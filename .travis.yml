@@ -1,0 +1,38 @@
+# travis build configuration 
+
+env:
+#Do not define 'global' env vars here.  They cannot be used with API builds
+    matrix:
+      - TARGET=all
+
+language: cpp
+#sudo: required
+sudo: false
+
+addons:
+  apt:
+    packages:
+      libc6-i386
+
+cache:
+  directories:
+    - $HOME/gcc-arm-none-eabi-5_4-2016q3
+
+
+install:
+  - export GCC_DIR=$HOME/gcc-arm-none-eabi-5_4-2016q3
+  - export GCC_ARCHIVE=$HOME/gcc-arm-none-eabi-5_4-2016q3-20160926-linux.tar.bz2
+  - export GCC_URL=https://launchpad.net/gcc-arm-embedded/5.0/5-2016-q3-update/+download/gcc-arm-none-eabi-5_4-2016q3-20160926-linux.tar.bz2
+  - if [ ! -e $GCC_DIR/bin/arm-none-eabi-gcc ];then 
+        wget $GCC_URL -O $GCC_ARCHIVE;
+        tar xfj $GCC_ARCHIVE -C $HOME;
+    fi
+  - export PATH=$PATH:$GCC_DIR/bin
+
+script:
+    - ls
+    - cd gcc 
+    - make $TARGET 
+    - make clean
+    - make $TARGET
+ #   - arm-none-eabi-size h8mini.elf 
