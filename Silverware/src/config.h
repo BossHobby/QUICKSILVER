@@ -392,32 +392,6 @@
 
 //--fpmode=fast
 
-// define logic - do not change
-///////////////
-
-// used for pwm calculations
-#ifdef ENABLE_OVERCLOCK
-#ifdef QUICKSILVERF4
-#define SYS_CLOCK_FREQ_HZ 168000000
-#define PWM_CLOCK_FREQ_HZ 42000000
-#define TICK_CLOCK_FREQ_HZ 21000000
-#else
-#define SYS_CLOCK_FREQ_HZ 64000000
-#define PWM_CLOCK_FREQ_HZ 64000000
-#define TICK_CLOCK_FREQ_HZ 8000000
-#endif
-#else
-#ifdef QUICKSILVERF4
-#define SYS_CLOCK_FREQ_HZ 168000000
-#define PWM_CLOCK_FREQ_HZ 42000000
-#define TICK_CLOCK_FREQ_HZ 21000000
-#else
-#define SYS_CLOCK_FREQ_HZ 48000000
-#define PWM_CLOCK_FREQ_HZ 48000000
-#define TICK_CLOCK_FREQ_HZ 6
-000000
-#endif
-#endif
 
 #ifdef MOTOR_BEEPS
 #ifdef USE_ESC_DRIVER
@@ -436,6 +410,16 @@
 
 #ifdef BWHOOP
 #define F0
+#ifdef ENABLE_OVERCLOCK
+#define SYS_CLOCK_FREQ_HZ 64000000
+#define PWM_CLOCK_FREQ_HZ 64000000
+#define TICK_CLOCK_FREQ_HZ 8000000
+#else
+#define SYS_CLOCK_FREQ_HZ 48000000
+#define PWM_CLOCK_FREQ_HZ 48000000
+#define TICK_CLOCK_FREQ_HZ 6000000
+#endif
+
 //LEDS
 #define LED_NUMBER 2
 #define LED1PIN GPIO_Pin_2
@@ -499,6 +483,16 @@
 
 #ifdef E011
 #define F0
+#ifdef ENABLE_OVERCLOCK
+#define SYS_CLOCK_FREQ_HZ 64000000
+#define PWM_CLOCK_FREQ_HZ 64000000
+#define TICK_CLOCK_FREQ_HZ 8000000
+#else
+#define SYS_CLOCK_FREQ_HZ 48000000
+#define PWM_CLOCK_FREQ_HZ 48000000
+#define TICK_CLOCK_FREQ_HZ 6000000
+#endif
+
 //LEDS
 #define LED_NUMBER 2
 #define LED1PIN GPIO_Pin_2
@@ -563,6 +557,16 @@
 
 #ifdef H8mini_blue_board
 #define F0
+#ifdef ENABLE_OVERCLOCK
+#define SYS_CLOCK_FREQ_HZ 64000000
+#define PWM_CLOCK_FREQ_HZ 64000000
+#define TICK_CLOCK_FREQ_HZ 8000000
+#else
+#define SYS_CLOCK_FREQ_HZ 48000000
+#define PWM_CLOCK_FREQ_HZ 48000000
+#define TICK_CLOCK_FREQ_HZ 6000000
+#endif
+
 //LEDS
 #define LED_NUMBER 1
 #define LED1PIN GPIO_Pin_1
@@ -625,6 +629,16 @@
 
 #ifdef Alienwhoop_ZERO
 #define F0
+#ifdef ENABLE_OVERCLOCK
+#define SYS_CLOCK_FREQ_HZ 64000000
+#define PWM_CLOCK_FREQ_HZ 64000000
+#define TICK_CLOCK_FREQ_HZ 8000000
+#else
+#define SYS_CLOCK_FREQ_HZ 48000000
+#define PWM_CLOCK_FREQ_HZ 48000000
+#define TICK_CLOCK_FREQ_HZ 6000000
+#endif
+
 //LEDS
 #define LED_NUMBER 1
 #define LED1PIN GPIO_Pin_0
@@ -689,6 +703,10 @@
 
 #ifdef CC3D_REVO_F4
 #define F405
+#define SYS_CLOCK_FREQ_HZ 168000000
+#define PWM_CLOCK_FREQ_HZ 84000000
+#define TICK_CLOCK_FREQ_HZ 21000000
+
 //LEDS
 #define LED_NUMBER 2
 #define LED1PIN GPIO_Pin_5
