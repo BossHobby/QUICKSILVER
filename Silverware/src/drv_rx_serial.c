@@ -8,17 +8,23 @@
 #include "drv_rx_serial.h"
 
 
+
+//SET SERIAL BAUDRATE BASED ON RECEIVER PROTOCOL
+
 #if defined (RX_DSMX_2048) || defined (RX_DSM2_1024)
 //#include "rx_dsm.h"
 #define SERIAL_BAUDRATE 115200
 #endif
 
 
+//FUNCTION TO SET APB CLOCK TO USART BASED ON USER SELECTED UART, TARGET MCU, AND TARGET DEFINED USART ALTERNATE FUNCTION PINS CALLED BELOW FROM INSIDE usart_rx_init()
 
 void APBPeriphClockCmd(void)
 {
 #if defined (UART_1) && defined (F0)
-RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART2, ENABLE);
+#if defined (USART1_PA3PA2) || defined (USART1_SDA)
+RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+#endif
 #endif
 
 #if defined (UART_1) && defined (F405)
@@ -34,6 +40,7 @@ RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
 #endif
 }
 
+//FUNCTION TO INITIALIZE USART FOR A SERIAL RX CALLED FROM RECEIVER PROTOCOL
 
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF)
 void usart_rx_init(void)

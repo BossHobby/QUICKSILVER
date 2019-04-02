@@ -1,6 +1,9 @@
 #include "config.h"
+
 void usart_rx_init(void);
 
+
+//  CONDITIONAL SELECTION OF DEFINES BASED ON USER SELECTED UART FOR SERIAL RX, TARGET MCU, AND TARGET DEFINED USART ALTERNATE MAPPING PINS
 
 #if defined (UART_1) && defined (F0)
 #ifdef USART1_PA3PA2

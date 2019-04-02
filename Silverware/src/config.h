@@ -7,15 +7,12 @@
 //***********************************************HARDWARE SELECTION*****************************************************
 
 // *************DEFINE FLIGHT CONTROLLER HARDWARE
-// *************SELECT ONLY ONE 
-// *************uncomment BWHOOP define for bwhoop, bwhoop pro, E011C Santa Edition, and Beta FPV Lite Flight Controllers
-// *************uncomment E011 define for E011 flight Controller
-// *************uncomment H8mini_blue_board for the H8 mini flight controller with blue circuit board
+// *************SELECT QUICKSILVER F4 FROM TARGET DROP DOWN BOX FOR F4 TARGETS AND NFE_Silverware FROM TARGET DROP DOWN BOX FOR F0 TARGETS
 //#define BWHOOP
 //#define E011
 //#define H8mini_blue_board
 //#define Alienwhoop_ZERO  
-#define QUICKSILVERF4
+#define CC3D_REVO_F4
 
 
 
@@ -55,7 +52,7 @@
 #define BF_EXPO_YAW 0.00
 #endif
 
-// *************rate in deg/sec 
+// *************rate in deg/sec 																													todo:  move rates/expo out of radio protocol and wherever else that stuff is and into their own spot
 // *************for angle mode
 #define LEVEL_MAX_RATE 230.0    //Roll & Pitch axis
 
@@ -75,42 +72,29 @@
 //**********************************************************************************************************************
 //***********************************************RECEIVER SETTINGS******************************************************
 
-// *************Receiver protocol selection
+// *************Receiver protocol selection									//todo:  add missing radio protocols from bobnove and make them all jive with new rx_init function in drv_rx_serial.c
 //#define RX_SBUS
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
-#define RX_DSMX_2048
+#define RX_DSMX_2048																				//  Only dsm protocols working on F4 right now
 //#define RX_DSM2_1024
 //#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 
-// *************Serial Receiver UART Selection
+// *************Serial Receiver UART Selection																		//todo:  In drv_rc_serial.c and .h:  uart 1 is set up for F0, uart 1 and 3 are set up for f4.  Need to add inverter GPIO control pin for uart 3.  So plenty more to do here
 //#define UART_1
 //#define UART_2
 #define UART_3
 
 // *************Serial Receiver Inversion Selection
-#define INVERT_UART
+#define INVERT_UART																																//todo:  make this do something for f0 and for f4 with hardware controlled inverter on board
 
-// *************Transmitter Type Selection
+// *************Transmitter Type Selection																				//todo:  drop toy tx support - clarify that remaining options are just for bayang protocol
 //#define USE_STOCK_TX
 //#define USE_DEVO
 #define USE_MULTI
 
 // *******************************SWITCH SELECTION*****************************
-// *************CHAN_ON - on always ( all protocols)
-// *************CHAN_OFF - off always ( all protocols)
-// *************Aux channels are selectable as CHAN_5 through CHAN_10 for DEVO and MULTIMODULE users
-// *************Toy transmitter mapping is CHAN_5 (rates button), CHAN_6 (stick gestures RRD/LLD), 
-//**************CHAN_7 (headfree button), CHAN_8 (roll trim buttons), CHAN_9 (pitch trim buttons)
-
-//*************Arm switch and Idle Up switch (idle up will behave like betaflight airmode)
-//*************comment out to disable arming or idle up features ONLY if not wanted.  Other features set to CHAN_OFF to disable
-
-//*************Assign feature to auxiliary channel.  NOTE - Switching on LEVELMODE is required for any leveling modes to 
-//*************be active.  With LEVELMODE active - MCU will apply RACEMODE if racemode channel is on, HORIZON if horizon 
-//*************channel is on, or racemodeHORIZON if both channels are on - and will be standard LEVELMODE if neither 
-//*************racemode or horizon are switched on.
 #define ARMING CHAN_5
 #define IDLE_UP CHAN_5
 #define IDLE_THR 0.05f                   //This designates an idle throttle of 5%
@@ -448,7 +432,7 @@
 
 // gcc warnings in main.c
 
-//Hardware target defines moved from hardware.h so that board selection of bwhoop or e011 can be performed in config.h file
+//TODO:  MOVE TARGET DEFINES TO THEIR OWN FILE AND REORDER THE .H HIERCHARCHY TO config.h->targets.h->defines.h   Correct all relavent #includes related to this change
 
 #ifdef BWHOOP
 #define F0
@@ -648,7 +632,7 @@
 #define LED2PIN GPIO_Pin_0
 #define LED2PORT GPIOA
 
-//SOFT I2C & GYRO
+//I2C & GYRO
 #define HW_I2C_SPEED_FAST2
 #define HW_I2C_PINS_PA910
 #define I2C_SDAPIN GPIO_Pin_10
@@ -703,7 +687,7 @@
 #define PWM_PB1
 #endif
 
-#ifdef QUICKSILVERF4
+#ifdef CC3D_REVO_F4
 #define F405
 //LEDS
 #define LED_NUMBER 2
@@ -714,8 +698,8 @@
 //#define LED1_INVERT
 #define LED2_INVERT
 
-//SOFT I2C & GYRO
-#define USE_DUMMY_I2C
+//I2C & GYRO
+#define USE_DUMMY_I2C									//todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
 //#define I2C_SDAPIN GPIO_Pin_10
 //#define I2C_SDAPORT GPIOA
 //#define I2C_SCLPIN GPIO_Pin_9
@@ -736,7 +720,7 @@
 #define USART3_PB11PB10
 #define SOFTSPI_NONE
 #else
-#define SOFTSPI_3WIRE
+#define SOFTSPI_3WIRE							//todo:port spi receiver and soft spi driver to f4
 #define SPI_MOSI_PIN GPIO_Pin_3
 #define SPI_MOSI_PORT GPIOA
 #define SPI_CLK_PIN GPIO_Pin_2
@@ -748,7 +732,7 @@
 #endif
 
 //VOLTAGE DIVIDER
-#define DISABLE_LVC
+#define DISABLE_LVC								//todo:port adc functions to f4
 #define BATTERYPIN GPIO_Pin_5
 #define BATTERYPORT GPIOA
 #define BATTERY_ADC_CHANNEL ADC_Channel_5
@@ -763,9 +747,9 @@
 
 // pwm pin initialization
 #define USE_PWM_DRIVER
-//#define USE_ESC_DRIVER
-//#define USE_DSHOT_DMA_DRIVER
-//#define USE_DSHOT_DRIVER_BETA
+//#define USE_ESC_DRIVER       //todo:  evaluate need for this to stay if focused on quadcopters
+//#define USE_DSHOT_DMA_DRIVER  
+//#define USE_DSHOT_DRIVER_BETA  //todo:  probably eliminate this completely
 
 //#define PWM_PA0
 //#define PWM_PA1
@@ -782,4 +766,11 @@
 #define PWM_PB0
 #define PWM_PB1
 #endif
+
+
+
+//more f4 todo:  rgb led port, dma dshot port, change apb2 clock speed to match apb1, change f4 system clock to use HSE external crystal, code spi driver for f4 gyro,
+//softserial not throwing errors anymore but needs review for proper configuration, port of buzzer function has not been investigated, reorganize control() in control.c to call functions from new files intuitively named for said functions
+//add all recent updates from NFE_Silverware
+//add various omnibus f4 targets, raceflight revolt target, airbot target
 
