@@ -383,9 +383,9 @@
 #define ENABLESTIX_TRESHOLD 0.3
 #define ENABLESTIX_TIMEOUT 1e6
 
-// overclock to 64Mhz for F0
 
-#define ENABLE_OVERCLOCK
+
+
 
 #pragma diag_warning 1035 , 177 , 4017
 #pragma diag_error 260
@@ -410,6 +410,7 @@
 
 #ifdef BWHOOP
 #define F0
+#define ENABLE_OVERCLOCK
 #ifdef ENABLE_OVERCLOCK
 #define SYS_CLOCK_FREQ_HZ 64000000
 #define PWM_CLOCK_FREQ_HZ 64000000
@@ -483,6 +484,7 @@
 
 #ifdef E011
 #define F0
+#define ENABLE_OVERCLOCK
 #ifdef ENABLE_OVERCLOCK
 #define SYS_CLOCK_FREQ_HZ 64000000
 #define PWM_CLOCK_FREQ_HZ 64000000
@@ -557,6 +559,7 @@
 
 #ifdef H8mini_blue_board
 #define F0
+#define ENABLE_OVERCLOCK
 #ifdef ENABLE_OVERCLOCK
 #define SYS_CLOCK_FREQ_HZ 64000000
 #define PWM_CLOCK_FREQ_HZ 64000000
@@ -629,6 +632,7 @@
 
 #ifdef Alienwhoop_ZERO
 #define F0
+#define ENABLE_OVERCLOCK
 #ifdef ENABLE_OVERCLOCK
 #define SYS_CLOCK_FREQ_HZ 64000000
 #define PWM_CLOCK_FREQ_HZ 64000000
