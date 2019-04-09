@@ -15,10 +15,10 @@
 
 #ifdef RX_SBUS
 
-#define SERIAL_BAUDRATE 100000
+//#define SERIAL_BAUDRATE 100000   //moved to rx_serial driver
 
 // sbus is normally inverted
-#define SBUS_INVERT 1
+//#define SBUS_INVERT 1						//now handled by a function in rx_serial driver and a config define
 
 // global use rx variables
 extern float rx[4];
@@ -70,7 +70,7 @@ int stat_overflow;
 
 
 //void SERIAL_RX_USART_IRQHandler(void)
-void sbus_USART_ISR(void)
+void SBUS_USART_ISR(void)
 {
     rx_buffer[rx_end] = USART_ReceiveData(SERIAL_RX_USART);
     // calculate timing since last rx
@@ -106,56 +106,10 @@ void sbus_USART_ISR(void)
 
 void sbus_init(void)
 {
-    // make sure there is some time to program the board
-    if ( gettime() < 2000000 ) return;
-    
-    GPIO_InitTypeDef  GPIO_InitStructure;
-
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-
-    GPIO_InitStructure.GPIO_Pin = SERIAL_RX_PIN;
-    GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure); 
-    GPIO_PinAFConfig(SERIAL_RX_PORT, SERIAL_RX_SOURCE , SERIAL_RX_CHANNEL);
-
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_SERIAL_RX_USART, ENABLE);
-
-    USART_InitTypeDef USART_InitStructure;
-
-    USART_InitStructure.USART_BaudRate = SERIAL_BAUDRATE;
-    USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-    USART_InitStructure.USART_StopBits = USART_StopBits_2;
-    USART_InitStructure.USART_Parity = USART_Parity_No;
-    USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-    USART_InitStructure.USART_Mode = USART_Mode_Rx ;//USART_Mode_Rx | USART_Mode_Tx;
-
-    USART_Init(SERIAL_RX_USART, &USART_InitStructure);
-// swap rx/tx pins
-#ifndef Alienwhoop_ZERO
-    USART_SWAPPinCmd( SERIAL_RX_USART, ENABLE);
-#endif
-// invert signal ( default sbus )
-   if (SBUS_INVERT) USART_InvPinCmd(SERIAL_RX_USART, USART_InvPin_Rx|USART_InvPin_Tx , ENABLE );
-
-
-    USART_ITConfig(SERIAL_RX_USART, USART_IT_RXNE, ENABLE);
-
-    USART_Cmd(SERIAL_RX_USART, ENABLE);
-
-    NVIC_InitTypeDef NVIC_InitStructure;
-
-    NVIC_InitStructure.NVIC_IRQChannel = SERIAL_RX_USART_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);
-
-
+    usart_rx_init();         //initialize usart in drv_rx_serial  
     rxmode = !RXMODE_BIND;
-
-// set setup complete flag
- framestarted = 0;
+		// set setup complete flag
+		framestarted = 0;
 }
 
 

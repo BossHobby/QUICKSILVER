@@ -11,10 +11,11 @@
 //SET SERIAL BAUDRATE BASED ON RECEIVER PROTOCOL
 
 #if defined (RX_DSMX_2048) || defined (RX_DSM2_1024) || defined(RX_IBUS)
-//#include "rx_dsm.h"
 #define SERIAL_BAUDRATE 115200
 #endif
-
+#if defined (RX_SBUS)
+#define SERIAL_BAUDRATE 100000
+#endif
 
 //FUNCTION TO SET APB CLOCK TO USART BASED ON USER SELECTED UART, TARGET MCU, AND TARGET DEFINED USART ALTERNATE FUNCTION PINS CALLED BELOW FROM INSIDE usart_rx_init()
 
@@ -39,6 +40,35 @@ RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
 #endif
 }
 
+
+//FUNCTION TO COMMAND EXTERNAL USART INVERTER HIGH OR LOW         todo: sort out target mapping tag in drv_rx_serial.h for a quick define from the taarget
+
+#define USART_INVERTER_PIN GPIO_Pin_0   //hard defined here for testing right now on cc3d revo
+#define USART_INVERTER_PORT GPIOC
+
+void usart_invert(void)
+{
+	#ifdef F405
+        GPIO_InitTypeDef    GPIO_InitStructure;
+        GPIO_InitStructure.GPIO_Pin = USART_INVERTER_PIN;
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+        GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+        GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+        GPIO_Init(USART_INVERTER_PORT, &GPIO_InitStructure); 
+        #ifdef INVERT_UART
+        // Inverter control line, set high
+        GPIO_SetBits(USART_INVERTER_PORT, USART_INVERTER_PIN);
+				#else          
+        // Inverter control line, set low
+        GPIO_ResetBits(USART_INVERTER_PORT, USART_INVERTER_PIN);
+        #endif  
+		#endif
+	#ifdef F0
+				USART_InvPinCmd(SERIAL_RX_USART, USART_InvPin_Rx|USART_InvPin_Tx , ENABLE );
+	#endif
+}
+
+
 //FUNCTION TO INITIALIZE USART FOR A SERIAL RX CALLED FROM RECEIVER PROTOCOL
 
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
@@ -47,29 +77,33 @@ void usart_rx_init(void)
     // make sure there is some time to program the board if SDA pins are reinitialized as GPIO
     if ( gettime() < 2000000 ) return;    
     GPIO_InitTypeDef  GPIO_InitStructure;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;   
-    GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;   
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;   
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF; 
+#if defined (RX_DSMX_2048) || defined (RX_DSM2_1024) || defined (RX_CRSF) || defined (RX_IBUS)
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
+		GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+#endif
+#if defined (RX_SBUS)
+		GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+		GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+#endif   
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;  
     GPIO_InitStructure.GPIO_Pin = SERIAL_RX_PIN;
     GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure); 
     GPIO_PinAFConfig(SERIAL_RX_PORT, SERIAL_RX_SOURCE , SERIAL_RX_CHANNEL);
-	
-  //  RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
-		
-		APBPeriphClockCmd();
-	
+		APBPeriphClockCmd();	
     USART_InitTypeDef USART_InitStructure;
     USART_InitStructure.USART_BaudRate = SERIAL_BAUDRATE;
     USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-	#ifdef RX_SBUS
-	  USART_InitStructure.USART_StopBits = USART_StopBits_2;  //Sbus just has to be different.
-#else  
+#if defined (RX_DSMX_2048) || defined (RX_DSM2_1024) || defined (RX_CRSF) || defined (RX_IBUS)	
     USART_InitStructure.USART_StopBits = USART_StopBits_1;  
-		#endif
     USART_InitStructure.USART_Parity = USART_Parity_No;    //sbus is even parity
+#endif
+#if defined (RX_SBUS)
+    USART_InitStructure.USART_StopBits = USART_StopBits_2;
+    USART_InitStructure.USART_Parity = USART_Parity_No;   //todo: try setting even
+#endif
     USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-    USART_InitStructure.USART_Mode =  USART_Mode_Rx;  //USART_Mode_Rx | USART_Mode_Tx;
+    USART_InitStructure.USART_Mode = USART_Mode_Rx ;//USART_Mode_Rx | USART_Mode_Tx;
     USART_Init(SERIAL_RX_USART, &USART_InitStructure);
 // swap rx/tx pins - available on F0 targets
 #ifdef F0_USART_PINSWAP
@@ -89,6 +123,7 @@ void usart_rx_init(void)
     NVIC_Init(&NVIC_InitStructure);
 }
 #endif
+
 
 //USART ISR to radio protocol mapping
 #ifdef UART_1
@@ -115,7 +150,7 @@ void USART3_IRQHandler(void)
 	DSM_USART_ISR();
 	#endif
 	#ifdef RX_SBUS 
-	sbus_USART_ISR();
+	SBUS_USART_ISR();
 	#endif
 }
 	#endif

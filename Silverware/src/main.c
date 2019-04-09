@@ -155,7 +155,7 @@ clk_init();
 	spi_init();
 	
   time_init();
-
+	usart_invert();
 
 #if defined(RX_DSMX_2048) || defined(RX_DSM2_1024)    
 		rx_spektrum_bind(); 
