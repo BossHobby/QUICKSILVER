@@ -446,7 +446,7 @@
 #define SENSOR_ROTATE_90_CW
 
 // SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF)
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
 #define USART1_SDA
 #define F0_USART_PINSWAP
 #define SOFTSPI_NONE
@@ -521,7 +521,7 @@
 #define SENSOR_ROTATE_90_CW
 
 // SPI RX PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) 
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
 #define USART1_SDA
 #define F0_USART_PINSWAP
 #define SOFTSPI_NONE
@@ -594,7 +594,7 @@
 #define SENSOR_ROTATE_180
 
 // SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) 
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
 #define USART1_SDA
 #define F0_USART_PINSWAP
 #define SOFTSPI_NONE
@@ -666,7 +666,7 @@
 #define SENSOR_ROTATE_90_CCW
 
 // SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) 
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
 //#define F0_USART_PINSWAP
 #define USART1_PA3PA2
 #define SOFTSPI_NONE

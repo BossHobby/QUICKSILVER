@@ -91,6 +91,7 @@ void usart_rx_init(void)
 #endif
 
 //USART ISR to radio protocol mapping
+#ifdef UART_1
 void USART1_IRQHandler(void)
 {
 	#ifdef RX_IBUS 
@@ -103,6 +104,8 @@ void USART1_IRQHandler(void)
 	sbus_USART_ISR();
 	#endif
 	}
+#endif
+#ifdef UART_3
 void USART3_IRQHandler(void)
 {
 	#ifdef RX_IBUS 
@@ -115,3 +118,4 @@ void USART3_IRQHandler(void)
 	sbus_USART_ISR();
 	#endif
 }
+	#endif
