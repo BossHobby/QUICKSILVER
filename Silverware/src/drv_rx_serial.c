@@ -7,8 +7,6 @@
 #include "defines.h"
 #include "drv_rx_serial.h"
 
-int testInt = 0;
-
 
 //SET SERIAL BAUDRATE BASED ON RECEIVER PROTOCOL
 
@@ -64,7 +62,11 @@ void usart_rx_init(void)
     USART_InitTypeDef USART_InitStructure;
     USART_InitStructure.USART_BaudRate = SERIAL_BAUDRATE;
     USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+	#ifdef RX_SBUS
+	  USART_InitStructure.USART_StopBits = USART_StopBits_2;  //Sbus just has to be different.
+#else  
     USART_InitStructure.USART_StopBits = USART_StopBits_1;  
+		#endif
     USART_InitStructure.USART_Parity = USART_Parity_No;    //sbus is even parity
     USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
     USART_InitStructure.USART_Mode =  USART_Mode_Rx;  //USART_Mode_Rx | USART_Mode_Tx;
@@ -88,5 +90,28 @@ void usart_rx_init(void)
 }
 #endif
 
-
-	
+//USART ISR to radio protocol mapping
+void USART1_IRQHandler(void)
+{
+	#ifdef RX_IBUS 
+	Ibus_USART_ISR();
+	#endif
+	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
+	DSM_USART_ISR();
+	#endif
+	#ifdef RX_SBUS 
+	sbus_USART_ISR();
+	#endif
+	}
+void USART3_IRQHandler(void)
+{
+	#ifdef RX_IBUS 
+	Ibus_USART_ISR();
+	#endif
+	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
+	DSM_USART_ISR();
+	#endif
+	#ifdef RX_SBUS 
+	sbus_USART_ISR();
+	#endif
+}

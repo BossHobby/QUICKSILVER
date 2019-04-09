@@ -112,9 +112,10 @@ uint8_t telemetryPosition = 0; //This iterates through the above, you can only s
 uint8_t teleCounter = 0;
 
 
-void USART1_IRQHandler(void)
+//void SERIAL_RX_USART _IRQHandler(void)
+void Ibus_USART_ISR(void)
 {
-  rx_buffer[rx_end] = USART_ReceiveData(USART1);
+  rx_buffer[rx_end] = USART_ReceiveData(SERIAL_RX_USART );
   // calculate timing since last rx
   unsigned long  maxticks = SysTick->LOAD;
   unsigned long ticks = SysTick->VAL;
@@ -132,11 +133,11 @@ void USART1_IRQHandler(void)
 
   lastticks = ticks;
 
-  if ( USART_GetFlagStatus(USART1 , USART_FLAG_ORE ) )
+  if ( USART_GetFlagStatus(SERIAL_RX_USART  , USART_FLAG_ORE ) )
   {
     // overflow means something was lost
     rx_time[rx_end] = 0xFFFe;
-    USART_ClearFlag( USART1 , USART_FLAG_ORE );
+    USART_ClearFlag( SERIAL_RX_USART  , USART_FLAG_ORE );
     if ( ibus_stats ) stat_overflow++;
   }
 

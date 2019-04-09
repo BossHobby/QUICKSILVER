@@ -69,9 +69,10 @@ int stat_frames_second;
 int stat_overflow;
 
 
-void USART1_IRQHandler(void)
+//void SERIAL_RX_USART_IRQHandler(void)
+void sbus_USART_ISR(void)
 {
-    rx_buffer[rx_end] = USART_ReceiveData(USART1);
+    rx_buffer[rx_end] = USART_ReceiveData(SERIAL_RX_USART);
     // calculate timing since last rx
     unsigned long  maxticks = SysTick->LOAD;	
     unsigned long ticks = SysTick->VAL;	
@@ -89,11 +90,11 @@ void USART1_IRQHandler(void)
 
     lastticks = ticks;
        
-    if ( USART_GetFlagStatus(USART1 , USART_FLAG_ORE ) )
+    if ( USART_GetFlagStatus(SERIAL_RX_USART , USART_FLAG_ORE ) )
     {
       // overflow means something was lost 
       rx_time[rx_end]= 0xFFFe;
-      USART_ClearFlag( USART1 , USART_FLAG_ORE );
+      USART_ClearFlag( SERIAL_RX_USART , USART_FLAG_ORE );
       if ( sbus_stats ) stat_overflow++;
     }    
         
@@ -119,7 +120,7 @@ void sbus_init(void)
     GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure); 
     GPIO_PinAFConfig(SERIAL_RX_PORT, SERIAL_RX_SOURCE , SERIAL_RX_CHANNEL);
 
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_SERIAL_RX_USART, ENABLE);
 
     USART_InitTypeDef USART_InitStructure;
 
@@ -130,22 +131,22 @@ void sbus_init(void)
     USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
     USART_InitStructure.USART_Mode = USART_Mode_Rx ;//USART_Mode_Rx | USART_Mode_Tx;
 
-    USART_Init(USART1, &USART_InitStructure);
+    USART_Init(SERIAL_RX_USART, &USART_InitStructure);
 // swap rx/tx pins
 #ifndef Alienwhoop_ZERO
-    USART_SWAPPinCmd( USART1, ENABLE);
+    USART_SWAPPinCmd( SERIAL_RX_USART, ENABLE);
 #endif
 // invert signal ( default sbus )
-   if (SBUS_INVERT) USART_InvPinCmd(USART1, USART_InvPin_Rx|USART_InvPin_Tx , ENABLE );
+   if (SBUS_INVERT) USART_InvPinCmd(SERIAL_RX_USART, USART_InvPin_Rx|USART_InvPin_Tx , ENABLE );
 
 
-    USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
+    USART_ITConfig(SERIAL_RX_USART, USART_IT_RXNE, ENABLE);
 
-    USART_Cmd(USART1, ENABLE);
+    USART_Cmd(SERIAL_RX_USART, ENABLE);
 
     NVIC_InitTypeDef NVIC_InitStructure;
 
-    NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
+    NVIC_InitStructure.NVIC_IRQChannel = SERIAL_RX_USART_IRQn;
     NVIC_InitStructure.NVIC_IRQChannelPriority = 0;
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);
