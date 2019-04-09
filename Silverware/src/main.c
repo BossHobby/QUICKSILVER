@@ -74,6 +74,7 @@ THE SOFTWARE.
 debug_type debug;
 #endif
 
+unsigned int yeeOldTest = 0;
 
 
 
@@ -141,7 +142,7 @@ int random_seed = 0;
 
 int main(void)
 {
-	
+
 	delay(1000);
 
 

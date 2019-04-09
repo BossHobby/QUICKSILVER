@@ -75,16 +75,17 @@
 // *************Receiver protocol selection									//todo:  add missing radio protocols from bobnove and make them all jive with new rx_init function in drv_rx_serial.c
 //#define RX_SBUS
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
-#define RX_DSMX_2048																				//  Only dsm protocols working on F4 right now
+#define RX_IBUS
+//#define RX_DSMX_2048																				//  Only ibus and dsm protocols are working on F4 right now
 //#define RX_DSM2_1024
 //#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 
 // *************Serial Receiver UART Selection																		//todo:  In drv_rc_serial.c and .h:  uart 1 is set up for F0, uart 1 and 3 are set up for f4.  Need to add inverter GPIO control pin for uart 3.  So plenty more to do here
-//#define UART_1
+#define UART_1
 //#define UART_2
-#define UART_3
+//#define UART_3
 
 // *************Serial Receiver Inversion Selection
 #define INVERT_UART																																//todo:  make this do something for f0 and for f4 with hardware controlled inverter on board
@@ -737,7 +738,7 @@
 
 
 // SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) 
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
 #define USART1_PA10PA9
 #define USART3_PB11PB10
 #define SOFTSPI_NONE

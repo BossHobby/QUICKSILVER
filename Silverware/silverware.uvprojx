@@ -626,6 +626,11 @@
               <FileType>5</FileType>
               <FilePath>.\src\uart.h</FilePath>
             </File>
+            <File>
+              <FileName>rx_ibus.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\rx_ibus.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -2002,6 +2007,11 @@
               <FileName>uart.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\src\uart.h</FilePath>
+            </File>
+            <File>
+              <FileName>rx_ibus.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\rx_ibus.c</FilePath>
             </File>
           </Files>
         </Group>

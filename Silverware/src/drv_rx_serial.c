@@ -7,11 +7,12 @@
 #include "defines.h"
 #include "drv_rx_serial.h"
 
+int testInt = 0;
 
 
 //SET SERIAL BAUDRATE BASED ON RECEIVER PROTOCOL
 
-#if defined (RX_DSMX_2048) || defined (RX_DSM2_1024)
+#if defined (RX_DSMX_2048) || defined (RX_DSM2_1024) || defined(RX_IBUS)
 //#include "rx_dsm.h"
 #define SERIAL_BAUDRATE 115200
 #endif
@@ -42,7 +43,7 @@ RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
 
 //FUNCTION TO INITIALIZE USART FOR A SERIAL RX CALLED FROM RECEIVER PROTOCOL
 
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF)
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
 void usart_rx_init(void)
 {
     // make sure there is some time to program the board if SDA pins are reinitialized as GPIO
@@ -66,7 +67,7 @@ void usart_rx_init(void)
     USART_InitStructure.USART_StopBits = USART_StopBits_1;  
     USART_InitStructure.USART_Parity = USART_Parity_No;    //sbus is even parity
     USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-    USART_InitStructure.USART_Mode = USART_Mode_Rx ;//USART_Mode_Rx | USART_Mode_Tx;
+    USART_InitStructure.USART_Mode =  USART_Mode_Rx;  //USART_Mode_Rx | USART_Mode_Tx;
     USART_Init(SERIAL_RX_USART, &USART_InitStructure);
 // swap rx/tx pins - available on F0 targets
 #ifdef F0_USART_PINSWAP
@@ -88,3 +89,4 @@ void usart_rx_init(void)
 #endif
 
 
+	
