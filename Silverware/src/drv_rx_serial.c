@@ -136,7 +136,7 @@ void USART1_IRQHandler(void)
 	DSM_USART_ISR();
 	#endif
 	#ifdef RX_SBUS 
-	sbus_USART_ISR();
+	SBUS_USART_ISR();
 	#endif
 	}
 #endif

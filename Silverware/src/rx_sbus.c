@@ -7,6 +7,7 @@
 #include "defines.h"
 #include "util.h"
 #include "uart.h"
+#include "drv_rx_serial.h"
 
 
 // sbus input ( pin SWCLK after calibration) 
