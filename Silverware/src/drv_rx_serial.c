@@ -100,7 +100,7 @@ void usart_rx_init(void)
 #endif
 #if defined (RX_SBUS)
     USART_InitStructure.USART_StopBits = USART_StopBits_2;
-    USART_InitStructure.USART_Parity = USART_Parity_No;   //todo: try setting even
+    USART_InitStructure.USART_Parity = USART_Parity_Even;   //todo: try setting even
 #endif
     USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
     USART_InitStructure.USART_Mode = USART_Mode_Rx ;//USART_Mode_Rx | USART_Mode_Tx;
