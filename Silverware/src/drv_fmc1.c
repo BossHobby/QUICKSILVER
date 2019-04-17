@@ -40,7 +40,7 @@ void fmc_lock() {
 int fmc_erase( void )
 {	
 	#ifdef F405
-	int test = FLASH_EraseSector( FLASH_ADDR, VoltageRange_3);
+	int test = FLASH_EraseSector( FLASH_Sector_1, VoltageRange_3);
 	#endif	
 	
 	#ifdef F0
