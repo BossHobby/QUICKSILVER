@@ -294,7 +294,7 @@ void rx_init(void)
         static int fps = 0;
         static unsigned long secondtime = 0;
 
-        if ( gettime() - secondtime > TICK_CLOCK_FREQ_HZ  )
+        if ( gettime() - secondtime > 1000000 )
         {
           stat_frames_second = fps;
           fps = 0;
