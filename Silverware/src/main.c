@@ -210,7 +210,7 @@ aux[CH_AUX1] = 1;
 
 int count = 0;
 	
-while ( count < 10 )
+while ( count < 64 )
 {
 	vbattfilt += adc_read(0);
 	delay(1000);
