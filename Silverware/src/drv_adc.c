@@ -251,7 +251,12 @@ void adc_init(void)
  // different vccs will translate to a different adc scale factor,
  // so actual vcc is not important as long as the voltage is correct in the end 
  // vref_cal =  1.17857f * (float) ( adcref_read ((adcrefcal *) 0x1FFFF7BA) );									//check for new addresses
-	vref_cal =  ADC_REF * (float) ( adcref_read ((adcrefcal *) 0x1FFFF7BA) );
+#ifdef F0
+vref_cal =  ADC_REF * (float) ( adcref_read ((adcrefcal *) 0x1FFFF7BA) );
+#endif
+#ifdef F405
+vref_cal =  ADC_REF * (float) ( adcref_read ((adcrefcal *) 0x1FFF7A2A) );
+#endif
 	
 }
 
