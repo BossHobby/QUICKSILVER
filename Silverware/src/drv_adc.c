@@ -26,7 +26,8 @@ return adcref_address ->word1;
 float vref_cal;
 
 void adc_init(void)
-{	 
+{	
+#ifdef F0	
   ADC_InitTypeDef     ADC_InitStructure;
   
 	{
@@ -85,12 +86,173 @@ void adc_init(void)
   ADC_StartOfConversion(ADC1);
 	
   DMA_Cmd(DMA1_Channel1, ENABLE);
+#endif
+
+#ifdef F405
+//pc2 additional function ADC123_IN12
+//adc1,2,3 connected to APB2 bus
+//dma2 connected on AHB1 bus to APB2 peripherals
+//dma2 transmit bufer empty signal is on stream 0, channel 0 / stream 4, channel 0 for adc1
+//																			 stream 2, channel 1 / stream 3, channel 1 for adc2
+//																			 stream 0, channel 2 / stream 1, channel 2 for adc3
+//adc typedef for struct
+  ADC_InitTypeDef     ADC_InitStructure;
+	
+//gpio struct  
+	{
+  GPIO_InitTypeDef    GPIO_InitStructure;
+  GPIO_InitStructure.GPIO_Pin = BATTERYPIN ;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+  GPIO_Init(BATTERYPORT, &GPIO_InitStructure);
+	}
+	
+//enable APB2 clock for adc1
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
+	
+//enable AHB1 clock for dma1  
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2 , ENABLE);
+	
+//dma struct	
+	{
+  DMA_InitTypeDef     DMA_InitStructure;	
+	DMA_InitStructure.DMA_Channel=DMA_Channel_0;
+  DMA_InitStructure.DMA_PeripheralBaseAddr =  (uint32_t)&ADC1->DR;
+  DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)adcarray;
+  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
+  DMA_InitStructure.DMA_BufferSize = 2;
+  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
+  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
+  DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
+  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
+	DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_HalfFull;    //maybe not needed with fifo disabled
+	DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+	DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;	
+  DMA_Init(DMA2_Stream0, &DMA_InitStructure);
+	}
+	
+// Enables or disables the ADC DMA request after last transfer 
+  ADC_DMARequestAfterLastTransferCmd(ADC1, ENABLE);
+// fire it up 
+  ADC_DMACmd(ADC1, ENABLE);  
+//initialize adc	
+  ADC_StructInit(&ADC_InitStructure);
+  
+//adc struct	
+  ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
+	ADC_InitStructure.ADC_ScanConvMode = DISABLE;
+  ADC_InitStructure.ADC_ContinuousConvMode = ENABLE; 
+  //ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
+	ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_Rising;							//should it be this or none?
+	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T2_TRGO;  									// 
+	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
+	ADC_InitStructure.ADC_NbrOfConversion = 1;
+  ADC_Init(ADC1, &ADC_InitStructure); 
+	
+	ADC_RegularChannelConfig(ADC1, ADC_Channel_Vrefint , 1 , ADC_SampleTime_480Cycles);
+	ADC_RegularChannelConfig(ADC1, BATTERY_ADC_CHANNEL , 1 , ADC_SampleTime_480Cycles);
+	ADC_TempSensorVrefintCmd(ENABLE);
+  ADC_Cmd(ADC1, ENABLE);     
+  ADC_SoftwareStartConv(ADC1);
+  DMA_Cmd(DMA2_Stream0, ENABLE);
+#endif
+
+#ifdef F405test  //adc2 .... different settings than above - also working
+//pc2 additional function ADC123_IN12
+//adc1,2,3 connected to APB2 bus
+//dma2 connected on AHB1 bus to APB2 peripherals
+//dma2 transmit bufer empty signal is on stream 0, channel 0 / stream 4, channel 0 for adc1
+//																			 stream 2, channel 1 / stream 3, channel 1 for adc2
+//																			 stream 0, channel 2 / stream 1, channel 2 for adc3
+//adc typedef for struct
+  ADC_InitTypeDef     ADC_InitStructure;
+	
+//gpio struct  
+	{
+  GPIO_InitTypeDef    GPIO_InitStructure;
+  GPIO_InitStructure.GPIO_Pin = BATTERYPIN ;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+  GPIO_Init(BATTERYPORT, &GPIO_InitStructure);
+	}
+	
+//enable APB2 clock for adc1
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC2, ENABLE);
+	
+//enable AHB1 clock for dma1  
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2 , ENABLE);
+	
+//dma struct	
+	{
+  DMA_InitTypeDef     DMA_InitStructure;	
+	DMA_InitStructure.DMA_Channel=DMA_Channel_1;
+  DMA_InitStructure.DMA_PeripheralBaseAddr =  (uint32_t)&ADC2->DR;  //(uint32_t)0x40012440;   //check for new address - pointer to data register for adc1, adc2 / pc2
+  DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)adcarray;
+  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
+  DMA_InitStructure.DMA_BufferSize = 2;
+  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
+  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
+  DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
+  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
+//	DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_HalfFull;    //maybe not needed with fifo disabled
+	DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+	DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+		
+  DMA_Init(DMA2_Stream3, &DMA_InitStructure);
+	}
+	
+// Enables or disables the ADC DMA request after last transfer 
+  ADC_DMARequestAfterLastTransferCmd(ADC2, ENABLE);
+// fire it up 
+  ADC_DMACmd(ADC2, ENABLE);  
+
+	
+//initialize adc	
+  ADC_StructInit(&ADC_InitStructure);
+  
+//adc struct	
+  ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
+	ADC_InitStructure.ADC_ScanConvMode = DISABLE;
+  ADC_InitStructure.ADC_ContinuousConvMode = ENABLE; 
+  ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
+	//ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_Rising;							//should it be this or none?
+	//ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T2_TRGO;  
+	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
+  //ADC_InitStructure.ADC_ScanDirection = ADC_ScanDirection_Backward;
+	ADC_InitStructure.ADC_NbrOfConversion = 1;
+  ADC_Init(ADC2, &ADC_InitStructure); 
+	
+	ADC_RegularChannelConfig(ADC2, ADC_Channel_Vrefint , 1 , ADC_SampleTime_480Cycles);
+  //ADC_ChannelConfig(ADC1, ADC_Channel_Vrefint , ADC_SampleTime_239_5Cycles); 
+
+	ADC_RegularChannelConfig(ADC2, BATTERY_ADC_CHANNEL , 1 , ADC_SampleTime_480Cycles);
+  //ADC_ChannelConfig(ADC1, BATTERY_ADC_CHANNEL , ADC_SampleTime_239_5Cycles); 
+
+	ADC_TempSensorVrefintCmd(ENABLE);
+//  ADC_VrefintCmd(ENABLE);
+	
+//  ADC_GetCalibrationFactor(ADC1);    //f4 self calibrates
+  
+  ADC_Cmd(ADC2, ENABLE);     
+
+  ADC_SoftwareStartConv(ADC2);
+//  ADC_StartOfConversion(ADC1);
+	
+  DMA_Cmd(DMA2_Stream3, ENABLE);
+#endif
  
  // reference is measured a 3.3v, we are powered by 2.8, so a 1.17 multiplier
  // different vccs will translate to a different adc scale factor,
  // so actual vcc is not important as long as the voltage is correct in the end 
- // vref_cal =  1.17857f * (float) ( adcref_read ((adcrefcal *) 0x1FFFF7BA) );
+ // vref_cal =  1.17857f * (float) ( adcref_read ((adcrefcal *) 0x1FFFF7BA) );									//check for new addresses
 	vref_cal =  ADC_REF * (float) ( adcref_read ((adcrefcal *) 0x1FFFF7BA) );
+	
 }
 
 float adc_read(int channel)

@@ -755,10 +755,10 @@
 #endif
 
 //VOLTAGE DIVIDER
-#define DISABLE_LVC								//todo:port adc functions to f4
-#define BATTERYPIN GPIO_Pin_5
-#define BATTERYPORT GPIOA
-#define BATTERY_ADC_CHANNEL ADC_Channel_5
+//#define DISABLE_LVC								//todo:port adc functions to f4
+#define BATTERYPIN GPIO_Pin_2
+#define BATTERYPORT GPIOC
+#define BATTERY_ADC_CHANNEL ADC_Channel_12
 #define ADC_SCALEFACTOR 0.002423
 #define ADC_REF 1.0f
 
