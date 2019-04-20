@@ -343,7 +343,8 @@ void pid_precalc()
 	timefactor = 0.0032f / looptime;
 	
 #ifdef PID_VOLTAGE_COMPENSATION
-	v_compensation = mapf ( vbattfilt , 3.00 , 4.00 , PID_VC_FACTOR , 1.00);
+	extern float lipo_cell_count;
+	v_compensation = mapf ( (vbattfilt/(float)lipo_cell_count) , 3.00 , 4.00 , PID_VC_FACTOR , 1.00);
 	if( v_compensation > PID_VC_FACTOR) v_compensation = PID_VC_FACTOR;
 	if( v_compensation < 1.00f) v_compensation = 1.00;
 	#ifdef LEVELMODE_PID_ATTENUATION

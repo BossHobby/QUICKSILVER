@@ -127,7 +127,10 @@
 //**********************************************************************************************************************
 //***********************************************VOLTAGE SETTINGS*******************************************************
 
-// ************* Raises pids automatically as battery voltage drops in flight.
+// ************* Set your lipo cell count to override auto cell count detect logic
+//#define LIPO_CELL_COUNT 1
+
+// ************* Raises pids automatically as battery voltage drops in flight.   Ensure voltage is calibrated before use.
 #define PID_VOLTAGE_COMPENSATION
 #define LEVELMODE_PID_ATTENUATION 0.90f  //used to prevent oscillations in angle modes with pid_voltage_compensation enabled due to high pids
 
@@ -144,7 +147,7 @@
 #define LVC_LOWER_THROTTLE_VOLTAGE_RAW 2.70
 #define LVC_LOWER_THROTTLE_KP 3.0
 
-// *************do not start software if battery is too low (below 3.3v)
+// *************do not start software if battery is too low (below 3.3v)  - only works on 1s lipos
 // *************flashes 2 times repeatedly at startup
 //#define STOP_LOWBATTERY
 
@@ -155,6 +158,8 @@
 #define HYST 0.10
 
 // *************automatic voltage telemetry correction/calibration factor - change the values below if voltage telemetry is inaccurate
+// *************Corrects for an offset error in the telemetry measurement (same offset across the battery voltage range)
+// *************Enter values in total battery volts.  This is factor is used in all voltage related calculations - ensure your transmitter is not mucking with telemetry scale before adjusting 
 #define ACTUAL_BATTERY_VOLTAGE 4.20
 #define REPORTED_TELEMETRY_VOLTAGE 4.20
 
