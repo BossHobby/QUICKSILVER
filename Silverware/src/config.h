@@ -466,8 +466,15 @@
 #define BATTERYPIN GPIO_Pin_5
 #define BATTERYPORT GPIOA
 #define BATTERY_ADC_CHANNEL ADC_Channel_5
-#define ADC_SCALEFACTOR 0.001364
-#define ADC_REF 1.17857f
+#ifndef VOLTAGE_DIVIDER_R1
+#define VOLTAGE_DIVIDER_R1 10000
+#endif
+#ifndef VOLTAGE_DIVIDER_R2
+#define VOLTAGE_DIVIDER_R2 10000
+#endif
+#ifndef ADC_REF_VOLTAGE
+#define ADC_REF_VOLTAGE 2.8
+#endif
 
 // MOTOR PINS
 #define MOTOR0_PIN_PB1 // motor 0 back-left
@@ -541,8 +548,15 @@
 #define BATTERYPIN GPIO_Pin_5
 #define BATTERYPORT GPIOA
 #define BATTERY_ADC_CHANNEL ADC_Channel_5
-#define ADC_SCALEFACTOR 0.001364
-#define ADC_REF 1.17857f
+#ifndef VOLTAGE_DIVIDER_R1
+#define VOLTAGE_DIVIDER_R1 10000
+#endif
+#ifndef VOLTAGE_DIVIDER_R2
+#define VOLTAGE_DIVIDER_R2 10000
+#endif
+#ifndef ADC_REF_VOLTAGE
+#define ADC_REF_VOLTAGE 2.8
+#endif
 
 // Assingment of pin to motor
 #define MOTOR0_PIN_PA6 // motor 0 back-left
@@ -614,8 +628,15 @@
 #define BATTERYPIN GPIO_Pin_5
 #define BATTERYPORT GPIOA
 #define BATTERY_ADC_CHANNEL ADC_Channel_5
-#define ADC_SCALEFACTOR 0.001364
-#define ADC_REF 1.17857f
+#ifndef VOLTAGE_DIVIDER_R1
+#define VOLTAGE_DIVIDER_R1 10000
+#endif
+#ifndef VOLTAGE_DIVIDER_R2
+#define VOLTAGE_DIVIDER_R2 10000
+#endif
+#ifndef ADC_REF_VOLTAGE
+#define ADC_REF_VOLTAGE 2.8
+#endif
 
 // Assingment of pin to motor
 #define MOTOR0_PIN_PA6 // motor 0 back-left
@@ -686,8 +707,15 @@
 #define BATTERYPIN GPIO_Pin_5
 #define BATTERYPORT GPIOA
 #define BATTERY_ADC_CHANNEL ADC_Channel_5
-#define ADC_SCALEFACTOR 0.002423
-#define ADC_REF 1.0f
+#ifndef VOLTAGE_DIVIDER_R1
+#define VOLTAGE_DIVIDER_R1 2000
+#endif
+#ifndef VOLTAGE_DIVIDER_R2
+#define VOLTAGE_DIVIDER_R2 1000
+#endif
+#ifndef ADC_REF_VOLTAGE
+#define ADC_REF_VOLTAGE 3.3
+#endif
 
 // MOTOR PINS
 #define MOTOR0_PIN_PA7
@@ -755,12 +783,19 @@
 #endif
 
 //VOLTAGE DIVIDER
-//#define DISABLE_LVC								//todo:port adc functions to f4
+//#define DISABLE_LVC
 #define BATTERYPIN GPIO_Pin_2
 #define BATTERYPORT GPIOC
 #define BATTERY_ADC_CHANNEL ADC_Channel_12
-#define ADC_SCALEFACTOR 0.002423
-#define ADC_REF 1.0f
+#ifndef VOLTAGE_DIVIDER_R1
+#define VOLTAGE_DIVIDER_R1 4700
+#endif
+#ifndef VOLTAGE_DIVIDER_R2
+#define VOLTAGE_DIVIDER_R2 2200
+#endif
+#ifndef ADC_REF_VOLTAGE
+#define ADC_REF_VOLTAGE 3.3
+#endif
 
 // MOTOR PINS
 #define MOTOR0_PIN_PB0
