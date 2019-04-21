@@ -437,6 +437,7 @@
 #define LED2_INVERT
 
 //I2C & GYRO
+#define USE_HARDWARE_I2C
 #define HW_I2C_SPEED_FAST2
 #define HW_I2C_PINS_PA910
 #define I2C_SDAPIN GPIO_Pin_10
@@ -678,6 +679,7 @@
 #define LED2PORT GPIOA
 
 //I2C & GYRO
+#define USE_HARDWARE_I2C
 #define HW_I2C_SPEED_FAST2
 #define HW_I2C_PINS_PA910
 #define I2C_SDAPIN GPIO_Pin_10

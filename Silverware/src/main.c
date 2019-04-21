@@ -186,8 +186,9 @@ clk_init();
         //gyro not found   
 		failloop(4);
 	}
-	gyro_cal();
-	adc_init();
+gyro_cal();
+adc_init();
+		
 //set always on channel to on
 aux[CH_ON] = 1;	
 	
@@ -211,7 +212,7 @@ aux[CH_AUX1] = 1;
 
 int count = 0;
 delay (1000);	
-while ( count < 5000 )
+while ( count < 5000 )	
 {
 	float bootadc = adc_read(0)*vreffilt;
 	lpf ( &vreffilt , adc_read(1)  , 0.9968f);
@@ -232,6 +233,7 @@ for ( int i = 6 ; i > 0 ; i--)
 #else
 		lipo_cell_count = (float)LIPO_CELL_COUNT;
 #endif
+float vbattfilt_corr = 4.2f * (float)lipo_cell_count;
 
 
 #ifdef RX_BAYANG_BLE_APP
@@ -245,7 +247,6 @@ for ( int i = 6 ; i > 0 ; i--)
 // infinite loop
 if ( vbattfilt/(float)lipo_cell_count < 3.3f) failloop(2);
 #endif
-
 
 
 //	gyro_cal();						//temp move further up to bandaid a conflict bug
@@ -343,7 +344,7 @@ if ( liberror )
 		// ( or they can use a single filter)		
 		lpf ( &thrfilt , thrsum , 0.9968f);	// 0.5 sec at 1.6ms loop time	
 
-        float vbattfilt_corr = 4.2f * (float)lipo_cell_count;
+
         // li-ion battery model compensation time decay ( 18 seconds )
         lpf ( &vbattfilt_corr , vbattfilt , FILTERCALC( 1000 , 18000e3) );
 	
