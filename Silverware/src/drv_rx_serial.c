@@ -62,9 +62,8 @@ void usart_invert(void)
         // Inverter control line, set low
         GPIO_ResetBits(USART_INVERTER_PORT, USART_INVERTER_PIN);
         #endif  
-		#endif
-	#ifdef F0
-				USART_InvPinCmd(SERIAL_RX_USART, USART_InvPin_Rx|USART_InvPin_Tx , ENABLE );
+	#else
+	// do nothing here, usart swap command in usart init
 	#endif
 }
 
@@ -105,9 +104,14 @@ void usart_rx_init(void)
     USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
     USART_InitStructure.USART_Mode = USART_Mode_Rx ;//USART_Mode_Rx | USART_Mode_Tx;
     USART_Init(SERIAL_RX_USART, &USART_InitStructure);
+#ifdef F0
+#ifdef INVERT_UART
+		USART_InvPinCmd(SERIAL_RX_USART, USART_InvPin_Rx|USART_InvPin_Tx , ENABLE );
+#endif
 // swap rx/tx pins - available on F0 targets
 #ifdef F0_USART_PINSWAP
     USART_SWAPPinCmd( SERIAL_RX_USART, ENABLE);
+#endif
 #endif
     USART_ITConfig(SERIAL_RX_USART, USART_IT_RXNE, ENABLE);
     USART_Cmd(SERIAL_RX_USART, ENABLE);
