@@ -70,6 +70,7 @@ void sixaxis_init( void)
 //Initialize SPI
 	spi_gyro_init();
 //Initialize Gyro
+	uint8_t test_id = MPU6XXX_get_id(117);
 	MPU6XXX_write(MPU_RA_PWR_MGMT_1, MPU_BIT_H_RESET);  //reg 107 soft reset
 	delay(150);
 	MPU6XXX_write(MPU_RA_PWR_MGMT_1, MPU_CLK_SEL_PLLGYROZ);  //reg 107 set pll clock to 3 Z axis reference
@@ -113,7 +114,7 @@ int sixaxis_check( void)
 	#ifndef DISABLE_GYRO_CHECK
 	// read "who am I" register
 	#ifdef F405
-	int id = spi_transfer_byte(117); //this doesn't work ... just returns the sent value
+	uint8_t id = MPU6XXX_get_id(117);  //this doesn't work ... just returns the sent value
 	#endif
 	#ifdef F0
 	int id = i2c_readreg( 117 );

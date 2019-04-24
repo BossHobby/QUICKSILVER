@@ -102,9 +102,9 @@ void adc_init(void)
 //gpio struct  
 	{
   GPIO_InitTypeDef    GPIO_InitStructure;
-  GPIO_InitStructure.GPIO_Pin = BATTERYPIN ;
+  GPIO_InitStructure.GPIO_Pin = BATTERYPIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(BATTERYPORT, &GPIO_InitStructure);
 	}
 	

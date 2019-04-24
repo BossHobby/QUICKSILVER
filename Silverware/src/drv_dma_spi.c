@@ -1,6 +1,7 @@
 #include "project.h"
 #include <stdio.h>
 #include "config.h"
+#include "drv_time.h"
 
 
 
@@ -12,8 +13,7 @@ void spi_gyro_init(void)
 {
 // RCC Clock Setting
 //RCC_AHB1PeriphClockCmd( RCC_AHB1Periph_DMA2, ENABLE);
-RCC_APB2PeriphClockCmd( RCC_APB2Periph_SPI1, ENABLE);  //maybe not turn this on yet but use disable routine before struct?
-
+//RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE); this clock is already on from gpio driver
 //*********************GPIO**************************************	
 	
 // GPIO & Alternate Function Setting
@@ -24,6 +24,7 @@ GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+GPIO_Init(MPU6XXX_SPI_PORT, &GPIO_InitStructure);
 // Chip Select GPIO
 GPIO_InitStructure.GPIO_Pin = MPU6XXX_NSS_PIN;
 GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
@@ -31,11 +32,10 @@ GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 GPIO_Init(MPU6XXX_SPI_PORT, &GPIO_InitStructure);
 
 // Interrupt GPIO	
-GPIO_InitTypeDef    GPIO_INT_InitStructure;
 GPIO_InitStructure.GPIO_Pin = MPU6XXX_INT_PIN;
 GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
 GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-GPIO_Init(MPU6XXX_INT_PORT, &GPIO_INT_InitStructure);
+GPIO_Init(MPU6XXX_INT_PORT, &GPIO_InitStructure);
 
 // Chip Select Set High
 GPIO_SetBits(MPU6XXX_SPI_PORT, MPU6XXX_NSS_PIN);
@@ -43,13 +43,13 @@ GPIO_SetBits(MPU6XXX_SPI_PORT, MPU6XXX_NSS_PIN);
 // TODO: GPIO Listen to interrupt pin, set up interrupt handler, ect
  
 // Connect SPI pins to AF_SPI1
-GPIO_PinAFConfig(MPU6XXX_SPI_PORT, MPU6XXX_SCLK_PIN, MPU6XXX_SPI_AF); //SCLK
-GPIO_PinAFConfig(MPU6XXX_SPI_PORT, MPU6XXX_MISO_PIN, MPU6XXX_SPI_AF); //MISO
-GPIO_PinAFConfig(MPU6XXX_SPI_PORT, MPU6XXX_MOSI_PIN, MPU6XXX_SPI_AF); //MOSI
+GPIO_PinAFConfig(MPU6XXX_SPI_PORT, MPU6XXX_SCLK_PINSOURCE, MPU6XXX_SPI_AF); //SCLK
+GPIO_PinAFConfig(MPU6XXX_SPI_PORT, MPU6XXX_MISO_PINSOURCE, MPU6XXX_SPI_AF); //MISO
+GPIO_PinAFConfig(MPU6XXX_SPI_PORT, MPU6XXX_MOSI_PINSOURCE, MPU6XXX_SPI_AF); //MOSI
 
 	
 //*********************SPI***************************************		
-
+RCC_APB2PeriphClockCmd( RCC_APB2Periph_SPI1, ENABLE);
 // SPI Config
 SPI_I2S_DeInit(MPU6XXX_SPI_INSTANCE);
 SPI_InitTypeDef SPI_InitStructure;
@@ -66,7 +66,7 @@ SPI_Init(MPU6XXX_SPI_INSTANCE, &SPI_InitStructure);
 SPI_Cmd(MPU6XXX_SPI_INSTANCE, ENABLE);
 
 while(SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET) ;
-//SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
+SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
 }
 
 
@@ -84,10 +84,9 @@ void spi_disable(void)
 // Blocking Transmit/Read function
 uint8_t spi_transfer_byte(uint8_t data)  //blocking send using spi to configure gyro
 {
-  uint8_t byte = data;
+  uint8_t byte[2];
+	byte[0] = data;
   uint16_t spiTimeout;
-	
-	spi_enable();
 	
   spiTimeout = 0x1000;
   while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
@@ -104,9 +103,10 @@ uint8_t spi_transfer_byte(uint8_t data)  //blocking send using spi to configure 
     if ((spiTimeout--) == 0)
       return 0;
   }
+
   // Pack received data into the same variable
-  data = (uint8_t)SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
-  return byte;
+  byte[1] = (uint8_t)SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
+  return byte[1];
 
 }
 
@@ -120,7 +120,34 @@ void MPU6XXX_write(uint8_t reg, uint8_t data)  //TODO:  deal with fail spi timeo
   spi_disable();
 }
 
+uint8_t MPU6XXX_get_id(uint8_t reg)
+{
+	spi_enable();
+	uint8_t byte[2];
+	byte[0] = reg;
+  uint16_t spiTimeout;
+	
+  spiTimeout = 0x1000;
+  while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
+  {
+    if ((spiTimeout--) == 0)
+      return 0;
+  }
+	// Send data
+  SPI_I2S_SendData(MPU6XXX_SPI_INSTANCE, reg);
 
+  spiTimeout = 0x1000;
+  while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_RXNE) == RESET)
+  {
+    if ((spiTimeout--) == 0)
+      return 0;
+  }
+
+  // Pack received data into the same variable
+  byte[1] = (uint8_t)SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
+  return byte[1];
+	spi_disable();
+}
 
 // Initialize DMA transmit and receive streams to SPI and bring SPI up to full speed for bulk transfer 
 void dma_spi_init(void)
