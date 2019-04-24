@@ -33,7 +33,7 @@ THE SOFTWARE.
 #include "drv_serial.h"
 
 #include "drv_i2c.h"
-
+#include "drv_dma_spi.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -66,35 +66,45 @@ extern debug_type debug;
 
 void sixaxis_init( void)
 {
-// gyro soft reset
+#ifdef F405
+//Initialize SPI
+	spi_gyro_init();
+//Initialize Gyro
+	MPU6XXX_write(MPU_RA_PWR_MGMT_1, MPU_BIT_H_RESET);  //reg 107 soft reset
+	delay(150);
+	MPU6XXX_write(MPU_RA_PWR_MGMT_1, MPU_CLK_SEL_PLLGYROZ);  //reg 107 set pll clock to 3 Z axis reference
+  MPU6XXX_write(MPU_RA_USER_CTRL, MPU_BIT_I2C_IF_DIS);  //reg 106 to 16 enabling spi
+  MPU6XXX_write(MPU_RA_PWR_MGMT_2, 0x00);		//reg 108 disable standbye mode to 0
+  MPU6XXX_write(MPU_RA_SMPLRT_DIV, 0x00);		//reg 25 sample rate divider to 0
+  MPU6XXX_write(MPU_RA_CONFIG, MPU_BITS_DLPF_CFG_256HZ);		//reg 26 dlpf to 0 - 8khz
+  MPU6XXX_write(MPU_RA_ACCEL_CONFIG, MPU_BITS_FS_16G);		//reg 28 accel scale to 16G
+  MPU6XXX_write(MPU_RA_GYRO_CONFIG, MPU_BITS_FS_2000DPS);		//reg 27 gyro scale to 2000deg/s
+  MPU6XXX_write(MPU_RA_INT_ENABLE, 0x01);		//reg 56 data ready enable interrupt to 1
+	
+// Speed up SPI Clock after config	
 	
 	
+	
+#endif	
+	
+#ifdef F0	
+// gyro soft reset	
 	i2c_writereg(  107 , 128);
-	 
- delay(40000);
-	
-
+	delay(40000);
 // set pll to 1, clear sleep bit old type gyro (mpu-6050)	
 	i2c_writereg(  107 , 1);
-	
 	int newboard = !(0x68 == i2c_readreg(117) );
-
-    delay(100);
-	
-	i2c_writereg(  28, B00011000);	// 16G scale
-
-    
+	delay(100);
+// set accelerometer scale to 16G
+	i2c_writereg(  28, B00011000);   
 // acc lpf for the new gyro type
 //       0-6 ( same as gyro)
 	if (newboard) i2c_writereg( 29, ACC_LOW_PASS_FILTER);
-	
 // gyro scale 2000 deg (FS =3)
-
 	i2c_writereg( 27 , 24);
-	
 // Gyro DLPF low pass filter
-
 	i2c_writereg( 26 , GYRO_LOW_PASS_FILTER);
+#endif
 }
 
 
@@ -102,8 +112,12 @@ int sixaxis_check( void)
 {
 	#ifndef DISABLE_GYRO_CHECK
 	// read "who am I" register
+	#ifdef F405
+	int id = spi_transfer_byte(117); //this doesn't work ... just returns the sent value
+	#endif
+	#ifdef F0
 	int id = i2c_readreg( 117 );
-
+	#endif
 	#ifdef DEBUG
 	debug.gyroid = id;
 	#endif

@@ -1,5 +1,7 @@
 #include "project.h"
+#include <stdio.h>
 #include "config.h"
+
 
 
 
@@ -9,7 +11,7 @@
 void spi_gyro_init(void)
 {
 // RCC Clock Setting
-RCC_AHB1PeriphClockCmd( RCC_AHB1Periph_DMA2, ENABLE);
+//RCC_AHB1PeriphClockCmd( RCC_AHB1Periph_DMA2, ENABLE);
 RCC_APB2PeriphClockCmd( RCC_APB2Periph_SPI1, ENABLE);  //maybe not turn this on yet but use disable routine before struct?
 
 //*********************GPIO**************************************	
@@ -64,7 +66,7 @@ SPI_Init(MPU6XXX_SPI_INSTANCE, &SPI_InitStructure);
 SPI_Cmd(MPU6XXX_SPI_INSTANCE, ENABLE);
 
 while(SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET) ;
-SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
+//SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
 }
 
 
@@ -79,36 +81,44 @@ void spi_disable(void)
 }
 
 
-// Blocking Transmit/Read function to Configure Gyro Registers
-uint8_t SPI_transfer_byte(uint8_t data)  //blocking send using spi to configure gyro
+// Blocking Transmit/Read function
+uint8_t spi_transfer_byte(uint8_t data)  //blocking send using spi to configure gyro
 {
   uint8_t byte = data;
   uint16_t spiTimeout;
-
+	
+	spi_enable();
+	
   spiTimeout = 0x1000;
-
   while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
   {
     if ((spiTimeout--) == 0)
       return 0;
   }
-
+	// Send data
   SPI_I2S_SendData(MPU6XXX_SPI_INSTANCE, data);
 
   spiTimeout = 0x1000;
-
   while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_RXNE) == RESET)
   {
     if ((spiTimeout--) == 0)
       return 0;
   }
-  // Pack received data into the same array
+  // Pack received data into the same variable
   data = (uint8_t)SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
+  return byte;
 
-  return byte;	
 }
 
 
+// Function to write gyro registers
+void MPU6XXX_write(uint8_t reg, uint8_t data)  //TODO:  deal with fail spi timeout return 0 case
+{
+  spi_enable();
+  spi_transfer_byte(reg);
+  spi_transfer_byte(data);
+  spi_disable();
+}
 
 
 

@@ -774,12 +774,12 @@
 //#define I2C_SCLPORT GPIOA
 //#define I2C_GYRO_ADDRESS 0x68
 //#define SOFTI2C_GYRO_ADDRESS 0x69
-//#define GYRO_ID_1 0x68
-//#define GYRO_ID_2 0x98 // new id
+#define GYRO_ID_1 0x68
+//#define GYRO_ID_2 0x73
 //#define GYRO_ID_3 0x78
 //#define GYRO_ID_4 0x72 
 #define SENSOR_ROTATE_90_CCW
-#define DISABLE_GYRO_CHECK
+//#define DISABLE_GYRO_CHECK
 
 
 // SPI PINS DEFINITONS & RADIO
