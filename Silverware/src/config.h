@@ -757,19 +757,8 @@
 #define LED2_INVERT
 
 //SPI, I2C & GYRO
-#define MPU6XXX_SPI_AF GPIO_AF_SPI1
-#define MPU6XXX_SPI_INSTANCE SPI1
-#define MPU6XXX_SPI_PORT GPIOA
-#define MPU6XXX_SCLK_PINSOURCE GPIO_PinSource5
-#define MPU6XXX_SCLK_PIN GPIO_Pin_5
-#define MPU6XXX_MISO_PINSOURCE GPIO_PinSource6
-#define MPU6XXX_MISO_PIN GPIO_Pin_6
-#define MPU6XXX_MOSI_PINSOURCE GPIO_PinSource7
-#define MPU6XXX_MOSI_PIN GPIO_Pin_7
-#define MPU6XXX_NSS_PINSOURCE GPIO_PinSource4
-#define MPU6XXX_NSS_PIN GPIO_Pin_4
-#define MPU6XXX_INT_PIN GPIO_Pin_4
-#define MPU6XXX_INT_PORT GPIOC
+#define MPU6XXX_SPI1
+
 
 #define USE_DUMMY_I2C									//todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
 //#define I2C_SDAPIN GPIO_Pin_10

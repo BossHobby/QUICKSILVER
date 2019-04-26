@@ -4,16 +4,30 @@
 #include "drv_time.h"
 
 
-
-
-
+#ifdef MPU6XXX_SPI1
+#define MPU6XXX_SPI_INSTANCE SPI1
+#define MPU6XXX_SPI_PORT GPIOA
+#define MPU6XXX_SCLK_PINSOURCE GPIO_PinSource5
+#define MPU6XXX_SCLK_PIN GPIO_Pin_5
+#define MPU6XXX_MISO_PINSOURCE GPIO_PinSource6
+#define MPU6XXX_MISO_PIN GPIO_Pin_6
+#define MPU6XXX_MOSI_PINSOURCE GPIO_PinSource7
+#define MPU6XXX_MOSI_PIN GPIO_Pin_7
+#define MPU6XXX_NSS_PINSOURCE GPIO_PinSource4
+#define MPU6XXX_NSS_PIN GPIO_Pin_4
+#define MPU6XXX_INT_PIN GPIO_Pin_4
+#define MPU6XXX_INT_PORT GPIOC
+#define MPU6XXX_SPI_AF GPIO_AF_SPI1
+#endif
 
 //  Initialize SPI Connection to Gyro
 void spi_gyro_init(void)
 {
 // RCC Clock Setting
-//RCC_AHB1PeriphClockCmd( RCC_AHB1Periph_DMA2, ENABLE);
-//RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE); this clock is already on from gpio driver
+//RCC_AHB1PeriphClockCmd( RCC_AHB1Periph_DMA2, ENABLE);	// this doesnt need to be turned on till DMA is coded
+//RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE); //this clock is already on from gpio driver
+	
+	
 //*********************GPIO**************************************	
 	
 // GPIO & Alternate Function Setting
@@ -24,7 +38,8 @@ GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
-GPIO_Init(MPU6XXX_SPI_PORT, &GPIO_InitStructure);
+GPIO_Init(MPU6XXX_SPI_PORT, &GPIO_InitStructure);	
+	
 // Chip Select GPIO
 GPIO_InitStructure.GPIO_Pin = MPU6XXX_NSS_PIN;
 GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
@@ -48,7 +63,10 @@ GPIO_PinAFConfig(MPU6XXX_SPI_PORT, MPU6XXX_MISO_PINSOURCE, MPU6XXX_SPI_AF); //MI
 GPIO_PinAFConfig(MPU6XXX_SPI_PORT, MPU6XXX_MOSI_PINSOURCE, MPU6XXX_SPI_AF); //MOSI
 
 	
-//*********************SPI***************************************		
+//*********************SPI***************************************	
+
+
+//SPI1 to APB2 bus clock																					//TODO  Make this populate with defines for switching SPI instances
 RCC_APB2PeriphClockCmd( RCC_APB2Periph_SPI1, ENABLE);
 // SPI Config
 SPI_I2S_DeInit(MPU6XXX_SPI_INSTANCE);
@@ -65,9 +83,12 @@ SPI_InitStructure.SPI_CRCPolynomial = 7;
 SPI_Init(MPU6XXX_SPI_INSTANCE, &SPI_InitStructure);
 SPI_Cmd(MPU6XXX_SPI_INSTANCE, ENABLE);
 
+// Dummy read to clear receive buffer
 while(SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET) ;
 SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
 }
+
+//*********************FUNCTIONS************************************
 
 
 // Chip Select functions
@@ -82,72 +103,64 @@ void spi_disable(void)
 
 
 // Blocking Transmit/Read function
-uint8_t spi_transfer_byte(uint8_t data)  //blocking send using spi to configure gyro
+uint8_t spi_transfer_byte(uint8_t data)
 {
-  uint8_t byte[2];
-	byte[0] = data;
   uint16_t spiTimeout;
 	
+	//check if transmit buffer empty flag is set
   spiTimeout = 0x1000;
   while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
   {
     if ((spiTimeout--) == 0)
-      return 0;
+      return 1;
   }
+	
 	// Send data
   SPI_I2S_SendData(MPU6XXX_SPI_INSTANCE, data);
 
-  spiTimeout = 0x1000;
+	//wait to receive something ... timeout if nothing comes in
+  spiTimeout = 0x1000;																
   while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_RXNE) == RESET)
   {
     if ((spiTimeout--) == 0)
-      return 0;
+      return 1;
   }
 
   // Pack received data into the same variable
-  byte[1] = (uint8_t)SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
-  return byte[1];
-
+  return SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
 }
 
 
 // Function to write gyro registers
-void MPU6XXX_write(uint8_t reg, uint8_t data)  //TODO:  deal with fail spi timeout return 0 case
+uint8_t MPU6XXX_write(uint8_t reg, uint8_t data)  //TODO:  deal with fail spi timeout return 0 case
 {
+	uint8_t stuff;
   spi_enable();
-  spi_transfer_byte(reg);
-  spi_transfer_byte(data);
+  stuff = spi_transfer_byte(reg | 0x00);
+	while (stuff == 1) return 1;
+  stuff = spi_transfer_byte(data);
+	while (stuff == 1)return 1;
   spi_disable();
+	return stuff;
 }
 
-uint8_t MPU6XXX_get_id(uint8_t reg)
+
+// Function to read gyro registers
+uint8_t MPU6XXX_read(uint8_t reg)  //TODO:  deal with fail spi timeout return 0 case
 {
-	spi_enable();
-	uint8_t byte[2];
-	byte[0] = reg;
-  uint16_t spiTimeout;
-	
-  spiTimeout = 0x1000;
-  while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
-  {
-    if ((spiTimeout--) == 0)
-      return 0;
-  }
-	// Send data
-  SPI_I2S_SendData(MPU6XXX_SPI_INSTANCE, reg);
-
-  spiTimeout = 0x1000;
-  while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_RXNE) == RESET)
-  {
-    if ((spiTimeout--) == 0)
-      return 0;
-  }
-
-  // Pack received data into the same variable
-  byte[1] = (uint8_t)SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
-  return byte[1];
-	spi_disable();
+	uint8_t stuff;
+  spi_enable();
+  stuff = spi_transfer_byte(reg | 0x80);
+	while (stuff == 1) return 1;
+  stuff = spi_transfer_byte(0x00);
+	while (stuff == 1)return 1;
+  spi_disable();
+	return stuff;
 }
+
+
+////////////////////////////////WORKING UP TO HERE SO FAR//////////////////////////////////////////////////////////////
+
 
 // Initialize DMA transmit and receive streams to SPI and bring SPI up to full speed for bulk transfer 
 void dma_spi_init(void)

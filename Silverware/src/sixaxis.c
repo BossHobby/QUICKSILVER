@@ -23,7 +23,7 @@ THE SOFTWARE.
 */
 
 
-
+#include "project.h"
 #include "binary.h"
 #include "sixaxis.h"
 #include "drv_time.h"
@@ -66,21 +66,23 @@ extern debug_type debug;
 
 void sixaxis_init( void)
 {
+
 #ifdef F405
 //Initialize SPI
+
 	spi_gyro_init();
 //Initialize Gyro
-	uint8_t test_id = MPU6XXX_get_id(117);
-	MPU6XXX_write(MPU_RA_PWR_MGMT_1, MPU_BIT_H_RESET);  //reg 107 soft reset
-	delay(150);
+	MPU6XXX_write(MPU_RA_PWR_MGMT_1, MPU_BIT_H_RESET);  //reg 107 soft reset  MPU_BIT_H_RESET
+	delay(5000);
 	MPU6XXX_write(MPU_RA_PWR_MGMT_1, MPU_CLK_SEL_PLLGYROZ);  //reg 107 set pll clock to 3 Z axis reference
   MPU6XXX_write(MPU_RA_USER_CTRL, MPU_BIT_I2C_IF_DIS);  //reg 106 to 16 enabling spi
   MPU6XXX_write(MPU_RA_PWR_MGMT_2, 0x00);		//reg 108 disable standbye mode to 0
+	delay(150);
   MPU6XXX_write(MPU_RA_SMPLRT_DIV, 0x00);		//reg 25 sample rate divider to 0
   MPU6XXX_write(MPU_RA_CONFIG, MPU_BITS_DLPF_CFG_256HZ);		//reg 26 dlpf to 0 - 8khz
   MPU6XXX_write(MPU_RA_ACCEL_CONFIG, MPU_BITS_FS_16G);		//reg 28 accel scale to 16G
-  MPU6XXX_write(MPU_RA_GYRO_CONFIG, MPU_BITS_FS_2000DPS);		//reg 27 gyro scale to 2000deg/s
-  MPU6XXX_write(MPU_RA_INT_ENABLE, 0x01);		//reg 56 data ready enable interrupt to 1
+	MPU6XXX_write(MPU_RA_GYRO_CONFIG, MPU_BITS_FS_2000DPS);		//reg 27 gyro scale to 2000deg/s
+	MPU6XXX_write(MPU_RA_INT_ENABLE, 0x01);		//reg 56 data ready enable interrupt to 1
 	
 // Speed up SPI Clock after config	
 	
@@ -114,7 +116,7 @@ int sixaxis_check( void)
 	#ifndef DISABLE_GYRO_CHECK
 	// read "who am I" register
 	#ifdef F405
-	uint8_t id = MPU6XXX_get_id(117);  //this doesn't work ... just returns the sent value
+	uint8_t id = MPU6XXX_read(MPU_RA_WHO_AM_I);
 	#endif
 	#ifdef F0
 	int id = i2c_readreg( 117 );
