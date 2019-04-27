@@ -73,21 +73,28 @@ void sixaxis_init( void)
 	spi_gyro_init();
 //Initialize Gyro
 	MPU6XXX_write(MPU_RA_PWR_MGMT_1, MPU_BIT_H_RESET);  //reg 107 soft reset  MPU_BIT_H_RESET
-	delay(5000);
-	MPU6XXX_write(MPU_RA_PWR_MGMT_1, MPU_CLK_SEL_PLLGYROZ);  //reg 107 set pll clock to 3 Z axis reference
+	delay(100000);
+	MPU6XXX_write(MPU_RA_SIGNAL_PATH_RESET, MPU_RESET_SIGNAL_PATHWAYS);
+	delay(100000);
+	MPU6XXX_write(MPU_RA_PWR_MGMT_1, MPU_CLK_SEL_PLLGYROX);  //reg 107 set pll clock to 1 for x axis reference
+	delay(100000);
   MPU6XXX_write(MPU_RA_USER_CTRL, MPU_BIT_I2C_IF_DIS);  //reg 106 to 16 enabling spi
-  MPU6XXX_write(MPU_RA_PWR_MGMT_2, 0x00);		//reg 108 disable standbye mode to 0
-	delay(150);
-  MPU6XXX_write(MPU_RA_SMPLRT_DIV, 0x00);		//reg 25 sample rate divider to 0
+	delay(1500);
+  MPU6XXX_write(MPU_RA_PWR_MGMT_2, MPU_BITS_STDBY_MODE_OFF);		//reg 108 disable standbye mode to 0
+	delay(1500);
+  MPU6XXX_write(MPU_RA_SMPLRT_DIV, MPU_BIT_SMPLRT_DIVIDER_OFF);		//reg 25 sample rate divider to 0
+	delay(1500);
   MPU6XXX_write(MPU_RA_CONFIG, MPU_BITS_DLPF_CFG_256HZ);		//reg 26 dlpf to 0 - 8khz
+	delay(1500);
   MPU6XXX_write(MPU_RA_ACCEL_CONFIG, MPU_BITS_FS_16G);		//reg 28 accel scale to 16G
+	delay(1500);
 	MPU6XXX_write(MPU_RA_GYRO_CONFIG, MPU_BITS_FS_2000DPS);		//reg 27 gyro scale to 2000deg/s
-	MPU6XXX_write(MPU_RA_INT_ENABLE, 0x01);		//reg 56 data ready enable interrupt to 1
+	delay(1500);
+	MPU6XXX_write(MPU_RA_INT_ENABLE, MPU_BIT_INT_STATUS_DATA);		//reg 56 data ready enable interrupt to 1
+	delay(1500);
 	
-// Speed up SPI Clock after config	
-	
-	
-	
+// Speed up SPI Clock to 20mhz after config	
+	spi_reset_prescaler();	
 #endif	
 	
 #ifdef F0	
@@ -147,11 +154,14 @@ float lpffilter2(float in, int num);
 
 void sixaxis_read(void)
 {
-	int data[16];
-	float gyronew[3];
-	
+int data[14];	
+float gyronew[3];	
+#ifdef F0	
 	i2c_readdata( 59 , data , 14 );
-		
+#endif
+#ifdef F405
+	MPU6XXX_read_data(59 , data , 14);
+#endif	
 #ifdef SENSOR_ROTATE_90_CW	         
         accel[0] = (int16_t) ((data[2] << 8) + data[3]);
         accel[1] = -(int16_t) ((data[0] << 8) + data[1]);

@@ -771,7 +771,7 @@
 //#define GYRO_ID_2 0x73
 //#define GYRO_ID_3 0x78
 //#define GYRO_ID_4 0x72 
-#define SENSOR_ROTATE_90_CCW
+//#define SENSOR_ROTATE_90_CCW
 //#define DISABLE_GYRO_CHECK
 
 

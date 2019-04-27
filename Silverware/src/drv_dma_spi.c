@@ -88,7 +88,21 @@ while(SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET) ;
 SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
 }
 
+
 //*********************FUNCTIONS************************************
+extern int liberror;   //tracks any failed spi reads or writes to trigger failloop
+
+// Reset spi prescaler to 20mhz
+void spi_reset_prescaler(void)
+{
+	SPI_Cmd(MPU6XXX_SPI_INSTANCE, DISABLE);
+  const uint16_t clearBRP = 0xFFC7;
+  uint16_t temp = MPU6XXX_SPI_INSTANCE->CR1;
+  temp &= clearBRP;
+  temp |= SPI_BaudRatePrescaler_2;	
+  MPU6XXX_SPI_INSTANCE->CR1 = temp;
+  SPI_Cmd(MPU6XXX_SPI_INSTANCE, ENABLE);	
+}
 
 
 // Chip Select functions
@@ -111,53 +125,63 @@ uint8_t spi_transfer_byte(uint8_t data)
   spiTimeout = 0x1000;
   while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
   {
-    if ((spiTimeout--) == 0)
-      return 1;
+    if ((spiTimeout--) == 0){
+			liberror++;										//liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
+			break;}
   }
 	
-	// Send data
+	// Send out data
   SPI_I2S_SendData(MPU6XXX_SPI_INSTANCE, data);
 
-	//wait to receive something ... timeout if nothing comes in
+	//wait to receive something ... timeout if nothing comes in 
   spiTimeout = 0x1000;																
   while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_RXNE) == RESET)
   {
-    if ((spiTimeout--) == 0)
-      return 1;
+    if ((spiTimeout--) == 0){
+			liberror++;										//liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
+			break;}
   }
 
-  // Pack received data into the same variable
+  // Return back received data in SPIx->DR
   return SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
 }
 
 
 // Function to write gyro registers
-uint8_t MPU6XXX_write(uint8_t reg, uint8_t data)  //TODO:  deal with fail spi timeout return 0 case
+uint8_t MPU6XXX_write(uint8_t reg, uint8_t data)
 {
 	uint8_t stuff;
   spi_enable();
   stuff = spi_transfer_byte(reg | 0x00);
-	while (stuff == 1) return 1;
   stuff = spi_transfer_byte(data);
-	while (stuff == 1)return 1;
   spi_disable();
 	return stuff;
 }
 
 
 // Function to read gyro registers
-uint8_t MPU6XXX_read(uint8_t reg)  //TODO:  deal with fail spi timeout return 0 case
+uint8_t MPU6XXX_read(uint8_t reg)
 {
 	uint8_t stuff;
   spi_enable();
-  stuff = spi_transfer_byte(reg | 0x80);
-	while (stuff == 1) return 1;
+  spi_transfer_byte(reg | 0x80);
   stuff = spi_transfer_byte(0x00);
-	while (stuff == 1)return 1;
   spi_disable();
 	return stuff;
 }
 
+
+//Function to read gyro motion data registers
+void MPU6XXX_read_data(uint8_t reg, int *data, int size)
+{
+	spi_enable();
+	spi_transfer_byte(reg | 0x80);
+	for (int i = 0; i < size; i++)
+		{	
+		data[i] = spi_transfer_byte(0x00);
+		}
+	spi_disable();
+}
 
 ////////////////////////////////WORKING UP TO HERE SO FAR//////////////////////////////////////////////////////////////
 
