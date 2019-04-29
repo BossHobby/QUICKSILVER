@@ -74,7 +74,6 @@ THE SOFTWARE.
 debug_type debug;
 #endif
 
-unsigned int yeeOldTest = 0;
 
 
 
@@ -196,7 +195,7 @@ aux[CH_ON] = 1;
 aux[CH_AUX1] = 1;
 #endif
     
-    
+   
  #ifdef FLASH_SAVE1
 // read pid identifier for values in file pid.c
     flash_hard_coded_pid_identifier();

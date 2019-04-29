@@ -96,6 +96,29 @@ extern int liberror;   //tracks any failed spi reads or writes to trigger faillo
 void spi_reset_prescaler(void)
 {
 	SPI_Cmd(MPU6XXX_SPI_INSTANCE, DISABLE);
+// SPI Config
+SPI_I2S_DeInit(MPU6XXX_SPI_INSTANCE);
+SPI_InitTypeDef SPI_InitStructure;
+SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
+SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
+SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
+SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
+SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
+SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
+SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
+SPI_InitStructure.SPI_CRCPolynomial = 7;
+SPI_Init(MPU6XXX_SPI_INSTANCE, &SPI_InitStructure);	
+	SPI_Cmd(MPU6XXX_SPI_INSTANCE, ENABLE);
+	// Dummy read to clear receive buffer - just in case
+	while(SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET) ;
+	SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
+}
+
+
+void spi_reset_prescaler2(void)
+{
+	SPI_Cmd(MPU6XXX_SPI_INSTANCE, DISABLE);
   const uint16_t clearBRP = 0xFFC7;
   uint16_t temp = MPU6XXX_SPI_INSTANCE->CR1;
   temp &= clearBRP;
