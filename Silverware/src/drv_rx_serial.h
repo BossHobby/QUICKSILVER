@@ -71,4 +71,15 @@ void 	SBUS_USART_ISR(void);
 #endif
 
 
-
+#if defined (UART_3) && defined (F405)
+#ifdef USART3_PC11PC10
+	#define SERIAL_RX_USART USART3
+	#define SERIAL_RX_SPEKBIND_BINDTOOL_PIN GPIO_Pin_10
+	#define SERIAL_RX_SPEKBIND_RX_PIN GPIO_Pin_11
+	#define SERIAL_RX_PIN GPIO_Pin_11
+	#define SERIAL_RX_PORT GPIOC
+	#define SERIAL_RX_SOURCE GPIO_PinSource11
+	#define SERIAL_RX_CHANNEL GPIO_AF_USART3
+	#define SERIAL_USART_IRQ USART3_IRQn
+#endif
+#endif

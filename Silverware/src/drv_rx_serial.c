@@ -44,6 +44,12 @@ RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
 RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
 #endif
 #endif
+
+#if defined (UART_3) && defined (F405)
+#ifdef USART3_PC11PC10
+RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
+#endif
+#endif
 }
 
 
