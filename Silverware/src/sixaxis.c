@@ -442,8 +442,12 @@ while ( time - timestart < CAL_TIME  &&  time - timemax < 15e6 )
 		lastlooptime = time;
 		if ( looptime == 0 ) looptime = 1;
 
+#ifdef F0
 	i2c_readdata(  67 , data , 6 );	
-
+#endif
+#ifdef F405
+	MPU6XXX_read_data(  67 , data , 6 );	
+#endif
 			
 	gyro[1] = (int16_t) ((data[0]<<8) + data[1]);
 	gyro[0] = (int16_t) ((data[2]<<8) + data[3]);
