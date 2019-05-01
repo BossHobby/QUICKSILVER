@@ -140,74 +140,91 @@ static void setup_4way_external_interrupt(void);
 #endif									   
 int random_seed = 0;
 
+void systemResetToBootloader(void)
+{
+    *((uint32_t *)0x2001FFFC) = 0xDEADBEEF; // 128KB SRAM STM32F4XX
+    NVIC_SystemReset();
+}
+
+void(*bootJump)(void);
+
+void force_dfu(void)
+{
+    __set_MSP(*((uint32_t *)0x1FFF0000));
+		bootJump = (void(*)(void))(*((uint32_t *) 0x1FFF0004));
+    bootJump();
+    while (1);   
+}
+
+void check_dfu_request(void)
+{
+	if (*((uint32_t *)0x2001FFFC) == 0xDEADBEEF)
+	{
+
+  *((uint32_t *)0x2001FFFC) = 0x0;
+	force_dfu();
+	}
+}
+
+
 int main(void)
 {
-
-	delay(1000);
-
-
+check_dfu_request();
+delay(1000);
+	
 #ifdef ENABLE_OVERCLOCK
 clk_init();
 #endif
 	
-  gpio_init();	
-  ledon(255);									//Turn on LED during boot so that if a delay is used as part of using programming pins for other functions, the FC does not appear inactive while programming times out
-	spi_init();
-	
-  time_init();
-	usart_invert();
+gpio_init();	
+ledon(255);									//Turn on LED during boot so that if a delay is used as part of using programming pins for other functions, the FC does not appear inactive while programming times out
+spi_init();	
+time_init();
+usart_invert();
 
 #if defined(RX_DSMX_2048) || defined(RX_DSM2_1024)    
-		rx_spektrum_bind(); 
+rx_spektrum_bind(); 
 #endif
 	
-	
-	delay(100000);
+delay(100000);
 		
-	i2c_init();	
+i2c_init();	
+pwm_init();
+pwm_set( MOTOR_BL , 0);
+pwm_set( MOTOR_FL , 0);	 
+pwm_set( MOTOR_FR , 0); 
+pwm_set( MOTOR_BR , 0); 
+sixaxis_init();
 	
-	pwm_init();
+if ( sixaxis_check() ) 
+{
 
-	pwm_set( MOTOR_BL , 0);
-	pwm_set( MOTOR_FL , 0);	 
-	pwm_set( MOTOR_FR , 0); 
-	pwm_set( MOTOR_BR , 0); 
+}
+else 
+{
+//gyro not found   
+failloop(4);
+}
 
-
-	sixaxis_init();
-	
-	if ( sixaxis_check() ) 
-	{
-		
-	}
-	else 
-	{
-        //gyro not found   
-		failloop(4);
-	}
-gyro_cal();
 adc_init();
-		
+
 //set always on channel to on
-aux[CH_ON] = 1;	
+aux[CH_ON] = 1;
 	
 #ifdef AUX1_START_ON
 aux[CH_AUX1] = 1;
 #endif
     
-   
+  
  #ifdef FLASH_SAVE1
 // read pid identifier for values in file pid.c
-    flash_hard_coded_pid_identifier();
+flash_hard_coded_pid_identifier();
 
 // load flash saved variables
-    flash_load( );
+flash_load( );
 #endif
 
-
-	
-	rx_init();
-
+rx_init();
 
 int count = 0;
 delay (1000);	
@@ -247,8 +264,7 @@ float vbattfilt_corr = 4.2f * (float)lipo_cell_count;
 if ( vbattfilt/(float)lipo_cell_count < 3.3f) failloop(2);
 #endif
 
-
-//	gyro_cal();						//temp move further up to bandaid a conflict bug
+gyro_cal();
 
 extern void rgb_init( void);
 rgb_init();
@@ -256,8 +272,6 @@ rgb_init();
 #ifdef SERIAL_ENABLE
 serial_init();
 #endif
-
-
 
 imu_init();
 
@@ -276,9 +290,7 @@ if ( liberror )
 }
 
 
-
  lastlooptime = gettime();
-
 
 //
 //

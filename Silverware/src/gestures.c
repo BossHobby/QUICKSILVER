@@ -78,7 +78,11 @@ void gestures( void)
 							}    
 			
             if (command == GESTURE_RRR)
-              {								
+              {		
+								 #ifndef SWITCHABLE_FEATURE_1
+									extern void systemResetToBootloader(void);
+								 #endif
+									systemResetToBootloader();
 								 #ifdef SWITCHABLE_FEATURE_1
                  extern int flash_feature_1;
                  flash_feature_1=!flash_feature_1;
