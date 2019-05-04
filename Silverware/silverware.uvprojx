@@ -756,6 +756,11 @@
               <FileType>5</FileType>
               <FilePath>.\src\drv_dma_spi.h</FilePath>
             </File>
+            <File>
+              <FileName>drv_dshot_dma_f4.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\drv_dshot_dma_f4.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -2147,6 +2152,11 @@
               <FileName>drv_dma_spi.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\src\drv_dma_spi.h</FilePath>
+            </File>
+            <File>
+              <FileName>drv_dshot_dma_f4.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\drv_dshot_dma_f4.c</FilePath>
             </File>
           </Files>
         </Group>

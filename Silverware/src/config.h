@@ -12,8 +12,8 @@
 //#define E011
 //#define H8mini_blue_board
 //#define Alienwhoop_ZERO  
-//#define CC3D_REVO_F4
-#define Alienwhoop_V2
+#define CC3D_REVO_F4
+//#define Alienwhoop_V2
 
 
 
@@ -84,8 +84,8 @@
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 
 // *************Serial Receiver UART Selection																		//todo:  In drv_rc_serial.c and .h:  uart 1 is set up for F0, uart 1 and 3 are set up for f4.  Need to add inverter GPIO control pin for uart 3.  So plenty more to do here
-//#define UART_1
-#define UART_2
+#define UART_1
+//#define UART_2
 //#define UART_3
 
 // *************Serial Receiver Inversion Selection
@@ -736,8 +736,8 @@
 #define MOTOR3_PIN_PA6
 
 // pwm pin initialization
-#define USE_PWM_DRIVER
-//#define USE_DSHOT_DMA_DRIVER
+//#define USE_PWM_DRIVER
+#define USE_DSHOT_DMA_DRIVER
 #define PWM_PA4
 #define PWM_PA6
 #define PWM_PA7
@@ -796,7 +796,7 @@
 #endif
 
 //VOLTAGE DIVIDER
-//#define DISABLE_LVC
+#define DISABLE_LVC
 #define BATTERYPIN GPIO_Pin_2
 #define BATTERYPORT GPIOC
 #define BATTERY_ADC_CHANNEL ADC_Channel_12
@@ -817,9 +817,9 @@
 #define MOTOR3_PIN_PA2
 
 // pwm pin initialization
-#define USE_PWM_DRIVER
+//#define USE_PWM_DRIVER
 //#define USE_ESC_DRIVER       //todo:  evaluate need for this to stay if focused on quadcopters
-//#define USE_DSHOT_DMA_DRIVER  
+#define USE_DSHOT_DMA_DRIVER  
 //#define USE_DSHOT_DRIVER_BETA  //todo:  probably eliminate this completely
 
 //#define PWM_PA0

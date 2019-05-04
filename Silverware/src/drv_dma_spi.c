@@ -3,6 +3,7 @@
 #include "config.h"
 #include "drv_time.h"
 
+#ifdef F405
 
 #ifdef MPU6XXX_SPI1
 #define MPU6XXX_SPI_INSTANCE SPI1
@@ -241,6 +242,6 @@ DMA_Init(DMA2_Stream3, &DMA_InitStructure);
 // IRQ handler
 
 
-
+#endif
 
 

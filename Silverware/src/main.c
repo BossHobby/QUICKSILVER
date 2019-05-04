@@ -169,7 +169,7 @@ void check_dfu_request(void)
 
 int main(void)
 {
-check_dfu_request();
+//check_dfu_request();
 delay(1000);
 	
 #ifdef ENABLE_OVERCLOCK
