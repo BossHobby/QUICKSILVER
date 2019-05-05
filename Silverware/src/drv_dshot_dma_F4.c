@@ -70,17 +70,17 @@
 
 
 #ifdef DSHOT150
-	#define DSHOT_BIT_TIME 		((SYS_CLOCK_FREQ_HZ/1000/150)-1)
+	#define DSHOT_BIT_TIME 		((PWM_CLOCK_FREQ_HZ/1000/150)-1)
 	#define DSHOT_T0H_TIME 		(DSHOT_BIT_TIME * .375 )
   #define DSHOT_T1H_TIME 		(DSHOT_BIT_TIME * .75 )
 #endif
 #ifdef DSHOT300
-	#define DSHOT_BIT_TIME 		((SYS_CLOCK_FREQ_HZ/1000/300)-1)
+	#define DSHOT_BIT_TIME 		((PWM_CLOCK_FREQ_HZ/1000/300)-1)
 	#define DSHOT_T0H_TIME 		(DSHOT_BIT_TIME * .375)
   #define DSHOT_T1H_TIME 		(DSHOT_BIT_TIME *.75 )
 #endif
 #ifdef DSHOT600																			 // Tim_1 is running at 84mhz with APB2 clock currently configured at 42MHZ
-	#define DSHOT_BIT_TIME 		((84000000/1000/600)-1)  // timer cycles per bit for a bit timing period of 1.67us	
+	#define DSHOT_BIT_TIME 		((PWM_CLOCK_FREQ_HZ/1000/600)-1)  // timer cycles per bit for a bit timing period of 1.67us	
 	#define DSHOT_T0H_TIME 		(DSHOT_BIT_TIME * .375 )  
   #define DSHOT_T1H_TIME 		(DSHOT_BIT_TIME *.75 )
 	
