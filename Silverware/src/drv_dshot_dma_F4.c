@@ -293,8 +293,8 @@ void dshot_dma_portA()
 	DMA2_Stream4->M0AR = (uint32_t)dshot_portA;
 
 	DMA_ClearFlag(DMA2_Stream1, DMA_FLAG_TCIF1);
-	DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF1);
-	DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF1);
+	DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4);
+	DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5);
 
 	DMA2_Stream5->NDTR = 16;
 	DMA2_Stream1->NDTR = 16;
@@ -322,8 +322,8 @@ void dshot_dma_portB()
 	DMA2_Stream4->M0AR = (uint32_t)dshot_portB;
 
 	DMA_ClearFlag(DMA2_Stream1, DMA_FLAG_TCIF1);
-	DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF1);
-	DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF1);
+	DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4);
+	DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5);
 
 	DMA2_Stream5->NDTR = 16;
 	DMA2_Stream1->NDTR = 16;
