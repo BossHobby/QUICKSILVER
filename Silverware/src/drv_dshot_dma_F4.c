@@ -215,7 +215,7 @@ void pwm_init()
 	/* DMA2 Stream5_Channel6 configuration ----------------------------------------------*/
 	DMA_DeInit(DMA2_Stream5);
 	DMA_InitStructure.DMA_Channel =								DMA_Channel_6;
-	DMA_InitStructure.DMA_PeripheralBaseAddr = 		(uint32_t)&GPIOA->BSRRH;
+	DMA_InitStructure.DMA_PeripheralBaseAddr = 		(uint32_t)&GPIOA->BSRRL;
 	DMA_InitStructure.DMA_Memory0BaseAddr = 			(uint32_t)dshot_portA;
 	DMA_InitStructure.DMA_DIR = 									DMA_DIR_MemoryToPeripheral;
 	DMA_InitStructure.DMA_BufferSize = 						16;
@@ -233,7 +233,7 @@ void pwm_init()
 	/* DMA2	Stream1_Channel6 configuration ----------------------------------------------*/	
 	DMA_DeInit(DMA2_Stream1);
 	DMA_InitStructure.DMA_Channel =								DMA_Channel_6;
-	DMA_InitStructure.DMA_PeripheralBaseAddr = 		(uint32_t)&GPIOA->BSRRL;
+	DMA_InitStructure.DMA_PeripheralBaseAddr = 		(uint32_t)&GPIOA->BSRRH;
 	DMA_InitStructure.DMA_Memory0BaseAddr = 			(uint32_t)motor_data_portA;
 	DMA_InitStructure.DMA_DIR = 									DMA_DIR_MemoryToPeripheral;
 	DMA_InitStructure.DMA_BufferSize = 						16;
@@ -251,7 +251,7 @@ void pwm_init()
 	/* DMA2 Stream4_Channel6 configuration ----------------------------------------------*/
 	DMA_DeInit(DMA2_Stream4);
 	DMA_InitStructure.DMA_Channel =								DMA_Channel_6;
-	DMA_InitStructure.DMA_PeripheralBaseAddr = 		(uint32_t)&GPIOA->BSRRL;
+	DMA_InitStructure.DMA_PeripheralBaseAddr = 		(uint32_t)&GPIOA->BSRRH;
 	DMA_InitStructure.DMA_Memory0BaseAddr = 			(uint32_t)dshot_portA;
 	DMA_InitStructure.DMA_DIR = 									DMA_DIR_MemoryToPeripheral;
 	DMA_InitStructure.DMA_BufferSize = 						16;
@@ -285,11 +285,11 @@ void pwm_init()
 
 void dshot_dma_portA()
 {
-	DMA2_Stream5->PAR = (uint32_t)&GPIOA->BSRRH;
+	DMA2_Stream5->PAR = (uint32_t)&GPIOA->BSRRL;
 	DMA2_Stream5->M0AR = (uint32_t)dshot_portA;						//M1AR?
-	DMA2_Stream1->PAR = (uint32_t)&GPIOA->BSRRL;
+	DMA2_Stream1->PAR = (uint32_t)&GPIOA->BSRRH;
 	DMA2_Stream1->M0AR = (uint32_t)motor_data_portA;
-	DMA2_Stream4->PAR = (uint32_t)&GPIOA->BSRRL;
+	DMA2_Stream4->PAR = (uint32_t)&GPIOA->BSRRH;
 	DMA2_Stream4->M0AR = (uint32_t)dshot_portA;
 
 	DMA_ClearFlag(DMA2_Stream1, DMA_FLAG_TCIF1);
@@ -314,11 +314,11 @@ void dshot_dma_portA()
 
 void dshot_dma_portB()
 {
-	DMA2_Stream5->PAR = (uint32_t)&GPIOB->BSRRH;
+	DMA2_Stream5->PAR = (uint32_t)&GPIOB->BSRRL;
 	DMA2_Stream5->M0AR = (uint32_t)dshot_portB;
-	DMA2_Stream1->PAR = (uint32_t)&GPIOB->BSRRL;
+	DMA2_Stream1->PAR = (uint32_t)&GPIOB->BSRRH;
 	DMA2_Stream1->M0AR = (uint32_t)motor_data_portB;
-	DMA2_Stream4->PAR = (uint32_t)&GPIOB->BSRRL;
+	DMA2_Stream4->PAR = (uint32_t)&GPIOB->BSRRH;
 	DMA2_Stream4->M0AR = (uint32_t)dshot_portB;
 
 	DMA_ClearFlag(DMA2_Stream1, DMA_FLAG_TCIF1);
