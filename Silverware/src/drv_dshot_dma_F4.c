@@ -11,11 +11,6 @@
 // this DMA driver is done with the reference to http://www.cnblogs.com/shangdawei/p/4762035.html
 
 // No throttle jitter, no min/max calibration, just pure digital goodness :)
-// Dshot150 would be fast enough for up to 8 kHz main loop frequency. But
-// since this implementation does simple bit banging, Dshot150 takes a lot of
-// our 1 ms main loop time. Dshot300 takes less time for bit banging, which
-// leaves more idle time. Implementing the driver using DMA (like Betaflight
-// does) is left as an excercise for the reader ;)
 
 // The ESC signal must be taken before the FET, i.e. non-inverted. The
 // signal after the FET with a pull-up resistor is not good enough.
@@ -27,42 +22,6 @@
 // and removed filter cap.
 
 // USE AT YOUR OWN RISK. ALWAYS REMOVE PROPS WHEN TESTING.
-
-// Enable this for 3D. The 'Motor Direction' setting in BLHeliSuite must
-// be set to 'Bidirectional' (or 'Bidirectional Rev.') accordingly:
-//#define BIDIRECTIONAL
-
-// Select Dshot150 or Dshot300. Dshot150 consumes quite some main loop time.
-// DShot300 may require removing the input filter cap on the ESC:
-#include "config.h"
-#ifdef F405
-
-
-#define DSHOT600
-//#define DSHOT300
-//#define DSHOT150
-
-
-
-#ifdef DSHOT150
-	#define DSHOT_BIT_TIME 		((SYS_CLOCK_FREQ_HZ/1000/150)-1)
-	#define DSHOT_T0H_TIME 		(DSHOT_BIT_TIME*0.30 + 0.05 )
-  #define DSHOT_T1H_TIME 		(DSHOT_BIT_TIME*0.60 + 0.05 )
-#endif
-#ifdef DSHOT300
-	#define DSHOT_BIT_TIME 		((SYS_CLOCK_FREQ_HZ/1000/300)-1)
-	#define DSHOT_T0H_TIME 		(DSHOT_BIT_TIME*0.30 + 0.05 )
-  #define DSHOT_T1H_TIME 		(DSHOT_BIT_TIME*0.60 + 0.05 )
-#endif
-#ifdef DSHOT600																			 // Tim_1 is running at 84mhz with APB2 clock currently configured at 42MHZ
-	#define DSHOT_BIT_TIME 		((84000000/1000/600)-1)  // timer cycles per bit for a bit timing period of 1.67us
-	#define DSHOT_T0H_TIME 		(DSHOT_BIT_TIME*0.30 + 0.05 )  
-  #define DSHOT_T1H_TIME 		(DSHOT_BIT_TIME*0.60 + 0.05 )
-#endif
-
-// IDLE_OFFSET is added to the throttle. Adjust its value so that the motors
-// still spin at minimum throttle.
-#define IDLE_OFFSET 40  
 
 // READ THIS:
 
@@ -87,6 +46,46 @@
 #include "util.h"
 #include "drv_dshot.h"
 #include "config.h"
+#ifdef F405
+
+
+// Select Dshot150 or Dshot300. Dshot150 consumes quite some main loop time.
+// DShot300 may require removing the input filter cap on the ESC:
+
+#define DSHOT600
+//#define DSHOT300
+//#define DSHOT150
+
+
+// IDLE_OFFSET is added to the throttle. Adjust its value so that the motors
+// still spin at minimum throttle.
+
+#define IDLE_OFFSET 40  
+
+
+// Enable this for 3D. The 'Motor Direction' setting in BLHeliSuite must
+// be set to 'Bidirectional' (or 'Bidirectional Rev.') accordingly:
+
+//#define BIDIRECTIONAL
+
+
+#ifdef DSHOT150
+	#define DSHOT_BIT_TIME 		((SYS_CLOCK_FREQ_HZ/1000/150)-1)
+	#define DSHOT_T0H_TIME 		(DSHOT_BIT_TIME * .375 )
+  #define DSHOT_T1H_TIME 		(DSHOT_BIT_TIME * .75 )
+#endif
+#ifdef DSHOT300
+	#define DSHOT_BIT_TIME 		((SYS_CLOCK_FREQ_HZ/1000/300)-1)
+	#define DSHOT_T0H_TIME 		(DSHOT_BIT_TIME * .375)
+  #define DSHOT_T1H_TIME 		(DSHOT_BIT_TIME *.75 )
+#endif
+#ifdef DSHOT600																			 // Tim_1 is running at 84mhz with APB2 clock currently configured at 42MHZ
+	#define DSHOT_BIT_TIME 		((84000000/1000/600)-1)  // timer cycles per bit for a bit timing period of 1.67us	
+	#define DSHOT_T0H_TIME 		(DSHOT_BIT_TIME * .375 )  
+  #define DSHOT_T1H_TIME 		(DSHOT_BIT_TIME *.75 )
+	
+#endif
+
 
 #ifdef USE_DSHOT_DMA_DRIVER
 
@@ -128,15 +127,6 @@ void make_packet( uint8_t number, uint16_t value, bool telemetry );
 #define FORWARD 0
 #define REVERSE 1
 #endif
-
-// normal output mode
-#define gpioset( port , pin) port->BSRRH = pin
-#define gpioreset( port , pin) port->BSRRL = pin
-
-
-//inverted output
-//#define gpioset( port , pin) port->BSRRL = pin
-//#define gpioreset( port , pin) port->BSRRH = pin
 
 
 void pwm_init()
@@ -286,15 +276,15 @@ void pwm_init()
 void dshot_dma_portA()
 {
 	DMA2_Stream5->PAR = (uint32_t)&GPIOA->BSRRL;
-	DMA2_Stream5->M0AR = (uint32_t)dshot_portA;						//M1AR?
+	DMA2_Stream5->M0AR = (uint32_t)dshot_portA;
 	DMA2_Stream1->PAR = (uint32_t)&GPIOA->BSRRH;
 	DMA2_Stream1->M0AR = (uint32_t)motor_data_portA;
 	DMA2_Stream4->PAR = (uint32_t)&GPIOA->BSRRH;
 	DMA2_Stream4->M0AR = (uint32_t)dshot_portA;
 
-	DMA_ClearFlag(DMA2_Stream1, DMA_FLAG_TCIF1);
-	DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4);
-	DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5);
+	DMA_ClearFlag(DMA2_Stream1, DMA_FLAG_TCIF1 | DMA_FLAG_HTIF1 | DMA_FLAG_TEIF1);
+	DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4 | DMA_FLAG_HTIF4 | DMA_FLAG_TEIF4);
+	DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5 | DMA_FLAG_HTIF5 | DMA_FLAG_TEIF5);
 
 	DMA2_Stream5->NDTR = 16;
 	DMA2_Stream1->NDTR = 16;
@@ -321,9 +311,9 @@ void dshot_dma_portB()
 	DMA2_Stream4->PAR = (uint32_t)&GPIOB->BSRRH;
 	DMA2_Stream4->M0AR = (uint32_t)dshot_portB;
 
-	DMA_ClearFlag(DMA2_Stream1, DMA_FLAG_TCIF1);
-	DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4);
-	DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5);
+	DMA_ClearFlag(DMA2_Stream1, DMA_FLAG_TCIF1 | DMA_FLAG_HTIF1 | DMA_FLAG_TEIF1);
+	DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4 | DMA_FLAG_HTIF4 | DMA_FLAG_TEIF4);
+	DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5 | DMA_FLAG_HTIF5 | DMA_FLAG_TEIF5);
 
 	DMA2_Stream5->NDTR = 16;
 	DMA2_Stream1->NDTR = 16;
@@ -375,7 +365,8 @@ void dshot_dma_start()
 	while( dshot_dma_phase != 0 && (gettime()-time) < LOOPTIME ) { } 	// wait maximum a LOOPTIME for dshot dma to complete
 	if( dshot_dma_phase != 0 ) return;																// skip this dshot command
 
-#if	defined(RGB_LED_DMA) && (RGB_LED_NUMBER>0)																																																//TODO - port to F4 when RGB gets done
+/*
+	#if	defined(RGB_LED_DMA) && (RGB_LED_NUMBER>0)																																								//TODO - port to F4 when RGB gets done or find a solution without conflicts
 	/// terminate current RGB transfer
 	extern int	rgb_dma_phase;
 
@@ -394,6 +385,7 @@ void dshot_dma_start()
 		failloop(9);
 	}
 #endif
+*/
 
 		// generate dshot dma packet
 	for ( uint8_t i = 0; i < 16; i++ ) {
@@ -575,7 +567,7 @@ void DMA2_Stream4_IRQHandler(void)
 			return;
 		case 1:
 			dshot_dma_phase =0;
-			#if defined(RGB_LED_DMA) && (RGB_LED_NUMBER>0)
+	/*		#if defined(RGB_LED_DMA) && (RGB_LED_NUMBER>0)																																		//TODO - port to F4 when RGB gets done or find a solution without conflicts
 				extern int rgb_dma_phase;
 				extern void rgb_dma_trigger();
 
@@ -583,7 +575,7 @@ void DMA2_Stream4_IRQHandler(void)
 					rgb_dma_phase = 1;
 					rgb_dma_trigger();
 				}
-			#endif
+			#endif     */
 			return;
 		default :
 			dshot_dma_phase =0;
