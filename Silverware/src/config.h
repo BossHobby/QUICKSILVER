@@ -102,7 +102,7 @@
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING CHAN_5
-#define IDLE_UP CHAN_5
+//#define IDLE_UP CHAN_5
 #define IDLE_THR 0.05f                   //This designates an idle throttle of 5%
 #define LEVELMODE CHAN_6
 #define RACEMODE  CHAN_7
@@ -366,7 +366,7 @@
 
 // throttle direct to motors for thrust measure
 
-//#define MOTORS_TO_THROTTLE
+#define MOTORS_TO_THROTTLE
 
 // throttle direct to motors for thrust measure as a flight mode
 //#define MOTORS_TO_THROTTLE_MODE MULTI_CHAN_8
@@ -760,8 +760,8 @@
 #define LED1PORT GPIOB
 #define LED2PIN GPIO_Pin_4
 #define LED2PORT GPIOB
-//#define LED1_INVERT
-#define LED2_INVERT
+#define LED1_INVERT
+//#define LED2_INVERT
 
 //SPI, I2C & GYRO
 #define MPU6XXX_SPI1

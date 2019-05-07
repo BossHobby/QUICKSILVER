@@ -94,7 +94,7 @@ void 	SBUS_USART_ISR(void);
 	#define SERIAL_RX_PORT GPIOC
 	#define SERIAL_RX_SOURCE GPIO_PinSource7
 	#define SERIAL_RX_CHANNEL GPIO_AF_USART6
-	#define SERIAL_USART_IRQ USART3_IRQn
+	#define SERIAL_USART_IRQ USART6_IRQn
 #endif
 #endif
 
