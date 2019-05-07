@@ -12,8 +12,11 @@
 //#define E011
 //#define H8mini_blue_board
 //#define Alienwhoop_ZERO  
-#define CC3D_REVO_F4
+//#define CC3D_REVO_F4
+#define OmnibusF4SD
+//#define OmnibusF4
 //#define Alienwhoop_V2
+
 
 
 
@@ -84,9 +87,10 @@
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 
 // *************Serial Receiver UART Selection																		//todo:  In drv_rc_serial.c and .h:  uart 1 is set up for F0, uart 1 and 3 are set up for f4.  Need to add inverter GPIO control pin for uart 3.  So plenty more to do here
-#define UART_1
+//#define UART_1
 //#define UART_2
 //#define UART_3
+#define UART_6
 
 // *************Serial Receiver Inversion Selection
 #define INVERT_UART																																//todo:  make this do something for f0 and for f4 with hardware controlled inverter on board
@@ -744,7 +748,7 @@
 #define PWM_PB1
 #endif
 
-#ifdef CC3D_REVO_F4
+#if defined(CC3D_REVO_F4) || defined(OmnibusF4SD) || defined(OmnibusF4)
 #define F405
 #define SYS_CLOCK_FREQ_HZ 168000000
 #define PWM_CLOCK_FREQ_HZ 84000000
@@ -774,14 +778,26 @@
 //#define GYRO_ID_2 0x73
 //#define GYRO_ID_3 0x78
 //#define GYRO_ID_4 0x72 
-//#define SENSOR_ROTATE_90_CCW
+#define SENSOR_FLIP_180
 //#define DISABLE_GYRO_CHECK
 
 
 // SPI PINS DEFINITONS & RADIO
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
+//#define USART4_PA1PA0   //not created yet
+//#define UART3_INVERTER_PIN PC9 // Omnibus F4 Pro Corner
+#ifdef OmnibusF4SD
+#define USART6_PC7PC6
+#define USART_INVERTER_PIN GPIO_Pin_8
+#define USART_INVERTER_PORT GPIOC
 #define USART1_PA10PA9
+#endif
+#ifdef CC3D_REVO_F4
+#define USART1_PA10PA9
+#define USART_INVERTER_PIN GPIO_Pin_0
+#define USART_INVERTER_PORT GPIOC
 #define USART3_PB11PB10
+#endif
 #define SOFTSPI_NONE
 #else
 #define SOFTSPI_3WIRE							//todo:port spi receiver and soft spi driver to f4

@@ -50,13 +50,16 @@ RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
 RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
 #endif
 #endif
+
+#if defined (UART_6) && defined (F405)
+#ifdef USART6_PC7PC6
+RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
+#endif
+#endif
 }
 
 
 //FUNCTION TO COMMAND EXTERNAL USART INVERTER HIGH OR LOW         todo: sort out target mapping tag in drv_rx_serial.h for a quick define from the taarget
-
-#define USART_INVERTER_PIN GPIO_Pin_0   //hard defined here for testing right now on cc3d revo
-#define USART_INVERTER_PORT GPIOC
 
 void usart_invert(void)
 {
@@ -173,6 +176,21 @@ void USART2_IRQHandler(void)
 	#endif
 
 #ifdef UART_3
+void USART3_IRQHandler(void)
+{
+	#ifdef RX_IBUS 
+	Ibus_USART_ISR();
+	#endif
+	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
+	DSM_USART_ISR();
+	#endif
+	#ifdef RX_SBUS 
+	SBUS_USART_ISR();
+	#endif
+}
+#endif
+
+#ifdef UART_6
 void USART3_IRQHandler(void)
 {
 	#ifdef RX_IBUS 
