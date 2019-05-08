@@ -17,8 +17,9 @@
 //#define OmnibusF4
 //#define Alienwhoop_V2
 
-
-
+// *************DEFINE FLIGHT CONTROLLER MOTOR OUTPUT - *****warning*****  GETTING THIS WRONG CAN SMOKE YOUR BOARD :)
+#define BRUSHLESS_TARGET
+//#define BRUSHED_TARGET
 
 //**********************************************************************************************************************
 //***********************************************RATES & EXPO SETTINGS**************************************************
@@ -76,24 +77,25 @@
 //**********************************************************************************************************************
 //***********************************************RECEIVER SETTINGS******************************************************
 
-// *************Receiver protocol selection									//todo:  add missing radio protocols from bobnove and make them all jive with new rx_init function in drv_rx_serial.c
+// *************Receiver protocol selection									//todo:  add missing radio protocols from bobnova and make them all jive with new rx_init function in drv_rx_serial.c
 #define RX_SBUS
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
 //#define RX_IBUS
-//#define RX_DSMX_2048																				//  Only ibus and dsm protocols are working on F4 right now
+//#define RX_DSMX_2048																				//  Only sbus, ibus, and dsm protocols are working on F4 right now
 //#define RX_DSM2_1024
 //#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 
-// *************Serial Receiver UART Selection																		//todo:  In drv_rc_serial.c and .h:  uart 1 is set up for F0, uart 1 and 3 are set up for f4.  Need to add inverter GPIO control pin for uart 3.  So plenty more to do here
+// *************Serial Receiver UART Selection																		//todo:  Many missing usart AF setups, So plenty more to do here
 //#define UART_1
 //#define UART_2
 //#define UART_3
+//#define UART_4
 #define UART_6
 
 // *************Serial Receiver Inversion Selection
-#define INVERT_UART																																//todo:  make this do something for f0 and for f4 with hardware controlled inverter on board
+#define INVERT_UART																																
 
 // *************Transmitter Type Selection																				//todo:  drop toy tx support - clarify that remaining options are just for bayang protocol
 //#define USE_STOCK_TX
@@ -102,14 +104,14 @@
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING CHAN_5
-//#define IDLE_UP CHAN_5
-#define IDLE_THR 0.05f                   //This designates an idle throttle of 5%
-#define LEVELMODE CHAN_6
-#define RACEMODE  CHAN_7
-#define HORIZON   CHAN_8
-#define PIDPROFILE CHAN_9                //For switching stickAccelerator & stickTransition profiles on pid.c page
+#define IDLE_UP CHAN_5																															//todo:  sort out a better brushless plan for airmode, idle up, and min throttle enable
+#define IDLE_THR 0.04f                   //This designates an idle throttle of 5%
+#define LEVELMODE CHAN_OFF
+#define RACEMODE  CHAN_OFF
+#define HORIZON   CHAN_OFF
+#define PIDPROFILE CHAN_ON                //For switching stickAccelerator & stickTransition profiles on pid.c page
 #define RATES CHAN_ON
-#define LEDS_ON CHAN_10
+#define LEDS_ON CHAN_OFF
 
 // *************switch for fpv / other, requires fet
 // *************comment out to disable
@@ -126,6 +128,7 @@
 
 // *************automatically remove center bias in toy tx ( needs throttle off for 1 second )
 //#define STOCK_TX_AUTOCENTER
+
 
 
 
@@ -170,6 +173,7 @@
 
 
 
+
 //**********************************************************************************************************************
 //***********************************************FILTER SETTINGS********************************************************
 
@@ -187,16 +191,17 @@
 
 //Select Gyro Filter Cut Frequency
 #define GYRO_FILTER_PASS1 HZ_90
-#define GYRO_FILTER_PASS2 HZ_90
+#define GYRO_FILTER_PASS2 HZ_140
 
 //Select D Term Filter Cut Frequency *** Select Only one
-#define  DTERM_LPF_2ND_HZ 100
-//#define DTERM_LPF_1ST_HZ 70
+//#define  DTERM_LPF_2ND_HZ 100
+#define DTERM_LPF_1ST_HZ 70
 
 //Select Motor Filter Type  (I am no longer using this)
 //#define MOTOR_FILTER2_ALPHA MFILT1_HZ_90
 
 #endif
+
 
 
 
@@ -232,19 +237,22 @@
 // *************mix lower throttle reduces thrust imbalances by reducing throttle proportionally to the adjustable reduction percent
 // *************mix increase throttle increases the authority of the pid controller at lowest throttle values like airmode when combined with idle up
 // *************mix3 has a stronger effect and works better with brushless
-#define MIX_LOWER_THROTTLE
-#define MIX_THROTTLE_REDUCTION_PERCENT 10
+//#define MIX_LOWER_THROTTLE
+//#define MIX_THROTTLE_REDUCTION_PERCENT 10
 //#define MIX_INCREASE_THROTTLE
 
 //#define MIX_LOWER_THROTTLE_3
-#define MIX_INCREASE_THROTTLE_3
-#define MIX_THROTTLE_INCREASE_MAX 0.2f
+//#define MIX_INCREASE_THROTTLE_3
+//#define MIX_THROTTLE_INCREASE_MAX 0.8f
+//#define MIX_THROTTLE_REDUCTION_MAX 0.8f
+#define BRUSHLESS_MIX_SCALING
 
 //**************joelucid's yaw fix
 #define YAW_FIX
 
 //**************joelucid's transient windup protection.  Removes roll and pitch bounce back after flips
 #define TRANSIENT_WINDUP_PROTECTION
+
 
 
 
@@ -306,8 +314,8 @@
 #define TRIM_ROLL 0.0
 
 // limit minimum motor output to a value (0.0 - 1.0)
-#define MOTOR_MIN_ENABLE
-#define MOTOR_MIN_VALUE 0.05
+//#define MOTOR_MIN_ENABLE
+//#define MOTOR_MIN_VALUE 0.05
 
 // flash saving features
 //#define DISABLE_GESTURES2
@@ -366,7 +374,7 @@
 
 // throttle direct to motors for thrust measure
 
-#define MOTORS_TO_THROTTLE
+//#define MOTORS_TO_THROTTLE
 
 // throttle direct to motors for thrust measure as a flight mode
 //#define MOTORS_TO_THROTTLE_MODE MULTI_CHAN_8
@@ -777,14 +785,15 @@
 #define GYRO_ID_1 0x68
 //#define GYRO_ID_2 0x73
 //#define GYRO_ID_3 0x78
-//#define GYRO_ID_4 0x72 
+//#define GYRO_ID_4 0x72
+//#define SENSOR_ROTATE_90_CCW
 #define SENSOR_FLIP_180
 //#define DISABLE_GYRO_CHECK
 
 
 // SPI PINS DEFINITONS & RADIO
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
-//#define USART4_PA1PA0   //not created yet
+//   //not created yet
 //#define UART3_INVERTER_PIN PC9 // Omnibus F4 Pro Corner
 #ifdef OmnibusF4SD
 #define USART6_PC7PC6
@@ -792,11 +801,12 @@
 #define USART_INVERTER_PORT GPIOC
 #define USART1_PA10PA9
 #endif
-#ifdef CC3D_REVO_F4
+#if defined(CC3D_REVO_F4) || defined(OmnibusF4)
 #define USART1_PA10PA9
 #define USART_INVERTER_PIN GPIO_Pin_0
 #define USART_INVERTER_PORT GPIOC
 #define USART3_PB11PB10
+#define USART4_PA1PA0
 #endif
 #define SOFTSPI_NONE
 #else
@@ -829,8 +839,14 @@
 // MOTOR PINS
 #define MOTOR0_PIN_PB0
 #define MOTOR1_PIN_PB1
-#define MOTOR2_PIN_PA3
-#define MOTOR3_PIN_PA2
+#define MOTOR2_PIN_PA2
+#define MOTOR3_PIN_PA3
+
+//pyroflip
+//#define MOTOR0_PIN_PA8
+//#define MOTOR1_PIN_PC9			//DSHOT not coded for port C yet
+//#define MOTOR2_PIN_PB1
+//#define MOTOR3_PIN_PB0
 
 // pwm pin initialization
 //#define USE_PWM_DRIVER
@@ -852,6 +868,7 @@
 //#define PWM_PA11
 #define PWM_PB0
 #define PWM_PB1
+//#define PWM_PC9
 #endif
 
 #ifdef Alienwhoop_V2

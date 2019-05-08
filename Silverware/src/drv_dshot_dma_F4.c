@@ -60,7 +60,7 @@
 // IDLE_OFFSET is added to the throttle. Adjust its value so that the motors
 // still spin at minimum throttle.
 
-#define IDLE_OFFSET 40  
+#define IDLE_OFFSET 25  
 
 
 // Enable this for 3D. The 'Motor Direction' setting in BLHeliSuite must
@@ -71,18 +71,18 @@
 
 #ifdef DSHOT150
 	#define DSHOT_BIT_TIME 		((PWM_CLOCK_FREQ_HZ/1000/150)-1)
-	#define DSHOT_T0H_TIME 		(DSHOT_BIT_TIME * .375 )
-  #define DSHOT_T1H_TIME 		(DSHOT_BIT_TIME * .75 )
+	#define DSHOT_T0H_TIME 		(DSHOT_BIT_TIME*0.30 + 0.05 )
+  #define DSHOT_T1H_TIME 		(DSHOT_BIT_TIME*0.60 + 0.05 )
 #endif
 #ifdef DSHOT300
 	#define DSHOT_BIT_TIME 		((PWM_CLOCK_FREQ_HZ/1000/300)-1)
-	#define DSHOT_T0H_TIME 		(DSHOT_BIT_TIME * .375)
-  #define DSHOT_T1H_TIME 		(DSHOT_BIT_TIME *.75 )
+	#define DSHOT_T0H_TIME 		(DSHOT_BIT_TIME*0.30 + 0.05 )
+  #define DSHOT_T1H_TIME 		(DSHOT_BIT_TIME*0.60 + 0.05 )
 #endif
 #ifdef DSHOT600																			 // Tim_1 is running at 84mhz with APB2 clock currently configured at 42MHZ
-	#define DSHOT_BIT_TIME 		((PWM_CLOCK_FREQ_HZ/1000/600)-1)  // timer cycles per bit for a bit timing period of 1.67us	
-	#define DSHOT_T0H_TIME 		(DSHOT_BIT_TIME * .375 )  
-  #define DSHOT_T1H_TIME 		(DSHOT_BIT_TIME *.75 )
+	#define DSHOT_BIT_TIME 		((PWM_CLOCK_FREQ_HZ/1000/600)-1)  // clock cycles per bit for a bit timing period of 1.67us
+	#define DSHOT_T0H_TIME 		(DSHOT_BIT_TIME*0.30 + 0.05 )  
+  #define DSHOT_T1H_TIME 		(DSHOT_BIT_TIME*0.60 + 0.05 )
 	
 #endif
 

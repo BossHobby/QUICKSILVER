@@ -51,6 +51,12 @@ RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
 #endif
 #endif
 
+#if defined (UART_4) && defined (F405)
+#ifdef USART4_PA1PA0
+RCC_APB1PeriphClockCmd(RCC_APB1Periph_UART4, ENABLE);
+#endif
+#endif
+
 #if defined (UART_6) && defined (F405)
 #ifdef USART6_PC7PC6
 RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART6, ENABLE);
@@ -177,6 +183,21 @@ void USART2_IRQHandler(void)
 
 #ifdef UART_3
 void USART3_IRQHandler(void)
+{
+	#ifdef RX_IBUS 
+	Ibus_USART_ISR();
+	#endif
+	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
+	DSM_USART_ISR();
+	#endif
+	#ifdef RX_SBUS 
+	SBUS_USART_ISR();
+	#endif
+}
+#endif
+
+#ifdef UART_4
+void USART4_IRQHandler(void)
 {
 	#ifdef RX_IBUS 
 	Ibus_USART_ISR();

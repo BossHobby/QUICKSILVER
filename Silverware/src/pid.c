@@ -63,13 +63,20 @@ float stickTransitionProfileB[3]  = { 0.3 , 0.3 , 0.0};           //keep values 
 
 
 //************************************PIDS****************************************
+//Brushless Pids
+//float pidkp[PIDNUMBER] = {12.5e-2 , 14.5e-2  , 2.5e-1 }; 
+//float pidki[PIDNUMBER] = { 14.0e-1  , 14.0e-1 , 14.0e-1 };	
+//float pidkd[PIDNUMBER] = { 2.3e-1 , 3.3e-1  , 0.5e-1 };
 
+float pidkp[PIDNUMBER] = {9.5e-2 , 12.5e-2  , 2.0e-1 }; 
+float pidki[PIDNUMBER] = { 14.0e-1  , 14.0e-1 , 14.0e-1 };	
+float pidkd[PIDNUMBER] = { 2.3e-1 , 3.3e-1  , 0.5e-1 };
 
 //6mm & 7mm Abduction Pids for whoops (Team Alienwhoop)- set filtering ALIENWHOOP_ZERO_FILTERING
 //                         ROLL       PITCH     YAW
-float pidkp[PIDNUMBER] = {21.5e-2 , 21.5e-2  , 10.5e-1 }; 
-float pidki[PIDNUMBER] = { 14e-1  , 15e-1 , 15e-1 };	
-float pidkd[PIDNUMBER] = { 7.4e-1 , 7.4e-1  , 5.5e-1 };
+//float pidkp[PIDNUMBER] = {21.5e-2 , 21.5e-2  , 10.5e-1 }; 
+//float pidki[PIDNUMBER] = { 14e-1  , 15e-1 , 15e-1 };	
+//float pidkd[PIDNUMBER] = { 7.4e-1 , 7.4e-1  , 5.5e-1 };
 
 
 //BOSS 7 with 716 motors and 46mm Props - set filtering to BETA_FILTERING and adjust pass 1 and pass 2 for KALMAN_GYRO both to 70hz, set DTERM_LPF_2ND_HZ to 120hz, disable motor filtering
@@ -109,17 +116,29 @@ float pidkd[PIDNUMBER] = { 7.4e-1 , 7.4e-1  , 5.5e-1 };
 
 
 //************************************Setpoint Weight****************************************
-// "setpoint weighting" 0.0 - 1.0 where 1.0 = normal pid
-#define ENABLE_SETPOINT_WEIGHTING
-//            Roll   Pitch   Yaw
-//float b[3] = { 0.97 , 0.98 , 0.95};   //RACE
-float b[3] = { 0.93 , 0.93 , 0.9};      //FREESTYLE
+#ifdef BRUSHLESS_TARGET
 
-/// output limit			
-const float outlimit[PIDNUMBER] = { 1.7 , 1.7 , 0.5 };
+	/// output limit	
+	const float outlimit[PIDNUMBER] = { 0.8 , 0.8 , 0.4 };
 
-// limit of integral term (abs)
-const float integrallimit[PIDNUMBER] = { 1.7 , 1.7 , 0.5 };
+	// limit of integral term (abs)
+	const float integrallimit[PIDNUMBER] = { 0.8 , 0.8 , 0.4 };
+
+#else  //BRUSHED TARGET
+
+	// "p term setpoint weighting" 0.0 - 1.0 where 1.0 = normal pid
+	#define ENABLE_SETPOINT_WEIGHTING
+	//            Roll   Pitch   Yaw
+	//float b[3] = { 0.97 , 0.98 , 0.95};   //BRUSHED RACE
+	float b[3] = { 0.93 , 0.93 , 0.9};      //BRUSHED FREESTYLE
+
+	/// output limit	
+	const float outlimit[PIDNUMBER] = { 1.7 , 1.7 , 0.5 };
+
+	// limit of integral term (abs)
+	const float integrallimit[PIDNUMBER] = { 1.7 , 1.7 , 0.5 };
+	
+#endif
 
 //#define RECTANGULAR_RULE_INTEGRAL
 //#define MIDPOINT_RULE_INTEGRAL

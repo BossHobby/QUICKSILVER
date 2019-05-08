@@ -434,11 +434,19 @@ static void WriteByteCrc(uint8_t b)
     CRCout.word = _crc_xmodem_update(CRCout.word, b);
 }
 
+#ifdef F405
+#define SET_LED1_ON LED1PORT->BSRRL = LED1PIN
+#define SET_LED1_OFF LED1PORT->BSRRH = LED1PIN
+#define SET_LED2_ON LED2PORT->BSRRL = LED2PIN
+#define SET_LED2_OFF LED2PORT->BSRRH = LED2PIN
+#endif
+
+#ifdef F0
 #define SET_LED1_ON LED1PORT->BSRR = LED1PIN
 #define SET_LED1_OFF LED1PORT->BRR = LED1PIN
 #define SET_LED2_ON LED2PORT->BSRR = LED2PIN
 #define SET_LED2_OFF LED2PORT->BRR = LED2PIN
-
+#endif
 
 //void esc4wayProcess(serialPort_t *mspPort)
 void esc4wayProcess()
