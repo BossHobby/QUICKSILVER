@@ -38,14 +38,13 @@
 
 #include "project.h"
 
-#include "config.h"
 #include "defines.h"
 #include "drv_pwm.h"
 #include "drv_time.h"
 #include "hardware.h"
 #include "util.h"
 #include "drv_dshot.h"
-#include "config.h"
+
 #ifdef F405
 
 
@@ -99,11 +98,10 @@
 #endif
 #endif
 
-#if defined(MOTOR0_PIN_PB0) || defined(MOTOR0_PIN_PB1) || defined(MOTOR1_PIN_PB0) || defined(MOTOR1_PIN_PB1) ||defined(MOTOR2_PIN_PB0) || defined(MOTOR2_PIN_PB1) || defined(MOTOR3_PIN_PB0) || defined(MOTOR3_PIN_PB1)
-	#define DSHOT_DMA_PHASE	2												// motor pins at both portA and portB
-#else
-	#define DSHOT_DMA_PHASE	1												// motor pins all at portA
-#endif
+
+//sum = total number of dshot GPIO ports
+#define DSHOT_PORT_COUNT (DSHOT_GPIO_A + DSHOT_GPIO_B + DSHOT_GPIO_C)
+
 
 extern int failsafe;
 extern int onground;
@@ -111,14 +109,16 @@ extern int onground;
 int pwmdir = 0;
 static unsigned long pwm_failsafe_time = 1;
 
-volatile int dshot_dma_phase = 0;									// 1:portA  2:portB	 0:idle
+volatile int dshot_dma_phase = 0;									// 0:idle, 1: also idles in interrupt handler as single phase gets called by dshot_dma_start(), 2: & 3: handle remaining phases
 volatile uint16_t dshot_packet[4];								// 16bits dshot data for 4 motors
 
 volatile uint16_t motor_data_portA[ 16 ] = { 0 };	// DMA buffer: reset output when bit data=0 at TOH timing
 volatile uint16_t motor_data_portB[ 16 ] = { 0 };	//
+volatile uint16_t motor_data_portC[ 16 ] = { 0 };	//
 
 volatile uint16_t dshot_portA[1] = { 0 };					// sum of all motor pins at portA
 volatile uint16_t dshot_portB[1] = { 0 };					// sum of all motor pins at portB
+volatile uint16_t dshot_portC[1] = { 0 };					// sum of all motor pins at portC
 
 typedef enum { false, true } bool;
 void make_packet( uint8_t number, uint16_t value, bool telemetry );
@@ -150,17 +150,19 @@ void pwm_init()
 	GPIO_InitStructure.GPIO_Pin = DSHOT_PIN_3 ;
 	GPIO_Init( DSHOT_PORT_3, &GPIO_InitStructure );
 
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3 ;
-	GPIO_Init( GPIOA, &GPIO_InitStructure );
 
-	if( DSHOT_PORT_0 == GPIOA )	*dshot_portA |= DSHOT_PIN_0;
-	else												*dshot_portB |= DSHOT_PIN_0;
-	if( DSHOT_PORT_1 == GPIOA )	*dshot_portA |= DSHOT_PIN_1;
-	else												*dshot_portB |= DSHOT_PIN_1;
-	if( DSHOT_PORT_2 == GPIOA )	*dshot_portA |= DSHOT_PIN_2;
-	else												*dshot_portB |= DSHOT_PIN_2;
-	if( DSHOT_PORT_3 == GPIOA )	*dshot_portA |= DSHOT_PIN_3;
-	else												*dshot_portB |= DSHOT_PIN_3;
+	if		 ( DSHOT_PORT_0 == GPIOA )			*dshot_portA |= DSHOT_PIN_0;
+	else if( DSHOT_PORT_0 == GPIOB )			*dshot_portB |= DSHOT_PIN_0;
+	else if( DSHOT_PORT_0 == GPIOC )			*dshot_portC |= DSHOT_PIN_0;
+	if		 ( DSHOT_PORT_1 == GPIOA )			*dshot_portA |= DSHOT_PIN_1;
+	else if( DSHOT_PORT_1 == GPIOB )			*dshot_portB |= DSHOT_PIN_1;
+	else if( DSHOT_PORT_1 == GPIOC )			*dshot_portC |= DSHOT_PIN_1;
+	if		 ( DSHOT_PORT_2 == GPIOA )			*dshot_portA |= DSHOT_PIN_2;
+	else if( DSHOT_PORT_2 == GPIOB )			*dshot_portB |= DSHOT_PIN_2;
+	else if( DSHOT_PORT_2 == GPIOC )			*dshot_portC |= DSHOT_PIN_2;
+	if		 ( DSHOT_PORT_3 == GPIOA )			*dshot_portA |= DSHOT_PIN_3;
+	else if( DSHOT_PORT_3 == GPIOB )			*dshot_portB |= DSHOT_PIN_3;
+	else if( DSHOT_PORT_3 == GPIOC )			*dshot_portC |= DSHOT_PIN_3;
 
 // DShot timer/DMA2 init
 	// TIM1_UP  DMA2_STREAM_5/CH6: set all output to HIGH		at TIM1 update
@@ -331,6 +333,36 @@ void dshot_dma_portB()
 	TIM_Cmd( TIM1, ENABLE );
 }
 
+void dshot_dma_portC()
+{
+	DMA2_Stream5->PAR = (uint32_t)&GPIOC->BSRRL;
+	DMA2_Stream5->M0AR = (uint32_t)dshot_portC;
+	DMA2_Stream1->PAR = (uint32_t)&GPIOC->BSRRH;
+	DMA2_Stream1->M0AR = (uint32_t)motor_data_portC;
+	DMA2_Stream4->PAR = (uint32_t)&GPIOC->BSRRH;
+	DMA2_Stream4->M0AR = (uint32_t)dshot_portC;
+
+	DMA_ClearFlag(DMA2_Stream1, DMA_FLAG_TCIF1 | DMA_FLAG_HTIF1 | DMA_FLAG_TEIF1);
+	DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4 | DMA_FLAG_HTIF4 | DMA_FLAG_TEIF4);
+	DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5 | DMA_FLAG_HTIF5 | DMA_FLAG_TEIF5);
+
+	DMA2_Stream5->NDTR = 16;
+	DMA2_Stream1->NDTR = 16;
+	DMA2_Stream4->NDTR = 16;
+
+	TIM1->SR = 0;
+
+	DMA_Cmd(DMA2_Stream1, ENABLE);
+	DMA_Cmd(DMA2_Stream4, ENABLE);
+	DMA_Cmd(DMA2_Stream5, ENABLE);
+
+	TIM_DMACmd(TIM1, TIM_DMA_Update | TIM_DMA_CC4 | TIM_DMA_CC1, ENABLE);
+
+	TIM_SetCounter( TIM1, DSHOT_BIT_TIME );
+	TIM_Cmd( TIM1, ENABLE );
+}
+
+
 
 
 
@@ -365,45 +397,29 @@ void dshot_dma_start()
 	while( dshot_dma_phase != 0 && (gettime()-time) < LOOPTIME ) { } 	// wait maximum a LOOPTIME for dshot dma to complete
 	if( dshot_dma_phase != 0 ) return;																// skip this dshot command
 
-/*
-	#if	defined(RGB_LED_DMA) && (RGB_LED_NUMBER>0)																																								//TODO - port to F4 when RGB gets done or find a solution without conflicts
-	/// terminate current RGB transfer
-	extern int	rgb_dma_phase;
-
-	time=gettime();
-	while( rgb_dma_phase ==1 && (gettime()-time) < LOOPTIME ) { } 		// wait maximum a LOOPTIME for RGB dma to complete
-
-	if( rgb_dma_phase ==1 ) {																					// terminate current RGB dma transfer, proceed dshot
-		rgb_dma_phase =0;
-		DMA_Cmd(DMA1_Channel5, DISABLE);
-		DMA_Cmd(DMA1_Channel2, DISABLE);
-		DMA_Cmd(DMA1_Channel4, DISABLE);
-
-		TIM_DMACmd(TIM1, TIM_DMA_Update | TIM_DMA_CC4 | TIM_DMA_CC1, DISABLE);
-		TIM_Cmd( TIM1, DISABLE );
-		extern void failloop();
-		failloop(9);
-	}
-#endif
-*/
-
 		// generate dshot dma packet
 	for ( uint8_t i = 0; i < 16; i++ ) {
 		motor_data_portA[ i ] = 0;
 		motor_data_portB[ i ] = 0;
+		motor_data_portC[ i ] = 0;
+		
 
 	  if ( !( dshot_packet[0] & 0x8000 ) ) {
-			if( DSHOT_PORT_0 == GPIOA )	motor_data_portA[ i ] |= DSHOT_PIN_0;
-			else 												motor_data_portB[ i ] |= DSHOT_PIN_0; }
+			if			( DSHOT_PORT_0 == GPIOA )	motor_data_portA[ i ] |= DSHOT_PIN_0;
+			else if ( DSHOT_PORT_0 == GPIOB )	motor_data_portB[ i ] |= DSHOT_PIN_0;
+			else if	( DSHOT_PORT_0 == GPIOC )	motor_data_portC[ i ] |= DSHOT_PIN_0;	}
 	  if ( !( dshot_packet[1] & 0x8000 ) ) {
-			if( DSHOT_PORT_1 == GPIOA )	motor_data_portA[ i ] |= DSHOT_PIN_1;
-			else 												motor_data_portB[ i ] |= DSHOT_PIN_1; }
+			if			( DSHOT_PORT_1 == GPIOA )	motor_data_portA[ i ] |= DSHOT_PIN_1;
+			else if ( DSHOT_PORT_1 == GPIOB )	motor_data_portB[ i ] |= DSHOT_PIN_1;
+			else if ( DSHOT_PORT_1 == GPIOC )	motor_data_portC[ i ] |= DSHOT_PIN_1;	}
 	  if ( !( dshot_packet[2] & 0x8000 ) ) {
-			if( DSHOT_PORT_2 == GPIOA )	motor_data_portA[ i ] |= DSHOT_PIN_2;
-			else 												motor_data_portB[ i ] |= DSHOT_PIN_2; }
+			if			( DSHOT_PORT_2 == GPIOA )	motor_data_portA[ i ] |= DSHOT_PIN_2;
+			else if ( DSHOT_PORT_2 == GPIOB )	motor_data_portB[ i ] |= DSHOT_PIN_2;
+			else if ( DSHOT_PORT_2 == GPIOC )	motor_data_portC[ i ] |= DSHOT_PIN_2;	}
 	  if ( !( dshot_packet[3] & 0x8000 ) ) {
-			if( DSHOT_PORT_3 == GPIOA )	motor_data_portA[ i ] |= DSHOT_PIN_3;
-			else 												motor_data_portB[ i ] |= DSHOT_PIN_3; }
+			if			( DSHOT_PORT_3 == GPIOA )	motor_data_portA[ i ] |= DSHOT_PIN_3;
+			else if ( DSHOT_PORT_3 == GPIOB ) motor_data_portB[ i ] |= DSHOT_PIN_3;
+			else if ( DSHOT_PORT_3 == GPIOC ) motor_data_portC[ i ] |= DSHOT_PIN_3;	}
 
 	  dshot_packet[0] <<= 1;
 	  dshot_packet[1] <<= 1;
@@ -411,7 +427,7 @@ void dshot_dma_start()
 	  dshot_packet[3] <<= 1;
 	}
 
-	dshot_dma_phase = DSHOT_DMA_PHASE;
+	dshot_dma_phase = DSHOT_PORT_COUNT;
 
 	TIM1->ARR 	= DSHOT_BIT_TIME;
 	TIM1->CCR1 	= DSHOT_T0H_TIME;
@@ -419,7 +435,9 @@ void dshot_dma_start()
 
 	DMA2_Stream1->CR |= DMA_MemoryDataSize_HalfWord|DMA_PeripheralDataSize_HalfWord;	// switch from byte to halfword
 
-	dshot_dma_portA();
+	if 			(DSHOT_GPIO_A == 1) dshot_dma_portA();
+	else if	(DSHOT_GPIO_B == 1) dshot_dma_portB();
+	else if	(DSHOT_GPIO_C == 1) dshot_dma_portC(); 
 }
 
 
@@ -473,15 +491,7 @@ void pwm_set( uint8_t number, float pwm )
             // usually the quad should be gone by then
 			if ( gettime() - pwm_failsafe_time > 4000000 ) {
 				value = 0;
-				
-								/*
-                gpioreset( DSHOT_PORT_0, DSHOT_PIN_0 );
-                gpioreset( DSHOT_PORT_1, DSHOT_PIN_1 );
-                gpioreset( DSHOT_PORT_2, DSHOT_PIN_2 );
-                gpioreset( DSHOT_PORT_3, DSHOT_PIN_3 );
-								*/
-                //////
-                return;
+        return;
 			}
 		}
 	} else {
@@ -534,10 +544,10 @@ void motorbeep()
 			}
 
 			if ( beep_command != 0 ) {
-				make_packet( 0, beep_command, false );
-				make_packet( 1, beep_command, false );
-				make_packet( 2, beep_command, false );
-				make_packet( 3, beep_command, false );
+				make_packet( 0, beep_command, true );
+				make_packet( 1, beep_command, true );
+				make_packet( 2, beep_command, true );
+				make_packet( 3, beep_command, true );
 				dshot_dma_start();
 			}
 		}
@@ -561,32 +571,24 @@ void DMA2_Stream4_IRQHandler(void)
 
 
 	switch( dshot_dma_phase ) {
-		case 2:
-			dshot_dma_phase =1;
+		case 3:		//has to be port B here because we are in 3 phase mode and port A runs first in dshot_dma_start()
+			dshot_dma_phase =2;
 			dshot_dma_portB();
+			return;		
+		case 2:		//could be port B or C here
+			dshot_dma_phase =1;
+			//if 3 phase, B already fired in case 3, its just C left ... if 2 phase AC or BC, then first phase has fired and its just C left
+			if( DSHOT_PORT_COUNT == 3 || (DSHOT_PORT_COUNT == 2 && DSHOT_GPIO_B == 0) || (DSHOT_PORT_COUNT == 2 && DSHOT_GPIO_A == 0)   ) dshot_dma_portC();
+			//last possible GPIO phase combo is 2 phase AB, where A has already fired off and now we need B
+			else dshot_dma_portB();
 			return;
 		case 1:
 			dshot_dma_phase =0;
-	/*		#if defined(RGB_LED_DMA) && (RGB_LED_NUMBER>0)																																		//TODO - port to F4 when RGB gets done or find a solution without conflicts
-				extern int rgb_dma_phase;
-				extern void rgb_dma_trigger();
-
-				if( rgb_dma_phase == 2 ) {
-					rgb_dma_phase = 1;
-					rgb_dma_trigger();
-				}
-			#endif     */
 			return;
 		default :
 			dshot_dma_phase =0;
 			break;
 	}
-
-
-#if defined(RGB_LED_DMA) && (RGB_LED_NUMBER>0)
-	extern int rgb_dma_phase;
-	rgb_dma_phase = 0;
-#endif
 
 }
 #endif

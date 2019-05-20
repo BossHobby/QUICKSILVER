@@ -527,10 +527,10 @@ void motorbeep()
 			}
 
 			if ( beep_command != 0 ) {
-				make_packet( 0, beep_command, false );
-				make_packet( 1, beep_command, false );
-				make_packet( 2, beep_command, false );
-				make_packet( 3, beep_command, false );
+				make_packet( 0, beep_command, true );
+				make_packet( 1, beep_command, true );
+				make_packet( 2, beep_command, true );
+				make_packet( 3, beep_command, true );
 				dshot_dma_start();
 			}
 		}

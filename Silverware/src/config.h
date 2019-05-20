@@ -57,10 +57,6 @@
 #define BF_EXPO_YAW 0.00
 #endif
 
-// *************rate in deg/sec 																													todo:  move rates/expo out of radio protocol and wherever else that stuff is and into their own spot
-// *************for angle mode
-#define LEVEL_MAX_RATE 230.0    //Roll & Pitch axis
-
 // *************max angle for level mode
 #define LEVEL_MAX_ANGLE 65.0f
 
@@ -88,11 +84,11 @@
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 
 // *************Serial Receiver UART Selection																		//todo:  Many missing usart AF setups, So plenty more to do here
-//#define UART_1
+#define UART_1
 //#define UART_2
 //#define UART_3
 //#define UART_4
-#define UART_6
+//#define UART_6
 
 // *************Serial Receiver Inversion Selection
 #define INVERT_UART																																

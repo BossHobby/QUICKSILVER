@@ -69,7 +69,7 @@ RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART6, ENABLE);
 
 void usart_invert(void)
 {
-	#ifdef F405
+	#if defined(F405) && defined(INVERT_UART) && defined(USART_INVERTER_PIN) && defined(USART_INVERTER_PORT)
         GPIO_InitTypeDef    GPIO_InitStructure;
         GPIO_InitStructure.GPIO_Pin = USART_INVERTER_PIN;
         GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
