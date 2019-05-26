@@ -16,6 +16,7 @@
 #define OmnibusF4SD
 //#define OmnibusF4
 //#define Alienwhoop_V2
+//#define LuxF4osd
 
 // *************DEFINE FLIGHT CONTROLLER MOTOR OUTPUT - *****warning*****  GETTING THIS WRONG CAN SMOKE YOUR BOARD :)
 #define BRUSHLESS_TARGET
@@ -752,7 +753,7 @@
 #define PWM_PB1
 #endif
 
-#if defined(CC3D_REVO_F4) || defined(OmnibusF4SD) || defined(OmnibusF4)
+#if defined(CC3D_REVO_F4) || defined(OmnibusF4SD) || defined(OmnibusF4) || defined(LuxF4osd)
 #define F405
 #define SYS_CLOCK_FREQ_HZ 168000000
 #define PWM_CLOCK_FREQ_HZ 84000000
@@ -783,7 +784,12 @@
 //#define GYRO_ID_3 0x78
 //#define GYRO_ID_4 0x72
 //#define SENSOR_ROTATE_90_CCW
+#if defined(LuxF4osd)
+#define SENSOR_ROTATE_90_CCW
+#else
 #define SENSOR_FLIP_180
+#endif
+
 //#define DISABLE_GYRO_CHECK
 
 
@@ -797,7 +803,7 @@
 #define USART_INVERTER_PORT GPIOC
 #define USART1_PA10PA9
 #endif
-#if defined(CC3D_REVO_F4) || defined(OmnibusF4)
+#if defined(CC3D_REVO_F4) || defined(OmnibusF4) || defined(LuxF4osd)
 #define USART1_PA10PA9
 #define USART_INVERTER_PIN GPIO_Pin_0
 #define USART_INVERTER_PORT GPIOC
@@ -833,10 +839,10 @@
 #endif
 
 // MOTOR PINS
-#define MOTOR0_PIN_PB0
-#define MOTOR1_PIN_PB1
-#define MOTOR2_PIN_PA2
-#define MOTOR3_PIN_PA3
+#define MOTOR0_PIN_PA3
+#define MOTOR1_PIN_PA2
+#define MOTOR2_PIN_PB0
+#define MOTOR3_PIN_PB1
 
 //pyroflip
 //#define MOTOR0_PIN_PA8
