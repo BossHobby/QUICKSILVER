@@ -1,9 +1,11 @@
 #include "config.h"
 
 void usart_rx_init(void);
-void Ibus_USART_ISR(void);
-void DSM_USART_ISR(void);
-void 	SBUS_USART_ISR(void);
+//void Ibus_USART_ISR(void);
+//void DSM_USART_ISR(void);
+//void 	SBUS_USART_ISR(void);
+void RX_USART_ISR(void);
+
 
 //  CONDITIONAL SELECTION OF DEFINES BASED ON USER SELECTED UART FOR SERIAL RX, TARGET MCU, AND TARGET DEFINED USART ALTERNATE MAPPING PINS
 

@@ -113,7 +113,7 @@ uint8_t teleCounter = 0;
 
 
 //void SERIAL_RX_USART _IRQHandler(void)
-void Ibus_USART_ISR(void)
+void RX_USART_ISR(void)
 {
   rx_buffer[rx_end] = USART_ReceiveData(SERIAL_RX_USART);
   // calculate timing since last rx

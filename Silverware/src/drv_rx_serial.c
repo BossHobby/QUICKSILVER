@@ -10,7 +10,7 @@
 
 //SET SERIAL BAUDRATE BASED ON RECEIVER PROTOCOL
 
-#if defined (RX_DSMX_2048) || defined (RX_DSM2_1024) || defined(RX_IBUS)
+#if defined (RX_DSMX_2048) || defined (RX_DSM2_1024) || defined(RX_IBUS) || defined(RX_FPORT)
 #define SERIAL_BAUDRATE 115200
 #endif
 #if defined (RX_SBUS)
@@ -91,7 +91,7 @@ void usart_invert(void)
 
 //FUNCTION TO INITIALIZE USART FOR A SERIAL RX CALLED FROM RECEIVER PROTOCOL
 
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
 void usart_rx_init(void)
 {
     // make sure there is some time to program the board if SDA pins are reinitialized as GPIO
@@ -102,7 +102,7 @@ void usart_rx_init(void)
     GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
 		GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
 #endif
-#if defined (RX_SBUS)
+#if defined (RX_SBUS) || defined(RX_FPORT)
 		GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 		GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
 #endif   
@@ -114,7 +114,7 @@ void usart_rx_init(void)
     USART_InitTypeDef USART_InitStructure;
     USART_InitStructure.USART_BaudRate = SERIAL_BAUDRATE;
     USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-#if defined (RX_DSMX_2048) || defined (RX_DSM2_1024) || defined (RX_CRSF) || defined (RX_IBUS)	
+#if defined (RX_DSMX_2048) || defined (RX_DSM2_1024) || defined (RX_CRSF) || defined (RX_IBUS) ||defined(RX_FPORT)
     USART_InitStructure.USART_StopBits = USART_StopBits_1;  
     USART_InitStructure.USART_Parity = USART_Parity_No;    //sbus is even parity
 #endif
@@ -123,7 +123,14 @@ void usart_rx_init(void)
     USART_InitStructure.USART_Parity = USART_Parity_Even;   //todo: try setting even
 #endif
     USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+#if defined (RX_FPORT) || defined(RX_CRSF)
+		USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+#else
     USART_InitStructure.USART_Mode = USART_Mode_Rx ;//USART_Mode_Rx | USART_Mode_Tx;
+#endif
+#if defined (RX_FPORT)
+		USART_HalfDuplexCmd(SERIAL_RX_USART, ENABLE);
+#endif
     USART_Init(SERIAL_RX_USART, &USART_InitStructure);
 #ifdef F0
 #ifdef INVERT_UART
@@ -154,74 +161,84 @@ void usart_rx_init(void)
 #ifdef UART_1
 void USART1_IRQHandler(void)
 {
-	#ifdef RX_IBUS 
-	Ibus_USART_ISR();
-	#endif
-	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
-	DSM_USART_ISR();
-	#endif
-	#ifdef RX_SBUS 
-	SBUS_USART_ISR();
-	#endif
+	RX_USART_ISR();
+//	#ifdef RX_IBUS 
+//	Ibus_USART_ISR();
+//	#endif
+//	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
+//	DSM_USART_ISR();
+//	#endif
+//	#ifdef RX_SBUS 
+//	SBUS_USART_ISR();
+//	
+//	#endif
 	}
 #endif
 
 #ifdef UART_2
 void USART2_IRQHandler(void)
 {
-	#ifdef RX_IBUS 
-	Ibus_USART_ISR();
-	#endif
-	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
-	DSM_USART_ISR();
-	#endif
-	#ifdef RX_SBUS 
-	SBUS_USART_ISR();
-	#endif
+		RX_USART_ISR();
+//	#ifdef RX_IBUS 
+//	Ibus_USART_ISR();
+//	#endif
+//	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
+//	DSM_USART_ISR();
+//	#endif
+//	#ifdef RX_SBUS 
+//	SBUS_USART_ISR();
+//	
+//	#endif
 }
 	#endif
 
 #ifdef UART_3
 void USART3_IRQHandler(void)
 {
-	#ifdef RX_IBUS 
-	Ibus_USART_ISR();
-	#endif
-	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
-	DSM_USART_ISR();
-	#endif
-	#ifdef RX_SBUS 
-	SBUS_USART_ISR();
-	#endif
+		RX_USART_ISR();
+//	#ifdef RX_IBUS 
+//	Ibus_USART_ISR();
+//	#endif
+//	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
+//	DSM_USART_ISR();
+//	#endif
+//	#ifdef RX_SBUS 
+//	SBUS_USART_ISR();
+//	
+//	#endif
 }
 #endif
 
 #ifdef UART_4
 void USART4_IRQHandler(void)
 {
-	#ifdef RX_IBUS 
-	Ibus_USART_ISR();
-	#endif
-	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
-	DSM_USART_ISR();
-	#endif
-	#ifdef RX_SBUS 
-	SBUS_USART_ISR();
-	#endif
+		RX_USART_ISR();
+//	#ifdef RX_IBUS 
+//	Ibus_USART_ISR();
+//	#endif
+//	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
+//	DSM_USART_ISR();
+//	#endif
+//	#ifdef RX_SBUS 
+//	SBUS_USART_ISR();
+//	
+//	#endif
 }
 #endif
 
 #ifdef UART_6
 void USART6_IRQHandler(void)
 {
-	#ifdef RX_IBUS 
-	Ibus_USART_ISR();
-	#endif
-	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
-	DSM_USART_ISR();
-	#endif
-	#ifdef RX_SBUS 
-	SBUS_USART_ISR();
-	#endif
+		RX_USART_ISR();
+//	#ifdef RX_IBUS 
+//	Ibus_USART_ISR();
+//	#endif
+//	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
+//	DSM_USART_ISR();
+//	#endif
+//	#ifdef RX_SBUS 
+//	SBUS_USART_ISR();
+//	
+//	#endif
 }
 	#endif

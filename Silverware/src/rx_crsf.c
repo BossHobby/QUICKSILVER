@@ -174,7 +174,7 @@ uint8_t crsfFrameCRC(void)
 
 
 // Receive ISR callback, called back from serial port
-void USART1_IRQHandler(void)	
+void RX_USART_ISR(void)	
 {
     static uint8_t crsfFramePosition = 0;
     unsigned long  maxticks = SysTick->LOAD;	
