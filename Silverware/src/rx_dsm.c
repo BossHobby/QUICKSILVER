@@ -70,7 +70,7 @@ float dsmx_scalefactor = (0.14662756f/DSM_SCALE_PERCENT);
 
 // Receive ISR callback
 
-void DSM_USART_ISR(void)
+void RX_USART_ISR(void)
 { 
     static uint8_t spekFramePosition = 0;
 	

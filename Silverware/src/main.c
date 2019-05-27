@@ -85,6 +85,7 @@ extern void flash_load( void);
 extern void flash_hard_coded_pid_identifier(void);
 
 
+
 // looptime in seconds
 float looptime;
 // filtered battery in volts
@@ -132,6 +133,8 @@ int flash_feature_3 = 0;
 int ledcommand = 0;
 int ledblink = 0;
 unsigned long ledcommandtime = 0;
+
+
 
 void failloop( int val);
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
@@ -206,6 +209,7 @@ else
 {
 //gyro not found   
 failloop(4);
+	
 }
 
 adc_init();
@@ -230,6 +234,7 @@ rx_init();
 
 int count = 0;
 delay (1000);	
+
 while ( count < 5000 )	
 {
 	float bootadc = adc_read(0)*vreffilt;
@@ -266,8 +271,8 @@ float vbattfilt_corr = 4.2f * (float)lipo_cell_count;
 if ( vbattfilt/(float)lipo_cell_count < 3.3f) failloop(2);
 #endif
 
-gyro_cal();
 
+gyro_cal();
 extern void rgb_init( void);
 rgb_init();
 
@@ -276,7 +281,6 @@ serial_init();
 #endif
 
 imu_init();
-
 #ifdef FLASH_SAVE2
 // read accelerometer calibration values from option bytes ( 2* 8bit)
 extern float accelcal[3];
@@ -284,13 +288,11 @@ extern float accelcal[3];
  accelcal[1] = flash2_readdata( OB->DATA1 ) - 127;
 #endif
 				   
-
 extern int liberror;
 if ( liberror ) 
 {
 		failloop(7);
 }
-
 
  lastlooptime = gettime();
 
@@ -303,7 +305,6 @@ if ( liberror )
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 	setup_4way_external_interrupt();
 #endif  
-
 	while(1)
 	{ 
 		// gettime() needs to be called at least once per second 

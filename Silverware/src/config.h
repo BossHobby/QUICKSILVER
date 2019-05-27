@@ -11,9 +11,9 @@
 //#define BWHOOP
 //#define E011
 //#define H8mini_blue_board
-//#define Alienwhoop_ZERO  
+#define Alienwhoop_ZERO  
 //#define CC3D_REVO_F4
-#define OmnibusF4SD
+//#define OmnibusF4SD
 //#define OmnibusF4
 //#define Alienwhoop_V2
 //#define LuxF4osd
@@ -21,8 +21,9 @@
 //#define Raceflight_Revolt
 
 // *************DEFINE FLIGHT CONTROLLER MOTOR OUTPUT - *****warning*****  GETTING THIS WRONG CAN SMOKE YOUR BOARD :)
-#define BRUSHLESS_TARGET
-//#define BRUSHED_TARGET
+//#define BRUSHLESS_TARGET
+#define BRUSHED_TARGET
+
 
 //**********************************************************************************************************************
 //***********************************************RATES & EXPO SETTINGS**************************************************
@@ -77,9 +78,10 @@
 //***********************************************RECEIVER SETTINGS******************************************************
 
 // *************Receiver protocol selection									//todo:  add missing radio protocols from bobnova and make them all jive with new rx_init function in drv_rx_serial.c
-#define RX_SBUS
+//#define RX_SBUS
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
 //#define RX_IBUS
+#define RX_FPORT
 //#define RX_DSMX_2048																				//  Only sbus, ibus, and dsm protocols are working on F4 right now
 //#define RX_DSM2_1024
 //#define RX_NRF24_BAYANG_TELEMETRY
@@ -94,7 +96,7 @@
 //#define UART_6
 
 // *************Serial Receiver Inversion Selection
-#define INVERT_UART																																
+#define INVERT_UART					    //Normally true for SBUS and FPORT																											
 
 // *************Transmitter Type Selection																				//todo:  drop toy tx support - clarify that remaining options are just for bayang protocol
 //#define USE_STOCK_TX
@@ -465,7 +467,7 @@
 #define SENSOR_ROTATE_90_CW
 
 // SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
 #define USART1_SDA
 #define F0_USART_PINSWAP
 #define SOFTSPI_NONE
@@ -627,7 +629,7 @@
 #define SENSOR_ROTATE_180
 
 // SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
 #define USART1_SDA
 #define F0_USART_PINSWAP
 #define SOFTSPI_NONE
@@ -708,8 +710,10 @@
 #define SENSOR_ROTATE_90_CCW
 
 // SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
-//#define F0_USART_PINSWAP
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
+#if defined(RX_FPORT)
+	#define F0_USART_PINSWAP
+#endif
 #define USART1_PA3PA2
 #define SOFTSPI_NONE
 #else
@@ -796,7 +800,7 @@
 
 
 // SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
 //   //not created yet
 //#define UART3_INVERTER_PIN PC9 // Omnibus F4 Pro Corner
 #ifdef OmnibusF4SD
@@ -910,7 +914,7 @@
 
 
 // SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
 #define USART2_PA3PA2
 #define USART3_PC11PC10
 
@@ -1009,7 +1013,7 @@
 //#define DISABLE_GYRO_CHECK
 
 // SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
 #define USART1_PA10PA9
 #define USART_INVERTER_PIN GPIO_Pin_0
 #define USART_INVERTER_PORT GPIOC
@@ -1093,7 +1097,7 @@
 //#define DISABLE_GYRO_CHECK
 
 // SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
 #define USART1_PA10PA9
 #define USART_INVERTER_PIN GPIO_Pin_0
 #define USART_INVERTER_PORT GPIOC

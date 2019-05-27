@@ -631,6 +631,11 @@
               <FileType>1</FileType>
               <FilePath>.\src\rx_ibus.c</FilePath>
             </File>
+            <File>
+              <FileName>rx_fport.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\rx_fport.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -2027,6 +2032,11 @@
               <FileName>rx_ibus.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\rx_ibus.c</FilePath>
+            </File>
+            <File>
+              <FileName>rx_fport.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\rx_fport.c</FilePath>
             </File>
           </Files>
         </Group>
