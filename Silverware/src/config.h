@@ -11,18 +11,18 @@
 //#define BWHOOP
 //#define E011
 //#define H8mini_blue_board
-#define Alienwhoop_ZERO  
+//#define Alienwhoop_ZERO  
 //#define CC3D_REVO_F4
 //#define OmnibusF4SD
-//#define OmnibusF4
+#define OmnibusF4
 //#define Alienwhoop_V2
 //#define LuxF4osd
 //#define CLRacing_F4
 //#define Raceflight_Revolt
 
 // *************DEFINE FLIGHT CONTROLLER MOTOR OUTPUT - *****warning*****  GETTING THIS WRONG CAN SMOKE YOUR BOARD :)
-//#define BRUSHLESS_TARGET
-#define BRUSHED_TARGET
+#define BRUSHLESS_TARGET
+//#define BRUSHED_TARGET
 
 
 //**********************************************************************************************************************
@@ -78,10 +78,10 @@
 //***********************************************RECEIVER SETTINGS******************************************************
 
 // *************Receiver protocol selection									//todo:  add missing radio protocols from bobnova and make them all jive with new rx_init function in drv_rx_serial.c
-//#define RX_SBUS
+#define RX_SBUS
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
 //#define RX_IBUS
-#define RX_FPORT
+//#define RX_FPORT
 //#define RX_DSMX_2048																				//  Only sbus, ibus, and dsm protocols are working on F4 right now
 //#define RX_DSM2_1024
 //#define RX_NRF24_BAYANG_TELEMETRY
