@@ -5,6 +5,10 @@
 
 #ifdef F405
 
+#ifdef ICM20601_SPI1
+	#define MPU6XXX_SPI1
+#endif
+
 #ifdef MPU6XXX_SPI1
 #define MPU6XXX_SPI_INSTANCE SPI1
 #define MPU6XXX_SPI_PORT GPIOA
@@ -20,6 +24,8 @@
 #define MPU6XXX_INT_PORT GPIOC
 #define MPU6XXX_SPI_AF GPIO_AF_SPI1
 #endif
+
+
 
 //  Initialize SPI Connection to Gyro
 void spi_gyro_init(void)
@@ -93,7 +99,7 @@ SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
 //*********************FUNCTIONS************************************
 extern int liberror;   //tracks any failed spi reads or writes to trigger failloop
 
-// Reset spi prescaler to 20mhz
+// Reset spi prescaler to 8mhz, 10mhz, or 20mhz
 void spi_reset_prescaler(void)
 {
 	SPI_Cmd(MPU6XXX_SPI_INSTANCE, DISABLE);
@@ -106,7 +112,15 @@ SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
 SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
 SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
 SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
+#if defined 	(ICM20601_SPI1)		//8mhz SPI
+	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_5;
+#else 
+	#if defined (ICM20602_SPI1)		//10mhz SPI
+	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+	#else				//(MPUXXXX)				//20mhz SPI
+	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
+	#endif
+#endif
 SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
 SPI_InitStructure.SPI_CRCPolynomial = 7;
 SPI_Init(MPU6XXX_SPI_INSTANCE, &SPI_InitStructure);	
