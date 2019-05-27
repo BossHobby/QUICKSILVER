@@ -99,7 +99,7 @@ SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
 //*********************FUNCTIONS************************************
 extern int liberror;   //tracks any failed spi reads or writes to trigger failloop
 
-// Reset spi prescaler to 8mhz, 10mhz, or 20mhz
+// Reset spi prescaler to 5.25mhz, 10mhz, or 20mhz
 void spi_reset_prescaler(void)
 {
 	SPI_Cmd(MPU6XXX_SPI_INSTANCE, DISABLE);
@@ -112,8 +112,8 @@ SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
 SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
 SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
 SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-#if defined 	(ICM20601_SPI1)		//8mhz SPI
-	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_5;
+#if defined 	(ICM20601_SPI1)		//5.25mhz SPI
+	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
 #else 
 	#if defined (ICM20602_SPI1)		//10mhz SPI
 	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
