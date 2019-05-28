@@ -13,8 +13,8 @@
 //#define H8mini_blue_board
 //#define Alienwhoop_ZERO  
 //#define CC3D_REVO_F4
-//#define OmnibusF4SD
-#define OmnibusF4
+#define OmnibusF4SD
+//#define OmnibusF4
 //#define Alienwhoop_V2
 //#define LuxF4osd
 //#define CLRacing_F4
@@ -29,8 +29,8 @@
 //***********************************************RATES & EXPO SETTINGS**************************************************
 
 // *************Select your preffered rate calculation format (define only one)
-#define SILVERWARE_RATES
-//#define BETAFLIGHT_RATES
+//#define SILVERWARE_RATES
+#define BETAFLIGHT_RATES
 
 #ifdef SILVERWARE_RATES
 // *************rate in deg/sec
@@ -50,15 +50,15 @@
 #endif
 
 #ifdef BETAFLIGHT_RATES
-#define BF_RC_RATE_ROLL 1.00
-#define BF_RC_RATE_PITCH 1.00
-#define BF_RC_RATE_YAW 1.00
+#define BF_RC_RATE_ROLL 1.30
+#define BF_RC_RATE_PITCH 1.30
+#define BF_RC_RATE_YAW 1.30
 #define BF_SUPER_RATE_ROLL 0.70
 #define BF_SUPER_RATE_PITCH 0.70
 #define BF_SUPER_RATE_YAW 0.70
-#define BF_EXPO_ROLL 0.00
-#define BF_EXPO_PITCH 0.00
-#define BF_EXPO_YAW 0.00
+#define BF_EXPO_ROLL 0.40
+#define BF_EXPO_PITCH 0.40
+#define BF_EXPO_YAW 0.40
 #endif
 
 // *************max angle for level mode
@@ -78,10 +78,10 @@
 //***********************************************RECEIVER SETTINGS******************************************************
 
 // *************Receiver protocol selection									//todo:  add missing radio protocols from bobnova and make them all jive with new rx_init function in drv_rx_serial.c
-#define RX_SBUS
+//#define RX_SBUS
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
 //#define RX_IBUS
-//#define RX_FPORT
+#define RX_FPORT
 //#define RX_DSMX_2048																				//  Only sbus, ibus, and dsm protocols are working on F4 right now
 //#define RX_DSM2_1024
 //#define RX_NRF24_BAYANG_TELEMETRY
@@ -96,7 +96,7 @@
 //#define UART_6
 
 // *************Serial Receiver Inversion Selection
-#define INVERT_UART					    //Normally true for SBUS and FPORT																											
+//#define INVERT_UART					    //Normally true for SBUS and FPORT																											
 
 // *************Transmitter Type Selection																				//todo:  drop toy tx support - clarify that remaining options are just for bayang protocol
 //#define USE_STOCK_TX
@@ -105,7 +105,7 @@
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING CHAN_5
-#define IDLE_UP CHAN_5																															//todo:  sort out a better brushless plan for airmode, idle up, and min throttle enable
+#define IDLE_UP CHAN_6																															//todo:  sort out a better brushless plan for airmode, idle up, and min throttle enable
 #define IDLE_THR 0.04f                   //This designates an idle throttle of 5%
 #define LEVELMODE CHAN_OFF
 #define RACEMODE  CHAN_OFF
@@ -195,8 +195,8 @@
 #define GYRO_FILTER_PASS2 HZ_140
 
 //Select D Term Filter Cut Frequency *** Select Only one
-//#define  DTERM_LPF_2ND_HZ 100
-#define DTERM_LPF_1ST_HZ 70
+#define  DTERM_LPF_2ND_HZ 100
+//#define DTERM_LPF_1ST_HZ 70
 
 //Select Motor Filter Type  (I am no longer using this)
 //#define MOTOR_FILTER2_ALPHA MFILT1_HZ_90
@@ -793,6 +793,9 @@
 #if defined(LuxF4osd)
 #define SENSOR_ROTATE_90_CCW
 #else
+#if  defined(OmnibusF4SD)
+#define SENSOR_ROTATE_90_CW
+#endif
 #define SENSOR_FLIP_180
 #endif
 
@@ -804,10 +807,11 @@
 //   //not created yet
 //#define UART3_INVERTER_PIN PC9 // Omnibus F4 Pro Corner
 #ifdef OmnibusF4SD
-#define USART6_PC7PC6
 #define USART_INVERTER_PIN GPIO_Pin_8
 #define USART_INVERTER_PORT GPIOC
 #define USART1_PA10PA9
+#define USART3_PB11PB10
+#define USART6_PC7PC6
 #endif
 #if defined(CC3D_REVO_F4) || defined(OmnibusF4) || defined(LuxF4osd)
 #define USART1_PA10PA9
@@ -844,7 +848,18 @@
 #define ADC_REF_VOLTAGE 3.3
 #endif
 
+
+
 // MOTOR PINS
+
+//OmniF4SD
+#ifdef OmnibusF4SD
+#define MOTOR2_PIN_PA3
+#define MOTOR3_PIN_PA2
+#define MOTOR0_PIN_PB0
+#define MOTOR1_PIN_PB1
+
+#else //Default
 #define MOTOR0_PIN_PA3
 #define MOTOR1_PIN_PA2
 #define MOTOR2_PIN_PB0
@@ -856,6 +871,7 @@
 //#define MOTOR2_PIN_PB1
 //#define MOTOR3_PIN_PB0
 
+#endif
 // pwm pin initialization
 //#define USE_PWM_DRIVER
 //#define USE_ESC_DRIVER       //todo:  evaluate need for this to stay if focused on quadcopters
