@@ -78,6 +78,7 @@ extern int ledblink;
 
 extern float apid(int x);
 
+
 #ifdef NOMOTORS
 // to maintain timing or it will be optimized away
 float tempx[4];
@@ -403,7 +404,7 @@ if (aux[LEVELMODE]&&!acro_override){
 #endif
 	
 #ifndef IDLE_THR
-	#define IDLE_THR .05f
+	#define IDLE_THR .001f																														//just enough to override motor stop at 0 throttle
 #endif
 
 	if (armed_state == 0){                                     												// CONDITION: armed state variable is 0 so quad is DISARMED					
@@ -473,7 +474,7 @@ if (aux[CH_AUX1]){
 		
 		onground = 0;
 		onground_long = gettime();
-		
+			
 		float mix[4];	
 
 #ifdef 	THROTTLE_TRANSIENT_COMPENSATION
@@ -708,7 +709,7 @@ else
 // options for mix throttle lowering if enabled
 // 0 - 100 range ( 100 = full reduction / 0 = no reduction )
 #ifndef MIX_THROTTLE_REDUCTION_PERCENT
-#define MIX_THROTTLE_REDUCTION_PERCENT 20
+#define MIX_THROTTLE_REDUCTION_PERCENT 10
 #endif
 
 // limit reduction and increase to this amount ( 0.0 - 1.0)
@@ -830,11 +831,11 @@ for ( int i = 0 ; i <= 3 ; i++)
 
 
 //***********************Min Motor Command Logic
-		#ifdef MOTOR_MIN_COMMAND   // mapping style min motor command.  remaps entire range of motor commands from user set min value to 1
+		#ifdef DIGITAL_IDLE   // mapping style min motor command.  remaps entire range of motor commands from user set min value to 1
 		#ifdef BRUSHLESS_TARGET
 		// do nothing - idle set by DSHOT
 		#else
-			float motor_min_value = (float) MOTOR_MIN_COMMAND * 0.01f;
+			float motor_min_value = (float) DIGITAL_IDLE * 0.01f;
 			if ( mix[i] < 0 ) mix[i] = 0;											//Clip all mixer values into 0 to 1 range before remapping
 			if ( mix[i] > 1 ) mix[i] = 1;	
 			mix[i] = motor_min_value + mix[i] * (1.0f - motor_min_value);

@@ -25,6 +25,9 @@
 //#define BRUSHED_TARGET
 
 
+
+
+
 //**********************************************************************************************************************
 //***********************************************RATES & EXPO SETTINGS**************************************************
 
@@ -105,12 +108,11 @@
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING CHAN_5
-#define IDLE_UP CHAN_5																															//todo:  sort out a better brushless plan for airmode, idle up, and min throttle enable
-#define IDLE_THR 0.04f                   //This designates an idle throttle of 4%
+#define IDLE_UP CHAN_5
 #define LEVELMODE CHAN_OFF
 #define RACEMODE  CHAN_OFF
 #define HORIZON   CHAN_OFF
-#define PIDPROFILE CHAN_9                //For switching stickAccelerator & stickTransition profiles on pid.c page - careful with full bronx on brushless
+#define PIDPROFILE CHAN_9              //For switching stickAccelerator & stickTransition profiles on pid.c page - careful with full bronx on brushless
 #define RATES CHAN_ON
 #define LEDS_ON CHAN_OFF
 
@@ -126,6 +128,7 @@
 
 // *************RRD/LLD stick gesture aux start up state.
 //#define AUX1_START_ON
+
 
 
 
@@ -172,6 +175,7 @@
 
 
 
+
 //**********************************************************************************************************************
 //***********************************************FILTER SETTINGS********************************************************
 
@@ -203,11 +207,12 @@
 
 
 
+
 //**********************************************************************************************************************
 //***********************************************MOTOR OUTPUT SETTINGS**************************************************
 
 // *************brushed motor minimum idle percent / dshot digital idle
-#define DIGITAL_IDLE 4
+#define DIGITAL_IDLE 5
 
 // *************invert yaw pid for "PROPS OUT" configuration - This feature is switchable to "PROPS IN" when active with stick gesture DOWN-UP-DOWN, Save selection with DOWN-DOWN-DOWN
 #define INVERT_YAW_PID
@@ -232,20 +237,29 @@
 // *************throttle angle compensation in level mode
 //#define AUTO_THROTTLE
 
-// *************BRUSHED TARGET mixer settings
+// *************BRUSHED TARGET MIXER SETTINGS
 // *************MIX_THROTTLE_REDUCTION_PERCENT reduces thrust imbalances by reducing throttle proportionally to the adjustable reduction percent to the limit set by MIX_THROTTLE_REDUCTION_MAX
 // *************MIX_THROTTLE_INCREASE_MAX increases the authority of the pid controller at lowest throttle values like airmode when combined with idle up
-// *************BRUSHLESS_MIX_SCALING disables the default brushed mixer and applies the default brushless mixer
-#define MIX_THROTTLE_REDUCTION_PERCENT 10
-#define MIX_THROTTLE_INCREASE_MAX 0.2f
+// *************BRUSHLESS_MIX_SCALING define disables the default brushed mixer and applies the default brushless mixer
+//#define MIX_THROTTLE_REDUCTION_PERCENT 10
+//#define MIX_THROTTLE_INCREASE_MAX 0.2f
 //#define MIX_THROTTLE_REDUCTION_MAX 0.5f
 //#define BRUSHLESS_MIX_SCALING
+
+// *************BRUSHLESS TARGET MIXER SETTINGS
+// *************AIRMODE_STRENGTH is the amount of authority AIRMODE is given over throttle
+// *************Decrease CLIPPING_LIMIT to force clipping in place of mix scaling to 
+// *************restore lost power on "promblem quads" by allowing some thrust imbalances to pass through the mixer
+//	#define AIRMODE_STRENGTH  1.0f
+//	#define CLIPPING_LIMIT  1.0f 
+
 
 //**************joelucid's yaw fix
 #define YAW_FIX
 
 //**************I-term relax.  Removes roll and pitch bounce back after flips
 #define TRANSIENT_WINDUP_PROTECTION
+
 
 
 
