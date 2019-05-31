@@ -438,7 +438,7 @@ if (aux[CH_AUX1]){
 
 
 // turn motors off if throttle is off and pitch / roll sticks are centered
-	if ( failsafe || (throttle < 0.001f && (!ENABLESTIX || !onground_long || aux[LEVELMODE] || (fabsf(rx[ROLL]) < (float) ENABLESTIX_TRESHOLD && fabsf(rx[PITCH]) < (float) ENABLESTIX_TRESHOLD && fabsf(rx[YAW]) < (float) ENABLESTIX_TRESHOLD ) ) ) ) 
+	if ( (armed_state == 0) || failsafe || (throttle < 0.001f && (!ENABLESTIX || !onground_long || aux[LEVELMODE] || (fabsf(rx[ROLL]) < (float) ENABLESTIX_TRESHOLD && fabsf(rx[PITCH]) < (float) ENABLESTIX_TRESHOLD && fabsf(rx[YAW]) < (float) ENABLESTIX_TRESHOLD ) ) ) ) 
 	{	// motors off
 
 		if ( onground_long )
@@ -461,32 +461,9 @@ if (aux[CH_AUX1]){
 		#ifdef MOTOR_BEEPS
 		extern void motorbeep( void);
 		motorbeep();
-		#endif
-
-		#ifdef MIX_LOWER_THROTTLE
-		// reset the overthrottle filter
-		lpf(&overthrottlefilt, 0.0f, 0.72f);	// 50hz 1khz sample rate
-		lpf(&underthrottlefilt, 0.0f, 0.72f);	// 50hz 1khz sample rate
-		#endif				
-		
-		#ifdef STOCK_TX_AUTOCENTER
-		for( int i = 0 ; i <3;i++)
-			{
-				if ( rx[i] == lastrx[i] )
-					{
-						consecutive[i]++;
+		#endif			
 						
-					}
-				else consecutive[i] = 0;
-				lastrx[i] = rx[i];
-				if ( consecutive[i] > 1000 && fabsf( rx[i]) < 0.1f )
-					{
-						autocenter[i] = rx[i];
-					}
-			}
-		#endif				
 		
-	
 		throttle = 0;										//zero out throttle so it does not come back on as idle up value if enabled			
 		onground = 1;
 		thrsum = 0;
@@ -673,16 +650,23 @@ else
 		#endif
        		}
 
+//********************************MIXER SCALING***********************************************************
 					
+#ifdef BRUSHED_TARGET
+	#define BRUSHED_MIX_SCALING
+#endif
+	
+					
+#if defined (BRUSHLESS_TARGET) || defined (BRUSHLESS_MIX_SCALING)					
 #ifdef BRUSHLESS_MIX_SCALING
-		#undef MIX_LOWER_THROTTLE
-		#undef MIX_INCREASE_THROTTLE
-		#undef MIX_LOWER_THROTTLE_3
-		#undef MIX_INCREASE_THROTTLE_3
-#define AIRMODE_STRENGTH  1.0f        //  Most amount of power that can be added for Airmode
-#define CLIPPING_LIMIT  1.0f					//  Most amount of power that can be pulled before clipping
-					
-					
+		#undef BRUSHED_MIX_SCALING
+#endif
+#ifndef AIRMODE_STRENGTH
+	#define AIRMODE_STRENGTH  1.0f        //  Most amount of power that can be added for Airmode
+#endif
+#ifndef CLIPPING_LIMIT
+	#define CLIPPING_LIMIT  1.0f					//  Most amount of power that can be pulled before clipping
+#endif					
 					
          static int mixScaling;
          if (onground) mixScaling = 0;
@@ -716,20 +700,17 @@ else
                  for (int i=0; i<4; i++)
                      mix[i] -= reduceAmount;
          }
-#endif 					
+#endif				 
 
 
-#if ( defined MIX_LOWER_THROTTLE || defined MIX_INCREASE_THROTTLE)
-
-//#define MIX_INCREASE_THROTTLE
+								 
+#ifdef BRUSHED_MIX_SCALING			 
 
 // options for mix throttle lowering if enabled
 // 0 - 100 range ( 100 = full reduction / 0 = no reduction )
 #ifndef MIX_THROTTLE_REDUCTION_PERCENT
-#define MIX_THROTTLE_REDUCTION_PERCENT 100
+#define MIX_THROTTLE_REDUCTION_PERCENT 20
 #endif
-// lpf (exponential) shape if on, othewise linear
-//#define MIX_THROTTLE_FILTER_LPF
 
 // limit reduction and increase to this amount ( 0.0 - 1.0)
 // 0.0 = no action 
@@ -743,7 +724,7 @@ else
 #define MIX_MOTOR_MAX 1.0f
 #endif
 
-
+//throttle reduction
 		  float overthrottle = 0;
 		  float underthrottle = 0.001f;
 		
@@ -754,124 +735,41 @@ else
 					if (mix[i] < underthrottle)
 						underthrottle = mix[i];
 		    }
-
-#ifdef MIX_LOWER_THROTTLE
             
 		  overthrottle -= MIX_MOTOR_MAX ;
 
 		  if (overthrottle > (float)MIX_THROTTLE_REDUCTION_MAX)
 			  overthrottle = (float)MIX_THROTTLE_REDUCTION_MAX;
 
-#ifdef MIX_THROTTLE_FILTER_LPF
-		  if (overthrottle > overthrottlefilt)
-			  lpf(&overthrottlefilt, overthrottle, 0.82);	// 20hz 1khz sample rate
-		  else
-			  lpf(&overthrottlefilt, overthrottle, 0.72);	// 50hz 1khz sample rate
-#else
 		  if (overthrottle > overthrottlefilt)
 			  overthrottlefilt += 0.005f;
 		  else
 			  overthrottlefilt -= 0.01f;
-#endif
-#else
-overthrottle = 0.0f;        
-#endif
-          
-#ifdef MIX_INCREASE_THROTTLE
-// under			
 			
-		  if (underthrottle < -(float)MIX_THROTTLE_REDUCTION_MAX)
-			  underthrottle = -(float)MIX_THROTTLE_REDUCTION_MAX;
-			
-#ifdef MIX_THROTTLE_FILTER_LPF
-		  if (underthrottle < underthrottlefilt)
-			  lpf(&underthrottlefilt, underthrottle, 0.82);	// 20hz 1khz sample rate
-		  else
-			  lpf(&underthrottlefilt, underthrottle, 0.72);	// 50hz 1khz sample rate
-#else
-		  if (underthrottle < underthrottlefilt)
-			  underthrottlefilt -= 0.005f;
-		  else
-			  underthrottlefilt += 0.01f;
-#endif
-// under
-			if (underthrottlefilt < - (float)MIX_THROTTLE_REDUCTION_MAX)
-			  underthrottlefilt = - (float)MIX_THROTTLE_REDUCTION_MAX;
-		  if (underthrottlefilt > 0.1f)
-			  underthrottlefilt = 0.1;
-
-			underthrottle = underthrottlefilt;
-					
-			if (underthrottle > 0.0f)
-			  underthrottle = 0.0001f;
-
-			underthrottle *= ((float)MIX_THROTTLE_REDUCTION_PERCENT / 100.0f);
-#else
-  underthrottle = 0.001f;			
-#endif			
-// over			
 		  if (overthrottlefilt > (float)MIX_THROTTLE_REDUCTION_MAX)
 			  overthrottlefilt = (float)MIX_THROTTLE_REDUCTION_MAX;
 		  if (overthrottlefilt < -0.1f)
 			  overthrottlefilt = -0.1;
 
-
 		  overthrottle = overthrottlefilt;
-
-			
+		
 		  if (overthrottle < 0.0f)
 			  overthrottle = -0.0001f;
-
 			
 			// reduce by a percentage only, so we get an inbetween performance
 			overthrottle *= ((float)MIX_THROTTLE_REDUCTION_PERCENT / 100.0f);
-
-			
-			
-		  if (overthrottle > 0 || underthrottle < 0 )
+		
+		  if (overthrottle > 0)
 		    {		// exceeding max motor thrust
-					float temp = overthrottle + underthrottle;
+					float temp = overthrottle;
 			    for (int i = 0; i < 4; i++)
 			      {
 				      mix[i] -= temp;
 			      }
 		    }
-#endif				
 
-
-#ifdef MIX_LOWER_THROTTLE_3
-{
-#ifndef MIX_THROTTLE_REDUCTION_MAX
-#define MIX_THROTTLE_REDUCTION_MAX 0.5f
-#endif
-
-float overthrottle = 0;
-
-for (int i = 0; i < 4; i++)
-		    {
-			    if (mix[i] > overthrottle)
-				    overthrottle = mix[i];
-            }
-
-
-overthrottle -=1.0f;
-// limit to half throttle max reduction
-if ( overthrottle > (float) MIX_THROTTLE_REDUCTION_MAX)  overthrottle = (float) MIX_THROTTLE_REDUCTION_MAX;
-
-if ( overthrottle > 0.0f)
-{
-    for ( int i = 0 ; i < 4 ; i++)
-        mix[i] -= overthrottle;
-}
-#ifdef MIX_THROTTLE_FLASHLED
-if ( overthrottle > 0.1f) ledcommand = 1;
-#endif
-}
-#endif
-
-
-#ifdef MIX_INCREASE_THROTTLE_3
-{
+//Brushed airmode - throttle increase				
+				
 #ifndef MIX_THROTTLE_INCREASE_MAX
 #define MIX_THROTTLE_INCREASE_MAX 0.2f
 #endif
@@ -884,7 +782,6 @@ if ( overthrottle > 0.1f) ledcommand = 1;
 							underthrottle = mix[i];
 			}
 
-
 		// limit to half throttle max reduction
 		if ( underthrottle < -(float) MIX_THROTTLE_INCREASE_MAX)  underthrottle = -(float) MIX_THROTTLE_INCREASE_MAX;
 
@@ -893,26 +790,24 @@ if ( overthrottle > 0.1f) ledcommand = 1;
 					for ( int i = 0 ; i < 4 ; i++)
             mix[i] -= underthrottle;
 			}
-		#ifdef MIX_THROTTLE_FLASHLED
-			if ( underthrottle < -0.01f) ledcommand = 1;
-		#endif
 	}
-}
+
 #endif
 
             
+//********************************MOTOR OUTPUT***********************************************************            
             
-            
-thrsum = 0;		
-				
-		for ( int i = 0 ; i <= 3 ; i++)
-		{			
-		           
-		#ifdef CLIP_FF
-		mix[i] = clip_ff(mix[i], i);
-		#endif
+thrsum = 0;		//reset throttle sum for voltage monitoring logic in main loop
 
+//Begin for-loop to send motor commands
+for ( int i = 0 ; i <= 3 ; i++)
+	{			
+		
+//***********************Motor Test Logic
 		#if defined(MOTORS_TO_THROTTLE) || defined(MOTORS_TO_THROTTLE_MODE)
+		#if defined(MOTORS_TO_THROTTLE) && !defined(MOTORS_TO_THROTTLE_MODE)
+		#undef MOTOR_MIN_COMMAND
+		#endif
 		#if defined(MOTORS_TO_THROTTLE_MODE) && !defined(MOTORS_TO_THROTTLE)
 		if(aux[MOTORS_TO_THROTTLE_MODE])
 		{
@@ -932,15 +827,24 @@ thrsum = 0;
 		#warning "MOTORS TEST MODE"
 		#endif
 		#endif
+//***********************End Motor Test Logic
 
-		#ifdef MOTOR_MIN_ENABLE
-		if (mix[i] < (float) MOTOR_MIN_VALUE)
-		{
-			mix[i] = (float) MOTOR_MIN_VALUE;
-		}
+
+//***********************Min Motor Command Logic
+		#ifdef MOTOR_MIN_COMMAND   // mapping style min motor command.  remaps entire range of motor commands from user set min value to 1
+		#ifdef BRUSHLESS_TARGET
+		// do nothing - idle set by DSHOT
+		#else
+			float motor_min_value = (float) MOTOR_MIN_COMMAND * 0.01f;
+			if ( mix[i] < 0 ) mix[i] = 0;											//Clip all mixer values into 0 to 1 range before remapping
+			if ( mix[i] > 1 ) mix[i] = 1;	
+			mix[i] = motor_min_value + mix[i] * (1.0f - motor_min_value);
 		#endif
-		
-			
+		#endif  
+//***********************End Min Motor Command Logic
+
+
+//***********************Send Motor PWM Command Logic			
 		#ifndef NOMOTORS
 		#ifndef MOTORS_TO_THROTTLE
 		//normal mode
@@ -955,16 +859,20 @@ thrsum = 0;
 		#warning "NO MOTORS"
 		tempx[i] = motormap( mix[i] );
 		#endif
+//***********************End Motor PWM Command Logic
 		
+//***********************Clip mmixer outputs (if not already done) before applying calculating throttle sum
 		if ( mix[i] < 0 ) mix[i] = 0;
 		if ( mix[i] > 1 ) mix[i] = 1;
 		thrsum+= mix[i];
-		}	
-		thrsum = thrsum / 4;
-		
-	}// end motors on
+	}	
+// end of for-loop to send motor PWM commands
+		thrsum = thrsum / 4;		//calculate throttle sum for voltage monitoring logic in main loop		
+	}
+// end motors on
 	
 }
+// end of control function
 
 
 #ifndef MOTOR_FILTER2_ALPHA
@@ -993,19 +901,6 @@ float motorlpf( float in , int x)
 }
 #endif
 
-float hann_lastsample[4];
-float hann_lastsample2[4];
-
-// hanning 3 sample filter
-float motorfilter( float motorin ,int number)
-{
- 	float ans = motorin*0.25f + hann_lastsample[number] * 0.5f +   hann_lastsample2[number] * 0.25f ;
-	
-	hann_lastsample2[number] = hann_lastsample[number];
-	hann_lastsample[number] = motorin;
-	
-	return ans;
-}
 
 
     //initial values for the kalman filter 
@@ -1042,38 +937,6 @@ float  motor_kalman( float in , int x)
 return x_est;
 }	
 	
-	
-float clip_feedforward[4];
-// clip feedforward adds the amount of thrust exceeding 1.0 ( max) 
-// to the next iteration(s) of the loop
-// so samples 0.5 , 1.5 , 0.4 would transform into 0.5 , 1.0 , 0.9;
-
-float clip_ff(float motorin, int number)
-{
-
-	if (motorin > 1.0f)
-	  {
-		  clip_feedforward[number] += (motorin - 1.0f);
-		  //cap feedforward to prevent windup 
-		  if (clip_feedforward[number] > .5f)
-			  clip_feedforward[number] = .5f;
-	  }
-	else if (clip_feedforward[number] > 0)
-	  {
-		  float difference = 1.0f - motorin;
-		  motorin = motorin + clip_feedforward[number];
-		  if (motorin > 1.0f)
-		    {
-			    clip_feedforward[number] -= difference;
-			    if (clip_feedforward[number] < 0)
-				    clip_feedforward[number] = 0;
-		    }
-		  else
-			  clip_feedforward[number] = 0;
-
-	  }
-	return motorin;
-}
 
 #ifndef TORQUE_BOOST
     #define TORQUE_BOOST   0.0

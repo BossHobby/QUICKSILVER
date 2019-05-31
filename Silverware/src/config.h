@@ -13,8 +13,8 @@
 //#define H8mini_blue_board
 //#define Alienwhoop_ZERO  
 //#define CC3D_REVO_F4
-#define OmnibusF4SD
-//#define OmnibusF4
+//#define OmnibusF4SD
+#define OmnibusF4
 //#define Alienwhoop_V2
 //#define LuxF4osd
 //#define CLRacing_F4
@@ -29,8 +29,8 @@
 //***********************************************RATES & EXPO SETTINGS**************************************************
 
 // *************Select your preffered rate calculation format (define only one)
-//#define SILVERWARE_RATES
-#define BETAFLIGHT_RATES
+#define SILVERWARE_RATES
+//#define BETAFLIGHT_RATES
 
 #ifdef SILVERWARE_RATES
 // *************rate in deg/sec
@@ -105,7 +105,7 @@
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING CHAN_5
-#define IDLE_UP CHAN_6																															//todo:  sort out a better brushless plan for airmode, idle up, and min throttle enable
+#define IDLE_UP CHAN_5																															//todo:  sort out a better brushless plan for airmode, idle up, and min throttle enable
 #define IDLE_THR 0.04f                   //This designates an idle throttle of 5%
 #define LEVELMODE CHAN_OFF
 #define RACEMODE  CHAN_OFF
@@ -215,10 +215,7 @@
 // *************pwm frequency for motor control
 // *************a higher frequency makes the motors more linear
 // *************in Hz
-#define PWMFREQ 16000
-
-// *************clip feedforward attempts to resolve issues that occur near full throttle by adding any clipped motor commands to the next loop output
-//#define CLIP_FF
+#define PWMFREQ 32000
 
 // *************torque boost is a highly eperimental feature.  it is a lpf D term on motor outputs that will accelerate the response
 // *************of the motors when the command to the motors is changing by increasing or decreasing the voltage thats sent.  It differs
@@ -235,18 +232,14 @@
 // *************throttle angle compensation in level mode
 //#define AUTO_THROTTLE
 
-// *************mix lower throttle reduces thrust imbalances by reducing throttle proportionally to the adjustable reduction percent
-// *************mix increase throttle increases the authority of the pid controller at lowest throttle values like airmode when combined with idle up
-// *************mix3 has a stronger effect and works better with brushless
-//#define MIX_LOWER_THROTTLE
-//#define MIX_THROTTLE_REDUCTION_PERCENT 10
-//#define MIX_INCREASE_THROTTLE
-
-//#define MIX_LOWER_THROTTLE_3
-//#define MIX_INCREASE_THROTTLE_3
-//#define MIX_THROTTLE_INCREASE_MAX 0.8f
-//#define MIX_THROTTLE_REDUCTION_MAX 0.8f
-#define BRUSHLESS_MIX_SCALING
+// *************BRUSHED TARGET mixer settings
+// *************MIX_THROTTLE_REDUCTION_PERCENT reduces thrust imbalances by reducing throttle proportionally to the adjustable reduction percent to the limit set by MIX_THROTTLE_REDUCTION_MAX
+// *************MIX_THROTTLE_INCREASE_MAX increases the authority of the pid controller at lowest throttle values like airmode when combined with idle up
+// *************BRUSHLESS_MIX_SCALING disables the default brushed mixer and applies the default brushless mixer
+#define MIX_THROTTLE_REDUCTION_PERCENT 10
+#define MIX_THROTTLE_INCREASE_MAX 0.2f
+//#define MIX_THROTTLE_REDUCTION_MAX 0.5f
+//#define BRUSHLESS_MIX_SCALING
 
 //**************joelucid's yaw fix
 #define YAW_FIX
@@ -314,9 +307,9 @@
 #define TRIM_PITCH 0.0
 #define TRIM_ROLL 0.0
 
-// limit minimum motor output to a value (0.0 - 1.0)
-//#define MOTOR_MIN_ENABLE
-//#define MOTOR_MIN_VALUE 0.05
+// brushed motor idle percent / dshot digital idle
+#define DIGITAL_IDLE 4
+
 
 // flash saving features
 //#define DISABLE_GESTURES2

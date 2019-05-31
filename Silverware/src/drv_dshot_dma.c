@@ -62,7 +62,9 @@
 
 // IDLE_OFFSET is added to the throttle. Adjust its value so that the motors
 // still spin at minimum throttle.
-#define IDLE_OFFSET 40  
+#ifndef DIGITAL_IDLE
+#define DIGITAL_IDLE 4  
+#endif
 
 // READ THIS:
 
@@ -441,16 +443,16 @@ void pwm_set( uint8_t number, float pwm )
 
 	if ( pwmdir == FORWARD ) {
 		// maps 0.0 .. 0.999 to 48 + IDLE_OFFSET .. 1047
-		value = 48 + IDLE_OFFSET + (uint16_t)( pwm * ( 1000 - IDLE_OFFSET ) );
+		value = 48 + (DIGITAL_IDLE * 10) + (uint16_t)( pwm * ( 1000 - (DIGITAL_IDLE * 10) ) );
 	} else if ( pwmdir == REVERSE ) {
 		// maps 0.0 .. 0.999 to 1048 + IDLE_OFFSET .. 2047
-		value = 1048 + IDLE_OFFSET + (uint16_t)( pwm * ( 1000 - IDLE_OFFSET ) );
+		value = 1048 + (DIGITAL_IDLE * 10) + (uint16_t)( pwm * ( 1000 - (DIGITAL_IDLE * 10) ) );
 	}
 
 #else
 
 	// maps 0.0 .. 0.999 to 48 + IDLE_OFFSET * 2 .. 2047
-	value = 48 + IDLE_OFFSET * 2 + (uint16_t)( pwm * ( 2001 - IDLE_OFFSET * 2 ) );
+	value = 48 + (DIGITAL_IDLE * 20) + (uint16_t)( pwm * ( 2001 - (DIGITAL_IDLE * 20) ) );
 
 #endif
 
