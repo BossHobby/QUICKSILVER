@@ -4,8 +4,7 @@
 
 #include "project.h"
 #include "xn297.h"
-#include "hardware.h"
-#include "config.h"
+#include "defines.h"
 
 #ifdef SOFTSPI_3WIRE
 

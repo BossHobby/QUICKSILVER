@@ -1,4 +1,4 @@
-#include "config.h"
+#include "defines.h"
 #include "util.h"
 
 #include <math.h>

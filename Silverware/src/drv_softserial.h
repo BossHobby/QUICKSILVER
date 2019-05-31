@@ -26,7 +26,7 @@ SOFTWARE.
 #define DRV_SOFTSERIAL_H
 
 #include "project.h"
-#include "config.h"
+#include "defines.h"
 #include "drv_time.h"
 
 typedef struct SoftSerialData_s

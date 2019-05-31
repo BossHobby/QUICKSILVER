@@ -23,7 +23,7 @@ SOFTWARE.
 */
 
 #include "drv_softserial.h"
-#include "config.h"
+#include "defines.h"
 
 uint32_t softserial_micros_per_bit = (uint32_t)(1000000/9600);
 uint32_t softserial_micros_per_bit_half = (uint32_t)(1000000/9600)*.5;

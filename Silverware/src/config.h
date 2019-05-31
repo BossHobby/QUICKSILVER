@@ -1,13 +1,13 @@
-#include "defines.h"
-#include "hardware.h"
 
-//Universal pids are already loaded for 6mm and 7mm whoops by default.  Adjust pids in pid.c file for any non whoop builds.  
+
+
+//Universal pids are already loaded for 5" brushless by default.  Adjust pids in pid.c file for your build.  
 
 //**********************************************************************************************************************
 //***********************************************HARDWARE SELECTION*****************************************************
 
 // *************DEFINE FLIGHT CONTROLLER HARDWARE
-// *************SELECT QUICKSILVER F4 FROM TARGET DROP DOWN BOX FOR F4 TARGETS AND NFE_Silverware FROM TARGET DROP DOWN BOX FOR F0 TARGETS
+// *************SELECT QUICKSILVER F4 FROM TARGET DROP DOWN BOX FOR F4 TARGETS AND NFE_Silverware FROM TARGET DROP DOWN BOX FOR F0 TARGETS **CLEAN TARGETS in project menu when changing between f0/f4**
 //#define BWHOOP
 //#define E011
 //#define H8mini_blue_board
@@ -78,17 +78,17 @@
 //***********************************************RECEIVER SETTINGS******************************************************
 
 // *************Receiver protocol selection									//todo:  add missing radio protocols from bobnova and make them all jive with new rx_init function in drv_rx_serial.c
-//#define RX_SBUS
+#define RX_SBUS
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
 //#define RX_IBUS
-#define RX_FPORT
-//#define RX_DSMX_2048																				//  Only sbus, ibus, and dsm protocols are working on F4 right now
+//#define RX_FPORT
+//#define RX_DSMX_2048																				//  Only fport, sbus, ibus, and dsm protocols are working on F4 right now
 //#define RX_DSM2_1024
 //#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 
-// *************Serial Receiver UART Selection																		//todo:  Many missing usart AF setups, So plenty more to do here
+// *************Serial Receiver UART Selection (uncomment all if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
 #define UART_1
 //#define UART_2
 //#define UART_3
@@ -98,7 +98,7 @@
 // *************Serial Receiver Inversion Selection
 //#define INVERT_UART					    //Normally true for SBUS and FPORT																											
 
-// *************Transmitter Type Selection																				//todo:  drop toy tx support - clarify that remaining options are just for bayang protocol
+// *************Transmitter Type Selection (for bayang protocol only)																				//todo:  drop toy tx support - clarify that remaining options are just for bayang protocol
 //#define USE_STOCK_TX
 //#define USE_DEVO
 #define USE_MULTI
@@ -106,11 +106,11 @@
 // *******************************SWITCH SELECTION*****************************
 #define ARMING CHAN_5
 #define IDLE_UP CHAN_5																															//todo:  sort out a better brushless plan for airmode, idle up, and min throttle enable
-#define IDLE_THR 0.04f                   //This designates an idle throttle of 5%
+#define IDLE_THR 0.04f                   //This designates an idle throttle of 4%
 #define LEVELMODE CHAN_OFF
 #define RACEMODE  CHAN_OFF
 #define HORIZON   CHAN_OFF
-#define PIDPROFILE CHAN_9                //For switching stickAccelerator & stickTransition profiles on pid.c page
+#define PIDPROFILE CHAN_9                //For switching stickAccelerator & stickTransition profiles on pid.c page - careful with full bronx on brushless
 #define RATES CHAN_ON
 #define LEDS_ON CHAN_OFF
 
@@ -124,11 +124,8 @@
 // *************if no channel is assigned but buzzer is set to CHAN_ON - buzzer will activate on LVC and FAILSAFE.
 //#define BUZZER_ENABLE CHAN_OFF
 
-// *************start in level mode for toy tx.
+// *************RRD/LLD stick gesture aux start up state.
 //#define AUX1_START_ON
-
-// *************automatically remove center bias in toy tx ( needs throttle off for 1 second )
-//#define STOCK_TX_AUTOCENTER
 
 
 
@@ -198,7 +195,7 @@
 #define  DTERM_LPF_2ND_HZ 100
 //#define DTERM_LPF_1ST_HZ 70
 
-//Select Motor Filter Type  (I am no longer using this)
+//Select Motor Filter Type  (last resort filtering stage)
 //#define MOTOR_FILTER2_ALPHA MFILT1_HZ_90
 
 #endif
@@ -209,15 +206,17 @@
 //**********************************************************************************************************************
 //***********************************************MOTOR OUTPUT SETTINGS**************************************************
 
+// *************brushed motor minimum idle percent / dshot digital idle
+#define DIGITAL_IDLE 4
+
 // *************invert yaw pid for "PROPS OUT" configuration - This feature is switchable to "PROPS IN" when active with stick gesture DOWN-UP-DOWN, Save selection with DOWN-DOWN-DOWN
 #define INVERT_YAW_PID
 
-// *************pwm frequency for motor control
-// *************a higher frequency makes the motors more linear
-// *************in Hz
-#define PWMFREQ 32000
+// *************throttle boost - can intensify small throttle imbalances visible in FPV if factor is set too high
+//#define THROTTLE_TRANSIENT_COMPENSATION 
+//#define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 4.0
 
-// *************torque boost is a highly eperimental feature.  it is a lpf D term on motor outputs that will accelerate the response
+// *************torque boost is a highly eperimental feature and can smoke brushless motors fast.  it is a lpf D term on motor outputs that will accelerate the response
 // *************of the motors when the command to the motors is changing by increasing or decreasing the voltage thats sent.  It differs
 // *************from throttle transient compensation in that it acts on all motor commands - not just throttle changes.  this feature
 // *************is very noise sensative so D term specifically has to be lowered and gyro/d filtering may need to be increased.
@@ -225,9 +224,10 @@
 // *************retune it back up to where it feels good.  I'm finding about 60 to 65% of my previous D value seems to work.
 //#define TORQUE_BOOST 1.0
 
-// *************makes throttle feel more poppy - can intensify small throttle imbalances visible in FPV if factor is set too high
-//#define THROTTLE_TRANSIENT_COMPENSATION 
-//#define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 4.0 
+// *************pwm frequency for motor control
+// *************a higher frequency makes the motors more linear
+// *************in Hz
+#define PWMFREQ 32000
  
 // *************throttle angle compensation in level mode
 //#define AUTO_THROTTLE
@@ -244,7 +244,7 @@
 //**************joelucid's yaw fix
 #define YAW_FIX
 
-//**************joelucid's transient windup protection.  Removes roll and pitch bounce back after flips
+//**************I-term relax.  Removes roll and pitch bounce back after flips
 #define TRANSIENT_WINDUP_PROTECTION
 
 
@@ -255,23 +255,6 @@
 
 // *************lost quad beeps using motors (30 sec timeout) - pulses motors after timeout period to help find a lost model
 //#define MOTOR_BEEPS
-
-// *************0 - 7 - power for telemetry
-#define TX_POWER 7
-
-// *************led brightness in-flight ( solid lights only)
-// *************0- 15 range
-#define LED_BRIGHTNESS 15
-
-// *************Comment out to disable pid tuning gestures
-#define PID_GESTURE_TUNING
-#define COMBINE_PITCH_ROLL_PID_TUNING
-
-// *************flash save method
-// *************flash_save 1: pids + accel calibration
-// *************flash_save 2: accel calibration to option bytes
-#define FLASH_SAVE1
-//#define FLASH_SAVE2
 
 // *************enable inverted flight code ( brushless only )
 //#define INVERTED_ENABLE
@@ -290,92 +273,9 @@
 //#############################################################################################################################
 //#############################################################################################################################
 // debug / other things
-// this should not be usually changed
+// this should not be usually changed or still need work
 //#############################################################################################################################
 //#############################################################################################################################
-
-//enables use of stick accelerator and stick transition for d term lpf 1 & 2
-#define ADVANCED_PID_CONTROLLER
-
-//Throttle must drop below this value if arming feature is enabled for arming to take place.  MIX_INCREASE_THROTTLE_3 if enabled
-//will also not activate on the ground untill this threshold is passed during takeoff for safety and better staging behavior.
-#define THROTTLE_SAFETY .10f
-
-// level mode "manual" trims ( in degrees)
-// pitch positive forward
-// roll positive right
-#define TRIM_PITCH 0.0
-#define TRIM_ROLL 0.0
-
-// brushed motor idle percent / dshot digital idle
-#define DIGITAL_IDLE 4
-
-
-// flash saving features
-//#define DISABLE_GESTURES2
-
-#ifdef LVC_LOWER_THROTTLE
-#define SWITCHABLE_FEATURE_2
-#endif
-
-#ifdef INVERT_YAW_PID
-#define SWITCHABLE_FEATURE_3
-#endif
-
-#ifdef ALIENWHOOP_ZERO_FILTERING
-#define KALMAN_GYRO
-#define GYRO_FILTER_PASS1 HZ_90
-#define  DTERM_LPF_2ND_HZ 100
-#define MOTOR_FILTER2_ALPHA MFILT1_HZ_50
-#define SWITCHABLE_MOTOR_FILTER2_ALPHA MFILT1_HZ_90
-#define SWITCHABLE_FEATURE_1
-#endif
-
-#ifdef WEAK_FILTERING
-#define KALMAN_GYRO
-#define GYRO_FILTER_PASS1 HZ_90
-#define  DTERM_LPF_2ND_HZ 100
-#define MOTOR_FILTER2_ALPHA MFILT1_HZ_90
-#endif
-
-#ifdef STRONG_FILTERING
-#define KALMAN_GYRO
-#define GYRO_FILTER_PASS1 HZ_80
-#define  DTERM_LPF_2ND_HZ 90
-#define MOTOR_FILTER2_ALPHA MFILT1_HZ_80
-#endif
-
-#ifdef VERY_STRONG_FILTERING
-#define KALMAN_GYRO
-#define GYRO_FILTER_PASS1 HZ_70
-#define  DTERM_LPF_2ND_HZ 80
-#define MOTOR_FILTER2_ALPHA MFILT1_HZ_70
-#endif
-
-#ifdef BETA_FILTERING
-	#if (!defined(KALMAN_GYRO) && !defined(PT1_GYRO)) || (!defined(GYRO_FILTER_PASS1) && !defined(GYRO_FILTER_PASS2))
-		#define SOFT_LPF_NONE
-	#endif
-#endif
-
-#define GYRO_LOW_PASS_FILTER 0
-
-#define DISABLE_FLIP_SEQUENCER
-#define STARTFLIP CHAN_OFF
-
-// disable motors for testing
-//#define NOMOTORS
-
-// throttle direct to motors for thrust measure
-
-//#define MOTORS_TO_THROTTLE
-
-// throttle direct to motors for thrust measure as a flight mode
-//#define MOTORS_TO_THROTTLE_MODE MULTI_CHAN_8
-
-// *************motor curve to use - select one
-// *************the pwm frequency has to be set independently
-#define MOTOR_CURVE_NONE
 
 // loop time in uS
 // this affects soft gyro lpf frequency if used
@@ -387,10 +287,78 @@
 // debug things ( debug struct and other)
 #define DEBUG
 
-// rxdebug structure
+// disable motors for testing
+//#define NOMOTORS
+
+// throttle direct to motors for thrust measure
+//#define MOTORS_TO_THROTTLE
+
+
+
+
+
+
+
+//***********************************************************TODO LIST************************************************************
+
+//MAINTAIN THIS LIST (probably the most important thing on this list)
+
+//investigate how idle up aux and digital idle play together - are they adding together or playing nicely - does idle up need to become airmode?
+
+//establish a "profiles.h" include behind config where users can save build default configs to make quick setup easier when updating
+
+//dma support in driver for f4 and F0 gyro - interrupt driven gyro sync fired control()
+
+//8k f4 loop support - examine all filtering time constants
+
+//moar TARGETS TODO stuff is in hardware.h like buzzer pin assignment and rgb led pin assignment
+
+//audit and add all recent updates from NFE_Silverware that are missing
+
+//audit code for any remaining toy tx features and remove
+
+//fix the core of rx channel assignments to lose the stupid bayang labels or trim features
+
+//port of buzzer function has not been investigated for f4
+
+//rgb led port to f4
+
+//OSD Support
+
+// Interject variables into define hell
+
+//USB Support & Passthrough Support for F0 (repurpose swd clk pin as half duplex serial) and F4 (investigate USB detect pin)
+
+//USB Confgurator & Serial protocol for variable configuration
+
+//SETUP WIZARD
+
+//investigate softserial driver - is it working?, what is it being used for?, can we develop it into a useful feature?
+
+//softserial not throwing errors anymore but needs review for proper configuration - i think I mixed up BSRRH and BSRRL
+
+//bayang for f4 / software spi - i think I mixed up BSRRH and BSRRL
+
+//find other places I mixed up BSRRH and BSRRL like all the i2c drivers
+
+//reorganize control() in control.c to call functions from new files intuitively named for said functions
+
+
+// throttle direct to motors for thrust measure as a flight mode							//***************** this needs to maybe go away after osd?  not safe - encourages running props with craft in in hand
+//#define MOTORS_TO_THROTTLE_MODE MULTI_CHAN_8
+
+#define DISABLE_FLIP_SEQUENCER  																							//****************need to turn this into crashflip recovery - will require bidirectional esc setting
+
+#define STARTFLIP CHAN_OFF																										//****************this would be the aux trigger
+
+// *************motor curve to use - select one																//***************This could become something like tpa
+// *************the pwm frequency has to be set independently
+#define MOTOR_CURVE_NONE
+
+// rxdebug structure																													//**************** Does this even work???
 //#define RXDEBUG
 
-// enable motors if pitch / roll controls off center (at zero throttle)
+// enable motors if pitch / roll controls off center (at zero throttle)				//**************** This needs to get surgically removed
 // possible values: 0 / 1
 // use in acro build only
 #define ENABLESTIX 0
@@ -401,761 +369,12 @@
 
 
 
-#pragma diag_warning 1035 , 177 , 4017
-#pragma diag_error 260
 
-//--fpmode=fast
 
 
-#ifdef MOTOR_BEEPS
-#ifdef USE_ESC_DRIVER
-#warning "MOTOR BEEPS_WORKS WITH BRUSHED MOTORS ONLY"
-#endif
-#endif
 
-// for the ble beacon to work after in-flight reset
-#ifdef RX_BAYANG_PROTOCOL_BLE_BEACON
-#undef STOP_LOWBATTERY
-#endif
 
-// gcc warnings in main.c
 
-//TODO:  MOVE TARGET DEFINES TO THEIR OWN FILE AND REORDER THE .H HIERCHARCHY TO config.h->targets.h->defines.h   Correct all relavent #includes related to this change
 
-#ifdef BWHOOP
-#define F0
-#define ENABLE_OVERCLOCK
-#ifdef ENABLE_OVERCLOCK
-#define SYS_CLOCK_FREQ_HZ 64000000
-#define PWM_CLOCK_FREQ_HZ 64000000
-#define TICK_CLOCK_FREQ_HZ 8000000
-#else
-#define SYS_CLOCK_FREQ_HZ 48000000
-#define PWM_CLOCK_FREQ_HZ 48000000
-#define TICK_CLOCK_FREQ_HZ 6000000
-#endif
 
-//LEDS
-#define LED_NUMBER 2
-#define LED1PIN GPIO_Pin_2
-#define LED1PORT GPIOA
-#define LED2PIN GPIO_Pin_3
-#define LED2PORT GPIOA
-#define LED1_INVERT
-#define LED2_INVERT
-
-//I2C & GYRO
-#define USE_HARDWARE_I2C
-#define HW_I2C_SPEED_FAST2
-#define HW_I2C_PINS_PA910
-#define I2C_SDAPIN GPIO_Pin_10
-#define I2C_SDAPORT GPIOA
-#define I2C_SCLPIN GPIO_Pin_9
-#define I2C_SCLPORT GPIOA
-#define I2C_GYRO_ADDRESS 0x68
-#define GYRO_ID_1 0x68
-#define GYRO_ID_2 0x98 // new id
-#define GYRO_ID_3 0x7D
-#define GYRO_ID_4 0x72
-#define SENSOR_ROTATE_90_CW
-
-// SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
-#define USART1_SDA
-#define F0_USART_PINSWAP
-#define SOFTSPI_NONE
-#else
-#define SOFTSPI_3WIRE
-#define SPI_MOSI_PIN GPIO_Pin_0
-#define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_1
-#define SPI_CLK_PORT GPIOF
-#define SPI_SS_PIN GPIO_Pin_0
-#define SPI_SS_PORT GPIOF
-#define RADIO_XN297L
-#define RADIO_CHECK
-#endif
-
-//VOLTAGE DIVIDER
-#define BATTERYPIN GPIO_Pin_5
-#define BATTERYPORT GPIOA
-#define BATTERY_ADC_CHANNEL ADC_Channel_5
-#ifndef VOLTAGE_DIVIDER_R1
-#define VOLTAGE_DIVIDER_R1 10000
-#endif
-#ifndef VOLTAGE_DIVIDER_R2
-#define VOLTAGE_DIVIDER_R2 10000
-#endif
-#ifndef ADC_REF_VOLTAGE
-#define ADC_REF_VOLTAGE 2.8
-#endif
-
-// MOTOR PINS
-#define MOTOR0_PIN_PB1 // motor 0 back-left
-#define MOTOR1_PIN_PA4 // motor 1 front-left
-#define MOTOR2_PIN_PA6 // motor 2 back-right
-#define MOTOR3_PIN_PA7 // motor 3 front-right
-
-// pwm pin initialization
-#define USE_PWM_DRIVER
-#define PWM_PA4
-#define PWM_PA6
-#define PWM_PA7
-#define PWM_PB1
-#endif
-
-#ifdef E011
-#define F0
-#define ENABLE_OVERCLOCK
-#ifdef ENABLE_OVERCLOCK
-#define SYS_CLOCK_FREQ_HZ 64000000
-#define PWM_CLOCK_FREQ_HZ 64000000
-#define TICK_CLOCK_FREQ_HZ 8000000
-#else
-#define SYS_CLOCK_FREQ_HZ 48000000
-#define PWM_CLOCK_FREQ_HZ 48000000
-#define TICK_CLOCK_FREQ_HZ 6000000
-#endif
-
-//LEDS
-#define LED_NUMBER 2
-#define LED1PIN GPIO_Pin_2
-#define LED1PORT GPIOA
-#define LED2PIN GPIO_Pin_3
-#define LED2PORT GPIOA
-#define LED1_INVERT
-#define LED2_INVERT
-
-//I2C & GYRO
-#define USE_SOFTWARE_I2C
-#define SOFTI2C_SPEED_FAST
-#define SOFTI2C_PUSHPULL_CLK
-#define I2C_SDAPIN GPIO_Pin_10
-#define I2C_SDAPORT GPIOA
-#define I2C_SCLPIN GPIO_Pin_9
-#define I2C_SCLPORT GPIOA
-#define I2C_GYRO_ADDRESS 0x68
-#define GYRO_ID_1 0x68
-#define GYRO_ID_2 0x98 // new id
-#define GYRO_ID_3 0x7D
-#define GYRO_ID_4 0x72
-#define SENSOR_ROTATE_90_CW
-
-// SPI RX PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
-#define USART1_SDA
-#define F0_USART_PINSWAP
-#define SOFTSPI_NONE
-#else
-#define SOFTSPI_3WIRE
-#define SPI_MOSI_PIN GPIO_Pin_0
-#define SPI_MOSI_PORT GPIOF
-#define SPI_CLK_PIN GPIO_Pin_1
-#define SPI_CLK_PORT GPIOF
-#define SPI_SS_PIN GPIO_Pin_0
-#define SPI_SS_PORT GPIOA
-#define RADIO_XN297L
-#define RADIO_CHECK
-#endif
-
-//VOLTAGE DIVIDER
-#define BATTERYPIN GPIO_Pin_5
-#define BATTERYPORT GPIOA
-#define BATTERY_ADC_CHANNEL ADC_Channel_5
-#ifndef VOLTAGE_DIVIDER_R1
-#define VOLTAGE_DIVIDER_R1 10000
-#endif
-#ifndef VOLTAGE_DIVIDER_R2
-#define VOLTAGE_DIVIDER_R2 10000
-#endif
-#ifndef ADC_REF_VOLTAGE
-#define ADC_REF_VOLTAGE 2.8
-#endif
-
-// Assingment of pin to motor
-#define MOTOR0_PIN_PA6 // motor 0 back-left
-#define MOTOR1_PIN_PA4 // motor 1 front-left
-#define MOTOR2_PIN_PB1 // motor 2 back-right
-#define MOTOR3_PIN_PA7 // motor 3 front-right
-
-// pwm pin initialization
-#define USE_PWM_DRIVER
-#define PWM_PA4
-#define PWM_PA6
-#define PWM_PA7
-#define PWM_PB1
-#endif
-
-#ifdef H8mini_blue_board
-#define F0
-#define ENABLE_OVERCLOCK
-#ifdef ENABLE_OVERCLOCK
-#define SYS_CLOCK_FREQ_HZ 64000000
-#define PWM_CLOCK_FREQ_HZ 64000000
-#define TICK_CLOCK_FREQ_HZ 8000000
-#else
-#define SYS_CLOCK_FREQ_HZ 48000000
-#define PWM_CLOCK_FREQ_HZ 48000000
-#define TICK_CLOCK_FREQ_HZ 6000000
-#endif
-
-//LEDS
-#define LED_NUMBER 1
-#define LED1PIN GPIO_Pin_1
-#define LED1PORT GPIOF
-#define LED2PIN GPIO_Pin_3
-#define LED2PORT GPIOA
-
-//I2C & GYRO
-#define USE_SOFTWARE_I2C
-#define SOFTI2C_SPEED_FAST
-#define SOFTI2C_PUSHPULL_CLK
-#define I2C_SDAPIN GPIO_Pin_10
-#define I2C_SDAPORT GPIOA
-#define I2C_SCLPIN GPIO_Pin_9
-#define I2C_SCLPORT GPIOA
-#define I2C_GYRO_ADDRESS 0x68
-#define GYRO_ID_1 0x68
-#define GYRO_ID_2 0x78 // common h8 gyro
-#define GYRO_ID_3 0x7D
-#define GYRO_ID_4 0x72
-#define SENSOR_ROTATE_180
-
-// SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
-#define USART1_SDA
-#define F0_USART_PINSWAP
-#define SOFTSPI_NONE
-#else
-#define SOFTSPI_3WIRE
-#define SPI_MOSI_PIN GPIO_Pin_1
-#define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_2
-#define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN GPIO_Pin_3
-#define SPI_SS_PORT GPIOA
-#define RADIO_XN297L
-#define RADIO_CHECK
-#endif
-
-//VOLTAGE DIVIDER
-#define BATTERYPIN GPIO_Pin_5
-#define BATTERYPORT GPIOA
-#define BATTERY_ADC_CHANNEL ADC_Channel_5
-#ifndef VOLTAGE_DIVIDER_R1
-#define VOLTAGE_DIVIDER_R1 10000
-#endif
-#ifndef VOLTAGE_DIVIDER_R2
-#define VOLTAGE_DIVIDER_R2 10000
-#endif
-#ifndef ADC_REF_VOLTAGE
-#define ADC_REF_VOLTAGE 2.8
-#endif
-
-// Assingment of pin to motor
-#define MOTOR0_PIN_PA6 // motor 0 back-left
-#define MOTOR1_PIN_PA4 // motor 1 front-left
-#define MOTOR2_PIN_PB1 // motor 2 back-right
-#define MOTOR3_PIN_PA7 // motor 3 front-right
-
-// pwm pin initialization
-#define USE_PWM_DRIVER
-#define PWM_PA4
-#define PWM_PA6
-#define PWM_PA7
-#define PWM_PB1
-#endif
-
-#ifdef Alienwhoop_ZERO
-
-#define F0
-#define ENABLE_OVERCLOCK
-#ifdef ENABLE_OVERCLOCK
-#define SYS_CLOCK_FREQ_HZ 64000000
-#define PWM_CLOCK_FREQ_HZ 64000000
-#define TICK_CLOCK_FREQ_HZ 8000000
-#else
-#define SYS_CLOCK_FREQ_HZ 48000000
-#define PWM_CLOCK_FREQ_HZ 48000000
-#define TICK_CLOCK_FREQ_HZ 6000000
-#endif
-
-//LEDS
-#define LED_NUMBER 1
-#define LED1PIN GPIO_Pin_0
-#define LED1PORT GPIOF
-#define LED2PIN GPIO_Pin_0
-#define LED2PORT GPIOA
-
-//I2C & GYRO
-#define USE_HARDWARE_I2C
-#define HW_I2C_SPEED_FAST2
-#define HW_I2C_PINS_PA910
-#define I2C_SDAPIN GPIO_Pin_10
-#define I2C_SDAPORT GPIOA
-#define I2C_SCLPIN GPIO_Pin_9
-#define I2C_SCLPORT GPIOA
-#define I2C_GYRO_ADDRESS 0x68
-#define GYRO_ID_1 0x68
-#define GYRO_ID_2 0x98 // new id
-#define GYRO_ID_3 0x78
-#define GYRO_ID_4 0x72 
-#define SENSOR_ROTATE_90_CCW
-
-// SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
-#if defined(RX_FPORT)
-	#define F0_USART_PINSWAP
-#endif
-#define USART1_PA3PA2
-#define SOFTSPI_NONE
-#else
-#define SOFTSPI_3WIRE
-#define SPI_MOSI_PIN GPIO_Pin_3
-#define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_2
-#define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN GPIO_Pin_1
-#define SPI_SS_PORT GPIOA
-#define RADIO_CHECK
-#define RADIO_XN297L
-#endif
-
-//VOLTAGE DIVIDER
-#define BATTERYPIN GPIO_Pin_5
-#define BATTERYPORT GPIOA
-#define BATTERY_ADC_CHANNEL ADC_Channel_5
-#ifndef VOLTAGE_DIVIDER_R1
-#define VOLTAGE_DIVIDER_R1 2000
-#endif
-#ifndef VOLTAGE_DIVIDER_R2
-#define VOLTAGE_DIVIDER_R2 1000
-#endif
-#ifndef ADC_REF_VOLTAGE
-#define ADC_REF_VOLTAGE 3.3
-#endif
-
-// MOTOR PINS
-#define MOTOR0_PIN_PA7
-//#define MOTOR1_PIN_PA4  //2nd Draft prototype patch
-//#define MOTOR2_PIN_PB1  //2nd Draft prototype patch
-#define MOTOR1_PIN_PB1
-#define MOTOR2_PIN_PA4
-#define MOTOR3_PIN_PA6
-
-// pwm pin initialization
-//#define USE_PWM_DRIVER
-#define USE_DSHOT_DMA_DRIVER
-#define PWM_PA4
-#define PWM_PA6
-#define PWM_PA7
-#define PWM_PB1
-#endif
-
-#if defined(CC3D_REVO_F4) || defined(OmnibusF4SD) || defined(OmnibusF4) || defined(LuxF4osd)
-#define F405
-#define SYS_CLOCK_FREQ_HZ 168000000
-#define PWM_CLOCK_FREQ_HZ 84000000
-#define TICK_CLOCK_FREQ_HZ 21000000
-
-//LEDS
-#define LED_NUMBER 2
-#define LED1PIN GPIO_Pin_5
-#define LED1PORT GPIOB
-#define LED2PIN GPIO_Pin_4
-#define LED2PORT GPIOB
-#define LED1_INVERT
-//#define LED2_INVERT
-
-//SPI, I2C & GYRO
-#define MPU6XXX_SPI1
-
-
-#define USE_DUMMY_I2C									//todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
-//#define I2C_SDAPIN GPIO_Pin_10
-//#define I2C_SDAPORT GPIOA
-//#define I2C_SCLPIN GPIO_Pin_9
-//#define I2C_SCLPORT GPIOA
-//#define I2C_GYRO_ADDRESS 0x68
-//#define SOFTI2C_GYRO_ADDRESS 0x69
-#define GYRO_ID_1 0x68
-//#define GYRO_ID_2 0x73
-//#define GYRO_ID_3 0x78
-//#define GYRO_ID_4 0x72
-//#define SENSOR_ROTATE_90_CCW
-#if defined(LuxF4osd)
-#define SENSOR_ROTATE_90_CCW
-#else
-#if  defined(OmnibusF4SD)
-#define SENSOR_ROTATE_90_CW
-#endif
-#define SENSOR_FLIP_180
-#endif
-
-//#define DISABLE_GYRO_CHECK
-
-
-// SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
-//   //not created yet
-//#define UART3_INVERTER_PIN PC9 // Omnibus F4 Pro Corner
-#ifdef OmnibusF4SD
-#define USART_INVERTER_PIN GPIO_Pin_8
-#define USART_INVERTER_PORT GPIOC
-#define USART1_PA10PA9
-#define USART3_PB11PB10
-#define USART6_PC7PC6
-#endif
-#if defined(CC3D_REVO_F4) || defined(OmnibusF4) || defined(LuxF4osd)
-#define USART1_PA10PA9
-#define USART_INVERTER_PIN GPIO_Pin_0
-#define USART_INVERTER_PORT GPIOC
-#define USART3_PB11PB10
-#define USART4_PA1PA0
-#endif
-#define SOFTSPI_NONE
-#else
-#define SOFTSPI_3WIRE							//todo:port spi receiver and soft spi driver to f4
-#define SPI_MOSI_PIN GPIO_Pin_3
-#define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_2
-#define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN GPIO_Pin_1
-#define SPI_SS_PORT GPIOA
-#define RADIO_CHECK
-#define RADIO_XN297L
-#endif
-
-//VOLTAGE DIVIDER
-#define DISABLE_LVC
-#define BATTERYPIN GPIO_Pin_2
-#define BATTERYPORT GPIOC
-#define BATTERY_ADC_CHANNEL ADC_Channel_12
-#ifndef VOLTAGE_DIVIDER_R1
-#define VOLTAGE_DIVIDER_R1 4700
-#endif
-#ifndef VOLTAGE_DIVIDER_R2
-#define VOLTAGE_DIVIDER_R2 2200
-#endif
-#ifndef ADC_REF_VOLTAGE
-#define ADC_REF_VOLTAGE 3.3
-#endif
-
-
-
-// MOTOR PINS
-
-//OmniF4SD
-#ifdef OmnibusF4SD
-#define MOTOR2_PIN_PA3
-#define MOTOR3_PIN_PA2
-#define MOTOR0_PIN_PB0
-#define MOTOR1_PIN_PB1
-
-#else //Default
-#define MOTOR0_PIN_PA3
-#define MOTOR1_PIN_PA2
-#define MOTOR2_PIN_PB0
-#define MOTOR3_PIN_PB1
-
-//pyroflip
-//#define MOTOR0_PIN_PA8
-//#define MOTOR1_PIN_PC9			//DSHOT not coded for port C yet
-//#define MOTOR2_PIN_PB1
-//#define MOTOR3_PIN_PB0
-
-#endif
-// pwm pin initialization
-//#define USE_PWM_DRIVER
-//#define USE_ESC_DRIVER       //todo:  evaluate need for this to stay if focused on quadcopters
-#define USE_DSHOT_DMA_DRIVER  
-//#define USE_DSHOT_DRIVER_BETA  //todo:  probably eliminate this completely
-
-//#define PWM_PA0
-//#define PWM_PA1
-#define PWM_PA2
-#define PWM_PA3
-//#define PWM_PA4
-//#define PWM_PA5
-//#define PWM_PA6
-//#define PWM_PA7
-//#define PWM_PA8
-//#define PWM_PA9
-//#define PWM_PA10
-//#define PWM_PA11
-#define PWM_PB0
-#define PWM_PB1
-//#define PWM_PC9
-#endif
-
-#ifdef Alienwhoop_V2
-#define F405
-#define SYS_CLOCK_FREQ_HZ 168000000
-#define PWM_CLOCK_FREQ_HZ 84000000
-#define TICK_CLOCK_FREQ_HZ 21000000
-
-//LEDS
-#define LED_NUMBER 2
-#define LED1PIN GPIO_Pin_12
-#define LED1PORT GPIOC
-#define LED2PIN GPIO_Pin_2
-#define LED2PORT GPIOD
-//#define LED1_INVERT
-#define LED2_INVERT
-
-//SPI, I2C & GYRO
-#define MPU6XXX_SPI1
-
-
-#define USE_DUMMY_I2C									//todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
-//#define I2C_SDAPIN GPIO_Pin_10
-//#define I2C_SDAPORT GPIOA
-//#define I2C_SCLPIN GPIO_Pin_9
-//#define I2C_SCLPORT GPIOA
-//#define I2C_GYRO_ADDRESS 0x68
-//#define SOFTI2C_GYRO_ADDRESS 0x69
-#define GYRO_ID_1 0x70
-#define GYRO_ID_2 0x73
-#define GYRO_ID_3 0x71
-//#define GYRO_ID_4 0x72 
-#define SENSOR_ROTATE_90_CW
-//#define DISABLE_GYRO_CHECK
-
-
-// SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
-#define USART2_PA3PA2
-#define USART3_PC11PC10
-
-#define SOFTSPI_NONE
-#else
-#define SOFTSPI_3WIRE							//todo:port spi receiver and soft spi driver to f4
-#define SPI_MOSI_PIN GPIO_Pin_3
-#define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_2
-#define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN GPIO_Pin_1
-#define SPI_SS_PORT GPIOA
-#define RADIO_CHECK
-#define RADIO_XN297L
-#endif
-
-//VOLTAGE DIVIDER
-#define DISABLE_LVC
-/*#define BATTERYPIN GPIO_Pin_2
-#define BATTERYPORT GPIOC
-#define BATTERY_ADC_CHANNEL ADC_Channel_12
-#ifndef VOLTAGE_DIVIDER_R1
-#define VOLTAGE_DIVIDER_R1 4700
-#endif
-#ifndef VOLTAGE_DIVIDER_R2
-#define VOLTAGE_DIVIDER_R2 2200
-#endif
-#ifndef ADC_REF_VOLTAGE
-#define ADC_REF_VOLTAGE 3.3
-#endif */
-
-// MOTOR PINS
-#define MOTOR0_PIN_PC6
-#define MOTOR1_PIN_PC7
-#define MOTOR2_PIN_PC8
-#define MOTOR3_PIN_PC9
-
-// pwm pin initialization
-#define USE_PWM_DRIVER
-//#define USE_ESC_DRIVER       //todo:  evaluate need for this to stay if focused on quadcopters
-//#define USE_DSHOT_DMA_DRIVER  
-//#define USE_DSHOT_DRIVER_BETA  //todo:  probably eliminate this completely
-
-//#define PWM_PA0
-//#define PWM_PA1
-//#define PWM_PA2
-//#define PWM_PA3
-//#define PWM_PA4
-//#define PWM_PA5
-//#define PWM_PA6
-//#define PWM_PA7
-//#define PWM_PA8
-//#define PWM_PA9
-//#define PWM_PA10
-//#define PWM_PA11
-//#define PWM_PB0
-//#define PWM_PB1
-#define PWM_PC6
-#define PWM_PC7
-#define PWM_PC8
-#define PWM_PC9
-#endif
-
-
-#ifdef CLRacing_F4
-#define F405
-#define SYS_CLOCK_FREQ_HZ 168000000
-#define PWM_CLOCK_FREQ_HZ 84000000
-#define TICK_CLOCK_FREQ_HZ 21000000
-
-//LEDS
-#define LED_NUMBER 1
-#define LED1PIN GPIO_Pin_5
-#define LED1PORT GPIOB
-#define LED2PIN GPIO_Pin_5
-#define LED2PORT GPIOB
-#define LED1_INVERT
-//#define LED2_INVERT
-
-//SPI, I2C & GYRO
-#define MPU6XXX_SPI1
-
-#define USE_DUMMY_I2C									//todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
-//#define I2C_SDAPIN GPIO_Pin_10
-//#define I2C_SDAPORT GPIOA
-//#define I2C_SCLPIN GPIO_Pin_9
-//#define I2C_SCLPORT GPIOA
-//#define I2C_GYRO_ADDRESS 0x68
-//#define SOFTI2C_GYRO_ADDRESS 0x69
-#define GYRO_ID_1 0x68
-//#define GYRO_ID_2 0x73
-//#define GYRO_ID_3 0x78
-//#define GYRO_ID_4 0x72
-//#define SENSOR_ROTATE_90_CCW
-#define SENSOR_ROTATE_90_CW
-//#define DISABLE_GYRO_CHECK
-
-// SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
-#define USART1_PA10PA9
-#define USART_INVERTER_PIN GPIO_Pin_0
-#define USART_INVERTER_PORT GPIOC
-#define USART3_PB11PB10
-#define USART4_PA1PA0
-#define USART6_PC7PC6
-#define SOFTSPI_NONE
-#else
-#define SOFTSPI_3WIRE							//todo:port spi receiver and soft spi driver to f4
-#define SPI_MOSI_PIN GPIO_Pin_3
-#define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_2
-#define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN GPIO_Pin_1
-#define SPI_SS_PORT GPIOA
-#define RADIO_CHECK
-#define RADIO_XN297L
-#endif
-
-//VOLTAGE DIVIDER
-#define DISABLE_LVC
-#define BATTERYPIN GPIO_Pin_2
-#define BATTERYPORT GPIOC
-#define BATTERY_ADC_CHANNEL ADC_Channel_12
-#ifndef VOLTAGE_DIVIDER_R1
-#define VOLTAGE_DIVIDER_R1 4700
-#endif
-#ifndef VOLTAGE_DIVIDER_R2
-#define VOLTAGE_DIVIDER_R2 2200
-#endif
-#ifndef ADC_REF_VOLTAGE
-#define ADC_REF_VOLTAGE 3.3
-#endif
-
-// MOTOR PINS
-#define MOTOR0_PIN_PA3
-#define MOTOR1_PIN_PA2
-#define MOTOR2_PIN_PB0
-#define MOTOR3_PIN_PB1
-
-// pwm pin initialization
-//#define USE_PWM_DRIVER
-//#define USE_ESC_DRIVER       //todo:  evaluate need for this to stay if focused on quadcopters
-#define USE_DSHOT_DMA_DRIVER  
-//#define USE_DSHOT_DRIVER_BETA  //todo:  probably eliminate this completely
-#endif
-
-
-#ifdef Raceflight_Revolt
-#define F405
-#define SYS_CLOCK_FREQ_HZ 168000000
-#define PWM_CLOCK_FREQ_HZ 84000000
-#define TICK_CLOCK_FREQ_HZ 21000000
-
-//LEDS
-#define LED_NUMBER 1
-#define LED1PIN GPIO_Pin_5
-#define LED1PORT GPIOB
-#define LED2PIN GPIO_Pin_5
-#define LED2PORT GPIOB
-#define LED1_INVERT
-//#define LED2_INVERT
-
-//SPI, I2C & GYRO
-#define ICM20601_SPI1
-
-#define USE_DUMMY_I2C									//todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
-//#define I2C_SDAPIN GPIO_Pin_10
-//#define I2C_SDAPORT GPIOA
-//#define I2C_SCLPIN GPIO_Pin_9
-//#define I2C_SCLPORT GPIOA
-//#define I2C_GYRO_ADDRESS 0x68
-//#define SOFTI2C_GYRO_ADDRESS 0x69
-#define GYRO_ID_1 0x68
-//#define GYRO_ID_2 0x73
-//#define GYRO_ID_3 0x78
-//#define GYRO_ID_4 0x72
-#define SENSOR_ROTATE_90_CCW
-//#define SENSOR_FLIP_180
-//#define SENSOR_ROTATE_90_CW
-//#define DISABLE_GYRO_CHECK
-
-// SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
-#define USART1_PA10PA9
-#define USART_INVERTER_PIN GPIO_Pin_0
-#define USART_INVERTER_PORT GPIOC
-#define USART3_PB11PB10
-#define USART4_PA1PA0
-#define USART6_PC7PC6
-#define SOFTSPI_NONE
-#else
-#define SOFTSPI_3WIRE							//todo:port spi receiver and soft spi driver to f4
-#define SPI_MOSI_PIN GPIO_Pin_3
-#define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_2
-#define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN GPIO_Pin_1
-#define SPI_SS_PORT GPIOA
-#define RADIO_CHECK
-#define RADIO_XN297L
-#endif
-
-//VOLTAGE DIVIDER
-#define DISABLE_LVC
-#define BATTERYPIN GPIO_Pin_2
-#define BATTERYPORT GPIOC
-#define BATTERY_ADC_CHANNEL ADC_Channel_12
-#ifndef VOLTAGE_DIVIDER_R1
-#define VOLTAGE_DIVIDER_R1 4700
-#endif
-#ifndef VOLTAGE_DIVIDER_R2
-#define VOLTAGE_DIVIDER_R2 2200
-#endif
-#ifndef ADC_REF_VOLTAGE
-#define ADC_REF_VOLTAGE 3.3
-#endif
-
-// MOTOR PINS
-#define MOTOR0_PIN_PB0
-#define MOTOR1_PIN_PB1
-#define MOTOR2_PIN_PA3
-#define MOTOR3_PIN_PA2
-
-// pwm pin initialization
-//#define USE_PWM_DRIVER
-//#define USE_ESC_DRIVER       //todo:  evaluate need for this to stay if focused on quadcopters
-#define USE_DSHOT_DMA_DRIVER  
-//#define USE_DSHOT_DRIVER_BETA  //todo:  probably eliminate this completely
-#endif
-
-//more f4 todo:  rgb led port, dma dshot port, code spi dma driver for f4 gyro, setup more uarts in driver
-//softserial not throwing errors anymore but needs review for proper configuration, port of buzzer function has not been investigated, reorganize control() in control.c to call functions from new files intuitively named for said functions
-//add all recent updates from NFE_Silverware
-//add various omnibus f4 targets, raceflight revolt target, airbot target
 

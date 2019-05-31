@@ -1,7 +1,7 @@
 
 #include "project.h"
 #include "drv_fmc.h"
-#include "config.h"
+#include "defines.h"
 
 extern int fmc_erase( void );
 extern void fmc_unlock(void);

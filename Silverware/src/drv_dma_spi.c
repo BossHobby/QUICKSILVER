@@ -1,6 +1,6 @@
 #include "project.h"
 #include <stdio.h>
-#include "config.h"
+#include "defines.h"
 #include "drv_time.h"
 
 #ifdef F405

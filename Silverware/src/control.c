@@ -26,7 +26,7 @@ THE SOFTWARE.
 #include <math.h>
 
 #include "pid.h"
-#include "config.h"
+#include "defines.h"
 #include "util.h"
 #include "drv_pwm.h"
 #include "control.h"
@@ -37,7 +37,6 @@ THE SOFTWARE.
 #include "drv_fmc.h"
 #include "flip_sequencer.h"
 #include "gestures.h"
-#include "defines.h"
 #include "led.h"
 
 

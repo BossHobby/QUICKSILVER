@@ -4,8 +4,7 @@
 
 #include "project.h"
 #include "xn297.h"
-#include "hardware.h"
-#include "config.h"
+#include "defines.h"
 
 // all cases except 3 wires radio
 #if !defined (SOFTSPI_3WIRE)

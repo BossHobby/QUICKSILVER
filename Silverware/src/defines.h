@@ -1,5 +1,9 @@
+#include "hardware.h"
 
 // defines for things that do not normally need changing
+
+#pragma diag_warning 1035 , 177 , 4017
+#pragma diag_error 260
 
 #define MOTOR_BL 0
 #define MOTOR_FL 1
@@ -144,6 +148,42 @@
 #define REVERSE DIR1
 
 
+#ifdef ALIENWHOOP_ZERO_FILTERING
+#define KALMAN_GYRO
+#define GYRO_FILTER_PASS1 HZ_90
+#define  DTERM_LPF_2ND_HZ 100
+#define MOTOR_FILTER2_ALPHA MFILT1_HZ_50
+#define SWITCHABLE_MOTOR_FILTER2_ALPHA MFILT1_HZ_90
+#define SWITCHABLE_FEATURE_1
+#endif
+
+#ifdef WEAK_FILTERING
+#define KALMAN_GYRO
+#define GYRO_FILTER_PASS1 HZ_90
+#define  DTERM_LPF_2ND_HZ 100
+#define MOTOR_FILTER2_ALPHA MFILT1_HZ_90
+#endif
+
+#ifdef STRONG_FILTERING
+#define KALMAN_GYRO
+#define GYRO_FILTER_PASS1 HZ_80
+#define  DTERM_LPF_2ND_HZ 90
+#define MOTOR_FILTER2_ALPHA MFILT1_HZ_80
+#endif
+
+#ifdef VERY_STRONG_FILTERING
+#define KALMAN_GYRO
+#define GYRO_FILTER_PASS1 HZ_70
+#define  DTERM_LPF_2ND_HZ 80
+#define MOTOR_FILTER2_ALPHA MFILT1_HZ_70
+#endif
+
+#ifdef BETA_FILTERING
+	#if (!defined(KALMAN_GYRO) && !defined(PT1_GYRO)) || (!defined(GYRO_FILTER_PASS1) && !defined(GYRO_FILTER_PASS2))
+		#define SOFT_LPF_NONE
+	#endif
+#endif
+
 #ifdef KALMAN_GYRO
 // kalman Q/R ratio for Q = 0.02
 // loop time 1000Hz
@@ -245,8 +285,52 @@
 #define	MFILT1_HZ_500	0.836544
 
 
+// *************0 - 7 - power for bayang telemetry
+#define TX_POWER 7
+
+// *************led brightness in-flight ( solid lights only)
+// *************0- 15 range
+#define LED_BRIGHTNESS 15
+
+// *************Comment out to disable pid tuning gestures
+#define PID_GESTURE_TUNING
+#define COMBINE_PITCH_ROLL_PID_TUNING
+
+// *************flash save method
+// *************flash_save 1: pids + accel calibration
+// *************flash_save 2: accel calibration to option bytes
+#define FLASH_SAVE1
+//#define FLASH_SAVE2
+
+// flash saving features
+//#define DISABLE_GESTURES2
+
+//enables use of stick accelerator and stick transition for d term lpf 1 & 2
+#define ADVANCED_PID_CONTROLLER
+
+//Throttle must drop below this value if arming feature is enabled for arming to take place.  MIX_INCREASE_THROTTLE_3 if enabled
+//will also not activate on the ground untill this threshold is passed during takeoff for safety and better staging behavior.
+#define THROTTLE_SAFETY .10f
+
+// level mode "manual" trims ( in degrees)
+// pitch positive forward
+// roll positive right
+#define TRIM_PITCH 0.0
+#define TRIM_ROLL 0.0
 
 
+#ifdef LVC_LOWER_THROTTLE
+#define SWITCHABLE_FEATURE_2
+#endif
+
+#ifdef INVERT_YAW_PID
+#define SWITCHABLE_FEATURE_3
+#endif
+
+// for the ble beacon to work after in-flight reset
+#ifdef RX_BAYANG_PROTOCOL_BLE_BEACON
+#undef STOP_LOWBATTERY
+#endif
 
 
 

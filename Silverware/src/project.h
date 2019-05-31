@@ -1,5 +1,5 @@
 
-#include "config.h"
+#include "defines.h"
 
 #ifdef F0
 #include "stm32f0xx.h"

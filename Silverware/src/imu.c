@@ -9,7 +9,7 @@
 
 #include "util.h"
 #include "sixaxis.h"
-#include "config.h"
+#include "defines.h"
 
 #include <stdlib.h>
 

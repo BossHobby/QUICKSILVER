@@ -57,14 +57,12 @@
 
 #include "project.h"
 
-#include "config.h"
 #include "defines.h"
 #include "drv_pwm.h"
 #include "drv_time.h"
-#include "hardware.h"
 #include "util.h"
 #include "drv_dshot.h"
-#include "config.h"
+
 
 #ifdef USE_DSHOT_DRIVER_BETA
 

@@ -1,7 +1,7 @@
 #include "drv_time.h"
-#include "config.h"
-#include "flip_sequencer.h"
 #include "defines.h"
+#include "flip_sequencer.h"
+
 
 
 #define THROTTLE_UP 0.8

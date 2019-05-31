@@ -1,6 +1,6 @@
 #include "project.h"
 #include "binary.h"
-#include "config.h"
+#include "defines.h"
 
 // the clock is already set, we turn pll off and set a new multiplier
 void setclock(void)

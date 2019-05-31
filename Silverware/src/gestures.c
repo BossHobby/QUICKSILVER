@@ -2,7 +2,6 @@
 #include "sixaxis.h"
 #include "drv_time.h"
 #include "defines.h"
-#include "config.h"
 #include "pid.h"
 
 

@@ -9,9 +9,8 @@
 #include "project.h"
 #include <stdio.h>
 #include "drv_serial.h"
-#include "config.h"
-#include "drv_time.h"
 #include "defines.h"
+#include "drv_time.h"
 #include "util.h"
 #include "uart.h"
 #include "drv_rx_serial.h"

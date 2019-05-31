@@ -41,7 +41,6 @@
 #include "defines.h"
 #include "drv_pwm.h"
 #include "drv_time.h"
-#include "hardware.h"
 #include "util.h"
 #include "drv_dshot.h"
 

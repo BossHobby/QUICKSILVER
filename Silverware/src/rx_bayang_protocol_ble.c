@@ -29,7 +29,6 @@ THE SOFTWARE.
 #include "xn297.h"
 #include "drv_time.h"
 #include <stdio.h>
-#include "config.h"
 #include "defines.h"
 
 #include "rx_bayang.h"

@@ -1,4 +1,4 @@
-#include "config.h"
+#include "defines.h"
 //set the dshot pins based on defines in hardware.h
 
 // motor0

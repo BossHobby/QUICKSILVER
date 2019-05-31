@@ -1,4 +1,4 @@
-#include "config.h"
+#include "defines.h"
 
 #ifdef BOLDCLASH_716MM_8K
 

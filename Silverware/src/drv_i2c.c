@@ -31,7 +31,7 @@ THE SOFTWARE.
 #include "drv_softi2c.h"
 #include "drv_hw_i2c.h"
 
-#include "config.h"
+#include "defines.h"
 
 #ifndef USE_HARDWARE_I2C
 #ifndef USE_SOFTWARE_I2C

@@ -1,4 +1,4 @@
-#include "config.h"
+#include "defines.h"
 
 void usart_rx_init(void);
 //void Ibus_USART_ISR(void);

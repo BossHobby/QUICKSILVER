@@ -1,7 +1,7 @@
 
 #include "project.h"
 #include "drv_pwm.h"
-#include "config.h"
+#include "defines.h"
 
 #ifdef USE_PWM_DRIVER
 

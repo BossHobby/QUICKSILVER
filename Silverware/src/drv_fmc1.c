@@ -1,4 +1,4 @@
-#include "config.h"
+#include "defines.h"
 
 #include "project.h"
 #include "drv_fmc.h"

@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include <stdio.h>
 
 #include "drv_softi2c.h"
-#include "config.h"
+#include "defines.h"
 
 #ifndef USE_DUMMY_I2C
 //#define i2cdebug

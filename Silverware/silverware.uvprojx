@@ -636,6 +636,11 @@
               <FileType>1</FileType>
               <FilePath>.\src\rx_fport.c</FilePath>
             </File>
+            <File>
+              <FileName>targets.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\targets.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -2037,6 +2042,11 @@
               <FileName>rx_fport.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\rx_fport.c</FilePath>
+            </File>
+            <File>
+              <FileName>targets.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\targets.h</FilePath>
             </File>
           </Files>
         </Group>

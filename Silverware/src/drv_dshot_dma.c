@@ -34,7 +34,7 @@
 
 // Select Dshot150 or Dshot300. Dshot150 consumes quite some main loop time.
 // DShot300 may require removing the input filter cap on the ESC:
-#include "config.h"
+#include "defines.h"
 #ifdef F0
 
 
@@ -81,14 +81,12 @@
 
 #include "project.h"
 
-#include "config.h"
 #include "defines.h"
 #include "drv_pwm.h"
 #include "drv_time.h"
-#include "hardware.h"
 #include "util.h"
 #include "drv_dshot.h"
-#include "config.h"
+
 
 #ifdef USE_DSHOT_DMA_DRIVER
 

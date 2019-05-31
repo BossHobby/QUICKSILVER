@@ -9,9 +9,8 @@
 //#include "stm32f0xx_usart.h"
 //#include <stdio.h>
 //#include "drv_serial.h"
-//#include "config.h"
-//#include "drv_time.h"
 //#include "defines.h"
+//#include "drv_time.h"
 //#include "util.h"
 
 
@@ -19,9 +18,8 @@
 #include "uart.h"
 #include <stdio.h>
 #include "drv_serial.h"
-#include "config.h"
-#include "drv_time.h"
 #include "defines.h"
+#include "drv_time.h"
 #include "util.h"
 #include "drv_fmc.h"
 #include "drv_rx_serial.h"

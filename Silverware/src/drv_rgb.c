@@ -3,7 +3,7 @@
 #include "project.h"
 #include "drv_spi.h"
 #include "binary.h"
-#include "config.h"
+#include "defines.h"
 #include "drv_time.h"
 #include "util.h"
 

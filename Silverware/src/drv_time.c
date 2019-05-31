@@ -1,7 +1,7 @@
 //
 #include "project.h"
 #include "drv_time.h"
-#include "config.h"
+#include "defines.h"
 
 void failloop( int val);
 

@@ -1,26 +1,4 @@
-
-// HARDWARE PINS SETTING
-//
-
-//NFE NOTES:  Most of the target related pin assignments are now being staged at the bottom of config.h 
-//in preparation of being moved to seperate target files.
-
-// do not change hardware pins below
-// make sure you don't set SWDIO or SWDCLK pins (programming pins)
-// if you do, you lose board programmability without a reset pin
-//
-// example: pin "PB2" ( port b , pin 2 )
-// pin: GPIO_Pin_2
-// port: GPIOB
-
-
-// setting procedure:
-// set led number zero, led aux number zero
-// uncomment  DISABLE_SPI_PINS and DISABLE_PWM_PINS
-// this will prevent any pins to be used, so that there are no conflicts
-// set pins starting with leds, in order to see working status
-// do not set PA13 , PA14 (stm32f031) as this will break the programming interface
-// to disable led pins set number to zero
+#include "targets.h"
 
 // the error codes indicate a failure that prevents normal operation
 // led flash codes - the quad will not fly / bind if flashing a code
@@ -32,8 +10,75 @@
 // 7 - i2c error  - triggered by hardware i2c driver only
 // 8 - i2c error main loop  - triggered by hardware i2c driver only
 
+#ifdef F0
+#define ENABLE_OVERCLOCK
+#ifdef ENABLE_OVERCLOCK
+#define SYS_CLOCK_FREQ_HZ 64000000
+#define PWM_CLOCK_FREQ_HZ 64000000
+#define TICK_CLOCK_FREQ_HZ 8000000
+#else
+#define SYS_CLOCK_FREQ_HZ 48000000
+#define PWM_CLOCK_FREQ_HZ 48000000
+#define TICK_CLOCK_FREQ_HZ 6000000
+#endif
+#endif
+
+#ifdef F405
+#define SYS_CLOCK_FREQ_HZ 168000000
+#define PWM_CLOCK_FREQ_HZ 84000000
+#define TICK_CLOCK_FREQ_HZ 21000000
+#endif
+
+#ifdef BRUSHLESS_TARGET
+// pwm pin initialization
+//#define USE_PWM_DRIVER
+//#define USE_ESC_DRIVER       //todo:  evaluate need for this to stay if focused on quadcopters
+#define USE_DSHOT_DMA_DRIVER  
+//#define USE_DSHOT_DRIVER_BETA 
+#endif
+
+#ifdef BRUSHED_TARGET
+// pwm pin initialization
+#define USE_PWM_DRIVER
+//#define USE_ESC_DRIVER       //todo:  evaluate need for this to stay if focused on quadcopters
+//#define USE_DSHOT_DMA_DRIVER  
+//#define USE_DSHOT_DRIVER_BETA 
+#endif
 
 
+//*************************************Features that still need to be moved into targets and checked for compatability************************************************
+
+#define GYRO_LOW_PASS_FILTER 0
+
+// RGB led type ws2812 - ws2813
+// numbers over 8 could decrease performance
+#define RGB_LED_NUMBER 0
+#define RGB_LED_DMA
+
+
+// pin / port for the RGB led ( programming port ok )
+#define RGB_PIN GPIO_Pin_11
+#define RGB_PORT GPIOA
+
+
+// pin for fpv switch ( turns off at failsafe )
+// GPIO_Pin_13 // SWDAT - GPIO_Pin_14 // SWCLK  
+// if programming pin, will not flash after bind
+#define FPV_PIN GPIO_Pin_13
+#define FPV_PORT GPIOA 
+
+
+// BUZZER pin settings - buzzer active "high"
+// SWDAT and SWCLK pins OK here
+// GPIO_Pin_13 // SWDAT - GPIO_Pin_14 // SWCLK 
+#define BUZZER_PIN       GPIO_Pin_14
+#define BUZZER_PIN_PORT  GPIOA
+// x (micro)seconds after loss of tx or low bat before buzzer starts
+#define BUZZER_DELAY     30e6 
+
+
+
+//*************************************Legacy stuff moved into targets - remaining for future reference************************************************
 
 // i2c driver to use ( dummy - disables i2c )
 // hardware i2c used PB6 and 7 by default ( can also use PA9 and 10)
@@ -66,9 +111,6 @@
 // disable the check for known gyro that causes the 4 times flash
 //#define DISABLE_GYRO_CHECK
 
-// TODO: gyro ids for the gyro check
-//move to sixaxis & defines.h
-
 
 // disable lvc functions
 //#define DISABLE_LVC
@@ -76,7 +118,6 @@
 
 // pwm driver = brushed motors
 // esc driver = servo type signal for brushless esc
-// pins PA0 - PA11 , PB0 , PB1
 
 //**DO NOT ENABLE ESC DRIVER WITH BRUSHED MOTORS ATTACHED**
 
@@ -113,28 +154,6 @@
 #define PWM_PB1
 */
 
-// RGB led type ws2812 - ws2813
-// numbers over 8 could decrease performance
-#define RGB_LED_NUMBER 0
-#define RGB_LED_DMA
+//***********************************************END LEGACY REFERENCE LIST*****************************************************
 
 
-// pin / port for the RGB led ( programming port ok )
-#define RGB_PIN GPIO_Pin_11
-#define RGB_PORT GPIOA
-
-
-// pin for fpv switch ( turns off at failsafe )
-// GPIO_Pin_13 // SWDAT - GPIO_Pin_14 // SWCLK  
-// if programming pin, will not flash after bind
-#define FPV_PIN GPIO_Pin_13
-#define FPV_PORT GPIOA 
-
-
-// BUZZER pin settings - buzzer active "high"
-// SWDAT and SWCLK pins OK here
-// GPIO_Pin_13 // SWDAT - GPIO_Pin_14 // SWCLK 
-#define BUZZER_PIN       GPIO_Pin_14
-#define BUZZER_PIN_PORT  GPIOA
-// x (micro)seconds after loss of tx or low bat before buzzer starts
-#define BUZZER_DELAY     30e6 
