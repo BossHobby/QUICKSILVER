@@ -263,7 +263,8 @@ void checkrx()
 					rx[3] *= 0.001f;
 
 					
-          if ( rx[3] > 1 ) rx[3] = 1;
+				if ( rx[3] > 1 ) rx[3] = 1;	
+				if ( rx[3] < 0 ) rx[3] = 0;
 					
 					
 	

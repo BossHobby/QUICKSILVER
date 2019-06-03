@@ -274,7 +274,9 @@ void checkrx()
           channels[2] -= 173;
           rx[3] = 0.000610128f * channels[2];
 
-          if ( rx[3] > 1 ) rx[3] = 1;
+				if ( rx[3] > 1 ) rx[3] = 1;	
+				if ( rx[3] < 0 ) rx[3] = 0;
+				
           //I also don't know why expo is being applied in RX code.
           if (aux[LEVELMODE]) {
             if (aux[RACEMODE] && !aux[HORIZON]) {

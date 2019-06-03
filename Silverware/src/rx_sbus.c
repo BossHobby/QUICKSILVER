@@ -241,7 +241,8 @@ void rx_init(void)
       channels[2] -= 173;
       rx[3] = 0.000610128f * channels[2];
 
-      if ( rx[3] > 1 ) rx[3] = 1;
+				if ( rx[3] > 1 ) rx[3] = 1;	
+				if ( rx[3] < 0 ) rx[3] = 0;
 					
 					
 	
