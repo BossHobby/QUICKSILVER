@@ -27,11 +27,11 @@ extern debug_type debug;
 // filter time in seconds
 // time to correct gyro readings using the accelerometer
 // 1-4 are generally good
-#define FILTERTIME 2.0
+#define FILTERTIME 5.0
 
 // accel magnitude limits for drift correction
-#define ACC_MIN 0.7f
-#define ACC_MAX 1.3f
+#define ACC_MIN 0.9f
+#define ACC_MAX 1.1f
 
 
 float GEstG[3] = { 0, 0, ACC_1G };
@@ -119,7 +119,7 @@ void imu_calc(void)
 // remove bias
     accel[0] = accel[0] - accelcal[0];
     accel[1] = accel[1] - accelcal[1];
-
+    accel[2] = accel[2] - accelcal[2];
 
 // reduce to accel in G
     for (int i = 0; i < 3; i++)
