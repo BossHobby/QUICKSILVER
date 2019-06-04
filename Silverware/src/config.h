@@ -258,7 +258,9 @@
 #define YAW_FIX
 
 //**************I-term relax.  Removes roll and pitch bounce back after flips
-#define TRANSIENT_WINDUP_PROTECTION
+#define I_TERM_RELAX
+//#define RELAX_FACTOR 10
+//#define RELAX_FREQUENCY_HZ 20
 
 
 

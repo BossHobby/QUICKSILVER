@@ -21,7 +21,8 @@
 #define PITCH 1
 #define YAW 2
 
-// this should be precalculated by the compiler as it's a constant
+// this should be precalculated by the compiler when parameters are constant
+//(1 - alpha. filtertime = 1 / filter-cutoff-frequency) as long as filtertime > sampleperiod
 #define FILTERCALC( sampleperiod, filtertime) (1.0f - ( 6.0f*(float)sampleperiod) / ( 3.0f *(float)sampleperiod + (float)filtertime))
 
 

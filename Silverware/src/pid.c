@@ -196,25 +196,16 @@ float timefactor;
 // output: pidoutput[x] = change required from motors
 float pid(int x )
 { 
-    if ((aux[LEVELMODE]) && (!aux[RACEMODE])){
-				if ((onground) || (in_air == 0)){
-						ierror[x] *= 0.98f;}
+    if ((aux[LEVELMODE]) && (!aux[RACEMODE])){			//in level mode or horizon but not racemode
+				if ((onground) || (in_air == 0)){						// and while on the ground...
+						ierror[x] *= 0.98f;}										// wind down the integral error
 		}else{
-			  if (onground) ierror[x] *= 0.98f;
+			  if (onground) ierror[x] *= 0.98f;  					//in acro mode - only wind down integral when idle up is off and throttle is 0  
 		}
+
 		
-#ifdef TRANSIENT_WINDUP_PROTECTION
-    static float avgSetpoint[3];
-    static int count[3];
-    extern float splpf( float in,int num );
-    
-    if ( x < 2 && (count[x]++ % 2) == 0 ) {
-        avgSetpoint[x] = splpf( setpoint[x], x );
-    }
-#endif
-		
-    int iwindup = 0;
-    if (( pidoutput[x] == outlimit[x] )&& ( error[x] > 0) )
+    int iwindup = 0;																										// (iwidup = 0  windup is permitted)   (iwindup = 1 windup is squashed)
+    if (( pidoutput[x] >= outlimit[x] )&& ( error[x] > 0) )
     {
         iwindup = 1;		
     }
@@ -224,15 +215,24 @@ float pid(int x )
         iwindup = 1;				
     } 
     
-    #ifdef ANTI_WINDUP_DISABLE
-    iwindup = 0;
-    #endif
- 
-    #ifdef TRANSIENT_WINDUP_PROTECTION
-		if ( x < 2 && fabsf( setpoint[x] - avgSetpoint[x] ) > 0.1f ) {
+		
+		#ifdef I_TERM_RELAX    //  Roll - Pitch  Setpoint based I term relax method
+		#ifndef RELAX_FACTOR
+		#define RELAX_FACTOR 10		//  5.7 degrees/s
+		#endif
+		#ifndef RELAX_FREQUENCY
+		#define RELAX_FREQUENCY_HZ 20
+		#endif
+		static float avgSetpoint[ 2 ];
+		if ( x < 2 ) { 
+		lpf( &avgSetpoint[x], setpoint[x], FILTERCALC( (LOOPTIME * 1e-6f), 1.0f/(float)RELAX_FREQUENCY_HZ ) );   // 20 Hz filter
+		const float hpfSetpoint = setpoint[x] - avgSetpoint[x];
+		if ( fabsf( hpfSetpoint ) > (float)RELAX_FACTOR*1e-2f ) {
 			iwindup = 1;
+			}
 		}
-    #endif
+		#endif
+		
 		
     if ( !iwindup)
     {

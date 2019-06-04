@@ -224,7 +224,7 @@ extern "C" float throttlehpf( float in )
 	return throttlehpf1.step(in );
 }
 
-
+/*
 
 // for TRANSIENT_WINDUP_PROTECTION feature
 //Low pass bessel filter order=1 alpha1=0.023
@@ -255,4 +255,5 @@ extern "C" float splpf( float in,int num )
 
 	return spfilter[num].step(in );
 }
+*/
 
