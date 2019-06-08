@@ -333,6 +333,20 @@
 #undef STOP_LOWBATTERY
 #endif
 
+#if defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND) || defined(RX_NRF24_BAYANG_TELEMETRY)
+#undef UART_1
+#undef UART_2
+#undef UART_3
+#undef UART_4
+#undef UART_6
+#endif
+
+#ifdef SOFTSPI_NONE
+#undef RADIO_XN297L
+#undef RADIO_XN297
+#undef SOFTSPI_3WIRE	
+#undef SOFTSPI_4WIRE	
+#endif
 
 
 

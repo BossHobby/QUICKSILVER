@@ -34,8 +34,14 @@ void spi_init(void)
 }
 
 
+#ifdef F405
+#define gpioset( port , pin) port->BSRRL = pin
+#define gpioreset( port , pin) port->BSRRH = pin
+#endif
+#ifdef F0
 #define gpioset( port , pin) port->BSRR = pin
 #define gpioreset( port , pin) port->BRR = pin
+#endif
 
 #define MOSIHIGH gpioset( SPI_MOSI_PORT, SPI_MOSI_PIN)
 #define MOSILOW gpioreset( SPI_MOSI_PORT, SPI_MOSI_PIN);
@@ -45,19 +51,29 @@ void spi_init(void)
 //#define READMISO (GPIO_ReadInputDataBit(SPI_MISO_PORT, SPI_MISO_PIN) )
 #define READMISO (SPI_MISO_PORT->IDR & SPI_MISO_PIN)
 
-#pragma push
+//#pragma push
 
-#pragma Otime
-#pragma O2
+//#pragma Otime
+//#pragma O2
 
 void spi_cson( )
 {
+	#ifdef F405
+	SPI_SS_PORT->BSRRH = SPI_SS_PIN;
+	#endif
+	#ifdef F0
 	SPI_SS_PORT->BRR = SPI_SS_PIN;
+	#endif
 }
 
 void spi_csoff( )
 {
+	#ifdef F405
+	SPI_SS_PORT->BSRRL = SPI_SS_PIN;
+	#endif
+	#ifdef F0
 	SPI_SS_PORT->BSRR = SPI_SS_PIN;
+	#endif
 }
 
 
@@ -152,7 +168,7 @@ int spi_sendrecvbyte2( int data)
 }
 
 
-#pragma pop
+//#pragma pop
 
 #endif
 

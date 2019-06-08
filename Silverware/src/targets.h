@@ -346,16 +346,17 @@
 #define USART4_PA1PA0
 #endif
 #define SOFTSPI_NONE
-#else
-#define SOFTSPI_3WIRE							//todo:port spi receiver and soft spi driver to f4
-#define SPI_MOSI_PIN GPIO_Pin_3
-#define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_2
-#define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN GPIO_Pin_1
-#define SPI_SS_PORT GPIOA
+#endif
+#ifndef SOFTSPI_NONE
 #define RADIO_CHECK
-#define RADIO_XN297L
+#define SPI_MISO_PINGPIO_Pin_10
+#define SPI_MISO_PIN GPIOB
+#define SPI_MOSI_PIN GPIO_Pin_11
+#define SPI_MOSI_PORT GPIOB
+#define SPI_CLK_PIN GPIO_Pin_6
+#define SPI_CLK_PORT GPIOC
+#define SPI_SS_PIN GPIO_Pin_7
+#define SPI_SS_PORT GPIOC
 #endif
 
 //VOLTAGE DIVIDER

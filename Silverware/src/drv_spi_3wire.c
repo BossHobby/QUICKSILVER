@@ -68,8 +68,14 @@ void mosi_output( void)
 	
 }
 
+#ifdef F405
+#define gpioset( port , pin) port->BSRRL = pin
+#define gpioreset( port , pin) port->BSRRH = pin
+#endif
+#ifdef F0
 #define gpioset( port , pin) port->BSRR = pin
 #define gpioreset( port , pin) port->BRR = pin
+#endif
 
 #define MOSIHIGH gpioset( SPI_MOSI_PORT, SPI_MOSI_PIN)
 #define MOSILOW gpioreset( SPI_MOSI_PORT, SPI_MOSI_PIN);
@@ -79,15 +85,11 @@ void mosi_output( void)
 
 #define READMOSI (SPI_MOSI_PORT->IDR & SPI_MOSI_PIN)
 
-#pragma push
-
-#pragma Otime
-#pragma O2
 
 void spi_cson( )
 {
 	#ifdef F405
-	SPI_SS_PORT->BSRRL = SPI_SS_PIN;
+	SPI_SS_PORT->BSRRH = SPI_SS_PIN;
 	#endif
 	#ifdef F0
 	SPI_SS_PORT->BRR = SPI_SS_PIN;
@@ -97,7 +99,7 @@ void spi_cson( )
 void spi_csoff( )
 {
 	#ifdef F405
-	SPI_SS_PORT->BSRRH = SPI_SS_PIN;
+	SPI_SS_PORT->BSRRL = SPI_SS_PIN;
 	#endif
 	#ifdef F0
 	SPI_SS_PORT->BSRR = SPI_SS_PIN;
@@ -120,6 +122,27 @@ for ( int i =7 ; i >=0 ; i--)
 		}
 	
 		SCKHIGH;
+		#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");	
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		#endif
+		#if defined(F0) && defined(ENABLE_OVERCLOCK)
+		__asm("NOP");
+		__asm("NOP");		
+		#endif
 		SCKLOW;
 	}
 }
@@ -132,7 +155,27 @@ for ( int i =7 ; i >=0 ; i--)
 	{
 						
 		SCKHIGH;
-
+		#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");	
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		#endif
+		#if defined(F0) && defined(ENABLE_OVERCLOCK)
+		__asm("NOP");
+		__asm("NOP");		
+		#endif
 		recv = recv<<1;
 
         recv = recv|((SPI_MOSI_PORT->IDR & (int)SPI_MOSI_PIN)?1:0);
@@ -216,28 +259,8 @@ for ( int i =7 ; i >=0 ; i--)
     return recv;
 }
 
-/*
 
- int spi_sendzerorecvbyte( )
-{ int recv = 0;
-	MOSILOW;
 
-	for ( int i = 7 ; i >=0 ; i--)
-	{
-		recv = recv<<1;
-		
-		SCKHIGH;
-		
-		if ( READMISO ) recv= recv|1;
-
-		SCKLOW;
-		
-	}	
-    return recv;
-}
-*/
-
-#pragma pop
 
 #endif
 

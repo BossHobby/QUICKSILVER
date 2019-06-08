@@ -98,13 +98,18 @@
 //#define UART_4
 //#define UART_6
 
-// *************Serial Receiver Inversion Selection
-//#define INVERT_UART					    //Normally true for SBUS and FPORT																											
+// *************Serial Receiver Inversion Selection  (Normally true for SBUS and FPORT)
+//#define INVERT_UART																								
 
-// *************Transmitter Type Selection (for bayang protocol only)																				//todo:  drop toy tx support - clarify that remaining options are just for bayang protocol
-//#define USE_STOCK_TX
+// *************Type Selection For Bayang Protocol Only
 //#define USE_DEVO
 #define USE_MULTI
+
+#define RADIO_XN297L
+//#define RADIO_XN297
+
+#define SOFTSPI_3WIRE	
+//#define SOFTSPI_4WIRE	
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING CHAN_5
@@ -316,13 +321,15 @@
 
 //MAINTAIN THIS LIST (probably the most important thing on this list)
 
-//investigate how idle up aux and digital idle play together - are they adding together or playing nicely - does idle up need to become airmode?
+//confirm functionality of 4 wire spi on xn297 - F0 and F4 .... confirm functionality of 3 wire spi on xn297L - F0
+
+//investigate dynamic airmode strength adjustment as a potential benefit
 
 //establish a "profiles.h" include behind config where users can save build default configs to make quick setup easier when updating
 
 //dma support in driver for f4 and F0 gyro - interrupt driven gyro sync fired control()
 
-//8k f4 loop support - examine all filtering time constants
+//8k f4 loop support - examine all filtering time constants - mostly done - still need accelerometer filters and ADC filters adjusted
 
 //moar TARGETS TODO stuff is in hardware.h like buzzer pin assignment and rgb led pin assignment
 
@@ -349,8 +356,6 @@
 //investigate softserial driver - is it working?, what is it being used for?, can we develop it into a useful feature?
 
 //softserial not throwing errors anymore but needs review for proper configuration - i think I mixed up BSRRH and BSRRL
-
-//bayang for f4 / software spi - i think I mixed up BSRRH and BSRRL
 
 //find other places I mixed up BSRRH and BSRRL like all the i2c drivers
 
