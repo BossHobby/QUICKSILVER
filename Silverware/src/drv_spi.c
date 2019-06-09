@@ -89,9 +89,38 @@ for ( int i =7 ; i >=0 ; i--)
 		{
 			MOSILOW;
 		}
-	
+		#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		#endif
 		SCKHIGH;
+		#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		#endif
 		SCKLOW;
+		#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		#endif
 	}
 }
 
@@ -109,11 +138,35 @@ int spi_sendrecvbyte2( int data)
 		{
 			MOSILOW;
 		}
+		#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		#endif
 		SCKHIGH;
+		#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		#endif
 		data = data<<1;
 		if ( READMISO ) recv= recv|(1<<7);
 		recv = recv<<1;
 		SCKLOW;
+		#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		#endif
 	}	
 	  recv = recv>>8;
     return recv;
@@ -136,13 +189,34 @@ int spi_sendrecvbyte2( int data)
 		}
 		
 		data = data<<1;
-		
+		#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		#endif		
 		SCKHIGH;
-		
+		#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		#endif		
 		if ( READMISO ) recv= recv|1;
 
 		SCKLOW;
-		
+		#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		#endif		
 	}	
 
     return recv;
@@ -156,13 +230,34 @@ int spi_sendrecvbyte2( int data)
 	for ( int i = 7 ; i >=0 ; i--)
 	{
 		recv = recv<<1;
-		
+		#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		#endif		
 		SCKHIGH;
-		
+		#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		#endif		
 		if ( READMISO ) recv= recv|1;
 
 		SCKLOW;
-		
+		#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		#endif		
 	}	
     return recv;
 }

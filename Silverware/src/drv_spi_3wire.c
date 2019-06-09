@@ -120,7 +120,16 @@ for ( int i =7 ; i >=0 ; i--)
 		{
 			MOSILOW;
 		}
-	
+			#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");	
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		#endif
 		SCKHIGH;
 		#ifdef F405
 		__asm("NOP");
@@ -144,6 +153,16 @@ for ( int i =7 ; i >=0 ; i--)
 		__asm("NOP");		
 		#endif
 		SCKLOW;
+		#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");	
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		#endif
 	}
 }
 
@@ -153,7 +172,15 @@ for ( int i =7 ; i >=0 ; i--)
 
 	for ( int i = 7 ; i >=0 ; i--)
 	{
-						
+		#ifdef F405
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");	
+		#endif						
 		SCKHIGH;
 		#ifdef F405
 		__asm("NOP");
@@ -165,12 +192,9 @@ for ( int i =7 ; i >=0 ; i--)
 		__asm("NOP");
 		__asm("NOP");
 		__asm("NOP");
-		__asm("NOP");	
 		__asm("NOP");
 		__asm("NOP");
-		__asm("NOP");
-		__asm("NOP");
-		__asm("NOP");
+		__asm("NOP"); 
 		#endif
 		#if defined(F0) && defined(ENABLE_OVERCLOCK)
 		__asm("NOP");
@@ -181,7 +205,14 @@ for ( int i =7 ; i >=0 ; i--)
         recv = recv|((SPI_MOSI_PORT->IDR & (int)SPI_MOSI_PIN)?1:0);
         
 		SCKLOW;
-		
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");
+		__asm("NOP");	
 	}	
 
     return recv;
