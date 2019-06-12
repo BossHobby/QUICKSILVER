@@ -105,6 +105,7 @@
 
 extern int failsafe;
 extern int onground;
+extern int armed_state;
 
 int pwmdir = 0;
 static unsigned long pwm_failsafe_time = 1;
@@ -478,7 +479,7 @@ void pwm_set( uint8_t number, float pwm )
 
 #endif
 
-	if ( onground ) {
+	if ( onground || !armed_state) {
 		value = 0; // stop the motors
 	}
 
@@ -491,7 +492,7 @@ void pwm_set( uint8_t number, float pwm )
             // usually the quad should be gone by then
 			if ( gettime() - pwm_failsafe_time > 4000000 ) {
 				value = 0;
-        return;
+        //  return;    -   esc reboots are annoying
 			}
 		}
 	} else {

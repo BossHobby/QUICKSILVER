@@ -12,10 +12,6 @@ int mosi_out = 0;
 
 void spi_init(void)
 {    
-	// spi port inits
-//#ifdef Alienwhoop_ZERO   //Only for 2nd prototype w/spi bayang rx and chip select on programming clock pin
-//	delay (2000000);
-//#endif
 		GPIO_InitTypeDef  GPIO_InitStructure;
 	
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
@@ -205,6 +201,7 @@ for ( int i =7 ; i >=0 ; i--)
         recv = recv|((SPI_MOSI_PORT->IDR & (int)SPI_MOSI_PIN)?1:0);
         
 		SCKLOW;
+		#ifdef F405
 		__asm("NOP");
 		__asm("NOP");
 		__asm("NOP");
@@ -213,6 +210,7 @@ for ( int i =7 ; i >=0 ; i--)
 		__asm("NOP");
 		__asm("NOP");
 		__asm("NOP");	
+		#endif
 	}	
 
     return recv;

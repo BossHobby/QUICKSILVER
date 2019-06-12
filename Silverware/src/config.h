@@ -99,11 +99,11 @@
 //#define UART_6
 
 // *************Serial Receiver Inversion Selection  (Normally true for SBUS and FPORT)
-//#define INVERT_UART																								
+#define INVERT_UART																								
 
 // *************Type Selection For Bayang Protocol Only
-//#define USE_DEVO
-#define USE_MULTI
+#define USE_DEVO
+//#define USE_MULTI
 
 #define RADIO_XN297L
 //#define RADIO_XN297
@@ -198,7 +198,7 @@
 
 //Select Gyro Filter Cut Frequency
 #define GYRO_FILTER_PASS1 HZ_90
-#define GYRO_FILTER_PASS2 HZ_140
+#define GYRO_FILTER_PASS2 HZ_90
 
 //Select D Term Filter Cut Frequency *** Select Only one
 #define  DTERM_LPF_2ND_HZ 100
@@ -212,12 +212,11 @@
 
 
 
-
 //**********************************************************************************************************************
 //***********************************************MOTOR OUTPUT SETTINGS**************************************************
 
 // *************brushed motor minimum idle percent / dshot digital idle
-#define DIGITAL_IDLE 5
+#define DIGITAL_IDLE 4.5
 
 // *************invert yaw pid for "PROPS OUT" configuration - This feature is switchable to "PROPS IN" when active with stick gesture DOWN-UP-DOWN, Save selection with DOWN-DOWN-DOWN
 #define INVERT_YAW_PID
@@ -303,7 +302,7 @@
 #define FAILSAFETIME 1000000  // one second
 
 // debug things ( debug struct and other)
-#define DEBUG
+//#define DEBUG
 
 // disable motors for testing
 //#define NOMOTORS
@@ -321,9 +320,7 @@
 
 //MAINTAIN THIS LIST (probably the most important thing on this list)
 
-//confirm functionality of 4 wire spi on xn297 - F0 and F4 .... confirm functionality of 3 wire spi on xn297L - F0
-
-//investigate dynamic airmode strength adjustment as a potential benefit
+//investigate dynamic airmode strength adjustment as a potential benefit - felt uneasy in early tests on 75mm brushless whoop
 
 //establish a "profiles.h" include behind config where users can save build default configs to make quick setup easier when updating
 

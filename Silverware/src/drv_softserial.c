@@ -121,13 +121,13 @@ int softserial_read_byte(uint8_t* byte)
 #endif
 void softserial_set_input(const SoftSerialData_t* data)
 {
-	SET_LED2_ON;
+	SET_LED1_ON;
 	if (softserial_is_1wire(data))
 		softserial_init_rx(data);
 }
 void softserial_set_output(const SoftSerialData_t* data)
 {
-	SET_LED2_OFF;
+	SET_LED1_OFF;
 	if (softserial_is_1wire(data))
 		softserial_init_tx(data);
 	delay(20);

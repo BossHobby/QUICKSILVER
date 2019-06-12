@@ -454,7 +454,7 @@ void pwm_set( uint8_t number, float pwm )
 
 #endif
 
-	if ( onground ) {
+	if ( onground || !armed_state) {
 		value = 0; // stop the motors
 	}
 
@@ -474,7 +474,7 @@ void pwm_set( uint8_t number, float pwm )
                 gpioreset( DSHOT_PORT_3, DSHOT_PIN_3 );
 								*/
                 //////
-                return;
+              //  return;    -   esc reboots are annoying
 			}
 		}
 	} else {
