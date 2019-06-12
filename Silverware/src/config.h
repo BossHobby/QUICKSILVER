@@ -19,12 +19,15 @@
 //#define LuxF4osd
 //#define CLRacing_F4
 //#define Raceflight_Revolt
+//#define FortiniF4osd
+
 
 // *************DEFINE FLIGHT CONTROLLER MOTOR OUTPUT - *****warning*****  GETTING THIS WRONG CAN SMOKE YOUR BOARD :)
 #define BRUSHLESS_TARGET
 //#define BRUSHED_TARGET
 
-
+// Something new to play with....  25hz for D16sbus, 50hx for D8sbus, 90hz for bayang   Formula is [(1/rx framerate)/2] * 0.9
+#define RX_SMOOTHING_HZ 25
 
 
 

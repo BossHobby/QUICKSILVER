@@ -185,6 +185,16 @@ float rate_multiplier = 1.0;
 		}
 		#endif
 	 }
+	 rxcopy[ 3 ] = rx [3];	
+	 
+	 
+#ifdef RX_SMOOTHING_HZ
+	for ( int i = 0; i < 4; ++i ) {
+	lpf( &rxcopy[ i ], rxcopy[ i ], FILTERCALC( 0.001 , 1.0f/RX_SMOOTHING_HZ ) );
+	}
+#endif	
+	 
+	 
 
 #ifndef DISABLE_FLIP_SEQUENCER	
   flip_sequencer();
