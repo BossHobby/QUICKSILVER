@@ -5,10 +5,11 @@
 
 #ifdef F405
 
-#ifdef ICM20601_SPI1
+#if defined(ICM20601_SPI1) || defined(ICM20602_SPI1)
 	#define MPU6XXX_SPI1
 #endif
 
+//SPI PINS
 #ifdef MPU6XXX_SPI1
 #define MPU6XXX_SPI_INSTANCE SPI1
 #define MPU6XXX_SPI_PORT GPIOA
@@ -18,12 +19,28 @@
 #define MPU6XXX_MISO_PIN GPIO_Pin_6
 #define MPU6XXX_MOSI_PINSOURCE GPIO_PinSource7
 #define MPU6XXX_MOSI_PIN GPIO_Pin_7
-#define MPU6XXX_NSS_PINSOURCE GPIO_PinSource4
-#define MPU6XXX_NSS_PIN GPIO_Pin_4
-#define MPU6XXX_INT_PIN GPIO_Pin_4
-#define MPU6XXX_INT_PORT GPIOC
 #define MPU6XXX_SPI_AF GPIO_AF_SPI1
 #endif
+
+//CHIP SELECT PINS
+#if defined(MPU6XXX_NSS_PA8) || defined(ICM20601_NSS_PA8) || defined(ICM20602_NSS_PA8)
+#define MPU6XXX_NSS_PINSOURCE GPIO_PinSource8
+#define MPU6XXX_NSS_PIN GPIO_Pin_8
+#define MPU6XXX_NSS_PORT GPIOA
+#endif
+
+#if defined(MPU6XXX_NSS_PA4) || defined(ICM20601_NSS_PA4) || defined(ICM20602_NSS_PA4)
+#define MPU6XXX_NSS_PINSOURCE GPIO_PinSource4
+#define MPU6XXX_NSS_PIN GPIO_Pin_4
+#define MPU6XXX_NSS_PORT GPIOA
+#endif
+
+//INTERRUPT PINS
+#if defined(MPU6XXX_INT_PC4) || defined(ICM20601_INT_PC4) || defined(ICM20602_INT_PC4)
+#define MPU6XXX_INT_PIN GPIO_Pin_4
+#define MPU6XXX_INT_PORT GPIOC
+#endif
+
 
 
 
@@ -51,7 +68,7 @@ GPIO_Init(MPU6XXX_SPI_PORT, &GPIO_InitStructure);
 GPIO_InitStructure.GPIO_Pin = MPU6XXX_NSS_PIN;
 GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
 GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-GPIO_Init(MPU6XXX_SPI_PORT, &GPIO_InitStructure);
+GPIO_Init(MPU6XXX_NSS_PORT, &GPIO_InitStructure);
 
 // Interrupt GPIO	
 GPIO_InitStructure.GPIO_Pin = MPU6XXX_INT_PIN;

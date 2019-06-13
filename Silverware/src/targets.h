@@ -307,6 +307,8 @@
 
 //SPI, I2C & GYRO
 #define MPU6XXX_SPI1
+#define MPU6XXX_NSS_PA4
+#define MPU6XXX_INT_PC4
 #define USE_DUMMY_I2C									//todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
 //#define I2C_SDAPIN GPIO_Pin_10
 //#define I2C_SDAPORT GPIOA
@@ -396,6 +398,8 @@
 
 //SPI, I2C & GYRO
 #define MPU6XXX_SPI1
+#define MPU6XXX_NSS_PA4
+#define MPU6XXX_INT_PC4
 #define USE_DUMMY_I2C									//todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
 //#define I2C_SDAPIN GPIO_Pin_10
 //#define I2C_SDAPORT GPIOA
@@ -504,6 +508,8 @@
 
 //SPI, I2C & GYRO
 #define MPU6XXX_SPI1
+#define MPU6XXX_NSS_PA4
+#define MPU6XXX_INT_PC4
 #define USE_DUMMY_I2C									//todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
 //#define I2C_SDAPIN GPIO_Pin_10
 //#define I2C_SDAPORT GPIOA
@@ -592,7 +598,8 @@
 
 //SPI, I2C & GYRO
 #define MPU6XXX_SPI1
-
+#define MPU6XXX_NSS_PA4
+#define MPU6XXX_INT_PC4
 #define USE_DUMMY_I2C									//todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
 //#define I2C_SDAPIN GPIO_Pin_10
 //#define I2C_SDAPORT GPIOA
@@ -667,7 +674,8 @@
 
 //SPI, I2C & GYRO
 #define ICM20601_SPI1
-
+#define ICM20601_NSS_PA4
+#define ICM20601_INT_PC4
 #define USE_DUMMY_I2C									//todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
 //#define I2C_SDAPIN GPIO_Pin_10
 //#define I2C_SDAPORT GPIOA
@@ -746,7 +754,8 @@
 
 //SPI, I2C & GYRO
 #define ICM20602_SPI1
-
+#define ICM20602_NSS_PA8
+#define ICM20602_INT_PC4
 #define USE_DUMMY_I2C									//todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
 //#define I2C_SDAPIN GPIO_Pin_10
 //#define I2C_SDAPORT GPIOA
