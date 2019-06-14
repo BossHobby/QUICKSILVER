@@ -336,8 +336,8 @@
 #endif
 #ifndef SOFTSPI_NONE
 #define RADIO_CHECK
-#define SPI_MISO_PINGPIO_Pin_10
-#define SPI_MISO_PIN GPIOA
+#define SPI_MISO_PIN GPIO_Pin_10
+#define SPI_MISO_PORT GPIOA
 #define SPI_MOSI_PIN GPIO_Pin_9
 #define SPI_MOSI_PORT GPIOA
 #define SPI_CLK_PIN GPIO_Pin_6
@@ -397,6 +397,7 @@
 #define LED1_INVERT
 
 //SPI, I2C & GYRO
+#define DISABLE_GYRO_CHECK
 #define MPU6XXX_SPI1
 #define MPU6XXX_NSS_PA4
 #define MPU6XXX_INT_PC4
@@ -408,10 +409,10 @@
 //#define I2C_GYRO_ADDRESS 0x68
 //#define SOFTI2C_GYRO_ADDRESS 0x69
 #define GYRO_ID_1 0x68
-//#define GYRO_ID_2 0x73
-//#define GYRO_ID_3 0x78
-//#define GYRO_ID_4 0x72
-//#define SENSOR_ROTATE_90_CCW
+#define GYRO_ID_2 0x73
+#define GYRO_ID_3 0x78
+#define GYRO_ID_4 0x71
+#define SENSOR_ROTATE_90_CCW
 #if defined(LuxF4osd)
 #define SENSOR_ROTATE_90_CCW
 #else
@@ -443,14 +444,14 @@
 #endif
 #ifndef SOFTSPI_NONE
 #define RADIO_CHECK
-#define SPI_MISO_PINGPIO_Pin_4
-#define SPI_MISO_PIN GPIOB
+#define SPI_MISO_PIN GPIO_Pin_10
+#define SPI_MISO_PORT GPIOA
 #define SPI_MOSI_PIN GPIO_Pin_9
 #define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_10
-#define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN GPIO_Pin_2
-#define SPI_SS_PORT GPIOD
+#define SPI_CLK_PIN GPIO_Pin_6
+#define SPI_CLK_PORT GPIOC
+#define SPI_SS_PIN GPIO_Pin_7
+#define SPI_SS_PORT GPIOC
 #endif
 
 //VOLTAGE DIVIDER
@@ -528,16 +529,17 @@
 #define USART2_PA3PA2
 #define USART3_PC11PC10
 #define SOFTSPI_NONE
-#else
-#define SOFTSPI_3WIRE							//todo:port spi receiver and soft spi driver to f4
-#define SPI_MOSI_PIN GPIO_Pin_3
-#define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_2
-#define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN GPIO_Pin_1
-#define SPI_SS_PORT GPIOA
+#endif
+#ifndef SOFTSPI_NONE
 #define RADIO_CHECK
-#define RADIO_XN297L
+#define SPI_MISO_PIN GPIO_Pin_10
+#define SPI_MISO_PORT GPIOA
+#define SPI_MOSI_PIN GPIO_Pin_9
+#define SPI_MOSI_PORT GPIOA
+#define SPI_CLK_PIN GPIO_Pin_6
+#define SPI_CLK_PORT GPIOC
+#define SPI_SS_PIN GPIO_Pin_7
+#define SPI_SS_PORT GPIOC
 #endif
 
 //VOLTAGE DIVIDER
@@ -624,16 +626,17 @@
 #define USART4_PA1PA0
 #define USART6_PC7PC6
 #define SOFTSPI_NONE
-#else
-#define SOFTSPI_3WIRE							//todo:port spi receiver and soft spi driver to f4
-#define SPI_MOSI_PIN GPIO_Pin_3
-#define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_2
-#define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN GPIO_Pin_1
-#define SPI_SS_PORT GPIOA
+#endif
+#ifndef SOFTSPI_NONE
 #define RADIO_CHECK
-#define RADIO_XN297L
+#define SPI_MISO_PIN GPIO_Pin_10
+#define SPI_MISO_PORT GPIOA
+#define SPI_MOSI_PIN GPIO_Pin_9
+#define SPI_MOSI_PORT GPIOA
+#define SPI_CLK_PIN GPIO_Pin_6
+#define SPI_CLK_PORT GPIOC
+#define SPI_SS_PIN GPIO_Pin_7
+#define SPI_SS_PORT GPIOC
 #endif
 
 //VOLTAGE DIVIDER
@@ -701,16 +704,17 @@
 #define USART4_PA1PA0
 #define USART6_PC7PC6
 #define SOFTSPI_NONE
-#else
-#define SOFTSPI_3WIRE							//todo:port spi receiver and soft spi driver to f4
-#define SPI_MOSI_PIN GPIO_Pin_3
-#define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_2
-#define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN GPIO_Pin_1
-#define SPI_SS_PORT GPIOA
+#endif
+#ifndef SOFTSPI_NONE
 #define RADIO_CHECK
-#define RADIO_XN297L
+#define SPI_MISO_PIN GPIO_Pin_10
+#define SPI_MISO_PORT GPIOA
+#define SPI_MOSI_PIN GPIO_Pin_9
+#define SPI_MOSI_PORT GPIOA
+#define SPI_CLK_PIN GPIO_Pin_6
+#define SPI_CLK_PORT GPIOC
+#define SPI_SS_PIN GPIO_Pin_7
+#define SPI_SS_PORT GPIOC
 #endif
 
 //VOLTAGE DIVIDER
@@ -781,16 +785,17 @@
 #define USART4_PA1PA0
 #define USART6_PC7PC6
 #define SOFTSPI_NONE
-#else
-#define SOFTSPI_3WIRE							//todo:port spi receiver and soft spi driver to f4
-#define SPI_MOSI_PIN GPIO_Pin_3
-#define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_2
-#define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN GPIO_Pin_1
-#define SPI_SS_PORT GPIOA
+#endif
+#ifndef SOFTSPI_NONE
 #define RADIO_CHECK
-#define RADIO_XN297L
+#define SPI_MISO_PIN GPIO_Pin_10
+#define SPI_MISO_PORT GPIOA
+#define SPI_MOSI_PIN GPIO_Pin_9
+#define SPI_MOSI_PORT GPIOA
+#define SPI_CLK_PIN GPIO_Pin_6
+#define SPI_CLK_PORT GPIOC
+#define SPI_SS_PIN GPIO_Pin_7
+#define SPI_SS_PORT GPIOC
 #endif
 
 //VOLTAGE DIVIDER
@@ -814,10 +819,5 @@
 #define MOTOR2_PIN_PB0
 #define MOTOR3_PIN_PB1
 
-// pwm pin initialization
-//#define USE_PWM_DRIVER
-//#define USE_ESC_DRIVER       //todo:  evaluate need for this to stay if focused on quadcopters
-#define USE_DSHOT_DMA_DRIVER  
-//#define USE_DSHOT_DRIVER_BETA  //todo:  probably eliminate this completely
 #endif
 
