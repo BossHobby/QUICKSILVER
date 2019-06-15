@@ -7,8 +7,8 @@
 
 #ifdef BUZZER_ENABLE
 
-#define PIN_OFF( port , pin ) GPIO_ResetBits( port , pin)
-#define PIN_ON( port , pin ) GPIO_SetBits( port , pin)
+//#define PIN_OFF( port , pin ) GPIO_ResetBits( port , pin)   //moved to defines.h
+//#define PIN_ON( port , pin ) GPIO_SetBits( port , pin)   //moved to defines.h
 
 
 int gpio_init_buzzer(void)
@@ -64,7 +64,7 @@ void buzzer()
 				pulse_rate = 600000; // 3/5ths second
 
 			// start the buzzer if timeout has elapsed
-			if ( time - buzzertime > BUZZER_DELAY || lowbatt)
+			if ( time - buzzertime > BUZZER_DELAY || lowbatt || aux[BUZZER_ENABLE])
 			{
 				// initialize pin only after minimum 10 seconds from powerup
 				if ( !buzzer_init && time >  10e6)

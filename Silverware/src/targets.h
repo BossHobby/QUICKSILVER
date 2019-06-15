@@ -5,7 +5,7 @@
 #ifdef BWHOOP
 #define F0
 
-//LEDS
+//LEDS & BUZZER
 #define LED_NUMBER 2
 #define LED1PIN GPIO_Pin_2
 #define LED1PORT GPIOA
@@ -13,6 +13,8 @@
 #define LED2PORT GPIOA
 #define LED1_INVERT
 #define LED2_INVERT
+#define BUZZER_PIN GPIO_Pin_14
+#define BUZZER_PIN_PORT GPIOA
 
 //I2C & GYRO
 #define USE_HARDWARE_I2C
@@ -78,7 +80,7 @@
 #ifdef E011
 #define F0
 
-//LEDS
+//LEDS & BUZZER
 #define LED_NUMBER 2
 #define LED1PIN GPIO_Pin_2
 #define LED1PORT GPIOA
@@ -86,6 +88,8 @@
 #define LED2PORT GPIOA
 #define LED1_INVERT
 #define LED2_INVERT
+#define BUZZER_PIN GPIO_Pin_14
+#define BUZZER_PIN_PORT GPIOA
 
 //I2C & GYRO
 #define USE_SOFTWARE_I2C
@@ -151,12 +155,14 @@
 #ifdef H8mini_blue_board
 #define F0
 
-//LEDS
+//LEDS & BUZZER
 #define LED_NUMBER 1
 #define LED1PIN GPIO_Pin_1
 #define LED1PORT GPIOF
 #define LED2PIN GPIO_Pin_3
 #define LED2PORT GPIOA
+#define BUZZER_PIN GPIO_Pin_14
+#define BUZZER_PIN_PORT GPIOA
 
 //I2C & GYRO
 #define USE_SOFTWARE_I2C
@@ -222,12 +228,14 @@
 #ifdef Alienwhoop_ZERO
 #define F0
 
-//LEDS
+//LEDS & BUZZER
 #define LED_NUMBER 1
 #define LED1PIN GPIO_Pin_0
 #define LED1PORT GPIOF
 #define LED2PIN GPIO_Pin_0
 #define LED2PORT GPIOA
+#define BUZZER_PIN GPIO_Pin_14
+#define BUZZER_PIN_PORT GPIOA
 
 //I2C & GYRO
 #define USE_HARDWARE_I2C
@@ -304,6 +312,9 @@
 #define LED2PORT GPIOB
 #define LED1_INVERT
 //#define LED2_INVERT
+#define BUZZER_PIN				GPIO_Pin_6
+#define BUZZER_PIN_PORT		GPIOB
+#define BUZZER_INVERT
 
 //SPI, I2C & GYRO
 #define MPU6XXX_SPI1
@@ -347,7 +358,7 @@
 #endif
 
 //VOLTAGE DIVIDER
-#define DISABLE_LVC
+#define DISABLE_ADC
 #define BATTERYPIN GPIO_Pin_2
 #define BATTERYPORT GPIOC
 #define BATTERY_ADC_CHANNEL ADC_Channel_12
@@ -395,6 +406,9 @@
 #define LED1PIN GPIO_Pin_5
 #define LED1PORT GPIOB
 #define LED1_INVERT
+#define BUZZER_PIN GPIO_Pin_4
+#define BUZZER_PIN_PORT GPIOB
+#define BUZZER_INVERT
 
 //SPI, I2C & GYRO
 #define DISABLE_GYRO_CHECK
@@ -455,7 +469,7 @@
 #endif
 
 //VOLTAGE DIVIDER
-#define DISABLE_LVC
+#define DISABLE_ADC
 #define BATTERYPIN GPIO_Pin_2
 #define BATTERYPORT GPIOC
 #define BATTERY_ADC_CHANNEL ADC_Channel_12
@@ -506,6 +520,9 @@
 #define LED2PORT GPIOD
 //#define LED1_INVERT
 #define LED2_INVERT
+#define BUZZER_PIN GPIO_Pin_2
+#define BUZZER_PIN_PORT GPIOA
+#define BUZZER_INVERT
 
 //SPI, I2C & GYRO
 #define MPU6XXX_SPI1
@@ -543,7 +560,7 @@
 #endif
 
 //VOLTAGE DIVIDER
-#define DISABLE_LVC
+#define DISABLE_ADC
 /*#define BATTERYPIN GPIO_Pin_2
 #define BATTERYPORT GPIOC
 #define BATTERY_ADC_CHANNEL ADC_Channel_12
@@ -591,12 +608,12 @@
 
 //LEDS
 #define LED_NUMBER 1
-#define LED1PIN GPIO_Pin_5
-#define LED1PORT GPIOB
-#define LED2PIN GPIO_Pin_5
-#define LED2PORT GPIOB
+#define LED1PIN 					GPIO_Pin_5
+#define LED1PORT 					GPIOB
 #define LED1_INVERT
-//#define LED2_INVERT
+#define BUZZER_PIN				GPIO_Pin_4
+#define BUZZER_PIN_PORT		GPIOB
+#define BUZZER_INVERT
 
 //SPI, I2C & GYRO
 #define MPU6XXX_SPI1
@@ -640,7 +657,7 @@
 #endif
 
 //VOLTAGE DIVIDER
-#define DISABLE_LVC
+#define DISABLE_ADC
 #define BATTERYPIN GPIO_Pin_2
 #define BATTERYPORT GPIOC
 #define BATTERY_ADC_CHANNEL ADC_Channel_12
@@ -666,19 +683,19 @@
 #ifdef Raceflight_Revolt
 #define F405
 
-//LEDS
+//LEDS & BUZZER
 #define LED_NUMBER 1
-#define LED1PIN GPIO_Pin_5
-#define LED1PORT GPIOB
-#define LED2PIN GPIO_Pin_5
-#define LED2PORT GPIOB
 #define LED1_INVERT
-//#define LED2_INVERT
+#define LED1PIN						GPIO_Pin_5
+#define LED1PORT 					GPIOB
+#define BUZZER_PIN				GPIO_Pin_4
+#define BUZZER_PIN_PORT		GPIOB
+#define BUZZER_INVERT
 
 //SPI, I2C & GYRO
-#define ICM20601_SPI1
-#define ICM20601_NSS_PA4
-#define ICM20601_INT_PC4
+#define ICM20602_SPI1
+#define ICM20602_NSS_PA4
+#define ICM20602_INT_PC4
 #define USE_DUMMY_I2C									//todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
 //#define I2C_SDAPIN GPIO_Pin_10
 //#define I2C_SDAPORT GPIOA
@@ -687,12 +704,12 @@
 //#define I2C_GYRO_ADDRESS 0x68
 //#define SOFTI2C_GYRO_ADDRESS 0x69
 #define GYRO_ID_1 0x68
-//#define GYRO_ID_2 0x73
-//#define GYRO_ID_3 0x78
+#define GYRO_ID_2 0x12
+#define GYRO_ID_3 0x69
 //#define GYRO_ID_4 0x72
-#define SENSOR_ROTATE_90_CCW
-//#define SENSOR_FLIP_180
-//#define SENSOR_ROTATE_90_CW
+//#define SENSOR_ROTATE_90_CCW
+#define SENSOR_FLIP_180
+#define SENSOR_ROTATE_90_CW
 //#define DISABLE_GYRO_CHECK
 
 // SPI PINS DEFINITONS & RADIO
@@ -718,25 +735,24 @@
 #endif
 
 //VOLTAGE DIVIDER
-#define DISABLE_LVC
 #define BATTERYPIN GPIO_Pin_2
 #define BATTERYPORT GPIOC
 #define BATTERY_ADC_CHANNEL ADC_Channel_12
 #ifndef VOLTAGE_DIVIDER_R1
-#define VOLTAGE_DIVIDER_R1 4700
+#define VOLTAGE_DIVIDER_R1 10000
 #endif
 #ifndef VOLTAGE_DIVIDER_R2
-#define VOLTAGE_DIVIDER_R2 2200
+#define VOLTAGE_DIVIDER_R2 1000
 #endif
 #ifndef ADC_REF_VOLTAGE
 #define ADC_REF_VOLTAGE 3.3
 #endif
 
 // MOTOR PINS
-#define MOTOR0_PIN_PB0
+#define MOTOR0_PIN_PA3
 #define MOTOR1_PIN_PB1
-#define MOTOR2_PIN_PA3
-#define MOTOR3_PIN_PA2
+#define MOTOR2_PIN_PA2
+#define MOTOR3_PIN_PB0
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -748,13 +764,16 @@
 #define TICK_CLOCK_FREQ_HZ 21000000
 
 //LEDS
-#define LED_NUMBER 1
-#define LED1PIN GPIO_Pin_5
-#define LED1PORT GPIOB
-#define LED2PIN GPIO_Pin_6
-#define LED2PORT GPIOB
+#define LED_NUMBER 2
+#define LED1PIN 					GPIO_Pin_5
+#define LED1PORT 					GPIOB
+#define LED2PIN 					GPIO_Pin_6
+#define LED2PORT 					GPIOB
 #define LED1_INVERT
-//#define LED2_INVERT
+#define LED2_INVERT
+#define BUZZER_PIN				GPIO_Pin_4
+#define BUZZER_PIN_PORT		GPIOB
+#define BUZZER_INVERT
 
 //SPI, I2C & GYRO
 #define ICM20602_SPI1
@@ -799,7 +818,7 @@
 #endif
 
 //VOLTAGE DIVIDER
-#define DISABLE_LVC
+#define DISABLE_ADC
 #define BATTERYPIN GPIO_Pin_2
 #define BATTERYPORT GPIOC
 #define BATTERY_ADC_CHANNEL ADC_Channel_12

@@ -8,7 +8,7 @@ uint16_t adcarray[2];
 extern debug_type debug;
 
 
-#ifndef DISABLE_LVC
+#ifndef DISABLE_ADC
 
 
 typedef struct {

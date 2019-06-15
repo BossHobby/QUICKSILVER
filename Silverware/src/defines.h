@@ -348,8 +348,15 @@
 #undef SOFTSPI_4WIRE	
 #endif
 
-
-
+#ifdef BUZZER_INVERT
+#define PIN_ON( port , pin ) GPIO_ResetBits( port , pin)
+#define PIN_OFF( port , pin ) GPIO_SetBits( port , pin)
+#else
+#define PIN_OFF( port , pin ) GPIO_ResetBits( port , pin)
+#define PIN_ON( port , pin ) GPIO_SetBits( port , pin)
+#endif
+// x (micro)seconds after loss of tx or low bat before buzzer starts
+#define BUZZER_DELAY     30e6 
 
 
 

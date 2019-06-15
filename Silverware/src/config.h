@@ -144,10 +144,14 @@
 //**********************************************************************************************************************
 //***********************************************VOLTAGE SETTINGS*******************************************************
 
+// ************* This disables all voltage related logic by returning 4.2V/cell at all times.
+// ************* (some targets without voltage dividers may have this already set in targets.h)
+//#define DISABLE_LVC
+
 // ************* Set your lipo cell count to override auto cell count detect logic
 //#define LIPO_CELL_COUNT 1
 
-// ************* Raises pids automatically as battery voltage drops in flight.   Ensure voltage is calibrated before use.
+// ************* Raises pids automatically as battery voltage drops in flight.  **CRITICAL** Ensure voltage is calibrated before use.
 #define PID_VOLTAGE_COMPENSATION
 #define LEVELMODE_PID_ATTENUATION 0.90f  //used to prevent oscillations in angle modes with pid_voltage_compensation enabled due to high pids
 
@@ -159,7 +163,7 @@
 // *************lower throttle when battery below threshold - forced landing low voltage cutoff
 // *************THIS FEATURE WILL BE OFF BY DEFAULT EVEN WHEN DEFINED - USE STICK GESTURE LEFT-LEFT-LEFT TO ACTIVATE THEN DOWN-DOWN-DOWN TO SAVE AS ON
 // *************Led light will blink once when LVC forced landing is turned on, blink twice when turned off, and will blink multiple times upon save command
-#define LVC_LOWER_THROTTLE
+//#define LVC_LOWER_THROTTLE
 #define LVC_LOWER_THROTTLE_VOLTAGE 3.30
 #define LVC_LOWER_THROTTLE_VOLTAGE_RAW 2.70
 #define LVC_LOWER_THROTTLE_KP 3.0

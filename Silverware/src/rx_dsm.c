@@ -13,12 +13,6 @@
 
 #if defined(RX_DSMX_2048) || defined(RX_DSM2_1024)
 
-#ifndef BUZZER_ENABLE 																									// use the convenience macros from buzzer.c for bind pulses
-#define PIN_OFF( port , pin ) GPIO_ResetBits( port , pin)
-#define PIN_ON( port , pin ) GPIO_SetBits( port , pin)
-#endif
-
-
 // global use rx variables
 extern float rx[4];
 extern char aux[AUXNUMBER];
@@ -147,17 +141,17 @@ void rx_spektrum_bind(void)
         GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure); 
         
         // RX line, set high
-        PIN_ON(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_RX_PIN);
+        GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_RX_PIN);
         // Bind window is around 20-140ms after powerup
         delay(60000);
 
         for (uint8_t i = 0; i < BIND_PULSES; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms          
                 // RX line, drive low for 120us
-                PIN_OFF(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_RX_PIN);
+                GPIO_ResetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_RX_PIN);
                 delay(120);
             
                 // RX line, drive high for 120us
-                PIN_ON(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_RX_PIN);
+                GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_RX_PIN);
                 delay(120);
         }
 	}
@@ -170,17 +164,17 @@ void rx_spektrum_bind(void)
         GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure); 
         
         // RX line, set high
-        PIN_ON(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
+        GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
         // Bind window is around 20-140ms after powerup
         delay(60000);
 
         for (uint8_t i = 0; i < BIND_PULSES; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms          
                 // RX line, drive low for 120us
-                PIN_OFF(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
+                GPIO_ResetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
                 delay(120);
             
                 // RX line, drive high for 120us
-                PIN_ON(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
+                GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
                 delay(120);
         }	
 }

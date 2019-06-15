@@ -74,10 +74,10 @@
 // BUZZER pin settings - buzzer active "high"
 // SWDAT and SWCLK pins OK here
 // GPIO_Pin_13 // SWDAT - GPIO_Pin_14 // SWCLK 
-#define BUZZER_PIN       GPIO_Pin_14
-#define BUZZER_PIN_PORT  GPIOA
+//#define BUZZER_PIN       GPIO_Pin_14
+//#define BUZZER_PIN_PORT  GPIOA
 // x (micro)seconds after loss of tx or low bat before buzzer starts
-#define BUZZER_DELAY     30e6 
+//#define BUZZER_DELAY     30e6 
 
 
 
@@ -116,7 +116,7 @@
 
 
 // disable lvc functions
-//#define DISABLE_LVC
+//#define DISABLE_ADC
 
 
 // pwm driver = brushed motors
