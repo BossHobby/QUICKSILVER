@@ -14,6 +14,7 @@
 #include "util.h"
 #include "uart.h"
 #include "drv_rx_serial.h"
+#include <stdbool.h>
 
 
 // sbus input ( pin SWCLK after calibration)
@@ -87,15 +88,27 @@ uint32 ticksLongest = 0;
 //Telemetry variables
 
 //Global values to send as telemetry
+bool FPORTDebugTelemetry = false;
 extern float vbattfilt;
 extern float vbatt_comp;
 extern unsigned int lastlooptime;
 uint8_t telemetryPacket[10];
-
+extern int current_pid_axis;
+extern int current_pid_term;
+extern float pidkp[PIDNUMBER]; 
+extern float pidki[PIDNUMBER];	
+extern float pidkd[PIDNUMBER];
+extern float lipo_cell_count;
 
 uint16_t telemetryIDs[] = {
   0x0210, //VFAS, use for vbat_comp
-  0x0211,  //VFAS1, use for vbattfilt
+  0x0211, //VFAS1, use for vbattfilt
+	//Everything past here is only active in FPORT-Debug-Telemetry mode
+	0x0900, //A3_FIRST_ID, used for cell count
+	0x0400, //T1, used for Axis Identifier
+	0x0700, //ACC-X, misused for PID-P
+	0x0710, //ACC-X, misused for PID-I
+	0x0720, //ACC-X, misused for PID-D
 };
 uint8_t telemetryPosition = 0; //This iterates through the above, you can only send one sensor per frame.
 uint8_t teleCounter = 0;
@@ -313,7 +326,13 @@ void checkrx()
             aux[CHAN_15] = (channels[14] > 993) ? 1 : 0;
             aux[CHAN_16] = (channels[15] > 993) ? 1 : 0;
           */
-
+					if(channels[12] > 993){// Channel 13 is now FPORT Debug Telemetry switch. Integrate this better sometime
+								FPORTDebugTelemetry = true;
+					}
+					else
+						{
+							FPORTDebugTelemetry = false;
+						}
 
           time_lastframe = gettime();
           if (sbus_stats) stat_frames_accepted++;
@@ -350,7 +369,6 @@ void checkrx()
           telemetryPacket[2] = 0x10;
           //Note: This does not properly escape 0x7E and 0x7D characters. Some telemetry packets will fail CRC on the other end. This will be fixed.
           if (telemetryPosition == 0) { //vbat_comp
-
             telemetryPacket[3] = telemetryIDs[telemetryPosition];  //0x10;
             telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;  //0x02;
             telemetryPacket[5] = (int)(vbatt_comp * 100);
@@ -359,11 +377,52 @@ void checkrx()
             telemetryPacket[8] = 0x00;
           }
           else if (telemetryPosition == 1) { //vbattfilt
-
             telemetryPacket[3] = telemetryIDs[telemetryPosition];  //x11;
             telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;   //0x02;
             telemetryPacket[5] = (int)(vbattfilt * 100);
             telemetryPacket[6] = (int)(vbattfilt * 100) >> 8;
+            telemetryPacket[7] = 0x00;
+            telemetryPacket[8] = 0x00;
+          }
+					
+					else if (telemetryPosition == 2) { //Cell count
+            telemetryPacket[3] = telemetryIDs[telemetryPosition]; 
+            telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;   
+            telemetryPacket[5] = (int)(lipo_cell_count * 100);
+            telemetryPacket[6] = (int)(lipo_cell_count * 100) >> 8;
+            telemetryPacket[7] = 0x00;
+            telemetryPacket[8] = 0x00;
+          }
+					else if (telemetryPosition == 3) { //PID axis(hundreds column) and P/I/D (ones column) being adjusted currently 
+						uint16_t axisAndPidID = (current_pid_axis + 1) * 100; //Adding one so there's always a value. 1 for Pitch (or Pitch/roll), 2 for Roll, 3 for Yaw
+						axisAndPidID += current_pid_term+1; //Adding one here too, humans don't deal well with counting starting at zero for this sort of thing
+            telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;    // Adding one to the above makes it match the LED flash codes too
+            telemetryPacket[5] = (int)(axisAndPidID);
+            telemetryPacket[6] = (int)(axisAndPidID) >> 8;
+            telemetryPacket[7] = 0x00;
+            telemetryPacket[8] = 0x00;
+          }
+					else if (telemetryPosition == 4) { //PID-P
+						telemetryPacket[3] = telemetryIDs[telemetryPosition];  
+            telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;   
+            telemetryPacket[5] = (int)(pidkp[current_pid_axis] * 10000);
+            telemetryPacket[6] = (int)(pidkp[current_pid_axis] * 10000) >> 8;
+            telemetryPacket[7] = 0x00;
+            telemetryPacket[8] = 0x00;
+          }
+					else if (telemetryPosition == 5) { //PID-I
+            telemetryPacket[3] = telemetryIDs[telemetryPosition];  
+            telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;   
+            telemetryPacket[5] = (int)(pidki[current_pid_axis] * 1000);
+            telemetryPacket[6] = (int)(pidki[current_pid_axis] * 1000) >> 8;
+            telemetryPacket[7] = 0x00;
+            telemetryPacket[8] = 0x00;
+          }
+					else if (telemetryPosition == 6) { //PID-D
+            telemetryPacket[3] = telemetryIDs[telemetryPosition]; 
+            telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;  
+						telemetryPacket[5] = (int)(pidkd[current_pid_axis] * 1000);
+            telemetryPacket[6] = (int)(pidkd[current_pid_axis] * 1000) >> 8;
             telemetryPacket[7] = 0x00;
             telemetryPacket[8] = 0x00;
           }
@@ -384,10 +443,18 @@ void checkrx()
             USART_SendData(USART1, telemetryPacket[x]);
           }  //That's it, telemetry sent
           telemetryPosition++;
-          if (telemetryPosition >= sizeof(telemetryIDs) / 2) // 2 byte ints, so this should give the number of entries. It just incremented, which takes care of the count with 0 or 1
-          {
-            telemetryPosition = 0;
-          }
+					if(FPORTDebugTelemetry){
+						if (telemetryPosition >= sizeof(telemetryIDs) / 2) // 2 byte ints, so this should give the number of entries. It just incremented, which takes care of the count with 0 or 1
+						{
+							telemetryPosition = 0;
+						}
+					}
+					else
+						{
+							if(telemetryPosition == 2){
+											telemetryPosition = 0;			
+							}
+						}
 
         }
         else {

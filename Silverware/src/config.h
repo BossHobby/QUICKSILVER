@@ -13,8 +13,8 @@
 //#define H8mini_blue_board
 //#define Alienwhoop_ZERO  
 //#define CC3D_REVO_F4
-//#define OmnibusF4SD
-#define OmnibusF4
+#define OmnibusF4SD
+//#define OmnibusF4
 //#define Alienwhoop_V2
 //#define LuxF4osd
 //#define CLRacing_F4
@@ -35,8 +35,8 @@
 //***********************************************RATES & EXPO SETTINGS**************************************************
 
 // *************Select your preffered rate calculation format (define only one)
-#define SILVERWARE_RATES
-//#define BETAFLIGHT_RATES
+//#define SILVERWARE_RATES
+#define BETAFLIGHT_RATES
 
 #ifdef SILVERWARE_RATES
 // *************rate in deg/sec
@@ -84,10 +84,10 @@
 //***********************************************RECEIVER SETTINGS******************************************************
 
 // *************Receiver protocol selection									//todo:  add missing radio protocols from bobnova and make them all jive with new rx_init function in drv_rx_serial.c
-#define RX_SBUS
+//#define RX_SBUS
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
 //#define RX_IBUS
-//#define RX_FPORT
+#define RX_FPORT
 //#define RX_DSMX_2048																				//  Only fport, sbus, ibus, and dsm protocols are working on F4 right now
 //#define RX_DSM2_1024
 //#define RX_NRF24_BAYANG_TELEMETRY
@@ -116,7 +116,7 @@
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING CHAN_5
-#define IDLE_UP CHAN_5
+#define IDLE_UP CHAN_6  //Safer separete from ARMING on big stuff IMO. Slamming throttle to zero is faster than getting a finger back to the arm switch if the quad attacks
 #define LEVELMODE CHAN_OFF
 #define RACEMODE  CHAN_OFF
 #define HORIZON   CHAN_OFF
@@ -364,6 +364,12 @@
 //find other places I mixed up BSRRH and BSRRL like all the i2c drivers
 
 //reorganize control() in control.c to call functions from new files intuitively named for said functions
+
+// BOBNOVA Section -------- BOBNOVA Section -------- BOBNOVA Section -------- BOBNOVA Section -------- BOBNOVA Section
+
+//FPORT Debug Telemetry is in. Add a "You're on this axis" feature? If you're at all familiar with Quicksilver PIDs the D is a dead giveaway for pitchRoll vs yaw
+
+// There were other things on my list that I don't remember now. I'll add them.
 
 
 // throttle direct to motors for thrust measure as a flight mode							//***************** this needs to maybe go away after osd?  not safe - encourages running props with craft in in hand

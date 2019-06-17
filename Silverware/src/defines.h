@@ -297,6 +297,12 @@
 #define PID_GESTURE_TUNING
 #define COMBINE_PITCH_ROLL_PID_TUNING
 
+// *************Comment out for original relative proportional inc/dec steps for PID values
+#define PID_TUNING_INCDEC_FACTOR 0.5f //fixed inc/dec values for PID tuning - by SilverAG
+//Default value is 0.5f which means that PID values will be increased or decreased by constant index of 0.5
+//For example, if PID value is 10.0 it will be incremented by 0.5 to 10.5 or decremented by 0.5 to 9.5
+//Feel free to change 0.5f value to your liking
+
 // *************flash save method
 // *************flash_save 1: pids + accel calibration
 // *************flash_save 2: accel calibration to option bytes

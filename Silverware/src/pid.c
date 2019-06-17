@@ -64,28 +64,23 @@ float stickTransitionProfileB[3]  = { 0.3 , 0.3 , 0.0};           //keep values 
 //************************************PIDS****************************************
 //Brushless Pids
 //TWR 8:1 3"
-//float pidkp[PIDNUMBER] = {12.5e-2 , 14.5e-2  , 2.5e-1 }; 
+//float pidkp[PIDNUMBER] = {12.5e-2 , 14.5e-2  , 25.0e-2 }; 
 //float pidki[PIDNUMBER] = { 14.0e-1  , 14.0e-1 , 14.0e-1 };	
 //float pidkd[PIDNUMBER] = { 2.3e-1 , 3.3e-1  , 0.5e-1 };
 
 //TWR 12:1 4"
-float pidkp[PIDNUMBER] = {9.5e-2 , 12.5e-2  , 2.0e-1 }; 
+float pidkp[PIDNUMBER] = {9.5e-2 , 12.5e-2  , 20.0e-2 }; 
 float pidki[PIDNUMBER] = { 14.0e-1  , 14.0e-1 , 14.0e-1 };	
 float pidkd[PIDNUMBER] = { 2.3e-1 , 3.3e-1  , 0.5e-1 };
 
 //TWR 14:1 5"
-//float pidkp[PIDNUMBER] = {7.5e-2 , 7.5e-2  , 1.8e-1 }; 
+//float pidkp[PIDNUMBER] = {7.5e-2 , 7.5e-2  , 18.0e-2 }; 
 //float pidki[PIDNUMBER] = { 14.0e-1  , 14.0e-1 , 14.0e-1 };	
 //float pidkd[PIDNUMBER] = { 2.3e-1 , 2.3e-1  , 0.4e-1 };
 
-//5" Chameleon, T-Motor 2306 2600kV
-//float pidkp[PIDNUMBER] = {6.5e-2 , 9.5e-2  , 1.0e-1 }; 
-//float pidki[PIDNUMBER] = { 12.0e-1  , 12.0e-1 , 12.0e-1 };	
-//float pidkd[PIDNUMBER] = { 1.7e-1 , 2.4e-1  , 0.3e-1 };
-
 //6mm & 7mm Abduction Pids for whoops (Team Alienwhoop)- set filtering ALIENWHOOP_ZERO_FILTERING
 //                         ROLL       PITCH     YAW
-//float pidkp[PIDNUMBER] = {21.5e-2 , 21.5e-2  , 10.5e-1 }; 
+//float pidkp[PIDNUMBER] = {21.5e-2 , 21.5e-2  , 105.0e-2 }; 
 //float pidki[PIDNUMBER] = { 14e-1  , 15e-1 , 15e-1 };	
 //float pidkd[PIDNUMBER] = { 7.4e-1 , 7.4e-1  , 5.5e-1 };
 
@@ -93,7 +88,7 @@ float pidkd[PIDNUMBER] = { 2.3e-1 , 3.3e-1  , 0.5e-1 };
 //BOSS 7 with 716 motors and 46mm Props - set filtering to BETA_FILTERING and adjust pass 1 and pass 2 for KALMAN_GYRO both to 70hz, set DTERM_LPF_2ND_HZ to 120hz, disable motor filtering
 //                                        set TORQUE_BOOST to 1.0, and add #define THROTTLE_TRANSIENT_COMPENSATION and #define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 4.0
 //                         ROLL       PITCH     YAW
-//float pidkp[PIDNUMBER] = { 19.5e-2 , 19.5e-2  , 9.5e-1 }; 
+//float pidkp[PIDNUMBER] = { 19.5e-2 , 19.5e-2  , 95.0e-2 }; 
 //float pidki[PIDNUMBER] = { 12e-1  , 12e-1 , 8e-1 };	
 //float pidkd[PIDNUMBER] = {10.7e-1 , 10.7e-1  , 2.0e-1 };	
 
@@ -474,10 +469,24 @@ int next_pid_axis()
 	return current_pid_axis + 1;
 }
 
-#define PID_GESTURES_MULTI 1.1f
+//#define PID_GESTURES_MULTI 1.1f //removed from here
 
 int change_pid_value(int increase)
 {
+	#ifdef PID_TUNING_INCDEC_FACTOR			//custom fixed step for inc/dec PIDs
+	float multiplier = 0.1f; //pidkp roll & pitch: 0.xe-2 - other PIDs: 0.xe-1
+	if (increase) {
+		number_of_increments[current_pid_term][current_pid_axis]++;
+	}
+	else {
+		number_of_increments[current_pid_term][current_pid_axis]--;
+		multiplier = -0.1f;
+	}
+	if ((current_pid_term==0) && (current_pid_axis==0 || current_pid_axis==1)) multiplier = multiplier/10.0f; //pidkp roll & pitch: 0.xe-2 - other PIDs: 0.xe-1
+	float newPID = current_pid_term_pointer[current_pid_axis] + ((float)PID_TUNING_INCDEC_FACTOR * multiplier);
+	if (newPID>0) current_pid_term_pointer[current_pid_axis] = newPID;	
+#else
+	#define PID_GESTURES_MULTI 1.1f // moved here
 	float multiplier = 1.0f/(float)PID_GESTURES_MULTI;
 	if (increase) {
 		multiplier = (float)PID_GESTURES_MULTI;
@@ -494,7 +503,7 @@ int change_pid_value(int increase)
 		current_pid_term_pointer[current_pid_axis+1] = current_pid_term_pointer[current_pid_axis+1] * multiplier;
 	}
 	#endif
-	
+	#endif
 	return abs(number_of_increments[current_pid_term][current_pid_axis]);
 }
 
