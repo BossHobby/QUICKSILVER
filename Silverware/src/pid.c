@@ -306,7 +306,7 @@ float pid(int x )
         
 						setpoint_derivative[x] =  (setpoint[x] - lastsetpoint[x]) * pidkd[x] * timefactor;
 						#ifdef RX_SMOOTHING_HZ
-						lpf( &setpoint_derivative[x], setpoint_derivative[x], FILTERCALC( 0.001 , 1.0f/RX_SMOOTHING_HZ ) );
+						lpf( &setpoint_derivative[x], setpoint_derivative[x], FILTERCALC( LOOPTIME * (float)1e-6 , 1.0f/RX_SMOOTHING_HZ ) );
 						#endif
 						dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x] ) - ((gyro[x] - lastrate[x]) * pidkd[x] * timefactor);
 						lastsetpoint[x] = setpoint [x];
@@ -351,7 +351,7 @@ float pid(int x )
 				
 						setpoint_derivative[x] =  (setpoint[x] - lastsetpoint[x]) * pidkd[x] * timefactor;
 						#ifdef RX_SMOOTHING_HZ
-						lpf( &setpoint_derivative[x], setpoint_derivative[x], FILTERCALC( 0.001 , 1.0f/RX_SMOOTHING_HZ ) );
+						lpf( &setpoint_derivative[x], setpoint_derivative[x], FILTERCALC( LOOPTIME * (float)1e-6 , 1.0f/RX_SMOOTHING_HZ ) );
 						#endif
 						dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x] ) - ((gyro[x] - lastrate[x]) * pidkd[x] * timefactor);
 						lastsetpoint[x] = setpoint [x];

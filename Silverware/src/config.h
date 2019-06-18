@@ -26,7 +26,7 @@
 #define BRUSHLESS_TARGET
 //#define BRUSHED_TARGET
 
-// Something new to play with....  25hz for D16sbus, 50hx for D8sbus, 90hz for bayang   Formula is [(1/rx framerate)/2] * 0.9
+// Something new to play with....  25hz for D16sbus, 50hx for D8sbus, 40hz for DSMX, 20hz for DSM2, 90hz for bayang   Formula is [(1/rx framerate)/2] * 0.9
 #define RX_SMOOTHING_HZ 25
 
 
@@ -35,8 +35,8 @@
 //***********************************************RATES & EXPO SETTINGS**************************************************
 
 // *************Select your preffered rate calculation format (define only one)
-//#define SILVERWARE_RATES
-#define BETAFLIGHT_RATES
+#define SILVERWARE_RATES
+//#define BETAFLIGHT_RATES
 
 #ifdef SILVERWARE_RATES
 // *************rate in deg/sec
@@ -84,10 +84,10 @@
 //***********************************************RECEIVER SETTINGS******************************************************
 
 // *************Receiver protocol selection									//todo:  add missing radio protocols from bobnova and make them all jive with new rx_init function in drv_rx_serial.c
-//#define RX_SBUS
+#define RX_SBUS
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
 //#define RX_IBUS
-#define RX_FPORT
+//#define RX_FPORT
 //#define RX_DSMX_2048																				//  Only fport, sbus, ibus, and dsm protocols are working on F4 right now
 //#define RX_DSM2_1024
 //#define RX_NRF24_BAYANG_TELEMETRY
@@ -116,11 +116,11 @@
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING CHAN_5
-#define IDLE_UP CHAN_6  //Safer separete from ARMING on big stuff IMO. Slamming throttle to zero is faster than getting a finger back to the arm switch if the quad attacks
+#define IDLE_UP CHAN_5
 #define LEVELMODE CHAN_OFF
 #define RACEMODE  CHAN_OFF
 #define HORIZON   CHAN_OFF
-#define PIDPROFILE CHAN_9              //For switching stickAccelerator & stickTransition profiles on pid.c page - careful with full bronx on brushless
+#define PIDPROFILE CHAN_9
 #define RATES CHAN_ON
 #define LEDS_ON CHAN_OFF
 

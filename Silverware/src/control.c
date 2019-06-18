@@ -165,14 +165,38 @@ float rate_multiplier = 1.0;
     else
         pwmdir = FORWARD;    
 #endif	
+
+
 	
+
+	 	
+	 
+	 
+#ifdef RX_SMOOTHING_HZ
+	for ( int i = 0; i < 4; ++i ) {
+	lpf( &rxcopy[ i ], rx[ i ], FILTERCALC( LOOPTIME * (float)1e-6 , 1.0f/RX_SMOOTHING_HZ ) );
+	}
+	
+	#ifdef STICKS_DEADBAND
+		for ( int i = 0 ; i < 3 ; i++)
+		{
+		if ( fabsf( rxcopy[ i ] ) <= STICKS_DEADBAND ) {
+			rxcopy[ i ] = 0.0f;
+		} else {
+			if ( rxcopy[ i ] >= 0 ) {
+				rxcopy[ i ] = mapf( rxcopy[ i ], STICKS_DEADBAND, 1, 0, 1 );
+			} else {
+				rxcopy[ i ] = mapf( rxcopy[ i ], -STICKS_DEADBAND, -1, 0, -1 );
+			}
+		}
+		}
+		#endif
+	
+#else
 	for ( int i = 0 ; i < 3 ; i++)
 	{
-		#ifdef STOCK_TX_AUTOCENTER
-		rxcopy[i] = (rx[i] - autocenter[i]);
-		#else
 		rxcopy[i] = rx[i];
-		#endif
+
 		#ifdef STICKS_DEADBAND
 		if ( fabsf( rxcopy[ i ] ) <= STICKS_DEADBAND ) {
 			rxcopy[ i ] = 0.0f;
@@ -185,14 +209,7 @@ float rate_multiplier = 1.0;
 		}
 		#endif
 	 }
-	 rxcopy[ 3 ] = rx [3];	
-	 
-	 
-#ifdef RX_SMOOTHING_HZ
-	for ( int i = 0; i < 4; ++i ) {
-	lpf( &rxcopy[ i ], rxcopy[ i ], FILTERCALC( 0.001 , 1.0f/RX_SMOOTHING_HZ ) );
-	}
-#endif	
+#endif		
 	 
 	 
 
