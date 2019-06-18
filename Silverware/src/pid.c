@@ -174,6 +174,8 @@ extern float looptime;
 extern int in_air;
 extern char aux[AUXNUMBER];
 extern float vbattfilt;
+extern float vbattfilt_corr;
+extern float vbatt_comp;
 
 
 
@@ -379,7 +381,17 @@ void pid_precalc()
 	
 #ifdef PID_VOLTAGE_COMPENSATION
 	extern float lipo_cell_count;
-	v_compensation = mapf ( (vbattfilt/(float)lipo_cell_count) , 2.5 , 3.85 , PID_VC_FACTOR , 1.00);
+	
+	#ifdef EXACT_VOLTS
+	v_compensation = mapf ( (vbattfilt/(float)lipo_cell_count) , 2.5 , 3.85 , PID_VC_FACTOR , 1.00);	
+	#endif
+	#ifdef FILTERED_VOLTS
+	v_compensation = mapf ( (vbattfilt_corr/(float)lipo_cell_count) , 2.5 , 3.85 , PID_VC_FACTOR , 1.00);	
+	#endif
+	#ifdef FUELGAUGE_VOLTS
+	v_compensation = mapf ( (vbatt_comp/(float)lipo_cell_count) , 2.5 , 3.85 , PID_VC_FACTOR , 1.00);	
+	#endif
+
 	if( v_compensation > PID_VC_FACTOR) v_compensation = PID_VC_FACTOR;
 	if( v_compensation < 1.00f) v_compensation = 1.00;
 	#ifdef LEVELMODE_PID_ATTENUATION

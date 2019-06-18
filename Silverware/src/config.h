@@ -26,10 +26,19 @@
 #define BRUSHLESS_TARGET
 //#define BRUSHED_TARGET
 
-// Something new to play with....  25hz for D16sbus, 50hx for D8sbus, 40hz for DSMX, 20hz for DSM2, 90hz for bayang   Formula is [(1/rx framerate)/2] * 0.9
+
+
+
+//**********************************************************************************************************************
+//***********************************************NEW STUFF TO PLAY WITH*****************************************************
+
+// Select filter cut 25hz for D16sbus, 50hx for D8sbus, 40hz for DSMX, 20hz for DSM2, 90hz for bayang   Formula is [(1/rx framerate)/2] * 0.9
 #define RX_SMOOTHING_HZ 25
 
-
+//Select (only one) source variable for PID VBAT Compensation
+//#define EXACT_VOLTS     //origional method - responds to exact moment to moment sag
+//#define FILTERED_VOLTS  // responds to some sag
+#define FUELGAUGE_VOLTS 	// ignores sag
 
 //**********************************************************************************************************************
 //***********************************************RATES & EXPO SETTINGS**************************************************
