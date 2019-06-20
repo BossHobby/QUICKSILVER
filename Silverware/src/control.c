@@ -173,13 +173,12 @@ float rate_multiplier = 1.0;
 	 
 	 
 #ifdef RX_SMOOTHING_HZ
-	for ( int i = 0; i < 4; ++i ) {
-	lpf( &rxcopy[ i ], rx[ i ], FILTERCALC( LOOPTIME * (float)1e-6 , 1.0f/RX_SMOOTHING_HZ ) );
-	}
-	
+	static float rx_filtered[4];
+	for ( int i = 0; i < 3; ++i ) {
+	lpf( &rx_filtered[ i ], rx[ i ], FILTERCALC( LOOPTIME * (float)1e-6 , 1.0f/RX_SMOOTHING_HZ ) );
+	rxcopy[i] = rx_filtered[i];
+
 	#ifdef STICKS_DEADBAND
-		for ( int i = 0 ; i < 3 ; i++)
-		{
 		if ( fabsf( rxcopy[ i ] ) <= STICKS_DEADBAND ) {
 			rxcopy[ i ] = 0.0f;
 		} else {
@@ -189,9 +188,9 @@ float rate_multiplier = 1.0;
 				rxcopy[ i ] = mapf( rxcopy[ i ], -STICKS_DEADBAND, -1, 0, -1 );
 			}
 		}
-		}
-		#endif
-	
+	#endif
+	}
+
 #else
 	for ( int i = 0 ; i < 3 ; i++)
 	{
