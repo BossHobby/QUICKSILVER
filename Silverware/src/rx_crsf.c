@@ -6,6 +6,7 @@
 #include "drv_time.h"
 #include "util.h"
 #include "drv_fmc.h"
+#include "drv_rx_serial.h"
 
 #ifdef RX_CRSF
 
@@ -50,14 +51,14 @@ int rx_bind_enable = 0;
  
 
 // internal crsf variables
-#define CRSF_TIME_NEEDED_PER_FRAME_US   1100 // 700 ms + 400 ms for potential ad-hoc request
-#define CRSF_TIME_BETWEEN_FRAMES_US     6667 // At fastest, frames are sent by the transmitter every 6.667 milliseconds, 150 Hz
+#define CRSF_TIME_NEEDED_PER_FRAME_US   (1100 * (TICK_CLOCK_FREQ_HZ / 1000000)) // 700 ms + 400 ms for potential ad-hoc request
+#define CRSF_TIME_BETWEEN_FRAMES_US     (6667 * (TICK_CLOCK_FREQ_HZ / 1000000)) // At fastest, frames are sent by the transmitter every 6.667 milliseconds, 150 Hz
 #define CRSF_DIGITAL_CHANNEL_MIN 172
 #define CRSF_DIGITAL_CHANNEL_MAX 1811
 #define CRSF_PAYLOAD_OFFSET offsetof(crsfFrameDef_t, type)
 #define CRSF_MAX_CHANNEL 16
 #define CRSF_FRAME_SIZE_MAX 64
-#define SERIAL_BAUDRATE 420000
+//#define SERIAL_BAUDRATE 420000
 #define CRSF_MSP_RX_BUF_SIZE 128
 #define CRSF_MSP_TX_BUF_SIZE 128
 #define CRSF_PAYLOAD_SIZE_MAX   60
@@ -263,36 +264,7 @@ void crsfFrameStatus(void)
 
 void crsf_init(void)
 {
-    // make sure there is some time to program the board
-    if ( gettime() < 2000000 ) return;    
-    GPIO_InitTypeDef  GPIO_InitStructure;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;   
-    GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;   
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;   
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;  
-    GPIO_InitStructure.GPIO_Pin = SERIAL_RX_PIN;
-    GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure); 
-    GPIO_PinAFConfig(SERIAL_RX_PORT, SERIAL_RX_SOURCE , SERIAL_RX_CHANNEL);
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
-    USART_InitTypeDef USART_InitStructure;
-    USART_InitStructure.USART_BaudRate = SERIAL_BAUDRATE;
-    USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-    USART_InitStructure.USART_StopBits = USART_StopBits_1;  
-    USART_InitStructure.USART_Parity = USART_Parity_No;    //sbus is even parity
-    USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-    USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-    USART_Init(USART1, &USART_InitStructure);
-// swap rx/tx pins
-#ifndef Alienwhoop_ZERO
-    USART_SWAPPinCmd( USART1, ENABLE);
-#endif
-    USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
-    USART_Cmd(USART1, ENABLE);
-    NVIC_InitTypeDef NVIC_InitStructure;
-    NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);
+	usart_rx_init();
 // set setup complete flag
  framestarted = 0;
 }

@@ -97,6 +97,7 @@ extern void flash_hard_coded_pid_identifier(void);
 float looptime;
 // filtered battery in volts
 float vbattfilt = 0.0;
+float vbattfilt_corr = 4.2;
 float vbatt_comp = 4.2;
 // voltage reference for vcc compensation
 float vreffilt = 1.0;
@@ -275,7 +276,7 @@ for ( int i = 6 ; i > 0 ; i--)
 #else
 		lipo_cell_count = (float)LIPO_CELL_COUNT;
 #endif
-float vbattfilt_corr = 4.2f * (float)lipo_cell_count;
+vbattfilt_corr *= (float)lipo_cell_count;
 
 
 #ifdef RX_BAYANG_BLE_APP

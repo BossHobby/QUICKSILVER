@@ -9,6 +9,9 @@
 
 //SET SERIAL BAUDRATE BASED ON RECEIVER PROTOCOL
 
+#if defined (RX_CRSF)
+#define SERIAL_BAUDRATE 420000
+#endif
 #if defined (RX_DSMX_2048) || defined (RX_DSM2_1024) || defined(RX_IBUS) || defined(RX_FPORT)
 #define SERIAL_BAUDRATE 115200
 #endif

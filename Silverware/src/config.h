@@ -32,8 +32,9 @@
 //**********************************************************************************************************************
 //***********************************************NEW STUFF TO PLAY WITH*****************************************************
 
-// Select filter cut 25hz for D16sbus, 50hx for D8sbus, 40hz for DSMX, 20hz for DSM2, 90hz for bayang   Formula is [(1/rx framerate)/2] * 0.9
+// Select filter cut 25hz for SBUS, 67hz for CRSF, 40hz for DSMX, 20hz for DSM2, 90hz for bayang   Formula is [(1/rx framerate)/2] * 0.9
 #define RX_SMOOTHING_HZ 25
+
 
 //Select (only one) source variable for PID VBAT Compensation
 //#define EXACT_VOLTS     //origional method - responds to exact moment to moment sag
@@ -111,7 +112,7 @@
 //#define UART_6
 
 // *************Serial Receiver Inversion Selection  (Normally true for SBUS and FPORT)
-#define INVERT_UART																								
+//#define INVERT_UART																								
 
 // *************Type Selection For Bayang Protocol Only
 #define USE_DEVO
@@ -155,7 +156,7 @@
 
 // ************* This disables all voltage related logic by returning 4.2V/cell at all times.
 // ************* (some targets without voltage dividers may have this already set in targets.h)
-//#define DISABLE_LVC
+//#define DISABLE_ADC
 
 // ************* Set your lipo cell count to override auto cell count detect logic
 //#define LIPO_CELL_COUNT 1
@@ -182,7 +183,7 @@
 //#define STOP_LOWBATTERY
 
 // *************voltage to start warning led blinking
-#define VBATTLOW 3.5
+#define VBATTLOW 3.3
 
 // *************voltage hysteresis in volts
 #define HYST 0.10
@@ -214,11 +215,11 @@
 
 //Select Gyro Filter Cut Frequency
 #define GYRO_FILTER_PASS1 HZ_90
-#define GYRO_FILTER_PASS2 HZ_90
+#define GYRO_FILTER_PASS2 HZ_140
 
 //Select D Term Filter Cut Frequency *** Select Only one
-#define  DTERM_LPF_2ND_HZ 100
-//#define DTERM_LPF_1ST_HZ 70
+//#define  DTERM_LPF_2ND_HZ 100
+#define DTERM_LPF_1ST_HZ 70
 
 //Select Motor Filter Type  (last resort filtering stage)
 //#define MOTOR_FILTER2_ALPHA MFILT1_HZ_90
@@ -318,7 +319,7 @@
 #define FAILSAFETIME 1000000  // one second
 
 // debug things ( debug struct and other)
-#define DEBUG
+//#define DEBUG
 
 // disable motors for testing
 //#define NOMOTORS
