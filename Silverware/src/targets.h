@@ -302,7 +302,8 @@
 
 #if defined(CC3D_REVO_F4)
 #define F405
-
+#define USB_DETECT_PIN GPIO_Pin_5
+#define USB_DETECT_PORT GPIOC
 //LEDS
 #define LED_NUMBER 2
 #define LED1PIN GPIO_Pin_5
@@ -328,9 +329,9 @@
 //#define I2C_GYRO_ADDRESS 0x68
 //#define SOFTI2C_GYRO_ADDRESS 0x69
 #define GYRO_ID_1 0x68
-//#define GYRO_ID_2 0x73
-//#define GYRO_ID_3 0x78
-//#define GYRO_ID_4 0x72
+#define GYRO_ID_2 0x73
+#define GYRO_ID_3 0x78
+#define GYRO_ID_4 0x71
 //#define SENSOR_ROTATE_90_CCW
 //#define SENSOR_ROTATE_90_CW
 //#define SENSOR_FLIP_180
@@ -399,6 +400,8 @@
 
 #if defined(OmnibusF4SD) || defined(OmnibusF4) || defined(LuxF4osd)
 #define F405
+#define USB_DETECT_PIN GPIO_Pin_5
+#define USB_DETECT_PORT GPIOC
 
 //LEDS
 #define LED_NUMBER 1
@@ -603,6 +606,8 @@
 
 #ifdef CLRacing_F4
 #define F405
+#define USB_DETECT_PIN GPIO_Pin_5
+#define USB_DETECT_PORT GPIOC
 
 //LEDS
 #define LED_NUMBER 1
@@ -679,6 +684,8 @@
 
 #ifdef Raceflight_Revolt
 #define F405
+#define USB_DETECT_PIN GPIO_Pin_5
+#define USB_DETECT_PORT GPIOC
 
 //LEDS & BUZZER
 #define LED_NUMBER 1

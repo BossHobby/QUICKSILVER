@@ -108,6 +108,7 @@
 
 extern int failsafe;
 extern int onground;
+extern int armed_state;
 
 int pwmdir = 0;
 static unsigned long pwm_failsafe_time = 1;

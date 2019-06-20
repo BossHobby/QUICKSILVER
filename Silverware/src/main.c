@@ -61,7 +61,16 @@ THE SOFTWARE.
 #include "serial_4way.h"
 #endif									   
 						   
-						   
+#ifdef F405
+#include "usbd_cdc_core.h"
+#include "usbd_usr.h"
+//#include "usb_conf.h"
+#include "usbd_desc.h"
+//#include "usbd_cdc_vcp.h"
+#include "usb_detect.h"
+__ALIGN_BEGIN USB_OTG_CORE_HANDLE    USB_OTG_dev __ALIGN_END ;
+#endif
+
 #if defined (__GNUC__)&& !( defined (SOFT_LPF_NONE) || defined (GYRO_FILTER_PASS1) || defined (GYRO_FILTER_PASS2) )
 #warning the soft lpf may not work correctly with gcc due to longer loop time
 #endif
@@ -72,7 +81,6 @@ THE SOFTWARE.
 #include "debug.h"
 debug_type debug;
 #endif
-
 
 
 
@@ -141,13 +149,13 @@ volatile int switch_to_4way = 0;
 static void setup_4way_external_interrupt(void);
 #endif									   
 int random_seed = 0;
-
+/*
 void systemResetToBootloader(void)
 {
     *((uint32_t *)0x2001FFFC) = 0xDEADBEEF; // 128KB SRAM STM32F4XX
     NVIC_SystemReset();
 }
-
+*/
 void(*bootJump)(void);
 
 void force_dfu(void)
@@ -179,8 +187,20 @@ delay(1000);
 #ifdef ENABLE_OVERCLOCK
 clk_init();
 #endif
+
+gpio_init();
 	
-gpio_init();	
+#ifdef F405
+USBD_Init(&USB_OTG_dev,
+          USB_OTG_FS_CORE_ID,
+          &USR_desc, 
+          &USBD_CDC_cb, 
+          &USR_cb);
+#ifdef USB_DETECT_PIN	
+usb_detect_init();
+#endif
+#endif	
+	
 ledon(255);									//Turn on LED during boot so that if a delay is used as part of using programming pins for other functions, the FC does not appear inactive while programming times out
 spi_init();	
 time_init();
@@ -569,6 +589,12 @@ rgb_dma_start();
 // receiver function
 checkrx();
 
+#if defined(USB_DETECT_PIN) && defined(F405)
+usb_detect();
+#endif
+#if !defined(USB_DETECT_PIN) && defined(F405)
+usb_configurator();
+#endif
 
 #ifdef DEBUG
 	debug.cpu_load = (gettime() - lastlooptime )*1e-3f;

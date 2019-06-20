@@ -502,6 +502,11 @@
               <FilePath>.\src\rx_bayang_protocol_telemetry.c</FilePath>
             </File>
             <File>
+              <FileName>rx_bayang_protocol_telemetry_autobind.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\rx_bayang_protocol_telemetry_autobind.c</FilePath>
+            </File>
+            <File>
               <FileName>rx_nrf24_bayang_telemetry.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\rx_nrf24_bayang_telemetry.c</FilePath>
@@ -520,6 +525,16 @@
               <FileName>rx_dsm.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\rx_dsm.c</FilePath>
+            </File>
+            <File>
+              <FileName>rx_ibus.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\rx_ibus.c</FilePath>
+            </File>
+            <File>
+              <FileName>rx_fport.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\rx_fport.c</FilePath>
             </File>
             <File>
               <FileName>led.c</FileName>
@@ -617,29 +632,24 @@
               <FilePath>.\src\serial_4way_avrootloader.c</FilePath>
             </File>
             <File>
-              <FileName>rx_bayang_protocol_telemetry_autobind.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\src\rx_bayang_protocol_telemetry_autobind.c</FilePath>
-            </File>
-            <File>
               <FileName>uart.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\src\uart.h</FilePath>
             </File>
             <File>
-              <FileName>rx_ibus.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\src\rx_ibus.c</FilePath>
-            </File>
-            <File>
-              <FileName>rx_fport.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\src\rx_fport.c</FilePath>
-            </File>
-            <File>
               <FileName>targets.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\src\targets.h</FilePath>
+            </File>
+            <File>
+              <FileName>usb_detect.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\usb_detect.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_detect.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\usb_detect.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -747,6 +757,11 @@
               <FilePath>.\src\drv_dshot_dma.c</FilePath>
             </File>
             <File>
+              <FileName>drv_dshot_dma_f4.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\drv_dshot_dma_f4.c</FilePath>
+            </File>
+            <File>
               <FileName>drv_rx_serial.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\drv_rx_serial.c</FilePath>
@@ -766,10 +781,292 @@
               <FileType>5</FileType>
               <FilePath>.\src\drv_dma_spi.h</FilePath>
             </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>usb</GroupName>
+          <GroupOption>
+            <CommonProperty>
+              <UseCPPCompiler>0</UseCPPCompiler>
+              <RVCTCodeConst>0</RVCTCodeConst>
+              <RVCTZI>0</RVCTZI>
+              <RVCTOtherData>0</RVCTOtherData>
+              <ModuleSelection>0</ModuleSelection>
+              <IncludeInBuild>0</IncludeInBuild>
+              <AlwaysBuild>2</AlwaysBuild>
+              <GenerateAssemblyFile>2</GenerateAssemblyFile>
+              <AssembleAssemblyFile>2</AssembleAssemblyFile>
+              <PublicsOnly>2</PublicsOnly>
+              <StopOnExitCode>11</StopOnExitCode>
+              <CustomArgument></CustomArgument>
+              <IncludeLibraryModules></IncludeLibraryModules>
+              <ComprImg>1</ComprImg>
+            </CommonProperty>
+            <GroupArmAds>
+              <Cads>
+                <interw>2</interw>
+                <Optim>0</Optim>
+                <oTime>2</oTime>
+                <SplitLS>2</SplitLS>
+                <OneElfS>2</OneElfS>
+                <Strict>2</Strict>
+                <EnumInt>2</EnumInt>
+                <PlainCh>2</PlainCh>
+                <Ropi>2</Ropi>
+                <Rwpi>2</Rwpi>
+                <wLevel>0</wLevel>
+                <uThumb>2</uThumb>
+                <uSurpInc>2</uSurpInc>
+                <uC99>2</uC99>
+                <uGnu>2</uGnu>
+                <useXO>2</useXO>
+                <v6Lang>0</v6Lang>
+                <v6LangP>0</v6LangP>
+                <vShortEn>2</vShortEn>
+                <vShortWch>2</vShortWch>
+                <v6Lto>2</v6Lto>
+                <v6WtE>2</v6WtE>
+                <v6Rtti>2</v6Rtti>
+                <VariousControls>
+                  <MiscControls></MiscControls>
+                  <Define></Define>
+                  <Undefine></Undefine>
+                  <IncludePath></IncludePath>
+                </VariousControls>
+              </Cads>
+              <Aads>
+                <interw>2</interw>
+                <Ropi>2</Ropi>
+                <Rwpi>2</Rwpi>
+                <thumb>2</thumb>
+                <SplitLS>2</SplitLS>
+                <SwStkChk>2</SwStkChk>
+                <NoWarn>2</NoWarn>
+                <uSurpInc>2</uSurpInc>
+                <useXO>2</useXO>
+                <uClangAs>2</uClangAs>
+                <VariousControls>
+                  <MiscControls></MiscControls>
+                  <Define></Define>
+                  <Undefine></Undefine>
+                  <IncludePath></IncludePath>
+                </VariousControls>
+              </Aads>
+            </GroupArmAds>
+          </GroupOption>
+          <Files>
             <File>
-              <FileName>drv_dshot_dma_f4.c</FileName>
+              <FileName>stm32f4xx_it.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\src\drv_dshot_dma_f4.c</FilePath>
+              <FilePath>.\src\vcp4\stm32f4xx_it.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32fxxx_it.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\vcp4\stm32fxxx_it.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_bsp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\vcp4\usb_bsp.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_cdc_vcp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\vcp4\usbd_cdc_vcp.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_desc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\vcp4\usbd_desc.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_usr.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\vcp4\usbd_usr.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>usb otg</GroupName>
+          <GroupOption>
+            <CommonProperty>
+              <UseCPPCompiler>0</UseCPPCompiler>
+              <RVCTCodeConst>0</RVCTCodeConst>
+              <RVCTZI>0</RVCTZI>
+              <RVCTOtherData>0</RVCTOtherData>
+              <ModuleSelection>0</ModuleSelection>
+              <IncludeInBuild>0</IncludeInBuild>
+              <AlwaysBuild>2</AlwaysBuild>
+              <GenerateAssemblyFile>2</GenerateAssemblyFile>
+              <AssembleAssemblyFile>2</AssembleAssemblyFile>
+              <PublicsOnly>2</PublicsOnly>
+              <StopOnExitCode>11</StopOnExitCode>
+              <CustomArgument></CustomArgument>
+              <IncludeLibraryModules></IncludeLibraryModules>
+              <ComprImg>1</ComprImg>
+            </CommonProperty>
+            <GroupArmAds>
+              <Cads>
+                <interw>2</interw>
+                <Optim>0</Optim>
+                <oTime>2</oTime>
+                <SplitLS>2</SplitLS>
+                <OneElfS>2</OneElfS>
+                <Strict>2</Strict>
+                <EnumInt>2</EnumInt>
+                <PlainCh>2</PlainCh>
+                <Ropi>2</Ropi>
+                <Rwpi>2</Rwpi>
+                <wLevel>0</wLevel>
+                <uThumb>2</uThumb>
+                <uSurpInc>2</uSurpInc>
+                <uC99>2</uC99>
+                <uGnu>2</uGnu>
+                <useXO>2</useXO>
+                <v6Lang>0</v6Lang>
+                <v6LangP>0</v6LangP>
+                <vShortEn>2</vShortEn>
+                <vShortWch>2</vShortWch>
+                <v6Lto>2</v6Lto>
+                <v6WtE>2</v6WtE>
+                <v6Rtti>2</v6Rtti>
+                <VariousControls>
+                  <MiscControls></MiscControls>
+                  <Define></Define>
+                  <Undefine></Undefine>
+                  <IncludePath></IncludePath>
+                </VariousControls>
+              </Cads>
+              <Aads>
+                <interw>2</interw>
+                <Ropi>2</Ropi>
+                <Rwpi>2</Rwpi>
+                <thumb>2</thumb>
+                <SplitLS>2</SplitLS>
+                <SwStkChk>2</SwStkChk>
+                <NoWarn>2</NoWarn>
+                <uSurpInc>2</uSurpInc>
+                <useXO>2</useXO>
+                <uClangAs>2</uClangAs>
+                <VariousControls>
+                  <MiscControls></MiscControls>
+                  <Define></Define>
+                  <Undefine></Undefine>
+                  <IncludePath></IncludePath>
+                </VariousControls>
+              </Aads>
+            </GroupArmAds>
+          </GroupOption>
+          <Files>
+            <File>
+              <FileName>usb_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Libraries\STM32_USB_OTG_Driver\src\usb_core.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_dcd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Libraries\STM32_USB_OTG_Driver\src\usb_dcd.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_dcd_int.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Libraries\STM32_USB_OTG_Driver\src\usb_dcd_int.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>usb device</GroupName>
+          <GroupOption>
+            <CommonProperty>
+              <UseCPPCompiler>0</UseCPPCompiler>
+              <RVCTCodeConst>0</RVCTCodeConst>
+              <RVCTZI>0</RVCTZI>
+              <RVCTOtherData>0</RVCTOtherData>
+              <ModuleSelection>0</ModuleSelection>
+              <IncludeInBuild>0</IncludeInBuild>
+              <AlwaysBuild>2</AlwaysBuild>
+              <GenerateAssemblyFile>2</GenerateAssemblyFile>
+              <AssembleAssemblyFile>2</AssembleAssemblyFile>
+              <PublicsOnly>2</PublicsOnly>
+              <StopOnExitCode>11</StopOnExitCode>
+              <CustomArgument></CustomArgument>
+              <IncludeLibraryModules></IncludeLibraryModules>
+              <ComprImg>1</ComprImg>
+            </CommonProperty>
+            <GroupArmAds>
+              <Cads>
+                <interw>2</interw>
+                <Optim>0</Optim>
+                <oTime>2</oTime>
+                <SplitLS>2</SplitLS>
+                <OneElfS>2</OneElfS>
+                <Strict>2</Strict>
+                <EnumInt>2</EnumInt>
+                <PlainCh>2</PlainCh>
+                <Ropi>2</Ropi>
+                <Rwpi>2</Rwpi>
+                <wLevel>0</wLevel>
+                <uThumb>2</uThumb>
+                <uSurpInc>2</uSurpInc>
+                <uC99>2</uC99>
+                <uGnu>2</uGnu>
+                <useXO>2</useXO>
+                <v6Lang>0</v6Lang>
+                <v6LangP>0</v6LangP>
+                <vShortEn>2</vShortEn>
+                <vShortWch>2</vShortWch>
+                <v6Lto>2</v6Lto>
+                <v6WtE>2</v6WtE>
+                <v6Rtti>2</v6Rtti>
+                <VariousControls>
+                  <MiscControls></MiscControls>
+                  <Define></Define>
+                  <Undefine></Undefine>
+                  <IncludePath></IncludePath>
+                </VariousControls>
+              </Cads>
+              <Aads>
+                <interw>2</interw>
+                <Ropi>2</Ropi>
+                <Rwpi>2</Rwpi>
+                <thumb>2</thumb>
+                <SplitLS>2</SplitLS>
+                <SwStkChk>2</SwStkChk>
+                <NoWarn>2</NoWarn>
+                <uSurpInc>2</uSurpInc>
+                <useXO>2</useXO>
+                <uClangAs>2</uClangAs>
+                <VariousControls>
+                  <MiscControls></MiscControls>
+                  <Define></Define>
+                  <Undefine></Undefine>
+                  <IncludePath></IncludePath>
+                </VariousControls>
+              </Aads>
+            </GroupArmAds>
+          </GroupOption>
+          <Files>
+            <File>
+              <FileName>usbd_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Libraries\STM32_USB_Device_Library\Core\src\usbd_core.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_ioreq.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Libraries\STM32_USB_Device_Library\Core\src\usbd_ioreq.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_req.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Libraries\STM32_USB_Device_Library\Core\src\usbd_req.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_cdc_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Libraries\STM32_USB_Device_Library\Class\cdc\src\usbd_cdc_core.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1745,7 +2042,7 @@
               <MiscControls>--fpmode=fast</MiscControls>
               <Define>USE_STDPERIPH_DRIVER, STM32F40_41xxx</Define>
               <Undefine></Undefine>
-              <IncludePath>.\src;.\..\Libraries\STM32F4xx_StdPeriph_Driver\inc;.\..\Utilities\;.\..\Libraries\CMSIS\CM4\CoreSupport;.\..\Libraries\CMSIS\CM4\Include;.\..\Libraries\CMSIS\CM4\DeviceSupport\ST\STM32F4xx;.\..\Libraries\CMSIS\CM4\Device\ST\STM32F4xx\Include</IncludePath>
+              <IncludePath>.\src;.\src\vcp4;.\..\Libraries\STM32F4xx_StdPeriph_Driver\inc;.\..\Utilities\;.\..\Libraries\CMSIS\CM4\CoreSupport;.\..\Libraries\CMSIS\CM4\Include;.\..\Libraries\CMSIS\CM4\DeviceSupport\ST\STM32F4xx;.\..\Libraries\CMSIS\CM4\Device\ST\STM32F4xx\Include;..\Libraries\STM32_USB_OTG_Driver\inc;..\Libraries\STM32_USB_Device_Library\Core\inc;..\Libraries\STM32_USB_Device_Library\Class\cdc\inc;..\Libraries\STM32_USB_Device_Library\Class\dfu\inc</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -1909,6 +2206,11 @@
               <FilePath>.\src\rx_bayang_protocol_telemetry.c</FilePath>
             </File>
             <File>
+              <FileName>rx_bayang_protocol_telemetry_autobind.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\rx_bayang_protocol_telemetry_autobind.c</FilePath>
+            </File>
+            <File>
               <FileName>rx_nrf24_bayang_telemetry.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\rx_nrf24_bayang_telemetry.c</FilePath>
@@ -1927,6 +2229,16 @@
               <FileName>rx_dsm.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\rx_dsm.c</FilePath>
+            </File>
+            <File>
+              <FileName>rx_ibus.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\rx_ibus.c</FilePath>
+            </File>
+            <File>
+              <FileName>rx_fport.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\rx_fport.c</FilePath>
             </File>
             <File>
               <FileName>led.c</FileName>
@@ -2024,29 +2336,24 @@
               <FilePath>.\src\serial_4way_avrootloader.c</FilePath>
             </File>
             <File>
-              <FileName>rx_bayang_protocol_telemetry_autobind.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\src\rx_bayang_protocol_telemetry_autobind.c</FilePath>
-            </File>
-            <File>
               <FileName>uart.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\src\uart.h</FilePath>
             </File>
             <File>
-              <FileName>rx_ibus.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\src\rx_ibus.c</FilePath>
-            </File>
-            <File>
-              <FileName>rx_fport.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\src\rx_fport.c</FilePath>
-            </File>
-            <File>
               <FileName>targets.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\src\targets.h</FilePath>
+            </File>
+            <File>
+              <FileName>usb_detect.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\usb_detect.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_detect.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\usb_detect.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -2154,6 +2461,11 @@
               <FilePath>.\src\drv_dshot_dma.c</FilePath>
             </File>
             <File>
+              <FileName>drv_dshot_dma_f4.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\drv_dshot_dma_f4.c</FilePath>
+            </File>
+            <File>
               <FileName>drv_rx_serial.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\drv_rx_serial.c</FilePath>
@@ -2173,10 +2485,136 @@
               <FileType>5</FileType>
               <FilePath>.\src\drv_dma_spi.h</FilePath>
             </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>usb</GroupName>
+          <Files>
             <File>
-              <FileName>drv_dshot_dma_f4.c</FileName>
+              <FileName>stm32f4xx_it.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\src\drv_dshot_dma_f4.c</FilePath>
+              <FilePath>.\src\vcp4\stm32f4xx_it.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32fxxx_it.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\vcp4\stm32fxxx_it.c</FilePath>
+              <FileOption>
+                <CommonProperty>
+                  <UseCPPCompiler>2</UseCPPCompiler>
+                  <RVCTCodeConst>0</RVCTCodeConst>
+                  <RVCTZI>0</RVCTZI>
+                  <RVCTOtherData>0</RVCTOtherData>
+                  <ModuleSelection>0</ModuleSelection>
+                  <IncludeInBuild>0</IncludeInBuild>
+                  <AlwaysBuild>2</AlwaysBuild>
+                  <GenerateAssemblyFile>2</GenerateAssemblyFile>
+                  <AssembleAssemblyFile>2</AssembleAssemblyFile>
+                  <PublicsOnly>2</PublicsOnly>
+                  <StopOnExitCode>11</StopOnExitCode>
+                  <CustomArgument></CustomArgument>
+                  <IncludeLibraryModules></IncludeLibraryModules>
+                  <ComprImg>1</ComprImg>
+                </CommonProperty>
+                <FileArmAds>
+                  <Cads>
+                    <interw>2</interw>
+                    <Optim>0</Optim>
+                    <oTime>2</oTime>
+                    <SplitLS>2</SplitLS>
+                    <OneElfS>2</OneElfS>
+                    <Strict>2</Strict>
+                    <EnumInt>2</EnumInt>
+                    <PlainCh>2</PlainCh>
+                    <Ropi>2</Ropi>
+                    <Rwpi>2</Rwpi>
+                    <wLevel>0</wLevel>
+                    <uThumb>2</uThumb>
+                    <uSurpInc>2</uSurpInc>
+                    <uC99>2</uC99>
+                    <uGnu>2</uGnu>
+                    <useXO>2</useXO>
+                    <v6Lang>0</v6Lang>
+                    <v6LangP>0</v6LangP>
+                    <vShortEn>2</vShortEn>
+                    <vShortWch>2</vShortWch>
+                    <v6Lto>2</v6Lto>
+                    <v6WtE>2</v6WtE>
+                    <v6Rtti>2</v6Rtti>
+                    <VariousControls>
+                      <MiscControls></MiscControls>
+                      <Define></Define>
+                      <Undefine></Undefine>
+                      <IncludePath></IncludePath>
+                    </VariousControls>
+                  </Cads>
+                </FileArmAds>
+              </FileOption>
+            </File>
+            <File>
+              <FileName>usb_bsp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\vcp4\usb_bsp.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_cdc_vcp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\vcp4\usbd_cdc_vcp.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_desc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\vcp4\usbd_desc.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_usr.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\vcp4\usbd_usr.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>usb otg</GroupName>
+          <Files>
+            <File>
+              <FileName>usb_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Libraries\STM32_USB_OTG_Driver\src\usb_core.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_dcd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Libraries\STM32_USB_OTG_Driver\src\usb_dcd.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_dcd_int.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Libraries\STM32_USB_OTG_Driver\src\usb_dcd_int.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>usb device</GroupName>
+          <Files>
+            <File>
+              <FileName>usbd_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Libraries\STM32_USB_Device_Library\Core\src\usbd_core.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_ioreq.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Libraries\STM32_USB_Device_Library\Core\src\usbd_ioreq.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_req.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Libraries\STM32_USB_Device_Library\Core\src\usbd_req.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_cdc_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Libraries\STM32_USB_Device_Library\Class\cdc\src\usbd_cdc_core.c</FilePath>
             </File>
           </Files>
         </Group>
