@@ -184,6 +184,7 @@
             <hadXRAM>0</hadXRAM>
             <uocXRam>0</uocXRam>
             <RvdsVP>0</RvdsVP>
+            <RvdsMve>0</RvdsMve>
             <hadIRAM2>0</hadIRAM2>
             <hadIROM2>0</hadIROM2>
             <StupSel>8</StupSel>
@@ -779,6 +780,16 @@
               <FileName>drv_dma_spi.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\src\drv_dma_spi.h</FilePath>
+            </File>
+            <File>
+              <FileName>drv_max7456.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\drv_max7456.c</FilePath>
+            </File>
+            <File>
+              <FileName>drv_max7456.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\drv_max7456.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -1887,6 +1898,7 @@
             <hadXRAM>0</hadXRAM>
             <uocXRam>0</uocXRam>
             <RvdsVP>2</RvdsVP>
+            <RvdsMve>0</RvdsMve>
             <hadIRAM2>1</hadIRAM2>
             <hadIROM2>0</hadIROM2>
             <StupSel>8</StupSel>
@@ -2482,6 +2494,16 @@
               <FileName>drv_dma_spi.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\src\drv_dma_spi.h</FilePath>
+            </File>
+            <File>
+              <FileName>drv_max7456.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\drv_max7456.c</FilePath>
+            </File>
+            <File>
+              <FileName>drv_max7456.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\drv_max7456.h</FilePath>
             </File>
           </Files>
         </Group>
