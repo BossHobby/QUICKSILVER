@@ -189,9 +189,9 @@ void RX_USART_ISR(void)
         }
 		lastticks = ticks;
 	
-		if ( USART_GetFlagStatus(USART1 , USART_FLAG_ORE ) ){
+		if ( USART_GetFlagStatus(SERIAL_RX_USART , USART_FLAG_ORE ) ){
       // overflow means something was lost 
-      USART_ClearFlag( USART1 , USART_FLAG_ORE );
+      USART_ClearFlag( SERIAL_RX_USART , USART_FLAG_ORE );
 			crsfFramePosition = 0;
     }    
 
@@ -206,7 +206,7 @@ void RX_USART_ISR(void)
     // full frame length includes the length of the address and framelength fields
 		const uint8_t fullFrameLength = crsfFramePosition < 3 ? 5 : crsfFrame.frame.frameLength + CRSF_FRAME_LENGTH_ADDRESS + CRSF_FRAME_LENGTH_FRAMELENGTH;
     if (crsfFramePosition < fullFrameLength) {
-        crsfFrame.bytes[crsfFramePosition++] = USART_ReceiveData(USART1);
+        crsfFrame.bytes[crsfFramePosition++] = USART_ReceiveData(SERIAL_RX_USART);
 				if (crsfFramePosition < fullFrameLength) {
 						crsfFrameDone = 0;
 				}else{

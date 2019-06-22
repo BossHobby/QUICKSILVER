@@ -1487,7 +1487,7 @@
       <GroupNumber>2</GroupNumber>
       <FileNumber>61</FileNumber>
       <FileType>1</FileType>
-      <tvExp>1</tvExp>
+      <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
       <PathWithFileName>.\src\drv_dshot_dma_f4.c</PathWithFileName>
@@ -1550,7 +1550,7 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>.\drv_max7456.c</PathWithFileName>
+      <PathWithFileName>.\src\drv_max7456.c</PathWithFileName>
       <FilenameWithoutPath>drv_max7456.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
@@ -1562,7 +1562,7 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>.\drv_max7456.h</PathWithFileName>
+      <PathWithFileName>.\src\drv_max7456.h</PathWithFileName>
       <FilenameWithoutPath>drv_max7456.h</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>

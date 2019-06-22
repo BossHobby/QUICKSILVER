@@ -784,12 +784,12 @@
             <File>
               <FileName>drv_max7456.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\drv_max7456.c</FilePath>
+              <FilePath>.\src\drv_max7456.c</FilePath>
             </File>
             <File>
               <FileName>drv_max7456.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\drv_max7456.h</FilePath>
+              <FilePath>.\src\drv_max7456.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -2498,12 +2498,12 @@
             <File>
               <FileName>drv_max7456.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\drv_max7456.c</FilePath>
+              <FilePath>.\src\drv_max7456.c</FilePath>
             </File>
             <File>
               <FileName>drv_max7456.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\drv_max7456.h</FilePath>
+              <FilePath>.\src\drv_max7456.h</FilePath>
             </File>
           </Files>
         </Group>

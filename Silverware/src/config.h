@@ -13,14 +13,14 @@
 //#define H8mini_blue_board
 //#define Alienwhoop_ZERO  
 //#define CC3D_REVO_F4
-//#define OmnibusF4SD
+#define OmnibusF4SD
 //#define OmnibusF4
 //#define Alienwhoop_V2
 //#define LuxF4osd
 //#define CLRacing_F4
 //#define Raceflight_Revolt
 //#define FortiniF4osd
-#define Pyrodrone_F4
+//#define Pyrodrone_F4
 
 
 // *************DEFINE FLIGHT CONTROLLER MOTOR OUTPUT - *****warning*****  GETTING THIS WRONG CAN SMOKE YOUR BOARD :)
@@ -216,11 +216,11 @@
 
 //Select Gyro Filter Cut Frequency
 #define GYRO_FILTER_PASS1 HZ_90
-#define GYRO_FILTER_PASS2 HZ_140
+#define GYRO_FILTER_PASS2 HZ_90
 
 //Select D Term Filter Cut Frequency *** Select Only one
-//#define  DTERM_LPF_2ND_HZ 100
-#define DTERM_LPF_1ST_HZ 70
+#define  DTERM_LPF_2ND_HZ 100
+//#define DTERM_LPF_1ST_HZ 70
 
 //Select Motor Filter Type  (last resort filtering stage)
 //#define MOTOR_FILTER2_ALPHA MFILT1_HZ_90
