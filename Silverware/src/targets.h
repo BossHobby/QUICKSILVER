@@ -839,9 +839,9 @@
 #endif
 
 //OSD
-//#define ENABLE_OSD
-//#define MAX7456_SPI3
-//#define MAX7456_NSS_PA15
+#define ENABLE_OSD
+#define MAX7456_SPI3
+#define MAX7456_NSS_PB3
 
 //VOLTAGE DIVIDER
 #define BATTERYPIN GPIO_Pin_2
