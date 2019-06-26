@@ -1,4 +1,7 @@
-/*
+void spi_max7456_init(void);
+void max7456_init(void);
+void osd_intro(void);
+void osd_clear(void);
 
 #define DMM 0x04 
 #define DMAH 0x05 
@@ -13,9 +16,13 @@
 #define RB0 0x10 
 #define STAT 0xA2 //Status register read address
 #define CMDO 0xC0 
+#define OSDM 0x0C
+#define VOS 0x03
 //#define DMDO 0XB0 
 
-
+#define BLINK 0x11
+#define INVERT 0x09
+#define TEXT 0x01
 
 
 
@@ -42,4 +49,3 @@
 #define VCC 4
 #define FIRTEST 7
 
-*/

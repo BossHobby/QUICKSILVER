@@ -651,6 +651,16 @@
               <FileType>5</FileType>
               <FilePath>.\src\usb_detect.h</FilePath>
             </File>
+            <File>
+              <FileName>osd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\osd.c</FilePath>
+            </File>
+            <File>
+              <FileName>osd.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\osd.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -2364,6 +2374,16 @@
               <FileName>usb_detect.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\src\usb_detect.h</FilePath>
+            </File>
+            <File>
+              <FileName>osd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\osd.c</FilePath>
+            </File>
+            <File>
+              <FileName>osd.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\osd.h</FilePath>
             </File>
           </Files>
         </Group>

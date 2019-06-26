@@ -51,6 +51,7 @@ THE SOFTWARE.
 #include "drv_fmc2.h"
 #include "gestures.h"
 #include "binary.h"
+#include "osd.h"
 
 #include <stdio.h>
 #include <math.h>
@@ -220,7 +221,9 @@ pwm_set( MOTOR_FL , 0);
 pwm_set( MOTOR_FR , 0); 
 pwm_set( MOTOR_BR , 0); 
 sixaxis_init();
-	
+#ifdef ENABLE_OSD
+osd_init();
+#endif	
 if ( sixaxis_check() ) 
 {
 
@@ -292,6 +295,7 @@ if ( vbattfilt/(float)lipo_cell_count < 3.3f) failloop(2);
 #endif
 
 
+
 gyro_cal();
 extern void rgb_init( void);
 rgb_init();
@@ -307,7 +311,11 @@ extern float accelcal[3];
  accelcal[0] = flash2_readdata( OB->DATA0 ) - 127;
  accelcal[1] = flash2_readdata( OB->DATA1 ) - 127;
 #endif
-				   
+
+#ifdef ENABLE_OSD
+osd_clear();
+#endif	
+
 extern int liberror;
 if ( liberror ) 
 {
@@ -589,6 +597,10 @@ rgb_dma_start();
 
 // receiver function
 checkrx();
+
+#ifdef ENABLE_OSD
+osd_display();
+#endif
 
 #if defined(USB_DETECT_PIN) && defined(F405)
 usb_detect();

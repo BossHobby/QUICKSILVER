@@ -1,17 +1,17 @@
-//#define TESTING_OSD
-#ifdef TESTING_OSD
+
+
 #include "project.h"
 #include <stdio.h>
 #include "defines.h"
 #include "drv_time.h"
 #include "drv_max7456.h"
+#include "string.h"
 
-
-#define MAX7456_SPI2
-#define MAX7456_NSS_PD2
+#ifdef ENABLE_OSD
 
 //SPI PINS
 #ifdef MAX7456_SPI2
+#define RCC_APBPeriph_SPI RCC_APB1Periph_SPI2
 #define MAX7456_SPI_INSTANCE SPI2
 #define MAX7456_SPI_PORT GPIOB
 #define MAX7456_SCLK_PINSOURCE GPIO_PinSource13
@@ -23,9 +23,33 @@
 #define MAX7456_SPI_AF GPIO_AF_SPI2
 #endif
 
+#ifdef MAX7456_SPI3
+#define RCC_APBPeriph_SPI RCC_APB1Periph_SPI3
+#define MAX7456_SPI_INSTANCE SPI3
+#define MAX7456_SPI_PORT GPIOC
+#define MAX7456_SCLK_PINSOURCE GPIO_PinSource10
+#define MAX7456_SCLK_PIN GPIO_Pin_10
+#define MAX7456_MISO_PINSOURCE GPIO_PinSource11
+#define MAX7456_MISO_PIN GPIO_Pin_11
+#define MAX7456_MOSI_PINSOURCE GPIO_PinSource12
+#define MAX7456_MOSI_PIN GPIO_Pin_12
+#define MAX7456_SPI_AF GPIO_AF_SPI3
+#endif
+
+//NSS PINS
 #ifdef MAX7456_NSS_PD2
 #define MAX7456_NSS_PIN GPIO_Pin_2
 #define MAX7456_NSS_PORT GPIOD
+#endif
+
+#ifdef MAX7456_NSS_PB12
+#define MAX7456_NSS_PIN GPIO_Pin_12
+#define MAX7456_NSS_PORT GPIOB
+#endif
+
+#ifdef MAX7456_NSS_PA15
+#define MAX7456_NSS_PIN GPIO_Pin_15
+#define MAX7456_NSS_PORT GPIOA
 #endif
 
 
@@ -65,8 +89,8 @@ GPIO_PinAFConfig(MAX7456_SPI_PORT, MAX7456_MOSI_PINSOURCE, MAX7456_SPI_AF); //MO
 //*********************SPI***************************************	
 
 
-//SPI1 to APB2 bus clock																					//TODO  Make this populate with defines for switching SPI instances
-RCC_APB1PeriphClockCmd( RCC_APB1Periph_SPI2, ENABLE);
+//SPI1 to APB2 bus clock
+RCC_APB1PeriphClockCmd( RCC_APBPeriph_SPI, ENABLE);
 // SPI Config
 SPI_I2S_DeInit(MAX7456_SPI_INSTANCE);
 SPI_InitTypeDef SPI_InitStructure;
@@ -143,7 +167,7 @@ uint8_t MAX7456_write(uint8_t reg, uint8_t data)
 {
 	uint8_t stuff;
   max7456_enable();
-  stuff = max7456_transfer_byte(reg | 0x00);
+  stuff = max7456_transfer_byte(reg);
   stuff = max7456_transfer_byte(data);
   max7456_disable();
 	return stuff;
@@ -155,41 +179,110 @@ uint8_t MAX7456_read(uint8_t reg)
 {
 	uint8_t stuff;
   max7456_enable();
-  max7456_transfer_byte(reg | 0x80);
-  stuff = max7456_transfer_byte(0x00);
+  max7456_transfer_byte(reg);
+  stuff = max7456_transfer_byte(0xFF);
   max7456_disable();
 	return stuff;
 }
-/*
-void max7456_write( uint8_t reg, uint8_t val )
+
+//function to auto incriment write - requires handling NSS seperately
+void max7456_transfer( uint8_t reg, uint8_t val )
 {
-  SPI.transfer( reg );
-  SPI.transfer( val );
+  max7456_transfer_byte(reg);
+  max7456_transfer_byte(val);
 }
 
 
-uint8_t max7456_read( uint8_t reg )
-{ 
+//*******************************************************************************OSD FUNCTIONS********************************************************************************
+
+
+// osd video system ( PAL /NTSC) at startup if no video input is present
+// after input is present the last detected system will be used.
+uint8_t osdsystem = NTSC;
+uint8_t lastvm0 = 0x55;
+uint8_t lastsystem = 99;
+uint8_t maxrows = 16;
+
+
+
+// prints to screen with dmm_attribute TEXT, BLINK, or INVERT
+void osd_print( char *buffer ,  uint8_t dmm_attribute,  uint8_t x , uint8_t y)
+{
+  if( lastsystem == NTSC)
+    {
+      //NTSC adjustment 3 lines up if after line 13 or maybe this should be 8
+      if ( y > 13 ) y = y - 3;      
+    }
+  if ( y > 16 ) y = 16;
+  
+  uint16_t pos = x + y*30; 
+				
   max7456_enable();
-  SPI.transfer( reg );
-  return SPI.transfer( 255 );
-  max7456_disable();
+   // 16 bit mode, auto increment mode 
+  max7456_transfer(DMM, dmm_attribute );
+  // memory address
+  max7456_transfer(DMAH, 0x01 & (pos >> 8) );
+  max7456_transfer(DMAL, (uint8_t) pos  );
+  
+  for ( int i = 0; i < strlen(buffer); i++ ) {
+  max7456_transfer( DMDI, buffer[i] );
+  }
+  // off autoincrement mode
+  max7456_transfer( DMDI, 0xFF ); 
+  max7456_disable(); 
 }
-*/
 
 
 
-void osd_clear()
+//clears off entire display
+void osd_clear(void)
 {
-  for ( byte y = 0 ; y < maxrows ; y++)
-  {
-   osd_print( "          " , 10 ,  0 , y ); 
-   osd_print( "          " , 10 ,  10 , y ); 
-   osd_print( "          " , 10 ,  20 , y ); 
+  for ( uint8_t y = 0 ; y < maxrows ; y++)
+  {							// CHAR , COL , ROW
+   osd_print( "          " , TEXT,  0 , y ); 
+   osd_print( "          " , TEXT,  10 , y ); 
+   osd_print( "          " , TEXT,  20 , y ); 
    }
 }
 
 
+
+//establish initial boot-up state
+void max7456_init(void)
+{
+uint8_t x;
+MAX7456_write(VM0 , 0x02);   	 //soft reset
+delay(200);
+x = MAX7456_read(OSDBL_R); 		 // mine set to 13 (factory) 
+MAX7456_write(OSDBL_W , x|0x10);
+if ( osdsystem == PAL )	
+  { 
+		MAX7456_write(VM0, 0x72);	 // Set pal mode ( ntsc by default) and enable display
+		lastvm0 = 0x72;
+	}else{
+		MAX7456_write(VM0, 0x08);	 // Set ntsc mode and enable display
+		lastvm0 = 0x08;
+	}	
+MAX7456_write(VM1, 0x0C);			 // set background brightness (bits 456), blinking time(bits 23), blinking duty cycle (bits 01) 
+MAX7456_write(OSDM, 0x2D);		 // osd mux rise/fall ( lowest sharpness)
+osd_clear();									 // initial screen clear off
+}															 //still need to detect NTSC/PAL here and set placeholder ... maybe more from Silver's functions below too
+
+
+
+//splash screen
+void osd_intro(void)
+{
+ osd_print( "QUICKSILVER" , INVERT ,  9  , 5	);  //char, col, row
+ osd_print( "BY ALIENWHOOP" , TEXT ,  16 , 12	);  //char, col, row
+}
+
+
+
+
+
+
+/*
 
 byte floattochar(char * buffer, float val)
 {// this did not work the simpler way (with %f ) 
@@ -205,75 +298,6 @@ byte floattochar(char * buffer, float val)
  return cx;
 }
 
-
-
-
-
-void osd_print( char *buffer , uint8_t len,  uint8_t x , uint8_t y)
-{
-    if( lastsystem == NTSC)
-    {
-      //NTSC adjustment 3 lines up if after line 8
-      //
-      if ( y > 7 ) y = y - 3; 
-      
-    }
-  if ( y > 16 ) y = 16;
-  
-  uint8_t pos = x + y*30;
-  
-  cs_on();
-   // 16 bit mode, auto increment mode 
-  spi_write(DMM, B00000001 );
-  // memory address
-  spi_write(DMAH, B00000001 & (pos >> 8) );
-  spi_write(DMAL, (byte) pos  );
-  
-  for ( int i = 0; i < len; i++ ) {
-  spi_write( DMDI, buffer[i] );
-  }
-  // off autoincrement mode
-  spi_write( DMDI, 0xFF );
-  cs_off(); 
-}
-
-
-
-
-void max7456init()
-{
-byte x;
-  
-cs_on();
-spi_write( VM0, B00000010 ); // soft reset
-cs_off();
-
-delay(1);
-
-x = spi_read(OSDBL_R); // mine set to 31 (factory) 
-cs_on();
-spi_write( OSDBL_W , x|B00010000 );
-cs_off();
-
-cs_on();
-if ( osdsystem == PAL )
-  {   
-  spi_write( VM0, B01001000 ); // Set pal mode ( ntsc by default) and enable display
-  lastvm0 = B01001000;
-  }
-else 
-  {
-  spi_write( VM0, B00001000); 
-  lastvm0 = B00001000;
-  }
-
- spi_write( VM1, B00001110);
- 
- spi_write( 0x0C, B00101101); // osd mux rise/fall ( lowest sharpness)
- 
- cs_off();
-
-}
 
 
 
@@ -360,11 +384,7 @@ cs_off();
 
 
 
-void osd_intro()
-{
- osd_print( "smallOSD" , 8 ,  5 , 5 );  // row , col
- osd_print( "v0.8" , 4 ,  5 , 6 );  // row , col   
-}
+
 
 
 // check for osd "accidental" reset
@@ -398,6 +418,37 @@ void check_osd()
    flag = 1;
   } 
 }
+
+*/
+
+//????????????????????????????????????????????????????????????MOVE TO src FILE??????????????????????????????
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #endif
 
 

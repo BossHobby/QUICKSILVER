@@ -482,6 +482,11 @@
 #define SPI_SS_PORT GPIOC
 #endif
 
+//OSD
+#define ENABLE_OSD
+#define MAX7456_SPI3
+#define MAX7456_NSS_PA15
+
 //VOLTAGE DIVIDER
 #define BATTERYPIN GPIO_Pin_2
 #define BATTERYPORT GPIOC
@@ -639,19 +644,9 @@
 #define MPU6XXX_NSS_PA4
 #define MPU6XXX_INT_PC4
 #define USE_DUMMY_I2C									//todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
-//#define I2C_SDAPIN GPIO_Pin_10
-//#define I2C_SDAPORT GPIOA
-//#define I2C_SCLPIN GPIO_Pin_9
-//#define I2C_SCLPORT GPIOA
-//#define I2C_GYRO_ADDRESS 0x68
-//#define SOFTI2C_GYRO_ADDRESS 0x69
 #define GYRO_ID_1 0x68
-//#define GYRO_ID_2 0x73
-//#define GYRO_ID_3 0x78
-//#define GYRO_ID_4 0x72
 //#define SENSOR_ROTATE_90_CCW
 #define SENSOR_ROTATE_90_CW
-//#define DISABLE_GYRO_CHECK
 
 // SPI PINS DEFINITONS & RADIO
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
@@ -674,6 +669,11 @@
 #define SPI_SS_PIN GPIO_Pin_7
 #define SPI_SS_PORT GPIOC
 #endif
+
+//OSD
+#define ENABLE_OSD
+#define MAX7456_SPI3
+#define MAX7456_NSS_PA15
 
 //VOLTAGE DIVIDER
 #define BATTERYPIN GPIO_Pin_2
@@ -838,6 +838,11 @@
 #define SPI_SS_PORT GPIOC
 #endif
 
+//OSD
+//#define ENABLE_OSD
+//#define MAX7456_SPI3
+//#define MAX7456_NSS_PA15
+
 //VOLTAGE DIVIDER
 #define BATTERYPIN GPIO_Pin_2
 #define BATTERYPORT GPIOC
@@ -916,6 +921,11 @@
 #define SPI_SS_PIN GPIO_Pin_7
 #define SPI_SS_PORT GPIOC
 #endif
+
+//OSD
+#define ENABLE_OSD
+#define MAX7456_SPI2
+#define MAX7456_NSS_PB12
 
 //VOLTAGE DIVIDER
 #define BATTERYPIN GPIO_Pin_2
