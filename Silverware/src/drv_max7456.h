@@ -1,7 +1,10 @@
+#include "stdint.h"
 void spi_max7456_init(void);
 void max7456_init(void);
 void osd_intro(void);
 void osd_clear(void);
+void osd_checksystem(void);
+void osd_print( char *buffer ,  uint8_t dmm_attribute,  uint8_t x , uint8_t y);
 
 #define DMM 0x04 
 #define DMAH 0x05 
@@ -23,8 +26,10 @@ void osd_clear(void);
 #define BLINK 0x11
 #define INVERT 0x09
 #define TEXT 0x01
+#define MAXROWS 16
 
-
+#define SYSTEMXPOS 7
+#define SYSTEMYPOS 7
 
 
 #define MAX7456_VSYNC 2

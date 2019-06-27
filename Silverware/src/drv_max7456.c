@@ -117,7 +117,7 @@ SPI_I2S_ReceiveData(MAX7456_SPI_INSTANCE);
 }
 
 
-//*********************FUNCTIONS************************************
+//*******************************************************************************SPI FUNCTIONS********************************************************************************
 extern int liberror;   //tracks any failed spi reads or writes to trigger failloop
 
 
@@ -204,21 +204,23 @@ void max7456_transfer( uint8_t reg, uint8_t val )
 // osd video system ( PAL /NTSC) at startup if no video input is present
 // after input is present the last detected system will be used.
 uint8_t osdsystem = NTSC;
-uint8_t lastvm0 = 0x55;
+// detected osd video system starts at 99 and gets updated here by osd_checksystem()
 uint8_t lastsystem = 99;
-uint8_t maxrows = 16;
+uint8_t lastvm0 = 0x55;
+
+//TODO ... should we monitor lastvm0 and handle any unexpected changes using check_osd() ... not sure if/when an osd chip becomes unstable due to voltage or some other reason
 
 
 
 // prints to screen with dmm_attribute TEXT, BLINK, or INVERT
 void osd_print( char *buffer ,  uint8_t dmm_attribute,  uint8_t x , uint8_t y)
 {
-  if( lastsystem == NTSC)
-    {
-      //NTSC adjustment 3 lines up if after line 13 or maybe this should be 8
-      if ( y > 13 ) y = y - 3;      
-    }
-  if ( y > 16 ) y = 16;
+  if( lastsystem != PAL)
+  {
+      //NTSC adjustment 3 lines up if after line 12 or maybe this should be 8
+      if ( y > 12 ) y = y - 2;      
+  }
+  if ( y > MAXROWS-1 ) y = MAXROWS-1;
   
   uint16_t pos = x + y*30; 
 				
@@ -242,12 +244,81 @@ void osd_print( char *buffer ,  uint8_t dmm_attribute,  uint8_t x , uint8_t y)
 //clears off entire display
 void osd_clear(void)
 {
-  for ( uint8_t y = 0 ; y < maxrows ; y++)
-  {							// CHAR , COL , ROW
+  for ( uint8_t y = 0 ; y < MAXROWS ; y++)
+  {						// CHAR , ATTRIBUTE , COL , ROW
    osd_print( "          " , TEXT,  0 , y ); 
    osd_print( "          " , TEXT,  10 , y ); 
    osd_print( "          " , TEXT,  20 , y ); 
    }
+}
+
+
+
+// set the video output system PAL /NTSC
+void osd_setsystem( uint8_t sys)
+{
+uint8_t x = MAX7456_read(VM0_R); 
+if ( sys == PAL )
+    {
+     lastvm0 = x | 0x40; 
+     MAX7456_write( VM0, x | 0x40 );
+    }
+else
+    {
+     lastvm0 =  x & 0xBF;
+     MAX7456_write( VM0, x & 0xBF );
+    }
+}
+
+
+
+//function to autodetect and correct ntsc/pal mode or mismatch
+void osd_checksystem(void)
+{  
+  // check detected video system
+  uint8_t x = MAX7456_read(STAT);
+  if ((x & 0x01) == 0x01)
+  { //PAL
+   if ( lastsystem != PAL )
+    {
+    lastsystem = PAL;
+    if ( osdsystem != PAL ) 
+      {
+				osd_setsystem(PAL);
+      }
+		osd_clear();									 // initial screen clear off
+//		osd_print( "PAL  DETECTED" , BLINK , SYSTEMXPOS+1 , SYSTEMYPOS );  //for debugging - remove later
+    }
+  } 
+  if ((x & 0x02) == 0x02)
+  { //NTSC
+   if ( lastsystem != NTSC )
+    {
+    lastsystem = NTSC;
+    if ( osdsystem != NTSC ) 
+      {
+				osd_setsystem(NTSC);				
+      }
+		osd_clear();									 // initial screen clear off
+//		osd_print( "NTSC DETECTED" , BLINK , SYSTEMXPOS+1 , SYSTEMYPOS );  //for debugging - remove later
+    }	
+  }  
+  
+   if ( ( x & 0x03 ) == 0x00 )
+  {//No signal
+   if ( lastsystem > 1 )
+    {
+		if (lastsystem > 2) osd_clear();									 // initial screen clear off since lastsystem is set to 99 at boot		
+		static uint8_t warning_sent = 0;
+		if (warning_sent < 2)
+			{															//incriments once at boot, and again the first time through main loop.  Then cleared by a incoming signal
+			osd_print( "NO CAMERA SIGNAL" , BLINK , SYSTEMXPOS , SYSTEMYPOS );
+			warning_sent++;
+			lastsystem = 2;
+			}
+    }
+    
+  }  
 }
 
 
@@ -258,7 +329,7 @@ void max7456_init(void)
 uint8_t x;
 MAX7456_write(VM0 , 0x02);   	 //soft reset
 delay(200);
-x = MAX7456_read(OSDBL_R); 		 // mine set to 13 (factory) 
+x = MAX7456_read(OSDBL_R); 		 // mine set to 13 (factory) **********check this out
 MAX7456_write(OSDBL_W , x|0x10);
 if ( osdsystem == PAL )	
   { 
@@ -269,8 +340,10 @@ if ( osdsystem == PAL )
 		lastvm0 = 0x08;
 	}	
 MAX7456_write(VM1, 0x0C);			 // set background brightness (bits 456), blinking time(bits 23), blinking duty cycle (bits 01) 
-MAX7456_write(OSDM, 0x2D);		 // osd mux rise/fall ( lowest sharpness)
-osd_clear();									 // initial screen clear off
+MAX7456_write(OSDM, 0x2D);		 // osd mux & rise/fall ( lowest sharpness)
+
+osd_checksystem();
+
 }															 //still need to detect NTSC/PAL here and set placeholder ... maybe more from Silver's functions below too
 
 
@@ -279,179 +352,34 @@ osd_clear();									 // initial screen clear off
 void osd_intro(void)
 {
  osd_print( "QUICKSILVER" , INVERT ,  9  , 5	);  //char, col, row
- osd_print( "BY ALIENWHOOP" , TEXT ,  16 , 12	);  //char, col, row
+ osd_print( "BY ALIENWHOOP" , TEXT ,  16 , 14	);  //char, col, row
 }
 
 
 
-
-
-
-/*
-
-byte floattochar(char * buffer, float val)
-{// this did not work the simpler way (with %f ) 
-  unsigned int volta;
-  unsigned int voltb;// decimal digits
-  volta = trunc ( val);
-  voltb = round ((float)( val - volta)*100 );
-  volta = constrain( volta , 0 , 99);
-  voltb = constrain( voltb , 0 , 99); 
-  byte cx;
-  cx = snprintf ( buffer, 10, "%d.%02d",(int) volta, voltb );
-
- return cx;
-}
-
-
-
-
-
-void  checksystem()
-{
-  if ( !systemclear && millis() - timesystem > 3000)
-  {
-  // delete the PAL /NTSC /NONE message after a timeout
-  osd_print( "    " , 4 , SYSTEMXPOS , SYSTEMYPOS ); 
-  systemclear = 1;     
-  }
-  
-  // check detected video system
-  byte x = spi_read(STAT);
-  if (x & B00000001) 
-  { //PAL
-  //Serial.println("PAL");
-  if ( lastsystem != PAL )
-    {
-     osd_print( "PAL " , 4 , SYSTEMXPOS , SYSTEMYPOS );
-     timesystem = millis(); 
-     systemclear = 0;
-     lastsystem = PAL;
-     if ( osdsystem != PAL ) 
-       {
-         osd_clear();
-         osd_setsystem(PAL);
-       }
-    }
-  } 
-  if (x & B00000010) 
-  { //NTSC
-  //Serial.println("NTSC");
-   if ( lastsystem != NTSC )
-    {
-    osd_print( "NTSC" , 4 , SYSTEMXPOS , SYSTEMYPOS );
-    timesystem = millis(); 
-    systemclear = 0;
-    lastsystem = NTSC;
-    if ( osdsystem != NTSC ) 
-      {
-       osd_clear();
-       osd_setsystem(NTSC);
-      }
-    }
-  }  
-  
-   if ( ! ( x|B00000011 ) )
-  {//No signal
-   //Serial.println("NONE");
-   if ( lastsystem != 2 )
-    {
-    osd_print( "NONE" , 4 , SYSTEMXPOS , SYSTEMYPOS );
-    timesystem = millis(); 
-    systemclear = 0;
-    lastsystem = 2;
-    }
-    
-  }  
- return;
-}
-
-
-// set the video output system PAL /NTSC
-void osd_setsystem( byte sys)
-{
-byte x = spi_read(VM0_R); 
-
-cs_on();
-if ( sys == PAL )
-    {
-     lastvm0 = x| B01000000; 
-     spi_write( VM0, x|( B01000000 ) );
-    }
-else
-    {
-     lastvm0 =  x& B10111111;
-     spi_write( VM0, x&( B10111111 ) );
-    }
-cs_off();
- 
-}
-
-
-
-
-
-
+//NOT USING THIS FUNCTION YET OR EVEN SURE IF IT IS NEEDED
 // check for osd "accidental" reset
 // the MAX7456 and atmega328 have very different voltage ranges
 // MAX resets somewhere between 4.2V and 4.6V
 // atmega328 works to below 3.3V (depending on brownout fuses)
-void check_osd()
+void check_osd(void)
 {
-  byte x = spi_read(VM0_R);  
- 
+  uint8_t x = MAX7456_read(VM0_R);   
   if ( x != lastvm0)
   {// the register is not what it's supposed to be
-
-   cs_on();
-   spi_write( VM0, B00000010 ); // soft reset
-   cs_off();
-   delay(1);
-   // only set minimum number of registers for functionality
-   cs_on();    
+   MAX7456_write( VM0, 0x02 ); // soft reset
+   delay(200);
+   // only set minimum number of registers for functionality   
    if ( osdsystem == PAL )
-    {
-    spi_write( VM0, B01001000 ); // Set pal mode ( ntsc by default) and enable display
-    lastvm0 = B01001000;
-    }
-   else
-    {
-    spi_write( VM0, B00001000); // set NTSC
-    lastvm0 = B00001000;
-    }
-   cs_off();
-   flag = 1;
+  { 
+		MAX7456_write(VM0, 0x72);	 // Set pal mode ( ntsc by default) and enable display
+		lastvm0 = 0x72;
+	}else{
+		MAX7456_write(VM0, 0x08);	 // Set ntsc mode and enable display
+		lastvm0 = 0x08;
+	}	
   } 
 }
-
-*/
-
-//????????????????????????????????????????????????????????????MOVE TO src FILE??????????????????????????????
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 #endif
