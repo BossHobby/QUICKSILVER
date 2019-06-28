@@ -232,6 +232,12 @@ extern int rx_bind_enable;
 	rx_bind_enable = fmc_read_float(56);
 #endif
 
+#ifdef ENABLE_OSD
+	extern unsigned long osd_element[OSD_NUMBER_ELEMENTS];
+	for (int i=0; i<OSD_NUMBER_ELEMENTS; i++) {		
+	osd_element[i] = fmc_read( i+OSD_FLASH_START); 
+	}
+#endif
     }
     else
     {
