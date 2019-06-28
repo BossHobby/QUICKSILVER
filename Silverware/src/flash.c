@@ -131,6 +131,14 @@ if ( rx_bind_enable ){
 	}
 #endif
 
+#ifdef ENABLE_OSD		//currently starts at address 57
+extern unsigned long osd_element[OSD_NUMBER_ELEMENTS];
+	for (int i=0; i<OSD_NUMBER_ELEMENTS; i++) {		
+	writeword( i+OSD_FLASH_START , osd_element[i] ); 
+	}
+
+#endif
+
     writeword(255, FMC_HEADER);
     
 	fmc_lock();

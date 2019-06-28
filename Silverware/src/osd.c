@@ -33,7 +33,31 @@ typedef struct screen_element_t
 screen_element_s callSign;
 
 
+/*screen elements characteristics written like registers in a 32bit binany number
+except callsign which will take 6 addresses.  callsign bit 1 will be enable/disable,
+bit 2 will be text/invert, and the remaining 30 bits will be 5 characters.  6 total addresses
+will allow callsign text to fill the whole screen across
+BIT
+0			-		0 is display element active , 1 is display element inactive
+1:2		-		00 is TEXT, 01 is INVERT, 11 is BLINK
+3:7		-		the X screen position (column)
+8:11	-		the Y screen position	(row)
+12:15	-		not currently used
+16:31	-		available for two binary ascii characters
+*/
+//Flash Variables - 32bit
+unsigned long osd_element[OSD_NUMBER_ELEMENTS];
+/*
+elements 0-5 - Call Sign
+element 6 Fuel Gauge volts
+element 7 Filtered Volts
+element 8 Exact Volts
+*/
+unsigned long *callsign1 = osd_element;
 
+unsigned long *fuelgauge_volts = (osd_element + 6);
+unsigned long *filtered_volts = (osd_element + 7);
+unsigned long *exact_volts = (osd_element + 8);
 
 
 void osd_display(void)
@@ -54,7 +78,7 @@ if (lastsystem > 1)  		//first check for video signal autodetect - run if necess
 //Printing a float may look something like this:
 //osd_print( sprintf(buffer,"%.02f",(float) pidkp[0]) , TEXT,  10 , 10 );
 //complier may need some poking
-LDFLAGS += -u _printf_float       <-add to build options - linker flag
+//LDFLAGS += -u _printf_float       <-add to build options - linker flag
 
 
 // keep a static count variable for things that only need to be sent once
@@ -69,23 +93,18 @@ extern float lipo_cell_count;
 
 // pilot name routine could look something like this...
 
-callSign.active = 1;																	//struct elements should be populated from flash memory read at boot up in final design
-strcpy(&callSign.text, "ALIENWHOOP");									//really sorting that out needs to come first.  Not yet sure where elements of struct should be initialized yet?
-callSign.position_x = 7;			//random values for now
-callSign.position_y = 7;
-callSign.attribute = TEXT;
 
-if (callSign.active == 1)		//check if call sign is a user selected elemet to display
+if ((*callsign1 & 0x01) == 0x01)		//check if call sign is a user selected elemet to display
 {
 	if (callSign_count < 1)		//check if it has already been sent once
 	{
-	osd_print(&callSign.text , callSign.attribute , callSign.position_x , callSign.position_y);
+	osd_print(&callSign.text , callSign.attribute , callSign.position_x , callSign.position_y);    //todo - gut the old struct stuff and use the new register method
 	callSign_count++;
 	}
 }
 
-*/
 
+*/
 
 } //end osd_display()
 

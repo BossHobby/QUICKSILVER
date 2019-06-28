@@ -364,6 +364,7 @@
 // x (micro)seconds after loss of tx or low bat before buzzer starts
 #define BUZZER_DELAY     30e6 
 
-
+#define OSD_FLASH_START 57
+#define OSD_NUMBER_ELEMENTS 9
 
 
