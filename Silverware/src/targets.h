@@ -474,12 +474,12 @@
 #define RADIO_CHECK
 #define SPI_MISO_PIN GPIO_Pin_10
 #define SPI_MISO_PORT GPIOA
-#define SPI_MOSI_PIN GPIO_Pin_9
-#define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_6
-#define SPI_CLK_PORT GPIOC
-#define SPI_SS_PIN GPIO_Pin_7
-#define SPI_SS_PORT GPIOC
+#define SPI_MOSI_PIN GPIO_Pin_4
+#define SPI_MOSI_PORT GPIOB
+#define SPI_CLK_PIN GPIO_Pin_10
+#define SPI_CLK_PORT GPIOA
+#define SPI_SS_PIN GPIO_Pin_6
+#define SPI_SS_PORT GPIOB
 #endif
 
 //OSD
@@ -504,10 +504,10 @@
 // MOTOR PINS
 //OmniF4SD
 #ifdef OmnibusF4SD
-#define MOTOR2_PIN_PA3
+#define MOTOR2_PIN_PB1
 #define MOTOR3_PIN_PA2
 #define MOTOR0_PIN_PB0
-#define MOTOR1_PIN_PB1
+#define MOTOR1_PIN_PA3
 
 #else //OmnibusF4
 #define MOTOR0_PIN_PA3

@@ -11,17 +11,6 @@ void osd_init(void)
 	osd_intro();
 }
 
-// maybe define reference coordinates for top and bottom, right left and middle?  Need to find these values.  
-#define TL_X
-#define TL_Y
-#define TM_X
-#define TM_Y
-#define TR_X
-#define TR_Y
-
-
-						
-
 
 
 /*screen elements characteristics written like registers in a 32bit binany number
@@ -129,17 +118,16 @@ if ((*callsign1 & 0x01) == 0x01)		//check if call sign is a user selected elemet
 
 
 //fuelgauge volts
-*fuelgauge_volts = 0x705;		//another test value from the simulated register	
+*fuelgauge_volts = 0x731;		//another test value from the simulated register	
 static float last_fuelgauge_volts;
 if (vbatt_comp != last_fuelgauge_volts)
 {
 last_fuelgauge_volts = vbatt_comp;
-char osd_fuelgauge_volts[3];
-sprintf(osd_fuelgauge_volts,"%.01f",(float) vbatt_comp);
+char osd_fuelgauge_volts[4];
+sprintf(osd_fuelgauge_volts,"%.1fV",(float) vbatt_comp);
 osd_print( osd_fuelgauge_volts , decode_attribute(*fuelgauge_volts),  decode_positionx(*fuelgauge_volts) +3 , decode_positiony(*fuelgauge_volts) );
 char osd_cellcount[2];
-sprintf(osd_cellcount,"%.00f",(float) lipo_cell_count);
-osd_cellcount[1] = 'S';
+sprintf(osd_cellcount,"%.fS",(float) lipo_cell_count);
 if (!lowbatt){
 osd_print( osd_cellcount ,decode_attribute(*fuelgauge_volts) ,  decode_positionx(*fuelgauge_volts) , decode_positiony(*fuelgauge_volts) );
 }else{
@@ -147,7 +135,7 @@ osd_print( osd_cellcount , BLINK | INVERT,  decode_positionx(*fuelgauge_volts) ,
 }
 }
 //NOTES:
-//complier may need some poking
+//complier may need some poking for sprintf
 //LDFLAGS += -u _printf_float       <-add to build options - linker flag
 
 //filtered volts

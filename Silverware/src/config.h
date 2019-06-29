@@ -183,7 +183,7 @@
 // *************flashes 2 times repeatedly at startup
 //#define STOP_LOWBATTERY
 
-// *************voltage to start warning led blinking
+// *************voltage/cell to start warning led blinking
 #define VBATTLOW 3.3
 
 // *************voltage hysteresis in volts

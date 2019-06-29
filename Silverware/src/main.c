@@ -455,7 +455,7 @@ if( thrfilt > 0.1f )
     if ( lowbatt ) hyst = HYST;
     else hyst = 0.0f;
 
-    if (( tempvolt + (float) VDROP_FACTOR * thrfilt <(float) VBATTLOW + hyst )
+    if (( tempvolt + (float) VDROP_FACTOR * thrfilt <((float) VBATTLOW * lipo_cell_count) + hyst )
         || ( vbattfilt < ( float ) 2.7f ) )
         lowbatt = 1;
     else lowbatt = 0;
