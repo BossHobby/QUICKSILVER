@@ -404,8 +404,8 @@ void checkrx()
           }
 					else if (telemetryPosition == 4) { //PID-P
 						telemetryPacket[3] = telemetryIDs[telemetryPosition];  
-            telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;   
-            telemetryPacket[5] = (int)(pidkp[current_pid_axis] * 10000);
+            telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8; 
+						telemetryPacket[5] = (int)(pidkp[current_pid_axis] * 10000);
             telemetryPacket[6] = (int)(pidkp[current_pid_axis] * 10000) >> 8;
             telemetryPacket[7] = 0x00;
             telemetryPacket[8] = 0x00;

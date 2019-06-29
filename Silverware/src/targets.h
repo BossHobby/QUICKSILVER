@@ -440,12 +440,12 @@
 #define GYRO_ID_2 0x73
 #define GYRO_ID_3 0x78
 #define GYRO_ID_4 0x71
-#define SENSOR_ROTATE_90_CCW
 #if defined(LuxF4osd)
 #define SENSOR_ROTATE_90_CCW
 #else
 #if  defined(OmnibusF4SD)
-#define SENSOR_ROTATE_90_CW
+#define SENSOR_ROTATE_90_CW  //Bobnova orientation
+//#define SENSOR_ROTATE_90_CCW  //NFE orientation
 #endif
 #define SENSOR_FLIP_180
 #endif
@@ -504,10 +504,17 @@
 // MOTOR PINS
 //OmniF4SD
 #ifdef OmnibusF4SD
-#define MOTOR2_PIN_PB1
-#define MOTOR3_PIN_PA2
+// NFE MOTORS NFE MOTORS NFE MOTORS 
+//#define MOTOR2_PIN_PB1
+//#define MOTOR3_PIN_PA2
+//#define MOTOR0_PIN_PB0
+//#define MOTOR1_PIN_PA3
+
+//BOBNOVA MOTORS  BOBNOVA MOTORS 
 #define MOTOR0_PIN_PB0
-#define MOTOR1_PIN_PA3
+#define MOTOR1_PIN_PB1
+#define MOTOR2_PIN_PA3
+#define MOTOR3_PIN_PA2
 
 #else //OmnibusF4
 #define MOTOR0_PIN_PA3

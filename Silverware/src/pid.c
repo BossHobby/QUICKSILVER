@@ -74,9 +74,15 @@ float stickTransitionProfileB[3]  = { 0.3 , 0.3 , 0.0};           //keep values 
 //float pidkd[PIDNUMBER] = { 2.3e-1 , 3.3e-1  , 0.5e-1 };
 
 //TWR 12:1 4"
-float pidkp[PIDNUMBER] = {9.5e-2 , 12.5e-2  , 20.0e-2 }; 
-float pidki[PIDNUMBER] = { 14.0e-1  , 14.0e-1 , 14.0e-1 };	
-float pidkd[PIDNUMBER] = { 2.3e-1 , 3.3e-1  , 0.5e-1 };
+//float pidkp[PIDNUMBER] = {9.5e-2 , 12.5e-2  , 20.0e-2 }; 
+//float pidki[PIDNUMBER] = { 14.0e-1  , 14.0e-1 , 14.0e-1 };	
+//float pidkd[PIDNUMBER] = { 2.3e-1 , 3.3e-1  , 0.5e-1 };
+
+//5" Chameleon, T-Motor 2306 2600kV HQ 5x4.3x3 -Bobnova edition
+//                         ROLL       PITCH     YAW
+float pidkp[PIDNUMBER] = {6.5e-2 , 7.5e-2  , 10.0e-2 }; 
+float pidki[PIDNUMBER] = { 12.0e-1  , 12.0e-1 , 12.0e-1 };	
+float pidkd[PIDNUMBER] = { 1.7e-1 , 2.4e-1  , 0.3e-1 };
 
 //TWR 14:1 5"
 //float pidkp[PIDNUMBER] = {7.5e-2 , 7.5e-2  , 18.0e-2 }; 
@@ -491,16 +497,38 @@ int next_pid_axis()
 int change_pid_value(int increase)
 {
 	#ifdef PID_TUNING_INCDEC_FACTOR			//custom fixed step for inc/dec PIDs
-	float multiplier = 0.1f; //pidkp roll & pitch: 0.xe-2 - other PIDs: 0.xe-1
+	float multiplier = 0.1f; //Base multiplier of PID_TUNING_INCDEC_FACTOR (currently set to 0.001). 
+	//                        //This results in 0.1 steps to PIDs as expressed in the top of this file. Could do with simplification
 	if (increase) {
 		number_of_increments[current_pid_term][current_pid_axis]++;
 	}
 	else {
 		number_of_increments[current_pid_term][current_pid_axis]--;
-		multiplier = -0.1f;
+		multiplier = multiplier - multiplier - multiplier; // Invert it for decreasing pid
 	}
+	
+	float newPID = current_pid_term_pointer[current_pid_axis]; //Set the newPID to the current PID.
+	
+	#ifdef RX_FPORT //FPORT you can see the PIDs changing, so let's give smaller increments at the lower end
+									//Not doing this for non-FPORT because it'd be far too easy to get very, very lost.
+	
+	if((newPID >= 3.0f && increase) || newPID >= 0.35f){
+		multiplier = multiplier * 1.0f;
+	}
+	else if((newPID >= 1.0f && increase) || newPID >= 0.105f){
+		multiplier = multiplier * 0.1f;
+	}
+	else {
+		multiplier = multiplier * 0.01f;
+	}
+	if(current_pid_term == 0){ //P is a tenth the size of the others, so it's always going to be in tier 2. Make it visually match, otherwise CONFUSION!
+		multiplier = multiplier * 10;
+	}
+	#else
 	if ((current_pid_term==0) && (current_pid_axis==0 || current_pid_axis==1)) multiplier = multiplier/10.0f; //pidkp roll & pitch: 0.xe-2 - other PIDs: 0.xe-1
-	float newPID = current_pid_term_pointer[current_pid_axis] + ((float)PID_TUNING_INCDEC_FACTOR * multiplier);
+	#endif
+	
+	newPID = current_pid_term_pointer[current_pid_axis] + ((float)PID_TUNING_INCDEC_FACTOR * multiplier);
 	if (newPID>0) current_pid_term_pointer[current_pid_axis] = newPID;	
 #else
 	#define PID_GESTURES_MULTI 1.1f // moved here
