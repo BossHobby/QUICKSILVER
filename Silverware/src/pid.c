@@ -80,7 +80,7 @@ float stickTransitionProfileB[3]  = { 0.3 , 0.3 , 0.0};           //keep values 
 
 //5" Chameleon, T-Motor 2306 2600kV HQ 5x4.3x3 -Bobnova edition
 //                         ROLL       PITCH     YAW
-float pidkp[PIDNUMBER] = {6.5e-2 , 7.5e-2  , 10.0e-2 }; 
+float pidkp[PIDNUMBER] = {6.5e-2 , 7.5e-2  , 15.0e-2 }; 
 float pidki[PIDNUMBER] = { 12.0e-1  , 12.0e-1 , 12.0e-1 };	
 float pidkd[PIDNUMBER] = { 1.7e-1 , 2.4e-1  , 0.3e-1 };
 
@@ -509,23 +509,16 @@ int change_pid_value(int increase)
 	
 	float newPID = current_pid_term_pointer[current_pid_axis]; //Set the newPID to the current PID.
 	
+	if (current_pid_term == 0) multiplier = multiplier/10.0f; //pidkp roll & pitch: 0.xe-2 - other PIDs: 0.xe-1
+	
 	#ifdef RX_FPORT //FPORT you can see the PIDs changing, so let's give smaller increments at the lower end
 									//Not doing this for non-FPORT because it'd be far too easy to get very, very lost.
-	
-	if((newPID >= 3.0f && increase) || newPID >= 0.35f){
-		multiplier = multiplier * 1.0f;
+	if(current_pid_term == 2 && ((newPID <= 0.04f) || (newPID < 0.045f && !increase))){
+		multiplier = multiplier / 10;
 	}
-	else if((newPID >= 1.0f && increase) || newPID >= 0.105f){
-		multiplier = multiplier * 0.1f;
+	else if(current_pid_term == 2 && ((newPID <= 0.5f) || (newPID  <= 0.51f && !increase))){
+		multiplier = multiplier / 5;
 	}
-	else {
-		multiplier = multiplier * 0.01f;
-	}
-	if(current_pid_term == 0){ //P is a tenth the size of the others, so it's always going to be in tier 2. Make it visually match, otherwise CONFUSION!
-		multiplier = multiplier * 10;
-	}
-	#else
-	if ((current_pid_term==0) && (current_pid_axis==0 || current_pid_axis==1)) multiplier = multiplier/10.0f; //pidkp roll & pitch: 0.xe-2 - other PIDs: 0.xe-1
 	#endif
 	
 	newPID = current_pid_term_pointer[current_pid_axis] + ((float)PID_TUNING_INCDEC_FACTOR * multiplier);
