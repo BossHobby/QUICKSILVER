@@ -498,7 +498,7 @@ int change_pid_value(int increase)
 {
 	#ifdef PID_TUNING_INCDEC_FACTOR			//custom fixed step for inc/dec PIDs
 	float multiplier = 0.1f; //Base multiplier of PID_TUNING_INCDEC_FACTOR (currently set to 0.001). 
-	//                        //This results in 0.1 steps to PIDs as expressed in the top of this file. Could do with simplification
+	//                        //This results in 0.5 steps to PIDs as expressed in the top of this file. Could do with simplification
 	if (increase) {
 		number_of_increments[current_pid_term][current_pid_axis]++;
 	}
@@ -509,7 +509,7 @@ int change_pid_value(int increase)
 	
 	float newPID = current_pid_term_pointer[current_pid_axis]; //Set the newPID to the current PID.
 	
-	if (current_pid_term == 0) multiplier = multiplier/10.0f; //pidkp roll & pitch: 0.xe-2 - other PIDs: 0.xe-1
+	if (current_pid_term == 0) multiplier = multiplier/10.0f; //pidkp: 0.xe-2 - other PIDs: 0.xe-1
 	
 	#ifdef RX_FPORT //FPORT you can see the PIDs changing, so let's give smaller increments at the lower end
 									//Not doing this for non-FPORT because it'd be far too easy to get very, very lost.
