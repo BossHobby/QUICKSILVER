@@ -425,17 +425,10 @@
 #define FPV_PORT GPIOA 
 
 //SPI, I2C & GYRO
-#define DISABLE_GYRO_CHECK
 #define MPU6XXX_SPI1
 #define MPU6XXX_NSS_PA4
 #define MPU6XXX_INT_PC4
 #define USE_DUMMY_I2C									//todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
-//#define I2C_SDAPIN GPIO_Pin_10
-//#define I2C_SDAPORT GPIOA
-//#define I2C_SCLPIN GPIO_Pin_9
-//#define I2C_SCLPORT GPIOA
-//#define I2C_GYRO_ADDRESS 0x68
-//#define SOFTI2C_GYRO_ADDRESS 0x69
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x73
 #define GYRO_ID_3 0x78
@@ -444,10 +437,9 @@
 #define SENSOR_ROTATE_90_CCW
 #else
 #if  defined(OmnibusF4SD)
-#define SENSOR_ROTATE_90_CW  //Bobnova orientation
-//#define SENSOR_ROTATE_90_CCW  //NFE orientation
+#define SENSOR_ROTATE_90_CW
 #endif
-#define SENSOR_FLIP_180
+#define SENSOR_FLIP_180  //Bobnova orientation
 #endif
 
 // SPI PINS DEFINITONS & RADIO
@@ -521,12 +513,6 @@
 #define MOTOR1_PIN_PA2
 #define MOTOR2_PIN_PB0
 #define MOTOR3_PIN_PB1
-
-//pyroflip
-//#define MOTOR0_PIN_PA8
-//#define MOTOR1_PIN_PC9
-//#define MOTOR2_PIN_PB1
-//#define MOTOR3_PIN_PB0
 #endif
 
 

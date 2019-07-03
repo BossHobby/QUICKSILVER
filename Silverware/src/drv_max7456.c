@@ -6,6 +6,7 @@
 #include "drv_time.h"
 #include "drv_max7456.h"
 #include "string.h"
+#include "util.h"
 
 #ifdef ENABLE_OSD
 
@@ -212,7 +213,77 @@ uint8_t lastvm0 = 0x55;
 
 
 
-// prints to screen with dmm_attribute TEXT, BLINK, or INVERT
+//stuffs a float into a char array.  parameters are array length and precision.  only pads spaces for 0's up to the thousands place.
+void fast_fprint(char* str, uint8_t length, float v, uint8_t precision)
+{
+	uint32_t value = v * (ipow(10, precision));
+	uint8_t digitsinfrontofdecimal = length - (precision + 1);
+	static uint32_t last_cast = 0;
+	for (uint8_t i = 0; i < digitsinfrontofdecimal; i++) 
+	{
+	uint32_t cast_value = value / ipow(10, (digitsinfrontofdecimal+(precision-1)-i));
+	str[i] = ((cast_value)- (10 * last_cast))+48;
+	last_cast = cast_value;
+	}
+
+	for (uint8_t i = digitsinfrontofdecimal; i < length; i++)
+	{
+		if (i == digitsinfrontofdecimal){
+		if (precision > 0) str[i] = 46;
+		else str[i] = ' ';
+		}else{
+		uint32_t cast_value = value / ipow(10, (digitsinfrontofdecimal+precision-i));
+		str[i] = ((cast_value)- (10 * last_cast))+48;
+		last_cast = cast_value;
+		}
+	}
+	last_cast = 0;
+	
+	if (digitsinfrontofdecimal > 3)
+	{
+	if ((str[0] == 48) && (str[1] == 48) && (str[2] == 48)) str[2] = ' ';
+	if ((str[0] == 48) && (str[1] == 48)) str[1] = ' ';
+	if (str[0] == 48) str[0] = ' ';
+	}
+	if (digitsinfrontofdecimal > 2)
+	{
+	if ((str[0] == 48) && (str[1] == 48)) str[1] = ' ';
+	if (str[0] == 48) str[0] = ' ';
+	}
+	if (digitsinfrontofdecimal > 1)
+	{
+	if (str[0] == 48) str[0] = ' ';
+	}	
+}
+
+// prints char array to screen with array length, dmm_attribute TEXT, BLINK, or INVERT, and xy position
+void osd_print_char( char *buffer , uint8_t length,  uint8_t dmm_attribute,  uint8_t x , uint8_t y)
+{
+  if( lastsystem != PAL)
+  {
+      //NTSC adjustment 3 lines up if after line 12 or maybe this should be 8
+      if ( y > 12 ) y = y - 2;      
+  }
+  if ( y > MAXROWS-1 ) y = MAXROWS-1;
+  
+  uint16_t pos = x + y*30; 
+				
+  max7456_enable();
+   // 16 bit mode, auto increment mode 
+  max7456_transfer(DMM, dmm_attribute );
+  // memory address
+  max7456_transfer(DMAH, 0x01 & (pos >> 8) );
+  max7456_transfer(DMAL, (uint8_t) pos  );
+  
+  for ( int i = 0; i < length; i++ ) {
+  max7456_transfer( DMDI, buffer[i] );
+  }
+  // off autoincrement mode
+  max7456_transfer( DMDI, 0xFF ); 
+  max7456_disable(); 
+}
+
+// prints string to screen with dmm_attribute TEXT, BLINK, or INVERT.  CAUTION:  strlen() is used in this so only use this for compile time strings
 void osd_print( char *buffer ,  uint8_t dmm_attribute,  uint8_t x , uint8_t y)
 {
   if( lastsystem != PAL)

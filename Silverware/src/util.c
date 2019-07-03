@@ -52,9 +52,7 @@ return ga;
 
 float mapf(float x, float in_min, float in_max, float out_min, float out_max)
 {
-
 return ((x - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min;
-
 }
 
 
@@ -69,6 +67,7 @@ void limitf ( float *input , const float limit)
 	if (*input > limit) *input = limit;
 	if (*input < - limit) *input = - limit;		
 }
+
 
 float rcexpo ( float in , float exp )
 {
@@ -113,9 +112,7 @@ if (x < 0)
 else
    sin1 = (1.27323954f - .405284735f * x) *x;
 
-
-return sin1; 
-    
+return sin1;    
 } 
 
 
@@ -125,6 +122,22 @@ float fastcos( float x )
 	return fastsin(x);
 }
 
+
+int ipow(int base, int exp)
+{
+    int result = 1;
+    for (;;)
+    {
+        if (exp & 1)
+            result *= base;
+        exp >>= 1;
+        if (!exp)
+            break;
+        base *= base;
+    }
+
+    return result;
+}
 
 
 #include <inttypes.h>
@@ -169,7 +182,6 @@ do
 }	
 while (( val ) && power >=0) ;
 
-
 	for (  ; power <= SP_INT_BUFFERSIZE-1 ; power++)
 	{
 		buffer_add(buffer2[power] );
@@ -180,7 +192,6 @@ while (( val ) && power >=0) ;
 // this does not handle Nans inf and values over 32bit signed int
 void print_float( float val )
 {
-
 	int ival = (int) val;
 
 	if ( val < 0 && ival == 0 ) buffer_add( (char) '-' );
