@@ -39,7 +39,7 @@ extern float rx[4];
 extern char aux[AUXNUMBER];
 extern char lastaux[AUXNUMBER];
 extern char auxchange[AUXNUMBER];
-int failsafe = 0;
+int failsafe = 1337; //It ain't safe if it ain't there
 int rxmode = 0;
 int rx_ready = 0;
 

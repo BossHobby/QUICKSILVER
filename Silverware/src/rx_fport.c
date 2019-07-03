@@ -33,7 +33,7 @@ extern float rx[4];
 extern char aux[AUXNUMBER];
 extern char lastaux[AUXNUMBER];
 extern char auxchange[AUXNUMBER];
-int failsafe = 0;
+int failsafe = 9001;  //OVER 9000
 int rxmode = 0;
 int rx_ready = 0;
 
@@ -466,7 +466,7 @@ void checkrx()
       }
     } // end frame received
 
-
+	}
     if ( gettime() - time_lastframe > 1000000 ) //Failsafe, it's important!
     {
       failsafe_noframes = 1;
@@ -478,7 +478,7 @@ void checkrx()
 
 
 
-  }
+  
 }
 
 
