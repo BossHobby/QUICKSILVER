@@ -58,13 +58,12 @@ uint8_t decode_attribute (uint32_t element)
 uint8_t decode_positionx (uint32_t element)
 {	//shift 2 bits and grab the bottom 5
 	return ((element>>2) & 0x1F); // this can be simplified to save memory if it debugs ok
-//	return decoded_element;
+
 }
 
 uint32_t decode_positiony (uint32_t element)
 {	//shift 7 bits and grab the bottom 4
-	uint32_t decoded_element = ((element>>7) & 0x0F); // this can be simplified to save memory if it debugs ok
-	return decoded_element;
+	return ((element>>7) & 0x0F); // this can be simplified to save memory if it debugs ok
 }
 
 

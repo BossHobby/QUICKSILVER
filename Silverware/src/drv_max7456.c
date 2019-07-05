@@ -119,7 +119,7 @@ SPI_I2S_ReceiveData(MAX7456_SPI_INSTANCE);
 
 
 //*******************************************************************************SPI FUNCTIONS********************************************************************************
-extern int liberror;   //tracks any failed spi reads or writes to trigger failloop
+int osd_liberror;   //tracks any failed spi reads or writes to trigger check_osd() on next disarm or maybe print an osd fail warning?  Not used yet
 
 
 
@@ -146,7 +146,7 @@ uint8_t max7456_transfer_byte(uint8_t data)
   while (SPI_I2S_GetFlagStatus(MAX7456_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
   {
     if ((spiTimeout--) == 0){
-			liberror++;										//liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
+			osd_liberror++;										//liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
 			break;}
   }
 	
@@ -158,7 +158,7 @@ uint8_t max7456_transfer_byte(uint8_t data)
   while (SPI_I2S_GetFlagStatus(MAX7456_SPI_INSTANCE, SPI_I2S_FLAG_RXNE) == RESET)
   {
     if ((spiTimeout--) == 0){
-			liberror++;										//liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
+			osd_liberror++;										//liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
 			break;}
   }
 
@@ -191,7 +191,7 @@ uint8_t MAX7456_read(uint8_t reg)
 	return stuff;
 }
 
-//function to auto incriment write - requires handling NSS seperately
+//function to auto incriment write an address and a byte - requires handling NSS seperately
 void max7456_transfer( uint8_t reg, uint8_t val )
 {
   max7456_transfer_byte(reg);
@@ -270,16 +270,16 @@ void osd_print_char( char *buffer , uint8_t length,  uint8_t dmm_attribute,  uin
 				
   max7456_enable();
    // 16 bit mode, auto increment mode 
-  max7456_transfer(DMM, dmm_attribute );
+  max7456_transfer(DMM, dmm_attribute);
   // memory address
   max7456_transfer(DMAH, 0x01 & (pos >> 8) );
   max7456_transfer(DMAL, (uint8_t) pos  );
-  
+
   for ( int i = 0; i < length; i++ ) {
-  max7456_transfer( DMDI, buffer[i] );
+  max7456_transfer( DMDI , buffer[i] );
   }
   // off autoincrement mode
-  max7456_transfer( DMDI, 0xFF ); 
+  max7456_transfer( DMDI , 0xFF ); 
   max7456_disable(); 
 }
 
