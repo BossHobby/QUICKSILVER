@@ -534,12 +534,12 @@
         <Ww>
           <count>2</count>
           <WinNumber>1</WinNumber>
-          <ItemText>lipo_cell_count</ItemText>
+          <ItemText>SPI3-&gt;SR</ItemText>
         </Ww>
         <Ww>
           <count>3</count>
           <WinNumber>1</WinNumber>
-          <ItemText>SPI1-&gt;DR</ItemText>
+          <ItemText>SPI3-&gt;DR</ItemText>
         </Ww>
         <Ww>
           <count>4</count>
@@ -730,7 +730,7 @@
       <DebugFlag>
         <trace>0</trace>
         <periodic>1</periodic>
-        <aLwin>0</aLwin>
+        <aLwin>1</aLwin>
         <aCover>0</aCover>
         <aSer1>0</aSer1>
         <aSer2>0</aSer2>
@@ -2146,7 +2146,7 @@
 
   <Group>
     <GroupName>PeripheralsSTM32F4</GroupName>
-    <tvExp>0</tvExp>
+    <tvExp>1</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>

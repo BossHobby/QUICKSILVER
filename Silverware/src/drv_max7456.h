@@ -5,8 +5,9 @@ void osd_intro(void);
 void osd_clear(void);
 void osd_checksystem(void);
 void osd_print( char *buffer ,  uint8_t dmm_attribute,  uint8_t x , uint8_t y);
-void osd_print_char( char *buffer , uint8_t length,  uint8_t dmm_attribute,  uint8_t x , uint8_t y);
-void fast_fprint(char* str, uint8_t length, float v, uint8_t precision);
+void osd_print_data( uint8_t *buffer , uint8_t length,  uint8_t dmm_attribute,  uint8_t x , uint8_t y);
+void fast_fprint(uint8_t* str, uint8_t length, float v, uint8_t precision);
+
 
 #define DMM 0x04 
 #define DMAH 0x05 

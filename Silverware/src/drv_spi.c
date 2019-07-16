@@ -147,7 +147,7 @@ int spi_sendrecvbyte2( int data)
 		__asm("NOP");
 		__asm("NOP");
 		__asm("NOP");
-		__asm("NOP");
+		__asm("NOP");  
 		#endif		
 		SCKHIGH;
 	

@@ -111,7 +111,7 @@ void adc_init(void)
 //enable APB2 clock for adc1
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
 	
-//enable AHB1 clock for dma1  
+//enable AHB1 clock for dma2  
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2 , ENABLE);
 	
 //dma struct	

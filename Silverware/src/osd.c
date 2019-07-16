@@ -73,21 +73,26 @@ uint32_t decode_positiony (uint32_t element)
 
 void osd_display(void)
 {
-	
-//first check for video signal autodetect - run if necessary	
-extern uint8_t lastsystem;		//initialized at 99 for none then becomes 0 or 1 for ntsc/pal
-if (lastsystem > 1)  		
-{
-	osd_checksystem();
-}
-
-//************OSD ROUTINES HERE*************
 
 //static variables to keep the state of menus
 static uint8_t osd_menu_active = 0;    // off -0 , on - 1
 
 // keep a static count variable for things that only need to be sent once
 static uint8_t callSign_count = 0;
+	
+//first check for video signal autodetect - run if necessary	
+extern uint8_t lastsystem;		//initialized at 99 for none then becomes 0 or 1 for ntsc/pal
+	if (lastsystem > 1)  		
+	{
+	osd_checksystem();
+		if (lastsystem < 2)  //camera has been detected while in the main loop and screen has been cleared again - reset static variables for send once screen elements
+		{
+		callSign_count = 0;	
+		}
+	}
+
+//************OSD ROUTINES HERE*************
+
 
 //grab out of scope variables for data that needs to be displayed
 extern float vbattfilt;
@@ -115,8 +120,8 @@ if ((*callsign1 & 0x01) == 0x01)		//check if call sign is a user selected elemet
 {
 	if (callSign_count < 1)		//check if it has already been sent once
 	{
-	osd_print("ALIENWHOOP" , decode_attribute(*callsign1) , decode_positionx(*callsign1) , decode_positiony(*callsign1));    //todo - gut the old struct stuff and use the new register method
-	callSign_count++;
+	osd_print("ALIENWHOOP" , decode_attribute(*callsign1) , decode_positionx(*callsign1) , decode_positiony(*callsign1));    //todo - needs to be pulled from the new register flash method	
+		callSign_count++;
 	}
 }
 
@@ -128,9 +133,10 @@ static uint8_t vbat_trigger = 0;
 vbat_trigger++;
 if (vbat_trigger == 255)
 {
-char osd_fuelgauge_volts[4];
+uint8_t osd_fuelgauge_volts[5];
 fast_fprint(osd_fuelgauge_volts, 4, vbatt_comp, 1);
-osd_print_char( osd_fuelgauge_volts , 4 , decode_attribute(*fuelgauge_volts),  decode_positionx(*fuelgauge_volts) +3 , decode_positiony(*fuelgauge_volts) );
+osd_fuelgauge_volts[4]='V';
+osd_print_data( osd_fuelgauge_volts , 5 , decode_attribute(*fuelgauge_volts),  decode_positionx(*fuelgauge_volts) +3 , decode_positiony(*fuelgauge_volts) );
 }
 
 //cellcount is part of voltage element	but printed on a different trigger
@@ -138,15 +144,14 @@ static uint8_t lowbat_trigger = 10;
 lowbat_trigger++;
 if (lowbat_trigger == 255)
 {
-char osd_cellcount[2];
+uint8_t osd_cellcount[2];
 osd_cellcount[0] = lipo_cell_count + 48;
 osd_cellcount[1] = 'S';
 if (!lowbatt){
-osd_print_char( osd_cellcount , 2 , decode_attribute(*fuelgauge_volts) ,  decode_positionx(*fuelgauge_volts) , decode_positiony(*fuelgauge_volts) );
+osd_print_data( osd_cellcount , 2 , decode_attribute(*fuelgauge_volts) ,  decode_positionx(*fuelgauge_volts) , decode_positiony(*fuelgauge_volts) );
 }else{
-osd_print_char( osd_cellcount , 2 , BLINK | INVERT,  decode_positionx(*fuelgauge_volts) , decode_positiony(*fuelgauge_volts) );	
+osd_print_data( osd_cellcount , 2 , BLINK | INVERT,  decode_positionx(*fuelgauge_volts) , decode_positiony(*fuelgauge_volts) );	
 }
-osd_print( "V" , decode_attribute(*fuelgauge_volts) ,  decode_positionx(*fuelgauge_volts)+7 , decode_positiony(*fuelgauge_volts) );
 }
 
 
