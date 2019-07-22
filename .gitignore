@@ -1,6 +1,10 @@
 output/
 Objects/
 
+Debug/
+
+Release/
+
 *.dep
 *.bak
 
