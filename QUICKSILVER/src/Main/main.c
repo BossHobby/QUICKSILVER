@@ -63,13 +63,7 @@
 #endif
 
 #ifdef F405
-#include "usbd_cdc_core.h"
-#include "usbd_usr.h"
-//#include "usb_conf.h"
-#include "usbd_desc.h"
-//#include "usbd_cdc_vcp.h"
-#include "usb_detect.h"
-__ALIGN_BEGIN USB_OTG_CORE_HANDLE    USB_OTG_dev __ALIGN_END ;
+#include "drv_usb.h"
 #endif
 
 
@@ -164,14 +158,7 @@ int main(void)
   gpio_init();
 
 #ifdef F405
-  USBD_Init(&USB_OTG_dev,
-            USB_OTG_FS_CORE_ID,
-            &USR_desc,
-            &USBD_CDC_cb,
-            &USR_cb);
-#ifdef USB_DETECT_PIN
-  usb_detect_init();
-#endif
+  usb_init();
 #endif
 
   ledon(255);                 //Turn on LED during boot so that if a delay is used as part of using programming pins for other functions, the FC does not appear inactive while programming times out
@@ -574,11 +561,8 @@ int main(void)
     osd_display();
 #endif
 
-#if defined(USB_DETECT_PIN) && defined(F405)
+#ifdef F405
     usb_detect();
-#endif
-#if !defined(USB_DETECT_PIN) && defined(F405)
-    usb_configurator();
 #endif
 
 #ifdef DEBUG
