@@ -10,10 +10,10 @@ SE=arm-none-eabi-size
 BUILD_DIR = build
 BINARY = QUICKSILVER
 
-rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
+rwildcard=$(wildcard $1$2)$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
 
-# TARGET = stm32f4
-TARGET_DIR = src/system
+TARGET ?= stm32f405
+TARGET_DIR = src/system/$(TARGET)
 include $(TARGET_DIR)/target.mk
 
 INCLUDE = src src/main \
@@ -21,13 +21,14 @@ INCLUDE = src src/main \
 	src/drivers/usb \
 	$(TARGET_INCLUDE)
 
-SOURCE  = $(call rwildcard,src/,*.c) \
-	$(call rwildcard,src/,*.cpp) \
+SOURCE  = $(call rwildcard,src/main/,*.c) \
+  $(call rwildcard,src/drivers/,*.c) \
+	$(call rwildcard,src/main/,*.cpp) \
+	$(call rwildcard,src/drivers/,*.cpp) \
 	$(TARGET_SOURCE)
 
 OBJS    = $(addsuffix .o,$(addprefix $(BUILD_DIR)/,$(basename $(SOURCE))))
 DEPS    = $(addsuffix .d,$(addprefix $(BUILD_DIR)/,$(basename $(SOURCE))))
-
 
 all: release
 
