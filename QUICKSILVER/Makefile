@@ -13,12 +13,12 @@ BINARY = QUICKSILVER
 rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
 
 # TARGET = stm32f4
-TARGET_DIR = src/System
+TARGET_DIR = src/system
 include $(TARGET_DIR)/target.mk
 
-INCLUDE = src src/Main \
-	src/Drivers \
-	src/Drivers/USB \
+INCLUDE = src src/main \
+	src/drivers \
+	src/drivers/usb \
 	$(TARGET_INCLUDE)
 
 SOURCE  = $(call rwildcard,src/,*.c) \
