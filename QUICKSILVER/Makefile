@@ -7,10 +7,20 @@ CP=arm-none-eabi-objcopy
 OD=arm-none-eabi-objdump
 SE=arm-none-eabi-size
 
-BINARY = QUICKSILVER
 rwildcard = $(wildcard $1$2)$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
 
 TARGET ?= stm32f405
+BINARY ?= QUICKSILVER.STM32F405
+
+ifneq (,$(findstring stm32f405,$(MAKECMDGOALS)))
+	TARGET = stm32f405
+	BINARY = QUICKSILVER.STM32F405
+endif
+ifneq (,$(findstring stm32f411,$(MAKECMDGOALS)))
+	TARGET = stm32f411
+	BINARY = QUICKSILVER.STM32F411
+endif
+
 TARGET_DIR = src/system/$(TARGET)
 include $(TARGET_DIR)/target.mk
 
@@ -51,9 +61,9 @@ LDFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) \
 
 ASFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) -x assembler-with-cpp $(addprefix -I,$(INCLUDE)) -MMD -MP
 
-all: $(BINARY)
+all: $(TARGET)
 
-$(BINARY): $(BUILD_DIR)/$(BINARY).bin $(BUILD_DIR)/$(BINARY).hex
+$(TARGET): $(BUILD_DIR)/$(BINARY).bin $(BUILD_DIR)/$(BINARY).hex
 
 $(BUILD_DIR)/$(BINARY).bin: $(BUILD_DIR)/$(BINARY).elf
 	$(CP) -O binary $(BUILD_DIR)/$(BINARY).elf $(BUILD_DIR)/$(BINARY).bin
