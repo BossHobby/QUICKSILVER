@@ -245,28 +245,6 @@ static uint16_t VCP_DataRx(uint8_t *Buf, uint32_t Len) {
 }
 
 /*******************************************************************************
- * Function Name  : usbIsConfigured.
- * Description    : Determines if USB VCP is configured or not
- * Input          : None.
- * Output         : None.
- * Return         : True if configured.
- *******************************************************************************/
-uint8_t usbIsConfigured(void) {
-  return (bDeviceState == CONFIGURED);
-}
-
-/*******************************************************************************
- * Function Name  : usbIsConnected.
- * Description    : Determines if USB VCP is connected ot not
- * Input          : None.
- * Output         : None.
- * Return         : True if connected.
- *******************************************************************************/
-uint8_t usbIsConnected(void) {
-  return (bDeviceState != UNCONNECTED);
-}
-
-/*******************************************************************************
  * Function Name  : CDC_BaudRate.
  * Description    : Get the current baud rate
  * Input          : None.

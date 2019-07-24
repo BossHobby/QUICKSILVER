@@ -45,6 +45,11 @@ void usb_detect(void) {
   }
 #endif
 
+  if (bDeviceState != CONFIGURED) {
+    // only read if we are configured
+    return;
+  }
+
   const uint32_t len = CDC_Receive_DATA(data_to_receive, 1);
   if (len == 0) {
     return; // no data, bail
