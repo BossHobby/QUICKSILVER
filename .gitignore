@@ -1,9 +1,11 @@
 output/
+build/
 Objects/
 
 Debug/
-
 Release/
+
+.vscode
 
 *.dep
 *.bak
