@@ -7,10 +7,8 @@ CP=arm-none-eabi-objcopy
 OD=arm-none-eabi-objdump
 SE=arm-none-eabi-size
 
-BUILD_DIR = build
 BINARY = QUICKSILVER
-
-rwildcard=$(wildcard $1$2)$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
+rwildcard = $(wildcard $1$2)$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
 
 TARGET ?= stm32f405
 TARGET_DIR = src/system/$(TARGET)
@@ -27,16 +25,17 @@ SOURCE  = $(call rwildcard,src/main/,*.c) \
 	$(call rwildcard,src/drivers/,*.cpp) \
 	$(TARGET_SOURCE)
 
+ifeq ($(MODE),release)
+  OPTIMIZE_FLAGS = -O3
+else
+  MODE = debug
+  OPTIMIZE_FLAGS = -g -O0
+endif
+
+BUILD_DIR = build/$(MODE)
+
 OBJS    = $(addsuffix .o,$(addprefix $(BUILD_DIR)/,$(basename $(SOURCE))))
 DEPS    = $(addsuffix .d,$(addprefix $(BUILD_DIR)/,$(basename $(SOURCE))))
-
-all: release
-
-debug: OPTIMIZE_FLAGS = -g -O0
-debug: $(BINARY)
-
-release: OPTIMIZE_FLAGS = -O3
-release: $(BINARY)
 
 COMMON_FLAGS = -Wall -Wextra -MMD -MP --specs=nano.specs --specs=nosys.specs \
 	-fsingle-precision-constant -fno-exceptions -fstack-usage \
@@ -51,6 +50,8 @@ LDFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) \
 	-static -Wl,-gc-sections -Wl,-L$(TARGET_DIR) -T$(TARGET_LD_SCRIPT)
 
 ASFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) -x assembler-with-cpp $(addprefix -I,$(INCLUDE)) -MMD -MP
+
+all: $(BINARY)
 
 $(BINARY): $(BUILD_DIR)/$(BINARY).bin $(BUILD_DIR)/$(BINARY).hex
 
@@ -84,7 +85,7 @@ $(BUILD_DIR)/%.o: %.S
 	$(CC) -c -o $@ $(ASFLAGS) $<
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf build
 
 flash: $(BUILD_DIR)/$(BINARY).bin
 	(echo -n 'R' > /dev/ttyACM0 && sleep 2) || true
