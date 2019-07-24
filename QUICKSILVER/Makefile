@@ -28,8 +28,16 @@ SOURCE  = $(call rwildcard,src/,*.c) \
 OBJS    = $(addsuffix .o,$(addprefix $(BUILD_DIR)/,$(basename $(SOURCE))))
 DEPS    = $(addsuffix .d,$(addprefix $(BUILD_DIR)/,$(basename $(SOURCE))))
 
-OPTIMIZE_FLAGS = -g -O0 -Wall -Wextra
-COMMON_FLAGS = -MMD -MP --specs=nano.specs --specs=nosys.specs \
+
+all: release
+
+debug: OPTIMIZE_FLAGS = -g -O0
+debug: $(BINARY)
+
+release: OPTIMIZE_FLAGS = -O3
+release: $(BINARY)
+
+COMMON_FLAGS = -Wall -Wextra -MMD -MP --specs=nano.specs --specs=nosys.specs \
 	-fsingle-precision-constant -fno-exceptions -fstack-usage \
 	-ffunction-sections -fdata-sections
 
@@ -42,8 +50,6 @@ LDFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) \
 	-static -Wl,-gc-sections -Wl,-L$(TARGET_DIR) -T$(TARGET_LD_SCRIPT)
 
 ASFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) -x assembler-with-cpp $(addprefix -I,$(INCLUDE)) -MMD -MP
-
-all: $(BINARY)
 
 $(BINARY): $(BUILD_DIR)/$(BINARY).bin $(BUILD_DIR)/$(BINARY).hex
 
