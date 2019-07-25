@@ -8,6 +8,9 @@ Release/
 
 .vscode
 
+.elf
+.elf.launch
+.launch
 
 *.dep
 *.bak
