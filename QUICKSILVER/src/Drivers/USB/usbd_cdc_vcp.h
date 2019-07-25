@@ -31,31 +31,28 @@
 #include <stdint.h>
 
 #include "usbd_core.h"
-#include "usbd_usr.h"
 #include "usbd_desc.h"
+#include "usbd_usr.h"
 
-//__ALIGN_BEGIN USB_OTG_CORE_HANDLE  USB_OTG_dev __ALIGN_END;					//pretty sure this has to be uncommented if there is no app.c 
+//__ALIGN_BEGIN USB_OTG_CORE_HANDLE  USB_OTG_dev __ALIGN_END;					//pretty sure this has to be uncommented if there is no app.c
 
 uint32_t CDC_Send_DATA(uint8_t *ptrBuffer, uint32_t sendLength);
 uint32_t CDC_Send_FreeBytes(void);
-uint32_t CDC_Receive_DATA(uint8_t* recvBuf, uint32_t len);       // HJI
+uint32_t CDC_Receive_DATA(uint8_t *recvBuf, uint32_t len); // HJI
 uint32_t CDC_Receive_BytesAvailable(void);
 
-
-uint8_t usbIsConfigured(void);  // HJI
-uint8_t usbIsConnected(void);   // HJI
 uint32_t CDC_BaudRate(void);
 
 /* External variables --------------------------------------------------------*/
 extern __IO uint32_t bDeviceState; /* USB device status */
 
 typedef enum _DEVICE_STATE {
-    UNCONNECTED,
-    ATTACHED,
-    POWERED,
-    SUSPENDED,
-    ADDRESSED,
-    CONFIGURED
+  UNCONNECTED,
+  ATTACHED,
+  POWERED,
+  SUSPENDED,
+  ADDRESSED,
+  CONFIGURED
 } DEVICE_STATE;
 
 /* Exported typef ------------------------------------------------------------*/
@@ -65,10 +62,9 @@ typedef enum _DEVICE_STATE {
 typedef struct
 {
   uint32_t bitrate;
-  uint8_t  format;
-  uint8_t  paritytype;
-  uint8_t  datatype;
+  uint8_t format;
+  uint8_t paritytype;
+  uint8_t datatype;
 } LINE_CODING;
-
 
 #endif /* __USBD_CDC_VCP_H */

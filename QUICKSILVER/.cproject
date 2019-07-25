@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+<?fileVersion 4.0.0?>
+<cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
 		<cconfiguration id="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.997762300">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.997762300" moduleId="org.eclipse.cdt.core.settings" name="Debug">
@@ -38,16 +39,13 @@
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.includepaths.182813089" name="Include paths (-I)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.includepaths" valueType="includePath">
 									<listOptionValue builtIn="false" value="../src"/>
-									<listOptionValue builtIn="false" value="&quot;../src\Main&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../src\Drivers&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../src\System&quot;"/>
+									<listOptionValue builtIn="false" value="../src/Main"/>
+									<listOptionValue builtIn="false" value="../src/Drivers"/>
+									<listOptionValue builtIn="false" value="../src/Drivers/USB"/>
+									<listOptionValue builtIn="false" value="../src/System"/>
 									<listOptionValue builtIn="false" value="../Libraries/CMSIS/Include"/>
 									<listOptionValue builtIn="false" value="../Libraries/Device/STM32F4xx/Include"/>
 									<listOptionValue builtIn="false" value="../Libraries/STM32F4xx_StdPeriph_Driver/inc"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Class\cdc\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Class\dfu\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Core\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_OTG_Driver\inc&quot;"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.input.764959805" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.input"/>
 							</tool>
@@ -61,17 +59,13 @@
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.includepaths.1014905151" name="Include paths (-I)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.includepaths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="../src"/>
-									<listOptionValue builtIn="false" value="&quot;../src\Main&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../src\Drivers&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../src\System&quot;"/>
+									<listOptionValue builtIn="false" value="../src/Main"/>
+									<listOptionValue builtIn="false" value="../src/Drivers"/>
+									<listOptionValue builtIn="false" value="../src/Drivers/USB"/>
+									<listOptionValue builtIn="false" value="../src/System"/>
 									<listOptionValue builtIn="false" value="../Libraries/CMSIS/Include"/>
 									<listOptionValue builtIn="false" value="../Libraries/Device/STM32F4xx/Include"/>
 									<listOptionValue builtIn="false" value="../Libraries/STM32F4xx_StdPeriph_Driver/inc"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Class\cdc\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Class\dfu\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Core\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_OTG_Driver\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../src\Main&quot;"/>
 								</option>
 								<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.ffunction.825180139" name="Place functions in their own sections (-ffunction-sections)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.ffunction" useByScannerDiscovery="false" value="true" valueType="boolean"/>
 								<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.fdata.1474274030" name="Place data in their own sections (-fdata-sections)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.fdata" useByScannerDiscovery="false" value="true" valueType="boolean"/>
@@ -88,16 +82,13 @@
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.includepaths.221375403" name="Include paths (-I)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.includepaths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="../src"/>
-									<listOptionValue builtIn="false" value="&quot;../src\Main&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../src\Drivers&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../src\System&quot;"/>
+									<listOptionValue builtIn="false" value="../src/Main"/>
+									<listOptionValue builtIn="false" value="../src/Drivers"/>
+									<listOptionValue builtIn="false" value="../src/Drivers/USB"/>
+									<listOptionValue builtIn="false" value="../src/System"/>
 									<listOptionValue builtIn="false" value="../Libraries/CMSIS/Include"/>
 									<listOptionValue builtIn="false" value="../Libraries/Device/STM32F4xx/Include"/>
 									<listOptionValue builtIn="false" value="../Libraries/STM32F4xx_StdPeriph_Driver/inc"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Class\cdc\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Class\dfu\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Core\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_OTG_Driver\inc&quot;"/>
 								</option>
 								<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.ffunction.280452213" name="Place functions in their own sections (-ffunction-sections)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.ffunction" useByScannerDiscovery="false" value="true" valueType="boolean"/>
 								<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.fdata.953986524" name="Place data in their own sections (-fdata-sections)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.fdata" useByScannerDiscovery="false" value="true" valueType="boolean"/>
@@ -178,16 +169,13 @@
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.includepaths.2117195745" name="Include paths (-I)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.includepaths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="../src"/>
-									<listOptionValue builtIn="false" value="&quot;../src\Main&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../src\Drivers&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../src\System&quot;"/>
+									<listOptionValue builtIn="false" value="../src/Main"/>
+									<listOptionValue builtIn="false" value="../src/Drivers"/>
+									<listOptionValue builtIn="false" value="../src/Drivers/USB"/>
+									<listOptionValue builtIn="false" value="../src/System"/>
 									<listOptionValue builtIn="false" value="../Libraries/CMSIS/Include"/>
 									<listOptionValue builtIn="false" value="../Libraries/Device/STM32F4xx/Include"/>
 									<listOptionValue builtIn="false" value="../Libraries/STM32F4xx_StdPeriph_Driver/inc"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Class\cdc\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Class\dfu\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Core\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_OTG_Driver\inc&quot;"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.input.1629534646" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.input"/>
 							</tool>
@@ -201,16 +189,13 @@
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.includepaths.1801179846" name="Include paths (-I)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.includepaths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="../src"/>
-									<listOptionValue builtIn="false" value="&quot;../src\Main&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../src\Drivers&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../src\System&quot;"/>
+									<listOptionValue builtIn="false" value="../src/Main"/>
+									<listOptionValue builtIn="false" value="../src/Drivers"/>
+									<listOptionValue builtIn="false" value="../src/Drivers/USB"/>
+									<listOptionValue builtIn="false" value="../src/System"/>
 									<listOptionValue builtIn="false" value="../Libraries/CMSIS/Include"/>
 									<listOptionValue builtIn="false" value="../Libraries/Device/STM32F4xx/Include"/>
 									<listOptionValue builtIn="false" value="../Libraries/STM32F4xx_StdPeriph_Driver/inc"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Class\cdc\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Class\dfu\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Core\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_OTG_Driver\inc&quot;"/>
 								</option>
 								<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.ffunction.1187487995" name="Place functions in their own sections (-ffunction-sections)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.ffunction" useByScannerDiscovery="false" value="true" valueType="boolean"/>
 								<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.fdata.1386120882" name="Place data in their own sections (-fdata-sections)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.fdata" useByScannerDiscovery="false" value="true" valueType="boolean"/>
@@ -227,16 +212,13 @@
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.includepaths.830181094" name="Include paths (-I)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.includepaths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="../src"/>
-									<listOptionValue builtIn="false" value="&quot;../src\Main&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../src\Drivers&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../src\System&quot;"/>
+									<listOptionValue builtIn="false" value="../src/Main"/>
+									<listOptionValue builtIn="false" value="../src/Drivers"/>
+									<listOptionValue builtIn="false" value="../src/Drivers/USB"/>
+									<listOptionValue builtIn="false" value="../src/System"/>
 									<listOptionValue builtIn="false" value="../Libraries/CMSIS/Include"/>
 									<listOptionValue builtIn="false" value="../Libraries/Device/STM32F4xx/Include"/>
 									<listOptionValue builtIn="false" value="../Libraries/STM32F4xx_StdPeriph_Driver/inc"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Class\cdc\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Class\dfu\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_Device_Library\Core\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;../USB_Libraries\STM32_USB_OTG_Driver\inc&quot;"/>
 								</option>
 								<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.ffunction.151701459" name="Place functions in their own sections (-ffunction-sections)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.ffunction" useByScannerDiscovery="false" value="true" valueType="boolean"/>
 								<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.fdata.1622003520" name="Place data in their own sections (-fdata-sections)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.option.fdata" useByScannerDiscovery="false" value="true" valueType="boolean"/>

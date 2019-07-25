@@ -1,13 +1,13 @@
 output/
+build/
 Objects/
 
 Debug/
-
 Release/
 
-*.elf
-*.elf.launch
-*.launch
+
+.vscode
+
 
 *.dep
 *.bak
