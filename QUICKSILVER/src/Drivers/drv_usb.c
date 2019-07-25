@@ -64,7 +64,7 @@ void usb_serial_write(uint8_t *data, uint32_t len) {
 }
 
 void usb_serial_print(char *str) {
-  CDC_Send_DATA(str, strlen(str));
+	CDC_Send_DATA((uint8_t*)str, strlen(str));
 }
 
 void usb_serial_printf(const char *fmt, ...) {
