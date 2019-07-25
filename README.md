@@ -1,4 +1,4 @@
-![](NFE_Dev_Tools/Quicksilver_1.png
+![](NFE_Dev_Tools/Quicksilver_1.png)
 
 # QUICKSILVER
 Flight Controller Firmware based on Silverware by Silver13
