@@ -1,1 +1,1 @@
-SYSTEM = stm32f405
+SYSTEM = stm32f0xx
