@@ -7,4 +7,4 @@ void usb_init(void);
 void usb_detect(void);
 void usb_serial_write(uint8_t *data, uint32_t len);
 void usb_serial_printf(const char *fmt, ...);
-void usb_serial_print(const char *str);
+void usb_serial_print(char *str);

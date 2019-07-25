@@ -1,8 +1,10 @@
+#include "drv_usb.h"
 #include "Main/defines.h"
 
 #ifdef F405
 
 #include <stdio.h>
+#include <stdarg.h>
 
 #include "stm32f4xx.h"
 #include "string.h"
@@ -61,7 +63,7 @@ void usb_serial_write(uint8_t *data, uint32_t len) {
   CDC_Send_DATA(data, len);
 }
 
-void usb_serial_print(const char *str) {
+void usb_serial_print(char *str) {
   CDC_Send_DATA(str, strlen(str));
 }
 
