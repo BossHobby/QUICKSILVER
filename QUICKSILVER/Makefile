@@ -9,20 +9,8 @@ SE=arm-none-eabi-size
 
 rwildcard = $(wildcard $1$2)$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
 
-TARGET ?= stm32f405
-BINARY ?= QUICKSILVER.STM32F405
-
-ifneq (,$(findstring stm32f405,$(MAKECMDGOALS)))
-	TARGET = stm32f405
-	BINARY = QUICKSILVER.STM32F405
-endif
-ifneq (,$(findstring stm32f411,$(MAKECMDGOALS)))
-	TARGET = stm32f411
-	BINARY = QUICKSILVER.STM32F411
-endif
-
-TARGET_DIR = src/system/$(TARGET)
-include $(TARGET_DIR)/target.mk
+# include our target logic
+include src/targets/target.mk
 
 INCLUDE = src src/main \
 	src/drivers \
@@ -42,6 +30,7 @@ else
   OPTIMIZE_FLAGS = -g -O0
 endif
 
+BINARY = quicksilver.$(TARGET).$(MODE)
 BUILD_DIR = build/$(MODE)
 
 OBJS    = $(addsuffix .o,$(addprefix $(BUILD_DIR)/,$(basename $(SOURCE))))
@@ -57,7 +46,7 @@ CXXFLAGS = $(COMMON_FLAGS) $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) \
 
 LDFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) \
 	-Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group \
-	-static -Wl,-gc-sections -Wl,-L$(TARGET_DIR) -T$(TARGET_LD_SCRIPT)
+	-static -Wl,-gc-sections -Wl,-L$(SYSTEM_DIR) -T$(SYSTEM_LD_SCRIPT)
 
 ASFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) -x assembler-with-cpp $(addprefix -I,$(INCLUDE)) -MMD -MP
 
