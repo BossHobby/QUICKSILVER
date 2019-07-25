@@ -1,13 +1,13 @@
 # each directory represents a target
-TARGETS = $(sort $(notdir $(wildcard src/targets/*)))
-TARGET = $(foreach entry,$(MAKECMDGOALS),$(findstring $(entry),$(TARGETS)))
+TARGETS := $(sort $(notdir $(wildcard src/targets/*)))
+TARGET := $(strip $(foreach dir,$(TARGETS),$(findstring $(dir),$(MAKECMDGOALS))))
 
 ifeq ($(TARGET),)
 # default to build AWv2
 TARGET = alienwhoop_v2
 endif
 
-TARGET_DIR = src/targets/$(TARGET)
+TARGET_DIR := src/targets/$(TARGET)
 include $(TARGET_DIR)/target.mk
 
 # we get SYSTEM from target
