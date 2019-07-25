@@ -76,6 +76,7 @@ uint8_t osd_menu_phase = 0;
 uint8_t osd_display_element = 0;
 uint8_t display_trigger = 0;
 uint8_t last_lowbatt_state = 2;
+uint8_t osd_cursor;
 
 void osd_display_reset(void)
 {
@@ -87,9 +88,94 @@ last_lowbatt_state = 2;		//reset last lowbatt comparator
 }
 
 
+uint8_t user_selection(uint8_t element, uint8_t total)
+{
+if (osd_cursor != element)
+	{
+	if (osd_cursor < 1) osd_cursor = 1;
+	if (osd_cursor > total) osd_cursor = total;
+	}
+if (osd_cursor == element)
+	{
+	return INVERT;
+	}else{
+	return TEXT;
+	}
+}
+
+
+extern int flash_feature_1;    //currently used for auto entry into wizard menu
+uint8_t osd_select;
+void osd_select_menu_item (void)
+{
+	if (osd_select == 1 && flash_feature_1 == 1)		//main mmenu
+	{
+		osd_select = 0;  //reset the trigger
+
+		switch (osd_cursor)
+		{
+		case 0:
+			break;
+
+		case 1:
+			break;
+
+		case 2:
+			break;
+
+		case 3:
+			break;
+
+		case 4:
+			break;
+
+		case 5:
+			break;
+
+		case 6:
+			break;
+
+		case 7:
+			break;
+
+		case 8:
+			flash_feature_1 = 0;
+			break;
+
+		case 9:
+			osd_cursor = 0;
+			osd_display_phase = 0;
+
+			#ifdef FLASH_SAVE1
+				extern int pid_gestures_used;
+				extern int ledcommand;
+				extern void flash_save( void);
+				extern void flash_load( void);
+				pid_gestures_used = 0;
+				ledcommand = 1;
+				flash_save( );
+				flash_load( );
+				// reset flash numbers for pids
+				extern int number_of_increments[3][3];
+				for( int i = 0 ; i < 3 ; i++)
+					for( int j = 0 ; j < 3 ; j++)
+						number_of_increments[i][j] = 0;
+			// reset loop time - maybe not necessary cause it gets reset in the next screen clear
+			extern unsigned long lastlooptime;
+			lastlooptime = gettime();
+			#endif
+			break;
+
+
+		}
+
+	}
+}
+
+
 void osd_display(void)
 {
-//first check for video signal autodetect - run if necessary	
+//first check if video signal autodetect needs to run - run if necessary
 extern uint8_t lastsystem;		//initialized at 99 for none then becomes 0 or 1 for ntsc/pal
 if (lastsystem > 1)  				//if no camera was detected at boot up
 {
@@ -97,19 +183,19 @@ if (lastsystem > 1)  				//if no camera was detected at boot up
 	if (lastsystem < 2) osd_display_reset(); 			//camera has been detected while in the main loop and screen has been cleared again - reset screen cases
 }
 
-//************OSD ROUTINES HERE*************
+//************OSD MENU DISPLAY ROUTINES HERE*************
 
 
 //grab out of scope variables for data that needs to be displayed
-extern int flash_feature_1;  //currently used for auto entry into wizard menu
+//extern int flash_feature_1;
 //extern float vbattfilt;
 //extern float vbattfilt_corr;
 extern float vbatt_comp;	
 extern float lipo_cell_count;
 extern int lowbatt;
 //just some values to test position/attribute/active until we start saving them to flash with the osd manu
-*callsign1 = 0xAB;   //	1 01010 11			
-*fuelgauge_volts = 0x72D;
+*callsign1 = 0xAB;   		//	0001 01010 11
+*fuelgauge_volts = 0x72D;	//‭  1110 01011 01‬
 
 
 switch(osd_display_phase)		//phase starts at 2, RRR gesture subtracts 1 to enter the menu, RRR again or DDD subtracts 1 to clear the screen and return to regular display
@@ -132,46 +218,47 @@ case 1:											//osd menu is active
 			osd_menu_phase++;
 			break;
 		case 1:
-			osd_print("MENU" , INVERT , 13 , 1);
-			osd_menu_phase++;
+			osd_print("MENU" , INVERT , 13 , 1);			//function call returns text or invert, gets passed # of elements for wrap around,
+			osd_menu_phase++;								//and which element number this is
 			break;
 		case 2:
-			osd_print("VTX" , TEXT , 7, 3);
+			osd_print("VTX" , user_selection(1,9) , 7, 3);					//selection_status (1,9)
 			osd_menu_phase++;
 			break;	
 		case 3:
-			osd_print("PIDS" , TEXT , 7, 4);
+			osd_print("PIDS" , user_selection(2,9) , 7, 4);
 			osd_menu_phase++;
 			break;
 		case 4:
-			osd_print("FILTERS" , TEXT , 7, 5);
+			osd_print("FILTERS" , user_selection(3,9) , 7, 5);
 			osd_menu_phase++;
 			break;
 		case 5:
-			osd_print("RATES" , TEXT , 7, 6);
+			osd_print("RATES" , user_selection(4,9) , 7, 6);
 			osd_menu_phase++;
 			break;
 		case 6:
-			osd_print("FLIGHT MODES" , TEXT , 7, 7);
+			osd_print("FLIGHT MODES" , user_selection(5,9) , 7, 7);
 			osd_menu_phase++;
 			break;
 		case 7:
-			osd_print("OSD ELEMENTS" , TEXT , 7, 8);
+			osd_print("OSD ELEMENTS" , user_selection(6,9) , 7, 8);
 			osd_menu_phase++;
 			break;
 		case 8:
-			osd_print("SPECIAL FEATURES" , TEXT , 7, 9);
+			osd_print("SPECIAL FEATURES" , user_selection(7,9) , 7, 9);
 			osd_menu_phase++;
 			break;	
 		case 9:
-			osd_print("SETUP WIZARD" , TEXT , 7, 10);
+			osd_print("SETUP WIZARD" , user_selection(8,9) , 7, 10);
 			osd_menu_phase++;
 			break;
 		case 10:
-			osd_print("SAVE + EXIT" , TEXT , 7, 11);
+			osd_print("SAVE + EXIT" , user_selection(9,9) , 7, 11);
 			osd_menu_phase++;
 			break;
 		case 11:
+			osd_select_menu_item();
 			break;
 	}		
 	}else{

@@ -5,6 +5,10 @@ Debug/
 
 Release/
 
+*.elf
+*.elf.launch
+*.launch
+
 *.dep
 *.bak
 

@@ -14,7 +14,7 @@ int pid_gestures_used = 0;
 
 void gestures( void)
 {
-	#ifndef DISABLE_GESTURES2
+#ifndef DISABLE_GESTURES2
 		int command = gestures2();
 
 		if (command!=GESTURE_NONE)
@@ -30,12 +30,12 @@ void gestures( void)
                 }
                 else
                 {		
-										#ifdef ENABLE_OSD
-										extern uint8_t osd_display_phase;
-										osd_display_phase = 0;						//Turn off menu
-										extern int flash_feature_1;
-										flash_feature_1= 0;							//set flash status for setup wizard to OFF
-										#endif
+										//#ifdef ENABLE_OSD
+										//extern uint8_t osd_display_phase;
+										//osd_display_phase = 0;						//Turn off menu
+										//extern int flash_feature_1;
+										//flash_feature_1= 0;							//set flash status for setup wizard to OFF
+										//#endif
                     ledcommand = 1;
                     pid_gestures_used = 0;
                 }
@@ -64,12 +64,12 @@ void gestures( void)
 	
             if (command == GESTURE_DUD)
               {                  
-								 #ifdef SWITCHABLE_FEATURE_3
+				 #ifdef SWITCHABLE_FEATURE_3
                  extern int flash_feature_3;
                  flash_feature_3=!flash_feature_3;
                  ledblink = 2 - flash_feature_3;
                  pid_gestures_used = 1;								 
-								 #endif
+				 #endif
               }    
 				
             if (command == GESTURE_UUU)
@@ -85,29 +85,26 @@ void gestures( void)
 			
             if (command == GESTURE_RRR)
               {		
-									#ifdef ENABLE_OSD
-									extern uint8_t osd_display_phase;
-									osd_display_phase --;
-									ledblink = 2 - osd_display_phase;
-									pid_gestures_used = 1;
-									#endif
-								
-								 #ifdef SWITCHABLE_FEATURE_1		// use this for auto entry to the wizard
-                 extern int flash_feature_1;
-                 flash_feature_1= !flash_feature_1;
-                // ledblink = 2 - flash_feature_1;
-                 pid_gestures_used = 1;								 
-								 #endif
+				 #ifdef ENABLE_OSD
+				 extern uint8_t osd_display_phase;
+				 osd_display_phase --;
+				 ledblink = 2 - osd_display_phase;
+				 //pid_gestures_used = 1;
+				 #endif
               }
  				
             if (command == GESTURE_LLL)
               {
+            	extern int flash_feature_1;
+                flash_feature_1=!flash_feature_1;
+                ledblink = 1 - flash_feature_1;
+                pid_gestures_used = 1;
                  #ifdef SWITCHABLE_FEATURE_2     
                  extern int flash_feature_2;
                  flash_feature_2=!flash_feature_2;
                  ledblink = 2 - flash_feature_2;
                  pid_gestures_used = 1;								 
-								 #endif
+				 #endif
               }
 	             
             if (command == GESTURE_RRD)
@@ -120,7 +117,48 @@ void gestures( void)
                   ledcommand = 1;
                   aux[CH_AUX1] = 0;
               }
-            #ifdef PID_GESTURE_TUNING              
+
+
+#ifdef ENABLE_OSD
+            if (command == GESTURE_OSD_UP)
+              {
+            	 extern uint8_t osd_menu_phase;
+                 extern uint8_t osd_cursor;
+                 osd_cursor--;
+                 osd_menu_phase = 1;
+                 ledblink = 1;
+              }
+
+
+            if (command == GESTURE_OSD_DOWN)
+              {
+            	 extern uint8_t osd_menu_phase;
+            	 extern uint8_t osd_cursor;
+                 osd_menu_phase = 1;
+            	 osd_cursor++;
+                 ledblink = 1;
+              }
+
+            if (command == GESTURE_OSD_RIGHT)
+              {
+            	 extern uint8_t osd_select;
+            	 osd_select = 1;
+                 ledblink = 2;
+              }
+
+            if (command == GESTURE_OSD_LEFT)
+              {
+            	 extern uint8_t osd_cursor;
+				 extern uint8_t osd_display_phase;
+				 osd_cursor = 0;
+				 osd_display_phase --;
+				 ledblink = 2 - osd_display_phase;
+				 pid_gestures_used = 0;
+              }
+#endif
+
+
+#ifdef PID_GESTURE_TUNING
             if ( command >= GESTURE_UDR ) pid_gestures_used = 1;   
               
             if (command == GESTURE_UDU)
@@ -151,9 +189,12 @@ void gestures( void)
                 // U D R - Increase value
                 // U D L - Descrease value
                // ledblink = blink; //Will cause led logic to blink the number of times ledblink has stored in it.
-                #endif
+#endif
+
+
+
 
 	  }
-		#endif		
+#endif
  }
 
