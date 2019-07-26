@@ -178,8 +178,12 @@ int gestures2()
 		  if (time - gesturetime > GESTURETIME_MIN)
 		    {
 			  	int gesturetime_idle;
+				#ifdef ENABLE_OSD
 		    	if (osd_display_phase == 1) gesturetime_idle = GESTURETIME_IDLE_OSD;
 		    	else gesturetime_idle = GESTURETIME_IDLE;
+				#else
+		    	gesturetime_idle = GESTURETIME_IDLE;
+				#endif
 			    if ((gesture_start == GESTURE_CENTER) && (time - gesturetime > gesturetime_idle))
 			      {
 				      setgesture = GESTURE_CENTER_IDLE;
@@ -219,6 +223,7 @@ uint8_t gbuffer[GSIZE];
 
 uint8_t check_command( uint8_t  buffer1[] , const uint8_t  command[]  )
 {
+#ifdef ENABLE_OSD
 	if(osd_display_phase == 1)
 	{
     for (int i = 0; i < OSD_GSIZE; i++)
@@ -233,6 +238,13 @@ uint8_t check_command( uint8_t  buffer1[] , const uint8_t  command[]  )
 	            return 0;
 	        }
 	}
+#else
+	for (int i = 0; i < GSIZE; i++)
+	        {
+	            if( buffer1[i] != command[GSIZE - i - 1])
+	            return 0;
+	        }
+#endif
 return 1;            
 }
 
@@ -241,6 +253,7 @@ int gesture_sequence(int currentgesture)
 
 	if (currentgesture != gbuffer[0])
 	  {			// add to queue
+		#ifdef ENABLE_OSD
 		if(osd_display_phase == 1)
 		{
 			for (int i = OSD_GSIZE - 1; i >= 1; i--)
@@ -253,10 +266,17 @@ int gesture_sequence(int currentgesture)
 				gbuffer[i] = gbuffer[i - 1];
 			}
 		}
+		#else
+		for (int i = GSIZE - 1; i >= 1; i--)
+		{
+			gbuffer[i] = gbuffer[i - 1];
+		}
+		#endif
 		  gbuffer[0] = currentgesture;
 
 
 // check commands
+#ifdef ENABLE_OSD
 	if(osd_display_phase == 1)
 		{
 		  if (check_command ( &gbuffer[0] , &command12[0] ) )
@@ -400,7 +420,111 @@ int gesture_sequence(int currentgesture)
 		    }
 			#endif
 		}
+#else
+	  if (check_command ( &gbuffer[0] , &command1[0] ) )
+	    {
+		    // command 1
 
+		    //change buffer so it does not trigger again
+		    gbuffer[1] = GESTURE_OTHER;
+		    return GESTURE_LLD;
+	    }
+
+
+	  if (check_command ( &gbuffer[0] , &command2[0] ))
+	    {
+		    // command 2
+
+		    //change buffer so it does not trigger again
+		    gbuffer[1] = GESTURE_OTHER;
+		    return GESTURE_RRD;
+	    }
+
+
+	  if (check_command ( &gbuffer[0] , &command3[0] ))
+	    {
+		    // command 3
+
+		    //change buffer so it does not trigger again
+		    gbuffer[1] = GESTURE_OTHER;
+		    return GESTURE_DDD;
+	    }
+      if (check_command ( &gbuffer[0] , &command8[0] ))
+	    {
+		    // command 8
+
+		    //change buffer so it does not trigger again
+		    gbuffer[1] = GESTURE_OTHER;
+		    return GESTURE_UUU;
+	    }
+
+      if (check_command ( &gbuffer[0] , &command9[0] ))
+	    {
+		    // command 9
+
+		    //change buffer so it does not trigger again
+		    gbuffer[1] = GESTURE_OTHER;
+		    return GESTURE_RRR;
+	    }
+
+			    if (check_command ( &gbuffer[0] , &command10[0] ))
+	    {
+		    // command 10
+
+		    //change buffer so it does not trigger again
+		    gbuffer[1] = GESTURE_OTHER;
+		    return GESTURE_LLL;
+	    }
+
+			    if (check_command ( &gbuffer[0] , &command11[0] ))
+	    {
+		    // command 11
+
+		    //change buffer so it does not trigger again
+		    gbuffer[1] = GESTURE_OTHER;
+		    return GESTURE_DUD;
+	    }
+
+
+
+
+		#ifdef PID_GESTURE_TUNING
+		if (check_command ( &gbuffer[0] , &command4[0] ))
+	    {
+		    // command 4
+
+		    //change buffer so it does not trigger again
+		    gbuffer[1] = GESTURE_OTHER;
+		    return GESTURE_UDU;
+	    }
+
+		if (check_command ( &gbuffer[0] , &command5[0] ))
+	    {
+		    // command 5
+
+		    //change buffer so it does not trigger again
+		    gbuffer[1] = GESTURE_OTHER;
+		    return GESTURE_UDD;
+	    }
+
+		if (check_command ( &gbuffer[0] , &command6[0] ))
+	    {
+		    // command 6
+
+		    //change buffer so it does not trigger again
+		    gbuffer[1] = GESTURE_OTHER;
+		    return GESTURE_UDR;
+	    }
+		if (check_command ( &gbuffer[0] , &command7[0] ))
+	    {
+		    // command 7
+
+		    //change buffer so it does not trigger again
+		    gbuffer[1] = GESTURE_OTHER;
+		    return GESTURE_UDL;
+	    }
+		#endif
+#endif
 	  }
 
 	return GESTURE_NONE;

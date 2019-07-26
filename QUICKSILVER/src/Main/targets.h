@@ -475,7 +475,7 @@
 #endif
 
 //OSD
-#define ENABLE_OSD
+//#define ENABLE_OSD
 #define MAX7456_SPI3
 #define MAX7456_NSS_PA15
 
