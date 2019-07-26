@@ -7,8 +7,6 @@ CP=arm-none-eabi-objcopy
 OD=arm-none-eabi-objdump
 SE=arm-none-eabi-size
 
-rwildcard = $(wildcard $1$2)$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
-
 # include our target logic
 include src/targets/target.mk
 
@@ -17,11 +15,9 @@ INCLUDE = src src/main \
 	src/drivers/usb \
 	$(TARGET_INCLUDE)
 
-SOURCE  = $(call rwildcard,src/main/,*.c) \
-  $(call rwildcard,src/drivers/,*.c) \
-	$(call rwildcard,src/main/,*.cpp) \
-	$(call rwildcard,src/drivers/,*.cpp) \
-	$(TARGET_SOURCE)
+SOURCE = $(shell sh -c 'find src/main/ -iname *.c -or -name *.cpp') \
+	$(shell sh -c 'find src/drivers/ -iname *.c -or -name *.cpp') \
+	$(TARGET_SOURCE) 
 
 ifeq ($(MODE),release)
   OPTIMIZE_FLAGS = -O3

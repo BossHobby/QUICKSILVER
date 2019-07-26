@@ -1,5 +1,5 @@
 # each directory represents a target
-TARGETS := $(sort $(notdir $(wildcard src/targets/*)))
+TARGETS := $(sort $(notdir $(shell sh -c 'find src/targets/ -type d')))
 TARGET := $(strip $(foreach dir,$(TARGETS),$(findstring $(dir),$(MAKECMDGOALS))))
 
 ifeq ($(TARGET),)
