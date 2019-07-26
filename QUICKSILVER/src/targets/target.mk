@@ -1,6 +1,6 @@
 # each directory represents a target
 TARGETS := $(sort $(notdir $(shell sh -c 'find src/targets/ -type d')))
-TARGET := $(strip $(foreach dir,$(TARGETS),$(findstring $(dir),$(MAKECMDGOALS))))
+TARGET := $(strip $(foreach dir,$(MAKECMDGOALS),$(findstring $(dir),$(TARGETS))))
 
 ifeq ($(TARGET),)
 # default to build AWv2
