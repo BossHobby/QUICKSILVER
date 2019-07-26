@@ -208,7 +208,18 @@ static void SystemInit_ExtMemCtl(void);
   * @param  None
   * @retval None
   */
+void (*DfuBootJump)(void);
 void SystemInit(void) {
+
+  if (*((uint32_t *)0x2001FFFC) == 0xDEADBEEF) {
+    *((uint32_t *)0x2001FFFC) = 0x0;
+    __set_MSP(*((uint32_t *)0x1FFF0000));
+    DfuBootJump = (void (*)(void))(*((uint32_t *)0x1FFF0004));
+    DfuBootJump();
+    while (1)
+      ;
+  }
+
 /* FPU settings ------------------------------------------------------------*/
 #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
   SCB->CPACR |= ((3UL << 10 * 2) | (3UL << 11 * 2)); /* set CP10 and CP11 Full Access */
