@@ -10,7 +10,9 @@ SE=arm-none-eabi-size
 # include our target logic
 include src/targets/target.mk
 
-INCLUDE = src src/main \
+INCLUDE = src \
+	src/main \
+	src/main/rx\
 	src/drivers \
 	src/drivers/usb \
 	$(TARGET_INCLUDE)

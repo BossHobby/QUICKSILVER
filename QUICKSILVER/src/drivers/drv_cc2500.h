@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 enum cc2500_w_registers {
   CC2500_SRES = 0x30,    //Reset chip.
   CC2500_SFSTXON = 0x31, //Enable and calibrate frequency synthesizer (if MCSM0.FS_AUTOCAL=1). If in RX (with CCA): Go to a wait state where only the synthesizer is running (for quick RX / TX turnaround).
@@ -86,3 +88,7 @@ enum cc2500_rw_registers {
 };
 
 void cc2500_init(void);
+void cc2500_reset(void);
+void cc2500_strobe(uint8_t address);
+uint8_t cc2500_read_reg(uint8_t reg);
+uint8_t cc2500_write_reg(uint8_t reg, uint8_t data);

@@ -122,7 +122,7 @@ void cc2500_strobe(uint8_t address) {
   cc2500_csn_disable();
 }
 
-void cc2500_read_reg(uint8_t reg) {
+uint8_t cc2500_read_reg(uint8_t reg) {
   cc2500_csn_enable();
   cc2500_spi_transfer_byte(reg | 0x80);
   const uint32_t ret = cc2500_spi_transfer_byte(0x00);
@@ -130,7 +130,7 @@ void cc2500_read_reg(uint8_t reg) {
   return ret;
 }
 
-void cc2500_write_reg(uint8_t reg, uint8_t data) {
+uint8_t cc2500_write_reg(uint8_t reg, uint8_t data) {
   cc2500_csn_enable();
   cc2500_spi_transfer_byte(reg);
   const uint32_t ret = cc2500_spi_transfer_byte(data);
