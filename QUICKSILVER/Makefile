@@ -48,7 +48,19 @@ ASFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) -x assembler-with-cpp $(addprefix -I,$(
 
 all: $(TARGET)
 
-$(TARGET): $(BUILD_DIR)/$(BINARY).bin $(BUILD_DIR)/$(BINARY).hex
+FORCE:
+
+$(TARGET): $(BUILD_DIR)/target $(BUILD_DIR)/$(BINARY).bin $(BUILD_DIR)/$(BINARY).hex
+	
+$(BUILD_DIR)/target: FORCE
+	@mkdir -p $(BUILD_DIR)
+	@echo "Setting target to $(TARGET)"
+	@echo "$(TARGET)" > $(BUILD_DIR)/target.tmp
+	@if test -r $(BUILD_DIR)/target; then \
+		cmp $(BUILD_DIR)/target.tmp $(BUILD_DIR)/target || mv -f $(BUILD_DIR)/target.tmp $(BUILD_DIR)/target; \
+	else \
+		mv $(BUILD_DIR)/target.tmp $(BUILD_DIR)/target; \
+	fi
 
 $(BUILD_DIR)/$(BINARY).bin: $(BUILD_DIR)/$(BINARY).elf
 	$(CP) -O binary $(BUILD_DIR)/$(BINARY).elf $(BUILD_DIR)/$(BINARY).bin
@@ -59,24 +71,24 @@ $(BUILD_DIR)/$(BINARY).hex: $(BUILD_DIR)/$(BINARY).elf
 $(BUILD_DIR)/$(BINARY).elf: $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^ 
 
-$(BUILD_DIR)/%.o: %.c
-	mkdir -p $(@D)
+$(BUILD_DIR)/%.o: %.c $(BUILD_DIR)/target
+	@mkdir -p $(@D)
 	$(CC) $(addprefix -I,$(INCLUDE)) $(CFLAGS) -c $< -o $@  
 
-$(BUILD_DIR)/%.o: %.cpp
-	mkdir -p $(@D)
+$(BUILD_DIR)/%.o: %.cpp $(BUILD_DIR)/target
+	@mkdir -p $(@D)
 	$(CXX) $(addprefix -I,$(INCLUDE)) $(CXXFLAGS) -c $< -o $@ 
 
-$(BUILD_DIR)/%.o: %.cc
-	mkdir -p $(@D)
+$(BUILD_DIR)/%.o: %.cc $(BUILD_DIR)/target
+	@mkdir -p $(@D)
 	$(CXX) $(addprefix -I,$(INCLUDE)) $(CXXFLAGS) -c $< -o $@ 
 
-$(BUILD_DIR)/%.o: %.s
-	mkdir -p $(dir $@)
+$(BUILD_DIR)/%.o: %.s $(BUILD_DIR)/target
+	@mkdir -p $(dir $@)
 	$(CC) -c -o $@ $(ASFLAGS) $<
 
-$(BUILD_DIR)/%.o: %.S
-	mkdir -p $(dir $@)
+$(BUILD_DIR)/%.o: %.S $(BUILD_DIR)/target
+	@mkdir -p $(dir $@)
 	$(CC) -c -o $@ $(ASFLAGS) $<
 
 clean:
@@ -86,4 +98,4 @@ flash: $(BUILD_DIR)/$(BINARY).bin
 	(echo -n 'R' > /dev/ttyACM0 && sleep 2) || true
 	dfu-util -a 0 -s 0x08000000:leave -R -D $(BUILD_DIR)/$(BINARY).bin
 
--include $(DEPS)
+#-include $(DEPS)
