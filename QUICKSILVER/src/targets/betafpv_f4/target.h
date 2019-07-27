@@ -25,24 +25,20 @@
 #define FPV_PORT GPIOB
 
 //SPI, I2C & GYRO
+#define CC2500_SPI3
+#define CC2500_NSS_PA15
+
 #define MPU6XXX_SPI1
 #define MPU6XXX_NSS_PA4
 #define MPU6XXX_INT_PIN GPIO_Pin_1
 #define MPU6XXX_INT_PORT GPIOA
+
 #define USE_DUMMY_I2C //todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
-//#define I2C_SDAPIN GPIO_Pin_10
-//#define I2C_SDAPORT GPIOA
-//#define I2C_SCLPIN GPIO_Pin_9
-//#define I2C_SCLPORT GPIOA
-//#define I2C_GYRO_ADDRESS 0x68
-//#define SOFTI2C_GYRO_ADDRESS 0x69
+
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x73
 #define GYRO_ID_3 0x78
 #define GYRO_ID_4 0x71
-//#define SENSOR_ROTATE_90_CCW
-//#define SENSOR_ROTATE_90_CW
-//#define SENSOR_FLIP_180
 
 // SPI PINS DEFINITONS & RADIO
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
@@ -66,12 +62,15 @@
 #define BATTERYPIN GPIO_Pin_0
 #define BATTERYPORT GPIOB
 #define BATTERY_ADC_CHANNEL ADC_Channel_12
+
 #ifndef VOLTAGE_DIVIDER_R1
 #define VOLTAGE_DIVIDER_R1 10000
 #endif
+
 #ifndef VOLTAGE_DIVIDER_R2
 #define VOLTAGE_DIVIDER_R2 1000
 #endif
+
 #ifndef ADC_REF_VOLTAGE
 #define ADC_REF_VOLTAGE 3.3
 #endif

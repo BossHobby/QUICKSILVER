@@ -96,6 +96,6 @@ clean:
 
 flash: $(BUILD_DIR)/$(BINARY).bin
 	(echo -n 'R' > /dev/ttyACM0 && sleep 2) || true
-	dfu-util -a 0 -s 0x08000000:leave -R -D $(BUILD_DIR)/$(BINARY).bin
+	dfu-util -a 0 -s 0x08000000:leave -D $(BUILD_DIR)/$(BINARY).bin
 
 #-include $(DEPS)
