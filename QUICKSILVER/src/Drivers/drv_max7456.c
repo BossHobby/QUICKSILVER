@@ -298,7 +298,12 @@ void transfer_complete_cb(void)
 
 
 //irq handler for receive interrupt
+#ifdef MAX7456_SPI3
 void DMA1_Stream0_IRQHandler(void)
+#endif
+#ifdef MAX7456_SPI2
+void DMA1_Stream3_IRQHandler(void)
+#endif
 {
   if (DMA_GetITStatus(DMA1_RX_STREAM, DMA_RX_IT_FLAG))
   {
