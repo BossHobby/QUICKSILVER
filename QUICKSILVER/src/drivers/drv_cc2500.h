@@ -63,9 +63,9 @@ enum cc2500_rw_registers {
   CC2500_MCSM0 = 0x18,    //Main Radio Control State Machine configuration
   CC2500_FOCCFG = 0x19,   //Frequency Offset Compensation configuration
   CC2500_BSCFG = 0x1A,    //Bit Synchronization configuration
-  CC2500_AGCTRL2 = 0x1B,  //AGC control
-  CC2500_AGCTRL1 = 0x1C,  //AGC control
-  CC2500_AGCTRL0 = 0x1D,  //AGC control
+  CC2500_AGCCTRL2 = 0x1B, //AGC control
+  CC2500_AGCCTRL1 = 0x1C, //AGC control
+  CC2500_AGCCTRL0 = 0x1D, //AGC control
   CC2500_WOREVT1 = 0x1E,  //High byte Event 0 timeout
   CC2500_WOREVT0 = 0x1F,  //Low byte Event 0 timeout
   CC2500_WORCTRL = 0x20,  //Wake On Radio control
