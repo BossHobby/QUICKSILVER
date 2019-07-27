@@ -2,7 +2,7 @@
 
 #include "project.h"
 
-#ifdef F405
+#if defined(F405) && defined(USE_CC2500)
 
 #ifdef CC2500_SPI3
 #define CC2500_SPI_INSTANCE SPI3
