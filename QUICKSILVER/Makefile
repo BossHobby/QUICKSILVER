@@ -34,7 +34,7 @@ DEPS    = $(addsuffix .d,$(addprefix $(BUILD_DIR)/,$(basename $(SOURCE))))
 
 COMMON_FLAGS = -Wall -MMD -MP --specs=nano.specs --specs=nosys.specs \
 	-fsingle-precision-constant -fno-exceptions -fstack-usage \
-	-ffunction-sections -fdata-sections
+	-ffunction-sections -fdata-sections -fno-strict-aliasing
 
 CFLAGS   = $(COMMON_FLAGS) $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS)
 CXXFLAGS = $(COMMON_FLAGS) $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) \
