@@ -1,0 +1,11 @@
+eclipse.preferences.version=1
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.toolchain.base.1781714849.17720129/MODE/delimiter=\:
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.toolchain.base.1781714849.17720129/MODE/operation=append
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.toolchain.base.1781714849.17720129/MODE/value=release
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.toolchain.base.1781714849.17720129/append=true
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.toolchain.base.1781714849.17720129/appendContributed=true
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.toolchain.base.1781714849/MODE/delimiter=\:
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.toolchain.base.1781714849/MODE/operation=replace
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.toolchain.base.1781714849/MODE/value=debug
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.toolchain.base.1781714849/append=true
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.toolchain.base.1781714849/appendContributed=true

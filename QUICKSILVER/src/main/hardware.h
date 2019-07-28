@@ -2,7 +2,7 @@
 
 // the error codes indicate a failure that prevents normal operation
 // led flash codes - the quad will not fly / bind if flashing a code
-// 2 - low battery at powerup - if enabled by config.h "#define STOP_LOWBATTERY" 
+// 2 - low battery at powerup - if enabled by config.h "#define STOP_LOWBATTERY"
 // 3 - radio chip not found
 // 4 - Gyro not found - maybe i2c speed
 // 5 - clock , intterrupts , systick , gcc bad code , bad memory access (code issues like bad pointers)- this should not come up
@@ -26,6 +26,12 @@
 #endif
 
 #ifdef F405
+#ifdef F411
+#define SYS_CLOCK_FREQ_HZ 84000000
+#define PWM_CLOCK_FREQ_HZ 84000000
+#define TICK_CLOCK_FREQ_HZ 10500000
+#define LOOPTIME 250
+#else
 #define SYS_CLOCK_FREQ_HZ 168000000
 #define PWM_CLOCK_FREQ_HZ 84000000
 #define TICK_CLOCK_FREQ_HZ 21000000
@@ -35,23 +41,23 @@
 #define LOOPTIME 250
 #endif
 #endif
+#endif
 
 #ifdef BRUSHLESS_TARGET
 // pwm pin initialization
 //#define USE_PWM_DRIVER
 //#define USE_ESC_DRIVER       //todo:  evaluate need for this to stay if focused on quadcopters
-#define USE_DSHOT_DMA_DRIVER  
-//#define USE_DSHOT_DRIVER_BETA 
+#define USE_DSHOT_DMA_DRIVER
+//#define USE_DSHOT_DRIVER_BETA
 #endif
 
 #ifdef BRUSHED_TARGET
 // pwm pin initialization
 #define USE_PWM_DRIVER
 //#define USE_ESC_DRIVER       //todo:  evaluate need for this to stay if focused on quadcopters
-//#define USE_DSHOT_DMA_DRIVER  
-//#define USE_DSHOT_DRIVER_BETA 
+//#define USE_DSHOT_DMA_DRIVER
+//#define USE_DSHOT_DRIVER_BETA
 #endif
-
 
 //*************************************Features that still need to be moved into targets and checked for compatability************************************************
 
@@ -62,27 +68,21 @@
 #define RGB_LED_NUMBER 0
 #define RGB_LED_DMA
 
-
 // pin / port for the RGB led ( programming port ok )
 #define RGB_PIN GPIO_Pin_11
 #define RGB_PORT GPIOA
 
-
 // pin for fpv switch ( turns off at failsafe )
-// GPIO_Pin_13 // SWDAT - GPIO_Pin_14 // SWCLK  
+// GPIO_Pin_13 // SWDAT - GPIO_Pin_14 // SWCLK
 // if programming pin, will not flash after bind
-
-
 
 // BUZZER pin settings - buzzer active "high"
 // SWDAT and SWCLK pins OK here
-// GPIO_Pin_13 // SWDAT - GPIO_Pin_14 // SWCLK 
+// GPIO_Pin_13 // SWDAT - GPIO_Pin_14 // SWCLK
 //#define BUZZER_PIN       GPIO_Pin_14
 //#define BUZZER_PIN_PORT  GPIOA
 // x (micro)seconds after loss of tx or low bat before buzzer starts
-//#define BUZZER_DELAY     30e6 
-
-
+//#define BUZZER_DELAY     30e6
 
 //*************************************Legacy stuff moved into targets - remaining for future reference************************************************
 
@@ -92,14 +92,12 @@
 //#define USE_SOFTWARE_I2C
 //#define USE_DUMMY_I2C
 
-
-// I2C speed: fast = no delays 
+// I2C speed: fast = no delays
 // slow1 = for i2c without pull-up resistors
 // slow2 = i2c failsafe speed
 //#define SOFTI2C_SPEED_FAST
 //#define SOFTI2C_SPEED_SLOW1
 //#define SOFTI2C_SPEED_SLOW2
-
 
 // hardware i2c speed ( 1000, 400 , 200 , 100Khz)
 //#define HW_I2C_SPEED_FAST2
@@ -107,20 +105,16 @@
 //#define HW_I2C_SPEED_SLOW1
 //#define HW_I2C_SPEED_SLOW2
 
-
 // pins for hw i2c , select one only
 // select pins PB6 and PB7 OR select pins PA9 and PA10
 //#define HW_I2C_PINS_PB67
 //#define HW_I2C_PINS_PA910
 
-
 // disable the check for known gyro that causes the 4 times flash
 //#define DISABLE_GYRO_CHECK
 
-
 // disable lvc functions
 //#define DISABLE_ADC
-
 
 // pwm driver = brushed motors
 // esc driver = servo type signal for brushless esc
@@ -132,11 +126,9 @@
 //#define USE_DSHOT_DMA_DRIVER
 //#define USE_DSHOT_DRIVER_BETA
 
-
 //FC must have MOSFETS and motor pulldown resistors removed. MAY NOT WORK WITH ALL ESCS
 //#define USE_SERIAL_4WAY_BLHELI_INTERFACE
-		
-		
+
 // pwm pins disable
 // disable all pwm pins / function
 //#define DISABLE_PWM_PINS
@@ -161,5 +153,3 @@
 */
 
 //***********************************************END LEGACY REFERENCE LIST*****************************************************
-
-

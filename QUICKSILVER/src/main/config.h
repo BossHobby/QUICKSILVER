@@ -1,34 +1,13 @@
 
 
-
-//Universal pids are already loaded for 5" brushless by default.  Adjust pids in pid.c file for your build.  
+//Universal pids are already loaded for 5" brushless by default.  Adjust pids in pid.c file for your build.
 
 //**********************************************************************************************************************
 //***********************************************HARDWARE SELECTION*****************************************************
 
-// *************DEFINE FLIGHT CONTROLLER HARDWARE
-// *************SELECT QUICKSILVER F4 FROM TARGET DROP DOWN BOX FOR F4 TARGETS AND NFE_Silverware FROM TARGET DROP DOWN BOX FOR F0 TARGETS **CLEAN TARGETS in project menu when changing between f0/f4**
-//#define BWHOOP
-//#define E011
-//#define H8mini_blue_board
-//#define Alienwhoop_ZERO  
-//#define CC3D_REVO_F4
-#define OmnibusF4SD
-//#define OmnibusF4
-//#define Alienwhoop_V2
-//#define LuxF4osd
-//#define CLRacing_F4
-//#define Raceflight_Revolt
-//#define FortiniF4osd
-//#define Pyrodrone_F4
-
-
 // *************DEFINE FLIGHT CONTROLLER MOTOR OUTPUT - *****warning*****  GETTING THIS WRONG CAN SMOKE YOUR BOARD :)
-#define BRUSHLESS_TARGET
-//#define BRUSHED_TARGET
-
-
-
+//#define BRUSHLESS_TARGET
+#define BRUSHED_TARGET
 
 //**********************************************************************************************************************
 //***********************************************NEW STUFF TO PLAY WITH*****************************************************
@@ -36,11 +15,10 @@
 // Select filter cut 25hz for SBUS, 67hz for CRSF, 40hz for DSMX, 20hz for DSM2, 90hz for bayang   Formula is [(1/rx framerate)/2] * 0.9
 #define RX_SMOOTHING_HZ 90
 
-
 //Select (only one) source variable for PID VBAT Compensation
 //#define EXACT_VOLTS     //origional method - responds to exact moment to moment sag
 //#define FILTERED_VOLTS  // responds to some sag
-#define FUELGAUGE_VOLTS 	// ignores sag
+#define FUELGAUGE_VOLTS // ignores sag
 
 //**********************************************************************************************************************
 //***********************************************RATES & EXPO SETTINGS**************************************************
@@ -52,11 +30,11 @@
 #ifdef SILVERWARE_RATES
 // *************rate in deg/sec
 // *************for acro mode
-#define MAX_RATE 860.0          //Roll & Pitch axis
-#define MAX_RATEYAW 500.0       //Yaw axis (used in acro and leveling modes)
+#define MAX_RATE 860.0    //Roll & Pitch axis
+#define MAX_RATEYAW 500.0 //Yaw axis (used in acro and leveling modes)
 
 // *************EXPO from 0.00 to 1.00 , 0 = no exp
-// *************positive = less sensitive near center 
+// *************positive = less sensitive near center
 #define ACRO_EXPO_ROLL 0.80
 #define ACRO_EXPO_PITCH 0.80
 #define ACRO_EXPO_YAW 0.60
@@ -88,14 +66,11 @@
 // *************.01f = 1% of stick range - comment out to disable
 #define STICKS_DEADBAND .01f
 
-
-
-
 //**********************************************************************************************************************
 //***********************************************RECEIVER SETTINGS******************************************************
 
 // *************Receiver protocol selection									//todo:  add missing radio protocols from bobnova and make them all jive with new rx_init function in drv_rx_serial.c
-//#define RX_SBUS
+#define RX_SBUS
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
 //#define RX_IBUS
 //#define RX_FPORT
@@ -103,17 +78,17 @@
 //#define RX_DSM2_1024
 //#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
-#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
+//#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 
 // *************Serial Receiver UART Selection (uncomment all if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
-#define UART_1
-//#define UART_2
+//#define UART_1
+#define UART_2
 //#define UART_3
 //#define UART_4
 //#define UART_6
 
 // *************Serial Receiver Inversion Selection  (Normally true for SBUS and FPORT)
-//#define INVERT_UART																								
+//#define INVERT_UART
 
 // *************Type Selection For Bayang Protocol Only
 #define USE_DEVO
@@ -129,8 +104,8 @@
 #define ARMING CHAN_5
 #define IDLE_UP CHAN_5
 #define LEVELMODE CHAN_OFF
-#define RACEMODE  CHAN_OFF
-#define HORIZON   CHAN_OFF
+#define RACEMODE CHAN_OFF
+#define HORIZON CHAN_OFF
 #define PIDPROFILE CHAN_9
 #define RATES CHAN_ON
 #define LEDS_ON CHAN_OFF
@@ -148,10 +123,6 @@
 // *************RRD/LLD stick gesture aux start up state.
 //#define AUX1_START_ON
 
-
-
-
-
 //**********************************************************************************************************************
 //***********************************************VOLTAGE SETTINGS*******************************************************
 
@@ -164,7 +135,7 @@
 
 // ************* Raises pids automatically as battery voltage drops in flight.  **CRITICAL** Ensure voltage is calibrated before use.
 #define PID_VOLTAGE_COMPENSATION
-#define LEVELMODE_PID_ATTENUATION 0.90f  //used to prevent oscillations in angle modes with pid_voltage_compensation enabled due to high pids
+#define LEVELMODE_PID_ATTENUATION 0.90f //used to prevent oscillations in angle modes with pid_voltage_compensation enabled due to high pids
 
 // *************compensation for battery voltage vs throttle drop
 #define VDROP_FACTOR 0.7
@@ -191,13 +162,9 @@
 
 // *************automatic voltage telemetry correction/calibration factor - change the values below if voltage telemetry is inaccurate
 // *************Corrects for an offset error in the telemetry measurement (same offset across the battery voltage range)
-// *************Enter values in total battery volts.  This is factor is used in all voltage related calculations - ensure your transmitter is not mucking with telemetry scale before adjusting 
+// *************Enter values in total battery volts.  This is factor is used in all voltage related calculations - ensure your transmitter is not mucking with telemetry scale before adjusting
 #define ACTUAL_BATTERY_VOLTAGE 4.20
 #define REPORTED_TELEMETRY_VOLTAGE 4.20
-
-
-
-
 
 //**********************************************************************************************************************
 //***********************************************FILTER SETTINGS********************************************************
@@ -208,7 +175,7 @@
 //#define ALIENWHOOP_ZERO_FILTERING
 #define BETA_FILTERING
 
-#ifdef BETA_FILTERING  //*** ABOVE 100 ADJUST IN INCRIMENTS OF 20, BELOW 100 ADJUST IN INCRIMENTS OF 10, nothing coded beyond 500hz
+#ifdef BETA_FILTERING //*** ABOVE 100 ADJUST IN INCRIMENTS OF 20, BELOW 100 ADJUST IN INCRIMENTS OF 10, nothing coded beyond 500hz
 
 //Select Gyro Filter Type *** Select Only One type
 //#define KALMAN_GYRO
@@ -227,9 +194,6 @@
 
 #endif
 
-
-
-
 //**********************************************************************************************************************
 //***********************************************MOTOR OUTPUT SETTINGS**************************************************
 
@@ -240,14 +204,14 @@
 #define INVERT_YAW_PID
 
 // *************throttle boost - can intensify small throttle imbalances visible in FPV if factor is set too high
-//#define THROTTLE_TRANSIENT_COMPENSATION 
+//#define THROTTLE_TRANSIENT_COMPENSATION
 //#define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 4.0
 
 // *************torque boost is a highly eperimental feature and can smoke brushless motors fast.  it is a lpf D term on motor outputs that will accelerate the response
 // *************of the motors when the command to the motors is changing by increasing or decreasing the voltage thats sent.  It differs
 // *************from throttle transient compensation in that it acts on all motor commands - not just throttle changes.  this feature
 // *************is very noise sensative so D term specifically has to be lowered and gyro/d filtering may need to be increased.
-// *************reccomendation right now is to leave boost at or below 2, drop your p gains a few points, then cut your D in half and 
+// *************reccomendation right now is to leave boost at or below 2, drop your p gains a few points, then cut your D in half and
 // *************retune it back up to where it feels good.  I'm finding about 60 to 65% of my previous D value seems to work.
 //#define TORQUE_BOOST 1.0
 
@@ -255,7 +219,7 @@
 // *************a higher frequency makes the motors more linear
 // *************in Hz
 #define PWMFREQ 32000
- 
+
 // *************throttle angle compensation in level mode
 //#define AUTO_THROTTLE
 
@@ -270,11 +234,10 @@
 
 // *************BRUSHLESS TARGET MIXER SETTINGS
 // *************AIRMODE_STRENGTH is the amount of authority AIRMODE is given over throttle
-// *************Decrease CLIPPING_LIMIT to force clipping in place of mix scaling to 
+// *************Decrease CLIPPING_LIMIT to force clipping in place of mix scaling to
 // *************restore lost power on "promblem quads" by allowing some thrust imbalances to pass through the mixer
 //	#define AIRMODE_STRENGTH  1.0f
-//	#define CLIPPING_LIMIT  1.0f 
-
+//	#define CLIPPING_LIMIT  1.0f
 
 //**************joelucid's yaw fix
 #define YAW_FIX
@@ -283,10 +246,6 @@
 #define I_TERM_RELAX
 //#define RELAX_FACTOR 10
 //#define RELAX_FREQUENCY_HZ 20
-
-
-
-
 
 //**********************************************************************************************************************
 //***********************************************ADDITIONAL FEATURES****************************************************
@@ -304,10 +263,6 @@
 // *************entering <LEFT-LEFT-DOWN> will return the quad to normal operation.
 #define STICK_TRAVEL_CHECK
 
-
-
-
-
 //#############################################################################################################################
 //#############################################################################################################################
 // debug / other things
@@ -315,9 +270,8 @@
 //#############################################################################################################################
 //#############################################################################################################################
 
-
 // failsafe time in uS
-#define FAILSAFETIME 1000000  // one second
+#define FAILSAFETIME 1000000 // one second
 
 // debug things ( debug struct and other)
 #define DEBUG
@@ -327,12 +281,6 @@
 
 // throttle direct to motors for thrust measure
 //#define MOTORS_TO_THROTTLE
-
-
-
-
-
-
 
 //***********************************************************TODO LIST************************************************************
 
@@ -382,13 +330,12 @@
 
 // There were other things on my list that I don't remember now. I'll add them.
 
-
 // throttle direct to motors for thrust measure as a flight mode							//***************** this needs to maybe go away after osd?  not safe - encourages running props with craft in in hand
 //#define MOTORS_TO_THROTTLE_MODE MULTI_CHAN_8
 
-#define DISABLE_FLIP_SEQUENCER  																							//****************need to turn this into crashflip recovery - will require bidirectional esc setting
+#define DISABLE_FLIP_SEQUENCER //****************need to turn this into crashflip recovery - will require bidirectional esc setting
 
-#define STARTFLIP CHAN_OFF																										//****************this would be the aux trigger
+#define STARTFLIP CHAN_OFF //****************this would be the aux trigger
 
 // *************motor curve to use - select one																//***************This could become something like tpa
 // *************the pwm frequency has to be set independently
@@ -403,17 +350,3 @@
 #define ENABLESTIX 0
 #define ENABLESTIX_TRESHOLD 0.3
 #define ENABLESTIX_TIMEOUT 1e6
-
-
-
-
-
-
-
-
-
-
-
-
-
-
