@@ -1,4 +1,14 @@
 eclipse.preferences.version=1
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.70541187/Mode/delimiter=\:
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.70541187/Mode/operation=append
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.70541187/Mode/value=debug
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.70541187/append=true
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.70541187/appendContributed=true
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.546393083/MODE/delimiter=\:
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.546393083/MODE/operation=append
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.546393083/MODE/value=release
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.546393083/append=true
+environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.546393083/appendContributed=true
 environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.toolchain.base.1781714849.17720129/MODE/delimiter=\:
 environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.toolchain.base.1781714849.17720129/MODE/operation=append
 environment/project/com.st.stm32cube.ide.mcu.gnu.managedbuild.toolchain.base.1781714849.17720129/MODE/value=release
