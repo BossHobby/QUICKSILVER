@@ -87,8 +87,17 @@ enum cc2500_rw_registers {
   CC2500_FIFO = 0x3F,     //FIFO access
 };
 
+enum cc2500_modifiers {
+  CC2500_WRITE_SINGLE = 0x00,
+  CC2500_WRITE_BURST = 0x40,
+  CC2500_READ_SINGLE = 0x80,
+  CC2500_READ_BURST = 0xC0,
+};
+
 void cc2500_init(void);
 void cc2500_reset(void);
 void cc2500_strobe(uint8_t address);
 uint8_t cc2500_read_reg(uint8_t reg);
 uint8_t cc2500_write_reg(uint8_t reg, uint8_t data);
+uint8_t cc2500_read_fifo(uint8_t *result, uint8_t len);
+uint8_t cc2500_read_gdo0();

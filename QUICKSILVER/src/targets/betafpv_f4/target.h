@@ -25,8 +25,16 @@
 #define FPV_PORT GPIOB
 
 //SPI, I2C & GYRO
+#define USE_CC2500
+#define USE_CC2500_PA_LNA
+#define USE_CC2500_DIVERSITY
+
 #define CC2500_SPI3
 #define CC2500_NSS_PA15
+#define CC2500_GDO0_PC14
+#define CC2500_TX_EN_PA8
+#define CC2500_LNA_EN_PA13
+#define CC2500_ANT_SEL_PA14
 
 #define MPU6XXX_SPI1
 #define MPU6XXX_NSS_PA4
@@ -41,21 +49,10 @@
 #define GYRO_ID_4 0x71
 
 // SPI PINS DEFINITONS & RADIO
+#define SOFTSPI_NONE
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
 #define USART1_PA10PA9
 #define USART2_PA3PA2
-#define SOFTSPI_NONE
-#endif
-#ifndef SOFTSPI_NONE
-#define RADIO_CHECK
-#define SPI_MISO_PIN GPIO_Pin_10
-#define SPI_MISO_PORT GPIOA
-#define SPI_MOSI_PIN GPIO_Pin_9
-#define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_6
-#define SPI_CLK_PORT GPIOC
-#define SPI_SS_PIN GPIO_Pin_7
-#define SPI_SS_PORT GPIOC
 #endif
 
 //VOLTAGE DIVIDER

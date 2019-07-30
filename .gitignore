@@ -5,7 +5,7 @@ Objects/
 Debug/
 Release/
 
-
+compile_commands.json
 .vscode
 *.xml
 *.settings.xml

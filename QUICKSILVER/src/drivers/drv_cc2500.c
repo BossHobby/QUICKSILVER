@@ -27,15 +27,33 @@
 #endif
 
 #ifdef CC2500_GDO0_PC14
+#define CC2500_GDO0_PINSOURCE GPIO_PinSource14
+#define CC2500_GDO0_PIN GPIO_Pin_14
+#define CC2500_GDO0_PORT GPIOC
 #endif
 
+#ifdef USE_CC2500_PA_LNA
+
 #ifdef CC2500_TX_EN_PA8
+#define CC2500_TX_EN_PINSOURCE GPIO_PinSource8
+#define CC2500_TX_EN_PIN GPIO_Pin_8
+#define CC2500_TX_EN_PORT GPIOA
 #endif
 
 #ifdef CC2500_LNA_EN_PA13
+#define CC2500_LNA_EN_PINSOURCE GPIO_PinSource13
+#define CC2500_LNA_EN_PIN GPIO_Pin_13
+#define CC2500_LNA_EN_PORT GPIOA
 #endif
 
+#if defined(USE_CC2500_DIVERSITY)
 #ifdef CC2500_ANT_SEL_PA14
+#define CC2500_ANT_SEL_PINSOURCE GPIO_PinSource14
+#define CC2500_ANT_SEL_PIN GPIO_Pin_14
+#define CC2500_ANT_SEL_PORT GPIOA
+#endif
+#endif
+
 #endif
 
 extern int liberror;
@@ -46,6 +64,10 @@ void cc2500_csn_enable() {
 
 void cc2500_csn_disable() {
   GPIO_SetBits(CC2500_NSS_PORT, CC2500_NSS_PIN);
+}
+
+uint8_t cc2500_read_gdo0() {
+  return GPIO_ReadInputDataBit(CC2500_GDO0_PORT, CC2500_GDO0_PIN);
 }
 
 void cc2500_hardware_init(void) {
@@ -67,8 +89,37 @@ void cc2500_hardware_init(void) {
   GPIO_InitStructure.GPIO_Pin = CC2500_NSS_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(CC2500_NSS_PORT, &GPIO_InitStructure);
   GPIO_SetBits(CC2500_NSS_PORT, CC2500_NSS_PIN);
+
+#if defined(USE_CC2500_PA_LNA)
+  GPIO_InitStructure.GPIO_Pin = CC2500_LNA_EN_PIN;
+  GPIO_Init(CC2500_LNA_EN_PORT, &GPIO_InitStructure);
+  // turn antenna on
+  GPIO_SetBits(CC2500_LNA_EN_PORT, CC2500_LNA_EN_PIN);
+
+  GPIO_InitStructure.GPIO_Pin = CC2500_TX_EN_PIN;
+  GPIO_Init(CC2500_TX_EN_PORT, &GPIO_InitStructure);
+  // turn tx off
+  GPIO_ResetBits(CC2500_LNA_EN_PORT, CC2500_TX_EN_PIN);
+
+#if defined(USE_CC2500_DIVERSITY)
+  GPIO_InitStructure.GPIO_Pin = CC2500_ANT_SEL_PIN;
+  GPIO_Init(CC2500_ANT_SEL_PORT, &GPIO_InitStructure);
+  // choose b?
+  GPIO_SetBits(CC2500_LNA_EN_PORT, CC2500_ANT_SEL_PIN);
+#endif
+
+#endif // USE_CC2500_PA_LNA
+
+  // GDO0
+  GPIO_InitStructure.GPIO_Pin = CC2500_GDO0_PIN;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+  GPIO_InitStructure.GPIO_Speed = 0;
+  GPIO_InitStructure.GPIO_OType = 0;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_Init(CC2500_GDO0_PORT, &GPIO_InitStructure);
 
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);
 
@@ -77,10 +128,10 @@ void cc2500_hardware_init(void) {
   SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
   SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
   SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
-  SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
-  SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
+  SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
+  SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
   SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64;
+  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
   SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
   SPI_InitStructure.SPI_CRCPolynomial = 7;
   SPI_Init(CC2500_SPI_INSTANCE, &SPI_InitStructure);
@@ -124,10 +175,24 @@ void cc2500_strobe(uint8_t address) {
 
 uint8_t cc2500_read_reg(uint8_t reg) {
   cc2500_csn_enable();
-  cc2500_spi_transfer_byte(reg | 0x80);
-  const uint32_t ret = cc2500_spi_transfer_byte(0x00);
+  cc2500_spi_transfer_byte(reg | CC2500_READ_SINGLE);
+  const uint32_t ret = cc2500_spi_transfer_byte(0xFF);
   cc2500_csn_disable();
   return ret;
+}
+
+uint8_t cc2500_read_multi(uint8_t reg, uint8_t data, uint8_t *result, uint8_t len) {
+  cc2500_csn_enable();
+  const uint8_t ret = cc2500_spi_transfer_byte(reg);
+  for (uint8_t i = 0; i < len; i++) {
+    result[i] = cc2500_spi_transfer_byte(data);
+  }
+  cc2500_csn_disable();
+  return ret;
+}
+
+uint8_t cc2500_read_fifo(uint8_t *result, uint8_t len) {
+  return cc2500_read_multi(CC2500_FIFO | CC2500_READ_BURST, 0xFF, result, len);
 }
 
 uint8_t cc2500_write_reg(uint8_t reg, uint8_t data) {
