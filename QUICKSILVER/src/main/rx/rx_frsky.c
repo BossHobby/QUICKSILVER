@@ -7,6 +7,9 @@
 
 #ifdef RX_FRSKY
 
+#define FRSKY_D_CHANNEL_COUNT 8
+#define FRSKY_D_CHANNEL_SCALING (2.0f / 3)
+
 enum {
   STATE_DETECT = 0,
   STATE_INIT,
@@ -108,6 +111,22 @@ void rx_init(void) {
   }
 }
 
+static uint8_t packet_size() {
+  if (cc2500_read_gdo0() == 0) {
+    return 0;
+  }
+  return cc2500_read_reg(CC2500_RXBYTES | CC2500_READ_BURST) & 0x7F;
+}
+
+static uint8_t read_packet() {
+  uint8_t len = packet_size();
+  if (len == 0) {
+    return 0;
+  }
+  cc2500_read_fifo(packet, len);
+  return len;
+}
+
 static void init_tune_rx(void) {
   cc2500_write_reg(CC2500_FOCCFG, 0x14);
   timeTunedMs = millis();
@@ -135,17 +154,10 @@ static uint8_t tune_rx() {
     cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)bind_offset);
   }
 
-  if (cc2500_read_gdo0() == 0) {
-    return 0;
-  }
-  usb_serial_print("tune_rx got packet\r\n");
-
-  uint8_t len = cc2500_read_reg(CC2500_RXBYTES | CC2500_READ_BURST) & 0x7F;
+  uint8_t len = read_packet();
   if (len == 0) {
     return 0;
   }
-
-  cc2500_read_fifo(packet, len);
   if (packet[len - 1] & 0x80) {
     if (packet[2] == 0x01) {
       uint8_t lqi = packet[len - 1] & 0x7F;
@@ -156,6 +168,24 @@ static uint8_t tune_rx() {
     }
   }
   return 0;
+}
+
+void next_channel(uint8_t skip) {
+  static uint8_t channr = 0;
+
+  channr += skip;
+  while (channr >= listLength) {
+    channr -= listLength;
+  }
+
+  cc2500_strobe(CC2500_SIDLE);
+  cc2500_write_reg(CC2500_FSCAL3, cal_data[bindHopData[channr]][0]);
+  cc2500_write_reg(CC2500_FSCAL2, cal_data[bindHopData[channr]][1]);
+  cc2500_write_reg(CC2500_FSCAL1, cal_data[bindHopData[channr]][2]);
+  cc2500_write_reg(CC2500_CHANNR, bindHopData[channr]);
+
+  // FRSKY D only
+  cc2500_strobe(CC2500_SFRX);
 }
 
 static void init_get_bind(void) {
@@ -185,16 +215,12 @@ static uint8_t get_bind1() {
   // len|bind |tx
   // id|03|01|idx|h0|h1|h2|h3|h4|00|00|00|00|00|00|00|00|00|00|00|00|00|00|00|CHK1|CHK2|RSSI|LQI/CRC|
   // Start by getting bind packet 0 and the txid
-  if (cc2500_read_gdo0() == 0) {
-    return 0;
-  }
 
-  uint8_t len = cc2500_read_reg(CC2500_RXBYTES | CC2500_READ_BURST) & 0x7F;
+  uint8_t len = read_packet();
   if (len == 0) {
     return 0;
   }
 
-  cc2500_read_fifo(packet, len);
   if (packet[len - 1] & 0x80) {
     if (packet[2] == 0x01) {
       if (packet[5] == 0x00) {
@@ -219,16 +245,11 @@ static uint8_t get_bind2(uint8_t *packet) {
     return 1;
   }
 
-  if (!cc2500_read_gdo0()) {
+  uint8_t len = read_packet();
+  if (len == 0) {
     return 0;
   }
 
-  uint8_t len = cc2500_read_reg(CC2500_RXBYTES | CC2500_READ_BURST) & 0x7F;
-  if (!len) {
-    return 0;
-  }
-
-  cc2500_read_fifo(packet, len);
   if (packet[len - 1] & 0x80) {
     if (packet[2] == 0x01) {
       if ((packet[3] == bindTxId[0]) && (packet[4] == bindTxId[1])) {
@@ -291,7 +312,6 @@ void checkrx() {
     if (tune_rx(packet)) {
       init_get_bind();
       initialise_data(1);
-
       protocol_state = STATE_BIND_BINDING1;
     }
     break;
@@ -303,7 +323,6 @@ void checkrx() {
   case STATE_BIND_BINDING2:
     if (get_bind2(packet)) {
       cc2500_strobe(CC2500_SIDLE);
-
       protocol_state = STATE_BIND_COMPLETE;
     }
     break;
@@ -312,8 +331,91 @@ void checkrx() {
     protocol_state = STATE_STARTING;
     break;
   default:
-    usb_serial_printf("STATE_STARTING %d %d %d\r\n", rxNum, bindTxId[0], bindTxId[1]);
+    frsky_d_handle_packet();
     break;
+  }
+}
+
+uint16_t channels[FRSKY_D_CHANNEL_COUNT];
+
+static void decode_channel_pair(uint16_t *channels, const uint8_t *packet, const uint8_t highNibbleOffset) {
+  channels[0] = FRSKY_D_CHANNEL_SCALING * (uint16_t)((packet[highNibbleOffset] & 0xf) << 8 | packet[0]);
+  channels[1] = FRSKY_D_CHANNEL_SCALING * (uint16_t)((packet[highNibbleOffset] & 0xf0) << 4 | packet[1]);
+}
+
+void frsky_d_set_rc_data() {
+  static uint16_t dataErrorCount = 0;
+
+  uint16_t channels[FRSKY_D_CHANNEL_COUNT];
+  uint8_t dataError = 0;
+
+  decode_channel_pair(channels, packet + 6, 4);
+  decode_channel_pair(channels + 2, packet + 8, 3);
+  decode_channel_pair(channels + 4, packet + 12, 4);
+  decode_channel_pair(channels + 6, packet + 14, 3);
+
+  for (int i = 0; i < FRSKY_D_CHANNEL_COUNT; i++) {
+    usb_serial_printf("channel %d %d\r\n", i, channels[i]);
+    if ((channels[i] < 800) || (channels[i] > 2200)) {
+      dataError = 1;
+
+      break;
+    }
+  }
+}
+
+void frsky_d_handle_packet() {
+  static unsigned long last_packet_received_time = 0;
+  static unsigned long telemetry_time_us;
+
+  const unsigned long current_packet_received_time = gettime();
+
+  switch (protocol_state) {
+  case STATE_STARTING:
+    listLength = 47;
+    initialise_data(0);
+    protocol_state = STATE_UPDATE;
+    next_channel(1);
+    cc2500_strobe(CC2500_SRX);
+
+    break;
+  case STATE_UPDATE:
+    last_packet_received_time = current_packet_received_time;
+    protocol_state = STATE_DATA;
+
+    /*
+    if (checkBindRequested(false)) {
+      lastPacketReceivedTime = 0;
+      timeoutUs = 50;
+      missingPackets = 0;
+
+      protocol_state = STATE_INIT;
+
+      break;
+    }
+    */
+  case STATE_DATA: {
+    uint8_t len = cc2500_read_reg(CC2500_RXBYTES | CC2500_READ_BURST) & 0x7F;
+    if (len < 20) {
+      break;
+    }
+    cc2500_read_fifo(packet, 20);
+    if (packet[19] & 0x80) {
+      if (packet[0] == 0x11) {
+        if ((packet[1] == bindTxId[0]) && (packet[2] == bindTxId[1])) {
+          next_channel(1);
+          {
+            cc2500_strobe(CC2500_SRX);
+            protocol_state = STATE_UPDATE;
+          }
+          frsky_d_set_rc_data();
+
+          last_packet_received_time = current_packet_received_time;
+        }
+      }
+    }
+    break;
+  }
   }
 }
 
