@@ -27,15 +27,24 @@ enum {
 
 static uint8_t cal_data[255][3];
 static uint8_t protocol_state = STATE_DETECT;
-static unsigned long timeTunedMs;
+static unsigned long time_tuned_ms;
 static uint8_t packet[128];
-static uint8_t listLength;
+static uint8_t list_length;
 
-static int8_t bind_offset;
-static uint8_t bindIdx;
-static uint8_t bindTxId[2];
-static uint8_t bindHopData[50];
-static uint8_t rxNum;
+typedef struct {
+  int8_t offset;
+  uint8_t idx;
+  uint8_t tx_id[2];
+  uint8_t hop_data[50];
+  uint8_t rx_num;
+} bind_data;
+
+static bind_data bind;
+
+extern float rx[4];
+extern char aux[AUXNUMBER];
+extern char lastaux[AUXNUMBER];
+extern char auxchange[AUXNUMBER];
 
 int failsafe = 1; // It isn't safe if we haven't checked it!
 int rxmode = RXMODE_BIND;
@@ -111,6 +120,15 @@ void rx_init(void) {
   }
 }
 
+static uint8_t frsky_dectect(void) {
+  const uint8_t chipPartNum = cc2500_read_reg(CC2500_PARTNUM | CC2500_READ_BURST); //CC2500 read registers chip part num
+  const uint8_t chipVersion = cc2500_read_reg(CC2500_VERSION | CC2500_READ_BURST); //CC2500 read registers chip version
+  if (chipPartNum == 0x80 && chipVersion == 0x03) {
+    return 1;
+  }
+  return 0;
+}
+
 static uint8_t packet_size() {
   if (cc2500_read_gdo0() == 0) {
     return 0;
@@ -129,9 +147,9 @@ static uint8_t read_packet() {
 
 static void init_tune_rx(void) {
   cc2500_write_reg(CC2500_FOCCFG, 0x14);
-  timeTunedMs = millis();
-  bind_offset = -126;
-  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)bind_offset);
+  time_tuned_ms = millis();
+  bind.offset = -126;
+  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)bind.offset);
   cc2500_write_reg(CC2500_PKTCTRL1, 0x0C);
   cc2500_write_reg(CC2500_MCSM0, 0x8);
 
@@ -145,13 +163,13 @@ static void init_tune_rx(void) {
 }
 
 static uint8_t tune_rx() {
-  if (bind_offset >= 126) {
-    bind_offset = -126;
+  if (bind.offset >= 126) {
+    bind.offset = -126;
   }
-  if ((millis() - timeTunedMs) > 50) {
-    timeTunedMs = millis();
-    bind_offset += 5;
-    cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)bind_offset);
+  if ((millis() - time_tuned_ms) > 50) {
+    time_tuned_ms = millis();
+    bind.offset += 5;
+    cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)bind.offset);
   }
 
   uint8_t len = read_packet();
@@ -174,15 +192,15 @@ void next_channel(uint8_t skip) {
   static uint8_t channr = 0;
 
   channr += skip;
-  while (channr >= listLength) {
-    channr -= listLength;
+  while (channr >= list_length) {
+    channr -= list_length;
   }
 
   cc2500_strobe(CC2500_SIDLE);
-  cc2500_write_reg(CC2500_FSCAL3, cal_data[bindHopData[channr]][0]);
-  cc2500_write_reg(CC2500_FSCAL2, cal_data[bindHopData[channr]][1]);
-  cc2500_write_reg(CC2500_FSCAL1, cal_data[bindHopData[channr]][2]);
-  cc2500_write_reg(CC2500_CHANNR, bindHopData[channr]);
+  cc2500_write_reg(CC2500_FSCAL3, cal_data[bind.hop_data[channr]][0]);
+  cc2500_write_reg(CC2500_FSCAL2, cal_data[bind.hop_data[channr]][1]);
+  cc2500_write_reg(CC2500_FSCAL1, cal_data[bind.hop_data[channr]][2]);
+  cc2500_write_reg(CC2500_CHANNR, bind.hop_data[channr]);
 
   // FRSKY D only
   cc2500_strobe(CC2500_SFRX);
@@ -198,14 +216,14 @@ static void init_get_bind(void) {
   delay(20); // waiting flush FIFO
 
   cc2500_strobe(CC2500_SRX);
-  listLength = 0;
-  bindIdx = 0x05;
+  list_length = 0;
+  bind.idx = 0x05;
 }
 
 void initialise_data(uint8_t adr) {
-  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)bind_offset);
+  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)bind.offset);
   cc2500_write_reg(CC2500_MCSM0, 0x8);
-  cc2500_write_reg(CC2500_ADDR, adr ? 0x03 : bindTxId[0]);
+  cc2500_write_reg(CC2500_ADDR, adr ? 0x03 : bind.tx_id[0]);
   cc2500_write_reg(CC2500_PKTCTRL1, 0x0D);
   cc2500_write_reg(CC2500_FOCCFG, 0x16);
   delay(10);
@@ -215,7 +233,6 @@ static uint8_t get_bind1() {
   // len|bind |tx
   // id|03|01|idx|h0|h1|h2|h3|h4|00|00|00|00|00|00|00|00|00|00|00|00|00|00|00|CHK1|CHK2|RSSI|LQI/CRC|
   // Start by getting bind packet 0 and the txid
-
   uint8_t len = read_packet();
   if (len == 0) {
     return 0;
@@ -225,13 +242,12 @@ static uint8_t get_bind1() {
     if (packet[2] == 0x01) {
       if (packet[5] == 0x00) {
 
-        bindTxId[0] = packet[3];
-        bindTxId[1] = packet[4];
+        bind.tx_id[0] = packet[3];
+        bind.tx_id[1] = packet[4];
         for (uint8_t n = 0; n < 5; n++) {
-          bindHopData[packet[5] + n] = packet[6 + n];
+          bind.hop_data[packet[5] + n] = packet[6 + n];
         }
-        rxNum = packet[12];
-
+        bind.rx_num = packet[12];
         return 1;
       }
     }
@@ -241,7 +257,7 @@ static uint8_t get_bind1() {
 }
 
 static uint8_t get_bind2(uint8_t *packet) {
-  if (bindIdx > 120) {
+  if (bind.idx > 120) {
     return 1;
   }
 
@@ -252,45 +268,36 @@ static uint8_t get_bind2(uint8_t *packet) {
 
   if (packet[len - 1] & 0x80) {
     if (packet[2] == 0x01) {
-      if ((packet[3] == bindTxId[0]) && (packet[4] == bindTxId[1])) {
-        if (packet[5] == bindIdx) {
+      if ((packet[3] == bind.tx_id[0]) && (packet[4] == bind.tx_id[1])) {
+        if (packet[5] == bind.idx) {
 #if defined(DJTS)
           if (packet[5] == 0x2D) {
             for (uint8_t i = 0; i < 2; i++) {
-              bindHopData[packet[5] + i] = packet[6 + i];
+              bind.hop_data[packet[5] + i] = packet[6 + i];
             }
-            listLength = 47;
+            list_length = 47;
             return 1;
           }
 #endif
 
           for (uint8_t n = 0; n < 5; n++) {
             if (packet[6 + n] == packet[len - 3] || (packet[6 + n] == 0)) {
-              if (bindIdx >= 0x2D) {
-                listLength = packet[5] + n;
+              if (bind.idx >= 0x2D) {
+                list_length = packet[5] + n;
 
                 return 1;
               }
             }
-            bindHopData[packet[5] + n] = packet[6 + n];
+            bind.hop_data[packet[5] + n] = packet[6 + n];
           }
 
-          bindIdx = bindIdx + 5;
+          bind.idx = bind.idx + 5;
           return 0;
         }
       }
     }
   }
 
-  return 0;
-}
-
-static uint8_t frsky_dectect(void) {
-  const uint8_t chipPartNum = cc2500_read_reg(CC2500_PARTNUM | CC2500_READ_BURST); //CC2500 read registers chip part num
-  const uint8_t chipVersion = cc2500_read_reg(CC2500_VERSION | CC2500_READ_BURST); //CC2500 read registers chip version
-  if (chipPartNum == 0x80 && chipVersion == 0x03) {
-    return 1;
-  }
   return 0;
 }
 
@@ -344,24 +351,76 @@ static void decode_channel_pair(uint16_t *channels, const uint8_t *packet, const
 }
 
 void frsky_d_set_rc_data() {
-  static uint16_t dataErrorCount = 0;
-
-  uint16_t channels[FRSKY_D_CHANNEL_COUNT];
-  uint8_t dataError = 0;
-
   decode_channel_pair(channels, packet + 6, 4);
   decode_channel_pair(channels + 2, packet + 8, 3);
   decode_channel_pair(channels + 4, packet + 12, 4);
   decode_channel_pair(channels + 6, packet + 14, 3);
 
   for (int i = 0; i < FRSKY_D_CHANNEL_COUNT; i++) {
-    usb_serial_printf("channel %d %d\r\n", i, channels[i]);
     if ((channels[i] < 800) || (channels[i] > 2200)) {
-      dataError = 1;
-
-      break;
+      failsafe = 1;
+      return;
     }
   }
+
+  // AETR channel order
+  channels[0] -= 993;
+  channels[1] -= 993;
+  channels[3] -= 993;
+
+  rx[0] = channels[0];
+  rx[1] = channels[1];
+  rx[2] = channels[3];
+
+  for (int i = 0; i < 3; i++) {
+    rx[i] *= 0.00122026f;
+  }
+
+  channels[2] -= 173;
+  rx[3] = 0.000610128f * channels[2];
+
+  if (rx[3] > 1)
+    rx[3] = 1;
+  if (rx[3] < 0)
+    rx[3] = 0;
+
+  if (aux[LEVELMODE]) {
+    if (aux[RACEMODE] && !aux[HORIZON]) {
+      if (ANGLE_EXPO_ROLL > 0.01)
+        rx[0] = rcexpo(rx[0], ANGLE_EXPO_ROLL);
+      if (ACRO_EXPO_PITCH > 0.01)
+        rx[1] = rcexpo(rx[1], ACRO_EXPO_PITCH);
+      if (ANGLE_EXPO_YAW > 0.01)
+        rx[2] = rcexpo(rx[2], ANGLE_EXPO_YAW);
+    } else if (aux[HORIZON]) {
+      if (ANGLE_EXPO_ROLL > 0.01)
+        rx[0] = rcexpo(rx[0], ACRO_EXPO_ROLL);
+      if (ACRO_EXPO_PITCH > 0.01)
+        rx[1] = rcexpo(rx[1], ACRO_EXPO_PITCH);
+      if (ANGLE_EXPO_YAW > 0.01)
+        rx[2] = rcexpo(rx[2], ANGLE_EXPO_YAW);
+    } else {
+      if (ANGLE_EXPO_ROLL > 0.01)
+        rx[0] = rcexpo(rx[0], ANGLE_EXPO_ROLL);
+      if (ANGLE_EXPO_PITCH > 0.01)
+        rx[1] = rcexpo(rx[1], ANGLE_EXPO_PITCH);
+      if (ANGLE_EXPO_YAW > 0.01)
+        rx[2] = rcexpo(rx[2], ANGLE_EXPO_YAW);
+    }
+  } else {
+    if (ACRO_EXPO_ROLL > 0.01)
+      rx[0] = rcexpo(rx[0], ACRO_EXPO_ROLL);
+    if (ACRO_EXPO_PITCH > 0.01)
+      rx[1] = rcexpo(rx[1], ACRO_EXPO_PITCH);
+    if (ACRO_EXPO_YAW > 0.01)
+      rx[2] = rcexpo(rx[2], ACRO_EXPO_YAW);
+  }
+
+  //Here we have the AUX channels Silverware supports
+  aux[CHAN_5] = (channels[4] > 1600) ? 1 : 0;
+  aux[CHAN_6] = (channels[5] > 1600) ? 1 : 0;
+  aux[CHAN_7] = (channels[6] > 1600) ? 1 : 0;
+  aux[CHAN_8] = (channels[7] > 1600) ? 1 : 0;
 }
 
 void frsky_d_handle_packet() {
@@ -372,7 +431,7 @@ void frsky_d_handle_packet() {
 
   switch (protocol_state) {
   case STATE_STARTING:
-    listLength = 47;
+    list_length = 47;
     initialise_data(0);
     protocol_state = STATE_UPDATE;
     next_channel(1);
@@ -382,18 +441,7 @@ void frsky_d_handle_packet() {
   case STATE_UPDATE:
     last_packet_received_time = current_packet_received_time;
     protocol_state = STATE_DATA;
-
-    /*
-    if (checkBindRequested(false)) {
-      lastPacketReceivedTime = 0;
-      timeoutUs = 50;
-      missingPackets = 0;
-
-      protocol_state = STATE_INIT;
-
-      break;
-    }
-    */
+    // fallthrough
   case STATE_DATA: {
     uint8_t len = cc2500_read_reg(CC2500_RXBYTES | CC2500_READ_BURST) & 0x7F;
     if (len < 20) {
@@ -402,14 +450,16 @@ void frsky_d_handle_packet() {
     cc2500_read_fifo(packet, 20);
     if (packet[19] & 0x80) {
       if (packet[0] == 0x11) {
-        if ((packet[1] == bindTxId[0]) && (packet[2] == bindTxId[1])) {
+        if ((packet[1] == bind.tx_id[0]) && (packet[2] == bind.tx_id[1])) {
           next_channel(1);
           {
             cc2500_strobe(CC2500_SRX);
             protocol_state = STATE_UPDATE;
           }
-          frsky_d_set_rc_data();
 
+          failsafe = 0;
+
+          frsky_d_set_rc_data();
           last_packet_received_time = current_packet_received_time;
         }
       }
