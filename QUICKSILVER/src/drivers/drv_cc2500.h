@@ -100,4 +100,11 @@ void cc2500_strobe(uint8_t address);
 uint8_t cc2500_read_reg(uint8_t reg);
 uint8_t cc2500_write_reg(uint8_t reg, uint8_t data);
 uint8_t cc2500_read_fifo(uint8_t *result, uint8_t len);
+uint8_t cc2500_write_fifo(uint8_t *data, uint8_t len);
 uint8_t cc2500_read_gdo0();
+
+void cc2500_enter_rxmode(void);
+void cc2500_enter_txmode(void);
+
+void cc2500_switch_antenna(void);
+void cc2500_set_power(uint8_t power);

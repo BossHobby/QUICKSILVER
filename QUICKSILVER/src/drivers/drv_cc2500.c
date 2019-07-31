@@ -1,5 +1,6 @@
 #include "drv_cc2500.h"
 
+#include "drv_time.h"
 #include "project.h"
 
 #if defined(F405) && defined(USE_CC2500)
@@ -144,8 +145,8 @@ void cc2500_hardware_init(void) {
   SPI_I2S_ReceiveData(CC2500_SPI_INSTANCE);
 }
 
-uint8_t cc2500_spi_transfer_byte(uint8_t data) {
-  for (uint16_t spiTimeout = 0x1000; SPI_I2S_GetFlagStatus(CC2500_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET;) {
+inline uint8_t cc2500_spi_transfer_byte(uint8_t data) {
+  for (uint16_t spiTimeout = 1000; SPI_I2S_GetFlagStatus(CC2500_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET;) {
     if ((spiTimeout--) == 0) {
       liberror++; //liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
       return 0;
@@ -156,7 +157,7 @@ uint8_t cc2500_spi_transfer_byte(uint8_t data) {
   SPI_I2S_SendData(CC2500_SPI_INSTANCE, data);
 
   //wait to receive something ... timeout if nothing comes in
-  for (uint16_t spiTimeout = 0x1000; SPI_I2S_GetFlagStatus(CC2500_SPI_INSTANCE, SPI_I2S_FLAG_RXNE) == RESET;) {
+  for (uint16_t spiTimeout = 1000; SPI_I2S_GetFlagStatus(CC2500_SPI_INSTANCE, SPI_I2S_FLAG_RXNE) == RESET;) {
     if ((spiTimeout--) == 0) {
       liberror++; //liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
       return 0;
@@ -167,13 +168,20 @@ uint8_t cc2500_spi_transfer_byte(uint8_t data) {
   return SPI_I2S_ReceiveData(CC2500_SPI_INSTANCE);
 }
 
-void cc2500_strobe(uint8_t address) {
+inline void cc2500_strobe(uint8_t address) {
   cc2500_csn_enable();
   cc2500_spi_transfer_byte(address);
   cc2500_csn_disable();
 }
 
-uint8_t cc2500_read_reg(uint8_t reg) {
+inline uint8_t cc2500_get_status(void) {
+  cc2500_csn_enable();
+  uint8_t status = cc2500_spi_transfer_byte(0xFF);
+  cc2500_csn_disable();
+  return status;
+}
+
+inline uint8_t cc2500_read_reg(uint8_t reg) {
   cc2500_csn_enable();
   cc2500_spi_transfer_byte(reg | CC2500_READ_SINGLE);
   const uint32_t ret = cc2500_spi_transfer_byte(0xFF);
@@ -181,7 +189,7 @@ uint8_t cc2500_read_reg(uint8_t reg) {
   return ret;
 }
 
-uint8_t cc2500_read_multi(uint8_t reg, uint8_t data, uint8_t *result, uint8_t len) {
+inline uint8_t cc2500_read_multi(uint8_t reg, uint8_t data, uint8_t *result, uint8_t len) {
   cc2500_csn_enable();
   const uint8_t ret = cc2500_spi_transfer_byte(reg);
   for (uint8_t i = 0; i < len; i++) {
@@ -191,11 +199,36 @@ uint8_t cc2500_read_multi(uint8_t reg, uint8_t data, uint8_t *result, uint8_t le
   return ret;
 }
 
-uint8_t cc2500_read_fifo(uint8_t *result, uint8_t len) {
+inline uint8_t cc2500_read_fifo(uint8_t *result, uint8_t len) {
   return cc2500_read_multi(CC2500_FIFO | CC2500_READ_BURST, 0xFF, result, len);
 }
 
-uint8_t cc2500_write_reg(uint8_t reg, uint8_t data) {
+inline uint8_t cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
+  cc2500_csn_enable();
+  const uint8_t ret = cc2500_spi_transfer_byte(reg);
+  for (uint8_t i = 0; i < len; i++) {
+    cc2500_spi_transfer_byte(data[i]);
+  }
+  cc2500_csn_disable();
+  return ret;
+}
+
+inline uint8_t cc2500_write_fifo(uint8_t *data, uint8_t len) {
+  // flush tx fifo
+  cc2500_strobe(CC2500_SFTX);
+
+  const uint8_t ret = cc2500_write_multi(CC2500_FIFO | CC2500_WRITE_BURST, data, len);
+
+  // and send!
+  cc2500_strobe(CC2500_STX);
+
+  // while ((cc2500_get_status() & (0x70)) != (1 << 4))
+  //   ;
+
+  return ret;
+}
+
+inline uint8_t cc2500_write_reg(uint8_t reg, uint8_t data) {
   cc2500_csn_enable();
   cc2500_spi_transfer_byte(reg);
   const uint32_t ret = cc2500_spi_transfer_byte(data);
@@ -212,6 +245,50 @@ void cc2500_reset(void) {
 void cc2500_init(void) {
   cc2500_hardware_init();
   cc2500_reset();
+}
+
+void cc2500_switch_antenna() {
+#if defined(USE_CC2500_PA_LNA) && defined(USE_CC2500_DIVERSITY)
+  static uint8_t alternative_selected = 1;
+  if (alternative_selected == 1) {
+    GPIO_ResetBits(CC2500_ANT_SEL_PORT, CC2500_ANT_SEL_PIN);
+  } else {
+    GPIO_SetBits(CC2500_ANT_SEL_PORT, CC2500_ANT_SEL_PIN);
+  }
+  alternative_selected = alternative_selected ? 0 : 1;
+#endif
+}
+
+void cc2500_enter_rxmode(void) {
+#if defined(USE_CC2500_PA_LNA)
+  GPIO_SetBits(CC2500_LNA_EN_PORT, CC2500_LNA_EN_PIN);
+  GPIO_ResetBits(CC2500_TX_EN_PORT, CC2500_TX_EN_PIN);
+#endif
+}
+
+void cc2500_enter_txmode(void) {
+#if defined(USE_CC2500_PA_LNA)
+  GPIO_ResetBits(CC2500_LNA_EN_PORT, CC2500_LNA_EN_PIN);
+  GPIO_SetBits(CC2500_TX_EN_PORT, CC2500_TX_EN_PIN);
+#endif
+}
+
+void cc2500_set_power(uint8_t power) {
+  static const uint8_t patable[8] = {
+      0xC5, // -12dbm
+      0x97, // -10dbm
+      0x6E, // -8dbm
+      0x7F, // -6dbm
+      0xA9, // -4dbm
+      0xBB, // -2dbm
+      0xFE, // 0dbm
+      0xFF  // 1.5dbm
+  };
+
+  if (power > 7)
+    power = 7;
+
+  cc2500_write_reg(CC2500_PATABLE, patable[power]);
 }
 
 #endif
