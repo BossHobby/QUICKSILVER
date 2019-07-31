@@ -219,8 +219,7 @@
 #define PWM_PB0_AF GPIO_AF_TIM3
 #endif
 #ifdef F0
-#define PWM_PB0
-_AF GPIO_AF_1
+#define PWM_PB0_AF GPIO_AF_1
 #endif
 #define PWM_PB0_PINSOURCE GPIO_PinSource0
 #define PWM_PB0_TIMER TIM3
@@ -286,7 +285,7 @@ _AF GPIO_AF_1
 #ifdef PWM_PB10
 #define PWM_PB10_PIN GPIO_Pin_10
 #define PWM_PB10_PORT GPIOB
-#define PWM_PB10_AF GPIO_AF_TIM3
+#define PWM_PB10_AF GPIO_AF_TIM2
 #define PWM_PB10_PINSOURCE GPIO_PinSource10
 #define PWM_PB10_TIMER TIM2
 #define PWM_PB10_CHANNEL CH3
@@ -345,8 +344,7 @@ _AF GPIO_AF_1
 
 #ifndef DISABLE_PWM_PINS
 
-    void
-    init_timer(TIM_TypeDef *TIMx, int period);
+void init_timer(TIM_TypeDef *TIMx, int period);
 
 TIM_OCInitTypeDef TIM_OCInitStructure;
 
@@ -923,13 +921,13 @@ void pwm_set(uint8_t number, float pwmf) {
     TIM4->CCR1 = (uint16_t)pwm;
 #endif
 #ifdef MOTOR0_PIN_PB7
-    TIM4->CCR1 = (uint16_t)pwm;
+    TIM4->CCR2 = (uint16_t)pwm;
 #endif
 #ifdef MOTOR0_PIN_PB8
-    TIM4->CCR1 = (uint16_t)pwm;
+    TIM4->CCR3 = (uint16_t)pwm;
 #endif
 #ifdef MOTOR0_PIN_PB10
-    TIM2->CCR1 = (uint16_t)pwm;
+    TIM2->CCR3 = (uint16_t)pwm;
 #endif
 #ifdef MOTOR0_PIN_PC6
     TIM3->CCR2 = (uint16_t)pwm;
@@ -992,13 +990,13 @@ void pwm_set(uint8_t number, float pwmf) {
     TIM4->CCR1 = (uint16_t)pwm;
 #endif
 #ifdef MOTOR1_PIN_PB7
-    TIM4->CCR1 = (uint16_t)pwm;
+    TIM4->CCR2 = (uint16_t)pwm;
 #endif
 #ifdef MOTOR1_PIN_PB8
-    TIM4->CCR1 = (uint16_t)pwm;
+    TIM4->CCR3 = (uint16_t)pwm;
 #endif
 #ifdef MOTOR1_PIN_PB10
-    TIM2->CCR1 = (uint16_t)pwm;
+    TIM2->CCR3 = (uint16_t)pwm;
 #endif
 #ifdef MOTOR1_PIN_PC6
     TIM3->CCR2 = (uint16_t)pwm;
@@ -1061,13 +1059,13 @@ void pwm_set(uint8_t number, float pwmf) {
     TIM4->CCR1 = (uint16_t)pwm;
 #endif
 #ifdef MOTOR2_PIN_PB7
-    TIM4->CCR1 = (uint16_t)pwm;
+    TIM4->CCR2 = (uint16_t)pwm;
 #endif
 #ifdef MOTOR2_PIN_PB8
-    TIM4->CCR1 = (uint16_t)pwm;
+    TIM4->CCR3 = (uint16_t)pwm;
 #endif
 #ifdef MOTOR2_PIN_PB10
-    TIM2->CCR1 = (uint16_t)pwm;
+    TIM2->CCR3 = (uint16_t)pwm;
 #endif
 #ifdef MOTOR2_PIN_PC6
     TIM3->CCR2 = (uint16_t)pwm;
@@ -1130,13 +1128,13 @@ void pwm_set(uint8_t number, float pwmf) {
     TIM4->CCR1 = (uint16_t)pwm;
 #endif
 #ifdef MOTOR3_PIN_PB7
-    TIM4->CCR1 = (uint16_t)pwm;
+    TIM4->CCR2 = (uint16_t)pwm;
 #endif
 #ifdef MOTOR3_PIN_PB8
-    TIM4->CCR1 = (uint16_t)pwm;
+    TIM4->CCR3 = (uint16_t)pwm;
 #endif
 #ifdef MOTOR3_PIN_PB10
-    TIM2->CCR1 = (uint16_t)pwm;
+    TIM2->CCR3 = (uint16_t)pwm;
 #endif
 #ifdef MOTOR3_PIN_PC6
     TIM3->CCR2 = (uint16_t)pwm;
