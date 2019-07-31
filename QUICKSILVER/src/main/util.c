@@ -22,205 +22,176 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-
-#include <math.h>
 #include "util.h"
 #include "drv_time.h"
-
+#include <math.h>
 
 // calculates the coefficient for lpf filter, times in the same units
 float lpfcalc(float sampleperiod, float filtertime) {
-float ga = 1.0f - sampleperiod / filtertime;
-if (ga > 1.0f)
-	ga = 1.0f;
-if (ga < 0.0f)
-	ga = 0.0f;
-return ga;
+  float ga = 1.0f - sampleperiod / filtertime;
+  if (ga > 1.0f)
+    ga = 1.0f;
+  if (ga < 0.0f)
+    ga = 0.0f;
+  return ga;
 }
 
-
-// calculates the coefficient for lpf filter 
+// calculates the coefficient for lpf filter
 float lpfcalc_hz(float sampleperiod, float filterhz) {
-float ga = 1.0f - sampleperiod * filterhz;
-if (ga > 1.0f)
-	ga = 1.0f;
-if (ga < 0.0f)
-	ga = 0.0f;
-return ga;
+  float ga = 1.0f - sampleperiod * filterhz;
+  if (ga > 1.0f)
+    ga = 1.0f;
+  if (ga < 0.0f)
+    ga = 0.0f;
+  return ga;
 }
 
-
-float mapf(float x, float in_min, float in_max, float out_min, float out_max)
-{
-return ((x - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min;
+float mapf(float x, float in_min, float in_max, float out_min, float out_max) {
+  return ((x - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min;
 }
 
-
-void lpf( float *out, float in , float coeff)
-{
-	*out = ( *out )* coeff + in * ( 1-coeff); 
+void lpf(float *out, float in, float coeff) {
+  *out = (*out) * coeff + in * (1 - coeff);
 }
 
-
-void limitf ( float *input , const float limit)
-{
-	if (*input > limit) *input = limit;
-	if (*input < - limit) *input = - limit;		
+void limitf(float *input, const float limit) {
+  if (*input > limit)
+    *input = limit;
+  if (*input < -limit)
+    *input = -limit;
 }
 
-
-float rcexpo ( float in , float exp )
-{
-	if ( exp > 1 ) exp = 1;
-	if ( exp < -1 ) exp = -1;
-	float ans = in*in*in * exp + in * ( 1 - exp );
-	limitf( &ans , 1.0);
-	return ans;
+float rcexpo(float in, float exp) {
+  if (exp > 1)
+    exp = 1;
+  if (exp < -1)
+    exp = -1;
+  float ans = in * in * in * exp + in * (1 - exp);
+  limitf(&ans, 1.0);
+  return ans;
 }
-
 
 // timing routines for debugging
 static unsigned long timestart;
 unsigned long timeend;
 
 // timestart
-void TS( void)
-{
-	timestart = gettime(); 
+void TS(void) {
+  timestart = gettime();
 }
 // timeend
-void TE( void)
-{
-	timeend =( gettime() - timestart );	
+void TE(void) {
+  timeend = (gettime() - timestart);
 }
 
-
-
-float fastsin( float x )
-{
- //always wrap input angle to -PI..PI
-while (x < -3.14159265f)
+float fastsin(float x) {
+  //always wrap input angle to -PI..PI
+  while (x < -3.14159265f)
     x += 6.28318531f;
 
-while (x >  3.14159265f)
+  while (x > 3.14159265f)
     x -= 6.28318531f;
-float sin1;
+  float sin1;
 
-//compute sine
-if (x < 0)
-   sin1 = (1.27323954f + .405284735f * x) *x;
-else
-   sin1 = (1.27323954f - .405284735f * x) *x;
+  //compute sine
+  if (x < 0)
+    sin1 = (1.27323954f + .405284735f * x) * x;
+  else
+    sin1 = (1.27323954f - .405284735f * x) * x;
 
-return sin1;    
-} 
-
-
-float fastcos( float x )
-{
- x += 1.57079632f;
-	return fastsin(x);
+  return sin1;
 }
 
-
-int ipow(int base, int exp)
-{
-    int result = 1;
-    for (;;)
-    {
-        if (exp & 1)
-            result *= base;
-        exp >>= 1;
-        if (!exp)
-            break;
-        base *= base;
-    }
-
-    return result;
+float fastcos(float x) {
+  x += 1.57079632f;
+  return fastsin(x);
 }
 
+int ipow(int base, int exp) {
+  int result = 1;
+  for (;;) {
+    if (exp & 1)
+      result *= base;
+    exp >>= 1;
+    if (!exp)
+      break;
+    base *= base;
+  }
+
+  return result;
+}
 
 #include <inttypes.h>
 uint32_t seed = 7;
-uint32_t random( void)
-{
+uint32_t random(void) {
   seed ^= seed << 13;
   seed ^= seed >> 17;
   seed ^= seed << 5;
   return seed;
 }
 
-
 // serial print routines
 #ifdef SERIAL_ENABLE
 
-extern void buffer_add(int val );
+extern void buffer_add(int val);
 #include <stdlib.h>
 
 // print a 32bit signed int
-void print_int( int val )
-{
+void print_int(int val) {
 
-#define SP_INT_BUFFERSIZE 12	
-char buffer2[SP_INT_BUFFERSIZE];
- 
-	if (val < 0) 
-	{
-		buffer_add( (char) '-' );
-		val = abs(val);
-	}
+#define SP_INT_BUFFERSIZE 12
+  char buffer2[SP_INT_BUFFERSIZE];
 
-int power = SP_INT_BUFFERSIZE;
+  if (val < 0) {
+    buffer_add((char)'-');
+    val = abs(val);
+  }
 
-do
-{
-	power--;
-	int quotient = val/(10);
-	int remainder = val-quotient*10;
-	val = quotient;
-	buffer2[power] = remainder+'0';
-}	
-while (( val ) && power >=0) ;
+  int power = SP_INT_BUFFERSIZE;
 
-	for (  ; power <= SP_INT_BUFFERSIZE-1 ; power++)
-	{
-		buffer_add(buffer2[power] );
-	}
+  do {
+    power--;
+    int quotient = val / (10);
+    int remainder = val - quotient * 10;
+    val = quotient;
+    buffer2[power] = remainder + '0';
+  } while ((val) && power >= 0);
+
+  for (; power <= SP_INT_BUFFERSIZE - 1; power++) {
+    buffer_add(buffer2[power]);
+  }
 }
 
 // print float with 2 decimal points
 // this does not handle Nans inf and values over 32bit signed int
-void print_float( float val )
-{
-	int ival = (int) val;
+void print_float(float val) {
+  int ival = (int)val;
 
-	if ( val < 0 && ival == 0 ) buffer_add( (char) '-' );
+  if (val < 0 && ival == 0)
+    buffer_add((char)'-');
 
-	print_int( ival ); 
-	
-	buffer_add( (char) '.' );
-	
-	val = val - (int) val;
-	
-	int decimals = val * 100;
-	
-	decimals = abs(decimals);
-	
-	if (decimals < 10) buffer_add( (char) '0' );
-	print_int( decimals );
+  print_int(ival);
 
+  buffer_add((char)'.');
+
+  val = val - (int)val;
+
+  int decimals = val * 100;
+
+  decimals = abs(decimals);
+
+  if (decimals < 10)
+    buffer_add((char)'0');
+  print_int(decimals);
 }
 
-void print_str(const char *str)
-{
-	int count = 0;
-	// a 64 character limit so we don't print the entire flash by mistake
-	while (str[count]&&!(count>>6) ) 
-	{
-	buffer_add( (char) str[count] );
-	count++;
-	}
+void print_str(const char *str) {
+  int count = 0;
+  // a 64 character limit so we don't print the entire flash by mistake
+  while (str[count] && !(count >> 6)) {
+    buffer_add((char)str[count]);
+    count++;
+  }
 }
 
 #endif
-

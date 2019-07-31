@@ -42,7 +42,7 @@ CFLAGS   = $(COMMON_FLAGS) $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS)
 CXXFLAGS = $(COMMON_FLAGS) $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) \
 	-fno-rtti -std=c++17
 
-LDFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) \
+LDFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) -u _printf_float \
 	-Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group \
 	-static -Wl,-gc-sections -Wl,-L$(SYSTEM_DIR) -T$(SYSTEM_LD_SCRIPT)
 
