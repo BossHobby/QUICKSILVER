@@ -15,7 +15,7 @@
 #define FRSKY_HOPTABLE_SIZE 47
 
 #define SYNC_DELAY_MAX 9000
-#define MAX_MISSING_PKT 100
+#define MAX_MISSING_FRAMES 150
 
 enum {
   STATE_DETECT = 0,
@@ -45,9 +45,6 @@ static uint8_t packet[128];
 static uint8_t list_length;
 
 static uint8_t protocol_state = STATE_DETECT;
-
-static uint32_t missingPackets = 0;
-static unsigned long timeoutUs = 50;
 static unsigned long time_tuned_ms;
 
 typedef struct {
@@ -112,7 +109,7 @@ static bind_data bind = {
         0x5,
         0x0,
         0x0,
-        0,
+        0x0,
     },
 };
 
@@ -444,20 +441,18 @@ static void frsky_d_set_rc_data() {
 }
 
 static uint8_t frsky_d_handle_packet() {
-  static unsigned long last_packet_received_time = 0;
-  static unsigned long telemetryTimeUs;
+  static uint32_t last_packet_received_time = 0;
+  static uint32_t frame_had_packet = 0;
+  static uint32_t frame_index = 0;
+  static uint32_t frames_lost = 0;
+  static uint32_t max_sync_delay = 50 * SYNC_DELAY_MAX;
 
-  const unsigned long current_packet_received_time = debug_timer_micros();
+  const uint32_t current_packet_received_time = debug_timer_micros();
 
-  // make sure we never read the same packet twice by crc flag
-  uint8_t has_data = 0;
-  packet[19] = 0x00;
-
-  handle_overflows();
-
+  uint8_t ret = 0;
   switch (protocol_state) {
   case STATE_STARTING:
-    list_length = FRSKY_HOPTABLE_SIZE;
+    usb_debug_print("FRSKY STATE_STARTING\r\n");
 
     cc2500_enter_rxmode();
     set_address(0);
@@ -468,67 +463,76 @@ static uint8_t frsky_d_handle_packet() {
     break;
   case STATE_UPDATE:
     cc2500_enter_rxmode();
-    last_packet_received_time = current_packet_received_time;
+    frame_had_packet = 0;
     protocol_state = STATE_DATA;
+    last_packet_received_time = current_packet_received_time;
     // fallthrough
   case STATE_DATA: {
+
     uint8_t len = packet_size();
     if (len >= 20) {
       cc2500_read_fifo(packet, 20);
-      if (packet[19] & 0x80) {
-        missingPackets = 0;
-        timeoutUs = 1;
-        if (packet[0] == 0x11 && packet[1] == bind.tx_id[0] && packet[2] == bind.tx_id[1]) {
-          const uint8_t channel = next_channel(1);
-          frsky_d_frame *frame = (frsky_d_frame *)packet;
+      const frsky_d_frame *frame = (frsky_d_frame *)packet;
 
-          if ((packet[3] % 4) == 2) {
-            usb_serial_printf(" T:%d:%d ", frame->counter, channel);
-            telemetryTimeUs = debug_timer_micros();
-            protocol_state = STATE_TELEMETRY;
-          } else {
-            cc2500_strobe(CC2500_SRX);
-            usb_serial_printf(" P:%d:%d ", frame->counter, channel);
+      if (frame->length == 0x11 &&
+          (frame->crc[1] & 0x80) &&
+          frame->tx_id[0] == bind.tx_id[0] &&
+          frame->tx_id[1] == bind.tx_id[1]) {
 
-            protocol_state = STATE_UPDATE;
-          }
-
-          has_data = 1;
-          last_packet_received_time = current_packet_received_time;
+        if (frame_index >= 188) {
+          frame_index = 0;
         }
+
+        if (frame->counter != frame_index) {
+          frame_index = frame->counter;
+        }
+
+        next_channel(1);
+        cc2500_strobe(CC2500_SRX);
+
+        if ((frame->counter % 4) == 2) {
+          protocol_state = STATE_TELEMETRY;
+          frame_index++;
+        } else {
+          protocol_state = STATE_UPDATE;
+        }
+
+        last_packet_received_time = current_packet_received_time;
+        max_sync_delay = SYNC_DELAY_MAX;
+        frame_had_packet = 1;
+        frames_lost = 0;
+        frame_index++;
+        ret = 1;
+      } else {
+        usb_debug_print("FRSKY INVALID PACKET!\r\n");
       }
     }
 
-    if ((current_packet_received_time - last_packet_received_time) > (timeoutUs * SYNC_DELAY_MAX)) {
-      cc2500_enter_rxmode();
+    handle_overflows();
 
-      if (timeoutUs == 1) {
-        if (missingPackets >= 2) {
-          cc2500_switch_antenna();
-        }
-
-        if (missingPackets > MAX_MISSING_PKT) {
-          usb_serial_printf("E\r\n\r\n");
-          timeoutUs = 50;
-          failsafe = 1;
-        }
-
-        missingPackets++;
-        const uint8_t channel = next_channel(1);
-        usb_serial_printf(" M:%d:%d ", missingPackets, channel);
-      } else {
-        next_channel(13);
+    if ((current_packet_received_time - last_packet_received_time) >= max_sync_delay) {
+      if (!frame_had_packet) {
+        frames_lost++;
+        frame_index++;
+      }
+      if (frames_lost >= 1) {
+        cc2500_switch_antenna();
+      }
+      if (frames_lost >= MAX_MISSING_FRAMES) {
+        max_sync_delay = 10 * SYNC_DELAY_MAX;
+        failsafe = 1;
+        usb_debug_printf("\r\nFRSKY FAILSAFE\r\n");
       }
 
+      next_channel(1);
       cc2500_strobe(CC2500_SRX);
       protocol_state = STATE_UPDATE;
     }
     break;
   }
-
   case STATE_TELEMETRY:
     // telemetry has to be done 2000us after rx
-    if ((debug_timer_micros() - telemetryTimeUs) >= 1380) {
+    if ((debug_timer_micros() - last_packet_received_time) >= 1380) {
       cc2500_strobe(CC2500_SIDLE);
       cc2500_set_power(6);
       cc2500_strobe(CC2500_SFRX);
@@ -546,12 +550,12 @@ static uint8_t frsky_d_handle_packet() {
       cc2500_strobe(CC2500_SIDLE);
       cc2500_write_fifo(frame, frame[0] + 1);
 
-      protocol_state = STATE_UPDATE;
-      has_data = 0;
+      protocol_state = STATE_DATA;
     }
     break;
   }
-  return has_data;
+
+  return ret;
 }
 
 void rx_init(void) {
@@ -631,26 +635,26 @@ void rx_init(void) {
 void checkrx() {
   switch (protocol_state) {
   case STATE_DETECT:
-    usb_serial_print("FRSKY STATE_DETECT\r\n");
+    usb_debug_print("FRSKY STATE_DETECT\r\n");
     if (frsky_dectect()) {
       protocol_state = STATE_INIT;
     }
     break;
   case STATE_INIT:
-    usb_serial_print("FRSKY STATE_INIT\r\n");
+    usb_debug_print("FRSKY STATE_INIT\r\n");
     cc2500_enter_rxmode();
     cc2500_strobe(CC2500_SRX);
     //protocol_state = STATE_BIND_COMPLETE;
     protocol_state = STATE_BIND;
     break;
   case STATE_BIND:
-    usb_serial_print("FRSKY STATE_BIND\r\n");
+    usb_debug_print("FRSKY STATE_BIND\r\n");
     init_tune_rx();
     protocol_state = STATE_BIND_TUNING;
     break;
   case STATE_BIND_TUNING:
     if (tune_rx(packet)) {
-      usb_serial_print("FRSKY STATE_BIND_TUNING DONE\r\n");
+      usb_debug_print("FRSKY STATE_BIND_TUNING DONE\r\n");
       set_address(1);
       init_get_bind();
       protocol_state = STATE_BIND_BINDING1;
@@ -658,27 +662,27 @@ void checkrx() {
     break;
   case STATE_BIND_BINDING1:
     if (get_bind1(packet)) {
-      usb_serial_print("FRSKY STATE_BIND_BINDING1 DONE\r\n");
+      usb_debug_print("FRSKY STATE_BIND_BINDING1 DONE\r\n");
       protocol_state = STATE_BIND_BINDING2;
     }
     break;
   case STATE_BIND_BINDING2:
     if (get_bind2(packet)) {
       cc2500_strobe(CC2500_SIDLE);
-      usb_serial_print("FRSKY STATE_BIND_BINDING2 DONE\r\n");
+      usb_debug_print("FRSKY STATE_BIND_BINDING2 DONE\r\n");
       protocol_state = STATE_BIND_COMPLETE;
     }
     break;
   case STATE_BIND_COMPLETE:
-    usb_serial_print("FRSKY BOUND!\r\n");
-    usb_serial_printf("idx: %d\r\n", bind.idx);
-    usb_serial_printf("offset: %d\r\n", bind.offset);
-    usb_serial_printf("tx_id: 0x%x%x\r\n", bind.tx_id[0], bind.tx_id[1]);
-    usb_serial_printf("hop_data:");
+    usb_debug_print("FRSKY STATE_BIND_COMPLETE\r\n");
+    usb_debug_printf("idx: %d\r\n", bind.idx);
+    usb_debug_printf("offset: %d\r\n", bind.offset);
+    usb_debug_printf("tx_id: 0x%x%x\r\n", bind.tx_id[0], bind.tx_id[1]);
+    usb_debug_printf("hop_data:");
     for (uint32_t i = 0; i < 50; i++) {
-      usb_serial_printf(" %x, ", bind.hop_data[i]);
+      usb_debug_printf(" %x, ", bind.hop_data[i]);
     }
-    usb_serial_print("\r\n");
+    usb_debug_print("\r\n");
 
     rxmode = RXMODE_NORMAL;
     protocol_state = STATE_STARTING;

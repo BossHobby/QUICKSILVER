@@ -145,7 +145,7 @@ void cc2500_hardware_init(void) {
   SPI_I2S_ReceiveData(CC2500_SPI_INSTANCE);
 }
 
-inline uint8_t cc2500_spi_transfer_byte(uint8_t data) {
+uint8_t cc2500_spi_transfer_byte(uint8_t data) {
   for (uint16_t spiTimeout = 1000; SPI_I2S_GetFlagStatus(CC2500_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET;) {
     if ((spiTimeout--) == 0) {
       liberror++; //liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
@@ -189,7 +189,7 @@ inline uint8_t cc2500_read_reg(uint8_t reg) {
   return ret;
 }
 
-inline uint8_t cc2500_read_multi(uint8_t reg, uint8_t data, uint8_t *result, uint8_t len) {
+uint8_t cc2500_read_multi(uint8_t reg, uint8_t data, uint8_t *result, uint8_t len) {
   cc2500_csn_enable();
   const uint8_t ret = cc2500_spi_transfer_byte(reg);
   for (uint8_t i = 0; i < len; i++) {
@@ -203,7 +203,7 @@ inline uint8_t cc2500_read_fifo(uint8_t *result, uint8_t len) {
   return cc2500_read_multi(CC2500_FIFO | CC2500_READ_BURST, 0xFF, result, len);
 }
 
-inline uint8_t cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
+uint8_t cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
   cc2500_csn_enable();
   const uint8_t ret = cc2500_spi_transfer_byte(reg);
   for (uint8_t i = 0; i < len; i++) {
