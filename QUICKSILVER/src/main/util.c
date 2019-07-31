@@ -80,8 +80,8 @@ void TS(void) {
   timestart = gettime();
 }
 // timeend
-void TE(void) {
-  timeend = (gettime() - timestart);
+unsigned long TE(void) {
+  return timeend = (gettime() - timestart);
 }
 
 float fastsin(float x) {

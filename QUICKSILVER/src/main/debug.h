@@ -1,4 +1,4 @@
-
+#pragma once
 
 typedef struct debug {
   int gyroid;
