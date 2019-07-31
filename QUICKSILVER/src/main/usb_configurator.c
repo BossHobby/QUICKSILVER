@@ -15,31 +15,35 @@ void systemResetToBootloader(void) {
   NVIC_SystemReset();
 }
 
+static uint8_t first_packet = 1;
+
 //This function will be where all usb send/receive coms live
 void usb_configurator(uint8_t *data, uint32_t len) {
-
-  if (len != 1) {
+  if (first_packet) {
+    first_packet = 0;
     return;
   }
 
-  switch (data[0]) {
-  case 'R':
-    //  The following bits will reboot to DFU upon receiving 'R' (which is sent by BF configurator)
-    usb_serial_print("SYSTEM RESET\r\n");
-    delay(50 * 1000);
-    systemResetToBootloader();
-    break;
+  for (uint32_t i = 0; i < len; i++) {
+    switch (data[i]) {
+    case 'R':
+      //  The following bits will reboot to DFU upon receiving 'R' (which is sent by BF configurator)
+      usb_serial_print("SYSTEM RESET\r\n");
+      delay(50 * 1000);
+      systemResetToBootloader();
+      break;
 #ifdef DEBUG
-  case 'D':
-    usb_serial_printf("adcfilt: %f\r\n", debug.adcfilt);
-    usb_serial_printf("looptime: %f\r\n", debug.timefilt);
-    usb_serial_printf("cpu_load: %f\r\n", debug.cpu_load * 100);
-    usb_serial_printf("max_cpu_load: %f\r\n", debug.max_cpu_load * 100);
-    usb_serial_printf("RX: %f %f %f %f\r\n", rx[0], rx[1], rx[2], rx[3]);
-    break;
+    case 'D':
+      usb_serial_printf("adcfilt: %f\r\n", debug.adcfilt);
+      usb_serial_printf("looptime: %f\r\n", debug.timefilt);
+      usb_serial_printf("cpu_load: %f\r\n", debug.cpu_load * 100);
+      usb_serial_printf("max_cpu_load: %f\r\n", debug.max_cpu_load * 100);
+      usb_serial_printf("RX: %f %f %f %f\r\n", rx[0], rx[1], rx[2], rx[3]);
+      break;
 #endif
-  default:
-    usb_serial_write(data, len);
-    break;
+    default:
+      usb_serial_write(data, len);
+      break;
+    }
   }
 }
