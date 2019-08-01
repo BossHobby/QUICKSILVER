@@ -53,9 +53,9 @@
 #endif
 
 // OSD
-#define ENABLE_OSD
-#define MAX7456_SPI2
-#define MAX7456_NSS_PB12
+// #define ENABLE_OSD
+// #define MAX7456_SPI2
+// #define MAX7456_NSS_PB12
 
 //VOLTAGE DIVIDER
 #define BATTERYPIN GPIO_Pin_0
