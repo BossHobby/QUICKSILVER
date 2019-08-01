@@ -1,9 +1,8 @@
+#include "rx.h"
 
 #include "drv_cc2500.h"
-
 #include "drv_time.h"
 #include "drv_usb.h"
-#include "project.h"
 #include "util.h"
 
 #ifdef RX_FRSKY
@@ -42,76 +41,12 @@ typedef struct {
 
 static uint8_t cal_data[255][3];
 static uint8_t packet[128];
-static uint8_t list_length;
+static uint8_t list_length = FRSKY_HOPTABLE_SIZE;
 
 static uint8_t protocol_state = STATE_DETECT;
 static unsigned long time_tuned_ms;
 
-typedef struct {
-  int8_t offset;
-  uint8_t idx;
-  uint8_t tx_id[2];
-  uint8_t hop_data[50];
-  uint8_t rx_num;
-} bind_data;
-
-static bind_data bind = {
-    -7,
-    45,
-    {0xa7, 0x80},
-    {
-        0x2,
-        0xe6,
-        0xe1,
-        0xdc,
-        0xd7,
-        0xd2,
-        0xcd,
-        0xc8,
-        0xc3,
-        0xbe,
-        0xb9,
-        0xb4,
-        0xaf,
-        0xaa,
-        0xa5,
-        0xa0,
-        0x9b,
-        0x96,
-        0x91,
-        0x8c,
-        0x87,
-        0x84,
-        0x7d,
-        0x78,
-        0x73,
-        0x6e,
-        0x69,
-        0x64,
-        0x5f,
-        0x5a,
-        0x55,
-        0x50,
-        0x4b,
-        0x46,
-        0x41,
-        0x3c,
-        0x37,
-        0x32,
-        0x2d,
-        0x28,
-        0x23,
-        0x1e,
-        0x19,
-        0x14,
-        0xf,
-        0xa,
-        0x5,
-        0x0,
-        0x0,
-        0x0,
-    },
-};
+frsky_bind_data frsky_bind = {0xff, 0xff};
 
 extern float rx[4];
 extern char aux[AUXNUMBER];
@@ -173,13 +108,13 @@ static void set_address(uint8_t is_bind) {
   cc2500_strobe(CC2500_SIDLE);
 
   // freq offset
-  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)bind.offset);
+  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)frsky_bind.offset);
 
   // never automatically calibrate, po_timeout count = 64
   // no autotune as (we use our pll map)
   cc2500_write_reg(CC2500_MCSM0, 0x8);
 
-  cc2500_write_reg(CC2500_ADDR, is_bind ? 0x03 : bind.tx_id[0]);
+  cc2500_write_reg(CC2500_ADDR, is_bind ? 0x03 : frsky_bind.tx_id[0]);
 
   // ADR_CHK, APPEND_STATUS, CRC_AUTOFLUSH
   cc2500_write_reg(CC2500_PKTCTRL1, 0x0D);
@@ -208,7 +143,7 @@ static uint8_t next_channel(uint8_t skip) {
     channr -= list_length;
   }
 
-  set_channel(bind.hop_data[channr]);
+  set_channel(frsky_bind.hop_data[channr]);
 
   // FRSKY D only
   cc2500_strobe(CC2500_SFRX);
@@ -252,9 +187,9 @@ static void init_tune_rx(void) {
   cc2500_write_reg(CC2500_FOCCFG, 0x14);
 
   time_tuned_ms = debug_timer_millis();
-  bind.offset = -126;
+  frsky_bind.offset = -126;
 
-  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)bind.offset);
+  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)frsky_bind.offset);
   cc2500_write_reg(CC2500_PKTCTRL1, 0x0C);
   cc2500_write_reg(CC2500_MCSM0, 0x8);
 
@@ -264,13 +199,13 @@ static void init_tune_rx(void) {
 }
 
 static uint8_t tune_rx() {
-  if (bind.offset >= 126) {
-    bind.offset = -126;
+  if (frsky_bind.offset >= 126) {
+    frsky_bind.offset = -126;
   }
   if ((debug_timer_millis() - time_tuned_ms) > 50) {
     time_tuned_ms = debug_timer_millis();
-    bind.offset += 5;
-    cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)bind.offset);
+    frsky_bind.offset += 5;
+    cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)frsky_bind.offset);
   }
 
   uint8_t len = read_packet();
@@ -296,7 +231,7 @@ static void init_get_bind(void) {
 
   cc2500_strobe(CC2500_SRX);
   list_length = 0;
-  bind.idx = 0x05;
+  frsky_bind.idx = 0x05;
 }
 
 static uint8_t get_bind1() {
@@ -312,12 +247,12 @@ static uint8_t get_bind1() {
     if (packet[2] == 0x01) {
       if (packet[5] == 0x00) {
 
-        bind.tx_id[0] = packet[3];
-        bind.tx_id[1] = packet[4];
+        frsky_bind.tx_id[0] = packet[3];
+        frsky_bind.tx_id[1] = packet[4];
         for (uint8_t n = 0; n < 5; n++) {
-          bind.hop_data[packet[5] + n] = packet[6 + n];
+          frsky_bind.hop_data[packet[5] + n] = packet[6 + n];
         }
-        bind.rx_num = packet[12];
+        frsky_bind.rx_num = packet[12];
         return 1;
       }
     }
@@ -327,7 +262,7 @@ static uint8_t get_bind1() {
 }
 
 static uint8_t get_bind2(uint8_t *packet) {
-  if (bind.idx > 120) {
+  if (frsky_bind.idx > 120) {
     return 1;
   }
 
@@ -338,19 +273,19 @@ static uint8_t get_bind2(uint8_t *packet) {
 
   if (packet[len - 1] & 0x80) {
     if (packet[2] == 0x01) {
-      if ((packet[3] == bind.tx_id[0]) && (packet[4] == bind.tx_id[1])) {
-        if (packet[5] == bind.idx) {
+      if ((packet[3] == frsky_bind.tx_id[0]) && (packet[4] == frsky_bind.tx_id[1])) {
+        if (packet[5] == frsky_bind.idx) {
           for (uint8_t n = 0; n < 5; n++) {
             if (packet[6 + n] == packet[len - 3] || (packet[6 + n] == 0)) {
-              if (bind.idx >= 0x2D) {
+              if (frsky_bind.idx >= 0x2D) {
                 list_length = packet[5] + n;
                 return 1;
               }
             }
-            bind.hop_data[packet[5] + n] = packet[6 + n];
+            frsky_bind.hop_data[packet[5] + n] = packet[6 + n];
           }
 
-          bind.idx = bind.idx + 5;
+          frsky_bind.idx = frsky_bind.idx + 5;
           return 0;
         }
       }
@@ -455,6 +390,7 @@ static uint8_t frsky_d_handle_packet() {
     usb_debug_print("FRSKY STATE_STARTING\r\n");
 
     cc2500_enter_rxmode();
+    cc2500_write_reg(CC2500_FOCCFG, 0x14);
     set_address(0);
     next_channel(1);
     cc2500_strobe(CC2500_SRX);
@@ -476,8 +412,8 @@ static uint8_t frsky_d_handle_packet() {
 
       if (frame->length == 0x11 &&
           (frame->crc[1] & 0x80) &&
-          frame->tx_id[0] == bind.tx_id[0] &&
-          frame->tx_id[1] == bind.tx_id[1]) {
+          frame->tx_id[0] == frsky_bind.tx_id[0] &&
+          frame->tx_id[1] == frsky_bind.tx_id[1]) {
 
         if (frame_index >= 188) {
           frame_index = 0;
@@ -521,10 +457,11 @@ static uint8_t frsky_d_handle_packet() {
       if (frames_lost >= MAX_MISSING_FRAMES) {
         max_sync_delay = 10 * SYNC_DELAY_MAX;
         failsafe = 1;
-        usb_debug_printf("\r\nFRSKY FAILSAFE\r\n");
+        next_channel(13);
+      } else {
+        next_channel(1);
       }
 
-      next_channel(1);
       cc2500_strobe(CC2500_SRX);
       protocol_state = STATE_UPDATE;
     }
@@ -540,8 +477,8 @@ static uint8_t frsky_d_handle_packet() {
 
       static uint8_t frame[20];
       frame[0] = 0x11; // length
-      frame[1] = bind.tx_id[0];
-      frame[2] = bind.tx_id[1];
+      frame[1] = frsky_bind.tx_id[0];
+      frame[2] = frsky_bind.tx_id[1];
       frame[3] = 100;
       frame[4] = 100;
       frame[5] = frsky_extract_rssi(packet[18]);
@@ -644,8 +581,11 @@ void checkrx() {
     usb_debug_print("FRSKY STATE_INIT\r\n");
     cc2500_enter_rxmode();
     cc2500_strobe(CC2500_SRX);
-    //protocol_state = STATE_BIND_COMPLETE;
-    protocol_state = STATE_BIND;
+    if (frsky_bind.idx == 0xff) {
+      protocol_state = STATE_BIND;
+    } else {
+      protocol_state = STATE_BIND_COMPLETE;
+    }
     break;
   case STATE_BIND:
     usb_debug_print("FRSKY STATE_BIND\r\n");
@@ -668,19 +608,19 @@ void checkrx() {
     break;
   case STATE_BIND_BINDING2:
     if (get_bind2(packet)) {
-      cc2500_strobe(CC2500_SIDLE);
       usb_debug_print("FRSKY STATE_BIND_BINDING2 DONE\r\n");
       protocol_state = STATE_BIND_COMPLETE;
     }
     break;
   case STATE_BIND_COMPLETE:
+    cc2500_strobe(CC2500_SIDLE);
     usb_debug_print("FRSKY STATE_BIND_COMPLETE\r\n");
-    usb_debug_printf("idx: %d\r\n", bind.idx);
-    usb_debug_printf("offset: %d\r\n", bind.offset);
-    usb_debug_printf("tx_id: 0x%x%x\r\n", bind.tx_id[0], bind.tx_id[1]);
+    usb_debug_printf("idx: %d\r\n", frsky_bind.idx);
+    usb_debug_printf("offset: %d\r\n", frsky_bind.offset);
+    usb_debug_printf("tx_id: 0x%x%x\r\n", frsky_bind.tx_id[0], frsky_bind.tx_id[1]);
     usb_debug_printf("hop_data:");
     for (uint32_t i = 0; i < 50; i++) {
-      usb_debug_printf(" %x, ", bind.hop_data[i]);
+      usb_debug_printf(" %x, ", frsky_bind.hop_data[i]);
     }
     usb_debug_print("\r\n");
 
