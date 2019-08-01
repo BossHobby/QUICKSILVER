@@ -5,7 +5,7 @@
 #include "drv_usb.h"
 #include "util.h"
 
-#ifdef RX_FRSKY
+#if defined(RX_FRSKY) && defined(USE_CC2500)
 
 #define FRSKY_D_CHANNEL_COUNT 8
 #define FRSKY_D_CHANNEL_SCALING (2.0f / 3)
