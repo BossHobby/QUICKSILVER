@@ -5,6 +5,10 @@
 
 #include "stm32f4xx.h"
 
+extern float pidkp[PIDNUMBER];
+extern float pidki[PIDNUMBER];
+extern float pidkd[PIDNUMBER];
+
 #ifdef DEBUG
 extern debug_type debug;
 extern float rx[];
@@ -36,6 +40,11 @@ void usb_configurator(uint8_t *data, uint32_t len) {
       usb_serial_print("SYSTEM RESET\r\n");
       delay(50 * 1000);
       systemResetToBootloader();
+      break;
+    case 'P':
+      usb_serial_printf("pidkp: %f %f %f\r\n", pidkp[0], pidkp[1], pidkp[2]);
+      usb_serial_printf("pidki: %f %f %f\r\n", pidki[0], pidki[1], pidki[2]);
+      usb_serial_printf("pidkd: %f %f %f\r\n", pidkd[0], pidkd[1], pidkd[2]);
       break;
 #ifdef DEBUG
     case 'D':

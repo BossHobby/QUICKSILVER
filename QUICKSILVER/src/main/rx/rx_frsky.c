@@ -375,6 +375,65 @@ static void frsky_d_set_rc_data() {
   aux[CHAN_10] = 0;
 }
 
+static uint8_t frsky_d_hub_encode(uint8_t *buf, uint8_t data) {
+  // take care of byte stuffing
+  if (data == 0x5e) {
+    buf[0] = 0x5d;
+    buf[1] = 0x3e;
+  } else if (data == 0x5d) {
+    buf[0] = 0x5d;
+    buf[1] = 0x3d;
+  }
+
+  buf[0] = data;
+  return 1;
+}
+
+static uint8_t frsky_d_append_hub_telemetry(uint8_t telemetry_id, uint8_t *buf) {
+#define FRSKY_HUB_FIRST_USER_ID 0x31
+
+  static uint8_t pid_axis = 0;
+  extern float *pids_array[3];
+
+  extern int current_pid_term;
+  extern int current_pid_axis;
+
+  uint8_t size = 0;
+  buf[size++] = 0;
+  buf[size++] = telemetry_id;
+
+  if (pid_axis >= 3) {
+    const int16_t term = current_pid_term;
+    const int16_t axis = current_pid_axis;
+
+    buf[size++] = 0x5E;
+    buf[size++] = FRSKY_HUB_FIRST_USER_ID + 0;
+    buf[size++] = (uint8_t)(term & 0xff);
+    buf[size++] = (uint8_t)(term >> 8);
+    buf[size++] = 0x5E;
+    buf[size++] = 0x5E;
+    buf[size++] = FRSKY_HUB_FIRST_USER_ID + 1;
+    buf[size++] = (uint8_t)(axis & 0xff);
+    buf[size++] = (uint8_t)(axis >> 8);
+    buf[size++] = 0x5E;
+
+    pid_axis = 0;
+  } else {
+    const int16_t pidk = (int16_t)(pids_array[current_pid_term][pid_axis] * 1000);
+    buf[size++] = 0x5E;
+    buf[size++] = FRSKY_HUB_FIRST_USER_ID + 2 + pid_axis;
+    size += frsky_d_hub_encode(buf + size, (uint8_t)(pidk & 0xff));
+    size += frsky_d_hub_encode(buf + size, (uint8_t)(pidk >> 8));
+    buf[size++] = 0x5E;
+
+    pid_axis++;
+  }
+
+  // write size
+  buf[0] = size - 2;
+  return size;
+}
+
 static uint8_t frsky_d_handle_packet() {
   static uint32_t last_packet_received_time = 0;
   static uint32_t frame_had_packet = 0;
@@ -473,17 +532,21 @@ static uint8_t frsky_d_handle_packet() {
       cc2500_strobe(CC2500_SFRX);
       cc2500_enter_txmode();
 
-      static uint8_t frame[20];
-      frame[0] = 0x11; // length
-      frame[1] = frsky_bind.tx_id[0];
-      frame[2] = frsky_bind.tx_id[1];
-      frame[3] = 100;
-      frame[4] = 100;
-      frame[5] = frsky_extract_rssi(packet[18]);
-      frame[6] = 0;
-      frame[7] = packet[4];
+      const uint8_t telemetry_id = packet[4];
+      extern float vbattfilt;
+
+      static uint8_t telemetry[20];
+      telemetry[0] = 0x11; // length
+      telemetry[1] = frsky_bind.tx_id[0];
+      telemetry[2] = frsky_bind.tx_id[1];
+      telemetry[3] = (uint8_t)(vbattfilt * 100);
+      telemetry[4] = (uint8_t)(vbattfilt * 100);
+      telemetry[5] = frsky_extract_rssi(packet[18]);
+      telemetry[6] = frsky_d_append_hub_telemetry(telemetry_id, telemetry + 8);
+      telemetry[7] = telemetry_id;
+
       cc2500_strobe(CC2500_SIDLE);
-      cc2500_write_fifo(frame, frame[0] + 1);
+      cc2500_write_fifo(telemetry, telemetry[0] + 1);
 
       protocol_state = STATE_DATA;
     }
