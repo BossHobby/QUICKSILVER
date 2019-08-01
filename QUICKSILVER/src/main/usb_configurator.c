@@ -24,15 +24,8 @@ void systemResetToBootloader(void) {
   NVIC_SystemReset();
 }
 
-static uint8_t first_packet = 1;
-
 //This function will be where all usb send/receive coms live
 void usb_configurator(uint8_t *data, uint32_t len) {
-  if (first_packet) {
-    first_packet = 0;
-    return;
-  }
-
   for (uint32_t i = 0; i < len; i++) {
     switch (data[i]) {
     case 'R':
