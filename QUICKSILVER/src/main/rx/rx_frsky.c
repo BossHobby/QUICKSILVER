@@ -457,11 +457,9 @@ static uint8_t frsky_d_handle_packet() {
       if (frames_lost >= MAX_MISSING_FRAMES) {
         max_sync_delay = 10 * SYNC_DELAY_MAX;
         failsafe = 1;
-        next_channel(13);
-      } else {
-        next_channel(1);
       }
 
+      next_channel(1);
       cc2500_strobe(CC2500_SRX);
       protocol_state = STATE_UPDATE;
     }
