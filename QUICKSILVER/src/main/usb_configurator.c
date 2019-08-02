@@ -26,6 +26,10 @@ void systemResetToBootloader(void) {
 
 //This function will be where all usb send/receive coms live
 void usb_configurator(uint8_t *data, uint32_t len) {
+  if (len) {
+    usb_serial_write(data, len);
+  }
+
   for (uint32_t i = 0; i < len; i++) {
     switch (data[i]) {
     case 'R':
@@ -47,21 +51,18 @@ void usb_configurator(uint8_t *data, uint32_t len) {
       usb_serial_printf("max_cpu_load: %f\r\n", debug.max_cpu_load * 100);
       usb_serial_printf("RX: %f %f %f %f\r\n", rx[0], rx[1], rx[2], rx[3]);
 #ifdef RX_FRSKY
-      usb_debug_print("FRSKY_BIND\r\n");
-      usb_debug_printf("idx: %d\r\n", frsky_bind.idx);
-      usb_debug_printf("offset: %d\r\n", frsky_bind.offset);
-      usb_debug_printf("tx_id: 0x%x%x\r\n", frsky_bind.tx_id[0], frsky_bind.tx_id[1]);
-      usb_debug_printf("hop_data:");
+      usb_serial_print("FRSKY_BIND\r\n");
+      usb_serial_printf("idx: %d\r\n", frsky_bind.idx);
+      usb_serial_printf("offset: %d\r\n", frsky_bind.offset);
+      usb_serial_printf("tx_id: 0x%x%x\r\n", frsky_bind.tx_id[0], frsky_bind.tx_id[1]);
+      usb_serial_printf("hop_data:");
       for (uint32_t i = 0; i < 50; i++) {
-        usb_debug_printf(" %x, ", frsky_bind.hop_data[i]);
+        usb_serial_printf(" %x, ", frsky_bind.hop_data[i]);
       }
-      usb_debug_print("\r\n");
+      usb_serial_print("\r\n");
 #endif
       break;
 #endif
-    default:
-      usb_serial_write(data, len);
-      break;
     }
   }
 }

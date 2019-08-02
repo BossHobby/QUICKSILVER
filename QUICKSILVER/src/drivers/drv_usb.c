@@ -20,7 +20,8 @@ __ALIGN_BEGIN USB_OTG_CORE_HANDLE USB_OTG_dev __ALIGN_END;
 #define VCP_PACKET_SIZE 64
 
 // uint8_t data_to_send[VCP_PACKET_SIZE];    //maxed out at 64 member array - adjust as needed for sending more than one array position at a time
-uint8_t data_to_receive[VCP_PACKET_SIZE]; //maxed out at 64 member array - only set to one position for the time being since all we are listening for is 0x52 for flashing
+static uint8_t data_to_receive[VCP_PACKET_SIZE]; //maxed out at 64 member array - only set to one position for the time being since all we are listening for is 0x52 for flashing
+static uint8_t usb_is_active = 0;
 
 void usb_init(void) {
   USBD_Init(&USB_OTG_dev,
@@ -46,14 +47,18 @@ void usb_detect(void) {
   const uint8_t usb_connect = GPIO_ReadInputDataBit(USB_DETECT_PORT, USB_DETECT_PIN);
   if (usb_connect != 1) {
     // no usb connetion, bail
+    usb_is_active = 0;
     return;
   }
 #endif
 
   if (bDeviceState != CONFIGURED) {
     // only read if we are configured
+    usb_is_active = 0;
     return;
   }
+
+  usb_is_active = 1;
 
   const uint32_t len = CDC_Receive_DATA(data_to_receive, VCP_PACKET_SIZE);
   if (len == 0) {
@@ -63,24 +68,23 @@ void usb_detect(void) {
 }
 
 void usb_serial_write(uint8_t *data, uint32_t len) {
-  if (bDeviceState != CONFIGURED) {
-    // only write if we are configured
+  if (!usb_is_active) {
     return;
   }
+
   CDC_Send_DATA(data, len);
 }
 
 void usb_serial_print(char *str) {
-  if (bDeviceState != CONFIGURED) {
-    // only write if we are configured
+  if (!usb_is_active) {
     return;
   }
+
   CDC_Send_DATA((uint8_t *)str, strlen(str));
 }
 
 void usb_serial_printf(const char *fmt, ...) {
-  if (bDeviceState != CONFIGURED) {
-    // only write if we are configured
+  if (!usb_is_active) {
     return;
   }
 
