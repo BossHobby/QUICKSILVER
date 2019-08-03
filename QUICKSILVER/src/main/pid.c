@@ -64,9 +64,9 @@ float stickTransitionProfileB[3]  = { 0.3 , 0.3 , 0.0};           //keep values 
 //************************************PIDS****************************************
 //Brushless Pids
 //TWR <8:1 2"
-float pidkp[PIDNUMBER] = {14.5e-2 , 14.5e-2  , 2.5e-1 };
-float pidki[PIDNUMBER] = { 14.0e-1  , 14.0e-1 , 14.0e-1 };
-float pidkd[PIDNUMBER] = { 4.5e-1 , 4.5e-1  , 0.5e-1 };
+//float pidkp[PIDNUMBER] = {14.5e-2 , 14.5e-2  , 2.5e-1 };
+//float pidki[PIDNUMBER] = { 14.0e-1  , 14.0e-1 , 14.0e-1 };
+//float pidkd[PIDNUMBER] = { 4.5e-1 , 4.5e-1  , 0.5e-1 };
 
 //TWR 8:1 3"
 //float pidkp[PIDNUMBER] = {12.5e-2 , 14.5e-2  , 25.0e-2 }; 
@@ -85,9 +85,9 @@ float pidkd[PIDNUMBER] = { 4.5e-1 , 4.5e-1  , 0.5e-1 };
 //float pidkd[PIDNUMBER] = { 1.7e-1 , 2.4e-1  , 0.3e-1 };
 
 //TWR 14:1 5"
-//float pidkp[PIDNUMBER] = {7.5e-2 , 7.5e-2  , 18.0e-2 }; 
-//float pidki[PIDNUMBER] = { 14.0e-1  , 14.0e-1 , 14.0e-1 };	
-//float pidkd[PIDNUMBER] = { 2.3e-1 , 2.3e-1  , 0.4e-1 };
+float pidkp[PIDNUMBER] = {7.5e-2 , 7.5e-2  , 18.0e-2 };
+float pidki[PIDNUMBER] = { 14.0e-1  , 14.0e-1 , 14.0e-1 };
+float pidkd[PIDNUMBER] = { 2.3e-1 , 2.3e-1  , 0.4e-1 };
 
 //6mm & 7mm Abduction Pids for whoops (Team Alienwhoop)- set filtering ALIENWHOOP_ZERO_FILTERING
 //                         ROLL       PITCH     YAW
