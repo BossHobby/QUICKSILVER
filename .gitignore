@@ -7,7 +7,7 @@ Release/
 
 
 .vscode
-
+*.xml
 *.elf
 *.elf.launch
 *.launch
