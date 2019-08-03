@@ -8,6 +8,8 @@ Release/
 
 .vscode
 *.xml
+*.language.settings.xml
+
 *.elf
 *.elf.launch
 *.launch
