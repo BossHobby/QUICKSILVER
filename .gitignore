@@ -5,9 +5,7 @@ Objects/
 Debug/
 Release/
 
-QUICKSILVER/.settings/language.settings.xml
-*QUICKSILVER/.settings/language.settings.xml
-*.settings/language.settings.xml
+
 .vscode
 *.xml
 *.settings.xml

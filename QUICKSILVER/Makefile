@@ -23,7 +23,7 @@ ifeq ($(MODE),release)
   OPTIMIZE_FLAGS = -O3
 else
   MODE = debug
-  OPTIMIZE_FLAGS = -g -O0
+  OPTIMIZE_FLAGS = -g -O1
 endif
 
 BINARY = quicksilver.$(TARGET).$(MODE)
