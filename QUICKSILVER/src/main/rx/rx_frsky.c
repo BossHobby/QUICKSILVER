@@ -439,8 +439,6 @@ static uint8_t frsky_d_handle_packet() {
   uint8_t ret = 0;
   switch (protocol_state) {
   case STATE_STARTING:
-    usb_debug_print("FRSKY STATE_STARTING\r\n");
-
     cc2500_enter_rxmode();
     cc2500_write_reg(CC2500_FOCCFG, 0x14);
     set_address(0);
