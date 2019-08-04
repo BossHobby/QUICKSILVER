@@ -1,3 +1,5 @@
+#include "config.h"
+
 #define Betafpv_F4
 
 #define F411

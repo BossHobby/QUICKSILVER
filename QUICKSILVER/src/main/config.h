@@ -81,9 +81,9 @@
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 
 // *************Serial Receiver UART Selection (uncomment all if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
-#define UART_1
+//#define UART_1
 //#define UART_2
-//#define UART_3
+#define UART_3
 //#define UART_4
 //#define UART_6
 

@@ -1,3 +1,5 @@
+#include "config.h"
+
 #define F0
 #define Alienwhoop_ZERO
 

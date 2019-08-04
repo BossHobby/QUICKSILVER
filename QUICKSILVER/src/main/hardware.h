@@ -1,4 +1,4 @@
-#include "targets.h"
+#include "target.h"
 
 // the error codes indicate a failure that prevents normal operation
 // led flash codes - the quad will not fly / bind if flashing a code

@@ -1,3 +1,5 @@
+#include "config.h"
+
 #define F0
 #define H8mini_blue_board
 

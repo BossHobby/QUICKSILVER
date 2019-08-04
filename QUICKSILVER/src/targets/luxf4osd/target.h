@@ -1,3 +1,5 @@
+#include "config.h"
+
 #define F405
 #define LuxF4osd
 

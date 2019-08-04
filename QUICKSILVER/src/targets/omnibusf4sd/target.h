@@ -1,3 +1,5 @@
+#include "config.h"
+
 #define F405
 #define OmnibusF4SD
 

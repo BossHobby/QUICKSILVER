@@ -1,3 +1,5 @@
+#include "config.h"
+
 #define F405
 #define OmnibusF4
 
@@ -50,6 +52,7 @@
 #define USART_INVERTER_PORT GPIOC
 #define USART3_PB11PB10
 #define USART4_PA1PA0
+#define USART6_PC7PC6
 #endif
 #define SOFTSPI_NONE
 #endif
