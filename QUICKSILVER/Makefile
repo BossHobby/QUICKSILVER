@@ -18,15 +18,8 @@ INCLUDE = src \
 	$(TARGET_INCLUDE)
 
 SOURCE = $(shell sh -c 'find src/main/ -iname *.c -or -name *.cpp') \
-	$(shell sh -c 'find src/drivers/ -iname *.c -or -name *.cpp') \
+	$(shell sh -c 'find src/drivers/ -maxdepth 1 -iname *.c -or -name *.cpp') \
 	$(TARGET_SOURCE) 
-
-ifeq ($(MODE),release)
-  OPTIMIZE_FLAGS = -O3
-else
-  MODE = debug
-  OPTIMIZE_FLAGS = -g -O1
-endif
 
 BINARY = quicksilver.$(TARGET).$(MODE)
 BUILD_DIR = build/$(MODE)
@@ -36,17 +29,27 @@ DEPS    = $(addsuffix .d,$(addprefix $(BUILD_DIR)/,$(basename $(SOURCE))))
 
 COMMON_FLAGS = -Wall -MMD -MP --specs=nano.specs --specs=nosys.specs \
 	-fsingle-precision-constant -fno-exceptions -fstack-usage \
-	-ffunction-sections -fdata-sections -fno-strict-aliasing
+	-ffunction-sections -fdata-sections -fno-strict-aliasing \
+	-flto -ffast-math
 
-CFLAGS   = $(COMMON_FLAGS) $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS)
+CFLAGS   = $(COMMON_FLAGS) $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) \
+	-std=c11
 CXXFLAGS = $(COMMON_FLAGS) $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) \
-	-fno-rtti -std=c++17
+	-std=c++17 -fno-rtti -fno-exceptions 
 
-LDFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) -u _printf_float \
-	-Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group \
-	-static -Wl,-gc-sections -Wl,-L$(SYSTEM_DIR) -T$(SYSTEM_LD_SCRIPT)
+LDFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) \
+	-Wl,--start-group -lc -lm -Wl,--end-group \
+	-static -Wl,-L$(SYSTEM_DIR),-T$(SYSTEM_LD_SCRIPT),-Map,output.map,--gc-sections
 
 ASFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) -x assembler-with-cpp $(addprefix -I,$(INCLUDE)) -MMD -MP
+
+ifeq ($(MODE),release)
+  OPTIMIZE_FLAGS = -O3 -Os
+else
+  MODE = debug
+  OPTIMIZE_FLAGS = -g -O1 -Os
+	LDFLAGS += -u _printf_float
+endif
 
 all: $(TARGET)
 

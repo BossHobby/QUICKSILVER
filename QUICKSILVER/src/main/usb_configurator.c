@@ -3,6 +3,8 @@
 #include "drv_usb.h"
 #include "project.h"
 
+#ifdef F405
+
 #include "stm32f4xx.h"
 
 extern float pidkp[PIDNUMBER];
@@ -66,3 +68,5 @@ void usb_configurator(uint8_t *data, uint32_t len) {
     }
   }
 }
+
+#endif

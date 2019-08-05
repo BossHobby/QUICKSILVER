@@ -11,4 +11,5 @@ SYSTEM_INCLUDE = src/system/stm32f405 \
 
 SYSTEM_SOURCE = src/system/stm32f405/startup_stm32f40xx.s \
 	$(shell sh -c 'find src/system/stm32f405 -name *.c') \
-	$(shell sh -c 'find Libraries/STM32F4xx_StdPeriph_Driver/src -name *.c') 
+	$(shell sh -c 'find Libraries/STM32F4xx_StdPeriph_Driver/src -name *.c') \
+	$(shell sh -c 'find src/drivers/usb -iname *.c -or -name *.cpp')
