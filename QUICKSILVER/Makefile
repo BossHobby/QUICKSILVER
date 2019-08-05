@@ -39,7 +39,7 @@ CXXFLAGS = $(COMMON_FLAGS) $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) \
 
 LDFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) \
 	-Wl,--start-group -lc -lm -Wl,--end-group \
-	-static -Wl,-L$(SYSTEM_DIR),-T$(SYSTEM_LD_SCRIPT),-Map,output.map,--gc-sections
+	-static -Wl,-L$(SYSTEM_DIR),-T$(SYSTEM_LD_SCRIPT),-Map,$(BUILD_DIR)/$(BINARY).map,--gc-sections
 
 ASFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) -x assembler-with-cpp $(addprefix -I,$(INCLUDE)) -MMD -MP
 
@@ -55,7 +55,7 @@ all: $(TARGET)
 
 FORCE:
 
-$(TARGET): $(BUILD_DIR)/target $(BUILD_DIR)/$(BINARY).bin $(BUILD_DIR)/$(BINARY).hex
+$(TARGET): $(BUILD_DIR)/target $(BUILD_DIR)/$(BINARY).bin $(BUILD_DIR)/$(BINARY).hex $(BUILD_DIR)/$(BINARY).list
 	
 $(BUILD_DIR)/target: FORCE
 	@mkdir -p $(BUILD_DIR)
@@ -72,6 +72,9 @@ $(BUILD_DIR)/$(BINARY).bin: $(BUILD_DIR)/$(BINARY).elf
 
 $(BUILD_DIR)/$(BINARY).hex: $(BUILD_DIR)/$(BINARY).elf
 	$(CP) -O ihex $(BUILD_DIR)/$(BINARY).elf $(BUILD_DIR)/$(BINARY).hex
+
+$(BUILD_DIR)/$(BINARY).list: $(BUILD_DIR)/$(BINARY).elf
+	$(OD) -h -S $(BUILD_DIR)/$(BINARY).elf > $(BUILD_DIR)/$(BINARY).list
 
 $(BUILD_DIR)/$(BINARY).elf: $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^ 
