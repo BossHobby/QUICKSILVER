@@ -81,7 +81,9 @@
 #define MOTOR3_PIN_PB6
 
 // PWM PIN INITIALIZATION
+#ifdef BRUSHED_TARGET
 #define PWM_PB8
 #define PWM_PB7
 #define PWM_PB10
 #define PWM_PB6
+#endif
