@@ -30,7 +30,7 @@ THE SOFTWARE.
 #include "drv_softi2c.h"
 #include "defines.h"
 
-#ifndef USE_DUMMY_I2C
+#ifdef USE_SOFTWARE_I2C
 //#define i2cdebug
 
 static GPIO_InitTypeDef  sdainit;

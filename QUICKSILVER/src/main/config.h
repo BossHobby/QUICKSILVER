@@ -82,8 +82,8 @@
 //#define RX_FRSKY
 
 // *************Serial Receiver UART Selection (uncomment all if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
-//#define UART_1
-#define UART_2
+#define UART_1
+//#define UART_2
 //#define UART_3
 //#define UART_4
 //#define UART_6
@@ -95,11 +95,11 @@
 #define USE_DEVO
 //#define USE_MULTI
 
-//#define RADIO_XN297L
-#define RADIO_XN297
+#define RADIO_XN297L
+//#define RADIO_XN297
 
-//#define SOFTSPI_3WIRE
-#define SOFTSPI_4WIRE
+#define SOFTSPI_3WIRE
+//#define SOFTSPI_4WIRE
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING CHAN_5

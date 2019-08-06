@@ -223,6 +223,9 @@
 						<entry kind="includePath" name="/${ProjName}/src/main">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/main/rx">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
 						<entry kind="includePath" name="/${ProjName}/src/drivers">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
@@ -255,29 +258,31 @@
 						<entry kind="includePath" name="/${ProjName}/src/main">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/main/rx">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
 						<entry kind="includePath" name="/${ProjName}/src/drivers">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f0xx">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/Libraries/Device/STM32F4xx/Include">
+						<entry kind="includePath" name="/${ProjName}/Libraries/Device/STM32F0xx/Include">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
+						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F0xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/omnibusf4sd">
+						<entry kind="includePath" name="/${ProjName}/src/targets/alienwhoop_zero">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="STM32F40XX" value="1"/>
-						<entry kind="macro" name="STM32F4XX" value="1"/>
+						<entry kind="macro" name="STM32F031" value="1"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/drivers">
@@ -287,29 +292,31 @@
 						<entry kind="includePath" name="/${ProjName}/src/main">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/main/rx">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
 						<entry kind="includePath" name="/${ProjName}/src/drivers">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f0xx">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/Libraries/Device/STM32F4xx/Include">
+						<entry kind="includePath" name="/${ProjName}/Libraries/Device/STM32F0xx/Include">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
+						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F0xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/omnibusf4sd">
+						<entry kind="includePath" name="/${ProjName}/src/targets/alienwhoop_zero">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="STM32F40XX" value="1"/>
-						<entry kind="macro" name="STM32F4XX" value="1"/>
+						<entry kind="macro" name="STM32F031" value="1"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/system/stm32f405">
@@ -319,6 +326,9 @@
 						<entry kind="includePath" name="/${ProjName}/src/main">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/main/rx">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
 						<entry kind="includePath" name="/${ProjName}/src/drivers">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
@@ -344,11 +354,48 @@
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
+					<resource project-relative-path="src/main/rx">
+						<entry kind="includePath" name="/${ProjName}/src">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/main">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/main/rx">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/drivers">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f0xx">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/Libraries/Device/STM32F0xx/Include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F0xx_StdPeriph_Driver/inc">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/targets/alienwhoop_zero">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="macro" name="STM32F031" value="1"/>
+						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
+					</resource>
 					<resource project-relative-path="src/drivers/usb">
 						<entry kind="includePath" name="/${ProjName}/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/src/main">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/main/rx">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/src/drivers">
@@ -374,6 +421,74 @@
 						</entry>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
+						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
+					</resource>
+					<resource project-relative-path="Libraries/STM32F0xx_StdPeriph_Driver/src">
+						<entry kind="includePath" name="/${ProjName}/src">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/main">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/main/rx">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/drivers">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f0xx">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/Libraries/Device/STM32F0xx/Include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F0xx_StdPeriph_Driver/inc">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/targets/alienwhoop_zero">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="macro" name="STM32F031" value="1"/>
+						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
+					</resource>
+					<resource project-relative-path="src/system/stm32f0xx">
+						<entry kind="includePath" name="/${ProjName}/src">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/main">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/main/rx">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/drivers">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f0xx">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/Libraries/Device/STM32F0xx/Include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F0xx_StdPeriph_Driver/inc">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/targets/alienwhoop_zero">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="macro" name="STM32F031" value="1"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 				</language>
@@ -385,29 +500,31 @@
 						<entry kind="includePath" name="/${ProjName}/src/main">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
+						<entry kind="includePath" name="/${ProjName}/src/main/rx">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
 						<entry kind="includePath" name="/${ProjName}/src/drivers">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f0xx">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/Libraries/Device/STM32F4xx/Include">
+						<entry kind="includePath" name="/${ProjName}/Libraries/Device/STM32F0xx/Include">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
+						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F0xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/omnibusf4sd">
+						<entry kind="includePath" name="/${ProjName}/src/targets/alienwhoop_zero">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="STM32F40XX" value="1"/>
-						<entry kind="macro" name="STM32F4XX" value="1"/>
+						<entry kind="macro" name="STM32F031" value="1"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 				</language>

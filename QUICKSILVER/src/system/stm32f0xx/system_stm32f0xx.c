@@ -274,7 +274,7 @@ void SystemCoreClockUpdate (void)
   */
 static void SetSysClock(void)
 {
-  __IO uint32_t StartUpCounter = 0, HSEStatus = 0;
+ // __IO uint32_t StartUpCounter = 0, HSEStatus = 0;
   
   /* SYSCLK, HCLK, PCLK configuration ----------------------------------------*/
   /* At this stage the HSI is already enabled */
@@ -293,7 +293,8 @@ static void SetSysClock(void)
   RCC->CFGR &= (uint32_t)((uint32_t)~(RCC_CFGR_PLLSRC | RCC_CFGR_PLLMULL));
   RCC->CFGR |= (uint32_t)(RCC_CFGR_PLLSRC_HSI_Div2 | RCC_CFGR_PLLMULL12);  
 #else  /* PLL_SOURCE_HSE_BYPASS or PLL_SOURCE_HSE */
-  /* Enable HSE */    
+  /* Enable HSE */
+  __IO uint32_t StartUpCounter = 0, HSEStatus = 0;
   RCC->CR |= ((uint32_t)RCC_CR_HSEON);    
 #if defined (PLL_SOURCE_HSE_BYPASS)
   /* HSE oscillator bypassed with external clock */    
