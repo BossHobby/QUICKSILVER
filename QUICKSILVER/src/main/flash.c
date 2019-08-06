@@ -124,7 +124,7 @@ void flash_save(void) {
 
 #endif
 
-#ifdef RX_FRSKY //currently starts at address 57
+#ifdef RX_FRSKY //currently starts at address 66
   extern frsky_bind_data frsky_bind;
   for (int i = 0; i < sizeof(frsky_bind_data) / 4; i++) {
     writeword(i + 66, frsky_bind.raw[i]);
