@@ -164,7 +164,6 @@ void osd_display(void) {
     osd_checksystem(); //try to detect camera
     if (lastsystem < 2) {
       osd_display_reset(); //camera has been detected while in the main loop and screen has been cleared again - reset screen cases
-      return;              // dont draw anything else this frame
     }
   }
 
