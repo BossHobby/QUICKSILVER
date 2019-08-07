@@ -23,7 +23,7 @@
 //#include "platform.h"
 
 
-#include "serial_4way.h"
+#include "drv_serial_4way.h"
 #include "drv_pwm.h"
 #ifdef  USE_SERIAL_4WAY_BLHELI_INTERFACE
 
@@ -41,10 +41,10 @@
 #include "drv_dshot.h"
 
 #ifdef USE_SERIAL_4WAY_BLHELI_BOOTLOADER
-#include "serial_4way_avrootloader.h"
+#include "drv_serial_4way_avrootloader.h"
 #endif
 #if defined(USE_SERIAL_4WAY_SK_BOOTLOADER)
-#include "serial_4way_stk500v2.h"
+#include "drv_serial_4way_stk500v2.h"
 #endif
 
 

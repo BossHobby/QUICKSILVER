@@ -54,7 +54,7 @@
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 #include "drv_softserial.h"
-#include "serial_4way.h"
+#include "drv_serial_4way.h"
 #endif
 
 #ifdef F405

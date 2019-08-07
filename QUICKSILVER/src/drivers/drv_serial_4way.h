@@ -19,15 +19,14 @@
 
 #include "defines.h"
 
-
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 #define USE_SERIAL_4WAY_BLHELI_BOOTLOADER
 //#define USE_SERIAL_4WAY_SK_BOOTLOADER // not implemented in Silverware yet
 
+#include "drv_serial_4way_impl.h"
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <inttypes.h>
-#include "serial_4way_impl.h"
 
 #define imC2 0
 #define imSIL_BLB 1
@@ -39,15 +38,15 @@ extern uint8_t selected_esc;
 
 extern ioMem_t ioMem;
 
-typedef union __attribute__ ((packed)) {
-    uint8_t bytes[2];
-    uint16_t word;
+typedef union __attribute__((packed)) {
+  uint8_t bytes[2];
+  uint16_t word;
 } uint8_16_u;
 
-typedef union __attribute__ ((packed)) {
-    uint8_t bytes[4];
-    uint16_t words[2];
-    uint32_t dword;
+typedef union __attribute__((packed)) {
+  uint8_t bytes[4];
+  uint16_t words[2];
+  uint32_t dword;
 } uint8_32_u;
 
 //extern uint8_32_u DeviceInfo;
@@ -58,4 +57,3 @@ struct serialPort_s;
 void esc4wayProcess(void);
 void esc4wayRelease(void);
 #endif
-

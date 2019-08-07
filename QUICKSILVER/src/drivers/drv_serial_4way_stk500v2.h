@@ -16,29 +16,14 @@
  * Author: 4712
 */
 #pragma once
+#ifdef USE_SERIAL_4WAY_SK_BOOTLOADER
 
-#include <stdint.h>
-#include <stdbool.h>
+uint8_t Stk_SignOn(void);
+uint8_t Stk_ConnectEx(uint8_32_u *pDeviceInfo);
+uint8_t Stk_ReadEEprom(ioMem_t *pMem);
+uint8_t Stk_WriteEEprom(ioMem_t *pMem);
+uint8_t Stk_ReadFlash(ioMem_t *pMem);
+uint8_t Stk_WriteFlash(ioMem_t *pMem);
+uint8_t Stk_Chip_Erase(void);
 
-extern uint8_t selected_esc;
-
-bool isEscHi(uint8_t selEsc);
-bool isEscLo(uint8_t selEsc);
-void setEscHi(uint8_t selEsc);
-void setEscLo(uint8_t selEsc);
-void setEscInput(uint8_t selEsc);
-void setEscOutput(uint8_t selEsc);
-
-#define ESC_IS_HI  isEscHi(selected_esc)
-#define ESC_IS_LO  isEscLo(selected_esc)
-#define ESC_SET_HI setEscHi(selected_esc)
-#define ESC_SET_LO setEscLo(selected_esc)
-#define ESC_INPUT  setEscInput(selected_esc)
-#define ESC_OUTPUT setEscOutput(selected_esc)
-
-typedef struct ioMem_s {
-    uint8_t D_NUM_BYTES;
-    uint8_t D_FLASH_ADDR_H;
-    uint8_t D_FLASH_ADDR_L;
-    uint8_t *D_PTR_I;
-} ioMem_t;
+#endif
