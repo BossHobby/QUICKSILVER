@@ -14,7 +14,32 @@ volatile unsigned long systickcount = 0;
 #warning SYS_CLOCK_FREQ_HZ not present
 #endif
 
+void debug_timer_init() {
+  if (!(CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk)) {
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CYCCNT = 0;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+  }
+}
+
+uint32_t debug_timer_micros() {
+  return DWT->CYCCNT / (SystemCoreClock / 1000000L);
+}
+
+uint32_t debug_timer_millis() {
+  return (debug_timer_micros()) / 1000;
+}
+
+void debug_timer_delay_us(uint32_t us) {
+  volatile uint32_t delay = us * (SystemCoreClock / 1000000L);
+  volatile uint32_t start = DWT->CYCCNT;
+  while (DWT->CYCCNT - start < delay) {
+    asm("nop");
+  }
+}
+
 #ifdef F405
+
 // divider by 8 is enabled in this systick config
 static __INLINE uint32_t SysTick_Config2(uint32_t ticks) {
   if (ticks > SysTick_LOAD_RELOAD_Msk)
@@ -43,6 +68,8 @@ void time_init() {
       ;
   }
 #endif
+
+  debug_timer_init();
 }
 
 // called at least once per 16ms or time will overflow
@@ -77,7 +104,7 @@ unsigned long time_update(void) {
 }
 
 // return time in uS from start ( micros())
-unsigned long gettime() {
+uint32_t gettime() {
   return time_update();
 }
 
@@ -94,6 +121,7 @@ void delay(uint32_t data) {
 
 void SysTick_Handler(void) {
 }
+
 #endif
 
 #ifdef F0
@@ -119,6 +147,8 @@ void time_init() {
     while (1)
       ;
   }
+
+  debug_timer_init();
 }
 
 // called at least once per 16ms or time will overflow

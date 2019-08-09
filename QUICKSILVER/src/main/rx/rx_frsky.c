@@ -57,22 +57,6 @@ int failsafe = 1; // It isn't safe if we haven't checked it!
 int rxmode = RXMODE_BIND;
 int rx_ready = 0;
 
-void debug_timer_init() {
-  if (!(CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk)) {
-    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-    DWT->CYCCNT = 0;
-    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
-  }
-}
-
-uint32_t debug_timer_micros() {
-  return DWT->CYCCNT / (SystemCoreClock / 1000000L);
-}
-
-uint32_t debug_timer_millis() {
-  return (debug_timer_micros()) / 1000;
-}
-
 uint8_t frsky_extract_rssi(uint8_t rssi_raw) {
   if (rssi_raw >= 128) {
     // adapted to fit better to the original values... FIXME: find real formula
@@ -548,7 +532,6 @@ static uint8_t frsky_d_handle_packet() {
 }
 
 void rx_init(void) {
-  debug_timer_init();
   cc2500_init();
 
   // enable gdo0 on read
