@@ -127,7 +127,7 @@
 //#define USE_DSHOT_DRIVER_BETA
 
 //FC must have MOSFETS and motor pulldown resistors removed. MAY NOT WORK WITH ALL ESCS
-//#define USE_SERIAL_4WAY_BLHELI_INTERFACE
+#define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
 // pwm pins disable
 // disable all pwm pins / function

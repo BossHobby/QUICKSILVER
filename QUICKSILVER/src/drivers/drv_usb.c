@@ -67,6 +67,13 @@ void usb_detect(void) {
   usb_configurator(data_to_receive, len);
 }
 
+uint32_t usb_serial_read(uint8_t *data, uint32_t len) {
+  if (!usb_is_active) {
+    return 0;
+  }
+  return CDC_Receive_DATA(data, len);
+}
+
 void usb_serial_write(uint8_t *data, uint32_t len) {
   if (!usb_is_active) {
     return;

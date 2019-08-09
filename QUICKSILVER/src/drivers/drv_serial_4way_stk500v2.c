@@ -22,19 +22,14 @@
 #include <stdint.h>
 
 #include "defines.h"
-#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 #include "drv_serial_4way.h"
+#include "drv_time.h"
 
+#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 #ifdef USE_SERIAL_4WAY_SK_BOOTLOADER
 
-#include "drivers/io.h"
-#include "drivers/serial.h"
-#include "drivers/time.h"
-
-#include "io/serial.h"
-#include "io/serial_4way.h"
-#include "io/serial_4way_impl.h"
-#include "io/serial_4way_stk500v2.h"
+#define micros debug_timer_micros
+#define millis debug_timer_millis
 
 #define BIT_LO_US (32) //32uS
 #define BIT_HI_US (2 * BIT_LO_US)
@@ -87,7 +82,7 @@ static uint8_t ckSumOut;
 #define EnterIspCmd2 0x53
 #define signature_r 0x30
 
-#define delay_us(x) delayMicroseconds(x)
+#define delay_us(x) debug_timer_delay_us(x)
 #define IRQ_OFF // dummy
 #define IRQ_ON  // dummy
 

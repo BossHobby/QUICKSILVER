@@ -22,11 +22,6 @@
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 
-//#include "drivers/io.h"
-//#include "drivers/serial.h"
-//#include "drivers/time.h"
-//#include "drivers/timer.h"
-
 #include "drv_serial_4way.h"
 #include "drv_serial_4way_impl.h"
 #include "drv_time.h"
@@ -63,77 +58,75 @@
 #define START_BIT_TIME (BIT_TIME_3_4)
 //#define STOP_BIT_TIME     ((BIT_TIME * 9) + BIT_TIME_HALVE)
 
-#define micros gettime
-#define millis .001gettime
+#define micros debug_timer_micros
+#define millis debug_timer_millis
 
 #include "drv_softserial.h"
 extern SoftSerialData_t escSerial[4];
 
-#undef ESC_INPUT
-#undef ESC_OUTPUT
-#define ESC_INPUT softserial_set_input(&escSerial[selected_esc]);
-#define ESC_OUTPUT softserial_set_output(&escSerial[selected_esc]);
-
 static uint8_t suart_getc_(uint8_t *bt) {
+#ifdef F0
   return softserial_read_byte_ex(&escSerial[selected_esc], bt);
-}
-/*
-    uint32_t btime;
-    uint32_t start_time;
+#else
+  uint32_t btime;
+  uint32_t start_time;
 
-    uint32_t wait_time = millis() + START_BIT_TIMEOUT_MS;
-    while (ESC_IS_HI) {
-        // check for startbit begin
-        if (millis() >= wait_time) {
-            return 0;
-        }
+  uint32_t wait_time = millis() + START_BIT_TIMEOUT_MS;
+  while (ESC_IS_HI) {
+    // check for startbit begin
+    if (millis() >= wait_time) {
+      return 0;
     }
-    // start bit
-    start_time = micros();
-    btime = start_time + START_BIT_TIME;
-    uint16_t bitmask = 0;
-    uint8_t bit = 0;
-    while (micros() < btime);
-    while (1) {
-        if (ESC_IS_HI)
-        {
-            bitmask |= (1 << bit);
-        }
-        btime = btime + BIT_TIME;
-        bit++;
-        if (bit == 10) break;
-        while (micros() < btime);
+  }
+  // start bit
+  start_time = micros();
+  btime = start_time + START_BIT_TIME;
+  uint16_t bitmask = 0;
+  uint8_t bit = 0;
+  while (micros() < btime)
+    ;
+  while (1) {
+    if (ESC_IS_HI) {
+      bitmask |= (1 << bit);
     }
-    // check start bit and stop bit
-    if ((bitmask & 1) || (!(bitmask & (1 << 9)))) {
-        return 0;
-    }
-    *bt = bitmask >> 1;
-    return 1;
+    btime = btime + BIT_TIME;
+    bit++;
+    if (bit == 10)
+      break;
+    while (micros() < btime)
+      ;
+  }
+  // check start bit and stop bit
+  if ((bitmask & 1) || (!(bitmask & (1 << 9)))) {
+    return 0;
+  }
+  *bt = bitmask >> 1;
+  return 1;
+#endif
 }
-*/
 
 static void suart_putc_(uint8_t *tx_b) {
+#ifdef F0
   softserial_write_byte_ex(&escSerial[selected_esc], *tx_b);
-}
-/*
-    // shift out stopbit first
-    uint16_t bitmask = (*tx_b << 2) | 1 | (1 << 10);
-    uint32_t btime = micros();
-    while (1) {
-        if (bitmask & 1) {
-            ESC_SET_HI; // 1
-        }
-        else {
-            ESC_SET_LO; // 0
-        }
-        btime = btime + BIT_TIME;
-        bitmask = (bitmask >> 1);
-        if (bitmask == 0) break; // stopbit shifted out - but don't wait
-        while (micros() < btime);
+#else
+  // shift out stopbit first
+  uint16_t bitmask = (*tx_b << 2) | 1 | (1 << 10);
+  uint32_t btime = micros();
+  while (1) {
+    if (bitmask & 1) {
+      ESC_SET_HI; // 1
+    } else {
+      ESC_SET_LO; // 0
     }
+    btime = btime + BIT_TIME;
+    bitmask = (bitmask >> 1);
+    if (bitmask == 0)
+      break; // stopbit shifted out - but don't wait
+    while (micros() < btime)
+      ;
+  }
+#endif
 }
-*/
 
 static uint8_16_u CRC_16;
 static uint8_16_u LastCRC_16;
@@ -201,7 +194,6 @@ static void BL_SendBuf(uint8_t *pstring, uint8_t len) {
 }
 
 uint8_t BL_ConnectEx(uint8_32_u *pDeviceInfo) {
-  ESC_INPUT;
 #define BootMsgLen 4
 #define DevSignHi (BootMsgLen)
 #define DevSignLo (BootMsgLen + 1)
@@ -318,7 +310,7 @@ uint8_t BL_PageErase(ioMem_t *pMem) {
   if (BL_SendCMDSetAddress(pMem)) {
     uint8_t sCMD[] = {CMD_ERASE_FLASH, 0x01};
     BL_SendBuf(sCMD, 2);
-    return (BL_GetACK((1400 / START_BIT_TIMEOUT_MS)) == brSUCCESS);
+    return (BL_GetACK((3000 / START_BIT_TIMEOUT_MS)) == brSUCCESS);
   }
   return 0;
 }
@@ -846,7 +838,6 @@ void BL_SendCMDRunRestartBootloader(uint8_32_u *pDeviceInfo) {
 }
 
 static uint8_t BL_ReadA(uint8_t cmd, ioMem_t *pMem) {
-  UNUSED(cmd);
   uint16_t address = pMem->D_FLASH_ADDR_H << 8 | pMem->D_FLASH_ADDR_L;
 
   uint16_t bytes = pMem->D_NUM_BYTES;
@@ -858,8 +849,6 @@ static uint8_t BL_ReadA(uint8_t cmd, ioMem_t *pMem) {
 }
 
 static uint8_t BL_WriteA(uint8_t cmd, ioMem_t *pMem, uint32_t timeout) {
-  UNUSED(cmd);
-  UNUSED(timeout);
   uint16_t address = pMem->D_FLASH_ADDR_H << 8 | pMem->D_FLASH_ADDR_L;
 
   uint16_t bytes = pMem->D_NUM_BYTES;
@@ -870,7 +859,6 @@ static uint8_t BL_WriteA(uint8_t cmd, ioMem_t *pMem, uint32_t timeout) {
 }
 
 uint8_t BL_ReadFlash(uint8_t interface_mode, ioMem_t *pMem) {
-  UNUSED(interface_mode);
   return BL_ReadA(0, pMem);
 }
 

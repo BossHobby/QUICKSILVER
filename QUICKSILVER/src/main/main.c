@@ -53,8 +53,8 @@
 #include <stdio.h>
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
-#include "drv_softserial.h"
 #include "drv_serial_4way.h"
+#include "drv_softserial.h"
 #endif
 
 #ifdef F405
@@ -124,7 +124,7 @@ unsigned long ledcommandtime = 0;
 uint32_t loopCounter = 0; //For tagging loops that ran long, short, freaked out, etc. Yes, Bobnova was here.
 
 void failloop(int val);
-#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
+#if defined(USE_SERIAL_4WAY_BLHELI_INTERFACE) && defined(F0)
 volatile int switch_to_4way = 0;
 static void setup_4way_external_interrupt(void);
 #endif
@@ -257,7 +257,7 @@ int main(void) {
   //
   //
 
-#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
+#if defined(USE_SERIAL_4WAY_BLHELI_INTERFACE) && defined(F0)
   setup_4way_external_interrupt();
 #endif
   while (1) {
@@ -466,7 +466,7 @@ int main(void) {
       }
     }
 #endif
-#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
+#if defined(USE_SERIAL_4WAY_BLHELI_INTERFACE) && defined(F0)
     extern int onground;
     if (onground) {
       NVIC_EnableIRQ(EXTI4_15_IRQn);
@@ -605,7 +605,7 @@ void UsageFault_Handler(void) {
   handle_fault();
 }
 
-#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
+#if defined(USE_SERIAL_4WAY_BLHELI_INTERFACE) && defined(F0)
 
 // set up external interrupt to check
 // for 4way serial start byte

@@ -22,6 +22,7 @@
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 #define USE_SERIAL_4WAY_BLHELI_BOOTLOADER
 //#define USE_SERIAL_4WAY_SK_BOOTLOADER // not implemented in Silverware yet
+// #define USE_FAKE_ESC
 
 #include "drv_serial_4way_impl.h"
 #include <inttypes.h>
@@ -35,8 +36,6 @@
 #define imARM_BLB 4
 
 extern uint8_t selected_esc;
-
-extern ioMem_t ioMem;
 
 typedef union __attribute__((packed)) {
   uint8_t bytes[2];

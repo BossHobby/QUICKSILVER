@@ -1,3 +1,5 @@
+#include "usb_configurator.h"
+
 #include "debug.h"
 #include "drv_time.h"
 #include "drv_usb.h"
@@ -28,12 +30,11 @@ void systemResetToBootloader(void) {
 
 //This function will be where all usb send/receive coms live
 void usb_configurator(uint8_t *data, uint32_t len) {
-  if (len) {
-    usb_serial_write(data, len);
-  }
-
   for (uint32_t i = 0; i < len; i++) {
     switch (data[i]) {
+    case '$':
+      i += usb_process_msp(data, len);
+      break;
     case 'R':
       //  The following bits will reboot to DFU upon receiving 'R' (which is sent by BF configurator)
       usb_serial_print("SYSTEM RESET\r\n");
@@ -66,6 +67,10 @@ void usb_configurator(uint8_t *data, uint32_t len) {
       break;
 #endif
     }
+  }
+
+  if (len) {
+    usb_serial_write(data, len);
   }
 }
 
