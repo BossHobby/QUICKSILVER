@@ -1,14 +1,11 @@
 CXX=arm-none-eabi-g++
 CC=arm-none-eabi-gcc
-LD=arm-none-eabi-g++
+LD=arm-none-eabi-gcc
 AR=arm-none-eabi-ar
 AS=arm-none-eabi-as
 CP=arm-none-eabi-objcopy
 OD=arm-none-eabi-objdump
 SE=arm-none-eabi-size
-
-# include our target logic
-include src/targets/target.mk
 
 INCLUDE = src \
 	src/main \
@@ -21,34 +18,39 @@ SOURCE = $(shell sh -c 'find src/main/ -iname *.c -or -name *.cpp') \
 	$(shell sh -c 'find src/drivers/ -maxdepth 1 -iname *.c -or -name *.cpp') \
 	$(TARGET_SOURCE) 
 
+ifeq ($(MODE),release)
+  OPTIMIZE_FLAGS = -s -O3 -Os
+else
+  MODE = debug
+  OPTIMIZE_FLAGS = -g -O1 -Os
+endif
+
+# include our target logic
+include src/targets/target.mk
+
 BINARY = quicksilver.$(TARGET).$(MODE)
 BUILD_DIR = build/$(MODE)
 
 OBJS    = $(addsuffix .o,$(addprefix $(BUILD_DIR)/,$(basename $(SOURCE))))
 DEPS    = $(addsuffix .d,$(addprefix $(BUILD_DIR)/,$(basename $(SOURCE))))
 
-COMMON_FLAGS = -Wall -MMD -MP --specs=nano.specs --specs=nosys.specs \
-	-fsingle-precision-constant -fno-exceptions -fstack-usage \
-	-ffunction-sections -fdata-sections -fno-strict-aliasing
+COMMON_FLAGS = -Wall -Wdouble-promotion -MMD -MP \
+	--specs=nano.specs --specs=nosys.specs \
+	-fsingle-precision-constant -fno-exceptions -fno-strict-aliasing \
+	-ffunction-sections -fdata-sections -fstack-usage \
+	-fno-stack-protector -fomit-frame-pointer \
+	-fno-unwind-tables -fno-asynchronous-unwind-tables \
+	-fno-math-errno -fmerge-all-constants
 
-CFLAGS   = $(COMMON_FLAGS) $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) \
-	-std=c11
-CXXFLAGS = $(COMMON_FLAGS) $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) \
-	-std=c++17 -fno-rtti -fno-exceptions 
+CFLAGS   = $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(COMMON_FLAGS)  \
+	-std=gnu11
+CXXFLAGS = $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(COMMON_FLAGS)  \
+	-std=gnu++17 -fno-rtti -fno-exceptions -fvtable-gc -fno-threadsafe-statics -fno-use-cxa-atexit
 
-LDFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) \
-	-Wl,--start-group -lc -lm -Wl,--end-group \
-	-static -Wl,-L$(SYSTEM_DIR),-T$(SYSTEM_LD_SCRIPT),-Map,$(BUILD_DIR)/$(BINARY).map,--gc-sections
+LDFLAGS  += -static -lc -lnosys -lm -Wl,-L$(SYSTEM_DIR),-T$(SYSTEM_LD_SCRIPT),-Map,$(BUILD_DIR)/$(BINARY).map,--verbose,--gc-sections,--print-gc-sections \
+	$(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(COMMON_FLAGS)
 
-ASFLAGS  = $(COMMON_FLAGS) $(ARCH_FLAGS) -x assembler-with-cpp $(addprefix -I,$(INCLUDE)) -MMD -MP
-
-ifeq ($(MODE),release)
-  OPTIMIZE_FLAGS = -O3 -Os
-else
-  MODE = debug
-  OPTIMIZE_FLAGS = -g -O1 -Os
-	LDFLAGS += -u _printf_float
-endif
+ASFLAGS  += $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(COMMON_FLAGS) -x assembler-with-cpp $(addprefix -I,$(INCLUDE)) -MMD -MP
 
 all: $(TARGET)
 
@@ -67,16 +69,17 @@ $(BUILD_DIR)/target: FORCE
 	fi
 
 $(BUILD_DIR)/$(BINARY).bin: $(BUILD_DIR)/$(BINARY).elf
-	$(CP) -O binary $(BUILD_DIR)/$(BINARY).elf $(BUILD_DIR)/$(BINARY).bin
+	$(CP) -O binary $^ $@
 
 $(BUILD_DIR)/$(BINARY).hex: $(BUILD_DIR)/$(BINARY).elf
-	$(CP) -O ihex $(BUILD_DIR)/$(BINARY).elf $(BUILD_DIR)/$(BINARY).hex
+	$(CP) -O ihex $^ $@
 
 $(BUILD_DIR)/$(BINARY).list: $(BUILD_DIR)/$(BINARY).elf
-	$(OD) -h -S $(BUILD_DIR)/$(BINARY).elf > $(BUILD_DIR)/$(BINARY).list
+	$(OD) -h -S $^ > $@
 
 $(BUILD_DIR)/$(BINARY).elf: $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^ 
+	$(SE) -A $@
 
 $(BUILD_DIR)/%.o: %.c $(BUILD_DIR)/target
 	@mkdir -p $(@D)

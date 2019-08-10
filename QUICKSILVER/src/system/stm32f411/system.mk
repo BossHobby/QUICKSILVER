@@ -1,6 +1,10 @@
 ARCH_FLAGS = -mthumb -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 
 DEVICE_FLAGS = -DSTM32F4XX -DSTM32F40XX -DUSE_STDPERIPH_DRIVER
 
+ifeq ($(MODE),debug)
+	LDFLAGS += -u _printf_float
+endif
+
 SYSTEM_LD_SCRIPT = stm32f4_flash.ld
 
 SYSTEM_INCLUDE = src/system/stm32f411 \
