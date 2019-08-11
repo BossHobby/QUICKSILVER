@@ -32,9 +32,6 @@ void systemResetToBootloader(void) {
 void usb_configurator(uint8_t *data, uint32_t len) {
   for (uint32_t i = 0; i < len; i++) {
     switch (data[i]) {
-    case '$':
-      i += usb_process_msp(data, len);
-      break;
     case 'R':
       //  The following bits will reboot to DFU upon receiving 'R' (which is sent by BF configurator)
       usb_serial_print("SYSTEM RESET\r\n");
@@ -46,6 +43,11 @@ void usb_configurator(uint8_t *data, uint32_t len) {
       usb_serial_printf("pidki: %f %f %f\r\n", pidki[0], pidki[1], pidki[2]);
       usb_serial_printf("pidkd: %f %f %f\r\n", pidkd[0], pidkd[1], pidkd[2]);
       break;
+#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
+    case '$':
+      i += usb_process_msp(data, len);
+      break;
+#endif
 #ifdef DEBUG
     case 'D':
       usb_serial_printf("adcfilt: %f\r\n", debug.adcfilt);

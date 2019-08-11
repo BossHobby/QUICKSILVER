@@ -6,7 +6,7 @@
 #include "drv_usb.h"
 #include "project.h"
 
-#ifdef F405
+#if defined(F405) && defined(USE_SERIAL_4WAY_BLHELI_INTERFACE)
 
 #define MSP_API_VERSION 1 //out message
 #define MSP_FC_VARIANT 2  //out message
