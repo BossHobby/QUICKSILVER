@@ -179,17 +179,15 @@ static uint16_t VCP_DataTx(uint8_t *Buf, uint32_t Len) {
         and wait for any existing transmission to complete.
     */
 
-  if (CDC_Send_FreeBytes() == 0 || USB_Tx_State != 0) {
-    return USBD_BUSY;
-  }
+  while (CDC_Send_FreeBytes() == 0 || USB_Tx_State != 0)
+    ;
 
   for (uint32_t i = 0; i < Len; i++) {
     APP_Rx_Buffer[APP_Rx_ptr_in] = Buf[i];
     APP_Rx_ptr_in = (APP_Rx_ptr_in + 1) % APP_RX_DATA_SIZE;
 
-    if (CDC_Send_FreeBytes() == 0) {
-      return USBD_BUSY;
-    }
+    while (CDC_Send_FreeBytes() == 0)
+      ;
   }
 
   return USBD_OK;
