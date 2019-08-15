@@ -32,22 +32,20 @@ void systemResetToBootloader(void) {
 void usb_configurator(uint8_t *data, uint32_t len) {
   for (uint32_t i = 0; i < len; i++) {
     switch (data[i]) {
-    case 'R':
+    case USB_MAGIC_REBOOT:
       //  The following bits will reboot to DFU upon receiving 'R' (which is sent by BF configurator)
       usb_serial_print("SYSTEM RESET\r\n");
       delay(50 * 1000);
       systemResetToBootloader();
       break;
-    case 'P':
-      usb_serial_printf("pidkp: %f %f %f\r\n", pidkp[0], pidkp[1], pidkp[2]);
-      usb_serial_printf("pidki: %f %f %f\r\n", pidki[0], pidki[1], pidki[2]);
-      usb_serial_printf("pidkd: %f %f %f\r\n", pidkd[0], pidkd[1], pidkd[2]);
-      break;
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
-    case '$':
+    case USB_MAGIC_MSP:
       i += usb_process_msp(data, len);
       break;
 #endif
+    case USB_MAGIC_QUIC:
+      i += usb_process_quic(data, len);
+      break;
 #ifdef DEBUG
     case 'D':
       usb_serial_printf("adcfilt: %f\r\n", debug.adcfilt);
@@ -68,12 +66,17 @@ void usb_configurator(uint8_t *data, uint32_t len) {
 #endif
       break;
 #endif
+    case 'P':
+      usb_serial_printf("pidkp: %f %f %f\r\n", pidkp[0], pidkp[1], pidkp[2]);
+      usb_serial_printf("pidki: %f %f %f\r\n", pidki[0], pidki[1], pidki[2]);
+      usb_serial_printf("pidkd: %f %f %f\r\n", pidkd[0], pidkd[1], pidkd[2]);
+      break;
     }
   }
 
-  if (len) {
-    usb_serial_write(data, len);
-  }
+  //if (len) {
+  //  usb_serial_write(data, len);
+  //}
 }
 
 #endif

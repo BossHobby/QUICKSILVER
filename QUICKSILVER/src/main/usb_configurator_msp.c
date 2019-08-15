@@ -21,18 +21,6 @@
 
 #define MSP_BUILD_DATE_TIME __DATE__ __TIME__
 
-void print_msp(uint8_t dir, uint8_t *data, uint32_t len) {
-  const uint8_t size = data[3];
-  const uint8_t code = data[4];
-  const uint8_t chksum = data[size + MSP_HEADER_LEN];
-
-  if (dir) {
-    usb_serial_printf("E MSP OUT code: %d size: %d chksum: %d\r\n", code, size, chksum);
-  } else {
-    usb_serial_printf("E MSP IN code: %d size: %d chksum: %d\r\n", code, size, chksum);
-  }
-}
-
 void send_msp(uint8_t code, uint8_t *data, uint8_t len) {
   const uint8_t size = len + MSP_HEADER_LEN + 1;
 
@@ -54,7 +42,6 @@ void send_msp(uint8_t code, uint8_t *data, uint8_t len) {
   }
   frame[len + MSP_HEADER_LEN] = chksum;
 
-  print_msp(1, frame, size);
   usb_serial_write(frame, size);
 }
 
@@ -63,8 +50,6 @@ uint8_t usb_process_msp(uint8_t *data, uint32_t len) {
   const uint8_t code = data[4];
   // const uint8_t chksum = data[size + MSP_HEADER_LEN];
   const uint8_t full_size = size + MSP_HEADER_LEN + 1;
-
-  print_msp(0, data, len);
 
   switch (code) {
   case MSP_API_VERSION: {
@@ -122,7 +107,6 @@ uint8_t usb_process_msp(uint8_t *data, uint32_t len) {
   }
   case MSP_SET_4WAY_IF: {
     const uint8_t data_size = len - full_size;
-    usb_serial_printf("E MSP_SET_4WAY_IF data_size: %d (%d vs %d)\r\n", data_size, len, full_size);
 
     uint8_t data[1] = {4};
     send_msp(code, data, 1);
