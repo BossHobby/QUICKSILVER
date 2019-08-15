@@ -10,9 +10,11 @@
 
 //LEDS
 #define LED_NUMBER 2
+// red led
 #define LED1PIN GPIO_Pin_13
 #define LED1PORT GPIOC
 #define LED1_INVERT
+// green led
 #define LED2PIN GPIO_Pin_9
 #define LED2PORT GPIOB
 #define LED2_INVERT
