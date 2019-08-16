@@ -51,6 +51,7 @@
 #define CMD_BOOTSIGN 0x08
 
 #define START_BIT_TIMEOUT 2000
+#define START_BIT_TIMEOUT_MS 2
 
 #define BIT_TIME (52)                                         // 52uS
 #define BIT_TIME_HALVE (BIT_TIME >> 1)                        // 26uS
