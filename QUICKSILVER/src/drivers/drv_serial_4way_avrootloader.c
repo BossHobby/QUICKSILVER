@@ -50,7 +50,7 @@
 #define CMD_BOOTINIT 0x07
 #define CMD_BOOTSIGN 0x08
 
-#define START_BIT_TIMEOUT_MS 2
+#define START_BIT_TIMEOUT 2000
 
 #define BIT_TIME (52)                                         // 52uS
 #define BIT_TIME_HALVE (BIT_TIME >> 1)                        // 26uS
@@ -65,25 +65,24 @@
 extern SoftSerialData_t escSerial[4];
 
 static uint8_t suart_getc_(uint8_t *bt) {
-#ifdef F0
+#if F0
   return softserial_read_byte_ex(&escSerial[selected_esc], bt);
 #else
   uint32_t btime;
-  uint32_t start_time;
+  uint32_t start_time = micros();
 
-  uint32_t wait_time = millis() + START_BIT_TIMEOUT_MS;
   while (ESC_IS_HI) {
     // check for startbit begin
-    if (millis() >= wait_time) {
+    if (micros() - start_time >= START_BIT_TIMEOUT) {
       return 0;
     }
   }
   // start bit
   start_time = micros();
-  btime = start_time + START_BIT_TIME;
+  btime = START_BIT_TIME;
   uint16_t bitmask = 0;
   uint8_t bit = 0;
-  while (micros() < btime)
+  while (micros() - start_time < btime)
     ;
   while (1) {
     if (ESC_IS_HI) {
@@ -93,7 +92,7 @@ static uint8_t suart_getc_(uint8_t *bt) {
     bit++;
     if (bit == 10)
       break;
-    while (micros() < btime)
+    while (micros() - start_time < btime)
       ;
   }
   // check start bit and stop bit
@@ -106,12 +105,13 @@ static uint8_t suart_getc_(uint8_t *bt) {
 }
 
 static void suart_putc_(uint8_t *tx_b) {
-#ifdef F0
+#if F0
   softserial_write_byte_ex(&escSerial[selected_esc], *tx_b);
 #else
   // shift out stopbit first
+  uint32_t btime = 0;
+  uint32_t start_time = micros();
   uint16_t bitmask = (*tx_b << 2) | 1 | (1 << 10);
-  uint32_t btime = micros();
   while (1) {
     if (bitmask & 1) {
       ESC_SET_HI; // 1
@@ -122,7 +122,7 @@ static void suart_putc_(uint8_t *tx_b) {
     bitmask = (bitmask >> 1);
     if (bitmask == 0)
       break; // stopbit shifted out - but don't wait
-    while (micros() < btime)
+    while (micros() - start_time < btime)
       ;
   }
 #endif
