@@ -420,19 +420,18 @@ void esc4wayProcess()
     uint8_t *InBuff;
     ioMem_t ioMem;
 
-    // Start here  with UART Main loop
-    #ifdef BEEPER
-    // fix for buzzer often starts beeping continuously when the ESCs are read
-    // switch beeper silent here
-    beeperSilence();
-    #endif
     bool isExitScheduled = false;
+
+    RX_LED_OFF;
+    TX_LED_OFF;
 
     while (1) {
         // restart looking for new sequence from host
         do {
+            RX_LED_ON;
             CRC_in.word = 0;
             ESC = ReadByteCrc();
+            RX_LED_OFF;
         } while (ESC != cmd_Local_Escape);
 
         RX_LED_ON;
@@ -455,6 +454,8 @@ void esc4wayProcess()
 
         CRC_check.bytes[1] = ReadByte();
         CRC_check.bytes[0] = ReadByte();
+
+        RX_LED_OFF;
 
         if (CRC_check.word == CRC_in.word) {
             ACK_OUT = ACK_OK;
@@ -860,8 +861,6 @@ void esc4wayProcess()
 
         CRCout.word = 0;
 
-        RX_LED_OFF;
-
         WriteByteCrc(cmd_Remote_Escape);
         WriteByteCrc(CMD);
         WriteByteCrc(ioMem.D_FLASH_ADDR_H);
@@ -878,8 +877,9 @@ void esc4wayProcess()
         WriteByteCrc(ACK_OUT);
         WriteByte(CRCout.bytes[1]);
         WriteByte(CRCout.bytes[0]);
-
         TX_LED_OFF;
+        RX_LED_OFF;
+
         if (isExitScheduled) {
             esc4wayRelease();
             return;
