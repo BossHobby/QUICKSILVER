@@ -59,6 +59,11 @@ float stickTransitionProfileB[3] = {0.3, 0.3, 0.0};  //keep values between -1 an
 
 //************************************PIDS****************************************
 //Brushless Pids
+//65mm burshless whoop
+//float pidkp[PIDNUMBER] = {12e-2, 12e-2, 2.5e-1};
+//float pidki[PIDNUMBER] = {14.0e-1, 14.0e-1, 14.0e-1};
+//float pidkd[PIDNUMBER] = {4.5e-1, 4.5e-1, 0.5e-1};
+
 //TWR <8:1 2"
 //float pidkp[PIDNUMBER] = {14.5e-2 , 14.5e-2  , 2.5e-1 };
 //float pidki[PIDNUMBER] = { 14.0e-1  , 14.0e-1 , 14.0e-1 };
