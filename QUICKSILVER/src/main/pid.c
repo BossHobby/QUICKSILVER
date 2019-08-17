@@ -503,8 +503,14 @@ int change_pid_value(int increase) {
 #endif
 
   newPID = current_pid_term_pointer[current_pid_axis] + ((float)PID_TUNING_INCDEC_FACTOR * multiplier);
-  if (newPID > 0)
+  if (newPID > 0) {
     current_pid_term_pointer[current_pid_axis] = newPID;
+#ifdef COMBINE_PITCH_ROLL_PID_TUNING
+    if (current_pid_axis == 0) {
+      current_pid_term_pointer[current_pid_axis + 1] = newPID;
+    }
+#endif
+  }
 #else
 #define PID_GESTURES_MULTI 1.1f // moved here
   float multiplier = 1.0f / (float)PID_GESTURES_MULTI;
