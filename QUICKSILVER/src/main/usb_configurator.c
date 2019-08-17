@@ -72,19 +72,19 @@ void usb_configurator(uint8_t *data, uint32_t len) {
       if (profile.rate_mode == RATE_MODE_BETAFLIGHT) {
         usb_serial_printf("betaflight ratemode\r\n");
         usb_serial_printf("rc_rate: %f %f %f\r\n",
-                          profile.rate.betaflight.rc_rate.roll,
-                          profile.rate.betaflight.rc_rate.pitch,
-                          profile.rate.betaflight.rc_rate.yaw);
+                          profile.betaflight_rate.rc_rate.roll,
+                          profile.betaflight_rate.rc_rate.pitch,
+                          profile.betaflight_rate.rc_rate.yaw);
         usb_serial_printf("super_rate: %f %f %f\r\n",
-                          profile.rate.betaflight.super_rate.roll,
-                          profile.rate.betaflight.super_rate.pitch,
-                          profile.rate.betaflight.super_rate.yaw);
+                          profile.betaflight_rate.super_rate.roll,
+                          profile.betaflight_rate.super_rate.pitch,
+                          profile.betaflight_rate.super_rate.yaw);
       } else {
         usb_serial_printf("silverware ratemode\r\n");
         usb_serial_printf("max_rate: %f %f %f\r\n",
-                          profile.rate.silverware.max_rate.roll,
-                          profile.rate.silverware.max_rate.pitch,
-                          profile.rate.silverware.max_rate.yaw);
+                          profile.silverware_rate.max_rate.roll,
+                          profile.silverware_rate.max_rate.pitch,
+                          profile.silverware_rate.max_rate.yaw);
       }
 
       usb_serial_printf("pidkp: %f %f %f\r\n", pidkp[0], pidkp[1], pidkp[2]);

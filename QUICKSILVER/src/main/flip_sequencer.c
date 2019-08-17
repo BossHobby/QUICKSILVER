@@ -79,9 +79,9 @@ void flip_sequencer() {
 
   float max_rate = 860.0f;
   if (profile.rate_mode == RATE_MODE_BETAFLIGHT) {
-    max_rate = 200 * profile.rate.betaflight.rc_rate.roll * (1 / 1 - (float)profile.rate.betaflight.super_rate.roll);
+    max_rate = 200 * profile.betaflight_rate.rc_rate.roll * (1 / 1 - (float)profile.betaflight_rate.super_rate.roll);
   } else {
-    max_rate = (profile.rate.silverware.max_rate.roll + profile.rate.silverware.max_rate.pitch) / 2;
+    max_rate = (profile.silverware_rate.max_rate.roll + profile.silverware_rate.max_rate.pitch) / 2;
   }
 
   switch (flipstage) {

@@ -30,15 +30,11 @@ typedef struct {
   vector_t expo;
 } rate_mode_betaflight_t;
 
-typedef union {
-  rate_mode_silverware_t silverware;
-  rate_mode_betaflight_t betaflight;
-} rate_t;
-
 // Full Profile
 typedef struct {
   rate_modes_t rate_mode;
-  rate_t rate;
+  rate_mode_silverware_t silverware_rate;
+  rate_mode_betaflight_t betaflight_rate;
 
   float low_rate_mulitplier;
 } profile_t;
