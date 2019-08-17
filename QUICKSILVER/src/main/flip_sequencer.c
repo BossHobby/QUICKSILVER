@@ -4,6 +4,7 @@
 
 #include "defines.h"
 #include "drv_time.h"
+#include "profile.h"
 
 #define THROTTLE_UP 0.8
 #define THROTTLE_HOVER 0.5
@@ -43,11 +44,11 @@ int flipdir = 0;
 extern int onground;
 extern float GEstG[3];
 extern float rx[];
+extern profile_t profile;
 
 float rx_override[4];
 
 void start_flip() {
-
   if (isflipping == 0 && !onground) {
     isflipping = 1;
     fliptime = gettime();
@@ -76,6 +77,13 @@ void flip_sequencer() {
     flipstage = STAGE_FLIP_EXIT;
   }
 
+  float max_rate = 860.0f;
+  if (profile.rate_mode == RATE_MODE_BETAFLIGHT) {
+    max_rate = 200 * profile.rate.betaflight.rc_rate.roll * (1 / 1 - (float)profile.rate.betaflight.super_rate.roll);
+  } else {
+    max_rate = (profile.rate.silverware.max_rate.roll + profile.rate.silverware.max_rate.pitch) / 2;
+  }
+
   switch (flipstage) {
   case STAGE_FLIP_NONE:
 
@@ -93,9 +101,9 @@ void flip_sequencer() {
     if (GEstG[2] < 0) {
       // flip initiated inverted
       if (flipdir)
-        rx_override[flipindex] = (float)FLIP_RATE / (float)MAX_RATE;
+        rx_override[flipindex] = (float)FLIP_RATE / max_rate;
       else
-        rx_override[flipindex] = (float)-FLIP_RATE / (float)MAX_RATE;
+        rx_override[flipindex] = (float)-FLIP_RATE / max_rate;
       rx_override[3] = THROTTLE_HOVER;
       flipstage = STAGE_FLIP_ROTATING_INVERTED;
     }
@@ -107,9 +115,9 @@ void flip_sequencer() {
 
     if (gettime() - fliptime > THROTTLE_UP_TIME) {
       if (flipdir)
-        rx_override[flipindex] = (float)FLIP_RATE / (float)MAX_RATE;
+        rx_override[flipindex] = (float)FLIP_RATE / max_rate;
       else
-        rx_override[flipindex] = (float)-FLIP_RATE / (float)MAX_RATE;
+        rx_override[flipindex] = (float)-FLIP_RATE / max_rate;
       rx_override[3] = THROTTLE_UP;
       flipstage = STAGE_FLIP_ROTATING;
     }

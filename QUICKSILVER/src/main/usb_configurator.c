@@ -3,6 +3,7 @@
 #include "debug.h"
 #include "drv_time.h"
 #include "drv_usb.h"
+#include "profile.h"
 #include "project.h"
 
 #ifdef F405
@@ -15,6 +16,7 @@ extern float pidkd[PIDNUMBER];
 
 #ifdef DEBUG
 extern debug_type debug;
+extern profile_t profile;
 extern float rx[];
 
 #ifdef RX_FRSKY
@@ -67,6 +69,24 @@ void usb_configurator(uint8_t *data, uint32_t len) {
       break;
 #endif
     case 'P':
+      if (profile.rate_mode == RATE_MODE_BETAFLIGHT) {
+        usb_serial_printf("betaflight ratemode\r\n");
+        usb_serial_printf("rc_rate: %f %f %f\r\n",
+                          profile.rate.betaflight.rc_rate.roll,
+                          profile.rate.betaflight.rc_rate.pitch,
+                          profile.rate.betaflight.rc_rate.yaw);
+        usb_serial_printf("super_rate: %f %f %f\r\n",
+                          profile.rate.betaflight.super_rate.roll,
+                          profile.rate.betaflight.super_rate.pitch,
+                          profile.rate.betaflight.super_rate.yaw);
+      } else {
+        usb_serial_printf("silverware ratemode\r\n");
+        usb_serial_printf("max_rate: %f %f %f\r\n",
+                          profile.rate.silverware.max_rate.roll,
+                          profile.rate.silverware.max_rate.pitch,
+                          profile.rate.silverware.max_rate.yaw);
+      }
+
       usb_serial_printf("pidkp: %f %f %f\r\n", pidkp[0], pidkp[1], pidkp[2]);
       usb_serial_printf("pidki: %f %f %f\r\n", pidki[0], pidki[1], pidki[2]);
       usb_serial_printf("pidkd: %f %f %f\r\n", pidkd[0], pidkd[1], pidkd[2]);

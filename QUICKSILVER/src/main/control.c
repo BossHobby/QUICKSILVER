@@ -38,8 +38,7 @@ THE SOFTWARE.
 #include "flip_sequencer.h"
 #include "gestures.h"
 #include "led.h"
-
-
+#include "profile.h"
 
 float	throttle;
 int idle_state;
@@ -101,153 +100,113 @@ float underthrottlefilt = 0;
 
 float rxcopy[4];
 
-#ifdef BETAFLIGHT_RATES
+extern profile_t profile;
+
+static inline float constrainf(float amt, float low, float high) {
+  if (amt < low)
+    return low;
+  else if (amt > high)
+    return high;
+  else
+    return amt;
+}
+
+static float calcBFRatesRad(int axis) {
 #define SETPOINT_RATE_LIMIT 1998.0f
 #define RC_RATE_INCREMENTAL 14.54f
 
-static inline float constrainf(float amt, float low, float high)
-{
-    if (amt < low)
-        return low;
-    else if (amt > high)
-        return high;
-    else
-        return amt;
+  float rcRate, superExpo;
+  if (axis == ROLL) {
+    rcRate = profile.rate.betaflight.rc_rate.roll;
+    superExpo = profile.rate.betaflight.super_rate.roll;
+  } else if (axis == PITCH) {
+    rcRate = profile.rate.betaflight.rc_rate.pitch;
+    superExpo = profile.rate.betaflight.super_rate.pitch;
+  } else {
+    rcRate = profile.rate.betaflight.rc_rate.yaw;
+    superExpo = profile.rate.betaflight.super_rate.yaw;
+  }
+  if (rcRate > 2.0f) {
+    rcRate += RC_RATE_INCREMENTAL * (rcRate - 2.0f);
+  }
+  const float rcCommandfAbs = rxcopy[axis] > 0 ? rxcopy[axis] : -rxcopy[axis];
+  float angleRate = 200.0f * rcRate * rxcopy[axis];
+  if (superExpo) {
+    const float rcSuperfactor = 1.0f / (constrainf(1.0f - (rcCommandfAbs * superExpo), 0.01f, 1.00f));
+    angleRate *= rcSuperfactor;
+  }
+  return constrainf(angleRate, -SETPOINT_RATE_LIMIT, SETPOINT_RATE_LIMIT) * (float)DEGTORAD;
 }
 
-static float calcBFRatesRad(int axis)
-{
-    float rcRate, superExpo;
-    if (axis == ROLL) {
-        rcRate = (float) BF_RC_RATE_ROLL;
-        superExpo = (float) BF_SUPER_RATE_ROLL;
-    } else if (axis == PITCH) {
-        rcRate = (float) BF_RC_RATE_PITCH;
-        superExpo = (float) BF_SUPER_RATE_PITCH;
-	} else {
-        rcRate = (float) BF_RC_RATE_YAW;
-        superExpo = (float) BF_SUPER_RATE_YAW;
-    }
-    if (rcRate > 2.0f) {
-        rcRate += RC_RATE_INCREMENTAL * (rcRate - 2.0f);
-    }
-    const float rcCommandfAbs = rxcopy[axis] > 0 ? rxcopy[axis] : -rxcopy[axis];
-    float angleRate = 200.0f * rcRate * rxcopy[axis];
-    if (superExpo) {
-        const float rcSuperfactor = 1.0f / (constrainf(1.0f - (rcCommandfAbs * superExpo), 0.01f, 1.00f));
-        angleRate *= rcSuperfactor;
-    }
-    return constrainf(angleRate, -SETPOINT_RATE_LIMIT, SETPOINT_RATE_LIMIT) * (float) DEGTORAD;
-}
+void calc_rx() {
+  for (int i = 0; i < 3; ++i) {
+#ifdef RX_SMOOTHING_HZ
+    static float rx_filtered[4];
+    lpf(&rx_filtered[i], rx[i], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / RX_SMOOTHING_HZ));
+    rxcopy[i] = rx_filtered[i];
+#else
+    rxcopy[i] = rx[i];
 #endif
+
+#ifdef STICKS_DEADBAND
+    if (fabsf(rxcopy[i]) <= STICKS_DEADBAND) {
+      rxcopy[i] = 0.0f;
+    } else {
+      if (rxcopy[i] >= 0) {
+        rxcopy[i] = mapf(rxcopy[i], STICKS_DEADBAND, 1, 0, 1);
+      } else {
+        rxcopy[i] = mapf(rxcopy[i], -STICKS_DEADBAND, -1, 0, -1);
+      }
+    }
+#endif
+  }
+
+#ifndef DISABLE_FLIP_SEQUENCER
+  flip_sequencer();
+
+  if (controls_override) {
+    for (int i = 0; i < 3; i++) {
+      rxcopy[i] = rx_override[i];
+    }
+  }
+
+  if (auxchange[STARTFLIP] && !aux[STARTFLIP]) { // only on high -> low transition
+    start_flip();
+  }
+#endif
+}
 
 void control( void)
 {	
-
-// high-low rates switch 
-float rate_multiplier = 1.0;
-	
-	if ( aux[RATES]  )
-	{		
-		
-	}
-	else
-	{
-		rate_multiplier = LOW_RATES_MULTI;
-	}
-	// make local copy
-	
-	
-#ifdef INVERTED_ENABLE	
-    extern int pwmdir;
-	if ( aux[FN_INVERTED]  )		
-        pwmdir = REVERSE;
-    else
-        pwmdir = FORWARD;    
+#ifdef INVERTED_ENABLE
+  extern int pwmdir;
+  if (aux[FN_INVERTED])
+    pwmdir = REVERSE;
+  else
+    pwmdir = FORWARD;
 #endif	
 
-
-	
-
-	 	
-	 
-	 
-#ifdef RX_SMOOTHING_HZ
-	static float rx_filtered[4];
-	for ( int i = 0; i < 3; ++i ) {
-	lpf( &rx_filtered[ i ], rx[ i ], FILTERCALC( LOOPTIME * (float)1e-6 , 1.0f/RX_SMOOTHING_HZ ) );
-	rxcopy[i] = rx_filtered[i];
-
-	#ifdef STICKS_DEADBAND
-		if ( fabsf( rxcopy[ i ] ) <= STICKS_DEADBAND ) {
-			rxcopy[ i ] = 0.0f;
-		} else {
-			if ( rxcopy[ i ] >= 0 ) {
-				rxcopy[ i ] = mapf( rxcopy[ i ], STICKS_DEADBAND, 1, 0, 1 );
-			} else {
-				rxcopy[ i ] = mapf( rxcopy[ i ], -STICKS_DEADBAND, -1, 0, -1 );
-			}
-		}
-	#endif
-	}
-
-#else
-	for ( int i = 0 ; i < 3 ; i++)
-	{
-		rxcopy[i] = rx[i];
-
-		#ifdef STICKS_DEADBAND
-		if ( fabsf( rxcopy[ i ] ) <= STICKS_DEADBAND ) {
-			rxcopy[ i ] = 0.0f;
-		} else {
-			if ( rxcopy[ i ] >= 0 ) {
-				rxcopy[ i ] = mapf( rxcopy[ i ], STICKS_DEADBAND, 1, 0, 1 );
-			} else {
-				rxcopy[ i ] = mapf( rxcopy[ i ], -STICKS_DEADBAND, -1, 0, -1 );
-			}
-		}
-		#endif
-	 }
-#endif		
-	 
-	 
-
-#ifndef DISABLE_FLIP_SEQUENCER	
-  flip_sequencer();
-	
-	if ( controls_override)
-	{
-		for ( int i = 0 ; i < 3 ; i++)
-		{
-			rxcopy[i] = rx_override[i];
-		}
-	}
-
-	if ( auxchange[STARTFLIP]&&!aux[STARTFLIP] )
-	{// only on high -> low transition
-		start_flip();		
-	}
-#endif	
-	
-
-
-
-pid_precalc();	
-
+	calc_rx();
+	pid_precalc();	
 
 	// flight control
-
 	float rates[3];
 
-#ifndef BETAFLIGHT_RATES
-    rates[0] = rate_multiplier * rxcopy[0] * (float) MAX_RATE * DEGTORAD;
-    rates[1] = rate_multiplier * rxcopy[1] * (float) MAX_RATE * DEGTORAD;
-    rates[2] = rate_multiplier * rxcopy[2] * (float) MAX_RATEYAW * DEGTORAD;
-#else
-    rates[0] = rate_multiplier * calcBFRatesRad(0);
+	// high-low rates switch 
+	float rate_multiplier = 1.0;
+	if (aux[RATES] <= 0) {		
+		rate_multiplier = profile.low_rate_mulitplier;
+	}
+
+	if (profile.rate_mode == RATE_MODE_BETAFLIGHT) {
+		rates[0] = rate_multiplier * calcBFRatesRad(0);
     rates[1] = rate_multiplier * calcBFRatesRad(1);
     rates[2] = rate_multiplier * calcBFRatesRad(2);
-#endif
+	} else {
+		rates[0] = rate_multiplier * rxcopy[0] * profile.rate.silverware.max_rate.roll * DEGTORAD;
+    rates[1] = rate_multiplier * rxcopy[1] * profile.rate.silverware.max_rate.pitch * DEGTORAD;
+    rates[2] = rate_multiplier * rxcopy[2] * profile.rate.silverware.max_rate.yaw * DEGTORAD;
+	}
         
 if (aux[LEVELMODE]&&!acro_override){
 	extern void stick_vector( float rx_input[] , float maxangle);
