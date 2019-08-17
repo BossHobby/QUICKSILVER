@@ -280,37 +280,7 @@ void checkrx()
     if (rx[3] < 0)
       rx[3] = 0;
 
-    if (aux[LEVELMODE]) {
-      if (aux[RACEMODE] && !aux[HORIZON]) {
-        if (ANGLE_EXPO_ROLL > 0.01)
-          rx[0] = rcexpo(rx[0], ANGLE_EXPO_ROLL);
-        if (ACRO_EXPO_PITCH > 0.01)
-          rx[1] = rcexpo(rx[1], ACRO_EXPO_PITCH);
-        if (ANGLE_EXPO_YAW > 0.01)
-          rx[2] = rcexpo(rx[2], ANGLE_EXPO_YAW);
-      } else if (aux[HORIZON]) {
-        if (ANGLE_EXPO_ROLL > 0.01)
-          rx[0] = rcexpo(rx[0], ACRO_EXPO_ROLL);
-        if (ACRO_EXPO_PITCH > 0.01)
-          rx[1] = rcexpo(rx[1], ACRO_EXPO_PITCH);
-        if (ANGLE_EXPO_YAW > 0.01)
-          rx[2] = rcexpo(rx[2], ANGLE_EXPO_YAW);
-      } else {
-        if (ANGLE_EXPO_ROLL > 0.01)
-          rx[0] = rcexpo(rx[0], ANGLE_EXPO_ROLL);
-        if (ANGLE_EXPO_PITCH > 0.01)
-          rx[1] = rcexpo(rx[1], ANGLE_EXPO_PITCH);
-        if (ANGLE_EXPO_YAW > 0.01)
-          rx[2] = rcexpo(rx[2], ANGLE_EXPO_YAW);
-      }
-    } else {
-      if (ACRO_EXPO_ROLL > 0.01)
-        rx[0] = rcexpo(rx[0], ACRO_EXPO_ROLL);
-      if (ACRO_EXPO_PITCH > 0.01)
-        rx[1] = rcexpo(rx[1], ACRO_EXPO_PITCH);
-      if (ACRO_EXPO_YAW > 0.01)
-        rx[2] = rcexpo(rx[2], ACRO_EXPO_YAW);
-    }
+    rx_apply_expo();
 
     aux[CHAN_5] = (crsfChannelData[4] > 1100) ? 1 : 0; //1100 cutoff intentionally selected to force aux channels low if
     aux[CHAN_6] = (crsfChannelData[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state

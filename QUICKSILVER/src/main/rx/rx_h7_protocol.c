@@ -145,21 +145,7 @@ int decode_h7(void) {
   aux[2] = (rxdata[6] & H7_F_S_MASK) ? 1 : 0; //??
 
 #ifndef DISABLE_EXPO
-  if (aux[LEVELMODE]) {
-    if (aux[RACEMODE]) {
-      rx[0] = rcexpo(rx[0], ANGLE_EXPO_ROLL);
-      rx[1] = rcexpo(rx[1], ACRO_EXPO_PITCH);
-      rx[2] = rcexpo(rx[2], ANGLE_EXPO_YAW);
-    } else {
-      rx[0] = rcexpo(rx[0], ANGLE_EXPO_ROLL);
-      rx[1] = rcexpo(rx[1], ANGLE_EXPO_PITCH);
-      rx[2] = rcexpo(rx[2], ANGLE_EXPO_YAW);
-    }
-  } else {
-    rx[0] = rcexpo(rx[0], ACRO_EXPO_ROLL);
-    rx[1] = rcexpo(rx[1], ACRO_EXPO_PITCH);
-    rx[2] = rcexpo(rx[2], ACRO_EXPO_YAW);
-  }
+  rx_apply_expo();
 #endif
 
   for (int i = 0; i < AUXNUMBER - 2; i++) {

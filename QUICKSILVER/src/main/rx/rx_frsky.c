@@ -311,37 +311,7 @@ static void frsky_d_set_rc_data() {
   if (rx[3] < 0)
     rx[3] = 0;
 
-  if (aux[LEVELMODE]) {
-    if (aux[RACEMODE] && !aux[HORIZON]) {
-      if (ANGLE_EXPO_ROLL > 0.01)
-        rx[0] = rcexpo(rx[0], ANGLE_EXPO_ROLL);
-      if (ACRO_EXPO_PITCH > 0.01)
-        rx[1] = rcexpo(rx[1], ACRO_EXPO_PITCH);
-      if (ANGLE_EXPO_YAW > 0.01)
-        rx[2] = rcexpo(rx[2], ANGLE_EXPO_YAW);
-    } else if (aux[HORIZON]) {
-      if (ANGLE_EXPO_ROLL > 0.01)
-        rx[0] = rcexpo(rx[0], ACRO_EXPO_ROLL);
-      if (ACRO_EXPO_PITCH > 0.01)
-        rx[1] = rcexpo(rx[1], ACRO_EXPO_PITCH);
-      if (ANGLE_EXPO_YAW > 0.01)
-        rx[2] = rcexpo(rx[2], ANGLE_EXPO_YAW);
-    } else {
-      if (ANGLE_EXPO_ROLL > 0.01)
-        rx[0] = rcexpo(rx[0], ANGLE_EXPO_ROLL);
-      if (ANGLE_EXPO_PITCH > 0.01)
-        rx[1] = rcexpo(rx[1], ANGLE_EXPO_PITCH);
-      if (ANGLE_EXPO_YAW > 0.01)
-        rx[2] = rcexpo(rx[2], ANGLE_EXPO_YAW);
-    }
-  } else {
-    if (ACRO_EXPO_ROLL > 0.01)
-      rx[0] = rcexpo(rx[0], ACRO_EXPO_ROLL);
-    if (ACRO_EXPO_PITCH > 0.01)
-      rx[1] = rcexpo(rx[1], ACRO_EXPO_PITCH);
-    if (ACRO_EXPO_YAW > 0.01)
-      rx[2] = rcexpo(rx[2], ACRO_EXPO_YAW);
-  }
+  rx_apply_expo();
 
   //Here we have the AUX channels Silverware supports
   aux[CHAN_5] = (channels[4] > 1600) ? 1 : 0;

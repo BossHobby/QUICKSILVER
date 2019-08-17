@@ -576,37 +576,7 @@ static int decodepacket(void) {
 
       aux[CH_RTH] = (rxdata[2] & 0x01) ? 1 : 0; // rth channel
 
-      if (aux[LEVELMODE]) {
-        if (aux[RACEMODE] && !aux[HORIZON]) {
-          if (ANGLE_EXPO_ROLL > 0.01)
-            rx[0] = rcexpo(rx[0], ANGLE_EXPO_ROLL);
-          if (ACRO_EXPO_PITCH > 0.01)
-            rx[1] = rcexpo(rx[1], ACRO_EXPO_PITCH);
-          if (ANGLE_EXPO_YAW > 0.01)
-            rx[2] = rcexpo(rx[2], ANGLE_EXPO_YAW);
-        } else if (aux[HORIZON]) {
-          if (ANGLE_EXPO_ROLL > 0.01)
-            rx[0] = rcexpo(rx[0], ACRO_EXPO_ROLL);
-          if (ACRO_EXPO_PITCH > 0.01)
-            rx[1] = rcexpo(rx[1], ACRO_EXPO_PITCH);
-          if (ANGLE_EXPO_YAW > 0.01)
-            rx[2] = rcexpo(rx[2], ANGLE_EXPO_YAW);
-        } else {
-          if (ANGLE_EXPO_ROLL > 0.01)
-            rx[0] = rcexpo(rx[0], ANGLE_EXPO_ROLL);
-          if (ANGLE_EXPO_PITCH > 0.01)
-            rx[1] = rcexpo(rx[1], ANGLE_EXPO_PITCH);
-          if (ANGLE_EXPO_YAW > 0.01)
-            rx[2] = rcexpo(rx[2], ANGLE_EXPO_YAW);
-        }
-      } else {
-        if (ACRO_EXPO_ROLL > 0.01)
-          rx[0] = rcexpo(rx[0], ACRO_EXPO_ROLL);
-        if (ACRO_EXPO_PITCH > 0.01)
-          rx[1] = rcexpo(rx[1], ACRO_EXPO_PITCH);
-        if (ACRO_EXPO_YAW > 0.01)
-          rx[2] = rcexpo(rx[2], ACRO_EXPO_YAW);
-      }
+      rx_apply_expo();
 
       for (int i = 0; i < AUXNUMBER - 2; i++) {
         auxchange[i] = 0;

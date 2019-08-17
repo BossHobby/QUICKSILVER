@@ -3,10 +3,13 @@
 #include "config.h"
 
 // Utility
-typedef struct {
-  float roll;
-  float pitch;
-  float yaw;
+typedef union {
+  struct {
+    float roll;
+    float pitch;
+    float yaw;
+  };
+  float axis[3];
 } vector_t;
 
 // Rates
