@@ -2,14 +2,23 @@
 
 #include "profile.h"
 #include "project.h"
+#include "util.h"
 
 extern float rx[4];
 extern char aux[AUXNUMBER];
 extern profile_t profile;
 
 void rx_apply_expo(void) {
-  vector_t angle_expo = {{0, 0, 0}};
-  vector_t acro_expo = {{0, 0, 0}};
+  vector_t angle_expo = {
+      .roll = 0,
+      .pitch = 0,
+      .yaw = 0,
+  };
+  vector_t acro_expo = {
+      .roll = 0,
+      .pitch = 0,
+      .yaw = 0,
+  };
 
   if (profile.rate_mode == RATE_MODE_BETAFLIGHT) {
     angle_expo = profile.rate.betaflight.expo;
@@ -19,7 +28,11 @@ void rx_apply_expo(void) {
     acro_expo = profile.rate.silverware.acro_expo;
   }
 
-  vector_t expo = {{0, 0, 0}};
+  vector_t expo = {
+      .roll = 0,
+      .pitch = 0,
+      .yaw = 0,
+  };
   if (aux[LEVELMODE]) {
     if (aux[RACEMODE] && !aux[HORIZON]) {
       expo.axis[0] = angle_expo.roll;
