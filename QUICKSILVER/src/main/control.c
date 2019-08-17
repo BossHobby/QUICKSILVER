@@ -158,6 +158,7 @@ void calc_rx() {
     }
 #endif
   }
+  rxcopy[3] = rx[3];
 
 #ifndef DISABLE_FLIP_SEQUENCER
   flip_sequencer();
