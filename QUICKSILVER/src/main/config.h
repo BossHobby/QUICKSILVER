@@ -12,7 +12,7 @@
 //**********************************************************************************************************************
 //***********************************************NEW STUFF TO PLAY WITH*****************************************************
 
-// Select filter cut 25hz for SBUS, 67hz for CRSF, 40hz for DSMX, 20hz for DSM2, 90hz for bayang   Formula is [(1/rx framerate)/2] * 0.9
+// Select filter cut 25hz for SBUS, 67hz for CRSF, 40hz for DSMX, 20hz for DSM2, 90hz for bayang, 45hz for frsky   Formula is [(1/rx framerate)/2] * 0.9
 #define RX_SMOOTHING_HZ 25
 
 //Select (only one) source variable for PID VBAT Compensation
@@ -27,7 +27,6 @@
 #define SILVERWARE_RATES
 //#define BETAFLIGHT_RATES
 
-#ifdef SILVERWARE_RATES
 // *************rate in deg/sec
 // *************for acro mode
 #define MAX_RATE 860.0    //Roll & Pitch axis
@@ -42,19 +41,18 @@
 #define ANGLE_EXPO_ROLL 0.55
 #define ANGLE_EXPO_PITCH 0.0
 #define ANGLE_EXPO_YAW 0.55
-#endif
 
-#ifdef BETAFLIGHT_RATES
 #define BF_RC_RATE_ROLL 1.30
 #define BF_RC_RATE_PITCH 1.30
 #define BF_RC_RATE_YAW 1.30
+
 #define BF_SUPER_RATE_ROLL 0.70
 #define BF_SUPER_RATE_PITCH 0.70
 #define BF_SUPER_RATE_YAW 0.70
+
 #define BF_EXPO_ROLL 0.40
 #define BF_EXPO_PITCH 0.40
 #define BF_EXPO_YAW 0.40
-#endif
 
 // *************max angle for level mode
 #define LEVEL_MAX_ANGLE 65.0f

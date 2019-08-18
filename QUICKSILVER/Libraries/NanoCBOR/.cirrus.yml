@@ -1,0 +1,50 @@
+container:
+  cpu: 1
+  memory: 128Mb
+
+lint_task:
+  container:
+    image: silkeh/clang:latest
+  test_script: make clang-tidy
+
+build_task:
+  depends_on:
+    - lint
+  install_script:
+    - apt update
+    - apt install -y libcunit1-dev
+  matrix:
+    - name: clang
+      env:
+        CC: clang
+      container:
+        matrix:
+          image: silkeh/clang:6
+          image: silkeh/clang:7
+      install_libgcc_script:
+        - apt install -y libgcc-6-dev
+    - name: gcc
+      env:
+        CC: gcc
+      container:
+        matrix:
+          image: gcc:6
+          image: gcc:7
+  test_script: 
+    - make -C tests/automated clean test
+    - make bin/nanocbor.so
+
+
+arm_task:
+  container:
+    image: hiberglobal/gcc-arm-none-eabi:8-2018-q4-major
+  env:
+    CFLAGS: -mno-thumb-interwork -mcpu=cortex-m0plus -mlittle-endian -mthumb -mfloat-abi=soft -march=armv6s-m -DNANOCBOR_BYTEORDER_HEADER=\"stddef.h\" -DNANOCBOR_BE64TOH_FUNC=__builtin_bswap64 -DNANOCBOR_HTOBE64_FUNC=__builtin_bswap64 -DNANOCBOR_HTOBE32_FUNC=__builtin_bswap32
+    CC: arm-none-eabi-gcc
+  install_script:
+    - apk add make
+  test_script: 
+    - make objs
+    - arm-none-eabi-size bin/objs/* > output.txt
+  size_artifacts:
+    path: output.txt

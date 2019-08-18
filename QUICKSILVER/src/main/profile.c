@@ -3,6 +3,11 @@
 profile_t profile = {
 #ifdef SILVERWARE_RATES
     .rate_mode = RATE_MODE_SILVERWARE,
+#endif
+#ifdef BETAFLIGHT_RATES
+    .rate_mode = RATE_MODE_BETAFLIGHT,
+#endif
+
     .silverware_rate = {
         .max_rate = {
             MAX_RATE,
@@ -20,9 +25,6 @@ profile_t profile = {
             ANGLE_EXPO_YAW,
         },
     },
-#endif
-#ifdef BETAFLIGHT_RATES
-    .rate_mode = RATE_MODE_BETAFLIGHT,
     .betaflight_rate = {
         .rc_rate = {
             BF_RC_RATE_ROLL,
@@ -40,7 +42,6 @@ profile_t profile = {
             BF_EXPO_YAW,
         },
     },
-#endif
 
     .low_rate_mulitplier = LOW_RATES_MULTI,
 };
