@@ -8,5 +8,5 @@ typedef enum {
   USB_MAGIC_QUIC = '#',
 } usb_magics;
 
-uint8_t usb_process_msp(uint8_t *data, uint32_t len);
-uint8_t usb_process_quic(uint8_t *data, uint32_t len);
+void usb_process_msp();
+void usb_process_quic();

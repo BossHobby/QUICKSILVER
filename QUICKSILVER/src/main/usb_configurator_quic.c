@@ -1,6 +1,6 @@
 #include "usb_configurator.h"
 
-#include "nanocbor/nanocbor.h"
+#include "drv_usb.h"
 #include "profile.h"
 #include "project.h"
 
@@ -14,6 +14,7 @@ extern float rxcopy[4];
 typedef enum {
   QUIC_CMD_INVALID,
   QUIC_CMD_GET,
+  QUIC_CMD_SET,
 } quic_command;
 
 typedef enum {
@@ -37,13 +38,6 @@ void send_quic(quic_command cmd, uint8_t *data, uint8_t len) {
   usb_serial_write(frame, size);
 }
 
-void nanocbor_fmt_vector(nanocbor_encoder_t *enc, vector_t *vec) {
-  nanocbor_fmt_array(enc, 3);
-  nanocbor_fmt_float(enc, vec->axis[0]);
-  nanocbor_fmt_float(enc, vec->axis[1]);
-  nanocbor_fmt_float(enc, vec->axis[2]);
-}
-
 void get_quic(quic_values value) {
   uint8_t buf[1024];
 
@@ -52,37 +46,7 @@ void get_quic(quic_values value) {
 
   switch (value) {
   case QUIC_VAL_PROFILE:
-    nanocbor_fmt_map_indefinite(&enc);
-
-    nanocbor_put_tstr(&enc, "rate_mode");
-    nanocbor_fmt_uint(&enc, profile.rate_mode);
-
-    nanocbor_put_tstr(&enc, "silverware_rate");
-    {
-      nanocbor_fmt_map(&enc, 3);
-      nanocbor_put_tstr(&enc, "max_rate");
-      nanocbor_fmt_vector(&enc, &profile.silverware_rate.max_rate);
-      nanocbor_put_tstr(&enc, "angle_expo");
-      nanocbor_fmt_vector(&enc, &profile.silverware_rate.angle_expo);
-      nanocbor_put_tstr(&enc, "acro_expo");
-      nanocbor_fmt_vector(&enc, &profile.silverware_rate.acro_expo);
-    }
-
-    nanocbor_put_tstr(&enc, "betaflight_rate");
-    {
-      nanocbor_fmt_map(&enc, 3);
-      nanocbor_put_tstr(&enc, "rc_rate");
-      nanocbor_fmt_vector(&enc, &profile.betaflight_rate.rc_rate);
-      nanocbor_put_tstr(&enc, "super_rate");
-      nanocbor_fmt_vector(&enc, &profile.betaflight_rate.super_rate);
-      nanocbor_put_tstr(&enc, "expo");
-      nanocbor_fmt_vector(&enc, &profile.betaflight_rate.expo);
-    }
-
-    nanocbor_put_tstr(&enc, "low_rate_mulitplier");
-    nanocbor_fmt_float(&enc, profile.low_rate_mulitplier);
-
-    nanocbor_fmt_end_indefinite(&enc);
+    nanocbor_fmt_profile_t(&enc, profile);
     send_quic(QUIC_CMD_GET, buf, nanocbor_encoded_len(&enc));
     break;
   case QUIC_VAL_RX:
@@ -101,21 +65,55 @@ void get_quic(quic_values value) {
     nanocbor_fmt_float(&enc, rxcopy[3]);
     send_quic(QUIC_CMD_GET, buf, nanocbor_encoded_len(&enc));
     break;
+  default:
+    break;
   }
 }
 
-uint8_t usb_process_quic(uint8_t *data, uint32_t len) {
-  // already checked, just for reference
-  if (data[0] != USB_MAGIC_QUIC) {
+void set_quic(quic_values value, uint8_t *data, uint32_t len) {
+  uint8_t buf[1024];
+
+  nanocbor_value_t val;
+  nanocbor_decoder_init(&val, data, len);
+
+  nanocbor_encoder_t enc;
+  nanocbor_encoder_init(&enc, buf, 1024);
+
+  switch (value) {
+  case QUIC_VAL_PROFILE: {
+    profile_t p;
+    nanocbor_get_profile_t(&val, &p);
+    nanocbor_fmt_profile_t(&enc, p);
+    send_quic(QUIC_CMD_SET, buf, nanocbor_encoded_len(&enc));
+    break;
+  }
+  default:
+    break;
+  }
+}
+
+void usb_process_quic() {
+  const uint8_t cmd = usb_serial_read_byte();
+  const uint8_t size = usb_serial_read_byte();
+
+  uint8_t data[size];
+  uint32_t len = usb_serial_read(data, size);
+  for (uint32_t timeout = 1000; len < size && timeout; --timeout) {
+    len += usb_serial_read(data + len, size - len);
+    delay(10);
+    __WFI();
+  }
+  if (len < size) {
+    usb_serial_printf("ERROR invalid size (%d vs %d)\r\n", len, size);
     return;
   }
 
-  const uint8_t cmd = data[1];
-  const uint8_t size = data[2];
-
   switch (cmd) {
   case QUIC_CMD_GET:
-    get_quic(data[3]);
+    get_quic(data[0]);
+    break;
+  case QUIC_CMD_SET:
+    set_quic(data[0], data + 1, size - 1);
     break;
   }
 }

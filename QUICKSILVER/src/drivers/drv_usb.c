@@ -17,10 +17,6 @@
 
 __ALIGN_BEGIN USB_OTG_CORE_HANDLE USB_OTG_dev __ALIGN_END;
 
-#define VCP_PACKET_SIZE 64
-
-// uint8_t data_to_send[VCP_PACKET_SIZE];    //maxed out at 64 member array - adjust as needed for sending more than one array position at a time
-static uint8_t data_to_receive[VCP_PACKET_SIZE]; //maxed out at 64 member array - only set to one position for the time being since all we are listening for is 0x52 for flashing
 static uint8_t usb_is_active = 0;
 
 void usb_init(void) {
@@ -59,12 +55,7 @@ void usb_detect(void) {
   }
 
   usb_is_active = 1;
-
-  const uint32_t len = CDC_Receive_DATA(data_to_receive, VCP_PACKET_SIZE);
-  if (len == 0) {
-    return; // no data, bail
-  }
-  usb_configurator(data_to_receive, len);
+  usb_configurator();
 }
 
 uint32_t usb_serial_read(uint8_t *data, uint32_t len) {
@@ -72,6 +63,15 @@ uint32_t usb_serial_read(uint8_t *data, uint32_t len) {
     return 0;
   }
   return CDC_Receive_DATA(data, len);
+}
+
+uint8_t usb_serial_read_byte(void) {
+  uint8_t byte = 0;
+  for (uint32_t timeout = 1000; usb_serial_read(&byte, 1) != 1 && timeout; --timeout) {
+    delay(10);
+    __WFI();
+  }
+  return byte;
 }
 
 void usb_serial_write(uint8_t *data, uint32_t len) {

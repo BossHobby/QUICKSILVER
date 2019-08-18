@@ -375,8 +375,7 @@ static uint8_t ReadByte(void)
     // need timeout?
     softserial_read_byte(&byte);
 #else
-    while(usb_serial_read(&byte, 1) != 1)
-        ;
+    byte = usb_serial_read_byte();
 #endif
 	return byte;
 }

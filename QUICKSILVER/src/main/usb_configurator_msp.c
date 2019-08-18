@@ -45,11 +45,37 @@ void send_msp(uint8_t code, uint8_t *data, uint8_t len) {
   usb_serial_write(frame, size);
 }
 
-uint8_t usb_process_msp(uint8_t *data, uint32_t len) {
-  const uint8_t size = data[3];
-  const uint8_t code = data[4];
-  // const uint8_t chksum = data[size + MSP_HEADER_LEN];
-  const uint8_t full_size = size + MSP_HEADER_LEN + 1;
+void usb_process_msp() {
+  if (usb_serial_read_byte() != 'M' || usb_serial_read_byte() != '<') {
+    return;
+  }
+
+  const uint8_t size = usb_serial_read_byte();
+  const uint8_t code = usb_serial_read_byte();
+
+  uint8_t chksum = size ^ code;
+  if (size > 0) {
+    uint8_t data[size];
+    uint32_t len = usb_serial_read(data, size);
+    for (uint32_t timeout = 1000; len < size && timeout; --timeout) {
+      len += usb_serial_read(data + len, size - len);
+      delay(10);
+      __WFI();
+    }
+    if (len != size) {
+      usb_serial_printf("ERROR invalid size (%d vs %d)\r\n", len, size);
+      return;
+    }
+    for (uint8_t i = 0; i < size; i++) {
+      chksum ^= data[i];
+    }
+  }
+
+  const uint8_t expected_chksum = usb_serial_read_byte();
+  if (chksum != expected_chksum) {
+    usb_serial_printf("ERROR invalid chksum (%d vs %d)\r\n", chksum, expected_chksum);
+    return;
+  }
 
   switch (code) {
   case MSP_API_VERSION: {
@@ -106,8 +132,6 @@ uint8_t usb_process_msp(uint8_t *data, uint32_t len) {
     break;
   }
   case MSP_SET_4WAY_IF: {
-    const uint8_t data_size = len - full_size;
-
     uint8_t data[1] = {4};
     send_msp(code, data, 1);
 
@@ -117,14 +141,11 @@ uint8_t usb_process_msp(uint8_t *data, uint32_t len) {
     esc4wayInit();
     esc4wayProcess();
     lastlooptime = gettime();
-
-    return len;
+    break;
   }
   default:
     break;
   }
-
-  return full_size;
 }
 
 #endif

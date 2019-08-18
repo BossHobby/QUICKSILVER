@@ -69,6 +69,8 @@ CDC_IF_Prop_TypeDef VCP_fops = {VCP_Init, VCP_DeInit, VCP_Ctrl, VCP_DataTx, VCP_
  * @retval Result of the opeartion (USBD_OK in all cases)
  */
 static uint16_t VCP_Init(void) {
+  APP_Tx_ptr_out = 0;
+  APP_Tx_ptr_in = 0;
   bDeviceState = CONFIGURED;
   return USBD_OK;
 }
