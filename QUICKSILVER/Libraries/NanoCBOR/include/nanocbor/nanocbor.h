@@ -213,6 +213,8 @@ bool nanocbor_at_end(const nanocbor_value_t *it);
  * @return              negative on error
  */
 int nanocbor_get_uint32(nanocbor_value_t *cvalue, uint32_t *value);
+int nanocbor_get_uint8(nanocbor_value_t *cvalue, uint8_t *value);
+int nanocbor_get_float(nanocbor_value_t *cvalue, float *value);
 
 /**
  * @brief Retrieve a signed integer as int32_t from the stream
