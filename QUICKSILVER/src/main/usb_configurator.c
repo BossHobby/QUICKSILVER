@@ -25,6 +25,9 @@ extern frsky_bind_data frsky_bind;
 #endif
 #endif
 
+uint8_t encode_buffer[1024];
+uint8_t decode_buffer[1024];
+
 void systemResetToBootloader(void) {
   *((uint32_t *)0x2001FFFC) = 0xDEADBEEF; // 128KB SRAM STM32F4XX
   NVIC_SystemReset();

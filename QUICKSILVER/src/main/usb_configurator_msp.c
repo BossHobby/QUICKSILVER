@@ -45,6 +45,9 @@ void send_msp(uint8_t code, uint8_t *data, uint8_t len) {
   usb_serial_write(frame, size);
 }
 
+extern uint8_t encode_buffer[1024];
+extern uint8_t decode_buffer[1024];
+
 void usb_process_msp() {
   if (usb_serial_read_byte() != 'M' || usb_serial_read_byte() != '<') {
     return;
@@ -52,13 +55,16 @@ void usb_process_msp() {
 
   const uint8_t size = usb_serial_read_byte();
   const uint8_t code = usb_serial_read_byte();
+  if (code == 0) {
+    usb_serial_printf("ERROR invalid code (%d)\r\n", code);
+    return;
+  }
 
   uint8_t chksum = size ^ code;
   if (size > 0) {
-    uint8_t data[size];
-    uint32_t len = usb_serial_read(data, size);
+    uint32_t len = usb_serial_read(decode_buffer, size);
     for (uint32_t timeout = 1000; len < size && timeout; --timeout) {
-      len += usb_serial_read(data + len, size - len);
+      len += usb_serial_read(decode_buffer + len, size - len);
       delay(10);
       __WFI();
     }
@@ -67,7 +73,7 @@ void usb_process_msp() {
       return;
     }
     for (uint8_t i = 0; i < size; i++) {
-      chksum ^= data[i];
+      chksum ^= decode_buffer[i];
     }
   }
 
