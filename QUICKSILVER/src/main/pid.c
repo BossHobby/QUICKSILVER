@@ -86,15 +86,15 @@ float stickTransitionProfileB[3] = {0.3, 0.3, 0.0};  //keep values between -1 an
 //float pidkd[PIDNUMBER] = { 1.7e-1 , 2.4e-1  , 0.3e-1 };
 
 //TWR 14:1 5"
-float pidkp[PIDNUMBER] = {7.5e-2, 7.5e-2, 18.0e-2};
-float pidki[PIDNUMBER] = {14.0e-1, 14.0e-1, 14.0e-1};
-float pidkd[PIDNUMBER] = {2.3e-1, 2.3e-1, 0.4e-1};
+//float pidkp[PIDNUMBER] = {7.5e-2, 7.5e-2, 18.0e-2};
+//float pidki[PIDNUMBER] = {14.0e-1, 14.0e-1, 14.0e-1};
+//float pidkd[PIDNUMBER] = {2.3e-1, 2.3e-1, 0.4e-1};
 
 //6mm & 7mm Abduction Pids for whoops (Team Alienwhoop)- set filtering ALIENWHOOP_ZERO_FILTERING
 //                         ROLL       PITCH     YAW
-//float pidkp[PIDNUMBER] = {21.5e-2, 21.5e-2, 105.0e-2};
-//float pidki[PIDNUMBER] = {14e-1, 15e-1, 15e-1};
-//float pidkd[PIDNUMBER] = {7.4e-1, 7.4e-1, 5.5e-1};
+float pidkp[PIDNUMBER] = {21.5e-2, 21.5e-2, 105.0e-2};
+float pidki[PIDNUMBER] = {14e-1, 15e-1, 15e-1};
+float pidkd[PIDNUMBER] = {7.4e-1, 7.4e-1, 5.5e-1};
 
 //BOSS 7 with 716 motors and 46mm Props - set filtering to BETA_FILTERING and adjust pass 1 and pass 2 for KALMAN_GYRO both to 70hz, set DTERM_LPF_2ND_HZ to 120hz, disable motor filtering
 //                                        set TORQUE_BOOST to 1.0, and add #define THROTTLE_TRANSIENT_COMPENSATION and #define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 4.0

@@ -46,8 +46,9 @@ profile_t profile = {
 #ifdef BETAFLIGHT_RATES
     .rate_mode = RATE_MODE_BETAFLIGHT,
 #endif
-
+    .level_max_angle = LEVEL_MAX_ANGLE,
     .low_rate_mulitplier = LOW_RATES_MULTI,
+    .sticks_deadband = STICKS_DEADBAND,
 };
 
 int8_t buf_equal(const uint8_t *str1, size_t len1, const uint8_t *str2, size_t len2) {
@@ -77,27 +78,26 @@ void nanocbor_fmt_vector_t(nanocbor_encoder_t *enc, vector_t vec) {
   nanocbor_fmt_float(enc, vec.axis[2]);
 }
 
-#define START_STRUCT_GETTER(type)                             \
+#define START_STRUCT_GETTER(type, size)                       \
   void nanocbor_fmt_##type(nanocbor_encoder_t *enc, type o) { \
-    nanocbor_fmt_map_indefinite(enc);
+    nanocbor_fmt_map(enc, size);
 
-#define END_STRUCT_GETTER()         \
-  nanocbor_fmt_end_indefinite(enc); \
+#define END_STRUCT_GETTER() \
   }
 
 #define MEMBER(member, type)       \
   nanocbor_put_tstr(enc, #member); \
   nanocbor_fmt_##type(enc, o.member);
 
-START_STRUCT_GETTER(rate_mode_silverware_t)
+START_STRUCT_GETTER(rate_mode_silverware_t, 3)
 SILVERWARE_RATE_MEMBERS
 END_STRUCT_GETTER()
 
-START_STRUCT_GETTER(rate_mode_betaflight_t)
+START_STRUCT_GETTER(rate_mode_betaflight_t, 3)
 BETAFLIGHT_RATE_MEMBERS
 END_STRUCT_GETTER()
 
-START_STRUCT_GETTER(profile_t)
+START_STRUCT_GETTER(profile_t, 6)
 PROFILE_MEMBERS
 END_STRUCT_GETTER()
 #undef MEMBER

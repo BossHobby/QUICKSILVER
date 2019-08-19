@@ -146,17 +146,17 @@ void calc_rx() {
     rxcopy[i] = rx[i];
 #endif
 
-#ifdef STICKS_DEADBAND
-    if (fabsf(rxcopy[i]) <= STICKS_DEADBAND) {
-      rxcopy[i] = 0.0f;
-    } else {
-      if (rxcopy[i] >= 0) {
-        rxcopy[i] = mapf(rxcopy[i], STICKS_DEADBAND, 1, 0, 1);
+    if (profile.sticks_deadband > 0.0f) {
+      if (fabsf(rxcopy[i]) <= profile.sticks_deadband) {
+        rxcopy[i] = 0.0f;
       } else {
-        rxcopy[i] = mapf(rxcopy[i], -STICKS_DEADBAND, -1, 0, -1);
+        if (rxcopy[i] >= 0) {
+          rxcopy[i] = mapf(rxcopy[i], profile.sticks_deadband, 1, 0, 1);
+        } else {
+          rxcopy[i] = mapf(rxcopy[i], -profile.sticks_deadband, -1, 0, -1);
+        }
       }
     }
-#endif
   }
   rxcopy[3] = rx[3];
 

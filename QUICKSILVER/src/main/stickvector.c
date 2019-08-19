@@ -1,4 +1,5 @@
 #include "defines.h"
+#include "profile.h"
 #include "util.h"
 
 #include <math.h>
@@ -7,6 +8,7 @@
 extern float GEstG[3];
 extern float Q_rsqrt(float number);
 extern char aux[];
+extern profile_t profile;
 
 // error vector between stick position and quad orientation
 // this is the output of this function
@@ -26,8 +28,8 @@ void stick_vector(float rx_input[], float maxangle) {
     float pitch, roll;
 
     // rotate down vector to match stick position
-    pitch = rx_input[1] * LEVEL_MAX_ANGLE * DEGTORAD + (float)TRIM_PITCH * DEGTORAD;
-    roll = rx_input[0] * LEVEL_MAX_ANGLE * DEGTORAD + (float)TRIM_ROLL * DEGTORAD;
+    pitch = rx_input[1] * profile.level_max_angle * DEGTORAD + (float)TRIM_PITCH * DEGTORAD;
+    roll = rx_input[0] * profile.level_max_angle * DEGTORAD + (float)TRIM_ROLL * DEGTORAD;
 
     stickvector[0] = fastsin(roll);
     stickvector[1] = fastsin(pitch);

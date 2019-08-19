@@ -1,6 +1,7 @@
 #pragma once
 
-#include "nanocbor/nanocbor.h"
+#include <nanocbor/nanocbor.h>
+
 #include "project.h"
 
 // Utility
@@ -47,14 +48,18 @@ typedef struct {
   rate_mode_silverware_t silverware_rate;
   rate_mode_betaflight_t betaflight_rate;
 
+  float level_max_angle;
   float low_rate_mulitplier;
+  float sticks_deadband;
 } profile_t;
 
 #define PROFILE_MEMBERS                           \
   MEMBER(rate_mode, uint8)                        \
   MEMBER(silverware_rate, rate_mode_silverware_t) \
   MEMBER(betaflight_rate, rate_mode_betaflight_t) \
-  MEMBER(low_rate_mulitplier, float)
+  MEMBER(level_max_angle, float)                  \
+  MEMBER(low_rate_mulitplier, float)              \
+  MEMBER(sticks_deadband, float)
 
 void nanocbor_fmt_vector_t(nanocbor_encoder_t *enc, vector_t vec);
 void nanocbor_fmt_profile_t(nanocbor_encoder_t *enc, profile_t p);
