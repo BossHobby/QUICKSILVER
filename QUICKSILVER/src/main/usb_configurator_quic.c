@@ -1,6 +1,8 @@
 #include "usb_configurator.h"
 
 #include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "drv_time.h"
 #include "drv_usb.h"
@@ -81,7 +83,7 @@ void get_quic(quic_values value) {
 
   switch (value) {
   case QUIC_VAL_PROFILE: {
-    cbor_result_t res = cbor_encode_profile_t(&enc, profile);
+    res = cbor_encode_profile_t(&enc, profile);
     if (res < CBOR_OK) {
       send_quic_logf("CBOR ERROR %d", res);
       return;
