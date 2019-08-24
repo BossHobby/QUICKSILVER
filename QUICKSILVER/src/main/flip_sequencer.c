@@ -78,10 +78,10 @@ void flip_sequencer() {
   }
 
   float max_rate = 860.0f;
-  if (profile.rate_mode == RATE_MODE_BETAFLIGHT) {
-    max_rate = 200 * profile.betaflight_rate.rc_rate.roll * (1 / 1 - (float)profile.betaflight_rate.super_rate.roll);
+  if (profile.rate.mode == RATE_MODE_BETAFLIGHT) {
+    max_rate = 200 * profile.rate.betaflight.rc_rate.roll * (1 / 1 - (float)profile.rate.betaflight.super_rate.roll);
   } else {
-    max_rate = (profile.silverware_rate.max_rate.roll + profile.silverware_rate.max_rate.pitch) / 2;
+    max_rate = (profile.rate.silverware.max_rate.roll + profile.rate.silverware.max_rate.pitch) / 2;
   }
 
   switch (flipstage) {
@@ -156,9 +156,9 @@ void flip_sequencer() {
     rx_override[2] = rx[2];
 
     if (flipdir)
-      rx_override[flipindex] = (float)LEVEL_MODE_ANGLE / profile.level_max_angle;
+      rx_override[flipindex] = (float)LEVEL_MODE_ANGLE / profile.rate.level_max_angle;
     else
-      rx_override[flipindex] = (float)-LEVEL_MODE_ANGLE / profile.level_max_angle;
+      rx_override[flipindex] = (float)-LEVEL_MODE_ANGLE / profile.rate.level_max_angle;
     if (gettime() - levelmodetime > LEVEL_MODE_TIME)
       flipstage = STAGE_FLIP_EXIT;
     break;

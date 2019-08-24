@@ -115,14 +115,14 @@ static float calcBFRatesRad(int axis) {
 
   float rcRate, superExpo;
   if (axis == ROLL) {
-    rcRate = profile.betaflight_rate.rc_rate.roll;
-    superExpo = profile.betaflight_rate.super_rate.roll;
+    rcRate = profile.rate.betaflight.rc_rate.roll;
+    superExpo = profile.rate.betaflight.super_rate.roll;
   } else if (axis == PITCH) {
-    rcRate = profile.betaflight_rate.rc_rate.pitch;
-    superExpo = profile.betaflight_rate.super_rate.pitch;
+    rcRate = profile.rate.betaflight.rc_rate.pitch;
+    superExpo = profile.rate.betaflight.super_rate.pitch;
   } else {
-    rcRate = profile.betaflight_rate.rc_rate.yaw;
-    superExpo = profile.betaflight_rate.super_rate.yaw;
+    rcRate = profile.rate.betaflight.rc_rate.yaw;
+    superExpo = profile.rate.betaflight.super_rate.yaw;
   }
   if (rcRate > 2.0f) {
     rcRate += RC_RATE_INCREMENTAL * (rcRate - 2.0f);
@@ -146,14 +146,14 @@ void calc_rx() {
     rxcopy[i] = rx[i];
 #endif
 
-    if (profile.sticks_deadband > 0.0f) {
-      if (fabsf(rxcopy[i]) <= profile.sticks_deadband) {
+    if (profile.rate.sticks_deadband > 0.0f) {
+      if (fabsf(rxcopy[i]) <= profile.rate.sticks_deadband) {
         rxcopy[i] = 0.0f;
       } else {
         if (rxcopy[i] >= 0) {
-          rxcopy[i] = mapf(rxcopy[i], profile.sticks_deadband, 1, 0, 1);
+          rxcopy[i] = mapf(rxcopy[i], profile.rate.sticks_deadband, 1, 0, 1);
         } else {
-          rxcopy[i] = mapf(rxcopy[i], -profile.sticks_deadband, -1, 0, -1);
+          rxcopy[i] = mapf(rxcopy[i], -profile.rate.sticks_deadband, -1, 0, -1);
         }
       }
     }
@@ -193,17 +193,17 @@ void control(void) {
   // high-low rates switch
   float rate_multiplier = 1.0;
   if (aux[RATES] <= 0) {
-    rate_multiplier = profile.low_rate_mulitplier;
+    rate_multiplier = profile.rate.low_rate_mulitplier;
   }
 
-  if (profile.rate_mode == RATE_MODE_BETAFLIGHT) {
+  if (profile.rate.mode == RATE_MODE_BETAFLIGHT) {
     rates[0] = rate_multiplier * calcBFRatesRad(0);
     rates[1] = rate_multiplier * calcBFRatesRad(1);
     rates[2] = rate_multiplier * calcBFRatesRad(2);
   } else {
-    rates[0] = rate_multiplier * rxcopy[0] * profile.silverware_rate.max_rate.roll * DEGTORAD;
-    rates[1] = rate_multiplier * rxcopy[1] * profile.silverware_rate.max_rate.pitch * DEGTORAD;
-    rates[2] = rate_multiplier * rxcopy[2] * profile.silverware_rate.max_rate.yaw * DEGTORAD;
+    rates[0] = rate_multiplier * rxcopy[0] * profile.rate.silverware.max_rate.roll * DEGTORAD;
+    rates[1] = rate_multiplier * rxcopy[1] * profile.rate.silverware.max_rate.pitch * DEGTORAD;
+    rates[2] = rate_multiplier * rxcopy[2] * profile.rate.silverware.max_rate.yaw * DEGTORAD;
   }
 
   if (aux[LEVELMODE] && !acro_override) {

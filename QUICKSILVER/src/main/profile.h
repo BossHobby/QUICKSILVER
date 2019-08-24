@@ -42,24 +42,43 @@ typedef struct {
   MEMBER(super_rate, vector_t)  \
   MEMBER(expo, vector_t)
 
-// Full Profile
 typedef struct {
-  rate_modes_t rate_mode;
-  rate_mode_silverware_t silverware_rate;
-  rate_mode_betaflight_t betaflight_rate;
-
+  rate_modes_t mode;
+  rate_mode_silverware_t silverware;
+  rate_mode_betaflight_t betaflight;
   float level_max_angle;
   float low_rate_mulitplier;
   float sticks_deadband;
+} rate_t;
+
+#define RATE_MEMBERS                         \
+  MEMBER(mode, uint8)                        \
+  MEMBER(silverware, rate_mode_silverware_t) \
+  MEMBER(betaflight, rate_mode_betaflight_t) \
+  MEMBER(level_max_angle, float)             \
+  MEMBER(low_rate_mulitplier, float)         \
+  MEMBER(sticks_deadband, float)
+
+typedef struct {
+  vector_t kp;
+  vector_t ki;
+  vector_t kd;
+} pid_rate_t;
+
+#define PID_RATE_MEMBERS \
+  MEMBER(kp, vector_t)   \
+  MEMBER(ki, vector_t)   \
+  MEMBER(kd, vector_t)
+
+// Full Profile
+typedef struct {
+  rate_t rate;
+  pid_rate_t pid;
 } profile_t;
 
-#define PROFILE_MEMBERS                           \
-  MEMBER(rate_mode, uint8)                        \
-  MEMBER(silverware_rate, rate_mode_silverware_t) \
-  MEMBER(betaflight_rate, rate_mode_betaflight_t) \
-  MEMBER(level_max_angle, float)                  \
-  MEMBER(low_rate_mulitplier, float)              \
-  MEMBER(sticks_deadband, float)
+#define PROFILE_MEMBERS \
+  MEMBER(rate, rate_t)  \
+  MEMBER(pid, pid_rate_t)
 
 cbor_result_t cbor_decode_vector_t(cbor_value_t *enc, vector_t *vec);
 cbor_result_t cbor_decode_profile_t(cbor_value_t *enc, profile_t *p);

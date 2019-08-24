@@ -32,6 +32,7 @@ THE SOFTWARE.
 // https://github.com/lijunhw/nRF24_BLE/blob/master/Arduino/nRF24_BLE_advertizer_demo/nRF24_BLE_advertizer_demo.ino
 
 */
+#include <stdio.h>
 
 #include "binary.h"
 #include "drv_spi.h"
@@ -39,8 +40,8 @@ THE SOFTWARE.
 #include "defines.h"
 #include "drv_time.h"
 #include "drv_xn297.h"
+#include "profile.h"
 #include "project.h"
-#include <stdio.h>
 
 #include "rx_bayang.h"
 
@@ -732,9 +733,7 @@ buf[L++] =  onground_and_bind; //binary xxxxabcd - xxxx = error code or warning,
     buf[L++] = vbatt_comp_int >> 8; // Battery voltage compensated
     buf[L++] = vbatt_comp_int;      // Battery voltage compensated
 
-    extern float pidkp[];  // current_PID_for_display = 0, 1, 2
-    extern float pidki[];  // current_PID_for_display = 3, 4, 5
-    extern float pidkd[];  // current_PID_for_display = 6, 7, 8
+    extern profile_t profile;
     extern float apidkp[]; // current_PID_for_display = 9, 10
     extern float apidki[]; //  current_PID_for_display = 11, 12
     extern float apidkd[]; //  current_PID_for_display = 13, 14
@@ -743,31 +742,31 @@ buf[L++] =  onground_and_bind; //binary xxxxabcd - xxxx = error code or warning,
 
     switch (current_PID_for_display) {
     case 0:
-      pid_for_display = (uint16_t)(pidkp[0] * 10000.0f);
+      pid_for_display = (uint16_t)(profile.pid.kp.axis[0] * 10000.0f);
       break;
     case 1:
-      pid_for_display = (uint16_t)(pidkp[1] * 10000.0f);
+      pid_for_display = (uint16_t)(profile.pid.kp.axis[1] * 10000.0f);
       break;
     case 2:
-      pid_for_display = (uint16_t)(pidkp[2] * 10000.0f);
+      pid_for_display = (uint16_t)(profile.pid.kp.axis[2] * 10000.0f);
       break;
     case 3:
-      pid_for_display = (uint16_t)(pidki[0] * 10000.0f);
+      pid_for_display = (uint16_t)(profile.pid.ki.axis[0] * 10000.0f);
       break;
     case 4:
-      pid_for_display = (uint16_t)(pidki[1] * 10000.0f);
+      pid_for_display = (uint16_t)(profile.pid.ki.axis[1] * 10000.0f);
       break;
     case 5:
-      pid_for_display = (uint16_t)(pidki[2] * 10000.0f);
+      pid_for_display = (uint16_t)(profile.pid.ki.axis[2] * 10000.0f);
       break;
     case 6:
-      pid_for_display = (uint16_t)(pidkd[0] * 10000.0f);
+      pid_for_display = (uint16_t)(profile.pid.kd.axis[0] * 10000.0f);
       break;
     case 7:
-      pid_for_display = (uint16_t)(pidkd[1] * 10000.0f);
+      pid_for_display = (uint16_t)(profile.pid.kd.axis[1] * 10000.0f);
       break;
     case 8:
-      pid_for_display = (uint16_t)(pidkd[2] * 10000.0f);
+      pid_for_display = (uint16_t)(profile.pid.kd.axis[2] * 10000.0f);
       break;
       /*
 	 //level mode PIDs - disabled for now...

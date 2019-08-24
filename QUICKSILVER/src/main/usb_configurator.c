@@ -10,10 +10,6 @@
 
 #include "stm32f4xx.h"
 
-extern float pidkp[PIDNUMBER];
-extern float pidki[PIDNUMBER];
-extern float pidkd[PIDNUMBER];
-
 #ifdef DEBUG
 extern debug_type debug;
 extern profile_t profile;
@@ -76,27 +72,36 @@ void usb_configurator(void) {
     break;
 #endif
   case 'P':
-    if (profile.rate_mode == RATE_MODE_BETAFLIGHT) {
+    if (profile.rate.mode == RATE_MODE_BETAFLIGHT) {
       usb_serial_printf("betaflight ratemode\r\n");
       usb_serial_printf("rc_rate: %f %f %f\r\n",
-                        profile.betaflight_rate.rc_rate.roll,
-                        profile.betaflight_rate.rc_rate.pitch,
-                        profile.betaflight_rate.rc_rate.yaw);
+                        profile.rate.betaflight.rc_rate.roll,
+                        profile.rate.betaflight.rc_rate.pitch,
+                        profile.rate.betaflight.rc_rate.yaw);
       usb_serial_printf("super_rate: %f %f %f\r\n",
-                        profile.betaflight_rate.super_rate.roll,
-                        profile.betaflight_rate.super_rate.pitch,
-                        profile.betaflight_rate.super_rate.yaw);
+                        profile.rate.betaflight.super_rate.roll,
+                        profile.rate.betaflight.super_rate.pitch,
+                        profile.rate.betaflight.super_rate.yaw);
     } else {
       usb_serial_printf("silverware ratemode\r\n");
       usb_serial_printf("max_rate: %f %f %f\r\n",
-                        profile.silverware_rate.max_rate.roll,
-                        profile.silverware_rate.max_rate.pitch,
-                        profile.silverware_rate.max_rate.yaw);
+                        profile.rate.silverware.max_rate.roll,
+                        profile.rate.silverware.max_rate.pitch,
+                        profile.rate.silverware.max_rate.yaw);
     }
 
-    usb_serial_printf("pidkp: %f %f %f\r\n", pidkp[0], pidkp[1], pidkp[2]);
-    usb_serial_printf("pidki: %f %f %f\r\n", pidki[0], pidki[1], pidki[2]);
-    usb_serial_printf("pidkd: %f %f %f\r\n", pidkd[0], pidkd[1], pidkd[2]);
+    usb_serial_printf("pidkp: %f %f %f\r\n",
+                      profile.pid.kp.axis[0],
+                      profile.pid.kp.axis[1],
+                      profile.pid.kp.axis[2]);
+    usb_serial_printf("pidki: %f %f %f\r\n",
+                      profile.pid.ki.axis[0],
+                      profile.pid.ki.axis[1],
+                      profile.pid.ki.axis[2]);
+    usb_serial_printf("pidkd: %f %f %f\r\n",
+                      profile.pid.kd.axis[0],
+                      profile.pid.kd.axis[1],
+                      profile.pid.kd.axis[2]);
     break;
   }
 }

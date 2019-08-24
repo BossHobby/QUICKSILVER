@@ -21,6 +21,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+#include <stdbool.h>
+#include <stdlib.h>
 
 #include <math.h>
 #include <stdbool.h>
@@ -57,78 +59,6 @@ float stickTransitionProfileA[3] = {0.0, 0.0, 0.0};  //keep values between -1 an
 float stickAcceleratorProfileB[3] = {1.5, 1.5, 1.0}; //keep values between 0 and 2.5
 float stickTransitionProfileB[3] = {0.3, 0.3, 0.0};  //keep values between -1 and 1
 
-//************************************PIDS****************************************
-//Brushless Pids
-//65mm burshless whoop
-//float pidkp[PIDNUMBER] = {12e-2, 12e-2, 2.5e-1};
-//float pidki[PIDNUMBER] = {14.0e-1, 14.0e-1, 14.0e-1};
-//float pidkd[PIDNUMBER] = {4.5e-1, 4.5e-1, 0.5e-1};
-
-//TWR <8:1 2"
-//float pidkp[PIDNUMBER] = {14.5e-2 , 14.5e-2  , 2.5e-1 };
-//float pidki[PIDNUMBER] = { 14.0e-1  , 14.0e-1 , 14.0e-1 };
-//float pidkd[PIDNUMBER] = { 4.5e-1 , 4.5e-1  , 0.5e-1 };
-
-//TWR 8:1 3"
-//float pidkp[PIDNUMBER] = {12.5e-2 , 14.5e-2  , 25.0e-2 };
-//float pidki[PIDNUMBER] = { 14.0e-1  , 14.0e-1 , 14.0e-1 };
-//float pidkd[PIDNUMBER] = { 2.3e-1 , 3.3e-1  , 0.5e-1 };
-
-//TWR 12:1 4"
-//float pidkp[PIDNUMBER] = {9.5e-2 , 12.5e-2  , 20.0e-2 };
-//float pidki[PIDNUMBER] = { 14.0e-1  , 14.0e-1 , 14.0e-1 };
-//float pidkd[PIDNUMBER] = { 2.3e-1 , 3.3e-1  , 0.5e-1 };
-
-//5" Chameleon, T-Motor 2306 2600kV HQ 5x4.3x3 -Bobnova edition
-//                         ROLL       PITCH     YAW
-//float pidkp[PIDNUMBER] = {6.5e-2 , 7.5e-2  , 15.0e-2 };
-//float pidki[PIDNUMBER] = { 12.0e-1  , 12.0e-1 , 12.0e-1 };
-//float pidkd[PIDNUMBER] = { 1.7e-1 , 2.4e-1  , 0.3e-1 };
-
-//TWR 14:1 5"
-//float pidkp[PIDNUMBER] = {7.5e-2, 7.5e-2, 18.0e-2};
-//float pidki[PIDNUMBER] = {14.0e-1, 14.0e-1, 14.0e-1};
-//float pidkd[PIDNUMBER] = {2.3e-1, 2.3e-1, 0.4e-1};
-
-//6mm & 7mm Abduction Pids for whoops (Team Alienwhoop)- set filtering ALIENWHOOP_ZERO_FILTERING
-//                         ROLL       PITCH     YAW
-float pidkp[PIDNUMBER] = {21.5e-2, 21.5e-2, 105.0e-2};
-float pidki[PIDNUMBER] = {14e-1, 15e-1, 15e-1};
-float pidkd[PIDNUMBER] = {7.4e-1, 7.4e-1, 5.5e-1};
-
-//BOSS 7 with 716 motors and 46mm Props - set filtering to BETA_FILTERING and adjust pass 1 and pass 2 for KALMAN_GYRO both to 70hz, set DTERM_LPF_2ND_HZ to 120hz, disable motor filtering
-//                                        set TORQUE_BOOST to 1.0, and add #define THROTTLE_TRANSIENT_COMPENSATION and #define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 4.0
-//                         ROLL       PITCH     YAW
-//float pidkp[PIDNUMBER] = { 19.5e-2 , 19.5e-2  , 95.0e-2 };
-//float pidki[PIDNUMBER] = { 12e-1  , 12e-1 , 8e-1 };
-//float pidkd[PIDNUMBER] = {10.7e-1 , 10.7e-1  , 2.0e-1 };
-
-//***************  The following tunes beyond this point are all pretty dated.  I have not built/flown/tuned any of these in a long time and there have been alot of changes.
-//***************  If your build best matches some of the specs below ... consider the tune a starting point and give me feedback/adjust as necessary.
-
-// (OLD) 6mm experimental AwesomeSauce 20000kv Pids (Team Alienwhoop) - set filtering ALIENWHOOP_ZERO_FILTERING
-//                         ROLL       PITCH     YAW
-//float pidkp[PIDNUMBER] = { 25.5e-2 , 25.5e-2  , 11.5e-1 };
-//float pidki[PIDNUMBER] = { 20.5e-1  , 20.5e-1 , 16e-1 };
-//float pidkd[PIDNUMBER] = { 11.4e-1 , 11.4e-1  , 4.9e-1 };
-
-// (OLD) BOSS 6 & 7 - 615 and 716 motors, hm830 46mm props  - set filtering to VERY_STRONG_FILTERING
-//                         ROLL       PITCH     YAW
-//float pidkp[PIDNUMBER] = { 24.5e-2 , 24.5e-2  , 9.5e-1 };
-//float pidki[PIDNUMBER] = { 12e-1  , 12e-1 , 8e-1 };
-//float pidkd[PIDNUMBER] = {14.1e-1 , 14.1e-1  , 7e-1 };
-// (OLD) BOSS 8.0 - 816 motors, kingkong 66mm props  - set filtering to WEAK_FILTERING
-//                         ROLL       PITCH     YAW
-//float pidkp[PIDNUMBER] = { 26.7e-2 , 26.7e-2  , 9.5e-1 };
-//float pidki[PIDNUMBER] = { 12e-1  , 12e-1 , 8e-1 };
-//float pidkd[PIDNUMBER] = {16.2e-1 , 16.2e-1  , 7e-1 };
-
-// (OLD) BOSS 8.5 - 820 motors, kingkong 66mm props  - set filtering to STRONG_FILTERING
-//                         ROLL       PITCH     YAW
-//float pidkp[PIDNUMBER] = { 29.5e-2 , 29.5e-2  , 11.5e-1 };
-//float pidki[PIDNUMBER] = { 12e-1  , 12e-1 , 12.0e-1 };
-//float pidkd[PIDNUMBER] = {17.5e-1 , 17.5e-1  , 7e-1 };
-
 //************************************Setpoint Weight****************************************
 #ifdef BRUSHLESS_TARGET
 
@@ -161,11 +91,17 @@ const float integrallimit[PIDNUMBER] = {1.7, 1.7, 0.5};
 //#define ANTI_WINDUP_DISABLE
 
 // non changable things below
-float *pids_array[3] = {pidkp, pidki, pidkd};
+extern profile_t profile;
+
+float *pids_array[3] = {
+    profile.pid.kp.axis,
+    profile.pid.ki.axis,
+    profile.pid.kd.axis,
+};
 int number_of_increments[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 int current_pid_axis = 0;
 int current_pid_term = 0;
-float *current_pid_term_pointer = pidkp;
+float *current_pid_term_pointer = profile.pid.kp.axis;
 
 float ierror[PIDNUMBER] = {0, 0, 0};
 float pidoutput[PIDNUMBER];
@@ -236,18 +172,18 @@ float pid(int x) {
   if (!iwindup) {
 #ifdef MIDPOINT_RULE_INTEGRAL
     // trapezoidal rule instead of rectangular
-    ierror[x] = ierror[x] + (error[x] + lasterror[x]) * 0.5f * pidki[x] * looptime;
+    ierror[x] = ierror[x] + (error[x] + lasterror[x]) * 0.5f * profile.pid.ki.axis[x] * looptime;
     lasterror[x] = error[x];
 #endif
 
 #ifdef RECTANGULAR_RULE_INTEGRAL
-    ierror[x] = ierror[x] + error[x] * pidki[x] * looptime;
+    ierror[x] = ierror[x] + error[x] * profile.pid.ki.axis[x] * looptime;
     lasterror[x] = error[x];
 #endif
 
 #ifdef SIMPSON_RULE_INTEGRAL
     // assuming similar time intervals
-    ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + error[x]) * pidki[x] * looptime;
+    ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + error[x]) * profile.pid.ki.axis[x] * looptime;
     lasterror2[x] = lasterror[x];
     lasterror[x] = error[x];
 #endif
@@ -257,12 +193,12 @@ float pid(int x) {
 
 #ifdef ENABLE_SETPOINT_WEIGHTING
   // P term
-  pidoutput[x] = error[x] * (b[x]) * pidkp[x];
+  pidoutput[x] = error[x] * (b[x]) * profile.pid.kp.axis[x];
   // b
-  pidoutput[x] += -(1.0f - b[x]) * pidkp[x] * gyro[x];
+  pidoutput[x] += -(1.0f - b[x]) * profile.pid.kp.axis[x] * gyro[x];
 #else
   // P term with b disabled
-  pidoutput[x] = error[x] * pidkp[x];
+  pidoutput[x] = error[x] * profile.pid.kp.axis[x];
 #endif
 
   // I term
@@ -270,14 +206,14 @@ float pid(int x) {
 
   // D term
   // skip yaw D term if not set
-  if (pidkd[x] > 0) {
+  if (profile.pid.kd.axis[x] > 0) {
 
 #if (defined DTERM_LPF_1ST_HZ && !defined ADVANCED_PID_CONTROLLER)
     float dterm;
     static float lastrate[3];
     static float dlpf[3] = {0};
 
-    dterm = -(gyro[x] - lastrate[x]) * pidkd[x] * timefactor;
+    dterm = -(gyro[x] - lastrate[x]) * profile.pid.kd.axis[x] * timefactor;
     lastrate[x] = gyro[x];
     lpf(&dlpf[x], dterm, FILTERCALC(looptime, 1.0f / DTERM_LPF_1ST_HZ));
     pidoutput[x] += dlpf[x];
@@ -306,11 +242,11 @@ float pid(int x) {
     static float dlpf[3] = {0};
     static float setpoint_derivative[3];
 
-    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * pidkd[x] * timefactor;
+    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * profile.pid.kd.axis[x] * timefactor;
 #ifdef RX_SMOOTHING_HZ
     lpf(&setpoint_derivative[x], setpoint_derivative[x], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / RX_SMOOTHING_HZ));
 #endif
-    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * pidkd[x] * timefactor);
+    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * profile.pid.kd.axis[x] * timefactor);
     lastsetpoint[x] = setpoint[x];
     lastrate[x] = gyro[x];
     lpf(&dlpf[x], dterm, FILTERCALC(looptime, 1.0f / DTERM_LPF_1ST_HZ));
@@ -322,7 +258,7 @@ float pid(int x) {
     static float lastrate[3];
     float lpf2(float in, int num);
 
-    dterm = -(gyro[x] - lastrate[x]) * pidkd[x] * timefactor;
+    dterm = -(gyro[x] - lastrate[x]) * profile.pid.kd.axis[x] * timefactor;
     lastrate[x] = gyro[x];
     dterm = lpf2(dterm, x);
     pidoutput[x] += dterm;
@@ -351,11 +287,11 @@ float pid(int x) {
     float lpf2(float in, int num);
     static float setpoint_derivative[3];
 
-    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * pidkd[x] * timefactor;
+    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * profile.pid.kd.axis[x] * timefactor;
 #ifdef RX_SMOOTHING_HZ
     lpf(&setpoint_derivative[x], setpoint_derivative[x], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / RX_SMOOTHING_HZ));
 #endif
-    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * pidkd[x] * timefactor);
+    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * profile.pid.kd.axis[x] * timefactor);
     lastsetpoint[x] = setpoint[x];
     lastrate[x] = gyro[x];
     dterm = lpf2(dterm, x);
@@ -435,15 +371,15 @@ int next_pid_term() {
 
   switch (current_pid_term) {
   case 0:
-    current_pid_term_pointer = pidki;
+    current_pid_term_pointer = profile.pid.ki.axis;
     current_pid_term = 1;
     break;
   case 1:
-    current_pid_term_pointer = pidkd;
+    current_pid_term_pointer = profile.pid.kd.axis;
     current_pid_term = 2;
     break;
   case 2:
-    current_pid_term_pointer = pidkp;
+    current_pid_term_pointer = profile.pid.kd.axis;
     current_pid_term = 0;
     break;
   }
@@ -491,7 +427,7 @@ int change_pid_value(int increase) {
   float newPID = current_pid_term_pointer[current_pid_axis]; //Set the newPID to the current PID.
 
   if (current_pid_term == 0)
-    multiplier = multiplier / 10.0f; //pidkp: 0.xe-2 - other PIDs: 0.xe-1
+    multiplier = multiplier / 10.0f; //profile.pid.kd.axis: 0.xe-2 - other PIDs: 0.xe-1
 
 #ifdef RX_FPORT //FPORT you can see the PIDs changing, so let's give smaller increments at the lower end \
                 //Not doing this for non-FPORT because it'd be far too easy to get very, very lost.

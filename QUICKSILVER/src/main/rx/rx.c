@@ -20,12 +20,12 @@ void rx_apply_expo(void) {
       .yaw = 0,
   };
 
-  if (profile.rate_mode == RATE_MODE_BETAFLIGHT) {
-    angle_expo = profile.betaflight_rate.expo;
-    acro_expo = profile.betaflight_rate.expo;
+  if (profile.rate.mode == RATE_MODE_BETAFLIGHT) {
+    angle_expo = profile.rate.betaflight.expo;
+    acro_expo = profile.rate.betaflight.expo;
   } else {
-    angle_expo = profile.silverware_rate.angle_expo;
-    acro_expo = profile.silverware_rate.acro_expo;
+    angle_expo = profile.rate.silverware.angle_expo;
+    acro_expo = profile.rate.silverware.acro_expo;
   }
 
   vector_t expo = {

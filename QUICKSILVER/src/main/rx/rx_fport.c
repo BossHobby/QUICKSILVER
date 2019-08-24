@@ -14,6 +14,7 @@
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "drv_uart.h"
+#include "profile.h"
 #include "project.h"
 #include "util.h"
 
@@ -90,9 +91,7 @@ extern unsigned int lastlooptime;
 uint8_t telemetryPacket[10];
 extern int current_pid_axis;
 extern int current_pid_term;
-extern float pidkp[PIDNUMBER];
-extern float pidki[PIDNUMBER];
-extern float pidkd[PIDNUMBER];
+extern profile_t profile;
 extern float lipo_cell_count;
 
 uint16_t telemetryIDs[] = {
@@ -357,22 +356,22 @@ void checkrx() {
           } else if (telemetryPosition == 4) { //PID-P
             telemetryPacket[3] = telemetryIDs[telemetryPosition];
             telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-            telemetryPacket[5] = (int)(pidkp[current_pid_axis] * 10000);
-            telemetryPacket[6] = (int)(pidkp[current_pid_axis] * 10000) >> 8;
+            telemetryPacket[5] = (int)(profile.pid.kp.axis[current_pid_axis] * 10000);
+            telemetryPacket[6] = (int)(profile.pid.kp.axis[current_pid_axis] * 10000) >> 8;
             telemetryPacket[7] = 0x00;
             telemetryPacket[8] = 0x00;
           } else if (telemetryPosition == 5) { //PID-I
             telemetryPacket[3] = telemetryIDs[telemetryPosition];
             telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-            telemetryPacket[5] = (int)(pidki[current_pid_axis] * 1000);
-            telemetryPacket[6] = (int)(pidki[current_pid_axis] * 1000) >> 8;
+            telemetryPacket[5] = (int)((profile.pid.ki.axis[current_pid_axis] * 1000);
+            telemetryPacket[6] = (int)((profile.pid.ki.axis[current_pid_axis] * 1000) >> 8;
             telemetryPacket[7] = 0x00;
             telemetryPacket[8] = 0x00;
           } else if (telemetryPosition == 6) { //PID-D
             telemetryPacket[3] = telemetryIDs[telemetryPosition];
             telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-            telemetryPacket[5] = (int)(pidkd[current_pid_axis] * 1000);
-            telemetryPacket[6] = (int)(pidkd[current_pid_axis] * 1000) >> 8;
+            telemetryPacket[5] = (int)((profile.pid.kd.axis[current_pid_axis] * 1000);
+            telemetryPacket[6] = (int)((profile.pid.kd.axis[current_pid_axis] * 1000) >> 8;
             telemetryPacket[7] = 0x00;
             telemetryPacket[8] = 0x00;
           }
