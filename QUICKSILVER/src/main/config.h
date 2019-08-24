@@ -6,14 +6,14 @@
 //***********************************************HARDWARE SELECTION*****************************************************
 
 // *************DEFINE FLIGHT CONTROLLER MOTOR OUTPUT - *****warning*****  GETTING THIS WRONG CAN SMOKE YOUR BOARD :)
-#define BRUSHLESS_TARGET
-//#define BRUSHED_TARGET
+//#define BRUSHLESS_TARGET
+#define BRUSHED_TARGET
 
 //**********************************************************************************************************************
 //***********************************************NEW STUFF TO PLAY WITH*****************************************************
 
 // Select filter cut 25hz for SBUS, 67hz for CRSF, 40hz for DSMX, 20hz for DSM2, 90hz for bayang, 45hz for frsky   Formula is [(1/rx framerate)/2] * 0.9
-#define RX_SMOOTHING_HZ 25
+#define RX_SMOOTHING_HZ 45
 
 //Select (only one) source variable for PID VBAT Compensation
 //#define EXACT_VOLTS     //origional method - responds to exact moment to moment sag
@@ -27,6 +27,7 @@
 #define SILVERWARE_RATES
 //#define BETAFLIGHT_RATES
 
+// ******************** SILVERWARE_RATES ********************
 // *************rate in deg/sec
 // *************for acro mode
 #define MAX_RATE 860.0    //Roll & Pitch axis
@@ -34,14 +35,15 @@
 
 // *************EXPO from 0.00 to 1.00 , 0 = no exp
 // *************positive = less sensitive near center
-#define ACRO_EXPO_ROLL 0.80
-#define ACRO_EXPO_PITCH 0.80
-#define ACRO_EXPO_YAW 0.60
+#define ACRO_EXPO_ROLL 0.85
+#define ACRO_EXPO_PITCH 0.85
+#define ACRO_EXPO_YAW 0.65
 
 #define ANGLE_EXPO_ROLL 0.55
 #define ANGLE_EXPO_PITCH 0.0
 #define ANGLE_EXPO_YAW 0.55
 
+// ******************** BETAFLIGHT_RATES ********************
 #define BF_RC_RATE_ROLL 1.30
 #define BF_RC_RATE_PITCH 1.30
 #define BF_RC_RATE_YAW 1.30
@@ -74,13 +76,13 @@
 //#define RX_FPORT
 //#define RX_DSMX_2048																				//  Only fport, sbus, ibus, and dsm protocols are working on F4 right now
 //#define RX_DSM2_1024
-#define RX_NRF24_BAYANG_TELEMETRY
+//#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
-//#define RX_FRSKY
+#define RX_FRSKY
 
 // *************Serial Receiver UART Selection (uncomment all if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
-#define UART_1
+//#define UART_1
 //#define UART_2
 //#define UART_3
 //#define UART_4
@@ -102,11 +104,11 @@
 // *******************************SWITCH SELECTION*****************************
 #define ARMING CHAN_5
 #define IDLE_UP CHAN_5
-#define LEVELMODE CHAN_OFF
+#define LEVELMODE CHAN_6
 #define RACEMODE CHAN_OFF
 #define HORIZON CHAN_OFF
 #define PIDPROFILE CHAN_9
-#define RATES CHAN_ON
+#define RATES CHAN_6
 #define LEDS_ON CHAN_OFF
 
 // *************switch for fpv / other, requires fet

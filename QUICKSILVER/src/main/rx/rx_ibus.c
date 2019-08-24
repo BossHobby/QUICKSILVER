@@ -3,23 +3,16 @@
 //The content of this file, other than what came from rx_sbus.c was written by Bobnova in March/April 2019.
 
 // serial for stm32 not used yet
-//#include "project.h"
-//#include "stm32f0xx_usart.h"
-//#include <stdio.h>
-//#include "drv_serial.h"
-//#include "defines.h"
-//#include "drv_time.h"
-//#include "util.h"
+#include <stdio.h>
 
 #include "defines.h"
 #include "drv_fmc.h"
 #include "drv_rx_serial.h"
 #include "drv_serial.h"
 #include "drv_time.h"
+#include "drv_uart.h"
 #include "project.h"
-#include "uart.h"
 #include "util.h"
-#include <stdio.h>
 
 // iBus input ( pin SWCLK after calibration)
 // WILL DISABLE PROGRAMMING AFTER GYRO CALIBRATION - 2 - 3 seconds after powerup)
