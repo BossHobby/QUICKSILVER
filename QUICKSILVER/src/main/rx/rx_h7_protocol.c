@@ -28,8 +28,8 @@
 #include "config.h"
 #include "defines.h"
 #include "drv_time.h"
+#include "drv_xn297.h"
 #include "project.h"
-#include "xn297.h"
 #include <stdio.h>
 
 #include "rx_bayang.h"
