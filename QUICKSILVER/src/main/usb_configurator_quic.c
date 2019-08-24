@@ -1,5 +1,7 @@
 #include "usb_configurator.h"
 
+#include <stdarg.h>
+
 #include "drv_time.h"
 #include "drv_usb.h"
 #include "profile.h"
@@ -19,6 +21,7 @@ typedef enum {
   QUIC_CMD_INVALID,
   QUIC_CMD_GET,
   QUIC_CMD_SET,
+  QUIC_CMD_LOG,
 } quic_command;
 
 typedef enum {
@@ -36,37 +39,73 @@ void send_quic(quic_command cmd, uint8_t *data, uint16_t len) {
   frame[2] = (len >> 8) & 0xFF;
   frame[3] = len & 0xFF;
 
-  for (uint8_t i = 0; i < len; i++) {
+  for (uint32_t i = 0; i < len; i++) {
     frame[i + QUIC_HEADER_LEN] = data[i];
   }
 
   usb_serial_write(frame, size);
 }
 
+cbor_result_t send_quic_log(const char *str) {
+  const uint32_t size = strlen(str) + 128;
+  uint8_t buffer[size];
+
+  cbor_value_t enc;
+  cbor_encoder_init(&enc, buffer, size);
+
+  cbor_result_t res = cbor_encode_str(&enc, str);
+  if (res < CBOR_OK) {
+    return res;
+  }
+  send_quic(QUIC_CMD_LOG, buffer, cbor_encoder_len(&enc));
+  return res;
+}
+
+cbor_result_t send_quic_logf(const char *fmt, ...) {
+  const uint32_t size = strlen(fmt) + 128;
+  char str[size];
+
+  memset(str, 0, size);
+
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf(str, size, fmt, args);
+  va_end(args);
+  return send_quic_log(str);
+}
+
 void get_quic(quic_values value) {
-  nanocbor_encoder_t enc;
-  nanocbor_encoder_init(&enc, encode_buffer, 1024);
+  cbor_result_t res = CBOR_OK;
+  cbor_value_t enc;
+  cbor_encoder_init(&enc, encode_buffer, 1024);
 
   switch (value) {
-  case QUIC_VAL_PROFILE:
-    nanocbor_fmt_profile_t(&enc, profile);
-    send_quic(QUIC_CMD_GET, encode_buffer, nanocbor_encoded_len(&enc));
+  case QUIC_VAL_PROFILE: {
+    cbor_result_t res = cbor_encode_profile_t(&enc, profile);
+    if (res < CBOR_OK) {
+      send_quic_logf("CBOR ERROR %d", res);
+      return;
+    }
+    send_quic(QUIC_CMD_GET, encode_buffer, cbor_encoder_len(&enc));
     break;
+  }
   case QUIC_VAL_RX:
-    nanocbor_fmt_map(&enc, 2);
-    nanocbor_put_tstr(&enc, "raw");
-    nanocbor_fmt_array(&enc, 4);
-    nanocbor_fmt_float(&enc, rx[0]);
-    nanocbor_fmt_float(&enc, rx[1]);
-    nanocbor_fmt_float(&enc, rx[2]);
-    nanocbor_fmt_float(&enc, rx[3]);
-    nanocbor_put_tstr(&enc, "copy");
-    nanocbor_fmt_array(&enc, 4);
-    nanocbor_fmt_float(&enc, rxcopy[0]);
-    nanocbor_fmt_float(&enc, rxcopy[1]);
-    nanocbor_fmt_float(&enc, rxcopy[2]);
-    nanocbor_fmt_float(&enc, rxcopy[3]);
-    send_quic(QUIC_CMD_GET, encode_buffer, nanocbor_encoded_len(&enc));
+    cbor_encode_map(&enc, 2);
+
+    cbor_encode_str(&enc, "raw");
+    cbor_encode_array(&enc, 4);
+    cbor_encode_float(&enc, rx[0]);
+    cbor_encode_float(&enc, rx[1]);
+    cbor_encode_float(&enc, rx[2]);
+    cbor_encode_float(&enc, rx[3]);
+
+    cbor_encode_str(&enc, "copy");
+    cbor_encode_array(&enc, 4);
+    cbor_encode_float(&enc, rxcopy[0]);
+    cbor_encode_float(&enc, rxcopy[1]);
+    cbor_encode_float(&enc, rxcopy[2]);
+    cbor_encode_float(&enc, rxcopy[3]);
+    send_quic(QUIC_CMD_GET, encode_buffer, cbor_encoder_len(&enc));
     break;
   default:
     break;
@@ -74,17 +113,27 @@ void get_quic(quic_values value) {
 }
 
 void set_quic(quic_values value, uint8_t *data, uint32_t len) {
-  nanocbor_value_t val;
-  nanocbor_decoder_init(&val, data, len);
+  cbor_result_t res = CBOR_OK;
 
-  nanocbor_encoder_t enc;
-  nanocbor_encoder_init(&enc, encode_buffer, 1024);
+  cbor_value_t dec;
+  cbor_decoder_init(&dec, data, len);
+
+  cbor_value_t enc;
+  cbor_encoder_init(&enc, encode_buffer, 1024);
 
   switch (value) {
   case QUIC_VAL_PROFILE: {
-    nanocbor_get_profile_t(&val, &profile);
-    nanocbor_fmt_profile_t(&enc, profile);
-    send_quic(QUIC_CMD_SET, encode_buffer, nanocbor_encoded_len(&enc));
+    res = cbor_decode_profile_t(&dec, &profile);
+    if (res < CBOR_OK) {
+      send_quic_logf("CBOR ERROR %d", res);
+      return;
+    }
+    res = cbor_encode_profile_t(&enc, profile);
+    if (res < CBOR_OK) {
+      send_quic_logf("CBOR ERROR %d", res);
+      return;
+    }
+    send_quic(QUIC_CMD_SET, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
   default:

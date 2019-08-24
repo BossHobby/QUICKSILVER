@@ -1,6 +1,7 @@
 #include "drv_usb.h"
 
 #include "defines.h"
+#include "drv_time.h"
 
 #ifdef F405
 

@@ -67,83 +67,119 @@ int8_t buf_equal_string(const uint8_t *str1, size_t len1, const char *str2) {
   return buf_equal(str1, len1, (const uint8_t *)str2, strlen(str2));
 }
 
-int nanocbor_fmt_uint8(nanocbor_encoder_t *enc, uint8_t v) {
-  return nanocbor_fmt_uint(enc, v);
+cbor_result_t cbor_encode_vector_t(cbor_value_t *enc, vector_t vec) {
+  cbor_result_t res = cbor_encode_array(enc, 3);
+  if (res < CBOR_OK) {
+    return res;
+  }
+  res = cbor_encode_float(enc, vec.axis[0]);
+  if (res < CBOR_OK) {
+    return res;
+  }
+  res = cbor_encode_float(enc, vec.axis[1]);
+  if (res < CBOR_OK) {
+    return res;
+  }
+  res = cbor_encode_float(enc, vec.axis[2]);
+  if (res < CBOR_OK) {
+    return res;
+  }
+  return res;
 }
 
-void nanocbor_fmt_vector_t(nanocbor_encoder_t *enc, vector_t vec) {
-  nanocbor_fmt_array(enc, 3);
-  nanocbor_fmt_float(enc, vec.axis[0]);
-  nanocbor_fmt_float(enc, vec.axis[1]);
-  nanocbor_fmt_float(enc, vec.axis[2]);
-}
+#define START_STRUCT_ENCODER(type)                              \
+  cbor_result_t cbor_encode_##type(cbor_value_t *enc, type o) { \
+    cbor_result_t res = CBOR_OK;                                \
+    res = cbor_encode_map_indefinite(enc);                      \
+    if (res < CBOR_OK)                                          \
+      return res;
 
-#define START_STRUCT_GETTER(type, size)                       \
-  void nanocbor_fmt_##type(nanocbor_encoder_t *enc, type o) { \
-    nanocbor_fmt_map(enc, size);
-
-#define END_STRUCT_GETTER() \
+#define END_STRUCT_ENCODER()              \
+  return cbor_encode_end_indefinite(enc); \
   }
 
-#define MEMBER(member, type)       \
-  nanocbor_put_tstr(enc, #member); \
-  nanocbor_fmt_##type(enc, o.member);
+#define MEMBER(member, type)               \
+  res = cbor_encode_str(enc, #member);     \
+  if (res < CBOR_OK)                       \
+    return res;                            \
+  res = cbor_encode_##type(enc, o.member); \
+  if (res < CBOR_OK)                       \
+    return res;
 
-START_STRUCT_GETTER(rate_mode_silverware_t, 3)
+START_STRUCT_ENCODER(rate_mode_silverware_t)
 SILVERWARE_RATE_MEMBERS
-END_STRUCT_GETTER()
+END_STRUCT_ENCODER()
 
-START_STRUCT_GETTER(rate_mode_betaflight_t, 3)
+START_STRUCT_ENCODER(rate_mode_betaflight_t)
 BETAFLIGHT_RATE_MEMBERS
-END_STRUCT_GETTER()
+END_STRUCT_ENCODER()
 
-START_STRUCT_GETTER(profile_t, 6)
+START_STRUCT_ENCODER(profile_t)
 PROFILE_MEMBERS
-END_STRUCT_GETTER()
+END_STRUCT_ENCODER()
 #undef MEMBER
 
-void nanocbor_get_vector_t(nanocbor_value_t *it, vector_t *vec) {
-  nanocbor_value_t array;
-  nanocbor_enter_array(it, &array);
-  nanocbor_get_float(&array, &vec->axis[0]);
-  nanocbor_get_float(&array, &vec->axis[1]);
-  nanocbor_get_float(&array, &vec->axis[2]);
-  nanocbor_leave_container(it, &array);
+cbor_result_t cbor_decode_vector_t(cbor_value_t *it, vector_t *vec) {
+  cbor_result_t res = CBOR_OK;
+
+  cbor_container_t array;
+  res = cbor_decode_array(it, &array);
+  if (res < CBOR_OK)
+    return res;
+
+  res = cbor_decode_float(it, &vec->axis[0]);
+  if (res < CBOR_OK)
+    return res;
+
+  res = cbor_decode_float(it, &vec->axis[1]);
+  if (res < CBOR_OK)
+    return res;
+
+  res = cbor_decode_float(it, &vec->axis[2]);
+  if (res < CBOR_OK)
+    return res;
+
+  return res;
 }
 
-#define START_STRUCT_SETTER(type)                                    \
-  void nanocbor_get_##type(nanocbor_value_t *it, type *o) {          \
-    nanocbor_value_t map;                                            \
-    if (nanocbor_enter_map(it, &map) < NANOCBOR_OK) {                \
-      usb_serial_print("CBOR ERROR\r\n");                            \
-    }                                                                \
+#define START_STRUCT_DECODER(type)                                   \
+  cbor_result_t cbor_decode_##type(cbor_value_t *dec, type *o) {     \
+    cbor_result_t res = CBOR_OK;                                     \
+    cbor_container_t map;                                            \
+    res = cbor_decode_map(dec, &map);                                \
+    if (res < CBOR_OK)                                               \
+      return res;                                                    \
     const uint8_t *name;                                             \
-    size_t name_len;                                                 \
-    while (!nanocbor_at_end(&map)) {                                 \
-      if (nanocbor_get_tstr(&map, &name, &name_len) < NANOCBOR_OK) { \
-        usb_serial_print("CBOR ERROR\r\n");                          \
-      }
+    uint32_t name_len;                                               \
+    for (uint32_t i = 0; i < cbor_decode_map_size(dec, &map); i++) { \
+      res = cbor_decode_tstr(dec, &name, &name_len);                 \
+      if (res < CBOR_OK)                                             \
+        return res;
 
-#define END_STRUCT_SETTER()           \
-  nanocbor_skip(&map);                \
-  }                                   \
-  nanocbor_leave_container(it, &map); \
+#define END_STRUCT_DECODER()   \
+  res = cbor_decode_skip(dec); \
+  if (res < CBOR_OK)           \
+    return res;                \
+  }                            \
+  return res;                  \
   }
 
 #define MEMBER(member, type)                       \
   if (buf_equal_string(name, name_len, #member)) { \
-    nanocbor_get_##type(&map, &o->member);         \
+    res = cbor_decode_##type(dec, &o->member);     \
+    if (res < CBOR_OK)                             \
+      return res;                                  \
     continue;                                      \
   }
-START_STRUCT_SETTER(rate_mode_silverware_t)
+START_STRUCT_DECODER(rate_mode_silverware_t)
 SILVERWARE_RATE_MEMBERS
-END_STRUCT_SETTER()
+END_STRUCT_DECODER()
 
-START_STRUCT_SETTER(rate_mode_betaflight_t)
+START_STRUCT_DECODER(rate_mode_betaflight_t)
 BETAFLIGHT_RATE_MEMBERS
-END_STRUCT_SETTER()
+END_STRUCT_DECODER()
 
-START_STRUCT_SETTER(profile_t)
+START_STRUCT_DECODER(profile_t)
 PROFILE_MEMBERS
-END_STRUCT_SETTER()
+END_STRUCT_DECODER()
 #undef MEMBER

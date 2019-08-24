@@ -13,12 +13,12 @@ INCLUDE = src \
 	src/drivers \
 	src/drivers/usb \
 	$(TARGET_INCLUDE) \
-	Libraries/NanoCBOR/include
+	Libraries/cbor/src
 
 SOURCE = $(shell sh -c 'find src/main/ -iname *.c -or -name *.cpp') \
 	$(shell sh -c 'find src/drivers/ -maxdepth 1 -iname *.c -or -name *.cpp') \
 	$(TARGET_SOURCE) \
-	$(shell sh -c 'find Libraries/NanoCBOR/src -iname *.c -or -name *.cpp')
+	$(shell sh -c 'find Libraries/cbor/src -iname *.c -or -name *.cpp')
 
 ifeq ($(MODE),release)
   OPTIMIZE_FLAGS = -s -O3 -Os
