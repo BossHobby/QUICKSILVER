@@ -555,18 +555,9 @@ void control(void) {
 #endif
 #endif
 
-#ifdef INVERT_YAW_PID
-#ifdef SWITCHABLE_FEATURE_3
-    extern int flash_feature_3;
-    if (flash_feature_3 == 0) {
+    if (profile.setup.invert_yaw) {
       pidoutput[2] = -pidoutput[2];
-    } else {
-      //do nothing
     }
-#else
-    pidoutput[2] = -pidoutput[2];
-#endif
-#endif
 
 #ifdef INVERTED_ENABLE
     if (pwmdir == REVERSE) {
@@ -587,19 +578,10 @@ void control(void) {
       mix[MOTOR_BL] = throttle + pidoutput[ROLL] + pidoutput[PITCH] + pidoutput[YAW]; // BL
     }
 
-#ifdef INVERT_YAW_PID
     // we invert again cause it's used by the pid internally (for limit)
-#ifdef SWITCHABLE_FEATURE_3
-    extern int flash_feature_3;
-    if (flash_feature_3 == 0) {
+    if (profile.setup.invert_yaw) {
       pidoutput[2] = -pidoutput[2];
-    } else {
-      //do nothing
     }
-#else
-    pidoutput[2] = -pidoutput[2];
-#endif
-#endif
 
     for (int i = 0; i <= 3; i++) {
 #ifdef MOTOR_FILTER

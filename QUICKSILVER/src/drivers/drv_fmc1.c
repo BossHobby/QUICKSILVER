@@ -1,7 +1,7 @@
 #include "defines.h"
 
-#include "project.h"
 #include "drv_fmc.h"
+#include "project.h"
 
 #ifdef F0
 // address 32768 - 1024 = 31k - last flash block
@@ -22,63 +22,59 @@ Sector 9    0x080A0000 - 0x080BFFFF 128 Kbytes
 Sector 10   0x080C0000 - 0x080DFFFF 128 Kbytes
 Sector 11   0x080E0000 - 0x080FFFFF 128 Kbytes
 */
-#define FLASH_ADDR 0x0800C000  //sector 3 address
+#define FLASH_ADDR 0x0800C000 //sector 3 address
 #endif
 
-extern void failloop( int);
+extern void failloop(int);
 
 // address 0 - 255 ( for current block FLASH_ADDR )
 // value 32 bit to write
-void writeword( unsigned long address, unsigned long value)
-{
-	int test = FLASH_ProgramWord( FLASH_ADDR + (address<<2), value);	
-	if ( test != FLASH_COMPLETE )
-	{
-		FLASH_Lock();
-		failloop(5);
-	}
+void writeword(unsigned long address, unsigned long value) {
+  int test = FLASH_ProgramWord(FLASH_ADDR + (address << 2), value);
+  if (test != FLASH_COMPLETE) {
+    FLASH_Lock();
+    failloop(5);
+  }
 }
 
 //#pragma GCC push_options
 //#pragma GCC optimize ("O0")
 void fmc_write_float(unsigned long address, float float_to_write) {
-	writeword(address, *(unsigned long *) &float_to_write);
+  writeword(address, *(unsigned long *)&float_to_write);
 }
 
 float fmc_read_float(unsigned long address) {
-	unsigned long result = fmc_read(address);
-	return *(float*)&result;
+  unsigned long result = fmc_read(address);
+  return *(float *)&result;
 }
 //#pragma GCC pop_options
 
 void fmc_unlock() {
-	FLASH_Unlock();
+  FLASH_Unlock();
 }
 
 void fmc_lock() {
-	FLASH_Lock();
+  FLASH_Lock();
 }
 
-int fmc_erase( void )
-{	
-	#ifdef F405
-	int test = FLASH_EraseSector( FLASH_Sector_3, VoltageRange_3);
-	#endif	
-	
-	#ifdef F0
-	int test = FLASH_ErasePage( FLASH_ADDR );
-	#endif
-	if ( test != FLASH_COMPLETE ) FLASH_Lock();
-    else return 0;
-	return 1;// error occured
+int fmc_erase(void) {
+#ifdef F405
+  int test = FLASH_EraseSector(FLASH_Sector_3, VoltageRange_3);
+#endif
+
+#ifdef F0
+  int test = FLASH_ErasePage(FLASH_ADDR);
+#endif
+  if (test != FLASH_COMPLETE)
+    FLASH_Lock();
+  else
+    return 0;
+  return 1; // error occured
 }
 
 // reads 32 bit value
-unsigned long fmc_read(unsigned long address)
-{
-	address = address * 4 + FLASH_ADDR;
-	unsigned int *addressptr = (unsigned int *)address;
-	return (*addressptr);
+unsigned long fmc_read(unsigned long address) {
+  address = address * 4 + FLASH_ADDR;
+  unsigned int *addressptr = (unsigned int *)address;
+  return (*addressptr);
 }
-
-

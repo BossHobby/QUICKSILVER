@@ -2,12 +2,14 @@
 #include "defines.h"
 #include "drv_time.h"
 #include "pid.h"
+#include "profile.h"
 #include "sixaxis.h"
 
 extern int ledcommand;
 extern int ledblink;
 extern int onground;
 extern char aux[AUXNUMBER];
+extern profile_t profile;
 
 int pid_gestures_used = 0;
 
@@ -55,12 +57,9 @@ void gestures(void) {
     }
 
     if (command == GESTURE_DUD) {
-#ifdef SWITCHABLE_FEATURE_3
-      extern int flash_feature_3;
-      flash_feature_3 = !flash_feature_3;
-      ledblink = 2 - flash_feature_3;
+      profile.setup.invert_yaw = !profile.setup.invert_yaw;
+      ledblink = 2 - profile.setup.invert_yaw;
       pid_gestures_used = 1;
-#endif
     }
 
     if (command == GESTURE_UUU) {

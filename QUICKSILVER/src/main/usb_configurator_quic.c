@@ -6,6 +6,7 @@
 
 #include "drv_time.h"
 #include "drv_usb.h"
+#include "flash.h"
 #include "profile.h"
 #include "project.h"
 
@@ -130,6 +131,10 @@ void set_quic(quic_values value, uint8_t *data, uint32_t len) {
       send_quic_logf("CBOR ERROR %d", res);
       return;
     }
+
+    flash_save();
+    flash_load();
+
     res = cbor_encode_profile_t(&enc, profile);
     if (res < CBOR_OK) {
       send_quic_logf("CBOR ERROR %d", res);

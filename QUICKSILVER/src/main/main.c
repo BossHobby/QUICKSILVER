@@ -104,7 +104,6 @@ char auxchange[AUXNUMBER];
 extern int rxmode;
 // failsafe on / off
 extern int failsafe;
-extern float hardcoded_pid_identifier;
 extern int onground;
 int in_air;
 int armed_state;
@@ -114,7 +113,6 @@ int binding_while_armed = 1;
 //Experimental Flash Memory Feature
 int flash_feature_1 = 0; //SETUP WIZARD
 int flash_feature_2 = 0; //LVC
-int flash_feature_3 = 0; //PROPS IN/OUT
 
 // for led flash on gestures
 int ledcommand = 0;

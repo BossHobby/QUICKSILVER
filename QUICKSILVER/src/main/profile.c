@@ -4,7 +4,16 @@
 
 #include "drv_usb.h"
 
-profile_t profile = {
+// Default values for our profile
+const profile_t default_profile = {
+    .setup = {
+#ifdef INVERT_YAW_PID
+        .invert_yaw = 1,
+#else
+        .invert_yaw = 0,
+#endif
+    },
+
     .rate = {
 #ifdef SILVERWARE_RATES
         .mode = RATE_MODE_SILVERWARE,
@@ -126,6 +135,8 @@ profile_t profile = {
         //.kd = {17.5e-1 , 17.5e-1  , 7e-1 },
     },
 };
+// the actual profile
+profile_t profile = default_profile;
 
 int8_t buf_equal(const uint8_t *str1, size_t len1, const uint8_t *str2, size_t len2) {
   if (len2 != len1) {
@@ -192,6 +203,10 @@ END_STRUCT_ENCODER()
 
 START_STRUCT_ENCODER(rate_t)
 RATE_MEMBERS
+END_STRUCT_ENCODER()
+
+START_STRUCT_ENCODER(setup_t)
+SETUP_MEMBERS
 END_STRUCT_ENCODER()
 
 START_STRUCT_ENCODER(pid_rate_t)
@@ -265,6 +280,10 @@ END_STRUCT_DECODER()
 
 START_STRUCT_DECODER(rate_t)
 RATE_MEMBERS
+END_STRUCT_DECODER()
+
+START_STRUCT_DECODER(setup_t)
+SETUP_MEMBERS
 END_STRUCT_DECODER()
 
 START_STRUCT_DECODER(pid_rate_t)

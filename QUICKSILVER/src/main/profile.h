@@ -70,14 +70,23 @@ typedef struct {
   MEMBER(ki, vector_t)   \
   MEMBER(kd, vector_t)
 
+typedef struct {
+  uint8_t invert_yaw;
+} setup_t;
+
+#define SETUP_MEMBERS \
+  MEMBER(invert_yaw, uint8)
+
 // Full Profile
 typedef struct {
+  setup_t setup;
   rate_t rate;
   pid_rate_t pid;
 } profile_t;
 
-#define PROFILE_MEMBERS \
-  MEMBER(rate, rate_t)  \
+#define PROFILE_MEMBERS  \
+  MEMBER(setup, setup_t) \
+  MEMBER(rate, rate_t)   \
   MEMBER(pid, pid_rate_t)
 
 cbor_result_t cbor_decode_vector_t(cbor_value_t *enc, vector_t *vec);

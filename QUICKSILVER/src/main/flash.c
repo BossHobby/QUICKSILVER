@@ -1,22 +1,19 @@
+#include <string.h>
 
 #include "defines.h"
 #include "drv_fmc.h"
+#include "profile.h"
 #include "project.h"
 #include "rx.h"
 
-extern int fmc_erase(void);
-extern void fmc_unlock(void);
-extern void fmc_lock(void);
-
+extern const profile_t default_profile;
+extern profile_t profile;
 extern float accelcal[];
 extern float *pids_array[3];
-
-extern float hardcoded_pid_identifier;
 
 #define FMC_HEADER 0x12AA0001
 
 float initial_pid_identifier = -10;
-float saved_pid_identifier;
 
 float flash_get_hard_coded_pid_identifier(void) {
   float result = 0;
@@ -43,12 +40,6 @@ void flash_save(void) {
   writeword(addresscount++, FMC_HEADER);
 
   fmc_write_float(addresscount++, initial_pid_identifier);
-
-  for (int i = 0; i < 3; i++) {
-    for (int j = 0; j < 3; j++) {
-      fmc_write_float(addresscount++, pids_array[i][j]);
-    }
-  }
 
   fmc_write_float(addresscount++, accelcal[0]);
   fmc_write_float(addresscount++, accelcal[1]);
@@ -95,18 +86,6 @@ void flash_save(void) {
   }
 #endif
 
-#ifdef SWITCHABLE_FEATURE_3
-  extern int flash_feature_3;
-
-  //save LVC info
-
-  if (flash_feature_3) {
-    fmc_write_float(55, 1);
-  } else {
-    fmc_write_float(55, 0);
-  }
-#endif
-
 #if defined(RX_DSMX_2048) || defined(RX_DSM2_1024)
   extern int rx_bind_enable;
   if (rx_bind_enable) {
@@ -130,9 +109,21 @@ void flash_save(void) {
     writeword(i + 66, frsky_bind.raw[i]);
   }
 #endif
+  {
+    uint8_t buffer[1024];
+    memset(buffer, 0, 1024);
 
-  writeword(255, FMC_HEADER);
+    cbor_value_t enc;
+    cbor_encoder_init(&enc, buffer, 1024);
+    cbor_encode_profile_t(&enc, profile);
 
+    uint32_t *proxy = (uint32_t *)buffer;
+    for (int i = 0; i < 256; i++) {
+      writeword(i + 256, proxy[i]);
+    }
+  }
+
+  writeword(512, FMC_HEADER);
   fmc_lock();
 }
 
@@ -140,19 +131,9 @@ void flash_load(void) {
 
   unsigned long addresscount = 0;
   // check if saved data is present
-  if (FMC_HEADER == fmc_read(addresscount++) && FMC_HEADER == fmc_read(255)) {
+  if (FMC_HEADER == fmc_read(addresscount++) && FMC_HEADER == fmc_read(512)) {
 
-    saved_pid_identifier = fmc_read_float(addresscount++);
-    // load pids from flash if pid.c values are still the same
-    if (saved_pid_identifier == initial_pid_identifier) {
-      for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-          pids_array[i][j] = fmc_read_float(addresscount++);
-        }
-      }
-    } else {
-      addresscount += 9;
-    }
+    float saved_pid_identifier = fmc_read_float(addresscount++);
 
     accelcal[0] = fmc_read_float(addresscount++);
     accelcal[1] = fmc_read_float(addresscount++);
@@ -203,11 +184,6 @@ void flash_load(void) {
     flash_feature_2 = fmc_read_float(54);
 #endif
 
-#ifdef SWITCHABLE_FEATURE_3
-    extern int flash_feature_3;
-    flash_feature_3 = fmc_read_float(55);
-#endif
-
 #if defined(RX_DSMX_2048) || defined(RX_DSM2_1024)
     extern int rx_bind_enable;
     rx_bind_enable = fmc_read_float(56);
@@ -226,6 +202,27 @@ void flash_load(void) {
       frsky_bind.raw[i] = fmc_read(i + 66);
     }
 #endif
+
+    //profile
+    {
+      uint8_t buffer[1024];
+      memset(buffer, 0, 1024);
+      uint32_t *proxy = (uint32_t *)buffer;
+      for (int i = 0; i < 256; i++) {
+        proxy[i] = fmc_read(i + 256);
+      }
+
+      cbor_value_t enc;
+      cbor_decoder_init(&enc, buffer, 1024);
+      cbor_decode_profile_t(&enc, &profile);
+
+      // values in profile.c (was pid.c) changed, overwrite with defaults form profile.c
+      if (saved_pid_identifier != initial_pid_identifier) {
+        profile.pid = default_profile.pid;
+      }
+    }
+
   } else {
+    // Flash was empty, load defaults?
   }
 }

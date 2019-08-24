@@ -328,10 +328,6 @@
 #define SWITCHABLE_FEATURE_2
 #endif
 
-#ifdef INVERT_YAW_PID
-#define SWITCHABLE_FEATURE_3
-#endif
-
 // for the ble beacon to work after in-flight reset
 #ifdef RX_BAYANG_PROTOCOL_BLE_BEACON
 #undef STOP_LOWBATTERY
