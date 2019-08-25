@@ -77,17 +77,34 @@ typedef struct {
 #define SETUP_MEMBERS \
   MEMBER(invert_yaw, uint8)
 
+typedef struct {
+  uint8_t lipo_cell_count;
+  uint8_t pid_voltage_compensation;
+  uint8_t stop_lowbattery;
+  float actual_battery_voltage;
+  float reported_telemetry_voltage;
+} voltage_t;
+
+#define VOLTAGE_MEMBERS                   \
+  MEMBER(lipo_cell_count, uint8)          \
+  MEMBER(pid_voltage_compensation, uint8) \
+  MEMBER(stop_lowbattery, uint8)          \
+  MEMBER(actual_battery_voltage, float)   \
+  MEMBER(reported_telemetry_voltage, float)
+
 // Full Profile
 typedef struct {
   setup_t setup;
   rate_t rate;
   pid_rate_t pid;
+  voltage_t voltage;
 } profile_t;
 
-#define PROFILE_MEMBERS  \
-  MEMBER(setup, setup_t) \
-  MEMBER(rate, rate_t)   \
-  MEMBER(pid, pid_rate_t)
+#define PROFILE_MEMBERS   \
+  MEMBER(setup, setup_t)  \
+  MEMBER(rate, rate_t)    \
+  MEMBER(pid, pid_rate_t) \
+  MEMBER(voltage, voltage_t)
 
 cbor_result_t cbor_decode_vector_t(cbor_value_t *enc, vector_t *vec);
 cbor_result_t cbor_decode_profile_t(cbor_value_t *enc, profile_t *p);

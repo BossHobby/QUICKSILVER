@@ -16,6 +16,8 @@
 extern profile_t profile;
 extern float rx[4];
 extern float rxcopy[4];
+extern float vbattfilt;
+extern float vbatt_comp;
 
 extern uint8_t encode_buffer[1024];
 extern uint8_t decode_buffer[1024];
@@ -31,6 +33,7 @@ typedef enum {
   QUIC_VAL_INVALID,
   QUIC_VAL_PROFILE,
   QUIC_VAL_RX,
+  QUIC_VAL_VBAT,
 } quic_values;
 
 void send_quic(quic_command cmd, uint8_t *data, uint16_t len) {
@@ -108,6 +111,15 @@ void get_quic(quic_values value) {
     cbor_encode_float(&enc, rxcopy[1]);
     cbor_encode_float(&enc, rxcopy[2]);
     cbor_encode_float(&enc, rxcopy[3]);
+    send_quic(QUIC_CMD_GET, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  case QUIC_VAL_VBAT:
+    cbor_encode_map(&enc, 2);
+    cbor_encode_str(&enc, "filter");
+    cbor_encode_float(&enc, vbattfilt);
+    cbor_encode_str(&enc, "compare");
+    cbor_encode_float(&enc, vbatt_comp);
+
     send_quic(QUIC_CMD_GET, encode_buffer, cbor_encoder_len(&enc));
     break;
   default:

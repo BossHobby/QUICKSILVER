@@ -299,9 +299,9 @@ float pid(int x) {
 #endif
   }
 
-#ifdef PID_VOLTAGE_COMPENSATION
-  pidoutput[x] *= v_compensation;
-#endif
+  if (profile.voltage.pid_voltage_compensation)
+    pidoutput[x] *= v_compensation;
+
   limitf(&pidoutput[x], outlimit[x]);
 
   return pidoutput[x];
@@ -313,28 +313,29 @@ float pid(int x) {
 void pid_precalc() {
   timefactor = 0.0032f / looptime;
 
-#ifdef PID_VOLTAGE_COMPENSATION
-  extern float lipo_cell_count;
+  if (profile.voltage.pid_voltage_compensation) {
+    extern float lipo_cell_count;
 
 #ifdef EXACT_VOLTS
-  v_compensation = mapf((vbattfilt / (float)lipo_cell_count), 2.5, 3.85, PID_VC_FACTOR, 1.00);
+    v_compensation = mapf((vbattfilt / (float)lipo_cell_count), 2.5, 3.85, PID_VC_FACTOR, 1.00);
 #endif
 #ifdef FILTERED_VOLTS
-  v_compensation = mapf((vbattfilt_corr / (float)lipo_cell_count), 2.5, 3.85, PID_VC_FACTOR, 1.00);
+    v_compensation = mapf((vbattfilt_corr / (float)lipo_cell_count), 2.5, 3.85, PID_VC_FACTOR, 1.00);
 #endif
 #ifdef FUELGAUGE_VOLTS
-  v_compensation = mapf((vbatt_comp / (float)lipo_cell_count), 2.5, 3.85, PID_VC_FACTOR, 1.00);
+    v_compensation = mapf((vbatt_comp / (float)lipo_cell_count), 2.5, 3.85, PID_VC_FACTOR, 1.00);
 #endif
 
-  if (v_compensation > PID_VC_FACTOR)
-    v_compensation = PID_VC_FACTOR;
-  if (v_compensation < 1.00f)
-    v_compensation = 1.00;
+    if (v_compensation > PID_VC_FACTOR)
+      v_compensation = PID_VC_FACTOR;
+    if (v_compensation < 1.00f)
+      v_compensation = 1.00;
+
 #ifdef LEVELMODE_PID_ATTENUATION
-  if (aux[LEVELMODE])
-    v_compensation *= LEVELMODE_PID_ATTENUATION;
+    if (aux[LEVELMODE])
+      v_compensation *= LEVELMODE_PID_ATTENUATION;
 #endif
-#endif
+  }
 }
 
 #ifndef DTERM_LPF_2ND_HZ

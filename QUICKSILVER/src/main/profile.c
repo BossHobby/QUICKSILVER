@@ -134,6 +134,25 @@ const profile_t default_profile = {
         //.ki = { 12e-1  , 12e-1 , 12.0e-1 },
         //.kd = {17.5e-1 , 17.5e-1  , 7e-1 },
     },
+    .voltage = {
+#ifdef LIPO_CELL_COUNT
+        .lipo_cell_count = LIPO_CELL_COUNT,
+#else
+        .lipo_cell_count = 0,
+#endif
+#ifdef PID_VOLTAGE_COMPENSATION
+        .pid_voltage_compensation = 1,
+#else
+        .pid_voltage_compensation = 0,
+#endif
+#ifdef STOP_LOWBATTERY
+        .stop_lowbattery = 1,
+#else
+        .stop_lowbattery = 0,
+#endif
+        .actual_battery_voltage = ACTUAL_BATTERY_VOLTAGE,
+        .reported_telemetry_voltage = REPORTED_TELEMETRY_VOLTAGE,
+    },
 };
 // the actual profile
 profile_t profile = default_profile;
@@ -207,6 +226,10 @@ END_STRUCT_ENCODER()
 
 START_STRUCT_ENCODER(setup_t)
 SETUP_MEMBERS
+END_STRUCT_ENCODER()
+
+START_STRUCT_ENCODER(voltage_t)
+VOLTAGE_MEMBERS
 END_STRUCT_ENCODER()
 
 START_STRUCT_ENCODER(pid_rate_t)
@@ -284,6 +307,10 @@ END_STRUCT_DECODER()
 
 START_STRUCT_DECODER(setup_t)
 SETUP_MEMBERS
+END_STRUCT_DECODER()
+
+START_STRUCT_DECODER(voltage_t)
+VOLTAGE_MEMBERS
 END_STRUCT_DECODER()
 
 START_STRUCT_DECODER(pid_rate_t)

@@ -44,6 +44,7 @@
 #include "led.h"
 #include "osd.h"
 #include "pid.h"
+#include "profile.h"
 #include "rx.h"
 #include "sixaxis.h"
 #include "util.h"
@@ -89,6 +90,8 @@ unsigned int lastlooptime;
 int lowbatt = 1;
 
 //int minindex = 0;
+
+extern profile_t profile;
 
 // holds the main four channels, roll, pitch , yaw , throttle
 float rx[4];
@@ -197,17 +200,19 @@ int main(void) {
     count++;
   }
 
-#ifndef LIPO_CELL_COUNT
-  for (int i = 6; i > 0; i--) {
-    float cells = i;
-    if (vbattfilt / cells > 3.7f) {
-      lipo_cell_count = (float)cells;
-      break;
+  if (profile.voltage.lipo_cell_count == 0) {
+    // Lipo count not specified, trigger auto detect
+    for (int i = 6; i > 0; i--) {
+      float cells = i;
+      if (vbattfilt / cells > 3.7f) {
+        lipo_cell_count = (float)cells;
+        break;
+      }
     }
+  } else {
+    lipo_cell_count = (float)profile.voltage.lipo_cell_count;
   }
-#else
-  lipo_cell_count = (float)LIPO_CELL_COUNT;
-#endif
+
   vbattfilt_corr *= (float)lipo_cell_count;
 
 #ifdef RX_BAYANG_BLE_APP
@@ -216,11 +221,12 @@ int main(void) {
   random_seed = random_seed & 0xff;
 #endif
 
-#ifdef STOP_LOWBATTERY
   // infinite loop
-  if (vbattfilt / (float)lipo_cell_count < 3.3f)
-    failloop(2);
-#endif
+  if (profile.voltage.stop_lowbattery) {
+    if (vbattfilt / (float)lipo_cell_count < 3.3f) {
+      failloop(2);
+    }
+  }
 
   gyro_cal();
   extern void rgb_init(void);
