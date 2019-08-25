@@ -13,7 +13,7 @@
 //***********************************************NEW STUFF TO PLAY WITH*****************************************************
 
 // Select filter cut 25hz for SBUS, 67hz for CRSF, 40hz for DSMX, 20hz for DSM2, 90hz for bayang, 45hz for frsky   Formula is [(1/rx framerate)/2] * 0.9
-#define RX_SMOOTHING_HZ 45
+#define RX_SMOOTHING_HZ 90
 
 //Select (only one) source variable for PID VBAT Compensation
 //#define EXACT_VOLTS     //origional method - responds to exact moment to moment sag
@@ -35,9 +35,9 @@
 
 // *************EXPO from 0.00 to 1.00 , 0 = no exp
 // *************positive = less sensitive near center
-#define ACRO_EXPO_ROLL 0.85
-#define ACRO_EXPO_PITCH 0.85
-#define ACRO_EXPO_YAW 0.65
+#define ACRO_EXPO_ROLL 0.80
+#define ACRO_EXPO_PITCH 0.80
+#define ACRO_EXPO_YAW 0.60
 
 #define ANGLE_EXPO_ROLL 0.55
 #define ANGLE_EXPO_PITCH 0.0
@@ -103,12 +103,12 @@
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING CHAN_5
-#define IDLE_UP CHAN_5
-#define LEVELMODE CHAN_6
+#define IDLE_UP CHAN_6
+#define LEVELMODE CHAN_OFF
 #define RACEMODE CHAN_OFF
 #define HORIZON CHAN_OFF
 #define PIDPROFILE CHAN_9
-#define RATES CHAN_6
+#define RATES CHAN_ON
 #define LEDS_ON CHAN_OFF
 
 // *************switch for fpv / other, requires fet
