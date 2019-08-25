@@ -151,10 +151,6 @@
 #define LVC_LOWER_THROTTLE_VOLTAGE_RAW 2.70
 #define LVC_LOWER_THROTTLE_KP 3.0
 
-// *************do not start software if battery is too low (below 3.3v)  - only works on 1s lipos
-// *************flashes 2 times repeatedly at startup
-//#define STOP_LOWBATTERY
-
 // *************voltage/cell to start warning led blinking
 #define VBATTLOW 3.3
 

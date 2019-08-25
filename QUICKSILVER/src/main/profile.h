@@ -80,7 +80,7 @@ typedef struct {
 typedef struct {
   uint8_t lipo_cell_count;
   uint8_t pid_voltage_compensation;
-  uint8_t stop_lowbattery;
+  float vbattlow;
   float actual_battery_voltage;
   float reported_telemetry_voltage;
 } voltage_t;
@@ -88,7 +88,7 @@ typedef struct {
 #define VOLTAGE_MEMBERS                   \
   MEMBER(lipo_cell_count, uint8)          \
   MEMBER(pid_voltage_compensation, uint8) \
-  MEMBER(stop_lowbattery, uint8)          \
+  MEMBER(vbattlow, float)                 \
   MEMBER(actual_battery_voltage, float)   \
   MEMBER(reported_telemetry_voltage, float)
 

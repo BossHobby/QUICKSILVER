@@ -145,11 +145,7 @@ const profile_t default_profile = {
 #else
         .pid_voltage_compensation = 0,
 #endif
-#ifdef STOP_LOWBATTERY
-        .stop_lowbattery = 1,
-#else
-        .stop_lowbattery = 0,
-#endif
+        .vbattlow = VBATTLOW,
         .actual_battery_voltage = ACTUAL_BATTERY_VOLTAGE,
         .reported_telemetry_voltage = REPORTED_TELEMETRY_VOLTAGE,
     },

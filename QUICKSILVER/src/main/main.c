@@ -221,13 +221,6 @@ int main(void) {
   random_seed = random_seed & 0xff;
 #endif
 
-  // infinite loop
-  if (profile.voltage.stop_lowbattery) {
-    if (vbattfilt / (float)lipo_cell_count < 3.3f) {
-      failloop(2);
-    }
-  }
-
   gyro_cal();
   extern void rgb_init(void);
   rgb_init();
@@ -376,7 +369,7 @@ int main(void) {
     else
       hyst = 0.0f;
 
-    if ((tempvolt + (float)VDROP_FACTOR * thrfilt < ((float)VBATTLOW * lipo_cell_count) + hyst) || (vbattfilt < (float)2.7f))
+    if ((tempvolt + (float)VDROP_FACTOR * thrfilt < (profile.voltage.vbattlow * lipo_cell_count) + hyst) || (vbattfilt < (float)2.7f))
       lowbatt = 1;
     else
       lowbatt = 0;
