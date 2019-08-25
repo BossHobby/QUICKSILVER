@@ -8,7 +8,7 @@ Replace <board-name> in the following appropriately.
 ```shell
 apt install openocd dfu-util gcc-arm-none-eabi gdb-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
 ```
-3. Open Folder <guano-repo>/QUICKSILVER with VSCode
+3. Open Folder `<guano-repo>/QUICKSILVER` with VSCode
 4. Install "Cortex-Debug" extension and the "STM32F4 Device Support Plugin"
 5. Select Debug on the left, "Add Configuration..." in the Dropdown, Compare with the following:
 ```json
