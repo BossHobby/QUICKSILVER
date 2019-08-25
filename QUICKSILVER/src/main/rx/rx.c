@@ -8,6 +8,16 @@ extern float rx[4];
 extern char aux[AUXNUMBER];
 extern profile_t profile;
 
+float rcexpo(float in, float exp) {
+  if (exp > 1)
+    exp = 1;
+  if (exp < -1)
+    exp = -1;
+  float ans = in * in * in * exp + in * (1 - exp);
+  limitf(&ans, 1.0);
+  return ans;
+}
+
 void rx_apply_expo(void) {
   vector_t angle_expo = {
       .roll = 0,

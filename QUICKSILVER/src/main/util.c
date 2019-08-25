@@ -61,16 +61,6 @@ void limitf(float *input, const float limit) {
     *input = -limit;
 }
 
-float rcexpo(float in, float exp) {
-  if (exp > 1)
-    exp = 1;
-  if (exp < -1)
-    exp = -1;
-  float ans = in * in * in * exp + in * (1 - exp);
-  limitf(&ans, 1.0);
-  return ans;
-}
-
 // timing routines for debugging
 static unsigned long timestart;
 unsigned long timeend;
