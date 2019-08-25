@@ -6,7 +6,7 @@ Replace <board-name> in the following appropriately.
 1. Install vscode
 2. Run the following
 ```shell
-apt install openocd dfu-util gcc-arm-none-eabi gdb-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+apt install openocd dfu-util gcc-arm-none-eabi gdb-multiarch libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
 ```
 3. Open Folder `<guano-repo>/QUICKSILVER` with VSCode
 4. Install "Cortex-Debug" extension and the "STM32F4 Device Support Plugin"
