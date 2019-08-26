@@ -3,6 +3,7 @@
 #include "drv_time.h"
 #include "pid.h"
 #include "profile.h"
+#include "rx.h"
 #include "sixaxis.h"
 
 extern int ledcommand;
@@ -94,12 +95,12 @@ void gestures(void) {
     }
 
     if (command == GESTURE_RRD) {
-      aux[CH_AUX1] = 1;
+      aux[TRAVEL_CHECK] = 1;
       ledcommand = 1;
     }
     if (command == GESTURE_LLD) {
       ledcommand = 1;
-      aux[CH_AUX1] = 0;
+      aux[TRAVEL_CHECK] = 0;
     }
 
 #ifdef ENABLE_OSD

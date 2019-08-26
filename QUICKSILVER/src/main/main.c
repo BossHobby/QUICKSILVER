@@ -174,10 +174,11 @@ int main(void) {
   adc_init();
 
   //set always on channel to on
-  aux[CH_ON] = 1;
+  aux[AUX_CHANNEL_ON] = 1;
+  aux[AUX_CHANNEL_OFF] = 0;
 
-#ifdef AUX1_START_ON
-  aux[CH_AUX1] = 1;
+#ifdef STICK_TRAVEL_CHECK_START_ON
+  aux[TRAVEL_CHECK] = 1;
 #endif
 
 #ifdef FLASH_SAVE1

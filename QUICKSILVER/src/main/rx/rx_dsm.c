@@ -223,18 +223,18 @@ void checkrx()
     rx_apply_expo();
 
 #ifdef RX_DSMX_2048
-    aux[CHAN_5] = (channels[4] > 1100) ? 1 : 0; //1100 cutoff intentionally selected to force aux channels low if
-    aux[CHAN_6] = (channels[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
-    aux[CHAN_7] = (channels[6] > 1100) ? 1 : 0;
-    aux[CHAN_8] = (channels[7] > 1100) ? 1 : 0;
-    aux[CHAN_9] = (channels[8] > 1100) ? 1 : 0;
-    aux[CHAN_10] = (channels[9] > 1100) ? 1 : 0;
+    aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0;        //1100 cutoff intentionally selected to force aux channels low if
+    aux[AUX_CHANNEL_1ANNEL_1] = (channels[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
+    aux[AUX_CHANNEL_2] = (channels[6] > 1100) ? 1 : 0;
+    aux[AUX_CHANNEL_3] = (channels[7] > 1100) ? 1 : 0;
+    aux[AUX_CHANNEL_4] = (channels[8] > 1100) ? 1 : 0;
+    aux[AUX_CHANNEL_5] = (channels[9] > 1100) ? 1 : 0;
 #endif
 
 #ifdef RX_DSM2_1024
-    aux[CHAN_5] = (channels[4] > 550) ? 1 : 0; //550 cutoff intentionally selected to force aux channels low if
-    aux[CHAN_6] = (channels[5] > 550) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
-    aux[CHAN_7] = (channels[6] > 550) ? 1 : 0;
+    aux[AUX_CHANNEL_0] = (channels[4] > 550) ? 1 : 0;        //550 cutoff intentionally selected to force aux channels low if
+    aux[AUX_CHANNEL_1ANNEL_1] = (channels[5] > 550) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
+    aux[AUX_CHANNEL_2] = (channels[6] > 550) ? 1 : 0;
 #endif
 
     if (bind_safety > 900) { //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data

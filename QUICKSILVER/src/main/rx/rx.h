@@ -16,6 +16,26 @@ typedef union {
 } frsky_bind_data;
 #endif
 
+typedef enum {
+  AUX_CHANNEL_0,
+  AUX_CHANNEL_1,
+  AUX_CHANNEL_2,
+  AUX_CHANNEL_3,
+  AUX_CHANNEL_4,
+  AUX_CHANNEL_5,
+  AUX_CHANNEL_6,
+  AUX_CHANNEL_7,
+  AUX_CHANNEL_8,
+  AUX_CHANNEL_9,
+  AUX_CHANNEL_10,
+  AUX_CHANNEL_11,
+  AUX_CHANNEL_12,
+  AUX_CHANNEL_13,
+  AUX_CHANNEL_ON,
+  AUX_CHANNEL_OFF,
+  AUX_CHANNEL_MAX
+} aux_channel_t;
+
 void rx_init(void);
 void checkrx(void);
 

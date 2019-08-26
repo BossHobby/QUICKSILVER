@@ -228,18 +228,18 @@ void checkrx() {
         rx_apply_expo();
 
         //Here we have the AUX channels Silverware supports
-        aux[CHAN_5] = (channels[4] > 1600) ? 1 : 0;
-        aux[CHAN_6] = (channels[5] > 1600) ? 1 : 0;
-        aux[CHAN_7] = (channels[6] > 1600) ? 1 : 0;
-        aux[CHAN_8] = (channels[7] > 1600) ? 1 : 0;
-        aux[CHAN_9] = (channels[8] > 1600) ? 1 : 0;
-        aux[CHAN_10] = (channels[9] > 1600) ? 1 : 0;
+        aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
+        aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
+        aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
+        aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
+        aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
+        aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
         //and here we have the rest of the iBus AUX channels/
         /* Currently Silverware only has six AUX channels.
-					aux[CHAN_11] = (channels[10] > 1600) ? 1 : 0;
-					aux[CHAN_12] = (channels[11] > 1600) ? 1 : 0;
-					aux[CHAN_13] = (channels[12] > 1600) ? 1 : 0;
-					aux[CHAN_14] = (channels[13] > 1600) ? 1 : 0;
+					aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
+					aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
+					aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
+					aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
 					*/
 
         time_lastframe = gettime();

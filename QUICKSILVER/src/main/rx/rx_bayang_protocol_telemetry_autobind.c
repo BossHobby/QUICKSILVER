@@ -89,13 +89,10 @@ void writeregs(uint8_t data[], uint8_t size) {
 
 void rx_init() {
 
-  // always on (CH_ON) channel set 1
+  // always on (AUX_CHANNEL_ON) channel set 1
   aux[AUXNUMBER - 2] = 1;
-  // always off (CH_OFF) channel set 0
+  // always off (AUX_CHANNEL_OFF) channel set 0
   aux[AUXNUMBER - 1] = 0;
-#ifdef AUX1_START_ON
-  aux[CH_AUX1] = 1;
-#endif
 
 #ifdef RADIO_XN297L
 

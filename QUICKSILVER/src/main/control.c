@@ -414,7 +414,7 @@ void control(void) {
 
 #ifdef STICK_TRAVEL_CHECK //This feature completely disables throttle and allows visual feedback if control inputs reach full throws
   //Stick endpoints check tied to aux channel stick gesture
-  if (aux[CH_AUX1]) {
+  if (aux[TRAVEL_CHECK]) {
     throttle = 0;
     if ((rx[0] <= -0.99f) || (rx[0] >= 0.99f) || (rx[1] <= -0.99f) || (rx[1] >= 0.99f) || (rx[2] <= -0.99f) || (rx[2] >= 0.99f) || (rx[3] <= 0.0f) || (rx[3] >= 0.99f)) {
       ledcommand = 1;

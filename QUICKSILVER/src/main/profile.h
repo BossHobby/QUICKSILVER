@@ -106,8 +106,8 @@ typedef struct {
   MEMBER(pid, pid_rate_t) \
   MEMBER(voltage, voltage_t)
 
-cbor_result_t cbor_decode_vector_t(cbor_value_t *enc, vector_t *vec);
-cbor_result_t cbor_decode_profile_t(cbor_value_t *enc, profile_t *p);
+cbor_result_t cbor_encode_vector_t(cbor_value_t *enc, vector_t vec);
+cbor_result_t cbor_decode_profile_t(cbor_value_t *dec, profile_t *p);
 
-cbor_result_t cbor_encode_vector_t(cbor_value_t *it, vector_t vec);
-cbor_result_t cbor_encode_profile_t(cbor_value_t *it, profile_t p);
+cbor_result_t cbor_encode_profile_t(cbor_value_t *enc, profile_t p);
+cbor_result_t cbor_decode_vector_t(cbor_value_t *dec, vector_t *vec);

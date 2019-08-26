@@ -283,12 +283,12 @@ void checkrx()
 
     rx_apply_expo();
 
-    aux[CHAN_5] = (crsfChannelData[4] > 1100) ? 1 : 0; //1100 cutoff intentionally selected to force aux channels low if
-    aux[CHAN_6] = (crsfChannelData[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
-    aux[CHAN_7] = (crsfChannelData[6] > 1100) ? 1 : 0;
-    aux[CHAN_8] = (crsfChannelData[7] > 1100) ? 1 : 0;
-    aux[CHAN_9] = (crsfChannelData[8] > 1100) ? 1 : 0;
-    aux[CHAN_10] = (crsfChannelData[9] > 1100) ? 1 : 0;
+    aux[AUX_CHANNEL_0] = (crsfChannelData[4] > 1100) ? 1 : 0; //1100 cutoff intentionally selected to force aux channels low if
+    aux[AUX_CHANNEL_1] = (crsfChannelData[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
+    aux[AUX_CHANNEL_2] = (crsfChannelData[6] > 1100) ? 1 : 0;
+    aux[AUX_CHANNEL_3] = (crsfChannelData[7] > 1100) ? 1 : 0;
+    aux[AUX_CHANNEL_4] = (crsfChannelData[8] > 1100) ? 1 : 0;
+    aux[AUX_CHANNEL_5] = (crsfChannelData[9] > 1100) ? 1 : 0;
 
     if (bind_safety > 100) { //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
       rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high

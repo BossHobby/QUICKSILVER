@@ -183,13 +183,10 @@ int rxdata[17 + 2 * crc_en];
 
 void rx_init() {
 
-  // always on (CH_ON) channel set 1
+  // always on (AUX_CHANNEL_ON) channel set 1
   aux[AUXNUMBER - 2] = 1;
-  // always off (CH_OFF) channel set 0
+  // always off (AUX_CHANNEL_OFF) channel set 0
   aux[AUXNUMBER - 1] = 0;
-#ifdef AUX1_START_ON
-  aux[CH_AUX1] = 1;
-#endif
 
 #ifdef RADIO_CHECK
   int rxcheck = xn_readreg(0x0f); // rx address pipe 5

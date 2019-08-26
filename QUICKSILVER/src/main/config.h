@@ -102,27 +102,28 @@
 //#define SOFTSPI_4WIRE
 
 // *******************************SWITCH SELECTION*****************************
-#define ARMING CHAN_5
-#define IDLE_UP CHAN_6
-#define LEVELMODE CHAN_OFF
-#define RACEMODE CHAN_OFF
-#define HORIZON CHAN_OFF
-#define PIDPROFILE CHAN_9
-#define RATES CHAN_ON
-#define LEDS_ON CHAN_OFF
+#define ARMING AUX_CHANNEL_0
+#define IDLE_UP AUX_CHANNEL_1
+#define LEVELMODE AUX_CHANNEL_OFF
+#define RACEMODE AUX_CHANNEL_OFF
+#define HORIZON AUX_CHANNEL_OFF
+#define PIDPROFILE AUX_CHANNEL_4
+//#define TRAVEL_CHECK AUX_CHANNEL_13
+#define RATES AUX_CHANNEL_ON
+#define LEDS_ON AUX_CHANNEL_OFF
 
 // *************switch for fpv / other, requires fet
 // *************comment out to disable
-//#define FPV_ON CHAN_ON
+//#define FPV_ON AUX_CHANNEL_ON
 
 // *************enable buzzer functionality
 // *************external buzzer requires pin assignment in hardware.h before defining below
-// *************change channel assignment from CHAN_OFF to a numbered aux switch if you want switch control
-// *************if no channel is assigned but buzzer is set to CHAN_ON - buzzer will activate on LVC and FAILSAFE.
-//#define BUZZER_ENABLE CHAN_OFF
+// *************change channel assignment from AUX_CHANNEL_OFF to a numbered aux switch if you want switch control
+// *************if no channel is assigned but buzzer is set to AUX_CHANNEL_ON - buzzer will activate on LVC and FAILSAFE.
+//#define BUZZER_ENABLE AUX_CHANNEL_OFF
 
 // *************RRD/LLD stick gesture aux start up state.
-//#define AUX1_START_ON
+//#define STICK_TRAVEL_CHECK_START_ON
 
 //**********************************************************************************************************************
 //***********************************************VOLTAGE SETTINGS*******************************************************
@@ -252,7 +253,7 @@
 
 // *************enable inverted flight code ( brushless only )
 //#define INVERTED_ENABLE
-//#define FN_INVERTED CH_OFF //for brushless only
+//#define FN_INVERTED AUX_CHANNEL_OFF //for brushless only
 
 // *************SPECIAL TEST MODE TO CHECK TRANSMITTER STICK THROWS
 // *************This define will allow you to check if your radio is reaching 100% throws entering <RIGHT-RIGHT-DOWN> gesture
@@ -328,11 +329,11 @@
 // There were other things on my list that I don't remember now. I'll add them.
 
 // throttle direct to motors for thrust measure as a flight mode							//***************** this needs to maybe go away after osd?  not safe - encourages running props with craft in in hand
-//#define MOTORS_TO_THROTTLE_MODE MULTI_CHAN_8
+//#define MOTORS_TO_THROTTLE_MODE MULTI_AUX_CHANNEL_3
 
 #define DISABLE_FLIP_SEQUENCER //****************need to turn this into crashflip recovery - will require bidirectional esc setting
 
-#define STARTFLIP CHAN_OFF //****************this would be the aux trigger
+#define STARTFLIP AUX_CHANNEL_OFF //****************this would be the aux trigger
 
 // *************motor curve to use - select one																//***************This could become something like tpa
 // *************the pwm frequency has to be set independently

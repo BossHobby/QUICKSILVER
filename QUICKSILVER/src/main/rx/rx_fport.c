@@ -268,20 +268,20 @@ void checkrx() {
           rx_apply_expo();
 
           //Here we have the AUX channels Silverware supports
-          aux[CHAN_5] = (channels[4] > 993) ? 1 : 0;
-          aux[CHAN_6] = (channels[5] > 993) ? 1 : 0;
-          aux[CHAN_7] = (channels[6] > 993) ? 1 : 0;
-          aux[CHAN_8] = (channels[7] > 993) ? 1 : 0;
-          aux[CHAN_9] = (channels[8] > 993) ? 1 : 0;
-          aux[CHAN_10] = (channels[9] > 993) ? 1 : 0;
+          aux[AUX_CHANNEL_0] = (channels[4] > 993) ? 1 : 0;
+          aux[AUX_CHANNEL_1] = (channels[5] > 993) ? 1 : 0;
+          aux[AUX_CHANNEL_2] = (channels[6] > 993) ? 1 : 0;
+          aux[AUX_CHANNEL_3] = (channels[7] > 993) ? 1 : 0;
+          aux[AUX_CHANNEL_4] = (channels[8] > 993) ? 1 : 0;
+          aux[AUX_CHANNEL_5] = (channels[9] > 993) ? 1 : 0;
           //and here we have the rest of the FPORT/SBUS channels/
           /* Currently Silverware only has six AUX channels.
-            aux[CHAN_11] = (channels[10] > 993) ? 1 : 0;
-            aux[CHAN_12] = (channels[11] > 993) ? 1 : 0;
-            aux[CHAN_13] = (channels[12] > 993) ? 1 : 0;
-            aux[CHAN_14] = (channels[13] > 993) ? 1 : 0;
-            aux[CHAN_15] = (channels[14] > 993) ? 1 : 0;
-            aux[CHAN_16] = (channels[15] > 993) ? 1 : 0;
+            aux[AUX_CHANNEL_6] = (channels[10] > 993) ? 1 : 0;
+            aux[AUX_CHANNEL_7] = (channels[11] > 993) ? 1 : 0;
+            aux[AUX_CHANNEL_8] = (channels[12] > 993) ? 1 : 0;
+            aux[AUX_CHANNEL_9] = (channels[13] > 993) ? 1 : 0;
+            aux[AUX_CHANNEL_9] = (channels[14] > 993) ? 1 : 0;
+            aux[AUX_CHANNEL_10] = (channels[15] > 993) ? 1 : 0;
           */
           if (channels[12] > 993) { // Channel 13 is now FPORT Debug Telemetry switch. Integrate this better sometime
             FPORTDebugTelemetry = true;
