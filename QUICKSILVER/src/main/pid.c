@@ -116,7 +116,7 @@ extern float gyro[3];
 extern int onground;
 extern float looptime;
 extern int in_air;
-extern char aux[AUXNUMBER];
+extern char aux[AUX_CHANNEL_MAX];
 extern float vbattfilt;
 extern float vbattfilt_corr;
 extern float vbatt_comp;

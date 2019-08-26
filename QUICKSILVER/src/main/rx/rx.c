@@ -5,7 +5,7 @@
 #include "util.h"
 
 extern float rx[4];
-extern char aux[AUXNUMBER];
+extern char aux[AUX_CHANNEL_MAX];
 extern profile_t profile;
 
 float rcexpo(float in, float exp) {

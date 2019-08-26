@@ -30,9 +30,9 @@
 
 // global use rx variables
 extern float rx[4];
-extern char aux[AUXNUMBER];
-extern char lastaux[AUXNUMBER];
-extern char auxchange[AUXNUMBER];
+extern char aux[AUX_CHANNEL_MAX];
+extern char lastaux[AUX_CHANNEL_MAX];
+extern char auxchange[AUX_CHANNEL_MAX];
 int failsafe = 9001; //OVER 9000
 int rxmode = 0;
 int rx_ready = 0;

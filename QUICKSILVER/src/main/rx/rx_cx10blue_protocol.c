@@ -43,9 +43,9 @@ THE SOFTWARE.
 #define PAYLOAD_LENGHT 19
 
 extern float rx[4];
-extern char aux[AUXNUMBER];
-extern char lastaux[AUXNUMBER];
-extern char auxchange[AUXNUMBER];
+extern char aux[AUX_CHANNEL_MAX];
+extern char lastaux[AUX_CHANNEL_MAX];
+extern char auxchange[AUX_CHANNEL_MAX];
 
 int rxmode = 0;
 int failsafe = 0;
@@ -125,7 +125,7 @@ static int decodepacket(void) {
 
     aux[2] = (rxdata[17] & 0x01) ? 1 : 0; // rates mid
 
-    for (int i = 0; i < AUXNUMBER - 2; i++) {
+    for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
       auxchange[i] = 0;
       if (lastaux[i] != aux[i])
         auxchange[i] = 1;

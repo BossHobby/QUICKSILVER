@@ -68,8 +68,8 @@ float yawangle;
 
 extern float looptime;
 
-extern char auxchange[AUXNUMBER];
-extern char aux[AUXNUMBER];
+extern char auxchange[AUX_CHANNEL_MAX];
+extern char aux[AUX_CHANNEL_MAX];
 
 extern int ledcommand;
 extern int ledblink;

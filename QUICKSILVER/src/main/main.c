@@ -98,10 +98,10 @@ float rx[4];
 
 // holds auxilliary channels
 // the last 2 are always on and off respectively
-char aux[AUXNUMBER] = {0, 0, 0, 0, 0, 0};
-char lastaux[AUXNUMBER];
+char aux[AUX_CHANNEL_MAX] = {0, 0, 0, 0, 0, 0};
+char lastaux[AUX_CHANNEL_MAX];
 // if an aux channel has just changed
-char auxchange[AUXNUMBER];
+char auxchange[AUX_CHANNEL_MAX];
 
 // bind / normal rx mode
 extern int rxmode;

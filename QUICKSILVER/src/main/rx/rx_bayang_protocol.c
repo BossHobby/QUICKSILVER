@@ -40,9 +40,9 @@ THE SOFTWARE.
 int rx_ready = 1;
 int bind_safety = 0;
 extern float rx[4];
-extern char aux[AUXNUMBER];
-extern char lastaux[AUXNUMBER];
-extern char auxchange[AUXNUMBER];
+extern char aux[AUX_CHANNEL_MAX];
+extern char lastaux[AUX_CHANNEL_MAX];
+extern char auxchange[AUX_CHANNEL_MAX];
 
 void writeregs(uint8_t data[], uint8_t size) {
   spi_cson();
@@ -164,7 +164,7 @@ static int decodepacket(void) {
 
       rx_apply_expo();
 
-      for (int i = 0; i < AUXNUMBER - 2; i++) {
+      for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
         auxchange[i] = 0;
         if (lastaux[i] != aux[i])
           auxchange[i] = 1;

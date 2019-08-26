@@ -39,9 +39,9 @@
 
 extern float rx[4];
 
-extern char aux[AUXNUMBER];
-extern char lastaux[AUXNUMBER];
-extern char auxchange[AUXNUMBER];
+extern char aux[AUX_CHANNEL_MAX];
+extern char lastaux[AUX_CHANNEL_MAX];
+extern char auxchange[AUX_CHANNEL_MAX];
 
 #define H7_FLIP_MASK 0x80 // right shoulder (3D flip switch), resets after aileron or elevator has moved and came back to neutral
 #define H7_F_S_MASK 0x01
@@ -148,7 +148,7 @@ int decode_h7(void) {
   rx_apply_expo();
 #endif
 
-  for (int i = 0; i < AUXNUMBER - 2; i++) {
+  for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
     auxchange[i] = 0;
     if (lastaux[i] != aux[i])
       auxchange[i] = 1;

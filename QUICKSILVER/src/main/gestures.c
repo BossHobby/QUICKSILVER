@@ -9,7 +9,7 @@
 extern int ledcommand;
 extern int ledblink;
 extern int onground;
-extern char aux[AUXNUMBER];
+extern char aux[AUX_CHANNEL_MAX];
 extern profile_t profile;
 
 int pid_gestures_used = 0;

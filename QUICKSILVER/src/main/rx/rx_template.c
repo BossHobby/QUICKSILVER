@@ -58,11 +58,11 @@ THE SOFTWARE.
 // throttle range 0.0f to 1.0f = under 0.1f it's interpreted as off
 extern float rx[4];
 // digital on / off channels
-extern char aux[AUXNUMBER];
+extern char aux[AUX_CHANNEL_MAX];
 // last value of above
-extern char lastaux[AUXNUMBER];
+extern char lastaux[AUX_CHANNEL_MAX];
 // 1 if change in aux from last value
-extern char auxchange[AUXNUMBER];
+extern char auxchange[AUX_CHANNEL_MAX];
 
 int failsafe = 0;
 
@@ -218,7 +218,7 @@ static int decodepacket(void) {
 
       aux[CH_RTH] = (rxdata[2] & 0x01) ? 1 : 0; // rth channel
 
-      for (int i = 0; i < AUXNUMBER - 2; i++) {
+      for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
         auxchange[i] = 0;
         if (lastaux[i] != aux[i])
           auxchange[i] = 1;

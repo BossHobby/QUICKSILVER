@@ -168,9 +168,9 @@ void nrf24_write_xn297_payload(int *txdata, int size) {
 }
 
 extern float rx[4];
-extern char aux[AUXNUMBER];
-extern char lastaux[AUXNUMBER];
-extern char auxchange[AUXNUMBER];
+extern char aux[AUX_CHANNEL_MAX];
+extern char lastaux[AUX_CHANNEL_MAX];
+extern char auxchange[AUX_CHANNEL_MAX];
 
 char lasttrim[4];
 char rfchannel[4];
@@ -184,9 +184,9 @@ int rxdata[17 + 2 * crc_en];
 void rx_init() {
 
   // always on (AUX_CHANNEL_ON) channel set 1
-  aux[AUXNUMBER - 2] = 1;
+  aux[AUX_CHANNEL_MAX - 2] = 1;
   // always off (AUX_CHANNEL_OFF) channel set 0
-  aux[AUXNUMBER - 1] = 0;
+  aux[AUX_CHANNEL_MAX - 1] = 0;
 
 #ifdef RADIO_CHECK
   int rxcheck = xn_readreg(0x0f); // rx address pipe 5
@@ -394,7 +394,7 @@ static int decodepacket(void) {
 
       rx_apply_expo();
 
-      for (int i = 0; i < AUXNUMBER - 2; i++) {
+      for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
         auxchange[i] = 0;
         if (lastaux[i] != aux[i])
           auxchange[i] = 1;

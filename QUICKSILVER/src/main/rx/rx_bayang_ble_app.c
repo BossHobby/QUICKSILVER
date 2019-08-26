@@ -161,9 +161,9 @@ int PID_index_delay = 0;
 #ifdef RX_BAYANG_BLE_APP
 
 extern float rx[4];
-extern char aux[AUXNUMBER];
-extern char lastaux[AUXNUMBER];
-extern char auxchange[AUXNUMBER];
+extern char aux[AUX_CHANNEL_MAX];
+extern char lastaux[AUX_CHANNEL_MAX];
+extern char auxchange[AUX_CHANNEL_MAX];
 
 char lasttrim[4];
 
@@ -195,9 +195,9 @@ char quad_name[6] = {'N', 'O', 'N', 'A', 'M', 'E'};
 void rx_init() {
 
   // always on (AUX_CHANNEL_ON) channel set 1
-  aux[AUXNUMBER - 2] = 1;
+  aux[AUX_CHANNEL_MAX - 2] = 1;
   // always off (AUX_CHANNEL_OFF) channel set 0
-  aux[AUXNUMBER - 1] = 0;
+  aux[AUX_CHANNEL_MAX - 1] = 0;
 
 #ifdef AUX4_START_ON
   aux[CH_AUX4] = 1;
@@ -957,7 +957,7 @@ static int decodepacket(void) {
 
       rx_apply_expo();
 
-      for (int i = 0; i < AUXNUMBER - 2; i++) {
+      for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
         auxchange[i] = 0;
         if (lastaux[i] != aux[i])
           auxchange[i] = 1;

@@ -171,7 +171,7 @@ void imu_calc(void)
           }
 	  }
 
-extern char aux[AUXNUMBER];
+extern char aux[AUX_CHANNEL_MAX];
 if(aux[HORIZON])
 {			
 	attitude[0] = atan2approx(GEstG[0], GEstG[2]) ;
