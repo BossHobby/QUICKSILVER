@@ -92,18 +92,24 @@ typedef struct {
   MEMBER(actual_battery_voltage, float)   \
   MEMBER(reported_telemetry_voltage, float)
 
+typedef struct {
+  aux_channel_t aux[AUX_FUNCTION_MAX];
+} channel_t;
+
 // Full Profile
 typedef struct {
   setup_t setup;
   rate_t rate;
+  channel_t channel;
   pid_rate_t pid;
   voltage_t voltage;
 } profile_t;
 
-#define PROFILE_MEMBERS   \
-  MEMBER(setup, setup_t)  \
-  MEMBER(rate, rate_t)    \
-  MEMBER(pid, pid_rate_t) \
+#define PROFILE_MEMBERS      \
+  MEMBER(setup, setup_t)     \
+  MEMBER(rate, rate_t)       \
+  MEMBER(channel, channel_t) \
+  MEMBER(pid, pid_rate_t)    \
   MEMBER(voltage, voltage_t)
 
 cbor_result_t cbor_encode_vector_t(cbor_value_t *enc, vector_t vec);

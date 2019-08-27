@@ -108,7 +108,6 @@
 #define RACEMODE AUX_CHANNEL_OFF
 #define HORIZON AUX_CHANNEL_OFF
 #define PIDPROFILE AUX_CHANNEL_4
-//#define TRAVEL_CHECK AUX_CHANNEL_13
 #define RATES AUX_CHANNEL_ON
 #define LEDS_ON AUX_CHANNEL_OFF
 
@@ -258,8 +257,10 @@
 // *************SPECIAL TEST MODE TO CHECK TRANSMITTER STICK THROWS
 // *************This define will allow you to check if your radio is reaching 100% throws entering <RIGHT-RIGHT-DOWN> gesture
 // ************* will disable throttle and will rapid blink the led when sticks are moved to 100% throws
-// *************entering <LEFT-LEFT-DOWN> will return the quad to normal operation.
+// ************* entering <LEFT-LEFT-DOWN> will return the quad to normal operation.
+// ************* you can optionaly select a aux channel to trigger the same.
 #define STICK_TRAVEL_CHECK
+//#define TRAVEL_CHECK AUX_CHANNEL_13
 
 //#############################################################################################################################
 //#############################################################################################################################

@@ -116,7 +116,6 @@ extern float gyro[3];
 extern int onground;
 extern float looptime;
 extern int in_air;
-extern char aux[AUX_CHANNEL_MAX];
 extern float vbattfilt;
 extern float vbattfilt_corr;
 extern float vbatt_comp;
@@ -134,8 +133,8 @@ float timefactor;
 // input: error[x] = setpoint - gyro
 // output: pidoutput[x] = change required from motors
 float pid(int x) {
-  if ((aux[LEVELMODE]) && (!aux[RACEMODE])) { //in level mode or horizon but not racemode
-    if ((onground) || (in_air == 0)) {        // and while on the ground...
+  if ((rx_aux_on(AUX_LEVELMODE)) && (!rx_aux_on(AUX_RACEMODE))) { //in level mode or horizon but not racemode
+    if ((onground) || (in_air == 0)) {                            // and while on the ground...
       ierror[x] *= 0.98f;
     } // wind down the integral error
   } else {
@@ -225,7 +224,7 @@ float pid(int x) {
     float transitionSetpointWeight[3];
     float stickAccelerator[3];
     float stickTransition[3];
-    if (aux[PIDPROFILE]) {
+    if (rx_aux_on(AUX_PIDPROFILE)) {
       stickAccelerator[x] = stickAcceleratorProfileB[x];
       stickTransition[x] = stickTransitionProfileB[x];
     } else {
@@ -270,7 +269,7 @@ float pid(int x) {
     float transitionSetpointWeight[3];
     float stickAccelerator[3];
     float stickTransition[3];
-    if (aux[PIDPROFILE]) {
+    if (rx_aux_on(AUX_PIDPROFILE)) {
       stickAccelerator[x] = stickAcceleratorProfileB[x];
       stickTransition[x] = stickTransitionProfileB[x];
     } else {
@@ -332,7 +331,7 @@ void pid_precalc() {
       v_compensation = 1.00;
 
 #ifdef LEVELMODE_PID_ATTENUATION
-    if (aux[LEVELMODE])
+    if (rx_aux_on(AUX_LEVELMODE))
       v_compensation *= LEVELMODE_PID_ATTENUATION;
 #endif
   }

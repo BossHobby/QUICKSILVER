@@ -16,6 +16,7 @@
 extern profile_t profile;
 extern float rx[4];
 extern float rxcopy[4];
+extern uint8_t aux[AUX_CHANNEL_MAX];
 extern float vbattfilt;
 extern float vbatt_comp;
 
@@ -96,7 +97,7 @@ void get_quic(quic_values value) {
     break;
   }
   case QUIC_VAL_RX:
-    cbor_encode_map(&enc, 2);
+    cbor_encode_map(&enc, 3);
 
     cbor_encode_str(&enc, "raw");
     cbor_encode_array(&enc, 4);
@@ -111,6 +112,13 @@ void get_quic(quic_values value) {
     cbor_encode_float(&enc, rxcopy[1]);
     cbor_encode_float(&enc, rxcopy[2]);
     cbor_encode_float(&enc, rxcopy[3]);
+
+    cbor_encode_str(&enc, "aux");
+    cbor_encode_array(&enc, AUX_CHANNEL_MAX);
+    for (uint32_t i = 0; i < AUX_CHANNEL_MAX; i++) {
+      cbor_encode_uint8(&enc, aux[i]);
+    }
+
     send_quic(QUIC_CMD_GET, encode_buffer, cbor_encoder_len(&enc));
     break;
   case QUIC_VAL_VBAT:
@@ -192,7 +200,8 @@ void usb_process_quic() {
     break;
   }
 
-  extern unsigned int lastlooptime;
+  // reset loop time
+  extern unsigned long lastlooptime;
   lastlooptime = gettime();
 }
 #endif

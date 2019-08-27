@@ -5,12 +5,12 @@
 //
 // a dummy gps frame is sent to stop "gps alerts"
 // the routine sends attitude, fc volts and rssi ( if available)
+#include <stdio.h>
 
 #include "binary.h"
 #include "config.h"
 #include "defines.h"
 #include "rx_bayang.h" // for struct rxdebug;
-#include <stdio.h>
 
 #ifdef OSD_LTM_PROTOCOL
 
@@ -106,7 +106,6 @@ void send_g_frame() {
 extern float vbattfilt;
 extern int failsafe;
 extern int rxmode;
-extern char aux[];
 
 //extern int packetpersecond;
 extern struct rxdebug rxdebug;
@@ -126,7 +125,7 @@ void send_s_frame() {
   sendbyte(0);    // airspeed
 #define ARMED ((rxmode != RXMODE_BIND))
 #define FAILSAFE failsafe
-#define MODE ((aux[LEVELMODE]) ? 3 : 4)
+#define MODE ((rx_aux_on(AUX_LEVELMODE)) ? 3 : 4)
 
   //0 : Manual
   //1 : Rate

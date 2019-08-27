@@ -40,8 +40,7 @@ void buzzer() {
   // before configuring the gpio buzzer pin to ensure
   // there is time to program the chip (if using SWDAT or SWCLK)
 
-  extern char aux[];
-  if (lowbatt || failsafe || aux[BUZZER_ENABLE]) {
+  if (lowbatt || failsafe || rx_aux_on(AUX_BUZZER_ENABLE)) {
     unsigned long time = gettime();
     if (buzzertime == 0)
       buzzertime = time;
@@ -56,7 +55,7 @@ void buzzer() {
         pulse_rate = 600000; // 3/5ths second
 
       // start the buzzer if timeout has elapsed
-      if (time - buzzertime > BUZZER_DELAY || lowbatt || aux[BUZZER_ENABLE]) {
+      if (time - buzzertime > BUZZER_DELAY || lowbatt || rx_aux_on(AUX_BUZZER_ENABLE)) {
         // initialize pin only after minimum 10 seconds from powerup
         if (!buzzer_init && time > 10e6) {
           buzzer_init = gpio_init_buzzer();

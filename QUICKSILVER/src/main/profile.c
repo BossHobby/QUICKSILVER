@@ -149,6 +149,35 @@ const profile_t default_profile = {
         .actual_battery_voltage = ACTUAL_BATTERY_VOLTAGE,
         .reported_telemetry_voltage = REPORTED_TELEMETRY_VOLTAGE,
     },
+    .channel = {
+        .aux = {
+            ARMING,       //AUX_ARMING
+            IDLE_UP,      //AUX_IDLE_UP
+            LEVELMODE,    //AUX_LEVELMODE
+            RACEMODE,     //AUX_RACEMODE
+            HORIZON,      //AUX_HORIZON
+            PIDPROFILE,   //AUX_PIDPROFILE
+            TRAVEL_CHECK, //AUX_TRAVEL_CHECK
+            RATES,        //AUX_RATES
+            LEDS_ON,      //AUX_LEDS_ON
+#ifdef BUZZER_ENABLE      //AUX_BUZZER_ENABLE
+            BUZZER_ENABLE,
+#else
+            AUX_CHANNEL_OFF,
+#endif
+            STARTFLIP, //AUX_STARTFLIP
+#ifdef FN_INVERTED     //AUX_FN_INVERTED
+            FN_INVERTED,
+#else
+            AUX_CHANNEL_OFF,
+#endif
+#ifdef MOTORS_TO_THROTTLE_MODE //AUX_MOTORS_TO_THROTTLE_MODE
+            MOTORS_TO_THROTTLE_MODE,
+#else
+            AUX_CHANNEL_OFF,
+#endif
+        },
+    },
 };
 // the actual profile
 profile_t profile = default_profile;
@@ -183,6 +212,37 @@ cbor_result_t cbor_encode_vector_t(cbor_value_t *enc, vector_t vec) {
     return res;
   }
   res = cbor_encode_float(enc, vec.axis[2]);
+  if (res < CBOR_OK) {
+    return res;
+  }
+  return res;
+}
+
+cbor_result_t cbor_encode_channel_t(cbor_value_t *enc, channel_t chan) {
+  cbor_result_t res = CBOR_OK;
+
+  res = cbor_encode_map_indefinite(enc);
+  if (res < CBOR_OK) {
+    return res;
+  }
+
+  res = cbor_encode_str(enc, "aux");
+  if (res < CBOR_OK) {
+    return res;
+  }
+  res = cbor_encode_array(enc, AUX_FUNCTION_MAX);
+  if (res < CBOR_OK) {
+    return res;
+  }
+
+  for (uint32_t i = 0; i < AUX_FUNCTION_MAX; i++) {
+    res = cbor_encode_uint8(enc, chan.aux[i]);
+    if (res < CBOR_OK) {
+      return res;
+    }
+  }
+
+  res = cbor_encode_end_indefinite(enc);
   if (res < CBOR_OK) {
     return res;
   }
@@ -257,6 +317,43 @@ cbor_result_t cbor_decode_vector_t(cbor_value_t *it, vector_t *vec) {
   if (res < CBOR_OK)
     return res;
 
+  return res;
+}
+
+cbor_result_t cbor_decode_channel_t(cbor_value_t *dec, channel_t *chan) {
+  cbor_result_t res = CBOR_OK;
+
+  cbor_container_t map;
+  res = cbor_decode_map(dec, &map);
+  if (res < CBOR_OK)
+    return res;
+
+  const uint8_t *name;
+  uint32_t name_len;
+  for (uint32_t i = 0; i < cbor_decode_map_size(dec, &map); i++) {
+    res = cbor_decode_tstr(dec, &name, &name_len);
+    if (res < CBOR_OK)
+      return res;
+
+    if (buf_equal_string(name, name_len, "aux")) {
+      cbor_container_t array;
+      res = cbor_decode_array(dec, &array);
+      if (res < CBOR_OK)
+        return res;
+
+      for (uint32_t i = 0; i < AUX_FUNCTION_MAX; i++) {
+        res = cbor_decode_uint8(dec, &chan->aux[i]);
+        if (res < CBOR_OK) {
+          return res;
+        }
+      }
+      continue;
+    }
+
+    res = cbor_decode_skip(dec);
+    if (res < CBOR_OK)
+      return res;
+  }
   return res;
 }
 

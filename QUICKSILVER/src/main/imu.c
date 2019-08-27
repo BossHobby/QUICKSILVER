@@ -1,17 +1,15 @@
 
 // library headers
 #include <inttypes.h>
+#include <math.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 //#define _USE_MATH_DEFINES
-#include "drv_time.h"
-#include <math.h>
-
 #include "defines.h"
+#include "drv_time.h"
 #include "sixaxis.h"
 #include "util.h"
-
-#include <stdlib.h>
 
 #ifdef DEBUG
 #include "debug.h"
@@ -98,7 +96,6 @@ void vectorcopy(float *vector1, float *vector2) {
 extern float looptime;
 
 void imu_calc(void) {
-
   // remove bias
   accel[0] = accel[0] - accelcal[0];
   accel[1] = accel[1] - accelcal[1];
@@ -140,10 +137,8 @@ void imu_calc(void) {
     }
   }
 
-  extern char aux[AUX_CHANNEL_MAX];
-  if (aux[HORIZON]) {
+  if (rx_aux_on(AUX_HORIZON)) {
     attitude[0] = atan2approx(GEstG[0], GEstG[2]);
-
     attitude[1] = atan2approx(GEstG[1], GEstG[2]);
   }
 }

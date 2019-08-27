@@ -7,7 +7,6 @@
 
 extern float GEstG[3];
 extern float Q_rsqrt(float number);
-extern char aux[];
 extern profile_t profile;
 
 // error vector between stick position and quad orientation
@@ -81,7 +80,7 @@ void stick_vector(float rx_input[], float maxangle) {
 #define g_treshold 0.125f
 #define roll_bias 0.25f
 
-  if (aux[FN_INVERTED] && (GEstG[2] > g_treshold)) {
+  if (rx_aux_on(AUX_FN_INVERTED) && (GEstG[2] > g_treshold)) {
     flip_active = 1;
     // rotate around axis with larger leaning angle
 
@@ -91,7 +90,7 @@ void stick_vector(float rx_input[], float maxangle) {
       errorvect[flipaxis] = -rollrate;
     }
 
-  } else if (!aux[FN_INVERTED] && (GEstG[2] < -g_treshold)) {
+  } else if (!rx_aux_on(AUX_FN_INVERTED) && (GEstG[2] < -g_treshold)) {
     flip_active = 1;
 
     if (flipdir) {

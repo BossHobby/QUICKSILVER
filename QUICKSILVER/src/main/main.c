@@ -396,7 +396,7 @@ int main(void) {
           if (failsafe) {
             ledflash(500000, 15);
           } else {
-            int leds_on = !aux[LEDS_ON];
+            int leds_on = !rx_aux_on(AUX_LEDS_ON);
             if (ledcommand) {
               if (!ledcommandtime)
                 ledcommandtime = gettime();
@@ -460,7 +460,7 @@ int main(void) {
       if (failsafe) {
         GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);
       } else {
-        GPIO_WriteBit(FPV_PORT, FPV_PIN, aux[FPV_ON] ? Bit_SET : Bit_RESET);
+        GPIO_WriteBit(FPV_PORT, FPV_PIN, rx_aux_on(AUX_FPV_ON) ? Bit_SET : Bit_RESET);
       }
     }
 #endif

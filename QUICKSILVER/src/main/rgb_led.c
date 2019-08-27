@@ -7,7 +7,6 @@ extern int lowbatt;
 extern int rxmode;
 extern int failsafe;
 extern int ledcommand;
-extern char aux[];
 
 // normal flight rgb colour - LED switch ON
 #define RGB_VALUE_INFLIGHT_ON RGB(255, 255, 255)
@@ -149,7 +148,7 @@ void rgb_led_lvc(void) {
           //rgb_led_set_all( RGB( 0 , 128 , 128 ) );
         } else {
 
-          if (aux[LEDS_ON])
+          if (rx_aux_on(AUX_LEDS_ON))
 
             rgb_led_set_all(RGB_VALUE_INFLIGHT_ON);
           else

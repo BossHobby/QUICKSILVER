@@ -33,8 +33,30 @@ typedef enum {
   AUX_CHANNEL_13,
   AUX_CHANNEL_ON,
   AUX_CHANNEL_OFF,
+
   AUX_CHANNEL_MAX
 } aux_channel_t;
+
+typedef enum {
+  AUX_ARMING,
+  AUX_IDLE_UP,
+  AUX_LEVELMODE,
+  AUX_RACEMODE,
+  AUX_HORIZON,
+  AUX_PIDPROFILE,
+  AUX_TRAVEL_CHECK,
+  AUX_RATES,
+  AUX_LEDS_ON,
+  AUX_BUZZER_ENABLE,
+  AUX_STARTFLIP,
+  AUX_FN_INVERTED,
+  AUX_MOTORS_TO_THROTTLE_MODE,
+
+  AUX_FUNCTION_MAX
+} aux_function_t;
+
+uint8_t rx_aux_on(aux_function_t function);
+uint8_t rx_auxchange(aux_function_t function);
 
 void rx_init(void);
 void checkrx(void);

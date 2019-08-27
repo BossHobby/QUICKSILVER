@@ -68,9 +68,6 @@ float yawangle;
 
 extern float looptime;
 
-extern char auxchange[AUX_CHANNEL_MAX];
-extern char aux[AUX_CHANNEL_MAX];
-
 extern int ledcommand;
 extern int ledblink;
 
@@ -169,7 +166,7 @@ void calc_rx() {
     }
   }
 
-  if (auxchange[STARTFLIP] && !aux[STARTFLIP]) { // only on high -> low transition
+  if (rx_auxchange(AUX_STARTFLIP) && !rx_aux_on(AUX_STARTFLIP)) { // only on high -> low transition
     start_flip();
   }
 #endif
@@ -178,7 +175,7 @@ void calc_rx() {
 void control(void) {
 #ifdef INVERTED_ENABLE
   extern int pwmdir;
-  if (aux[FN_INVERTED])
+  if (rx_aux_on(AUX_FN_INVERTED))
     pwmdir = REVERSE;
   else
     pwmdir = FORWARD;
@@ -192,7 +189,7 @@ void control(void) {
 
   // high-low rates switch
   float rate_multiplier = 1.0;
-  if (aux[RATES] <= 0) {
+  if (rx_aux_on(AUX_RATES) <= 0) {
     rate_multiplier = profile.rate.low_rate_mulitplier;
   }
 
@@ -206,7 +203,7 @@ void control(void) {
     rates[2] = rate_multiplier * rxcopy[2] * profile.rate.silverware.max_rate.yaw * DEGTORAD;
   }
 
-  if (aux[LEVELMODE] && !acro_override) {
+  if (rx_aux_on(AUX_LEVELMODE) && !acro_override) {
     extern void stick_vector(float rx_input[], float maxangle);
     extern float errorvect[]; // level mode angle error calculated by stick_vector.c
     extern float GEstG[3];    // gravity vector for yaw feedforward
@@ -230,8 +227,8 @@ void control(void) {
     // *************************************************************************
     // *************************************************************************
 
-    if (aux[RACEMODE] && !aux[HORIZON]) { //racemode with angle behavior on roll ais
-      if (GEstG[2] < 0) {                 // acro on roll and pitch when inverted
+    if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON)) { //racemode with angle behavior on roll ais
+      if (GEstG[2] < 0) {                                     // acro on roll and pitch when inverted
         error[0] = rates[0] - gyro[0];
         error[1] = rates[1] - gyro[1];
       } else {
@@ -244,7 +241,7 @@ void control(void) {
       // yaw
       error[2] = yawerror[2] - gyro[2];
 
-    } else if (aux[RACEMODE] && aux[HORIZON]) { //racemode with horizon behavior on roll axis
+    } else if (rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON)) { //racemode with horizon behavior on roll axis
       float inclinationRoll = attitude[0];
       float inclinationPitch = attitude[1];
       float inclinationMax;
@@ -283,7 +280,7 @@ void control(void) {
       // yaw
       error[2] = yawerror[2] - gyro[2];
 
-    } else if (!aux[RACEMODE] && aux[HORIZON]) { //horizon overrites standard level behavior
+    } else if (!rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON)) { //horizon overrites standard level behavior
       //pitch and roll
       for (int i = 0; i <= 1; i++) {
         float inclinationRoll = attitude[0];
@@ -363,8 +360,8 @@ void control(void) {
 #ifndef ARMING
   armed_state = 1; // if arming feature is disabled - quad is always armed
 #else              // CONDITION: arming feature is enabled
-  if (!aux[ARMING]) { // 						CONDITION: switch is DISARMED
-    armed_state = 0;  // 												disarm the quad by setting armed state variable to zero
+  if (!rx_aux_on(AUX_ARMING)) { // 						CONDITION: switch is DISARMED
+    armed_state = 0;            // 												disarm the quad by setting armed state variable to zero
     if (rx_ready == 1)
       binding_while_armed = 0;                                                                //                        rx is bound and has been disarmed so clear binding while armed flag
   } else {                                                                                    // 						CONDITION: switch is ARMED
@@ -381,7 +378,7 @@ void control(void) {
 #ifndef IDLE_UP
   idle_state = 0;
 #else
-  if (!aux[IDLE_UP]) {
+  if (!rx_aux_on(AUX_IDLE_UP)) {
     idle_state = 0;
   } else {
     idle_state = 1;
@@ -414,7 +411,7 @@ void control(void) {
 
 #ifdef STICK_TRAVEL_CHECK //This feature completely disables throttle and allows visual feedback if control inputs reach full throws
   //Stick endpoints check tied to aux channel stick gesture
-  if (aux[TRAVEL_CHECK]) {
+  if (rx_aux_on(AUX_TRAVEL_CHECK)) {
     throttle = 0;
     if ((rx[0] <= -0.99f) || (rx[0] >= 0.99f) || (rx[1] <= -0.99f) || (rx[1] >= 0.99f) || (rx[2] <= -0.99f) || (rx[2] >= 0.99f) || (rx[3] <= 0.0f) || (rx[3] >= 0.99f)) {
       ledcommand = 1;
@@ -423,7 +420,7 @@ void control(void) {
 #endif
 
   // turn motors off if throttle is off and pitch / roll sticks are centered
-  if ((armed_state == 0) || failsafe || (throttle < 0.001f && (!ENABLESTIX || !onground_long || aux[LEVELMODE] || (fabsf(rx[ROLL]) < (float)ENABLESTIX_TRESHOLD && fabsf(rx[PITCH]) < (float)ENABLESTIX_TRESHOLD && fabsf(rx[YAW]) < (float)ENABLESTIX_TRESHOLD)))) { // motors off
+  if ((armed_state == 0) || failsafe || (throttle < 0.001f && (!ENABLESTIX || !onground_long || rx_aux_on(AUX_LEVELMODE) || (fabsf(rx[ROLL]) < (float)ENABLESTIX_TRESHOLD && fabsf(rx[PITCH]) < (float)ENABLESTIX_TRESHOLD && fabsf(rx[YAW]) < (float)ENABLESTIX_TRESHOLD)))) { // motors off
 
     if (onground_long) {
       if (gettime() - onground_long > ENABLESTIX_TIMEOUT) {
@@ -475,7 +472,7 @@ void control(void) {
 
     // throttle angle compensation
 #ifdef AUTO_THROTTLE
-    if (aux[LEVELMODE]) {
+    if (rx_aux_on(AUX_LEVELMODE)) {
       //float autothrottle = fastcos(attitude[0] * DEGTORAD) * fastcos(attitude[1] * DEGTORAD);
       extern float GEstG[];
       float autothrottle = GEstG[2];
@@ -760,7 +757,7 @@ void control(void) {
 #undef MOTOR_MIN_COMMAND
 #endif
 #if defined(MOTORS_TO_THROTTLE_MODE) && !defined(MOTORS_TO_THROTTLE)
-      if (aux[MOTORS_TO_THROTTLE_MODE]) {
+      if (rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE)) {
 #endif
         mix[i] = throttle;
         if (i == MOTOR_FL && (rx[ROLL] > 0.5f || rx[PITCH] < -0.5f)) {
