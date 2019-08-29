@@ -357,9 +357,6 @@ void control(void) {
 #define THROTTLE_SAFETY .15f
 #endif
 
-#ifndef ARMING
-  armed_state = 1; // if arming feature is disabled - quad is always armed
-#else              // CONDITION: arming feature is enabled
   if (!rx_aux_on(AUX_ARMING)) { // 						CONDITION: switch is DISARMED
     armed_state = 0;            // 												disarm the quad by setting armed state variable to zero
     if (rx_ready == 1)
@@ -373,17 +370,12 @@ void control(void) {
       arming_release = 1; //                       						clear the arming release flag - the arming release flag being cleared
     }                     //											 						is what stops the quad from automatically disarming again the next time
   }                       //											 						throttle is raised above the safety limit
-#endif
 
-#ifndef IDLE_UP
-  idle_state = 0;
-#else
   if (!rx_aux_on(AUX_IDLE_UP)) {
     idle_state = 0;
   } else {
     idle_state = 1;
   }
-#endif
 
 #ifndef IDLE_THR
 #define IDLE_THR .001f //just enough to override motor stop at 0 throttle
@@ -810,7 +802,7 @@ void control(void) {
       pwm_set(i, mix[i]);
 #endif
 #else
-// no motors mode ( anti-optimization)
+      // no motors mode ( anti-optimization)
 #warning "NO MOTORS"
       tempx[i] = motormap(mix[i]);
 #endif
