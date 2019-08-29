@@ -1,3 +1,3 @@
-void buzzer( void);
+#pragma once
 
-
+void buzzer(void);
