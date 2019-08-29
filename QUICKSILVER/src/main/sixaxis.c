@@ -21,24 +21,21 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-
-#include "sixaxis.h"
-#include "binary.h"
-#include "defines.h"
-#include "drv_serial.h"
-#include "drv_time.h"
-#include "led.h"
-#include "project.h"
-#include "util.h"
-
-#include "drv_dma_spi.h"
-#include "drv_i2c.h"
-
 #include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
 
+#include "binary.h"
 #include "debug.h"
+#include "defines.h"
+#include "drv_dma_spi.h"
+#include "drv_i2c.h"
+#include "drv_serial.h"
+#include "drv_time.h"
+#include "led.h"
+#include "project.h"
+#include "sixaxis.h"
+#include "util.h"
 
 // this works only on newer boards (non mpu-6050)
 // on older boards the hw gyro setting controls the acc as well
