@@ -629,7 +629,7 @@ void send_beacon() {
 
   //int acro_or_level_mode;
 
-  //if ( aux[LEVELMODE] ) acro_or_level_mode = 1;
+  //if ( rx_aux_on(AUX_LEVELMODE) ) acro_or_level_mode = 1;
   //else acro_or_level_mode = 0;
 
   extern unsigned int total_time_in_air;
@@ -651,7 +651,7 @@ void send_beacon() {
   unsigned int total_time_in_air_time = total_time_in_air >> 20;
   total_time_in_air_time = total_time_in_air_time * 10;
 
-  int rate_and_mode_value = (aux[RATES] << 1) + !!(aux[LEVELMODE]);
+  int rate_and_mode_value = (rx_aux_on(AUX_RATES) << 1) + !!(rx_aux_on(AUX_LEVELMODE));
 
   extern int bound_for_BLE_packet;
   extern int failsafe;

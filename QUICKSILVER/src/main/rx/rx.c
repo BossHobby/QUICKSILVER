@@ -53,12 +53,12 @@ void rx_apply_expo(void) {
       .pitch = 0,
       .yaw = 0,
   };
-  if (aux[LEVELMODE]) {
-    if (aux[RACEMODE] && !aux[HORIZON]) {
+  if (rx_aux_on(AUX_LEVELMODE)) {
+    if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON)) {
       expo.axis[0] = angle_expo.roll;
       expo.axis[1] = acro_expo.pitch;
       expo.axis[2] = angle_expo.yaw;
-    } else if (aux[HORIZON]) {
+    } else if (rx_aux_on(AUX_HORIZON)) {
       expo.axis[0] = acro_expo.roll;
       expo.axis[1] = acro_expo.pitch;
       expo.axis[2] = angle_expo.yaw;
