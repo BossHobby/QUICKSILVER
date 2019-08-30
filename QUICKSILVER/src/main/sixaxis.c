@@ -40,8 +40,8 @@ THE SOFTWARE.
 // this works only on newer boards (non mpu-6050)
 // on older boards the hw gyro setting controls the acc as well
 #define ACC_LOW_PASS_FILTER 5
-
-extern debug_type debug;
+#define CAL_TIME 2e6
+#define GLOW_TIME 62500
 
 // temporary fix for compatibility between versions
 #ifndef GYRO_ID_1
@@ -56,6 +56,17 @@ extern debug_type debug;
 #ifndef GYRO_ID_4
 #define GYRO_ID_4 0x72
 #endif
+
+extern debug_type debug;
+
+float accel[3];
+float gyro[3];
+
+float accelcal[3];
+float gyrocal[3];
+
+float lpffilter(float in, int num);
+float lpffilter2(float in, int num);
 
 void sixaxis_init(void) {
 
@@ -128,15 +139,6 @@ int sixaxis_check(void) {
   return 1;
 #endif
 }
-
-float accel[3];
-float gyro[3];
-
-float accelcal[3];
-float gyrocal[3];
-
-float lpffilter(float in, int num);
-float lpffilter2(float in, int num);
 
 void sixaxis_read(void) {
   int data[14];
@@ -288,95 +290,6 @@ void sixaxis_read(void) {
   }
 }
 
-void gyro_read(void) {
-  int data[6];
-
-  i2c_readdata(67, data, 6);
-
-  float gyronew[3];
-  // order
-  gyronew[1] = (int16_t)((data[0] << 8) + data[1]);
-  gyronew[0] = (int16_t)((data[2] << 8) + data[3]);
-  gyronew[2] = (int16_t)((data[4] << 8) + data[5]);
-
-  gyronew[0] = gyronew[0] - gyrocal[0];
-  gyronew[1] = gyronew[1] - gyrocal[1];
-  gyronew[2] = gyronew[2] - gyrocal[2];
-
-#ifdef SENSOR_ROTATE_45_CCW
-  {
-    float temp = gyronew[1];
-    gyronew[1] = gyronew[0] * INVSQRT2 + gyronew[1] * INVSQRT2;
-    gyronew[0] = gyronew[0] * INVSQRT2 - temp * INVSQRT2;
-  }
-#endif
-
-#ifdef SENSOR_ROTATE_45_CW
-  {
-    float temp = gyronew[0];
-    gyronew[0] = gyronew[1] * INVSQRT2 + gyronew[0] * INVSQRT2;
-    gyronew[1] = gyronew[1] * INVSQRT2 - temp * INVSQRT2;
-  }
-#endif
-
-#ifdef SENSOR_ROTATE_90_CW
-  {
-    float temp = gyronew[1];
-    gyronew[1] = -gyronew[0];
-    gyronew[0] = temp;
-  }
-#endif
-
-#ifdef SENSOR_ROTATE_90_CCW
-  {
-    float temp = gyronew[1];
-    gyronew[1] = gyronew[0];
-    gyronew[0] = -temp;
-  }
-#endif
-
-#ifdef SENSOR_ROTATE_180
-  {
-    gyronew[1] = -gyronew[1];
-    gyronew[0] = -gyronew[0];
-  }
-#endif
-
-#ifdef SENSOR_FLIP_180
-  {
-    gyronew[1] = -gyronew[1];
-    gyronew[2] = -gyronew[2];
-  }
-#endif
-
-  //gyronew[0] = - gyronew[0];
-  gyronew[1] = -gyronew[1];
-  gyronew[2] = -gyronew[2];
-
-  for (int i = 0; i < 3; i++) {
-    gyronew[i] = gyronew[i] * 0.061035156f * 0.017453292f;
-#ifndef SOFT_LPF_NONE
-
-#if defined(GYRO_FILTER_PASS2) && defined(GYRO_FILTER_PASS1)
-    gyro[i] = lpffilter(gyronew[i], i);
-    gyro[i] = lpffilter2(gyro[i], i);
-#endif
-
-#if defined(GYRO_FILTER_PASS1) && !defined(GYRO_FILTER_PASS2)
-    gyro[i] = lpffilter(gyronew[i], i);
-#endif
-
-#if defined(GYRO_FILTER_PASS2) && !defined(GYRO_FILTER_PASS1)
-    gyro[i] = lpffilter2(gyronew[i], i);
-#endif
-#else
-    gyro[i] = gyronew[i];
-#endif
-  }
-}
-
-#define CAL_TIME 2e6
-
 void gyro_cal(void) {
   int data[6];
   float limit[3];
@@ -411,19 +324,6 @@ void gyro_cal(void) {
     gyro[0] = (int16_t)((data[2] << 8) + data[3]);
     gyro[2] = (int16_t)((data[4] << 8) + data[5]);
 
-/*		
-if ( (time - timestart)%200000 > 100000) 
-{
-	ledon(B00000101);
-	ledoff(B00001010);
-}
-else 
-{
-	ledon(B00001010);
-	ledoff(B00000101);
-}
-*/
-#define GLOW_TIME 62500
     static int brightness = 0;
     led_pwm(brightness);
     if ((brightness & 1) ^ ((time - timestart) % GLOW_TIME > (GLOW_TIME >> 1))) {
