@@ -103,13 +103,13 @@ void cc2500_hardware_init(void) {
   GPIO_InitStructure.GPIO_Pin = CC2500_TX_EN_PIN;
   GPIO_Init(CC2500_TX_EN_PORT, &GPIO_InitStructure);
   // turn tx off
-  GPIO_ResetBits(CC2500_LNA_EN_PORT, CC2500_TX_EN_PIN);
+  GPIO_ResetBits(CC2500_TX_EN_PORT, CC2500_TX_EN_PIN);
 
 #if defined(USE_CC2500_DIVERSITY)
   GPIO_InitStructure.GPIO_Pin = CC2500_ANT_SEL_PIN;
   GPIO_Init(CC2500_ANT_SEL_PORT, &GPIO_InitStructure);
   // choose b?
-  GPIO_SetBits(CC2500_LNA_EN_PORT, CC2500_ANT_SEL_PIN);
+  GPIO_SetBits(CC2500_ANT_SEL_PORT, CC2500_ANT_SEL_PIN);
 #endif
 
 #endif // USE_CC2500_PA_LNA
