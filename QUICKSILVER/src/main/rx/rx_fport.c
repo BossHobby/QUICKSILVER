@@ -363,15 +363,15 @@ void checkrx() {
           } else if (telemetryPosition == 5) { //PID-I
             telemetryPacket[3] = telemetryIDs[telemetryPosition];
             telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-            telemetryPacket[5] = (int)((profile.pid.ki.axis[current_pid_axis] * 1000);
-            telemetryPacket[6] = (int)((profile.pid.ki.axis[current_pid_axis] * 1000) >> 8;
+            telemetryPacket[5] = (int)(profile.pid.ki.axis[current_pid_axis] * 1000);
+            telemetryPacket[6] = (int)(profile.pid.ki.axis[current_pid_axis] * 1000) >> 8;
             telemetryPacket[7] = 0x00;
             telemetryPacket[8] = 0x00;
           } else if (telemetryPosition == 6) { //PID-D
             telemetryPacket[3] = telemetryIDs[telemetryPosition];
             telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-            telemetryPacket[5] = (int)((profile.pid.kd.axis[current_pid_axis] * 1000);
-            telemetryPacket[6] = (int)((profile.pid.kd.axis[current_pid_axis] * 1000) >> 8;
+            telemetryPacket[5] = (int)(profile.pid.kd.axis[current_pid_axis] * 1000);
+            telemetryPacket[6] = (int)(profile.pid.kd.axis[current_pid_axis] * 1000) >> 8;
             telemetryPacket[7] = 0x00;
             telemetryPacket[8] = 0x00;
           }
