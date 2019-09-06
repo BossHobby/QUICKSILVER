@@ -112,6 +112,8 @@ typedef struct {
   MEMBER(pid, pid_rate_t)    \
   MEMBER(voltage, voltage_t)
 
+void profile_set_defaults();
+
 cbor_result_t cbor_encode_vector_t(cbor_value_t *enc, vector_t vec);
 cbor_result_t cbor_decode_profile_t(cbor_value_t *dec, profile_t *p);
 

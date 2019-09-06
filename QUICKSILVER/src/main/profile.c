@@ -5,7 +5,7 @@
 #include "drv_usb.h"
 
 // Default values for our profile
-const profile_t profile = {
+const profile_t default_profile = {
     .setup = {
 #ifdef INVERT_YAW_PID
         .invert_yaw = 1,
@@ -180,8 +180,11 @@ const profile_t profile = {
     },
 };
 // the actual profile
-// todo: reactivate
-//profile_t profile = default_profile;
+profile_t profile;
+
+void profile_set_defaults() {
+  profile = default_profile;
+}
 
 int8_t buf_equal(const uint8_t *str1, size_t len1, const uint8_t *str2, size_t len2) {
   if (len2 != len1) {

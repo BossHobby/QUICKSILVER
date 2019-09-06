@@ -132,6 +132,8 @@ static void setup_4way_external_interrupt(void);
 int random_seed = 0;
 
 int main(void) {
+  // load default profile
+  profile_set_defaults();
 
   delay(1000);
 

@@ -6,8 +6,7 @@
 #include "project.h"
 #include "rx.h"
 
-// todo: restore this functionality somehow
-//extern const profile_t default_profile;
+extern const profile_t default_profile;
 extern profile_t profile;
 extern float accelcal[];
 extern float *pids_array[3];
@@ -217,11 +216,10 @@ void flash_load(void) {
       cbor_decoder_init(&enc, buffer, 1024);
       cbor_decode_profile_t(&enc, &profile);
 
-      // todo: restore this functionality somehow
       // values in profile.c (was pid.c) changed, overwrite with defaults form profile.c
-      //if (saved_pid_identifier != initial_pid_identifier) {
-      //  profile.pid = default_profile.pid;
-      //}
+      if (saved_pid_identifier != initial_pid_identifier) {
+        profile.pid = default_profile.pid;
+      }
     }
 
   } else {
