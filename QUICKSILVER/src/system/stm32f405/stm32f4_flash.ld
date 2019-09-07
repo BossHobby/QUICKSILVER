@@ -42,12 +42,20 @@ _Min_Heap_Size = 0;      /* required amount of heap  */
 _Min_Stack_Size = 0x400; /* required amount of stack */
 
 /* Specify the memory areas */
+/*
+Flash Layout:
+0x08000000 - 0x0800C000: isr, rodata, data (Section 0 - Section 2)
+0x0800C000 - 0x08010000: configuration, profile (Section 3)
+0x08010000 - 0x080FFFFF: code (Section 4 - Section 11)
+*/
 MEMORY
 {
-  FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 1024K
-  RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 128K
-  MEMORY_B1 (rx)  : ORIGIN = 0x60000000, LENGTH = 0K
-  CCMRAM (rw)     : ORIGIN = 0x10000000, LENGTH = 64K
+  FLASH (rx)        : ORIGIN = 0x08000000, LENGTH = 48K
+  FLASH_CONFIG (r)  : ORIGIN = 0x0800C000, LENGTH = 16K
+  FLASH_CODE   (rx) : ORIGIN = 0x08010000, LENGTH = 960K
+  RAM (xrw)         : ORIGIN = 0x20000000, LENGTH = 128K
+  MEMORY_B1 (rx)    : ORIGIN = 0x60000000, LENGTH = 0K
+  CCMRAM (rw)       : ORIGIN = 0x10000000, LENGTH = 64K
 }
 
 /* Define output sections */
@@ -76,7 +84,7 @@ SECTIONS
 
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
-  } >FLASH
+  } >FLASH_CODE
 
   /* Constant data goes into FLASH */
   .rodata :
