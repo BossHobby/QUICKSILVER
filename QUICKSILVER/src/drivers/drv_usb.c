@@ -60,7 +60,10 @@ void usb_detect(void) {
 }
 
 uint32_t usb_serial_read(uint8_t *data, uint32_t len) {
-  if (!usb_is_active) {
+  if (data == NULL || len == 0) {
+    return 0;
+  }
+  if (!usb_is_active || CDC_Receive_BytesAvailable() == 0) {
     return 0;
   }
   return CDC_Receive_DATA(data, len);
@@ -76,6 +79,9 @@ uint8_t usb_serial_read_byte(void) {
 }
 
 void usb_serial_write(uint8_t *data, uint32_t len) {
+  if (data == NULL || len == 0) {
+    return 0;
+  }
   if (!usb_is_active) {
     return;
   }
@@ -84,11 +90,7 @@ void usb_serial_write(uint8_t *data, uint32_t len) {
 }
 
 void usb_serial_print(char *str) {
-  if (!usb_is_active) {
-    return;
-  }
-
-  CDC_Send_DATA((uint8_t *)str, strlen(str));
+  usb_serial_write((uint8_t *)str, strlen(str));
 }
 
 void usb_serial_printf(const char *fmt, ...) {
