@@ -502,6 +502,9 @@ static uint8_t frsky_d_handle_packet() {
 }
 
 void rx_init(void) {
+  if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
+    return;
+
   cc2500_init();
 
   // enable gdo0 on read
@@ -575,6 +578,9 @@ void rx_init(void) {
 }
 
 void checkrx() {
+  if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
+    return;
+
   switch (protocol_state) {
   case STATE_DETECT:
     if (frsky_dectect()) {
