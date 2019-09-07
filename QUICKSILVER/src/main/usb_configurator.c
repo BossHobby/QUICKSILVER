@@ -12,7 +12,6 @@
 
 #ifdef DEBUG
 extern debug_type debug;
-extern profile_t profile;
 extern float rx[];
 
 #ifdef RX_FRSKY
@@ -21,6 +20,7 @@ extern frsky_bind_data frsky_bind;
 #endif
 #endif
 
+extern profile_t profile;
 uint8_t encode_buffer[1024];
 uint8_t decode_buffer[1024];
 
