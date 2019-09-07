@@ -1,12 +1,12 @@
-
-
 #include "drv_max7456.h"
+
+#include <stdio.h>
+
 #include "defines.h"
 #include "drv_time.h"
 #include "project.h"
 #include "string.h"
 #include "util.h"
-#include <stdio.h>
 
 #ifdef ENABLE_OSD
 
@@ -349,9 +349,14 @@ void osd_print_data(uint8_t *buffer, uint8_t length, uint8_t dmm_attribute, uint
   if (y > MAXROWS - 1)
     y = MAXROWS - 1;
 
-  uint16_t pos = x + y * 30;
-  uint8_t osd_buffer[18]; //allows for a maximum of 5 characters to be written to screen per loop
+  const uint32_t size = (length * 2) + 8;
+  static uint8_t osd_buffer[18]; //allows for a maximum of 5 characters to be written to screen per loop
+  if (size > 18) {
+    return;
+  }
+
   // 16 bit mode, auto increment mode
+  uint16_t pos = x + y * 30;
   osd_buffer[0] = DMM;
   osd_buffer[1] = dmm_attribute;
   osd_buffer[2] = DMAH;
@@ -380,25 +385,31 @@ void osd_print(char *buffer, uint8_t dmm_attribute, uint8_t x, uint8_t y) {
   if (y > MAXROWS - 1)
     y = MAXROWS - 1;
 
-  uint16_t pos = x + y * 30;
-  static uint8_t osd_String_buffer[40]; //allows for a maximum of 16 characters to be written to screen per loop
+  const uint32_t size = (strlen(buffer) * 2) + 8;
+  static uint8_t osd_string_buffer[40]; //allows for a maximum of 16 characters to be written to screen per loop
+  if (size > 40) {
+    return;
+  }
+
   // 16 bit mode, auto increment mode
-  osd_String_buffer[0] = DMM;
-  osd_String_buffer[1] = dmm_attribute;
-  osd_String_buffer[2] = DMAH;
-  osd_String_buffer[3] = 0x01 & (pos >> 8);
-  osd_String_buffer[4] = DMAL;
-  osd_String_buffer[5] = (uint8_t)pos;
+  uint16_t pos = x + y * 30;
+  osd_string_buffer[0] = DMM;
+  osd_string_buffer[1] = dmm_attribute;
+  osd_string_buffer[2] = DMAH;
+  osd_string_buffer[3] = 0x01 & (pos >> 8);
+  osd_string_buffer[4] = DMAL;
+  osd_string_buffer[5] = (uint8_t)pos;
 
   for (unsigned int i = 0; i < strlen(buffer); i++) {
-    osd_String_buffer[(i * 2) + 6] = DMDI;
-    osd_String_buffer[(i * 2) + 7] = buffer[i];
+    osd_string_buffer[(i * 2) + 6] = DMDI;
+    osd_string_buffer[(i * 2) + 7] = buffer[i];
   }
   // off autoincrement mode
-  osd_String_buffer[(strlen(buffer) * 2) + 6] = DMDI;
-  osd_String_buffer[(strlen(buffer) * 2) + 7] = 0xFF;
+  osd_string_buffer[(strlen(buffer) * 2) + 6] = DMDI;
+  osd_string_buffer[(strlen(buffer) * 2) + 7] = 0xFF;
+
   //non blocking dma print
-  max7456_dma_it_transfer_bytes(osd_String_buffer, (strlen(buffer) * 2) + 8);
+  max7456_dma_it_transfer_bytes(osd_string_buffer, size);
 }
 
 //clears off entire display    This function is a blocking use of non blocking print (not looptime friendly)
