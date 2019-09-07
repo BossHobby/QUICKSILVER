@@ -30,7 +30,6 @@ typedef enum {
 
 typedef struct {
   uint8_t *start, *curr, *end;
-  uint32_t len;
 } cbor_value_t;
 
 typedef struct {

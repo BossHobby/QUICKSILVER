@@ -10,17 +10,15 @@
 #define CBOR_VALUE_MASK 0x1F
 
 void cbor_decoder_init(cbor_value_t *dec, uint8_t *data, uint32_t len) {
-  dec->start = data;
-  dec->curr = data;
-  dec->end = data + len;
-  dec->len = len;
+  dec->start = dec->curr = data;
+  dec->end = dec->start + len;
 }
 
 void cbor_encoder_init(cbor_value_t *enc, uint8_t *data, uint32_t len) {
-  enc->start = data;
-  enc->curr = data;
-  enc->end = data + len;
-  enc->len = len;
+  memset(data, 0, len);
+
+  enc->start = enc->curr = data;
+  enc->end = enc->start + len;
 }
 
 static int32_t _cbor_remaining(cbor_value_t *dec) {
