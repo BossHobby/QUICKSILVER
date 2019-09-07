@@ -115,7 +115,7 @@ void flash_save(void) {
 
     cbor_value_t enc;
     cbor_encoder_init(&enc, buffer, 1024);
-    cbor_encode_profile_t(&enc, profile);
+    cbor_encode_profile_t(&enc, &profile);
 
     uint32_t *proxy = (uint32_t *)buffer;
     for (int i = 0; i < 256; i++) {

@@ -202,27 +202,27 @@ int8_t buf_equal_string(const uint8_t *str1, size_t len1, const char *str2) {
   return buf_equal(str1, len1, (const uint8_t *)str2, strlen(str2));
 }
 
-cbor_result_t cbor_encode_vector_t(cbor_value_t *enc, vector_t vec) {
+cbor_result_t cbor_encode_vector_t(cbor_value_t *enc, const vector_t *vec) {
   cbor_result_t res = cbor_encode_array(enc, 3);
   if (res < CBOR_OK) {
     return res;
   }
-  res = cbor_encode_float(enc, vec.axis[0]);
+  res = cbor_encode_float(enc, &vec->axis[0]);
   if (res < CBOR_OK) {
     return res;
   }
-  res = cbor_encode_float(enc, vec.axis[1]);
+  res = cbor_encode_float(enc, &vec->axis[1]);
   if (res < CBOR_OK) {
     return res;
   }
-  res = cbor_encode_float(enc, vec.axis[2]);
+  res = cbor_encode_float(enc, &vec->axis[2]);
   if (res < CBOR_OK) {
     return res;
   }
   return res;
 }
 
-cbor_result_t cbor_encode_channel_t(cbor_value_t *enc, channel_t chan) {
+cbor_result_t cbor_encode_channel_t(cbor_value_t *enc, const channel_t *chan) {
   cbor_result_t res = CBOR_OK;
 
   res = cbor_encode_map_indefinite(enc);
@@ -240,7 +240,7 @@ cbor_result_t cbor_encode_channel_t(cbor_value_t *enc, channel_t chan) {
   }
 
   for (uint32_t i = 0; i < AUX_FUNCTION_MAX; i++) {
-    res = cbor_encode_uint8(enc, chan.aux[i]);
+    res = cbor_encode_uint8(enc, &chan->aux[i]);
     if (res < CBOR_OK) {
       return res;
     }
@@ -253,23 +253,23 @@ cbor_result_t cbor_encode_channel_t(cbor_value_t *enc, channel_t chan) {
   return res;
 }
 
-#define START_STRUCT_ENCODER(type)                              \
-  cbor_result_t cbor_encode_##type(cbor_value_t *enc, type o) { \
-    cbor_result_t res = CBOR_OK;                                \
-    res = cbor_encode_map_indefinite(enc);                      \
-    if (res < CBOR_OK)                                          \
+#define START_STRUCT_ENCODER(type)                                     \
+  cbor_result_t cbor_encode_##type(cbor_value_t *enc, const type *o) { \
+    cbor_result_t res = CBOR_OK;                                       \
+    res = cbor_encode_map_indefinite(enc);                             \
+    if (res < CBOR_OK)                                                 \
       return res;
 
 #define END_STRUCT_ENCODER()              \
   return cbor_encode_end_indefinite(enc); \
   }
 
-#define MEMBER(member, type)               \
-  res = cbor_encode_str(enc, #member);     \
-  if (res < CBOR_OK)                       \
-    return res;                            \
-  res = cbor_encode_##type(enc, o.member); \
-  if (res < CBOR_OK)                       \
+#define MEMBER(member, type)                 \
+  res = cbor_encode_str(enc, #member);       \
+  if (res < CBOR_OK)                         \
+    return res;                              \
+  res = cbor_encode_##type(enc, &o->member); \
+  if (res < CBOR_OK)                         \
     return res;
 
 START_STRUCT_ENCODER(rate_mode_silverware_t)

@@ -78,18 +78,18 @@ cbor_result_t cbor_encode_array_indefinite(cbor_value_t *enc);
 cbor_result_t cbor_encode_map_indefinite(cbor_value_t *enc);
 cbor_result_t cbor_encode_end_indefinite(cbor_value_t *enc);
 
-cbor_result_t cbor_encode_uint8(cbor_value_t *enc, uint8_t val);
-cbor_result_t cbor_encode_uint16(cbor_value_t *enc, uint16_t val);
-cbor_result_t cbor_encode_uint32(cbor_value_t *enc, uint32_t val);
+cbor_result_t cbor_encode_uint8(cbor_value_t *enc, const uint8_t *val);
+cbor_result_t cbor_encode_uint16(cbor_value_t *enc, const uint16_t *val);
+cbor_result_t cbor_encode_uint32(cbor_value_t *enc, const uint32_t *val);
 
-cbor_result_t cbor_encode_int8(cbor_value_t *enc, int8_t val);
-cbor_result_t cbor_encode_int16(cbor_value_t *enc, int16_t val);
-cbor_result_t cbor_encode_int32(cbor_value_t *enc, int32_t val);
+cbor_result_t cbor_encode_int8(cbor_value_t *enc, const int8_t *val);
+cbor_result_t cbor_encode_int16(cbor_value_t *enc, const int16_t *val);
+cbor_result_t cbor_encode_int32(cbor_value_t *enc, const int32_t *val);
 
-cbor_result_t cbor_encode_float(cbor_value_t *enc, float val);
+cbor_result_t cbor_encode_float(cbor_value_t *enc, const float *val);
 
 cbor_result_t cbor_encode_bstr(cbor_value_t *enc, const uint8_t *buf, uint32_t len);
 cbor_result_t cbor_encode_tstr(cbor_value_t *enc, const uint8_t *buf, uint32_t len);
 cbor_result_t cbor_encode_str(cbor_value_t *enc, const char *buf);
 
-cbor_result_t cbor_encode_tag(cbor_value_t *enc, uint32_t val);
+cbor_result_t cbor_encode_tag(cbor_value_t *enc, const uint32_t *val);

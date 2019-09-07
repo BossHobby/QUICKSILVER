@@ -88,7 +88,7 @@ void get_quic(quic_values value) {
 
   switch (value) {
   case QUIC_VAL_PROFILE: {
-    res = cbor_encode_profile_t(&enc, profile);
+    res = cbor_encode_profile_t(&enc, &profile);
     if (res < CBOR_OK) {
       send_quic_logf("CBOR ERROR %d", res);
       return;
@@ -101,22 +101,22 @@ void get_quic(quic_values value) {
 
     cbor_encode_str(&enc, "raw");
     cbor_encode_array(&enc, 4);
-    cbor_encode_float(&enc, rx[0]);
-    cbor_encode_float(&enc, rx[1]);
-    cbor_encode_float(&enc, rx[2]);
-    cbor_encode_float(&enc, rx[3]);
+    cbor_encode_float(&enc, &rx[0]);
+    cbor_encode_float(&enc, &rx[1]);
+    cbor_encode_float(&enc, &rx[2]);
+    cbor_encode_float(&enc, &rx[3]);
 
     cbor_encode_str(&enc, "copy");
     cbor_encode_array(&enc, 4);
-    cbor_encode_float(&enc, rxcopy[0]);
-    cbor_encode_float(&enc, rxcopy[1]);
-    cbor_encode_float(&enc, rxcopy[2]);
-    cbor_encode_float(&enc, rxcopy[3]);
+    cbor_encode_float(&enc, &rxcopy[0]);
+    cbor_encode_float(&enc, &rxcopy[1]);
+    cbor_encode_float(&enc, &rxcopy[2]);
+    cbor_encode_float(&enc, &rxcopy[3]);
 
     cbor_encode_str(&enc, "aux");
     cbor_encode_array(&enc, AUX_CHANNEL_MAX);
     for (uint32_t i = 0; i < AUX_CHANNEL_MAX; i++) {
-      cbor_encode_uint8(&enc, aux[i]);
+      cbor_encode_uint8(&enc, &aux[i]);
     }
 
     send_quic(QUIC_CMD_GET, encode_buffer, cbor_encoder_len(&enc));
@@ -124,9 +124,9 @@ void get_quic(quic_values value) {
   case QUIC_VAL_VBAT:
     cbor_encode_map(&enc, 2);
     cbor_encode_str(&enc, "filter");
-    cbor_encode_float(&enc, vbattfilt);
+    cbor_encode_float(&enc, &vbattfilt);
     cbor_encode_str(&enc, "compare");
-    cbor_encode_float(&enc, vbatt_comp);
+    cbor_encode_float(&enc, &vbatt_comp);
 
     send_quic(QUIC_CMD_GET, encode_buffer, cbor_encoder_len(&enc));
     break;
@@ -153,9 +153,9 @@ void set_quic(quic_values value, uint8_t *data, uint32_t len) {
     }
 
     flash_save();
-    flash_load();
+    //flash_load();
 
-    res = cbor_encode_profile_t(&enc, profile);
+    res = cbor_encode_profile_t(&enc, &profile);
     if (res < CBOR_OK) {
       send_quic_logf("CBOR ERROR %d", res);
       return;

@@ -114,8 +114,8 @@ typedef struct {
 
 void profile_set_defaults();
 
-cbor_result_t cbor_encode_vector_t(cbor_value_t *enc, vector_t vec);
+cbor_result_t cbor_encode_vector_t(cbor_value_t *enc, const vector_t *vec);
 cbor_result_t cbor_decode_profile_t(cbor_value_t *dec, profile_t *p);
 
-cbor_result_t cbor_encode_profile_t(cbor_value_t *enc, profile_t p);
+cbor_result_t cbor_encode_profile_t(cbor_value_t *enc, const profile_t *p);
 cbor_result_t cbor_decode_vector_t(cbor_value_t *dec, vector_t *vec);
