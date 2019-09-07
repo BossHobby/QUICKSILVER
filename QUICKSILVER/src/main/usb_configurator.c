@@ -31,7 +31,7 @@ void systemResetToBootloader(void) {
 
 //This function will be where all usb send/receive coms live
 void usb_configurator(void) {
-  uint8_t magic = 0;
+  static uint8_t magic = 0;
   if (usb_serial_read(&magic, 1) != 1) {
     return;
   }

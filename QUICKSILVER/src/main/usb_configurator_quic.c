@@ -38,9 +38,13 @@ typedef enum {
 } quic_values;
 
 void send_quic(quic_command cmd, uint8_t *data, uint16_t len) {
+  static uint8_t frame[1024 + QUIC_HEADER_LEN];
+  if (len > 1024) {
+    return;
+  }
+
   const uint16_t size = len + QUIC_HEADER_LEN;
 
-  uint8_t frame[size];
   frame[0] = USB_MAGIC_QUIC;
   frame[1] = cmd;
   frame[2] = (len >> 8) & 0xFF;
