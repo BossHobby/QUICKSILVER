@@ -16,6 +16,7 @@
 #define QUIC_PROTOCOL_VERSION 1
 
 extern profile_t profile;
+extern profile_t default_profile;
 extern float rx[4];
 extern float rxcopy[4];
 extern uint8_t aux[AUX_CHANNEL_MAX];
@@ -42,7 +43,8 @@ typedef enum {
   QUIC_VAL_PROFILE,
   QUIC_VAL_RX,
   QUIC_VAL_VBAT,
-  QUIC_VAL_INFO
+  QUIC_VAL_INFO,
+  QUIC_VAL_DEFAULT_PROFILE,
 } quic_values;
 
 void send_quic(quic_command cmd, quic_flag flag, uint8_t *data, uint16_t len) {
@@ -121,6 +123,13 @@ void get_quic(uint8_t *data, uint32_t len) {
   switch (value) {
   case QUIC_VAL_PROFILE: {
     res = cbor_encode_profile_t(&enc, &profile);
+    check_cbor_error(QUIC_CMD_GET);
+
+    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  }
+  case QUIC_VAL_DEFAULT_PROFILE: {
+    res = cbor_encode_profile_t(&enc, &default_profile);
     check_cbor_error(QUIC_CMD_GET);
 
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
