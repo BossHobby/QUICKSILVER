@@ -31,13 +31,18 @@ typedef enum {
 } quic_command;
 
 typedef enum {
+  QUIC_FLAG_NONE,
+  QUIC_FLAG_ERROR,
+} quic_flag;
+
+typedef enum {
   QUIC_VAL_INVALID,
   QUIC_VAL_PROFILE,
   QUIC_VAL_RX,
   QUIC_VAL_VBAT,
 } quic_values;
 
-void send_quic(quic_command cmd, uint8_t *data, uint16_t len) {
+void send_quic(quic_command cmd, quic_flag flag, uint8_t *data, uint16_t len) {
   static uint8_t frame[1024 + QUIC_HEADER_LEN];
   if (len > 1024) {
     return;
@@ -46,7 +51,7 @@ void send_quic(quic_command cmd, uint8_t *data, uint16_t len) {
   const uint16_t size = len + QUIC_HEADER_LEN;
 
   frame[0] = USB_MAGIC_QUIC;
-  frame[1] = cmd;
+  frame[1] = (cmd & (0xff >> 3)) | (flag & (0xff >> 5)) << 5;
   frame[2] = (len >> 8) & 0xFF;
   frame[3] = len & 0xFF;
 
@@ -68,7 +73,7 @@ cbor_result_t send_quic_log(const char *str) {
   if (res < CBOR_OK) {
     return res;
   }
-  send_quic(QUIC_CMD_LOG, buffer, cbor_encoder_len(&enc));
+  send_quic(QUIC_CMD_LOG, QUIC_FLAG_NONE, buffer, cbor_encoder_len(&enc));
   return res;
 }
 
@@ -85,10 +90,23 @@ cbor_result_t send_quic_logf(const char *fmt, ...) {
   return send_quic_log(str);
 }
 
-void get_quic(quic_values value) {
+void get_quic(uint8_t *data, uint32_t len) {
   cbor_result_t res = CBOR_OK;
+
+  cbor_value_t dec;
+  cbor_decoder_init(&dec, data, len);
+
+  quic_values value;
+  res = cbor_decode_uint8(&dec, &value);
+  if (res < CBOR_OK) {
+    send_quic_logf("CBOR ERROR %d", res);
+    return;
+  }
+
   cbor_value_t enc;
   cbor_encoder_init(&enc, encode_buffer, 1024);
+
+  cbor_encode_uint8(&enc, &value);
 
   switch (value) {
   case QUIC_VAL_PROFILE: {
@@ -97,7 +115,7 @@ void get_quic(quic_values value) {
       send_quic_logf("CBOR ERROR %d", res);
       return;
     }
-    send_quic(QUIC_CMD_GET, encode_buffer, cbor_encoder_len(&enc));
+    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
   case QUIC_VAL_RX:
@@ -123,7 +141,7 @@ void get_quic(quic_values value) {
       cbor_encode_uint8(&enc, &aux[i]);
     }
 
-    send_quic(QUIC_CMD_GET, encode_buffer, cbor_encoder_len(&enc));
+    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   case QUIC_VAL_VBAT:
     cbor_encode_map(&enc, 2);
@@ -132,21 +150,30 @@ void get_quic(quic_values value) {
     cbor_encode_str(&enc, "compare");
     cbor_encode_float(&enc, &vbatt_comp);
 
-    send_quic(QUIC_CMD_GET, encode_buffer, cbor_encoder_len(&enc));
+    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   default:
     break;
   }
 }
 
-void set_quic(quic_values value, uint8_t *data, uint32_t len) {
+void set_quic(uint8_t *data, uint32_t len) {
   cbor_result_t res = CBOR_OK;
 
   cbor_value_t dec;
   cbor_decoder_init(&dec, data, len);
 
+  quic_values value;
+  res = cbor_decode_uint8(&dec, &value);
+  if (res < CBOR_OK) {
+    send_quic_logf("CBOR ERROR %d", res);
+    return;
+  }
+
   cbor_value_t enc;
   cbor_encoder_init(&enc, encode_buffer, 1024);
+
+  cbor_encode_uint8(&enc, &value);
 
   switch (value) {
   case QUIC_VAL_PROFILE: {
@@ -157,14 +184,13 @@ void set_quic(quic_values value, uint8_t *data, uint32_t len) {
     }
 
     flash_save();
-    //flash_load();
 
     res = cbor_encode_profile_t(&enc, &profile);
     if (res < CBOR_OK) {
       send_quic_logf("CBOR ERROR %d", res);
       return;
     }
-    send_quic(QUIC_CMD_SET, encode_buffer, cbor_encoder_len(&enc));
+    send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
   default:
@@ -197,10 +223,10 @@ void usb_process_quic() {
 
   switch (cmd) {
   case QUIC_CMD_GET:
-    get_quic(decode_buffer[0]);
+    get_quic(decode_buffer, size);
     break;
   case QUIC_CMD_SET:
-    set_quic(decode_buffer[0], decode_buffer + 1, size - 1);
+    set_quic(decode_buffer, size);
     break;
   }
 
