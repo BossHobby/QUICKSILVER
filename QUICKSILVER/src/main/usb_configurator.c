@@ -29,6 +29,8 @@ void systemResetToBootloader(void) {
   NVIC_SystemReset();
 }
 
+// double promition in the following is intended
+#pragma GCC diagnostic ignored "-Wdouble-promotion"
 //This function will be where all usb send/receive coms live
 void usb_configurator(void) {
   static uint8_t magic = 0;
@@ -105,5 +107,6 @@ void usb_configurator(void) {
     break;
   }
 }
+#pragma GCC diagnostic pop
 
 #endif
