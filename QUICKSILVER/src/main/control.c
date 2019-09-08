@@ -777,17 +777,18 @@ void control(void) {
       //***********************End Motor Test Logic
 
       //***********************Min Motor Command Logic
-#ifdef DIGITAL_IDLE // mapping style min motor command.  remaps entire range of motor commands from user set min value to 1
+
 #ifdef BRUSHLESS_TARGET
 // do nothing - idle set by DSHOT
 #else
-      float motor_min_value = (float)DIGITAL_IDLE * 0.01f;
-      if (mix[i] < 0)
-        mix[i] = 0; //Clip all mixer values into 0 to 1 range before remapping
-      if (mix[i] > 1)
-        mix[i] = 1;
-      mix[i] = motor_min_value + mix[i] * (1.0f - motor_min_value);
-#endif
+      if (profile.motor.digital_idle) {
+        float motor_min_value = (float)profile.motor.digital_idle * 0.01f;
+        if (mix[i] < 0)
+          mix[i] = 0; //Clip all mixer values into 0 to 1 range before remapping
+        if (mix[i] > 1)
+          mix[i] = 1;
+        mix[i] = motor_min_value + mix[i] * (1.0f - motor_min_value);
+      }
 #endif
       //***********************End Min Motor Command Logic
 

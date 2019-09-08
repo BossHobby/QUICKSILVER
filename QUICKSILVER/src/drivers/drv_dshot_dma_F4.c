@@ -42,6 +42,7 @@
 #include "drv_pwm.h"
 #include "drv_time.h"
 #include "util.h"
+#include "profile.h"
 #include "drv_dshot.h"
 
 #ifdef F405
@@ -53,13 +54,6 @@
 #define DSHOT600
 //#define DSHOT300
 //#define DSHOT150
-
-
-// IDLE_OFFSET is added to the throttle. Adjust its value so that the motors
-// still spin at minimum throttle.
-#ifndef DIGITAL_IDLE
-#define DIGITAL_IDLE 4
-#endif
 
 
 // Enable this for 3D. The 'Motor Direction' setting in BLHeliSuite must
@@ -106,6 +100,7 @@
 extern int failsafe;
 extern int onground;
 extern int armed_state;
+extern profile_t profile;
 
 int pwmdir = 0;
 static unsigned long pwm_failsafe_time = 1;
@@ -466,16 +461,16 @@ void pwm_set( uint8_t number, float pwm )
 
 	if ( pwmdir == FORWARD ) {
 		// maps 0.0 .. 0.999 to 48 + IDLE_OFFSET .. 1047
-		value = 48 + (DIGITAL_IDLE * 10) + (uint16_t)( pwm * ( 1000 - (DIGITAL_IDLE * 10) ) );
+		value = 48 + (profile.motor.digital_idle * 10) + (uint16_t)( pwm * ( 1000 - (profile.motor.digital_idle * 10) ) );
 	} else if ( pwmdir == REVERSE ) {
 		// maps 0.0 .. 0.999 to 1048 + IDLE_OFFSET .. 2047
-		value = 1048 + (DIGITAL_IDLE * 10) + (uint16_t)( pwm * ( 1000 - (DIGITAL_IDLE * 10) ) );
+		value = 1048 + (profile.motor.digital_idle * 10) + (uint16_t)( pwm * ( 1000 - (profile.motor.digital_idle * 10) ) );
 	}
 
 #else
 
 	// maps 0.0 .. 0.999 to 48 + IDLE_OFFSET * 2 .. 2047
-	value = 48 + (DIGITAL_IDLE * 20) + (uint16_t)( pwm * ( 2001 - (DIGITAL_IDLE * 20) ) );
+	value = 48 + (profile.motor.digital_idle * 20) + (uint16_t)( pwm * ( 2001 - (profile.motor.digital_idle * 20) ) );
 
 #endif
 

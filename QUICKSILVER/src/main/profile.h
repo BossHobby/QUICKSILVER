@@ -71,10 +71,12 @@ typedef struct {
   MEMBER(kd, vector_t)
 
 typedef struct {
+  float digital_idle;
   uint8_t invert_yaw;
 } motor_t;
 
-#define MOTOR_MEMBERS \
+#define MOTOR_MEMBERS         \
+  MEMBER(digital_idle, float) \
   MEMBER(invert_yaw, uint8)
 
 typedef struct {

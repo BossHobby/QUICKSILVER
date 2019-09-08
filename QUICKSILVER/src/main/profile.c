@@ -14,6 +14,7 @@ const profile_t default_profile = {
 #else
         .invert_yaw = 0,
 #endif
+        .digital_idle = DIGITAL_IDLE,
     },
 
     .rate = {

@@ -275,3 +275,9 @@
 #define OSD_FLASH_START 57
 #define OSD_NUMBER_ELEMENTS 9
 #define SWITCHABLE_FEATURE_1 //CONFIGURATION WIZARD
+
+// IDLE_OFFSET is added to the throttle. Adjust its value so that the motors
+// still spin at minimum throttle.
+#ifndef DIGITAL_IDLE
+#define DIGITAL_IDLE 4
+#endif
