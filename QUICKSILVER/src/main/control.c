@@ -544,7 +544,7 @@ void control(void) {
 #endif
 #endif
 
-    if (profile.setup.invert_yaw) {
+    if (profile.motor.invert_yaw) {
       pidoutput[2] = -pidoutput[2];
     }
 
@@ -568,7 +568,7 @@ void control(void) {
     }
 
     // we invert again cause it's used by the pid internally (for limit)
-    if (profile.setup.invert_yaw) {
+    if (profile.motor.invert_yaw) {
       pidoutput[2] = -pidoutput[2];
     }
 

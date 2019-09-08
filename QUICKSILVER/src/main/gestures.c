@@ -58,8 +58,8 @@ void gestures(void) {
     }
 
     if (command == GESTURE_DUD) {
-      profile.setup.invert_yaw = !profile.setup.invert_yaw;
-      ledblink = 2 - profile.setup.invert_yaw;
+      profile.motor.invert_yaw = !profile.motor.invert_yaw;
+      ledblink = 2 - profile.motor.invert_yaw;
       pid_gestures_used = 1;
     }
 

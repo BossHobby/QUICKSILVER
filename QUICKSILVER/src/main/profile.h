@@ -72,9 +72,9 @@ typedef struct {
 
 typedef struct {
   uint8_t invert_yaw;
-} setup_t;
+} motor_t;
 
-#define SETUP_MEMBERS \
+#define MOTOR_MEMBERS \
   MEMBER(invert_yaw, uint8)
 
 typedef struct {
@@ -98,7 +98,7 @@ typedef struct {
 
 // Full Profile
 typedef struct {
-  setup_t setup;
+  motor_t motor;
   rate_t rate;
   channel_t channel;
   pid_rate_t pid;
@@ -106,7 +106,7 @@ typedef struct {
 } profile_t;
 
 #define PROFILE_MEMBERS      \
-  MEMBER(setup, setup_t)     \
+  MEMBER(motor, motor_t)     \
   MEMBER(rate, rate_t)       \
   MEMBER(channel, channel_t) \
   MEMBER(pid, pid_rate_t)    \

@@ -8,7 +8,7 @@
 // ignore -Wmissing-braces here, gcc bug with nested structs
 #pragma GCC diagnostic ignored "-Wmissing-braces"
 const profile_t default_profile = {
-    .setup = {
+    .motor = {
 #ifdef INVERT_YAW_PID
         .invert_yaw = 1,
 #else
@@ -288,8 +288,8 @@ START_STRUCT_ENCODER(rate_t)
 RATE_MEMBERS
 END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(setup_t)
-SETUP_MEMBERS
+START_STRUCT_ENCODER(motor_t)
+MOTOR_MEMBERS
 END_STRUCT_ENCODER()
 
 START_STRUCT_ENCODER(voltage_t)
@@ -406,8 +406,8 @@ START_STRUCT_DECODER(rate_t)
 RATE_MEMBERS
 END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(setup_t)
-SETUP_MEMBERS
+START_STRUCT_DECODER(motor_t)
+MOTOR_MEMBERS
 END_STRUCT_DECODER()
 
 START_STRUCT_DECODER(voltage_t)
