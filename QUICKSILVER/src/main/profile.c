@@ -5,6 +5,8 @@
 #include "drv_usb.h"
 
 // Default values for our profile
+// ignore -Wmissing-braces here, gcc bug with nested structs
+#pragma GCC diagnostic ignored "-Wmissing-braces"
 const profile_t default_profile = {
     .setup = {
 #ifdef INVERT_YAW_PID
@@ -179,6 +181,8 @@ const profile_t default_profile = {
         },
     },
 };
+#pragma GCC diagnostic pop
+
 // the actual profile
 profile_t profile;
 

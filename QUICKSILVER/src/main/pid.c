@@ -429,8 +429,9 @@ int change_pid_value(int increase) {
   if (current_pid_term == 0)
     multiplier = multiplier / 10.0f; //profile.pid.kd.axis: 0.xe-2 - other PIDs: 0.xe-1
 
-#ifdef RX_FPORT //FPORT you can see the PIDs changing, so let's give smaller increments at the lower end \
-                //Not doing this for non-FPORT because it'd be far too easy to get very, very lost.
+#ifdef RX_FPORT
+  //FPORT you can see the PIDs changing, so let's give smaller increments at the lower end
+  //Not doing this for non-FPORT because it'd be far too easy to get very, very lost.
   if (current_pid_term == 2 && ((newPID <= 0.04f) || (newPID < 0.045f && !increase))) {
     multiplier = multiplier / 10;
   } else if (current_pid_term == 2 && ((newPID <= 0.5f) || (newPID <= 0.51f && !increase))) {
