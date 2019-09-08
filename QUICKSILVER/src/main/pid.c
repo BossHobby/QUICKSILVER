@@ -31,6 +31,7 @@ THE SOFTWARE.
 #include "defines.h"
 #include "led.h"
 #include "pid.h"
+#include "profile.h"
 #include "util.h"
 
 //**************************ADVANCED PID CONTROLLER - WITH PROFILE SWITCHING ON AUX SWITCH PIDPROFILE*******************************
