@@ -67,3 +67,6 @@ Temporary Items
 .apdisk
 *.Bobnova
 *.dbgconf
+
+go.mod
+go.sum
