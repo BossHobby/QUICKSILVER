@@ -201,9 +201,31 @@ void checkrx() {
       CRCByte = CRCByte + (CRCByte >> 8);
       CRCByte = CRCByte << 8;
       CRCByte = CRCByte >> 8;
-      if (CRCByte == 0x00FF) { //CRC is good, shove it into controls
+      if (CRCByte == 0x00FF) { //CRC is good, check Failsafe bit(s) and shove it into controls
 
+          
         //FPORT uses SBUS style data, but starts further in the packet
+        
+    if (data[25] & (1 << 2)) //RX appears to set this bit when it knows it missed a frame. How does it know?
+    {
+      if (!time_siglost)
+        time_siglost = gettime();
+      if (gettime() - time_siglost > TICK_CLOCK_FREQ_HZ) //8,000,000 ticks on F0, 21M on F4. One second.
+      {
+        failsafe_siglost = 1;
+      }
+    } else {
+      time_siglost = 0;
+      failsafe_siglost = 0;
+    }
+    if (data[25] & (1 << 3)) {
+      failsafe_sbus_failsafe = 1; // Sbus packets have a failsafe bit. This is cool.
+    } else {
+      failsafe_sbus_failsafe = 0;
+    }
+          
+          
+          
         channels[0] = ((data[3] | data[4] << 8) & 0x07FF);
         channels[1] = ((data[4] >> 3 | data[5] << 5) & 0x07FF);
         channels[2] = ((data[5] >> 6 | data[6] << 2 | data[7] << 10) & 0x07FF);
