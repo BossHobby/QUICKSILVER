@@ -372,11 +372,11 @@ int next_pid_term() {
 
   switch (current_pid_term) {
   case 0:
-    current_pid_term_pointer = profile.pid.ki.axis;
+    current_pid_term_pointer = profile.pid.kp.axis;
     current_pid_term = 1;
     break;
   case 1:
-    current_pid_term_pointer = profile.pid.kd.axis;
+    current_pid_term_pointer = profile.pid.ki.axis;
     current_pid_term = 2;
     break;
   case 2:
