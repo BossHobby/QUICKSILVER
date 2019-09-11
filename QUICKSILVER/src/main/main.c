@@ -114,7 +114,7 @@ int arming_release;
 int binding_while_armed = 1;
 
 //Experimental Flash Memory Feature
-int flash_feature_1 = 0; //SETUP WIZARD
+int flash_feature_1 = 1; //SETUP WIZARD
 int flash_feature_2 = 0; //LVC
 
 // for led flash on gestures

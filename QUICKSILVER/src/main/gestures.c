@@ -129,8 +129,14 @@ void gestures(void) {
     if (command == GESTURE_OSD_LEFT) {
       extern uint8_t osd_cursor;
       extern uint8_t osd_display_phase;
+      extern uint8_t osd_menu_phase;
       osd_cursor = 0;
+      if (osd_display_phase > 2){
+    	  osd_display_phase = 1;
+    	  osd_menu_phase = 0;
+      }else{
       osd_display_phase--;
+      }
       ledblink = 2 - osd_display_phase;
       pid_gestures_used = 0;
     }

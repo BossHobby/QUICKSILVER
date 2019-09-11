@@ -101,22 +101,25 @@ void osd_select_menu_item(void) {
     osd_select = 0; //reset the trigger
 
     switch (osd_cursor) {
-    case 0:
+    case 0:	//nothing happens here - case 0 is not used
       break;
 
-    case 1:
+    case 1:		//vtx
       break;
 
-    case 2:
+    case 2:		//pids
       break;
 
-    case 3:
+    case 3:		//filters
       break;
 
-    case 4:
+    case 4:		//rates
+    	osd_cursor = 0;
+    	osd_display_phase = 6;
+    	osd_menu_phase = 0;
       break;
 
-    case 5:
+    case 5:		//flight modes
       break;
 
     case 6:
@@ -155,6 +158,11 @@ void osd_select_menu_item(void) {
     }
   }
 }
+
+//void osd_select_ratestype_item(void)
+//{
+//		like above function but to select between betaflight and silverware rate menus
+//}
 
 void osd_display(void) {
   //first check if video signal autodetect needs to run - run if necessary
@@ -313,6 +321,57 @@ void osd_display(void) {
       break;
     }
     break;
+
+  case 3:		//vtx menu
+    break;
+
+  case 4:		//pids menu
+	break;
+
+  case 5:		//filters menu
+    break;
+
+  case 6:		//main rates menu
+      switch (osd_menu_phase) {
+      case 0:
+          osd_clear();
+          extern unsigned long lastlooptime;
+          lastlooptime = gettime();
+          osd_menu_phase++;
+          break;
+      case 1:
+    	  osd_print("RATES", INVERT, 13, 1); //function call returns text or invert, gets passed # of elements for wrap around,
+    	  osd_menu_phase++;                 //and which element number this is
+    	  break;
+      case 2:
+          osd_print("SILVERWARE", user_selection(1, 2), 7, 4);
+          osd_menu_phase++;
+          break;
+      case 3:
+          osd_print("BETAFLIGHT", user_selection(2, 2), 7, 5);
+          osd_menu_phase++;
+          break;
+      case 4:
+//    	  osd_select_ratestype_item(); NFE LEAVING OFF HERE
+    	  break;
+      }
+    break;
+
+  case 7:		//silverware rates submenu
+    break;
+
+  case 8:		//betaflight rates submenu
+    break;
+
+  case 9:		//flight modes menu
+    break;
+
+  case 10:		//osd elements menu
+    break;
+
+  case 11:		//special features menu
+  	break;
+
   }
 
 } //end osd_display()

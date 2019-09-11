@@ -179,7 +179,7 @@ int gestures2()
 		    {
 			  	int gesturetime_idle;
 				#ifdef ENABLE_OSD
-		    	if (osd_display_phase == 1) gesturetime_idle = GESTURETIME_IDLE_OSD;
+		    	if (osd_display_phase != 2) gesturetime_idle = GESTURETIME_IDLE_OSD;
 		    	else gesturetime_idle = GESTURETIME_IDLE;
 				#else
 		    	gesturetime_idle = GESTURETIME_IDLE;
@@ -224,7 +224,7 @@ uint8_t gbuffer[GSIZE];
 uint8_t check_command( uint8_t  buffer1[] , const uint8_t  command[]  )
 {
 #ifdef ENABLE_OSD
-	if(osd_display_phase == 1)
+	if(osd_display_phase != 2)
 	{
     for (int i = 0; i < OSD_GSIZE; i++)
             {
@@ -254,7 +254,7 @@ int gesture_sequence(int currentgesture)
 	if (currentgesture != gbuffer[0])
 	  {			// add to queue
 		#ifdef ENABLE_OSD
-		if(osd_display_phase == 1)
+		if(osd_display_phase != 2)
 		{
 			for (int i = OSD_GSIZE - 1; i >= 1; i--)
 		    {
@@ -277,7 +277,7 @@ int gesture_sequence(int currentgesture)
 
 // check commands
 #ifdef ENABLE_OSD
-	if(osd_display_phase == 1)
+	if(osd_display_phase != 2)
 		{
 		  if (check_command ( &gbuffer[0] , &command12[0] ) )
 		    {

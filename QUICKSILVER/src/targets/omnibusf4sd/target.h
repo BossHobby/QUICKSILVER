@@ -62,7 +62,7 @@
 #define SPI_MOSI_PIN GPIO_Pin_4
 #define SPI_MOSI_PORT GPIOB
 #define SPI_CLK_PIN GPIO_Pin_10
-#define SPI_CLK_PORT GPIOA
+#define SPI_CLK_PORT GPIOB
 #define SPI_SS_PIN GPIO_Pin_6
 #define SPI_SS_PORT GPIOB
 #endif
