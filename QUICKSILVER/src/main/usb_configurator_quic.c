@@ -45,6 +45,7 @@ typedef enum {
   QUIC_VAL_VBAT,
   QUIC_VAL_INFO,
   QUIC_VAL_DEFAULT_PROFILE,
+  QUIC_VAL_IMU,
 } quic_values;
 
 void send_quic(quic_command cmd, quic_flag flag, uint8_t *data, uint16_t len) {
@@ -179,6 +180,19 @@ void get_quic(uint8_t *data, uint32_t len) {
 
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
+  case QUIC_VAL_IMU: {
+    cbor_encode_map(&enc, 1);
+
+    extern float gyro_raw[3];
+    cbor_encode_str(&enc, "gyro_raw");
+    cbor_encode_array(&enc, 3);
+    cbor_encode_float(&enc, &gyro_raw[0]);
+    cbor_encode_float(&enc, &gyro_raw[1]);
+    cbor_encode_float(&enc, &gyro_raw[2]);
+
+    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  }
   default:
     send_quic_errorf(QUIC_CMD_GET, "INVALID VALUE %d", value);
     break;
