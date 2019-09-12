@@ -3,6 +3,7 @@
 #include "project.h"
 #include "stdio.h"
 #include "string.h"
+#include "profile.h"
 
 #ifdef ENABLE_OSD
 
@@ -159,10 +160,28 @@ void osd_select_menu_item(void) {
   }
 }
 
-//void osd_select_ratestype_item(void)
-//{
-//		like above function but to select between betaflight and silverware rate menus
-//}
+extern profile_t profile;
+void osd_select_ratestype_item(void)
+{//		like above function but to select between betaflight and silverware rate menus
+  if (osd_select == 1) //stick was pushed right to select a rate type
+  {
+	osd_select = 0;	//reset the trigger
+	switch(osd_cursor){
+	case 1:
+		osd_cursor = 0;	//reset the cursor
+		profile.rate.mode = RATE_MODE_SILVERWARE;	//update profile
+		osd_display_phase = 7;	//update display phase to the next menu screen
+		osd_menu_phase = 0;	//clear the screen
+		break;
+	case 2:
+		osd_cursor = 0;
+		profile.rate.mode = RATE_MODE_BETAFLIGHT;
+		osd_display_phase = 8;	//update display phase to the next menu screen
+		osd_menu_phase = 0;	//clear the screen
+		break;
+	}
+  }
+}
 
 void osd_display(void) {
   //first check if video signal autodetect needs to run - run if necessary
@@ -352,12 +371,127 @@ void osd_display(void) {
           osd_menu_phase++;
           break;
       case 4:
-//    	  osd_select_ratestype_item(); NFE LEAVING OFF HERE
+    	  osd_select_ratestype_item();
     	  break;
       }
     break;
 
   case 7:		//silverware rates submenu
+      switch (osd_menu_phase) {
+      case 0:
+          osd_clear();
+          extern unsigned long lastlooptime;
+          lastlooptime = gettime();
+          osd_menu_phase++;
+          break;
+      case 1:
+    	  osd_print("SILVERWARE RATES", INVERT, 7, 1);
+    	  osd_menu_phase++;
+    	  break;
+      case 2:
+          osd_print("ROLL", TEXT, 14, 4);
+          osd_menu_phase++;
+          break;
+      case 3:
+    	  osd_print("PITCH", TEXT, 19, 4);
+          osd_menu_phase++;
+          break;
+      case 4:
+    	  osd_print("YAW", TEXT, 25, 4);
+          osd_menu_phase++;
+          break;
+      case 5:
+          osd_print("RATE", user_selection(1, 4), 2, 6);
+          osd_menu_phase++;
+          break;
+      case 6:
+    	  osd_print("ACRO EXPO", user_selection(2, 4), 2, 7);
+          osd_menu_phase++;
+          break;
+      case 7:
+          osd_print("ANGLE EXPO", user_selection(3, 4), 2, 8);
+          osd_menu_phase++;
+          break;
+      case 8:
+          osd_print("SAVE AND EXIT", user_selection(4, 4), 2, 14);
+          osd_menu_phase++;
+          break;
+      case 9:
+    	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
+          uint8_t osd_roll_rate[4];
+          fast_fprint(osd_roll_rate, 4, profile.rate.silverware.max_rate.roll, 0);
+          osd_print_data(osd_roll_rate, 4, TEXT, 15, 6);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 10:
+    	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
+          uint8_t osd_pitch_rate[4];
+          fast_fprint(osd_pitch_rate, 4, profile.rate.silverware.max_rate.pitch, 0);
+          osd_print_data(osd_pitch_rate, 4, TEXT, 20, 6);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 11:
+    	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
+          uint8_t osd_yaw_rate[4];
+          fast_fprint(osd_yaw_rate, 4, profile.rate.silverware.max_rate.yaw, 0);
+          osd_print_data(osd_yaw_rate, 4, TEXT, 25, 6);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 12:
+    	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
+          uint8_t osd_acro_expo_roll[4];
+          fast_fprint(osd_acro_expo_roll, 4, profile.rate.silverware.acro_expo.roll, 2);
+          osd_print_data(osd_acro_expo_roll, 4, TEXT, 15, 7);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 13:
+    	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
+          uint8_t osd_acro_expo_pitch[4];
+          fast_fprint(osd_acro_expo_pitch, 4, profile.rate.silverware.acro_expo.pitch, 2);
+          osd_print_data(osd_acro_expo_pitch, 4, TEXT, 20, 7);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 14:
+    	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
+          uint8_t osd_acro_expo_yaw[4];
+          fast_fprint(osd_acro_expo_yaw, 4, profile.rate.silverware.acro_expo.yaw, 2);
+          osd_print_data(osd_acro_expo_yaw, 4, TEXT, 25, 7);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 15:
+    	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
+          uint8_t osd_angle_expo_roll[4];
+          fast_fprint(osd_angle_expo_roll, 4, profile.rate.silverware.angle_expo.roll, 2);
+          osd_print_data(osd_angle_expo_roll, 4, TEXT, 15, 8);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 16:
+    	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
+          uint8_t osd_angle_expo_pitch[4];
+          fast_fprint(osd_angle_expo_pitch, 4, profile.rate.silverware.angle_expo.pitch, 2);
+          osd_print_data(osd_angle_expo_pitch, 4, TEXT, 20, 8);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 17:
+    	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
+          uint8_t osd_angle_expo_yaw[4];
+          fast_fprint(osd_angle_expo_yaw, 4, profile.rate.silverware.angle_expo.yaw, 2);
+          osd_print_data(osd_angle_expo_yaw, 4, TEXT, 25, 8);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 18:
+    	  //osd_adjust_silverwarerates_item();
+    	  break;
+      }
     break;
 
   case 8:		//betaflight rates submenu
