@@ -15,11 +15,10 @@ volatile unsigned long systickcount = 0;
 #endif
 
 void debug_timer_init() {
-  if (!(CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk)) {
-    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-    DWT->CYCCNT = 0;
-    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
-  }
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  DWT->CYCCNT = 0;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 }
 
 uint32_t debug_timer_micros() {
