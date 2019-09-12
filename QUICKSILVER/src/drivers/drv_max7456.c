@@ -295,47 +295,47 @@ uint8_t lastvm0 = 0x55;
 //TODO ... should we monitor lastvm0 and handle any unexpected changes using check_osd() ... not sure if/when an osd chip becomes unstable due to voltage or some other reason
 
 //stuffs a float into a char array.  parameters are array length and precision.  only pads spaces for 0's up to the thousands place.
+
+uint8_t count_digits(uint32_t value) {
+  uint8_t count = 0;
+  while (value > 0) {
+    value /= 10;
+    count++;
+  }
+  return count;
+}
+
 void fast_fprint(uint8_t *str, uint8_t length, float v, uint8_t precision) {
-  uint32_t value = v * (ipow(10, precision));
-  uint8_t digitsinfrontofdecimal = length - (precision + 1);
-  static uint32_t last_cast = 0;
-  for (uint8_t i = 0; i < digitsinfrontofdecimal; i++) {
-    uint32_t cast_value = value / ipow(10, (digitsinfrontofdecimal + (precision - 1) - i));
-    str[i] = ((cast_value) - (10 * last_cast)) + 48;
-    last_cast = cast_value;
-  }
 
-  for (uint8_t i = digitsinfrontofdecimal; i < length; i++) {
-    if (i == digitsinfrontofdecimal) {
-      if (precision > 0)
-        str[i] = 46;
-      else
-        str[i] = ' ';
-    } else {
-      uint32_t cast_value = value / ipow(10, (digitsinfrontofdecimal + precision - i));
-      str[i] = ((cast_value) - (10 * last_cast)) + 48;
-      last_cast = cast_value;
+  // make sure our string is empty
+  memset(str, 0, length);
+
+  // calculate what we want to multiply by
+  const uint32_t multiplier = ipow(10, precision);
+  const uint8_t digits = count_digits(v);
+
+  // move our decimal point
+  uint32_t value = v * multiplier;
+  uint32_t divider = ipow(10, digits + precision - 1);
+
+  for (uint32_t i = 0; i < length; ++i) {
+    if (value <= 0) {
+      if ((i - digits) <= precision) {
+        str[i] = '0';
+        continue;
+      }
+      break;
     }
-  }
-  last_cast = 0;
 
-  if (digitsinfrontofdecimal > 3) {
-    if ((str[0] == 48) && (str[1] == 48) && (str[2] == 48))
-      str[2] = ' ';
-    if ((str[0] == 48) && (str[1] == 48))
-      str[1] = ' ';
-    if (str[0] == 48)
-      str[0] = ' ';
-  }
-  if (digitsinfrontofdecimal > 2) {
-    if ((str[0] == 48) && (str[1] == 48))
-      str[1] = ' ';
-    if (str[0] == 48)
-      str[0] = ' ';
-  }
-  if (digitsinfrontofdecimal > 1) {
-    if (str[0] == 48)
-      str[0] = ' ';
+    if (i == digits) {
+      str[i] = '.';
+      continue;
+    }
+
+    uint8_t digit = value / divider;
+    str[i] = '0' + digit;
+    value = value % divider;
+    divider /= 10;
   }
 }
 
