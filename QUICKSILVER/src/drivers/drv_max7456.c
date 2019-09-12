@@ -305,6 +305,7 @@ uint8_t count_digits(uint32_t value) {
   return count;
 }
 
+//stuffs a float into a char array.  parameters are array length and precision.  only pads spaces for 0's up to the thousands place.
 void fast_fprint(uint8_t *str, uint8_t length, float v, uint8_t precision) {
 
   // make sure our string is empty
@@ -313,12 +314,18 @@ void fast_fprint(uint8_t *str, uint8_t length, float v, uint8_t precision) {
   // calculate what we want to multiply by
   const uint32_t multiplier = ipow(10, precision);
   const uint8_t digits = count_digits(v);
+  const uint32_t padding = length - (digits + precision + 1);
 
   // move our decimal point
   uint32_t value = v * multiplier;
   uint32_t divider = ipow(10, digits + precision - 1);
 
   for (uint32_t i = 0; i < length; ++i) {
+    if (i < padding) {
+      str[i] = ' ';
+      continue;
+    }
+
     if (value <= 0) {
       if ((i - digits) <= precision) {
         str[i] = '0';
@@ -327,7 +334,7 @@ void fast_fprint(uint8_t *str, uint8_t length, float v, uint8_t precision) {
       break;
     }
 
-    if (i == digits) {
+    if (i == padding + digits) {
       str[i] = '.';
       continue;
     }
