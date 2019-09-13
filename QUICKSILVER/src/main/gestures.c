@@ -109,7 +109,8 @@ void gestures(void) {
       extern uint8_t osd_cursor;
       extern uint8_t osd_select;
       if(osd_select){
-    	  //do nothing here but handle gesture in osd.c to increase a value
+      extern uint8_t increase_osd_value;
+      increase_osd_value = 1;
       }else{
       osd_cursor--;
       osd_menu_phase = 1;
@@ -122,7 +123,8 @@ void gestures(void) {
       extern uint8_t osd_cursor;
       extern uint8_t osd_select;
       if(osd_select){
-    	  //do nothing here but handle gesture in osd.c to decrease a value
+      extern uint8_t decrease_osd_value;
+      decrease_osd_value = 1;
       }else{
       osd_menu_phase = 1;
       osd_cursor++;

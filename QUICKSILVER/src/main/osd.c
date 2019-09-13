@@ -191,6 +191,8 @@ void osd_select_ratestype_item(void)
   }
 }
 
+uint8_t increase_osd_value;
+uint8_t decrease_osd_value;
 void osd_adjust_silverwarerates_item(void)
 {
 	if(osd_select > 3) {
@@ -198,11 +200,56 @@ void osd_adjust_silverwarerates_item(void)
 		osd_menu_phase = 1; //repaint the screen again
 	}
 	switch(osd_cursor){
-	case 1:	//adjust row 1 items based on osd_select value and up/down osd gestures
+	case 1: //adjust row 1 items based on osd_select value and up/down osd gestures
+		if(osd_select == 1){
+			if (increase_osd_value) profile.rate.silverware.max_rate.roll = profile.rate.silverware.max_rate.roll + 10.0f;
+			if (decrease_osd_value) profile.rate.silverware.max_rate.roll = profile.rate.silverware.max_rate.roll - 10.0f;
+		}
+		if(osd_select == 2){
+			if (increase_osd_value) profile.rate.silverware.max_rate.pitch = profile.rate.silverware.max_rate.pitch + 10.0f;
+			if (decrease_osd_value) profile.rate.silverware.max_rate.pitch = profile.rate.silverware.max_rate.pitch - 10.0f;
+		}
+		if(osd_select == 3){
+			if (increase_osd_value) profile.rate.silverware.max_rate.yaw = profile.rate.silverware.max_rate.yaw + 10.0f;
+			if (decrease_osd_value) profile.rate.silverware.max_rate.yaw = profile.rate.silverware.max_rate.yaw - 10.0f;
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
 		break;
 	case 2:	//adjust row 2 items based on osd_select value and up/down osd gestures
+		if(osd_select == 1){
+			if (increase_osd_value) profile.rate.silverware.acro_expo.roll = profile.rate.silverware.acro_expo.roll + 0.05f;
+			if (decrease_osd_value) profile.rate.silverware.acro_expo.roll = profile.rate.silverware.acro_expo.roll - 0.05f;
+		}
+		if(osd_select == 2){
+			if (increase_osd_value) profile.rate.silverware.acro_expo.pitch = profile.rate.silverware.acro_expo.pitch + 0.05f;
+			if (decrease_osd_value) profile.rate.silverware.acro_expo.pitch = profile.rate.silverware.acro_expo.pitch - 0.05f;
+		}
+		if(osd_select == 3){
+			if (increase_osd_value) profile.rate.silverware.acro_expo.yaw = profile.rate.silverware.acro_expo.yaw + 0.05f;
+			if (decrease_osd_value) profile.rate.silverware.acro_expo.yaw = profile.rate.silverware.acro_expo.yaw - 0.05f;
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
 		break;
 	case 3:	//adjust row 3 items based on osd_select value and up/down osd gestures
+		if(osd_select == 1){
+			if (increase_osd_value) profile.rate.silverware.angle_expo.roll = profile.rate.silverware.angle_expo.roll + 0.05f;
+			if (decrease_osd_value) profile.rate.silverware.angle_expo.roll = profile.rate.silverware.angle_expo.roll - 0.05f;
+		}
+		if(osd_select == 2){
+			if (increase_osd_value) profile.rate.silverware.angle_expo.pitch = profile.rate.silverware.angle_expo.pitch + 0.05f;
+			if (decrease_osd_value) profile.rate.silverware.angle_expo.pitch = profile.rate.silverware.angle_expo.pitch - 0.05f;
+		}
+		if(osd_select == 3){
+			if (increase_osd_value) profile.rate.silverware.angle_expo.yaw = profile.rate.silverware.angle_expo.yaw + 0.05f;
+			if (decrease_osd_value) profile.rate.silverware.angle_expo.yaw = profile.rate.silverware.angle_expo.yaw - 0.05f;
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
 		break;
 	case 4: //save&exit silverware rates
 		if (osd_select == 1){
