@@ -69,10 +69,12 @@ void spi_gyro_init(void) {
   GPIO_Init(MPU6XXX_NSS_PORT, &GPIO_InitStructure);
 
   // Interrupt GPIO
+#ifdef MPU6XXX_INT_PIN
   GPIO_InitStructure.GPIO_Pin = MPU6XXX_INT_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_Init(MPU6XXX_INT_PORT, &GPIO_InitStructure);
+#endif
 
   // Chip Select Set High
   GPIO_SetBits(MPU6XXX_SPI_PORT, MPU6XXX_NSS_PIN);
