@@ -219,16 +219,16 @@ void osd_adjust_silverwarerates_item(void)
 		break;
 	case 2:	//adjust row 2 items based on osd_select value and up/down osd gestures
 		if(osd_select == 1){
-			if (increase_osd_value) profile.rate.silverware.acro_expo.roll = profile.rate.silverware.acro_expo.roll + 0.05f;
-			if (decrease_osd_value) profile.rate.silverware.acro_expo.roll = profile.rate.silverware.acro_expo.roll - 0.05f;
+			if (increase_osd_value) profile.rate.silverware.acro_expo.roll = profile.rate.silverware.acro_expo.roll + 0.01f;
+			if (decrease_osd_value) profile.rate.silverware.acro_expo.roll = profile.rate.silverware.acro_expo.roll - 0.01f;
 		}
 		if(osd_select == 2){
-			if (increase_osd_value) profile.rate.silverware.acro_expo.pitch = profile.rate.silverware.acro_expo.pitch + 0.05f;
-			if (decrease_osd_value) profile.rate.silverware.acro_expo.pitch = profile.rate.silverware.acro_expo.pitch - 0.05f;
+			if (increase_osd_value) profile.rate.silverware.acro_expo.pitch = profile.rate.silverware.acro_expo.pitch + 0.01f;
+			if (decrease_osd_value) profile.rate.silverware.acro_expo.pitch = profile.rate.silverware.acro_expo.pitch - 0.01f;
 		}
 		if(osd_select == 3){
-			if (increase_osd_value) profile.rate.silverware.acro_expo.yaw = profile.rate.silverware.acro_expo.yaw + 0.05f;
-			if (decrease_osd_value) profile.rate.silverware.acro_expo.yaw = profile.rate.silverware.acro_expo.yaw - 0.05f;
+			if (increase_osd_value) profile.rate.silverware.acro_expo.yaw = profile.rate.silverware.acro_expo.yaw + 0.01f;
+			if (decrease_osd_value) profile.rate.silverware.acro_expo.yaw = profile.rate.silverware.acro_expo.yaw - 0.01f;
 		}
 		increase_osd_value = 0;
 		decrease_osd_value = 0;
@@ -236,16 +236,16 @@ void osd_adjust_silverwarerates_item(void)
 		break;
 	case 3:	//adjust row 3 items based on osd_select value and up/down osd gestures
 		if(osd_select == 1){
-			if (increase_osd_value) profile.rate.silverware.angle_expo.roll = profile.rate.silverware.angle_expo.roll + 0.05f;
-			if (decrease_osd_value) profile.rate.silverware.angle_expo.roll = profile.rate.silverware.angle_expo.roll - 0.05f;
+			if (increase_osd_value) profile.rate.silverware.angle_expo.roll = profile.rate.silverware.angle_expo.roll + 0.01f;
+			if (decrease_osd_value) profile.rate.silverware.angle_expo.roll = profile.rate.silverware.angle_expo.roll - 0.01f;
 		}
 		if(osd_select == 2){
-			if (increase_osd_value) profile.rate.silverware.angle_expo.pitch = profile.rate.silverware.angle_expo.pitch + 0.05f;
-			if (decrease_osd_value) profile.rate.silverware.angle_expo.pitch = profile.rate.silverware.angle_expo.pitch - 0.05f;
+			if (increase_osd_value) profile.rate.silverware.angle_expo.pitch = profile.rate.silverware.angle_expo.pitch + 0.01f;
+			if (decrease_osd_value) profile.rate.silverware.angle_expo.pitch = profile.rate.silverware.angle_expo.pitch - 0.01f;
 		}
 		if(osd_select == 3){
-			if (increase_osd_value) profile.rate.silverware.angle_expo.yaw = profile.rate.silverware.angle_expo.yaw + 0.05f;
-			if (decrease_osd_value) profile.rate.silverware.angle_expo.yaw = profile.rate.silverware.angle_expo.yaw - 0.05f;
+			if (increase_osd_value) profile.rate.silverware.angle_expo.yaw = profile.rate.silverware.angle_expo.yaw + 0.01f;
+			if (decrease_osd_value) profile.rate.silverware.angle_expo.yaw = profile.rate.silverware.angle_expo.yaw - 0.01f;
 		}
 		increase_osd_value = 0;
 		decrease_osd_value = 0;
@@ -276,6 +276,93 @@ void osd_adjust_silverwarerates_item(void)
 		}
 		break;
 	}
+}
+
+
+void osd_adjust_betaflightrates_item(void)
+{
+	if(osd_select > 3) {
+		osd_select = 3;	//limit osd select variable from accumulating past 3 columns of adjustable items
+		osd_menu_phase = 1; //repaint the screen again
+	}
+	switch(osd_cursor){
+	case 1: //adjust row 1 items based on osd_select value and up/down osd gestures
+		if(osd_select == 1){
+			if (increase_osd_value) profile.rate.betaflight.rc_rate.roll = profile.rate.betaflight.rc_rate.roll + 0.01f;
+			if (decrease_osd_value) profile.rate.betaflight.rc_rate.roll = profile.rate.betaflight.rc_rate.roll - 0.01f;
+		}
+		if(osd_select == 2){
+			if (increase_osd_value) profile.rate.betaflight.rc_rate.pitch = profile.rate.betaflight.rc_rate.pitch + 0.01f;
+			if (decrease_osd_value) profile.rate.betaflight.rc_rate.pitch = profile.rate.betaflight.rc_rate.pitch - 0.01f;
+		}
+		if(osd_select == 3){
+			if (increase_osd_value) profile.rate.betaflight.rc_rate.yaw = profile.rate.betaflight.rc_rate.yaw + 0.01f;
+			if (decrease_osd_value) profile.rate.betaflight.rc_rate.yaw = profile.rate.betaflight.rc_rate.yaw - 0.01f;
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 2:	//adjust row 2 items based on osd_select value and up/down osd gestures
+		if(osd_select == 1){
+			if (increase_osd_value) profile.rate.betaflight.super_rate.roll = profile.rate.betaflight.super_rate.roll + 0.01f;
+			if (decrease_osd_value) profile.rate.betaflight.super_rate.roll = profile.rate.betaflight.super_rate.roll - 0.01f;
+		}
+		if(osd_select == 2){
+			if (increase_osd_value) profile.rate.betaflight.super_rate.pitch = profile.rate.betaflight.super_rate.pitch + 0.01f;
+			if (decrease_osd_value) profile.rate.betaflight.super_rate.pitch = profile.rate.betaflight.super_rate.pitch - 0.01f;
+		}
+		if(osd_select == 3){
+			if (increase_osd_value) profile.rate.betaflight.super_rate.yaw = profile.rate.betaflight.super_rate.yaw + 0.01f;
+			if (decrease_osd_value) profile.rate.betaflight.super_rate.yaw = profile.rate.betaflight.super_rate.yaw - 0.01f;
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 3:	//adjust row 3 items based on osd_select value and up/down osd gestures
+		if(osd_select == 1){
+			if (increase_osd_value) profile.rate.betaflight.expo.roll = profile.rate.betaflight.expo.roll + 0.01f;
+			if (decrease_osd_value) profile.rate.betaflight.expo.roll = profile.rate.betaflight.expo.roll - 0.01f;
+		}
+		if(osd_select == 2){
+			if (increase_osd_value) profile.rate.betaflight.expo.pitch = profile.rate.betaflight.expo.pitch + 0.01f;
+			if (decrease_osd_value) profile.rate.betaflight.expo.pitch = profile.rate.betaflight.expo.pitch - 0.01f;
+		}
+		if(osd_select == 3){
+			if (increase_osd_value) profile.rate.betaflight.expo.yaw = profile.rate.betaflight.expo.yaw + 0.01f;
+			if (decrease_osd_value) profile.rate.betaflight.expo.yaw = profile.rate.betaflight.expo.yaw - 0.01f;
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 4: //save&exit silverware rates
+		if (osd_select == 1){
+	      osd_cursor = 0;
+	      osd_display_phase = 0;
+		  #ifdef FLASH_SAVE1
+	      extern int pid_gestures_used;
+	      extern int ledcommand;
+	      extern void flash_save(void);
+	      extern void flash_load(void);
+	      pid_gestures_used = 0;
+	      ledcommand = 1;
+	      flash_save();
+	      flash_load();
+	      // reset flash numbers for pids
+	      extern int number_of_increments[3][3];
+	      for (int i = 0; i < 3; i++)
+	        for (int j = 0; j < 3; j++)
+	          number_of_increments[i][j] = 0;
+	      // reset loop time - maybe not necessary cause it gets reset in the next screen clear
+	      extern unsigned long lastlooptime;
+	      lastlooptime = gettime();
+		  #endif
+		}
+		break;
+	}
+
 }
 
 void osd_display(void) {
@@ -590,7 +677,123 @@ void osd_display(void) {
     break;
 
   case 8:		//betaflight rates submenu
+      switch (osd_menu_phase) {
+      case 0:
+          osd_clear();
+          extern unsigned long lastlooptime;
+          lastlooptime = gettime();
+          osd_menu_phase++;
+          break;
+      case 1:
+    	  osd_print("BETAFLIGHT RATES", INVERT, 7, 1);
+    	  osd_menu_phase++;
+    	  break;
+      case 2:
+          osd_print("ROLL", TEXT, 14, 4);
+          osd_menu_phase++;
+          break;
+      case 3:
+    	  osd_print("PITCH", TEXT, 19, 4);
+          osd_menu_phase++;
+          break;
+      case 4:
+    	  osd_print("YAW", TEXT, 25, 4);
+          osd_menu_phase++;
+          break;
+      case 5:
+          osd_print("RC RATE", user_selection(1, 4), 2, 6);
+          osd_menu_phase++;
+          break;
+      case 6:
+    	  osd_print("SUPER RATE", user_selection(2, 4), 2, 7);
+          osd_menu_phase++;
+          break;
+      case 7:
+          osd_print("EXPO", user_selection(3, 4), 2, 8);
+          osd_menu_phase++;
+          break;
+      case 8:
+          osd_print("SAVE AND EXIT", user_selection(4, 4), 2, 14);
+          osd_menu_phase++;
+          break;
+      case 9:
+    	  if (profile.rate.mode == RATE_MODE_BETAFLIGHT){
+          uint8_t osd_roll_rate[4];
+          fast_fprint(osd_roll_rate, 4, profile.rate.betaflight.rc_rate.roll, 2);
+          osd_print_data(osd_roll_rate, 4, adjust_selection(1, 1), 15, 6);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 10:
+    	  if (profile.rate.mode == RATE_MODE_BETAFLIGHT){
+          uint8_t osd_pitch_rate[4];
+          fast_fprint(osd_pitch_rate, 4, profile.rate.betaflight.rc_rate.pitch, 2);
+          osd_print_data(osd_pitch_rate, 4, adjust_selection(2, 1), 20, 6);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 11:
+    	  if (profile.rate.mode == RATE_MODE_BETAFLIGHT){
+          uint8_t osd_yaw_rate[4];
+          fast_fprint(osd_yaw_rate, 4, profile.rate.betaflight.rc_rate.yaw, 2);
+          osd_print_data(osd_yaw_rate, 4, adjust_selection(3, 1), 25, 6);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 12:
+    	  if (profile.rate.mode == RATE_MODE_BETAFLIGHT){
+          uint8_t osd_acro_expo_roll[4];
+          fast_fprint(osd_acro_expo_roll, 4, profile.rate.betaflight.super_rate.roll, 2);
+          osd_print_data(osd_acro_expo_roll, 4, adjust_selection(1, 2), 15, 7);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 13:
+    	  if (profile.rate.mode == RATE_MODE_BETAFLIGHT){
+          uint8_t osd_acro_expo_pitch[4];
+          fast_fprint(osd_acro_expo_pitch, 4, profile.rate.betaflight.super_rate.pitch, 2);
+          osd_print_data(osd_acro_expo_pitch, 4, adjust_selection(2, 2), 20, 7);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 14:
+    	  if (profile.rate.mode == RATE_MODE_BETAFLIGHT){
+          uint8_t osd_acro_expo_yaw[4];
+          fast_fprint(osd_acro_expo_yaw, 4, profile.rate.betaflight.super_rate.yaw, 2);
+          osd_print_data(osd_acro_expo_yaw, 4, adjust_selection(3, 2), 25, 7);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 15:
+    	  if (profile.rate.mode == RATE_MODE_BETAFLIGHT){
+          uint8_t osd_angle_expo_roll[4];
+          fast_fprint(osd_angle_expo_roll, 4, profile.rate.betaflight.expo.roll, 2);
+          osd_print_data(osd_angle_expo_roll, 4, adjust_selection(1, 3), 15, 8);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 16:
+    	  if (profile.rate.mode == RATE_MODE_BETAFLIGHT){
+          uint8_t osd_angle_expo_pitch[4];
+          fast_fprint(osd_angle_expo_pitch, 4, profile.rate.betaflight.expo.pitch, 2);
+          osd_print_data(osd_angle_expo_pitch, 4, adjust_selection(2, 3), 20, 8);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 17:
+    	  if (profile.rate.mode == RATE_MODE_BETAFLIGHT){
+          uint8_t osd_angle_expo_yaw[4];
+          fast_fprint(osd_angle_expo_yaw, 4, profile.rate.betaflight.expo.yaw, 2);
+          osd_print_data(osd_angle_expo_yaw, 4, adjust_selection(3, 3), 25, 8);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 18:
+    	  osd_adjust_betaflightrates_item();
+    	  break;
+      }
     break;
+
 
   case 9:		//flight modes menu
     break;
