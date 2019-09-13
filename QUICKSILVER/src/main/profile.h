@@ -98,8 +98,14 @@ typedef struct {
   aux_channel_t aux[AUX_FUNCTION_MAX];
 } channel_t;
 
+typedef struct {
+  uint8_t name[36];
+  uint32_t datetime;
+} metadata_t;
+
 // Full Profile
 typedef struct {
+  metadata_t meta;
   motor_t motor;
   rate_t rate;
   channel_t channel;
@@ -108,6 +114,7 @@ typedef struct {
 } profile_t;
 
 #define PROFILE_MEMBERS      \
+  MEMBER(meta, metadata_t)   \
   MEMBER(motor, motor_t)     \
   MEMBER(rate, rate_t)       \
   MEMBER(channel, channel_t) \

@@ -8,6 +8,11 @@
 // ignore -Wmissing-braces here, gcc bug with nested structs
 #pragma GCC diagnostic ignored "-Wmissing-braces"
 const profile_t default_profile = {
+    .meta = {
+        .name = "default",
+        .datetime = 0,
+    },
+
     .motor = {
 #ifdef INVERT_YAW_PID
         .invert_yaw = 1,
@@ -258,6 +263,39 @@ cbor_result_t cbor_encode_channel_t(cbor_value_t *enc, const channel_t *chan) {
   return res;
 }
 
+cbor_result_t cbor_encode_metadata_t(cbor_value_t *enc, const metadata_t *meta) {
+  cbor_result_t res = CBOR_OK;
+
+  res = cbor_encode_map_indefinite(enc);
+  if (res < CBOR_OK) {
+    return res;
+  }
+
+  res = cbor_encode_str(enc, "name");
+  if (res < CBOR_OK) {
+    return res;
+  }
+  res = cbor_encode_tstr(enc, meta->name, 36);
+  if (res < CBOR_OK) {
+    return res;
+  }
+
+  res = cbor_encode_str(enc, "datetime");
+  if (res < CBOR_OK) {
+    return res;
+  }
+  res = cbor_encode_uint32(enc, &meta->datetime);
+  if (res < CBOR_OK) {
+    return res;
+  }
+
+  res = cbor_encode_end_indefinite(enc);
+  if (res < CBOR_OK) {
+    return res;
+  }
+  return res;
+}
+
 #define START_STRUCT_ENCODER(type)                                     \
   cbor_result_t cbor_encode_##type(cbor_value_t *enc, const type *o) { \
     cbor_result_t res = CBOR_OK;                                       \
@@ -355,6 +393,50 @@ cbor_result_t cbor_decode_channel_t(cbor_value_t *dec, channel_t *chan) {
         if (res < CBOR_OK) {
           return res;
         }
+      }
+      continue;
+    }
+
+    res = cbor_decode_skip(dec);
+    if (res < CBOR_OK)
+      return res;
+  }
+  return res;
+}
+
+cbor_result_t cbor_decode_metadata_t(cbor_value_t *dec, metadata_t *meta) {
+  cbor_result_t res = CBOR_OK;
+
+  cbor_container_t map;
+  res = cbor_decode_map(dec, &map);
+  if (res < CBOR_OK)
+    return res;
+
+  const uint8_t *name;
+  uint32_t name_len;
+  for (uint32_t i = 0; i < cbor_decode_map_size(dec, &map); i++) {
+    res = cbor_decode_tstr(dec, &name, &name_len);
+    if (res < CBOR_OK)
+      return res;
+
+    if (buf_equal_string(name, name_len, "name")) {
+      res = cbor_decode_tstr(dec, &name, &name_len);
+      if (res < CBOR_OK) {
+        return res;
+      }
+
+      if (name_len > 36) {
+        name_len = 36;
+      }
+      memset(meta->name, 0, 36);
+      memcpy(meta->name, name, name_len);
+      continue;
+    }
+
+    if (buf_equal_string(name, name_len, "datetime")) {
+      res = cbor_decode_uint32(dec, &meta->datetime);
+      if (res < CBOR_OK) {
+        return res;
       }
       continue;
     }
