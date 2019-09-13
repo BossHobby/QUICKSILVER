@@ -80,6 +80,7 @@ void osd_display_reset(void) {
   last_lowbatt_state = 2;  //reset last lowbatt comparator
 }
 
+uint8_t osd_select;
 uint8_t user_selection(uint8_t element, uint8_t total) {
   if (osd_cursor != element) {
     if (osd_cursor < 1)
@@ -87,15 +88,22 @@ uint8_t user_selection(uint8_t element, uint8_t total) {
     if (osd_cursor > total)
       osd_cursor = total;
   }
-  if (osd_cursor == element) {
+  if (osd_cursor == element && osd_select == 0) {
     return INVERT;
   } else {
     return TEXT;
   }
 }
 
+uint8_t adjust_selection(uint8_t element, uint8_t row) {
+	if (osd_select == element && osd_cursor == row ){
+		return INVERT;
+	}else{
+		return TEXT;
+	}
+}
+
 extern int flash_feature_1; //currently used for auto entry into wizard menu
-uint8_t osd_select;
 void osd_select_menu_item(void) {
   if (osd_select == 1 && flash_feature_1 == 1) //main mmenu
   {
@@ -181,6 +189,46 @@ void osd_select_ratestype_item(void)
 		break;
 	}
   }
+}
+
+void osd_adjust_silverwarerates_item(void)
+{
+	if(osd_select > 3) {
+		osd_select = 3;	//limit osd select variable from accumulating past 3 columns of adjustable items
+		osd_menu_phase = 1; //repaint the screen again
+	}
+	switch(osd_cursor){
+	case 1:	//adjust row 1 items based on osd_select value and up/down osd gestures
+		break;
+	case 2:	//adjust row 2 items based on osd_select value and up/down osd gestures
+		break;
+	case 3:	//adjust row 3 items based on osd_select value and up/down osd gestures
+		break;
+	case 4: //save&exit silverware rates
+		if (osd_select == 1){
+	      osd_cursor = 0;
+	      osd_display_phase = 0;
+		  #ifdef FLASH_SAVE1
+	      extern int pid_gestures_used;
+	      extern int ledcommand;
+	      extern void flash_save(void);
+	      extern void flash_load(void);
+	      pid_gestures_used = 0;
+	      ledcommand = 1;
+	      flash_save();
+	      flash_load();
+	      // reset flash numbers for pids
+	      extern int number_of_increments[3][3];
+	      for (int i = 0; i < 3; i++)
+	        for (int j = 0; j < 3; j++)
+	          number_of_increments[i][j] = 0;
+	      // reset loop time - maybe not necessary cause it gets reset in the next screen clear
+	      extern unsigned long lastlooptime;
+	      lastlooptime = gettime();
+		  #endif
+		}
+		break;
+	}
 }
 
 void osd_display(void) {
@@ -419,24 +467,24 @@ void osd_display(void) {
       case 9:
     	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
           uint8_t osd_roll_rate[4];
-          fast_fprint(osd_roll_rate, 4, profile.rate.silverware.max_rate.roll, 0);
-          osd_print_data(osd_roll_rate, 4, TEXT, 15, 6);
+          fast_fprint(osd_roll_rate, 5, profile.rate.silverware.max_rate.roll, 0);
+          osd_print_data(osd_roll_rate, 4, adjust_selection(1, 1), 15, 6);
     	  }
           osd_menu_phase++;
           break;
       case 10:
     	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
           uint8_t osd_pitch_rate[4];
-          fast_fprint(osd_pitch_rate, 4, profile.rate.silverware.max_rate.pitch, 0);
-          osd_print_data(osd_pitch_rate, 4, TEXT, 20, 6);
+          fast_fprint(osd_pitch_rate, 5, profile.rate.silverware.max_rate.pitch, 0);
+          osd_print_data(osd_pitch_rate, 4, adjust_selection(2, 1), 20, 6);
     	  }
           osd_menu_phase++;
           break;
       case 11:
     	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
           uint8_t osd_yaw_rate[4];
-          fast_fprint(osd_yaw_rate, 4, profile.rate.silverware.max_rate.yaw, 0);
-          osd_print_data(osd_yaw_rate, 4, TEXT, 25, 6);
+          fast_fprint(osd_yaw_rate, 5, profile.rate.silverware.max_rate.yaw, 0);
+          osd_print_data(osd_yaw_rate, 4, adjust_selection(3, 1), 25, 6);
     	  }
           osd_menu_phase++;
           break;
@@ -444,7 +492,7 @@ void osd_display(void) {
     	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
           uint8_t osd_acro_expo_roll[4];
           fast_fprint(osd_acro_expo_roll, 4, profile.rate.silverware.acro_expo.roll, 2);
-          osd_print_data(osd_acro_expo_roll, 4, TEXT, 15, 7);
+          osd_print_data(osd_acro_expo_roll, 4, adjust_selection(1, 2), 15, 7);
     	  }
           osd_menu_phase++;
           break;
@@ -452,7 +500,7 @@ void osd_display(void) {
     	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
           uint8_t osd_acro_expo_pitch[4];
           fast_fprint(osd_acro_expo_pitch, 4, profile.rate.silverware.acro_expo.pitch, 2);
-          osd_print_data(osd_acro_expo_pitch, 4, TEXT, 20, 7);
+          osd_print_data(osd_acro_expo_pitch, 4, adjust_selection(2, 2), 20, 7);
     	  }
           osd_menu_phase++;
           break;
@@ -460,7 +508,7 @@ void osd_display(void) {
     	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
           uint8_t osd_acro_expo_yaw[4];
           fast_fprint(osd_acro_expo_yaw, 4, profile.rate.silverware.acro_expo.yaw, 2);
-          osd_print_data(osd_acro_expo_yaw, 4, TEXT, 25, 7);
+          osd_print_data(osd_acro_expo_yaw, 4, adjust_selection(3, 2), 25, 7);
     	  }
           osd_menu_phase++;
           break;
@@ -468,7 +516,7 @@ void osd_display(void) {
     	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
           uint8_t osd_angle_expo_roll[4];
           fast_fprint(osd_angle_expo_roll, 4, profile.rate.silverware.angle_expo.roll, 2);
-          osd_print_data(osd_angle_expo_roll, 4, TEXT, 15, 8);
+          osd_print_data(osd_angle_expo_roll, 4, adjust_selection(1, 3), 15, 8);
     	  }
           osd_menu_phase++;
           break;
@@ -476,7 +524,7 @@ void osd_display(void) {
     	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
           uint8_t osd_angle_expo_pitch[4];
           fast_fprint(osd_angle_expo_pitch, 4, profile.rate.silverware.angle_expo.pitch, 2);
-          osd_print_data(osd_angle_expo_pitch, 4, TEXT, 20, 8);
+          osd_print_data(osd_angle_expo_pitch, 4, adjust_selection(2, 3), 20, 8);
     	  }
           osd_menu_phase++;
           break;
@@ -484,12 +532,12 @@ void osd_display(void) {
     	  if (profile.rate.mode == RATE_MODE_SILVERWARE){
           uint8_t osd_angle_expo_yaw[4];
           fast_fprint(osd_angle_expo_yaw, 4, profile.rate.silverware.angle_expo.yaw, 2);
-          osd_print_data(osd_angle_expo_yaw, 4, TEXT, 25, 8);
+          osd_print_data(osd_angle_expo_yaw, 4, adjust_selection(3, 3), 25, 8);
     	  }
           osd_menu_phase++;
           break;
       case 18:
-    	  //osd_adjust_silverwarerates_item();
+    	  osd_adjust_silverwarerates_item();
     	  break;
       }
     break;

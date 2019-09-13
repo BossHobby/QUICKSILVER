@@ -107,22 +107,34 @@ void gestures(void) {
     if (command == GESTURE_OSD_UP) {
       extern uint8_t osd_menu_phase;
       extern uint8_t osd_cursor;
+      extern uint8_t osd_select;
+      if(osd_select){
+    	  //do nothing here but handle gesture in osd.c to increase a value
+      }else{
       osd_cursor--;
       osd_menu_phase = 1;
       ledblink = 1;
+      }
     }
 
     if (command == GESTURE_OSD_DOWN) {
       extern uint8_t osd_menu_phase;
       extern uint8_t osd_cursor;
+      extern uint8_t osd_select;
+      if(osd_select){
+    	  //do nothing here but handle gesture in osd.c to decrease a value
+      }else{
       osd_menu_phase = 1;
       osd_cursor++;
       ledblink = 1;
+      }
     }
 
     if (command == GESTURE_OSD_RIGHT) {
       extern uint8_t osd_select;
-      osd_select = 1;
+      extern uint8_t osd_menu_phase;
+      osd_select ++;
+      osd_menu_phase = 1;
       ledblink = 2;
     }
 
@@ -130,6 +142,11 @@ void gestures(void) {
       extern uint8_t osd_cursor;
       extern uint8_t osd_display_phase;
       extern uint8_t osd_menu_phase;
+      extern uint8_t osd_select;
+      if(osd_select){
+      osd_select --;
+      osd_menu_phase = 1;
+      }else{
       osd_cursor = 0;
       if (osd_display_phase > 2){
     	  osd_display_phase = 1;
@@ -139,6 +156,7 @@ void gestures(void) {
       }
       ledblink = 2 - osd_display_phase;
       pid_gestures_used = 0;
+      }
     }
 #endif
 
