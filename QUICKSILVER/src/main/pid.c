@@ -102,7 +102,7 @@ float *pids_array[3] = {
 int number_of_increments[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 int current_pid_axis = 0;
 int current_pid_term = 0;
-float *current_pid_term_pointer = profile.pid.kp.axis;
+static vector_t *current_pid_term_pointer = &profile.pid.kp;
 
 float ierror[PIDNUMBER] = {0, 0, 0};
 float pidoutput[PIDNUMBER];
@@ -372,15 +372,15 @@ int next_pid_term() {
 
   switch (current_pid_term) {
   case 0:
-    current_pid_term_pointer = profile.pid.kp.axis;
+    current_pid_term_pointer = &profile.pid.ki;
     current_pid_term = 1;
     break;
   case 1:
-    current_pid_term_pointer = profile.pid.ki.axis;
+    current_pid_term_pointer = &profile.pid.kd;
     current_pid_term = 2;
     break;
   case 2:
-    current_pid_term_pointer = profile.pid.kd.axis;
+    current_pid_term_pointer = &profile.pid.kp;
     current_pid_term = 0;
     break;
   }
@@ -425,7 +425,7 @@ int change_pid_value(int increase) {
     multiplier = multiplier - multiplier - multiplier; // Invert it for decreasing pid
   }
 
-  float newPID = current_pid_term_pointer[current_pid_axis]; //Set the newPID to the current PID.
+  float newPID = current_pid_term_pointer->axis[current_pid_axis]; //Set the newPID to the current PID.
 
   if (current_pid_term == 0)
     multiplier = multiplier / 10.0f; //profile.pid.kd.axis: 0.xe-2 - other PIDs: 0.xe-1
@@ -440,12 +440,12 @@ int change_pid_value(int increase) {
   }
 #endif
 
-  newPID = current_pid_term_pointer[current_pid_axis] + ((float)PID_TUNING_INCDEC_FACTOR * multiplier);
+  newPID = current_pid_term_pointer->axis[current_pid_axis] + ((float)PID_TUNING_INCDEC_FACTOR * multiplier);
   if (newPID > 0) {
-    current_pid_term_pointer[current_pid_axis] = newPID;
+    current_pid_term_pointer->axis[current_pid_axis] = newPID;
 #ifdef COMBINE_PITCH_ROLL_PID_TUNING
     if (current_pid_axis == 0) {
-      current_pid_term_pointer[current_pid_axis + 1] = newPID;
+      current_pid_term_pointer->axis[current_pid_axis + 1] = newPID;
     }
 #endif
   }
@@ -459,11 +459,11 @@ int change_pid_value(int increase) {
     number_of_increments[current_pid_term][current_pid_axis]--;
   }
 
-  current_pid_term_pointer[current_pid_axis] = current_pid_term_pointer[current_pid_axis] * multiplier;
+  current_pid_term_pointer->axis[current_pid_axis] = current_pid_term_pointer->axis[current_pid_axis] * multiplier;
 
 #ifdef COMBINE_PITCH_ROLL_PID_TUNING
   if (current_pid_axis == 0) {
-    current_pid_term_pointer[current_pid_axis + 1] = current_pid_term_pointer[current_pid_axis + 1] * multiplier;
+    current_pid_term_pointer->axis[current_pid_axis + 1] = current_pid_term_pointer->axis[current_pid_axis + 1] * multiplier;
   }
 #endif
 #endif
