@@ -3,6 +3,7 @@
 #include "drv_cc2500.h"
 #include "drv_time.h"
 #include "drv_usb.h"
+#include "profile.h"
 #include "util.h"
 
 #if defined(RX_FRSKY) && defined(USE_CC2500)
@@ -340,7 +341,7 @@ static uint8_t frsky_d_append_hub_telemetry(uint8_t telemetry_id, uint8_t *buf) 
 #define FRSKY_HUB_FIRST_USER_ID 0x31
 
   static uint8_t pid_axis = 0;
-  extern float *pids_array[3];
+  extern vector_t *current_pid_term_pointer();
 
   extern int current_pid_term;
   extern int current_pid_axis;
@@ -366,7 +367,7 @@ static uint8_t frsky_d_append_hub_telemetry(uint8_t telemetry_id, uint8_t *buf) 
 
     pid_axis = 0;
   } else {
-    const int16_t pidk = (int16_t)(pids_array[current_pid_term][pid_axis] * 1000);
+    const int16_t pidk = (int16_t)(current_pid_term_pointer()->axis[pid_axis] * 1000);
     buf[size++] = 0x5E;
     buf[size++] = FRSKY_HUB_FIRST_USER_ID + 2 + pid_axis;
     size += frsky_d_hub_encode(buf + size, (uint8_t)(pidk & 0xff));

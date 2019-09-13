@@ -93,17 +93,17 @@ void usb_configurator(void) {
     }
 
     usb_serial_printf("pidkp: %f %f %f\r\n",
-                      profile.pid.kp.axis[0],
-                      profile.pid.kp.axis[1],
-                      profile.pid.kp.axis[2]);
+                      profile_current_pid_rates()->kp.axis[0],
+                      profile_current_pid_rates()->kp.axis[1],
+                      profile_current_pid_rates()->kp.axis[2]);
     usb_serial_printf("pidki: %f %f %f\r\n",
-                      profile.pid.ki.axis[0],
-                      profile.pid.ki.axis[1],
-                      profile.pid.ki.axis[2]);
+                      profile_current_pid_rates()->ki.axis[0],
+                      profile_current_pid_rates()->ki.axis[1],
+                      profile_current_pid_rates()->ki.axis[2]);
     usb_serial_printf("pidkd: %f %f %f\r\n",
-                      profile.pid.kd.axis[0],
-                      profile.pid.kd.axis[1],
-                      profile.pid.kd.axis[2]);
+                      profile_current_pid_rates()->kd.axis[0],
+                      profile_current_pid_rates()->kd.axis[1],
+                      profile_current_pid_rates()->kd.axis[2]);
     break;
   }
 }

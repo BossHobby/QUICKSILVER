@@ -9,7 +9,6 @@
 extern const profile_t default_profile;
 extern profile_t profile;
 extern float accelcal[];
-extern float *pids_array[3];
 
 #define FMC_HEADER 0x12AA0001
 
@@ -19,9 +18,9 @@ float flash_get_hard_coded_pid_identifier(void) {
   float result = 0;
 
   for (int i = 0; i < 3; i++) {
-    for (int j = 0; j < 3; j++) {
-      result += pids_array[i][j] * (i + 1) * (j + 1) * 0.932f;
-    }
+    result += profile.pid.pid_rates[0].kp.axis[i] * (i + 1) * (1) * 0.932f;
+    result += profile.pid.pid_rates[0].ki.axis[i] * (i + 1) * (2) * 0.932f;
+    result += profile.pid.pid_rates[0].kd.axis[i] * (i + 1) * (3) * 0.932f;
   }
   return result;
 }

@@ -70,6 +70,40 @@ typedef struct {
   MEMBER(ki, vector_t)   \
   MEMBER(kd, vector_t)
 
+typedef enum {
+  PID_PROFILE_1,
+  PID_PROFILE_2,
+  PID_PROFILE_MAX
+} pid_profile_t;
+
+typedef struct {
+  vector_t accelerator;
+  vector_t transition;
+} stick_rate_t;
+
+#define STICK_RATE_MEMBERS      \
+  MEMBER(accelerator, vector_t) \
+  MEMBER(transition, vector_t)
+
+typedef enum {
+  STICK_PROFILE_1,
+  STICK_PROFILE_2,
+  STICK_PROFILE_MAX
+} stick_profile_t;
+
+typedef struct {
+  pid_profile_t pid_profile;
+  pid_rate_t pid_rates[PID_PROFILE_MAX];
+  stick_profile_t stick_profile;
+  stick_rate_t stick_rates[STICK_PROFILE_MAX];
+} profile_pid_t;
+
+#define PID_MEMBERS                                    \
+  MEMBER(pid_profile, uint8)                           \
+  ARRAY_MEMBER(pid_rates, PID_PROFILE_MAX, pid_rate_t) \
+  MEMBER(stick_profile, uint8)                         \
+  ARRAY_MEMBER(stick_rates, STICK_PROFILE_MAX, stick_rate_t)
+
 typedef struct {
   float digital_idle;
   uint8_t invert_yaw;
@@ -98,6 +132,9 @@ typedef struct {
   aux_channel_t aux[AUX_FUNCTION_MAX];
 } channel_t;
 
+#define CHANNEL_MEMBERS \
+  ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, uint8)
+
 typedef struct {
   uint8_t name[36];
   uint32_t datetime;
@@ -109,7 +146,7 @@ typedef struct {
   motor_t motor;
   rate_t rate;
   channel_t channel;
-  pid_rate_t pid;
+  profile_pid_t pid;
   voltage_t voltage;
 } profile_t;
 
@@ -118,10 +155,11 @@ typedef struct {
   MEMBER(motor, motor_t)     \
   MEMBER(rate, rate_t)       \
   MEMBER(channel, channel_t) \
-  MEMBER(pid, pid_rate_t)    \
+  MEMBER(pid, profile_pid_t) \
   MEMBER(voltage, voltage_t)
 
 void profile_set_defaults();
+pid_rate_t *profile_current_pid_rates();
 
 cbor_result_t cbor_encode_vector_t(cbor_value_t *enc, const vector_t *vec);
 cbor_result_t cbor_decode_profile_t(cbor_value_t *dec, profile_t *p);

@@ -739,31 +739,31 @@ buf[L++] =  onground_and_bind; //binary xxxxabcd - xxxx = error code or warning,
 
     switch (current_PID_for_display) {
     case 0:
-      pid_for_display = (uint16_t)(profile.pid.kp.axis[0] * 10000.0f);
+      pid_for_display = (uint16_t)(profile_current_pid_rates()->kp.axis[0] * 10000.0f);
       break;
     case 1:
-      pid_for_display = (uint16_t)(profile.pid.kp.axis[1] * 10000.0f);
+      pid_for_display = (uint16_t)(profile_current_pid_rates()->kp.axis[1] * 10000.0f);
       break;
     case 2:
-      pid_for_display = (uint16_t)(profile.pid.kp.axis[2] * 10000.0f);
+      pid_for_display = (uint16_t)(profile_current_pid_rates()->kp.axis[2] * 10000.0f);
       break;
     case 3:
-      pid_for_display = (uint16_t)(profile.pid.ki.axis[0] * 10000.0f);
+      pid_for_display = (uint16_t)(profile_current_pid_rates()->ki.axis[0] * 10000.0f);
       break;
     case 4:
-      pid_for_display = (uint16_t)(profile.pid.ki.axis[1] * 10000.0f);
+      pid_for_display = (uint16_t)(profile_current_pid_rates()->ki.axis[1] * 10000.0f);
       break;
     case 5:
-      pid_for_display = (uint16_t)(profile.pid.ki.axis[2] * 10000.0f);
+      pid_for_display = (uint16_t)(profile_current_pid_rates()->ki.axis[2] * 10000.0f);
       break;
     case 6:
-      pid_for_display = (uint16_t)(profile.pid.kd.axis[0] * 10000.0f);
+      pid_for_display = (uint16_t)(profile_current_pid_rates()->kd.axis[0] * 10000.0f);
       break;
     case 7:
-      pid_for_display = (uint16_t)(profile.pid.kd.axis[1] * 10000.0f);
+      pid_for_display = (uint16_t)(profile_current_pid_rates()->kd.axis[1] * 10000.0f);
       break;
     case 8:
-      pid_for_display = (uint16_t)(profile.pid.kd.axis[2] * 10000.0f);
+      pid_for_display = (uint16_t)(profile_current_pid_rates()->kd.axis[2] * 10000.0f);
       break;
       /*
 	 //level mode PIDs - disabled for now...

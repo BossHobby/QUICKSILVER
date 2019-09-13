@@ -203,29 +203,26 @@ void checkrx() {
       CRCByte = CRCByte >> 8;
       if (CRCByte == 0x00FF) { //CRC is good, check Failsafe bit(s) and shove it into controls
 
-          
         //FPORT uses SBUS style data, but starts further in the packet
-        
-    if (data[25] & (1 << 2)) //RX appears to set this bit when it knows it missed a frame. How does it know?
-    {
-      if (!time_siglost)
-        time_siglost = gettime();
-      if (gettime() - time_siglost > TICK_CLOCK_FREQ_HZ) //8,000,000 ticks on F0, 21M on F4. One second.
-      {
-        failsafe_siglost = 1;
-      }
-    } else {
-      time_siglost = 0;
-      failsafe_siglost = 0;
-    }
-    if (data[25] & (1 << 3)) {
-      failsafe_sbus_failsafe = 1; // Sbus packets have a failsafe bit. This is cool.
-    } else {
-      failsafe_sbus_failsafe = 0;
-    }
-          
-          
-          
+
+        if (data[25] & (1 << 2)) //RX appears to set this bit when it knows it missed a frame. How does it know?
+        {
+          if (!time_siglost)
+            time_siglost = gettime();
+          if (gettime() - time_siglost > TICK_CLOCK_FREQ_HZ) //8,000,000 ticks on F0, 21M on F4. One second.
+          {
+            failsafe_siglost = 1;
+          }
+        } else {
+          time_siglost = 0;
+          failsafe_siglost = 0;
+        }
+        if (data[25] & (1 << 3)) {
+          failsafe_sbus_failsafe = 1; // Sbus packets have a failsafe bit. This is cool.
+        } else {
+          failsafe_sbus_failsafe = 0;
+        }
+
         channels[0] = ((data[3] | data[4] << 8) & 0x07FF);
         channels[1] = ((data[4] >> 3 | data[5] << 5) & 0x07FF);
         channels[2] = ((data[5] >> 6 | data[6] << 2 | data[7] << 10) & 0x07FF);
@@ -378,22 +375,22 @@ void checkrx() {
           } else if (telemetryPosition == 4) { //PID-P
             telemetryPacket[3] = telemetryIDs[telemetryPosition];
             telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-            telemetryPacket[5] = (int)(profile.pid.kp.axis[current_pid_axis] * 10000);
-            telemetryPacket[6] = (int)(profile.pid.kp.axis[current_pid_axis] * 10000) >> 8;
+            telemetryPacket[5] = (int)(profile_current_pid_rates()->kp.axis[current_pid_axis] * 10000);
+            telemetryPacket[6] = (int)(profile_current_pid_rates()->kp.axis[current_pid_axis] * 10000) >> 8;
             telemetryPacket[7] = 0x00;
             telemetryPacket[8] = 0x00;
           } else if (telemetryPosition == 5) { //PID-I
             telemetryPacket[3] = telemetryIDs[telemetryPosition];
             telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-            telemetryPacket[5] = (int)(profile.pid.ki.axis[current_pid_axis] * 1000);
-            telemetryPacket[6] = (int)(profile.pid.ki.axis[current_pid_axis] * 1000) >> 8;
+            telemetryPacket[5] = (int)(profile_current_pid_rates()->ki.axis[current_pid_axis] * 1000);
+            telemetryPacket[6] = (int)(profile_current_pid_rates()->ki.axis[current_pid_axis] * 1000) >> 8;
             telemetryPacket[7] = 0x00;
             telemetryPacket[8] = 0x00;
           } else if (telemetryPosition == 6) { //PID-D
             telemetryPacket[3] = telemetryIDs[telemetryPosition];
             telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-            telemetryPacket[5] = (int)(profile.pid.kd.axis[current_pid_axis] * 1000);
-            telemetryPacket[6] = (int)(profile.pid.kd.axis[current_pid_axis] * 1000) >> 8;
+            telemetryPacket[5] = (int)(profile_current_pid_rates()->kd.axis[current_pid_axis] * 1000);
+            telemetryPacket[6] = (int)(profile_current_pid_rates()->kd.axis[current_pid_axis] * 1000) >> 8;
             telemetryPacket[7] = 0x00;
             telemetryPacket[8] = 0x00;
           }

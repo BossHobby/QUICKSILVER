@@ -34,32 +34,6 @@ THE SOFTWARE.
 #include "profile.h"
 #include "util.h"
 
-//**************************ADVANCED PID CONTROLLER - WITH PROFILE SWITCHING ON AUX SWITCH PIDPROFILE*******************************
-// GENERAL SUMMARY OF THIS FEATURE:
-// stickAccelerator and stickTransition are a more detailed version of the traditional D term setpoint weight and transition variables that you may be familiar with in other firmwares.
-// The difference here is that we name the D term setpoint weight "Stick Accelerator" because it's actual function is to accelerate the response of the pid controller to stick inputs.
-// Another difference is that negative stick transitions are possible meaning that you can have a higher stick acceleration near center stick which fades to a lower stick acceleration at
-// full stick throws should you desire to see what that feels like.  Traditionally we are only used to being able to transition from a low setpoint to a higher one.
-// The final differences are that you can adjust each axis independently and also set up two seperate profiles so that you can switch "feels" in flight with the PIDPROFILE aux
-// channel selection set up in the receiver section of config.h
-//
-//HOW TO USE THIS FEATURE:
-// Safe values for stickAccelerator are from 0 to about 2.5 where 0 represents a "MEASUREMENT" based D term calculation and is the traditional Silverware PID controller, and a
-// a value of 1 represents an "ERROR" based D term calculation.  Values above 1 add even more acceleration but be reasonable and keep this below about 2.5.
-
-// Range of acceptable values for stickTransition are from -1 to 1.  Do not input a value outside of this range.  When stick transition is 0 - no stick transition will take place
-// and stick acceleration will remain constant regardless of stick position.  Positive values up to 1 will represent a transition where stick acceleration at it's maximum at full
-// stick deflection and is reduced by whatever percentage you enter here at stick center.  For example accelerator at 1 and transition at .3 means that there will be 30% reduction
-// of acceleration at stick center, and acceleration strength of 1 at full stick.
-
-//pid profile A						 Roll  PITCH  YAW
-float stickAcceleratorProfileA[3] = {0.0, 0.0, 0.0}; //keep values between 0 and 2.5
-float stickTransitionProfileA[3] = {0.0, 0.0, 0.0};  //keep values between -1 and 1
-
-//pid profile B						 Roll  PITCH  YAW
-float stickAcceleratorProfileB[3] = {1.5, 1.5, 1.0}; //keep values between 0 and 2.5
-float stickTransitionProfileB[3] = {0.3, 0.3, 0.0};  //keep values between -1 and 1
-
 //************************************Setpoint Weight****************************************
 #ifdef BRUSHLESS_TARGET
 
@@ -94,15 +68,9 @@ const float integrallimit[PIDNUMBER] = {1.7, 1.7, 0.5};
 // non changable things below
 extern profile_t profile;
 
-float *pids_array[3] = {
-    profile.pid.kp.axis,
-    profile.pid.ki.axis,
-    profile.pid.kd.axis,
-};
 int number_of_increments[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 int current_pid_axis = 0;
 int current_pid_term = 0;
-static vector_t *current_pid_term_pointer = &profile.pid.kp;
 
 float ierror[PIDNUMBER] = {0, 0, 0};
 float pidoutput[PIDNUMBER];
@@ -172,18 +140,18 @@ float pid(int x) {
   if (!iwindup) {
 #ifdef MIDPOINT_RULE_INTEGRAL
     // trapezoidal rule instead of rectangular
-    ierror[x] = ierror[x] + (error[x] + lasterror[x]) * 0.5f * profile.pid.ki.axis[x] * looptime;
+    ierror[x] = ierror[x] + (error[x] + lasterror[x]) * 0.5f * profile_current_pid_rates()->ki.axis[x] * looptime;
     lasterror[x] = error[x];
 #endif
 
 #ifdef RECTANGULAR_RULE_INTEGRAL
-    ierror[x] = ierror[x] + error[x] * profile.pid.ki.axis[x] * looptime;
+    ierror[x] = ierror[x] + error[x] * profile_current_pid_rates()->ki.axis[x] * looptime;
     lasterror[x] = error[x];
 #endif
 
 #ifdef SIMPSON_RULE_INTEGRAL
     // assuming similar time intervals
-    ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + error[x]) * profile.pid.ki.axis[x] * looptime;
+    ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + error[x]) * profile_current_pid_rates()->ki.axis[x] * looptime;
     lasterror2[x] = lasterror[x];
     lasterror[x] = error[x];
 #endif
@@ -193,12 +161,12 @@ float pid(int x) {
 
 #ifdef ENABLE_SETPOINT_WEIGHTING
   // P term
-  pidoutput[x] = error[x] * (b[x]) * profile.pid.kp.axis[x];
+  pidoutput[x] = error[x] * (b[x]) * profile_current_pid_rates()->kp.axis[x];
   // b
-  pidoutput[x] += -(1.0f - b[x]) * profile.pid.kp.axis[x] * gyro[x];
+  pidoutput[x] += -(1.0f - b[x]) * profile_current_pid_rates()->kp.axis[x] * gyro[x];
 #else
   // P term with b disabled
-  pidoutput[x] = error[x] * profile.pid.kp.axis[x];
+  pidoutput[x] = error[x] * profile_current_pid_rates()->kp.axis[x];
 #endif
 
   // I term
@@ -206,14 +174,14 @@ float pid(int x) {
 
   // D term
   // skip yaw D term if not set
-  if (profile.pid.kd.axis[x] > 0) {
+  if (profile_current_pid_rates()->kd.axis[x] > 0) {
 
 #if (defined DTERM_LPF_1ST_HZ && !defined ADVANCED_PID_CONTROLLER)
     float dterm;
     static float lastrate[3];
     static float dlpf[3] = {0};
 
-    dterm = -(gyro[x] - lastrate[x]) * profile.pid.kd.axis[x] * timefactor;
+    dterm = -(gyro[x] - lastrate[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor;
     lastrate[x] = gyro[x];
     lpf(&dlpf[x], dterm, FILTERCALC(looptime, 1.0f / DTERM_LPF_1ST_HZ));
     pidoutput[x] += dlpf[x];
@@ -226,11 +194,11 @@ float pid(int x) {
     float stickAccelerator[3];
     float stickTransition[3];
     if (rx_aux_on(AUX_PIDPROFILE)) {
-      stickAccelerator[x] = stickAcceleratorProfileB[x];
-      stickTransition[x] = stickTransitionProfileB[x];
+      stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_2].accelerator.axis[x];
+      stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_2].transition.axis[x];
     } else {
-      stickAccelerator[x] = stickAcceleratorProfileA[x];
-      stickTransition[x] = stickTransitionProfileA[x];
+      stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_1].accelerator.axis[x];
+      stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_1].transition.axis[x];
     }
     if (stickAccelerator[x] < 1) {
       transitionSetpointWeight[x] = (fabsf(rxcopy[x]) * stickTransition[x]) + (1 - stickTransition[x]);
@@ -242,11 +210,11 @@ float pid(int x) {
     static float dlpf[3] = {0};
     static float setpoint_derivative[3];
 
-    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * profile.pid.kd.axis[x] * timefactor;
+    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor;
 #ifdef RX_SMOOTHING_HZ
     lpf(&setpoint_derivative[x], setpoint_derivative[x], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / RX_SMOOTHING_HZ));
 #endif
-    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * profile.pid.kd.axis[x] * timefactor);
+    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor);
     lastsetpoint[x] = setpoint[x];
     lastrate[x] = gyro[x];
     lpf(&dlpf[x], dterm, FILTERCALC(looptime, 1.0f / DTERM_LPF_1ST_HZ));
@@ -258,7 +226,7 @@ float pid(int x) {
     static float lastrate[3];
     float lpf2(float in, int num);
 
-    dterm = -(gyro[x] - lastrate[x]) * profile.pid.kd.axis[x] * timefactor;
+    dterm = -(gyro[x] - lastrate[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor;
     lastrate[x] = gyro[x];
     dterm = lpf2(dterm, x);
     pidoutput[x] += dterm;
@@ -271,11 +239,11 @@ float pid(int x) {
     float stickAccelerator[3];
     float stickTransition[3];
     if (rx_aux_on(AUX_PIDPROFILE)) {
-      stickAccelerator[x] = stickAcceleratorProfileB[x];
-      stickTransition[x] = stickTransitionProfileB[x];
+      stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_2].accelerator.axis[x];
+      stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_2].transition.axis[x];
     } else {
-      stickAccelerator[x] = stickAcceleratorProfileA[x];
-      stickTransition[x] = stickTransitionProfileA[x];
+      stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_1].accelerator.axis[x];
+      stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_1].transition.axis[x];
     }
     if (stickAccelerator[x] < 1) {
       transitionSetpointWeight[x] = (fabsf(rxcopy[x]) * stickTransition[x]) + (1 - stickTransition[x]);
@@ -287,11 +255,11 @@ float pid(int x) {
     float lpf2(float in, int num);
     static float setpoint_derivative[3];
 
-    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * profile.pid.kd.axis[x] * timefactor;
+    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor;
 #ifdef RX_SMOOTHING_HZ
     lpf(&setpoint_derivative[x], setpoint_derivative[x], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / RX_SMOOTHING_HZ));
 #endif
-    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * profile.pid.kd.axis[x] * timefactor);
+    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor);
     lastsetpoint[x] = setpoint[x];
     lastrate[x] = gyro[x];
     dterm = lpf2(dterm, x);
@@ -368,24 +336,23 @@ float lpf2(float in, int num) {
 // 3: D
 // The return value is used to blink the leds in main.c
 int next_pid_term() {
-  //	current_pid_axis = 0;
+  current_pid_term++;
+  if (current_pid_term == 3) {
+    current_pid_term = 0;
+  }
+  return current_pid_term + 1;
+}
 
+vector_t *current_pid_term_pointer() {
   switch (current_pid_term) {
   case 0:
-    current_pid_term_pointer = &profile.pid.ki;
-    current_pid_term = 1;
-    break;
+    return &profile_current_pid_rates()->kp;
   case 1:
-    current_pid_term_pointer = &profile.pid.kd;
-    current_pid_term = 2;
-    break;
+    return &profile_current_pid_rates()->ki;
   case 2:
-    current_pid_term_pointer = &profile.pid.kp;
-    current_pid_term = 0;
-    break;
+    return &profile_current_pid_rates()->kd;
   }
-
-  return current_pid_term + 1;
+  return &profile_current_pid_rates()->kp;
 }
 
 // Cycle through the axis - Initial is Roll
@@ -425,10 +392,10 @@ int change_pid_value(int increase) {
     multiplier = multiplier - multiplier - multiplier; // Invert it for decreasing pid
   }
 
-  float newPID = current_pid_term_pointer->axis[current_pid_axis]; //Set the newPID to the current PID.
+  float newPID = current_pid_term_pointer()->axis[current_pid_axis]; //Set the newPID to the current PID.
 
   if (current_pid_term == 0)
-    multiplier = multiplier / 10.0f; //profile.pid.kd.axis: 0.xe-2 - other PIDs: 0.xe-1
+    multiplier = multiplier / 10.0f; //profile_current_pid_rates()->kd.axis: 0.xe-2 - other PIDs: 0.xe-1
 
 #ifdef RX_FPORT
   //FPORT you can see the PIDs changing, so let's give smaller increments at the lower end
@@ -440,12 +407,12 @@ int change_pid_value(int increase) {
   }
 #endif
 
-  newPID = current_pid_term_pointer->axis[current_pid_axis] + ((float)PID_TUNING_INCDEC_FACTOR * multiplier);
+  newPID = current_pid_term_pointer()->axis[current_pid_axis] + ((float)PID_TUNING_INCDEC_FACTOR * multiplier);
   if (newPID > 0) {
-    current_pid_term_pointer->axis[current_pid_axis] = newPID;
+    current_pid_term_pointer()->axis[current_pid_axis] = newPID;
 #ifdef COMBINE_PITCH_ROLL_PID_TUNING
     if (current_pid_axis == 0) {
-      current_pid_term_pointer->axis[current_pid_axis + 1] = newPID;
+      current_pid_term_pointer()->axis[current_pid_axis + 1] = newPID;
     }
 #endif
   }
@@ -459,11 +426,11 @@ int change_pid_value(int increase) {
     number_of_increments[current_pid_term][current_pid_axis]--;
   }
 
-  current_pid_term_pointer->axis[current_pid_axis] = current_pid_term_pointer->axis[current_pid_axis] * multiplier;
+  current_pid_term_pointer()->axis[current_pid_axis] = current_pid_term_pointer()->axis[current_pid_axis] * multiplier;
 
 #ifdef COMBINE_PITCH_ROLL_PID_TUNING
   if (current_pid_axis == 0) {
-    current_pid_term_pointer->axis[current_pid_axis + 1] = current_pid_term_pointer->axis[current_pid_axis + 1] * multiplier;
+    current_pid_term_pointer()->axis[current_pid_axis + 1] = current_pid_term_pointer()->axis[current_pid_axis + 1] * multiplier;
   }
 #endif
 #endif
