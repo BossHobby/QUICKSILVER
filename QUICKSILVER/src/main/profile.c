@@ -193,7 +193,7 @@ const profile_t default_profile = {
 profile_t profile;
 
 void profile_set_defaults() {
-  profile = default_profile;
+  memcpy(&profile, &default_profile, sizeof(profile_t));
 }
 
 int8_t buf_equal(const uint8_t *str1, size_t len1, const uint8_t *str2, size_t len2) {
