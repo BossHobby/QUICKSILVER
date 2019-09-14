@@ -1,6 +1,6 @@
 #include "defines.h"
 
-void usart_rx_init(void);
+void usart_rx_init(uint8_t RXProtocol);
 //void Ibus_USART_ISR(void);
 //void DSM_USART_ISR(void);
 //void 	SBUS_USART_ISR(void);

@@ -138,7 +138,7 @@ void spektrumFrameStatus(void) {
 }
 
 void dsm_init(void) {
-  usart_rx_init();  //initialize usart in drv_rx_serial
+  usart_rx_init(4);  //initialize usart in drv_rx_serial
   framestarted = 0; // set setup complete flag
 }
 

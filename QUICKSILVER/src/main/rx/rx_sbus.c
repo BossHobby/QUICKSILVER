@@ -118,7 +118,7 @@ void RX_USART_ISR(void) {
 }
 
 void sbus_init(void) {
-  usart_rx_init(); //initialize usart in drv_rx_serial
+  usart_rx_init(2); //initialize usart in drv_rx_serial
   rxmode = !RXMODE_BIND;
   // set setup complete flag
   framestarted = 0;

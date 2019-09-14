@@ -7,16 +7,27 @@
 #include "drv_time.h"
 
 //SET SERIAL BAUDRATE BASED ON RECEIVER PROTOCOL
+//1 = fport
+//2 = sbus
+//3 = ibus
+//4 = DSM2/X
+//5 = CRSF
 
-#if defined(RX_CRSF)
-#define SERIAL_BAUDRATE 420000
-#endif
-#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_IBUS) || defined(RX_FPORT)
-#define SERIAL_BAUDRATE 115200
-#endif
-#if defined(RX_SBUS)
-#define SERIAL_BAUDRATE 100000
-#endif
+
+
+
+
+
+
+//#if defined(RX_CRSF)
+//#define SERIAL_BAUDRATE 420000
+//#endif
+//#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_IBUS) || defined(RX_FPORT)
+//#define SERIAL_BAUDRATE 115200
+//#endif
+//#if defined(RX_SBUS)
+//#define SERIAL_BAUDRATE 100000
+//#endif
 
 //FUNCTION TO SET APB CLOCK TO USART BASED ON USER SELECTED UART, TARGET MCU, AND TARGET DEFINED USART ALTERNATE FUNCTION PINS CALLED BELOW FROM INSIDE usart_rx_init()
 
@@ -94,46 +105,104 @@ void usart_invert(void) {
 
 //FUNCTION TO INITIALIZE USART FOR A SERIAL RX CALLED FROM RECEIVER PROTOCOL
 
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
-void usart_rx_init(void) {
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
+void usart_rx_init(uint8_t RXProtocol) {
+  #if defined(RX_FPORT)
+  RXProtocol = 1;
+#endif
+#if defined(RX_SBUS)
+  RXProtocol = 2;
+#endif
+#if defined(RX_IBUS)
+  RXProtocol = 3;
+#endif
+#if defined(RX_DSM2_1024) || defined(RX_DSMX_2028)
+  RXProtocol = 4;
+#endif
+#if defined(RX_CRSF)
+  RXProtocol = 5;
+#endif
+
+#if defined(RX_CRSF)
+#define SERIAL_BAUDRATE 420000
+#endif
+#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_IBUS) || defined(RX_FPORT)
+#define SERIAL_BAUDRATE 115200
+#endif
+#if defined(RX_SBUS)
+#define SERIAL_BAUDRATE 100000
+#endif
+
   // make sure there is some time to program the board if SDA pins are reinitialized as GPIO
   if (gettime() < 2000000)
     return;
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
+//#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
+if(RXProtocol == 3 || RXProtocol == 4 || RXProtocol == 5){
   GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-#endif
-#if defined(RX_SBUS) || defined(RX_FPORT)
+}
+//#endif
+else if(RXProtocol == 1 || RXProtocol == 2){
+//#if defined(RX_SBUS) || defined(RX_FPORT)
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-#endif
+//#endif
+}
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_Pin = SERIAL_RX_PIN;
   GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure);
   GPIO_PinAFConfig(SERIAL_RX_PORT, SERIAL_RX_SOURCE, SERIAL_RX_CHANNEL);
   APBPeriphClockCmd();
   USART_InitTypeDef USART_InitStructure;
-  USART_InitStructure.USART_BaudRate = SERIAL_BAUDRATE;
+  if(RXProtocol == 1 || RXProtocol == 3 || RXProtocol == 4 || RXProtocol == 5){
+    USART_InitStructure.USART_BaudRate = 115200;
+  }
+  else if(RXProtocol == 2){
+    USART_InitStructure.USART_BaudRate = 100000;
+  }
+  else if(RXProtocol == 4){
+    USART_InitStructure.USART_BaudRate = 420000;
+  }
+  
   USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
-  USART_InitStructure.USART_StopBits = USART_StopBits_1;
+  if(RXProtocol == 2){
+    USART_InitStructure.USART_StopBits = USART_StopBits_2;
+  USART_InitStructure.USART_Parity = USART_Parity_Even;
+  }
+  else{
+    USART_InitStructure.USART_StopBits = USART_StopBits_1;
   USART_InitStructure.USART_Parity = USART_Parity_No;
-#endif
-#if defined(RX_SBUS)
-  USART_InitStructure.USART_StopBits = USART_StopBits_2;
-  USART_InitStructure.USART_Parity = USART_Parity_Even; //todo: try setting even
-#endif
+  }
+//#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
+//  USART_InitStructure.USART_StopBits = USART_StopBits_1;
+//  USART_InitStructure.USART_Parity = USART_Parity_No;
+//#endif
+//#if defined(RX_SBUS)
+//  USART_InitStructure.USART_StopBits = USART_StopBits_2;
+//  USART_InitStructure.USART_Parity = USART_Parity_Even; //todo: try setting even
+//#endif
+
   USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-#if defined(RX_FPORT) || defined(RX_CRSF)
+
+if(RXProtocol == 1 || RXProtocol == 5){
   USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-#else
+}
+else{
   USART_InitStructure.USART_Mode = USART_Mode_Rx; //USART_Mode_Rx | USART_Mode_Tx;
-#endif
-#if defined(RX_FPORT)
+}
+//#if defined(RX_FPORT) || defined(RX_CRSF)
+//  USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+//#else
+//  USART_InitStructure.USART_Mode = USART_Mode_Rx; //USART_Mode_Rx | USART_Mode_Tx;
+//#endif
+if(RXProtocol == 1){
   USART_HalfDuplexCmd(SERIAL_RX_USART, ENABLE);
-#endif
+}
+//#if defined(RX_FPORT)
+//  USART_HalfDuplexCmd(SERIAL_RX_USART, ENABLE);
+//#endif
   USART_Init(SERIAL_RX_USART, &USART_InitStructure);
 #ifdef F0
 #ifdef INVERT_UART
