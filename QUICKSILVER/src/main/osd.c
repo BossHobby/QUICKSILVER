@@ -4,6 +4,7 @@
 #include "stdio.h"
 #include "string.h"
 #include "profile.h"
+#include "float.h"
 
 #ifdef ENABLE_OSD
 
@@ -62,8 +63,14 @@ uint8_t decode_positionx(uint32_t element) { //shift 2 bits and grab the bottom 
 uint32_t decode_positiony(uint32_t element) { //shift 7 bits and grab the bottom 4
   return ((element >> 7) & 0x0F);             // this can be simplified to save memory if it debugs ok
 }
+//******************************************************************************************************************************
 
+
+//******************************************************************************************************************************
 // case state variables for switch logic
+
+extern int flash_feature_1; //currently used for auto entry into wizard menu
+extern profile_t profile;
 uint8_t osd_display_phase = 2;
 uint8_t osd_wizard_phase = 0;
 uint8_t osd_menu_phase = 0;
@@ -71,6 +78,14 @@ uint8_t osd_display_element = 0;
 uint8_t display_trigger = 0;
 uint8_t last_lowbatt_state = 2;
 uint8_t osd_cursor;
+uint8_t osd_select;
+uint8_t increase_osd_value;
+uint8_t decrease_osd_value;
+//******************************************************************************************************************************
+
+
+//******************************************************************************************************************************
+// osd utility functions
 
 void osd_display_reset(void) {
   osd_wizard_phase = 0;    //reset the wizard
@@ -80,7 +95,29 @@ void osd_display_reset(void) {
   last_lowbatt_state = 2;  //reset last lowbatt comparator
 }
 
-uint8_t osd_select;
+void osd_save_exit(void){
+    osd_cursor = 0;
+    osd_display_phase = 0;
+	#ifdef FLASH_SAVE1
+    extern int pid_gestures_used;
+    extern int ledcommand;
+    extern void flash_save(void);
+    extern void flash_load(void);
+    pid_gestures_used = 0;
+    ledcommand = 1;
+    flash_save();
+    flash_load();
+    // reset flash numbers for pids
+    extern int number_of_increments[3][3];
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 3; j++)
+        number_of_increments[i][j] = 0;
+    // reset loop time - maybe not necessary cause it gets reset in the next screen clear
+    extern unsigned long lastlooptime;
+    lastlooptime = gettime();
+    #endif
+}
+
 uint8_t user_selection(uint8_t element, uint8_t total) {
   if (osd_cursor != element) {
     if (osd_cursor < 1)
@@ -103,7 +140,31 @@ uint8_t adjust_selection(uint8_t element, uint8_t row) {
 	}
 }
 
-extern int flash_feature_1; //currently used for auto entry into wizard menu
+uint16_t rp_kp_scale(float pid_rate){		//increment by 0.0015923566878981f
+	uint16_t scaled_pid_value = (pid_rate * 628.0f);
+	return scaled_pid_value;
+}
+
+uint16_t yaw_kp_scale(float pid_rate){		//increment by 0.0031847133757962f
+	uint16_t scaled_pid_value = (pid_rate * 314.0f);
+	return scaled_pid_value;
+}
+
+uint16_t ki_scale(float pid_rate){			//increment by 0.02f
+	uint16_t scaled_pid_value = (pid_rate * 50.0f);
+	return scaled_pid_value;
+}
+
+uint16_t kd_scale(float pid_rate){			//increment by 0.0083333333333333f
+	uint16_t scaled_pid_value = (pid_rate * 120.0f);
+	return scaled_pid_value;
+}
+//******************************************************************************************************************************
+
+
+//******************************************************************************************************************************
+// osd submenu pointer logic
+
 void osd_select_menu_item(void) {
   if (osd_select == 1 && flash_feature_1 == 1) //main mmenu
   {
@@ -117,6 +178,9 @@ void osd_select_menu_item(void) {
       break;
 
     case 2:		//pids
+    	osd_cursor = 0;
+    	osd_display_phase = 3;
+    	osd_menu_phase = 0;
       break;
 
     case 3:		//filters
@@ -142,33 +206,112 @@ void osd_select_menu_item(void) {
       break;
 
     case 9:
-      osd_cursor = 0;
-      osd_display_phase = 0;
-
-#ifdef FLASH_SAVE1
-      extern int pid_gestures_used;
-      extern int ledcommand;
-      extern void flash_save(void);
-      extern void flash_load(void);
-      pid_gestures_used = 0;
-      ledcommand = 1;
-      flash_save();
-      flash_load();
-      // reset flash numbers for pids
-      extern int number_of_increments[3][3];
-      for (int i = 0; i < 3; i++)
-        for (int j = 0; j < 3; j++)
-          number_of_increments[i][j] = 0;
-      // reset loop time - maybe not necessary cause it gets reset in the next screen clear
-      extern unsigned long lastlooptime;
-      lastlooptime = gettime();
-#endif
+      osd_save_exit();
       break;
     }
   }
 }
+//******************************************************************************************************************************
 
-extern profile_t profile;
+
+//******************************************************************************************************************************
+//osd pids logic
+
+void osd_select_pidprofile_item(void)
+{
+  if (osd_select == 1) //stick was pushed right to select a rate type
+  {
+	osd_select = 0;	//reset the trigger
+	switch(osd_cursor){
+	case 1:
+		osd_cursor = 0;	//reset the cursor
+		profile.pid.pid_profile = PID_PROFILE_1;	//update profile
+		osd_display_phase = 4;	//update display phase to the next menu screen
+		osd_menu_phase = 0;	//clear the screen
+		break;
+	case 2:
+		osd_cursor = 0;
+		profile.pid.pid_profile = PID_PROFILE_2;	//update profile
+		osd_display_phase = 4;	//update display phase to the next menu screen
+		osd_menu_phase = 0;	//clear the screen
+		break;
+	}
+  }
+}
+
+
+void osd_adjust_pidprofile_item(void)
+{
+	if(osd_select > 3) {
+		osd_select = 3;	//limit osd select variable from accumulating past 3 columns of adjustable items
+		osd_menu_phase = 1; //repaint the screen again
+	}
+	switch(osd_cursor){
+	case 1: //adjust row 1 items based on osd_select value and up/down osd gestures
+		if(osd_select == 1){
+			if (increase_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].kp.roll = profile.pid.pid_rates[profile.pid.pid_profile].kp.roll + (0.0015924f + FLT_EPSILON);
+			if (decrease_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].kp.roll = profile.pid.pid_rates[profile.pid.pid_profile].kp.roll - (0.0015924f + FLT_EPSILON);
+		}
+		if(osd_select == 2){
+			if (increase_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].kp.pitch = profile.pid.pid_rates[profile.pid.pid_profile].kp.pitch + (0.0015924f + FLT_EPSILON);
+			if (decrease_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].kp.pitch = profile.pid.pid_rates[profile.pid.pid_profile].kp.pitch - (0.0015924f + FLT_EPSILON);
+		}
+		if(osd_select == 3){
+			if (increase_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].kp.yaw = profile.pid.pid_rates[profile.pid.pid_profile].kp.yaw + (0.0031847f + FLT_EPSILON);
+			if (decrease_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].kp.yaw = profile.pid.pid_rates[profile.pid.pid_profile].kp.yaw - (0.0031847f + FLT_EPSILON);
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 2:	//adjust row 2 items based on osd_select value and up/down osd gestures
+		if(osd_select == 1){
+			if (increase_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].ki.roll = profile.pid.pid_rates[profile.pid.pid_profile].ki.roll + (0.02f + FLT_EPSILON);
+			if (decrease_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].ki.roll = profile.pid.pid_rates[profile.pid.pid_profile].ki.roll - (0.02f + FLT_EPSILON);
+		}
+		if(osd_select == 2){
+			if (increase_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].ki.pitch = profile.pid.pid_rates[profile.pid.pid_profile].ki.pitch + (0.02f + FLT_EPSILON);
+			if (decrease_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].ki.pitch = profile.pid.pid_rates[profile.pid.pid_profile].ki.pitch - (0.02f + FLT_EPSILON);
+		}
+		if(osd_select == 3){
+			if (increase_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].ki.yaw = profile.pid.pid_rates[profile.pid.pid_profile].ki.yaw + (0.02f + FLT_EPSILON);
+			if (decrease_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].ki.yaw = profile.pid.pid_rates[profile.pid.pid_profile].ki.yaw - (0.02f + FLT_EPSILON);
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 3:	//adjust row 3 items based on osd_select value and up/down osd gestures
+		if(osd_select == 1){
+			if (increase_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].kd.roll = profile.pid.pid_rates[profile.pid.pid_profile].kd.roll + (0.0083333f + FLT_EPSILON);
+			if (decrease_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].kd.roll = profile.pid.pid_rates[profile.pid.pid_profile].kd.roll - (0.0083333f + FLT_EPSILON);
+		}
+		if(osd_select == 2){
+			if (increase_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].kd.pitch = profile.pid.pid_rates[profile.pid.pid_profile].kd.pitch + (0.0083333f + FLT_EPSILON);
+			if (decrease_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].kd.pitch = profile.pid.pid_rates[profile.pid.pid_profile].kd.pitch - (0.0083333f + FLT_EPSILON);
+		}
+		if(osd_select == 3){
+			if (increase_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].kd.yaw = profile.pid.pid_rates[profile.pid.pid_profile].kd.yaw + (0.0083333f + FLT_EPSILON);
+			if (decrease_osd_value) profile.pid.pid_rates[profile.pid.pid_profile].kd.yaw = profile.pid.pid_rates[profile.pid.pid_profile].kd.yaw - (0.0083333f + FLT_EPSILON);
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 4: //save&exit silverware rates
+		if (osd_select == 1){
+		osd_save_exit();
+		}
+		break;
+	}
+
+}
+//******************************************************************************************************************************
+
+
+//******************************************************************************************************************************
+//osd rates logic
+
 void osd_select_ratestype_item(void)
 {//		like above function but to select between betaflight and silverware rate menus
   if (osd_select == 1) //stick was pushed right to select a rate type
@@ -191,8 +334,7 @@ void osd_select_ratestype_item(void)
   }
 }
 
-uint8_t increase_osd_value;
-uint8_t decrease_osd_value;
+
 void osd_adjust_silverwarerates_item(void)
 {
 	if(osd_select > 3) {
@@ -202,16 +344,16 @@ void osd_adjust_silverwarerates_item(void)
 	switch(osd_cursor){
 	case 1: //adjust row 1 items based on osd_select value and up/down osd gestures
 		if(osd_select == 1){
-			if (increase_osd_value) profile.rate.silverware.max_rate.roll = profile.rate.silverware.max_rate.roll + 10.0f;
-			if (decrease_osd_value) profile.rate.silverware.max_rate.roll = profile.rate.silverware.max_rate.roll - 10.0f;
+			if (increase_osd_value) profile.rate.silverware.max_rate.roll = profile.rate.silverware.max_rate.roll + (10.0f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.silverware.max_rate.roll = profile.rate.silverware.max_rate.roll - (10.0f + FLT_EPSILON);
 		}
 		if(osd_select == 2){
-			if (increase_osd_value) profile.rate.silverware.max_rate.pitch = profile.rate.silverware.max_rate.pitch + 10.0f;
-			if (decrease_osd_value) profile.rate.silverware.max_rate.pitch = profile.rate.silverware.max_rate.pitch - 10.0f;
+			if (increase_osd_value) profile.rate.silverware.max_rate.pitch = profile.rate.silverware.max_rate.pitch + (10.0f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.silverware.max_rate.pitch = profile.rate.silverware.max_rate.pitch - (10.0f + FLT_EPSILON);
 		}
 		if(osd_select == 3){
-			if (increase_osd_value) profile.rate.silverware.max_rate.yaw = profile.rate.silverware.max_rate.yaw + 10.0f;
-			if (decrease_osd_value) profile.rate.silverware.max_rate.yaw = profile.rate.silverware.max_rate.yaw - 10.0f;
+			if (increase_osd_value) profile.rate.silverware.max_rate.yaw = profile.rate.silverware.max_rate.yaw + (10.0f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.silverware.max_rate.yaw = profile.rate.silverware.max_rate.yaw - (10.0f + FLT_EPSILON);
 		}
 		increase_osd_value = 0;
 		decrease_osd_value = 0;
@@ -219,16 +361,16 @@ void osd_adjust_silverwarerates_item(void)
 		break;
 	case 2:	//adjust row 2 items based on osd_select value and up/down osd gestures
 		if(osd_select == 1){
-			if (increase_osd_value) profile.rate.silverware.acro_expo.roll = profile.rate.silverware.acro_expo.roll + 0.01f;
-			if (decrease_osd_value) profile.rate.silverware.acro_expo.roll = profile.rate.silverware.acro_expo.roll - 0.01f;
+			if (increase_osd_value) profile.rate.silverware.acro_expo.roll = profile.rate.silverware.acro_expo.roll + (0.01f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.silverware.acro_expo.roll = profile.rate.silverware.acro_expo.roll - (0.01f + FLT_EPSILON);
 		}
 		if(osd_select == 2){
-			if (increase_osd_value) profile.rate.silverware.acro_expo.pitch = profile.rate.silverware.acro_expo.pitch + 0.01f;
-			if (decrease_osd_value) profile.rate.silverware.acro_expo.pitch = profile.rate.silverware.acro_expo.pitch - 0.01f;
+			if (increase_osd_value) profile.rate.silverware.acro_expo.pitch = profile.rate.silverware.acro_expo.pitch + (0.01f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.silverware.acro_expo.pitch = profile.rate.silverware.acro_expo.pitch - (0.01f + FLT_EPSILON);
 		}
 		if(osd_select == 3){
-			if (increase_osd_value) profile.rate.silverware.acro_expo.yaw = profile.rate.silverware.acro_expo.yaw + 0.01f;
-			if (decrease_osd_value) profile.rate.silverware.acro_expo.yaw = profile.rate.silverware.acro_expo.yaw - 0.01f;
+			if (increase_osd_value) profile.rate.silverware.acro_expo.yaw = profile.rate.silverware.acro_expo.yaw + (0.01f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.silverware.acro_expo.yaw = profile.rate.silverware.acro_expo.yaw - (0.01f + FLT_EPSILON);
 		}
 		increase_osd_value = 0;
 		decrease_osd_value = 0;
@@ -236,16 +378,16 @@ void osd_adjust_silverwarerates_item(void)
 		break;
 	case 3:	//adjust row 3 items based on osd_select value and up/down osd gestures
 		if(osd_select == 1){
-			if (increase_osd_value) profile.rate.silverware.angle_expo.roll = profile.rate.silverware.angle_expo.roll + 0.01f;
-			if (decrease_osd_value) profile.rate.silverware.angle_expo.roll = profile.rate.silverware.angle_expo.roll - 0.01f;
+			if (increase_osd_value) profile.rate.silverware.angle_expo.roll = profile.rate.silverware.angle_expo.roll + (0.01f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.silverware.angle_expo.roll = profile.rate.silverware.angle_expo.roll - (0.01f + FLT_EPSILON);
 		}
 		if(osd_select == 2){
-			if (increase_osd_value) profile.rate.silverware.angle_expo.pitch = profile.rate.silverware.angle_expo.pitch + 0.01f;
-			if (decrease_osd_value) profile.rate.silverware.angle_expo.pitch = profile.rate.silverware.angle_expo.pitch - 0.01f;
+			if (increase_osd_value) profile.rate.silverware.angle_expo.pitch = profile.rate.silverware.angle_expo.pitch + (0.01f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.silverware.angle_expo.pitch = profile.rate.silverware.angle_expo.pitch - (0.01f + FLT_EPSILON);
 		}
 		if(osd_select == 3){
-			if (increase_osd_value) profile.rate.silverware.angle_expo.yaw = profile.rate.silverware.angle_expo.yaw + 0.01f;
-			if (decrease_osd_value) profile.rate.silverware.angle_expo.yaw = profile.rate.silverware.angle_expo.yaw - 0.01f;
+			if (increase_osd_value) profile.rate.silverware.angle_expo.yaw = profile.rate.silverware.angle_expo.yaw + (0.01f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.silverware.angle_expo.yaw = profile.rate.silverware.angle_expo.yaw - (0.01f + FLT_EPSILON);
 		}
 		increase_osd_value = 0;
 		decrease_osd_value = 0;
@@ -253,26 +395,7 @@ void osd_adjust_silverwarerates_item(void)
 		break;
 	case 4: //save&exit silverware rates
 		if (osd_select == 1){
-	      osd_cursor = 0;
-	      osd_display_phase = 0;
-		  #ifdef FLASH_SAVE1
-	      extern int pid_gestures_used;
-	      extern int ledcommand;
-	      extern void flash_save(void);
-	      extern void flash_load(void);
-	      pid_gestures_used = 0;
-	      ledcommand = 1;
-	      flash_save();
-	      flash_load();
-	      // reset flash numbers for pids
-	      extern int number_of_increments[3][3];
-	      for (int i = 0; i < 3; i++)
-	        for (int j = 0; j < 3; j++)
-	          number_of_increments[i][j] = 0;
-	      // reset loop time - maybe not necessary cause it gets reset in the next screen clear
-	      extern unsigned long lastlooptime;
-	      lastlooptime = gettime();
-		  #endif
+		osd_save_exit();
 		}
 		break;
 	}
@@ -288,16 +411,16 @@ void osd_adjust_betaflightrates_item(void)
 	switch(osd_cursor){
 	case 1: //adjust row 1 items based on osd_select value and up/down osd gestures
 		if(osd_select == 1){
-			if (increase_osd_value) profile.rate.betaflight.rc_rate.roll = profile.rate.betaflight.rc_rate.roll + 0.01f;
-			if (decrease_osd_value) profile.rate.betaflight.rc_rate.roll = profile.rate.betaflight.rc_rate.roll - 0.01f;
+			if (increase_osd_value) profile.rate.betaflight.rc_rate.roll = profile.rate.betaflight.rc_rate.roll + (0.01f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.betaflight.rc_rate.roll = profile.rate.betaflight.rc_rate.roll - (0.01f + FLT_EPSILON);
 		}
 		if(osd_select == 2){
-			if (increase_osd_value) profile.rate.betaflight.rc_rate.pitch = profile.rate.betaflight.rc_rate.pitch + 0.01f;
-			if (decrease_osd_value) profile.rate.betaflight.rc_rate.pitch = profile.rate.betaflight.rc_rate.pitch - 0.01f;
+			if (increase_osd_value) profile.rate.betaflight.rc_rate.pitch = profile.rate.betaflight.rc_rate.pitch + (0.01f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.betaflight.rc_rate.pitch = profile.rate.betaflight.rc_rate.pitch - (0.01f + FLT_EPSILON);
 		}
 		if(osd_select == 3){
-			if (increase_osd_value) profile.rate.betaflight.rc_rate.yaw = profile.rate.betaflight.rc_rate.yaw + 0.01f;
-			if (decrease_osd_value) profile.rate.betaflight.rc_rate.yaw = profile.rate.betaflight.rc_rate.yaw - 0.01f;
+			if (increase_osd_value) profile.rate.betaflight.rc_rate.yaw = profile.rate.betaflight.rc_rate.yaw + (0.01f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.betaflight.rc_rate.yaw = profile.rate.betaflight.rc_rate.yaw - (0.01f + FLT_EPSILON);
 		}
 		increase_osd_value = 0;
 		decrease_osd_value = 0;
@@ -305,16 +428,16 @@ void osd_adjust_betaflightrates_item(void)
 		break;
 	case 2:	//adjust row 2 items based on osd_select value and up/down osd gestures
 		if(osd_select == 1){
-			if (increase_osd_value) profile.rate.betaflight.super_rate.roll = profile.rate.betaflight.super_rate.roll + 0.01f;
-			if (decrease_osd_value) profile.rate.betaflight.super_rate.roll = profile.rate.betaflight.super_rate.roll - 0.01f;
+			if (increase_osd_value) profile.rate.betaflight.super_rate.roll = profile.rate.betaflight.super_rate.roll + (0.01f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.betaflight.super_rate.roll = profile.rate.betaflight.super_rate.roll - (0.01f + FLT_EPSILON);
 		}
 		if(osd_select == 2){
-			if (increase_osd_value) profile.rate.betaflight.super_rate.pitch = profile.rate.betaflight.super_rate.pitch + 0.01f;
-			if (decrease_osd_value) profile.rate.betaflight.super_rate.pitch = profile.rate.betaflight.super_rate.pitch - 0.01f;
+			if (increase_osd_value) profile.rate.betaflight.super_rate.pitch = profile.rate.betaflight.super_rate.pitch + (0.01f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.betaflight.super_rate.pitch = profile.rate.betaflight.super_rate.pitch - (0.01f + FLT_EPSILON);
 		}
 		if(osd_select == 3){
-			if (increase_osd_value) profile.rate.betaflight.super_rate.yaw = profile.rate.betaflight.super_rate.yaw + 0.01f;
-			if (decrease_osd_value) profile.rate.betaflight.super_rate.yaw = profile.rate.betaflight.super_rate.yaw - 0.01f;
+			if (increase_osd_value) profile.rate.betaflight.super_rate.yaw = profile.rate.betaflight.super_rate.yaw + (0.01f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.betaflight.super_rate.yaw = profile.rate.betaflight.super_rate.yaw - (0.01f + FLT_EPSILON);
 		}
 		increase_osd_value = 0;
 		decrease_osd_value = 0;
@@ -322,16 +445,16 @@ void osd_adjust_betaflightrates_item(void)
 		break;
 	case 3:	//adjust row 3 items based on osd_select value and up/down osd gestures
 		if(osd_select == 1){
-			if (increase_osd_value) profile.rate.betaflight.expo.roll = profile.rate.betaflight.expo.roll + 0.01f;
-			if (decrease_osd_value) profile.rate.betaflight.expo.roll = profile.rate.betaflight.expo.roll - 0.01f;
+			if (increase_osd_value) profile.rate.betaflight.expo.roll = profile.rate.betaflight.expo.roll + (0.01f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.betaflight.expo.roll = profile.rate.betaflight.expo.roll - (0.01f + FLT_EPSILON);
 		}
 		if(osd_select == 2){
-			if (increase_osd_value) profile.rate.betaflight.expo.pitch = profile.rate.betaflight.expo.pitch + 0.01f;
-			if (decrease_osd_value) profile.rate.betaflight.expo.pitch = profile.rate.betaflight.expo.pitch - 0.01f;
+			if (increase_osd_value) profile.rate.betaflight.expo.pitch = profile.rate.betaflight.expo.pitch + (0.01f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.betaflight.expo.pitch = profile.rate.betaflight.expo.pitch - (0.01f + FLT_EPSILON);
 		}
 		if(osd_select == 3){
-			if (increase_osd_value) profile.rate.betaflight.expo.yaw = profile.rate.betaflight.expo.yaw + 0.01f;
-			if (decrease_osd_value) profile.rate.betaflight.expo.yaw = profile.rate.betaflight.expo.yaw - 0.01f;
+			if (increase_osd_value) profile.rate.betaflight.expo.yaw = profile.rate.betaflight.expo.yaw + (0.01f + FLT_EPSILON);
+			if (decrease_osd_value) profile.rate.betaflight.expo.yaw = profile.rate.betaflight.expo.yaw - (0.01f + FLT_EPSILON);
 		}
 		increase_osd_value = 0;
 		decrease_osd_value = 0;
@@ -339,31 +462,17 @@ void osd_adjust_betaflightrates_item(void)
 		break;
 	case 4: //save&exit silverware rates
 		if (osd_select == 1){
-	      osd_cursor = 0;
-	      osd_display_phase = 0;
-		  #ifdef FLASH_SAVE1
-	      extern int pid_gestures_used;
-	      extern int ledcommand;
-	      extern void flash_save(void);
-	      extern void flash_load(void);
-	      pid_gestures_used = 0;
-	      ledcommand = 1;
-	      flash_save();
-	      flash_load();
-	      // reset flash numbers for pids
-	      extern int number_of_increments[3][3];
-	      for (int i = 0; i < 3; i++)
-	        for (int j = 0; j < 3; j++)
-	          number_of_increments[i][j] = 0;
-	      // reset loop time - maybe not necessary cause it gets reset in the next screen clear
-	      extern unsigned long lastlooptime;
-	      lastlooptime = gettime();
-		  #endif
+		osd_save_exit();
 		}
 		break;
 	}
 
 }
+//******************************************************************************************************************************
+
+
+//******************************************************************************************************************************
+// osd main display function
 
 void osd_display(void) {
   //first check if video signal autodetect needs to run - run if necessary
@@ -523,11 +632,154 @@ void osd_display(void) {
     }
     break;
 
-  case 3:		//vtx menu
+  case 3:		//pids profile menu
+      switch (osd_menu_phase) {
+      case 0:
+          osd_clear();
+          extern unsigned long lastlooptime;
+          lastlooptime = gettime();
+          osd_menu_phase++;
+          break;
+      case 1:
+    	  osd_print("PID PROFILE", INVERT, 9, 1); //function call returns text or invert, gets passed # of elements for wrap around,
+    	  osd_menu_phase++;                 //and which element number this is
+    	  break;
+      case 2:
+          osd_print("PID PROFILE 1", user_selection(1, 2), 7, 4);
+          osd_menu_phase++;
+          break;
+      case 3:
+          osd_print("PID PROFILE 2", user_selection(2, 2), 7, 5);
+          osd_menu_phase++;
+          break;
+      case 4:
+    	  osd_select_pidprofile_item();
+    	  break;
+      }
     break;
 
-  case 4:		//pids menu
-	break;
+  case 4:		//pids profiles
+      switch (osd_menu_phase) {
+      case 0:
+          osd_clear();
+          extern unsigned long lastlooptime;
+          lastlooptime = gettime();
+          osd_menu_phase++;
+          break;
+      case 1:
+    	  if(profile.pid.pid_profile == PID_PROFILE_1){
+    	  osd_print("PID PROFILE 1", INVERT, 9, 1);
+    	  osd_menu_phase++;
+    	  }else{
+          osd_print("PID PROFILE 2", INVERT, 9, 1);
+          osd_menu_phase++;
+    	  }
+    	  break;
+      case 2:
+          osd_print("ROLL", TEXT, 10, 4);
+          osd_menu_phase++;
+          break;
+      case 3:
+    	  osd_print("PITCH", TEXT, 16, 4);
+          osd_menu_phase++;
+          break;
+      case 4:
+    	  osd_print("YAW", TEXT, 23, 4);
+          osd_menu_phase++;
+          break;
+      case 5:
+          osd_print("KP", user_selection(1, 4), 4, 6);
+          osd_menu_phase++;
+          break;
+      case 6:
+    	  osd_print("KI", user_selection(2, 4), 4, 7);
+          osd_menu_phase++;
+          break;
+      case 7:
+          osd_print("KD", user_selection(3, 4), 4, 8);
+          osd_menu_phase++;
+          break;
+      case 8:
+          osd_print("SAVE AND EXIT", user_selection(4, 4), 2, 14);
+          osd_menu_phase++;
+          break;
+      case 9:
+    	  if (profile.pid.pid_profile == PID_PROFILE_1 || profile.pid.pid_profile == PID_PROFILE_2){
+          uint8_t osd_roll_kp[4];
+          fast_fprint(osd_roll_kp, 5, rp_kp_scale(profile.pid.pid_rates[profile.pid.pid_profile].kp.roll), 0);
+          osd_print_data(osd_roll_kp, 4, adjust_selection(1, 1), 10, 6);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 10:
+    	  if (profile.pid.pid_profile == PID_PROFILE_1 || profile.pid.pid_profile == PID_PROFILE_2){
+          uint8_t osd_pitch_kp[4];
+          fast_fprint(osd_pitch_kp, 5, rp_kp_scale(profile.pid.pid_rates[profile.pid.pid_profile].kp.pitch), 0);
+          osd_print_data(osd_pitch_kp, 4, adjust_selection(2, 1), 16, 6);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 11:
+    	  if (profile.pid.pid_profile == PID_PROFILE_1 || profile.pid.pid_profile == PID_PROFILE_2){
+          uint8_t osd_yaw_kp[4];
+          fast_fprint(osd_yaw_kp, 5, yaw_kp_scale(profile.pid.pid_rates[profile.pid.pid_profile].kp.yaw), 0);
+          osd_print_data(osd_yaw_kp, 4, adjust_selection(3, 1), 22, 6);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 12:
+    	  if (profile.pid.pid_profile == PID_PROFILE_1 || profile.pid.pid_profile == PID_PROFILE_2){
+          uint8_t osd_roll_ki[4];
+          fast_fprint(osd_roll_ki, 5, ki_scale(profile.pid.pid_rates[profile.pid.pid_profile].ki.roll), 0);
+          osd_print_data(osd_roll_ki, 4, adjust_selection(1, 2), 10, 7);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 13:
+    	  if (profile.pid.pid_profile == PID_PROFILE_1 || profile.pid.pid_profile == PID_PROFILE_2){
+          uint8_t osd_pitch_ki[4];
+          fast_fprint(osd_pitch_ki, 5, ki_scale(profile.pid.pid_rates[profile.pid.pid_profile].ki.pitch), 0);
+          osd_print_data(osd_pitch_ki, 4, adjust_selection(2, 2), 16, 7);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 14:
+    	  if (profile.pid.pid_profile == PID_PROFILE_1 || profile.pid.pid_profile == PID_PROFILE_2){
+          uint8_t osd_yaw_ki[4];
+          fast_fprint(osd_yaw_ki, 5, ki_scale(profile.pid.pid_rates[profile.pid.pid_profile].ki.yaw), 0);
+          osd_print_data(osd_yaw_ki, 4, adjust_selection(3, 2), 22, 7);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 15:
+    	  if (profile.pid.pid_profile == PID_PROFILE_1 || profile.pid.pid_profile == PID_PROFILE_2){
+          uint8_t osd_roll_kd[4];
+          fast_fprint(osd_roll_kd, 5, kd_scale(profile.pid.pid_rates[profile.pid.pid_profile].kd.roll), 0);
+          osd_print_data(osd_roll_kd, 4, adjust_selection(1, 3), 10, 8);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 16:
+    	  if (profile.pid.pid_profile == PID_PROFILE_1 || profile.pid.pid_profile == PID_PROFILE_2){
+          uint8_t osd_pitch_kd[4];
+          fast_fprint(osd_pitch_kd, 5, kd_scale(profile.pid.pid_rates[profile.pid.pid_profile].kd.pitch), 0);
+          osd_print_data(osd_pitch_kd, 4, adjust_selection(2, 3), 16, 8);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 17:
+    	  if (profile.pid.pid_profile == PID_PROFILE_1 || profile.pid.pid_profile == PID_PROFILE_2){
+          uint8_t osd_yaw_kd[4];
+          fast_fprint(osd_yaw_kd, 5, kd_scale(profile.pid.pid_rates[profile.pid.pid_profile].kd.yaw), 0);
+          osd_print_data(osd_yaw_kd, 4, adjust_selection(3, 3), 22, 8);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 18:
+    	  osd_adjust_pidprofile_item();
+    	  break;
+      }
+    break;
 
   case 5:		//filters menu
     break;
@@ -807,5 +1059,5 @@ void osd_display(void) {
   }
 
 } //end osd_display()
-
+//******************************************************************************************************************************
 #endif
