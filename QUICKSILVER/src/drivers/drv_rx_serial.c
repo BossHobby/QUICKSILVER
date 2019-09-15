@@ -6,6 +6,7 @@
 #include "drv_serial.h"
 #include "drv_time.h"
 
+extern uint8_t rxusart;
 //SET SERIAL BAUDRATE BASED ON RECEIVER PROTOCOL
 //1 = fport
 //2 = sbus
@@ -232,82 +233,42 @@ else{
 #endif
 
 //USART ISR to radio protocol mapping
-#ifdef UART_1
+//#ifdef UART_1
 void USART1_IRQHandler(void) {
+if(rxusart == 1){
   RX_USART_ISR();
-  //	#ifdef RX_IBUS
-  //	Ibus_USART_ISR();
-  //	#endif
-  //	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
-  //	DSM_USART_ISR();
-  //	#endif
-  //	#ifdef RX_SBUS
-  //	SBUS_USART_ISR();
-  //
-  //	#endif
+  }
 }
-#endif
+//#endif
 
-#ifdef UART_2
+//#ifdef UART_2
 void USART2_IRQHandler(void) {
+  if(rxusart == 2){
   RX_USART_ISR();
-  //	#ifdef RX_IBUS
-  //	Ibus_USART_ISR();
-  //	#endif
-  //	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
-  //	DSM_USART_ISR();
-  //	#endif
-  //	#ifdef RX_SBUS
-  //	SBUS_USART_ISR();
-  //
-  //	#endif
+  } 
 }
-#endif
+//#endif
 
 #ifdef UART_3
 void USART3_IRQHandler(void) {
   RX_USART_ISR();
-  //	#ifdef RX_IBUS
-  //	Ibus_USART_ISR();
-  //	#endif
-  //	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
-  //	DSM_USART_ISR();
-  //	#endif
-  //	#ifdef RX_SBUS
-  //	SBUS_USART_ISR();
-  //
-  //	#endif
-}
+ }
 #endif
 
 #ifdef UART_4
 void USART4_IRQHandler(void) {
   RX_USART_ISR();
-  //	#ifdef RX_IBUS
-  //	Ibus_USART_ISR();
-  //	#endif
-  //	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
-  //	DSM_USART_ISR();
-  //	#endif
-  //	#ifdef RX_SBUS
-  //	SBUS_USART_ISR();
-  //
-  //	#endif
-}
+  }
+#endif
+
+#ifdef UART_5
+void USART5_IRQHandler(void) {
+  RX_USART_ISR();
+  }
 #endif
 
 #ifdef UART_6
 void USART6_IRQHandler(void) {
   RX_USART_ISR();
-  //	#ifdef RX_IBUS
-  //	Ibus_USART_ISR();
-  //	#endif
-  //	#if defined RX_DSMX_2048 || defined RX_DSM2_1024
-  //	DSM_USART_ISR();
-  //	#endif
-  //	#ifdef RX_SBUS
-  //	SBUS_USART_ISR();
-  //
-  //	#endif
 }
 #endif
