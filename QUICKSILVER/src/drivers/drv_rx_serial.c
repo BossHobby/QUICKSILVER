@@ -8,10 +8,10 @@
 
 extern uint8_t rxusart;
 //SET SERIAL BAUDRATE BASED ON RECEIVER PROTOCOL
-//1 = fport
+//1 = DSM2/X
 //2 = sbus
 //3 = ibus
-//4 = DSM2/X
+//4 = FPORT
 //5 = CRSF
 
 
@@ -108,22 +108,23 @@ void usart_invert(void) {
 
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
 void usart_rx_init(uint8_t RXProtocol) {
-  #if defined(RX_FPORT)
+  #if defined(RX_DSM2_1024) || defined(RX_DSMX_2028)
   RXProtocol = 1;
-#endif
+
 #if defined(RX_SBUS)
   RXProtocol = 2;
 #endif
 #if defined(RX_IBUS)
   RXProtocol = 3;
 #endif
-#if defined(RX_DSM2_1024) || defined(RX_DSMX_2028)
-  RXProtocol = 4;
-#endif
+
 #if defined(RX_CRSF)
   RXProtocol = 5;
 #endif
-
+#endif
+  #if defined(RX_FPORT)
+  RXProtocol = 4;
+#endif
 #if defined(RX_CRSF)
 #define SERIAL_BAUDRATE 420000
 #endif
@@ -140,12 +141,12 @@ void usart_rx_init(uint8_t RXProtocol) {
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 //#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
-if(RXProtocol == 3 || RXProtocol == 4 || RXProtocol == 5){
+if(RXProtocol == 3 || RXProtocol == 1 || RXProtocol == 5){
   GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
 }
 //#endif
-else if(RXProtocol == 1 || RXProtocol == 2){
+else if(RXProtocol == 4 || RXProtocol == 2){
 //#if defined(RX_SBUS) || defined(RX_FPORT)
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
@@ -157,13 +158,13 @@ else if(RXProtocol == 1 || RXProtocol == 2){
   GPIO_PinAFConfig(SERIAL_RX_PORT, SERIAL_RX_SOURCE, SERIAL_RX_CHANNEL);
   APBPeriphClockCmd();
   USART_InitTypeDef USART_InitStructure;
-  if(RXProtocol == 1 || RXProtocol == 3 || RXProtocol == 4 || RXProtocol == 5){
+  if(RXProtocol == 1 || RXProtocol == 3 || RXProtocol == 4){
     USART_InitStructure.USART_BaudRate = 115200;
   }
   else if(RXProtocol == 2){
     USART_InitStructure.USART_BaudRate = 100000;
   }
-  else if(RXProtocol == 4){
+  else if(RXProtocol == 5){
     USART_InitStructure.USART_BaudRate = 420000;
   }
   
@@ -187,7 +188,7 @@ else if(RXProtocol == 1 || RXProtocol == 2){
 
   USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
 
-if(RXProtocol == 1 || RXProtocol == 5){
+if(RXProtocol == 4 || RXProtocol == 5){
   USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
 }
 else{
@@ -198,7 +199,7 @@ else{
 //#else
 //  USART_InitStructure.USART_Mode = USART_Mode_Rx; //USART_Mode_Rx | USART_Mode_Tx;
 //#endif
-if(RXProtocol == 1){
+if(RXProtocol == 4){
   USART_HalfDuplexCmd(SERIAL_RX_USART, ENABLE);
 }
 else{
@@ -233,21 +234,21 @@ else{
 #endif
 
 //USART ISR to radio protocol mapping
-//#ifdef UART_1
+#ifdef UART_1
 void USART1_IRQHandler(void) {
-if(rxusart == 1){
+//if(rxusart == 1){
   RX_USART_ISR();
-  }
+  //}
 }
-//#endif
+#endif
 
-//#ifdef UART_2
+#ifdef UART_2
 void USART2_IRQHandler(void) {
-  if(rxusart == 2){
+  //if(rxusart == 2){
   RX_USART_ISR();
-  } 
+  //} 
 }
-//#endif
+#endif
 
 #ifdef UART_3
 void USART3_IRQHandler(void) {

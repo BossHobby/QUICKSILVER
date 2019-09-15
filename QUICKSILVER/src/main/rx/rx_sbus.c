@@ -110,7 +110,7 @@ void RX_USART_ISR(void) {
     frameLengthReceived = 1;
     frameStatus = 0;                                          //0 is "frame in progress or first frame not arrived", 1 is "frame ready to be read",
                                                               //3 is "frame already complete and processed (this ignores the telemetry packet)", 2 is unused.
-  } else if (frameLengthReceived == 25 && frameStatus == 0) { //sbus frames are always 32 bytes. Convenient!
+  } else if (frameLengthReceived == 25 && frameStatus == 0) { //sbus frames are always 24 bytes. Convenient!
     frameStatus = 1;
   }
   rx_end++;
