@@ -60,11 +60,12 @@ uint8_t rx_auxchange(aux_function_t function);
 
 void rx_init(void);
 void checkrx(void);
+void findprotocol(void);
 
 float rcexpo(float x, float exp);
 void rx_apply_expo(void);
 
-#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024)
+#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_UNIFIED_SERIAL)
 void rx_spektrum_bind(void);
 #endif
 void usart_invert(void);

@@ -200,6 +200,9 @@ else{
 if(RXProtocol == 1){
   USART_HalfDuplexCmd(SERIAL_RX_USART, ENABLE);
 }
+else{
+  USART_HalfDuplexCmd(SERIAL_RX_USART, DISABLE);
+}
 //#if defined(RX_FPORT)
 //  USART_HalfDuplexCmd(SERIAL_RX_USART, ENABLE);
 //#endif

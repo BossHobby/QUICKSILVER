@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include <stdio.h>
-
 #include "defines.h"
+#include "drv_fmc.h"
 #include "drv_rx_serial.h"
 #include "drv_serial.h"
 #include "drv_time.h"
@@ -9,6 +9,7 @@
 #include "profile.h"
 #include "project.h"
 #include "util.h"
+#include "led.h"
 
 // sbus input ( pin SWCLK after calibration)
 // WILL DISABLE PROGRAMMING AFTER GYRO CALIBRATION - 2 - 3 seconds after powerup)
@@ -28,6 +29,7 @@ int rxmode = 0;
 int rx_ready = 0;
 
 // internal variables
+uint8_t RXProtocol = 0;
 #define RX_BUFF_SIZE 64
 uint8_t rx_buffer[RX_BUFF_SIZE];
 uint8_t rx_end = 0;
@@ -37,8 +39,9 @@ int frameStatus = -1;
 uint8_t frameStart = 0;
 uint8_t frameEnd = 0;
 uint8_t telemetryCounter = 0;
-uint8_t frameLength = 0;
+uint8_t frameLength = 10;
 uint8_t escapedChars = 0;
+uint8_t rx_bind_enable = 0;
 
 unsigned long time_lastrx;
 unsigned long time_siglost;
@@ -48,9 +51,13 @@ unsigned long time_lastframe;
 int frame_received = 0;
 int rx_state = 0;
 int bind_safety = 0;
-uint8_t data[64]; //Significantly larger than any known packets
+uint8_t data[64]; //Significantly larger than any known frames
 int channels[16];
 uint16_t CRCByte = 0; //Defined here to allow Debug to see it.
+uint8_t protocolToCheck = 1;//Defined here to allow Debug to see it.
+uint8_t protocolDetectTimer = 0;//Defined here to allow Debug to see it.
+
+
 
 int failsafe_sbus_failsafe = 0;
 int failsafe_siglost = 0;
@@ -70,6 +77,7 @@ int stat_overflow;
 uint32 ticksStart = 0;
 uint32 ticksEnd = 0;
 uint32 ticksLongest = 0;
+int bobnovas = 0;
 
 //Telemetry variables
 
@@ -98,6 +106,8 @@ uint8_t telemetryPosition = 0; //This iterates through the above, you can only s
 uint8_t teleCounter = 0;
 
 void RX_USART_ISR(void) {
+  
+  
   rx_buffer[rx_end] = USART_ReceiveData(USART1);
   // calculate timing since last rx
   unsigned long maxticks = SysTick->LOAD;
@@ -127,12 +137,14 @@ void RX_USART_ISR(void) {
 
   
   bytesSinceStart++;
-  if (rx_buffer[rx_end] == 0x0f && rx_time[rx_end] > 21000) { //0x7e is both start and end for frames, as well as start/end for telemetry frames.
-    frameStart = rx_end;                                      //a 0x7e after a "long" pause is a new frame starting
+  if (rx_time[rx_end] > 9000) { //Long delay since last byte. Probably a new frame, or we missed some bytes. Either way, start over.
+    frameStart = rx_end;                                      
     bytesSinceStart = 0;
-    frameStatus = 0; //0 is "frame in progress or first frame not arrived", 1 is "frame ready(ish) to be read",
-    //2 is "Frame looks complete, CRC it and read controls", 3 is "frame already complete and processed (this ignores the telemetry packet)"
-  } else if (bytesSinceStart > 39 && frameStatus == 0) { //It's long enough to be a full frame, and we're waiting for a full frame. Check it!
+    frameStatus = 0; //0 is "frame in progress or first frame not arrived", 
+                     //1 is "frame ready(ish) to be read, or at least checked",
+                     //2 is "Frame looks complete, CRC it and read controls", 
+                     //3 is "frame already complete and processed, do nothing (or send telemetry if enabled)"
+  } else if (bytesSinceStart >= frameLength && frameStatus == 0) { //It's long enough to be a full frame, and we're waiting for a full frame. Check it!
     frameStatus = 1;
   }
   
@@ -144,14 +156,144 @@ void rx_init(void) {
     
 }
 
+
+
+
+
 void checkrx() {
+  frameStatus = 0; // We're ready for radio packets
+  if(RXProtocol == 0){
+    findprotocol();
+  }
+  else{
+    usart_rx_init(RXProtocol);
+  }
+  
+  
 
-if(frameStatus < 50){
-usart_rx_init(2);
-frameStatus = 100;
 }
 
+
+
+
+
+
+void findprotocol(void){
+  bobnovas++;
+  //uint8_t protocolToCheck = 1; Moved to global for visibility
+  while(RXProtocol == 0){
+    bobnovas++;
+    //uint8_t protocolDetectTimer = 0;Moved to global for visibility
+    usart_rx_init(protocolToCheck); //Configure a protocol!
+    delay(500000);
+    protocolDetectTimer = 0;
+    while(frameStatus == 0 && protocolDetectTimer < 5){ // Wait 5 seconds to see if something turns up. 
+    bobnovas = bobnovas + 10;
+      for(int i = 0; i < protocolToCheck; i++){
+        ledon(255);
+        delay(20000);
+        ledoff(255);
+        delay(50000);
+        }
+      ledoff(255);
+      delay(1000000 - (protocolToCheck * 70000));
+      protocolDetectTimer++;
+    }
+    if(frameStatus == 1){//We got something! What is it?
+      switch (protocolToCheck)
+      {
+      case 1: // FPORT
+        if(rx_buffer[frameStart] == 0x7E){
+          RXProtocol = protocolToCheck;
+        }
+        break;
+      case 2: // SBUS
+        if(rx_buffer[frameStart] == 0x0F){
+          RXProtocol = protocolToCheck;
+        }
+        break;
+      case 3: // IBUS
+        if(rx_buffer[frameStart] == 0x20){  
+          RXProtocol = protocolToCheck;
+        }
+        break;
+      case 4: // DSM
+        if(rx_buffer[frameStart] == 0x00 && rx_buffer[frameStart+1] == 0x00 && rx_buffer[frameStart] !=0x00){
+          RXProtocol = protocolToCheck;
+        }
+        break;
+      case 5: // CRSF
+        if(rx_buffer[frameStart] != 0xFF && 1 == 2){  //Need to look up the expected start value.
+          RXProtocol = protocolToCheck;
+        }
+        break;
+      
+      default:
+        break;
+      }
+      //if(rx_buffer[frameStart])
+    }
+    
+    protocolToCheck++;
+    if(protocolToCheck > 5){
+      protocolToCheck = 1;
+    }
+  }
 }
+
+
+
+// Send Spektrum bind pulses to a GPIO e.g. TX1
+void rx_spektrum_bind(void) {
+//
+  rx_bind_enable = fmc_read_float(56);
+  if (rx_bind_enable == 0) {
+    GPIO_InitTypeDef GPIO_InitStructure;
+    GPIO_InitStructure.GPIO_Pin = SERIAL_RX_SPEKBIND_RX_PIN;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure);
+
+    // RX line, set high
+    GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_RX_PIN);
+    // Bind window is around 20-140ms after powerup
+    delay(60000);
+
+    for (uint8_t i = 0; i < 9; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
+      // RX line, drive low for 120us
+      GPIO_ResetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_RX_PIN);
+      delay(120);
+
+      // RX line, drive high for 120us
+      GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_RX_PIN);
+      delay(120);
+    }
+  }
+//#endif
+  GPIO_InitTypeDef GPIO_InitStructure;
+  GPIO_InitStructure.GPIO_Pin = SERIAL_RX_SPEKBIND_BINDTOOL_PIN;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure);
+
+  // RX line, set high
+  GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
+  // Bind window is around 20-140ms after powerup
+  delay(60000);
+
+  for (uint8_t i = 0; i < 9; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
+    // RX line, drive low for 120us
+    GPIO_ResetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
+    delay(120);
+
+    // RX line, drive high for 120us
+    GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
+    delay(120);
+  }
+}
+
 
 
 #endif
