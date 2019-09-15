@@ -61,6 +61,12 @@ uint8_t rx_auxchange(aux_function_t function);
 void rx_init(void);
 void checkrx(void);
 void findprotocol(void);
+void rx_serial_init(void);
+void processDSMX(void);
+void processSBUS(void);
+void processIBUS(void);
+void processFPORT(void);
+void processCRSF(void);
 
 float rcexpo(float x, float exp);
 void rx_apply_expo(void);
