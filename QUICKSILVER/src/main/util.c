@@ -111,6 +111,12 @@ int ipow(int base, int exp) {
   return result;
 }
 
+int round_num(float num)
+{
+    return num < 0 ? num - 0.5 : num + 0.5;
+}
+
+
 #include <inttypes.h>
 uint32_t seed = 7;
 uint32_t random(void) {
