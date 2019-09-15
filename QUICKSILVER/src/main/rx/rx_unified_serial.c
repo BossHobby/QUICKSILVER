@@ -17,8 +17,6 @@
 
 #define SERIAL_BAUDRATE 115200
 
-// FPort is normally inverted
-//#define INVERT_UART    //now handled by a function in rx_serial driver and a config define
 
 // global use rx variables
 extern float rx[4];
