@@ -10,6 +10,7 @@
 #include "project.h"
 #include "util.h"
 #include "led.h"
+#include "rx.h"
 
 // sbus input ( pin SWCLK after calibration)
 // WILL DISABLE PROGRAMMING AFTER GYRO CALIBRATION - 2 - 3 seconds after powerup)
@@ -24,6 +25,7 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
+uint8_t rxusart = 2;
 int failsafe = 9001; //OVER 9000
 int rxmode = 0;
 int rx_ready = 0;
@@ -144,7 +146,8 @@ void RX_USART_ISR(void) {
                      //1 is "frame ready(ish) to be read, or at least checked",
                      //2 is "Frame looks complete, CRC it and read controls", 
                      //3 is "frame already complete and processed, do nothing (or send telemetry if enabled)"
-  } else if (bytesSinceStart >= frameLength && frameStatus == 0) { //It's long enough to be a full frame, and we're waiting for a full frame. Check it!
+  } 
+  else if (bytesSinceStart >= frameLength && frameStatus == 0) { //It's long enough to be a full frame, and we're waiting for a full frame. Check it!
     frameStatus = 1;
   }
   
@@ -174,7 +177,7 @@ void checkrx() {
 }
 
 
-
+//NOTE TO SELF: Put in some double-check code on the detections somehow.
 
 
 
@@ -184,10 +187,12 @@ void findprotocol(void){
   while(RXProtocol == 0){
     bobnovas++;
     //uint8_t protocolDetectTimer = 0;Moved to global for visibility
+    //protocolToCheck = 3;
     usart_rx_init(protocolToCheck); //Configure a protocol!
     delay(500000);
     protocolDetectTimer = 0;
-    while(frameStatus == 0 && protocolDetectTimer < 5){ // Wait 5 seconds to see if something turns up. 
+    
+    while((frameStatus == 0 || frameStatus == 3) && protocolDetectTimer < 5){ // Wait 5 seconds to see if something turns up. 
     bobnovas = bobnovas + 10;
       for(int i = 0; i < protocolToCheck; i++){
         ledon(255);
@@ -227,8 +232,8 @@ void findprotocol(void){
           RXProtocol = protocolToCheck;
         }
         break;
-      
       default:
+        frameStatus = 3; //Whatever we got, it didn't make sense. Mark the frame as Checked and start over.
         break;
       }
       //if(rx_buffer[frameStart])
@@ -237,6 +242,7 @@ void findprotocol(void){
     protocolToCheck++;
     if(protocolToCheck > 5){
       protocolToCheck = 1;
+      rxusart = 1;
     }
   }
 }

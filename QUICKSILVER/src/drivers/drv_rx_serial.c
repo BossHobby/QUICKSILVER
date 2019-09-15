@@ -243,38 +243,38 @@ else{
 #endif
 
 //USART ISR to radio protocol mapping
-#ifdef UART_1
+//#ifdef UART_1
 void USART1_IRQHandler(void) {
-  //if(rxusart == 1){
+if(rxusart == 1){
   RX_USART_ISR();
-  //}
+  }
 }
-#endif
+//#endif
 
-#ifdef UART_2
+//#ifdef UART_2
 void USART2_IRQHandler(void) {
-  //if(rxusart == 2){
+  if(rxusart == 2){
   RX_USART_ISR();
-  //}
+  } 
 }
-#endif
+//#endif
 
 #ifdef UART_3
 void USART3_IRQHandler(void) {
   RX_USART_ISR();
-}
+ }
 #endif
 
 #ifdef UART_4
 void USART4_IRQHandler(void) {
   RX_USART_ISR();
-}
+  }
 #endif
 
 #ifdef UART_5
 void USART5_IRQHandler(void) {
   RX_USART_ISR();
-}
+  }
 #endif
 
 #ifdef UART_6
