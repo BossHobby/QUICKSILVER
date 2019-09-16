@@ -186,6 +186,9 @@ void osd_select_menu_item(void) {
       break;
 
     case 1:		//vtx
+    	osd_cursor = 0;
+    	osd_display_phase = 11;
+    	osd_menu_phase = 0;
       break;
 
     case 2:		//pids
@@ -195,6 +198,9 @@ void osd_select_menu_item(void) {
       break;
 
     case 3:		//filters
+    	osd_cursor = 0;
+    	osd_display_phase = 5;
+    	osd_menu_phase = 0;
       break;
 
     case 4:		//rates
@@ -204,19 +210,28 @@ void osd_select_menu_item(void) {
       break;
 
     case 5:		//flight modes
+    	osd_cursor = 0;
+    	osd_display_phase = 9;
+    	osd_menu_phase = 0;
       break;
 
-    case 6:
+    case 6:		//osd elements
+    	osd_cursor = 0;
+    	osd_display_phase = 10;
+    	osd_menu_phase = 0;
       break;
 
-    case 7:
+    case 7:		//special features
+    	osd_cursor = 0;
+    	osd_display_phase = 12;
+    	osd_menu_phase = 0;
       break;
 
-    case 8:
+    case 8:		//setup wizard
       flash_feature_1 = 0;
       break;
 
-    case 9:
+    case 9:		//save & exit
       osd_save_exit();
       break;
     }
@@ -483,6 +498,53 @@ void osd_adjust_betaflightrates_item(void)
 
 
 //******************************************************************************************************************************
+//osd special features logic
+
+void osd_select_special_features(void)
+{
+  if (osd_select == 1) //stick was pushed right to select a rate type
+  {
+	osd_select = 0;	//reset the trigger
+	switch(osd_cursor){
+    case 1:		//stick boost profiles
+    	osd_cursor = 0;
+    	osd_display_phase = 13;
+    	osd_menu_phase = 0;
+      break;
+	}
+  }
+}
+//******************************************************************************************************************************
+
+
+//******************************************************************************************************************************
+//osd stick boost logic
+
+void osd_select_stickboost(void)
+{
+  if (osd_select == 1) //stick was pushed right to select a rate type
+  {
+	osd_select = 0;	//reset the trigger
+	switch(osd_cursor){
+	case 1:
+		osd_cursor = 0;	//reset the cursor
+		profile.pid.stick_profile = STICK_PROFILE_1;	//update profile
+		osd_display_phase = 14;	//update display phase to the next menu screen
+		osd_menu_phase = 0;	//clear the screen
+		break;
+	case 2:
+		osd_cursor = 0;
+		profile.pid.pid_profile = STICK_PROFILE_2;	//update profile
+		osd_display_phase = 15;	//update display phase to the next menu screen
+		osd_menu_phase = 0;	//clear the screen
+		break;
+	}
+  }
+}
+//******************************************************************************************************************************
+
+
+//******************************************************************************************************************************
 // osd main display function
 
 void osd_display(void) {
@@ -652,8 +714,8 @@ void osd_display(void) {
           osd_menu_phase++;
           break;
       case 1:
-    	  osd_print("PID PROFILE", INVERT, 9, 1); //function call returns text or invert, gets passed # of elements for wrap around,
-    	  osd_menu_phase++;                 //and which element number this is
+    	  osd_print("PID PROFILES", INVERT, 9, 1);
+    	  osd_menu_phase++;
     	  break;
       case 2:
           osd_print("PID PROFILE 1", user_selection(1, 2), 7, 4);
@@ -793,6 +855,29 @@ void osd_display(void) {
     break;
 
   case 5:		//filters menu
+      switch (osd_menu_phase) {
+      case 0:
+          osd_clear();
+          extern unsigned long lastlooptime;
+          lastlooptime = gettime();
+          osd_menu_phase++;
+          break;
+      case 1:
+    	  osd_print("FILTERS", INVERT, 11, 1);
+    	  osd_menu_phase++;
+    	  break;
+      case 2:
+          osd_print("UNDER", user_selection(1, 2), 7, 4);
+          osd_menu_phase++;
+          break;
+      case 3:
+          osd_print("DEVELOPMENT", user_selection(2, 2), 7, 5);
+          osd_menu_phase++;
+          break;
+      case 4:
+    	  //osd_select_filters();
+    	  break;
+      }
     break;
 
   case 6:		//main rates menu
@@ -804,8 +889,8 @@ void osd_display(void) {
           osd_menu_phase++;
           break;
       case 1:
-    	  osd_print("RATES", INVERT, 13, 1); //function call returns text or invert, gets passed # of elements for wrap around,
-    	  osd_menu_phase++;                 //and which element number this is
+    	  osd_print("RATES", INVERT, 13, 1);
+    	  osd_menu_phase++;
     	  break;
       case 2:
           osd_print("SILVERWARE", user_selection(1, 2), 7, 4);
@@ -1057,15 +1142,183 @@ void osd_display(void) {
       }
     break;
 
-
   case 9:		//flight modes menu
+      switch (osd_menu_phase) {
+      case 0:
+          osd_clear();
+          extern unsigned long lastlooptime;
+          lastlooptime = gettime();
+          osd_menu_phase++;
+          break;
+      case 1:
+    	  osd_print("FLIGHT MODES", INVERT, 9, 1);
+    	  osd_menu_phase++;
+    	  break;
+      case 2:
+          osd_print("UNDER", user_selection(1, 2), 7, 4);
+          osd_menu_phase++;
+          break;
+      case 3:
+          osd_print("DEVELOPMENT", user_selection(2, 2), 7, 5);
+          osd_menu_phase++;
+          break;
+      case 4:
+    	  //osd_select_flightmode();
+    	  break;
+      }
     break;
 
   case 10:		//osd elements menu
+      switch (osd_menu_phase) {
+      case 0:
+          osd_clear();
+          extern unsigned long lastlooptime;
+          lastlooptime = gettime();
+          osd_menu_phase++;
+          break;
+      case 1:
+    	  osd_print("OSD ELEMENTS", INVERT, 9, 1);
+    	  osd_menu_phase++;
+    	  break;
+      case 2:
+          osd_print("UNDER", user_selection(1, 2), 7, 4);
+          osd_menu_phase++;
+          break;
+      case 3:
+          osd_print("DEVELOPMENT", user_selection(2, 2), 7, 5);
+          osd_menu_phase++;
+          break;
+      case 4:
+    	  //osd_select_elements();
+    	  break;
+      }
     break;
 
-  case 11:		//special features menu
-  	break;
+  case 11:		//vtx
+      switch (osd_menu_phase) {
+      case 0:
+          osd_clear();
+          extern unsigned long lastlooptime;
+          lastlooptime = gettime();
+          osd_menu_phase++;
+          break;
+      case 1:
+    	  osd_print("VTX CONTROLS", INVERT, 9, 1);
+    	  osd_menu_phase++;
+    	  break;
+      case 2:
+          osd_print("UNDER", user_selection(1, 2), 7, 4);
+          osd_menu_phase++;
+          break;
+      case 3:
+          osd_print("DEVELOPMENT", user_selection(2, 2), 7, 5);
+          osd_menu_phase++;
+          break;
+      case 4:
+    	  //osd_select_vtx();
+    	  break;
+      }
+    break;
+
+  case 12:		//special features
+      switch (osd_menu_phase) {
+      case 0:
+          osd_clear();
+          extern unsigned long lastlooptime;
+          lastlooptime = gettime();
+          osd_menu_phase++;
+          break;
+      case 1:
+          osd_print("SPECIAL FEATURES", INVERT, 7, 1);
+          osd_menu_phase++;
+          break;
+      case 2:
+          osd_print("STICK BOOST", user_selection(1, 1), 7, 4);
+          osd_menu_phase++;
+          break;
+      case 3:
+    	  osd_select_special_features();
+    	  break;
+      }
+      break;
+
+  case 13:		//stick accelerator profiles
+      switch (osd_menu_phase) {
+      case 0:
+          osd_clear();
+          extern unsigned long lastlooptime;
+          lastlooptime = gettime();
+          osd_menu_phase++;
+          break;
+      case 1:
+          osd_print("STICK BOOST PROFILES", INVERT, 5, 1);
+          osd_menu_phase++;
+          break;
+      case 2:
+          osd_print("AUX OFF PROFILE 1", user_selection(1, 2), 7, 4);
+          osd_menu_phase++;
+          break;
+      case 3:
+          osd_print("AUX ON  PROFILE 2", user_selection(2, 2), 7, 5);
+          osd_menu_phase++;
+          break;
+      case 4:
+    	  osd_select_stickboost();
+    	  break;
+      }
+      break;
+
+  case 14:		//stick boost profile 1
+      switch (osd_menu_phase) {
+      case 0:
+          osd_clear();
+          extern unsigned long lastlooptime;
+          lastlooptime = gettime();
+          osd_menu_phase++;
+          break;
+      case 1:
+    	  osd_print("BOOST PROFILE 1", INVERT, 9, 1);
+    	  osd_menu_phase++;
+    	  break;
+      case 2:
+          osd_print("UNDER", user_selection(1, 2), 7, 4);
+          osd_menu_phase++;
+          break;
+      case 3:
+          osd_print("DEVELOPMENT", user_selection(2, 2), 7, 5);
+          osd_menu_phase++;
+          break;
+      case 4:
+    	  //osd_stickboost_profile1();
+    	  break;
+      }
+    break;
+
+  case 15:		//stick boost profile 2
+      switch (osd_menu_phase) {
+      case 0:
+          osd_clear();
+          extern unsigned long lastlooptime;
+          lastlooptime = gettime();
+          osd_menu_phase++;
+          break;
+      case 1:
+    	  osd_print("BOOST PROFILE 2", INVERT, 9, 1);
+    	  osd_menu_phase++;
+    	  break;
+      case 2:
+          osd_print("UNDER", user_selection(1, 2), 7, 4);
+          osd_menu_phase++;
+          break;
+      case 3:
+          osd_print("DEVELOPMENT", user_selection(2, 2), 7, 5);
+          osd_menu_phase++;
+          break;
+      case 4:
+    	  //osd_stickboost_profile2();
+    	  break;
+      }
+    break;
 
   }
 

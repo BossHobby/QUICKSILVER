@@ -397,8 +397,8 @@ void osd_print(char *buffer, uint8_t dmm_attribute, uint8_t x, uint8_t y) {
     y = MAXROWS - 1;
 
   const uint32_t size = (strlen(buffer) * 2) + 8;
-  static uint8_t osd_string_buffer[40]; //allows for a maximum of 16 characters to be written to screen per loop
-  if (size > 40) {
+  static uint8_t osd_string_buffer[48]; //allows for a maximum of 20 characters to be written to screen per loop
+  if (size > 48) {
     return;
   }
 
