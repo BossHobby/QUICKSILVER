@@ -97,6 +97,7 @@ void osd_display_reset(void) {
 }
 
 void osd_save_exit(void){
+	osd_select = 0;
     osd_cursor = 0;
     osd_display_phase = 0;
 	#ifdef FLASH_SAVE1
@@ -534,12 +535,62 @@ void osd_select_stickboost(void)
 		break;
 	case 2:
 		osd_cursor = 0;
-		profile.pid.pid_profile = STICK_PROFILE_2;	//update profile
-		osd_display_phase = 15;	//update display phase to the next menu screen
+		profile.pid.stick_profile = STICK_PROFILE_2;	//update profile
+		osd_display_phase = 14;	//update display phase to the next menu screen
 		osd_menu_phase = 0;	//clear the screen
 		break;
 	}
   }
+}
+
+
+void osd_adjust_stickprofile_item(void)
+{
+	if(osd_select > 3) {
+		osd_select = 3;	//limit osd select variable from accumulating past 3 columns of adjustable items
+		osd_menu_phase = 1; //repaint the screen again
+	}
+	switch(osd_cursor){
+	case 1: //adjust row 1 items based on osd_select value and up/down osd gestures
+		if(osd_select == 1){
+			if (increase_osd_value) profile.pid.stick_rates[profile.pid.stick_profile].accelerator.roll = increment_rounded_float(profile.pid.stick_rates[profile.pid.stick_profile].accelerator.roll);
+			if (decrease_osd_value) profile.pid.stick_rates[profile.pid.stick_profile].accelerator.roll = decrement_rounded_float(profile.pid.stick_rates[profile.pid.stick_profile].accelerator.roll);
+		}
+		if(osd_select == 2){
+			if (increase_osd_value) profile.pid.stick_rates[profile.pid.stick_profile].accelerator.pitch = increment_rounded_float(profile.pid.stick_rates[profile.pid.stick_profile].accelerator.pitch);
+			if (decrease_osd_value) profile.pid.stick_rates[profile.pid.stick_profile].accelerator.pitch = decrement_rounded_float(profile.pid.stick_rates[profile.pid.stick_profile].accelerator.pitch);
+		}
+		if(osd_select == 3){
+			if (increase_osd_value) profile.pid.stick_rates[profile.pid.stick_profile].accelerator.yaw = increment_rounded_float(profile.pid.stick_rates[profile.pid.stick_profile].accelerator.yaw);
+			if (decrease_osd_value) profile.pid.stick_rates[profile.pid.stick_profile].accelerator.yaw = decrement_rounded_float(profile.pid.stick_rates[profile.pid.stick_profile].accelerator.yaw);
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 2:	//adjust row 2 items based on osd_select value and up/down osd gestures
+		if(osd_select == 1){
+			if (increase_osd_value) profile.pid.stick_rates[profile.pid.stick_profile].transition.roll = increment_rounded_float(profile.pid.stick_rates[profile.pid.stick_profile].transition.roll);
+			if (decrease_osd_value) profile.pid.stick_rates[profile.pid.stick_profile].transition.roll = decrement_rounded_float(profile.pid.stick_rates[profile.pid.stick_profile].transition.roll);
+		}
+		if(osd_select == 2){
+			if (increase_osd_value) profile.pid.stick_rates[profile.pid.stick_profile].transition.pitch = increment_rounded_float(profile.pid.stick_rates[profile.pid.stick_profile].transition.pitch);
+			if (decrease_osd_value) profile.pid.stick_rates[profile.pid.stick_profile].transition.pitch = decrement_rounded_float(profile.pid.stick_rates[profile.pid.stick_profile].transition.pitch);
+		}
+		if(osd_select == 3){
+			if (increase_osd_value) profile.pid.stick_rates[profile.pid.stick_profile].transition.yaw = increment_rounded_float(profile.pid.stick_rates[profile.pid.stick_profile].transition.yaw);
+			if (decrease_osd_value) profile.pid.stick_rates[profile.pid.stick_profile].transition.yaw = decrement_rounded_float(profile.pid.stick_rates[profile.pid.stick_profile].transition.yaw);
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 3: //save&exit silverware rates
+		if (osd_select == 1){
+		osd_save_exit();
+		}
+		break;
+	}
 }
 //******************************************************************************************************************************
 
@@ -1268,7 +1319,7 @@ void osd_display(void) {
       }
       break;
 
-  case 14:		//stick boost profile 1
+  case 14:		//stick boost profiles
       switch (osd_menu_phase) {
       case 0:
           osd_clear();
@@ -1277,45 +1328,88 @@ void osd_display(void) {
           osd_menu_phase++;
           break;
       case 1:
-    	  osd_print("BOOST PROFILE 1", INVERT, 9, 1);
+    	  if(profile.pid.stick_profile == STICK_PROFILE_1){
+    	  osd_print("BOOST PROFILE 1", INVERT, 7, 1);
     	  osd_menu_phase++;
+    	  }else{
+          osd_print("BOOST PROFILE 2", INVERT, 7, 1);
+          osd_menu_phase++;
+    	  }
     	  break;
       case 2:
-          osd_print("UNDER", user_selection(1, 2), 7, 4);
+          osd_print("ROLL", TEXT, 10, 4);
           osd_menu_phase++;
           break;
       case 3:
-          osd_print("DEVELOPMENT", user_selection(2, 2), 7, 5);
+    	  osd_print("PITCH", TEXT, 16, 4);
           osd_menu_phase++;
           break;
       case 4:
-    	  //osd_stickboost_profile1();
-    	  break;
-      }
-    break;
-
-  case 15:		//stick boost profile 2
-      switch (osd_menu_phase) {
-      case 0:
-          osd_clear();
-          extern unsigned long lastlooptime;
-          lastlooptime = gettime();
+    	  osd_print("YAW", TEXT, 23, 4);
           osd_menu_phase++;
           break;
-      case 1:
-    	  osd_print("BOOST PROFILE 2", INVERT, 9, 1);
-    	  osd_menu_phase++;
-    	  break;
-      case 2:
-          osd_print("UNDER", user_selection(1, 2), 7, 4);
+      case 5:
+          osd_print("ACCEL", user_selection(1, 3), 4, 6);
           osd_menu_phase++;
           break;
-      case 3:
-          osd_print("DEVELOPMENT", user_selection(2, 2), 7, 5);
+      case 6:
+    	  osd_print("TRANS", user_selection(2, 3), 4, 7);
           osd_menu_phase++;
           break;
-      case 4:
-    	  //osd_stickboost_profile2();
+      case 7:
+          osd_print("SAVE AND EXIT", user_selection(3, 3), 2, 14);
+          osd_menu_phase++;
+          break;
+      case 8:
+    	  if (profile.pid.stick_profile == STICK_PROFILE_1 || profile.pid.stick_profile == STICK_PROFILE_2){
+          uint8_t osd_roll_accel[4];
+          fast_fprint(osd_roll_accel, 4, profile.pid.stick_rates[profile.pid.stick_profile].accelerator.roll + FLT_EPSILON, 2);
+          osd_print_data(osd_roll_accel, 4, adjust_selection(1, 1), 10, 6);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 9:
+    	  if (profile.pid.stick_profile == STICK_PROFILE_1 || profile.pid.stick_profile == STICK_PROFILE_2){
+          uint8_t osd_pitch_accel[4];
+          fast_fprint(osd_pitch_accel, 4, profile.pid.stick_rates[profile.pid.stick_profile].accelerator.pitch + FLT_EPSILON, 2);
+          osd_print_data(osd_pitch_accel, 4, adjust_selection(2, 1), 16, 6);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 10:
+    	  if (profile.pid.stick_profile == STICK_PROFILE_1 || profile.pid.stick_profile == STICK_PROFILE_2){
+          uint8_t osd_yaw_accel[4];
+          fast_fprint(osd_yaw_accel, 4, profile.pid.stick_rates[profile.pid.stick_profile].accelerator.yaw + FLT_EPSILON, 2);
+          osd_print_data(osd_yaw_accel, 4, adjust_selection(3, 1), 22, 6);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 11:
+    	  if (profile.pid.stick_profile == STICK_PROFILE_1 || profile.pid.stick_profile == STICK_PROFILE_2){
+          uint8_t osd_roll_trans[4];
+          fast_fprint(osd_roll_trans, 4, profile.pid.stick_rates[profile.pid.stick_profile].transition.roll + FLT_EPSILON, 2);
+          osd_print_data(osd_roll_trans, 4, adjust_selection(1, 2), 10, 7);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 12:
+    	  if (profile.pid.stick_profile == STICK_PROFILE_1 || profile.pid.stick_profile == STICK_PROFILE_2){
+          uint8_t osd_pitch_trans[4];
+          fast_fprint(osd_pitch_trans, 4, profile.pid.stick_rates[profile.pid.stick_profile].transition.pitch + FLT_EPSILON, 2);
+          osd_print_data(osd_pitch_trans, 4, adjust_selection(2, 2), 16, 7);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 13:
+    	  if (profile.pid.stick_profile == STICK_PROFILE_1 || profile.pid.stick_profile == STICK_PROFILE_2){
+          uint8_t osd_yaw_trans[4];
+          fast_fprint(osd_yaw_trans, 4, profile.pid.stick_rates[profile.pid.stick_profile].transition.yaw + FLT_EPSILON, 2);
+          osd_print_data(osd_yaw_trans, 4, adjust_selection(3, 2), 22, 7);
+    	  }
+          osd_menu_phase++;
+          break;
+      case 14:
+    	  osd_adjust_stickprofile_item();
     	  break;
       }
     break;
