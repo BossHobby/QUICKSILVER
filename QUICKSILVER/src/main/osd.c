@@ -6,6 +6,7 @@
 #include "profile.h"
 #include "float.h"
 #include "util.h"
+#include "rx.h"
 
 #ifdef ENABLE_OSD
 
@@ -170,6 +171,28 @@ float increment_rounded_float(float input){
 float decrement_rounded_float(float input){
     float value = (int)(input * 100.0f + 0.5f);
     return (float)(value-1) / 100.0f;
+}
+
+
+const char* get_aux_status (int input){
+	static char* respond[] = {"CHANNEL 5", "CHANNEL 6", "CHANNEL 7", "CHANNEL 8", "CHANNEL 9", "CHANNEL 10", "GESTURE", "ALWAYS ON", "ALWAYS OFF", "ERROR"};
+	if(input == AUX_CHANNEL_0) return respond[0];
+	if(input == AUX_CHANNEL_1) return respond[1];
+	if(input == AUX_CHANNEL_2) return respond[2];
+	if(input == AUX_CHANNEL_3) return respond[3];
+	if(input == AUX_CHANNEL_4) return respond[4];
+	if(input == AUX_CHANNEL_5) return respond[5];
+	if(input == AUX_CHANNEL_6) return respond[6];
+	if(input == AUX_CHANNEL_7) return respond[6];
+	if(input == AUX_CHANNEL_8) return respond[6];
+	if(input == AUX_CHANNEL_9) return respond[6];
+	if(input == AUX_CHANNEL_10) return respond[6];
+	if(input == AUX_CHANNEL_11) return respond[6];
+	if(input == AUX_CHANNEL_12) return respond[6];
+	if(input == AUX_CHANNEL_13) return respond[6];
+	if(input == AUX_CHANNEL_ON) return respond[7];
+	if(input == AUX_CHANNEL_OFF) return respond[8];
+	else return respond[9];
 }
 //******************************************************************************************************************************
 
@@ -1206,14 +1229,90 @@ void osd_display(void) {
     	  osd_menu_phase++;
     	  break;
       case 2:
-          osd_print("UNDER", user_selection(1, 2), 7, 4);
+          osd_print("ARMING", user_selection(1, 11), 4, 2);
           osd_menu_phase++;
           break;
       case 3:
-          osd_print("DEVELOPMENT", user_selection(2, 2), 7, 5);
+          osd_print("IDLE UP", user_selection(2, 11), 4, 3);
           osd_menu_phase++;
           break;
       case 4:
+          osd_print("LEVELMODE", user_selection(3, 11), 4, 4);
+          osd_menu_phase++;
+          break;
+      case 5:
+          osd_print("RACEMODE", user_selection(4, 11), 4, 5);
+          osd_menu_phase++;
+          break;
+      case 6:
+          osd_print("HORIZON", user_selection(5, 11), 4, 6);
+          osd_menu_phase++;
+          break;
+      case 7:
+          osd_print("STICK BOOST", user_selection(6, 11), 4, 7);
+          osd_menu_phase++;
+          break;
+      case 8:
+          osd_print("HIGH RATES", user_selection(7, 11), 4, 8);
+          osd_menu_phase++;
+          break;
+      case 9:
+          osd_print("BUZZER", user_selection(8, 11), 4, 9);
+          osd_menu_phase++;
+          break;
+      case 10:
+          osd_print("TURTLE", user_selection(9, 11), 4, 10);
+          osd_menu_phase++;
+          break;
+      case 11:
+          osd_print("MOTOR TEST", user_selection(10, 11), 4, 11);
+          osd_menu_phase++;
+          break;
+      case 12:
+          osd_print("SAVE AND EXIT", user_selection(11, 11), 4, 14);
+          osd_menu_phase++;
+          break;
+      case 13:
+    	  osd_print(get_aux_status(profile.channel.aux[AUX_ARMING]), adjust_selection(1, 1), 17, 2);
+          osd_menu_phase++;
+          break;
+      case 14:
+    	  osd_print(get_aux_status(profile.channel.aux[AUX_IDLE_UP]), adjust_selection(1, 2), 17, 3);
+          osd_menu_phase++;
+          break;
+      case 15:
+    	  osd_print(get_aux_status(profile.channel.aux[AUX_LEVELMODE]), adjust_selection(1, 3), 17, 4);
+          osd_menu_phase++;
+          break;
+      case 16:
+    	  osd_print(get_aux_status(profile.channel.aux[AUX_RACEMODE]), adjust_selection(1, 4), 17, 5);
+          osd_menu_phase++;
+          break;
+      case 17:
+    	  osd_print(get_aux_status(profile.channel.aux[AUX_HORIZON]), adjust_selection(1, 5), 17, 6);
+          osd_menu_phase++;
+          break;
+      case 18:
+    	  osd_print(get_aux_status(profile.channel.aux[AUX_PIDPROFILE]), adjust_selection(1, 6), 17, 7);
+          osd_menu_phase++;
+          break;
+      case 19:
+    	  osd_print(get_aux_status(profile.channel.aux[AUX_RATES]), adjust_selection(1, 7), 17, 8);
+          osd_menu_phase++;
+          break;
+      case 20:
+    	  osd_print(get_aux_status(profile.channel.aux[AUX_BUZZER_ENABLE]), adjust_selection(1, 8), 17, 9);
+          osd_menu_phase++;
+          break;
+      case 21:
+    	  osd_print(get_aux_status(profile.channel.aux[AUX_STARTFLIP]), adjust_selection(1, 9), 17, 10);
+          osd_menu_phase++;
+          break;
+      case 22:
+    	  osd_print(get_aux_status(profile.channel.aux[AUX_MOTORS_TO_THROTTLE_MODE]), adjust_selection(1, 10), 17, 11);
+          osd_menu_phase++;
+          break;
+      case 23:
     	  //osd_select_flightmode();
     	  break;
       }
