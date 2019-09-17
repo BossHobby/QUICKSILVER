@@ -179,8 +179,8 @@ int main(void) {
   aux[AUX_CHANNEL_ON] = 1;
   aux[AUX_CHANNEL_OFF] = 0;
 
-#ifdef STICK_TRAVEL_CHECK_START_ON
-  aux[TRAVEL_CHECK] = 1;
+#ifdef GESTURE_AUX_START_ON
+  aux[AUX_CHANNEL_12] = 1;
 #endif
 
 #ifdef FLASH_SAVE1

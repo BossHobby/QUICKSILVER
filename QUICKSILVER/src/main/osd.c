@@ -175,7 +175,7 @@ float decrement_rounded_float(float input){
 
 
 const char* get_aux_status (int input){
-	static char* respond[] = {"CHANNEL 5", "CHANNEL 6", "CHANNEL 7", "CHANNEL 8", "CHANNEL 9", "CHANNEL 10", "GESTURE", "ALWAYS ON", "ALWAYS OFF", "ERROR"};
+	static char* respond[] = {"CHANNEL 5", "CHANNEL 6", "CHANNEL 7", "CHANNEL 8", "CHANNEL 9", "CHANNEL 10", "CHANNEL 11", "CHANNEL 12", "CHANNEL 13", "CHANNEL 14", "CHANNEL 15", "CHANNEL 16", "GESTURE AUX", "ALWAYS ON", "ALWAYS OFF", "ERROR"};
 	if(input == AUX_CHANNEL_0) return respond[0];
 	if(input == AUX_CHANNEL_1) return respond[1];
 	if(input == AUX_CHANNEL_2) return respond[2];
@@ -183,16 +183,15 @@ const char* get_aux_status (int input){
 	if(input == AUX_CHANNEL_4) return respond[4];
 	if(input == AUX_CHANNEL_5) return respond[5];
 	if(input == AUX_CHANNEL_6) return respond[6];
-	if(input == AUX_CHANNEL_7) return respond[6];
-	if(input == AUX_CHANNEL_8) return respond[6];
-	if(input == AUX_CHANNEL_9) return respond[6];
-	if(input == AUX_CHANNEL_10) return respond[6];
-	if(input == AUX_CHANNEL_11) return respond[6];
-	if(input == AUX_CHANNEL_12) return respond[6];
-	if(input == AUX_CHANNEL_13) return respond[6];
-	if(input == AUX_CHANNEL_ON) return respond[7];
-	if(input == AUX_CHANNEL_OFF) return respond[8];
-	else return respond[9];
+	if(input == AUX_CHANNEL_7) return respond[7];
+	if(input == AUX_CHANNEL_8) return respond[8];
+	if(input == AUX_CHANNEL_9) return respond[9];
+	if(input == AUX_CHANNEL_10) return respond[10];
+	if(input == AUX_CHANNEL_11) return respond[11];
+	if(input == AUX_CHANNEL_12) return respond[12];
+	if(input == AUX_CHANNEL_ON) return respond[13];
+	if(input == AUX_CHANNEL_OFF) return respond[14];
+	return respond[15];
 }
 //******************************************************************************************************************************
 

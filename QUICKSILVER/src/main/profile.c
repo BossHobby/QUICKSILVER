@@ -198,7 +198,11 @@ const profile_t default_profile = {
             RACEMODE,     //AUX_RACEMODE
             HORIZON,      //AUX_HORIZON
             PIDPROFILE,   //AUX_PIDPROFILE
-            TRAVEL_CHECK, //AUX_TRAVEL_CHECK
+#ifdef STICK_TRAVEL_CHECK //AUX_TRAVEL_CHECK
+            STICK_TRAVEL_CHECK,
+#else
+			AUX_CHANNEL_OFF,
+#endif
             RATES,        //AUX_RATES
             LEDS_ON,      //AUX_LEDS_ON
 #ifdef BUZZER_ENABLE      //AUX_BUZZER_ENABLE

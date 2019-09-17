@@ -121,8 +121,8 @@
 // *************if no channel is assigned but buzzer is set to AUX_CHANNEL_ON - buzzer will activate on LVC and FAILSAFE.
 //#define BUZZER_ENABLE AUX_CHANNEL_OFF
 
-// *************RRD/LLD stick gesture aux start up state.
-//#define STICK_TRAVEL_CHECK_START_ON
+// *************RRD/LLD stick gesture aux start up state.  Gesture aux is AUX_CHANNEL_12
+//#define GESTURE_AUX_START_ON
 
 //**********************************************************************************************************************
 //***********************************************VOLTAGE SETTINGS*******************************************************
@@ -259,8 +259,7 @@
 // ************* will disable throttle and will rapid blink the led when sticks are moved to 100% throws
 // ************* entering <LEFT-LEFT-DOWN> will return the quad to normal operation.
 // ************* you can optionaly select a aux channel to trigger the same.
-#define STICK_TRAVEL_CHECK
-//#define TRAVEL_CHECK AUX_CHANNEL_13
+//#define STICK_TRAVEL_CHECK AUX_CHANNEL_OFF
 
 //#############################################################################################################################
 //#############################################################################################################################
