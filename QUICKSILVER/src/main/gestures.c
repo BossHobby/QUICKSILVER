@@ -95,12 +95,12 @@ void gestures(void) {
     }
 
     if (command == GESTURE_RRD) {
-      aux[profile.channel.aux[AUX_CHANNEL_12]] = 1;
+      aux[AUX_CHANNEL_12] = 1;
       ledcommand = 1;
     }
     if (command == GESTURE_LLD) {
       ledcommand = 1;
-      aux[profile.channel.aux[AUX_CHANNEL_12]] = 0;
+      aux[AUX_CHANNEL_12] = 0;
     }
 
 #ifdef ENABLE_OSD
