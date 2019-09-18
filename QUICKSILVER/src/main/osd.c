@@ -523,7 +523,7 @@ void osd_adjust_betaflightrates_item(void)
 //******************************************************************************************************************************
 //osd special features logic
 
-void osd_select_flightmode(void)		//This function is broken ... it crashes
+void osd_select_flightmode(void)
 {
 	if(osd_select > 1) {
 		osd_select = 1;	//limit osd select variable from accumulating past 3 columns of adjustable items
@@ -1495,7 +1495,7 @@ void osd_display(void) {
           osd_menu_phase++;
           break;
       case 23:
-    	  //osd_select_flightmode(); 	//This function is broken
+    	  osd_select_flightmode();
     	  break;
       }
     break;

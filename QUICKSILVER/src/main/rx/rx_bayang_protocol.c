@@ -156,7 +156,7 @@ static int decodepacket(void) {
 
       aux[CH_FLIP] = (rxdata[2] & 0x08) ? 1 : 0;
 
-      aux[CH_EXPERT] = (rxdata[1] == 0xfa) ? 1 : 0;
+      //aux[CH_EXPERT] = (rxdata[1] == 0xfa) ? 1 : 0;
 
       aux[CH_HEADFREE] = (rxdata[2] & 0x02) ? 1 : 0;
 
