@@ -4,7 +4,7 @@ void max7456_init(void);
 void osd_intro(void);
 void osd_clear(void);
 void osd_checksystem(void);
-void osd_print( char *buffer ,  uint8_t dmm_attribute,  uint8_t x , uint8_t y);
+void osd_print( const char *buffer ,  uint8_t dmm_attribute,  uint8_t x , uint8_t y);
 void osd_print_data( uint8_t *buffer , uint8_t length,  uint8_t dmm_attribute,  uint8_t x , uint8_t y);
 void fast_fprint(uint8_t* str, uint8_t length, float v, uint8_t precision);
 

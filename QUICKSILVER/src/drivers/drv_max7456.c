@@ -387,7 +387,7 @@ void osd_print_data(uint8_t *buffer, uint8_t length, uint8_t dmm_attribute, uint
 }
 
 // prints string to screen with dmm_attribute TEXT, BLINK, or INVERT.  CAUTION:  strlen() is used in this so only use this for compile time strings
-void osd_print(char *buffer, uint8_t dmm_attribute, uint8_t x, uint8_t y) {
+void osd_print(const char *buffer, uint8_t dmm_attribute, uint8_t x, uint8_t y) {
   if (lastsystem != PAL) {
     //NTSC adjustment 3 lines up if after line 12 or maybe this should be 8
     if (y > 12)

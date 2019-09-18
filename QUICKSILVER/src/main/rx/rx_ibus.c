@@ -234,13 +234,11 @@ void checkrx() {
         aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
         aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
         aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
-        //and here we have the rest of the iBus AUX channels/
-        /* Currently Silverware only has six AUX channels.
-					aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
-					aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
-					aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
-					aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
-					*/
+        aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
+		aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
+		aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
+		aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
+
 
         time_lastframe = gettime();
         if (ibus_stats)

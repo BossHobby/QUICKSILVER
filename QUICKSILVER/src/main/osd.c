@@ -175,7 +175,7 @@ float decrement_rounded_float(float input){
 
 
 const char* get_aux_status (int input){
-	static char* respond[] = {"CHANNEL 5", "CHANNEL 6", "CHANNEL 7", "CHANNEL 8", "CHANNEL 9", "CHANNEL 10", "CHANNEL 11", "CHANNEL 12", "CHANNEL 13", "CHANNEL 14", "CHANNEL 15", "CHANNEL 16", "GESTURE AUX", "ALWAYS ON", "ALWAYS OFF", "ERROR"};
+	static char* respond[] = {"CHANNEL 5  ", "CHANNEL 6  ", "CHANNEL 7  ", "CHANNEL 8  ", "CHANNEL 9  ", "CHANNEL 10 ", "CHANNEL 11 ", "CHANNEL 12 ", "CHANNEL 13 ", "CHANNEL 14 ", "CHANNEL 15 ", "CHANNEL 16 ", "GESTURE AUX", "ALWAYS ON  ", "ALWAYS OFF ", "ERROR      "};
 	if(input == AUX_CHANNEL_0) return respond[0];
 	if(input == AUX_CHANNEL_1) return respond[1];
 	if(input == AUX_CHANNEL_2) return respond[2];
@@ -515,6 +515,189 @@ void osd_adjust_betaflightrates_item(void)
 		}
 		break;
 	}
+
+}
+//******************************************************************************************************************************
+
+
+//******************************************************************************************************************************
+//osd special features logic
+
+void osd_select_flightmode(void)		//This function is broken ... it crashes
+{
+	if(osd_select > 1) {
+		osd_select = 1;	//limit osd select variable from accumulating past 3 columns of adjustable items
+		osd_menu_phase = 1; //repaint the screen again
+	}
+
+	switch(osd_cursor){
+	case 1: //adjust row 1 item based on osd_select value and up/down osd gestures
+		if (osd_select == 1){
+		int i = profile.channel.aux[AUX_ARMING];
+		if (increase_osd_value && i != AUX_CHANNEL_0)  {
+			i--;
+			profile.channel.aux[AUX_ARMING] = i;
+			}
+		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
+			i++;
+			profile.channel.aux[AUX_ARMING] = i;
+			}
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 2:
+		if (osd_select == 1){
+		int i = profile.channel.aux[AUX_IDLE_UP];
+		if (increase_osd_value && i != AUX_CHANNEL_0)  {
+			i--;
+			profile.channel.aux[AUX_IDLE_UP] = i;
+			}
+		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
+			i++;
+			profile.channel.aux[AUX_IDLE_UP] = i;
+			}
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 3:
+		if (osd_select == 1){
+		int i = profile.channel.aux[AUX_LEVELMODE];
+		if (increase_osd_value && i != AUX_CHANNEL_0)  {
+			i--;
+			profile.channel.aux[AUX_LEVELMODE] = i;
+			}
+		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
+			i++;
+			profile.channel.aux[AUX_LEVELMODE] = i;
+			}
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 4:
+		if (osd_select == 1){
+		int i = profile.channel.aux[AUX_RACEMODE];
+		if (increase_osd_value && i != AUX_CHANNEL_0)  {
+			i--;
+			profile.channel.aux[AUX_RACEMODE] = i;
+			}
+		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
+			i++;
+			profile.channel.aux[AUX_RACEMODE] = i;
+			}
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 5:
+		if (osd_select == 1){
+		int i = profile.channel.aux[AUX_HORIZON];
+		if (increase_osd_value && i != AUX_CHANNEL_0)  {
+			i--;
+			profile.channel.aux[AUX_HORIZON] = i;
+			}
+		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
+			i++;
+			profile.channel.aux[AUX_HORIZON] = i;
+			}
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 6:
+		if (osd_select == 1){
+		int i = profile.channel.aux[AUX_PIDPROFILE];
+		if (increase_osd_value && i != AUX_CHANNEL_0)  {
+			i--;
+			profile.channel.aux[AUX_PIDPROFILE] = i;
+			}
+		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
+			i++;
+			profile.channel.aux[AUX_PIDPROFILE] = i;
+			}
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 7:
+		if (osd_select == 1){
+		int i = profile.channel.aux[AUX_RATES];
+		if (increase_osd_value && i != AUX_CHANNEL_0)  {
+			i--;
+			profile.channel.aux[AUX_RATES] = i;
+			}
+		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
+			i++;
+			profile.channel.aux[AUX_RATES] = i;
+			}
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 8:
+		if (osd_select == 1){
+		int i = profile.channel.aux[AUX_BUZZER_ENABLE];
+		if (increase_osd_value && i != AUX_CHANNEL_0)  {
+			i--;
+			profile.channel.aux[AUX_BUZZER_ENABLE] = i;
+			}
+		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
+			i++;
+			profile.channel.aux[AUX_BUZZER_ENABLE] = i;
+			}
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 9:
+		if (osd_select == 1){
+		int i = profile.channel.aux[AUX_STARTFLIP];
+		if (increase_osd_value && i != AUX_CHANNEL_0)  {
+			i--;
+			profile.channel.aux[AUX_STARTFLIP] = i;
+			}
+		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
+			i++;
+			profile.channel.aux[AUX_STARTFLIP] = i;
+			}
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 10:
+		if (osd_select == 1){
+		int i = profile.channel.aux[AUX_MOTORS_TO_THROTTLE_MODE];
+		if (increase_osd_value && i != AUX_CHANNEL_0)  {
+			i--;
+			profile.channel.aux[AUX_MOTORS_TO_THROTTLE_MODE] = i;
+			}
+		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
+			i++;
+			profile.channel.aux[AUX_MOTORS_TO_THROTTLE_MODE] = i;
+			}
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		break;
+	case 11: //save & exit FLIGHT MODES
+		if (osd_select == 1){
+		osd_save_exit();
+		}
+		break;
+	}
+
 
 }
 //******************************************************************************************************************************
@@ -1312,7 +1495,7 @@ void osd_display(void) {
           osd_menu_phase++;
           break;
       case 23:
-    	  //osd_select_flightmode();
+    	  //osd_select_flightmode(); 	//This function is broken
     	  break;
       }
     break;

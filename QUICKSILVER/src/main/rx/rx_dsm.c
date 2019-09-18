@@ -233,7 +233,7 @@ void checkrx()
 
 #ifdef RX_DSM2_1024
     aux[AUX_CHANNEL_0] = (channels[4] > 550) ? 1 : 0;        //550 cutoff intentionally selected to force aux channels low if
-    aux[AUX_CHANNEL_1ANNEL_1] = (channels[5] > 550) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
+    aux[AUX_CHANNEL_1] = (channels[5] > 550) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
     aux[AUX_CHANNEL_2] = (channels[6] > 550) ? 1 : 0;
 #endif
 
