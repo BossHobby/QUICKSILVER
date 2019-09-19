@@ -181,7 +181,7 @@ void get_quic(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   case QUIC_VAL_IMU: {
-    cbor_encode_map(&enc, 1);
+    cbor_encode_map(&enc, 2);
 
     extern float gyro_raw[3];
     cbor_encode_str(&enc, "gyro_raw");
@@ -189,6 +189,13 @@ void get_quic(uint8_t *data, uint32_t len) {
     cbor_encode_float(&enc, &gyro_raw[0]);
     cbor_encode_float(&enc, &gyro_raw[1]);
     cbor_encode_float(&enc, &gyro_raw[2]);
+
+    extern float GEstG[3];
+    cbor_encode_str(&enc, "gyro_rot");
+    cbor_encode_array(&enc, 3);
+    cbor_encode_float(&enc, &GEstG[0]);
+    cbor_encode_float(&enc, &GEstG[1]);
+    cbor_encode_float(&enc, &GEstG[2]);
 
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;

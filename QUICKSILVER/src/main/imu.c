@@ -31,7 +31,6 @@ extern debug_type debug;
 #define ACC_MAX 1.1f
 
 float GEstG[3] = {0, 0, ACC_1G};
-
 float attitude[3];
 
 extern float gyro[3];
@@ -122,15 +121,13 @@ void imu_calc(void) {
   GEstG[1] = (deltaGyroAngle[2]) * GEstG[0] + GEstG[1];
 
   // calc acc mag
-  float accmag;
-
-  accmag = calcmagnitude(&accel[0]);
-
+  float accmag = calcmagnitude(&accel[0]);
   if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G) && !DISABLE_ACC) {
     // normalize acc
     for (int axis = 0; axis < 3; axis++) {
       accel[axis] = accel[axis] * (ACC_1G / accmag);
     }
+
     float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FILTERTIME);
     for (int x = 0; x < 3; x++) {
       lpf(&GEstG[x], accel[x], filtcoeff);

@@ -33,6 +33,7 @@ THE SOFTWARE.
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "led.h"
+#include "profile.h"
 #include "project.h"
 #include "sixaxis.h"
 #include "util.h"
@@ -58,6 +59,7 @@ THE SOFTWARE.
 #endif
 
 extern debug_type debug;
+extern profile_t profile;
 
 float accel[3];
 float gyro[3];
@@ -271,7 +273,7 @@ void sixaxis_read(void) {
   gyro_raw[2] = -gyro_raw[2];
 
   for (int i = 0; i < 3; i++) {
-    gyro_raw[i] = gyro_raw[i] * 0.061035156f * 0.017453292f;
+    gyro_raw[i] = gyro_raw[i] * 0.061035156f * DEGTORAD;
 #ifndef SOFT_LPF_NONE
 
 #if defined(GYRO_FILTER_PASS2) && defined(GYRO_FILTER_PASS1)
