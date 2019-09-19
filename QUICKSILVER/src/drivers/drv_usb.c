@@ -40,11 +40,13 @@ void usb_init(void) {
 }
 
 void usb_detect(void) {
+extern int disable_arming;
 #ifdef USB_DETECT_PIN
   const uint8_t usb_connect = GPIO_ReadInputDataBit(USB_DETECT_PORT, USB_DETECT_PIN);
   if (usb_connect != 1) {
     // no usb connetion, bail
     usb_is_active = 0;
+    disable_arming = usb_is_active;
     return;
   }
 #endif
@@ -52,10 +54,13 @@ void usb_detect(void) {
   if (bDeviceState != CONFIGURED) {
     // only read if we are configured
     usb_is_active = 0;
+    disable_arming = usb_is_active;
     return;
   }
 
   usb_is_active = 1;
+  disable_arming = usb_is_active;
+
   usb_configurator();
 }
 
