@@ -538,7 +538,7 @@ void osd_select_flightmode(void)
 			i--;
 			profile.channel.aux[AUX_ARMING] = i;
 			}
-		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
+		if (decrease_osd_value && i != AUX_CHANNEL_12)  {
 			i++;
 			profile.channel.aux[AUX_ARMING] = i;
 			}
