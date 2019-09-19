@@ -20,6 +20,7 @@ const profile_t default_profile = {
         .invert_yaw = 0,
 #endif
         .digital_idle = DIGITAL_IDLE,
+        .gyro_rotation = GYRO_ROTATE_NONE,
     },
 
     .rate = {

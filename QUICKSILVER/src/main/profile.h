@@ -104,14 +104,26 @@ typedef struct {
   MEMBER(stick_profile, uint8)                         \
   ARRAY_MEMBER(stick_rates, STICK_PROFILE_MAX, stick_rate_t)
 
+typedef enum {
+  GYRO_ROTATE_NONE,
+  GYRO_ROTATE_45_CCW,
+  GYRO_ROTATE_45_CW,
+  GYRO_ROTATE_90_CW,
+  GYRO_ROTATE_90_CCW,
+  GYRO_ROTATE_180,
+  GYRO_FLIP_180,
+} gyro_rotation_t;
+
 typedef struct {
   float digital_idle;
   uint8_t invert_yaw;
+  gyro_rotation_t gyro_rotation;
 } motor_t;
 
 #define MOTOR_MEMBERS         \
   MEMBER(digital_idle, float) \
-  MEMBER(invert_yaw, uint8)
+  MEMBER(invert_yaw, uint8)   \
+  MEMBER(gyro_rotation, uint8)
 
 typedef struct {
   uint8_t lipo_cell_count;
