@@ -538,7 +538,7 @@ void osd_select_flightmode(void)
 			i--;
 			profile.channel.aux[AUX_ARMING] = i;
 			}
-		if (decrease_osd_value && i != AUX_CHANNEL_12)  {
+		if (decrease_osd_value && i != AUX_CHANNEL_11)  {
 			i++;
 			profile.channel.aux[AUX_ARMING] = i;
 			}
@@ -823,12 +823,7 @@ void osd_display(void) {
   extern float vbatt_comp;
   extern float lipo_cell_count;
   extern int lowbatt;
-  extern int disable_arming;
-  if(osd_display_phase != 2){
-	  disable_arming = 1;			//prevent any unexpected accidental surprises while tinkering in menus
-  }else{
-	  disable_arming = 0;
-  }
+
   //just some values to test position/attribute/active until we start saving them to flash with the osd manu
   *callsign1 = 0xAB;        //	0001 01010 11
   *fuelgauge_volts = 0x72D; //‭  1110 01011 01‬

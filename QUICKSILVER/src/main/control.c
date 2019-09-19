@@ -45,7 +45,7 @@ extern int armed_state;
 extern int in_air;
 extern int arming_release;
 extern int binding_while_armed;
-extern int disable_arming;
+extern uint8_t osd_display_phase;
 extern int rx_ready;
 
 extern float rx[];
@@ -363,7 +363,7 @@ void control(void) {
     if (rx_ready == 1)
       binding_while_armed = 0;                                                                //                        rx is bound and has been disarmed so clear binding while armed flag
   } else {                                                                                    // 						CONDITION: switch is ARMED
-    if (((rx[3] > THROTTLE_SAFETY) && (arming_release == 0)) || (binding_while_armed == 1) || (disable_arming == 1)) { //				   CONDITION: (throttle is above safety limit and ARMING RELEASE FLAG IS NOT CLEARED) OR (bind just took place with transmitter armed)
+    if (((rx[3] > THROTTLE_SAFETY) && (arming_release == 0)) || (binding_while_armed == 1) || (osd_display_phase != 2)) { //				   CONDITION: (throttle is above safety limit and ARMING RELEASE FLAG IS NOT CLEARED) OR (bind just took place with transmitter armed)
       armed_state = 0;                                                                        //                         	 				override to disarmed state and rapid blink the leds
       ledcommand = 1;
     } else {              //            					 CONDITION: quad is being armed in a safe state

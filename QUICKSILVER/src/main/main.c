@@ -112,7 +112,6 @@ int in_air;
 int armed_state;
 int arming_release;
 int binding_while_armed = 1;
-int disable_arming = 0;
 
 //Experimental Flash Memory Feature
 int flash_feature_1 = 1; //SETUP WIZARD
