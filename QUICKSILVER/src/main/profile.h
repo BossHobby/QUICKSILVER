@@ -117,13 +117,13 @@ typedef enum {
 typedef struct {
   float digital_idle;
   uint8_t invert_yaw;
-  gyro_rotation_t gyro_rotation;
+  gyro_rotation_t gyro_orientation;
 } motor_t;
 
 #define MOTOR_MEMBERS         \
   MEMBER(digital_idle, float) \
   MEMBER(invert_yaw, uint8)   \
-  MEMBER(gyro_rotation, uint8)
+  MEMBER(gyro_orientation, uint8)
 
 typedef struct {
   uint8_t lipo_cell_count;

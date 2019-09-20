@@ -20,7 +20,27 @@ const profile_t default_profile = {
         .invert_yaw = 0,
 #endif
         .digital_idle = DIGITAL_IDLE,
-        .gyro_rotation = GYRO_ROTATE_NONE,
+#ifdef SENSOR_ROTATE_90_CW
+        .gyro_orientation = GYRO_ROTATE_90_CW,
+#endif
+#ifdef SENSOR_ROTATE_45_CCW
+        .gyro_orientation = GYRO_ROTATE_45_CCW,
+#endif
+#ifdef SENSOR_ROTATE_45_CW
+        .gyro_orientation = GYRO_ROTATE_45_CW,
+#endif
+#ifdef SENSOR_ROTATE_90_CCW
+        .gyro_orientation = GYRO_ROTATE_90_CCW,
+#endif
+#ifdef SENSOR_ROTATE_180
+        .gyro_orientation = GYRO_ROTATE_180,
+#endif
+#ifdef SENSOR_FLIP_180
+        .gyro_orientation = GYRO_FLIP_180,
+#endif
+#if !defined(SENSOR_ROTATE_90_CW) && !defined(SENSOR_ROTATE_45_CCW) && !defined(SENSOR_ROTATE_45_CW) && !defined(SENSOR_ROTATE_90_CCW) && !defined(SENSOR_ROTATE_180) && !defined(SENSOR_FLIP_180)
+        .gyro_orientation = GYRO_ROTATE_NONE,
+#endif
     },
 
     .rate = {
@@ -202,11 +222,11 @@ const profile_t default_profile = {
 #ifdef STICK_TRAVEL_CHECK //AUX_TRAVEL_CHECK
             STICK_TRAVEL_CHECK,
 #else
-			AUX_CHANNEL_OFF,
+            AUX_CHANNEL_OFF,
 #endif
-            RATES,        //AUX_RATES
-            LEDS_ON,      //AUX_LEDS_ON
-#ifdef BUZZER_ENABLE      //AUX_BUZZER_ENABLE
+            RATES,   //AUX_RATES
+            LEDS_ON, //AUX_LEDS_ON
+#ifdef BUZZER_ENABLE //AUX_BUZZER_ENABLE
             BUZZER_ENABLE,
 #else
             AUX_CHANNEL_OFF,

@@ -44,6 +44,9 @@ THE SOFTWARE.
 #define CAL_TIME 2e6
 #define GLOW_TIME 62500
 
+// this is the value of both cos 45 and sin 45 = 1/sqrt(2)
+#define INVSQRT2 0.707106781f
+
 // temporary fix for compatibility between versions
 #ifndef GYRO_ID_1
 #define GYRO_ID_1 0x68
@@ -153,66 +156,45 @@ void sixaxis_read(void) {
 #ifdef F405
   MPU6XXX_read_data(59, data, 14);
 #endif
-#ifdef SENSOR_ROTATE_90_CW
-  accel[0] = (int16_t)((data[2] << 8) + data[3]);
-  accel[1] = -(int16_t)((data[0] << 8) + data[1]);
-  accel[2] = (int16_t)((data[4] << 8) + data[5]);
-#else
 
   accel[0] = -(int16_t)((data[0] << 8) + data[1]);
   accel[1] = -(int16_t)((data[2] << 8) + data[3]);
   accel[2] = (int16_t)((data[4] << 8) + data[5]);
 
-#endif
-
-#ifdef SENSOR_ROTATE_90_CW_deleted
-  { //
+  if (profile.motor.gyro_orientation == GYRO_ROTATE_90_CW) {
     float temp = accel[1];
     accel[1] = accel[0];
     accel[0] = -temp;
   }
-#endif
 
-// this is the value of both cos 45 and sin 45 = 1/sqrt(2)
-#define INVSQRT2 0.707106781f
-
-#ifdef SENSOR_ROTATE_45_CCW
-  {
+  if (profile.motor.gyro_orientation == GYRO_ROTATE_45_CCW) {
     float temp = accel[0];
     accel[0] = (accel[0] * INVSQRT2 + accel[1] * INVSQRT2);
     accel[1] = -(temp * INVSQRT2 - accel[1] * INVSQRT2);
   }
-#endif
 
-#ifdef SENSOR_ROTATE_45_CW
-  {
+  if (profile.motor.gyro_orientation == GYRO_ROTATE_45_CW) {
     float temp = accel[1];
     accel[1] = (accel[1] * INVSQRT2 + accel[0] * INVSQRT2);
     accel[0] = -(temp * INVSQRT2 - accel[0] * INVSQRT2);
   }
-#endif
 
-#ifdef SENSOR_ROTATE_90_CCW
-  {
+  if (profile.motor.gyro_orientation == GYRO_ROTATE_90_CCW) {
     float temp = accel[1];
     accel[1] = -accel[0];
     accel[0] = temp;
   }
-#endif
 
-#ifdef SENSOR_ROTATE_180
-  {
+  if (profile.motor.gyro_orientation == GYRO_ROTATE_180) {
     accel[1] = -accel[1];
     accel[0] = -accel[0];
   }
-#endif
 
-#ifdef SENSOR_FLIP_180
-  {
+  if (profile.motor.gyro_orientation == GYRO_FLIP_180) {
     accel[2] = -accel[2];
     accel[0] = -accel[0];
   }
-#endif
+
   //order
   gyro_raw[1] = (int16_t)((data[8] << 8) + data[9]);
   gyro_raw[0] = (int16_t)((data[10] << 8) + data[11]);
@@ -222,51 +204,39 @@ void sixaxis_read(void) {
   gyro_raw[1] = gyro_raw[1] - gyrocal[1];
   gyro_raw[2] = gyro_raw[2] - gyrocal[2];
 
-#ifdef SENSOR_ROTATE_90_CW
-  {
+  if (profile.motor.gyro_orientation == GYRO_ROTATE_90_CW) {
     float temp = gyro_raw[1];
     gyro_raw[1] = -gyro_raw[0];
     gyro_raw[0] = temp;
   }
-#endif
 
-#ifdef SENSOR_ROTATE_45_CCW
-  {
+  if (profile.motor.gyro_orientation == GYRO_ROTATE_45_CCW) {
     float temp = gyro_raw[1];
     gyro_raw[1] = gyro_raw[0] * INVSQRT2 + gyro_raw[1] * INVSQRT2;
     gyro_raw[0] = gyro_raw[0] * INVSQRT2 - temp * INVSQRT2;
   }
-#endif
 
-#ifdef SENSOR_ROTATE_45_CW
-  {
+  if (profile.motor.gyro_orientation == GYRO_ROTATE_45_CW) {
     float temp = gyro_raw[0];
     gyro_raw[0] = gyro_raw[1] * INVSQRT2 + gyro_raw[0] * INVSQRT2;
     gyro_raw[1] = gyro_raw[1] * INVSQRT2 - temp * INVSQRT2;
   }
-#endif
 
-#ifdef SENSOR_ROTATE_90_CCW
-  {
+  if (profile.motor.gyro_orientation == GYRO_ROTATE_90_CCW) {
     float temp = gyro_raw[1];
     gyro_raw[1] = gyro_raw[0];
     gyro_raw[0] = -temp;
   }
-#endif
 
-#ifdef SENSOR_ROTATE_180
-  {
+  if (profile.motor.gyro_orientation == GYRO_ROTATE_180) {
     gyro_raw[1] = -gyro_raw[1];
     gyro_raw[0] = -gyro_raw[0];
   }
-#endif
 
-#ifdef SENSOR_FLIP_180
-  {
+  if (profile.motor.gyro_orientation == GYRO_FLIP_180) {
     gyro_raw[1] = -gyro_raw[1];
     gyro_raw[2] = -gyro_raw[2];
   }
-#endif
 
   //gyro_raw[0] = - gyro_raw[0];
   gyro_raw[1] = -gyro_raw[1];
