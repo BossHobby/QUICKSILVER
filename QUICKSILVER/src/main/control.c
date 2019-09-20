@@ -358,6 +358,10 @@ void control(void) {
 #define THROTTLE_SAFETY .15f
 #endif
 
+#ifndef ENABLE_OSD
+  uint8_t osd_display_phase = 2;		//bypass osd menu safety check if FC does not have OSD
+#endif
+
   if (!rx_aux_on(AUX_ARMING)) { // 						CONDITION: switch is DISARMED
     armed_state = 0;            // 												disarm the quad by setting armed state variable to zero
     if (rx_ready == 1)

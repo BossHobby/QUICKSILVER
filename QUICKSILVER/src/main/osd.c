@@ -288,7 +288,6 @@ void osd_select_pidprofile_item(void)
   }
 }
 
-
 void osd_adjust_pidprofile_item(void)
 {
 	if(osd_select > 3) {
@@ -449,7 +448,6 @@ void osd_adjust_silverwarerates_item(void)
 		break;
 	}
 }
-
 
 void osd_adjust_betaflightrates_item(void)
 {

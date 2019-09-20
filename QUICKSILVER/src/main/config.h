@@ -13,7 +13,7 @@
 //***********************************************NEW STUFF TO PLAY WITH*****************************************************
 
 // Select filter cut 25hz for SBUS, 67hz for CRSF, 40hz for DSMX, 20hz for DSM2, 90hz for bayang, 45hz for frsky   Formula is [(1/rx framerate)/2] * 0.9
-#define RX_SMOOTHING_HZ 90
+#define RX_SMOOTHING_HZ 50
 
 //Select (only one) source variable for PID VBAT Compensation
 //#define EXACT_VOLTS     //origional method - responds to exact moment to moment sag
@@ -74,9 +74,9 @@
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
 //#define RX_IBUS
 //#define RX_FPORT
-//#define RX_DSMX_2048																				//  Only fport, sbus, ibus, and dsm protocols are working on F4 right now
+#define RX_DSMX_2048																				//  Only fport, sbus, ibus, and dsm protocols are working on F4 right now
 //#define RX_DSM2_1024
-#define RX_NRF24_BAYANG_TELEMETRY
+//#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 //#define RX_FRSKY
@@ -103,11 +103,11 @@
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING AUX_CHANNEL_0
-#define IDLE_UP AUX_CHANNEL_1
-#define LEVELMODE AUX_CHANNEL_OFF
+#define IDLE_UP AUX_CHANNEL_0
+#define LEVELMODE AUX_CHANNEL_1
 #define RACEMODE AUX_CHANNEL_OFF
 #define HORIZON AUX_CHANNEL_OFF
-#define PIDPROFILE AUX_CHANNEL_4
+#define PIDPROFILE AUX_CHANNEL_OFF
 #define RATES AUX_CHANNEL_ON
 #define LEDS_ON AUX_CHANNEL_OFF
 
