@@ -38,16 +38,19 @@
 #define MPU6XXX_NSS_PA4
 #define MPU6XXX_INT_PIN GPIO_Pin_1
 #define MPU6XXX_INT_PORT GPIOA
-
 #define USE_DUMMY_I2C //todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
 
 //not sure if right?
 //#define SENSOR_ROTATE_90_CCW
+//@brucesdad gyro
+//#define SENSOR_ROTATE_180
+//#define SENSOR_FLIP_180
 
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x73
 #define GYRO_ID_3 0x78
 #define GYRO_ID_4 0x71
+
 
 // SPI PINS DEFINITONS & RADIO
 #define SOFTSPI_NONE
@@ -83,6 +86,12 @@
 #define MOTOR1_PIN_PB8
 #define MOTOR2_PIN_PB10
 #define MOTOR3_PIN_PB6
+
+//@brucesdad pins
+//#define MOTOR0_PIN_PB8
+//#define MOTOR1_PIN_PB7
+//#define MOTOR2_PIN_PB6
+//#define MOTOR3_PIN_PB10
 
 // PWM PIN INITIALIZATION
 #ifdef BRUSHED_TARGET

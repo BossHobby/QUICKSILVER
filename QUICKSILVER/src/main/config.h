@@ -17,8 +17,8 @@
 
 //Select (only one) source variable for PID VBAT Compensation
 //#define EXACT_VOLTS     //origional method - responds to exact moment to moment sag
-//#define FILTERED_VOLTS  // responds to some sag
-#define FUELGAUGE_VOLTS // ignores sag
+#define FILTERED_VOLTS  // responds to some sag
+//#define FUELGAUGE_VOLTS // ignores sag
 
 //**********************************************************************************************************************
 //***********************************************RATES & EXPO SETTINGS**************************************************
@@ -107,7 +107,7 @@
 #define LEVELMODE AUX_CHANNEL_1
 #define RACEMODE AUX_CHANNEL_OFF
 #define HORIZON AUX_CHANNEL_OFF
-#define PIDPROFILE AUX_CHANNEL_OFF
+#define PIDPROFILE AUX_CHANNEL_9
 #define RATES AUX_CHANNEL_ON
 #define LEDS_ON AUX_CHANNEL_OFF
 
