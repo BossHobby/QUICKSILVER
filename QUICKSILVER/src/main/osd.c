@@ -69,7 +69,7 @@ uint32_t decode_positiony(uint32_t element) { //shift 7 bits and grab the bottom
 
 
 //******************************************************************************************************************************
-// case state variables for switch logic
+// case & state variables for switch logic and profile adjustments
 
 extern int flash_feature_1; //currently used for auto entry into wizard menu
 extern profile_t profile;
@@ -83,6 +83,17 @@ uint8_t osd_cursor;
 uint8_t osd_select;
 uint8_t increase_osd_value;
 uint8_t decrease_osd_value;
+
+#define BF_PIDS 0
+const float bf_pids_increments[] = {0.0015924, 0.0015924, 0.0031847, 0.02, 0.02, 0.02, 0.0083333, 0.0083333, 0.0083333};
+#define SW_RATES 1
+const float sw_rates_increments[] = {10.0, 10.0, 10.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
+#define ROUNDED 3
+const float rounded_increments[] = {0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
+
+const uint8_t pid_submenu_map[] = {4, 4};	//describes the menu case to call next for each submenu option
+const uint8_t rates_submenu_map[] = {7, 8};
+const uint8_t stickboost_submenu_map[] = {14, 14};
 //******************************************************************************************************************************
 
 
@@ -245,14 +256,6 @@ vector_t *get_stick_profile_term(uint8_t term) {
   return NULL;
 }
 
-#define BF_PIDS 0
-const float bf_pids_increments[] = {0.0015924, 0.0015924, 0.0031847, 0.02, 0.02, 0.02, 0.0083333, 0.0083333, 0.0083333};
-#define SW_RATES 1
-const float sw_rates_increments[] = {10.0, 10.0, 10.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
-#define ROUNDED 3
-const float rounded_increments[] = {0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
-
-
 void osd_vector_adjust ( vector_t *pointer, uint8_t rows, uint8_t columns, uint8_t special_case){
 
 	if(osd_select > columns) {
@@ -297,6 +300,22 @@ void osd_vector_adjust ( vector_t *pointer, uint8_t rows, uint8_t columns, uint8
 		}
 	}
 }
+
+void osd_submenu_select (uint8_t *pointer, uint8_t rows, const uint8_t next_menu[]){
+	if (osd_select == 1){ //stick was pushed right to select a rate type
+		osd_select = 0;	//reset the trigger
+		uint8_t i;
+		for (i = 1; i <= rows; i++){
+			if(i == osd_cursor){
+				osd_cursor = 0;	//reset the cursor
+				*pointer = i-1;	//update profile
+				osd_display_phase = next_menu[i-1];	//update display phase to the next menu screen
+				osd_menu_phase = 0;	//clear the screen
+			}
+		}
+	}
+}
+
 //******************************************************************************************************************************
 
 
@@ -362,60 +381,6 @@ void osd_select_menu_item(void) {
       osd_save_exit();
       break;
     }
-  }
-}
-//******************************************************************************************************************************
-
-
-//******************************************************************************************************************************
-//osd pids logic
-
-void osd_select_pidprofile_item(void)
-{
-  if (osd_select == 1) //stick was pushed right to select a rate type
-  {
-	osd_select = 0;	//reset the trigger
-	switch(osd_cursor){
-	case 1:
-		osd_cursor = 0;	//reset the cursor
-		profile.pid.pid_profile = PID_PROFILE_1;	//update profile
-		osd_display_phase = 4;	//update display phase to the next menu screen
-		osd_menu_phase = 0;	//clear the screen
-		break;
-	case 2:
-		osd_cursor = 0;
-		profile.pid.pid_profile = PID_PROFILE_2;	//update profile
-		osd_display_phase = 4;	//update display phase to the next menu screen
-		osd_menu_phase = 0;	//clear the screen
-		break;
-	}
-  }
-}
-//******************************************************************************************************************************
-
-
-//******************************************************************************************************************************
-//osd rates logic
-
-void osd_select_ratestype_item(void)
-{//		like above function but to select between betaflight and silverware rate menus
-  if (osd_select == 1) //stick was pushed right to select a rate type
-  {
-	osd_select = 0;	//reset the trigger
-	switch(osd_cursor){
-	case 1:
-		osd_cursor = 0;	//reset the cursor
-		profile.rate.mode = RATE_MODE_SILVERWARE;	//update profile
-		osd_display_phase = 7;	//update display phase to the next menu screen
-		osd_menu_phase = 0;	//clear the screen
-		break;
-	case 2:
-		osd_cursor = 0;
-		profile.rate.mode = RATE_MODE_BETAFLIGHT;
-		osd_display_phase = 8;	//update display phase to the next menu screen
-		osd_menu_phase = 0;	//clear the screen
-		break;
-	}
   }
 }
 //******************************************************************************************************************************
@@ -623,33 +588,6 @@ void osd_select_special_features(void)
 
 
 //******************************************************************************************************************************
-//osd stick boost logic
-
-void osd_select_stickboost(void)
-{
-  if (osd_select == 1) //stick was pushed right to select a rate type
-  {
-	osd_select = 0;	//reset the trigger
-	switch(osd_cursor){
-	case 1:
-		osd_cursor = 0;	//reset the cursor
-		profile.pid.stick_profile = STICK_PROFILE_1;	//update profile
-		osd_display_phase = 14;	//update display phase to the next menu screen
-		osd_menu_phase = 0;	//clear the screen
-		break;
-	case 2:
-		osd_cursor = 0;
-		profile.pid.stick_profile = STICK_PROFILE_2;	//update profile
-		osd_display_phase = 14;	//update display phase to the next menu screen
-		osd_menu_phase = 0;	//clear the screen
-		break;
-	}
-  }
-}
-//******************************************************************************************************************************
-
-
-//******************************************************************************************************************************
 // osd main display function
 
 void osd_display(void) {
@@ -832,7 +770,7 @@ void osd_display(void) {
           osd_menu_phase++;
           break;
       case 4:
-    	  osd_select_pidprofile_item();
+    	  osd_submenu_select (&profile.pid.pid_profile, 2 , pid_submenu_map);
     	  break;
       }
     break;
@@ -1007,7 +945,7 @@ void osd_display(void) {
           osd_menu_phase++;
           break;
       case 4:
-    	  osd_select_ratestype_item();
+    	  osd_submenu_select (&profile.rate.mode, 2 , rates_submenu_map);
     	  break;
       }
     break;
@@ -1445,7 +1383,7 @@ void osd_display(void) {
           osd_menu_phase++;
           break;
       case 4:
-    	  osd_select_stickboost();
+    	  osd_submenu_select (&profile.pid.stick_profile, 2 , stickboost_submenu_map);
     	  break;
       }
       break;
