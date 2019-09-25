@@ -94,6 +94,14 @@ const float rounded_increments[] = {0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.
 const uint8_t pid_submenu_map[] = {4, 4};	//describes the menu case to call next for each submenu option
 const uint8_t rates_submenu_map[] = {7, 8};
 const uint8_t stickboost_submenu_map[] = {14, 14};
+
+const uint8_t main_menu_map[] = {11, 3, 5, 6, 9, 10, 12};		//case numbers for {vtx, pids, filters, rates, flight modes, osd elements, special features}
+const uint8_t special_features_map[] = {13};					//case numbers for {stickboost}
+#define MAIN_MENU 1
+#define SUB_MENU 0
+
+const uint8_t flight_mode_aux_limits[] = {11, 14, 14, 14, 14, 14, 14, 14, 14, 14};	//from aux_channel_t
+const uint8_t flight_mode_aux_items[] = {0, 1, 2, 3, 4, 5, 7, 9, 10, 12};			//from aux_function_t
 //******************************************************************************************************************************
 
 
@@ -264,10 +272,10 @@ void osd_vector_adjust ( vector_t *pointer, uint8_t rows, uint8_t columns, uint8
 	}
 	uint8_t adjust_tracker = ((osd_cursor-1)*columns) + (osd_select - 1);
 	uint8_t i;
-	for (i = 1; i <= columns; i++){
+	for (i = 1; i <= rows; i++){
 		if (osd_cursor == i){	//osd_cursor always describes what row we are on.  when i lands on the active row, then we check to see what column we are on.
 			uint8_t j;
-			for (j = 1; j <= columns; j++){	//osd_select always describes what column we are on.  when j lands on the active row, then we check for a requested increase or decrease
+			for (j = 1; j <= columns; j++){	//osd_select always describes what column we are on.  when j lands on the active column, then we check for a requested increase or decrease
 				if (osd_select == j){
 					if (special_case == BF_PIDS){
 						if (increase_osd_value){
@@ -316,273 +324,57 @@ void osd_submenu_select (uint8_t *pointer, uint8_t rows, const uint8_t next_menu
 	}
 }
 
-//******************************************************************************************************************************
-
-
-//******************************************************************************************************************************
-// osd submenu pointer logic - main menu map
-
-void osd_select_menu_item(void) {
+void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_menu) {
   if (osd_select == 1 && flash_feature_1 == 1) //main mmenu
   {
     osd_select = 0; //reset the trigger
-
-    switch (osd_cursor) {
-    case 0:	//nothing happens here - case 0 is not used
-      break;
-
-    case 1:		//vtx
-    	osd_cursor = 0;
-    	osd_display_phase = 11;
-    	osd_menu_phase = 0;
-      break;
-
-    case 2:		//pids
-    	osd_cursor = 0;
-    	osd_display_phase = 3;
-    	osd_menu_phase = 0;
-      break;
-
-    case 3:		//filters
-    	osd_cursor = 0;
-    	osd_display_phase = 5;
-    	osd_menu_phase = 0;
-      break;
-
-    case 4:		//rates
-    	osd_cursor = 0;
-    	osd_display_phase = 6;
-    	osd_menu_phase = 0;
-      break;
-
-    case 5:		//flight modes
-    	osd_cursor = 0;
-    	osd_display_phase = 9;
-    	osd_menu_phase = 0;
-      break;
-
-    case 6:		//osd elements
-    	osd_cursor = 0;
-    	osd_display_phase = 10;
-    	osd_menu_phase = 0;
-      break;
-
-    case 7:		//special features
-    	osd_cursor = 0;
-    	osd_display_phase = 12;
-    	osd_menu_phase = 0;
-      break;
-
-    case 8:		//setup wizard
-      flash_feature_1 = 0;
-      break;
-
-    case 9:		//save & exit
-      osd_save_exit();
-      break;
+    uint8_t i;
+    for (i = 1; i <= rows; i++){		//7 main menu items that lead to a new submenu
+    	if(i == osd_cursor){
+    		osd_cursor = 0;
+    		osd_display_phase = menu_map[i-1];
+    		osd_menu_phase = 0;
+    	}
+    }
+    if (main_menu){
+    	if(osd_cursor == rows + 1) flash_feature_1 = 0; //flag the setup wizard in main menu
+    	if(osd_cursor == rows + 2) osd_save_exit();		//include save&exit in main menu
     }
   }
 }
-//******************************************************************************************************************************
 
-
-//******************************************************************************************************************************
-//osd flight mode logic
-
-void osd_select_flightmode(void)
-{
+void osd_enum_adjust(uint8_t *pointer, uint8_t rows, const uint8_t increase_limit[]){
 	if(osd_select > 1) {
-		osd_select = 1;	//limit osd select variable from accumulating past 3 columns of adjustable items
+		osd_select = 1;	//limit osd select variable from accumulating past 1 columns of adjustable items
 		osd_menu_phase = 1; //repaint the screen again
 	}
-
-	switch(osd_cursor){
-	case 1: //adjust row 1 item based on osd_select value and up/down osd gestures
-		if (osd_select == 1){
-		int i = profile.channel.aux[AUX_ARMING];
-		if (increase_osd_value && i != AUX_CHANNEL_0)  {
-			i--;
-			profile.channel.aux[AUX_ARMING] = i;
-			}
-		if (decrease_osd_value && i != AUX_CHANNEL_11)  {
-			i++;
-			profile.channel.aux[AUX_ARMING] = i;
-			}
+	uint8_t i;
+	for (i = 1; i <= rows; i++){
+		if (osd_cursor == i){	//osd_cursor always describes what row we are on.  when i lands on the active row, then we check to see if we adjust the value.
+				if (osd_select == 1){
+					uint8_t i = *pointer;
+					if (increase_osd_value && i != increase_limit[osd_cursor-1])  {	//limits need to be 11 for arming, 14 for verything else
+						i++;
+						*pointer = i;
+						increase_osd_value = 0;
+						osd_menu_phase = 1; //repaint the screen again
+						}
+					if (decrease_osd_value && i != 0)  {	//limit is always 0 for an enum
+						i--;
+						*pointer = i;
+						decrease_osd_value = 0;
+						osd_menu_phase = 1; //repaint the screen again
+						}
+				}
 		}
-		increase_osd_value = 0;
-		decrease_osd_value = 0;
-		osd_menu_phase = 1; //repaint the screen again
-		break;
-	case 2:
-		if (osd_select == 1){
-		int i = profile.channel.aux[AUX_IDLE_UP];
-		if (increase_osd_value && i != AUX_CHANNEL_0)  {
-			i--;
-			profile.channel.aux[AUX_IDLE_UP] = i;
-			}
-		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
-			i++;
-			profile.channel.aux[AUX_IDLE_UP] = i;
-			}
-		}
-		increase_osd_value = 0;
-		decrease_osd_value = 0;
-		osd_menu_phase = 1; //repaint the screen again
-		break;
-	case 3:
-		if (osd_select == 1){
-		int i = profile.channel.aux[AUX_LEVELMODE];
-		if (increase_osd_value && i != AUX_CHANNEL_0)  {
-			i--;
-			profile.channel.aux[AUX_LEVELMODE] = i;
-			}
-		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
-			i++;
-			profile.channel.aux[AUX_LEVELMODE] = i;
-			}
-		}
-		increase_osd_value = 0;
-		decrease_osd_value = 0;
-		osd_menu_phase = 1; //repaint the screen again
-		break;
-	case 4:
-		if (osd_select == 1){
-		int i = profile.channel.aux[AUX_RACEMODE];
-		if (increase_osd_value && i != AUX_CHANNEL_0)  {
-			i--;
-			profile.channel.aux[AUX_RACEMODE] = i;
-			}
-		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
-			i++;
-			profile.channel.aux[AUX_RACEMODE] = i;
-			}
-		}
-		increase_osd_value = 0;
-		decrease_osd_value = 0;
-		osd_menu_phase = 1; //repaint the screen again
-		break;
-	case 5:
-		if (osd_select == 1){
-		int i = profile.channel.aux[AUX_HORIZON];
-		if (increase_osd_value && i != AUX_CHANNEL_0)  {
-			i--;
-			profile.channel.aux[AUX_HORIZON] = i;
-			}
-		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
-			i++;
-			profile.channel.aux[AUX_HORIZON] = i;
-			}
-		}
-		increase_osd_value = 0;
-		decrease_osd_value = 0;
-		osd_menu_phase = 1; //repaint the screen again
-		break;
-	case 6:
-		if (osd_select == 1){
-		int i = profile.channel.aux[AUX_PIDPROFILE];
-		if (increase_osd_value && i != AUX_CHANNEL_0)  {
-			i--;
-			profile.channel.aux[AUX_PIDPROFILE] = i;
-			}
-		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
-			i++;
-			profile.channel.aux[AUX_PIDPROFILE] = i;
-			}
-		}
-		increase_osd_value = 0;
-		decrease_osd_value = 0;
-		osd_menu_phase = 1; //repaint the screen again
-		break;
-	case 7:
-		if (osd_select == 1){
-		int i = profile.channel.aux[AUX_RATES];
-		if (increase_osd_value && i != AUX_CHANNEL_0)  {
-			i--;
-			profile.channel.aux[AUX_RATES] = i;
-			}
-		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
-			i++;
-			profile.channel.aux[AUX_RATES] = i;
-			}
-		}
-		increase_osd_value = 0;
-		decrease_osd_value = 0;
-		osd_menu_phase = 1; //repaint the screen again
-		break;
-	case 8:
-		if (osd_select == 1){
-		int i = profile.channel.aux[AUX_BUZZER_ENABLE];
-		if (increase_osd_value && i != AUX_CHANNEL_0)  {
-			i--;
-			profile.channel.aux[AUX_BUZZER_ENABLE] = i;
-			}
-		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
-			i++;
-			profile.channel.aux[AUX_BUZZER_ENABLE] = i;
-			}
-		}
-		increase_osd_value = 0;
-		decrease_osd_value = 0;
-		osd_menu_phase = 1; //repaint the screen again
-		break;
-	case 9:
-		if (osd_select == 1){
-		int i = profile.channel.aux[AUX_STARTFLIP];
-		if (increase_osd_value && i != AUX_CHANNEL_0)  {
-			i--;
-			profile.channel.aux[AUX_STARTFLIP] = i;
-			}
-		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
-			i++;
-			profile.channel.aux[AUX_STARTFLIP] = i;
-			}
-		}
-		increase_osd_value = 0;
-		decrease_osd_value = 0;
-		osd_menu_phase = 1; //repaint the screen again
-		break;
-	case 10:
-		if (osd_select == 1){
-		int i = profile.channel.aux[AUX_MOTORS_TO_THROTTLE_MODE];
-		if (increase_osd_value && i != AUX_CHANNEL_0)  {
-			i--;
-			profile.channel.aux[AUX_MOTORS_TO_THROTTLE_MODE] = i;
-			}
-		if (decrease_osd_value && i != AUX_CHANNEL_OFF)  {
-			i++;
-			profile.channel.aux[AUX_MOTORS_TO_THROTTLE_MODE] = i;
-			}
-		}
-		increase_osd_value = 0;
-		decrease_osd_value = 0;
-		osd_menu_phase = 1; //repaint the screen again
-		break;
-	case 11: //save & exit FLIGHT MODES
+	}
+	increase_osd_value = 0;
+	decrease_osd_value = 0;
+	if (osd_cursor == rows + 1){
 		if (osd_select == 1){
 		osd_save_exit();
 		}
-		break;
 	}
-}
-//******************************************************************************************************************************
-
-
-//******************************************************************************************************************************
-//osd special features logic
-
-void osd_select_special_features(void)
-{
-  if (osd_select == 1) //stick was pushed right to select a rate type
-  {
-	osd_select = 0;	//reset the trigger
-	switch(osd_cursor){
-    case 1:		//stick boost profiles
-    	osd_cursor = 0;
-    	osd_display_phase = 13;
-    	osd_menu_phase = 0;
-      break;
-	}
-  }
 }
 //******************************************************************************************************************************
 
@@ -675,7 +467,7 @@ void osd_display(void) {
         osd_menu_phase++;
         break;
       case 11:
-        osd_select_menu_item();
+        osd_select_menu_item(7,main_menu_map, MAIN_MENU);
         break;
       }
     } else {
@@ -1283,7 +1075,7 @@ void osd_display(void) {
           osd_menu_phase++;
           break;
       case 23:
-    	  osd_select_flightmode();
+    	  osd_enum_adjust(&profile.channel.aux[flight_mode_aux_items[osd_cursor-1]], 10, flight_mode_aux_limits);
     	  break;
       }
     break;
@@ -1357,7 +1149,7 @@ void osd_display(void) {
           osd_menu_phase++;
           break;
       case 3:
-    	  osd_select_special_features();
+    	  osd_select_menu_item(1,special_features_map, SUB_MENU);
     	  break;
       }
       break;
