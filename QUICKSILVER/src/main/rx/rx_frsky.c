@@ -2,8 +2,8 @@
 
 #include "drv_cc2500.h"
 #include "drv_time.h"
-#include "drv_usb.h"
 #include "profile.h"
+#include "usb_configurator.h"
 #include "util.h"
 
 #if defined(RX_FRSKY) && defined(USE_CC2500)
@@ -446,7 +446,7 @@ static uint8_t frsky_d_handle_packet() {
         frame_index++;
         ret = 1;
       } else {
-        usb_debug_print("FRSKY INVALID PACKET!\r\n");
+        quic_debugf("FRSKY INVALID PACKET!");
       }
     }
 

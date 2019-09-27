@@ -14,6 +14,7 @@
 
 #define QUIC_HEADER_LEN 4
 #define QUIC_PROTOCOL_VERSION 1
+#define quic_errorf(cmd, args...) send_quic_strf(cmd, QUIC_FLAG_ERROR, args)
 
 extern profile_t profile;
 extern profile_t default_profile;
@@ -25,28 +26,6 @@ extern float vbatt_comp;
 
 extern uint8_t encode_buffer[1024];
 extern uint8_t decode_buffer[1024];
-
-typedef enum {
-  QUIC_CMD_INVALID,
-  QUIC_CMD_GET,
-  QUIC_CMD_SET,
-  QUIC_CMD_LOG,
-} quic_command;
-
-typedef enum {
-  QUIC_FLAG_NONE,
-  QUIC_FLAG_ERROR,
-} quic_flag;
-
-typedef enum {
-  QUIC_VAL_INVALID,
-  QUIC_VAL_PROFILE,
-  QUIC_VAL_RX,
-  QUIC_VAL_VBAT,
-  QUIC_VAL_INFO,
-  QUIC_VAL_DEFAULT_PROFILE,
-  QUIC_VAL_IMU,
-} quic_values;
 
 void send_quic(quic_command cmd, quic_flag flag, uint8_t *data, uint16_t len) {
   static uint8_t frame[1024 + QUIC_HEADER_LEN];
@@ -96,13 +75,10 @@ cbor_result_t send_quic_strf(quic_command cmd, quic_flag flag, const char *fmt, 
   return send_quic_str(cmd, flag, str);
 }
 
-#define send_quic_errorf(cmd, args...) send_quic_strf(cmd, QUIC_FLAG_ERROR, args)
-#define send_quic_logf(args...) send_quic_strf(QUIC_CMD_LOG, QUIC_FLAG_NONE, args)
-
-#define check_cbor_error(cmd)                    \
-  if (res < CBOR_OK) {                           \
-    send_quic_errorf(cmd, "CBOR ERROR %d", res); \
-    return;                                      \
+#define check_cbor_error(cmd)               \
+  if (res < CBOR_OK) {                      \
+    quic_errorf(cmd, "CBOR ERROR %d", res); \
+    return;                                 \
   }
 
 void get_quic(uint8_t *data, uint32_t len) {
@@ -201,7 +177,7 @@ void get_quic(uint8_t *data, uint32_t len) {
     break;
   }
   default:
-    send_quic_errorf(QUIC_CMD_GET, "INVALID VALUE %d", value);
+    quic_errorf(QUIC_CMD_GET, "INVALID VALUE %d", value);
     break;
   }
 }
@@ -243,13 +219,13 @@ void set_quic(uint8_t *data, uint32_t len) {
 void usb_process_quic() {
   const uint8_t cmd = usb_serial_read_byte();
   if (cmd == QUIC_CMD_INVALID) {
-    send_quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);
+    quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);
     return;
   }
 
   const uint16_t size = (uint16_t)usb_serial_read_byte() << 8 | usb_serial_read_byte();
   if (size == 0) {
-    send_quic_errorf(cmd, "INVALID SIZE %d", size);
+    quic_errorf(cmd, "INVALID SIZE %d", size);
     return;
   }
 
@@ -259,7 +235,7 @@ void usb_process_quic() {
     delay(10);
   }
   if (len != size) {
-    send_quic_errorf(cmd, "INVALID SIZE %d", size);
+    quic_errorf(cmd, "INVALID SIZE %d", size);
     return;
   }
 
@@ -271,7 +247,7 @@ void usb_process_quic() {
     set_quic(decode_buffer, size);
     break;
   default:
-    send_quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);
+    quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);
     break;
   }
 

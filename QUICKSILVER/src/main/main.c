@@ -60,6 +60,7 @@
 
 #ifdef F405
 #include "drv_usb.h"
+#include "usb_configurator.h"
 #endif
 
 #ifdef DEBUG
@@ -572,7 +573,7 @@ void failloop(int val) {
 
   while (1) {
 #if defined(F405) && defined(DEBUG)
-    usb_debug_printf("failloop %s (%d)\r\n", failloop_string(val), val);
+    quic_debugf("failloop %s (%d)", failloop_string(val), val);
     usb_detect();
 #endif
     for (int i = 0; i < val; i++) {
