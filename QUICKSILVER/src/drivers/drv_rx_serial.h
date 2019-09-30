@@ -45,6 +45,8 @@ void RX_USART_ISR(void);
 			#define SERIAL_RX_SOURCE GPIO_PinSource9
 			#define SERIAL_RX_SPEKBIND_RX_PIN GPIO_Pin_9
 		#else
+			#define SERIAL_TX_PIN GPIO_Pin_9
+			#define SERIAL_TX_SOURCE GPIO_PinSource9
 			#define SERIAL_RX_PIN GPIO_Pin_10
 			#define SERIAL_RX_SOURCE GPIO_PinSource10
 			#define SERIAL_RX_SPEKBIND_RX_PIN GPIO_Pin_10

@@ -100,7 +100,7 @@ void usart_invert(void) {
   GPIO_ResetBits(USART_INVERTER_PORT, USART_INVERTER_PIN);
 #endif
 #else
-// do nothing here, usart swap command in usart init
+  // do nothing here, usart swap command in usart init
 #endif
 }
 
@@ -108,23 +108,22 @@ void usart_invert(void) {
 
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
 void usart_rx_init(uint8_t RXProtocol) {
-  #if defined(RX_DSM2_1024) || defined(RX_DSMX_2028)
+#if defined(RX_DSM2_1024) || defined(RX_DSMX_2028)
   RXProtocol = 1;
-
+#endif
 #if defined(RX_SBUS)
   RXProtocol = 2;
 #endif
 #if defined(RX_IBUS)
   RXProtocol = 3;
 #endif
-
+#if defined(RX_FPORT)
+  RXProtocol = 4;
+#endif
 #if defined(RX_CRSF)
   RXProtocol = 5;
 #endif
-#endif
-  #if defined(RX_FPORT)
-  RXProtocol = 4;
-#endif
+
 #if defined(RX_CRSF)
 #define SERIAL_BAUDRATE 420000
 #endif
@@ -140,80 +139,90 @@ void usart_rx_init(uint8_t RXProtocol) {
     return;
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-//#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
-if(RXProtocol == 3 || RXProtocol == 1 || RXProtocol == 5){
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-}
-//#endif
-else if(RXProtocol == 4 || RXProtocol == 2){
-//#if defined(RX_SBUS) || defined(RX_FPORT)
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-//#endif
-}
+  //#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
+  if (RXProtocol == 1 || RXProtocol == 3 || RXProtocol == 5) {
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
+    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+  }
+  //#endif
+  else if (RXProtocol == 2 || RXProtocol == 4) {
+    //#if defined(RX_SBUS) || defined(RX_FPORT)
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    //#endif
+  }
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStructure.GPIO_Pin = SERIAL_RX_PIN;
-  GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure);
-  GPIO_PinAFConfig(SERIAL_RX_PORT, SERIAL_RX_SOURCE, SERIAL_RX_CHANNEL);
+
+  if (RXProtocol == 4) {
+    GPIO_InitStructure.GPIO_Pin = SERIAL_TX_PIN;
+    GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure);
+    GPIO_PinAFConfig(SERIAL_RX_PORT, SERIAL_TX_SOURCE, SERIAL_RX_CHANNEL);
+  }
+  else {
+    GPIO_InitStructure.GPIO_Pin = SERIAL_RX_PIN;
+    GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure);
+    GPIO_PinAFConfig(SERIAL_RX_PORT, SERIAL_RX_SOURCE, SERIAL_RX_CHANNEL);
+  }
+  //GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure);
+  //GPIO_PinAFConfig(SERIAL_RX_PORT, SERIAL_RX_SOURCE, SERIAL_RX_CHANNEL);
   APBPeriphClockCmd();
   USART_InitTypeDef USART_InitStructure;
-  if(RXProtocol == 1 || RXProtocol == 3 || RXProtocol == 4){
+  if (RXProtocol == 1 || RXProtocol == 3 || RXProtocol == 4) {
     USART_InitStructure.USART_BaudRate = 115200;
   }
-  else if(RXProtocol == 2){
+  else if (RXProtocol == 2) {
     USART_InitStructure.USART_BaudRate = 100000;
   }
-  else if(RXProtocol == 5){
+  else if (RXProtocol == 5) {
     USART_InitStructure.USART_BaudRate = 420000;
   }
-  
+
   USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-  if(RXProtocol == 2){
+  if (RXProtocol == 2) {
     USART_InitStructure.USART_StopBits = USART_StopBits_2;
-  USART_InitStructure.USART_Parity = USART_Parity_Even;
+    USART_InitStructure.USART_Parity = USART_Parity_Even;
   }
-  else{
+  else {
     USART_InitStructure.USART_StopBits = USART_StopBits_1;
-  USART_InitStructure.USART_Parity = USART_Parity_No;
+    USART_InitStructure.USART_Parity = USART_Parity_No;
   }
-//#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
-//  USART_InitStructure.USART_StopBits = USART_StopBits_1;
-//  USART_InitStructure.USART_Parity = USART_Parity_No;
-//#endif
-//#if defined(RX_SBUS)
-//  USART_InitStructure.USART_StopBits = USART_StopBits_2;
-//  USART_InitStructure.USART_Parity = USART_Parity_Even; //todo: try setting even
-//#endif
+  //#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
+  //  USART_InitStructure.USART_StopBits = USART_StopBits_1;
+  //  USART_InitStructure.USART_Parity = USART_Parity_No;
+  //#endif
+  //#if defined(RX_SBUS)
+  //  USART_InitStructure.USART_StopBits = USART_StopBits_2;
+  //  USART_InitStructure.USART_Parity = USART_Parity_Even; //todo: try setting even
+  //#endif
 
   USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
 
-if(RXProtocol == 4 || RXProtocol == 5){
-  USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-}
-else{
-  USART_InitStructure.USART_Mode = USART_Mode_Rx; //USART_Mode_Rx | USART_Mode_Tx;
-}
-//#if defined(RX_FPORT) || defined(RX_CRSF)
-//  USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-//#else
-//  USART_InitStructure.USART_Mode = USART_Mode_Rx; //USART_Mode_Rx | USART_Mode_Tx;
-//#endif
-if(RXProtocol == 4){
-  USART_HalfDuplexCmd(SERIAL_RX_USART, ENABLE);
-}
-else{
-  USART_HalfDuplexCmd(SERIAL_RX_USART, DISABLE);
-}
-//#if defined(RX_FPORT)
-//  USART_HalfDuplexCmd(SERIAL_RX_USART, ENABLE);
-//#endif
+  if (RXProtocol == 4 || RXProtocol == 5) {
+    USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+  }
+  else {
+    USART_InitStructure.USART_Mode = USART_Mode_Rx; //USART_Mode_Rx | USART_Mode_Tx;
+  }
+  //#if defined(RX_FPORT) || defined(RX_CRSF)
+  //  USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+  //#else
+  //  USART_InitStructure.USART_Mode = USART_Mode_Rx; //USART_Mode_Rx | USART_Mode_Tx;
+  //#endif
+  if (RXProtocol == 4) {
+    USART_HalfDuplexCmd(SERIAL_RX_USART, ENABLE);
+  }
+  else {
+    USART_HalfDuplexCmd(SERIAL_RX_USART, DISABLE);
+  }
+  //#if defined(RX_FPORT)
+  //  USART_HalfDuplexCmd(SERIAL_RX_USART, ENABLE);
+  //#endif
   USART_Init(SERIAL_RX_USART, &USART_InitStructure);
 #ifdef F0
 #ifdef INVERT_UART
   USART_InvPinCmd(SERIAL_RX_USART, USART_InvPin_Rx | USART_InvPin_Tx, ENABLE);
 #endif
-// swap rx/tx pins - available on F0 targets
+  // swap rx/tx pins - available on F0 targets
 #ifdef F0_USART_PINSWAP
   USART_SWAPPinCmd(SERIAL_RX_USART, ENABLE);
 #endif
@@ -236,7 +245,7 @@ else{
 //USART ISR to radio protocol mapping
 #ifdef UART_1
 void USART1_IRQHandler(void) {
-//if(rxusart == 1){
+  //if(rxusart == 1){
   RX_USART_ISR();
   //}
 }
@@ -246,26 +255,26 @@ void USART1_IRQHandler(void) {
 void USART2_IRQHandler(void) {
   //if(rxusart == 2){
   RX_USART_ISR();
-  //} 
+  //}
 }
 #endif
 
 #ifdef UART_3
 void USART3_IRQHandler(void) {
   RX_USART_ISR();
- }
+}
 #endif
 
 #ifdef UART_4
 void USART4_IRQHandler(void) {
   RX_USART_ISR();
-  }
+}
 #endif
 
 #ifdef UART_5
 void USART5_IRQHandler(void) {
   RX_USART_ISR();
-  }
+}
 #endif
 
 #ifdef UART_6
