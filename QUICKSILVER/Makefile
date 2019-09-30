@@ -61,6 +61,7 @@ FORCE:
 $(TARGET): $(BUILD_DIR)/target $(BUILD_DIR)/$(BINARY).bin $(BUILD_DIR)/$(BINARY).hex $(BUILD_DIR)/$(BINARY).list
 	
 $(BUILD_DIR)/target: FORCE
+	@sleep 0.2s
 	@mkdir -p $(BUILD_DIR)
 	@echo "Setting target to $(TARGET)"
 	@echo "$(TARGET)" > $(BUILD_DIR)/target.tmp
