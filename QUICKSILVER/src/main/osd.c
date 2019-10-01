@@ -37,6 +37,11 @@ elements 0-5 - Call Sign
 element 6 Fuel Gauge volts
 element 7 Filtered Volts
 element 8 Exact Volts
+***********************
+***********************
+element 9 Flight Mode
+element 10 Time
+element 11 RSSI
 */
 
 //pointers to flash variable array
@@ -151,8 +156,25 @@ const uint8_t flight_modes_aux_items[] = {0, 1, 2, 3, 4, 5, 7, 9, 10, 12};			//f
 const uint8_t flight_modes_grid[10][2] = { {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}, {1, 6}, {1, 7}, {1, 8}, {1, 9}, {1, 10} };
 
 //osd elements submenu map
-const char osd_elements_temp_labels[3][21] = { {"OSD ELEMENTS"},{"UNDER"},{"DEVELOPMENT"} };
-const uint8_t osd_elements_temp_positions[3][2] = { {9, 1}, {7, 4}, {7,5} };
+const char osd_elements_menu_labels[5][21] = { {"OSD ELEMENTS"},{"ADD OR REMOVE"},{"EDIT POSITIONS"},{"EDIT TEXT STYLE"},{"EDIT CALLSIGN"} };
+const uint8_t osd_elements_menu_positions[5][2] = { {9, 1}, {7, 4}, {7, 5}, {7, 6}, {7, 7} };
+const uint8_t osd_elements_map[] = {15, 16, 17, 18};
+
+//osd element add / remove submenu map
+const char osd_display_labels[12][21] = { {"OSD DISPLAY ITEMS"}, {"CALLSIGN"}, {"VBATT"}, {"VBATT FILT"}, {"VBATT CORR"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"ARMED/DISARMED"}, {"UNASSIGNED"}, {"UNASSIGNED"}, {"SAVE AND EXIT"} };
+const uint8_t osd_display_positions[12][2] = { {6,1}, {4,2}, {4,3}, {4,4}, {4,5}, {4,6}, {4,7}, {4,8}, {4,9}, {4,10}, {4,11}, {4,14} };
+
+//osd positions submenu map
+const char positions_temp_labels[3][21] = { {"POSITIONS"},{"UNDER"},{"DEVELOPMENT"} };
+const uint8_t positions_temp_positions[3][2] = { {11, 1}, {7, 4}, {7,5} };
+
+//osd text style submenu map
+const char osd_text_temp_labels[3][21] = { {"TEXT STYLE"},{"UNDER"},{"DEVELOPMENT"} };
+const uint8_t osd_text_temp_positions[3][2] = { {11, 1}, {7, 4}, {7,5} };
+
+//osd callsign style submenu map
+const char callsign_temp_labels[3][21] = { {"CALLSIGN"},{"UNDER"},{"DEVELOPMENT"} };
+const uint8_t callsign_temp_positions[3][2] = { {11, 1}, {7, 4}, {7,5} };
 
 //vtx submenu map
 const char vtx_temp_labels[3][21] = { {"VTX CONTROLS"},{"UNDER"},{"DEVELOPMENT"} };
@@ -675,7 +697,8 @@ void osd_display(void) {
 
   case 10:		//osd elements menu
 	  last_display_phase = 1;
-	  print_osd_menu_strings(3, 2, osd_elements_temp_labels, osd_elements_temp_positions);
+	  print_osd_menu_strings(5, 4, osd_elements_menu_labels, osd_elements_menu_positions);
+	  if (osd_menu_phase == 6) osd_select_menu_item(4,osd_elements_map, SUB_MENU);
     break;
 
   case 11:		//vtx
@@ -701,6 +724,26 @@ void osd_display(void) {
 	  else print_osd_menu_strings(7, 3, stickboost2_labels, stickboost_positions);
 	  print_osd_adjustable_vectors(ROUNDED, 7, 6, get_stick_profile_term(stickboost_data_index[osd_menu_phase-8][0]), stickboost_data_index, stickboost_grid, stickboost_data_positions);
 	  if (osd_menu_phase == 14) osd_vector_adjust(get_stick_profile_term(osd_cursor), 2, 3, ROUNDED, stickboost_adjust_limits);
+	  break;
+
+  case 15:		//add or remove osd elements to display
+	  last_display_phase = 10;
+	  print_osd_menu_strings(12, 11, osd_display_labels, osd_display_positions);
+	  break;
+
+  case 16:		//edit element positions
+	  last_display_phase = 10;
+	  print_osd_menu_strings(3, 2, positions_temp_labels, positions_temp_positions);
+	  break;
+
+  case 17:		//edit display style
+	  last_display_phase = 10;
+	  print_osd_menu_strings(3, 2, osd_text_temp_labels, osd_text_temp_positions);
+	  break;
+
+  case 18:		//edit callsign text
+	  last_display_phase = 10;
+	  print_osd_menu_strings(3, 2, callsign_temp_labels, callsign_temp_positions);
 	  break;
 
   }
