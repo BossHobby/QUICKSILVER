@@ -75,12 +75,14 @@ uint32_t decode_positiony(uint32_t element) { //shift 7 bits and grab the bottom
 extern int flash_feature_1; //currently used for auto entry into wizard menu
 extern profile_t profile;
 uint8_t osd_display_phase = 2;
+uint8_t last_display_phase;
 uint8_t osd_wizard_phase = 0;
 uint8_t osd_menu_phase = 0;
 uint8_t osd_display_element = 0;
 uint8_t display_trigger = 0;
 uint8_t last_lowbatt_state = 2;
 uint8_t osd_cursor;
+uint8_t last_osd_cursor[6];
 uint8_t osd_select;
 uint8_t increase_osd_value;
 uint8_t decrease_osd_value;
@@ -385,9 +387,26 @@ void osd_vector_adjust ( vector_t *pointer, uint8_t rows, uint8_t columns, uint8
 	}
 }
 
+uint8_t last_cursor_array_stuffer(uint8_t cursor, uint8_t add_new){  	//where add_new can be either STORE_VALUE or RETURN_VALUE
+	if (add_new){
+		for (int i = 5; i >= 1; i--){	//shift all the values to the right one array position
+			last_osd_cursor[i] = last_osd_cursor[i-1];
+		}
+		last_osd_cursor[0] = cursor;	//add the most recent value to slot 0
+		return 0;
+	}else{
+		uint8_t next_cursor_value = last_osd_cursor[0];	//remove slot 0 for return and left shift the rest over
+		for (int i = 1; i <= 5; i++){
+			last_osd_cursor[i-1] = last_osd_cursor[i];
+		}
+	return next_cursor_value;
+	}
+}
+
 void osd_submenu_select (uint8_t *pointer, uint8_t rows, const uint8_t next_menu[]){
-	if (osd_select == 1){ //stick was pushed right to select a rate type
+	if (osd_select == 1){ //stick was pushed right to select a next menu
 		osd_select = 0;	//reset the trigger
+		last_cursor_array_stuffer(osd_cursor, STORE_VALUE);
 		if(osd_cursor <= rows){
 			*pointer = osd_cursor-1;	//update profile
 			osd_display_phase = next_menu[osd_cursor-1];	//update display phase to the next menu screen
@@ -402,6 +421,7 @@ void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_m
 	if (osd_select == 1 && flash_feature_1 == 1) //main menu
 	{
 		osd_select = 0; //reset the trigger
+		last_cursor_array_stuffer(osd_cursor, STORE_VALUE);
 		if (osd_cursor <= rows){
 			osd_display_phase = menu_map[osd_cursor-1];
 			osd_cursor = 0;
@@ -534,32 +554,34 @@ void osd_display(void) {
   case 1:                //osd menu is active
     if (flash_feature_1) //setup wizard
     {
+    	last_display_phase = 2;
     	print_osd_menu_strings(10, 9, main_menu_labels, main_menu_positions);
     	if(osd_menu_phase == 11)osd_select_menu_item(7,main_menu_map, MAIN_MENU);
     } else {
-      switch (osd_wizard_phase) {
-      case 0:
-    	osd_clear_screen();
-        osd_wizard_phase++;
-        break;
-      case 1:
-        osd_print("SETUP WIZARD", INVERT, 9, 1);
-        osd_wizard_phase++;
-        break;
-      case 2:
-        osd_print("PROPS OFF", BLINK, 7, 6);
-        osd_wizard_phase++;
-        break;
-      case 3:
-        osd_print("THROTTLE UP", TEXT, 7, 8);
-        osd_wizard_phase++;
-        break;
-      case 4:
-        osd_print("TO CONTINUE", TEXT, 7, 9);
-        osd_wizard_phase++;
-        break;
-      case 5:
-        break;
+    	last_display_phase = 2;
+    	switch (osd_wizard_phase) {
+    	case 0:
+    		osd_clear_screen();
+    		osd_wizard_phase++;
+    		break;
+    	case 1:
+    		osd_print("SETUP WIZARD", INVERT, 9, 1);
+    		osd_wizard_phase++;
+    		break;
+    	case 2:
+    		osd_print("PROPS OFF", BLINK, 7, 6);
+    		osd_wizard_phase++;
+    		break;
+    	case 3:
+    		osd_print("THROTTLE UP", TEXT, 7, 8);
+    		osd_wizard_phase++;
+    		break;
+    	case 4:
+    		osd_print("TO CONTINUE", TEXT, 7, 9);
+    		osd_wizard_phase++;
+    		break;
+    	case 5:
+    		break;
       }
     }
     break; //osd menu or wizard has been displayed for this loop	- break out of display function
@@ -606,11 +628,13 @@ void osd_display(void) {
     break;
 
   case 3:		//pids profile menu
+	  last_display_phase = 1;
 	  print_osd_menu_strings(3, 2, pid_profiles_labels, pid_profiles_positions);
 	  if (osd_menu_phase == 4)osd_submenu_select (&profile.pid.pid_profile, 2 , pid_submenu_map);
     break;
 
   case 4:		//pids profiles
+	  last_display_phase = 3;
 	  if(profile.pid.pid_profile == PID_PROFILE_1) print_osd_menu_strings(8, 4, pid_profile1_labels, pid_profile_positions);
 	  else print_osd_menu_strings(8, 4, pid_profile2_labels, pid_profile_positions);
 	  print_osd_adjustable_vectors(BF_PIDS, 8, 9, get_pid_term(pid_profile_data_index[osd_menu_phase-9][0]), pid_profile_data_index, pid_profile_grid, pid_profile_data_positions);
@@ -618,51 +642,61 @@ void osd_display(void) {
     break;
 
   case 5:		//filters menu
+	  last_display_phase = 1;
 	  print_osd_menu_strings(3, 2, filter_temp_labels, filter_temp_positions);
     break;
 
   case 6:		//main rates menu
+	  last_display_phase = 1;
 	  print_osd_menu_strings(3, 2, rates_profile_labels, rates_profile_positions);
 	  if (osd_menu_phase == 4)osd_submenu_select (&profile.rate.mode, 2 , rates_submenu_map);
     break;
 
   case 7:		//silverware rates submenu
+	  last_display_phase = 6;
 	  print_osd_menu_strings(8, 4, sw_rates_labels, sw_rates_positions);
 	  print_osd_adjustable_vectors(SW_RATES, 8, 9, get_sw_rate_term(sw_rates_data_index[osd_menu_phase-9][0]), sw_rates_data_index, sw_rates_grid, sw_rates_data_positions);
 	  if (osd_menu_phase == 18) osd_vector_adjust(get_sw_rate_term(osd_cursor), 3, 3, SW_RATES, sw_rates_adjust_limits);
     break;
 
   case 8:		//betaflight rates submenu
+	  last_display_phase = 6;
 	  print_osd_menu_strings(8, 4, bf_rates_labels, bf_rates_positions);
 	  print_osd_adjustable_vectors(ROUNDED, 8, 9, get_bf_rate_term(bf_rates_data_index[osd_menu_phase-9][0]), bf_rates_data_index, bf_rates_grid, bf_rates_data_positions);
 	  if (osd_menu_phase == 18) osd_vector_adjust(get_bf_rate_term(osd_cursor), 3, 3, ROUNDED, bf_rates_adjust_limits);
     break;
 
   case 9:		//flight modes menu
+	  last_display_phase = 1;
 	  print_osd_menu_strings(12, 11, flight_modes_labels, flight_modes_positions);
 	  print_osd_adjustable_enums (12, 10, get_aux_status(profile.channel.aux[flight_modes_aux_items[osd_menu_phase-13]]), flight_modes_grid, flight_modes_data_positions);
 	  if (osd_menu_phase==23)osd_enum_adjust(&profile.channel.aux[flight_modes_aux_items[osd_cursor-1]], 10, flight_modes_aux_limits);
     break;
 
   case 10:		//osd elements menu
+	  last_display_phase = 1;
 	  print_osd_menu_strings(3, 2, osd_elements_temp_labels, osd_elements_temp_positions);
     break;
 
   case 11:		//vtx
+	  last_display_phase = 1;
 	  print_osd_menu_strings(3, 2, vtx_temp_labels, vtx_temp_positions);
     break;
 
   case 12:		//special features
+	  last_display_phase = 1;
 	  print_osd_menu_strings(2, 1, special_features_labels, special_features_positions);
 	  if (osd_menu_phase == 3) osd_select_menu_item(1,special_features_map, SUB_MENU);
       break;
 
   case 13:		//stick accelerator profiles
+	  last_display_phase = 12;
 	  print_osd_menu_strings(3, 2, stickboost_labels, stickboost_profile_positions);
 	  if (osd_menu_phase == 4) osd_submenu_select (&profile.pid.stick_profile, 2 , stickboost_submenu_map);
       break;
 
   case 14:		//stick boost profiles
+	  last_display_phase = 13;
 	  if(profile.pid.stick_profile == STICK_PROFILE_1) print_osd_menu_strings(7, 3, stickboost1_labels, stickboost_positions);
 	  else print_osd_menu_strings(7, 3, stickboost2_labels, stickboost_positions);
 	  print_osd_adjustable_vectors(ROUNDED, 7, 6, get_stick_profile_term(stickboost_data_index[osd_menu_phase-8][0]), stickboost_data_index, stickboost_grid, stickboost_data_positions);

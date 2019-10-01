@@ -5,6 +5,7 @@
 #include "profile.h"
 #include "rx.h"
 #include "sixaxis.h"
+#include "osd.h"
 
 extern int ledcommand;
 extern int ledblink;
@@ -145,13 +146,14 @@ void gestures(void) {
       extern uint8_t osd_display_phase;
       extern uint8_t osd_menu_phase;
       extern uint8_t osd_select;
+      extern uint8_t last_display_phase;
       if(osd_select){
       osd_select --;
       osd_menu_phase = 1;
       }else{
-      osd_cursor = 0;
+      osd_cursor = last_cursor_array_stuffer(osd_cursor, RETURN_VALUE); //this tracks like last display phase
       if (osd_display_phase > 2){
-    	  osd_display_phase = 1;
+    	  osd_display_phase = last_display_phase;
     	  osd_menu_phase = 0;
       }else{
       osd_display_phase--;
