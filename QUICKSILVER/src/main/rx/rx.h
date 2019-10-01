@@ -68,6 +68,8 @@ void processIBUS(void);
 void processFPORT(void);
 void processCRSF(void);
 
+void sendFPORTTelemetry(void);
+
 float rcexpo(float x, float exp);
 void rx_apply_expo(void);
 
