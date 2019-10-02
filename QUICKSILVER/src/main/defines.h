@@ -270,7 +270,7 @@
 #define BUZZER_DELAY 30e6
 
 #define OSD_FLASH_START 57
-#define OSD_NUMBER_ELEMENTS 9
+#define OSD_NUMBER_ELEMENTS 15
 #define SWITCHABLE_FEATURE_1 //CONFIGURATION WIZARD
 
 // IDLE_OFFSET is added to the throttle. Adjust its value so that the motors

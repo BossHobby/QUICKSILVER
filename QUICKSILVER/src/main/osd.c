@@ -31,7 +31,7 @@ BIT
 */
 
 //Flash Variables - 32bit					# of osd elements and flash memory start position in defines.h
-unsigned long osd_element[OSD_NUMBER_ELEMENTS];
+extern unsigned long osd_element[OSD_NUMBER_ELEMENTS];
 /*
 elements 0-5 - Call Sign
 element 6 Fuel Gauge volts
@@ -55,7 +55,18 @@ unsigned long *fuelgauge_volts = (osd_element + 6);
 unsigned long *filtered_volts = (osd_element + 7);
 unsigned long *exact_volts = (osd_element + 8);
 
+unsigned long *flight_mode = (osd_element + 9);
+unsigned long *rssi = (osd_element + 10);
+unsigned long *stopwatch = (osd_element + 11);
+unsigned long *arm_disarm = (osd_element + 12);
+unsigned long *unassigned = (osd_element + 13);
+unsigned long *unassigned2 = (osd_element + 14);
+
 //screen element register decoding functions
+uint8_t decode_active_element(uint32_t element){
+	return (element & 0x01);
+}
+
 uint8_t decode_attribute(uint32_t element) { //shifting right one bit and comparing the new bottom bit to the key above
   uint8_t decoded_element = ((element >> 1) & 0x01);
   if (decoded_element == 0x01)
@@ -65,12 +76,52 @@ uint8_t decode_attribute(uint32_t element) { //shifting right one bit and compar
 }
 
 uint8_t decode_positionx(uint32_t element) { //shift 2 bits and grab the bottom 5
-  return ((element >> 2) & 0x1F);            // this can be simplified to save memory if it debugs ok
+  return ((element >> 2) & 0x1F);
 }
 
-uint32_t decode_positiony(uint32_t element) { //shift 7 bits and grab the bottom 4
-  return ((element >> 7) & 0x0F);             // this can be simplified to save memory if it debugs ok
+uint8_t decode_positiony(uint32_t element) { //shift 7 bits and grab the bottom 4
+  return ((element >> 7) & 0x0F);
 }
+
+#define ACTIVE 0
+#define ATTRIBUTE 1
+#define POSITIONX 2
+#define POSITIONY 3
+
+uint8_t osd_decode(uint32_t element, uint8_t status){
+	switch (status){
+	case 0:
+		return (element & 0x01);
+		break;
+	case 1:
+		if (((element >> 1) & 0x01) == 0x01) return INVERT;
+		else return TEXT;
+		break;
+	case 2:
+		return ((element >> 2) & 0x1F);
+		break;
+	case 3:
+		return ((element >> 7) & 0x0F);
+		break;
+	}
+	return 0;
+}
+
+const char* get_decode_element_string (uint32_t input , uint8_t status){
+	switch (status){
+	case 0:		//ACTIVE
+		if (osd_decode(input, status)) return "ACTIVE  ";
+		else return "INACTIVE";
+		break;
+	case 1:		//ATTRIBUTE
+		if (osd_decode(input, status)) return "INVERT";
+		else return "TEXT";
+		break;
+	}
+	return 0;
+}
+
+
 //******************************************************************************************************************************
 
 
@@ -86,11 +137,15 @@ uint8_t osd_menu_phase = 0;
 uint8_t osd_display_element = 0;
 uint8_t display_trigger = 0;
 uint8_t last_lowbatt_state = 2;
+uint8_t last_lowbatt_state2 = 2;
+uint8_t last_lowbatt_state3 = 2;
 uint8_t osd_cursor;
 uint8_t last_osd_cursor[6];
 uint8_t osd_select;
 uint8_t increase_osd_value;
 uint8_t decrease_osd_value;
+
+
 
 #define BF_PIDS 0
 const float bf_pids_increments[] = {0.0015924, 0.0015924, 0.0031847, 0.02, 0.02, 0.02, 0.0083333, 0.0083333, 0.0083333};
@@ -161,8 +216,11 @@ const uint8_t osd_elements_menu_positions[5][2] = { {9, 1}, {7, 4}, {7, 5}, {7, 
 const uint8_t osd_elements_map[] = {15, 16, 17, 18};
 
 //osd element add / remove submenu map
-const char osd_display_labels[12][21] = { {"OSD DISPLAY ITEMS"}, {"CALLSIGN"}, {"VBATT"}, {"VBATT FILT"}, {"VBATT CORR"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"ARMED/DISARMED"}, {"UNASSIGNED"}, {"UNASSIGNED"}, {"SAVE AND EXIT"} };
+const char osd_display_labels[12][21] = { {"OSD DISPLAY ITEMS"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"EXACT VOLTS"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"ARMED/DISARMED"}, {"UNASSIGNED"}, {"UNASSIGNED"}, {"SAVE AND EXIT"} };
 const uint8_t osd_display_positions[12][2] = { {6,1}, {4,2}, {4,3}, {4,4}, {4,5}, {4,6}, {4,7}, {4,8}, {4,9}, {4,10}, {4,11}, {4,14} };
+const uint8_t osd_display_data_positions[10][2] = { {20, 2}, {20, 3}, {20, 4}, {20, 5}, {20, 6}, {20, 7}, {20, 8}, {20, 9}, {20, 10}, {20, 11} };
+const uint8_t osd_display_grid[10][2] = { {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}, {1, 6}, {1, 7}, {1, 8}, {1, 9}, {1, 10} };
+const uint8_t osd_elements_active_items[] = {0, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 
 //osd positions submenu map
 const char positions_temp_labels[3][21] = { {"POSITIONS"},{"UNDER"},{"DEVELOPMENT"} };
@@ -210,6 +268,8 @@ void osd_display_reset(void) {
   osd_display_phase = 2;   //jump to regular osd display next loop
   osd_display_element = 0; //start with first screen element
   last_lowbatt_state = 2;  //reset last lowbatt comparator
+  last_lowbatt_state2 = 2;
+  last_lowbatt_state3 = 2;
 }
 
 void osd_save_exit(void){
@@ -312,7 +372,6 @@ float adjust_rounded_float(float input, float adjust_amount){
 	}
 	return input;
 }
-
 
 const char* get_aux_status (int input){
 	static char* respond[] = {"CHANNEL 5  ", "CHANNEL 6  ", "CHANNEL 7  ", "CHANNEL 8  ", "CHANNEL 9  ", "CHANNEL 10 ", "CHANNEL 11 ", "CHANNEL 12 ", "CHANNEL 13 ", "CHANNEL 14 ", "CHANNEL 15 ", "CHANNEL 16 ", "GESTURE AUX", "ALWAYS ON  ", "ALWAYS OFF ", "ERROR      "};
@@ -456,6 +515,45 @@ void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_m
 	}
 }
 
+
+void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t status){
+	if(osd_select > 1) {
+		osd_select = 1;	//limit osd select variable from accumulating past 1 columns of adjustable items
+		osd_menu_phase = 1; //repaint the screen again
+	}
+	if (osd_cursor <= rows){
+		if (osd_select == 1){
+			switch (status){
+			case 0:
+				if (increase_osd_value && osd_decode(*pointer, status) == 0x00 ){
+					*pointer = *pointer + 1;
+					osd_menu_phase = 1; //repaint the screen again
+				}
+				if (decrease_osd_value && osd_decode(*pointer, status) != 0x00 ){
+					*pointer = *pointer - 1;
+					osd_menu_phase = 1; //repaint the screen again
+				}
+
+				break;
+			case 1:
+				break;
+			case 2:
+				break;
+			case 3:
+				break;
+			}
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+	}
+	if (osd_cursor == rows + 1){
+		if (osd_select == 1){
+			osd_save_exit();
+		}
+	}
+
+}
+
 void osd_enum_adjust(uint8_t *pointer, uint8_t rows, const uint8_t increase_limit[]){
 	if(osd_select > 1) {
 		osd_select = 1;	//limit osd select variable from accumulating past 1 columns of adjustable items
@@ -556,15 +654,15 @@ void osd_display(void) {
 
   //grab out of scope variables for data that needs to be displayed
   //extern int flash_feature_1;
-  //extern float vbattfilt;
-  //extern float vbattfilt_corr;
+  extern float vbattfilt;
+  extern float vbattfilt_corr;
   extern float vbatt_comp;
   extern float lipo_cell_count;
   extern int lowbatt;
 
-  //just some values to test position/attribute/active until we start saving them to flash with the osd manu
-  *callsign1 = 0xAB;        //	0001 01010 11
-  *fuelgauge_volts = 0x72D; //‭  1110 01011 01‬
+ //just some values to test position/attribute/active until we start saving them to flash with the osd manu
+ // *callsign1 = 0xAB;        //	0001 01010 11
+ // *fuelgauge_volts = 0x72D; //‭  1110 01011 01‬
 
   switch (osd_display_phase) //phase starts at 2, RRR gesture subtracts 1 to enter the menu, RRR again or DDD subtracts 1 to clear the screen and return to regular display
   {
@@ -609,46 +707,97 @@ void osd_display(void) {
     break; //osd menu or wizard has been displayed for this loop	- break out of display function
 
   case 2: //regular osd display
-    switch (osd_display_element) {
-    case 0:
-      if ((*callsign1 & 0x01) == 0x01)
-        osd_print("ALIENWHOOP", decode_attribute(*callsign1), decode_positionx(*callsign1), decode_positiony(*callsign1)); //todo - needs to be pulled from the new register flash method
-      osd_display_element++;
-      break; //screen has been displayed for this loop - break out of display function
+	  switch (osd_display_element) {
+	  case 0:
+		  if (decode_active_element(*callsign1))
+			  osd_print("ALIENWHOOP", decode_attribute(*callsign1), decode_positionx(*callsign1), decode_positiony(*callsign1)); //todo - needs to be pulled from the new register flash method
+		  osd_display_element++;
+		  break; //screen has been displayed for this loop - break out of display function
 
-    case 1:
-      if ((*fuelgauge_volts & 0x01) == 1) {
-        uint8_t osd_fuelgauge_volts[5];
-        fast_fprint(osd_fuelgauge_volts, 4, vbatt_comp, 1);
-        osd_fuelgauge_volts[4] = 'V';
-        osd_print_data(osd_fuelgauge_volts, 5, decode_attribute(*fuelgauge_volts), decode_positionx(*fuelgauge_volts) + 3, decode_positiony(*fuelgauge_volts));
-      }
-      osd_display_element++;
-      break;
+	  case 1:
+		  if ((*fuelgauge_volts & 0x01) == 1) {
+			  uint8_t osd_fuelgauge_volts[5];
+			  fast_fprint(osd_fuelgauge_volts, 4, vbatt_comp, 1);
+			  osd_fuelgauge_volts[4] = 'V';
+			  osd_print_data(osd_fuelgauge_volts, 5, decode_attribute(*fuelgauge_volts), decode_positionx(*fuelgauge_volts) + 3, decode_positiony(*fuelgauge_volts));
+		  }
+		  osd_display_element++;
+		  break;
 
-    case 2:
-      if ((*fuelgauge_volts & 0x01) == 1) {
-        if (lowbatt != last_lowbatt_state) {
-          uint8_t osd_cellcount[2] = {lipo_cell_count + 48, 'S'};
-          if (!lowbatt) {
-            osd_print_data(osd_cellcount, 2, decode_attribute(*fuelgauge_volts), decode_positionx(*fuelgauge_volts), decode_positiony(*fuelgauge_volts));
-          } else {
-            osd_print_data(osd_cellcount, 2, BLINK | INVERT, decode_positionx(*fuelgauge_volts), decode_positiony(*fuelgauge_volts));
-          }
-          last_lowbatt_state = lowbatt;
-        }
-      }
-      osd_display_element++;
-      break;
+	  case 2:
+		  if ((*fuelgauge_volts & 0x01) == 1) {
+			  if (lowbatt != last_lowbatt_state) {
+				  uint8_t osd_cellcount[2] = {lipo_cell_count + 48, 'S'};
+				  if (!lowbatt) {
+					  osd_print_data(osd_cellcount, 2, decode_attribute(*fuelgauge_volts), decode_positionx(*fuelgauge_volts), decode_positiony(*fuelgauge_volts));
+				  } else {
+					  osd_print_data(osd_cellcount, 2, BLINK | INVERT, decode_positionx(*fuelgauge_volts), decode_positiony(*fuelgauge_volts));
+				  }
+				  last_lowbatt_state = lowbatt;
+			  }
+		  }
+		  osd_display_element++;
+		  break;
 
-    case 3:
-      display_trigger++;
-      if (display_trigger == 0)
-        osd_display_element = 1;
-      break;
-    }
+	  case 3:
+		  if ((*filtered_volts & 0x01) == 1) {
+			  uint8_t osd_filtered_volts[5];
+			  fast_fprint(osd_filtered_volts, 4, vbattfilt_corr, 1);
+			  osd_filtered_volts[4] = 'V';
+			  osd_print_data(osd_filtered_volts, 5, decode_attribute(*filtered_volts), decode_positionx(*filtered_volts) + 3, decode_positiony(*filtered_volts));
+		  }
+		  osd_display_element++;
+		  break;
+
+	  case 4:
+		  if ((*filtered_volts & 0x01) == 1) {
+			  if (lowbatt != last_lowbatt_state2) {
+				  uint8_t osd_cellcount2[2] = {lipo_cell_count + 48, 'S'};
+				  if (!lowbatt) {
+					  osd_print_data(osd_cellcount2, 2, decode_attribute(*filtered_volts), decode_positionx(*filtered_volts), decode_positiony(*filtered_volts));
+				  } else {
+					  osd_print_data(osd_cellcount2, 2, BLINK | INVERT, decode_positionx(*filtered_volts), decode_positiony(*filtered_volts));
+				  }
+				  last_lowbatt_state2 = lowbatt;
+			  }
+		  }
+		  osd_display_element++;
+		  break;
+
+	  case 5:
+		  if ((*exact_volts & 0x01) == 1) {
+			  uint8_t osd_exact_volts[5];
+			  fast_fprint(osd_exact_volts, 4, vbattfilt, 1);
+			  osd_exact_volts[4] = 'V';
+			  osd_print_data(osd_exact_volts, 5, decode_attribute(*exact_volts), decode_positionx(*exact_volts) + 3, decode_positiony(*exact_volts));
+		  }
+		  osd_display_element++;
+		  break;
+
+	  case 6:
+		  if ((*exact_volts & 0x01) == 1) {
+			  if (lowbatt != last_lowbatt_state3) {
+				  uint8_t osd_cellcount3[2] = {lipo_cell_count + 48, 'S'};
+				  if (!lowbatt) {
+					  osd_print_data(osd_cellcount3, 2, decode_attribute(*exact_volts), decode_positionx(*exact_volts), decode_positiony(*exact_volts));
+				  } else {
+					  osd_print_data(osd_cellcount3, 2, BLINK | INVERT, decode_positionx(*exact_volts), decode_positiony(*exact_volts));
+				  }
+				  last_lowbatt_state3 = lowbatt;
+			  }
+		  }
+		  osd_display_element++;
+		  break;
+
+	  case 7:  //end of regular display - display_trigger counter sticks here till it wraps
+		  display_trigger++;
+		  if (display_trigger == 0) osd_display_element = 1;
+		  break;
+	  }
     break;
-
+//**********************************************************************************************************************************************************************************************
+//																				OSD MENUS BELOW THIS POINT
+//**********************************************************************************************************************************************************************************************
   case 3:		//pids profile menu
 	  last_display_phase = 1;
 	  print_osd_menu_strings(3, 2, pid_profiles_labels, pid_profiles_positions);
@@ -729,6 +878,8 @@ void osd_display(void) {
   case 15:		//add or remove osd elements to display
 	  last_display_phase = 10;
 	  print_osd_menu_strings(12, 11, osd_display_labels, osd_display_positions);
+	  print_osd_adjustable_enums (12, 10, get_decode_element_string(osd_element[osd_elements_active_items[osd_menu_phase-13]], ACTIVE), osd_display_grid, osd_display_data_positions);
+	  if (osd_menu_phase==23) osd_encoded_adjust(&osd_element[osd_elements_active_items[osd_cursor-1]], 10, ACTIVE);
 	  break;
 
   case 16:		//edit element positions

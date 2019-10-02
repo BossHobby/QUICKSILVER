@@ -113,9 +113,11 @@ int armed_state;
 int arming_release;
 int binding_while_armed = 1;
 
-//Experimental Flash Memory Feature
+//Flash Memory Feature defaults for a flash w/full chip erase
 int flash_feature_1 = 1; //SETUP WIZARD
 int flash_feature_2 = 0; //LVC
+unsigned long osd_element[OSD_NUMBER_ELEMENTS] = { 0xAB, 0x00, 0x00, 0x00, 0x00, 0x00, 0x704, 0x72D, 0x754 };
+
 
 // for led flash on gestures
 int ledcommand = 0;
