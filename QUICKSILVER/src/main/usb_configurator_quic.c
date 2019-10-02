@@ -9,6 +9,7 @@
 #include "flash.h"
 #include "profile.h"
 #include "project.h"
+#include "sixaxis.h"
 
 #if defined(F405)
 
@@ -224,19 +225,16 @@ void usb_process_quic() {
   }
 
   const uint16_t size = (uint16_t)usb_serial_read_byte() << 8 | usb_serial_read_byte();
-  if (size == 0) {
-    quic_errorf(cmd, "INVALID SIZE %d", size);
-    return;
-  }
-
-  uint32_t len = usb_serial_read(decode_buffer, size);
-  for (uint32_t timeout = 1000; len < size && timeout > 0; --timeout) {
-    len += usb_serial_read(decode_buffer + len, size - len);
-    delay(10);
-  }
-  if (len != size) {
-    quic_errorf(cmd, "INVALID SIZE %d", size);
-    return;
+  if (size != 0) {
+    uint32_t len = usb_serial_read(decode_buffer, size);
+    for (uint32_t timeout = 1000; len < size && timeout > 0; --timeout) {
+      len += usb_serial_read(decode_buffer + len, size - len);
+      delay(10);
+    }
+    if (len != size) {
+      quic_errorf(cmd, "INVALID SIZE %d", size);
+      return;
+    }
   }
 
   switch (cmd) {
@@ -245,6 +243,20 @@ void usb_process_quic() {
     break;
   case QUIC_CMD_SET:
     set_quic(decode_buffer, size);
+    break;
+  case QUIC_CMD_CAL_IMU:
+    gyro_cal(); // for flashing lights
+    acc_cal();
+
+#ifdef FLASH_SAVE2
+    extern float accelcal[3];
+    flash2_fmc_write(accelcal[0] + 127, accelcal[1] + 127);
+#endif
+
+#ifdef FLASH_SAVE1
+    flash_save();
+    flash_load();
+#endif
     break;
   default:
     quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);

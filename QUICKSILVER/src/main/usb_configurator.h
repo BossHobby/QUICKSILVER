@@ -14,6 +14,7 @@ typedef enum {
   QUIC_CMD_GET,
   QUIC_CMD_SET,
   QUIC_CMD_LOG,
+  QUIC_CMD_CAL_IMU
 } quic_command;
 
 typedef enum {
