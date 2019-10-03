@@ -55,6 +55,7 @@ void usb_configurator(void) {
     break;
 #ifdef DEBUG
   case 'D':
+    usb_serial_printf("gyroid: %x\r\n", debug.gyroid);
     usb_serial_printf("adcfilt: %f\r\n", debug.adcfilt);
     usb_serial_printf("looptime: %f\r\n", debug.timefilt);
     usb_serial_printf("cpu_load: %f\r\n", debug.cpu_load * 100);
