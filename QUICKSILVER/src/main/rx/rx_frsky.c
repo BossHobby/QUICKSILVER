@@ -57,6 +57,7 @@ extern char auxchange[AUX_CHANNEL_MAX];
 int failsafe = 1; // It isn't safe if we haven't checked it!
 int rxmode = RXMODE_BIND;
 int rx_ready = 0;
+int rx_bind_enable = 0;
 
 uint8_t frsky_extract_rssi(uint8_t rssi_raw) {
   if (rssi_raw >= 128) {
@@ -582,6 +583,12 @@ void checkrx() {
   if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
     return;
 
+  if (rx_bind_enable == 1) {
+    protocol_state = STATE_INIT;
+    rxmode = RXMODE_BIND;
+    rx_ready = 0;
+  }
+
   switch (protocol_state) {
   case STATE_DETECT:
     if (frsky_dectect()) {
@@ -591,7 +598,8 @@ void checkrx() {
   case STATE_INIT:
     cc2500_enter_rxmode();
     cc2500_strobe(CC2500_SRX);
-    if (frsky_bind.idx == 0xff) {
+    if (frsky_bind.idx == 0xff || rx_bind_enable == 1) {
+      rx_bind_enable = 0;
       protocol_state = STATE_BIND;
     } else {
       protocol_state = STATE_BIND_COMPLETE;
