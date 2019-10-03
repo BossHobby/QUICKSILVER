@@ -110,6 +110,18 @@
 #define DSHOT_GPIO_A 1
 #endif
 
+#ifdef MOTOR0_PIN_PB4
+#define DSHOT_PIN_0 GPIO_Pin_4
+#define DSHOT_PORT_0 GPIOB
+#define DSHOT_GPIO_B 1
+#endif
+
+#ifdef MOTOR0_PIN_PB5
+#define DSHOT_PIN_0 GPIO_Pin_5
+#define DSHOT_PORT_0 GPIOB
+#define DSHOT_GPIO_B 1
+#endif
+
 #ifdef MOTOR0_PIN_PB6
 #define DSHOT_PIN_0 GPIO_Pin_6
 #define DSHOT_PORT_0 GPIOB
@@ -242,6 +254,18 @@
 #define DSHOT_PIN_1 GPIO_Pin_11
 #define DSHOT_PORT_1 GPIOA
 #define DSHOT_GPIO_A 1
+#endif
+
+#ifdef MOTOR1_PIN_PB4
+#define DSHOT_PIN_1 GPIO_Pin_4
+#define DSHOT_PORT_1 GPIOB
+#define DSHOT_GPIO_B 1
+#endif
+
+#ifdef MOTOR1_PIN_PB5
+#define DSHOT_PIN_1 GPIO_Pin_5
+#define DSHOT_PORT_1 GPIOB
+#define DSHOT_GPIO_B 1
 #endif
 
 #ifdef MOTOR1_PIN_PB6
@@ -378,6 +402,18 @@
 #define DSHOT_GPIO_A 1
 #endif
 
+#ifdef MOTOR2_PIN_PB4
+#define DSHOT_PIN_2 GPIO_Pin_4
+#define DSHOT_PORT_2 GPIOB
+#define DSHOT_GPIO_B 1
+#endif
+
+#ifdef MOTOR2_PIN_PB5
+#define DSHOT_PIN_2 GPIO_Pin_5
+#define DSHOT_PORT_2 GPIOB
+#define DSHOT_GPIO_B 1
+#endif
+
 #ifdef MOTOR2_PIN_PB6
 #define DSHOT_PIN_2 GPIO_Pin_6
 #define DSHOT_PORT_2 GPIOB
@@ -510,6 +546,18 @@
 #define DSHOT_PIN_3 GPIO_Pin_11
 #define DSHOT_PORT_3 GPIOA
 #define DSHOT_GPIO_A 1
+#endif
+
+#ifdef MOTOR3_PIN_PB4
+#define DSHOT_PIN_3 GPIO_Pin_4
+#define DSHOT_PORT_3 GPIOB
+#define DSHOT_GPIO_B 1
+#endif
+
+#ifdef MOTOR3_PIN_PB5
+#define DSHOT_PIN_3 GPIO_Pin_5
+#define DSHOT_PORT_3 GPIOB
+#define DSHOT_GPIO_B 1
 #endif
 
 #ifdef MOTOR3_PIN_PB6
