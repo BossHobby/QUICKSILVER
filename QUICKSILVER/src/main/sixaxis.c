@@ -161,36 +161,36 @@ void sixaxis_read(void) {
   accel[1] = -(int16_t)((data[2] << 8) + data[3]);
   accel[2] = (int16_t)((data[4] << 8) + data[5]);
 
-  if (profile.motor.gyro_orientation == GYRO_ROTATE_90_CW) {
+  if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CW) {
     float temp = accel[1];
     accel[1] = accel[0];
     accel[0] = -temp;
   }
 
-  if (profile.motor.gyro_orientation == GYRO_ROTATE_45_CCW) {
+  if (profile.motor.gyro_orientation & GYRO_ROTATE_45_CCW) {
     float temp = accel[0];
     accel[0] = (accel[0] * INVSQRT2 + accel[1] * INVSQRT2);
     accel[1] = -(temp * INVSQRT2 - accel[1] * INVSQRT2);
   }
 
-  if (profile.motor.gyro_orientation == GYRO_ROTATE_45_CW) {
+  if (profile.motor.gyro_orientation & GYRO_ROTATE_45_CW) {
     float temp = accel[1];
     accel[1] = (accel[1] * INVSQRT2 + accel[0] * INVSQRT2);
     accel[0] = -(temp * INVSQRT2 - accel[0] * INVSQRT2);
   }
 
-  if (profile.motor.gyro_orientation == GYRO_ROTATE_90_CCW) {
+  if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CCW) {
     float temp = accel[1];
     accel[1] = -accel[0];
     accel[0] = temp;
   }
 
-  if (profile.motor.gyro_orientation == GYRO_ROTATE_180) {
+  if (profile.motor.gyro_orientation & GYRO_ROTATE_180) {
     accel[1] = -accel[1];
     accel[0] = -accel[0];
   }
 
-  if (profile.motor.gyro_orientation == GYRO_FLIP_180) {
+  if (profile.motor.gyro_orientation & GYRO_FLIP_180) {
     accel[2] = -accel[2];
     accel[0] = -accel[0];
   }
@@ -204,36 +204,36 @@ void sixaxis_read(void) {
   gyro_raw[1] = gyro_raw[1] - gyrocal[1];
   gyro_raw[2] = gyro_raw[2] - gyrocal[2];
 
-  if (profile.motor.gyro_orientation == GYRO_ROTATE_90_CW) {
+  if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CW) {
     float temp = gyro_raw[1];
     gyro_raw[1] = -gyro_raw[0];
     gyro_raw[0] = temp;
   }
 
-  if (profile.motor.gyro_orientation == GYRO_ROTATE_45_CCW) {
+  if (profile.motor.gyro_orientation & GYRO_ROTATE_45_CCW) {
     float temp = gyro_raw[1];
     gyro_raw[1] = gyro_raw[0] * INVSQRT2 + gyro_raw[1] * INVSQRT2;
     gyro_raw[0] = gyro_raw[0] * INVSQRT2 - temp * INVSQRT2;
   }
 
-  if (profile.motor.gyro_orientation == GYRO_ROTATE_45_CW) {
+  if (profile.motor.gyro_orientation & GYRO_ROTATE_45_CW) {
     float temp = gyro_raw[0];
     gyro_raw[0] = gyro_raw[1] * INVSQRT2 + gyro_raw[0] * INVSQRT2;
     gyro_raw[1] = gyro_raw[1] * INVSQRT2 - temp * INVSQRT2;
   }
 
-  if (profile.motor.gyro_orientation == GYRO_ROTATE_90_CCW) {
+  if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CCW) {
     float temp = gyro_raw[1];
     gyro_raw[1] = gyro_raw[0];
     gyro_raw[0] = -temp;
   }
 
-  if (profile.motor.gyro_orientation == GYRO_ROTATE_180) {
+  if (profile.motor.gyro_orientation & GYRO_ROTATE_180) {
     gyro_raw[1] = -gyro_raw[1];
     gyro_raw[0] = -gyro_raw[0];
   }
 
-  if (profile.motor.gyro_orientation == GYRO_FLIP_180) {
+  if (profile.motor.gyro_orientation & GYRO_FLIP_180) {
     gyro_raw[1] = -gyro_raw[1];
     gyro_raw[2] = -gyro_raw[2];
   }

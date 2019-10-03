@@ -105,19 +105,19 @@ typedef struct {
   ARRAY_MEMBER(stick_rates, STICK_PROFILE_MAX, stick_rate_t)
 
 typedef enum {
-  GYRO_ROTATE_NONE,
-  GYRO_ROTATE_45_CCW,
-  GYRO_ROTATE_45_CW,
-  GYRO_ROTATE_90_CW,
-  GYRO_ROTATE_90_CCW,
-  GYRO_ROTATE_180,
-  GYRO_FLIP_180,
+  GYRO_ROTATE_NONE = 0x0,
+  GYRO_ROTATE_45_CCW = 0x1,
+  GYRO_ROTATE_45_CW = 0x2,
+  GYRO_ROTATE_90_CW = 0x4,
+  GYRO_ROTATE_90_CCW = 0x8,
+  GYRO_ROTATE_180 = 0x10,
+  GYRO_FLIP_180 = 0x20,
 } gyro_rotation_t;
 
 typedef struct {
   float digital_idle;
   uint8_t invert_yaw;
-  gyro_rotation_t gyro_orientation;
+  uint8_t gyro_orientation;
 } motor_t;
 
 #define MOTOR_MEMBERS         \
