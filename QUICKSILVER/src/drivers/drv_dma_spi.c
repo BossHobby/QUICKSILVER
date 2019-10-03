@@ -38,9 +38,20 @@
 #define MPU6XXX_NSS_PORT GPIOA
 #endif
 
+#if defined(MPU6XXX_NSS_PC2) || defined(ICM20601_NSS_PC2) || defined(ICM20602_NSS_PC2)
+#define MPU6XXX_NSS_PINSOURCE GPIO_PinSource2
+#define MPU6XXX_NSS_PIN GPIO_Pin_2
+#define MPU6XXX_NSS_PORT GPIOC
+#endif
+
 //INTERRUPT PINS
 #if defined(MPU6XXX_INT_PC4) || defined(ICM20601_INT_PC4) || defined(ICM20602_INT_PC4)
 #define MPU6XXX_INT_PIN GPIO_Pin_4
+#define MPU6XXX_INT_PORT GPIOC
+#endif
+
+#if defined(MPU6XXX_INT_PC3) || defined(ICM20601_INT_PC3) || defined(ICM20602_INT_PC3)
+#define MPU6XXX_INT_PIN GPIO_Pin_3
 #define MPU6XXX_INT_PORT GPIOC
 #endif
 
