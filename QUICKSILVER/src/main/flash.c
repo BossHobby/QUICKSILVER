@@ -11,6 +11,7 @@ extern profile_t profile;
 extern float accelcal[];
 
 #define FMC_HEADER 0x12AA0001
+#define FRSKY_BIND_OFFSET OSD_FLASH_START + OSD_NUMBER_ELEMENTS
 
 float initial_pid_identifier = -10;
 
@@ -105,7 +106,7 @@ void flash_save(void) {
 #ifdef RX_FRSKY //currently starts at address 66
   extern frsky_bind_data frsky_bind;
   for (int i = 0; i < sizeof(frsky_bind_data) / 4; i++) {
-    writeword(i + 66, frsky_bind.raw[i]);
+    writeword(i + FRSKY_BIND_OFFSET, frsky_bind.raw[i]);
   }
 #endif
   {
@@ -198,7 +199,7 @@ void flash_load(void) {
 #ifdef RX_FRSKY //currently starts at address 57
     extern frsky_bind_data frsky_bind;
     for (int i = 0; i < sizeof(frsky_bind_data) / 4; i++) {
-      frsky_bind.raw[i] = fmc_read(i + 66);
+      frsky_bind.raw[i] = fmc_read(i + FRSKY_BIND_OFFSET);
     }
 #endif
 
