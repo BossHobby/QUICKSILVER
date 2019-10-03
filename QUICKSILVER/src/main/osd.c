@@ -29,7 +29,7 @@ BIT
 11:15	-		not currently used
 16:31	-		available for two binary ascii characters
 */
-
+// 1111111 11111 11
 //Flash Variables - 32bit					# of osd elements and flash memory start position in defines.h
 extern unsigned long osd_element[OSD_NUMBER_ELEMENTS];
 /*
@@ -518,40 +518,53 @@ void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_m
 	}
 }
 
-
-void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t status){
-	if(osd_select > 1) {
-		osd_select = 1;	//limit osd select variable from accumulating past 1 columns of adjustable items
+void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_t status){
+	if(osd_select > columns) {
+		osd_select = columns;	//limit osd select variable from accumulating past 1 columns of adjustable items
 		osd_menu_phase = 1; //repaint the screen again
 	}
 	if (osd_cursor <= rows){
-		if (osd_select == 1){
-			switch (status){
-			case 0:	//adjust active or inactive element
-				if (increase_osd_value && osd_decode(*pointer, status) == 0x00 ){
-					*pointer = *pointer + 1;
-					osd_menu_phase = 1; //repaint the screen again
-				}
-				if (decrease_osd_value && osd_decode(*pointer, status) == 0x01 ){
-					*pointer = *pointer - 1;
-					osd_menu_phase = 1; //repaint the screen again
-				}
-				break;
-			case 1:	//adjust TEXT or INVERT
-				if (increase_osd_value && osd_decode(*pointer, status) == TEXT ){	//increase requested and currently on TEXT
-					*pointer = *pointer | (0x02);	//flip the 2nd bit on
-					osd_menu_phase = 1; //repaint the screen again
-				}
-					if (decrease_osd_value && osd_decode(*pointer, status) == INVERT ){	//decrease requested and currently on INVERT
-					*pointer = *pointer ^ (0x02) ;	//flip the 2nd bit off
-					osd_menu_phase = 1; //repaint the screen again
-				}
-				break;
-			case 2:	//adjust positionX
-				break;
-			case 3:	//adjust positionY
-				break;
+		switch (status){
+		case 0:	//adjust active or inactive element
+			if (increase_osd_value && osd_decode(*pointer, status) == 0x00 ){
+				*pointer = *pointer + 1;
+				osd_menu_phase = 1; //repaint the screen again
 			}
+			if (decrease_osd_value && osd_decode(*pointer, status) == 0x01 ){
+				*pointer = *pointer - 1;
+				osd_menu_phase = 1; //repaint the screen again
+			}
+			break;
+		case 1:	//adjust TEXT or INVERT
+			if (increase_osd_value && osd_decode(*pointer, status) == TEXT ){	//increase requested and currently on TEXT
+				*pointer = *pointer | (0x02);	//flip the 2nd bit on
+				osd_menu_phase = 1; //repaint the screen again
+			}
+				if (decrease_osd_value && osd_decode(*pointer, status) == INVERT ){	//decrease requested and currently on INVERT
+				*pointer = *pointer ^ (0x02) ;	//flip the 2nd bit off
+				osd_menu_phase = 1; //repaint the screen again
+			}
+			break;
+		case 2:	//adjust positionX
+			if (increase_osd_value && osd_decode(*pointer, status) != 30 ){
+				*pointer = (((*pointer >> 2) + 1) << 2) + (*pointer & 0x03);
+				osd_menu_phase = 1; //repaint the screen again
+			}
+			if (decrease_osd_value && osd_decode(*pointer, status) != 0 ){
+				*pointer = (((*pointer >> 2) - 1) << 2) + (*pointer & 0x03);
+				osd_menu_phase = 1; //repaint the screen again
+			}
+			break;
+		case 3:	//adjust positionY
+			if (increase_osd_value && osd_decode(*pointer, status) != 15 ){
+				*pointer = (((*pointer >> 7) + 1) << 7) + (*pointer & 0x7F);
+				osd_menu_phase = 1; //repaint the screen again
+			}
+			if (decrease_osd_value && osd_decode(*pointer, status) != 0 ){
+				*pointer = (((*pointer >> 7) - 1) << 7) + (*pointer & 0x7F);
+				osd_menu_phase = 1; //repaint the screen again
+			}
+			break;
 		}
 		increase_osd_value = 0;
 		decrease_osd_value = 0;
@@ -889,21 +902,22 @@ void osd_display(void) {
 	  last_display_phase = 10;
 	  print_osd_menu_strings(12, 11, osd_display_labels, osd_display_positions);
 	  print_osd_adjustable_enums (12, 10, get_decode_element_string(osd_element[osd_elements_active_items[osd_menu_phase-13]], ACTIVE), osd_display_grid, osd_display_data_positions);
-	  if (osd_menu_phase==23) osd_encoded_adjust(&osd_element[osd_elements_active_items[osd_cursor-1]], 10, ACTIVE);
+	  if (osd_menu_phase==23) osd_encoded_adjust(&osd_element[osd_elements_active_items[osd_cursor-1]], 10, 1, ACTIVE);
 	  break;
 
   case 16:		//edit element positions
 	  last_display_phase = 10;
 	  print_osd_menu_strings(14, 11, osd_position_labels, osd_position_adjust_positions);
 	  print_osd_adjustable_enums (14, 20,get_decode_element_string(osd_element[osd_position_active_items[osd_menu_phase-15]], osd_position_index[osd_menu_phase-15]), osd_position_grid, osd_position_data_positions);
+	  if (osd_menu_phase==35 && osd_select > 0) osd_encoded_adjust(&osd_element[osd_elements_active_items[osd_cursor-1]], 10, 2, osd_select+1);
 	  break;
 
   case 17:		//edit display text style
 	  last_display_phase = 10;
 	  print_osd_menu_strings(12, 11, osd_text_style, osd_text_style_positions);
 	  print_osd_adjustable_enums (12, 10, get_decode_element_string(osd_element[osd_elements_active_items[osd_menu_phase-13]], ATTRIBUTE), osd_display_grid, osd_display_data_positions);
-	  if (osd_menu_phase==23) osd_encoded_adjust(&osd_element[osd_elements_active_items[osd_cursor-1]], 10, ATTRIBUTE);
-	  break;;
+	  if (osd_menu_phase==23) osd_encoded_adjust(&osd_element[osd_elements_active_items[osd_cursor-1]], 10, 1, ATTRIBUTE);
+	  break;
 
   case 18:		//edit callsign text
 	  last_display_phase = 10;
