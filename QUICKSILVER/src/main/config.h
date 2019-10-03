@@ -82,11 +82,11 @@
 //#define RX_FRSKY
 
 // *************Serial Receiver UART Selection (uncomment all if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
-//#define UART_1
+#define UART_1
 //#define UART_2
 //#define UART_3
 //#define UART_4
-#define UART_6
+//#define UART_6
 
 // *************Serial Receiver Inversion Selection  (Normally true for SBUS and FPORT)
 //#define INVERT_UART
