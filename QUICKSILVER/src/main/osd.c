@@ -59,8 +59,8 @@ unsigned long *flight_mode = (osd_element + 9);
 unsigned long *rssi = (osd_element + 10);
 unsigned long *stopwatch = (osd_element + 11);
 unsigned long *arm_disarm = (osd_element + 12);
-unsigned long *unassigned = (osd_element + 13);
-unsigned long *unassigned2 = (osd_element + 14);
+unsigned long *osd_throttle = (osd_element + 13);
+unsigned long *osd_vtx = (osd_element + 14);
 
 //screen element register decoding functions
 uint8_t decode_active_element(uint32_t element){
@@ -114,8 +114,8 @@ const char* get_decode_element_string (uint32_t input , uint8_t status){
 		else return "INACTIVE";
 		break;
 	case 1:		//ATTRIBUTE
-		if (osd_decode(input, status)) return "INVERT";
-		else return "TEXT";
+		if (osd_decode(input, status) == INVERT) return "INVERT";
+		else return "NORMAL";
 		break;
 	}
 	return 0;
@@ -215,8 +215,8 @@ const char osd_elements_menu_labels[5][21] = { {"OSD ELEMENTS"},{"ADD OR REMOVE"
 const uint8_t osd_elements_menu_positions[5][2] = { {9, 1}, {7, 4}, {7, 5}, {7, 6}, {7, 7} };
 const uint8_t osd_elements_map[] = {15, 16, 17, 18};
 
-//osd element add / remove submenu map
-const char osd_display_labels[12][21] = { {"OSD DISPLAY ITEMS"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"EXACT VOLTS"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"ARMED/DISARMED"}, {"UNASSIGNED"}, {"UNASSIGNED"}, {"SAVE AND EXIT"} };
+//osd element add/remove & text/invert submenu map
+const char osd_display_labels[12][21] = { {"OSD DISPLAY ITEMS"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"EXACT VOLTS"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"ARMED/DISARMED"}, {"THROTTLE"}, {"VTX"}, {"SAVE AND EXIT"} };
 const uint8_t osd_display_positions[12][2] = { {6,1}, {4,2}, {4,3}, {4,4}, {4,5}, {4,6}, {4,7}, {4,8}, {4,9}, {4,10}, {4,11}, {4,14} };
 const uint8_t osd_display_data_positions[10][2] = { {20, 2}, {20, 3}, {20, 4}, {20, 5}, {20, 6}, {20, 7}, {20, 8}, {20, 9}, {20, 10}, {20, 11} };
 const uint8_t osd_display_grid[10][2] = { {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}, {1, 6}, {1, 7}, {1, 8}, {1, 9}, {1, 10} };
@@ -524,22 +524,29 @@ void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t status){
 	if (osd_cursor <= rows){
 		if (osd_select == 1){
 			switch (status){
-			case 0:
+			case 0:	//adjust active or inactive element
 				if (increase_osd_value && osd_decode(*pointer, status) == 0x00 ){
 					*pointer = *pointer + 1;
 					osd_menu_phase = 1; //repaint the screen again
 				}
-				if (decrease_osd_value && osd_decode(*pointer, status) != 0x00 ){
+				if (decrease_osd_value && osd_decode(*pointer, status) == 0x01 ){
 					*pointer = *pointer - 1;
 					osd_menu_phase = 1; //repaint the screen again
 				}
-
 				break;
-			case 1:
+			case 1:	//adjust TEXT or INVERT
+				if (increase_osd_value && osd_decode(*pointer, status) == TEXT ){	//increase requested and currently on TEXT
+					*pointer = *pointer | (0x02);	//flip the 2nd bit on
+					osd_menu_phase = 1; //repaint the screen again
+				}
+					if (decrease_osd_value && osd_decode(*pointer, status) == INVERT ){	//decrease requested and currently on INVERT
+					*pointer = *pointer ^ (0x02) ;	//flip the 2nd bit off
+					osd_menu_phase = 1; //repaint the screen again
+				}
 				break;
-			case 2:
+			case 2:	//adjust positionX
 				break;
-			case 3:
+			case 3:	//adjust positionY
 				break;
 			}
 		}
@@ -889,8 +896,10 @@ void osd_display(void) {
 
   case 17:		//edit display style
 	  last_display_phase = 10;
-	  print_osd_menu_strings(3, 2, osd_text_temp_labels, osd_text_temp_positions);
-	  break;
+	  print_osd_menu_strings(12, 11, osd_display_labels, osd_display_positions);
+	  print_osd_adjustable_enums (12, 10, get_decode_element_string(osd_element[osd_elements_active_items[osd_menu_phase-13]], ATTRIBUTE), osd_display_grid, osd_display_data_positions);
+	  if (osd_menu_phase==23) osd_encoded_adjust(&osd_element[osd_elements_active_items[osd_cursor-1]], 10, ATTRIBUTE);
+	  break;;
 
   case 18:		//edit callsign text
 	  last_display_phase = 10;
