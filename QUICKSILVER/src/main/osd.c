@@ -107,6 +107,13 @@ uint8_t osd_decode(uint32_t element, uint8_t status){
 	return 0;
 }
 
+
+const char* get_position_string (int input){
+	static char* respond[] = {" 0", " 1", " 2", " 3", " 4", " 5", " 6", " 7", " 8", " 9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "ERROR"};
+	return respond[input];
+}
+
+
 const char* get_decode_element_string (uint32_t input , uint8_t status){
 	switch (status){
 	case 0:		//ACTIVE
@@ -117,9 +124,16 @@ const char* get_decode_element_string (uint32_t input , uint8_t status){
 		if (osd_decode(input, status) == INVERT) return "INVERT";
 		else return "NORMAL";
 		break;
+	case 2:
+		return get_position_string(osd_decode(input, status));
+		break;
+	case 3:
+		return get_position_string(osd_decode(input, status));
+		break;
 	}
 	return 0;
 }
+
 
 
 //******************************************************************************************************************************
@@ -223,12 +237,16 @@ const uint8_t osd_display_grid[10][2] = { {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}
 const uint8_t osd_elements_active_items[] = {0, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 
 //osd positions submenu map
-const char positions_temp_labels[3][21] = { {"POSITIONS"},{"UNDER"},{"DEVELOPMENT"} };
-const uint8_t positions_temp_positions[3][2] = { {11, 1}, {7, 4}, {7,5} };
+const char osd_position_labels[14][21] = { {"OSD POSITIONS"},{"ADJ X"}, {"ADJ Y"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"EXACT VOLTS"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"ARMED/DISARMED"}, {"THROTTLE"}, {"VTX"}, {"SAVE AND EXIT"} };
+const uint8_t osd_position_adjust_positions[14][2] = { {1,1}, {18,1}, {24,1}, {3,2}, {3,3}, {3,4}, {3,5}, {3,6}, {3,7}, {3,8}, {3,9}, {3,10}, {3,11}, {3,14} };
+const uint8_t osd_position_grid[20][2] = { {1, 1}, {2, 1}, {1, 2}, {2, 2}, {1, 3}, {2, 3}, {1, 4}, {2, 4}, {1, 5}, {2, 5}, {1, 6}, {2, 6}, {1, 7}, {2, 7}, {1, 8}, {2, 8}, {1, 9}, {2, 9}, {1, 10}, {2, 10} };
+const uint8_t osd_position_data_positions[20][2] = { {20, 2}, {26, 2}, {20, 3}, {26, 3}, {20, 4}, {26, 4}, {20, 5}, {26, 5}, {20, 6}, {26, 6}, {20, 7}, {26, 7}, {20, 8}, {26, 8}, {20, 9}, {26, 9}, {20, 10}, {26, 10}, {20, 11}, {26, 11} };
+const uint8_t osd_position_active_items[] = {0, 0, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14};
+const uint8_t osd_position_index[20] = {2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3};
 
 //osd text style submenu map
-const char osd_text_temp_labels[3][21] = { {"TEXT STYLE"},{"UNDER"},{"DEVELOPMENT"} };
-const uint8_t osd_text_temp_positions[3][2] = { {11, 1}, {7, 4}, {7,5} };
+const char osd_text_style[12][21] = { {"OSD TEXT STYLE"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"EXACT VOLTS"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"ARMED/DISARMED"}, {"THROTTLE"}, {"VTX"}, {"SAVE AND EXIT"} };
+const uint8_t osd_text_style_positions[12][2] = { {8,1}, {4,2}, {4,3}, {4,4}, {4,5}, {4,6}, {4,7}, {4,8}, {4,9}, {4,10}, {4,11}, {4,14} };
 
 //osd callsign style submenu map
 const char callsign_temp_labels[3][21] = { {"CALLSIGN"},{"UNDER"},{"DEVELOPMENT"} };
@@ -375,22 +393,7 @@ float adjust_rounded_float(float input, float adjust_amount){
 
 const char* get_aux_status (int input){
 	static char* respond[] = {"CHANNEL 5  ", "CHANNEL 6  ", "CHANNEL 7  ", "CHANNEL 8  ", "CHANNEL 9  ", "CHANNEL 10 ", "CHANNEL 11 ", "CHANNEL 12 ", "CHANNEL 13 ", "CHANNEL 14 ", "CHANNEL 15 ", "CHANNEL 16 ", "GESTURE AUX", "ALWAYS ON  ", "ALWAYS OFF ", "ERROR      "};
-	if(input == AUX_CHANNEL_0) return respond[0];
-	if(input == AUX_CHANNEL_1) return respond[1];
-	if(input == AUX_CHANNEL_2) return respond[2];
-	if(input == AUX_CHANNEL_3) return respond[3];
-	if(input == AUX_CHANNEL_4) return respond[4];
-	if(input == AUX_CHANNEL_5) return respond[5];
-	if(input == AUX_CHANNEL_6) return respond[6];
-	if(input == AUX_CHANNEL_7) return respond[7];
-	if(input == AUX_CHANNEL_8) return respond[8];
-	if(input == AUX_CHANNEL_9) return respond[9];
-	if(input == AUX_CHANNEL_10) return respond[10];
-	if(input == AUX_CHANNEL_11) return respond[11];
-	if(input == AUX_CHANNEL_12) return respond[12];
-	if(input == AUX_CHANNEL_ON) return respond[13];
-	if(input == AUX_CHANNEL_OFF) return respond[14];
-	return respond[15];
+	return respond[input];
 }
 
 vector_t *get_pid_term(uint8_t term) {
@@ -891,12 +894,13 @@ void osd_display(void) {
 
   case 16:		//edit element positions
 	  last_display_phase = 10;
-	  print_osd_menu_strings(3, 2, positions_temp_labels, positions_temp_positions);
+	  print_osd_menu_strings(14, 11, osd_position_labels, osd_position_adjust_positions);
+	  print_osd_adjustable_enums (14, 20,get_decode_element_string(osd_element[osd_position_active_items[osd_menu_phase-15]], osd_position_index[osd_menu_phase-15]), osd_position_grid, osd_position_data_positions);
 	  break;
 
-  case 17:		//edit display style
+  case 17:		//edit display text style
 	  last_display_phase = 10;
-	  print_osd_menu_strings(12, 11, osd_display_labels, osd_display_positions);
+	  print_osd_menu_strings(12, 11, osd_text_style, osd_text_style_positions);
 	  print_osd_adjustable_enums (12, 10, get_decode_element_string(osd_element[osd_elements_active_items[osd_menu_phase-13]], ATTRIBUTE), osd_display_grid, osd_display_data_positions);
 	  if (osd_menu_phase==23) osd_encoded_adjust(&osd_element[osd_elements_active_items[osd_cursor-1]], 10, ATTRIBUTE);
 	  break;;
