@@ -42,9 +42,9 @@
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
 #define USART1_PA10PA9
 #define USART2_PA3PA2
-//#define USART3_PC11PC10
-//#define USART4_PA1PA0
-//#define USART5_PD2PC12
+#define USART3_PC11PC10
+#define USART4_PA1PA0
+#define USART5_PD2PC12
 #endif
 
 // OSD
@@ -70,7 +70,7 @@
 #endif
 
 // MOTOR PINS
-#define MOTOR0_PIN_PC6
-#define MOTOR1_PIN_PC7
-#define MOTOR2_PIN_PC8
-#define MOTOR3_PIN_PC9
+#define MOTOR0_PIN_PC8 //S3_OUT
+#define MOTOR1_PIN_PC9 //S4_OUT
+#define MOTOR2_PIN_PC6 //S1_OUT
+#define MOTOR3_PIN_PC7 //S2_OUT
