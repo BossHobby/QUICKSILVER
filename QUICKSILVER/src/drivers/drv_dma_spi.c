@@ -88,7 +88,7 @@ void spi_gyro_init(void) {
 #endif
 
   // Chip Select Set High
-  GPIO_SetBits(MPU6XXX_SPI_PORT, MPU6XXX_NSS_PIN);
+  GPIO_SetBits(MPU6XXX_NSS_PORT, MPU6XXX_NSS_PIN);
 
   // TODO: GPIO Listen to interrupt pin, set up interrupt handler, ect
 
@@ -168,10 +168,10 @@ void spi_reset_prescaler2(void) {
 
 // Chip Select functions
 void spi_enable(void) {
-  GPIO_ResetBits(MPU6XXX_SPI_PORT, MPU6XXX_NSS_PIN);
+  GPIO_ResetBits(MPU6XXX_NSS_PORT, MPU6XXX_NSS_PIN);
 }
 void spi_disable(void) {
-  GPIO_SetBits(MPU6XXX_SPI_PORT, MPU6XXX_NSS_PIN);
+  GPIO_SetBits(MPU6XXX_NSS_PORT, MPU6XXX_NSS_PIN);
 }
 
 // Blocking Transmit/Read function
