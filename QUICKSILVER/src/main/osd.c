@@ -892,7 +892,7 @@ void osd_display(void) {
 
   case 14:		//stick boost profiles
 	  last_display_phase = 13;
-	  if(profile.pid.stick_profile == STICK_PROFILE_1) print_osd_menu_strings(7, 3, stickboost1_labels, stickboost_positions);
+	  if(profile.pid.stick_profile == STICK_PROFILE_OFF) print_osd_menu_strings(7, 3, stickboost1_labels, stickboost_positions);
 	  else print_osd_menu_strings(7, 3, stickboost2_labels, stickboost_positions);
 	  print_osd_adjustable_vectors(ROUNDED, 7, 6, get_stick_profile_term(stickboost_data_index[osd_menu_phase-8][0]), stickboost_data_index, stickboost_grid, stickboost_data_positions);
 	  if (osd_menu_phase == 14) osd_vector_adjust(get_stick_profile_term(osd_cursor), 2, 3, ROUNDED, stickboost_adjust_limits);

@@ -144,7 +144,7 @@ const profile_t default_profile = {
             //.ki = { 12e-1  , 12e-1 , 12.0e-1 },
             //.kd = {17.5e-1 , 17.5e-1  , 7e-1 },
         }},
-        .stick_profile = STICK_PROFILE_1,
+        .stick_profile = STICK_PROFILE_OFF,
         .stick_rates = {
             //**************************ADVANCED PID CONTROLLER - WITH PROFILE SWITCHING ON AUX SWITCH STICK_BOOST_PROFILE*******************************
             // GENERAL SUMMARY OF THIS FEATURE:
