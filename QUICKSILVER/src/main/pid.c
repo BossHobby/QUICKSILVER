@@ -193,12 +193,12 @@ float pid(int x) {
     float transitionSetpointWeight[3];
     float stickAccelerator[3];
     float stickTransition[3];
-    if (rx_aux_on(AUX_PIDPROFILE)) {
-      stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_2].accelerator.axis[x];
-      stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_2].transition.axis[x];
+    if (rx_aux_on(AUX_STICK_BOOST_PROFILE)) {
+      stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_ON].accelerator.axis[x];
+      stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_ON].transition.axis[x];
     } else {
-      stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_1].accelerator.axis[x];
-      stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_1].transition.axis[x];
+      stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_OFF].accelerator.axis[x];
+      stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_OFF].transition.axis[x];
     }
     if (stickAccelerator[x] < 1) {
       transitionSetpointWeight[x] = (fabsf(rxcopy[x]) * stickTransition[x]) + (1 - stickTransition[x]);
@@ -238,12 +238,12 @@ float pid(int x) {
     float transitionSetpointWeight[3];
     float stickAccelerator[3];
     float stickTransition[3];
-    if (rx_aux_on(AUX_PIDPROFILE)) {
-      stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_2].accelerator.axis[x];
-      stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_2].transition.axis[x];
+    if (rx_aux_on(AUX_STICK_BOOST_PROFILE)) {
+      stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_ON].accelerator.axis[x];
+      stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_ON].transition.axis[x];
     } else {
-      stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_1].accelerator.axis[x];
-      stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_1].transition.axis[x];
+      stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_OFF].accelerator.axis[x];
+      stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_OFF].transition.axis[x];
     }
     if (stickAccelerator[x] < 1) {
       transitionSetpointWeight[x] = (fabsf(rxcopy[x]) * stickTransition[x]) + (1 - stickTransition[x]);

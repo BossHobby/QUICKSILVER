@@ -144,15 +144,15 @@ const profile_t default_profile = {
             //.ki = { 12e-1  , 12e-1 , 12.0e-1 },
             //.kd = {17.5e-1 , 17.5e-1  , 7e-1 },
         }},
-        .stick_profile = STICK_PROFILE_1,
+        .stick_profile = STICK_PROFILE_OFF,
         .stick_rates = {
-            //**************************ADVANCED PID CONTROLLER - WITH PROFILE SWITCHING ON AUX SWITCH PIDPROFILE*******************************
+            //**************************ADVANCED PID CONTROLLER - WITH PROFILE SWITCHING ON AUX SWITCH STICK_BOOST_PROFILE*******************************
             // GENERAL SUMMARY OF THIS FEATURE:
             // stickAccelerator and stickTransition are a more detailed version of the traditional D term setpoint weight and transition variables that you may be familiar with in other firmwares.
             // The difference here is that we name the D term setpoint weight "Stick Accelerator" because it's actual function is to accelerate the response of the pid controller to stick inputs.
             // Another difference is that negative stick transitions are possible meaning that you can have a higher stick acceleration near center stick which fades to a lower stick acceleration at
             // full stick throws should you desire to see what that feels like.  Traditionally we are only used to being able to transition from a low setpoint to a higher one.
-            // The final differences are that you can adjust each axis independently and also set up two seperate profiles so that you can switch "feels" in flight with the PIDPROFILE aux
+            // The final differences are that you can adjust each axis independently and also set up two seperate profiles so that you can switch "feels" in flight with the STICK_BOOST_PROFILE aux
             // channel selection set up in the receiver section of config.h
             //
             //HOW TO USE THIS FEATURE:
@@ -197,7 +197,7 @@ const profile_t default_profile = {
             LEVELMODE,    //AUX_LEVELMODE
             RACEMODE,     //AUX_RACEMODE
             HORIZON,      //AUX_HORIZON
-            PIDPROFILE,   //AUX_PIDPROFILE
+            STICK_BOOST_PROFILE,   //AUX_STICK_BOOST_PROFILE
 #ifdef STICK_TRAVEL_CHECK //AUX_TRAVEL_CHECK
             STICK_TRAVEL_CHECK,
 #else

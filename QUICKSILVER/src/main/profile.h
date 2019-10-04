@@ -86,8 +86,8 @@ typedef struct {
   MEMBER(transition, vector_t)
 
 typedef enum {
-  STICK_PROFILE_1,
-  STICK_PROFILE_2,
+  STICK_PROFILE_OFF,
+  STICK_PROFILE_ON,
   STICK_PROFILE_MAX
 } stick_profile_t;
 
