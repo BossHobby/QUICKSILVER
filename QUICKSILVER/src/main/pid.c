@@ -193,7 +193,7 @@ float pid(int x) {
     float transitionSetpointWeight[3];
     float stickAccelerator[3];
     float stickTransition[3];
-    if (rx_aux_on(AUX_PIDPROFILE)) {
+    if (rx_aux_on(AUX_STICK_BOOST_PROFILE)) {
       stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_2].accelerator.axis[x];
       stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_2].transition.axis[x];
     } else {
@@ -238,7 +238,7 @@ float pid(int x) {
     float transitionSetpointWeight[3];
     float stickAccelerator[3];
     float stickTransition[3];
-    if (rx_aux_on(AUX_PIDPROFILE)) {
+    if (rx_aux_on(AUX_STICK_BOOST_PROFILE)) {
       stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_2].accelerator.axis[x];
       stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_2].transition.axis[x];
     } else {
