@@ -19,7 +19,7 @@ void osd_init(void) {
 
 /*screen elements characteristics written like registers in a 32bit binany number
 except callsign which will take 6 addresses.  callsign bit 1 will be enable/disable,
-bit 2 will be text/invert, and the remaining 30 bits will be 5 characters.  6 total addresses
+bit 2 will be text/invert, and the remaining 5 addresses will be 4 characters each.  6 total addresses
 will allow callsign text to fill the whole screen across
 BIT
 0			-		0 is display element inactive , 1 is display element active
@@ -27,9 +27,9 @@ BIT
 2:6		-		the X screen position (column)
 7:10	-		the Y screen position	(row)
 11:15	-		not currently used
-16:31	-		available for two binary ascii characters
+16:31	-		available for two binary ascii characters but not currently used
 */
-// 1111111 11111 11
+
 //Flash Variables - 32bit					# of osd elements and flash memory start position in defines.h
 extern unsigned long osd_element[OSD_NUMBER_ELEMENTS];
 /*
@@ -248,9 +248,12 @@ const uint8_t osd_position_index[20] = {2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3
 const char osd_text_style[12][21] = { {"OSD TEXT STYLE"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"EXACT VOLTS"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"ARMED/DISARMED"}, {"THROTTLE"}, {"VTX"}, {"SAVE AND EXIT"} };
 const uint8_t osd_text_style_positions[12][2] = { {8,1}, {4,2}, {4,3}, {4,4}, {4,5}, {4,6}, {4,7}, {4,8}, {4,9}, {4,10}, {4,11}, {4,14} };
 
-//osd callsign style submenu map
-const char callsign_temp_labels[3][21] = { {"CALLSIGN"},{"UNDER"},{"DEVELOPMENT"} };
-const uint8_t callsign_temp_positions[3][2] = { {11, 1}, {7, 4}, {7,5} };
+//osd callsign edit submenu map
+const char osd_callsign_edit_labels[23][21] = { {"CALLSIGN"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"EDIT:"},{"SAVE AND EXIT"} };
+const uint8_t osd_callsign_edit_positions[23][2] = { {11, 1}, {8, 6}, {9, 6}, {10, 6}, {11, 6}, {12, 6}, {13, 6}, {14, 6}, {15, 6}, {16, 6}, {17, 6}, {18, 6}, {19, 6}, {20, 6}, {21, 6}, {22, 6}, {23, 6}, {24, 6}, {25, 6}, {26, 6}, {27, 6}, {1, 5}, {1, 7} };
+const uint8_t osd_callsign_grid [20][2] = { {1, 1}, {2, 1}, {3, 1}, {4, 1}, {5, 1}, {6, 1}, {7, 1}, {8, 1}, {9, 1}, {10, 1}, {11, 1}, {12, 1}, {13, 1}, {14, 1}, {15, 1}, {16, 1}, {17, 1}, {18, 1}, {19, 1}, {20, 1} };
+const uint8_t osd_callsign_edit_data_positions[20][2] = { {8, 5}, {9, 5}, {10, 5}, {11, 5}, {12, 5}, {13, 5}, {14, 5}, {15, 5}, {16, 5}, {17, 5}, {18, 5}, {19, 5}, {20, 5}, {21, 5}, {22, 5}, {23, 5}, {24, 5}, {25, 5}, {26, 5}, {27, 5} };
+const uint8_t callsign_shift_index[20][2] = { {1, 0} , {1, 8} , {1, 16} , {1, 24} , {2, 0} , {2, 8} , {2, 16} , {2, 24} , {3, 0} , {3, 8} , {3, 16} , {3, 24} , {4, 0} , {4, 8} , {4, 16} , {4, 24} , {5, 0} , {5, 8} , {5, 16} , {5, 24} };
 
 //vtx submenu map
 const char vtx_temp_labels[3][21] = { {"VTX CONTROLS"},{"UNDER"},{"DEVELOPMENT"} };
@@ -496,7 +499,6 @@ void osd_submenu_select (uint8_t *pointer, uint8_t rows, const uint8_t next_menu
 			osd_display_phase = next_menu[osd_cursor-1];	//update display phase to the next menu screen
 			osd_cursor = 0;	//reset the cursor
 			osd_menu_phase = 0;	//clear the screen
-
 		}
 	}
 }
@@ -516,6 +518,52 @@ void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_m
 			if(osd_cursor == rows + 2) osd_save_exit();		//include save&exit in main menu
 		}
 	}
+}
+
+uint32_t get_callsign_bitmask(uint8_t input){
+	if(input == 8)  return 0xFF;
+	if(input == 16) return 0xFFFF;
+	if(input == 24) return 0xFFFFFF;
+	return 0;
+}
+
+void osd_encoded_adjust_callsign(void){
+	if(osd_select > 20) {
+		osd_select = 20;	//limit osd select variable from accumulating past 1 columns of adjustable items
+		osd_menu_phase = 1; //repaint the screen again
+	}
+	if (increase_osd_value){
+		osd_element[callsign_shift_index[osd_select-1][0]] = (((osd_element[callsign_shift_index[osd_select-1][0]] >> callsign_shift_index[osd_select-1][1]) + 1) << callsign_shift_index[osd_select-1][1]) + (osd_element[callsign_shift_index[osd_select-1][0]] & get_callsign_bitmask(callsign_shift_index[osd_select-1][1]));
+		osd_menu_phase = 1; //repaint the screen again
+	}
+	if (decrease_osd_value){
+		osd_element[callsign_shift_index[osd_select-1][0]] = (((osd_element[callsign_shift_index[osd_select-1][0]] >> callsign_shift_index[osd_select-1][1]) - 1) << callsign_shift_index[osd_select-1][1]) + (osd_element[callsign_shift_index[osd_select-1][0]] & get_callsign_bitmask(callsign_shift_index[osd_select-1][1]));
+		osd_menu_phase = 1; //repaint the screen again
+	}
+	increase_osd_value = 0;
+	decrease_osd_value = 0;
+	if (osd_cursor == 2){
+		if (osd_select == 1){
+			osd_save_exit();
+		}
+	}
+}
+
+void print_osd_callsign_adjustable (uint8_t string_element_qty, uint8_t data_element_qty, const uint8_t grid[data_element_qty][2], const uint8_t print_position[data_element_qty][2]){
+	if (osd_menu_phase <= string_element_qty)
+        return;
+	if (osd_menu_phase > string_element_qty + data_element_qty)
+        return;
+	static uint8_t skip_loop = 0;
+	if (osd_menu_phase ==  string_element_qty + 1 && skip_loop == 0){	//skip a loop to prevent dma collision with previous print function
+		skip_loop++;
+		return;
+	}
+	skip_loop = 0;
+	uint8_t index = osd_menu_phase-string_element_qty-1;
+	uint8_t character[] = {(osd_element[callsign_shift_index[index][0]] >> callsign_shift_index[index][1]) & 0xFF};
+	osd_print_data( character, 1, grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
+	osd_menu_phase++;
 }
 
 void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_t status){
@@ -574,7 +622,6 @@ void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_
 			osd_save_exit();
 		}
 	}
-
 }
 
 void osd_enum_adjust(uint8_t *pointer, uint8_t rows, const uint8_t increase_limit[]){
@@ -921,7 +968,9 @@ void osd_display(void) {
 
   case 18:		//edit callsign text
 	  last_display_phase = 10;
-	  print_osd_menu_strings(3, 2, callsign_temp_labels, callsign_temp_positions);
+	  print_osd_menu_strings(23, 2, osd_callsign_edit_labels, osd_callsign_edit_positions);
+	  print_osd_callsign_adjustable(23, 20, osd_callsign_grid, osd_callsign_edit_data_positions);
+	  if ( osd_menu_phase== 44) osd_encoded_adjust_callsign();
 	  break;
 
   }
