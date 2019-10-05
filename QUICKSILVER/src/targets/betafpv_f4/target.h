@@ -1,7 +1,7 @@
 #include "config.h"
 
 #define Betafpv_F4
-#undef Betafpv_F4_RX
+#define Betafpv_F4_RX
 
 #define F411
 #define F405
@@ -24,7 +24,7 @@
 #define FPV_PORT GPIOB
 
 //SPI, I2C & GYRO
-#ifdef Betafpv_F4_RX
+#ifdef RX_FRSKY
 #define USE_CC2500
 #define USE_CC2500_PA_LNA
 #define USE_CC2500_DIVERSITY
