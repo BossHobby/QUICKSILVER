@@ -296,6 +296,9 @@ void osd_display_reset(void) {
 void osd_save_exit(void){
 	osd_select = 0;
     osd_cursor = 0;
+    for (uint8_t i = 0; i < 6; i++){
+    	last_osd_cursor[i] = 0;
+    }
     osd_display_phase = 0;
 	#ifdef FLASH_SAVE1
     extern int pid_gestures_used;
@@ -566,6 +569,61 @@ void print_osd_callsign_adjustable (uint8_t string_element_qty, uint8_t data_ele
 	osd_menu_phase++;
 }
 
+/*
+uint8_t print_osd_callsign_buggy(void){
+	static uint8_t index = 0;
+	static uint8_t callsign_length = 0;
+
+	if(index < callsign_length && callsign_length > 0){
+		uint8_t character[] = {(osd_element[callsign_shift_index[index][0]] >> callsign_shift_index[index][1]) & 0xFF};
+		osd_print_data( character, 1, decode_attribute(*callsign1), decode_positionx(*callsign1) + index, decode_positiony(*callsign1));
+		index++;
+		return 0;
+	}
+	if (index == callsign_length){
+		for (uint8_t i = 19; i >= 0; i--){
+			uint8_t last_user_input = (osd_element[callsign_shift_index[i][0]] >> callsign_shift_index[i][1]) & 0xFF;
+			if (last_user_input != 0x3F){
+				callsign_length = i + 1;
+				index = 0;
+				return 0;
+			}
+		}
+		callsign_length = 0;	//for loop found callsign is all spaces so set length to 0 and return
+		index = 0;
+		return 1;
+	}
+	return 1;
+}
+*/
+
+uint8_t print_osd_callsign(void){
+	static uint8_t index = 0;
+	static uint8_t callsign_length = 0;
+	if (index == 0){
+		for (uint8_t i = 19; i >= 0; i--){
+			uint8_t last_user_input = (osd_element[callsign_shift_index[i][0]] >> callsign_shift_index[i][1]) & 0xFF;
+			if (last_user_input != 0x3F){
+				callsign_length = i + 1;
+				index++;
+				return 0;
+			}
+		}
+		callsign_length = 0;	//for loop found callsign is all spaces so set length to 0 and return
+		index = 0;
+		return 1;
+	}
+
+	if(index <= callsign_length && callsign_length > 0){
+		uint8_t character[] = {(osd_element[callsign_shift_index[index-1][0]] >> callsign_shift_index[index-1][1]) & 0xFF};
+		osd_print_data( character, 1, decode_attribute(*callsign1), decode_positionx(*callsign1) + index-1, decode_positiony(*callsign1));
+		index++;
+		return 0;
+	}
+	index = 0;
+	return 1;
+}
+
 void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_t status){
 	if(osd_select > columns) {
 		osd_select = columns;	//limit osd select variable from accumulating past 1 columns of adjustable items
@@ -693,7 +751,7 @@ void print_osd_adjustable_vectors(uint8_t menu_type, uint8_t string_element_qty,
   	}
   	skip_loop = 0;
   	uint8_t index = osd_menu_phase-string_element_qty-1;
-  	uint8_t data_buffer[5];		//pid_scale(get_pid_term(data_index[index][0])
+  	uint8_t data_buffer[5];
   	if (menu_type == BF_PIDS) fast_fprint(data_buffer, 5, pid_scale(pointer->axis[data_index[index][1]], pid_scale_index[index]), 0);
   	if (menu_type == SW_RATES){
   		if (index < 3) fast_fprint(data_buffer, 5, pointer->axis[data_index[index][1]], 0);
@@ -729,10 +787,6 @@ void osd_display(void) {
   extern float vbatt_comp;
   extern float lipo_cell_count;
   extern int lowbatt;
-
- //just some values to test position/attribute/active until we start saving them to flash with the osd manu
- // *callsign1 = 0xAB;        //	0001 01010 11
- // *fuelgauge_volts = 0x72D; //‭  1110 01011 01‬
 
   switch (osd_display_phase) //phase starts at 2, RRR gesture subtracts 1 to enter the menu, RRR again or DDD subtracts 1 to clear the screen and return to regular display
   {
@@ -777,11 +831,16 @@ void osd_display(void) {
     break; //osd menu or wizard has been displayed for this loop	- break out of display function
 
   case 2: //regular osd display
+
 	  switch (osd_display_element) {
 	  case 0:
-		  if (decode_active_element(*callsign1))
-			  osd_print("ALIENWHOOP", decode_attribute(*callsign1), decode_positionx(*callsign1), decode_positiony(*callsign1)); //todo - needs to be pulled from the new register flash method
-		  osd_display_element++;
+		  if (decode_active_element(*callsign1)){
+			  //osd_print("ALIENWHOOP", decode_attribute(*callsign1), decode_positionx(*callsign1), decode_positiony(*callsign1)); //todo - needs to be pulled from the new register flash method
+			  uint8_t callsign_done = print_osd_callsign();
+			  if(callsign_done) osd_display_element++;
+		  }else{
+			  osd_display_element++;
+		  }
 		  break; //screen has been displayed for this loop - break out of display function
 
 	  case 1:
