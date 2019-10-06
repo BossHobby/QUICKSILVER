@@ -299,7 +299,7 @@ void checkrx() {
           aux[AUX_CHANNEL_9] = (channels[13] > 993) ? 1 : 0;
           aux[AUX_CHANNEL_10] = (channels[14] > 993) ? 1 : 0;
           aux[AUX_CHANNEL_11] = (channels[15] > 993) ? 1 : 0;
-          */
+
           if (channels[12] > 993) { // Channel 13 is now FPORT Debug Telemetry switch. Integrate this better sometime
             FPORTDebugTelemetry = true;
           } else {
