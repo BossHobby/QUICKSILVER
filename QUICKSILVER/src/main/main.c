@@ -59,6 +59,7 @@
 #endif
 
 #ifdef F405
+#include "blackbox.h"
 #include "drv_usb.h"
 #include "usb_configurator.h"
 #endif
@@ -499,6 +500,7 @@ int main(void) {
 #endif
 
 #ifdef F405
+    blackbox_update();
     usb_detect();
 #endif
 

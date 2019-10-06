@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "blackbox.h"
 #include "drv_time.h"
 #include "drv_usb.h"
 #include "flash.h"
@@ -24,6 +25,10 @@ extern float rxcopy[4];
 extern uint8_t aux[AUX_CHANNEL_MAX];
 extern float vbattfilt;
 extern float vbatt_comp;
+extern unsigned long lastlooptime;
+
+extern uint8_t blackbox_enabled;
+extern uint32_t blackbox_rate;
 
 extern uint8_t encode_buffer[1024];
 extern uint8_t decode_buffer[1024];
@@ -82,6 +87,26 @@ cbor_result_t send_quic_strf(quic_command cmd, quic_flag flag, const char *fmt, 
     return;                                 \
   }
 
+cbor_result_t quic_blackbox(const blackbox_t *blackbox) {
+  cbor_result_t res = CBOR_OK;
+
+  cbor_value_t enc;
+  cbor_encoder_init(&enc, encode_buffer, 1024);
+
+  res = cbor_encode_blackbox_t(&enc, blackbox);
+  if (res < CBOR_OK) {
+    quic_errorf(QUIC_CMD_BLACKBOX, "CBOR ERROR %d", res);
+    return res;
+  }
+
+  send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+
+  // reset loop time
+  lastlooptime = gettime();
+
+  return res;
+}
+
 void get_quic(uint8_t *data, uint32_t len) {
   cbor_result_t res = CBOR_OK;
 
@@ -113,40 +138,6 @@ void get_quic(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
-  case QUIC_VAL_RX:
-    cbor_encode_map(&enc, 3);
-
-    cbor_encode_str(&enc, "raw");
-    cbor_encode_array(&enc, 4);
-    cbor_encode_float(&enc, &rx[0]);
-    cbor_encode_float(&enc, &rx[1]);
-    cbor_encode_float(&enc, &rx[2]);
-    cbor_encode_float(&enc, &rx[3]);
-
-    cbor_encode_str(&enc, "copy");
-    cbor_encode_array(&enc, 4);
-    cbor_encode_float(&enc, &rxcopy[0]);
-    cbor_encode_float(&enc, &rxcopy[1]);
-    cbor_encode_float(&enc, &rxcopy[2]);
-    cbor_encode_float(&enc, &rxcopy[3]);
-
-    cbor_encode_str(&enc, "aux");
-    cbor_encode_array(&enc, AUX_CHANNEL_MAX);
-    for (uint32_t i = 0; i < AUX_CHANNEL_MAX; i++) {
-      cbor_encode_uint8(&enc, &aux[i]);
-    }
-
-    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
-    break;
-  case QUIC_VAL_VBAT:
-    cbor_encode_map(&enc, 2);
-    cbor_encode_str(&enc, "filter");
-    cbor_encode_float(&enc, &vbattfilt);
-    cbor_encode_str(&enc, "compare");
-    cbor_encode_float(&enc, &vbatt_comp);
-
-    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
-    break;
   case QUIC_VAL_INFO:
     cbor_encode_map(&enc, 1);
 
@@ -155,28 +146,14 @@ void get_quic(uint8_t *data, uint32_t len) {
     static const uint32_t protocol = QUIC_PROTOCOL_VERSION;
     cbor_encode_uint32(&enc, &protocol);
 
-    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
-    break;
-  case QUIC_VAL_IMU: {
-    cbor_encode_map(&enc, 2);
-
-    extern float gyro_raw[3];
-    cbor_encode_str(&enc, "gyro_raw");
-    cbor_encode_array(&enc, 3);
-    cbor_encode_float(&enc, &gyro_raw[0]);
-    cbor_encode_float(&enc, &gyro_raw[1]);
-    cbor_encode_float(&enc, &gyro_raw[2]);
-
-    extern float GEstG[3];
-    cbor_encode_str(&enc, "gyro_rot");
-    cbor_encode_array(&enc, 3);
-    cbor_encode_float(&enc, &GEstG[0]);
-    cbor_encode_float(&enc, &GEstG[1]);
-    cbor_encode_float(&enc, &GEstG[2]);
+    blackbox_enabled = 1;
 
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
-  }
+  case QUIC_VAL_BLACKBOX_RATE:
+    cbor_encode_uint32(&enc, &blackbox_rate);
+    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
   default:
     quic_errorf(QUIC_CMD_GET, "INVALID VALUE %d", value);
     break;
@@ -212,7 +189,18 @@ void set_quic(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
+  case QUIC_VAL_BLACKBOX_RATE: {
+    res = cbor_decode_uint32(&dec, &blackbox_rate);
+    check_cbor_error(QUIC_CMD_SET);
+
+    res = cbor_encode_uint32(&enc, &blackbox_rate);
+    check_cbor_error(QUIC_CMD_SET);
+
+    send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  }
   default:
+    quic_errorf(QUIC_CMD_GET, "INVALID VALUE %d", value);
     break;
   }
 }
@@ -264,7 +252,6 @@ void usb_process_quic() {
   }
 
   // reset loop time
-  extern unsigned long lastlooptime;
   lastlooptime = gettime();
 }
 #endif
