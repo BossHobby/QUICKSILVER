@@ -104,9 +104,22 @@ void flash_save(void) {
 #endif
 
 #ifdef RX_FRSKY //currently starts at address 66
+  extern int rx_bind_enable;
   extern frsky_bind_data frsky_bind;
+
+  frsky_bind_data dummy_frsky_bind = {
+      .offset = 0xff,
+      .idx = 0xff,
+  };
+
   for (int i = 0; i < sizeof(frsky_bind_data) / 4; i++) {
-    writeword(i + FRSKY_BIND_OFFSET, frsky_bind.raw[i]);
+    if (rx_bind_enable == 1) {
+      // we want to bind to next bootup
+      // so lets write dummy data
+      writeword(i + FRSKY_BIND_OFFSET, dummy_frsky_bind.raw[i]);
+    } else {
+      writeword(i + FRSKY_BIND_OFFSET, frsky_bind.raw[i]);
+    }
   }
 #endif
   {
@@ -197,9 +210,14 @@ void flash_load(void) {
 #endif
 
 #ifdef RX_FRSKY //currently starts at address 57
-    extern frsky_bind_data frsky_bind;
-    for (int i = 0; i < sizeof(frsky_bind_data) / 4; i++) {
-      frsky_bind.raw[i] = fmc_read(i + FRSKY_BIND_OFFSET);
+    extern int rx_bind_enable;
+
+    // only load data if we did not just overwrite it
+    if (rx_bind_enable != 1) {
+      extern frsky_bind_data frsky_bind;
+      for (int i = 0; i < sizeof(frsky_bind_data) / 4; i++) {
+        frsky_bind.raw[i] = fmc_read(i + FRSKY_BIND_OFFSET);
+      }
     }
 #endif
 
