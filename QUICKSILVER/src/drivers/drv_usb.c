@@ -18,7 +18,7 @@
 
 __ALIGN_BEGIN USB_OTG_CORE_HANDLE USB_OTG_dev __ALIGN_END;
 
-static uint8_t usb_is_active = 0;
+uint8_t usb_is_active = 0;
 
 void usb_init(void) {
   USBD_Init(&USB_OTG_dev,
