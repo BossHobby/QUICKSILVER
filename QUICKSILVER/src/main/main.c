@@ -156,7 +156,7 @@ int main(void) {
   time_init();
   usart_invert();
 
-#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024)
+#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_UNIFIED_SERIAL)
   rx_spektrum_bind();
 #endif
 

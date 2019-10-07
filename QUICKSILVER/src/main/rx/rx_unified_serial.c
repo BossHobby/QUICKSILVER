@@ -50,7 +50,7 @@ uint8_t frameEnd = 0;
 uint8_t telemetryCounter = 0;
 uint8_t expectedFrameLength = 10;
 uint8_t escapedChars = 0;
-uint8_t rx_bind_enable = 0;
+int rx_bind_enable = 0;
 
 unsigned long time_lastrx;
 unsigned long time_siglost;
@@ -150,7 +150,8 @@ void RX_USART_ISR(void) {
 }
 
 void rx_init(void) {
-
+	if (rx_bind_enable == 0)
+	RXProtocol = 0;
 }
 
 void rx_serial_init(void) {
@@ -185,7 +186,7 @@ void rx_serial_init(void) {
     default:
       break;
   }
-  RXProtocolNextBoot = RXProtocol;
+ // RXProtocolNextBoot = RXProtocol; //Remove meeeeeeeee toooooooooooo
 }
 
 
@@ -816,7 +817,7 @@ void processCRSF(void) {
 
 void findprotocol(void) {
 
-  rx_spektrum_bind(); // Light off DSMX binding, it *must* come first.
+  //rx_spektrum_bind(); // Light off DSMX binding, it *must* come first.
   protocolToCheck = 1; //Start with DSMX
   //uint8_t protocolToCheck = 1; Moved to global for visibility
 
@@ -842,10 +843,9 @@ void findprotocol(void) {
       switch (protocolToCheck)
       {
         case 1: // DSM
-          if (rx_buffer[frameStart] == 0x00 && rx_buffer[frameStart + 1] == 0x00 && rx_buffer[frameStart] != 0x00) { // this one obviously needs some work to not trigger on an empty frame
-            RXProtocol = protocolToCheck;
+          if (rx_buffer[frameStart] == 0x00 && rx_buffer[frameStart + 1] == 0x00 && rx_buffer[frameStart + 2] != 0x00) { // this one obviously needs some work to not trigger on an empty frame
+        	RXProtocol = protocolToCheck;
           }
-          break;
         case 2: // SBUS
           if (rx_buffer[frameStart] == 0x0F) {
             RXProtocol = protocolToCheck;
@@ -913,7 +913,7 @@ void rx_spektrum_bind(void) {
       delay(120);
     }
   }
-  //#endif
+  /*  bindtool to be evaluated later
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.GPIO_Pin = SERIAL_RX_SPEKBIND_BINDTOOL_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
@@ -934,7 +934,7 @@ void rx_spektrum_bind(void) {
     // RX line, drive high for 120us
     GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
     delay(120);
-  }
+  }*/
 }
 
 
