@@ -40,17 +40,17 @@ void RX_USART_ISR(void);
 		#define SERIAL_RX_PORT GPIOA
 		#define SERIAL_RX_CHANNEL GPIO_AF_USART1
 		#define SERIAL_USART_IRQ USART1_IRQn
-		#ifdef RX_FPORT
-			#define SERIAL_RX_PIN GPIO_Pin_9
-			#define SERIAL_RX_SOURCE GPIO_PinSource9
-			#define SERIAL_RX_SPEKBIND_RX_PIN GPIO_Pin_9
-		#else
+		//#ifdef RX_FPORT
+		//	#define SERIAL_RX_PIN GPIO_Pin_9
+		//	#define SERIAL_RX_SOURCE GPIO_PinSource9
+		//	#define SERIAL_RX_SPEKBIND_RX_PIN GPIO_Pin_9
+		//#else
 			#define SERIAL_TX_PIN GPIO_Pin_9
 			#define SERIAL_TX_SOURCE GPIO_PinSource9
 			#define SERIAL_RX_PIN GPIO_Pin_10
 			#define SERIAL_RX_SOURCE GPIO_PinSource10
 			#define SERIAL_RX_SPEKBIND_RX_PIN GPIO_Pin_10
-		#endif
+		//#endif
 	#endif
 #endif
 

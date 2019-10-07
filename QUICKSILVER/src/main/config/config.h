@@ -105,8 +105,8 @@
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING AUX_CHANNEL_0
-#define IDLE_UP AUX_CHANNEL_0
-#define LEVELMODE AUX_CHANNEL_1
+#define IDLE_UP AUX_CHANNEL_1
+#define LEVELMODE AUX_CHANNEL_2
 #define RACEMODE AUX_CHANNEL_OFF
 #define HORIZON AUX_CHANNEL_OFF
 #define STICK_BOOST_PROFILE AUX_CHANNEL_4
