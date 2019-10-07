@@ -71,6 +71,13 @@ void gestures(void) {
       ledblink = 2 - rx_bind_enable;
       pid_gestures_used = 1;
 #endif
+#if defined(RX_UNIFIED_SERIAL)
+  pid_gestures_used = 1;
+  extern uint8_t RXProtocolNextBoot;
+  RXProtocolNextBoot = 100;
+  ledblink = 1;
+#endif
+
     }
 
     if (command == GESTURE_RRR) {

@@ -86,7 +86,7 @@ void flash_save(void) {
   }
 #endif
 
-#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_UNIFIED_SERIAL)
+#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024)// || defined(RX_UNIFIED_SERIAL)
   extern int rx_bind_enable;
   if (rx_bind_enable) {
     fmc_write_float(56, 1);
@@ -104,8 +104,10 @@ void flash_save(void) {
 #endif
 
 #ifdef RX_UNIFIED_SERIAL
-  extern uint8_t RXProtocol;
-  writeword(50,RXProtocol);
+  //extern uint8_t RXProtocol;
+  extern uint8_t RXProtocolNextBoot;
+  writeword(50,RXProtocolNextBoot);
+
 #endif
 
 #ifdef RX_FRSKY //currently starts at address 66
@@ -195,6 +197,9 @@ void flash_load(void) {
 #ifdef RX_UNIFIED_SERIAL
   extern uint8_t RXProtocol;
   RXProtocol = fmc_read(50);
+  if(RXProtocol > 10){
+    RXProtocol = 0;
+  }
 #endif
 
 #ifdef SWITCHABLE_FEATURE_1
@@ -207,7 +212,7 @@ void flash_load(void) {
     flash_feature_2 = fmc_read_float(54);
 #endif
 
-#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024)
+#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024)// || defined(RX_UNIFIED_SERIAL)
     extern int rx_bind_enable;
     rx_bind_enable = fmc_read_float(56);
 #endif

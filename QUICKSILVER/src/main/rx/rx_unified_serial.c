@@ -37,6 +37,7 @@ int rx_ready = 0;
 
 // internal variables
 uint8_t RXProtocol = 0;
+uint8_t RXProtocolNextBoot = 0;
 #define RX_BUFF_SIZE 68
 uint8_t rx_buffer[RX_BUFF_SIZE];
 uint8_t rx_end = 0;
@@ -72,6 +73,7 @@ uint32 ticksStart = 0;
 uint32 ticksEnd = 0;
 uint32 ticksLongest = 0;
 int bobnovas = 0;
+int bobnovas2 = 0;
 
 //Telemetry variables
 
@@ -183,6 +185,7 @@ void rx_serial_init(void) {
     default:
       break;
   }
+  RXProtocolNextBoot = RXProtocol;
 }
 
 
@@ -688,7 +691,7 @@ void processFPORT(void) {
 
 void sendFPORTTelemetry(){
 
-  if (telemetryCounter > 0 && bytesSinceStart >= 41) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
+  if (telemetryCounter > 0 && bytesSinceStart >= 40) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
         telemetryCounter = 0;
 
         uint16_t telemetryIDs[] = {
@@ -791,7 +794,8 @@ void sendFPORTTelemetry(){
             telemetryPosition = 0;
           }
         }
-
+      frameStatus = 4;
+      bytesSinceStart = 0;
       }
       
 }
