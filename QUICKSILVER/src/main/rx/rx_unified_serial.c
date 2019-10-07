@@ -145,7 +145,6 @@ void RX_USART_ISR(void) {
 
   rx_end++;
   rx_end %= (RX_BUFF_SIZE);
-  bobnovas += 100;
 }
 
 void rx_init(void) {
@@ -209,7 +208,6 @@ if (gettime() - time_lastframe > 1000000)
         processDSMX();
         break;
       case 2: // SBUS
-        bobnovas++;
         processSBUS();
 
         break;
@@ -395,7 +393,6 @@ void processSBUS(void) {
 void processIBUS(void) {
 
   uint8_t frameLength = 0;
-  bobnovas += 1000;
   for (uint8_t counter = 0; counter < 32; counter++) {                //First up, get the data out of the RX buffer and into somewhere safe
     rx_data[counter] = rx_buffer[(counter + frameStart) % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
     frameLength++;                                                    // to accept telemetry requests without overwriting control data
@@ -691,7 +688,7 @@ void processFPORT(void) {
 
 void sendFPORTTelemetry(){
 
-  if (telemetryCounter > 0 && bytesSinceStart >= 40) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
+  if (telemetryCounter > 0 && bytesSinceStart >= 41) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
         telemetryCounter = 0;
 
         uint16_t telemetryIDs[] = {
@@ -708,7 +705,7 @@ void sendFPORTTelemetry(){
 
         //Telemetry time! Let's have some variables
         //uint8_t telemetryPacket[10]; //Redefining this every pass is (probably) faster than zeroing it.
-        uint16_t teleCRC = 0; //Really, really want to start with a zerod CRC!
+        //uint16_t teleCRC = 0; //Really, really want to start with a zerod CRC!
 
         telemetryPacket[0] = 0x08; //Bytes 0 through 2 are static in this implementation
         telemetryPacket[1] = 0x81;
@@ -768,8 +765,8 @@ void sendFPORTTelemetry(){
           telemetryPacket[8] = 0x00;
         }
 
+        uint16_t teleCRC = 0;
         //Calculate CRC for packet. This function does not support escaped characters.
-
         for (int x = 0; x < 9; x++) {
           teleCRC = teleCRC + telemetryPacket[x];
         }
@@ -827,7 +824,6 @@ void findprotocol(void) {
     protocolDetectTimer = 0;
 
     while ((frameStatus == 0 || frameStatus == 3) && protocolDetectTimer < 1) { // Wait 2 seconds to see if something turns up.
-      bobnovas = bobnovas + 10;
       for (int i = 0; i < protocolToCheck; i++) {
         ledon(255);
         delay(20000);

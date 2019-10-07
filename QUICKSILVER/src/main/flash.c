@@ -86,7 +86,7 @@ void flash_save(void) {
   }
 #endif
 
-#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024)
+#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_UNIFIED_SERIAL)
   extern int rx_bind_enable;
   if (rx_bind_enable) {
     fmc_write_float(56, 1);
@@ -101,6 +101,11 @@ void flash_save(void) {
     writeword(i + OSD_FLASH_START, osd_element[i]);
   }
 
+#endif
+
+#ifdef RX_UNIFIED_SERIAL
+  extern uint8_t RXProtocol;
+  writeword(50,RXProtocol);
 #endif
 
 #ifdef RX_FRSKY //currently starts at address 66
@@ -185,6 +190,11 @@ void flash_load(void) {
         rfchannel[i] = temp >> (i * 8);
       }
     }
+#endif
+
+#ifdef RX_UNIFIED_SERIAL
+  extern uint8_t RXProtocol;
+  RXProtocol = fmc_read(50);
 #endif
 
 #ifdef SWITCHABLE_FEATURE_1
