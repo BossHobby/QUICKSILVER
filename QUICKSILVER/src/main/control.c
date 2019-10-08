@@ -45,7 +45,6 @@ extern int armed_state;
 extern int in_air;
 extern int arming_release;
 extern int binding_while_armed;
-extern uint8_t osd_display_phase;
 extern int rx_ready;
 
 extern float rx[];
@@ -67,10 +66,10 @@ float motormap(float input);
 
 float yawangle;
 
-extern float looptime;
+//extern float looptime;
 
 extern int ledcommand;
-extern int ledblink;
+//extern int ledblink;
 
 extern float apid(int x);
 
@@ -360,6 +359,8 @@ void control(void) {
 
 #ifndef ENABLE_OSD
   uint8_t osd_display_phase = 2;		//bypass osd menu safety check if FC does not have OSD
+#else
+  extern uint8_t osd_display_phase;
 #endif
 
   if (!rx_aux_on(AUX_ARMING)) { // 						CONDITION: switch is DISARMED

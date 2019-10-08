@@ -11,10 +11,10 @@
 #include "sixaxis.h"
 #include "util.h"
 
-#ifdef DEBUG
-#include "debug.h"
-extern debug_type debug;
-#endif
+//#ifdef DEBUG
+//#include "debug.h"
+//extern debug_type debug;
+//#endif
 
 #define ACC_1G 1.0f
 
