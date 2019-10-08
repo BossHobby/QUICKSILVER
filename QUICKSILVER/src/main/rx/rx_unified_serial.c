@@ -201,7 +201,8 @@ if (gettime() - time_lastframe > 1000000)
     failsafe_noframes = 0;
 
   // add the 3 failsafes together
-  failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
+  if (rx_ready)
+	failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
 
 
   
@@ -262,9 +263,104 @@ if (gettime() - time_lastframe > 1000000)
 }
 
 
+//*****************************************
+#define DSM_SCALE_PERCENT 147		//this might stay somewhere or be replaced with wizard scaling
+//*****************************************
+
+//*****************************************
+//#define RX_DSM2_1024_TEMP			//for testing override to dsm2 - this needs to be determined by the actual time length of the frames  11 vs 22ms
+//*****************************************
 
 void processDSMX(void) {
 
+	for (uint8_t counter = 0; counter < 16; counter++) {                //First up, get therx_data out of the RX buffer and into somewhere safe
+		rx_data[counter] = rx_buffer[(counter + frameStart) % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
+	}
+
+	#ifdef RX_DSM2_1024_TEMP
+	float dsmx_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
+	// 10 bit frames
+	static uint8_t spek_chan_shift = 2;
+	static uint8_t spek_chan_mask = 0x03;
+	static uint8_t dsm_channel_count = 7;
+	#else	//DSMX_2048
+	#define RX_DSMX_2048_TEMP
+	float dsmx_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
+	// 11 bit frames
+	static uint8_t spek_chan_shift = 3;
+	static uint8_t spek_chan_mask = 0x07;
+	static uint8_t dsm_channel_count = 12;
+	#endif
+
+
+    for (int b = 3; b < expectedFrameLength; b += 2) { //stick data in channels buckets
+    	const uint8_t spekChannel = 0x0F & (rx_data[b - 1] >> spek_chan_shift);
+    	if (spekChannel < dsm_channel_count && spekChannel < 12) {
+    		channels[spekChannel] = ((uint32_t)(rx_data[b - 1] & spek_chan_mask) << 8) + rx_data[b];
+    		frameStatus = 2;
+    		bind_safety++;// incriments up as good frames come in till we pass a safe point where aux channels are updated
+    	}else{
+    		frameStatus = 0;	//abandon ship something went wrong
+    	}
+    }
+
+
+    if (frameStatus == 2) {
+    	if ((bind_safety < 900) && (bind_safety > 0))	//has to be both below 900 and above 0 since initialized to 0
+    		rxmode = RXMODE_BIND; // this is rapid flash during bind safety
+
+          // TAER channel order
+  	  	#ifdef RX_DSMX_2048_TEMP
+    	rx[0] = (channels[1] - 1024.0f) * dsmx_scalefactor;
+    	rx[1] = (channels[2] - 1024.0f) * dsmx_scalefactor;
+    	rx[2] = (channels[3] - 1024.0f) * dsmx_scalefactor;
+    	rx[3] = ((channels[0] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f;
+
+    	if (rx[3] > 1)
+    		rx[3] = 1;
+    	if (rx[3] < 0)
+    		rx[3] = 0;
+		#endif
+
+		#ifdef RX_DSM2_1024_TEMP
+    	rx[0] = (channels[1] - 512.0f) * dsm2_scalefactor;
+    	rx[1] = (channels[2] - 512.0f) * dsm2_scalefactor;
+    	rx[2] = (channels[3] - 512.0f) * dsm2_scalefactor;
+    	rx[3] = ((channels[0] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f;
+
+    	if (rx[3] > 1)
+    		rx[3] = 1;
+    	if (rx[3] < 0)
+    		rx[3] = 0;
+		#endif
+
+      	rx_apply_expo();
+
+		#ifdef RX_DSMX_2048_TEMP
+      	aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0;        //1100 cutoff intentionally selected to force aux channels low if
+      	aux[AUX_CHANNEL_1] = (channels[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
+      	aux[AUX_CHANNEL_2] = (channels[6] > 1100) ? 1 : 0;
+      	aux[AUX_CHANNEL_3] = (channels[7] > 1100) ? 1 : 0;
+      	aux[AUX_CHANNEL_4] = (channels[8] > 1100) ? 1 : 0;
+      	aux[AUX_CHANNEL_5] = (channels[9] > 1100) ? 1 : 0;
+      	aux[AUX_CHANNEL_6] = (channels[10] > 1100) ? 1 : 0;
+      	aux[AUX_CHANNEL_7] = (channels[11] > 1100) ? 1 : 0;
+		#endif
+
+		#ifdef RX_DSM2_1024_TEMP
+      	aux[AUX_CHANNEL_0] = (channels[4] > 550) ? 1 : 0;        //550 cutoff intentionally selected to force aux channels low if
+      	aux[AUX_CHANNEL_1] = (channels[5] > 550) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
+      	aux[AUX_CHANNEL_2] = (channels[6] > 550) ? 1 : 0;
+		#endif
+
+
+      	time_lastframe = gettime();
+      	if (bind_safety > 900) { //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
+      		rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
+      		rxmode = !RXMODE_BIND; // restores normal led operation
+      		bind_safety = 901;     // reset counter so it doesnt wrap
+      	}
+    }
 }
 
 
