@@ -181,7 +181,7 @@ static uint16_t VCP_DataTx(uint8_t *Buf, uint32_t Len) {
         and wait for any existing transmission to complete.
     */
 
-  for (uint32_t timeout = 1000; timeout && CDC_Send_FreeBytes() == 0 || USB_Tx_State != 0; --timeout) {
+  for (uint32_t timeout = 1000; timeout && (CDC_Send_FreeBytes() == 0 || USB_Tx_State != 0); --timeout) {
     __WFI();
   }
 
@@ -189,7 +189,7 @@ static uint16_t VCP_DataTx(uint8_t *Buf, uint32_t Len) {
     APP_Rx_Buffer[APP_Rx_ptr_in] = Buf[i];
     APP_Rx_ptr_in = (APP_Rx_ptr_in + 1) % APP_RX_DATA_SIZE;
 
-    for (uint32_t timeout = 1000; timeout && CDC_Send_FreeBytes() == 0 || USB_Tx_State != 0; --timeout) {
+    for (uint32_t timeout = 1000; timeout && (CDC_Send_FreeBytes() == 0 || USB_Tx_State != 0); --timeout) {
       __WFI();
     }
   }
