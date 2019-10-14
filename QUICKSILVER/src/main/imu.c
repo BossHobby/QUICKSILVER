@@ -21,14 +21,16 @@
 // disable drift correction ( for testing)
 #define DISABLE_ACC 0
 
-// filter time in seconds
+// filter times in seconds
 // time to correct gyro readings using the accelerometer
 // 1-4 are generally good
-#define FILTERTIME 5.0
+#define FASTFILTER 0.05	//onground filter
+#define PREFILTER 0.2	//in_air prefilter (this can be commented out)
+#define FILTERTIME 1.0	//in_air fusion filter
 
 // accel magnitude limits for drift correction
-#define ACC_MIN 0.9f
-#define ACC_MAX 1.1f
+#define ACC_MIN 0.7f
+#define ACC_MAX 1.3f
 
 float GEstG[3] = {0, 0, ACC_1G};
 float attitude[3];
@@ -120,19 +122,48 @@ void imu_calc(void) {
   GEstG[0] = GEstG[0] - (deltaGyroAngle[2]) * GEstG[1];
   GEstG[1] = (deltaGyroAngle[2]) * GEstG[0] + GEstG[1];
 
-  // calc acc mag
-  float accmag = calcmagnitude(&accel[0]);
-  if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G) && !DISABLE_ACC) {
-    // normalize acc
-    for (int axis = 0; axis < 3; axis++) {
-      accel[axis] = accel[axis] * (ACC_1G / accmag);
-    }
+  extern int onground;
+    if(onground){		//happyhour bartender - quad is ON GROUND and disarmed
+  	  // calc acc mag
+  	  float accmag = calcmagnitude(&accel[0]);
+    	  if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
+    		  // normalize acc
+    		  for (int axis = 0; axis < 3; axis++) {
+    			  accel[axis] = accel[axis] * (ACC_1G / accmag);
+    		  }
 
-    float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FILTERTIME);
-    for (int x = 0; x < 3; x++) {
-      lpf(&GEstG[x], accel[x], filtcoeff);
+    		  float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FASTFILTER);
+    		  for (int x = 0; x < 3; x++) {
+    			  lpf(&GEstG[x], accel[x], filtcoeff);
+    		  }
+    	  }
+    }else{		//lateshift bartender - quad is IN AIR and things are getting wild
+  	  // hit accel[3] with a sledgehammer
+	  #ifdef PREFILTER
+    	  float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)PREFILTER);
+    	  for (int x = 0; x < 3; x++) {
+    		  lpf(&accel[x], accel[x], filtcoeff);
+    	  }
+	  #endif
+  	  // calc mag of filtered acc
+  	  float accmag = calcmagnitude(&accel[0]);
+    	  if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)){
+    		  // normalize acc
+    		  for (int axis = 0; axis < 3; axis++) {
+    			  accel[axis] = accel[axis] * (ACC_1G / accmag);
+    		  }
+    		  // filter accel on to GEstG
+    		  float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FILTERTIME);
+    		  for (int x = 0; x < 3; x++) {
+    			  lpf(&GEstG[x], accel[x], filtcoeff);
+    		  }
+    		  //heal the gravity vector after nudging it with accel
+    		  float GEstGmag = calcmagnitude(&GEstG[0]);
+    		  for (int axis = 0; axis < 3; axis++) {
+    			  GEstG[axis] = GEstG[axis] * (ACC_1G / GEstGmag);
+    		  }
+    	  }
     }
-  }
 
   if (rx_aux_on(AUX_HORIZON)) {
     attitude[0] = atan2approx(GEstG[0], GEstG[2]);
