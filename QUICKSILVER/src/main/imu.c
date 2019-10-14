@@ -1,20 +1,12 @@
-
-// library headers
 #include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
-//#define _USE_MATH_DEFINES
 #include "defines.h"
 #include "drv_time.h"
 #include "sixaxis.h"
 #include "util.h"
-
-//#ifdef DEBUG
-//#include "debug.h"
-//extern debug_type debug;
-//#endif
 
 #define ACC_1G 1.0f
 
@@ -50,34 +42,6 @@ void imu_init(void) {
     delay(1000);
   }
 }
-
-//#pragma GCC push_options
-//#pragma GCC optimize ("O0")
-// from http://en.wikipedia.org/wiki/Fast_inverse_square_root
-// originally from quake3 code
-
-float Q_rsqrt(float number) {
-
-  long i;
-  float x2, y;
-  const float threehalfs = 1.5F;
-
-  x2 = number * 0.5F;
-  y = number;
-  i = *(long *)&y;
-  i = 0x5f3759df - (i >> 1);
-  y = *(float *)&i;
-  y = y * (threehalfs - (x2 * y * y)); // 1st iteration
-  y = y * (threehalfs - (x2 * y * y)); // 2nd iteration, this can be removed
-                                       //	y  = y * ( threehalfs - ( x2 * y * y ) );   // 3nd iteration, this can be removed
-
-  return y;
-}
-//#pragma GCC pop_options
-
-void vectorcopy(float *vector1, float *vector2);
-
-float atan2approx(float y, float x);
 
 float calcmagnitude(float vector[3]) {
   float accmag = 0;
@@ -169,50 +133,4 @@ void imu_calc(void) {
     attitude[0] = atan2approx(GEstG[0], GEstG[2]);
     attitude[1] = atan2approx(GEstG[1], GEstG[2]);
   }
-}
-
-#define M_PI 3.14159265358979323846 /* pi */
-
-#define OCTANTIFY(_x, _y, _o) \
-  do {                        \
-    float _t;                 \
-    _o = 0;                   \
-    if (_y < 0) {             \
-      _x = -_x;               \
-      _y = -_y;               \
-      _o += 4;                \
-    }                         \
-    if (_x <= 0) {            \
-      _t = _x;                \
-      _x = _y;                \
-      _y = -_t;               \
-      _o += 2;                \
-    }                         \
-    if (_x <= _y) {           \
-      _t = _y - _x;           \
-      _x = _x + _y;           \
-      _y = _t;                \
-      _o += 1;                \
-    }                         \
-  } while (0);
-
-// +-0.09 deg error
-float atan2approx(float y, float x) {
-
-  if (x == 0)
-    x = 123e-15f;
-  float phi = 0;
-  float dphi;
-  float t;
-
-  OCTANTIFY(x, y, phi);
-
-  t = (y / x);
-  // atan function for 0 - 1 interval
-  dphi = t * ((M_PI / 4 + 0.2447f) + t * ((-0.2447f + 0.0663f) + t * (-0.0663f)));
-  phi *= M_PI / 4;
-  dphi = phi + dphi;
-  if (dphi > (float)M_PI)
-    dphi -= 2 * M_PI;
-  return RADTODEG * dphi;
 }
