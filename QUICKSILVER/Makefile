@@ -81,7 +81,7 @@ $(BUILD_DIR)/$(BINARY).list: $(BUILD_DIR)/$(BINARY).elf
 	$(OD) -h -S $^ > $@
 
 $(BUILD_DIR)/$(BINARY).elf: $(OBJS)
-	$(LD) $(LDFLAGS) -o $@ $^ 
+	$(LD) $^ $(LDFLAGS) -o $@ 
 	$(SE) -A $@
 
 $(BUILD_DIR)/%.o: %.c $(BUILD_DIR)/target
