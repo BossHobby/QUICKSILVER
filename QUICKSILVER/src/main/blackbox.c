@@ -18,6 +18,8 @@ extern float gyro[3];
 extern float gyro_raw[3];
 extern float GEstG[3];
 
+extern float accel[3];
+
 #define CHECK_CBOR_ERROR(expr) \
   expr;                        \
   if (res < CBOR_OK) {         \
@@ -64,6 +66,11 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
   CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "rx_aux"));
   CHECK_CBOR_ERROR(res = cbor_encode_uint8_array(enc, b->rx_aux, AUX_CHANNEL_MAX));
 
+  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "accel_raw"));
+  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->accel_raw, 3));
+  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "accel_filter"));
+  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->accel_filter, 3));
+
   CHECK_CBOR_ERROR(res = cbor_encode_end_indefinite(enc));
 
   return res;
@@ -102,6 +109,14 @@ void blackbox_update() {
   state.gyro_vector[0] = GEstG[0];
   state.gyro_vector[1] = GEstG[1];
   state.gyro_vector[2] = GEstG[2];
+
+  state.accel_raw[0] = accel[0];
+  state.accel_raw[1] = accel[1];
+  state.accel_raw[2] = accel[2];
+
+  //state.accel_filter[0] = accel_filter[0];
+  //state.accel_filter[1] = accel_filter[1];
+  //state.accel_filter[2] = accel_filter[2];
 
   if (usb_is_active != 0 && (loop_counter % (uint32_t)((1000000.0f / (float)blackbox_rate) / LOOPTIME)) == 0) {
     quic_blackbox(&state);
