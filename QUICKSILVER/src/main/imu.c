@@ -101,14 +101,17 @@ void imu_calc(void) {
         lpf(&GEstG[x], accel[x], filtcoeff);
       }
     }
-  } else { //lateshift bartender - quad is IN AIR and things are getting wild
-           // hit accel[3] with a sledgehammer
+  } else {
+
+    //lateshift bartender - quad is IN AIR and things are getting wild
+    // hit accel[3] with a sledgehammer
 #ifdef PREFILTER
     float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)PREFILTER);
     for (int x = 0; x < 3; x++) {
       lpf(&accel[x], accel[x], filtcoeff);
     }
 #endif
+
     // calc mag of filtered acc
     float accmag = calcmagnitude(&accel[0]);
     if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
