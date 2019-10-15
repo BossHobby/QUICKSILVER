@@ -14,6 +14,7 @@ volatile unsigned long systickcount = 0;
 #warning SYS_CLOCK_FREQ_HZ not present
 #endif
 
+
 void debug_timer_init() {
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
   CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;

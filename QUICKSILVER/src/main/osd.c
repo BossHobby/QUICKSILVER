@@ -8,6 +8,7 @@
 #include "util.h"
 #include "rx.h"
 #include "osd.h"
+#include "debug.h"
 
 #ifdef ENABLE_OSD
 
@@ -141,7 +142,7 @@ const char* get_decode_element_string (uint32_t input , uint8_t status){
 
 //******************************************************************************************************************************
 // case & state variables for switch logic and profile adjustments
-
+debug_type debug;
 extern int flash_feature_1; //currently used for auto entry into wizard menu
 extern profile_t profile;
 uint8_t osd_display_phase = 2;
@@ -918,7 +919,17 @@ void osd_display(void) {
 		  osd_display_element++;
 		  break;
 
-	  case 7:  //end of regular display - display_trigger counter sticks here till it wraps
+	  case 7:
+		  if ((*stopwatch & 0x01) == 1) {
+			  uint8_t osd_stopwatch[5];
+			  fast_fprint(osd_stopwatch, 5, debug.totaltime, 0);
+			  osd_stopwatch[4] = 112; //Z+23 is fly hr
+			  osd_print_data(osd_stopwatch, 5, decode_attribute(*stopwatch), decode_positionx(*stopwatch), decode_positiony(*stopwatch));
+		  }
+		  osd_display_element++;
+		  break;
+
+	  case 8:  //end of regular display - display_trigger counter sticks here till it wraps
 		  display_trigger++;
 		  if (display_trigger == 0) osd_display_element = 1;
 		  break;
