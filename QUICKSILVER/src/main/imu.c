@@ -61,30 +61,25 @@ void vectorcopy(float *vector1, float *vector2) {
 extern float looptime;
 
 void imu_calc(void) {
-  // remove bias
-  accel[0] = accel[0] - accelcal[0];
-  accel[1] = accel[1] - accelcal[1];
-  accel[2] = accel[2] - accelcal[2];
+  // remove bias and reduce to accel in G
+  accel[0] = (accel[0] - accelcal[0]) * (1 / 2048.0f);
+  accel[1] = (accel[1] - accelcal[1]) * (1 / 2048.0f);
+  accel[2] = (accel[2] - accelcal[2]) * (1 / 2048.0f);
 
-  // reduce to accel in G
-  for (int i = 0; i < 3; i++) {
-    accel[i] *= (1 / 2048.0f);
-  }
+  const float gyro_delta_angle[3] = {
+      gyro[0] * looptime,
+      gyro[1] * looptime,
+      gyro[2] * looptime,
+  };
 
-  float deltaGyroAngle[3];
+  GEstG[2] = GEstG[2] - (gyro_delta_angle[0]) * GEstG[0];
+  GEstG[0] = (gyro_delta_angle[0]) * GEstG[2] + GEstG[0];
 
-  for (int i = 0; i < 3; i++) {
-    deltaGyroAngle[i] = (gyro[i]) * looptime;
-  }
+  GEstG[1] = GEstG[1] + (gyro_delta_angle[1]) * GEstG[2];
+  GEstG[2] = -(gyro_delta_angle[1]) * GEstG[1] + GEstG[2];
 
-  GEstG[2] = GEstG[2] - (deltaGyroAngle[0]) * GEstG[0];
-  GEstG[0] = (deltaGyroAngle[0]) * GEstG[2] + GEstG[0];
-
-  GEstG[1] = GEstG[1] + (deltaGyroAngle[1]) * GEstG[2];
-  GEstG[2] = -(deltaGyroAngle[1]) * GEstG[1] + GEstG[2];
-
-  GEstG[0] = GEstG[0] - (deltaGyroAngle[2]) * GEstG[1];
-  GEstG[1] = (deltaGyroAngle[2]) * GEstG[0] + GEstG[1];
+  GEstG[0] = GEstG[0] - (gyro_delta_angle[2]) * GEstG[1];
+  GEstG[1] = (gyro_delta_angle[2]) * GEstG[0] + GEstG[1];
 
   extern int onground;
   if (onground) { //happyhour bartender - quad is ON GROUND and disarmed
