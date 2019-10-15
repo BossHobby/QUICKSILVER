@@ -105,11 +105,11 @@
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING AUX_CHANNEL_0
-#define IDLE_UP AUX_CHANNEL_1
-#define LEVELMODE AUX_CHANNEL_2
+#define IDLE_UP AUX_CHANNEL_0
+#define LEVELMODE AUX_CHANNEL_OFF
 #define RACEMODE AUX_CHANNEL_OFF
 #define HORIZON AUX_CHANNEL_OFF
-#define STICK_BOOST_PROFILE AUX_CHANNEL_4
+#define STICK_BOOST_PROFILE AUX_CHANNEL_5
 #define RATES AUX_CHANNEL_ON
 #define LEDS_ON AUX_CHANNEL_OFF
 // *************enable buzzer functionality
@@ -184,8 +184,8 @@
 #define GYRO_FILTER_PASS2 HZ_90
 
 //Select D Term Filter Cut Frequency *** Select Only one
-#define DTERM_LPF_2ND_HZ 100
-//#define DTERM_LPF_1ST_HZ 70
+//#define DTERM_LPF_2ND_HZ 100
+#define DTERM_LPF_1ST_HZ 70
 
 //Select Motor Filter Type  (last resort filtering stage)
 //#define MOTOR_FILTER2_ALPHA MFILT1_HZ_90

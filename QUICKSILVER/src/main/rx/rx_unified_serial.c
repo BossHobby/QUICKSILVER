@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "defines.h"
 #include "drv_fmc.h"
 #include "drv_rx_serial.h"
@@ -18,43 +19,60 @@
 
 #ifdef RX_UNIFIED_SERIAL
 
+
+//*****************************************
+//*****************************************
+#define RX_FRAME_INTERVAL_TRIGGER_TICKS 105000		//*******This is the tick threshold for triggering a new frame to re-index to position 0 in the ISR
+//*****************************************
+//*****************************************
+#define DSM_SCALE_PERCENT 147		//this might stay somewhere or be replaced with wizard scaling
+//*****************************************
+//*****************************************
+//#define RX_DSM2_1024_TEMP			//for legacy override to dsm2 in place of dsmx
+//*****************************************
+
 extern debug_type debug;
 
-
-
-
-
-
 // global use rx variables
+//****************************
 extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
-extern char lastaux[AUX_CHANNEL_MAX];
-extern char auxchange[AUX_CHANNEL_MAX];
-uint8_t rxusart = 1;
-int failsafe = 9001; //OVER 9000
+//extern char lastaux[AUX_CHANNEL_MAX];  //I dont think this is used
+//extern char auxchange[AUX_CHANNEL_MAX]; //I dont think this is used either
+uint8_t rxusart = 1;	//not being used yet
+int failsafe = 01134; 	//hello
 int rxmode = 0;
 int rx_ready = 0;
 
 // internal variables
+//*****************************
+//uint8_t RXProtocolNextBoot = 0;	//go away?
+//uint8_t rx_end = 0;		//go away?
+//uint16_t rx_time[RX_BUFF_SIZE];	//go away?
+//uint8_t frameStart = 0;	//go away?
+//uint8_t frameEnd = 0;	//go away?
+//uint8_t escapedChars = 0;		//moved to scope
+//unsigned long time_lastrx;		//go away?
+//uint8_t last_rx_end = 0;		//go away?
+//int bobnovas = 0;
+//int bobnovas2 = 0;
+//uint32 ticksStart = 0;
+//uint32 ticksEnd = 0;
+//uint32 ticksLongest = 0;
+
 uint8_t RXProtocol = 0;
-uint8_t RXProtocolNextBoot = 0;
 #define RX_BUFF_SIZE 68
 uint8_t rx_buffer[RX_BUFF_SIZE];
-uint8_t rx_end = 0;
-uint16_t rx_time[RX_BUFF_SIZE];
-uint8_t rx_data[RX_BUFF_SIZE]; //A place to put the RX frame so nothing can get overwritten during processing.
+uint8_t rx_data[RX_BUFF_SIZE]; //A place to put the RX frame so nothing can get overwritten during processing.  //reduce size?
 uint8_t bytesSinceStart = 0;
 int frameStatus = -1;
-uint8_t frameStart = 0;
-uint8_t frameEnd = 0;
 uint8_t telemetryCounter = 0;
 uint8_t expectedFrameLength = 10;
-uint8_t escapedChars = 0;
 int rx_bind_enable = 0;
-
-unsigned long time_lastrx;
+uint32_t rx_framerate[3] = {0, 0, 1};	//new from NFE - do we wanna keep this?
+uint32_t rx_framerate_ticks = 0;	//new from NFE - do we wanna keep this?
+uint8_t stat_frames_second;
 unsigned long time_siglost;
-uint8_t last_rx_end = 0;
 unsigned long time_lastframe;
 int rx_state = 0;
 int bind_safety = 0;
@@ -63,20 +81,13 @@ uint16_t CRCByte = 0; //Defined here to allow Debug to see it.
 uint8_t protocolToCheck = 1;//Defined here to allow Debug to see it.
 uint8_t protocolDetectTimer = 0;//Defined here to allow Debug to see it.
 
-
 int failsafe_sbus_failsafe = 0;
 int failsafe_siglost = 0;
 int failsafe_noframes = 0;
 
-uint8_t stat_frames_second;
-uint32 ticksStart = 0;
-uint32 ticksEnd = 0;
-uint32 ticksLongest = 0;
-int bobnovas = 0;
-int bobnovas2 = 0;
 
 //Telemetry variables
-
+//***********************************
 //Global values to send as telemetry
 bool FPORTDebugTelemetry = false;
 extern float vbattfilt;
@@ -103,8 +114,42 @@ uint8_t teleCounter = 0;
 
 
 
+void RX_USART_ISR(void) {
+	//static uint32_t rx_framerate[3]
+  static int8_t rx_frame_position = 0;
+  //rx_buffer[rx_frame_position++] = USART_ReceiveData(SERIAL_RX_USART);
+  unsigned long maxticks = SysTick->LOAD;
+  unsigned long ticks = SysTick->VAL;
+  unsigned long rx_byte_interval;
+  static unsigned long lastticks;
+  if (ticks < lastticks)
+	  rx_byte_interval = lastticks - ticks;
+  else { // overflow ( underflow really)
+	  rx_byte_interval = lastticks + (maxticks - ticks);
+  }
+  lastticks = ticks;
 
+  if (USART_GetFlagStatus(SERIAL_RX_USART, USART_FLAG_ORE)) {
+	  // overflow means something was lost
+	  USART_ClearFlag(SERIAL_RX_USART, USART_FLAG_ORE);
+	  rx_frame_position = 0;
+  }
 
+  if (rx_byte_interval > RX_FRAME_INTERVAL_TRIGGER_TICKS) {
+	  rx_frame_position = 0;
+	  bytesSinceStart = 1;
+	  frameStatus = 0;
+  }
+
+  rx_buffer[rx_frame_position++] = USART_ReceiveData(SERIAL_RX_USART);
+  if (rx_frame_position >= expectedFrameLength && frameStatus == 0) {
+	  frameStatus = 1;
+  }
+  bytesSinceStart++;
+
+  rx_frame_position %= (RX_BUFF_SIZE);
+}
+/*
 void RX_USART_ISR(void) {
   rx_buffer[rx_end] = USART_ReceiveData(USART1);
   // calculate timing since last rx
@@ -147,7 +192,7 @@ void RX_USART_ISR(void) {
 
   rx_end++;
   rx_end %= (RX_BUFF_SIZE);
-}
+}*/
 
 void rx_init(void) {
 	if (rx_bind_enable == 0)
@@ -156,7 +201,7 @@ void rx_init(void) {
 
 void rx_serial_init(void) {
 
-  //RXProtocol = 4;  //Remove meeeeeeeee
+  //RXProtocol = 1;  //Remove meeeeeeeee
 
   frameStatus = 0; //Let the uart ISR do its stuff.
   if (RXProtocol == 0) { //No known protocol? Autodetect!
@@ -263,28 +308,22 @@ if (gettime() - time_lastframe > 1000000)
 }
 
 
-//*****************************************
-#define DSM_SCALE_PERCENT 147		//this might stay somewhere or be replaced with wizard scaling
-//*****************************************
 
-//*****************************************
-//#define RX_DSM2_1024_TEMP			//for testing override to dsm2 - this needs to be determined by the actual time length of the frames  11 vs 22ms
-//*****************************************
 
 void processDSMX(void) {
 
 	for (uint8_t counter = 0; counter < 16; counter++) {                //First up, get therx_data out of the RX buffer and into somewhere safe
-		rx_data[counter] = rx_buffer[(counter + frameStart) % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
+		rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
 	}
 
 	#ifdef RX_DSM2_1024_TEMP
-	float dsmx_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
+	float dsm2_scalefactor = (0.29354210f / DSM_SCALE_PERCENT);
 	// 10 bit frames
 	static uint8_t spek_chan_shift = 2;
 	static uint8_t spek_chan_mask = 0x03;
 	static uint8_t dsm_channel_count = 7;
 	#else	//DSMX_2048
-	#define RX_DSMX_2048_TEMP
+	#define RX_DSMX_2048_UNIFIED
 	float dsmx_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
 	// 11 bit frames
 	static uint8_t spek_chan_shift = 3;
@@ -297,20 +336,19 @@ void processDSMX(void) {
     	const uint8_t spekChannel = 0x0F & (rx_data[b - 1] >> spek_chan_shift);
     	if (spekChannel < dsm_channel_count && spekChannel < 12) {
     		channels[spekChannel] = ((uint32_t)(rx_data[b - 1] & spek_chan_mask) << 8) + rx_data[b];
-    		frameStatus = 2;
-    		bind_safety++;// incriments up as good frames come in till we pass a safe point where aux channels are updated
+    		frameStatus = 2;	// if we can hold 2 here for an entire frame, then we will decode it
     	}else{
-    		frameStatus = 0;	//abandon ship something went wrong
+    		//a counter here will flag on 22ms mode which could be used for auto-apply of correct filter cut on rc smoothing
     	}
     }
 
 
     if (frameStatus == 2) {
-    	if ((bind_safety < 900) && (bind_safety > 0))	//has to be both below 900 and above 0 since initialized to 0
+    	bind_safety++;
+    	if (bind_safety < 120)
     		rxmode = RXMODE_BIND; // this is rapid flash during bind safety
-
           // TAER channel order
-  	  	#ifdef RX_DSMX_2048_TEMP
+  	  	#ifdef RX_DSMX_2048_UNIFIED
     	rx[0] = (channels[1] - 1024.0f) * dsmx_scalefactor;
     	rx[1] = (channels[2] - 1024.0f) * dsmx_scalefactor;
     	rx[2] = (channels[3] - 1024.0f) * dsmx_scalefactor;
@@ -336,7 +374,7 @@ void processDSMX(void) {
 
       	rx_apply_expo();
 
-		#ifdef RX_DSMX_2048_TEMP
+		#ifdef RX_DSMX_2048_UNIFIED
       	aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0;        //1100 cutoff intentionally selected to force aux channels low if
       	aux[AUX_CHANNEL_1] = (channels[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
       	aux[AUX_CHANNEL_2] = (channels[6] > 1100) ? 1 : 0;
@@ -353,12 +391,19 @@ void processDSMX(void) {
       	aux[AUX_CHANNEL_2] = (channels[6] > 550) ? 1 : 0;
 		#endif
 
-
+      	//for failsafe_noframes
       	time_lastframe = gettime();
-      	if (bind_safety > 900) { //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
+      	//for framerate calculation - totally unnessary but cool to see
+      	rx_framerate[2] = !(rx_framerate[2]);
+      	rx_framerate[rx_framerate[2]] = time_lastframe;
+      	rx_framerate_ticks = abs(rx_framerate[0] - rx_framerate[1]);
+
+      	frameStatus = 3; //We're done with this frame now.
+
+      	if (bind_safety > 120) { //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
       		rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
       		rxmode = !RXMODE_BIND; // restores normal led operation
-      		bind_safety = 901;     // reset counter so it doesnt wrap
+      		bind_safety = 121;     // reset counter so it doesnt wrap
       	}
     }
 }
@@ -366,7 +411,7 @@ void processDSMX(void) {
 
 void processSBUS(void) {
   for (uint8_t counter = 0; counter < 25; counter++) {                //First up, get therx_data out of the RX buffer and into somewhere safe
-    rx_data[counter] = rx_buffer[(counter + frameStart) % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
+    rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
   }
 
   if (rx_data[23] & (1 << 2)) //RX sets this bit when it knows it missed a frame. Presumably this is a timer in the RX.
@@ -467,6 +512,11 @@ void processSBUS(void) {
     */
 
     time_lastframe = gettime();
+
+	  rx_framerate[2] = !(rx_framerate[2]);
+	  rx_framerate[rx_framerate[2]] = time_lastframe;
+	  rx_framerate_ticks = abs(rx_framerate[0] - rx_framerate[1]);
+
     if (bind_safety > 141) { //requires one second worth of good frames to come in before rx_ready safety can be toggled to 1
       rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
       bind_safety = 142;
@@ -494,7 +544,7 @@ void processIBUS(void) {
 
   uint8_t frameLength = 0;
   for (uint8_t counter = 0; counter < 32; counter++) {                //First up, get the data out of the RX buffer and into somewhere safe
-    rx_data[counter] = rx_buffer[(counter + frameStart) % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
+    rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
     frameLength++;                                                    // to accept telemetry requests without overwriting control data
   }
 
@@ -611,9 +661,10 @@ void processIBUS(void) {
 
 void processFPORT(void) {
   uint8_t frameLength = 0;
+  static uint8_t escapedChars = 0;
   uint8_t tempEscapedChars = 0;
   for (uint8_t counter = 0; counter <= bytesSinceStart; counter++) {                     //First up, get the data out of the RX buffer and into somewhere safe
-    rx_data[counter] = rx_buffer[(counter + tempEscapedChars + frameStart) % RX_BUFF_SIZE]; //We're going to be messing with the data and it wouldn't do to destroy a packet
+    rx_data[counter] = rx_buffer[(counter + tempEscapedChars) % RX_BUFF_SIZE]; //We're going to be messing with the data and it wouldn't do to destroy a packet
     frameLength++;
 
     if (rx_data[counter - 1] == 0x7D) { //0x7D and 0x7E are reserved, 0x7D is the marker for a reserved / escaped character
@@ -876,8 +927,8 @@ void sendFPORTTelemetry(){
         teleCRC = teleCRC >> 8;
         telemetryPacket[9] = teleCRC;      //0x34;
         for (uint8_t x = 0; x < 10; x++) { //Shove the packet out the UART. This also doesn't support escaped characters
-          while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
-          USART_SendData(USART1, telemetryPacket[x]);
+          while (USART_GetFlagStatus(SERIAL_RX_USART, USART_FLAG_TXE) == RESET);
+          USART_SendData(SERIAL_RX_USART, telemetryPacket[x]);
         } //That's it, telemetry sent
         telemetryPosition++;
         if (FPORTDebugTelemetry) {
@@ -908,12 +959,12 @@ void processCRSF(void) {
 
 
 //NOTE TO SELF: Put in some double-check code on the detections somehow.
-
+//NFE note:  how about we force hold failsafe until protocol is saved.  This acts like kind of a check on proper mapping/decoding as stick gesture must be used as a test
+// also, we ought to be able to clear noframes_failsafe in addition to satisfying the start byte check in order to hard select a radio protocol
 
 
 void findprotocol(void) {
 
-  //rx_spektrum_bind(); // Light off DSMX binding, it *must* come first.
   protocolToCheck = 1; //Start with DSMX
   //uint8_t protocolToCheck = 1; Moved to global for visibility
 
@@ -939,26 +990,28 @@ void findprotocol(void) {
       switch (protocolToCheck)
       {
         case 1: // DSM
-          if (rx_buffer[frameStart] == 0x00 && rx_buffer[frameStart + 1] == 0x00 && rx_buffer[frameStart + 2] != 0x00) { // this one obviously needs some work to not trigger on an empty frame
-        	RXProtocol = protocolToCheck;
+          if (rx_buffer[0] == 0x00 && rx_buffer[1] <= 0x04 && rx_buffer[2] != 0x00) { // allow up to 4 fades or detection will fail.  Some dsm rx will log a fade or two during binding
+        	  processDSMX();
+        	  if (bind_safety > 0)
+        		  RXProtocol = protocolToCheck;
           }
         case 2: // SBUS
-          if (rx_buffer[frameStart] == 0x0F) {
+          if (rx_buffer[0] == 0x0F) {
             RXProtocol = protocolToCheck;
           }
           break;
         case 3: // IBUS
-          if (rx_buffer[frameStart] == 0x20) {
+          if (rx_buffer[0] == 0x20) {
             RXProtocol = protocolToCheck;
           }
           break;
         case 4: // FPORT
-          if (rx_buffer[frameStart] == 0x7E) {
+          if (rx_buffer[0] == 0x7E) {
             RXProtocol = protocolToCheck;
           }
           break;
         case 5: // CRSF
-          if (rx_buffer[frameStart] != 0xFF && 1 == 2) { //Need to look up the expected start value.
+          if (rx_buffer[0] != 0xFF && 1 == 2) { //Need to look up the expected start value.
             RXProtocol = protocolToCheck;
           }
           break;
