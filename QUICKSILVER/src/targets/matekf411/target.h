@@ -1,7 +1,6 @@
 #include "config.h"
 
-#define Betafpv_F4
-#define Betafpv_F4_RX
+#define MatekF411
 
 #define F411
 #define F405
@@ -24,19 +23,6 @@
 #define FPV_PORT GPIOB
 
 //SPI, I2C & GYRO
-#ifdef RX_FRSKY
-#define USE_CC2500
-#define USE_CC2500_PA_LNA
-#define USE_CC2500_DIVERSITY
-
-#define CC2500_SPI3
-#define CC2500_NSS_PA15
-#define CC2500_GDO0_PC14
-#define CC2500_TX_EN_PA8
-#define CC2500_LNA_EN_PA13
-#define CC2500_ANT_SEL_PA14
-#endif
-
 #define MPU6XXX_SPI1
 #define MPU6XXX_NSS_PA4
 #define MPU6XXX_INT_PIN GPIO_Pin_1
@@ -80,24 +66,7 @@
 #endif
 
 // MOTOR PINS
-#ifdef Betafpv_F4_RX
-#define MOTOR0_PIN_PB7  //S3_OUT
-#define MOTOR1_PIN_PB8  //S4_OUT
-#define MOTOR2_PIN_PB10 //S1_OUT
-#define MOTOR3_PIN_PB6  //S2_OUT
-#else
 #define MOTOR0_PIN_PB6 //S3_OUT
 #define MOTOR1_PIN_PB7 //S4_OUT
 #define MOTOR2_PIN_PB4 //S1_OUT
 #define MOTOR3_PIN_PB5 //S2_OUT
-#endif
-
-// PWM PIN INITIALIZATION
-#ifdef Betafpv_F4_RX
-#ifdef BRUSHED_TARGET
-#define PWM_PB8
-#define PWM_PB7
-#define PWM_PB10
-#define PWM_PB6
-#endif
-#endif
