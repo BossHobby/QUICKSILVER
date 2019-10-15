@@ -21,10 +21,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-
-#include "util.h"
-#include "drv_time.h"
 #include <math.h>
+
+#include "defines.h"
+#include "drv_time.h"
+#include "util.h"
 
 // calculates the coefficient for lpf filter, times in the same units
 float lpfcalc(float sampleperiod, float filtertime) {
@@ -111,11 +112,9 @@ int ipow(int base, int exp) {
   return result;
 }
 
-int round_num(float num)
-{
-    return num < 0 ? num - 0.5 : num + 0.5;
+int round_num(float num) {
+  return num < 0 ? num - 0.5 : num + 0.5;
 }
-
 
 #include <inttypes.h>
 uint32_t seed = 7;
@@ -125,6 +124,72 @@ uint32_t random(void) {
   seed ^= seed << 5;
   return seed;
 }
+
+#define OCTANTIFY(_x, _y, _o) \
+  do {                        \
+    float _t;                 \
+    _o = 0;                   \
+    if (_y < 0) {             \
+      _x = -_x;               \
+      _y = -_y;               \
+      _o += 4;                \
+    }                         \
+    if (_x <= 0) {            \
+      _t = _x;                \
+      _x = _y;                \
+      _y = -_t;               \
+      _o += 2;                \
+    }                         \
+    if (_x <= _y) {           \
+      _t = _y - _x;           \
+      _x = _x + _y;           \
+      _y = _t;                \
+      _o += 1;                \
+    }                         \
+  } while (0);
+
+// +-0.09 deg error
+float atan2approx(float y, float x) {
+
+  if (x == 0)
+    x = 123e-15f;
+  float phi = 0;
+  float dphi;
+  float t;
+
+  OCTANTIFY(x, y, phi);
+
+  t = (y / x);
+  // atan function for 0 - 1 interval
+  dphi = t * ((M_PI / 4 + 0.2447f) + t * ((-0.2447f + 0.0663f) + t * (-0.0663f)));
+  phi *= M_PI / 4;
+  dphi = phi + dphi;
+  if (dphi > (float)M_PI)
+    dphi -= 2 * M_PI;
+  return RADTODEG * dphi;
+}
+
+//#pragma GCC push_options
+//#pragma GCC optimize ("O0")
+// from http://en.wikipedia.org/wiki/Fast_inverse_square_root
+// originally from quake3 code
+float Q_rsqrt(float number) {
+  long i;
+  float x2, y;
+  const float threehalfs = 1.5F;
+
+  x2 = number * 0.5F;
+  y = number;
+  i = *(long *)&y;
+  i = 0x5f3759df - (i >> 1);
+  y = *(float *)&i;
+  y = y * (threehalfs - (x2 * y * y)); // 1st iteration
+  y = y * (threehalfs - (x2 * y * y)); // 2nd iteration, this can be removed
+                                       //	y  = y * ( threehalfs - ( x2 * y * y ) );   // 3nd iteration, this can be removed
+
+  return y;
+}
+//#pragma GCC pop_options
 
 // serial print routines
 #ifdef SERIAL_ENABLE

@@ -1,20 +1,12 @@
-
-// library headers
 #include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
-//#define _USE_MATH_DEFINES
 #include "defines.h"
 #include "drv_time.h"
 #include "sixaxis.h"
 #include "util.h"
-
-//#ifdef DEBUG
-//#include "debug.h"
-//extern debug_type debug;
-//#endif
 
 #define ACC_1G 1.0f
 
@@ -24,9 +16,9 @@
 // filter times in seconds
 // time to correct gyro readings using the accelerometer
 // 1-4 are generally good
-#define FASTFILTER 0.05	//onground filter
-#define PREFILTER 0.2	//in_air prefilter (this can be commented out)
-#define FILTERTIME 1.0	//in_air fusion filter
+#define FASTFILTER 0.05 //onground filter
+#define PREFILTER 0.2   //in_air prefilter (this can be commented out)
+#define FILTERTIME 1.0  //in_air fusion filter
 
 // accel magnitude limits for drift correction
 #define ACC_MIN 0.7f
@@ -51,34 +43,6 @@ void imu_init(void) {
   }
 }
 
-//#pragma GCC push_options
-//#pragma GCC optimize ("O0")
-// from http://en.wikipedia.org/wiki/Fast_inverse_square_root
-// originally from quake3 code
-
-float Q_rsqrt(float number) {
-
-  long i;
-  float x2, y;
-  const float threehalfs = 1.5F;
-
-  x2 = number * 0.5F;
-  y = number;
-  i = *(long *)&y;
-  i = 0x5f3759df - (i >> 1);
-  y = *(float *)&i;
-  y = y * (threehalfs - (x2 * y * y)); // 1st iteration
-  y = y * (threehalfs - (x2 * y * y)); // 2nd iteration, this can be removed
-                                       //	y  = y * ( threehalfs - ( x2 * y * y ) );   // 3nd iteration, this can be removed
-
-  return y;
-}
-//#pragma GCC pop_options
-
-void vectorcopy(float *vector1, float *vector2);
-
-float atan2approx(float y, float x);
-
 float calcmagnitude(float vector[3]) {
   float accmag = 0;
   for (uint8_t axis = 0; axis < 3; axis++) {
@@ -97,122 +61,74 @@ void vectorcopy(float *vector1, float *vector2) {
 extern float looptime;
 
 void imu_calc(void) {
-  // remove bias
-  accel[0] = accel[0] - accelcal[0];
-  accel[1] = accel[1] - accelcal[1];
-  accel[2] = accel[2] - accelcal[2];
+  // remove bias and reduce to accel in G
+  accel[0] = (accel[0] - accelcal[0]) * (1 / 2048.0f);
+  accel[1] = (accel[1] - accelcal[1]) * (1 / 2048.0f);
+  accel[2] = (accel[2] - accelcal[2]) * (1 / 2048.0f);
 
-  // reduce to accel in G
-  for (int i = 0; i < 3; i++) {
-    accel[i] *= (1 / 2048.0f);
-  }
+  const float gyro_delta_angle[3] = {
+      gyro[0] * looptime,
+      gyro[1] * looptime,
+      gyro[2] * looptime,
+  };
 
-  float deltaGyroAngle[3];
+  GEstG[2] = GEstG[2] - (gyro_delta_angle[0]) * GEstG[0];
+  GEstG[0] = (gyro_delta_angle[0]) * GEstG[2] + GEstG[0];
 
-  for (int i = 0; i < 3; i++) {
-    deltaGyroAngle[i] = (gyro[i]) * looptime;
-  }
+  GEstG[1] = GEstG[1] + (gyro_delta_angle[1]) * GEstG[2];
+  GEstG[2] = -(gyro_delta_angle[1]) * GEstG[1] + GEstG[2];
 
-  GEstG[2] = GEstG[2] - (deltaGyroAngle[0]) * GEstG[0];
-  GEstG[0] = (deltaGyroAngle[0]) * GEstG[2] + GEstG[0];
-
-  GEstG[1] = GEstG[1] + (deltaGyroAngle[1]) * GEstG[2];
-  GEstG[2] = -(deltaGyroAngle[1]) * GEstG[1] + GEstG[2];
-
-  GEstG[0] = GEstG[0] - (deltaGyroAngle[2]) * GEstG[1];
-  GEstG[1] = (deltaGyroAngle[2]) * GEstG[0] + GEstG[1];
+  GEstG[0] = GEstG[0] - (gyro_delta_angle[2]) * GEstG[1];
+  GEstG[1] = (gyro_delta_angle[2]) * GEstG[0] + GEstG[1];
 
   extern int onground;
-    if(onground){		//happyhour bartender - quad is ON GROUND and disarmed
-  	  // calc acc mag
-  	  float accmag = calcmagnitude(&accel[0]);
-    	  if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
-    		  // normalize acc
-    		  for (int axis = 0; axis < 3; axis++) {
-    			  accel[axis] = accel[axis] * (ACC_1G / accmag);
-    		  }
+  if (onground) { //happyhour bartender - quad is ON GROUND and disarmed
+    // calc acc mag
+    float accmag = calcmagnitude(&accel[0]);
+    if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
+      // normalize acc
+      for (int axis = 0; axis < 3; axis++) {
+        accel[axis] = accel[axis] * (ACC_1G / accmag);
+      }
 
-    		  float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FASTFILTER);
-    		  for (int x = 0; x < 3; x++) {
-    			  lpf(&GEstG[x], accel[x], filtcoeff);
-    		  }
-    	  }
-    }else{		//lateshift bartender - quad is IN AIR and things are getting wild
-  	  // hit accel[3] with a sledgehammer
-	  #ifdef PREFILTER
-    	  float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)PREFILTER);
-    	  for (int x = 0; x < 3; x++) {
-    		  lpf(&accel[x], accel[x], filtcoeff);
-    	  }
-	  #endif
-  	  // calc mag of filtered acc
-  	  float accmag = calcmagnitude(&accel[0]);
-    	  if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)){
-    		  // normalize acc
-    		  for (int axis = 0; axis < 3; axis++) {
-    			  accel[axis] = accel[axis] * (ACC_1G / accmag);
-    		  }
-    		  // filter accel on to GEstG
-    		  float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FILTERTIME);
-    		  for (int x = 0; x < 3; x++) {
-    			  lpf(&GEstG[x], accel[x], filtcoeff);
-    		  }
-    		  //heal the gravity vector after nudging it with accel
-    		  float GEstGmag = calcmagnitude(&GEstG[0]);
-    		  for (int axis = 0; axis < 3; axis++) {
-    			  GEstG[axis] = GEstG[axis] * (ACC_1G / GEstGmag);
-    		  }
-    	  }
+      float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FASTFILTER);
+      for (int x = 0; x < 3; x++) {
+        lpf(&GEstG[x], accel[x], filtcoeff);
+      }
     }
+  } else {
+
+    //lateshift bartender - quad is IN AIR and things are getting wild
+    // hit accel[3] with a sledgehammer
+#ifdef PREFILTER
+    float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)PREFILTER);
+    for (int x = 0; x < 3; x++) {
+      lpf(&accel[x], accel[x], filtcoeff);
+    }
+#endif
+
+    // calc mag of filtered acc
+    float accmag = calcmagnitude(&accel[0]);
+    if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
+      // normalize acc
+      for (int axis = 0; axis < 3; axis++) {
+        accel[axis] = accel[axis] * (ACC_1G / accmag);
+      }
+      // filter accel on to GEstG
+      float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FILTERTIME);
+      for (int x = 0; x < 3; x++) {
+        lpf(&GEstG[x], accel[x], filtcoeff);
+      }
+      //heal the gravity vector after nudging it with accel
+      float GEstGmag = calcmagnitude(&GEstG[0]);
+      for (int axis = 0; axis < 3; axis++) {
+        GEstG[axis] = GEstG[axis] * (ACC_1G / GEstGmag);
+      }
+    }
+  }
 
   if (rx_aux_on(AUX_HORIZON)) {
     attitude[0] = atan2approx(GEstG[0], GEstG[2]);
     attitude[1] = atan2approx(GEstG[1], GEstG[2]);
   }
-}
-
-#define M_PI 3.14159265358979323846 /* pi */
-
-#define OCTANTIFY(_x, _y, _o) \
-  do {                        \
-    float _t;                 \
-    _o = 0;                   \
-    if (_y < 0) {             \
-      _x = -_x;               \
-      _y = -_y;               \
-      _o += 4;                \
-    }                         \
-    if (_x <= 0) {            \
-      _t = _x;                \
-      _x = _y;                \
-      _y = -_t;               \
-      _o += 2;                \
-    }                         \
-    if (_x <= _y) {           \
-      _t = _y - _x;           \
-      _x = _x + _y;           \
-      _y = _t;                \
-      _o += 1;                \
-    }                         \
-  } while (0);
-
-// +-0.09 deg error
-float atan2approx(float y, float x) {
-
-  if (x == 0)
-    x = 123e-15f;
-  float phi = 0;
-  float dphi;
-  float t;
-
-  OCTANTIFY(x, y, phi);
-
-  t = (y / x);
-  // atan function for 0 - 1 interval
-  dphi = t * ((M_PI / 4 + 0.2447f) + t * ((-0.2447f + 0.0663f) + t * (-0.0663f)));
-  phi *= M_PI / 4;
-  dphi = phi + dphi;
-  if (dphi > (float)M_PI)
-    dphi -= 2 * M_PI;
-  return RADTODEG * dphi;
 }
