@@ -625,6 +625,28 @@ uint8_t print_osd_callsign(void){
 	return 1;
 }
 
+uint8_t print_osd_flightmode(void){
+	const char flightmode_labels[5][21] = { {"   ACRO   "},{"  LEVEL   "},{" RACEMODE "},{" HORIZON  "},{"RM HORIZON"} };
+	static uint8_t index = 0;
+	uint8_t flightmode;
+	if (rx_aux_on(AUX_LEVELMODE)){
+		if (rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON))flightmode = 4;
+		if (!rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON))flightmode = 3;
+		if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON))flightmode = 2;
+		if (!rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON))flightmode = 1;
+	}else{
+		flightmode = 0;
+	}
+	if(index < 10){
+		uint8_t character[] = {flightmode_labels[flightmode][index]};
+		osd_print_data( character, 1, decode_attribute(*flight_mode), decode_positionx(*flight_mode) + index, decode_positiony(*flight_mode));
+		index++;
+		return 0;
+	}
+	index = 0;
+	return 1;
+}
+
 void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_t status){
 	if(osd_select > columns) {
 		osd_select = columns;	//limit osd select variable from accumulating past 1 columns of adjustable items
@@ -929,7 +951,16 @@ void osd_display(void) {
 		  osd_display_element++;
 		  break;
 
-	  case 8:  //end of regular display - display_trigger counter sticks here till it wraps
+	  case 8:
+		  if (decode_active_element(*flight_mode)){
+			  uint8_t flightmode_done = print_osd_flightmode();
+			  if(flightmode_done) osd_display_element++;
+		  }else{
+			  osd_display_element++;
+		  }
+		  break;
+
+	  case 9:  //end of regular display - display_trigger counter sticks here till it wraps
 		  display_trigger++;
 		  if (display_trigger == 0) osd_display_element = 1;
 		  break;

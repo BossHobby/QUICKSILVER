@@ -118,7 +118,7 @@ int binding_while_armed = 1;
 //Flash Memory Feature defaults for a flash w/full chip erase
 int flash_feature_1 = 1; //SETUP WIZARD
 int flash_feature_2 = 0; //LVC
-unsigned long osd_element[OSD_NUMBER_ELEMENTS] = { 0xA7, 0x43495551, 0x4C49534B, 0x3F524556, 0x3F3F3F3F, 0x3F3F3F3F, 0x704, 0x72D, 0x754, 0x00, 0x00, 0x6E0 };
+unsigned long osd_element[OSD_NUMBER_ELEMENTS] = { 0xA7, 0x43495551, 0x4C49534B, 0x3F524556, 0x3F3F3F3F, 0x3F3F3F3F, 0x704, 0x72D, 0x754, 0x6A8, 0x00, 0x6E0 };
 
 
 // for led flash on gestures
