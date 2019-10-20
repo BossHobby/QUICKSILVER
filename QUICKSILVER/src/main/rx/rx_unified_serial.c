@@ -22,13 +22,13 @@
 
 //*****************************************
 //*****************************************
-#define RX_FRAME_INTERVAL_TRIGGER_TICKS  (3000 * (TICK_CLOCK_FREQ_HZ / 1000000))		//This is the microsecond threshold for triggering a new frame to re-index to position 0 in the ISR
+#define RX_FRAME_INTERVAL_TRIGGER_TICKS  (3000 * (TICK_CLOCK_FREQ_HZ / 1000000))    //This is the microsecond threshold for triggering a new frame to re-index to position 0 in the ISR
 //*****************************************
 //*****************************************
-#define DSM_SCALE_PERCENT 147		//this might stay somewhere or be replaced with wizard scaling
+#define DSM_SCALE_PERCENT 147   //this might stay somewhere or be replaced with wizard scaling
 //*****************************************
 //*****************************************
-//#define RX_DSM2_1024_TEMP			//for legacy override to dsm2 in place of dsmx
+//#define RX_DSM2_1024_TEMP     //for legacy override to dsm2 in place of dsmx
 //*****************************************
 
 extern debug_type debug;
@@ -39,21 +39,21 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 //extern char lastaux[AUX_CHANNEL_MAX];  //I dont think this is used
 //extern char auxchange[AUX_CHANNEL_MAX]; //I dont think this is used either
-uint8_t rxusart = 1;	//not being used yet
-int failsafe = 01134; 	//hello
+uint8_t rxusart = 1;  //not being used yet
+int failsafe = 01134;   //hello
 int rxmode = 0;
 int rx_ready = 0;
 
 // internal variables
 //*****************************
-//uint8_t RXProtocolNextBoot = 0;	//go away?
-//uint8_t rx_end = 0;		//go away?
-//uint16_t rx_time[RX_BUFF_SIZE];	//go away?
-//uint8_t frameStart = 0;	//go away?
-//uint8_t frameEnd = 0;	//go away?
-//uint8_t escapedChars = 0;		//moved to scope
-//unsigned long time_lastrx;		//go away?
-//uint8_t last_rx_end = 0;		//go away?
+//uint8_t RXProtocolNextBoot = 0; //go away?
+//uint8_t rx_end = 0;   //go away?
+//uint16_t rx_time[RX_BUFF_SIZE]; //go away?
+//uint8_t frameStart = 0; //go away?
+//uint8_t frameEnd = 0; //go away?
+//uint8_t escapedChars = 0;   //moved to scope
+//unsigned long time_lastrx;    //go away?
+//uint8_t last_rx_end = 0;    //go away?
 //int bobnovas = 0;
 //int bobnovas2 = 0;
 //uint32 ticksStart = 0;
@@ -71,8 +71,8 @@ int frameStatus = -1;
 uint8_t telemetryCounter = 0;
 uint8_t expectedFrameLength = 10;
 int rx_bind_enable = 0;
-uint32_t rx_framerate[3] = {0, 0, 1};	//new from NFE - do we wanna keep this?
-uint32_t rx_framerate_ticks = 0;	//new from NFE - do we wanna keep this?
+uint32_t rx_framerate[3] = {0, 0, 1}; //new from NFE - do we wanna keep this?
+uint32_t rx_framerate_ticks = 0;  //new from NFE - do we wanna keep this?
 uint8_t stat_frames_second;
 unsigned long time_siglost;
 unsigned long time_lastframe;
@@ -92,10 +92,11 @@ int failsafe_noframes = 0;
 //***********************************
 //Global values to send as telemetry
 bool FPORTDebugTelemetry = false;
+uint8_t telemetryOffset = 0;
 extern float vbattfilt;
 extern float vbatt_comp;
 extern unsigned int lastlooptime;
-uint8_t telemetryPacket[10];
+uint8_t telemetryPacket[14];
 extern int current_pid_axis;
 extern int current_pid_term;
 extern profile_t profile;
@@ -116,40 +117,40 @@ uint8_t teleCounter = 0;
 
 
 void RX_USART_ISR(void) {
-	//static uint32_t rx_framerate[3]
+  //static uint32_t rx_framerate[3]
   unsigned long rx_byte_interval;
   //rx_buffer[rx_frame_position++] = USART_ReceiveData(SERIAL_RX_USART);
   unsigned long maxticks = SysTick->LOAD;
   unsigned long ticks = SysTick->VAL;
-  
+
   static unsigned long lastticks;
   if (ticks < lastticks)
-	  rx_byte_interval = lastticks - ticks;
+    rx_byte_interval = lastticks - ticks;
   else { // overflow ( underflow really)
-	  rx_byte_interval = lastticks + (maxticks - ticks);
+    rx_byte_interval = lastticks + (maxticks - ticks);
   }
   lastticks = ticks;
 
   if (USART_GetFlagStatus(SERIAL_RX_USART, USART_FLAG_ORE)) {
-	  // overflow means something was lost
-	  USART_ClearFlag(SERIAL_RX_USART, USART_FLAG_ORE);
-	  rx_frame_position = 0;
+    // overflow means something was lost
+    USART_ClearFlag(SERIAL_RX_USART, USART_FLAG_ORE);
+    rx_frame_position = 0;
   }
 
   if (rx_byte_interval > RX_FRAME_INTERVAL_TRIGGER_TICKS) {
-	  rx_frame_position = 0;
-	  frameStatus = 0;
+    rx_frame_position = 0;
+    frameStatus = 0;
   }
 
   rx_buffer[rx_frame_position++] = USART_ReceiveData(SERIAL_RX_USART);
   if (rx_frame_position >= expectedFrameLength && frameStatus == 0) {
-	  frameStatus = 1;
+    frameStatus = 1;
   }
 
   rx_frame_position %= (RX_BUFF_SIZE);
 }
 /*
-void RX_USART_ISR(void) {
+  void RX_USART_ISR(void) {
   rx_buffer[rx_end] = USART_ReceiveData(USART1);
   // calculate timing since last rx
   unsigned long maxticks = SysTick->LOAD;
@@ -191,16 +192,16 @@ void RX_USART_ISR(void) {
 
   rx_end++;
   rx_end %= (RX_BUFF_SIZE);
-}*/
+  }*/
 
 void rx_init(void) {
-	if (rx_bind_enable == 0)
-	RXProtocol = 0;
+  if (rx_bind_enable == 0)
+    RXProtocol = 0;
 }
 
 void rx_serial_init(void) {
 
-  //RXProtocol = 1;  //Remove meeeeeeeee
+  RXProtocol = 4;  //Remove meeeeeeeee
 
   frameStatus = 0; //Let the uart ISR do its stuff.
   if (RXProtocol == 0) { //No known protocol? Autodetect!
@@ -230,15 +231,15 @@ void rx_serial_init(void) {
     default:
       break;
   }
- // RXProtocolNextBoot = RXProtocol; //Remove meeeeeeeee toooooooooooo
+  // RXProtocolNextBoot = RXProtocol; //Remove meeeeeeeee toooooooooooo
 }
 
 
 
 void checkrx() {
 
-//FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!
-if (gettime() - time_lastframe > 1000000)
+  //FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!
+  if (gettime() - time_lastframe > 1000000)
   {
     failsafe_noframes = 1;
   } else
@@ -246,10 +247,10 @@ if (gettime() - time_lastframe > 1000000)
 
   // add the 3 failsafes together
   if (rx_ready)
-	failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
+    failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
 
 
-  
+
   if (frameStatus == 1) { //USART ISR says there's enough frame to look at. Look at it.
     switch (RXProtocol)
     {
@@ -274,16 +275,14 @@ if (gettime() - time_lastframe > 1000000)
         break;
     }
   }
-  else if(frameStatus == 3){
+  else if (frameStatus == 3) {
     switch (RXProtocol)
     {
       case 1: // DSM
         // Run DSM Telemetry
         break;
       case 2: // SBUS
-
         //Run smartport telemetry
-
         break;
       case 3: // IBUS
         //IBUS Telemetry function call goes here
@@ -303,108 +302,107 @@ if (gettime() - time_lastframe > 1000000)
     rx_serial_init(); //Set it up. This includes autodetecting protocol if necesary
     rxmode = !RXMODE_BIND;
   }
-  
-}
 
+}
 
 
 
 void processDSMX(void) {
 
-	for (uint8_t counter = 0; counter < 16; counter++) {                //First up, get therx_data out of the RX buffer and into somewhere safe
-		rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
-	}
+  for (uint8_t counter = 0; counter < 16; counter++) {                //First up, get therx_data out of the RX buffer and into somewhere safe
+    rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
+  }
 
-	#ifdef RX_DSM2_1024_TEMP
-	float dsm2_scalefactor = (0.29354210f / DSM_SCALE_PERCENT);
-	// 10 bit frames
-	static uint8_t spek_chan_shift = 2;
-	static uint8_t spek_chan_mask = 0x03;
-	static uint8_t dsm_channel_count = 7;
-	#else	//DSMX_2048
-	#define RX_DSMX_2048_UNIFIED
-	float dsmx_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
-	// 11 bit frames
-	static uint8_t spek_chan_shift = 3;
-	static uint8_t spek_chan_mask = 0x07;
-	static uint8_t dsm_channel_count = 12;
-	#endif
+#ifdef RX_DSM2_1024_TEMP
+  float dsm2_scalefactor = (0.29354210f / DSM_SCALE_PERCENT);
+  // 10 bit frames
+  static uint8_t spek_chan_shift = 2;
+  static uint8_t spek_chan_mask = 0x03;
+  static uint8_t dsm_channel_count = 7;
+#else //DSMX_2048
+#define RX_DSMX_2048_UNIFIED
+  float dsmx_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
+  // 11 bit frames
+  static uint8_t spek_chan_shift = 3;
+  static uint8_t spek_chan_mask = 0x07;
+  static uint8_t dsm_channel_count = 12;
+#endif
 
 
-    for (int b = 3; b < expectedFrameLength; b += 2) { //stick data in channels buckets
-    	const uint8_t spekChannel = 0x0F & (rx_data[b - 1] >> spek_chan_shift);
-    	if (spekChannel < dsm_channel_count && spekChannel < 12) {
-    		channels[spekChannel] = ((uint32_t)(rx_data[b - 1] & spek_chan_mask) << 8) + rx_data[b];
-    		frameStatus = 2;	// if we can hold 2 here for an entire frame, then we will decode it
-    	}else{
-    		//a counter here will flag on 22ms mode which could be used for auto-apply of correct filter cut on rc smoothing
-    	}
+  for (int b = 3; b < expectedFrameLength; b += 2) { //stick data in channels buckets
+    const uint8_t spekChannel = 0x0F & (rx_data[b - 1] >> spek_chan_shift);
+    if (spekChannel < dsm_channel_count && spekChannel < 12) {
+      channels[spekChannel] = ((uint32_t)(rx_data[b - 1] & spek_chan_mask) << 8) + rx_data[b];
+      frameStatus = 2;  // if we can hold 2 here for an entire frame, then we will decode it
+    } else {
+      //a counter here will flag on 22ms mode which could be used for auto-apply of correct filter cut on rc smoothing
     }
+  }
 
 
-    if (frameStatus == 2) {
-    	bind_safety++;
-    	if (bind_safety < 120)
-    		rxmode = RXMODE_BIND; // this is rapid flash during bind safety
-          // TAER channel order
-  	  	#ifdef RX_DSMX_2048_UNIFIED
-    	rx[0] = (channels[1] - 1024.0f) * dsmx_scalefactor;
-    	rx[1] = (channels[2] - 1024.0f) * dsmx_scalefactor;
-    	rx[2] = (channels[3] - 1024.0f) * dsmx_scalefactor;
-    	rx[3] = ((channels[0] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f;
+  if (frameStatus == 2) {
+    bind_safety++;
+    if (bind_safety < 120)
+      rxmode = RXMODE_BIND; // this is rapid flash during bind safety
+    // TAER channel order
+#ifdef RX_DSMX_2048_UNIFIED
+    rx[0] = (channels[1] - 1024.0f) * dsmx_scalefactor;
+    rx[1] = (channels[2] - 1024.0f) * dsmx_scalefactor;
+    rx[2] = (channels[3] - 1024.0f) * dsmx_scalefactor;
+    rx[3] = ((channels[0] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f;
 
-    	if (rx[3] > 1)
-    		rx[3] = 1;
-    	if (rx[3] < 0)
-    		rx[3] = 0;
-		#endif
+    if (rx[3] > 1)
+      rx[3] = 1;
+    if (rx[3] < 0)
+      rx[3] = 0;
+#endif
 
-		#ifdef RX_DSM2_1024_TEMP
-    	rx[0] = (channels[1] - 512.0f) * dsm2_scalefactor;
-    	rx[1] = (channels[2] - 512.0f) * dsm2_scalefactor;
-    	rx[2] = (channels[3] - 512.0f) * dsm2_scalefactor;
-    	rx[3] = ((channels[0] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f;
+#ifdef RX_DSM2_1024_TEMP
+    rx[0] = (channels[1] - 512.0f) * dsm2_scalefactor;
+    rx[1] = (channels[2] - 512.0f) * dsm2_scalefactor;
+    rx[2] = (channels[3] - 512.0f) * dsm2_scalefactor;
+    rx[3] = ((channels[0] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f;
 
-    	if (rx[3] > 1)
-    		rx[3] = 1;
-    	if (rx[3] < 0)
-    		rx[3] = 0;
-		#endif
+    if (rx[3] > 1)
+      rx[3] = 1;
+    if (rx[3] < 0)
+      rx[3] = 0;
+#endif
 
-      	rx_apply_expo();
+    rx_apply_expo();
 
-		#ifdef RX_DSMX_2048_UNIFIED
-      	aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0;        //1100 cutoff intentionally selected to force aux channels low if
-      	aux[AUX_CHANNEL_1] = (channels[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
-      	aux[AUX_CHANNEL_2] = (channels[6] > 1100) ? 1 : 0;
-      	aux[AUX_CHANNEL_3] = (channels[7] > 1100) ? 1 : 0;
-      	aux[AUX_CHANNEL_4] = (channels[8] > 1100) ? 1 : 0;
-      	aux[AUX_CHANNEL_5] = (channels[9] > 1100) ? 1 : 0;
-      	aux[AUX_CHANNEL_6] = (channels[10] > 1100) ? 1 : 0;
-      	aux[AUX_CHANNEL_7] = (channels[11] > 1100) ? 1 : 0;
-		#endif
+#ifdef RX_DSMX_2048_UNIFIED
+    aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0;        //1100 cutoff intentionally selected to force aux channels low if
+    aux[AUX_CHANNEL_1] = (channels[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
+    aux[AUX_CHANNEL_2] = (channels[6] > 1100) ? 1 : 0;
+    aux[AUX_CHANNEL_3] = (channels[7] > 1100) ? 1 : 0;
+    aux[AUX_CHANNEL_4] = (channels[8] > 1100) ? 1 : 0;
+    aux[AUX_CHANNEL_5] = (channels[9] > 1100) ? 1 : 0;
+    aux[AUX_CHANNEL_6] = (channels[10] > 1100) ? 1 : 0;
+    aux[AUX_CHANNEL_7] = (channels[11] > 1100) ? 1 : 0;
+#endif
 
-		#ifdef RX_DSM2_1024_TEMP
-      	aux[AUX_CHANNEL_0] = (channels[4] > 550) ? 1 : 0;        //550 cutoff intentionally selected to force aux channels low if
-      	aux[AUX_CHANNEL_1] = (channels[5] > 550) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
-      	aux[AUX_CHANNEL_2] = (channels[6] > 550) ? 1 : 0;
-		#endif
+#ifdef RX_DSM2_1024_TEMP
+    aux[AUX_CHANNEL_0] = (channels[4] > 550) ? 1 : 0;        //550 cutoff intentionally selected to force aux channels low if
+    aux[AUX_CHANNEL_1] = (channels[5] > 550) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
+    aux[AUX_CHANNEL_2] = (channels[6] > 550) ? 1 : 0;
+#endif
 
-      	//for failsafe_noframes
-      	time_lastframe = gettime();
-      	//for framerate calculation - totally unnessary but cool to see
-      	rx_framerate[2] = !(rx_framerate[2]);
-      	rx_framerate[rx_framerate[2]] = time_lastframe;
-      	rx_framerate_ticks = abs(rx_framerate[0] - rx_framerate[1]);
+    //for failsafe_noframes
+    time_lastframe = gettime();
+    //for framerate calculation - totally unnessary but cool to see
+    rx_framerate[2] = !(rx_framerate[2]);
+    rx_framerate[rx_framerate[2]] = time_lastframe;
+    rx_framerate_ticks = abs(rx_framerate[0] - rx_framerate[1]);
 
-      	frameStatus = 3; //We're done with this frame now.
+    frameStatus = 3; //We're done with this frame now.
 
-      	if (bind_safety > 120) { //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
-      		rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
-      		rxmode = !RXMODE_BIND; // restores normal led operation
-      		bind_safety = 121;     // reset counter so it doesnt wrap
-      	}
+    if (bind_safety > 120) { //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
+      rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
+      rxmode = !RXMODE_BIND; // restores normal led operation
+      bind_safety = 121;     // reset counter so it doesnt wrap
     }
+  }
 }
 
 
@@ -502,19 +500,20 @@ void processSBUS(void) {
     aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
     aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
     aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
-    //and here we have the rest of the sbus AUX channels/
-    /* Currently Silverware only has six AUX channels.
-        aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
-        aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
-        aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
-        aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
-    */
+    aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
+    aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
+    aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
+    aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
+    aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
+    aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
+
+
 
     time_lastframe = gettime();
 
-	  rx_framerate[2] = !(rx_framerate[2]);
-	  rx_framerate[rx_framerate[2]] = time_lastframe;
-	  rx_framerate_ticks = abs(rx_framerate[0] - rx_framerate[1]);
+    rx_framerate[2] = !(rx_framerate[2]);
+    rx_framerate[rx_framerate[2]] = time_lastframe;
+    rx_framerate_ticks = abs(rx_framerate[0] - rx_framerate[1]);
 
     if (bind_safety > 141) { //requires one second worth of good frames to come in before rx_ready safety can be toggled to 1
       rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
@@ -622,13 +621,13 @@ void processIBUS(void) {
       aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
       aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
       aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
-      //and here we have the rest of the iBus AUX channels/
-      /* Currently Silverware only has six AUX channels.
-        aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
-        aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
-        aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
-        aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
-      */
+      aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
+      aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
+      aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
+      aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
+      aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
+      aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
+
 
       time_lastframe = gettime();
       if (bind_safety > 141) { //requires one second worth of good frames to come in before rx_ready safety can be toggled to 1
@@ -674,7 +673,6 @@ void processFPORT(void) {
         counter--;
         frameLength--;
       } else if (rx_data[counter] == 0x5D) {
-        //data[counter - 1] = 0x7D;  It already is, this line is a reminder
         escapedChars++;
         tempEscapedChars++;
         counter--;
@@ -690,7 +688,6 @@ void processFPORT(void) {
   }
 
   if (frameStatus == 2) { //If it looks complete, process it further.
-
     CRCByte = 0;
     for (int x = 1; x < frameLength - 2; x++) {
       CRCByte = CRCByte + rx_data[x];
@@ -699,10 +696,8 @@ void processFPORT(void) {
     CRCByte = CRCByte << 8;
     CRCByte = CRCByte >> 8;
     if (CRCByte == 0x00FF) { //CRC is good, check Failsafe bit(s) and shove it into controls
-
       //FPORT uses SBUS style data, but starts further in the packet
-
-      if (rx_data[25] & (1 << 2)) //RX appears to set this bit when it knows it missed a frame. How does it know?
+      if (rx_data[25] & (1 << 2)) //RX appears to set this bit when it knows it missed a frame.
       {
         if (!time_siglost)
           time_siglost = gettime();
@@ -767,7 +762,6 @@ void processFPORT(void) {
         rx[0] = channels[0];
         rx[1] = channels[1];
         rx[2] = channels[3];
-        //I don't know what any of this really does.
         for (int i = 0; i < 3; i++) {
           rx[i] *= 0.00122026f;
         }
@@ -780,7 +774,6 @@ void processFPORT(void) {
         if (rx[3] < 0)
           rx[3] = 0;
 
-        //I also don't know why expo is being applied in RX code.
         rx_apply_expo();
 
         //Here we have the AUX channels Silverware supports
@@ -790,15 +783,14 @@ void processFPORT(void) {
         aux[AUX_CHANNEL_3] = (channels[7] > 993) ? 1 : 0;
         aux[AUX_CHANNEL_4] = (channels[8] > 993) ? 1 : 0;
         aux[AUX_CHANNEL_5] = (channels[9] > 993) ? 1 : 0;
-        //and here we have the rest of the FPORT/SBUS channels/
-        /* Currently Silverware only has six AUX channels.
-          aux[AUX_CHANNEL_6] = (channels[10] > 993) ? 1 : 0;
-          aux[AUX_CHANNEL_7] = (channels[11] > 993) ? 1 : 0;
-          aux[AUX_CHANNEL_8] = (channels[12] > 993) ? 1 : 0;
-          aux[AUX_CHANNEL_9] = (channels[13] > 993) ? 1 : 0;
-          aux[AUX_CHANNEL_9] = (channels[14] > 993) ? 1 : 0;
-          aux[AUX_CHANNEL_10] = (channels[15] > 993) ? 1 : 0;
-        */
+        aux[AUX_CHANNEL_6] = (channels[10] > 993) ? 1 : 0;
+        aux[AUX_CHANNEL_7] = (channels[11] > 993) ? 1 : 0;
+        aux[AUX_CHANNEL_8] = (channels[12] > 993) ? 1 : 0;
+        aux[AUX_CHANNEL_9] = (channels[13] > 993) ? 1 : 0;
+        aux[AUX_CHANNEL_10] = (channels[14] > 993) ? 1 : 0;
+        aux[AUX_CHANNEL_11] = (channels[15] > 993) ? 1 : 0;
+        
+
         if (channels[12] > 993) { // Channel 13 is now FPORT Debug Telemetry switch. Integrate this better sometime
           FPORTDebugTelemetry = true;
         } else {
@@ -826,9 +818,9 @@ void processFPORT(void) {
       frameStatus = 3; //We're done with this frame now.
       bind_safety++;   // It was a good frame, increment the good frame counter.
       telemetryCounter++; // Let the telemetry section know it's time to send.
-      
-    } 
-    else 
+
+    }
+    else
     { // if CRC fails, do this:
       //while(1){} Enable for debugging to lock the FC if CRC fails.
       frameStatus = 0; //Most likely reason for failed CRC is a frame that isn't fully here yet. No need to check again until a new byte comes in.
@@ -836,111 +828,129 @@ void processFPORT(void) {
   } // end frame received
 }
 
-void sendFPORTTelemetry(){
-
+void sendFPORTTelemetry() {
   if (telemetryCounter > 0 && rx_frame_position >= 40 && frameStatus == 3) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
-        telemetryCounter = 0;
-        frameStatus = 4;
+    telemetryCounter = 0;
+    frameStatus = 4;
 
-        uint16_t telemetryIDs[] = {
-    0x0210, //VFAS, use for vbat_comp
-    0x0211, //VFAS1, use for vbattfilt
-    //Everything past here is only active in FPORT-Debug-Telemetry mode
-    0x0900, //A3_FIRST_ID, used for cell count
-    0x0400, //T1, used for Axis Identifier
-    0x0700, //ACC-X, misused for PID-P
-    0x0710, //ACC-X, misused for PID-I
-    0x0720, //ACC-X, misused for PID-D
-  };
-  extern float lipo_cell_count; // For telemetry
+    uint16_t telemetryIDs[] = {
+      0x0210, //VFAS, use for vbat_comp
+      0x0211, //VFAS1, use for vbattfilt
+      //Everything past here is only active in FPORT-Debug-Telemetry mode
+      0x0900, //A3_FIRST_ID, used for cell count
+      0x0400, //T1, used for Axis Identifier
+      0x0700, //ACC-X, misused for PID-P
+      0x0710, //ACC-X, misused for PID-I
+      0x0720, //ACC-X, misused for PID-D
+    };
 
-        //Telemetry time! Let's have some variables
-        telemetryPacket[0] = 0x08; //Bytes 0 through 2 are static in this implementation
-        telemetryPacket[1] = 0x81;
-        telemetryPacket[2] = 0x10;
-        //Note: This does not properly escape 0x7E and 0x7D characters. Some telemetry packets will fail CRC on the other end. This will be fixed.
-        if (telemetryPosition == 0) {                                //vbat_comp
-          telemetryPacket[3] = telemetryIDs[telemetryPosition];      //0x10;
-          telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8; //0x02;
-          telemetryPacket[5] = (int)(vbatt_comp * 100);
-          telemetryPacket[6] = (int)(vbatt_comp * 100) >> 8;
-          telemetryPacket[7] = 0x00;
-          telemetryPacket[8] = 0x00;
-        } else if (telemetryPosition == 1) {                         //vbattfilt
-          telemetryPacket[3] = telemetryIDs[telemetryPosition];      //x11;
-          telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8; //0x02;
-          telemetryPacket[5] = (int)(vbattfilt * 100);
-          telemetryPacket[6] = (int)(vbattfilt * 100) >> 8;
-          telemetryPacket[7] = 0x00;
-          telemetryPacket[8] = 0x00;
+    extern float lipo_cell_count; // For telemetry
+    //Telemetry time! Let's have some variables
+    telemetryPacket[0] = 0x08; //Bytes 0 through 2 are static in this implementation
+    telemetryPacket[1] = 0x81;
+    telemetryPacket[2] = 0x10;
+    if (telemetryPosition == 0) {                                //vbat_comp
+      telemetryPacket[3] = telemetryIDs[telemetryPosition];      //0x10;
+      telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8; //0x02;
+      telemetryPacket[5] = (int)(vbatt_comp * 100);
+      telemetryPacket[6] = (int)(vbatt_comp * 100) >> 8;
+      telemetryPacket[7] = 0x00;
+      telemetryPacket[8] = 0x00;
+    } else if (telemetryPosition == 1) {                         //vbattfilt
+      telemetryPacket[3] = telemetryIDs[telemetryPosition];      //x11;
+      telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8; //0x02;
+      telemetryPacket[5] = (int)(vbattfilt * 100);
+      telemetryPacket[6] = (int)(vbattfilt * 100) >> 8;
+      telemetryPacket[7] = 0x00;
+      telemetryPacket[8] = 0x00;
+    } else if (telemetryPosition == 2) { //Cell count
+      telemetryPacket[3] = telemetryIDs[telemetryPosition];
+      telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
+      telemetryPacket[5] = (int)(lipo_cell_count * 100);
+      telemetryPacket[6] = (int)(lipo_cell_count * 100) >> 8;
+      telemetryPacket[7] = 0x00;
+      telemetryPacket[8] = 0x00;
+    } else if (telemetryPosition == 3) {                         //PID axis(hundreds column) and P/I/D (ones column) being adjusted currently
+      uint16_t axisAndPidID = (current_pid_axis + 1) * 100;      //Adding one so there's always a value. 1 for Pitch (or Pitch/roll), 2 for Roll, 3 for Yaw
+      axisAndPidID += current_pid_term + 1;                      //Adding one here too, humans don't deal well with counting starting at zero for this sort of thing
+      telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8; // Adding one to the above makes it match the LED flash codes too
+      telemetryPacket[5] = (int)(axisAndPidID);
+      telemetryPacket[6] = (int)(axisAndPidID) >> 8;
+      telemetryPacket[7] = 0x00;
+      telemetryPacket[8] = 0x00;
+    } else if (telemetryPosition == 4) { //PID-P
+      telemetryPacket[3] = telemetryIDs[telemetryPosition];
+      telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
+      telemetryPacket[5] = (int)(profile_current_pid_rates()->kp.axis[current_pid_axis] * 10000);
+      telemetryPacket[6] = (int)(profile_current_pid_rates()->kp.axis[current_pid_axis] * 10000) >> 8;
+      telemetryPacket[7] = 0x00;
+      telemetryPacket[8] = 0x00;
+    } else if (telemetryPosition == 5) { //PID-I
+      telemetryPacket[3] = telemetryIDs[telemetryPosition];
+      telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
+      telemetryPacket[5] = (int)(profile_current_pid_rates()->ki.axis[current_pid_axis] * 1000);
+      telemetryPacket[6] = (int)(profile_current_pid_rates()->ki.axis[current_pid_axis] * 1000) >> 8;
+      telemetryPacket[7] = 0x00;
+      telemetryPacket[8] = 0x00;
+    } else if (telemetryPosition == 6) { //PID-D
+      telemetryPacket[3] = telemetryIDs[telemetryPosition];
+      telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
+      telemetryPacket[5] = (int)(profile_current_pid_rates()->kd.axis[current_pid_axis] * 1000);
+      telemetryPacket[6] = (int)(profile_current_pid_rates()->kd.axis[current_pid_axis] * 1000) >> 8;
+      telemetryPacket[7] = 0x00;
+      telemetryPacket[8] = 0x00;
+    }
+
+
+// This *should* properly escape 0x7D and 0x7E characters. It doesn't.
+    telemetryOffset = 0;
+    for (uint8_t i = 8; i > 4; i--) {
+      if (telemetryPacket[i] == 0x7D || telemetryPacket[i] == 0x7E) {
+        for (uint8_t x = 8; x >= i; x--) {
+          telemetryPacket[x + 1] = telemetryPacket[x];
         }
-
-        else if (telemetryPosition == 2) { //Cell count
-          telemetryPacket[3] = telemetryIDs[telemetryPosition];
-          telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-          telemetryPacket[5] = (int)(lipo_cell_count * 100);
-          telemetryPacket[6] = (int)(lipo_cell_count * 100) >> 8;
-          telemetryPacket[7] = 0x00;
-          telemetryPacket[8] = 0x00;
-        } else if (telemetryPosition == 3) {                         //PID axis(hundreds column) and P/I/D (ones column) being adjusted currently
-          uint16_t axisAndPidID = (current_pid_axis + 1) * 100;      //Adding one so there's always a value. 1 for Pitch (or Pitch/roll), 2 for Roll, 3 for Yaw
-          axisAndPidID += current_pid_term + 1;                      //Adding one here too, humans don't deal well with counting starting at zero for this sort of thing
-          telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8; // Adding one to the above makes it match the LED flash codes too
-          telemetryPacket[5] = (int)(axisAndPidID);
-          telemetryPacket[6] = (int)(axisAndPidID) >> 8;
-          telemetryPacket[7] = 0x00;
-          telemetryPacket[8] = 0x00;
-        } else if (telemetryPosition == 4) { //PID-P
-          telemetryPacket[3] = telemetryIDs[telemetryPosition];
-          telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-          telemetryPacket[5] = (int)(profile_current_pid_rates()->kp.axis[current_pid_axis] * 10000);
-          telemetryPacket[6] = (int)(profile_current_pid_rates()->kp.axis[current_pid_axis] * 10000) >> 8;
-          telemetryPacket[7] = 0x00;
-          telemetryPacket[8] = 0x00;
-        } else if (telemetryPosition == 5) { //PID-I
-          telemetryPacket[3] = telemetryIDs[telemetryPosition];
-          telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-          telemetryPacket[5] = (int)(profile_current_pid_rates()->ki.axis[current_pid_axis] * 1000);
-          telemetryPacket[6] = (int)(profile_current_pid_rates()->ki.axis[current_pid_axis] * 1000) >> 8;
-          telemetryPacket[7] = 0x00;
-          telemetryPacket[8] = 0x00;
-        } else if (telemetryPosition == 6) { //PID-D
-          telemetryPacket[3] = telemetryIDs[telemetryPosition];
-          telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-          telemetryPacket[5] = (int)(profile_current_pid_rates()->kd.axis[current_pid_axis] * 1000);
-          telemetryPacket[6] = (int)(profile_current_pid_rates()->kd.axis[current_pid_axis] * 1000) >> 8;
-          telemetryPacket[7] = 0x00;
-          telemetryPacket[8] = 0x00;
-        }
-
-        uint16_t teleCRC = 0;
-        //Calculate CRC for packet. This function does not support escaped characters.
-        for (int x = 0; x < 9; x++) {
-          teleCRC = teleCRC + telemetryPacket[x];
-        }
-        teleCRC = teleCRC + (teleCRC >> 8);
-        teleCRC = 0xff - teleCRC;
-        teleCRC = teleCRC << 8;
-        teleCRC = teleCRC >> 8;
-        telemetryPacket[9] = teleCRC;      //0x34;
-        for (uint8_t x = 0; x < 10; x++) { //Shove the packet out the UART. This also doesn't support escaped characters
-          while (USART_GetFlagStatus(SERIAL_RX_USART, USART_FLAG_TXE) == RESET);
-          USART_SendData(SERIAL_RX_USART, telemetryPacket[x]);
-        } //That's it, telemetry sent
-        telemetryPosition++;
-        if (FPORTDebugTelemetry) {
-          if (telemetryPosition >= sizeof(telemetryIDs) / 2) // 2 byte ints, so this should give the number of entries. It just incremented, which takes care of the count with 0 or 1
-          {
-            telemetryPosition = 0;
-          }
+        telemetryPacket[i] = 0x7D;
+        if (telemetryPacket[i + 1] == 0x7D) {
+          telemetryPacket[i + 1] = 0x5D;
         }
         else {
-          if (telemetryPosition == 2) {
-            telemetryPosition = 0;
-          }
+          telemetryPacket[i + 1] = 0x5E;
         }
+        telemetryOffset++;
       }
-      
+    }
+    telemetryPacket[0] += telemetryOffset;
+
+
+
+    uint16_t teleCRC = 0;
+    //Calculate CRC for packet. This function does not support escaped characters.
+    for (int x = 0; x < 9 + telemetryOffset; x++) {
+      teleCRC = teleCRC + telemetryPacket[x];
+    }
+    teleCRC = teleCRC + (teleCRC >> 8);
+    teleCRC = 0xff - teleCRC;
+    teleCRC = teleCRC << 8;
+    teleCRC = teleCRC >> 8;
+    telemetryPacket[9 + telemetryOffset] = teleCRC;    //0x34;
+    for (uint8_t x = 0; x < 10 + telemetryOffset; x++) { //Shove the packet out the UART. This *should* support escaped characters, but it doesn't work.
+      while (USART_GetFlagStatus(SERIAL_RX_USART, USART_FLAG_TXE) == RESET);
+      USART_SendData(SERIAL_RX_USART, telemetryPacket[x]);
+    } //That's it, telemetry sent
+    telemetryPosition++;
+    if (FPORTDebugTelemetry) {
+      if (telemetryPosition >= sizeof(telemetryIDs) / 2) // 2 byte ints, so this should give the number of entries. It just incremented, which takes care of the count with 0 or 1
+      {
+        telemetryPosition = 0;
+      }
+    }
+    else {
+      if (telemetryPosition == 2) {
+        telemetryPosition = 0;
+      }
+    }
+  }
+
 }
 
 
@@ -986,9 +996,9 @@ void findprotocol(void) {
       {
         case 1: // DSM
           if (rx_buffer[0] == 0x00 && rx_buffer[1] <= 0x04 && rx_buffer[2] != 0x00) { // allow up to 4 fades or detection will fail.  Some dsm rx will log a fade or two during binding
-        	  processDSMX();
-        	  if (bind_safety > 0)
-        		  RXProtocol = protocolToCheck;
+            processDSMX();
+            if (bind_safety > 0)
+              RXProtocol = protocolToCheck;
           }
         case 2: // SBUS
           if (rx_buffer[0] == 0x0F) {
@@ -1014,7 +1024,6 @@ void findprotocol(void) {
           frameStatus = 3; //Whatever we got, it didn't make sense. Mark the frame as Checked and start over.
           break;
       }
-      //if(rx_buffer[frameStart])
     }
 
     protocolToCheck++;
@@ -1058,19 +1067,19 @@ void rx_spektrum_bind(void) {
     }
   }
   /*  bindtool to be evaluated later
-  GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.GPIO_Pin = SERIAL_RX_SPEKBIND_BINDTOOL_PIN;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure);
+    GPIO_InitTypeDef GPIO_InitStructure;
+    GPIO_InitStructure.GPIO_Pin = SERIAL_RX_SPEKBIND_BINDTOOL_PIN;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure);
 
-  // RX line, set high
-  GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
-  // Bind window is around 20-140ms after powerup
-  delay(60000);
+    // RX line, set high
+    GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
+    // Bind window is around 20-140ms after powerup
+    delay(60000);
 
-  for (uint8_t i = 0; i < 9; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
+    for (uint8_t i = 0; i < 9; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
     // RX line, drive low for 120us
     GPIO_ResetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
     delay(120);
@@ -1078,7 +1087,7 @@ void rx_spektrum_bind(void) {
     // RX line, drive high for 120us
     GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
     delay(120);
-  }*/
+    }*/
 }
 
 
