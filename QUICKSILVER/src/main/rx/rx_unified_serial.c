@@ -855,9 +855,6 @@ void sendFPORTTelemetry(){
   extern float lipo_cell_count; // For telemetry
 
         //Telemetry time! Let's have some variables
-        //uint8_t telemetryPacket[10]; //Redefining this every pass is (probably) faster than zeroing it.
-        //uint16_t teleCRC = 0; //Really, really want to start with a zerod CRC!
-
         telemetryPacket[0] = 0x08; //Bytes 0 through 2 are static in this implementation
         telemetryPacket[1] = 0x81;
         telemetryPacket[2] = 0x10;
@@ -942,9 +939,6 @@ void sendFPORTTelemetry(){
             telemetryPosition = 0;
           }
         }
-      frameStatus = 4;
-      rx_frame_position = 0;
-      frameStatus = 4;
       }
       
 }
