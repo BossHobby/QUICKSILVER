@@ -17,12 +17,12 @@
 // time to correct gyro readings using the accelerometer
 // 1-4 are generally good
 #define FASTFILTER 0.05 //onground filter
-#define PREFILTER 0.2   //in_air prefilter (this can be commented out)
-#define FILTERTIME 1.0  //in_air fusion filter
+//#define PREFILTER 0.2   //in_air prefilter (this can be commented out)
+#define FILTERTIME 2.0 //in_air fusion filter
 
 // accel magnitude limits for drift correction
-#define ACC_MIN 0.7f
-#define ACC_MAX 1.3f
+#define ACC_MIN 0.9f
+#define ACC_MAX 1.1f
 
 float GEstG[3] = {0, 0, ACC_1G};
 float attitude[3];
