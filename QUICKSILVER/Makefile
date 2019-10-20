@@ -67,7 +67,6 @@ $(TARGET): $(BUILD_DIR)/target $(BUILD_DIR)/$(BINARY).bin $(BUILD_DIR)/$(BINARY)
 	@echo "built $(BINARY) with gcc $(GCC_VERSION)"
 	
 $(BUILD_DIR)/target: FORCE
-	@sleep 0.2s
 	@mkdir -p $(BUILD_DIR)
 	@echo "Setting target to $(TARGET)"
 	@echo "$(TARGET)" > $(BUILD_DIR)/target.tmp

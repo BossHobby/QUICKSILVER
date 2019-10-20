@@ -22,7 +22,7 @@
 
 //*****************************************
 //*****************************************
-#define RX_FRAME_INTERVAL_TRIGGER_TICKS 105000		//*******This is the tick threshold for triggering a new frame to re-index to position 0 in the ISR
+#define RX_FRAME_INTERVAL_TRIGGER_TICKS  (3000 * (TICK_CLOCK_FREQ_HZ / 1000000))		//This is the microsecond threshold for triggering a new frame to re-index to position 0 in the ISR
 //*****************************************
 //*****************************************
 #define DSM_SCALE_PERCENT 147		//this might stay somewhere or be replaced with wizard scaling
@@ -60,11 +60,13 @@ int rx_ready = 0;
 //uint32 ticksEnd = 0;
 //uint32 ticksLongest = 0;
 
+
+
 uint8_t RXProtocol = 0;
 #define RX_BUFF_SIZE 68
 uint8_t rx_buffer[RX_BUFF_SIZE];
 uint8_t rx_data[RX_BUFF_SIZE]; //A place to put the RX frame so nothing can get overwritten during processing.  //reduce size?
-uint8_t bytesSinceStart = 0;
+uint8_t rx_frame_position = 0;
 int frameStatus = -1;
 uint8_t telemetryCounter = 0;
 uint8_t expectedFrameLength = 10;
@@ -113,14 +115,13 @@ uint8_t telemetryPosition = 0; //This iterates through the above, you can only s
 uint8_t teleCounter = 0;
 
 
-
 void RX_USART_ISR(void) {
 	//static uint32_t rx_framerate[3]
-  static int8_t rx_frame_position = 0;
+  unsigned long rx_byte_interval;
   //rx_buffer[rx_frame_position++] = USART_ReceiveData(SERIAL_RX_USART);
   unsigned long maxticks = SysTick->LOAD;
   unsigned long ticks = SysTick->VAL;
-  unsigned long rx_byte_interval;
+  
   static unsigned long lastticks;
   if (ticks < lastticks)
 	  rx_byte_interval = lastticks - ticks;
@@ -137,7 +138,6 @@ void RX_USART_ISR(void) {
 
   if (rx_byte_interval > RX_FRAME_INTERVAL_TRIGGER_TICKS) {
 	  rx_frame_position = 0;
-	  bytesSinceStart = 1;
 	  frameStatus = 0;
   }
 
@@ -145,7 +145,6 @@ void RX_USART_ISR(void) {
   if (rx_frame_position >= expectedFrameLength && frameStatus == 0) {
 	  frameStatus = 1;
   }
-  bytesSinceStart++;
 
   rx_frame_position %= (RX_BUFF_SIZE);
 }
@@ -178,15 +177,15 @@ void RX_USART_ISR(void) {
     USART_ClearFlag(USART1, USART_FLAG_ORE);
   }
 
-  bytesSinceStart++;
+  rx_frame_position++;
   if (rx_time[rx_end] > 9000) { //Long delay since last byte. Probably a new frame, or we missed some bytes. Either way, start over.
     frameStart = rx_end;
-    bytesSinceStart = 1;
+    rx_frame_position = 1;
     frameStatus = 0; //0 is "frame in progress or first frame not arrived",
     //1 is "frame ready(ish) to be read, or at least checked",
     //2 is "Frame looks complete, CRC it and read controls",
   }                  //3 is "frame already complete and processed, do nothing (or send telemetry if enabled)"
-  else if (bytesSinceStart >= expectedFrameLength && frameStatus == 0) { //It's long enough to be a full frame, and we're waiting for a full frame. Check it!
+  else if (rx_frame_position >= expectedFrameLength && frameStatus == 0) { //It's long enough to be a full frame, and we're waiting for a full frame. Check it!
     frameStatus = 1;
   }
 
@@ -663,7 +662,7 @@ void processFPORT(void) {
   uint8_t frameLength = 0;
   static uint8_t escapedChars = 0;
   uint8_t tempEscapedChars = 0;
-  for (uint8_t counter = 0; counter <= bytesSinceStart; counter++) {                     //First up, get the data out of the RX buffer and into somewhere safe
+  for (uint8_t counter = 0; counter <= rx_frame_position; counter++) {                     //First up, get the data out of the RX buffer and into somewhere safe
     rx_data[counter] = rx_buffer[(counter + tempEscapedChars) % RX_BUFF_SIZE]; //We're going to be messing with the data and it wouldn't do to destroy a packet
     frameLength++;
 
@@ -839,8 +838,9 @@ void processFPORT(void) {
 
 void sendFPORTTelemetry(){
 
-  if (telemetryCounter > 0 && bytesSinceStart >= 40) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
+  if (telemetryCounter > 0 && rx_frame_position >= 40 && frameStatus == 3) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
         telemetryCounter = 0;
+        frameStatus = 4;
 
         uint16_t telemetryIDs[] = {
     0x0210, //VFAS, use for vbat_comp
@@ -943,7 +943,8 @@ void sendFPORTTelemetry(){
           }
         }
       frameStatus = 4;
-      bytesSinceStart = 0;
+      rx_frame_position = 0;
+      frameStatus = 4;
       }
       
 }
