@@ -32,7 +32,7 @@
 #define GYRO_ID_2 0x73
 #define GYRO_ID_3 0x71
 //#define GYRO_ID_4 0x72
-#define SENSOR_ROTATE_90_CW
+#define SENSOR_ROTATE_90_CCW
 
 // SPI PINS DEFINITONS & RADIO
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)

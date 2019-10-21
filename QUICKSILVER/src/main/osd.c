@@ -327,21 +327,6 @@ void osd_clear_screen(void){
 	lastlooptime = gettime();
 }
 
-// this may be able to go away soon
-uint8_t user_selection(uint8_t element, uint8_t total) {
- // if (osd_cursor != element) {
-    if (osd_cursor < 1)
-      osd_cursor = 1;
-    if (osd_cursor > total)
-      osd_cursor = total;
-  //}
-  if ((osd_cursor == element && osd_select == 0) || element == 0) {
-    return INVERT;
-  } else {
-    return TEXT;
-  }
-}
-
 uint8_t user_select(uint8_t active_elements, uint8_t total_elements){
     if (osd_cursor < 1) osd_cursor = 1;
     if (osd_cursor > active_elements) osd_cursor = active_elements;
@@ -570,34 +555,6 @@ void print_osd_callsign_adjustable (uint8_t string_element_qty, uint8_t data_ele
 	osd_menu_phase++;
 }
 
-/*
-uint8_t print_osd_callsign_buggy(void){
-	static uint8_t index = 0;
-	static uint8_t callsign_length = 0;
-
-	if(index < callsign_length && callsign_length > 0){
-		uint8_t character[] = {(osd_element[callsign_shift_index[index][0]] >> callsign_shift_index[index][1]) & 0xFF};
-		osd_print_data( character, 1, decode_attribute(*callsign1), decode_positionx(*callsign1) + index, decode_positiony(*callsign1));
-		index++;
-		return 0;
-	}
-	if (index == callsign_length){
-		for (uint8_t i = 19; i >= 0; i--){
-			uint8_t last_user_input = (osd_element[callsign_shift_index[i][0]] >> callsign_shift_index[i][1]) & 0xFF;
-			if (last_user_input != 0x3F){
-				callsign_length = i + 1;
-				index = 0;
-				return 0;
-			}
-		}
-		callsign_length = 0;	//for loop found callsign is all spaces so set length to 0 and return
-		index = 0;
-		return 1;
-	}
-	return 1;
-}
-*/
-
 uint8_t print_osd_callsign(void){
 	static uint8_t index = 0;
 	static uint8_t callsign_length = 0;
@@ -644,6 +601,69 @@ uint8_t print_osd_flightmode(void){
 		return 0;
 	}
 	index = 0;
+	return 1;
+}
+
+uint8_t print_osd_system_status(void){
+	const char system_status_labels[8][21] = { {"               "},{" **DISARMED**  "},{"  **ARMED**    "},{"**FAILSAFE**"},{"THROTTLE SAFETY"},{" ARMING SAFETY "},{" STICK BOOST 1 "},{" STICK BOOST 2 "}, };
+	extern int armed_state;
+	static uint8_t last_armed_state;
+	static uint8_t armed_state_printing;
+//	extern int failsafe;
+//	static uint8_t last_failsafe;
+//	extern int arming_release;
+//	static uint8_t last_arming_release;
+//	extern int binding_while_armed;
+//	static uint8_t last_binding_while_armed;
+	static uint8_t index = 0;
+	static uint8_t counter;
+	if(armed_state != last_armed_state || armed_state_printing){
+		last_armed_state = armed_state;
+		if (armed_state_printing == 2){
+			counter++;
+			if (counter > 25){
+				uint8_t character[] = {system_status_labels[0][index]};
+				osd_print_data( character, 1, decode_attribute(*arm_disarm), decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+				index++;
+				if (index < 15){
+					return 0;
+				}else{
+					armed_state_printing = 0;
+					counter = 0;
+					index = 0;
+					return 1;
+				}
+			}
+		}
+		if (armed_state == 0) {	// || armed_state_printing == 1
+			uint8_t character[] = {system_status_labels[1][index]};
+			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			index++;
+			if (index < 15){
+				armed_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				armed_state_printing = 2;
+				return 1;
+			}
+		}
+		if (armed_state == 1) {	// || armed_state_printing == 1
+			uint8_t character[] = {system_status_labels[2][index]};
+			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			index++;
+			if (index < 15){
+				armed_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				armed_state_printing = 2;
+				return 1;
+			}
+		}
+
+	}
+
 	return 1;
 }
 
@@ -810,6 +830,7 @@ void osd_display(void) {
   extern float vbatt_comp;
   extern float lipo_cell_count;
   extern int lowbatt;
+  extern float throttle;
 
   switch (osd_display_phase) //phase starts at 2, RRR gesture subtracts 1 to enter the menu, RRR again or DDD subtracts 1 to clear the screen and return to regular display
   {
@@ -858,7 +879,6 @@ void osd_display(void) {
 	  switch (osd_display_element) {
 	  case 0:
 		  if (decode_active_element(*callsign1)){
-			  //osd_print("ALIENWHOOP", decode_attribute(*callsign1), decode_positionx(*callsign1), decode_positiony(*callsign1)); //todo - needs to be pulled from the new register flash method
 			  uint8_t callsign_done = print_osd_callsign();
 			  if(callsign_done) osd_display_element++;
 		  }else{
@@ -867,7 +887,7 @@ void osd_display(void) {
 		  break; //screen has been displayed for this loop - break out of display function
 
 	  case 1:
-		  if ((*fuelgauge_volts & 0x01) == 1) {
+		  if (decode_active_element(*fuelgauge_volts)) {
 			  uint8_t osd_fuelgauge_volts[5];
 			  fast_fprint(osd_fuelgauge_volts, 4, vbatt_comp, 1);
 			  osd_fuelgauge_volts[4] = 'V';
@@ -877,7 +897,7 @@ void osd_display(void) {
 		  break;
 
 	  case 2:
-		  if ((*fuelgauge_volts & 0x01) == 1) {
+		  if (decode_active_element(*fuelgauge_volts)) {
 			  if (lowbatt != last_lowbatt_state) {
 				  uint8_t osd_cellcount[2] = {lipo_cell_count + 48, 'S'};
 				  if (!lowbatt) {
@@ -892,7 +912,7 @@ void osd_display(void) {
 		  break;
 
 	  case 3:
-		  if ((*filtered_volts & 0x01) == 1) {
+		  if (decode_active_element(*filtered_volts)) {
 			  uint8_t osd_filtered_volts[5];
 			  fast_fprint(osd_filtered_volts, 4, vbattfilt_corr, 1);
 			  osd_filtered_volts[4] = 'V';
@@ -902,7 +922,7 @@ void osd_display(void) {
 		  break;
 
 	  case 4:
-		  if ((*filtered_volts & 0x01) == 1) {
+		  if (decode_active_element(*filtered_volts)) {
 			  if (lowbatt != last_lowbatt_state2) {
 				  uint8_t osd_cellcount2[2] = {lipo_cell_count + 48, 'S'};
 				  if (!lowbatt) {
@@ -917,7 +937,7 @@ void osd_display(void) {
 		  break;
 
 	  case 5:
-		  if ((*exact_volts & 0x01) == 1) {
+		  if (decode_active_element(*exact_volts)) {
 			  uint8_t osd_exact_volts[5];
 			  fast_fprint(osd_exact_volts, 4, vbattfilt, 1);
 			  osd_exact_volts[4] = 'V';
@@ -927,7 +947,7 @@ void osd_display(void) {
 		  break;
 
 	  case 6:
-		  if ((*exact_volts & 0x01) == 1) {
+		  if (decode_active_element(*exact_volts)) {
 			  if (lowbatt != last_lowbatt_state3) {
 				  uint8_t osd_cellcount3[2] = {lipo_cell_count + 48, 'S'};
 				  if (!lowbatt) {
@@ -942,7 +962,7 @@ void osd_display(void) {
 		  break;
 
 	  case 7:
-		  if ((*stopwatch & 0x01) == 1) {
+		  if (decode_active_element(*stopwatch)) {
 			  uint8_t osd_stopwatch[5];
 			  fast_fprint(osd_stopwatch, 5, debug.totaltime, 0);
 			  osd_stopwatch[4] = 112; //Z+23 is fly hr
@@ -960,7 +980,26 @@ void osd_display(void) {
 		  }
 		  break;
 
-	  case 9:  //end of regular display - display_trigger counter sticks here till it wraps
+	  case 9:
+		  if (decode_active_element(*osd_throttle)){
+			  uint8_t osd_throttle_value[5];
+			  fast_fprint(osd_throttle_value, 4, (throttle * 100.0f), 0);
+			  osd_throttle_value[3] = 4;
+			  osd_print_data(osd_throttle_value, 5, decode_attribute(*osd_throttle), decode_positionx(*osd_throttle), decode_positiony(*osd_throttle));
+		  }
+		  osd_display_element++;
+		  break;
+
+	  case 10:
+		  if (decode_active_element(*arm_disarm)){
+			  uint8_t system_status_done = print_osd_system_status();
+			  if(system_status_done) osd_display_element++;
+		  }else{
+			  osd_display_element++;
+		  }
+		  break;
+
+	  case 11:  //end of regular display - display_trigger counter sticks here till it wraps
 		  display_trigger++;
 		  if (display_trigger == 0) osd_display_element = 1;
 		  break;
