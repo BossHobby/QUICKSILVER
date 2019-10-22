@@ -70,6 +70,17 @@ typedef struct {
   MEMBER(ki, vector_t)   \
   MEMBER(kd, vector_t)
 
+typedef struct {
+  uint32_t index;
+  const char *name;
+  pid_rate_t rate;
+} pid_rate_preset_t;
+
+#define PID_RATE_PRESET_MEMBERS \
+  MEMBER(index, uint32)         \
+  STR_MEMBER(name)              \
+  MEMBER(rate, pid_rate_t)
+
 typedef enum {
   PID_PROFILE_1,
   PID_PROFILE_2,

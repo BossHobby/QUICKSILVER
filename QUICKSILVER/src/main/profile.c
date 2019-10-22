@@ -7,6 +7,152 @@
 // Default values for our profile
 // ignore -Wmissing-braces here, gcc bug with nested structs
 #pragma GCC diagnostic ignored "-Wmissing-braces"
+
+#define DEFAULT_PID_RATE_PRESET 3
+
+const pid_rate_preset_t pid_rate_presets[] = {
+    //Brushless Pids
+    {
+        .index = 0,
+        .name = "TWR <8:1 2",
+        .rate = {
+            .kp = {14.5e-2, 14.5e-2, 2.5e-1},
+            .ki = {14.0e-1, 14.0e-1, 14.0e-1},
+            .kd = {4.5e-1, 4.5e-1, 0.5e-1},
+        },
+    },
+
+    {
+        .index = 1,
+        .name = "TWR 8:1 3",
+        .rate = {
+            .kp = {12.5e-2, 14.5e-2, 25.0e-2},
+            .ki = {14.0e-1, 14.0e-1, 14.0e-1},
+            .kd = {2.3e-1, 3.3e-1, 0.5e-1},
+        },
+    },
+
+    {
+        .index = 2,
+        .name = "TWR 12:1 4",
+        .rate = {
+            .kp = {9.5e-2, 12.5e-2, 20.0e-2},
+            .ki = {14.0e-1, 14.0e-1, 14.0e-1},
+            .kd = {2.3e-1, 3.3e-1, 0.5e-1},
+        },
+    },
+
+    {
+        .index = 3,
+        .name = "TWR 14:1 5",
+        .rate = {
+            .kp = {7.5e-2, 7.5e-2, 18.0e-2},
+            .ki = {14.0e-1, 14.0e-1, 14.0e-1},
+            .kd = {2.3e-1, 2.3e-1, 0.4e-1},
+        },
+    },
+
+    {
+        .index = 4,
+        .name = "65mm 1s brushless whoop",
+        .rate = {
+            .kp = {14e-2, 14e-2, 2.5e-1},
+            .ki = {14.0e-1, 14.0e-1, 14.0e-1},
+            .kd = {5.6e-1, 5.6e-1, 0.5e-1},
+        },
+    },
+
+    {
+        .index = 5,
+        .name = "65mm 2s brushless whoop",
+        .rate = {
+            .kp = {10.5e-2, 10.5e-2, 2.15e-1},
+            .ki = {14.0e-1, 14.0e-1, 14.0e-1},
+            .kd = {4.8e-1, 4.8e-1, 0.5e-1},
+        },
+    },
+
+    {
+        .index = 6,
+        .name = "6mm & 7mm Abduction Pids for whoops (Team Alienwhoop)",
+        //  - set filtering ALIENWHOOP_ZERO_FILTERING
+        .rate = {
+            .kp = {21.5e-2, 21.5e-2, 105.0e-2},
+            .ki = {14e-1, 15e-1, 15e-1},
+            .kd = {7.4e-1, 7.4e-1, 5.5e-1},
+        },
+    },
+
+    {
+        .index = 7,
+        .name = "5in Chameleon, T - Motor 2306 2600kV HQ 5x4.3x3 - Bobnova edition",
+        .rate = {
+            .kp = {6.5e-2, 7.5e-2, 15.0e-2},
+            .ki = {12.0e-1, 12.0e-1, 12.0e-1},
+            .kd = {1.7e-1, 2.4e-1, 0.3e-1},
+        },
+    },
+
+    {
+        .index = 8,
+        .name = "BOSS 7 with 716 motors and 46mm Props",
+        // set filtering to BETA_FILTERING and adjust pass 1 and pass 2 for KALMAN_GYRO both to 70hz, set DTERM_LPF_2ND_HZ to 120hz, disable motor filtering
+        // set TORQUE_BOOST to 1.0, and add #define THROTTLE_TRANSIENT_COMPENSATION and #define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 4.0
+        .rate = {
+            .kp = {19.5e-2, 19.5e-2, 95.0e-2},
+            .ki = {12e-1, 12e-1, 8e-1},
+            .kd = {10.7e-1, 10.7e-1, 2.0e-1},
+        },
+    },
+
+    //***************  The following tunes beyond this point are all pretty dated.  I have not built/flown/tuned any of these in a long time and there have been alot of changes.
+    //***************  If your build best matches some of the specs below ... consider the tune a starting point and give me feedback/adjust as necessary.
+
+    {
+        .index = 9,
+        .name = "(OLD) 6mm experimental AwesomeSauce 20000kv Pids (Team Alienwhoop)",
+        //  - set filtering ALIENWHOOP_ZERO_FILTERING
+        .rate = {
+            .kp = {25.5e-2, 25.5e-2, 11.5e-1},
+            .ki = {20.5e-1, 20.5e-1, 16e-1},
+            .kd = {11.4e-1, 11.4e-1, 4.9e-1},
+        },
+    },
+
+    {
+        .index = 10,
+        .name = "(OLD) BOSS 6 & 7 - 615 and 716 motors, hm830 46mm props",
+        //   - set filtering to VERY_STRONG_FILTERING
+        .rate = {
+            .kp = {24.5e-2, 24.5e-2, 9.5e-1},
+            .ki = {12e-1, 12e-1, 8e-1},
+            .kd = {14.1e-1, 14.1e-1, 7e-1},
+        },
+    },
+
+    {
+        .index = 11,
+        .name = "(OLD) BOSS 8.0 - 816 motors, kingkong 66mm props",
+        //   - set filtering to WEAK_FILTERING
+        .rate = {
+            .kp = {26.7e-2, 26.7e-2, 9.5e-1},
+            .ki = {12e-1, 12e-1, 8e-1},
+            .kd = {16.2e-1, 16.2e-1, 7e-1},
+        },
+    },
+
+    {
+        .index = 12,
+        .name = "(OLD) BOSS 8.5 - 820 motors, kingkong 66mm props",
+        //   - set filtering to STRONG_FILTERING
+        .rate = {
+            .kp = {29.5e-2, 29.5e-2, 11.5e-1},
+            .ki = {12e-1, 12e-1, 12.0e-1},
+            .kd = {17.5e-1, 17.5e-1, 7e-1},
+        },
+    },
+};
+
 const profile_t default_profile = {
     .meta = {
         .name = "default",
@@ -93,78 +239,7 @@ const profile_t default_profile = {
     //************************************PIDS****************************************
     .pid = {
         .pid_profile = PID_PROFILE_1,
-        .pid_rates = {{
-            //Brushless Pids
-            //65mm burshless whoop
-            //.kp = {12e-2, 12e-2, 2.5e-1},
-            //.ki = {14.0e-1, 14.0e-1, 14.0e-1},
-            //.kd = {4.5e-1, 4.5e-1, 0.5e-1},
-
-            //TWR <8:1 2"
-            //.kp = {14.5e-2 , 14.5e-2  , 2.5e-1 },
-            //.ki = { 14.0e-1  , 14.0e-1 , 14.0e-1 },
-            //.kd = { 4.5e-1 , 4.5e-1  , 0.5e-1 },
-
-            //TWR 8:1 3"
-            //.kp = {12.5e-2 , 14.5e-2  , 25.0e-2 },
-            //.ki = { 14.0e-1  , 14.0e-1 , 14.0e-1 },
-            //.kd = { 2.3e-1 , 3.3e-1  , 0.5e-1 },
-
-            //TWR 12:1 4"
-            //.kp = {9.5e-2 , 12.5e-2  , 20.0e-2 },
-            //.ki = { 14.0e-1  , 14.0e-1 , 14.0e-1 },
-            //.kd = { 2.3e-1 , 3.3e-1  , 0.5e-1 },
-
-            //5" Chameleon, T-Motor 2306 2600kV HQ 5x4.3x3 -Bobnova edition
-            //                         ROLL       PITCH     YAW
-            //.kp = {6.5e-2 , 7.5e-2  , 15.0e-2 },
-            //.ki = { 12.0e-1  , 12.0e-1 , 12.0e-1 },
-            //.kd = { 1.7e-1 , 2.4e-1  , 0.3e-1 },
-
-            //TWR 14:1 5"
-            .kp = {7.5e-2, 7.5e-2, 18.0e-2},
-            .ki = {14.0e-1, 14.0e-1, 14.0e-1},
-            .kd = {2.3e-1, 2.3e-1, 0.4e-1},
-
-            //6mm & 7mm Abduction Pids for whoops (Team Alienwhoop)- set filtering ALIENWHOOP_ZERO_FILTERING
-            //                         ROLL       PITCH     YAW
-            //.kp = {21.5e-2, 21.5e-2, 105.0e-2},
-            //.ki = {14e-1, 15e-1, 15e-1},
-            //.kd = {7.4e-1, 7.4e-1, 5.5e-1},
-
-            //BOSS 7 with 716 motors and 46mm Props - set filtering to BETA_FILTERING and adjust pass 1 and pass 2 for KALMAN_GYRO both to 70hz, set DTERM_LPF_2ND_HZ to 120hz, disable motor filtering
-            //                                        set TORQUE_BOOST to 1.0, and add #define THROTTLE_TRANSIENT_COMPENSATION and #define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 4.0
-            //                         ROLL       PITCH     YAW
-            //.kp = { 19.5e-2 , 19.5e-2  , 95.0e-2 },
-            //.ki = { 12e-1  , 12e-1 , 8e-1 },
-            //.kd = {10.7e-1 , 10.7e-1  , 2.0e-1 },
-
-            //***************  The following tunes beyond this point are all pretty dated.  I have not built/flown/tuned any of these in a long time and there have been alot of changes.
-            //***************  If your build best matches some of the specs below ... consider the tune a starting point and give me feedback/adjust as necessary.
-
-            // (OLD) 6mm experimental AwesomeSauce 20000kv Pids (Team Alienwhoop) - set filtering ALIENWHOOP_ZERO_FILTERING
-            //                         ROLL       PITCH     YAW
-            //.kp = { 25.5e-2 , 25.5e-2  , 11.5e-1 },
-            //.ki = { 20.5e-1  , 20.5e-1 , 16e-1 },
-            //.kd = { 11.4e-1 , 11.4e-1  , 4.9e-1 },
-
-            // (OLD) BOSS 6 & 7 - 615 and 716 motors, hm830 46mm props  - set filtering to VERY_STRONG_FILTERING
-            //                         ROLL       PITCH     YAW
-            //.kp = { 24.5e-2 , 24.5e-2  , 9.5e-1 },
-            //.ki = { 12e-1  , 12e-1 , 8e-1 },
-            //.kd = {14.1e-1 , 14.1e-1  , 7e-1 },
-            // (OLD) BOSS 8.0 - 816 motors, kingkong 66mm props  - set filtering to WEAK_FILTERING
-            //                         ROLL       PITCH     YAW
-            //.kp = { 26.7e-2 , 26.7e-2  , 9.5e-1 },
-            //.ki = { 12e-1  , 12e-1 , 8e-1 },
-            //.kd = {16.2e-1 , 16.2e-1  , 7e-1 },
-
-            // (OLD) BOSS 8.5 - 820 motors, kingkong 66mm props  - set filtering to STRONG_FILTERING
-            //                         ROLL       PITCH     YAW
-            //.kp = { 29.5e-2 , 29.5e-2  , 11.5e-1 },
-            //.ki = { 12e-1  , 12e-1 , 12.0e-1 },
-            //.kd = {17.5e-1 , 17.5e-1  , 7e-1 },
-        }},
+        .pid_rates = {},
         .stick_profile = STICK_PROFILE_OFF,
         .stick_rates = {
             //**************************ADVANCED PID CONTROLLER - WITH PROFILE SWITCHING ON AUX SWITCH STICK_BOOST_PROFILE*******************************
@@ -213,13 +288,13 @@ const profile_t default_profile = {
     },
     .channel = {
         .aux = {
-            ARMING,       //AUX_ARMING
-            IDLE_UP,      //AUX_IDLE_UP
-            LEVELMODE,    //AUX_LEVELMODE
-            RACEMODE,     //AUX_RACEMODE
-            HORIZON,      //AUX_HORIZON
-            STICK_BOOST_PROFILE,   //AUX_STICK_BOOST_PROFILE
-#ifdef STICK_TRAVEL_CHECK //AUX_TRAVEL_CHECK
+            ARMING,              //AUX_ARMING
+            IDLE_UP,             //AUX_IDLE_UP
+            LEVELMODE,           //AUX_LEVELMODE
+            RACEMODE,            //AUX_RACEMODE
+            HORIZON,             //AUX_HORIZON
+            STICK_BOOST_PROFILE, //AUX_STICK_BOOST_PROFILE
+#ifdef STICK_TRAVEL_CHECK        //AUX_TRAVEL_CHECK
             STICK_TRAVEL_CHECK,
 #else
             AUX_CHANNEL_OFF,
@@ -245,6 +320,7 @@ const profile_t default_profile = {
         },
     },
 };
+
 #pragma GCC diagnostic pop
 
 // the actual profile
@@ -252,6 +328,8 @@ profile_t profile;
 
 void profile_set_defaults() {
   memcpy(&profile, &default_profile, sizeof(profile_t));
+
+  profile.pid.pid_rates[0] = pid_rate_presets[DEFAULT_PID_RATE_PRESET].rate;
 }
 
 pid_rate_t *profile_current_pid_rates() {
@@ -346,6 +424,14 @@ cbor_result_t cbor_encode_metadata_t(cbor_value_t *enc, const metadata_t *meta) 
   if (res < CBOR_OK)                         \
     return res;
 
+#define STR_MEMBER(member)               \
+  res = cbor_encode_str(enc, #member);   \
+  if (res < CBOR_OK)                     \
+    return res;                          \
+  res = cbor_encode_str(enc, o->member); \
+  if (res < CBOR_OK)                     \
+    return res;
+
 #define ARRAY_MEMBER(member, size, type)          \
   res = cbor_encode_str(enc, #member);            \
   if (res < CBOR_OK)                              \
@@ -381,6 +467,10 @@ END_STRUCT_ENCODER()
 
 START_STRUCT_ENCODER(pid_rate_t)
 PID_RATE_MEMBERS
+END_STRUCT_ENCODER()
+
+START_STRUCT_ENCODER(pid_rate_preset_t)
+PID_RATE_PRESET_MEMBERS
 END_STRUCT_ENCODER()
 
 START_STRUCT_ENCODER(stick_rate_t)
