@@ -168,6 +168,13 @@ const profile_t default_profile = {
         .invert_yaw = 0,
 #endif
         .digital_idle = DIGITAL_IDLE,
+
+#ifdef TORQUE_BOOST
+        .torque_boost = TORQUE_BOOST,
+#else
+        .torque_boost = 0.0,
+#endif
+
 #ifdef SENSOR_ROTATE_90_CW
         .gyro_orientation = GYRO_ROTATE_90_CW,
 #endif

@@ -358,7 +358,7 @@ void control(void) {
 #endif
 
 #ifndef ENABLE_OSD
-  uint8_t osd_display_phase = 2;		//bypass osd menu safety check if FC does not have OSD
+  uint8_t osd_display_phase = 2; //bypass osd menu safety check if FC does not have OSD
 #else
   extern uint8_t osd_display_phase;
 #endif
@@ -366,10 +366,10 @@ void control(void) {
   if (!rx_aux_on(AUX_ARMING)) { // 						CONDITION: switch is DISARMED
     armed_state = 0;            // 												disarm the quad by setting armed state variable to zero
     if (rx_ready == 1)
-      binding_while_armed = 0;                                                                //                        rx is bound and has been disarmed so clear binding while armed flag
-  } else {                                                                                    // 						CONDITION: switch is ARMED
+      binding_while_armed = 0;                                                                                            //                        rx is bound and has been disarmed so clear binding while armed flag
+  } else {                                                                                                                // 						CONDITION: switch is ARMED
     if (((rx[3] > THROTTLE_SAFETY) && (arming_release == 0)) || (binding_while_armed == 1) || (osd_display_phase != 2)) { //				   CONDITION: (throttle is above safety limit and ARMING RELEASE FLAG IS NOT CLEARED) OR (bind just took place with transmitter armed)
-      armed_state = 0;                                                                        //                         	 				override to disarmed state and rapid blink the leds
+      armed_state = 0;                                                                                                    //                         	 				override to disarmed state and rapid blink the leds
       ledcommand = 1;
     } else {              //            					 CONDITION: quad is being armed in a safe state
       armed_state = 1;    //                      					  arm the quad by setting armed state variable to 1
@@ -593,10 +593,10 @@ void control(void) {
       mix[i] = motor_kalman(mix[i], i);
 #endif
 
-#ifdef TORQUE_BOOST
-      float motord(float in, int x);
-      mix[i] = motord(mix[i], i);
-#endif
+      if (profile.motor.torque_boost > 0.0f) {
+        float motord(float in, int x);
+        mix[i] = motord(mix[i], i);
+      }
     }
 
     //********************************MIXER SCALING***********************************************************
@@ -871,12 +871,8 @@ float motor_kalman(float in, int x) {
   return x_est;
 }
 
-#ifndef TORQUE_BOOST
-#define TORQUE_BOOST 0.0
-#endif
-
 float motord(float in, int x) {
-  float factor = TORQUE_BOOST;
+  float factor = profile.motor.torque_boost;
   static float lastratexx[4][4];
 
   float out = (+0.125f * in + 0.250f * lastratexx[x][0] - 0.250f * lastratexx[x][2] - (0.125f) * lastratexx[x][3]) * factor;
