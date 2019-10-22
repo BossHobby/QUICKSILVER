@@ -5,6 +5,8 @@
 
 #include "blackbox.h"
 
+#define USB_BUFFER_SIZE 2048
+
 typedef enum {
   USB_MAGIC_REBOOT = 'R',
   USB_MAGIC_MSP = '$',

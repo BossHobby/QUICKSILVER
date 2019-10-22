@@ -16,6 +16,7 @@
 
 #define QUIC_HEADER_LEN 4
 #define QUIC_PROTOCOL_VERSION 1
+
 #define quic_errorf(cmd, args...) send_quic_strf(cmd, QUIC_FLAG_ERROR, args)
 
 extern profile_t profile;
@@ -34,12 +35,12 @@ extern unsigned long lastlooptime;
 extern uint8_t blackbox_enabled;
 extern uint32_t blackbox_rate;
 
-extern uint8_t encode_buffer[1024];
-extern uint8_t decode_buffer[1024];
+extern uint8_t encode_buffer[USB_BUFFER_SIZE];
+extern uint8_t decode_buffer[USB_BUFFER_SIZE];
 
 void send_quic(quic_command cmd, quic_flag flag, uint8_t *data, uint16_t len) {
-  static uint8_t frame[1024 + QUIC_HEADER_LEN];
-  if (len > 1024) {
+  static uint8_t frame[USB_BUFFER_SIZE + QUIC_HEADER_LEN];
+  if (len > USB_BUFFER_SIZE) {
     return;
   }
 
@@ -95,7 +96,7 @@ cbor_result_t quic_blackbox(const blackbox_t *blackbox) {
   cbor_result_t res = CBOR_OK;
 
   cbor_value_t enc;
-  cbor_encoder_init(&enc, encode_buffer, 1024);
+  cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
 
   res = cbor_encode_blackbox_t(&enc, blackbox);
   if (res < CBOR_OK) {
@@ -118,7 +119,7 @@ void get_quic(uint8_t *data, uint32_t len) {
   cbor_decoder_init(&dec, data, len);
 
   cbor_value_t enc;
-  cbor_encoder_init(&enc, encode_buffer, 1024);
+  cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
 
   quic_values value = QUIC_CMD_INVALID;
   res = cbor_decode_uint8(&dec, &value);
@@ -159,10 +160,13 @@ void get_quic(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   case QUIC_VAL_PID_RATE_PRESETS:
-    cbor_encode_array(&enc, pid_rate_presets_count);
+    res = cbor_encode_array(&enc, pid_rate_presets_count);
+    check_cbor_error(QUIC_CMD_GET);
     for (uint32_t i = 0; i < pid_rate_presets_count; i++) {
-      cbor_encode_pid_rate_preset_t(&enc, &pid_rate_presets[i]);
+      res = cbor_encode_pid_rate_preset_t(&enc, &pid_rate_presets[i]);
+      check_cbor_error(QUIC_CMD_GET);
     }
+
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   default:
@@ -178,7 +182,7 @@ void set_quic(uint8_t *data, uint32_t len) {
   cbor_decoder_init(&dec, data, len);
 
   cbor_value_t enc;
-  cbor_encoder_init(&enc, encode_buffer, 1024);
+  cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
 
   quic_values value;
   res = cbor_decode_uint8(&dec, &value);

@@ -45,8 +45,8 @@ void send_msp(uint8_t code, uint8_t *data, uint8_t len) {
   usb_serial_write(frame, size);
 }
 
-extern uint8_t encode_buffer[1024];
-extern uint8_t decode_buffer[1024];
+extern uint8_t encode_buffer[USB_BUFFER_SIZE];
+extern uint8_t decode_buffer[USB_BUFFER_SIZE];
 
 void usb_process_msp() {
   if (usb_serial_read_byte() != 'M' || usb_serial_read_byte() != '<') {
