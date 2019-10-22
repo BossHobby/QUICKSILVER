@@ -279,6 +279,19 @@ const profile_t default_profile = {
                 .transition = {0.3, 0.3, 0.0},  //keep values between -1 and 1
             },
         },
+        //**************************** ANGLE PIDS - used in level mode to set leveling strength
+
+        // Leveling algorithm coefficients for small errors  (normal flying)
+        .small_angle = {
+            .kp = 10.00, // P TERM GAIN ROLL + PITCH
+            .kd = 3.0,   // D TERM GAIN ROLL + PITCH
+        },
+
+        // Leveling algorithm coefficients for large errors  (stick banging or collisions)
+        .big_angle = {
+            .kp = 5.00, // P TERM GAIN ROLL + PITCH
+            .kd = 0.0,  // D TERM GAIN ROLL + PITCH
+        },
     },
     .voltage = {
 #ifdef LIPO_CELL_COUNT
@@ -478,6 +491,10 @@ START_STRUCT_ENCODER(pid_rate_t)
 PID_RATE_MEMBERS
 END_STRUCT_ENCODER()
 
+START_STRUCT_ENCODER(angle_pid_rate_t)
+ANGLE_PID_RATE_MEMBERS
+END_STRUCT_ENCODER()
+
 START_STRUCT_ENCODER(pid_rate_preset_t)
 PID_RATE_PRESET_MEMBERS
 END_STRUCT_ENCODER()
@@ -633,6 +650,10 @@ END_STRUCT_DECODER()
 
 START_STRUCT_DECODER(pid_rate_t)
 PID_RATE_MEMBERS
+END_STRUCT_DECODER()
+
+START_STRUCT_DECODER(angle_pid_rate_t)
+ANGLE_PID_RATE_MEMBERS
 END_STRUCT_DECODER()
 
 START_STRUCT_DECODER(stick_rate_t)

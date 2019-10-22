@@ -71,6 +71,15 @@ typedef struct {
   MEMBER(kd, vector_t)
 
 typedef struct {
+  float kp;
+  float kd;
+} angle_pid_rate_t;
+
+#define ANGLE_PID_RATE_MEMBERS \
+  MEMBER(kp, float)            \
+  MEMBER(kd, float)
+
+typedef struct {
   uint32_t index;
   const char *name;
   pid_rate_t rate;
@@ -107,13 +116,17 @@ typedef struct {
   pid_rate_t pid_rates[PID_PROFILE_MAX];
   stick_profile_t stick_profile;
   stick_rate_t stick_rates[STICK_PROFILE_MAX];
+  angle_pid_rate_t big_angle;
+  angle_pid_rate_t small_angle;
 } profile_pid_t;
 
-#define PID_MEMBERS                                    \
-  MEMBER(pid_profile, uint8)                           \
-  ARRAY_MEMBER(pid_rates, PID_PROFILE_MAX, pid_rate_t) \
-  MEMBER(stick_profile, uint8)                         \
-  ARRAY_MEMBER(stick_rates, STICK_PROFILE_MAX, stick_rate_t)
+#define PID_MEMBERS                                          \
+  MEMBER(pid_profile, uint8)                                 \
+  ARRAY_MEMBER(pid_rates, PID_PROFILE_MAX, pid_rate_t)       \
+  MEMBER(stick_profile, uint8)                               \
+  ARRAY_MEMBER(stick_rates, STICK_PROFILE_MAX, stick_rate_t) \
+  MEMBER(big_angle, angle_pid_rate_t)                        \
+  MEMBER(small_angle, angle_pid_rate_t)
 
 typedef enum {
   GYRO_ROTATE_NONE = 0x0,
