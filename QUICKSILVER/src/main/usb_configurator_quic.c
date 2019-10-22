@@ -20,6 +20,10 @@
 
 extern profile_t profile;
 extern profile_t default_profile;
+
+extern pid_rate_preset_t pid_rate_presets[];
+extern uint32_t pid_rate_presets_count;
+
 extern float rx[4];
 extern float rxcopy[4];
 extern uint8_t aux[AUX_CHANNEL_MAX];
@@ -152,6 +156,13 @@ void get_quic(uint8_t *data, uint32_t len) {
     break;
   case QUIC_VAL_BLACKBOX_RATE:
     cbor_encode_uint32(&enc, &blackbox_rate);
+    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  case QUIC_VAL_PID_RATE_PRESETS:
+    cbor_encode_array(&enc, pid_rate_presets_count);
+    for (uint32_t i = 0; i < pid_rate_presets_count; i++) {
+      cbor_encode_pid_rate_preset_t(&enc, &pid_rate_presets[i]);
+    }
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   default:

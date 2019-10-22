@@ -189,3 +189,5 @@ cbor_result_t cbor_decode_profile_t(cbor_value_t *dec, profile_t *p);
 
 cbor_result_t cbor_encode_profile_t(cbor_value_t *enc, const profile_t *p);
 cbor_result_t cbor_decode_vector_t(cbor_value_t *dec, vector_t *vec);
+
+cbor_result_t cbor_encode_pid_rate_preset_t(cbor_value_t *enc, const pid_rate_preset_t *p);

@@ -153,6 +153,8 @@ const pid_rate_preset_t pid_rate_presets[] = {
     },
 };
 
+uint32_t pid_rate_presets_count = sizeof(pid_rate_presets) / sizeof(pid_rate_preset_t);
+
 const profile_t default_profile = {
     .meta = {
         .name = "default",
