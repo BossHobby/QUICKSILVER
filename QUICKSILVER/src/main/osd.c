@@ -231,14 +231,14 @@ const uint8_t osd_elements_menu_positions[5][2] = { {9, 1}, {7, 4}, {7, 5}, {7, 
 const uint8_t osd_elements_map[] = {15, 16, 17, 18};
 
 //osd element add/remove & text/invert submenu map
-const char osd_display_labels[12][21] = { {"OSD DISPLAY ITEMS"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"EXACT VOLTS"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"ARMED/DISARMED"}, {"THROTTLE"}, {"VTX"}, {"SAVE AND EXIT"} };
+const char osd_display_labels[12][21] = { {"OSD DISPLAY ITEMS"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"EXACT VOLTS"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"SYSTEM STATUS"}, {"THROTTLE"}, {"VTX"}, {"SAVE AND EXIT"} };
 const uint8_t osd_display_positions[12][2] = { {6,1}, {4,2}, {4,3}, {4,4}, {4,5}, {4,6}, {4,7}, {4,8}, {4,9}, {4,10}, {4,11}, {4,14} };
 const uint8_t osd_display_data_positions[10][2] = { {20, 2}, {20, 3}, {20, 4}, {20, 5}, {20, 6}, {20, 7}, {20, 8}, {20, 9}, {20, 10}, {20, 11} };
 const uint8_t osd_display_grid[10][2] = { {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}, {1, 6}, {1, 7}, {1, 8}, {1, 9}, {1, 10} };
 const uint8_t osd_elements_active_items[] = {0, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 
 //osd positions submenu map
-const char osd_position_labels[14][21] = { {"OSD POSITIONS"},{"ADJ X"}, {"ADJ Y"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"EXACT VOLTS"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"ARMED/DISARMED"}, {"THROTTLE"}, {"VTX"}, {"SAVE AND EXIT"} };
+const char osd_position_labels[14][21] = { {"OSD POSITIONS"},{"ADJ X"}, {"ADJ Y"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"EXACT VOLTS"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"SYSTEM STATUS"}, {"THROTTLE"}, {"VTX"}, {"SAVE AND EXIT"} };
 const uint8_t osd_position_adjust_positions[14][2] = { {1,1}, {18,1}, {24,1}, {3,2}, {3,3}, {3,4}, {3,5}, {3,6}, {3,7}, {3,8}, {3,9}, {3,10}, {3,11}, {3,14} };
 const uint8_t osd_position_grid[20][2] = { {1, 1}, {2, 1}, {1, 2}, {2, 2}, {1, 3}, {2, 3}, {1, 4}, {2, 4}, {1, 5}, {2, 5}, {1, 6}, {2, 6}, {1, 7}, {2, 7}, {1, 8}, {2, 8}, {1, 9}, {2, 9}, {1, 10}, {2, 10} };
 const uint8_t osd_position_data_positions[20][2] = { {20, 2}, {26, 2}, {20, 3}, {26, 3}, {20, 4}, {26, 4}, {20, 5}, {26, 5}, {20, 6}, {26, 6}, {20, 7}, {26, 7}, {20, 8}, {26, 8}, {20, 9}, {26, 9}, {20, 10}, {26, 10}, {20, 11}, {26, 11} };
@@ -246,7 +246,7 @@ const uint8_t osd_position_active_items[] = {0, 0, 6, 6, 7, 7, 8, 8, 9, 9, 10, 1
 const uint8_t osd_position_index[20] = {2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3};
 
 //osd text style submenu map
-const char osd_text_style[12][21] = { {"OSD TEXT STYLE"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"EXACT VOLTS"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"ARMED/DISARMED"}, {"THROTTLE"}, {"VTX"}, {"SAVE AND EXIT"} };
+const char osd_text_style[12][21] = { {"OSD TEXT STYLE"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"EXACT VOLTS"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"SYSTEM STATUS"}, {"THROTTLE"}, {"VTX"}, {"SAVE AND EXIT"} };
 const uint8_t osd_text_style_positions[12][2] = { {8,1}, {4,2}, {4,3}, {4,4}, {4,5}, {4,6}, {4,7}, {4,8}, {4,9}, {4,10}, {4,11}, {4,14} };
 
 //osd callsign edit submenu map
@@ -605,16 +605,21 @@ uint8_t print_osd_flightmode(void){
 }
 
 uint8_t print_osd_system_status(void){
-	const char system_status_labels[8][21] = { {"               "},{" **DISARMED**  "},{"  **ARMED**    "},{"**FAILSAFE**"},{"THROTTLE SAFETY"},{" ARMING SAFETY "},{" STICK BOOST 1 "},{" STICK BOOST 2 "}, };
+	const char system_status_labels[8][21] = { {"               "},{" **DISARMED**  "},{"  **ARMED**    "},{" STICK BOOST 1 "},{" STICK BOOST 2 "},{" **FAILSAFE**  "},{"THROTTLE SAFETY"},{" ARMING SAFETY "} };
 	extern int armed_state;
 	static uint8_t last_armed_state;
 	static uint8_t armed_state_printing;
-//	extern int failsafe;
-//	static uint8_t last_failsafe;
-//	extern int arming_release;
-//	static uint8_t last_arming_release;
-//	extern int binding_while_armed;
-//	static uint8_t last_binding_while_armed;
+	static uint8_t last_aux_state;
+	static uint8_t aux_state_printing;
+	extern int failsafe;
+	static uint8_t last_failsafe_state = 1;
+	static uint8_t failsafe_state_printing;
+	extern uint8_t throttle_safety;
+	static uint8_t last_throttle_safety_state;
+	static uint8_t throttle_safety_state_printing;
+	extern int binding_while_armed;
+	static uint8_t last_binding_while_armed_state;
+	static uint8_t binding_while_armed_state_printing;
 	static uint8_t index = 0;
 	static uint8_t counter;
 	if(armed_state != last_armed_state || armed_state_printing){
@@ -635,7 +640,7 @@ uint8_t print_osd_system_status(void){
 				}
 			}
 		}
-		if (armed_state == 0) {	// || armed_state_printing == 1
+		if (armed_state == 0) {
 			uint8_t character[] = {system_status_labels[1][index]};
 			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
 			index++;
@@ -648,7 +653,7 @@ uint8_t print_osd_system_status(void){
 				return 1;
 			}
 		}
-		if (armed_state == 1) {	// || armed_state_printing == 1
+		if (armed_state == 1) {
 			uint8_t character[] = {system_status_labels[2][index]};
 			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
 			index++;
@@ -661,9 +666,139 @@ uint8_t print_osd_system_status(void){
 				return 1;
 			}
 		}
-
 	}
-
+	if(rx_aux_on(AUX_STICK_BOOST_PROFILE) != last_aux_state || aux_state_printing){
+		last_aux_state = rx_aux_on(AUX_STICK_BOOST_PROFILE);
+		if (aux_state_printing == 2){
+			counter++;
+			if (counter > 25){
+				uint8_t character[] = {system_status_labels[0][index]};
+				osd_print_data( character, 1, decode_attribute(*arm_disarm), decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+				index++;
+				if (index < 15){
+					return 0;
+				}else{
+					aux_state_printing = 0;
+					counter = 0;
+					index = 0;
+					return 1;
+				}
+			}
+		}
+		if (rx_aux_on(AUX_STICK_BOOST_PROFILE) == 0) {
+			uint8_t character[] = {system_status_labels[3][index]};
+			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			index++;
+			if (index < 15){
+				aux_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				aux_state_printing = 2;
+				return 1;
+			}
+		}
+		if (rx_aux_on(AUX_STICK_BOOST_PROFILE) == 1) {
+			uint8_t character[] = {system_status_labels[4][index]};
+			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			index++;
+			if (index < 15){
+				aux_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				aux_state_printing = 2;
+				return 1;
+			}
+		}
+	}
+	if(failsafe != last_failsafe_state || failsafe_state_printing){
+		last_failsafe_state = failsafe;
+		if (failsafe == 0) {
+			uint8_t character[] = {system_status_labels[0][index]};
+			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			index++;
+			if (index < 15){
+				failsafe_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				failsafe_state_printing = 0;
+				return 1;
+			}
+		}
+		if (failsafe == 1) {
+			uint8_t character[] = {system_status_labels[5][index]};
+			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			index++;
+			if (index < 15){
+				failsafe_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				failsafe_state_printing = 0;
+				return 1;
+			}
+		}
+	}
+	if((binding_while_armed != last_binding_while_armed_state && !failsafe) ||binding_while_armed_state_printing){ //binding_while_armed != last_binding_while_armed_state ||
+		last_binding_while_armed_state = binding_while_armed;
+		if (binding_while_armed == 0) {
+			uint8_t character[] = {system_status_labels[0][index]};
+			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			index++;
+			if (index < 15){
+				binding_while_armed_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				binding_while_armed_state_printing = 0;
+				return 1;
+			}
+		}
+		if (binding_while_armed == 1) {	// || armed_state_printing == 1
+			uint8_t character[] = {system_status_labels[7][index]};
+			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			index++;
+			if (index < 15){
+				binding_while_armed_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				binding_while_armed_state_printing = 0;
+				return 1;
+			}
+		}
+	}
+	if((throttle_safety != last_throttle_safety_state && !binding_while_armed) || throttle_safety_state_printing){
+		last_throttle_safety_state = throttle_safety;
+		if (throttle_safety == 0) {
+			uint8_t character[] = {system_status_labels[0][index]};
+			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			index++;
+			if (index < 15){
+				throttle_safety_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				throttle_safety_state_printing = 0;
+				return 1;
+			}
+		}
+		if (throttle_safety == 1) {
+			uint8_t character[] = {system_status_labels[6][index]};
+			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			index++;
+			if (index < 15){
+				throttle_safety_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				throttle_safety_state_printing = 0;
+				return 1;
+			}
+		}
+	}
 	return 1;
 }
 
@@ -831,6 +966,7 @@ void osd_display(void) {
   extern float lipo_cell_count;
   extern int lowbatt;
   extern float throttle;
+  extern int binding_while_armed;
 
   switch (osd_display_phase) //phase starts at 2, RRR gesture subtracts 1 to enter the menu, RRR again or DDD subtracts 1 to clear the screen and return to regular display
   {
@@ -983,8 +1119,8 @@ void osd_display(void) {
 	  case 9:
 		  if (decode_active_element(*osd_throttle)){
 			  uint8_t osd_throttle_value[5];
-			  fast_fprint(osd_throttle_value, 4, (throttle * 100.0f), 0);
-			  osd_throttle_value[3] = 4;
+			  fast_fprint(osd_throttle_value, 5, (throttle * 100.0f), 0);
+			  osd_throttle_value[4] = 4;
 			  osd_print_data(osd_throttle_value, 5, decode_attribute(*osd_throttle), decode_positionx(*osd_throttle), decode_positiony(*osd_throttle));
 		  }
 		  osd_display_element++;
@@ -1114,7 +1250,7 @@ void osd_display(void) {
 	  break;
 
   }
-
+if (osd_display_phase !=2 && rx_aux_on(AUX_ARMING)) binding_while_armed = 1;	//final safety check to disallow arming during OSD operation
 } //end osd_display()
 //******************************************************************************************************************************
 #endif

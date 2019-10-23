@@ -65,7 +65,7 @@ float error[PIDNUMBER];
 float motormap(float input);
 
 float yawangle;
-
+uint8_t throttle_safety;
 //extern float looptime;
 
 extern int ledcommand;
@@ -357,18 +357,18 @@ void control(void) {
 #define THROTTLE_SAFETY .15f
 #endif
 
-#ifndef ENABLE_OSD
-  uint8_t osd_display_phase = 2; //bypass osd menu safety check if FC does not have OSD
-#else
-  extern uint8_t osd_display_phase;
-#endif
+  if(((rx[3] > THROTTLE_SAFETY) && (arming_release == 0)) && rx_aux_on(AUX_ARMING)){	//this is needed for osd warnings but could be better used below too
+	  throttle_safety = 1;
+  }else{
+	  throttle_safety = 0;
+  }
 
   if (!rx_aux_on(AUX_ARMING)) { // 						CONDITION: switch is DISARMED
     armed_state = 0;            // 												disarm the quad by setting armed state variable to zero
     if (rx_ready == 1)
       binding_while_armed = 0;                                                                                            //                        rx is bound and has been disarmed so clear binding while armed flag
   } else {                                                                                                                // 						CONDITION: switch is ARMED
-    if (((rx[3] > THROTTLE_SAFETY) && (arming_release == 0)) || (binding_while_armed == 1) || (osd_display_phase != 2)) { //				   CONDITION: (throttle is above safety limit and ARMING RELEASE FLAG IS NOT CLEARED) OR (bind just took place with transmitter armed)
+    if (((rx[3] > THROTTLE_SAFETY) && (arming_release == 0)) || (binding_while_armed == 1) ){							  //				   CONDITION: (throttle is above safety limit and ARMING RELEASE FLAG IS NOT CLEARED) OR (bind just took place with transmitter armed)
       armed_state = 0;                                                                                                    //                         	 				override to disarmed state and rapid blink the leds
       ledcommand = 1;
     } else {              //            					 CONDITION: quad is being armed in a safe state
