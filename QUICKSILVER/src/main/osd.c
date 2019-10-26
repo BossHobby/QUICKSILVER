@@ -261,9 +261,9 @@ const char vtx_temp_labels[3][21] = { {"VTX CONTROLS"},{"UNDER"},{"DEVELOPMENT"}
 const uint8_t vtx_temp_positions[3][2] = { {9, 1}, {7, 4}, {7,5} };
 
 //special features menu map
-const char special_features_labels[2][21] = { {"SPECIAL FEATURES"},{"STICK BOOST"} };
-const uint8_t special_features_positions[3][2] = { {7, 1}, {7, 4} };
-const uint8_t special_features_map[] = {13};					//case numbers for {stickboost} ...adding more soon
+const char special_features_labels[4][21] = { {"SPECIAL FEATURES"},{"STICK BOOST"},{"LOW BATTERY"},{"LEVEL MODE"} };
+const uint8_t special_features_positions[4][2] = { {7, 1}, {7, 4}, {7, 5}, {7, 6} };
+const uint8_t special_features_map[] = {13, 19, 20};					//case numbers for {stickboost}, etc ...adding more soon
 
 //stick boost submenu map
 const char stickboost_labels[3][21] = { {"STICK BOOST PROFILES"},{"AUX OFF PROFILE 1"},{"AUX ON  PROFILE 2"} };
@@ -278,6 +278,15 @@ const uint8_t stickboost_data_index[6][2] = { {1, 0}, {1, 1}, {1, 2}, {2, 0}, {2
 const uint8_t stickboost_grid[6][2] = { {1, 1},{2, 1},{3, 1},{1, 2},{2, 2},{3, 2} };
 const uint8_t stickboost_data_positions[9][2] = { {13, 6},{18, 6},{23, 6},{13, 8},{18, 8},{23, 8} };
 const float stickboost_adjust_limits[6][2] = { {0, 3.0}, {0, 3.0}, {0, 3.0}, {0, 1.0}, {0, 1.0}, {0, 1.0} };
+
+//low battery map
+const char lowbatt_labels[3][21] = { {"LOW BATTERY"},{"VOLTS/CELL ALERT"},{"SAVE AND EXIT"} };
+const uint8_t lowbatt_positions[3][2] = { {10, 1},{4, 5},{4, 14} };
+const uint8_t lowbatt_grid [1][2] = {{1, 1}};	//not currently used
+const uint8_t lowbatt_data_positions[1][2] = { {21, 5} };
+const uint8_t lowbatt_data_index[1][2] = { {1, 0} };	// not currently used
+const float lowbatt_adjust_limits[1][2] = { {0, 4.2} };
+
 //******************************************************************************************************************************
 
 
@@ -463,6 +472,25 @@ void osd_vector_adjust ( vector_t *pointer, uint8_t rows, uint8_t columns, uint8
 	}
 }
 
+void osd_float_adjust ( float *pointer, const float adjust_limit[1][2], float adjust_amount){
+	if (osd_select > 1) {
+		osd_select = 1;
+		osd_menu_phase = 1; //repaint the screen again
+	}
+	if (osd_cursor <= 1){
+		if ((increase_osd_value && *pointer < adjust_limit[0][1]) || (decrease_osd_value  && *pointer > adjust_limit[0][0])){
+			*pointer = adjust_rounded_float(*pointer, adjust_amount);
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+	}
+	if (osd_cursor == 2){
+		if (osd_select == 1){
+		osd_save_exit();
+		}
+	}
+}
+
 uint8_t last_cursor_array_stuffer(uint8_t cursor, uint8_t add_new){  	//where add_new can be either STORE_VALUE or RETURN_VALUE
 	if (add_new){
 		for (int i = 5; i >= 1; i--){	//shift all the values to the right one array position
@@ -605,7 +633,7 @@ uint8_t print_osd_flightmode(void){
 }
 
 uint8_t print_osd_system_status(void){
-	const char system_status_labels[8][21] = { {"               "},{" **DISARMED**  "},{"  **ARMED**    "},{" STICK BOOST 1 "},{" STICK BOOST 2 "},{" **FAILSAFE**  "},{"THROTTLE SAFETY"},{" ARMING SAFETY "} };
+	const char system_status_labels[9][21] = { {"               "},{" **DISARMED**  "},{"  **ARMED**    "},{" STICK BOOST 1 "},{" STICK BOOST 2 "},{" **FAILSAFE**  "},{"THROTTLE SAFETY"},{" ARMING SAFETY "},{"**LOW BATTERY**"} };
 	extern int armed_state;
 	static uint8_t last_armed_state;
 	static uint8_t armed_state_printing;
@@ -620,6 +648,9 @@ uint8_t print_osd_system_status(void){
 	extern int binding_while_armed;
 	static uint8_t last_binding_while_armed_state;
 	static uint8_t binding_while_armed_state_printing;
+	extern int lowbatt;
+	static uint8_t last_lowbatt_state;
+	static uint8_t lowbatt_state_printing;
 	static uint8_t index = 0;
 	static uint8_t counter;
 	if(armed_state != last_armed_state || armed_state_printing){
@@ -741,7 +772,7 @@ uint8_t print_osd_system_status(void){
 			}
 		}
 	}
-	if((binding_while_armed != last_binding_while_armed_state && !failsafe) ||binding_while_armed_state_printing){ //binding_while_armed != last_binding_while_armed_state ||
+	if((binding_while_armed != last_binding_while_armed_state && !failsafe) ||binding_while_armed_state_printing){
 		last_binding_while_armed_state = binding_while_armed;
 		if (binding_while_armed == 0) {
 			uint8_t character[] = {system_status_labels[0][index]};
@@ -756,7 +787,7 @@ uint8_t print_osd_system_status(void){
 				return 1;
 			}
 		}
-		if (binding_while_armed == 1) {	// || armed_state_printing == 1
+		if (binding_while_armed == 1) {
 			uint8_t character[] = {system_status_labels[7][index]};
 			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
 			index++;
@@ -795,6 +826,35 @@ uint8_t print_osd_system_status(void){
 			}else{
 				index = 0;
 				throttle_safety_state_printing = 0;
+				return 1;
+			}
+		}
+	}
+	if((lowbatt != last_lowbatt_state && !binding_while_armed && !throttle_safety && !failsafe) || lowbatt_state_printing){
+		last_lowbatt_state = lowbatt;
+		if (lowbatt == 0) {
+			uint8_t character[] = {system_status_labels[0][index]};
+			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			index++;
+			if (index < 15){
+				lowbatt_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				lowbatt_state_printing = 0;
+				return 1;
+			}
+		}
+		if (lowbatt == 1) {
+			uint8_t character[] = {system_status_labels[8][index]};
+			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			index++;
+			if (index < 15){
+				lowbatt_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				lowbatt_state_printing = 0;
 				return 1;
 			}
 		}
@@ -938,6 +998,23 @@ void print_osd_adjustable_vectors(uint8_t menu_type, uint8_t string_element_qty,
   	if (menu_type == ROUNDED) fast_fprint(data_buffer, 5, pointer->axis[data_index[index][1]] + FLT_EPSILON, 2);
   	osd_print_data(data_buffer, 5, grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
   	osd_menu_phase++;
+}
+
+void print_osd_adjustable_float(uint8_t string_element_qty, uint8_t data_element_qty, float *pointer, const uint8_t print_position[data_element_qty][2], uint8_t precision){
+  	if (osd_menu_phase <= string_element_qty)
+          return;
+  	if (osd_menu_phase > string_element_qty + data_element_qty)
+          return;
+  	static uint8_t skip_loop = 0;
+  	if (osd_menu_phase ==  string_element_qty + 1 && skip_loop == 0){	//skip a loop to prevent dma collision with previous print function
+  		skip_loop++;
+  		return;
+  	}
+  	skip_loop = 0;
+	uint8_t data_buffer[5];
+	fast_fprint(data_buffer, 5, profile.voltage.vbattlow + FLT_EPSILON, precision);
+	osd_print_data(data_buffer, 5, grid_selection(1, 1), print_position[0][0], print_position[0][1]);
+	osd_menu_phase++;
 }
 //******************************************************************************************************************************
 
@@ -1203,17 +1280,17 @@ void osd_display(void) {
 
   case 12:		//special features
 	  last_display_phase = 1;
-	  print_osd_menu_strings(2, 1, special_features_labels, special_features_positions);
-	  if (osd_menu_phase == 3) osd_select_menu_item(1,special_features_map, SUB_MENU);
+	  print_osd_menu_strings(4, 3, special_features_labels, special_features_positions);
+	  if (osd_menu_phase == 5) osd_select_menu_item(3,special_features_map, SUB_MENU);
       break;
 
-  case 13:		//stick accelerator profiles
+  case 13:		//stick boost profiles
 	  last_display_phase = 12;
 	  print_osd_menu_strings(3, 2, stickboost_labels, stickboost_profile_positions);
 	  if (osd_menu_phase == 4) osd_submenu_select (&profile.pid.stick_profile, 2 , stickboost_submenu_map);
       break;
 
-  case 14:		//stick boost profiles
+  case 14:		//adjustable stick boost profiles
 	  last_display_phase = 13;
 	  if(profile.pid.stick_profile == STICK_PROFILE_OFF) print_osd_menu_strings(7, 3, stickboost1_labels, stickboost_positions);
 	  else print_osd_menu_strings(7, 3, stickboost2_labels, stickboost_positions);
@@ -1247,6 +1324,18 @@ void osd_display(void) {
 	  print_osd_menu_strings(23, 2, osd_callsign_edit_labels, osd_callsign_edit_positions);
 	  print_osd_callsign_adjustable(23, 20, osd_callsign_grid, osd_callsign_edit_data_positions);
 	  if ( osd_menu_phase== 44) osd_encoded_adjust_callsign();
+	  break;
+
+  case 19:		//edit lowbatt threshold
+	  last_display_phase = 12;
+	  print_osd_menu_strings(3, 2, lowbatt_labels, lowbatt_positions);
+	  print_osd_adjustable_float(3, 1, &profile.voltage.vbattlow, lowbatt_data_positions, 1);
+	 if (osd_menu_phase == 5) osd_float_adjust(&profile.voltage.vbattlow, lowbatt_adjust_limits, 0.1);
+	  break;
+
+  case 20:
+	  last_display_phase = 12;
+	  print_osd_menu_strings(3, 2, vtx_temp_labels, vtx_temp_positions);
 	  break;
 
   }
