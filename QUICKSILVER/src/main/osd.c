@@ -287,13 +287,26 @@ const uint8_t lowbatt_grid [1][2] = {{1, 1}};
 const uint8_t lowbatt_data_positions[1][2] = { {21, 5} };
 const float lowbatt_adjust_limits[1][2] = { {0, 4.2} };
 
-//levelmode map
-float *levelmode_ptr[6] = {&profile.rate.level_max_angle, &profile.rate.level_max_angle, &profile.pid.small_angle.kp, &profile.pid.small_angle.kd, &profile.pid.big_angle.kp, &profile.pid.big_angle.kd};
-const char levelmode_labels[7][21] = { {"LEVEL MODE"},{"KP"},{"KD"},{"MAX ANGLE DEGREES"},{"SM ANGLE STRENGTH"},{"LRG ANGLE STRENGTH"},{"SAVE AND EXIT"} };
-const uint8_t levelmode_positions[7][2] = { {10, 1},{21, 7},{25, 7},{1, 5},{1, 8},{1, 9},{1, 14} };
-const uint8_t levelmode_grid [6][2] = {{1, 1}, {1, 1}, {1, 2}, {2, 2}, {1, 3}, {2, 3},};
-const uint8_t levelmode_data_positions[6][2] = { {19, 5}, {19, 5}, {19, 8}, {23, 8}, {19, 9}, {23, 9} };
-const float levelmode_adjust_limits[6][2] = { {0, 85.0}, {0, 85.0}, {0, 20.0}, {0, 10.0}, {0, 20.0}, {0, 10.0} };
+//levelmode submenu map
+const char level_submenu_labels[3][21] = { {"LEVEL MODE"},{"MAX ANGLE"},{"LEVEL STRENGTH"} };
+const uint8_t level_submenu_positions[3][2] = { {10, 1}, {7, 4}, {7, 5} };
+const uint8_t level_submenu_map[] = {23, 24};
+
+//levelmode maxangle map
+float *level_maxangle_ptr[1] = {&profile.rate.level_max_angle};
+const char maxangle_labels[3][21] = { {"LEVEL MODE"},{"MAX ANGLE DEGREES"},{"SAVE AND EXIT"} };
+const uint8_t maxangle_positions[3][2] = { {10, 1},{1, 5},{1, 14} };
+const uint8_t maxangle_grid [6][2] = {{1, 1}};
+const uint8_t maxangle_data_positions[1][2] = { {19, 5} };
+const float maxangle_adjust_limits[1][2] = { {0, 85.0} };
+
+//levelmode pid map
+float *level_pid_ptr[4] = {&profile.pid.small_angle.kp, &profile.pid.small_angle.kd, &profile.pid.big_angle.kp, &profile.pid.big_angle.kd};
+const char levelmode_labels[6][21] = { {"LEVEL MODE"},{"KP"},{"KD"},{"SM ANGLE STRENGTH"},{"LRG ANGLE STRENGTH"},{"SAVE AND EXIT"} };
+const uint8_t levelmode_positions[6][2] = { {10, 1},{21, 5},{26, 5},{1, 6},{1, 7},{1, 14} };
+const uint8_t levelmode_grid [4][2] = {{1, 1}, {2, 1}, {1, 2}, {2, 2}};
+const uint8_t levelmode_data_positions[4][2] = { {19, 6}, {24, 6}, {19, 7}, {24, 7} };
+const float levelmode_adjust_limits[4][2] = { {0, 20.0}, {0, 10.0}, {0, 20.0}, {0, 10.0} };
 
 //torque boost map
 float *torqueboost_ptr[1] = {&profile.motor.torque_boost};
@@ -1361,9 +1374,8 @@ void osd_display(void) {
 
   case 20:		//edit levelmode
 	  last_display_phase = 12;
-	  print_osd_menu_strings(7, 4, levelmode_labels, levelmode_positions);
-	  print_osd_adjustable_float(7, 6, levelmode_ptr, levelmode_grid, levelmode_data_positions, 0);
-	  if (osd_menu_phase == 14) osd_float_adjust(levelmode_ptr, 3, 2, levelmode_adjust_limits, 1.0);
+	  print_osd_menu_strings(3, 2, level_submenu_labels, level_submenu_positions);
+	  if (osd_menu_phase == 4) osd_select_menu_item(2,level_submenu_map, SUB_MENU);
 	  break;
 
   case 21:		//edit torque boost
@@ -1379,6 +1391,21 @@ void osd_display(void) {
 	  print_osd_adjustable_float(3, 1, motoridle_ptr, motoridle_grid, motoridle_data_positions, 1);
 	  if (osd_menu_phase == 5) osd_float_adjust(motoridle_ptr, 1, 1, motoridle_adjust_limits, 0.1);
 	  break;
+
+  case 23:		//edit level max angle
+	  last_display_phase = 20;
+	  print_osd_menu_strings(3, 2, maxangle_labels, maxangle_positions);
+	  print_osd_adjustable_float(3, 1, level_maxangle_ptr, maxangle_grid, maxangle_data_positions, 0);
+	  if (osd_menu_phase == 5) osd_float_adjust(level_maxangle_ptr, 1, 1, maxangle_adjust_limits, 1.0);
+	  break;
+
+  case 24:		//edit level strength
+	  last_display_phase = 20;
+	  print_osd_menu_strings(6, 3, levelmode_labels, levelmode_positions);
+	  print_osd_adjustable_float(6, 4, level_pid_ptr, levelmode_grid, levelmode_data_positions, 1);
+	  if (osd_menu_phase == 11) osd_float_adjust(level_pid_ptr, 2, 2, levelmode_adjust_limits, 0.5);
+	  break;
+
 
   }
 if (osd_display_phase !=2 && rx_aux_on(AUX_ARMING)) binding_while_armed = 1;	//final safety check to disallow arming during OSD operation
