@@ -261,9 +261,9 @@ const char vtx_temp_labels[3][21] = { {"VTX CONTROLS"},{"UNDER"},{"DEVELOPMENT"}
 const uint8_t vtx_temp_positions[3][2] = { {9, 1}, {7, 4}, {7,5} };
 
 //special features menu map
-const char special_features_labels[4][21] = { {"SPECIAL FEATURES"},{"STICK BOOST"},{"LOW BATTERY"},{"LEVEL MODE"} };
-const uint8_t special_features_positions[4][2] = { {7, 1}, {7, 4}, {7, 5}, {7, 6} };
-const uint8_t special_features_map[] = {13, 19, 20};					//case numbers for {stickboost}, etc ...adding more soon
+const char special_features_labels[6][21] = { {"SPECIAL FEATURES"},{"STICK BOOST"},{"LOW BATTERY"},{"LEVEL MODE"},{"TORQUE BOOST"},{"DIGITAL IDLE"} };
+const uint8_t special_features_positions[6][2] = { {7, 1}, {7, 4}, {7, 5}, {7, 6}, {7, 7}, {7, 8} };
+const uint8_t special_features_map[] = {13, 19, 20, 21, 22};					//case numbers for {stickboost}, etc ...adding more soon
 
 //stick boost submenu map
 const char stickboost_labels[3][21] = { {"STICK BOOST PROFILES"},{"AUX OFF PROFILE 1"},{"AUX ON  PROFILE 2"} };
@@ -280,12 +280,36 @@ const uint8_t stickboost_data_positions[9][2] = { {13, 6},{18, 6},{23, 6},{13, 8
 const float stickboost_adjust_limits[6][2] = { {0, 3.0}, {0, 3.0}, {0, 3.0}, {0, 1.0}, {0, 1.0}, {0, 1.0} };
 
 //low battery map
+float *low_batt_ptr[1] = {&profile.voltage.vbattlow};
 const char lowbatt_labels[3][21] = { {"LOW BATTERY"},{"VOLTS/CELL ALERT"},{"SAVE AND EXIT"} };
 const uint8_t lowbatt_positions[3][2] = { {10, 1},{4, 5},{4, 14} };
-const uint8_t lowbatt_grid [1][2] = {{1, 1}};	//not currently used
+const uint8_t lowbatt_grid [1][2] = {{1, 1}};
 const uint8_t lowbatt_data_positions[1][2] = { {21, 5} };
-const uint8_t lowbatt_data_index[1][2] = { {1, 0} };	// not currently used
 const float lowbatt_adjust_limits[1][2] = { {0, 4.2} };
+
+//levelmode map
+float *levelmode_ptr[6] = {&profile.rate.level_max_angle, &profile.rate.level_max_angle, &profile.pid.small_angle.kp, &profile.pid.small_angle.kd, &profile.pid.big_angle.kp, &profile.pid.big_angle.kd};
+const char levelmode_labels[7][21] = { {"LEVEL MODE"},{"KP"},{"KD"},{"MAX ANGLE DEGREES"},{"SM ANGLE STRENGTH"},{"LRG ANGLE STRENGTH"},{"SAVE AND EXIT"} };
+const uint8_t levelmode_positions[7][2] = { {10, 1},{21, 7},{25, 7},{1, 5},{1, 8},{1, 9},{1, 14} };
+const uint8_t levelmode_grid [6][2] = {{1, 1}, {1, 1}, {1, 2}, {2, 2}, {1, 3}, {2, 3},};
+const uint8_t levelmode_data_positions[6][2] = { {19, 5}, {19, 5}, {19, 8}, {23, 8}, {19, 9}, {23, 9} };
+const float levelmode_adjust_limits[6][2] = { {0, 85.0}, {0, 85.0}, {0, 20.0}, {0, 10.0}, {0, 20.0}, {0, 10.0} };
+
+//torque boost map
+float *torqueboost_ptr[1] = {&profile.motor.torque_boost};
+const char torqueboost_labels[3][21] = { {"TORQUE BOOST"},{"MOTOR TORQUE BOOST"},{"SAVE AND EXIT"} };
+const uint8_t torqueboost_positions[3][2] = { {9, 1},{4, 5},{4, 14} };
+const uint8_t torqueboost_grid [1][2] = {{1, 1}};
+const uint8_t torqueboost_data_positions[1][2] = { {22, 5} };
+const float torqueboost_adjust_limits[1][2] = { {0, 3.0} };
+
+//digital idle map
+float *motoridle_ptr[1] = {&profile.motor.digital_idle};
+const char motoridle_labels[3][21] = { {"DIGITAL IDLE"},{"MOTOR IDLE %"},{"SAVE AND EXIT"} };
+const uint8_t motoridle_positions[3][2] = { {9, 1},{4, 5},{4, 14} };
+const uint8_t motoridle_grid [1][2] = {{1, 1}};
+const uint8_t motoridle_data_positions[1][2] = { {17, 5} };
+const float motoridle_adjust_limits[1][2] = { {0, 25.0} };
 
 //******************************************************************************************************************************
 
@@ -472,19 +496,20 @@ void osd_vector_adjust ( vector_t *pointer, uint8_t rows, uint8_t columns, uint8
 	}
 }
 
-void osd_float_adjust ( float *pointer, const float adjust_limit[1][2], float adjust_amount){
-	if (osd_select > 1) {
-		osd_select = 1;
+void osd_float_adjust ( float *pointer[],  uint8_t rows, uint8_t columns, const float adjust_limit[rows*columns][2], float adjust_amount){
+	if (osd_select > columns) {
+		osd_select = columns;
 		osd_menu_phase = 1; //repaint the screen again
 	}
-	if (osd_cursor <= 1){
-		if ((increase_osd_value && *pointer < adjust_limit[0][1]) || (decrease_osd_value  && *pointer > adjust_limit[0][0])){
-			*pointer = adjust_rounded_float(*pointer, adjust_amount);
+	if (osd_cursor <= rows){
+		uint8_t adjust_tracker = ((osd_cursor-1) * columns) + (osd_select - 1);
+		if ((increase_osd_value && *pointer[adjust_tracker] < adjust_limit[adjust_tracker][1]) || (decrease_osd_value  && *pointer[adjust_tracker] > adjust_limit[adjust_tracker][0])){
+			*pointer[adjust_tracker] = adjust_rounded_float(*pointer[adjust_tracker], adjust_amount);
 		}
 		increase_osd_value = 0;
 		decrease_osd_value = 0;
 	}
-	if (osd_cursor == 2){
+	if (osd_cursor == rows + 1){
 		if (osd_select == 1){
 		osd_save_exit();
 		}
@@ -1000,7 +1025,7 @@ void print_osd_adjustable_vectors(uint8_t menu_type, uint8_t string_element_qty,
   	osd_menu_phase++;
 }
 
-void print_osd_adjustable_float(uint8_t string_element_qty, uint8_t data_element_qty, float *pointer, const uint8_t print_position[data_element_qty][2], uint8_t precision){
+void print_osd_adjustable_float(uint8_t string_element_qty, uint8_t data_element_qty, float *pointer[], const uint8_t grid[data_element_qty][2], const uint8_t print_position[data_element_qty][2], uint8_t precision){
   	if (osd_menu_phase <= string_element_qty)
           return;
   	if (osd_menu_phase > string_element_qty + data_element_qty)
@@ -1012,8 +1037,9 @@ void print_osd_adjustable_float(uint8_t string_element_qty, uint8_t data_element
   	}
   	skip_loop = 0;
 	uint8_t data_buffer[5];
-	fast_fprint(data_buffer, 5, profile.voltage.vbattlow + FLT_EPSILON, precision);
-	osd_print_data(data_buffer, 5, grid_selection(1, 1), print_position[0][0], print_position[0][1]);
+	uint8_t index = osd_menu_phase-string_element_qty-1;
+	fast_fprint(data_buffer, 5, *pointer[index] + FLT_EPSILON, precision);
+	osd_print_data(data_buffer, 5, grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
 	osd_menu_phase++;
 }
 //******************************************************************************************************************************
@@ -1280,8 +1306,8 @@ void osd_display(void) {
 
   case 12:		//special features
 	  last_display_phase = 1;
-	  print_osd_menu_strings(4, 3, special_features_labels, special_features_positions);
-	  if (osd_menu_phase == 5) osd_select_menu_item(3,special_features_map, SUB_MENU);
+	  print_osd_menu_strings(6, 5, special_features_labels, special_features_positions);
+	  if (osd_menu_phase == 7) osd_select_menu_item(5,special_features_map, SUB_MENU);
       break;
 
   case 13:		//stick boost profiles
@@ -1329,13 +1355,29 @@ void osd_display(void) {
   case 19:		//edit lowbatt threshold
 	  last_display_phase = 12;
 	  print_osd_menu_strings(3, 2, lowbatt_labels, lowbatt_positions);
-	  print_osd_adjustable_float(3, 1, &profile.voltage.vbattlow, lowbatt_data_positions, 1);
-	 if (osd_menu_phase == 5) osd_float_adjust(&profile.voltage.vbattlow, lowbatt_adjust_limits, 0.1);
+	  print_osd_adjustable_float(3, 1, low_batt_ptr, lowbatt_grid, lowbatt_data_positions, 1);
+	  if (osd_menu_phase == 5) osd_float_adjust(low_batt_ptr, 1, 1, lowbatt_adjust_limits, 0.1);
 	  break;
 
-  case 20:
+  case 20:		//edit levelmode
 	  last_display_phase = 12;
-	  print_osd_menu_strings(3, 2, vtx_temp_labels, vtx_temp_positions);
+	  print_osd_menu_strings(7, 4, levelmode_labels, levelmode_positions);
+	  print_osd_adjustable_float(7, 6, levelmode_ptr, levelmode_grid, levelmode_data_positions, 0);
+	  if (osd_menu_phase == 14) osd_float_adjust(levelmode_ptr, 3, 2, levelmode_adjust_limits, 1.0);
+	  break;
+
+  case 21:		//edit torque boost
+	  last_display_phase = 12;
+	  print_osd_menu_strings(3, 2, torqueboost_labels, torqueboost_positions);
+	  print_osd_adjustable_float(3, 1, torqueboost_ptr, torqueboost_grid, torqueboost_data_positions, 1);
+	  if (osd_menu_phase == 5) osd_float_adjust(torqueboost_ptr, 1, 1, torqueboost_adjust_limits, 0.1);
+	  break;
+
+  case 22:		//edit digital idle
+	  last_display_phase = 12;
+	  print_osd_menu_strings(3, 2, motoridle_labels, motoridle_positions);
+	  print_osd_adjustable_float(3, 1, motoridle_ptr, motoridle_grid, motoridle_data_positions, 1);
+	  if (osd_menu_phase == 5) osd_float_adjust(motoridle_ptr, 1, 1, motoridle_adjust_limits, 0.1);
 	  break;
 
   }
