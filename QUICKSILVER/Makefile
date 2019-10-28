@@ -7,6 +7,8 @@ CP=arm-none-eabi-objcopy
 OD=arm-none-eabi-objdump
 SE=arm-none-eabi-size
 
+GCC_VERSION=$(shell arm-none-eabi-gcc -dumpversion)
+
 INCLUDE = src \
 	src/main \
 	src/main/rx \
@@ -62,9 +64,9 @@ all: $(TARGET)
 FORCE:
 
 $(TARGET): $(BUILD_DIR)/target $(BUILD_DIR)/$(BINARY).bin $(BUILD_DIR)/$(BINARY).hex $(BUILD_DIR)/$(BINARY).list
+	@echo "built $(BINARY) with gcc $(GCC_VERSION)"
 	
 $(BUILD_DIR)/target: FORCE
-
 	@mkdir -p $(BUILD_DIR)
 	@echo "Setting target to $(TARGET)"
 	@echo "$(TARGET)" > $(BUILD_DIR)/target.tmp
