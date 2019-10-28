@@ -9,8 +9,9 @@ SE=arm-none-eabi-size
 
 INCLUDE = src \
 	src/main \
-	src/main/rx\
-	src/main/osd\
+	src/main/rx \
+	src/main/osd \
+	src/main/config \
 	src/drivers \
 	src/drivers/usb \
 	$(TARGET_INCLUDE) \
