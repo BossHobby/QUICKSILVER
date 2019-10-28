@@ -42,7 +42,6 @@
 #include "drv_time.h"
 #include "gestures.h"
 #include "led.h"
-#include "osd.h"
 #include "pid.h"
 #include "profile.h"
 #include "rx.h"
@@ -51,6 +50,7 @@
 
 #include <inttypes.h>
 #include <math.h>
+#include <osd/osd_render.h>
 #include <stdio.h>
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE

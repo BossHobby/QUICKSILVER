@@ -1,3 +1,6 @@
+#include <osd/osd_render.h>
+#include "osd_menu_maps.h"
+#include "osd_adjust.h"
 #include "drv_max7456.h"
 #include "drv_time.h"
 #include "project.h"
@@ -7,8 +10,8 @@
 #include "float.h"
 #include "util.h"
 #include "rx.h"
-#include "osd.h"
 #include "debug.h"
+
 
 #ifdef ENABLE_OSD
 
@@ -18,10 +21,15 @@ void osd_init(void) {
   osd_intro();        //print the splash screen
 }
 
+
+
+//************************************************************************************************************************************************************************************
+//																					FLASH MEMORY
+//************************************************************************************************************************************************************************************
 /*screen elements characteristics written like registers in a 32bit binany number
 except callsign which will take 6 addresses.  callsign bit 1 will be enable/disable,
 bit 2 will be text/invert, and the remaining 5 addresses will be 4 characters each.  6 total addresses
-will allow callsign text to fill the whole screen across
+will allow callsign text to fill 20 characters
 BIT
 0			-		0 is display element inactive , 1 is display element active
 1			-		0 is TEXT, 1 is INVERT
@@ -33,17 +41,6 @@ BIT
 
 //Flash Variables - 32bit					# of osd elements and flash memory start position in defines.h
 extern unsigned long osd_element[OSD_NUMBER_ELEMENTS];
-/*
-elements 0-5 - Call Sign
-element 6 Fuel Gauge volts
-element 7 Filtered Volts
-element 8 Exact Volts
-***********************
-***********************
-element 9 Flight Mode
-element 10 Time
-element 11 RSSI
-*/
 
 //pointers to flash variable array
 unsigned long *callsign1 = osd_element;
@@ -136,11 +133,9 @@ const char* get_decode_element_string (uint32_t input , uint8_t status){
 }
 
 
-
-//******************************************************************************************************************************
-
-
-//******************************************************************************************************************************
+//************************************************************************************************************************************************************************************
+//																					STATE VARIABLES
+//************************************************************************************************************************************************************************************
 // case & state variables for switch logic and profile adjustments
 debug_type debug;
 extern int flash_feature_1; //currently used for auto entry into wizard menu
@@ -159,176 +154,13 @@ uint8_t last_osd_cursor[6];
 uint8_t osd_select;
 uint8_t increase_osd_value;
 uint8_t decrease_osd_value;
-
-
-
-#define BF_PIDS 0
-const float bf_pids_increments[] = {0.0015924, 0.0015924, 0.0031847, 0.02, 0.02, 0.02, 0.0083333, 0.0083333, 0.0083333};
-#define SW_RATES 1
-const float sw_rates_increments[] = {10.0, 10.0, 10.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
-#define ROUNDED 2
-const float rounded_increments[] = {0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
-
 #define MAIN_MENU 1
 #define SUB_MENU 0
 
-//main menu maps
-const char main_menu_labels[10][21] = {"MENU","VTX","PIDS","FILTERS","RATES","FLIGHT MODES","OSD ELEMENTS","SPECIAL FEATURES","SETUP WIZARD","SAVE AND EXIT"};
-const uint8_t main_menu_positions[10][2] = { {13, 1},{7, 3},{7, 4},{7, 5},{7, 6},{7, 7},{7, 8},{7, 9},{7, 10},{7, 11} };
-const uint8_t main_menu_map[] = {11, 3, 5, 6, 9, 10, 12};		//case numbers for {vtx, pids, filters, rates, flight modes, osd elements, special features}
 
-//pid profiles submenu map
-const char pid_profiles_labels[3][21] = { {"PID PROFILES"},{"PID PROFILE 1"},{"PID PROFILE 2"} };
-const uint8_t pid_profiles_positions[3][2] = { {9, 1},{7, 4},{7, 5} };
-const uint8_t pid_submenu_map[] = {4, 4};	//describes the menu case to call next for each submenu option
-
-// pids profiles map
-const char pid_profile1_labels[8][21] = { {"PID PROFILE 1"},{"ROLL"},{"PITCH"},{"YAW"},{"KP"},{"KI"},{"KD"},{"SAVE AND EXIT"} };
-const char pid_profile2_labels[8][21] = { {"PID PROFILE 2"},{"ROLL"},{"PITCH"},{"YAW"},{"KP"},{"KI"},{"KD"},{"SAVE AND EXIT"} };
-const uint8_t pid_profile_positions[8][2] = { {9, 1},{10, 4},{16, 4},{23, 4},{4, 6},{4, 7},{4, 8},{2, 14} };
-const uint8_t pid_profile_data_index[9][2] = { {1, 0}, {1, 1}, {1, 2}, {2, 0}, {2, 1}, {2, 2}, {3, 0}, {3, 1}, {3, 2} };
-const uint8_t pid_profile_grid[9][2] = { {1, 1},{2, 1},{3, 1},{1, 2},{2, 2},{3, 2},{1, 3},{2, 3},{3, 3} };
-const uint8_t pid_profile_data_positions[9][2] = { {10, 6},{16, 6},{22, 6},{10, 7},{16, 7},{22, 7},{10, 8},{16, 8},{22, 8} };
-const float pid_profile_adjust_limits[9][2] = { {0.0015924, 1.0}, {0.0015924, 1.0}, {0.0031847, 1.0}, {0.02, 3.0}, {0.02, 3.0}, {0.02, 3.0}, {0.0083333, 1.0}, {0.0083333, 1.0}, {0.0083333, 1.0} };
-const uint8_t pid_scale_index[9] = {0, 0, 1, 2, 2, 2, 3, 3, 3};
-
-//filters submenu map
-const char filter_temp_labels[3][21] = { {"FILTERS"},{"UNDER"},{"DEVELOPMENT"} };
-const uint8_t filter_temp_positions[3][2] = { {11, 1}, {7, 4}, {7,5} };
-
-//rates submenu map
-const char rates_profile_labels[3][21] = { {"RATES"}, {"SILVERWARE"}, {"BETAFLIGHT"} };
-const uint8_t rates_profile_positions[3][2] = { {13, 1},{7, 4},{7, 5} };
-const uint8_t rates_submenu_map[] = {7, 8};
-
-//silverware rates map
-const char sw_rates_labels[8][21] = { {"SILVERWARE RATES"},{"ROLL"},{"PITCH"},{"YAW"},{"RATE"},{"ACRO EXPO"},{"ANGLE EXPO"},{"SAVE AND EXIT"} };
-const uint8_t sw_rates_positions[8][2] = { {7, 1},{14, 4},{19, 4},{25, 4},{2, 6},{2, 7},{2, 8},{2, 14} };
-const uint8_t sw_rates_data_index[9][2] = { {1, 0}, {1, 1}, {1, 2}, {2, 0}, {2, 1}, {2, 2}, {3, 0}, {3, 1}, {3, 2} };
-const uint8_t sw_rates_grid[9][2] = { {1, 1},{2, 1},{3, 1},{1, 2},{2, 2},{3, 2},{1, 3},{2, 3},{3, 3} };
-const uint8_t sw_rates_data_positions[9][2] = { {14, 6},{19, 6},{24, 6},{13, 7},{18, 7},{23, 7},{13, 8},{18, 8},{23, 8} };
-const float sw_rates_adjust_limits[9][2] = { {0, 1800.0}, {0, 1800.0}, {0, 1800.0}, {0, 0.99}, {0, 0.99}, {0, 0.99}, {0, 0.99}, {0, 0.99}, {0, 0.99} };
-
-//betaflight rates map
-const char bf_rates_labels[8][21] = { {"BETAFLIGHT RATES"},{"ROLL"},{"PITCH"},{"YAW"},{"RC RATE"},{"SUPER RATE"},{"EXPO"},{"SAVE AND EXIT"} };
-const uint8_t bf_rates_positions[8][2] = { {7, 1},{14, 4},{19, 4},{25, 4},{2, 6},{2, 7},{2, 8},{2, 14} };
-const uint8_t bf_rates_data_index[9][2] = { {1, 0}, {1, 1}, {1, 2}, {2, 0}, {2, 1}, {2, 2}, {3, 0}, {3, 1}, {3, 2} };
-const uint8_t bf_rates_grid[9][2] = { {1, 1},{2, 1},{3, 1},{1, 2},{2, 2},{3, 2},{1, 3},{2, 3},{3, 3} };
-const uint8_t bf_rates_data_positions[9][2] = { {13, 6},{18, 6},{23, 6},{13, 7},{18, 7},{23, 7},{13, 8},{18, 8},{23, 8} };
-const float bf_rates_adjust_limits[9][2] = { {0, 3.0}, {0, 3.0}, {0, 3.0}, {0, 3.0}, {0, 3.0}, {0, 3.0}, {0, 0.99}, {0, 0.99}, {0, 0.99} };
-
-//flight modes map
-const char flight_modes_labels[12][21] = {"FLIGHT MODES","ARMING","IDLE UP","LEVELMODE","RACEMODE","HORIZON","STICK BOOST","HIGH RATES","BUZZER","TURTLE","MOTOR TEST","SAVE AND EXIT"};
-const uint8_t flight_modes_positions[12][2] = { {9, 1},{4, 2},{4, 3},{4, 4},{4, 5},{4, 6},{4, 7},{4, 8},{4, 9},{4, 10},{4, 11},{4, 14} };
-const uint8_t flight_modes_data_positions[10][2] = { {17, 2}, {17, 3}, {17, 4}, {17, 5}, {17, 6}, {17, 7}, {17, 8}, {17, 9}, {17, 10}, {17, 11} };
-const uint8_t flight_modes_aux_limits[] = {11, 14, 14, 14, 14, 14, 14, 14, 14, 14};	//from aux_channel_t
-const uint8_t flight_modes_aux_items[] = {0, 1, 2, 3, 4, 5, 7, 9, 10, 12};			//from aux_function_t
-const uint8_t flight_modes_grid[10][2] = { {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}, {1, 6}, {1, 7}, {1, 8}, {1, 9}, {1, 10} };
-
-//osd elements submenu map
-const char osd_elements_menu_labels[5][21] = { {"OSD ELEMENTS"},{"ADD OR REMOVE"},{"EDIT POSITIONS"},{"EDIT TEXT STYLE"},{"EDIT CALLSIGN"} };
-const uint8_t osd_elements_menu_positions[5][2] = { {9, 1}, {7, 4}, {7, 5}, {7, 6}, {7, 7} };
-const uint8_t osd_elements_map[] = {15, 16, 17, 18};
-
-//osd element add/remove & text/invert submenu map
-const char osd_display_labels[12][21] = { {"OSD DISPLAY ITEMS"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"EXACT VOLTS"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"SYSTEM STATUS"}, {"THROTTLE"}, {"VTX"}, {"SAVE AND EXIT"} };
-const uint8_t osd_display_positions[12][2] = { {6,1}, {4,2}, {4,3}, {4,4}, {4,5}, {4,6}, {4,7}, {4,8}, {4,9}, {4,10}, {4,11}, {4,14} };
-const uint8_t osd_display_data_positions[10][2] = { {20, 2}, {20, 3}, {20, 4}, {20, 5}, {20, 6}, {20, 7}, {20, 8}, {20, 9}, {20, 10}, {20, 11} };
-const uint8_t osd_display_grid[10][2] = { {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}, {1, 6}, {1, 7}, {1, 8}, {1, 9}, {1, 10} };
-const uint8_t osd_elements_active_items[] = {0, 6, 7, 8, 9, 10, 11, 12, 13, 14};
-
-//osd positions submenu map
-const char osd_position_labels[14][21] = { {"OSD POSITIONS"},{"ADJ X"}, {"ADJ Y"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"EXACT VOLTS"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"SYSTEM STATUS"}, {"THROTTLE"}, {"VTX"}, {"SAVE AND EXIT"} };
-const uint8_t osd_position_adjust_positions[14][2] = { {1,1}, {18,1}, {24,1}, {3,2}, {3,3}, {3,4}, {3,5}, {3,6}, {3,7}, {3,8}, {3,9}, {3,10}, {3,11}, {3,14} };
-const uint8_t osd_position_grid[20][2] = { {1, 1}, {2, 1}, {1, 2}, {2, 2}, {1, 3}, {2, 3}, {1, 4}, {2, 4}, {1, 5}, {2, 5}, {1, 6}, {2, 6}, {1, 7}, {2, 7}, {1, 8}, {2, 8}, {1, 9}, {2, 9}, {1, 10}, {2, 10} };
-const uint8_t osd_position_data_positions[20][2] = { {20, 2}, {26, 2}, {20, 3}, {26, 3}, {20, 4}, {26, 4}, {20, 5}, {26, 5}, {20, 6}, {26, 6}, {20, 7}, {26, 7}, {20, 8}, {26, 8}, {20, 9}, {26, 9}, {20, 10}, {26, 10}, {20, 11}, {26, 11} };
-const uint8_t osd_position_active_items[] = {0, 0, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14};
-const uint8_t osd_position_index[20] = {2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3};
-
-//osd text style submenu map
-const char osd_text_style[12][21] = { {"OSD TEXT STYLE"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"EXACT VOLTS"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"SYSTEM STATUS"}, {"THROTTLE"}, {"VTX"}, {"SAVE AND EXIT"} };
-const uint8_t osd_text_style_positions[12][2] = { {8,1}, {4,2}, {4,3}, {4,4}, {4,5}, {4,6}, {4,7}, {4,8}, {4,9}, {4,10}, {4,11}, {4,14} };
-
-//osd callsign edit submenu map
-const char osd_callsign_edit_labels[23][21] = { {"CALLSIGN"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"-"},{"EDIT:"},{"SAVE AND EXIT"} };
-const uint8_t osd_callsign_edit_positions[23][2] = { {11, 1}, {8, 6}, {9, 6}, {10, 6}, {11, 6}, {12, 6}, {13, 6}, {14, 6}, {15, 6}, {16, 6}, {17, 6}, {18, 6}, {19, 6}, {20, 6}, {21, 6}, {22, 6}, {23, 6}, {24, 6}, {25, 6}, {26, 6}, {27, 6}, {1, 5}, {1, 7} };
-const uint8_t osd_callsign_grid [20][2] = { {1, 1}, {2, 1}, {3, 1}, {4, 1}, {5, 1}, {6, 1}, {7, 1}, {8, 1}, {9, 1}, {10, 1}, {11, 1}, {12, 1}, {13, 1}, {14, 1}, {15, 1}, {16, 1}, {17, 1}, {18, 1}, {19, 1}, {20, 1} };
-const uint8_t osd_callsign_edit_data_positions[20][2] = { {8, 5}, {9, 5}, {10, 5}, {11, 5}, {12, 5}, {13, 5}, {14, 5}, {15, 5}, {16, 5}, {17, 5}, {18, 5}, {19, 5}, {20, 5}, {21, 5}, {22, 5}, {23, 5}, {24, 5}, {25, 5}, {26, 5}, {27, 5} };
-const uint8_t callsign_shift_index[20][2] = { {1, 0} , {1, 8} , {1, 16} , {1, 24} , {2, 0} , {2, 8} , {2, 16} , {2, 24} , {3, 0} , {3, 8} , {3, 16} , {3, 24} , {4, 0} , {4, 8} , {4, 16} , {4, 24} , {5, 0} , {5, 8} , {5, 16} , {5, 24} };
-
-//vtx submenu map
-const char vtx_temp_labels[3][21] = { {"VTX CONTROLS"},{"UNDER"},{"DEVELOPMENT"} };
-const uint8_t vtx_temp_positions[3][2] = { {9, 1}, {7, 4}, {7,5} };
-
-//special features menu map
-const char special_features_labels[6][21] = { {"SPECIAL FEATURES"},{"STICK BOOST"},{"LOW BATTERY"},{"LEVEL MODE"},{"TORQUE BOOST"},{"DIGITAL IDLE"} };
-const uint8_t special_features_positions[6][2] = { {7, 1}, {7, 4}, {7, 5}, {7, 6}, {7, 7}, {7, 8} };
-const uint8_t special_features_map[] = {13, 19, 20, 21, 22};					//case numbers for {stickboost}, etc ...adding more soon
-
-//stick boost submenu map
-const char stickboost_labels[3][21] = { {"STICK BOOST PROFILES"},{"AUX OFF PROFILE 1"},{"AUX ON  PROFILE 2"} };
-const uint8_t stickboost_profile_positions[3][2] = { {5, 1},{7, 4},{7, 5} };
-const uint8_t stickboost_submenu_map[] = {14, 14};
-
-//stick boost map
-const char stickboost1_labels[7][21] = { {"BOOST PROFILE 1"},{"ROLL"},{"PITCH"},{"YAW"},{"ACCELERATOR"},{"TRANSITION"},{"SAVE AND EXIT"} };
-const char stickboost2_labels[7][21] = { {"BOOST PROFILE 2"},{"ROLL"},{"PITCH"},{"YAW"},{"ACCELERATOR"},{"TRANSITION"},{"SAVE AND EXIT"} };
-const uint8_t stickboost_positions[7][2] = { {8, 1},{14, 4},{19, 4},{25, 4},{2, 6},{2, 8},{2, 14} };
-const uint8_t stickboost_data_index[6][2] = { {1, 0}, {1, 1}, {1, 2}, {2, 0}, {2, 1}, {2, 2} };
-const uint8_t stickboost_grid[6][2] = { {1, 1},{2, 1},{3, 1},{1, 2},{2, 2},{3, 2} };
-const uint8_t stickboost_data_positions[9][2] = { {13, 6},{18, 6},{23, 6},{13, 8},{18, 8},{23, 8} };
-const float stickboost_adjust_limits[6][2] = { {0, 3.0}, {0, 3.0}, {0, 3.0}, {0, 1.0}, {0, 1.0}, {0, 1.0} };
-
-//low battery map
-float *low_batt_ptr[1] = {&profile.voltage.vbattlow};
-const char lowbatt_labels[3][21] = { {"LOW BATTERY"},{"VOLTS/CELL ALERT"},{"SAVE AND EXIT"} };
-const uint8_t lowbatt_positions[3][2] = { {10, 1},{4, 5},{4, 14} };
-const uint8_t lowbatt_grid [1][2] = {{1, 1}};
-const uint8_t lowbatt_data_positions[1][2] = { {21, 5} };
-const float lowbatt_adjust_limits[1][2] = { {0, 4.2} };
-
-//levelmode submenu map
-const char level_submenu_labels[3][21] = { {"LEVEL MODE"},{"MAX ANGLE"},{"LEVEL STRENGTH"} };
-const uint8_t level_submenu_positions[3][2] = { {10, 1}, {7, 4}, {7, 5} };
-const uint8_t level_submenu_map[] = {23, 24};
-
-//levelmode maxangle map
-float *level_maxangle_ptr[1] = {&profile.rate.level_max_angle};
-const char maxangle_labels[3][21] = { {"LEVEL MODE"},{"MAX ANGLE DEGREES"},{"SAVE AND EXIT"} };
-const uint8_t maxangle_positions[3][2] = { {10, 1},{1, 5},{1, 14} };
-const uint8_t maxangle_grid [6][2] = {{1, 1}};
-const uint8_t maxangle_data_positions[1][2] = { {19, 5} };
-const float maxangle_adjust_limits[1][2] = { {0, 85.0} };
-
-//levelmode pid map
-float *level_pid_ptr[4] = {&profile.pid.small_angle.kp, &profile.pid.small_angle.kd, &profile.pid.big_angle.kp, &profile.pid.big_angle.kd};
-const char levelmode_labels[6][21] = { {"LEVEL MODE"},{"KP"},{"KD"},{"SM ANGLE STRENGTH"},{"LRG ANGLE STRENGTH"},{"SAVE AND EXIT"} };
-const uint8_t levelmode_positions[6][2] = { {10, 1},{21, 5},{26, 5},{1, 6},{1, 7},{1, 14} };
-const uint8_t levelmode_grid [4][2] = {{1, 1}, {2, 1}, {1, 2}, {2, 2}};
-const uint8_t levelmode_data_positions[4][2] = { {19, 6}, {24, 6}, {19, 7}, {24, 7} };
-const float levelmode_adjust_limits[4][2] = { {0, 20.0}, {0, 10.0}, {0, 20.0}, {0, 10.0} };
-
-//torque boost map
-float *torqueboost_ptr[1] = {&profile.motor.torque_boost};
-const char torqueboost_labels[3][21] = { {"TORQUE BOOST"},{"MOTOR TORQUE BOOST"},{"SAVE AND EXIT"} };
-const uint8_t torqueboost_positions[3][2] = { {9, 1},{4, 5},{4, 14} };
-const uint8_t torqueboost_grid [1][2] = {{1, 1}};
-const uint8_t torqueboost_data_positions[1][2] = { {22, 5} };
-const float torqueboost_adjust_limits[1][2] = { {0, 3.0} };
-
-//digital idle map
-float *motoridle_ptr[1] = {&profile.motor.digital_idle};
-const char motoridle_labels[3][21] = { {"DIGITAL IDLE"},{"MOTOR IDLE %"},{"SAVE AND EXIT"} };
-const uint8_t motoridle_positions[3][2] = { {9, 1},{4, 5},{4, 14} };
-const uint8_t motoridle_grid [1][2] = {{1, 1}};
-const uint8_t motoridle_data_positions[1][2] = { {17, 5} };
-const float motoridle_adjust_limits[1][2] = { {0, 25.0} };
-
-//******************************************************************************************************************************
-
-
-//******************************************************************************************************************************
-// osd utility functions
+//************************************************************************************************************************************************************************************
+//																					UTILITY FUNCTIONS
+//************************************************************************************************************************************************************************************
 
 void osd_display_reset(void) {
   osd_wizard_phase = 0;    //reset the wizard
@@ -338,33 +170,6 @@ void osd_display_reset(void) {
   last_lowbatt_state = 2;  //reset last lowbatt comparator
   last_lowbatt_state2 = 2;
   last_lowbatt_state3 = 2;
-}
-
-void osd_save_exit(void){
-	osd_select = 0;
-    osd_cursor = 0;
-    for (uint8_t i = 0; i < 6; i++){
-    	last_osd_cursor[i] = 0;
-    }
-    osd_display_phase = 0;
-	#ifdef FLASH_SAVE1
-    extern int pid_gestures_used;
-    extern int ledcommand;
-    extern void flash_save(void);
-    extern void flash_load(void);
-    pid_gestures_used = 0;
-    ledcommand = 1;
-    flash_save();
-    flash_load();
-    // reset flash numbers for pids
-    extern int number_of_increments[3][3];
-    for (int i = 0; i < 3; i++)
-      for (int j = 0; j < 3; j++)
-        number_of_increments[i][j] = 0;
-    // reset loop time - maybe not necessary cause it gets reset in the next screen clear
-    extern unsigned long lastlooptime;
-    lastlooptime = gettime();
-    #endif
 }
 
 void osd_clear_screen(void){
@@ -414,195 +219,10 @@ uint16_t pid_scale(float pid_rate, uint8_t pid_scale_index){
 	return 0;
 }
 
-float adjust_rounded_float(float input, float adjust_amount){
-	float value = (int)(input * 100.0f + 0.5f);
-	if (increase_osd_value){
-		increase_osd_value = 0;
-		osd_menu_phase = 1; //repaint the screen again
-		return (float)(value+(100.0f * adjust_amount)) / 100.0f;
-	}
-	if (decrease_osd_value){
-		decrease_osd_value = 0;
-		osd_menu_phase = 1; //repaint the screen again
-		return (float)(value-(100.0f * adjust_amount)) / 100.0f;
-	}
-	return input;
-}
 
-const char* get_aux_status (int input){
-	static char* respond[] = {"CHANNEL 5  ", "CHANNEL 6  ", "CHANNEL 7  ", "CHANNEL 8  ", "CHANNEL 9  ", "CHANNEL 10 ", "CHANNEL 11 ", "CHANNEL 12 ", "CHANNEL 13 ", "CHANNEL 14 ", "CHANNEL 15 ", "CHANNEL 16 ", "GESTURE AUX", "ALWAYS ON  ", "ALWAYS OFF ", "ERROR      "};
-	return respond[input];
-}
-
-vector_t *get_pid_term(uint8_t term) {
-  switch (term) {
-  case 1:
-    return &profile.pid.pid_rates[profile.pid.pid_profile].kp;
-  case 2:
-    return &profile.pid.pid_rates[profile.pid.pid_profile].ki;
-  case 3:
-    return &profile.pid.pid_rates[profile.pid.pid_profile].kd;
-  }
-  return NULL;
-}
-
-vector_t *get_sw_rate_term(uint8_t term) {
-  switch (term) {
-  case 1:
-    return &profile.rate.silverware.max_rate;
-  case 2:
-    return &profile.rate.silverware.acro_expo;
-  case 3:
-    return &profile.rate.silverware.angle_expo;
-  }
-  return NULL;
-}
-
-vector_t *get_bf_rate_term(uint8_t term) {
-  switch (term) {
-  case 1:
-    return &profile.rate.betaflight.rc_rate;
-  case 2:
-    return &profile.rate.betaflight.super_rate;
-  case 3:
-    return &profile.rate.betaflight.expo;
-  }
-  return NULL;
-}
-
-vector_t *get_stick_profile_term(uint8_t term) {
-  switch (term) {
-  case 1:
-    return &profile.pid.stick_rates[profile.pid.stick_profile].accelerator;
-  case 2:
-    return &profile.pid.stick_rates[profile.pid.stick_profile].transition;
-  }
-  return NULL;
-}
-
-
-void osd_vector_adjust ( vector_t *pointer, uint8_t rows, uint8_t columns, uint8_t special_case, const float adjust_limit[rows*columns][2]){
-	if (osd_select > columns) {
-		osd_select = columns;	//limit osd select variable from accumulating past 3 columns of adjustable items
-		osd_menu_phase = 1; //repaint the screen again
-	}
-	if (osd_cursor <= rows){
-		uint8_t adjust_tracker = ((osd_cursor-1) * columns) + (osd_select - 1);
-		if ((increase_osd_value && pointer->axis[osd_select-1] < adjust_limit[adjust_tracker][1]) || (decrease_osd_value  && pointer->axis[osd_select-1] > adjust_limit[adjust_tracker][0])){
-			if (special_case == BF_PIDS){
-				if (increase_osd_value) pointer->axis[osd_select-1] = pointer->axis[osd_select-1] + bf_pids_increments[adjust_tracker];
-				if (decrease_osd_value) pointer->axis[osd_select-1] = pointer->axis[osd_select-1] - bf_pids_increments[adjust_tracker];
-				osd_menu_phase = 1; //repaint the screen again
-			}
-			if (special_case == SW_RATES)
-				pointer->axis[osd_select-1] = adjust_rounded_float(pointer->axis[osd_select-1], sw_rates_increments[adjust_tracker]);
-			if (special_case == ROUNDED)
-				pointer->axis[osd_select-1] = adjust_rounded_float(pointer->axis[osd_select-1], rounded_increments[adjust_tracker]);
-		}
-		increase_osd_value = 0;
-		decrease_osd_value = 0;
-	}
-	if (osd_cursor == rows + 1){
-		if (osd_select == 1){
-		osd_save_exit();
-		}
-	}
-}
-
-void osd_float_adjust ( float *pointer[],  uint8_t rows, uint8_t columns, const float adjust_limit[rows*columns][2], float adjust_amount){
-	if (osd_select > columns) {
-		osd_select = columns;
-		osd_menu_phase = 1; //repaint the screen again
-	}
-	if (osd_cursor <= rows){
-		uint8_t adjust_tracker = ((osd_cursor-1) * columns) + (osd_select - 1);
-		if ((increase_osd_value && *pointer[adjust_tracker] < adjust_limit[adjust_tracker][1]) || (decrease_osd_value  && *pointer[adjust_tracker] > adjust_limit[adjust_tracker][0])){
-			*pointer[adjust_tracker] = adjust_rounded_float(*pointer[adjust_tracker], adjust_amount);
-		}
-		increase_osd_value = 0;
-		decrease_osd_value = 0;
-	}
-	if (osd_cursor == rows + 1){
-		if (osd_select == 1){
-		osd_save_exit();
-		}
-	}
-}
-
-uint8_t last_cursor_array_stuffer(uint8_t cursor, uint8_t add_new){  	//where add_new can be either STORE_VALUE or RETURN_VALUE
-	if (add_new){
-		for (int i = 5; i >= 1; i--){	//shift all the values to the right one array position
-			last_osd_cursor[i] = last_osd_cursor[i-1];
-		}
-		last_osd_cursor[0] = cursor;	//add the most recent value to slot 0
-		return 0;
-	}else{
-		uint8_t next_cursor_value = last_osd_cursor[0];	//remove slot 0 for return and left shift the rest over
-		for (int i = 1; i <= 5; i++){
-			last_osd_cursor[i-1] = last_osd_cursor[i];
-		}
-	return next_cursor_value;
-	}
-}
-
-void osd_submenu_select (uint8_t *pointer, uint8_t rows, const uint8_t next_menu[]){
-	if (osd_select == 1){ //stick was pushed right to select a next menu
-		osd_select = 0;	//reset the trigger
-		last_cursor_array_stuffer(osd_cursor, STORE_VALUE);
-		if(osd_cursor <= rows){
-			*pointer = osd_cursor-1;	//update profile
-			osd_display_phase = next_menu[osd_cursor-1];	//update display phase to the next menu screen
-			osd_cursor = 0;	//reset the cursor
-			osd_menu_phase = 0;	//clear the screen
-		}
-	}
-}
-
-void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_menu) {
-	if (osd_select == 1 && flash_feature_1 == 1) //main menu
-	{
-		osd_select = 0; //reset the trigger
-		last_cursor_array_stuffer(osd_cursor, STORE_VALUE);
-		if (osd_cursor <= rows){
-			osd_display_phase = menu_map[osd_cursor-1];
-			osd_cursor = 0;
-			osd_menu_phase = 0;
-		}
-		if (main_menu){
-			if(osd_cursor == rows + 1) flash_feature_1 = 0; //flag the setup wizard in main menu
-			if(osd_cursor == rows + 2) osd_save_exit();		//include save&exit in main menu
-		}
-	}
-}
-
-uint32_t get_callsign_bitmask(uint8_t input){
-	if(input == 8)  return 0xFF;
-	if(input == 16) return 0xFFFF;
-	if(input == 24) return 0xFFFFFF;
-	return 0;
-}
-
-void osd_encoded_adjust_callsign(void){
-	if(osd_select > 20) {
-		osd_select = 20;	//limit osd select variable from accumulating past 1 columns of adjustable items
-		osd_menu_phase = 1; //repaint the screen again
-	}
-	if (increase_osd_value){
-		osd_element[callsign_shift_index[osd_select-1][0]] = (((osd_element[callsign_shift_index[osd_select-1][0]] >> callsign_shift_index[osd_select-1][1]) + 1) << callsign_shift_index[osd_select-1][1]) + (osd_element[callsign_shift_index[osd_select-1][0]] & get_callsign_bitmask(callsign_shift_index[osd_select-1][1]));
-		osd_menu_phase = 1; //repaint the screen again
-	}
-	if (decrease_osd_value){
-		osd_element[callsign_shift_index[osd_select-1][0]] = (((osd_element[callsign_shift_index[osd_select-1][0]] >> callsign_shift_index[osd_select-1][1]) - 1) << callsign_shift_index[osd_select-1][1]) + (osd_element[callsign_shift_index[osd_select-1][0]] & get_callsign_bitmask(callsign_shift_index[osd_select-1][1]));
-		osd_menu_phase = 1; //repaint the screen again
-	}
-	increase_osd_value = 0;
-	decrease_osd_value = 0;
-	if (osd_cursor == 2){
-		if (osd_select == 1){
-			osd_save_exit();
-		}
-	}
-}
+//************************************************************************************************************************************************************************************
+//																					PRINT FUNCTIONS
+//************************************************************************************************************************************************************************************
 
 void print_osd_callsign_adjustable (uint8_t string_element_qty, uint8_t data_element_qty, const uint8_t grid[data_element_qty][2], const uint8_t print_position[data_element_qty][2]){
 	if (osd_menu_phase <= string_element_qty)
@@ -900,93 +520,6 @@ uint8_t print_osd_system_status(void){
 	return 1;
 }
 
-void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_t status){
-	if(osd_select > columns) {
-		osd_select = columns;	//limit osd select variable from accumulating past 1 columns of adjustable items
-		osd_menu_phase = 1; //repaint the screen again
-	}
-	if (osd_cursor <= rows){
-		switch (status){
-		case 0:	//adjust active or inactive element
-			if (increase_osd_value && osd_decode(*pointer, status) == 0x00 ){
-				*pointer = *pointer + 1;
-				osd_menu_phase = 1; //repaint the screen again
-			}
-			if (decrease_osd_value && osd_decode(*pointer, status) == 0x01 ){
-				*pointer = *pointer - 1;
-				osd_menu_phase = 1; //repaint the screen again
-			}
-			break;
-		case 1:	//adjust TEXT or INVERT
-			if (increase_osd_value && osd_decode(*pointer, status) == TEXT ){	//increase requested and currently on TEXT
-				*pointer = *pointer | (0x02);	//flip the 2nd bit on
-				osd_menu_phase = 1; //repaint the screen again
-			}
-				if (decrease_osd_value && osd_decode(*pointer, status) == INVERT ){	//decrease requested and currently on INVERT
-				*pointer = *pointer ^ (0x02) ;	//flip the 2nd bit off
-				osd_menu_phase = 1; //repaint the screen again
-			}
-			break;
-		case 2:	//adjust positionX
-			if (increase_osd_value && osd_decode(*pointer, status) != 30 ){
-				*pointer = (((*pointer >> 2) + 1) << 2) + (*pointer & 0x03);
-				osd_menu_phase = 1; //repaint the screen again
-			}
-			if (decrease_osd_value && osd_decode(*pointer, status) != 0 ){
-				*pointer = (((*pointer >> 2) - 1) << 2) + (*pointer & 0x03);
-				osd_menu_phase = 1; //repaint the screen again
-			}
-			break;
-		case 3:	//adjust positionY
-			if (increase_osd_value && osd_decode(*pointer, status) != 15 ){
-				*pointer = (((*pointer >> 7) + 1) << 7) + (*pointer & 0x7F);
-				osd_menu_phase = 1; //repaint the screen again
-			}
-			if (decrease_osd_value && osd_decode(*pointer, status) != 0 ){
-				*pointer = (((*pointer >> 7) - 1) << 7) + (*pointer & 0x7F);
-				osd_menu_phase = 1; //repaint the screen again
-			}
-			break;
-		}
-		increase_osd_value = 0;
-		decrease_osd_value = 0;
-	}
-	if (osd_cursor == rows + 1){
-		if (osd_select == 1){
-			osd_save_exit();
-		}
-	}
-}
-
-void osd_enum_adjust(uint8_t *pointer, uint8_t rows, const uint8_t increase_limit[]){
-	if(osd_select > 1) {
-		osd_select = 1;	//limit osd select variable from accumulating past 1 columns of adjustable items
-		osd_menu_phase = 1; //repaint the screen again
-	}
-	if (osd_cursor <= rows){
-		if (osd_select == 1){
-			uint8_t i = *pointer;
-			if (increase_osd_value && i != increase_limit[osd_cursor-1])  {	//limits need to be 11 for arming, 14 for everything else on flight modes
-				i++;
-				*pointer = i;
-				osd_menu_phase = 1; //repaint the screen again
-			}
-			if (decrease_osd_value && i != 0)  {	//limit is always 0 for an enum
-				i--;
-				*pointer = i;
-				osd_menu_phase = 1; //repaint the screen again
-			}
-		}
-		increase_osd_value = 0;
-		decrease_osd_value = 0;
-	}
-	if (osd_cursor == rows + 1){
-		if (osd_select == 1){
-			osd_save_exit();
-		}
-	}
-}
-
 void print_osd_menu_strings (uint8_t string_element_qty, uint8_t active_element_qty, const char element_names[string_element_qty][21], const uint8_t print_position[string_element_qty][2]){
 	if (osd_menu_phase >  string_element_qty)
         return;
@@ -1055,13 +588,25 @@ void print_osd_adjustable_float(uint8_t string_element_qty, uint8_t data_element
 	osd_print_data(data_buffer, 5, grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
 	osd_menu_phase++;
 }
-//******************************************************************************************************************************
 
 
-//******************************************************************************************************************************
-// osd main display function
+
+
+
+//************************************************************************************************************************************************************************************
+//************************************************************************************************************************************************************************************
+//																				MAIN OSD DISPLAY FUNCTION
+//************************************************************************************************************************************************************************************
+//************************************************************************************************************************************************************************************
 
 void osd_display(void) {
+  extern float vbattfilt;
+  extern float vbattfilt_corr;
+  extern float vbatt_comp;
+  extern float lipo_cell_count;
+  extern int lowbatt;
+  extern float throttle;
+  extern int binding_while_armed;
   //first check if video signal autodetect needs to run - run if necessary
   extern uint8_t lastsystem; //initialized at 99 for none then becomes 0 or 1 for ntsc/pal
   if (lastsystem > 1)        //if no camera was detected at boot up
@@ -1073,17 +618,6 @@ void osd_display(void) {
   }
 
   //************OSD MENU DISPLAY ROUTINES HERE*************
-
-  //grab out of scope variables for data that needs to be displayed
-  //extern int flash_feature_1;
-  extern float vbattfilt;
-  extern float vbattfilt_corr;
-  extern float vbatt_comp;
-  extern float lipo_cell_count;
-  extern int lowbatt;
-  extern float throttle;
-  extern int binding_while_armed;
-
   switch (osd_display_phase) //phase starts at 2, RRR gesture subtracts 1 to enter the menu, RRR again or DDD subtracts 1 to clear the screen and return to regular display
   {
   case 0: //osd screen clears, resets to regular display, and resets wizard and menu starting points

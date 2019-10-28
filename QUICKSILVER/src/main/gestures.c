@@ -1,3 +1,4 @@
+#include <osd/osd_adjust.h>
 #include "gestures.h"
 #include "defines.h"
 #include "drv_time.h"
@@ -5,7 +6,6 @@
 #include "profile.h"
 #include "rx.h"
 #include "sixaxis.h"
-#include "osd.h"
 
 extern int ledcommand;
 extern int ledblink;
