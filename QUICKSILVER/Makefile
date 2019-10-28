@@ -12,6 +12,7 @@ INCLUDE = src \
 	src/main/rx \
 	src/main/osd \
 	src/main/config \
+	src/main/usb \
 	src/drivers \
 	src/drivers/usb \
 	$(TARGET_INCLUDE) \
