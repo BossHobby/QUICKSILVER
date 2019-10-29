@@ -66,7 +66,7 @@
 extern SoftSerialData_t escSerial[4];
 
 static uint8_t suart_getc_(uint8_t *bt) {
-#if F0
+#ifdef F0
   return softserial_read_byte_ex(&escSerial[selected_esc], bt);
 #else
   uint32_t btime;
@@ -106,7 +106,7 @@ static uint8_t suart_getc_(uint8_t *bt) {
 }
 
 static void suart_putc_(uint8_t *tx_b) {
-#if F0
+#ifdef F0
   softserial_write_byte_ex(&escSerial[selected_esc], *tx_b);
 #else
   // shift out stopbit first
