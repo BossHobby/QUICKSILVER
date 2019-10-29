@@ -190,16 +190,21 @@ void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_
 //************************************************************profile variable adjust functions***********************************************************
 
 float adjust_rounded_float(float input, float adjust_amount){
+	float result;
 	float value = (int)(input * 100.0f + 0.5f);
 	if (increase_osd_value){
 		increase_osd_value = 0;
 		osd_menu_phase = 1; //repaint the screen again
-		return (float)(value+(100.0f * adjust_amount)) / 100.0f;
+		result = (float)(value+(100.0f * adjust_amount)) / 100.0f;
+		if ((int)(result*100.0f) == 0) return 0;
+		else return result;
 	}
 	if (decrease_osd_value){
 		decrease_osd_value = 0;
 		osd_menu_phase = 1; //repaint the screen again
-		return (float)(value-(100.0f * adjust_amount)) / 100.0f;
+		result = (float)(value-(100.0f * adjust_amount)) / 100.0f;
+		if ((int)(result*100.0f) == 0) return 0;
+		else return result;
 	}
 	return input;
 }

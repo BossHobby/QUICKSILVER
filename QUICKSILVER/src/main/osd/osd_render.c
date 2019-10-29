@@ -60,27 +60,6 @@ unsigned long *arm_disarm = (osd_element + 12);
 unsigned long *osd_throttle = (osd_element + 13);
 unsigned long *osd_vtx = (osd_element + 14);
 
-//screen element register decoding functions
-uint8_t decode_active_element(uint32_t element){
-	return (element & 0x01);
-}
-
-uint8_t decode_attribute(uint32_t element) { //shifting right one bit and comparing the new bottom bit to the key above
-  uint8_t decoded_element = ((element >> 1) & 0x01);
-  if (decoded_element == 0x01)
-    return INVERT;
-  else
-    return TEXT;
-}
-
-uint8_t decode_positionx(uint32_t element) { //shift 2 bits and grab the bottom 5
-  return ((element >> 2) & 0x1F);
-}
-
-uint8_t decode_positiony(uint32_t element) { //shift 7 bits and grab the bottom 4
-  return ((element >> 7) & 0x0F);
-}
-
 #define ACTIVE 0
 #define ATTRIBUTE 1
 #define POSITIONX 2
@@ -105,12 +84,10 @@ uint8_t osd_decode(uint32_t element, uint8_t status){
 	return 0;
 }
 
-
 const char* get_position_string (int input){
 	static char* respond[] = {" 0", " 1", " 2", " 3", " 4", " 5", " 6", " 7", " 8", " 9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "ERROR"};
 	return respond[input];
 }
-
 
 const char* get_decode_element_string (uint32_t input , uint8_t status){
 	switch (status){
@@ -260,7 +237,7 @@ uint8_t print_osd_callsign(void){
 
 	if(index <= callsign_length && callsign_length > 0){
 		uint8_t character[] = {(osd_element[callsign_shift_index[index-1][0]] >> callsign_shift_index[index-1][1]) & 0xFF};
-		osd_print_data( character, 1, decode_attribute(*callsign1), decode_positionx(*callsign1) + index-1, decode_positiony(*callsign1));
+		osd_print_data( character, 1, osd_decode(*callsign1, ATTRIBUTE), osd_decode(*callsign1, POSITIONX) + index-1, osd_decode(*callsign1, POSITIONY));
 		index++;
 		return 0;
 	}
@@ -282,7 +259,7 @@ uint8_t print_osd_flightmode(void){
 	}
 	if(index < 10){
 		uint8_t character[] = {flightmode_labels[flightmode][index]};
-		osd_print_data( character, 1, decode_attribute(*flight_mode), decode_positionx(*flight_mode) + index, decode_positiony(*flight_mode));
+		osd_print_data( character, 1, osd_decode(*flight_mode, ATTRIBUTE), osd_decode(*flight_mode, POSITIONX) + index, osd_decode(*flight_mode, POSITIONY));
 		index++;
 		return 0;
 	}
@@ -317,7 +294,7 @@ uint8_t print_osd_system_status(void){
 			counter++;
 			if (counter > 25){
 				uint8_t character[] = {system_status_labels[0][index]};
-				osd_print_data( character, 1, decode_attribute(*arm_disarm), decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+				osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE), osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 				index++;
 				if (index < 15){
 					return 0;
@@ -331,7 +308,7 @@ uint8_t print_osd_system_status(void){
 		}
 		if (armed_state == 0) {
 			uint8_t character[] = {system_status_labels[1][index]};
-			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 			index++;
 			if (index < 15){
 				armed_state_printing = 1;
@@ -344,7 +321,7 @@ uint8_t print_osd_system_status(void){
 		}
 		if (armed_state == 1) {
 			uint8_t character[] = {system_status_labels[2][index]};
-			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 			index++;
 			if (index < 15){
 				armed_state_printing = 1;
@@ -362,7 +339,7 @@ uint8_t print_osd_system_status(void){
 			counter++;
 			if (counter > 25){
 				uint8_t character[] = {system_status_labels[0][index]};
-				osd_print_data( character, 1, decode_attribute(*arm_disarm), decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+				osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE), osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 				index++;
 				if (index < 15){
 					return 0;
@@ -376,7 +353,7 @@ uint8_t print_osd_system_status(void){
 		}
 		if (rx_aux_on(AUX_STICK_BOOST_PROFILE) == 0) {
 			uint8_t character[] = {system_status_labels[3][index]};
-			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 			index++;
 			if (index < 15){
 				aux_state_printing = 1;
@@ -389,7 +366,7 @@ uint8_t print_osd_system_status(void){
 		}
 		if (rx_aux_on(AUX_STICK_BOOST_PROFILE) == 1) {
 			uint8_t character[] = {system_status_labels[4][index]};
-			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 			index++;
 			if (index < 15){
 				aux_state_printing = 1;
@@ -405,7 +382,7 @@ uint8_t print_osd_system_status(void){
 		last_failsafe_state = failsafe;
 		if (failsafe == 0) {
 			uint8_t character[] = {system_status_labels[0][index]};
-			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 			index++;
 			if (index < 15){
 				failsafe_state_printing = 1;
@@ -418,7 +395,7 @@ uint8_t print_osd_system_status(void){
 		}
 		if (failsafe == 1) {
 			uint8_t character[] = {system_status_labels[5][index]};
-			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 			index++;
 			if (index < 15){
 				failsafe_state_printing = 1;
@@ -434,7 +411,7 @@ uint8_t print_osd_system_status(void){
 		last_binding_while_armed_state = binding_while_armed;
 		if (binding_while_armed == 0) {
 			uint8_t character[] = {system_status_labels[0][index]};
-			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 			index++;
 			if (index < 15){
 				binding_while_armed_state_printing = 1;
@@ -447,7 +424,7 @@ uint8_t print_osd_system_status(void){
 		}
 		if (binding_while_armed == 1) {
 			uint8_t character[] = {system_status_labels[7][index]};
-			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 			index++;
 			if (index < 15){
 				binding_while_armed_state_printing = 1;
@@ -463,7 +440,7 @@ uint8_t print_osd_system_status(void){
 		last_throttle_safety_state = throttle_safety;
 		if (throttle_safety == 0) {
 			uint8_t character[] = {system_status_labels[0][index]};
-			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 			index++;
 			if (index < 15){
 				throttle_safety_state_printing = 1;
@@ -476,7 +453,7 @@ uint8_t print_osd_system_status(void){
 		}
 		if (throttle_safety == 1) {
 			uint8_t character[] = {system_status_labels[6][index]};
-			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 			index++;
 			if (index < 15){
 				throttle_safety_state_printing = 1;
@@ -492,7 +469,7 @@ uint8_t print_osd_system_status(void){
 		last_lowbatt_state = lowbatt;
 		if (lowbatt == 0) {
 			uint8_t character[] = {system_status_labels[0][index]};
-			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 			index++;
 			if (index < 15){
 				lowbatt_state_printing = 1;
@@ -505,7 +482,7 @@ uint8_t print_osd_system_status(void){
 		}
 		if (lowbatt == 1) {
 			uint8_t character[] = {system_status_labels[8][index]};
-			osd_print_data( character, 1, decode_attribute(*arm_disarm) | BLINK, decode_positionx(*arm_disarm) + index, decode_positiony(*arm_disarm));
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 			index++;
 			if (index < 15){
 				lowbatt_state_printing = 1;
@@ -664,7 +641,7 @@ void osd_display(void) {
 
 	  switch (osd_display_element) {
 	  case 0:
-		  if (decode_active_element(*callsign1)){
+		  if (osd_decode(*callsign1, ACTIVE)){
 			  uint8_t callsign_done = print_osd_callsign();
 			  if(callsign_done) osd_display_element++;
 		  }else{
@@ -673,23 +650,23 @@ void osd_display(void) {
 		  break; //screen has been displayed for this loop - break out of display function
 
 	  case 1:
-		  if (decode_active_element(*fuelgauge_volts)) {
+		  if (osd_decode(*fuelgauge_volts, ACTIVE)) {
 			  uint8_t osd_fuelgauge_volts[5];
 			  fast_fprint(osd_fuelgauge_volts, 4, vbatt_comp, 1);
 			  osd_fuelgauge_volts[4] = 'V';
-			  osd_print_data(osd_fuelgauge_volts, 5, decode_attribute(*fuelgauge_volts), decode_positionx(*fuelgauge_volts) + 3, decode_positiony(*fuelgauge_volts));
+			  osd_print_data(osd_fuelgauge_volts, 5, osd_decode(*fuelgauge_volts, ATTRIBUTE), osd_decode(*fuelgauge_volts, POSITIONX) + 3, osd_decode(*fuelgauge_volts, POSITIONY));
 		  }
 		  osd_display_element++;
 		  break;
 
 	  case 2:
-		  if (decode_active_element(*fuelgauge_volts)) {
+		  if (osd_decode(*fuelgauge_volts, ACTIVE)) {
 			  if (lowbatt != last_lowbatt_state) {
 				  uint8_t osd_cellcount[2] = {lipo_cell_count + 48, 'S'};
 				  if (!lowbatt) {
-					  osd_print_data(osd_cellcount, 2, decode_attribute(*fuelgauge_volts), decode_positionx(*fuelgauge_volts), decode_positiony(*fuelgauge_volts));
+					  osd_print_data(osd_cellcount, 2, osd_decode(*fuelgauge_volts, ATTRIBUTE), osd_decode(*fuelgauge_volts, POSITIONX), osd_decode(*fuelgauge_volts, POSITIONY));
 				  } else {
-					  osd_print_data(osd_cellcount, 2, BLINK | INVERT, decode_positionx(*fuelgauge_volts), decode_positiony(*fuelgauge_volts));
+					  osd_print_data(osd_cellcount, 2, BLINK | INVERT, osd_decode(*fuelgauge_volts, POSITIONX), osd_decode(*fuelgauge_volts, POSITIONY));
 				  }
 				  last_lowbatt_state = lowbatt;
 			  }
@@ -698,23 +675,23 @@ void osd_display(void) {
 		  break;
 
 	  case 3:
-		  if (decode_active_element(*filtered_volts)) {
+		  if (osd_decode(*filtered_volts, ACTIVE)) {
 			  uint8_t osd_filtered_volts[5];
 			  fast_fprint(osd_filtered_volts, 4, vbattfilt_corr, 1);
 			  osd_filtered_volts[4] = 'V';
-			  osd_print_data(osd_filtered_volts, 5, decode_attribute(*filtered_volts), decode_positionx(*filtered_volts) + 3, decode_positiony(*filtered_volts));
+			  osd_print_data(osd_filtered_volts, 5, osd_decode(*filtered_volts, ATTRIBUTE), osd_decode(*filtered_volts, POSITIONX) + 3, osd_decode(*filtered_volts, POSITIONY));
 		  }
 		  osd_display_element++;
 		  break;
 
 	  case 4:
-		  if (decode_active_element(*filtered_volts)) {
+		  if (osd_decode(*filtered_volts, ACTIVE)) {
 			  if (lowbatt != last_lowbatt_state2) {
 				  uint8_t osd_cellcount2[2] = {lipo_cell_count + 48, 'S'};
 				  if (!lowbatt) {
-					  osd_print_data(osd_cellcount2, 2, decode_attribute(*filtered_volts), decode_positionx(*filtered_volts), decode_positiony(*filtered_volts));
+					  osd_print_data(osd_cellcount2, 2, osd_decode(*filtered_volts, ATTRIBUTE), osd_decode(*filtered_volts, POSITIONX), osd_decode(*filtered_volts, POSITIONY));
 				  } else {
-					  osd_print_data(osd_cellcount2, 2, BLINK | INVERT, decode_positionx(*filtered_volts), decode_positiony(*filtered_volts));
+					  osd_print_data(osd_cellcount2, 2, BLINK | INVERT, osd_decode(*filtered_volts, POSITIONX), osd_decode(*filtered_volts, POSITIONY));
 				  }
 				  last_lowbatt_state2 = lowbatt;
 			  }
@@ -723,23 +700,23 @@ void osd_display(void) {
 		  break;
 
 	  case 5:
-		  if (decode_active_element(*exact_volts)) {
+		  if (osd_decode(*exact_volts, ACTIVE)) {
 			  uint8_t osd_exact_volts[5];
 			  fast_fprint(osd_exact_volts, 4, vbattfilt, 1);
 			  osd_exact_volts[4] = 'V';
-			  osd_print_data(osd_exact_volts, 5, decode_attribute(*exact_volts), decode_positionx(*exact_volts) + 3, decode_positiony(*exact_volts));
+			  osd_print_data(osd_exact_volts, 5, osd_decode(*exact_volts, ATTRIBUTE), osd_decode(*exact_volts, POSITIONX) + 3, osd_decode(*exact_volts, POSITIONY));
 		  }
 		  osd_display_element++;
 		  break;
 
 	  case 6:
-		  if (decode_active_element(*exact_volts)) {
+		  if (osd_decode(*exact_volts, ACTIVE)) {
 			  if (lowbatt != last_lowbatt_state3) {
 				  uint8_t osd_cellcount3[2] = {lipo_cell_count + 48, 'S'};
 				  if (!lowbatt) {
-					  osd_print_data(osd_cellcount3, 2, decode_attribute(*exact_volts), decode_positionx(*exact_volts), decode_positiony(*exact_volts));
+					  osd_print_data(osd_cellcount3, 2, osd_decode(*exact_volts, ATTRIBUTE), osd_decode(*exact_volts, POSITIONX), osd_decode(*exact_volts, POSITIONY));
 				  } else {
-					  osd_print_data(osd_cellcount3, 2, BLINK | INVERT, decode_positionx(*exact_volts), decode_positiony(*exact_volts));
+					  osd_print_data(osd_cellcount3, 2, BLINK | INVERT, osd_decode(*exact_volts, POSITIONX), osd_decode(*exact_volts, POSITIONY));
 				  }
 				  last_lowbatt_state3 = lowbatt;
 			  }
@@ -748,17 +725,17 @@ void osd_display(void) {
 		  break;
 
 	  case 7:
-		  if (decode_active_element(*stopwatch)) {
+		  if (osd_decode(*stopwatch, ACTIVE)) {
 			  uint8_t osd_stopwatch[5];
 			  fast_fprint(osd_stopwatch, 5, debug.totaltime, 0);
 			  osd_stopwatch[4] = 112; //Z+23 is fly hr
-			  osd_print_data(osd_stopwatch, 5, decode_attribute(*stopwatch), decode_positionx(*stopwatch), decode_positiony(*stopwatch));
+			  osd_print_data(osd_stopwatch, 5, osd_decode(*stopwatch, ATTRIBUTE), osd_decode(*stopwatch, POSITIONX), osd_decode(*stopwatch, POSITIONY));
 		  }
 		  osd_display_element++;
 		  break;
 
 	  case 8:
-		  if (decode_active_element(*flight_mode)){
+		  if (osd_decode(*flight_mode, ACTIVE)){
 			  uint8_t flightmode_done = print_osd_flightmode();
 			  if(flightmode_done) osd_display_element++;
 		  }else{
@@ -767,17 +744,17 @@ void osd_display(void) {
 		  break;
 
 	  case 9:
-		  if (decode_active_element(*osd_throttle)){
+		  if (osd_decode(*osd_throttle, ACTIVE)){
 			  uint8_t osd_throttle_value[5];
 			  fast_fprint(osd_throttle_value, 5, (throttle * 100.0f), 0);
 			  osd_throttle_value[4] = 4;
-			  osd_print_data(osd_throttle_value, 5, decode_attribute(*osd_throttle), decode_positionx(*osd_throttle), decode_positiony(*osd_throttle));
+			  osd_print_data(osd_throttle_value, 5, osd_decode(*osd_throttle, ATTRIBUTE), osd_decode(*osd_throttle, POSITIONX), osd_decode(*osd_throttle, POSITIONY));
 		  }
 		  osd_display_element++;
 		  break;
 
 	  case 10:
-		  if (decode_active_element(*arm_disarm)){
+		  if (osd_decode(*arm_disarm, ACTIVE)){
 			  uint8_t system_status_done = print_osd_system_status();
 			  if(system_status_done) osd_display_element++;
 		  }else{
