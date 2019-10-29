@@ -14,6 +14,7 @@ volatile unsigned long systickcount = 0;
 #warning SYS_CLOCK_FREQ_HZ not present
 #endif
 
+#ifdef F405
 
 void debug_timer_init() {
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
@@ -37,8 +38,6 @@ void debug_timer_delay_us(uint32_t us) {
     __asm("NOP");
   }
 }
-
-#ifdef F405
 
 // divider by 8 is enabled in this systick config
 static __INLINE uint32_t SysTick_Config2(uint32_t ticks) {
@@ -147,8 +146,6 @@ void time_init() {
     while (1)
       ;
   }
-
-  debug_timer_init();
 }
 
 // called at least once per 16ms or time will overflow
@@ -207,5 +204,20 @@ void delay(uint32_t data) {
 #endif
 
 void SysTick_Handler(void) {
+}
+
+void debug_timer_init() {
+}
+
+uint32_t debug_timer_micros() {
+  return gettime();
+}
+
+uint32_t debug_timer_millis() {
+  return (debug_timer_micros()) / 1000;
+}
+
+void debug_timer_delay_us(uint32_t us) {
+  delay(us);
 }
 #endif
