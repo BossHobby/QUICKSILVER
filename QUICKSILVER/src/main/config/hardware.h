@@ -1,3 +1,6 @@
+#pragma once
+
+#include "motor_pins.h"
 #include "target.h"
 
 // the error codes indicate a failure that prevents normal operation
@@ -127,7 +130,9 @@
 //#define USE_DSHOT_DRIVER_BETA
 
 //FC must have MOSFETS and motor pulldown resistors removed. MAY NOT WORK WITH ALL ESCS
+#ifdef BRUSHLESS_TARGET
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
+#endif
 
 // pwm pins disable
 // disable all pwm pins / function

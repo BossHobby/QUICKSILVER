@@ -200,6 +200,9 @@ const profile_t default_profile = {
 #if !defined(SENSOR_ROTATE_90_CW) && !defined(SENSOR_ROTATE_45_CCW) && !defined(SENSOR_ROTATE_45_CW) && !defined(SENSOR_ROTATE_90_CCW) && !defined(SENSOR_ROTATE_180) && !defined(SENSOR_FLIP_180)
         .gyro_orientation = GYRO_ROTATE_NONE,
 #endif
+#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) MOTOR_PIN_IDENT(port, pin),
+        .motor_pins = {MOTOR_PINS},
+#undef MOTOR_PIN
     },
 
     .rate = {

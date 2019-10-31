@@ -122,14 +122,13 @@ uint8_t esc4wayInit(void)
 	pwm_set( MOTOR_BR , 0); 
 
 	// set up 1wire serial to each esc
-	// motor 0
-	escSerial[0] = softserial_init(DSHOT_PORT_0,DSHOT_PIN_0,DSHOT_PORT_0, DSHOT_PIN_0, 19200);
-	// motor 1
-	escSerial[1] = softserial_init(DSHOT_PORT_1,DSHOT_PIN_1,DSHOT_PORT_1, DSHOT_PIN_1, 19200);
-	// motor 2
-	escSerial[2] = softserial_init(DSHOT_PORT_2,DSHOT_PIN_2,DSHOT_PORT_2, DSHOT_PIN_2, 19200);
-	// motor 3
-	escSerial[3] = softserial_init(DSHOT_PORT_3,DSHOT_PIN_3,DSHOT_PORT_3, DSHOT_PIN_3, 19200);
+
+#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel)               \
+  escSerial[MOTOR_PIN_IDENT(port, pin)] = softserial_init(GPIO##port, GPIO_Pin_##pin, GPIO##port, GPIO_Pin_##pin, 19200);
+
+  MOTOR_PINS
+
+#undef MOTOR_PIN
 
 #ifdef F0
 	// tx = dat (PA13), rx = clk (PA14)

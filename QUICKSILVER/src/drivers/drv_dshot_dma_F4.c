@@ -88,6 +88,10 @@
 #endif
 #endif
 
+static uint8_t DSHOT_GPIO_A = 0;
+static uint8_t DSHOT_GPIO_B = 0;
+static uint8_t DSHOT_GPIO_C = 0;
+
 //sum = total number of dshot GPIO ports
 #define DSHOT_PORT_COUNT (DSHOT_GPIO_A + DSHOT_GPIO_B + DSHOT_GPIO_C)
 
@@ -112,6 +116,7 @@ volatile uint16_t dshot_portC[1] = {0}; // sum of all motor pins at portC
 
 typedef enum { false,
                true } bool;
+
 void make_packet(uint8_t number, uint16_t value, bool telemetry);
 
 #ifndef FORWARD
@@ -127,42 +132,23 @@ void pwm_init() {
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 
-  GPIO_InitStructure.GPIO_Pin = DSHOT_PIN_0;
-  GPIO_Init(DSHOT_PORT_0, &GPIO_InitStructure);
+#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) \
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_##pin;            \
+  GPIO_Init(GPIO##port, &GPIO_InitStructure);              \
+  if (GPIO##port == GPIOA) {                               \
+    DSHOT_GPIO_A = 1;                                      \
+    *dshot_portA |= GPIO_Pin_##pin;                        \
+  } else if (GPIO##port == GPIOB) {                        \
+    DSHOT_GPIO_B = 1;                                      \
+    *dshot_portB |= GPIO_Pin_##pin;                        \
+  } else if (GPIO##port == GPIOC) {                        \
+    DSHOT_GPIO_C = 1;                                      \
+    *dshot_portC |= GPIO_Pin_##pin;                        \
+  }
 
-  GPIO_InitStructure.GPIO_Pin = DSHOT_PIN_1;
-  GPIO_Init(DSHOT_PORT_1, &GPIO_InitStructure);
+  MOTOR_PINS
 
-  GPIO_InitStructure.GPIO_Pin = DSHOT_PIN_2;
-  GPIO_Init(DSHOT_PORT_2, &GPIO_InitStructure);
-
-  GPIO_InitStructure.GPIO_Pin = DSHOT_PIN_3;
-  GPIO_Init(DSHOT_PORT_3, &GPIO_InitStructure);
-
-  if (DSHOT_PORT_0 == GPIOA)
-    *dshot_portA |= DSHOT_PIN_0;
-  else if (DSHOT_PORT_0 == GPIOB)
-    *dshot_portB |= DSHOT_PIN_0;
-  else if (DSHOT_PORT_0 == GPIOC)
-    *dshot_portC |= DSHOT_PIN_0;
-  if (DSHOT_PORT_1 == GPIOA)
-    *dshot_portA |= DSHOT_PIN_1;
-  else if (DSHOT_PORT_1 == GPIOB)
-    *dshot_portB |= DSHOT_PIN_1;
-  else if (DSHOT_PORT_1 == GPIOC)
-    *dshot_portC |= DSHOT_PIN_1;
-  if (DSHOT_PORT_2 == GPIOA)
-    *dshot_portA |= DSHOT_PIN_2;
-  else if (DSHOT_PORT_2 == GPIOB)
-    *dshot_portB |= DSHOT_PIN_2;
-  else if (DSHOT_PORT_2 == GPIOC)
-    *dshot_portC |= DSHOT_PIN_2;
-  if (DSHOT_PORT_3 == GPIOA)
-    *dshot_portA |= DSHOT_PIN_3;
-  else if (DSHOT_PORT_3 == GPIOB)
-    *dshot_portB |= DSHOT_PIN_3;
-  else if (DSHOT_PORT_3 == GPIOC)
-    *dshot_portC |= DSHOT_PIN_3;
+#undef MOTOR_PIN
 
   // DShot timer/DMA2 init
   // TIM1_UP  DMA2_STREAM_5/CH6: set all output to HIGH		at TIM1 update
@@ -390,38 +376,19 @@ void dshot_dma_start() {
     motor_data_portB[i] = 0;
     motor_data_portC[i] = 0;
 
-    if (!(dshot_packet[0] & 0x8000)) {
-      if (DSHOT_PORT_0 == GPIOA)
-        motor_data_portA[i] |= DSHOT_PIN_0;
-      else if (DSHOT_PORT_0 == GPIOB)
-        motor_data_portB[i] |= DSHOT_PIN_0;
-      else if (DSHOT_PORT_0 == GPIOC)
-        motor_data_portC[i] |= DSHOT_PIN_0;
-    }
-    if (!(dshot_packet[1] & 0x8000)) {
-      if (DSHOT_PORT_1 == GPIOA)
-        motor_data_portA[i] |= DSHOT_PIN_1;
-      else if (DSHOT_PORT_1 == GPIOB)
-        motor_data_portB[i] |= DSHOT_PIN_1;
-      else if (DSHOT_PORT_1 == GPIOC)
-        motor_data_portC[i] |= DSHOT_PIN_1;
-    }
-    if (!(dshot_packet[2] & 0x8000)) {
-      if (DSHOT_PORT_2 == GPIOA)
-        motor_data_portA[i] |= DSHOT_PIN_2;
-      else if (DSHOT_PORT_2 == GPIOB)
-        motor_data_portB[i] |= DSHOT_PIN_2;
-      else if (DSHOT_PORT_2 == GPIOC)
-        motor_data_portC[i] |= DSHOT_PIN_2;
-    }
-    if (!(dshot_packet[3] & 0x8000)) {
-      if (DSHOT_PORT_3 == GPIOA)
-        motor_data_portA[i] |= DSHOT_PIN_3;
-      else if (DSHOT_PORT_3 == GPIOB)
-        motor_data_portB[i] |= DSHOT_PIN_3;
-      else if (DSHOT_PORT_3 == GPIOC)
-        motor_data_portC[i] |= DSHOT_PIN_3;
-    }
+#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel)    \
+  if (!(dshot_packet[MOTOR_PIN_IDENT(port, pin)] & 0x8000)) { \
+    if (GPIO##port == GPIOA)                                  \
+      motor_data_portA[i] |= GPIO_Pin_##pin;                  \
+    else if (GPIO##port == GPIOB)                             \
+      motor_data_portB[i] |= GPIO_Pin_##pin;                  \
+    else if (GPIO##port == GPIOC)                             \
+      motor_data_portC[i] |= GPIO_Pin_##pin;                  \
+  }
+
+    MOTOR_PINS
+
+#undef MOTOR_PIN
 
     dshot_packet[0] <<= 1;
     dshot_packet[1] <<= 1;
@@ -496,7 +463,7 @@ void pwm_set(uint8_t number, float pwm) {
     pwm_failsafe_time = 0;
   }
 
-  make_packet(number, value, false);
+  make_packet(profile.motor.motor_pins[number], value, false);
 
   if (number == 3) {
     dshot_dma_start();
