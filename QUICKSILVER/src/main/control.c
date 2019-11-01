@@ -139,8 +139,10 @@ void calc_rx() {
     static float rx_filtered[4];
     lpf(&rx_filtered[i], rx[i], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / RX_SMOOTHING_HZ));
     rxcopy[i] = rx_filtered[i];
+    limitf(&rxcopy[i], 1.0);
 #else
     rxcopy[i] = rx[i];
+    limitf(&rxcopy[i], 1.0);
 #endif
 
     if (profile.rate.sticks_deadband > 0.0f) {
