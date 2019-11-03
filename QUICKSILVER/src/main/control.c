@@ -423,7 +423,7 @@ void control(void) {
     }
 
     for (int i = 0; i <= 3; i++) {
-      pwm_set(i, 0);
+      motor_set(i, 0);
 #ifdef MOTOR_FILTER
       // reset the motor filter
       motorfilter(0, i);
@@ -800,11 +800,11 @@ void control(void) {
 #ifndef NOMOTORS
 #ifndef MOTORS_TO_THROTTLE
       //normal mode
-      pwm_set(i, motormap(mix[i]));
+      motor_set(i, motormap(mix[i]));
 #else
       // throttle test mode
       ledcommand = 1;
-      pwm_set(i, mix[i]);
+      motor_set(i, mix[i]);
 #endif
 #else
       // no motors mode ( anti-optimization)

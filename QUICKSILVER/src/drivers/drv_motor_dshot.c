@@ -119,7 +119,7 @@ void bitbang_data4(void);
 void bitbang_data(void);
 #endif
 
-void pwm_init() {
+void motor_init() {
   GPIO_InitTypeDef GPIO_InitStructure;
 
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
@@ -145,7 +145,7 @@ void pwm_init() {
   pwmdir = FORWARD;
 }
 
-void pwm_set(uint8_t number, float pwm) {
+void motor_set(uint8_t number, float pwm) {
   // if ( number > 3 ) failloop(5);
   if (number > 3)
     return;

@@ -162,11 +162,11 @@ int main(void) {
   delay(100000);
 
   i2c_init();
-  pwm_init();
-  pwm_set(MOTOR_BL, 0);
-  pwm_set(MOTOR_FL, 0);
-  pwm_set(MOTOR_FR, 0);
-  pwm_set(MOTOR_BR, 0);
+  motor_init();
+  motor_set(MOTOR_BL, 0);
+  motor_set(MOTOR_FL, 0);
+  motor_set(MOTOR_FR, 0);
+  motor_set(MOTOR_BR, 0);
 #ifdef ENABLE_OSD
   delay(200000);
   osd_init();
@@ -576,7 +576,7 @@ const char *failloop_string(int val) {
 
 void failloop(int val) {
   for (int i = 0; i <= 3; i++) {
-    pwm_set(i, 0);
+    motor_set(i, 0);
   }
 
   while (1) {

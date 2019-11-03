@@ -71,7 +71,7 @@ void init_timer(TIM_TypeDef *TIMx, int period) {
   TIM_TimeBaseInit(TIMx, &TIM_TimeBaseStructure);
 }
 
-void pwm_init(void) {
+void motor_init(void) {
 
 // timer clock enable
 #define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) \
@@ -117,12 +117,12 @@ void motorbeep(void) {
     else if (time - motorbeeptime > MOTOR_BEEPS_TIMEOUT) {
       if (!beepon && (time % 2000000 < 125000)) {
         for (int i = 0; i <= 3; i++) {
-          pwm_set(i, MOTOR_BEEPS_PWM_ON);
+          motor_set(i, MOTOR_BEEPS_PWM_ON);
           beepon = 1;
         }
       } else {
         for (int i = 0; i <= 3; i++) {
-          pwm_set(i, MOTOR_BEEPS_PWM_OFF);
+          motor_set(i, MOTOR_BEEPS_PWM_OFF);
           beepon = 0;
         }
       }
@@ -131,7 +131,7 @@ void motorbeep(void) {
     motorbeeptime = 0;
 }
 
-void pwm_set(uint8_t number, float pwmf) {
+void motor_set(uint8_t number, float pwmf) {
   int pwm = pwmf * PWMTOP;
 
   if (pwm < 0)
@@ -156,10 +156,10 @@ void pwm_set(uint8_t number, float pwmf) {
 
 #else
 // pwm pins disabled
-void pwm_init(void) {
+void motor_init(void) {
 }
 
-void pwm_set(uint8_t number, float pwm) {
+void motor_set(uint8_t number, float pwm) {
 }
 
 #endif

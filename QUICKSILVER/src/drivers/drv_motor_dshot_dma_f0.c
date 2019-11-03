@@ -129,7 +129,7 @@ void make_packet(uint8_t number, uint16_t value, bool telemetry);
 //#define gpioset( port , pin) port->BRR = pin
 //#define gpioreset( port , pin) port->BSRR = pin
 
-void pwm_init() {
+void motor_init() {
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
@@ -390,7 +390,7 @@ void dshot_dma_start() {
   dshot_dma_portA();
 }
 
-void pwm_set(uint8_t number, float pwm) {
+void motor_set(uint8_t number, float pwm) {
   // if ( number > 3 ) failloop(5);
   if (number > 3)
     return;

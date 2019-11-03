@@ -269,7 +269,7 @@ void init_timer(TIM_TypeDef *TIMx, int period);
 
 TIM_OCInitTypeDef TIM_OCInitStructure;
 
-void pwm_init(void) {
+void motor_init(void) {
 
   GPIO_InitTypeDef GPIO_InitStructure;
 
@@ -629,7 +629,7 @@ void init_timer(TIM_TypeDef *TIMx, int period) {
 
 extern int onground;
 
-void pwm_set(uint8_t number, float pwmf) {
+void motor_set(uint8_t number, float pwmf) {
 
   if (pwmf < 0.0f)
     pwmf = 0.0f;
@@ -872,10 +872,10 @@ void pwm_set(uint8_t number, float pwmf) {
 
 #else
 // pwm pins disabled
-void pwm_init(void) {
+void motor_init(void) {
 }
 
-void pwm_set(uint8_t number, float pwm) {
+void motor_set(uint8_t number, float pwm) {
 }
 
 #endif

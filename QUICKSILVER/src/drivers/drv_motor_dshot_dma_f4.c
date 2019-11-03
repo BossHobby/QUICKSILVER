@@ -122,7 +122,7 @@ void make_packet(uint8_t number, uint16_t value, bool telemetry);
 #define REVERSE 1
 #endif
 
-void pwm_init() {
+void motor_init() {
   GPIO_InitTypeDef GPIO_InitStructure;
 
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
@@ -410,7 +410,7 @@ void dshot_dma_start() {
     dshot_dma_portC();
 }
 
-void pwm_set(uint8_t number, float pwm) {
+void motor_set(uint8_t number, float pwm) {
   // if ( number > 3 ) failloop(5);
   if (number > 3)
     return;
