@@ -63,13 +63,11 @@
 #endif
 
 // Assingment of pin to motor
-#define MOTOR0_PIN_PA6 // motor 0 back-left
-#define MOTOR1_PIN_PA4 // motor 1 front-left
-#define MOTOR2_PIN_PB1 // motor 2 back-right
-#define MOTOR3_PIN_PA7 // motor 3 front-right
-
-// pwm pin initialization
-#define PWM_PA4
-#define PWM_PA6
-#define PWM_PA7
-#define PWM_PB1
+// motor 0 back-left
+#define MOTOR_PIN0 MOTOR_PIN_PA6
+// motor 1 front-left
+#define MOTOR_PIN1 MOTOR_PIN_PA4
+// motor 2 back-right
+#define MOTOR_PIN2 MOTOR_PIN_PB1
+// motor 3 front-right
+#define MOTOR_PIN3 MOTOR_PIN_PA7

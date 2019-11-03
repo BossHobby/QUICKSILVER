@@ -75,24 +75,7 @@
 #endif
 
 // MOTOR PINS
-#define MOTOR0_PIN_PA3
-#define MOTOR1_PIN_PA2
-#define MOTOR2_PIN_PB0
-#define MOTOR3_PIN_PB1
-
-// PWM PIN INITIALIZATION
-//#define PWM_PA0
-//#define PWM_PA1
-#define PWM_PA2
-#define PWM_PA3
-//#define PWM_PA4
-//#define PWM_PA5
-//#define PWM_PA6
-//#define PWM_PA7
-//#define PWM_PA8
-//#define PWM_PA9
-//#define PWM_PA10
-//#define PWM_PA11
-#define PWM_PB0
-#define PWM_PB1
-//#define PWM_PC9
+#define MOTOR_PIN0 MOTOR_PIN_PA3
+#define MOTOR_PIN1 MOTOR_PIN_PA2
+#define MOTOR_PIN2 MOTOR_PIN_PB0
+#define MOTOR_PIN3 MOTOR_PIN_PB1

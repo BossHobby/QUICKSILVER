@@ -51,7 +51,6 @@
 #define GYRO_ID_3 0x78
 #define GYRO_ID_4 0x71
 
-
 // SPI PINS DEFINITONS & RADIO
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
 #define USART1_PA10PA9
@@ -93,21 +92,13 @@
 #endif
 
 // MOTOR PINS
-#define MOTOR0_PIN_PB7
-#define MOTOR1_PIN_PB8
-#define MOTOR2_PIN_PB10
-#define MOTOR3_PIN_PB6
+#define MOTOR_PIN0 MOTOR_PIN_PB7
+#define MOTOR_PIN1 MOTOR_PIN_PB8
+#define MOTOR_PIN2 MOTOR_PIN_PB10
+#define MOTOR_PIN3 MOTOR_PIN_PB6
 
 //@brucesdad pins
-//#define MOTOR0_PIN_PB8
-//#define MOTOR1_PIN_PB7
-//#define MOTOR2_PIN_PB6
-//#define MOTOR3_PIN_PB10
-
-// PWM PIN INITIALIZATION
-#ifdef BRUSHED_TARGET
-#define PWM_PB8
-#define PWM_PB7
-#define PWM_PB10
-#define PWM_PB6
-#endif
+//#define MOTOR_PIN0 MOTOR_PIN_PB8
+//#define MOTOR_PIN1 MOTOR_PIN_PB7
+//#define MOTOR_PIN2 MOTOR_PIN_PB6
+//#define MOTOR_PIN3 MOTOR_PIN_PB10

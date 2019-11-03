@@ -63,13 +63,7 @@
 #endif
 
 // MOTOR PINS
-#define MOTOR0_PIN_PA7
-#define MOTOR1_PIN_PB1
-#define MOTOR2_PIN_PA4
-#define MOTOR3_PIN_PA6
-
-// pwm pin initialization
-#define PWM_PA4
-#define PWM_PA6
-#define PWM_PA7
-#define PWM_PB1
+#define MOTOR_PIN0 MOTOR_PIN_PA7
+#define MOTOR_PIN1 MOTOR_PIN_PB1
+#define MOTOR_PIN2 MOTOR_PIN_PA4
+#define MOTOR_PIN3 MOTOR_PIN_PA6
