@@ -35,7 +35,7 @@
 #include "drv_fmc2.h"
 #include "drv_gpio.h"
 #include "drv_i2c.h"
-#include "drv_pwm.h"
+#include "drv_motor.h"
 #include "drv_serial.h"
 #include "drv_softi2c.h"
 #include "drv_spi.h"
@@ -118,8 +118,7 @@ int binding_while_armed = 1;
 //Flash Memory Feature defaults for a flash w/full chip erase
 int flash_feature_1 = 1; //SETUP WIZARD
 int flash_feature_2 = 0; //LVC
-unsigned long osd_element[OSD_NUMBER_ELEMENTS] = { 0xA7, 0x43495551, 0x4C49534B, 0x3F524556, 0x3F3F3F3F, 0x3F3F3F3F, 0x704, 0x72D, 0x754, 0x6A8, 0xE2, 0x6E0, 0x320, 0x680 };
-
+unsigned long osd_element[OSD_NUMBER_ELEMENTS] = {0xA7, 0x43495551, 0x4C49534B, 0x3F524556, 0x3F3F3F3F, 0x3F3F3F3F, 0x704, 0x72D, 0x754, 0x6A8, 0x00, 0x6E0, 0x320, 0x680};
 
 // for led flash on gestures
 int ledcommand = 0;
@@ -458,23 +457,23 @@ int main(void) {
 
 #ifdef FPV_ON
     static int fpv_init = 0;
-    if (rx_aux_on(AUX_FPV_ON)){
-    	// fpv switch on
-    	if (!fpv_init && rxmode == RXMODE_NORMAL) {
-    		fpv_init = gpio_init_fpv();
-    	}
-    	if (fpv_init) {
-    		GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_SET);
-    	}
+    if (rx_aux_on(AUX_FPV_ON)) {
+      // fpv switch on
+      if (!fpv_init && rxmode == RXMODE_NORMAL) {
+        fpv_init = gpio_init_fpv();
+      }
+      if (fpv_init) {
+        GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_SET);
+      }
     } else {
-    	// fpv switch off
-    	if (fpv_init){
-    		if (failsafe) {
-    			GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_SET);
-    		} else {
-    			GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);
-    		}
-    	}
+      // fpv switch off
+      if (fpv_init) {
+        if (failsafe) {
+          GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_SET);
+        } else {
+          GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);
+        }
+      }
     }
 #endif
 #if defined(USE_SERIAL_4WAY_BLHELI_INTERFACE) && defined(F0)
@@ -512,7 +511,7 @@ int main(void) {
 #endif
 
 #ifdef DEBUG
-    debug.cpu_load = (gettime() - lastlooptime);// * 1e-3f;
+    debug.cpu_load = (gettime() - lastlooptime); // * 1e-3f;
 
     if (loopCounter > 10000) {
       if (debug.cpu_load > debug.max_cpu_load) // First "few" loops are messy

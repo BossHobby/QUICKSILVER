@@ -29,7 +29,7 @@ THE SOFTWARE.
 #include "defines.h"
 #include "drv_fmc.h"
 #include "drv_fmc2.h"
-#include "drv_pwm.h"
+#include "drv_motor.h"
 #include "drv_time.h"
 #include "flip_sequencer.h"
 #include "gestures.h"

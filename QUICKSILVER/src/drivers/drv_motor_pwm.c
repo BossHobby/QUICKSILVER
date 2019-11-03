@@ -1,9 +1,7 @@
-
-#include "drv_pwm.h"
-
 #include <math.h>
 
 #include "defines.h"
+#include "drv_motor.h"
 #include "drv_time.h"
 #include "profile.h"
 #include "project.h"

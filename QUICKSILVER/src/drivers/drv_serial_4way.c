@@ -23,10 +23,9 @@
 #include <string.h>
 
 #include "drv_serial_4way.h"
-#include "drv_pwm.h"
+#include "drv_motor.h"
 #include "drv_usb.h"
 #include "drv_softserial.h"
-#include "drv_dshot.h"
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 

@@ -19,6 +19,14 @@
 
 // USE AT YOUR OWN RISK. ALWAYS REMOVE PROPS WHEN TESTING.
 
+#include "defines.h"
+#include "drv_motor.h"
+#include "drv_time.h"
+#include "project.h"
+#include "util.h"
+
+#ifdef USE_DSHOT_DRIVER_BETA
+
 // Enable this for 3D. The 'Motor Direction' setting in BLHeliSuite must
 // be set to 'Bidirectional' (or 'Bidirectional Rev.') accordingly:
 //#define BIDIRECTIONAL
@@ -53,16 +61,6 @@
 // it has fastest send time in this implementation
 
 // Dshot150 is pretty insensitive to pin mixes and wire capacitance
-
-#include "project.h"
-
-#include "defines.h"
-#include "drv_dshot.h"
-#include "drv_pwm.h"
-#include "drv_time.h"
-#include "util.h"
-
-#ifdef USE_DSHOT_DRIVER_BETA
 
 #ifdef THREE_D_THROTTLE
 #error "Not tested with THREE_D_THROTTLE config option"
