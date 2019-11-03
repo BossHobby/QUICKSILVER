@@ -127,17 +127,13 @@ void motor_init() {
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 
-  GPIO_InitStructure.GPIO_Pin = DSHOT_PIN_0;
-  GPIO_Init(DSHOT_PORT_0, &GPIO_InitStructure);
+#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) \
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_##pin;            \
+  GPIO_Init(GPIO##port, &GPIO_InitStructure);
 
-  GPIO_InitStructure.GPIO_Pin = DSHOT_PIN_1;
-  GPIO_Init(DSHOT_PORT_1, &GPIO_InitStructure);
+  MOTOR_PINS
 
-  GPIO_InitStructure.GPIO_Pin = DSHOT_PIN_2;
-  GPIO_Init(DSHOT_PORT_2, &GPIO_InitStructure);
-
-  GPIO_InitStructure.GPIO_Pin = DSHOT_PIN_3;
-  GPIO_Init(DSHOT_PORT_3, &GPIO_InitStructure);
+#undef MOTOR_PIN
 
   // set failsafetime so signal is off at start
   pwm_failsafe_time = gettime() - 100000;
@@ -190,10 +186,12 @@ void motor_set(uint8_t number, float pwm) {
       if (gettime() - pwm_failsafe_time > 1000000) {
         value = 0;
 
-        gpioreset(DSHOT_PORT_0, DSHOT_PIN_0);
-        gpioreset(DSHOT_PORT_1, DSHOT_PIN_1);
-        gpioreset(DSHOT_PORT_2, DSHOT_PIN_2);
-        gpioreset(DSHOT_PORT_3, DSHOT_PIN_3);
+#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) \
+  gpioreset(GPIO##port, GPIO_Pin_##pin);
+
+        MOTOR_PINS
+
+#undef MOTOR_PIN
         //////
         return;
       }
@@ -281,20 +279,24 @@ void make_packet(uint8_t number, uint16_t value, bool telemetry) {
   __asm { NOP }    \
   //__asm{NOP} __asm{NOP} __asm{NOP} __asm{NOP}
 #endif
+#ifdef __GNUC__
+#define ASM_DELAY asm("nop");
+#else
+#define ASM_DELAY __asm {NOP}
+#endif
+
+#define MOTOR_SET(...) gpioset(__VA_ARGS__)
+#define MOTOR_RESET(...) gpioreset(__VA_ARGS__)
+#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) GPIO##port, GPIO_Pin_##pin
 
 void bitbang_data1() {
   for (uint8_t i = 0; i < 48; ++i) {
 
     if (motor_data[i] & 0x01) {
-
-      gpioset(DSHOT_PORT_0, DSHOT_PIN_0); // FL
+      MOTOR_SET(MOTOR_PIN0); // FL
     } else {
-#ifdef __GNUC__
-      asm("nop");
-#else
-      __asm {NOP }
-#endif
-      gpioreset(DSHOT_PORT_0, DSHOT_PIN_0);
+      ASM_DELAY
+      MOTOR_RESET(MOTOR_PIN0);
     }
 
     D600_DELAY;
@@ -305,14 +307,10 @@ void bitbang_data2() {
   for (uint8_t i = 0; i < 48; ++i) {
 
     if (motor_data[i] & 0x02) {
-      gpioset(DSHOT_PORT_1, DSHOT_PIN_1); // BL
+      MOTOR_SET(MOTOR_PIN1); // BL
     } else {
-#ifdef __GNUC__
-      asm("nop");
-#else
-      __asm {NOP }
-#endif
-      gpioreset(DSHOT_PORT_1, DSHOT_PIN_1);
+      ASM_DELAY
+      MOTOR_RESET(MOTOR_PIN1);
     }
 
     D600_DELAY;
@@ -323,14 +321,10 @@ void bitbang_data3() {
   for (uint8_t i = 0; i < 48; ++i) {
 
     if (motor_data[i] & 0x04) {
-      gpioset(DSHOT_PORT_2, DSHOT_PIN_2); // FR
+      MOTOR_SET(MOTOR_PIN2); // FR
     } else {
-#ifdef __GNUC__
-      asm("nop");
-#else
-      __asm {NOP }
-#endif
-      gpioreset(DSHOT_PORT_2, DSHOT_PIN_2);
+      ASM_DELAY
+      MOTOR_RESET(MOTOR_PIN2);
     }
 
     D600_DELAY;
@@ -341,15 +335,10 @@ void bitbang_data4() {
   for (uint8_t i = 0; i < 48; ++i) {
 
     if (motor_data[i] & 0x08) {
-
-      gpioset(DSHOT_PORT_3, DSHOT_PIN_3); // BR
+      MOTOR_SET(MOTOR_PIN3); // BR
     } else {
-#ifdef __GNUC__
-      asm("nop");
-#else
-      __asm {NOP }
-#endif
-      gpioreset(DSHOT_PORT_3, DSHOT_PIN_3);
+      ASM_DELAY
+      MOTOR_RESET(MOTOR_PIN3);
     }
 
     D600_DELAY;
@@ -360,47 +349,31 @@ void bitbang_data() {
   for (uint8_t i = 0; i < 48; ++i) {
 
     if (motor_data[i] & 0x01) {
-      gpioset(DSHOT_PORT_0, DSHOT_PIN_0); // FL
+      MOTOR_SET(MOTOR_PIN0); // FL
     } else {
-#ifdef __GNUC__
-      asm("nop");
-#else
-      __asm {NOP }
-#endif
-      gpioreset(DSHOT_PORT_0, DSHOT_PIN_0);
+      ASM_DELAY
+      MOTOR_RESET(MOTOR_PIN0);
     }
 
     if (motor_data[i] & 0x02) {
-      gpioset(DSHOT_PORT_1, DSHOT_PIN_1); // BL
+      MOTOR_SET(MOTOR_PIN1); // BL
     } else {
-#ifdef __GNUC__
-      asm("nop");
-#else
-      __asm {NOP }
-#endif
-      gpioreset(DSHOT_PORT_1, DSHOT_PIN_1);
+      ASM_DELAY
+      MOTOR_RESET(MOTOR_PIN1);
     }
 
     if (motor_data[i] & 0x04) {
-      gpioset(DSHOT_PORT_2, DSHOT_PIN_2); // FR
+      MOTOR_SET(MOTOR_PIN2); // FR
     } else {
-#ifdef __GNUC__
-      asm("nop");
-#else
-      __asm {NOP }
-#endif
-      gpioreset(DSHOT_PORT_2, DSHOT_PIN_2);
+      ASM_DELAY
+      MOTOR_RESET(MOTOR_PIN2);
     }
 
     if (motor_data[i] & 0x08) {
-      gpioset(DSHOT_PORT_3, DSHOT_PIN_3); // BR
+      MOTOR_SET(MOTOR_PIN3); // BR
     } else {
-#ifdef __GNUC__
-      asm("nop");
-#else
-      __asm {NOP }
-#endif
-      gpioreset(DSHOT_PORT_3, DSHOT_PIN_3);
+      ASM_DELAY
+      MOTOR_RESET(MOTOR_PIN3);
     }
 
 #if defined(DSHOT300) && !defined(DSHOT150)
@@ -508,6 +481,7 @@ void bitbang_data() {
 #endif
   }
 }
+#undef MOTOR_PIN
 
 #pragma pop
 
