@@ -133,26 +133,11 @@ static int decodepacket(void) {
       //			rx[1] = rx[1] + 0.03225 * 0.5 * (float)(((rxdata[6])>>2) - 31);
       //			rx[2] = rx[2] + 0.03225 * 0.5 * (float)(((rxdata[10])>>2) - 31);
 
-#ifdef USE_STOCK_TX
-      char trims[2];
-      static char lasttrim[2];
-
-      trims[0] = rxdata[6] >> 2;
-      trims[1] = rxdata[4] >> 2;
-      // trims[2] = rxdata[8] >> 2; // throttle and yaw trims are not used
-      // trims[3] = rxdata[10] >> 2;
-      for (int i = 0; i < 2; i++)
-        if (trims[i] != lasttrim[i]) {
-          aux[CH_PIT_TRIM + i] = trims[i] > lasttrim[i];
-          lasttrim[i] = trims[i];
-        }
-#else
       aux[CH_INV] = (rxdata[3] & 0x80) ? 1 : 0; // inverted flag
 
       aux[CH_VID] = (rxdata[2] & 0x10) ? 1 : 0;
 
       aux[CH_PIC] = (rxdata[2] & 0x20) ? 1 : 0;
-#endif
 
       aux[CH_FLIP] = (rxdata[2] & 0x08) ? 1 : 0;
 
@@ -219,14 +204,6 @@ int timingfail = 0;
 // was 250 ( uS )
 // sign changed
 #define PACKET_OFFSET 500
-
-#ifdef USE_STOCK_TX
-#undef PACKET_PERIOD
-#define PACKET_PERIOD 3000
-
-#undef PACKET_OFFSET
-#define PACKET_OFFSET 999
-#endif
 
 // how many times to hop ahead if no reception
 #define HOPPING_NUMBER 4

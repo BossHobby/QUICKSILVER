@@ -43,13 +43,6 @@ THE SOFTWARE.
 // was 250 ( uS )
 #define PACKET_OFFSET 000
 
-#ifdef USE_STOCK_TX
-#undef PACKET_PERIOD
-#define PACKET_PERIOD 2000
-#undef PACKET_OFFSET
-#define PACKET_OFFSET 0
-#endif
-
 // how many times to hop ahead if no reception
 #define HOPPING_NUMBER 4
 
@@ -206,7 +199,7 @@ void rx_init() {
 #ifdef RX_DATARATE_250K
   xn_writereg(RF_SETUP, B00100110); // power / data rate 250K
 #else
-  xn_writereg(RF_SETUP, B00000110);             // power / data rate 1000K
+  xn_writereg(RF_SETUP, B00000110); // power / data rate 1000K
 #endif
 
   xn_writereg(RX_PW_P0, 15 + crc_en * 2); // payload size
@@ -362,23 +355,11 @@ static int decodepacket(void) {
            rxdata[9]) *
           0.000976562f;
 
-#ifdef USE_STOCK_TX
-      char trims[4];
-      trims[0] = rxdata[6] >> 2;
-      trims[1] = rxdata[4] >> 2;
-
-      for (int i = 0; i < 2; i++)
-        if (trims[i] != lasttrim[i]) {
-          aux[CH_PIT_TRIM + i] = trims[i] > lasttrim[i];
-          lasttrim[i] = trims[i];
-        }
-#else
       aux[CH_INV] = (rxdata[3] & 0x80) ? 1 : 0; // inverted flag
 
       aux[CH_VID] = (rxdata[2] & 0x10) ? 1 : 0;
 
       aux[CH_PIC] = (rxdata[2] & 0x20) ? 1 : 0;
-#endif
 
       //aux[CH_TO] = (rxdata[3] & 0x20) ? 1 : 0; // take off flag
 

@@ -147,11 +147,6 @@ THE SOFTWARE.
 // was 250 ( uS )
 #define PACKET_OFFSET 250
 
-#ifdef USE_STOCK_TX
-#undef PACKET_OFFSET
-#define PACKET_OFFSET -250
-#endif
-
 // how many times to hop ahead if no reception
 #define HOPPING_NUMBER 4
 
@@ -656,12 +651,7 @@ void send_beacon() {
   extern int bound_for_BLE_packet;
   extern int failsafe;
   int onground_and_bind = (failsafe << 2) + (onground << 1) + (bound_for_BLE_packet);
-
-#ifdef USE_STOCK_TX
-  //nothing to do - already prepared (4. bit flag is 0 for stock TX)
-#else
   onground_and_bind = 8 + onground_and_bind;
-#endif
 
   int packetpersecond_short = packetpersecond / 2;
   if (packetpersecond_short > 0xff)
@@ -926,24 +916,10 @@ static int decodepacket(void) {
       //                      rx[1] = rx[1] + 0.03225 * 0.5 * (float)(((rxdata[6])>>2) - 31);
       //                      rx[2] = rx[2] + 0.03225 * 0.5 * (float)(((rxdata[10])>>2) - 31);
 
-      // Instead they are used as binary aux channels
-#ifdef USE_STOCK_TX
-      char trims[4];
-      trims[0] = rxdata[6] >> 2;
-      trims[1] = rxdata[4] >> 2;
-      // trims[2] = rxdata[8] >> 2; // throttle and yaw trims are not used
-      // trims[3] = rxdata[10] >> 2;
-      for (int i = 0; i < 2; i++)
-        if (trims[i] != lasttrim[i]) {
-          aux[CH_PIT_TRIM + i] = trims[i] > lasttrim[i];
-          lasttrim[i] = trims[i];
-        }
-#else
       // this share the same numbers to the above CH_PIT_TRIM etc
       aux[CH_VID] = (rxdata[2] & 0x10) ? 1 : 0;
 
       aux[CH_PIC] = (rxdata[2] & 0x20) ? 1 : 0;
-#endif
 
       aux[CH_INV] = (rxdata[3] & 0x80) ? 1 : 0; // inverted flag
 

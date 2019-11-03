@@ -614,11 +614,6 @@ int timingfail = 0;
 // was 250 ( uS )
 #define PACKET_OFFSET 250
 
-#ifdef USE_STOCK_TX
-#undef PACKET_OFFSET
-#define PACKET_OFFSET -250
-#endif
-
 // how many times to hop ahead if no reception
 #define HOPPING_NUMBER 4
 
