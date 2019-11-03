@@ -6,11 +6,6 @@
 //#pragma diag_warning 1035 , 177 , 4017
 //#pragma diag_error 260
 
-#define MOTOR_BL 0
-#define MOTOR_FL 1
-#define MOTOR_FR 3
-#define MOTOR_BR 2
-
 #define PIDNUMBER 3
 
 #define DEGTORAD 0.017453292f
@@ -26,7 +21,6 @@
 
 #define RXMODE_BIND 0
 #define RXMODE_NORMAL (!RXMODE_BIND)
-
 
 #ifdef BETAFLIGHT_RATES
 #define ACRO_EXPO_ROLL BF_EXPO_ROLL

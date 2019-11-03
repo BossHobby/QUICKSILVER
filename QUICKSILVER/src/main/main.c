@@ -162,11 +162,9 @@ int main(void) {
   delay(100000);
 
   i2c_init();
+
   motor_init();
-  motor_set(MOTOR_BL, 0);
-  motor_set(MOTOR_FL, 0);
-  motor_set(MOTOR_FR, 0);
-  motor_set(MOTOR_BR, 0);
+  motor_set_all(0);
 #ifdef ENABLE_OSD
   delay(200000);
   osd_init();

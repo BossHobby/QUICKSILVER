@@ -114,11 +114,7 @@ uint8_t esc4wayInit(void)
 	// StopPwmAllMotors();
 	//pwmDisableMotors();
 	escCount = 4;
-
-	motor_set( MOTOR_BL , 0);
-	motor_set( MOTOR_FL , 0);	 
-	motor_set( MOTOR_FR , 0); 
-	motor_set( MOTOR_BR , 0); 
+    motor_set_all(0);
 
 	// set up 1wire serial to each esc
 
@@ -139,10 +135,7 @@ uint8_t esc4wayInit(void)
 
 void esc4wayRelease(void) {
 	motor_init();
-	motor_set( MOTOR_BL , 0);
-	motor_set( MOTOR_FL , 0);	 
-	motor_set( MOTOR_FR , 0); 
-	motor_set( MOTOR_BR , 0); 
+	motor_set_all(0);
 }
 
 
