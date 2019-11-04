@@ -79,6 +79,11 @@
 #define MAX7456_NSS_PORT GPIOA
 #endif
 
+#ifdef MAX7456_NSS_PA10
+#define MAX7456_NSS_PIN GPIO_Pin_10
+#define MAX7456_NSS_PORT GPIOA
+#endif
+
 //  Initialize SPI Connection to max7456
 void spi_max7456_init(void) {
 

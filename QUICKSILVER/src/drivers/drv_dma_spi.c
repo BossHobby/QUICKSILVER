@@ -12,6 +12,10 @@
 #define MPU6XXX_SPI1
 #endif
 
+#if defined(ICM20601_SPI2) || defined(ICM20602_SPI2)
+#define MPU6XXX_SPI2
+#endif
+
 //SPI PINS
 #ifdef MPU6XXX_SPI1
 #define MPU6XXX_SPI_INSTANCE SPI1
@@ -23,6 +27,18 @@
 #define MPU6XXX_MOSI_PINSOURCE GPIO_PinSource7
 #define MPU6XXX_MOSI_PIN GPIO_Pin_7
 #define MPU6XXX_SPI_AF GPIO_AF_SPI1
+#endif
+
+#ifdef MPU6XXX_SPI2
+#define MPU6XXX_SPI_INSTANCE SPI2
+#define MPU6XXX_SPI_PORT GPIOB
+#define MPU6XXX_SCLK_PINSOURCE GPIO_PinSource13
+#define MPU6XXX_SCLK_PIN GPIO_Pin_13
+#define MPU6XXX_MISO_PINSOURCE GPIO_PinSource14
+#define MPU6XXX_MISO_PIN GPIO_Pin_14
+#define MPU6XXX_MOSI_PINSOURCE GPIO_PinSource15
+#define MPU6XXX_MOSI_PIN GPIO_Pin_15
+#define MPU6XXX_SPI_AF GPIO_AF_SPI2
 #endif
 
 //CHIP SELECT PINS
@@ -44,6 +60,12 @@
 #define MPU6XXX_NSS_PORT GPIOC
 #endif
 
+#if defined(MPU6XXX_NSS_PB12) || defined(ICM20601_NSS_PB12) || defined(ICM20602_NSS_PB12)
+#define MPU6XXX_NSS_PINSOURCE GPIO_PinSource12
+#define MPU6XXX_NSS_PIN GPIO_Pin_12
+#define MPU6XXX_NSS_PORT GPIOB
+#endif
+
 //INTERRUPT PINS
 #if defined(MPU6XXX_INT_PC4) || defined(ICM20601_INT_PC4) || defined(ICM20602_INT_PC4)
 #define MPU6XXX_INT_PIN GPIO_Pin_4
@@ -53,6 +75,11 @@
 #if defined(MPU6XXX_INT_PC3) || defined(ICM20601_INT_PC3) || defined(ICM20602_INT_PC3)
 #define MPU6XXX_INT_PIN GPIO_Pin_3
 #define MPU6XXX_INT_PORT GPIOC
+#endif
+
+#if defined(MPU6XXX_INT_PA8) || defined(ICM20601_INT_PA8) || defined(ICM20602_INT_PA8)
+#define MPU6XXX_INT_PIN GPIO_Pin_8
+#define MPU6XXX_INT_PORT GPIOA
 #endif
 
 //  Initialize SPI Connection to Gyro
@@ -98,9 +125,14 @@ void spi_gyro_init(void) {
   GPIO_PinAFConfig(MPU6XXX_SPI_PORT, MPU6XXX_MOSI_PINSOURCE, MPU6XXX_SPI_AF); //MOSI
 
   //*********************SPI***************************************
-
+#ifdef MPU6XXX_SPI1
   //SPI1 to APB2 bus clock																					//TODO  Make this populate with defines for switching SPI instances
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
+#endif
+#ifdef MPU6XXX_SPI2
+  //SPI2 to APB1 bus clock
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
+#endif
   // SPI Config
   SPI_I2S_DeInit(MPU6XXX_SPI_INSTANCE);
   SPI_InitTypeDef SPI_InitStructure;
