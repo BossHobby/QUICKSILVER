@@ -280,7 +280,7 @@ uint8_t spi_transfer_byte(uint8_t data) {
   // Return back received data in SPIx->DR
   return SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
 }
-/*
+
 // Function to write gyro registers
 uint8_t MPU6XXX_write(uint8_t reg, uint8_t data) {
   uint8_t stuff;
@@ -289,7 +289,7 @@ uint8_t MPU6XXX_write(uint8_t reg, uint8_t data) {
   stuff = spi_transfer_byte(data);
   spi_disable();
   return stuff;
-}*/
+}
 
 // Function to read gyro registers
 uint8_t MPU6XXX_read(uint8_t reg) {
@@ -397,7 +397,7 @@ uint8_t MPU6XXX_dma_spi_read(uint8_t reg) {
 }
 
 // blocking dma write of a single register
-void MPU6XXX_write(uint8_t reg, uint8_t data) { //MPU6XXX_dma_spi_write
+void MPU6XXX_dma_spi_write(uint8_t reg, uint8_t data) { //MPU6XXX_dma_spi_write
   uint8_t buffer[2] = {reg, data};
   MPU6XXX_dma_transfer_bytes(buffer, 2);
 }

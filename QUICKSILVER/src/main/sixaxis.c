@@ -155,8 +155,8 @@ void sixaxis_read(void) {
   i2c_readdata(59, data, 14);
 #endif
 #ifdef F405
- // MPU6XXX_read_data(59, data, 14);
-  MPU6XXX_dma_read_data(59, data, 14);
+   MPU6XXX_read_data(59, data, 14);
+  //MPU6XXX_dma_read_data(59, data, 14);
 #endif
 
   accel[0] = -(int16_t)((data[0] << 8) + data[1]);
@@ -293,8 +293,8 @@ void gyro_cal(void) {
     i2c_readdata(67, data, 6);
 #endif
 #ifdef F405
-   // MPU6XXX_read_data(67, data, 6);
-    MPU6XXX_dma_read_data(67, data, 6);
+    MPU6XXX_read_data(67, data, 6);
+   // MPU6XXX_dma_read_data(67, data, 6);
 #endif
 
     gyro[1] = (int16_t)((data[0] << 8) + data[1]);
