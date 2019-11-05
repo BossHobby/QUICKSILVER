@@ -16,6 +16,29 @@
 #define MPU6XXX_SPI2
 #endif
 
+
+#ifdef MPU6XXX_SPI2
+#define RCC_APBPeriph_SPI RCC_APB1Periph_SPI2
+#define MPU6XXX_SPI_INSTANCE SPI2
+#define MPU6XXX_SPI_PORT GPIOB
+#define MPU6XXX_SCLK_PINSOURCE GPIO_PinSource13
+#define MPU6XXX_SCLK_PIN GPIO_Pin_13
+#define MPU6XXX_MISO_PINSOURCE GPIO_PinSource14
+#define MPU6XXX_MISO_PIN GPIO_Pin_14
+#define MPU6XXX_MOSI_PINSOURCE GPIO_PinSource15
+#define MPU6XXX_MOSI_PIN GPIO_Pin_15
+#define MPU6XXX_SPI_AF GPIO_AF_SPI2
+#define DMA1_RX_STREAM DMA1_Stream3
+#define DMA1_TX_STREAM DMA1_Stream4
+#define DMA_RX_CHANNEL DMA_Channel_0
+#define DMA_TX_CHANNEL DMA_Channel_0
+#define DMA_RX_TCI_FLAG DMA_FLAG_TCIF3
+#define DMA_TX_TCI_FLAG DMA_FLAG_TCIF4
+#define DMA_STREAM_IRQ DMA1_Stream3_IRQn
+#define DMA_RX_IT_FLAG DMA_IT_TCIF3
+#endif
+
+
 //SPI PINS
 #ifdef MPU6XXX_SPI1
 #define MPU6XXX_SPI_INSTANCE SPI1
@@ -29,7 +52,7 @@
 #define MPU6XXX_SPI_AF GPIO_AF_SPI1
 #endif
 
-#ifdef MPU6XXX_SPI2
+#ifdef MPU6XXX_SPI2NFE //NFE
 #define MPU6XXX_SPI_INSTANCE SPI2
 #define MPU6XXX_SPI_PORT GPIOB
 #define MPU6XXX_SCLK_PINSOURCE GPIO_PinSource13
@@ -127,11 +150,11 @@ void spi_gyro_init(void) {
   //*********************SPI***************************************
 #ifdef MPU6XXX_SPI1
   //SPI1 to APB2 bus clock																					//TODO  Make this populate with defines for switching SPI instances
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);	//NFE
 #endif
 #ifdef MPU6XXX_SPI2
   //SPI2 to APB1 bus clock
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
+  RCC_APB1PeriphClockCmd(RCC_APBPeriph_SPI, ENABLE);
 #endif
   // SPI Config
   SPI_I2S_DeInit(MPU6XXX_SPI_INSTANCE);
@@ -152,6 +175,18 @@ void spi_gyro_init(void) {
   while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
     ;
   SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
+/*
+  // Enable DMA clock
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
+
+  // Enable DMA Interrupt on receive line
+  NVIC_InitTypeDef NVIC_InitStruct;
+  NVIC_InitStruct.NVIC_IRQChannel = DMA_STREAM_IRQ;
+  NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x02;
+  NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x02;
+  NVIC_Init(&NVIC_InitStruct);
+  */
 }
 
 //*********************FUNCTIONS************************************
@@ -186,8 +221,19 @@ void spi_reset_prescaler(void) {
   while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
     ;
   SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
-}
 
+  // Enable DMA clock
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
+/*
+  // Enable DMA Interrupt on receive line
+  NVIC_InitTypeDef NVIC_InitStruct;
+  NVIC_InitStruct.NVIC_IRQChannel = DMA_STREAM_IRQ;
+  NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x02;
+  NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x02;
+  NVIC_Init(&NVIC_InitStruct);*/
+}
+/*
 void spi_reset_prescaler2(void) {
   SPI_Cmd(MPU6XXX_SPI_INSTANCE, DISABLE);
   const uint16_t clearBRP = 0xFFC7;
@@ -196,7 +242,7 @@ void spi_reset_prescaler2(void) {
   temp |= SPI_BaudRatePrescaler_2;
   MPU6XXX_SPI_INSTANCE->CR1 = temp;
   SPI_Cmd(MPU6XXX_SPI_INSTANCE, ENABLE);
-}
+}*/
 
 // Chip Select functions
 void spi_enable(void) {
@@ -234,7 +280,7 @@ uint8_t spi_transfer_byte(uint8_t data) {
   // Return back received data in SPIx->DR
   return SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
 }
-
+/*
 // Function to write gyro registers
 uint8_t MPU6XXX_write(uint8_t reg, uint8_t data) {
   uint8_t stuff;
@@ -243,7 +289,7 @@ uint8_t MPU6XXX_write(uint8_t reg, uint8_t data) {
   stuff = spi_transfer_byte(data);
   spi_disable();
   return stuff;
-}
+}*/
 
 // Function to read gyro registers
 uint8_t MPU6XXX_read(uint8_t reg) {
@@ -265,9 +311,106 @@ void MPU6XXX_read_data(uint8_t reg, int *data, int size) {
   spi_disable();
 }
 
+
+
 ////////////////////////////////WORKING UP TO HERE SO FAR//////////////////////////////////////////////////////////////
 
 // Initialize DMA transmit and receive streams to SPI and bring SPI up to full speed for bulk transfer
+// dma stream inits
+void dma_receive_MPU6XXX_init(uint8_t *base_address_in, uint8_t buffer_size) {
+  DMA_InitTypeDef DMA_InitStructure;
+
+  //RX Stream
+  DMA_DeInit(DMA1_RX_STREAM);
+  DMA_InitStructure.DMA_Channel = DMA_RX_CHANNEL;
+  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(MPU6XXX_SPI_INSTANCE->DR));
+  DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)base_address_in;
+  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
+  ;
+  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructure.DMA_BufferSize = (uint16_t)buffer_size;
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  DMA_Init(DMA1_RX_STREAM, &DMA_InitStructure);
+}
+
+void dma_transmit_MPU6XXX_init(uint8_t *base_address_out, uint8_t buffer_size) {
+  DMA_InitTypeDef DMA_InitStructure;
+
+  //TX Stream
+  DMA_DeInit(DMA1_TX_STREAM);
+  DMA_InitStructure.DMA_Channel = DMA_TX_CHANNEL;
+  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(MPU6XXX_SPI_INSTANCE->DR));
+  DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)base_address_out;
+  DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
+  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructure.DMA_BufferSize = (uint16_t)buffer_size;
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  DMA_Init(DMA1_TX_STREAM, &DMA_InitStructure);
+}
+
+
+//blocking dma transmit bytes
+void MPU6XXX_dma_transfer_bytes(uint8_t *buffer, uint8_t length) {
+  dma_receive_MPU6XXX_init(buffer, length);
+  dma_transmit_MPU6XXX_init(buffer, length);
+  spi_enable();
+  DMA_Cmd(DMA1_RX_STREAM, ENABLE); // Enable the DMA SPI RX Stream
+  DMA_Cmd(DMA1_TX_STREAM, ENABLE); // Enable the DMA SPI TX Stream
+  // Enable the SPI Rx/Tx DMA request
+  SPI_I2S_DMACmd(MPU6XXX_SPI_INSTANCE, SPI_I2S_DMAReq_Tx, ENABLE);
+  SPI_I2S_DMACmd(MPU6XXX_SPI_INSTANCE, SPI_I2S_DMAReq_Rx, ENABLE);
+  SPI_Cmd(MPU6XXX_SPI_INSTANCE, ENABLE);
+  /* Waiting the end of Data transfer */
+  while (DMA_GetFlagStatus(DMA1_RX_STREAM, DMA_RX_TCI_FLAG) == RESET) {
+  };
+  while (DMA_GetFlagStatus(DMA1_TX_STREAM, DMA_TX_TCI_FLAG) == RESET) {
+  };
+  DMA_ClearFlag(DMA1_RX_STREAM, DMA_RX_TCI_FLAG);
+  DMA_ClearFlag(DMA1_TX_STREAM, DMA_TX_TCI_FLAG);
+  DMA_Cmd(DMA1_TX_STREAM, DISABLE);
+  DMA_Cmd(DMA1_RX_STREAM, DISABLE);
+  SPI_I2S_DMACmd(MPU6XXX_SPI_INSTANCE, SPI_I2S_DMAReq_Tx, DISABLE);
+  SPI_I2S_DMACmd(MPU6XXX_SPI_INSTANCE, SPI_I2S_DMAReq_Rx, DISABLE);
+  SPI_Cmd(MPU6XXX_SPI_INSTANCE, DISABLE);
+  spi_disable();
+}
+
+// blocking dma read of a single register
+uint8_t MPU6XXX_dma_spi_read(uint8_t reg) {
+  uint8_t buffer[2] = {reg | 0x80, 0x00};
+  MPU6XXX_dma_transfer_bytes(buffer, 2);
+  return buffer[1];
+}
+
+// blocking dma write of a single register
+void MPU6XXX_write(uint8_t reg, uint8_t data) { //MPU6XXX_dma_spi_write
+  uint8_t buffer[2] = {reg, data};
+  MPU6XXX_dma_transfer_bytes(buffer, 2);
+}
+
+void MPU6XXX_dma_read_data(uint8_t reg, int *data, int size) {
+  uint8_t buffer[15] = {reg | 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  MPU6XXX_dma_transfer_bytes(buffer, size + 1);
+  for (int i = 1; i < size + 1; i++) {
+    data[i-1] = buffer[i];
+  }
+}
+
+/*
 void dma_spi_init(void) {
   // Speed up SPI
 
@@ -290,7 +433,7 @@ void dma_spi_init(void) {
   DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
   DMA_InitStructure.DMA_Priority = DMA_Priority_High;
   DMA_Init(DMA2_Stream3, &DMA_InitStructure);
-}
+}*/
 
 // Transfer Complete Callback Function
 
