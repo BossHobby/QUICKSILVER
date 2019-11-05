@@ -138,23 +138,4 @@
 // disable all pwm pins / function
 //#define DISABLE_PWM_PINS
 
-/*                                   **********moved to target
-// pwm pin initialization
-// enable the pwm pins to be used here ( multiple pins ok)
-//#define PWM_PA0
-//#define PWM_PA1
-//#define PWM_PA2
-//#define PWM_PA3
-#define PWM_PA4
-//#define PWM_PA5
-#define PWM_PA6
-#define PWM_PA7
-//#define PWM_PA8
-//#define PWM_PA9
-//#define PWM_PA10
-//#define PWM_PA11
-//#define PWM_PB0
-#define PWM_PB1
-*/
-
 //***********************************************END LEGACY REFERENCE LIST*****************************************************
