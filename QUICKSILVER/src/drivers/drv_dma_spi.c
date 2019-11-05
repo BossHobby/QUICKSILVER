@@ -127,6 +127,8 @@ void spi_gyro_init(void) {
   GPIO_InitStructure.GPIO_Pin = MPU6XXX_NSS_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
   GPIO_Init(MPU6XXX_NSS_PORT, &GPIO_InitStructure);
 
   // Interrupt GPIO
@@ -175,7 +177,7 @@ void spi_gyro_init(void) {
   while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
     ;
   SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
-/*
+
   // Enable DMA clock
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
 
@@ -186,7 +188,7 @@ void spi_gyro_init(void) {
   NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x02;
   NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x02;
   NVIC_Init(&NVIC_InitStruct);
-  */
+
 }
 
 //*********************FUNCTIONS************************************
