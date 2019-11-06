@@ -3,6 +3,7 @@
 #define MatekF411RX
 
 #define F411
+#define F4
 #define F405
 
 // #define USB_DETECT_PIN GPIO_Pin_5
@@ -51,9 +52,12 @@
 
 // SPI PINS DEFINITONS & RADIO
 #define SOFTSPI_NONE
+
+#define USART_PORTS \
+  USART1_PA10PA9    \
+  USART2_PA3PA2
+
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
-#define USART1_PA10PA9
-#define USART2_PA3PA2
 #endif
 
 // OSD

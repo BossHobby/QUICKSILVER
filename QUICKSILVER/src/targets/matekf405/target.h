@@ -2,6 +2,7 @@
 
 #define MatekF405
 
+#define F4
 #define F405
 
 #define USB_DETECT_PIN GPIO_Pin_12

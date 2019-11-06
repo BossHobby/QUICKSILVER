@@ -3,6 +3,7 @@
 #define MatekF411
 
 #define F411
+#define F4
 #define F405
 
 // #define USB_DETECT_PIN GPIO_Pin_5
