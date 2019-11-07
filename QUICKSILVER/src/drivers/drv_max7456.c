@@ -133,8 +133,7 @@ void spi_max7456_init(void) {
   SPI_Cmd(MAX7456_SPI_INSTANCE, ENABLE);
 
   // Dummy read to clear receive buffer
-  while (SPI_I2S_GetFlagStatus(MAX7456_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
-    ;
+  while (SPI_I2S_GetFlagStatus(MAX7456_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET);
   SPI_I2S_ReceiveData(MAX7456_SPI_INSTANCE);
 
   // Enable DMA clock
@@ -159,7 +158,6 @@ void dma_receive_max7456_init(uint8_t *base_address_in, uint8_t buffer_size) {
   DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(MAX7456_SPI_INSTANCE->DR));
   DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)base_address_in;
   DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
-  ;
   DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
   DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
   DMA_InitStructure.DMA_BufferSize = (uint16_t)buffer_size;
@@ -195,6 +193,7 @@ void dma_transmit_max7456_init(uint8_t *base_address_out, uint8_t buffer_size) {
   DMA_Init(DMA1_TX_STREAM, &DMA_InitStructure);
 }
 
+//deinit/reinit spi for unique slave configuration
 void spi_max7556_reinit(void){
 // SPI Config
 SPI_I2S_DeInit(MAX7456_SPI_INSTANCE);
@@ -210,6 +209,8 @@ SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
 SPI_InitStructure.SPI_CRCPolynomial = 7;
 SPI_Init(MAX7456_SPI_INSTANCE, &SPI_InitStructure);
 }
+
+
 //*******************************************************************************SPI / DMA FUNCTIONS********************************************************************************
 
 int osd_liberror; //tracks any failed spi reads or writes to trigger check_osd() on next disarm or maybe print an osd fail warning?  Not used yet
