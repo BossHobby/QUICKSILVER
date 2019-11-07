@@ -298,7 +298,9 @@ int main(void) {
     // attitude calculations for level mode
     extern void imu_calc(void);
     imu_calc();
-
+#ifdef ENABLE_OSD
+    osd_display();
+#endif
     // battery low logic
 
     // read acd and scale based on processor voltage
@@ -496,7 +498,7 @@ int main(void) {
     // receiver function
     checkrx();
 
-#ifdef ENABLE_OSD
+#ifdef ENABLE_OSD_OLD_SPOT
     osd_display();
 #endif
 
@@ -506,7 +508,7 @@ int main(void) {
 #endif
 
 #ifdef DEBUG
-    debug.cpu_load = (gettime() - lastlooptime) * 1e-3f;
+    debug.cpu_load = (gettime() - lastlooptime);// * 1e-3f;
 
     if (loopCounter > 10000) {
       if (debug.cpu_load > debug.max_cpu_load) // First "few" loops are messy

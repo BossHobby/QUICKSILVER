@@ -332,6 +332,8 @@ void MPU6XXX_dma_spi_write(uint8_t reg, uint8_t data) { //MPU6XXX_dma_spi_write
 }
 
 void MPU6XXX_dma_read_data(uint8_t reg, int *data, int size) {
+  extern uint8_t osd_dma_status;
+  while (osd_dma_status);
   uint8_t buffer[15] = {reg | 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   spi_MPU6XXX_reinit_fast();
   MPU6XXX_dma_transfer_bytes(buffer, size + 1);

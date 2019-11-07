@@ -103,6 +103,8 @@ void spi_max7456_init(void) {
   GPIO_InitStructure.GPIO_Pin = MAX7456_NSS_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
   GPIO_Init(MAX7456_NSS_PORT, &GPIO_InitStructure);
 
   // Chip Select Set High

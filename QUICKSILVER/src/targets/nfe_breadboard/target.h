@@ -51,7 +51,7 @@
 #endif
 
 // OSD
-//#define ENABLE_OSD
+#define ENABLE_OSD
 #define MAX7456_SPI2
 #define MAX7456_NSS_PA10
 
