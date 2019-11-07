@@ -120,7 +120,7 @@ void spi_gyro_init(void) {
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(MPU6XXX_SPI_PORT, &GPIO_InitStructure);
 
   // Chip Select GPIO
@@ -174,8 +174,7 @@ void spi_gyro_init(void) {
   SPI_Cmd(MPU6XXX_SPI_INSTANCE, ENABLE);
 
   // Dummy read to clear receive buffer
-  while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
-    ;
+  while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET);
   SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
 
   // Enable DMA clock
@@ -212,7 +211,7 @@ void spi_reset_prescaler(void) {
 #if defined(ICM20602_SPI1) //10mhz SPI
   SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
 #else                      //(MPUXXXX)				//20mhz SPI
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
+  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
 #endif
 #endif
   SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
@@ -220,12 +219,11 @@ void spi_reset_prescaler(void) {
   SPI_Init(MPU6XXX_SPI_INSTANCE, &SPI_InitStructure);
   SPI_Cmd(MPU6XXX_SPI_INSTANCE, ENABLE);
   // Dummy read to clear receive buffer - just in case
-  while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
-    ;
+  while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET);
   SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
 
   // Enable DMA clock
-  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
+ // RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
 /*
   // Enable DMA Interrupt on receive line
   NVIC_InitTypeDef NVIC_InitStruct;
@@ -235,16 +233,54 @@ void spi_reset_prescaler(void) {
   NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x02;
   NVIC_Init(&NVIC_InitStruct);*/
 }
-/*
+
+void spi_reset_prescaler1(void) {
+  // SPI Config
+	  SPI_I2S_DeInit(MPU6XXX_SPI_INSTANCE);
+	  SPI_InitTypeDef SPI_InitStructure;
+	  SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
+	  SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
+	  SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+	  SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
+	  SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
+	  SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
+	#if defined(ICM20601_SPI1) //5.25mhz SPI
+	  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
+	#else
+	#if defined(ICM20602_SPI1) //10mhz SPI
+	  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+	#else                      //(MPUXXXX)				//20mhz SPI
+	  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64;
+	#endif
+	#endif
+	  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
+	  SPI_InitStructure.SPI_CRCPolynomial = 7;
+	  SPI_Init(MPU6XXX_SPI_INSTANCE, &SPI_InitStructure);
+}
+
 void spi_reset_prescaler2(void) {
-  SPI_Cmd(MPU6XXX_SPI_INSTANCE, DISABLE);
-  const uint16_t clearBRP = 0xFFC7;
-  uint16_t temp = MPU6XXX_SPI_INSTANCE->CR1;
-  temp &= clearBRP;
-  temp |= SPI_BaudRatePrescaler_2;
-  MPU6XXX_SPI_INSTANCE->CR1 = temp;
-  SPI_Cmd(MPU6XXX_SPI_INSTANCE, ENABLE);
-}*/
+  // SPI Config
+	  SPI_I2S_DeInit(MPU6XXX_SPI_INSTANCE);
+	  SPI_InitTypeDef SPI_InitStructure;
+	  SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
+	  SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
+	  SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+	  SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
+	  SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
+	  SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
+	#if defined(ICM20601_SPI1) //5.25mhz SPI
+	  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
+	#else
+	#if defined(ICM20602_SPI1) //10mhz SPI
+	  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+	#else                      //(MPUXXXX)				//20mhz SPI
+	  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
+	#endif
+	#endif
+	  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
+	  SPI_InitStructure.SPI_CRCPolynomial = 7;
+	  SPI_Init(MPU6XXX_SPI_INSTANCE, &SPI_InitStructure);
+}
 
 // Chip Select functions
 void spi_enable(void) {
@@ -394,6 +430,7 @@ void MPU6XXX_dma_transfer_bytes(uint8_t *buffer, uint8_t length) {
 // blocking dma read of a single register
 uint8_t MPU6XXX_dma_spi_read(uint8_t reg) {
   uint8_t buffer[2] = {reg | 0x80, 0x00};
+  spi_reset_prescaler1();
   MPU6XXX_dma_transfer_bytes(buffer, 2);
   return buffer[1];
 }
@@ -401,11 +438,13 @@ uint8_t MPU6XXX_dma_spi_read(uint8_t reg) {
 // blocking dma write of a single register
 void MPU6XXX_dma_spi_write(uint8_t reg, uint8_t data) { //MPU6XXX_dma_spi_write
   uint8_t buffer[2] = {reg, data};
+  spi_reset_prescaler1();
   MPU6XXX_dma_transfer_bytes(buffer, 2);
 }
 
 void MPU6XXX_dma_read_data(uint8_t reg, int *data, int size) {
   uint8_t buffer[15] = {reg | 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  spi_reset_prescaler2();
   MPU6XXX_dma_transfer_bytes(buffer, size + 1);
   for (int i = 1; i < size + 1; i++) {
     data[i-1] = buffer[i];

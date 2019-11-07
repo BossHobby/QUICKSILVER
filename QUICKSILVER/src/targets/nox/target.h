@@ -24,7 +24,7 @@
 #define MPU6XXX_NSS_PB12
 #define MPU6XXX_INT_PA8
 #define USE_DUMMY_I2C
-//#define SENSOR_ROTATE_90_CCW
+#define SENSOR_ROTATE_90_CW
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x73
 #define GYRO_ID_3 0x78
@@ -52,14 +52,14 @@
 #endif
 
 // OSD
-//#define ENABLE_OSD
+#define ENABLE_OSD
 #define MAX7456_SPI2
 #define MAX7456_NSS_PA10
 
 //VOLTAGE DIVIDER
 #define BATTERYPIN GPIO_Pin_5
 #define BATTERYPORT GPIOA
-#define BATTERY_ADC_CHANNEL ADC_Channel_8
+#define BATTERY_ADC_CHANNEL ADC_Channel_5
 
 #ifndef VOLTAGE_DIVIDER_R1
 #define VOLTAGE_DIVIDER_R1 10000

@@ -168,15 +168,16 @@ int main(void) {
   pwm_set(MOTOR_FL, 0);
   pwm_set(MOTOR_FR, 0);
   pwm_set(MOTOR_BR, 0);
-  sixaxis_init();
 #ifdef ENABLE_OSD
+  delay(1000000);	//trim this down later
   osd_init();
+  delay(1000000);	//trim this down later
 #endif
+  sixaxis_init();
   if (!sixaxis_check()) {
     //gyro not found
     failloop(4);
   }
-
   adc_init();
 
   //set always on channel to on

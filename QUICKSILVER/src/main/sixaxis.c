@@ -38,7 +38,7 @@ THE SOFTWARE.
 #include "sixaxis.h"
 #include "util.h"
 
-//#define DMA_GYRO
+#define DMA_GYRO
 
 // this works only on newer boards (non mpu-6050)
 // on older boards the hw gyro setting controls the acc as well
@@ -105,6 +105,8 @@ void sixaxis_init(void) {
   delay(1500);
   MPU6XXX_write(MPU_RA_INT_ENABLE, MPU_BIT_INT_STATUS_DATA); //reg 56 data ready enable interrupt to 1
   delay(1500);
+  // Speed up SPI Clock to 20mhz after config
+  spi_reset_prescaler();
 #else
   MPU6XXX_dma_spi_write(MPU_RA_PWR_MGMT_1, MPU_BIT_H_RESET); //reg 107 soft reset  MPU_BIT_H_RESET
   delay(100000);
@@ -130,7 +132,7 @@ void sixaxis_init(void) {
 
 
   // Speed up SPI Clock to 20mhz after config
-  spi_reset_prescaler();
+ // spi_reset_prescaler();
 #endif
 
 #ifdef F0
