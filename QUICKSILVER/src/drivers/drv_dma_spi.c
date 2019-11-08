@@ -115,7 +115,7 @@ void spi_gyro_init(void) {
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
   GPIO_Init(MPU6XXX_SPI_PORT, &GPIO_InitStructure);
 
   // Chip Select GPIO
@@ -332,8 +332,6 @@ void MPU6XXX_dma_spi_write(uint8_t reg, uint8_t data) { //MPU6XXX_dma_spi_write
 }
 
 void MPU6XXX_dma_read_data(uint8_t reg, int *data, int size) {
-  extern uint8_t osd_dma_status;
-  while (osd_dma_status);
   uint8_t buffer[15] = {reg | 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   spi_MPU6XXX_reinit_fast();
   MPU6XXX_dma_transfer_bytes(buffer, size + 1);

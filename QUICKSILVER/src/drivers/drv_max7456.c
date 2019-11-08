@@ -96,7 +96,7 @@ void spi_max7456_init(void) {
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
   GPIO_Init(MAX7456_SPI_PORT, &GPIO_InitStructure);
 
   // Chip Select GPIO
@@ -547,7 +547,7 @@ void osd_intro(void) {
   osd_print("QUICKSILVER", INVERT, 9, 5); //char, col, row
   while (osd_dma_status == BUSY) {
   };
-  osd_print("BY ALIENWHOOP", TEXT, 16, 14); //char, col, row
+  osd_print("LIKE A BOSS", TEXT, 18, 14); //char, col, row
   while (osd_dma_status == BUSY) {
   }; //this wait may not be necessary
 }
