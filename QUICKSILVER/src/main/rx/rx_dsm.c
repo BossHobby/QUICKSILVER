@@ -170,24 +170,24 @@ void rx_spektrum_bind(void) {
   }
 #endif
   GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.GPIO_Pin = SERIAL_RX_SPEKBIND_BINDTOOL_PIN;
+  GPIO_InitStructure.GPIO_Pin = usart_port_defs[RX_USART].rx_pin;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(SERIAL_RX_UART, &GPIO_InitStructure);
+  GPIO_Init(usart_port_defs[RX_USART].gpio_port, &GPIO_InitStructure);
 
   // RX line, set high
-  GPIO_SetBits(SERIAL_RX_UART, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
+  GPIO_SetBits(usart_port_defs[RX_USART].gpio_port, usart_port_defs[RX_USART].rx_pin);
   // Bind window is around 20-140ms after powerup
   delay(60000);
 
   for (uint8_t i = 0; i < BIND_PULSES; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
     // RX line, drive low for 120us
-    GPIO_ResetBits(SERIAL_RX_UART, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
+    GPIO_ResetBits(usart_port_defs[RX_USART].gpio_port, usart_port_defs[RX_USART].rx_pin);
     delay(120);
 
     // RX line, drive high for 120us
-    GPIO_SetBits(SERIAL_RX_UART, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
+    GPIO_SetBits(usart_port_defs[RX_USART].gpio_port, usart_port_defs[RX_USART].rx_pin);
     delay(120);
   }
 }
@@ -195,10 +195,7 @@ void rx_spektrum_bind(void) {
 void rx_init(void) {
 }
 
-void checkrx()
-
-{
-
+void checkrx() {
   if (framestarted < 0) {
     failsafe = 1;          //kill motors while initializing usart (maybe not necessary)
     dsm_init();            // toggles "framestarted = 0;" after initializing
