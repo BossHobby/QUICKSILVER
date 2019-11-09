@@ -8,6 +8,7 @@ void serial_enable_rcc(usart_ports_t port) {
   case 1:
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
     break;
+#ifdef F4
   case 2:
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
     break;
@@ -23,6 +24,7 @@ void serial_enable_rcc(usart_ports_t port) {
   case 6:
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART6, ENABLE);
     break;
+#endif
   }
 }
 void serial_enable_interrupt(usart_ports_t port) {
@@ -32,6 +34,7 @@ void serial_enable_interrupt(usart_ports_t port) {
   case 1:
     NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
     break;
+#ifdef F4
   case 2:
     NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
     break;
@@ -47,9 +50,10 @@ void serial_enable_interrupt(usart_ports_t port) {
   case 6:
     NVIC_InitStructure.NVIC_IRQChannel = USART6_IRQn;
     break;
+#endif
   }
 
-#ifdef F405
+#ifdef F4
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 #else
@@ -58,6 +62,14 @@ void serial_enable_interrupt(usart_ports_t port) {
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 }
+
+#ifdef F4
+
+#define USART4 UART4
+#define USART5 UART5
+
+#define GPIO_AF_USART4 GPIO_AF_UART4
+#define GPIO_AF_USART5 GPIO_AF_UART5
 
 #define USART_PORT(chan, port, rx, tx)     \
   {                                        \
@@ -72,6 +84,23 @@ void serial_enable_interrupt(usart_ports_t port) {
       .tx_pin = GPIO_Pin_##tx,             \
       .tx_pin_source = GPIO_PinSource##tx, \
   },
+#endif
+
+#ifdef F0
+#define USART_PORT(chan, port, rx, tx)     \
+  {                                        \
+      .channel_index = chan,               \
+      .channel = USART##chan,              \
+      .gpio_port = GPIO##port,             \
+      .gpio_af = GPIO_AF_1,                \
+      .rx_pin_index = rx,                  \
+      .rx_pin = GPIO_Pin_##rx,             \
+      .rx_pin_source = GPIO_PinSource##rx, \
+      .tx_pin_index = tx,                  \
+      .tx_pin = GPIO_Pin_##tx,             \
+      .tx_pin_source = GPIO_PinSource##tx, \
+  },
+#endif
 
 usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {USART_PORTS};
 

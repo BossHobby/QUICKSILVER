@@ -42,8 +42,8 @@
   USART1_PA10PA9    \
   USART2_PA3PA2     \
   USART3_PC11PC10   \
-  USART4_PA1PA0     \
-  USART5_PD2PC12
+  USART4_PA1PA0
+// USART5_PD2PC12 we do not support "split" spi pins at the moment
 
 #define SOFTSPI_NONE
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
