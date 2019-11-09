@@ -60,6 +60,52 @@ int beepon = 0;
 #ifndef DISABLE_PWM_PINS
 
 void init_timer(TIM_TypeDef *TIMx, int period) {
+  switch ((uint32_t)TIMx) {
+  case (uint32_t)TIM1:
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);
+    break;
+  case (uint32_t)TIM2:
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+    break;
+  case (uint32_t)TIM3:
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+    break;
+#ifdef F4
+  case (uint32_t)TIM4:
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);
+    break;
+  case (uint32_t)TIM5:
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5, ENABLE);
+    break;
+#endif
+  case (uint32_t)TIM6:
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);
+    break;
+  case (uint32_t)TIM7:
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7, ENABLE);
+    break;
+#ifdef F4
+  case (uint32_t)TIM8:
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM8, ENABLE);
+    break;
+  case (uint32_t)TIM9:
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM9, ENABLE);
+    break;
+  case (uint32_t)TIM11:
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM11, ENABLE);
+    break;
+  case (uint32_t)TIM12:
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM12, ENABLE);
+    break;
+  case (uint32_t)TIM13:
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM13, ENABLE);
+    break;
+#endif
+  case (uint32_t)TIM14:
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM14, ENABLE);
+    break;
+  }
+
   TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
 
   TIM_TimeBaseStructure.TIM_Prescaler = PWM_DIVIDER - 1;
@@ -75,7 +121,6 @@ void motor_init(void) {
 
 // timer clock enable
 #define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) \
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_##timer, ENABLE);  \
   init_timer(timer, PWMTOP);
 
   MOTOR_PINS
