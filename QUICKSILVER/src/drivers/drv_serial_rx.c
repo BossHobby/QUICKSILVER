@@ -3,7 +3,6 @@
 //#include <stdio.h>
 #include "defines.h"
 #include "drv_serial.h"
-#include "drv_serial_rx.h"
 #include "drv_time.h"
 
 extern uint8_t rxusart;
