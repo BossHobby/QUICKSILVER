@@ -96,6 +96,7 @@ void usart_rx_init(uint8_t RXProtocol) {
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 
   serial_enable_rcc(RX_USART);
+
   if (RXProtocol == 4) {
     PIO_InitStructure.GPIO_Pin = usart_port_defs[RX_USART].tx_pin;
     GPIO_Init(usart_port_defs[RX_USART].gpio_port, &GPIO_InitStructure);
