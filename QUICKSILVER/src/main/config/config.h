@@ -13,7 +13,7 @@
 //***********************************************NEW STUFF TO PLAY WITH*****************************************************
 
 // Select filter cut 25hz for SBUS, 67hz for CRSF, 40hz for DSMX, 20hz for DSM2, 90hz for bayang, 45hz for frsky   Formula is [(1/rx framerate)/2] * 0.9
-#define RX_SMOOTHING_HZ 50
+#define RX_SMOOTHING_HZ 40
 
 //Select (only one) source variable for PID VBAT Compensation
 //#define EXACT_VOLTS     //origional method - responds to exact moment to moment sag
@@ -70,11 +70,11 @@
 //***********************************************RECEIVER SETTINGS******************************************************
 
 // *************Receiver protocol selection									//todo:  add missing radio protocols from bobnova and make them all jive with new rx_init function in drv_rx_serial.c
-#define RX_SBUS
+//#define RX_SBUS
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
 //#define RX_IBUS
 //#define RX_FPORT
-//#define RX_DSMX_2048																				//  Only fport, sbus, ibus, and dsm protocols are working on F4 right now
+#define RX_DSMX_2048																				//  Only fport, sbus, ibus, and dsm protocols are working on F4 right now
 //#define RX_DSM2_1024
 //#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
@@ -82,8 +82,8 @@
 //#define RX_FRSKY
 
 // *************Serial Receiver UART Selection (uncomment all if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
-//#define UART_1
-#define UART_2
+#define UART_1
+//#define UART_2
 //#define UART_3
 //#define UART_4
 //#define UART_6
@@ -119,7 +119,7 @@
 // *************external buzzer requires pin assignment in hardware.h before defining below
 // *************change channel assignment from AUX_CHANNEL_OFF to a numbered aux switch if you want switch control
 // *************if no channel is assigned but buzzer is set to AUX_CHANNEL_ON - buzzer will activate on LVC and FAILSAFE.
-//#define BUZZER_ENABLE AUX_CHANNEL_OFF
+#define BUZZER_ENABLE AUX_CHANNEL_OFF
 
 // *************RRD/LLD stick gesture aux start up state.  Gesture aux is AUX_CHANNEL_12
 //#define GESTURE_AUX_START_ON
@@ -183,8 +183,8 @@
 #define GYRO_FILTER_PASS2 HZ_90
 
 //Select D Term Filter Cut Frequency *** Select Only one
-#define DTERM_LPF_2ND_HZ 100
-//#define DTERM_LPF_1ST_HZ 70
+//#define DTERM_LPF_2ND_HZ 100
+#define DTERM_LPF_1ST_HZ 70
 
 //Select Motor Filter Type  (last resort filtering stage)
 //#define MOTOR_FILTER2_ALPHA MFILT1_HZ_90

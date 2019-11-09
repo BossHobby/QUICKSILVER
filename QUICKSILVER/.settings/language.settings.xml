@@ -613,7 +613,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -625,7 +625,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -660,7 +660,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -672,7 +672,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -707,7 +707,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -719,7 +719,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -754,7 +754,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -766,7 +766,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -801,7 +801,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -813,7 +813,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -848,7 +848,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -860,7 +860,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -907,7 +907,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nfe_breadboard">
+						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -942,7 +942,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -954,7 +954,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -989,7 +989,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -1001,7 +1001,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -1151,7 +1151,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -1163,7 +1163,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -1200,7 +1200,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -1212,7 +1212,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
