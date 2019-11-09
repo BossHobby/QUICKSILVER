@@ -39,14 +39,18 @@
 //#define DISABLE_GYRO_CHECK
 
 // SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
-#define USART1_PA10PA9
 #define USART_INVERTER_PIN GPIO_Pin_15
 #define USART_INVERTER_PORT GPIOC
-#define USART3_PB11PB10
-#define USART4_PA1PA0
-#define USART6_PC7PC6
+
+#define USART_PORTS \
+  USART1_PA10PA9    \
+  USART3_PB11PB10   \
+  USART4_PA1PA0     \
+  USART6_PC7PC6
+
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
 #define SOFTSPI_NONE
+#define RX_USART USART_PORT1
 #endif
 #ifndef SOFTSPI_NONE
 #define RADIO_CHECK

@@ -27,33 +27,19 @@
 #define GYRO_ID_2 0x73
 #define GYRO_ID_3 0x78
 #define GYRO_ID_4 0x71
-#if defined(LuxF4osd)
-#define SENSOR_ROTATE_90_CCW
-#else
-#if defined(OmnibusF4SD)
 #define SENSOR_ROTATE_90_CW
-#endif
-//#define SENSOR_FLIP_180  //Bobnova orientation
-#endif
 
 // SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
-//   //not created yet
-//#define UART3_INVERTER_PIN PC9 // Omnibus F4 Pro Corner
-#ifdef OmnibusF4SD
 #define USART_INVERTER_PIN GPIO_Pin_8
 #define USART_INVERTER_PORT GPIOC
-#define USART1_PA10PA9
-#define USART3_PB11PB10
-#define USART6_PC7PC6
-#endif
-#if defined(OmnibusF4) || defined(LuxF4osd)
-#define USART1_PA10PA9
-#define USART_INVERTER_PIN GPIO_Pin_0
-#define USART_INVERTER_PORT GPIOC
-#define USART3_PB11PB10
-#define USART4_PA1PA0
-#endif
+
+#define USART_PORTS \
+  USART1_PA10PA9    \
+  USART3_PB11PB10   \
+  USART6_PC7PC6
+
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
+#define RX_USART USART_PORT1
 #define SOFTSPI_NONE
 #endif
 #ifndef SOFTSPI_NONE
@@ -88,8 +74,7 @@
 #endif
 
 // MOTOR PINS
-//OmniF4SD
-#ifdef OmnibusF4SD
+
 // NFE MOTORS NFE MOTORS NFE MOTORS
 #define MOTOR_PIN2 MOTOR_PIN_PB1
 #define MOTOR_PIN3 MOTOR_PIN_PA2
@@ -113,10 +98,3 @@
 //#define MOTOR_PIN1 MOTOR_PIN_PB1
 //#define MOTOR_PIN2 MOTOR_PIN_PA3
 //#define MOTOR_PIN3 MOTOR_PIN_PA2
-
-#else //OmnibusF4
-#define MOTOR_PIN0 MOTOR_PIN_PA3
-#define MOTOR_PIN1 MOTOR_PIN_PA2
-#define MOTOR_PIN2 MOTOR_PIN_PB0
-#define MOTOR_PIN3 MOTOR_PIN_PB1
-#endif

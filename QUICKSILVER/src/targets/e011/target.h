@@ -32,10 +32,13 @@
 #define SENSOR_ROTATE_90_CW
 
 // SPI RX PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS)
-#define USART1_SDA
+#define USART_PORTS \
+  USART1_SDA
+
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
 #define F0_USART_PINSWAP
 #define SOFTSPI_NONE
+#define RX_USART USART_PORT1
 #else
 #define SOFTSPI_3WIRE
 #define SPI_MOSI_PIN GPIO_Pin_0
