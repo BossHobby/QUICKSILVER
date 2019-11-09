@@ -221,3 +221,8 @@ void debug_timer_delay_us(uint32_t us) {
   delay(us);
 }
 #endif
+
+void delay_until(uint32_t uS) {
+  while (gettime() < uS)
+    ;
+}
