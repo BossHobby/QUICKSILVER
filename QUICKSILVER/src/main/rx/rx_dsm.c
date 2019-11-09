@@ -5,6 +5,7 @@
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "drv_uart.h"
+#include "profile.h"
 #include "project.h"
 #include "util.h"
 
@@ -82,15 +83,15 @@ void RX_USART_ISR(void) {
   }
   lastticks = ticks;
 
-  if (USART_GetFlagStatus(usart_port_defs[RX_USART].channel, USART_FLAG_ORE)) {
+  if (USART_GetFlagStatus(usart_port_defs[profile.serial.rx].channel, USART_FLAG_ORE)) {
     // overflow means something was lost
-    USART_ClearFlag(usart_port_defs[RX_USART].channel, USART_FLAG_ORE);
+    USART_ClearFlag(usart_port_defs[profile.serial.rx].channel, USART_FLAG_ORE);
   }
   if (spekTimeInterval > SPEKTRUM_NEEDED_FRAME_INTERVAL) {
     spekFramePosition = 0;
   }
   if (spekFramePosition < SPEK_FRAME_SIZE) {
-    spekFrame[spekFramePosition++] = USART_ReceiveData(usart_port_defs[RX_USART].channel);
+    spekFrame[spekFramePosition++] = USART_ReceiveData(usart_port_defs[profile.serial.rx].channel);
     if (spekFramePosition < SPEK_FRAME_SIZE) {
       rcFrameComplete = 0;
     } else {
@@ -170,24 +171,24 @@ void rx_spektrum_bind(void) {
   }
 #endif
   GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.GPIO_Pin = usart_port_defs[RX_USART].rx_pin;
+  GPIO_InitStructure.GPIO_Pin = usart_port_defs[profile.serial.rx].rx_pin;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(usart_port_defs[RX_USART].gpio_port, &GPIO_InitStructure);
+  GPIO_Init(usart_port_defs[profile.serial.rx].gpio_port, &GPIO_InitStructure);
 
   // RX line, set high
-  GPIO_SetBits(usart_port_defs[RX_USART].gpio_port, usart_port_defs[RX_USART].rx_pin);
+  GPIO_SetBits(usart_port_defs[profile.serial.rx].gpio_port, usart_port_defs[profile.serial.rx].rx_pin);
   // Bind window is around 20-140ms after powerup
   delay(60000);
 
   for (uint8_t i = 0; i < BIND_PULSES; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
     // RX line, drive low for 120us
-    GPIO_ResetBits(usart_port_defs[RX_USART].gpio_port, usart_port_defs[RX_USART].rx_pin);
+    GPIO_ResetBits(usart_port_defs[profile.serial.rx].gpio_port, usart_port_defs[profile.serial.rx].rx_pin);
     delay(120);
 
     // RX line, drive high for 120us
-    GPIO_SetBits(usart_port_defs[RX_USART].gpio_port, usart_port_defs[RX_USART].rx_pin);
+    GPIO_SetBits(usart_port_defs[profile.serial.rx].gpio_port, usart_port_defs[profile.serial.rx].rx_pin);
     delay(120);
   }
 }

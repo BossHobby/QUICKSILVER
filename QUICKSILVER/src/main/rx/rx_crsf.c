@@ -5,6 +5,7 @@
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "drv_uart.h"
+#include "profile.h"
 #include "project.h"
 #include "util.h"
 
@@ -170,9 +171,9 @@ void RX_USART_ISR(void) {
   }
   lastticks = ticks;
 
-  if (USART_GetFlagStatus(usart_port_defs[RX_USART].channel, USART_FLAG_ORE)) {
+  if (USART_GetFlagStatus(usart_port_defs[profile.serial.rx].channel, USART_FLAG_ORE)) {
     // overflow means something was lost
-    USART_ClearFlag(usart_port_defs[RX_USART].channel, USART_FLAG_ORE);
+    USART_ClearFlag(usart_port_defs[profile.serial.rx].channel, USART_FLAG_ORE);
     crsfFramePosition = 0;
   }
 
@@ -186,7 +187,7 @@ void RX_USART_ISR(void) {
   // full frame length includes the length of the address and framelength fields
   const uint8_t fullFrameLength = crsfFramePosition < 3 ? 5 : crsfFrame.frame.frameLength + CRSF_FRAME_LENGTH_ADDRESS + CRSF_FRAME_LENGTH_FRAMELENGTH;
   if (crsfFramePosition < fullFrameLength) {
-    crsfFrame.bytes[crsfFramePosition++] = USART_ReceiveData(usart_port_defs[RX_USART].channel);
+    crsfFrame.bytes[crsfFramePosition++] = USART_ReceiveData(usart_port_defs[profile.serial.rx].channel);
     if (crsfFramePosition < fullFrameLength) {
       crsfFrameDone = 0;
     } else {

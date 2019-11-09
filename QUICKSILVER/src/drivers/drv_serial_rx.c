@@ -1,9 +1,8 @@
-//#include "project.h"
-#include "drv_uart.h"
-//#include <stdio.h>
 #include "defines.h"
 #include "drv_serial.h"
 #include "drv_time.h"
+#include "drv_uart.h"
+#include "profile.h"
 
 extern uint8_t rxusart;
 //SET SERIAL BAUDRATE BASED ON RECEIVER PROTOCOL
@@ -95,18 +94,18 @@ void usart_rx_init(uint8_t RXProtocol) {
   }
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 
-  serial_enable_rcc(RX_USART);
+  serial_enable_rcc(profile.serial.rx);
 
   if (RXProtocol == 4) {
-    PIO_InitStructure.GPIO_Pin = usart_port_defs[RX_USART].tx_pin;
-    GPIO_Init(usart_port_defs[RX_USART].gpio_port, &GPIO_InitStructure);
+    PIO_InitStructure.GPIO_Pin = usart_port_defs[profile.serial.rx].tx_pin;
+    GPIO_Init(usart_port_defs[profile.serial.rx].gpio_port, &GPIO_InitStructure);
 
-    GPIO_PinAFConfig(usart_port_defs[RX_USART].gpio_port, usart_port_defs[RX_USART].tx_pin_source, usart_port_defs[RX_USART].gpio_af);
+    GPIO_PinAFConfig(usart_port_defs[profile.serial.rx].gpio_port, usart_port_defs[profile.serial.rx].tx_pin_source, usart_port_defs[profile.serial.rx].gpio_af);
   } else {
-    GPIO_InitStructure.GPIO_Pin = usart_port_defs[RX_USART].rx_pin;
-    GPIO_Init(usart_port_defs[RX_USART].gpio_port, &GPIO_InitStructure);
+    GPIO_InitStructure.GPIO_Pin = usart_port_defs[profile.serial.rx].rx_pin;
+    GPIO_Init(usart_port_defs[profile.serial.rx].gpio_port, &GPIO_InitStructure);
 
-    GPIO_PinAFConfig(usart_port_defs[RX_USART].gpio_port, usart_port_defs[RX_USART].rx_pin_source, usart_port_defs[RX_USART].gpio_af);
+    GPIO_PinAFConfig(usart_port_defs[profile.serial.rx].gpio_port, usart_port_defs[profile.serial.rx].rx_pin_source, usart_port_defs[profile.serial.rx].gpio_af);
   }
 
   USART_InitTypeDef USART_InitStructure;
@@ -148,27 +147,27 @@ void usart_rx_init(uint8_t RXProtocol) {
   //  USART_InitStructure.USART_Mode = USART_Mode_Rx; //USART_Mode_Rx | USART_Mode_Tx;
   //#endif
   if (RXProtocol == 4) {
-    USART_HalfDuplexCmd(usart_port_defs[RX_USART].channel, ENABLE);
+    USART_HalfDuplexCmd(usart_port_defs[profile.serial.rx].channel, ENABLE);
   } else {
-    USART_HalfDuplexCmd(usart_port_defs[RX_USART].channel, DISABLE);
+    USART_HalfDuplexCmd(usart_port_defs[profile.serial.rx].channel, DISABLE);
   }
   //#if defined(RX_FPORT)
-  //  USART_HalfDuplexCmd(usart_port_defs[RX_USART].channel, ENABLE);
+  //  USART_HalfDuplexCmd(usart_port_defs[profile.serial.rx].channel, ENABLE);
   //#endif
-  USART_Init(usart_port_defs[RX_USART].channel, &USART_InitStructure);
+  USART_Init(usart_port_defs[profile.serial.rx].channel, &USART_InitStructure);
 #ifdef F0
 #ifdef INVERT_UART
-  USART_InvPinCmd(usart_port_defs[RX_USART].channel, USART_InvPin_Rx | USART_InvPin_Tx, ENABLE);
+  USART_InvPinCmd(usart_port_defs[profile.serial.rx].channel, USART_InvPin_Rx | USART_InvPin_Tx, ENABLE);
 #endif
   // swap rx/tx pins - available on F0 targets
 #ifdef F0_USART_PINSWAP
-  USART_SWAPPinCmd(usart_port_defs[RX_USART].channel, ENABLE);
+  USART_SWAPPinCmd(usart_port_defs[profile.serial.rx].channel, ENABLE);
 #endif
 #endif
 
-  USART_ITConfig(usart_port_defs[RX_USART].channel, USART_IT_RXNE, ENABLE);
-  USART_Cmd(usart_port_defs[RX_USART].channel, ENABLE);
+  USART_ITConfig(usart_port_defs[profile.serial.rx].channel, USART_IT_RXNE, ENABLE);
+  USART_Cmd(usart_port_defs[profile.serial.rx].channel, ENABLE);
 
-  serial_enable_interrupt(RX_USART);
+  serial_enable_interrupt(profile.serial.rx);
 }
 #endif

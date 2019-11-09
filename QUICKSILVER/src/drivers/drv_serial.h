@@ -2,15 +2,6 @@
 
 #include "defines.h"
 
-#define USART_IDENT(channel) USART_PORT##channel
-#define USART_PORT(channel, port, rx_pin, tx_pin) USART_IDENT(channel),
-
-typedef enum {
-  USART_PORTS USART_PORTS_MAX,
-} usart_ports_t;
-
-#undef USART_PORT
-
 typedef struct {
   uint8_t channel_index;
   USART_TypeDef *channel;

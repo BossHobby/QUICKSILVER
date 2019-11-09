@@ -205,6 +205,11 @@ const profile_t default_profile = {
 #undef MOTOR_PIN
     },
 
+    .serial = {
+        .rx = RX_USART,
+        .smart_audio = -1,
+    },
+
     .rate = {
 #ifdef SILVERWARE_RATES
         .mode = RATE_MODE_SILVERWARE,
@@ -492,6 +497,10 @@ START_STRUCT_ENCODER(motor_t)
 MOTOR_MEMBERS
 END_STRUCT_ENCODER()
 
+START_STRUCT_ENCODER(serial_t)
+SERIAL_MEMBERS
+END_STRUCT_ENCODER()
+
 START_STRUCT_ENCODER(voltage_t)
 VOLTAGE_MEMBERS
 END_STRUCT_ENCODER()
@@ -651,6 +660,10 @@ END_STRUCT_DECODER()
 
 START_STRUCT_DECODER(motor_t)
 MOTOR_MEMBERS
+END_STRUCT_DECODER()
+
+START_STRUCT_DECODER(serial_t)
+SERIAL_MEMBERS
 END_STRUCT_DECODER()
 
 START_STRUCT_DECODER(voltage_t)

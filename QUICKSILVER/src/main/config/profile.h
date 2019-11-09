@@ -178,6 +178,15 @@ typedef struct {
   ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, uint8)
 
 typedef struct {
+  usart_ports_t rx;
+  usart_ports_t smart_audio;
+} serial_t;
+
+#define SERIAL_MEMBERS \
+  MEMBER(rx, uint8)    \
+  MEMBER(smart_audio, uint8)
+
+typedef struct {
   uint8_t name[36];
   uint32_t datetime;
 } metadata_t;
@@ -186,6 +195,7 @@ typedef struct {
 typedef struct {
   metadata_t meta;
   motor_t motor;
+  serial_t serial;
   rate_t rate;
   channel_t channel;
   profile_pid_t pid;
@@ -195,10 +205,13 @@ typedef struct {
 #define PROFILE_MEMBERS      \
   MEMBER(meta, metadata_t)   \
   MEMBER(motor, motor_t)     \
+  MEMBER(serial, serial_t)   \
   MEMBER(rate, rate_t)       \
   MEMBER(channel, channel_t) \
   MEMBER(pid, profile_pid_t) \
   MEMBER(voltage, voltage_t)
+
+extern profile_t profile;
 
 void profile_set_defaults();
 pid_rate_t *profile_current_pid_rates();

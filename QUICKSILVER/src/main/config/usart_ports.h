@@ -16,3 +16,14 @@
 #define USART4_PA1PA0 USART_PORT(4, A, 1, 0)
 #define USART6_PC7PC6 USART_PORT(6, C, 7, 6)
 #endif
+
+#define USART_IDENT(channel) USART_PORT##channel
+#define USART_PORT(channel, port, rx_pin, tx_pin) USART_IDENT(channel),
+
+typedef enum {
+  USART_PORT_INVALID,
+  USART_PORTS
+  USART_PORTS_MAX,
+} usart_ports_t;
+
+#undef USART_PORT
