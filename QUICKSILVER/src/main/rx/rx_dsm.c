@@ -2,8 +2,8 @@
 
 #include "defines.h"
 #include "drv_fmc.h"
-#include "drv_rx_serial.h"
 #include "drv_serial.h"
+#include "drv_serial_rx.h"
 #include "drv_time.h"
 #include "drv_uart.h"
 #include "project.h"
@@ -249,7 +249,7 @@ void checkrx()
     rx_apply_expo();
 
 #ifdef RX_DSMX_2048
-    aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0;        //1100 cutoff intentionally selected to force aux channels low if
+    aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0; //1100 cutoff intentionally selected to force aux channels low if
     aux[AUX_CHANNEL_1] = (channels[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
     aux[AUX_CHANNEL_2] = (channels[6] > 1100) ? 1 : 0;
     aux[AUX_CHANNEL_3] = (channels[7] > 1100) ? 1 : 0;
@@ -258,7 +258,7 @@ void checkrx()
 #endif
 
 #ifdef RX_DSM2_1024
-    aux[AUX_CHANNEL_0] = (channels[4] > 550) ? 1 : 0;        //550 cutoff intentionally selected to force aux channels low if
+    aux[AUX_CHANNEL_0] = (channels[4] > 550) ? 1 : 0; //550 cutoff intentionally selected to force aux channels low if
     aux[AUX_CHANNEL_1] = (channels[5] > 550) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
     aux[AUX_CHANNEL_2] = (channels[6] > 550) ? 1 : 0;
 #endif

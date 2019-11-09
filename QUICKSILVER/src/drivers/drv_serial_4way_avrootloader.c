@@ -62,7 +62,7 @@
 #define micros debug_timer_micros
 #define millis debug_timer_millis
 
-#include "drv_softserial.h"
+#include "drv_serial_soft.h"
 extern SoftSerialData_t escSerial[4];
 
 static uint8_t suart_getc_(uint8_t *bt) {
