@@ -1,6 +1,8 @@
 #pragma once
 
 #include "motor_pins.h"
+#include "usart_ports.h"
+
 #include "target.h"
 
 // the error codes indicate a failure that prevents normal operation

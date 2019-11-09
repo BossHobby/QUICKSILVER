@@ -17,7 +17,7 @@
 
 //Select (only one) source variable for PID VBAT Compensation
 //#define EXACT_VOLTS     //origional method - responds to exact moment to moment sag
-#define FILTERED_VOLTS  // responds to some sag
+#define FILTERED_VOLTS // responds to some sag
 //#define FUELGAUGE_VOLTS // ignores sag
 
 //**********************************************************************************************************************
@@ -76,19 +76,19 @@
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
 //#define RX_IBUS
 //#define RX_FPORT
-//#define RX_DSMX_2048																				//  Only fport, sbus, ibus, and dsm protocols are working on F4 right now
+//#define RX_DSMX_2048 //  Only fport, sbus, ibus, and dsm protocols are working on F4 right now
 //#define RX_DSM2_1024
 //#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 //#define RX_FRSKY
 
-// *************Serial Receiver UART Selection (uncomment all if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
-//#define UART_1
-#define UART_2
-//#define UART_3
-//#define UART_4
-//#define UART_6
+// *************Serial Receiver UART Selection (uncomment all for default from target or if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
+//#define RX_USART USART_PORT1
+//#define RX_USART USART_PORT2
+//#define RX_USART USART_PORT3
+//#define RX_USART USART_PORT4
+//#define RX_USART USART_PORT6
 
 // *************Serial Receiver Inversion Selection  (Normally true for SBUS and FPORT)
 //#define INVERT_UART
@@ -203,7 +203,6 @@
 
 // *************throttle boost - can intensify small throttle imbalances visible in FPV if factor is set too high on brushed or actually rob performance on brushless due to thrust imbalances
 //#define THROTTLE_BOOST 7.0
-
 
 // *************torque boost is a highly eperimental feature and can smoke brushless motors fast.  it is a lpf D term on motor outputs that will accelerate the response
 // *************of the motors when the command to the motors is changing by increasing or decreasing the voltage thats sent.  It differs

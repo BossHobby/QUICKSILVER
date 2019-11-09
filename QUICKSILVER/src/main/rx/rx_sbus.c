@@ -75,7 +75,7 @@ float rx_rssi;
 
 //void SERIAL_RX_USART_IRQHandler(void)
 void RX_USART_ISR(void) {
-  rx_buffer[rx_end] = USART_ReceiveData(SERIAL_RX_USART);
+  rx_buffer[rx_end] = USART_ReceiveData(usart_port_defs[RX_USART].channel);
   // calculate timing since last rx
   uint16_t maxticks = (SysTick->LOAD) / 260; // Hack the 24bit counters down to 16bit
   uint16_t ticks = (SysTick->VAL) / 260;
@@ -95,10 +95,10 @@ void RX_USART_ISR(void) {
 
   lastticks = ticks;
 
-  if (USART_GetFlagStatus(SERIAL_RX_USART, USART_FLAG_ORE)) {
+  if (USART_GetFlagStatus(usart_port_defs[RX_USART].channel, USART_FLAG_ORE)) {
     // overflow means something was lost
     rx_time[rx_end] = 0xFe;
-    USART_ClearFlag(SERIAL_RX_USART, USART_FLAG_ORE);
+    USART_ClearFlag(usart_port_defs[RX_USART].channel, USART_FLAG_ORE);
     if (sbus_stats)
       stat_overflow++;
   }

@@ -82,15 +82,15 @@ void RX_USART_ISR(void) {
   }
   lastticks = ticks;
 
-  if (USART_GetFlagStatus(SERIAL_RX_USART, USART_FLAG_ORE)) {
+  if (USART_GetFlagStatus(usart_port_defs[RX_USART].channel, USART_FLAG_ORE)) {
     // overflow means something was lost
-    USART_ClearFlag(SERIAL_RX_USART, USART_FLAG_ORE);
+    USART_ClearFlag(usart_port_defs[RX_USART].channel, USART_FLAG_ORE);
   }
   if (spekTimeInterval > SPEKTRUM_NEEDED_FRAME_INTERVAL) {
     spekFramePosition = 0;
   }
   if (spekFramePosition < SPEK_FRAME_SIZE) {
-    spekFrame[spekFramePosition++] = USART_ReceiveData(SERIAL_RX_USART);
+    spekFrame[spekFramePosition++] = USART_ReceiveData(usart_port_defs[RX_USART].channel);
     if (spekFramePosition < SPEK_FRAME_SIZE) {
       rcFrameComplete = 0;
     } else {
@@ -151,20 +151,20 @@ void rx_spektrum_bind(void) {
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure);
+    GPIO_Init(SERIAL_RX_UART, &GPIO_InitStructure);
 
     // RX line, set high
-    GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_RX_PIN);
+    GPIO_SetBits(SERIAL_RX_UART, SERIAL_RX_SPEKBIND_RX_PIN);
     // Bind window is around 20-140ms after powerup
     delay(60000);
 
     for (uint8_t i = 0; i < BIND_PULSES; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
       // RX line, drive low for 120us
-      GPIO_ResetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_RX_PIN);
+      GPIO_ResetBits(SERIAL_RX_UART, SERIAL_RX_SPEKBIND_RX_PIN);
       delay(120);
 
       // RX line, drive high for 120us
-      GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_RX_PIN);
+      GPIO_SetBits(SERIAL_RX_UART, SERIAL_RX_SPEKBIND_RX_PIN);
       delay(120);
     }
   }
@@ -174,20 +174,20 @@ void rx_spektrum_bind(void) {
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure);
+  GPIO_Init(SERIAL_RX_UART, &GPIO_InitStructure);
 
   // RX line, set high
-  GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
+  GPIO_SetBits(SERIAL_RX_UART, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
   // Bind window is around 20-140ms after powerup
   delay(60000);
 
   for (uint8_t i = 0; i < BIND_PULSES; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
     // RX line, drive low for 120us
-    GPIO_ResetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
+    GPIO_ResetBits(SERIAL_RX_UART, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
     delay(120);
 
     // RX line, drive high for 120us
-    GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
+    GPIO_SetBits(SERIAL_RX_UART, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
     delay(120);
   }
 }

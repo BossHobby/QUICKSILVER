@@ -93,7 +93,7 @@ uint8_t teleCounter = 0;
 
 //void SERIAL_RX_USART _IRQHandler(void)
 void RX_USART_ISR(void) {
-  rx_buffer[rx_end] = USART_ReceiveData(SERIAL_RX_USART);
+  rx_buffer[rx_end] = USART_ReceiveData(usart_port_defs[RX_USART].channel);
   // calculate timing since last rx
   unsigned long maxticks = SysTick->LOAD;
   unsigned long ticks = SysTick->VAL;
@@ -112,10 +112,10 @@ void RX_USART_ISR(void) {
 
   lastticks = ticks;
 
-  if (USART_GetFlagStatus(SERIAL_RX_USART, USART_FLAG_ORE)) {
+  if (USART_GetFlagStatus(usart_port_defs[RX_USART].channel, USART_FLAG_ORE)) {
     // overflow means something was lost
     rx_time[rx_end] = 0xFFFe;
-    USART_ClearFlag(SERIAL_RX_USART, USART_FLAG_ORE);
+    USART_ClearFlag(usart_port_defs[RX_USART].channel, USART_FLAG_ORE);
     if (ibus_stats)
       stat_overflow++;
   }

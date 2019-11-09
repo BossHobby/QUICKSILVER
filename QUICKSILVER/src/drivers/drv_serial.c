@@ -1,98 +1,96 @@
-// serial for stm32 not used yet
 #include "drv_serial.h"
-#include "defines.h"
-#include "drv_uart.h"
+
 #include "project.h"
-#include <stdio.h>
 
-// enable serial driver ( pin SWCLK after calibration)
-// WILL DISABLE PROGRAMMING AFTER GYRO CALIBRATION - 2 - 3 seconds after powerup)
-
-// this has to be in config.h
-//#define SERIAL_ENABLE
-
-#define SERIAL_BUFFER_SIZE 64
-
-#define SERIAL_BAUDRATE 115200
-
-#ifdef SERIAL_ENABLE
-
-uint8_t buffer[SERIAL_BUFFER_SIZE];
-char buffer_start = 0;
-char buffer_end = 0;
-
-void USART1_IRQHandler(void) {
-  if (buffer_end != buffer_start) {
-    USART_SendData(USART1, buffer[buffer_start]);
-    buffer_start++;
-    buffer_start = buffer_start % (SERIAL_BUFFER_SIZE);
-  } else {
-    USART_ITConfig(USART1, USART_IT_TXE, DISABLE);
+//FUNCTION TO SET APB CLOCK TO USART BASED ON GIVEN UART
+void serial_enable_rcc(usart_ports_t port) {
+  switch (usart_port_defs[RX_USART].channel_index) {
+  case 1:
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+    break;
+  case 2:
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
+    break;
+  case 3:
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
+    break;
+  case 4:
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_UART4, ENABLE);
+    break;
+  case 5:
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_UART5, ENABLE);
+    break;
+  case 6:
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART6, ENABLE);
+    break;
   }
 }
-
-void serial_init(void) {
-
-  GPIO_InitTypeDef GPIO_InitStructure;
-
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_14;
-  GPIO_Init(GPIOA, &GPIO_InitStructure);
-
-  GPIO_PinAFConfig(GPIOA, GPIO_PinSource14, GPIO_AF_1);
-
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
-
-  USART_InitTypeDef USART_InitStructure;
-
-  USART_InitStructure.USART_BaudRate = SERIAL_BAUDRATE;
-  USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-  USART_InitStructure.USART_StopBits = USART_StopBits_1;
-  USART_InitStructure.USART_Parity = USART_Parity_No;
-  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-  USART_InitStructure.USART_Mode = USART_Mode_Tx; //USART_Mode_Rx | USART_Mode_Tx;
-
-  USART_Init(USART1, &USART_InitStructure);
-
-  //	USART_ITConfig(USART1, USART_IT_TXE, ENABLE);
-  USART_Cmd(USART1, ENABLE);
-
+void serial_enable_interrupt(usart_ports_t port) {
   NVIC_InitTypeDef NVIC_InitStructure;
 
-  NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
+  switch (usart_port_defs[RX_USART].channel_index) {
+  case 1:
+    NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
+    break;
+  case 2:
+    NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
+    break;
+  case 3:
+    NVIC_InitStructure.NVIC_IRQChannel = USART3_IRQn;
+    break;
+  case 4:
+    NVIC_InitStructure.NVIC_IRQChannel = UART4_IRQn;
+    break;
+  case 5:
+    NVIC_InitStructure.NVIC_IRQChannel = UART5_IRQn;
+    break;
+  case 6:
+    NVIC_InitStructure.NVIC_IRQChannel = USART6_IRQn;
+    break;
+  }
+
+#ifdef F405
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+#else
   NVIC_InitStructure.NVIC_IRQChannelPriority = 0;
+#endif
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 }
 
-int fputc(int ch, FILE *f) {
-  buffer[buffer_end] = (char)ch;
-  buffer_end++;
-  buffer_end = buffer_end % (SERIAL_BUFFER_SIZE);
+#define USART_PORT(chan, port, rx, tx)     \
+  {                                        \
+      .channel_index = chan,               \
+      .channel = USART##chan,              \
+      .gpio_port = GPIO##port,             \
+      .gpio_af = GPIO_AF_USART##chan,      \
+      .rx_pin_index = rx,                  \
+      .rx_pin = GPIO_Pin_##rx,             \
+      .rx_pin_source = GPIO_PinSource##rx, \
+      .tx_pin_index = tx,                  \
+      .tx_pin = GPIO_Pin_##tx,             \
+      .tx_pin_source = GPIO_PinSource##tx, \
+  },
 
-  USART_ITConfig(USART1, USART_IT_TXE, ENABLE);
-  return ch;
-}
+usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {USART_PORTS};
 
-void buffer_add(int val) {
-  buffer[buffer_end] = (char)val;
-  buffer_end++;
-  buffer_end = buffer_end % (SERIAL_BUFFER_SIZE);
+#undef USART_PORT
 
-  USART_ITConfig(USART1, USART_IT_TXE, ENABLE);
-  return;
-}
+void handle_usart_irq(usart_ports_t channel) {
 
-#else
-// serial disabled - dummy functions
-void serial_init(void) {
-}
-
-void buffer_add(int val) {
-}
-
+#ifdef RX_USART
+  extern void RX_USART_ISR(void);
+  if (RX_USART == channel)
+    RX_USART_ISR();
 #endif
+}
+
+#define USART_PORT(channel, port, rx_pin, tx_pin) \
+  void USART##channel##_IRQHandler(void) {        \
+    handle_usart_irq(USART_IDENT(channel));       \
+  }
+
+USART_PORTS
+
+#undef USART_PORT
