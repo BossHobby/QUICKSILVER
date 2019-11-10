@@ -342,16 +342,8 @@
 			</target>
 			<target name="nfe_breadboard" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>make</buildCommand>
-				<buildArguments>-j12</buildArguments>
-				<buildTarget>nfe_breadboard</buildTarget>
-				<stopOnError>true</stopOnError>
-				<useDefaultCommand>true</useDefaultCommand>
-				<runAllBuilders>true</runAllBuilders>
-			</target>
-			<target name="cc3d_revo_nano" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
-				<buildCommand>make</buildCommand>
 				<buildArguments>-j8</buildArguments>
-				<buildTarget>cc3d_revo_nano</buildTarget>
+				<buildTarget>nfe_breadboard</buildTarget>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>true</useDefaultCommand>
 				<runAllBuilders>true</runAllBuilders>
