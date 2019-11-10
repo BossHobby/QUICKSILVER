@@ -1,7 +1,6 @@
 // serial for stm32 not used yet
-#include "drv_serial.h"
 #include "defines.h"
-#include "drv_uart.h"
+#include "drv_serial.h"
 #include "project.h"
 #include <stdio.h>
 

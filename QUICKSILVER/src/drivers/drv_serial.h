@@ -2,6 +2,13 @@
 
 #include "defines.h"
 
+#ifdef F405
+#include "stm32f4xx_usart.h"
+#endif
+#ifdef F0
+#include "stm32f0xx_usart.h"
+#endif
+
 typedef struct {
   uint8_t channel_index;
   USART_TypeDef *channel;
@@ -24,3 +31,4 @@ void serial_enable_rcc(usart_ports_t port);
 void serial_enable_interrupt(usart_ports_t port);
 
 void usart_rx_init(void);
+void serial_smart_audio_init(void);

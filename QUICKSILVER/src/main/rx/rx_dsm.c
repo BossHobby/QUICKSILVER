@@ -4,7 +4,6 @@
 #include "drv_fmc.h"
 #include "drv_serial.h"
 #include "drv_time.h"
-#include "drv_uart.h"
 #include "profile.h"
 #include "project.h"
 #include "util.h"
