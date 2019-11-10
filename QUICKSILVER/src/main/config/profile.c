@@ -206,8 +206,16 @@ const profile_t default_profile = {
     },
 
     .serial = {
+#ifdef RX_USART
         .rx = RX_USART,
-        .smart_audio = -1,
+#else
+        .rx = USART_PORT_INVALID,
+#endif
+#ifdef SMART_AUDIO_USART
+        .smart_audio = SMART_AUDIO_USART,
+#else
+        .smart_audio = USART_PORT_INVALID,
+#endif
     },
 
     .rate = {
