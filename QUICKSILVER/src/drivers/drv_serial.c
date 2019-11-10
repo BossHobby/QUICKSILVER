@@ -2,10 +2,11 @@
 
 #include "profile.h"
 #include "project.h"
+#include "usb_configurator.h"
 
 //FUNCTION TO SET APB CLOCK TO USART BASED ON GIVEN UART
 void serial_enable_rcc(usart_ports_t port) {
-  switch (usart_port_defs[profile.serial.rx].channel_index) {
+  switch (usart_port_defs[port].channel_index) {
   case 1:
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
     break;
@@ -28,10 +29,10 @@ void serial_enable_rcc(usart_ports_t port) {
 #endif
   }
 }
-void serial_enable_interrupt(usart_ports_t port) {
+void serial_enable_isr(usart_ports_t port) {
   NVIC_InitTypeDef NVIC_InitStructure;
 
-  switch (usart_port_defs[profile.serial.rx].channel_index) {
+  switch (usart_port_defs[port].channel_index) {
   case 1:
     NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
     break;
@@ -104,24 +105,27 @@ void serial_enable_interrupt(usart_ports_t port) {
 #endif
 
 usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {
-  {},
-  USART_PORTS
-};
+    {},
+    USART_PORTS};
 
 #undef USART_PORT
 
-void handle_usart_irq(usart_ports_t channel) {
+void handle_usart_isr(usart_ports_t channel) {
 
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
   extern void RX_USART_ISR(void);
   if (profile.serial.rx == channel)
     RX_USART_ISR();
 #endif
+
+  extern void serial_smart_audio_isr(void);
+  if (profile.serial.smart_audio == channel)
+    serial_smart_audio_isr();
 }
 
 #define USART_PORT(channel, port, rx_pin, tx_pin) \
   void USART##channel##_IRQHandler(void) {        \
-    handle_usart_irq(USART_IDENT(channel));       \
+    handle_usart_isr(USART_IDENT(channel));       \
   }
 
 USART_PORTS

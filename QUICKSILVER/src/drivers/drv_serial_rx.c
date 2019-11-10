@@ -21,6 +21,8 @@ extern uint8_t rxusart;
 //#define SERIAL_BAUDRATE 100000
 //#endif
 
+#define port_def usart_port_defs[profile.serial.rx]
+
 //FUNCTION TO COMMAND EXTERNAL USART INVERTER HIGH OR LOW         todo: sort out target mapping tag in drv_rx_serial.h for a quick define from the taarget
 
 void usart_invert(void) {
@@ -156,17 +158,17 @@ void usart_rx_init(uint8_t RXProtocol) {
   USART_Init(usart_port_defs[profile.serial.rx].channel, &USART_InitStructure);
 #ifdef F0
 #ifdef INVERT_UART
-  USART_InvPinCmd(usart_port_defs[profile.serial.rx].channel, USART_InvPin_Rx | USART_InvPin_Tx, ENABLE);
+  USART_InvPinCmd(port_def.channel, USART_InvPin_Rx | USART_InvPin_Tx, ENABLE);
 #endif
   // swap rx/tx pins - available on F0 targets
 #ifdef F0_USART_PINSWAP
-  USART_SWAPPinCmd(usart_port_defs[profile.serial.rx].channel, ENABLE);
+  USART_SWAPPinCmd(port_def.channel, ENABLE);
 #endif
 #endif
 
-  USART_ITConfig(usart_port_defs[profile.serial.rx].channel, USART_IT_RXNE, ENABLE);
-  USART_Cmd(usart_port_defs[profile.serial.rx].channel, ENABLE);
+  USART_ITConfig(port_def.channel, USART_IT_RXNE, ENABLE);
+  USART_Cmd(port_def.channel, ENABLE);
 
-  serial_enable_interrupt(profile.serial.rx);
+  serial_enable_isr(profile.serial.rx);
 }
 #endif
