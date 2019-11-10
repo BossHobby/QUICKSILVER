@@ -192,6 +192,9 @@ int main(void) {
   flash_load();
 #endif
 
+#ifdef ENABLE_SMART_AUDIO
+  serial_smart_audio_init();
+#endif
   rx_init();
 
   int count = 0;
