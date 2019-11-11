@@ -87,24 +87,15 @@
 #define ADC_REF_VOLTAGE 3.3
 #endif
 
-// MOTOR PINS
-//OmniF4SD
-#ifdef OmnibusF4SD
-// NFE MOTORS NFE MOTORS NFE MOTORS
-#define MOTOR2_PIN_PB1
-#define MOTOR3_PIN_PA2
+//OmnibusF4
+//#define MOTOR0_PIN_PA3
+//#define MOTOR1_PIN_PA2
+//#define MOTOR2_PIN_PB0
+//#define MOTOR3_PIN_PB1
+
+//NFE 3in 3100kv
 #define MOTOR0_PIN_PB0
-#define MOTOR1_PIN_PA3
+#define MOTOR1_PIN_PB1
+#define MOTOR2_PIN_PA2
+#define MOTOR3_PIN_PA3
 
-//BOBNOVA MOTORS  BOBNOVA MOTORS
-//#define MOTOR0_PIN_PB0
-//#define MOTOR1_PIN_PB1
-//#define MOTOR2_PIN_PA3
-//#define MOTOR3_PIN_PA2
-
-#else //OmnibusF4
-#define MOTOR0_PIN_PA3
-#define MOTOR1_PIN_PA2
-#define MOTOR2_PIN_PB0
-#define MOTOR3_PIN_PB1
-#endif

@@ -53,10 +53,21 @@
 
 
 // SPI PINS DEFINITONS & RADIO
-#define SOFTSPI_NONE
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
 #define USART1_PA10PA9
 #define USART2_PA3PA2
+#define SOFTSPI_NONE
+#endif
+#ifndef SOFTSPI_NONE
+#define RADIO_CHECK
+#define SPI_MISO_PIN GPIO_Pin_10
+#define SPI_MISO_PORT GPIOA
+#define SPI_MOSI_PIN GPIO_Pin_9
+#define SPI_MOSI_PORT GPIOA
+#define SPI_CLK_PIN GPIO_Pin_2
+#define SPI_CLK_PORT GPIOA
+#define SPI_SS_PIN GPIO_Pin_3
+#define SPI_SS_PORT GPIOA
 #endif
 
 // OSD

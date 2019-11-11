@@ -169,7 +169,7 @@ int main(void) {
   pwm_set(MOTOR_FR, 0);
   pwm_set(MOTOR_BR, 0);
 #ifdef ENABLE_OSD
-  delay(100000);
+  delay(200000);
   osd_init();
 #endif
   sixaxis_init();

@@ -13,7 +13,7 @@
 //***********************************************NEW STUFF TO PLAY WITH*****************************************************
 
 // Select filter cut 25hz for SBUS, 67hz for CRSF, 40hz for DSMX, 20hz for DSM2, 90hz for bayang, 45hz for frsky   Formula is [(1/rx framerate)/2] * 0.9
-#define RX_SMOOTHING_HZ 40
+#define RX_SMOOTHING_HZ 50
 
 //Select (only one) source variable for PID VBAT Compensation
 //#define EXACT_VOLTS     //origional method - responds to exact moment to moment sag
@@ -70,7 +70,7 @@
 //***********************************************RECEIVER SETTINGS******************************************************
 
 // *************Receiver protocol selection									//todo:  add missing radio protocols from bobnova and make them all jive with new rx_init function in drv_rx_serial.c
-#define RX_SBUS
+//#define RX_SBUS
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
 //#define RX_IBUS
 //#define RX_FPORT
@@ -78,12 +78,12 @@
 //#define RX_DSM2_1024
 //#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
-//#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
+#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 //#define RX_FRSKY
 
 // *************Serial Receiver UART Selection (uncomment all if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
 //#define UART_1
-#define UART_2
+//#define UART_2
 //#define UART_3
 //#define UART_4
 //#define UART_6
@@ -201,8 +201,8 @@
 #define INVERT_YAW_PID
 
 // *************throttle boost - can intensify small throttle imbalances visible in FPV if factor is set too high
-#define THROTTLE_TRANSIENT_COMPENSATION
-#define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 7.0
+//#define THROTTLE_TRANSIENT_COMPENSATION
+//#define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 7.0
 
 // *************torque boost is a highly eperimental feature and can smoke brushless motors fast.  it is a lpf D term on motor outputs that will accelerate the response
 // *************of the motors when the command to the motors is changing by increasing or decreasing the voltage thats sent.  It differs
