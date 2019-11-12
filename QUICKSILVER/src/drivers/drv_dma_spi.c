@@ -358,6 +358,7 @@ void MPU6XXX_dma_read_data(uint8_t reg, int *data, int size) {
 
 //****************************************************************************LEGACY SPI FUNCTIONS********************************************************************************
 
+/*
 // Reset spi prescaler to 5.25mhz, 10mhz, or 20mhz
 void spi_reset_prescaler(void) {
   SPI_Cmd(MPU6XXX_SPI_INSTANCE, DISABLE);
@@ -446,6 +447,7 @@ void MPU6XXX_read_data(uint8_t reg, int *data, int size) {
   }
   spi_disable();
 }
+*/
 //**************************************************************************************************************************************************************************
 
 //TODO: Determine any advantage to interrupt based non blocking gyro read.  Current blocking read takes ~8.5us

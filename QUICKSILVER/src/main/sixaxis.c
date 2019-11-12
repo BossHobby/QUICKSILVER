@@ -38,7 +38,7 @@ THE SOFTWARE.
 #include "sixaxis.h"
 #include "util.h"
 
-#define DMA_GYRO
+
 
 // this works only on newer boards (non mpu-6050)
 // on older boards the hw gyro setting controls the acc as well
@@ -81,33 +81,8 @@ void sixaxis_init(void) {
 
 #ifdef F405
   //Initialize SPI
-
   spi_gyro_init();
   //Initialize Gyro
-#ifndef DMA_GYRO
-  MPU6XXX_write(MPU_RA_PWR_MGMT_1, MPU_BIT_H_RESET); //reg 107 soft reset  MPU_BIT_H_RESET
-  delay(100000);
-  MPU6XXX_write(MPU_RA_SIGNAL_PATH_RESET, MPU_RESET_SIGNAL_PATHWAYS);
-  delay(100000);
-  MPU6XXX_write(MPU_RA_PWR_MGMT_1, MPU_CLK_SEL_PLLGYROX); //reg 107 set pll clock to 1 for x axis reference
-  delay(100000);
-  MPU6XXX_write(MPU_RA_USER_CTRL, MPU_BIT_I2C_IF_DIS); //reg 106 to 16 enabling spi
-  delay(1500);
-  MPU6XXX_write(MPU_RA_PWR_MGMT_2, MPU_BITS_STDBY_MODE_OFF); //reg 108 disable standbye mode to 0
-  delay(1500);
-  MPU6XXX_write(MPU_RA_SMPLRT_DIV, MPU_BIT_SMPLRT_DIVIDER_OFF); //reg 25 sample rate divider to 0
-  delay(1500);
-  MPU6XXX_write(MPU_RA_CONFIG, MPU_BITS_DLPF_CFG_256HZ); //reg 26 dlpf to 0 - 8khz
-  delay(1500);
-  MPU6XXX_write(MPU_RA_ACCEL_CONFIG, MPU_BITS_FS_16G); //reg 28 accel scale to 16G
-  delay(1500);
-  MPU6XXX_write(MPU_RA_GYRO_CONFIG, MPU_BITS_FS_2000DPS); //reg 27 gyro scale to 2000deg/s
-  delay(1500);
-  MPU6XXX_write(MPU_RA_INT_ENABLE, MPU_BIT_INT_STATUS_DATA); //reg 56 data ready enable interrupt to 1
-  delay(1500);
-  // Speed up SPI Clock to 20mhz after config
-  spi_reset_prescaler();
-#else
   MPU6XXX_dma_spi_write(MPU_RA_PWR_MGMT_1, MPU_BIT_H_RESET); //reg 107 soft reset  MPU_BIT_H_RESET
   delay(100000);
   MPU6XXX_dma_spi_write(MPU_RA_SIGNAL_PATH_RESET, MPU_RESET_SIGNAL_PATHWAYS);
@@ -128,11 +103,6 @@ void sixaxis_init(void) {
   delay(1500);
   MPU6XXX_dma_spi_write(MPU_RA_INT_ENABLE, MPU_BIT_INT_STATUS_DATA); //reg 56 data ready enable interrupt to 1
   delay(1500);
-#endif
-
-
-  // Speed up SPI Clock to 20mhz after config
- // spi_reset_prescaler();
 #endif
 
 #ifdef F0
@@ -160,11 +130,7 @@ int sixaxis_check(void) {
 #ifndef DISABLE_GYRO_CHECK
 // read "who am I" register
 #ifdef F405
-	#ifndef DMA_GYRO
-		uint8_t id = MPU6XXX_read(MPU_RA_WHO_AM_I);
-	#else
-		uint8_t id = MPU6XXX_dma_spi_read(MPU_RA_WHO_AM_I);
-	#endif
+  uint8_t id = MPU6XXX_dma_spi_read(MPU_RA_WHO_AM_I);
 #endif
 #ifdef F0
   int id = i2c_readreg(117);
@@ -186,11 +152,7 @@ void sixaxis_read(void) {
   i2c_readdata(59, data, 14);
 #endif
 #ifdef F405
-	#ifndef DMA_GYRO
-  	  MPU6XXX_read_data(59, data, 14);
-	#else
-  	  MPU6XXX_dma_read_data(59, data, 14);
-	#endif
+  MPU6XXX_dma_read_data(59, data, 14);
 #endif
 
   accel[0] = -(int16_t)((data[0] << 8) + data[1]);
@@ -326,12 +288,8 @@ void gyro_cal(void) {
 #ifdef F0
     i2c_readdata(67, data, 6);
 #endif
-	#ifdef F405
-		#ifndef DMA_GYRO
-    		MPU6XXX_read_data(67, data, 6);
-		#else
-    		MPU6XXX_dma_read_data(67, data, 6);
-		#endif
+#ifdef F405
+    MPU6XXX_dma_read_data(67, data, 6);
 #endif
 
     gyro[1] = (int16_t)((data[0] << 8) + data[1]);
