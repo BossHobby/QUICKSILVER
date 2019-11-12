@@ -1,4 +1,5 @@
 #include "stdint.h"
+#include "defines.h"
 void spi_max7456_init(void);
 void max7456_init(void);
 void osd_intro(void);
@@ -25,8 +26,11 @@ void fast_fprint(uint8_t* str, uint8_t length, float v, uint8_t precision);
 #define OSDM 0x0C
 #define VOS 0x03
 //#define DMDO 0XB0 
-
+#ifdef AIRBOT_OSD_PATCH //airbot ab7456 chip cant time blinks unless there is no incoming video signal
+#define BLINK 0x01
+#else
 #define BLINK 0x11
+#endif
 #define INVERT 0x09
 #define TEXT 0x01
 #define MAXROWS 16

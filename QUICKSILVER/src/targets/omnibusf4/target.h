@@ -88,14 +88,14 @@
 #endif
 
 //OmnibusF4
-//#define MOTOR0_PIN_PA3
-//#define MOTOR1_PIN_PA2
-//#define MOTOR2_PIN_PB0
-//#define MOTOR3_PIN_PB1
+#define MOTOR0_PIN_PA3
+#define MOTOR1_PIN_PA2
+#define MOTOR2_PIN_PB0
+#define MOTOR3_PIN_PB1
 
 //NFE 3in 3100kv
-#define MOTOR0_PIN_PB0
-#define MOTOR1_PIN_PB1
-#define MOTOR2_PIN_PA2
-#define MOTOR3_PIN_PA3
+//#define MOTOR0_PIN_PB0
+//#define MOTOR1_PIN_PB1
+//#define MOTOR2_PIN_PA2
+//#define MOTOR3_PIN_PA3
 

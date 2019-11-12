@@ -88,6 +88,11 @@
 
 // MOTOR PINS
 //OmniF4SD
+#define MOTOR0_PIN_PB1
+#define MOTOR1_PIN_PA2
+#define MOTOR2_PIN_PB0
+#define MOTOR3_PIN_PA3
+
 // NFE 2in squirt motors
 //#define MOTOR2_PIN_PB1
 //#define MOTOR3_PIN_PA2
@@ -95,10 +100,10 @@
 //#define MOTOR1_PIN_PA3
 
 // NFE 3in 4100kv motors
-#define MOTOR0_PIN_PB1
-#define MOTOR1_PIN_PB0
-#define MOTOR2_PIN_PA3
-#define MOTOR3_PIN_PA2
+//#define MOTOR0_PIN_PB1
+//#define MOTOR1_PIN_PB0
+//#define MOTOR2_PIN_PA3
+//#define MOTOR3_PIN_PA2
 
 //BOBNOVA MOTORS  BOBNOVA MOTORS
 //#define MOTOR0_PIN_PB0
