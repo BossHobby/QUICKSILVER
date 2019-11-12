@@ -82,8 +82,8 @@
 //#define RX_FRSKY
 
 // *************Serial Receiver UART Selection (uncomment all if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
-//#define UART_1
-#define UART_2
+#define UART_1
+//#define UART_2
 //#define UART_3
 //#define UART_4
 //#define UART_6
@@ -201,8 +201,8 @@
 #define INVERT_YAW_PID
 
 // *************throttle boost - can intensify small throttle imbalances visible in FPV if factor is set too high
-#define THROTTLE_TRANSIENT_COMPENSATION
-#define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 7.0
+//#define THROTTLE_TRANSIENT_COMPENSATION
+//#define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 7.0
 
 // *************torque boost is a highly eperimental feature and can smoke brushless motors fast.  it is a lpf D term on motor outputs that will accelerate the response
 // *************of the motors when the command to the motors is changing by increasing or decreasing the voltage thats sent.  It differs
@@ -267,6 +267,9 @@
 // this should not be usually changed or still need work
 //#############################################################################################################################
 //#############################################################################################################################
+
+//The airbot made ab7456 osd chip will not support blink commands
+//#define AIRBOT_OSD_PATCH
 
 // failsafe time in uS
 #define FAILSAFETIME 1000000 // one second

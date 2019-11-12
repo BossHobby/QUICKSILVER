@@ -20,7 +20,10 @@
 
 #define BUZZER_PIN GPIO_Pin_13
 #define BUZZER_PIN_PORT GPIOC
+<<<<<<< HEAD
 
+=======
+>>>>>>> feature-dma-gyro
 
 #define FPV_PIN GPIO_Pin_12
 #define FPV_PORT GPIOB

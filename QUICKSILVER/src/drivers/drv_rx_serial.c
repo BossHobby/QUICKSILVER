@@ -33,6 +33,12 @@ void APBPeriphClockCmd(void) {
 #endif
 #endif
 
+#if defined(UART_1) && defined(F405)
+#ifdef USART1_PB7PB6
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+#endif
+#endif
+
 #if defined(UART_2) && defined(F405)
 #ifdef USART2_PA3PA2
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);

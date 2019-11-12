@@ -62,7 +62,7 @@
 #define SPI_MOSI_PIN GPIO_Pin_4
 #define SPI_MOSI_PORT GPIOB
 #define SPI_CLK_PIN GPIO_Pin_10
-#define SPI_CLK_PORT GPIOB
+#define SPI_CLK_PORT GPIOA
 #define SPI_SS_PIN GPIO_Pin_6
 #define SPI_SS_PORT GPIOB
 #endif
@@ -88,12 +88,22 @@
 
 // MOTOR PINS
 //OmniF4SD
-#ifdef OmnibusF4SD
-// NFE MOTORS NFE MOTORS NFE MOTORS
-#define MOTOR2_PIN_PB1
-#define MOTOR3_PIN_PA2
-#define MOTOR0_PIN_PB0
-#define MOTOR1_PIN_PA3
+#define MOTOR0_PIN_PB1
+#define MOTOR1_PIN_PA2
+#define MOTOR2_PIN_PB0
+#define MOTOR3_PIN_PA3
+
+// NFE 2in squirt motors
+//#define MOTOR2_PIN_PB1
+//#define MOTOR3_PIN_PA2
+//#define MOTOR0_PIN_PB0
+//#define MOTOR1_PIN_PA3
+
+// NFE 3in 4100kv motors
+//#define MOTOR0_PIN_PB1
+//#define MOTOR1_PIN_PB0
+//#define MOTOR2_PIN_PA3
+//#define MOTOR3_PIN_PA2
 
 //BOBNOVA MOTORS  BOBNOVA MOTORS
 //#define MOTOR0_PIN_PB0
@@ -101,9 +111,3 @@
 //#define MOTOR2_PIN_PA3
 //#define MOTOR3_PIN_PA2
 
-#else //OmnibusF4
-#define MOTOR0_PIN_PA3
-#define MOTOR1_PIN_PA2
-#define MOTOR2_PIN_PB0
-#define MOTOR3_PIN_PB1
-#endif

@@ -92,17 +92,34 @@ void spi_max7456_init(void) {
   // GPIO & Alternate Function Setting
   GPIO_InitTypeDef GPIO_InitStructure;
   // Clock, Miso, Mosi GPIO
-  GPIO_InitStructure.GPIO_Pin = MAX7456_SCLK_PIN | MAX7456_MISO_PIN | MAX7456_MOSI_PIN;
+  GPIO_InitStructure.GPIO_Pin = MAX7456_SCLK_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
   GPIO_Init(MAX7456_SPI_PORT, &GPIO_InitStructure);
 
+  GPIO_InitStructure.GPIO_Pin = MAX7456_MOSI_PIN | MAX7456_MISO_PIN;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_Init(MAX7456_SPI_PORT, &GPIO_InitStructure);
+/*
+  GPIO_InitStructure.GPIO_Pin = MAX7456_MISO_PIN;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  //GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_Init(MAX7456_SPI_PORT, &GPIO_InitStructure);
+*/
   // Chip Select GPIO
   GPIO_InitStructure.GPIO_Pin = MAX7456_NSS_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
   GPIO_Init(MAX7456_NSS_PORT, &GPIO_InitStructure);
 
   // Chip Select Set High
@@ -133,8 +150,7 @@ void spi_max7456_init(void) {
   SPI_Cmd(MAX7456_SPI_INSTANCE, ENABLE);
 
   // Dummy read to clear receive buffer
-  while (SPI_I2S_GetFlagStatus(MAX7456_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
-    ;
+  while (SPI_I2S_GetFlagStatus(MAX7456_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET);
   SPI_I2S_ReceiveData(MAX7456_SPI_INSTANCE);
 
   // Enable DMA clock
@@ -159,7 +175,6 @@ void dma_receive_max7456_init(uint8_t *base_address_in, uint8_t buffer_size) {
   DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(MAX7456_SPI_INSTANCE->DR));
   DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)base_address_in;
   DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
-  ;
   DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
   DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
   DMA_InitStructure.DMA_BufferSize = (uint16_t)buffer_size;
@@ -194,6 +209,24 @@ void dma_transmit_max7456_init(uint8_t *base_address_out, uint8_t buffer_size) {
   DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
   DMA_Init(DMA1_TX_STREAM, &DMA_InitStructure);
 }
+
+//deinit/reinit spi for unique slave configuration
+void spi_max7556_reinit(void){
+// SPI Config
+SPI_I2S_DeInit(MAX7456_SPI_INSTANCE);
+SPI_InitTypeDef SPI_InitStructure;
+SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
+SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
+SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
+SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
+SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
+SPI_InitStructure.SPI_CRCPolynomial = 7;
+SPI_Init(MAX7456_SPI_INSTANCE, &SPI_InitStructure);
+}
+
 
 //*******************************************************************************SPI / DMA FUNCTIONS********************************************************************************
 
@@ -240,6 +273,7 @@ void max7456_dma_transfer_bytes(uint8_t *buffer, uint8_t length) {
 // blocking dma read of a single register
 uint8_t max7456_dma_spi_read(uint8_t reg) {
   uint8_t buffer[2] = {reg, 0xFF};
+  spi_max7556_reinit();
   max7456_dma_transfer_bytes(buffer, 2);
   return buffer[1];
 }
@@ -247,12 +281,14 @@ uint8_t max7456_dma_spi_read(uint8_t reg) {
 // blocking dma write of a single register
 void max7456_dma_spi_write(uint8_t reg, uint8_t data) {
   uint8_t buffer[2] = {reg, data};
+  spi_max7556_reinit();
   max7456_dma_transfer_bytes(buffer, 2);
 }
 
 // non blocking bulk dma transmit for interrupt callback configuration
 void max7456_dma_it_transfer_bytes(uint8_t *buffer_address, uint8_t buffer_length) {
   osd_dma_status = BUSY;
+  spi_max7556_reinit();
   dma_transmit_max7456_init(buffer_address, buffer_length);
   dma_receive_max7456_init(buffer_address, buffer_length);
   DMA_ITConfig(DMA1_RX_STREAM, DMA_IT_TC, ENABLE); // Configure the Interrupt on transfer complete for either SPI tx or rx
@@ -526,7 +562,7 @@ void osd_intro(void) {
   osd_print("QUICKSILVER", INVERT, 9, 5); //char, col, row
   while (osd_dma_status == BUSY) {
   };
-  osd_print("BY ALIENWHOOP", TEXT, 16, 14); //char, col, row
+  osd_print("LIKE A BOSS", TEXT, 18, 14); //char, col, row
   while (osd_dma_status == BUSY) {
   }; //this wait may not be necessary
 }
