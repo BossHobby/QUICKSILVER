@@ -75,6 +75,8 @@ static uint8_t CRC8(const uint8_t *data, const int8_t len) {
 void serial_smart_audio_send_data(uint8_t *data, uint32_t size) {
   for (uint32_t i = 0; i < size; i++) {
     USART_SendData(port_def.channel, data[i]);
+    delay(100);
+
     for (uint32_t timeout = 0x1000; USART_GetFlagStatus(port_def.channel, USART_FLAG_TC) == RESET;) {
       if (!timeout--) {
         quic_debugf("SMART: send timeout");
@@ -89,7 +91,7 @@ uint8_t serial_smart_audio_read_byte() {
   for (uint32_t timeout = 0x1000; USART_GetFlagStatus(port_def.channel, USART_FLAG_RXNE) == RESET;) {
     if (!timeout--) {
       quic_debugf("SMART: recv timeout");
-      break;
+      return 0x00;
     }
     delay(100);
   }
@@ -113,9 +115,26 @@ void serial_smart_audio_read_packet() {
   uint8_t payload[length];
   for (uint8_t i = 0; i < length; i++) {
     payload[i] = serial_smart_audio_read_byte();
+    quic_debugf("SMART: payload 0x%x", payload[i]);
   }
 
   quic_debugf("SMART: cmd %d length %d", cmd, length);
+  switch (cmd) {
+  case 0x01:
+  case 0x09: {
+    uint8_t version = cmd == 0x09 ? 2 : 1;
+    uint8_t channel = serial_smart_audio_read_byte();
+    uint8_t power = serial_smart_audio_read_byte();
+    uint8_t mode = serial_smart_audio_read_byte();
+    uint16_t frequency = (uint16_t)(((uint16_t)serial_smart_audio_read_byte() << 8) | serial_smart_audio_read_byte());
+    uint8_t crc = serial_smart_audio_read_byte();
+    quic_debugf("SMART: channel %d frequency %d power %d mode 0x%x", channel, frequency, power, mode);
+    break;
+  }
+
+  default:
+    break;
+  }
 }
 
 void serial_smart_audio_send_payload(uint8_t cmd, uint8_t *payload, uint32_t size) {
@@ -132,6 +151,8 @@ void serial_smart_audio_send_payload(uint8_t cmd, uint8_t *payload, uint32_t siz
   frame[size + 4] = CRC8(frame, frame_length - 1);
 
   serial_smart_audio_send_data(frame, frame_length);
+
+  delay(1000);
   serial_smart_audio_read_packet();
 }
 #endif
