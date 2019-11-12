@@ -559,7 +559,7 @@ void max7456_init(void) {
 
 //splash screen
 void osd_intro(void) {
-  osd_print("QUICKSILVER", TEXT, 9, 5); //char, col, row
+  osd_print("QUICKSILVER", INVERT, 9, 5); //char, col, row
   while (osd_dma_status == BUSY) {
   };
   osd_print("LIKE A BOSS", TEXT, 18, 14); //char, col, row
