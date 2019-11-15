@@ -253,6 +253,10 @@
 #undef SOFTSPI_4WIRE
 #endif
 
+#if defined(BUZZER_ENABLE) && !defined(BUZZER_PIN)
+#undef BUZZER_ENABLE
+#endif
+
 #ifdef BUZZER_INVERT
 #define PIN_ON(port, pin) GPIO_ResetBits(port, pin)
 #define PIN_OFF(port, pin) GPIO_SetBits(port, pin)
