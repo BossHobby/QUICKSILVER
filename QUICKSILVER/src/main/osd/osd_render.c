@@ -268,12 +268,13 @@ uint8_t print_osd_flightmode(void){
 }
 
 uint8_t print_osd_system_status(void){
-	const char system_status_labels[9][21] = { {"               "},{" **DISARMED**  "},{"  **ARMED**    "},{" STICK BOOST 1 "},{" STICK BOOST 2 "},{" **FAILSAFE**  "},{"THROTTLE SAFETY"},{" ARMING SAFETY "},{"**LOW BATTERY**"} };
+	const char system_status_labels[10][21] = { {"               "},{" **DISARMED**  "},{"  **ARMED**    "},{" STICK BOOST 1 "},{" STICK BOOST 2 "},{" **FAILSAFE**  "},{"THROTTLE SAFETY"},{" ARMING SAFETY "},{"**LOW BATTERY**"},{"**MOTOR TEST** "} };
 	extern int armed_state;
 	static uint8_t last_armed_state;
 	static uint8_t armed_state_printing;
 	static uint8_t last_aux_state;
 	static uint8_t aux_state_printing;
+	static uint8_t motortest_state_printing;
 	extern int failsafe;
 	static uint8_t last_failsafe_state = 1;
 	static uint8_t failsafe_state_printing;
@@ -490,6 +491,34 @@ uint8_t print_osd_system_status(void){
 			}else{
 				index = 0;
 				lowbatt_state_printing = 0;
+				return 1;
+			}
+		}
+	}
+	if((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) && !binding_while_armed && !throttle_safety && !failsafe)|| (motortest_state_printing  && !binding_while_armed && !throttle_safety && !failsafe)){
+		if ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) == 0) ){
+			uint8_t character[] = {system_status_labels[0][index]};
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
+			index++;
+			if (index < 15){
+				motortest_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				motortest_state_printing = 0;
+				return 1;
+			}
+		}
+		if (rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) == 1) {
+			uint8_t character[] = {system_status_labels[9][index]};
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
+			index++;
+			if (index < 15){
+				motortest_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				motortest_state_printing = 1;
 				return 1;
 			}
 		}
