@@ -2,6 +2,7 @@
 
 #define CC3D_Revo_Nano
 
+#define F4
 #define F411
 #define F405
 

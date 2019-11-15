@@ -24,7 +24,7 @@
 typedef enum {
   USART_PORT_INVALID,
   USART_PORTS
-  USART_PORTS_MAX,
+      USART_PORTS_MAX,
 } usart_ports_t;
 
 #undef USART_PORT

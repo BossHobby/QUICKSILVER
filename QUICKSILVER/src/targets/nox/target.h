@@ -2,6 +2,7 @@
 
 #define Nox
 
+#define F4
 #define F411
 #define F405
 
