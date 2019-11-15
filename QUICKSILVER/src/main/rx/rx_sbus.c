@@ -168,6 +168,13 @@ void checkrx() {
     channels[6] = ((data[9] >> 2 | data[10] << 6) & 0x07FF);
     channels[7] = ((data[10] >> 5 | data[11] << 3) & 0x07FF);
     channels[8] = ((data[12] | data[13] << 8) & 0x07FF);
+    channels[9] = ((data[13] >> 3 | data[14] << 5) & 0x07FF); //This is the last channel Silverware previously supported.
+    channels[10] = ((data[14] >> 6 | data[15] << 2 | data[16] << 10) & 0x07FF);
+    channels[11] = ((data[16] >> 1 | data[17] << 7) & 0x07FF);
+    channels[12] = ((data[17] >> 4 | data[18] << 4) & 0x07FF);
+    channels[13] = ((data[18] >> 7 | data[19] << 1 | data[20] << 9) & 0x07FF);
+    channels[14] = ((data[20] >> 2 | data[21] << 6) & 0x07FF);
+    channels[15] = ((data[21] >> 5 | data[22] << 3) & 0x07FF);
 
     if (rx_state == 0) //Stay in failsafe until we've received a stack of frames AND throttle is under 10% or so
     {
@@ -214,20 +221,18 @@ void checkrx() {
 
       rx_apply_expo();
 
-      //Here we have the AUX channels Silverware supports
       aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
       aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
       aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
       aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
       aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
       aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
-      //and here we have the rest of the sbus AUX channels/
-      /* Currently Silverware only has six AUX channels.
-					aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
-					aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
-					aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
-					aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
-					*/
+      aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
+      aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
+      aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
+      aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
+      aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
+      aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
 
       time_lastframe = gettime();
       if (sbus_stats)
