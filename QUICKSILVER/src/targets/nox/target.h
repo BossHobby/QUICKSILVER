@@ -8,7 +8,7 @@
 //#define USB_DETECT_PIN GPIO_Pin_5
 //#define USB_DETECT_PORT GPIOC
 
-//LEDS, Buzzer, FPV 
+//LEDS, Buzzer, FPV
 #define LED_NUMBER 1
 #define LED1PIN GPIO_Pin_4
 #define LED1PORT GPIOA
@@ -30,16 +30,21 @@
 #define GYRO_ID_3 0x78
 #define GYRO_ID_4 0x71
 //#define DISABLE_GYRO_CHECK
+
 // SPI PINS DEFINITONS & RADIO
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
 #define USART_INVERTER_PIN GPIO_Pin_8
 #define USART_INVERTER_PORT GPIOC
-#define USART1_PB7PB6
-#define USART2_PA3PA2
+
+#define USART_PORTS \
+  USART1_PB7PB6     \
+  USART2_PA3PA2
+
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
+#define RX_USART USART_PORT2
 #define SOFTSPI_NONE
 #endif
 
-#ifndef SOFTSPI_NONE		//sort this out later for use of bayang
+#ifndef SOFTSPI_NONE //sort this out later for use of bayang
 //#define RADIO_CHECK
 //#define SPI_MISO_PIN GPIO_Pin_10
 //#define SPI_MISO_PORT GPIOA
@@ -74,8 +79,11 @@
 #endif
 
 // MOTOR PINS
-#define MOTOR0_PIN_PB8 //S3_OUT
-#define MOTOR1_PIN_PB1 //S4_OUT
-#define MOTOR2_PIN_PA1 //S1_OUT
-#define MOTOR3_PIN_PA7 //S2_OUT
-
+//S3_OUT
+#define MOTOR_PIN0 MOTOR_PIN_PB8
+//S4_OUT
+#define MOTOR_PIN1 MOTOR_PIN_PB1
+//S1_OUT
+#define MOTOR_PIN2 MOTOR_PIN_PA1
+//S2_OUT
+#define MOTOR_PIN3 MOTOR_PIN_PA7
