@@ -174,7 +174,11 @@ const profile_t default_profile = {
 #else
         .torque_boost = 0.0,
 #endif
-
+#ifdef THROTTLE_BOOST
+        .throttle_boost = THROTTLE_BOOST,
+#else
+        .throttle_boost = 0.0,
+#endif
 #ifdef SENSOR_ROTATE_90_CW
         .gyro_orientation = GYRO_ROTATE_90_CW,
 #endif
@@ -329,13 +333,15 @@ const profile_t default_profile = {
             AUX_CHANNEL_OFF,
 #endif
             STARTFLIP, //AUX_STARTFLIP
-#ifdef FN_INVERTED     //AUX_FN_INVERTED
-            FN_INVERTED,
+
+#ifdef MOTORS_TO_THROTTLE_MODE //AUX_MOTORS_TO_THROTTLE_MODE
+            MOTORS_TO_THROTTLE_MODE,
 #else
             AUX_CHANNEL_OFF,
 #endif
-#ifdef MOTORS_TO_THROTTLE_MODE //AUX_MOTORS_TO_THROTTLE_MODE
-            MOTORS_TO_THROTTLE_MODE,
+			RSSI,
+#ifdef FPV_ON     //AUX_FN_INVERTED
+            FPV_ON,
 #else
             AUX_CHANNEL_OFF,
 #endif

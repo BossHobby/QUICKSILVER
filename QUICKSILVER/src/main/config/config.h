@@ -82,8 +82,8 @@
 //#define RX_FRSKY
 
 // *************Serial Receiver UART Selection (uncomment all if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
-//#define UART_1
-#define UART_2
+#define UART_1
+//#define UART_2
 //#define UART_3
 //#define UART_4
 //#define UART_6
@@ -110,16 +110,15 @@
 #define STICK_BOOST_PROFILE AUX_CHANNEL_4
 #define RATES AUX_CHANNEL_ON
 #define LEDS_ON AUX_CHANNEL_OFF
-
-// *************switch for fpv / other, requires fet
-// *************comment out to disable
-//#define FPV_ON AUX_CHANNEL_ON
-
 // *************enable buzzer functionality
-// *************external buzzer requires pin assignment in hardware.h before defining below
 // *************change channel assignment from AUX_CHANNEL_OFF to a numbered aux switch if you want switch control
 // *************if no channel is assigned but buzzer is set to AUX_CHANNEL_ON - buzzer will activate on LVC and FAILSAFE.
-//#define BUZZER_ENABLE AUX_CHANNEL_OFF
+#define BUZZER_ENABLE AUX_CHANNEL_OFF
+#define MOTORS_TO_THROTTLE_MODE AUX_CHANNEL_OFF
+#define RSSI AUX_CHANNEL_11
+// *************switch for fpv / other, requires fet
+// *************comment out to disable
+#define FPV_ON AUX_CHANNEL_OFF
 
 // *************RRD/LLD stick gesture aux start up state.  Gesture aux is AUX_CHANNEL_12
 //#define GESTURE_AUX_START_ON
@@ -200,9 +199,9 @@
 // *************invert yaw pid for "PROPS OUT" configuration - This feature is switchable to "PROPS IN" when active with stick gesture DOWN-UP-DOWN, Save selection with DOWN-DOWN-DOWN
 #define INVERT_YAW_PID
 
-// *************throttle boost - can intensify small throttle imbalances visible in FPV if factor is set too high
-//#define THROTTLE_TRANSIENT_COMPENSATION
-//#define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 7.0
+// *************throttle boost - can intensify small throttle imbalances visible in FPV if factor is set too high on brushed or actually rob performance on brushless due to thrust imbalances
+//#define THROTTLE_BOOST 7.0
+
 
 // *************torque boost is a highly eperimental feature and can smoke brushless motors fast.  it is a lpf D term on motor outputs that will accelerate the response
 // *************of the motors when the command to the motors is changing by increasing or decreasing the voltage thats sent.  It differs

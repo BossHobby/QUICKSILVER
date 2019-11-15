@@ -143,13 +143,15 @@ typedef struct {
   uint8_t invert_yaw;
   uint8_t gyro_orientation;
   float torque_boost;
+  float throttle_boost;
 } motor_t;
 
 #define MOTOR_MEMBERS             \
   MEMBER(digital_idle, float)     \
   MEMBER(invert_yaw, uint8)       \
   MEMBER(gyro_orientation, uint8) \
-  MEMBER(torque_boost, float)
+  MEMBER(torque_boost, float)	  \
+  MEMBER(throttle_boost, float)
 
 typedef struct {
   uint8_t lipo_cell_count;

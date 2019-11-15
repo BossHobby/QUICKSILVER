@@ -457,17 +457,24 @@ int main(void) {
 #endif
 
 #ifdef FPV_ON
-    // fpv switch
     static int fpv_init = 0;
-    if (!fpv_init && rxmode == RXMODE_NORMAL) {
-      fpv_init = gpio_init_fpv();
-    }
-    if (fpv_init) {
-      if (failsafe) {
-        GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);
-      } else {
-        GPIO_WriteBit(FPV_PORT, FPV_PIN, rx_aux_on(AUX_FPV_ON) ? Bit_SET : Bit_RESET);
-      }
+    if (rx_aux_on(AUX_FPV_ON)){
+    	// fpv switch on
+    	if (!fpv_init && rxmode == RXMODE_NORMAL) {
+    		fpv_init = gpio_init_fpv();
+    	}
+    	if (fpv_init) {
+    		GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_SET);
+    	}
+    } else {
+    	// fpv switch off
+    	if (fpv_init){
+    		if (failsafe) {
+    			GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_SET);
+    		} else {
+    			GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);
+    		}
+    	}
     }
 #endif
 #if defined(USE_SERIAL_4WAY_BLHELI_INTERFACE) && defined(F0)
