@@ -30,5 +30,5 @@ void serial_init(void);
 void serial_enable_rcc(usart_ports_t port);
 void serial_enable_isr(usart_ports_t port);
 
-void usart_rx_init(void);
+void usart_rx_init(uint8_t RXProtocol);
 void serial_smart_audio_init(void);

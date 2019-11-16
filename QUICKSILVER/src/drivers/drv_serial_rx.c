@@ -98,7 +98,7 @@ void usart_rx_init(uint8_t RXProtocol) {
   serial_enable_rcc(profile.serial.rx);
 
   if (RXProtocol == 4) {
-    PIO_InitStructure.GPIO_Pin = usart_port_defs[profile.serial.rx].tx_pin;
+    GPIO_InitStructure.GPIO_Pin = usart_port_defs[profile.serial.rx].tx_pin;
     GPIO_Init(usart_port_defs[profile.serial.rx].gpio_port, &GPIO_InitStructure);
 
     GPIO_PinAFConfig(usart_port_defs[profile.serial.rx].gpio_port, usart_port_defs[profile.serial.rx].tx_pin_source, usart_port_defs[profile.serial.rx].gpio_af);

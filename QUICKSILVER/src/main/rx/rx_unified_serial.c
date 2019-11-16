@@ -3,10 +3,8 @@
 #include <stdlib.h>
 #include "defines.h"
 #include "drv_fmc.h"
-#include "drv_rx_serial.h"
 #include "drv_serial.h"
 #include "drv_time.h"
-#include "drv_uart.h"
 #include "profile.h"
 #include "project.h"
 #include "util.h"
@@ -18,7 +16,6 @@
 // WILL DISABLE PROGRAMMING AFTER GYRO CALIBRATION - 2 - 3 seconds after powerup)
 
 #ifdef RX_UNIFIED_SERIAL
-
 
 //*****************************************
 //*****************************************
@@ -115,11 +112,12 @@ uint16_t SbusTelemetryIDs[] = {
 uint8_t telemetryPosition = 0; //This iterates through the above, you can only send one sensor per frame.
 uint8_t teleCounter = 0;
 
+#define USART usart_port_defs[profile.serial.rx]
 
 void RX_USART_ISR(void) {
   //static uint32_t rx_framerate[3]
   unsigned long rx_byte_interval;
-  //rx_buffer[rx_frame_position++] = USART_ReceiveData(SERIAL_RX_USART);
+  //rx_buffer[rx_frame_position++] = USART_ReceiveData(USART.channel);
   unsigned long maxticks = SysTick->LOAD;
   unsigned long ticks = SysTick->VAL;
 
@@ -131,9 +129,9 @@ void RX_USART_ISR(void) {
   }
   lastticks = ticks;
 
-  if (USART_GetFlagStatus(SERIAL_RX_USART, USART_FLAG_ORE)) {
+  if (USART_GetFlagStatus(USART.channel, USART_FLAG_ORE)) {
     // overflow means something was lost
-    USART_ClearFlag(SERIAL_RX_USART, USART_FLAG_ORE);
+    USART_ClearFlag(USART.channel, USART_FLAG_ORE);
     rx_frame_position = 0;
   }
 
@@ -142,7 +140,7 @@ void RX_USART_ISR(void) {
     frameStatus = 0;
   }
 
-  rx_buffer[rx_frame_position++] = USART_ReceiveData(SERIAL_RX_USART);
+  rx_buffer[rx_frame_position++] = USART_ReceiveData(USART.channel);
   if (rx_frame_position >= expectedFrameLength && frameStatus == 0) {
     frameStatus = 1;
   }
@@ -934,8 +932,8 @@ void sendFPORTTelemetry() {
     teleCRC = teleCRC >> 8;
     telemetryPacket[9 + telemetryOffset] = teleCRC;    //0x34;
     for (uint8_t x = 0; x < 10 + telemetryOffset; x++) { //Shove the packet out the UART. This *should* support escaped characters, but it doesn't work.
-      while (USART_GetFlagStatus(SERIAL_RX_USART, USART_FLAG_TXE) == RESET);
-      USART_SendData(SERIAL_RX_USART, telemetryPacket[x]);
+      while (USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET);
+      USART_SendData(USART.channel, telemetryPacket[x]);
     } //That's it, telemetry sent
     telemetryPosition++;
     if (FPORTDebugTelemetry) {
@@ -1045,24 +1043,24 @@ void rx_spektrum_bind(void) {
   rx_bind_enable = fmc_read_float(56);
   if (rx_bind_enable == 0) {
     GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.GPIO_Pin = SERIAL_RX_SPEKBIND_RX_PIN;
+    GPIO_InitStructure.GPIO_Pin = USART.rx_pin;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure);
+    GPIO_Init(USART.gpio_port, &GPIO_InitStructure);
 
     // RX line, set high
-    GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_RX_PIN);
+    GPIO_SetBits(USART.gpio_port, USART.rx_pin);
     // Bind window is around 20-140ms after powerup
     delay(60000);
 
     for (uint8_t i = 0; i < 9; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
       // RX line, drive low for 120us
-      GPIO_ResetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_RX_PIN);
+      GPIO_ResetBits(USART.gpio_port, USART.rx_pin);
       delay(120);
 
       // RX line, drive high for 120us
-      GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_RX_PIN);
+      GPIO_SetBits(USART.gpio_port, USART.rx_pin);
       delay(120);
     }
   }
@@ -1072,20 +1070,20 @@ void rx_spektrum_bind(void) {
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(SERIAL_RX_PORT, &GPIO_InitStructure);
+    GPIO_Init(USART.gpio_port, &GPIO_InitStructure);
 
     // RX line, set high
-    GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
+    GPIO_SetBits(USART.gpio_port, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
     // Bind window is around 20-140ms after powerup
     delay(60000);
 
     for (uint8_t i = 0; i < 9; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
     // RX line, drive low for 120us
-    GPIO_ResetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
+    GPIO_ResetBits(USART.gpio_port, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
     delay(120);
 
     // RX line, drive high for 120us
-    GPIO_SetBits(SERIAL_RX_PORT, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
+    GPIO_SetBits(USART.gpio_port, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
     delay(120);
     }*/
 }

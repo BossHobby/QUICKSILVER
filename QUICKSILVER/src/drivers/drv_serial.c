@@ -111,7 +111,7 @@ usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {
 #undef USART_PORT
 
 void handle_usart_isr(usart_ports_t channel) {
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
   extern void RX_USART_ISR(void);
   if (profile.serial.rx == channel)
     RX_USART_ISR();
