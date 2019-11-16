@@ -33,7 +33,7 @@
 #define USART_PORTS \
   USART1_SDA
 
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT)
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
 #define F0_USART_PINSWAP
 #define SOFTSPI_NONE
 #define RX_USART USART_PORT1
