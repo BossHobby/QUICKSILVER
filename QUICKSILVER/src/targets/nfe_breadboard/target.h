@@ -39,15 +39,15 @@
 #endif
 
 #ifndef SOFTSPI_NONE		//sort this out later for use of bayang
-//#define RADIO_CHECK
-//#define SPI_MISO_PIN GPIO_Pin_10
-//#define SPI_MISO_PORT GPIOA
-//#define SPI_MOSI_PIN GPIO_Pin_9
-//#define SPI_MOSI_PORT GPIOA
-//#define SPI_CLK_PIN GPIO_Pin_6
-//#define SPI_CLK_PORT GPIOC
-//#define SPI_SS_PIN GPIO_Pin_7
-//#define SPI_SS_PORT GPIOC
+#define RADIO_CHECK
+#define SPI_MISO_PIN GPIO_Pin_2
+#define SPI_MISO_PORT GPIOA
+#define SPI_MOSI_PIN GPIO_Pin_3
+#define SPI_MOSI_PORT GPIOA
+#define SPI_CLK_PIN GPIO_Pin_6
+#define SPI_CLK_PORT GPIOB
+#define SPI_SS_PIN GPIO_Pin_7
+#define SPI_SS_PORT GPIOB
 #endif
 
 // OSD

@@ -72,6 +72,8 @@ unsigned long autobindtime = 0;
 int autobind_inhibit = 0;
 int packet_period = PACKET_PERIOD;
 
+uint8_t spi_rx_rssi;
+
 void writeregs(uint8_t data[], uint8_t size) {
   spi_cson();
   for (uint8_t i = 0; i < size; i++) {
@@ -112,8 +114,7 @@ void rx_init() {
 
 #define XN_TO_RX B10001111
 #define XN_TO_TX B10000010
-#define XN_POWER B00000001 | ((TX_POWER & 7) << 3)
-
+#define XN_POWER (B00000001 | ((TX_POWER & 7) << 3))
 #endif
 
 #ifdef RADIO_XN297
@@ -135,7 +136,7 @@ void rx_init() {
 
 #define XN_TO_RX B00001111
 #define XN_TO_TX B00000010
-#define XN_POWER (B00000001 | ((TX_POWER & 3) << 1))
+#define XN_POWER ((B00000001 | ((TX_POWER & 3) << 1)) | 0xa0 )	// | 0x80 rssi  // | 0xa0 filtered rssi
 #endif
 
   delay(100);
@@ -315,6 +316,10 @@ static char checkpacket() {
   if (status & (1 << MASK_RX_DR)) {         // RX packet received
     xn_writereg(STATUS, (1 << MASK_RX_DR)); // rx clear bit
     return 1;
+  }else{
+#ifdef RADIO_XN297
+	spi_rx_rssi = (xn_readreg(9)) & 0x0f;
+#endif
   }
 #else
   if ((status & B00001110) != B00001110) { // rx fifo not empty
@@ -532,6 +537,9 @@ void checkrx(void) {
 
   if (gettime() - secondtimer > 1000000) {
     packetpersecond = packetrx;
+#ifdef RADIO_XN297L
+    spi_rx_rssi = packetpersecond/2;
+#endif
     packetrx = 0;
     secondtimer = gettime();
   }

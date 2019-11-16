@@ -543,8 +543,14 @@ void print_osd_rssi(void){
 #ifdef RX_FRSKY
 	#define RX_PROTOCOL 5
 #endif
-#if defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND) || defined(RX_NRF24_BAYANG_TELEMETRY)
+#if defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND) && defined(RADIO_XN297)
 	#define RX_PROTOCOL 6
+#endif
+#if defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND) && defined(RADIO_XN297L)
+	#define RX_PROTOCOL 7
+#endif
+#if defined(RX_NRF24_BAYANG_TELEMETRY)
+	#define RX_PROTOCOL 8
 #endif
   extern int channels[];
   extern int failsafe;
@@ -555,7 +561,7 @@ void print_osd_rssi(void){
   switch (RX_PROTOCOL){
 	case 1:
 		break;
-	case 2:
+	case 2:	//sbus
 		rx_rssi = 0.000610128f *(channels[(profile.channel.aux[AUX_RSSI]+4)]-173);
 	    if (rx_rssi > 1)
 	    	rx_rssi = 1;
@@ -567,7 +573,7 @@ void print_osd_rssi(void){
 	    osd_rssi[4] = 1;
 	    osd_print_data(osd_rssi, 5, osd_decode(*rssi, ATTRIBUTE), osd_decode(*rssi, POSITIONX), osd_decode(*rssi, POSITIONY));
 		break;
-	case 3:
+	case 3:	//ibus
 		rx_rssi = 0.001f *(channels[(profile.channel.aux[AUX_RSSI]+4)]-1000);
 	    if (rx_rssi > 1)
 	    	rx_rssi = 1;
@@ -581,7 +587,7 @@ void print_osd_rssi(void){
 		break;
 	case 4: //crsf - no idea yet
 		break;
-	case 5:
+	case 5: //frsky spi
 		rx_rssi = spi_rx_rssi;
 		if (rx_rssi > 100.0f) rx_rssi = 100.0f;
 		if (failsafe) rx_rssi = 0.0f;
@@ -590,7 +596,21 @@ void print_osd_rssi(void){
 	    osd_rssi[4] = 1;
 	    osd_print_data(osd_rssi, 5, osd_decode(*rssi, ATTRIBUTE), osd_decode(*rssi, POSITIONX), osd_decode(*rssi, POSITIONY));
 		break;
-	case 6:
+	case 6: //xn297
+		rx_rssi = spi_rx_rssi * 10.0f;
+		lpf(&rx_rssi_filt, rx_rssi, FILTERCALC(LOOPTIME*133, 2e6)); //2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
+	    fast_fprint(osd_rssi, 5, (rx_rssi_filt-0.5f), 0);
+	    osd_rssi[4] = 1;
+	    osd_print_data(osd_rssi, 5, osd_decode(*rssi, ATTRIBUTE), osd_decode(*rssi, POSITIONX), osd_decode(*rssi, POSITIONY));
+		break;
+	case 7: //xn297L - fake rssi based on packets/s - needs an exponential scale applied
+		rx_rssi = spi_rx_rssi;
+		lpf(&rx_rssi_filt, rx_rssi, FILTERCALC(LOOPTIME*133, 2e6)); //2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
+	    fast_fprint(osd_rssi, 5, (rx_rssi_filt-0.5f), 0);
+	    osd_rssi[4] = 1;
+	    osd_print_data(osd_rssi, 5, osd_decode(*rssi, ATTRIBUTE), osd_decode(*rssi, POSITIONX), osd_decode(*rssi, POSITIONY));
+		break;
+	case 8: //nrf
 		break;
 	}
 
