@@ -57,7 +57,7 @@ int rx_ready = 0;
 //uint32 ticksEnd = 0;
 //uint32 ticksLongest = 0;
 
-uint8_t RXProtocol = 0;
+uint8_t RXProtocol = RX_PROTOCOL_INVALID;
 #define RX_BUFF_SIZE 68
 uint8_t rx_buffer[RX_BUFF_SIZE];
 uint8_t rx_data[RX_BUFF_SIZE]; //A place to put the RX frame so nothing can get overwritten during processing.  //reduce size?
@@ -143,50 +143,6 @@ void RX_USART_ISR(void) {
 
   rx_frame_position %= (RX_BUFF_SIZE);
 }
-/*
-  void RX_USART_ISR(void) {
-  rx_buffer[rx_end] = USART_ReceiveData(USART1);
-  // calculate timing since last rx
-  unsigned long maxticks = SysTick->LOAD;
-  unsigned long ticks = SysTick->VAL;
-  unsigned long elapsedticks;
-  static unsigned long lastticks;
-  if (ticks < lastticks)
-    elapsedticks = lastticks - ticks;
-  else { // overflow ( underflow really)
-    elapsedticks = lastticks + (maxticks - ticks);
-  }
-
-  if (elapsedticks < 65536) {
-    rx_time[rx_end] = elapsedticks; //
-  }
-  else {
-    rx_time[rx_end] = 65535; //ffff
-  }
-
-  lastticks = ticks;
-
-  if (USART_GetFlagStatus(USART1, USART_FLAG_ORE)) {
-    // overflow means something was lost
-    rx_time[rx_end] = 0xFFFe;
-    USART_ClearFlag(USART1, USART_FLAG_ORE);
-  }
-
-  rx_frame_position++;
-  if (rx_time[rx_end] > 9000) { //Long delay since last byte. Probably a new frame, or we missed some bytes. Either way, start over.
-    frameStart = rx_end;
-    rx_frame_position = 1;
-    frameStatus = 0; //0 is "frame in progress or first frame not arrived",
-    //1 is "frame ready(ish) to be read, or at least checked",
-    //2 is "Frame looks complete, CRC it and read controls",
-  }                  //3 is "frame already complete and processed, do nothing (or send telemetry if enabled)"
-  else if (rx_frame_position >= expectedFrameLength && frameStatus == 0) { //It's long enough to be a full frame, and we're waiting for a full frame. Check it!
-    frameStatus = 1;
-  }
-
-  rx_end++;
-  rx_end %= (RX_BUFF_SIZE);
-  }*/
 
 void rx_init(void) {
   if (rx_bind_enable == 0)
@@ -197,26 +153,28 @@ void rx_serial_init(void) {
 
   //RXProtocol = 4;  //Remove meeeeeeeee
 
-  frameStatus = 0;       //Let the uart ISR do its stuff.
-  if (RXProtocol == 0) { //No known protocol? Autodetect!
+  frameStatus = 0; //Let the uart ISR do its stuff.
+
+  if (RXProtocol == RX_PROTOCOL_INVALID) { //No known protocol? Autodetect!
     findprotocol();
   } else {
     usart_rx_init(RXProtocol); //There's already a known protocol, we're good.
   }
+
   switch (RXProtocol) {
-  case 1: // DSM
+  case RX_PROTOCOL_DSM: // DSM
     expectedFrameLength = 16;
     break;
-  case 2: // SBUS
+  case RX_PROTOCOL_SBUS: // SBUS
     expectedFrameLength = 24;
     break;
-  case 3: // IBUS
+  case RX_PROTOCOL_IBUS: // IBUS
     expectedFrameLength = 32;
     break;
-  case 4:                     // FPORT
+  case RX_PROTOCOL_FPORT:     // FPORT
     expectedFrameLength = 28; //Minimum.
     break;
-  case 5:                     // CRSF
+  case RX_PROTOCOL_CRSF:      // CRSF
     expectedFrameLength = 64; //Maybe 65? Not sure where the Sync Byte comes in
     break;
 
@@ -240,20 +198,19 @@ void checkrx() {
 
   if (frameStatus == 1) { //USART ISR says there's enough frame to look at. Look at it.
     switch (RXProtocol) {
-    case 1: // DSM
+    case RX_PROTOCOL_DSM: // DSM
       processDSMX();
       break;
-    case 2: // SBUS
+    case RX_PROTOCOL_SBUS: // SBUS
       processSBUS();
-
       break;
-    case 3: // IBUS
+    case RX_PROTOCOL_IBUS: // IBUS
       processIBUS();
       break;
-    case 4: // FPORT
+    case RX_PROTOCOL_FPORT: // FPORT
       processFPORT();
       break;
-    case 5: // CRSF
+    case RX_PROTOCOL_CRSF: // CRSF
       processCRSF();
       break;
 
@@ -262,19 +219,19 @@ void checkrx() {
     }
   } else if (frameStatus == 3) {
     switch (RXProtocol) {
-    case 1: // DSM
+    case RX_PROTOCOL_DSM: // DSM
       // Run DSM Telemetry
       break;
-    case 2: // SBUS
+    case RX_PROTOCOL_SBUS: // SBUS
       //Run smartport telemetry
       break;
-    case 3: // IBUS
+    case RX_PROTOCOL_IBUS: // IBUS
       //IBUS Telemetry function call goes here
       break;
-    case 4: // FPORT
+    case RX_PROTOCOL_FPORT: // FPORT
       sendFPORTTelemetry();
       break;
-    case 5: // CRSF
+    case RX_PROTOCOL_CRSF: // CRSF
       //CRSF telemetry function call yo
       break;
 
@@ -923,12 +880,9 @@ void processCRSF(void) {
 
 void findprotocol(void) {
 
-  protocolToCheck = 1; //Start with DSMX
-  //uint8_t protocolToCheck = 1; Moved to global for visibility
+  protocolToCheck = RX_PROTOCOL_DSM; //Start with DSMX
 
-  while (RXProtocol == 0) {
-    //protocolToCheck = 4;
-    //uint8_t protocolDetectTimer = 0;Moved to global for visibility
+  while (RXProtocol == RX_PROTOCOL_INVALID) {
     usart_rx_init(protocolToCheck); //Configure a protocol!
     delay(500000);
     protocolDetectTimer = 0;
@@ -944,30 +898,31 @@ void findprotocol(void) {
       delay(500000 - (protocolToCheck * 70000));
       protocolDetectTimer++;
     }
+
     if (frameStatus == 1) { //We got something! What is it?
       switch (protocolToCheck) {
-      case 1:                                                                       // DSM
+      case RX_PROTOCOL_DSM:                                                         // DSM
         if (rx_buffer[0] == 0x00 && rx_buffer[1] <= 0x04 && rx_buffer[2] != 0x00) { // allow up to 4 fades or detection will fail.  Some dsm rx will log a fade or two during binding
           processDSMX();
           if (bind_safety > 0)
             RXProtocol = protocolToCheck;
         }
-      case 2: // SBUS
+      case RX_PROTOCOL_SBUS: // SBUS
         if (rx_buffer[0] == 0x0F) {
           RXProtocol = protocolToCheck;
         }
         break;
-      case 3: // IBUS
+      case RX_PROTOCOL_IBUS: // IBUS
         if (rx_buffer[0] == 0x20) {
           RXProtocol = protocolToCheck;
         }
         break;
-      case 4: // FPORT
+      case RX_PROTOCOL_FPORT: // FPORT
         if (rx_buffer[0] == 0x7E) {
           RXProtocol = protocolToCheck;
         }
         break;
-      case 5:                                 // CRSF
+      case RX_PROTOCOL_CRSF:                  // CRSF
         if (rx_buffer[0] != 0xFF && 1 == 2) { //Need to look up the expected start value.
           RXProtocol = protocolToCheck;
         }
@@ -991,7 +946,6 @@ void findprotocol(void) {
 
 // Send Spektrum bind pulses to a GPIO e.g. TX1
 void rx_spektrum_bind(void) {
-  //
   rx_bind_enable = fmc_read_float(56);
   if (rx_bind_enable == 0) {
     GPIO_InitTypeDef GPIO_InitStructure;
@@ -1016,28 +970,6 @@ void rx_spektrum_bind(void) {
       delay(120);
     }
   }
-  /*  bindtool to be evaluated later
-    GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.GPIO_Pin = SERIAL_RX_SPEKBIND_BINDTOOL_PIN;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(USART.gpio_port, &GPIO_InitStructure);
-
-    // RX line, set high
-    GPIO_SetBits(USART.gpio_port, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
-    // Bind window is around 20-140ms after powerup
-    delay(60000);
-
-    for (uint8_t i = 0; i < 9; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
-    // RX line, drive low for 120us
-    GPIO_ResetBits(USART.gpio_port, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
-    delay(120);
-
-    // RX line, drive high for 120us
-    GPIO_SetBits(USART.gpio_port, SERIAL_RX_SPEKBIND_BINDTOOL_PIN);
-    delay(120);
-    }*/
 }
 
 #endif

@@ -9,11 +9,14 @@
 #include "stm32f0xx_usart.h"
 #endif
 
-#define RX_PROTOCOL_DSM 1
-#define RX_PROTOCOL_SBUS 2
-#define RX_PROTOCOL_IBUS 3
-#define RX_PROTOCOL_FPORT 4
-#define RX_PROTOCOL_CRSF 5
+typedef enum {
+  RX_PROTOCOL_INVALID = 0,
+  RX_PROTOCOL_DSM = 1,
+  RX_PROTOCOL_SBUS = 2,
+  RX_PROTOCOL_IBUS = 3,
+  RX_PROTOCOL_FPORT = 4,
+  RX_PROTOCOL_CRSF = 5,
+} rx_serial_protocol_t;
 
 typedef struct {
   uint8_t channel_index;
