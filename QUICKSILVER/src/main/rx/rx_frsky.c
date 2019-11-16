@@ -49,6 +49,8 @@ static unsigned long time_tuned_ms;
 
 frsky_bind_data frsky_bind = {{0xff, 0xff}};
 
+uint8_t spi_rx_rssi;
+
 extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
@@ -322,6 +324,8 @@ static void frsky_d_set_rc_data() {
   aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
   aux[AUX_CHANNEL_4] = 0;
   aux[AUX_CHANNEL_5] = 0;
+
+  spi_rx_rssi = frsky_extract_rssi(packet[18]);
 }
 
 static uint8_t frsky_d_hub_encode(uint8_t *buf, uint8_t data) {
