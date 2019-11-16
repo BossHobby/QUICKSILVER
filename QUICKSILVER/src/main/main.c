@@ -37,6 +37,7 @@
 #include "drv_i2c.h"
 #include "drv_motor.h"
 #include "drv_serial.h"
+#include "drv_serial_smart_audio.h"
 #include "drv_softi2c.h"
 #include "drv_spi.h"
 #include "drv_time.h"
@@ -246,6 +247,10 @@ int main(void) {
 
 #ifdef ENABLE_OSD
   osd_clear();
+#endif
+
+#ifdef ENABLE_SMART_AUDIO
+  serial_smart_audio_send_payload(SA_CMD_GET_SETTINGS, NULL, 0);
 #endif
 
   extern int liberror;

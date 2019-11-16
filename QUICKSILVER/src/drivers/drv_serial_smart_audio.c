@@ -1,5 +1,9 @@
-#include "drv_serial.h"
+#include "drv_serial_smart_audio.h"
 
+#include <stddef.h>
+
+#include "drv_serial.h"
+#include "drv_time.h"
 #include "profile.h"
 #include "usb_configurator.h"
 
@@ -7,6 +11,8 @@
 
 #define SMART_AUDIO_BAUDRATE 4800
 #define port_def usart_port_defs[profile.serial.smart_audio]
+
+smart_audio_settings_t smart_audio_settings;
 
 void serial_smart_audio_enter_tx() {
   uint32_t tmp = port_def.channel->CR1;
@@ -52,50 +58,46 @@ void serial_smart_audio_init(void) {
 }
 
 #define POLYGEN 0xd5
-static uint8_t CRC8(const uint8_t *data, const int8_t len) {
-  uint8_t crc = 0; /* start with 0 so first byte can be 'xored' in */
-  uint8_t currByte;
+static uint8_t crc8(uint8_t crc, const uint8_t input) {
+  crc ^= input; /* XOR-in the next input byte */
 
-  for (int i = 0; i < len; i++) {
-    currByte = data[i];
-
-    crc ^= currByte; /* XOR-in the next input byte */
-
-    for (int i = 0; i < 8; i++) {
-      if ((crc & 0x80) != 0) {
-        crc = (uint8_t)((crc << 1) ^ POLYGEN);
-      } else {
-        crc <<= 1;
-      }
+  for (int i = 0; i < 8; i++) {
+    if ((crc & 0x80) != 0) {
+      crc = (uint8_t)((crc << 1) ^ POLYGEN);
+    } else {
+      crc <<= 1;
     }
+  }
+
+  return crc;
+}
+
+static uint8_t crc8_data(const uint8_t *data, const int8_t len) {
+  uint8_t crc = 0; /* start with 0 so first byte can be 'xored' in */
+  for (int i = 0; i < len; i++) {
+    crc = crc8(crc, data[i]);
   }
   return crc;
 }
 
 void serial_smart_audio_send_data(uint8_t *data, uint32_t size) {
   for (uint32_t i = 0; i < size; i++) {
+    while (USART_GetFlagStatus(port_def.channel, USART_FLAG_TXE) == RESET)
+      ;
     USART_SendData(port_def.channel, data[i]);
-    delay(100);
-
-    for (uint32_t timeout = 0x1000; USART_GetFlagStatus(port_def.channel, USART_FLAG_TC) == RESET;) {
-      if (!timeout--) {
-        quic_debugf("SMART: send timeout");
-        break;
-      }
-      delay(10);
-    }
   }
 }
 
 uint8_t serial_smart_audio_read_byte() {
-  for (uint32_t timeout = 0x1000; USART_GetFlagStatus(port_def.channel, USART_FLAG_RXNE) == RESET;) {
-    if (!timeout--) {
-      quic_debugf("SMART: recv timeout");
-      return 0x00;
-    }
-    delay(100);
-  }
+  while (USART_GetFlagStatus(port_def.channel, USART_FLAG_RXNE) == RESET)
+    ;
   return USART_ReceiveData(port_def.channel);
+}
+
+uint8_t serial_smart_audio_read_byte_crc(uint8_t *crc) {
+  const uint8_t data = serial_smart_audio_read_byte();
+  *crc = crc8(*crc, data);
+  return data;
 }
 
 void serial_smart_audio_read_packet() {
@@ -109,28 +111,29 @@ void serial_smart_audio_read_packet() {
     return;
   }
 
-  uint8_t cmd = serial_smart_audio_read_byte();
-  uint8_t length = serial_smart_audio_read_byte();
+  uint8_t crc = 0;
+  uint8_t cmd = serial_smart_audio_read_byte_crc(&crc);
+  uint8_t length = serial_smart_audio_read_byte_crc(&crc);
 
   uint8_t payload[length];
   for (uint8_t i = 0; i < length; i++) {
-    payload[i] = serial_smart_audio_read_byte();
-    quic_debugf("SMART: payload 0x%x", payload[i]);
+    payload[i] = serial_smart_audio_read_byte_crc(&crc);
   }
 
-  quic_debugf("SMART: cmd %d length %d", cmd, length);
   switch (cmd) {
   case 0x01:
-  case 0x09: {
-    uint8_t version = cmd == 0x09 ? 2 : 1;
-    uint8_t channel = serial_smart_audio_read_byte();
-    uint8_t power = serial_smart_audio_read_byte();
-    uint8_t mode = serial_smart_audio_read_byte();
-    uint16_t frequency = (uint16_t)(((uint16_t)serial_smart_audio_read_byte() << 8) | serial_smart_audio_read_byte());
-    uint8_t crc = serial_smart_audio_read_byte();
-    quic_debugf("SMART: channel %d frequency %d power %d mode 0x%x", channel, frequency, power, mode);
+  case 0x09:
+    if (crc == payload[5]) {
+      quic_debugf("SMART: invalid crc 0x%x vs 0x%x", crc, payload[4]);
+      return;
+    }
+
+    smart_audio_settings.version = (cmd == 0x09 ? 2 : 1);
+    smart_audio_settings.channel = payload[0];
+    smart_audio_settings.power = payload[1];
+    smart_audio_settings.mode = payload[2];
+    smart_audio_settings.frequency = (uint16_t)(((uint16_t)payload[3] << 8) | payload[4]);
     break;
-  }
 
   default:
     break;
@@ -148,11 +151,11 @@ void serial_smart_audio_send_payload(uint8_t cmd, uint8_t *payload, uint32_t siz
   for (uint8_t i = 0; i < size; i++) {
     frame[i + 4] = payload[i];
   }
-  frame[size + 4] = CRC8(frame, frame_length - 1);
+  frame[size + 4] = crc8_data(frame, frame_length - 1);
 
   serial_smart_audio_send_data(frame, frame_length);
 
-  delay(1000);
+  delay(100);
   serial_smart_audio_read_packet();
 }
 #endif
