@@ -199,7 +199,7 @@ void rx_init(void) {
 
 void rx_serial_init(void) {
 
-  RXProtocol = 4;  //Remove meeeeeeeee
+  //RXProtocol = 4;  //Remove meeeeeeeee
 
   frameStatus = 0; //Let the uart ISR do its stuff.
   if (RXProtocol == 0) { //No known protocol? Autodetect!

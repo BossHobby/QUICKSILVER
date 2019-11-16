@@ -9,6 +9,12 @@
 #include "stm32f0xx_usart.h"
 #endif
 
+#define RX_PROTOCOL_DSM 1
+#define RX_PROTOCOL_SBUS 2
+#define RX_PROTOCOL_IBUS 3
+#define RX_PROTOCOL_FPORT 4
+#define RX_PROTOCOL_CRSF 5
+
 typedef struct {
   uint8_t channel_index;
   USART_TypeDef *channel;
