@@ -546,12 +546,10 @@ void print_osd_rssi(void){
 #if defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND) && defined(RADIO_XN297)
 	#define RX_PROTOCOL 6
 #endif
-#if defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND) && defined(RADIO_XN297L)
+#if (defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND) && defined(RADIO_XN297L)) || defined(RX_NRF24_BAYANG_TELEMETRY)
 	#define RX_PROTOCOL 7
 #endif
-#if defined(RX_NRF24_BAYANG_TELEMETRY)
-	#define RX_PROTOCOL 8
-#endif
+
   extern int channels[];
   extern int failsafe;
   extern uint8_t spi_rx_rssi;
@@ -603,14 +601,14 @@ void print_osd_rssi(void){
 	    osd_rssi[4] = 1;
 	    osd_print_data(osd_rssi, 5, osd_decode(*rssi, ATTRIBUTE), osd_decode(*rssi, POSITIONX), osd_decode(*rssi, POSITIONY));
 		break;
-	case 7: //xn297L - fake rssi based on packets/s - needs an exponential scale applied
-		rx_rssi = spi_rx_rssi;
-		lpf(&rx_rssi_filt, rx_rssi, FILTERCALC(LOOPTIME*133, 2e6)); //2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
+	case 7: //nrf and xn297L - fake rssi based on packets/s - needs an exponential scale applied
+		#define RSSI_EXP 0.9f
+		rx_rssi = (float)spi_rx_rssi/100.0f;
+		rx_rssi = rx_rssi * rx_rssi * rx_rssi * RSSI_EXP + rx_rssi * (1 - RSSI_EXP);
+		lpf(&rx_rssi_filt, rx_rssi*100.0f, FILTERCALC(LOOPTIME*133, 2e6)); //2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
 	    fast_fprint(osd_rssi, 5, (rx_rssi_filt-0.5f), 0);
 	    osd_rssi[4] = 1;
 	    osd_print_data(osd_rssi, 5, osd_decode(*rssi, ATTRIBUTE), osd_decode(*rssi, POSITIONX), osd_decode(*rssi, POSITIONY));
-		break;
-	case 8: //nrf
 		break;
 	}
 

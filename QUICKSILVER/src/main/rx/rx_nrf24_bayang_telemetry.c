@@ -407,6 +407,8 @@ int timingfail = 0;
 int telemetry_enabled = 0;
 int packet_period = PACKET_PERIOD;
 
+uint8_t spi_rx_rssi;
+
 uint8_t rxaddr[5];
 int packets = 0;
 
@@ -531,6 +533,7 @@ void checkrx(void) {
 
   if (gettime() - secondtimer > 1000000) {
     packetpersecond = packetrx;
+    spi_rx_rssi = packetpersecond/2;
     packetrx = 0;
     secondtimer = gettime();
   }

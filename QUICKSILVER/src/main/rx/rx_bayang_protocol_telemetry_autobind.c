@@ -114,7 +114,7 @@ void rx_init() {
 
 #define XN_TO_RX B10001111
 #define XN_TO_TX B10000010
-#define XN_POWER (B00000001 | ((TX_POWER & 7) << 3))
+#define XN_POWER (B00000001 | ((TX_POWER & 3) << 1))
 #endif
 
 #ifdef RADIO_XN297
