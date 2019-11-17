@@ -67,7 +67,7 @@ $(TARGET): $(BUILD_DIR)/target $(BUILD_DIR)/$(BINARY).bin $(BUILD_DIR)/$(BINARY)
 	@echo "built $(BINARY) with gcc $(GCC_VERSION)"
 	
 $(BUILD_DIR)/target: FORCE
-	@if test -r /ThisIsTotallyAHackButItFixesMyLinuxRunCondition; then echo got a delay > /dev/null; fi
+	@if test -r /doesntreallymatterjustneedadelay; then echo got a delay > /dev/null; fi
 	@mkdir -p $(BUILD_DIR)
 	@echo "Setting target to $(TARGET)"
 	@echo "$(TARGET)" > $(BUILD_DIR)/target.tmp

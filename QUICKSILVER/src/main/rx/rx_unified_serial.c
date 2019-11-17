@@ -148,8 +148,8 @@ void RX_USART_ISR(void) {
 }
 
 void rx_init(void) {
-  if (rx_bind_enable == 0)
-    RXProtocol = 0;
+  //if (rx_bind_enable == 0)
+    //RXProtocol = 0;
 }
 
 void rx_serial_init(void) {
