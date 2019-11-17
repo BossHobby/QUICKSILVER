@@ -983,9 +983,9 @@ void findprotocol(void) {
   //lastlooptime = gettime();
 
   if(RXProtocol != RX_PROTOCOL_INVALID){
-    rx_bind_enable = 1;
+    //rx_bind_enable = 1; NFE doesn't like this, and is convincing.
   }
-  
+
   if(protocolDetectTimer > 4000){ //4000 loops, half a second
     protocolDetectTimer = 0; // Reset timer, triggering a shift to detecting the next protocol
   }
