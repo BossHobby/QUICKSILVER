@@ -120,6 +120,14 @@ void serial_smart_audio_read_packet() {
     payload[i] = serial_smart_audio_read_byte_crc(&crc);
   }
 
+  if (cmd != 0x01 && cmd != 0x09) {
+    uint8_t crc_input = serial_smart_audio_read_byte_crc(&crc);
+    if (crc != crc_input) {
+      quic_debugf("SMART: invalid crc 0x%x vs 0x%x", crc, crc_input);
+      return;
+    }
+  }
+
   switch (cmd) {
   case 0x01:
   case 0x09:
@@ -135,12 +143,21 @@ void serial_smart_audio_read_packet() {
     smart_audio_settings.frequency = (uint16_t)(((uint16_t)payload[3] << 8) | payload[4]);
     break;
 
-  default:
+  case SA_CMD_SET_FREQUENCY:
+    smart_audio_settings.frequency = (uint16_t)(((uint16_t)payload[0] << 8) | payload[1]);
     break;
+
+  case SA_CMD_SET_CHANNEL:
+    smart_audio_settings.channel = payload[0];
+    break;
+
+  default: {
+    break;
+  }
   }
 }
 
-void serial_smart_audio_send_payload(uint8_t cmd, uint8_t *payload, uint32_t size) {
+void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const uint32_t size) {
   uint8_t frame_length = 4 + size + 1;
   uint8_t frame[frame_length];
 

@@ -34,6 +34,7 @@ typedef enum {
   QUIC_VAL_DEFAULT_PROFILE,
   QUIC_VAL_BLACKBOX_RATE,
   QUIC_VAL_PID_RATE_PRESETS,
+  QUIC_VAL_VTX_SETTINGS
 } quic_values;
 
 void usb_process_msp();

@@ -10,6 +10,14 @@ typedef enum {
   SA_CMD_SET_MODE = 0x05,
 } smart_audio_cmd_t;
 
+typedef enum {
+  SA_MODE_FREQUENCY = 1 << 0,
+  SA_MODE_PIT = 1 << 1,
+  SA_MODE_IN_RANGE_PIT = 1 << 2,
+  SA_MODE_OUT_RANGE_PIT = 1 << 3,
+  SA_MODE_UNLOCKED = 1 << 4,
+} smart_mode_t;
+
 typedef struct {
   uint8_t version;
   uint8_t channel;
@@ -19,4 +27,4 @@ typedef struct {
 } smart_audio_settings_t;
 
 void serial_smart_audio_init(void);
-void serial_smart_audio_send_payload(uint8_t cmd, uint8_t *payload, uint32_t size);
+void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const uint32_t size);

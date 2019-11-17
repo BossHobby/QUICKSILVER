@@ -11,6 +11,7 @@
 #include "profile.h"
 #include "project.h"
 #include "sixaxis.h"
+#include "vtx.h"
 
 #if defined(F405)
 
@@ -24,6 +25,8 @@ extern profile_t default_profile;
 
 extern pid_rate_preset_t pid_rate_presets[];
 extern uint32_t pid_rate_presets_count;
+
+extern vtx_settings_t vtx_settings;
 
 extern float rx[4];
 extern float rxcopy[4];
@@ -144,19 +147,23 @@ void get_quic(uint8_t *data, uint32_t len) {
     break;
   }
   case QUIC_VAL_INFO:
-    cbor_encode_map(&enc, 1);
-
-    cbor_encode_str(&enc, "protocol");
+    res = cbor_encode_map(&enc, 1);
+    check_cbor_error(QUIC_CMD_GET);
 
     static const uint32_t protocol = QUIC_PROTOCOL_VERSION;
-    cbor_encode_uint32(&enc, &protocol);
+    res = cbor_encode_str(&enc, "protocol");
+    check_cbor_error(QUIC_CMD_GET);
+    res = cbor_encode_uint32(&enc, &protocol);
+    check_cbor_error(QUIC_CMD_GET);
 
     blackbox_enabled = 1;
 
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   case QUIC_VAL_BLACKBOX_RATE:
-    cbor_encode_uint32(&enc, &blackbox_rate);
+    res = cbor_encode_uint32(&enc, &blackbox_rate);
+    check_cbor_error(QUIC_CMD_GET);
+
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   case QUIC_VAL_PID_RATE_PRESETS:
@@ -166,6 +173,12 @@ void get_quic(uint8_t *data, uint32_t len) {
       res = cbor_encode_pid_rate_preset_t(&enc, &pid_rate_presets[i]);
       check_cbor_error(QUIC_CMD_GET);
     }
+
+    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  case QUIC_VAL_VTX_SETTINGS:
+    res = cbor_encode_vtx_settings_t(&enc, &vtx_settings);
+    check_cbor_error(QUIC_CMD_GET);
 
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
@@ -209,6 +222,18 @@ void set_quic(uint8_t *data, uint32_t len) {
     check_cbor_error(QUIC_CMD_SET);
 
     res = cbor_encode_uint32(&enc, &blackbox_rate);
+    check_cbor_error(QUIC_CMD_SET);
+
+    send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  }
+  case QUIC_VAL_VTX_SETTINGS: {
+    res = cbor_decode_vtx_settings_t(&dec, &vtx_settings);
+    check_cbor_error(QUIC_CMD_SET);
+
+    vtx_set(&vtx_settings);
+
+    res = cbor_encode_vtx_settings_t(&enc, &vtx_settings);
     check_cbor_error(QUIC_CMD_SET);
 
     send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
