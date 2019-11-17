@@ -180,11 +180,14 @@ typedef struct {
 typedef struct {
   usart_ports_t rx;
   usart_ports_t smart_audio;
+
+  usart_ports_t port_max;
 } serial_t;
 
-#define SERIAL_MEMBERS \
-  MEMBER(rx, uint8)    \
-  MEMBER(smart_audio, uint8)
+#define SERIAL_MEMBERS       \
+  MEMBER(rx, uint8)          \
+  MEMBER(smart_audio, uint8) \
+  MEMBER(port_max, uint8)
 
 typedef struct {
   uint8_t name[36];

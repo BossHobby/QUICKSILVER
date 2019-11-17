@@ -216,6 +216,8 @@ const profile_t default_profile = {
 #else
         .smart_audio = USART_PORT_INVALID,
 #endif
+
+        .port_max = USART_PORTS_MAX,
     },
 
     .rate = {
