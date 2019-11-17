@@ -105,8 +105,10 @@ uint16_t telemetryIDs[] = {
 uint8_t telemetryPosition = 0; //This iterates through the above, you can only send one sensor per frame.
 uint8_t teleCounter = 0;
 
+#define USART usart_port_defs[profile.serial.rx]
+
 void RX_USART_ISR(void) {
-  rx_buffer[rx_end] = USART_ReceiveData(USART1);
+  rx_buffer[rx_end] = USART_ReceiveData(USART.channel);
   // calculate timing since last rx
   unsigned long maxticks = SysTick->LOAD;
   unsigned long ticks = SysTick->VAL;
@@ -125,10 +127,10 @@ void RX_USART_ISR(void) {
 
   lastticks = ticks;
 
-  if (USART_GetFlagStatus(USART1, USART_FLAG_ORE)) {
+  if (USART_GetFlagStatus(USART.channel, USART_FLAG_ORE)) {
     // overflow means something was lost
     rx_time[rx_end] = 0xFFFe;
-    USART_ClearFlag(USART1, USART_FLAG_ORE);
+    USART_ClearFlag(USART.channel, USART_FLAG_ORE);
     if (sbus_stats)
       stat_overflow++;
   }
@@ -402,9 +404,9 @@ void checkrx() {
           teleCRC = teleCRC >> 8;
           telemetryPacket[9] = teleCRC;      //0x34;
           for (uint8_t x = 0; x < 10; x++) { //Shove the packet out the UART. This also doesn't support escaped characters
-            while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET)
+            while (USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET)
               ; // Wait for Empty
-            USART_SendData(USART1, telemetryPacket[x]);
+            USART_SendData(USART.channel, telemetryPacket[x]);
           } //That's it, telemetry sent
           telemetryPosition++;
           if (FPORTDebugTelemetry) {

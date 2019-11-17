@@ -7,7 +7,6 @@
 #include "profile.h"
 #include "project.h"
 #include "util.h"
-#include "profile.h"
 
 // sbus input ( pin SWCLK after calibration)
 // WILL DISABLE PROGRAMMING AFTER GYRO CALIBRATION - 2 - 3 seconds after powerup)
@@ -70,12 +69,15 @@ int stat_garbage;
 int stat_frames_accepted = 0;
 int stat_frames_second;
 int stat_overflow;
+
 extern profile_t profile;
 float rx_rssi;
 
+#define USART usart_port_defs[profile.serial.rx]
+
 //void SERIAL_RX_USART_IRQHandler(void)
 void RX_USART_ISR(void) {
-  rx_buffer[rx_end] = USART_ReceiveData(usart_port_defs[profile.serial.rx].channel);
+  rx_buffer[rx_end] = USART_ReceiveData(USART.channel);
   // calculate timing since last rx
   uint16_t maxticks = (SysTick->LOAD) / 260; // Hack the 24bit counters down to 16bit
   uint16_t ticks = (SysTick->VAL) / 260;
@@ -95,10 +97,10 @@ void RX_USART_ISR(void) {
 
   lastticks = ticks;
 
-  if (USART_GetFlagStatus(usart_port_defs[profile.serial.rx].channel, USART_FLAG_ORE)) {
+  if (USART_GetFlagStatus(USART.channel, USART_FLAG_ORE)) {
     // overflow means something was lost
     rx_time[rx_end] = 0xFe;
-    USART_ClearFlag(usart_port_defs[profile.serial.rx].channel, USART_FLAG_ORE);
+    USART_ClearFlag(USART.channel, USART_FLAG_ORE);
     if (sbus_stats)
       stat_overflow++;
   }
@@ -236,9 +238,11 @@ void checkrx() {
       aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
       aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
 
-      rx_rssi = 0.0610128f *(channels[(profile.channel.aux[AUX_RSSI]+4)]-173);
-      if (rx_rssi > 100.0f) rx_rssi = 100.0f;
-      if (rx_rssi < 0.0f) rx_rssi = 0.0f;
+      rx_rssi = 0.0610128f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 173);
+      if (rx_rssi > 100.0f)
+        rx_rssi = 100.0f;
+      if (rx_rssi < 0.0f)
+        rx_rssi = 0.0f;
 
       time_lastframe = gettime();
       if (sbus_stats)

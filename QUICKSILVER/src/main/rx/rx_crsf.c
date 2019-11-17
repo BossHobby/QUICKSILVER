@@ -61,6 +61,8 @@ int rx_bind_enable = 0;
 #define CRSF_MSP_TX_BUF_SIZE 128
 #define CRSF_PAYLOAD_SIZE_MAX 60
 
+#define USART usart_port_defs[profile.serial.rx]
+
 int crsfFrameDone = 0;
 uint32_t crsfChannelData[CRSF_MAX_CHANNEL];
 int rx_frame_pending;
@@ -170,9 +172,9 @@ void RX_USART_ISR(void) {
   }
   lastticks = ticks;
 
-  if (USART_GetFlagStatus(usart_port_defs[profile.serial.rx].channel, USART_FLAG_ORE)) {
+  if (USART_GetFlagStatus(USART.channel, USART_FLAG_ORE)) {
     // overflow means something was lost
-    USART_ClearFlag(usart_port_defs[profile.serial.rx].channel, USART_FLAG_ORE);
+    USART_ClearFlag(USART.channel, USART_FLAG_ORE);
     crsfFramePosition = 0;
   }
 
@@ -186,7 +188,7 @@ void RX_USART_ISR(void) {
   // full frame length includes the length of the address and framelength fields
   const uint8_t fullFrameLength = crsfFramePosition < 3 ? 5 : crsfFrame.frame.frameLength + CRSF_FRAME_LENGTH_ADDRESS + CRSF_FRAME_LENGTH_FRAMELENGTH;
   if (crsfFramePosition < fullFrameLength) {
-    crsfFrame.bytes[crsfFramePosition++] = USART_ReceiveData(usart_port_defs[profile.serial.rx].channel);
+    crsfFrame.bytes[crsfFramePosition++] = USART_ReceiveData(USART.channel);
     if (crsfFramePosition < fullFrameLength) {
       crsfFrameDone = 0;
     } else {

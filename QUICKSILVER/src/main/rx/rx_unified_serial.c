@@ -93,7 +93,9 @@ extern unsigned int lastlooptime;
 uint8_t telemetryPacket[14];
 extern int current_pid_axis;
 extern int current_pid_term;
+
 extern profile_t profile;
+float rx_rssi; //TODO: actually use this!
 
 uint16_t SbusTelemetryIDs[] = {
     0x0210, //VFAS, use for vbat_comp

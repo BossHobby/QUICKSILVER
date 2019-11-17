@@ -90,9 +90,11 @@ uint16_t telemetryIDs[] = {
 uint8_t telemetryPosition = 0; //This iterates through the above, you can only send one sensor per frame.
 uint8_t teleCounter = 0;
 
+#define USART usart_port_defs[profile.serial.rx]
+
 //void SERIAL_RX_USART _IRQHandler(void)
 void RX_USART_ISR(void) {
-  rx_buffer[rx_end] = USART_ReceiveData(usart_port_defs[profile.serial.rx].channel);
+  rx_buffer[rx_end] = USART_ReceiveData(USART.channel);
   // calculate timing since last rx
   unsigned long maxticks = SysTick->LOAD;
   unsigned long ticks = SysTick->VAL;
@@ -111,10 +113,10 @@ void RX_USART_ISR(void) {
 
   lastticks = ticks;
 
-  if (USART_GetFlagStatus(usart_port_defs[profile.serial.rx].channel, USART_FLAG_ORE)) {
+  if (USART_GetFlagStatus(USART.channel, USART_FLAG_ORE)) {
     // overflow means something was lost
     rx_time[rx_end] = 0xFFFe;
-    USART_ClearFlag(usart_port_defs[profile.serial.rx].channel, USART_FLAG_ORE);
+    USART_ClearFlag(USART.channel, USART_FLAG_ORE);
     if (ibus_stats)
       stat_overflow++;
   }

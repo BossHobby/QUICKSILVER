@@ -66,8 +66,9 @@ float dsmx_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
 uint16_t rssi_channel; // Stores the raw unscaled RX RSSI data.
 float rx_rssi;
 
-// Receive ISR callback
+#define USART usart_port_defs[profile.serial.rx]
 
+// Receive ISR callback
 void RX_USART_ISR(void) {
   static uint8_t spekFramePosition = 0;
 
@@ -82,15 +83,15 @@ void RX_USART_ISR(void) {
   }
   lastticks = ticks;
 
-  if (USART_GetFlagStatus(usart_port_defs[profile.serial.rx].channel, USART_FLAG_ORE)) {
+  if (USART_GetFlagStatus(USART.channel, USART_FLAG_ORE)) {
     // overflow means something was lost
-    USART_ClearFlag(usart_port_defs[profile.serial.rx].channel, USART_FLAG_ORE);
+    USART_ClearFlag(USART.channel, USART_FLAG_ORE);
   }
   if (spekTimeInterval > SPEKTRUM_NEEDED_FRAME_INTERVAL) {
     spekFramePosition = 0;
   }
   if (spekFramePosition < SPEK_FRAME_SIZE) {
-    spekFrame[spekFramePosition++] = USART_ReceiveData(usart_port_defs[profile.serial.rx].channel);
+    spekFrame[spekFramePosition++] = USART_ReceiveData(USART.channel);
     if (spekFramePosition < SPEK_FRAME_SIZE) {
       rcFrameComplete = 0;
     } else {
@@ -110,18 +111,18 @@ void spektrumFrameStatus(void) {
     uint16_t fade_count = (spekFrame[0] << 8) + spekFrame[1];
     uint32_t timestamp = gettime() / 1000 / (1000 / SPEKTRUM_FADE_REPORTS_PER_SEC);
     static uint32_t last_fade_timestamp = 0; // Stores the timestamp of the last fade read.
-    static uint16_t last_fade_count = 0; // Stores the fade count at the last fade read.
-    if (last_fade_timestamp == 0) { //first frame received
-        last_fade_count = fade_count;
-        last_fade_timestamp = timestamp;
+    static uint16_t last_fade_count = 0;     // Stores the fade count at the last fade read.
+    if (last_fade_timestamp == 0) {          //first frame received
+      last_fade_count = fade_count;
+      last_fade_timestamp = timestamp;
     } else if ((timestamp - last_fade_timestamp) >= 1) {
-		#ifdef RX_DSMX_2048
-        	rssi_channel = 2048 - ((fade_count - last_fade_count) * 2048 / (SPEKTRUM_MAX_FADE_PER_SEC / SPEKTRUM_FADE_REPORTS_PER_SEC));
-		#else
-            rssi_channel = 1024 - ((fade_count - last_fade_count) * 1024 / (SPEKTRUM_MAX_FADE_PER_SEC / SPEKTRUM_FADE_REPORTS_PER_SEC));
-		#endif
-            last_fade_count = fade_count;
-            last_fade_timestamp = timestamp;
+#ifdef RX_DSMX_2048
+      rssi_channel = 2048 - ((fade_count - last_fade_count) * 2048 / (SPEKTRUM_MAX_FADE_PER_SEC / SPEKTRUM_FADE_REPORTS_PER_SEC));
+#else
+      rssi_channel = 1024 - ((fade_count - last_fade_count) * 1024 / (SPEKTRUM_MAX_FADE_PER_SEC / SPEKTRUM_FADE_REPORTS_PER_SEC));
+#endif
+      last_fade_count = fade_count;
+      last_fade_timestamp = timestamp;
     }
 
     for (int b = 3; b < SPEK_FRAME_SIZE; b += 2) { //stick data in channels buckets
@@ -137,7 +138,7 @@ void spektrumFrameStatus(void) {
 }
 
 void dsm_init(void) {
-  usart_rx_init(1);  //initialize usart in drv_rx_serial
+  usart_rx_init(1); //initialize usart in drv_rx_serial
   framestarted = 0; // set setup complete flag
 }
 
@@ -170,24 +171,24 @@ void rx_spektrum_bind(void) {
   }
 #endif
   GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.GPIO_Pin = usart_port_defs[profile.serial.rx].rx_pin;
+  GPIO_InitStructure.GPIO_Pin = USART.rx_pin;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(usart_port_defs[profile.serial.rx].gpio_port, &GPIO_InitStructure);
+  GPIO_Init(USART.gpio_port, &GPIO_InitStructure);
 
   // RX line, set high
-  GPIO_SetBits(usart_port_defs[profile.serial.rx].gpio_port, usart_port_defs[profile.serial.rx].rx_pin);
+  GPIO_SetBits(USART.gpio_port, USART.rx_pin);
   // Bind window is around 20-140ms after powerup
   delay(60000);
 
   for (uint8_t i = 0; i < BIND_PULSES; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
     // RX line, drive low for 120us
-    GPIO_ResetBits(usart_port_defs[profile.serial.rx].gpio_port, usart_port_defs[profile.serial.rx].rx_pin);
+    GPIO_ResetBits(USART.gpio_port, USART.rx_pin);
     delay(120);
 
     // RX line, drive high for 120us
-    GPIO_SetBits(usart_port_defs[profile.serial.rx].gpio_port, usart_port_defs[profile.serial.rx].rx_pin);
+    GPIO_SetBits(USART.gpio_port, USART.rx_pin);
     delay(120);
   }
 }
@@ -262,8 +263,10 @@ void checkrx() {
     rx_rssi = 0.000488281 * rssi_channel;
     rx_rssi = rx_rssi * rx_rssi * rx_rssi * RSSI_EXP + rx_rssi * (1 - RSSI_EXP);
     rx_rssi *= 100.0f;
-    if(rx_rssi > 100.0f) rx_rssi = 100.0f;
-    if(rx_rssi < 0.0f) rx_rssi = 0.0f;
+    if (rx_rssi > 100.0f)
+      rx_rssi = 100.0f;
+    if (rx_rssi < 0.0f)
+      rx_rssi = 0.0f;
 
     if (bind_safety > 900) { //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
       rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
