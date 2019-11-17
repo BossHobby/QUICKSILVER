@@ -184,7 +184,7 @@ int main(void) {
   aux[AUX_CHANNEL_OFF] = 0;
 
 #ifdef GESTURE_AUX_START_ON
-  aux[AUX_CHANNEL_12] = 1;
+  aux[AUX_CHANNEL_GESTURE] = 1;
 #endif
 
 #ifdef FLASH_SAVE1

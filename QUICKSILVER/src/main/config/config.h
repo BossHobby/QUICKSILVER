@@ -120,7 +120,7 @@
 // *************comment out to disable
 #define FPV_ON AUX_CHANNEL_OFF
 
-// *************RRD/LLD stick gesture aux start up state.  Gesture aux is AUX_CHANNEL_12
+// *************RRD/LLD stick gesture aux start up state.  Gesture aux is AUX_CHANNEL_GESTURE
 //#define GESTURE_AUX_START_ON
 
 //**********************************************************************************************************************
