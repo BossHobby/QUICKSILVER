@@ -24,8 +24,10 @@
 
 // STM32 acro firmware
 // files of this project should be assumed MIT licence unless otherwise noted
-
-#include "project.h"
+#include <inttypes.h>
+#include <math.h>
+#include <osd/osd_render.h>
+#include <stdio.h>
 
 #include "binary.h"
 #include "buzzer.h"
@@ -37,7 +39,6 @@
 #include "drv_i2c.h"
 #include "drv_motor.h"
 #include "drv_serial.h"
-#include "drv_serial_smart_audio.h"
 #include "drv_softi2c.h"
 #include "drv_spi.h"
 #include "drv_time.h"
@@ -45,14 +46,11 @@
 #include "led.h"
 #include "pid.h"
 #include "profile.h"
+#include "project.h"
 #include "rx.h"
 #include "sixaxis.h"
 #include "util.h"
-
-#include <inttypes.h>
-#include <math.h>
-#include <osd/osd_render.h>
-#include <stdio.h>
+#include "vtx.h"
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 #include "drv_serial_4way.h"
@@ -193,9 +191,7 @@ int main(void) {
   flash_load();
 #endif
 
-#ifdef ENABLE_SMART_AUDIO
-  serial_smart_audio_init();
-#endif
+  vtx_init();
   rx_init();
 
   int count = 0;
@@ -247,10 +243,6 @@ int main(void) {
 
 #ifdef ENABLE_OSD
   osd_clear();
-#endif
-
-#ifdef ENABLE_SMART_AUDIO
-  serial_smart_audio_send_payload(SA_CMD_GET_SETTINGS, NULL, 0);
 #endif
 
   extern int liberror;
@@ -461,27 +453,8 @@ int main(void) {
     buzzer();
 #endif
 
-#ifdef FPV_ON
-    static int fpv_init = 0;
-    if (rx_aux_on(AUX_FPV_ON)) {
-      // fpv switch on
-      if (!fpv_init && rxmode == RXMODE_NORMAL) {
-        fpv_init = gpio_init_fpv();
-      }
-      if (fpv_init) {
-        GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_SET);
-      }
-    } else {
-      // fpv switch off
-      if (fpv_init) {
-        if (failsafe) {
-          GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_SET);
-        } else {
-          GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);
-        }
-      }
-    }
-#endif
+    vtx_update();
+
 #if defined(USE_SERIAL_4WAY_BLHELI_INTERFACE) && defined(F0)
     extern int onground;
     if (onground) {
