@@ -76,7 +76,8 @@ int bind_safety = 0;
 int channels[16];
 uint16_t CRCByte = 0;            //Defined here to allow Debug to see it.
 uint8_t protocolToCheck = 1;     //Defined here to allow Debug to see it.
-uint8_t protocolDetectTimer = 0; //Defined here to allow Debug to see it.
+uint16_t protocolDetectTimer = 0; //Defined here to allow Debug to see it.
+
 
 int failsafe_sbus_failsafe = 0;
 int failsafe_siglost = 0;
@@ -157,8 +158,8 @@ void rx_serial_init(void) {
 
   frameStatus = 0; //Let the uart ISR do its stuff.
 
-  if (RXProtocol == RX_PROTOCOL_INVALID) { //No known protocol? Autodetect!
-    findprotocol();
+  if (RXProtocol == RX_PROTOCOL_INVALID) { //No known protocol? Can't really set the radio up yet then can we?
+    //findprotocol();
   } else {
     usart_rx_init(RXProtocol); //There's already a known protocol, we're good.
   }
@@ -187,7 +188,10 @@ void rx_serial_init(void) {
 }
 
 void checkrx() {
-
+if(RXProtocol == RX_PROTOCOL_INVALID){ //If there's no protocol, there's no reason to check failsafe.
+  findprotocol();
+}
+else{
   //FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!
   if (gettime() - time_lastframe > 1000000) {
     failsafe_noframes = 1;
@@ -245,10 +249,16 @@ void checkrx() {
     rxmode = !RXMODE_BIND;
   }
 }
+}
+
+
+
+
+
 
 void processDSMX(void) {
 
-  for (uint8_t counter = 0; counter < 16; counter++) {    //First up, get therx_data out of the RX buffer and into somewhere safe
+  for (uint8_t counter = 0; counter < 16; counter++) {    //First up, get the rx_data out of the RX buffer and into somewhere safe
     rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
   }
 
@@ -341,6 +351,10 @@ void processDSMX(void) {
     }
   }
 }
+
+
+
+
 
 void processSBUS(void) {
   for (uint8_t counter = 0; counter < 25; counter++) {    //First up, get therx_data out of the RX buffer and into somewhere safe
@@ -470,6 +484,9 @@ void processSBUS(void) {
 
 } // end frame received
 
+
+
+
 void processIBUS(void) {
 
   uint8_t frameLength = 0;
@@ -584,6 +601,9 @@ void processIBUS(void) {
     //while(1){} Enable for debugging to lock the FC if CRC fails. In the air we just drop CRC-failed packets
   }
 } // end frame received
+
+
+
 
 void processFPORT(void) {
   uint8_t frameLength = 0;
@@ -753,6 +773,9 @@ void processFPORT(void) {
   } // end frame received
 }
 
+
+
+
 void sendFPORTTelemetry() {
   if (telemetryCounter > 0 && rx_frame_position >= 40 && frameStatus == 3) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
     telemetryCounter = 0;
@@ -873,8 +896,16 @@ void sendFPORTTelemetry() {
   }
 }
 
+
+
+
 void processCRSF(void) {
+  //We should probably put something here.
 }
+
+
+
+
 
 //NOTE TO SELF: Put in some double-check code on the detections somehow.
 //NFE note:  how about we force hold failsafe until protocol is saved.  This acts like kind of a check on proper mapping/decoding as stick gesture must be used as a test
@@ -882,13 +913,19 @@ void processCRSF(void) {
 
 void findprotocol(void) {
 
-  protocolToCheck = RX_PROTOCOL_DSM; //Start with DSMX
+  //protocolToCheck = RX_PROTOCOL_DSM; //Start with DSMX
 
-  while (RXProtocol == RX_PROTOCOL_INVALID) {
-    usart_rx_init(protocolToCheck); //Configure a protocol!
-    delay(500000);
-    protocolDetectTimer = 0;
-
+  //while (RXProtocol == RX_PROTOCOL_INVALID) {
+    if(protocolDetectTimer == 0){
+      protocolToCheck++; //Check the next protocol down the list.
+      if(protocolToCheck > RX_PROTOCOL_CRSF){ //(AKA 5)
+        protocolToCheck = RX_PROTOCOL_DSM; //AKA 1
+      }
+      usart_rx_init(protocolToCheck); //Configure a protocol!
+    //delay(500000); //Don't need this now.
+    }
+    protocolDetectTimer++; //Should increment once per main loop
+/*
     while ((frameStatus == 0 || frameStatus == 3) && protocolDetectTimer < 1) { // Wait 2 seconds to see if something turns up.
       for (int i = 0; i < protocolToCheck; i++) {
         ledon(255);
@@ -900,7 +937,7 @@ void findprotocol(void) {
       delay(500000 - (protocolToCheck * 70000));
       protocolDetectTimer++;
     }
-
+*/
     if (frameStatus == 1) { //We got something! What is it?
       switch (protocolToCheck) {
       case RX_PROTOCOL_DSM:                                                         // DSM
@@ -935,15 +972,23 @@ void findprotocol(void) {
       }
     }
 
-    protocolToCheck++;
-    if (protocolToCheck > 5) {
-      protocolToCheck = 1;
-      rxusart = 1;
-    }
+    //protocolToCheck++;
+    //if (protocolToCheck > 5) {
+    //  protocolToCheck = 1;
+    //  rxusart = 1;
+    //}
+  //}
+  //frameStatus = 3; //All done!
+  //debug.max_cpu_loop_number = gettime();
+  //lastlooptime = gettime();
+
+  if(RXProtocol != RX_PROTOCOL_INVALID){
+    rx_bind_enable = 1;
   }
-  frameStatus = 3; //All done!
-  debug.max_cpu_loop_number = gettime();
-  lastlooptime = gettime();
+  
+  if(protocolDetectTimer > 4000){ //4000 loops, half a second
+    protocolDetectTimer = 0; // Reset timer, triggering a shift to detecting the next protocol
+  }
 }
 
 // Send Spektrum bind pulses to a GPIO e.g. TX1
