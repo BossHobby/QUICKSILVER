@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "drv_usb.h"
+#include "util.h"
 
 // Default values for our profile
 // ignore -Wmissing-braces here, gcc bug with nested structs
@@ -380,22 +381,6 @@ void profile_set_defaults() {
 
 pid_rate_t *profile_current_pid_rates() {
   return &profile.pid.pid_rates[profile.pid.pid_profile];
-}
-
-int8_t buf_equal(const uint8_t *str1, size_t len1, const uint8_t *str2, size_t len2) {
-  if (len2 != len1) {
-    return 0;
-  }
-  for (size_t i = 0; i < len1; i++) {
-    if (str1[i] != str2[i]) {
-      return 0;
-    }
-  }
-  return 1;
-}
-
-int8_t buf_equal_string(const uint8_t *str1, size_t len1, const char *str2) {
-  return buf_equal(str1, len1, (const uint8_t *)str2, strlen(str2));
 }
 
 cbor_result_t cbor_encode_vector_t(cbor_value_t *enc, const vector_t *vec) {

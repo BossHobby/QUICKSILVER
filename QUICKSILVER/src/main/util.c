@@ -256,3 +256,19 @@ void print_str(const char *str) {
 }
 
 #endif
+
+int8_t buf_equal(const uint8_t *str1, size_t len1, const uint8_t *str2, size_t len2) {
+  if (len2 != len1) {
+    return 0;
+  }
+  for (size_t i = 0; i < len1; i++) {
+    if (str1[i] != str2[i]) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+int8_t buf_equal_string(const uint8_t *str1, size_t len1, const char *str2) {
+  return buf_equal(str1, len1, (const uint8_t *)str2, strlen(str2));
+}

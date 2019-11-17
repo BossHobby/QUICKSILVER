@@ -1,5 +1,8 @@
 #pragma once
 
+#include <stddef.h>
+#include <stdint.h>
+
 #define M_PI 3.14159265358979323846 /* pi */
 
 void lpf(float *out, float in, float coeff);
@@ -23,3 +26,6 @@ float fastsin(float x);
 float fastcos(float x);
 
 void limit180(float *);
+
+int8_t buf_equal(const uint8_t *str1, size_t len1, const uint8_t *str2, size_t len2);
+int8_t buf_equal_string(const uint8_t *str1, size_t len1, const char *str2);
