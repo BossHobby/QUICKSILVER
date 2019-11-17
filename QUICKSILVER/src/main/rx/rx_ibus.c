@@ -13,6 +13,7 @@
 #include "drv_uart.h"
 #include "project.h"
 #include "util.h"
+#include "profile.h"
 
 // iBus input ( pin SWCLK after calibration)
 // WILL DISABLE PROGRAMMING AFTER GYRO CALIBRATION - 2 - 3 seconds after powerup)
@@ -58,6 +59,8 @@ uint16_t CRCByte = 0; //Defined here to allow Debug to see it.
 int failsafe_ibus_failsafe = 0;
 int failsafe_siglost = 0;
 int failsafe_noframes = 0;
+extern profile_t profile;
+float rx_rssi;
 
 // enable statistics
 const int ibus_stats = 0;
@@ -182,6 +185,7 @@ void checkrx() {
       channels[12] = data[26] + (data[27] << 8);
       channels[13] = data[28] + (data[29] << 8);
 
+
       if (rx_state == 0) //Stay in failsafe until we've received a stack of frames AND throttle is under 10% or so
       {
         // wait for valid ibus signal
@@ -238,6 +242,10 @@ void checkrx() {
 		aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
 		aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
 		aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
+
+	    rx_rssi = 0.1f *(channels[(profile.channel.aux[AUX_RSSI]+4)]-1000);
+		if (rx_rssi > 100.0f) rx_rssi = 100.0f;
+		if (rx_rssi < 0.0f) rx_rssi = 0.0f;
 
 
         time_lastframe = gettime();

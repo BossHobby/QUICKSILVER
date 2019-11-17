@@ -55,6 +55,8 @@ THE SOFTWARE.
 #define RX_MODE_NORMAL RXMODE_NORMAL
 #define RX_MODE_BIND RXMODE_BIND
 
+#define RSSI_EXP 0.9f
+
 #ifdef RX_NRF24_BAYANG_TELEMETRY
 
 // crc enable - rx side
@@ -407,7 +409,7 @@ int timingfail = 0;
 int telemetry_enabled = 0;
 int packet_period = PACKET_PERIOD;
 
-uint8_t spi_rx_rssi;
+float rx_rssi;
 
 uint8_t rxaddr[5];
 int packets = 0;
@@ -533,9 +535,14 @@ void checkrx(void) {
 
   if (gettime() - secondtimer > 1000000) {
     packetpersecond = packetrx;
-    spi_rx_rssi = packetpersecond/2;
     packetrx = 0;
     secondtimer = gettime();
+
+    rx_rssi = packetpersecond/200.0f;
+    rx_rssi = rx_rssi * rx_rssi * rx_rssi * RSSI_EXP + rx_rssi * (1 - RSSI_EXP);
+    rx_rssi *= 100.0f;
+    if (rx_rssi > 100.0f) rx_rssi = 100.0f;
+    if (rx_rssi < 0.0f) rx_rssi = 0.0f;
   }
 }
 

@@ -48,6 +48,8 @@ THE SOFTWARE.
 // how many times to hop ahead if no reception
 #define HOPPING_NUMBER 4
 
+#define RSSI_EXP 0.9f
+
 #ifdef RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 
 extern float rx[4];
@@ -72,7 +74,7 @@ unsigned long autobindtime = 0;
 int autobind_inhibit = 0;
 int packet_period = PACKET_PERIOD;
 
-uint8_t spi_rx_rssi;
+float rx_rssi;
 
 void writeregs(uint8_t data[], uint8_t size) {
   spi_cson();
@@ -318,7 +320,9 @@ static char checkpacket() {
     return 1;
   }else{
 #ifdef RADIO_XN297
-	spi_rx_rssi = (xn_readreg(9)) & 0x0f;
+	rx_rssi = 10.0f * ((xn_readreg(9)) & 0x0f);
+	if (rx_rssi > 100.0f) rx_rssi = 100.0f;
+	if (rx_rssi < 0.0f) rx_rssi = 0.0f;
 #endif
   }
 #else
@@ -537,11 +541,16 @@ void checkrx(void) {
 
   if (gettime() - secondtimer > 1000000) {
     packetpersecond = packetrx;
-#ifdef RADIO_XN297L
-    spi_rx_rssi = packetpersecond/2;
-#endif
     packetrx = 0;
     secondtimer = gettime();
+
+#ifdef RADIO_XN297L
+    rx_rssi = packetpersecond/200.0f;
+    rx_rssi = rx_rssi * rx_rssi * rx_rssi * RSSI_EXP + rx_rssi * (1 - RSSI_EXP);
+    rx_rssi *= 100.0f;
+    if (rx_rssi > 100.0f) rx_rssi = 100.0f;
+    if (rx_rssi < 0.0f) rx_rssi = 0.0f;
+#endif
   }
 }
 

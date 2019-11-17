@@ -8,6 +8,7 @@
 #include "drv_uart.h"
 #include "project.h"
 #include "util.h"
+#include "profile.h"
 
 // sbus input ( pin SWCLK after calibration)
 // WILL DISABLE PROGRAMMING AFTER GYRO CALIBRATION - 2 - 3 seconds after powerup)
@@ -70,6 +71,8 @@ int stat_garbage;
 int stat_frames_accepted = 0;
 int stat_frames_second;
 int stat_overflow;
+extern profile_t profile;
+float rx_rssi;
 
 //void SERIAL_RX_USART_IRQHandler(void)
 void RX_USART_ISR(void) {
@@ -233,6 +236,10 @@ void checkrx() {
       aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
       aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
       aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
+
+      rx_rssi = 0.0610128f *(channels[(profile.channel.aux[AUX_RSSI]+4)]-173);
+      if (rx_rssi > 100.0f) rx_rssi = 100.0f;
+      if (rx_rssi < 0.0f) rx_rssi = 0.0f;
 
       time_lastframe = gettime();
       if (sbus_stats)

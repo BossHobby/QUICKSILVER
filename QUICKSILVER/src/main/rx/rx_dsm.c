@@ -49,6 +49,8 @@ static uint8_t spek_chan_shift = 2;
 static uint8_t spek_chan_mask = 0x03;
 #endif
 
+#define RSSI_EXP 0.9f
+
 static uint32_t channels[CHANNEL_COUNT];
 static int rcFrameComplete = 0;
 int framestarted = -1;
@@ -58,6 +60,12 @@ uint32_t flagged_time;
 static volatile uint8_t spekFrame[SPEK_FRAME_SIZE];
 float dsm2_scalefactor = (0.29354210f / DSM_SCALE_PERCENT);
 float dsmx_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
+
+// Variables used for calculating a signal strength from satellite fade.
+//  This is time-variant and computed every second based on the fade
+//  count over the last second.
+uint16_t rssi_channel; // Stores the raw unscaled RX RSSI data.
+float rx_rssi;
 
 // Receive ISR callback
 
@@ -98,6 +106,24 @@ void spektrumFrameStatus(void) {
     rx_frame_pending = 1; //flags when last time through we had a frame and this time we dont
   } else {
     rcFrameComplete = 0; //isr callback triggers alert of fresh data in buffer
+
+    // Fade to rssi hack
+    uint16_t fade_count = (spekFrame[0] << 8) + spekFrame[1];
+    uint32_t timestamp = gettime() / 1000 / (1000 / SPEKTRUM_FADE_REPORTS_PER_SEC);
+    static uint32_t last_fade_timestamp = 0; // Stores the timestamp of the last fade read.
+    static uint16_t last_fade_count = 0; // Stores the fade count at the last fade read.
+    if (last_fade_timestamp == 0) { //first frame received
+        last_fade_count = fade_count;
+        last_fade_timestamp = timestamp;
+    } else if ((timestamp - last_fade_timestamp) >= 1) {
+		#ifdef RX_DSMX_2048
+        	rssi_channel = 2048 - ((fade_count - last_fade_count) * 2048 / (SPEKTRUM_MAX_FADE_PER_SEC / SPEKTRUM_FADE_REPORTS_PER_SEC));
+		#else
+            rssi_channel = 1024 - ((fade_count - last_fade_count) * 1024 / (SPEKTRUM_MAX_FADE_PER_SEC / SPEKTRUM_FADE_REPORTS_PER_SEC));
+		#endif
+            last_fade_count = fade_count;
+            last_fade_timestamp = timestamp;
+    }
 
     for (int b = 3; b < SPEK_FRAME_SIZE; b += 2) { //stick data in channels buckets
       const uint8_t spekChannel = 0x0F & (spekFrame[b - 1] >> spek_chan_shift);
@@ -236,6 +262,12 @@ void checkrx()
     aux[AUX_CHANNEL_1] = (channels[5] > 550) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
     aux[AUX_CHANNEL_2] = (channels[6] > 550) ? 1 : 0;
 #endif
+
+    rx_rssi = 0.000488281 * rssi_channel;
+    rx_rssi = rx_rssi * rx_rssi * rx_rssi * RSSI_EXP + rx_rssi * (1 - RSSI_EXP);
+    rx_rssi *= 100.0f;
+    if(rx_rssi > 100.0f) rx_rssi = 100.0f;
+    if(rx_rssi < 0.0f) rx_rssi = 0.0f;
 
     if (bind_safety > 900) { //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
       rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high

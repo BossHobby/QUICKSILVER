@@ -70,7 +70,7 @@
 //***********************************************RECEIVER SETTINGS******************************************************
 
 // *************Receiver protocol selection									//todo:  add missing radio protocols from bobnova and make them all jive with new rx_init function in drv_rx_serial.c
-//#define RX_SBUS
+#define RX_SBUS
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
 //#define RX_IBUS
 //#define RX_FPORT
@@ -78,12 +78,12 @@
 //#define RX_DSM2_1024
 //#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
-#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
+//#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 //#define RX_FRSKY
 
 // *************Serial Receiver UART Selection (uncomment all if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
 //#define UART_1
-//#define UART_2
+#define UART_2
 //#define UART_3
 //#define UART_4
 //#define UART_6
@@ -95,11 +95,11 @@
 //#define USE_DEVO
 //#define USE_MULTI
 
-#define RADIO_XN297L
-//#define RADIO_XN297
+//#define RADIO_XN297L
+#define RADIO_XN297
 
-#define SOFTSPI_3WIRE
-//#define SOFTSPI_4WIRE
+//#define SOFTSPI_3WIRE
+#define SOFTSPI_4WIRE
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING AUX_CHANNEL_0

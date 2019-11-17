@@ -527,91 +527,15 @@ uint8_t print_osd_system_status(void){
 }
 
 void print_osd_rssi(void){
-#if defined(RX_DSMX_2048) || defined (RX_DSM2_1024)
-	#define RX_PROTOCOL 1
-#endif
-#if defined(RX_SBUS) || defined(RX_FPORT)
-	#define RX_PROTOCOL 2
-	extern int channels[];
-#endif
-#ifdef RX_IBUS
-	#define RX_PROTOCOL 3
-#endif
-#ifdef RX_CRSF
-	#define RX_PROTOCOL 4
-#endif
-#ifdef RX_FRSKY
-	#define RX_PROTOCOL 5
-#endif
-#if defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND) && defined(RADIO_XN297)
-	#define RX_PROTOCOL 6
-#endif
-#if (defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND) && defined(RADIO_XN297L)) || defined(RX_NRF24_BAYANG_TELEMETRY)
-	#define RX_PROTOCOL 7
-#endif
-
-  extern int channels[];
-  extern int failsafe;
-  extern uint8_t spi_rx_rssi;
-  float rx_rssi;
-  static float rx_rssi_filt;
-  uint8_t osd_rssi[5];
-  switch (RX_PROTOCOL){
-	case 1:
-		break;
-	case 2:	//sbus
-		rx_rssi = 0.000610128f *(channels[(profile.channel.aux[AUX_RSSI]+4)]-173);
-	    if (rx_rssi > 1)
-	    	rx_rssi = 1;
-	    if (rx_rssi < 0)
-	    	rx_rssi = 0;
-	    rx_rssi = rx_rssi * 100.0f;
-	    lpf(&rx_rssi_filt, rx_rssi, FILTERCALC(LOOPTIME*133, 2e6)); //2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
-	    fast_fprint(osd_rssi, 5, (rx_rssi_filt-0.5f), 0);
-	    osd_rssi[4] = 1;
-	    osd_print_data(osd_rssi, 5, osd_decode(*rssi, ATTRIBUTE), osd_decode(*rssi, POSITIONX), osd_decode(*rssi, POSITIONY));
-		break;
-	case 3:	//ibus
-		rx_rssi = 0.001f *(channels[(profile.channel.aux[AUX_RSSI]+4)]-1000);
-	    if (rx_rssi > 1)
-	    	rx_rssi = 1;
-	    if (rx_rssi < 0)
-	    	rx_rssi = 0;
-	    rx_rssi = rx_rssi * 100.0f;
-	    lpf(&rx_rssi_filt, rx_rssi, FILTERCALC(LOOPTIME*133, 2e6)); //2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
-	    fast_fprint(osd_rssi, 5, (rx_rssi_filt-0.5f), 0);
-	    osd_rssi[4] = 1;
-	    osd_print_data(osd_rssi, 5, osd_decode(*rssi, ATTRIBUTE), osd_decode(*rssi, POSITIONX), osd_decode(*rssi, POSITIONY));
-		break;
-	case 4: //crsf - no idea yet
-		break;
-	case 5: //frsky spi
-		rx_rssi = spi_rx_rssi;
-		if (rx_rssi > 100.0f) rx_rssi = 100.0f;
-		if (failsafe) rx_rssi = 0.0f;
-	    lpf(&rx_rssi_filt, rx_rssi, FILTERCALC(LOOPTIME*133, 2e6)); //2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
-	    fast_fprint(osd_rssi, 5, (rx_rssi_filt-0.5f), 0);
-	    osd_rssi[4] = 1;
-	    osd_print_data(osd_rssi, 5, osd_decode(*rssi, ATTRIBUTE), osd_decode(*rssi, POSITIONX), osd_decode(*rssi, POSITIONY));
-		break;
-	case 6: //xn297
-		rx_rssi = spi_rx_rssi * 10.0f;
-		lpf(&rx_rssi_filt, rx_rssi, FILTERCALC(LOOPTIME*133, 2e6)); //2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
-	    fast_fprint(osd_rssi, 5, (rx_rssi_filt-0.5f), 0);
-	    osd_rssi[4] = 1;
-	    osd_print_data(osd_rssi, 5, osd_decode(*rssi, ATTRIBUTE), osd_decode(*rssi, POSITIONX), osd_decode(*rssi, POSITIONY));
-		break;
-	case 7: //nrf and xn297L - fake rssi based on packets/s - needs an exponential scale applied
-		#define RSSI_EXP 0.9f
-		rx_rssi = (float)spi_rx_rssi/100.0f;
-		rx_rssi = rx_rssi * rx_rssi * rx_rssi * RSSI_EXP + rx_rssi * (1 - RSSI_EXP);
-		lpf(&rx_rssi_filt, rx_rssi*100.0f, FILTERCALC(LOOPTIME*133, 2e6)); //2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
-	    fast_fprint(osd_rssi, 5, (rx_rssi_filt-0.5f), 0);
-	    osd_rssi[4] = 1;
-	    osd_print_data(osd_rssi, 5, osd_decode(*rssi, ATTRIBUTE), osd_decode(*rssi, POSITIONX), osd_decode(*rssi, POSITIONY));
-		break;
-	}
-
+	extern int failsafe;
+	extern float rx_rssi;
+	static float rx_rssi_filt;
+	uint8_t osd_rssi[5];
+	if (failsafe) rx_rssi = 0.0f;
+	lpf(&rx_rssi_filt, rx_rssi, FILTERCALC(LOOPTIME*133, 2e6)); //2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
+	fast_fprint(osd_rssi, 5, (rx_rssi_filt-0.5f), 0);
+	osd_rssi[4] = 1;
+	osd_print_data(osd_rssi, 5, osd_decode(*rssi, ATTRIBUTE), osd_decode(*rssi, POSITIONX), osd_decode(*rssi, POSITIONY));
 }
 
 void print_osd_menu_strings (uint8_t string_element_qty, uint8_t active_element_qty, const char element_names[string_element_qty][21], const uint8_t print_position[string_element_qty][2]){
