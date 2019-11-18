@@ -30,7 +30,7 @@ void USART1_IRQHandler(void) {
   }
 }
 
-void serial_init(void) {
+void serial_debug_init(void) {
 
   GPIO_InitTypeDef GPIO_InitStructure;
 
@@ -88,7 +88,7 @@ void buffer_add(int val) {
 
 #else
 // serial disabled - dummy functions
-void serial_init(void) {
+void serial_debug_init(void) {
 }
 
 void buffer_add(int val) {
