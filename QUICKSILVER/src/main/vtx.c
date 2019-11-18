@@ -3,6 +3,7 @@
 #include <stddef.h>
 
 #include "drv_gpio.h"
+#include "drv_serial.h"
 #include "drv_serial_smart_audio.h"
 #include "drv_time.h"
 #include "project.h"
