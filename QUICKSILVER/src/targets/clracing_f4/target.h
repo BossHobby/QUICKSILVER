@@ -18,17 +18,16 @@
 #define FPV_PIN GPIO_Pin_13
 #define FPV_PORT GPIOA
 
-//SPI, I2C & GYRO
+//GYRO
 #define MPU6XXX_SPI1
 #define MPU6XXX_NSS_PA4
 #define MPU6XXX_INT_PC4
-#define USE_DUMMY_I2C //todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
+#define USE_DUMMY_I2C
 #define GYRO_ID_1 0x68
-//#define SENSOR_ROTATE_90_CCW
 #define SENSOR_ROTATE_90_CW
 
-// SPI PINS DEFINITONS & RADIO
-#define USART_INVERTER_PIN GPIO_Pin_0
+//RADIO
+#define USART_INVERTER_PIN GPIO_Pin_0		//UART 1
 #define USART_INVERTER_PORT GPIOC
 
 #define USART_PORTS \
@@ -47,10 +46,10 @@
 #define SPI_MISO_PORT GPIOA
 #define SPI_MOSI_PIN GPIO_Pin_9
 #define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_6
-#define SPI_CLK_PORT GPIOC
-#define SPI_SS_PIN GPIO_Pin_7
-#define SPI_SS_PORT GPIOC
+#define SPI_CLK_PIN GPIO_Pin11
+#define SPI_CLK_PORT GPIOB
+#define SPI_SS_PIN GPIO_Pin_10
+#define SPI_SS_PORT GPIOB
 #endif
 
 //OSD

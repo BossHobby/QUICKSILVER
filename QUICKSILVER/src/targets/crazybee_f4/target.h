@@ -6,53 +6,41 @@
 #define F4
 #define F405
 
-// #define USB_DETECT_PIN GPIO_Pin_5
-// #define USB_DETECT_PORT GPIOC
-
 //LEDS
-#define LED_NUMBER 2
-// red led
+#define LED_NUMBER 1
 #define LED1PIN GPIO_Pin_13
 #define LED1PORT GPIOC
 #define LED1_INVERT
-// green led
-#define LED2PIN GPIO_Pin_9
-#define LED2PORT GPIOB
-#define LED2_INVERT
+#define BUZZER_PIN GPIO_Pin_15
+#define BUZZER_PIN_PORT GPIOC
+#define FPV_PIN GPIO_Pin_13
+#define FPV_PORT GPIOA
 
-#define FPV_PIN GPIO_Pin_12
-#define FPV_PORT GPIOB
+//GYRO
+#define MPU6XXX_SPI1
+#define MPU6XXX_NSS_PA4
+#define MPU6XXX_INT_PIN GPIO_Pin_1
+#define MPU6XXX_INT_PORT GPIOA
+#define USE_DUMMY_I2C
+#define GYRO_ID_1 0x68
+#define GYRO_ID_2 0x73
+#define GYRO_ID_3 0x78
+#define GYRO_ID_4 0x71
 
-//SPI, I2C & GYRO
+//RADIO
+#ifdef RX_FRSKY
 #define USE_CC2500
 //#define USE_CC2500_PA_LNA
 //#define USE_CC2500_DIVERSITY
-
 #define CC2500_SPI3
 #define CC2500_NSS_PA15
 #define CC2500_GDO0_PC14
 //#define CC2500_TX_EN_PA8
 //#define CC2500_LNA_EN_PA13
 //#define CC2500_ANT_SEL_PA14
+#define SOFTSPI_NONE
+#endif
 
-#define MPU6XXX_SPI1
-#define MPU6XXX_NSS_PA4
-#define MPU6XXX_INT_PIN GPIO_Pin_1
-#define MPU6XXX_INT_PORT GPIOA
-#define USE_DUMMY_I2C //todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
-
-//not sure if right?
-//#define SENSOR_ROTATE_90_CCW
-//@brucesdad gyro
-//#define SENSOR_ROTATE_180
-//#define SENSOR_FLIP_180
-
-#define GYRO_ID_1 0x68
-#define GYRO_ID_2 0x73
-#define GYRO_ID_3 0x78
-#define GYRO_ID_4 0x71
-
-// SPI PINS DEFINITONS & RADIO
 #define USART_PORTS \
   USART1_PA10PA9    \
   USART2_PA3PA2
@@ -67,9 +55,9 @@
 #define SPI_MISO_PORT GPIOA
 #define SPI_MOSI_PIN GPIO_Pin_9
 #define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_2
+#define SPI_CLK_PIN GPIO_Pin_3
 #define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN GPIO_Pin_3
+#define SPI_SS_PIN GPIO_Pin_2
 #define SPI_SS_PORT GPIOA
 #endif
 
@@ -101,8 +89,3 @@
 #define MOTOR_PIN2 MOTOR_PIN_PB10
 #define MOTOR_PIN3 MOTOR_PIN_PB6
 
-//@brucesdad pins
-//#define MOTOR_PIN0 MOTOR_PIN_PB8
-//#define MOTOR_PIN1 MOTOR_PIN_PB7
-//#define MOTOR_PIN2 MOTOR_PIN_PB6
-//#define MOTOR_PIN3 MOTOR_PIN_PB10

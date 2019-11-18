@@ -4,41 +4,33 @@
 #define F405
 #define FortiniF4osd
 
+//***************REV 2 ONLY***************
+
 //LEDS
 #define LED_NUMBER 2
 #define LED1PIN GPIO_Pin_5
 #define LED1PORT GPIOB
+#define LED1_INVERT
 #define LED2PIN GPIO_Pin_6
 #define LED2PORT GPIOB
-#define LED1_INVERT
-#define LED2_INVERT
 #define BUZZER_PIN GPIO_Pin_4
 #define BUZZER_PIN_PORT GPIOB
 #define BUZZER_INVERT
 #define FPV_PIN GPIO_Pin_13
 #define FPV_PORT GPIOA
 
-//SPI, I2C & GYRO
+//GYRO
 #define ICM20602_SPI1
 #define ICM20602_NSS_PA8
 #define ICM20602_INT_PC4
-#define USE_DUMMY_I2C //todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
-//#define I2C_SDAPIN GPIO_Pin_10
-//#define I2C_SDAPORT GPIOA
-//#define I2C_SCLPIN GPIO_Pin_9
-//#define I2C_SCLPORT GPIOA
-//#define I2C_GYRO_ADDRESS 0x68
-//#define SOFTI2C_GYRO_ADDRESS 0x69
+#define USE_DUMMY_I2C
 #define GYRO_ID_1 0x12
 #define GYRO_ID_2 0xaf
 #define GYRO_ID_3 0xac
 #define GYRO_ID_4 0x98
 #define SENSOR_ROTATE_90_CCW
-//#define SENSOR_FLIP_180
-//#define SENSOR_ROTATE_90_CW
-//#define DISABLE_GYRO_CHECK
 
-// SPI PINS DEFINITONS & RADIO
+//RADIO
 #define USART_INVERTER_PIN GPIO_Pin_15
 #define USART_INVERTER_PORT GPIOC
 
@@ -52,16 +44,17 @@
 #define SOFTSPI_NONE
 #define RX_USART USART_PORT1
 #endif
+
 #ifndef SOFTSPI_NONE
 #define RADIO_CHECK
 #define SPI_MISO_PIN GPIO_Pin_10
 #define SPI_MISO_PORT GPIOA
 #define SPI_MOSI_PIN GPIO_Pin_9
 #define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_6
-#define SPI_CLK_PORT GPIOC
-#define SPI_SS_PIN GPIO_Pin_7
-#define SPI_SS_PORT GPIOC
+#define SPI_CLK_PIN GPIO_Pin_11
+#define SPI_CLK_PORT GPIOB
+#define SPI_SS_PIN GPIO_Pin_10
+#define SPI_SS_PORT GPIOB
 #endif
 
 //OSD

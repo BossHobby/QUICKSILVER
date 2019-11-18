@@ -14,24 +14,26 @@
 #define LED1_INVERT
 #define BUZZER_PIN GPIO_Pin_4
 #define BUZZER_PIN_PORT GPIOB
-#define BUZZER_INVERT
+//#define BUZZER_INVERT
 #define FPV_PIN GPIO_Pin_13
 #define FPV_PORT GPIOA
 
-//SPI, I2C & GYRO
+//GYRO
 #define MPU6XXX_SPI1
 #define MPU6XXX_NSS_PA4
 #define MPU6XXX_INT_PC4
-#define USE_DUMMY_I2C //todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
+#define USE_DUMMY_I2C
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x73
 #define GYRO_ID_3 0x78
 #define GYRO_ID_4 0x71
-#define SENSOR_ROTATE_90_CW
+#define SENSOR_ROTATE_180
 
-// SPI PINS DEFINITONS & RADIO
-#define USART_INVERTER_PIN GPIO_Pin_8
+//RADIO
+#define USART_INVERTER_PIN GPIO_Pin_8 //UART 6
 #define USART_INVERTER_PORT GPIOC
+//#define USART_INVERTER_PIN GPIO_Pin_9 //UART 3
+//#define USART_INVERTER_PORT GPIOC
 
 #define USART_PORTS \
   USART1_PA10PA9    \
@@ -74,12 +76,11 @@
 #endif
 
 // MOTOR PINS
-
-// NFE MOTORS NFE MOTORS NFE MOTORS
-#define MOTOR_PIN2 MOTOR_PIN_PB1
-#define MOTOR_PIN3 MOTOR_PIN_PA2
-#define MOTOR_PIN0 MOTOR_PIN_PB0
+#define MOTOR_PIN0 MOTOR_PIN_PA2
 #define MOTOR_PIN1 MOTOR_PIN_PA3
+#define MOTOR_PIN2 MOTOR_PIN_PB0
+#define MOTOR_PIN3 MOTOR_PIN_PB1
+
 
 // NFE 2in squirt motors
 //#define MOTOR_PIN2 MOTOR_PIN_PB1

@@ -14,32 +14,24 @@
 #define LED1PORT GPIOB
 #define BUZZER_PIN GPIO_Pin_4
 #define BUZZER_PIN_PORT GPIOB
-#define BUZZER_INVERT
+//#define BUZZER_INVERT
 #define FPV_PIN GPIO_Pin_13
 #define FPV_PORT GPIOA
 
-//SPI, I2C & GYRO
+//GYRO
 #define ICM20602_SPI1
 #define ICM20602_NSS_PA4
 #define ICM20602_INT_PC4
-#define USE_DUMMY_I2C //todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
-//#define I2C_SDAPIN GPIO_Pin_10
-//#define I2C_SDAPORT GPIOA
-//#define I2C_SCLPIN GPIO_Pin_9
-//#define I2C_SCLPORT GPIOA
-//#define I2C_GYRO_ADDRESS 0x68
-//#define SOFTI2C_GYRO_ADDRESS 0x69
+#define USE_DUMMY_I2C
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x12
 #define GYRO_ID_3 0x69
-//#define GYRO_ID_4 0x72
-//#define SENSOR_ROTATE_90_CCW
-#define SENSOR_FLIP_180
+#define GYRO_ID_4 0x72
 #define SENSOR_ROTATE_90_CW
 //#define DISABLE_GYRO_CHECK
 
-// SPI PINS DEFINITONS & RADIO
-#define USART_INVERTER_PIN GPIO_Pin_0
+//RADIO
+#define USART_INVERTER_PIN GPIO_Pin_0	//UART 1
 #define USART_INVERTER_PORT GPIOC
 
 #define USART_PORTS \
@@ -58,10 +50,10 @@
 #define SPI_MISO_PORT GPIOA
 #define SPI_MOSI_PIN GPIO_Pin_9
 #define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_6
-#define SPI_CLK_PORT GPIOC
-#define SPI_SS_PIN GPIO_Pin_7
-#define SPI_SS_PORT GPIOC
+#define SPI_CLK_PIN GPIO_Pin_11
+#define SPI_CLK_PORT GPIOB
+#define SPI_SS_PIN GPIO_Pin_10
+#define SPI_SS_PORT GPIOB
 #endif
 
 //VOLTAGE DIVIDER
@@ -80,6 +72,6 @@
 
 // MOTOR PINS
 #define MOTOR_PIN0 MOTOR_PIN_PA3
-#define MOTOR_PIN1 MOTOR_PIN_PB1
-#define MOTOR_PIN2 MOTOR_PIN_PA2
-#define MOTOR_PIN3 MOTOR_PIN_PB0
+#define MOTOR_PIN1 MOTOR_PIN_PA2
+#define MOTOR_PIN2 MOTOR_PIN_PB0
+#define MOTOR_PIN3 MOTOR_PIN_PB1

@@ -10,28 +10,21 @@
 
 //LEDS
 #define LED_NUMBER 2
-// red led
-#define LED1PIN GPIO_Pin_9
+#define LED1PIN GPIO_Pin_9		// red led
 #define LED1PORT GPIOB
-#define LED1_INVERT
-// green led
-#define LED2PIN GPIO_Pin_14
+#define LED2PIN GPIO_Pin_14		// green led
 #define LED2PORT GPIOA
 #define LED2_INVERT
-
 #define BUZZER_PIN GPIO_Pin_13
 #define BUZZER_PIN_PORT GPIOC
+#define FPV_PIN GPIO_Pin_13
+#define FPV_PORT GPIOA
 
-#define FPV_PIN GPIO_Pin_12
-#define FPV_PORT GPIOB
-
-//SPI, I2C & GYRO
+//GYRO
 #define ICM20602_SPI1
 #define ICM20602_NSS_PC2
 #define ICM20602_INT_PC3
-
-#define USE_DUMMY_I2C //todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
-
+#define USE_DUMMY_I2C
 #define SENSOR_ROTATE_90_CCW
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x12

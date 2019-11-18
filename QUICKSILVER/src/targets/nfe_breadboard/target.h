@@ -19,12 +19,11 @@
 #define FPV_PIN GPIO_Pin_13
 #define FPV_PORT GPIOA
 
-//SPI, I2C & GYRO
+//GYRO
 #define MPU6XXX_SPI2
 #define MPU6XXX_NSS_PB12
 #define MPU6XXX_INT_PA8
 #define USE_DUMMY_I2C
-//#define SENSOR_ROTATE_90_CCW
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x73
 #define GYRO_ID_3 0x78
@@ -44,7 +43,7 @@
 #define SOFTSPI_NONE
 #endif
 
-#ifndef SOFTSPI_NONE //sort this out later for use of bayang
+#ifndef SOFTSPI_NONE
 #define RADIO_CHECK
 #define SPI_MISO_PIN GPIO_Pin_2
 #define SPI_MISO_PORT GPIOA

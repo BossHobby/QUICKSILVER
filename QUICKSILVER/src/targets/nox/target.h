@@ -20,7 +20,7 @@
 #define FPV_PIN GPIO_Pin_13
 #define FPV_PORT GPIOA
 
-//SPI, I2C & GYRO
+//GYRO
 #define MPU6XXX_SPI2
 #define MPU6XXX_NSS_PB12
 #define MPU6XXX_INT_PA8
@@ -32,8 +32,8 @@
 #define GYRO_ID_4 0x71
 //#define DISABLE_GYRO_CHECK
 
-// SPI PINS DEFINITONS & RADIO
-#define USART_INVERTER_PIN GPIO_Pin_8
+//RADIO
+#define USART_INVERTER_PIN GPIO_Pin_14	//UART 2
 #define USART_INVERTER_PORT GPIOC
 
 #define USART_PORTS \
@@ -46,15 +46,15 @@
 #endif
 
 #ifndef SOFTSPI_NONE //sort this out later for use of bayang
-//#define RADIO_CHECK
-//#define SPI_MISO_PIN GPIO_Pin_10
-//#define SPI_MISO_PORT GPIOA
-//#define SPI_MOSI_PIN GPIO_Pin_9
-//#define SPI_MOSI_PORT GPIOA
-//#define SPI_CLK_PIN GPIO_Pin_6
-//#define SPI_CLK_PORT GPIOC
-//#define SPI_SS_PIN GPIO_Pin_7
-//#define SPI_SS_PORT GPIOC
+#define RADIO_CHECK
+#define SPI_MISO_PIN GPIO_Pin_7
+#define SPI_MISO_PORT GPIOB
+#define SPI_MOSI_PIN GPIO_Pin_6
+#define SPI_MOSI_PORT GPIOB
+#define SPI_CLK_PIN GPIO_Pin_3
+#define SPI_CLK_PORT GPIOA
+#define SPI_SS_PIN GPIO_Pin_2
+#define SPI_SS_PORT GPIOA
 #endif
 
 // OSD

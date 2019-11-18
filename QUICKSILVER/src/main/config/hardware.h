@@ -70,12 +70,12 @@
 
 // RGB led type ws2812 - ws2813
 // numbers over 8 could decrease performance
-#define RGB_LED_NUMBER 0
-#define RGB_LED_DMA
+//#define RGB_LED_NUMBER 0
+//#define RGB_LED_DMA
 
 // pin / port for the RGB led ( programming port ok )
-#define RGB_PIN GPIO_Pin_11
-#define RGB_PORT GPIOA
+//#define RGB_PIN GPIO_Pin_11
+//#define RGB_PORT GPIOA
 
 // pin for fpv switch ( turns off at failsafe )
 // GPIO_Pin_13 // SWDAT - GPIO_Pin_14 // SWCLK

@@ -15,26 +15,19 @@
 #define FPV_PIN GPIO_Pin_15
 #define FPV_PORT GPIOA
 
-//SPI, I2C & GYRO
+//GYRO
 #define MPU6XXX_SPI1
 #define MPU6XXX_NSS_PA4
 #define MPU6XXX_INT_PC4
-#define USE_DUMMY_I2C //todo: soft i2c is working for f4 but I dont think i have done hardware i2c - disabled for now since all f4 boards use spi gyro
-//#define I2C_SDAPIN GPIO_Pin_10
-//#define I2C_SDAPORT GPIOA
-//#define I2C_SCLPIN GPIO_Pin_9
-//#define I2C_SCLPORT GPIOA
-//#define I2C_GYRO_ADDRESS 0x68
-//#define SOFTI2C_GYRO_ADDRESS 0x69
+#define USE_DUMMY_I2C
 #define GYRO_ID_1 0x68
-//#define GYRO_ID_2 0x73
-//#define GYRO_ID_3 0x78
-//#define GYRO_ID_4 0x72
-//#define SENSOR_ROTATE_90_CCW
+#define GYRO_ID_2 0x73
+#define GYRO_ID_3 0x78
+#define GYRO_ID_4 0x72
 #define SENSOR_ROTATE_90_CW
 
-// SPI PINS DEFINITONS & RADIO
-#define USART_INVERTER_PIN GPIO_Pin_3
+//RADIO
+#define USART_INVERTER_PIN GPIO_Pin_3	//UART 1
 #define USART_INVERTER_PORT GPIOC
 
 #define USART_PORTS \
@@ -43,6 +36,7 @@
   USART3_PB11PB10   \
   USART4_PA1PA0     \
   USART6_PC7PC6
+//  USART5_PD2PC12
 
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
 #define RX_USART USART_PORT1
@@ -54,10 +48,10 @@
 #define SPI_MISO_PORT GPIOA
 #define SPI_MOSI_PIN GPIO_Pin_9
 #define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN GPIO_Pin_6
-#define SPI_CLK_PORT GPIOC
-#define SPI_SS_PIN GPIO_Pin_7
-#define SPI_SS_PORT GPIOC
+#define SPI_CLK_PIN GPIO_Pin_3
+#define SPI_CLK_PORT GPIOA
+#define SPI_SS_PIN GPIO_Pin_2
+#define SPI_SS_PORT GPIOA
 #endif
 
 //OSD
