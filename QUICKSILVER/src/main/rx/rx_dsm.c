@@ -138,8 +138,8 @@ void spektrumFrameStatus(void) {
 }
 
 void dsm_init(void) {
-  usart_rx_init(1); //initialize usart in drv_rx_serial
-  framestarted = 0; // set setup complete flag
+  serial_rx_init(RX_PROTOCOL_DSM); //initialize usart in drv_rx_serial
+  framestarted = 0;                // set setup complete flag
 }
 
 // Send Spektrum bind pulses to a GPIO e.g. TX1

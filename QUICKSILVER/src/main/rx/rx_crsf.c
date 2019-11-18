@@ -238,7 +238,7 @@ void crsfFrameStatus(void) {
 }
 
 void crsf_init(void) {
-  usart_rx_init(5);
+  serial_rx_init(RX_PROTOCOL_CRSF);
   // set setup complete flag
   framestarted = 0;
 }

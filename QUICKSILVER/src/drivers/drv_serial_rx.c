@@ -38,7 +38,7 @@ void usart_invert(void) {
 //FUNCTION TO INITIALIZE USART FOR A SERIAL RX CALLED FROM RECEIVER PROTOCOL
 
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
-void usart_rx_init(uint8_t RXProtocol) {
+void serial_rx_init(uint8_t RXProtocol) {
 #if defined(RX_DSM2_1024) || defined(RX_DSMX_2028)
   RXProtocol = RX_PROTOCOL_DSM;
 #endif

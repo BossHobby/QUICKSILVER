@@ -161,7 +161,7 @@ void rx_serial_init(void) {
   if (RXProtocol == RX_PROTOCOL_INVALID) { //No known protocol? Can't really set the radio up yet then can we?
     //findprotocol();
   } else {
-    usart_rx_init(RXProtocol); //There's already a known protocol, we're good.
+    serial_rx_init(RXProtocol); //There's already a known protocol, we're good.
   }
 
   switch (RXProtocol) {
@@ -921,7 +921,7 @@ void findprotocol(void) {
       if(protocolToCheck > RX_PROTOCOL_CRSF){ //(AKA 5)
         protocolToCheck = RX_PROTOCOL_DSM; //AKA 1
       }
-      usart_rx_init(protocolToCheck); //Configure a protocol!
+      serial_rx_init(protocolToCheck); //Configure a protocol!
     //delay(500000); //Don't need this now.
     }
     protocolDetectTimer++; //Should increment once per main loop

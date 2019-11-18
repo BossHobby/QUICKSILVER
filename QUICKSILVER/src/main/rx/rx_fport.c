@@ -155,7 +155,7 @@ void checkrx() {
   if (frameStatus < 0) //can't read a packet before you set up the uart.
   {
     // initialize USART for FPORT
-    usart_rx_init(4); //initialize usart in drv_rx_serial
+    serial_rx_init(RX_PROTOCOL_FPORT); //initialize usart in drv_rx_serial
     rxmode = !RXMODE_BIND;
     // set setup complete flag
     frameStatus = 0;

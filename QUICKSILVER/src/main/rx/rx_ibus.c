@@ -136,7 +136,7 @@ void RX_USART_ISR(void) {
 
 void ibus_init(void) {
   //Serial init bits are all in drv_rx_serial.c now
-  usart_rx_init(3); //Which is called here.
+  serial_rx_init(RX_PROTOCOL_IBUS); //Which is called here.
   rxmode = !RXMODE_BIND;
 
   // set setup complete flag
