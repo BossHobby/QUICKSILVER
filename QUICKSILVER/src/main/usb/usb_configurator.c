@@ -41,9 +41,10 @@ void usb_configurator(void) {
   switch (magic) {
   case USB_MAGIC_REBOOT:
     //  The following bits will reboot to DFU upon receiving 'R' (which is sent by BF configurator)
-    usb_serial_print("SYSTEM RESET\r\n");
-    delay(50 * 1000);
     systemResetToBootloader();
+    break;
+  case USB_MAGIC_SOFT_REBOOT:
+    NVIC_SystemReset();
     break;
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
   case USB_MAGIC_MSP:

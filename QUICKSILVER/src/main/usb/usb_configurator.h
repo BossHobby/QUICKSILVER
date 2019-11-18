@@ -9,6 +9,7 @@
 
 typedef enum {
   USB_MAGIC_REBOOT = 'R',
+  USB_MAGIC_SOFT_REBOOT = 'S',
   USB_MAGIC_MSP = '$',
   USB_MAGIC_QUIC = '#',
 } usb_magics;
