@@ -192,7 +192,16 @@ int main(void) {
 #endif
 
   vtx_init();
+
+#ifdef SERIAL_RX
+  // if our RX is a serial, only init if we have valid usart
+  if (profile.serial.rx != USART_PORT_INVALID) {
+    rx_init();
+  }
+#else
+  // we have a spi RX
   rx_init();
+#endif
 
   int count = 0;
   delay(1000);
@@ -478,7 +487,15 @@ int main(void) {
 #endif
 
     // receiver function
+#ifdef SERIAL_RX
+    // if our RX is a serial, only check if we have valid usart and its the one currently active
+    if (serial_rx_port == profile.serial.rx) {
+      checkrx();
+    }
+#else
+    // we have a spi RX
     checkrx();
+#endif
 
 #ifdef ENABLE_OSD
     osd_display();

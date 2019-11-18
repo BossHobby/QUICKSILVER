@@ -10,38 +10,39 @@
 #ifdef ENABLE_SMART_AUDIO
 
 #define SMART_AUDIO_BAUDRATE 4800
-#define port_def usart_port_defs[profile.serial.smart_audio]
+#define USART usart_port_defs[serial_smart_audio_port]
 
 smart_audio_settings_t smart_audio_settings;
 
 void serial_smart_audio_enter_tx() {
-  uint32_t tmp = port_def.channel->CR1;
+  uint32_t tmp = USART.channel->CR1;
   tmp &= ~(USART_CR1_TE | USART_CR1_RE);
   tmp |= USART_CR1_TE;
-  port_def.channel->CR1 = tmp;
+  USART.channel->CR1 = tmp;
 }
 
 void serial_smart_audio_enter_rx() {
-  uint32_t tmp = port_def.channel->CR1;
+  uint32_t tmp = USART.channel->CR1;
   tmp &= ~(USART_CR1_TE | USART_CR1_RE);
   tmp |= USART_CR1_RE;
-  port_def.channel->CR1 = tmp;
+  USART.channel->CR1 = tmp;
 }
 
 void serial_smart_audio_init(void) {
-  USART_Cmd(port_def.channel, DISABLE);
+  serial_smart_audio_port = profile.serial.smart_audio;
 
-  serial_enable_rcc(profile.serial.smart_audio);
+  USART_Cmd(USART.channel, DISABLE);
+
+  serial_enable_rcc(serial_smart_audio_port);
 
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStructure.GPIO_Pin = port_def.tx_pin;
-  GPIO_Init(port_def.gpio_port, &GPIO_InitStructure);
-
-  GPIO_PinAFConfig(port_def.gpio_port, port_def.tx_pin_source, port_def.gpio_af);
+  GPIO_InitStructure.GPIO_Pin = USART.tx_pin;
+  GPIO_Init(USART.gpio_port, &GPIO_InitStructure);
+  GPIO_PinAFConfig(USART.gpio_port, USART.tx_pin_source, USART.gpio_af);
 
   USART_InitTypeDef USART_InitStructure;
   USART_InitStructure.USART_BaudRate = SMART_AUDIO_BAUDRATE;
@@ -50,11 +51,11 @@ void serial_smart_audio_init(void) {
   USART_InitStructure.USART_Parity = USART_Parity_No;
   USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
   USART_InitStructure.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
-  USART_Init(port_def.channel, &USART_InitStructure);
+  USART_Init(USART.channel, &USART_InitStructure);
 
-  USART_HalfDuplexCmd(port_def.channel, ENABLE);
+  USART_HalfDuplexCmd(USART.channel, ENABLE);
 
-  USART_Cmd(port_def.channel, ENABLE);
+  USART_Cmd(USART.channel, ENABLE);
 }
 
 #define POLYGEN 0xd5
@@ -82,16 +83,16 @@ static uint8_t crc8_data(const uint8_t *data, const int8_t len) {
 
 void serial_smart_audio_send_data(uint8_t *data, uint32_t size) {
   for (uint32_t i = 0; i < size; i++) {
-    while (USART_GetFlagStatus(port_def.channel, USART_FLAG_TXE) == RESET)
+    while (USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET)
       ;
-    USART_SendData(port_def.channel, data[i]);
+    USART_SendData(USART.channel, data[i]);
   }
 }
 
 uint8_t serial_smart_audio_read_byte() {
-  while (USART_GetFlagStatus(port_def.channel, USART_FLAG_RXNE) == RESET)
+  while (USART_GetFlagStatus(USART.channel, USART_FLAG_RXNE) == RESET)
     ;
-  return USART_ReceiveData(port_def.channel);
+  return USART_ReceiveData(USART.channel);
 }
 
 uint8_t serial_smart_audio_read_byte_crc(uint8_t *crc) {

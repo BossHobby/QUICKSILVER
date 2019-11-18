@@ -35,6 +35,9 @@ typedef struct {
 
 extern usart_port_def_t usart_port_defs[USART_PORTS_MAX];
 
+extern usart_ports_t serial_rx_port;
+extern usart_ports_t serial_smart_audio_port;
+
 void serial_enable_rcc(usart_ports_t port);
 void serial_enable_isr(usart_ports_t port);
 

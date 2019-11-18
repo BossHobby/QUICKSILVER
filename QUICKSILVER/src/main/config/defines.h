@@ -233,6 +233,10 @@
 #define SWITCHABLE_FEATURE_2
 #endif
 
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
+#define SERIAL_RX
+#endif
+
 // for the ble beacon to work after in-flight reset
 #ifdef RX_BAYANG_PROTOCOL_BLE_BEACON
 #undef STOP_LOWBATTERY

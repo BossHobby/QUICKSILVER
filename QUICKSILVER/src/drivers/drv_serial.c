@@ -4,6 +4,9 @@
 #include "project.h"
 #include "usb_configurator.h"
 
+usart_ports_t serial_rx_port = USART_PORT_INVALID;
+usart_ports_t serial_smart_audio_port = USART_PORT_INVALID;
+
 //FUNCTION TO SET APB CLOCK TO USART BASED ON GIVEN UART
 void serial_enable_rcc(usart_ports_t port) {
   switch (usart_port_defs[port].channel_index) {
@@ -111,7 +114,7 @@ usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {
 #undef USART_PORT
 
 void handle_usart_isr(usart_ports_t channel) {
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
+#ifdef SERIAL_RX
   extern void RX_USART_ISR(void);
   if (profile.serial.rx == channel)
     RX_USART_ISR();

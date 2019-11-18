@@ -51,7 +51,9 @@ vtx_settings_t vtx_settings;
 
 void vtx_init() {
 #ifdef ENABLE_SMART_AUDIO
-  serial_smart_audio_init();
+  if (profile.serial.smart_audio != USART_PORT_INVALID) {
+    serial_smart_audio_init();
+  }
 #endif
 }
 
@@ -78,7 +80,7 @@ void vtx_update() {
 #endif
 
 #ifdef ENABLE_SMART_AUDIO
-  if (onground) {
+  if (onground && serial_smart_audio_port == profile.serial.smart_audio) {
     if (smart_audio_settings.version == 0) {
       // no smart audio detected, try again
       serial_smart_audio_send_payload(SA_CMD_GET_SETTINGS, NULL, 0);
@@ -109,21 +111,23 @@ void vtx_set(vtx_settings_t *vtx) {
 
 void vtx_set_frequency(vtx_band_t band, vtx_channel_t channel) {
 #ifdef ENABLE_SMART_AUDIO
-  if (smart_audio_settings.mode & SA_MODE_FREQUENCY) {
-    const uint16_t frequency = frequency_table[band][channel];
-    const uint8_t payload[2] = {
-        (frequency >> 8) & 0xFF,
-        frequency & 0xFF,
-    };
-    serial_smart_audio_send_payload(SA_CMD_SET_FREQUENCY, payload, 2);
-  } else {
-    const uint8_t channel_index = band * VTX_CHANNEL_MAX + channel;
-    const uint8_t payload[1] = {channel_index};
-    serial_smart_audio_send_payload(SA_CMD_SET_CHANNEL, payload, 1);
-  }
+  if (serial_smart_audio_port == profile.serial.smart_audio) {
+    if (smart_audio_settings.mode & SA_MODE_FREQUENCY) {
+      const uint16_t frequency = frequency_table[band][channel];
+      const uint8_t payload[2] = {
+          (frequency >> 8) & 0xFF,
+          frequency & 0xFF,
+      };
+      serial_smart_audio_send_payload(SA_CMD_SET_FREQUENCY, payload, 2);
+    } else {
+      const uint8_t channel_index = band * VTX_CHANNEL_MAX + channel;
+      const uint8_t payload[1] = {channel_index};
+      serial_smart_audio_send_payload(SA_CMD_SET_CHANNEL, payload, 1);
+    }
 
-  vtx_settings.band = band;
-  vtx_settings.channel = channel;
+    vtx_settings.band = band;
+    vtx_settings.channel = channel;
+  }
 #endif
 }
 

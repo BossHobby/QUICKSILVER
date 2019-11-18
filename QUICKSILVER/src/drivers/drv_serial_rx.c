@@ -11,7 +11,7 @@ extern uint8_t rxusart;
 //4 = FPORT
 //5 = CRSF
 
-#define port_def usart_port_defs[profile.serial.rx]
+#define USART usart_port_defs[serial_rx_port]
 
 //FUNCTION TO COMMAND EXTERNAL USART INVERTER HIGH OR LOW         todo: sort out target mapping tag in drv_rx_serial.h for a quick define from the taarget
 
@@ -37,8 +37,10 @@ void usart_invert(void) {
 
 //FUNCTION TO INITIALIZE USART FOR A SERIAL RX CALLED FROM RECEIVER PROTOCOL
 
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
+#ifdef SERIAL_RX
 void serial_rx_init(uint8_t RXProtocol) {
+  serial_rx_port = profile.serial.rx;
+
 #if defined(RX_DSM2_1024) || defined(RX_DSMX_2028)
   RXProtocol = RX_PROTOCOL_DSM;
 #endif
@@ -54,6 +56,7 @@ void serial_rx_init(uint8_t RXProtocol) {
 #if defined(RX_CRSF)
   RXProtocol = RX_PROTOCOL_CRSF;
 #endif
+
   // make sure there is some time to program the board if SDA pins are reinitialized as GPIO
   if (gettime() < 2000000)
     return;
@@ -69,18 +72,18 @@ void serial_rx_init(uint8_t RXProtocol) {
   }
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 
-  serial_enable_rcc(profile.serial.rx);
+  serial_enable_rcc(serial_rx_port);
 
   if (RXProtocol == RX_PROTOCOL_FPORT) {
-    GPIO_InitStructure.GPIO_Pin = port_def.tx_pin;
-    GPIO_Init(port_def.gpio_port, &GPIO_InitStructure);
+    GPIO_InitStructure.GPIO_Pin = USART.tx_pin;
+    GPIO_Init(USART.gpio_port, &GPIO_InitStructure);
 
-    GPIO_PinAFConfig(port_def.gpio_port, port_def.tx_pin_source, port_def.gpio_af);
+    GPIO_PinAFConfig(USART.gpio_port, USART.tx_pin_source, USART.gpio_af);
   } else {
-    GPIO_InitStructure.GPIO_Pin = port_def.rx_pin;
-    GPIO_Init(port_def.gpio_port, &GPIO_InitStructure);
+    GPIO_InitStructure.GPIO_Pin = USART.rx_pin;
+    GPIO_Init(USART.gpio_port, &GPIO_InitStructure);
 
-    GPIO_PinAFConfig(port_def.gpio_port, port_def.rx_pin_source, port_def.gpio_af);
+    GPIO_PinAFConfig(USART.gpio_port, USART.rx_pin_source, USART.gpio_af);
   }
 
   USART_InitTypeDef USART_InitStructure;
@@ -110,26 +113,26 @@ void serial_rx_init(uint8_t RXProtocol) {
   }
 
   if (RXProtocol == RX_PROTOCOL_FPORT) {
-    USART_HalfDuplexCmd(port_def.channel, ENABLE);
+    USART_HalfDuplexCmd(USART.channel, ENABLE);
   } else {
-    USART_HalfDuplexCmd(port_def.channel, DISABLE);
+    USART_HalfDuplexCmd(USART.channel, DISABLE);
   }
 
-  USART_Init(port_def.channel, &USART_InitStructure);
+  USART_Init(USART.channel, &USART_InitStructure);
 
 #ifdef F0
 #ifdef INVERT_UART
-  USART_InvPinCmd(port_def.channel, USART_InvPin_Rx | USART_InvPin_Tx, ENABLE);
+  USART_InvPinCmd(USART.channel, USART_InvPin_Rx | USART_InvPin_Tx, ENABLE);
 #endif
   // swap rx/tx pins - available on F0 targets
 #ifdef F0_USART_PINSWAP
-  USART_SWAPPinCmd(port_def.channel, ENABLE);
+  USART_SWAPPinCmd(USART.channel, ENABLE);
 #endif
 #endif
 
-  USART_ITConfig(port_def.channel, USART_IT_RXNE, ENABLE);
-  USART_Cmd(port_def.channel, ENABLE);
+  USART_ITConfig(USART.channel, USART_IT_RXNE, ENABLE);
+  USART_Cmd(USART.channel, ENABLE);
 
-  serial_enable_isr(profile.serial.rx);
+  serial_enable_isr(serial_rx_port);
 }
 #endif
