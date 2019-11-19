@@ -159,7 +159,7 @@ void rx_serial_init(void) {
   frameStatus = 0; //Let the uart ISR do its stuff.
 
   if (RXProtocol == RX_PROTOCOL_INVALID) { //No known protocol? Can't really set the radio up yet then can we?
-    //findprotocol();
+    findprotocol();
   } else {
     serial_rx_init(RXProtocol); //There's already a known protocol, we're good.
   }

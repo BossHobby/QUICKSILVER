@@ -39,8 +39,6 @@ void usart_invert(void) {
 
 #ifdef SERIAL_RX
 void serial_rx_init(uint8_t RXProtocol) {
-  serial_rx_port = profile.serial.rx;
-
 #if defined(RX_DSM2_1024) || defined(RX_DSMX_2028)
   RXProtocol = RX_PROTOCOL_DSM;
 #endif
@@ -58,8 +56,10 @@ void serial_rx_init(uint8_t RXProtocol) {
 #endif
 
   // make sure there is some time to program the board if SDA pins are reinitialized as GPIO
-  if (gettime() < 2000000)
-    return;
+  //if (gettime() < 2000000)
+  //  return;
+
+  serial_rx_port = profile.serial.rx;
 
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
