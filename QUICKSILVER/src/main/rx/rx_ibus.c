@@ -134,6 +134,7 @@ void RX_USART_ISR(void) {
   rx_end %= (RX_BUFF_SIZE);
 }
 
+// initialize ibus
 void ibus_init(void) {
   //Serial init bits are all in drv_rx_serial.c now
   serial_rx_init(RX_PROTOCOL_IBUS); //Which is called here.
@@ -144,12 +145,12 @@ void ibus_init(void) {
 }
 
 void rx_init(void) {
+  ibus_init();
 }
 
 void checkrx() {
-  if (frameStatus < 0) //can't read a packet before you set up the uart.
-  {
-    // initialize ibus
+  if (frameStatus < 0) {
+    //can't read a packet before you set up the uart.
     ibus_init();
     // set in routine above "frameStatus = 0;"
   }

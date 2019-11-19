@@ -138,8 +138,10 @@ void spektrumFrameStatus(void) {
 }
 
 void dsm_init(void) {
+  failsafe = 1;                    //kill motors while initializing usart (maybe not necessary)
   serial_rx_init(RX_PROTOCOL_DSM); //initialize usart in drv_rx_serial
   framestarted = 0;                // set setup complete flag
+  rxmode = !RXMODE_BIND;           // put LEDS in normal signal status
 }
 
 // Send Spektrum bind pulses to a GPIO e.g. TX1
@@ -194,13 +196,12 @@ void rx_spektrum_bind(void) {
 }
 
 void rx_init(void) {
+  dsm_init();
 }
 
 void checkrx() {
   if (framestarted < 0) {
-    failsafe = 1;          //kill motors while initializing usart (maybe not necessary)
-    dsm_init();            // toggles "framestarted = 0;" after initializing
-    rxmode = !RXMODE_BIND; // put LEDS in normal signal status
+    dsm_init(); // toggles "framestarted = 0;" after initializing
   }
 
   if (framestarted == 0) { // this is the failsafe condition

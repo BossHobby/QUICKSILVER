@@ -118,6 +118,7 @@ void RX_USART_ISR(void) {
   rx_end %= (RX_BUFF_SIZE);
 }
 
+// initialize sbus
 void sbus_init(void) {
   serial_rx_init(RX_PROTOCOL_SBUS); //initialize usart in drv_rx_serial
   rxmode = !RXMODE_BIND;
@@ -126,12 +127,12 @@ void sbus_init(void) {
 }
 
 void rx_init(void) {
+  sbus_init();
 }
 
 void checkrx() {
-  if (frameStatus < 0) //can't read a packet before you set up the uart.
-  {
-    // initialize sbus
+  if (frameStatus < 0) {
+    //can't read a packet before you set up the uart.
     sbus_init();
     // set in routine above "frameStatus = 0;"
   }

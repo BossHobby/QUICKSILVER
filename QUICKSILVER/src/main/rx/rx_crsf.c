@@ -238,22 +238,20 @@ void crsfFrameStatus(void) {
 }
 
 void crsf_init(void) {
+  failsafe = 1; //kill motors while initializing usart (maybe not necessary)
   serial_rx_init(RX_PROTOCOL_CRSF);
   // set setup complete flag
   framestarted = 0;
+  rxmode = !RXMODE_BIND; // put LEDS in normal signal status
 }
 
 void rx_init(void) {
+  crsf_init();
 }
 
-void checkrx()
-
-{
-
+void checkrx() {
   if (framestarted < 0) {
-    failsafe = 1;          //kill motors while initializing usart (maybe not necessary)
-    crsf_init();           // toggles "framestarted = 0;" after initializing
-    rxmode = !RXMODE_BIND; // put LEDS in normal signal status
+    crsf_init(); // toggles "framestarted = 0;" after initializing
   }
 
   if (framestarted == 0) { // this is the failsafe condition

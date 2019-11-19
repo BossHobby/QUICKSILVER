@@ -148,17 +148,22 @@ void RX_USART_ISR(void) {
   rx_end %= (RX_BUFF_SIZE);
 }
 
+void fport_init() {
+  // initialize USART for FPORT
+  serial_rx_init(RX_PROTOCOL_FPORT); //initialize usart in drv_rx_serial
+  rxmode = !RXMODE_BIND;
+  // set setup complete flag
+  frameStatus = 0;
+}
+
 void rx_init(void) {
+  fport_init();
 }
 
 void checkrx() {
-  if (frameStatus < 0) //can't read a packet before you set up the uart.
-  {
-    // initialize USART for FPORT
-    serial_rx_init(RX_PROTOCOL_FPORT); //initialize usart in drv_rx_serial
-    rxmode = !RXMODE_BIND;
-    // set setup complete flag
-    frameStatus = 0;
+  if (frameStatus < 0) {
+    //can't read a packet before you set up the uart.
+    fport_init()
   }
 
   if (frameStatus == 1) //UART says there's something to look at. Let's look at it.
