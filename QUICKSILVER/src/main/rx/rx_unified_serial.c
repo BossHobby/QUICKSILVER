@@ -74,10 +74,9 @@ unsigned long time_lastframe;
 int rx_state = 0;
 int bind_safety = 0;
 int channels[16];
-uint16_t CRCByte = 0;            //Defined here to allow Debug to see it.
-uint8_t protocolToCheck = 1;     //Defined here to allow Debug to see it.
+uint16_t CRCByte = 0;             //Defined here to allow Debug to see it.
+uint8_t protocolToCheck = 1;      //Defined here to allow Debug to see it.
 uint16_t protocolDetectTimer = 0; //Defined here to allow Debug to see it.
-
 
 int failsafe_sbus_failsafe = 0;
 int failsafe_siglost = 0;
@@ -149,7 +148,7 @@ void RX_USART_ISR(void) {
 
 void rx_init(void) {
   //if (rx_bind_enable == 0)
-    //RXProtocol = 0;
+  //RXProtocol = 0;
   rx_serial_init();
 }
 
@@ -189,73 +188,67 @@ void rx_serial_init(void) {
 }
 
 void checkrx() {
-if(RXProtocol == RX_PROTOCOL_INVALID){ //If there's no protocol, there's no reason to check failsafe.
-  findprotocol();
-}
-else{
-  //FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!
-  if (gettime() - time_lastframe > 1000000) {
-    failsafe_noframes = 1;
-  } else
-    failsafe_noframes = 0;
+  if (RXProtocol == RX_PROTOCOL_INVALID) { //If there's no protocol, there's no reason to check failsafe.
+    findprotocol();
+  } else {
+    //FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!
+    if (gettime() - time_lastframe > 1000000) {
+      failsafe_noframes = 1;
+    } else
+      failsafe_noframes = 0;
 
-  // add the 3 failsafes together
-  if (rx_ready)
-    failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
+    // add the 3 failsafes together
+    if (rx_ready)
+      failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
 
-  if (frameStatus == 1) { //USART ISR says there's enough frame to look at. Look at it.
-    switch (RXProtocol) {
-    case RX_PROTOCOL_DSM: // DSM
-      processDSMX();
-      break;
-    case RX_PROTOCOL_SBUS: // SBUS
-      processSBUS();
-      break;
-    case RX_PROTOCOL_IBUS: // IBUS
-      processIBUS();
-      break;
-    case RX_PROTOCOL_FPORT: // FPORT
-      processFPORT();
-      break;
-    case RX_PROTOCOL_CRSF: // CRSF
-      processCRSF();
-      break;
+    if (frameStatus == 1) { //USART ISR says there's enough frame to look at. Look at it.
+      switch (RXProtocol) {
+      case RX_PROTOCOL_DSM: // DSM
+        processDSMX();
+        break;
+      case RX_PROTOCOL_SBUS: // SBUS
+        processSBUS();
+        break;
+      case RX_PROTOCOL_IBUS: // IBUS
+        processIBUS();
+        break;
+      case RX_PROTOCOL_FPORT: // FPORT
+        processFPORT();
+        break;
+      case RX_PROTOCOL_CRSF: // CRSF
+        processCRSF();
+        break;
 
-    default:
-      break;
+      default:
+        break;
+      }
+    } else if (frameStatus == 3) {
+      switch (RXProtocol) {
+      case RX_PROTOCOL_DSM: // DSM
+        // Run DSM Telemetry
+        break;
+      case RX_PROTOCOL_SBUS: // SBUS
+        //Run smartport telemetry
+        break;
+      case RX_PROTOCOL_IBUS: // IBUS
+        //IBUS Telemetry function call goes here
+        break;
+      case RX_PROTOCOL_FPORT: // FPORT
+        sendFPORTTelemetry();
+        break;
+      case RX_PROTOCOL_CRSF: // CRSF
+        //CRSF telemetry function call yo
+        break;
+
+      default:
+        break;
+      }
+    } else if (frameStatus == -1) { //RX/USART not set up.
+      rx_serial_init();             //Set it up. This includes autodetecting protocol if necesary
+      rxmode = !RXMODE_BIND;
     }
-  } else if (frameStatus == 3) {
-    switch (RXProtocol) {
-    case RX_PROTOCOL_DSM: // DSM
-      // Run DSM Telemetry
-      break;
-    case RX_PROTOCOL_SBUS: // SBUS
-      //Run smartport telemetry
-      break;
-    case RX_PROTOCOL_IBUS: // IBUS
-      //IBUS Telemetry function call goes here
-      break;
-    case RX_PROTOCOL_FPORT: // FPORT
-      sendFPORTTelemetry();
-      break;
-    case RX_PROTOCOL_CRSF: // CRSF
-      //CRSF telemetry function call yo
-      break;
-
-    default:
-      break;
-    }
-  } else if (frameStatus == -1) { //RX/USART not set up.
-    rx_serial_init();             //Set it up. This includes autodetecting protocol if necesary
-    rxmode = !RXMODE_BIND;
   }
 }
-}
-
-
-
-
-
 
 void processDSMX(void) {
 
@@ -352,10 +345,6 @@ void processDSMX(void) {
     }
   }
 }
-
-
-
-
 
 void processSBUS(void) {
   for (uint8_t counter = 0; counter < 25; counter++) {    //First up, get therx_data out of the RX buffer and into somewhere safe
@@ -485,9 +474,6 @@ void processSBUS(void) {
 
 } // end frame received
 
-
-
-
 void processIBUS(void) {
 
   uint8_t frameLength = 0;
@@ -602,9 +588,6 @@ void processIBUS(void) {
     //while(1){} Enable for debugging to lock the FC if CRC fails. In the air we just drop CRC-failed packets
   }
 } // end frame received
-
-
-
 
 void processFPORT(void) {
   uint8_t frameLength = 0;
@@ -774,9 +757,6 @@ void processFPORT(void) {
   } // end frame received
 }
 
-
-
-
 void sendFPORTTelemetry() {
   if (telemetryCounter > 0 && rx_frame_position >= 40 && frameStatus == 3) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
     telemetryCounter = 0;
@@ -897,16 +877,9 @@ void sendFPORTTelemetry() {
   }
 }
 
-
-
-
 void processCRSF(void) {
   //We should probably put something here.
 }
-
-
-
-
 
 //NOTE TO SELF: Put in some double-check code on the detections somehow.
 //NFE note:  how about we force hold failsafe until protocol is saved.  This acts like kind of a check on proper mapping/decoding as stick gesture must be used as a test
@@ -917,16 +890,16 @@ void findprotocol(void) {
   //protocolToCheck = RX_PROTOCOL_DSM; //Start with DSMX
 
   //while (RXProtocol == RX_PROTOCOL_INVALID) {
-    if(protocolDetectTimer == 0){
-      protocolToCheck++; //Check the next protocol down the list.
-      if(protocolToCheck > RX_PROTOCOL_CRSF){ //(AKA 5)
-        protocolToCheck = RX_PROTOCOL_DSM; //AKA 1
-      }
-      serial_rx_init(protocolToCheck); //Configure a protocol!
-    //delay(500000); //Don't need this now.
+  if (protocolDetectTimer == 0) {
+    protocolToCheck++;                        //Check the next protocol down the list.
+    if (protocolToCheck > RX_PROTOCOL_CRSF) { //(AKA 5)
+      protocolToCheck = RX_PROTOCOL_DSM;      //AKA 1
     }
-    protocolDetectTimer++; //Should increment once per main loop
-/*
+    serial_rx_init(protocolToCheck); //Configure a protocol!
+    //delay(500000); //Don't need this now.
+  }
+  protocolDetectTimer++;  //Should increment once per main loop
+                          /*
     while ((frameStatus == 0 || frameStatus == 3) && protocolDetectTimer < 1) { // Wait 2 seconds to see if something turns up.
       for (int i = 0; i < protocolToCheck; i++) {
         ledon(255);
@@ -939,56 +912,56 @@ void findprotocol(void) {
       protocolDetectTimer++;
     }
 */
-    if (frameStatus == 1) { //We got something! What is it?
-      switch (protocolToCheck) {
-      case RX_PROTOCOL_DSM:                                                         // DSM
-        if (rx_buffer[0] == 0x00 && rx_buffer[1] <= 0x04 && rx_buffer[2] != 0x00) { // allow up to 4 fades or detection will fail.  Some dsm rx will log a fade or two during binding
-          processDSMX();
-          if (bind_safety > 0)
-            RXProtocol = protocolToCheck;
-        }
-      case RX_PROTOCOL_SBUS: // SBUS
-        if (rx_buffer[0] == 0x0F) {
+  if (frameStatus == 1) { //We got something! What is it?
+    switch (protocolToCheck) {
+    case RX_PROTOCOL_DSM:                                                         // DSM
+      if (rx_buffer[0] == 0x00 && rx_buffer[1] <= 0x04 && rx_buffer[2] != 0x00) { // allow up to 4 fades or detection will fail.  Some dsm rx will log a fade or two during binding
+        processDSMX();
+        if (bind_safety > 0)
           RXProtocol = protocolToCheck;
-        }
-        break;
-      case RX_PROTOCOL_IBUS: // IBUS
-        if (rx_buffer[0] == 0x20) {
-          RXProtocol = protocolToCheck;
-        }
-        break;
-      case RX_PROTOCOL_FPORT: // FPORT
-        if (rx_buffer[0] == 0x7E) {
-          RXProtocol = protocolToCheck;
-        }
-        break;
-      case RX_PROTOCOL_CRSF:                  // CRSF
-        if (rx_buffer[0] != 0xFF && 1 == 2) { //Need to look up the expected start value.
-          RXProtocol = protocolToCheck;
-        }
-        break;
-      default:
-        frameStatus = 3; //Whatever we got, it didn't make sense. Mark the frame as Checked and start over.
-        break;
       }
+    case RX_PROTOCOL_SBUS: // SBUS
+      if (rx_buffer[0] == 0x0F) {
+        RXProtocol = protocolToCheck;
+      }
+      break;
+    case RX_PROTOCOL_IBUS: // IBUS
+      if (rx_buffer[0] == 0x20) {
+        RXProtocol = protocolToCheck;
+      }
+      break;
+    case RX_PROTOCOL_FPORT: // FPORT
+      if (rx_buffer[0] == 0x7E) {
+        RXProtocol = protocolToCheck;
+      }
+      break;
+    case RX_PROTOCOL_CRSF:                  // CRSF
+      if (rx_buffer[0] != 0xFF && 1 == 2) { //Need to look up the expected start value.
+        RXProtocol = protocolToCheck;
+      }
+      break;
+    default:
+      frameStatus = 3; //Whatever we got, it didn't make sense. Mark the frame as Checked and start over.
+      break;
     }
+  }
 
-    //protocolToCheck++;
-    //if (protocolToCheck > 5) {
-    //  protocolToCheck = 1;
-    //  rxusart = 1;
-    //}
+  //protocolToCheck++;
+  //if (protocolToCheck > 5) {
+  //  protocolToCheck = 1;
+  //  rxusart = 1;
+  //}
   //}
   //frameStatus = 3; //All done!
   //debug.max_cpu_loop_number = gettime();
   //lastlooptime = gettime();
 
-  if(RXProtocol != RX_PROTOCOL_INVALID){
+  if (RXProtocol != RX_PROTOCOL_INVALID) {
     //rx_bind_enable = 1; NFE doesn't like this, and is convincing.
   }
 
-  if(protocolDetectTimer > 4000){ //4000 loops, half a second
-    protocolDetectTimer = 0; // Reset timer, triggering a shift to detecting the next protocol
+  if (protocolDetectTimer > 4000) { //4000 loops, half a second
+    protocolDetectTimer = 0;        // Reset timer, triggering a shift to detecting the next protocol
   }
 }
 
