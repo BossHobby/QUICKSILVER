@@ -81,7 +81,7 @@ void vtx_update() {
 #endif
 
 #ifdef ENABLE_SMART_AUDIO
-  if (onground && serial_smart_audio_port == profile.serial.smart_audio) {
+  if (onground && serial_smart_audio_port == profile.serial.smart_audio && serial_smart_audio_port != USART_PORT_INVALID) {
     static uint8_t connect_tries = 0;
     if (smart_audio_settings.version == 0 && connect_tries < 3) {
       // no smart audio detected, try again
@@ -114,7 +114,7 @@ void vtx_set(vtx_settings_t *vtx) {
 
 void vtx_set_frequency(vtx_band_t band, vtx_channel_t channel) {
 #ifdef ENABLE_SMART_AUDIO
-  if (serial_smart_audio_port == profile.serial.smart_audio) {
+  if (serial_smart_audio_port == profile.serial.smart_audio && serial_smart_audio_port != USART_PORT_INVALID) {
     if (smart_audio_settings.mode & SA_MODE_FREQUENCY) {
       const uint16_t frequency = frequency_table[band][channel];
       const uint8_t payload[2] = {

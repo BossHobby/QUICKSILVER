@@ -489,7 +489,7 @@ int main(void) {
     // receiver function
 #ifdef SERIAL_RX
     // if our RX is a serial, only check if we have valid usart and its the one currently active
-    if (serial_rx_port == profile.serial.rx) {
+    if (serial_rx_port == profile.serial.rx && serial_rx_port != USART_PORT_INVALID) {
       checkrx();
     }
 #else
