@@ -82,11 +82,13 @@ void vtx_update() {
 
 #ifdef ENABLE_SMART_AUDIO
   if (onground && serial_smart_audio_port == profile.serial.smart_audio) {
-    if (smart_audio_settings.version == 0) {
+    static uint8_t connect_tries = 0;
+    if (smart_audio_settings.version == 0 && connect_tries < 3) {
       // no smart audio detected, try again
       serial_smart_audio_send_payload(SA_CMD_GET_SETTINGS, NULL, 0);
       // reset loop time
       lastlooptime = gettime();
+      connect_tries++;
     } else if (smart_audio_detected == 0) {
       int8_t channel_index = -1;
       if (smart_audio_settings.mode & SA_MODE_FREQUENCY) {
