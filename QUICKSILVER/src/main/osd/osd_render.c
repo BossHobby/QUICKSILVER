@@ -52,7 +52,6 @@ unsigned long *callsign6 = (osd_element + 5);
 unsigned long *fuelgauge_volts = (osd_element + 6);
 unsigned long *filtered_volts = (osd_element + 7);
 unsigned long *exact_volts = (osd_element + 8);
-
 unsigned long *flight_mode = (osd_element + 9);
 unsigned long *rssi = (osd_element + 10);
 unsigned long *stopwatch = (osd_element + 11);
@@ -937,12 +936,11 @@ void osd_display(void) {
 	  if (osd_menu_phase == 4) osd_select_menu_item(2,level_submenu_map, SUB_MENU);
 	  break;
 
-  case 21:		//edit torque boost
+  case 21:		//motor boost submenu
 	  last_display_phase = 12;
-	  print_osd_menu_strings(3, 2, torqueboost_labels, torqueboost_positions);
-	  print_osd_adjustable_float(3, 1, torqueboost_ptr, torqueboost_grid, torqueboost_data_positions, 1);
-	  if (osd_menu_phase == 5) osd_float_adjust(torqueboost_ptr, 1, 1, torqueboost_adjust_limits, 0.1);
-	  break;
+	  print_osd_menu_strings(3, 2, motor_boost_labels, motor_boost_positions);
+	  if (osd_menu_phase == 4) osd_select_menu_item(2,motor_boost_map, SUB_MENU);
+      break;
 
   case 22:		//edit digital idle
 	  last_display_phase = 12;
@@ -964,7 +962,20 @@ void osd_display(void) {
 	  print_osd_adjustable_float(6, 4, level_pid_ptr, levelmode_grid, levelmode_data_positions, 1);
 	  if (osd_menu_phase == 11) osd_float_adjust(level_pid_ptr, 2, 2, levelmode_adjust_limits, 0.5);
 	  break;
+//**********************************
+  case 25:		//edit torque boost
+	  last_display_phase = 21;
+	  print_osd_menu_strings(3, 2, torqueboost_labels, torqueboost_positions);
+	  print_osd_adjustable_float(3, 1, torqueboost_ptr, torqueboost_grid, torqueboost_data_positions, 1);
+	  if (osd_menu_phase == 5) osd_float_adjust(torqueboost_ptr, 1, 1, torqueboost_adjust_limits, 0.1);
+	  break;
 
+  case 26:		//edit throttle boost
+	  last_display_phase = 21;
+	  print_osd_menu_strings(3, 2, throttleboost_labels, throttleboost_positions);
+	  print_osd_adjustable_float(3, 1, throttleboost_ptr, throttleboost_grid, throttleboost_data_positions, 1);
+	  if (osd_menu_phase == 5) osd_float_adjust(throttleboost_ptr, 1, 1, throttleboost_adjust_limits, 0.5);
+	  break;
 
   }
 if (osd_display_phase !=2 && rx_aux_on(AUX_ARMING)) binding_while_armed = 1;	//final safety check to disallow arming during OSD operation

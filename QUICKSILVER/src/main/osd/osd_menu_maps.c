@@ -98,7 +98,7 @@ const char vtx_temp_labels[3][21] = { {"VTX CONTROLS"},{"UNDER"},{"DEVELOPMENT"}
 const uint8_t vtx_temp_positions[3][2] = { {9, 1}, {7, 4}, {7,5} };
 
 //special features menu map
-const char special_features_labels[6][21] = { {"SPECIAL FEATURES"},{"STICK BOOST"},{"LOW BATTERY"},{"LEVEL MODE"},{"TORQUE BOOST"},{"DIGITAL IDLE"} };
+const char special_features_labels[6][21] = { {"SPECIAL FEATURES"},{"STICK BOOST"},{"LOW BATTERY"},{"LEVEL MODE"},{"MOTOR BOOST"},{"DIGITAL IDLE"} };
 const uint8_t special_features_positions[6][2] = { {7, 1}, {7, 4}, {7, 5}, {7, 6}, {7, 7}, {7, 8} };
 const uint8_t special_features_map[] = {13, 19, 20, 21, 22};					//case numbers for {stickboost}, etc ...adding more soon
 
@@ -145,6 +145,11 @@ const uint8_t levelmode_grid [4][2] = {{1, 1}, {2, 1}, {1, 2}, {2, 2}};
 const uint8_t levelmode_data_positions[4][2] = { {19, 6}, {24, 6}, {19, 7}, {24, 7} };
 const float levelmode_adjust_limits[4][2] = { {0, 20.0}, {0, 10.0}, {0, 20.0}, {0, 10.0} };
 
+//motor boost menu map
+const char motor_boost_labels[3][21] = { {"MOTOR BOOST TYPES"},{"TORQUE BOOST"},{"THROTTLE BOOST"} };
+const uint8_t motor_boost_positions[3][2] = { {7, 1}, {7, 4}, {7, 5} };
+const uint8_t motor_boost_map[] = {25, 26};					//case numbers for TORQUE BOOST, THROTTLE BOOST
+
 //torque boost map
 float *torqueboost_ptr[1] = {&profile.motor.torque_boost};
 const char torqueboost_labels[3][21] = { {"TORQUE BOOST"},{"MOTOR TORQUE BOOST"},{"SAVE AND EXIT"} };
@@ -152,6 +157,14 @@ const uint8_t torqueboost_positions[3][2] = { {9, 1},{4, 5},{4, 14} };
 const uint8_t torqueboost_grid [1][2] = {{1, 1}};
 const uint8_t torqueboost_data_positions[1][2] = { {22, 5} };
 const float torqueboost_adjust_limits[1][2] = { {0, 3.0} };
+
+//throttle boost map
+float *throttleboost_ptr[1] = {&profile.motor.throttle_boost};
+const char throttleboost_labels[3][21] = { {"THROTTLE BOOST"},{"MOTOR THROTTLE BOOST"},{"SAVE AND EXIT"} };
+const uint8_t throttleboost_positions[3][2] = { {8, 1},{2, 5},{2, 14} };
+const uint8_t throttleboost_grid [1][2] = {{1, 1}};
+const uint8_t throttleboost_data_positions[1][2] = { {22, 5} };
+const float throttleboost_adjust_limits[1][2] = { {0, 10.0} };
 
 //digital idle map
 float *motoridle_ptr[1] = {&profile.motor.digital_idle};

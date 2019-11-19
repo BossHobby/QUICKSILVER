@@ -141,6 +141,11 @@ extern const uint8_t levelmode_grid [4][2];
 extern const uint8_t levelmode_data_positions[4][2];
 extern const float levelmode_adjust_limits[4][2];
 
+//motor boost menu map
+extern const char motor_boost_labels[3][21];
+extern const uint8_t motor_boost_positions[3][2];
+extern const uint8_t motor_boost_map[];
+
 //torque boost map
 extern float *torqueboost_ptr[1];
 extern const char torqueboost_labels[3][21];
@@ -148,6 +153,14 @@ extern const uint8_t torqueboost_positions[3][2];
 extern const uint8_t torqueboost_grid [1][2];
 extern const uint8_t torqueboost_data_positions[1][2];
 extern const float torqueboost_adjust_limits[1][2];
+
+//throttle boost map
+float *throttleboost_ptr[1];
+const char throttleboost_labels[3][21];
+const uint8_t throttleboost_positions[3][2];
+const uint8_t throttleboost_grid [1][2];
+const uint8_t throttleboost_data_positions[1][2];
+const float throttleboost_adjust_limits[1][2];
 
 //digital idle map
 extern float *motoridle_ptr[1];
