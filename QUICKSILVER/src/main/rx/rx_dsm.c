@@ -66,7 +66,7 @@ float dsmx_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
 uint16_t rssi_channel; // Stores the raw unscaled RX RSSI data.
 float rx_rssi;
 
-#define USART usart_port_defs[profile.serial.rx]
+#define USART usart_port_defs[serial_rx_port]
 
 // Receive ISR callback
 void RX_USART_ISR(void) {

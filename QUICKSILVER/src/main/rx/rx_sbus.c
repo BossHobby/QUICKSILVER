@@ -73,7 +73,7 @@ int stat_overflow;
 extern profile_t profile;
 float rx_rssi;
 
-#define USART usart_port_defs[profile.serial.rx]
+#define USART usart_port_defs[serial_rx_port]
 
 //void SERIAL_RX_USART_IRQHandler(void)
 void RX_USART_ISR(void) {

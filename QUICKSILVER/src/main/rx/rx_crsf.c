@@ -61,7 +61,7 @@ int rx_bind_enable = 0;
 #define CRSF_MSP_TX_BUF_SIZE 128
 #define CRSF_PAYLOAD_SIZE_MAX 60
 
-#define USART usart_port_defs[profile.serial.rx]
+#define USART usart_port_defs[serial_rx_port]
 
 int crsfFrameDone = 0;
 uint32_t crsfChannelData[CRSF_MAX_CHANNEL];

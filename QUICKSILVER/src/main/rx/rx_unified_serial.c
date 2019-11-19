@@ -111,7 +111,7 @@ uint16_t SbusTelemetryIDs[] = {
 uint8_t telemetryPosition = 0; //This iterates through the above, you can only send one sensor per frame.
 uint8_t teleCounter = 0;
 
-#define USART usart_port_defs[profile.serial.rx]
+#define USART usart_port_defs[serial_rx_port]
 
 void RX_USART_ISR(void) {
   //static uint32_t rx_framerate[3]

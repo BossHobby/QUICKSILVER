@@ -90,7 +90,7 @@ uint16_t telemetryIDs[] = {
 uint8_t telemetryPosition = 0; //This iterates through the above, you can only send one sensor per frame.
 uint8_t teleCounter = 0;
 
-#define USART usart_port_defs[profile.serial.rx]
+#define USART usart_port_defs[serial_rx_port]
 
 //void SERIAL_RX_USART _IRQHandler(void)
 void RX_USART_ISR(void) {

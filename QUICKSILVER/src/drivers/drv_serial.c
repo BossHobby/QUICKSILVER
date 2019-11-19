@@ -116,7 +116,7 @@ usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {
 void handle_usart_isr(usart_ports_t channel) {
 #ifdef SERIAL_RX
   extern void RX_USART_ISR(void);
-  if (profile.serial.rx == channel)
+  if (serial_rx_port == channel)
     RX_USART_ISR();
 #endif
 }
