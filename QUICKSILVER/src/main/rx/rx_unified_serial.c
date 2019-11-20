@@ -968,7 +968,7 @@ void findprotocol(void) {
 // Send Spektrum bind pulses to a GPIO e.g. TX1
 void rx_spektrum_bind(void) {
 #define SPECTRUM_BIND_PIN usart_port_defs[profile.serial.rx].rx_pin
-#define SPECTRUM_BIND_PORT usart_port_defs[profile.serial.rx].rx_pin
+#define SPECTRUM_BIND_PORT usart_port_defs[profile.serial.rx].gpio_port
 
   if (profile.serial.rx == USART_PORT_INVALID) {
     return;
