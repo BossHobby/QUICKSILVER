@@ -2,6 +2,7 @@
 
 #include "drv_fmc.h"
 #include "project.h"
+#include "usb_configurator.h"
 
 #ifdef F0
 // address 32768 - 1024 = 31k - last flash block
@@ -58,7 +59,11 @@ void fmc_lock() {
 }
 
 int fmc_erase(void) {
+
 #ifdef F405
+  FLASH_ClearFlag(FLASH_FLAG_PGSERR | FLASH_FLAG_PGPERR |
+                  FLASH_FLAG_PGAERR | FLASH_FLAG_WRPERR |
+                  FLASH_FLAG_OPERR | FLASH_FLAG_EOP); // clear error status
   int test = FLASH_EraseSector(FLASH_Sector_3, VoltageRange_3);
 #endif
 
