@@ -106,7 +106,7 @@ uint16_t telemetryIDs[] = {
 uint8_t telemetryPosition = 0; //This iterates through the above, you can only send one sensor per frame.
 uint8_t teleCounter = 0;
 
-#define USART usart_port_defs[profile.serial.rx]
+#define USART usart_port_defs[serial_rx_port]
 
 void RX_USART_ISR(void) {
   rx_buffer[rx_end] = USART_ReceiveData(USART.channel);
@@ -149,17 +149,22 @@ void RX_USART_ISR(void) {
   rx_end %= (RX_BUFF_SIZE);
 }
 
+void fport_init() {
+  // initialize USART for FPORT
+  serial_rx_init(RX_PROTOCOL_FPORT); //initialize usart in drv_rx_serial
+  rxmode = !RXMODE_BIND;
+  // set setup complete flag
+  frameStatus = 0;
+}
+
 void rx_init(void) {
+  fport_init();
 }
 
 void checkrx() {
-  if (frameStatus < 0) //can't read a packet before you set up the uart.
-  {
-    // initialize USART for FPORT
-    serial_rx_init(RX_PROTOCOL_FPORT); //initialize usart in drv_rx_serial
-    rxmode = !RXMODE_BIND;
-    // set setup complete flag
-    frameStatus = 0;
+  if (frameStatus < 0) {
+    //can't read a packet before you set up the uart.
+    fport_init();
   }
 
   if (frameStatus == 1) //UART says there's something to look at. Let's look at it.
@@ -306,12 +311,6 @@ void checkrx() {
           } else {
             FPORTDebugTelemetry = false;
           }
-
-          rx_rssi = 0.0610128f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 173);
-          if (rx_rssi > 100.0f)
-            rx_rssi = 100.0f;
-          if (rx_rssi < 0.0f)
-            rx_rssi = 0.0f;
 
           time_lastframe = gettime();
           if (sbus_stats)

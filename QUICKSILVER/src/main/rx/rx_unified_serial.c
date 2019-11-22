@@ -117,7 +117,7 @@ uint16_t SbusTelemetryIDs[] = {
 uint8_t telemetryPosition = 0; //This iterates through the above, you can only send one sensor per frame.
 uint8_t teleCounter = 0;
 
-#define USART usart_port_defs[profile.serial.rx]
+#define USART usart_port_defs[serial_rx_port]
 
 void RX_USART_ISR(void) {
   //static uint32_t rx_framerate[3]
@@ -1046,27 +1046,34 @@ void findprotocol(void) {
 
 // Send Spektrum bind pulses to a GPIO e.g. TX1
 void rx_spektrum_bind(void) {
+#define SPECTRUM_BIND_PIN usart_port_defs[profile.serial.rx].rx_pin
+#define SPECTRUM_BIND_PORT usart_port_defs[profile.serial.rx].gpio_port
+
+  if (profile.serial.rx == USART_PORT_INVALID) {
+    return;
+  }
+
   rx_bind_enable = fmc_read_float(56);
   if (rx_bind_enable == 0) {
     GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.GPIO_Pin = USART.rx_pin;
+    GPIO_InitStructure.GPIO_Pin = SPECTRUM_BIND_PIN;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(USART.gpio_port, &GPIO_InitStructure);
+    GPIO_Init(SPECTRUM_BIND_PORT, &GPIO_InitStructure);
 
     // RX line, set high
-    GPIO_SetBits(USART.gpio_port, USART.rx_pin);
+    GPIO_SetBits(SPECTRUM_BIND_PORT, SPECTRUM_BIND_PIN);
     // Bind window is around 20-140ms after powerup
     delay(60000);
 
     for (uint8_t i = 0; i < 9; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
       // RX line, drive low for 120us
-      GPIO_ResetBits(USART.gpio_port, USART.rx_pin);
+      GPIO_ResetBits(SPECTRUM_BIND_PORT, SPECTRUM_BIND_PIN);
       delay(120);
 
       // RX line, drive high for 120us
-      GPIO_SetBits(USART.gpio_port, USART.rx_pin);
+      GPIO_SetBits(SPECTRUM_BIND_PORT, SPECTRUM_BIND_PIN);
       delay(120);
     }
   }
