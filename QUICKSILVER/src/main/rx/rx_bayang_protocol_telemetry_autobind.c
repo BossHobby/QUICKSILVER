@@ -29,7 +29,7 @@ THE SOFTWARE.
 #include "drv_xn297.h"
 #include "project.h"
 #include <stdio.h>
-
+#include "profile.h"
 #include "rx_bayang.h"
 
 #include "util.h"
@@ -74,6 +74,7 @@ unsigned long autobindtime = 0;
 int autobind_inhibit = 0;
 int packet_period = PACKET_PERIOD;
 
+extern profile_t profile;
 float rx_rssi;
 
 void writeregs(uint8_t data[], uint8_t size) {
@@ -320,9 +321,11 @@ static char checkpacket() {
     return 1;
   }else{
 #ifdef RADIO_XN297
+  if (profile.channel.aux[AUX_RSSI] <= AUX_CHANNEL_11){ //rssi set to actual rssi register value
 	rx_rssi = 10.0f * ((xn_readreg(9)) & 0x0f);
 	if (rx_rssi > 100.0f) rx_rssi = 100.0f;
 	if (rx_rssi < 0.0f) rx_rssi = 0.0f;
+  }
 #endif
   }
 #else
@@ -550,6 +553,15 @@ void checkrx(void) {
     rx_rssi *= 100.0f;
     if (rx_rssi > 100.0f) rx_rssi = 100.0f;
     if (rx_rssi < 0.0f) rx_rssi = 0.0f;
+#endif
+#ifdef RADIO_XN297
+    if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11){ //rssi set to internal link quality
+        rx_rssi = packetpersecond/200.0f;
+        rx_rssi = rx_rssi * rx_rssi * rx_rssi * RSSI_EXP + rx_rssi * (1 - RSSI_EXP);
+        rx_rssi *= 100.0f;
+        if (rx_rssi > 100.0f) rx_rssi = 100.0f;
+        if (rx_rssi < 0.0f) rx_rssi = 0.0f;
+    }
 #endif
   }
 }
