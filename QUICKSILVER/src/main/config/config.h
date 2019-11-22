@@ -117,7 +117,7 @@
 // *************if no channel is assigned but buzzer is set to AUX_CHANNEL_ON - buzzer will activate on LVC and FAILSAFE.
 #define BUZZER_ENABLE AUX_CHANNEL_OFF
 #define MOTORS_TO_THROTTLE_MODE AUX_CHANNEL_OFF
-#define RSSI AUX_CHANNEL_11
+#define RSSI AUX_CHANNEL_OFF
 // *************switch for fpv / other, requires fet
 // *************comment out to disable
 #define FPV_ON AUX_CHANNEL_OFF
