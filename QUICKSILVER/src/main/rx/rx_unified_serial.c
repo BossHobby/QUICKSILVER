@@ -813,6 +813,7 @@ void processFPORT(void) {
           rx_rssi = 0.0f;
 
         frameStatus = 3;    //We're done with this frame now.
+        telemetryCounter++; // Let the telemetry section know it's time to send.
 
         if (bind_safety > 131) { //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
           rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
@@ -820,18 +821,20 @@ void processFPORT(void) {
           bind_safety = 131;     // reset counter so it doesnt wrap
         }
       }
-
-      telemetryCounter++; // Let the telemetry section know it's time to send.
-
   } // end frame received
-
 }
 
 
 
 void sendFPORTTelemetry() {
-  if (telemetryCounter > 0 && rx_frame_position >= 40 && frameStatus == 3) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
-    telemetryCounter = 0;
+  if (telemetryCounter > 1 && rx_frame_position >= 41 && frameStatus == 3) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
+    static uint8_t skip_a_loop;
+    skip_a_loop++;
+    if (skip_a_loop < 3){
+    	return;
+    }
+    skip_a_loop = 0;
+	telemetryCounter = 0;
     frameStatus = 4;
 
     uint16_t telemetryIDs[] = {
