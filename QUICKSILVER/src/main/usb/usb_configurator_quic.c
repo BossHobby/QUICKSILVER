@@ -16,7 +16,6 @@
 #if defined(F405)
 
 #define QUIC_HEADER_LEN 4
-#define QUIC_PROTOCOL_VERSION 1
 
 #define quic_errorf(cmd, args...) send_quic_strf(cmd, QUIC_FLAG_ERROR, args)
 
@@ -147,13 +146,7 @@ void get_quic(uint8_t *data, uint32_t len) {
     break;
   }
   case QUIC_VAL_INFO:
-    res = cbor_encode_map(&enc, 1);
-    check_cbor_error(QUIC_CMD_GET);
-
-    static const uint32_t protocol = QUIC_PROTOCOL_VERSION;
-    res = cbor_encode_str(&enc, "protocol");
-    check_cbor_error(QUIC_CMD_GET);
-    res = cbor_encode_uint32(&enc, &protocol);
+    res = cbor_encode_target_info_t(&enc, &target_info);
     check_cbor_error(QUIC_CMD_GET);
 
     blackbox_enabled = 1;

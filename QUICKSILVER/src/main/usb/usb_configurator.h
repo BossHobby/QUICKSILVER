@@ -5,6 +5,8 @@
 
 #include "blackbox.h"
 
+#define QUIC_PROTOCOL_VERSION 1
+
 #define USB_BUFFER_SIZE 2048
 
 typedef enum {
