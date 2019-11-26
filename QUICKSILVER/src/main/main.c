@@ -51,6 +51,7 @@
 #include "sixaxis.h"
 #include "util.h"
 #include "vtx.h"
+#include "iir_filter.h"
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 #include "drv_serial_4way.h"
@@ -234,6 +235,7 @@ int main(void) {
   random_seed = random_seed & 0xff;
 #endif
 
+  IIRFilter_Init();
   gyro_cal();
   extern void rgb_init(void);
   rgb_init();

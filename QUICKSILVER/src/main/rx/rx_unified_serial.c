@@ -454,7 +454,7 @@ void processSBUS(void) {
   channels[5] = ((rx_data[7] >> 7 | rx_data[8] << 1 | rx_data[9] << 9) & 0x07FF);
   channels[6] = ((rx_data[9] >> 2 | rx_data[10] << 6) & 0x07FF);
   channels[7] = ((rx_data[10] >> 5 | rx_data[11] << 3) & 0x07FF);
-  channels[8] = ((rx_data[12] | rx_data[11] << 8) & 0x07FF);
+  channels[8] = ((rx_data[12] | rx_data[13] << 8) & 0x07FF);
   channels[9] = ((rx_data[13] >> 3 | rx_data[14] << 5) & 0x07FF); //This is the last channel Silverware previously supported.
   channels[10] = ((rx_data[14] >> 6 | rx_data[15] << 2 | rx_data[16] << 10) & 0x07FF);
   channels[11] = ((rx_data[16] >> 1 | rx_data[17] << 7) & 0x07FF);
