@@ -93,7 +93,7 @@ void serial_smart_audio_send_data(uint8_t *data, uint32_t size) {
 uint8_t serial_smart_audio_read_byte() {
   for (uint32_t timeout = 0x10000; USART_GetFlagStatus(USART.channel, USART_FLAG_RXNE) == RESET;)
     if (!timeout--)
-      return;
+      return 0;
   return USART_ReceiveData(USART.channel);
 }
 

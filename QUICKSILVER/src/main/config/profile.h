@@ -180,14 +180,11 @@ typedef struct {
 typedef struct {
   usart_ports_t rx;
   usart_ports_t smart_audio;
-
-  usart_ports_t port_max;
 } serial_t;
 
-#define SERIAL_MEMBERS       \
-  MEMBER(rx, uint8)          \
-  MEMBER(smart_audio, uint8) \
-  MEMBER(port_max, uint8)
+#define SERIAL_MEMBERS \
+  MEMBER(rx, uint8)    \
+  MEMBER(smart_audio, uint8)
 
 typedef struct {
   uint8_t name[36];
@@ -214,7 +211,20 @@ typedef struct {
   MEMBER(pid, profile_pid_t) \
   MEMBER(voltage, voltage_t)
 
+typedef struct {
+  uint32_t quic_protocol_version;
+
+  const char *motor_pins[MOTOR_PIN_IDENT_MAX];
+  const char *usart_ports[USART_PORTS_MAX];
+} target_info_t;
+
+#define TARGET_INFO_MEMBERS                         \
+  MEMBER(quic_protocol_version, uint32)             \
+  STR_ARRAY_MEMBER(motor_pins, MOTOR_PIN_IDENT_MAX) \
+  STR_ARRAY_MEMBER(usart_ports, USART_PORTS_MAX)
+
 extern profile_t profile;
+extern target_info_t target_info;
 
 void profile_set_defaults();
 pid_rate_t *profile_current_pid_rates();
@@ -226,3 +236,4 @@ cbor_result_t cbor_encode_profile_t(cbor_value_t *enc, const profile_t *p);
 cbor_result_t cbor_decode_vector_t(cbor_value_t *dec, vector_t *vec);
 
 cbor_result_t cbor_encode_pid_rate_preset_t(cbor_value_t *enc, const pid_rate_preset_t *p);
+cbor_result_t cbor_encode_target_info_t(cbor_value_t *enc, const target_info_t *i);

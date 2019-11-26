@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "drv_usb.h"
+#include "usb_configurator.h"
 #include "util.h"
 
 // Default values for our profile
@@ -217,8 +218,6 @@ const profile_t default_profile = {
 #else
         .smart_audio = USART_PORT_INVALID,
 #endif
-
-        .port_max = USART_PORTS_MAX,
     },
 
     .rate = {
@@ -368,6 +367,18 @@ const profile_t default_profile = {
     },
 };
 
+target_info_t target_info = {
+    .quic_protocol_version = QUIC_PROTOCOL_VERSION,
+
+#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) "P" #port #pin,
+    .motor_pins = {MOTOR_PINS},
+#undef MOTOR_PIN
+
+#define USART_PORT(channel, port, rx_pin, tx_pin) "USART_" #channel,
+    .usart_ports = {"NONE", USART_PORTS},
+#undef USART_PORT
+};
+
 #pragma GCC diagnostic pop
 
 // the actual profile
@@ -476,6 +487,19 @@ cbor_result_t cbor_encode_metadata_t(cbor_value_t *enc, const metadata_t *meta) 
       return res;                                 \
   }
 
+#define STR_ARRAY_MEMBER(member, size)        \
+  res = cbor_encode_str(enc, #member);        \
+  if (res < CBOR_OK)                          \
+    return res;                               \
+  res = cbor_encode_array(enc, size);         \
+  if (res < CBOR_OK)                          \
+    return res;                               \
+  for (uint32_t i = 0; i < size; i++) {       \
+    res = cbor_encode_str(enc, o->member[i]); \
+    if (res < CBOR_OK)                        \
+      return res;                             \
+  }
+
 START_STRUCT_ENCODER(rate_mode_silverware_t)
 SILVERWARE_RATE_MEMBERS
 END_STRUCT_ENCODER()
@@ -527,6 +551,11 @@ END_STRUCT_ENCODER()
 START_STRUCT_ENCODER(profile_t)
 PROFILE_MEMBERS
 END_STRUCT_ENCODER()
+
+START_STRUCT_ENCODER(target_info_t)
+TARGET_INFO_MEMBERS
+END_STRUCT_ENCODER()
+
 #undef MEMBER
 #undef ARRAY_MEMBER
 
