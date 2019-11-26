@@ -138,6 +138,14 @@ int main(void) {
   // load default profile
   profile_set_defaults();
 
+#ifdef FLASH_SAVE1
+  // read pid identifier for values in file pid.c
+  flash_hard_coded_pid_identifier();
+
+  // load flash saved variables
+  flash_load();
+#endif
+
   delay(1000);
 
 #ifdef ENABLE_OVERCLOCK
@@ -184,13 +192,7 @@ int main(void) {
   aux[AUX_CHANNEL_GESTURE] = 1;
 #endif
 
-#ifdef FLASH_SAVE1
-  // read pid identifier for values in file pid.c
-  flash_hard_coded_pid_identifier();
-
-  // load flash saved variables
-  flash_load();
-#endif
+//temp placeholder for old flash load function
 
   vtx_init();
 
