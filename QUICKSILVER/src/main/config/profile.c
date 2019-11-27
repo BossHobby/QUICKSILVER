@@ -18,9 +18,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .index = 0,
         .name = "TWR <8:1 2",
         .rate = {
-            .kp = {14.5e-2, 14.5e-2, 2.5e-1},
-            .ki = {14.0e-1, 14.0e-1, 14.0e-1},
-            .kd = {4.5e-1, 4.5e-1, 0.5e-1},
+            .kp = {91, 91, 78.5},
+            .ki = {70, 70, 70},
+            .kd = {54, 54, 6},
         },
     },
 
@@ -28,9 +28,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .index = 1,
         .name = "TWR 8:1 3",
         .rate = {
-            .kp = {12.5e-2, 14.5e-2, 25.0e-2},
-            .ki = {14.0e-1, 14.0e-1, 14.0e-1},
-            .kd = {2.3e-1, 3.3e-1, 0.5e-1},
+            .kp = {78.5, 91, 78.5},
+            .ki = {70, 70, 70},
+            .kd = {27.5, 39.5, 6},
         },
     },
 
@@ -38,9 +38,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .index = 2,
         .name = "TWR 12:1 4",
         .rate = {
-            .kp = {9.5e-2, 12.5e-2, 20.0e-2},
-            .ki = {14.0e-1, 14.0e-1, 14.0e-1},
-            .kd = {2.3e-1, 3.3e-1, 0.5e-1},
+            .kp = {59.5, 78.5, 63},
+            .ki = {70, 70, 70},
+            .kd = {27.5, 39.5, 6},
         },
     },
 
@@ -48,9 +48,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .index = 3,
         .name = "TWR 14:1 5",
         .rate = {
-            .kp = {7.5e-2, 7.5e-2, 18.0e-2},
-            .ki = {14.0e-1, 14.0e-1, 14.0e-1},
-            .kd = {2.3e-1, 2.3e-1, 0.4e-1},
+            .kp = {47, 47, 56.5},
+            .ki = {70, 70, 70},
+            .kd = {27.5, 27.5, 4.5},
         },
     },
 
@@ -58,9 +58,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .index = 4,
         .name = "65mm 1s brushless whoop",
         .rate = {
-            .kp = {14e-2, 14e-2, 2.5e-1},
-            .ki = {14.0e-1, 14.0e-1, 14.0e-1},
-            .kd = {5.6e-1, 5.6e-1, 0.5e-1},
+            .kp = {88, 88, 78.5},
+            .ki = {70, 70, 70},
+            .kd = {67, 67, 6},
         },
     },
 
@@ -68,9 +68,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .index = 5,
         .name = "65mm 2s brushless whoop",
         .rate = {
-            .kp = {10.5e-2, 10.5e-2, 2.15e-1},
-            .ki = {14.0e-1, 14.0e-1, 14.0e-1},
-            .kd = {4.8e-1, 4.8e-1, 0.5e-1},
+            .kp = {66, 66, 67.5},
+            .ki = {70, 70, 70},
+            .kd = {57.5, 57.5, 6},
         },
     },
 
@@ -79,9 +79,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .name = "6mm & 7mm Abduction Pids for whoops (Team Alienwhoop)",
         //  - set filtering ALIENWHOOP_ZERO_FILTERING
         .rate = {
-            .kp = {21.5e-2, 21.5e-2, 105.0e-2},
-            .ki = {14e-1, 15e-1, 15e-1},
-            .kd = {7.4e-1, 7.4e-1, 5.5e-1},
+            .kp = {135, 135, 330},
+            .ki = {70, 75, 75},
+            .kd = {89, 89, 66},
         },
     },
 
@@ -89,9 +89,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .index = 7,
         .name = "5in Chameleon, T - Motor 2306 2600kV HQ 5x4.3x3 - Bobnova edition",
         .rate = {
-            .kp = {6.5e-2, 7.5e-2, 15.0e-2},
-            .ki = {12.0e-1, 12.0e-1, 12.0e-1},
-            .kd = {1.7e-1, 2.4e-1, 0.3e-1},
+            .kp = {41, 47, 47},
+            .ki = {60, 60, 60},
+            .kd = {20.5, 29, 3.5},
         },
     },
 
@@ -101,9 +101,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         // set filtering to BETA_FILTERING and adjust pass 1 and pass 2 for KALMAN_GYRO both to 70hz, set DTERM_LPF_2ND_HZ to 120hz, disable motor filtering
         // set TORQUE_BOOST to 1.0, and add #define THROTTLE_TRANSIENT_COMPENSATION and #define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 4.0
         .rate = {
-            .kp = {19.5e-2, 19.5e-2, 95.0e-2},
-            .ki = {12e-1, 12e-1, 8e-1},
-            .kd = {10.7e-1, 10.7e-1, 2.0e-1},
+            .kp = {122.5, 122.5, 298},
+            .ki = {60, 60, 40},
+            .kd = {128.5, 128.5, 24},
         },
     },
 
@@ -115,9 +115,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .name = "(OLD) 6mm experimental AwesomeSauce 20000kv Pids (Team Alienwhoop)",
         //  - set filtering ALIENWHOOP_ZERO_FILTERING
         .rate = {
-            .kp = {25.5e-2, 25.5e-2, 11.5e-1},
-            .ki = {20.5e-1, 20.5e-1, 16e-1},
-            .kd = {11.4e-1, 11.4e-1, 4.9e-1},
+            .kp = {160, 160, 361},
+            .ki = {102.5, 102.5, 80},
+            .kd = {137, 137, 59},
         },
     },
 
@@ -126,9 +126,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .name = "(OLD) BOSS 6 & 7 - 615 and 716 motors, hm830 46mm props",
         //   - set filtering to VERY_STRONG_FILTERING
         .rate = {
-            .kp = {24.5e-2, 24.5e-2, 9.5e-1},
-            .ki = {12e-1, 12e-1, 8e-1},
-            .kd = {14.1e-1, 14.1e-1, 7e-1},
+            .kp = {154, 154, 298},
+            .ki = {60, 60, 40},
+            .kd = {169, 169, 84},
         },
     },
 
@@ -137,9 +137,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .name = "(OLD) BOSS 8.0 - 816 motors, kingkong 66mm props",
         //   - set filtering to WEAK_FILTERING
         .rate = {
-            .kp = {26.7e-2, 26.7e-2, 9.5e-1},
-            .ki = {12e-1, 12e-1, 8e-1},
-            .kd = {16.2e-1, 16.2e-1, 7e-1},
+            .kp = {167.5, 167.5, 298},
+            .ki = {60, 60, 40},
+            .kd = {194.5, 194.5, 84},
         },
     },
 
@@ -148,15 +148,14 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .name = "(OLD) BOSS 8.5 - 820 motors, kingkong 66mm props",
         //   - set filtering to STRONG_FILTERING
         .rate = {
-            .kp = {29.5e-2, 29.5e-2, 11.5e-1},
-            .ki = {12e-1, 12e-1, 12.0e-1},
-            .kd = {17.5e-1, 17.5e-1, 7e-1},
+            .kp = {185, 185, 361},
+            .ki = {60, 60, 60},
+            .kd = {210, 210, 84},
         },
     },
 };
 
-uint32_t pid_rate_presets_count = sizeof(pid_rate_presets) / sizeof(pid_rate_preset_t);
-
+const uint32_t pid_rate_presets_count = sizeof(pid_rate_presets) / sizeof(pid_rate_preset_t);
 const profile_t default_profile = {
     .meta = {
         .name = "default",

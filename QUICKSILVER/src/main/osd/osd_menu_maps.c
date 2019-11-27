@@ -15,7 +15,7 @@ const uint8_t pid_profiles_positions[3][2] = { {9, 1},{7, 4},{7, 5} };
 const uint8_t pid_submenu_map[] = {4, 4};	//describes the menu case to call next for each submenu option
 
 //adjust increments used in vector adjust functions
-const float bf_pids_increments[] = {0.0015924, 0.0015924, 0.0031847, 0.02, 0.02, 0.02, 0.0083333, 0.0083333, 0.0083333};
+const float bf_pids_increments[] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
 const float sw_rates_increments[] = {10.0, 10.0, 10.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
 const float rounded_increments[] = {0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
 
@@ -26,7 +26,7 @@ const uint8_t pid_profile_positions[8][2] = { {9, 1},{10, 4},{16, 4},{23, 4},{4,
 const uint8_t pid_profile_data_index[9][2] = { {1, 0}, {1, 1}, {1, 2}, {2, 0}, {2, 1}, {2, 2}, {3, 0}, {3, 1}, {3, 2} };
 const uint8_t pid_profile_grid[9][2] = { {1, 1},{2, 1},{3, 1},{1, 2},{2, 2},{3, 2},{1, 3},{2, 3},{3, 3} };
 const uint8_t pid_profile_data_positions[9][2] = { {10, 6},{16, 6},{22, 6},{10, 7},{16, 7},{22, 7},{10, 8},{16, 8},{22, 8} };
-const float pid_profile_adjust_limits[9][2] = { {0.0015924, 1.0}, {0.0015924, 1.0}, {0.0031847, 1.0}, {0.02, 3.0}, {0.02, 3.0}, {0.02, 3.0}, {0.0083333, 1.0}, {0.0083333, 1.0}, {0.0083333, 1.0} };
+const float pid_profile_adjust_limits[9][2] = { {1.0, 628.0}, {1.0, 628.0}, {1.0, 314.0}, {1.0, 50.0}, {1.0, 50.0}, {1.0, 50.0}, {1.0, 120.0}, {1.0, 120.0}, {1.0, 120.0} };
 const uint8_t pid_scale_index[9] = {0, 0, 1, 2, 2, 2, 3, 3, 3};
 
 //filters submenu map

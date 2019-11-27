@@ -175,26 +175,6 @@ uint8_t grid_selection(uint8_t element, uint8_t row) {
 	}
 }
 
-uint16_t pid_scale(float pid_rate, uint8_t pid_scale_index){
-	if (pid_scale_index == 0){	//	kP roll/pitch	increment by 0.0015923566878981f
-		uint16_t scaled_pid_value = round_num(pid_rate * 628.0f);
-		return scaled_pid_value;
-	}
-	if (pid_scale_index == 1){	//	kP yaw			increment by 0.0031847133757962f
-		uint16_t scaled_pid_value = round_num(pid_rate * 314.0f);
-		return scaled_pid_value;
-	}
-	if (pid_scale_index == 2){	//	kI				increment by 0.02f
-		uint16_t scaled_pid_value = round_num(pid_rate * 50.0f);
-		return scaled_pid_value;
-	}
-	if (pid_scale_index == 3){	//	kD				increment by 0.0083333333333333f
-		uint16_t scaled_pid_value = round_num(pid_rate * 120.0f);
-		return scaled_pid_value;
-	}
-	return 0;
-}
-
 
 //************************************************************************************************************************************************************************************
 //																					PRINT FUNCTIONS
@@ -615,7 +595,7 @@ void print_osd_adjustable_vectors(uint8_t menu_type, uint8_t string_element_qty,
   	skip_loop = 0;
   	uint8_t index = osd_menu_phase-string_element_qty-1;
   	uint8_t data_buffer[5];
-  	if (menu_type == BF_PIDS) fast_fprint(data_buffer, 5, pid_scale(pointer->axis[data_index[index][1]], pid_scale_index[index]), 0);
+  	if (menu_type == BF_PIDS) fast_fprint(data_buffer, 5, pointer->axis[data_index[index][1]], 0);
   	if (menu_type == SW_RATES){
   		if (index < 3) fast_fprint(data_buffer, 5, pointer->axis[data_index[index][1]], 0);
   		else fast_fprint(data_buffer, 5, pointer->axis[data_index[index][1]] + FLT_EPSILON, 2);

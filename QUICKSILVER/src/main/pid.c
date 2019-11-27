@@ -75,8 +75,20 @@ int current_pid_term = 0;
 float ierror[PIDNUMBER] = {0, 0, 0};
 float pidoutput[PIDNUMBER];
 float setpoint[PIDNUMBER];
-static float lasterror[PIDNUMBER];
 float v_compensation = 1.00;
+
+static float lasterror[PIDNUMBER];
+
+static float current_kp[PIDNUMBER] = {0, 0, 0};
+static float current_ki[PIDNUMBER] = {0, 0, 0};
+static float current_kd[PIDNUMBER] = {0, 0, 0};
+
+static const float pid_scales[PIDNUMBER][PIDNUMBER] = {
+    // roll, pitch, yaw
+    {628.0f, 628.0f, 314.0f}, //kp
+    {50.0f, 50.0f, 50.0f},    //ki
+    {120.0f, 120.0f, 120.0f}, //kd
+};
 
 extern float error[PIDNUMBER];
 extern float setpoint[PIDNUMBER];
@@ -141,18 +153,18 @@ float pid(int x) {
   if (!iwindup) {
 #ifdef MIDPOINT_RULE_INTEGRAL
     // trapezoidal rule instead of rectangular
-    ierror[x] = ierror[x] + (error[x] + lasterror[x]) * 0.5f * profile_current_pid_rates()->ki.axis[x] * looptime;
+    ierror[x] = ierror[x] + (error[x] + lasterror[x]) * 0.5f * current_ki[x] * looptime;
     lasterror[x] = error[x];
 #endif
 
 #ifdef RECTANGULAR_RULE_INTEGRAL
-    ierror[x] = ierror[x] + error[x] * profile_current_pid_rates()->ki.axis[x] * looptime;
+    ierror[x] = ierror[x] + error[x] * current_ki[x] * looptime;
     lasterror[x] = error[x];
 #endif
 
 #ifdef SIMPSON_RULE_INTEGRAL
     // assuming similar time intervals
-    ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + error[x]) * profile_current_pid_rates()->ki.axis[x] * looptime;
+    ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + error[x]) * current_ki[x] * looptime;
     lasterror2[x] = lasterror[x];
     lasterror[x] = error[x];
 #endif
@@ -162,12 +174,12 @@ float pid(int x) {
 
 #ifdef ENABLE_SETPOINT_WEIGHTING
   // P term
-  pidoutput[x] = error[x] * (b[x]) * profile_current_pid_rates()->kp.axis[x];
+  pidoutput[x] = error[x] * (b[x]) * current_kp[x];
   // b
-  pidoutput[x] += -(1.0f - b[x]) * profile_current_pid_rates()->kp.axis[x] * gyro[x];
+  pidoutput[x] += -(1.0f - b[x]) * current_kp[x] * gyro[x];
 #else
   // P term with b disabled
-  pidoutput[x] = error[x] * profile_current_pid_rates()->kp.axis[x];
+  pidoutput[x] = error[x] * current_kp[x];
 #endif
 
   // I term
@@ -175,14 +187,14 @@ float pid(int x) {
 
   // D term
   // skip yaw D term if not set
-  if (profile_current_pid_rates()->kd.axis[x] > 0) {
+  if (current_kd[x] > 0) {
 
 #if (defined DTERM_LPF_1ST_HZ && !defined ADVANCED_PID_CONTROLLER)
     float dterm;
     static float lastrate[3];
     static float dlpf[3] = {0};
 
-    dterm = -(gyro[x] - lastrate[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor;
+    dterm = -(gyro[x] - lastrate[x]) * current_kd[x] * timefactor;
     lastrate[x] = gyro[x];
     lpf(&dlpf[x], dterm, FILTERCALC(looptime, 1.0f / DTERM_LPF_1ST_HZ));
     pidoutput[x] += dlpf[x];
@@ -211,11 +223,11 @@ float pid(int x) {
     static float dlpf[3] = {0};
     static float setpoint_derivative[3];
 
-    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor;
+    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
 #ifdef RX_SMOOTHING_HZ
     lpf(&setpoint_derivative[x], setpoint_derivative[x], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / RX_SMOOTHING_HZ));
 #endif
-    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor);
+    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * current_kd[x] * timefactor);
     lastsetpoint[x] = setpoint[x];
     lastrate[x] = gyro[x];
     lpf(&dlpf[x], dterm, FILTERCALC(looptime, 1.0f / DTERM_LPF_1ST_HZ));
@@ -227,7 +239,7 @@ float pid(int x) {
     static float lastrate[3];
     float lpf2(float in, int num);
 
-    dterm = -(gyro[x] - lastrate[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor;
+    dterm = -(gyro[x] - lastrate[x]) * current_kd[x] * timefactor;
     lastrate[x] = gyro[x];
     dterm = lpf2(dterm, x);
     pidoutput[x] += dterm;
@@ -256,11 +268,11 @@ float pid(int x) {
     float lpf2(float in, int num);
     static float setpoint_derivative[3];
 
-    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor;
+    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
 #ifdef RX_SMOOTHING_HZ
     lpf(&setpoint_derivative[x], setpoint_derivative[x], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / RX_SMOOTHING_HZ));
 #endif
-    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor);
+    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * current_kd[x] * timefactor);
     lastsetpoint[x] = setpoint[x];
     lastrate[x] = gyro[x];
     dterm = lpf2(dterm, x);
@@ -314,6 +326,12 @@ void pid_precalc() {
     if (rx_aux_on(AUX_LEVELMODE))
       v_compensation *= LEVELMODE_PID_ATTENUATION;
 #endif
+  }
+
+  for (uint8_t i = 0; i < PIDNUMBER; i++) {
+    current_kp[i] = profile_current_pid_rates()->kp.axis[i] / pid_scales[0][i];
+    current_ki[i] = profile_current_pid_rates()->ki.axis[i] / pid_scales[1][i];
+    current_kd[i] = profile_current_pid_rates()->kd.axis[i] / pid_scales[2][i];
   }
 }
 
@@ -418,7 +436,7 @@ int change_pid_value(int increase) {
   }
 #endif
 
-  newPID = current_pid_term_pointer()->axis[current_pid_axis] + ((float)PID_TUNING_INCDEC_FACTOR * multiplier);
+  newPID = current_pid_term_pointer()->axis[current_pid_axis] + ((float)PID_TUNING_INCDEC_FACTOR * multiplier * pid_scales[current_pid_term][current_pid_axis]);
   if (newPID > 0) {
     current_pid_term_pointer()->axis[current_pid_axis] = newPID;
 #ifdef COMBINE_PITCH_ROLL_PID_TUNING
