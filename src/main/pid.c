@@ -29,6 +29,7 @@ THE SOFTWARE.
 #include <stdlib.h>
 
 #include "defines.h"
+#include "filter.h"
 #include "led.h"
 #include "pid.h"
 #include "profile.h"

@@ -3,6 +3,30 @@
 #include "math.h"
 #include "project.h"
 
+// calculates the coefficient for lpf filter, times in the same units
+float lpfcalc(float sampleperiod, float filtertime) {
+  float ga = 1.0f - sampleperiod / filtertime;
+  if (ga > 1.0f)
+    ga = 1.0f;
+  if (ga < 0.0f)
+    ga = 0.0f;
+  return ga;
+}
+
+// calculates the coefficient for lpf filter
+float lpfcalc_hz(float sampleperiod, float filterhz) {
+  float ga = 1.0f - sampleperiod * filterhz;
+  if (ga > 1.0f)
+    ga = 1.0f;
+  if (ga < 0.0f)
+    ga = 0.0f;
+  return ga;
+}
+
+void lpf(float *out, float in, float coeff) {
+  *out = (*out) * coeff + in * (1 - coeff);
+}
+
 void iir_filter_lpf2_set_freq(iir_filter_lpf2 *filter, float sample_freq, float cutoff_freq) {
   const float fr = sample_freq / cutoff_freq;
   const float ohm = tanf(M_PI_F / fr);

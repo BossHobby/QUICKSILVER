@@ -2,6 +2,7 @@
 
 #include "debug.h"
 #include "defines.h"
+#include "filter.h"
 #include "profile.h"
 #include "project.h"
 #include "util.h"

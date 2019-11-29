@@ -1,5 +1,7 @@
-
+extern "C" {
+#include "filter.h"
 #include "defines.h"
+}
 
 #ifndef GYRO_FILTER_PASS1
 #define SOFT_LPF1_NONE

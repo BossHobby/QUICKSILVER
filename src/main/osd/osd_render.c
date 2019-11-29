@@ -10,6 +10,7 @@
 #include "float.h"
 #include "util.h"
 #include "rx.h"
+#include "filter.h"
 #include "debug.h"
 
 

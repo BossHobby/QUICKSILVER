@@ -42,6 +42,7 @@
 #include "drv_softi2c.h"
 #include "drv_spi.h"
 #include "drv_time.h"
+#include "filter.h"
 #include "gestures.h"
 #include "led.h"
 #include "pid.h"

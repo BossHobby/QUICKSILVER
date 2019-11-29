@@ -5,11 +5,6 @@
 
 #define M_PI 3.14159265358979323846 /* pi */
 
-void lpf(float *out, float in, float coeff);
-
-float lpfcalc(float sampleperiod, float filtertime);
-float lpfcalc_hz(float sampleperiod, float filterhz);
-
 float mapf(float x, float in_min, float in_max, float out_min, float out_max);
 void limitf(float *input, const float limit);
 
