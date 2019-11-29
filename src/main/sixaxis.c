@@ -32,13 +32,12 @@ THE SOFTWARE.
 #include "drv_i2c.h"
 #include "drv_serial.h"
 #include "drv_time.h"
+#include "filter.h"
 #include "led.h"
 #include "profile.h"
 #include "project.h"
 #include "sixaxis.h"
 #include "util.h"
-
-
 
 // this works only on newer boards (non mpu-6050)
 // on older boards the hw gyro setting controls the acc as well
@@ -73,9 +72,6 @@ float gyro_raw[3];
 
 float accelcal[3];
 float gyrocal[3];
-
-float lpffilter(float in, int num);
-float lpffilter2(float in, int num);
 
 void sixaxis_init(void) {
 

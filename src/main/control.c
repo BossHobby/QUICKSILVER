@@ -31,6 +31,7 @@ THE SOFTWARE.
 #include "drv_fmc2.h"
 #include "drv_motor.h"
 #include "drv_time.h"
+#include "filter.h"
 #include "flip_sequencer.h"
 #include "gestures.h"
 #include "led.h"
@@ -423,7 +424,6 @@ void control(void) {
     float mix[4];
 
     if (profile.motor.throttle_boost > 0.0f) {
-      extern float throttlehpf(float in);
       throttle += (float)(profile.motor.throttle_boost) * throttlehpf(throttle);
       if (throttle < 0)
         throttle = 0;

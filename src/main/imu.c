@@ -5,7 +5,7 @@
 
 #include "defines.h"
 #include "drv_time.h"
-#include "iir_filter.h"
+#include "filter.h"
 #include "sixaxis.h"
 #include "util.h"
 

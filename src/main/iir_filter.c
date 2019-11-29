@@ -1,6 +1,5 @@
+#include "filter.h"
 
-
-#include "iir_filter.h"
 #include "math.h"
 #include "project.h"
 

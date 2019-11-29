@@ -43,7 +43,6 @@
 #include "drv_spi.h"
 #include "drv_time.h"
 #include "gestures.h"
-#include "iir_filter.h"
 #include "led.h"
 #include "pid.h"
 #include "profile.h"
