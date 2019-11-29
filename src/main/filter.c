@@ -39,12 +39,7 @@ void lpf(float *out, float in, float coeff) {
 
 #if defined(PT1_GYRO) && defined(GYRO_FILTER_PASS1)
 #define SOFT_LPF_1ST_PASS1 GYRO_FILTER_PASS1
-typedef struct {
-  float lpf_last;
-} filter_lpf1;
-
 static float alpha = 0.5;
-
 filter_lpf1 filter1[3];
 
 void filter_lpf1_coeff() {
@@ -65,12 +60,7 @@ float filter_lpf1_step(filter_lpf1 *filter, float in) {
 
 #if defined(PT1_GYRO) && defined(GYRO_FILTER_PASS2)
 #define SOFT_LPF_1ST_PASS2 GYRO_FILTER_PASS2
-typedef struct {
-  float lpf_last;
-} filter_lpf2;
-
 static float alpha2 = 0.5;
-
 filter_lpf2 filter2[3];
 
 void filter_lpf2_coeff() {
@@ -91,13 +81,6 @@ float filter_lpf2_step(filter_lpf2 *filter, float in) {
 
 #if defined(KALMAN_GYRO) && defined(GYRO_FILTER_PASS1)
 #define SOFT_KALMAN_GYRO_PASS1 GYRO_FILTER_PASS1
-typedef struct {
-  float x_est_last;
-  float P_last;
-  float Q;
-  float R;
-} filter_kalman;
-
 void filter_kalman_init(filter_kalman *filter) {
   filter->Q = 0.02;
   filter->R = 0.1;
@@ -130,13 +113,6 @@ filter_kalman filter1[3];
 
 #if defined(KALMAN_GYRO) && defined(GYRO_FILTER_PASS2)
 #define SOFT_KALMAN_GYRO_PASS2 GYRO_FILTER_PASS2
-typedef struct {
-  float x_est_last;
-  float P_last;
-  float Q;
-  float R;
-} filter_kalman2;
-
 void filter_kalman2_init(filter_kalman2 *filter) {
   filter->Q = 0.02;
   filter->R = 0.1;
@@ -244,10 +220,6 @@ float lpffilter2(float in, int num) {
 
 // 16Hz hpf filter for throttle compensation
 //High pass bessel filter order=1 alpha1=0.016
-typedef struct {
-  float v[2];
-} filter_be_hp1;
-
 void filter_be_hp1_init(filter_be_hp1 *filter) {
   filter->v[0] = 0.0;
 }
@@ -267,10 +239,6 @@ float throttlehpf(float in) {
 
 // for TRANSIENT_WINDUP_PROTECTION feature
 //Low pass bessel filter order=1 alpha1=0.023
-typedef struct {
-  float v[2];
-} filter_sp;
-
 void filter_sp_init(filter_sp *filter) {
   filter->v[0] = 0.0;
 }

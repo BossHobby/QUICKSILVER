@@ -5,6 +5,36 @@
 #define M_PI_F 3.1415926
 
 typedef struct {
+  float lpf_last;
+} filter_lpf1;
+
+typedef struct {
+  float lpf_last;
+} filter_lpf2;
+
+typedef struct {
+  float x_est_last;
+  float P_last;
+  float Q;
+  float R;
+} filter_kalman;
+
+typedef struct {
+  float x_est_last;
+  float P_last;
+  float Q;
+  float R;
+} filter_kalman2;
+
+typedef struct {
+  float v[2];
+} filter_be_hp1;
+
+typedef struct {
+  float v[2];
+} filter_sp;
+
+typedef struct {
   float cutoff_freq;
   float a1;
   float a2;
