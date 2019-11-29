@@ -238,7 +238,6 @@ int main(void) {
   random_seed = random_seed & 0xff;
 #endif
 
-  IIRFilter_Init();
   gyro_cal();
   extern void rgb_init(void);
   rgb_init();

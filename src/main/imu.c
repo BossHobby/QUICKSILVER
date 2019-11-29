@@ -5,9 +5,9 @@
 
 #include "defines.h"
 #include "drv_time.h"
+#include "iir_filter.h"
 #include "sixaxis.h"
 #include "util.h"
-#include "iir_filter.h"
 
 #define ACC_1G 1.0f
 #define BFPV_IMU
@@ -35,6 +35,10 @@ extern float gyro[3];
 extern float accel[3];
 extern float accelcal[3];
 
+#ifdef BFPV_IMU
+static iir_filter_lpf2 accel_filter[3];
+#endif
+
 void imu_init(void) {
   // init the gravity vector with accel values
   for (int xx = 0; xx < 100; xx++) {
@@ -45,6 +49,12 @@ void imu_init(void) {
     }
     delay(1000);
   }
+
+#ifdef BFPV_IMU
+  iir_filter_lpf2_set_freq(&accel_filter[0], IMU_SAMPLE_RATE, IMU_FILTER_CUTOFF_FREQ);
+  iir_filter_lpf2_set_freq(&accel_filter[1], IMU_SAMPLE_RATE, IMU_FILTER_CUTOFF_FREQ);
+  iir_filter_lpf2_set_freq(&accel_filter[2], IMU_SAMPLE_RATE, IMU_FILTER_CUTOFF_FREQ);
+#endif
 }
 
 float calcmagnitude(float vector[3]) {
@@ -71,49 +81,48 @@ void imu_calc(void) {
   accel[2] = (accel[2] - accelcal[2]) * (1 / 2048.0f);
 
 #ifdef BFPV_IMU
-  accel[0] = LPF2pApply_1(accel[0]);
-  accel[1] = LPF2pApply_2(accel[1]);
-  accel[2] = LPF2pApply_3(accel[2]);
+  accel[0] = iir_filter_lpf2_apply(&accel_filter[0], accel[0]);
+  accel[1] = iir_filter_lpf2_apply(&accel_filter[1], accel[1]);
+  accel[2] = iir_filter_lpf2_apply(&accel_filter[2], accel[2]);
 
   float EstG[3];
 
-	vectorcopy(&EstG[0], &GEstG[0]);
+  vectorcopy(&EstG[0], &GEstG[0]);
 
   float gyros[3];
-  for (int i = 0; i < 3; i++){
-      gyros[i] = gyro[i] * looptime;
+  for (int i = 0; i < 3; i++) {
+    gyros[i] = gyro[i] * looptime;
   }
   float mat[3][3];
-	float cosx, sinx, cosy, siny, cosz, sinz;
-	float coszcosx, coszcosy, sinzcosx, coszsinx, sinzsinx;
+  float cosx, sinx, cosy, siny, cosz, sinz;
+  float coszcosx, coszcosy, sinzcosx, coszsinx, sinzsinx;
 
-	cosx = _cosf(gyros[1]);
-	sinx = _sinf(gyros[1]);
-	cosy = _cosf(gyros[0]);
-	siny = _sinf(-gyros[0]);
-	cosz = _cosf(gyros[2]);
-	sinz = _sinf(-gyros[2]);
+  cosx = _cosf(gyros[1]);
+  sinx = _sinf(gyros[1]);
+  cosy = _cosf(gyros[0]);
+  siny = _sinf(-gyros[0]);
+  cosz = _cosf(gyros[2]);
+  sinz = _sinf(-gyros[2]);
 
-	coszcosx = cosz * cosx;
-	coszcosy = cosz * cosy;
-	sinzcosx = sinz * cosx;
-	coszsinx = sinx * cosz;
-	sinzsinx = sinx * sinz;
+  coszcosx = cosz * cosx;
+  coszcosy = cosz * cosy;
+  sinzcosx = sinz * cosx;
+  coszsinx = sinx * cosz;
+  sinzsinx = sinx * sinz;
 
-	mat[0][0] = coszcosy;
-	mat[0][1] = -cosy * sinz;
-	mat[0][2] = siny;
-	mat[1][0] = sinzcosx + (coszsinx * siny);
-	mat[1][1] = coszcosx - (sinzsinx * siny);
-	mat[1][2] = -sinx * cosy;
-	mat[2][0] = (sinzsinx) - (coszcosx * siny);
-	mat[2][1] = (coszsinx) + (sinzcosx * siny);
-	mat[2][2] = cosy * cosx;
+  mat[0][0] = coszcosy;
+  mat[0][1] = -cosy * sinz;
+  mat[0][2] = siny;
+  mat[1][0] = sinzcosx + (coszsinx * siny);
+  mat[1][1] = coszcosx - (sinzsinx * siny);
+  mat[1][2] = -sinx * cosy;
+  mat[2][0] = (sinzsinx) - (coszcosx * siny);
+  mat[2][1] = (coszsinx) + (sinzcosx * siny);
+  mat[2][2] = cosy * cosx;
 
-	EstG[0] = GEstG[0] * mat[0][0] + GEstG[1] * mat[1][0] + GEstG[2] * mat[2][0];
-	EstG[1] = GEstG[0] * mat[0][1] + GEstG[1] * mat[1][1] + GEstG[2] * mat[2][1];
-	EstG[2] = GEstG[0] * mat[0][2] + GEstG[1] * mat[1][2] + GEstG[2] * mat[2][2];
-
+  EstG[0] = GEstG[0] * mat[0][0] + GEstG[1] * mat[1][0] + GEstG[2] * mat[2][0];
+  EstG[1] = GEstG[0] * mat[0][1] + GEstG[1] * mat[1][1] + GEstG[2] * mat[2][1];
+  EstG[2] = GEstG[0] * mat[0][2] + GEstG[1] * mat[1][2] + GEstG[2] * mat[2][2];
 
   vectorcopy(&GEstG[0], &EstG[0]);
 #else
@@ -150,16 +159,14 @@ void imu_calc(void) {
     }
   } else {
 #ifdef BFPV_IMU
-	  float accmag = calcmagnitude(&accel[0]);
-      for (int axis = 0; axis < 3; axis++)
-          {
-              accel[axis] = accel[axis] * ( ACC_1G / accmag);
-          }
-          float filtcoeff = lpfcalc_hz( looptime, 1.0f/(float)FILTERTIME);
-          for (int x = 0; x < 3; x++)
-          {
-             lpf(&GEstG[x], accel[x], filtcoeff);
-          }
+    float accmag = calcmagnitude(&accel[0]);
+    for (int axis = 0; axis < 3; axis++) {
+      accel[axis] = accel[axis] * (ACC_1G / accmag);
+    }
+    float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FILTERTIME);
+    for (int x = 0; x < 3; x++) {
+      lpf(&GEstG[x], accel[x], filtcoeff);
+    }
 #else
     //lateshift bartender - quad is IN AIR and things are getting wild
     // hit accel[3] with a sledgehammer
