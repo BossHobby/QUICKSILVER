@@ -139,6 +139,9 @@ int main(void) {
   // load default profile
   profile_set_defaults();
 
+  // setup filters early
+  filter_init();
+
 #ifdef FLASH_SAVE1
   // read pid identifier for values in file pid.c
   flash_hard_coded_pid_identifier();

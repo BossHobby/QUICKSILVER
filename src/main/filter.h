@@ -22,6 +22,8 @@ float lpfcalc(float sampleperiod, float filtertime);
 float lpfcalc_hz(float sampleperiod, float filterhz);
 void lpf(float *out, float in, float coeff);
 
+void filter_init();
+
 float lpffilter(float in, int num);
 float lpffilter2(float in, int num);
 float throttlehpf(float in);
