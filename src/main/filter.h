@@ -9,7 +9,7 @@
 typedef struct {
   float lpf_last;
   float alpha;
-} filter_lpf;
+} filter_pt1;
 
 typedef struct {
   float x_est_last;
@@ -42,9 +42,9 @@ float lpfcalc_hz(float sampleperiod, float filterhz);
 
 void lpf(float *out, float in, float coeff);
 
-void filter_lpf_init(filter_lpf *filter, uint8_t count, float hz);
-void filter_lpf_coeff(filter_lpf *filter, uint8_t count, float hz);
-float filter_lpf_step(filter_lpf *filter, float in);
+void filter_pt1_init(filter_pt1 *filter, uint8_t count, float hz);
+void filter_pt1_coeff(filter_pt1 *filter, uint8_t count, float hz);
+float filter_pt1_step(filter_pt1 *filter, float in);
 
 void filter_kalman_init(filter_kalman *filter, uint8_t count, float coeff);
 float filter_kalman_step(filter_kalman *filter, float in);

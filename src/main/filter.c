@@ -38,7 +38,7 @@ void lpf(float *out, float in, float coeff) {
 }
 
 #if defined(PT1_GYRO)
-void filter_lpf_init(filter_lpf *filter, uint8_t count, float hz) {
+void filter_pt1_init(filter_pt1 *filter, uint8_t count, float hz) {
   const float alpha = FILTERCALC(looptime, (1.0f / hz));
   for (uint8_t i = 0; i < count; i++) {
     filter[i].lpf_last = 0;
@@ -46,14 +46,14 @@ void filter_lpf_init(filter_lpf *filter, uint8_t count, float hz) {
   }
 }
 
-void filter_lpf_coeff(filter_lpf *filter, uint8_t count, float hz) {
+void filter_pt1_coeff(filter_pt1 *filter, uint8_t count, float hz) {
   const float alpha = FILTERCALC(looptime, (1.0f / hz));
   for (uint8_t i = 0; i < count; i++) {
     filter[i].alpha = alpha;
   }
 }
 
-float filter_lpf_step(filter_lpf *filter, float in) {
+float filter_pt1_step(filter_pt1 *filter, float in) {
   lpf(&filter->lpf_last, in, filter->alpha);
   return filter->lpf_last;
 }
@@ -152,7 +152,7 @@ float filter_iir_lpf2_step(filter_iir_lpf2 *filter, float sample) {
 
 #if defined(PT1_GYRO) && defined(GYRO_FILTER_PASS1)
 #define SOFT_LPF_1ST_PASS1 GYRO_FILTER_PASS1
-filter_lpf filter1[3];
+filter_pt1 filter1[3];
 #endif
 #if defined(KALMAN_GYRO) && defined(GYRO_FILTER_PASS1)
 #define SOFT_KALMAN_GYRO_PASS1 GYRO_FILTER_PASS1
@@ -166,8 +166,8 @@ float lpffilter(float in, int num) {
 
 #ifdef SOFT_LPF_1ST_PASS1
   if (num == 0)
-    filter_lpf_coeff(filter1, 3, SOFT_LPF_1ST_PASS1);
-  return filter_lpf_step(&filter1[num], in);
+    filter_pt1_coeff(filter1, 3, SOFT_LPF_1ST_PASS1);
+  return filter_pt1_step(&filter1[num], in);
 #endif
 
 #ifdef SOFT_KALMAN_GYRO_PASS1
@@ -177,7 +177,7 @@ float lpffilter(float in, int num) {
 
 #if defined(PT1_GYRO) && defined(GYRO_FILTER_PASS2)
 #define SOFT_LPF_1ST_PASS2 GYRO_FILTER_PASS2
-filter_lpf filter2[3];
+filter_pt1 filter2[3];
 #endif
 #if defined(KALMAN_GYRO) && defined(GYRO_FILTER_PASS2)
 #define SOFT_KALMAN_GYRO_PASS2 GYRO_FILTER_PASS2
@@ -191,8 +191,8 @@ float lpffilter2(float in, int num) {
 
 #ifdef SOFT_LPF_1ST_PASS2
   if (num == 0)
-    filter_lpf_coeff(filter2, 3, SOFT_LPF_1ST_PASS2);
-  return filter_lpf_step(&filter2[num], in);
+    filter_pt1_coeff(filter2, 3, SOFT_LPF_1ST_PASS2);
+  return filter_pt1_step(&filter2[num], in);
 #endif
 
 #ifdef SOFT_KALMAN_GYRO_PASS2
@@ -212,14 +212,14 @@ float splpf(float in, int num) {
 
 void filter_init() {
 #ifdef SOFT_LPF_1ST_PASS1
-  filter_lpf_init(filter1, 3, SOFT_LPF_1ST_PASS1);
+  filter_pt1_init(filter1, 3, SOFT_LPF_1ST_PASS1);
 #endif
 #ifdef SOFT_KALMAN_GYRO_PASS1
   filter_kalman_init(filter1, 3, SOFT_KALMAN_GYRO_PASS1);
 #endif
 
 #ifdef SOFT_LPF_1ST_PASS2
-  filter_lpf_init(filter2, 3, SOFT_LPF_1ST_PASS2);
+  filter_pt1_init(filter2, 3, SOFT_LPF_1ST_PASS2);
 #endif
 #ifdef SOFT_KALMAN_GYRO_PASS2
   filter_kalman_init(filter2, 3, SOFT_KALMAN_GYRO_PASS2);
