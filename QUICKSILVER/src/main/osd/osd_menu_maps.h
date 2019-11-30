@@ -23,7 +23,6 @@ extern const uint8_t pid_profile_data_index[9][2];
 extern const uint8_t pid_profile_grid[9][2];
 extern const uint8_t pid_profile_data_positions[9][2];
 extern const float pid_profile_adjust_limits[9][2];
-extern const uint8_t pid_scale_index[9];
 
 //filters submenu map
 extern const char filter_temp_labels[3][21];

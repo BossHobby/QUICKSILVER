@@ -196,14 +196,14 @@ float adjust_rounded_float(float input, float adjust_amount){
 		increase_osd_value = 0;
 		osd_menu_phase = 1; //repaint the screen again
 		result = (float)(value+(100.0f * adjust_amount)) / 100.0f;
-		if ((int)(result*100.0f) == 0) return 0;
+		if ((int)(result*100.0f) <= 0) return 0;
 		else return result;
 	}
 	if (decrease_osd_value){
 		decrease_osd_value = 0;
 		osd_menu_phase = 1; //repaint the screen again
 		result = (float)(value-(100.0f * adjust_amount)) / 100.0f;
-		if ((int)(result*100.0f) == 0) return 0;
+		if ((int)(result*100.0f) <= 0) return 0;
 		else return result;
 	}
 	return input;
@@ -268,11 +268,8 @@ void osd_vector_adjust ( vector_t *pointer, uint8_t rows, uint8_t columns, uint8
 	if (osd_cursor <= rows){
 		uint8_t adjust_tracker = ((osd_cursor-1) * columns) + (osd_select - 1);
 		if ((increase_osd_value && pointer->axis[osd_select-1] < adjust_limit[adjust_tracker][1]) || (decrease_osd_value  && pointer->axis[osd_select-1] > adjust_limit[adjust_tracker][0])){
-			if (special_case == BF_PIDS){
-				if (increase_osd_value) pointer->axis[osd_select-1] = pointer->axis[osd_select-1] + bf_pids_increments[adjust_tracker];
-				if (decrease_osd_value) pointer->axis[osd_select-1] = pointer->axis[osd_select-1] - bf_pids_increments[adjust_tracker];
-				osd_menu_phase = 1; //repaint the screen again
-			}
+			if (special_case == BF_PIDS)
+				pointer->axis[osd_select-1] = adjust_rounded_float(pointer->axis[osd_select-1], bf_pids_increments[adjust_tracker]);
 			if (special_case == SW_RATES)
 				pointer->axis[osd_select-1] = adjust_rounded_float(pointer->axis[osd_select-1], sw_rates_increments[adjust_tracker]);
 			if (special_case == ROUNDED)
