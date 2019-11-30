@@ -4,13 +4,6 @@
 #include "math.h"
 #include "project.h"
 
-#ifndef GYRO_FILTER_PASS1
-#define SOFT_LPF1_NONE
-#endif
-#ifndef GYRO_FILTER_PASS2
-#define SOFT_LPF2_NONE
-#endif
-
 extern float looptime;
 
 // calculates the coefficient for lpf filter, times in the same units
@@ -150,56 +143,6 @@ float filter_iir_lpf2_step(filter_iir_lpf2 *filter, float sample) {
   return output;
 }
 
-#if defined(PT1_GYRO) && defined(GYRO_FILTER_PASS1)
-#define SOFT_LPF_1ST_PASS1 GYRO_FILTER_PASS1
-filter_pt1 filter1[3];
-#endif
-#if defined(KALMAN_GYRO) && defined(GYRO_FILTER_PASS1)
-#define SOFT_KALMAN_GYRO_PASS1 GYRO_FILTER_PASS1
-filter_kalman filter1[3];
-#endif
-
-float lpffilter(float in, int num) {
-#ifdef SOFT_LPF1_NONE
-  return in;
-#endif
-
-#ifdef SOFT_LPF_1ST_PASS1
-  if (num == 0)
-    filter_pt1_coeff(filter1, 3, SOFT_LPF_1ST_PASS1);
-  return filter_pt1_step(&filter1[num], in);
-#endif
-
-#ifdef SOFT_KALMAN_GYRO_PASS1
-  return filter_kalman_step(&filter1[num], in);
-#endif
-}
-
-#if defined(PT1_GYRO) && defined(GYRO_FILTER_PASS2)
-#define SOFT_LPF_1ST_PASS2 GYRO_FILTER_PASS2
-filter_pt1 filter2[3];
-#endif
-#if defined(KALMAN_GYRO) && defined(GYRO_FILTER_PASS2)
-#define SOFT_KALMAN_GYRO_PASS2 GYRO_FILTER_PASS2
-filter_kalman filter2[3];
-#endif
-
-float lpffilter2(float in, int num) {
-#ifdef SOFT_LPF2_NONE
-  return in;
-#endif
-
-#ifdef SOFT_LPF_1ST_PASS2
-  if (num == 0)
-    filter_pt1_coeff(filter2, 3, SOFT_LPF_1ST_PASS2);
-  return filter_pt1_step(&filter2[num], in);
-#endif
-
-#ifdef SOFT_KALMAN_GYRO_PASS2
-  return filter_kalman_step(&filter2[num], in);
-#endif
-}
-
 filter_be_hp1 throttlehpf1;
 float throttlehpf(float in) {
   return filter_be_hp1_step(&throttlehpf1, in);
@@ -211,20 +154,6 @@ float splpf(float in, int num) {
 }
 
 void filter_init() {
-#ifdef SOFT_LPF_1ST_PASS1
-  filter_pt1_init(filter1, 3, SOFT_LPF_1ST_PASS1);
-#endif
-#ifdef SOFT_KALMAN_GYRO_PASS1
-  filter_kalman_init(filter1, 3, SOFT_KALMAN_GYRO_PASS1);
-#endif
-
-#ifdef SOFT_LPF_1ST_PASS2
-  filter_pt1_init(filter2, 3, SOFT_LPF_1ST_PASS2);
-#endif
-#ifdef SOFT_KALMAN_GYRO_PASS2
-  filter_kalman_init(filter2, 3, SOFT_KALMAN_GYRO_PASS2);
-#endif
-
   filter_be_hp1_init(&throttlehpf1);
   filter_sp_init(spfilter, 3);
 }
