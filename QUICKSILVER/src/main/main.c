@@ -174,7 +174,7 @@ int main(void) {
   motor_init();
   motor_set_all(0);
 #ifdef ENABLE_OSD
-  delay(200000);
+  delay(300000);
   osd_init();
 #endif
   sixaxis_init();
