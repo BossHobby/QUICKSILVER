@@ -15,11 +15,13 @@ DEFINES=(
   "RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND"
   "RX_FRSKY"
 )
-SCRIPT_FOLDER="$(dirname "$0")"
 OUTPUT_FOLDER="output"
+SCRIPT_FOLDER="$(dirname "$0")"
+SOURCE_FOLDER="$SCRIPT_FOLDER/.."
+BUILD_FOLDER="$SOURCE_FOLDER/build"
 
 INDEX_PAGE="$OUTPUT_FOLDER/quicksilver.html"
-CONFIG_FILE="src/main/config/config.h"
+CONFIG_FILE="$SOURCE_FOLDER/src/main/config/config.h"
 TARGETS_FILE="$SCRIPT_FOLDER/targets.json"
 
 function resetConfig() {
@@ -68,8 +70,8 @@ for target in $(jq -r '.[] | @base64' $TARGETS_FILE); do
     resetConfig
     setConfig "$(config_get '.defines | to_entries[] | @base64')"
 
-    if make -j32 MODE="$MODE" $TARGET_NAME &> /dev/null; then 
-      cp "build/$MODE/quicksilver.$TARGET_NAME.$MODE.hex" "$OUTPUT_FOLDER/$BUILD_NAME.hex"
+    if make -j32 -C "$SOURCE_FOLDER" MODE="$MODE" $TARGET_NAME &> /dev/null; then 
+      cp "$BUILD_FOLDER/$MODE/quicksilver.$TARGET_NAME.$MODE.hex" "$OUTPUT_FOLDER/$BUILD_NAME.hex"
       upload "$OUTPUT_FOLDER/$BUILD_NAME.hex" &> /dev/null
       echo "<div><a target=\"_blank\" href=\"$BUILD_NAME.hex\">$BUILD_NAME</a></div>" >> $INDEX_PAGE
 
