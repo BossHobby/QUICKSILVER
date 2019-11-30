@@ -1,0 +1,62 @@
+[
+  {
+    "name": "matekf411rx",
+    "configurations": [
+      {
+        "name": "brushless.frsky",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_FRSKY": "",
+          "RX_SMOOTHING_HZ": "45"
+        }
+      },
+      {
+        "name": "brushed.frsky",
+        "defines": {
+          "BRUSHED_TARGET": "",
+          "RX_FRSKY": "",
+          "RX_SMOOTHING_HZ": "45"
+        }
+      }
+    ]
+  },
+  {
+    "name": "matekf411",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": "",
+          "RX_SMOOTHING_HZ": "50"
+        }
+      }
+    ]
+  },
+  {
+    "name": "crazybee_f4",
+    "configurations": [
+      {
+        "name": "brushless.frsky",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_FRSKY": "",
+          "RX_SMOOTHING_HZ": "45"
+        }
+      }
+    ]
+  },
+  {
+    "name": "nox",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": "",
+          "RX_SMOOTHING_HZ": "50"
+        }
+      }
+    ]
+  }
+]
