@@ -1,5 +1,18 @@
 [
   {
+    "name": "alienwhoop_v2",
+    "configurations": [
+      {
+        "name": "brushed.serial",
+        "defines": {
+          "BRUSHED_TARGET": "",
+          "RX_UNIFIED_SERIAL": "",
+          "RX_SMOOTHING_HZ": "50"
+        }
+      }
+    ]
+  },
+  {
     "name": "matekf411rx",
     "configurations": [
       {
