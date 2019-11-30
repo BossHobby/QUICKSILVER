@@ -94,8 +94,7 @@ void filter_be_hp1_init(filter_be_hp1 *filter) {
   filter->v[0] = 0.0;
 }
 
-float filter_be_hp1_step(filter_be_hp1 *filter, float x) //class II
-{
+float filter_be_hp1_step(filter_be_hp1 *filter, float x) { //class II
   filter->v[0] = filter->v[1];
   filter->v[1] = (9.521017968695103528e-1f * x) + (0.90420359373902081668f * filter->v[0]);
   return (filter->v[1] - filter->v[0]);
@@ -115,7 +114,7 @@ float filter_sp_step(filter_sp *filter, float x) { //class II
   return (filter->v[0] + filter->v[1]);
 }
 
-void iir_filter_lpf2_set_freq(iir_filter_lpf2 *filter, float sample_freq, float cutoff_freq) {
+void filter_iir_lpf2_init(filter_iir_lpf2 *filter, float sample_freq, float cutoff_freq) {
   const float fr = sample_freq / cutoff_freq;
   const float ohm = tanf(M_PI_F / fr);
   const float c = 1.0f + 2.0f * cosf(M_PI_F / 4.0f) * ohm + ohm * ohm;
@@ -131,7 +130,7 @@ void iir_filter_lpf2_set_freq(iir_filter_lpf2 *filter, float sample_freq, float 
   }
 }
 
-float iir_filter_lpf2_apply(iir_filter_lpf2 *filter, float sample) {
+float filter_iir_lpf2_step(filter_iir_lpf2 *filter, float sample) {
   if (filter->cutoff_freq <= 0.0f) {
     return sample; /* No filtering */
   }
