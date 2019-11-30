@@ -42,6 +42,8 @@ float lpfcalc_hz(float sampleperiod, float filterhz);
 
 void lpf(float *out, float in, float coeff);
 
+void filter_init();
+
 void filter_pt1_init(filter_pt1 *filter, uint8_t count, float hz);
 void filter_pt1_coeff(filter_pt1 *filter, uint8_t count, float hz);
 float filter_pt1_step(filter_pt1 *filter, float in);
@@ -58,8 +60,4 @@ float filter_sp_step(filter_sp *filter, float x);
 void filter_iir_lpf2_init(filter_iir_lpf2 *filter, float sample_freq, float cutoff_freq);
 float filter_iir_lpf2_step(filter_iir_lpf2 *filter, float sample);
 
-void filter_init();
-
-float lpffilter(float in, int num);
-float lpffilter2(float in, int num);
 float throttlehpf(float in);
