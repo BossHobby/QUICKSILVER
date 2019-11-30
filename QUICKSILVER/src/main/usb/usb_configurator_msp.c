@@ -137,7 +137,7 @@ void usb_process_msp() {
     send_msp(code, data, 12);
     break;
   }
-#ifdef defined(USE_SERIAL_4WAY_BLHELI_INTERFACE)
+#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
   case MSP_SET_4WAY_IF: {
     uint8_t data[1] = {4};
     send_msp(code, data, 1);
