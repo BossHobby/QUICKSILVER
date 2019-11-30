@@ -46,11 +46,9 @@ void usb_configurator(void) {
   case USB_MAGIC_SOFT_REBOOT:
     NVIC_SystemReset();
     break;
-#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
   case USB_MAGIC_MSP:
     usb_process_msp();
     break;
-#endif
   case USB_MAGIC_QUIC:
     usb_process_quic();
     break;
@@ -108,6 +106,10 @@ void usb_configurator(void) {
                       profile_current_pid_rates()->kd.axis[2]);
     break;
   }
+
+  // this will block and handle all usb traffic while active
+  extern unsigned int lastlooptime;
+  lastlooptime = gettime();
 }
 #pragma GCC diagnostic pop
 

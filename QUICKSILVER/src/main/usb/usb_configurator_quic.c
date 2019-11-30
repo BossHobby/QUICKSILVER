@@ -283,8 +283,5 @@ void usb_process_quic() {
     quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);
     break;
   }
-
-  // reset loop time
-  lastlooptime = gettime();
 }
 #endif

@@ -142,16 +142,14 @@ void usb_process_msp() {
     uint8_t data[1] = {4};
     send_msp(code, data, 1);
 
-    // this will block and handle all usb traffic while active
-    extern unsigned int lastlooptime;
-
     esc4wayInit();
     esc4wayProcess();
-    lastlooptime = gettime();
+
     break;
   }
 #endif
   default:
+    usb_serial_printf("ERROR unkown code (%d)\r\n", code);
     break;
   }
 }
