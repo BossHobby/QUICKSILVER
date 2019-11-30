@@ -6,7 +6,7 @@
 #include "drv_usb.h"
 #include "project.h"
 
-#if defined(F405) && defined(USE_SERIAL_4WAY_BLHELI_INTERFACE)
+#if defined(F405)
 
 #define MSP_API_VERSION 1 //out message
 #define MSP_FC_VARIANT 2  //out message
@@ -137,6 +137,7 @@ void usb_process_msp() {
     send_msp(code, data, 12);
     break;
   }
+#ifdef defined(USE_SERIAL_4WAY_BLHELI_INTERFACE)
   case MSP_SET_4WAY_IF: {
     uint8_t data[1] = {4};
     send_msp(code, data, 1);
@@ -149,6 +150,7 @@ void usb_process_msp() {
     lastlooptime = gettime();
     break;
   }
+#endif
   default:
     break;
   }
