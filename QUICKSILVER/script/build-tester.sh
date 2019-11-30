@@ -24,6 +24,8 @@ INDEX_PAGE="$OUTPUT_FOLDER/quicksilver.html"
 CONFIG_FILE="$SOURCE_FOLDER/src/main/config/config.h"
 TARGETS_FILE="$SCRIPT_FOLDER/targets.json"
 
+VERSION=$(git -C $SOURCE_FOLDER describe --always --long)
+
 function resetConfig() {
   for DEFINE in "${DEFINES[@]}"; do
     sed -i "s/^#define \($DEFINE.*\)$/\/\/#define \1/" $CONFIG_FILE
@@ -53,6 +55,7 @@ echo '<!DOCTYPE html>
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>QUICKSILVER Builds</title>
 </head><body>' > $INDEX_PAGE
+echo "<h1>QUICKSILVER Builds $VERSION</h1>" >> $INDEX_PAGE
 
 for target in $(jq -r '.[] | @base64' $TARGETS_FILE); do
   target_get() {
