@@ -6,11 +6,8 @@
 
 typedef struct {
   float lpf_last;
-} filter_lpf1;
-
-typedef struct {
-  float lpf_last;
-} filter_lpf2;
+  float alpha;
+} filter_lpf;
 
 typedef struct {
   float x_est_last;
@@ -18,13 +15,6 @@ typedef struct {
   float Q;
   float R;
 } filter_kalman;
-
-typedef struct {
-  float x_est_last;
-  float P_last;
-  float Q;
-  float R;
-} filter_kalman2;
 
 typedef struct {
   float v[2];
@@ -45,12 +35,13 @@ typedef struct {
   float delay_element_2; /* Buffered sample -2 */
 } iir_filter_lpf2;
 
-void iir_filter_lpf2_set_freq(iir_filter_lpf2 *filter, float sample_freq, float cutoff_freq);
-float iir_filter_lpf2_apply(iir_filter_lpf2 *filter, float sample);
-
 float lpfcalc(float sampleperiod, float filtertime);
 float lpfcalc_hz(float sampleperiod, float filterhz);
+
 void lpf(float *out, float in, float coeff);
+
+void iir_filter_lpf2_set_freq(iir_filter_lpf2 *filter, float sample_freq, float cutoff_freq);
+float iir_filter_lpf2_apply(iir_filter_lpf2 *filter, float sample);
 
 void filter_init();
 
