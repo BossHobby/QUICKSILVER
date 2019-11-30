@@ -367,7 +367,10 @@ const profile_t default_profile = {
     },
 };
 
+#define MACRO_STR(arg) #arg
+
 target_info_t target_info = {
+    .target_name = MACRO_STR(TARGET),
     .quic_protocol_version = QUIC_PROTOCOL_VERSION,
 
 #define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) "P" #port #pin,

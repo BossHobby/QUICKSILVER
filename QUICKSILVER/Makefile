@@ -49,15 +49,15 @@ COMMON_FLAGS = -Wall -Wdouble-promotion -MMD -MP \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables \
 	-fno-math-errno -fmerge-all-constants
 
-CFLAGS   = $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(COMMON_FLAGS)  \
+CFLAGS   = $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(TARGET_FLAGS) $(COMMON_FLAGS)  \
 	-std=gnu11
-CXXFLAGS = $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(COMMON_FLAGS)  \
+CXXFLAGS = $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(TARGET_FLAGS) $(COMMON_FLAGS)  \
 	-std=gnu++17 -fno-rtti -fno-exceptions -fvtable-gc -fno-threadsafe-statics -fno-use-cxa-atexit
 
 LDFLAGS  += -static -lc -lnosys -lm -Wl,-L$(SYSTEM_DIR),-T$(SYSTEM_LD_SCRIPT),-Map,$(BUILD_DIR)/$(BINARY).map,--verbose,--gc-sections,--print-gc-sections \
-	$(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(COMMON_FLAGS)
+	$(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(TARGET_FLAGS) $(COMMON_FLAGS)
 
-ASFLAGS  += $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(COMMON_FLAGS) -x assembler-with-cpp $(addprefix -I,$(INCLUDE)) -MMD -MP
+ASFLAGS  += $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(TARGET_FLAGS) $(COMMON_FLAGS) -x assembler-with-cpp $(addprefix -I,$(INCLUDE)) -MMD -MP
 
 all: $(TARGET)
 

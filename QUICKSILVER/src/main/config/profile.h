@@ -212,6 +212,8 @@ typedef struct {
   MEMBER(voltage, voltage_t)
 
 typedef struct {
+  const char *target_name;
+
   uint32_t quic_protocol_version;
 
   const char *motor_pins[MOTOR_PIN_IDENT_MAX];
@@ -219,6 +221,7 @@ typedef struct {
 } target_info_t;
 
 #define TARGET_INFO_MEMBERS                         \
+  STR_MEMBER(target_name)                           \
   MEMBER(quic_protocol_version, uint32)             \
   STR_ARRAY_MEMBER(motor_pins, MOTOR_PIN_IDENT_MAX) \
   STR_ARRAY_MEMBER(usart_ports, USART_PORTS_MAX)
