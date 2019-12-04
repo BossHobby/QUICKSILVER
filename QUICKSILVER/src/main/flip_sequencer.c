@@ -6,12 +6,16 @@
 #include "drv_time.h"
 #include "profile.h"
 
-#define THROTTLE_UP 0.8
+#define STANDARD_TURTLE
+#define TURTLE_TIMEOUT 5e6	//todo:  5 second timeout for testing
+
+
+#define THROTTLE_UP 1.0		//todo:  needs to be adjustable
 #define THROTTLE_HOVER 0.5
 #define THROTTLE_EXIT 0.6
 
 #define FLIP_RATE 1500
-//time to up throttle in beggining stage
+//time to up throttle in beginning stage
 // 200ms
 #define THROTTLE_UP_TIME 200e3
 // end time in level mode
@@ -31,6 +35,7 @@
 #define STAGE_FLIP_LEVELMODE 5
 #define STAGE_FLIP_EXIT 6
 
+int motortest_override;
 int acro_override = 0;
 int level_override = 0;
 int controls_override = 0;
@@ -45,10 +50,21 @@ extern int onground;
 extern float GEstG[3];
 extern float rx[];
 extern profile_t profile;
+extern int pwmdir;
 
 float rx_override[4];
 
+//ISSUES - turning off the switch does not reset control variables
+
 void start_flip() {
+#ifdef STANDARD_TURTLE
+	if (isflipping == 0 && onground) {  //if not currently in a turtle sequence and are disarmed
+	    isflipping = 1;					//set the all clear to turtle flag
+	    flipstage = STAGE_FLIP_START;
+	}
+#endif
+
+#ifdef AUTOMATED_FLIP
   if (isflipping == 0 && !onground) {
     isflipping = 1;
     fliptime = gettime();
@@ -63,9 +79,79 @@ void start_flip() {
       flipdir = 1;
   } else if (rx[0] > 0)
     flipdir = 1;
+#endif
 }
 
 void flip_sequencer() {
+#ifdef STANDARD_TURTLE
+	if (!isflipping){	//turtle can't be initiated without the all clear flag - hold control variables at 0 state
+		if (flipstage != STAGE_FLIP_NONE)
+			pwmdir = FORWARD;				//forward pwmdir only once as its last state may be unknown from previous turtle event
+		flipstage = STAGE_FLIP_NONE;
+		controls_override = 0;
+		motortest_override = 0;
+		return;
+	}
+
+	if((GEstG[2] > 0) && isflipping){	//exit if initiated right side up
+		flipstage = STAGE_FLIP_EXIT;
+	}
+
+	switch (flipstage) {
+	  case STAGE_FLIP_NONE:
+	    break;
+
+	  case STAGE_FLIP_START:
+		controls_override = 1;
+		rx_override[0] = 0;
+		rx_override[1] = 0;
+		rx_override[2] = 0;
+		rx_override[3] = 0;
+		motortest_override = 1;
+		pwmdir = REVERSE;
+		flipindex = 0;
+		flipdir = 0;
+		if (fabsf(rx[0]) > 0.5f || fabsf(rx[1]) > 0.5f){
+			if (fabsf(rx[0]) < fabsf(rx[1])) {
+				flipindex = 1;
+				if (rx[1] > 0)
+					flipdir = 1;
+				flipstage = STAGE_FLIP_ROTATING;
+				fliptime = gettime();
+			}else{
+				if (rx[0] > 0)
+					flipdir = 1;
+				flipstage = STAGE_FLIP_ROTATING;
+				fliptime = gettime();
+			}
+		}
+		break;
+
+	  case STAGE_FLIP_ROTATING:
+		rx_override[3] = THROTTLE_UP;
+	    if (flipdir){
+	        rx_override[flipindex] = 1.0f;
+	    }else{
+	        rx_override[flipindex] = -1.0f;
+	    }
+		if (gettime() - fliptime > TURTLE_TIMEOUT)
+			flipstage = STAGE_FLIP_START;
+		if (GEstG[2] > 0.50f)
+			flipstage = STAGE_FLIP_EXIT;
+		break;
+
+	  case STAGE_FLIP_EXIT:
+		isflipping = 0;
+		flipstage = STAGE_FLIP_NONE;
+		controls_override = 0;
+		motortest_override = 0;
+		pwmdir = FORWARD;
+		break;
+	}
+#endif
+
+
+#ifdef AUTOMATED_FLIP
   if (!isflipping)
     return;
 
@@ -175,4 +261,5 @@ void flip_sequencer() {
     flipstage = STAGE_FLIP_EXIT;
     break;
   }
+#endif
 }

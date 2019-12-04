@@ -334,7 +334,7 @@
 // throttle direct to motors for thrust measure as a flight mode							//***************** this needs to maybe go away after osd?  not safe - encourages running props with craft in in hand
 //#define MOTORS_TO_THROTTLE_MODE MULTI_AUX_CHANNEL_3
 
-#define DISABLE_FLIP_SEQUENCER //****************need to turn this into crashflip recovery - will require bidirectional esc setting
+//#define DISABLE_FLIP_SEQUENCER //****************need to turn this into crashflip recovery - will require bidirectional esc setting
 
 #define STARTFLIP AUX_CHANNEL_OFF //****************this would be the aux trigger
 

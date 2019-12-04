@@ -466,7 +466,7 @@ void motor_set(uint8_t number, float pwm) {
 	  make_packet(profile.motor.motor_pins[number], value, false);
   }else{						//make a series of dshot command packets
 	  static uint8_t counter;
-	  if (counter <= 50){
+	  if (counter <= 60){
 		  counter++;
 		  if (pwmdir == REVERSE)
 			  value = 21;	//DSHOT_CMD_ROTATE_REVERSE 21
@@ -474,7 +474,7 @@ void motor_set(uint8_t number, float pwm) {
 			  value = 20;	//DSHOT_CMD_ROTATE_NORMAL 20
 		  make_packet(profile.motor.motor_pins[number], value, true);
 	  }
-	  if (counter == 51){
+	  if (counter == 60){
 		  counter = 0;
 		  last_pwmdir = pwmdir;
 	  }

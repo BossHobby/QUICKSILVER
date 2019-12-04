@@ -80,6 +80,7 @@ float tempx[4];
 
 unsigned long timecommand = 0;
 
+extern int motortest_override;
 extern int controls_override;
 extern float rx_override[];
 extern int acro_override;
@@ -162,8 +163,11 @@ void calc_rx() {
     }
   }
 
-  if (rx_auxchange(AUX_STARTFLIP) && !rx_aux_on(AUX_STARTFLIP)) { // only on high -> low transition
+  if (rx_aux_on(AUX_STARTFLIP)) { //turtle active when aux high
     start_flip();
+  }else{
+	extern int isflipping;
+	isflipping = 0;  			//reset the flip sequencer state variable with aux low
   }
 #endif
 }
@@ -753,19 +757,19 @@ void control(void) {
 #undef MOTOR_MIN_COMMAND
 #endif
 #if defined(MOTORS_TO_THROTTLE_MODE) && !defined(MOTORS_TO_THROTTLE)
-      if (rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE)) {
+      if ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE)) || (motortest_override)) {
 #endif
         mix[i] = throttle;
-        if (i == MOTOR_FL && (rx[ROLL] > 0.5f || rx[PITCH] < -0.5f)) {
+        if (i == MOTOR_FL && (rxcopy[ROLL] > 0.5f || rxcopy[PITCH] < -0.5f)) {
           mix[i] = 0;
         }
-        if (i == MOTOR_BL && (rx[ROLL] > 0.5f || rx[PITCH] > 0.5f)) {
+        if (i == MOTOR_BL && (rxcopy[ROLL] > 0.5f || rxcopy[PITCH] > 0.5f)) {
           mix[i] = 0;
         }
-        if (i == MOTOR_FR && (rx[ROLL] < -0.5f || rx[PITCH] < -0.5f)) {
+        if (i == MOTOR_FR && (rxcopy[ROLL] < -0.5f || rxcopy[PITCH] < -0.5f)) {
           mix[i] = 0;
         }
-        if (i == MOTOR_BR && (rx[ROLL] < -0.5f || rx[PITCH] > 0.5f)) {
+        if (i == MOTOR_BR && (rxcopy[ROLL] < -0.5f || rxcopy[PITCH] > 0.5f)) {
           mix[i] = 0;
         }
 #if defined(MOTORS_TO_THROTTLE_MODE) && !defined(MOTORS_TO_THROTTLE)
