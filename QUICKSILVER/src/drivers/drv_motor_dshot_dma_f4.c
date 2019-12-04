@@ -99,6 +99,8 @@ extern int armed_state;
 extern profile_t profile;
 
 int pwmdir = 0;
+int last_pwmdir = 0;
+
 static unsigned long pwm_failsafe_time = 1;
 
 volatile int dshot_dma_phase = 0;  // 0:idle, 1: also idles in interrupt handler as single phase gets called by dshot_dma_start(), 2: & 3: handle remaining phases
@@ -460,8 +462,23 @@ void motor_set(uint8_t number, float pwm) {
   } else {
     pwm_failsafe_time = 0;
   }
-
-  make_packet(profile.motor.motor_pins[number], value, false);
+  if (pwmdir == last_pwmdir){	//make a regular packet
+	  make_packet(profile.motor.motor_pins[number], value, false);
+  }else{						//make a series of dshot command packets
+	  static uint8_t counter;
+	  if (counter <= 50){
+		  counter++;
+		  if (pwmdir == REVERSE)
+			  value = 21;	//DSHOT_CMD_ROTATE_REVERSE 21
+		  if (pwmdir == FORWARD)
+			  value = 20;	//DSHOT_CMD_ROTATE_NORMAL 20
+		  make_packet(profile.motor.motor_pins[number], value, true);
+	  }
+	  if (counter == 51){
+		  counter = 0;
+		  last_pwmdir = pwmdir;
+	  }
+  }
 
   if (number == 3) {
     dshot_dma_start();
