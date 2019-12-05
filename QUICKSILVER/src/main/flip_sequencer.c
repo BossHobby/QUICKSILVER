@@ -54,7 +54,6 @@ extern int pwmdir;
 
 float rx_override[4];
 
-//ISSUES - turning off the switch does not reset control variables
 
 void start_flip() {
 #ifdef STANDARD_TURTLE
@@ -64,7 +63,7 @@ void start_flip() {
 	}
 #endif
 
-#ifdef AUTOMATED_FLIP
+#ifdef AUTOMATED_FLIP		//depreciated - needs a proper going through if it is to be restored
   if (readytoflip == 0 && !onground) {
     readytoflip = 1;
     fliptime = gettime();
@@ -129,12 +128,12 @@ void flip_sequencer() {
 		if (fabsf(rx[0]) > 0.5f || fabsf(rx[1]) > 0.5f){
 			if (fabsf(rx[0]) < fabsf(rx[1])) {
 				flipindex = 1;
-				if (rx[1] > 0)
+				if (rx[1] < 0)
 					flipdir = 1;
 				flipstage = STAGE_FLIP_ROTATING;
 				fliptime = gettime();
 			}else{
-				if (rx[0] > 0)
+				if (rx[0] < 0)
 					flipdir = 1;
 				flipstage = STAGE_FLIP_ROTATING;
 				fliptime = gettime();
