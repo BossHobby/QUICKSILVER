@@ -267,7 +267,7 @@ uint8_t print_osd_flightmode(void){
 }
 
 uint8_t print_osd_system_status(void){
-	const char system_status_labels[10][21] = { {"               "},{" **DISARMED**  "},{"  **ARMED**    "},{" STICK BOOST 1 "},{" STICK BOOST 2 "},{" **FAILSAFE**  "},{"THROTTLE SAFETY"},{" ARMING SAFETY "},{"**LOW BATTERY**"},{"**MOTOR TEST** "} };
+	const char system_status_labels[11][21] = { {"               "},{" **DISARMED**  "},{"  **ARMED**    "},{" STICK BOOST 1 "},{" STICK BOOST 2 "},{" **FAILSAFE**  "},{"THROTTLE SAFETY"},{" ARMING SAFETY "},{"**LOW BATTERY**"},{"**MOTOR TEST** "},{"  **TURTLE**   "} };
 	extern int armed_state;
 	static uint8_t last_armed_state;
 	static uint8_t armed_state_printing;
@@ -288,6 +288,10 @@ uint8_t print_osd_system_status(void){
 	static uint8_t lowbatt_state_printing;
 	static uint8_t index = 0;
 	static uint8_t counter;
+	static uint8_t turtle_state_printing;
+	extern int flipstage;
+	uint8_t turtle_state;
+	static uint8_t last_turtle_state;
 	if(armed_state != last_armed_state || armed_state_printing){
 		last_armed_state = armed_state;
 		if (armed_state_printing == 2){
@@ -518,6 +522,39 @@ uint8_t print_osd_system_status(void){
 			}else{
 				index = 0;
 				motortest_state_printing = 1;
+				return 1;
+			}
+		}
+	}
+	if (flipstage > 0 && armed_state == 1 )
+		turtle_state = 1;
+	else
+		turtle_state = 0;
+	if((turtle_state != last_turtle_state && !binding_while_armed && !throttle_safety && !failsafe)|| (turtle_state_printing  && !binding_while_armed && !throttle_safety && !failsafe)){
+		last_turtle_state = flipstage;
+		if (turtle_state == 0 ){
+			uint8_t character[] = {system_status_labels[0][index]};
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
+			index++;
+			if (index < 15){
+				turtle_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				turtle_state_printing = 0;
+				return 1;
+			}
+		}
+		if (turtle_state == 1) {
+			uint8_t character[] = {system_status_labels[10][index]};
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
+			index++;
+			if (index < 15){
+				turtle_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				turtle_state_printing = 1;
 				return 1;
 			}
 		}

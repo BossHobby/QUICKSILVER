@@ -6,13 +6,11 @@
 #include "drv_time.h"
 #include "profile.h"
 
-int NFE;
-
 #define STANDARD_TURTLE
-#define TURTLE_TIMEOUT 1e6	//todo:  1 second timeout for auto turtle
+#define TURTLE_TIMEOUT 1e6	//1 second timeout for auto turtle
 
 
-#define THROTTLE_UP 1.0		//todo:  needs to be adjustable
+#define THROTTLE_UP 1.0
 #define THROTTLE_HOVER 0.5
 #define THROTTLE_EXIT 0.6
 
@@ -103,7 +101,6 @@ void flip_sequencer() {
 		last_onground = onground;
 		if (!onground)						//quad was just armed - set the turtle_trigger flag to ready
 			turtle_trigger = 1;				//trigger will reinit to 0 next go round
-		NFE++;
 	}
 
 
