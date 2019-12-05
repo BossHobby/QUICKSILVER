@@ -143,7 +143,7 @@ void flip_sequencer() {
 		break;
 
 	  case STAGE_FLIP_ROTATING:
-		rx_override[3] = profile.motor.turtle_throttle_percent;
+		rx_override[3] = profile.motor.turtle_throttle_percent/100.0f;
 	    if (flipdir){
 	        rx_override[flipindex] = 1.0f;
 	    }else{

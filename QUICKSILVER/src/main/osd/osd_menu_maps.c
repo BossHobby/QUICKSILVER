@@ -98,9 +98,9 @@ const char vtx_temp_labels[3][21] = { {"VTX CONTROLS"},{"UNDER"},{"DEVELOPMENT"}
 const uint8_t vtx_temp_positions[3][2] = { {9, 1}, {7, 4}, {7,5} };
 
 //special features menu map
-const char special_features_labels[6][21] = { {"SPECIAL FEATURES"},{"STICK BOOST"},{"LOW BATTERY"},{"LEVEL MODE"},{"MOTOR BOOST"},{"DIGITAL IDLE"} };
-const uint8_t special_features_positions[6][2] = { {7, 1}, {7, 4}, {7, 5}, {7, 6}, {7, 7}, {7, 8} };
-const uint8_t special_features_map[] = {13, 19, 20, 21, 22};					//case numbers for {stickboost}, etc ...adding more soon
+const char special_features_labels[7][21] = { {"SPECIAL FEATURES"},{"STICK BOOST"},{"LOW BATTERY"},{"LEVEL MODE"},{"MOTOR BOOST"},{"DIGITAL IDLE"},{"TURTLE THROTTLE"} };
+const uint8_t special_features_positions[7][2] = { {7, 1}, {7, 4}, {7, 5}, {7, 6}, {7, 7}, {7, 8}, {7, 9} };
+const uint8_t special_features_map[] = {13, 19, 20, 21, 22, 27};					//case numbers for {stickboost}, etc ...adding more soon
 
 //stick boost submenu map
 const char stickboost_labels[3][21] = { {"STICK BOOST PROFILES"},{"AUX OFF PROFILE 1"},{"AUX ON  PROFILE 2"} };
@@ -173,3 +173,11 @@ const uint8_t motoridle_positions[3][2] = { {9, 1},{4, 5},{4, 14} };
 const uint8_t motoridle_grid [1][2] = {{1, 1}};
 const uint8_t motoridle_data_positions[1][2] = { {17, 5} };
 const float motoridle_adjust_limits[1][2] = { {0, 25.0} };
+
+//turtle map
+float *turtlethrottle_ptr[1] = {&profile.motor.turtle_throttle_percent};
+const char turtlethrottle_labels[3][21] = { {"TURTLE MODE"},{"TURTLE THROTTLE %"},{"SAVE AND EXIT"} };
+const uint8_t turtlethrottle_positions[3][2] = { {9, 1},{4, 5},{4, 14} };
+const uint8_t turtlethrottle_grid [1][2] = {{1, 1}};
+const uint8_t turtlethrottle_data_positions[1][2] = { {22, 5} };
+const float turtlethrottle_adjust_limits[1][2] = { {0, 100} };
