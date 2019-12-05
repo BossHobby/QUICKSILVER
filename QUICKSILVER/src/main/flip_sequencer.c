@@ -7,7 +7,7 @@
 #include "profile.h"
 
 #define STANDARD_TURTLE
-#define TURTLE_TIMEOUT 5e6	//todo:  5 second timeout for testing
+#define TURTLE_TIMEOUT 1e6	//todo:  1 second timeout for auto turtle
 
 
 #define THROTTLE_UP 1.0		//todo:  needs to be adjustable
@@ -40,7 +40,7 @@ int acro_override = 0;
 int level_override = 0;
 int controls_override = 0;
 unsigned long fliptime;
-int isflipping = 0;
+int readytoflip = 0;
 int flipstage = STAGE_FLIP_NONE;
 unsigned int levelmodetime;
 int flipindex = 0;
@@ -58,15 +58,15 @@ float rx_override[4];
 
 void start_flip() {
 #ifdef STANDARD_TURTLE
-	if (isflipping == 0 && onground) {  //if not currently in a turtle sequence and are disarmed
-	    isflipping = 1;					//set the all clear to turtle flag
-	    flipstage = STAGE_FLIP_START;
+	if (!readytoflip && onground) {  //if not currently queued up for a turtle sequence and disarmed
+	    readytoflip = 1;					//queue up for a turtle event
+	    flipstage = STAGE_FLIP_NONE;
 	}
 #endif
 
 #ifdef AUTOMATED_FLIP
-  if (isflipping == 0 && !onground) {
-    isflipping = 1;
+  if (readytoflip == 0 && !onground) {
+    readytoflip = 1;
     fliptime = gettime();
     flipstage = STAGE_FLIP_START;
   }
@@ -84,16 +84,31 @@ void start_flip() {
 
 void flip_sequencer() {
 #ifdef STANDARD_TURTLE
-	if (!isflipping){	//turtle can't be initiated without the all clear flag - hold control variables at 0 state
+	if (!readytoflip){						//turtle can't be initiated without the all clear flag - hold control variables at 0 state
 		if (flipstage != STAGE_FLIP_NONE)
-			pwmdir = FORWARD;				//forward pwmdir only once as its last state may be unknown from previous turtle event
+			pwmdir = FORWARD;				//forward pwmdir only once as its last state may be unknown from previously interrupted turtle event
 		flipstage = STAGE_FLIP_NONE;
 		controls_override = 0;
 		motortest_override = 0;
-		return;
+		return;								//turtle mode off or flying away from a successful turtle will return here
+	}										// a disarmed quad with turtle mode on will continue past
+
+
+//  track the change of onground and flag a potential turtle trigger event only on disarmed to armed event.
+	int turtle_trigger = 0;
+	static int last_onground = 0;
+	if (onground != last_onground){
+		last_onground = onground;
+		if (!onground)						//quad was just armed - set the turtle_trigger flag to ready
+			turtle_trigger = 1;				//trigger will reinit to 0 next go round
 	}
 
-	if((GEstG[2] > 0) && isflipping){	//exit if initiated right side up
+
+	if((GEstG[2] < 0) && turtle_trigger){	//begin the turtle sequence only once and with turtle_trigger flag ready and while upside down.
+		flipstage = STAGE_FLIP_START;
+	}
+
+	if(GEstG[2] > 0.5f){					//exit the sequence if you failed to turtle, picked up the quad, and flipped it over your damn self
 		flipstage = STAGE_FLIP_EXIT;
 	}
 
@@ -141,7 +156,7 @@ void flip_sequencer() {
 		break;
 
 	  case STAGE_FLIP_EXIT:
-		isflipping = 0;
+		readytoflip = 0;
 		flipstage = STAGE_FLIP_NONE;
 		controls_override = 0;
 		motortest_override = 0;
@@ -152,13 +167,13 @@ void flip_sequencer() {
 
 
 #ifdef AUTOMATED_FLIP
-  if (!isflipping)
+  if (!readytoflip)
     return;
 
   if (onground)
     flipstage = STAGE_FLIP_EXIT;
 
-  if (isflipping && gettime() - fliptime > FLIP_TIMEOUT_TOTAL) {
+  if (readytoflip && gettime() - fliptime > FLIP_TIMEOUT_TOTAL) {
     // abort after timeout second
     flipstage = STAGE_FLIP_EXIT;
   }
@@ -250,7 +265,7 @@ void flip_sequencer() {
     break;
 
   case STAGE_FLIP_EXIT:
-    isflipping = 0;
+    readytoflip = 0;
     flipstage = STAGE_FLIP_NONE;
     acro_override = 0;
     level_override = 0;

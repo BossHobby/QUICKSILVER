@@ -166,8 +166,8 @@ void calc_rx() {
   if (rx_aux_on(AUX_STARTFLIP)) { //turtle active when aux high
     start_flip();
   }else{
-	extern int isflipping;
-	isflipping = 0;  			//reset the flip sequencer state variable with aux low
+	extern int readytoflip;
+	readytoflip = 0;  			//reset the flip sequencer state variable with aux low
   }
 #endif
 }
