@@ -205,6 +205,11 @@ const profile_t default_profile = {
 #define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) MOTOR_PIN_IDENT(port, pin),
         .motor_pins = {MOTOR_PINS},
 #undef MOTOR_PIN
+#ifndef DISABLE_FLIP_SEQUENCER
+		.turtle_throttle_percent = 0.70f,
+#else
+		.turtle_throttle_percent = 0.00f,
+#endif
     },
 
     .serial = {

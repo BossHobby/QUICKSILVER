@@ -46,6 +46,7 @@ unsigned int levelmodetime;
 int flipindex = 0;
 int flipdir = 0;
 
+extern profile_t profile;
 extern int onground;
 extern float GEstG[3];
 extern float rx[];
@@ -142,7 +143,7 @@ void flip_sequencer() {
 		break;
 
 	  case STAGE_FLIP_ROTATING:
-		rx_override[3] = THROTTLE_UP;
+		rx_override[3] = profile.motor.turtle_throttle_percent;
 	    if (flipdir){
 	        rx_override[flipindex] = 1.0f;
 	    }else{

@@ -145,6 +145,7 @@ typedef struct {
   float torque_boost;
   float throttle_boost;
   motor_pin_ident_t motor_pins[4];
+  float turtle_throttle_percent;
 } motor_t;
 
 #define MOTOR_MEMBERS             \

@@ -112,6 +112,7 @@
 #define STICK_BOOST_PROFILE AUX_CHANNEL_4
 #define RATES AUX_CHANNEL_ON
 #define LEDS_ON AUX_CHANNEL_OFF
+#define STARTFLIP AUX_CHANNEL_OFF //****************turtle mode
 // *************enable buzzer functionality
 // *************change channel assignment from AUX_CHANNEL_OFF to a numbered aux switch if you want switch control
 // *************if no channel is assigned but buzzer is set to AUX_CHANNEL_ON - buzzer will activate on LVC and FAILSAFE.
@@ -287,33 +288,9 @@
 
 //MAINTAIN THIS LIST (probably the most important thing on this list)
 
-//investigate dynamic airmode strength adjustment as a potential benefit - felt uneasy in early tests on 75mm brushless whoop
-
-//establish a "profiles.h" include behind config where users can save build default configs to make quick setup easier when updating
-
-//dma support in driver for f4 and F0 gyro - interrupt driven gyro sync fired control()
-
-//8k f4 loop support - examine all filtering time constants - mostly done - still need accelerometer filters and ADC filters adjusted
-
-//moar TARGETS TODO stuff is in hardware.h like buzzer pin assignment and rgb led pin assignment
-
-//audit and add all recent updates from NFE_Silverware that are missing
-
-//audit code for any remaining toy tx features and remove
-
-//fix the core of rx channel assignments to lose the stupid bayang labels or trim features
-
-//port of buzzer function has not been investigated for f4
-
 //rgb led port to f4
 
-//OSD Support
-
-// Interject variables into define hell
-
-//USB Support & Passthrough Support for F0 (repurpose swd clk pin as half duplex serial) and F4 (investigate USB detect pin)
-
-//USB Confgurator & Serial protocol for variable configuration
+//USB Support & Passthrough Support for F0 (repurpose swd clk pin as half duplex serial)
 
 //SETUP WIZARD
 
@@ -331,12 +308,8 @@
 
 // There were other things on my list that I don't remember now. I'll add them.
 
-// throttle direct to motors for thrust measure as a flight mode							//***************** this needs to maybe go away after osd?  not safe - encourages running props with craft in in hand
-//#define MOTORS_TO_THROTTLE_MODE MULTI_AUX_CHANNEL_3
 
-//#define DISABLE_FLIP_SEQUENCER //****************need to turn this into crashflip recovery - will require bidirectional esc setting
-
-#define STARTFLIP AUX_CHANNEL_OFF //****************this would be the aux trigger
+//Moar stuff that needs attention
 
 // *************motor curve to use - select one																//***************This could become something like tpa
 // *************the pwm frequency has to be set independently
