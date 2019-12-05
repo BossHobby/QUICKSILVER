@@ -206,7 +206,7 @@ const profile_t default_profile = {
         .motor_pins = {MOTOR_PINS},
 #undef MOTOR_PIN
 #ifndef DISABLE_FLIP_SEQUENCER
-		.turtle_throttle_percent = 0.70f,
+		.turtle_throttle_percent = 70.0f,
 #else
 		.turtle_throttle_percent = 0.00f,
 #endif

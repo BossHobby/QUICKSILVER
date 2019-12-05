@@ -6,6 +6,8 @@
 #include "drv_time.h"
 #include "profile.h"
 
+int NFE;
+
 #define STANDARD_TURTLE
 #define TURTLE_TIMEOUT 1e6	//todo:  1 second timeout for auto turtle
 
@@ -101,6 +103,7 @@ void flip_sequencer() {
 		last_onground = onground;
 		if (!onground)						//quad was just armed - set the turtle_trigger flag to ready
 			turtle_trigger = 1;				//trigger will reinit to 0 next go round
+		NFE++;
 	}
 
 
@@ -129,12 +132,12 @@ void flip_sequencer() {
 		if (fabsf(rx[0]) > 0.5f || fabsf(rx[1]) > 0.5f){
 			if (fabsf(rx[0]) < fabsf(rx[1])) {
 				flipindex = 1;
-				if (rx[1] < 0)
+				if (rx[1] > 0)
 					flipdir = 1;
 				flipstage = STAGE_FLIP_ROTATING;
 				fliptime = gettime();
 			}else{
-				if (rx[0] < 0)
+				if (rx[0] > 0)
 					flipdir = 1;
 				flipstage = STAGE_FLIP_ROTATING;
 				fliptime = gettime();

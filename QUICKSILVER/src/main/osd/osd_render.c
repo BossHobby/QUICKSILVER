@@ -878,7 +878,7 @@ void osd_display(void) {
   case 12:		//special features
 	  last_display_phase = 1;
 	  print_osd_menu_strings(7, 6, special_features_labels, special_features_positions);
-	  if (osd_menu_phase == 8) osd_select_menu_item(5,special_features_map, SUB_MENU);
+	  if (osd_menu_phase == 8) osd_select_menu_item(6,special_features_map, SUB_MENU);
       break;
 
   case 13:		//stick boost profiles
