@@ -47,6 +47,7 @@ int flipindex = 0;
 int flipdir = 0;
 
 extern profile_t profile;
+extern int binding_while_armed;
 extern int onground;
 extern float GEstG[3];
 extern float rx[];
@@ -90,6 +91,7 @@ void flip_sequencer() {
 		flipstage = STAGE_FLIP_NONE;
 		controls_override = 0;
 		motortest_override = 0;
+		binding_while_armed = 1;			//just in case absolutely require that the quad be disarmed
 		return;								//turtle mode off or flying away from a successful turtle will return here
 	}										// a disarmed quad with turtle mode on will continue past
 
@@ -161,6 +163,7 @@ void flip_sequencer() {
 		controls_override = 0;
 		motortest_override = 0;
 		pwmdir = FORWARD;
+		binding_while_armed = 1;
 		break;
 	}
 #endif
