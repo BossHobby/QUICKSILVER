@@ -13,11 +13,11 @@
 //***********************************************NEW STUFF TO PLAY WITH*****************************************************
 
 // Select filter cut 25hz for SBUS, 67hz for CRSF, 40hz for DSMX, 20hz for DSM2, 90hz for bayang, 45hz for frsky   Formula is [(1/rx framerate)/2] * 0.9
-#define RX_SMOOTHING_HZ 40
+#define RX_SMOOTHING_HZ 50
 
 //Select (only one) source variable for PID VBAT Compensation
-#define EXACT_VOLTS     //origional method - responds to exact moment to moment sag
-//#define FILTERED_VOLTS // responds to some sag
+//#define EXACT_VOLTS     //origional method - responds to exact moment to moment sag
+#define FILTERED_VOLTS // responds to some sag
 //#define FUELGAUGE_VOLTS // ignores sag
 
 //**********************************************************************************************************************

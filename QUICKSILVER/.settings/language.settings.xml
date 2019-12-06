@@ -637,7 +637,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
+						<entry kind="includePath" name="/${ProjName}/src/targets/nfe_breadboard">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -645,7 +645,7 @@
 						</entry>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="matekf405"/>
+						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="Libraries/cbor/src">
@@ -685,7 +685,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
+						<entry kind="includePath" name="/${ProjName}/src/targets/nfe_breadboard">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -693,7 +693,7 @@
 						</entry>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="matekf405"/>
+						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main">
@@ -733,7 +733,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
+						<entry kind="includePath" name="/${ProjName}/src/targets/nfe_breadboard">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -741,7 +741,7 @@
 						</entry>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="matekf405"/>
+						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/config">
@@ -781,7 +781,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
+						<entry kind="includePath" name="/${ProjName}/src/targets/nfe_breadboard">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -789,7 +789,7 @@
 						</entry>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="matekf405"/>
+						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/usb">
@@ -829,7 +829,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
+						<entry kind="includePath" name="/${ProjName}/src/targets/nfe_breadboard">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -837,7 +837,7 @@
 						</entry>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="matekf405"/>
+						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/drivers">
@@ -877,7 +877,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
+						<entry kind="includePath" name="/${ProjName}/src/targets/nfe_breadboard">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -885,7 +885,7 @@
 						</entry>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="matekf405"/>
+						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/system/stm32f405">
@@ -925,7 +925,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
+						<entry kind="includePath" name="/${ProjName}/src/targets/nfe_breadboard">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -933,7 +933,7 @@
 						</entry>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="matekf405"/>
+						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/rx">
@@ -973,7 +973,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
+						<entry kind="includePath" name="/${ProjName}/src/targets/nfe_breadboard">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -981,7 +981,7 @@
 						</entry>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="matekf405"/>
+						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/drivers/usb">
@@ -1021,7 +1021,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
+						<entry kind="includePath" name="/${ProjName}/src/targets/nfe_breadboard">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -1029,7 +1029,7 @@
 						</entry>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="matekf405"/>
+						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/system/stm32f411">
@@ -1185,7 +1185,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
+						<entry kind="includePath" name="/${ProjName}/src/targets/nfe_breadboard">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -1193,7 +1193,7 @@
 						</entry>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="matekf405"/>
+						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 				</language>
@@ -1235,7 +1235,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/matekf405">
+						<entry kind="includePath" name="/${ProjName}/src/targets/nfe_breadboard">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
@@ -1243,7 +1243,7 @@
 						</entry>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="matekf405"/>
+						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 				</language>

@@ -102,12 +102,13 @@ float timefactor;
 // input: error[x] = setpoint - gyro
 // output: pidoutput[x] = change required from motors
 float pid(int x) {
+  extern int flipstage;
   if ((rx_aux_on(AUX_LEVELMODE)) && (!rx_aux_on(AUX_RACEMODE))) { //in level mode or horizon but not racemode
-    if ((onground) || (in_air == 0)) {                            // and while on the ground...
+    if ((onground) || (in_air == 0) || (flipstage > 0)) {         // and while on the ground or while turtle is operating...
       ierror[x] *= 0.98f;
     } // wind down the integral error
   } else {
-    if (onground)
+    if (onground || (flipstage > 0))
       ierror[x] *= 0.98f; //in acro mode - only wind down integral when idle up is off and throttle is 0
   }
 
