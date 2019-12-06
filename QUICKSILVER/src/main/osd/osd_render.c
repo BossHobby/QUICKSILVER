@@ -531,7 +531,7 @@ uint8_t print_osd_system_status(void){
 	else
 		turtle_state = 0;
 	if((turtle_state != last_turtle_state && !binding_while_armed && !throttle_safety && !failsafe)|| (turtle_state_printing  && !binding_while_armed && !throttle_safety && !failsafe)){
-		last_turtle_state = flipstage;
+		last_turtle_state = turtle_state;
 		if (turtle_state == 0 ){
 			uint8_t character[] = {system_status_labels[0][index]};
 			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));

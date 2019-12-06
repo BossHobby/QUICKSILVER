@@ -9,7 +9,6 @@
 #define STANDARD_TURTLE
 #define TURTLE_TIMEOUT 1e6	//1 second timeout for auto turtle
 
-
 #define THROTTLE_UP 1.0
 #define THROTTLE_HOVER 0.5
 #define THROTTLE_EXIT 0.6
@@ -86,12 +85,13 @@ void start_flip() {
 void flip_sequencer() {
 #ifdef STANDARD_TURTLE
 	if (!readytoflip){						//turtle can't be initiated without the all clear flag - hold control variables at 0 state
-		if (flipstage != STAGE_FLIP_NONE)
+		if (flipstage != STAGE_FLIP_NONE){
 			pwmdir = FORWARD;				//forward pwmdir only once as its last state may be unknown from previously interrupted turtle event
+			binding_while_armed = 1;		//just in case absolutely require that the quad be disarmed when turning off turtle mode with a started sequencer
+		}
 		flipstage = STAGE_FLIP_NONE;
 		controls_override = 0;
 		motortest_override = 0;
-		binding_while_armed = 1;			//just in case absolutely require that the quad be disarmed
 		return;								//turtle mode off or flying away from a successful turtle will return here
 	}										// a disarmed quad with turtle mode on will continue past
 
@@ -110,7 +110,7 @@ void flip_sequencer() {
 		flipstage = STAGE_FLIP_START;
 	}
 
-	if(GEstG[2] > 0.5f){					//exit the sequence if you failed to turtle, picked up the quad, and flipped it over your damn self
+	if(GEstG[2] > 0.5f && flipstage){					//exit the sequence if you failed to turtle, picked up the quad, and flipped it over your damn self
 		flipstage = STAGE_FLIP_EXIT;
 	}
 
