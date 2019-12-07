@@ -1,0 +1,10 @@
+---
+kind: pipeline
+type: docker
+name: default
+
+steps:
+  - name: build
+    image: hanfer/docker-gcc-arm-none-eabi:latest
+    commands:
+      - bash QUICKSILVER/script/build-tester.sh
