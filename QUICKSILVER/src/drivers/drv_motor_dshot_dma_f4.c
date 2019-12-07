@@ -99,6 +99,8 @@ extern int armed_state;
 extern profile_t profile;
 
 int pwmdir = 0;
+int last_pwmdir = 0;
+
 static unsigned long pwm_failsafe_time = 1;
 
 volatile int dshot_dma_phase = 0;  // 0:idle, 1: also idles in interrupt handler as single phase gets called by dshot_dma_start(), 2: & 3: handle remaining phases
@@ -440,8 +442,8 @@ void motor_set(uint8_t number, float pwm) {
   value = 48 + (profile.motor.digital_idle * 20) + (uint16_t)(pwm * (2001 - (profile.motor.digital_idle * 20)));
 
 #endif
-
-  if (onground || !armed_state) {
+  extern int motortest_override;
+  if ((onground || !armed_state ) || (motortest_override && pwm < 0.01f) || (rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE))) {	//turn off the slow motors during turtle or motortest
     value = 0; // stop the motors
   }
 
@@ -460,8 +462,28 @@ void motor_set(uint8_t number, float pwm) {
   } else {
     pwm_failsafe_time = 0;
   }
-
-  make_packet(profile.motor.motor_pins[number], value, false);
+  if (pwmdir == last_pwmdir){	//make a regular packet
+	  make_packet(profile.motor.motor_pins[number], value, false);
+  }else{						//make a series of dshot command packets
+	  static uint16_t counter;
+	  if (counter <= 8000){
+		  counter++;
+		  if (pwmdir == REVERSE)
+			  value = 21;	//DSHOT_CMD_ROTATE_REVERSE 21
+		  if (pwmdir == FORWARD)
+			  value = 20;	//DSHOT_CMD_ROTATE_NORMAL 20
+		  if (counter <= 4000)							//override to disarmed for a few cycles just since case blheli wants that
+			  make_packet(profile.motor.motor_pins[number], 0, false);
+		  if (counter > 4000 && counter <= 4060)		//send the command 6 times plus a few extra times for good measure
+			  make_packet(profile.motor.motor_pins[number], value, true);
+		  if (counter > 4600)							//override to disarmed for a few cycles just since case blheli wants that
+			  make_packet(profile.motor.motor_pins[number], 0, false);
+	  }
+	  if (counter == 8001){
+		  counter = 0;
+		  last_pwmdir = pwmdir;
+	  }
+  }
 
   if (number == 3) {
     dshot_dma_start();

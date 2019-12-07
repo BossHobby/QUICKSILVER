@@ -267,7 +267,7 @@ uint8_t print_osd_flightmode(void){
 }
 
 uint8_t print_osd_system_status(void){
-	const char system_status_labels[10][21] = { {"               "},{" **DISARMED**  "},{"  **ARMED**    "},{" STICK BOOST 1 "},{" STICK BOOST 2 "},{" **FAILSAFE**  "},{"THROTTLE SAFETY"},{" ARMING SAFETY "},{"**LOW BATTERY**"},{"**MOTOR TEST** "} };
+	const char system_status_labels[11][21] = { {"               "},{" **DISARMED**  "},{"  **ARMED**    "},{" STICK BOOST 1 "},{" STICK BOOST 2 "},{" **FAILSAFE**  "},{"THROTTLE SAFETY"},{" ARMING SAFETY "},{"**LOW BATTERY**"},{"**MOTOR TEST** "},{"  **TURTLE**   "} };
 	extern int armed_state;
 	static uint8_t last_armed_state;
 	static uint8_t armed_state_printing;
@@ -288,6 +288,10 @@ uint8_t print_osd_system_status(void){
 	static uint8_t lowbatt_state_printing;
 	static uint8_t index = 0;
 	static uint8_t counter;
+	static uint8_t turtle_state_printing;
+	extern int flipstage;
+	uint8_t turtle_state;
+	static uint8_t last_turtle_state;
 	if(armed_state != last_armed_state || armed_state_printing){
 		last_armed_state = armed_state;
 		if (armed_state_printing == 2){
@@ -518,6 +522,39 @@ uint8_t print_osd_system_status(void){
 			}else{
 				index = 0;
 				motortest_state_printing = 1;
+				return 1;
+			}
+		}
+	}
+	if (flipstage > 0 && armed_state == 1 )
+		turtle_state = 1;
+	else
+		turtle_state = 0;
+	if((turtle_state != last_turtle_state && !binding_while_armed && !throttle_safety && !failsafe)|| (turtle_state_printing  && !binding_while_armed && !throttle_safety && !failsafe)){
+		last_turtle_state = turtle_state;
+		if (turtle_state == 0 ){
+			uint8_t character[] = {system_status_labels[0][index]};
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
+			index++;
+			if (index < 15){
+				turtle_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				turtle_state_printing = 0;
+				return 1;
+			}
+		}
+		if (turtle_state == 1) {
+			uint8_t character[] = {system_status_labels[10][index]};
+			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
+			index++;
+			if (index < 15){
+				turtle_state_printing = 1;
+				return 0;
+			}else{
+				index = 0;
+				turtle_state_printing = 1;
 				return 1;
 			}
 		}
@@ -877,8 +914,8 @@ void osd_display(void) {
 
   case 12:		//special features
 	  last_display_phase = 1;
-	  print_osd_menu_strings(6, 5, special_features_labels, special_features_positions);
-	  if (osd_menu_phase == 7) osd_select_menu_item(5,special_features_map, SUB_MENU);
+	  print_osd_menu_strings(7, 6, special_features_labels, special_features_positions);
+	  if (osd_menu_phase == 8) osd_select_menu_item(6,special_features_map, SUB_MENU);
       break;
 
   case 13:		//stick boost profiles
@@ -962,7 +999,7 @@ void osd_display(void) {
 	  print_osd_adjustable_float(6, 4, level_pid_ptr, levelmode_grid, levelmode_data_positions, 1);
 	  if (osd_menu_phase == 11) osd_float_adjust(level_pid_ptr, 2, 2, levelmode_adjust_limits, 0.5);
 	  break;
-//**********************************
+
   case 25:		//edit torque boost
 	  last_display_phase = 21;
 	  print_osd_menu_strings(3, 2, torqueboost_labels, torqueboost_positions);
@@ -975,6 +1012,13 @@ void osd_display(void) {
 	  print_osd_menu_strings(3, 2, throttleboost_labels, throttleboost_positions);
 	  print_osd_adjustable_float(3, 1, throttleboost_ptr, throttleboost_grid, throttleboost_data_positions, 1);
 	  if (osd_menu_phase == 5) osd_float_adjust(throttleboost_ptr, 1, 1, throttleboost_adjust_limits, 0.5);
+	  break;
+
+  case 27:		//edit turtle throttle percent
+	  last_display_phase = 12;
+	  print_osd_menu_strings(3, 2, turtlethrottle_labels, turtlethrottle_positions);
+	  print_osd_adjustable_float(3, 1, turtlethrottle_ptr, turtlethrottle_grid, turtlethrottle_data_positions, 0);
+	  if (osd_menu_phase == 5) osd_float_adjust(turtlethrottle_ptr, 1, 1, turtlethrottle_adjust_limits, 10.0);
 	  break;
 
   }

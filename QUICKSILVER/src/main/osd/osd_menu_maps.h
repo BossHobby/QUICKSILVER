@@ -94,8 +94,8 @@ extern const char vtx_temp_labels[3][21];
 extern const uint8_t vtx_temp_positions[3][2];
 
 //special features menu map
-extern const char special_features_labels[6][21];
-extern const uint8_t special_features_positions[6][2];
+extern const char special_features_labels[7][21];
+extern const uint8_t special_features_positions[7][2];
 extern const uint8_t special_features_map[];
 
 //stick boost submenu map
@@ -170,3 +170,10 @@ extern const uint8_t motoridle_grid [1][2];
 extern const uint8_t motoridle_data_positions[1][2];
 extern const float motoridle_adjust_limits[1][2];
 
+//turtle map
+float *turtlethrottle_ptr[1];
+const char turtlethrottle_labels[3][21];
+const uint8_t turtlethrottle_positions[3][2];
+const uint8_t turtlethrottle_grid [1][2];
+const uint8_t turtlethrottle_data_positions[1][2];
+const float turtlethrottle_adjust_limits[1][2];

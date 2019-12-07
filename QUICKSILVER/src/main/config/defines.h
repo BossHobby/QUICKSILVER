@@ -280,3 +280,6 @@
 #ifndef DIGITAL_IDLE
 #define DIGITAL_IDLE 4
 #endif
+
+//#define DISABLE_FLIP_SEQUENCER //****************turtle / crashflip recovery available by default
+
