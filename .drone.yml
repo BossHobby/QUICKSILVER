@@ -8,3 +8,15 @@ steps:
     image: hanfer/docker-gcc-arm-none-eabi:latest
     commands:
       - bash QUICKSILVER/script/build-tester.sh
+  - name: publish
+    image: plugins/github-release
+    settings:
+      api_key:
+        from_secret: github_token
+      files: output/quicksilver*.hex
+      prerelease: true
+      title: latest
+      overwrite: true
+    when:
+      event:
+        - tag
