@@ -193,6 +193,12 @@ const profile_t default_profile = {
 #ifdef SENSOR_ROTATE_90_CCW
         .gyro_orientation = GYRO_ROTATE_90_CCW,
 #endif
+#ifdef SENSOR_ROTATE_135_CCW
+        .gyro_orientation = GYRO_ROTATE_90_CCW | GYRO_ROTATE_45_CCW
+#endif
+#ifdef SENSOR_ROTATE_135_CW
+        .gyro_orientation = GYRO_ROTATE_90_CW | GYRO_ROTATE_45_CW
+#endif
 #ifdef SENSOR_ROTATE_180
         .gyro_orientation = GYRO_ROTATE_180,
 #endif
