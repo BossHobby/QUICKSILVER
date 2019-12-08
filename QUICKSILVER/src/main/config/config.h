@@ -110,7 +110,7 @@
 #define RACEMODE AUX_CHANNEL_OFF
 #define HORIZON AUX_CHANNEL_OFF
 #define STICK_BOOST_PROFILE AUX_CHANNEL_4
-#define RATES AUX_CHANNEL_ON
+#define HIGH_RATES AUX_CHANNEL_ON
 #define LEDS_ON AUX_CHANNEL_OFF
 #define TURTLE AUX_CHANNEL_OFF //****************turtle mode
 // *************enable buzzer functionality

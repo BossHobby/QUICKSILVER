@@ -646,7 +646,7 @@ void send_beacon() {
   unsigned int total_time_in_air_time = total_time_in_air >> 20;
   total_time_in_air_time = total_time_in_air_time * 10;
 
-  int rate_and_mode_value = (rx_aux_on(AUX_RATES) << 1) + !!(rx_aux_on(AUX_LEVELMODE));
+  int rate_and_mode_value = (rx_aux_on(AUX_HIGH_RATES) << 1) + !!(rx_aux_on(AUX_LEVELMODE));
 
   extern int bound_for_BLE_packet;
   extern int failsafe;

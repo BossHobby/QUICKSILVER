@@ -189,7 +189,7 @@ void control(void) {
 
   // high-low rates switch
   float rate_multiplier = 1.0;
-  if (rx_aux_on(AUX_RATES) <= 0) {
+  if (rx_aux_on(AUX_HIGH_RATES) <= 0) {
     rate_multiplier = profile.rate.low_rate_mulitplier;
   }
 

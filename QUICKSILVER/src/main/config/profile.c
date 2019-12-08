@@ -348,7 +348,7 @@ const profile_t default_profile = {
 #else
             AUX_CHANNEL_OFF,
 #endif
-            RATES,   //AUX_RATES
+            HIGH_RATES,   //AUX_HIGH_RATES
             LEDS_ON, //AUX_LEDS_ON
 #ifdef BUZZER_ENABLE //AUX_BUZZER_ENABLE
             BUZZER_ENABLE,
