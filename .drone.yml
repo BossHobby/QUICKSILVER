@@ -17,6 +17,7 @@ steps:
       prerelease: true
       title: latest
       overwrite: true
+      draft: true
     when:
       event:
         - tag
