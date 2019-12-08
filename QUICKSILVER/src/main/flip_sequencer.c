@@ -6,7 +6,11 @@
 #include "drv_time.h"
 #include "profile.h"
 
+#ifdef BRUSHLESS_TARGET
+// TODO: enable for brushed too
 #define STANDARD_TURTLE
+#endif
+
 #define TURTLE_TIMEOUT 1e6 //1 second timeout for auto turtle
 
 #define THROTTLE_UP 1.0
@@ -51,7 +55,10 @@ extern int onground;
 extern float GEstG[3];
 extern float rx[];
 extern profile_t profile;
+
+#ifdef STANDARD_TURTLE
 extern int pwmdir;
+#endif
 
 float rx_override[4];
 
