@@ -64,8 +64,6 @@ for target in $(jq -r '.[] | @base64' $TARGETS_FILE); do
 
     if make -j32 -C "$SOURCE_FOLDER" MODE="$MODE" $TARGET_NAME &> /dev/null; then 
       cp "$BUILD_FOLDER/$MODE/quicksilver.$TARGET_NAME.$MODE.hex" "$OUTPUT_FOLDER/$BUILD_NAME.hex"
-      echo "<div><a target=\"_blank\" href=\"$BUILD_NAME.hex\">$BUILD_NAME</a></div>" >> $INDEX_PAGE
-
       echo -e "\e[32mSuccessfully\e[39m built target $BUILD_NAME"
     else
       echo -e "\e[31mError\e[39m building target $BUILD_NAME"
