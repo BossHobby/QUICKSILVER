@@ -163,7 +163,7 @@ void calc_rx() {
     }
   }
 
-  if (rx_aux_on(AUX_STARTFLIP)) { //turtle active when aux high
+  if (rx_aux_on(AUX_TURTLE)) { //turtle active when aux high
     start_flip();
   }else{
 	extern int readytoflip;

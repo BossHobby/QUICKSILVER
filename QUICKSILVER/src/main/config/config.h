@@ -6,8 +6,8 @@
 //***********************************************HARDWARE SELECTION*****************************************************
 
 // *************DEFINE FLIGHT CONTROLLER MOTOR OUTPUT - *****warning*****  GETTING THIS WRONG CAN SMOKE YOUR BOARD :)
-#define BRUSHLESS_TARGET
-//#define BRUSHED_TARGET
+#define BRUSHLESS_TARGET 
+//#define BRUSHED_TARGET 
 
 //**********************************************************************************************************************
 //***********************************************NEW STUFF TO PLAY WITH*****************************************************
@@ -71,7 +71,7 @@
 
 // *************Receiver protocol selection
 
-#define RX_UNIFIED_SERIAL
+#define RX_UNIFIED_SERIAL 
 //#define RX_SBUS
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
 //#define RX_IBUS
@@ -81,7 +81,7 @@
 //#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
-//#define RX_FRSKY
+//#define RX_FRSKY 
 
 // *************Serial Receiver UART Selection (uncomment all for default from target or if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
 //#define RX_USART USART_PORT1
@@ -112,7 +112,7 @@
 #define STICK_BOOST_PROFILE AUX_CHANNEL_4
 #define RATES AUX_CHANNEL_ON
 #define LEDS_ON AUX_CHANNEL_OFF
-#define STARTFLIP AUX_CHANNEL_OFF //****************turtle mode
+#define TURTLE AUX_CHANNEL_OFF //****************turtle mode
 // *************enable buzzer functionality
 // *************change channel assignment from AUX_CHANNEL_OFF to a numbered aux switch if you want switch control
 // *************if no channel is assigned but buzzer is set to AUX_CHANNEL_ON - buzzer will activate on LVC and FAILSAFE.
@@ -307,7 +307,6 @@
 //FPORT Debug Telemetry is in. Add a "You're on this axis" feature? If you're at all familiar with Quicksilver PIDs the D is a dead giveaway for pitchRoll vs yaw
 
 // There were other things on my list that I don't remember now. I'll add them.
-
 
 //Moar stuff that needs attention
 

@@ -355,7 +355,7 @@ const profile_t default_profile = {
 #else
             AUX_CHANNEL_OFF,
 #endif
-            STARTFLIP, //AUX_STARTFLIP
+            TURTLE, //AUX_TURTLE
 
 #ifdef MOTORS_TO_THROTTLE_MODE //AUX_MOTORS_TO_THROTTLE_MODE
             MOTORS_TO_THROTTLE_MODE,
