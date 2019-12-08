@@ -20,7 +20,6 @@ SCRIPT_FOLDER="$(dirname "$0")"
 SOURCE_FOLDER="$SCRIPT_FOLDER/.."
 BUILD_FOLDER="$SOURCE_FOLDER/build"
 
-INDEX_PAGE="$OUTPUT_FOLDER/quicksilver.html"
 CONFIG_FILE="$SOURCE_FOLDER/src/main/config/config.h"
 TARGETS_FILE="$SCRIPT_FOLDER/targets.json"
 
@@ -47,16 +46,6 @@ function setConfig() {
 rm -rf $OUTPUT_FOLDER
 mkdir $OUTPUT_FOLDER
 
-echo '<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>QUICKSILVER Builds</title>
-</head><body>' > $INDEX_PAGE
-echo "<h1>QUICKSILVER Builds $VERSION</h1>" >> $INDEX_PAGE
-
 for target in $(jq -r '.[] | @base64' $TARGETS_FILE); do
   target_get() {
     echo ${target} | base64 --decode | jq -r "${1}"
@@ -75,7 +64,6 @@ for target in $(jq -r '.[] | @base64' $TARGETS_FILE); do
 
     if make -j32 -C "$SOURCE_FOLDER" MODE="$MODE" $TARGET_NAME &> /dev/null; then 
       cp "$BUILD_FOLDER/$MODE/quicksilver.$TARGET_NAME.$MODE.hex" "$OUTPUT_FOLDER/$BUILD_NAME.hex"
-      upload "$OUTPUT_FOLDER/$BUILD_NAME.hex" &> /dev/null
       echo "<div><a target=\"_blank\" href=\"$BUILD_NAME.hex\">$BUILD_NAME</a></div>" >> $INDEX_PAGE
 
       echo -e "\e[32mSuccessfully\e[39m built target $BUILD_NAME"
@@ -84,6 +72,3 @@ for target in $(jq -r '.[] | @base64' $TARGETS_FILE); do
     fi
   done
 done
-
-echo '</body></html>' >> $INDEX_PAGE
-upload $INDEX_PAGE &> /dev/null
