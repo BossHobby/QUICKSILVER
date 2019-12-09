@@ -393,15 +393,9 @@ int next_pid_axis() {
 float adjust_rounded_pid(float input, float adjust_amount){
     float result;
     float value = (int)(input * 100.0f + 0.5f);
-    if (adjust_amount > 0){
-        result = (float)(value+(100.0f * adjust_amount)) / 100.0f;
-        if ((int)(result*100.0f) <= 0) return 0;
-        else return result;
-    }else{
-        result = (float)(value-(100.0f * adjust_amount)) / 100.0f;
-        if ((int)(result*100.0f) <= 0) return 0;
-        else return result;
-    }
+    result = (float)(value+(100.0f * adjust_amount)) / 100.0f;
+    if ((int)(result*100.0f) <= 0) return 0;
+    else return result;
 }
 
 int change_pid_value(int increase) {
