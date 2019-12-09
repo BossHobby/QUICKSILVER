@@ -75,20 +75,8 @@ int current_pid_term = 0;
 float ierror[PIDNUMBER] = {0, 0, 0};
 float pidoutput[PIDNUMBER];
 float setpoint[PIDNUMBER];
-float v_compensation = 1.00;
-
 static float lasterror[PIDNUMBER];
-
-static float current_kp[PIDNUMBER] = {0, 0, 0};
-static float current_ki[PIDNUMBER] = {0, 0, 0};
-static float current_kd[PIDNUMBER] = {0, 0, 0};
-
-static const float pid_scales[PIDNUMBER][PIDNUMBER] = {
-    // roll, pitch, yaw
-    {628.0f, 628.0f, 314.0f}, //kp
-    {50.0f, 50.0f, 50.0f},    //ki
-    {120.0f, 120.0f, 120.0f}, //kd
-};
+float v_compensation = 1.00;
 
 extern float error[PIDNUMBER];
 extern float setpoint[PIDNUMBER];
@@ -153,18 +141,18 @@ float pid(int x) {
   if (!iwindup) {
 #ifdef MIDPOINT_RULE_INTEGRAL
     // trapezoidal rule instead of rectangular
-    ierror[x] = ierror[x] + (error[x] + lasterror[x]) * 0.5f * current_ki[x] * looptime;
+    ierror[x] = ierror[x] + (error[x] + lasterror[x]) * 0.5f * profile_current_pid_rates()->ki.axis[x] * looptime;
     lasterror[x] = error[x];
 #endif
 
 #ifdef RECTANGULAR_RULE_INTEGRAL
-    ierror[x] = ierror[x] + error[x] * current_ki[x] * looptime;
+    ierror[x] = ierror[x] + error[x] * profile_current_pid_rates()->ki.axis[x] * looptime;
     lasterror[x] = error[x];
 #endif
 
 #ifdef SIMPSON_RULE_INTEGRAL
     // assuming similar time intervals
-    ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + error[x]) * current_ki[x] * looptime;
+    ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + error[x]) * profile_current_pid_rates()->ki.axis[x] * looptime;
     lasterror2[x] = lasterror[x];
     lasterror[x] = error[x];
 #endif
@@ -174,12 +162,12 @@ float pid(int x) {
 
 #ifdef ENABLE_SETPOINT_WEIGHTING
   // P term
-  pidoutput[x] = error[x] * (b[x]) * current_kp[x];
+  pidoutput[x] = error[x] * (b[x]) * profile_current_pid_rates()->kp.axis[x];
   // b
-  pidoutput[x] += -(1.0f - b[x]) * current_kp[x] * gyro[x];
+  pidoutput[x] += -(1.0f - b[x]) * profile_current_pid_rates()->kp.axis[x] * gyro[x];
 #else
   // P term with b disabled
-  pidoutput[x] = error[x] * current_kp[x];
+  pidoutput[x] = error[x] * profile_current_pid_rates()->kp.axis[x];
 #endif
 
   // I term
@@ -187,14 +175,14 @@ float pid(int x) {
 
   // D term
   // skip yaw D term if not set
-  if (current_kd[x] > 0) {
+  if (profile_current_pid_rates()->kd.axis[x] > 0) {
 
 #if (defined DTERM_LPF_1ST_HZ && !defined ADVANCED_PID_CONTROLLER)
     float dterm;
     static float lastrate[3];
     static float dlpf[3] = {0};
 
-    dterm = -(gyro[x] - lastrate[x]) * current_kd[x] * timefactor;
+    dterm = -(gyro[x] - lastrate[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor;
     lastrate[x] = gyro[x];
     lpf(&dlpf[x], dterm, FILTERCALC(looptime, 1.0f / DTERM_LPF_1ST_HZ));
     pidoutput[x] += dlpf[x];
@@ -223,11 +211,11 @@ float pid(int x) {
     static float dlpf[3] = {0};
     static float setpoint_derivative[3];
 
-    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
+    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor;
 #ifdef RX_SMOOTHING_HZ
     lpf(&setpoint_derivative[x], setpoint_derivative[x], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / RX_SMOOTHING_HZ));
 #endif
-    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * current_kd[x] * timefactor);
+    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor);
     lastsetpoint[x] = setpoint[x];
     lastrate[x] = gyro[x];
     lpf(&dlpf[x], dterm, FILTERCALC(looptime, 1.0f / DTERM_LPF_1ST_HZ));
@@ -239,7 +227,7 @@ float pid(int x) {
     static float lastrate[3];
     float lpf2(float in, int num);
 
-    dterm = -(gyro[x] - lastrate[x]) * current_kd[x] * timefactor;
+    dterm = -(gyro[x] - lastrate[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor;
     lastrate[x] = gyro[x];
     dterm = lpf2(dterm, x);
     pidoutput[x] += dterm;
@@ -268,11 +256,11 @@ float pid(int x) {
     float lpf2(float in, int num);
     static float setpoint_derivative[3];
 
-    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
+    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor;
 #ifdef RX_SMOOTHING_HZ
     lpf(&setpoint_derivative[x], setpoint_derivative[x], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / RX_SMOOTHING_HZ));
 #endif
-    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * current_kd[x] * timefactor);
+    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * profile_current_pid_rates()->kd.axis[x] * timefactor);
     lastsetpoint[x] = setpoint[x];
     lastrate[x] = gyro[x];
     dterm = lpf2(dterm, x);
@@ -326,12 +314,6 @@ void pid_precalc() {
     if (rx_aux_on(AUX_LEVELMODE))
       v_compensation *= LEVELMODE_PID_ATTENUATION;
 #endif
-  }
-
-  for (uint8_t i = 0; i < PIDNUMBER; i++) {
-    current_kp[i] = profile_current_pid_rates()->kp.axis[i] / pid_scales[0][i];
-    current_ki[i] = profile_current_pid_rates()->ki.axis[i] / pid_scales[1][i];
-    current_kd[i] = profile_current_pid_rates()->kd.axis[i] / pid_scales[2][i];
   }
 }
 
@@ -408,68 +390,41 @@ int next_pid_axis() {
   return current_pid_axis + 1;
 }
 
-//#define PID_GESTURES_MULTI 1.1f //removed from here
+float adjust_rounded_pid(float input, float adjust_amount){
+    float result;
+    float value = (int)(input * 100.0f + 0.5f);
+    if (adjust_amount > 0){
+        result = (float)(value+(100.0f * adjust_amount)) / 100.0f;
+        if ((int)(result*100.0f) <= 0) return 0;
+        else return result;
+    }else{
+        result = (float)(value-(100.0f * adjust_amount)) / 100.0f;
+        if ((int)(result*100.0f) <= 0) return 0;
+        else return result;
+    }
+}
 
 int change_pid_value(int increase) {
-#ifdef PID_TUNING_INCDEC_FACTOR //custom fixed step for inc/dec PIDs
-  float multiplier = 0.1f;      //Base multiplier of PID_TUNING_INCDEC_FACTOR (currently set to 0.001).
-  //                        //This results in 0.5 steps to PIDs as expressed in the top of this file. Could do with simplification
+  float pid_adjustment = (float)PID_TUNING_ADJUST_AMOUNT;
   if (increase) {
     number_of_increments[current_pid_term][current_pid_axis]++;
   } else {
     number_of_increments[current_pid_term][current_pid_axis]--;
-    multiplier = multiplier - multiplier - multiplier; // Invert it for decreasing pid
+    pid_adjustment = -pid_adjustment;
   }
 
-  float newPID = current_pid_term_pointer()->axis[current_pid_axis]; //Set the newPID to the current PID.
-
-  if (current_pid_term == 0)
-    multiplier = multiplier / 10.0f; //profile_current_pid_rates()->kd.axis: 0.xe-2 - other PIDs: 0.xe-1
-
-#ifdef RX_FPORT
-  //FPORT you can see the PIDs changing, so let's give smaller increments at the lower end
-  //Not doing this for non-FPORT because it'd be far too easy to get very, very lost.
-  if (current_pid_term == 2 && ((newPID <= 0.04f) || (newPID < 0.045f && !increase))) {
-    multiplier = multiplier / 10;
-  } else if (current_pid_term == 2 && ((newPID <= 0.5f) || (newPID <= 0.51f && !increase))) {
-    multiplier = multiplier / 5;
-  }
-#endif
-
-  newPID = current_pid_term_pointer()->axis[current_pid_axis] + ((float)PID_TUNING_INCDEC_FACTOR * multiplier * pid_scales[current_pid_term][current_pid_axis]);
-  if (newPID > 0) {
-    current_pid_term_pointer()->axis[current_pid_axis] = newPID;
-#ifdef COMBINE_PITCH_ROLL_PID_TUNING
-    if (current_pid_axis == 0) {
-      current_pid_term_pointer()->axis[current_pid_axis + 1] = newPID;
-    }
-#endif
-  }
-#else
-#define PID_GESTURES_MULTI 1.1f // moved here
-  float multiplier = 1.0f / (float)PID_GESTURES_MULTI;
-  if (increase) {
-    multiplier = (float)PID_GESTURES_MULTI;
-    number_of_increments[current_pid_term][current_pid_axis]++;
-  } else {
-    number_of_increments[current_pid_term][current_pid_axis]--;
-  }
-
-  current_pid_term_pointer()->axis[current_pid_axis] = current_pid_term_pointer()->axis[current_pid_axis] * multiplier;
+  current_pid_term_pointer()->axis[current_pid_axis] = adjust_rounded_pid(current_pid_term_pointer()->axis[current_pid_axis] , pid_adjustment);
 
 #ifdef COMBINE_PITCH_ROLL_PID_TUNING
-  if (current_pid_axis == 0) {
-    current_pid_term_pointer()->axis[current_pid_axis + 1] = current_pid_term_pointer()->axis[current_pid_axis + 1] * multiplier;
-  }
-#endif
+  if (current_pid_axis == 0)
+    current_pid_term_pointer()->axis[current_pid_axis + 1] = adjust_rounded_pid(current_pid_term_pointer()->axis[current_pid_axis + 1] , pid_adjustment);
 #endif
   return abs(number_of_increments[current_pid_term][current_pid_axis]);
 }
 
-// Increase currently selected term, for the currently selected axis, (by functions above) by 10%
-// The return value, is absolute number of times the specific term/axis was increased or decreased.  For example, if P for Roll was increased by 10% twice,
-// And then reduced by 10% 3 times, the return value would be 1  -  The user has to rememeber he has eventually reduced the by 10% and not increased by 10%
-// I guess this can be improved by using the red leds for increments and blue leds for decrements or something, or just rely on SilverVISE
+// Increase currently selected term, for the currently selected axis, (by functions above) by 1 point
+// The return value, is absolute number of times the specific term/axis was increased or decreased.  For example, if P for Roll was increased by 1 point twice,
+// And then reduced by 1 point 3 times, the return value would be 1  -  The user has to track if the overall command was increase or decrease
 int increase_pid() {
   return change_pid_value(1);
 }

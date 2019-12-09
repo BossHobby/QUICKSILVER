@@ -197,23 +197,20 @@
 // *************0- 15 range
 #define LED_BRIGHTNESS 15
 
-// *************Comment out to disable pid tuning gestures
+// *************Comment out to disable pid tuning gestures - originally created by SilverAG
 #define PID_GESTURE_TUNING
+// *************Comment out to adjust each axis individually - otherwise they move at the same time
 #define COMBINE_PITCH_ROLL_PID_TUNING
-
-// *************Comment out for original relative proportional inc/dec steps for PID values
-#define PID_TUNING_INCDEC_FACTOR 0.5f //fixed inc/dec values for PID tuning - by SilverAG
-//Default value is 0.5f which means that PID values will be increased or decreased by constant index of 0.5
-//For example, if PID value is 10.0 it will be incremented by 0.5 to 10.5 or decremented by 0.5 to 9.5
-//Feel free to change 0.5f value to your liking
+// *************Feel free to change 1.0 value to your liking
+#define PID_TUNING_ADJUST_AMOUNT 1.0 //fixed inc/dec values for PID tuning
 
 // *************flash save method
 // *************flash_save 1: pids + accel calibration
-// *************flash_save 2: accel calibration to option bytes
+// *************flash_save 2: accel calibration to option bytes - probably depreciated or broken
 #define FLASH_SAVE1
 //#define FLASH_SAVE2
 
-// flash saving features
+// flash saving features  - best left alone or many things might break
 //#define DISABLE_GESTURES2
 
 //enables use of stick accelerator and stick transition for d term lpf 1 & 2
