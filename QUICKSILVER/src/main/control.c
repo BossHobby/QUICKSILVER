@@ -155,19 +155,19 @@ void calc_rx() {
   rxcopy[3] = rx[3];
 
 #ifndef DISABLE_FLIP_SEQUENCER
+  if (rx_aux_on(AUX_TURTLE)) { //turtle active when aux high
+    start_flip();
+  }else{
+	extern int readytoflip;
+	readytoflip = 0;  			//reset the flip sequencer state variable with aux low
+  }
+
   flip_sequencer();
 
   if (controls_override) {
     for (int i = 0; i < 3; i++) {
       rxcopy[i] = rx_override[i];
     }
-  }
-
-  if (rx_aux_on(AUX_TURTLE)) { //turtle active when aux high
-    start_flip();
-  }else{
-	extern int readytoflip;
-	readytoflip = 0;  			//reset the flip sequencer state variable with aux low
   }
 #endif
 }

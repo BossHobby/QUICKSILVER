@@ -103,11 +103,12 @@ void flip_sequencer() {
 
   //  track the change of onground and flag a potential turtle trigger event only on disarmed to armed event.
   int turtle_trigger = 0;
-  static int last_onground = 0;
-  if (onground != last_onground) {
-    last_onground = onground;
-    if (!onground)        //quad was just armed - set the turtle_trigger flag to ready
+  static int last_armed_state_turtle;
+  if (rx_aux_on(AUX_ARMING) != last_armed_state_turtle) {
+	  last_armed_state_turtle = rx_aux_on(AUX_ARMING);
+    if (rx_aux_on(AUX_ARMING))       //quad was just armed - set the turtle_trigger flag to ready
       turtle_trigger = 1; //trigger will reinit to 0 next go round
+
   }
 
   if ((GEstG[2] < 0) && turtle_trigger) { //begin the turtle sequence only once and with turtle_trigger flag ready and while upside down.
