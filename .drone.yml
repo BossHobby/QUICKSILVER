@@ -14,7 +14,6 @@ steps:
       api_key:
         from_secret: github_token
       files: output/quicksilver*.hex
-      prerelease: true
       title: latest
       overwrite: true
     when:
