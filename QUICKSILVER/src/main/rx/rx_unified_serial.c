@@ -824,7 +824,18 @@ void processFPORT(void) {
   } // end frame received
 }
 
+vector_t *get_pid_value(uint8_t term) {
 
+  switch (term) {
+  case 0:
+    return &profile.pid.pid_rates[profile.pid.pid_profile].kp;
+  case 1:
+    return &profile.pid.pid_rates[profile.pid.pid_profile].ki;
+  case 2:
+    return &profile.pid.pid_rates[profile.pid.pid_profile].kd;
+  }
+  return NULL;
+}
 
 void sendFPORTTelemetry() {
   if (telemetryCounter > 1 && rx_frame_position >= 41 && frameStatus == 3) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
@@ -885,22 +896,22 @@ void sendFPORTTelemetry() {
     } else if (telemetryPosition == 4) { //PID-P
       telemetryPacket[3] = telemetryIDs[telemetryPosition];
       telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-      telemetryPacket[5] = (int)(profile_current_pid_rates()->kp.axis[current_pid_axis] * 10000);
-      telemetryPacket[6] = (int)(profile_current_pid_rates()->kp.axis[current_pid_axis] * 10000) >> 8;
+      telemetryPacket[5] = (int)(get_pid_value(0)->axis[current_pid_axis] * 100);
+      telemetryPacket[6] = (int)(get_pid_value(0)->axis[current_pid_axis] * 100) >> 8;
       telemetryPacket[7] = 0x00;
       telemetryPacket[8] = 0x00;
     } else if (telemetryPosition == 5) { //PID-I
       telemetryPacket[3] = telemetryIDs[telemetryPosition];
       telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-      telemetryPacket[5] = (int)(profile_current_pid_rates()->ki.axis[current_pid_axis] * 1000);
-      telemetryPacket[6] = (int)(profile_current_pid_rates()->ki.axis[current_pid_axis] * 1000) >> 8;
+      telemetryPacket[5] = (int)(get_pid_value(1)->axis[current_pid_axis] * 100);
+      telemetryPacket[6] = (int)(get_pid_value(1)->axis[current_pid_axis] * 100) >> 8;
       telemetryPacket[7] = 0x00;
       telemetryPacket[8] = 0x00;
     } else if (telemetryPosition == 6) { //PID-D
       telemetryPacket[3] = telemetryIDs[telemetryPosition];
       telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-      telemetryPacket[5] = (int)(profile_current_pid_rates()->kd.axis[current_pid_axis] * 1000);
-      telemetryPacket[6] = (int)(profile_current_pid_rates()->kd.axis[current_pid_axis] * 1000) >> 8;
+      telemetryPacket[5] = (int)(get_pid_value(2)->axis[current_pid_axis] * 100);
+      telemetryPacket[6] = (int)(get_pid_value(2)->axis[current_pid_axis] * 100) >> 8;
       telemetryPacket[7] = 0x00;
       telemetryPacket[8] = 0x00;
     }
