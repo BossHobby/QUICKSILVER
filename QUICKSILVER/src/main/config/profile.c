@@ -196,10 +196,10 @@ const profile_t default_profile = {
         .gyro_orientation = GYRO_ROTATE_90_CCW | GYRO_ROTATE_45_CCW
 #endif
 #ifdef SENSOR_ROTATE_135_CW
-        .gyro_orientation = GYRO_ROTATE_90_CW | GYRO_ROTATE_45_CW
+                                                     .gyro_orientation = GYRO_ROTATE_90_CW | GYRO_ROTATE_45_CW
 #endif
 #ifdef SENSOR_ROTATE_180
-        .gyro_orientation = GYRO_ROTATE_180,
+                                                                                                 .gyro_orientation = GYRO_ROTATE_180,
 #endif
 #ifdef SENSOR_FLIP_180
         .gyro_orientation = GYRO_FLIP_180,
@@ -211,9 +211,9 @@ const profile_t default_profile = {
         .motor_pins = {MOTOR_PINS},
 #undef MOTOR_PIN
 #ifndef DISABLE_FLIP_SEQUENCER
-		.turtle_throttle_percent = 10.0f,
+        .turtle_throttle_percent = 10.0f,
 #else
-		.turtle_throttle_percent = 0.00f,
+        .turtle_throttle_percent = 0.00f,
 #endif
     },
 
@@ -353,9 +353,9 @@ const profile_t default_profile = {
 #else
             AUX_CHANNEL_OFF,
 #endif
-            HIGH_RATES,   //AUX_HIGH_RATES
-            LEDS_ON, //AUX_LEDS_ON
-#ifdef BUZZER_ENABLE //AUX_BUZZER_ENABLE
+            HIGH_RATES, //AUX_HIGH_RATES
+            LEDS_ON,    //AUX_LEDS_ON
+#ifdef BUZZER_ENABLE    //AUX_BUZZER_ENABLE
             BUZZER_ENABLE,
 #else
             AUX_CHANNEL_OFF,
@@ -400,7 +400,9 @@ profile_t profile;
 void profile_set_defaults() {
   memcpy(&profile, &default_profile, sizeof(profile_t));
 
-  profile.pid.pid_rates[0] = pid_rate_presets[DEFAULT_PID_RATE_PRESET].rate;
+  for (uint8_t i = 0; i < PID_PROFILE_MAX; i++) {
+    profile.pid.pid_rates[i] = pid_rate_presets[DEFAULT_PID_RATE_PRESET].rate;
+  }
 }
 
 pid_rate_t *profile_current_pid_rates() {
