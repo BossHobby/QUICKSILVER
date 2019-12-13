@@ -1,6 +1,4 @@
-![](NFE_Dev_Tools/Quicksilver_1.png)
-
-# QUICKSILVER
+# QUICKSILVER [![Build Status](https://ci.bkleiner.codes/api/badges/NotFastEnuf/Guano/status.svg)](https://ci.bkleiner.codes/NotFastEnuf/Guano)
 Flight Controller Firmware based on Silverware by Silver13
 
 **NFE NOTES:**
