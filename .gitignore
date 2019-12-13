@@ -8,7 +8,7 @@ Release/
 compile_commands.json
 .vscode
 *.xml
-*.settings.xml
+!language.settings.xml
 
 *.elf
 *.elf.launch

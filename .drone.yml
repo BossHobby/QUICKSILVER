@@ -7,7 +7,7 @@ steps:
   - name: build
     image: hanfer/docker-gcc-arm-none-eabi:latest
     commands:
-      - bash QUICKSILVER/script/build-tester.sh
+      - bash script/build-tester.sh
   - name: publish
     image: plugins/github-release
     settings:
