@@ -148,18 +148,25 @@ typedef struct {
   float turtle_throttle_percent;
 } motor_t;
 
-#define MOTOR_MEMBERS                 \
-  MEMBER(digital_idle, float)         \
-  MEMBER(invert_yaw, uint8)           \
-  MEMBER(gyro_orientation, uint8)     \
-  MEMBER(torque_boost, float)         \
-  MEMBER(throttle_boost, float)       \
-  ARRAY_MEMBER(motor_pins, 4, uint8)  \
+#define MOTOR_MEMBERS                \
+  MEMBER(digital_idle, float)        \
+  MEMBER(invert_yaw, uint8)          \
+  MEMBER(gyro_orientation, uint8)    \
+  MEMBER(torque_boost, float)        \
+  MEMBER(throttle_boost, float)      \
+  ARRAY_MEMBER(motor_pins, 4, uint8) \
   MEMBER(turtle_throttle_percent, float)
+
+typedef enum {
+  PID_VOLTAGE_COMPENSATION_NONE,
+  PID_VOLTAGE_COMPENSATION_EXACT_VOLTS,
+  PID_VOLTAGE_COMPENSATION_FILTERED_VOLTS,
+  PID_VOLTAGE_COMPENSATION_FUELGAUGE_VOLTS,
+} pid_voltage_compensation_t;
 
 typedef struct {
   uint8_t lipo_cell_count;
-  uint8_t pid_voltage_compensation;
+  pid_voltage_compensation_t pid_voltage_compensation;
   float vbattlow;
   float actual_battery_voltage;
   float reported_telemetry_voltage;

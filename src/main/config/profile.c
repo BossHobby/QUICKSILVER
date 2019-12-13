@@ -193,13 +193,13 @@ const profile_t default_profile = {
         .gyro_orientation = GYRO_ROTATE_90_CCW,
 #endif
 #ifdef SENSOR_ROTATE_135_CCW
-        .gyro_orientation = GYRO_ROTATE_90_CCW | GYRO_ROTATE_45_CCW
+        .gyro_orientation = GYRO_ROTATE_90_CCW | GYRO_ROTATE_45_CCW,
 #endif
 #ifdef SENSOR_ROTATE_135_CW
-                                                     .gyro_orientation = GYRO_ROTATE_90_CW | GYRO_ROTATE_45_CW
+        .gyro_orientation = GYRO_ROTATE_90_CW | GYRO_ROTATE_45_CW,
 #endif
 #ifdef SENSOR_ROTATE_180
-                                                                                                 .gyro_orientation = GYRO_ROTATE_180,
+        .gyro_orientation = GYRO_ROTATE_180,
 #endif
 #ifdef SENSOR_FLIP_180
         .gyro_orientation = GYRO_FLIP_180,
@@ -332,9 +332,17 @@ const profile_t default_profile = {
         .lipo_cell_count = 0,
 #endif
 #ifdef PID_VOLTAGE_COMPENSATION
-        .pid_voltage_compensation = 1,
+#ifdef EXACT_VOLTS
+        .pid_voltage_compensation = PID_VOLTAGE_COMPENSATION_EXACT_VOLTS,
+#endif
+#ifdef FILTERED_VOLTS
+        .pid_voltage_compensation = PID_VOLTAGE_COMPENSATION_FILTERED_VOLTS,
+#endif
+#ifdef FUELGAUGE_VOLTS
+        .pid_voltage_compensation = PID_VOLTAGE_COMPENSATION_FUELGAUGE_VOLTS,
+#endif
 #else
-        .pid_voltage_compensation = 0,
+        .pid_voltage_compensation = PID_VOLTAGE_COMPENSATION_NONE,
 #endif
         .vbattlow = VBATTLOW,
         .actual_battery_voltage = ACTUAL_BATTERY_VOLTAGE,
