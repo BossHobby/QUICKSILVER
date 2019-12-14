@@ -1,3 +1,5 @@
+#pragma once
+
 #include "hardware.h"
 #include "rx.h"
 
@@ -7,6 +9,12 @@
 //#pragma diag_error 260
 
 #define PIDNUMBER 3
+static const float pid_scales[PIDNUMBER][PIDNUMBER] = {
+    // roll, pitch, yaw
+    {628.0f, 628.0f, 314.0f}, //kp
+    {50.0f, 50.0f, 50.0f},    //ki
+    {120.0f, 120.0f, 120.0f}, //kd
+};
 
 #define DEGTORAD 0.017453292f
 #define RADTODEG 57.29577951f
@@ -279,4 +287,3 @@
 #endif
 
 //#define DISABLE_FLIP_SEQUENCER //****************turtle / crashflip recovery available by default
-

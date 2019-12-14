@@ -83,13 +83,6 @@ static float current_kp[PIDNUMBER] = {0, 0, 0};
 static float current_ki[PIDNUMBER] = {0, 0, 0};
 static float current_kd[PIDNUMBER] = {0, 0, 0};
 
-static const float pid_scales[PIDNUMBER][PIDNUMBER] = {
-    // roll, pitch, yaw
-    {628.0f, 628.0f, 314.0f}, //kp
-    {50.0f, 50.0f, 50.0f},    //ki
-    {120.0f, 120.0f, 120.0f}, //kd
-};
-
 extern float error[PIDNUMBER];
 extern float setpoint[PIDNUMBER];
 extern float looptime;
@@ -409,12 +402,14 @@ int next_pid_axis() {
   return current_pid_axis + 1;
 }
 
-float adjust_rounded_pid(float input, float adjust_amount){
-    float result;
-    float value = (int)(input * 100.0f + 0.5f);
-    result = (float)(value+(100.0f * adjust_amount)) / 100.0f;
-    if ((int)(result*100.0f) <= 0) return 0;
-    else return result;
+float adjust_rounded_pid(float input, float adjust_amount) {
+  float result;
+  float value = (int)(input * 100.0f + 0.5f);
+  result = (float)(value + (100.0f * adjust_amount)) / 100.0f;
+  if ((int)(result * 100.0f) <= 0)
+    return 0;
+  else
+    return result;
 }
 
 int change_pid_value(int increase) {
@@ -426,11 +421,11 @@ int change_pid_value(int increase) {
     pid_adjustment = -pid_adjustment;
   }
 
-  current_pid_term_pointer()->axis[current_pid_axis] = adjust_rounded_pid(current_pid_term_pointer()->axis[current_pid_axis] , pid_adjustment);
+  current_pid_term_pointer()->axis[current_pid_axis] = adjust_rounded_pid(current_pid_term_pointer()->axis[current_pid_axis], pid_adjustment);
 
 #ifdef COMBINE_PITCH_ROLL_PID_TUNING
   if (current_pid_axis == 0)
-    current_pid_term_pointer()->axis[current_pid_axis + 1] = adjust_rounded_pid(current_pid_term_pointer()->axis[current_pid_axis + 1] , pid_adjustment);
+    current_pid_term_pointer()->axis[current_pid_axis + 1] = adjust_rounded_pid(current_pid_term_pointer()->axis[current_pid_axis + 1], pid_adjustment);
 #endif
   return abs(number_of_increments[current_pid_term][current_pid_axis]);
 }
