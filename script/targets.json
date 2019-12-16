@@ -84,5 +84,18 @@
         }
       }
     ]
+  },
+  {
+    "name": "nfe_breadboard",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": "",
+          "RX_SMOOTHING_HZ": "50"
+        }
+      }
+    ]
   }
 ]
