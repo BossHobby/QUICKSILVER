@@ -66,6 +66,16 @@ const pid_rate_preset_t pid_rate_presets[] = {
 
     {
         .index = 5,
+        .name = "65mm 1s brushless whoop - Hanfer Edition",
+        .rate = {
+            .kp = {93, 91, 84},
+            .ki = {70, 70, 70},
+            .kd = {68, 68, 7},
+        },
+    },
+
+    {
+        .index = 6,
         .name = "65mm 2s brushless whoop",
         .rate = {
             .kp = {73, 72, 71},
@@ -75,7 +85,7 @@ const pid_rate_preset_t pid_rate_presets[] = {
     },
 
     {
-        .index = 6,
+        .index = 7,
         .name = "6mm & 7mm Abduction Pids for whoops (Team Alienwhoop)",
         //  - set filtering ALIENWHOOP_ZERO_FILTERING
         .rate = {
@@ -86,7 +96,7 @@ const pid_rate_preset_t pid_rate_presets[] = {
     },
 
     {
-        .index = 7,
+        .index = 8,
         .name = "5in Chameleon, T - Motor 2306 2600kV HQ 5x4.3x3 - Bobnova edition",
         .rate = {
             .kp = {41, 47, 47},
@@ -96,7 +106,7 @@ const pid_rate_preset_t pid_rate_presets[] = {
     },
 
     {
-        .index = 8,
+        .index = 9,
         .name = "BOSS 7 with 716 motors and 46mm Props",
         // set filtering to BETA_FILTERING and adjust pass 1 and pass 2 for KALMAN_GYRO both to 70hz, set DTERM_LPF_2ND_HZ to 120hz, disable motor filtering
         // set TORQUE_BOOST to 1.0, and add #define THROTTLE_TRANSIENT_COMPENSATION and #define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 4.0
@@ -111,7 +121,7 @@ const pid_rate_preset_t pid_rate_presets[] = {
     //***************  If your build best matches some of the specs below ... consider the tune a starting point and give me feedback/adjust as necessary.
 
     {
-        .index = 9,
+        .index = 10,
         .name = "(OLD) 6mm experimental AwesomeSauce 20000kv Pids (Team Alienwhoop)",
         //  - set filtering ALIENWHOOP_ZERO_FILTERING
         .rate = {
@@ -122,7 +132,7 @@ const pid_rate_preset_t pid_rate_presets[] = {
     },
 
     {
-        .index = 10,
+        .index = 11,
         .name = "(OLD) BOSS 6 & 7 - 615 and 716 motors, hm830 46mm props",
         //   - set filtering to VERY_STRONG_FILTERING
         .rate = {
@@ -133,7 +143,7 @@ const pid_rate_preset_t pid_rate_presets[] = {
     },
 
     {
-        .index = 11,
+        .index = 12,
         .name = "(OLD) BOSS 8.0 - 816 motors, kingkong 66mm props",
         //   - set filtering to WEAK_FILTERING
         .rate = {
@@ -144,7 +154,7 @@ const pid_rate_preset_t pid_rate_presets[] = {
     },
 
     {
-        .index = 12,
+        .index = 13,
         .name = "(OLD) BOSS 8.5 - 820 motors, kingkong 66mm props",
         //   - set filtering to STRONG_FILTERING
         .rate = {
