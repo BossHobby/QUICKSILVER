@@ -2,6 +2,7 @@
 
 #include "defines.h"
 #include "drv_fmc.h"
+#include "drv_serial.h"
 #include "profile.h"
 #include "project.h"
 #include "rx.h"
@@ -97,7 +98,7 @@ void flash_save(void) {
 
 #ifdef RX_UNIFIED_SERIAL
   if (rx_bind_enable) {
-    extern uint8_t RXProtocol;
+    extern rx_serial_protocol_t RXProtocol;
     writeword(50, RXProtocol);
   } else {
     writeword(50, 0);
@@ -194,7 +195,7 @@ void flash_load(void) {
 #endif
 
 #ifdef RX_UNIFIED_SERIAL
-    extern uint8_t RXProtocol;
+    extern rx_serial_protocol_t RXProtocol;
     if (rx_bind_enable != 1) {
       RXProtocol = 0;
     } else {

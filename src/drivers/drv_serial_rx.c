@@ -38,21 +38,21 @@ void usart_invert(void) {
 //FUNCTION TO INITIALIZE USART FOR A SERIAL RX CALLED FROM RECEIVER PROTOCOL
 
 #ifdef SERIAL_RX
-void serial_rx_init(uint8_t RXProtocol) {
+void serial_rx_init(rx_serial_protocol_t RXProtocol) {
 #if defined(RX_DSM2_1024) || defined(RX_DSMX_2028)
-  RXProtocol = RX_PROTOCOL_DSM;
+  RXProtocol = RX_SERIAL_PROTOCOL_DSM;
 #endif
 #if defined(RX_SBUS)
-  RXProtocol = RX_PROTOCOL_SBUS;
+  RXProtocol = RX_SERIAL_PROTOCOL_SBUS;
 #endif
 #if defined(RX_IBUS)
-  RXProtocol = RX_PROTOCOL_IBUS;
+  RXProtocol = RX_SERIAL_PROTOCOL_IBUS;
 #endif
 #if defined(RX_FPORT)
-  RXProtocol = RX_PROTOCOL_FPORT;
+  RXProtocol = RX_SERIAL_PROTOCOL_FPORT;
 #endif
 #if defined(RX_CRSF)
-  RXProtocol = RX_PROTOCOL_CRSF;
+  RXProtocol = RX_SERIAL_PROTOCOL_CRSF;
 #endif
 
   // make sure there is some time to program the board if SDA pins are reinitialized as GPIO
@@ -63,10 +63,10 @@ void serial_rx_init(uint8_t RXProtocol) {
 
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-  if (RXProtocol == RX_PROTOCOL_DSM || RXProtocol == RX_PROTOCOL_IBUS || RXProtocol == RX_PROTOCOL_CRSF) {
+  if (RXProtocol == RX_SERIAL_PROTOCOL_DSM || RXProtocol == RX_SERIAL_PROTOCOL_IBUS || RXProtocol == RX_SERIAL_PROTOCOL_CRSF) {
     GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-  } else if (RXProtocol == RX_PROTOCOL_SBUS || RXProtocol == RX_PROTOCOL_FPORT) {
+  } else if (RXProtocol == RX_SERIAL_PROTOCOL_SBUS || RXProtocol == RX_SERIAL_PROTOCOL_FPORT) {
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   }
@@ -74,7 +74,7 @@ void serial_rx_init(uint8_t RXProtocol) {
 
   serial_enable_rcc(serial_rx_port);
 
-  if (RXProtocol == RX_PROTOCOL_FPORT) {
+  if (RXProtocol == RX_SERIAL_PROTOCOL_FPORT) {
     GPIO_InitStructure.GPIO_Pin = USART.tx_pin;
     GPIO_Init(USART.gpio_port, &GPIO_InitStructure);
 
@@ -87,16 +87,16 @@ void serial_rx_init(uint8_t RXProtocol) {
   }
 
   USART_InitTypeDef USART_InitStructure;
-  if (RXProtocol == RX_PROTOCOL_DSM || RXProtocol == RX_PROTOCOL_IBUS || RXProtocol == RX_PROTOCOL_FPORT) {
+  if (RXProtocol == RX_SERIAL_PROTOCOL_DSM || RXProtocol == RX_SERIAL_PROTOCOL_IBUS || RXProtocol == RX_SERIAL_PROTOCOL_FPORT) {
     USART_InitStructure.USART_BaudRate = 115200;
-  } else if (RXProtocol == RX_PROTOCOL_SBUS) {
+  } else if (RXProtocol == RX_SERIAL_PROTOCOL_SBUS) {
     USART_InitStructure.USART_BaudRate = 100000;
-  } else if (RXProtocol == RX_PROTOCOL_CRSF) {
+  } else if (RXProtocol == RX_SERIAL_PROTOCOL_CRSF) {
     USART_InitStructure.USART_BaudRate = 420000;
   }
 
   USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-  if (RXProtocol == RX_PROTOCOL_SBUS) {
+  if (RXProtocol == RX_SERIAL_PROTOCOL_SBUS) {
     USART_InitStructure.USART_StopBits = USART_StopBits_2;
     USART_InitStructure.USART_Parity = USART_Parity_Even;
   } else {
@@ -106,13 +106,13 @@ void serial_rx_init(uint8_t RXProtocol) {
 
   USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
 
-  if (RXProtocol == RX_PROTOCOL_FPORT || RXProtocol == RX_PROTOCOL_CRSF) {
+  if (RXProtocol == RX_SERIAL_PROTOCOL_FPORT || RXProtocol == RX_SERIAL_PROTOCOL_CRSF) {
     USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
   } else {
     USART_InitStructure.USART_Mode = USART_Mode_Rx; //USART_Mode_Rx | USART_Mode_Tx;
   }
 
-  if (RXProtocol == RX_PROTOCOL_FPORT) {
+  if (RXProtocol == RX_SERIAL_PROTOCOL_FPORT) {
     USART_HalfDuplexCmd(USART.channel, ENABLE);
   } else {
     USART_HalfDuplexCmd(USART.channel, DISABLE);
