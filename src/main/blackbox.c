@@ -11,7 +11,7 @@ extern uint8_t usb_is_active;
 extern float vbattfilt;
 
 extern float rx[4];
-extern float rxcopy[4];
+extern float rx_filtered[4];
 extern uint8_t aux[AUX_CHANNEL_MAX];
 
 extern float gyro[3];
@@ -89,10 +89,10 @@ void blackbox_update() {
   state.rx_raw[2] = rx[2];
   state.rx_raw[3] = rx[3];
 
-  state.rx_filter[0] = rxcopy[0];
-  state.rx_filter[1] = rxcopy[1];
-  state.rx_filter[2] = rxcopy[2];
-  state.rx_filter[3] = rxcopy[3];
+  state.rx_filter[0] = rx_filtered[0];
+  state.rx_filter[1] = rx_filtered[1];
+  state.rx_filter[2] = rx_filtered[2];
+  state.rx_filter[3] = rx_filtered[3];
 
   for (uint32_t i = 0; i < AUX_CHANNEL_MAX; i++) {
     state.rx_aux[i] = aux[i];

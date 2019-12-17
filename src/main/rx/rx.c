@@ -6,7 +6,7 @@
 #include "project.h"
 #include "util.h"
 
-float rxcopy[4];
+float rx_filtered[4];
 
 extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
@@ -88,26 +88,26 @@ void rx_apply_expo(void) {
 void calc_rx() {
   for (int i = 0; i < 3; ++i) {
 #ifdef RX_SMOOTHING_HZ
-    static float rx_filtered[4];
-    lpf(&rx_filtered[i], rx[i], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / RX_SMOOTHING_HZ));
-    rxcopy[i] = rx_filtered[i];
-    limitf(&rxcopy[i], 1.0);
+    static float rx_temp[4];
+    lpf(&rx_temp[i], rx[i], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / RX_SMOOTHING_HZ));
+    rx_filtered[i] = rx_temp[i];
+    limitf(&rx_filtered[i], 1.0);
 #else
-    rxcopy[i] = rx[i];
-    limitf(&rxcopy[i], 1.0);
+    rx_filtered[i] = rx[i];
+    limitf(&rx_filtered[i], 1.0);
 #endif
 
     if (profile.rate.sticks_deadband > 0.0f) {
-      if (fabsf(rxcopy[i]) <= profile.rate.sticks_deadband) {
-        rxcopy[i] = 0.0f;
+      if (fabsf(rx_filtered[i]) <= profile.rate.sticks_deadband) {
+        rx_filtered[i] = 0.0f;
       } else {
-        if (rxcopy[i] >= 0) {
-          rxcopy[i] = mapf(rxcopy[i], profile.rate.sticks_deadband, 1, 0, 1);
+        if (rx_filtered[i] >= 0) {
+          rx_filtered[i] = mapf(rx_filtered[i], profile.rate.sticks_deadband, 1, 0, 1);
         } else {
-          rxcopy[i] = mapf(rxcopy[i], -profile.rate.sticks_deadband, -1, 0, -1);
+          rx_filtered[i] = mapf(rx_filtered[i], -profile.rate.sticks_deadband, -1, 0, -1);
         }
       }
     }
   }
-  rxcopy[3] = rx[3];
+  rx_filtered[3] = rx[3];
 }

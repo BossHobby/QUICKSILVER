@@ -193,7 +193,7 @@ float pid(int x) {
 #endif
 
 #if (defined DTERM_LPF_1ST_HZ && defined ADVANCED_PID_CONTROLLER)
-    extern float rxcopy[4];
+    extern float rx_filtered[4];
     float dterm;
     float transitionSetpointWeight[3];
     float stickAccelerator[3];
@@ -206,9 +206,9 @@ float pid(int x) {
       stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_OFF].transition.axis[x];
     }
     if (stickAccelerator[x] < 1) {
-      transitionSetpointWeight[x] = (fabsf(rxcopy[x]) * stickTransition[x]) + (1 - stickTransition[x]);
+      transitionSetpointWeight[x] = (fabsf(rx_filtered[x]) * stickTransition[x]) + (1 - stickTransition[x]);
     } else {
-      transitionSetpointWeight[x] = (fabsf(rxcopy[x]) * (stickTransition[x] / stickAccelerator[x])) + (1 - stickTransition[x]);
+      transitionSetpointWeight[x] = (fabsf(rx_filtered[x]) * (stickTransition[x] / stickAccelerator[x])) + (1 - stickTransition[x]);
     }
     static float lastrate[3];
     static float lastsetpoint[3];
@@ -238,7 +238,7 @@ float pid(int x) {
 #endif
 
 #if (defined DTERM_LPF_2ND_HZ && defined ADVANCED_PID_CONTROLLER)
-    extern float rxcopy[4];
+    extern float rx_filtered[4];
     float dterm;
     float transitionSetpointWeight[3];
     float stickAccelerator[3];
@@ -251,9 +251,9 @@ float pid(int x) {
       stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_OFF].transition.axis[x];
     }
     if (stickAccelerator[x] < 1) {
-      transitionSetpointWeight[x] = (fabsf(rxcopy[x]) * stickTransition[x]) + (1 - stickTransition[x]);
+      transitionSetpointWeight[x] = (fabsf(rx_filtered[x]) * stickTransition[x]) + (1 - stickTransition[x]);
     } else {
-      transitionSetpointWeight[x] = (fabsf(rxcopy[x]) * (stickTransition[x] / stickAccelerator[x])) + (1 - stickTransition[x]);
+      transitionSetpointWeight[x] = (fabsf(rx_filtered[x]) * (stickTransition[x] / stickAccelerator[x])) + (1 - stickTransition[x]);
     }
     static float lastrate[3];
     static float lastsetpoint[3];

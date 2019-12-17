@@ -48,7 +48,7 @@ extern int binding_while_armed;
 extern int rx_ready;
 
 extern float rx[];
-extern float rxcopy[];
+extern float rx_filtered[];
 extern float gyro[3];
 extern int failsafe;
 extern float pidoutput[PIDNUMBER];
@@ -118,8 +118,8 @@ static float calcBFRatesRad(int axis) {
   if (rcRate > 2.0f) {
     rcRate += RC_RATE_INCREMENTAL * (rcRate - 2.0f);
   }
-  const float rcCommandfAbs = rxcopy[axis] > 0 ? rxcopy[axis] : -rxcopy[axis];
-  float angleRate = 200.0f * rcRate * rxcopy[axis];
+  const float rcCommandfAbs = rx_filtered[axis] > 0 ? rx_filtered[axis] : -rx_filtered[axis];
+  float angleRate = 200.0f * rcRate * rx_filtered[axis];
   if (superExpo) {
     const float rcSuperfactor = 1.0f / (constrainf(1.0f - (rcCommandfAbs * superExpo), 0.01f, 1.00f));
     angleRate *= rcSuperfactor;
@@ -151,7 +151,7 @@ void control(void) {
 
   if (controls_override) {
     for (int i = 0; i < 3; i++) {
-      rxcopy[i] = rx_override[i];
+      rx_filtered[i] = rx_override[i];
     }
   }
 #endif
@@ -170,9 +170,9 @@ void control(void) {
     rates[1] = rate_multiplier * calcBFRatesRad(1);
     rates[2] = rate_multiplier * calcBFRatesRad(2);
   } else {
-    rates[0] = rate_multiplier * rxcopy[0] * profile.rate.silverware.max_rate.roll * DEGTORAD;
-    rates[1] = rate_multiplier * rxcopy[1] * profile.rate.silverware.max_rate.pitch * DEGTORAD;
-    rates[2] = rate_multiplier * rxcopy[2] * profile.rate.silverware.max_rate.yaw * DEGTORAD;
+    rates[0] = rate_multiplier * rx_filtered[0] * profile.rate.silverware.max_rate.roll * DEGTORAD;
+    rates[1] = rate_multiplier * rx_filtered[1] * profile.rate.silverware.max_rate.pitch * DEGTORAD;
+    rates[2] = rate_multiplier * rx_filtered[2] * profile.rate.silverware.max_rate.yaw * DEGTORAD;
   }
 
   if (rx_aux_on(AUX_LEVELMODE) && !acro_override) {
@@ -181,7 +181,7 @@ void control(void) {
     extern float GEstG[3];    // gravity vector for yaw feedforward
     float yawerror[3] = {0};  // yaw rotation vector
     // calculate roll / pitch error
-    stick_vector(rxcopy, 0);
+    stick_vector(rx_filtered, 0);
     // apply yaw from the top of the quad
     yawerror[0] = GEstG[1] * rates[2];
     yawerror[1] = -GEstG[0] * rates[2];
@@ -230,7 +230,7 @@ void control(void) {
         angleFade = 1;
       }
       float stickFade;
-      float deflection = fabsf(rxcopy[0]);
+      float deflection = fabsf(rx_filtered[0]);
       if (deflection <= HORIZON_STICK_TRANSITION) {
         stickFade = deflection / HORIZON_STICK_TRANSITION;
       } else {
@@ -271,7 +271,7 @@ void control(void) {
           angleFade = 1;
         }
         float stickFade;
-        float deflection = fabsf(rxcopy[i]);
+        float deflection = fabsf(rx_filtered[i]);
         if (deflection <= HORIZON_STICK_TRANSITION) {
           stickFade = deflection / HORIZON_STICK_TRANSITION;
         } else {
@@ -725,16 +725,16 @@ void control(void) {
       if ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE)) || (motortest_override)) {
 #endif
         mix[i] = throttle;
-        if (i == MOTOR_FL && (rxcopy[ROLL] > 0.5f || rxcopy[PITCH] < -0.5f)) {
+        if (i == MOTOR_FL && (rx_filtered[ROLL] > 0.5f || rx_filtered[PITCH] < -0.5f)) {
           mix[i] = 0;
         }
-        if (i == MOTOR_BL && (rxcopy[ROLL] > 0.5f || rxcopy[PITCH] > 0.5f)) {
+        if (i == MOTOR_BL && (rx_filtered[ROLL] > 0.5f || rx_filtered[PITCH] > 0.5f)) {
           mix[i] = 0;
         }
-        if (i == MOTOR_FR && (rxcopy[ROLL] < -0.5f || rxcopy[PITCH] < -0.5f)) {
+        if (i == MOTOR_FR && (rx_filtered[ROLL] < -0.5f || rx_filtered[PITCH] < -0.5f)) {
           mix[i] = 0;
         }
-        if (i == MOTOR_BR && (rxcopy[ROLL] < -0.5f || rxcopy[PITCH] > 0.5f)) {
+        if (i == MOTOR_BR && (rx_filtered[ROLL] < -0.5f || rx_filtered[PITCH] > 0.5f)) {
           mix[i] = 0;
         }
 #if defined(MOTORS_TO_THROTTLE_MODE) && !defined(MOTORS_TO_THROTTLE)

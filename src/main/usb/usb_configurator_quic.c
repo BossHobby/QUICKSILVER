@@ -28,7 +28,7 @@ extern uint32_t pid_rate_presets_count;
 extern vtx_settings_t vtx_settings;
 
 extern float rx[4];
-extern float rxcopy[4];
+extern float rx_filtered[4];
 extern uint8_t aux[AUX_CHANNEL_MAX];
 extern float vbattfilt;
 extern float vbatt_comp;
