@@ -62,17 +62,17 @@ void rx_init(void);
 void rx_serial_init(void);
 
 void rx_precalc();
-
 void rx_check(void);
-void findprotocol(void);
 
-void processDSMX(void);
-void processSBUS(void);
-void processIBUS(void);
-void processFPORT(void);
-void processCRSF(void);
+void rx_serial_find_protocol(void);
 
-void sendFPORTTelemetry(void);
+void rx_serial_process_dsmx(void);
+void rx_serial_process_sbus(void);
+void rx_serial_process_ibus(void);
+void rx_serial_process_fport(void);
+void rx_serial_process_crsf(void);
+
+void rx_serial_send_fport_telemetry(void);
 
 float rcexpo(float x, float exp);
 void rx_apply_expo(void);

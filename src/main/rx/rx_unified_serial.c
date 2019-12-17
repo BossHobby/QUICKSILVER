@@ -165,7 +165,7 @@ void rx_serial_init(void) {
 
   frameStatus = 0;                         //Let the uart ISR do its stuff.
   if (RXProtocol == RX_PROTOCOL_INVALID) { //No known protocol? Can't really set the radio up yet then can we?
-    findprotocol();
+    rx_serial_find_protocol();
   } else {
     serial_rx_init(RXProtocol); //There's already a known protocol, we're good.
   }
@@ -195,7 +195,7 @@ void rx_serial_init(void) {
 
 void rx_check() {
   if (RXProtocol == RX_PROTOCOL_INVALID) { //If there's no protocol, there's no reason to check failsafe.
-    findprotocol();
+    rx_serial_find_protocol();
   } else {
     //FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!
     if (gettime() - time_lastframe > 1000000) {
@@ -210,19 +210,19 @@ void rx_check() {
     if (frameStatus == 1) { //USART ISR says there's enough frame to look at. Look at it.
       switch (RXProtocol) {
       case RX_PROTOCOL_DSM: // DSM
-        processDSMX();
+        rx_serial_process_dsmx();
         break;
       case RX_PROTOCOL_SBUS: // SBUS
-        processSBUS();
+        rx_serial_process_sbus();
         break;
       case RX_PROTOCOL_IBUS: // IBUS
-        processIBUS();
+        rx_serial_process_ibus();
         break;
       case RX_PROTOCOL_FPORT: // FPORT
-        processFPORT();
+        rx_serial_process_fport();
         break;
       case RX_PROTOCOL_CRSF: // CRSF
-        processCRSF();
+        rx_serial_process_crsf();
         break;
 
       default:
@@ -240,7 +240,7 @@ void rx_check() {
         //IBUS Telemetry function call goes here
         break;
       case RX_PROTOCOL_FPORT: // FPORT
-        sendFPORTTelemetry();
+        rx_serial_send_fport_telemetry();
         break;
       case RX_PROTOCOL_CRSF: // CRSF
         //CRSF telemetry function call yo
@@ -256,7 +256,7 @@ void rx_check() {
   }
 }
 
-void processDSMX(void) {
+void rx_serial_process_dsmx(void) {
 
   for (uint8_t counter = 0; counter < 16; counter++) {    //First up, get the rx_data out of the RX buffer and into somewhere safe
     rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
@@ -409,7 +409,7 @@ void processDSMX(void) {
   }
 }
 
-void processSBUS(void) {
+void rx_serial_process_sbus(void) {
   for (uint8_t counter = 0; counter < 25; counter++) {    //First up, get therx_data out of the RX buffer and into somewhere safe
     rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
   }
@@ -529,7 +529,7 @@ void processSBUS(void) {
   }
 }
 
-void processIBUS(void) {
+void rx_serial_process_ibus(void) {
 
   uint8_t frameLength = 0;
   for (uint8_t counter = 0; counter < 32; counter++) {    //First up, get the data out of the RX buffer and into somewhere safe
@@ -647,7 +647,7 @@ void processIBUS(void) {
   }
 }
 
-void processFPORT(void) {
+void rx_serial_process_fport(void) {
   uint8_t frameLength = 0;
   static uint8_t escapedChars = 0;
   uint8_t tempEscapedChars = 0;
@@ -822,7 +822,7 @@ vector_t *get_pid_value(uint8_t term) {
   return NULL;
 }
 
-void sendFPORTTelemetry() {
+void rx_serial_send_fport_telemetry() {
   if (telemetryCounter > 1 && rx_frame_position >= 41 && frameStatus == 3) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
     static uint8_t skip_a_loop;
     skip_a_loop++;
@@ -948,7 +948,7 @@ void sendFPORTTelemetry() {
   }
 }
 
-void processCRSF(void) {
+void rx_serial_process_crsf(void) {
   //We should probably put something here.
 }
 
@@ -956,7 +956,7 @@ void processCRSF(void) {
 //NFE note:  how about we force hold failsafe until protocol is saved.  This acts like kind of a check on proper mapping/decoding as stick gesture must be used as a test
 // also, we ought to be able to clear noframes_failsafe in addition to satisfying the start byte check in order to hard select a radio protocol
 
-void findprotocol(void) {
+void rx_serial_find_protocol(void) {
   //rxmode = !RXMODE_BIND; // put LEDS in normal signal status
   //protocolToCheck = RX_PROTOCOL_DSM; //Start with DSMX
 
@@ -987,7 +987,7 @@ void findprotocol(void) {
     switch (protocolToCheck) {
     case RX_PROTOCOL_DSM:                                                         // DSM
       if (rx_buffer[0] == 0x00 && rx_buffer[1] <= 0x04 && rx_buffer[2] != 0x00) { // allow up to 4 fades or detection will fail.  Some dsm rx will log a fade or two during binding
-        processDSMX();
+        rx_serial_process_dsmx();
         if (bind_safety > 0)
           RXProtocol = protocolToCheck;
       }
