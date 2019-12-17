@@ -157,9 +157,9 @@ void calc_rx() {
 #ifndef DISABLE_FLIP_SEQUENCER
   if (rx_aux_on(AUX_TURTLE)) { //turtle active when aux high
     start_flip();
-  }else{
-	extern int readytoflip;
-	readytoflip = 0;  			//reset the flip sequencer state variable with aux low
+  } else {
+    extern int readytoflip;
+    readytoflip = 0; //reset the flip sequencer state variable with aux low
   }
 
   flip_sequencer();
@@ -450,21 +450,14 @@ void control(void) {
 
     float mix[4];
 
-//#ifdef THROTTLE_TRANSIENT_COMPENSATION
-
-//#ifndef THROTTLE_TRANSIENT_COMPENSATION_FACTOR
-//#define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 7.0
-//#endif
-
     if (profile.motor.throttle_boost > 0.0f) {
-    	extern float throttlehpf(float in);
-    	throttle += (float)(profile.motor.throttle_boost)*throttlehpf(throttle);
-    	if (throttle < 0)
-    		throttle = 0;
-    	if (throttle > 1.0f)
-    		throttle = 1.0f;
+      extern float throttlehpf(float in);
+      throttle += (float)(profile.motor.throttle_boost) * throttlehpf(throttle);
+      if (throttle < 0)
+        throttle = 0;
+      if (throttle > 1.0f)
+        throttle = 1.0f;
     }
-//#endif
 
     if (controls_override) { // change throttle in flip mode
       throttle = rx_override[3];
