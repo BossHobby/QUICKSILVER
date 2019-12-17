@@ -173,15 +173,15 @@ int main(void) {
 
   motor_init();
   motor_set_all(0);
-#ifdef ENABLE_OSD
-  delay(300000);
-  osd_init();
-#endif
   sixaxis_init();
   if (!sixaxis_check()) {
     //gyro not found
     failloop(4);
   }
+#ifdef ENABLE_OSD
+  delay(300000);
+  osd_init();
+#endif
   adc_init();
 
   //set always on channel to on
