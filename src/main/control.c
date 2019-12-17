@@ -48,6 +48,7 @@ extern int binding_while_armed;
 extern int rx_ready;
 
 extern float rx[];
+extern float rxcopy[];
 extern float gyro[3];
 extern int failsafe;
 extern float pidoutput[PIDNUMBER];
@@ -88,8 +89,6 @@ extern int acro_override;
 float overthrottlefilt = 0;
 float underthrottlefilt = 0;
 
-float rxcopy[4];
-
 extern profile_t profile;
 
 static inline float constrainf(float amt, float low, float high) {
@@ -128,31 +127,17 @@ static float calcBFRatesRad(int axis) {
   return constrainf(angleRate, -SETPOINT_RATE_LIMIT, SETPOINT_RATE_LIMIT) * (float)DEGTORAD;
 }
 
-void calc_rx() {
-  for (int i = 0; i < 3; ++i) {
-#ifdef RX_SMOOTHING_HZ
-    static float rx_filtered[4];
-    lpf(&rx_filtered[i], rx[i], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / RX_SMOOTHING_HZ));
-    rxcopy[i] = rx_filtered[i];
-    limitf(&rxcopy[i], 1.0);
-#else
-    rxcopy[i] = rx[i];
-    limitf(&rxcopy[i], 1.0);
+void control(void) {
+#ifdef INVERTED_ENABLE
+  extern int pwmdir;
+  if (rx_aux_on(AUX_FN_INVERTED))
+    pwmdir = REVERSE;
+  else
+    pwmdir = FORWARD;
 #endif
 
-    if (profile.rate.sticks_deadband > 0.0f) {
-      if (fabsf(rxcopy[i]) <= profile.rate.sticks_deadband) {
-        rxcopy[i] = 0.0f;
-      } else {
-        if (rxcopy[i] >= 0) {
-          rxcopy[i] = mapf(rxcopy[i], profile.rate.sticks_deadband, 1, 0, 1);
-        } else {
-          rxcopy[i] = mapf(rxcopy[i], -profile.rate.sticks_deadband, -1, 0, -1);
-        }
-      }
-    }
-  }
-  rxcopy[3] = rx[3];
+  calc_rx();
+  pid_precalc();
 
 #ifndef DISABLE_FLIP_SEQUENCER
   if (rx_aux_on(AUX_TURTLE)) { //turtle active when aux high
@@ -170,19 +155,6 @@ void calc_rx() {
     }
   }
 #endif
-}
-
-void control(void) {
-#ifdef INVERTED_ENABLE
-  extern int pwmdir;
-  if (rx_aux_on(AUX_FN_INVERTED))
-    pwmdir = REVERSE;
-  else
-    pwmdir = FORWARD;
-#endif
-
-  calc_rx();
-  pid_precalc();
 
   // flight control
   float rates[3];

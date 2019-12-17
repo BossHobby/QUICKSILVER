@@ -1,8 +1,12 @@
 #include "rx.h"
 
+#include <math.h>
+
 #include "profile.h"
 #include "project.h"
 #include "util.h"
+
+float rxcopy[4];
 
 extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
@@ -79,4 +83,31 @@ void rx_apply_expo(void) {
     rx[1] = rcexpo(rx[1], expo.pitch);
   if (expo.yaw > 0.01)
     rx[2] = rcexpo(rx[2], expo.yaw);
+}
+
+void calc_rx() {
+  for (int i = 0; i < 3; ++i) {
+#ifdef RX_SMOOTHING_HZ
+    static float rx_filtered[4];
+    lpf(&rx_filtered[i], rx[i], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / RX_SMOOTHING_HZ));
+    rxcopy[i] = rx_filtered[i];
+    limitf(&rxcopy[i], 1.0);
+#else
+    rxcopy[i] = rx[i];
+    limitf(&rxcopy[i], 1.0);
+#endif
+
+    if (profile.rate.sticks_deadband > 0.0f) {
+      if (fabsf(rxcopy[i]) <= profile.rate.sticks_deadband) {
+        rxcopy[i] = 0.0f;
+      } else {
+        if (rxcopy[i] >= 0) {
+          rxcopy[i] = mapf(rxcopy[i], profile.rate.sticks_deadband, 1, 0, 1);
+        } else {
+          rxcopy[i] = mapf(rxcopy[i], -profile.rate.sticks_deadband, -1, 0, -1);
+        }
+      }
+    }
+  }
+  rxcopy[3] = rx[3];
 }

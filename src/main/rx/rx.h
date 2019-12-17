@@ -59,9 +59,13 @@ uint8_t rx_aux_on(aux_function_t function);
 uint8_t rx_auxchange(aux_function_t function);
 
 void rx_init(void);
+void rx_serial_init(void);
+
+void calc_rx();
+
 void checkrx(void);
 void findprotocol(void);
-void rx_serial_init(void);
+
 void processDSMX(void);
 void processSBUS(void);
 void processIBUS(void);
