@@ -23,7 +23,7 @@ uint8_t rx_auxchange(aux_function_t function) {
   return auxchange[profile.channel.aux[function]];
 }
 
-float rcexpo(float in, float exp) {
+float rx_expo(float in, float exp) {
   if (exp > 1)
     exp = 1;
   if (exp < -1)
@@ -97,11 +97,11 @@ void rx_apply_expo(void) {
   }
 
   if (expo.roll > 0.01)
-    rx[0] = rcexpo(rx[0], expo.roll);
+    rx[0] = rx_expo(rx[0], expo.roll);
   if (expo.pitch > 0.01)
-    rx[1] = rcexpo(rx[1], expo.pitch);
+    rx[1] = rx_expo(rx[1], expo.pitch);
   if (expo.yaw > 0.01)
-    rx[2] = rcexpo(rx[2], expo.yaw);
+    rx[2] = rx_expo(rx[2], expo.yaw);
 }
 
 void rx_precalc() {

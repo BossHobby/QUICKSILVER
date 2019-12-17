@@ -90,7 +90,7 @@ void rx_serial_process_crsf(void);
 
 void rx_serial_send_fport_telemetry(void);
 
-float rcexpo(float x, float exp);
+float rx_expo(float x, float exp);
 float rx_smoothing_hz(rx_protocol_t proto);
 
 void rx_apply_expo(void);
