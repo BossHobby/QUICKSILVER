@@ -78,8 +78,8 @@ unsigned long time_lastframe;
 //int rx_state = 0;		NFE chucked this out
 int bind_safety = 0;
 int channels[16];
-uint16_t CRCByte = 0;            //Defined here to allow Debug to see it.
-uint8_t protocolToCheck = 1;     //Defined here to allow Debug to see it.
+uint16_t CRCByte = 0;             //Defined here to allow Debug to see it.
+uint8_t protocolToCheck = 1;      //Defined here to allow Debug to see it.
 uint16_t protocolDetectTimer = 0; //Defined here to allow Debug to see it.
 
 extern profile_t profile;
@@ -102,7 +102,6 @@ extern unsigned int lastlooptime;
 uint8_t telemetryPacket[14];
 extern int current_pid_axis;
 extern int current_pid_term;
-
 
 uint16_t SbusTelemetryIDs[] = {
     0x0210, //VFAS, use for vbat_comp
@@ -154,17 +153,17 @@ void RX_USART_ISR(void) {
 }
 
 void rx_init(void) {
-	//if (rx_bind_enable == 0)
-    //RXProtocol = 0;
-	rxmode = !RXMODE_BIND; // put LEDS in normal signal status
-	rx_serial_init();
+  //if (rx_bind_enable == 0)
+  //RXProtocol = 0;
+  rxmode = !RXMODE_BIND; // put LEDS in normal signal status
+  rx_serial_init();
 }
 
 void rx_serial_init(void) {
 
   //RXProtocol = 4;  //Remove meeeeeeeee
 
-  frameStatus = 0; //Let the uart ISR do its stuff.
+  frameStatus = 0;                         //Let the uart ISR do its stuff.
   if (RXProtocol == RX_PROTOCOL_INVALID) { //No known protocol? Can't really set the radio up yet then can we?
     findprotocol();
   } else {
@@ -195,73 +194,67 @@ void rx_serial_init(void) {
 }
 
 void checkrx() {
-if(RXProtocol == RX_PROTOCOL_INVALID){ //If there's no protocol, there's no reason to check failsafe.
-  findprotocol();
-}
-else{
-  //FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!
-  if (gettime() - time_lastframe > 1000000) {
-    failsafe_noframes = 1;
-  } else
-    failsafe_noframes = 0;
+  if (RXProtocol == RX_PROTOCOL_INVALID) { //If there's no protocol, there's no reason to check failsafe.
+    findprotocol();
+  } else {
+    //FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!
+    if (gettime() - time_lastframe > 1000000) {
+      failsafe_noframes = 1;
+    } else
+      failsafe_noframes = 0;
 
-  // add the 3 failsafes together
-  if (rx_ready)
-    failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
+    // add the 3 failsafes together
+    if (rx_ready)
+      failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
 
-  if (frameStatus == 1) { //USART ISR says there's enough frame to look at. Look at it.
-    switch (RXProtocol) {
-    case RX_PROTOCOL_DSM: // DSM
-      processDSMX();
-      break;
-    case RX_PROTOCOL_SBUS: // SBUS
-      processSBUS();
-      break;
-    case RX_PROTOCOL_IBUS: // IBUS
-      processIBUS();
-      break;
-    case RX_PROTOCOL_FPORT: // FPORT
-      processFPORT();
-      break;
-    case RX_PROTOCOL_CRSF: // CRSF
-      processCRSF();
-      break;
+    if (frameStatus == 1) { //USART ISR says there's enough frame to look at. Look at it.
+      switch (RXProtocol) {
+      case RX_PROTOCOL_DSM: // DSM
+        processDSMX();
+        break;
+      case RX_PROTOCOL_SBUS: // SBUS
+        processSBUS();
+        break;
+      case RX_PROTOCOL_IBUS: // IBUS
+        processIBUS();
+        break;
+      case RX_PROTOCOL_FPORT: // FPORT
+        processFPORT();
+        break;
+      case RX_PROTOCOL_CRSF: // CRSF
+        processCRSF();
+        break;
 
-    default:
-      break;
+      default:
+        break;
+      }
+    } else if (frameStatus == 3) {
+      switch (RXProtocol) {
+      case RX_PROTOCOL_DSM: // DSM
+        // Run DSM Telemetry
+        break;
+      case RX_PROTOCOL_SBUS: // SBUS
+        //Run smartport telemetry
+        break;
+      case RX_PROTOCOL_IBUS: // IBUS
+        //IBUS Telemetry function call goes here
+        break;
+      case RX_PROTOCOL_FPORT: // FPORT
+        sendFPORTTelemetry();
+        break;
+      case RX_PROTOCOL_CRSF: // CRSF
+        //CRSF telemetry function call yo
+        break;
+
+      default:
+        break;
+      }
+    } else if (frameStatus == -1) { //RX/USART not set up.
+      rx_serial_init();             //Set it up. This includes autodetecting protocol if necesary
+      rxmode = !RXMODE_BIND;
     }
-  } else if (frameStatus == 3) {
-    switch (RXProtocol) {
-    case RX_PROTOCOL_DSM: // DSM
-      // Run DSM Telemetry
-      break;
-    case RX_PROTOCOL_SBUS: // SBUS
-      //Run smartport telemetry
-      break;
-    case RX_PROTOCOL_IBUS: // IBUS
-      //IBUS Telemetry function call goes here
-      break;
-    case RX_PROTOCOL_FPORT: // FPORT
-      sendFPORTTelemetry();
-      break;
-    case RX_PROTOCOL_CRSF: // CRSF
-      //CRSF telemetry function call yo
-      break;
-
-    default:
-      break;
-    }
-  } else if (frameStatus == -1) { //RX/USART not set up.
-    rx_serial_init();             //Set it up. This includes autodetecting protocol if necesary
-    rxmode = !RXMODE_BIND;
   }
 }
-}
-
-
-
-
-
 
 void processDSMX(void) {
 
@@ -367,7 +360,7 @@ void processDSMX(void) {
     //for failsafe_noframes
     time_lastframe = gettime();
 
-/*    //for framerate calculation - totally unnecessary but cool to see
+    /*    //for framerate calculation - totally unnecessary but cool to see
     rx_framerate[2] = !(rx_framerate[2]);
     rx_framerate[rx_framerate[2]] = time_lastframe;
     rx_framerate_ticks = abs(rx_framerate[0] - rx_framerate[1]);*/
@@ -382,23 +375,23 @@ void processDSMX(void) {
     }
     fps_counter++;
 
-    if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11){ //rssi set to internal link quality
+    if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11) { //rssi set to internal link quality
 #ifdef DSM_RSSI_FADES
 #ifdef RX_DSMX_2048_UNIFIED
-    	rx_rssi = 0.000488281 * link_quality_raw;
+      rx_rssi = 0.000488281 * link_quality_raw;
 #else
-    	rx_rssi = 0.000976563 * link_quality_raw;
+      rx_rssi = 0.000976563 * link_quality_raw;
 #endif
 #else
-    	rx_rssi = stat_frames_second/91.0f;
+      rx_rssi = stat_frames_second / 91.0f;
 #endif
-        rx_rssi = rx_rssi * rx_rssi * rx_rssi * LQ_EXPO + rx_rssi * (1 - LQ_EXPO);
-        rx_rssi *= 100.0f;
-    }else{	//rssi set to value decoded from aux channel input from receiver
+      rx_rssi = rx_rssi * rx_rssi * rx_rssi * LQ_EXPO + rx_rssi * (1 - LQ_EXPO);
+      rx_rssi *= 100.0f;
+    } else { //rssi set to value decoded from aux channel input from receiver
 #ifdef RX_DSMX_2048_UNIFIED
-    	rx_rssi = ((channels[(profile.channel.aux[AUX_RSSI] + 4)] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f;
+      rx_rssi = ((channels[(profile.channel.aux[AUX_RSSI] + 4)] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f;
 #else
-    	rx_rssi = ((channels[(profile.channel.aux[AUX_RSSI] + 4)] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f;
+      rx_rssi = ((channels[(profile.channel.aux[AUX_RSSI] + 4)] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f;
 #endif
     }
     if (rx_rssi > 100.0f)
@@ -416,10 +409,6 @@ void processDSMX(void) {
   }
 }
 
-
-
-
-
 void processSBUS(void) {
   for (uint8_t counter = 0; counter < 25; counter++) {    //First up, get therx_data out of the RX buffer and into somewhere safe
     rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
@@ -427,7 +416,7 @@ void processSBUS(void) {
 
   if (rx_data[23] & (1 << 2)) //RX sets this bit when it knows it missed a frame. Presumably this is a timer in the RX.
   {
-	link_quality_raw++;
+    link_quality_raw++;
     if (!time_siglost)
       time_siglost = gettime();
     if (gettime() - time_siglost > TICK_CLOCK_FREQ_HZ) //8,000,000 ticks on F0, 21M on F4. One second.
@@ -468,8 +457,8 @@ void processSBUS(void) {
   if (frameStatus == 2) {
     // normal rx mode
     bind_safety++;
-	if (bind_safety < 130)
-	   rxmode = RXMODE_BIND; // this is rapid flash during bind safety
+    if (bind_safety < 130)
+      rxmode = RXMODE_BIND; // this is rapid flash during bind safety
 
     // AETR channel order
     channels[0] -= 993;
@@ -518,12 +507,12 @@ void processSBUS(void) {
       secondtime = time_lastframe;
     }
 
-    if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11){ //rssi set to internal link quality
-        rx_rssi = stat_frames_second/112.0f;
-        rx_rssi = rx_rssi * rx_rssi * rx_rssi * LQ_EXPO + rx_rssi * (1 - LQ_EXPO);
-        rx_rssi *= 100.0f;
-    }else{	//rssi set to value decoded from aux channel input from receiver
-    	rx_rssi = 0.0610128f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 173);
+    if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11) { //rssi set to internal link quality
+      rx_rssi = stat_frames_second / 112.0f;
+      rx_rssi = rx_rssi * rx_rssi * rx_rssi * LQ_EXPO + rx_rssi * (1 - LQ_EXPO);
+      rx_rssi *= 100.0f;
+    } else { //rssi set to value decoded from aux channel input from receiver
+      rx_rssi = 0.0610128f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 173);
     }
     if (rx_rssi > 100.0f)
       rx_rssi = 100.0f;
@@ -539,9 +528,6 @@ void processSBUS(void) {
     }
   }
 }
-
-
-
 
 void processIBUS(void) {
 
@@ -576,90 +562,90 @@ void processIBUS(void) {
 
     frameStatus = 2;
 
-  } else { // if CRC fails, do this:
+  } else {
+    // if CRC fails, do this:
     //while(1){} Enable for debugging to lock the FC if CRC fails. In the air we just drop CRC-failed packets
-	  frameStatus = 0;   //Most likely reason for failed CRC is a frame that isn't fully here yet. No need to check again until a new byte comes in.
+    //Most likely reason for failed CRC is a frame that isn't fully here yet. No need to check again until a new byte comes in.
+
+    frameStatus = 0;
   }
 
   if (frameStatus == 2) {
-      // normal rx mode
-      bind_safety++;
-      if (bind_safety < 130)
-    	  rxmode = RXMODE_BIND; // this is rapid flash during bind safety
+    // normal rx mode
+    bind_safety++;
+    if (bind_safety < 130)
+      rxmode = RXMODE_BIND; // this is rapid flash during bind safety
 
-      // AETR channel order
-      channels[0] -= 1500;
-      channels[1] -= 1500;
-      channels[2] -= 1000;
-      channels[3] -= 1500;
+    // AETR channel order
+    channels[0] -= 1500;
+    channels[1] -= 1500;
+    channels[2] -= 1000;
+    channels[3] -= 1500;
 
-      rx[0] = channels[0];
-      rx[1] = channels[1];
-      rx[2] = channels[3];
-      rx[3] = channels[2];
+    rx[0] = channels[0];
+    rx[1] = channels[1];
+    rx[2] = channels[3];
+    rx[3] = channels[2];
 
-      for (int i = 0; i < 3; i++) {
-        rx[i] *= 0.002f;
-      }
-      rx[3] *= 0.001f;
+    for (int i = 0; i < 3; i++) {
+      rx[i] *= 0.002f;
+    }
+    rx[3] *= 0.001f;
 
-      if (rx[3] > 1)
-        rx[3] = 1;
-      if (rx[3] < 0)
-        rx[3] = 0;
+    if (rx[3] > 1)
+      rx[3] = 1;
+    if (rx[3] < 0)
+      rx[3] = 0;
 
-      rx_apply_expo();
+    rx_apply_expo();
 
-      //Here we have the AUX channels Silverware supports
-      aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
+    //Here we have the AUX channels Silverware supports
+    aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
+    aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
+    aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
+    aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
+    aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
+    aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
+    aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
+    aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
+    aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
+    aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
+    aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
+    aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
 
-      time_lastframe = gettime();
+    time_lastframe = gettime();
 
-      // stats & rssi
-      static int fps_counter = 0;
-      static unsigned long secondtime = 0;
-      if (time_lastframe - secondtime > 1000000) {
-        stat_frames_second = fps_counter;
-        fps_counter = 0;
-        secondtime = time_lastframe;
-      }
-      fps_counter++;
+    // stats & rssi
+    static int fps_counter = 0;
+    static unsigned long secondtime = 0;
+    if (time_lastframe - secondtime > 1000000) {
+      stat_frames_second = fps_counter;
+      fps_counter = 0;
+      secondtime = time_lastframe;
+    }
+    fps_counter++;
 
-      if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11){ //rssi set to internal link quality
-          rx_rssi = stat_frames_second/111.0f;		//**this needs adjusting to actual ibus expected packets per second
-          rx_rssi = rx_rssi * rx_rssi * rx_rssi * LQ_EXPO + rx_rssi * (1 - LQ_EXPO);
-          rx_rssi *= 100.0f;
-      }else{	//rssi set to value decoded from aux channel input from receiver
-    	  rx_rssi = 0.1f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 1000);
-      }
-      if (rx_rssi > 100.0f)
-        rx_rssi = 100.0f;
-      if (rx_rssi < 0.0f)
-        rx_rssi = 0.0f;
+    if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11) { //rssi set to internal link quality
+      rx_rssi = stat_frames_second / 111.0f;              //**this needs adjusting to actual ibus expected packets per second
+      rx_rssi = rx_rssi * rx_rssi * rx_rssi * LQ_EXPO + rx_rssi * (1 - LQ_EXPO);
+      rx_rssi *= 100.0f;
+    } else { //rssi set to value decoded from aux channel input from receiver
+      rx_rssi = 0.1f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 1000);
+    }
+    if (rx_rssi > 100.0f)
+      rx_rssi = 100.0f;
+    if (rx_rssi < 0.0f)
+      rx_rssi = 0.0f;
 
-      frameStatus = 3; //We're done with this frame now.
+    frameStatus = 3; //We're done with this frame now.
 
-      if (bind_safety > 131) { //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
-        rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
-        rxmode = !RXMODE_BIND; // restores normal led operation
-        bind_safety = 131;     // reset counter so it doesnt wrap
-      }
+    if (bind_safety > 131) { //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
+      rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
+      rxmode = !RXMODE_BIND; // restores normal led operation
+      bind_safety = 131;     // reset counter so it doesnt wrap
     }
   }
-
-
-
+}
 
 void processFPORT(void) {
   uint8_t frameLength = 0;
@@ -695,132 +681,131 @@ void processFPORT(void) {
       CRCByte = CRCByte + (CRCByte >> 8);
       CRCByte = CRCByte << 8;
       CRCByte = CRCByte >> 8;
-      if (CRCByte == 0x00FF) { //CRC is good, check Failsafe bit(s) and shove it into controls
-        //FPORT uses SBUS style data, but starts further in the packet
-          if (rx_data[25] & (1 << 2)) //RX appears to set this bit when it knows it missed a frame.
+      if (CRCByte == 0x00FF) {      //CRC is good, check Failsafe bit(s) and shove it into controls
+                                    //FPORT uses SBUS style data, but starts further in the packet
+        if (rx_data[25] & (1 << 2)) //RX appears to set this bit when it knows it missed a frame.
+        {
+          link_quality_raw++;
+          if (!time_siglost)
+            time_siglost = gettime();
+          if (gettime() - time_siglost > TICK_CLOCK_FREQ_HZ) //8,000,000 ticks on F0, 21M on F4. One second.
           {
-        	link_quality_raw++;
-            if (!time_siglost)
-              time_siglost = gettime();
-            if (gettime() - time_siglost > TICK_CLOCK_FREQ_HZ) //8,000,000 ticks on F0, 21M on F4. One second.
-            {
-              failsafe_siglost = 1;
-            }
-          } else {
-            time_siglost = 0;
-            failsafe_siglost = 0;
+            failsafe_siglost = 1;
           }
-          if (rx_data[25] & (1 << 3)) {
-            failsafe_sbus_failsafe = 1; // Sbus packets have a failsafe bit. This is cool.
-          } else {
-            failsafe_sbus_failsafe = 0;
-          }
+        } else {
+          time_siglost = 0;
+          failsafe_siglost = 0;
+        }
+        if (rx_data[25] & (1 << 3)) {
+          failsafe_sbus_failsafe = 1; // Sbus packets have a failsafe bit. This is cool.
+        } else {
+          failsafe_sbus_failsafe = 0;
+        }
 
-          channels[0] = ((rx_data[3] | rx_data[4] << 8) & 0x07FF);
-          channels[1] = ((rx_data[4] >> 3 | rx_data[5] << 5) & 0x07FF);
-          channels[2] = ((rx_data[5] >> 6 | rx_data[6] << 2 | rx_data[7] << 10) & 0x07FF);
-          channels[3] = ((rx_data[7] >> 1 | rx_data[8] << 7) & 0x07FF);
-          channels[4] = ((rx_data[8] >> 4 | rx_data[9] << 4) & 0x07FF);
-          channels[5] = ((rx_data[9] >> 7 | rx_data[10] << 1 | rx_data[11] << 9) & 0x07FF);
-          channels[6] = ((rx_data[11] >> 2 | rx_data[12] << 6) & 0x07FF);
-          channels[7] = ((rx_data[12] >> 5 | rx_data[13] << 3) & 0x07FF);
-          channels[8] = ((rx_data[14] | rx_data[15] << 8) & 0x07FF);
-          channels[9] = ((rx_data[15] >> 3 | rx_data[16] << 5) & 0x07FF); //This is the last channel Silverware previously supported.
-          channels[10] = ((rx_data[16] >> 6 | rx_data[17] << 2 | rx_data[18] << 10) & 0x07FF);
-          channels[11] = ((rx_data[18] >> 1 | rx_data[19] << 7) & 0x07FF);
-          channels[12] = ((rx_data[19] >> 4 | rx_data[20] << 4) & 0x07FF);
-          channels[13] = ((rx_data[20] >> 7 | rx_data[21] << 1 | rx_data[22] << 9) & 0x07FF);
-          channels[14] = ((rx_data[22] >> 2 | rx_data[23] << 6) & 0x07FF);
-          channels[15] = ((rx_data[23] >> 5 | rx_data[24] << 3) & 0x07FF);
+        channels[0] = ((rx_data[3] | rx_data[4] << 8) & 0x07FF);
+        channels[1] = ((rx_data[4] >> 3 | rx_data[5] << 5) & 0x07FF);
+        channels[2] = ((rx_data[5] >> 6 | rx_data[6] << 2 | rx_data[7] << 10) & 0x07FF);
+        channels[3] = ((rx_data[7] >> 1 | rx_data[8] << 7) & 0x07FF);
+        channels[4] = ((rx_data[8] >> 4 | rx_data[9] << 4) & 0x07FF);
+        channels[5] = ((rx_data[9] >> 7 | rx_data[10] << 1 | rx_data[11] << 9) & 0x07FF);
+        channels[6] = ((rx_data[11] >> 2 | rx_data[12] << 6) & 0x07FF);
+        channels[7] = ((rx_data[12] >> 5 | rx_data[13] << 3) & 0x07FF);
+        channels[8] = ((rx_data[14] | rx_data[15] << 8) & 0x07FF);
+        channels[9] = ((rx_data[15] >> 3 | rx_data[16] << 5) & 0x07FF); //This is the last channel Silverware previously supported.
+        channels[10] = ((rx_data[16] >> 6 | rx_data[17] << 2 | rx_data[18] << 10) & 0x07FF);
+        channels[11] = ((rx_data[18] >> 1 | rx_data[19] << 7) & 0x07FF);
+        channels[12] = ((rx_data[19] >> 4 | rx_data[20] << 4) & 0x07FF);
+        channels[13] = ((rx_data[20] >> 7 | rx_data[21] << 1 | rx_data[22] << 9) & 0x07FF);
+        channels[14] = ((rx_data[22] >> 2 | rx_data[23] << 6) & 0x07FF);
+        channels[15] = ((rx_data[23] >> 5 | rx_data[24] << 3) & 0x07FF);
 
-    	  //frameStatus = 2;
+        //frameStatus = 2;
 
       } else { // if CRC fails, do this:
         //while(1){} Enable for debugging to lock the FC if CRC fails.
         frameStatus = 0; //Most likely reason for failed CRC is a frame that isn't fully here yet. No need to check again until a new byte comes in.
       }
-  }
+    }
 
     if (frameStatus == 2) {
       // normal rx mode
       bind_safety++;
-  	  if (bind_safety < 130)
-  	    rxmode = RXMODE_BIND; // this is rapid flash during bind safety
+      if (bind_safety < 130)
+        rxmode = RXMODE_BIND; // this is rapid flash during bind safety
 
+      // AETR channel order
+      channels[0] -= 993;
+      channels[1] -= 993;
+      channels[3] -= 993;
 
-        // AETR channel order
-        channels[0] -= 993;
-        channels[1] -= 993;
-        channels[3] -= 993;
-
-        rx[0] = channels[0];
-        rx[1] = channels[1];
-        rx[2] = channels[3];
-        for (int i = 0; i < 3; i++) {
-          rx[i] *= 0.00122026f;
-        }
-
-        channels[2] -= 173;
-        rx[3] = 0.000610128f * channels[2];
-
-        if (rx[3] > 1)
-          rx[3] = 1;
-        if (rx[3] < 0)
-          rx[3] = 0;
-
-        rx_apply_expo();
-
-        //Here we have the AUX channels Silverware supports
-        aux[AUX_CHANNEL_0] = (channels[4] > 993) ? 1 : 0;
-        aux[AUX_CHANNEL_1] = (channels[5] > 993) ? 1 : 0;
-        aux[AUX_CHANNEL_2] = (channels[6] > 993) ? 1 : 0;
-        aux[AUX_CHANNEL_3] = (channels[7] > 993) ? 1 : 0;
-        aux[AUX_CHANNEL_4] = (channels[8] > 993) ? 1 : 0;
-        aux[AUX_CHANNEL_5] = (channels[9] > 993) ? 1 : 0;
-        aux[AUX_CHANNEL_6] = (channels[10] > 993) ? 1 : 0;
-        aux[AUX_CHANNEL_7] = (channels[11] > 993) ? 1 : 0;
-        aux[AUX_CHANNEL_8] = (channels[12] > 993) ? 1 : 0;
-        aux[AUX_CHANNEL_9] = (channels[13] > 993) ? 1 : 0;
-        aux[AUX_CHANNEL_10] = (channels[14] > 993) ? 1 : 0;
-        aux[AUX_CHANNEL_11] = (channels[15] > 993) ? 1 : 0;
-
-        if (channels[12] > 993) { // Channel 13 is now FPORT Debug Telemetry switch. Integrate this better sometime
-          FPORTDebugTelemetry = true;
-        } else {
-          FPORTDebugTelemetry = false;
-        }
-
-        time_lastframe = gettime();
-
-        // link quality & rssi
-        static unsigned long secondtime = 0;
-        if (time_lastframe - secondtime > 1000000) {
-          stat_frames_second = 	112 - link_quality_raw;
-      	  link_quality_raw = 0;
-          secondtime = time_lastframe;
-        }
-
-        if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11){ //rssi set to internal link quality
-            rx_rssi = stat_frames_second/112.0f;
-            rx_rssi = rx_rssi * rx_rssi * rx_rssi * LQ_EXPO + rx_rssi * (1 - LQ_EXPO);
-            rx_rssi *= 100.0f;
-        }else{	//rssi set to value decoded from aux channel input from receiver
-        	rx_rssi = 0.0610128f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 173);
-        }
-        if (rx_rssi > 100.0f)
-          rx_rssi = 100.0f;
-        if (rx_rssi < 0.0f)
-          rx_rssi = 0.0f;
-
-        frameStatus = 3;    //We're done with this frame now.
-        telemetryCounter++; // Let the telemetry section know it's time to send.
-
-        if (bind_safety > 131) { //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
-          rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
-          rxmode = !RXMODE_BIND; // restores normal led operation
-          bind_safety = 131;     // reset counter so it doesnt wrap
-        }
+      rx[0] = channels[0];
+      rx[1] = channels[1];
+      rx[2] = channels[3];
+      for (int i = 0; i < 3; i++) {
+        rx[i] *= 0.00122026f;
       }
+
+      channels[2] -= 173;
+      rx[3] = 0.000610128f * channels[2];
+
+      if (rx[3] > 1)
+        rx[3] = 1;
+      if (rx[3] < 0)
+        rx[3] = 0;
+
+      rx_apply_expo();
+
+      //Here we have the AUX channels Silverware supports
+      aux[AUX_CHANNEL_0] = (channels[4] > 993) ? 1 : 0;
+      aux[AUX_CHANNEL_1] = (channels[5] > 993) ? 1 : 0;
+      aux[AUX_CHANNEL_2] = (channels[6] > 993) ? 1 : 0;
+      aux[AUX_CHANNEL_3] = (channels[7] > 993) ? 1 : 0;
+      aux[AUX_CHANNEL_4] = (channels[8] > 993) ? 1 : 0;
+      aux[AUX_CHANNEL_5] = (channels[9] > 993) ? 1 : 0;
+      aux[AUX_CHANNEL_6] = (channels[10] > 993) ? 1 : 0;
+      aux[AUX_CHANNEL_7] = (channels[11] > 993) ? 1 : 0;
+      aux[AUX_CHANNEL_8] = (channels[12] > 993) ? 1 : 0;
+      aux[AUX_CHANNEL_9] = (channels[13] > 993) ? 1 : 0;
+      aux[AUX_CHANNEL_10] = (channels[14] > 993) ? 1 : 0;
+      aux[AUX_CHANNEL_11] = (channels[15] > 993) ? 1 : 0;
+
+      if (channels[12] > 993) { // Channel 13 is now FPORT Debug Telemetry switch. Integrate this better sometime
+        FPORTDebugTelemetry = true;
+      } else {
+        FPORTDebugTelemetry = false;
+      }
+
+      time_lastframe = gettime();
+
+      // link quality & rssi
+      static unsigned long secondtime = 0;
+      if (time_lastframe - secondtime > 1000000) {
+        stat_frames_second = 112 - link_quality_raw;
+        link_quality_raw = 0;
+        secondtime = time_lastframe;
+      }
+
+      if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11) { //rssi set to internal link quality
+        rx_rssi = stat_frames_second / 112.0f;
+        rx_rssi = rx_rssi * rx_rssi * rx_rssi * LQ_EXPO + rx_rssi * (1 - LQ_EXPO);
+        rx_rssi *= 100.0f;
+      } else { //rssi set to value decoded from aux channel input from receiver
+        rx_rssi = 0.0610128f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 173);
+      }
+      if (rx_rssi > 100.0f)
+        rx_rssi = 100.0f;
+      if (rx_rssi < 0.0f)
+        rx_rssi = 0.0f;
+
+      frameStatus = 3;    //We're done with this frame now.
+      telemetryCounter++; // Let the telemetry section know it's time to send.
+
+      if (bind_safety > 131) { //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
+        rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
+        rxmode = !RXMODE_BIND; // restores normal led operation
+        bind_safety = 131;     // reset counter so it doesnt wrap
+      }
+    }
   } // end frame received
 }
 
@@ -841,11 +826,11 @@ void sendFPORTTelemetry() {
   if (telemetryCounter > 1 && rx_frame_position >= 41 && frameStatus == 3) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
     static uint8_t skip_a_loop;
     skip_a_loop++;
-    if (skip_a_loop < 3){
-    	return;
+    if (skip_a_loop < 3) {
+      return;
     }
     skip_a_loop = 0;
-	telemetryCounter = 0;
+    telemetryCounter = 0;
     frameStatus = 4;
 
     uint16_t telemetryIDs[] = {
@@ -963,16 +948,9 @@ void sendFPORTTelemetry() {
   }
 }
 
-
-
-
 void processCRSF(void) {
   //We should probably put something here.
 }
-
-
-
-
 
 //NOTE TO SELF: Put in some double-check code on the detections somehow.
 //NFE note:  how about we force hold failsafe until protocol is saved.  This acts like kind of a check on proper mapping/decoding as stick gesture must be used as a test
@@ -983,16 +961,16 @@ void findprotocol(void) {
   //protocolToCheck = RX_PROTOCOL_DSM; //Start with DSMX
 
   //while (RXProtocol == RX_PROTOCOL_INVALID) {
-    if(protocolDetectTimer == 0){
-      protocolToCheck++; //Check the next protocol down the list.
-      if(protocolToCheck > RX_PROTOCOL_CRSF){ //(AKA 5)
-        protocolToCheck = RX_PROTOCOL_DSM; //AKA 1
-      }
-      serial_rx_init(protocolToCheck); //Configure a protocol!
-    //delay(500000); //Don't need this now.
+  if (protocolDetectTimer == 0) {
+    protocolToCheck++;                        //Check the next protocol down the list.
+    if (protocolToCheck > RX_PROTOCOL_CRSF) { //(AKA 5)
+      protocolToCheck = RX_PROTOCOL_DSM;      //AKA 1
     }
-    protocolDetectTimer++; //Should increment once per main loop
-/*
+    serial_rx_init(protocolToCheck); //Configure a protocol!
+    //delay(500000); //Don't need this now.
+  }
+  protocolDetectTimer++;  //Should increment once per main loop
+                          /*
     while ((frameStatus == 0 || frameStatus == 3) && protocolDetectTimer < 1) { // Wait 2 seconds to see if something turns up.
       for (int i = 0; i < protocolToCheck; i++) {
         ledon(255);
@@ -1005,56 +983,56 @@ void findprotocol(void) {
       protocolDetectTimer++;
     }
 */
-    if (frameStatus == 1) { //We got something! What is it?
-      switch (protocolToCheck) {
-      case RX_PROTOCOL_DSM:                                                         // DSM
-        if (rx_buffer[0] == 0x00 && rx_buffer[1] <= 0x04 && rx_buffer[2] != 0x00) { // allow up to 4 fades or detection will fail.  Some dsm rx will log a fade or two during binding
-          processDSMX();
-          if (bind_safety > 0)
-            RXProtocol = protocolToCheck;
-        }
-      case RX_PROTOCOL_SBUS: // SBUS
-        if (rx_buffer[0] == 0x0F) {
+  if (frameStatus == 1) { //We got something! What is it?
+    switch (protocolToCheck) {
+    case RX_PROTOCOL_DSM:                                                         // DSM
+      if (rx_buffer[0] == 0x00 && rx_buffer[1] <= 0x04 && rx_buffer[2] != 0x00) { // allow up to 4 fades or detection will fail.  Some dsm rx will log a fade or two during binding
+        processDSMX();
+        if (bind_safety > 0)
           RXProtocol = protocolToCheck;
-        }
-        break;
-      case RX_PROTOCOL_IBUS: // IBUS
-        if (rx_buffer[0] == 0x20) {
-          RXProtocol = protocolToCheck;
-        }
-        break;
-      case RX_PROTOCOL_FPORT: // FPORT
-        if (rx_buffer[0] == 0x7E) {
-          RXProtocol = protocolToCheck;
-        }
-        break;
-      case RX_PROTOCOL_CRSF:                  // CRSF
-        if (rx_buffer[0] != 0xFF && 1 == 2) { //Need to look up the expected start value.
-          RXProtocol = protocolToCheck;
-        }
-        break;
-      default:
-        frameStatus = 3; //Whatever we got, it didn't make sense. Mark the frame as Checked and start over.
-        break;
       }
+    case RX_PROTOCOL_SBUS: // SBUS
+      if (rx_buffer[0] == 0x0F) {
+        RXProtocol = protocolToCheck;
+      }
+      break;
+    case RX_PROTOCOL_IBUS: // IBUS
+      if (rx_buffer[0] == 0x20) {
+        RXProtocol = protocolToCheck;
+      }
+      break;
+    case RX_PROTOCOL_FPORT: // FPORT
+      if (rx_buffer[0] == 0x7E) {
+        RXProtocol = protocolToCheck;
+      }
+      break;
+    case RX_PROTOCOL_CRSF:                  // CRSF
+      if (rx_buffer[0] != 0xFF && 1 == 2) { //Need to look up the expected start value.
+        RXProtocol = protocolToCheck;
+      }
+      break;
+    default:
+      frameStatus = 3; //Whatever we got, it didn't make sense. Mark the frame as Checked and start over.
+      break;
     }
+  }
 
-    //protocolToCheck++;
-    //if (protocolToCheck > 5) {
-    //  protocolToCheck = 1;
-    //  rxusart = 1;
-    //}
+  //protocolToCheck++;
+  //if (protocolToCheck > 5) {
+  //  protocolToCheck = 1;
+  //  rxusart = 1;
+  //}
   //}
   //frameStatus = 3; //All done!
   //debug.max_cpu_loop_number = gettime();
   //lastlooptime = gettime();
 
-  if(RXProtocol != RX_PROTOCOL_INVALID){
+  if (RXProtocol != RX_PROTOCOL_INVALID) {
     //rx_bind_enable = 1; NFE doesn't like this, and is convincing.  ROFL(NFE)
   }
 
-  if(protocolDetectTimer > 4000){ //4000 loops, half a second
-    protocolDetectTimer = 0; // Reset timer, triggering a shift to detecting the next protocol
+  if (protocolDetectTimer > 4000) { //4000 loops, half a second
+    protocolDetectTimer = 0;        // Reset timer, triggering a shift to detecting the next protocol
   }
 }
 
