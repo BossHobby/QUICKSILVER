@@ -6,8 +6,7 @@
         "name": "brushed.serial",
         "defines": {
           "BRUSHED_TARGET": "",
-          "RX_UNIFIED_SERIAL": "",
-          "RX_SMOOTHING_HZ": "50"
+          "RX_UNIFIED_SERIAL": ""
         }
       }
     ]
@@ -19,16 +18,14 @@
         "name": "brushless.frsky",
         "defines": {
           "BRUSHLESS_TARGET": "",
-          "RX_FRSKY": "",
-          "RX_SMOOTHING_HZ": "45"
+          "RX_FRSKY": ""
         }
       },
       {
         "name": "brushed.frsky",
         "defines": {
           "BRUSHED_TARGET": "",
-          "RX_FRSKY": "",
-          "RX_SMOOTHING_HZ": "45"
+          "RX_FRSKY": ""
         }
       },
       {
@@ -36,7 +33,6 @@
         "defines": {
           "BRUSHLESS_TARGET": "",
           "RX_FRSKY": "",
-          "RX_SMOOTHING_HZ": "45",
           "DSHOT": "300"
         }
       }
@@ -49,8 +45,7 @@
         "name": "brushless.serial",
         "defines": {
           "BRUSHLESS_TARGET": "",
-          "RX_UNIFIED_SERIAL": "",
-          "RX_SMOOTHING_HZ": "50"
+          "RX_UNIFIED_SERIAL": ""
         }
       }
     ]
@@ -62,8 +57,7 @@
         "name": "brushless.frsky",
         "defines": {
           "BRUSHLESS_TARGET": "",
-          "RX_FRSKY": "",
-          "RX_SMOOTHING_HZ": "45"
+          "RX_FRSKY": ""
         }
       }
     ]
@@ -75,8 +69,7 @@
         "name": "brushless.serial",
         "defines": {
           "BRUSHLESS_TARGET": "",
-          "RX_UNIFIED_SERIAL": "",
-          "RX_SMOOTHING_HZ": "50"
+          "RX_UNIFIED_SERIAL": ""
         }
       }
     ]
@@ -88,8 +81,7 @@
         "name": "brushless.serial",
         "defines": {
           "BRUSHLESS_TARGET": "",
-          "RX_UNIFIED_SERIAL": "",
-          "RX_SMOOTHING_HZ": "50"
+          "RX_UNIFIED_SERIAL": ""
         }
       }
     ]
@@ -101,8 +93,7 @@
         "name": "brushless.serial",
         "defines": {
           "BRUSHLESS_TARGET": "",
-          "RX_UNIFIED_SERIAL": "",
-          "RX_SMOOTHING_HZ": "50"
+          "RX_UNIFIED_SERIAL": ""
         }
       }
     ]
