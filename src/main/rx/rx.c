@@ -85,7 +85,7 @@ void rx_apply_expo(void) {
     rx[2] = rcexpo(rx[2], expo.yaw);
 }
 
-void calc_rx() {
+void rx_precalc() {
   for (int i = 0; i < 3; ++i) {
 #ifdef RX_SMOOTHING_HZ
     static float rx_temp[4];

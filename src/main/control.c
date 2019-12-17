@@ -136,7 +136,7 @@ void control(void) {
     pwmdir = FORWARD;
 #endif
 
-  calc_rx();
+  rx_precalc();
   pid_precalc();
 
 #ifndef DISABLE_FLIP_SEQUENCER

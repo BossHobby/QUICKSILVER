@@ -61,7 +61,7 @@ uint8_t rx_auxchange(aux_function_t function);
 void rx_init(void);
 void rx_serial_init(void);
 
-void calc_rx();
+void rx_precalc();
 
 void checkrx(void);
 void findprotocol(void);
