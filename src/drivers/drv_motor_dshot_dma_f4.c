@@ -47,16 +47,22 @@
 
 // Select Dshot150 or Dshot300. Dshot150 consumes quite some main loop time.
 // DShot300 may require removing the input filter cap on the ESC:
-
+#ifndef DSHOT
 #define DSHOT600
 //#define DSHOT300
 //#define DSHOT150
+#endif
 
 // Enable this for 3D. The 'Motor Direction' setting in BLHeliSuite must
 // be set to 'Bidirectional' (or 'Bidirectional Rev.') accordingly:
 
 //#define BIDIRECTIONAL
 
+#ifdef DSHOT
+#define DSHOT_BIT_TIME ((PWM_CLOCK_FREQ_HZ / 1000 / DSHOT) - 1)
+#define DSHOT_T0H_TIME (DSHOT_BIT_TIME * 0.30 + 0.05)
+#define DSHOT_T1H_TIME (DSHOT_BIT_TIME * 0.60 + 0.05)
+#endif
 #ifdef DSHOT150
 #define DSHOT_BIT_TIME ((PWM_CLOCK_FREQ_HZ / 1000 / 150) - 1)
 #define DSHOT_T0H_TIME (DSHOT_BIT_TIME * 0.30 + 0.05)

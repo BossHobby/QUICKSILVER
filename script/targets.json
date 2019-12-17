@@ -30,6 +30,15 @@
           "RX_FRSKY": "",
           "RX_SMOOTHING_HZ": "45"
         }
+      },
+      {
+        "name": "dshot300.frsky",
+        "defines": {
+          "BRUSHED_TARGET": "",
+          "RX_FRSKY": "",
+          "RX_SMOOTHING_HZ": "45",
+          "DSHOT": "300"
+        }
       }
     ]
   },
