@@ -585,7 +585,7 @@ void rx_init(void) {
   cc2500_strobe(CC2500_SIDLE);
 }
 
-void checkrx() {
+void rx_check() {
   if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
     return;
 

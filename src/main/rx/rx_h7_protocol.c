@@ -166,7 +166,7 @@ int failcount = 0;
 int chan[16];
 #endif
 
-void checkrx(void) {
+void rx_check(void) {
   if (checkpacket()) {
     unsigned long time = gettime();
     xn_readpayload(rxdata, PACKET_SIZE);

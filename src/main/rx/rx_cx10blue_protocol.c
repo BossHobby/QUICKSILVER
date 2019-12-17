@@ -164,7 +164,7 @@ unsigned long secondtimer;
 
 #endif
 
-void checkrx(void) {
+void rx_check(void) {
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {

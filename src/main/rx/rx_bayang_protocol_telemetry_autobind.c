@@ -409,7 +409,7 @@ unsigned int skipchannel = 0;
 int lastrxchan;
 int timingfail = 0;
 
-void checkrx(void) {
+void rx_check(void) {
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {

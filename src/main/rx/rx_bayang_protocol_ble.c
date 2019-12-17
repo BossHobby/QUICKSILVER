@@ -617,7 +617,7 @@ int timingfail = 0;
 // how many times to hop ahead if no reception
 #define HOPPING_NUMBER 4
 
-void checkrx(void) {
+void rx_check(void) {
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {

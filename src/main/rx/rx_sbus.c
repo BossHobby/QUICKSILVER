@@ -130,7 +130,7 @@ void rx_init(void) {
   sbus_init();
 }
 
-void checkrx() {
+void rx_check() {
   if (frameStatus < 0) {
     //can't read a packet before you set up the uart.
     sbus_init();

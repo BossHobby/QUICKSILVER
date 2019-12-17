@@ -161,7 +161,7 @@ void rx_init(void) {
   fport_init();
 }
 
-void checkrx() {
+void rx_check() {
   if (frameStatus < 0) {
     //can't read a packet before you set up the uart.
     fport_init();

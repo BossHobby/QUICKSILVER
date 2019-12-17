@@ -495,11 +495,11 @@ int main(void) {
 #ifdef SERIAL_RX
     // if our RX is a serial, only check if we have valid usart and its the one currently active
     if (serial_rx_port == profile.serial.rx && serial_rx_port != USART_PORT_INVALID) {
-      checkrx();
+      rx_check();
     }
 #else
     // we have a spi RX
-    checkrx();
+    rx_check();
 #endif
 
 #ifdef ENABLE_OSD

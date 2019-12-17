@@ -249,7 +249,7 @@ void rx_init(void) {
   crsf_init();
 }
 
-void checkrx() {
+void rx_check() {
   if (framestarted < 0) {
     crsf_init(); // toggles "framestarted = 0;" after initializing
   }

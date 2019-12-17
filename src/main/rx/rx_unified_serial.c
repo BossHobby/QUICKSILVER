@@ -193,7 +193,7 @@ void rx_serial_init(void) {
   // RXProtocolNextBoot = RXProtocol; //Remove meeeeeeeee toooooooooooo
 }
 
-void checkrx() {
+void rx_check() {
   if (RXProtocol == RX_PROTOCOL_INVALID) { //If there's no protocol, there's no reason to check failsafe.
     findprotocol();
   } else {

@@ -367,7 +367,7 @@ int timingfail = 0;
 int telemetry_enabled = 0;
 int packet_period = PACKET_PERIOD;
 
-void checkrx(void) {
+void rx_check(void) {
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {

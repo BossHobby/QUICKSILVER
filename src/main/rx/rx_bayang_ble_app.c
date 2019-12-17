@@ -964,7 +964,7 @@ int lastrxchan;
 int timingfail = 0;
 extern int bound_for_BLE_packet; //SilverVISE
 
-void checkrx(void) {
+void rx_check(void) {
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {

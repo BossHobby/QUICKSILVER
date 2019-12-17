@@ -63,7 +63,7 @@ void rx_serial_init(void);
 
 void rx_precalc();
 
-void checkrx(void);
+void rx_check(void);
 void findprotocol(void);
 
 void processDSMX(void);

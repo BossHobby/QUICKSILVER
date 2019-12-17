@@ -414,7 +414,7 @@ float rx_rssi;
 uint8_t rxaddr[5];
 int packets = 0;
 
-void checkrx(void) {
+void rx_check(void) {
   int packetreceived = checkpacket();
 
   if (packetreceived) {

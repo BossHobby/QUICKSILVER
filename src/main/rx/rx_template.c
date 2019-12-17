@@ -261,7 +261,7 @@ int timingfail = 0;
 // packet period in uS
 #define PACKET_PERIOD 3000
 
-void checkrx(void) {
+void rx_check(void) {
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {

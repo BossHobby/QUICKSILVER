@@ -65,7 +65,7 @@
 */
 
 void rx_init(void);
-void checkrx(void);
+void rx_check(void);
 
 struct rxdebug {
   unsigned long packettime;

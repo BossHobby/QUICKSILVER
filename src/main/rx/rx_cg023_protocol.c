@@ -218,7 +218,7 @@ unsigned long secondtimer;
 #warning "RX debug enabled"
 #endif
 
-void checkrx(void) {
+void rx_check(void) {
   if (checkpacket()) {
     xn_readpayload(rxdata, 15);
     if (rxmode == RXMODE_BIND) { // rx startup , bind mode

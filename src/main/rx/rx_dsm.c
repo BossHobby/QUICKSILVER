@@ -199,7 +199,7 @@ void rx_init(void) {
   dsm_init();
 }
 
-void checkrx() {
+void rx_check() {
   if (framestarted < 0) {
     dsm_init(); // toggles "framestarted = 0;" after initializing
   }
