@@ -1,6 +1,6 @@
 #pragma once
 
-#include "project.h"
+#include <stdint.h>
 
 #ifdef RX_FRSKY
 typedef union {
@@ -29,6 +29,7 @@ typedef enum {
   RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON,
   RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND,
   RX_PROTOCOL_FRSKY,
+  RX_PROTOCOL_MAX,
 } rx_protocol_t;
 
 typedef enum {
@@ -90,6 +91,8 @@ void rx_serial_process_crsf(void);
 void rx_serial_send_fport_telemetry(void);
 
 float rcexpo(float x, float exp);
+float rx_smoothing_hz(rx_protocol_t proto);
+
 void rx_apply_expo(void);
 
 #if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_UNIFIED_SERIAL)

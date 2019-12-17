@@ -2,6 +2,7 @@
 
 #include <math.h>
 
+#include "drv_serial.h"
 #include "profile.h"
 #include "project.h"
 #include "util.h"
@@ -30,6 +31,24 @@ float rcexpo(float in, float exp) {
   float ans = in * in * in * exp + in * (1 - exp);
   limitf(&ans, 1.0);
   return ans;
+}
+
+float rx_smoothing_hz(rx_protocol_t proto) {
+#ifdef RX_UNIFIED_SERIAL
+  if (proto == RX_PROTOCOL_UNIFIED_SERIAL) {
+    extern rx_serial_protocol_t RXProtocol;
+    static uint8_t serial_proto_map[] = {
+        RX_PROTOCOL_INVALID,   //RX_SERIAL_PROTOCOL_INVALID
+        RX_PROTOCOL_DSMX_2048, //RX_SERIAL_PROTOCOL_DSM
+        RX_PROTOCOL_SBUS,      //RX_SERIAL_PROTOCOL_SBUS
+        RX_PROTOCOL_IBUS,      //RX_SERIAL_PROTOCOL_IBUS
+        RX_PROTOCOL_FPORT,     //RX_SERIAL_PROTOCOL_FPORT
+        RX_PROTOCOL_CRSF,      //RX_SERIAL_PROTOCOL_CRSF
+    };
+    return RX_SMOOTHING_HZ[serial_proto_map[RXProtocol]];
+  }
+#endif
+  return RX_SMOOTHING_HZ[proto];
 }
 
 void rx_apply_expo(void) {
@@ -87,9 +106,9 @@ void rx_apply_expo(void) {
 
 void rx_precalc() {
   for (int i = 0; i < 3; ++i) {
-#ifdef RX_SMOOTHING_HZ
+#ifdef RX_SMOOTHING
     static float rx_temp[4];
-    lpf(&rx_temp[i], rx[i], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / RX_SMOOTHING_HZ));
+    lpf(&rx_temp[i], rx[i], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / rx_smoothing_hz(RX_PROTOCOL)));
     rx_filtered[i] = rx_temp[i];
     limitf(&rx_filtered[i], 1.0);
 #else

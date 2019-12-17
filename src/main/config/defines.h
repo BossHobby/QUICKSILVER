@@ -286,3 +286,53 @@ static const float pid_scales[PIDNUMBER][PIDNUMBER] = {
 #endif
 
 //#define DISABLE_FLIP_SEQUENCER //****************turtle / crashflip recovery available by default
+
+#ifdef RX_UNIFIED_SERIAL
+#define RX_PROTOCOL RX_PROTOCOL_UNIFIED_SERIAL
+#endif
+#ifdef RX_SBUS
+#define RX_PROTOCOL RX_PROTOCOL_SBUS
+#endif
+#ifdef RX_CRSF
+#define RX_PROTOCOL RX_PROTOCOL_CRSF
+#endif
+#ifdef RX_IBUS
+#define RX_PROTOCOL RX_PROTOCOL_IBUS
+#endif
+#ifdef RX_FPORT
+#define RX_PROTOCOL RX_PROTOCOL_FPORT
+#endif
+#ifdef RX_DSMX_2048
+#define RX_PROTOCOL RX_PROTOCOL_DSMX_2048
+#endif
+#ifdef RX_DSM2_1024
+#define RX_PROTOCOL RX_PROTOCOL_DSM2_1024
+#endif
+#ifdef RX_NRF24_BAYANG_TELEMETRY
+#define RX_PROTOCOL RX_PROTOCOL_NRF24_BAYANG_TELEMETRY
+#endif
+#ifdef RX_BAYANG_PROTOCOL_BLE_BEACON
+#define RX_PROTOCOL RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON
+#endif
+#ifdef RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
+#define RX_PROTOCOL RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
+#endif
+#ifdef RX_FRSKY
+#define RX_PROTOCOL RX_PROTOCOL_FRSKY
+#endif
+
+// Select filter cut 25hz for SBUS, 67hz for CRSF, 40hz for DSMX, 20hz for DSM2, 90hz for bayang, 45hz for frsky   Formula is [(1/rx framerate)/2] * 0.9
+static const uint8_t RX_SMOOTHING_HZ[RX_PROTOCOL_MAX] = {
+    0,  //RX_PROTOCOL_INVALID, wont happen
+    0,  //RX_PROTOCOL_UNIFIED_SERIAL, will autodetect following
+    25, //RX_PROTOCOL_SBUS,
+    67, //RX_PROTOCOL_CRSF,
+    50, //RX_PROTOCOL_IBUS, check these
+    50, //RX_PROTOCOL_FPORT, check these
+    40, //RX_PROTOCOL_DSMX_2048,
+    20, //RX_PROTOCOL_DSM2_1024,
+    90, //RX_PROTOCOL_NRF24_BAYANG_TELEMETRY,
+    90, //RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON,
+    90, //RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND,
+    45, //RX_PROTOCOL_FRSKY,
+};

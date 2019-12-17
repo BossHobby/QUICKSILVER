@@ -6,14 +6,13 @@
 //***********************************************HARDWARE SELECTION*****************************************************
 
 // *************DEFINE FLIGHT CONTROLLER MOTOR OUTPUT - *****warning*****  GETTING THIS WRONG CAN SMOKE YOUR BOARD :)
-#define BRUSHLESS_TARGET 
-//#define BRUSHED_TARGET 
+#define BRUSHLESS_TARGET
+//#define BRUSHED_TARGET
 
 //**********************************************************************************************************************
 //***********************************************NEW STUFF TO PLAY WITH*****************************************************
 
-// Select filter cut 25hz for SBUS, 67hz for CRSF, 40hz for DSMX, 20hz for DSM2, 90hz for bayang, 45hz for frsky   Formula is [(1/rx framerate)/2] * 0.9
-#define RX_SMOOTHING_HZ 50
+#define RX_SMOOTHING
 
 //Select (only one) source variable for PID VBAT Compensation
 //#define EXACT_VOLTS     //origional method - responds to exact moment to moment sag
@@ -71,7 +70,7 @@
 
 // *************Receiver protocol selection
 
-#define RX_UNIFIED_SERIAL 
+#define RX_UNIFIED_SERIAL
 //#define RX_SBUS
 //#define RX_CRSF                                           //Requires tbs firmware v2.88 or newer for failsafe to operate properly
 //#define RX_IBUS
@@ -81,7 +80,7 @@
 //#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
-//#define RX_FRSKY 
+//#define RX_FRSKY
 
 // *************Serial Receiver UART Selection (uncomment all for default from target or if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
 //#define RX_USART USART_PORT1
