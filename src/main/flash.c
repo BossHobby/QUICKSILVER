@@ -98,8 +98,8 @@ void flash_save(void) {
 
 #ifdef RX_UNIFIED_SERIAL
   if (rx_bind_enable) {
-    extern rx_serial_protocol_t RXProtocol;
-    writeword(50, RXProtocol);
+    extern rx_serial_protocol_t rx_serial_protocol;
+    writeword(50, rx_serial_protocol);
   } else {
     writeword(50, 0);
   }
@@ -195,11 +195,11 @@ void flash_load(void) {
 #endif
 
 #ifdef RX_UNIFIED_SERIAL
-    extern rx_serial_protocol_t RXProtocol;
+    extern rx_serial_protocol_t rx_serial_protocol;
     if (rx_bind_enable != 1) {
-      RXProtocol = 0;
+      rx_serial_protocol = 0;
     } else {
-      RXProtocol = fmc_read(50);
+      rx_serial_protocol = fmc_read(50);
     }
 
 #endif

@@ -61,7 +61,7 @@ int rx_ready = 0;
 //uint32 ticksEnd = 0;
 //uint32 ticksLongest = 0;
 
-rx_serial_protocol_t RXProtocol = RX_SERIAL_PROTOCOL_INVALID;
+rx_serial_protocol_t rx_serial_protocol = RX_SERIAL_PROTOCOL_INVALID;
 #define RX_BUFF_SIZE 68
 uint8_t rx_buffer[RX_BUFF_SIZE];
 uint8_t rx_data[RX_BUFF_SIZE]; //A place to put the RX frame so nothing can get overwritten during processing.  //reduce size?
@@ -154,23 +154,23 @@ void RX_USART_ISR(void) {
 
 void rx_init(void) {
   //if (rx_bind_enable == 0)
-  //RXProtocol = 0;
+  //rx_serial_protocol = 0;
   rxmode = !RXMODE_BIND; // put LEDS in normal signal status
   rx_serial_init();
 }
 
 void rx_serial_init(void) {
 
-  //RXProtocol = 4;  //Remove meeeeeeeee
+  //rx_serial_protocol = 4;  //Remove meeeeeeeee
 
-  frameStatus = 0;                                //Let the uart ISR do its stuff.
-  if (RXProtocol == RX_SERIAL_PROTOCOL_INVALID) { //No known protocol? Can't really set the radio up yet then can we?
+  frameStatus = 0;                                        //Let the uart ISR do its stuff.
+  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_INVALID) { //No known protocol? Can't really set the radio up yet then can we?
     rx_serial_find_protocol();
   } else {
-    serial_rx_init(RXProtocol); //There's already a known protocol, we're good.
+    serial_rx_init(rx_serial_protocol); //There's already a known protocol, we're good.
   }
 
-  switch (RXProtocol) {
+  switch (rx_serial_protocol) {
   case RX_SERIAL_PROTOCOL_DSM: // DSM
     expectedFrameLength = 16;
     break;
@@ -190,11 +190,11 @@ void rx_serial_init(void) {
   default:
     break;
   }
-  // RXProtocolNextBoot = RXProtocol; //Remove meeeeeeeee toooooooooooo
+  // RXProtocolNextBoot = rx_serial_protocol; //Remove meeeeeeeee toooooooooooo
 }
 
 void rx_check() {
-  if (RXProtocol == RX_SERIAL_PROTOCOL_INVALID) { //If there's no protocol, there's no reason to check failsafe.
+  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_INVALID) { //If there's no protocol, there's no reason to check failsafe.
     rx_serial_find_protocol();
   } else {
     //FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!
@@ -208,7 +208,7 @@ void rx_check() {
       failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
 
     if (frameStatus == 1) { //USART ISR says there's enough frame to look at. Look at it.
-      switch (RXProtocol) {
+      switch (rx_serial_protocol) {
       case RX_SERIAL_PROTOCOL_DSM: // DSM
         rx_serial_process_dsmx();
         break;
@@ -229,7 +229,7 @@ void rx_check() {
         break;
       }
     } else if (frameStatus == 3) {
-      switch (RXProtocol) {
+      switch (rx_serial_protocol) {
       case RX_SERIAL_PROTOCOL_DSM: // DSM
         // Run DSM Telemetry
         break;
@@ -960,7 +960,7 @@ void rx_serial_find_protocol(void) {
   //rxmode = !RXMODE_BIND; // put LEDS in normal signal status
   //protocolToCheck = RX_SERIAL_PROTOCOL_DSM; //Start with DSMX
 
-  //while (RXProtocol == RX_SERIAL_PROTOCOL_INVALID) {
+  //while (rx_serial_protocol == RX_SERIAL_PROTOCOL_INVALID) {
   if (protocolDetectTimer == 0) {
     protocolToCheck++;                               //Check the next protocol down the list.
     if (protocolToCheck > RX_SERIAL_PROTOCOL_CRSF) { //(AKA 5)
@@ -989,26 +989,26 @@ void rx_serial_find_protocol(void) {
       if (rx_buffer[0] == 0x00 && rx_buffer[1] <= 0x04 && rx_buffer[2] != 0x00) { // allow up to 4 fades or detection will fail.  Some dsm rx will log a fade or two during binding
         rx_serial_process_dsmx();
         if (bind_safety > 0)
-          RXProtocol = protocolToCheck;
+          rx_serial_protocol = protocolToCheck;
       }
     case RX_SERIAL_PROTOCOL_SBUS: // SBUS
       if (rx_buffer[0] == 0x0F) {
-        RXProtocol = protocolToCheck;
+        rx_serial_protocol = protocolToCheck;
       }
       break;
     case RX_SERIAL_PROTOCOL_IBUS: // IBUS
       if (rx_buffer[0] == 0x20) {
-        RXProtocol = protocolToCheck;
+        rx_serial_protocol = protocolToCheck;
       }
       break;
     case RX_SERIAL_PROTOCOL_FPORT: // FPORT
       if (rx_buffer[0] == 0x7E) {
-        RXProtocol = protocolToCheck;
+        rx_serial_protocol = protocolToCheck;
       }
       break;
     case RX_SERIAL_PROTOCOL_CRSF:           // CRSF
       if (rx_buffer[0] != 0xFF && 1 == 2) { //Need to look up the expected start value.
-        RXProtocol = protocolToCheck;
+        rx_serial_protocol = protocolToCheck;
       }
       break;
     default:
@@ -1027,7 +1027,7 @@ void rx_serial_find_protocol(void) {
   //debug.max_cpu_loop_number = gettime();
   //lastlooptime = gettime();
 
-  if (RXProtocol != RX_SERIAL_PROTOCOL_INVALID) {
+  if (rx_serial_protocol != RX_SERIAL_PROTOCOL_INVALID) {
     //rx_bind_enable = 1; NFE doesn't like this, and is convincing.  ROFL(NFE)
   }
 

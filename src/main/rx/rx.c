@@ -36,7 +36,7 @@ float rx_expo(float in, float exp) {
 float rx_smoothing_hz(rx_protocol_t proto) {
 #ifdef RX_UNIFIED_SERIAL
   if (proto == RX_PROTOCOL_UNIFIED_SERIAL) {
-    extern rx_serial_protocol_t RXProtocol;
+    extern rx_serial_protocol_t rx_serial_protocol;
     static uint8_t serial_proto_map[] = {
         RX_PROTOCOL_INVALID,   //RX_SERIAL_PROTOCOL_INVALID
         RX_PROTOCOL_DSMX_2048, //RX_SERIAL_PROTOCOL_DSM
@@ -45,7 +45,7 @@ float rx_smoothing_hz(rx_protocol_t proto) {
         RX_PROTOCOL_FPORT,     //RX_SERIAL_PROTOCOL_FPORT
         RX_PROTOCOL_CRSF,      //RX_SERIAL_PROTOCOL_CRSF
     };
-    return RX_SMOOTHING_HZ[serial_proto_map[RXProtocol]];
+    return RX_SMOOTHING_HZ[serial_proto_map[rx_serial_protocol]];
   }
 #endif
   return RX_SMOOTHING_HZ[proto];
