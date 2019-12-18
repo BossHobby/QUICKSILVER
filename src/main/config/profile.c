@@ -393,6 +393,24 @@ const profile_t default_profile = {
 #endif
         },
     },
+    .osd = {
+        .elements = {
+            0xA7,
+            0x43495551,
+            0x4C49534B,
+            0x3F524556,
+            0x3F3F3F3F,
+            0x3F3F3F3F,
+            0x704,
+            0x72D,
+            0x754,
+            0x6A8,
+            0xE0,
+            0x6E0,
+            0x320,
+            0x680,
+        },
+    },
 };
 
 #define MACRO_STR(arg) #arg
@@ -551,6 +569,10 @@ END_STRUCT_ENCODER()
 
 START_STRUCT_ENCODER(serial_t)
 SERIAL_MEMBERS
+END_STRUCT_ENCODER()
+
+START_STRUCT_ENCODER(osd_t)
+OSD_MEMBERS
 END_STRUCT_ENCODER()
 
 START_STRUCT_ENCODER(voltage_t)
@@ -721,6 +743,10 @@ END_STRUCT_DECODER()
 
 START_STRUCT_DECODER(serial_t)
 SERIAL_MEMBERS
+END_STRUCT_DECODER()
+
+START_STRUCT_DECODER(osd_t)
+OSD_MEMBERS
 END_STRUCT_DECODER()
 
 START_STRUCT_DECODER(voltage_t)

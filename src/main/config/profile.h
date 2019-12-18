@@ -196,6 +196,13 @@ typedef struct {
   MEMBER(smart_audio, uint8)
 
 typedef struct {
+  uint32_t elements[OSD_NUMBER_ELEMENTS];
+} osd_t;
+
+#define OSD_MEMBERS \
+  ARRAY_MEMBER(elements, OSD_NUMBER_ELEMENTS, uint32)
+
+typedef struct {
   uint8_t name[36];
   uint32_t datetime;
 } metadata_t;
@@ -205,6 +212,7 @@ typedef struct {
   metadata_t meta;
   motor_t motor;
   serial_t serial;
+  osd_t osd;
   rate_t rate;
   channel_t channel;
   profile_pid_t pid;

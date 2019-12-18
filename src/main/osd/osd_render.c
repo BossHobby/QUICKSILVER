@@ -40,24 +40,24 @@ BIT
 */
 
 //Flash Variables - 32bit					# of osd elements and flash memory start position in defines.h
-extern unsigned long osd_element[OSD_NUMBER_ELEMENTS];
+extern profile_t profile;
 
 //pointers to flash variable array
-unsigned long *callsign1 = osd_element;
-unsigned long *callsign2 = (osd_element + 1);
-unsigned long *callsign3 = (osd_element + 2);
-unsigned long *callsign4 = (osd_element + 3);
-unsigned long *callsign5 = (osd_element + 4);
-unsigned long *callsign6 = (osd_element + 5);
-unsigned long *fuelgauge_volts = (osd_element + 6);
-unsigned long *filtered_volts = (osd_element + 7);
-unsigned long *exact_volts = (osd_element + 8);
-unsigned long *flight_mode = (osd_element + 9);
-unsigned long *rssi = (osd_element + 10);
-unsigned long *stopwatch = (osd_element + 11);
-unsigned long *arm_disarm = (osd_element + 12);
-unsigned long *osd_throttle = (osd_element + 13);
-unsigned long *osd_vtx = (osd_element + 14);
+unsigned long *callsign1 = profile.osd.elements;
+unsigned long *callsign2 = (profile.osd.elements + 1);
+unsigned long *callsign3 = (profile.osd.elements + 2);
+unsigned long *callsign4 = (profile.osd.elements + 3);
+unsigned long *callsign5 = (profile.osd.elements + 4);
+unsigned long *callsign6 = (profile.osd.elements + 5);
+unsigned long *fuelgauge_volts = (profile.osd.elements + 6);
+unsigned long *filtered_volts = (profile.osd.elements + 7);
+unsigned long *exact_volts = (profile.osd.elements + 8);
+unsigned long *flight_mode = (profile.osd.elements + 9);
+unsigned long *rssi = (profile.osd.elements + 10);
+unsigned long *stopwatch = (profile.osd.elements + 11);
+unsigned long *arm_disarm = (profile.osd.elements + 12);
+unsigned long *osd_throttle = (profile.osd.elements + 13);
+unsigned long *osd_vtx = (profile.osd.elements + 14);
 
 #define ACTIVE 0
 #define ATTRIBUTE 1
@@ -115,7 +115,6 @@ const char* get_decode_element_string (uint32_t input , uint8_t status){
 // case & state variables for switch logic and profile adjustments
 debug_type debug;
 extern int flash_feature_1; //currently used for auto entry into wizard menu
-extern profile_t profile;
 uint8_t osd_display_phase = 2;
 uint8_t last_display_phase;
 uint8_t osd_wizard_phase = 0;
@@ -192,7 +191,7 @@ void print_osd_callsign_adjustable (uint8_t string_element_qty, uint8_t data_ele
 	}
 	skip_loop = 0;
 	uint8_t index = osd_menu_phase-string_element_qty-1;
-	uint8_t character[] = {(osd_element[callsign_shift_index[index][0]] >> callsign_shift_index[index][1]) & 0xFF};
+	uint8_t character[] = {(profile.osd.elements[callsign_shift_index[index][0]] >> callsign_shift_index[index][1]) & 0xFF};
 	osd_print_data( character, 1, grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
 	osd_menu_phase++;
 }
@@ -202,7 +201,7 @@ uint8_t print_osd_callsign(void){
 	static uint8_t callsign_length = 0;
 	if (index == 0){
 		for (uint8_t i = 19; i >= 0; i--){
-			uint8_t last_user_input = (osd_element[callsign_shift_index[i][0]] >> callsign_shift_index[i][1]) & 0xFF;
+			uint8_t last_user_input = (profile.osd.elements[callsign_shift_index[i][0]] >> callsign_shift_index[i][1]) & 0xFF;
 			if (last_user_input != 0x3F){
 				callsign_length = i + 1;
 				index++;
@@ -215,7 +214,7 @@ uint8_t print_osd_callsign(void){
 	}
 
 	if(index <= callsign_length && callsign_length > 0){
-		uint8_t character[] = {(osd_element[callsign_shift_index[index-1][0]] >> callsign_shift_index[index-1][1]) & 0xFF};
+		uint8_t character[] = {(profile.osd.elements[callsign_shift_index[index-1][0]] >> callsign_shift_index[index-1][1]) & 0xFF};
 		osd_print_data( character, 1, osd_decode(*callsign1, ATTRIBUTE), osd_decode(*callsign1, POSITIONX) + index-1, osd_decode(*callsign1, POSITIONY));
 		index++;
 		return 0;
@@ -915,22 +914,22 @@ void osd_display(void) {
   case 15:		//add or remove osd elements to display
 	  last_display_phase = 10;
 	  print_osd_menu_strings(12, 11, osd_display_labels, osd_display_positions);
-	  print_osd_adjustable_enums (12, 10, get_decode_element_string(osd_element[osd_elements_active_items[osd_menu_phase-13]], ACTIVE), osd_display_grid, osd_display_data_positions);
-	  if (osd_menu_phase==23) osd_encoded_adjust(&osd_element[osd_elements_active_items[osd_cursor-1]], 10, 1, ACTIVE);
+	  print_osd_adjustable_enums (12, 10, get_decode_element_string(profile.osd.elements[osd_elements_active_items[osd_menu_phase-13]], ACTIVE), osd_display_grid, osd_display_data_positions);
+	  if (osd_menu_phase==23) osd_encoded_adjust(&profile.osd.elements[osd_elements_active_items[osd_cursor-1]], 10, 1, ACTIVE);
 	  break;
 
   case 16:		//edit element positions
 	  last_display_phase = 10;
 	  print_osd_menu_strings(14, 11, osd_position_labels, osd_position_adjust_positions);
-	  print_osd_adjustable_enums (14, 20,get_decode_element_string(osd_element[osd_position_active_items[osd_menu_phase-15]], osd_position_index[osd_menu_phase-15]), osd_position_grid, osd_position_data_positions);
-	  if (osd_menu_phase==35 && osd_select > 0) osd_encoded_adjust(&osd_element[osd_elements_active_items[osd_cursor-1]], 10, 2, osd_select+1);
+	  print_osd_adjustable_enums (14, 20,get_decode_element_string(profile.osd.elements[osd_position_active_items[osd_menu_phase-15]], osd_position_index[osd_menu_phase-15]), osd_position_grid, osd_position_data_positions);
+	  if (osd_menu_phase==35 && osd_select > 0) osd_encoded_adjust(&profile.osd.elements[osd_elements_active_items[osd_cursor-1]], 10, 2, osd_select+1);
 	  break;
 
   case 17:		//edit display text style
 	  last_display_phase = 10;
 	  print_osd_menu_strings(12, 11, osd_text_style, osd_text_style_positions);
-	  print_osd_adjustable_enums (12, 10, get_decode_element_string(osd_element[osd_elements_active_items[osd_menu_phase-13]], ATTRIBUTE), osd_display_grid, osd_display_data_positions);
-	  if (osd_menu_phase==23) osd_encoded_adjust(&osd_element[osd_elements_active_items[osd_cursor-1]], 10, 1, ATTRIBUTE);
+	  print_osd_adjustable_enums (12, 10, get_decode_element_string(profile.osd.elements[osd_elements_active_items[osd_menu_phase-13]], ATTRIBUTE), osd_display_grid, osd_display_data_positions);
+	  if (osd_menu_phase==23) osd_encoded_adjust(&profile.osd.elements[osd_elements_active_items[osd_cursor-1]], 10, 1, ATTRIBUTE);
 	  break;
 
   case 18:		//edit callsign text

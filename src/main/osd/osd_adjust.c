@@ -16,7 +16,6 @@ extern uint8_t last_osd_cursor[6];
 extern uint8_t osd_select;
 extern uint8_t increase_osd_value;
 extern uint8_t decrease_osd_value;
-extern unsigned long osd_element[OSD_NUMBER_ELEMENTS];
 extern int flash_feature_1; //currently used for auto entry into wizard menu
 extern profile_t profile;
 
@@ -112,11 +111,11 @@ void osd_encoded_adjust_callsign(void){
 		osd_menu_phase = 1; //repaint the screen again
 	}
 	if (increase_osd_value){
-		osd_element[callsign_shift_index[osd_select-1][0]] = (((osd_element[callsign_shift_index[osd_select-1][0]] >> callsign_shift_index[osd_select-1][1]) + 1) << callsign_shift_index[osd_select-1][1]) + (osd_element[callsign_shift_index[osd_select-1][0]] & get_callsign_bitmask(callsign_shift_index[osd_select-1][1]));
+		profile.osd.elements[callsign_shift_index[osd_select-1][0]] = (((profile.osd.elements[callsign_shift_index[osd_select-1][0]] >> callsign_shift_index[osd_select-1][1]) + 1) << callsign_shift_index[osd_select-1][1]) + (profile.osd.elements[callsign_shift_index[osd_select-1][0]] & get_callsign_bitmask(callsign_shift_index[osd_select-1][1]));
 		osd_menu_phase = 1; //repaint the screen again
 	}
 	if (decrease_osd_value){
-		osd_element[callsign_shift_index[osd_select-1][0]] = (((osd_element[callsign_shift_index[osd_select-1][0]] >> callsign_shift_index[osd_select-1][1]) - 1) << callsign_shift_index[osd_select-1][1]) + (osd_element[callsign_shift_index[osd_select-1][0]] & get_callsign_bitmask(callsign_shift_index[osd_select-1][1]));
+		profile.osd.elements[callsign_shift_index[osd_select-1][0]] = (((profile.osd.elements[callsign_shift_index[osd_select-1][0]] >> callsign_shift_index[osd_select-1][1]) - 1) << callsign_shift_index[osd_select-1][1]) + (profile.osd.elements[callsign_shift_index[osd_select-1][0]] & get_callsign_bitmask(callsign_shift_index[osd_select-1][1]));
 		osd_menu_phase = 1; //repaint the screen again
 	}
 	increase_osd_value = 0;

@@ -43,6 +43,7 @@
 #include "drv_spi.h"
 #include "drv_time.h"
 #include "gestures.h"
+#include "iir_filter.h"
 #include "led.h"
 #include "pid.h"
 #include "profile.h"
@@ -51,7 +52,6 @@
 #include "sixaxis.h"
 #include "util.h"
 #include "vtx.h"
-#include "iir_filter.h"
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 #include "drv_serial_4way.h"
@@ -118,7 +118,6 @@ int binding_while_armed = 1;
 //Flash Memory Feature defaults for a flash w/full chip erase
 int flash_feature_1 = 1; //SETUP WIZARD
 int flash_feature_2 = 0; //LVC
-unsigned long osd_element[OSD_NUMBER_ELEMENTS] = {0xA7, 0x43495551, 0x4C49534B, 0x3F524556, 0x3F3F3F3F, 0x3F3F3F3F, 0x704, 0x72D, 0x754, 0x6A8, 0xE0, 0x6E0, 0x320, 0x680};
 
 // for led flash on gestures
 int ledcommand = 0;
@@ -192,7 +191,7 @@ int main(void) {
   aux[AUX_CHANNEL_GESTURE] = 1;
 #endif
 
-//temp placeholder for old flash load function
+  //temp placeholder for old flash load function
 
   vtx_init();
 
