@@ -223,6 +223,7 @@ typedef struct {
   MEMBER(meta, metadata_t)   \
   MEMBER(motor, motor_t)     \
   MEMBER(serial, serial_t)   \
+  MEMBER(osd, osd_t)         \
   MEMBER(rate, rate_t)       \
   MEMBER(channel, channel_t) \
   MEMBER(pid, profile_pid_t) \
