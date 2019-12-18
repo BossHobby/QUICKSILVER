@@ -11,7 +11,7 @@ extern profile_t profile;
 extern float accelcal[];
 
 #define FMC_HEADER 0x12AA0001
-#define FRSKY_BIND_OFFSET OSD_FLASH_START + OSD_NUMBER_ELEMENTS
+#define FRSKY_BIND_OFFSET 50
 
 float initial_pid_identifier = -10;
 
