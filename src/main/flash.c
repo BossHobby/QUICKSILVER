@@ -11,7 +11,7 @@ extern profile_t profile;
 extern float accelcal[];
 
 #define FMC_HEADER 0x12AA0001
-#define FRSKY_BIND_OFFSET 50
+#define FRSKY_BIND_OFFSET 57
 
 float initial_pid_identifier = -10;
 
@@ -104,7 +104,7 @@ void flash_save(void) {
   }
 #endif
 
-#ifdef RX_FRSKY //currently starts at address 66
+#ifdef RX_FRSKY
   extern int rx_bind_enable;
   extern frsky_bind_data frsky_bind;
 
@@ -213,7 +213,7 @@ void flash_load(void) {
     flash_feature_2 = fmc_read_float(54);
 #endif
 
-#ifdef RX_FRSKY //currently starts at address 57
+#ifdef RX_FRSKY
     extern int rx_bind_enable;
 
     // only load data if we did not just overwrite it
