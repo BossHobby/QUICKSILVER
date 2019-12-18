@@ -63,11 +63,12 @@ for target in $(jq -r '.[] | @base64' $TARGETS_FILE); do
     resetConfig
     setConfig "$(config_get '.defines | to_entries[] | @base64')"
 
-    if make -j32 -C "$SOURCE_FOLDER" MODE="$MODE" $TARGET_NAME &> /dev/null; then 
+    if make -j32 -C "$SOURCE_FOLDER" MODE="$MODE" $TARGET_NAME; then 
       cp "$BUILD_FOLDER/$MODE/quicksilver.$TARGET_NAME.$MODE.hex" "$OUTPUT_FOLDER/$BUILD_NAME.hex"
       echo -e "\e[32mSuccessfully\e[39m built target $BUILD_NAME"
     else
       echo -e "\e[31mError\e[39m building target $BUILD_NAME"
+      exit 1
     fi
   done
 done
