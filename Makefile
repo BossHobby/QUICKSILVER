@@ -7,7 +7,12 @@ CP=arm-none-eabi-objcopy
 OD=arm-none-eabi-objdump
 SE=arm-none-eabi-size
 
-GCC_VERSION=$(shell arm-none-eabi-gcc -dumpversion)
+GCC_VERSION = $(shell arm-none-eabi-gcc -dumpversion)
+GIT_VERSION = master
+
+ifneq (, $(shell which git))
+	GIT_VERSION = $(shell git describe --always --long)
+endif
 
 INCLUDE = src \
 	src/main \
@@ -47,7 +52,7 @@ COMMON_FLAGS = -Wall -Wdouble-promotion -MMD -MP \
 	-ffunction-sections -fdata-sections -fstack-usage \
 	-fno-stack-protector -fomit-frame-pointer \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables \
-	-fno-math-errno -fmerge-all-constants
+	-fno-math-errno -fmerge-all-constants -DGIT_VERSION=$(GIT_VERSION)
 
 CFLAGS   = $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(TARGET_FLAGS) $(COMMON_FLAGS)  \
 	-std=gnu11

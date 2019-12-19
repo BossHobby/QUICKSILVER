@@ -231,6 +231,7 @@ typedef struct {
 
 typedef struct {
   const char *target_name;
+  const char *git_version;
 
   uint32_t quic_protocol_version;
 
@@ -240,6 +241,7 @@ typedef struct {
 
 #define TARGET_INFO_MEMBERS                         \
   STR_MEMBER(target_name)                           \
+  STR_MEMBER(git_version)                           \
   MEMBER(quic_protocol_version, uint32)             \
   STR_ARRAY_MEMBER(motor_pins, MOTOR_PIN_IDENT_MAX) \
   STR_ARRAY_MEMBER(usart_ports, USART_PORTS_MAX)

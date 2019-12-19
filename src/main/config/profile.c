@@ -413,10 +413,13 @@ const profile_t default_profile = {
     },
 };
 
-#define MACRO_STR(arg) #arg
+#define _MACRO_STR(arg) #arg
+#define MACRO_STR(name) _MACRO_STR(name)
 
 target_info_t target_info = {
     .target_name = MACRO_STR(TARGET),
+    .git_version = MACRO_STR(GIT_VERSION),
+
     .quic_protocol_version = QUIC_PROTOCOL_VERSION,
 
 #define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) "P" #port #pin,
