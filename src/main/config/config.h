@@ -279,7 +279,7 @@
 #define FAILSAFETIME 1000000 // one second
 
 // debug things ( debug struct and other)
-#define DEBUG
+//#define DEBUG
 
 // disable motors for testing
 //#define NOMOTORS

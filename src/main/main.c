@@ -77,6 +77,8 @@ extern void flash_hard_coded_pid_identifier(void);
 
 // looptime in seconds
 float looptime;
+// running sum of looptimes
+float osd_totaltime;
 // filtered battery in volts
 float vbattfilt = 0.0;
 float vbattfilt_corr = 4.2;
@@ -285,7 +287,7 @@ int main(void) {
       failloop(6);
       //endless loop
     }
-
+    osd_totaltime += looptime;
 #ifdef DEBUG
     debug.totaltime += looptime;
     lpf(&debug.timefilt, looptime, 0.998);

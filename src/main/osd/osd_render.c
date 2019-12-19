@@ -640,6 +640,7 @@ void osd_display(void) {
   extern int lowbatt;
   extern float throttle;
   extern int binding_while_armed;
+  extern float osd_totaltime;
   //first check if video signal autodetect needs to run - run if necessary
   extern uint8_t lastsystem; //initialized at 99 for none then becomes 0 or 1 for ntsc/pal
   if (lastsystem > 1)        //if no camera was detected at boot up
@@ -783,7 +784,7 @@ void osd_display(void) {
 	  case 7:
 		  if (osd_decode(*stopwatch, ACTIVE)) {
 			  uint8_t osd_stopwatch[5];
-			  fast_fprint(osd_stopwatch, 5, debug.totaltime, 0);
+			  fast_fprint(osd_stopwatch, 5, osd_totaltime, 0);
 			  osd_stopwatch[4] = 112; //Z+23 is fly hr
 			  osd_print_data(osd_stopwatch, 5, osd_decode(*stopwatch, ATTRIBUTE), osd_decode(*stopwatch, POSITIONX), osd_decode(*stopwatch, POSITIONY));
 		  }
