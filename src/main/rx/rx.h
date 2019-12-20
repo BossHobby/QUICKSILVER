@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config.h"
 #include <stdint.h>
 
 #ifdef RX_FRSKY
