@@ -299,6 +299,10 @@ static void frsky_d_set_rc_data() {
   rx_ready = 1;
   failsafe = 0;
 
+  // frsky input is us*1.5
+  // under normal conditions this is ~1480...3020
+  // when tx is set to 125% this is  ~1290...3210
+
   // AETR channel order
   rx[0] = (channels[0] - 1500) - 750;
   rx[1] = (channels[1] - 1500) - 750;
@@ -318,16 +322,18 @@ static void frsky_d_set_rc_data() {
   rx_apply_expo();
 
   //Here we have the AUX channels Silverware supports
-  aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
-  aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
-  aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
-  aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
+  aux[AUX_CHANNEL_0] = (channels[4] > 1750) ? 1 : 0;
+  aux[AUX_CHANNEL_1] = (channels[5] > 1750) ? 1 : 0;
+  aux[AUX_CHANNEL_2] = (channels[6] > 1750) ? 1 : 0;
+  aux[AUX_CHANNEL_3] = (channels[7] > 1750) ? 1 : 0;
   aux[AUX_CHANNEL_4] = 0;
   aux[AUX_CHANNEL_5] = 0;
 
   rx_rssi = frsky_extract_rssi(packet[18]);
-  if (rx_rssi > 100.0f) rx_rssi = 100.0f;
-  if (rx_rssi < 0.0f) rx_rssi = 0.0f;
+  if (rx_rssi > 100.0f)
+    rx_rssi = 100.0f;
+  if (rx_rssi < 0.0f)
+    rx_rssi = 0.0f;
 }
 
 static uint8_t frsky_d_hub_encode(uint8_t *buf, uint8_t data) {
