@@ -16,7 +16,7 @@ const pid_rate_preset_t pid_rate_presets[] = {
     //Brushless Pids
     {
         .index = 0,
-        .name = "TWR <8:1 2",
+        .name = "TWR <8:1 2in",
         .rate = {
             .kp = {91, 91, 78.5},
             .ki = {70, 70, 70},
@@ -26,7 +26,7 @@ const pid_rate_preset_t pid_rate_presets[] = {
 
     {
         .index = 1,
-        .name = "TWR 8:1 3",
+        .name = "TWR 8:1 3in",
         .rate = {
             .kp = {78.5, 91, 78.5},
             .ki = {70, 70, 70},
@@ -36,7 +36,7 @@ const pid_rate_preset_t pid_rate_presets[] = {
 
     {
         .index = 2,
-        .name = "TWR 12:1 4",
+        .name = "TWR 12:1 4in",
         .rate = {
             .kp = {59.5, 78.5, 63},
             .ki = {70, 70, 70},
@@ -46,7 +46,7 @@ const pid_rate_preset_t pid_rate_presets[] = {
 
     {
         .index = 3,
-        .name = "TWR 14:1 5",
+        .name = "TWR 14:1 5in",
         .rate = {
             .kp = {47, 47, 56.5},
             .ki = {70, 70, 70},
