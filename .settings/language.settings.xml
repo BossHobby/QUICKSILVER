@@ -587,7 +587,7 @@
 					</resource>
 				</language>
 			</provider>
-			<provider class="com.st.stm32cube.ide.mcu.toolchain.armnone.setup.CrossBuiltinSpecsDetector" console="false" env-hash="-938771179824202199" id="com.st.stm32cube.ide.mcu.toolchain.armnone.setup.CrossBuiltinSpecsDetector" keep-relative-paths="false" name="MCU ARM GCC Built-in Compiler Settings" parameter="${COMMAND} ${FLAGS} -E -P -v -dD &quot;${INPUTS}&quot;" prefer-non-shared="true">
+			<provider class="com.st.stm32cube.ide.mcu.toolchain.armnone.setup.CrossBuiltinSpecsDetector" console="false" env-hash="-1315978123255115236" id="com.st.stm32cube.ide.mcu.toolchain.armnone.setup.CrossBuiltinSpecsDetector" keep-relative-paths="false" name="MCU ARM GCC Built-in Compiler Settings" parameter="${COMMAND} ${FLAGS} -E -P -v -dD &quot;${INPUTS}&quot;" prefer-non-shared="true">
 				<language-scope id="org.eclipse.cdt.core.gcc"/>
 				<language-scope id="org.eclipse.cdt.core.g++"/>
 			</provider>
@@ -643,6 +643,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
+						<entry kind="macro" name="GIT_VERSION" value="master"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
@@ -691,6 +692,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
+						<entry kind="macro" name="GIT_VERSION" value="master"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
@@ -739,6 +741,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
+						<entry kind="macro" name="GIT_VERSION" value="master"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
@@ -787,6 +790,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
+						<entry kind="macro" name="GIT_VERSION" value="master"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
@@ -835,6 +839,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
+						<entry kind="macro" name="GIT_VERSION" value="master"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
@@ -883,6 +888,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
+						<entry kind="macro" name="GIT_VERSION" value="master"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
@@ -931,6 +937,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
+						<entry kind="macro" name="GIT_VERSION" value="master"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
@@ -979,6 +986,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
+						<entry kind="macro" name="GIT_VERSION" value="master"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
@@ -1027,6 +1035,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
+						<entry kind="macro" name="GIT_VERSION" value="master"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
@@ -1191,6 +1200,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
+						<entry kind="macro" name="GIT_VERSION" value="master"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
@@ -1241,6 +1251,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
+						<entry kind="macro" name="GIT_VERSION" value="master"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="nfe_breadboard"/>
@@ -1248,7 +1259,7 @@
 					</resource>
 				</language>
 			</provider>
-			<provider class="com.st.stm32cube.ide.mcu.toolchain.armnone.setup.CrossBuiltinSpecsDetector" console="false" env-hash="-938771179824202199" id="com.st.stm32cube.ide.mcu.toolchain.armnone.setup.CrossBuiltinSpecsDetector" keep-relative-paths="false" name="MCU ARM GCC Built-in Compiler Settings" parameter="${COMMAND} ${FLAGS} -E -P -v -dD &quot;${INPUTS}&quot;" prefer-non-shared="true">
+			<provider class="com.st.stm32cube.ide.mcu.toolchain.armnone.setup.CrossBuiltinSpecsDetector" console="false" env-hash="-1315978123255115236" id="com.st.stm32cube.ide.mcu.toolchain.armnone.setup.CrossBuiltinSpecsDetector" keep-relative-paths="false" name="MCU ARM GCC Built-in Compiler Settings" parameter="${COMMAND} ${FLAGS} -E -P -v -dD &quot;${INPUTS}&quot;" prefer-non-shared="true">
 				<language-scope id="org.eclipse.cdt.core.gcc"/>
 				<language-scope id="org.eclipse.cdt.core.g++"/>
 			</provider>

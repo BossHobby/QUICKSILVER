@@ -93,6 +93,18 @@
       }
     ]
   },
+    {
+    "name": "clracing_f4",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      }
+    ]
+  },
   {
     "name": "nfe_breadboard",
     "configurations": [
