@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "drv_serial.h"
+#include "filter.h"
 #include "profile.h"
 #include "project.h"
 #include "util.h"
@@ -107,7 +108,7 @@ void rx_apply_expo(void) {
 void rx_precalc() {
   for (int i = 0; i < 3; ++i) {
 #ifdef RX_SMOOTHING
-    static float rx_temp[4];
+    static float rx_temp[4] = {0, 0, 0, 0};
     lpf(&rx_temp[i], rx[i], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / rx_smoothing_hz(RX_PROTOCOL)));
     rx_filtered[i] = rx_temp[i];
     limitf(&rx_filtered[i], 1.0);
