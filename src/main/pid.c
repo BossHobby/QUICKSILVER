@@ -194,10 +194,10 @@ float pid(int x) {
     float lpf2(float in, int num);
     static float dlpf[3] = {0};
     static float setpoint_derivative[3];
-
-    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
 #ifdef RX_SMOOTHING
-    lpf(&setpoint_derivative[x], setpoint_derivative[x], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / rx_smoothing_hz(RX_PROTOCOL)));
+    lpf(&setpoint_derivative[x], ((setpoint[x] - lastsetpoint[x]) * current_kd[x] * timefactor), FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / rx_smoothing_hz(RX_PROTOCOL)));
+#else
+    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
 #endif
     dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * current_kd[x] * timefactor);
     lastsetpoint[x] = setpoint[x];
