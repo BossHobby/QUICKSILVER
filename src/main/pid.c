@@ -77,9 +77,10 @@ float ierror[PIDNUMBER] = {0, 0, 0};
 float pidoutput[PIDNUMBER];
 float setpoint[PIDNUMBER];
 float v_compensation = 1.00;
+float tda_compensation = 1.00;
 
 static float lasterror[PIDNUMBER];
-
+static float lasterror2[PIDNUMBER];
 static float current_kp[PIDNUMBER] = {0, 0, 0};
 static float current_ki[PIDNUMBER] = {0, 0, 0};
 static float current_kd[PIDNUMBER] = {0, 0, 0};
@@ -91,16 +92,10 @@ extern float gyro[3];
 extern int onground;
 extern float looptime;
 extern int in_air;
-extern float vbattfilt;
 extern float vbattfilt_corr;
-extern float vbatt_comp;
 
 // multiplier for pids at 3V - for PID_VOLTAGE_COMPENSATION - default 1.33f from H101 code
 #define PID_VC_FACTOR 1.33f
-
-#ifdef SIMPSON_RULE_INTEGRAL
-static float lasterror2[PIDNUMBER];
-#endif
 
 float timefactor;
 
@@ -199,7 +194,10 @@ float pid(int x) {
 #else
     setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
 #endif
-    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * current_kd[x] * timefactor);
+    float gyro_derivative = (gyro[x] - lastrate[x]) * current_kd[x] * timefactor;
+    if (profile.pid.throttle_dterm_attenuation)
+      gyro_derivative *= tda_compensation;
+    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - (gyro_derivative);
     lastsetpoint[x] = setpoint[x];
     lastrate[x] = gyro[x];
     //D term filtering
@@ -224,7 +222,35 @@ void pid_precalc() {
   timefactor = 0.0032f / looptime;
 
   if (profile.voltage.pid_voltage_compensation) {
+    extern float lipo_cell_count;
+    v_compensation = mapf((vbattfilt_corr / (float)lipo_cell_count), 2.5, 3.85, PID_VC_FACTOR, 1.00);
+    if (v_compensation > PID_VC_FACTOR)
+      v_compensation = PID_VC_FACTOR;
+    if (v_compensation < 1.00f)
+      v_compensation = 1.00;
 
+#ifdef LEVELMODE_PID_ATTENUATION
+    if (rx_aux_on(AUX_LEVELMODE))
+      v_compensation *= LEVELMODE_PID_ATTENUATION;
+#endif
+  }
+
+#define TDA_BREAKPOINT 0.35f
+#define TDA_PERCENT 0.70f
+  if (profile.pid.throttle_dterm_attenuation) {
+    extern float throttle;
+    tda_compensation = mapf(throttle, TDA_BREAKPOINT, 1.0, 1.0, TDA_PERCENT);
+    if (tda_compensation > 1.00f)
+    	tda_compensation = 1.00;
+    if (tda_compensation < TDA_PERCENT)
+    	tda_compensation = TDA_PERCENT;
+  }
+
+
+
+
+
+/*
     //v_compensation = mapf((vbattfilt / (float)lipo_cell_count), 2.5, 3.85, PID_VC_FACTOR, 1.00);
     if (profile.voltage.pid_voltage_compensation == PID_VOLTAGE_COMPENSATION_EXACT_VOLTS) {
       extern float throttle;
@@ -253,11 +279,8 @@ void pid_precalc() {
         v_compensation = 1.00;
     }
 
-#ifdef LEVELMODE_PID_ATTENUATION
-    if (rx_aux_on(AUX_LEVELMODE))
-      v_compensation *= LEVELMODE_PID_ATTENUATION;
-#endif
-  }
+
+  }*/
 
   for (uint8_t i = 0; i < PIDNUMBER; i++) {
     current_kp[i] = profile_current_pid_rates()->kp.axis[i] / pid_scales[0][i];

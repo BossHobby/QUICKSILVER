@@ -111,6 +111,11 @@ typedef enum {
   STICK_PROFILE_MAX
 } stick_profile_t;
 
+typedef enum{
+  THROTTLE_D_ATTENTUATION_NONE,
+  THROTTLE_D_ATTENUATION_ACTIVE,
+}throttle_dterm_attenuation_t;
+
 typedef struct {
   pid_profile_t pid_profile;
   pid_rate_t pid_rates[PID_PROFILE_MAX];
@@ -118,6 +123,7 @@ typedef struct {
   stick_rate_t stick_rates[STICK_PROFILE_MAX];
   angle_pid_rate_t big_angle;
   angle_pid_rate_t small_angle;
+  throttle_dterm_attenuation_t throttle_dterm_attenuation;
 } profile_pid_t;
 
 #define PID_MEMBERS                                          \
@@ -126,7 +132,8 @@ typedef struct {
   MEMBER(stick_profile, uint8)                               \
   ARRAY_MEMBER(stick_rates, STICK_PROFILE_MAX, stick_rate_t) \
   MEMBER(big_angle, angle_pid_rate_t)                        \
-  MEMBER(small_angle, angle_pid_rate_t)
+  MEMBER(small_angle, angle_pid_rate_t)						 \
+  MEMBER(throttle_dterm_attenuation, uint8)
 
 typedef enum {
   GYRO_ROTATE_NONE = 0x0,

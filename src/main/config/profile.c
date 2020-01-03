@@ -334,6 +334,12 @@ const profile_t default_profile = {
             .kp = 5.00, // P TERM GAIN ROLL + PITCH
             .kd = 0.0,  // D TERM GAIN ROLL + PITCH
         },
+
+#ifdef THROTTLE_D_ATTENUATION
+		.throttle_dterm_attenuation = THROTTLE_D_ATTENUATION_ACTIVE,
+#else
+        .throttle_dterm_attenuation = THROTTLE_D_ATTENTUATION_NONE,
+#endif
     },
     .voltage = {
 #ifdef LIPO_CELL_COUNT

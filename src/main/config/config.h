@@ -13,7 +13,9 @@
 //***********************************************NEW STUFF TO PLAY WITH*****************************************************
 
 #define RX_SMOOTHING
+#define THROTTLE_D_ATTENUATION
 
+// THIS CAN GO AWAY NOW
 //Select (only one) source variable for PID VBAT Compensation
 //#define EXACT_VOLTS     //origional method - responds to exact moment to moment sag
 #define FILTERED_VOLTS // responds to some sag
