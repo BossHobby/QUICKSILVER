@@ -181,64 +181,6 @@ float pid(int x) {
   // D term
   // skip yaw D term if not set
   if (current_kd[x] > 0) {
-
-#if (defined DTERM_LPF_1ST_HZ && !defined ADVANCED_PID_CONTROLLER)
-    float dterm;
-    static float lastrate[3];
-    static float dlpf[3] = {0};
-
-    dterm = -(gyro[x] - lastrate[x]) * current_kd[x] * timefactor;
-    lastrate[x] = gyro[x];
-    lpf(&dlpf[x], dterm, FILTERCALC(looptime, 1.0f / DTERM_LPF_1ST_HZ));
-    pidoutput[x] += dlpf[x];
-#endif
-
-#if (defined DTERM_LPF_1ST_HZ && defined ADVANCED_PID_CONTROLLER)
-    extern float rx_filtered[4];
-    float dterm;
-    float transitionSetpointWeight[3];
-    float stickAccelerator[3];
-    float stickTransition[3];
-    if (rx_aux_on(AUX_STICK_BOOST_PROFILE)) {
-      stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_ON].accelerator.axis[x];
-      stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_ON].transition.axis[x];
-    } else {
-      stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_OFF].accelerator.axis[x];
-      stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_OFF].transition.axis[x];
-    }
-    if (stickAccelerator[x] < 1) {
-      transitionSetpointWeight[x] = (fabsf(rx_filtered[x]) * stickTransition[x]) + (1 - stickTransition[x]);
-    } else {
-      transitionSetpointWeight[x] = (fabsf(rx_filtered[x]) * (stickTransition[x] / stickAccelerator[x])) + (1 - stickTransition[x]);
-    }
-    static float lastrate[3];
-    static float lastsetpoint[3];
-    static float dlpf[3] = {0};
-    static float setpoint_derivative[3];
-
-    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
-#ifdef RX_SMOOTHING
-    lpf(&setpoint_derivative[x], setpoint_derivative[x], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / rx_smoothing_hz(RX_PROTOCOL)));
-#endif
-    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * current_kd[x] * timefactor);
-    lastsetpoint[x] = setpoint[x];
-    lastrate[x] = gyro[x];
-    lpf(&dlpf[x], dterm, FILTERCALC(looptime, 1.0f / DTERM_LPF_1ST_HZ));
-    pidoutput[x] += dlpf[x];
-#endif
-
-#if (defined DTERM_LPF_2ND_HZ && !defined ADVANCED_PID_CONTROLLER)
-    float dterm;
-    static float lastrate[3];
-    float lpf2(float in, int num);
-
-    dterm = -(gyro[x] - lastrate[x]) * current_kd[x] * timefactor;
-    lastrate[x] = gyro[x];
-    dterm = lpf2(dterm, x);
-    pidoutput[x] += dterm;
-#endif
-
-#if (defined DTERM_LPF_2ND_HZ && defined ADVANCED_PID_CONTROLLER)
     extern float rx_filtered[4];
     float dterm;
     float transitionSetpointWeight[3];
@@ -259,6 +201,7 @@ float pid(int x) {
     static float lastrate[3];
     static float lastsetpoint[3];
     float lpf2(float in, int num);
+    static float dlpf[3] = {0};
     static float setpoint_derivative[3];
 
     setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
@@ -268,9 +211,14 @@ float pid(int x) {
     dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - ((gyro[x] - lastrate[x]) * current_kd[x] * timefactor);
     lastsetpoint[x] = setpoint[x];
     lastrate[x] = gyro[x];
-    dterm = lpf2(dterm, x);
-    pidoutput[x] += dterm;
+    //D term filtering
+#ifdef DTERM_LPF_2ND_HZ
+    dlpf[x] = lpf2(dterm, x);
 #endif
+#ifdef DTERM_LPF_1ST_HZ
+    lpf(&dlpf[x], dterm, FILTERCALC(looptime, 1.0f / DTERM_LPF_1ST_HZ));
+#endif
+    pidoutput[x] += dlpf[x];
   }
 
   if (profile.voltage.pid_voltage_compensation)
