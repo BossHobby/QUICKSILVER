@@ -195,7 +195,7 @@ float pid(int x) {
     setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
 #endif
     float gyro_derivative = (gyro[x] - lastrate[x]) * current_kd[x] * timefactor;
-    if (profile.pid.throttle_dterm_attenuation)
+    if (profile.pid.throttle_dterm_attenuation.tda_active)
       gyro_derivative *= tda_compensation;
     dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - (gyro_derivative);
     lastsetpoint[x] = setpoint[x];
@@ -235,15 +235,14 @@ void pid_precalc() {
 #endif
   }
 
-#define TDA_BREAKPOINT 0.35f
-#define TDA_PERCENT 0.70f
-  if (profile.pid.throttle_dterm_attenuation) {
+
+  if (profile.pid.throttle_dterm_attenuation.tda_active) {
     extern float throttle;
-    tda_compensation = mapf(throttle, TDA_BREAKPOINT, 1.0, 1.0, TDA_PERCENT);
+    tda_compensation = mapf(throttle, profile.pid.throttle_dterm_attenuation.tda_breakpoint, 1.0, 1.0, profile.pid.throttle_dterm_attenuation.tda_percent);
     if (tda_compensation > 1.00f)
     	tda_compensation = 1.00;
-    if (tda_compensation < TDA_PERCENT)
-    	tda_compensation = TDA_PERCENT;
+    if (tda_compensation < profile.pid.throttle_dterm_attenuation.tda_percent)
+    	tda_compensation = profile.pid.throttle_dterm_attenuation.tda_percent;
   }
 
 

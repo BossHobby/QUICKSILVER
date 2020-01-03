@@ -335,11 +335,15 @@ const profile_t default_profile = {
             .kd = 0.0,  // D TERM GAIN ROLL + PITCH
         },
 
+		.throttle_dterm_attenuation = {
 #ifdef THROTTLE_D_ATTENUATION
-		.throttle_dterm_attenuation = THROTTLE_D_ATTENUATION_ACTIVE,
+			.tda_active =THROTTLE_D_ATTENUATION_ACTIVE,
 #else
-        .throttle_dterm_attenuation = THROTTLE_D_ATTENTUATION_NONE,
+			.tda_active =THROTTLE_D_ATTENUATION_NONE,
 #endif
+			.tda_breakpoint = TDA_BREAKPOINT,
+			.tda_percent = TDA_PERCENT,
+		},
     },
     .voltage = {
 #ifdef LIPO_CELL_COUNT
@@ -604,6 +608,10 @@ START_STRUCT_ENCODER(stick_rate_t)
 STICK_RATE_MEMBERS
 END_STRUCT_ENCODER()
 
+START_STRUCT_ENCODER(throttle_dterm_attenuation_t)
+DTERM_ATTENUATION_MEMBERS
+END_STRUCT_ENCODER()
+
 START_STRUCT_ENCODER(profile_pid_t)
 PID_MEMBERS
 END_STRUCT_ENCODER()
@@ -772,6 +780,10 @@ END_STRUCT_DECODER()
 
 START_STRUCT_DECODER(stick_rate_t)
 STICK_RATE_MEMBERS
+END_STRUCT_DECODER()
+
+START_STRUCT_DECODER(throttle_dterm_attenuation_t)
+DTERM_ATTENUATION_MEMBERS
 END_STRUCT_DECODER()
 
 START_STRUCT_DECODER(profile_pid_t)

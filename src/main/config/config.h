@@ -12,8 +12,9 @@
 //**********************************************************************************************************************
 //***********************************************NEW STUFF TO PLAY WITH*****************************************************
 
-#define RX_SMOOTHING
 #define THROTTLE_D_ATTENUATION
+#define TDA_BREAKPOINT 0.35f
+#define TDA_PERCENT 0.70f
 
 // THIS CAN GO AWAY NOW
 //Select (only one) source variable for PID VBAT Compensation
@@ -66,6 +67,8 @@
 // *************transmitter stick adjustable deadband for roll/pitch/yaw
 // *************.01f = 1% of stick range - comment out to disable
 #define STICKS_DEADBAND .01f
+
+#define RX_SMOOTHING
 
 //**********************************************************************************************************************
 //***********************************************RECEIVER SETTINGS******************************************************
