@@ -143,26 +143,13 @@ float pid(int x) {
   }
 #endif
 
+  //SIMPSON_RULE_INTEGRAL
   if (!iwindup) {
-#ifdef MIDPOINT_RULE_INTEGRAL
-    // trapezoidal rule instead of rectangular
-    ierror[x] = ierror[x] + (error[x] + lasterror[x]) * 0.5f * current_ki[x] * looptime;
-    lasterror[x] = error[x];
-#endif
-
-#ifdef RECTANGULAR_RULE_INTEGRAL
-    ierror[x] = ierror[x] + error[x] * current_ki[x] * looptime;
-    lasterror[x] = error[x];
-#endif
-
-#ifdef SIMPSON_RULE_INTEGRAL
     // assuming similar time intervals
     ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + error[x]) * current_ki[x] * looptime;
     lasterror2[x] = lasterror[x];
     lasterror[x] = error[x];
-#endif
   }
-
   limitf(&ierror[x], integrallimit[x]);
 
 #ifdef ENABLE_SETPOINT_WEIGHTING
