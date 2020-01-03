@@ -162,6 +162,10 @@ float pid(int x) {
   pidoutput[x] = error[x] * current_kp[x];
 #endif
 
+  // Pid Voltage Comp applied to P term only
+  if (profile.voltage.pid_voltage_compensation)
+    pidoutput[x] *= v_compensation;
+
   // I term
   pidoutput[x] += ierror[x];
 
@@ -207,9 +211,6 @@ float pid(int x) {
 #endif
     pidoutput[x] += dlpf[x];
   }
-
-  if (profile.voltage.pid_voltage_compensation)
-    pidoutput[x] *= v_compensation;
 
   limitf(&pidoutput[x], outlimit[x]);
 
