@@ -587,8 +587,8 @@ void control(void) {
     if (onground)
       mixScaling = 0;
     // only enable once really in the air
-    else if (in_air)
-      mixScaling = 1;
+    else
+      mixScaling = in_air;
     if (mixScaling) {
       //ledcommand=1;
       float minMix = 1000.0f;
