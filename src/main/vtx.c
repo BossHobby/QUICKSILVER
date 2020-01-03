@@ -24,6 +24,9 @@ static int fpv_init = 0;
 #endif
 
 #ifdef ENABLE_SMART_AUDIO
+
+#define SMART_AUDIO_CONNECTION_TRIES 10
+
 extern smart_audio_settings_t smart_audio_settings;
 
 const uint16_t frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX] = {
@@ -83,7 +86,7 @@ void vtx_update() {
 #ifdef ENABLE_SMART_AUDIO
   if (onground && serial_smart_audio_port == profile.serial.smart_audio && serial_smart_audio_port != USART_PORT_INVALID) {
     static uint8_t connect_tries = 0;
-    if (smart_audio_settings.version == 0 && connect_tries < 3) {
+    if (smart_audio_settings.version == 0 && connect_tries < SMART_AUDIO_CONNECTION_TRIES) {
       // no smart audio detected, try again
       serial_smart_audio_send_payload(SA_CMD_GET_SETTINGS, NULL, 0);
       // reset loop time
