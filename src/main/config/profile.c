@@ -335,15 +335,15 @@ const profile_t default_profile = {
             .kd = 0.0,  // D TERM GAIN ROLL + PITCH
         },
 
-		.throttle_dterm_attenuation = {
+        .throttle_dterm_attenuation = {
 #ifdef THROTTLE_D_ATTENUATION
-			.tda_active =THROTTLE_D_ATTENUATION_ACTIVE,
+            .tda_active = THROTTLE_D_ATTENUATION_ACTIVE,
 #else
-			.tda_active =THROTTLE_D_ATTENUATION_NONE,
+            .tda_active = THROTTLE_D_ATTENUATION_NONE,
 #endif
-			.tda_breakpoint = TDA_BREAKPOINT,
-			.tda_percent = TDA_PERCENT,
-		},
+            .tda_breakpoint = TDA_BREAKPOINT,
+            .tda_percent = TDA_PERCENT,
+        },
     },
     .voltage = {
 #ifdef LIPO_CELL_COUNT

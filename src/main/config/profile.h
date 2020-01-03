@@ -111,22 +111,22 @@ typedef enum {
   STICK_PROFILE_MAX
 } stick_profile_t;
 
-typedef enum{
+typedef enum {
   THROTTLE_D_ATTENTUATION_NONE,
   THROTTLE_D_ATTENUATION_ACTIVE,
   THROTTLE_D_ATTENUATION_MAX,
-}tda_active_t;
+} tda_active_t;
 
 typedef struct {
   tda_active_t tda_active;
   float tda_breakpoint;
   float tda_percent;
-}throttle_dterm_attenuation_t;
+} throttle_dterm_attenuation_t;
 
-#define DTERM_ATTENUATION_MEMBERS					\
-  MEMBER(tda_active, uint8)                         \
-  MEMBER(tda_breakpoint, float)						\
-  MEMBER(tda_percent, float)						\
+#define DTERM_ATTENUATION_MEMBERS \
+  MEMBER(tda_active, uint8)       \
+  MEMBER(tda_breakpoint, float)   \
+  MEMBER(tda_percent, float)
 
 typedef struct {
   pid_profile_t pid_profile;
@@ -144,7 +144,7 @@ typedef struct {
   MEMBER(stick_profile, uint8)                               \
   ARRAY_MEMBER(stick_rates, STICK_PROFILE_MAX, stick_rate_t) \
   MEMBER(big_angle, angle_pid_rate_t)                        \
-  MEMBER(small_angle, angle_pid_rate_t)						 \
+  MEMBER(small_angle, angle_pid_rate_t)                      \
   MEMBER(throttle_dterm_attenuation, throttle_dterm_attenuation_t)
 
 typedef enum {
