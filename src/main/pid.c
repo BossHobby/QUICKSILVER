@@ -60,10 +60,7 @@ const float integrallimit[PIDNUMBER] = {1.7, 1.7, 0.5};
 
 #endif
 
-//#define RECTANGULAR_RULE_INTEGRAL
-//#define MIDPOINT_RULE_INTEGRAL
-#define SIMPSON_RULE_INTEGRAL
-
+// TODO: re-implement?
 //#define ANTI_WINDUP_DISABLE
 
 // non changable things below
@@ -93,6 +90,7 @@ extern int onground;
 extern float looptime;
 extern int in_air;
 extern float vbattfilt_corr;
+extern float rx_filtered[4];
 
 // multiplier for pids at 3V - for PID_VOLTAGE_COMPENSATION - default 1.33f from H101 code
 #define PID_VC_FACTOR 1.33f
@@ -115,17 +113,69 @@ void pid_init() {
 #endif
 }
 
+// calculate change from ideal loop time
+// 0.0032f is there for legacy purposes, should be 0.001f = looptime
+// this is called in advance as an optimization because it has division
+void pid_precalc() {
+  timefactor = 0.0032f / looptime;
+  extern float throttle;
+
+#ifdef DTERM_LPF_1ST_HZ
+  // recalc lpf coeff, maybe for lpf2 too?
+  filter_lp_pt1_coeff(filter, 3, DTERM_LPF_1ST_HZ);
+#endif
+
+  if (profile.voltage.pid_voltage_compensation) {
+    extern float lipo_cell_count;
+    v_compensation = mapf((vbattfilt_corr / (float)lipo_cell_count), 2.5, 3.85, PID_VC_FACTOR, 1.00);
+    if (v_compensation > PID_VC_FACTOR)
+      v_compensation = PID_VC_FACTOR;
+    if (v_compensation < 1.00f)
+      v_compensation = 1.00;
+
+#ifdef LEVELMODE_PID_ATTENUATION
+    if (rx_aux_on(AUX_LEVELMODE))
+      v_compensation *= LEVELMODE_PID_ATTENUATION;
+#endif
+  }
+
+  if (profile.pid.throttle_dterm_attenuation.tda_active) {
+    tda_compensation = mapf(throttle, profile.pid.throttle_dterm_attenuation.tda_breakpoint, 1.0, 1.0, profile.pid.throttle_dterm_attenuation.tda_percent);
+    if (tda_compensation > 1.00f)
+      tda_compensation = 1.00;
+    if (tda_compensation < profile.pid.throttle_dterm_attenuation.tda_percent)
+      tda_compensation = profile.pid.throttle_dterm_attenuation.tda_percent;
+  }
+
+#ifdef DTERM_DYNAMIC_LPF
+  float dynamic_throttle = throttle * (1 - throttle / 2.0f) * 2.0f;
+  float d_term_dynamic_freq = mapf(dynamic_throttle, 0.0, 1.0, (float)DYNAMIC_FREQ_MIN, (float)DYNAMIC_FREQ_MAX);
+  if (d_term_dynamic_freq < DYNAMIC_FREQ_MIN)
+    d_term_dynamic_freq = DYNAMIC_FREQ_MIN;
+  if (d_term_dynamic_freq > DYNAMIC_FREQ_MAX)
+    d_term_dynamic_freq = DYNAMIC_FREQ_MAX;
+  dynamic_pt1_coefficient = FILTERCALC(looptime, 1.0f / d_term_dynamic_freq);
+#endif
+
+  for (uint8_t i = 0; i < PIDNUMBER; i++) {
+    current_kp[i] = profile_current_pid_rates()->kp.axis[i] / pid_scales[0][i];
+    current_ki[i] = profile_current_pid_rates()->ki.axis[i] / pid_scales[1][i];
+    current_kd[i] = profile_current_pid_rates()->kd.axis[i] / pid_scales[2][i];
+  }
+}
+
 // pid calculation for acro ( rate ) mode
 // input: error[x] = setpoint - gyro
 // output: pidoutput[x] = change required from motors
 float pid(int x) {
-  if ((rx_aux_on(AUX_LEVELMODE)) && (!rx_aux_on(AUX_RACEMODE))) { //in level mode or horizon but not racemode
-    if ((onground) || (in_air == 0)) {                            // and while on the ground...
-      ierror[x] *= 0.98f;
-    } // wind down the integral error
-  } else {
-    if (onground)
-      ierror[x] *= 0.98f; //in acro mode - only wind down integral when idle up is off and throttle is 0
+
+  // in level mode or horizon but not racemode and while on the ground...
+  if ((rx_aux_on(AUX_LEVELMODE)) && (!rx_aux_on(AUX_RACEMODE)) && ((onground) || (in_air == 0))) {
+    // wind down the integral error
+    ierror[x] *= 0.98f;
+  } else if (onground) {
+    //in acro mode - only wind down integral when idle up is off and throttle is 0
+    ierror[x] *= 0.98f;
   }
 
   int iwindup = 0; // (iwidup = 0  windup is permitted)   (iwindup = 1 windup is squashed)
@@ -183,8 +233,6 @@ float pid(int x) {
   // D term
   // skip yaw D term if not set
   if (current_kd[x] > 0) {
-    extern float rx_filtered[4];
-    float dterm;
     float transitionSetpointWeight[3];
     float stickAccelerator[3];
     float stickTransition[3];
@@ -203,7 +251,6 @@ float pid(int x) {
 
     static float lastrate[3];
     static float lastsetpoint[3];
-    static float dlpf[3] = {0};
     static float setpoint_derivative[3];
 
 #ifdef RX_SMOOTHING
@@ -216,11 +263,12 @@ float pid(int x) {
     if (profile.pid.throttle_dterm_attenuation.tda_active)
       gyro_derivative *= tda_compensation;
 
-    dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - (gyro_derivative);
+    const float dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - (gyro_derivative);
     lastsetpoint[x] = setpoint[x];
     lastrate[x] = gyro[x];
 
     //D term filtering
+    static float dlpf[3] = {0};
 #ifdef DTERM_LPF_2ND_HZ
     dlpf[x] = filter_lp2_pt1_step(&filter[x], dterm);
 #endif
@@ -239,57 +287,6 @@ float pid(int x) {
   limitf(&pidoutput[x], outlimit[x]);
 
   return pidoutput[x];
-}
-
-// calculate change from ideal loop time
-// 0.0032f is there for legacy purposes, should be 0.001f = looptime
-// this is called in advance as an optimization because it has division
-void pid_precalc() {
-  timefactor = 0.0032f / looptime;
-  extern float throttle;
-
-#ifdef DTERM_LPF_1ST_HZ
-  // recalc lpf coeff, maybe for lpf2 too?
-  filter_lp_pt1_coeff(filter, 3, DTERM_LPF_1ST_HZ);
-#endif
-
-  if (profile.voltage.pid_voltage_compensation) {
-    extern float lipo_cell_count;
-    v_compensation = mapf((vbattfilt_corr / (float)lipo_cell_count), 2.5, 3.85, PID_VC_FACTOR, 1.00);
-    if (v_compensation > PID_VC_FACTOR)
-      v_compensation = PID_VC_FACTOR;
-    if (v_compensation < 1.00f)
-      v_compensation = 1.00;
-
-#ifdef LEVELMODE_PID_ATTENUATION
-    if (rx_aux_on(AUX_LEVELMODE))
-      v_compensation *= LEVELMODE_PID_ATTENUATION;
-#endif
-  }
-
-  if (profile.pid.throttle_dterm_attenuation.tda_active) {
-    tda_compensation = mapf(throttle, profile.pid.throttle_dterm_attenuation.tda_breakpoint, 1.0, 1.0, profile.pid.throttle_dterm_attenuation.tda_percent);
-    if (tda_compensation > 1.00f)
-      tda_compensation = 1.00;
-    if (tda_compensation < profile.pid.throttle_dterm_attenuation.tda_percent)
-      tda_compensation = profile.pid.throttle_dterm_attenuation.tda_percent;
-  }
-
-#ifdef DTERM_DYNAMIC_LPF
-  float dynamic_throttle = throttle * (1 - throttle / 2.0f) * 2.0f;
-  float d_term_dynamic_freq = mapf(dynamic_throttle, 0.0, 1.0, (float)DYNAMIC_FREQ_MIN, (float)DYNAMIC_FREQ_MAX);
-  if (d_term_dynamic_freq < DYNAMIC_FREQ_MIN)
-    d_term_dynamic_freq = DYNAMIC_FREQ_MIN;
-  if (d_term_dynamic_freq > DYNAMIC_FREQ_MAX)
-    d_term_dynamic_freq = DYNAMIC_FREQ_MAX;
-  dynamic_pt1_coefficient = FILTERCALC(looptime, 1.0f / d_term_dynamic_freq);
-#endif
-
-  for (uint8_t i = 0; i < PIDNUMBER; i++) {
-    current_kp[i] = profile_current_pid_rates()->kp.axis[i] / pid_scales[0][i];
-    current_ki[i] = profile_current_pid_rates()->ki.axis[i] / pid_scales[1][i];
-    current_kd[i] = profile_current_pid_rates()->kd.axis[i] / pid_scales[2][i];
-  }
 }
 
 // below are functions used with gestures for changing pids by a percentage
@@ -345,13 +342,13 @@ int next_pid_axis() {
 }
 
 float adjust_rounded_pid(float input, float adjust_amount) {
-  float result;
-  float value = (int)(input * 100.0f + 0.5f);
-  result = (float)(value + (100.0f * adjust_amount)) / 100.0f;
+  const float value = (int)(input * 100.0f + 0.5f);
+  const float result = (float)(value + (100.0f * adjust_amount)) / 100.0f;
+
   if ((int)(result * 100.0f) <= 0)
     return 0;
-  else
-    return result;
+
+  return result;
 }
 
 int change_pid_value(int increase) {
