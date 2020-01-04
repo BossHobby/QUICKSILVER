@@ -95,13 +95,15 @@ extern float rx_filtered[4];
 // multiplier for pids at 3V - for PID_VOLTAGE_COMPENSATION - default 1.33f from H101 code
 #define PID_VC_FACTOR 1.33f
 float timefactor;
-float dynamic_pt1_coefficient;
 
 #ifdef DTERM_LPF_2ND_HZ
 static filter_lp2_pt1 filter[3];
 #endif
 #ifdef DTERM_LPF_1ST_HZ
 static filter_lp_pt1 filter[3];
+#endif
+#ifdef DTERM_DYNAMIC_LPF
+static filter_lp_pt1 dynamic_filter[3];
 #endif
 
 void pid_init() {
@@ -110,6 +112,10 @@ void pid_init() {
 #endif
 #ifdef DTERM_LPF_1ST_HZ
   filter_lp_pt1_init(filter, 3, DTERM_LPF_1ST_HZ);
+#endif
+#ifdef DTERM_DYNAMIC_LPF
+  // zero out filter, freq will be updated later on
+  filter_lp_pt1_init(dynamic_filter, 3, DYNAMIC_FREQ_MAX);
 #endif
 }
 
@@ -154,7 +160,7 @@ void pid_precalc() {
     d_term_dynamic_freq = DYNAMIC_FREQ_MIN;
   if (d_term_dynamic_freq > DYNAMIC_FREQ_MAX)
     d_term_dynamic_freq = DYNAMIC_FREQ_MAX;
-  dynamic_pt1_coefficient = FILTERCALC(looptime, 1.0f / d_term_dynamic_freq);
+  filter_lp_pt1_coeff(dynamic_filter, 3, d_term_dynamic_freq);
 #endif
 
   for (uint8_t i = 0; i < PIDNUMBER; i++) {
@@ -269,6 +275,7 @@ float pid(int x) {
 
     //D term filtering
     static float dlpf[3] = {0};
+
 #ifdef DTERM_LPF_2ND_HZ
     dlpf[x] = filter_lp2_pt1_step(&filter[x], dterm);
 #endif
@@ -276,12 +283,10 @@ float pid(int x) {
     dlpf[x] = filter_lp_pt1_step(&filter[x], dterm);
 #endif
 #ifdef DTERM_DYNAMIC_LPF
-    static float dlpf2[3] = {0};
-    lpf(&dlpf2[x], dlpf[x], dynamic_pt1_coefficient);
-    pidoutput[x] += dlpf2[x];
-#else
-    pidoutput[x] += dlpf[x];
+    dlpf[x] = filter_lp_pt1_step(&dynamic_filter[x], dlpf[x]);
 #endif
+
+    pidoutput[x] += dlpf[x];
   }
 
   limitf(&pidoutput[x], outlimit[x]);
