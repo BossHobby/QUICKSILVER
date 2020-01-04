@@ -274,19 +274,19 @@ float pid(int x) {
     lastrate[x] = gyro[x];
 
     //D term filtering
-    static float dlpf[3] = {0};
+    float dlpf = 0;
 
 #ifdef DTERM_LPF_2ND_HZ
-    dlpf[x] = filter_lp2_pt1_step(&filter[x], dterm);
+    dlpf = filter_lp2_pt1_step(&filter[x], dterm);
 #endif
 #ifdef DTERM_LPF_1ST_HZ
-    dlpf[x] = filter_lp_pt1_step(&filter[x], dterm);
+    dlpf = filter_lp_pt1_step(&filter[x], dterm);
 #endif
 #ifdef DTERM_DYNAMIC_LPF
-    dlpf[x] = filter_lp_pt1_step(&dynamic_filter[x], dlpf[x]);
+    dlpf = filter_lp_pt1_step(&dynamic_filter[x], dlpf);
 #endif
 
-    pidoutput[x] += dlpf[x];
+    pidoutput[x] += dlpf;
   }
 
   limitf(&pidoutput[x], outlimit[x]);
