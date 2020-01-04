@@ -248,8 +248,10 @@ void pid_precalc() {
   timefactor = 0.0032f / looptime;
   extern float throttle;
 
+#ifdef DTERM_LPF_1ST_HZ
   // recalc lpf coeff, maybe for lpf2 too?
   filter_lp_pt1_coeff(filter, 3, DTERM_LPF_1ST_HZ);
+#endif
 
   if (profile.voltage.pid_voltage_compensation) {
     extern float lipo_cell_count;
