@@ -46,8 +46,11 @@ void filter_lp_pt1_coeff(filter_lp_pt1 *filter, uint8_t count, float hz) {
 }
 
 float filter_lp_pt1_step(filter_lp_pt1 *filter, float in) {
-  lpf(&filter->last_out, in, filter->alpha);
-  return filter->last_out;
+  const float out = filter->last_out * filter->alpha + in * (1 - filter->alpha);
+
+  filter->last_out = out;
+
+  return out;
 }
 
 void filter_lp2_pt1_init(filter_lp2_pt1 *filter, uint8_t count, float hz) {
