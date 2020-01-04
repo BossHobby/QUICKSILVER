@@ -188,9 +188,23 @@
 #define GYRO_FILTER_PASS1 HZ_90
 #define GYRO_FILTER_PASS2 HZ_90
 
-//Select D Term Filter Cut Frequency *** Select Only one
-#define DTERM_LPF_2ND_HZ 100
-//#define DTERM_LPF_1ST_HZ 70
+//dynamic D term filter
+//a pt1 filter that moves up in cut hz with a parabolic relationship to applied throttle.  The theory here is
+//that propwash is most likely to occur as throttle is applied in dirty air - and propwash is most significantly
+// caused by latency in the D term filtering.  Therefore, the approach is to reduce latency in the lowest frequency
+//range of d term filtering which is responsible for the most phase delay as increasing throttle is applied.  Noise pass-through
+//will obviously increase with this approach, but when used in combination with throttle_dterm_attenuation - that gains on D will
+//also be lowered with increasing throttle thereby mitigating much of the danger from reduced filtering while allowing D term to be more effective
+//at eliminating propwash.  Motor noise related to rpm is known to have a quadratic relationship with increasing throttle.  While a quadratic curve
+//could have been selected for this feature, a faster moving parabolic one was selected in its place as the goal is not to follow motor noise, but
+//to get the filter out of the way as fast as possible in the interest of better performance and handling through reduced D filter latency when you need it most.
+#define DTERM_DYNAMIC_LPF
+#define DYNAMIC_FREQ_MIN 70
+#define DYNAMIC_FREQ_MAX 260
+
+//Select fixed D Term Filter Cut Frequency *** Select Only One *** (This fixed filter is best applied near the FREQ_MAX of the dynamic D term filter)
+//#define DTERM_LPF_2ND_HZ 260
+#define DTERM_LPF_1ST_HZ 260
 
 //Select Motor Filter Type  (last resort filtering stage)
 //#define MOTOR_FILTER2_ALPHA MFILT1_HZ_90

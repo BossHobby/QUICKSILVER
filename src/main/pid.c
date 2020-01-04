@@ -96,8 +96,8 @@ extern float vbattfilt_corr;
 
 // multiplier for pids at 3V - for PID_VOLTAGE_COMPENSATION - default 1.33f from H101 code
 #define PID_VC_FACTOR 1.33f
-
 float timefactor;
+float dynamic_pt1_coefficient;
 
 // pid calculation for acro ( rate ) mode
 // input: error[x] = setpoint - gyro
@@ -207,7 +207,13 @@ float pid(int x) {
 #ifdef DTERM_LPF_1ST_HZ
     lpf(&dlpf[x], dterm, FILTERCALC(looptime, 1.0f / DTERM_LPF_1ST_HZ));
 #endif
+#ifdef DTERM_DYNAMIC_LPF
+    static float dlpf2[3] = {0};
+    lpf(&dlpf2[x], dlpf[x], dynamic_pt1_coefficient);
+    pidoutput[x] += dlpf2[x];
+#else
     pidoutput[x] += dlpf[x];
+#endif
   }
 
   limitf(&pidoutput[x], outlimit[x]);
@@ -220,6 +226,7 @@ float pid(int x) {
 // this is called in advance as an optimization because it has division
 void pid_precalc() {
   timefactor = 0.0032f / looptime;
+  extern float throttle;
 
   if (profile.voltage.pid_voltage_compensation) {
     extern float lipo_cell_count;
@@ -237,7 +244,6 @@ void pid_precalc() {
 
 
   if (profile.pid.throttle_dterm_attenuation.tda_active) {
-    extern float throttle;
     tda_compensation = mapf(throttle, profile.pid.throttle_dterm_attenuation.tda_breakpoint, 1.0, 1.0, profile.pid.throttle_dterm_attenuation.tda_percent);
     if (tda_compensation > 1.00f)
     	tda_compensation = 1.00;
@@ -246,8 +252,13 @@ void pid_precalc() {
   }
 
 
-
-
+#ifdef DTERM_DYNAMIC_LPF
+  float dynamic_throttle = throttle * (1 - throttle/2.0f) * 2.0f;
+  float d_term_dynamic_freq = mapf(dynamic_throttle, 0.0, 1.0, (float)DYNAMIC_FREQ_MIN, (float)DYNAMIC_FREQ_MAX);
+  if(d_term_dynamic_freq < DYNAMIC_FREQ_MIN) d_term_dynamic_freq = DYNAMIC_FREQ_MIN;
+  if(d_term_dynamic_freq > DYNAMIC_FREQ_MAX) d_term_dynamic_freq = DYNAMIC_FREQ_MAX;
+  dynamic_pt1_coefficient = FILTERCALC(looptime, 1.0f / d_term_dynamic_freq);
+#endif
 
 /*
     //v_compensation = mapf((vbattfilt / (float)lipo_cell_count), 2.5, 3.85, PID_VC_FACTOR, 1.00);
