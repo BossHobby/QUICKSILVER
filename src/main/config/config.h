@@ -16,12 +16,6 @@
 #define TDA_BREAKPOINT 0.35f
 #define TDA_PERCENT 0.70f
 
-// THIS CAN GO AWAY NOW
-//Select (only one) source variable for PID VBAT Compensation
-//#define EXACT_VOLTS     //origional method - responds to exact moment to moment sag
-#define FILTERED_VOLTS // responds to some sag
-//#define FUELGAUGE_VOLTS // ignores sag
-
 //**********************************************************************************************************************
 //***********************************************RATES & EXPO SETTINGS**************************************************
 
