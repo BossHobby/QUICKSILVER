@@ -9,22 +9,11 @@
 typedef struct {
   float lpf_last;
   float alpha;
-} filter_pt1;
-
-typedef struct {
-  float x_est_last;
-  float P_last;
-  float Q;
-  float R;
-} filter_kalman;
+} filter_lp_pt1;
 
 typedef struct {
   float v[2];
-} filter_be_hp1;
-
-typedef struct {
-  float v[2];
-} filter_sp;
+} filter_lp_sp;
 
 typedef struct {
   float cutoff_freq;
@@ -35,7 +24,18 @@ typedef struct {
   float b2;
   float delay_element_1; /* Buffered sample -1 */
   float delay_element_2; /* Buffered sample -2 */
-} filter_iir_lpf2;
+} filter_lp2_iir;
+
+typedef struct {
+  float x_est_last;
+  float P_last;
+  float Q;
+  float R;
+} filter_kalman;
+
+typedef struct {
+  float v[2];
+} filter_hp_be;
 
 float lpfcalc(float sampleperiod, float filtertime);
 float lpfcalc_hz(float sampleperiod, float filterhz);
@@ -44,20 +44,20 @@ void lpf(float *out, float in, float coeff);
 
 void filter_init();
 
-void filter_pt1_init(filter_pt1 *filter, uint8_t count, float hz);
-void filter_pt1_coeff(filter_pt1 *filter, uint8_t count, float hz);
-float filter_pt1_step(filter_pt1 *filter, float in);
+void filter_lp_pt1_init(filter_lp_pt1 *filter, uint8_t count, float hz);
+void filter_lp_pt1_coeff(filter_lp_pt1 *filter, uint8_t count, float hz);
+float filter_lp_pt1_step(filter_lp_pt1 *filter, float in);
+
+void filter_lp_sp_init(filter_lp_sp *filter, uint8_t count);
+float filter_lp_sp_step(filter_lp_sp *filter, float x);
+
+void filter_lp2_iir_init(filter_lp2_iir *filter, float sample_freq, float cutoff_freq);
+float filter_lp2_iir_step(filter_lp2_iir *filter, float sample);
+
+void filter_hp_be_init(filter_hp_be *filter);
+float filter_hp_be_step(filter_hp_be *filter, float x);
 
 void filter_kalman_init(filter_kalman *filter, uint8_t count, float coeff);
 float filter_kalman_step(filter_kalman *filter, float in);
-
-void filter_be_hp1_init(filter_be_hp1 *filter);
-float filter_be_hp1_step(filter_be_hp1 *filter, float x);
-
-void filter_sp_init(filter_sp *filter, uint8_t count);
-float filter_sp_step(filter_sp *filter, float x);
-
-void filter_iir_lpf2_init(filter_iir_lpf2 *filter, float sample_freq, float cutoff_freq);
-float filter_iir_lpf2_step(filter_iir_lpf2 *filter, float sample);
 
 float throttlehpf(float in);

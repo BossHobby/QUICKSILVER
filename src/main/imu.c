@@ -36,7 +36,7 @@ extern float accel[3];
 extern float accelcal[3];
 
 #ifdef BFPV_IMU
-static filter_iir_lpf2 accel_filter[3];
+static filter_lp2_iir accel_filter[3];
 #endif
 
 void imu_init(void) {
@@ -51,9 +51,9 @@ void imu_init(void) {
   }
 
 #ifdef BFPV_IMU
-  filter_iir_lpf2_init(&accel_filter[0], IMU_SAMPLE_RATE, IMU_FILTER_CUTOFF_FREQ);
-  filter_iir_lpf2_init(&accel_filter[1], IMU_SAMPLE_RATE, IMU_FILTER_CUTOFF_FREQ);
-  filter_iir_lpf2_init(&accel_filter[2], IMU_SAMPLE_RATE, IMU_FILTER_CUTOFF_FREQ);
+  filter_lp2_iir_init(&accel_filter[0], IMU_SAMPLE_RATE, IMU_FILTER_CUTOFF_FREQ);
+  filter_lp2_iir_init(&accel_filter[1], IMU_SAMPLE_RATE, IMU_FILTER_CUTOFF_FREQ);
+  filter_lp2_iir_init(&accel_filter[2], IMU_SAMPLE_RATE, IMU_FILTER_CUTOFF_FREQ);
 #endif
 }
 
@@ -81,9 +81,9 @@ void imu_calc(void) {
   accel[1] = (accel[1] - accelcal[1]) * (1 / 2048.0f);
   accel[2] = (accel[2] - accelcal[2]) * (1 / 2048.0f);
 
-  accel[0] = filter_iir_lpf2_step(&accel_filter[0], accel[0]);
-  accel[1] = filter_iir_lpf2_step(&accel_filter[1], accel[1]);
-  accel[2] = filter_iir_lpf2_step(&accel_filter[2], accel[2]);
+  accel[0] = filter_lp2_iir_step(&accel_filter[0], accel[0]);
+  accel[1] = filter_lp2_iir_step(&accel_filter[1], accel[1]);
+  accel[2] = filter_lp2_iir_step(&accel_filter[2], accel[2]);
 
   float EstG[3];
   vectorcopy(&EstG[0], &GEstG[0]);

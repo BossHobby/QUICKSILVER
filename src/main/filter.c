@@ -31,7 +31,7 @@ void lpf(float *out, float in, float coeff) {
 }
 
 #if defined(PT1_GYRO)
-void filter_pt1_init(filter_pt1 *filter, uint8_t count, float hz) {
+void filter_lp_pt1_init(filter_lp_pt1 *filter, uint8_t count, float hz) {
   const float alpha = FILTERCALC(looptime, (1.0f / hz));
   for (uint8_t i = 0; i < count; i++) {
     filter[i].lpf_last = 0;
@@ -39,14 +39,14 @@ void filter_pt1_init(filter_pt1 *filter, uint8_t count, float hz) {
   }
 }
 
-void filter_pt1_coeff(filter_pt1 *filter, uint8_t count, float hz) {
+void filter_lp_pt1_coeff(filter_lp_pt1 *filter, uint8_t count, float hz) {
   const float alpha = FILTERCALC(looptime, (1.0f / hz));
   for (uint8_t i = 0; i < count; i++) {
     filter[i].alpha = alpha;
   }
 }
 
-float filter_pt1_step(filter_pt1 *filter, float in) {
+float filter_lp_pt1_step(filter_lp_pt1 *filter, float in) {
   lpf(&filter->lpf_last, in, filter->alpha);
   return filter->lpf_last;
 }
@@ -83,11 +83,11 @@ float filter_kalman_step(filter_kalman *filter, float in) {
 
 // 16Hz hpf filter for throttle compensation
 //High pass bessel filter order=1 alpha1=0.016
-void filter_be_hp1_init(filter_be_hp1 *filter) {
+void filter_hp_be_init(filter_hp_be *filter) {
   filter->v[0] = 0.0;
 }
 
-float filter_be_hp1_step(filter_be_hp1 *filter, float x) { //class II
+float filter_hp_be_step(filter_hp_be *filter, float x) { //class II
   filter->v[0] = filter->v[1];
   filter->v[1] = (9.521017968695103528e-1f * x) + (0.90420359373902081668f * filter->v[0]);
   return (filter->v[1] - filter->v[0]);
@@ -95,19 +95,19 @@ float filter_be_hp1_step(filter_be_hp1 *filter, float x) { //class II
 
 // for TRANSIENT_WINDUP_PROTECTION feature
 //Low pass bessel filter order=1 alpha1=0.023
-void filter_sp_init(filter_sp *filter, uint8_t count) {
+void filter_lp_sp_init(filter_lp_sp *filter, uint8_t count) {
   for (uint8_t i = 0; i < count; i++) {
     filter[i].v[0] = 0.0;
   }
 }
 
-float filter_sp_step(filter_sp *filter, float x) { //class II
+float filter_lp_sp_step(filter_lp_sp *filter, float x) { //class II
   filter->v[0] = filter->v[1];
   filter->v[1] = (6.749703162983405891e-2f * x) + (0.86500593674033188218f * filter->v[0]);
   return (filter->v[0] + filter->v[1]);
 }
 
-void filter_iir_lpf2_init(filter_iir_lpf2 *filter, float sample_freq, float cutoff_freq) {
+void filter_lp2_iir_init(filter_lp2_iir *filter, float sample_freq, float cutoff_freq) {
   const float fr = sample_freq / cutoff_freq;
   const float ohm = tanf(M_PI_F / fr);
   const float c = 1.0f + 2.0f * cosf(M_PI_F / 4.0f) * ohm + ohm * ohm;
@@ -123,7 +123,7 @@ void filter_iir_lpf2_init(filter_iir_lpf2 *filter, float sample_freq, float cuto
   }
 }
 
-float filter_iir_lpf2_step(filter_iir_lpf2 *filter, float sample) {
+float filter_lp2_iir_step(filter_lp2_iir *filter, float sample) {
   if (filter->cutoff_freq <= 0.0f) {
     return sample; /* No filtering */
   }
@@ -143,17 +143,17 @@ float filter_iir_lpf2_step(filter_iir_lpf2 *filter, float sample) {
   return output;
 }
 
-filter_be_hp1 throttlehpf1;
+filter_hp_be throttlehpf1;
 float throttlehpf(float in) {
-  return filter_be_hp1_step(&throttlehpf1, in);
+  return filter_hp_be_step(&throttlehpf1, in);
 }
 
-filter_sp spfilter[3];
+filter_lp_sp spfilter[3];
 float splpf(float in, int num) {
-  return filter_sp_step(&spfilter[num], in);
+  return filter_lp_sp_step(&spfilter[num], in);
 }
 
 void filter_init() {
-  filter_be_hp1_init(&throttlehpf1);
-  filter_sp_init(spfilter, 3);
+  filter_hp_be_init(&throttlehpf1);
+  filter_lp_sp_init(spfilter, 3);
 }

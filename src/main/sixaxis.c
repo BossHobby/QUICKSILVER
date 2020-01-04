@@ -72,12 +72,12 @@ THE SOFTWARE.
 #if defined(PT1_GYRO)
 #if defined(GYRO_FILTER_PASS1)
 #define SOFT_LPF_1ST_PASS1 GYRO_FILTER_PASS1
-filter_pt1 filter1[3];
+filter_lp_pt1 filter1[3];
 #endif
 
 #if defined(GYRO_FILTER_PASS2)
 #define SOFT_LPF_1ST_PASS2 GYRO_FILTER_PASS2
-filter_pt1 filter2[3];
+filter_lp_pt1 filter2[3];
 #endif
 #endif
 
@@ -106,14 +106,14 @@ float gyrocal[3];
 
 void gyro_filter_init() {
 #ifdef SOFT_LPF_1ST_PASS1
-  filter_pt1_init(filter1, 3, SOFT_LPF_1ST_PASS1);
+  filter_lp_pt1_init(filter1, 3, SOFT_LPF_1ST_PASS1);
 #endif
 #ifdef SOFT_KALMAN_GYRO_PASS1
   filter_kalman_init(filter1, 3, SOFT_KALMAN_GYRO_PASS1);
 #endif
 
 #ifdef SOFT_LPF_1ST_PASS2
-  filter_pt1_init(filter2, 3, SOFT_LPF_1ST_PASS2);
+  filter_lp_pt1_init(filter2, 3, SOFT_LPF_1ST_PASS2);
 #endif
 #ifdef SOFT_KALMAN_GYRO_PASS2
   filter_kalman_init(filter2, 3, SOFT_KALMAN_GYRO_PASS2);
@@ -127,8 +127,8 @@ float gyro_filter_step(float in, int num) {
 
 #ifdef SOFT_LPF_1ST_PASS1
   if (num == 0)
-    filter_pt1_coeff(filter1, 3, SOFT_LPF_1ST_PASS1);
-  return filter_pt1_step(&filter1[num], in);
+    filter_lp_pt1_coeff(filter1, 3, SOFT_LPF_1ST_PASS1);
+  return filter_lp_pt1_step(&filter1[num], in);
 #endif
 
 #ifdef SOFT_KALMAN_GYRO_PASS1
@@ -143,8 +143,8 @@ float gyro_filter2_step(float in, int num) {
 
 #ifdef SOFT_LPF_1ST_PASS2
   if (num == 0)
-    filter_pt1_coeff(filter2, 3, SOFT_LPF_1ST_PASS2);
-  return filter_pt1_step(&filter2[num], in);
+    filter_lp_pt1_coeff(filter2, 3, SOFT_LPF_1ST_PASS2);
+  return filter_lp_pt1_step(&filter2[num], in);
 #endif
 
 #ifdef SOFT_KALMAN_GYRO_PASS2
