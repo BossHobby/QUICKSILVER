@@ -7,13 +7,21 @@
 #define M_PI_F 3.1415926
 
 typedef struct {
-  float lpf_last;
+  float last_out;
   float alpha;
 } filter_lp_pt1;
 
 typedef struct {
   float v[2];
 } filter_lp_sp;
+
+typedef struct {
+  float last_out;
+  float last_out2;
+  float two_one_minus_alpha;
+  float one_minus_alpha_sqr;
+  float alpha_sqr;
+} filter_lp2_pt1;
 
 typedef struct {
   float cutoff_freq;
@@ -50,6 +58,10 @@ float filter_lp_pt1_step(filter_lp_pt1 *filter, float in);
 
 void filter_lp_sp_init(filter_lp_sp *filter, uint8_t count);
 float filter_lp_sp_step(filter_lp_sp *filter, float x);
+
+void filter_lp2_pt1_init(filter_lp2_pt1 *filter, uint8_t count, float hz);
+void filter_lp2_pt1_coeff(filter_lp2_pt1 *filter, uint8_t count, float hz);
+float filter_lp2_pt1_step(filter_lp2_pt1 *filter, float in);
 
 void filter_lp2_iir_init(filter_lp2_iir *filter, float sample_freq, float cutoff_freq);
 float filter_lp2_iir_step(filter_lp2_iir *filter, float sample);

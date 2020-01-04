@@ -30,11 +30,10 @@ void lpf(float *out, float in, float coeff) {
   *out = (*out) * coeff + in * (1 - coeff);
 }
 
-#if defined(PT1_GYRO)
 void filter_lp_pt1_init(filter_lp_pt1 *filter, uint8_t count, float hz) {
-  const float alpha = FILTERCALC(looptime, (1.0f / hz));
+  const float alpha = FILTERCALC((LOOPTIME * 1e-6), (1.0f / hz));
   for (uint8_t i = 0; i < count; i++) {
-    filter[i].lpf_last = 0;
+    filter[i].last_out = 0;
     filter[i].alpha = alpha;
   }
 }
@@ -47,10 +46,45 @@ void filter_lp_pt1_coeff(filter_lp_pt1 *filter, uint8_t count, float hz) {
 }
 
 float filter_lp_pt1_step(filter_lp_pt1 *filter, float in) {
-  lpf(&filter->lpf_last, in, filter->alpha);
-  return filter->lpf_last;
+  lpf(&filter->last_out, in, filter->alpha);
+  return filter->last_out;
 }
-#endif
+
+void filter_lp2_pt1_init(filter_lp2_pt1 *filter, uint8_t count, float hz) {
+  const float two_one_minus_alpha = 2 * FILTERCALC((LOOPTIME * 1e-6), (1.0f / hz));
+  const float one_minus_alpha_sqr = (FILTERCALC((LOOPTIME * 1e-6), (1.0f / hz))) * (FILTERCALC((LOOPTIME * 1e-6), (1.0f / hz)));
+  const float alpha_sqr = (1 - FILTERCALC((LOOPTIME * 1e-6), (1.0f / hz))) * (1 - FILTERCALC((LOOPTIME * 1e-6), (1.0f / hz)));
+
+  for (uint8_t i = 0; i < count; i++) {
+    filter[i].last_out = 0;
+    filter[i].last_out2 = 0;
+
+    filter[i].two_one_minus_alpha = two_one_minus_alpha;
+    filter[i].one_minus_alpha_sqr = one_minus_alpha_sqr;
+    filter[i].alpha_sqr = alpha_sqr;
+  }
+}
+
+void filter_lp2_pt1_coeff(filter_lp2_pt1 *filter, uint8_t count, float hz) {
+  const float two_one_minus_alpha = 2 * FILTERCALC(looptime, (1.0f / hz));
+  const float one_minus_alpha_sqr = (FILTERCALC(looptime, (1.0f / hz))) * (FILTERCALC(looptime, (1.0f / hz)));
+  const float alpha_sqr = (1 - FILTERCALC(looptime, (1.0f / hz))) * (1 - FILTERCALC(looptime, (1.0f / hz)));
+
+  for (uint8_t i = 0; i < count; i++) {
+    filter[i].two_one_minus_alpha = two_one_minus_alpha;
+    filter[i].one_minus_alpha_sqr = one_minus_alpha_sqr;
+    filter[i].alpha_sqr = alpha_sqr;
+  }
+}
+
+float filter_lp2_pt1_step(filter_lp2_pt1 *filter, float in) {
+  const float out = in * filter->alpha_sqr + filter->two_one_minus_alpha * filter->last_out - filter->one_minus_alpha_sqr * filter->last_out2;
+
+  filter->last_out2 = filter->last_out;
+  filter->last_out = out;
+
+  return out;
+}
 
 #if defined(KALMAN_GYRO)
 void filter_kalman_init(filter_kalman *filter, uint8_t count, float coeff) {

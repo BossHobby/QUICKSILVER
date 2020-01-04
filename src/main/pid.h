@@ -2,6 +2,7 @@
 
 void rotateErrors(void);
 
+void pid_init();
 void pid_precalc(void);
 float pid(int x);
 

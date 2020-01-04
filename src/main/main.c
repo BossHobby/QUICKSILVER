@@ -141,6 +141,7 @@ int main(void) {
 
   // setup filters early
   filter_init();
+  pid_init();
 
 #ifdef FLASH_SAVE1
   // read pid identifier for values in file pid.c

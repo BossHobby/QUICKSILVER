@@ -99,6 +99,22 @@ extern float vbattfilt_corr;
 float timefactor;
 float dynamic_pt1_coefficient;
 
+#ifdef DTERM_LPF_2ND_HZ
+static filter_lp2_pt1 filter[3];
+#endif
+#ifdef DTERM_LPF_1ST_HZ
+static filter_lp_pt1 filter[3];
+#endif
+
+void pid_init() {
+#ifdef DTERM_LPF_2ND_HZ
+  filter_lp2_pt1_init(filter, 3, DTERM_LPF_2ND_HZ);
+#endif
+#ifdef DTERM_LPF_1ST_HZ
+  filter_lp_pt1_init(filter, 3, DTERM_LPF_1ST_HZ);
+#endif
+}
+
 // pid calculation for acro ( rate ) mode
 // input: error[x] = setpoint - gyro
 // output: pidoutput[x] = change required from motors
@@ -184,28 +200,32 @@ float pid(int x) {
     } else {
       transitionSetpointWeight[x] = (fabsf(rx_filtered[x]) * (stickTransition[x] / stickAccelerator[x])) + (1 - stickTransition[x]);
     }
+
     static float lastrate[3];
     static float lastsetpoint[3];
-    float lpf2(float in, int num);
     static float dlpf[3] = {0};
     static float setpoint_derivative[3];
+
 #ifdef RX_SMOOTHING
     lpf(&setpoint_derivative[x], ((setpoint[x] - lastsetpoint[x]) * current_kd[x] * timefactor), FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / rx_smoothing_hz(RX_PROTOCOL)));
 #else
     setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
 #endif
+
     float gyro_derivative = (gyro[x] - lastrate[x]) * current_kd[x] * timefactor;
     if (profile.pid.throttle_dterm_attenuation.tda_active)
       gyro_derivative *= tda_compensation;
+
     dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - (gyro_derivative);
     lastsetpoint[x] = setpoint[x];
     lastrate[x] = gyro[x];
+
     //D term filtering
 #ifdef DTERM_LPF_2ND_HZ
-    dlpf[x] = lpf2(dterm, x);
+    dlpf[x] = filter_lp2_pt1_step(&filter[x], dterm);
 #endif
 #ifdef DTERM_LPF_1ST_HZ
-    lpf(&dlpf[x], dterm, FILTERCALC(looptime, 1.0f / DTERM_LPF_1ST_HZ));
+    dlpf[x] = filter_lp_pt1_step(&filter[x], dterm);
 #endif
 #ifdef DTERM_DYNAMIC_LPF
     static float dlpf2[3] = {0};
@@ -228,6 +248,9 @@ void pid_precalc() {
   timefactor = 0.0032f / looptime;
   extern float throttle;
 
+  // recalc lpf coeff, maybe for lpf2 too?
+  filter_lp_pt1_coeff(filter, 3, DTERM_LPF_1ST_HZ);
+
   if (profile.voltage.pid_voltage_compensation) {
     extern float lipo_cell_count;
     v_compensation = mapf((vbattfilt_corr / (float)lipo_cell_count), 2.5, 3.85, PID_VC_FACTOR, 1.00);
@@ -242,20 +265,21 @@ void pid_precalc() {
 #endif
   }
 
-
   if (profile.pid.throttle_dterm_attenuation.tda_active) {
     tda_compensation = mapf(throttle, profile.pid.throttle_dterm_attenuation.tda_breakpoint, 1.0, 1.0, profile.pid.throttle_dterm_attenuation.tda_percent);
     if (tda_compensation > 1.00f)
-    	tda_compensation = 1.00;
+      tda_compensation = 1.00;
     if (tda_compensation < profile.pid.throttle_dterm_attenuation.tda_percent)
-    	tda_compensation = profile.pid.throttle_dterm_attenuation.tda_percent;
+      tda_compensation = profile.pid.throttle_dterm_attenuation.tda_percent;
   }
 
 #ifdef DTERM_DYNAMIC_LPF
-  float dynamic_throttle = throttle * (1 - throttle/2.0f) * 2.0f;
+  float dynamic_throttle = throttle * (1 - throttle / 2.0f) * 2.0f;
   float d_term_dynamic_freq = mapf(dynamic_throttle, 0.0, 1.0, (float)DYNAMIC_FREQ_MIN, (float)DYNAMIC_FREQ_MAX);
-  if(d_term_dynamic_freq < DYNAMIC_FREQ_MIN) d_term_dynamic_freq = DYNAMIC_FREQ_MIN;
-  if(d_term_dynamic_freq > DYNAMIC_FREQ_MAX) d_term_dynamic_freq = DYNAMIC_FREQ_MAX;
+  if (d_term_dynamic_freq < DYNAMIC_FREQ_MIN)
+    d_term_dynamic_freq = DYNAMIC_FREQ_MIN;
+  if (d_term_dynamic_freq > DYNAMIC_FREQ_MAX)
+    d_term_dynamic_freq = DYNAMIC_FREQ_MAX;
   dynamic_pt1_coefficient = FILTERCALC(looptime, 1.0f / d_term_dynamic_freq);
 #endif
 
@@ -264,27 +288,6 @@ void pid_precalc() {
     current_ki[i] = profile_current_pid_rates()->ki.axis[i] / pid_scales[1][i];
     current_kd[i] = profile_current_pid_rates()->kd.axis[i] / pid_scales[2][i];
   }
-}
-
-#ifndef DTERM_LPF_2ND_HZ
-#define DTERM_LPF_2ND_HZ 99
-#endif
-
-//the compiler calculates these
-static float two_one_minus_alpha = 2 * FILTERCALC((LOOPTIME * 1e-6), (1.0f / DTERM_LPF_2ND_HZ));
-static float one_minus_alpha_sqr = (FILTERCALC((LOOPTIME * 1e-6), (1.0f / DTERM_LPF_2ND_HZ))) * (FILTERCALC((LOOPTIME * 1e-6), (1.0f / DTERM_LPF_2ND_HZ)));
-static float alpha_sqr = (1 - FILTERCALC((LOOPTIME * 1e-6), (1.0f / DTERM_LPF_2ND_HZ))) * (1 - FILTERCALC((LOOPTIME * 1e-6), (1.0f / DTERM_LPF_2ND_HZ)));
-
-static float last_out[3], last_out2[3];
-
-float lpf2(float in, int num) {
-
-  float ans = in * alpha_sqr + two_one_minus_alpha * last_out[num] - one_minus_alpha_sqr * last_out2[num];
-
-  last_out2[num] = last_out[num];
-  last_out[num] = ans;
-
-  return ans;
 }
 
 // below are functions used with gestures for changing pids by a percentage
