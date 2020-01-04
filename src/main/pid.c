@@ -251,7 +251,6 @@ void pid_precalc() {
     	tda_compensation = profile.pid.throttle_dterm_attenuation.tda_percent;
   }
 
-
 #ifdef DTERM_DYNAMIC_LPF
   float dynamic_throttle = throttle * (1 - throttle/2.0f) * 2.0f;
   float d_term_dynamic_freq = mapf(dynamic_throttle, 0.0, 1.0, (float)DYNAMIC_FREQ_MIN, (float)DYNAMIC_FREQ_MAX);
@@ -259,38 +258,6 @@ void pid_precalc() {
   if(d_term_dynamic_freq > DYNAMIC_FREQ_MAX) d_term_dynamic_freq = DYNAMIC_FREQ_MAX;
   dynamic_pt1_coefficient = FILTERCALC(looptime, 1.0f / d_term_dynamic_freq);
 #endif
-
-/*
-    //v_compensation = mapf((vbattfilt / (float)lipo_cell_count), 2.5, 3.85, PID_VC_FACTOR, 1.00);
-    if (profile.voltage.pid_voltage_compensation == PID_VOLTAGE_COMPENSATION_EXACT_VOLTS) {
-      extern float throttle;
-      v_compensation = mapf(throttle, 0.4, 1.0, 1.0, .80);
-      if (v_compensation > 1.00f)
-        v_compensation = 1.00;
-      if (v_compensation < 0.80f)
-        v_compensation = 0.80;
-    }
-
-    if (profile.voltage.pid_voltage_compensation == PID_VOLTAGE_COMPENSATION_FILTERED_VOLTS) {
-      extern float lipo_cell_count;
-      v_compensation = mapf((vbattfilt_corr / (float)lipo_cell_count), 2.5, 3.85, PID_VC_FACTOR, 1.00);
-      if (v_compensation > PID_VC_FACTOR)
-        v_compensation = PID_VC_FACTOR;
-      if (v_compensation < 1.00f)
-        v_compensation = 1.00;
-    }
-
-    if (profile.voltage.pid_voltage_compensation == PID_VOLTAGE_COMPENSATION_FUELGAUGE_VOLTS) {
-      extern float lipo_cell_count;
-      v_compensation = mapf((vbatt_comp / (float)lipo_cell_count), 2.5, 3.85, PID_VC_FACTOR, 1.00);
-      if (v_compensation > PID_VC_FACTOR)
-        v_compensation = PID_VC_FACTOR;
-      if (v_compensation < 1.00f)
-        v_compensation = 1.00;
-    }
-
-
-  }*/
 
   for (uint8_t i = 0; i < PIDNUMBER; i++) {
     current_kp[i] = profile_current_pid_rates()->kp.axis[i] / pid_scales[0][i];
