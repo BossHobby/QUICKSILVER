@@ -126,11 +126,8 @@ void pid_precalc() {
 
   if (profile.voltage.pid_voltage_compensation) {
     extern float lipo_cell_count;
-    v_compensation = mapf((vbattfilt_corr / (float)lipo_cell_count), 2.5, 3.85, PID_VC_FACTOR, 1.00);
-    if (v_compensation > PID_VC_FACTOR)
-      v_compensation = PID_VC_FACTOR;
-    if (v_compensation < 1.00f)
-      v_compensation = 1.00;
+    v_compensation = mapf((vbattfilt_corr / (float)lipo_cell_count), 2.5f, 3.85f, PID_VC_FACTOR, 1.0f);
+    v_compensation = constrainf(v_compensation, 1.0f, PID_VC_FACTOR);
 
 #ifdef LEVELMODE_PID_ATTENUATION
     if (rx_aux_on(AUX_LEVELMODE))
@@ -139,21 +136,14 @@ void pid_precalc() {
   }
 
   if (profile.pid.throttle_dterm_attenuation.tda_active) {
-    tda_compensation = mapf(throttle, profile.pid.throttle_dterm_attenuation.tda_breakpoint, 1.0, 1.0, profile.pid.throttle_dterm_attenuation.tda_percent);
-    if (tda_compensation > 1.00f)
-      tda_compensation = 1.00;
-    if (tda_compensation < profile.pid.throttle_dterm_attenuation.tda_percent)
-      tda_compensation = profile.pid.throttle_dterm_attenuation.tda_percent;
+    tda_compensation = mapf(throttle, profile.pid.throttle_dterm_attenuation.tda_breakpoint, 1.0f, 1.0f, profile.pid.throttle_dterm_attenuation.tda_percent);
+    tda_compensation = constrainf(tda_compensation, profile.pid.throttle_dterm_attenuation.tda_percent, 1.0f);
   }
 
   if (profile.filter.dterm_dynamic_enable) {
     float dynamic_throttle = throttle * (1 - throttle / 2.0f) * 2.0f;
-    float d_term_dynamic_freq = mapf(dynamic_throttle, 0.0, 1.0, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
-
-    if (d_term_dynamic_freq < profile.filter.dterm_dynamic_min)
-      d_term_dynamic_freq = profile.filter.dterm_dynamic_min;
-    if (d_term_dynamic_freq > profile.filter.dterm_dynamic_max)
-      d_term_dynamic_freq = profile.filter.dterm_dynamic_max;
+    float d_term_dynamic_freq = mapf(dynamic_throttle, 0.0f, 1.0f, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
+    d_term_dynamic_freq = constrainf(d_term_dynamic_freq, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
 
     filter_lp_pt1_coeff(&dynamic_filter, d_term_dynamic_freq);
   }

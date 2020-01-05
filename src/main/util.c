@@ -39,6 +39,14 @@ void limitf(float *input, const float limit) {
     *input = -limit;
 }
 
+float constrainf(const float in, const float min, const float max) {
+  if (in > max)
+    return max;
+  if (in < min)
+    return min;
+  return in;
+}
+
 // timing routines for debugging
 static unsigned long timestart;
 unsigned long timeend;
