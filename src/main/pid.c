@@ -96,7 +96,7 @@ extern float rx_filtered[4];
 #define PID_VC_FACTOR 1.33f
 float timefactor;
 
-static filter_t filter[FILTER_MAX_SLOTS][3];
+static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
 
 static filter_lp_pt1 dynamic_filter;
@@ -105,7 +105,7 @@ static filter_state_t dynamic_filter_state[3];
 void pid_init() {
 
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
-    filter_init(profile.filter.dterm[i].type, filter[i], filter_state[i], 3, profile.filter.dterm[i].cutoff_freq);
+    filter_init(profile.filter.dterm[i].type, &filter[i], filter_state[i], 3, profile.filter.dterm[i].cutoff_freq);
   }
 
   if (profile.filter.dterm_dynamic_enable) {
@@ -121,8 +121,8 @@ void pid_precalc() {
   timefactor = 0.0032f / looptime;
   extern float throttle;
 
-  filter_coeff(profile.filter.dterm[0].type, filter[0], profile.filter.dterm[0].cutoff_freq);
-  filter_coeff(profile.filter.dterm[1].type, filter[1], profile.filter.dterm[1].cutoff_freq);
+  filter_coeff(profile.filter.dterm[0].type, &filter[0], profile.filter.dterm[0].cutoff_freq);
+  filter_coeff(profile.filter.dterm[1].type, &filter[1], profile.filter.dterm[1].cutoff_freq);
 
   if (profile.voltage.pid_voltage_compensation) {
     extern float lipo_cell_count;
@@ -271,8 +271,8 @@ float pid(int x) {
     //D term filtering
     float dlpf = dterm;
 
-    dlpf = filter_step(profile.filter.dterm[0].type, filter[0], &filter_state[0][x], dlpf);
-    dlpf = filter_step(profile.filter.dterm[1].type, filter[1], &filter_state[1][x], dlpf);
+    dlpf = filter_step(profile.filter.dterm[0].type, &filter[0], &filter_state[0][x], dlpf);
+    dlpf = filter_step(profile.filter.dterm[1].type, &filter[1], &filter_state[1][x], dlpf);
 
     if (profile.filter.dterm_dynamic_enable) {
       dlpf = filter_lp_pt1_step(&dynamic_filter, &dynamic_filter_state[x], dlpf);

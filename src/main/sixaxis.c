@@ -62,7 +62,7 @@ THE SOFTWARE.
 #define GYRO_ID_4 0x72
 #endif
 
-static filter_t filter[FILTER_MAX_SLOTS][3];
+static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
 
 extern debug_type debug;
@@ -124,7 +124,7 @@ void sixaxis_init(void) {
 #endif
 
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
-    filter_init(profile.filter.gyro[i].type, filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq);
+    filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq);
   }
 }
 
@@ -242,14 +242,14 @@ void sixaxis_read(void) {
   gyro_raw[1] = -gyro_raw[1];
   gyro_raw[2] = -gyro_raw[2];
 
-  filter_coeff(profile.filter.gyro[0].type, filter[0], profile.filter.gyro[0].cutoff_freq);
-  filter_coeff(profile.filter.gyro[1].type, filter[1], profile.filter.gyro[1].cutoff_freq);
+  filter_coeff(profile.filter.gyro[0].type, &filter[0], profile.filter.gyro[0].cutoff_freq);
+  filter_coeff(profile.filter.gyro[1].type, &filter[1], profile.filter.gyro[1].cutoff_freq);
 
   for (int i = 0; i < 3; i++) {
     gyro[i] = gyro_raw[i] * 0.061035156f * DEGTORAD;
 
-    gyro[i] = filter_step(profile.filter.gyro[0].type, filter[0], &filter_state[0][i], gyro[i]);
-    gyro[i] = filter_step(profile.filter.gyro[1].type, filter[1], &filter_state[1][i], gyro[i]);
+    gyro[i] = filter_step(profile.filter.gyro[0].type, &filter[0], &filter_state[0][i], gyro[i]);
+    gyro[i] = filter_step(profile.filter.gyro[1].type, &filter[1], &filter_state[1][i], gyro[i]);
   }
 }
 
