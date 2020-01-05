@@ -92,15 +92,6 @@ float underthrottlefilt = 0;
 
 extern profile_t profile;
 
-static inline float constrainf(float amt, float low, float high) {
-  if (amt < low)
-    return low;
-  else if (amt > high)
-    return high;
-  else
-    return amt;
-}
-
 static float calcBFRatesRad(int axis) {
 #define SETPOINT_RATE_LIMIT 1998.0f
 #define RC_RATE_INCREMENTAL 14.54f
