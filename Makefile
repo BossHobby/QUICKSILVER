@@ -8,9 +8,9 @@ OD=arm-none-eabi-objdump
 SE=arm-none-eabi-size
 
 GCC_VERSION = $(shell arm-none-eabi-gcc -dumpversion)
-GIT_VERSION = master
+GIT_VERSION = unknow
 
-ifneq (, $(shell which git))
+ifneq ($(shell which git),)
 	GIT_VERSION = $(shell git describe --always --long)
 endif
 
@@ -31,10 +31,14 @@ SOURCE = $(shell sh -c 'find src/main/ -iname *.c -or -name *.cpp') \
 	$(shell sh -c 'find Libraries/cbor/src -iname *.c -or -name *.cpp')
 
 ifeq ($(MODE),release)
-  OPTIMIZE_FLAGS = -s -O3 -Os
+  OPTIMIZE_FLAGS = -s -O3
 else
   MODE = debug
-  OPTIMIZE_FLAGS = -g -O1 -Os
+  OPTIMIZE_FLAGS = -g -O1 
+endif
+
+ifneq ($(SMALL),)
+	OPTIMIZE_FLAGS += -Os
 endif
 
 # include our target logic
