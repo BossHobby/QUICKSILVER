@@ -3,6 +3,8 @@
 #include "profile.h"
 
 typedef struct {
+  float cpu_load;
+
   float vbat_filter;
 
   float gyro_raw[3];

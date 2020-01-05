@@ -8,6 +8,7 @@ blackbox_t state;
 
 extern uint8_t usb_is_active;
 
+extern float cpu_load;
 extern float vbattfilt;
 
 extern float rx[4];
@@ -49,6 +50,9 @@ cbor_result_t cbor_encode_uint8_array(cbor_value_t *enc, const uint8_t *array, u
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
   CHECK_CBOR_ERROR(cbor_result_t res = cbor_encode_map_indefinite(enc));
 
+  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "cpu_load"));
+  CHECK_CBOR_ERROR(res = cbor_encode_float(enc, &b->cpu_load));
+
   CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "vbat_filter"));
   CHECK_CBOR_ERROR(res = cbor_encode_float(enc, &b->vbat_filter));
 
@@ -81,6 +85,8 @@ void blackbox_update() {
 
   if (blackbox_enabled == 0)
     return;
+
+  state.cpu_load = cpu_load;
 
   state.vbat_filter = vbattfilt;
 

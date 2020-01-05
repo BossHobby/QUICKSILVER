@@ -127,6 +127,7 @@ int ledblink = 0;
 unsigned long ledcommandtime = 0;
 
 uint32_t loopCounter = 0; //For tagging loops that ran long, short, freaked out, etc. Yes, Bobnova was here.
+float cpu_load = 0;
 
 void failloop(int val);
 #if defined(USE_SERIAL_4WAY_BLHELI_INTERFACE) && defined(F0)
@@ -514,8 +515,10 @@ int main(void) {
     usb_detect();
 #endif
 
+    cpu_load = (gettime() - lastlooptime);
+
 #ifdef DEBUG
-    debug.cpu_load = (gettime() - lastlooptime); // * 1e-3f;
+    debug.cpu_load = cpu_load; // * 1e-3f;
 
     if (loopCounter > 10000) {
       if (debug.cpu_load > debug.max_cpu_load) // First "few" loops are messy
