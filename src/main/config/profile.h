@@ -2,6 +2,7 @@
 
 #include <cbor.h>
 
+#include "filter.h"
 #include "project.h"
 
 // Utility
@@ -220,6 +221,24 @@ typedef struct {
   ARRAY_MEMBER(elements, OSD_NUMBER_ELEMENTS, uint32)
 
 typedef struct {
+  filter_type_t type;
+  float cutoff_freq;
+} filter_parameter_t;
+
+#define FILTER_PARAMETER_MEMBERS \
+  MEMBER(type, uint8)            \
+  MEMBER(cutoff_freq, float)
+
+typedef struct {
+  filter_parameter_t gyro[FILTER_MAX_SLOTS];
+  filter_parameter_t dterm[FILTER_MAX_SLOTS];
+} profile_filter_t;
+
+#define FILTER_MEMBERS                                     \
+  ARRAY_MEMBER(gyro, FILTER_MAX_SLOTS, filter_parameter_t) \
+  ARRAY_MEMBER(dterm, FILTER_MAX_SLOTS, filter_parameter_t)
+
+typedef struct {
   uint8_t name[36];
   uint32_t datetime;
 } metadata_t;
@@ -229,6 +248,7 @@ typedef struct {
   metadata_t meta;
   motor_t motor;
   serial_t serial;
+  profile_filter_t filter;
   osd_t osd;
   rate_t rate;
   channel_t channel;
@@ -236,14 +256,15 @@ typedef struct {
   voltage_t voltage;
 } profile_t;
 
-#define PROFILE_MEMBERS      \
-  MEMBER(meta, metadata_t)   \
-  MEMBER(motor, motor_t)     \
-  MEMBER(serial, serial_t)   \
-  MEMBER(osd, osd_t)         \
-  MEMBER(rate, rate_t)       \
-  MEMBER(channel, channel_t) \
-  MEMBER(pid, profile_pid_t) \
+#define PROFILE_MEMBERS            \
+  MEMBER(meta, metadata_t)         \
+  MEMBER(motor, motor_t)           \
+  MEMBER(serial, serial_t)         \
+  MEMBER(filter, profile_filter_t) \
+  MEMBER(osd, osd_t)               \
+  MEMBER(rate, rate_t)             \
+  MEMBER(channel, channel_t)       \
+  MEMBER(pid, profile_pid_t)       \
   MEMBER(voltage, voltage_t)
 
 typedef struct {

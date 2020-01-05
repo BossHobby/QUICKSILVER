@@ -62,36 +62,8 @@ THE SOFTWARE.
 #define GYRO_ID_4 0x72
 #endif
 
-#ifndef GYRO_FILTER_PASS1
-#define SOFT_LPF1_NONE
-#endif
-#ifndef GYRO_FILTER_PASS2
-#define SOFT_LPF2_NONE
-#endif
-
-#if defined(PT1_GYRO)
-#if defined(GYRO_FILTER_PASS1)
-#define SOFT_LPF_1ST_PASS1 GYRO_FILTER_PASS1
-filter_lp_pt1 filter1[3];
-#endif
-
-#if defined(GYRO_FILTER_PASS2)
-#define SOFT_LPF_1ST_PASS2 GYRO_FILTER_PASS2
-filter_lp_pt1 filter2[3];
-#endif
-#endif
-
-#if defined(KALMAN_GYRO)
-#if defined(GYRO_FILTER_PASS1)
-#define SOFT_KALMAN_GYRO_PASS1 GYRO_FILTER_PASS1
-filter_kalman filter1[3];
-#endif
-
-#if defined(GYRO_FILTER_PASS2)
-#define SOFT_KALMAN_GYRO_PASS2 GYRO_FILTER_PASS2
-filter_kalman filter2[3];
-#endif
-#endif
+static filter_t filter[FILTER_MAX_SLOTS][3];
+static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
 
 extern debug_type debug;
 extern profile_t profile;
@@ -103,54 +75,6 @@ float gyro_raw[3];
 
 float accelcal[3];
 float gyrocal[3];
-
-void gyro_filter_init() {
-#ifdef SOFT_LPF_1ST_PASS1
-  filter_lp_pt1_init(filter1, 3, SOFT_LPF_1ST_PASS1);
-#endif
-#ifdef SOFT_KALMAN_GYRO_PASS1
-  filter_kalman_init(filter1, 3, SOFT_KALMAN_GYRO_PASS1);
-#endif
-
-#ifdef SOFT_LPF_1ST_PASS2
-  filter_lp_pt1_init(filter2, 3, SOFT_LPF_1ST_PASS2);
-#endif
-#ifdef SOFT_KALMAN_GYRO_PASS2
-  filter_kalman_init(filter2, 3, SOFT_KALMAN_GYRO_PASS2);
-#endif
-}
-
-float gyro_filter_step(float in, int num) {
-#ifdef SOFT_LPF1_NONE
-  return in;
-#endif
-
-#ifdef SOFT_LPF_1ST_PASS1
-  if (num == 0)
-    filter_lp_pt1_coeff(filter1, 3, SOFT_LPF_1ST_PASS1);
-  return filter_lp_pt1_step(&filter1[num], in);
-#endif
-
-#ifdef SOFT_KALMAN_GYRO_PASS1
-  return filter_kalman_step(&filter1[num], in);
-#endif
-}
-
-float gyro_filter2_step(float in, int num) {
-#ifdef SOFT_LPF2_NONE
-  return in;
-#endif
-
-#ifdef SOFT_LPF_1ST_PASS2
-  if (num == 0)
-    filter_lp_pt1_coeff(filter2, 3, SOFT_LPF_1ST_PASS2);
-  return filter_lp_pt1_step(&filter2[num], in);
-#endif
-
-#ifdef SOFT_KALMAN_GYRO_PASS2
-  return filter_kalman_step(&filter2[num], in);
-#endif
-}
 
 void sixaxis_init(void) {
 #ifdef F405
@@ -199,7 +123,9 @@ void sixaxis_init(void) {
   i2c_writereg(26, GYRO_LOW_PASS_FILTER);
 #endif
 
-  gyro_filter_init();
+  for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
+    filter_init(profile.filter.gyro[i].type, filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq);
+  }
 }
 
 int sixaxis_check(void) {
@@ -316,25 +242,14 @@ void sixaxis_read(void) {
   gyro_raw[1] = -gyro_raw[1];
   gyro_raw[2] = -gyro_raw[2];
 
+  filter_coeff(profile.filter.gyro[0].type, filter[0], profile.filter.gyro[0].cutoff_freq);
+  filter_coeff(profile.filter.gyro[1].type, filter[1], profile.filter.gyro[1].cutoff_freq);
+
   for (int i = 0; i < 3; i++) {
-    gyro_raw[i] = gyro_raw[i] * 0.061035156f * DEGTORAD;
-#ifndef SOFT_LPF_NONE
+    gyro[i] = gyro_raw[i] * 0.061035156f * DEGTORAD;
 
-#if defined(GYRO_FILTER_PASS2) && defined(GYRO_FILTER_PASS1)
-    gyro[i] = gyro_filter_step(gyro_raw[i], i);
-    gyro[i] = gyro_filter2_step(gyro[i], i);
-#endif
-
-#if defined(GYRO_FILTER_PASS1) && !defined(GYRO_FILTER_PASS2)
-    gyro[i] = gyro_filter_step(gyro_raw[i], i);
-#endif
-
-#if defined(GYRO_FILTER_PASS2) && !defined(GYRO_FILTER_PASS1)
-    gyro[i] = gyro_filter2_step(gyro_raw[i], i);
-#endif
-#else
-    gyro[i] = gyro_raw[i];
-#endif
+    gyro[i] = filter_step(profile.filter.gyro[0].type, filter[0], &filter_state[0][i], gyro[i]);
+    gyro[i] = filter_step(profile.filter.gyro[1].type, filter[1], &filter_state[1][i], gyro[i]);
   }
 }
 

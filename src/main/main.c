@@ -140,7 +140,7 @@ int main(void) {
   profile_set_defaults();
 
   // setup filters early
-  filter_init();
+  filter_global_init();
   pid_init();
 
 #ifdef FLASH_SAVE1

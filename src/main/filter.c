@@ -30,61 +30,53 @@ void lpf(float *out, float in, float coeff) {
   *out = (*out) * coeff + in * (1 - coeff);
 }
 
-void filter_lp_pt1_init(filter_lp_pt1 *filter, uint8_t count, float hz) {
-  const float alpha = FILTERCALC((LOOPTIME * 1e-6), (1.0f / hz));
+void filter_lp_pt1_init(filter_lp_pt1 *filter, filter_state_t *state, uint8_t count, float hz) {
+  filter->alpha = FILTERCALC((LOOPTIME * 1e-6), (1.0f / hz));
+
   for (uint8_t i = 0; i < count; i++) {
-    filter[i].last_out = 0;
-    filter[i].alpha = alpha;
+    state[i].delay_element[0] = 0;
+    state[i].delay_element[1] = 0;
   }
 }
 
-void filter_lp_pt1_coeff(filter_lp_pt1 *filter, uint8_t count, float hz) {
-  const float alpha = FILTERCALC(looptime, (1.0f / hz));
-  for (uint8_t i = 0; i < count; i++) {
-    filter[i].alpha = alpha;
-  }
+void filter_lp_pt1_coeff(filter_lp_pt1 *filter, float hz) {
+  filter->alpha = FILTERCALC(looptime, (1.0f / hz));
 }
 
-float filter_lp_pt1_step(filter_lp_pt1 *filter, float in) {
-  const float out = filter->last_out * filter->alpha + in * (1 - filter->alpha);
+float filter_lp_pt1_step(filter_lp_pt1 *filter, filter_state_t *state, float in) {
+  const float out = state->delay_element[0] * filter->alpha + in * (1 - filter->alpha);
 
-  filter->last_out = out;
+  state->delay_element[0] = out;
 
   return out;
 }
 
-void filter_lp2_pt1_init(filter_lp2_pt1 *filter, uint8_t count, float hz) {
-  const float two_one_minus_alpha = 2 * FILTERCALC((LOOPTIME * 1e-6), (1.0f / hz));
-  const float one_minus_alpha_sqr = (FILTERCALC((LOOPTIME * 1e-6), (1.0f / hz))) * (FILTERCALC((LOOPTIME * 1e-6), (1.0f / hz)));
-  const float alpha_sqr = (1 - FILTERCALC((LOOPTIME * 1e-6), (1.0f / hz))) * (1 - FILTERCALC((LOOPTIME * 1e-6), (1.0f / hz)));
+void filter_lp2_pt1_init(filter_lp2_pt1 *filter, filter_state_t *state, uint8_t count, float hz) {
+  const float alpha = FILTERCALC((LOOPTIME * 1e-6), (1.0f / hz));
+
+  filter->two_one_minus_alpha = 2 * alpha;
+  filter->one_minus_alpha_sqr = (alpha) * (alpha);
+  filter->alpha_sqr = (1 - alpha) * (1 - alpha);
 
   for (uint8_t i = 0; i < count; i++) {
-    filter[i].last_out = 0;
-    filter[i].last_out2 = 0;
-
-    filter[i].two_one_minus_alpha = two_one_minus_alpha;
-    filter[i].one_minus_alpha_sqr = one_minus_alpha_sqr;
-    filter[i].alpha_sqr = alpha_sqr;
+    state[i].delay_element[0] = 0;
+    state[i].delay_element[1] = 0;
   }
 }
 
-void filter_lp2_pt1_coeff(filter_lp2_pt1 *filter, uint8_t count, float hz) {
-  const float two_one_minus_alpha = 2 * FILTERCALC(looptime, (1.0f / hz));
-  const float one_minus_alpha_sqr = (FILTERCALC(looptime, (1.0f / hz))) * (FILTERCALC(looptime, (1.0f / hz)));
-  const float alpha_sqr = (1 - FILTERCALC(looptime, (1.0f / hz))) * (1 - FILTERCALC(looptime, (1.0f / hz)));
+void filter_lp2_pt1_coeff(filter_lp2_pt1 *filter, float hz) {
+  const float alpha = FILTERCALC(looptime, (1.0f / hz));
 
-  for (uint8_t i = 0; i < count; i++) {
-    filter[i].two_one_minus_alpha = two_one_minus_alpha;
-    filter[i].one_minus_alpha_sqr = one_minus_alpha_sqr;
-    filter[i].alpha_sqr = alpha_sqr;
-  }
+  filter->two_one_minus_alpha = 2 * alpha;
+  filter->one_minus_alpha_sqr = (alpha) * (alpha);
+  filter->alpha_sqr = (1 - alpha) * (1 - alpha);
 }
 
-float filter_lp2_pt1_step(filter_lp2_pt1 *filter, float in) {
-  const float out = in * filter->alpha_sqr + filter->two_one_minus_alpha * filter->last_out - filter->one_minus_alpha_sqr * filter->last_out2;
+float filter_lp2_pt1_step(filter_lp2_pt1 *filter, filter_state_t *state, float in) {
+  const float out = in * filter->alpha_sqr + filter->two_one_minus_alpha * state->delay_element[0] - filter->one_minus_alpha_sqr * state->delay_element[1];
 
-  filter->last_out2 = filter->last_out;
-  filter->last_out = out;
+  state->delay_element[1] = state->delay_element[0];
+  state->delay_element[0] = out;
 
   return out;
 }
@@ -119,7 +111,7 @@ float filter_kalman_step(filter_kalman *filter, float in) {
 #endif
 
 // 16Hz hpf filter for throttle compensation
-//High pass bessel filter order=1 alpha1=0.016
+// High pass bessel filter order=1 alpha1=0.016
 void filter_hp_be_init(filter_hp_be *filter) {
   filter->v[0] = 0.0;
 }
@@ -131,7 +123,7 @@ float filter_hp_be_step(filter_hp_be *filter, float x) { //class II
 }
 
 // for TRANSIENT_WINDUP_PROTECTION feature
-//Low pass bessel filter order=1 alpha1=0.023
+// Low pass bessel filter order=1 alpha1=0.023
 void filter_lp_sp_init(filter_lp_sp *filter, uint8_t count) {
   for (uint8_t i = 0; i < count; i++) {
     filter[i].v[0] = 0.0;
@@ -190,7 +182,47 @@ float splpf(float in, int num) {
   return filter_lp_sp_step(&spfilter[num], in);
 }
 
-void filter_init() {
+void filter_global_init() {
   filter_hp_be_init(&throttlehpf1);
   filter_lp_sp_init(spfilter, 3);
+}
+
+void filter_init(filter_type_t type, filter_t *filter, filter_state_t *state, uint8_t count, float hz) {
+  switch (type) {
+  case FILTER_LP_PT1:
+    filter_lp_pt1_init(&filter->lp_pt1, state, count, hz);
+    break;
+  case FILTER_LP2_PT1:
+    filter_lp2_pt1_init(&filter->lp2_pt1, state, count, hz);
+    break;
+  default:
+    // no filter, do nothing
+    break;
+  }
+}
+
+void filter_coeff(filter_type_t type, filter_t *filter, float hz) {
+  switch (type) {
+  case FILTER_LP_PT1:
+    filter_lp_pt1_coeff(&filter->lp_pt1, hz);
+    break;
+  case FILTER_LP2_PT1:
+    filter_lp2_pt1_coeff(&filter->lp2_pt1, hz);
+    break;
+  default:
+    // no filter, do nothing
+    break;
+  }
+}
+
+float filter_step(filter_type_t type, filter_t *filter, filter_state_t *state, float in) {
+  switch (type) {
+  case FILTER_LP_PT1:
+    return filter_lp_pt1_step(&filter->lp_pt1, state, in);
+  case FILTER_LP2_PT1:
+    return filter_lp2_pt1_step(&filter->lp2_pt1, state, in);
+  default:
+    // no filter at all
+    return in;
+  }
 }

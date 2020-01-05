@@ -240,6 +240,54 @@ const profile_t default_profile = {
 #endif
     },
 
+    .filter = {
+        .gyro = {
+#ifdef GYRO_FILTER_PASS1
+            {
+                .type = FILTER_LP_PT1,
+                .cutoff_freq = GYRO_FILTER_PASS1,
+            },
+#else
+            {
+                .type = FILTER_NONE,
+            },
+#endif
+#ifdef GYRO_FILTER_PASS2
+            {
+                .type = FILTER_LP_PT1,
+                .cutoff_freq = GYRO_FILTER_PASS2,
+            }
+#else
+            {
+                .type = FILTER_NONE,
+            }
+#endif
+        },
+
+        .dterm = {
+#ifdef DTERM_LPF_1ST_HZ
+            {
+                .type = FILTER_LP_PT1,
+                .cutoff_freq = DTERM_LPF_1ST_HZ,
+            },
+#else
+            {
+                .type = FILTER_NONE,
+            },
+#endif
+#ifdef DTERM_LPF_2ND_HZ
+            {
+                .type = FILTER_LP2_PT1,
+                .cutoff_freq = DTERM_LPF_2ND_HZ,
+            }
+#else
+            {
+                .type = FILTER_NONE,
+            }
+#endif
+        },
+    },
+
     .rate = {
 #ifdef SILVERWARE_RATES
         .mode = RATE_MODE_SILVERWARE,
@@ -584,6 +632,14 @@ START_STRUCT_ENCODER(serial_t)
 SERIAL_MEMBERS
 END_STRUCT_ENCODER()
 
+START_STRUCT_ENCODER(filter_parameter_t)
+FILTER_PARAMETER_MEMBERS
+END_STRUCT_ENCODER()
+
+START_STRUCT_ENCODER(profile_filter_t)
+FILTER_MEMBERS
+END_STRUCT_ENCODER()
+
 START_STRUCT_ENCODER(osd_t)
 OSD_MEMBERS
 END_STRUCT_ENCODER()
@@ -760,6 +816,14 @@ END_STRUCT_DECODER()
 
 START_STRUCT_DECODER(serial_t)
 SERIAL_MEMBERS
+END_STRUCT_DECODER()
+
+START_STRUCT_DECODER(filter_parameter_t)
+FILTER_PARAMETER_MEMBERS
+END_STRUCT_DECODER()
+
+START_STRUCT_DECODER(profile_filter_t)
+FILTER_MEMBERS
 END_STRUCT_DECODER()
 
 START_STRUCT_DECODER(osd_t)

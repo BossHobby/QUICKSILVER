@@ -96,26 +96,23 @@ extern float rx_filtered[4];
 #define PID_VC_FACTOR 1.33f
 float timefactor;
 
-#ifdef DTERM_LPF_2ND_HZ
-static filter_lp2_pt1 filter[3];
-#endif
-#ifdef DTERM_LPF_1ST_HZ
-static filter_lp_pt1 filter[3];
-#endif
+static filter_t filter[FILTER_MAX_SLOTS][3];
+static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
+
 #ifdef DTERM_DYNAMIC_LPF
-static filter_lp_pt1 dynamic_filter[3];
+static filter_lp_pt1 dynamic_filter;
+static filter_state_t dynamic_filter_state[3];
 #endif
 
 void pid_init() {
-#ifdef DTERM_LPF_2ND_HZ
-  filter_lp2_pt1_init(filter, 3, DTERM_LPF_2ND_HZ);
-#endif
-#ifdef DTERM_LPF_1ST_HZ
-  filter_lp_pt1_init(filter, 3, DTERM_LPF_1ST_HZ);
-#endif
+
+  for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
+    filter_init(profile.filter.dterm[i].type, filter[i], filter_state[i], 3, profile.filter.dterm[i].cutoff_freq);
+  }
+
 #ifdef DTERM_DYNAMIC_LPF
   // zero out filter, freq will be updated later on
-  filter_lp_pt1_init(dynamic_filter, 3, DYNAMIC_FREQ_MAX);
+  filter_lp_pt1_init(&dynamic_filter, dynamic_filter_state, 3, DYNAMIC_FREQ_MAX);
 #endif
 }
 
@@ -126,10 +123,8 @@ void pid_precalc() {
   timefactor = 0.0032f / looptime;
   extern float throttle;
 
-#ifdef DTERM_LPF_1ST_HZ
-  // recalc lpf coeff, maybe for lpf2 too?
-  filter_lp_pt1_coeff(filter, 3, DTERM_LPF_1ST_HZ);
-#endif
+  filter_coeff(profile.filter.dterm[0].type, filter[0], profile.filter.dterm[0].cutoff_freq);
+  filter_coeff(profile.filter.dterm[1].type, filter[1], profile.filter.dterm[1].cutoff_freq);
 
   if (profile.voltage.pid_voltage_compensation) {
     extern float lipo_cell_count;
@@ -160,7 +155,7 @@ void pid_precalc() {
     d_term_dynamic_freq = DYNAMIC_FREQ_MIN;
   if (d_term_dynamic_freq > DYNAMIC_FREQ_MAX)
     d_term_dynamic_freq = DYNAMIC_FREQ_MAX;
-  filter_lp_pt1_coeff(dynamic_filter, 3, d_term_dynamic_freq);
+  filter_lp_pt1_coeff(&dynamic_filter, d_term_dynamic_freq);
 #endif
 
   for (uint8_t i = 0; i < PIDNUMBER; i++) {
@@ -274,16 +269,13 @@ float pid(int x) {
     lastrate[x] = gyro[x];
 
     //D term filtering
-    float dlpf = 0;
+    float dlpf = dterm;
 
-#ifdef DTERM_LPF_2ND_HZ
-    dlpf = filter_lp2_pt1_step(&filter[x], dterm);
-#endif
-#ifdef DTERM_LPF_1ST_HZ
-    dlpf = filter_lp_pt1_step(&filter[x], dterm);
-#endif
+    dlpf = filter_step(profile.filter.dterm[0].type, filter[0], &filter_state[0][x], dlpf);
+    dlpf = filter_step(profile.filter.dterm[1].type, filter[1], &filter_state[1][x], dlpf);
+
 #ifdef DTERM_DYNAMIC_LPF
-    dlpf = filter_lp_pt1_step(&dynamic_filter[x], dlpf);
+    dlpf = filter_lp_pt1_step(&dynamic_filter, &dynamic_filter_state[x], dlpf);
 #endif
 
     pidoutput[x] += dlpf;
