@@ -286,6 +286,18 @@ const profile_t default_profile = {
             }
 #endif
         },
+
+#ifdef DTERM_DYNAMIC_LPF
+        .dterm_dynamic_enable = 1,
+#else
+        .dterm_dynamic_enable = 0,
+#endif
+#ifdef DYNAMIC_FREQ_MIN
+        .dterm_dynamic_min = DYNAMIC_FREQ_MIN,
+#endif
+#ifdef DYNAMIC_FREQ_MAX
+        .dterm_dynamic_max = DYNAMIC_FREQ_MAX,
+#endif
     },
 
     .rate = {

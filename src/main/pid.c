@@ -99,10 +99,8 @@ float timefactor;
 static filter_t filter[FILTER_MAX_SLOTS][3];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
 
-#ifdef DTERM_DYNAMIC_LPF
 static filter_lp_pt1 dynamic_filter;
 static filter_state_t dynamic_filter_state[3];
-#endif
 
 void pid_init() {
 
@@ -110,10 +108,10 @@ void pid_init() {
     filter_init(profile.filter.dterm[i].type, filter[i], filter_state[i], 3, profile.filter.dterm[i].cutoff_freq);
   }
 
-#ifdef DTERM_DYNAMIC_LPF
-  // zero out filter, freq will be updated later on
-  filter_lp_pt1_init(&dynamic_filter, dynamic_filter_state, 3, DYNAMIC_FREQ_MAX);
-#endif
+  if (profile.filter.dterm_dynamic_enable) {
+    // zero out filter, freq will be updated later on
+    filter_lp_pt1_init(&dynamic_filter, dynamic_filter_state, 3, DYNAMIC_FREQ_MAX);
+  }
 }
 
 // calculate change from ideal loop time
@@ -148,15 +146,17 @@ void pid_precalc() {
       tda_compensation = profile.pid.throttle_dterm_attenuation.tda_percent;
   }
 
-#ifdef DTERM_DYNAMIC_LPF
-  float dynamic_throttle = throttle * (1 - throttle / 2.0f) * 2.0f;
-  float d_term_dynamic_freq = mapf(dynamic_throttle, 0.0, 1.0, (float)DYNAMIC_FREQ_MIN, (float)DYNAMIC_FREQ_MAX);
-  if (d_term_dynamic_freq < DYNAMIC_FREQ_MIN)
-    d_term_dynamic_freq = DYNAMIC_FREQ_MIN;
-  if (d_term_dynamic_freq > DYNAMIC_FREQ_MAX)
-    d_term_dynamic_freq = DYNAMIC_FREQ_MAX;
-  filter_lp_pt1_coeff(&dynamic_filter, d_term_dynamic_freq);
-#endif
+  if (profile.filter.dterm_dynamic_enable) {
+    float dynamic_throttle = throttle * (1 - throttle / 2.0f) * 2.0f;
+    float d_term_dynamic_freq = mapf(dynamic_throttle, 0.0, 1.0, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
+
+    if (d_term_dynamic_freq < profile.filter.dterm_dynamic_min)
+      d_term_dynamic_freq = profile.filter.dterm_dynamic_min;
+    if (d_term_dynamic_freq > profile.filter.dterm_dynamic_max)
+      d_term_dynamic_freq = profile.filter.dterm_dynamic_max;
+
+    filter_lp_pt1_coeff(&dynamic_filter, d_term_dynamic_freq);
+  }
 
   for (uint8_t i = 0; i < PIDNUMBER; i++) {
     current_kp[i] = profile_current_pid_rates()->kp.axis[i] / pid_scales[0][i];
@@ -274,9 +274,9 @@ float pid(int x) {
     dlpf = filter_step(profile.filter.dterm[0].type, filter[0], &filter_state[0][x], dlpf);
     dlpf = filter_step(profile.filter.dterm[1].type, filter[1], &filter_state[1][x], dlpf);
 
-#ifdef DTERM_DYNAMIC_LPF
-    dlpf = filter_lp_pt1_step(&dynamic_filter, &dynamic_filter_state[x], dlpf);
-#endif
+    if (profile.filter.dterm_dynamic_enable) {
+      dlpf = filter_lp_pt1_step(&dynamic_filter, &dynamic_filter_state[x], dlpf);
+    }
 
     pidoutput[x] += dlpf;
   }

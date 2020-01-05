@@ -232,11 +232,17 @@ typedef struct {
 typedef struct {
   filter_parameter_t gyro[FILTER_MAX_SLOTS];
   filter_parameter_t dterm[FILTER_MAX_SLOTS];
+  uint8_t dterm_dynamic_enable;
+  float dterm_dynamic_min;
+  float dterm_dynamic_max;
 } profile_filter_t;
 
-#define FILTER_MEMBERS                                     \
-  ARRAY_MEMBER(gyro, FILTER_MAX_SLOTS, filter_parameter_t) \
-  ARRAY_MEMBER(dterm, FILTER_MAX_SLOTS, filter_parameter_t)
+#define FILTER_MEMBERS                                      \
+  ARRAY_MEMBER(gyro, FILTER_MAX_SLOTS, filter_parameter_t)  \
+  ARRAY_MEMBER(dterm, FILTER_MAX_SLOTS, filter_parameter_t) \
+  MEMBER(dterm_dynamic_enable, uint8)                       \
+  MEMBER(dterm_dynamic_min, float)                          \
+  MEMBER(dterm_dynamic_max, float)
 
 typedef struct {
   uint8_t name[36];
