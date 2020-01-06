@@ -322,10 +322,10 @@ static void frsky_d_set_rc_data() {
   rx_apply_expo();
 
   //Here we have the AUX channels Silverware supports
-  aux[AUX_CHANNEL_0] = (channels[4] > 1750) ? 1 : 0;
-  aux[AUX_CHANNEL_1] = (channels[5] > 1750) ? 1 : 0;
-  aux[AUX_CHANNEL_2] = (channels[6] > 1750) ? 1 : 0;
-  aux[AUX_CHANNEL_3] = (channels[7] > 1750) ? 1 : 0;
+  aux[AUX_CHANNEL_0] = (channels[4] > 1850) ? 1 : 0;
+  aux[AUX_CHANNEL_1] = (channels[5] > 1850) ? 1 : 0;
+  aux[AUX_CHANNEL_2] = (channels[6] > 1850) ? 1 : 0;
+  aux[AUX_CHANNEL_3] = (channels[7] > 1850) ? 1 : 0;
   aux[AUX_CHANNEL_4] = 0;
   aux[AUX_CHANNEL_5] = 0;
 
