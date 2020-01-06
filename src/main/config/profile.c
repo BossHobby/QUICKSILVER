@@ -68,9 +68,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .index = 5,
         .name = "65mm 1s brushless whoop - Hanfer Edition",
         .rate = {
-            .kp = {93, 91, 84},
-            .ki = {70, 70, 70},
-            .kd = {68, 68, 7},
+            .kp = {95, 95, 92},
+            .ki = {71, 71, 71},
+            .kd = {75, 75, 12},
         },
     },
 
