@@ -412,15 +412,7 @@ const profile_t default_profile = {
         .lipo_cell_count = 0,
 #endif
 #ifdef PID_VOLTAGE_COMPENSATION
-#ifdef EXACT_VOLTS
-        .pid_voltage_compensation = PID_VOLTAGE_COMPENSATION_EXACT_VOLTS,
-#endif
-#ifdef FILTERED_VOLTS
-        .pid_voltage_compensation = PID_VOLTAGE_COMPENSATION_FILTERED_VOLTS,
-#endif
-#ifdef FUELGAUGE_VOLTS
-        .pid_voltage_compensation = PID_VOLTAGE_COMPENSATION_FUELGAUGE_VOLTS,
-#endif
+        .pid_voltage_compensation = PID_VOLTAGE_COMPENSATION_ACTIVE,
 #else
         .pid_voltage_compensation = PID_VOLTAGE_COMPENSATION_NONE,
 #endif
