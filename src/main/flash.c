@@ -133,12 +133,12 @@ void flash_save(void) {
     cbor_encode_profile_t(&enc, &profile);
 
     uint32_t *proxy = (uint32_t *)buffer;
-    for (int i = 0; i < PROFILE_FLASH_SIZE / 8; i++) {
+    for (int i = 0; i < (PROFILE_FLASH_SIZE / 8); i++) {
       writeword(i + 256, proxy[i]);
     }
   }
 
-  writeword(512, FMC_HEADER);
+  writeword(256 + (PROFILE_FLASH_SIZE / 8), FMC_HEADER);
   fmc_lock();
 }
 
@@ -146,7 +146,7 @@ void flash_load(void) {
 
   unsigned long addresscount = 0;
   // check if saved data is present
-  if (FMC_HEADER == fmc_read(addresscount++) && FMC_HEADER == fmc_read(512)) {
+  if (FMC_HEADER == fmc_read(addresscount++) && FMC_HEADER == fmc_read(256 + (PROFILE_FLASH_SIZE / 8))) {
 
     float saved_pid_identifier = fmc_read_float(addresscount++);
 
@@ -232,13 +232,13 @@ void flash_load(void) {
       memset(buffer, 0, PROFILE_FLASH_SIZE);
 
       uint32_t *proxy = (uint32_t *)buffer;
-      for (int i = 0; i < PROFILE_FLASH_SIZE / 8; i++) {
+      for (int i = 0; i < (PROFILE_FLASH_SIZE / 8); i++) {
         proxy[i] = fmc_read(i + 256);
       }
 
-      cbor_value_t enc;
-      cbor_decoder_init(&enc, buffer, PROFILE_FLASH_SIZE);
-      cbor_decode_profile_t(&enc, &profile);
+      cbor_value_t dec;
+      cbor_decoder_init(&dec, buffer, PROFILE_FLASH_SIZE);
+      cbor_decode_profile_t(&dec, &profile);
 
       // values in profile.c (was pid.c) changed, overwrite with defaults form profile.c
       if (saved_pid_identifier != initial_pid_identifier) {
