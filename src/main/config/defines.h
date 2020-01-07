@@ -276,6 +276,7 @@ static const float pid_scales[PIDNUMBER][PIDNUMBER] = {
 // x (micro)seconds after loss of tx or low bat before buzzer starts
 #define BUZZER_DELAY 30e6
 
+#define PROFILE_FLASH_SIZE 2048
 #define OSD_NUMBER_ELEMENTS 32
 #define SWITCHABLE_FEATURE_1 //CONFIGURATION WIZARD
 

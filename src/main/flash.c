@@ -125,15 +125,15 @@ void flash_save(void) {
   }
 #endif
   {
-    uint8_t buffer[1024];
-    memset(buffer, 0, 1024);
+    uint8_t buffer[PROFILE_FLASH_SIZE];
+    memset(buffer, 0, PROFILE_FLASH_SIZE);
 
     cbor_value_t enc;
-    cbor_encoder_init(&enc, buffer, 1024);
+    cbor_encoder_init(&enc, buffer, PROFILE_FLASH_SIZE);
     cbor_encode_profile_t(&enc, &profile);
 
     uint32_t *proxy = (uint32_t *)buffer;
-    for (int i = 0; i < 256; i++) {
+    for (int i = 0; i < PROFILE_FLASH_SIZE / 8; i++) {
       writeword(i + 256, proxy[i]);
     }
   }
@@ -228,15 +228,16 @@ void flash_load(void) {
 
     //profile
     {
-      uint8_t buffer[1024];
-      memset(buffer, 0, 1024);
+      uint8_t buffer[PROFILE_FLASH_SIZE];
+      memset(buffer, 0, PROFILE_FLASH_SIZE);
+
       uint32_t *proxy = (uint32_t *)buffer;
-      for (int i = 0; i < 256; i++) {
+      for (int i = 0; i < PROFILE_FLASH_SIZE / 8; i++) {
         proxy[i] = fmc_read(i + 256);
       }
 
       cbor_value_t enc;
-      cbor_decoder_init(&enc, buffer, 1024);
+      cbor_decoder_init(&enc, buffer, PROFILE_FLASH_SIZE);
       cbor_decode_profile_t(&enc, &profile);
 
       // values in profile.c (was pid.c) changed, overwrite with defaults form profile.c
