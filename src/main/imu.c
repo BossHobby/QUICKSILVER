@@ -101,9 +101,9 @@ void imu_calc(void) {
   accel[1] = (accel[1] - accelcal[1]) * (1 / 2048.0f);
   accel[2] = (accel[2] - accelcal[2]) * (1 / 2048.0f);
 
-  accel[0] = filter_lp2_iir_step(&filter[0], accel[0]);
-  accel[1] = filter_lp2_iir_step(&filter[1], accel[1]);
-  accel[2] = filter_lp2_iir_step(&filter[2], accel[2]);
+  accel_filter[0] = filter_lp2_iir_step(&filter[0], accel[0]);
+  accel_filter[1] = filter_lp2_iir_step(&filter[1], accel[1]);
+  accel_filter[2] = filter_lp2_iir_step(&filter[2], accel[2]);
 
   float EstG[3];
   vectorcopy(&EstG[0], &GEstG[0]);
