@@ -83,17 +83,21 @@ static uint8_t crc8_data(const uint8_t *data, const int8_t len) {
 
 void serial_smart_audio_send_data(uint8_t *data, uint32_t size) {
   for (uint32_t i = 0; i < size; i++) {
-    for (uint32_t timeout = 0x20000; USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET;)
-      if (!timeout--)
+    for (uint32_t timeout = 0x20000; USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET;) {
+      if (!timeout--) {
         return;
+      }
+    }
     USART_SendData(USART.channel, data[i]);
   }
 }
 
 uint8_t serial_smart_audio_read_byte() {
-  for (uint32_t timeout = 0x20000; USART_GetFlagStatus(USART.channel, USART_FLAG_RXNE) == RESET;)
-    if (!timeout--)
+  for (uint32_t timeout = 0x20000; USART_GetFlagStatus(USART.channel, USART_FLAG_RXNE) == RESET;) {
+    if (!timeout--) {
       return 0;
+    }
+  }
   return USART_ReceiveData(USART.channel);
 }
 
@@ -173,9 +177,10 @@ void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const 
   }
   frame[size + 4] = crc8_data(frame, frame_length - 1);
 
+  uint8_t dummy = 0x0;
+  serial_smart_audio_send_data(&dummy, 1);
   serial_smart_audio_send_data(frame, frame_length);
 
-  delay(100);
   serial_smart_audio_read_packet();
 }
 #endif
