@@ -105,7 +105,8 @@ void spi_max7456_init(void) {
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(MAX7456_SPI_PORT, &GPIO_InitStructure);
-/*
+
+  /*
   GPIO_InitStructure.GPIO_Pin = MAX7456_MISO_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
@@ -113,7 +114,8 @@ void spi_max7456_init(void) {
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(MAX7456_SPI_PORT, &GPIO_InitStructure);
-*/
+  */
+
   // Chip Select GPIO
   GPIO_InitStructure.GPIO_Pin = MAX7456_NSS_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
@@ -150,7 +152,8 @@ void spi_max7456_init(void) {
   SPI_Cmd(MAX7456_SPI_INSTANCE, ENABLE);
 
   // Dummy read to clear receive buffer
-  while (SPI_I2S_GetFlagStatus(MAX7456_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET);
+  while (SPI_I2S_GetFlagStatus(MAX7456_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
+    ;
   SPI_I2S_ReceiveData(MAX7456_SPI_INSTANCE);
 
   // Enable DMA clock
@@ -211,22 +214,21 @@ void dma_transmit_max7456_init(uint8_t *base_address_out, uint8_t buffer_size) {
 }
 
 //deinit/reinit spi for unique slave configuration
-void spi_max7556_reinit(void){
-// SPI Config
-SPI_I2S_DeInit(MAX7456_SPI_INSTANCE);
-SPI_InitTypeDef SPI_InitStructure;
-SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
-SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
-SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
-SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
-SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
-SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
-SPI_InitStructure.SPI_CRCPolynomial = 7;
-SPI_Init(MAX7456_SPI_INSTANCE, &SPI_InitStructure);
+void spi_max7556_reinit(void) {
+  // SPI Config
+  SPI_I2S_DeInit(MAX7456_SPI_INSTANCE);
+  SPI_InitTypeDef SPI_InitStructure;
+  SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
+  SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
+  SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+  SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
+  SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+  SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
+  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
+  SPI_InitStructure.SPI_CRCPolynomial = 7;
+  SPI_Init(MAX7456_SPI_INSTANCE, &SPI_InitStructure);
 }
-
 
 //*******************************************************************************SPI / DMA FUNCTIONS********************************************************************************
 
