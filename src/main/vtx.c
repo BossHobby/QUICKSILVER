@@ -23,6 +23,8 @@ extern int lastlooptime;
 static int fpv_init = 0;
 #endif
 
+vtx_settings_t vtx_settings;
+
 #ifdef ENABLE_SMART_AUDIO
 
 #define SMART_AUDIO_CONNECTION_TRIES 10
@@ -49,11 +51,36 @@ int8_t find_frequency_index(uint16_t frequency) {
   }
   return -1;
 }
+
+uint8_t has_smart_audio_configured() {
+  return serial_smart_audio_port == profile.serial.smart_audio && serial_smart_audio_port != USART_PORT_INVALID;
+}
+
+void load_smart_audio_settings(uint8_t requires_power_cycle) {
+  int8_t channel_index = -1;
+  if (smart_audio_settings.mode & SA_MODE_FREQUENCY) {
+    channel_index = find_frequency_index(smart_audio_settings.frequency);
+  } else {
+    channel_index = smart_audio_settings.channel;
+  }
+
+  if (channel_index >= 0) {
+    vtx_settings.band = channel_index / VTX_CHANNEL_MAX;
+    vtx_settings.channel = channel_index % VTX_CHANNEL_MAX;
+  }
+
+  if (requires_power_cycle) {
+    vtx_settings.pit_mode = smart_audio_settings.mode & SA_MODE_PIT ? 1 : 0;
+    if (smart_audio_settings.version == 2) {
+      vtx_settings.power_level = smart_audio_settings.power;
+    }
+  }
+}
 #endif
 
-vtx_settings_t vtx_settings;
-
 void vtx_init() {
+  vtx_settings.detected = 0;
+
 #ifdef ENABLE_SMART_AUDIO
   if (profile.serial.smart_audio != USART_PORT_INVALID) {
     serial_smart_audio_init();
@@ -84,7 +111,7 @@ void vtx_update() {
 #endif
 
 #ifdef ENABLE_SMART_AUDIO
-  if (onground && serial_smart_audio_port == profile.serial.smart_audio && serial_smart_audio_port != USART_PORT_INVALID) {
+  if (onground && has_smart_audio_configured()) {
     static uint8_t connect_tries = 0;
     if (smart_audio_settings.version == 0 && connect_tries < SMART_AUDIO_CONNECTION_TRIES) {
       // no smart audio detected, try again
@@ -92,32 +119,30 @@ void vtx_update() {
       // reset loop time
       lastlooptime = gettime();
       connect_tries++;
-    } else if (smart_audio_detected == 0) {
-      int8_t channel_index = -1;
-      if (smart_audio_settings.mode & SA_MODE_FREQUENCY) {
-        channel_index = find_frequency_index(smart_audio_settings.frequency);
-      } else {
-        channel_index = smart_audio_settings.channel;
-      }
-
-      if (channel_index >= 0) {
-        vtx_settings.band = channel_index / VTX_CHANNEL_MAX;
-        vtx_settings.channel = channel_index % VTX_CHANNEL_MAX;
-      }
-
+    } else if (smart_audio_settings.version != 0 && smart_audio_detected == 0) {
+      load_smart_audio_settings(1);
       smart_audio_detected = 1;
+      vtx_settings.detected = 1;
     }
   }
 #endif
 }
 
 void vtx_set(vtx_settings_t *vtx) {
-  vtx_set_frequency(vtx->band, vtx->channel);
+  if (vtx_settings.pit_mode != vtx->pit_mode) {
+    vtx_set_pit_mode(vtx->pit_mode);
+  }
+  if (vtx_settings.power_level != vtx->power_level) {
+    vtx_set_power_level(vtx->power_level);
+  }
+  if (vtx_settings.band != vtx->band || vtx_settings.channel != vtx->channel) {
+    vtx_set_frequency(vtx->band, vtx->channel);
+  }
 }
 
 void vtx_set_frequency(vtx_band_t band, vtx_channel_t channel) {
 #ifdef ENABLE_SMART_AUDIO
-  if (serial_smart_audio_port == profile.serial.smart_audio && serial_smart_audio_port != USART_PORT_INVALID) {
+  if (smart_audio_detected && has_smart_audio_configured()) {
     if (smart_audio_settings.mode & SA_MODE_FREQUENCY) {
       const uint16_t frequency = frequency_table[band][channel];
       const uint8_t payload[2] = {
@@ -131,8 +156,41 @@ void vtx_set_frequency(vtx_band_t band, vtx_channel_t channel) {
       serial_smart_audio_send_payload(SA_CMD_SET_CHANNEL, payload, 1);
     }
 
-    vtx_settings.band = band;
-    vtx_settings.channel = channel;
+    load_smart_audio_settings(0);
+  }
+#endif
+}
+
+void vtx_set_pit_mode(uint8_t pit_mode) {
+#ifdef ENABLE_SMART_AUDIO
+  if (smart_audio_detected && has_smart_audio_configured()) {
+    uint8_t mode = 0x0;
+
+    if (smart_audio_settings.mode & SA_MODE_OUT_RANGE_PIT) {
+      mode |= 0x02;
+    } else {
+      // default to SA_MODE_IN_RANGE_PIT
+      mode |= 0x01;
+    }
+
+    if (pit_mode == 0) {
+      mode |= 0x04;
+    }
+
+    serial_smart_audio_send_payload(SA_CMD_SET_MODE, &mode, 1);
+    vtx_settings.pit_mode = pit_mode;
+  }
+#endif
+}
+
+void vtx_set_power_level(vtx_power_level_t power_level) {
+#ifdef ENABLE_SMART_AUDIO
+  if (smart_audio_detected && has_smart_audio_configured()) {
+    uint8_t level = power_level;
+    if (smart_audio_settings.version == 2) {
+      serial_smart_audio_send_payload(SA_CMD_SET_POWER, &level, 1);
+      vtx_settings.power_level = power_level;
+    }
   }
 #endif
 }
@@ -141,6 +199,15 @@ cbor_result_t cbor_encode_vtx_settings_t(cbor_value_t *enc, const vtx_settings_t
   cbor_result_t res = CBOR_OK;
 
   res = cbor_encode_map_indefinite(enc);
+  if (res < CBOR_OK) {
+    return res;
+  }
+
+  res = cbor_encode_str(enc, "detected");
+  if (res < CBOR_OK) {
+    return res;
+  }
+  res = cbor_encode_uint8(enc, &vtx->detected);
   if (res < CBOR_OK) {
     return res;
   }
@@ -159,6 +226,24 @@ cbor_result_t cbor_encode_vtx_settings_t(cbor_value_t *enc, const vtx_settings_t
     return res;
   }
   res = cbor_encode_uint8(enc, &vtx->channel);
+  if (res < CBOR_OK) {
+    return res;
+  }
+
+  res = cbor_encode_str(enc, "pit_mode");
+  if (res < CBOR_OK) {
+    return res;
+  }
+  res = cbor_encode_uint8(enc, &vtx->pit_mode);
+  if (res < CBOR_OK) {
+    return res;
+  }
+
+  res = cbor_encode_str(enc, "power_level");
+  if (res < CBOR_OK) {
+    return res;
+  }
+  res = cbor_encode_uint8(enc, &vtx->power_level);
   if (res < CBOR_OK) {
     return res;
   }
@@ -195,6 +280,22 @@ cbor_result_t cbor_decode_vtx_settings_t(cbor_value_t *dec, vtx_settings_t *vtx)
 
     if (buf_equal_string(name, name_len, "channel")) {
       res = cbor_decode_uint8(dec, &vtx->channel);
+      if (res < CBOR_OK) {
+        return res;
+      }
+      continue;
+    }
+
+    if (buf_equal_string(name, name_len, "pit_mode")) {
+      res = cbor_decode_uint8(dec, &vtx->pit_mode);
+      if (res < CBOR_OK) {
+        return res;
+      }
+      continue;
+    }
+
+    if (buf_equal_string(name, name_len, "power_level")) {
+      res = cbor_decode_uint8(dec, &vtx->power_level);
       if (res < CBOR_OK) {
         return res;
       }

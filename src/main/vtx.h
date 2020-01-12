@@ -25,9 +25,23 @@ typedef enum {
   VTX_CHANNEL_MAX,
 } vtx_channel_t;
 
+typedef enum {
+  VTX_POWER_LEVEL_1,
+  VTX_POWER_LEVEL_2,
+  VTX_POWER_LEVEL_3,
+  VTX_POWER_LEVEL_4,
+
+  VTX_POWER_LEVEL_MAX,
+} vtx_power_level_t;
+
 typedef struct {
+  uint8_t detected;
+
   vtx_band_t band;
   vtx_channel_t channel;
+
+  uint8_t pit_mode;
+  vtx_power_level_t power_level;
 } vtx_settings_t;
 
 void vtx_init();
@@ -35,6 +49,8 @@ void vtx_update();
 
 void vtx_set(vtx_settings_t *vtx);
 void vtx_set_frequency(vtx_band_t band, vtx_channel_t channel);
+void vtx_set_pit_mode(uint8_t pit_mode);
+void vtx_set_power_level(vtx_power_level_t power_level);
 
 cbor_result_t cbor_encode_vtx_settings_t(cbor_value_t *enc, const vtx_settings_t *vtx);
 cbor_result_t cbor_decode_vtx_settings_t(cbor_value_t *dec, vtx_settings_t *vtx);

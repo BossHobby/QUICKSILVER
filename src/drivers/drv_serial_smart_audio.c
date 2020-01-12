@@ -158,6 +158,15 @@ void serial_smart_audio_read_packet() {
     smart_audio_settings.channel = payload[0];
     break;
 
+  case SA_CMD_SET_POWER:
+    smart_audio_settings.channel = payload[0];
+    smart_audio_settings.power = payload[1];
+    break;
+
+  case SA_CMD_SET_MODE:
+    smart_audio_settings.mode = payload[0];
+    break;
+
   default: {
     break;
   }

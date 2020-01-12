@@ -221,10 +221,12 @@ void set_quic(uint8_t *data, uint32_t len) {
     break;
   }
   case QUIC_VAL_VTX_SETTINGS: {
-    res = cbor_decode_vtx_settings_t(&dec, &vtx_settings);
+    vtx_settings_t settings;
+
+    res = cbor_decode_vtx_settings_t(&dec, &settings);
     check_cbor_error(QUIC_CMD_SET);
 
-    vtx_set(&vtx_settings);
+    vtx_set(&settings);
 
     res = cbor_encode_vtx_settings_t(&enc, &vtx_settings);
     check_cbor_error(QUIC_CMD_SET);
