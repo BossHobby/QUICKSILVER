@@ -15,9 +15,9 @@
 #define DISABLE_ACC 0
 
 // IMU fusion algo, CHOOSE ONE
-#define BFPV_IMU
+//#define BFPV_IMU
 //#define SILVERWARE_IMU
-//#define QUICKSILVER_IMU
+#define QUICKSILVER_IMU
 
 // filter times in seconds
 // time to correct gyro readings using the accelerometer
