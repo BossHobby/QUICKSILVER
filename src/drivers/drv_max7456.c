@@ -590,4 +590,30 @@ void check_osd(void) {
   }
 }
 
+void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size) {
+  // make sure we do not collide with a dma write
+  while (osd_dma_status == BUSY)
+    ;
+
+  // disable osd
+  max7456_dma_spi_write(VM0, 0x0);
+  delay(10);
+
+  max7456_dma_spi_write(CMAH, addr);
+  max7456_dma_spi_write(CMM, 0x50);
+
+  // wait for NVM to be ready
+  while (max7456_dma_spi_read(STAT) & 0x20)
+    ;
+
+  for (uint8_t i = 0; i < size; i++) {
+    max7456_dma_spi_write(CMAL, i);
+    out[i] = max7456_dma_spi_read(CMDO);
+    delay(1);
+  }
+
+  // enable osd
+  max7456_dma_spi_write(VM0, 0x1);
+}
+
 #endif

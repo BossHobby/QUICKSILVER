@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "blackbox.h"
+#include "drv_max7456.h"
 #include "drv_time.h"
 #include "drv_usb.h"
 #include "flash.h"
@@ -240,6 +241,28 @@ void set_quic(uint8_t *data, uint32_t len) {
   }
 }
 
+void quic_get_osd_char(uint8_t *data, uint32_t len) {
+  cbor_result_t res = CBOR_OK;
+
+  cbor_value_t dec;
+  cbor_decoder_init(&dec, data, len);
+
+  cbor_value_t enc;
+  cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+
+  uint8_t char_addr = 0;
+  res = cbor_decode_uint8(&dec, &char_addr);
+  check_cbor_error(QUIC_CMD_GET_OSD_CHAR);
+
+  uint8_t font[54];
+  osd_read_character(char_addr, font, 54);
+
+  res = cbor_encode_bstr(&enc, font, 54);
+  check_cbor_error(QUIC_CMD_GET_OSD_CHAR);
+
+  send_quic(QUIC_CMD_GET_OSD_CHAR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+}
+
 void usb_process_quic() {
   const uint8_t cmd = usb_serial_read_byte();
   if (cmd == QUIC_CMD_INVALID) {
@@ -280,6 +303,9 @@ void usb_process_quic() {
     flash_save();
     flash_load();
 #endif
+    break;
+  case QUIC_CMD_GET_OSD_CHAR:
+    quic_get_osd_char(decode_buffer, size);
     break;
   default:
     quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);
