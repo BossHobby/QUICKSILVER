@@ -47,6 +47,14 @@
           "BRUSHLESS_TARGET": "",
           "RX_UNIFIED_SERIAL": ""
         }
+      },
+      {
+        "name": "dshot300.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": "",
+          "DSHOT": "300"
+        }
       }
     ]
   },
@@ -93,7 +101,7 @@
       }
     ]
   },
-    {
+  {
     "name": "clracing_f4",
     "configurations": [
       {
