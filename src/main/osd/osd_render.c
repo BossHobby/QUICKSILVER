@@ -623,7 +623,30 @@ void print_osd_adjustable_float(uint8_t string_element_qty, uint8_t data_element
 	osd_menu_phase++;
 }
 
-
+void print_osd_filters(uint8_t string_element_qty, uint8_t data_element_qty, float *pointer[], uint8_t *pointer2[], const char filtertype_labels[5][21], const uint8_t grid[data_element_qty][2], const uint8_t print_position[data_element_qty][2], uint8_t precision){
+  	if (osd_menu_phase <= string_element_qty)
+          return;
+  	if (osd_menu_phase > string_element_qty + data_element_qty)
+          return;
+  	static uint8_t skip_loop = 0;
+  	if (osd_menu_phase ==  string_element_qty + 1 && skip_loop == 0){	//skip a loop to prevent dma collision with previous print function
+  		skip_loop++;
+  		return;
+  	}
+  	skip_loop = 0;
+	uint8_t data_buffer[5];
+	uint8_t index = osd_menu_phase-string_element_qty-1;
+	if (*pointer[index] != POINTER_REDIRECT){
+		fast_fprint(data_buffer, 5, *pointer[index] + FLT_EPSILON, precision);
+		osd_print_data(data_buffer, 5, grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
+	}else{
+		//char data_to_print[21] = filtertype_labels[*pointer2[index]][21];
+		osd_print(filtertype_labels[*pointer2[index]], grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
+		//const char string_to_print[3][21] = {"NONE", "PT1", "PT2"};
+		//osd_print(string_to_print[*pointer2[index]], grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
+	}
+	osd_menu_phase++;
+}
 
 
 
@@ -852,7 +875,8 @@ void osd_display(void) {
 
   case 5:		//filters menu
 	  last_display_phase = 1;
-	  print_osd_menu_strings(3, 2, filter_temp_labels, filter_temp_positions);
+	  print_osd_menu_strings(3, 2, filter_labels, filter_positions);
+	  if (osd_menu_phase == 4) osd_select_menu_item(2 , filter_submenu_map, SUB_MENU);
     break;
 
   case 6:		//main rates menu
@@ -1002,6 +1026,19 @@ void osd_display(void) {
 	  if (osd_menu_phase == 5) osd_float_adjust(turtlethrottle_ptr, 1, 1, turtlethrottle_adjust_limits, 10.0);
 	  break;
 
+  case 28:		//edit gyro filters
+  	  last_display_phase = 5;
+  	  print_osd_menu_strings(6, 5, gyrofilter_labels, gyrofilter_positions);
+  	  print_osd_filters(6, 4, gyrofilter_ptr, gyrofilter_ptr2, gyrofilter_type_labels, gyrofilter_grid, gyrofilter_data_positions, 0);
+  	  if (osd_menu_phase == 11) osd_filter_adjust(gyrofilter_ptr, gyrofilter_ptr2, 4, 1, gyrofilter_adjust_limits, 10.0);
+  	  break;
+
+  case 29:		//edit dterm filters
+  	  last_display_phase = 5;
+  	  print_osd_menu_strings(9, 8, dtermfilter_labels, dtermfilter_positions);
+  	  print_osd_filters(9, 7, dtermfilter_ptr, dtermfilter_ptr2, dtermfilter_type_labels, dtermfilter_grid, dtermfilter_data_positions, 0);
+  	  if (osd_menu_phase == 17) osd_filter_adjust(dtermfilter_ptr, dtermfilter_ptr2, 7, 1, dtermfilter_adjust_limits, 10.0);
+  	  break;
   }
 if (osd_display_phase !=2 && rx_aux_on(AUX_ARMING)) binding_while_armed = 1;	//final safety check to disallow arming during OSD operation
 } //end osd_display()

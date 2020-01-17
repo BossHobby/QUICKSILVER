@@ -25,8 +25,9 @@ extern const uint8_t pid_profile_data_positions[9][2];
 extern const float pid_profile_adjust_limits[9][2];
 
 //filters submenu map
-extern const char filter_temp_labels[3][21];
-extern const uint8_t filter_temp_positions[3][2];
+extern const char filter_labels[3][21];
+extern const uint8_t filter_positions[3][2];
+const uint8_t filter_submenu_map[2];
 
 //rates submenu map
 extern const char rates_profile_labels[3][21];
@@ -176,3 +177,25 @@ const uint8_t turtlethrottle_positions[3][2];
 const uint8_t turtlethrottle_grid [1][2];
 const uint8_t turtlethrottle_data_positions[1][2];
 const float turtlethrottle_adjust_limits[1][2];
+
+//gyro filter map
+#define POINTER_REDIRECT -999.0f
+//static float pointer_redirect;
+float *gyrofilter_ptr[4];
+uint8_t *gyrofilter_ptr2[4];
+const char gyrofilter_labels[6][21];
+const char gyrofilter_type_labels[3][21];
+const uint8_t gyrofilter_positions[6][2];
+const uint8_t gyrofilter_grid[4][2];
+const uint8_t gyrofilter_data_positions[4][2];
+const float gyrofilter_adjust_limits[4][2];
+
+//dterm filter map
+float *dtermfilter_ptr[7];
+uint8_t *dtermfilter_ptr2[7];
+const char dtermfilter_labels[9][21];
+const char dtermfilter_type_labels[3][21];
+const uint8_t dtermfilter_positions[9][2];
+const uint8_t dtermfilter_grid[7][2];
+const uint8_t dtermfilter_data_positions[7][2];
+const float dtermfilter_adjust_limits[7][2];

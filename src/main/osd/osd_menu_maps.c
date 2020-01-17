@@ -1,6 +1,7 @@
 #include "stdio.h"
 #include "osd_menu_maps.h"
 #include "profile.h"
+#include "filter.h"
 
 extern profile_t profile;
 
@@ -29,8 +30,9 @@ const uint8_t pid_profile_data_positions[9][2] = { {10, 6},{16, 6},{22, 6},{10, 
 const float pid_profile_adjust_limits[9][2] = { {0.0, 400.0}, {0.0, 400.0}, {0.0, 400.0}, {0.0, 100.0}, {0.0, 100.0}, {0.0, 100.0}, {0.0, 120.0}, {0.0, 120.0}, {0.0, 120.0} };
 
 //filters submenu map
-const char filter_temp_labels[3][21] = { {"FILTERS"},{"UNDER"},{"DEVELOPMENT"} };
-const uint8_t filter_temp_positions[3][2] = { {11, 1}, {7, 4}, {7,5} };
+const char filter_labels[3][21] = { {"FILTERS"},{"GYRO"},{"D-TERM"} };
+const uint8_t filter_positions[3][2] = { {11, 1}, {7, 4}, {7,5} };
+const uint8_t filter_submenu_map[2] = { 28, 29 };
 
 //rates submenu map
 const char rates_profile_labels[3][21] = { {"RATES"}, {"SILVERWARE"}, {"BETAFLIGHT"} };
@@ -180,3 +182,25 @@ const uint8_t turtlethrottle_positions[3][2] = { {9, 1},{4, 5},{4, 14} };
 const uint8_t turtlethrottle_grid [1][2] = {{1, 1}};
 const uint8_t turtlethrottle_data_positions[1][2] = { {22, 5} };
 const float turtlethrottle_adjust_limits[1][2] = { {0, 100} };
+
+//gyro filter map
+float pointer_redirect = POINTER_REDIRECT;
+float *gyrofilter_ptr[4] = {&pointer_redirect, &profile.filter.gyro[0].cutoff_freq, &pointer_redirect, &profile.filter.gyro[1].cutoff_freq};
+uint8_t *gyrofilter_ptr2[4] = {&profile.filter.gyro[0].type, 0, &profile.filter.gyro[1].type, 0};
+const char gyrofilter_labels[6][21] = { {"GYRO FILTERS"},{"PASS 1 TYPE"},{"PASS 1 FREQ"},{"PASS 2 TYPE"},{"PASS 2 FREQ"},{"SAVE AND EXIT"} };
+const char gyrofilter_type_labels[3][21] = {"NONE"," PT1"," PT2"};
+const uint8_t gyrofilter_positions[6][2] = { {9, 1},{4, 4},{4, 5},{4, 6},{4, 7},{4, 14} };
+const uint8_t gyrofilter_grid [4][2] = {{1, 1},{1, 2},{1, 3},{1, 4}};
+const uint8_t gyrofilter_data_positions[4][2] = { {18, 4},{18, 5},{18, 6},{18, 7} };
+const float gyrofilter_adjust_limits[4][2] = { {0, 2},{50, 500},{0, 2},{50, 500} };
+
+//dterm filter map
+float *dtermfilter_ptr[7] = {&pointer_redirect, &profile.filter.dterm[0].cutoff_freq, &pointer_redirect, &profile.filter.dterm[1].cutoff_freq, &pointer_redirect, &profile.filter.dterm_dynamic_min, &profile.filter.dterm_dynamic_max};
+uint8_t *dtermfilter_ptr2[7] = {&profile.filter.dterm[0].type, 0, &profile.filter.dterm[1].type, 0, &profile.filter.dterm_dynamic_enable, 0, 0};
+const char dtermfilter_labels[9][21] = { {"D-TERM FILTERS"},{"PASS 1 TYPE"},{"PASS 1 FREQ"},{"PASS 2 TYPE"},{"PASS 2 FREQ"},{"DYNAMIC"},{"FREQ MIN"},{"FREQ MAX"},{"SAVE AND EXIT"} };
+const char dtermfilter_type_labels[3][21] = {"NONE"," PT1"," PT2"};
+const uint8_t dtermfilter_positions[9][2] = { {8, 1},{4, 3},{4, 4},{4, 5},{4, 6},{4, 7},{4, 8},{4, 9},{4, 14} };
+const uint8_t dtermfilter_grid [7][2] = {{1, 1},{1, 2},{1, 3},{1, 4},{1, 5},{1, 6},{1, 7}};
+const uint8_t dtermfilter_data_positions[7][2] = { {18, 3},{18, 4},{18, 5},{18, 6},{18, 7},{18, 8},{18, 9}};
+const float dtermfilter_adjust_limits[7][2] = { {0, 2},{50, 500},{0, 2},{50, 500},{0, 1},{50, 500},{50, 500} };
+

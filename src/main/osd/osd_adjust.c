@@ -333,4 +333,41 @@ void osd_enum_adjust(uint8_t *pointer, uint8_t rows, const uint8_t increase_limi
 	}
 }
 
+void osd_filter_adjust(float *pointer[], uint8_t *pointer2[], uint8_t rows, uint8_t columns, const float adjust_limit[rows*columns][2], float adjust_amount){
+	if (osd_select > columns) {
+		osd_select = columns;
+		osd_menu_phase = 1; //repaint the screen again
+	}
+
+	if (osd_cursor <= rows && osd_select > 0){
+		uint8_t adjust_tracker = ((osd_cursor-1) * columns) + (osd_select - 1);
+
+		if (*pointer[adjust_tracker] != POINTER_REDIRECT){	//POINTER_REDIRECT = -999.0 is a dummy value to indicate skipping to another data type
+			if ((increase_osd_value && *pointer[adjust_tracker] < adjust_limit[adjust_tracker][1]) || (decrease_osd_value  && *pointer[adjust_tracker] > adjust_limit[adjust_tracker][0])){
+			*pointer[adjust_tracker] = adjust_rounded_float(*pointer[adjust_tracker], adjust_amount);
+			}
+		}else{
+			uint8_t i = *pointer2[adjust_tracker];
+			if (increase_osd_value && i != adjust_limit[adjust_tracker][1])  {
+				i++;
+				*pointer2[adjust_tracker] = i;
+				osd_menu_phase = 1; //repaint the screen again
+			}
+			if (decrease_osd_value && i != 0)  {	//limit is always 0 for an enum or uint8_t
+				i--;
+				*pointer2[adjust_tracker] = i;
+				osd_menu_phase = 1; //repaint the screen again
+			}
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+	}
+
+	if (osd_cursor == rows + 1){
+		if (osd_select == 1){
+		osd_save_exit();
+		}
+	}
+}
+
 
