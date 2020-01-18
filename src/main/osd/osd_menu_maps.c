@@ -99,9 +99,9 @@ const char vtx_temp_labels[3][21] = { {"VTX CONTROLS"},{"UNDER"},{"DEVELOPMENT"}
 const uint8_t vtx_temp_positions[3][2] = { {9, 1}, {7, 4}, {7,5} };
 
 //special features menu map
-const char special_features_labels[7][21] = { {"SPECIAL FEATURES"},{"STICK BOOST"},{"LOW BATTERY"},{"LEVEL MODE"},{"MOTOR BOOST"},{"DIGITAL IDLE"},{"TURTLE THROTTLE"} };
-const uint8_t special_features_positions[7][2] = { {7, 1}, {7, 4}, {7, 5}, {7, 6}, {7, 7}, {7, 8}, {7, 9} };
-const uint8_t special_features_map[] = {13, 19, 20, 21, 22, 27};					//case numbers for {stickboost}, etc ...adding more soon
+const char special_features_labels[8][21] = { {"SPECIAL FEATURES"},{"STICK BOOST"},{"MOTOR BOOST"},{"PID MODIFIERS"},{"DIGITAL IDLE"},{"LOW BATTERY"},{"LEVEL MODE"},{"TURTLE THROTTLE"} };
+const uint8_t special_features_positions[8][2] = { {7, 1}, {7, 3}, {7, 4}, {7, 5}, {7, 6}, {7, 7}, {7, 8}, {7, 9} };
+const uint8_t special_features_map[] = {13, 21, 30, 22, 19, 20, 27};					//case numbers for {stickboost}, etc ...adding more soon
 
 //stick boost submenu map
 const char stickboost_labels[3][21] = { {"STICK BOOST PROFILES"},{"AUX OFF PROFILE 1"},{"AUX ON  PROFILE 2"} };
@@ -204,3 +204,12 @@ const uint8_t dtermfilter_grid [7][2] = {{1, 1},{1, 2},{1, 3},{1, 4},{1, 5},{1, 
 const uint8_t dtermfilter_data_positions[7][2] = { {18, 3},{18, 4},{18, 5},{18, 6},{18, 7},{18, 8},{18, 9}};
 const float dtermfilter_adjust_limits[7][2] = { {0, 2},{50, 500},{0, 2},{50, 500},{0, 1},{50, 500},{50, 500} };
 
+//pid modifiers map
+float *pidmodify_ptr[4] = { &pointer_redirect, &pointer_redirect, &profile.pid.throttle_dterm_attenuation.tda_breakpoint, &profile.pid.throttle_dterm_attenuation.tda_percent};
+uint8_t *pidmodify_ptr2[4] = {&profile.voltage.pid_voltage_compensation,  &profile.pid.throttle_dterm_attenuation.tda_active, 0, 0};
+const char pidmodify_labels[6][21] = { {"PID MODIFIERS"},{"P-TERM VOLTAGE COMP"},{"THROTTLE D ATTENUATE"},{"TDA BREAKPOINT"},{"TDA PERCENT"},{"SAVE AND EXIT"} };
+const char pidmodify_type_labels[2][21] = {" NONE ","ACTIVE"};
+const uint8_t pidmodify_positions[6][2] = { {8, 1},{2, 4},{2, 5},{2, 6},{2, 7},{2, 14} };
+const uint8_t pidmodify_grid [4][2] = {{1, 1},{1, 2},{1, 3},{1, 4}};
+const uint8_t pidmodify_data_positions[4][2] = { {23, 4},{23, 5},{23, 6},{23, 7}};
+const float pidmodify_adjust_limits[4][2] = { {0, 1},{0, 1},{0, 1},{0, 1} };

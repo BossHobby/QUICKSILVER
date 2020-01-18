@@ -94,8 +94,8 @@ extern const char vtx_temp_labels[3][21];
 extern const uint8_t vtx_temp_positions[3][2];
 
 //special features menu map
-extern const char special_features_labels[7][21];
-extern const uint8_t special_features_positions[7][2];
+extern const char special_features_labels[8][21];
+extern const uint8_t special_features_positions[8][2];
 extern const uint8_t special_features_map[];
 
 //stick boost submenu map
@@ -199,3 +199,13 @@ const uint8_t dtermfilter_positions[9][2];
 const uint8_t dtermfilter_grid[7][2];
 const uint8_t dtermfilter_data_positions[7][2];
 const float dtermfilter_adjust_limits[7][2];
+
+//pid modifiers map
+float *pidmodify_ptr[4];
+uint8_t *pidmodify_ptr2[4];
+const char pidmodify_labels[6][21];
+const char pidmodify_type_labels[2][21];
+const uint8_t pidmodify_positions[6][2];
+const uint8_t pidmodify_grid [4][2];
+const uint8_t pidmodify_data_positions[4][2];
+const float pidmodify_adjust_limits[4][2];

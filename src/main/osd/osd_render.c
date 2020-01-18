@@ -623,7 +623,7 @@ void print_osd_adjustable_float(uint8_t string_element_qty, uint8_t data_element
 	osd_menu_phase++;
 }
 
-void print_osd_filters(uint8_t string_element_qty, uint8_t data_element_qty, float *pointer[], uint8_t *pointer2[], const char filtertype_labels[5][21], const uint8_t grid[data_element_qty][2], const uint8_t print_position[data_element_qty][2], uint8_t precision){
+void print_osd_mixed_data(uint8_t string_element_qty, uint8_t data_element_qty, float *pointer[], uint8_t *pointer2[], const char filtertype_labels[5][21], const uint8_t grid[data_element_qty][2], const uint8_t print_position[data_element_qty][2], uint8_t precision){
   	if (osd_menu_phase <= string_element_qty)
           return;
   	if (osd_menu_phase > string_element_qty + data_element_qty)
@@ -640,10 +640,7 @@ void print_osd_filters(uint8_t string_element_qty, uint8_t data_element_qty, flo
 		fast_fprint(data_buffer, 5, *pointer[index] + FLT_EPSILON, precision);
 		osd_print_data(data_buffer, 5, grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
 	}else{
-		//char data_to_print[21] = filtertype_labels[*pointer2[index]][21];
 		osd_print(filtertype_labels[*pointer2[index]], grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
-		//const char string_to_print[3][21] = {"NONE", "PT1", "PT2"};
-		//osd_print(string_to_print[*pointer2[index]], grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
 	}
 	osd_menu_phase++;
 }
@@ -919,8 +916,8 @@ void osd_display(void) {
 
   case 12:		//special features
 	  last_display_phase = 1;
-	  print_osd_menu_strings(7, 6, special_features_labels, special_features_positions);
-	  if (osd_menu_phase == 8) osd_select_menu_item(6,special_features_map, SUB_MENU);
+	  print_osd_menu_strings(8, 7, special_features_labels, special_features_positions);
+	  if (osd_menu_phase == 9) osd_select_menu_item(7,special_features_map, SUB_MENU);
       break;
 
   case 13:		//stick boost profiles
@@ -1029,15 +1026,22 @@ void osd_display(void) {
   case 28:		//edit gyro filters
   	  last_display_phase = 5;
   	  print_osd_menu_strings(6, 5, gyrofilter_labels, gyrofilter_positions);
-  	  print_osd_filters(6, 4, gyrofilter_ptr, gyrofilter_ptr2, gyrofilter_type_labels, gyrofilter_grid, gyrofilter_data_positions, 0);
-  	  if (osd_menu_phase == 11) osd_filter_adjust(gyrofilter_ptr, gyrofilter_ptr2, 4, 1, gyrofilter_adjust_limits, 10.0);
+  	  print_osd_mixed_data(6, 4, gyrofilter_ptr, gyrofilter_ptr2, gyrofilter_type_labels, gyrofilter_grid, gyrofilter_data_positions, 0);
+  	  if (osd_menu_phase == 11) osd_mixed_data_adjust(gyrofilter_ptr, gyrofilter_ptr2, 4, 1, gyrofilter_adjust_limits, 10.0);
   	  break;
 
   case 29:		//edit dterm filters
   	  last_display_phase = 5;
   	  print_osd_menu_strings(9, 8, dtermfilter_labels, dtermfilter_positions);
-  	  print_osd_filters(9, 7, dtermfilter_ptr, dtermfilter_ptr2, dtermfilter_type_labels, dtermfilter_grid, dtermfilter_data_positions, 0);
-  	  if (osd_menu_phase == 17) osd_filter_adjust(dtermfilter_ptr, dtermfilter_ptr2, 7, 1, dtermfilter_adjust_limits, 10.0);
+  	  print_osd_mixed_data(9, 7, dtermfilter_ptr, dtermfilter_ptr2, dtermfilter_type_labels, dtermfilter_grid, dtermfilter_data_positions, 0);
+  	  if (osd_menu_phase == 17) osd_mixed_data_adjust(dtermfilter_ptr, dtermfilter_ptr2, 7, 1, dtermfilter_adjust_limits, 10.0);
+  	  break;
+
+  case 30:		//edit pid modifiers
+  	  last_display_phase = 12;
+  	  print_osd_menu_strings(6, 5, pidmodify_labels, pidmodify_positions);
+  	  print_osd_mixed_data(6, 4, pidmodify_ptr, pidmodify_ptr2, pidmodify_type_labels, pidmodify_grid, pidmodify_data_positions, 2);
+  	  if (osd_menu_phase == 11) osd_mixed_data_adjust(pidmodify_ptr, pidmodify_ptr2, 4, 1, pidmodify_adjust_limits, 0.05);
   	  break;
   }
 if (osd_display_phase !=2 && rx_aux_on(AUX_ARMING)) binding_while_armed = 1;	//final safety check to disallow arming during OSD operation

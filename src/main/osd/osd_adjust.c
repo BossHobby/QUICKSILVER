@@ -333,7 +333,7 @@ void osd_enum_adjust(uint8_t *pointer, uint8_t rows, const uint8_t increase_limi
 	}
 }
 
-void osd_filter_adjust(float *pointer[], uint8_t *pointer2[], uint8_t rows, uint8_t columns, const float adjust_limit[rows*columns][2], float adjust_amount){
+void osd_mixed_data_adjust(float *pointer[], uint8_t *pointer2[], uint8_t rows, uint8_t columns, const float adjust_limit[rows*columns][2], float adjust_amount){
 	if (osd_select > columns) {
 		osd_select = columns;
 		osd_menu_phase = 1; //repaint the screen again
