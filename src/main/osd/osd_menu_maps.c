@@ -187,6 +187,7 @@ const float turtlethrottle_adjust_limits[1][2] = { {0, 100} };
 float pointer_redirect = POINTER_REDIRECT;
 float *gyrofilter_ptr[4] = {&pointer_redirect, &profile.filter.gyro[0].cutoff_freq, &pointer_redirect, &profile.filter.gyro[1].cutoff_freq};
 uint8_t *gyrofilter_ptr2[4] = {&profile.filter.gyro[0].type, 0, &profile.filter.gyro[1].type, 0};
+const uint8_t gyrofilter_reboot_request[4] = {1, 0, 1, 0};
 const char gyrofilter_labels[6][21] = { {"GYRO FILTERS"},{"PASS 1 TYPE"},{"PASS 1 FREQ"},{"PASS 2 TYPE"},{"PASS 2 FREQ"},{"SAVE AND EXIT"} };
 const char gyrofilter_type_labels[3][21] = {"NONE"," PT1"," PT2"};
 const uint8_t gyrofilter_positions[6][2] = { {9, 1},{4, 4},{4, 5},{4, 6},{4, 7},{4, 14} };
@@ -197,6 +198,7 @@ const float gyrofilter_adjust_limits[4][2] = { {0, 2},{50, 500},{0, 2},{50, 500}
 //dterm filter map
 float *dtermfilter_ptr[7] = {&pointer_redirect, &profile.filter.dterm[0].cutoff_freq, &pointer_redirect, &profile.filter.dterm[1].cutoff_freq, &pointer_redirect, &profile.filter.dterm_dynamic_min, &profile.filter.dterm_dynamic_max};
 uint8_t *dtermfilter_ptr2[7] = {&profile.filter.dterm[0].type, 0, &profile.filter.dterm[1].type, 0, &profile.filter.dterm_dynamic_enable, 0, 0};
+const uint8_t dtermfilter_reboot_request[7] = {1, 0, 1, 0, 1, 0, 0};
 const char dtermfilter_labels[9][21] = { {"D-TERM FILTERS"},{"PASS 1 TYPE"},{"PASS 1 FREQ"},{"PASS 2 TYPE"},{"PASS 2 FREQ"},{"DYNAMIC"},{"FREQ MIN"},{"FREQ MAX"},{"SAVE AND EXIT"} };
 const char dtermfilter_type_labels[3][21] = {"NONE"," PT1"," PT2"};
 const uint8_t dtermfilter_positions[9][2] = { {8, 1},{4, 3},{4, 4},{4, 5},{4, 6},{4, 7},{4, 8},{4, 9},{4, 14} };
@@ -207,6 +209,7 @@ const float dtermfilter_adjust_limits[7][2] = { {0, 2},{50, 500},{0, 2},{50, 500
 //pid modifiers map
 float *pidmodify_ptr[4] = { &pointer_redirect, &pointer_redirect, &profile.pid.throttle_dterm_attenuation.tda_breakpoint, &profile.pid.throttle_dterm_attenuation.tda_percent};
 uint8_t *pidmodify_ptr2[4] = {&profile.voltage.pid_voltage_compensation,  &profile.pid.throttle_dterm_attenuation.tda_active, 0, 0};
+const uint8_t pidmodify_reboot_request[4] = {0,0,0,0};
 const char pidmodify_labels[6][21] = { {"PID MODIFIERS"},{"P-TERM VOLTAGE COMP"},{"THROTTLE D ATTENUATE"},{"TDA BREAKPOINT"},{"TDA PERCENT"},{"SAVE AND EXIT"} };
 const char pidmodify_type_labels[2][21] = {" NONE ","ACTIVE"};
 const uint8_t pidmodify_positions[6][2] = { {8, 1},{2, 4},{2, 5},{2, 6},{2, 7},{2, 14} };
