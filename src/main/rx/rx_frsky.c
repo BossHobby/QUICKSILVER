@@ -523,7 +523,7 @@ static uint8_t frsky_d_handle_packet() {
       cc2500_strobe(CC2500_SIDLE);
       cc2500_write_fifo(telemetry, telemetry[0] + 1);
 
-      protocol_state = STATE_DATA;
+      protocol_state = STATE_UPDATE;
     }
     break;
   }
