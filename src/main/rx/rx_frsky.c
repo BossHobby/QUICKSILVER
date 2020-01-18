@@ -485,7 +485,7 @@ static uint8_t frsky_d_handle_packet() {
         frames_lost++;
         frame_index++;
       }
-      if (frames_lost >= 1) {
+      if (frames_lost >= 2) {
         cc2500_switch_antenna();
       }
       if (frames_lost >= MAX_MISSING_FRAMES) {
