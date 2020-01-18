@@ -295,13 +295,20 @@ static void frsky_d_set_rc_data() {
   channels[6] = (uint16_t)(((packet[17] & 0x0F) << 8 | packet[14]));
   channels[7] = (uint16_t)(((packet[17] & 0xF0) << 4 | packet[15]));
 
-  // if we made it this far, data is ready
-  rx_ready = 1;
-  failsafe = 0;
-
   // frsky input is us*1.5
   // under normal conditions this is ~1480...3020
   // when tx is set to 125% this is  ~1290...3210
+
+  // this check terrifies me, but betaflight has something similar
+  for (uint8_t i = 0; i < FRSKY_D_CHANNEL_COUNT; i++) {
+    if (channels[i] < 1200 || channels[i] > 3300) {
+      return;
+    }
+  }
+
+  // if we made it this far, data is ready
+  rx_ready = 1;
+  failsafe = 0;
 
   // AETR channel order
   rx[0] = (channels[0] - 1500) - 750;
@@ -328,6 +335,13 @@ static void frsky_d_set_rc_data() {
   aux[AUX_CHANNEL_3] = (channels[7] > 2000) ? 1 : 0;
   aux[AUX_CHANNEL_4] = 0;
   aux[AUX_CHANNEL_5] = 0;
+
+  for (uint8_t i = 0; i < AUX_CHANNEL_MAX - 3; i++) {
+    auxchange[i] = 0;
+    if (lastaux[i] != aux[i])
+      auxchange[i] = 1;
+    lastaux[i] = aux[i];
+  }
 
   rx_rssi = frsky_extract_rssi(packet[18]);
   if (rx_rssi > 100.0f)
@@ -426,7 +440,7 @@ static uint8_t frsky_d_handle_packet() {
     uint8_t len = packet_size();
     if (len >= 20) {
       cc2500_read_fifo(packet, 20);
-      const frsky_d_frame *frame = (frsky_d_frame *)packet;
+      frsky_d_frame *frame = (frsky_d_frame *)packet;
 
       if (frame->length == 0x11 &&
           (frame->crc[1] & 0x80) &&
@@ -453,6 +467,8 @@ static uint8_t frsky_d_handle_packet() {
 
         last_packet_received_time = current_packet_received_time;
         max_sync_delay = SYNC_DELAY_MAX;
+        // make sure we dont read the packet a second time
+        frame->crc[1] = 0x00;
         frame_had_packet = 1;
         frames_lost = 0;
         frame_index++;
