@@ -26,7 +26,7 @@ static int fpv_init = 0;
 vtx_settings_t vtx_settings;
 
 #ifdef ENABLE_SMART_AUDIO
-#define VTX_SET_DELAY 5000
+#define VTX_SET_DELAY 50000
 #define SMART_AUDIO_CONNECTION_TRIES 10
 
 extern smart_audio_settings_t smart_audio_settings;
@@ -116,7 +116,6 @@ void vtx_update() {
       lastlooptime = gettime();
       connect_tries++;
     } else if (smart_audio_settings.version != 0 && smart_audio_detected == 0) {
-
       quic_debugf("smart audio version: %d", smart_audio_settings.version);
 
       int8_t channel_index = -1;
@@ -145,6 +144,7 @@ void vtx_update() {
 
       smart_audio_detected = 1;
       vtx_settings.detected = 1;
+      connect_tries = 0;
     }
   }
 #endif

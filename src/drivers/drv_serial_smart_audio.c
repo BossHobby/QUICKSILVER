@@ -85,7 +85,7 @@ void serial_smart_audio_send_data(uint8_t *data, uint32_t size) {
   for (uint32_t i = 0; i < size; i++) {
     for (uint32_t timeout = 0x10000; USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET;) {
       if (!timeout--) {
-        quic_debugf("SMART: send timeout");
+        quic_debugf("SMART_AUDIO: send timeout");
         return;
       }
       debug_timer_delay_us(1);
@@ -97,10 +97,10 @@ void serial_smart_audio_send_data(uint8_t *data, uint32_t size) {
 uint8_t serial_smart_audio_read_byte() {
   for (uint32_t timeout = 0x10000; USART_GetFlagStatus(USART.channel, USART_FLAG_RXNE) == RESET;) {
     if (!timeout--) {
-      quic_debugf("SMART: read timeout");
+      quic_debugf("SMART_AUDIO: read timeout");
       return 0;
     }
-    debug_timer_delay_us(1);
+    debug_timer_delay_us(5);
   }
   return USART_ReceiveData(USART.channel);
 }
@@ -119,6 +119,7 @@ void serial_smart_audio_read_packet() {
   }
 
   if (serial_smart_audio_read_byte() != 0x55) {
+    quic_debugf("SMART_AUDIO: invalid magic");
     return;
   }
 
@@ -134,7 +135,7 @@ void serial_smart_audio_read_packet() {
   if (cmd != 0x01 && cmd != 0x09) {
     uint8_t crc_input = serial_smart_audio_read_byte_crc(&crc);
     if (crc != crc_input) {
-      quic_debugf("SMART: invalid crc 0x%x vs 0x%x", crc, crc_input);
+      quic_debugf("SMART_AUDIO: invalid crc 0x%x vs 0x%x", crc, crc_input);
       return;
     }
   }
@@ -144,7 +145,7 @@ void serial_smart_audio_read_packet() {
   case SA_CMD_GET_SETTINGS_V2:
   case SA_CMD_GET_SETTINGS_V21:
     if (crc == payload[5]) {
-      quic_debugf("SMART: invalid crc 0x%x vs 0x%x", crc, payload[4]);
+      quic_debugf("SMART_AUDIO: invalid crc 0x%x vs 0x%x", crc, payload[4]);
       return;
     }
 
@@ -163,20 +164,22 @@ void serial_smart_audio_read_packet() {
     smart_audio_settings.channel = payload[0];
     break;
 
-  case SA_CMD_SET_POWER:
-    if (smart_audio_settings.version >= 2) {
+  case SA_CMD_SET_POWER: {
+    // workaround for buggy vtxes which swap the channel and the power arguments
+    const uint8_t weird_channel = (smart_audio_settings.channel / 8) * 10 + smart_audio_settings.channel % 8;
+    if (payload[0] == smart_audio_settings.channel || payload[0] == weird_channel) {
       smart_audio_settings.power = payload[1];
-    } else {
+    } else if (payload[1] == 1) {
       smart_audio_settings.power = payload[0];
     }
     break;
-
+  }
   case SA_CMD_SET_MODE:
     smart_audio_settings.mode = payload[0];
     break;
 
   default: {
-    quic_debugf("smart audio: invalid cmd %d (%d)", cmd, length);
+    quic_debugf("SMART_AUDIO: invalid cmd %d (%d)", cmd, length);
     break;
   }
   }
