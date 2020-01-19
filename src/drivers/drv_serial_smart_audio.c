@@ -83,20 +83,24 @@ static uint8_t crc8_data(const uint8_t *data, const int8_t len) {
 
 void serial_smart_audio_send_data(uint8_t *data, uint32_t size) {
   for (uint32_t i = 0; i < size; i++) {
-    for (uint32_t timeout = 0x20000; USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET;) {
+    for (uint32_t timeout = 0x10000; USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET;) {
       if (!timeout--) {
+        quic_debugf("SMART: send timeout");
         return;
       }
+      debug_timer_delay_us(1);
     }
     USART_SendData(USART.channel, data[i]);
   }
 }
 
 uint8_t serial_smart_audio_read_byte() {
-  for (uint32_t timeout = 0x20000; USART_GetFlagStatus(USART.channel, USART_FLAG_RXNE) == RESET;) {
+  for (uint32_t timeout = 0x10000; USART_GetFlagStatus(USART.channel, USART_FLAG_RXNE) == RESET;) {
     if (!timeout--) {
+      quic_debugf("SMART: read timeout");
       return 0;
     }
+    debug_timer_delay_us(1);
   }
   return USART_ReceiveData(USART.channel);
 }
@@ -136,14 +140,15 @@ void serial_smart_audio_read_packet() {
   }
 
   switch (cmd) {
-  case 0x01:
-  case 0x09:
+  case SA_CMD_GET_SETTINGS:
+  case SA_CMD_GET_SETTINGS_V2:
+  case SA_CMD_GET_SETTINGS_V21:
     if (crc == payload[5]) {
       quic_debugf("SMART: invalid crc 0x%x vs 0x%x", crc, payload[4]);
       return;
     }
 
-    smart_audio_settings.version = (cmd == 0x09 ? 2 : 1);
+    smart_audio_settings.version = (cmd == SA_CMD_GET_SETTINGS ? 1 : (cmd == SA_CMD_GET_SETTINGS_V2 ? 2 : 3));
     smart_audio_settings.channel = payload[0];
     smart_audio_settings.power = payload[1];
     smart_audio_settings.mode = payload[2];
@@ -159,8 +164,11 @@ void serial_smart_audio_read_packet() {
     break;
 
   case SA_CMD_SET_POWER:
-    smart_audio_settings.channel = payload[0];
-    smart_audio_settings.power = payload[1];
+    if (smart_audio_settings.version >= 2) {
+      smart_audio_settings.power = payload[1];
+    } else {
+      smart_audio_settings.power = payload[0];
+    }
     break;
 
   case SA_CMD_SET_MODE:
@@ -168,6 +176,7 @@ void serial_smart_audio_read_packet() {
     break;
 
   default: {
+    quic_debugf("smart audio: invalid cmd %d (%d)", cmd, length);
     break;
   }
   }
