@@ -14,7 +14,7 @@
 #include "sixaxis.h"
 #include "vtx.h"
 
-#if defined(F405)
+#if defined(F4)
 
 #define QUIC_HEADER_LEN 4
 
@@ -172,6 +172,7 @@ void get_quic(uint8_t *data, uint32_t len) {
 
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
+#ifdef ENABLE_OSD
   case QUIC_VAL_OSD_FONT: {
     uint8_t font[54];
     uint8_t buffer[256 * 56];
@@ -190,6 +191,7 @@ void get_quic(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, buffer, cbor_encoder_len(&enc));
     break;
   }
+#endif
   default:
     quic_errorf(QUIC_CMD_GET, "INVALID VALUE %d", value);
     break;
@@ -249,6 +251,7 @@ void set_quic(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
+#ifdef ENABLE_OSD
   case QUIC_VAL_OSD_FONT: {
     uint32_t len = 54;
 
@@ -267,6 +270,7 @@ void set_quic(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
+#endif
   default:
     quic_errorf(QUIC_CMD_SET, "INVALID VALUE %d", value);
     break;
