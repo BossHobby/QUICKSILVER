@@ -41,24 +41,21 @@ extern uint32_t blackbox_rate;
 extern uint8_t encode_buffer[USB_BUFFER_SIZE];
 extern uint8_t decode_buffer[USB_BUFFER_SIZE];
 
-void send_quic(quic_command cmd, quic_flag flag, uint8_t *data, uint16_t len) {
-  static uint8_t frame[USB_BUFFER_SIZE + QUIC_HEADER_LEN];
-  if (len > USB_BUFFER_SIZE) {
-    return;
-  }
+void send_quic_header(quic_command cmd, quic_flag flag, int16_t len) {
+  static uint8_t frame[QUIC_HEADER_LEN];
 
   const uint16_t size = len + QUIC_HEADER_LEN;
-
   frame[0] = USB_MAGIC_QUIC;
   frame[1] = (cmd & (0xff >> 3)) | (flag & (0xff >> 5)) << 5;
   frame[2] = (len >> 8) & 0xFF;
   frame[3] = len & 0xFF;
 
-  for (uint32_t i = 0; i < len; i++) {
-    frame[i + QUIC_HEADER_LEN] = data[i];
-  }
+  usb_serial_write(frame, QUIC_HEADER_LEN);
+}
 
-  usb_serial_write(frame, size);
+void send_quic(quic_command cmd, quic_flag flag, uint8_t *data, uint16_t len) {
+  send_quic_header(cmd, flag, len);
+  usb_serial_write(data, len);
 }
 
 cbor_result_t send_quic_str(quic_command cmd, quic_flag flag, const char *str) {
@@ -176,6 +173,25 @@ void get_quic(uint8_t *data, uint32_t len) {
 
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
+  case QUIC_VAL_OSD_FONT: {
+    uint8_t font[54];
+    uint8_t buffer[256 * 56];
+
+    cbor_encoder_init(&enc, buffer, 256 * 56 + 1);
+    res = cbor_encode_uint8(&enc, &value);
+    check_cbor_error(QUIC_CMD_GET);
+
+    for (uint16_t i = 0; i < 256; i++) {
+      uint8_t char_addr = i;
+      osd_read_character(char_addr, font, 54);
+
+      res = cbor_encode_bstr(&enc, font, 54);
+      check_cbor_error(QUIC_CMD_GET);
+    }
+
+    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, buffer, cbor_encoder_len(&enc));
+    break;
+  }
   default:
     quic_errorf(QUIC_CMD_GET, "INVALID VALUE %d", value);
     break;
@@ -241,28 +257,6 @@ void set_quic(uint8_t *data, uint32_t len) {
   }
 }
 
-void quic_get_osd_char(uint8_t *data, uint32_t len) {
-  cbor_result_t res = CBOR_OK;
-
-  cbor_value_t dec;
-  cbor_decoder_init(&dec, data, len);
-
-  cbor_value_t enc;
-  cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
-
-  uint8_t char_addr = 0;
-  res = cbor_decode_uint8(&dec, &char_addr);
-  check_cbor_error(QUIC_CMD_GET_OSD_CHAR);
-
-  uint8_t font[54];
-  osd_read_character(char_addr, font, 54);
-
-  res = cbor_encode_bstr(&enc, font, 54);
-  check_cbor_error(QUIC_CMD_GET_OSD_CHAR);
-
-  send_quic(QUIC_CMD_GET_OSD_CHAR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
-}
-
 void usb_process_quic() {
   const uint8_t cmd = usb_serial_read_byte();
   if (cmd == QUIC_CMD_INVALID) {
@@ -303,9 +297,6 @@ void usb_process_quic() {
     flash_save();
     flash_load();
 #endif
-    break;
-  case QUIC_CMD_GET_OSD_CHAR:
-    quic_get_osd_char(decode_buffer, size);
     break;
   default:
     quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);
