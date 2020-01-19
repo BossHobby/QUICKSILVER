@@ -44,7 +44,6 @@ extern uint8_t decode_buffer[USB_BUFFER_SIZE];
 void send_quic_header(quic_command cmd, quic_flag flag, int16_t len) {
   static uint8_t frame[QUIC_HEADER_LEN];
 
-  const uint16_t size = len + QUIC_HEADER_LEN;
   frame[0] = USB_MAGIC_QUIC;
   frame[1] = (cmd & (0xff >> 3)) | (flag & (0xff >> 5)) << 5;
   frame[2] = (len >> 8) & 0xFF;
@@ -182,8 +181,7 @@ void get_quic(uint8_t *data, uint32_t len) {
     check_cbor_error(QUIC_CMD_GET);
 
     for (uint16_t i = 0; i < 256; i++) {
-      uint8_t char_addr = i;
-      osd_read_character(char_addr, font, 54);
+      osd_read_character(i, font, 54);
 
       res = cbor_encode_bstr(&enc, font, 54);
       check_cbor_error(QUIC_CMD_GET);
@@ -251,8 +249,26 @@ void set_quic(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
+  case QUIC_VAL_OSD_FONT: {
+    uint32_t len = 54;
+
+    for (uint16_t i = 0; i < 256; i++) {
+      const uint8_t *ptr = NULL;
+
+      res = cbor_decode_bstr(&dec, &ptr, &len);
+      check_cbor_error(QUIC_CMD_SET);
+
+      osd_write_character(i, ptr, 54);
+    }
+
+    res = cbor_encode_str(&enc, "OK");
+    check_cbor_error(QUIC_CMD_SET);
+
+    send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  }
   default:
-    quic_errorf(QUIC_CMD_GET, "INVALID VALUE %d", value);
+    quic_errorf(QUIC_CMD_SET, "INVALID VALUE %d", value);
     break;
   }
 }
@@ -265,24 +281,31 @@ void usb_process_quic() {
   }
 
   const uint16_t size = (uint16_t)usb_serial_read_byte() << 8 | usb_serial_read_byte();
+  uint8_t buffer[size];
+
   if (size != 0) {
-    uint32_t len = usb_serial_read(decode_buffer, size);
-    for (uint32_t timeout = 1000; len < size && timeout > 0; --timeout) {
-      len += usb_serial_read(decode_buffer + len, size - len);
-      delay(10);
+    uint32_t len = usb_serial_read(buffer, size);
+    for (uint32_t timeout = 0x2000; len < size && timeout > 0;) {
+      uint32_t n = usb_serial_read(buffer + len, size - len);
+      if (n == 0) {
+        timeout--;
+        __WFI();
+      } else {
+        len += n;
+      }
     }
     if (len != size) {
-      quic_errorf(cmd, "INVALID SIZE %d", size);
+      quic_errorf(cmd, "INVALID SIZE %d vs %d", len, size);
       return;
     }
   }
 
   switch (cmd) {
   case QUIC_CMD_GET:
-    get_quic(decode_buffer, size);
+    get_quic(buffer, size);
     break;
   case QUIC_CMD_SET:
-    set_quic(decode_buffer, size);
+    set_quic(buffer, size);
     break;
   case QUIC_CMD_CAL_IMU:
     gyro_cal(); // for flashing lights
