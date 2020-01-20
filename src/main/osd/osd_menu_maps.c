@@ -104,7 +104,7 @@ const uint8_t vtx_temp_positions[3][2] = { {9, 1}, {7, 4}, {7,5} };
 uint8_t *vtx_ptr[4] = {&vtx_settings.band, &vtx_settings.channel, &vtx_settings.power_level, &vtx_settings.pit_mode};
 const char vtx_labels[6][21] = {"VTX CONTROLS","BAND","CHANNEL","POWER LEVEL","PITMODE","SAVE AND EXIT"};
 const uint8_t vtx_positions[6][2] = { {9, 1},{4, 4},{4, 5},{4, 6},{4, 7},{4, 14} };
-const uint8_t vtx_data_positions[4][2] = { {17, 4}, {17, 5}, {17, 6}, {17, 7} };
+const uint8_t vtx_data_positions[4][2] = { {20, 4}, {20, 5}, {20, 6}, {20, 7} };
 const uint8_t vtx_limits[4] = {4, 7, 3, 1};
 const uint8_t vtx_grid[4][2] = { {1, 1}, {1, 2}, {1, 3}, {1, 4} };
 

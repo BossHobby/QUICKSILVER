@@ -7,6 +7,7 @@
 #include "osd_adjust.h"
 #include "osd_render.h"
 #include "profile.h"
+#include "vtx.h"
 
 
 extern uint8_t osd_menu_phase;
@@ -19,6 +20,7 @@ extern uint8_t decrease_osd_value;
 extern uint8_t reboot_fc_requested;
 extern int flash_feature_1; //currently used for auto entry into wizard menu
 extern profile_t profile;
+extern vtx_settings_t vtx_settings;
 
 
 //**************************************************************** utility and tracking functions*********************************************************
@@ -48,6 +50,8 @@ void osd_save_exit(void){
     extern unsigned long lastlooptime;
     lastlooptime = gettime();
     #endif
+    //update vtx settings
+    vtx_set(&vtx_settings);
     //check for fc reboot request
     if(reboot_fc_requested) NVIC_SystemReset();
 }
@@ -218,7 +222,7 @@ const char* get_aux_status (int input){
 
 const char* get_vtx_status(int input){
 	if (input < 0) return 0;
-	static char* vtx_data_status[4][8] = {{"A","B","E","F","R"}, {"1","2","3","4","5","6","7","8"}, {"25 ","100","250","800"}, {"OFF","ON "}};
+	static char* vtx_data_status[4][8] = {{"A","B","E","F","R"}, {"1","2","3","4","5","6","7","8"}, {"25 ","100","250","800"}, {"OFF","ON ","N/A"}};
 	return vtx_data_status[input][*vtx_ptr[input]];
 }
 
