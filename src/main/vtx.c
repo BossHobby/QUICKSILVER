@@ -25,13 +25,6 @@ static int fpv_init = 0;
 
 vtx_settings_t vtx_settings;
 
-#ifdef ENABLE_SMART_AUDIO
-#define VTX_SET_DELAY 50000
-#define SMART_AUDIO_CONNECTION_TRIES 10
-
-extern smart_audio_settings_t smart_audio_settings;
-uint8_t smart_audio_detected = 0;
-
 const uint16_t frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX] = {
     {5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725}, // VTX_BAND_A
     {5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866}, // VTX_BAND_B
@@ -39,6 +32,17 @@ const uint16_t frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX] = {
     {5740, 5760, 5780, 5800, 5820, 5840, 5860, 5880}, // VTX_BAND_F
     {5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917}, // VTX_BAND_R
 };
+
+uint16_t vtx_frequency_from_channel(vtx_band_t band, vtx_channel_t channel) {
+  return frequency_table[band][channel];
+}
+
+#ifdef ENABLE_SMART_AUDIO
+#define VTX_SET_DELAY 50000
+#define SMART_AUDIO_CONNECTION_TRIES 10
+
+extern smart_audio_settings_t smart_audio_settings;
+uint8_t smart_audio_detected = 0;
 
 int8_t find_frequency_index(uint16_t frequency) {
   for (uint8_t band = 0; band < VTX_BAND_MAX; band++) {
@@ -163,6 +167,7 @@ void vtx_set(vtx_settings_t *vtx) {
 uint8_t vtx_set_frequency(vtx_band_t band, vtx_channel_t channel) {
 #ifdef ENABLE_SMART_AUDIO
   if (smart_audio_detected && has_smart_audio_configured()) {
+    uint8_t did_change = 0;
     int8_t channel_index = -1;
 
     if (smart_audio_settings.mode & SA_MODE_FREQUENCY) {
@@ -171,13 +176,19 @@ uint8_t vtx_set_frequency(vtx_band_t band, vtx_channel_t channel) {
           (frequency >> 8) & 0xFF,
           frequency & 0xFF,
       };
-      serial_smart_audio_send_payload(SA_CMD_SET_FREQUENCY, payload, 2);
+      if (smart_audio_settings.frequency != frequency) {
+        serial_smart_audio_send_payload(SA_CMD_SET_FREQUENCY, payload, 2);
+        did_change = 1;
+      }
 
       channel_index = find_frequency_index(smart_audio_settings.frequency);
     } else {
       const uint8_t index = band * VTX_CHANNEL_MAX + channel;
       const uint8_t payload[1] = {index};
-      serial_smart_audio_send_payload(SA_CMD_SET_CHANNEL, payload, 1);
+      if (smart_audio_settings.channel != index) {
+        serial_smart_audio_send_payload(SA_CMD_SET_CHANNEL, payload, 1);
+        did_change = 1;
+      }
 
       channel_index = smart_audio_settings.channel;
     }
@@ -187,7 +198,7 @@ uint8_t vtx_set_frequency(vtx_band_t band, vtx_channel_t channel) {
       vtx_settings.channel = channel_index % VTX_CHANNEL_MAX;
     }
 
-    return 1;
+    return did_change;
   }
 #endif
 
@@ -226,18 +237,25 @@ uint8_t vtx_set_pit_mode(vtx_pit_mode_t pit_mode) {
 uint8_t vtx_set_power_level(vtx_power_level_t power_level) {
 #ifdef ENABLE_SMART_AUDIO
   if (smart_audio_detected && has_smart_audio_configured()) {
+    uint8_t did_change = 0;
     uint8_t level = power_level;
 
     if (smart_audio_settings.version >= 2) {
-      serial_smart_audio_send_payload(SA_CMD_SET_POWER, &level, 1);
+      if (smart_audio_settings.power != level) {
+        serial_smart_audio_send_payload(SA_CMD_SET_POWER, &level, 1);
+        did_change = 1;
+      }
       vtx_settings.power_level = smart_audio_settings.power;
     } else {
       level = smart_audio_dac_power_level[power_level];
-      serial_smart_audio_send_payload(SA_CMD_SET_POWER, &level, 1);
+      if (smart_audio_settings.power != level) {
+        serial_smart_audio_send_payload(SA_CMD_SET_POWER, &level, 1);
+        did_change = 1;
+      }
       vtx_settings.power_level = smart_audio_dac_power_level_index(smart_audio_settings.power);
     }
 
-    return 1;
+    return did_change;
   }
 #endif
 

@@ -60,5 +60,7 @@ uint8_t vtx_set_frequency(vtx_band_t band, vtx_channel_t channel);
 uint8_t vtx_set_pit_mode(vtx_pit_mode_t pit_mode);
 uint8_t vtx_set_power_level(vtx_power_level_t power_level);
 
+uint16_t vtx_frequency_from_channel(vtx_band_t band, vtx_channel_t channel);
+
 cbor_result_t cbor_encode_vtx_settings_t(cbor_value_t *enc, const vtx_settings_t *vtx);
 cbor_result_t cbor_decode_vtx_settings_t(cbor_value_t *dec, vtx_settings_t *vtx);
