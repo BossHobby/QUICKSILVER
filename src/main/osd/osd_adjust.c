@@ -213,6 +213,12 @@ const char* get_aux_status (int input){
 	return respond[input];
 }
 
+const char* get_vtx_status(int input){
+	if (input < 0) return 0;
+	static char* vtx_data_status[4][8] = {{"A","B","E","F","R"}, {"1","2","3","4","5","6","7","8"}, {"25 ","100","250","800"}, {"OFF","ON "}};
+	return vtx_data_status[input][*vtx_ptr[input]];
+}
+
 vector_t *get_pid_term(uint8_t term) {
   switch (term) {
   case 1:
@@ -304,7 +310,7 @@ void osd_float_adjust ( float *pointer[],  uint8_t rows, uint8_t columns, const 
 	}
 }
 
-void osd_enum_adjust(uint8_t *pointer, uint8_t rows, const uint8_t increase_limit[]){
+void osd_enum_adjust_depreciated(uint8_t *pointer, uint8_t rows, const uint8_t increase_limit[]){
 	if(osd_select > 1) {
 		osd_select = 1;	//limit osd select variable from accumulating past 1 columns of adjustable items
 		osd_menu_phase = 1; //repaint the screen again
@@ -322,6 +328,34 @@ void osd_enum_adjust(uint8_t *pointer, uint8_t rows, const uint8_t increase_limi
 				*pointer = i;
 				osd_menu_phase = 1; //repaint the screen again
 			}
+		}
+		increase_osd_value = 0;
+		decrease_osd_value = 0;
+	}
+	if (osd_cursor == rows + 1){
+		if (osd_select == 1){
+			osd_save_exit();
+		}
+	}
+}
+
+void osd_enum_adjust(uint8_t *pointer[], uint8_t rows, const uint8_t increase_limit[]){
+	if(osd_select > 1) {
+		osd_select = 1;	//limit osd select variable from accumulating past 1 columns of adjustable items
+		osd_menu_phase = 1; //repaint the screen again
+	}
+	if (osd_cursor <= rows && osd_select > 0){
+		uint8_t adjust_tracker = osd_cursor-1;
+		uint8_t i = *pointer[adjust_tracker];
+		if (increase_osd_value && i != increase_limit[adjust_tracker])  {	//limits need to be 11 for arming, 14 for everything else on flight modes
+			i++;
+			*pointer[adjust_tracker] = i;
+			osd_menu_phase = 1; //repaint the screen again
+		}
+		if (decrease_osd_value && i != 0)  {	//limit is always 0 for an enum
+			i--;
+			*pointer[adjust_tracker] = i;
+			osd_menu_phase = 1; //repaint the screen again
 		}
 		increase_osd_value = 0;
 		decrease_osd_value = 0;

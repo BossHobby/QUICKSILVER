@@ -16,6 +16,7 @@ void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_
 void osd_encoded_adjust_callsign(void);
 
 const char* get_aux_status (int input);
+const char* get_vtx_status(int input);
 vector_t *get_pid_term(uint8_t term);
 vector_t *get_sw_rate_term(uint8_t term);
 vector_t *get_bf_rate_term(uint8_t term);
@@ -23,5 +24,5 @@ vector_t *get_stick_profile_term(uint8_t term);
 
 void osd_vector_adjust ( vector_t *pointer, uint8_t rows, uint8_t columns, uint8_t special_case, const float adjust_limit[rows*columns][2]);
 void osd_float_adjust ( float *pointer[],  uint8_t rows, uint8_t columns, const float adjust_limit[rows*columns][2], float adjust_amount);
-void osd_enum_adjust(uint8_t *pointer, uint8_t rows, const uint8_t increase_limit[]);
+void osd_enum_adjust(uint8_t *pointer[], uint8_t rows, const uint8_t increase_limit[]);
 void osd_mixed_data_adjust(float *pointer[], uint8_t *pointer2[], uint8_t rows, uint8_t columns, const float adjust_limit[rows*columns][2], float adjust_amount);

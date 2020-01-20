@@ -11,6 +11,7 @@
 #include "util.h"
 #include "rx.h"
 #include "filter.h"
+#include "vtx.h"
 #include "debug.h"
 
 
@@ -42,6 +43,7 @@ BIT
 
 //Flash Variables - 32bit					# of osd elements and flash memory start position in defines.h
 extern profile_t profile;
+extern vtx_settings_t vtx_settings;
 
 //pointers to flash variable array
 unsigned long *callsign1 = profile.osd.elements;
@@ -860,7 +862,7 @@ void osd_display(void) {
 	  last_display_phase = 1;
 	  print_osd_menu_strings(3, 2, pid_profiles_labels, pid_profiles_positions);
 	  if (osd_menu_phase == 4)osd_submenu_select (&profile.pid.pid_profile, 2 , pid_submenu_map);
-    break;
+      break;
 
   case 4:		//pids profiles
 	  last_display_phase = 3;
@@ -868,51 +870,53 @@ void osd_display(void) {
 	  else print_osd_menu_strings(8, 4, pid_profile2_labels, pid_profile_positions);
 	  print_osd_adjustable_vectors(BF_PIDS, 8, 9, get_pid_term(pid_profile_data_index[osd_menu_phase-9][0]), pid_profile_data_index, pid_profile_grid, pid_profile_data_positions);
 	  if (osd_menu_phase == 18) osd_vector_adjust(get_pid_term(osd_cursor), 3, 3, BF_PIDS, pid_profile_adjust_limits);
-    break;
+      break;
 
   case 5:		//filters menu
 	  last_display_phase = 1;
 	  print_osd_menu_strings(3, 2, filter_labels, filter_positions);
 	  if (osd_menu_phase == 4) osd_select_menu_item(2 , filter_submenu_map, SUB_MENU);
-    break;
+      break;
 
   case 6:		//main rates menu
 	  last_display_phase = 1;
 	  print_osd_menu_strings(3, 2, rates_profile_labels, rates_profile_positions);
 	  if (osd_menu_phase == 4)osd_submenu_select (&profile.rate.mode, 2 , rates_submenu_map);
-    break;
+      break;
 
   case 7:		//silverware rates submenu
 	  last_display_phase = 6;
 	  print_osd_menu_strings(8, 4, sw_rates_labels, sw_rates_positions);
 	  print_osd_adjustable_vectors(SW_RATES, 8, 9, get_sw_rate_term(sw_rates_data_index[osd_menu_phase-9][0]), sw_rates_data_index, sw_rates_grid, sw_rates_data_positions);
 	  if (osd_menu_phase == 18) osd_vector_adjust(get_sw_rate_term(osd_cursor), 3, 3, SW_RATES, sw_rates_adjust_limits);
-    break;
+      break;
 
   case 8:		//betaflight rates submenu
 	  last_display_phase = 6;
 	  print_osd_menu_strings(8, 4, bf_rates_labels, bf_rates_positions);
 	  print_osd_adjustable_vectors(ROUNDED, 8, 9, get_bf_rate_term(bf_rates_data_index[osd_menu_phase-9][0]), bf_rates_data_index, bf_rates_grid, bf_rates_data_positions);
 	  if (osd_menu_phase == 18) osd_vector_adjust(get_bf_rate_term(osd_cursor), 3, 3, ROUNDED, bf_rates_adjust_limits);
-    break;
+      break;
 
   case 9:		//flight modes menu
 	  last_display_phase = 1;
 	  print_osd_menu_strings(12, 11, flight_modes_labels, flight_modes_positions);
 	  print_osd_adjustable_enums (12, 10, get_aux_status(profile.channel.aux[flight_modes_aux_items[osd_menu_phase-13]]), flight_modes_grid, flight_modes_data_positions);
-	  if (osd_menu_phase==23)osd_enum_adjust(&profile.channel.aux[flight_modes_aux_items[osd_cursor-1]], 10, flight_modes_aux_limits);
-    break;
+	  if (osd_menu_phase==23)osd_enum_adjust(flight_modes_ptr, 10, flight_modes_aux_limits);
+      break;
 
   case 10:		//osd elements menu
 	  last_display_phase = 1;
 	  print_osd_menu_strings(5, 4, osd_elements_menu_labels, osd_elements_menu_positions);
 	  if (osd_menu_phase == 6) osd_select_menu_item(4,osd_elements_map, SUB_MENU);
-    break;
+      break;
 
   case 11:		//vtx
 	  last_display_phase = 1;
-	  print_osd_menu_strings(3, 2, vtx_temp_labels, vtx_temp_positions);
-    break;
+	  print_osd_menu_strings(6, 5, vtx_labels, vtx_positions);
+	  print_osd_adjustable_enums(6, 4, get_vtx_status(osd_menu_phase-7), vtx_grid, vtx_data_positions);
+	  if (osd_menu_phase == 11) osd_enum_adjust(vtx_ptr, 4, vtx_limits);
+      break;
 
   case 12:		//special features
 	  last_display_phase = 1;

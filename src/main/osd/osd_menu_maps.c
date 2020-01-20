@@ -2,8 +2,10 @@
 #include "osd_menu_maps.h"
 #include "profile.h"
 #include "filter.h"
+#include "vtx.h"
 
 extern profile_t profile;
+extern vtx_settings_t vtx_settings;
 
 //main menu maps
 const char main_menu_labels[10][21] = {"MENU","VTX","PIDS","FILTERS","RATES","FLIGHT MODES","OSD ELEMENTS","SPECIAL FEATURES","SETUP WIZARD","SAVE AND EXIT"};
@@ -56,6 +58,7 @@ const uint8_t bf_rates_data_positions[9][2] = { {13, 6},{18, 6},{23, 6},{13, 7},
 const float bf_rates_adjust_limits[9][2] = { {0, 3.0}, {0, 3.0}, {0, 3.0}, {0, 3.0}, {0, 3.0}, {0, 3.0}, {0, 0.99}, {0, 0.99}, {0, 0.99} };
 
 //flight modes map
+uint8_t *flight_modes_ptr[10] = {&profile.channel.aux[0], &profile.channel.aux[1], &profile.channel.aux[2], &profile.channel.aux[3], &profile.channel.aux[4], &profile.channel.aux[5], &profile.channel.aux[9], &profile.channel.aux[10], &profile.channel.aux[11], &profile.channel.aux[12]};
 const char flight_modes_labels[12][21] = {"FLIGHT MODES","ARMING","IDLE UP","LEVELMODE","RACEMODE","HORIZON","STICK BOOST","BUZZER","TURTLE","MOTOR TEST", "RSSI" ,"SAVE AND EXIT"};
 const uint8_t flight_modes_positions[12][2] = { {9, 1},{4, 2},{4, 3},{4, 4},{4, 5},{4, 6},{4, 7},{4, 8},{4, 9},{4, 10},{4, 11},{4, 14} };
 const uint8_t flight_modes_data_positions[10][2] = { {17, 2}, {17, 3}, {17, 4}, {17, 5}, {17, 6}, {17, 7}, {17, 8}, {17, 9}, {17, 10}, {17, 11} };
@@ -97,6 +100,13 @@ const uint8_t callsign_shift_index[20][2] = { {1, 0} , {1, 8} , {1, 16} , {1, 24
 //vtx submenu map
 const char vtx_temp_labels[3][21] = { {"VTX CONTROLS"},{"UNDER"},{"DEVELOPMENT"} };
 const uint8_t vtx_temp_positions[3][2] = { {9, 1}, {7, 4}, {7,5} };
+//vtx menu map
+uint8_t *vtx_ptr[4] = {&vtx_settings.band, &vtx_settings.channel, &vtx_settings.power_level, &vtx_settings.pit_mode};
+const char vtx_labels[6][21] = {"VTX CONTROLS","BAND","CHANNEL","POWER LEVEL","PITMODE","SAVE AND EXIT"};
+const uint8_t vtx_positions[6][2] = { {9, 1},{4, 4},{4, 5},{4, 6},{4, 7},{4, 14} };
+const uint8_t vtx_data_positions[4][2] = { {17, 4}, {17, 5}, {17, 6}, {17, 7} };
+const uint8_t vtx_limits[4] = {4, 7, 3, 1};
+const uint8_t vtx_grid[4][2] = { {1, 1}, {1, 2}, {1, 3}, {1, 4} };
 
 //special features menu map
 const char special_features_labels[8][21] = { {"SPECIAL FEATURES"},{"STICK BOOST"},{"MOTOR BOOST"},{"PID MODIFIERS"},{"DIGITAL IDLE"},{"LOW BATTERY"},{"LEVEL MODE"},{"TURTLE THROTTLE"} };

@@ -51,6 +51,7 @@ extern const uint8_t bf_rates_data_positions[9][2];
 extern const float bf_rates_adjust_limits[9][2];
 
 //flight modes map
+uint8_t *flight_modes_ptr[10];
 extern const char flight_modes_labels[12][21];
 extern const uint8_t flight_modes_positions[12][2];
 extern const uint8_t flight_modes_data_positions[10][2];
@@ -92,6 +93,13 @@ extern const uint8_t callsign_shift_index[20][2];
 //vtx submenu map
 extern const char vtx_temp_labels[3][21];
 extern const uint8_t vtx_temp_positions[3][2];
+//vtx menu map
+uint8_t *vtx_ptr[4];
+const char vtx_labels[6][21];
+const uint8_t vtx_positions[6][2];
+const uint8_t vtx_data_positions[4][2];
+const uint8_t vtx_limits[4];
+const uint8_t vtx_grid[4][2];
 
 //special features menu map
 extern const char special_features_labels[8][21];
