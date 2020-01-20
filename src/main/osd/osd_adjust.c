@@ -32,6 +32,9 @@ void osd_save_exit(void){
     	last_osd_cursor[i] = 0;
     }
     osd_display_phase = 0;
+    //update vtx settings
+    vtx_set(&vtx_settings);
+    //check for fc reboot request
 	#ifdef FLASH_SAVE1
     extern int pid_gestures_used;
     extern int ledcommand;
@@ -50,9 +53,6 @@ void osd_save_exit(void){
     extern unsigned long lastlooptime;
     lastlooptime = gettime();
     #endif
-    //update vtx settings
-    vtx_set(&vtx_settings);
-    //check for fc reboot request
     if(reboot_fc_requested) NVIC_SystemReset();
 }
 
