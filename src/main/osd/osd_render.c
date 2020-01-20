@@ -151,12 +151,6 @@ void osd_display_reset(void) {
   last_lowbatt_state3 = 2;
 }
 
-void osd_clear_screen(void){
-	osd_clear();
-	extern unsigned long lastlooptime;
-	lastlooptime = gettime();
-}
-
 uint8_t user_select(uint8_t active_elements, uint8_t total_elements){
     if (osd_cursor < 1) osd_cursor = 1;
     if (osd_cursor > active_elements) osd_cursor = active_elements;
@@ -561,8 +555,7 @@ void print_osd_menu_strings (uint8_t string_element_qty, uint8_t active_element_
 	if (osd_menu_phase >  string_element_qty)
         return;
     if (osd_menu_phase == 0){
-    	osd_clear_screen();
-        osd_menu_phase++;
+    	if(osd_runtime_screen_clear()) osd_menu_phase++;
         return;
     }
     osd_print(element_names[osd_menu_phase-1], user_select(active_element_qty, string_element_qty), print_position[osd_menu_phase-1][0], print_position[osd_menu_phase-1][1]);
@@ -679,8 +672,7 @@ void osd_display(void) {
   switch (osd_display_phase) //phase starts at 2, RRR gesture subtracts 1 to enter the menu, RRR again or DDD subtracts 1 to clear the screen and return to regular display
   {
   case 0: //osd screen clears, resets to regular display, and resets wizard and menu starting points
-    osd_display_reset();
-    osd_clear_screen();
+    if(osd_runtime_screen_clear()) osd_display_reset();
     break; //screen has been cleared for this loop - break out of display function
 
   case 1:                //osd menu is active
@@ -693,8 +685,7 @@ void osd_display(void) {
     	last_display_phase = 2;
     	switch (osd_wizard_phase) {
     	case 0:
-    		osd_clear_screen();
-    		osd_wizard_phase++;
+    		if(osd_runtime_screen_clear()) osd_wizard_phase++;;
     		break;
     	case 1:
     		osd_print("SETUP WIZARD", INVERT, 9, 1);

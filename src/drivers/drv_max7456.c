@@ -486,6 +486,22 @@ void osd_clear(void) {
   }
 }
 
+uint8_t osd_runtime_screen_clear(void) {
+	static uint8_t clr_col = 0;
+	static uint8_t clr_row = 0;
+	osd_print("               ", TEXT, clr_col, clr_row);
+	clr_row++;
+	if (clr_row > MAXROWS){
+		clr_row = 0;
+		clr_col += 15;
+		if (clr_col > 15){
+			clr_col = 0;
+			return 1;
+		}
+	}
+	return 0;
+}
+
 // set the video output system PAL /NTSC
 void osd_setsystem(uint8_t sys) {
   uint8_t x = max7456_dma_spi_read(VM0_R);
