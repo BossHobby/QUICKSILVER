@@ -35,9 +35,9 @@ typedef enum {
 } vtx_power_level_t;
 
 typedef enum {
-  VTX_PIT_MODE_NO_SUPPORT,
   VTX_PIT_MODE_OFF,
   VTX_PIT_MODE_ON,
+  VTX_PIT_MODE_NO_SUPPORT,
 
   VTX_PIT_MODE_MAX,
 } vtx_pit_mode_t;
