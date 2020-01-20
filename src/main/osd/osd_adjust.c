@@ -16,6 +16,7 @@ extern uint8_t last_osd_cursor[6];
 extern uint8_t osd_select;
 extern uint8_t increase_osd_value;
 extern uint8_t decrease_osd_value;
+extern uint8_t reboot_fc_requested;
 extern int flash_feature_1; //currently used for auto entry into wizard menu
 extern profile_t profile;
 
@@ -47,6 +48,8 @@ void osd_save_exit(void){
     extern unsigned long lastlooptime;
     lastlooptime = gettime();
     #endif
+    //check for fc reboot request
+    if(reboot_fc_requested) NVIC_SystemReset();
 }
 
 uint8_t last_cursor_array_stuffer(uint8_t cursor, uint8_t add_new){  	//where add_new can be either STORE_VALUE or RETURN_VALUE
@@ -310,35 +313,6 @@ void osd_float_adjust ( float *pointer[],  uint8_t rows, uint8_t columns, const 
 	}
 }
 
-void osd_enum_adjust_depreciated(uint8_t *pointer, uint8_t rows, const uint8_t increase_limit[]){
-	if(osd_select > 1) {
-		osd_select = 1;	//limit osd select variable from accumulating past 1 columns of adjustable items
-		osd_menu_phase = 1; //repaint the screen again
-	}
-	if (osd_cursor <= rows){
-		if (osd_select == 1){
-			uint8_t i = *pointer;
-			if (increase_osd_value && i != increase_limit[osd_cursor-1])  {	//limits need to be 11 for arming, 14 for everything else on flight modes
-				i++;
-				*pointer = i;
-				osd_menu_phase = 1; //repaint the screen again
-			}
-			if (decrease_osd_value && i != 0)  {	//limit is always 0 for an enum
-				i--;
-				*pointer = i;
-				osd_menu_phase = 1; //repaint the screen again
-			}
-		}
-		increase_osd_value = 0;
-		decrease_osd_value = 0;
-	}
-	if (osd_cursor == rows + 1){
-		if (osd_select == 1){
-			osd_save_exit();
-		}
-	}
-}
-
 void osd_enum_adjust(uint8_t *pointer[], uint8_t rows, const uint8_t increase_limit[]){
 	if(osd_select > 1) {
 		osd_select = 1;	//limit osd select variable from accumulating past 1 columns of adjustable items
@@ -367,7 +341,7 @@ void osd_enum_adjust(uint8_t *pointer[], uint8_t rows, const uint8_t increase_li
 	}
 }
 
-void osd_mixed_data_adjust(float *pointer[], uint8_t *pointer2[], uint8_t rows, uint8_t columns, const float adjust_limit[rows*columns][2], float adjust_amount){
+void osd_mixed_data_adjust(float *pointer[], uint8_t *pointer2[], uint8_t rows, uint8_t columns, const float adjust_limit[rows*columns][2], float adjust_amount, const uint8_t reboot_request[rows*columns]){
 	if (osd_select > columns) {
 		osd_select = columns;
 		osd_menu_phase = 1; //repaint the screen again
@@ -386,11 +360,13 @@ void osd_mixed_data_adjust(float *pointer[], uint8_t *pointer2[], uint8_t rows, 
 				i++;
 				*pointer2[adjust_tracker] = i;
 				osd_menu_phase = 1; //repaint the screen again
+				if (reboot_request[adjust_tracker] == 1) reboot_fc_requested = 1;
 			}
 			if (decrease_osd_value && i != 0)  {	//limit is always 0 for an enum or uint8_t
 				i--;
 				*pointer2[adjust_tracker] = i;
 				osd_menu_phase = 1; //repaint the screen again
+				if (reboot_request[adjust_tracker] == 1) reboot_fc_requested = 1;
 			}
 		}
 		increase_osd_value = 0;

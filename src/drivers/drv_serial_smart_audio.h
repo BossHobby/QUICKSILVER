@@ -8,6 +8,8 @@ typedef enum {
   SA_CMD_SET_CHANNEL = 0x03,
   SA_CMD_SET_FREQUENCY = 0x04,
   SA_CMD_SET_MODE = 0x05,
+  SA_CMD_GET_SETTINGS_V2 = 0x9,
+  SA_CMD_GET_SETTINGS_V21 = 0x11,
 } smart_audio_cmd_t;
 
 typedef enum {

@@ -132,6 +132,7 @@ uint8_t last_osd_cursor[6];
 uint8_t osd_select;
 uint8_t increase_osd_value;
 uint8_t decrease_osd_value;
+uint8_t reboot_fc_requested = 0;
 #define MAIN_MENU 1
 #define SUB_MENU 0
 
@@ -1031,21 +1032,21 @@ void osd_display(void) {
   	  last_display_phase = 5;
   	  print_osd_menu_strings(6, 5, gyrofilter_labels, gyrofilter_positions);
   	  print_osd_mixed_data(6, 4, gyrofilter_ptr, gyrofilter_ptr2, gyrofilter_type_labels, gyrofilter_grid, gyrofilter_data_positions, 0);
-  	  if (osd_menu_phase == 11) osd_mixed_data_adjust(gyrofilter_ptr, gyrofilter_ptr2, 4, 1, gyrofilter_adjust_limits, 10.0);
+  	  if (osd_menu_phase == 11) osd_mixed_data_adjust(gyrofilter_ptr, gyrofilter_ptr2, 4, 1, gyrofilter_adjust_limits, 10.0, gyrofilter_reboot_request);
   	  break;
 
   case 29:		//edit dterm filters
   	  last_display_phase = 5;
   	  print_osd_menu_strings(9, 8, dtermfilter_labels, dtermfilter_positions);
   	  print_osd_mixed_data(9, 7, dtermfilter_ptr, dtermfilter_ptr2, dtermfilter_type_labels, dtermfilter_grid, dtermfilter_data_positions, 0);
-  	  if (osd_menu_phase == 17) osd_mixed_data_adjust(dtermfilter_ptr, dtermfilter_ptr2, 7, 1, dtermfilter_adjust_limits, 10.0);
+  	  if (osd_menu_phase == 17) osd_mixed_data_adjust(dtermfilter_ptr, dtermfilter_ptr2, 7, 1, dtermfilter_adjust_limits, 10.0, dtermfilter_reboot_request);
   	  break;
 
   case 30:		//edit pid modifiers
   	  last_display_phase = 12;
   	  print_osd_menu_strings(6, 5, pidmodify_labels, pidmodify_positions);
   	  print_osd_mixed_data(6, 4, pidmodify_ptr, pidmodify_ptr2, pidmodify_type_labels, pidmodify_grid, pidmodify_data_positions, 2);
-  	  if (osd_menu_phase == 11) osd_mixed_data_adjust(pidmodify_ptr, pidmodify_ptr2, 4, 1, pidmodify_adjust_limits, 0.05);
+  	  if (osd_menu_phase == 11) osd_mixed_data_adjust(pidmodify_ptr, pidmodify_ptr2, 4, 1, pidmodify_adjust_limits, 0.05, pidmodify_reboot_request);
   	  break;
   }
 if (osd_display_phase !=2 && rx_aux_on(AUX_ARMING)) binding_while_armed = 1;	//final safety check to disallow arming during OSD operation

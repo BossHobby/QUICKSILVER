@@ -191,6 +191,7 @@ const float turtlethrottle_adjust_limits[1][2];
 //static float pointer_redirect;
 float *gyrofilter_ptr[4];
 uint8_t *gyrofilter_ptr2[4];
+const uint8_t gyrofilter_reboot_request[4];
 const char gyrofilter_labels[6][21];
 const char gyrofilter_type_labels[3][21];
 const uint8_t gyrofilter_positions[6][2];
@@ -201,6 +202,7 @@ const float gyrofilter_adjust_limits[4][2];
 //dterm filter map
 float *dtermfilter_ptr[7];
 uint8_t *dtermfilter_ptr2[7];
+const uint8_t dtermfilter_reboot_request[7];
 const char dtermfilter_labels[9][21];
 const char dtermfilter_type_labels[3][21];
 const uint8_t dtermfilter_positions[9][2];
@@ -211,6 +213,7 @@ const float dtermfilter_adjust_limits[7][2];
 //pid modifiers map
 float *pidmodify_ptr[4];
 uint8_t *pidmodify_ptr2[4];
+const uint8_t pidmodify_reboot_request[4];
 const char pidmodify_labels[6][21];
 const char pidmodify_type_labels[2][21];
 const uint8_t pidmodify_positions[6][2];

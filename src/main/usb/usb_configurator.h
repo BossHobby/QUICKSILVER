@@ -22,7 +22,7 @@ typedef enum {
   QUIC_CMD_SET,
   QUIC_CMD_LOG,
   QUIC_CMD_CAL_IMU,
-  QUIC_CMD_BLACKBOX,
+  QUIC_CMD_BLACKBOX
 } quic_command;
 
 typedef enum {
@@ -37,7 +37,8 @@ typedef enum {
   QUIC_VAL_DEFAULT_PROFILE,
   QUIC_VAL_BLACKBOX_RATE,
   QUIC_VAL_PID_RATE_PRESETS,
-  QUIC_VAL_VTX_SETTINGS
+  QUIC_VAL_VTX_SETTINGS,
+  QUIC_VAL_OSD_FONT
 } quic_values;
 
 void usb_process_msp();
