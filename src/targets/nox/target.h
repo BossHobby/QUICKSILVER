@@ -33,12 +33,14 @@
 //#define DISABLE_GYRO_CHECK
 
 //RADIO
-#define USART_INVERTER_PIN GPIO_Pin_14	//UART 2
+#define USART_INVERTER_PIN GPIO_Pin_14 //UART 2
 #define USART_INVERTER_PORT GPIOC
 
 #define USART_PORTS \
   USART1_PB7PB6     \
   USART2_PA3PA2
+
+#define ENABLE_SMART_AUDIO
 
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
 #define RX_USART USART_PORT2
