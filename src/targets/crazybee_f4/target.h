@@ -45,6 +45,8 @@
   USART1_PA10PA9    \
   USART2_PA3PA2
 
+#define ENABLE_SMART_AUDIO
+
 #if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
 #define RX_USART USART_PORT2
 #define SOFTSPI_NONE
@@ -88,4 +90,3 @@
 #define MOTOR_PIN1 MOTOR_PIN_PB8
 #define MOTOR_PIN2 MOTOR_PIN_PB10
 #define MOTOR_PIN3 MOTOR_PIN_PB6
-
