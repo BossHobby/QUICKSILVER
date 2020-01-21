@@ -83,7 +83,7 @@ static uint8_t crc8_data(const uint8_t *data, const int8_t len) {
 
 void serial_smart_audio_send_data(uint8_t *data, uint32_t size) {
   for (uint32_t i = 0; i < size; i++) {
-    for (uint32_t timeout = 0x10000; USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET;) {
+    for (uint32_t timeout = 0x2000; USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET;) {
       if (!timeout--) {
         quic_debugf("SMART_AUDIO: send timeout");
         return;
@@ -95,7 +95,7 @@ void serial_smart_audio_send_data(uint8_t *data, uint32_t size) {
 }
 
 uint8_t serial_smart_audio_read_byte() {
-  for (uint32_t timeout = 0x10000; USART_GetFlagStatus(USART.channel, USART_FLAG_RXNE) == RESET;) {
+  for (uint32_t timeout = 0x2000; USART_GetFlagStatus(USART.channel, USART_FLAG_RXNE) == RESET;) {
     if (!timeout--) {
       quic_debugf("SMART_AUDIO: read timeout");
       return 0;

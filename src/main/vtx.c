@@ -39,7 +39,7 @@ uint16_t vtx_frequency_from_channel(vtx_band_t band, vtx_channel_t channel) {
 
 #ifdef ENABLE_SMART_AUDIO
 #define VTX_SET_DELAY 50000
-#define SMART_AUDIO_CONNECTION_TRIES 10
+#define SMART_AUDIO_CONNECTION_TRIES 3
 
 extern smart_audio_settings_t smart_audio_settings;
 uint8_t smart_audio_detected = 0;
