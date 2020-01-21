@@ -27,7 +27,7 @@ extern const float pid_profile_adjust_limits[9][2];
 //filters submenu map
 extern const char filter_labels[3][21];
 extern const uint8_t filter_positions[3][2];
-const uint8_t filter_submenu_map[2];
+extern const uint8_t filter_submenu_map[2];
 
 //rates submenu map
 extern const char rates_profile_labels[3][21];
@@ -51,7 +51,7 @@ extern const uint8_t bf_rates_data_positions[9][2];
 extern const float bf_rates_adjust_limits[9][2];
 
 //flight modes map
-uint8_t *flight_modes_ptr[10];
+extern uint8_t *flight_modes_ptr[10];
 extern const char flight_modes_labels[12][21];
 extern const uint8_t flight_modes_positions[12][2];
 extern const uint8_t flight_modes_data_positions[10][2];
@@ -91,15 +91,15 @@ extern const uint8_t osd_callsign_edit_data_positions[20][2];
 extern const uint8_t callsign_shift_index[20][2];
 
 //vtx submenu map
-extern const char vtx_temp_labels[3][21];
-extern const uint8_t vtx_temp_positions[3][2];
+extern const char vtx_na_labels[3][21];
+extern const uint8_t vtx_na_positions[3][2];
 //vtx menu map
-uint8_t *vtx_ptr[4];
-const char vtx_labels[6][21];
-const uint8_t vtx_positions[6][2];
-const uint8_t vtx_data_positions[4][2];
-const uint8_t vtx_limits[4];
-const uint8_t vtx_grid[4][2];
+extern uint8_t *vtx_ptr[4];
+extern const char vtx_labels[6][21];
+extern const uint8_t vtx_positions[6][2];
+extern const uint8_t vtx_data_positions[4][2];
+extern const uint8_t vtx_limits[4];
+extern const uint8_t vtx_grid[4][2];
 
 //special features menu map
 extern const char special_features_labels[8][21];
@@ -163,12 +163,12 @@ extern const uint8_t torqueboost_data_positions[1][2];
 extern const float torqueboost_adjust_limits[1][2];
 
 //throttle boost map
-float *throttleboost_ptr[1];
-const char throttleboost_labels[3][21];
-const uint8_t throttleboost_positions[3][2];
-const uint8_t throttleboost_grid [1][2];
-const uint8_t throttleboost_data_positions[1][2];
-const float throttleboost_adjust_limits[1][2];
+extern float *throttleboost_ptr[1];
+extern const char throttleboost_labels[3][21];
+extern const uint8_t throttleboost_positions[3][2];
+extern const uint8_t throttleboost_grid [1][2];
+extern const uint8_t throttleboost_data_positions[1][2];
+extern const float throttleboost_adjust_limits[1][2];
 
 //digital idle map
 extern float *motoridle_ptr[1];
@@ -179,44 +179,44 @@ extern const uint8_t motoridle_data_positions[1][2];
 extern const float motoridle_adjust_limits[1][2];
 
 //turtle map
-float *turtlethrottle_ptr[1];
-const char turtlethrottle_labels[3][21];
-const uint8_t turtlethrottle_positions[3][2];
-const uint8_t turtlethrottle_grid [1][2];
-const uint8_t turtlethrottle_data_positions[1][2];
-const float turtlethrottle_adjust_limits[1][2];
+extern float *turtlethrottle_ptr[1];
+extern const char turtlethrottle_labels[3][21];
+extern const uint8_t turtlethrottle_positions[3][2];
+extern const uint8_t turtlethrottle_grid [1][2];
+extern const uint8_t turtlethrottle_data_positions[1][2];
+extern const float turtlethrottle_adjust_limits[1][2];
 
 //gyro filter map
 #define POINTER_REDIRECT -999.0f
 //static float pointer_redirect;
-float *gyrofilter_ptr[4];
-uint8_t *gyrofilter_ptr2[4];
-const uint8_t gyrofilter_reboot_request[4];
-const char gyrofilter_labels[6][21];
-const char gyrofilter_type_labels[3][21];
-const uint8_t gyrofilter_positions[6][2];
-const uint8_t gyrofilter_grid[4][2];
-const uint8_t gyrofilter_data_positions[4][2];
-const float gyrofilter_adjust_limits[4][2];
+extern float *gyrofilter_ptr[4];
+extern uint8_t *gyrofilter_ptr2[4];
+extern const uint8_t gyrofilter_reboot_request[4];
+extern const char gyrofilter_labels[6][21];
+extern const char gyrofilter_type_labels[3][21];
+extern const uint8_t gyrofilter_positions[6][2];
+extern const uint8_t gyrofilter_grid[4][2];
+extern const uint8_t gyrofilter_data_positions[4][2];
+extern const float gyrofilter_adjust_limits[4][2];
 
 //dterm filter map
-float *dtermfilter_ptr[7];
-uint8_t *dtermfilter_ptr2[7];
-const uint8_t dtermfilter_reboot_request[7];
-const char dtermfilter_labels[9][21];
-const char dtermfilter_type_labels[3][21];
-const uint8_t dtermfilter_positions[9][2];
-const uint8_t dtermfilter_grid[7][2];
-const uint8_t dtermfilter_data_positions[7][2];
-const float dtermfilter_adjust_limits[7][2];
+extern float *dtermfilter_ptr[7];
+extern uint8_t *dtermfilter_ptr2[7];
+extern const uint8_t dtermfilter_reboot_request[7];
+extern const char dtermfilter_labels[9][21];
+extern const char dtermfilter_type_labels[3][21];
+extern const uint8_t dtermfilter_positions[9][2];
+extern const uint8_t dtermfilter_grid[7][2];
+extern const uint8_t dtermfilter_data_positions[7][2];
+extern const float dtermfilter_adjust_limits[7][2];
 
 //pid modifiers map
-float *pidmodify_ptr[4];
-uint8_t *pidmodify_ptr2[4];
-const uint8_t pidmodify_reboot_request[4];
-const char pidmodify_labels[6][21];
-const char pidmodify_type_labels[2][21];
-const uint8_t pidmodify_positions[6][2];
-const uint8_t pidmodify_grid [4][2];
-const uint8_t pidmodify_data_positions[4][2];
-const float pidmodify_adjust_limits[4][2];
+extern float *pidmodify_ptr[4];
+extern uint8_t *pidmodify_ptr2[4];
+extern const uint8_t pidmodify_reboot_request[4];
+extern const char pidmodify_labels[6][21];
+extern const char pidmodify_type_labels[2][21];
+extern const uint8_t pidmodify_positions[6][2];
+extern const uint8_t pidmodify_grid [4][2];
+extern const uint8_t pidmodify_data_positions[4][2];
+extern const float pidmodify_adjust_limits[4][2];

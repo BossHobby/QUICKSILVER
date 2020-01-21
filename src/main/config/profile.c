@@ -471,6 +471,7 @@ const profile_t default_profile = {
             0x6E0,
             0x320,
             0x680,
+			0x84,
         },
     },
 };

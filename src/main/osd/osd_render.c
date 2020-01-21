@@ -841,7 +841,16 @@ void osd_display(void) {
 		  osd_display_element++;
 		  break;
 
-	  case 12:  //end of regular display - display_trigger counter sticks here till it wraps
+	  case 12:
+		  if (osd_decode(*osd_vtx, ACTIVE) && vtx_settings.detected){
+			  uint8_t osd_vtx_freq[5];
+			  fast_fprint(osd_vtx_freq, 5, vtx_frequency_from_channel(vtx_settings.band, vtx_settings.channel), 0);
+			  osd_print_data(osd_vtx_freq, 5, osd_decode(*osd_vtx, ATTRIBUTE), osd_decode(*osd_vtx, POSITIONX), osd_decode(*osd_vtx, POSITIONY));
+		  }
+		  osd_display_element++;
+		  break;
+
+	  case 13:  //end of regular display - display_trigger counter sticks here till it wraps
 		  display_trigger++;
 		  if (display_trigger == 0) osd_display_element = 1;
 		  break;
@@ -905,9 +914,14 @@ void osd_display(void) {
 
   case 11:		//vtx
 	  last_display_phase = 1;
-	  print_osd_menu_strings(6, 5, vtx_labels, vtx_positions);
-	  print_osd_adjustable_enums(6, 4, get_vtx_status(osd_menu_phase-7), vtx_grid, vtx_data_positions);
-	  if (osd_menu_phase == 11) osd_enum_adjust(vtx_ptr, 4, vtx_limits);
+	  if(vtx_settings.detected){
+		  print_osd_menu_strings(6, 5, vtx_labels, vtx_positions);
+		  print_osd_adjustable_enums(6, 4, get_vtx_status(osd_menu_phase-7), vtx_grid, vtx_data_positions);
+		  if (osd_menu_phase == 11) osd_enum_adjust(vtx_ptr, 4, vtx_limits);
+	  }else{
+		  print_osd_menu_strings(3, 0, vtx_na_labels, vtx_na_positions);
+		  if(osd_select) osd_select = 0;
+	  }
       break;
 
   case 12:		//special features

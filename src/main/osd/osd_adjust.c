@@ -222,7 +222,7 @@ const char* get_aux_status (int input){
 
 const char* get_vtx_status(int input){
 	if (input < 0) return 0;
-	static char* vtx_data_status[4][8] = {{"A","B","E","F","R"}, {"1","2","3","4","5","6","7","8"}, {"25 ","100","250","800"}, {"OFF","ON ","N/A"}};
+	static char* vtx_data_status[4][8] = {{"A","B","E","F","R"}, {"1","2","3","4","5","6","7","8"}, {"1","2","3","4"}, {"OFF","ON ","N/A"}};
 	return vtx_data_status[input][*vtx_ptr[input]];
 }
 
