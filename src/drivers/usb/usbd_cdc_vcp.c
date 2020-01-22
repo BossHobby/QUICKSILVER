@@ -180,18 +180,15 @@ static uint16_t VCP_DataTx(uint8_t *Buf, uint32_t Len) {
         could just check for: USB_CDC_ZLP, but better to be safe
         and wait for any existing transmission to complete.
     */
-
-  for (uint32_t timeout = 1000; timeout && (CDC_Send_FreeBytes() == 0 || USB_Tx_State != 0); --timeout) {
-    __WFI();
-  }
-
   for (uint32_t i = 0; i < Len; i++) {
-    APP_Rx_Buffer[APP_Rx_ptr_in] = Buf[i];
-    APP_Rx_ptr_in = (APP_Rx_ptr_in + 1) % APP_RX_DATA_SIZE;
-
-    for (uint32_t timeout = 1000; timeout && (CDC_Send_FreeBytes() == 0 || USB_Tx_State != 0); --timeout) {
+    for (uint32_t timeout = 100; (CDC_Send_FreeBytes() == 0 || USB_Tx_State != 0); --timeout) {
+      if (timeout == 0) {
+        return USBD_FAIL;
+      }
       __WFI();
     }
+    APP_Rx_Buffer[APP_Rx_ptr_in] = Buf[i];
+    APP_Rx_ptr_in = (APP_Rx_ptr_in + 1) % APP_RX_DATA_SIZE;
   }
 
   return USBD_OK;
@@ -217,7 +214,10 @@ uint32_t CDC_Receive_DATA(uint8_t *recvBuf, uint32_t len) {
 
 uint32_t CDC_Receive_BytesAvailable(void) {
   /* return the bytes available in the receive circular buffer */
-  return APP_Tx_ptr_out > APP_Tx_ptr_in ? APP_TX_DATA_SIZE - APP_Tx_ptr_out + APP_Tx_ptr_in : APP_Tx_ptr_in - APP_Tx_ptr_out;
+  if (APP_Tx_ptr_out > APP_Tx_ptr_in) {
+    return APP_TX_DATA_SIZE - APP_Tx_ptr_out + APP_Tx_ptr_in;
+  }
+  return APP_Tx_ptr_in - APP_Tx_ptr_out;
 }
 
 /**
