@@ -24,8 +24,8 @@ THE SOFTWARE.
 #include <math.h>
 #include <string.h>
 
-#include "defines.h"
 #include "drv_time.h"
+#include "project.h"
 #include "util.h"
 
 float mapf(float x, float in_min, float in_max, float out_min, float out_max) {
@@ -256,4 +256,30 @@ int8_t buf_equal(const uint8_t *str1, size_t len1, const uint8_t *str2, size_t l
 
 int8_t buf_equal_string(const uint8_t *str1, size_t len1, const char *str2) {
   return buf_equal(str1, len1, (const uint8_t *)str2, strlen(str2));
+}
+
+int32_t circular_buffer_write(circular_buffer_t *c, uint8_t data) {
+  uint32_t next = c->head + 1;
+  if (next >= c->size)
+    next = 0;
+
+  if (next == c->tail)
+    return -1;
+
+  c->buffer[c->head] = data;
+  c->head = next;
+  return 0;
+}
+
+int32_t circular_buffer_read(circular_buffer_t *c, uint8_t *data) {
+  if (c->head == c->tail)
+    return -1;
+
+  uint32_t next = c->tail + 1;
+  if (next >= c->size)
+    next = 0;
+
+  *data = c->buffer[c->tail];
+  c->tail = next;
+  return 0;
 }

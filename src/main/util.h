@@ -25,3 +25,13 @@ void limit180(float *);
 
 int8_t buf_equal(const uint8_t *str1, size_t len1, const uint8_t *str2, size_t len2);
 int8_t buf_equal_string(const uint8_t *str1, size_t len1, const char *str2);
+
+typedef struct {
+  uint8_t *const buffer;
+  uint32_t head;
+  uint32_t tail;
+  const uint32_t size;
+} circular_buffer_t;
+
+int32_t circular_buffer_write(circular_buffer_t *c, uint8_t data);
+int32_t circular_buffer_read(circular_buffer_t *c, uint8_t *data);
