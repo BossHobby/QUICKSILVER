@@ -38,7 +38,6 @@ uint16_t vtx_frequency_from_channel(vtx_band_t band, vtx_channel_t channel) {
 }
 
 #ifdef ENABLE_SMART_AUDIO
-#define VTX_SET_DELAY 50000
 #define SMART_AUDIO_CONNECTION_TRIES 3
 
 extern smart_audio_settings_t smart_audio_settings;
@@ -74,8 +73,6 @@ int8_t smart_audio_dac_power_level_index(uint8_t dac) {
 uint8_t has_smart_audio_configured() {
   return serial_smart_audio_port == profile.serial.smart_audio && serial_smart_audio_port != USART_PORT_INVALID;
 }
-#else
-#define VTX_SET_DELAY 0
 #endif
 
 void vtx_init() {
@@ -155,12 +152,8 @@ void vtx_update() {
 }
 
 void vtx_set(vtx_settings_t *vtx) {
-  if (vtx_set_pit_mode(vtx->pit_mode))
-    debug_timer_delay_us(VTX_SET_DELAY);
-
-  if (vtx_set_power_level(vtx->power_level))
-    debug_timer_delay_us(VTX_SET_DELAY);
-
+  vtx_set_pit_mode(vtx->pit_mode);
+  vtx_set_power_level(vtx->power_level);
   vtx_set_frequency(vtx->band, vtx->channel);
 }
 

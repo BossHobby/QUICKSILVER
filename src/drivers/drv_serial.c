@@ -32,6 +32,7 @@ void serial_enable_rcc(usart_ports_t port) {
 #endif
   }
 }
+
 void serial_enable_isr(usart_ports_t port) {
   NVIC_InitTypeDef NVIC_InitStructure;
 
@@ -116,8 +117,17 @@ usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {
 void handle_usart_isr(usart_ports_t channel) {
 #ifdef SERIAL_RX
   extern void RX_USART_ISR(void);
-  if (serial_rx_port == channel)
+  if (serial_rx_port == channel) {
     RX_USART_ISR();
+    return;
+  }
+#endif
+#ifdef ENABLE_SMART_AUDIO
+  extern void smart_audio_uart_isr(void);
+  if (serial_smart_audio_port == channel) {
+    smart_audio_uart_isr();
+    return;
+  }
 #endif
 }
 

@@ -29,4 +29,4 @@ typedef struct {
 } smart_audio_settings_t;
 
 void serial_smart_audio_init(void);
-void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const uint32_t size);
+uint8_t serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const uint32_t size);
