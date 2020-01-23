@@ -183,7 +183,7 @@ static uint16_t VCP_DataTx(uint8_t *Buf, uint32_t Len) {
   for (uint32_t i = 0; i < Len; i++) {
     for (uint32_t timeout = 100; (CDC_Send_FreeBytes() == 0 || USB_Tx_State != 0); --timeout) {
       if (timeout == 0) {
-        return USBD_FAIL;
+        return USBD_OK;
       }
       __WFI();
     }
