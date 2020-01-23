@@ -10,7 +10,8 @@
 
 #ifdef ENABLE_SMART_AUDIO
 
-#define SMART_AUDIO_BAUDRATE 4800
+#define SMART_AUDIO_BAUDRATE_MIN 4650
+#define SMART_AUDIO_BAUDRATE_MAX 4950
 #define SMART_AUDIO_BUFFER_SIZE 512
 
 #define USART usart_port_defs[serial_smart_audio_port]
@@ -26,27 +27,12 @@ static volatile circular_buffer_t smart_audio_rx_buffer = {
 };
 
 static volatile uint8_t transfer_done = 0;
+static uint32_t baud_rate = 4800;
+static uint32_t packets_sent = 0;
+static uint32_t packets_recv = 0;
 
-void serial_smart_audio_enter_tx() {
-  uint32_t tmp = USART.channel->CR1;
-  tmp &= ~(USART_CR1_TE | USART_CR1_RE);
-  tmp |= USART_CR1_TE;
-  USART.channel->CR1 = tmp;
-}
-
-void serial_smart_audio_enter_rx() {
-  uint32_t tmp = USART.channel->CR1;
-  tmp &= ~(USART_CR1_TE | USART_CR1_RE);
-  tmp |= USART_CR1_RE;
-  USART.channel->CR1 = tmp;
-}
-
-void serial_smart_audio_init(void) {
-  serial_smart_audio_port = profile.serial.smart_audio;
-
+void serial_smart_audio_reconfigure() {
   USART_Cmd(USART.channel, DISABLE);
-
-  serial_enable_rcc(serial_smart_audio_port);
 
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
@@ -58,7 +44,7 @@ void serial_smart_audio_init(void) {
   GPIO_PinAFConfig(USART.gpio_port, USART.tx_pin_source, USART.gpio_af);
 
   USART_InitTypeDef USART_InitStructure;
-  USART_InitStructure.USART_BaudRate = SMART_AUDIO_BAUDRATE;
+  USART_InitStructure.USART_BaudRate = baud_rate;
   USART_InitStructure.USART_WordLength = USART_WordLength_8b;
   USART_InitStructure.USART_StopBits = USART_StopBits_2;
   USART_InitStructure.USART_Parity = USART_Parity_No;
@@ -71,24 +57,57 @@ void serial_smart_audio_init(void) {
   USART_ClearITPendingBit(USART.channel, USART_IT_RXNE | USART_IT_TC);
   USART_ITConfig(USART.channel, USART_IT_TC, ENABLE);
   USART_Cmd(USART.channel, ENABLE);
+}
 
+void serial_smart_audio_init(void) {
+  serial_smart_audio_port = profile.serial.smart_audio;
+
+  serial_enable_rcc(serial_smart_audio_port);
+  serial_smart_audio_reconfigure();
   serial_enable_isr(serial_smart_audio_port);
 }
 
 void smart_audio_uart_isr(void) {
+  if (USART_GetITStatus(USART.channel, USART_IT_TC) != RESET) {
+    USART_ClearITPendingBit(USART.channel, USART_IT_TC);
+    USART_ITConfig(USART.channel, USART_IT_RXNE, ENABLE);
+    transfer_done = 1;
+  }
+
   if (USART_GetITStatus(USART.channel, USART_IT_RXNE) != RESET) {
     USART_ClearITPendingBit(USART.channel, USART_IT_RXNE);
     circular_buffer_write(&smart_audio_rx_buffer, USART_ReceiveData(USART.channel));
-  }
-
-  if (USART_GetITStatus(USART.channel, USART_IT_TC) != RESET) {
-    USART_ClearITPendingBit(USART.channel, USART_IT_TC);
-    transfer_done = 1;
+    packets_recv++;
   }
 
   if (USART_GetFlagStatus(USART.channel, USART_FLAG_ORE)) {
     USART_ClearFlag(USART.channel, USART_FLAG_ORE);
   }
+}
+
+void smart_audio_auto_baud() {
+  if (packets_sent < 30) {
+    return;
+  }
+
+  if (((packets_recv * 100) / packets_sent) < 70) {
+    static int8_t direction = 1;
+    if ((direction == 1) && (baud_rate == SMART_AUDIO_BAUDRATE_MAX)) {
+      direction = -1;
+    } else if ((direction == -1 && baud_rate == SMART_AUDIO_BAUDRATE_MIN)) {
+      direction = 1;
+    }
+
+    baud_rate += direction * 50;
+    quic_debugf("SMART_AUDIO: auto baud %d (%d)", baud_rate, direction * 50);
+    serial_smart_audio_reconfigure();
+
+    extern int lastlooptime;
+    lastlooptime = gettime();
+  }
+
+  packets_sent = 0;
+  packets_recv = 0;
 }
 
 #define POLYGEN 0xd5
@@ -130,6 +149,7 @@ void serial_smart_audio_send_data(uint8_t *data, uint32_t size) {
     }
     quic_debugf("SMART_AUDIO: write 0x%x", data[i]);
     USART_SendData(USART.channel, data[i]);
+    packets_sent++;
   }
 }
 
@@ -155,7 +175,6 @@ uint8_t serial_smart_audio_read_byte_crc(uint8_t *crc) {
 uint8_t serial_smart_audio_read_packet() {
   while (transfer_done == 0)
     __WFI();
-  USART_ITConfig(USART.channel, USART_IT_RXNE, ENABLE);
 
   for (uint8_t tries = 0;; tries++) {
     if (tries >= 3) {
@@ -236,29 +255,31 @@ uint8_t serial_smart_audio_read_packet() {
 }
 
 uint8_t serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const uint32_t size) {
-  uint8_t frame_length = 4 + size + 1;
+  uint8_t frame_length = size + 1 + 5;
   uint8_t frame[frame_length];
 
-  frame[0] = 0xAA;
-  frame[1] = 0x55;
-  frame[2] = (cmd << 1) | 0x1;
-  frame[3] = size;
+  frame[0] = 0x00;
+  frame[1] = 0xAA;
+  frame[2] = 0x55;
+  frame[3] = (cmd << 1) | 0x1;
+  frame[4] = size;
   for (uint8_t i = 0; i < size; i++) {
-    frame[i + 4] = payload[i];
+    frame[i + 5] = payload[i];
   }
-  frame[size + 4] = crc8_data(frame, frame_length - 1);
+  frame[size + 5] = crc8_data(frame, frame_length - 1);
 
   for (uint8_t tries = 0; tries < 3; tries++) {
+    smart_audio_auto_baud();
+
     quic_debugf("SMART_AUDIO: send cmd %d (%d)", cmd, size);
     USART_ITConfig(USART.channel, USART_IT_RXNE, DISABLE);
 
-    uint8_t dummy = 0x0;
-    serial_smart_audio_send_data(&dummy, 1);
     serial_smart_audio_send_data(frame, frame_length);
 
     if (serial_smart_audio_read_packet()) {
       return 1;
     }
+    debug_timer_delay_us(100);
   }
 
   return 0;
