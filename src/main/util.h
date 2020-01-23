@@ -33,5 +33,5 @@ typedef struct {
   const uint32_t size;
 } circular_buffer_t;
 
-int32_t circular_buffer_write(circular_buffer_t *c, uint8_t data);
-int32_t circular_buffer_read(circular_buffer_t *c, uint8_t *data);
+uint8_t circular_buffer_write(circular_buffer_t *c, uint8_t data);
+uint8_t circular_buffer_read(circular_buffer_t *c, uint8_t *data);
