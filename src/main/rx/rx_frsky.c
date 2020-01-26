@@ -8,6 +8,10 @@
 
 #if defined(RX_FRSKY) && defined(USE_CC2500)
 
+//Source https://www.rcgroups.com/forums/showpost.php?p=21864861
+
+#define FRSKY_ENABLE_TELEMETRY
+
 #define FRSKY_D_CHANNEL_COUNT 8
 #define FRSKY_D_CHANNEL_SCALING (2.0f / 3)
 
@@ -422,7 +426,6 @@ static uint8_t frsky_d_handle_packet() {
   switch (protocol_state) {
   case STATE_STARTING:
     cc2500_enter_rxmode();
-    cc2500_write_reg(CC2500_FOCCFG, 0x14);
     set_address(0);
     next_channel(1);
     cc2500_strobe(CC2500_SRX);
@@ -430,13 +433,11 @@ static uint8_t frsky_d_handle_packet() {
     protocol_state = STATE_UPDATE;
     break;
   case STATE_UPDATE:
-    cc2500_enter_rxmode();
     frame_had_packet = 0;
     protocol_state = STATE_DATA;
     last_packet_received_time = current_packet_received_time;
     // fallthrough
   case STATE_DATA: {
-
     uint8_t len = packet_size();
     if (len >= 20) {
       cc2500_read_fifo(packet, 20);
@@ -452,16 +453,19 @@ static uint8_t frsky_d_handle_packet() {
         }
 
         if (frame->counter != frame_index) {
+          quic_debugf("FRSKY: frame mismatch %d vs %d", frame->counter, frame_index);
           frame_index = frame->counter;
         }
 
         next_channel(1);
-        cc2500_strobe(CC2500_SRX);
 
+#ifdef FRSKY_ENABLE_TELEMETRY
         if ((frame->counter % 4) == 2) {
           protocol_state = STATE_TELEMETRY;
-          frame_index++;
-        } else {
+        } else
+#endif
+        {
+          cc2500_strobe(CC2500_SRX);
           protocol_state = STATE_UPDATE;
         }
 
@@ -474,7 +478,7 @@ static uint8_t frsky_d_handle_packet() {
         frame_index++;
         ret = 1;
       } else {
-        quic_debugf("FRSKY INVALID PACKET!");
+        quic_debugf("FRSKY: invalid frame");
       }
     }
 
@@ -482,6 +486,7 @@ static uint8_t frsky_d_handle_packet() {
 
     if ((current_packet_received_time - last_packet_received_time) >= max_sync_delay) {
       if (!frame_had_packet) {
+        quic_debugf("FRSKY: frame lost");
         frames_lost++;
         frame_index++;
       }
@@ -489,10 +494,14 @@ static uint8_t frsky_d_handle_packet() {
         cc2500_switch_antenna();
       }
       if (frames_lost >= MAX_MISSING_FRAMES) {
+        quic_debugf("FRSKY: failsafe");
         max_sync_delay = 10 * SYNC_DELAY_MAX;
         failsafe = 1;
       }
 
+      // we could be comming here from STATE_TELEMETRY
+      // make sure we are in rx mode
+      cc2500_enter_rxmode();
       next_channel(1);
       cc2500_strobe(CC2500_SRX);
       protocol_state = STATE_UPDATE;
@@ -523,7 +532,9 @@ static uint8_t frsky_d_handle_packet() {
       cc2500_strobe(CC2500_SIDLE);
       cc2500_write_fifo(telemetry, telemetry[0] + 1);
 
-      protocol_state = STATE_UPDATE;
+      protocol_state = STATE_DATA;
+      last_packet_received_time = current_packet_received_time;
+      frame_index++;
     }
     break;
   }
@@ -648,6 +659,7 @@ void rx_check() {
     }
     break;
   case STATE_BIND_COMPLETE:
+    quic_debugf("FRSKY: bound");
     cc2500_strobe(CC2500_SIDLE);
     rxmode = RXMODE_NORMAL;
     protocol_state = STATE_STARTING;
