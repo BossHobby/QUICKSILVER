@@ -258,7 +258,7 @@ int8_t buf_equal_string(const uint8_t *str1, size_t len1, const char *str2) {
   return buf_equal(str1, len1, (const uint8_t *)str2, strlen(str2));
 }
 
-uint8_t circular_buffer_write(circular_buffer_t *c, uint8_t data) {
+uint8_t circular_buffer_write(volatile circular_buffer_t *c, uint8_t data) {
   uint32_t next = c->head + 1;
   if (next >= c->size)
     next = 0;
@@ -271,7 +271,7 @@ uint8_t circular_buffer_write(circular_buffer_t *c, uint8_t data) {
   return 1;
 }
 
-uint8_t circular_buffer_read(circular_buffer_t *c, uint8_t *data) {
+uint8_t circular_buffer_read(volatile circular_buffer_t *c, uint8_t *data) {
   if (c->head == c->tail)
     return 0;
 

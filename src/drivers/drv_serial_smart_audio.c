@@ -18,7 +18,7 @@
 
 smart_audio_settings_t smart_audio_settings;
 
-static volatile uint8_t smart_audio_rx_data[SMART_AUDIO_BUFFER_SIZE];
+static uint8_t smart_audio_rx_data[SMART_AUDIO_BUFFER_SIZE];
 static volatile circular_buffer_t smart_audio_rx_buffer = {
     .buffer = smart_audio_rx_data,
     .head = 0,
