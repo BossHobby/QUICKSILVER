@@ -25,7 +25,7 @@ int rxmode = RXMODE_BIND;
 int rx_ready = 0;
 int rx_bind_enable = 0;
 
-uint8_t frsky_extract_rssi(uint8_t rssi_raw) {
+uint16_t frsky_extract_rssi(uint8_t rssi_raw) {
   if (rssi_raw >= 128) {
     // adapted to fit better to the original values... FIXME: find real formula
     // return (rssi_raw * 18)/32 - 82;

@@ -120,7 +120,7 @@ static uint16_t frsky_d16_crc(const uint8_t *data, uint8_t len) {
   return crc;
 }
 
-void frsky_d16_set_rc_data() {
+static void frsky_d16_set_rc_data() {
   uint16_t temp_channels[8] = {
       (uint16_t)((packet[10] << 8) & 0xF00) | packet[9],
       (uint16_t)((packet[11] << 4) & 0xFF0) | (packet[10] >> 4),
@@ -194,7 +194,47 @@ uint8_t frsky_d16_is_valid_packet(uint8_t *packet) {
          (frsky_bind.rx_num == 0 || header->rx_num == 0 || frsky_bind.rx_num == header->rx_num);
 }
 
-uint8_t frsky_d16_handle_packet() {
+static uint8_t smart_port_data[128];
+static volatile circular_buffer_t smart_port_buffer = {
+    .buffer = smart_port_data,
+    .head = 0,
+    .tail = 0,
+    .size = 128,
+};
+
+void frsky_d16_write_telemetry(smart_port_payload_t *payload) {
+
+  if (circular_buffer_write(&smart_port_buffer, FSSP_START_STOP) == 0) {
+    return;
+  }
+
+  if (circular_buffer_write(&smart_port_buffer, FSSP_SENSOR_ID1 & 0x1f) == 0) {
+    return;
+  }
+
+  const uint8_t *ptr = payload;
+  for (uint32_t i = 0; i < sizeof(smart_port_payload_t); i++) {
+    const uint8_t c = ptr[i];
+    if (c == FSSP_DLE || c == FSSP_START_STOP) {
+      circular_buffer_write(&smart_port_buffer, FSSP_DLE);
+      circular_buffer_write(&smart_port_buffer, c ^ FSSP_DLE_XOR);
+    } else {
+      circular_buffer_write(&smart_port_buffer, c);
+    }
+  }
+}
+
+static uint8_t frsky_d16_append_telemetry(uint8_t *buf) {
+  uint8_t size = 0;
+  for (; size < 5; size++) {
+    if (circular_buffer_read(&smart_port_buffer, &buf[size]) == 0) {
+      break;
+    }
+  }
+  return size;
+}
+
+static uint8_t frsky_d16_handle_packet() {
   static uint8_t frame_had_packet = 0;
   static uint32_t frames_lost = 0;
 
@@ -234,7 +274,6 @@ uint8_t frsky_d16_handle_packet() {
       if (frsky_d16_is_valid_packet(packet)) {
         last_packet_received_time = current_packet_received_time;
         max_sync_delay = FRSKY_SYNC_DELAY_MAX;
-        //quic_debugf("FRSKY_D16: got frame %d", header->counter);
 
         if (channel_skip) {
           channels_to_skip = header->counter << 2;
@@ -267,7 +306,6 @@ uint8_t frsky_d16_handle_packet() {
     }
 
     if ((current_packet_received_time - last_packet_received_time) >= max_sync_delay) {
-      quic_debugf("FRSKY_D16: failsafe");
       failsafe = 1;
       rx_rssi = 0;
 
@@ -297,9 +335,9 @@ uint8_t frsky_d16_handle_packet() {
       telemetry[2] = frsky_bind.tx_id[1];
       telemetry[3] = packet[3];
       if (even_odd) {
-        telemetry[4] = frsky_extract_rssi(packet[18]) | 0x80;
+        telemetry[4] = (uint8_t)frsky_extract_rssi(packet[18]) | 0x80;
       } else {
-        telemetry[4] = 50 & 0x7f;
+        telemetry[4] = (uint8_t)(vbattfilt * 10) & 0x7f;
       }
       even_odd = even_odd == 1 ? 0 : 1;
 
@@ -323,7 +361,7 @@ uint8_t frsky_d16_handle_packet() {
           out_flag->flag.ack_id = in_flag->flag.packet_id;
           out_flag->flag.packet_id = local_packet_id;
 
-          telemetry[6] = 0;
+          telemetry[6] = frsky_d16_append_telemetry(&telemetry[7]);
 
           local_packet_id = (local_packet_id + 1) % FRSKY_D16_TELEMETRY_SEQUENCE_LENGTH;
         }
