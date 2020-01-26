@@ -1,4 +1,4 @@
-#include "rx.h"
+#include "rx_frsky.h"
 
 #include "drv_cc2500.h"
 #include "drv_time.h"
@@ -7,5 +7,336 @@
 #include "util.h"
 
 #if defined(RX_FRSKY) && defined(USE_CC2500)
+
+#define FRSKY_HOPTABLE_SIZE 47
+
+uint8_t packet[128];
+uint8_t protocol_state = FRSKY_STATE_DETECT;
+
+static uint8_t cal_data[255][3];
+static uint8_t list_length = FRSKY_HOPTABLE_SIZE;
+
+static unsigned long time_tuned_ms;
+
+frsky_bind_data frsky_bind = {{0xff, 0xff}};
+
+int failsafe = 1; // It isn't safe if we haven't checked it!
+int rxmode = RXMODE_BIND;
+int rx_ready = 0;
+int rx_bind_enable = 0;
+
+#ifdef RX_FRSKY_D8
+void frsky_d_set_rc_data();
+uint8_t frsky_d_handle_packet();
+#endif
+
+uint8_t frsky_extract_rssi(uint8_t rssi_raw) {
+  if (rssi_raw >= 128) {
+    // adapted to fit better to the original values... FIXME: find real formula
+    // return (rssi_raw * 18)/32 - 82;
+    return ((((uint16_t)rssi_raw) * 18) >> 5) - 82;
+  } else {
+    return ((((uint16_t)rssi_raw) * 18) >> 5) + 65;
+  }
+}
+
+static uint8_t frsky_dectect(void) {
+  const uint8_t chipPartNum = cc2500_read_reg(CC2500_PARTNUM | CC2500_READ_BURST); //CC2500 read registers chip part num
+  const uint8_t chipVersion = cc2500_read_reg(CC2500_VERSION | CC2500_READ_BURST); //CC2500 read registers chip version
+  if (chipPartNum == 0x80 && chipVersion == 0x03) {
+    return 1;
+  }
+  return 0;
+}
+
+void handle_overflows(void) {
+  // fetch marc status
+  uint8_t marc_state = cc2500_read_reg(CC2500_MARCSTATE) & 0x1F;
+  if (marc_state == 0x11) {
+    // flush rx buf
+    quic_debugf("FRSKY: RX overflow");
+    cc2500_strobe(CC2500_SFRX);
+  } else if (marc_state == 0x16) {
+    // flush tx buf
+    quic_debugf("FRSKY: TX overflow");
+    cc2500_strobe(CC2500_SFTX);
+  }
+}
+
+void set_address(uint8_t is_bind) {
+  cc2500_strobe(CC2500_SIDLE);
+
+  // freq offset
+  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)frsky_bind.offset);
+
+  // never automatically calibrate, po_timeout count = 64
+  // no autotune as (we use our pll map)
+  cc2500_write_reg(CC2500_MCSM0, 0x8);
+
+  cc2500_write_reg(CC2500_ADDR, is_bind ? 0x03 : frsky_bind.tx_id[0]);
+
+  // ADR_CHK, APPEND_STATUS, CRC_AUTOFLUSH
+  cc2500_write_reg(CC2500_PKTCTRL1, 0x0D);
+
+  // FOC_LIMIT 10, FOC_POST_K, FOC_PRE_K 10
+  cc2500_write_reg(CC2500_FOCCFG, 0x16);
+
+  delay(10);
+}
+
+static void set_channel(uint8_t channel) {
+  cc2500_strobe(CC2500_SIDLE);
+
+  cc2500_write_reg(CC2500_FSCAL3, cal_data[channel][0]);
+  cc2500_write_reg(CC2500_FSCAL2, cal_data[channel][1]);
+  cc2500_write_reg(CC2500_FSCAL1, cal_data[channel][2]);
+
+  cc2500_write_reg(CC2500_CHANNR, channel);
+}
+
+uint8_t next_channel(uint8_t skip) {
+  static uint8_t channr = 0;
+
+  channr += skip;
+  while (channr >= list_length) {
+    channr -= list_length;
+  }
+
+  set_channel(frsky_bind.hop_data[channr]);
+
+  // FRSKY D only
+  cc2500_strobe(CC2500_SFRX);
+
+  return channr;
+}
+
+uint8_t packet_size() {
+  if (cc2500_read_gdo0() == 0) {
+    return 0;
+  }
+
+  // there is a bug in the cc2500
+  // see p3 http:// www.ti.com/lit/er/swrz002e/swrz002e.pdf
+  // workaround: read len register very quickly twice:
+
+  // try this 10 times befor giving up:
+  for (uint8_t i = 0; i < 10; i++) {
+    uint8_t len1 = cc2500_read_reg(CC2500_RXBYTES | CC2500_READ_BURST) & 0x7F;
+    uint8_t len2 = cc2500_read_reg(CC2500_RXBYTES | CC2500_READ_BURST) & 0x7F;
+
+    // valid len found?
+    if (len1 == len2) {
+      return len1;
+    }
+  }
+
+  return 0;
+}
+
+static uint8_t read_packet() {
+  uint8_t len = packet_size();
+  if (len == 0) {
+    return 0;
+  }
+  cc2500_read_fifo(packet, len);
+  return len;
+}
+
+static void init_tune_rx(void) {
+  cc2500_write_reg(CC2500_FOCCFG, 0x14);
+
+  time_tuned_ms = timer_millis();
+  frsky_bind.offset = -126;
+
+  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)frsky_bind.offset);
+  cc2500_write_reg(CC2500_PKTCTRL1, 0x0C);
+  cc2500_write_reg(CC2500_MCSM0, 0x8);
+
+  set_channel(0);
+
+  cc2500_strobe(CC2500_SRX);
+}
+
+static uint8_t tune_rx(uint8_t iteration) {
+  if (frsky_bind.offset >= 126) {
+    frsky_bind.offset = -126;
+  }
+  if ((timer_millis() - time_tuned_ms) > 50) {
+    time_tuned_ms = timer_millis();
+    // switch to fine tuning after first hit
+    frsky_bind.offset += iteration > 0 ? 1 : 5;
+    cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)frsky_bind.offset);
+  }
+
+  uint8_t len = read_packet();
+  if (len == 0) {
+    return 0;
+  }
+  if (packet[len - 1] & 0x80) {
+    if (packet[2] == 0x01) {
+      uint8_t lqi = packet[len - 1] & 0x7F;
+      // higher lqi represent better link quality
+      if (lqi > 50) {
+        return 1;
+      }
+    }
+  }
+  return 0;
+}
+
+static void init_get_bind(void) {
+  set_channel(0);
+  cc2500_strobe(CC2500_SFRX);
+  delay(20); // waiting flush FIFO
+
+  cc2500_strobe(CC2500_SRX);
+  list_length = 0;
+  frsky_bind.idx = 0x05;
+}
+
+static uint8_t get_bind1() {
+  // len|bind |tx
+  // id|03|01|idx|h0|h1|h2|h3|h4|00|00|00|00|00|00|00|00|00|00|00|00|00|00|00|CHK1|CHK2|RSSI|LQI/CRC|
+  // Start by getting bind packet 0 and the txid
+  uint8_t len = read_packet();
+  if (len == 0) {
+    return 0;
+  }
+
+  if (packet[len - 1] & 0x80) {
+    if (packet[2] == 0x01) {
+      if (packet[5] == 0x00) {
+
+        frsky_bind.tx_id[0] = packet[3];
+        frsky_bind.tx_id[1] = packet[4];
+        for (uint8_t n = 0; n < 5; n++) {
+          frsky_bind.hop_data[packet[5] + n] = packet[6 + n];
+        }
+        frsky_bind.rx_num = packet[12];
+        return 1;
+      }
+    }
+  }
+
+  return 0;
+}
+
+static uint8_t get_bind2(uint8_t *packet) {
+  if (frsky_bind.idx > 120) {
+    return 1;
+  }
+
+  uint8_t len = read_packet();
+  if (len == 0) {
+    return 0;
+  }
+
+  if (packet[len - 1] & 0x80) {
+    if (packet[2] == 0x01) {
+      if ((packet[3] == frsky_bind.tx_id[0]) && (packet[4] == frsky_bind.tx_id[1])) {
+        if (packet[5] == frsky_bind.idx) {
+          for (uint8_t n = 0; n < 5; n++) {
+            if (packet[6 + n] == packet[len - 3] || (packet[6 + n] == 0)) {
+              if (frsky_bind.idx >= 0x2D) {
+                list_length = packet[5] + n;
+                return 1;
+              }
+            }
+            frsky_bind.hop_data[packet[5] + n] = packet[6 + n];
+          }
+
+          frsky_bind.idx = frsky_bind.idx + 5;
+          return 0;
+        }
+      }
+    }
+  }
+
+  return 0;
+}
+
+void calibrate_channels() {
+  //calibrate all channels
+  for (uint32_t c = 0; c < 0xFF; c++) {
+    cc2500_strobe(CC2500_SIDLE);
+    cc2500_write_reg(CC2500_CHANNR, c);
+
+    cc2500_strobe(CC2500_SCAL);
+    while (cc2500_read_reg(CC2500_MARCSTATE) != 0x01)
+      ;
+
+    cal_data[c][0] = cc2500_read_reg(CC2500_FSCAL3);
+    cal_data[c][1] = cc2500_read_reg(CC2500_FSCAL2);
+    cal_data[c][2] = cc2500_read_reg(CC2500_FSCAL1);
+  }
+
+  cc2500_strobe(CC2500_SIDLE);
+}
+
+void rx_check() {
+  if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
+    return;
+
+  switch (protocol_state) {
+  case FRSKY_STATE_DETECT:
+    if (frsky_dectect()) {
+      protocol_state = FRSKY_STATE_INIT;
+    }
+    break;
+  case FRSKY_STATE_INIT:
+    cc2500_enter_rxmode();
+    cc2500_strobe(CC2500_SRX);
+    if (frsky_bind.idx == 0xff) {
+      protocol_state = FRSKY_STATE_BIND;
+    } else {
+      protocol_state = FRSKY_STATE_BIND_COMPLETE;
+    }
+    break;
+  case FRSKY_STATE_BIND:
+    init_tune_rx();
+    protocol_state = FRSKY_STATE_BIND_TUNING;
+    break;
+  case FRSKY_STATE_BIND_TUNING: {
+    static uint8_t tune_samples = 0;
+    static int8_t last_offset = -126;
+
+    if (tune_rx(tune_samples)) {
+      const int8_t current_offset = frsky_bind.offset;
+      if (last_offset == current_offset) {
+        frsky_bind.offset -= 5;
+        tune_samples++;
+      }
+      last_offset = current_offset;
+    }
+    if (tune_samples >= 3) {
+      set_address(1);
+      init_get_bind();
+      protocol_state = FRSKY_STATE_BIND_BINDING1;
+    }
+    break;
+  }
+  case FRSKY_STATE_BIND_BINDING1:
+    if (get_bind1(packet)) {
+      protocol_state = FRSKY_STATE_BIND_BINDING2;
+    }
+    break;
+  case FRSKY_STATE_BIND_BINDING2:
+    if (get_bind2(packet)) {
+      protocol_state = FRSKY_STATE_BIND_COMPLETE;
+    }
+    break;
+  case FRSKY_STATE_BIND_COMPLETE:
+    quic_debugf("FRSKY: bound");
+    cc2500_strobe(CC2500_SIDLE);
+    rxmode = RXMODE_NORMAL;
+    protocol_state = FRSKY_STATE_STARTING;
+    break;
+  default:
+    if (frsky_d_handle_packet()) {
+      frsky_d_set_rc_data();
+    }
+    break;
+  }
+}
 
 #endif
