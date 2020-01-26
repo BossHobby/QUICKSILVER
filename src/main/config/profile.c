@@ -58,16 +58,6 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .index = 4,
         .name = "65mm 1s brushless whoop",
         .rate = {
-            .kp = {88, 88, 78.5},
-            .ki = {70, 70, 70},
-            .kd = {67, 67, 6},
-        },
-    },
-
-    {
-        .index = 5,
-        .name = "65mm 1s brushless whoop - Hanfer Edition",
-        .rate = {
             .kp = {95, 95, 92},
             .ki = {71, 71, 71},
             .kd = {75, 75, 12},
@@ -75,12 +65,22 @@ const pid_rate_preset_t pid_rate_presets[] = {
     },
 
     {
+        .index = 5,
+        .name = "65mm 1s brushless whoop - Hanfer Edition",
+        .rate = {
+            .kp = {103, 100, 100},
+            .ki = {77, 77, 77},
+            .kd = {76, 76, 13},
+        },
+    },
+
+    {
         .index = 6,
         .name = "65mm 2s brushless whoop",
         .rate = {
-            .kp = {94, 94, 86},
-            .ki = {71, 71, 71},
-            .kd = {52, 52, 9},
+            .kp = {102, 100, 100},
+            .ki = {77, 77, 77},
+            .kd = {62, 62, 12},
         },
     },
 
@@ -471,7 +471,7 @@ const profile_t default_profile = {
             0x6E0,
             0x320,
             0x680,
-			0x84,
+            0x84,
         },
     },
 };
