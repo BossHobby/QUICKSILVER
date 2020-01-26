@@ -237,7 +237,7 @@ uint32_t CDC_Receive_BytesAvailable(void) {
  */
 static uint16_t VCP_DataRx(uint8_t *Buf, uint32_t Len) {
   if (CDC_Receive_BytesAvailable() + Len > APP_TX_DATA_SIZE) {
-    return USBD_FAIL;
+    return USBD_OK;
   }
 
   for (uint32_t i = 0; i < Len; i++) {

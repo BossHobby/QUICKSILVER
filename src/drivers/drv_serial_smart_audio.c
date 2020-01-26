@@ -147,7 +147,6 @@ void serial_smart_audio_send_data(uint8_t *data, uint32_t size) {
       debug_timer_delay_us(1);
       __WFI();
     }
-    quic_debugf("SMART_AUDIO: write 0x%x", data[i]);
     USART_SendData(USART.channel, data[i]);
     packets_sent++;
   }
@@ -162,7 +161,6 @@ uint8_t serial_smart_audio_read_byte() {
     }
     __WFI();
   }
-  quic_debugf("SMART_AUDIO: read 0x%x", data);
   return data;
 }
 
