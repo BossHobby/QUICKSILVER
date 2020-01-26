@@ -306,7 +306,6 @@ static uint8_t frsky_d16_handle_packet() {
     }
 
     if ((current_packet_received_time - last_packet_received_time) >= max_sync_delay) {
-      failsafe = 1;
       rx_rssi = 0;
 
       // make sure we are in rx mode
@@ -393,6 +392,8 @@ static uint8_t frsky_d16_handle_packet() {
 
       if (frames_lost >= FRSKY_MAX_MISSING_FRAMES) {
         max_sync_delay = 50 * FRSKY_SYNC_DELAY_MAX;
+        failsafe = 1;
+        rx_rssi = 0;
         channel_skip = 1;
         send_telemetry = 0;
         protocol_state = FRSKY_STATE_UPDATE;
