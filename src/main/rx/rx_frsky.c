@@ -12,9 +12,9 @@
 
 uint8_t packet[128];
 uint8_t protocol_state = FRSKY_STATE_DETECT;
+uint8_t list_length = FRSKY_HOPTABLE_SIZE;
 
 static uint8_t cal_data[255][3];
-static uint8_t list_length = FRSKY_HOPTABLE_SIZE;
 
 static unsigned long time_tuned_ms;
 
@@ -24,11 +24,6 @@ int failsafe = 1; // It isn't safe if we haven't checked it!
 int rxmode = RXMODE_BIND;
 int rx_ready = 0;
 int rx_bind_enable = 0;
-
-#ifdef RX_FRSKY_D8
-void frsky_d_set_rc_data();
-uint8_t frsky_d_handle_packet();
-#endif
 
 uint8_t frsky_extract_rssi(uint8_t rssi_raw) {
   if (rssi_raw >= 128) {
@@ -273,10 +268,7 @@ void calibrate_channels() {
   cc2500_strobe(CC2500_SIDLE);
 }
 
-void rx_check() {
-  if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
-    return;
-
+void frsky_handle_bind() {
   switch (protocol_state) {
   case FRSKY_STATE_DETECT:
     if (frsky_dectect()) {
@@ -326,15 +318,12 @@ void rx_check() {
     }
     break;
   case FRSKY_STATE_BIND_COMPLETE:
-    quic_debugf("FRSKY: bound");
+    quic_debugf("FRSKY: bound rx_num %d", frsky_bind.rx_num);
     cc2500_strobe(CC2500_SIDLE);
     rxmode = RXMODE_NORMAL;
     protocol_state = FRSKY_STATE_STARTING;
     break;
   default:
-    if (frsky_d_handle_packet()) {
-      frsky_d_set_rc_data();
-    }
     break;
   }
 }

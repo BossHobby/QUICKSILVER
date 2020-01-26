@@ -6,15 +6,15 @@
 #include "usb_configurator.h"
 #include "util.h"
 
-#if defined(RX_FRSKY) && defined(USE_CC2500)
+#if defined(RX_FRSKY_D8) && defined(USE_CC2500)
 
 //Source https://www.rcgroups.com/forums/showpost.php?p=21864861
 
 #define FRSKY_ENABLE_TELEMETRY
 //#define FRSKY_ENABLE_HUB_TELEMETRY
 
-#define FRSKY_D_CHANNEL_COUNT 8
-#define FRSKY_HUB_FIRST_USER_ID 0x31
+#define FRSKY_D8_CHANNEL_COUNT 8
+#define FRSKY_D8_HUB_FIRST_USER_ID 0x31
 
 typedef struct {
   uint8_t length;
@@ -22,7 +22,7 @@ typedef struct {
   uint8_t counter;
   uint8_t channels[14];
   uint8_t crc[2];
-} frsky_d_frame;
+} frsky_d8_frame;
 
 float rx_rssi;
 
@@ -43,6 +43,7 @@ extern float vbattfilt;
 
 uint8_t frsky_extract_rssi(uint8_t rssi_raw);
 uint8_t frsky_detect();
+void frsky_handle_bind();
 
 void handle_overflows();
 void calibrate_channels();
@@ -50,8 +51,8 @@ void set_address(uint8_t is_bind);
 uint8_t next_channel(uint8_t skip);
 uint8_t packet_size();
 
-void frsky_d_set_rc_data() {
-  uint16_t channels[FRSKY_D_CHANNEL_COUNT];
+static void frsky_d8_set_rc_data() {
+  uint16_t channels[FRSKY_D8_CHANNEL_COUNT];
 
   channels[0] = (uint16_t)(((packet[10] & 0x0F) << 8 | packet[6]));
   channels[1] = (uint16_t)(((packet[10] & 0xF0) << 4 | packet[7]));
@@ -67,7 +68,7 @@ void frsky_d_set_rc_data() {
   // when tx is set to 125% this is  ~1290...3210
 
   // this check terrifies me, but betaflight has something similar
-  for (uint8_t i = 0; i < FRSKY_D_CHANNEL_COUNT; i++) {
+  for (uint8_t i = 0; i < FRSKY_D8_CHANNEL_COUNT; i++) {
     if (channels[i] < 1200 || channels[i] > 3300) {
       return;
     }
@@ -102,6 +103,12 @@ void frsky_d_set_rc_data() {
   aux[AUX_CHANNEL_3] = (channels[7] > 2000) ? 1 : 0;
   aux[AUX_CHANNEL_4] = 0;
   aux[AUX_CHANNEL_5] = 0;
+  aux[AUX_CHANNEL_6] = 0;
+  aux[AUX_CHANNEL_7] = 0;
+  aux[AUX_CHANNEL_8] = 0;
+  aux[AUX_CHANNEL_9] = 0;
+  aux[AUX_CHANNEL_10] = 0;
+  aux[AUX_CHANNEL_11] = 0;
 
   for (uint8_t i = 0; i < AUX_CHANNEL_MAX - 3; i++) {
     auxchange[i] = 0;
@@ -114,7 +121,7 @@ void frsky_d_set_rc_data() {
 }
 
 #ifdef FRSKY_ENABLE_HUB_TELEMETRY
-static uint8_t frsky_d_hub_encode(uint8_t *buf, uint8_t data) {
+static uint8_t frsky_d8_hub_encode(uint8_t *buf, uint8_t data) {
   // take care of byte stuffing
   if (data == 0x5e) {
     buf[0] = 0x5d;
@@ -128,7 +135,7 @@ static uint8_t frsky_d_hub_encode(uint8_t *buf, uint8_t data) {
   return 1;
 }
 
-static uint8_t frsky_d_append_hub_telemetry(uint8_t telemetry_id, uint8_t *buf) {
+static uint8_t frsky_d8_append_hub_telemetry(uint8_t telemetry_id, uint8_t *buf) {
   static uint8_t pid_axis = 0;
   extern vector_t *current_pid_term_pointer();
 
@@ -144,12 +151,12 @@ static uint8_t frsky_d_append_hub_telemetry(uint8_t telemetry_id, uint8_t *buf) 
     const int16_t axis = current_pid_axis;
 
     buf[size++] = 0x5E;
-    buf[size++] = FRSKY_HUB_FIRST_USER_ID + 0;
+    buf[size++] = FRSKY_D8_HUB_FIRST_USER_ID + 0;
     buf[size++] = (uint8_t)(term & 0xff);
     buf[size++] = (uint8_t)(term >> 8);
     buf[size++] = 0x5E;
     buf[size++] = 0x5E;
-    buf[size++] = FRSKY_HUB_FIRST_USER_ID + 1;
+    buf[size++] = FRSKY_D8_HUB_FIRST_USER_ID + 1;
     buf[size++] = (uint8_t)(axis & 0xff);
     buf[size++] = (uint8_t)(axis >> 8);
     buf[size++] = 0x5E;
@@ -158,9 +165,9 @@ static uint8_t frsky_d_append_hub_telemetry(uint8_t telemetry_id, uint8_t *buf) 
   } else {
     const int16_t pidk = (int16_t)(current_pid_term_pointer()->axis[pid_axis] * 1000);
     buf[size++] = 0x5E;
-    buf[size++] = FRSKY_HUB_FIRST_USER_ID + 2 + pid_axis;
-    size += frsky_d_hub_encode(buf + size, (uint8_t)(pidk & 0xff));
-    size += frsky_d_hub_encode(buf + size, (uint8_t)(pidk >> 8));
+    buf[size++] = FRSKY_D8_HUB_FIRST_USER_ID + 2 + pid_axis;
+    size += frsky_d8_hub_encode(buf + size, (uint8_t)(pidk & 0xff));
+    size += frsky_d8_hub_encode(buf + size, (uint8_t)(pidk >> 8));
     buf[size++] = 0x5E;
 
     pid_axis++;
@@ -172,7 +179,7 @@ static uint8_t frsky_d_append_hub_telemetry(uint8_t telemetry_id, uint8_t *buf) 
 }
 #endif
 
-uint8_t frsky_d_handle_packet() {
+static uint8_t frsky_d8_handle_packet() {
   static uint32_t last_packet_received_time = 0;
   static uint32_t frame_index = 0;
   static uint32_t frames_lost = 0;
@@ -202,7 +209,7 @@ uint8_t frsky_d_handle_packet() {
     }
 
     if ((timer_micros() - last_packet_received_time) > FRSKY_SYNC_DELAY_MAX) {
-      quic_debugf("FRSKY: update %d", frame_index);
+      quic_debugf("FRSKY_D8: update %d", frame_index);
       frame_index++;
       protocol_state = FRSKY_STATE_UPDATE;
     }
@@ -215,7 +222,7 @@ uint8_t frsky_d_handle_packet() {
     uint8_t len = packet_size();
     if (len >= 20) {
       cc2500_read_fifo(packet, 20);
-      frsky_d_frame *frame = (frsky_d_frame *)packet;
+      frsky_d8_frame *frame = (frsky_d8_frame *)packet;
 
       if (frame->length == 0x11 &&
           (frame->crc[1] & 0x80) &&
@@ -227,7 +234,7 @@ uint8_t frsky_d_handle_packet() {
         }
 
         if (frame->counter != frame_index) {
-          quic_debugf("FRSKY: frame mismatch %d vs %d", frame->counter, frame_index);
+          quic_debugf("FRSKY_D8: frame mismatch %d vs %d", frame->counter, frame_index);
           frame_index = frame->counter;
         }
 
@@ -269,10 +276,10 @@ uint8_t frsky_d_handle_packet() {
         frame_index++;
         ret = 1;
       } else {
-        quic_debugf("FRSKY: invalid frame");
+        quic_debugf("FRSKY_D8: invalid frame");
       }
     } else if (len > 0) {
-      quic_debugf("FRSKY: short frame");
+      quic_debugf("FRSKY_D8: short frame");
     }
 
     handle_overflows();
@@ -282,12 +289,12 @@ uint8_t frsky_d_handle_packet() {
         cc2500_switch_antenna();
       }
       if (frames_lost >= FRSKY_MAX_MISSING_FRAMES) {
-        quic_debugf("FRSKY: failsafe");
+        quic_debugf("FRSKY_D8: failsafe");
         max_sync_delay = 10 * FRSKY_SYNC_DELAY_MAX;
         failsafe = 1;
       }
 
-      quic_debugf("FRSKY: frame lost %u=%u (%u)", frame_index, (frame_index % 4), (current_packet_received_time - last_packet_received_time));
+      quic_debugf("FRSKY_D8: frame lost %u=%u (%u)", frame_index, (frame_index % 4), (current_packet_received_time - last_packet_received_time));
       frames_lost++;
       rx_rssi = 0;
 
@@ -385,6 +392,19 @@ void rx_init(void) {
   cc2500_write_reg(CC2500_ADDR, 0x00);
 
   calibrate_channels();
+}
+
+void rx_check() {
+  if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
+    return;
+
+  if (protocol_state <= FRSKY_STATE_BIND_COMPLETE) {
+    return frsky_handle_bind();
+  }
+
+  if (frsky_d8_handle_packet()) {
+    frsky_d8_set_rc_data();
+  }
 }
 
 #endif
