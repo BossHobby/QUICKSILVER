@@ -497,6 +497,7 @@ static uint8_t frsky_d_handle_packet() {
         quic_debugf("FRSKY: failsafe");
         max_sync_delay = 10 * SYNC_DELAY_MAX;
         failsafe = 1;
+        rx_rssi = 0;
       }
 
       // we could be comming here from STATE_TELEMETRY
