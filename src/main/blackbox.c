@@ -1,5 +1,8 @@
 #include "blackbox.h"
 
+#include <string.h>
+
+#include "rx_frsky.h"
 #include "usb_configurator.h"
 
 uint32_t blackbox_rate = 2;
@@ -127,6 +130,16 @@ void blackbox_update() {
 
   if (usb_is_active != 0 && (loop_counter % (uint32_t)((1000000.0f / (float)blackbox_rate) / LOOPTIME)) == 0) {
     quic_blackbox(&state);
+  }
+
+  if ((loop_counter % (uint32_t)((1000000.0f / LOOPTIME)) == 0)) {
+    smart_port_payload_t payload = {
+        .frame_id = FSSP_DATA_FRAME,
+        .value_id = 0x0830,
+        .value = 0x1337,
+    };
+
+    frsky_d16_write_telemetry(&payload);
   }
 
   loop_counter++;
