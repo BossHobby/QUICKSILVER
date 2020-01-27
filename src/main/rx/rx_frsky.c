@@ -11,15 +11,15 @@
 //Source https://www.rcgroups.com/forums/showpost.php?p=21864861
 
 #define FRSKY_ENABLE_TELEMETRY
+//#define FRSKY_ENABLE_HUB_TELEMETRY
 
 #define FRSKY_D_CHANNEL_COUNT 8
-#define FRSKY_D_CHANNEL_SCALING (2.0f / 3)
+#define FRSKY_HUB_FIRST_USER_ID 0x31
 
-#define FRSKY_RSSI_OFFSET 70
 #define FRSKY_HOPTABLE_SIZE 47
 
 #define SYNC_DELAY_MAX 9000
-#define MAX_MISSING_FRAMES 150
+#define MAX_MISSING_FRAMES 120
 
 enum {
   STATE_DETECT = 0,
@@ -59,6 +59,8 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
+
+extern float vbattfilt;
 
 int failsafe = 1; // It isn't safe if we haven't checked it!
 int rxmode = RXMODE_BIND;
@@ -368,9 +370,8 @@ static uint8_t frsky_d_hub_encode(uint8_t *buf, uint8_t data) {
   return 1;
 }
 
+#ifdef FRSKY_ENABLE_HUB_TELEMETRY
 static uint8_t frsky_d_append_hub_telemetry(uint8_t telemetry_id, uint8_t *buf) {
-#define FRSKY_HUB_FIRST_USER_ID 0x31
-
   static uint8_t pid_axis = 0;
   extern vector_t *current_pid_term_pointer();
 
@@ -412,13 +413,18 @@ static uint8_t frsky_d_append_hub_telemetry(uint8_t telemetry_id, uint8_t *buf) 
   buf[0] = size - 2;
   return size;
 }
+#endif
 
 static uint8_t frsky_d_handle_packet() {
   static uint32_t last_packet_received_time = 0;
-  static uint32_t frame_had_packet = 0;
+  static uint32_t telemetry_time = 0;
   static uint32_t frame_index = 0;
   static uint32_t frames_lost = 0;
   static uint32_t max_sync_delay = 50 * SYNC_DELAY_MAX;
+
+  static uint8_t frame_had_packet = 0;
+
+  static uint8_t telemetry[20];
 
   const uint32_t current_packet_received_time = debug_timer_micros();
 
@@ -461,7 +467,22 @@ static uint8_t frsky_d_handle_packet() {
 
 #ifdef FRSKY_ENABLE_TELEMETRY
         if ((frame->counter % 4) == 2) {
+          const uint8_t telemetry_id = packet[4];
+          telemetry[0] = 0x11; // length
+          telemetry[1] = frsky_bind.tx_id[0];
+          telemetry[2] = frsky_bind.tx_id[1];
+          telemetry[3] = (uint8_t)(vbattfilt * 100);
+          telemetry[4] = (uint8_t)(vbattfilt * 100);
+          telemetry[5] = frsky_extract_rssi(packet[18]);
+#ifdef FRSKY_ENABLE_HUB_TELEMETRY
+          telemetry[6] = frsky_d_append_hub_telemetry(telemetry_id, telemetry + 8);
+#else
+          telemetry[6] = 0;
+#endif
+          telemetry[7] = telemetry_id;
+
           protocol_state = STATE_TELEMETRY;
+          telemetry_time = debug_timer_micros();
         } else
 #endif
         {
@@ -495,7 +516,7 @@ static uint8_t frsky_d_handle_packet() {
       }
       if (frames_lost >= MAX_MISSING_FRAMES) {
         quic_debugf("FRSKY: failsafe");
-        max_sync_delay = 10 * SYNC_DELAY_MAX;
+        max_sync_delay = 50 * SYNC_DELAY_MAX;
         failsafe = 1;
         rx_rssi = 0;
       }
@@ -511,24 +532,11 @@ static uint8_t frsky_d_handle_packet() {
   }
   case STATE_TELEMETRY:
     // telemetry has to be done 2000us after rx
-    if ((debug_timer_micros() - last_packet_received_time) >= 1380) {
+    if ((debug_timer_micros() - telemetry_time) >= 1700) {
       cc2500_strobe(CC2500_SIDLE);
       cc2500_set_power(6);
       cc2500_strobe(CC2500_SFRX);
       cc2500_enter_txmode();
-
-      const uint8_t telemetry_id = packet[4];
-      extern float vbattfilt;
-
-      static uint8_t telemetry[20];
-      telemetry[0] = 0x11; // length
-      telemetry[1] = frsky_bind.tx_id[0];
-      telemetry[2] = frsky_bind.tx_id[1];
-      telemetry[3] = (uint8_t)(vbattfilt * 100);
-      telemetry[4] = (uint8_t)(vbattfilt * 100);
-      telemetry[5] = frsky_extract_rssi(packet[18]);
-      telemetry[6] = frsky_d_append_hub_telemetry(telemetry_id, telemetry + 8);
-      telemetry[7] = telemetry_id;
 
       cc2500_strobe(CC2500_SIDLE);
       cc2500_write_fifo(telemetry, telemetry[0] + 1);
