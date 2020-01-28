@@ -438,6 +438,21 @@ static uint8_t frsky_d_handle_packet() {
 
     protocol_state = STATE_UPDATE;
     break;
+  case STATE_RESUME:
+    // wait for IDLE
+    if ((cc2500_get_status() & (0x70)) == 0) {
+      // re-enter rx mode after telemetry
+      cc2500_enter_rxmode();
+      next_channel(1);
+      cc2500_strobe(CC2500_SRX);
+    }
+
+    if ((debug_timer_micros() - telemetry_time) < SYNC_DELAY_MAX) {
+      break;
+    }
+
+    protocol_state = STATE_UPDATE;
+    //fallthrough
   case STATE_UPDATE:
     frame_had_packet = 0;
     protocol_state = STATE_DATA;
@@ -507,32 +522,35 @@ static uint8_t frsky_d_handle_packet() {
 
     if ((current_packet_received_time - last_packet_received_time) >= max_sync_delay) {
       if (!frame_had_packet) {
-        quic_debugf("FRSKY: frame lost");
+        quic_debugf("FRSKY: frame lost %d", (current_packet_received_time - last_packet_received_time));
         frames_lost++;
         frame_index++;
+        rx_rssi = 0;
+      } else {
+        quic_debugf("FRSKY: hit sync delay %d", (current_packet_received_time - last_packet_received_time));
       }
       if (frames_lost >= 2) {
         cc2500_switch_antenna();
       }
       if (frames_lost >= MAX_MISSING_FRAMES) {
         quic_debugf("FRSKY: failsafe");
-        max_sync_delay = 50 * SYNC_DELAY_MAX;
+        max_sync_delay = 10 * SYNC_DELAY_MAX;
         failsafe = 1;
         rx_rssi = 0;
       }
 
-      // we could be comming here from STATE_TELEMETRY
-      // make sure we are in rx mode
       cc2500_enter_rxmode();
       next_channel(1);
       cc2500_strobe(CC2500_SRX);
       protocol_state = STATE_UPDATE;
+      last_packet_received_time = current_packet_received_time;
     }
     break;
   }
+#ifdef FRSKY_ENABLE_TELEMETRY
   case STATE_TELEMETRY:
     // telemetry has to be done 2000us after rx
-    if ((debug_timer_micros() - telemetry_time) >= 1700) {
+    if ((debug_timer_micros() - telemetry_time) >= 1500) {
       cc2500_strobe(CC2500_SIDLE);
       cc2500_set_power(6);
       cc2500_strobe(CC2500_SFRX);
@@ -541,11 +559,11 @@ static uint8_t frsky_d_handle_packet() {
       cc2500_strobe(CC2500_SIDLE);
       cc2500_write_fifo(telemetry, telemetry[0] + 1);
 
-      protocol_state = STATE_DATA;
-      last_packet_received_time = current_packet_received_time;
+      protocol_state = STATE_RESUME;
       frame_index++;
     }
     break;
+#endif
   }
 
   return ret;
