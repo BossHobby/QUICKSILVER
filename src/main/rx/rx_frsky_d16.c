@@ -382,14 +382,15 @@ static uint8_t frsky_d16_handle_packet() {
     }
     break;
   case FRSKY_STATE_RESUME:
-    if ((cc2500_get_status() & (0x70)) == 0 && (timer_micros() - last_packet_received_time) >= (rx_delay + 3700)) {
-      last_packet_received_time = timer_micros();
-      rx_delay = 5300;
-      frame_had_packet = 0;
-
+    if ((cc2500_get_status() & (0x70)) == 0) {
       cc2500_enter_rxmode();
       next_channel(channels_to_skip);
       cc2500_strobe(CC2500_SRX);
+    }
+    if ((timer_micros() - last_packet_received_time) >= (rx_delay + 3700)) {
+      last_packet_received_time = timer_micros();
+      rx_delay = 5300;
+      frame_had_packet = 0;
 
       if (frames_lost >= 2) {
         cc2500_switch_antenna();
