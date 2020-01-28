@@ -71,7 +71,7 @@ uint8_t cc2500_read_gdo0() {
   return GPIO_ReadInputDataBit(CC2500_GDO0_PORT, CC2500_GDO0_PIN);
 }
 
-void cc2500_hardware_init(void) {
+void cc2500_hardware_init() {
   GPIO_InitTypeDef GPIO_InitStructure;
 
   // SCLK, MISO, MOSI
@@ -168,13 +168,13 @@ uint8_t cc2500_spi_transfer_byte(uint8_t data) {
   return SPI_I2S_ReceiveData(CC2500_SPI_INSTANCE);
 }
 
-inline void cc2500_strobe(uint8_t address) {
+void cc2500_strobe(uint8_t address) {
   cc2500_csn_enable();
   cc2500_spi_transfer_byte(address);
   cc2500_csn_disable();
 }
 
-inline uint8_t cc2500_get_status(void) {
+uint8_t cc2500_get_status() {
   cc2500_csn_enable();
   uint8_t status = cc2500_spi_transfer_byte(0xFF);
   cc2500_csn_disable();
@@ -222,9 +222,6 @@ inline uint8_t cc2500_write_fifo(uint8_t *data, uint8_t len) {
   // and send!
   cc2500_strobe(CC2500_STX);
 
-  // while ((cc2500_get_status() & (0x70)) != (1 << 4))
-  //   ;
-
   return ret;
 }
 
@@ -236,13 +233,13 @@ inline uint8_t cc2500_write_reg(uint8_t reg, uint8_t data) {
   return ret;
 }
 
-void cc2500_reset(void) {
+void cc2500_reset() {
   cc2500_strobe(CC2500_SRES);
   delay(1000); // 1000us
   cc2500_strobe(CC2500_SIDLE);
 }
 
-void cc2500_init(void) {
+void cc2500_init() {
   cc2500_hardware_init();
   cc2500_reset();
 }
@@ -259,14 +256,14 @@ void cc2500_switch_antenna() {
 #endif
 }
 
-void cc2500_enter_rxmode(void) {
+void cc2500_enter_rxmode() {
 #if defined(USE_CC2500_PA_LNA)
   GPIO_SetBits(CC2500_LNA_EN_PORT, CC2500_LNA_EN_PIN);
   GPIO_ResetBits(CC2500_TX_EN_PORT, CC2500_TX_EN_PIN);
 #endif
 }
 
-void cc2500_enter_txmode(void) {
+void cc2500_enter_txmode() {
 #if defined(USE_CC2500_PA_LNA)
   GPIO_ResetBits(CC2500_LNA_EN_PORT, CC2500_LNA_EN_PIN);
   GPIO_SetBits(CC2500_TX_EN_PORT, CC2500_TX_EN_PIN);
