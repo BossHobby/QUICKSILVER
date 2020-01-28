@@ -76,8 +76,8 @@ typedef struct {
   uint8_t length;
   uint8_t tx_id[2];
   uint8_t constant;
-  uint8_t chanskip;
   uint8_t counter;
+  uint8_t chanskip;
   uint8_t rx_num;
   uint8_t flags;
   uint8_t _unused;
@@ -212,7 +212,7 @@ void frsky_d16_write_telemetry(smart_port_payload_t *payload) {
     return;
   }
 
-  const uint8_t *ptr = payload;
+  const uint8_t *ptr = (uint8_t *)payload;
   for (uint32_t i = 0; i < sizeof(smart_port_payload_t); i++) {
     const uint8_t c = ptr[i];
     if (c == FSSP_DLE || c == FSSP_START_STOP) {
@@ -246,7 +246,6 @@ static uint8_t frsky_d16_handle_packet() {
   static uint32_t rx_delay = 0;
 
   static uint32_t last_packet_received_time = 0;
-  const uint32_t current_packet_received_time = timer_micros();
 
   uint8_t ret = 0;
   switch (protocol_state) {
@@ -263,7 +262,7 @@ static uint8_t frsky_d16_handle_packet() {
     frame_had_packet = 0;
     protocol_state = FRSKY_STATE_DATA;
     rx_delay = 5300;
-    last_packet_received_time = current_packet_received_time;
+    last_packet_received_time = timer_micros();
     // fallthrough
   case FRSKY_STATE_DATA: {
     uint8_t len = packet_size();
@@ -272,17 +271,17 @@ static uint8_t frsky_d16_handle_packet() {
       frsky_d16_frame_header *header = (frsky_d16_frame_header *)packet;
 
       if (frsky_d16_is_valid_packet(packet)) {
-        last_packet_received_time = current_packet_received_time;
+        last_packet_received_time = timer_micros();
         max_sync_delay = FRSKY_SYNC_DELAY_MAX;
 
         if (channel_skip) {
-          channels_to_skip = header->counter << 2;
-          if (header->chanskip >= list_length) {
-            if (header->chanskip < (64 + list_length)) {
+          channels_to_skip = header->chanskip << 2;
+          if (header->counter >= list_length) {
+            if (header->counter < (64 + list_length)) {
               channels_to_skip += 1;
-            } else if (header->chanskip < (128 + list_length)) {
+            } else if (header->counter < (128 + list_length)) {
               channels_to_skip += 2;
-            } else if (header->chanskip < (192 + list_length)) {
+            } else if (header->counter < (192 + list_length)) {
               channels_to_skip += 3;
             }
           }
@@ -301,11 +300,11 @@ static uint8_t frsky_d16_handle_packet() {
 
     handle_overflows();
 
-    if (send_telemetry == 1 && (current_packet_received_time - last_packet_received_time) >= rx_delay) {
+    if (send_telemetry == 1 && (timer_micros() - last_packet_received_time) >= rx_delay) {
       protocol_state = FRSKY_STATE_TELEMETRY;
     }
 
-    if ((current_packet_received_time - last_packet_received_time) >= max_sync_delay) {
+    if ((timer_micros() - last_packet_received_time) >= max_sync_delay) {
       rx_rssi = 0;
 
       // make sure we are in rx mode
@@ -317,9 +316,15 @@ static uint8_t frsky_d16_handle_packet() {
     break;
   }
   case FRSKY_STATE_TELEMETRY:
-    if ((timer_micros() - last_packet_received_time) >= rx_delay + FRSKY_D16_TELEMETRY_DELAY) {
+    if ((timer_micros() - last_packet_received_time) >= (rx_delay + FRSKY_D16_TELEMETRY_DELAY)) {
+      const uint8_t rssi = frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]);
+
       cc2500_strobe(CC2500_SIDLE);
-      cc2500_set_power(6);
+      if (rssi > 110) {
+        cc2500_set_power(5);
+      } else {
+        cc2500_set_power(6);
+      }
       cc2500_strobe(CC2500_SFRX);
       cc2500_enter_txmode();
 
@@ -334,7 +339,7 @@ static uint8_t frsky_d16_handle_packet() {
       telemetry[2] = frsky_bind.tx_id[1];
       telemetry[3] = packet[3];
       if (even_odd) {
-        telemetry[4] = (uint8_t)frsky_extract_rssi(packet[18]) | 0x80;
+        telemetry[4] = rssi | 0x80;
       } else {
         telemetry[4] = (uint8_t)(vbattfilt * 10) & 0x7f;
       }
@@ -377,8 +382,8 @@ static uint8_t frsky_d16_handle_packet() {
     }
     break;
   case FRSKY_STATE_RESUME:
-    if ((timer_micros() - last_packet_received_time) >= rx_delay + 3700) {
-      last_packet_received_time = current_packet_received_time;
+    if ((cc2500_get_status() & (0x70)) == 0 && (timer_micros() - last_packet_received_time) >= (rx_delay + 3700)) {
+      last_packet_received_time = timer_micros();
       rx_delay = 5300;
       frame_had_packet = 0;
 
@@ -419,6 +424,7 @@ void rx_init(void) {
   cc2500_write_reg(CC2500_IOCFG0, 0x01);
 
   cc2500_write_reg(CC2500_MCSM0, 0x18);
+  cc2500_write_reg(CC2500_MCSM1, 0x0C);
 
   cc2500_write_reg(CC2500_PKTCTRL1, 0x04); // only append status
   cc2500_write_reg(CC2500_PATABLE, 0xFF);  // full power
@@ -432,7 +438,6 @@ void rx_init(void) {
   cc2500_write_reg(CC2500_MDMCFG0, 0x7A);
 
 #ifdef RX_FRSKY_D16_FCC
-  cc2500_write_reg(CC2500_MCSM1, 0x0C);
   cc2500_write_reg(CC2500_FREQ1, 0x76);
   cc2500_write_reg(CC2500_FREQ0, 0x27);
   cc2500_write_reg(CC2500_PKTLEN, 0x1E);
@@ -444,7 +449,6 @@ void rx_init(void) {
   cc2500_write_reg(CC2500_DEVIATN, 0x51);
 #endif
 #ifdef RX_FRSKY_D16_LBT
-  cc2500_write_reg(CC2500_MCSM1, 0x0E);
   cc2500_write_reg(CC2500_FREQ1, 0x80);
   cc2500_write_reg(CC2500_FREQ0, 0x00);
   cc2500_write_reg(CC2500_PKTLEN, 0x23);
