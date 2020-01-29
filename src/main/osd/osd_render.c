@@ -921,6 +921,8 @@ void osd_display(void) {
 	  }else{
 		  print_osd_menu_strings(3, 0, vtx_na_labels, vtx_na_positions);
 		  if(osd_select) osd_select = 0;
+			extern uint8_t vtx_connect_tries;
+      vtx_connect_tries = 0;
 	  }
       break;
 

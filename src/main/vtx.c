@@ -24,6 +24,7 @@ static int fpv_init = 0;
 #endif
 
 vtx_settings_t vtx_settings;
+uint8_t vtx_connect_tries = 0;
 
 const uint16_t frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX] = {
     {5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725}, // VTX_BAND_A
@@ -109,13 +110,15 @@ void vtx_update() {
 
 #ifdef ENABLE_SMART_AUDIO
   if (onground && has_smart_audio_configured()) {
-    static uint8_t connect_tries = 0;
-    if (smart_audio_settings.version == 0 && connect_tries < SMART_AUDIO_CONNECTION_TRIES) {
+
+    if (smart_audio_settings.version == 0 && vtx_connect_tries < SMART_AUDIO_CONNECTION_TRIES) {
       // no smart audio detected, try again
       serial_smart_audio_send_payload(SA_CMD_GET_SETTINGS, NULL, 0);
+
       // reset loop time
       lastlooptime = gettime();
-      connect_tries++;
+
+      vtx_connect_tries++;
     } else if (smart_audio_settings.version != 0 && smart_audio_detected == 0) {
       quic_debugf("smart audio version: %d", smart_audio_settings.version);
 
@@ -145,7 +148,7 @@ void vtx_update() {
 
       smart_audio_detected = 1;
       vtx_settings.detected = 1;
-      connect_tries = 0;
+      vtx_connect_tries = 0;
     }
   }
 #endif
