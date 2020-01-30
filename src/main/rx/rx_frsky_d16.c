@@ -247,6 +247,8 @@ static uint8_t frsky_d16_handle_packet() {
 
   static uint32_t last_packet_received_time = 0;
 
+  static uint8_t telemetry[20];
+
   uint8_t ret = 0;
   switch (protocol_state) {
   case FRSKY_STATE_STARTING:
@@ -301,39 +303,13 @@ static uint8_t frsky_d16_handle_packet() {
     handle_overflows();
 
     if (send_telemetry == 1 && (timer_micros() - last_packet_received_time) >= rx_delay) {
-      protocol_state = FRSKY_STATE_TELEMETRY;
-    }
-
-    if ((timer_micros() - last_packet_received_time) >= max_sync_delay) {
-      rx_rssi = 0;
-
-      // make sure we are in rx mode
-      cc2500_enter_rxmode();
-      next_channel(1);
-      cc2500_strobe(CC2500_SRX);
-      protocol_state = FRSKY_STATE_UPDATE;
-    }
-    break;
-  }
-  case FRSKY_STATE_TELEMETRY:
-    if ((timer_micros() - last_packet_received_time) >= (rx_delay + FRSKY_D16_TELEMETRY_DELAY)) {
       const uint8_t rssi = frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]);
-
-      cc2500_strobe(CC2500_SIDLE);
-      if (rssi > 110) {
-        cc2500_set_power(5);
-      } else {
-        cc2500_set_power(6);
-      }
-      cc2500_strobe(CC2500_SFRX);
-      cc2500_enter_txmode();
 
       static uint8_t even_odd = 0;
       static uint8_t local_packet_id = 0;
 
       extern float vbattfilt;
 
-      static uint8_t telemetry[20];
       telemetry[0] = 0x0E; // length
       telemetry[1] = frsky_bind.tx_id[0];
       telemetry[2] = frsky_bind.tx_id[1];
@@ -374,6 +350,33 @@ static uint8_t frsky_d16_handle_packet() {
       uint16_t crc = frsky_d16_crc(&telemetry[3], 10);
       telemetry[13] = crc >> 8;
       telemetry[14] = crc;
+
+      protocol_state = FRSKY_STATE_TELEMETRY;
+    }
+
+    if ((timer_micros() - last_packet_received_time) >= max_sync_delay) {
+      rx_rssi = 0;
+
+      // make sure we are in rx mode
+      cc2500_enter_rxmode();
+      next_channel(1);
+      cc2500_strobe(CC2500_SRX);
+      protocol_state = FRSKY_STATE_UPDATE;
+    }
+    break;
+  }
+  case FRSKY_STATE_TELEMETRY:
+    if ((timer_micros() - last_packet_received_time) >= (rx_delay + FRSKY_D16_TELEMETRY_DELAY)) {
+      const uint8_t rssi = frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]);
+
+      cc2500_strobe(CC2500_SIDLE);
+      if (rssi > 110) {
+        cc2500_set_power(5);
+      } else {
+        cc2500_set_power(6);
+      }
+      cc2500_strobe(CC2500_SFRX);
+      cc2500_enter_txmode();
 
       cc2500_strobe(CC2500_SIDLE);
       cc2500_write_fifo(telemetry, telemetry[0] + 1);

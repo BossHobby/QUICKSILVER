@@ -99,8 +99,10 @@ uint8_t next_channel(uint8_t skip) {
 
   set_channel(frsky_bind.hop_data[channr]);
 
+#ifdef RX_FRSKY_D8
   // FRSKY D only
   cc2500_strobe(CC2500_SFRX);
+#endif
 
   return channr;
 }
@@ -148,7 +150,7 @@ static void init_tune_rx(void) {
   cc2500_write_reg(CC2500_MCSM0, 0x8);
 
   set_channel(0);
-
+  cc2500_strobe(CC2500_SFRX);
   cc2500_strobe(CC2500_SRX);
 }
 
