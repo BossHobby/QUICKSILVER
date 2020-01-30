@@ -447,11 +447,10 @@ static uint8_t frsky_d_handle_packet() {
       cc2500_strobe(CC2500_SRX);
     }
 
-    if ((debug_timer_micros() - telemetry_time) < SYNC_DELAY_MAX) {
-      break;
+    if ((debug_timer_micros() - telemetry_time) >= SYNC_DELAY_MAX) {
+      protocol_state = STATE_UPDATE;
     }
-
-    protocol_state = STATE_UPDATE;
+    break;
     //fallthrough
   case STATE_UPDATE:
     frame_had_packet = 0;
