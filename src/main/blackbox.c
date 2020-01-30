@@ -134,8 +134,8 @@ void blackbox_update() {
 
   if ((loop_counter % (uint32_t)((1000000.0f / LOOPTIME)) == 0)) {
     smart_port_payload_t payload = {
-        .frame_id = FSSP_DATA_FRAME,
-        .value_id = 0x0830,
+        .frame_id = FSSP_MSPS_FRAME,
+        .value_id = 0x5000,
         .value = 0x1337,
     };
 
