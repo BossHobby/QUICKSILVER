@@ -101,8 +101,6 @@ void smart_audio_auto_baud() {
     baud_rate += direction * 50;
     quic_debugf("SMART_AUDIO: auto baud %d (%d)", baud_rate, direction * 50);
     serial_smart_audio_reconfigure();
-
-    reset_looptime();
   }
 
   packets_sent = 0;
