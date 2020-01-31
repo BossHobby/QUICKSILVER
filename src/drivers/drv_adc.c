@@ -8,7 +8,6 @@
 #include "util.h"
 
 uint16_t adcarray[2];
-extern debug_type debug;
 extern profile_t profile;
 
 #ifndef DISABLE_ADC

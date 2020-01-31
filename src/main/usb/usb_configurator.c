@@ -11,7 +11,6 @@
 #include "stm32f4xx.h"
 
 #ifdef DEBUG
-extern debug_type debug;
 extern float rx[];
 
 #ifdef RX_FRSKY

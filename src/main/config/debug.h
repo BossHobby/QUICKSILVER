@@ -1,5 +1,9 @@
 #pragma once
 
+#include "project.h"
+
+#ifdef DEBUG
+
 typedef struct debug {
   int gyroid;
   float vbatt_comp;
@@ -15,3 +19,7 @@ typedef struct debug {
   unsigned int min_cpu_loop_number;
   unsigned int loops_between_min_cpu_load;
 } debug_type;
+
+extern debug_type debug;
+
+#endif

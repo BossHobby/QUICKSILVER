@@ -65,7 +65,6 @@ THE SOFTWARE.
 static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
 
-extern debug_type debug;
 extern profile_t profile;
 
 float accel[3];

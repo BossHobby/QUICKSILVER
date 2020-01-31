@@ -116,7 +116,6 @@ const char* get_decode_element_string (uint32_t input , uint8_t status){
 //																					STATE VARIABLES
 //************************************************************************************************************************************************************************************
 // case & state variables for switch logic and profile adjustments
-debug_type debug;
 extern int flash_feature_1; //currently used for auto entry into wizard menu
 uint8_t osd_display_phase = 2;
 uint8_t last_display_phase;

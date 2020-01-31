@@ -31,6 +31,7 @@
 #include "binary.h"
 #include "buzzer.h"
 #include "control.h"
+#include "debug.h"
 #include "defines.h"
 #include "drv_adc.h"
 #include "drv_fmc2.h"
@@ -62,11 +63,6 @@
 #include "blackbox.h"
 #include "drv_usb.h"
 #include "usb_configurator.h"
-#endif
-
-#ifdef DEBUG
-#include "debug.h"
-debug_type debug;
 #endif
 
 // hal
