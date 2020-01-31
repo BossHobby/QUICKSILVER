@@ -35,3 +35,5 @@ typedef struct {
 
 uint8_t circular_buffer_write(volatile circular_buffer_t *c, uint8_t data);
 uint8_t circular_buffer_read(volatile circular_buffer_t *c, uint8_t *data);
+
+void reset_looptime();

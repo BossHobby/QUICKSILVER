@@ -1,10 +1,10 @@
 #include "usb_configurator.h"
 
 #include "debug.h"
-#include "drv_time.h"
 #include "drv_usb.h"
 #include "profile.h"
 #include "project.h"
+#include "util.h"
 
 #ifdef F405
 
@@ -108,8 +108,7 @@ void usb_configurator(void) {
   }
 
   // this will block and handle all usb traffic while active
-  extern unsigned int lastlooptime;
-  lastlooptime = gettime();
+  reset_looptime();
 }
 #pragma GCC diagnostic pop
 

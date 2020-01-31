@@ -6,12 +6,12 @@
 
 #include "blackbox.h"
 #include "drv_max7456.h"
-#include "drv_time.h"
 #include "drv_usb.h"
 #include "flash.h"
 #include "profile.h"
 #include "project.h"
 #include "sixaxis.h"
+#include "util.h"
 #include "vtx.h"
 
 #if defined(F4)
@@ -33,7 +33,6 @@ extern float rx_filtered[4];
 extern uint8_t aux[AUX_CHANNEL_MAX];
 extern float vbattfilt;
 extern float vbatt_comp;
-extern unsigned long lastlooptime;
 
 extern uint8_t blackbox_enabled;
 extern uint32_t blackbox_rate;
@@ -106,7 +105,7 @@ cbor_result_t quic_blackbox(const blackbox_t *blackbox) {
   send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
 
   // reset loop time
-  lastlooptime = gettime();
+  reset_looptime();
 
   return res;
 }

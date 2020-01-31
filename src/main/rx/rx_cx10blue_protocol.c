@@ -207,8 +207,7 @@ void rx_check(void) {
         rxmode = RXMODE_NORMAL;
 
         nextchannel();
-        extern unsigned long lastlooptime;
-        lastlooptime = gettime();
+        reset_looptime();
 #ifdef SERIAL
         printf(" BIND \n");
 #endif

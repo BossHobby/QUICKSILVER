@@ -86,7 +86,6 @@ float rx_rssi;
 bool FPORTDebugTelemetry = false;
 extern float vbattfilt;
 extern float vbatt_comp;
-extern unsigned int lastlooptime;
 uint8_t telemetryPacket[10];
 extern int current_pid_axis;
 extern int current_pid_term;

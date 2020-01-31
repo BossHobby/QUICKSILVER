@@ -1,11 +1,11 @@
 #include "gestures.h"
 #include "defines.h"
-#include "drv_time.h"
 #include "osd_adjust.h"
 #include "pid.h"
 #include "profile.h"
 #include "rx.h"
 #include "sixaxis.h"
+#include "util.h"
 
 extern int ledcommand;
 extern int ledblink;
@@ -54,8 +54,7 @@ void gestures(void) {
 #endif
 
       // reset loop time
-      extern unsigned long lastlooptime;
-      lastlooptime = gettime();
+      reset_looptime();
     }
 
     if (command == GESTURE_DUD) {

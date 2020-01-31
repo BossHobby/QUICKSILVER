@@ -98,7 +98,6 @@ bool FPORTDebugTelemetry = false;
 uint8_t telemetryOffset = 0;
 extern float vbattfilt;
 extern float vbatt_comp;
-extern unsigned int lastlooptime;
 uint8_t telemetryPacket[14];
 extern int current_pid_axis;
 extern int current_pid_term;
@@ -1025,7 +1024,6 @@ void rx_serial_find_protocol(void) {
   //}
   //frameStatus = 3; //All done!
   //debug.max_cpu_loop_number = gettime();
-  //lastlooptime = gettime();
 
   if (rx_serial_protocol != RX_SERIAL_PROTOCOL_INVALID) {
     //rx_bind_enable = 1; NFE doesn't like this, and is convincing.  ROFL(NFE)

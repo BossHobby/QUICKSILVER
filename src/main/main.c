@@ -488,7 +488,7 @@ int main(void) {
         NVIC_EnableIRQ(EXTI4_15_IRQn);
         ledoff(2);
 
-        lastlooptime = gettime();
+        reset_looptime();
       }
     } else {
       NVIC_DisableIRQ(EXTI4_15_IRQn);

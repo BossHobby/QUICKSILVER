@@ -17,7 +17,6 @@ extern int rxmode;
 extern int failsafe;
 
 extern int onground;
-extern int lastlooptime;
 
 #ifdef FPV_ON
 static int fpv_init = 0;
@@ -116,7 +115,7 @@ void vtx_update() {
       serial_smart_audio_send_payload(SA_CMD_GET_SETTINGS, NULL, 0);
 
       // reset loop time
-      lastlooptime = gettime();
+      reset_looptime();
 
       vtx_connect_tries++;
     } else if (smart_audio_settings.version != 0 && smart_audio_detected == 0) {
