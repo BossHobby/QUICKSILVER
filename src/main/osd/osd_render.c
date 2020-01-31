@@ -1,4 +1,4 @@
-#include <osd/osd_render.h>
+#include "osd_render.h"
 #include "osd_menu_maps.h"
 #include "osd_adjust.h"
 #include "drv_max7456.h"

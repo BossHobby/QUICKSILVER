@@ -1,7 +1,7 @@
-#include <osd/osd_adjust.h>
 #include "gestures.h"
 #include "defines.h"
 #include "drv_time.h"
+#include "osd_adjust.h"
 #include "pid.h"
 #include "profile.h"
 #include "rx.h"
@@ -109,13 +109,13 @@ void gestures(void) {
       extern uint8_t osd_menu_phase;
       extern uint8_t osd_cursor;
       extern uint8_t osd_select;
-      if(osd_select){
-      extern uint8_t increase_osd_value;
-      increase_osd_value = 1;
-      }else{
-      osd_cursor--;
-      osd_menu_phase = 1;
-      ledblink = 1;
+      if (osd_select) {
+        extern uint8_t increase_osd_value;
+        increase_osd_value = 1;
+      } else {
+        osd_cursor--;
+        osd_menu_phase = 1;
+        ledblink = 1;
       }
     }
 
@@ -123,20 +123,20 @@ void gestures(void) {
       extern uint8_t osd_menu_phase;
       extern uint8_t osd_cursor;
       extern uint8_t osd_select;
-      if(osd_select){
-      extern uint8_t decrease_osd_value;
-      decrease_osd_value = 1;
-      }else{
-      osd_menu_phase = 1;
-      osd_cursor++;
-      ledblink = 1;
+      if (osd_select) {
+        extern uint8_t decrease_osd_value;
+        decrease_osd_value = 1;
+      } else {
+        osd_menu_phase = 1;
+        osd_cursor++;
+        ledblink = 1;
       }
     }
 
     if (command == GESTURE_OSD_RIGHT) {
       extern uint8_t osd_select;
       extern uint8_t osd_menu_phase;
-      osd_select ++;
+      osd_select++;
       osd_menu_phase = 1;
       ledblink = 2;
     }
@@ -147,19 +147,19 @@ void gestures(void) {
       extern uint8_t osd_menu_phase;
       extern uint8_t osd_select;
       extern uint8_t last_display_phase;
-      if(osd_select){
-      osd_select --;
-      osd_menu_phase = 1;
-      }else{
-      osd_cursor = last_cursor_array_stuffer(osd_cursor, RETURN_VALUE); //this tracks like last display phase
-      if (osd_display_phase > 2){
-    	  osd_display_phase = last_display_phase;
-    	  osd_menu_phase = 0;
-      }else{
-      osd_display_phase--;
-      }
-      ledblink = 2 - osd_display_phase;
-      pid_gestures_used = 0;
+      if (osd_select) {
+        osd_select--;
+        osd_menu_phase = 1;
+      } else {
+        osd_cursor = last_cursor_array_stuffer(osd_cursor, RETURN_VALUE); //this tracks like last display phase
+        if (osd_display_phase > 2) {
+          osd_display_phase = last_display_phase;
+          osd_menu_phase = 0;
+        } else {
+          osd_display_phase--;
+        }
+        ledblink = 2 - osd_display_phase;
+        pid_gestures_used = 0;
       }
     }
 #endif

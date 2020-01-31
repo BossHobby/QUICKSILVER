@@ -26,7 +26,6 @@
 // files of this project should be assumed MIT licence unless otherwise noted
 #include <inttypes.h>
 #include <math.h>
-#include <osd/osd_render.h>
 #include <stdio.h>
 
 #include "binary.h"
@@ -45,6 +44,7 @@
 #include "filter.h"
 #include "gestures.h"
 #include "led.h"
+#include "osd_render.h"
 #include "pid.h"
 #include "profile.h"
 #include "project.h"
