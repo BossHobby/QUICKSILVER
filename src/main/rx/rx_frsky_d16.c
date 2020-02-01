@@ -17,6 +17,8 @@
 #define FRSKY_D16_CHANNEL_COUNT 16
 #define FRSKY_D16_TELEMETRY_SEQUENCE_LENGTH 4
 
+#define FRSKY_D16_PACKET_DELAY 5300
+
 #ifdef RX_FRSKY_D16_FCC
 #define FRSKY_D16_PACKET_LENGTH 32
 #define FRSKY_D16_TELEMETRY_DELAY 400
@@ -234,6 +236,56 @@ static uint8_t frsky_d16_append_telemetry(uint8_t *buf) {
   return size;
 }
 
+static void frsky_d16_build_telemetry(uint8_t *telemetry) {
+  const uint8_t rssi = frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]);
+
+  static uint8_t even_odd = 0;
+  static uint8_t local_packet_id = 0;
+
+  extern float vbattfilt;
+
+  telemetry[0] = 0x0E; // length
+  telemetry[1] = frsky_bind.tx_id[0];
+  telemetry[2] = frsky_bind.tx_id[1];
+  telemetry[3] = packet[3];
+  if (even_odd) {
+    telemetry[4] = rssi | 0x80;
+  } else {
+    telemetry[4] = (uint8_t)(vbattfilt * 10) & 0x7f;
+  }
+  even_odd = even_odd == 1 ? 0 : 1;
+
+  frsky_d16_telemetry_flag_t *in_flag = (frsky_d16_telemetry_flag_t *)&packet[21];
+  frsky_d16_telemetry_flag_t *out_flag = (frsky_d16_telemetry_flag_t *)&telemetry[5];
+  if (in_flag->flag.init_request) {
+    out_flag->raw = 0;
+    out_flag->flag.init_request = 1;
+    out_flag->flag.init_response = 1;
+
+    local_packet_id = 0;
+  } else {
+    const uint8_t local_ack_id = in_flag->flag.ack_id;
+    if (in_flag->flag.retransmit) {
+      out_flag->raw = 0;
+      out_flag->flag.ack_id = local_ack_id;
+      out_flag->flag.packet_id = in_flag->flag.ack_id;
+
+    } else if (local_packet_id != (local_ack_id + 1) % FRSKY_D16_TELEMETRY_SEQUENCE_LENGTH) {
+      out_flag->raw = 0;
+      out_flag->flag.ack_id = in_flag->flag.packet_id;
+      out_flag->flag.packet_id = local_packet_id;
+
+      telemetry[6] = frsky_d16_append_telemetry(&telemetry[7]);
+
+      local_packet_id = (local_packet_id + 1) % FRSKY_D16_TELEMETRY_SEQUENCE_LENGTH;
+    }
+  }
+
+  uint16_t crc = frsky_d16_crc(&telemetry[3], 10);
+  telemetry[13] = crc >> 8;
+  telemetry[14] = crc;
+}
+
 static uint8_t frsky_d16_handle_packet() {
   static uint8_t frame_had_packet = 0;
   static uint32_t frames_lost = 0;
@@ -263,7 +315,7 @@ static uint8_t frsky_d16_handle_packet() {
   case FRSKY_STATE_UPDATE:
     frame_had_packet = 0;
     protocol_state = FRSKY_STATE_DATA;
-    rx_delay = 5300;
+    rx_delay = FRSKY_D16_PACKET_DELAY;
     last_packet_received_time = timer_micros();
     // fallthrough
   case FRSKY_STATE_DATA: {
@@ -303,59 +355,17 @@ static uint8_t frsky_d16_handle_packet() {
     handle_overflows();
 
     if (send_telemetry == 1 && (timer_micros() - last_packet_received_time) >= rx_delay) {
-      const uint8_t rssi = frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]);
-
-      static uint8_t even_odd = 0;
-      static uint8_t local_packet_id = 0;
-
-      extern float vbattfilt;
-
-      telemetry[0] = 0x0E; // length
-      telemetry[1] = frsky_bind.tx_id[0];
-      telemetry[2] = frsky_bind.tx_id[1];
-      telemetry[3] = packet[3];
-      if (even_odd) {
-        telemetry[4] = rssi | 0x80;
-      } else {
-        telemetry[4] = (uint8_t)(vbattfilt * 10) & 0x7f;
-      }
-      even_odd = even_odd == 1 ? 0 : 1;
-
-      frsky_d16_telemetry_flag_t *in_flag = (frsky_d16_telemetry_flag_t *)&packet[21];
-      frsky_d16_telemetry_flag_t *out_flag = (frsky_d16_telemetry_flag_t *)&telemetry[5];
-      if (in_flag->flag.init_request) {
-        out_flag->raw = 0;
-        out_flag->flag.init_request = 1;
-        out_flag->flag.init_response = 1;
-
-        local_packet_id = 0;
-      } else {
-        const uint8_t local_ack_id = in_flag->flag.ack_id;
-        if (in_flag->flag.retransmit) {
-          out_flag->raw = 0;
-          out_flag->flag.ack_id = local_ack_id;
-          out_flag->flag.packet_id = in_flag->flag.ack_id;
-
-        } else if (local_packet_id != (local_ack_id + 1) % FRSKY_D16_TELEMETRY_SEQUENCE_LENGTH) {
-          out_flag->raw = 0;
-          out_flag->flag.ack_id = in_flag->flag.packet_id;
-          out_flag->flag.packet_id = local_packet_id;
-
-          telemetry[6] = frsky_d16_append_telemetry(&telemetry[7]);
-
-          local_packet_id = (local_packet_id + 1) % FRSKY_D16_TELEMETRY_SEQUENCE_LENGTH;
-        }
-      }
-
-      uint16_t crc = frsky_d16_crc(&telemetry[3], 10);
-      telemetry[13] = crc >> 8;
-      telemetry[14] = crc;
-
+      frsky_d16_build_telemetry(telemetry);
       protocol_state = FRSKY_STATE_TELEMETRY;
     }
 
     if ((timer_micros() - last_packet_received_time) >= max_sync_delay) {
+      if (frames_lost >= 2) {
+        cc2500_switch_antenna();
+      }
+
       rx_rssi = 0;
+      frames_lost++;
 
       // make sure we are in rx mode
       cc2500_enter_rxmode();
@@ -366,7 +376,8 @@ static uint8_t frsky_d16_handle_packet() {
     break;
   }
   case FRSKY_STATE_TELEMETRY:
-    if ((timer_micros() - last_packet_received_time) >= (rx_delay + FRSKY_D16_TELEMETRY_DELAY)) {
+    // move to idle state
+    if ((cc2500_get_status() & (0x70)) != 0) {
       const uint8_t rssi = frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]);
 
       cc2500_strobe(CC2500_SIDLE);
@@ -377,8 +388,9 @@ static uint8_t frsky_d16_handle_packet() {
       }
       cc2500_strobe(CC2500_SFRX);
       cc2500_enter_txmode();
-
       cc2500_strobe(CC2500_SIDLE);
+    }
+    if ((timer_micros() - last_packet_received_time) >= (rx_delay + FRSKY_D16_TELEMETRY_DELAY)) {
       cc2500_write_fifo(telemetry, telemetry[0] + 1);
 
       protocol_state = FRSKY_STATE_RESUME;
@@ -392,7 +404,7 @@ static uint8_t frsky_d16_handle_packet() {
     }
     if ((timer_micros() - last_packet_received_time) >= (rx_delay + 3700)) {
       last_packet_received_time = timer_micros();
-      rx_delay = 5300;
+      rx_delay = FRSKY_D16_PACKET_DELAY;
       frame_had_packet = 0;
 
       if (frames_lost >= 2) {
@@ -409,7 +421,10 @@ static uint8_t frsky_d16_handle_packet() {
         break;
       }
 
-      frames_lost++;
+      if (frame_had_packet == 0) {
+        frames_lost++;
+      }
+
       protocol_state = FRSKY_STATE_DATA;
     }
     break;
