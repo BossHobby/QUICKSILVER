@@ -33,7 +33,10 @@ typedef struct {
   const uint32_t size;
 } circular_buffer_t;
 
+uint32_t circular_buffer_free(volatile circular_buffer_t *c);
 uint8_t circular_buffer_write(volatile circular_buffer_t *c, uint8_t data);
+
+uint32_t circular_buffer_available(volatile circular_buffer_t *c);
 uint8_t circular_buffer_read(volatile circular_buffer_t *c, uint8_t *data);
 
 void reset_looptime();
