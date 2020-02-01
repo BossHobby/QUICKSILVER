@@ -303,6 +303,7 @@ void frsky_handle_bind() {
       last_offset = current_offset;
     }
     if (tune_samples >= 3) {
+      quic_debugf("FRSKY: tuned offset %d", frsky_bind.offset);
       set_address(1);
       init_get_bind();
       protocol_state = FRSKY_STATE_BIND_BINDING1;
