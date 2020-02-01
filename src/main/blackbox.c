@@ -132,15 +132,5 @@ void blackbox_update() {
     quic_blackbox(&state);
   }
 
-  if ((loop_counter % (uint32_t)((1000000.0f / LOOPTIME)) == 0)) {
-    smart_port_payload_t payload = {
-        .frame_id = FSSP_MSPS_FRAME,
-        .value_id = 0x5000,
-        .value = 0x1337,
-    };
-
-    frsky_d16_write_telemetry(&payload);
-  }
-
   loop_counter++;
 }
