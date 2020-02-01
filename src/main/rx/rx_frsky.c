@@ -192,13 +192,14 @@ static void init_tune_rx(void) {
   cc2500_strobe(CC2500_SRX);
 }
 
-static uint8_t tune_rx() {
+static uint8_t tune_rx(uint8_t iteration) {
   if (frsky_bind.offset >= 126) {
     frsky_bind.offset = -126;
   }
   if ((debug_timer_millis() - time_tuned_ms) > 50) {
     time_tuned_ms = debug_timer_millis();
-    frsky_bind.offset += 5;
+    // switch to fine tuning after first hit
+    frsky_bind.offset += iteration > 0 ? 1 : 5;
     cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)frsky_bind.offset);
   }
 
@@ -667,13 +668,25 @@ void rx_check() {
     init_tune_rx();
     protocol_state = STATE_BIND_TUNING;
     break;
-  case STATE_BIND_TUNING:
-    if (tune_rx(packet)) {
+  case STATE_BIND_TUNING: {
+    static uint8_t tune_samples = 0;
+    static int8_t last_offset = -126;
+
+    if (tune_rx(tune_samples)) {
+      const uint8_t current_offset = frsky_bind.offset;
+      if (last_offset == current_offset) {
+        frsky_bind.offset -= 5;
+        tune_samples++;
+      }
+      last_offset = current_offset;
+    }
+    if (tune_samples >= 3) {
       set_address(1);
       init_get_bind();
       protocol_state = STATE_BIND_BINDING1;
     }
     break;
+  }
   case STATE_BIND_BINDING1:
     if (get_bind1(packet)) {
       protocol_state = STATE_BIND_BINDING2;
