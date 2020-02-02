@@ -414,12 +414,11 @@ static uint8_t frsky_d_append_hub_telemetry(uint8_t telemetry_id, uint8_t *buf) 
 
 static uint8_t frsky_d_handle_packet() {
   static uint32_t last_packet_received_time = 0;
-  static uint8_t in_tx_mode = 0;
   static uint32_t frame_index = 0;
   static uint32_t frames_lost = 0;
   static uint32_t max_sync_delay = 50 * SYNC_DELAY_MAX;
 
-  static uint8_t frame_had_packet = 0;
+  static uint8_t in_tx_mode = 0;
 
   static uint8_t telemetry[20];
 
@@ -451,7 +450,6 @@ static uint8_t frsky_d_handle_packet() {
     break;
     //fallthrough
   case STATE_UPDATE:
-    frame_had_packet = 0;
     protocol_state = STATE_DATA;
     last_packet_received_time = current_packet_received_time;
     // fallthrough
@@ -505,7 +503,6 @@ static uint8_t frsky_d_handle_packet() {
         max_sync_delay = SYNC_DELAY_MAX;
         // make sure we dont read the packet a second time
         frame->crc[1] = 0x00;
-        frame_had_packet = 1;
         frames_lost = 0;
         frame_index++;
         ret = 1;
@@ -681,7 +678,7 @@ void rx_check() {
     static int8_t last_offset = -126;
 
     if (tune_rx(tune_samples)) {
-      const uint8_t current_offset = frsky_bind.offset;
+      const int8_t current_offset = frsky_bind.offset;
       if (last_offset == current_offset) {
         frsky_bind.offset -= 5;
         tune_samples++;
