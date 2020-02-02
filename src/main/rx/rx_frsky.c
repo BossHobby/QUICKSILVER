@@ -350,13 +350,10 @@ static void frsky_d_set_rc_data() {
     lastaux[i] = aux[i];
   }
 
-  rx_rssi = frsky_extract_rssi(packet[18]);
-  if (rx_rssi > 100.0f)
-    rx_rssi = 100.0f;
-  if (rx_rssi < 0.0f)
-    rx_rssi = 0.0f;
+  rx_rssi = constrainf(frsky_extract_rssi(packet[18]), 0.f, 100.f);
 }
 
+#ifdef FRSKY_ENABLE_HUB_TELEMETRY
 static uint8_t frsky_d_hub_encode(uint8_t *buf, uint8_t data) {
   // take care of byte stuffing
   if (data == 0x5e) {
@@ -371,7 +368,6 @@ static uint8_t frsky_d_hub_encode(uint8_t *buf, uint8_t data) {
   return 1;
 }
 
-#ifdef FRSKY_ENABLE_HUB_TELEMETRY
 static uint8_t frsky_d_append_hub_telemetry(uint8_t telemetry_id, uint8_t *buf) {
   static uint8_t pid_axis = 0;
   extern vector_t *current_pid_term_pointer();
@@ -418,7 +414,7 @@ static uint8_t frsky_d_append_hub_telemetry(uint8_t telemetry_id, uint8_t *buf) 
 
 static uint8_t frsky_d_handle_packet() {
   static uint32_t last_packet_received_time = 0;
-  static uint32_t telemetry_time = 0;
+  static uint8_t in_tx_mode = 0;
   static uint32_t frame_index = 0;
   static uint32_t frames_lost = 0;
   static uint32_t max_sync_delay = 50 * SYNC_DELAY_MAX;
@@ -446,9 +442,10 @@ static uint8_t frsky_d_handle_packet() {
       cc2500_enter_rxmode();
       next_channel(1);
       cc2500_strobe(CC2500_SRX);
+      in_tx_mode = 0;
     }
 
-    if ((debug_timer_micros() - telemetry_time) >= SYNC_DELAY_MAX) {
+    if ((current_packet_received_time - last_packet_received_time) >= SYNC_DELAY_MAX) {
       protocol_state = STATE_UPDATE;
     }
     break;
@@ -497,7 +494,6 @@ static uint8_t frsky_d_handle_packet() {
           telemetry[7] = telemetry_id;
 
           protocol_state = STATE_TELEMETRY;
-          telemetry_time = debug_timer_micros();
         } else
 #endif
         {
@@ -521,14 +517,6 @@ static uint8_t frsky_d_handle_packet() {
     handle_overflows();
 
     if ((current_packet_received_time - last_packet_received_time) >= max_sync_delay) {
-      if (!frame_had_packet) {
-        quic_debugf("FRSKY: frame lost %d", (current_packet_received_time - last_packet_received_time));
-        frames_lost++;
-        frame_index++;
-        rx_rssi = 0;
-      } else {
-        quic_debugf("FRSKY: hit sync delay %d", (current_packet_received_time - last_packet_received_time));
-      }
       if (frames_lost >= 2) {
         cc2500_switch_antenna();
       }
@@ -536,8 +524,12 @@ static uint8_t frsky_d_handle_packet() {
         quic_debugf("FRSKY: failsafe");
         max_sync_delay = 10 * SYNC_DELAY_MAX;
         failsafe = 1;
-        rx_rssi = 0;
       }
+
+      quic_debugf("FRSKY: frame lost %u", (current_packet_received_time - last_packet_received_time));
+      frames_lost++;
+      frame_index++;
+      rx_rssi = 0;
 
       cc2500_enter_rxmode();
       next_channel(1);
@@ -548,21 +540,37 @@ static uint8_t frsky_d_handle_packet() {
     break;
   }
 #ifdef FRSKY_ENABLE_TELEMETRY
-  case STATE_TELEMETRY:
-    // telemetry has to be done 2000us after rx
-    if ((debug_timer_micros() - telemetry_time) >= 1500) {
-      cc2500_strobe(CC2500_SIDLE);
-      cc2500_set_power(6);
-      cc2500_strobe(CC2500_SFRX);
-      cc2500_enter_txmode();
+  case STATE_TELEMETRY: {
 
-      cc2500_strobe(CC2500_SIDLE);
-      cc2500_write_fifo(telemetry, telemetry[0] + 1);
+    // telemetry has to be done ~2000us after rx
+    if ((current_packet_received_time - last_packet_received_time) >= 1700) {
+
+      // skip telemetry if we did not make it in time
+      if (in_tx_mode) {
+        cc2500_write_fifo(telemetry, telemetry[0] + 1);
+      }
 
       protocol_state = STATE_RESUME;
       frame_index++;
     }
+
+    // move to tx mode
+    if (!in_tx_mode) {
+      const uint8_t rssi = frsky_extract_rssi(packet[18]);
+
+      cc2500_strobe(CC2500_SIDLE);
+      if (rssi > 110) {
+        cc2500_set_power(5);
+      } else {
+        cc2500_set_power(6);
+      }
+      cc2500_strobe(CC2500_SFRX);
+      cc2500_enter_txmode();
+      cc2500_strobe(CC2500_SIDLE);
+      in_tx_mode = 1;
+    }
     break;
+  }
 #endif
   }
 
