@@ -56,6 +56,7 @@ void serial_smart_audio_reconfigure() {
   USART_ClearFlag(USART.channel, USART_FLAG_RXNE | USART_FLAG_TC);
   USART_ClearITPendingBit(USART.channel, USART_IT_RXNE | USART_IT_TC);
   USART_ITConfig(USART.channel, USART_IT_TC, ENABLE);
+  USART_ITConfig(USART.channel, USART_IT_RXNE, ENABLE);
   USART_Cmd(USART.channel, ENABLE);
 }
 
@@ -69,15 +70,13 @@ void serial_smart_audio_init(void) {
 
 void smart_audio_uart_isr(void) {
   if (USART_GetITStatus(USART.channel, USART_IT_TC) != RESET) {
-    USART_ClearITPendingBit(USART.channel, USART_IT_TC);
-    USART_ITConfig(USART.channel, USART_IT_RXNE, ENABLE);
     transfer_done = 1;
+    USART_ClearITPendingBit(USART.channel, USART_IT_TC);
   }
 
   if (USART_GetITStatus(USART.channel, USART_IT_RXNE) != RESET) {
     USART_ClearITPendingBit(USART.channel, USART_IT_RXNE);
     circular_buffer_write(&smart_audio_rx_buffer, USART_ReceiveData(USART.channel));
-    packets_recv++;
   }
 
   if (USART_GetFlagStatus(USART.channel, USART_FLAG_ORE)) {
@@ -86,12 +85,23 @@ void smart_audio_uart_isr(void) {
 }
 
 void smart_audio_auto_baud() {
-  if (packets_sent < 30) {
+  static uint8_t last_percent = 0;
+
+  // move quickly while we have not yet found a working baud rate
+  const uint8_t current_percent = ((packets_recv * 100) / packets_sent);
+  if (packets_sent < (last_percent == 0 ? 3 : 10)) {
+    last_percent = current_percent;
     return;
   }
 
-  if (((packets_recv * 100) / packets_sent) < 70) {
+  if (current_percent < 70) {
     static int8_t direction = 1;
+
+    // if we degraded by 10, switch it up
+    if (last_percent < current_percent) {
+      direction = direction == 1 ? -1 : 1;
+    }
+
     if ((direction == 1) && (baud_rate == SMART_AUDIO_BAUDRATE_MAX)) {
       direction = -1;
     } else if ((direction == -1 && baud_rate == SMART_AUDIO_BAUDRATE_MIN)) {
@@ -99,10 +109,12 @@ void smart_audio_auto_baud() {
     }
 
     baud_rate += direction * 50;
-    quic_debugf("SMART_AUDIO: auto baud %d (%d)", baud_rate, direction * 50);
+    quic_debugf("SMART_AUDIO: auto baud %d (%d) change %d vs %d", baud_rate, direction * 50, last_percent, current_percent);
     serial_smart_audio_reconfigure();
+    debug_timer_delay_us(100);
   }
 
+  last_percent = current_percent;
   packets_sent = 0;
   packets_recv = 0;
 }
@@ -145,58 +157,87 @@ void serial_smart_audio_send_data(uint8_t *data, uint32_t size) {
       __WFI();
     }
     USART_SendData(USART.channel, data[i]);
-    packets_sent++;
   }
+  packets_sent++;
 }
 
-uint8_t serial_smart_audio_read_byte() {
-  uint8_t data = 0;
-  for (uint32_t timeout = 100; circular_buffer_read(&smart_audio_rx_buffer, &data) == 0; timeout--) {
+uint8_t serial_smart_audio_read_byte(uint8_t *data) {
+  for (uint32_t timeout = 750;; timeout--) {
+    if (circular_buffer_read(&smart_audio_rx_buffer, data) == 1) {
+      break;
+    }
     if (timeout == 0) {
       quic_debugf("SMART_AUDIO: read timeout");
       return 0;
     }
     __WFI();
   }
-  return data;
+  return 1;
 }
 
-uint8_t serial_smart_audio_read_byte_crc(uint8_t *crc) {
-  const uint8_t data = serial_smart_audio_read_byte();
-  *crc = crc8(*crc, data);
-  return data;
+uint8_t serial_smart_audio_check_for_byte(uint8_t check) {
+  uint8_t data = 0;
+  if (serial_smart_audio_read_byte(&data) == 0) {
+    return 0;
+  }
+  return data == check ? 1 : 0;
+}
+
+uint8_t serial_smart_audio_read_byte_crc(uint8_t *crc, uint8_t *data) {
+  if (serial_smart_audio_read_byte(data) == 0) {
+    return 0;
+  }
+  *crc = crc8(*crc, *data);
+  return 1;
 }
 
 uint8_t serial_smart_audio_read_packet() {
-  while (transfer_done == 0)
+  for (uint32_t timeout = 750;; timeout--) {
+    if (circular_buffer_available(&smart_audio_rx_buffer) >= 2) {
+      break;
+    }
+    if (timeout == 0) {
+      quic_debugf("SMART_AUDIO: timeout waiting for packet");
+      return 0;
+    }
+    debug_timer_delay_us(1);
     __WFI();
+  }
 
   for (uint8_t tries = 0;; tries++) {
     if (tries >= 3) {
-      quic_debugf("SMART_AUDIO: invalid first magic");
+      quic_debugf("SMART_AUDIO: invalid magic");
       return 0;
     }
-    if (serial_smart_audio_read_byte() == 0xaa) {
+    if (serial_smart_audio_check_for_byte(0xaa) && serial_smart_audio_check_for_byte(0x55)) {
       break;
     }
   }
 
-  if (serial_smart_audio_read_byte() != 0x55) {
-    quic_debugf("SMART_AUDIO: invalid second magic");
+  uint8_t crc = 0;
+
+  uint8_t cmd;
+  if (!serial_smart_audio_read_byte_crc(&crc, &cmd)) {
     return 0;
   }
 
-  uint8_t crc = 0;
-  uint8_t cmd = serial_smart_audio_read_byte_crc(&crc);
-  uint8_t length = serial_smart_audio_read_byte_crc(&crc);
+  uint8_t length;
+  if (!serial_smart_audio_read_byte_crc(&crc, &length)) {
+    return 0;
+  }
 
   uint8_t payload[length];
   for (uint8_t i = 0; i < length; i++) {
-    payload[i] = serial_smart_audio_read_byte_crc(&crc);
+    if (!serial_smart_audio_read_byte_crc(&crc, &payload[i])) {
+      return 0;
+    }
   }
 
   if (cmd != 0x01 && cmd != 0x09) {
-    uint8_t crc_input = serial_smart_audio_read_byte_crc(&crc);
+    uint8_t crc_input;
+    if (!serial_smart_audio_read_byte_crc(&crc, &crc_input)) {
+      return 0;
+    }
     if (crc != crc_input) {
       quic_debugf("SMART_AUDIO: invalid crc 0x%x vs 0x%x", crc, crc_input);
       return 0;
@@ -245,6 +286,32 @@ uint8_t serial_smart_audio_read_packet() {
     quic_debugf("SMART_AUDIO: invalid cmd %d (%d)", cmd, length);
     break;
   }
+  packets_recv++;
+  return 1;
+}
+
+uint8_t serial_smart_audio_read_frame_back(const uint8_t *frame, const uint32_t size) {
+  while (transfer_done == 0)
+    __WFI();
+
+  uint8_t first = 0;
+  if (serial_smart_audio_read_byte(&first) == 0) {
+    return 0;
+  }
+
+  // handle optional zero byte
+  uint8_t start = 0;
+  if (first != 0x0 && first != frame[0]) {
+    return 0;
+  } else if (first == frame[0]) {
+    start = 1;
+  }
+
+  for (uint8_t i = start; i < size; i++) {
+    if (serial_smart_audio_check_for_byte(frame[i]) == 0) {
+      return 0;
+    }
+  }
 
   return 1;
 }
@@ -261,22 +328,23 @@ uint8_t serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, con
   for (uint8_t i = 0; i < size; i++) {
     frame[i + 5] = payload[i];
   }
-  frame[size + 5] = crc8_data(frame, frame_length - 1);
+  frame[size + 5] = crc8_data(frame + 1, frame_length - 2);
 
-  for (uint8_t tries = 0; tries < 3; tries++) {
-    smart_audio_auto_baud();
+  circular_buffer_clear(&smart_audio_rx_buffer);
+  smart_audio_auto_baud();
 
-    quic_debugf("SMART_AUDIO: send cmd %d (%d)", cmd, size);
-    USART_ITConfig(USART.channel, USART_IT_RXNE, DISABLE);
+  quic_debugf("SMART_AUDIO: send cmd %d (%d)", cmd, size);
+  serial_smart_audio_send_data(frame, frame_length);
 
-    serial_smart_audio_send_data(frame, frame_length);
-
-    if (serial_smart_audio_read_packet()) {
-      return 1;
-    }
-    debug_timer_delay_us(100);
+  if (!serial_smart_audio_read_frame_back(frame + 1, frame_length - 1)) {
+    quic_debugf("SMART_AUDIO: invalid mirror");
+    return 0;
   }
 
-  return 0;
+  if (!serial_smart_audio_read_packet()) {
+    return 0;
+  }
+
+  return 1;
 }
 #endif

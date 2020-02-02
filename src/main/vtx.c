@@ -38,7 +38,7 @@ uint16_t vtx_frequency_from_channel(vtx_band_t band, vtx_channel_t channel) {
 }
 
 #ifdef ENABLE_SMART_AUDIO
-#define SMART_AUDIO_CONNECTION_TRIES 3
+#define SMART_AUDIO_CONNECTION_TRIES 15
 
 extern smart_audio_settings_t smart_audio_settings;
 uint8_t smart_audio_detected = 0;
@@ -72,6 +72,15 @@ int8_t smart_audio_dac_power_level_index(uint8_t dac) {
 
 uint8_t has_smart_audio_configured() {
   return serial_smart_audio_port == profile.serial.smart_audio && serial_smart_audio_port != USART_PORT_INVALID;
+}
+
+uint8_t smart_audio_try_send_payload(uint8_t cmd, const uint8_t *payload, const uint32_t size) {
+  for (uint8_t tries = 0; tries < 5; tries++) {
+    if (serial_smart_audio_send_payload(cmd, payload, size)) {
+      return 1;
+    }
+  }
+  return 0;
 }
 #endif
 
@@ -110,14 +119,18 @@ void vtx_update() {
 #ifdef ENABLE_SMART_AUDIO
   if (onground && has_smart_audio_configured()) {
 
-    if (smart_audio_settings.version == 0 && vtx_connect_tries < SMART_AUDIO_CONNECTION_TRIES) {
+    static uint32_t delay_loops = 100;
+
+    if (delay_loops > 0) {
+      delay_loops--;
+    } else if (smart_audio_settings.version == 0 && vtx_connect_tries <= SMART_AUDIO_CONNECTION_TRIES) {
       // no smart audio detected, try again
       serial_smart_audio_send_payload(SA_CMD_GET_SETTINGS, NULL, 0);
 
       // reset loop time
       reset_looptime();
-
       vtx_connect_tries++;
+      delay_loops = 20;
     } else if (smart_audio_settings.version != 0 && smart_audio_detected == 0) {
       quic_debugf("smart audio version: %d", smart_audio_settings.version);
 
@@ -172,7 +185,7 @@ uint8_t vtx_set_frequency(vtx_band_t band, vtx_channel_t channel) {
           frequency & 0xFF,
       };
       if (smart_audio_settings.frequency != frequency) {
-        serial_smart_audio_send_payload(SA_CMD_SET_FREQUENCY, payload, 2);
+        smart_audio_try_send_payload(SA_CMD_SET_FREQUENCY, payload, 2);
         did_change = 1;
       }
 
@@ -181,7 +194,7 @@ uint8_t vtx_set_frequency(vtx_band_t band, vtx_channel_t channel) {
       const uint8_t index = band * VTX_CHANNEL_MAX + channel;
       const uint8_t payload[1] = {index};
       if (smart_audio_settings.channel != index) {
-        serial_smart_audio_send_payload(SA_CMD_SET_CHANNEL, payload, 1);
+        smart_audio_try_send_payload(SA_CMD_SET_CHANNEL, payload, 1);
         did_change = 1;
       }
 
@@ -217,7 +230,7 @@ uint8_t vtx_set_pit_mode(vtx_pit_mode_t pit_mode) {
         mode |= 0x04;
       }
 
-      serial_smart_audio_send_payload(SA_CMD_SET_MODE, &mode, 1);
+      smart_audio_try_send_payload(SA_CMD_SET_MODE, &mode, 1);
       vtx_settings.pit_mode = smart_audio_settings.mode & SA_MODE_PIT ? 1 : 0;
       return 1;
     } else {
@@ -237,14 +250,14 @@ uint8_t vtx_set_power_level(vtx_power_level_t power_level) {
 
     if (smart_audio_settings.version >= 2) {
       if (smart_audio_settings.power != level) {
-        serial_smart_audio_send_payload(SA_CMD_SET_POWER, &level, 1);
+        smart_audio_try_send_payload(SA_CMD_SET_POWER, &level, 1);
         did_change = 1;
       }
       vtx_settings.power_level = smart_audio_settings.power;
     } else {
       level = smart_audio_dac_power_level[power_level];
       if (smart_audio_settings.power != level) {
-        serial_smart_audio_send_payload(SA_CMD_SET_POWER, &level, 1);
+        smart_audio_try_send_payload(SA_CMD_SET_POWER, &level, 1);
         did_change = 1;
       }
       vtx_settings.power_level = smart_audio_dac_power_level_index(smart_audio_settings.power);
