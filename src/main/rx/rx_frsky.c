@@ -418,8 +418,6 @@ static uint8_t frsky_d_handle_packet() {
   static uint32_t frames_lost = 0;
   static uint32_t max_sync_delay = 50 * SYNC_DELAY_MAX;
 
-  static uint8_t in_tx_mode = 0;
-
   static uint8_t telemetry[20];
 
   const uint32_t current_packet_received_time = debug_timer_micros();
@@ -441,10 +439,10 @@ static uint8_t frsky_d_handle_packet() {
       cc2500_enter_rxmode();
       next_channel(1);
       cc2500_strobe(CC2500_SRX);
-      in_tx_mode = 0;
     }
 
-    if ((current_packet_received_time - last_packet_received_time) >= SYNC_DELAY_MAX) {
+    if ((debug_timer_micros() - last_packet_received_time) >= SYNC_DELAY_MAX) {
+      frame_index++;
       protocol_state = STATE_UPDATE;
     }
     break;
@@ -493,6 +491,10 @@ static uint8_t frsky_d_handle_packet() {
 
           protocol_state = STATE_TELEMETRY;
         } else
+#else
+        if ((frame->counter % 4) == 2) {
+          protocol_state = STATE_RESUME;
+        } else
 #endif
         {
           cc2500_strobe(CC2500_SRX);
@@ -540,19 +542,7 @@ static uint8_t frsky_d_handle_packet() {
   case STATE_TELEMETRY: {
 
     // telemetry has to be done ~2000us after rx
-    if ((current_packet_received_time - last_packet_received_time) >= 1700) {
-
-      // skip telemetry if we did not make it in time
-      if (in_tx_mode) {
-        cc2500_write_fifo(telemetry, telemetry[0] + 1);
-      }
-
-      protocol_state = STATE_RESUME;
-      frame_index++;
-    }
-
-    // move to tx mode
-    if (!in_tx_mode) {
+    if ((debug_timer_micros() - last_packet_received_time) >= 1500) {
       const uint8_t rssi = frsky_extract_rssi(packet[18]);
 
       cc2500_strobe(CC2500_SIDLE);
@@ -564,7 +554,8 @@ static uint8_t frsky_d_handle_packet() {
       cc2500_strobe(CC2500_SFRX);
       cc2500_enter_txmode();
       cc2500_strobe(CC2500_SIDLE);
-      in_tx_mode = 1;
+      cc2500_write_fifo(telemetry, telemetry[0] + 1);
+      protocol_state = STATE_RESUME;
     }
     break;
   }
