@@ -6,7 +6,7 @@
 #include "drv_usb.h"
 #include "project.h"
 
-#if defined(F405)
+#if defined(F4)
 
 #define MSP_API_VERSION 1 //out message
 #define MSP_FC_VARIANT 2  //out message

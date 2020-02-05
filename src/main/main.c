@@ -60,7 +60,7 @@
 #include "drv_serial_soft.h"
 #endif
 
-#ifdef F405
+#ifdef F4
 #include "blackbox.h"
 #include "drv_usb.h"
 #include "usb_configurator.h"
@@ -156,7 +156,7 @@ int main(void) {
 
   gpio_init();
 
-#ifdef F405
+#ifdef F4
   usb_init();
 #endif
 
@@ -506,7 +506,7 @@ int main(void) {
     osd_display();
 #endif
 
-#ifdef F405
+#ifdef F4
     blackbox_update();
     usb_detect();
 #endif
@@ -583,7 +583,7 @@ void failloop(int val) {
   }
 
   while (1) {
-#if defined(F405) && defined(DEBUG)
+#if defined(F4) && defined(DEBUG)
     quic_debugf("failloop %s (%d)", failloop_string(val), val);
     usb_detect();
 #endif
@@ -598,7 +598,7 @@ void failloop(int val) {
 }
 
 void handle_fault() {
-#if defined(F405) && defined(RESET_ON_FAULT)
+#if defined(F4) && defined(RESET_ON_FAULT)
   extern void systemResetToBootloader(void);
   systemResetToBootloader();
 #endif

@@ -2,7 +2,7 @@
 
 #include "defines.h"
 
-#ifdef F405
+#ifdef F4
 #include "stm32f4xx_usart.h"
 #endif
 #ifdef F0

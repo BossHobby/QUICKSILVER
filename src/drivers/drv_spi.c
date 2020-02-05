@@ -30,7 +30,7 @@ void spi_init(void) {
   spi_csoff();
 }
 
-#ifdef F405
+#ifdef F4
 #define gpioset(port, pin) port->BSRRL = pin
 #define gpioreset(port, pin) port->BSRRH = pin
 #endif
@@ -53,7 +53,7 @@ void spi_init(void) {
 //#pragma O2
 
 void spi_cson() {
-#ifdef F405
+#ifdef F4
   SPI_SS_PORT->BSRRH = SPI_SS_PIN;
 #endif
 #ifdef F0
@@ -62,7 +62,7 @@ void spi_cson() {
 }
 
 void spi_csoff() {
-#ifdef F405
+#ifdef F4
   SPI_SS_PORT->BSRRL = SPI_SS_PIN;
 #endif
 #ifdef F0
@@ -117,7 +117,7 @@ int spi_sendrecvbyte(int data) {
     }
 
     data = data << 1;
-#ifdef F405
+#ifdef F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");
@@ -142,7 +142,7 @@ int spi_sendzerorecvbyte() {
 
   for (int i = 7; i >= 0; i--) {
     recv = recv << 1;
-#ifdef F405
+#ifdef F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");
@@ -156,7 +156,7 @@ int spi_sendzerorecvbyte() {
       recv = recv | 1;
 
     SCKLOW;
-#ifdef F405
+#ifdef F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");

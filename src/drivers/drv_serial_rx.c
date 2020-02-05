@@ -16,7 +16,7 @@ extern uint8_t rxusart;
 //FUNCTION TO COMMAND EXTERNAL USART INVERTER HIGH OR LOW         todo: sort out target mapping tag in drv_rx_serial.h for a quick define from the taarget
 
 void usart_invert(void) {
-#if defined(F405) && defined(INVERT_UART) && defined(USART_INVERTER_PIN) && defined(USART_INVERTER_PORT)
+#if defined(F4) && defined(INVERT_UART) && defined(USART_INVERTER_PIN) && defined(USART_INVERTER_PORT)
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.GPIO_Pin = USART_INVERTER_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;

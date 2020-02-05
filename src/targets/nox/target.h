@@ -4,7 +4,6 @@
 
 #define F4
 #define F411
-#define F405
 
 //#define USB_DETECT_PIN GPIO_Pin_5
 //#define USB_DETECT_PORT GPIOC

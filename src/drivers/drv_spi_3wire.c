@@ -53,7 +53,7 @@ void mosi_output(void) {
   }
 }
 
-#ifdef F405
+#ifdef F4
 #define gpioset(port, pin) port->BSRRL = pin
 #define gpioreset(port, pin) port->BSRRH = pin
 #endif
@@ -70,7 +70,7 @@ void mosi_output(void) {
 #define READMOSI (SPI_MOSI_PORT->IDR & SPI_MOSI_PIN)
 
 void spi_cson() {
-#ifdef F405
+#ifdef F4
   SPI_SS_PORT->BSRRH = SPI_SS_PIN;
 #endif
 #ifdef F0
@@ -79,7 +79,7 @@ void spi_cson() {
 }
 
 void spi_csoff() {
-#ifdef F405
+#ifdef F4
   SPI_SS_PORT->BSRRL = SPI_SS_PIN;
 #endif
 #ifdef F0
@@ -95,7 +95,7 @@ void spi_sendbyte(int data) {
     } else {
       MOSILOW;
     }
-#ifdef F405
+#ifdef F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");
@@ -106,7 +106,7 @@ void spi_sendbyte(int data) {
     __asm("NOP");
 #endif
     SCKHIGH;
-#ifdef F405
+#ifdef F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");
@@ -128,7 +128,7 @@ void spi_sendbyte(int data) {
     __asm("NOP");
 #endif
     SCKLOW;
-#ifdef F405
+#ifdef F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");
@@ -145,7 +145,7 @@ int spi_recvbyte(void) {
   int recv = 0;
 
   for (int i = 7; i >= 0; i--) {
-#ifdef F405
+#ifdef F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");
@@ -155,7 +155,7 @@ int spi_recvbyte(void) {
     __asm("NOP");
 #endif
     SCKHIGH;
-#ifdef F405
+#ifdef F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");
@@ -178,7 +178,7 @@ int spi_recvbyte(void) {
     recv = recv | ((SPI_MOSI_PORT->IDR & (int)SPI_MOSI_PIN) ? 1 : 0);
 
     SCKLOW;
-#ifdef F405
+#ifdef F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");

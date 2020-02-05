@@ -8,7 +8,7 @@
 // address 32768 - 1024 = 31k - last flash block
 #define FLASH_ADDR 0x08007C00
 #endif
-#ifdef F405
+#ifdef F4
 /*
 Sector 0    0x08000000 - 0x08003FFF 16 Kbytes
 Sector 1    0x08004000 - 0x08007FFF 16 Kbytes
@@ -60,7 +60,7 @@ void fmc_lock() {
 
 int fmc_erase(void) {
 
-#ifdef F405
+#ifdef F4
   FLASH_ClearFlag(FLASH_FLAG_PGSERR | FLASH_FLAG_PGPERR |
                   FLASH_FLAG_PGAERR | FLASH_FLAG_WRPERR |
                   FLASH_FLAG_OPERR | FLASH_FLAG_EOP); // clear error status

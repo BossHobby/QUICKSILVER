@@ -20,7 +20,7 @@
 #define MOTOR_PIN_PB1 MOTOR_PIN(B, 1, GPIO_AF_1, TIM3, 4)
 #endif
 
-#ifdef F405
+#ifdef F4
 #define MOTOR_PIN_PA1 MOTOR_PIN(A, 1, GPIO_AF_TIM2, TIM2, 2)
 #define MOTOR_PIN_PA2 MOTOR_PIN(A, 2, GPIO_AF_TIM2, TIM2, 3)
 #define MOTOR_PIN_PA3 MOTOR_PIN(A, 3, GPIO_AF_TIM2, TIM2, 4)
@@ -59,7 +59,7 @@
 
 typedef enum {
   MOTOR_PINS
-  MOTOR_PIN_IDENT_MAX
+      MOTOR_PIN_IDENT_MAX
 } motor_pin_ident_t;
 
 #undef MOTOR_PIN

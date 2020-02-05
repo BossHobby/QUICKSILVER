@@ -6,7 +6,7 @@
 #include "project.h"
 #include "util.h"
 
-#ifdef F405
+#ifdef F4
 
 #include "stm32f4xx.h"
 

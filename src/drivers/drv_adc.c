@@ -85,7 +85,7 @@ void adc_init(void) {
   DMA_Cmd(DMA1_Channel1, ENABLE);
 #endif
 
-#ifdef F405
+#ifdef F4
   //vref_int only exists on ADC1
   //pc2 additional function ADC123_IN12
   //adc1,2,3 connected to APB2 bus
@@ -166,7 +166,7 @@ void adc_init(void) {
 #ifdef F0
   vref_cal = (3.3f / (float)ADC_REF_VOLTAGE) * (float)(adcref_read((adcrefcal *)0x1FFFF7BA));
 #endif
-#ifdef F405
+#ifdef F4
   vref_cal = (3.3f / (float)ADC_REF_VOLTAGE) * (float)(adcref_read((adcrefcal *)0x1FFF7A2A));
 #endif
 }

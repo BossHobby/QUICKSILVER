@@ -1,8 +1,9 @@
 #include "config.h"
 
+#define OmnibusF4SD
+
 #define F4
 #define F405
-#define OmnibusF4SD
 
 #define USB_DETECT_PIN GPIO_Pin_5
 #define USB_DETECT_PORT GPIOC
@@ -80,7 +81,6 @@
 #define MOTOR_PIN1 MOTOR_PIN_PA3
 #define MOTOR_PIN2 MOTOR_PIN_PB0
 #define MOTOR_PIN3 MOTOR_PIN_PB1
-
 
 // NFE 2in squirt motors
 //#define MOTOR_PIN2 MOTOR_PIN_PB1

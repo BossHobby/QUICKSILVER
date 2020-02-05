@@ -4,7 +4,6 @@
 
 #define F4
 #define F411
-#define F405
 
 //***********MOTORS NOT YET SUPPORTED*************
 
@@ -76,7 +75,7 @@
 #endif
 
 // MOTOR PINS		dummy pins					***********MOTORS NOT YET SUPPORTED*************
-#define MOTOR_PIN0 MOTOR_PIN_PB8	//PB8
-#define MOTOR_PIN1 MOTOR_PIN_PB1	//PB9
-#define MOTOR_PIN2 MOTOR_PIN_PA1	//PB3
-#define MOTOR_PIN3 MOTOR_PIN_PA7	//PB10
+#define MOTOR_PIN0 MOTOR_PIN_PB8 //PB8
+#define MOTOR_PIN1 MOTOR_PIN_PB1 //PB9
+#define MOTOR_PIN2 MOTOR_PIN_PA1 //PB3
+#define MOTOR_PIN3 MOTOR_PIN_PA7 //PB10

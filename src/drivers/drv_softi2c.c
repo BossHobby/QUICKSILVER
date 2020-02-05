@@ -137,7 +137,7 @@ void sclhighlow() {
 
 #endif
 
-#ifdef F405
+#ifdef F4
 void sdalow() {
   if (!sdaout)
     setoutput();

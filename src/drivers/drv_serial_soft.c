@@ -29,7 +29,7 @@ uint32_t softserial_micros_per_bit = (uint32_t)(1000000 / 9600);
 uint32_t softserial_micros_per_bit_half = (uint32_t)(1000000 / 9600) * .5;
 uint32_t esc_micros_per_bit = (uint32_t)(1000000 / 19200);
 
-#ifdef F405
+#ifdef F4
 #define SET_TX_HIGH(data) data->tx_port->BSRRL = data->tx_pin
 #define SET_RX_HIGH(data) data->rx_port->BSRRL = data->rx_pin
 #define SET_TX_LOW(data) data->tx_port->BSRRH = data->tx_pin
@@ -97,7 +97,7 @@ SoftSerialData_t softserial_init(GPIO_TypeDef *tx_port, uint16_t tx_pin, GPIO_Ty
 int softserial_read_byte(uint8_t *byte) {
   return softserial_read_byte_ex(&globalSerialData, byte);
 }
-#ifdef F405
+#ifdef F4
 #define SET_LED1_ON LED1PORT->BSRRL = LED1PIN
 #define SET_LED1_OFF LED1PORT->BSRRH = LED1PIN
 #define SET_LED2_ON LED2PORT->BSRRL = LED2PIN

@@ -30,13 +30,16 @@
 #endif
 #endif
 
-#ifdef F405
+#ifdef F4
+
 #ifdef F411
 #define SYS_CLOCK_FREQ_HZ 84000000
 #define PWM_CLOCK_FREQ_HZ 84000000
 #define TICK_CLOCK_FREQ_HZ 10500000
 #define LOOPTIME 250
-#else
+#endif
+
+#ifdef F405
 #define SYS_CLOCK_FREQ_HZ 168000000
 #define PWM_CLOCK_FREQ_HZ 84000000
 #define TICK_CLOCK_FREQ_HZ 21000000
@@ -46,6 +49,11 @@
 #define LOOPTIME 250
 #endif
 #endif
+
+#if defined(F411) && defined(F405)
+#error "multiple chip types (F411, F405) defined!"
+#endif
+
 #endif
 
 #ifdef BRUSHLESS_TARGET

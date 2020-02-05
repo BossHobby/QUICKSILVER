@@ -3,7 +3,7 @@
 #include "drv_time.h"
 #include "project.h"
 
-#if defined(F405) && defined(USE_CC2500)
+#if defined(F4) && defined(USE_CC2500)
 
 #ifdef CC2500_SPI3
 #define CC2500_SPI_INSTANCE SPI3

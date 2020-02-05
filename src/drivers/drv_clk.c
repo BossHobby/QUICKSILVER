@@ -23,7 +23,7 @@ void setclock(void) {
   //reset pll settings
   RCC->CFGR &= (uint32_t)0xFFC0FFFF;
 
-#ifndef F405
+#ifndef F4
 #ifdef ENABLE_OVERCLOCK
   RCC->CFGR &= ~(RCC_CFGR_PLLSRC | RCC_CFGR_PLLMULL);
   RCC->CFGR |= RCC_CFGR_PLLSRC_HSI_Div2 | RCC_CFGR_PLLMULL16;

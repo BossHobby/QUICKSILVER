@@ -3,7 +3,7 @@
 #include "defines.h"
 #include "drv_time.h"
 
-#ifdef F405
+#ifdef F4
 
 #include <stdarg.h>
 #include <stdio.h>

@@ -1,8 +1,9 @@
 #include "config.h"
 
+#define Raceflight_Revolt
+
 #define F4
 #define F405
-#define Raceflight_Revolt
 
 #define USB_DETECT_PIN GPIO_Pin_5
 #define USB_DETECT_PORT GPIOC
@@ -31,7 +32,7 @@
 //#define DISABLE_GYRO_CHECK
 
 //RADIO
-#define USART_INVERTER_PIN GPIO_Pin_0	//UART 1
+#define USART_INVERTER_PIN GPIO_Pin_0 //UART 1
 #define USART_INVERTER_PORT GPIOC
 
 #define USART_PORTS \

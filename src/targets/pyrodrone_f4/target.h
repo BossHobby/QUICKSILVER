@@ -1,8 +1,9 @@
 #include "config.h"
 
+#define Pyrodrone_F4
+
 #define F4
 #define F405
-#define Pyrodrone_F4
 
 //LEDS
 #define LED_NUMBER 1
@@ -27,7 +28,7 @@
 #define SENSOR_ROTATE_90_CW
 
 //RADIO
-#define USART_INVERTER_PIN GPIO_Pin_3	//UART 1
+#define USART_INVERTER_PIN GPIO_Pin_3 //UART 1
 #define USART_INVERTER_PORT GPIOC
 
 #define USART_PORTS \

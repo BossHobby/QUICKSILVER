@@ -50,7 +50,7 @@ void i2c_init(void) {
 #endif
 
 #ifdef USE_DUMMY_I2C
-#ifndef F405
+#ifndef F4
 #warning I2C FUNCTIONS DISABLED
 #endif
 #endif

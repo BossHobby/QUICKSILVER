@@ -76,7 +76,7 @@ float accelcal[3];
 float gyrocal[3];
 
 void sixaxis_init(void) {
-#ifdef F405
+#ifdef F4
   //Initialize SPI
   spi_gyro_init();
   //Initialize Gyro
@@ -130,7 +130,7 @@ void sixaxis_init(void) {
 int sixaxis_check(void) {
 #ifndef DISABLE_GYRO_CHECK
 // read "who am I" register
-#ifdef F405
+#ifdef F4
   uint8_t id = MPU6XXX_dma_spi_read(MPU_RA_WHO_AM_I);
 #endif
 #ifdef F0
@@ -152,7 +152,7 @@ void sixaxis_read(void) {
 #ifdef F0
   i2c_readdata(59, data, 14);
 #endif
-#ifdef F405
+#ifdef F4
   MPU6XXX_dma_read_data(59, data, 14);
 #endif
 
@@ -278,7 +278,7 @@ void gyro_cal(void) {
 #ifdef F0
     i2c_readdata(67, data, 6);
 #endif
-#ifdef F405
+#ifdef F4
     MPU6XXX_dma_read_data(67, data, 6);
 #endif
 

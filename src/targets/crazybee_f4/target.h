@@ -2,9 +2,8 @@
 
 #define CrazyBee_F4
 
-#define F411
 #define F4
-#define F405
+#define F411
 
 //LEDS
 #define LED_NUMBER 1

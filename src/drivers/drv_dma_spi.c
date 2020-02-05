@@ -6,7 +6,7 @@
 #include "drv_time.h"
 #include "project.h"
 
-#ifdef F405
+#ifdef F4
 
 #if defined(ICM20601_SPI1) || defined(ICM20602_SPI1)
 #define MPU6XXX_SPI1
@@ -102,7 +102,6 @@
 #define MPU6XXX_INT_PORT GPIOA
 #endif
 
-
 //  Initialize SPI Connection to Gyro
 void spi_gyro_init(void) {
 
@@ -124,7 +123,7 @@ void spi_gyro_init(void) {
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(MPU6XXX_SPI_PORT, &GPIO_InitStructure);
-/*
+  /*
   GPIO_InitStructure.GPIO_Pin = MPU6XXX_MISO_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
@@ -141,13 +140,13 @@ void spi_gyro_init(void) {
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
   GPIO_Init(MPU6XXX_NSS_PORT, &GPIO_InitStructure);
 
-  // Interrupt GPIO
-  #ifdef MPU6XXX_INT_PIN
+// Interrupt GPIO
+#ifdef MPU6XXX_INT_PIN
   GPIO_InitStructure.GPIO_Pin = MPU6XXX_INT_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_Init(MPU6XXX_INT_PORT, &GPIO_InitStructure);
-  #endif
+#endif
 
   // Chip Select Set High
   GPIO_SetBits(MPU6XXX_NSS_PORT, MPU6XXX_NSS_PIN);
@@ -157,15 +156,15 @@ void spi_gyro_init(void) {
   GPIO_PinAFConfig(MPU6XXX_SPI_PORT, MPU6XXX_MISO_PINSOURCE, MPU6XXX_SPI_AF); //MISO
   GPIO_PinAFConfig(MPU6XXX_SPI_PORT, MPU6XXX_MOSI_PINSOURCE, MPU6XXX_SPI_AF); //MOSI
 
-  //*********************SPI/DMA**********************************
-  #if defined(MPU6XXX_SPI1) || defined(MPU6XXX_SPI4)
+//*********************SPI/DMA**********************************
+#if defined(MPU6XXX_SPI1) || defined(MPU6XXX_SPI4)
   //SPI1 to APB2 bus clock
   RCC_APB2PeriphClockCmd(RCC_APBPeriph_SPI, ENABLE);
-  #endif
-  #if defined(MPU6XXX_SPI2) || defined(MPU6XXX_SPI3)
+#endif
+#if defined(MPU6XXX_SPI2) || defined(MPU6XXX_SPI3)
   //SPI2 to APB1 bus clock
   RCC_APB1PeriphClockCmd(RCC_APBPeriph_SPI, ENABLE);
-  #endif
+#endif
   // SPI Config
   SPI_I2S_DeInit(MPU6XXX_SPI_INSTANCE);
   SPI_InitTypeDef SPI_InitStructure;
@@ -182,7 +181,8 @@ void spi_gyro_init(void) {
   SPI_Cmd(MPU6XXX_SPI_INSTANCE, ENABLE);
 
   // Dummy read to clear receive buffer
-  while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET);
+  while (SPI_I2S_GetFlagStatus(MPU6XXX_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
+    ;
   SPI_I2S_ReceiveData(MPU6XXX_SPI_INSTANCE);
 
   // Enable DMA clock
@@ -246,52 +246,51 @@ void dma_transmit_MPU6XXX_init(uint8_t *base_address_out, uint8_t buffer_size) {
 //deinit/reinit spi for unique slave configuration
 void spi_MPU6XXX_reinit_slow(void) {
   // SPI Config
-	  SPI_I2S_DeInit(MPU6XXX_SPI_INSTANCE);
-	  SPI_InitTypeDef SPI_InitStructure;
-	  SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-	  SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
-	  SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
-	  SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
-	  SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
-	  SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-	  #if defined(ICM20601_SPI1) //5.25mhz SPI
-	  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
-	  #else
-	  #if defined(ICM20602_SPI1) //10mhz SPI
-	  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
-	  #else	//(MPUXXXX)			 //20mhz SPI
-	  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64;
-	  #endif
-	  #endif
-	  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
-	  SPI_InitStructure.SPI_CRCPolynomial = 7;
-	  SPI_Init(MPU6XXX_SPI_INSTANCE, &SPI_InitStructure);
+  SPI_I2S_DeInit(MPU6XXX_SPI_INSTANCE);
+  SPI_InitTypeDef SPI_InitStructure;
+  SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
+  SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
+  SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+  SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
+  SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
+  SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
+#if defined(ICM20601_SPI1) //5.25mhz SPI
+  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
+#else
+#if defined(ICM20602_SPI1) //10mhz SPI
+  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+#else                      //(MPUXXXX)			 //20mhz SPI
+  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64;
+#endif
+#endif
+  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
+  SPI_InitStructure.SPI_CRCPolynomial = 7;
+  SPI_Init(MPU6XXX_SPI_INSTANCE, &SPI_InitStructure);
 }
 
 void spi_MPU6XXX_reinit_fast(void) {
   // SPI Config
-	  SPI_I2S_DeInit(MPU6XXX_SPI_INSTANCE);
-	  SPI_InitTypeDef SPI_InitStructure;
-	  SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-	  SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
-	  SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
-	  SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
-	  SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
-	  SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-	  #if defined(ICM20601_SPI1) //5.25mhz SPI
-	  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
-	  #else
-	  #if defined(ICM20602_SPI1) //10mhz SPI
-	  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
-	  #else	//(MPUXXXX)			 //20mhz SPI
-	  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
-	  #endif
-	  #endif
-	  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
-	  SPI_InitStructure.SPI_CRCPolynomial = 7;
-	  SPI_Init(MPU6XXX_SPI_INSTANCE, &SPI_InitStructure);
+  SPI_I2S_DeInit(MPU6XXX_SPI_INSTANCE);
+  SPI_InitTypeDef SPI_InitStructure;
+  SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
+  SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
+  SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+  SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
+  SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
+  SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
+#if defined(ICM20601_SPI1) //5.25mhz SPI
+  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
+#else
+#if defined(ICM20602_SPI1) //10mhz SPI
+  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+#else                      //(MPUXXXX)			 //20mhz SPI
+  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
+#endif
+#endif
+  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
+  SPI_InitStructure.SPI_CRCPolynomial = 7;
+  SPI_Init(MPU6XXX_SPI_INSTANCE, &SPI_InitStructure);
 }
-
 
 //*******************************************************************************SPI / DMA FUNCTIONS********************************************************************************
 
@@ -349,16 +348,16 @@ void MPU6XXX_dma_spi_write(uint8_t reg, uint8_t data) { //MPU6XXX_dma_spi_write
 void MPU6XXX_dma_read_data(uint8_t reg, int *data, int size) {
 #if (defined(MAX7456_SPI2) && defined(MPU6XXX_SPI2)) || (defined(MAX7456_SPI1) && defined(MPU6XXX_SPI1))
   extern volatile uint8_t osd_dma_status;
-  while (osd_dma_status);
+  while (osd_dma_status)
+    ;
 #endif
   uint8_t buffer[15] = {reg | 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   spi_MPU6XXX_reinit_fast();
   MPU6XXX_dma_transfer_bytes(buffer, size + 1);
   for (int i = 1; i < size + 1; i++) {
-    data[i-1] = buffer[i];
+    data[i - 1] = buffer[i];
   }
 }
-
 
 //****************************************************************************LEGACY SPI FUNCTIONS********************************************************************************
 
