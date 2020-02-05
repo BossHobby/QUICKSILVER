@@ -44,6 +44,7 @@
 #include "drv_time.h"
 #include "filter.h"
 #include "gestures.h"
+#include "imu.h"
 #include "led.h"
 #include "osd_render.h"
 #include "pid.h"
@@ -67,7 +68,6 @@
 
 // hal
 void clk_init(void);
-void imu_init(void);
 extern void flash_load(void);
 extern void flash_hard_coded_pid_identifier(void);
 
@@ -175,11 +175,13 @@ int main(void) {
 
   motor_init();
   motor_set_all(0);
+
   sixaxis_init();
   if (!sixaxis_check()) {
     //gyro not found
     failloop(4);
   }
+
 #ifdef ENABLE_OSD
   delay(300000);
   osd_init();
@@ -282,8 +284,7 @@ int main(void) {
     if (looptime <= 0)
       looptime = 1;
     looptime = looptime * 1e-6f;
-    if (looptime > 0.02f) // max loop 20ms
-    {
+    if (looptime > 0.02f) { // max loop 20ms
       failloop(6);
       //endless loop
     }
@@ -306,7 +307,6 @@ int main(void) {
     control();
 
     // attitude calculations for level mode
-    extern void imu_calc(void);
     imu_calc();
 
     // battery low logic

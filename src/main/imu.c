@@ -71,7 +71,7 @@ static filter_state_t filter_pass1[3];
 static filter_state_t filter_pass2[3];
 #endif
 
-void imu_init(void) {
+void imu_init() {
   // init the gravity vector with accel values
   for (int xx = 0; xx < 100; xx++) {
     sixaxis_read();
@@ -95,7 +95,7 @@ void imu_init(void) {
 }
 
 #ifdef BFPV_IMU
-void imu_calc(void) {
+void imu_calc() {
   // remove bias and reduce to accel in G
   accel[0] = (accel[0] - accelcal[0]) * (1 / 2048.0f);
   accel[1] = (accel[1] - accelcal[1]) * (1 / 2048.0f);
@@ -183,7 +183,7 @@ void imu_calc(void) {
 #endif
 
 #ifdef SILVERWARE_IMU
-void imu_calc(void) {
+void imu_calc() {
   // remove bias and reduce to accel in G
   accel[0] = (accel[0] - accelcal[0]) * (1 / 2048.0f);
   accel[1] = (accel[1] - accelcal[1]) * (1 / 2048.0f);
@@ -261,7 +261,7 @@ void imu_calc(void) {
 #endif
 
 #ifdef QUICKSILVER_IMU
-void imu_calc(void) {
+void imu_calc() {
   const float gyro_delta_angle[3] = {
       gyro[0] * looptime,
       gyro[1] * looptime,
