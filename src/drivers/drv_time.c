@@ -24,7 +24,18 @@ void debug_timer_init() {
 }
 
 uint32_t debug_timer_micros() {
-  return DWT->CYCCNT / (SystemCoreClock / 1000000L);
+  static uint32_t total_micros = 0;
+  static uint32_t last_micros = 0;
+
+  const uint32_t micros = DWT->CYCCNT / (SystemCoreClock / 1000000L);
+  if (micros >= last_micros) {
+    total_micros += micros - last_micros;
+  } else {
+    total_micros += ((UINT32_MAX / (SystemCoreClock / 1000000L)) + micros) - last_micros;
+  }
+
+  last_micros = micros;
+  return total_micros;
 }
 
 uint32_t debug_timer_millis() {
