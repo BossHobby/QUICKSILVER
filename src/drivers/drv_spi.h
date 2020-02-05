@@ -1,8 +1,7 @@
 #pragma once
-// soft spi  header file
-//
 
-#include <inttypes.h>
+// soft spi  header file
+#include <stdint.h>
 
 void spi_init(void);
 void spi_cson(void);
