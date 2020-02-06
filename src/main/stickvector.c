@@ -1,9 +1,11 @@
-#include "defines.h"
-#include "profile.h"
-#include "util.h"
+#include "stickvector.h"
 
 #include <math.h>
 #include <string.h>
+
+#include "defines.h"
+#include "profile.h"
+#include "util.h"
 
 extern float GEstG[3];
 extern float Q_rsqrt(float number);
@@ -12,15 +14,14 @@ extern profile_t profile;
 // error vector between stick position and quad orientation
 // this is the output of this function
 float errorvect[3];
+
 // cache the last result so it does not get calculated everytime
-float last_rx[2] = {13.13f, 12.12f};
-float stickvector[3] = {0, 0, 1};
+static float last_rx[2] = {13.13f, 12.12f};
+static float stickvector[3] = {0, 0, 1};
 
 void stick_vector(float rx_input[], float maxangle) {
   // only compute stick rotation if values changed
-  if (last_rx[0] == rx_input[0] && last_rx[1] == rx_input[1]) {
-
-  } else {
+  if (last_rx[0] != rx_input[0] || last_rx[1] != rx_input[1]) {
     last_rx[0] = rx_input[0];
     last_rx[1] = rx_input[1];
 

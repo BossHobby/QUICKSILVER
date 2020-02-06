@@ -38,6 +38,7 @@ THE SOFTWARE.
 #include "pid.h"
 #include "profile.h"
 #include "sixaxis.h"
+#include "stickvector.h"
 #include "util.h"
 
 float throttle;
@@ -168,12 +169,13 @@ void control(void) {
   }
 
   if (rx_aux_on(AUX_LEVELMODE) && !acro_override) {
-    extern void stick_vector(float rx_input[], float maxangle);
     extern float errorvect[]; // level mode angle error calculated by stick_vector.c
     extern float GEstG[3];    // gravity vector for yaw feedforward
     float yawerror[3] = {0};  // yaw rotation vector
+
     // calculate roll / pitch error
     stick_vector(rx_filtered, 0);
+
     // apply yaw from the top of the quad
     yawerror[0] = GEstG[1] * rates[2];
     yawerror[1] = -GEstG[0] * rates[2];
