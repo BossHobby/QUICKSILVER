@@ -17,6 +17,9 @@
 */
 #pragma once
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "defines.h"
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
@@ -25,9 +28,6 @@
 // #define USE_FAKE_ESC
 
 #include "drv_serial_4way_impl.h"
-#include <inttypes.h>
-#include <stdbool.h>
-#include <stdint.h>
 
 #define imC2 0
 #define imSIL_BLB 1

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <inttypes.h>
+#include <stdint.h>
 
 void softi2c_init(void);
 void softi2c_readdata(int device_address, int register_address, int *data, int size);

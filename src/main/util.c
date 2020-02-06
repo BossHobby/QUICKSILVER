@@ -21,12 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+#include "util.h"
+
 #include <math.h>
 #include <string.h>
 
 #include "drv_time.h"
 #include "project.h"
-#include "util.h"
 
 float mapf(float x, float in_min, float in_max, float out_min, float out_max) {
   return ((x - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min;
@@ -101,7 +102,6 @@ int round_num(float num) {
   return num < 0 ? num - 0.5 : num + 0.5;
 }
 
-#include <inttypes.h>
 uint32_t seed = 7;
 uint32_t random(void) {
   seed ^= seed << 13;

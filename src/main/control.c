@@ -21,11 +21,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-
-#include <inttypes.h>
-#include <math.h>
-
 #include "control.h"
+
+#include <math.h>
+#include <stdint.h>
+
 #include "defines.h"
 #include "drv_fmc.h"
 #include "drv_fmc2.h"

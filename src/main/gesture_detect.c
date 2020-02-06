@@ -1,8 +1,10 @@
+#include "gestures.h"
+
+#include <math.h>
+#include <stdint.h>
+
 #include "defines.h"
 #include "drv_time.h"
-#include "gestures.h"
-#include <inttypes.h>
-#include <math.h>
 
 #define STICKMAX 0.7f
 #define STICKCENTER 0.2f

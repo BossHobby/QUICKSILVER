@@ -1,6 +1,8 @@
-#include <inttypes.h>
+#include "imu.h"
+
 #include <math.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #include "defines.h"

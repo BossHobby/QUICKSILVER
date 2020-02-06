@@ -24,8 +24,8 @@
 
 // STM32 acro firmware
 // files of this project should be assumed MIT licence unless otherwise noted
-#include <inttypes.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include "binary.h"
