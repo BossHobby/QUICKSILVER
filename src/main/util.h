@@ -12,9 +12,6 @@ float constrainf(const float in, const float min, const float max);
 int round_num(float num);
 float round_dec2(float num);
 
-void TS(void);
-unsigned long TE(void);
-
 float atan2approx(float y, float x);
 float Q_rsqrt(float number);
 int ipow(int base, int exp);

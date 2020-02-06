@@ -25,19 +25,6 @@ float constrainf(const float in, const float min, const float max) {
   return in;
 }
 
-// timing routines for debugging
-static unsigned long timestart;
-unsigned long timeend;
-
-// timestart
-void TS(void) {
-  timestart = gettime();
-}
-// timeend
-unsigned long TE(void) {
-  return timeend = (gettime() - timestart);
-}
-
 float fastsin(float x) {
   //always wrap input angle to -PI..PI
   while (x < -3.14159265f)
