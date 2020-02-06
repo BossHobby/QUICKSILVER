@@ -1,37 +1,13 @@
-/*
-The MIT License (MIT)
+#include "rx_bayang.h"
 
-Copyright (c) 2016 silverx
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-*/
+#include <stdio.h>
 
 #include "binary.h"
-#include "defines.h"
 #include "drv_spi.h"
 #include "drv_time.h"
 #include "drv_xn297.h"
-#include "project.h"
-#include <stdio.h>
 #include "profile.h"
-#include "rx_bayang.h"
-
+#include "project.h"
 #include "util.h"
 
 #define RX_MODE_NORMAL RXMODE_NORMAL
@@ -139,7 +115,7 @@ void rx_init() {
 
 #define XN_TO_RX B00001111
 #define XN_TO_TX B00000010
-#define XN_POWER ((B00000001 | ((TX_POWER & 3) << 1)) | 0xa0 )	// | 0x80 rssi  // | 0xa0 filtered rssi
+#define XN_POWER ((B00000001 | ((TX_POWER & 3) << 1)) | 0xa0) // | 0x80 rssi  // | 0xa0 filtered rssi
 #endif
 
   delay(100);
@@ -319,13 +295,15 @@ static char checkpacket() {
   if (status & (1 << MASK_RX_DR)) {         // RX packet received
     xn_writereg(STATUS, (1 << MASK_RX_DR)); // rx clear bit
     return 1;
-  }else{
+  } else {
 #ifdef RADIO_XN297
-  if (profile.channel.aux[AUX_RSSI] <= AUX_CHANNEL_11){ //rssi set to actual rssi register value
-	rx_rssi = 10.0f * ((xn_readreg(9)) & 0x0f);
-	if (rx_rssi > 100.0f) rx_rssi = 100.0f;
-	if (rx_rssi < 0.0f) rx_rssi = 0.0f;
-  }
+    if (profile.channel.aux[AUX_RSSI] <= AUX_CHANNEL_11) { //rssi set to actual rssi register value
+      rx_rssi = 10.0f * ((xn_readreg(9)) & 0x0f);
+      if (rx_rssi > 100.0f)
+        rx_rssi = 100.0f;
+      if (rx_rssi < 0.0f)
+        rx_rssi = 0.0f;
+    }
 #endif
   }
 #else
@@ -548,19 +526,23 @@ void rx_check(void) {
     secondtimer = gettime();
 
 #ifdef RADIO_XN297L
-    rx_rssi = packetpersecond/200.0f;
+    rx_rssi = packetpersecond / 200.0f;
     rx_rssi = rx_rssi * rx_rssi * rx_rssi * RSSI_EXP + rx_rssi * (1 - RSSI_EXP);
     rx_rssi *= 100.0f;
-    if (rx_rssi > 100.0f) rx_rssi = 100.0f;
-    if (rx_rssi < 0.0f) rx_rssi = 0.0f;
+    if (rx_rssi > 100.0f)
+      rx_rssi = 100.0f;
+    if (rx_rssi < 0.0f)
+      rx_rssi = 0.0f;
 #endif
 #ifdef RADIO_XN297
-    if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11){ //rssi set to internal link quality
-        rx_rssi = packetpersecond/200.0f;
-        rx_rssi = rx_rssi * rx_rssi * rx_rssi * RSSI_EXP + rx_rssi * (1 - RSSI_EXP);
-        rx_rssi *= 100.0f;
-        if (rx_rssi > 100.0f) rx_rssi = 100.0f;
-        if (rx_rssi < 0.0f) rx_rssi = 0.0f;
+    if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11) { //rssi set to internal link quality
+      rx_rssi = packetpersecond / 200.0f;
+      rx_rssi = rx_rssi * rx_rssi * rx_rssi * RSSI_EXP + rx_rssi * (1 - RSSI_EXP);
+      rx_rssi *= 100.0f;
+      if (rx_rssi > 100.0f)
+        rx_rssi = 100.0f;
+      if (rx_rssi < 0.0f)
+        rx_rssi = 0.0f;
     }
 #endif
   }
