@@ -1,16 +1,17 @@
+#include "rx.h"
+
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "debug.h"
-#include "defines.h"
 #include "drv_fmc.h"
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "led.h"
 #include "profile.h"
 #include "project.h"
-#include "rx.h"
 #include "util.h"
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 // sbus input ( pin SWCLK after calibration)
 // WILL DISABLE PROGRAMMING AFTER GYRO CALIBRATION - 2 - 3 seconds after powerup)

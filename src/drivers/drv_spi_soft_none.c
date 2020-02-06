@@ -1,6 +1,5 @@
 #include "drv_spi.h"
 
-#include "defines.h"
 #include "project.h"
 
 #ifdef SOFTSPI_NONE

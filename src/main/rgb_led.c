@@ -1,7 +1,8 @@
+#include <math.h>
+
 #include "defines.h"
 #include "drv_time.h"
 #include "util.h"
-#include <math.h>
 
 extern int lowbatt;
 extern int rxmode;

@@ -1,7 +1,6 @@
 // serial for stm32 not used yet
 #include <stdio.h>
 
-#include "defines.h"
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "profile.h"

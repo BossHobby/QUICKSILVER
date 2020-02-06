@@ -6,7 +6,6 @@
 #include "buzzer.h"
 #include "control.h"
 #include "debug.h"
-#include "defines.h"
 #include "drv_adc.h"
 #include "drv_fmc2.h"
 #include "drv_gpio.h"

@@ -21,18 +21,16 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
  */
+#include "rx_bayang.h"
+
+#include <stdio.h>
 
 #include "binary.h"
-#include "drv_spi.h"
-
 #include "config.h"
-#include "defines.h"
+#include "drv_spi.h"
 #include "drv_time.h"
 #include "drv_xn297.h"
 #include "project.h"
-#include <stdio.h>
-
-#include "rx_bayang.h"
 #include "util.h"
 
 #ifdef RX_H7_PROTOCOL

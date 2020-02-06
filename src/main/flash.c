@@ -1,6 +1,5 @@
 #include <string.h>
 
-#include "defines.h"
 #include "drv_fmc.h"
 #include "drv_serial.h"
 #include "profile.h"

@@ -2,7 +2,6 @@
 #include "binary.h"
 #include "drv_spi.h"
 
-#include "defines.h"
 #include "drv_xn297.h"
 #include "project.h"
 

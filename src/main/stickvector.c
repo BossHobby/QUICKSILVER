@@ -3,7 +3,6 @@
 #include <math.h>
 #include <string.h>
 
-#include "defines.h"
 #include "profile.h"
 #include "util.h"
 

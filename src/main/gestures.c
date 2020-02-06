@@ -1,5 +1,5 @@
 #include "gestures.h"
-#include "defines.h"
+
 #include "osd_adjust.h"
 #include "pid.h"
 #include "profile.h"

@@ -1,6 +1,5 @@
-//
 #include "drv_time.h"
-#include "defines.h"
+
 #include "project.h"
 
 void failloop(int val);

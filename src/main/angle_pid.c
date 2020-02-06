@@ -1,6 +1,5 @@
 #include <stdbool.h>
 
-#include "defines.h"
 #include "math.h"
 #include "pid.h"
 #include "profile.h"

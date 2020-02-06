@@ -1,10 +1,12 @@
-#include "stdio.h"
+#include "osd_adjust.h"
+
+#include <stdio.h>
+
 #include "defines.h"
 #include "drv_time.h"
 #include "util.h"
 #include "drv_max7456.h"
 #include "osd_menu_maps.h"
-#include "osd_adjust.h"
 #include "osd_render.h"
 #include "profile.h"
 #include "vtx.h"

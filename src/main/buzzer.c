@@ -1,6 +1,6 @@
 
 #include "buzzer.h"
-#include "defines.h"
+
 #include "drv_time.h"
 #include "project.h"
 
@@ -27,8 +27,8 @@ int gpio_init_buzzer(void) {
 void buzzer() {
   extern int failsafe;
   extern int lowbatt;
- // extern int rxmode;
- // extern unsigned long lastlooptime;
+  // extern int rxmode;
+  // extern unsigned long lastlooptime;
 
   static int toggle;
   static unsigned long buzzertime;

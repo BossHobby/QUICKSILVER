@@ -1,8 +1,9 @@
 // serial for stm32 not used yet
-#include "defines.h"
 #include "drv_serial.h"
-#include "project.h"
+
 #include <stdio.h>
+
+#include "project.h"
 
 // enable serial driver ( pin SWCLK after calibration)
 // WILL DISABLE PROGRAMMING AFTER GYRO CALIBRATION - 2 - 3 seconds after powerup)
