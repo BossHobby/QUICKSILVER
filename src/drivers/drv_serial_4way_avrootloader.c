@@ -59,8 +59,8 @@
 #define START_BIT_TIME (BIT_TIME_3_4)
 //#define STOP_BIT_TIME     ((BIT_TIME * 9) + BIT_TIME_HALVE)
 
-#define micros debug_timer_micros
-#define millis debug_timer_millis
+#define micros timer_micros
+#define millis timer_millis
 
 #include "drv_serial_soft.h"
 extern SoftSerialData_t escSerial[4];

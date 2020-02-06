@@ -111,7 +111,7 @@ void smart_audio_auto_baud() {
     baud_rate += direction * 50;
     quic_debugf("SMART_AUDIO: auto baud %d (%d) change %d vs %d", baud_rate, direction * 50, last_percent, current_percent);
     serial_smart_audio_reconfigure();
-    debug_timer_delay_us(100);
+    timer_delay_us(100);
   }
 
   last_percent = current_percent;
@@ -153,7 +153,7 @@ void serial_smart_audio_send_data(uint8_t *data, uint32_t size) {
         quic_debugf("SMART_AUDIO: send timeout");
         return;
       }
-      debug_timer_delay_us(1);
+      timer_delay_us(1);
       __WFI();
     }
     USART_SendData(USART.channel, data[i]);
@@ -200,7 +200,7 @@ uint8_t serial_smart_audio_read_packet() {
       quic_debugf("SMART_AUDIO: timeout waiting for packet");
       return 0;
     }
-    debug_timer_delay_us(1);
+    timer_delay_us(1);
     __WFI();
   }
 

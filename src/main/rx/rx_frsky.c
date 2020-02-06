@@ -180,7 +180,7 @@ static uint8_t read_packet() {
 static void init_tune_rx(void) {
   cc2500_write_reg(CC2500_FOCCFG, 0x14);
 
-  time_tuned_ms = debug_timer_millis();
+  time_tuned_ms = timer_millis();
   frsky_bind.offset = -126;
 
   cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)frsky_bind.offset);
@@ -196,8 +196,8 @@ static uint8_t tune_rx(uint8_t iteration) {
   if (frsky_bind.offset >= 126) {
     frsky_bind.offset = -126;
   }
-  if ((debug_timer_millis() - time_tuned_ms) > 50) {
-    time_tuned_ms = debug_timer_millis();
+  if ((timer_millis() - time_tuned_ms) > 50) {
+    time_tuned_ms = timer_millis();
     // switch to fine tuning after first hit
     frsky_bind.offset += iteration > 0 ? 1 : 5;
     cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)frsky_bind.offset);
@@ -420,7 +420,7 @@ static uint8_t frsky_d_handle_packet() {
 
   static uint8_t telemetry[20];
 
-  const uint32_t current_packet_received_time = debug_timer_micros();
+  const uint32_t current_packet_received_time = timer_micros();
 
   uint8_t ret = 0;
   switch (protocol_state) {
@@ -441,7 +441,7 @@ static uint8_t frsky_d_handle_packet() {
       cc2500_strobe(CC2500_SRX);
     }
 
-    if ((debug_timer_micros() - last_packet_received_time) >= SYNC_DELAY_MAX) {
+    if ((timer_micros() - last_packet_received_time) >= SYNC_DELAY_MAX) {
       frame_index++;
       protocol_state = STATE_UPDATE;
     }
@@ -542,7 +542,7 @@ static uint8_t frsky_d_handle_packet() {
   case STATE_TELEMETRY: {
 
     // telemetry has to be done ~2000us after rx
-    if ((debug_timer_micros() - last_packet_received_time) >= 1500) {
+    if ((timer_micros() - last_packet_received_time) >= 1500) {
       const uint8_t rssi = frsky_extract_rssi(packet[18]);
 
       cc2500_strobe(CC2500_SIDLE);

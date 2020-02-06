@@ -38,10 +38,6 @@ uint32_t debug_timer_micros() {
   return total_micros;
 }
 
-uint32_t debug_timer_millis() {
-  return (debug_timer_micros()) / 1000;
-}
-
 void debug_timer_delay_us(uint32_t us) {
   volatile uint32_t delay = us * (SystemCoreClock / 1000000L);
   volatile uint32_t start = DWT->CYCCNT;
@@ -64,7 +60,7 @@ static __INLINE uint32_t SysTick_Config2(uint32_t ticks) {
   return (0);                  /* Function successful */
 }
 
-void time_init() {
+void timer_init() {
 #ifdef F411
   if (SysTick_Config2(SystemCoreClock / 10)) { // not able to set divider
     failloop(5);
@@ -83,12 +79,12 @@ void time_init() {
 }
 
 // called at least once per 16ms or time will overflow
-unsigned long time_update(void) {
-  unsigned long maxticks = SysTick->LOAD;
-  unsigned long ticks = SysTick->VAL;
-  unsigned long quotient;
-  unsigned long elapsedticks;
-  static unsigned long remainder = 0; // carry forward the remainder ticks;
+uint32_t time_update() {
+  uint32_t maxticks = SysTick->LOAD;
+  uint32_t ticks = SysTick->VAL;
+  uint32_t quotient;
+  uint32_t elapsedticks;
+  static uint32_t remainder = 0; // carry forward the remainder ticks;
 
   if (ticks < lastticks) {
     elapsedticks = lastticks - ticks;
@@ -113,7 +109,7 @@ unsigned long time_update(void) {
   return globalticks;
 }
 
-// return time in uS from start ( micros())
+// return time in uS from start (micros())
 uint32_t gettime() {
   return time_update();
 }
@@ -129,7 +125,16 @@ void delay(uint32_t data) {
     ;
 }
 
-void SysTick_Handler(void) {
+uint32_t timer_micros() {
+  return debug_timer_micros();
+}
+
+uint32_t timer_millis() {
+  return (timer_micros()) / 1000;
+}
+
+void timer_delay_us(uint32_t us) {
+  debug_timer_delay_us(us);
 }
 
 #endif
@@ -149,10 +154,11 @@ static __INLINE uint32_t SysTick_Config2(uint32_t ticks) {
   return (0);                  /* Function successful */
 }
 
-void time_init() {
-
-  if (SysTick_Config2(SYS_CLOCK_FREQ_HZ / 8)) // sets reload value       48,000,000/8 = 6000   64,000,000/8 = 8000
-  {                                           // not able to set divider																				// determines how much time between interrupts
+void timer_init() {
+  // sets reload value       48,000,000/8 = 6000   64,000,000/8 = 8000
+  // determines how much time between interrupts
+  if (SysTick_Config2(SYS_CLOCK_FREQ_HZ / 8)) {
+    // not able to set divider
     failloop(5);
     while (1)
       ;
@@ -160,12 +166,12 @@ void time_init() {
 }
 
 // called at least once per 16ms or time will overflow
-unsigned long time_update(void) {
-  unsigned long maxticks = SysTick->LOAD;
-  unsigned long ticks = SysTick->VAL;
-  unsigned long quotient;
-  unsigned long elapsedticks;
-  static unsigned long remainder = 0; // carry forward the remainder ticks;
+uint32_t time_update() {
+  uint32_t maxticks = SysTick->LOAD;
+  uint32_t ticks = SysTick->VAL;
+  uint32_t quotient;
+  uint32_t elapsedticks;
+  static uint32_t remainder = 0; // carry forward the remainder ticks;
 
   if (ticks < lastticks) {
     elapsedticks = lastticks - ticks;
@@ -192,10 +198,11 @@ unsigned long time_update(void) {
   return globalticks;
 }
 
-// return time in uS from start ( micros())
-unsigned long gettime() {
+// return time in uS from start (micros())
+uint32_t gettime() {
   return time_update();
 }
+
 #ifdef ENABLE_OVERCLOCK
 // delay in uS
 void delay(uint32_t data) {
@@ -214,24 +221,21 @@ void delay(uint32_t data) {
 }
 #endif
 
-void SysTick_Handler(void) {
-}
-
-void debug_timer_init() {
-}
-
-uint32_t debug_timer_micros() {
+uint32_t timer_micros() {
   return gettime();
 }
 
-uint32_t debug_timer_millis() {
-  return (debug_timer_micros()) / 1000;
+uint32_t timer_millis() {
+  return (timer_micros()) / 1000;
 }
 
-void debug_timer_delay_us(uint32_t us) {
+void timer_delay_us(uint32_t us) {
   delay(us);
 }
 #endif
+
+void SysTick_Handler(void) {
+}
 
 void delay_until(uint32_t uS) {
   while (gettime() < uS)
