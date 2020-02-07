@@ -267,6 +267,6 @@ void circular_buffer_clear(volatile circular_buffer_t *c) {
 }
 
 void reset_looptime() {
-  extern unsigned int lastlooptime;
-  lastlooptime = gettime();
+  extern uint32_t lastlooptime;
+  lastlooptime = timer_micros();
 }

@@ -58,7 +58,7 @@ float vreffilt = 1.0;
 float thrfilt = 0;
 float lipo_cell_count = 1.0;
 
-unsigned int lastlooptime;
+uint32_t lastlooptime;
 // signal for lowbattery
 int lowbatt = 1;
 
@@ -239,7 +239,7 @@ int main(void) {
     failloop(7);
   }
 
-  lastlooptime = gettime();
+  lastlooptime = timer_micros();
 
   //
   //
@@ -252,7 +252,9 @@ int main(void) {
 #endif
   while (1) {
     // gettime() needs to be called at least once per second
-    unsigned long time = gettime();
+    volatile uint32_t _ = gettime();
+
+    uint32_t time = timer_micros();
     looptime = ((uint32_t)(time - lastlooptime));
     if (looptime <= 0)
       looptime = 1;
@@ -484,7 +486,7 @@ int main(void) {
     usb_detect();
 #endif
 
-    cpu_load = (gettime() - lastlooptime);
+    cpu_load = (timer_micros() - lastlooptime);
 
 #ifdef DEBUG
     debug.cpu_load = cpu_load; // * 1e-3f;
@@ -515,8 +517,8 @@ int main(void) {
     loopCounter++;
 #endif
 
-    while ((gettime() - time) < LOOPTIME)
-      ;
+    while ((timer_micros() - time) < LOOPTIME)
+      __NOP();
 
   } // end loop
 }

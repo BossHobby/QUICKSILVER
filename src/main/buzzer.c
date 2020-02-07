@@ -28,7 +28,6 @@ void buzzer() {
   extern int failsafe;
   extern int lowbatt;
   // extern int rxmode;
-  // extern unsigned long lastlooptime;
 
   static int toggle;
   static unsigned long buzzertime;
