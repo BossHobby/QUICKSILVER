@@ -346,7 +346,7 @@ void MPU6XXX_dma_spi_write(uint8_t reg, uint8_t data) { //MPU6XXX_dma_spi_write
 }
 
 void MPU6XXX_dma_read_data(uint8_t reg, int *data, int size) {
-#if (defined(MAX7456_SPI2) && defined(MPU6XXX_SPI2)) || (defined(MAX7456_SPI1) && defined(MPU6XXX_SPI1))
+#if defined(ENABLE_OSD) && ((defined(MAX7456_SPI2) && defined(MPU6XXX_SPI2)) || (defined(MAX7456_SPI1) && defined(MPU6XXX_SPI1)))
   extern volatile uint8_t osd_dma_status;
   while (osd_dma_status)
     ;
