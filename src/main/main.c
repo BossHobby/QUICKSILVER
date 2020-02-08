@@ -252,7 +252,10 @@ int main(void) {
 #endif
   while (1) {
     // gettime() needs to be called at least once per second
-    volatile uint32_t _ = gettime();
+    {
+      volatile uint32_t _ = gettime();
+      _;
+    }
 
     uint32_t time = timer_micros();
     looptime = ((uint32_t)(time - lastlooptime));
