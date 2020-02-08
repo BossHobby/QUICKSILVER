@@ -91,9 +91,11 @@ static void handle_overflows(void) {
   uint8_t marc_state = cc2500_read_reg(CC2500_MARCSTATE) & 0x1F;
   if (marc_state == 0x11) {
     // flush rx buf
+    quic_debugf("FRSKY: RX overflow");
     cc2500_strobe(CC2500_SFRX);
   } else if (marc_state == 0x16) {
     // flush tx buf
+    quic_debugf("FRSKY: TX overflow");
     cc2500_strobe(CC2500_SFTX);
   }
 }
@@ -441,12 +443,12 @@ static uint8_t frsky_d_handle_packet() {
       cc2500_strobe(CC2500_SRX);
     }
 
-    if ((timer_micros() - last_packet_received_time) >= SYNC_DELAY_MAX) {
+    if ((timer_micros() - last_packet_received_time) > SYNC_DELAY_MAX) {
+      quic_debugf("FRSKY: update %d", frame_index);
       frame_index++;
       protocol_state = STATE_UPDATE;
     }
     break;
-    //fallthrough
   case STATE_UPDATE:
     protocol_state = STATE_DATA;
     last_packet_received_time = current_packet_received_time;
@@ -511,6 +513,8 @@ static uint8_t frsky_d_handle_packet() {
       } else {
         quic_debugf("FRSKY: invalid frame");
       }
+    } else if (len > 0) {
+      quic_debugf("FRSKY: short frame");
     }
 
     handle_overflows();
@@ -525,14 +529,14 @@ static uint8_t frsky_d_handle_packet() {
         failsafe = 1;
       }
 
-      quic_debugf("FRSKY: frame lost %u", (current_packet_received_time - last_packet_received_time));
+      quic_debugf("FRSKY: frame lost %u=%u (%u)", frame_index, (frame_index % 4), (current_packet_received_time - last_packet_received_time));
       frames_lost++;
-      frame_index++;
       rx_rssi = 0;
 
       cc2500_enter_rxmode();
       next_channel(1);
       cc2500_strobe(CC2500_SRX);
+      frame_index++;
       protocol_state = STATE_UPDATE;
       last_packet_received_time = current_packet_received_time;
     }
@@ -578,7 +582,7 @@ void rx_init(void) {
   cc2500_write_reg(CC2500_MCSM1, 0x0C);
 
   // frsky d
-  cc2500_write_reg(CC2500_PKTLEN, 0x19);   // max packet lenght of 25
+  cc2500_write_reg(CC2500_PKTLEN, 17);     // max packet lenght of 25
   cc2500_write_reg(CC2500_PKTCTRL0, 0x05); // variable pkt lenth, enable crc
   cc2500_write_reg(CC2500_PKTCTRL1, 0x04); // only append status
   cc2500_write_reg(CC2500_PATABLE, 0xFF);  // full power
@@ -613,8 +617,6 @@ void rx_init(void) {
   cc2500_write_reg(CC2500_FSCAL2, 0x0A);
   cc2500_write_reg(CC2500_FSCAL1, 0x00);
   cc2500_write_reg(CC2500_FSCAL0, 0x11);
-
-  cc2500_write_reg(CC2500_FSTEST, 0x59);
 
   cc2500_write_reg(CC2500_TEST2, 0x88);
   cc2500_write_reg(CC2500_TEST1, 0x31);
