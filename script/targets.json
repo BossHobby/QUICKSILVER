@@ -18,21 +18,21 @@
         "name": "brushless.frsky",
         "defines": {
           "BRUSHLESS_TARGET": "",
-          "RX_FRSKY": ""
+          "RX_FRSKY_D8": ""
         }
       },
       {
         "name": "brushed.frsky",
         "defines": {
           "BRUSHED_TARGET": "",
-          "RX_FRSKY": ""
+          "RX_FRSKY_D8": ""
         }
       },
       {
         "name": "dshot300.frsky",
         "defines": {
           "BRUSHLESS_TARGET": "",
-          "RX_FRSKY": "",
+          "RX_FRSKY_D8": "",
           "DSHOT": "300"
         }
       }
@@ -72,7 +72,7 @@
         "name": "brushless.frsky",
         "defines": {
           "BRUSHLESS_TARGET": "",
-          "RX_FRSKY": ""
+          "RX_FRSKY_D8": ""
         }
       },
       {
