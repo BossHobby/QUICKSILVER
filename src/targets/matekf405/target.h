@@ -1,4 +1,5 @@
 #include "config.h"
+#include "config_helper.h"
 
 #define MatekF405
 
@@ -10,9 +11,9 @@
 
 //LEDS
 #define LED_NUMBER 2
-#define LED1PIN GPIO_Pin_9		// red led
+#define LED1PIN GPIO_Pin_9 // red led
 #define LED1PORT GPIOB
-#define LED2PIN GPIO_Pin_14		// green led
+#define LED2PIN GPIO_Pin_14 // green led
 #define LED2PORT GPIOA
 #define LED2_INVERT
 #define BUZZER_PIN GPIO_Pin_13
@@ -39,7 +40,7 @@
 // USART5_PD2PC12 we do not support "split" spi pins at the moment
 
 #define SOFTSPI_NONE
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
+#ifdef SERIAL_RX
 #define RX_USART USART_PORT1
 #endif
 

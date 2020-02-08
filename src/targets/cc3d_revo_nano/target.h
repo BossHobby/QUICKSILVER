@@ -1,4 +1,5 @@
 #include "config.h"
+#include "config_helper.h"
 
 #define CC3D_Revo_Nano
 
@@ -40,7 +41,7 @@
   USART1_PB7PB6     \
   USART2_PA3PA2
 
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
+#ifdef SERIAL_RX
 #define RX_USART USART_PORT2
 #define SOFTSPI_NONE
 #endif

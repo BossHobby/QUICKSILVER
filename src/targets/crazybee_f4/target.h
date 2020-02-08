@@ -1,4 +1,5 @@
 #include "config.h"
+#include "config_helper.h"
 
 #define CrazyBee_F4
 
@@ -46,7 +47,7 @@
 
 #define ENABLE_SMART_AUDIO
 
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
+#ifdef SERIAL_RX
 #define RX_USART USART_PORT2
 #define SOFTSPI_NONE
 #endif

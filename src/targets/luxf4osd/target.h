@@ -1,4 +1,5 @@
 #include "config.h"
+#include "config_helper.h"
 
 //******************UNCONFIRMED TARGET******************
 
@@ -32,7 +33,7 @@
 #define SENSOR_ROTATE_90_CCW
 
 //RADIO
-#define USART_INVERTER_PIN GPIO_Pin_0		//unknown UART
+#define USART_INVERTER_PIN GPIO_Pin_0 //unknown UART
 #define USART_INVERTER_PORT GPIOC
 
 #define USART_PORTS \
@@ -40,7 +41,7 @@
   USART3_PB11PB10   \
   USART4_PA1PA0
 
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
+#ifdef SERIAL_RX
 #define RX_USART USART_PORT1
 #define SOFTSPI_NONE
 #endif

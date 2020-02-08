@@ -1,4 +1,5 @@
 #include "config.h"
+#include "config_helper.h"
 
 #define NFE_Breadboard
 
@@ -35,7 +36,7 @@
   USART2_PA3PA2     \
   USART3_PC11PC10
 
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
+#ifdef SERIAL_RX
 #define RX_USART USART_PORT1
 #define SOFTSPI_NONE
 #endif
