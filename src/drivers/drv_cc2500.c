@@ -29,6 +29,8 @@
 
 #ifdef CC2500_GDO0_PC14
 #define CC2500_GDO0_PINSOURCE GPIO_PinSource14
+#define CC2500_GDO0_EXTI_PINSOURCE EXTI_PortSourceGPIOC
+#define CC2500_GDO0_EXTI_LINE EXTI_Line14
 #define CC2500_GDO0_PIN GPIO_Pin_14
 #define CC2500_GDO0_PORT GPIOC
 #endif
@@ -59,6 +61,8 @@
 
 extern int liberror;
 
+static uint8_t gdo0_exti_status = 1;
+
 void cc2500_csn_enable() {
   GPIO_ResetBits(CC2500_NSS_PORT, CC2500_NSS_PIN);
 }
@@ -68,7 +72,10 @@ void cc2500_csn_disable() {
 }
 
 uint8_t cc2500_read_gdo0() {
-  return GPIO_ReadInputDataBit(CC2500_GDO0_PORT, CC2500_GDO0_PIN);
+  uint8_t val = gdo0_exti_status;
+  gdo0_exti_status = 0;
+  return val;
+  //return GPIO_ReadInputDataBit(CC2500_GDO0_PORT, CC2500_GDO0_PIN);
 }
 
 void cc2500_hardware_init() {
@@ -122,6 +129,24 @@ void cc2500_hardware_init() {
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(CC2500_GDO0_PORT, &GPIO_InitStructure);
 
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
+  SYSCFG_EXTILineConfig(CC2500_GDO0_EXTI_PINSOURCE, CC2500_GDO0_PINSOURCE);
+
+  /* PD0 is connected to EXTI_Line0 */
+  EXTI_InitTypeDef EXTI_InitStruct;
+  EXTI_InitStruct.EXTI_Line = CC2500_GDO0_EXTI_LINE;
+  EXTI_InitStruct.EXTI_LineCmd = ENABLE;
+  EXTI_InitStruct.EXTI_Mode = EXTI_Mode_Interrupt;
+  EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Rising_Falling;
+  EXTI_Init(&EXTI_InitStruct);
+
+  NVIC_InitTypeDef NVIC_InitStruct;
+  NVIC_InitStruct.NVIC_IRQChannel = EXTI15_10_IRQn;
+  NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x00;
+  NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x00;
+  NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStruct);
+
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);
 
   SPI_I2S_DeInit(CC2500_SPI_INSTANCE);
@@ -143,6 +168,13 @@ void cc2500_hardware_init() {
     ;
 
   SPI_I2S_ReceiveData(CC2500_SPI_INSTANCE);
+}
+
+void EXTI15_10_IRQHandler(void) {
+  if (EXTI_GetITStatus(CC2500_GDO0_EXTI_LINE) != RESET) {
+    gdo0_exti_status = 1;
+    EXTI_ClearITPendingBit(CC2500_GDO0_EXTI_LINE);
+  }
 }
 
 uint8_t cc2500_spi_transfer_byte(uint8_t data) {
