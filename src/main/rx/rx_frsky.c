@@ -169,6 +169,11 @@ static uint8_t tune_rx(uint8_t iteration) {
   if (len == 0) {
     return 0;
   }
+  if (len > 35) {
+    cc2500_strobe(CC2500_SFRX);
+    return 0;
+  }
+
   if (packet[len - 1] & 0x80) {
     if (packet[2] == 0x01) {
       uint8_t lqi = packet[len - 1] & 0x7F;
@@ -199,6 +204,10 @@ static uint8_t get_bind1() {
   if (len == 0) {
     return 0;
   }
+  if (len > 35) {
+    cc2500_strobe(CC2500_SFRX);
+    return 0;
+  }
 
   if (packet[len - 1] & 0x80) {
     if (packet[2] == 0x01) {
@@ -225,6 +234,10 @@ static uint8_t get_bind2(uint8_t *packet) {
 
   uint8_t len = read_packet();
   if (len == 0) {
+    return 0;
+  }
+  if (len > 35) {
+    cc2500_strobe(CC2500_SFRX);
     return 0;
   }
 
@@ -288,11 +301,14 @@ void frsky_handle_bind() {
     break;
   case FRSKY_STATE_BIND:
     init_tune_rx();
+    handle_overflows();
     protocol_state = FRSKY_STATE_BIND_TUNING;
     break;
   case FRSKY_STATE_BIND_TUNING: {
     static uint8_t tune_samples = 0;
     static int8_t last_offset = -126;
+
+    handle_overflows();
 
     if (tune_rx(tune_samples)) {
       const int8_t current_offset = frsky_bind.offset;
@@ -311,11 +327,13 @@ void frsky_handle_bind() {
     break;
   }
   case FRSKY_STATE_BIND_BINDING1:
+    handle_overflows();
     if (get_bind1(packet)) {
       protocol_state = FRSKY_STATE_BIND_BINDING2;
     }
     break;
   case FRSKY_STATE_BIND_BINDING2:
+    handle_overflows();
     if (get_bind2(packet)) {
       protocol_state = FRSKY_STATE_BIND_COMPLETE;
     }
