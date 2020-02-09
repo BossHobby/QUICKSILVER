@@ -4,6 +4,6 @@
 #define SERIAL_RX
 #endif
 
-#if defined(RX_FRSKY_D8) || defined(RX_FRSKY_D16_FCC) || defined(RX_FRSKY_D16_LBT)
+#if defined(RX_FRSKY_D8) || defined(RX_FRSKY_D16_FCC) || defined(RX_FRSKY_D16_LBT) || defined(RX_REDPINE)
 #define RX_FRSKY
 #endif
