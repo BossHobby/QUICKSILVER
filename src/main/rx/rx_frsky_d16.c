@@ -305,7 +305,7 @@ static uint8_t frsky_d16_handle_packet() {
   case FRSKY_STATE_STARTING:
     cc2500_enter_rxmode();
     set_address(0);
-    cc2500_write_reg(CC2500_FIFOTHR, 0x14);
+    cc2500_write_reg(CC2500_FIFOTHR, 0x9);
     next_channel(1);
     cc2500_strobe(CC2500_SRX);
 
@@ -349,6 +349,8 @@ static uint8_t frsky_d16_handle_packet() {
       } else {
         quic_debugf("FRSKY_D16: invalid frame");
       }
+    } else if (len > 0) {
+      quic_debugf("FRSKY_D16: invalid size %d", len);
     }
 
     handle_overflows();
