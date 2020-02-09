@@ -82,6 +82,7 @@
 //#define RX_FRSKY_D8
 //#define RX_FRSKY_D16_FCC
 //#define RX_FRSKY_D16_LBT
+//#define RX_REDPINE
 
 // *************Serial Receiver UART Selection (uncomment all for default from target or if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
 //#define RX_USART USART_PORT1
