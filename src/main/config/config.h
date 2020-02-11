@@ -93,7 +93,7 @@
 
 // *************Type Selection For Bayang Protocol Only
 //#define USE_DEVO
-//#define USE_MULTI
+#define USE_MULTI
 
 //#define RADIO_XN297L
 #define RADIO_XN297
