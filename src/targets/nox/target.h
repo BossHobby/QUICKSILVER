@@ -51,8 +51,8 @@
 #define RADIO_CHECK
 #define SPI_MISO_PIN GPIO_Pin_7
 #define SPI_MISO_PORT GPIOB
-#define SPI_MOSI_PIN GPIO_Pin_6
-#define SPI_MOSI_PORT GPIOB
+#define SPI_MOSI_PIN GPIO_Pin_0
+#define SPI_MOSI_PORT GPIOA
 #define SPI_CLK_PIN GPIO_Pin_3
 #define SPI_CLK_PORT GPIOA
 #define SPI_SS_PIN GPIO_Pin_2
