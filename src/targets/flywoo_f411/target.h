@@ -1,6 +1,6 @@
 #include "config.h"
 
-#define Flywoo
+#define Flywoo_F411
 
 #define F4
 #define F411
@@ -23,6 +23,7 @@
 #define MPU6XXX_SPI1
 #define MPU6XXX_NSS_PA4
 #define MPU6XXX_INT_PB3
+#define MPU6XXX_INT_PORT GPIOB
 #define USE_DUMMY_I2C
 #define SENSOR_ROTATE_180_CW
 #define GYRO_ID_1 0x68
@@ -47,38 +48,27 @@
 #define SOFTSPI_NONE
 #endif
 
-////Ians spi pins///
+
 #ifndef SOFTSPI_NONE //sort this out later for use of bayang
 #define RADIO_CHECK
-#define SPI_MISO_PIN GPIO_Pin_2
-#define SPI_MISO_PORT GPIOA
-#define SPI_MOSI_PIN GPIO_Pin_10
+#define SPI_MISO_PIN GPIO_Pin_7
+#define SPI_MISO_PORT GPIOB
+#define SPI_MOSI_PIN GPIO_Pin_6
 #define SPI_MOSI_PORT GPIOB
 #define SPI_CLK_PIN GPIO_Pin_3
 #define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN GPIO_Pin_0
+#define SPI_SS_PIN GPIO_Pin_2
 #define SPI_SS_PORT GPIOA
-
-//#ifndef SOFTSPI_NONE //sort this out later for use of bayang
-//#define RADIO_CHECK
-//#define SPI_MISO_PIN GPIO_Pin_7
-//#define SPI_MISO_PORT GPIOB
-//#define SPI_MOSI_PIN GPIO_Pin_6
-//#define SPI_MOSI_PORT GPIOB
-//#define SPI_CLK_PIN GPIO_Pin_3
-//#define SPI_CLK_PORT GPIOA
-//#define SPI_SS_PIN GPIO_Pin_2
-//#define SPI_SS_PORT GPIOA
 
 #endif
 
 // OSD
 #define ENABLE_OSD
-#define MAX7456_SPI2
+#define MAX7456_SPI1
 #define MAX7456_NSS_PB12
 
 //VOLTAGE DIVIDER
-#define BATTERYPIN GPIO_Pin_5
+#define BATTERYPIN GPIO_Pin_00
 #define BATTERYPORT GPIOA
 #define BATTERY_ADC_CHANNEL ADC_Channel_5
 
@@ -96,10 +86,10 @@
 
 // MOTOR PINS
 //S3_OUT
-#define MOTOR_PIN0 MOTOR_PIN_PB8
+#define MOTOR_PIN0 MOTOR_PIN_PA10
 //S4_OUT
-#define MOTOR_PIN1 MOTOR_PIN_PB1
+#define MOTOR_PIN1 MOTOR_PIN_PB00
 //S1_OUT
-#define MOTOR_PIN2 MOTOR_PIN_PA1
+#define MOTOR_PIN2 MOTOR_PIN_PA8
 //S2_OUT
-#define MOTOR_PIN3 MOTOR_PIN_PA7
+#define MOTOR_PIN3 MOTOR_PIN_PA9
