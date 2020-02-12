@@ -355,7 +355,9 @@ uint8_t count_digits(uint32_t value) {
 
 //stuffs a float into a char array.  parameters are array length and precision.  only pads spaces for 0's up to the thousands place.
 void fast_fprint(uint8_t *str, uint8_t length, float v, uint8_t precision) {
-  uint32_t value = v * (ipow(10, precision));
+  const uint8_t is_negative = v < 0 ? 1 : 0;
+
+  uint32_t value = v * (is_negative ? -1.01f : 1.0f) * (ipow(10, precision));
   uint8_t digitsinfrontofdecimal = length - (precision + 1);
   static uint32_t last_cast = 0;
   for (uint8_t i = 0; i < digitsinfrontofdecimal; i++) {
@@ -380,7 +382,7 @@ void fast_fprint(uint8_t *str, uint8_t length, float v, uint8_t precision) {
 
   if (digitsinfrontofdecimal > 3) {
     if ((str[0] == 48) && (str[1] == 48) && (str[2] == 48))
-      str[2] = ' ';
+      str[2] = is_negative ? '-' : ' ';
     if ((str[0] == 48) && (str[1] == 48))
       str[1] = ' ';
     if (str[0] == 48)
@@ -388,13 +390,13 @@ void fast_fprint(uint8_t *str, uint8_t length, float v, uint8_t precision) {
   }
   if (digitsinfrontofdecimal > 2) {
     if ((str[0] == 48) && (str[1] == 48))
-      str[1] = ' ';
+      str[1] = is_negative ? '-' : ' ';
     if (str[0] == 48)
       str[0] = ' ';
   }
   if (digitsinfrontofdecimal > 1) {
     if (str[0] == 48)
-      str[0] = ' ';
+      str[0] = is_negative ? '-' : ' ';
   }
 }
 
@@ -487,19 +489,19 @@ void osd_clear(void) {
 }
 
 uint8_t osd_runtime_screen_clear(void) {
-	static uint8_t clr_col = 0;
-	static uint8_t clr_row = 0;
-	osd_print("               ", TEXT, clr_col, clr_row);
-	clr_row++;
-	if (clr_row > MAXROWS){
-		clr_row = 0;
-		clr_col += 15;
-		if (clr_col > 15){
-			clr_col = 0;
-			return 1;
-		}
-	}
-	return 0;
+  static uint8_t clr_col = 0;
+  static uint8_t clr_row = 0;
+  osd_print("               ", TEXT, clr_col, clr_row);
+  clr_row++;
+  if (clr_row > MAXROWS) {
+    clr_row = 0;
+    clr_col += 15;
+    if (clr_col > 15) {
+      clr_col = 0;
+      return 1;
+    }
+  }
+  return 0;
 }
 
 // set the video output system PAL /NTSC
