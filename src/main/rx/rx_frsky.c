@@ -154,15 +154,24 @@ static void init_tune_rx(void) {
   cc2500_strobe(CC2500_SRX);
 }
 
-static uint8_t tune_rx(uint8_t iteration) {
+static void tune_rx_offset(int8_t offset) {
+  frsky_bind.offset = offset;
   if (frsky_bind.offset >= 126) {
     frsky_bind.offset = -126;
   }
-  if ((timer_millis() - time_tuned_ms) > 50) {
-    time_tuned_ms = timer_millis();
+
+  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)frsky_bind.offset);
+
+  time_tuned_ms = timer_millis();
+}
+
+static uint8_t tune_delay = 50;
+
+static uint8_t tune_rx() {
+  if ((timer_millis() - time_tuned_ms) > tune_delay) {
     // switch to fine tuning after first hit
-    frsky_bind.offset += iteration > 0 ? 1 : 5;
-    cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)frsky_bind.offset);
+    tune_rx_offset(frsky_bind.offset + 5);
+    tune_delay = 50;
   }
 
   uint8_t len = read_packet();
@@ -177,6 +186,8 @@ static uint8_t tune_rx(uint8_t iteration) {
   if (packet[len - 1] & 0x80) {
     if (packet[2] == 0x01) {
       uint8_t lqi = packet[len - 1] & 0x7F;
+      packet[len - 1] = 0x0;
+
       // higher lqi represent better link quality
       if (lqi > 50) {
         return 1;
@@ -306,19 +317,29 @@ void frsky_handle_bind() {
     break;
   case FRSKY_STATE_BIND_TUNING: {
     static uint8_t tune_samples = 0;
-    static int8_t last_offset = -126;
+
+    static int8_t min_offset = 127;
+    static int8_t max_offset = -127;
+
+    const int8_t current_offset = frsky_bind.offset;
 
     handle_overflows();
 
-    if (tune_rx(tune_samples)) {
-      const int8_t current_offset = frsky_bind.offset;
-      if (last_offset == current_offset) {
-        frsky_bind.offset -= 5;
+    if (tune_rx()) {
+      if (current_offset < min_offset) {
+        min_offset = current_offset;
+        tune_delay = 0;
+      } else if (current_offset > max_offset) {
+        max_offset = current_offset;
+        tune_delay = 0;
+      } else {
         tune_samples++;
       }
-      last_offset = current_offset;
+      quic_debugf("FRSKY: tuned %d %d - %d", current_offset, min_offset, max_offset);
     }
-    if (tune_samples >= 3) {
+    if (tune_samples == 1) {
+      tune_rx_offset((max_offset + min_offset) / 2 - 1);
+
       quic_debugf("FRSKY: tuned offset %d", frsky_bind.offset);
       set_address(1);
       init_get_bind();
