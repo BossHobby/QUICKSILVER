@@ -144,7 +144,9 @@ static uint8_t redpine_handle_packet() {
         }
 
         //add a buffer on the packet time incase tx and rx clocks are different
-        max_sync_delay += max_sync_delay / 8;
+        if (frames_lost <= 1) {
+          max_sync_delay += max_sync_delay / 8;
+        }
 
         packet_time = timer_micros();
         total_time = timer_micros();
