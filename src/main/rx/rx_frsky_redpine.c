@@ -130,7 +130,7 @@ static uint8_t redpine_handle_packet() {
     // fallthrough
   case FRSKY_STATE_DATA: {
     uint8_t len = packet_size();
-    if (len >= REDPINE_PACKET_SIZE_W_ADDONS) {
+    if (len == REDPINE_PACKET_SIZE_W_ADDONS) {
       cc2500_read_fifo(packet, len);
 
       if ((packet[0] == REDPINE_PACKET_SIZE - 1) &&
@@ -141,11 +141,6 @@ static uint8_t redpine_handle_packet() {
           max_sync_delay = packet[REDPINE_CHANNEL_START + 7] * 100;
         } else {
           max_sync_delay = packet[REDPINE_CHANNEL_START + 7] * 1000;
-        }
-
-        //add a buffer on the packet time incase tx and rx clocks are different
-        if (frames_lost <= 1) {
-          max_sync_delay += max_sync_delay / 8;
         }
 
         packet_time = timer_micros();
