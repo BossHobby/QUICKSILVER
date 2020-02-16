@@ -209,7 +209,6 @@ static uint8_t frsky_d8_handle_packet() {
     }
 
     if ((timer_micros() - last_packet_received_time) > FRSKY_SYNC_DELAY_MAX) {
-      quic_debugf("FRSKY_D8: update %d", frame_index);
       frame_index++;
       protocol_state = FRSKY_STATE_UPDATE;
     }
