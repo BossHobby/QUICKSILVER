@@ -31,6 +31,7 @@
 #define CC2500_GDO0_PINSOURCE GPIO_PinSource14
 #define CC2500_GDO0_EXTI_PINSOURCE EXTI_PortSourceGPIOC
 #define CC2500_GDO0_EXTI_LINE EXTI_Line14
+#define CC2500_GDO0_EXTI_HANDLER EXTI15_10_IRQHandler
 #define CC2500_GDO0_PIN GPIO_Pin_14
 #define CC2500_GDO0_PORT GPIOC
 #endif
@@ -170,7 +171,7 @@ void cc2500_hardware_init() {
   SPI_I2S_ReceiveData(CC2500_SPI_INSTANCE);
 }
 
-void EXTI15_10_IRQHandler(void) {
+void CC2500_GDO0_EXTI_HANDLER() {
   if (EXTI_GetITStatus(CC2500_GDO0_EXTI_LINE) != RESET) {
     gdo0_exti_status = 1;
     EXTI_ClearITPendingBit(CC2500_GDO0_EXTI_LINE);
