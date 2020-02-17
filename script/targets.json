@@ -49,6 +49,13 @@
         }
       },
       {
+        "name": "brushless.crsf",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_CRSF": ""
+        }
+      },
+      {
         "name": "dshot300.serial",
         "defines": {
           "BRUSHLESS_TARGET": "",
