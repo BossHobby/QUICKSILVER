@@ -29,6 +29,13 @@
 #define GYRO_ID_4 0x72
 #define SENSOR_ROTATE_90_CW
 
+#define SPI_PORTS \
+  SPI3_PB3PB4PB5
+
+#define USE_M25P16
+#define M25P16_SPI_PORT SPI_PORT3
+#define M25P16_NSS_PIN PIN_A15
+
 //RADIO
 #define USART_PORTS \
   USART2_PA3PA2     \
