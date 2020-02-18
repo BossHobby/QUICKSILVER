@@ -143,6 +143,8 @@ static uint8_t redpine_handle_packet() {
           max_sync_delay = packet[REDPINE_CHANNEL_START + 7] * 1000;
         }
 
+        max_sync_delay += max_sync_delay / 8;
+
         packet_time = timer_micros();
         total_time = timer_micros();
         protocol_time = timer_micros();
