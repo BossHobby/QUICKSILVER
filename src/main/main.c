@@ -217,6 +217,7 @@ int main(void) {
   gyro_cal();
   extern void rgb_init(void);
   rgb_init();
+  blackbox_init();
 
 #ifdef SERIAL_ENABLE
   serial_init();

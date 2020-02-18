@@ -3,6 +3,8 @@
 #include "profile.h"
 
 typedef struct {
+  uint32_t time;
+
   float cpu_load;
 
   float vbat_filter;
@@ -17,7 +19,13 @@ typedef struct {
 
   float accel_raw[3];
   float accel_filter[3];
+
+  float pid_output[3];
 } blackbox_t;
 
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b);
+
+void blackbox_init();
 void blackbox_update();
+
+cbor_result_t blackbox_read_flash(const uint32_t addr, blackbox_t *b);
