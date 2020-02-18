@@ -1,6 +1,6 @@
 #include "drv_gpio.h"
+
 #include "defines.h"
-#include "project.h"
 
 void gpio_init(void) {
 
@@ -74,3 +74,11 @@ int gpio_init_fpv(void) {
 #endif
   return 0;
 }
+
+#define PIN(port_num, num) MAKE_PIN_DEF(port_num, num),
+
+gpio_pin_def_t gpio_pin_defs[GPIO_PINS_MAX] = {
+    {},
+    GPIO_PINS};
+
+#undef PIN
