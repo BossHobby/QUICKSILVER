@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "blackbox.h"
+#include "data_flash.h"
 #include "drv_max7456.h"
 #include "drv_usb.h"
 #include "flash.h"
@@ -34,7 +35,7 @@ extern uint8_t aux[AUX_CHANNEL_MAX];
 extern float vbattfilt;
 extern float vbatt_comp;
 
-extern uint8_t blackbox_enabled;
+extern uint8_t blackbox_override;
 extern uint32_t blackbox_rate;
 
 extern uint8_t encode_buffer[USB_BUFFER_SIZE];
@@ -145,7 +146,7 @@ void get_quic(uint8_t *data, uint32_t len) {
     res = cbor_encode_target_info_t(&enc, &target_info);
     check_cbor_error(QUIC_CMD_GET);
 
-    blackbox_enabled = 1;
+    blackbox_override = 1;
 
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
@@ -171,6 +172,33 @@ void get_quic(uint8_t *data, uint32_t len) {
 
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
+  case QUIC_VAL_BLACKBOX: {
+    blackbox_t blackbox;
+    extern data_flash_header_t data_flash_header;
+
+    res = cbor_encode_array_indefinite(&enc);
+    check_cbor_error(QUIC_CMD_GET);
+
+    send_quic_header(QUIC_CMD_GET, QUIC_FLAG_STREAMING, 0);
+    usb_serial_write(encode_buffer, cbor_encoder_len(&enc));
+
+    for (uint32_t i = 0; i < 5; i++) {
+      res = data_flash_read_backbox(i, &blackbox);
+      check_cbor_error(QUIC_CMD_GET);
+
+      cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+      res = cbor_encode_blackbox_t(&enc, &blackbox);
+      check_cbor_error(QUIC_CMD_GET);
+      usb_serial_write(encode_buffer, cbor_encoder_len(&enc));
+    }
+
+    cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+    res = cbor_encode_end_indefinite(&enc);
+    check_cbor_error(QUIC_CMD_GET);
+    usb_serial_write(encode_buffer, cbor_encoder_len(&enc));
+
+    break;
+  }
 #ifdef ENABLE_OSD
   case QUIC_VAL_OSD_FONT: {
     uint8_t font[54];
