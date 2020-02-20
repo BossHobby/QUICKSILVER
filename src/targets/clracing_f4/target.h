@@ -4,8 +4,9 @@
 #define F405
 #define CLRacing_F4
 
-#define USB_DETECT_PIN GPIO_Pin_5
-#define USB_DETECT_PORT GPIOC
+// no bueno on CLRacingF4s
+//#define USB_DETECT_PIN GPIO_Pin_5
+//#define USB_DETECT_PORT GPIOC
 
 //LEDS
 #define LED_NUMBER 1
@@ -27,7 +28,7 @@
 #define SENSOR_ROTATE_90_CW
 
 //RADIO
-#define USART_INVERTER_PIN GPIO_Pin_0		//UART 1
+#define USART_INVERTER_PIN GPIO_Pin_0 //UART 1
 #define USART_INVERTER_PORT GPIOC
 
 #define USART_PORTS \
