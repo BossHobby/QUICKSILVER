@@ -6,8 +6,8 @@
 #define CLRacing_F4
 
 // no bueno on CLRacingF4s
-#define USB_DETECT_PIN GPIO_Pin_5
-#define USB_DETECT_PORT GPIOC
+//#define USB_DETECT_PIN GPIO_Pin_5
+//#define USB_DETECT_PORT GPIOC
 
 //LEDS
 #define LED_NUMBER 1
