@@ -1,5 +1,7 @@
 #include "drv_spi.h"
 
+#include "usb_configurator.h"
+
 #define PIN MAKE_PIN_DEF
 #define SPI_PORT(chan, sck_pin, miso_pin, mosi_pin) \
   {                                                 \
@@ -36,7 +38,7 @@ void spi_enable_rcc(spi_ports_t port) {
 }
 
 uint8_t spi_transfer_byte(spi_ports_t port, uint8_t data) {
-  for (uint16_t timeout = 1000; SPI_I2S_GetFlagStatus(PORT.channel, SPI_I2S_FLAG_TXE) == RESET; timeout--) {
+  for (uint16_t timeout = 0x1000; SPI_I2S_GetFlagStatus(PORT.channel, SPI_I2S_FLAG_TXE) == RESET; timeout--) {
     if (timeout == 0) {
       //liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
       liberror++;
@@ -46,7 +48,15 @@ uint8_t spi_transfer_byte(spi_ports_t port, uint8_t data) {
 
   SPI_I2S_SendData(PORT.channel, data);
 
-  for (uint16_t timeout = 1000; SPI_I2S_GetFlagStatus(PORT.channel, SPI_I2S_FLAG_RXNE) == RESET; timeout--) {
+  for (uint16_t timeout = 0x1000; SPI_I2S_GetFlagStatus(PORT.channel, SPI_I2S_FLAG_RXNE) == RESET; timeout--) {
+    if (timeout == 0) {
+      //liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
+      liberror++;
+      return 0;
+    }
+  }
+
+  for (uint16_t timeout = 0x1000; SPI_I2S_GetFlagStatus(PORT.channel, SPI_I2S_FLAG_BSY) == SET; timeout--) {
     if (timeout == 0) {
       //liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
       liberror++;
