@@ -5,12 +5,24 @@
 #include "blackbox.h"
 
 typedef struct {
-  uint32_t time;
+  uint32_t page_size;
+  uint32_t pages_per_sector;
+  uint32_t sectors;
+  uint32_t sector_size;
+  uint32_t total_size;
+} data_flash_bounds_t;
+
+typedef struct {
   uint32_t entries;
 } data_flash_header_t;
 
 void data_flash_init();
 void data_flash_reset();
+void data_flash_restart();
+void data_flash_finish();
 
 cbor_result_t data_flash_read_backbox(const uint32_t addr, blackbox_t *b);
 cbor_result_t data_flash_write_backbox(const blackbox_t *b);
+
+cbor_result_t data_flash_read_header(data_flash_header_t *h);
+cbor_result_t data_flash_write_header(data_flash_header_t *h);

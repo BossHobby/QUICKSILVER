@@ -100,7 +100,7 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
   CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "rx_filter"));
   CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->rx_filter, 4));
   CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "rx_aux"));
-  CHECK_CBOR_ERROR(res = cbor_encode_uint8_array(enc, b->rx_aux, AUX_CHANNEL_MAX));
+  CHECK_CBOR_ERROR(res = cbor_encode_uint32(enc, &b->rx_aux));
 
   CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "accel_raw"));
   CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->accel_raw, 3));
@@ -130,7 +130,7 @@ cbor_result_t cbor_encode_compact_blackbox_t(cbor_value_t *enc, const blackbox_t
 
   CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->rx_raw, 4));
   CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->rx_filter, 4));
-  CHECK_CBOR_ERROR(res = cbor_encode_uint8_array(enc, b->rx_aux, AUX_CHANNEL_MAX));
+  CHECK_CBOR_ERROR(res = cbor_encode_uint32(enc, &b->rx_aux));
 
   CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->accel_raw, 3));
   CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->accel_filter, 3));
@@ -158,7 +158,7 @@ cbor_result_t cbor_decode_compact_blackbox_t(cbor_value_t *dec, blackbox_t *b) {
 
   CHECK_CBOR_ERROR(res = cbor_decode_float_array(dec, b->rx_raw, 4));
   CHECK_CBOR_ERROR(res = cbor_decode_float_array(dec, b->rx_filter, 4));
-  CHECK_CBOR_ERROR(res = cbor_decode_uint8_array(dec, b->rx_aux, AUX_CHANNEL_MAX));
+  CHECK_CBOR_ERROR(res = cbor_decode_uint32(dec, &b->rx_aux));
 
   CHECK_CBOR_ERROR(res = cbor_decode_float_array(dec, b->accel_raw, 3));
   CHECK_CBOR_ERROR(res = cbor_decode_float_array(dec, b->accel_filter, 3));
@@ -175,14 +175,17 @@ void blackbox_init() {
 void blackbox_update() {
   static uint32_t loop_counter = 0;
 
-  if ((rx_aux_on(AUX_ARMING) || blackbox_override) && blackbox_enabled == 0) {
-    if (usb_is_active == 0) {
-      data_flash_reset();
-    }
+  if (!rx_aux_on(AUX_ARMING) && blackbox_enabled == 1) {
+    data_flash_finish();
+    blackbox_enabled = 0;
+    return;
+  } else if (rx_aux_on(AUX_ARMING) && blackbox_enabled == 0) {
+    data_flash_restart();
     blackbox_enabled = 1;
+    return;
   }
 
-  if (blackbox_enabled == 0)
+  if (blackbox_enabled == 0 && blackbox_override == 0)
     return;
 
   state.time = timer_millis();
@@ -201,8 +204,11 @@ void blackbox_update() {
   state.rx_filter[2] = rx_filtered[2];
   state.rx_filter[3] = rx_filtered[3];
 
+  state.rx_aux = 0;
   for (uint32_t i = 0; i < AUX_CHANNEL_MAX; i++) {
-    state.rx_aux[i] = aux[i];
+    if (aux[i]) {
+      state.rx_aux = state.rx_aux | (0x1 << i);
+    }
   }
 
   state.gyro_raw[0] = gyro_raw[0];
@@ -233,6 +239,9 @@ void blackbox_update() {
     if (usb_is_active != 0) {
       quic_blackbox(&state);
     }
+  }
+
+  if (rx_aux_on(AUX_ARMING) && (loop_counter % 4 == 0)) {
     data_flash_write_backbox(&state);
   }
 
