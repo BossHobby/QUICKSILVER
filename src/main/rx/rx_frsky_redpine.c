@@ -170,7 +170,6 @@ static uint8_t redpine_handle_packet() {
       //out of sync with packets - do a complete resysnc
       quic_debugf("REDPINE: resync %u", (timer_micros() - total_time));
       rx_rssi = 0;
-      failsafe = 1;
       next_channel(1);
       cc2500_strobe(CC2500_SRX);
 
@@ -192,7 +191,7 @@ static uint8_t redpine_handle_packet() {
       redpine_fast = redpine_fast == 1 ? 0 : 1;
       max_sync_delay = REDPINE_PACKET_TIME_US;
       protocol_time = timer_micros();
-
+      failsafe = 1;
       protocol_state = FRSKY_STATE_INIT;
       rx_init();
       reset_looptime();
