@@ -71,6 +71,6 @@ int gpio_init_fpv(void) {
 
     return 1;
   }
-  return 0;
 #endif
+  return 0;
 }

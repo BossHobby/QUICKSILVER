@@ -18,7 +18,7 @@ extern int failsafe;
 
 extern int onground;
 
-#ifdef FPV_ON
+#if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
 static int fpv_init = 0;
 #endif
 
