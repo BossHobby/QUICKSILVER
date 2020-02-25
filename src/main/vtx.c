@@ -95,7 +95,7 @@ void vtx_init() {
 }
 
 void vtx_update() {
-#ifdef FPV_ON
+#if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
   if (rx_aux_on(AUX_FPV_ON)) {
     // fpv switch on
     if (!fpv_init && rxmode == RXMODE_NORMAL) {
