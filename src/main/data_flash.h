@@ -4,6 +4,8 @@
 
 #include "blackbox.h"
 
+#define DATA_FLASH_HEADER_MAGIC 0xdeadbeef
+
 typedef struct {
   uint32_t page_size;
   uint32_t pages_per_sector;
@@ -13,6 +15,7 @@ typedef struct {
 } data_flash_bounds_t;
 
 typedef struct {
+  uint32_t magic;
   uint32_t entries;
 } data_flash_header_t;
 
