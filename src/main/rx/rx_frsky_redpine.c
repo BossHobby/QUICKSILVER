@@ -36,7 +36,7 @@ extern int rxmode;
 extern int rx_ready;
 extern int rx_bind_enable;
 
-static uint8_t redpine_fast = 0;
+static uint8_t redpine_fast = 1;
 
 uint16_t frsky_extract_rssi(uint8_t rssi_raw);
 void frsky_handle_bind();
