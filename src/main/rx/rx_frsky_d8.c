@@ -10,8 +10,10 @@
 
 //Source https://www.rcgroups.com/forums/showpost.php?p=21864861
 
+#ifdef USE_CC2500_PA_LNA
 #define FRSKY_ENABLE_TELEMETRY
-//#define FRSKY_ENABLE_HUB_TELEMETRY
+#define FRSKY_ENABLE_HUB_TELEMETRY
+#endif
 
 #define FRSKY_D8_CHANNEL_COUNT 8
 #define FRSKY_D8_HUB_FIRST_USER_ID 0x31
@@ -185,7 +187,9 @@ static uint8_t frsky_d8_handle_packet() {
   static uint32_t frames_lost = 0;
   static uint32_t max_sync_delay = 50 * FRSKY_SYNC_DELAY_MAX;
 
+#ifdef FRSKY_ENABLE_TELEMETRY
   static uint8_t telemetry[20];
+#endif
 
   const uint32_t current_packet_received_time = timer_micros();
 
