@@ -172,33 +172,6 @@ void get_quic(uint8_t *data, uint32_t len) {
 
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
-  case QUIC_VAL_BLACKBOX: {
-    blackbox_t blackbox;
-    extern data_flash_header_t data_flash_header;
-
-    res = cbor_encode_array_indefinite(&enc);
-    check_cbor_error(QUIC_CMD_GET);
-
-    send_quic_header(QUIC_CMD_GET, QUIC_FLAG_STREAMING, 0);
-    usb_serial_write(encode_buffer, cbor_encoder_len(&enc));
-
-    for (uint32_t i = 0; i < 5; i++) {
-      res = data_flash_read_backbox(i, &blackbox);
-      check_cbor_error(QUIC_CMD_GET);
-
-      cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
-      res = cbor_encode_blackbox_t(&enc, &blackbox);
-      check_cbor_error(QUIC_CMD_GET);
-      usb_serial_write(encode_buffer, cbor_encoder_len(&enc));
-    }
-
-    cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
-    res = cbor_encode_end_indefinite(&enc);
-    check_cbor_error(QUIC_CMD_GET);
-    usb_serial_write(encode_buffer, cbor_encoder_len(&enc));
-
-    break;
-  }
 #ifdef ENABLE_OSD
   case QUIC_VAL_OSD_FONT: {
     uint8_t font[54];
@@ -304,6 +277,61 @@ void set_quic(uint8_t *data, uint32_t len) {
   }
 }
 
+void process_blackbox(uint8_t *data, uint32_t len) {
+  cbor_result_t res = CBOR_OK;
+
+  cbor_value_t dec;
+  cbor_decoder_init(&dec, data, len);
+
+  cbor_value_t enc;
+  cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+
+  quic_blackbox_command cmd;
+  res = cbor_decode_uint8(&dec, &cmd);
+  check_cbor_error(QUIC_CMD_BLACKBOX);
+
+  extern data_flash_header_t data_flash_header;
+
+  switch (cmd) {
+  case QUIC_BLACKBOX_RESET:
+    data_flash_reset();
+    send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, NULL, 0);
+    break;
+  case QUIC_BLACKBOX_LIST:
+    cbor_encode_uint32(&enc, &data_flash_header.entries);
+    send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  case QUIC_BLACKBOX_GET: {
+    extern data_flash_header_t data_flash_header;
+
+    send_quic_header(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, cbor_encoder_len(&enc));
+    usb_serial_write(encode_buffer, cbor_encoder_len(&enc));
+
+    blackbox_t blackbox;
+    for (uint32_t i = 0; i < data_flash_header.entries; i++) {
+      res = data_flash_read_backbox(i, &blackbox);
+      if (res < CBOR_OK) {
+        continue;
+      }
+
+      cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+      res = cbor_encode_compact_blackbox_t(&enc, &blackbox);
+      check_cbor_error(QUIC_CMD_BLACKBOX);
+
+      send_quic_header(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, cbor_encoder_len(&enc));
+      usb_serial_write(encode_buffer, cbor_encoder_len(&enc));
+    }
+
+    send_quic_header(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, 0);
+
+    break;
+  }
+  default:
+    quic_errorf(QUIC_CMD_BLACKBOX, "INVALID CMD %d", cmd);
+    break;
+  }
+}
+
 void usb_process_quic() {
   const uint8_t cmd = usb_serial_read_byte();
   if (cmd == QUIC_CMD_INVALID) {
@@ -351,6 +379,10 @@ void usb_process_quic() {
     flash_save();
     flash_load();
 #endif
+    send_quic(QUIC_CMD_CAL_IMU, QUIC_FLAG_NONE, NULL, 0);
+    break;
+  case QUIC_CMD_BLACKBOX:
+    process_blackbox(buffer, size);
     break;
   default:
     quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);

@@ -26,6 +26,12 @@ typedef enum {
 } quic_command;
 
 typedef enum {
+  QUIC_BLACKBOX_RESET,
+  QUIC_BLACKBOX_LIST,
+  QUIC_BLACKBOX_GET
+} quic_blackbox_command;
+
+typedef enum {
   QUIC_FLAG_NONE,
   QUIC_FLAG_ERROR,
   QUIC_FLAG_STREAMING,
@@ -39,8 +45,7 @@ typedef enum {
   QUIC_VAL_BLACKBOX_RATE,
   QUIC_VAL_PID_RATE_PRESETS,
   QUIC_VAL_VTX_SETTINGS,
-  QUIC_VAL_OSD_FONT,
-  QUIC_VAL_BLACKBOX
+  QUIC_VAL_OSD_FONT
 } quic_values;
 
 void usb_process_msp();
