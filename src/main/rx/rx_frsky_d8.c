@@ -253,7 +253,7 @@ static uint8_t frsky_d8_handle_packet() {
           telemetry[4] = (uint8_t)(vbattfilt * 100);
           telemetry[5] = frsky_extract_rssi(packet[18]);
 #ifdef FRSKY_ENABLE_HUB_TELEMETRY
-          telemetry[6] = frsky_d_append_hub_telemetry(telemetry_id, telemetry + 8);
+          telemetry[6] = frsky_d8_append_hub_telemetry(telemetry_id, telemetry + 8);
 #else
           telemetry[6] = 0;
 #endif
