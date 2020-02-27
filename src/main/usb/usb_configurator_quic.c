@@ -298,28 +298,35 @@ void process_blackbox(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, NULL, 0);
     break;
   case QUIC_BLACKBOX_LIST:
-    cbor_encode_uint32(&enc, &data_flash_header.entries);
+    cbor_encode_uint32(&enc, &data_flash_header.file_num);
     send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   case QUIC_BLACKBOX_GET: {
     extern data_flash_header_t data_flash_header;
 
+    uint8_t file_index;
+    res = cbor_decode_uint8(&dec, &file_index);
+    check_cbor_error(QUIC_CMD_BLACKBOX);
+
     send_quic_header(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, cbor_encoder_len(&enc));
     usb_serial_write(encode_buffer, cbor_encoder_len(&enc));
 
-    blackbox_t blackbox;
-    for (uint32_t i = 0; i < data_flash_header.entries; i++) {
-      res = data_flash_read_backbox(i, &blackbox);
-      if (res < CBOR_OK) {
-        continue;
+    if (data_flash_header.file_num > file_index) {
+      blackbox_t blackbox;
+      const data_flash_file_t *file = &data_flash_header.files[file_index];
+      for (uint32_t i = 0; i < file->entries; i++) {
+        res = data_flash_read_backbox(i, &blackbox);
+        if (res < CBOR_OK) {
+          continue;
+        }
+
+        cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+        res = cbor_encode_compact_blackbox_t(&enc, &blackbox);
+        check_cbor_error(QUIC_CMD_BLACKBOX);
+
+        send_quic_header(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, cbor_encoder_len(&enc));
+        usb_serial_write(encode_buffer, cbor_encoder_len(&enc));
       }
-
-      cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
-      res = cbor_encode_compact_blackbox_t(&enc, &blackbox);
-      check_cbor_error(QUIC_CMD_BLACKBOX);
-
-      send_quic_header(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, cbor_encoder_len(&enc));
-      usb_serial_write(encode_buffer, cbor_encoder_len(&enc));
     }
 
     send_quic_header(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, 0);

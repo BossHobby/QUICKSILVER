@@ -15,8 +15,14 @@ typedef struct {
 } data_flash_bounds_t;
 
 typedef struct {
-  uint32_t magic;
+  uint32_t start_sector;
   uint32_t entries;
+} data_flash_file_t;
+
+typedef struct {
+  uint32_t magic;
+  uint16_t file_num;
+  data_flash_file_t files[16];
 } data_flash_header_t;
 
 void data_flash_init();

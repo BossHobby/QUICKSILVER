@@ -83,10 +83,10 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
   CHECK_CBOR_ERROR(res = cbor_encode_uint32(enc, &b->time));
 
   CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "cpu_load"));
-  CHECK_CBOR_ERROR(res = cbor_encode_float(enc, &b->cpu_load));
+  CHECK_CBOR_ERROR(res = cbor_encode_uint16(enc, &b->cpu_load));
 
   CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "vbat_filter"));
-  CHECK_CBOR_ERROR(res = cbor_encode_float(enc, &b->vbat_filter));
+  CHECK_CBOR_ERROR(res = cbor_encode_uint16(enc, &b->vbat_filter));
 
   CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "gyro_raw"));
   CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->gyro_raw, 3));
@@ -120,9 +120,9 @@ cbor_result_t cbor_encode_compact_blackbox_t(cbor_value_t *enc, const blackbox_t
 
   CHECK_CBOR_ERROR(res = cbor_encode_uint32(enc, &b->time));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_float(enc, &b->cpu_load));
+  CHECK_CBOR_ERROR(res = cbor_encode_uint16(enc, &b->cpu_load));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_float(enc, &b->vbat_filter));
+  CHECK_CBOR_ERROR(res = cbor_encode_uint16(enc, &b->vbat_filter));
 
   CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->gyro_raw, 3));
   CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->gyro_filter, 3));
@@ -148,9 +148,9 @@ cbor_result_t cbor_decode_compact_blackbox_t(cbor_value_t *dec, blackbox_t *b) {
 
   CHECK_CBOR_ERROR(res = cbor_decode_uint32(dec, &b->time));
 
-  CHECK_CBOR_ERROR(res = cbor_decode_float(dec, &b->cpu_load));
+  CHECK_CBOR_ERROR(res = cbor_decode_uint16(dec, &b->cpu_load));
 
-  CHECK_CBOR_ERROR(res = cbor_decode_float(dec, &b->vbat_filter));
+  CHECK_CBOR_ERROR(res = cbor_decode_uint16(dec, &b->vbat_filter));
 
   CHECK_CBOR_ERROR(res = cbor_decode_float_array(dec, b->gyro_raw, 3));
   CHECK_CBOR_ERROR(res = cbor_decode_float_array(dec, b->gyro_filter, 3));
@@ -192,7 +192,7 @@ void blackbox_update() {
 
   state.cpu_load = cpu_load;
 
-  state.vbat_filter = vbattfilt;
+  state.vbat_filter = vbattfilt * 10;
 
   state.rx_raw[0] = rx[0];
   state.rx_raw[1] = rx[1];
