@@ -12,6 +12,18 @@
     ]
   },
   {
+    "name": "alienwhoop_v3",
+    "configurations": [
+      {
+        "name": "brushed.serial",
+        "defines": {
+          "BRUSHED_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      }
+    ]
+  },
+  {
     "name": "matekf411rx",
     "configurations": [
       {
