@@ -298,7 +298,7 @@ void process_blackbox(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, NULL, 0);
     break;
   case QUIC_BLACKBOX_LIST:
-    cbor_encode_uint32(&enc, &data_flash_header.file_num);
+    cbor_encode_uint16(&enc, &data_flash_header.file_num);
     send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   case QUIC_BLACKBOX_GET: {
