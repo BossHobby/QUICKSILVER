@@ -28,17 +28,16 @@
 #define GYRO_ID_3 0x78
 #define GYRO_ID_4 0x71
 
+#define SPI_PORTS \
+  SPI3_PB3PB4PB5
+
 //RADIO
 #ifdef RX_FRSKY
 #define USE_CC2500
-//#define USE_CC2500_PA_LNA
-//#define USE_CC2500_DIVERSITY
-#define CC2500_SPI3
-#define CC2500_NSS_PA15
+#define CC2500_SPI_PORT SPI_PORT3
+#define CC2500_NSS_PIN PIN_A15
 #define CC2500_GDO0_PC14
-//#define CC2500_TX_EN_PA8
-//#define CC2500_LNA_EN_PA13
-//#define CC2500_ANT_SEL_PA14
+
 #define SOFTSPI_NONE
 #endif
 

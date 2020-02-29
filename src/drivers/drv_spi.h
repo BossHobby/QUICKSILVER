@@ -22,6 +22,9 @@ extern spi_port_def_t spi_port_defs[SPI_PORTS_MAX];
 
 void spi_enable_rcc(spi_ports_t port);
 uint8_t spi_transfer_byte(spi_ports_t port, uint8_t data);
+void spi_init_pins(spi_ports_t port, gpio_pins_t nss);
+void spi_csn_enable(gpio_pins_t nss);
+void spi_csn_disable(gpio_pins_t nss);
 
 // soft spi  header file
 void spi_init(void);
