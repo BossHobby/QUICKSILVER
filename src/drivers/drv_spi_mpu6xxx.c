@@ -1,4 +1,4 @@
-#include "drv_dma_spi.h"
+#include "drv_spi_mpu6xxx.h"
 
 #include <stdio.h>
 
