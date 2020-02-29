@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "drv_cc2500.h"
+#include "drv_spi_cc2500.h"
 #include "drv_time.h"
 #include "profile.h"
 #include "usb_configurator.h"
