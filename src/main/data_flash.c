@@ -7,21 +7,24 @@
 #include "usb_configurator.h"
 #include "util.h"
 
-#define FILES_SECTOR_OFFSET bounds.sector_size
-
 data_flash_header_t data_flash_header;
+
+#ifdef USE_M25P16
 static data_flash_bounds_t bounds;
+
+#define FILES_SECTOR_OFFSET bounds.sector_size
 
 static data_flash_file_t *current_file() {
   return &data_flash_header.files[data_flash_header.file_num - 1];
 }
+#endif
 
 cbor_result_t data_flash_read_header(data_flash_header_t *h) {
 #ifdef USE_M25P16
   m25p16_wait_for_ready();
   m25p16_read_addr(M25P16_READ_DATA_BYTES, 0x0, (uint8_t *)h, sizeof(data_flash_header_t));
-  return CBOR_OK;
 #endif
+  return CBOR_OK;
 }
 
 cbor_result_t data_flash_write_header(data_flash_header_t *h) {
@@ -34,8 +37,8 @@ cbor_result_t data_flash_write_header(data_flash_header_t *h) {
   m25p16_command(M25P16_WRITE_ENABLE);
   m25p16_write_addr(M25P16_PAGE_PROGRAM, 0x0, (uint8_t *)h, sizeof(data_flash_header_t));
 
-  return CBOR_OK;
 #endif
+  return CBOR_OK;
 }
 
 void data_flash_init() {
@@ -88,8 +91,10 @@ void data_flash_restart() {
 }
 
 void data_flash_finish() {
+#ifdef USE_M25P16
   data_flash_write_header(&data_flash_header);
   reset_looptime();
+#endif
 }
 
 cbor_result_t data_flash_read_backbox(const uint32_t index, blackbox_t *b) {
@@ -99,8 +104,8 @@ cbor_result_t data_flash_read_backbox(const uint32_t index, blackbox_t *b) {
   const uint32_t offset = FILES_SECTOR_OFFSET + current_file()->start_sector * bounds.sector_size + index * 0x80;
   m25p16_read_addr(M25P16_READ_DATA_BYTES, offset, (uint8_t *)b, sizeof(blackbox_t));
 
-  return CBOR_OK;
 #endif
+  return CBOR_OK;
 }
 
 cbor_result_t data_flash_write_backbox(const blackbox_t *b) {
@@ -113,6 +118,6 @@ cbor_result_t data_flash_write_backbox(const blackbox_t *b) {
 
   current_file()->entries += 1;
 
-  return CBOR_OK;
 #endif
+  return CBOR_OK;
 }
