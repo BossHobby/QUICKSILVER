@@ -18,19 +18,15 @@
 //#define FPV_PORT GPIOA
 
 //GYRO
-#define MPU6XXX_SPI1
-#define MPU6XXX_NSS_PA4
-#define MPU6XXX_INT_PIN GPIO_Pin_1
-#define MPU6XXX_INT_PORT GPIOA
+#define MPU6XXX_SPI_PORT SPI_PORT1
+#define MPU6XXX_NSS PIN_A4
+#define MPU6XXX_INT PIN_A1
 #define USE_DUMMY_I2C
 #define SENSOR_ROTATE_90_CCW
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x73
 #define GYRO_ID_3 0x78
 #define GYRO_ID_4 0x71
-
-#define SPI_PORTS \
-  SPI3_PB3PB4PB5
 
 //RADIO
 #ifdef RX_FRSKY
@@ -60,7 +56,7 @@
 #endif
 
 // OSD
-#define ENABLE_OSD
+//#define ENABLE_OSD
 #define MAX7456_SPI2
 #define MAX7456_NSS_PB12
 

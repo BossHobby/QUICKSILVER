@@ -9,54 +9,20 @@
 
 #ifdef F4
 
-#if defined(ICM20601_SPI1) || defined(ICM20602_SPI1)
-#define MPU6XXX_SPI1
+#if defined(ICM20602_SPI_PORT) && defined(ICM20602_NSS)
+#define MPU6XXX_SPI_PORT ICM20602_SPI_PORT
+#define MPU6XXX_NSS ICM20602_NSS
+#ifdef ICM20602_INT
+#define MPU6XXX_INT ICM20602_INT
+#endif
 #endif
 
-#if defined(ICM20601_SPI2) || defined(ICM20602_SPI2)
-#define MPU6XXX_SPI2
+#if defined(ICM20601_SPI_PORT) && defined(ICM20601_NSS)
+#define MPU6XXX_SPI_PORT ICM20601_SPI_PORT
+#define MPU6XXX_NSS ICM20601_NSS
+#ifdef ICM20601_INT
+#define MPU6XXX_INT ICM20601_INT
 #endif
-
-//SPI PINS
-#if defined(MPU6XXX_SPI1)
-#define MPU6XXX_SPI_PORT SPI_PORT1
-#endif
-
-#if defined(MPU6XXX_SPI2)
-#define MPU6XXX_SPI_PORT SPI_PORT2
-#endif
-
-//CHIP SELECT PINS
-#if defined(MPU6XXX_NSS_PA8) || defined(ICM20601_NSS_PA8) || defined(ICM20602_NSS_PA8)
-#define MPU6XXX_NSS PIN_A8
-#endif
-
-#if defined(MPU6XXX_NSS_PA4) || defined(ICM20601_NSS_PA4) || defined(ICM20602_NSS_PA4)
-#define MPU6XXX_NSS PIN_A4
-#endif
-
-#if defined(MPU6XXX_NSS_PC2) || defined(ICM20601_NSS_PC2) || defined(ICM20602_NSS_PC2)
-#define MPU6XXX_NSS PIN_C2
-#endif
-
-#if defined(MPU6XXX_NSS_PB12) || defined(ICM20601_NSS_PB12) || defined(ICM20602_NSS_PB12)
-#define MPU6XXX_NSS PIN_B12
-#endif
-
-//INTERRUPT PINS
-#if defined(MPU6XXX_INT_PC4) || defined(ICM20601_INT_PC4) || defined(ICM20602_INT_PC4)
-#define MPU6XXX_INT_PIN GPIO_Pin_4
-#define MPU6XXX_INT_PORT GPIOC
-#endif
-
-#if defined(MPU6XXX_INT_PC3) || defined(ICM20601_INT_PC3) || defined(ICM20602_INT_PC3)
-#define MPU6XXX_INT_PIN GPIO_Pin_3
-#define MPU6XXX_INT_PORT GPIOC
-#endif
-
-#if defined(MPU6XXX_INT_PA8) || defined(ICM20601_INT_PA8) || defined(ICM20602_INT_PA8)
-#define MPU6XXX_INT_PIN GPIO_Pin_8
-#define MPU6XXX_INT_PORT GPIOA
 #endif
 
 #define PORT spi_port_defs[MPU6XXX_SPI_PORT]
@@ -64,6 +30,10 @@
 #define MISO_PIN gpio_pin_defs[PORT.miso]
 #define MOSI_PIN gpio_pin_defs[PORT.mosi]
 #define NSS_PIN gpio_pin_defs[MPU6XXX_NSS]
+
+#ifdef MPU6XXX_INT
+#define INT_PIN gpio_pin_defs[MPU6XXX_INT]
+#endif
 
 #define DMA_RX_STREAM PORT.dma.rx_stream
 #define DMA_TX_STREAM PORT.dma.tx_stream
@@ -112,11 +82,11 @@ void spi_gyro_init(void) {
   GPIO_Init(NSS_PIN.port, &GPIO_InitStructure);
 
 // Interrupt GPIO
-#ifdef MPU6XXX_INT_PIN
-  GPIO_InitStructure.GPIO_Pin = MPU6XXX_INT_PIN;
+#ifdef MPU6XXX_INT
+  GPIO_InitStructure.GPIO_Pin = INT_PIN.pin;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_Init(MPU6XXX_INT_PORT, &GPIO_InitStructure);
+  GPIO_Init(INT_PIN.port, &GPIO_InitStructure);
 #endif
 
   // Chip Select Set High
