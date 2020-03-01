@@ -231,14 +231,15 @@ void handle_dma_rx_isr(spi_ports_t port) {
   if (DMA_GetITStatus(PORT.dma.rx_stream, PORT.dma.rx_it_flag)) {
     DMA_ClearITPendingBit(PORT.dma.rx_stream, PORT.dma.rx_it_flag);
     DMA_ITConfig(PORT.dma.rx_stream, DMA_IT_TC, DISABLE);
-    dma_transfer_done[port] = 1;
 
 #if defined(ENABLE_OSD) && defined(MAX7456_SPI_PORT)
-    if (port == MAX7456_SPI_PORT) {
+    if (port == MAX7456_SPI_PORT && dma_transfer_done[port] == 1) {
       extern void max7456_dma_rx_isr();
       max7456_dma_rx_isr();
     }
 #endif
+
+    dma_transfer_done[port] = 1;
   }
 }
 

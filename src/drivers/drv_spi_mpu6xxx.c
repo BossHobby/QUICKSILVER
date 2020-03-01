@@ -125,7 +125,7 @@ void spi_gyro_init(void) {
 
   // Enable DMA Interrupt on receive line
   NVIC_InitTypeDef NVIC_InitStruct;
-  NVIC_InitStruct.NVIC_IRQChannel = DMA_RX_STREAM_IRQ;
+  NVIC_InitStruct.NVIC_IRQChannel = PORT.dma.rx_it;
   NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
   NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x02;
   NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x02;
@@ -134,6 +134,8 @@ void spi_gyro_init(void) {
 
 //deinit/reinit spi for unique slave configuration
 void spi_MPU6XXX_reinit_slow(void) {
+  SPI_Cmd(PORT.channel, DISABLE);
+
   // SPI Config
   SPI_I2S_DeInit(PORT.channel);
   SPI_InitTypeDef SPI_InitStructure;
@@ -155,9 +157,12 @@ void spi_MPU6XXX_reinit_slow(void) {
   SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
   SPI_InitStructure.SPI_CRCPolynomial = 7;
   SPI_Init(PORT.channel, &SPI_InitStructure);
+  SPI_Cmd(PORT.channel, ENABLE);
 }
 
 void spi_MPU6XXX_reinit_fast(void) {
+  SPI_Cmd(PORT.channel, DISABLE);
+
   // SPI Config
   SPI_I2S_DeInit(PORT.channel);
   SPI_InitTypeDef SPI_InitStructure;
@@ -179,52 +184,33 @@ void spi_MPU6XXX_reinit_fast(void) {
   SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
   SPI_InitStructure.SPI_CRCPolynomial = 7;
   SPI_Init(PORT.channel, &SPI_InitStructure);
+  SPI_Cmd(PORT.channel, ENABLE);
 }
 
 //*******************************************************************************SPI / DMA FUNCTIONS********************************************************************************
 
-extern int liberror; //tracks any failed spi reads or writes to trigger failloop		//this really isn't used with dma anymore
-
-//blocking dma transmit bytes
-void MPU6XXX_dma_transfer_bytes(uint8_t *buffer, uint8_t length) {
-  spi_dma_receive_init(MPU6XXX_SPI_PORT, buffer, length);
-  spi_dma_transmit_init(MPU6XXX_SPI_PORT, buffer, length);
-
-  spi_csn_enable(MPU6XXX_NSS);
-  DMA_Cmd(DMA_RX_STREAM, ENABLE); // Enable the DMA SPI RX Stream
-  DMA_Cmd(DMA_TX_STREAM, ENABLE); // Enable the DMA SPI TX Stream
-  // Enable the SPI Rx/Tx DMA request
-  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Tx, ENABLE);
-  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Rx, ENABLE);
-  SPI_Cmd(PORT.channel, ENABLE);
-  /* Waiting the end of Data transfer */
-  while (DMA_GetFlagStatus(DMA_RX_STREAM, DMA_RX_TCI_FLAG) == RESET) {
-  };
-  while (DMA_GetFlagStatus(DMA_TX_STREAM, DMA_TX_TCI_FLAG) == RESET) {
-  };
-  DMA_ClearFlag(DMA_RX_STREAM, DMA_RX_TCI_FLAG);
-  DMA_ClearFlag(DMA_TX_STREAM, DMA_TX_TCI_FLAG);
-  DMA_Cmd(DMA_TX_STREAM, DISABLE);
-  DMA_Cmd(DMA_RX_STREAM, DISABLE);
-  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Tx, DISABLE);
-  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Rx, DISABLE);
-  SPI_Cmd(PORT.channel, DISABLE);
-  spi_csn_disable(MPU6XXX_NSS);
-}
-
 // blocking dma read of a single register
 uint8_t MPU6XXX_dma_spi_read(uint8_t reg) {
-  uint8_t buffer[2] = {reg | 0x80, 0x00};
   spi_MPU6XXX_reinit_slow();
-  MPU6XXX_dma_transfer_bytes(buffer, 2);
+
+  uint8_t buffer[2] = {reg | 0x80, 0x00};
+
+  spi_csn_enable(MPU6XXX_NSS);
+  spi_dma_transfer_bytes(MPU6XXX_SPI_PORT, buffer, 2);
+  spi_csn_disable(MPU6XXX_NSS);
+
   return buffer[1];
 }
 
 // blocking dma write of a single register
 void MPU6XXX_dma_spi_write(uint8_t reg, uint8_t data) { //MPU6XXX_dma_spi_write
-  uint8_t buffer[2] = {reg, data};
   spi_MPU6XXX_reinit_slow();
-  MPU6XXX_dma_transfer_bytes(buffer, 2);
+
+  uint8_t buffer[2] = {reg, data};
+
+  spi_csn_enable(MPU6XXX_NSS);
+  spi_dma_transfer_bytes(MPU6XXX_SPI_PORT, buffer, 2);
+  spi_csn_disable(MPU6XXX_NSS);
 }
 
 void MPU6XXX_dma_read_data(uint8_t reg, int *data, int size) {
@@ -235,9 +221,14 @@ void MPU6XXX_dma_read_data(uint8_t reg, int *data, int size) {
       ;
   }
 #endif
-  uint8_t buffer[15] = {reg | 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   spi_MPU6XXX_reinit_fast();
-  MPU6XXX_dma_transfer_bytes(buffer, size + 1);
+
+  uint8_t buffer[15] = {reg | 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+  spi_csn_enable(MPU6XXX_NSS);
+  spi_dma_transfer_bytes(MPU6XXX_SPI_PORT, buffer, size + 1);
+  spi_csn_disable(MPU6XXX_NSS);
+
   for (int i = 1; i < size + 1; i++) {
     data[i - 1] = buffer[i];
   }

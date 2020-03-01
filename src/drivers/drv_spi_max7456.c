@@ -100,7 +100,7 @@ void spi_max7456_init(void) {
 
   // Enable DMA Interrupt on receive line
   NVIC_InitTypeDef NVIC_InitStruct;
-  NVIC_InitStruct.NVIC_IRQChannel = DMA_RX_STREAM_IRQ;
+  NVIC_InitStruct.NVIC_IRQChannel = PORT.dma.rx_it;
   NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
   NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x02;
   NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x02;
@@ -109,6 +109,8 @@ void spi_max7456_init(void) {
 
 //deinit/reinit spi for unique slave configuration
 void spi_max7556_reinit(void) {
+  SPI_Cmd(PORT.channel, DISABLE);
+
   // SPI Config
   SPI_I2S_DeInit(PORT.channel);
   SPI_InitTypeDef SPI_InitStructure;
@@ -122,55 +124,36 @@ void spi_max7556_reinit(void) {
   SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
   SPI_InitStructure.SPI_CRCPolynomial = 7;
   SPI_Init(PORT.channel, &SPI_InitStructure);
+  SPI_Cmd(PORT.channel, ENABLE);
 }
 
 //*******************************************************************************SPI / DMA FUNCTIONS********************************************************************************
 
-int osd_liberror; //tracks any failed spi reads or writes to trigger check_osd() on next disarm or maybe print an osd fail warning?  Not used yet
 #define BUSY 1
 #define READY 0
 volatile uint8_t osd_dma_status = READY; //for tracking the non blocking dma transactions - can be used to make non blocking into blocking
 
-//blocking dma transmit bytes
-void max7456_dma_transfer_bytes(uint8_t *buffer, uint8_t length) {
-  spi_dma_receive_init(MAX7456_SPI_PORT, buffer, length);
-  spi_dma_transmit_init(MAX7456_SPI_PORT, buffer, length);
-
-  spi_csn_enable(MAX7456_NSS);
-  DMA_Cmd(DMA_RX_STREAM, ENABLE); // Enable the DMA SPI RX Stream
-  DMA_Cmd(DMA_TX_STREAM, ENABLE); // Enable the DMA SPI TX Stream
-  // Enable the SPI Rx/Tx DMA request
-  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Tx, ENABLE);
-  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Rx, ENABLE);
-  SPI_Cmd(PORT.channel, ENABLE);
-  /* Waiting the end of Data transfer */
-  while (DMA_GetFlagStatus(DMA_RX_STREAM, DMA_RX_TCI_FLAG) == RESET) {
-  };
-  while (DMA_GetFlagStatus(DMA_TX_STREAM, DMA_TX_TCI_FLAG) == RESET) {
-  };
-  DMA_ClearFlag(DMA_RX_STREAM, DMA_RX_TCI_FLAG);
-  DMA_ClearFlag(DMA_TX_STREAM, DMA_TX_TCI_FLAG);
-  DMA_Cmd(DMA_TX_STREAM, DISABLE);
-  DMA_Cmd(DMA_RX_STREAM, DISABLE);
-  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Tx, DISABLE);
-  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Rx, DISABLE);
-  SPI_Cmd(PORT.channel, DISABLE);
-  spi_csn_disable(MAX7456_NSS);
-}
-
 // blocking dma read of a single register
 uint8_t max7456_dma_spi_read(uint8_t reg) {
-  uint8_t buffer[2] = {reg, 0xFF};
   spi_max7556_reinit();
-  max7456_dma_transfer_bytes(buffer, 2);
+
+  uint8_t buffer[2] = {reg, 0xFF};
+
+  spi_csn_enable(MAX7456_NSS);
+  spi_dma_transfer_bytes(MAX7456_SPI_PORT, buffer, 2);
+  spi_csn_disable(MAX7456_NSS);
+
   return buffer[1];
 }
 
 // blocking dma write of a single register
 void max7456_dma_spi_write(uint8_t reg, uint8_t data) {
-  uint8_t buffer[2] = {reg, data};
   spi_max7556_reinit();
-  max7456_dma_transfer_bytes(buffer, 2);
+
+  uint8_t buffer[2] = {reg, data};
+  spi_csn_enable(MAX7456_NSS);
+  spi_dma_transfer_bytes(MAX7456_SPI_PORT, buffer, 2);
+  spi_csn_disable(MAX7456_NSS);
 }
 
 // non blocking bulk dma transmit for interrupt callback configuration
