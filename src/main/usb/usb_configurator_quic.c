@@ -6,7 +6,7 @@
 
 #include "blackbox.h"
 #include "data_flash.h"
-#include "drv_max7456.h"
+#include "drv_spi_max7456.h"
 #include "drv_usb.h"
 #include "flash.h"
 #include "profile.h"

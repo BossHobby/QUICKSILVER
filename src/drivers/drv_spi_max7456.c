@@ -1,4 +1,4 @@
-#include "drv_max7456.h"
+#include "drv_spi_max7456.h"
 
 #include <stdio.h>
 
