@@ -3,20 +3,20 @@
 #include "usb_configurator.h"
 
 #define GPIO_PIN MAKE_PIN_DEF
-#define SPI_DMA(prt, chan, rx, tx)         \
-  {                                        \
-    .port = prt,                           \
-    .channel = DMA_Channel_##chan,         \
-                                           \
-    .rx_stream = DMA##prt##_Stream##rx,    \
-    .rx_tci_flag = DMA_FLAG_TCIF##rx,      \
-    .rx_it = DMA##prt##_Stream##rx##_IRQn, \
-    .rx_it_flag = DMA_IT_TCIF##rx,         \
-                                           \
-    .tx_stream = DMA##prt##_Stream##tx,    \
-    .tx_tci_flag = DMA_FLAG_TCIF##tx,      \
-    .tx_it = DMA##prt##_Stream##tx##_IRQn, \
-    .tx_it_flag = DMA_IT_TCIF##tx,         \
+#define SPI_DMA(spi_prt, dma_prt, chan, rx, tx) \
+  {                                             \
+    .port = dma_prt,                            \
+    .channel = DMA_Channel_##chan,              \
+                                                \
+    .rx_stream = DMA##dma_prt##_Stream##rx,     \
+    .rx_tci_flag = DMA_FLAG_TCIF##rx,           \
+    .rx_it = DMA##dma_prt##_Stream##rx##_IRQn,  \
+    .rx_it_flag = DMA_IT_TCIF##rx,              \
+                                                \
+    .tx_stream = DMA##dma_prt##_Stream##tx,     \
+    .tx_tci_flag = DMA_FLAG_TCIF##tx,           \
+    .tx_it = DMA##dma_prt##_Stream##tx##_IRQn,  \
+    .tx_it_flag = DMA_IT_TCIF##tx,              \
   }
 #define SPI_PORT(chan, sck_pin, miso_pin, mosi_pin) \
   {                                                 \
@@ -142,3 +142,67 @@ uint8_t spi_transfer_byte(spi_ports_t port, uint8_t data) {
 
   return SPI_I2S_ReceiveData(PORT.channel);
 }
+
+void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uint8_t buffer_size) {
+  DMA_InitTypeDef DMA_InitStructure;
+
+  //RX Stream
+  DMA_DeInit(PORT.dma.rx_stream);
+  DMA_InitStructure.DMA_Channel = PORT.dma.channel;
+  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(PORT.channel->DR));
+  DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)base_address_in;
+  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
+  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructure.DMA_BufferSize = (uint16_t)buffer_size;
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  DMA_Init(PORT.dma.rx_stream, &DMA_InitStructure);
+}
+
+void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, uint8_t buffer_size) {
+  DMA_InitTypeDef DMA_InitStructure;
+
+  //TX Stream
+  DMA_DeInit(PORT.dma.tx_stream);
+  DMA_InitStructure.DMA_Channel = PORT.dma.channel;
+  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(PORT.channel->DR));
+  DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)base_address_out;
+  DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
+  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructure.DMA_BufferSize = (uint16_t)buffer_size;
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  DMA_Init(PORT.dma.tx_stream, &DMA_InitStructure);
+}
+
+void handle_dma_rx_isr(spi_ports_t port) {
+#ifdef MAX7456_SPI_PORT
+  if (port == MAX7456_SPI_PORT) {
+    extern void max7456_dma_rx_isr();
+    max7456_dma_rx_isr();
+  }
+#endif
+}
+
+#define SPI_PORT(channel, sck_pin, miso_pin, mosi_pin) SPI_DMA##channel
+#define SPI_DMA(spi_prt, dma_prt, chan, rx, tx)   \
+  void DMA##dma_prt##_Stream##rx##_IRQHandler() { \
+    handle_dma_rx_isr(SPI_PORT##spi_prt);         \
+  }
+
+SPI_PORTS
+
+#undef SPI_DMA
+#undef SPI_PORT

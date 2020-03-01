@@ -39,6 +39,8 @@ extern const spi_port_def_t spi_port_defs[SPI_PORTS_MAX];
 
 void spi_enable_rcc(spi_ports_t port);
 void spi_dma_enable_rcc(spi_ports_t port);
+void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uint8_t buffer_size);
+void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, uint8_t buffer_size);
 uint8_t spi_transfer_byte(spi_ports_t port, uint8_t data);
 void spi_init_pins(spi_ports_t port, gpio_pins_t nss);
 void spi_csn_enable(gpio_pins_t nss);
