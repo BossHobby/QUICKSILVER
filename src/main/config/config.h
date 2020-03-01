@@ -295,6 +295,7 @@
 
 // debug things ( debug struct and other)
 //#define DEBUG
+//#define RESET_ON_FAULT
 
 // disable motors for testing
 //#define NOMOTORS
