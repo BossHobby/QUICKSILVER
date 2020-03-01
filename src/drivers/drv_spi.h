@@ -8,6 +8,21 @@
 #include "project.h"
 
 typedef struct {
+  uint32_t port;
+  uint32_t channel;
+
+  DMA_Stream_TypeDef *rx_stream;
+  uint32_t rx_tci_flag;
+  IRQn_Type rx_it;
+  uint32_t rx_it_flag;
+
+  DMA_Stream_TypeDef *tx_stream;
+  uint32_t tx_tci_flag;
+  IRQn_Type tx_it;
+  uint32_t tx_it_flag;
+} spi_dma_def_t;
+
+typedef struct {
   uint8_t channel_index;
   SPI_TypeDef *channel;
 
@@ -16,11 +31,14 @@ typedef struct {
   gpio_pins_t sck;
   gpio_pins_t miso;
   gpio_pins_t mosi;
+
+  spi_dma_def_t dma;
 } spi_port_def_t;
 
-extern spi_port_def_t spi_port_defs[SPI_PORTS_MAX];
+extern const spi_port_def_t spi_port_defs[SPI_PORTS_MAX];
 
 void spi_enable_rcc(spi_ports_t port);
+void spi_dma_enable_rcc(spi_ports_t port);
 uint8_t spi_transfer_byte(spi_ports_t port, uint8_t data);
 void spi_init_pins(spi_ports_t port, gpio_pins_t nss);
 void spi_csn_enable(gpio_pins_t nss);

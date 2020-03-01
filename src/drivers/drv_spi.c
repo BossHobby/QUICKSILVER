@@ -3,6 +3,21 @@
 #include "usb_configurator.h"
 
 #define GPIO_PIN MAKE_PIN_DEF
+#define SPI_DMA(prt, chan, rx, tx)         \
+  {                                        \
+    .port = prt,                           \
+    .channel = DMA_Channel_##chan,         \
+                                           \
+    .rx_stream = DMA##prt##_Stream##rx,    \
+    .rx_tci_flag = DMA_FLAG_TCIF##rx,      \
+    .rx_it = DMA##prt##_Stream##rx##_IRQn, \
+    .rx_it_flag = DMA_IT_TCIF##rx,         \
+                                           \
+    .tx_stream = DMA##prt##_Stream##tx,    \
+    .tx_tci_flag = DMA_FLAG_TCIF##tx,      \
+    .tx_it = DMA##prt##_Stream##tx##_IRQn, \
+    .tx_it_flag = DMA_IT_TCIF##tx,         \
+  }
 #define SPI_PORT(chan, sck_pin, miso_pin, mosi_pin) \
   {                                                 \
       .channel_index = chan,                        \
@@ -11,13 +26,15 @@
       .sck = sck_pin,                               \
       .miso = miso_pin,                             \
       .mosi = mosi_pin,                             \
+      .dma = SPI_DMA##chan,                         \
   },
 
-spi_port_def_t spi_port_defs[SPI_PORTS_MAX] = {
+const spi_port_def_t spi_port_defs[SPI_PORTS_MAX] = {
     {},
     SPI_PORTS};
 
 #undef SPI_PORT
+#undef SPI_DMA
 #undef GPIO_PIN
 
 #define PORT spi_port_defs[port]
@@ -37,6 +54,17 @@ void spi_enable_rcc(spi_ports_t port) {
     break;
   case 3:
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);
+    break;
+  }
+}
+
+void spi_dma_enable_rcc(spi_ports_t port) {
+  switch (PORT.dma.port) {
+  case 1:
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
+    break;
+  case 2:
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
     break;
   }
 }
