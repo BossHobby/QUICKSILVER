@@ -52,7 +52,7 @@ uint8_t cc2500_read_gdo0() {
   //return GPIO_ReadInputDataBit(CC2500_GDO0_PORT, CC2500_GDO0_PIN);
 }
 
-void cc2500_hardware_init() {
+static void cc2500_hardware_init() {
   spi_init_pins(CC2500_SPI_PORT, CC2500_NSS);
 
   GPIO_InitTypeDef GPIO_InitStructure;
@@ -121,8 +121,17 @@ void cc2500_hardware_init() {
   // Dummy read to clear receive buffer
   while (SPI_I2S_GetFlagStatus(PORT.channel, SPI_I2S_FLAG_TXE) == RESET)
     ;
-
   SPI_I2S_ReceiveData(PORT.channel);
+
+  // Enable DMA clock
+  spi_dma_enable_rcc(CC2500_SPI_PORT);
+
+  // Enable DMA Interrupt on receive line
+  NVIC_InitStruct.NVIC_IRQChannel = PORT.dma.rx_it;
+  NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x02;
+  NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x02;
+  NVIC_Init(&NVIC_InitStruct);
 }
 
 void CC2500_GDO0_EXTI_HANDLER() {
@@ -132,75 +141,68 @@ void CC2500_GDO0_EXTI_HANDLER() {
   }
 }
 
-uint8_t cc2500_spi_transfer_byte(uint8_t data) {
-  for (uint16_t spiTimeout = 1000; SPI_I2S_GetFlagStatus(PORT.channel, SPI_I2S_FLAG_TXE) == RESET;) {
-    if ((spiTimeout--) == 0) {
-      liberror++; //liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
-      return 0;
-    }
-  }
-
-  // Send out data
-  SPI_I2S_SendData(PORT.channel, data);
-
-  //wait to receive something ... timeout if nothing comes in
-  for (uint16_t spiTimeout = 1000; SPI_I2S_GetFlagStatus(PORT.channel, SPI_I2S_FLAG_RXNE) == RESET;) {
-    if ((spiTimeout--) == 0) {
-      liberror++; //liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
-      return 0;
-    }
-  }
-
-  // Return back received data in SPIx->DR
-  return SPI_I2S_ReceiveData(PORT.channel);
-}
-
 void cc2500_strobe(uint8_t address) {
   spi_csn_enable(CC2500_NSS);
-  cc2500_spi_transfer_byte(address);
+  spi_transfer_byte(CC2500_SPI_PORT, address);
   spi_csn_disable(CC2500_NSS);
 }
 
 uint8_t cc2500_get_status() {
   spi_csn_enable(CC2500_NSS);
-  uint8_t status = cc2500_spi_transfer_byte(0xFF);
+  const uint8_t status = spi_transfer_byte(CC2500_SPI_PORT, 0xFF);
   spi_csn_disable(CC2500_NSS);
   return status;
 }
 
-inline uint8_t cc2500_read_reg(uint8_t reg) {
+uint8_t cc2500_write_reg(uint8_t reg, uint8_t data) {
   spi_csn_enable(CC2500_NSS);
-  cc2500_spi_transfer_byte(reg | CC2500_READ_SINGLE);
-  const uint32_t ret = cc2500_spi_transfer_byte(0xFF);
+  spi_transfer_byte(CC2500_SPI_PORT, reg | CC2500_WRITE_SINGLE);
+  const uint8_t ret = spi_transfer_byte(CC2500_SPI_PORT, data);
   spi_csn_disable(CC2500_NSS);
   return ret;
 }
 
-uint8_t cc2500_read_multi(uint8_t reg, uint8_t data, uint8_t *result, uint8_t len) {
+uint8_t cc2500_read_reg(uint8_t reg) {
+  return cc2500_write_reg(reg | CC2500_READ_SINGLE, 0xFF);
+}
+
+static uint8_t cc2500_read_multi(uint8_t reg, uint8_t data, uint8_t *result, uint8_t len) {
   spi_csn_enable(CC2500_NSS);
-  const uint8_t ret = cc2500_spi_transfer_byte(reg);
+
+  uint8_t buffer[len + 1];
+  buffer[0] = reg;
   for (uint8_t i = 0; i < len; i++) {
-    result[i] = cc2500_spi_transfer_byte(data);
+    buffer[i + 1] = data;
   }
+
+  spi_dma_transfer_bytes(CC2500_SPI_PORT, buffer, len + 1);
+  for (uint8_t i = 0; i < len; i++) {
+    result[i] = buffer[i + 1];
+  }
+
   spi_csn_disable(CC2500_NSS);
-  return ret;
+  return buffer[0];
 }
 
-inline uint8_t cc2500_read_fifo(uint8_t *result, uint8_t len) {
+static uint8_t cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
+  spi_csn_enable(CC2500_NSS);
+
+  uint8_t buffer[len + 1];
+  buffer[0] = reg;
+  for (uint8_t i = 0; i < len; i++) {
+    buffer[i + 1] = data[i];
+  }
+
+  spi_dma_transfer_bytes(CC2500_SPI_PORT, buffer, len + 1);
+  spi_csn_disable(CC2500_NSS);
+  return buffer[0];
+}
+
+uint8_t cc2500_read_fifo(uint8_t *result, uint8_t len) {
   return cc2500_read_multi(CC2500_FIFO | CC2500_READ_BURST, 0xFF, result, len);
 }
 
-uint8_t cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
-  spi_csn_enable(CC2500_NSS);
-  const uint8_t ret = cc2500_spi_transfer_byte(reg);
-  for (uint8_t i = 0; i < len; i++) {
-    cc2500_spi_transfer_byte(data[i]);
-  }
-  spi_csn_disable(CC2500_NSS);
-  return ret;
-}
-
-inline uint8_t cc2500_write_fifo(uint8_t *data, uint8_t len) {
+uint8_t cc2500_write_fifo(uint8_t *data, uint8_t len) {
   // flush tx fifo
   cc2500_strobe(CC2500_SFTX);
 
@@ -209,14 +211,6 @@ inline uint8_t cc2500_write_fifo(uint8_t *data, uint8_t len) {
   // and send!
   cc2500_strobe(CC2500_STX);
 
-  return ret;
-}
-
-inline uint8_t cc2500_write_reg(uint8_t reg, uint8_t data) {
-  spi_csn_enable(CC2500_NSS);
-  cc2500_spi_transfer_byte(reg);
-  const uint32_t ret = cc2500_spi_transfer_byte(data);
-  spi_csn_disable(CC2500_NSS);
   return ret;
 }
 

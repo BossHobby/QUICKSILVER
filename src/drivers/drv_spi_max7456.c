@@ -211,12 +211,8 @@ void transfer_complete_cb(void) {
 
 //irq handler for receive interrupt
 void max7456_dma_rx_isr() {
-  if (DMA_GetITStatus(DMA_RX_STREAM, DMA_RX_IT_FLAG)) {
-    DMA_ClearITPendingBit(DMA_RX_STREAM, DMA_RX_IT_FLAG);
-    DMA_ITConfig(DMA_RX_STREAM, DMA_IT_TC, DISABLE);
-    transfer_complete_cb();
-    osd_dma_status = READY;
-  }
+  transfer_complete_cb();
+  osd_dma_status = READY;
 }
 
 //*******************************************************************************OSD FUNCTIONS********************************************************************************
