@@ -91,26 +91,27 @@ void spi_init_pins(spi_ports_t port, gpio_pins_t nss) {
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(MOSI_PIN.port, &GPIO_InitStructure);
 
   GPIO_InitStructure.GPIO_Pin = MISO_PIN.pin;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(MISO_PIN.port, &GPIO_InitStructure);
-
-  GPIO_PinAFConfig(SCK_PIN.port, SCK_PIN.pin_source, PORT.gpio_af);
-  GPIO_PinAFConfig(MISO_PIN.port, MISO_PIN.pin_source, PORT.gpio_af);
-  GPIO_PinAFConfig(MOSI_PIN.port, MOSI_PIN.pin_source, PORT.gpio_af);
 
   GPIO_InitStructure.GPIO_Pin = gpio_pin_defs[nss].pin;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
   GPIO_Init(gpio_pin_defs[nss].port, &GPIO_InitStructure);
+  GPIO_SetBits(gpio_pin_defs[nss].port, gpio_pin_defs[nss].pin);
+
+  GPIO_PinAFConfig(SCK_PIN.port, SCK_PIN.pin_source, PORT.gpio_af);
+  GPIO_PinAFConfig(MISO_PIN.port, MISO_PIN.pin_source, PORT.gpio_af);
+  GPIO_PinAFConfig(MOSI_PIN.port, MOSI_PIN.pin_source, PORT.gpio_af);
 }
 
 uint8_t spi_transfer_byte(spi_ports_t port, uint8_t data) {

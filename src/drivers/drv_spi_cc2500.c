@@ -53,7 +53,7 @@ uint8_t cc2500_read_gdo0() {
 }
 
 void cc2500_hardware_init() {
-  spi_init_pins(CC2500_SPI_PORT, CC2500_NSS_PIN);
+  spi_init_pins(CC2500_SPI_PORT, CC2500_NSS);
 
   GPIO_InitTypeDef GPIO_InitStructure;
 #if defined(USE_CC2500_PA_LNA)
@@ -102,7 +102,7 @@ void cc2500_hardware_init() {
   NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStruct);
 
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);
+  spi_enable_rcc(CC2500_SPI_PORT);
 
   SPI_I2S_DeInit(PORT.channel);
   SPI_InitTypeDef SPI_InitStructure;
@@ -156,33 +156,33 @@ uint8_t cc2500_spi_transfer_byte(uint8_t data) {
 }
 
 void cc2500_strobe(uint8_t address) {
-  spi_csn_enable(CC2500_SPI_PORT);
+  spi_csn_enable(CC2500_NSS);
   cc2500_spi_transfer_byte(address);
-  spi_csn_disable(CC2500_SPI_PORT);
+  spi_csn_disable(CC2500_NSS);
 }
 
 uint8_t cc2500_get_status() {
-  spi_csn_enable(CC2500_SPI_PORT);
+  spi_csn_enable(CC2500_NSS);
   uint8_t status = cc2500_spi_transfer_byte(0xFF);
-  spi_csn_disable(CC2500_SPI_PORT);
+  spi_csn_disable(CC2500_NSS);
   return status;
 }
 
 inline uint8_t cc2500_read_reg(uint8_t reg) {
-  spi_csn_enable(CC2500_SPI_PORT);
+  spi_csn_enable(CC2500_NSS);
   cc2500_spi_transfer_byte(reg | CC2500_READ_SINGLE);
   const uint32_t ret = cc2500_spi_transfer_byte(0xFF);
-  spi_csn_disable(CC2500_SPI_PORT);
+  spi_csn_disable(CC2500_NSS);
   return ret;
 }
 
 uint8_t cc2500_read_multi(uint8_t reg, uint8_t data, uint8_t *result, uint8_t len) {
-  spi_csn_enable(CC2500_SPI_PORT);
+  spi_csn_enable(CC2500_NSS);
   const uint8_t ret = cc2500_spi_transfer_byte(reg);
   for (uint8_t i = 0; i < len; i++) {
     result[i] = cc2500_spi_transfer_byte(data);
   }
-  spi_csn_disable(CC2500_SPI_PORT);
+  spi_csn_disable(CC2500_NSS);
   return ret;
 }
 
@@ -191,12 +191,12 @@ inline uint8_t cc2500_read_fifo(uint8_t *result, uint8_t len) {
 }
 
 uint8_t cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
-  spi_csn_enable(CC2500_SPI_PORT);
+  spi_csn_enable(CC2500_NSS);
   const uint8_t ret = cc2500_spi_transfer_byte(reg);
   for (uint8_t i = 0; i < len; i++) {
     cc2500_spi_transfer_byte(data[i]);
   }
-  spi_csn_disable(CC2500_SPI_PORT);
+  spi_csn_disable(CC2500_NSS);
   return ret;
 }
 
@@ -213,10 +213,10 @@ inline uint8_t cc2500_write_fifo(uint8_t *data, uint8_t len) {
 }
 
 inline uint8_t cc2500_write_reg(uint8_t reg, uint8_t data) {
-  spi_csn_enable(CC2500_SPI_PORT);
+  spi_csn_enable(CC2500_NSS);
   cc2500_spi_transfer_byte(reg);
   const uint32_t ret = cc2500_spi_transfer_byte(data);
-  spi_csn_disable(CC2500_SPI_PORT);
+  spi_csn_disable(CC2500_NSS);
   return ret;
 }
 

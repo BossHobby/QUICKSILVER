@@ -7,7 +7,7 @@
 #define SPI2_PB13B14B15 SPI_PORT(2, PIN_B13, PIN_B14, PIN_B15)
 #define SPI3_PB3PB4PB5 SPI_PORT(3, PIN_B3, PIN_B4, PIN_B5)
 
-//                        spi_port, dma_port, channel, rx_stream, tx_stream
+//                      spi_port, dma_port, channel, rx_stream, tx_stream
 #define SPI_DMA1 SPI_DMA(1, 2, 3, 2, 3)
 #define SPI_DMA2 SPI_DMA(2, 1, 0, 3, 4)
 #define SPI_DMA3 SPI_DMA(3, 1, 0, 0, 7)

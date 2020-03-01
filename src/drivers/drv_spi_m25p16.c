@@ -26,11 +26,9 @@
 void m25p16_init() {
   spi_init_pins(M25P16_SPI_PORT, M25P16_NSS_PIN);
 
-  spi_csn_disable(M25P16_NSS_PIN);
-
-  SPI_I2S_DeInit(SPI_PORT.channel);
   spi_enable_rcc(M25P16_SPI_PORT);
 
+  SPI_I2S_DeInit(SPI_PORT.channel);
   SPI_InitTypeDef SPI_InitStructure;
   SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
   SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
@@ -42,8 +40,13 @@ void m25p16_init() {
   SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
   SPI_InitStructure.SPI_CRCPolynomial = 7;
   SPI_Init(SPI_PORT.channel, &SPI_InitStructure);
-
   SPI_Cmd(SPI_PORT.channel, ENABLE);
+
+  // Dummy read to clear receive buffer
+  while (SPI_I2S_GetFlagStatus(PORT.channel, SPI_I2S_FLAG_TXE) == RESET)
+    ;
+
+  SPI_I2S_ReceiveData(PORT.channel);
 }
 
 uint8_t m25p16_command(const uint8_t cmd) {
