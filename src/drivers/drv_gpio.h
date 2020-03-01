@@ -19,7 +19,7 @@ typedef struct {
     .pin_source = GPIO_PinSource##num, \
   }
 
-extern gpio_pin_def_t gpio_pin_defs[GPIO_PINS_MAX];
+extern const volatile gpio_pin_def_t gpio_pin_defs[GPIO_PINS_MAX];
 
 void gpio_init(void);
 int gpio_init_fpv(void);

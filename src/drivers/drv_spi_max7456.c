@@ -95,20 +95,13 @@ void spi_max7456_init(void) {
     ;
   SPI_I2S_ReceiveData(PORT.channel);
 
-  // Enable DMA clock
-  spi_dma_enable_rcc(MAX7456_SPI_PORT);
-
-  // Enable DMA Interrupt on receive line
-  NVIC_InitTypeDef NVIC_InitStruct;
-  NVIC_InitStruct.NVIC_IRQChannel = PORT.dma.rx_it;
-  NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x02;
-  NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x02;
-  NVIC_Init(&NVIC_InitStruct);
+  spi_dma_init(MAX7456_SPI_PORT);
 }
 
 //deinit/reinit spi for unique slave configuration
 void spi_max7556_reinit(void) {
+  spi_dma_wait_for_ready(MAX7456_SPI_PORT);
+
   SPI_Cmd(PORT.channel, DISABLE);
 
   // SPI Config
@@ -161,40 +154,13 @@ void max7456_dma_it_transfer_bytes(uint8_t *buffer_address, uint8_t buffer_lengt
   osd_dma_status = BUSY;
   spi_max7556_reinit();
 
-  spi_dma_transmit_init(MAX7456_SPI_PORT, buffer_address, buffer_length);
-  spi_dma_receive_init(MAX7456_SPI_PORT, buffer_address, buffer_length);
-
-  // Configure the Interrupt on transfer complete for either SPI tx or rx
-  DMA_ITConfig(DMA_RX_STREAM, DMA_IT_TC, ENABLE);
-
   spi_csn_enable(MAX7456_NSS);
-  DMA_Cmd(DMA_RX_STREAM, ENABLE); // Enable the DMA SPI RX Stream
-  DMA_Cmd(DMA_TX_STREAM, ENABLE); // Enable the DMA SPI TX Stream
-
-  // Enable the SPI Rx/Tx DMA request
-  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Rx, ENABLE);
-  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Tx, ENABLE);
-  SPI_Cmd(PORT.channel, ENABLE);
+  spi_dma_transfer_begin(MAX7456_SPI_PORT, buffer_address, buffer_length);
 }
 
-//callback function to shut down dma streams
-void transfer_complete_cb(void) {
-  DMA_ClearFlag(DMA_TX_STREAM, DMA_TX_TCI_FLAG);
-  DMA_ClearFlag(DMA_RX_STREAM, DMA_RX_TCI_FLAG);
-
-  DMA_Cmd(DMA_TX_STREAM, DISABLE);
-  DMA_Cmd(DMA_RX_STREAM, DISABLE);
-
-  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Tx, DISABLE);
-  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Rx, DISABLE);
-
-  SPI_Cmd(PORT.channel, DISABLE);
-  spi_csn_disable(MAX7456_NSS);
-}
-
-//irq handler for receive interrupt
+// callback function to disable csn
 void max7456_dma_rx_isr() {
-  transfer_complete_cb();
+  spi_csn_disable(MAX7456_NSS);
   osd_dma_status = READY;
 }
 

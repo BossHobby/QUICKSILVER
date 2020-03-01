@@ -77,7 +77,7 @@ int gpio_init_fpv(void) {
 
 #define GPIO_PIN(port_num, num) MAKE_PIN_DEF(port_num, num),
 
-gpio_pin_def_t gpio_pin_defs[GPIO_PINS_MAX] = {
+const volatile gpio_pin_def_t gpio_pin_defs[GPIO_PINS_MAX] = {
     {},
     GPIO_PINS};
 

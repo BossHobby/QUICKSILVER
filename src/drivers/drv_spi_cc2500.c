@@ -123,15 +123,7 @@ static void cc2500_hardware_init() {
     ;
   SPI_I2S_ReceiveData(PORT.channel);
 
-  // Enable DMA clock
-  spi_dma_enable_rcc(CC2500_SPI_PORT);
-
-  // Enable DMA Interrupt on receive line
-  NVIC_InitStruct.NVIC_IRQChannel = PORT.dma.rx_it;
-  NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x02;
-  NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x02;
-  NVIC_Init(&NVIC_InitStruct);
+  spi_dma_init(CC2500_SPI_PORT);
 }
 
 void CC2500_GDO0_EXTI_HANDLER() {

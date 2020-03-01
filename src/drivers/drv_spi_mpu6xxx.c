@@ -35,14 +35,6 @@
 #define INT_PIN gpio_pin_defs[MPU6XXX_INT]
 #endif
 
-#define DMA_RX_STREAM PORT.dma.rx_stream
-#define DMA_TX_STREAM PORT.dma.tx_stream
-#define DMA_RX_CHANNEL PORT.dma.channel
-#define DMA_TX_CHANNEL PORT.dma.channel
-#define DMA_RX_TCI_FLAG PORT.dma.rx_tci_flag
-#define DMA_TX_TCI_FLAG PORT.dma.tx_tci_flag
-#define DMA_RX_STREAM_IRQ PORT.dma.rx_it
-
 //  Initialize SPI Connection to Gyro
 void spi_gyro_init(void) {
 
@@ -120,20 +112,12 @@ void spi_gyro_init(void) {
     ;
   SPI_I2S_ReceiveData(PORT.channel);
 
-  // Enable DMA clock
-  spi_dma_enable_rcc(MPU6XXX_SPI_PORT);
-
-  // Enable DMA Interrupt on receive line
-  NVIC_InitTypeDef NVIC_InitStruct;
-  NVIC_InitStruct.NVIC_IRQChannel = PORT.dma.rx_it;
-  NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x02;
-  NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x02;
-  NVIC_Init(&NVIC_InitStruct);
+  spi_dma_init(MPU6XXX_SPI_PORT);
 }
 
 //deinit/reinit spi for unique slave configuration
 void spi_MPU6XXX_reinit_slow(void) {
+  spi_dma_wait_for_ready(MPU6XXX_SPI_PORT);
   SPI_Cmd(PORT.channel, DISABLE);
 
   // SPI Config
@@ -161,6 +145,7 @@ void spi_MPU6XXX_reinit_slow(void) {
 }
 
 void spi_MPU6XXX_reinit_fast(void) {
+  spi_dma_wait_for_ready(MPU6XXX_SPI_PORT);
   SPI_Cmd(PORT.channel, DISABLE);
 
   // SPI Config
@@ -214,13 +199,6 @@ void MPU6XXX_dma_spi_write(uint8_t reg, uint8_t data) { //MPU6XXX_dma_spi_write
 }
 
 void MPU6XXX_dma_read_data(uint8_t reg, int *data, int size) {
-#if defined(ENABLE_OSD) && defined(MAX7456_SPI_PORT)
-  if (MAX7456_SPI_PORT == MPU6XXX_SPI_PORT) {
-    extern volatile uint8_t osd_dma_status;
-    while (osd_dma_status)
-      ;
-  }
-#endif
   spi_MPU6XXX_reinit_fast();
 
   uint8_t buffer[15] = {reg | 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};

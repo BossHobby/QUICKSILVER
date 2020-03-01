@@ -5,8 +5,9 @@
 #define GPIO_PIN MAKE_PIN_DEF
 #define SPI_DMA(spi_prt, dma_prt, chan, rx, tx) \
   {                                             \
-    .port = dma_prt,                            \
+    .dma_port = dma_prt,                        \
     .channel = DMA_Channel_##chan,              \
+    .channel_index = chan,                      \
                                                 \
     .rx_stream = DMA##dma_prt##_Stream##rx,     \
     .rx_tci_flag = DMA_FLAG_TCIF##rx,           \
@@ -29,7 +30,7 @@
       .dma = SPI_DMA##chan,                         \
   },
 
-const spi_port_def_t spi_port_defs[SPI_PORTS_MAX] = {
+const volatile spi_port_def_t spi_port_defs[SPI_PORTS_MAX] = {
     {},
     SPI_PORTS};
 
@@ -59,7 +60,7 @@ void spi_enable_rcc(spi_ports_t port) {
 }
 
 void spi_dma_enable_rcc(spi_ports_t port) {
-  switch (PORT.dma.port) {
+  switch (PORT.dma.dma_port) {
   case 1:
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
     break;
@@ -148,7 +149,25 @@ uint8_t spi_transfer_byte_timeout(spi_ports_t port, uint8_t data, uint32_t timeo
   return SPI_I2S_ReceiveData(PORT.channel);
 }
 
-void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uint8_t buffer_size) {
+volatile uint8_t dma_transfer_done[2 * 8] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+#define DMA_TRANSFER_DONE dma_transfer_done[(PORT.dma.dma_port - 1) * 2 + PORT.dma.channel_index]
+
+void spi_dma_init(spi_ports_t port) {
+  // Enable DMA clock
+  spi_dma_enable_rcc(port);
+
+  // Enable DMA Interrupt on receive line
+  NVIC_InitTypeDef NVIC_InitStruct;
+  NVIC_InitStruct.NVIC_IRQChannel = PORT.dma.rx_it;
+  NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x02;
+  NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x02;
+  NVIC_Init(&NVIC_InitStruct);
+
+  DMA_TRANSFER_DONE = 1;
+}
+
+void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uint32_t buffer_size) {
   //RX Stream
   DMA_DeInit(PORT.dma.rx_stream);
 
@@ -170,7 +189,7 @@ void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uint8_t bu
   DMA_Init(PORT.dma.rx_stream, &DMA_InitStructure);
 }
 
-void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, uint8_t buffer_size) {
+void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, uint32_t buffer_size) {
   //TX Stream
   DMA_DeInit(PORT.dma.tx_stream);
 
@@ -192,14 +211,14 @@ void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, uint8_t 
   DMA_Init(PORT.dma.tx_stream, &DMA_InitStructure);
 }
 
-volatile uint8_t dma_transfer_done[SPI_PORTS_MAX] = {1, 1, 1, 1};
+void spi_dma_wait_for_ready(spi_ports_t port) {
+  while (DMA_TRANSFER_DONE == 0)
+    __WFI();
+}
 
-//blocking dma transmit bytes
-void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint8_t length) {
-  while (dma_transfer_done[port] == 0)
-    ;
-
-  dma_transfer_done[port] = 0;
+void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) {
+  spi_dma_wait_for_ready(port);
+  DMA_TRANSFER_DONE = 0;
 
   spi_dma_receive_init(port, buffer, length);
   spi_dma_transmit_init(port, buffer, length);
@@ -212,34 +231,39 @@ void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint8_t length) {
 
   DMA_Cmd(PORT.dma.rx_stream, ENABLE); // Enable the DMA SPI RX Stream
   DMA_Cmd(PORT.dma.tx_stream, ENABLE); // Enable the DMA SPI TX Stream
+}
+
+//blocking dma transmit bytes
+void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length) {
+  spi_dma_transfer_begin(port, buffer, length);
 
   /* Waiting the end of Data transfer */
-  while (dma_transfer_done[port] == 0)
-    ;
-
-  DMA_ClearFlag(PORT.dma.rx_stream, PORT.dma.rx_tci_flag);
-  DMA_ClearFlag(PORT.dma.tx_stream, PORT.dma.tx_tci_flag);
-
-  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Tx, DISABLE);
-  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Rx, DISABLE);
-
-  DMA_Cmd(PORT.dma.rx_stream, DISABLE);
-  DMA_Cmd(PORT.dma.tx_stream, DISABLE);
+  spi_dma_wait_for_ready(port);
 }
 
 void handle_dma_rx_isr(spi_ports_t port) {
   if (DMA_GetITStatus(PORT.dma.rx_stream, PORT.dma.rx_it_flag)) {
     DMA_ClearITPendingBit(PORT.dma.rx_stream, PORT.dma.rx_it_flag);
+
+    DMA_ClearFlag(PORT.dma.rx_stream, PORT.dma.rx_tci_flag);
+    DMA_ClearFlag(PORT.dma.tx_stream, PORT.dma.tx_tci_flag);
+
+    SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Tx, DISABLE);
+    SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Rx, DISABLE);
+
     DMA_ITConfig(PORT.dma.rx_stream, DMA_IT_TC, DISABLE);
 
+    DMA_Cmd(PORT.dma.rx_stream, DISABLE);
+    DMA_Cmd(PORT.dma.tx_stream, DISABLE);
+
 #if defined(ENABLE_OSD) && defined(MAX7456_SPI_PORT)
-    if (port == MAX7456_SPI_PORT && dma_transfer_done[port] == 1) {
+    if (port == MAX7456_SPI_PORT) {
       extern void max7456_dma_rx_isr();
       max7456_dma_rx_isr();
     }
 #endif
 
-    dma_transfer_done[port] = 1;
+    DMA_TRANSFER_DONE = 1;
   }
 }
 
