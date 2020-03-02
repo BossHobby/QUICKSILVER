@@ -119,7 +119,7 @@ void vtx_update() {
 #ifdef ENABLE_SMART_AUDIO
   if (onground && has_smart_audio_configured()) {
 
-    static uint32_t delay_loops = 500;
+    static volatile uint32_t delay_loops = 500;
 
     if (delay_loops > 0) {
       delay_loops--;
