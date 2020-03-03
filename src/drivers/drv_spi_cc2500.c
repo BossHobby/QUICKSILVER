@@ -43,7 +43,7 @@
 
 extern int liberror;
 
-static uint8_t gdo0_exti_status = 1;
+static volatile uint8_t gdo0_exti_status = 1;
 
 uint8_t cc2500_read_gdo0() {
   uint8_t val = gdo0_exti_status;
@@ -56,6 +56,11 @@ static void cc2500_hardware_init() {
   spi_init_pins(CC2500_SPI_PORT, CC2500_NSS);
 
   GPIO_InitTypeDef GPIO_InitStructure;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+
 #if defined(USE_CC2500_PA_LNA)
   GPIO_InitStructure.GPIO_Pin = CC2500_LNA_EN_PIN;
   GPIO_Init(CC2500_LNA_EN_PORT, &GPIO_InitStructure);
@@ -79,26 +84,25 @@ static void cc2500_hardware_init() {
   // GDO0
   GPIO_InitStructure.GPIO_Pin = CC2500_GDO0_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
-  GPIO_InitStructure.GPIO_Speed = 0;
-  GPIO_InitStructure.GPIO_OType = 0;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(CC2500_GDO0_PORT, &GPIO_InitStructure);
 
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
   SYSCFG_EXTILineConfig(CC2500_GDO0_EXTI_PINSOURCE, CC2500_GDO0_PINSOURCE);
 
-  /* PD0 is connected to EXTI_Line0 */
   EXTI_InitTypeDef EXTI_InitStruct;
   EXTI_InitStruct.EXTI_Line = CC2500_GDO0_EXTI_LINE;
   EXTI_InitStruct.EXTI_LineCmd = ENABLE;
   EXTI_InitStruct.EXTI_Mode = EXTI_Mode_Interrupt;
-  EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Rising_Falling;
+  EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Rising;
   EXTI_Init(&EXTI_InitStruct);
 
   NVIC_InitTypeDef NVIC_InitStruct;
   NVIC_InitStruct.NVIC_IRQChannel = EXTI15_10_IRQn;
-  NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x00;
-  NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x00;
+  NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x0f;
+  NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x0f;
   NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStruct);
 
@@ -129,8 +133,8 @@ static void cc2500_hardware_init() {
 void CC2500_GDO0_EXTI_HANDLER() {
   if (EXTI_GetITStatus(CC2500_GDO0_EXTI_LINE) != RESET) {
     gdo0_exti_status = 1;
-    EXTI_ClearITPendingBit(CC2500_GDO0_EXTI_LINE);
   }
+  EXTI_ClearITPendingBit(CC2500_GDO0_EXTI_LINE);
 }
 
 void cc2500_strobe(uint8_t address) {
