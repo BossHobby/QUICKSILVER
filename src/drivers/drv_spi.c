@@ -9,11 +9,13 @@
     .channel = DMA_Channel_##chan,              \
     .channel_index = chan,                      \
                                                 \
+    .rx_stream_index = rx,                      \
     .rx_stream = DMA##dma_prt##_Stream##rx,     \
     .rx_tci_flag = DMA_FLAG_TCIF##rx,           \
     .rx_it = DMA##dma_prt##_Stream##rx##_IRQn,  \
     .rx_it_flag = DMA_IT_TCIF##rx,              \
                                                 \
+    .tx_stream_index = tx,                      \
     .tx_stream = DMA##dma_prt##_Stream##tx,     \
     .tx_tci_flag = DMA_FLAG_TCIF##tx,           \
     .tx_it = DMA##dma_prt##_Stream##tx##_IRQn,  \
@@ -150,7 +152,7 @@ uint8_t spi_transfer_byte_timeout(spi_ports_t port, uint8_t data, uint32_t timeo
 }
 
 volatile uint8_t dma_transfer_done[2 * 8] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-#define DMA_TRANSFER_DONE dma_transfer_done[(PORT.dma.dma_port - 1) * 8 + PORT.dma.channel_index]
+#define DMA_TRANSFER_DONE dma_transfer_done[(PORT.dma.dma_port - 1) * 8 + PORT.dma.rx_stream_index]
 
 void spi_dma_init(spi_ports_t port) {
   // Enable DMA clock
