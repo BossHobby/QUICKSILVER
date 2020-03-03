@@ -116,7 +116,7 @@ void spi_init_pins(spi_ports_t port, gpio_pins_t nss) {
 }
 
 uint8_t spi_transfer_byte(spi_ports_t port, uint8_t data) {
-  return spi_transfer_byte_timeout(port, data, 1000);
+  return spi_transfer_byte_timeout(port, data, 0x400);
 }
 
 uint8_t spi_transfer_byte_timeout(spi_ports_t port, uint8_t data, uint32_t timeout_max) {
@@ -150,7 +150,7 @@ uint8_t spi_transfer_byte_timeout(spi_ports_t port, uint8_t data, uint32_t timeo
 }
 
 volatile uint8_t dma_transfer_done[2 * 8] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-#define DMA_TRANSFER_DONE dma_transfer_done[(PORT.dma.dma_port - 1) * 2 + PORT.dma.channel_index]
+#define DMA_TRANSFER_DONE dma_transfer_done[(PORT.dma.dma_port - 1) * 8 + PORT.dma.channel_index]
 
 void spi_dma_init(spi_ports_t port) {
   // Enable DMA clock
@@ -212,8 +212,14 @@ void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, uint32_t
 }
 
 void spi_dma_wait_for_ready(spi_ports_t port) {
-  while (DMA_TRANSFER_DONE == 0)
+  for (uint16_t timeout = 0x400; DMA_TRANSFER_DONE == 0; timeout--) {
+    if (timeout == 0) {
+      //liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
+      liberror++;
+      return 0;
+    }
     __WFI();
+  }
 }
 
 void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) {
@@ -227,10 +233,17 @@ void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) 
   SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Tx, ENABLE);
   SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Rx, ENABLE);
 
+  DMA_ClearFlag(PORT.dma.rx_stream, PORT.dma.rx_tci_flag);
+  DMA_ClearFlag(PORT.dma.tx_stream, PORT.dma.tx_tci_flag);
+
+  DMA_ClearITPendingBit(PORT.dma.rx_stream, PORT.dma.rx_it_flag);
   DMA_ITConfig(PORT.dma.rx_stream, DMA_IT_TC, ENABLE);
 
   DMA_Cmd(PORT.dma.rx_stream, ENABLE); // Enable the DMA SPI RX Stream
   DMA_Cmd(PORT.dma.tx_stream, ENABLE); // Enable the DMA SPI TX Stream
+
+  // now we can enable the peripheral
+  //SPI_Cmd(PORT.channel, ENABLE);
 }
 
 //blocking dma transmit bytes
@@ -241,9 +254,10 @@ void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length) 
   spi_dma_wait_for_ready(port);
 }
 
-void handle_dma_rx_isr(spi_ports_t port) {
+inline void handle_dma_rx_isr(spi_ports_t port) {
   if (DMA_GetITStatus(PORT.dma.rx_stream, PORT.dma.rx_it_flag)) {
     DMA_ClearITPendingBit(PORT.dma.rx_stream, PORT.dma.rx_it_flag);
+    DMA_ITConfig(PORT.dma.rx_stream, DMA_IT_TC, DISABLE);
 
     DMA_ClearFlag(PORT.dma.rx_stream, PORT.dma.rx_tci_flag);
     DMA_ClearFlag(PORT.dma.tx_stream, PORT.dma.tx_tci_flag);
@@ -251,10 +265,11 @@ void handle_dma_rx_isr(spi_ports_t port) {
     SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Tx, DISABLE);
     SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Rx, DISABLE);
 
-    DMA_ITConfig(PORT.dma.rx_stream, DMA_IT_TC, DISABLE);
-
     DMA_Cmd(PORT.dma.rx_stream, DISABLE);
     DMA_Cmd(PORT.dma.tx_stream, DISABLE);
+
+    // now we can disable the peripheral
+    //SPI_Cmd(PORT.channel, DISABLE);
 
 #if defined(ENABLE_OSD) && defined(MAX7456_SPI_PORT)
     if (port == MAX7456_SPI_PORT) {
