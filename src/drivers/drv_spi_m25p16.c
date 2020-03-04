@@ -43,10 +43,10 @@ void m25p16_init() {
   SPI_Cmd(SPI_PORT.channel, ENABLE);
 
   // Dummy read to clear receive buffer
-  while (SPI_I2S_GetFlagStatus(PORT.channel, SPI_I2S_FLAG_TXE) == RESET)
+  while (SPI_I2S_GetFlagStatus(SPI_PORT.channel, SPI_I2S_FLAG_TXE) == RESET)
     ;
 
-  SPI_I2S_ReceiveData(PORT.channel);
+  SPI_I2S_ReceiveData(SPI_PORT.channel);
 }
 
 uint8_t m25p16_command(const uint8_t cmd) {
