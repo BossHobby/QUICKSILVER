@@ -1,6 +1,7 @@
 #pragma once
 
 #include "defines.h"
+#include "drv_gpio.h"
 
 #ifdef F4
 #include "stm32f4xx_usart.h"
@@ -22,15 +23,10 @@ typedef struct {
   uint8_t channel_index;
   USART_TypeDef *channel;
 
-  GPIO_TypeDef *gpio_port;
   uint32_t gpio_af;
 
-  uint8_t rx_pin_index;
-  uint32_t rx_pin;
-  uint32_t rx_pin_source;
-  uint8_t tx_pin_index;
-  uint32_t tx_pin;
-  uint32_t tx_pin_source;
+  gpio_pin_def_t rx_pin;
+  gpio_pin_def_t tx_pin;
 } usart_port_def_t;
 
 extern usart_port_def_t usart_port_defs[USART_PORTS_MAX];
