@@ -131,8 +131,13 @@ void handle_usart_isr(usart_ports_t channel) {
 #endif
 }
 
+// we need handlers for both U_S_ART and UART.
+// simply define both for every enabled port.
 #define USART_PORT(channel, port, rx_pin, tx_pin) \
   void USART##channel##_IRQHandler(void) {        \
+    handle_usart_isr(USART_IDENT(channel));       \
+  }                                               \
+  void UART##channel##_IRQHandler(void) {         \
     handle_usart_isr(USART_IDENT(channel));       \
   }
 
