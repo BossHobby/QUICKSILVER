@@ -218,7 +218,7 @@ void spi_dma_wait_for_ready(spi_ports_t port) {
     if (timeout == 0) {
       //liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
       liberror++;
-      return 0;
+      return;
     }
     __WFI();
   }
