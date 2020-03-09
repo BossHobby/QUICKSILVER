@@ -235,10 +235,11 @@ void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) 
   SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Tx, ENABLE);
   SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Rx, ENABLE);
 
-  DMA_ClearFlag(PORT.dma.rx_stream, PORT.dma.rx_tci_flag);
-  DMA_ClearFlag(PORT.dma.tx_stream, PORT.dma.tx_tci_flag);
+  // if everything goes right, those are not required.
+  //DMA_ClearFlag(PORT.dma.rx_stream, PORT.dma.rx_tci_flag);
+  //DMA_ClearFlag(PORT.dma.tx_stream, PORT.dma.tx_tci_flag);
 
-  DMA_ClearITPendingBit(PORT.dma.rx_stream, PORT.dma.rx_it_flag);
+  //DMA_ClearITPendingBit(PORT.dma.rx_stream, PORT.dma.rx_it_flag);
   DMA_ITConfig(PORT.dma.rx_stream, DMA_IT_TC, ENABLE);
 
   DMA_Cmd(PORT.dma.rx_stream, ENABLE); // Enable the DMA SPI RX Stream
@@ -250,16 +251,46 @@ void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) 
 
 //blocking dma transmit bytes
 void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length) {
-  spi_dma_transfer_begin(port, buffer, length);
+  spi_dma_wait_for_ready(port);
+  DMA_TRANSFER_DONE = 0;
 
-  /* Waiting the end of Data transfer */
+  spi_dma_receive_init(port, buffer, length);
+  spi_dma_transmit_init(port, buffer, length);
+
+  // Enable the SPI Rx/Tx DMA request
+  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Tx, ENABLE);
+  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Rx, ENABLE);
+
+  DMA_Cmd(PORT.dma.rx_stream, ENABLE); // Enable the DMA SPI RX Stream
+  DMA_Cmd(PORT.dma.tx_stream, ENABLE); // Enable the DMA SPI TX Stream
+
+  while (DMA_GetFlagStatus(PORT.dma.rx_stream, PORT.dma.rx_tci_flag) == RESET)
+    ;
+  while (DMA_GetFlagStatus(PORT.dma.tx_stream, PORT.dma.tx_tci_flag) == RESET)
+    ;
+
+  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Tx, DISABLE);
+  SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Rx, DISABLE);
+
+  DMA_Cmd(PORT.dma.rx_stream, DISABLE);
+  DMA_Cmd(PORT.dma.tx_stream, DISABLE);
+
+  DMA_TRANSFER_DONE = 1;
+}
+
+/* could also be solved with the IT, but seems to be slower by 4us worstcase 
+void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length) {
+  spi_dma_transfer_begin(port, buffer, length);
   spi_dma_wait_for_ready(port);
 }
+*/
 
 inline void handle_dma_rx_isr(spi_ports_t port) {
   if (DMA_GetITStatus(PORT.dma.rx_stream, PORT.dma.rx_it_flag)) {
     DMA_ClearITPendingBit(PORT.dma.rx_stream, PORT.dma.rx_it_flag);
     DMA_ITConfig(PORT.dma.rx_stream, DMA_IT_TC, DISABLE);
+
+    DMA_TRANSFER_DONE = 1;
 
     DMA_ClearFlag(PORT.dma.rx_stream, PORT.dma.rx_tci_flag);
     DMA_ClearFlag(PORT.dma.tx_stream, PORT.dma.tx_tci_flag);
@@ -279,8 +310,6 @@ inline void handle_dma_rx_isr(spi_ports_t port) {
       max7456_dma_rx_isr();
     }
 #endif
-
-    DMA_TRANSFER_DONE = 1;
   }
 }
 
