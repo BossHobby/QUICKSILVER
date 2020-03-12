@@ -19,7 +19,7 @@ typedef struct {
   float accel_filter[3]; // 104
 
   float pid_output[3]; // 116
-} __attribute__((packed)) blackbox_t;
+} blackbox_t;
 
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b);
 cbor_result_t cbor_encode_compact_blackbox_t(cbor_value_t *enc, const blackbox_t *b);
