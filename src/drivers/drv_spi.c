@@ -285,7 +285,7 @@ void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length) 
 }
 */
 
-inline void handle_dma_rx_isr(spi_ports_t port) {
+static void handle_dma_rx_isr(spi_ports_t port) {
   if (DMA_GetITStatus(PORT.dma.rx_stream, PORT.dma.rx_it_flag)) {
     DMA_ClearITPendingBit(PORT.dma.rx_stream, PORT.dma.rx_it_flag);
     DMA_ITConfig(PORT.dma.rx_stream, DMA_IT_TC, DISABLE);
