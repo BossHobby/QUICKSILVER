@@ -206,6 +206,8 @@ static uint8_t frsky_d8_handle_packet() {
   case FRSKY_STATE_RESUME:
     // wait for IDLE
     if ((cc2500_get_status() & (0x70)) == 0) {
+      handle_overflows();
+
       // re-enter rx mode after telemetry
       cc2500_enter_rxmode();
       next_channel(1);

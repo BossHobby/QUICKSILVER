@@ -149,6 +149,7 @@ static uint8_t cc2500_read_multi(uint8_t reg, uint8_t data, uint8_t *result, uin
   return buffer[0];
 }
 
+/*
 static uint8_t cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
   spi_csn_enable(CC2500_NSS);
 
@@ -161,6 +162,19 @@ static uint8_t cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
   spi_dma_transfer_bytes(CC2500_SPI_PORT, buffer, len + 1);
   spi_csn_disable(CC2500_NSS);
   return buffer[0];
+}
+*/
+
+static uint8_t cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
+  spi_csn_enable(CC2500_NSS);
+
+  const uint8_t ret = spi_transfer_byte(CC2500_SPI_PORT, reg);
+  for (uint8_t i = 0; i < len; i++) {
+    spi_transfer_byte(CC2500_SPI_PORT, data[i]);
+  }
+
+  spi_csn_disable(CC2500_NSS);
+  return ret;
 }
 
 uint8_t cc2500_read_fifo(uint8_t *result, uint8_t len) {
