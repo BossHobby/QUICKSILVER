@@ -4,8 +4,8 @@
 
 #include "binary.h"
 #include "drv_spi.h"
+#include "drv_spi_xn297.h"
 #include "drv_time.h"
-#include "drv_xn297.h"
 #include "project.h"
 #include "util.h"
 
