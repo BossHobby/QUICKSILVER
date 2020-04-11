@@ -11,6 +11,7 @@
 #include "drv_gpio.h"
 #include "drv_i2c.h"
 #include "drv_motor.h"
+#include "drv_rgb_led.h"
 #include "drv_serial.h"
 #include "drv_softi2c.h"
 #include "drv_spi.h"
@@ -23,6 +24,7 @@
 #include "pid.h"
 #include "profile.h"
 #include "project.h"
+#include "rgb_led.h"
 #include "rx.h"
 #include "sixaxis.h"
 #include "util.h"
@@ -215,7 +217,6 @@ int main(void) {
 #endif
 
   gyro_cal();
-  extern void rgb_init(void);
   rgb_init();
   blackbox_init();
 
@@ -434,10 +435,8 @@ int main(void) {
 
 #if (RGB_LED_NUMBER > 0)
     // RGB led control
-    extern void rgb_led_lvc(void);
     rgb_led_lvc();
 #ifdef RGB_LED_DMA
-    extern void rgb_dma_start();
     rgb_dma_start();
 #endif
 #endif
