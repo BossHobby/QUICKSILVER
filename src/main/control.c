@@ -12,6 +12,7 @@
 #include "gestures.h"
 #include "input.h"
 #include "led.h"
+#include "motorcurve.h"
 #include "pid.h"
 #include "profile.h"
 #include "sixaxis.h"
@@ -41,7 +42,6 @@ int onground_long = 1;
 float thrsum;
 
 float error[PIDNUMBER];
-float motormap(float input);
 
 float yawangle;
 uint8_t throttle_safety;
