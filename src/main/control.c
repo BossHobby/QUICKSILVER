@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdint.h>
 
+#include "angle_pid.h"
 #include "drv_fmc.h"
 #include "drv_fmc2.h"
 #include "drv_motor.h"
@@ -57,8 +58,6 @@ uint8_t throttle_safety;
 
 extern int ledcommand;
 //extern int ledblink;
-
-extern float apid(int x);
 
 unsigned long timecommand = 0;
 
@@ -133,7 +132,7 @@ void control(void) {
       } else {
         //roll is leveled to max angle limit
         angleerror[0] = errorvect[0];
-        error[0] = apid(0) + yawerror[0] - gyro[0];
+        error[0] = angle_pid(0) + yawerror[0] - gyro[0];
         //pitch is acro
         error[1] = rates[1] - gyro[1];
       }
@@ -171,7 +170,7 @@ void control(void) {
       } else { // apply a transitioning mix of acro and level behavior inside of stick HORIZON_TRANSITION point and full acro beyond stick HORIZON_TRANSITION point
         angleerror[0] = errorvect[0];
         // roll angle strength fades out as sticks approach HORIZON_TRANSITION while acro stength fades in according to value of acroFade factor
-        error[0] = ((apid(0) + yawerror[0] - gyro[0]) * (1 - fade)) + (fade * (rates[0] - gyro[0]));
+        error[0] = ((angle_pid(0) + yawerror[0] - gyro[0]) * (1 - fade)) + (fade * (rates[0] - gyro[0]));
         //pitch is acro
         error[1] = rates[1] - gyro[1];
       }
@@ -211,7 +210,7 @@ void control(void) {
         } else { // apply a transitioning mix of acro and level behavior inside of stick HORIZON_TRANSITION point and full acro beyond stick HORIZON_TRANSITION point
           angleerror[i] = errorvect[i];
           //  angle strength fades out as sticks approach HORIZON_TRANSITION while acro stength fades in according to value of acroFade factor
-          error[i] = ((apid(i) + yawerror[i] - gyro[i]) * (1 - fade)) + (fade * (rates[i] - gyro[i]));
+          error[i] = ((angle_pid(i) + yawerror[i] - gyro[i]) * (1 - fade)) + (fade * (rates[i] - gyro[i]));
         }
       }
       // yaw
@@ -221,7 +220,7 @@ void control(void) {
       // pitch and roll
       for (int i = 0; i <= 1; i++) {
         angleerror[i] = errorvect[i];
-        error[i] = apid(i) + yawerror[i] - gyro[i];
+        error[i] = angle_pid(i) + yawerror[i] - gyro[i];
       }
       // yaw
       error[2] = yawerror[2] - gyro[2];

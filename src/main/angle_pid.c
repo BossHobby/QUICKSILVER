@@ -18,7 +18,7 @@ float angleerror[APIDNUMBER];
 float lasterror[APIDNUMBER];
 float apidoutput[APIDNUMBER];
 
-float apid(int x) {
+float angle_pid(int x) {
   // P term 1 weighted
   apidoutput1[x] = (1 - fabsf(angleerror[x])) * angleerror[x] * profile.pid.small_angle.kp;
 
