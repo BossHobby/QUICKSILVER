@@ -99,7 +99,7 @@ void control(void) {
   // flight control
   float rates[3];
 
-  input_calc_rates(rates);
+  input_rates_calc(rates);
 
   if (rx_aux_on(AUX_LEVELMODE) && !acro_override) {
     extern float errorvect[]; // level mode angle error calculated by stick_vector.c
@@ -237,20 +237,14 @@ void control(void) {
     }
   }
 
+  {
 #ifdef YAW_FIX
-  {
     rotateErrors();
-    pid(0);
-    pid(1);
-    pid(2);
-  }
-#else
-  {
-    pid(0);
-    pid(1);
-    pid(2);
-  }
 #endif
+    pid(0);
+    pid(1);
+    pid(2);
+  }
 
   //this is needed for osd warnings but could be better used below too
   if (((rx[3] > THROTTLE_SAFETY) && (arming_release == 0)) && rx_aux_on(AUX_ARMING)) {
@@ -323,8 +317,7 @@ void control(void) {
     }
 
 #ifdef MOTOR_BEEPS
-    extern void motorbeep(void);
-    motorbeep();
+    motor_beep();
 #endif
 
     throttle = 0; //zero out throttle so it does not come back on as idle up value if enabled

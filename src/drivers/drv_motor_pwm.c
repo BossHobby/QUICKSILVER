@@ -154,7 +154,7 @@ void motor_init(void) {
 #undef MOTOR_PIN
 }
 
-void motorbeep(void) {
+void motor_beep(void) {
   if (failsafe) {
     unsigned long time = gettime();
     if (!motorbeeptime)

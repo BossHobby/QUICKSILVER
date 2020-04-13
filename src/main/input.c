@@ -156,7 +156,7 @@ static float calc_bf_rates(int axis) {
   return constrainf(angleRate, -SETPOINT_RATE_LIMIT, SETPOINT_RATE_LIMIT) * (float)DEGTORAD;
 }
 
-void input_calc_rates(float rates[]) {
+void input_rates_calc(float rates[]) {
   // high-low rates switch
   float rate_multiplier = 1.0;
   if (rx_aux_on(AUX_HIGH_RATES) <= 0) {

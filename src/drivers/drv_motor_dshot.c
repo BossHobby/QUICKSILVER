@@ -495,7 +495,7 @@ void bitbang_data() {
 #define MOTOR_BEEPS_TIMEOUT 5e6
 #endif
 
-void motorbeep() {
+void motor_beep() {
   static unsigned long motor_beep_time = 0;
   if (failsafe) {
     unsigned long time = gettime();

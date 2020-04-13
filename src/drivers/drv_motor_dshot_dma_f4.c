@@ -506,7 +506,7 @@ void motor_set(uint8_t number, float pwm) {
 #define MOTOR_BEEPS_TIMEOUT 1e6
 #endif
 
-void motorbeep() {
+void motor_beep() {
   static unsigned long motor_beep_time = 0;
   if (failsafe) {
     unsigned long time = gettime();
