@@ -12,11 +12,19 @@
 #include "gestures.h"
 #include "input.h"
 #include "led.h"
-#include "motorcurve.h"
+#include "motor.h"
 #include "pid.h"
 #include "profile.h"
 #include "sixaxis.h"
 #include "util.h"
+
+#ifndef THROTTLE_SAFETY
+#define THROTTLE_SAFETY .15f
+#endif
+
+#ifndef IDLE_THR
+#define IDLE_THR .001f //just enough to override motor stop at 0 throttle
+#endif
 
 float throttle;
 int idle_state;
@@ -26,6 +34,7 @@ extern int arming_release;
 extern int binding_while_armed;
 extern int rx_ready;
 
+extern float thrsum;
 extern float rx[];
 extern float rx_filtered[];
 extern float gyro[3];
@@ -39,8 +48,6 @@ extern float attitude[];
 int onground = 1;
 int onground_long = 1;
 
-float thrsum;
-
 float error[PIDNUMBER];
 
 float yawangle;
@@ -52,14 +59,8 @@ extern int ledcommand;
 
 extern float apid(int x);
 
-#ifdef NOMOTORS
-// to maintain timing or it will be optimized away
-float tempx[4];
-#endif
-
 unsigned long timecommand = 0;
 
-extern int motortest_override;
 extern int controls_override;
 extern float rx_override[];
 extern int acro_override;
@@ -254,11 +255,8 @@ void control(void) {
   }
 #endif
 
-#ifndef THROTTLE_SAFETY
-#define THROTTLE_SAFETY .15f
-#endif
-
-  if (((rx[3] > THROTTLE_SAFETY) && (arming_release == 0)) && rx_aux_on(AUX_ARMING)) { //this is needed for osd warnings but could be better used below too
+  //this is needed for osd warnings but could be better used below too
+  if (((rx[3] > THROTTLE_SAFETY) && (arming_release == 0)) && rx_aux_on(AUX_ARMING)) {
     throttle_safety = 1;
   } else {
     throttle_safety = 0;
@@ -283,10 +281,6 @@ void control(void) {
   } else {
     idle_state = 1;
   }
-
-#ifndef IDLE_THR
-#define IDLE_THR .001f //just enough to override motor stop at 0 throttle
-#endif
 
   if (armed_state == 0) {  // CONDITION: armed state variable is 0 so quad is DISARMED
     throttle = 0;          //						override throttle to 0
@@ -348,8 +342,6 @@ void control(void) {
 
     onground = 0;
     onground_long = gettime();
-
-    float mix[4];
 
     if (profile.motor.throttle_boost > 0.0f) {
       throttle += (float)(profile.motor.throttle_boost) * throttlehpf(throttle);
@@ -448,6 +440,8 @@ void control(void) {
     if (profile.motor.invert_yaw) {
       pidoutput[2] = -pidoutput[2];
     }
+
+    float mix[4] = {0, 0, 0, 0};
 
 #ifdef INVERTED_ENABLE
     if (pwmdir == REVERSE) {
@@ -637,88 +631,7 @@ void control(void) {
 
 #endif
 
-    //********************************MOTOR OUTPUT***********************************************************
-
-    thrsum = 0; //reset throttle sum for voltage monitoring logic in main loop
-
-    //Begin for-loop to send motor commands
-    for (int i = 0; i <= 3; i++) {
-
-      //***********************Motor Test Logic
-#if defined(MOTORS_TO_THROTTLE) || defined(MOTORS_TO_THROTTLE_MODE)
-#if defined(MOTORS_TO_THROTTLE) && !defined(MOTORS_TO_THROTTLE_MODE)
-#undef MOTOR_MIN_COMMAND
-#endif
-#if defined(MOTORS_TO_THROTTLE_MODE) && !defined(MOTORS_TO_THROTTLE)
-      if ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE)) || (motortest_override)) {
-#endif
-        mix[i] = throttle;
-        if (i == MOTOR_FL && (rx_filtered[ROLL] > 0.5f || rx_filtered[PITCH] < -0.5f)) {
-          mix[i] = 0;
-        }
-        if (i == MOTOR_BL && (rx_filtered[ROLL] > 0.5f || rx_filtered[PITCH] > 0.5f)) {
-          mix[i] = 0;
-        }
-        if (i == MOTOR_FR && (rx_filtered[ROLL] < -0.5f || rx_filtered[PITCH] < -0.5f)) {
-          mix[i] = 0;
-        }
-        if (i == MOTOR_BR && (rx_filtered[ROLL] < -0.5f || rx_filtered[PITCH] > 0.5f)) {
-          mix[i] = 0;
-        }
-#if defined(MOTORS_TO_THROTTLE_MODE) && !defined(MOTORS_TO_THROTTLE)
-      }
-#endif
-
-// flash leds in valid throttle range
-#ifdef MOTORS_TO_THROTTLE
-      ledcommand = 1;
-#warning "MOTORS TEST MODE"
-#endif
-#endif
-      //***********************End Motor Test Logic
-
-      //***********************Min Motor Command Logic
-
-#ifdef BRUSHLESS_TARGET
-// do nothing - idle set by DSHOT
-#else
-      if (profile.motor.digital_idle) {
-        float motor_min_value = (float)profile.motor.digital_idle * 0.01f;
-        if (mix[i] < 0)
-          mix[i] = 0; //Clip all mixer values into 0 to 1 range before remapping
-        if (mix[i] > 1)
-          mix[i] = 1;
-        mix[i] = motor_min_value + mix[i] * (1.0f - motor_min_value);
-      }
-#endif
-      //***********************End Min Motor Command Logic
-
-      //***********************Send Motor PWM Command Logic
-#ifndef NOMOTORS
-#ifndef MOTORS_TO_THROTTLE
-      //normal mode
-      motor_set(i, motormap(mix[i]));
-#else
-      // throttle test mode
-      ledcommand = 1;
-      motor_set(i, mix[i]);
-#endif
-#else
-      // no motors mode ( anti-optimization)
-#warning "NO MOTORS"
-      tempx[i] = motormap(mix[i]);
-#endif
-      //***********************End Motor PWM Command Logic
-
-      //***********************Clip mmixer outputs (if not already done) before applying calculating throttle sum
-      if (mix[i] < 0)
-        mix[i] = 0;
-      if (mix[i] > 1)
-        mix[i] = 1;
-      thrsum += mix[i];
-    }
-    // end of for-loop to send motor PWM commands
-    thrsum = thrsum / 4; //calculate throttle sum for voltage monitoring logic in main loop
+    motor_output_calc(mix);
   }
   // end motors on
 }
