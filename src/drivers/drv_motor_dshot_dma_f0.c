@@ -28,10 +28,6 @@
 
 // USE AT YOUR OWN RISK. ALWAYS REMOVE PROPS WHEN TESTING.
 
-// Enable this for 3D. The 'Motor Direction' setting in BLHeliSuite must
-// be set to 'Bidirectional' (or 'Bidirectional Rev.') accordingly:
-//#define BIDIRECTIONAL
-
 // Select Dshot150 or Dshot300. Dshot150 consumes quite some main loop time.
 // DShot300 may require removing the input filter cap on the ESC:
 #include "defines.h"

@@ -56,6 +56,7 @@ typedef enum {
   AUX_MOTORS_TO_THROTTLE_MODE,
   AUX_RSSI,
   AUX_FPV_ON,
+  AUX_FN_INVERTED,
 
   AUX_FUNCTION_MAX
 } aux_function_t;

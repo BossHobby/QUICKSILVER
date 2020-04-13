@@ -448,8 +448,13 @@ const profile_t default_profile = {
             AUX_CHANNEL_OFF,
 #endif
             RSSI,
-#ifdef FPV_ON //AUX_FN_INVERTED
+#ifdef FPV_ON //AUX_FPV_ON
             FPV_ON,
+#else
+            AUX_CHANNEL_OFF,
+#endif
+#ifdef FN_INVERTED //AUX_FN_INVERTED
+            FN_INVERTED,
 #else
             AUX_CHANNEL_OFF,
 #endif

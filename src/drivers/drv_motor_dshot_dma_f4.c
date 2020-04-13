@@ -53,11 +53,6 @@
 //#define DSHOT150
 #endif
 
-// Enable this for 3D. The 'Motor Direction' setting in BLHeliSuite must
-// be set to 'Bidirectional' (or 'Bidirectional Rev.') accordingly:
-
-//#define BIDIRECTIONAL
-
 #ifdef DSHOT
 #define DSHOT_BIT_TIME ((PWM_CLOCK_FREQ_HZ / 1000 / DSHOT) - 1)
 #define DSHOT_T0H_TIME (DSHOT_BIT_TIME * 0.30 + 0.05)
@@ -468,6 +463,10 @@ void motor_set(uint8_t number, float pwm) {
   } else {
     pwm_failsafe_time = 0;
   }
+
+#ifdef BIDIRECTIONAL
+  make_packet(profile.motor.motor_pins[number], value, false);
+#else
   if (pwmdir == last_pwmdir) { //make a regular packet
     make_packet(profile.motor.motor_pins[number], value, false);
   } else { //make a series of dshot command packets
@@ -490,6 +489,7 @@ void motor_set(uint8_t number, float pwm) {
       last_pwmdir = pwmdir;
     }
   }
+#endif
 
   if (number == 3) {
     dshot_dma_start();

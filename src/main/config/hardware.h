@@ -150,4 +150,10 @@
 // disable all pwm pins / function
 //#define DISABLE_PWM_PINS
 
+#if defined(BRUSHLESS_TARGET) && defined(INVERTED_ENABLE)
+// Enable this for 3D. The 'Motor Direction' setting in BLHeliSuite must
+// be set to 'Bidirectional' (or 'Bidirectional Rev.') accordingly:
+#define BIDIRECTIONAL
+#endif
+
 //***********************************************END LEGACY REFERENCE LIST*****************************************************
