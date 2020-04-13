@@ -79,9 +79,8 @@ extern float pidoutput[PIDNUMBER];
 extern profile_t profile;
 
 #ifdef MOTOR_FILTER2_ALPHA
-static float motor_filt[4];
-
 static float motorlpf(float in, int x) {
+  static float motor_filt[4];
   lpf(&motor_filt[x], in, 1 - MOTOR_FILTER2_ALPHA);
   return motor_filt[x];
 }
@@ -127,53 +126,8 @@ static float motord(float in, int x) {
   return in + out;
 }
 
-void motor_mixer_calc(float mix[4]) {
-
-  if (profile.motor.invert_yaw) {
-    pidoutput[2] = -pidoutput[2];
-  }
-
-#ifdef INVERTED_ENABLE
-  if (pwmdir == REVERSE) {
-    // inverted flight
-
-    mix[MOTOR_FR] = throttle + pidoutput[ROLL] + pidoutput[PITCH] - pidoutput[YAW]; // FR
-    mix[MOTOR_FL] = throttle - pidoutput[ROLL] + pidoutput[PITCH] + pidoutput[YAW]; // FL
-    mix[MOTOR_BR] = throttle + pidoutput[ROLL] - pidoutput[PITCH] + pidoutput[YAW]; // BR
-    mix[MOTOR_BL] = throttle - pidoutput[ROLL] - pidoutput[PITCH] - pidoutput[YAW]; // BL
-
-  } else
-#endif
-  {
-    // normal mixer
-    mix[MOTOR_FR] = throttle - pidoutput[ROLL] - pidoutput[PITCH] + pidoutput[YAW]; // FR
-    mix[MOTOR_FL] = throttle + pidoutput[ROLL] - pidoutput[PITCH] - pidoutput[YAW]; // FL
-    mix[MOTOR_BR] = throttle - pidoutput[ROLL] + pidoutput[PITCH] - pidoutput[YAW]; // BR
-    mix[MOTOR_BL] = throttle + pidoutput[ROLL] + pidoutput[PITCH] + pidoutput[YAW]; // BL
-  }
-
-  // we invert again cause it's used by the pid internally (for limit)
-  if (profile.motor.invert_yaw) {
-    pidoutput[2] = -pidoutput[2];
-  }
-
-  for (int i = 0; i <= 3; i++) {
-#ifdef MOTOR_FILTER2_ALPHA
-    mix[i] = motorlpf(mix[i], i);
-#endif
-
-#ifdef MOTOR_KAL
-    mix[i] = motor_kalman(mix[i], i);
-#endif
-
-    if (profile.motor.torque_boost > 0.0f) {
-      mix[i] = motord(mix[i], i);
-    }
-  }
-}
-
 //********************************MIXER SCALING***********************************************************
-void motor_mixer_scale_calc(float mix[4]) {
+static void motor_mixer_scale_calc(float mix[4]) {
 
 #ifdef BRUSHLESS_MIX_SCALING
   static int mix_scaling;
@@ -291,6 +245,81 @@ void motor_mixer_scale_calc(float mix[4]) {
 #endif
 }
 
+void motor_mixer_calc(float mix[4]) {
+
+#if defined(MOTORS_TO_THROTTLE)
+  motortest_override = 1;
+#endif
+
+#if defined(MOTORS_TO_THROTTLE) || defined(MOTORS_TO_THROTTLE_MODE)
+  if (rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) || motortest_override) {
+    // motor test mode, we set mix according to sticks
+    // TODO: investigate how skipping all that code below affects looptime
+
+    if (rx_filtered[ROLL] < -0.5f || rx_filtered[PITCH] < -0.5f) {
+      mix[MOTOR_FR] = 0;
+    } else {
+      mix[MOTOR_FR] = throttle;
+    }
+
+    if (rx_filtered[ROLL] > 0.5f || rx_filtered[PITCH] < -0.5f) {
+      mix[MOTOR_FL] = 0;
+    } else {
+      mix[MOTOR_FL] = throttle;
+    }
+
+    if (rx_filtered[ROLL] < -0.5f || rx_filtered[PITCH] > 0.5f) {
+      mix[MOTOR_BR] = 0;
+    } else {
+      mix[MOTOR_BR] = throttle;
+    }
+
+    if (rx_filtered[ROLL] > 0.5f || rx_filtered[PITCH] > 0.5f) {
+      mix[MOTOR_BL] = 0;
+    } else {
+      mix[MOTOR_BL] = throttle;
+    }
+  } else
+#endif
+  {
+    // normal mode, we set mix according to pidoutput
+
+#ifdef INVERTED_ENABLE
+    if (pwmdir == REVERSE) {
+      // inverted flight
+      mix[MOTOR_FR] = throttle + pidoutput[ROLL] + pidoutput[PITCH] - pidoutput[YAW]; // FR
+      mix[MOTOR_FL] = throttle - pidoutput[ROLL] + pidoutput[PITCH] + pidoutput[YAW]; // FL
+      mix[MOTOR_BR] = throttle + pidoutput[ROLL] - pidoutput[PITCH] + pidoutput[YAW]; // BR
+      mix[MOTOR_BL] = throttle - pidoutput[ROLL] - pidoutput[PITCH] - pidoutput[YAW]; // BL
+
+    } else
+#endif
+    {
+      // normal mixer
+      mix[MOTOR_FR] = throttle - pidoutput[ROLL] - pidoutput[PITCH] + pidoutput[YAW]; // FR
+      mix[MOTOR_FL] = throttle + pidoutput[ROLL] - pidoutput[PITCH] - pidoutput[YAW]; // FL
+      mix[MOTOR_BR] = throttle - pidoutput[ROLL] + pidoutput[PITCH] - pidoutput[YAW]; // BR
+      mix[MOTOR_BL] = throttle + pidoutput[ROLL] + pidoutput[PITCH] + pidoutput[YAW]; // BL
+    }
+
+    for (int i = 0; i <= 3; i++) {
+#ifdef MOTOR_FILTER2_ALPHA
+      mix[i] = motorlpf(mix[i], i);
+#endif
+
+#ifdef MOTOR_KAL
+      mix[i] = motor_kalman(mix[i], i);
+#endif
+
+      if (profile.motor.torque_boost > 0.0f) {
+        mix[i] = motord(mix[i], i);
+      }
+    }
+
+    motor_mixer_scale_calc(mix);
+  }
+}
+
 //********************************MOTOR OUTPUT***********************************************************
 void motor_output_calc(float mix[4]) {
   thrsum = 0; //reset throttle sum for voltage monitoring logic in main loop
@@ -298,35 +327,6 @@ void motor_output_calc(float mix[4]) {
   //Begin for-loop to send motor commands
   for (int i = 0; i <= 3; i++) {
 
-    //***********************Motor Test Logic
-#if defined(MOTORS_TO_THROTTLE) || defined(MOTORS_TO_THROTTLE_MODE)
-
-#if defined(MOTORS_TO_THROTTLE)
-    motortest_override = 1;
-#endif
-
-    if (rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) || motortest_override) {
-      mix[i] = throttle;
-
-      if (i == MOTOR_FL && (rx_filtered[ROLL] > 0.5f || rx_filtered[PITCH] < -0.5f)) {
-        mix[i] = 0;
-      }
-      if (i == MOTOR_BL && (rx_filtered[ROLL] > 0.5f || rx_filtered[PITCH] > 0.5f)) {
-        mix[i] = 0;
-      }
-      if (i == MOTOR_FR && (rx_filtered[ROLL] < -0.5f || rx_filtered[PITCH] < -0.5f)) {
-        mix[i] = 0;
-      }
-      if (i == MOTOR_BR && (rx_filtered[ROLL] < -0.5f || rx_filtered[PITCH] > 0.5f)) {
-        mix[i] = 0;
-      }
-    }
-
-    // TODO: flash leds in valid throttle range ?
-    // ledcommand = 1;
-#endif
-
-    //***********************Min Motor Command Logic
 #if defined(BRUSHED_TARGET)
     if (profile.motor.digital_idle && !(rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) || motortest_override)) {
       float motor_min_value = (float)profile.motor.digital_idle * 0.01f;
@@ -338,7 +338,6 @@ void motor_output_calc(float mix[4]) {
     // brushless: do nothing - idle set by DSHOT
 #endif
 
-    //***********************Send Motor PWM Command Logic
 #ifndef NOMOTORS
     //normal mode
     motor_set(i, motormap(mix[i]));

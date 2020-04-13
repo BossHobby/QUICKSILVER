@@ -423,10 +423,18 @@ void control(void) {
 #endif
 #endif
 
+    if (profile.motor.invert_yaw) {
+      pidoutput[2] = -pidoutput[2];
+    }
+
     float mix[4] = {0, 0, 0, 0};
     motor_mixer_calc(mix);
-    motor_mixer_scale_calc(mix);
     motor_output_calc(mix);
+
+    // we invert again cause it's used by the pid internally (for limit)
+    if (profile.motor.invert_yaw) {
+      pidoutput[2] = -pidoutput[2];
+    }
   }
   // end motors on
 }
