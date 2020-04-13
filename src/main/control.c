@@ -28,6 +28,7 @@
 
 float throttle;
 int idle_state;
+extern int pwmdir;
 extern int armed_state;
 extern int in_air;
 extern int arming_release;
@@ -65,14 +66,10 @@ extern int controls_override;
 extern float rx_override[];
 extern int acro_override;
 
-float overthrottlefilt = 0;
-float underthrottlefilt = 0;
-
 extern profile_t profile;
 
 void control(void) {
 #ifdef INVERTED_ENABLE
-  extern int pwmdir;
   if (rx_aux_on(AUX_FN_INVERTED))
     pwmdir = REVERSE;
   else
@@ -323,10 +320,6 @@ void control(void) {
 
     for (int i = 0; i <= 3; i++) {
       motor_set(i, 0);
-#ifdef MOTOR_FILTER
-      // reset the motor filter
-      motorfilter(0, i);
-#endif
     }
 
 #ifdef MOTOR_BEEPS
@@ -437,258 +430,11 @@ void control(void) {
 #endif
 #endif
 
-    if (profile.motor.invert_yaw) {
-      pidoutput[2] = -pidoutput[2];
-    }
-
     float mix[4] = {0, 0, 0, 0};
-
-#ifdef INVERTED_ENABLE
-    if (pwmdir == REVERSE) {
-      // inverted flight
-
-      mix[MOTOR_FR] = throttle + pidoutput[ROLL] + pidoutput[PITCH] - pidoutput[YAW]; // FR
-      mix[MOTOR_FL] = throttle - pidoutput[ROLL] + pidoutput[PITCH] + pidoutput[YAW]; // FL
-      mix[MOTOR_BR] = throttle + pidoutput[ROLL] - pidoutput[PITCH] + pidoutput[YAW]; // BR
-      mix[MOTOR_BL] = throttle - pidoutput[ROLL] - pidoutput[PITCH] - pidoutput[YAW]; // BL
-
-    } else
-#endif
-    {
-      // normal mixer
-      mix[MOTOR_FR] = throttle - pidoutput[ROLL] - pidoutput[PITCH] + pidoutput[YAW]; // FR
-      mix[MOTOR_FL] = throttle + pidoutput[ROLL] - pidoutput[PITCH] - pidoutput[YAW]; // FL
-      mix[MOTOR_BR] = throttle - pidoutput[ROLL] + pidoutput[PITCH] - pidoutput[YAW]; // BR
-      mix[MOTOR_BL] = throttle + pidoutput[ROLL] + pidoutput[PITCH] + pidoutput[YAW]; // BL
-    }
-
-    // we invert again cause it's used by the pid internally (for limit)
-    if (profile.motor.invert_yaw) {
-      pidoutput[2] = -pidoutput[2];
-    }
-
-    for (int i = 0; i <= 3; i++) {
-#ifdef MOTOR_FILTER
-      mix[i] = motorfilter(mix[i], i);
-#endif
-
-#ifdef MOTOR_FILTER2_ALPHA
-      float motorlpf(float in, int x);
-      mix[i] = motorlpf(mix[i], i);
-#endif
-
-#ifdef MOTOR_KAL
-      float motor_kalman(float in, int x);
-      mix[i] = motor_kalman(mix[i], i);
-#endif
-
-      if (profile.motor.torque_boost > 0.0f) {
-        float motord(float in, int x);
-        mix[i] = motord(mix[i], i);
-      }
-    }
-
-    //********************************MIXER SCALING***********************************************************
-
-#ifdef BRUSHED_TARGET
-#define BRUSHED_MIX_SCALING
-#endif
-
-#if defined(BRUSHLESS_TARGET) || defined(BRUSHLESS_MIX_SCALING)
-#ifdef BRUSHLESS_MIX_SCALING
-#undef BRUSHED_MIX_SCALING
-#endif
-#ifndef AIRMODE_STRENGTH
-#define AIRMODE_STRENGTH 1.0f //  Most amount of power that can be added for Airmode
-#endif
-#ifndef CLIPPING_LIMIT
-#define CLIPPING_LIMIT 1.0f //  Most amount of power that can be pulled before clipping
-#endif
-
-    static int mixScaling;
-    if (onground)
-      mixScaling = 0;
-    // only enable once really in the air
-    else
-      mixScaling = in_air;
-    if (mixScaling) {
-      //ledcommand=1;
-      float minMix = 1000.0f;
-      float maxMix = -1000.0f;
-      for (int i = 0; i < 4; i++) {
-        if (mix[i] < minMix)
-          minMix = mix[i];
-        if (mix[i] > maxMix)
-          maxMix = mix[i];
-        if (minMix < (-AIRMODE_STRENGTH))
-          minMix = (-AIRMODE_STRENGTH);
-        if (maxMix > (1 + CLIPPING_LIMIT))
-          maxMix = (1 + CLIPPING_LIMIT);
-      }
-      float mixRange = maxMix - minMix;
-      float reduceAmount = 0.0f;
-      if (mixRange > 1.0f) {
-        float scale = 1.0f / mixRange;
-        for (int i = 0; i < 4; i++)
-          mix[i] *= scale;
-        minMix *= scale;
-        reduceAmount = minMix;
-      } else {
-        if (maxMix > 1.0f)
-          reduceAmount = maxMix - 1.0f;
-        else if (minMix < 0.0f)
-          reduceAmount = minMix;
-      }
-      if (reduceAmount != 0.0f)
-        for (int i = 0; i < 4; i++)
-          mix[i] -= reduceAmount;
-    }
-#endif
-
-#ifdef BRUSHED_MIX_SCALING
-
-// options for mix throttle lowering if enabled
-// 0 - 100 range ( 100 = full reduction / 0 = no reduction )
-#ifndef MIX_THROTTLE_REDUCTION_PERCENT
-#define MIX_THROTTLE_REDUCTION_PERCENT 10
-#endif
-
-// limit reduction and increase to this amount ( 0.0 - 1.0)
-// 0.0 = no action
-// 0.5 = reduce up to 1/2 throttle
-//1.0 = reduce all the way to zero
-#ifndef MIX_THROTTLE_REDUCTION_MAX
-#define MIX_THROTTLE_REDUCTION_MAX 0.5
-#endif
-
-#ifndef MIX_MOTOR_MAX
-#define MIX_MOTOR_MAX 1.0f
-#endif
-
-    //throttle reduction
-    float overthrottle = 0;
-    float underthrottle = 0.001f;
-
-    for (int i = 0; i < 4; i++) {
-      if (mix[i] > overthrottle)
-        overthrottle = mix[i];
-      if (mix[i] < underthrottle)
-        underthrottle = mix[i];
-    }
-
-    overthrottle -= MIX_MOTOR_MAX;
-
-    if (overthrottle > (float)MIX_THROTTLE_REDUCTION_MAX)
-      overthrottle = (float)MIX_THROTTLE_REDUCTION_MAX;
-
-    if (overthrottle > overthrottlefilt)
-      overthrottlefilt += 0.005f;
-    else
-      overthrottlefilt -= 0.01f;
-
-    if (overthrottlefilt > (float)MIX_THROTTLE_REDUCTION_MAX)
-      overthrottlefilt = (float)MIX_THROTTLE_REDUCTION_MAX;
-    if (overthrottlefilt < -0.1f)
-      overthrottlefilt = -0.1;
-
-    overthrottle = overthrottlefilt;
-
-    if (overthrottle < 0.0f)
-      overthrottle = -0.0001f;
-
-    // reduce by a percentage only, so we get an inbetween performance
-    overthrottle *= ((float)MIX_THROTTLE_REDUCTION_PERCENT / 100.0f);
-
-    if (overthrottle > 0) { // exceeding max motor thrust
-      float temp = overthrottle;
-      for (int i = 0; i < 4; i++) {
-        mix[i] -= temp;
-      }
-    }
-
-    //Brushed airmode - throttle increase
-
-#ifndef MIX_THROTTLE_INCREASE_MAX
-#define MIX_THROTTLE_INCREASE_MAX 0.2f
-#endif
-    if (in_air == 1) {
-      float underthrottle = 0;
-
-      for (int i = 0; i < 4; i++) {
-        if (mix[i] < underthrottle)
-          underthrottle = mix[i];
-      }
-
-      // limit to half throttle max reduction
-      if (underthrottle < -(float)MIX_THROTTLE_INCREASE_MAX)
-        underthrottle = -(float)MIX_THROTTLE_INCREASE_MAX;
-
-      if (underthrottle < 0.0f) {
-        for (int i = 0; i < 4; i++)
-          mix[i] -= underthrottle;
-      }
-    }
-
-#endif
-
+    motor_mixer_calc(mix);
+    motor_mixer_scale_calc(mix);
     motor_output_calc(mix);
   }
   // end motors on
 }
 // end of control function
-
-#ifndef MOTOR_FILTER2_ALPHA
-#define MOTOR_FILTER2_ALPHA 0.3
-#endif
-
-float motor_filt[4];
-#if defined(MOTOR_FILTER2_ALPHA)
-float motorlpf(float in, int x) {
-  lpf(&motor_filt[x], in, 1 - MOTOR_FILTER2_ALPHA);
-  return motor_filt[x];
-}
-#endif
-
-//initial values for the kalman filter
-float x_est_last[4];
-float P_last[4];
-//the noise in the system
-const float Q = 0.02;
-//the noise in the system ( variance -  squared )
-
-#ifdef MOTOR_KAL
-const float R = Q / (float)MOTOR_KAL;
-#else
-float R = 0.1;
-#endif
-
-float motor_kalman(float in, int x) {
-
-  //do a prediction
-  float x_temp_est = x_est_last[x];
-  float P_temp = P_last[x] + Q;
-
-  float K = P_temp * (1.0f / (P_temp + R));
-  float x_est = x_temp_est + K * (in - x_temp_est);
-  float P = (1 - K) * P_temp;
-
-  //update our last's
-  P_last[x] = P;
-  x_est_last[x] = x_est;
-
-  return x_est;
-}
-
-float motord(float in, int x) {
-  float factor = profile.motor.torque_boost;
-  static float lastratexx[4][4];
-
-  float out = (+0.125f * in + 0.250f * lastratexx[x][0] - 0.250f * lastratexx[x][2] - (0.125f) * lastratexx[x][3]) * factor;
-
-  lastratexx[x][3] = lastratexx[x][2];
-  lastratexx[x][2] = lastratexx[x][1];
-  lastratexx[x][1] = lastratexx[x][0];
-  lastratexx[x][0] = in;
-
-  return in + out;
-}
