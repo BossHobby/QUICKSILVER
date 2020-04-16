@@ -789,18 +789,18 @@ cbor_result_t cbor_decode_profile_metadata_t(cbor_value_t *dec, profile_metadata
     continue;                                      \
   }
 
-#define ARRAY_MEMBER(member, size, type)            \
-  if (buf_equal_string(name, name_len, #member)) {  \
-    cbor_container_t array;                         \
-    res = cbor_decode_array(dec, &array);           \
-    if (res < CBOR_OK)                              \
-      return res;                                   \
-    for (uint32_t i = 0; i < size; i++) {           \
-      res = cbor_decode_##type(dec, &o->member[i]); \
-      if (res < CBOR_OK)                            \
-        return res;                                 \
-    }                                               \
-    continue;                                       \
+#define ARRAY_MEMBER(member, size, type)                                                   \
+  if (buf_equal_string(name, name_len, #member)) {                                         \
+    cbor_container_t array;                                                                \
+    res = cbor_decode_array(dec, &array);                                                  \
+    if (res < CBOR_OK)                                                                     \
+      return res;                                                                          \
+    for (uint32_t i = 0; i < min_uint32(size, cbor_decode_array_size(dec, &array)); i++) { \
+      res = cbor_decode_##type(dec, &o->member[i]);                                        \
+      if (res < CBOR_OK)                                                                   \
+        return res;                                                                        \
+    }                                                                                      \
+    continue;                                                                              \
   }
 
 START_STRUCT_DECODER(rate_mode_silverware_t)
