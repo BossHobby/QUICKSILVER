@@ -311,9 +311,7 @@ void control(void) {
       }
     }
 
-    for (int i = 0; i <= 3; i++) {
-      motor_set(i, 0);
-    }
+    motor_set_all(0);
 
 #ifdef MOTOR_BEEPS
     motor_beep();

@@ -130,7 +130,7 @@ static float motord(float in, int x) {
 static void motor_mixer_scale_calc(float mix[4]) {
 
 #ifdef BRUSHLESS_MIX_SCALING
-  static int mix_scaling;
+  uint8_t mix_scaling = 0;
 
   // only enable once really in the air
   if (onground) {
