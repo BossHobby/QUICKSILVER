@@ -74,13 +74,105 @@ uint8_t has_smart_audio_configured() {
   return serial_smart_audio_port == profile.serial.smart_audio && serial_smart_audio_port != USART_PORT_INVALID;
 }
 
-uint8_t smart_audio_try_send_payload(uint8_t cmd, const uint8_t *payload, const uint32_t size) {
-  for (uint8_t tries = 0; tries < 5; tries++) {
-    if (serial_smart_audio_send_payload(cmd, payload, size)) {
-      return 1;
+void vtx_smart_audio_update() {
+  smart_audio_update_result_t result = serial_smart_audio_update();
+
+  if ((result == SA_IDLE || result == SA_ERROR) && smart_audio_settings.version == 0 && vtx_connect_tries <= SMART_AUDIO_CONNECTION_TRIES) {
+    // no smart audio detected, try again
+    serial_smart_audio_send_payload(SA_CMD_GET_SETTINGS, NULL, 0);
+    vtx_connect_tries++;
+    return;
+  }
+
+  if (result == SA_SUCCESS && smart_audio_settings.version != 0 && smart_audio_detected == 0) {
+    quic_debugf("smart audio version: %d", smart_audio_settings.version);
+
+    int8_t channel_index = -1;
+    if (smart_audio_settings.mode & SA_MODE_FREQUENCY) {
+      channel_index = find_frequency_index(smart_audio_settings.frequency);
+    } else {
+      channel_index = smart_audio_settings.channel;
+    }
+
+    if (channel_index >= 0) {
+      vtx_settings.band = channel_index / VTX_CHANNEL_MAX;
+      vtx_settings.channel = channel_index % VTX_CHANNEL_MAX;
+    }
+
+    if (smart_audio_settings.version >= 2) {
+      vtx_settings.power_level = smart_audio_settings.power;
+    } else {
+      vtx_settings.power_level = smart_audio_dac_power_level_index(smart_audio_settings.power);
+    }
+
+    if (smart_audio_settings.version >= 3) {
+      vtx_settings.pit_mode = smart_audio_settings.mode & SA_MODE_PIT ? 1 : 0;
+    } else {
+      vtx_settings.pit_mode = VTX_PIT_MODE_NO_SUPPORT;
+    }
+
+    smart_audio_detected = 1;
+    vtx_settings.detected = 1;
+    vtx_connect_tries = 0;
+    return;
+  }
+
+  if ((result == SA_IDLE || result == SA_ERROR) && smart_audio_detected) {
+    if (smart_audio_settings.mode & SA_MODE_FREQUENCY) {
+      const uint16_t frequency = frequency_table[vtx_settings.band][vtx_settings.channel];
+      if (smart_audio_settings.frequency != frequency) {
+        const uint8_t payload[2] = {
+            (frequency >> 8) & 0xFF,
+            frequency & 0xFF,
+        };
+        serial_smart_audio_send_payload(SA_CMD_SET_FREQUENCY, payload, 2);
+        return;
+      }
+    } else {
+      const uint8_t index = vtx_settings.band * VTX_CHANNEL_MAX + vtx_settings.channel;
+      if (smart_audio_settings.channel != index) {
+        const uint8_t payload[1] = {index};
+        serial_smart_audio_send_payload(SA_CMD_SET_CHANNEL, payload, 1);
+        return;
+      }
+    }
+
+    uint8_t level = vtx_settings.power_level;
+    if (smart_audio_settings.version < 2) {
+      level = smart_audio_dac_power_level[vtx_settings.power_level];
+    }
+    if (smart_audio_settings.power != level) {
+      serial_smart_audio_send_payload(SA_CMD_SET_POWER, &level, 1);
+      return;
+    }
+
+    if (smart_audio_settings.version >= 3) {
+      vtx_pit_mode_t pit_mode = VTX_PIT_MODE_OFF;
+      if (smart_audio_settings.mode & SA_MODE_PIT) {
+        pit_mode = VTX_PIT_MODE_ON;
+      }
+
+      if (pit_mode != vtx_settings.pit_mode) {
+        uint8_t mode = 0x0;
+
+        if (smart_audio_settings.mode & SA_MODE_OUT_RANGE_PIT) {
+          mode |= 0x02;
+        } else {
+          // default to SA_MODE_IN_RANGE_PIT
+          mode |= 0x01;
+        }
+
+        if (vtx_settings.pit_mode == VTX_PIT_MODE_OFF) {
+          mode |= 0x04;
+        }
+
+        serial_smart_audio_send_payload(SA_CMD_SET_MODE, &mode, 1);
+        return;
+      }
+    } else {
+      vtx_settings.pit_mode = VTX_PIT_MODE_NO_SUPPORT;
     }
   }
-  return 0;
 }
 #endif
 
@@ -116,52 +208,15 @@ void vtx_update() {
   }
 #endif
 
+  static volatile uint32_t delay_loops = 5000;
+  if (delay_loops > 0) {
+    delay_loops--;
+    return;
+  }
+
 #ifdef ENABLE_SMART_AUDIO
   if (onground && has_smart_audio_configured()) {
-
-    static volatile uint32_t delay_loops = 500;
-
-    if (delay_loops > 0) {
-      delay_loops--;
-    } else if (smart_audio_settings.version == 0 && vtx_connect_tries <= SMART_AUDIO_CONNECTION_TRIES) {
-      // no smart audio detected, try again
-      serial_smart_audio_send_payload(SA_CMD_GET_SETTINGS, NULL, 0);
-
-      // reset loop time
-      reset_looptime();
-      vtx_connect_tries++;
-      delay_loops = 20;
-    } else if (smart_audio_settings.version != 0 && smart_audio_detected == 0) {
-      quic_debugf("smart audio version: %d", smart_audio_settings.version);
-
-      int8_t channel_index = -1;
-      if (smart_audio_settings.mode & SA_MODE_FREQUENCY) {
-        channel_index = find_frequency_index(smart_audio_settings.frequency);
-      } else {
-        channel_index = smart_audio_settings.channel;
-      }
-
-      if (channel_index >= 0) {
-        vtx_settings.band = channel_index / VTX_CHANNEL_MAX;
-        vtx_settings.channel = channel_index % VTX_CHANNEL_MAX;
-      }
-
-      if (smart_audio_settings.version >= 2) {
-        vtx_settings.power_level = smart_audio_settings.power;
-      } else {
-        vtx_settings.power_level = smart_audio_dac_power_level_index(smart_audio_settings.power);
-      }
-
-      if (smart_audio_settings.version >= 3) {
-        vtx_settings.pit_mode = smart_audio_settings.mode & SA_MODE_PIT ? 1 : 0;
-      } else {
-        vtx_settings.pit_mode = VTX_PIT_MODE_NO_SUPPORT;
-      }
-
-      smart_audio_detected = 1;
-      vtx_settings.detected = 1;
-      vtx_connect_tries = 0;
-    }
+    vtx_smart_audio_update();
   }
 #endif
 }
@@ -172,102 +227,19 @@ void vtx_set(vtx_settings_t *vtx) {
   vtx_set_frequency(vtx->band, vtx->channel);
 }
 
-uint8_t vtx_set_frequency(vtx_band_t band, vtx_channel_t channel) {
-#ifdef ENABLE_SMART_AUDIO
-  if (smart_audio_detected && has_smart_audio_configured()) {
-    uint8_t did_change = 0;
-    int8_t channel_index = -1;
-
-    if (smart_audio_settings.mode & SA_MODE_FREQUENCY) {
-      const uint16_t frequency = frequency_table[band][channel];
-      const uint8_t payload[2] = {
-          (frequency >> 8) & 0xFF,
-          frequency & 0xFF,
-      };
-      if (smart_audio_settings.frequency != frequency) {
-        smart_audio_try_send_payload(SA_CMD_SET_FREQUENCY, payload, 2);
-        did_change = 1;
-      }
-
-      channel_index = find_frequency_index(smart_audio_settings.frequency);
-    } else {
-      const uint8_t index = band * VTX_CHANNEL_MAX + channel;
-      const uint8_t payload[1] = {index};
-      if (smart_audio_settings.channel != index) {
-        smart_audio_try_send_payload(SA_CMD_SET_CHANNEL, payload, 1);
-        did_change = 1;
-      }
-
-      channel_index = smart_audio_settings.channel;
-    }
-
-    if (channel_index >= 0) {
-      vtx_settings.band = channel_index / VTX_CHANNEL_MAX;
-      vtx_settings.channel = channel_index % VTX_CHANNEL_MAX;
-    }
-
-    return did_change;
-  }
-#endif
-
-  return 0;
+void vtx_set_frequency(vtx_band_t band, vtx_channel_t channel) {
+  vtx_settings.band = band;
+  vtx_settings.channel = channel;
 }
 
-uint8_t vtx_set_pit_mode(vtx_pit_mode_t pit_mode) {
-#ifdef ENABLE_SMART_AUDIO
-  if (smart_audio_detected && has_smart_audio_configured()) {
-    if (smart_audio_settings.version >= 3) {
-      uint8_t mode = 0x0;
-
-      if (smart_audio_settings.mode & SA_MODE_OUT_RANGE_PIT) {
-        mode |= 0x02;
-      } else {
-        // default to SA_MODE_IN_RANGE_PIT
-        mode |= 0x01;
-      }
-
-      if (pit_mode == VTX_PIT_MODE_OFF) {
-        mode |= 0x04;
-      }
-
-      smart_audio_try_send_payload(SA_CMD_SET_MODE, &mode, 1);
-      vtx_settings.pit_mode = smart_audio_settings.mode & SA_MODE_PIT ? 1 : 0;
-      return 1;
-    } else {
-      vtx_settings.pit_mode = VTX_PIT_MODE_NO_SUPPORT;
-    }
-  }
-#endif
-
-  return 0;
+void vtx_set_pit_mode(vtx_pit_mode_t pit_mode) {
+  if (vtx_settings.pit_mode == VTX_PIT_MODE_NO_SUPPORT)
+    return;
+  vtx_settings.pit_mode = pit_mode;
 }
 
-uint8_t vtx_set_power_level(vtx_power_level_t power_level) {
-#ifdef ENABLE_SMART_AUDIO
-  if (smart_audio_detected && has_smart_audio_configured()) {
-    uint8_t did_change = 0;
-    uint8_t level = power_level;
-
-    if (smart_audio_settings.version >= 2) {
-      if (smart_audio_settings.power != level) {
-        smart_audio_try_send_payload(SA_CMD_SET_POWER, &level, 1);
-        did_change = 1;
-      }
-      vtx_settings.power_level = smart_audio_settings.power;
-    } else {
-      level = smart_audio_dac_power_level[power_level];
-      if (smart_audio_settings.power != level) {
-        smart_audio_try_send_payload(SA_CMD_SET_POWER, &level, 1);
-        did_change = 1;
-      }
-      vtx_settings.power_level = smart_audio_dac_power_level_index(smart_audio_settings.power);
-    }
-
-    return did_change;
-  }
-#endif
-
-  return 0;
+void vtx_set_power_level(vtx_power_level_t power_level) {
+  vtx_settings.power_level = power_level;
 }
 
 cbor_result_t cbor_encode_vtx_settings_t(cbor_value_t *enc, const vtx_settings_t *vtx) {
