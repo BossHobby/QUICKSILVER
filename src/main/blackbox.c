@@ -3,6 +3,7 @@
 #include "data_flash.h"
 #include "drv_time.h"
 #include "usb_configurator.h"
+#include "util.h"
 
 uint32_t blackbox_rate = 2;
 uint8_t blackbox_override = 0;
@@ -27,54 +28,6 @@ extern float accel[3];
 extern float accel_filter[3];
 
 extern float pidoutput[3];
-
-#define CHECK_CBOR_ERROR(expr) \
-  expr;                        \
-  if (res < CBOR_OK) {         \
-    return res;                \
-  }
-
-cbor_result_t cbor_encode_float_array(cbor_value_t *enc, const float *array, uint32_t size) {
-  CHECK_CBOR_ERROR(cbor_result_t res = cbor_encode_array(enc, size))
-
-  for (uint32_t i = 0; i < size; i++) {
-    CHECK_CBOR_ERROR(res = cbor_encode_float(enc, &array[i]));
-  }
-
-  return res;
-}
-
-cbor_result_t cbor_encode_uint8_array(cbor_value_t *enc, const uint8_t *array, uint32_t size) {
-  CHECK_CBOR_ERROR(cbor_result_t res = cbor_encode_array(enc, size));
-
-  for (uint32_t i = 0; i < size; i++) {
-    CHECK_CBOR_ERROR(res = cbor_encode_uint8(enc, &array[i]));
-  }
-
-  return res;
-}
-
-cbor_result_t cbor_decode_float_array(cbor_value_t *enc, float *array, uint32_t size) {
-  cbor_container_t container;
-  CHECK_CBOR_ERROR(cbor_result_t res = cbor_decode_array(enc, &container))
-
-  for (uint32_t i = 0; i < size; i++) {
-    CHECK_CBOR_ERROR(res = cbor_decode_float(enc, &array[i]));
-  }
-
-  return res;
-}
-
-cbor_result_t cbor_decode_uint8_array(cbor_value_t *enc, uint8_t *array, uint32_t size) {
-  cbor_container_t container;
-  CHECK_CBOR_ERROR(cbor_result_t res = cbor_decode_array(enc, &container));
-
-  for (uint32_t i = 0; i < size; i++) {
-    CHECK_CBOR_ERROR(res = cbor_decode_uint8(enc, &array[i]));
-  }
-
-  return res;
-}
 
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
   CHECK_CBOR_ERROR(cbor_result_t res = cbor_encode_map_indefinite(enc));

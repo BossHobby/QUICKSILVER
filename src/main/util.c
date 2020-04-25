@@ -213,6 +213,48 @@ void print_str(const char *str) {
 
 #endif
 
+cbor_result_t cbor_encode_float_array(cbor_value_t *enc, const float *array, uint32_t size) {
+  CHECK_CBOR_ERROR(cbor_result_t res = cbor_encode_array(enc, size))
+
+  for (uint32_t i = 0; i < size; i++) {
+    CHECK_CBOR_ERROR(res = cbor_encode_float(enc, &array[i]));
+  }
+
+  return res;
+}
+
+cbor_result_t cbor_encode_uint8_array(cbor_value_t *enc, const uint8_t *array, uint32_t size) {
+  CHECK_CBOR_ERROR(cbor_result_t res = cbor_encode_array(enc, size));
+
+  for (uint32_t i = 0; i < size; i++) {
+    CHECK_CBOR_ERROR(res = cbor_encode_uint8(enc, &array[i]));
+  }
+
+  return res;
+}
+
+cbor_result_t cbor_decode_float_array(cbor_value_t *enc, float *array, uint32_t size) {
+  cbor_container_t container;
+  CHECK_CBOR_ERROR(cbor_result_t res = cbor_decode_array(enc, &container))
+
+  for (uint32_t i = 0; i < size; i++) {
+    CHECK_CBOR_ERROR(res = cbor_decode_float(enc, &array[i]));
+  }
+
+  return res;
+}
+
+cbor_result_t cbor_decode_uint8_array(cbor_value_t *enc, uint8_t *array, uint32_t size) {
+  cbor_container_t container;
+  CHECK_CBOR_ERROR(cbor_result_t res = cbor_decode_array(enc, &container));
+
+  for (uint32_t i = 0; i < size; i++) {
+    CHECK_CBOR_ERROR(res = cbor_decode_uint8(enc, &array[i]));
+  }
+
+  return res;
+}
+
 int8_t buf_equal(const uint8_t *str1, size_t len1, const uint8_t *str2, size_t len2) {
   if (len2 != len1) {
     return 0;

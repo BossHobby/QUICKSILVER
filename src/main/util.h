@@ -1,9 +1,21 @@
 #pragma once
 
+#include <cbor.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #define M_PI 3.14159265358979323846 /* pi */
+
+#define CHECK_CBOR_ERROR(expr) \
+  expr;                        \
+  if (res < CBOR_OK) {         \
+    return res;                \
+  }
+
+cbor_result_t cbor_encode_float_array(cbor_value_t *enc, const float *array, uint32_t size);
+cbor_result_t cbor_encode_uint8_array(cbor_value_t *enc, const uint8_t *array, uint32_t size);
+cbor_result_t cbor_decode_float_array(cbor_value_t *enc, float *array, uint32_t size);
+cbor_result_t cbor_decode_uint8_array(cbor_value_t *enc, uint8_t *array, uint32_t size);
 
 float mapf(float x, float in_min, float in_max, float out_min, float out_max);
 void limitf(float *input, const float limit);

@@ -21,6 +21,8 @@
 
 #define quic_errorf(cmd, args...) send_quic_strf(cmd, QUIC_FLAG_ERROR, args)
 
+usb_motor_test_t usb_motor_test;
+
 extern profile_t profile;
 extern profile_t default_profile;
 
@@ -40,6 +42,20 @@ extern uint32_t blackbox_rate;
 
 extern uint8_t encode_buffer[USB_BUFFER_SIZE];
 extern uint8_t decode_buffer[USB_BUFFER_SIZE];
+
+cbor_result_t cbor_encode_usb_motor_test_t(cbor_value_t *enc, const usb_motor_test_t *b) {
+  CHECK_CBOR_ERROR(cbor_result_t res = cbor_encode_map_indefinite(enc));
+
+  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "active"));
+  CHECK_CBOR_ERROR(res = cbor_encode_uint32(enc, &b->active));
+
+  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "value"));
+  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->value, 4));
+
+  CHECK_CBOR_ERROR(res = cbor_encode_end_indefinite(enc));
+
+  return res;
+}
 
 void send_quic_header(quic_command cmd, quic_flag flag, int16_t len) {
   static uint8_t frame[QUIC_HEADER_LEN];
@@ -339,6 +355,48 @@ void process_blackbox(uint8_t *data, uint32_t len) {
   }
 }
 
+void process_motor_test(uint8_t *data, uint32_t len) {
+  cbor_result_t res = CBOR_OK;
+
+  cbor_value_t dec;
+  cbor_decoder_init(&dec, data, len);
+
+  cbor_value_t enc;
+  cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+
+  quic_moto_test_command cmd;
+  res = cbor_decode_uint8(&dec, &cmd);
+  check_cbor_error(QUIC_CMD_MOTOR_TEST);
+
+  switch (cmd) {
+  case QUIC_MOTOR_TEST_STATUS:
+    res = cbor_encode_usb_motor_test_t(&enc, &usb_motor_test);
+    check_cbor_error(QUIC_CMD_SET);
+    send_quic(QUIC_CMD_MOTOR_TEST, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+
+  case QUIC_MOTOR_TEST_ENABLE:
+    usb_motor_test.active = 1;
+    send_quic(QUIC_CMD_MOTOR_TEST, QUIC_FLAG_NONE, NULL, 0);
+    break;
+
+  case QUIC_MOTOR_TEST_DISABLE:
+    usb_motor_test.active = 0;
+    send_quic(QUIC_CMD_MOTOR_TEST, QUIC_FLAG_NONE, NULL, 0);
+    break;
+
+  case QUIC_MOTOR_TEST_SET_VALUE:
+    res = cbor_decode_float_array(&dec, usb_motor_test.value, 4);
+    check_cbor_error(QUIC_CMD_MOTOR_TEST);
+    send_quic(QUIC_CMD_MOTOR_TEST, QUIC_FLAG_NONE, NULL, 0);
+    break;
+
+  default:
+    quic_errorf(QUIC_CMD_MOTOR_TEST, "INVALID CMD %d", cmd);
+    break;
+  }
+}
+
 void usb_process_quic() {
   const uint8_t cmd = usb_serial_read_byte();
   if (cmd == QUIC_CMD_INVALID) {
@@ -390,6 +448,9 @@ void usb_process_quic() {
     break;
   case QUIC_CMD_BLACKBOX:
     process_blackbox(buffer, size);
+    break;
+  case QUIC_CMD_MOTOR_TEST:
+    process_motor_test(buffer, size);
     break;
   default:
     quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);
