@@ -47,7 +47,7 @@ cbor_result_t cbor_encode_usb_motor_test_t(cbor_value_t *enc, const usb_motor_te
   CHECK_CBOR_ERROR(cbor_result_t res = cbor_encode_map_indefinite(enc));
 
   CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "active"));
-  CHECK_CBOR_ERROR(res = cbor_encode_uint32(enc, &b->active));
+  CHECK_CBOR_ERROR(res = cbor_encode_uint8(enc, &b->active));
 
   CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "value"));
   CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->value, 4));
