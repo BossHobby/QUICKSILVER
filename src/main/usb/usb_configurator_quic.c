@@ -414,7 +414,7 @@ void process_motor_test(uint8_t *data, uint32_t len) {
     res = cbor_encode_uint8(&enc, &count);
     check_cbor_error(QUIC_CMD_MOTOR);
 
-    send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_EXIT, encode_buffer, cbor_encoder_len(&enc));
 
     esc4wayProcess();
     break;

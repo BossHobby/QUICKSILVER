@@ -44,6 +44,7 @@ typedef enum {
   QUIC_FLAG_NONE,
   QUIC_FLAG_ERROR,
   QUIC_FLAG_STREAMING,
+  QUIC_FLAG_EXIT,
 } quic_flag;
 
 typedef enum {
