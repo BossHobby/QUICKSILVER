@@ -29,11 +29,13 @@
 #endif
 
 float throttle;
-int idle_state;
+
+static uint8_t idle_state;
+static uint8_t arming_release;
+
 extern int pwmdir;
 extern int armed_state;
 extern int in_air;
-extern int arming_release;
 extern int binding_while_armed;
 extern int rx_ready;
 

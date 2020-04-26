@@ -78,7 +78,6 @@ extern int failsafe;
 extern int onground;
 int in_air;
 int armed_state;
-int arming_release;
 int binding_while_armed = 1;
 
 //Flash Memory Feature defaults for a flash w/full chip erase
