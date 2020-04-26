@@ -23,7 +23,7 @@ typedef enum {
   QUIC_CMD_LOG,
   QUIC_CMD_CAL_IMU,
   QUIC_CMD_BLACKBOX,
-  QUIC_CMD_MOTOR_TEST
+  QUIC_CMD_MOTOR
 } quic_command;
 
 typedef enum {
@@ -37,7 +37,8 @@ typedef enum {
   QUIC_MOTOR_TEST_ENABLE,
   QUIC_MOTOR_TEST_DISABLE,
   QUIC_MOTOR_TEST_SET_VALUE,
-} quic_moto_test_command;
+  QUIC_MOTOR_ESC4WAY,
+} quic_motor_command;
 
 typedef enum {
   QUIC_FLAG_NONE,

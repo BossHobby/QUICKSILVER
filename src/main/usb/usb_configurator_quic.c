@@ -6,6 +6,7 @@
 
 #include "blackbox.h"
 #include "data_flash.h"
+#include "drv_serial_4way.h"
 #include "drv_spi_max7456.h"
 #include "drv_usb.h"
 #include "flash.h"
@@ -367,41 +368,60 @@ void process_motor_test(uint8_t *data, uint32_t len) {
   cbor_value_t enc;
   cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
 
-  quic_moto_test_command cmd;
+  quic_motor_command cmd;
   res = cbor_decode_uint8(&dec, &cmd);
-  check_cbor_error(QUIC_CMD_MOTOR_TEST);
+  check_cbor_error(QUIC_CMD_MOTOR);
 
   switch (cmd) {
   case QUIC_MOTOR_TEST_STATUS:
     res = cbor_encode_usb_motor_test_t(&enc, &usb_motor_test);
-    check_cbor_error(QUIC_CMD_MOTOR_TEST);
-    send_quic(QUIC_CMD_MOTOR_TEST, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    check_cbor_error(QUIC_CMD_MOTOR);
+
+    send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
 
   case QUIC_MOTOR_TEST_ENABLE:
     usb_motor_test.active = 1;
+
     res = cbor_encode_uint8(&enc, &usb_motor_test.active);
-    check_cbor_error(QUIC_CMD_MOTOR_TEST);
-    send_quic(QUIC_CMD_MOTOR_TEST, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    check_cbor_error(QUIC_CMD_MOTOR);
+
+    send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
 
   case QUIC_MOTOR_TEST_DISABLE:
     usb_motor_test.active = 0;
+
     res = cbor_encode_uint8(&enc, &usb_motor_test.active);
-    check_cbor_error(QUIC_CMD_MOTOR_TEST);
-    send_quic(QUIC_CMD_MOTOR_TEST, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    check_cbor_error(QUIC_CMD_MOTOR);
+
+    send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
 
   case QUIC_MOTOR_TEST_SET_VALUE:
     res = cbor_decode_float_array(&dec, usb_motor_test.value, 4);
-    check_cbor_error(QUIC_CMD_MOTOR_TEST);
+    check_cbor_error(QUIC_CMD_MOTOR);
+
     res = cbor_encode_float_array(&enc, usb_motor_test.value, 4);
-    check_cbor_error(QUIC_CMD_MOTOR_TEST);
-    send_quic(QUIC_CMD_MOTOR_TEST, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    check_cbor_error(QUIC_CMD_MOTOR);
+
+    send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
 
+  case QUIC_MOTOR_ESC4WAY: {
+    uint8_t count = esc4wayInit();
+
+    res = cbor_encode_uint8(&enc, &count);
+    check_cbor_error(QUIC_CMD_MOTOR);
+
+    send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+
+    esc4wayProcess();
+    break;
+  }
+
   default:
-    quic_errorf(QUIC_CMD_MOTOR_TEST, "INVALID CMD %d", cmd);
+    quic_errorf(QUIC_CMD_MOTOR, "INVALID CMD %d", cmd);
     break;
   }
 }
@@ -458,7 +478,7 @@ void usb_process_quic() {
   case QUIC_CMD_BLACKBOX:
     process_blackbox(buffer, size);
     break;
-  case QUIC_CMD_MOTOR_TEST:
+  case QUIC_CMD_MOTOR:
     process_motor_test(buffer, size);
     break;
   default:
