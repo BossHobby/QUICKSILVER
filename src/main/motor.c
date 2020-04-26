@@ -249,15 +249,16 @@ static void motor_mixer_scale_calc(float mix[4]) {
 
 void motor_mixer_calc(float mix[4]) {
 
+  if (usb_motor_test.active) {
+    motortest_override = 1;
+  } else {
+    motortest_override = 0;
+  }
+
 #if defined(MOTORS_TO_THROTTLE)
   motortest_override = 1;
 #endif
 
-  if (usb_motor_test.active) {
-    motortest_override = 1;
-  }
-
-#if defined(MOTORS_TO_THROTTLE) || defined(MOTORS_TO_THROTTLE_MODE)
   if (rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) || motortest_override) {
     // TODO: investigate how skipping all that code below affects looptime
     if (usb_motor_test.active) {
@@ -293,9 +294,7 @@ void motor_mixer_calc(float mix[4]) {
       }
     }
 
-  } else
-#endif
-  {
+  } else {
     // normal mode, we set mix according to pidoutput
 
 #ifdef INVERTED_ENABLE

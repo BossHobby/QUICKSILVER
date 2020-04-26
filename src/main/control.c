@@ -351,6 +351,9 @@ void control(void) {
 #endif
 
   if (usb_motor_test.active) {
+    armed_state = 1;
+    onground = 0;
+
     float mix[4] = {0, 0, 0, 0};
     motor_mixer_calc(mix);
     motor_output_calc(mix);
