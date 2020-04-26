@@ -21,7 +21,10 @@
 
 #define quic_errorf(cmd, args...) send_quic_strf(cmd, QUIC_FLAG_ERROR, args)
 
-usb_motor_test_t usb_motor_test;
+usb_motor_test_t usb_motor_test = {
+    .active = 0,
+    .value = {0, 0, 0, 0},
+};
 
 extern profile_t profile;
 extern profile_t default_profile;
