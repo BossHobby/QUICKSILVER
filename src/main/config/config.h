@@ -335,10 +335,3 @@
 
 // rxdebug structure																													//**************** Does this even work???
 //#define RXDEBUG
-
-// enable motors if pitch / roll controls off center (at zero throttle)				//**************** This needs to get surgically removed
-// possible values: 0 / 1
-// use in acro build only
-#define ENABLESTIX 0
-#define ENABLESTIX_TRESHOLD 0.3
-#define ENABLESTIX_TIMEOUT 1e6

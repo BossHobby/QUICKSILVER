@@ -28,6 +28,8 @@
 #define IDLE_THR .001f //just enough to override motor stop at 0 throttle
 #endif
 
+#define ON_GROUND_LONG_TIMEOUT 1e6
+
 float throttle;
 
 static uint8_t idle_state;
@@ -352,15 +354,14 @@ void control(void) {
     float mix[4] = {0, 0, 0, 0};
     motor_mixer_calc(mix);
     motor_output_calc(mix);
-  } else if ((armed_state == 0) || failsafe || (throttle < 0.001f && (!ENABLESTIX || !onground_long || rx_aux_on(AUX_LEVELMODE) || (fabsf(rx[ROLL]) < (float)ENABLESTIX_TRESHOLD && fabsf(rx[PITCH]) < (float)ENABLESTIX_TRESHOLD && fabsf(rx[YAW]) < (float)ENABLESTIX_TRESHOLD)))) {
-    // turn motors off if throttle is off and pitch / roll sticks are centered
+  } else if ((armed_state == 0) || failsafe || (throttle < 0.001f)) {
+    // CONDITION: disarmed OR failsafe OR throttle off
 
-    if (onground_long) {
-      if (gettime() - onground_long > ENABLESTIX_TIMEOUT) {
-        onground_long = 0;
-      }
+    if (onground_long && (timer_micros() - onground_long > ON_GROUND_LONG_TIMEOUT)) {
+      onground_long = 0;
     }
 
+    // turn motors off
     motor_set_all(0);
 
 #ifdef MOTOR_BEEPS
@@ -374,7 +375,7 @@ void control(void) {
   } else { // motors on - normal flight
 
     onground = 0;
-    onground_long = gettime();
+    onground_long = timer_micros();
 
     if (profile.motor.throttle_boost > 0.0f) {
       throttle += (float)(profile.motor.throttle_boost) * throttlehpf(throttle);
