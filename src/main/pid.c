@@ -63,7 +63,7 @@ extern float looptime;
 extern float gyro[3];
 extern int onground;
 extern float looptime;
-extern int in_air;
+extern uint8_t in_air;
 extern float vbattfilt_corr;
 extern float rx_filtered[4];
 

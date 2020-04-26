@@ -33,10 +33,11 @@ float throttle;
 static uint8_t idle_state;
 static uint8_t arming_release;
 
+uint8_t in_air;
+uint8_t armed_state;
+uint8_t binding_while_armed = 1;
+
 extern int pwmdir;
-extern int armed_state;
-extern int in_air;
-extern int binding_while_armed;
 extern int rx_ready;
 
 extern float thrsum;

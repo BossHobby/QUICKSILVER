@@ -49,7 +49,7 @@ int flipindex = 0;
 int flipdir = 0;
 
 extern profile_t profile;
-extern int binding_while_armed;
+extern uint8_t binding_while_armed;
 extern int onground;
 extern float GEstG[3];
 extern float rx[];

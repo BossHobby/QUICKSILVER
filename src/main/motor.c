@@ -69,7 +69,7 @@ float overthrottlefilt = 0;
 float underthrottlefilt = 0;
 
 extern int pwmdir;
-extern int in_air;
+extern uint8_t in_air;
 extern int onground;
 extern int motortest_override;
 

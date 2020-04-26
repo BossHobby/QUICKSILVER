@@ -244,7 +244,7 @@ uint8_t print_osd_flightmode(void){
 
 uint8_t print_osd_system_status(void){
 	const char system_status_labels[11][21] = { {"               "},{" **DISARMED**  "},{"  **ARMED**    "},{" STICK BOOST 1 "},{" STICK BOOST 2 "},{" **FAILSAFE**  "},{"THROTTLE SAFETY"},{" ARMING SAFETY "},{"**LOW BATTERY**"},{"**MOTOR TEST** "},{"  **TURTLE**   "} };
-	extern int armed_state;
+	extern uint8_t armed_state;
 	static uint8_t last_armed_state;
 	static uint8_t armed_state_printing;
 	static uint8_t last_aux_state;
@@ -256,7 +256,7 @@ uint8_t print_osd_system_status(void){
 	extern uint8_t throttle_safety;
 	static uint8_t last_throttle_safety_state;
 	static uint8_t throttle_safety_state_printing;
-	extern int binding_while_armed;
+	extern uint8_t binding_while_armed;
 	static uint8_t last_binding_while_armed_state;
 	static uint8_t binding_while_armed_state_printing;
 	extern int lowbatt;
@@ -655,7 +655,7 @@ void osd_display(void) {
   extern float lipo_cell_count;
   extern int lowbatt;
   extern float throttle;
-  extern int binding_while_armed;
+  extern uint8_t binding_while_armed;
   extern float osd_totaltime;
   //first check if video signal autodetect needs to run - run if necessary
   extern uint8_t lastsystem; //initialized at 99 for none then becomes 0 or 1 for ntsc/pal

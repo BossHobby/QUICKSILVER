@@ -92,7 +92,7 @@ static uint8_t DSHOT_GPIO_B = 0;
 
 extern int failsafe;
 extern int onground;
-extern int armed_state;
+extern uint8_t armed_state;
 extern profile_t profile;
 
 int pwmdir = 0;
