@@ -4,6 +4,7 @@
 #include "motorcurve.h"
 #include "profile.h"
 #include "project.h"
+#include "usb_configurator.h"
 #include "util.h"
 
 #ifdef MOTORS_TO_THROTTLE
@@ -77,6 +78,7 @@ extern float rx_filtered[];
 extern float pidoutput[PIDNUMBER];
 
 extern profile_t profile;
+extern usb_motor_test_t usb_motor_test;
 
 #ifdef MOTOR_FILTER2_ALPHA
 static float motorlpf(float in, int x) {
@@ -251,34 +253,46 @@ void motor_mixer_calc(float mix[4]) {
   motortest_override = 1;
 #endif
 
+  if (usb_motor_test.active) {
+    motortest_override = 1;
+  }
+
 #if defined(MOTORS_TO_THROTTLE) || defined(MOTORS_TO_THROTTLE_MODE)
   if (rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) || motortest_override) {
-    // motor test mode, we set mix according to sticks
     // TODO: investigate how skipping all that code below affects looptime
-
-    if (rx_filtered[ROLL] < -0.5f || rx_filtered[PITCH] < -0.5f) {
-      mix[MOTOR_FR] = 0;
+    if (usb_motor_test.active) {
+      // set mix according to values we got via usb
+      mix[MOTOR_FR] = usb_motor_test.value[MOTOR_FR];
+      mix[MOTOR_FL] = usb_motor_test.value[MOTOR_FL];
+      mix[MOTOR_BR] = usb_motor_test.value[MOTOR_BR];
+      mix[MOTOR_BL] = usb_motor_test.value[MOTOR_BL];
     } else {
-      mix[MOTOR_FR] = throttle;
+      // motor test mode, we set mix according to sticks
+      if (rx_filtered[ROLL] < -0.5f || rx_filtered[PITCH] < -0.5f) {
+        mix[MOTOR_FR] = 0;
+      } else {
+        mix[MOTOR_FR] = throttle;
+      }
+
+      if (rx_filtered[ROLL] > 0.5f || rx_filtered[PITCH] < -0.5f) {
+        mix[MOTOR_FL] = 0;
+      } else {
+        mix[MOTOR_FL] = throttle;
+      }
+
+      if (rx_filtered[ROLL] < -0.5f || rx_filtered[PITCH] > 0.5f) {
+        mix[MOTOR_BR] = 0;
+      } else {
+        mix[MOTOR_BR] = throttle;
+      }
+
+      if (rx_filtered[ROLL] > 0.5f || rx_filtered[PITCH] > 0.5f) {
+        mix[MOTOR_BL] = 0;
+      } else {
+        mix[MOTOR_BL] = throttle;
+      }
     }
 
-    if (rx_filtered[ROLL] > 0.5f || rx_filtered[PITCH] < -0.5f) {
-      mix[MOTOR_FL] = 0;
-    } else {
-      mix[MOTOR_FL] = throttle;
-    }
-
-    if (rx_filtered[ROLL] < -0.5f || rx_filtered[PITCH] > 0.5f) {
-      mix[MOTOR_BR] = 0;
-    } else {
-      mix[MOTOR_BR] = throttle;
-    }
-
-    if (rx_filtered[ROLL] > 0.5f || rx_filtered[PITCH] > 0.5f) {
-      mix[MOTOR_BL] = 0;
-    } else {
-      mix[MOTOR_BL] = throttle;
-    }
   } else
 #endif
   {

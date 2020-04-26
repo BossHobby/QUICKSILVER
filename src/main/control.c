@@ -17,6 +17,7 @@
 #include "pid.h"
 #include "profile.h"
 #include "sixaxis.h"
+#include "usb_configurator.h"
 #include "util.h"
 
 #ifndef THROTTLE_SAFETY
@@ -66,6 +67,7 @@ extern float rx_override[];
 extern int acro_override;
 
 extern profile_t profile;
+extern usb_motor_test_t usb_motor_test;
 
 void control(void) {
 #ifdef INVERTED_ENABLE
@@ -301,9 +303,12 @@ void control(void) {
     }
   }
 #endif
-
-  // turn motors off if throttle is off and pitch / roll sticks are centered
-  if ((armed_state == 0) || failsafe || (throttle < 0.001f && (!ENABLESTIX || !onground_long || rx_aux_on(AUX_LEVELMODE) || (fabsf(rx[ROLL]) < (float)ENABLESTIX_TRESHOLD && fabsf(rx[PITCH]) < (float)ENABLESTIX_TRESHOLD && fabsf(rx[YAW]) < (float)ENABLESTIX_TRESHOLD)))) { // motors off
+  if (usb_motor_test.active) {
+    float mix[4] = {0, 0, 0, 0};
+    motor_mixer_calc(mix);
+    motor_output_calc(mix);
+  } else if ((armed_state == 0) || failsafe || (throttle < 0.001f && (!ENABLESTIX || !onground_long || rx_aux_on(AUX_LEVELMODE) || (fabsf(rx[ROLL]) < (float)ENABLESTIX_TRESHOLD && fabsf(rx[PITCH]) < (float)ENABLESTIX_TRESHOLD && fabsf(rx[YAW]) < (float)ENABLESTIX_TRESHOLD)))) {
+    // turn motors off if throttle is off and pitch / roll sticks are centered
 
     if (onground_long) {
       if (gettime() - onground_long > ENABLESTIX_TIMEOUT) {
