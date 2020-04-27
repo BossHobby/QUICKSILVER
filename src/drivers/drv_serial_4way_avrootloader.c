@@ -296,7 +296,7 @@ static uint8_t BL_WriteA(uint8_t cmd, ioMem_t *pMem, uint32_t timeout) {
 }
 
 uint8_t BL_ReadFlash(uint8_t interface_mode, ioMem_t *pMem) {
-  if (interface_mode == imATM_BLB) {
+  if (interface_mode == ESC4WAY_ATM_BLB) {
     return BL_ReadA(CMD_READ_FLASH_ATM, pMem);
   } else {
     return BL_ReadA(CMD_READ_FLASH_SIL, pMem);
