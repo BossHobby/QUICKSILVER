@@ -10,10 +10,6 @@ SE=arm-none-eabi-size
 GCC_VERSION = $(shell arm-none-eabi-gcc -dumpversion)
 GIT_VERSION = $(shell cat .git/refs/heads/master)
 
-ifneq ($(shell which git),)
-	GIT_VERSION = $(shell git rev-parse HEAD)
-endif
-
 INCLUDE = src \
 	src/main \
 	src/main/rx \
