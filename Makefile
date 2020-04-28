@@ -8,7 +8,11 @@ OD=arm-none-eabi-objdump
 SE=arm-none-eabi-size
 
 GCC_VERSION = $(shell arm-none-eabi-gcc -dumpversion)
-GIT_VERSION = $(shell cat .git/refs/heads/master)
+GIT_VERSION = unkown
+
+ifeq (,$(wildcard .git/refs/heads/master))
+	GIT_VERSION = $(shell cat .git/refs/heads/master)
+endif
 
 INCLUDE = src \
 	src/main \
