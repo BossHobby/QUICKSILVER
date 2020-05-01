@@ -158,7 +158,7 @@ static uint8_t BL_ReadBuf(uint8_t *pstring, uint8_t len) {
     len--;
   } while (len > 0);
 
-  if (isMcuConnected()) {
+  if (is_mcu_connected()) {
     //With CRC read 3 more
     if (!suart_getc_(&LastCRC_16.bytes[0]))
       goto timeout;
@@ -187,7 +187,7 @@ static void BL_SendBuf(uint8_t *pstring, uint8_t len) {
     len--;
   } while (len > 0);
 
-  if (isMcuConnected()) {
+  if (is_mcu_connected()) {
     suart_putc_(&CRC_16.bytes[0]);
     suart_putc_(&CRC_16.bytes[1]);
   }

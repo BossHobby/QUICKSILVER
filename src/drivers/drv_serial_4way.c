@@ -68,6 +68,32 @@
 #define SERIAL_4WAY_VERSION_HI (uint8_t)(SERIAL_4WAY_VERSION / 100)
 #define SERIAL_4WAY_VERSION_LO (uint8_t)(SERIAL_4WAY_VERSION % 100)
 
+#define ATMEL_DEVICE_MATCH ((pDeviceInfo->words[0] == 0x9307) || (pDeviceInfo->words[0] == 0x930A) || \
+                            (pDeviceInfo->words[0] == 0x930F) || (pDeviceInfo->words[0] == 0x940B))
+
+#define SILABS_DEVICE_MATCH ((pDeviceInfo->words[0] == 0xF310) || (pDeviceInfo->words[0] == 0xF330) || \
+                             (pDeviceInfo->words[0] == 0xF410) || (pDeviceInfo->words[0] == 0xF390) || \
+                             (pDeviceInfo->words[0] == 0xF850) || (pDeviceInfo->words[0] == 0xE8B1) || \
+                             (pDeviceInfo->words[0] == 0xE8B2))
+
+#define ARM_DEVICE_MATCH ((pDeviceInfo->words[0] == 0x1F06) || \
+                          (pDeviceInfo->words[0] == 0x3306) || (pDeviceInfo->words[0] == 0x3406))
+
+#define DEVICE_INFO_SIZE 4
+#define SET_DISCONNECTED device_info.words[0] = 0
+
+#define INTF_MODE_IDX 3 // index for DeviceInfostate
+
+#define ESC_COUNT 4
+
+uint8_t selected_esc;
+SoftSerialData_t escSerial[ESC_COUNT] = {0};
+
+static uint8_32_u device_info;
+static uint8_16_u crc_in;
+static uint8_16_u crc_out;
+static uint8_t interface_mode;
+
 uint16_t _crc_xmodem_update(uint16_t crc, uint8_t data) {
   crc = crc ^ ((uint16_t)data << 8);
   for (uint8_t i = 0; i < 8; i++) {
@@ -79,46 +105,110 @@ uint16_t _crc_xmodem_update(uint16_t crc, uint8_t data) {
   return crc;
 }
 
-static uint8_t escCount;
-
-SoftSerialData_t escSerial[4] = {0};
-
-uint8_t selected_esc;
-
-uint8_32_u DeviceInfo;
-
-#define DeviceInfoSize 4
-
-bool isMcuConnected(void) {
-  return (DeviceInfo.bytes[0] > 0);
+bool is_mcu_connected(void) {
+  return (device_info.bytes[0] > 0);
 }
 
-bool isEscHi(uint8_t selEsc) {
-  return GPIO_ReadInputDataBit(escSerial[selEsc].rx_port, escSerial[selEsc].rx_pin) > 0;
+bool is_esc_high(uint8_t esc) {
+  return GPIO_ReadInputDataBit(escSerial[esc].rx_port, escSerial[esc].rx_pin) > 0;
 }
 
-bool isEscLo(uint8_t selEsc) {
-  return !isEscHi(selEsc);
+bool is_esc_low(uint8_t esc) {
+  return !is_esc_high(esc);
 }
 
-void setEscHi(uint8_t selEsc) {
-  GPIO_SetBits(escSerial[selEsc].rx_port, escSerial[selEsc].rx_pin);
+void set_esc_high(uint8_t esc) {
+  GPIO_SetBits(escSerial[esc].rx_port, escSerial[esc].rx_pin);
 }
 
-void setEscLo(uint8_t selEsc) {
-  GPIO_ResetBits(escSerial[selEsc].rx_port, escSerial[selEsc].rx_pin);
+void set_esc_low(uint8_t esc) {
+  GPIO_ResetBits(escSerial[esc].rx_port, escSerial[esc].rx_pin);
 }
 
-void setEscInput(uint8_t selEsc) {
-  softserial_set_input(&escSerial[selEsc]);
+void set_esc_input(uint8_t esc) {
+  softserial_set_input(&escSerial[esc]);
 }
 
-void setEscOutput(uint8_t selEsc) {
-  softserial_set_output(&escSerial[selEsc]);
+void set_esc_output(uint8_t esc) {
+  softserial_set_output(&escSerial[esc]);
+}
+
+static uint8_t read_byte(void) {
+  uint8_t byte = 0;
+#ifdef F0
+  // need timeout?
+  softserial_read_byte(&byte);
+#else
+  while (usb_serial_read(&byte, 1) == 0)
+    ;
+#endif
+  return byte;
+}
+
+static uint8_t read_byte_crc(void) {
+  uint8_t b = read_byte();
+  crc_in.word = _crc_xmodem_update(crc_in.word, b);
+  return b;
+}
+
+static void write_byte(uint8_t b) {
+#ifdef F0
+  softserial_write_byte(b);
+#else
+  usb_serial_write(&b, 1);
+#endif
+}
+
+static void write_byte_crc(uint8_t b) {
+  write_byte(b);
+  crc_out.word = _crc_xmodem_update(crc_out.word, b);
+}
+
+static uint8_t connect_esc(uint8_32_u *pDeviceInfo) {
+  for (uint8_t I = 0; I < 3; ++I) {
+#if (defined(USE_SERIAL_4WAY_BLHELI_BOOTLOADER) && defined(USE_SERIAL_4WAY_SK_BOOTLOADER))
+    if ((interface_mode != ESC4WAY_ARM_BLB) && Stk_ConnectEx(pDeviceInfo) && ATMEL_DEVICE_MATCH) {
+      interface_mode = ESC4WAY_ATM_SK;
+      return 1;
+    } else {
+      if (BL_ConnectEx(pDeviceInfo)) {
+        if SILABS_DEVICE_MATCH {
+          interface_mode = ESC4WAY_SIL_BLB;
+          return 1;
+        } else if ATMEL_DEVICE_MATCH {
+          interface_mode = ESC4WAY_ATM_BLB;
+          return 1;
+        } else if ARM_DEVICE_MATCH {
+          interface_mode = ESC4WAY_ARM_BLB;
+          return 1;
+        }
+      }
+    }
+#elif defined(USE_SERIAL_4WAY_BLHELI_BOOTLOADER)
+    if (BL_ConnectEx(pDeviceInfo)) {
+      if SILABS_DEVICE_MATCH {
+        interface_mode = ESC4WAY_SIL_BLB;
+        return 1;
+      } else if ATMEL_DEVICE_MATCH {
+        interface_mode = ESC4WAY_ATM_BLB;
+        return 1;
+      } else if ARM_DEVICE_MATCH {
+        interface_mode = ESC4WAY_ARM_BLB;
+        return 1;
+      }
+    }
+#elif defined(USE_SERIAL_4WAY_SK_BOOTLOADER)
+    if (Stk_ConnectEx(pDeviceInfo)) {
+      interface_mode = ESC4WAY_ATM_SK;
+      if ATMEL_DEVICE_MATCH
+        return 1;
+    }
+#endif
+  }
+  return 0;
 }
 
 uint8_t serial_4way_init() {
-  escCount = 4;
   motor_set_all(0);
 
   // set up 1wire serial to each esc
@@ -135,107 +225,12 @@ uint8_t serial_4way_init() {
   softserial_init(GPIOA, GPIO_Pin_13, GPIOA, GPIO_Pin_14, 38400);
 #endif
 
-  return escCount;
+  return ESC_COUNT;
 }
 
-void esc4wayRelease(void) {
+void serial_4way_release() {
   motor_init();
   motor_set_all(0);
-}
-
-#define SET_DISCONNECTED DeviceInfo.words[0] = 0
-
-#define INTF_MODE_IDX 3 // index for DeviceInfostate
-
-#define ATMEL_DEVICE_MATCH ((pDeviceInfo->words[0] == 0x9307) || (pDeviceInfo->words[0] == 0x930A) || \
-                            (pDeviceInfo->words[0] == 0x930F) || (pDeviceInfo->words[0] == 0x940B))
-
-#define SILABS_DEVICE_MATCH ((pDeviceInfo->words[0] == 0xF310) || (pDeviceInfo->words[0] == 0xF330) || \
-                             (pDeviceInfo->words[0] == 0xF410) || (pDeviceInfo->words[0] == 0xF390) || \
-                             (pDeviceInfo->words[0] == 0xF850) || (pDeviceInfo->words[0] == 0xE8B1) || \
-                             (pDeviceInfo->words[0] == 0xE8B2))
-
-#define ARM_DEVICE_MATCH ((pDeviceInfo->words[0] == 0x1F06) || \
-                          (pDeviceInfo->words[0] == 0x3306) || (pDeviceInfo->words[0] == 0x3406))
-
-static uint8_t CurrentInterfaceMode;
-
-static uint8_t Connect(uint8_32_u *pDeviceInfo) {
-  for (uint8_t I = 0; I < 3; ++I) {
-#if (defined(USE_SERIAL_4WAY_BLHELI_BOOTLOADER) && defined(USE_SERIAL_4WAY_SK_BOOTLOADER))
-    if ((CurrentInterfaceMode != ESC4WAY_ARM_BLB) && Stk_ConnectEx(pDeviceInfo) && ATMEL_DEVICE_MATCH) {
-      CurrentInterfaceMode = ESC4WAY_ATM_SK;
-      return 1;
-    } else {
-      if (BL_ConnectEx(pDeviceInfo)) {
-        if SILABS_DEVICE_MATCH {
-          CurrentInterfaceMode = ESC4WAY_SIL_BLB;
-          return 1;
-        } else if ATMEL_DEVICE_MATCH {
-          CurrentInterfaceMode = ESC4WAY_ATM_BLB;
-          return 1;
-        } else if ARM_DEVICE_MATCH {
-          CurrentInterfaceMode = ESC4WAY_ARM_BLB;
-          return 1;
-        }
-      }
-    }
-#elif defined(USE_SERIAL_4WAY_BLHELI_BOOTLOADER)
-    if (BL_ConnectEx(pDeviceInfo)) {
-      if SILABS_DEVICE_MATCH {
-        CurrentInterfaceMode = ESC4WAY_SIL_BLB;
-        return 1;
-      } else if ATMEL_DEVICE_MATCH {
-        CurrentInterfaceMode = ESC4WAY_ATM_BLB;
-        return 1;
-      } else if ARM_DEVICE_MATCH {
-        CurrentInterfaceMode = ESC4WAY_ARM_BLB;
-        return 1;
-      }
-    }
-#elif defined(USE_SERIAL_4WAY_SK_BOOTLOADER)
-    if (Stk_ConnectEx(pDeviceInfo)) {
-      CurrentInterfaceMode = ESC4WAY_ATM_SK;
-      if ATMEL_DEVICE_MATCH
-        return 1;
-    }
-#endif
-  }
-  return 0;
-}
-
-static uint8_t ReadByte(void) {
-  uint8_t byte = 0;
-
-#ifdef F0
-  // need timeout?
-  softserial_read_byte(&byte);
-#else
-  while (usb_serial_read(&byte, 1) == 0)
-    ;
-#endif
-  return byte;
-}
-
-static uint8_16_u CRC_in;
-static uint8_t ReadByteCrc(void) {
-  uint8_t b = ReadByte();
-  CRC_in.word = _crc_xmodem_update(CRC_in.word, b);
-  return b;
-}
-
-static void WriteByte(uint8_t b) {
-#ifdef F0
-  softserial_write_byte(b);
-#else
-  usb_serial_write(&b, 1);
-#endif
-}
-
-static uint8_16_u CRCout;
-static void WriteByteCrc(uint8_t b) {
-  WriteByte(b);
-  CRCout.word = _crc_xmodem_update(CRCout.word, b);
 }
 
 uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t *output, uint8_t *output_len) {
@@ -249,8 +244,8 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
 
   // ******* Interface related stuff *******
   case ESC4WAY_INTERFACE_TEST_ALIVE: {
-    if (isMcuConnected()) {
-      switch (CurrentInterfaceMode) {
+    if (is_mcu_connected()) {
+      switch (interface_mode) {
 #ifdef USE_SERIAL_4WAY_BLHELI_BOOTLOADER
       case ESC4WAY_ATM_BLB:
       case ESC4WAY_SIL_BLB:
@@ -300,7 +295,7 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
   }
 
   case ESC4WAY_INTERFACE_EXIT: {
-    esc4wayRelease();
+    serial_4way_release();
     break;
   }
 
@@ -313,7 +308,7 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
     if (payload.params[0] == ESC4WAY_ATM_SK)
 #endif
     {
-      CurrentInterfaceMode = payload.params[0];
+      interface_mode = payload.params[0];
     } else {
       ACK_OUT = ESC4WAY_ACK_I_INVALID_PARAM;
     }
@@ -321,7 +316,7 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
   }
 
   case ESC4WAY_DEVICE_RESET: {
-    if (payload.params[0] >= escCount) {
+    if (payload.params[0] >= ESC_COUNT) {
       return ESC4WAY_ACK_I_INVALID_CHANNEL;
     }
 
@@ -332,19 +327,19 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
       reboot_esc = true;
     }
 
-    switch (CurrentInterfaceMode) {
+    switch (interface_mode) {
     case ESC4WAY_SIL_BLB:
 #ifdef USE_SERIAL_4WAY_BLHELI_BOOTLOADER
     case ESC4WAY_ATM_BLB:
     case ESC4WAY_ARM_BLB: {
-      BL_SendCMDRunRestartBootloader(&DeviceInfo);
+      BL_SendCMDRunRestartBootloader(&device_info);
       if (reboot_esc) {
         ESC_OUTPUT;
-        setEscLo(selected_esc);
+        set_esc_low(selected_esc);
         uint32_t m = timer_millis();
         while (timer_millis() - m < 300)
           ;
-        setEscHi(selected_esc);
+        set_esc_high(selected_esc);
         ESC_INPUT;
       }
       break;
@@ -363,7 +358,7 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
   case ESC4WAY_DEVICE_INIT_FLASH: {
     SET_DISCONNECTED;
 
-    if (payload.params[0] >= escCount) {
+    if (payload.params[0] >= ESC_COUNT) {
       return ESC4WAY_ACK_I_INVALID_CHANNEL;
     }
 
@@ -371,21 +366,21 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
     //ESC_LO or ESC_HI; Halt state for prev channel
     selected_esc = payload.params[0];
 
-    if (Connect(&DeviceInfo)) {
-      DeviceInfo.bytes[INTF_MODE_IDX] = CurrentInterfaceMode;
+    if (connect_esc(&device_info)) {
+      device_info.bytes[INTF_MODE_IDX] = interface_mode;
     } else {
       SET_DISCONNECTED;
       ACK_OUT = ESC4WAY_ACK_D_GENERAL_ERROR;
     }
 
-    *output_len = DeviceInfoSize;
-    memcpy(output, &DeviceInfo, DeviceInfoSize);
+    *output_len = DEVICE_INFO_SIZE;
+    memcpy(output, &device_info, DEVICE_INFO_SIZE);
     break;
   }
 
 #ifdef USE_SERIAL_4WAY_SK_BOOTLOADER
   case ESC4WAY_DEVICE_ERASE_ALL: {
-    switch (CurrentInterfaceMode) {
+    switch (interface_mode) {
     case ESC4WAY_ATM_SK: {
       if (!Stk_Chip_Erase())
         ACK_OUT = ESC4WAY_ACK_D_GENERAL_ERROR;
@@ -400,7 +395,7 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
 
 #ifdef USE_SERIAL_4WAY_BLHELI_BOOTLOADER
   case ESC4WAY_DEVICE_PAGE_ERASE: {
-    switch (CurrentInterfaceMode) {
+    switch (interface_mode) {
     case ESC4WAY_SIL_BLB:
     case ESC4WAY_ARM_BLB: {
       ioMem_t mem;
@@ -408,7 +403,7 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
       mem.D_PTR_I = NULL;
 
       uint8_t addr = output[0] = payload.params[0];
-      if (CurrentInterfaceMode == ESC4WAY_ARM_BLB) {
+      if (interface_mode == ESC4WAY_ARM_BLB) {
         // Address =Page * 1024
         mem.D_FLASH_ADDR_H = (addr << 2);
       } else {
@@ -435,12 +430,12 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
     mem.D_FLASH_ADDR_H = payload.flash_addr_h;
     mem.D_FLASH_ADDR_L = payload.flash_addr_l;
 
-    switch (CurrentInterfaceMode) {
+    switch (interface_mode) {
 #ifdef USE_SERIAL_4WAY_BLHELI_BOOTLOADER
     case ESC4WAY_SIL_BLB:
     case ESC4WAY_ATM_BLB:
     case ESC4WAY_ARM_BLB: {
-      if (!BL_ReadFlash(CurrentInterfaceMode, &mem)) {
+      if (!BL_ReadFlash(interface_mode, &mem)) {
         ACK_OUT = ESC4WAY_ACK_D_GENERAL_ERROR;
       }
       break;
@@ -470,7 +465,7 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
     mem.D_FLASH_ADDR_H = payload.flash_addr_h;
     mem.D_FLASH_ADDR_L = payload.flash_addr_l;
 
-    switch (CurrentInterfaceMode) {
+    switch (interface_mode) {
 #ifdef USE_SERIAL_4WAY_BLHELI_BOOTLOADER
     case ESC4WAY_ATM_BLB: {
       if (!BL_ReadEEprom(&mem)) {
@@ -504,7 +499,7 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
     mem.D_FLASH_ADDR_H = payload.flash_addr_h;
     mem.D_FLASH_ADDR_L = payload.flash_addr_l;
 
-    switch (CurrentInterfaceMode) {
+    switch (interface_mode) {
 #ifdef USE_SERIAL_4WAY_BLHELI_BOOTLOADER
     case ESC4WAY_SIL_BLB:
     case ESC4WAY_ATM_BLB:
@@ -536,7 +531,7 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
 
     ACK_OUT = ESC4WAY_ACK_D_GENERAL_ERROR;
 
-    switch (CurrentInterfaceMode) {
+    switch (interface_mode) {
 #ifdef USE_SERIAL_4WAY_BLHELI_BOOTLOADER
     case ESC4WAY_SIL_BLB: {
       ACK_OUT = ESC4WAY_ACK_I_INVALID_CMD;
@@ -564,7 +559,7 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
 #ifdef USE_SERIAL_4WAY_BLHELI_BOOTLOADER
   case ESC4WAY_DEVICE_VERIFY: {
 
-    switch (CurrentInterfaceMode) {
+    switch (interface_mode) {
     case ESC4WAY_ARM_BLB: {
       ioMem_t mem;
       mem.D_NUM_BYTES = payload.params_len;
@@ -621,59 +616,59 @@ void serial_4way_process() {
     uint8_t ESC;
     do {
       RX_LED_ON;
-      CRC_in.word = 0;
-      ESC = ReadByteCrc();
+      crc_in.word = 0;
+      ESC = read_byte_crc();
       RX_LED_OFF;
     } while (ESC != ESC4WAY_LOCAL_ESCAPE);
 
     RX_LED_ON;
 
-    const uint8_t CMD = ReadByteCrc();
+    const uint8_t CMD = read_byte_crc();
 
     serial_esc4way_payload_t payload;
-    payload.flash_addr_h = ReadByteCrc();
-    payload.flash_addr_l = ReadByteCrc();
+    payload.flash_addr_h = read_byte_crc();
+    payload.flash_addr_l = read_byte_crc();
 
-    payload.params_len = ReadByteCrc();
+    payload.params_len = read_byte_crc();
 
     const uint16_t size = payload.params_len == 0 ? 256 : payload.params_len;
     for (uint16_t i = 0; i < size; i++) {
-      input_buffer[i] = ReadByteCrc();
+      input_buffer[i] = read_byte_crc();
     }
 
     payload.params = input_buffer;
 
     uint8_16_u CRC_check;
-    CRC_check.bytes[1] = ReadByte();
-    CRC_check.bytes[0] = ReadByte();
+    CRC_check.bytes[1] = read_byte();
+    CRC_check.bytes[0] = read_byte();
 
     memset(output_buffer, 0, 256);
 
     RX_LED_OFF;
 
     uint8_t ACK_OUT = ESC4WAY_ACK_OK;
-    if (CRC_check.word == CRC_in.word) {
+    if (CRC_check.word == crc_in.word) {
       TX_LED_ON;
       ACK_OUT = serial_4way_send(CMD, payload, output_buffer, &output_len);
     } else {
       ACK_OUT = ESC4WAY_ACK_I_INVALID_CRC;
     }
 
-    CRCout.word = 0;
+    crc_out.word = 0;
 
-    WriteByteCrc(ESC4WAY_REMOTE_ESCAPE);
-    WriteByteCrc(CMD);
-    WriteByteCrc(payload.flash_addr_h);
-    WriteByteCrc(payload.flash_addr_l);
+    write_byte_crc(ESC4WAY_REMOTE_ESCAPE);
+    write_byte_crc(CMD);
+    write_byte_crc(payload.flash_addr_h);
+    write_byte_crc(payload.flash_addr_l);
 
-    WriteByteCrc(output_len);
+    write_byte_crc(output_len);
     for (uint16_t i = 0; i < output_len; i++) {
-      WriteByteCrc(output_buffer[i]);
+      write_byte_crc(output_buffer[i]);
     }
 
-    WriteByteCrc(ACK_OUT);
-    WriteByte(CRCout.bytes[1]);
-    WriteByte(CRCout.bytes[0]);
+    write_byte_crc(ACK_OUT);
+    write_byte(crc_out.bytes[1]);
+    write_byte(crc_out.bytes[0]);
     TX_LED_OFF;
     RX_LED_OFF;
   };

@@ -22,21 +22,21 @@
 
 extern uint8_t selected_esc;
 
-bool isEscHi(uint8_t selEsc);
-bool isEscLo(uint8_t selEsc);
-void setEscHi(uint8_t selEsc);
-void setEscLo(uint8_t selEsc);
-void setEscInput(uint8_t selEsc);
-void setEscOutput(uint8_t selEsc);
+bool is_esc_high(uint8_t esc);
+bool is_esc_low(uint8_t esc);
+void set_esc_high(uint8_t esc);
+void set_esc_low(uint8_t esc);
+void set_esc_input(uint8_t esc);
+void set_esc_output(uint8_t esc);
 
-#define ESC_IS_HI isEscHi(selected_esc)
-#define ESC_IS_LO isEscLo(selected_esc)
-#define ESC_SET_HI setEscHi(selected_esc)
-#define ESC_SET_LO setEscLo(selected_esc)
-#define ESC_INPUT setEscInput(selected_esc)
-#define ESC_OUTPUT setEscOutput(selected_esc)
+#define ESC_IS_HI is_esc_high(selected_esc)
+#define ESC_IS_LO is_esc_low(selected_esc)
+#define ESC_SET_HI set_esc_high(selected_esc)
+#define ESC_SET_LO set_esc_low(selected_esc)
+#define ESC_INPUT set_esc_input(selected_esc)
+#define ESC_OUTPUT set_esc_output(selected_esc)
 
-bool isMcuConnected();
+bool is_mcu_connected();
 
 typedef struct ioMem_s {
   uint8_t D_NUM_BYTES;

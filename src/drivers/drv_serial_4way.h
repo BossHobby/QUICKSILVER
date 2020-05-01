@@ -24,7 +24,7 @@
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 #define USE_SERIAL_4WAY_BLHELI_BOOTLOADER
-//#define USE_SERIAL_4WAY_SK_BOOTLOADER // not implemented in Silverware yet
+// #define USE_SERIAL_4WAY_SK_BOOTLOADER
 // #define USE_FAKE_ESC
 
 #include "drv_serial_4way_impl.h"
@@ -161,10 +161,8 @@ typedef struct {
   uint8_t params_len;
 } serial_esc4way_payload_t;
 
-extern uint8_t selected_esc;
-//extern uint8_32_u DeviceInfo;
-
 uint8_t serial_4way_init();
+void serial_4way_release();
 uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t *output, uint8_t *output_len);
 void serial_4way_process();
 
