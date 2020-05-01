@@ -117,7 +117,7 @@ void setEscOutput(uint8_t selEsc) {
   softserial_set_output(&escSerial[selEsc]);
 }
 
-uint8_t esc4wayInit(void) {
+uint8_t serial_4way_init() {
   escCount = 4;
   motor_set_all(0);
 
@@ -146,14 +146,6 @@ void esc4wayRelease(void) {
 #define SET_DISCONNECTED DeviceInfo.words[0] = 0
 
 #define INTF_MODE_IDX 3 // index for DeviceInfostate
-
-// Interface related only
-// establish and test connection to the Interface
-
-// Send Structure
-// ESC + CMD PARAM_LEN [PARAM (if len > 0)] CRC16_Hi CRC16_Lo
-// Return
-// ESC CMD PARAM_LEN [PARAM (if len > 0)] + ACK (uint8_t OK or ERR) + CRC16_Hi CRC16_Lo
 
 #define ATMEL_DEVICE_MATCH ((pDeviceInfo->words[0] == 0x9307) || (pDeviceInfo->words[0] == 0x930A) || \
                             (pDeviceInfo->words[0] == 0x930F) || (pDeviceInfo->words[0] == 0x940B))
@@ -246,7 +238,7 @@ static void WriteByteCrc(uint8_t b) {
   CRCout.word = _crc_xmodem_update(CRCout.word, b);
 }
 
-uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t *output, uint8_t *output_len, bool *isExitScheduled) {
+uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t *output, uint8_t *output_len) {
   uint8_t ACK_OUT = ESC4WAY_ACK_OK;
 
   *output_len = 1;
@@ -308,7 +300,7 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
   }
 
   case ESC4WAY_INTERFACE_EXIT: {
-    *isExitScheduled = true;
+    esc4wayRelease();
     break;
   }
 
@@ -612,12 +604,14 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
   return ACK_OUT;
 }
 
-void esc4wayProcess() {
+// Send Structure
+// ESC + CMD PARAM_LEN [PARAM (if len > 0)] CRC16_Hi CRC16_Lo
+// Return
+// ESC CMD PARAM_LEN [PARAM (if len > 0)] + ACK (uint8_t OK or ERR) + CRC16_Hi CRC16_Lo
+void serial_4way_process() {
   uint8_t input_buffer[256];
   uint8_t output_buffer[256];
   uint8_t output_len = 0;
-
-  bool isExitScheduled = false;
 
   RX_LED_OFF;
   TX_LED_OFF;
@@ -660,7 +654,7 @@ void esc4wayProcess() {
     uint8_t ACK_OUT = ESC4WAY_ACK_OK;
     if (CRC_check.word == CRC_in.word) {
       TX_LED_ON;
-      ACK_OUT = serial_4way_send(CMD, payload, output_buffer, &output_len, &isExitScheduled);
+      ACK_OUT = serial_4way_send(CMD, payload, output_buffer, &output_len);
     } else {
       ACK_OUT = ESC4WAY_ACK_I_INVALID_CRC;
     }
@@ -682,11 +676,6 @@ void esc4wayProcess() {
     WriteByte(CRCout.bytes[0]);
     TX_LED_OFF;
     RX_LED_OFF;
-
-    if (isExitScheduled) {
-      esc4wayRelease();
-      return;
-    }
   };
 }
 

@@ -36,6 +36,8 @@ void setEscOutput(uint8_t selEsc);
 #define ESC_INPUT setEscInput(selected_esc)
 #define ESC_OUTPUT setEscOutput(selected_esc)
 
+bool isMcuConnected();
+
 typedef struct ioMem_s {
   uint8_t D_NUM_BYTES;
   uint8_t D_FLASH_ADDR_H;

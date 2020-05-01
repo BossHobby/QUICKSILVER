@@ -409,14 +409,14 @@ void process_motor_test(uint8_t *data, uint32_t len) {
     break;
 
   case QUIC_MOTOR_ESC4WAY: {
-    uint8_t count = esc4wayInit();
+    uint8_t count = serial_4way_init();
 
     res = cbor_encode_uint8(&enc, &count);
     check_cbor_error(QUIC_CMD_MOTOR);
 
     send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_EXIT, encode_buffer, cbor_encoder_len(&enc));
 
-    esc4wayProcess();
+    serial_4way_process();
     break;
   }
 

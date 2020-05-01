@@ -142,8 +142,8 @@ void usb_process_msp() {
     uint8_t data[1] = {4};
     send_msp(code, data, 1);
 
-    esc4wayInit();
-    esc4wayProcess();
+    serial_4way_init();
+    serial_4way_process();
 
     break;
   }

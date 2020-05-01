@@ -164,9 +164,8 @@ typedef struct {
 extern uint8_t selected_esc;
 //extern uint8_32_u DeviceInfo;
 
-bool isMcuConnected(void);
-uint8_t esc4wayInit(void);
-struct serialPort_s;
-void esc4wayProcess(void);
-void esc4wayRelease(void);
+uint8_t serial_4way_init();
+uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t *output, uint8_t *output_len);
+void serial_4way_process();
+
 #endif
