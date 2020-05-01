@@ -158,6 +158,7 @@ typedef struct {
   uint8_t flash_addr_h;
   uint8_t flash_addr_l;
   uint8_t *params;
+  uint8_t params_len;
 } serial_esc4way_payload_t;
 
 extern uint8_t selected_esc;
