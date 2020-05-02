@@ -15,6 +15,7 @@ extern float rx[];
 
 #ifdef RX_FRSKY
 #include "rx.h"
+#include "rx_frsky.h"
 extern frsky_bind_data frsky_bind;
 #endif
 #endif

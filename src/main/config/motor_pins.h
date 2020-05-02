@@ -56,7 +56,7 @@
   MOTOR_PIN2       \
   MOTOR_PIN3
 
-#define MOTOR_PIN_IDENT(port, pin) P##port##pin
+#define MOTOR_PIN_IDENT(port, pin) MOTOR_P##port##pin
 #define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) MOTOR_PIN_IDENT(port, pin),
 
 typedef enum {

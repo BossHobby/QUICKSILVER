@@ -1,8 +1,9 @@
-#include "drv_max7456.h"
+#include "drv_spi_max7456.h"
 
 #include <stdio.h>
 
 #include "defines.h"
+#include "drv_spi.h"
 #include "drv_time.h"
 #include "project.h"
 #include "string.h"
@@ -11,78 +12,20 @@
 #ifdef ENABLE_OSD
 
 //SPI PINS
-#ifdef MAX7456_SPI2
-#define RCC_APBPeriph_SPI RCC_APB1Periph_SPI2
-#define MAX7456_SPI_INSTANCE SPI2
-#define MAX7456_SPI_PORT GPIOB
-#define MAX7456_SCLK_PINSOURCE GPIO_PinSource13
-#define MAX7456_SCLK_PIN GPIO_Pin_13
-#define MAX7456_MISO_PINSOURCE GPIO_PinSource14
-#define MAX7456_MISO_PIN GPIO_Pin_14
-#define MAX7456_MOSI_PINSOURCE GPIO_PinSource15
-#define MAX7456_MOSI_PIN GPIO_Pin_15
-#define MAX7456_SPI_AF GPIO_AF_SPI2
-#define DMA1_RX_STREAM DMA1_Stream3
-#define DMA1_TX_STREAM DMA1_Stream4
-#define DMA_RX_CHANNEL DMA_Channel_0
-#define DMA_TX_CHANNEL DMA_Channel_0
-#define DMA_RX_TCI_FLAG DMA_FLAG_TCIF3
-#define DMA_TX_TCI_FLAG DMA_FLAG_TCIF4
-#define DMA_STREAM_IRQ DMA1_Stream3_IRQn
-#define DMA_RX_IT_FLAG DMA_IT_TCIF3
-#endif
+#define PORT spi_port_defs[MAX7456_SPI_PORT]
+#define SCLK_PIN gpio_pin_defs[PORT.sck]
+#define MISO_PIN gpio_pin_defs[PORT.miso]
+#define MOSI_PIN gpio_pin_defs[PORT.mosi]
+#define NSS_PIN gpio_pin_defs[MAX7456_NSS]
 
-#ifdef MAX7456_SPI3
-#define RCC_APBPeriph_SPI RCC_APB1Periph_SPI3
-#define MAX7456_SPI_INSTANCE SPI3
-#define MAX7456_SPI_PORT GPIOC
-#define MAX7456_SCLK_PINSOURCE GPIO_PinSource10
-#define MAX7456_SCLK_PIN GPIO_Pin_10
-#define MAX7456_MISO_PINSOURCE GPIO_PinSource11
-#define MAX7456_MISO_PIN GPIO_Pin_11
-#define MAX7456_MOSI_PINSOURCE GPIO_PinSource12
-#define MAX7456_MOSI_PIN GPIO_Pin_12
-#define MAX7456_SPI_AF GPIO_AF_SPI3
-#define DMA1_RX_STREAM DMA1_Stream0
-#define DMA1_TX_STREAM DMA1_Stream7
-#define DMA_RX_CHANNEL DMA_Channel_0
-#define DMA_TX_CHANNEL DMA_Channel_0
-#define DMA_RX_TCI_FLAG DMA_FLAG_TCIF0
-#define DMA_TX_TCI_FLAG DMA_FLAG_TCIF7
-#define DMA_STREAM_IRQ DMA1_Stream0_IRQn
-#define DMA_RX_IT_FLAG DMA_IT_TCIF0
-#endif
-
-//NSS PINS
-#ifdef MAX7456_NSS_PD2
-#define MAX7456_NSS_PIN GPIO_Pin_2
-#define MAX7456_NSS_PORT GPIOD
-#endif
-
-#ifdef MAX7456_NSS_PB12
-#define MAX7456_NSS_PIN GPIO_Pin_12
-#define MAX7456_NSS_PORT GPIOB
-#endif
-
-#ifdef MAX7456_NSS_PB10
-#define MAX7456_NSS_PIN GPIO_Pin_10
-#define MAX7456_NSS_PORT GPIOB
-#endif
-
-#ifdef MAX7456_NSS_PB3
-#define MAX7456_NSS_PIN GPIO_Pin_3
-#define MAX7456_NSS_PORT GPIOB
-#endif
-
-#ifdef MAX7456_NSS_PA15
-#define MAX7456_NSS_PIN GPIO_Pin_15
-#define MAX7456_NSS_PORT GPIOA
-#endif
-
-#ifdef MAX7456_NSS_PA10
-#define MAX7456_NSS_PIN GPIO_Pin_10
-#define MAX7456_NSS_PORT GPIOA
-#endif
+#define DMA_RX_STREAM PORT.dma.rx_stream
+#define DMA_TX_STREAM PORT.dma.tx_stream
+#define DMA_RX_CHANNEL PORT.dma.channel
+#define DMA_TX_CHANNEL PORT.dma.channel
+#define DMA_RX_TCI_FLAG PORT.dma.rx_tci_flag
+#define DMA_TX_TCI_FLAG PORT.dma.tx_tci_flag
+#define DMA_RX_STREAM_IRQ PORT.dma.rx_it
+#define DMA_RX_IT_FLAG PORT.dma.rx_it_flag
 
 //  Initialize SPI Connection to max7456
 void spi_max7456_init(void) {
@@ -92,131 +35,77 @@ void spi_max7456_init(void) {
   // GPIO & Alternate Function Setting
   GPIO_InitTypeDef GPIO_InitStructure;
   // Clock, Miso, Mosi GPIO
-  GPIO_InitStructure.GPIO_Pin = MAX7456_SCLK_PIN;
+  GPIO_InitStructure.GPIO_Pin = SCLK_PIN.pin;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-  GPIO_Init(MAX7456_SPI_PORT, &GPIO_InitStructure);
+  GPIO_Init(SCLK_PIN.port, &GPIO_InitStructure);
 
-  GPIO_InitStructure.GPIO_Pin = MAX7456_MOSI_PIN | MAX7456_MISO_PIN;
+  GPIO_InitStructure.GPIO_Pin = MOSI_PIN.pin;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(MAX7456_SPI_PORT, &GPIO_InitStructure);
+  GPIO_Init(MOSI_PIN.port, &GPIO_InitStructure);
 
-  /*
-  GPIO_InitStructure.GPIO_Pin = MAX7456_MISO_PIN;
+  GPIO_InitStructure.GPIO_Pin = MISO_PIN.pin;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  //GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(MAX7456_SPI_PORT, &GPIO_InitStructure);
-  */
+  GPIO_Init(MISO_PIN.port, &GPIO_InitStructure);
 
   // Chip Select GPIO
-  GPIO_InitStructure.GPIO_Pin = MAX7456_NSS_PIN;
+  GPIO_InitStructure.GPIO_Pin = NSS_PIN.pin;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-  GPIO_Init(MAX7456_NSS_PORT, &GPIO_InitStructure);
+  GPIO_Init(NSS_PIN.port, &GPIO_InitStructure);
 
   // Chip Select Set High
-  GPIO_SetBits(MAX7456_NSS_PORT, MAX7456_NSS_PIN);
+  GPIO_SetBits(NSS_PIN.port, NSS_PIN.pin);
 
   // Connect SPI pins to AF_SPI1
-  GPIO_PinAFConfig(MAX7456_SPI_PORT, MAX7456_SCLK_PINSOURCE, MAX7456_SPI_AF); //SCLK
-  GPIO_PinAFConfig(MAX7456_SPI_PORT, MAX7456_MISO_PINSOURCE, MAX7456_SPI_AF); //MISO
-  GPIO_PinAFConfig(MAX7456_SPI_PORT, MAX7456_MOSI_PINSOURCE, MAX7456_SPI_AF); //MOSI
+  GPIO_PinAFConfig(SCLK_PIN.port, SCLK_PIN.pin_source, PORT.gpio_af); //SCLK
+  GPIO_PinAFConfig(MISO_PIN.port, MISO_PIN.pin_source, PORT.gpio_af); //MISO
+  GPIO_PinAFConfig(MOSI_PIN.port, MOSI_PIN.pin_source, PORT.gpio_af); //MOSI
 
-  //*********************SPI / DMA***************************************
+  //*********************SPI/DMA**********************************
+  spi_enable_rcc(MAX7456_SPI_PORT);
 
-  //SPI1 to APB2 bus clock
-  RCC_APB1PeriphClockCmd(RCC_APBPeriph_SPI, ENABLE);
   // SPI Config
-  SPI_I2S_DeInit(MAX7456_SPI_INSTANCE);
+  SPI_I2S_DeInit(PORT.channel);
   SPI_InitTypeDef SPI_InitStructure;
   SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
   SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
   SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
-  SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
-  SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+  SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
+  SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
   SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64;
   SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
   SPI_InitStructure.SPI_CRCPolynomial = 7;
-  SPI_Init(MAX7456_SPI_INSTANCE, &SPI_InitStructure);
-  SPI_Cmd(MAX7456_SPI_INSTANCE, ENABLE);
+  SPI_Init(PORT.channel, &SPI_InitStructure);
+  SPI_Cmd(PORT.channel, ENABLE);
 
   // Dummy read to clear receive buffer
-  while (SPI_I2S_GetFlagStatus(MAX7456_SPI_INSTANCE, SPI_I2S_FLAG_TXE) == RESET)
+  while (SPI_I2S_GetFlagStatus(PORT.channel, SPI_I2S_FLAG_TXE) == RESET)
     ;
-  SPI_I2S_ReceiveData(MAX7456_SPI_INSTANCE);
+  SPI_I2S_ReceiveData(PORT.channel);
 
-  // Enable DMA clock
-  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
-
-  // Enable DMA Interrupt on receive line
-  NVIC_InitTypeDef NVIC_InitStruct;
-  NVIC_InitStruct.NVIC_IRQChannel = DMA_STREAM_IRQ;
-  NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x02;
-  NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x02;
-  NVIC_Init(&NVIC_InitStruct);
-}
-
-// dma stream inits
-void dma_receive_max7456_init(uint8_t *base_address_in, uint8_t buffer_size) {
-  DMA_InitTypeDef DMA_InitStructure;
-
-  //RX Stream
-  DMA_DeInit(DMA1_RX_STREAM);
-  DMA_InitStructure.DMA_Channel = DMA_RX_CHANNEL;
-  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(MAX7456_SPI_INSTANCE->DR));
-  DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)base_address_in;
-  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
-  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
-  DMA_InitStructure.DMA_BufferSize = (uint16_t)buffer_size;
-  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
-  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
-  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
-  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
-  DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
-  DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
-  DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-  DMA_Init(DMA1_RX_STREAM, &DMA_InitStructure);
-}
-
-void dma_transmit_max7456_init(uint8_t *base_address_out, uint8_t buffer_size) {
-  DMA_InitTypeDef DMA_InitStructure;
-
-  //TX Stream
-  DMA_DeInit(DMA1_TX_STREAM);
-  DMA_InitStructure.DMA_Channel = DMA_TX_CHANNEL;
-  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(MAX7456_SPI_INSTANCE->DR));
-  DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)base_address_out;
-  DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
-  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
-  DMA_InitStructure.DMA_BufferSize = (uint16_t)buffer_size;
-  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
-  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
-  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
-  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
-  DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
-  DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
-  DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-  DMA_Init(DMA1_TX_STREAM, &DMA_InitStructure);
+  spi_dma_init(MAX7456_SPI_PORT);
 }
 
 //deinit/reinit spi for unique slave configuration
 void spi_max7556_reinit(void) {
+  spi_dma_wait_for_ready(MAX7456_SPI_PORT);
+
+  SPI_Cmd(PORT.channel, DISABLE);
+
   // SPI Config
-  SPI_I2S_DeInit(MAX7456_SPI_INSTANCE);
+  SPI_I2S_DeInit(PORT.channel);
   SPI_InitTypeDef SPI_InitStructure;
   SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
   SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
@@ -227,108 +116,52 @@ void spi_max7556_reinit(void) {
   SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
   SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
   SPI_InitStructure.SPI_CRCPolynomial = 7;
-  SPI_Init(MAX7456_SPI_INSTANCE, &SPI_InitStructure);
+  SPI_Init(PORT.channel, &SPI_InitStructure);
+  SPI_Cmd(PORT.channel, ENABLE);
 }
 
 //*******************************************************************************SPI / DMA FUNCTIONS********************************************************************************
 
-int osd_liberror; //tracks any failed spi reads or writes to trigger check_osd() on next disarm or maybe print an osd fail warning?  Not used yet
 #define BUSY 1
 #define READY 0
 volatile uint8_t osd_dma_status = READY; //for tracking the non blocking dma transactions - can be used to make non blocking into blocking
 
-// Chip Select functions
-void max7456_enable() {
-  GPIO_ResetBits(MAX7456_NSS_PORT, MAX7456_NSS_PIN);
-}
-
-void max7456_disable() {
-  GPIO_SetBits(MAX7456_NSS_PORT, MAX7456_NSS_PIN);
-}
-
-//blocking dma transmit bytes
-void max7456_dma_transfer_bytes(uint8_t *buffer, uint8_t length) {
-  dma_receive_max7456_init(buffer, length);
-  dma_transmit_max7456_init(buffer, length);
-  max7456_enable();
-  DMA_Cmd(DMA1_RX_STREAM, ENABLE); // Enable the DMA SPI RX Stream
-  DMA_Cmd(DMA1_TX_STREAM, ENABLE); // Enable the DMA SPI TX Stream
-  // Enable the SPI Rx/Tx DMA request
-  SPI_I2S_DMACmd(MAX7456_SPI_INSTANCE, SPI_I2S_DMAReq_Tx, ENABLE);
-  SPI_I2S_DMACmd(MAX7456_SPI_INSTANCE, SPI_I2S_DMAReq_Rx, ENABLE);
-  SPI_Cmd(MAX7456_SPI_INSTANCE, ENABLE);
-  /* Waiting the end of Data transfer */
-  while (DMA_GetFlagStatus(DMA1_RX_STREAM, DMA_RX_TCI_FLAG) == RESET) {
-  };
-  while (DMA_GetFlagStatus(DMA1_TX_STREAM, DMA_TX_TCI_FLAG) == RESET) {
-  };
-  DMA_ClearFlag(DMA1_RX_STREAM, DMA_RX_TCI_FLAG);
-  DMA_ClearFlag(DMA1_TX_STREAM, DMA_TX_TCI_FLAG);
-  DMA_Cmd(DMA1_TX_STREAM, DISABLE);
-  DMA_Cmd(DMA1_RX_STREAM, DISABLE);
-  SPI_I2S_DMACmd(MAX7456_SPI_INSTANCE, SPI_I2S_DMAReq_Tx, DISABLE);
-  SPI_I2S_DMACmd(MAX7456_SPI_INSTANCE, SPI_I2S_DMAReq_Rx, DISABLE);
-  SPI_Cmd(MAX7456_SPI_INSTANCE, DISABLE);
-  max7456_disable();
-}
-
 // blocking dma read of a single register
 uint8_t max7456_dma_spi_read(uint8_t reg) {
-  uint8_t buffer[2] = {reg, 0xFF};
   spi_max7556_reinit();
-  max7456_dma_transfer_bytes(buffer, 2);
+
+  uint8_t buffer[2] = {reg, 0xFF};
+
+  spi_csn_enable(MAX7456_NSS);
+  spi_dma_transfer_bytes(MAX7456_SPI_PORT, buffer, 2);
+  spi_csn_disable(MAX7456_NSS);
+
   return buffer[1];
 }
 
 // blocking dma write of a single register
 void max7456_dma_spi_write(uint8_t reg, uint8_t data) {
-  uint8_t buffer[2] = {reg, data};
   spi_max7556_reinit();
-  max7456_dma_transfer_bytes(buffer, 2);
+
+  uint8_t buffer[2] = {reg, data};
+  spi_csn_enable(MAX7456_NSS);
+  spi_dma_transfer_bytes(MAX7456_SPI_PORT, buffer, 2);
+  spi_csn_disable(MAX7456_NSS);
 }
 
 // non blocking bulk dma transmit for interrupt callback configuration
 void max7456_dma_it_transfer_bytes(uint8_t *buffer_address, uint8_t buffer_length) {
   osd_dma_status = BUSY;
   spi_max7556_reinit();
-  dma_transmit_max7456_init(buffer_address, buffer_length);
-  dma_receive_max7456_init(buffer_address, buffer_length);
-  DMA_ITConfig(DMA1_RX_STREAM, DMA_IT_TC, ENABLE); // Configure the Interrupt on transfer complete for either SPI tx or rx
-  max7456_enable();
-  DMA_Cmd(DMA1_RX_STREAM, ENABLE); // Enable the DMA SPI RX Stream
-  DMA_Cmd(DMA1_TX_STREAM, ENABLE); // Enable the DMA SPI TX Stream
-                                   // Enable the SPI Rx/Tx DMA request
-  SPI_I2S_DMACmd(MAX7456_SPI_INSTANCE, SPI_I2S_DMAReq_Rx, ENABLE);
-  SPI_I2S_DMACmd(MAX7456_SPI_INSTANCE, SPI_I2S_DMAReq_Tx, ENABLE);
-  SPI_Cmd(MAX7456_SPI_INSTANCE, ENABLE);
+
+  spi_csn_enable(MAX7456_NSS);
+  spi_dma_transfer_begin(MAX7456_SPI_PORT, buffer_address, buffer_length);
 }
 
-//callback function to shut down dma streams
-void transfer_complete_cb(void) {
-  DMA_ClearFlag(DMA1_TX_STREAM, DMA_TX_TCI_FLAG);
-  DMA_ClearFlag(DMA1_RX_STREAM, DMA_RX_TCI_FLAG);
-  DMA_Cmd(DMA1_TX_STREAM, DISABLE);
-  DMA_Cmd(DMA1_RX_STREAM, DISABLE);
-  SPI_I2S_DMACmd(MAX7456_SPI_INSTANCE, SPI_I2S_DMAReq_Tx, DISABLE);
-  SPI_I2S_DMACmd(MAX7456_SPI_INSTANCE, SPI_I2S_DMAReq_Rx, DISABLE);
-  SPI_Cmd(MAX7456_SPI_INSTANCE, DISABLE);
-  max7456_disable();
-}
-
-//irq handler for receive interrupt
-#ifdef MAX7456_SPI3
-void DMA1_Stream0_IRQHandler(void)
-#endif
-#ifdef MAX7456_SPI2
-    void DMA1_Stream3_IRQHandler(void)
-#endif
-{
-  if (DMA_GetITStatus(DMA1_RX_STREAM, DMA_RX_IT_FLAG)) {
-    DMA_ClearITPendingBit(DMA1_RX_STREAM, DMA_RX_IT_FLAG);
-    DMA_ITConfig(DMA1_RX_STREAM, DMA_IT_TC, DISABLE);
-    transfer_complete_cb();
-    osd_dma_status = READY;
-  }
+// callback function to disable csn
+void max7456_dma_rx_isr() {
+  spi_csn_disable(MAX7456_NSS);
+  osd_dma_status = READY;
 }
 
 //*******************************************************************************OSD FUNCTIONS********************************************************************************
@@ -355,7 +188,9 @@ uint8_t count_digits(uint32_t value) {
 
 //stuffs a float into a char array.  parameters are array length and precision.  only pads spaces for 0's up to the thousands place.
 void fast_fprint(uint8_t *str, uint8_t length, float v, uint8_t precision) {
-  uint32_t value = v * (ipow(10, precision));
+  const uint8_t is_negative = v < 0 ? 1 : 0;
+
+  uint32_t value = v * (is_negative ? -1.01f : 1.0f) * (ipow(10, precision));
   uint8_t digitsinfrontofdecimal = length - (precision + 1);
   static uint32_t last_cast = 0;
   for (uint8_t i = 0; i < digitsinfrontofdecimal; i++) {
@@ -380,7 +215,7 @@ void fast_fprint(uint8_t *str, uint8_t length, float v, uint8_t precision) {
 
   if (digitsinfrontofdecimal > 3) {
     if ((str[0] == 48) && (str[1] == 48) && (str[2] == 48))
-      str[2] = ' ';
+      str[2] = is_negative ? '-' : ' ';
     if ((str[0] == 48) && (str[1] == 48))
       str[1] = ' ';
     if (str[0] == 48)
@@ -388,13 +223,13 @@ void fast_fprint(uint8_t *str, uint8_t length, float v, uint8_t precision) {
   }
   if (digitsinfrontofdecimal > 2) {
     if ((str[0] == 48) && (str[1] == 48))
-      str[1] = ' ';
+      str[1] = is_negative ? '-' : ' ';
     if (str[0] == 48)
       str[0] = ' ';
   }
   if (digitsinfrontofdecimal > 1) {
     if (str[0] == 48)
-      str[0] = ' ';
+      str[0] = is_negative ? '-' : ' ';
   }
 }
 
@@ -487,19 +322,19 @@ void osd_clear(void) {
 }
 
 uint8_t osd_runtime_screen_clear(void) {
-	static uint8_t clr_col = 0;
-	static uint8_t clr_row = 0;
-	osd_print("               ", TEXT, clr_col, clr_row);
-	clr_row++;
-	if (clr_row > MAXROWS){
-		clr_row = 0;
-		clr_col += 15;
-		if (clr_col > 15){
-			clr_col = 0;
-			return 1;
-		}
-	}
-	return 0;
+  static uint8_t clr_col = 0;
+  static uint8_t clr_row = 0;
+  osd_print("               ", TEXT, clr_col, clr_row);
+  clr_row++;
+  if (clr_row > MAXROWS) {
+    clr_row = 0;
+    clr_col += 15;
+    if (clr_col > 15) {
+      clr_col = 0;
+      return 1;
+    }
+  }
+  return 0;
 }
 
 // set the video output system PAL /NTSC

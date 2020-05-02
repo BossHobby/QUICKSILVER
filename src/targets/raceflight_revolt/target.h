@@ -1,4 +1,5 @@
 #include "config.h"
+#include "config_helper.h"
 
 #define Raceflight_Revolt
 
@@ -20,9 +21,9 @@
 #define FPV_PORT GPIOA
 
 //GYRO
-#define ICM20602_SPI1
-#define ICM20602_NSS_PA4
-#define ICM20602_INT_PC4
+#define ICM20602_SPI_PORT SPI_PORT1
+#define ICM20602_NSS PIN_A4
+#define ICM20602_INT PIN_C4
 #define USE_DUMMY_I2C
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x12
@@ -41,7 +42,7 @@
   USART4_PA1PA0     \
   USART6_PC7PC6
 
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
+#ifdef SERIAL_RX
 #define RX_USART USART_PORT1
 #define SOFTSPI_NONE
 #endif

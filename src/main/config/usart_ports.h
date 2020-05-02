@@ -9,17 +9,17 @@
 #endif
 
 #ifdef F4
-#define USART1_PA10PA9 USART_PORT(1, A, 10, 9)
-#define USART1_PB7PB6 USART_PORT(1, B, 7, 6)
-#define USART2_PA3PA2 USART_PORT(2, A, 3, 2)
-#define USART3_PB11PB10 USART_PORT(3, B, 11, 10)
-#define USART3_PC11PC10 USART_PORT(3, C, 11, 10)
-#define USART4_PA1PA0 USART_PORT(4, A, 1, 0)
-#define USART6_PC7PC6 USART_PORT(6, C, 7, 6)
+#define USART1_PA10PA9 USART_PORT(1, PA10, PA9)
+#define USART1_PB7PB6 USART_PORT(1, PB7, PB6)
+#define USART2_PA3PA2 USART_PORT(2, PA3, PA2)
+#define USART3_PB11PB10 USART_PORT(3, PB11, PB10)
+#define USART3_PC11PC10 USART_PORT(3, PC11, PC10)
+#define USART4_PA1PA0 USART_PORT(4, PA1, PA0)
+#define USART6_PC7PC6 USART_PORT(6, PC7, PC6)
 #endif
 
 #define USART_IDENT(channel) USART_PORT##channel
-#define USART_PORT(channel, port, rx_pin, tx_pin) USART_IDENT(channel),
+#define USART_PORT(channel, rx_pin, tx_pin) USART_IDENT(channel),
 
 typedef enum {
   USART_PORT_INVALID,

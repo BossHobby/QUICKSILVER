@@ -1,4 +1,5 @@
 #include "config.h"
+#include "config_helper.h"
 
 #define Pyrodrone_F4
 
@@ -17,9 +18,9 @@
 #define FPV_PORT GPIOA
 
 //GYRO
-#define MPU6XXX_SPI1
-#define MPU6XXX_NSS_PA4
-#define MPU6XXX_INT_PC4
+#define MPU6XXX_SPI_PORT SPI_PORT1
+#define MPU6XXX_NSS PIN_A4
+#define MPU6XXX_INT PIN_C4
 #define USE_DUMMY_I2C
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x73
@@ -39,7 +40,7 @@
   USART6_PC7PC6
 //  USART5_PD2PC12
 
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
+#ifdef SERIAL_RX
 #define RX_USART USART_PORT1
 #define SOFTSPI_NONE
 #endif
@@ -57,8 +58,8 @@
 
 //OSD
 #define ENABLE_OSD
-#define MAX7456_SPI2
-#define MAX7456_NSS_PB12
+#define MAX7456_SPI_PORT SPI_PORT2
+#define MAX7456_NSS PIN_B12
 
 //VOLTAGE DIVIDER
 #define BATTERYPIN GPIO_Pin_2

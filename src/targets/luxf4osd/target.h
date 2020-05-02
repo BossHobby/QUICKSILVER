@@ -1,4 +1,5 @@
 #include "config.h"
+#include "config_helper.h"
 
 //******************UNCONFIRMED TARGET******************
 
@@ -21,9 +22,9 @@
 #define FPV_PORT GPIOA
 
 //GYRO
-#define MPU6XXX_SPI1
-#define MPU6XXX_NSS_PA4
-#define MPU6XXX_INT_PC4
+#define MPU6XXX_SPI_PORT SPI_PORT1
+#define MPU6XXX_NSS PIN_A4
+#define MPU6XXX_INT PIN_C4
 #define USE_DUMMY_I2C
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x73
@@ -32,7 +33,7 @@
 #define SENSOR_ROTATE_90_CCW
 
 //RADIO
-#define USART_INVERTER_PIN GPIO_Pin_0		//unknown UART
+#define USART_INVERTER_PIN GPIO_Pin_0 //unknown UART
 #define USART_INVERTER_PORT GPIOC
 
 #define USART_PORTS \
@@ -40,7 +41,7 @@
   USART3_PB11PB10   \
   USART4_PA1PA0
 
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
+#ifdef SERIAL_RX
 #define RX_USART USART_PORT1
 #define SOFTSPI_NONE
 #endif
@@ -58,8 +59,8 @@
 
 //OSD
 #define ENABLE_OSD
-#define MAX7456_SPI3
-#define MAX7456_NSS_PA15
+#define MAX7456_SPI_PORT SPI_PORT3
+#define MAX7456_NSS PIN_A15
 
 //VOLTAGE DIVIDER
 #define BATTERYPIN GPIO_Pin_2

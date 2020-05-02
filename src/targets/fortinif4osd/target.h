@@ -1,4 +1,5 @@
 #include "config.h"
+#include "config_helper.h"
 
 #define F4
 #define F405
@@ -20,9 +21,9 @@
 #define FPV_PORT GPIOA
 
 //GYRO
-#define ICM20602_SPI1
-#define ICM20602_NSS_PA8
-#define ICM20602_INT_PC4
+#define ICM20602_SPI_PORT SPI_PORT1
+#define ICM20602_NSS PIN_A8
+#define ICM20602_INT PIN_C4
 #define USE_DUMMY_I2C
 #define GYRO_ID_1 0x12
 #define GYRO_ID_2 0xaf
@@ -40,7 +41,7 @@
   USART4_PA1PA0     \
   USART6_PC7PC6
 
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
+#ifdef SERIAL_RX
 #define SOFTSPI_NONE
 #define RX_USART USART_PORT1
 #endif
@@ -59,8 +60,8 @@
 
 //OSD
 #define ENABLE_OSD
-#define MAX7456_SPI3
-#define MAX7456_NSS_PB3
+#define MAX7456_SPI_PORT SPI_PORT3
+#define MAX7456_NSS PIN_B3
 
 //VOLTAGE DIVIDER
 #define BATTERYPIN GPIO_Pin_2

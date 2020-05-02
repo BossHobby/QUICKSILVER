@@ -58,9 +58,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .index = 4,
         .name = "65mm 1s brushless whoop",
         .rate = {
-            .kp = {95, 95, 92},
-            .ki = {71, 71, 71},
-            .kd = {75, 75, 12},
+            .kp = {110, 110, 132},
+            .ki = {77, 77, 77},
+            .kd = {78, 78, 12},
         },
     },
 
@@ -68,9 +68,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .index = 5,
         .name = "65mm 1s brushless whoop - Hanfer Edition",
         .rate = {
-            .kp = {103, 100, 100},
+            .kp = {117, 117, 150},
             .ki = {77, 77, 77},
-            .kd = {76, 76, 13},
+            .kd = {83, 83, 13},
         },
     },
 
@@ -489,7 +489,7 @@ target_info_t target_info = {
     .motor_pins = {MOTOR_PINS},
 #undef MOTOR_PIN
 
-#define USART_PORT(channel, port, rx_pin, tx_pin) "USART_" #channel,
+#define USART_PORT(channel, rx_pin, tx_pin) "USART_" #channel,
     .usart_ports = {"NONE", USART_PORTS},
 #undef USART_PORT
 };
@@ -531,7 +531,7 @@ cbor_result_t cbor_encode_vector_t(cbor_value_t *enc, const vector_t *vec) {
   return res;
 }
 
-cbor_result_t cbor_encode_metadata_t(cbor_value_t *enc, const metadata_t *meta) {
+cbor_result_t cbor_encode_profile_metadata_t(cbor_value_t *enc, const profile_metadata_t *meta) {
   cbor_result_t res = CBOR_OK;
 
   res = cbor_encode_map_indefinite(enc);
@@ -625,19 +625,19 @@ START_STRUCT_ENCODER(rate_mode_betaflight_t)
 BETAFLIGHT_RATE_MEMBERS
 END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(rate_t)
+START_STRUCT_ENCODER(profile_rate_t)
 RATE_MEMBERS
 END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(motor_t)
+START_STRUCT_ENCODER(profile_motor_t)
 MOTOR_MEMBERS
 END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(serial_t)
+START_STRUCT_ENCODER(profile_serial_t)
 SERIAL_MEMBERS
 END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(filter_parameter_t)
+START_STRUCT_ENCODER(profile_filter_parameter_t)
 FILTER_PARAMETER_MEMBERS
 END_STRUCT_ENCODER()
 
@@ -645,11 +645,11 @@ START_STRUCT_ENCODER(profile_filter_t)
 FILTER_MEMBERS
 END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(osd_t)
+START_STRUCT_ENCODER(profile_osd_t)
 OSD_MEMBERS
 END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(voltage_t)
+START_STRUCT_ENCODER(profile_voltage_t)
 VOLTAGE_MEMBERS
 END_STRUCT_ENCODER()
 
@@ -677,7 +677,7 @@ START_STRUCT_ENCODER(profile_pid_t)
 PID_MEMBERS
 END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(channel_t)
+START_STRUCT_ENCODER(profile_channel_t)
 CHANNEL_MEMBERS
 END_STRUCT_ENCODER()
 
@@ -715,7 +715,7 @@ cbor_result_t cbor_decode_vector_t(cbor_value_t *it, vector_t *vec) {
   return res;
 }
 
-cbor_result_t cbor_decode_metadata_t(cbor_value_t *dec, metadata_t *meta) {
+cbor_result_t cbor_decode_profile_metadata_t(cbor_value_t *dec, profile_metadata_t *meta) {
   cbor_result_t res = CBOR_OK;
 
   cbor_container_t map;
@@ -789,18 +789,18 @@ cbor_result_t cbor_decode_metadata_t(cbor_value_t *dec, metadata_t *meta) {
     continue;                                      \
   }
 
-#define ARRAY_MEMBER(member, size, type)            \
-  if (buf_equal_string(name, name_len, #member)) {  \
-    cbor_container_t array;                         \
-    res = cbor_decode_array(dec, &array);           \
-    if (res < CBOR_OK)                              \
-      return res;                                   \
-    for (uint32_t i = 0; i < size; i++) {           \
-      res = cbor_decode_##type(dec, &o->member[i]); \
-      if (res < CBOR_OK)                            \
-        return res;                                 \
-    }                                               \
-    continue;                                       \
+#define ARRAY_MEMBER(member, size, type)                                                   \
+  if (buf_equal_string(name, name_len, #member)) {                                         \
+    cbor_container_t array;                                                                \
+    res = cbor_decode_array(dec, &array);                                                  \
+    if (res < CBOR_OK)                                                                     \
+      return res;                                                                          \
+    for (uint32_t i = 0; i < min_uint32(size, cbor_decode_array_size(dec, &array)); i++) { \
+      res = cbor_decode_##type(dec, &o->member[i]);                                        \
+      if (res < CBOR_OK)                                                                   \
+        return res;                                                                        \
+    }                                                                                      \
+    continue;                                                                              \
   }
 
 START_STRUCT_DECODER(rate_mode_silverware_t)
@@ -811,19 +811,19 @@ START_STRUCT_DECODER(rate_mode_betaflight_t)
 BETAFLIGHT_RATE_MEMBERS
 END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(rate_t)
+START_STRUCT_DECODER(profile_rate_t)
 RATE_MEMBERS
 END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(motor_t)
+START_STRUCT_DECODER(profile_motor_t)
 MOTOR_MEMBERS
 END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(serial_t)
+START_STRUCT_DECODER(profile_serial_t)
 SERIAL_MEMBERS
 END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(filter_parameter_t)
+START_STRUCT_DECODER(profile_filter_parameter_t)
 FILTER_PARAMETER_MEMBERS
 END_STRUCT_DECODER()
 
@@ -831,11 +831,11 @@ START_STRUCT_DECODER(profile_filter_t)
 FILTER_MEMBERS
 END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(osd_t)
+START_STRUCT_DECODER(profile_osd_t)
 OSD_MEMBERS
 END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(voltage_t)
+START_STRUCT_DECODER(profile_voltage_t)
 VOLTAGE_MEMBERS
 END_STRUCT_DECODER()
 
@@ -859,7 +859,7 @@ START_STRUCT_DECODER(profile_pid_t)
 PID_MEMBERS
 END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(channel_t)
+START_STRUCT_DECODER(profile_channel_t)
 CHANNEL_MEMBERS
 END_STRUCT_DECODER()
 

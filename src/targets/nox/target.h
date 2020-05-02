@@ -1,4 +1,5 @@
 #include "config.h"
+#include "config_helper.h"
 
 #define Nox
 
@@ -20,9 +21,9 @@
 #define FPV_PORT GPIOA
 
 //GYRO
-#define MPU6XXX_SPI2
-#define MPU6XXX_NSS_PB12
-#define MPU6XXX_INT_PA8
+#define MPU6XXX_SPI_PORT SPI_PORT2
+#define MPU6XXX_NSS PIN_B12
+#define MPU6XXX_INT PIN_A8
 #define USE_DUMMY_I2C
 #define SENSOR_ROTATE_90_CW
 #define GYRO_ID_1 0x68
@@ -42,7 +43,7 @@
 #define ENABLE_SMART_AUDIO
 #define SMART_AUDIO_USART USART_PORT1
 
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
+#ifdef SERIAL_RX
 #define RX_USART USART_PORT2
 #define SOFTSPI_NONE
 #endif
@@ -61,8 +62,8 @@
 
 // OSD
 #define ENABLE_OSD
-#define MAX7456_SPI2
-#define MAX7456_NSS_PA10
+#define MAX7456_SPI_PORT SPI_PORT2
+#define MAX7456_NSS PIN_A10
 
 //VOLTAGE DIVIDER
 #define BATTERYPIN GPIO_Pin_5

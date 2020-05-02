@@ -1,11 +1,13 @@
 #include "config.h"
+#include "config_helper.h"
 
 #define F4
 #define F405
 #define CLRacing_F4
 
-#define USB_DETECT_PIN GPIO_Pin_5
-#define USB_DETECT_PORT GPIOC
+// no bueno on CLRacingF4s
+//#define USB_DETECT_PIN GPIO_Pin_5
+//#define USB_DETECT_PORT GPIOC
 
 //LEDS
 #define LED_NUMBER 1
@@ -19,15 +21,15 @@
 #define FPV_PORT GPIOA
 
 //GYRO
-#define MPU6XXX_SPI1
-#define MPU6XXX_NSS_PA4
-#define MPU6XXX_INT_PC4
+#define MPU6XXX_SPI_PORT SPI_PORT1
+#define MPU6XXX_NSS PIN_A4
+#define MPU6XXX_INT PIN_C4
 #define USE_DUMMY_I2C
 #define GYRO_ID_1 0x68
 #define SENSOR_ROTATE_90_CW
 
 //RADIO
-#define USART_INVERTER_PIN GPIO_Pin_0		//UART 1
+#define USART_INVERTER_PIN GPIO_Pin_0 //UART 1
 #define USART_INVERTER_PORT GPIOC
 
 #define USART_PORTS \
@@ -36,7 +38,10 @@
   USART4_PA1PA0     \
   USART6_PC7PC6
 
-#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
+#define ENABLE_SMART_AUDIO
+#define SMART_AUDIO_USART USART_PORT4
+
+#ifdef SERIAL_RX
 #define RX_USART USART_PORT1
 #define SOFTSPI_NONE
 #endif
@@ -54,8 +59,8 @@
 
 //OSD
 #define ENABLE_OSD
-#define MAX7456_SPI3
-#define MAX7456_NSS_PA15
+#define MAX7456_SPI_PORT SPI_PORT3
+#define MAX7456_NSS PIN_A15
 
 //VOLTAGE DIVIDER
 #define BATTERYPIN GPIO_Pin_2

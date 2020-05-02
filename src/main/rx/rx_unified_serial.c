@@ -1036,7 +1036,6 @@ void rx_serial_find_protocol(void) {
 // Send Spektrum bind pulses to a GPIO e.g. TX1
 void rx_spektrum_bind(void) {
 #define SPECTRUM_BIND_PIN usart_port_defs[profile.serial.rx].rx_pin
-#define SPECTRUM_BIND_PORT usart_port_defs[profile.serial.rx].gpio_port
 
   if (profile.serial.rx == USART_PORT_INVALID) {
     return;
@@ -1045,24 +1044,24 @@ void rx_spektrum_bind(void) {
   rx_bind_enable = fmc_read_float(56);
   if (rx_bind_enable == 0) {
     GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.GPIO_Pin = SPECTRUM_BIND_PIN;
+    GPIO_InitStructure.GPIO_Pin = SPECTRUM_BIND_PIN.pin;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(SPECTRUM_BIND_PORT, &GPIO_InitStructure);
+    GPIO_Init(SPECTRUM_BIND_PIN.port, &GPIO_InitStructure);
 
     // RX line, set high
-    GPIO_SetBits(SPECTRUM_BIND_PORT, SPECTRUM_BIND_PIN);
+    GPIO_SetBits(SPECTRUM_BIND_PIN.port, SPECTRUM_BIND_PIN.pin);
     // Bind window is around 20-140ms after powerup
     delay(60000);
 
     for (uint8_t i = 0; i < 9; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
       // RX line, drive low for 120us
-      GPIO_ResetBits(SPECTRUM_BIND_PORT, SPECTRUM_BIND_PIN);
+      GPIO_ResetBits(SPECTRUM_BIND_PIN.port, SPECTRUM_BIND_PIN.pin);
       delay(120);
 
       // RX line, drive high for 120us
-      GPIO_SetBits(SPECTRUM_BIND_PORT, SPECTRUM_BIND_PIN);
+      GPIO_SetBits(SPECTRUM_BIND_PIN.port, SPECTRUM_BIND_PIN.pin);
       delay(120);
     }
   }

@@ -3,20 +3,6 @@
 #include "config.h"
 #include <stdint.h>
 
-#ifdef RX_FRSKY
-typedef union {
-  struct {
-    int8_t offset;
-    uint8_t idx;
-    uint8_t tx_id[2];
-    uint8_t hop_data[50];
-    uint8_t rx_num;
-    uint8_t _pad;
-  };
-  uint32_t raw[14];
-} frsky_bind_data;
-#endif
-
 typedef enum {
   RX_PROTOCOL_INVALID,
   RX_PROTOCOL_UNIFIED_SERIAL,
@@ -29,7 +15,9 @@ typedef enum {
   RX_PROTOCOL_NRF24_BAYANG_TELEMETRY,
   RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON,
   RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND,
-  RX_PROTOCOL_FRSKY,
+  RX_PROTOCOL_FRSKY_D8,
+  RX_PROTOCOL_FRSKY_D16,
+  RX_PROTOCOL_REDPINE,
   RX_PROTOCOL_MAX,
 } rx_protocol_t;
 

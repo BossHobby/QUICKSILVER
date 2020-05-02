@@ -1,6 +1,6 @@
-#include "rx.h"
+#include "rx_frsky.h"
 
-#include "drv_cc2500.h"
+#include "drv_spi_cc2500.h"
 #include "drv_time.h"
 #include "profile.h"
 #include "usb_configurator.h"
@@ -8,66 +8,24 @@
 
 #if defined(RX_FRSKY) && defined(USE_CC2500)
 
-//Source https://www.rcgroups.com/forums/showpost.php?p=21864861
-
-#define FRSKY_ENABLE_TELEMETRY
-//#define FRSKY_ENABLE_HUB_TELEMETRY
-
-#define FRSKY_D_CHANNEL_COUNT 8
-#define FRSKY_HUB_FIRST_USER_ID 0x31
-
 #define FRSKY_HOPTABLE_SIZE 47
 
-#define SYNC_DELAY_MAX 9000
-#define MAX_MISSING_FRAMES 120
-
-enum {
-  STATE_DETECT = 0,
-  STATE_INIT,
-  STATE_BIND,
-  STATE_BIND_TUNING,
-  STATE_BIND_BINDING1,
-  STATE_BIND_BINDING2,
-  STATE_BIND_COMPLETE,
-  STATE_STARTING,
-  STATE_UPDATE,
-  STATE_DATA,
-  STATE_TELEMETRY,
-  STATE_RESUME,
-};
-
-typedef struct {
-  uint8_t length;
-  uint8_t tx_id[2];
-  uint8_t counter;
-  uint8_t channels[14];
-  uint8_t crc[2];
-} frsky_d_frame;
+uint8_t packet[128];
+uint8_t protocol_state = FRSKY_STATE_DETECT;
+uint8_t list_length = FRSKY_HOPTABLE_SIZE;
 
 static uint8_t cal_data[255][3];
-static uint8_t packet[128];
-static uint8_t list_length = FRSKY_HOPTABLE_SIZE;
 
-static uint8_t protocol_state = STATE_DETECT;
 static unsigned long time_tuned_ms;
 
 frsky_bind_data frsky_bind = {{0xff, 0xff}};
-
-float rx_rssi;
-
-extern float rx[4];
-extern char aux[AUX_CHANNEL_MAX];
-extern char lastaux[AUX_CHANNEL_MAX];
-extern char auxchange[AUX_CHANNEL_MAX];
-
-extern float vbattfilt;
 
 int failsafe = 1; // It isn't safe if we haven't checked it!
 int rxmode = RXMODE_BIND;
 int rx_ready = 0;
 int rx_bind_enable = 0;
 
-uint8_t frsky_extract_rssi(uint8_t rssi_raw) {
+uint16_t frsky_extract_rssi(uint8_t rssi_raw) {
   if (rssi_raw >= 128) {
     // adapted to fit better to the original values... FIXME: find real formula
     // return (rssi_raw * 18)/32 - 82;
@@ -86,7 +44,7 @@ static uint8_t frsky_dectect(void) {
   return 0;
 }
 
-static void handle_overflows(void) {
+void handle_overflows(void) {
   // fetch marc status
   uint8_t marc_state = cc2500_read_reg(CC2500_MARCSTATE) & 0x1F;
   if (marc_state == 0x11) {
@@ -100,7 +58,7 @@ static void handle_overflows(void) {
   }
 }
 
-static void set_address(uint8_t is_bind) {
+void set_address(uint8_t is_bind) {
   cc2500_strobe(CC2500_SIDLE);
 
   // freq offset
@@ -131,7 +89,7 @@ static void set_channel(uint8_t channel) {
   cc2500_write_reg(CC2500_CHANNR, channel);
 }
 
-static uint8_t next_channel(uint8_t skip) {
+uint8_t next_channel(uint8_t skip) {
   static uint8_t channr = 0;
 
   channr += skip;
@@ -141,13 +99,15 @@ static uint8_t next_channel(uint8_t skip) {
 
   set_channel(frsky_bind.hop_data[channr]);
 
+#ifdef RX_FRSKY_D8
   // FRSKY D only
   cc2500_strobe(CC2500_SFRX);
+#endif
 
   return channr;
 }
 
-static uint8_t packet_size() {
+uint8_t packet_size() {
   if (cc2500_read_gdo0() == 0) {
     return 0;
   }
@@ -190,28 +150,44 @@ static void init_tune_rx(void) {
   cc2500_write_reg(CC2500_MCSM0, 0x8);
 
   set_channel(0);
-
+  cc2500_strobe(CC2500_SFRX);
   cc2500_strobe(CC2500_SRX);
 }
 
-static uint8_t tune_rx(uint8_t iteration) {
+static void tune_rx_offset(int8_t offset) {
+  frsky_bind.offset = offset;
   if (frsky_bind.offset >= 126) {
     frsky_bind.offset = -126;
   }
-  if ((timer_millis() - time_tuned_ms) > 50) {
-    time_tuned_ms = timer_millis();
+
+  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)frsky_bind.offset);
+
+  time_tuned_ms = timer_millis();
+}
+
+static uint8_t tune_delay = 50;
+
+static uint8_t tune_rx() {
+  if ((timer_millis() - time_tuned_ms) > tune_delay) {
     // switch to fine tuning after first hit
-    frsky_bind.offset += iteration > 0 ? 1 : 5;
-    cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)frsky_bind.offset);
+    tune_rx_offset(frsky_bind.offset + 5);
+    tune_delay = 50;
   }
 
   uint8_t len = read_packet();
   if (len == 0) {
     return 0;
   }
+  if (len > 35) {
+    cc2500_strobe(CC2500_SFRX);
+    return 0;
+  }
+
   if (packet[len - 1] & 0x80) {
     if (packet[2] == 0x01) {
       uint8_t lqi = packet[len - 1] & 0x7F;
+      packet[len - 1] = 0x0;
+
       // higher lqi represent better link quality
       if (lqi > 50) {
         return 1;
@@ -237,6 +213,10 @@ static uint8_t get_bind1() {
   // Start by getting bind packet 0 and the txid
   uint8_t len = read_packet();
   if (len == 0) {
+    return 0;
+  }
+  if (len > 35) {
+    cc2500_strobe(CC2500_SFRX);
     return 0;
   }
 
@@ -267,6 +247,10 @@ static uint8_t get_bind2(uint8_t *packet) {
   if (len == 0) {
     return 0;
   }
+  if (len > 35) {
+    cc2500_strobe(CC2500_SFRX);
+    return 0;
+  }
 
   if (packet[len - 1] & 0x80) {
     if (packet[2] == 0x01) {
@@ -292,340 +276,7 @@ static uint8_t get_bind2(uint8_t *packet) {
   return 0;
 }
 
-static void frsky_d_set_rc_data() {
-  uint16_t channels[FRSKY_D_CHANNEL_COUNT];
-
-  channels[0] = (uint16_t)(((packet[10] & 0x0F) << 8 | packet[6]));
-  channels[1] = (uint16_t)(((packet[10] & 0xF0) << 4 | packet[7]));
-  channels[2] = (uint16_t)(((packet[11] & 0x0F) << 8 | packet[8]));
-  channels[3] = (uint16_t)(((packet[11] & 0xF0) << 4 | packet[9]));
-  channels[4] = (uint16_t)(((packet[16] & 0x0F) << 8 | packet[12]));
-  channels[5] = (uint16_t)(((packet[16] & 0xF0) << 4 | packet[13]));
-  channels[6] = (uint16_t)(((packet[17] & 0x0F) << 8 | packet[14]));
-  channels[7] = (uint16_t)(((packet[17] & 0xF0) << 4 | packet[15]));
-
-  // frsky input is us*1.5
-  // under normal conditions this is ~1480...3020
-  // when tx is set to 125% this is  ~1290...3210
-
-  // this check terrifies me, but betaflight has something similar
-  for (uint8_t i = 0; i < FRSKY_D_CHANNEL_COUNT; i++) {
-    if (channels[i] < 1200 || channels[i] > 3300) {
-      return;
-    }
-  }
-
-  // if we made it this far, data is ready
-  rx_ready = 1;
-  failsafe = 0;
-
-  // AETR channel order
-  rx[0] = (channels[0] - 1500) - 750;
-  rx[1] = (channels[1] - 1500) - 750;
-  rx[2] = (channels[3] - 1500) - 750;
-  rx[3] = channels[2] - 1500;
-
-  for (int i = 0; i < 3; i++) {
-    rx[i] *= 1.f / 750.f;
-  }
-  rx[3] *= 1.f / 1500.f;
-
-  if (rx[3] > 1)
-    rx[3] = 1;
-  if (rx[3] < 0)
-    rx[3] = 0;
-
-  rx_apply_expo();
-
-  //Here we have the AUX channels Silverware supports
-  aux[AUX_CHANNEL_0] = (channels[4] > 2000) ? 1 : 0;
-  aux[AUX_CHANNEL_1] = (channels[5] > 2000) ? 1 : 0;
-  aux[AUX_CHANNEL_2] = (channels[6] > 2000) ? 1 : 0;
-  aux[AUX_CHANNEL_3] = (channels[7] > 2000) ? 1 : 0;
-  aux[AUX_CHANNEL_4] = 0;
-  aux[AUX_CHANNEL_5] = 0;
-
-  for (uint8_t i = 0; i < AUX_CHANNEL_MAX - 3; i++) {
-    auxchange[i] = 0;
-    if (lastaux[i] != aux[i])
-      auxchange[i] = 1;
-    lastaux[i] = aux[i];
-  }
-
-  rx_rssi = constrainf(frsky_extract_rssi(packet[18]), 0.f, 100.f);
-}
-
-#ifdef FRSKY_ENABLE_HUB_TELEMETRY
-static uint8_t frsky_d_hub_encode(uint8_t *buf, uint8_t data) {
-  // take care of byte stuffing
-  if (data == 0x5e) {
-    buf[0] = 0x5d;
-    buf[1] = 0x3e;
-  } else if (data == 0x5d) {
-    buf[0] = 0x5d;
-    buf[1] = 0x3d;
-  }
-
-  buf[0] = data;
-  return 1;
-}
-
-static uint8_t frsky_d_append_hub_telemetry(uint8_t telemetry_id, uint8_t *buf) {
-  static uint8_t pid_axis = 0;
-  extern vector_t *current_pid_term_pointer();
-
-  extern int current_pid_term;
-  extern int current_pid_axis;
-
-  uint8_t size = 0;
-  buf[size++] = 0;
-  buf[size++] = telemetry_id;
-
-  if (pid_axis >= 3) {
-    const int16_t term = current_pid_term;
-    const int16_t axis = current_pid_axis;
-
-    buf[size++] = 0x5E;
-    buf[size++] = FRSKY_HUB_FIRST_USER_ID + 0;
-    buf[size++] = (uint8_t)(term & 0xff);
-    buf[size++] = (uint8_t)(term >> 8);
-    buf[size++] = 0x5E;
-    buf[size++] = 0x5E;
-    buf[size++] = FRSKY_HUB_FIRST_USER_ID + 1;
-    buf[size++] = (uint8_t)(axis & 0xff);
-    buf[size++] = (uint8_t)(axis >> 8);
-    buf[size++] = 0x5E;
-
-    pid_axis = 0;
-  } else {
-    const int16_t pidk = (int16_t)(current_pid_term_pointer()->axis[pid_axis] * 1000);
-    buf[size++] = 0x5E;
-    buf[size++] = FRSKY_HUB_FIRST_USER_ID + 2 + pid_axis;
-    size += frsky_d_hub_encode(buf + size, (uint8_t)(pidk & 0xff));
-    size += frsky_d_hub_encode(buf + size, (uint8_t)(pidk >> 8));
-    buf[size++] = 0x5E;
-
-    pid_axis++;
-  }
-
-  // write size
-  buf[0] = size - 2;
-  return size;
-}
-#endif
-
-static uint8_t frsky_d_handle_packet() {
-  static uint32_t last_packet_received_time = 0;
-  static uint32_t frame_index = 0;
-  static uint32_t frames_lost = 0;
-  static uint32_t max_sync_delay = 50 * SYNC_DELAY_MAX;
-
-  static uint8_t telemetry[20];
-
-  const uint32_t current_packet_received_time = timer_micros();
-
-  uint8_t ret = 0;
-  switch (protocol_state) {
-  case STATE_STARTING:
-    cc2500_enter_rxmode();
-    set_address(0);
-    next_channel(1);
-    cc2500_strobe(CC2500_SRX);
-
-    protocol_state = STATE_UPDATE;
-    break;
-  case STATE_RESUME:
-    // wait for IDLE
-    if ((cc2500_get_status() & (0x70)) == 0) {
-      // re-enter rx mode after telemetry
-      cc2500_enter_rxmode();
-      next_channel(1);
-      cc2500_strobe(CC2500_SRX);
-    }
-
-    if ((timer_micros() - last_packet_received_time) > SYNC_DELAY_MAX) {
-      quic_debugf("FRSKY: update %d", frame_index);
-      frame_index++;
-      protocol_state = STATE_UPDATE;
-    }
-    break;
-  case STATE_UPDATE:
-    protocol_state = STATE_DATA;
-    last_packet_received_time = current_packet_received_time;
-    // fallthrough
-  case STATE_DATA: {
-    uint8_t len = packet_size();
-    if (len >= 20) {
-      cc2500_read_fifo(packet, 20);
-      frsky_d_frame *frame = (frsky_d_frame *)packet;
-
-      if (frame->length == 0x11 &&
-          (frame->crc[1] & 0x80) &&
-          frame->tx_id[0] == frsky_bind.tx_id[0] &&
-          frame->tx_id[1] == frsky_bind.tx_id[1]) {
-
-        if (frame_index >= 188) {
-          frame_index = 0;
-        }
-
-        if (frame->counter != frame_index) {
-          quic_debugf("FRSKY: frame mismatch %d vs %d", frame->counter, frame_index);
-          frame_index = frame->counter;
-        }
-
-        next_channel(1);
-
-#ifdef FRSKY_ENABLE_TELEMETRY
-        if ((frame->counter % 4) == 2) {
-          const uint8_t telemetry_id = packet[4];
-          telemetry[0] = 0x11; // length
-          telemetry[1] = frsky_bind.tx_id[0];
-          telemetry[2] = frsky_bind.tx_id[1];
-          telemetry[3] = (uint8_t)(vbattfilt * 100);
-          telemetry[4] = (uint8_t)(vbattfilt * 100);
-          telemetry[5] = frsky_extract_rssi(packet[18]);
-#ifdef FRSKY_ENABLE_HUB_TELEMETRY
-          telemetry[6] = frsky_d_append_hub_telemetry(telemetry_id, telemetry + 8);
-#else
-          telemetry[6] = 0;
-#endif
-          telemetry[7] = telemetry_id;
-
-          protocol_state = STATE_TELEMETRY;
-        } else
-#else
-        if ((frame->counter % 4) == 2) {
-          protocol_state = STATE_RESUME;
-        } else
-#endif
-        {
-          cc2500_strobe(CC2500_SRX);
-          protocol_state = STATE_UPDATE;
-        }
-
-        last_packet_received_time = current_packet_received_time;
-        max_sync_delay = SYNC_DELAY_MAX;
-        // make sure we dont read the packet a second time
-        frame->crc[1] = 0x00;
-        frames_lost = 0;
-        frame_index++;
-        ret = 1;
-      } else {
-        quic_debugf("FRSKY: invalid frame");
-      }
-    } else if (len > 0) {
-      quic_debugf("FRSKY: short frame");
-    }
-
-    handle_overflows();
-
-    if ((current_packet_received_time - last_packet_received_time) >= max_sync_delay) {
-      if (frames_lost >= 2) {
-        cc2500_switch_antenna();
-      }
-      if (frames_lost >= MAX_MISSING_FRAMES) {
-        quic_debugf("FRSKY: failsafe");
-        max_sync_delay = 10 * SYNC_DELAY_MAX;
-        failsafe = 1;
-      }
-
-      quic_debugf("FRSKY: frame lost %u=%u (%u)", frame_index, (frame_index % 4), (current_packet_received_time - last_packet_received_time));
-      frames_lost++;
-      rx_rssi = 0;
-
-      cc2500_enter_rxmode();
-      next_channel(1);
-      cc2500_strobe(CC2500_SRX);
-      frame_index++;
-      protocol_state = STATE_UPDATE;
-      last_packet_received_time = current_packet_received_time;
-    }
-    break;
-  }
-#ifdef FRSKY_ENABLE_TELEMETRY
-  case STATE_TELEMETRY: {
-
-    // telemetry has to be done ~2000us after rx
-    if ((timer_micros() - last_packet_received_time) >= 1500) {
-      const uint8_t rssi = frsky_extract_rssi(packet[18]);
-
-      cc2500_strobe(CC2500_SIDLE);
-      if (rssi > 110) {
-        cc2500_set_power(5);
-      } else {
-        cc2500_set_power(6);
-      }
-      cc2500_strobe(CC2500_SFRX);
-      cc2500_enter_txmode();
-      cc2500_strobe(CC2500_SIDLE);
-      cc2500_write_fifo(telemetry, telemetry[0] + 1);
-      protocol_state = STATE_RESUME;
-    }
-    break;
-  }
-#endif
-  }
-
-  return ret;
-}
-
-void rx_init(void) {
-  if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
-    return;
-
-  cc2500_init();
-
-  // enable gdo0 on read
-  cc2500_write_reg(CC2500_IOCFG0, 0x01);
-
-  cc2500_write_reg(CC2500_MCSM0, 0x18);
-  cc2500_write_reg(CC2500_MCSM1, 0x0C);
-
-  // frsky d
-  cc2500_write_reg(CC2500_PKTLEN, 17);     // max packet lenght of 25
-  cc2500_write_reg(CC2500_PKTCTRL0, 0x05); // variable pkt lenth, enable crc
-  cc2500_write_reg(CC2500_PKTCTRL1, 0x04); // only append status
-  cc2500_write_reg(CC2500_PATABLE, 0xFF);  // full power
-
-  cc2500_write_reg(CC2500_FSCTRL0, 0x00);
-  cc2500_write_reg(CC2500_FSCTRL1, 0x08);
-
-  // set base freq 2404 mhz
-  cc2500_write_reg(CC2500_FREQ0, 0x27);
-  cc2500_write_reg(CC2500_FREQ1, 0x76);
-  cc2500_write_reg(CC2500_FREQ2, 0x5C);
-
-  cc2500_write_reg(CC2500_MDMCFG4, 0xAA);
-  cc2500_write_reg(CC2500_MDMCFG3, 0x39);
-  cc2500_write_reg(CC2500_MDMCFG2, 0x11);
-  cc2500_write_reg(CC2500_MDMCFG1, 0x23);
-  cc2500_write_reg(CC2500_MDMCFG0, 0x7A);
-
-  cc2500_write_reg(CC2500_DEVIATN, 0x42);
-
-  cc2500_write_reg(CC2500_FOCCFG, 0x16);
-  cc2500_write_reg(CC2500_BSCFG, 0x6C);
-
-  cc2500_write_reg(CC2500_AGCCTRL2, 0x03);
-  cc2500_write_reg(CC2500_AGCCTRL1, 0x40);
-  cc2500_write_reg(CC2500_AGCCTRL0, 0x91);
-
-  cc2500_write_reg(CC2500_FREND1, 0x56);
-  cc2500_write_reg(CC2500_FREND0, 0x10);
-
-  cc2500_write_reg(CC2500_FSCAL3, 0xA9);
-  cc2500_write_reg(CC2500_FSCAL2, 0x0A);
-  cc2500_write_reg(CC2500_FSCAL1, 0x00);
-  cc2500_write_reg(CC2500_FSCAL0, 0x11);
-
-  cc2500_write_reg(CC2500_TEST2, 0x88);
-  cc2500_write_reg(CC2500_TEST1, 0x31);
-  cc2500_write_reg(CC2500_TEST0, 0x0B);
-
-  cc2500_write_reg(CC2500_FIFOTHR, 0x07);
-
-  cc2500_write_reg(CC2500_ADDR, 0x00);
-
+void calibrate_channels() {
   //calibrate all channels
   for (uint32_t c = 0; c < 0xFF; c++) {
     cc2500_strobe(CC2500_SIDLE);
@@ -643,68 +294,78 @@ void rx_init(void) {
   cc2500_strobe(CC2500_SIDLE);
 }
 
-void rx_check() {
-  if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
-    return;
-
+void frsky_handle_bind() {
   switch (protocol_state) {
-  case STATE_DETECT:
+  case FRSKY_STATE_DETECT:
     if (frsky_dectect()) {
-      protocol_state = STATE_INIT;
+      protocol_state = FRSKY_STATE_INIT;
     }
     break;
-  case STATE_INIT:
+  case FRSKY_STATE_INIT:
     cc2500_enter_rxmode();
     cc2500_strobe(CC2500_SRX);
     if (frsky_bind.idx == 0xff) {
-      protocol_state = STATE_BIND;
+      protocol_state = FRSKY_STATE_BIND;
     } else {
-      protocol_state = STATE_BIND_COMPLETE;
+      protocol_state = FRSKY_STATE_BIND_COMPLETE;
     }
     break;
-  case STATE_BIND:
+  case FRSKY_STATE_BIND:
     init_tune_rx();
-    protocol_state = STATE_BIND_TUNING;
+    handle_overflows();
+    protocol_state = FRSKY_STATE_BIND_TUNING;
     break;
-  case STATE_BIND_TUNING: {
+  case FRSKY_STATE_BIND_TUNING: {
     static uint8_t tune_samples = 0;
-    static int8_t last_offset = -126;
 
-    if (tune_rx(tune_samples)) {
-      const int8_t current_offset = frsky_bind.offset;
-      if (last_offset == current_offset) {
-        frsky_bind.offset -= 5;
+    static int8_t min_offset = 127;
+    static int8_t max_offset = -127;
+
+    const int8_t current_offset = frsky_bind.offset;
+
+    handle_overflows();
+
+    if (tune_rx()) {
+      if (current_offset < min_offset) {
+        min_offset = current_offset;
+        tune_delay = 0;
+      } else if (current_offset > max_offset) {
+        max_offset = current_offset;
+        tune_delay = 0;
+      } else {
         tune_samples++;
       }
-      last_offset = current_offset;
+      quic_debugf("FRSKY: tuned %d %d - %d", current_offset, min_offset, max_offset);
     }
-    if (tune_samples >= 3) {
+    if (tune_samples == 1) {
+      tune_rx_offset((max_offset + min_offset) / 2 - 1);
+
+      quic_debugf("FRSKY: tuned offset %d", frsky_bind.offset);
       set_address(1);
       init_get_bind();
-      protocol_state = STATE_BIND_BINDING1;
+      protocol_state = FRSKY_STATE_BIND_BINDING1;
     }
     break;
   }
-  case STATE_BIND_BINDING1:
+  case FRSKY_STATE_BIND_BINDING1:
+    handle_overflows();
     if (get_bind1(packet)) {
-      protocol_state = STATE_BIND_BINDING2;
+      protocol_state = FRSKY_STATE_BIND_BINDING2;
     }
     break;
-  case STATE_BIND_BINDING2:
+  case FRSKY_STATE_BIND_BINDING2:
+    handle_overflows();
     if (get_bind2(packet)) {
-      protocol_state = STATE_BIND_COMPLETE;
+      protocol_state = FRSKY_STATE_BIND_COMPLETE;
     }
     break;
-  case STATE_BIND_COMPLETE:
-    quic_debugf("FRSKY: bound");
+  case FRSKY_STATE_BIND_COMPLETE:
+    quic_debugf("FRSKY: bound rx_num %d", frsky_bind.rx_num);
     cc2500_strobe(CC2500_SIDLE);
     rxmode = RXMODE_NORMAL;
-    protocol_state = STATE_STARTING;
+    protocol_state = FRSKY_STATE_STARTING;
     break;
   default:
-    if (frsky_d_handle_packet()) {
-      frsky_d_set_rc_data();
-    }
     break;
   }
 }

@@ -1,6 +1,7 @@
 #include <math.h>
 
 #include "defines.h"
+#include "drv_rgb_led.h"
 #include "drv_time.h"
 #include "util.h"
 
@@ -27,8 +28,6 @@ extern int ledcommand;
 
 #define RGB_FILTER_TIME FILTERCALC(1000 * DOWNSAMPLE, RGB_FILTER_TIME_MICROSECONDS)
 #define RGB(r, g, b) ((((int)g & 0xff) << 16) | (((int)r & 0xff) << 8) | ((int)b & 0xff))
-
-extern void rgb_send(int data);
 
 #if (RGB_LED_NUMBER > 0)
 
