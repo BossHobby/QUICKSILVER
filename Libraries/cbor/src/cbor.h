@@ -10,14 +10,14 @@ typedef enum {
 } cbor_error_t;
 
 typedef enum {
-  CBOR_TYPE_UINT = 0x00,
-  CBOR_TYPE_NINT = 0x01,
-  CBOR_TYPE_BSTR = 0x02,
-  CBOR_TYPE_TSTR = 0x03,
-  CBOR_TYPE_ARRAY = 0x04,
-  CBOR_TYPE_MAP = 0x05,
-  CBOR_TYPE_TAG = 0x06,
-  CBOR_TYPE_FLOAT = 0x07,
+  CBOR_TYPE_UINT = 0x00U,
+  CBOR_TYPE_NINT = 0x01U,
+  CBOR_TYPE_BSTR = 0x02U,
+  CBOR_TYPE_TSTR = 0x03U,
+  CBOR_TYPE_ARRAY = 0x04U,
+  CBOR_TYPE_MAP = 0x05U,
+  CBOR_TYPE_TAG = 0x06U,
+  CBOR_TYPE_FLOAT = 0x07U,
 } cbor_major_type_t;
 
 typedef enum {

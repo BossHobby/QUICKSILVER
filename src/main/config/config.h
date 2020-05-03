@@ -79,10 +79,7 @@
 //#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
-//#define RX_FRSKY_D8
-//#define RX_FRSKY_D16_FCC
-//#define RX_FRSKY_D16_LBT
-//#define RX_REDPINE
+//#define RX_FRSKY
 
 // *************Serial Receiver UART Selection (uncomment all for default from target or if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
 //#define RX_USART USART_PORT1
@@ -295,7 +292,6 @@
 
 // debug things ( debug struct and other)
 //#define DEBUG
-//#define RESET_ON_FAULT
 
 // disable motors for testing
 //#define NOMOTORS

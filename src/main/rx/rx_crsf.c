@@ -20,8 +20,6 @@ int rx_ready = 0;
 int bind_safety = 0;
 int rx_bind_enable = 0;
 
-float rx_rssi; // TODO: give this data
-
 /*
  * CRSF protocol
  *

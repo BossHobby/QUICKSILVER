@@ -125,7 +125,7 @@ const uint8_t stickboost_positions[7][2] = { {8, 1},{14, 4},{19, 4},{25, 4},{2, 
 const uint8_t stickboost_data_index[6][2] = { {1, 0}, {1, 1}, {1, 2}, {2, 0}, {2, 1}, {2, 2} };
 const uint8_t stickboost_grid[6][2] = { {1, 1},{2, 1},{3, 1},{1, 2},{2, 2},{3, 2} };
 const uint8_t stickboost_data_positions[9][2] = { {13, 6},{18, 6},{23, 6},{13, 8},{18, 8},{23, 8} };
-const float stickboost_adjust_limits[6][2] = { {0, 3.0}, {0, 3.0}, {0, 3.0}, {-1.0, 1.0}, {-1.0, 1.0}, {-1.0, 1.0} };
+const float stickboost_adjust_limits[6][2] = { {0, 3.0}, {0, 3.0}, {0, 3.0}, {0, 1.0}, {0, 1.0}, {0, 1.0} };
 
 //low battery map
 float *low_batt_ptr[1] = {&profile.voltage.vbattlow};

@@ -69,8 +69,6 @@ void serial_enable_isr(usart_ports_t port) {
   NVIC_Init(&NVIC_InitStructure);
 }
 
-#define GPIO_PIN(port_num, num) MAKE_PIN_DEF(port_num, num)
-
 #ifdef F4
 
 #define USART4 UART4
@@ -79,24 +77,34 @@ void serial_enable_isr(usart_ports_t port) {
 #define GPIO_AF_USART4 GPIO_AF_UART4
 #define GPIO_AF_USART5 GPIO_AF_UART5
 
-#define USART_PORT(chan, rx, tx)      \
-  {                                   \
-      .channel_index = chan,          \
-      .channel = USART##chan,         \
-      .gpio_af = GPIO_AF_USART##chan, \
-      .rx_pin = rx,                   \
-      .tx_pin = tx,                   \
+#define USART_PORT(chan, port, rx, tx)     \
+  {                                        \
+      .channel_index = chan,               \
+      .channel = USART##chan,              \
+      .gpio_port = GPIO##port,             \
+      .gpio_af = GPIO_AF_USART##chan,      \
+      .rx_pin_index = rx,                  \
+      .rx_pin = GPIO_Pin_##rx,             \
+      .rx_pin_source = GPIO_PinSource##rx, \
+      .tx_pin_index = tx,                  \
+      .tx_pin = GPIO_Pin_##tx,             \
+      .tx_pin_source = GPIO_PinSource##tx, \
   },
 #endif
 
 #ifdef F0
-#define USART_PORT(chan, rx, tx) \
-  {                              \
-      .channel_index = chan,     \
-      .channel = USART##chan,    \
-      .gpio_af = GPIO_AF_1,      \
-      .rx_pin = rx,              \
-      .tx_pin = tx,              \
+#define USART_PORT(chan, port, rx, tx)     \
+  {                                        \
+      .channel_index = chan,               \
+      .channel = USART##chan,              \
+      .gpio_port = GPIO##port,             \
+      .gpio_af = GPIO_AF_1,                \
+      .rx_pin_index = rx,                  \
+      .rx_pin = GPIO_Pin_##rx,             \
+      .rx_pin_source = GPIO_PinSource##rx, \
+      .tx_pin_index = tx,                  \
+      .tx_pin = GPIO_Pin_##tx,             \
+      .tx_pin_source = GPIO_PinSource##tx, \
   },
 #endif
 
@@ -105,7 +113,6 @@ usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {
     USART_PORTS};
 
 #undef USART_PORT
-#undef GPIO_PIN
 
 void handle_usart_isr(usart_ports_t channel) {
 #ifdef SERIAL_RX
@@ -124,14 +131,9 @@ void handle_usart_isr(usart_ports_t channel) {
 #endif
 }
 
-// we need handlers for both U_S_ART and UART.
-// simply define both for every enabled port.
-#define USART_PORT(channel, rx_pin, tx_pin) \
-  void USART##channel##_IRQHandler(void) {  \
-    handle_usart_isr(USART_IDENT(channel)); \
-  }                                         \
-  void UART##channel##_IRQHandler(void) {   \
-    handle_usart_isr(USART_IDENT(channel)); \
+#define USART_PORT(channel, port, rx_pin, tx_pin) \
+  void USART##channel##_IRQHandler(void) {        \
+    handle_usart_isr(USART_IDENT(channel));       \
   }
 
 USART_PORTS

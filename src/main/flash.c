@@ -5,7 +5,6 @@
 #include "profile.h"
 #include "project.h"
 #include "rx.h"
-#include "rx_frsky.h"
 
 extern const profile_t default_profile;
 extern profile_t profile;

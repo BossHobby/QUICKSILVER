@@ -7,7 +7,6 @@
 #include "filter.h"
 #include "led.h"
 #include "profile.h"
-#include "project.h"
 #include "util.h"
 
 //************************************Setpoint Weight****************************************

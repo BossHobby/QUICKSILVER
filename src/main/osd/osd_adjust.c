@@ -5,7 +5,7 @@
 #include "defines.h"
 #include "drv_time.h"
 #include "util.h"
-#include "drv_spi_max7456.h"
+#include "drv_max7456.h"
 #include "osd_menu_maps.h"
 #include "osd_render.h"
 #include "profile.h"
@@ -196,19 +196,24 @@ void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_
 
 //************************************************************profile variable adjust functions***********************************************************
 
-float adjust_rounded_float(float input, float adjust_amount) {
-  const float value = (int)(input * 100.0f + (input <= 0 ? -0.5f : 0.5f));
-  if (increase_osd_value) {
-    increase_osd_value = 0;
-    osd_menu_phase = 1; //repaint the screen again
-    return (float)(value + (100.0f * adjust_amount)) / 100.0f;
-  }
-  if (decrease_osd_value) {
-    decrease_osd_value = 0;
-    osd_menu_phase = 1; //repaint the screen again
-    return (float)(value - (100.0f * adjust_amount)) / 100.0f;
-  }
-  return input;
+float adjust_rounded_float(float input, float adjust_amount){
+	float result;
+	float value = (int)(input * 100.0f + 0.5f);
+	if (increase_osd_value){
+		increase_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		result = (float)(value+(100.0f * adjust_amount)) / 100.0f;
+		if ((int)(result*100.0f) <= 0) return 0;
+		else return result;
+	}
+	if (decrease_osd_value){
+		decrease_osd_value = 0;
+		osd_menu_phase = 1; //repaint the screen again
+		result = (float)(value-(100.0f * adjust_amount)) / 100.0f;
+		if ((int)(result*100.0f) <= 0) return 0;
+		else return result;
+	}
+	return input;
 }
 
 const char* get_aux_status (int input){

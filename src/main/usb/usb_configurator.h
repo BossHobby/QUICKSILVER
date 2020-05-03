@@ -26,15 +26,8 @@ typedef enum {
 } quic_command;
 
 typedef enum {
-  QUIC_BLACKBOX_RESET,
-  QUIC_BLACKBOX_LIST,
-  QUIC_BLACKBOX_GET
-} quic_blackbox_command;
-
-typedef enum {
   QUIC_FLAG_NONE,
   QUIC_FLAG_ERROR,
-  QUIC_FLAG_STREAMING,
 } quic_flag;
 
 typedef enum {

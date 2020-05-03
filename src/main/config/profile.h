@@ -50,7 +50,7 @@ typedef struct {
   float level_max_angle;
   float low_rate_mulitplier;
   float sticks_deadband;
-} profile_rate_t;
+} rate_t;
 
 #define RATE_MEMBERS                         \
   MEMBER(mode, uint8)                        \
@@ -166,7 +166,7 @@ typedef struct {
   float throttle_boost;
   motor_pin_ident_t motor_pins[4];
   float turtle_throttle_percent;
-} profile_motor_t;
+} motor_t;
 
 #define MOTOR_MEMBERS                \
   MEMBER(digital_idle, float)        \
@@ -188,7 +188,7 @@ typedef struct {
   float vbattlow;
   float actual_battery_voltage;
   float reported_telemetry_voltage;
-} profile_voltage_t;
+} voltage_t;
 
 #define VOLTAGE_MEMBERS                   \
   MEMBER(lipo_cell_count, uint8)          \
@@ -199,7 +199,7 @@ typedef struct {
 
 typedef struct {
   aux_channel_t aux[AUX_FUNCTION_MAX];
-} profile_channel_t;
+} channel_t;
 
 #define CHANNEL_MEMBERS \
   ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, uint8)
@@ -207,7 +207,7 @@ typedef struct {
 typedef struct {
   usart_ports_t rx;
   usart_ports_t smart_audio;
-} profile_serial_t;
+} serial_t;
 
 #define SERIAL_MEMBERS \
   MEMBER(rx, uint8)    \
@@ -215,7 +215,7 @@ typedef struct {
 
 typedef struct {
   uint32_t elements[OSD_NUMBER_ELEMENTS];
-} profile_osd_t;
+} osd_t;
 
 #define OSD_MEMBERS \
   ARRAY_MEMBER(elements, OSD_NUMBER_ELEMENTS, uint32)
@@ -223,55 +223,55 @@ typedef struct {
 typedef struct {
   filter_type_t type;
   float cutoff_freq;
-} profile_filter_parameter_t;
+} filter_parameter_t;
 
 #define FILTER_PARAMETER_MEMBERS \
   MEMBER(type, uint8)            \
   MEMBER(cutoff_freq, float)
 
 typedef struct {
-  profile_filter_parameter_t gyro[FILTER_MAX_SLOTS];
-  profile_filter_parameter_t dterm[FILTER_MAX_SLOTS];
+  filter_parameter_t gyro[FILTER_MAX_SLOTS];
+  filter_parameter_t dterm[FILTER_MAX_SLOTS];
   uint8_t dterm_dynamic_enable;
   float dterm_dynamic_min;
   float dterm_dynamic_max;
 } profile_filter_t;
 
-#define FILTER_MEMBERS                                              \
-  ARRAY_MEMBER(gyro, FILTER_MAX_SLOTS, profile_filter_parameter_t)  \
-  ARRAY_MEMBER(dterm, FILTER_MAX_SLOTS, profile_filter_parameter_t) \
-  MEMBER(dterm_dynamic_enable, uint8)                               \
-  MEMBER(dterm_dynamic_min, float)                                  \
+#define FILTER_MEMBERS                                      \
+  ARRAY_MEMBER(gyro, FILTER_MAX_SLOTS, filter_parameter_t)  \
+  ARRAY_MEMBER(dterm, FILTER_MAX_SLOTS, filter_parameter_t) \
+  MEMBER(dterm_dynamic_enable, uint8)                       \
+  MEMBER(dterm_dynamic_min, float)                          \
   MEMBER(dterm_dynamic_max, float)
 
 typedef struct {
   uint8_t name[36];
   uint32_t datetime;
-} profile_metadata_t;
+} metadata_t;
 
 // Full Profile
 typedef struct {
-  profile_metadata_t meta;
-  profile_motor_t motor;
-  profile_serial_t serial;
+  metadata_t meta;
+  motor_t motor;
+  serial_t serial;
   profile_filter_t filter;
-  profile_osd_t osd;
-  profile_rate_t rate;
-  profile_channel_t channel;
+  osd_t osd;
+  rate_t rate;
+  channel_t channel;
   profile_pid_t pid;
-  profile_voltage_t voltage;
+  voltage_t voltage;
 } profile_t;
 
-#define PROFILE_MEMBERS              \
-  MEMBER(meta, profile_metadata_t)   \
-  MEMBER(motor, profile_motor_t)     \
-  MEMBER(serial, profile_serial_t)   \
-  MEMBER(filter, profile_filter_t)   \
-  MEMBER(osd, profile_osd_t)         \
-  MEMBER(rate, profile_rate_t)       \
-  MEMBER(channel, profile_channel_t) \
-  MEMBER(pid, profile_pid_t)         \
-  MEMBER(voltage, profile_voltage_t)
+#define PROFILE_MEMBERS            \
+  MEMBER(meta, metadata_t)         \
+  MEMBER(motor, motor_t)           \
+  MEMBER(serial, serial_t)         \
+  MEMBER(filter, profile_filter_t) \
+  MEMBER(osd, osd_t)               \
+  MEMBER(rate, rate_t)             \
+  MEMBER(channel, channel_t)       \
+  MEMBER(pid, profile_pid_t)       \
+  MEMBER(voltage, voltage_t)
 
 typedef struct {
   const char *target_name;

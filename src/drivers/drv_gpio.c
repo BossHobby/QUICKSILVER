@@ -1,6 +1,6 @@
 #include "drv_gpio.h"
-
 #include "defines.h"
+#include "project.h"
 
 void gpio_init(void) {
 
@@ -54,7 +54,6 @@ void gpio_init(void) {
 
 // init fpv pin separately because it may use SWDAT/SWCLK don't want to enable it right away
 int gpio_init_fpv(void) {
-#if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
   // only repurpose the pin after rx/tx have bound
   extern int rxmode;
   if (rxmode == RXMODE_NORMAL) {
@@ -71,14 +70,5 @@ int gpio_init_fpv(void) {
 
     return 1;
   }
-#endif
   return 0;
 }
-
-#define GPIO_PIN(port_num, num) MAKE_PIN_DEF(port_num, num),
-
-const volatile gpio_pin_def_t gpio_pin_defs[GPIO_PINS_MAX] = {
-    {},
-    GPIO_PINS};
-
-#undef GPIO_PIN

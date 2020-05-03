@@ -1,5 +1,4 @@
 #include "config.h"
-#include "config_helper.h"
 
 #define F4
 #define F405
@@ -23,9 +22,9 @@
 #define FPV_PORT GPIOA
 
 //GYRO
-#define MPU6XXX_SPI_PORT SPI_PORT1
-#define MPU6XXX_NSS PIN_A4
-#define MPU6XXX_INT PIN_C4
+#define MPU6XXX_SPI1
+#define MPU6XXX_NSS_PA4
+#define MPU6XXX_INT_PC4
 #define USE_DUMMY_I2C
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x73
@@ -34,7 +33,7 @@
 #define SENSOR_ROTATE_90_CCW
 
 //RADIO
-#define USART_INVERTER_PIN GPIO_Pin_0 //UART 1
+#define USART_INVERTER_PIN GPIO_Pin_0		//UART 1
 #define USART_INVERTER_PORT GPIOC
 
 #define USART_PORTS \
@@ -42,7 +41,7 @@
   USART3_PB11PB10   \
   USART4_PA1PA0
 
-#ifdef SERIAL_RX
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
 #define RX_USART USART_PORT1
 #define SOFTSPI_NONE
 #endif

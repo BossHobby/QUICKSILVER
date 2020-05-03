@@ -12,47 +12,27 @@
     ]
   },
   {
-    "name": "alienwhoop_v3",
-    "configurations": [
-      {
-        "name": "brushed.serial",
-        "defines": {
-          "BRUSHED_TARGET": "",
-          "RX_UNIFIED_SERIAL": ""
-        }
-      }
-    ]
-  },
-  {
     "name": "matekf411rx",
     "configurations": [
       {
         "name": "brushless.frsky",
         "defines": {
           "BRUSHLESS_TARGET": "",
-          "RX_FRSKY_D8": ""
+          "RX_FRSKY": ""
         }
       },
       {
         "name": "brushed.frsky",
         "defines": {
           "BRUSHED_TARGET": "",
-          "RX_FRSKY_D8": ""
+          "RX_FRSKY": ""
         }
       },
       {
         "name": "dshot300.frsky",
         "defines": {
           "BRUSHLESS_TARGET": "",
-          "RX_FRSKY_D8": "",
-          "DSHOT": "300"
-        }
-      },
-      {
-        "name": "dshot300.redpine",
-        "defines": {
-          "BRUSHLESS_TARGET": "",
-          "RX_REDPINE": "",
+          "RX_FRSKY": "",
           "DSHOT": "300"
         }
       }
@@ -69,30 +49,11 @@
         }
       },
       {
-        "name": "brushless.crsf",
-        "defines": {
-          "BRUSHLESS_TARGET": "",
-          "RX_CRSF": ""
-        }
-      },
-      {
         "name": "dshot300.serial",
         "defines": {
           "BRUSHLESS_TARGET": "",
           "RX_UNIFIED_SERIAL": "",
           "DSHOT": "300"
-        }
-      }
-    ]
-  },
-  {
-    "name": "matekf405",
-    "configurations": [
-      {
-        "name": "brushless.serial",
-        "defines": {
-          "BRUSHLESS_TARGET": "",
-          "RX_UNIFIED_SERIAL": ""
         }
       }
     ]
@@ -104,14 +65,7 @@
         "name": "brushless.frsky",
         "defines": {
           "BRUSHLESS_TARGET": "",
-          "RX_FRSKY_D8": ""
-        }
-      },
-      {
-        "name": "brushless.redpine",
-        "defines": {
-          "BRUSHLESS_TARGET": "",
-          "RX_REDPINE": ""
+          "RX_FRSKY": ""
         }
       },
       {
@@ -155,13 +109,6 @@
         "defines": {
           "BRUSHLESS_TARGET": "",
           "RX_UNIFIED_SERIAL": ""
-        }
-      },
-      {
-        "name": "brushless.crsf",
-        "defines": {
-          "BRUSHLESS_TARGET": "",
-          "RX_CRSF": ""
         }
       }
     ]

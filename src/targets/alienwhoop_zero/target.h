@@ -1,5 +1,4 @@
 #include "config.h"
-#include "config_helper.h"
 
 #define F0
 #define Alienwhoop_ZERO
@@ -34,7 +33,7 @@
 #define USART_PORTS \
   USART1_PA3PA2
 
-#ifdef SERIAL_RX
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
 #if defined(RX_FPORT)
 #define F0_USART_PINSWAP
 #endif

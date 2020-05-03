@@ -1,5 +1,4 @@
 #include "config.h"
-#include "config_helper.h"
 
 #define CC3D_Revo_Nano
 
@@ -22,9 +21,9 @@
 #define FPV_PORT GPIOA
 
 //GYRO
-#define MPU6XXX_SPI_PORT SPI_PORT2
-#define MPU6XXX_NSS PIN_B12
-#define MPU6XXX_INT PIN_A15
+#define MPU6XXX_SPI2
+#define MPU6XXX_NSS_PB12
+#define MPU6XXX_INT_PA15
 #define USE_DUMMY_I2C
 #define SENSOR_ROTATE_180
 #define GYRO_ID_1 0x68
@@ -41,7 +40,7 @@
   USART1_PB7PB6     \
   USART2_PA3PA2
 
-#ifdef SERIAL_RX
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
 #define RX_USART USART_PORT2
 #define SOFTSPI_NONE
 #endif

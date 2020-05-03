@@ -129,18 +129,7 @@ uint32_t timer_micros() {
 }
 
 uint32_t timer_millis() {
-  static uint32_t total_millis = 0;
-  static uint32_t last_millis = 0;
-
-  const uint32_t millis = debug_timer_micros() / 1000;
-  if (millis >= last_millis) {
-    total_millis += millis - last_millis;
-  } else {
-    total_millis += ((UINT32_MAX / 1000) + millis) - last_millis;
-  }
-
-  last_millis = millis;
-  return total_millis;
+  return (timer_micros()) / 1000;
 }
 
 void timer_delay_us(uint32_t us) {

@@ -1,8 +1,6 @@
 #pragma once
 
 #include "hardware.h"
-
-#include "config_helper.h"
 #include "rx.h"
 
 // defines for things that do not normally need changing
@@ -240,6 +238,10 @@ static const float pid_scales[PIDNUMBER][PIDNUMBER] = {
 #define SWITCHABLE_FEATURE_2
 #endif
 
+#if defined(RX_SBUS) || defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_CRSF) || defined(RX_IBUS) || defined(RX_FPORT) || defined(RX_UNIFIED_SERIAL)
+#define SERIAL_RX
+#endif
+
 // for the ble beacon to work after in-flight reset
 #ifdef RX_BAYANG_PROTOCOL_BLE_BEACON
 #undef STOP_LOWBATTERY
@@ -316,14 +318,8 @@ static const float pid_scales[PIDNUMBER][PIDNUMBER] = {
 #ifdef RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 #define RX_PROTOCOL RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 #endif
-#ifdef RX_FRSKY_D8
-#define RX_PROTOCOL RX_PROTOCOL_FRSKY_D8
-#endif
-#if defined(RX_FRSKY_D16_LBT) || defined(RX_FRSKY_D16_FCC)
-#define RX_PROTOCOL RX_PROTOCOL_FRSKY_D16
-#endif
-#ifdef RX_REDPINE
-#define RX_PROTOCOL RX_PROTOCOL_REDPINE
+#ifdef RX_FRSKY
+#define RX_PROTOCOL RX_PROTOCOL_FRSKY
 #endif
 
 // Select filter cut 25hz for SBUS, 67hz for CRSF, 40hz for DSMX, 20hz for DSM2, 90hz for bayang, 45hz for frsky   Formula is [(1/rx framerate)/2] * 0.9
@@ -339,7 +335,5 @@ static const uint8_t RX_SMOOTHING_HZ[RX_PROTOCOL_MAX] = {
     90, //RX_PROTOCOL_NRF24_BAYANG_TELEMETRY,
     90, //RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON,
     90, //RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND,
-    50, //RX_PROTOCOL_FRSKY_D8,
-    50, //RX_PROTOCOL_FRSKY_D16,
-    75, //RX_PROTOCOL_FRSKY_REDPINE,
+    45, //RX_PROTOCOL_FRSKY,
 };

@@ -6,9 +6,9 @@
 
 #include "binary.h"
 #include "debug.h"
+#include "drv_dma_spi.h"
 #include "drv_i2c.h"
 #include "drv_serial.h"
-#include "drv_spi_mpu6xxx.h"
 #include "drv_time.h"
 #include "filter.h"
 #include "led.h"

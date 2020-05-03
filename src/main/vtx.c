@@ -18,7 +18,7 @@ extern int failsafe;
 
 extern int onground;
 
-#if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
+#ifdef FPV_ON
 static int fpv_init = 0;
 #endif
 
@@ -95,7 +95,7 @@ void vtx_init() {
 }
 
 void vtx_update() {
-#if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
+#ifdef FPV_ON
   if (rx_aux_on(AUX_FPV_ON)) {
     // fpv switch on
     if (!fpv_init && rxmode == RXMODE_NORMAL) {
@@ -119,7 +119,7 @@ void vtx_update() {
 #ifdef ENABLE_SMART_AUDIO
   if (onground && has_smart_audio_configured()) {
 
-    static volatile uint32_t delay_loops = 500;
+    static uint32_t delay_loops = 100;
 
     if (delay_loops > 0) {
       delay_loops--;

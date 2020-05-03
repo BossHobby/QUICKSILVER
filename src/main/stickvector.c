@@ -1,4 +1,4 @@
-#include "input.h"
+#include "stickvector.h"
 
 #include <math.h>
 #include <string.h>
@@ -10,8 +10,6 @@ extern float GEstG[3];
 extern float Q_rsqrt(float number);
 extern profile_t profile;
 
-extern float rx_filtered[];
-
 // error vector between stick position and quad orientation
 // this is the output of this function
 float errorvect[3];
@@ -20,7 +18,7 @@ float errorvect[3];
 static float last_rx[2] = {13.13f, 12.12f};
 static float stickvector[3] = {0, 0, 1};
 
-void input_stick_vector(float rx_input[], float maxangle) {
+void stick_vector(float rx_input[], float maxangle) {
   // only compute stick rotation if values changed
   if (last_rx[0] != rx_input[0] || last_rx[1] != rx_input[1]) {
     last_rx[0] = rx_input[0];
@@ -127,49 +125,4 @@ void input_stick_vector(float rx_input[], float maxangle) {
     errorvect[!flipaxis] = GEstG[!flipaxis];
   }
 #endif
-}
-
-static float calc_bf_rates(int axis) {
-#define SETPOINT_RATE_LIMIT 1998.0f
-#define RC_RATE_INCREMENTAL 14.54f
-
-  float rcRate, superExpo;
-  if (axis == ROLL) {
-    rcRate = profile.rate.betaflight.rc_rate.roll;
-    superExpo = profile.rate.betaflight.super_rate.roll;
-  } else if (axis == PITCH) {
-    rcRate = profile.rate.betaflight.rc_rate.pitch;
-    superExpo = profile.rate.betaflight.super_rate.pitch;
-  } else {
-    rcRate = profile.rate.betaflight.rc_rate.yaw;
-    superExpo = profile.rate.betaflight.super_rate.yaw;
-  }
-  if (rcRate > 2.0f) {
-    rcRate += RC_RATE_INCREMENTAL * (rcRate - 2.0f);
-  }
-  const float rcCommandfAbs = rx_filtered[axis] > 0 ? rx_filtered[axis] : -rx_filtered[axis];
-  float angleRate = 200.0f * rcRate * rx_filtered[axis];
-  if (superExpo) {
-    const float rcSuperfactor = 1.0f / (constrainf(1.0f - (rcCommandfAbs * superExpo), 0.01f, 1.00f));
-    angleRate *= rcSuperfactor;
-  }
-  return constrainf(angleRate, -SETPOINT_RATE_LIMIT, SETPOINT_RATE_LIMIT) * (float)DEGTORAD;
-}
-
-void input_calc_rates(float rates[]) {
-  // high-low rates switch
-  float rate_multiplier = 1.0;
-  if (rx_aux_on(AUX_HIGH_RATES) <= 0) {
-    rate_multiplier = profile.rate.low_rate_mulitplier;
-  }
-
-  if (profile.rate.mode == RATE_MODE_BETAFLIGHT) {
-    rates[0] = rate_multiplier * calc_bf_rates(0);
-    rates[1] = rate_multiplier * calc_bf_rates(1);
-    rates[2] = rate_multiplier * calc_bf_rates(2);
-  } else {
-    rates[0] = rate_multiplier * rx_filtered[0] * profile.rate.silverware.max_rate.roll * DEGTORAD;
-    rates[1] = rate_multiplier * rx_filtered[1] * profile.rate.silverware.max_rate.pitch * DEGTORAD;
-    rates[2] = rate_multiplier * rx_filtered[2] * profile.rate.silverware.max_rate.yaw * DEGTORAD;
-  }
 }

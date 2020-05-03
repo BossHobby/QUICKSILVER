@@ -25,13 +25,6 @@ float constrainf(const float in, const float min, const float max) {
   return in;
 }
 
-uint32_t min_uint32(uint32_t a, uint32_t b) {
-  if (a < b) {
-    return a;
-  }
-  return b;
-}
-
 float fastsin(float x) {
   //always wrap input angle to -PI..PI
   while (x < -3.14159265f)
