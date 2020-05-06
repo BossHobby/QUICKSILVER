@@ -671,6 +671,10 @@ void serial_4way_process() {
     write_byte(crc_out.bytes[0]);
     TX_LED_OFF;
     RX_LED_OFF;
+
+    if (CMD == ESC4WAY_INTERFACE_EXIT) {
+      return;
+    }
   };
 }
 
