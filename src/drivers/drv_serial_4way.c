@@ -24,6 +24,7 @@
 #include "drv_serial_4way.h"
 #include "drv_serial_soft.h"
 #include "drv_usb.h"
+#include "usb_configurator.h"
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 
@@ -51,6 +52,7 @@
 #endif
 
 #define SERIAL_4WAY_INTERFACE_NAME_STR "m4wFCIntf"
+
 // *** change to adapt Revision
 #define SERIAL_4WAY_VER_MAIN 20
 #define SERIAL_4WAY_VER_SUB_1 (uint8_t)0
@@ -597,6 +599,46 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
   }
 
   return ACK_OUT;
+}
+
+uint8_t serial_4way_read_settings(blheli_settings_t *settings) {
+  uint8_t input[256];
+  uint8_t output[256];
+  uint8_t output_len = 0;
+
+  uint8_t ack = ESC4WAY_ACK_OK;
+  serial_esc4way_payload_t payload = {
+      .flash_addr_h = 0,
+      .flash_addr_l = 0,
+      .params = input,
+      .params_len = 1,
+  };
+
+  payload.params[0] = 0; //esc 0
+  payload.params_len = 1;
+
+  ack = serial_4way_send(ESC4WAY_DEVICE_INIT_FLASH, payload, output, &output_len);
+  if (ack != ESC4WAY_ACK_OK) {
+    quic_debugf("ERROR ESC4WAY_DEVICE_INIT_FLASH 0x%x", ack);
+    return ack;
+  }
+
+  uint16_t settings_offset = 0x1A00;
+  uint8_t settings_size = 0x70;
+
+  payload.flash_addr_h = settings_offset >> 8;
+  payload.flash_addr_l = settings_offset & 0xFF;
+  payload.params[0] = settings_size;
+  payload.params_len = 1;
+
+  ack = serial_4way_send(ESC4WAY_DEVICE_READ, payload, output, &output_len);
+  if (ack != ESC4WAY_ACK_OK) {
+    quic_debugf("ERROR ESC4WAY_DEVICE_READ 0x%x", ack);
+    return ack;
+  }
+
+  memcpy(settings, output, output_len);
+  return ack;
 }
 
 // Send Structure

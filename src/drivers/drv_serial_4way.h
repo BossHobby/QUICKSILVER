@@ -154,16 +154,65 @@ typedef enum {
 } serial_esc4way_ack_t;
 
 typedef struct {
-  uint8_t num_bytes;
   uint8_t flash_addr_h;
   uint8_t flash_addr_l;
   uint8_t *params;
   uint8_t params_len;
 } serial_esc4way_payload_t;
 
+typedef struct {
+  uint8_t MAIN_REVISION;            //offset 0x00
+  uint8_t SUB_REVISION;             //offset 0x01
+  uint8_t LAYOUT_REVISION;          //offset 0x02
+  uint8_t P_GAIN;                   //offset 0x03
+  uint8_t I_GAIN;                   //offset 0x04
+  uint8_t GOVERNOR_MODE;            //offset 0x05
+  uint8_t LOW_VOLTAGE_LIMIT;        //offset 0x06
+  uint8_t MOTOR_GAIN;               //offset 0x07
+  uint8_t MOTOR_IDLE;               //offset 0x08
+  uint8_t STARTUP_POWER;            //offset 0x09
+  uint8_t PWM_FREQUENCY;            //offset 0x0A
+  uint8_t MOTOR_DIRECTION;          //offset 0x0B
+  uint8_t INPUT_PWM_POLARITY;       //offset 0x0C
+  uint16_t MODE;                    //offset 0x0D
+  uint8_t PROGRAMMING_BY_TX;        //offset 0x0F
+  uint8_t REARM_AT_START;           //offset 0x10
+  uint8_t GOVERNOR_SETUP_TARGET;    //offset 0x11
+  uint8_t STARTUP_RPM;              //offset 0x12
+  uint8_t STARTUP_ACCELERATION;     //offset 0x13
+  uint8_t VOLT_COMP;                //offset 0x14
+  uint8_t COMMUTATION_TIMING;       //offset 0x15
+  uint8_t DAMPING_FORCE;            //offset 0x16
+  uint8_t GOVERNOR_RANGE;           //offset 0x17
+  uint8_t STARTUP_METHOD;           //offset 0x18
+  uint8_t PPM_MIN_THROTTLE;         //offset 0x19
+  uint8_t PPM_MAX_THROTTLE;         //offset 0x1A
+  uint8_t BEEP_STRENGTH;            //offset 0x1B
+  uint8_t BEACON_STRENGTH;          //offset 0x1C
+  uint8_t BEACON_DELAY;             //offset 0x1D
+  uint8_t THROTTLE_RATE;            //offset 0x1E
+  uint8_t DEMAG_COMPENSATION;       //offset 0x1F
+  uint8_t BEC_VOLTAGE;              //offset 0x20
+  uint8_t PPM_CENTER_THROTTLE;      //offset 0x21
+  uint8_t SPOOLUP_TIME;             //offset 0x22
+  uint8_t TEMPERATURE_PROTECTION;   //offset 0x23
+  uint8_t LOW_RPM_POWER_PROTECTION; //offset 0x24
+  uint8_t PWM_INPUT;                //offset 0x25
+  uint8_t PWM_DITHER;               //offset 0x26
+  uint8_t BRAKE_ON_STOP;            //offset 0x27
+  uint8_t LED_CONTROL;              //offset 0x28
+
+  uint8_t _padding[23]; // offset 0x29
+
+  char LAYOUT[16]; //offset 0x40
+  char MCU[16];    //offset 0x50
+  char NAME[16];   //offset 0x60
+} blheli_settings_t;
+
 uint8_t serial_4way_init();
 void serial_4way_release();
 uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t *output, uint8_t *output_len);
+uint8_t serial_4way_read_settings(blheli_settings_t *settings);
 void serial_4way_process();
 
 #endif
