@@ -70,11 +70,11 @@ static cbor_result_t _cbor_advance(cbor_value_t *dec, cbor_result_t res) {
 }
 
 static cbor_size_type_t _cbor_size_for_value(uint32_t val) {
-  if (val < UINT8_MAX) {
+  if (val <= UINT8_MAX) {
     return CBOR_SIZE_BYTE;
-  } else if (val < UINT16_MAX) {
+  } else if (val <= UINT16_MAX) {
     return CBOR_SIZE_SHORT;
-  } else if (val < UINT32_MAX) {
+  } else if (val <= UINT32_MAX) {
     return CBOR_SIZE_WORD;
   }
   return CBOR_SIZE_LONG;
