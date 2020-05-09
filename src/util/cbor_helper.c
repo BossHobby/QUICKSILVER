@@ -1,5 +1,7 @@
 #include "util/cbor_helper.h"
 
+#include <string.h>
+
 cbor_result_t cbor_encode_float_array(cbor_value_t *enc, const float *array, uint32_t size) {
   CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_array(enc, size))
 
@@ -39,5 +41,13 @@ cbor_result_t cbor_decode_uint8_array(cbor_value_t *enc, uint8_t *array, uint32_
     CBOR_CHECK_ERROR(res = cbor_decode_uint8(enc, &array[i]));
   }
 
+  return res;
+}
+
+cbor_result_t cbor_decode_tstr_copy(cbor_value_t *dec, uint8_t *buf, uint32_t size) {
+  const uint8_t *ptr;
+  uint32_t actual_size;
+  CBOR_CHECK_ERROR(cbor_result_t res = cbor_decode_tstr(dec, &ptr, &actual_size));
+  memcpy(buf, ptr, min_uint32(actual_size, size));
   return res;
 }
