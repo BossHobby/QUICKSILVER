@@ -26,6 +26,7 @@ INCLUDE = src \
 	Libraries/cbor/src
 
 SOURCE = $(shell sh -c 'find src/main/ -iname *.c -or -name *.cpp') \
+	$(shell sh -c 'find src/util/ -iname *.c -or -name *.cpp') \
 	$(shell sh -c 'find src/drivers/ -maxdepth 1 -iname *.c -or -name *.cpp') \
 	$(TARGET_SOURCE) \
 	$(shell sh -c 'find Libraries/cbor/src -iname *.c -or -name *.cpp')
