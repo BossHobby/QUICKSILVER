@@ -214,6 +214,27 @@ void get_quic(uint8_t *data, uint32_t len) {
     break;
   }
 #endif
+  case QUIC_VAL_BLHEL_SETTINGS: {
+    send_quic(QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
+
+    uint8_t count = serial_4way_init();
+    timer_delay_us(500000);
+
+    for (uint8_t i = 0; i < count; i++) {
+      blheli_settings_t settings;
+      serial_4way_read_settings(&settings, i);
+
+      cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+      res = cbor_encode_blheli_settings_t(&enc, &settings);
+      check_cbor_error(QUIC_CMD_MOTOR);
+
+      send_quic(QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
+    }
+
+    serial_4way_release();
+    send_quic_header(QUIC_CMD_GET, QUIC_FLAG_STREAMING, 0);
+    break;
+  }
   default:
     quic_errorf(QUIC_CMD_GET, "INVALID VALUE %d", value);
     break;
@@ -293,6 +314,27 @@ void set_quic(uint8_t *data, uint32_t len) {
     break;
   }
 #endif
+  case QUIC_VAL_BLHEL_SETTINGS: {
+    uint8_t count = serial_4way_init();
+    timer_delay_us(500000);
+
+    for (uint8_t i = 0; i < count; i++) {
+      blheli_settings_t settings;
+
+      res = cbor_decode_blheli_settings_t(&dec, &settings);
+      check_cbor_error(QUIC_CMD_SET);
+
+      serial_4way_write_settings(&settings, i);
+    }
+
+    serial_4way_release();
+
+    res = cbor_encode_str(&enc, "OK");
+    check_cbor_error(QUIC_CMD_SET);
+
+    send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  }
   default:
     quic_errorf(QUIC_CMD_SET, "INVALID VALUE %d", value);
     break;
@@ -417,27 +459,6 @@ void process_motor_test(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_EXIT, encode_buffer, cbor_encoder_len(&enc));
 
     serial_4way_process();
-    break;
-  }
-
-  case QUIC_MOTOR_BLHEL_SETTINGS: {
-    uint8_t count = serial_4way_init();
-    timer_delay_us(500000);
-
-    for (uint8_t i = 0; i < count; i++) {
-      blheli_settings_t settings;
-      serial_4way_read_settings(&settings, i);
-
-      cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
-      res = cbor_encode_blheli_settings_t(&enc, &settings);
-      check_cbor_error(QUIC_CMD_MOTOR);
-
-      send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
-    }
-
-    serial_4way_release();
-
-    send_quic_header(QUIC_CMD_MOTOR, QUIC_FLAG_STREAMING, 0);
     break;
   }
 

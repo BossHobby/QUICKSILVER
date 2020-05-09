@@ -89,6 +89,11 @@
 
 #define ESC_COUNT 4
 
+#define BLHELI_SETTINGS_OFFSET 0x1A00
+#define BLHELI_SETTINGS_SIZE 0x70
+
+#define SILABS_PAGE_SIZE 0x0200
+
 uint8_t selected_esc;
 SoftSerialData_t escSerial[ESC_COUNT] = {0};
 
@@ -656,12 +661,9 @@ uint8_t serial_4way_read_settings(blheli_settings_t *settings, uint8_t esc) {
     return ack;
   }
 
-  uint16_t settings_offset = 0x1A00;
-  uint8_t settings_size = 0x70;
-
-  payload.flash_addr_h = settings_offset >> 8;
-  payload.flash_addr_l = settings_offset & 0xFF;
-  payload.params[0] = settings_size;
+  payload.flash_addr_h = BLHELI_SETTINGS_OFFSET >> 8;
+  payload.flash_addr_l = BLHELI_SETTINGS_OFFSET & 0xFF;
+  payload.params[0] = BLHELI_SETTINGS_SIZE;
   payload.params_len = 1;
 
   ack = serial_4way_send(ESC4WAY_DEVICE_READ, payload, output, &output_len);
@@ -671,6 +673,51 @@ uint8_t serial_4way_read_settings(blheli_settings_t *settings, uint8_t esc) {
   }
 
   memcpy(settings, output, output_len);
+  return ack;
+}
+
+uint8_t serial_4way_write_settings(blheli_settings_t *settings, uint8_t esc) {
+  uint8_t input[256];
+  uint8_t output[256];
+  uint8_t output_len = 0;
+
+  uint8_t ack = ESC4WAY_ACK_OK;
+  serial_esc4way_payload_t payload = {
+      .flash_addr_h = 0,
+      .flash_addr_l = 0,
+      .params = input,
+      .params_len = 1,
+  };
+
+  payload.params[0] = esc;
+  payload.params_len = 1;
+
+  ack = serial_4way_send(ESC4WAY_DEVICE_INIT_FLASH, payload, output, &output_len);
+  if (ack != ESC4WAY_ACK_OK) {
+    quic_debugf("ERROR ESC4WAY_DEVICE_INIT_FLASH 0x%x", ack);
+    return ack;
+  }
+
+  payload.params[0] = BLHELI_SETTINGS_OFFSET / SILABS_PAGE_SIZE;
+  payload.params_len = 1;
+
+  ack = serial_4way_send(ESC4WAY_DEVICE_PAGE_ERASE, payload, output, &output_len);
+  if (ack != ESC4WAY_ACK_OK) {
+    quic_debugf("ERROR ESC4WAY_DEVICE_PAGE_ERASE 0x%x", ack);
+    return ack;
+  }
+
+  payload.flash_addr_h = BLHELI_SETTINGS_OFFSET >> 8;
+  payload.flash_addr_l = BLHELI_SETTINGS_OFFSET & 0xFF;
+  memcpy(payload.params, settings, BLHELI_SETTINGS_SIZE);
+  payload.params_len = BLHELI_SETTINGS_SIZE;
+
+  ack = serial_4way_send(ESC4WAY_DEVICE_WRITE, payload, output, &output_len);
+  if (ack != ESC4WAY_ACK_OK) {
+    quic_debugf("ERROR ESC4WAY_DEVICE_WRITE 0x%x", ack);
+    return ack;
+  }
+
   return ack;
 }
 
