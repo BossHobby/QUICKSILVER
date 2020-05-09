@@ -25,6 +25,7 @@
 #include "drv_serial_soft.h"
 #include "drv_usb.h"
 #include "usb_configurator.h"
+#include "util/cbor_helper.h"
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 
@@ -174,13 +175,13 @@ static uint8_t connect_esc(uint8_32_u *pDeviceInfo) {
       return 1;
     } else {
       if (BL_ConnectEx(pDeviceInfo)) {
-        if SILABS_DEVICE_MATCH {
+        if (SILABS_DEVICE_MATCH) {
           interface_mode = ESC4WAY_SIL_BLB;
           return 1;
-        } else if ATMEL_DEVICE_MATCH {
+        } else if (ATMEL_DEVICE_MATCH) {
           interface_mode = ESC4WAY_ATM_BLB;
           return 1;
-        } else if ARM_DEVICE_MATCH {
+        } else if (ARM_DEVICE_MATCH) {
           interface_mode = ESC4WAY_ARM_BLB;
           return 1;
         }
@@ -188,13 +189,13 @@ static uint8_t connect_esc(uint8_32_u *pDeviceInfo) {
     }
 #elif defined(USE_SERIAL_4WAY_BLHELI_BOOTLOADER)
     if (BL_ConnectEx(pDeviceInfo)) {
-      if SILABS_DEVICE_MATCH {
+      if (SILABS_DEVICE_MATCH) {
         interface_mode = ESC4WAY_SIL_BLB;
         return 1;
-      } else if ATMEL_DEVICE_MATCH {
+      } else if (ATMEL_DEVICE_MATCH) {
         interface_mode = ESC4WAY_ATM_BLB;
         return 1;
-      } else if ARM_DEVICE_MATCH {
+      } else if (ARM_DEVICE_MATCH) {
         interface_mode = ESC4WAY_ARM_BLB;
         return 1;
       }
@@ -202,7 +203,7 @@ static uint8_t connect_esc(uint8_32_u *pDeviceInfo) {
 #elif defined(USE_SERIAL_4WAY_SK_BOOTLOADER)
     if (Stk_ConnectEx(pDeviceInfo)) {
       interface_mode = ESC4WAY_ATM_SK;
-      if ATMEL_DEVICE_MATCH
+      if (ATMEL_DEVICE_MATCH)
         return 1;
     }
 #endif
@@ -601,7 +602,39 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
   return ACK_OUT;
 }
 
-uint8_t serial_4way_read_settings(blheli_settings_t *settings) {
+#define MEMBER CBOR_ENCODE_MEMBER
+#define STR_MEMBER CBOR_ENCODE_STR_MEMBER
+#define TSTR_MEMBER CBOR_ENCODE_TSTR_MEMBER
+#define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
+#define STR_ARRAY_MEMBER CBOR_ENCODE_STR_ARRAY_MEMBER
+
+CBOR_START_STRUCT_ENCODER(blheli_settings_t)
+BLHELI_SETTINGS_MEMBERS
+CBOR_END_STRUCT_ENCODER()
+
+#undef MEMBER
+#undef STR_MEMBER
+#undef TSTR_MEMBER
+#undef ARRAY_MEMBER
+#undef STR_ARRAY_MEMBER
+
+#define MEMBER CBOR_DECODE_MEMBER
+#define STR_MEMBER CBOR_DECODE_STR_MEMBER
+#define TSTR_MEMBER CBOR_DECODE_TSTR_MEMBER
+#define ARRAY_MEMBER CBOR_DECODE_ARRAY_MEMBER
+#define STR_ARRAY_MEMBER CBOR_DECODE_STR_ARRAY_MEMBER
+
+CBOR_START_STRUCT_DECODER(blheli_settings_t)
+BLHELI_SETTINGS_MEMBERS
+CBOR_END_STRUCT_DECODER()
+
+#undef MEMBER
+#undef STR_MEMBER
+#undef TSTR_MEMBER
+#undef ARRAY_MEMBER
+#undef STR_ARRAY_MEMBER
+
+uint8_t serial_4way_read_settings(blheli_settings_t *settings, uint8_t esc) {
   uint8_t input[256];
   uint8_t output[256];
   uint8_t output_len = 0;
@@ -614,7 +647,7 @@ uint8_t serial_4way_read_settings(blheli_settings_t *settings) {
       .params_len = 1,
   };
 
-  payload.params[0] = 0; //esc 0
+  payload.params[0] = esc;
   payload.params_len = 1;
 
   ack = serial_4way_send(ESC4WAY_DEVICE_INIT_FLASH, payload, output, &output_len);

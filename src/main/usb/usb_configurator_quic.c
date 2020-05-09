@@ -330,8 +330,7 @@ void process_blackbox(uint8_t *data, uint32_t len) {
     res = cbor_decode_uint8(&dec, &file_index);
     check_cbor_error(QUIC_CMD_BLACKBOX);
 
-    send_quic_header(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, cbor_encoder_len(&enc));
-    usb_serial_write(encode_buffer, cbor_encoder_len(&enc));
+    send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
 
     if (data_flash_header.file_num > file_index) {
       blackbox_t blackbox;
@@ -346,8 +345,7 @@ void process_blackbox(uint8_t *data, uint32_t len) {
         res = cbor_encode_compact_blackbox_t(&enc, &blackbox);
         check_cbor_error(QUIC_CMD_BLACKBOX);
 
-        send_quic_header(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, cbor_encoder_len(&enc));
-        usb_serial_write(encode_buffer, cbor_encoder_len(&enc));
+        send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
       }
     }
 
@@ -410,7 +408,7 @@ void process_motor_test(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
 
-  case QUIC_MOTOR_ESC4WAY: {
+  case QUIC_MOTOR_ESC4WAY_IF: {
     uint8_t count = serial_4way_init();
 
     res = cbor_encode_uint8(&enc, &count);
@@ -419,6 +417,27 @@ void process_motor_test(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_EXIT, encode_buffer, cbor_encoder_len(&enc));
 
     serial_4way_process();
+    break;
+  }
+
+  case QUIC_MOTOR_BLHEL_SETTINGS: {
+    uint8_t count = serial_4way_init();
+    timer_delay_us(500000);
+
+    for (uint8_t i = 0; i < count; i++) {
+      blheli_settings_t settings;
+      serial_4way_read_settings(&settings, i);
+
+      cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+      res = cbor_encode_blheli_settings_t(&enc, &settings);
+      check_cbor_error(QUIC_CMD_MOTOR);
+
+      send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
+    }
+
+    serial_4way_release();
+
+    send_quic_header(QUIC_CMD_MOTOR, QUIC_FLAG_STREAMING, 0);
     break;
   }
 

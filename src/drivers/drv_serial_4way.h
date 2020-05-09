@@ -17,6 +17,7 @@
 */
 #pragma once
 
+#include <cbor.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -160,7 +161,7 @@ typedef struct {
   uint8_t params_len;
 } serial_esc4way_payload_t;
 
-typedef struct {
+typedef struct __attribute__((__packed__)) {
   uint8_t MAIN_REVISION;            //offset 0x00
   uint8_t SUB_REVISION;             //offset 0x01
   uint8_t LAYOUT_REVISION;          //offset 0x02
@@ -204,15 +205,63 @@ typedef struct {
 
   uint8_t _padding[23]; // offset 0x29
 
-  char LAYOUT[16]; //offset 0x40
-  char MCU[16];    //offset 0x50
-  char NAME[16];   //offset 0x60
+  uint8_t LAYOUT[16]; //offset 0x40
+  uint8_t MCU[16];    //offset 0x50
+  uint8_t NAME[16];   //offset 0x60
 } blheli_settings_t;
+
+#define BLHELI_SETTINGS_MEMBERS           \
+  MEMBER(MAIN_REVISION, uint8)            \
+  MEMBER(SUB_REVISION, uint8)             \
+  MEMBER(LAYOUT_REVISION, uint8)          \
+  MEMBER(P_GAIN, uint8)                   \
+  MEMBER(I_GAIN, uint8)                   \
+  MEMBER(GOVERNOR_MODE, uint8)            \
+  MEMBER(LOW_VOLTAGE_LIMIT, uint8)        \
+  MEMBER(MOTOR_GAIN, uint8)               \
+  MEMBER(MOTOR_IDLE, uint8)               \
+  MEMBER(STARTUP_POWER, uint8)            \
+  MEMBER(PWM_FREQUENCY, uint8)            \
+  MEMBER(MOTOR_DIRECTION, uint8)          \
+  MEMBER(INPUT_PWM_POLARITY, uint8)       \
+  MEMBER(MODE, uint16)                    \
+  MEMBER(PROGRAMMING_BY_TX, uint8)        \
+  MEMBER(REARM_AT_START, uint8)           \
+  MEMBER(GOVERNOR_SETUP_TARGET, uint8)    \
+  MEMBER(STARTUP_RPM, uint8)              \
+  MEMBER(STARTUP_ACCELERATION, uint8)     \
+  MEMBER(VOLT_COMP, uint8)                \
+  MEMBER(COMMUTATION_TIMING, uint8)       \
+  MEMBER(DAMPING_FORCE, uint8)            \
+  MEMBER(GOVERNOR_RANGE, uint8)           \
+  MEMBER(STARTUP_METHOD, uint8)           \
+  MEMBER(PPM_MIN_THROTTLE, uint8)         \
+  MEMBER(PPM_MAX_THROTTLE, uint8)         \
+  MEMBER(BEEP_STRENGTH, uint8)            \
+  MEMBER(BEACON_STRENGTH, uint8)          \
+  MEMBER(BEACON_DELAY, uint8)             \
+  MEMBER(THROTTLE_RATE, uint8)            \
+  MEMBER(DEMAG_COMPENSATION, uint8)       \
+  MEMBER(BEC_VOLTAGE, uint8)              \
+  MEMBER(PPM_CENTER_THROTTLE, uint8)      \
+  MEMBER(SPOOLUP_TIME, uint8)             \
+  MEMBER(TEMPERATURE_PROTECTION, uint8)   \
+  MEMBER(LOW_RPM_POWER_PROTECTION, uint8) \
+  MEMBER(PWM_INPUT, uint8)                \
+  MEMBER(PWM_DITHER, uint8)               \
+  MEMBER(BRAKE_ON_STOP, uint8)            \
+  MEMBER(LED_CONTROL, uint8)              \
+  TSTR_MEMBER(LAYOUT, 16)                 \
+  TSTR_MEMBER(MCU, 16)                    \
+  TSTR_MEMBER(NAME, 16)
+
+cbor_result_t cbor_decode_blheli_settings_t(cbor_value_t *dec, blheli_settings_t *p);
+cbor_result_t cbor_encode_blheli_settings_t(cbor_value_t *enc, const blheli_settings_t *p);
 
 uint8_t serial_4way_init();
 void serial_4way_release();
 uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t *output, uint8_t *output_len);
-uint8_t serial_4way_read_settings(blheli_settings_t *settings);
+uint8_t serial_4way_read_settings(blheli_settings_t *settings, uint8_t esc);
 void serial_4way_process();
 
 #endif
