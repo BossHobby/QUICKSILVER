@@ -4,6 +4,7 @@
 #include "drv_time.h"
 #include "usb_configurator.h"
 #include "util.h"
+#include "util/cbor_helper.h"
 
 uint32_t blackbox_rate = 2;
 uint8_t blackbox_override = 0;
@@ -30,93 +31,93 @@ extern float accel_filter[3];
 extern float pidoutput[3];
 
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
-  CHECK_CBOR_ERROR(cbor_result_t res = cbor_encode_map_indefinite(enc));
+  CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_map_indefinite(enc));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "time"));
-  CHECK_CBOR_ERROR(res = cbor_encode_uint32(enc, &b->time));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "time"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->time));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "cpu_load"));
-  CHECK_CBOR_ERROR(res = cbor_encode_uint16(enc, &b->cpu_load));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "cpu_load"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &b->cpu_load));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "vbat_filter"));
-  CHECK_CBOR_ERROR(res = cbor_encode_uint16(enc, &b->vbat_filter));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "vbat_filter"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &b->vbat_filter));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "gyro_raw"));
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->gyro_raw, 3));
-  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "gyro_filter"));
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->gyro_filter, 3));
-  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "gyro_vector"));
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->gyro_vector, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "gyro_raw"));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->gyro_raw, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "gyro_filter"));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->gyro_filter, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "gyro_vector"));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->gyro_vector, 3));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "rx_raw"));
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->rx_raw, 4));
-  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "rx_filter"));
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->rx_filter, 4));
-  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "rx_aux"));
-  CHECK_CBOR_ERROR(res = cbor_encode_uint32(enc, &b->rx_aux));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "rx_raw"));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->rx_raw, 4));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "rx_filter"));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->rx_filter, 4));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "rx_aux"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->rx_aux));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "accel_raw"));
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->accel_raw, 3));
-  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "accel_filter"));
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->accel_filter, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "accel_raw"));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->accel_raw, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "accel_filter"));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->accel_filter, 3));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "pid_output"));
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->pid_output, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "pid_output"));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->pid_output, 3));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_end_indefinite(enc));
+  CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
 
   return res;
 }
 
 cbor_result_t cbor_encode_compact_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
-  CHECK_CBOR_ERROR(cbor_result_t res = cbor_encode_array_indefinite(enc));
+  CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_array_indefinite(enc));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_uint32(enc, &b->time));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->time));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_uint16(enc, &b->cpu_load));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &b->cpu_load));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_uint16(enc, &b->vbat_filter));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &b->vbat_filter));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->gyro_raw, 3));
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->gyro_filter, 3));
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->gyro_vector, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->gyro_raw, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->gyro_filter, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->gyro_vector, 3));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->rx_raw, 4));
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->rx_filter, 4));
-  CHECK_CBOR_ERROR(res = cbor_encode_uint32(enc, &b->rx_aux));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->rx_raw, 4));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->rx_filter, 4));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->rx_aux));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->accel_raw, 3));
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->accel_filter, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->accel_raw, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->accel_filter, 3));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->pid_output, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->pid_output, 3));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_end_indefinite(enc));
+  CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
 
   return res;
 }
 
 cbor_result_t cbor_decode_compact_blackbox_t(cbor_value_t *dec, blackbox_t *b) {
   cbor_container_t array;
-  CHECK_CBOR_ERROR(cbor_result_t res = cbor_decode_array(dec, &array));
+  CBOR_CHECK_ERROR(cbor_result_t res = cbor_decode_array(dec, &array));
 
-  CHECK_CBOR_ERROR(res = cbor_decode_uint32(dec, &b->time));
+  CBOR_CHECK_ERROR(res = cbor_decode_uint32(dec, &b->time));
 
-  CHECK_CBOR_ERROR(res = cbor_decode_uint16(dec, &b->cpu_load));
+  CBOR_CHECK_ERROR(res = cbor_decode_uint16(dec, &b->cpu_load));
 
-  CHECK_CBOR_ERROR(res = cbor_decode_uint16(dec, &b->vbat_filter));
+  CBOR_CHECK_ERROR(res = cbor_decode_uint16(dec, &b->vbat_filter));
 
-  CHECK_CBOR_ERROR(res = cbor_decode_float_array(dec, b->gyro_raw, 3));
-  CHECK_CBOR_ERROR(res = cbor_decode_float_array(dec, b->gyro_filter, 3));
-  CHECK_CBOR_ERROR(res = cbor_decode_float_array(dec, b->gyro_vector, 3));
+  CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->gyro_raw, 3));
+  CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->gyro_filter, 3));
+  CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->gyro_vector, 3));
 
-  CHECK_CBOR_ERROR(res = cbor_decode_float_array(dec, b->rx_raw, 4));
-  CHECK_CBOR_ERROR(res = cbor_decode_float_array(dec, b->rx_filter, 4));
-  CHECK_CBOR_ERROR(res = cbor_decode_uint32(dec, &b->rx_aux));
+  CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->rx_raw, 4));
+  CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->rx_filter, 4));
+  CBOR_CHECK_ERROR(res = cbor_decode_uint32(dec, &b->rx_aux));
 
-  CHECK_CBOR_ERROR(res = cbor_decode_float_array(dec, b->accel_raw, 3));
-  CHECK_CBOR_ERROR(res = cbor_decode_float_array(dec, b->accel_filter, 3));
+  CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->accel_raw, 3));
+  CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->accel_filter, 3));
 
-  CHECK_CBOR_ERROR(res = cbor_decode_float_array(dec, b->pid_output, 3));
+  CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->pid_output, 3));
 
   return res;
 }

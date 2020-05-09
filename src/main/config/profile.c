@@ -5,6 +5,7 @@
 #include "drv_usb.h"
 #include "usb_configurator.h"
 #include "util.h"
+#include "util/cbor_helper.h"
 
 // Default values for our profile
 // ignore -Wmissing-braces here, gcc bug with nested structs
@@ -569,133 +570,87 @@ cbor_result_t cbor_encode_profile_metadata_t(cbor_value_t *enc, const profile_me
   return res;
 }
 
-#define START_STRUCT_ENCODER(type)                                     \
-  cbor_result_t cbor_encode_##type(cbor_value_t *enc, const type *o) { \
-    cbor_result_t res = CBOR_OK;                                       \
-    res = cbor_encode_map_indefinite(enc);                             \
-    if (res < CBOR_OK)                                                 \
-      return res;
+#define MEMBER CBOR_ENCODE_MEMBER
+#define STR_MEMBER CBOR_ENCODE_STR_MEMBER
+#define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
+#define STR_ARRAY_MEMBER CBOR_ENCODE_STR_ARRAY_MEMBER
 
-#define END_STRUCT_ENCODER()              \
-  return cbor_encode_end_indefinite(enc); \
-  }
-
-#define MEMBER(member, type)                 \
-  res = cbor_encode_str(enc, #member);       \
-  if (res < CBOR_OK)                         \
-    return res;                              \
-  res = cbor_encode_##type(enc, &o->member); \
-  if (res < CBOR_OK)                         \
-    return res;
-
-#define STR_MEMBER(member)               \
-  res = cbor_encode_str(enc, #member);   \
-  if (res < CBOR_OK)                     \
-    return res;                          \
-  res = cbor_encode_str(enc, o->member); \
-  if (res < CBOR_OK)                     \
-    return res;
-
-#define ARRAY_MEMBER(member, size, type)          \
-  res = cbor_encode_str(enc, #member);            \
-  if (res < CBOR_OK)                              \
-    return res;                                   \
-  res = cbor_encode_array(enc, size);             \
-  if (res < CBOR_OK)                              \
-    return res;                                   \
-  for (uint32_t i = 0; i < size; i++) {           \
-    res = cbor_encode_##type(enc, &o->member[i]); \
-    if (res < CBOR_OK)                            \
-      return res;                                 \
-  }
-
-#define STR_ARRAY_MEMBER(member, size)        \
-  res = cbor_encode_str(enc, #member);        \
-  if (res < CBOR_OK)                          \
-    return res;                               \
-  res = cbor_encode_array(enc, size);         \
-  if (res < CBOR_OK)                          \
-    return res;                               \
-  for (uint32_t i = 0; i < size; i++) {       \
-    res = cbor_encode_str(enc, o->member[i]); \
-    if (res < CBOR_OK)                        \
-      return res;                             \
-  }
-
-START_STRUCT_ENCODER(rate_mode_silverware_t)
+CBOR_START_STRUCT_ENCODER(rate_mode_silverware_t)
 SILVERWARE_RATE_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(rate_mode_betaflight_t)
+CBOR_START_STRUCT_ENCODER(rate_mode_betaflight_t)
 BETAFLIGHT_RATE_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(profile_rate_t)
+CBOR_START_STRUCT_ENCODER(profile_rate_t)
 RATE_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(profile_motor_t)
+CBOR_START_STRUCT_ENCODER(profile_motor_t)
 MOTOR_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(profile_serial_t)
+CBOR_START_STRUCT_ENCODER(profile_serial_t)
 SERIAL_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(profile_filter_parameter_t)
+CBOR_START_STRUCT_ENCODER(profile_filter_parameter_t)
 FILTER_PARAMETER_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(profile_filter_t)
+CBOR_START_STRUCT_ENCODER(profile_filter_t)
 FILTER_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(profile_osd_t)
+CBOR_START_STRUCT_ENCODER(profile_osd_t)
 OSD_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(profile_voltage_t)
+CBOR_START_STRUCT_ENCODER(profile_voltage_t)
 VOLTAGE_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(pid_rate_t)
+CBOR_START_STRUCT_ENCODER(pid_rate_t)
 PID_RATE_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(angle_pid_rate_t)
+CBOR_START_STRUCT_ENCODER(angle_pid_rate_t)
 ANGLE_PID_RATE_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(pid_rate_preset_t)
+CBOR_START_STRUCT_ENCODER(pid_rate_preset_t)
 PID_RATE_PRESET_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(stick_rate_t)
+CBOR_START_STRUCT_ENCODER(stick_rate_t)
 STICK_RATE_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(throttle_dterm_attenuation_t)
+CBOR_START_STRUCT_ENCODER(throttle_dterm_attenuation_t)
 DTERM_ATTENUATION_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(profile_pid_t)
+CBOR_START_STRUCT_ENCODER(profile_pid_t)
 PID_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(profile_channel_t)
+CBOR_START_STRUCT_ENCODER(profile_channel_t)
 CHANNEL_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(profile_t)
+CBOR_START_STRUCT_ENCODER(profile_t)
 PROFILE_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
-START_STRUCT_ENCODER(target_info_t)
+CBOR_START_STRUCT_ENCODER(target_info_t)
 TARGET_INFO_MEMBERS
-END_STRUCT_ENCODER()
+CBOR_END_STRUCT_ENCODER()
 
 #undef MEMBER
+#undef STR_MEMBER
 #undef ARRAY_MEMBER
+#undef STR_ARRAY_MEMBER
 
 cbor_result_t cbor_decode_vector_t(cbor_value_t *it, vector_t *vec) {
   cbor_result_t res = CBOR_OK;
@@ -764,112 +719,76 @@ cbor_result_t cbor_decode_profile_metadata_t(cbor_value_t *dec, profile_metadata
   return res;
 }
 
-#define START_STRUCT_DECODER(type)                                   \
-  cbor_result_t cbor_decode_##type(cbor_value_t *dec, type *o) {     \
-    cbor_result_t res = CBOR_OK;                                     \
-    cbor_container_t map;                                            \
-    res = cbor_decode_map(dec, &map);                                \
-    if (res < CBOR_OK)                                               \
-      return res;                                                    \
-    const uint8_t *name;                                             \
-    uint32_t name_len;                                               \
-    for (uint32_t i = 0; i < cbor_decode_map_size(dec, &map); i++) { \
-      res = cbor_decode_tstr(dec, &name, &name_len);                 \
-      if (res < CBOR_OK)                                             \
-        return res;
+#define MEMBER CBOR_DECODE_MEMBER
+#define STR_MEMBER CBOR_DECODE_STR_MEMBER
+#define ARRAY_MEMBER CBOR_DECODE_ARRAY_MEMBER
+#define STR_ARRAY_MEMBER CBOR_DECODE_STR_ARRAY_MEMBER
 
-#define END_STRUCT_DECODER()   \
-  res = cbor_decode_skip(dec); \
-  if (res < CBOR_OK)           \
-    return res;                \
-  }                            \
-  return res;                  \
-  }
-
-#define MEMBER(member, type)                       \
-  if (buf_equal_string(name, name_len, #member)) { \
-    res = cbor_decode_##type(dec, &o->member);     \
-    if (res < CBOR_OK)                             \
-      return res;                                  \
-    continue;                                      \
-  }
-
-#define ARRAY_MEMBER(member, size, type)                                                   \
-  if (buf_equal_string(name, name_len, #member)) {                                         \
-    cbor_container_t array;                                                                \
-    res = cbor_decode_array(dec, &array);                                                  \
-    if (res < CBOR_OK)                                                                     \
-      return res;                                                                          \
-    for (uint32_t i = 0; i < min_uint32(size, cbor_decode_array_size(dec, &array)); i++) { \
-      res = cbor_decode_##type(dec, &o->member[i]);                                        \
-      if (res < CBOR_OK)                                                                   \
-        return res;                                                                        \
-    }                                                                                      \
-    continue;                                                                              \
-  }
-
-START_STRUCT_DECODER(rate_mode_silverware_t)
+CBOR_START_STRUCT_DECODER(rate_mode_silverware_t)
 SILVERWARE_RATE_MEMBERS
-END_STRUCT_DECODER()
+CBOR_END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(rate_mode_betaflight_t)
+CBOR_START_STRUCT_DECODER(rate_mode_betaflight_t)
 BETAFLIGHT_RATE_MEMBERS
-END_STRUCT_DECODER()
+CBOR_END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(profile_rate_t)
+CBOR_START_STRUCT_DECODER(profile_rate_t)
 RATE_MEMBERS
-END_STRUCT_DECODER()
+CBOR_END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(profile_motor_t)
+CBOR_START_STRUCT_DECODER(profile_motor_t)
 MOTOR_MEMBERS
-END_STRUCT_DECODER()
+CBOR_END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(profile_serial_t)
+CBOR_START_STRUCT_DECODER(profile_serial_t)
 SERIAL_MEMBERS
-END_STRUCT_DECODER()
+CBOR_END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(profile_filter_parameter_t)
+CBOR_START_STRUCT_DECODER(profile_filter_parameter_t)
 FILTER_PARAMETER_MEMBERS
-END_STRUCT_DECODER()
+CBOR_END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(profile_filter_t)
+CBOR_START_STRUCT_DECODER(profile_filter_t)
 FILTER_MEMBERS
-END_STRUCT_DECODER()
+CBOR_END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(profile_osd_t)
+CBOR_START_STRUCT_DECODER(profile_osd_t)
 OSD_MEMBERS
-END_STRUCT_DECODER()
+CBOR_END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(profile_voltage_t)
+CBOR_START_STRUCT_DECODER(profile_voltage_t)
 VOLTAGE_MEMBERS
-END_STRUCT_DECODER()
+CBOR_END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(pid_rate_t)
+CBOR_START_STRUCT_DECODER(pid_rate_t)
 PID_RATE_MEMBERS
-END_STRUCT_DECODER()
+CBOR_END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(angle_pid_rate_t)
+CBOR_START_STRUCT_DECODER(angle_pid_rate_t)
 ANGLE_PID_RATE_MEMBERS
-END_STRUCT_DECODER()
+CBOR_END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(stick_rate_t)
+CBOR_START_STRUCT_DECODER(stick_rate_t)
 STICK_RATE_MEMBERS
-END_STRUCT_DECODER()
+CBOR_END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(throttle_dterm_attenuation_t)
+CBOR_START_STRUCT_DECODER(throttle_dterm_attenuation_t)
 DTERM_ATTENUATION_MEMBERS
-END_STRUCT_DECODER()
+CBOR_END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(profile_pid_t)
+CBOR_START_STRUCT_DECODER(profile_pid_t)
 PID_MEMBERS
-END_STRUCT_DECODER()
+CBOR_END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(profile_channel_t)
+CBOR_START_STRUCT_DECODER(profile_channel_t)
 CHANNEL_MEMBERS
-END_STRUCT_DECODER()
+CBOR_END_STRUCT_DECODER()
 
-START_STRUCT_DECODER(profile_t)
+CBOR_START_STRUCT_DECODER(profile_t)
 PROFILE_MEMBERS
-END_STRUCT_DECODER()
+CBOR_END_STRUCT_DECODER()
+
 #undef MEMBER
+#undef STR_MEMBER
 #undef ARRAY_MEMBER
+#undef STR_ARRAY_MEMBER

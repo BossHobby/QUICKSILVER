@@ -8,12 +8,14 @@
 #include "data_flash.h"
 #include "drv_serial_4way.h"
 #include "drv_spi_max7456.h"
+#include "drv_time.h"
 #include "drv_usb.h"
 #include "flash.h"
 #include "profile.h"
 #include "project.h"
 #include "sixaxis.h"
 #include "util.h"
+#include "util/cbor_helper.h"
 #include "vtx.h"
 
 #if defined(F4)
@@ -48,15 +50,15 @@ extern uint8_t encode_buffer[USB_BUFFER_SIZE];
 extern uint8_t decode_buffer[USB_BUFFER_SIZE];
 
 cbor_result_t cbor_encode_usb_motor_test_t(cbor_value_t *enc, const usb_motor_test_t *b) {
-  CHECK_CBOR_ERROR(cbor_result_t res = cbor_encode_map_indefinite(enc));
+  CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_map_indefinite(enc));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "active"));
-  CHECK_CBOR_ERROR(res = cbor_encode_uint8(enc, &b->active));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "active"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &b->active));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_str(enc, "value"));
-  CHECK_CBOR_ERROR(res = cbor_encode_float_array(enc, b->value, 4));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "value"));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->value, 4));
 
-  CHECK_CBOR_ERROR(res = cbor_encode_end_indefinite(enc));
+  CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
 
   return res;
 }
