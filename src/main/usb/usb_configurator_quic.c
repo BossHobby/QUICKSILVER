@@ -214,6 +214,7 @@ void get_quic(uint8_t *data, uint32_t len) {
     break;
   }
 #endif
+#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
   case QUIC_VAL_BLHEL_SETTINGS: {
     send_quic(QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
 
@@ -235,6 +236,7 @@ void get_quic(uint8_t *data, uint32_t len) {
     send_quic_header(QUIC_CMD_GET, QUIC_FLAG_STREAMING, 0);
     break;
   }
+#endif
   default:
     quic_errorf(QUIC_CMD_GET, "INVALID VALUE %d", value);
     break;
@@ -314,6 +316,7 @@ void set_quic(uint8_t *data, uint32_t len) {
     break;
   }
 #endif
+#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
   case QUIC_VAL_BLHEL_SETTINGS: {
     uint8_t count = serial_4way_init();
     timer_delay_us(500000);
@@ -335,6 +338,7 @@ void set_quic(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
+#endif
   default:
     quic_errorf(QUIC_CMD_SET, "INVALID VALUE %d", value);
     break;
@@ -449,7 +453,7 @@ void process_motor_test(uint8_t *data, uint32_t len) {
 
     send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
-
+#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
   case QUIC_MOTOR_ESC4WAY_IF: {
     uint8_t count = serial_4way_init();
 
@@ -461,7 +465,7 @@ void process_motor_test(uint8_t *data, uint32_t len) {
     serial_4way_process();
     break;
   }
-
+#endif
   default:
     quic_errorf(QUIC_CMD_MOTOR, "INVALID CMD %d", cmd);
     break;
