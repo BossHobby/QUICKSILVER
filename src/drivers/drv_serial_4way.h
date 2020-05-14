@@ -260,8 +260,12 @@ cbor_result_t cbor_encode_blheli_settings_t(cbor_value_t *enc, const blheli_sett
 
 uint8_t serial_4way_init();
 void serial_4way_release();
-uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t *output, uint8_t *output_len);
-uint8_t serial_4way_read_settings(blheli_settings_t *settings, uint8_t esc);
+
+serial_esc4way_ack_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t *output, uint8_t *output_len);
+
+serial_esc4way_ack_t serial_4way_read_settings(blheli_settings_t *settings, uint8_t esc);
+serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uint8_t esc);
+
 void serial_4way_process();
 
 #endif

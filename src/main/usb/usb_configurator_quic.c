@@ -223,7 +223,10 @@ void get_quic(uint8_t *data, uint32_t len) {
 
     for (uint8_t i = 0; i < count; i++) {
       blheli_settings_t settings;
-      serial_4way_read_settings(&settings, i);
+      serial_esc4way_ack_t ack = serial_4way_read_settings(&settings, i);
+      if (ack != ESC4WAY_ACK_OK) {
+        break;
+      }
 
       cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
       res = cbor_encode_blheli_settings_t(&enc, &settings);
@@ -327,7 +330,10 @@ void set_quic(uint8_t *data, uint32_t len) {
       res = cbor_decode_blheli_settings_t(&dec, &settings);
       check_cbor_error(QUIC_CMD_SET);
 
-      serial_4way_write_settings(&settings, i);
+      serial_esc4way_ack_t ack = serial_4way_write_settings(&settings, i);
+      if (ack != ESC4WAY_ACK_OK) {
+        break;
+      }
     }
 
     serial_4way_release();

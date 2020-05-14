@@ -241,8 +241,8 @@ void serial_4way_release() {
   motor_set_all(0);
 }
 
-uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t *output, uint8_t *output_len) {
-  uint8_t ACK_OUT = ESC4WAY_ACK_OK;
+serial_esc4way_ack_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t *output, uint8_t *output_len) {
+  serial_esc4way_ack_t ACK_OUT = ESC4WAY_ACK_OK;
 
   *output_len = 1;
 
@@ -579,8 +579,7 @@ uint8_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t 
       ACK_OUT = ESC4WAY_ACK_OK;
       break;
 #else
-      ACK_OUT = BL_VerifyFlash(&mem);
-      switch (ACK_OUT) {
+      switch (BL_VerifyFlash(&mem)) {
       case brSUCCESS:
         ACK_OUT = ESC4WAY_ACK_OK;
         break;
@@ -639,7 +638,7 @@ CBOR_END_STRUCT_DECODER()
 #undef ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER
 
-uint8_t serial_4way_read_settings(blheli_settings_t *settings, uint8_t esc) {
+serial_esc4way_ack_t serial_4way_read_settings(blheli_settings_t *settings, uint8_t esc) {
   uint8_t input[256];
   uint8_t output[256];
   uint8_t output_len = 0;
@@ -676,7 +675,7 @@ uint8_t serial_4way_read_settings(blheli_settings_t *settings, uint8_t esc) {
   return ack;
 }
 
-uint8_t serial_4way_write_settings(blheli_settings_t *settings, uint8_t esc) {
+serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uint8_t esc) {
   uint8_t input[256];
   uint8_t output[256];
   uint8_t output_len = 0;
@@ -768,7 +767,7 @@ void serial_4way_process() {
 
     RX_LED_OFF;
 
-    uint8_t ACK_OUT = ESC4WAY_ACK_OK;
+    serial_esc4way_ack_t ACK_OUT = ESC4WAY_ACK_OK;
     if (CRC_check.word == crc_in.word) {
       TX_LED_ON;
       ACK_OUT = serial_4way_send(CMD, payload, output_buffer, &output_len);
