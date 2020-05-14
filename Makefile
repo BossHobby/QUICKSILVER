@@ -11,7 +11,7 @@ GCC_VERSION = $(shell arm-none-eabi-gcc -dumpversion)
 GIT_VERSION = unkown
 
 ifneq (,$(wildcard .git/refs/heads/master))
-	GIT_VERSION = $(shell cat .git/refs/heads/master)
+	GIT_VERSION = $(shell sh -c 'cat .git/refs/heads/master')
 endif
 
 INCLUDE = src \
