@@ -269,6 +269,9 @@ void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length) 
   while (DMA_GetFlagStatus(PORT.dma.tx_stream, PORT.dma.tx_tci_flag) == RESET)
     ;
 
+  DMA_ClearFlag(PORT.dma.rx_stream, PORT.dma.rx_tci_flag);
+  DMA_ClearFlag(PORT.dma.tx_stream, PORT.dma.tx_tci_flag);
+
   SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Tx, DISABLE);
   SPI_I2S_DMACmd(PORT.channel, SPI_I2S_DMAReq_Rx, DISABLE);
 
