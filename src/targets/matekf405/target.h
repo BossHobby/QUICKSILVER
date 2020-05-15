@@ -6,6 +6,19 @@
 #define F4
 #define F405
 
+//PORTS
+#define SPI_PORTS \
+  SPI1_PA5PA6PA7  \
+  SPI2_PB13B14B15 \
+  SPI3_PB3PB4PB5
+
+#define USART_PORTS \
+  USART1_PA10PA9    \
+  USART2_PA3PA2     \
+  USART3_PC11PC10   \
+  USART4_PA1PA0
+// USART5_PD2PC12 we do not support "split" spi pins at the moment
+
 #define USB_DETECT_PIN GPIO_Pin_12
 #define USB_DETECT_PORT GPIOB
 
@@ -31,20 +44,13 @@
 #define GYRO_ID_2 0x12
 #define GYRO_ID_3 0x69
 
-// SPI PINS DEFINITONS & RADIO
-#define USART_PORTS \
-  USART1_PA10PA9    \
-  USART2_PA3PA2     \
-  USART3_PC11PC10   \
-  USART4_PA1PA0
-// USART5_PD2PC12 we do not support "split" spi pins at the moment
-
+//RADIO
 #define SOFTSPI_NONE
 #ifdef SERIAL_RX
 #define RX_USART USART_PORT1
 #endif
 
-// OSD
+//OSD
 #define ENABLE_OSD
 #define MAX7456_SPI_PORT SPI_PORT2
 #define MAX7456_NSS PIN_B10

@@ -6,6 +6,16 @@
 #define F4
 #define F411
 
+//PORTS
+#define SPI_PORTS \
+  SPI1_PA5PA6PA7  \
+  SPI2_PB13B14B15 \
+  SPI3_PB3PB4PB5
+
+#define USART_PORTS \
+  USART1_PB7PB6     \
+  USART2_PA3PA2
+
 //***********MOTORS NOT YET SUPPORTED*************
 
 //LEDS, Buzzer, FPV
@@ -36,10 +46,6 @@
 //RADIO
 #define USART_INVERTER_PIN GPIO_Pin_15
 #define USART_INVERTER_PORT GPIOC
-
-#define USART_PORTS \
-  USART1_PB7PB6     \
-  USART2_PA3PA2
 
 #ifdef SERIAL_RX
 #define RX_USART USART_PORT2
