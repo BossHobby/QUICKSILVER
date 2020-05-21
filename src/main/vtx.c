@@ -254,24 +254,13 @@ void vtx_update() {
 }
 
 void vtx_set(vtx_settings_t *vtx) {
-  vtx_set_pit_mode(vtx->pit_mode);
-  vtx_set_power_level(vtx->power_level);
-  vtx_set_frequency(vtx->band, vtx->channel);
-}
+  if (vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT)
+    vtx_settings.pit_mode = vtx->pit_mode;
 
-void vtx_set_frequency(vtx_band_t band, vtx_channel_t channel) {
-  vtx_settings.band = band;
-  vtx_settings.channel = channel;
-}
+  vtx_settings.power_level = vtx->power_level;
 
-void vtx_set_pit_mode(vtx_pit_mode_t pit_mode) {
-  if (vtx_settings.pit_mode == VTX_PIT_MODE_NO_SUPPORT)
-    return;
-  vtx_settings.pit_mode = pit_mode;
-}
-
-void vtx_set_power_level(vtx_power_level_t power_level) {
-  vtx_settings.power_level = power_level;
+  vtx_settings.band = vtx->band;
+  vtx_settings.channel = vtx->channel;
 }
 
 cbor_result_t cbor_encode_vtx_settings_t(cbor_value_t *enc, const vtx_settings_t *vtx) {
