@@ -953,7 +953,7 @@ void rx_serial_process_crsf(void) {
 void rx_serial_find_protocol(void) {
   if (protocol_detect_timer == 0) {
     protocol_to_check++; //Check the next protocol down the list.
-    if (protocol_to_check >= RX_SERIAL_PROTOCOL_MAX) {
+    if (protocol_to_check > RX_SERIAL_PROTOCOL_MAX) {
       protocol_to_check = RX_SERIAL_PROTOCOL_DSM; //AKA 1
     }
     serial_rx_init(protocol_to_check); //Configure a protocol!
