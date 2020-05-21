@@ -19,6 +19,7 @@ typedef enum {
   RX_SERIAL_PROTOCOL_CRSF,
   RX_SERIAL_PROTOCOL_SBUS_INVERTED,
   RX_SERIAL_PROTOCOL_FPORT_INVERTED,
+  RX_SERIAL_PROTOCOL_MAX
 } rx_serial_protocol_t;
 
 typedef struct {

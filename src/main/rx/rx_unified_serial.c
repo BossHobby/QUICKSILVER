@@ -18,6 +18,8 @@
 
 #ifdef RX_UNIFIED_SERIAL
 
+#define RX_BUFF_SIZE 68
+
 //*****************************************
 //*****************************************
 #define RX_FRAME_INTERVAL_TRIGGER_TICKS (3000 * (TICK_CLOCK_FREQ_HZ / 1000000)) //This is the microsecond threshold for triggering a new frame to re-index to position 0 in the ISR
@@ -39,47 +41,37 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 //extern char lastaux[AUX_CHANNEL_MAX];  //I dont think this is used
 //extern char auxchange[AUX_CHANNEL_MAX]; //I dont think this is used either
-uint8_t rxusart = 1;  //not being used yet
+
 int failsafe = 01134; //hello
 int rxmode = 0;
 int rx_ready = 0;
 
-// internal variables
-//*****************************
-//uint8_t RXProtocolNextBoot = 0; //go away?
-//uint8_t rx_end = 0;   //go away?
-//uint16_t rx_time[RX_BUFF_SIZE]; //go away?
-//uint8_t frameStart = 0; //go away?
-//uint8_t frameEnd = 0; //go away?
-//uint8_t escapedChars = 0;   //moved to scope
-//unsigned long time_lastrx;    //go away?
-//uint8_t last_rx_end = 0;    //go away?
-//int bobnovas = 0;
-//int bobnovas2 = 0;
-//uint32 ticksStart = 0;
-//uint32 ticksEnd = 0;
-//uint32 ticksLongest = 0;
-
 rx_serial_protocol_t rx_serial_protocol = RX_SERIAL_PROTOCOL_INVALID;
-#define RX_BUFF_SIZE 68
-uint8_t rx_buffer[RX_BUFF_SIZE];
-uint8_t rx_data[RX_BUFF_SIZE]; //A place to put the RX frame so nothing can get overwritten during processing.  //reduce size?
-uint8_t rx_frame_position = 0;
-int frameStatus = -1;
-uint8_t telemetryCounter = 0;
-uint8_t expectedFrameLength = 10;
+
+static uint8_t rx_buffer[RX_BUFF_SIZE];
+static uint8_t rx_data[RX_BUFF_SIZE]; //A place to put the RX frame so nothing can get overwritten during processing.  //reduce size?
+static uint8_t rx_frame_position = 0;
+
+static int frame_status = -1;
+
+static uint8_t telemetry_counter = 0;
+static uint8_t expected_frame_length = 10;
+
 int rx_bind_enable = 0;
+
 //uint32_t rx_framerate[3] = {0, 0, 1}; //new from NFE - do we wanna keep this?
 //uint32_t rx_framerate_ticks = 0;      //new from NFE - do we wanna keep this?
-uint8_t stat_frames_second;
-unsigned long time_siglost;
-unsigned long time_lastframe;
-//int rx_state = 0;		NFE chucked this out
+
+static uint8_t stat_frames_second;
+static uint32_t time_siglost;
+static uint32_t time_lastframe;
+
 int bind_safety = 0;
 int channels[16];
-uint16_t CRCByte = 0;             //Defined here to allow Debug to see it.
-uint8_t protocolToCheck = 1;      //Defined here to allow Debug to see it.
-uint16_t protocolDetectTimer = 0; //Defined here to allow Debug to see it.
+
+static uint16_t crc_byte = 0;              //Defined here to allow Debug to see it.
+static uint8_t protocol_to_check = 1;      //Defined here to allow Debug to see it.
+static uint16_t protocol_detect_timer = 0; //Defined here to allow Debug to see it.
 
 extern profile_t profile;
 uint16_t link_quality_raw;
@@ -93,11 +85,13 @@ int failsafe_noframes = 0;
 //Telemetry variables
 //***********************************
 //Global values to send as telemetry
-bool FPORTDebugTelemetry = false;
-uint8_t telemetryOffset = 0;
+bool fport_debug_telemetry = false;
+
+uint8_t telemetry_offset = 0;
+uint8_t telemetry_packet[14];
+
 extern float vbattfilt;
 extern float vbatt_comp;
-uint8_t telemetryPacket[14];
 extern int current_pid_axis;
 extern int current_pid_term;
 
@@ -111,15 +105,13 @@ uint16_t SbusTelemetryIDs[] = {
     0x0710, //ACC-X, misused for PID-I
     0x0720, //ACC-X, misused for PID-D
 };
-uint8_t telemetryPosition = 0; //This iterates through the above, you can only send one sensor per frame.
-uint8_t teleCounter = 0;
+uint8_t telemetry_position = 0; //This iterates through the above, you can only send one sensor per frame.
 
 #define USART usart_port_defs[serial_rx_port]
 
 void RX_USART_ISR(void) {
   //static uint32_t rx_framerate[3]
   unsigned long rx_byte_interval;
-  //rx_buffer[rx_frame_position++] = USART_ReceiveData(USART.channel);
   unsigned long maxticks = SysTick->LOAD;
   unsigned long ticks = SysTick->VAL;
 
@@ -139,12 +131,12 @@ void RX_USART_ISR(void) {
 
   if (rx_byte_interval > RX_FRAME_INTERVAL_TRIGGER_TICKS) {
     rx_frame_position = 0;
-    frameStatus = 0;
+    frame_status = 0;
   }
 
   rx_buffer[rx_frame_position++] = USART_ReceiveData(USART.channel);
-  if (rx_frame_position >= expectedFrameLength && frameStatus == 0) {
-    frameStatus = 1;
+  if (rx_frame_position >= expected_frame_length && frame_status == 0) {
+    frame_status = 1;
   }
 
   rx_frame_position %= (RX_BUFF_SIZE);
@@ -161,7 +153,7 @@ void rx_serial_init(void) {
 
   //rx_serial_protocol = 4;  //Remove meeeeeeeee
 
-  frameStatus = 0;                                        //Let the uart ISR do its stuff.
+  frame_status = 0;                                       //Let the uart ISR do its stuff.
   if (rx_serial_protocol == RX_SERIAL_PROTOCOL_INVALID) { //No known protocol? Can't really set the radio up yet then can we?
     rx_serial_find_protocol();
   } else {
@@ -170,21 +162,21 @@ void rx_serial_init(void) {
 
   switch (rx_serial_protocol) {
   case RX_SERIAL_PROTOCOL_DSM: // DSM
-    expectedFrameLength = 16;
+    expected_frame_length = 16;
     break;
   case RX_SERIAL_PROTOCOL_SBUS:          // SBUS
   case RX_SERIAL_PROTOCOL_SBUS_INVERTED: // SBUS
-    expectedFrameLength = 24;
+    expected_frame_length = 24;
     break;
   case RX_SERIAL_PROTOCOL_IBUS: // IBUS
-    expectedFrameLength = 32;
+    expected_frame_length = 32;
     break;
   case RX_SERIAL_PROTOCOL_FPORT:          // FPORT
   case RX_SERIAL_PROTOCOL_FPORT_INVERTED: // FPORT
-    expectedFrameLength = 28;             //Minimum.
+    expected_frame_length = 28;           //Minimum.
     break;
   case RX_SERIAL_PROTOCOL_CRSF: // CRSF
-    expectedFrameLength = 64;   //Maybe 65? Not sure where the Sync Byte comes in
+    expected_frame_length = 64; //Maybe 65? Not sure where the Sync Byte comes in
     break;
 
   default:
@@ -207,7 +199,7 @@ void rx_check() {
     if (rx_ready)
       failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
 
-    if (frameStatus == 1) { //USART ISR says there's enough frame to look at. Look at it.
+    if (frame_status == 1) { //USART ISR says there's enough frame to look at. Look at it.
       switch (rx_serial_protocol) {
       case RX_SERIAL_PROTOCOL_DSM: // DSM
         rx_serial_process_dsmx();
@@ -230,7 +222,7 @@ void rx_check() {
       default:
         break;
       }
-    } else if (frameStatus == 3) {
+    } else if (frame_status == 3) {
       switch (rx_serial_protocol) {
       case RX_SERIAL_PROTOCOL_DSM: // DSM
         // Run DSM Telemetry
@@ -253,8 +245,8 @@ void rx_check() {
       default:
         break;
       }
-    } else if (frameStatus == -1) { //RX/USART not set up.
-      rx_serial_init();             //Set it up. This includes autodetecting protocol if necesary
+    } else if (frame_status == -1) { //RX/USART not set up.
+      rx_serial_init();              //Set it up. This includes autodetecting protocol if necesary
       rxmode = !RXMODE_BIND;
     }
   }
@@ -303,17 +295,17 @@ void rx_serial_process_dsmx(void) {
   }
 #endif
 
-  for (int b = 3; b < expectedFrameLength; b += 2) { //stick data in channels buckets
+  for (int b = 3; b < expected_frame_length; b += 2) { //stick data in channels buckets
     const uint8_t spekChannel = 0x0F & (rx_data[b - 1] >> spek_chan_shift);
     if (spekChannel < dsm_channel_count && spekChannel < 12) {
       channels[spekChannel] = ((uint32_t)(rx_data[b - 1] & spek_chan_mask) << 8) + rx_data[b];
-      frameStatus = 2; // if we can hold 2 here for an entire frame, then we will decode it
+      frame_status = 2; // if we can hold 2 here for an entire frame, then we will decode it
     } else {
       //a counter here will flag on 22ms mode which could be used for auto-apply of correct filter cut on rc smoothing
     }
   }
 
-  if (frameStatus == 2) {
+  if (frame_status == 2) {
     bind_safety++;
     if (bind_safety < 120)
       rxmode = RXMODE_BIND; // this is rapid flash during bind safety
@@ -403,7 +395,7 @@ void rx_serial_process_dsmx(void) {
     if (rx_rssi < 0.0f)
       rx_rssi = 0.0f;
 
-    frameStatus = 3; //We're done with this frame now.
+    frame_status = 3; //We're done with this frame now.
 
     if (bind_safety > 120) { //requires 120 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
       rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
@@ -456,9 +448,9 @@ void rx_serial_process_sbus(void) {
   channels[14] = ((rx_data[20] >> 2 | rx_data[21] << 6) & 0x07FF);
   channels[15] = ((rx_data[21] >> 5 | rx_data[22] << 3) & 0x07FF);
 
-  frameStatus = 2;
+  frame_status = 2;
 
-  if (frameStatus == 2) {
+  if (frame_status == 2) {
     // normal rx mode
     bind_safety++;
     if (bind_safety < 130)
@@ -523,7 +515,7 @@ void rx_serial_process_sbus(void) {
     if (rx_rssi < 0.0f)
       rx_rssi = 0.0f;
 
-    frameStatus = 3; //We're done with this frame now.
+    frame_status = 3; //We're done with this frame now.
 
     if (bind_safety > 131) { //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
       rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
@@ -534,19 +526,18 @@ void rx_serial_process_sbus(void) {
 }
 
 void rx_serial_process_ibus(void) {
-
   uint8_t frameLength = 0;
   for (uint8_t counter = 0; counter < 32; counter++) {    //First up, get the data out of the RX buffer and into somewhere safe
     rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
     frameLength++;                                        // to accept telemetry requests without overwriting control data
   }
 
-  CRCByte = 0xFFFF;
+  crc_byte = 0xFFFF;
   for (int x = 0; x < 30; x++) {
-    CRCByte = CRCByte - rx_data[x];
+    crc_byte = crc_byte - rx_data[x];
   }
 
-  if (CRCByte == rx_data[30] + (rx_data[31] << 8)) { //If the CRC is good, shove it into controls
+  if (crc_byte == rx_data[30] + (rx_data[31] << 8)) { //If the CRC is good, shove it into controls
 
     //Flysky channels are delightfully straightforward
     channels[0] = rx_data[2] + (rx_data[3] << 8);
@@ -564,17 +555,17 @@ void rx_serial_process_ibus(void) {
     channels[12] = rx_data[26] + (rx_data[27] << 8);
     channels[13] = rx_data[28] + (rx_data[29] << 8);
 
-    frameStatus = 2;
+    frame_status = 2;
 
   } else {
     // if CRC fails, do this:
     //while(1){} Enable for debugging to lock the FC if CRC fails. In the air we just drop CRC-failed packets
     //Most likely reason for failed CRC is a frame that isn't fully here yet. No need to check again until a new byte comes in.
 
-    frameStatus = 0;
+    frame_status = 0;
   }
 
-  if (frameStatus == 2) {
+  if (frame_status == 2) {
     // normal rx mode
     bind_safety++;
     if (bind_safety < 130)
@@ -641,7 +632,7 @@ void rx_serial_process_ibus(void) {
     if (rx_rssi < 0.0f)
       rx_rssi = 0.0f;
 
-    frameStatus = 3; //We're done with this frame now.
+    frame_status = 3; //We're done with this frame now.
 
     if (bind_safety > 131) { //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
       rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
@@ -675,17 +666,17 @@ void rx_serial_process_fport(void) {
     }
 
     if (rx_data[counter] == 0x7e && rx_data[counter - 1] == 0x7e && frameLength > 29) { //Looks like a complete frame, check CRC and process controls if it's good.
-      frameStatus = 2;
+      frame_status = 2;
       //counter = 200; //Breaks out of the for loop processing the data array. - NFE-IS THIS STILL NEEDED?
       //The telemetry request packet is not read, as it never seems to change. Less control lag if we ignore it.
-      CRCByte = 0;
+      crc_byte = 0;
       for (int x = 1; x < frameLength - 2; x++) {
-        CRCByte = CRCByte + rx_data[x];
+        crc_byte = crc_byte + rx_data[x];
       }
-      CRCByte = CRCByte + (CRCByte >> 8);
-      CRCByte = CRCByte << 8;
-      CRCByte = CRCByte >> 8;
-      if (CRCByte == 0x00FF) {      //CRC is good, check Failsafe bit(s) and shove it into controls
+      crc_byte = crc_byte + (crc_byte >> 8);
+      crc_byte = crc_byte << 8;
+      crc_byte = crc_byte >> 8;
+      if (crc_byte == 0x00FF) {     //CRC is good, check Failsafe bit(s) and shove it into controls
                                     //FPORT uses SBUS style data, but starts further in the packet
         if (rx_data[25] & (1 << 2)) //RX appears to set this bit when it knows it missed a frame.
         {
@@ -723,15 +714,15 @@ void rx_serial_process_fport(void) {
         channels[14] = ((rx_data[22] >> 2 | rx_data[23] << 6) & 0x07FF);
         channels[15] = ((rx_data[23] >> 5 | rx_data[24] << 3) & 0x07FF);
 
-        //frameStatus = 2;
+        //frame_status = 2;
 
       } else { // if CRC fails, do this:
         //while(1){} Enable for debugging to lock the FC if CRC fails.
-        frameStatus = 0; //Most likely reason for failed CRC is a frame that isn't fully here yet. No need to check again until a new byte comes in.
+        frame_status = 0; //Most likely reason for failed CRC is a frame that isn't fully here yet. No need to check again until a new byte comes in.
       }
     }
 
-    if (frameStatus == 2) {
+    if (frame_status == 2) {
       // normal rx mode
       bind_safety++;
       if (bind_safety < 130)
@@ -774,9 +765,9 @@ void rx_serial_process_fport(void) {
       aux[AUX_CHANNEL_11] = (channels[15] > 993) ? 1 : 0;
 
       if (channels[12] > 993) { // Channel 13 is now FPORT Debug Telemetry switch. Integrate this better sometime
-        FPORTDebugTelemetry = true;
+        fport_debug_telemetry = true;
       } else {
-        FPORTDebugTelemetry = false;
+        fport_debug_telemetry = false;
       }
 
       time_lastframe = gettime();
@@ -801,8 +792,8 @@ void rx_serial_process_fport(void) {
       if (rx_rssi < 0.0f)
         rx_rssi = 0.0f;
 
-      frameStatus = 3;    //We're done with this frame now.
-      telemetryCounter++; // Let the telemetry section know it's time to send.
+      frame_status = 3;    //We're done with this frame now.
+      telemetry_counter++; // Let the telemetry section know it's time to send.
 
       if (bind_safety > 131) { //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
         rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
@@ -814,7 +805,6 @@ void rx_serial_process_fport(void) {
 }
 
 vector_t *get_pid_value(uint8_t term) {
-
   switch (term) {
   case 0:
     return &profile.pid.pid_rates[profile.pid.pid_profile].kp;
@@ -827,15 +817,15 @@ vector_t *get_pid_value(uint8_t term) {
 }
 
 void rx_serial_send_fport_telemetry() {
-  if (telemetryCounter > 1 && rx_frame_position >= 41 && frameStatus == 3) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
+  if (telemetry_counter > 1 && rx_frame_position >= 41 && frame_status == 3) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
     static uint8_t skip_a_loop;
     skip_a_loop++;
     if (skip_a_loop < 3) {
       return;
     }
     skip_a_loop = 0;
-    telemetryCounter = 0;
-    frameStatus = 4;
+    telemetry_counter = 0;
+    frame_status = 4;
 
     uint16_t telemetryIDs[] = {
         0x0210, //VFAS, use for vbat_comp
@@ -850,103 +840,103 @@ void rx_serial_send_fport_telemetry() {
 
     extern float lipo_cell_count; // For telemetry
     //Telemetry time! Let's have some variables
-    telemetryPacket[0] = 0x08; //Bytes 0 through 2 are static in this implementation
-    telemetryPacket[1] = 0x81;
-    telemetryPacket[2] = 0x10;
-    if (telemetryPosition == 0) {                                //vbat_comp
-      telemetryPacket[3] = telemetryIDs[telemetryPosition];      //0x10;
-      telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8; //0x02;
-      telemetryPacket[5] = (int)(vbatt_comp * 100);
-      telemetryPacket[6] = (int)(vbatt_comp * 100) >> 8;
-      telemetryPacket[7] = 0x00;
-      telemetryPacket[8] = 0x00;
-    } else if (telemetryPosition == 1) {                         //vbattfilt
-      telemetryPacket[3] = telemetryIDs[telemetryPosition];      //x11;
-      telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8; //0x02;
-      telemetryPacket[5] = (int)(vbattfilt * 100);
-      telemetryPacket[6] = (int)(vbattfilt * 100) >> 8;
-      telemetryPacket[7] = 0x00;
-      telemetryPacket[8] = 0x00;
-    } else if (telemetryPosition == 2) { //Cell count
-      telemetryPacket[3] = telemetryIDs[telemetryPosition];
-      telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-      telemetryPacket[5] = (int)(lipo_cell_count * 100);
-      telemetryPacket[6] = (int)(lipo_cell_count * 100) >> 8;
-      telemetryPacket[7] = 0x00;
-      telemetryPacket[8] = 0x00;
-    } else if (telemetryPosition == 3) {                         //PID axis(hundreds column) and P/I/D (ones column) being adjusted currently
-      uint16_t axisAndPidID = (current_pid_axis + 1) * 100;      //Adding one so there's always a value. 1 for Pitch (or Pitch/roll), 2 for Roll, 3 for Yaw
-      axisAndPidID += current_pid_term + 1;                      //Adding one here too, humans don't deal well with counting starting at zero for this sort of thing
-      telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8; // Adding one to the above makes it match the LED flash codes too
-      telemetryPacket[5] = (int)(axisAndPidID);
-      telemetryPacket[6] = (int)(axisAndPidID) >> 8;
-      telemetryPacket[7] = 0x00;
-      telemetryPacket[8] = 0x00;
-    } else if (telemetryPosition == 4) { //PID-P
-      telemetryPacket[3] = telemetryIDs[telemetryPosition];
-      telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-      telemetryPacket[5] = (int)(get_pid_value(0)->axis[current_pid_axis] * 100);
-      telemetryPacket[6] = (int)(get_pid_value(0)->axis[current_pid_axis] * 100) >> 8;
-      telemetryPacket[7] = 0x00;
-      telemetryPacket[8] = 0x00;
-    } else if (telemetryPosition == 5) { //PID-I
-      telemetryPacket[3] = telemetryIDs[telemetryPosition];
-      telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-      telemetryPacket[5] = (int)(get_pid_value(1)->axis[current_pid_axis] * 100);
-      telemetryPacket[6] = (int)(get_pid_value(1)->axis[current_pid_axis] * 100) >> 8;
-      telemetryPacket[7] = 0x00;
-      telemetryPacket[8] = 0x00;
-    } else if (telemetryPosition == 6) { //PID-D
-      telemetryPacket[3] = telemetryIDs[telemetryPosition];
-      telemetryPacket[4] = telemetryIDs[telemetryPosition] >> 8;
-      telemetryPacket[5] = (int)(get_pid_value(2)->axis[current_pid_axis] * 100);
-      telemetryPacket[6] = (int)(get_pid_value(2)->axis[current_pid_axis] * 100) >> 8;
-      telemetryPacket[7] = 0x00;
-      telemetryPacket[8] = 0x00;
+    telemetry_packet[0] = 0x08; //Bytes 0 through 2 are static in this implementation
+    telemetry_packet[1] = 0x81;
+    telemetry_packet[2] = 0x10;
+    if (telemetry_position == 0) {                                 //vbat_comp
+      telemetry_packet[3] = telemetryIDs[telemetry_position];      //0x10;
+      telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8; //0x02;
+      telemetry_packet[5] = (int)(vbatt_comp * 100);
+      telemetry_packet[6] = (int)(vbatt_comp * 100) >> 8;
+      telemetry_packet[7] = 0x00;
+      telemetry_packet[8] = 0x00;
+    } else if (telemetry_position == 1) {                          //vbattfilt
+      telemetry_packet[3] = telemetryIDs[telemetry_position];      //x11;
+      telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8; //0x02;
+      telemetry_packet[5] = (int)(vbattfilt * 100);
+      telemetry_packet[6] = (int)(vbattfilt * 100) >> 8;
+      telemetry_packet[7] = 0x00;
+      telemetry_packet[8] = 0x00;
+    } else if (telemetry_position == 2) { //Cell count
+      telemetry_packet[3] = telemetryIDs[telemetry_position];
+      telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8;
+      telemetry_packet[5] = (int)(lipo_cell_count * 100);
+      telemetry_packet[6] = (int)(lipo_cell_count * 100) >> 8;
+      telemetry_packet[7] = 0x00;
+      telemetry_packet[8] = 0x00;
+    } else if (telemetry_position == 3) {                          //PID axis(hundreds column) and P/I/D (ones column) being adjusted currently
+      uint16_t axisAndPidID = (current_pid_axis + 1) * 100;        //Adding one so there's always a value. 1 for Pitch (or Pitch/roll), 2 for Roll, 3 for Yaw
+      axisAndPidID += current_pid_term + 1;                        //Adding one here too, humans don't deal well with counting starting at zero for this sort of thing
+      telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8; // Adding one to the above makes it match the LED flash codes too
+      telemetry_packet[5] = (int)(axisAndPidID);
+      telemetry_packet[6] = (int)(axisAndPidID) >> 8;
+      telemetry_packet[7] = 0x00;
+      telemetry_packet[8] = 0x00;
+    } else if (telemetry_position == 4) { //PID-P
+      telemetry_packet[3] = telemetryIDs[telemetry_position];
+      telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8;
+      telemetry_packet[5] = (int)(get_pid_value(0)->axis[current_pid_axis] * 100);
+      telemetry_packet[6] = (int)(get_pid_value(0)->axis[current_pid_axis] * 100) >> 8;
+      telemetry_packet[7] = 0x00;
+      telemetry_packet[8] = 0x00;
+    } else if (telemetry_position == 5) { //PID-I
+      telemetry_packet[3] = telemetryIDs[telemetry_position];
+      telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8;
+      telemetry_packet[5] = (int)(get_pid_value(1)->axis[current_pid_axis] * 100);
+      telemetry_packet[6] = (int)(get_pid_value(1)->axis[current_pid_axis] * 100) >> 8;
+      telemetry_packet[7] = 0x00;
+      telemetry_packet[8] = 0x00;
+    } else if (telemetry_position == 6) { //PID-D
+      telemetry_packet[3] = telemetryIDs[telemetry_position];
+      telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8;
+      telemetry_packet[5] = (int)(get_pid_value(2)->axis[current_pid_axis] * 100);
+      telemetry_packet[6] = (int)(get_pid_value(2)->axis[current_pid_axis] * 100) >> 8;
+      telemetry_packet[7] = 0x00;
+      telemetry_packet[8] = 0x00;
     }
 
     // This *should* properly escape 0x7D and 0x7E characters. It doesn't.
-    telemetryOffset = 0;
+    telemetry_offset = 0;
     for (uint8_t i = 8; i > 4; i--) {
-      if (telemetryPacket[i] == 0x7D || telemetryPacket[i] == 0x7E) {
+      if (telemetry_packet[i] == 0x7D || telemetry_packet[i] == 0x7E) {
         for (uint8_t x = 8; x >= i; x--) {
-          telemetryPacket[x + 1] = telemetryPacket[x];
+          telemetry_packet[x + 1] = telemetry_packet[x];
         }
-        telemetryPacket[i] = 0x7D;
-        if (telemetryPacket[i + 1] == 0x7D) {
-          telemetryPacket[i + 1] = 0x5D;
+        telemetry_packet[i] = 0x7D;
+        if (telemetry_packet[i + 1] == 0x7D) {
+          telemetry_packet[i + 1] = 0x5D;
         } else {
-          telemetryPacket[i + 1] = 0x5E;
+          telemetry_packet[i + 1] = 0x5E;
         }
-        telemetryOffset++;
+        telemetry_offset++;
       }
     }
-    telemetryPacket[0] += telemetryOffset;
+    telemetry_packet[0] += telemetry_offset;
 
     uint16_t teleCRC = 0;
     //Calculate CRC for packet. This function does not support escaped characters.
-    for (int x = 0; x < 9 + telemetryOffset; x++) {
-      teleCRC = teleCRC + telemetryPacket[x];
+    for (int x = 0; x < 9 + telemetry_offset; x++) {
+      teleCRC = teleCRC + telemetry_packet[x];
     }
     teleCRC = teleCRC + (teleCRC >> 8);
     teleCRC = 0xff - teleCRC;
     teleCRC = teleCRC << 8;
     teleCRC = teleCRC >> 8;
-    telemetryPacket[9 + telemetryOffset] = teleCRC;      //0x34;
-    for (uint8_t x = 0; x < 10 + telemetryOffset; x++) { //Shove the packet out the UART. This *should* support escaped characters, but it doesn't work.
+    telemetry_packet[9 + telemetry_offset] = teleCRC;     //0x34;
+    for (uint8_t x = 0; x < 10 + telemetry_offset; x++) { //Shove the packet out the UART. This *should* support escaped characters, but it doesn't work.
       while (USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET)
         ;
-      USART_SendData(USART.channel, telemetryPacket[x]);
+      USART_SendData(USART.channel, telemetry_packet[x]);
     } //That's it, telemetry sent
-    telemetryPosition++;
-    if (FPORTDebugTelemetry) {
-      if (telemetryPosition >= sizeof(telemetryIDs) / 2) // 2 byte ints, so this should give the number of entries. It just incremented, which takes care of the count with 0 or 1
+    telemetry_position++;
+    if (fport_debug_telemetry) {
+      if (telemetry_position >= sizeof(telemetryIDs) / 2) // 2 byte ints, so this should give the number of entries. It just incremented, which takes care of the count with 0 or 1
       {
-        telemetryPosition = 0;
+        telemetry_position = 0;
       }
     } else {
-      if (telemetryPosition == 2) {
-        telemetryPosition = 0;
+      if (telemetry_position == 2) {
+        telemetry_position = 0;
       }
     }
   }
@@ -961,83 +951,54 @@ void rx_serial_process_crsf(void) {
 // also, we ought to be able to clear noframes_failsafe in addition to satisfying the start byte check in order to hard select a radio protocol
 
 void rx_serial_find_protocol(void) {
-  //rxmode = !RXMODE_BIND; // put LEDS in normal signal status
-  //protocolToCheck = RX_SERIAL_PROTOCOL_DSM; //Start with DSMX
-
-  //while (rx_serial_protocol == RX_SERIAL_PROTOCOL_INVALID) {
-  if (protocolDetectTimer == 0) {
-    protocolToCheck++;                               //Check the next protocol down the list.
-    if (protocolToCheck > RX_SERIAL_PROTOCOL_CRSF) { //(AKA 5)
-      protocolToCheck = RX_SERIAL_PROTOCOL_DSM;      //AKA 1
+  if (protocol_detect_timer == 0) {
+    protocol_to_check++; //Check the next protocol down the list.
+    if (protocol_to_check >= RX_SERIAL_PROTOCOL_MAX) {
+      protocol_to_check = RX_SERIAL_PROTOCOL_DSM; //AKA 1
     }
-    serial_rx_init(protocolToCheck); //Configure a protocol!
-    //delay(500000); //Don't need this now.
+    serial_rx_init(protocol_to_check); //Configure a protocol!
   }
-  protocolDetectTimer++;  //Should increment once per main loop
-                          /*
-    while ((frameStatus == 0 || frameStatus == 3) && protocolDetectTimer < 1) { // Wait 2 seconds to see if something turns up.
-      for (int i = 0; i < protocolToCheck; i++) {
-        ledon(255);
-        delay(20000);
-        ledoff(255);
-        delay(50000);
-      }
-      ledoff(255);
-      delay(500000 - (protocolToCheck * 70000));
-      protocolDetectTimer++;
-    }
-*/
-  if (frameStatus == 1) { //We got something! What is it?
-    switch (protocolToCheck) {
+
+  protocol_detect_timer++; //Should increment once per main loop
+
+  if (frame_status == 1) { //We got something! What is it?
+    switch (protocol_to_check) {
     case RX_SERIAL_PROTOCOL_DSM:                                                  // DSM
       if (rx_buffer[0] == 0x00 && rx_buffer[1] <= 0x04 && rx_buffer[2] != 0x00) { // allow up to 4 fades or detection will fail.  Some dsm rx will log a fade or two during binding
         rx_serial_process_dsmx();
         if (bind_safety > 0)
-          rx_serial_protocol = protocolToCheck;
+          rx_serial_protocol = protocol_to_check;
       }
     case RX_SERIAL_PROTOCOL_SBUS:          // SBUS
     case RX_SERIAL_PROTOCOL_SBUS_INVERTED: // SBUS
       if (rx_buffer[0] == 0x0F) {
-        rx_serial_protocol = protocolToCheck;
+        rx_serial_protocol = protocol_to_check;
       }
       break;
     case RX_SERIAL_PROTOCOL_IBUS: // IBUS
       if (rx_buffer[0] == 0x20) {
-        rx_serial_protocol = protocolToCheck;
+        rx_serial_protocol = protocol_to_check;
       }
       break;
     case RX_SERIAL_PROTOCOL_FPORT:          // FPORT
     case RX_SERIAL_PROTOCOL_FPORT_INVERTED: // FPORT
       if (rx_buffer[0] == 0x7E) {
-        rx_serial_protocol = protocolToCheck;
+        rx_serial_protocol = protocol_to_check;
       }
       break;
     case RX_SERIAL_PROTOCOL_CRSF:           // CRSF
       if (rx_buffer[0] != 0xFF && 1 == 2) { //Need to look up the expected start value.
-        rx_serial_protocol = protocolToCheck;
+        rx_serial_protocol = protocol_to_check;
       }
       break;
     default:
-      frameStatus = 3; //Whatever we got, it didn't make sense. Mark the frame as Checked and start over.
+      frame_status = 3; //Whatever we got, it didn't make sense. Mark the frame as Checked and start over.
       break;
     }
   }
 
-  //protocolToCheck++;
-  //if (protocolToCheck > 5) {
-  //  protocolToCheck = 1;
-  //  rxusart = 1;
-  //}
-  //}
-  //frameStatus = 3; //All done!
-  //debug.max_cpu_loop_number = gettime();
-
-  if (rx_serial_protocol != RX_SERIAL_PROTOCOL_INVALID) {
-    //rx_bind_enable = 1; NFE doesn't like this, and is convincing.  ROFL(NFE)
-  }
-
-  if (protocolDetectTimer > 4000) { //4000 loops, half a second
-    protocolDetectTimer = 0;        // Reset timer, triggering a shift to detecting the next protocol
+  if (protocol_detect_timer > 4000) { //4000 loops, half a second
+    protocol_detect_timer = 0;        // Reset timer, triggering a shift to detecting the next protocol
   }
 }
 

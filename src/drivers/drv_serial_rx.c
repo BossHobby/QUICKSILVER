@@ -3,14 +3,6 @@
 #include "drv_time.h"
 #include "profile.h"
 
-extern uint8_t rxusart;
-//SET SERIAL BAUDRATE BASED ON RECEIVER PROTOCOL
-//1 = DSM2/X
-//2 = sbus
-//3 = ibus
-//4 = FPORT
-//5 = CRSF
-
 #define USART usart_port_defs[serial_rx_port]
 
 // FUNCTION TO COMMAND EXTERNAL USART INVERTER HIGH OR LOW
