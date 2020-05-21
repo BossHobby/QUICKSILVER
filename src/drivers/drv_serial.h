@@ -11,12 +11,14 @@
 #endif
 
 typedef enum {
-  RX_SERIAL_PROTOCOL_INVALID = 0,
-  RX_SERIAL_PROTOCOL_DSM = 1,
-  RX_SERIAL_PROTOCOL_SBUS = 2,
-  RX_SERIAL_PROTOCOL_IBUS = 3,
-  RX_SERIAL_PROTOCOL_FPORT = 4,
-  RX_SERIAL_PROTOCOL_CRSF = 5,
+  RX_SERIAL_PROTOCOL_INVALID,
+  RX_SERIAL_PROTOCOL_DSM,
+  RX_SERIAL_PROTOCOL_SBUS,
+  RX_SERIAL_PROTOCOL_IBUS,
+  RX_SERIAL_PROTOCOL_FPORT,
+  RX_SERIAL_PROTOCOL_CRSF,
+  RX_SERIAL_PROTOCOL_SBUS_INVERTED,
+  RX_SERIAL_PROTOCOL_FPORT_INVERTED,
 } rx_serial_protocol_t;
 
 typedef struct {
@@ -38,5 +40,5 @@ void serial_enable_rcc(usart_ports_t port);
 void serial_enable_isr(usart_ports_t port);
 
 void serial_debug_init(void);
-void serial_rx_init(uint8_t rx_serial_protocol);
+void serial_rx_init(rx_serial_protocol_t rx_serial_protocol);
 void serial_smart_audio_init(void);

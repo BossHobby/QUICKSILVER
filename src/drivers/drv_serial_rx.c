@@ -13,8 +13,8 @@ extern uint8_t rxusart;
 
 #define USART usart_port_defs[serial_rx_port]
 
-//FUNCTION TO COMMAND EXTERNAL USART INVERTER HIGH OR LOW         todo: sort out target mapping tag in drv_rx_serial.h for a quick define from the taarget
-
+// FUNCTION TO COMMAND EXTERNAL USART INVERTER HIGH OR LOW
+// Only used for manual protocol / inversion selection
 void usart_invert(void) {
 #if defined(F4) && defined(INVERT_UART) && defined(USART_INVERTER_PIN) && defined(USART_INVERTER_PORT)
   GPIO_InitTypeDef GPIO_InitStructure;
@@ -55,9 +55,21 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
   rx_serial_protocol = RX_SERIAL_PROTOCOL_CRSF;
 #endif
 
-  // make sure there is some time to program the board if SDA pins are reinitialized as GPIO
-  //if (gettime() < 2000000)
-  //  return;
+  //If the board supports inversion, prepare it.
+#if defined(F4) && defined(USART_INVERTER_PIN) && defined(USART_INVERTER_PORT)
+  GPIO_InitTypeDef GPIO_InverterInitStructure;
+  GPIO_InverterInitStructure.GPIO_Pin = USART_INVERTER_PIN;
+  GPIO_InverterInitStructure.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InverterInitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InverterInitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_Init(USART_INVERTER_PORT, &GPIO_InverterInitStructure);
+
+  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
+    GPIO_SetBits(USART_INVERTER_PORT, USART_INVERTER_PIN);
+  } else {
+    GPIO_ResetBits(USART_INVERTER_PORT, USART_INVERTER_PIN);
+  }
+#endif
 
   serial_rx_port = profile.serial.rx;
 

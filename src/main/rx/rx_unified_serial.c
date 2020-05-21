@@ -172,14 +172,16 @@ void rx_serial_init(void) {
   case RX_SERIAL_PROTOCOL_DSM: // DSM
     expectedFrameLength = 16;
     break;
-  case RX_SERIAL_PROTOCOL_SBUS: // SBUS
+  case RX_SERIAL_PROTOCOL_SBUS:          // SBUS
+  case RX_SERIAL_PROTOCOL_SBUS_INVERTED: // SBUS
     expectedFrameLength = 24;
     break;
   case RX_SERIAL_PROTOCOL_IBUS: // IBUS
     expectedFrameLength = 32;
     break;
-  case RX_SERIAL_PROTOCOL_FPORT: // FPORT
-    expectedFrameLength = 28;    //Minimum.
+  case RX_SERIAL_PROTOCOL_FPORT:          // FPORT
+  case RX_SERIAL_PROTOCOL_FPORT_INVERTED: // FPORT
+    expectedFrameLength = 28;             //Minimum.
     break;
   case RX_SERIAL_PROTOCOL_CRSF: // CRSF
     expectedFrameLength = 64;   //Maybe 65? Not sure where the Sync Byte comes in
@@ -210,13 +212,15 @@ void rx_check() {
       case RX_SERIAL_PROTOCOL_DSM: // DSM
         rx_serial_process_dsmx();
         break;
-      case RX_SERIAL_PROTOCOL_SBUS: // SBUS
+      case RX_SERIAL_PROTOCOL_SBUS:          // SBUS
+      case RX_SERIAL_PROTOCOL_SBUS_INVERTED: // SBUS
         rx_serial_process_sbus();
         break;
       case RX_SERIAL_PROTOCOL_IBUS: // IBUS
         rx_serial_process_ibus();
         break;
-      case RX_SERIAL_PROTOCOL_FPORT: // FPORT
+      case RX_SERIAL_PROTOCOL_FPORT:          // FPORT
+      case RX_SERIAL_PROTOCOL_FPORT_INVERTED: // FPORT
         rx_serial_process_fport();
         break;
       case RX_SERIAL_PROTOCOL_CRSF: // CRSF
@@ -231,13 +235,15 @@ void rx_check() {
       case RX_SERIAL_PROTOCOL_DSM: // DSM
         // Run DSM Telemetry
         break;
-      case RX_SERIAL_PROTOCOL_SBUS: // SBUS
-        //Run smartport telemetry
+      case RX_SERIAL_PROTOCOL_SBUS:          // SBUS
+      case RX_SERIAL_PROTOCOL_SBUS_INVERTED: // SBUS
+        //Run smartport telemetry?
         break;
       case RX_SERIAL_PROTOCOL_IBUS: // IBUS
         //IBUS Telemetry function call goes here
         break;
-      case RX_SERIAL_PROTOCOL_FPORT: // FPORT
+      case RX_SERIAL_PROTOCOL_FPORT:          // FPORT
+      case RX_SERIAL_PROTOCOL_FPORT_INVERTED: // FPORT
         rx_serial_send_fport_telemetry();
         break;
       case RX_SERIAL_PROTOCOL_CRSF: // CRSF
@@ -989,7 +995,8 @@ void rx_serial_find_protocol(void) {
         if (bind_safety > 0)
           rx_serial_protocol = protocolToCheck;
       }
-    case RX_SERIAL_PROTOCOL_SBUS: // SBUS
+    case RX_SERIAL_PROTOCOL_SBUS:          // SBUS
+    case RX_SERIAL_PROTOCOL_SBUS_INVERTED: // SBUS
       if (rx_buffer[0] == 0x0F) {
         rx_serial_protocol = protocolToCheck;
       }
@@ -999,7 +1006,8 @@ void rx_serial_find_protocol(void) {
         rx_serial_protocol = protocolToCheck;
       }
       break;
-    case RX_SERIAL_PROTOCOL_FPORT: // FPORT
+    case RX_SERIAL_PROTOCOL_FPORT:          // FPORT
+    case RX_SERIAL_PROTOCOL_FPORT_INVERTED: // FPORT
       if (rx_buffer[0] == 0x7E) {
         rx_serial_protocol = protocolToCheck;
       }
