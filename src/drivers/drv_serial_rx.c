@@ -70,7 +70,7 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
   if (rx_serial_protocol == RX_SERIAL_PROTOCOL_DSM || rx_serial_protocol == RX_SERIAL_PROTOCOL_IBUS || rx_serial_protocol == RX_SERIAL_PROTOCOL_CRSF) {
     GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-  } else if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT) {
+  } else if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS || rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   }
@@ -78,7 +78,7 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
 
   serial_enable_rcc(serial_rx_port);
 
-  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT) {
+  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
     GPIO_InitStructure.GPIO_Pin = USART.tx_pin.pin;
     GPIO_Init(USART.tx_pin.port, &GPIO_InitStructure);
 
@@ -91,16 +91,16 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
   }
 
   USART_InitTypeDef USART_InitStructure;
-  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_DSM || rx_serial_protocol == RX_SERIAL_PROTOCOL_IBUS || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT) {
+  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_DSM || rx_serial_protocol == RX_SERIAL_PROTOCOL_IBUS || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
     USART_InitStructure.USART_BaudRate = 115200;
-  } else if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS) {
+  } else if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS || rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED) {
     USART_InitStructure.USART_BaudRate = 100000;
   } else if (rx_serial_protocol == RX_SERIAL_PROTOCOL_CRSF) {
     USART_InitStructure.USART_BaudRate = 420000;
   }
 
   USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS) {
+  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS || rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED) {
     USART_InitStructure.USART_StopBits = USART_StopBits_2;
     USART_InitStructure.USART_Parity = USART_Parity_Even;
   } else {
@@ -110,13 +110,13 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
 
   USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
 
-  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT || rx_serial_protocol == RX_SERIAL_PROTOCOL_CRSF) {
+  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_CRSF) {
     USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
   } else {
     USART_InitStructure.USART_Mode = USART_Mode_Rx; //USART_Mode_Rx | USART_Mode_Tx;
   }
 
-  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT) {
+  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
     USART_HalfDuplexCmd(USART.channel, ENABLE);
   } else {
     USART_HalfDuplexCmd(USART.channel, DISABLE);
