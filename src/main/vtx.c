@@ -183,12 +183,14 @@ void vtx_smart_audio_update() {
       if (smart_audio_settings.version >= 3) {
         uint8_t mode = 0x0;
 
+        /* looks like in-range/out-range was dropped for VTXes with SA >= v2.1
         if (smart_audio_settings.mode & SA_MODE_OUT_RANGE_PIT) {
           mode |= 0x02;
         } else {
           // default to SA_MODE_IN_RANGE_PIT
           mode |= 0x01;
         }
+        */
 
         if (vtx_settings.pit_mode == VTX_PIT_MODE_OFF) {
           mode |= 0x04;
