@@ -58,6 +58,42 @@ cbor_result_t cbor_encode_usb_motor_test_t(cbor_value_t *enc, const usb_motor_te
   return res;
 }
 
+cbor_result_t cbor_encode_status_t(cbor_value_t *enc) {
+  CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_array_indefinite(enc));
+
+  const uint32_t time = timer_millis();
+  CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &time));
+
+  extern float cpu_load;
+  const uint16_t load = cpu_load;
+  CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &load));
+
+  const uint16_t vbat = state.vbattfilt * 10;
+  CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &vbat));
+
+  CBOR_CHECK_ERROR(res = cbor_encode_vec3_t(enc, &state.gyro_raw));
+  CBOR_CHECK_ERROR(res = cbor_encode_vec3_t(enc, &state.gyro));
+  CBOR_CHECK_ERROR(res = cbor_encode_vec3_t(enc, &state.GEstG));
+  CBOR_CHECK_ERROR(res = cbor_encode_vec4_t(enc, &state.rx));
+  CBOR_CHECK_ERROR(res = cbor_encode_vec4_t(enc, &state.rx_filtered));
+
+  uint32_t rx_aux = 0;
+  for (uint32_t i = 0; i < AUX_CHANNEL_MAX; i++) {
+    if (state.aux[i]) {
+      rx_aux = rx_aux | (0x1 << i);
+    }
+  }
+  CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &rx_aux));
+
+  CBOR_CHECK_ERROR(res = cbor_encode_vec3_t(enc, &state.accel_raw));
+  CBOR_CHECK_ERROR(res = cbor_encode_vec3_t(enc, &state.accel));
+  CBOR_CHECK_ERROR(res = cbor_encode_vec3_t(enc, &state.pidoutput));
+
+  CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
+
+  return res;
+}
+
 void send_quic_header(quic_command cmd, quic_flag flag, int16_t len) {
   static uint8_t frame[QUIC_HEADER_LEN];
 
@@ -145,8 +181,8 @@ void get_quic(uint8_t *data, uint32_t len) {
 
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
-  case QUIC_VAL_BLACKBOX_RATE:
-    res = cbor_encode_uint32(&enc, &blackbox_rate);
+  case QUIC_VAL_STATUS:
+    res = cbor_encode_status_t(&enc);
     check_cbor_error(QUIC_CMD_GET);
 
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
@@ -248,7 +284,7 @@ void set_quic(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
-  case QUIC_VAL_BLACKBOX_RATE: {
+  case QUIC_VAL_STATUS: {
     res = cbor_decode_uint32(&dec, &blackbox_rate);
     check_cbor_error(QUIC_CMD_SET);
 
@@ -367,7 +403,7 @@ void process_blackbox(uint8_t *data, uint32_t len) {
         }
 
         cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
-        res = cbor_encode_compact_blackbox_t(&enc, &blackbox);
+        res = cbor_encode_blackbox_t(&enc, &blackbox);
         check_cbor_error(QUIC_CMD_BLACKBOX);
 
         send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));

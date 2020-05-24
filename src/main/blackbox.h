@@ -22,8 +22,6 @@ typedef struct {
 } blackbox_t;
 
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b);
-cbor_result_t cbor_encode_compact_blackbox_t(cbor_value_t *enc, const blackbox_t *b);
-cbor_result_t cbor_decode_compact_blackbox_t(cbor_value_t *dec, blackbox_t *b);
 
 void blackbox_init();
 void blackbox_update();
