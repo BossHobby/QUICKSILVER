@@ -381,7 +381,27 @@ void process_blackbox(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, NULL, 0);
     break;
   case QUIC_BLACKBOX_LIST:
-    cbor_encode_uint16(&enc, &data_flash_header.file_num);
+    res = cbor_encode_map_indefinite(&enc);
+    check_cbor_error(QUIC_CMD_BLACKBOX);
+
+    res = cbor_encode_str(&enc, "file_num");
+    check_cbor_error(QUIC_CMD_BLACKBOX);
+    res = cbor_encode_uint16(&enc, &data_flash_header.file_num);
+    check_cbor_error(QUIC_CMD_BLACKBOX);
+
+    res = cbor_encode_str(&enc, "files");
+    check_cbor_error(QUIC_CMD_BLACKBOX);
+    res = cbor_encode_array(&enc, data_flash_header.file_num);
+    check_cbor_error(QUIC_CMD_BLACKBOX);
+
+    for (uint8_t i = 0; i < data_flash_header.file_num; i++) {
+      res = cbor_encode_uint32(&enc, &data_flash_header.files[i].entries);
+      check_cbor_error(QUIC_CMD_BLACKBOX);
+    }
+
+    res = cbor_encode_end_indefinite(&enc);
+    check_cbor_error(QUIC_CMD_BLACKBOX);
+
     send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   case QUIC_BLACKBOX_GET: {
