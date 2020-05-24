@@ -215,15 +215,15 @@ void sixaxis_read(void) {
     gyro_raw[2] = -gyro_raw[2];
   }
 
-  //gyro_raw[0] = - gyro_raw[0];
-  gyro_raw[1] = -gyro_raw[1];
-  gyro_raw[2] = -gyro_raw[2];
+  gyro_raw[0] = gyro_raw[0] * 0.061035156f * DEGTORAD;
+  gyro_raw[1] = -gyro_raw[1] * 0.061035156f * DEGTORAD;
+  gyro_raw[2] = -gyro_raw[2] * 0.061035156f * DEGTORAD;
 
   filter_coeff(profile.filter.gyro[0].type, &filter[0], profile.filter.gyro[0].cutoff_freq);
   filter_coeff(profile.filter.gyro[1].type, &filter[1], profile.filter.gyro[1].cutoff_freq);
 
   for (int i = 0; i < 3; i++) {
-    gyro[i] = gyro_raw[i] * 0.061035156f * DEGTORAD;
+    gyro[i] = gyro_raw[i];
 
     gyro[i] = filter_step(profile.filter.gyro[0].type, &filter[0], &filter_state[0][i], gyro[i]);
     gyro[i] = filter_step(profile.filter.gyro[1].type, &filter[1], &filter_state[1][i], gyro[i]);
