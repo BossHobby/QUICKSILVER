@@ -517,26 +517,6 @@ pid_rate_t *profile_current_pid_rates() {
   return &profile.pid.pid_rates[profile.pid.pid_profile];
 }
 
-cbor_result_t cbor_encode_vector_t(cbor_value_t *enc, const vector_t *vec) {
-  cbor_result_t res = cbor_encode_array(enc, 3);
-  if (res < CBOR_OK) {
-    return res;
-  }
-  res = cbor_encode_float(enc, &vec->axis[0]);
-  if (res < CBOR_OK) {
-    return res;
-  }
-  res = cbor_encode_float(enc, &vec->axis[1]);
-  if (res < CBOR_OK) {
-    return res;
-  }
-  res = cbor_encode_float(enc, &vec->axis[2]);
-  if (res < CBOR_OK) {
-    return res;
-  }
-  return res;
-}
-
 cbor_result_t cbor_encode_profile_metadata_t(cbor_value_t *enc, const profile_metadata_t *meta) {
   cbor_result_t res = CBOR_OK;
 
@@ -651,29 +631,6 @@ CBOR_END_STRUCT_ENCODER()
 #undef STR_MEMBER
 #undef ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER
-
-cbor_result_t cbor_decode_vector_t(cbor_value_t *it, vector_t *vec) {
-  cbor_result_t res = CBOR_OK;
-
-  cbor_container_t array;
-  res = cbor_decode_array(it, &array);
-  if (res < CBOR_OK)
-    return res;
-
-  res = cbor_decode_float(it, &vec->axis[0]);
-  if (res < CBOR_OK)
-    return res;
-
-  res = cbor_decode_float(it, &vec->axis[1]);
-  if (res < CBOR_OK)
-    return res;
-
-  res = cbor_decode_float(it, &vec->axis[2]);
-  if (res < CBOR_OK)
-    return res;
-
-  return res;
-}
 
 cbor_result_t cbor_decode_profile_metadata_t(cbor_value_t *dec, profile_metadata_t *meta) {
   cbor_result_t res = CBOR_OK;

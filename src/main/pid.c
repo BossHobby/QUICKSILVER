@@ -267,7 +267,7 @@ int next_pid_term() {
   return current_pid_term + 1;
 }
 
-vector_t *current_pid_term_pointer() {
+vec3_t *current_pid_term_pointer() {
   switch (current_pid_term) {
   case 0:
     return &profile_current_pid_rates()->kp;

@@ -4,16 +4,7 @@
 
 #include "filter.h"
 #include "project.h"
-
-// Utility
-typedef union {
-  struct {
-    float roll;
-    float pitch;
-    float yaw;
-  };
-  float axis[3];
-} vector_t;
+#include "util/vector.h"
 
 // Rates
 typedef enum {
@@ -22,26 +13,26 @@ typedef enum {
 } rate_modes_t;
 
 typedef struct {
-  vector_t max_rate;
-  vector_t acro_expo;
-  vector_t angle_expo;
+  vec3_t max_rate;
+  vec3_t acro_expo;
+  vec3_t angle_expo;
 } rate_mode_silverware_t;
 
 #define SILVERWARE_RATE_MEMBERS \
-  MEMBER(max_rate, vector_t)    \
-  MEMBER(acro_expo, vector_t)   \
-  MEMBER(angle_expo, vector_t)
+  MEMBER(max_rate, vec3_t)      \
+  MEMBER(acro_expo, vec3_t)     \
+  MEMBER(angle_expo, vec3_t)
 
 typedef struct {
-  vector_t rc_rate;
-  vector_t super_rate;
-  vector_t expo;
+  vec3_t rc_rate;
+  vec3_t super_rate;
+  vec3_t expo;
 } rate_mode_betaflight_t;
 
 #define BETAFLIGHT_RATE_MEMBERS \
-  MEMBER(rc_rate, vector_t)     \
-  MEMBER(super_rate, vector_t)  \
-  MEMBER(expo, vector_t)
+  MEMBER(rc_rate, vec3_t)       \
+  MEMBER(super_rate, vec3_t)    \
+  MEMBER(expo, vec3_t)
 
 typedef struct {
   rate_modes_t mode;
@@ -61,15 +52,15 @@ typedef struct {
   MEMBER(sticks_deadband, float)
 
 typedef struct {
-  vector_t kp;
-  vector_t ki;
-  vector_t kd;
+  vec3_t kp;
+  vec3_t ki;
+  vec3_t kd;
 } pid_rate_t;
 
 #define PID_RATE_MEMBERS \
-  MEMBER(kp, vector_t)   \
-  MEMBER(ki, vector_t)   \
-  MEMBER(kd, vector_t)
+  MEMBER(kp, vec3_t)     \
+  MEMBER(ki, vec3_t)     \
+  MEMBER(kd, vec3_t)
 
 typedef struct {
   float kp;
@@ -98,13 +89,13 @@ typedef enum {
 } pid_profile_t;
 
 typedef struct {
-  vector_t accelerator;
-  vector_t transition;
+  vec3_t accelerator;
+  vec3_t transition;
 } stick_rate_t;
 
-#define STICK_RATE_MEMBERS      \
-  MEMBER(accelerator, vector_t) \
-  MEMBER(transition, vector_t)
+#define STICK_RATE_MEMBERS    \
+  MEMBER(accelerator, vec3_t) \
+  MEMBER(transition, vec3_t)
 
 typedef enum {
   STICK_PROFILE_OFF,
@@ -296,11 +287,8 @@ extern target_info_t target_info;
 void profile_set_defaults();
 pid_rate_t *profile_current_pid_rates();
 
-cbor_result_t cbor_encode_vector_t(cbor_value_t *enc, const vector_t *vec);
-cbor_result_t cbor_decode_profile_t(cbor_value_t *dec, profile_t *p);
-
 cbor_result_t cbor_encode_profile_t(cbor_value_t *enc, const profile_t *p);
-cbor_result_t cbor_decode_vector_t(cbor_value_t *dec, vector_t *vec);
+cbor_result_t cbor_decode_profile_t(cbor_value_t *dec, profile_t *p);
 
 cbor_result_t cbor_encode_pid_rate_preset_t(cbor_value_t *enc, const pid_rate_preset_t *p);
 cbor_result_t cbor_encode_target_info_t(cbor_value_t *enc, const target_info_t *i);

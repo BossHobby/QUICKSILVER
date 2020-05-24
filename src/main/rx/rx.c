@@ -45,12 +45,12 @@ float rx_smoothing_hz(rx_protocol_t proto) {
 }
 
 void rx_apply_expo(void) {
-  vector_t angle_expo = {
+  vec3_t angle_expo = {
       .roll = 0,
       .pitch = 0,
       .yaw = 0,
   };
-  vector_t acro_expo = {
+  vec3_t acro_expo = {
       .roll = 0,
       .pitch = 0,
       .yaw = 0,
@@ -64,7 +64,7 @@ void rx_apply_expo(void) {
     acro_expo = profile.rate.silverware.acro_expo;
   }
 
-  vector_t expo = {
+  vec3_t expo = {
       .roll = 0,
       .pitch = 0,
       .yaw = 0,

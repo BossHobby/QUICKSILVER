@@ -221,7 +221,7 @@ const char* get_vtx_status(int input){
 	return vtx_data_status[input][*vtx_ptr[input]];
 }
 
-vector_t *get_pid_term(uint8_t term) {
+vec3_t *get_pid_term(uint8_t term) {
   switch (term) {
   case 1:
     return &profile.pid.pid_rates[profile.pid.pid_profile].kp;
@@ -233,7 +233,7 @@ vector_t *get_pid_term(uint8_t term) {
   return NULL;
 }
 
-vector_t *get_sw_rate_term(uint8_t term) {
+vec3_t *get_sw_rate_term(uint8_t term) {
   switch (term) {
   case 1:
     return &profile.rate.silverware.max_rate;
@@ -245,7 +245,7 @@ vector_t *get_sw_rate_term(uint8_t term) {
   return NULL;
 }
 
-vector_t *get_bf_rate_term(uint8_t term) {
+vec3_t *get_bf_rate_term(uint8_t term) {
   switch (term) {
   case 1:
     return &profile.rate.betaflight.rc_rate;
@@ -257,7 +257,7 @@ vector_t *get_bf_rate_term(uint8_t term) {
   return NULL;
 }
 
-vector_t *get_stick_profile_term(uint8_t term) {
+vec3_t *get_stick_profile_term(uint8_t term) {
   switch (term) {
   case 1:
     return &profile.pid.stick_rates[profile.pid.stick_profile].accelerator;
@@ -267,7 +267,7 @@ vector_t *get_stick_profile_term(uint8_t term) {
   return NULL;
 }
 
-void osd_vector_adjust ( vector_t *pointer, uint8_t rows, uint8_t columns, uint8_t special_case, const float adjust_limit[rows*columns][2]){
+void osd_vector_adjust ( vec3_t *pointer, uint8_t rows, uint8_t columns, uint8_t special_case, const float adjust_limit[rows*columns][2]){
 	if (osd_select > columns) {
 		osd_select = columns;	//limit osd select variable from accumulating past 3 columns of adjustable items
 		osd_menu_phase = 1; //repaint the screen again

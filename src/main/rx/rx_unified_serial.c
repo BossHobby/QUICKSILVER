@@ -804,7 +804,7 @@ void rx_serial_process_fport(void) {
   } // end frame received
 }
 
-vector_t *get_pid_value(uint8_t term) {
+vec3_t *get_pid_value(uint8_t term) {
   switch (term) {
   case 0:
     return &profile.pid.pid_rates[profile.pid.pid_profile].kp;

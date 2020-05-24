@@ -577,7 +577,7 @@ void print_osd_adjustable_enums (uint8_t string_element_qty, uint8_t data_elemen
 	osd_menu_phase++;
 }
 
-void print_osd_adjustable_vectors(uint8_t menu_type, uint8_t string_element_qty, uint8_t data_element_qty, vector_t *pointer, const uint8_t data_index[data_element_qty][2], const uint8_t grid[data_element_qty][2], const uint8_t print_position[data_element_qty][2]){
+void print_osd_adjustable_vectors(uint8_t menu_type, uint8_t string_element_qty, uint8_t data_element_qty, vec3_t *pointer, const uint8_t data_index[data_element_qty][2], const uint8_t grid[data_element_qty][2], const uint8_t print_position[data_element_qty][2]){
   	if (osd_menu_phase <= string_element_qty)
           return;
   	if (osd_menu_phase > string_element_qty + data_element_qty)

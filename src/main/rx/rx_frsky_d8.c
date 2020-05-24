@@ -139,7 +139,7 @@ static uint8_t frsky_d8_hub_encode(uint8_t *buf, uint8_t data) {
 
 static uint8_t frsky_d8_append_hub_telemetry(uint8_t telemetry_id, uint8_t *buf) {
   static uint8_t pid_axis = 0;
-  extern vector_t *current_pid_term_pointer();
+  extern vec3_t *current_pid_term_pointer();
 
   extern int current_pid_term;
   extern int current_pid_axis;
