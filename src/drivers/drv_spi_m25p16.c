@@ -110,7 +110,7 @@ void m25p16_get_bounds(data_flash_bounds_t *bounds) {
   uint8_t raw_id[3];
   m25p16_read_command(M25P16_READ_IDENTIFICATION, raw_id, 3);
 
-  const uint32_t chip_id = (raw_id[0] << 16) | (raw_id[1] << 8) | raw_id[2] << 16;
+  const uint32_t chip_id = (raw_id[0] << 16) | (raw_id[1] << 8) | raw_id[2];
   switch (chip_id) {
   case JEDEC_ID_WINBOND_W25Q16:
   case JEDEC_ID_MICRON_M25P16:
