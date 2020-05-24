@@ -303,42 +303,63 @@ cbor_result_t cbor_decode_uint32(cbor_value_t *dec, uint32_t *val) {
 }
 
 cbor_result_t cbor_decode_int8(cbor_value_t *dec, int8_t *val) {
-  cbor_result_t res = _cbor_decode_ensure_type(dec, CBOR_TYPE_NINT);
-  if (res < 0) {
-    return res;
+  if (_cbor_remaining(dec) <= 0) {
+    return CBOR_ERR_EOF;
+  }
+  cbor_major_type_t type = (cbor_major_type_t)_cbor_decode_type(*dec->curr);
+  if (type != CBOR_TYPE_NINT && type != CBOR_TYPE_UINT) {
+    return CBOR_ERR_INVALID_TYPE;
   }
 
-  res = _cbor_advance(dec, _cbor_decode_raw(dec, (uint8_t *)val, CBOR_SIZE_BYTE));
+  cbor_result_t res = _cbor_advance(dec, _cbor_decode_raw(dec, (uint8_t *)val, CBOR_SIZE_BYTE));
   if (res < 0) {
     return res;
   }
-  *val = (int8_t)(-1 - *((uint8_t *)(val)));
+  if (type == CBOR_TYPE_NINT) {
+    *val = (int8_t)(-1 - *((uint8_t *)(val)));
+  } else {
+    *val = (int8_t)(*((uint8_t *)(val)));
+  }
   return res;
 }
 cbor_result_t cbor_decode_int16(cbor_value_t *dec, int16_t *val) {
-  cbor_result_t res = _cbor_decode_ensure_type(dec, CBOR_TYPE_NINT);
-  if (res < 0) {
-    return res;
+  if (_cbor_remaining(dec) <= 0) {
+    return CBOR_ERR_EOF;
+  }
+  cbor_major_type_t type = (cbor_major_type_t)_cbor_decode_type(*dec->curr);
+  if (type != CBOR_TYPE_NINT && type != CBOR_TYPE_UINT) {
+    return CBOR_ERR_INVALID_TYPE;
   }
 
-  res = _cbor_advance(dec, _cbor_decode_raw(dec, (uint8_t *)val, CBOR_SIZE_SHORT));
+  cbor_result_t res = _cbor_advance(dec, _cbor_decode_raw(dec, (uint8_t *)val, CBOR_SIZE_SHORT));
   if (res < 0) {
     return res;
   }
-  *val = (int16_t)(-1 - *((uint16_t *)(val)));
+  if (type == CBOR_TYPE_NINT) {
+    *val = (int16_t)(-1 - *((uint16_t *)(val)));
+  } else {
+    *val = (int16_t)(*((uint16_t *)(val)));
+  }
   return res;
 }
 cbor_result_t cbor_decode_int32(cbor_value_t *dec, int32_t *val) {
-  cbor_result_t res = _cbor_decode_ensure_type(dec, CBOR_TYPE_NINT);
-  if (res < 0) {
-    return res;
+  if (_cbor_remaining(dec) <= 0) {
+    return CBOR_ERR_EOF;
+  }
+  cbor_major_type_t type = (cbor_major_type_t)_cbor_decode_type(*dec->curr);
+  if (type != CBOR_TYPE_NINT && type != CBOR_TYPE_UINT) {
+    return CBOR_ERR_INVALID_TYPE;
   }
 
-  res = _cbor_advance(dec, _cbor_decode_raw(dec, (uint8_t *)val, CBOR_SIZE_WORD));
+  cbor_result_t res = _cbor_advance(dec, _cbor_decode_raw(dec, (uint8_t *)val, CBOR_SIZE_WORD));
   if (res < 0) {
     return res;
   }
-  *val = (int32_t)(-1 - *((uint32_t *)(val)));
+  if (type == CBOR_TYPE_NINT) {
+    *val = (int32_t)(-1 - *((uint32_t *)(val)));
+  } else {
+    *val = (int32_t)(*((uint32_t *)(val)));
+  }
   return res;
 }
 
@@ -472,18 +493,24 @@ cbor_result_t cbor_encode_uint32(cbor_value_t *enc, const uint32_t *val) {
 }
 
 cbor_result_t cbor_encode_int8(cbor_value_t *enc, const int8_t *val) {
-  uint8_t proxy = 0;
-  proxy = (uint8_t)(-1 - *val);
+  if (*val >= 0) {
+    return _cbor_encode_raw(enc, CBOR_TYPE_UINT, (const uint8_t *)val, _cbor_size_for_value(*val));
+  }
+  uint8_t proxy = (uint8_t)(-*val - 1);
   return _cbor_encode_raw(enc, CBOR_TYPE_NINT, (const uint8_t *)&proxy, _cbor_size_for_value(proxy));
 }
 cbor_result_t cbor_encode_int16(cbor_value_t *enc, const int16_t *val) {
-  uint16_t proxy = 0;
-  proxy = (uint16_t)(-1 - *val);
+  if (*val >= 0) {
+    return _cbor_encode_raw(enc, CBOR_TYPE_UINT, (const uint8_t *)val, _cbor_size_for_value(*val));
+  }
+  uint16_t proxy = (uint16_t)(-*val - 1);
   return _cbor_encode_raw(enc, CBOR_TYPE_NINT, (const uint8_t *)&proxy, _cbor_size_for_value(proxy));
 }
 cbor_result_t cbor_encode_int32(cbor_value_t *enc, const int32_t *val) {
-  uint32_t proxy = 0;
-  proxy = (uint32_t)(-1 - *val);
+  if (*val >= 0) {
+    return _cbor_encode_raw(enc, CBOR_TYPE_UINT, (const uint8_t *)val, _cbor_size_for_value(*val));
+  }
+  uint32_t proxy = (uint32_t)(-*val - 1);
   return _cbor_encode_raw(enc, CBOR_TYPE_NINT, (const uint8_t *)&proxy, _cbor_size_for_value(proxy));
 }
 
