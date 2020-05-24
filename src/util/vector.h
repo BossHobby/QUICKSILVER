@@ -23,3 +23,6 @@ typedef union {
   };
   float axis[4];
 } vec4_t;
+
+cbor_result_t cbor_encode_vec4_t(cbor_value_t *enc, const vec4_t *vec);
+cbor_result_t cbor_decode_vec4_t(cbor_value_t *dec, vec4_t *vec);
