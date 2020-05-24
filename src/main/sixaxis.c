@@ -45,10 +45,10 @@ static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
 
 extern profile_t profile;
 
-float accel[3];
 float gyro[3];
 
-float gyro_raw[3];
+vec3_t accel_raw;
+vec3_t gyro_raw;
 
 float accelcal[3];
 float gyrocal[3];
@@ -134,101 +134,101 @@ void sixaxis_read(void) {
   MPU6XXX_dma_read_data(59, data, 14);
 #endif
 
-  accel[0] = -(int16_t)((data[0] << 8) + data[1]);
-  accel[1] = -(int16_t)((data[2] << 8) + data[3]);
-  accel[2] = (int16_t)((data[4] << 8) + data[5]);
+  accel_raw.axis[0] = -(int16_t)((data[0] << 8) + data[1]);
+  accel_raw.axis[1] = -(int16_t)((data[2] << 8) + data[3]);
+  accel_raw.axis[2] = (int16_t)((data[4] << 8) + data[5]);
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CW) {
-    float temp = accel[1];
-    accel[1] = accel[0];
-    accel[0] = -temp;
+    float temp = accel_raw.axis[1];
+    accel_raw.axis[1] = accel_raw.axis[0];
+    accel_raw.axis[0] = -temp;
   }
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_45_CCW) {
-    float temp = accel[0];
-    accel[0] = (accel[0] * INVSQRT2 + accel[1] * INVSQRT2);
-    accel[1] = -(temp * INVSQRT2 - accel[1] * INVSQRT2);
+    float temp = accel_raw.axis[0];
+    accel_raw.axis[0] = (accel_raw.axis[0] * INVSQRT2 + accel_raw.axis[1] * INVSQRT2);
+    accel_raw.axis[1] = -(temp * INVSQRT2 - accel_raw.axis[1] * INVSQRT2);
   }
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_45_CW) {
-    float temp = accel[1];
-    accel[1] = (accel[1] * INVSQRT2 + accel[0] * INVSQRT2);
-    accel[0] = -(temp * INVSQRT2 - accel[0] * INVSQRT2);
+    float temp = accel_raw.axis[1];
+    accel_raw.axis[1] = (accel_raw.axis[1] * INVSQRT2 + accel_raw.axis[0] * INVSQRT2);
+    accel_raw.axis[0] = -(temp * INVSQRT2 - accel_raw.axis[0] * INVSQRT2);
   }
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CCW) {
-    float temp = accel[1];
-    accel[1] = -accel[0];
-    accel[0] = temp;
+    float temp = accel_raw.axis[1];
+    accel_raw.axis[1] = -accel_raw.axis[0];
+    accel_raw.axis[0] = temp;
   }
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_180) {
-    accel[1] = -accel[1];
-    accel[0] = -accel[0];
+    accel_raw.axis[1] = -accel_raw.axis[1];
+    accel_raw.axis[0] = -accel_raw.axis[0];
   }
 
   if (profile.motor.gyro_orientation & GYRO_FLIP_180) {
-    accel[2] = -accel[2];
-    accel[0] = -accel[0];
+    accel_raw.axis[2] = -accel_raw.axis[2];
+    accel_raw.axis[0] = -accel_raw.axis[0];
   }
 
-  // remove bias and reduce to accel in G
-  accel[0] = (accel[0] - accelcal[0]) * (1 / 2048.0f);
-  accel[1] = (accel[1] - accelcal[1]) * (1 / 2048.0f);
-  accel[2] = (accel[2] - accelcal[2]) * (1 / 2048.0f);
+  // remove bias and reduce to accel_raw in G
+  accel_raw.axis[0] = (accel_raw.axis[0] - accelcal[0]) * (1 / 2048.0f);
+  accel_raw.axis[1] = (accel_raw.axis[1] - accelcal[1]) * (1 / 2048.0f);
+  accel_raw.axis[2] = (accel_raw.axis[2] - accelcal[2]) * (1 / 2048.0f);
 
   //order
-  gyro_raw[1] = (int16_t)((data[8] << 8) + data[9]);
-  gyro_raw[0] = (int16_t)((data[10] << 8) + data[11]);
-  gyro_raw[2] = (int16_t)((data[12] << 8) + data[13]);
+  gyro_raw.axis[1] = (int16_t)((data[8] << 8) + data[9]);
+  gyro_raw.axis[0] = (int16_t)((data[10] << 8) + data[11]);
+  gyro_raw.axis[2] = (int16_t)((data[12] << 8) + data[13]);
 
-  gyro_raw[0] = gyro_raw[0] - gyrocal[0];
-  gyro_raw[1] = gyro_raw[1] - gyrocal[1];
-  gyro_raw[2] = gyro_raw[2] - gyrocal[2];
+  gyro_raw.axis[0] = gyro_raw.axis[0] - gyrocal[0];
+  gyro_raw.axis[1] = gyro_raw.axis[1] - gyrocal[1];
+  gyro_raw.axis[2] = gyro_raw.axis[2] - gyrocal[2];
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CW) {
-    float temp = gyro_raw[1];
-    gyro_raw[1] = -gyro_raw[0];
-    gyro_raw[0] = temp;
+    float temp = gyro_raw.axis[1];
+    gyro_raw.axis[1] = -gyro_raw.axis[0];
+    gyro_raw.axis[0] = temp;
   }
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_45_CCW) {
-    float temp = gyro_raw[1];
-    gyro_raw[1] = gyro_raw[0] * INVSQRT2 + gyro_raw[1] * INVSQRT2;
-    gyro_raw[0] = gyro_raw[0] * INVSQRT2 - temp * INVSQRT2;
+    float temp = gyro_raw.axis[1];
+    gyro_raw.axis[1] = gyro_raw.axis[0] * INVSQRT2 + gyro_raw.axis[1] * INVSQRT2;
+    gyro_raw.axis[0] = gyro_raw.axis[0] * INVSQRT2 - temp * INVSQRT2;
   }
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_45_CW) {
-    float temp = gyro_raw[0];
-    gyro_raw[0] = gyro_raw[1] * INVSQRT2 + gyro_raw[0] * INVSQRT2;
-    gyro_raw[1] = gyro_raw[1] * INVSQRT2 - temp * INVSQRT2;
+    float temp = gyro_raw.axis[0];
+    gyro_raw.axis[0] = gyro_raw.axis[1] * INVSQRT2 + gyro_raw.axis[0] * INVSQRT2;
+    gyro_raw.axis[1] = gyro_raw.axis[1] * INVSQRT2 - temp * INVSQRT2;
   }
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CCW) {
-    float temp = gyro_raw[1];
-    gyro_raw[1] = gyro_raw[0];
-    gyro_raw[0] = -temp;
+    float temp = gyro_raw.axis[1];
+    gyro_raw.axis[1] = gyro_raw.axis[0];
+    gyro_raw.axis[0] = -temp;
   }
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_180) {
-    gyro_raw[1] = -gyro_raw[1];
-    gyro_raw[0] = -gyro_raw[0];
+    gyro_raw.axis[1] = -gyro_raw.axis[1];
+    gyro_raw.axis[0] = -gyro_raw.axis[0];
   }
 
   if (profile.motor.gyro_orientation & GYRO_FLIP_180) {
-    gyro_raw[1] = -gyro_raw[1];
-    gyro_raw[2] = -gyro_raw[2];
+    gyro_raw.axis[1] = -gyro_raw.axis[1];
+    gyro_raw.axis[2] = -gyro_raw.axis[2];
   }
 
-  gyro_raw[0] = gyro_raw[0] * 0.061035156f * DEGTORAD;
-  gyro_raw[1] = -gyro_raw[1] * 0.061035156f * DEGTORAD;
-  gyro_raw[2] = -gyro_raw[2] * 0.061035156f * DEGTORAD;
+  gyro_raw.axis[0] = gyro_raw.axis[0] * 0.061035156f * DEGTORAD;
+  gyro_raw.axis[1] = -gyro_raw.axis[1] * 0.061035156f * DEGTORAD;
+  gyro_raw.axis[2] = -gyro_raw.axis[2] * 0.061035156f * DEGTORAD;
 
   filter_coeff(profile.filter.gyro[0].type, &filter[0], profile.filter.gyro[0].cutoff_freq);
   filter_coeff(profile.filter.gyro[1].type, &filter[1], profile.filter.gyro[1].cutoff_freq);
 
   for (int i = 0; i < 3; i++) {
-    gyro[i] = gyro_raw[i];
+    gyro[i] = gyro_raw.axis[i];
 
     gyro[i] = filter_step(profile.filter.gyro[0].type, &filter[0], &filter_state[0][i], gyro[i]);
     gyro[i] = filter_step(profile.filter.gyro[1].type, &filter[1], &filter_state[1][i], gyro[i]);
@@ -311,7 +311,7 @@ void acc_cal(void) {
   for (int y = 0; y < 500; y++) {
     sixaxis_read();
     for (int x = 0; x < 3; x++) {
-      lpf(&accelcal[x], accel[x], 0.92);
+      lpf(&accelcal[x], accel_raw.axis[x], 0.92);
     }
     gettime(); // if it takes too long time will overflow so we call it here
   }

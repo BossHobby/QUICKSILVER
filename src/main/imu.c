@@ -10,6 +10,7 @@
 #include "filter.h"
 #include "sixaxis.h"
 #include "util.h"
+#include "util/vector.h"
 
 #define ACC_1G 1.0f
 
@@ -41,10 +42,9 @@ float GEstG[3] = {0, 0, ACC_1G};
 float attitude[3];
 
 extern float gyro[3];
-extern float accel[3];
-extern float accelcal[3];
+extern vec3_t accel_raw;
 
-float accel_filter[3];
+float accel[3];
 
 extern float looptime;
 
@@ -79,7 +79,7 @@ void imu_init() {
     sixaxis_read();
 
     for (int x = 0; x < 3; x++) {
-      lpf(&GEstG[x], accel[x] * (1 / 2048.0f), 0.85);
+      lpf(&GEstG[x], accel_raw.axis[x], 0.85);
     }
     delay(1000);
   }
@@ -98,9 +98,9 @@ void imu_init() {
 
 #ifdef BFPV_IMU
 void imu_calc() {
-  accel_filter[0] = filter_lp2_iir_step(&filter[0], accel[0]);
-  accel_filter[1] = filter_lp2_iir_step(&filter[1], accel[1]);
-  accel_filter[2] = filter_lp2_iir_step(&filter[2], accel[2]);
+  accel[0] = filter_lp2_iir_step(&filter[0], accel_raw.axis[0]);
+  accel[1] = filter_lp2_iir_step(&filter[1], accel_raw.axis[1]);
+  accel[2] = filter_lp2_iir_step(&filter[2], accel_raw.axis[2]);
 
   float EstG[3];
   vectorcopy(&EstG[0], &GEstG[0]);
@@ -143,26 +143,26 @@ void imu_calc() {
   extern int onground;
   if (onground) { //happyhour bartender - quad is ON GROUND and disarmed
     // calc acc mag
-    float accmag = calcmagnitude(&accel_filter[0]);
+    float accmag = calcmagnitude(&accel[0]);
     if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
       // normalize acc
       for (int axis = 0; axis < 3; axis++) {
-        accel_filter[axis] = accel_filter[axis] * (ACC_1G / accmag);
+        accel[axis] = accel[axis] * (ACC_1G / accmag);
       }
 
       float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FASTFILTER);
       for (int x = 0; x < 3; x++) {
-        lpf(&GEstG[x], accel_filter[x], filtcoeff);
+        lpf(&GEstG[x], accel[x], filtcoeff);
       }
     }
   } else {
-    float accmag = calcmagnitude(&accel_filter[0]);
+    float accmag = calcmagnitude(&accel[0]);
     for (int axis = 0; axis < 3; axis++) {
-      accel_filter[axis] = accel_filter[axis] * (ACC_1G / accmag);
+      accel[axis] = accel[axis] * (ACC_1G / accmag);
     }
     float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FILTERTIME);
     for (int x = 0; x < 3; x++) {
-      lpf(&GEstG[x], accel_filter[x], filtcoeff);
+      lpf(&GEstG[x], accel[x], filtcoeff);
     }
 
     //heal the gravity vector after fusion with accel
@@ -199,46 +199,46 @@ void imu_calc() {
   extern int onground;
   if (onground) { //happyhour bartender - quad is ON GROUND and disarmed
     // calc acc mag
+    float accmag = calcmagnitude(&accel_raw.axis[0]);
+    if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
+      // normalize acc
+      for (int axis = 0; axis < 3; axis++) {
+        accel_raw.axis[axis] = accel_raw.axis[axis] * (ACC_1G / accmag);
+      }
+
+      float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FASTFILTER);
+      for (int x = 0; x < 3; x++) {
+        lpf(&GEstG[x], accel_raw.axis[x], filtcoeff);
+      }
+    }
+  } else {
+    //lateshift bartender - quad is IN AIR and things are getting wild
+    // hit accel_raw.axis[3] with a sledgehammer
+#ifdef PREFILTER
+    float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)PREFILTER);
+    for (int x = 0; x < 3; x++) {
+      lpf(&accel[x], accel_raw.axis[x], filtcoeff);
+    }
+#else
+    for (int x = 0; x < 3; x++) {
+      accel[x] = accel_raw.axis[x];
+    }
+#endif
+
+    // calc mag of filtered acc
     float accmag = calcmagnitude(&accel[0]);
     if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
       // normalize acc
       for (int axis = 0; axis < 3; axis++) {
         accel[axis] = accel[axis] * (ACC_1G / accmag);
       }
-
-      float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FASTFILTER);
+      // filter accel on to GEstG
+      float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FILTERTIME);
       for (int x = 0; x < 3; x++) {
         lpf(&GEstG[x], accel[x], filtcoeff);
       }
     }
-  } else {
-    //lateshift bartender - quad is IN AIR and things are getting wild
-    // hit accel[3] with a sledgehammer
-#ifdef PREFILTER
-    float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)PREFILTER);
-    for (int x = 0; x < 3; x++) {
-      lpf(&accel_filter[x], accel[x], filtcoeff);
-    }
-#else
-    for (int x = 0; x < 3; x++) {
-      accel_filter[x] = accel[x];
-    }
-#endif
-
-    // calc mag of filtered acc
-    float accmag = calcmagnitude(&accel_filter[0]);
-    if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
-      // normalize acc
-      for (int axis = 0; axis < 3; axis++) {
-        accel_filter[axis] = accel_filter[axis] * (ACC_1G / accmag);
-      }
-      // filter accel_filter on to GEstG
-      float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FILTERTIME);
-      for (int x = 0; x < 3; x++) {
-        lpf(&GEstG[x], accel_filter[x], filtcoeff);
-      }
-    }
-    //heal the gravity vector after fusion with accel_filter
+    //heal the gravity vector after fusion with accel
     float GEstGmag = calcmagnitude(&GEstG[0]);
     for (int axis = 0; axis < 3; axis++) {
       GEstG[axis] = GEstG[axis] * (ACC_1G / GEstGmag);
@@ -271,33 +271,33 @@ void imu_calc() {
 
   filter_lp_pt1_coeff(&filter, PT1_FILTER_HZ);
 
-  accel_filter[0] = filter_lp_pt1_step(&filter, &filter_pass1[0], accel[0]);
-  accel_filter[1] = filter_lp_pt1_step(&filter, &filter_pass1[1], accel[1]);
-  accel_filter[2] = filter_lp_pt1_step(&filter, &filter_pass1[2], accel[2]);
+  accel[0] = filter_lp_pt1_step(&filter, &filter_pass1[0], accel_raw.axis[0]);
+  accel[1] = filter_lp_pt1_step(&filter, &filter_pass1[1], accel_raw.axis[1]);
+  accel[2] = filter_lp_pt1_step(&filter, &filter_pass1[2], accel_raw.axis[2]);
 
-  accel_filter[0] = filter_lp_pt1_step(&filter, &filter_pass2[0], accel_filter[0]);
-  accel_filter[1] = filter_lp_pt1_step(&filter, &filter_pass2[1], accel_filter[1]);
-  accel_filter[2] = filter_lp_pt1_step(&filter, &filter_pass2[2], accel_filter[2]);
+  accel[0] = filter_lp_pt1_step(&filter, &filter_pass2[0], accel[0]);
+  accel[1] = filter_lp_pt1_step(&filter, &filter_pass2[1], accel[1]);
+  accel[2] = filter_lp_pt1_step(&filter, &filter_pass2[2], accel[2]);
 
-  const float accmag = calcmagnitude(accel_filter);
+  const float accmag = calcmagnitude(accel);
   if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
-    accel_filter[0] = accel_filter[0] * (ACC_1G / accmag);
-    accel_filter[1] = accel_filter[1] * (ACC_1G / accmag);
-    accel_filter[2] = accel_filter[2] * (ACC_1G / accmag);
+    accel[0] = accel[0] * (ACC_1G / accmag);
+    accel[1] = accel[1] * (ACC_1G / accmag);
+    accel[2] = accel[2] * (ACC_1G / accmag);
 
     extern int onground;
     if (onground) {
       //happyhour bartender - quad is ON GROUND and disarmed
       const float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FASTFILTER);
-      lpf(&GEstG[0], accel_filter[0], filtcoeff);
-      lpf(&GEstG[1], accel_filter[1], filtcoeff);
-      lpf(&GEstG[2], accel_filter[2], filtcoeff);
+      lpf(&GEstG[0], accel[0], filtcoeff);
+      lpf(&GEstG[1], accel[1], filtcoeff);
+      lpf(&GEstG[2], accel[2], filtcoeff);
     } else {
       //lateshift bartender - quad is IN AIR and things are getting wild
       const float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FILTERTIME);
-      lpf(&GEstG[0], accel_filter[0], filtcoeff);
-      lpf(&GEstG[1], accel_filter[1], filtcoeff);
-      lpf(&GEstG[2], accel_filter[2], filtcoeff);
+      lpf(&GEstG[0], accel[0], filtcoeff);
+      lpf(&GEstG[1], accel[1], filtcoeff);
+      lpf(&GEstG[2], accel[2], filtcoeff);
     }
   }
 

@@ -21,13 +21,13 @@ extern float rx[4];
 extern float rx_filtered[4];
 extern uint8_t aux[AUX_CHANNEL_MAX];
 
+extern vec3_t gyro_raw;
 extern float gyro[3];
-extern float gyro_raw[3];
-extern float GEstG[3];
 
+extern vec3_t accel_raw;
 extern float accel[3];
-extern float accel_filter[3];
 
+extern float GEstG[3];
 extern float pidoutput[3];
 
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
@@ -43,9 +43,9 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
   CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &b->vbat_filter));
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "gyro_raw"));
-  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->gyro_raw, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->gyro_raw));
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "gyro_filter"));
-  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->gyro_filter, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->gyro_filter));
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "gyro_vector"));
   CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->gyro_vector, 3));
 
@@ -57,9 +57,9 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
   CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->rx_aux));
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "accel_raw"));
-  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->accel_raw, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->accel_raw));
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "accel_filter"));
-  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->accel_filter, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->accel_filter));
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "pid_output"));
   CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->pid_output, 3));
@@ -78,17 +78,17 @@ cbor_result_t cbor_encode_compact_blackbox_t(cbor_value_t *enc, const blackbox_t
 
   CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &b->vbat_filter));
 
-  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->gyro_raw, 3));
-  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->gyro_filter, 3));
-  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->gyro_vector, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->gyro_raw));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->gyro_filter));
 
   CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->rx_raw, 4));
   CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->rx_filter, 4));
   CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->rx_aux));
 
-  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->accel_raw, 3));
-  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->accel_filter, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->accel_raw));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->accel_filter));
 
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->gyro_vector, 3));
   CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->pid_output, 3));
 
   CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
@@ -106,16 +106,16 @@ cbor_result_t cbor_decode_compact_blackbox_t(cbor_value_t *dec, blackbox_t *b) {
 
   CBOR_CHECK_ERROR(res = cbor_decode_uint16(dec, &b->vbat_filter));
 
-  CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->gyro_raw, 3));
-  CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->gyro_filter, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(dec, &b->gyro_raw));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(dec, &b->gyro_filter));
   CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->gyro_vector, 3));
 
   CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->rx_raw, 4));
   CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->rx_filter, 4));
   CBOR_CHECK_ERROR(res = cbor_decode_uint32(dec, &b->rx_aux));
 
-  CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->accel_raw, 3));
-  CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->accel_filter, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(dec, &b->accel_raw));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(dec, &b->accel_filter));
 
   CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->pid_output, 3));
 
@@ -165,25 +165,19 @@ void blackbox_update() {
     }
   }
 
-  state.gyro_raw[0] = gyro_raw[0];
-  state.gyro_raw[1] = gyro_raw[1];
-  state.gyro_raw[2] = gyro_raw[2];
+  vec3_t temp;
 
-  state.gyro_filter[0] = gyro[0];
-  state.gyro_filter[1] = gyro[1];
-  state.gyro_filter[2] = gyro[2];
+  vec3_from_array(&temp, gyro);
+  vec3_compress(&state.gyro_filter, &temp, 1024);
+  vec3_compress(&state.gyro_raw, &gyro_raw, 1024);
+
+  vec3_from_array(&temp, accel);
+  vec3_compress(&state.accel_filter, &temp, 1024);
+  vec3_compress(&state.accel_raw, &accel_raw, 1024);
 
   state.gyro_vector[0] = GEstG[0];
   state.gyro_vector[1] = GEstG[1];
   state.gyro_vector[2] = GEstG[2];
-
-  state.accel_raw[0] = accel[0];
-  state.accel_raw[1] = accel[1];
-  state.accel_raw[2] = accel[2];
-
-  state.accel_filter[0] = accel_filter[0];
-  state.accel_filter[1] = accel_filter[1];
-  state.accel_filter[2] = accel_filter[2];
 
   state.pid_output[0] = pidoutput[0];
   state.pid_output[1] = pidoutput[1];

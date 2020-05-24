@@ -3,22 +3,22 @@
 #include "profile.h"
 
 typedef struct {
-  uint32_t time;        // 4
-  uint16_t cpu_load;    // 6
-  uint16_t vbat_filter; // 8
+  uint32_t time;
+  uint16_t cpu_load;
+  uint16_t vbat_filter;
 
-  float gyro_raw[3];    // 20
-  float gyro_filter[3]; // 32
-  float gyro_vector[3]; // 44
+  float rx_raw[4];
+  float rx_filter[4];
+  uint32_t rx_aux;
 
-  float rx_raw[4];    // 60
-  float rx_filter[4]; // 76
-  uint32_t rx_aux;    // 80
+  compact_vec3_t accel_raw;
+  compact_vec3_t accel_filter;
 
-  float accel_raw[3];    // 92
-  float accel_filter[3]; // 104
+  compact_vec3_t gyro_raw;
+  compact_vec3_t gyro_filter;
 
-  float pid_output[3]; // 116
+  float gyro_vector[3];
+  float pid_output[3];
 } blackbox_t;
 
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b);
