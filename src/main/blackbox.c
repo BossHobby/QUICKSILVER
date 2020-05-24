@@ -126,9 +126,7 @@ void blackbox_update() {
     return;
 
   blackbox.time = timer_millis();
-
   blackbox.cpu_load = state.cpu_load;
-
   blackbox.vbat_filter = state.vbattfilt * 10;
 
   blackbox.rx_raw = state.rx;
@@ -155,13 +153,7 @@ void blackbox_update() {
   blackbox.pid_output[1] = state.pidoutput.axis[1];
   blackbox.pid_output[2] = state.pidoutput.axis[2];
 
-  if ((loop_counter % (uint32_t)((1000000.0f / (float)blackbox_rate) / LOOPTIME)) == 0) {
-    if (flags.usb_active != 0) {
-      quic_blackbox(&blackbox);
-    }
-  }
-
-  if (rx_aux_on(AUX_ARMING) && (loop_counter % 4 == 0)) {
+  if (blackbox_enabled == 0 && (loop_counter % (uint32_t)((1000000.0f / (float)blackbox_rate) / LOOPTIME)) == 0) {
     data_flash_write_backbox(&blackbox);
   }
 

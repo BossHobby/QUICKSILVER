@@ -68,7 +68,6 @@ void usb_process_msp();
 void usb_process_quic();
 
 cbor_result_t send_quic_strf(quic_command cmd, quic_flag flag, const char *fmt, ...);
-cbor_result_t quic_blackbox(const blackbox_t *blackbox);
 
 #ifdef DEBUG
 #define quic_debugf(args...) send_quic_strf(QUIC_CMD_LOG, QUIC_FLAG_NONE, args)

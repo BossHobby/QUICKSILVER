@@ -108,26 +108,6 @@ cbor_result_t send_quic_strf(quic_command cmd, quic_flag flag, const char *fmt, 
     return;                                 \
   }
 
-cbor_result_t quic_blackbox(const blackbox_t *blackbox) {
-  cbor_result_t res = CBOR_OK;
-
-  cbor_value_t enc;
-  cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
-
-  res = cbor_encode_blackbox_t(&enc, blackbox);
-  if (res < CBOR_OK) {
-    quic_errorf(QUIC_CMD_BLACKBOX, "CBOR ERROR %d", res);
-    return res;
-  }
-
-  send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
-
-  // reset loop time
-  reset_looptime();
-
-  return res;
-}
-
 void get_quic(uint8_t *data, uint32_t len) {
   cbor_result_t res = CBOR_OK;
 
@@ -162,8 +142,6 @@ void get_quic(uint8_t *data, uint32_t len) {
   case QUIC_VAL_INFO:
     res = cbor_encode_target_info_t(&enc, &target_info);
     check_cbor_error(QUIC_CMD_GET);
-
-    blackbox_override = 1;
 
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
