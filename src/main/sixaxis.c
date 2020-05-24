@@ -172,6 +172,11 @@ void sixaxis_read(void) {
     accel[0] = -accel[0];
   }
 
+  // remove bias and reduce to accel in G
+  accel[0] = (accel[0] - accelcal[0]) * (1 / 2048.0f);
+  accel[1] = (accel[1] - accelcal[1]) * (1 / 2048.0f);
+  accel[2] = (accel[2] - accelcal[2]) * (1 / 2048.0f);
+
   //order
   gyro_raw[1] = (int16_t)((data[8] << 8) + data[9]);
   gyro_raw[0] = (int16_t)((data[10] << 8) + data[11]);

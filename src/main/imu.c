@@ -98,11 +98,6 @@ void imu_init() {
 
 #ifdef BFPV_IMU
 void imu_calc() {
-  // remove bias and reduce to accel in G
-  accel[0] = (accel[0] - accelcal[0]) * (1 / 2048.0f);
-  accel[1] = (accel[1] - accelcal[1]) * (1 / 2048.0f);
-  accel[2] = (accel[2] - accelcal[2]) * (1 / 2048.0f);
-
   accel_filter[0] = filter_lp2_iir_step(&filter[0], accel[0]);
   accel_filter[1] = filter_lp2_iir_step(&filter[1], accel[1]);
   accel_filter[2] = filter_lp2_iir_step(&filter[2], accel[2]);
@@ -186,11 +181,6 @@ void imu_calc() {
 
 #ifdef SILVERWARE_IMU
 void imu_calc() {
-  // remove bias and reduce to accel in G
-  accel[0] = (accel[0] - accelcal[0]) * (1 / 2048.0f);
-  accel[1] = (accel[1] - accelcal[1]) * (1 / 2048.0f);
-  accel[2] = (accel[2] - accelcal[2]) * (1 / 2048.0f);
-
   const float gyro_delta_angle[3] = {
       gyro[0] * looptime,
       gyro[1] * looptime,
@@ -278,11 +268,6 @@ void imu_calc() {
 
   GEstG[0] = GEstG[0] - (gyro_delta_angle[2]) * GEstG[1];
   GEstG[1] = (gyro_delta_angle[2]) * GEstG[0] + GEstG[1];
-
-  // remove bias and reduce to accel in G
-  accel[0] = (accel[0] - accelcal[0]) * (1 / 2048.0f);
-  accel[1] = (accel[1] - accelcal[1]) * (1 / 2048.0f);
-  accel[2] = (accel[2] - accelcal[2]) * (1 / 2048.0f);
 
   filter_lp_pt1_coeff(&filter, PT1_FILTER_HZ);
 
