@@ -82,6 +82,7 @@ void data_flash_restart() {
     }
   }
 
+  data_flash_header.files[data_flash_header.file_num].entries = 0;
   data_flash_header.files[data_flash_header.file_num].start_sector = offset;
   data_flash_header.file_num++;
 
