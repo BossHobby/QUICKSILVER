@@ -17,8 +17,8 @@ typedef struct {
   compact_vec3_t gyro_raw;
   compact_vec3_t gyro_filter;
 
-  float gyro_vector[3];
-  float pid_output[3];
+  vec3_t gyro_vector;
+  vec3_t pid_output;
 } blackbox_t;
 
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b);
