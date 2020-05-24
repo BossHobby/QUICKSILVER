@@ -7,8 +7,7 @@
 #include "util.h"
 #include "util/cbor_helper.h"
 
-uint32_t blackbox_rate = 2;
-uint8_t blackbox_override = 0;
+uint32_t blackbox_rate = 4;
 blackbox_t blackbox;
 
 static uint8_t blackbox_enabled = 0;

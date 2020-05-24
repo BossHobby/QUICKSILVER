@@ -2,7 +2,7 @@
 
 #include "profile.h"
 
-typedef struct {
+typedef struct __attribute__((packed)) {
   uint32_t time;
   uint16_t cpu_load;
   uint16_t vbat_filter;
