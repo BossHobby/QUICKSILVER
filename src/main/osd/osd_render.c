@@ -1,4 +1,5 @@
 #include "osd_render.h"
+
 #include "osd_menu_maps.h"
 #include "osd_adjust.h"
 #include "drv_spi_max7456.h"
@@ -12,6 +13,7 @@
 #include "rx.h"
 #include "filter.h"
 #include "vtx.h"
+#include "control.h"
 #include "debug.h"
 
 
@@ -44,6 +46,7 @@ BIT
 //Flash Variables - 32bit					# of osd elements and flash memory start position in defines.h
 extern profile_t profile;
 extern vtx_settings_t vtx_settings;
+extern control_flags_t flags;
 
 //pointers to flash variable array
 unsigned long *callsign1 = profile.osd.elements;
@@ -244,7 +247,7 @@ uint8_t print_osd_flightmode(void){
 
 uint8_t print_osd_system_status(void){
 	const char system_status_labels[11][21] = { {"               "},{" **DISARMED**  "},{"  **ARMED**    "},{" STICK BOOST 1 "},{" STICK BOOST 2 "},{" **FAILSAFE**  "},{"THROTTLE SAFETY"},{" ARMING SAFETY "},{"**LOW BATTERY**"},{"**MOTOR TEST** "},{"  **TURTLE**   "} };
-	extern uint8_t armed_state;
+
 	static uint8_t last_armed_state;
 	static uint8_t armed_state_printing;
 	static uint8_t last_aux_state;
@@ -256,7 +259,6 @@ uint8_t print_osd_system_status(void){
 	extern uint8_t throttle_safety;
 	static uint8_t last_throttle_safety_state;
 	static uint8_t throttle_safety_state_printing;
-	extern uint8_t binding_while_armed;
 	static uint8_t last_binding_while_armed_state;
 	static uint8_t binding_while_armed_state_printing;
 	extern int lowbatt;
@@ -268,8 +270,9 @@ uint8_t print_osd_system_status(void){
 	extern int flipstage;
 	uint8_t turtle_state;
 	static uint8_t last_turtle_state;
-	if(armed_state != last_armed_state || armed_state_printing){
-		last_armed_state = armed_state;
+
+	if(flags.armed_state != last_armed_state || armed_state_printing){
+		last_armed_state = flags.armed_state;
 		if (armed_state_printing == 2){
 			counter++;
 			if (counter > 25){
@@ -286,7 +289,7 @@ uint8_t print_osd_system_status(void){
 				}
 			}
 		}
-		if (armed_state == 0) {
+		if (flags.armed_state == 0) {
 			uint8_t character[] = {system_status_labels[1][index]};
 			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 			index++;
@@ -299,7 +302,7 @@ uint8_t print_osd_system_status(void){
 				return 1;
 			}
 		}
-		if (armed_state == 1) {
+		if (flags.armed_state == 1) {
 			uint8_t character[] = {system_status_labels[2][index]};
 			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 			index++;
@@ -387,9 +390,9 @@ uint8_t print_osd_system_status(void){
 			}
 		}
 	}
-	if((binding_while_armed != last_binding_while_armed_state && !failsafe) ||binding_while_armed_state_printing){
-		last_binding_while_armed_state = binding_while_armed;
-		if (binding_while_armed == 0) {
+	if((flags.binding_while_armed != last_binding_while_armed_state && !failsafe) ||binding_while_armed_state_printing){
+		last_binding_while_armed_state = flags.binding_while_armed;
+		if (flags.binding_while_armed == 0) {
 			uint8_t character[] = {system_status_labels[0][index]};
 			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 			index++;
@@ -402,7 +405,7 @@ uint8_t print_osd_system_status(void){
 				return 1;
 			}
 		}
-		if (binding_while_armed == 1) {
+		if (flags.binding_while_armed == 1) {
 			uint8_t character[] = {system_status_labels[7][index]};
 			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
 			index++;
@@ -416,7 +419,7 @@ uint8_t print_osd_system_status(void){
 			}
 		}
 	}
-	if((throttle_safety != last_throttle_safety_state && !binding_while_armed) || throttle_safety_state_printing){
+	if((throttle_safety != last_throttle_safety_state && !flags.binding_while_armed) || throttle_safety_state_printing){
 		last_throttle_safety_state = throttle_safety;
 		if (throttle_safety == 0) {
 			uint8_t character[] = {system_status_labels[0][index]};
@@ -445,7 +448,7 @@ uint8_t print_osd_system_status(void){
 			}
 		}
 	}
-	if((lowbatt != last_lowbatt_state && !binding_while_armed && !throttle_safety && !failsafe) || lowbatt_state_printing){
+	if((lowbatt != last_lowbatt_state && !flags.binding_while_armed && !throttle_safety && !failsafe) || lowbatt_state_printing){
 		last_lowbatt_state = lowbatt;
 		if (lowbatt == 0) {
 			uint8_t character[] = {system_status_labels[0][index]};
@@ -474,7 +477,7 @@ uint8_t print_osd_system_status(void){
 			}
 		}
 	}
-	if((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) && !binding_while_armed && !throttle_safety && !failsafe)|| (motortest_state_printing  && !binding_while_armed && !throttle_safety && !failsafe)){
+	if((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) && !flags.binding_while_armed && !throttle_safety && !failsafe)|| (motortest_state_printing  && !flags.binding_while_armed && !throttle_safety && !failsafe)){
 		if ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) == 0) ){
 			uint8_t character[] = {system_status_labels[0][index]};
 			osd_print_data( character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
@@ -502,11 +505,11 @@ uint8_t print_osd_system_status(void){
 			}
 		}
 	}
-	if (flipstage > 0 && armed_state == 1 )
+	if (flipstage > 0 && flags.armed_state == 1 )
 		turtle_state = 1;
 	else
 		turtle_state = 0;
-	if((turtle_state != last_turtle_state && !binding_while_armed && !throttle_safety && !failsafe)|| (turtle_state_printing  && !binding_while_armed && !throttle_safety && !failsafe)){
+	if((turtle_state != last_turtle_state && !flags.binding_while_armed && !throttle_safety && !failsafe)|| (turtle_state_printing  && !flags.binding_while_armed && !throttle_safety && !failsafe)){
 		last_turtle_state = turtle_state;
 		if (turtle_state == 0 ){
 			uint8_t character[] = {system_status_labels[0][index]};
@@ -655,7 +658,6 @@ void osd_display(void) {
   extern float lipo_cell_count;
   extern int lowbatt;
   extern float throttle;
-  extern uint8_t binding_while_armed;
   extern float osd_totaltime;
   //first check if video signal autodetect needs to run - run if necessary
   extern uint8_t lastsystem; //initialized at 99 for none then becomes 0 or 1 for ntsc/pal
@@ -1053,7 +1055,7 @@ void osd_display(void) {
   	  if (osd_menu_phase == 11) osd_mixed_data_adjust(pidmodify_ptr, pidmodify_ptr2, 4, 1, pidmodify_adjust_limits, 0.05, pidmodify_reboot_request);
   	  break;
   }
-if (osd_display_phase !=2 && rx_aux_on(AUX_ARMING)) binding_while_armed = 1;	//final safety check to disallow arming during OSD operation
+if (osd_display_phase !=2 && rx_aux_on(AUX_ARMING)) flags.binding_while_armed = 1;	//final safety check to disallow arming during OSD operation
 } //end osd_display()
 //******************************************************************************************************************************
 #endif

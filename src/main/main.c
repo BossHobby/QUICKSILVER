@@ -60,6 +60,7 @@ int lowbatt = 1;
 //int minindex = 0;
 
 extern profile_t profile;
+extern control_flags_t flags;
 
 // holds the main four channels, roll, pitch , yaw , throttle
 float rx[4];
@@ -75,7 +76,6 @@ char auxchange[AUX_CHANNEL_MAX];
 extern int rxmode;
 // failsafe on / off
 extern int failsafe;
-extern int onground;
 
 //Flash Memory Feature defaults for a flash w/full chip erase
 int flash_feature_1 = 1; //SETUP WIZARD
@@ -258,7 +258,7 @@ int main(void) {
     vbat_calc();
 
     // check gestures
-    if (onground) {
+    if (flags.onground) {
       gestures();
     }
 
@@ -328,8 +328,7 @@ int main(void) {
     vtx_update();
 
 #if defined(USE_SERIAL_4WAY_BLHELI_INTERFACE) && defined(F0)
-    extern int onground;
-    if (onground) {
+    if (flags.onground) {
       NVIC_EnableIRQ(EXTI4_15_IRQn);
 
       if (switch_to_4way) {

@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "control.h"
 #include "defines.h"
 #include "drv_time.h"
 #include "filter.h"
@@ -40,6 +41,8 @@
 
 float GEstG[3] = {0, 0, ACC_1G};
 float attitude[3];
+
+extern control_flags_t flags;
 
 extern float gyro[3];
 extern vec3_t accel_raw;
@@ -140,8 +143,7 @@ void imu_calc() {
 
   vectorcopy(&GEstG[0], &EstG[0]);
 
-  extern int onground;
-  if (onground) { //happyhour bartender - quad is ON GROUND and disarmed
+  if (flags.onground) { //happyhour bartender - quad is ON GROUND and disarmed
     // calc acc mag
     float accmag = calcmagnitude(&accel[0]);
     if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
@@ -196,8 +198,7 @@ void imu_calc() {
   GEstG[0] = GEstG[0] - (gyro_delta_angle[2]) * GEstG[1];
   GEstG[1] = (gyro_delta_angle[2]) * GEstG[0] + GEstG[1];
 
-  extern int onground;
-  if (onground) { //happyhour bartender - quad is ON GROUND and disarmed
+  if (flags.onground) { //happyhour bartender - quad is ON GROUND and disarmed
     // calc acc mag
     float accmag = calcmagnitude(&accel_raw.axis[0]);
     if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
@@ -285,8 +286,7 @@ void imu_calc() {
     accel[1] = accel[1] * (ACC_1G / accmag);
     accel[2] = accel[2] * (ACC_1G / accmag);
 
-    extern int onground;
-    if (onground) {
+    if (flags.onground) {
       //happyhour bartender - quad is ON GROUND and disarmed
       const float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FASTFILTER);
       lpf(&GEstG[0], accel[0], filtcoeff);

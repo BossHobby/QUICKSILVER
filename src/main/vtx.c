@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 
+#include "control.h"
 #include "drv_gpio.h"
 #include "drv_serial.h"
 #include "drv_serial_smart_audio.h"
@@ -16,7 +17,7 @@ extern int rxmode;
 // failsafe on / off
 extern int failsafe;
 
-extern int onground;
+extern control_flags_t flags;
 
 #if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
 static int fpv_init = 0;
@@ -247,7 +248,7 @@ void vtx_update() {
   }
 
 #ifdef ENABLE_SMART_AUDIO
-  if (onground && has_smart_audio_configured()) {
+  if (flags.onground && has_smart_audio_configured()) {
     vtx_smart_audio_update();
   }
 #endif

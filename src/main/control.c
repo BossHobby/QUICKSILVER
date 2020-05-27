@@ -30,14 +30,16 @@
 
 #define ON_GROUND_LONG_TIMEOUT 1e6
 
+control_flags_t flags = {
+    .binding_while_armed = 1,
+    .onground = 1,
+};
+
 float throttle;
 
 static uint8_t idle_state;
 static uint8_t arming_release;
-
-uint8_t in_air;
-uint8_t armed_state;
-uint8_t binding_while_armed = 1;
+static uint32_t onground_long = 1;
 
 extern int pwmdir;
 extern int rx_ready;
@@ -52,9 +54,6 @@ extern float setpoint[3];
 
 extern float angleerror[];
 extern float attitude[];
-
-int onground = 1;
-int onground_long = 1;
 
 float error[PIDNUMBER];
 
@@ -262,9 +261,9 @@ void control(void) {
     }
 
     // CONDITION: (throttle is above safety limit and ARMING RELEASE FLAG IS NOT CLEARED) OR (bind just took place with transmitter armed)
-    if ((throttle_safety == 1) || (binding_while_armed == 1)) {
+    if ((throttle_safety == 1) || (flags.binding_while_armed == 1)) {
       // override to disarmed state
-      armed_state = 0;
+      flags.armed_state = 0;
 
       // rapid blink the leds
       ledcommand = 1;
@@ -272,7 +271,7 @@ void control(void) {
       // CONDITION: quad is being armed in a safe state
 
       // arm the quad by setting armed state variable to 1
-      armed_state = 1;
+      flags.armed_state = 1;
 
       // clear the arming release flag - the arming release flag being cleared
       // is what stops the quad from automatically disarming again the next time
@@ -283,11 +282,11 @@ void control(void) {
     // CONDITION: switch is DISARMED
 
     // disarm the quad by setting armed state variable to zero
-    armed_state = 0;
+    flags.armed_state = 0;
 
     if (rx_ready == 1) {
       // rx is bound and has been disarmed so clear binding while armed flag
-      binding_while_armed = 0;
+      flags.binding_while_armed = 0;
     }
   }
 
@@ -298,12 +297,12 @@ void control(void) {
   }
 
   // CONDITION: armed state variable is 0 so quad is DISARMED
-  if (armed_state == 0) {
+  if (flags.armed_state == 0) {
     // override throttle to 0
     throttle = 0;
 
     // flag in air variable as NOT IN THE AIR for mix throttle increase safety
-    in_air = 0;
+    flags.in_air = 0;
 
     // arming release flag is set to not cleared to reactivate the throttle safety limit for the next arming event
     arming_release = 0;
@@ -318,13 +317,13 @@ void control(void) {
         throttle = 0;
 
         // deactivate mix increase 3 since throttle is off
-        in_air = 0;
+        flags.in_air = 0;
       } else {
         // map the remainder of the the active throttle region to 100%
         throttle = (rx[3] - 0.05f) * 1.05623158f;
 
         // activate mix increase since throttle is on
-        in_air = 1;
+        flags.in_air = 1;
       }
     } else {
       // CONDITION: idle up is turned ON
@@ -332,10 +331,10 @@ void control(void) {
       // throttle range is mapped from idle throttle value to 100%
       throttle = (float)IDLE_THR + rx[3] * (1.0f - (float)IDLE_THR);
 
-      if ((rx[3] > THROTTLE_SAFETY) && (in_air == 0)) {
+      if ((rx[3] > THROTTLE_SAFETY) && (flags.in_air == 0)) {
         // change the state of in air flag when first crossing the throttle
         // safety value to indicate craft has taken off for mix increase safety
-        in_air = 1;
+        flags.in_air = 1;
       }
     }
   }
@@ -351,13 +350,13 @@ void control(void) {
 #endif
 
   if (usb_motor_test.active) {
-    armed_state = 1;
-    onground = 0;
+    flags.armed_state = 1;
+    flags.onground = 0;
 
     float mix[4] = {0, 0, 0, 0};
     motor_mixer_calc(mix);
     motor_output_calc(mix);
-  } else if ((armed_state == 0) || failsafe || (throttle < 0.001f)) {
+  } else if ((flags.armed_state == 0) || failsafe || (throttle < 0.001f)) {
     // CONDITION: disarmed OR failsafe OR throttle off
 
     if (onground_long && (timer_micros() - onground_long > ON_GROUND_LONG_TIMEOUT)) {
@@ -372,12 +371,12 @@ void control(void) {
 #endif
 
     throttle = 0; //zero out throttle so it does not come back on as idle up value if enabled
-    onground = 1;
+    flags.onground = 1;
     thrsum = 0;
 
   } else { // motors on - normal flight
 
-    onground = 0;
+    flags.onground = 0;
     onground_long = timer_micros();
 
     if (profile.motor.throttle_boost > 0.0f) {

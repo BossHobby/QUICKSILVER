@@ -168,7 +168,7 @@ void motor_set(uint8_t number, float pwm) {
 
 #endif
 
-  if (onground) {
+  if (flags.onground) {
     value = 0; // stop the motors
   }
 

@@ -9,7 +9,6 @@
 
 extern int ledcommand;
 extern int ledblink;
-extern int onground;
 extern char aux[AUX_CHANNEL_MAX];
 extern profile_t profile;
 

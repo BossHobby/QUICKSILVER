@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include "control.h"
 #include "filter.h"
 #include "led.h"
 #include "profile.h"
@@ -40,6 +41,7 @@ const float integrallimit[PIDNUMBER] = {1.7, 1.7, 0.5};
 
 // non changable things below
 extern profile_t profile;
+extern control_flags_t flags;
 
 int number_of_increments[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 int current_pid_axis = 0;
@@ -61,9 +63,7 @@ extern float error[PIDNUMBER];
 extern float setpoint[PIDNUMBER];
 extern float looptime;
 extern float gyro[3];
-extern int onground;
 extern float looptime;
-extern uint8_t in_air;
 extern float vbattfilt_corr;
 extern float rx_filtered[4];
 
@@ -136,10 +136,10 @@ void pid_precalc() {
 float pid(int x) {
 
   // in level mode or horizon but not racemode and while on the ground...
-  if ((rx_aux_on(AUX_LEVELMODE)) && (!rx_aux_on(AUX_RACEMODE)) && ((onground) || (in_air == 0))) {
+  if ((rx_aux_on(AUX_LEVELMODE)) && (!rx_aux_on(AUX_RACEMODE)) && ((flags.onground) || (flags.in_air == 0))) {
     // wind down the integral error
     ierror[x] *= 0.98f;
-  } else if (onground) {
+  } else if (flags.onground) {
     //in acro mode - only wind down integral when idle up is off and throttle is 0
     ierror[x] *= 0.98f;
   }

@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdint.h>
 
+#include "control.h"
 #include "defines.h"
 #include "drv_time.h"
 
@@ -95,14 +96,14 @@ int lastgesture;
 int setgesture;
 static unsigned gesturetime;
 
-extern int onground;
+extern control_flags_t flags;
 extern float rx[];
 #ifdef ENABLE_OSD
 extern uint8_t osd_display_phase; //if phase == 1 then osd menu is active
 #endif
 
 int gestures2() {
-  if (onground) {
+  if (flags.onground) {
     if (GMACRO_XCENTER && GMACRO_PITCHCENTER) {
       gesture_start = GESTURE_CENTER;
     } else if (GMACRO_LEFT && GMACRO_PITCHCENTER) {

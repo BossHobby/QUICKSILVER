@@ -36,6 +36,7 @@
 
 // Dshot150 is pretty insensitive to pin mixes and wire capacitance
 
+#include "control.h"
 #include "defines.h"
 #include "drv_motor.h"
 #include "drv_time.h"
@@ -96,8 +97,8 @@ static uint8_t DSHOT_GPIO_C = 0;
 
 extern int failsafe;
 extern int onground;
-extern uint8_t armed_state;
 extern profile_t profile;
+extern control_flags_t flags;
 
 int pwmdir = 0;
 int last_pwmdir = 0;
@@ -444,8 +445,8 @@ void motor_set(uint8_t number, float pwm) {
 
 #endif
   extern int motortest_override;
-  if (onground || !armed_state || (motortest_override && pwm < 0.002f) || ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE)) && pwm < 0.002f)) { //turn off the slow motors during turtle or motortest
-    value = 0;                                                                                                                          // stop the motors
+  if (flags.onground || !flags.armed_state || (motortest_override && pwm < 0.002f) || ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE)) && pwm < 0.002f)) { //turn off the slow motors during turtle or motortest
+    value = 0;                                                                                                                                      // stop the motors
   }
 
   if (failsafe && !motortest_override) {

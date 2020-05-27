@@ -1,5 +1,6 @@
 #include "motor.h"
 
+#include "control.h"
 #include "drv_motor.h"
 #include "motorcurve.h"
 #include "profile.h"
@@ -68,9 +69,9 @@ float thrsum;
 float overthrottlefilt = 0;
 float underthrottlefilt = 0;
 
+extern control_flags_t flags;
+
 extern int pwmdir;
-extern uint8_t in_air;
-extern int onground;
 extern int motortest_override;
 
 extern float throttle;
@@ -135,10 +136,10 @@ static void motor_mixer_scale_calc(float mix[4]) {
   uint8_t mix_scaling = 0;
 
   // only enable once really in the air
-  if (onground) {
+  if (flags.onground) {
     mix_scaling = 0;
   } else {
-    mix_scaling = in_air;
+    mix_scaling = flags.in_air;
   }
 
   if (mix_scaling) {
@@ -227,7 +228,7 @@ static void motor_mixer_scale_calc(float mix[4]) {
   }
 
   //Brushed airmode - throttle increase
-  if (in_air == 1) {
+  if (flags.in_air == 1) {
     float underthrottle = 0;
 
     for (int i = 0; i < 4; i++) {

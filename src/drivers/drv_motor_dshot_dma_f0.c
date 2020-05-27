@@ -30,6 +30,7 @@
 
 // Select Dshot150 or Dshot300. Dshot150 consumes quite some main loop time.
 // DShot300 may require removing the input filter cap on the ESC:
+#include "control.h"
 #include "defines.h"
 #include "drv_motor.h"
 #include "drv_time.h"
@@ -92,8 +93,8 @@ static uint8_t DSHOT_GPIO_B = 0;
 
 extern int failsafe;
 extern int onground;
-extern uint8_t armed_state;
 extern profile_t profile;
+extern control_flags_t flags;
 
 int pwmdir = 0;
 static unsigned long pwm_failsafe_time = 1;
@@ -417,7 +418,7 @@ void motor_set(uint8_t number, float pwm) {
 
 #endif
 
-  if (onground || !armed_state) {
+  if (flags.onground || !flags.armed_state) {
     value = 0; // stop the motors
   }
 

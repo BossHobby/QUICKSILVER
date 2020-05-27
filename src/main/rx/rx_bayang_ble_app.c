@@ -14,6 +14,7 @@
 #include <stdio.h>
 
 #include "binary.h"
+#include "control.h"
 #include "drv_spi.h"
 #include "drv_spi_xn297.h"
 #include "drv_time.h"
@@ -590,7 +591,6 @@ void send_beacon() {
 
   extern float vbatt_comp;
   int vbatt_comp_int = vbatt_comp * 1000.0f;
-  extern int onground;
 
   unsigned int time = gettime();
 
@@ -612,7 +612,8 @@ void send_beacon() {
   TLMorPID = 1; // 0 = TLM, 1 = PID+TLM
 #endif
 
-  if (onground == 1) {
+  extern control_flags_t flags;
+  if (flags.onground == 1) {
     time_throttle_on = uptime;
   } else {
     total_time_in_air += (uptime - time_throttle_on);
@@ -625,7 +626,7 @@ void send_beacon() {
 
   extern int bound_for_BLE_packet;
   extern int failsafe;
-  int onground_and_bind = (failsafe << 2) + (onground << 1) + (bound_for_BLE_packet);
+  int onground_and_bind = (failsafe << 2) + (flags.onground << 1) + (bound_for_BLE_packet);
   onground_and_bind = 8 + onground_and_bind;
 
   int packetpersecond_short = packetpersecond / 2;

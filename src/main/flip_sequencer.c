@@ -2,6 +2,7 @@
 
 #include <math.h>
 
+#include "control.h"
 #include "drv_time.h"
 #include "profile.h"
 
@@ -48,12 +49,11 @@ unsigned int levelmodetime;
 int flipindex = 0;
 int flipdir = 0;
 
-extern profile_t profile;
-extern uint8_t binding_while_armed;
-extern int onground;
 extern float GEstG[3];
 extern float rx[];
+
 extern profile_t profile;
+extern control_flags_t flags;
 
 #ifdef STANDARD_TURTLE
 extern int pwmdir;
@@ -63,14 +63,14 @@ float rx_override[4];
 
 void start_flip() {
 #ifdef STANDARD_TURTLE
-  if (!readytoflip && onground) { //if not currently queued up for a turtle sequence and disarmed
-    readytoflip = 1;              //queue up for a turtle event
+  if (!readytoflip && flags.onground) { //if not currently queued up for a turtle sequence and disarmed
+    readytoflip = 1;                    //queue up for a turtle event
     flipstage = STAGE_FLIP_NONE;
   }
 #endif
 
 #ifdef AUTOMATED_FLIP //depreciated - needs a proper going through if it is to be restored
-  if (readytoflip == 0 && !onground) {
+  if (readytoflip == 0 && !flags.onground) {
     readytoflip = 1;
     fliptime = gettime();
     flipstage = STAGE_FLIP_START;
@@ -91,8 +91,8 @@ void flip_sequencer() {
 #ifdef STANDARD_TURTLE
   if (!readytoflip) { //turtle can't be initiated without the all clear flag - hold control variables at 0 state
     if (flipstage != STAGE_FLIP_NONE) {
-      pwmdir = FORWARD;        //forward pwmdir only once as its last state may be unknown from previously interrupted turtle event
-      binding_while_armed = 1; //just in case absolutely require that the quad be disarmed when turning off turtle mode with a started sequencer
+      pwmdir = FORWARD;              //forward pwmdir only once as its last state may be unknown from previously interrupted turtle event
+      flags.binding_while_armed = 1; //just in case absolutely require that the quad be disarmed when turning off turtle mode with a started sequencer
     }
     flipstage = STAGE_FLIP_NONE;
     controls_override = 0;
@@ -166,7 +166,7 @@ void flip_sequencer() {
     controls_override = 0;
     motortest_override = 0;
     pwmdir = FORWARD;
-    binding_while_armed = 1;
+    flags.binding_while_armed = 1;
     break;
   }
 #endif
@@ -175,7 +175,7 @@ void flip_sequencer() {
   if (!readytoflip)
     return;
 
-  if (onground)
+  if (flags.onground)
     flipstage = STAGE_FLIP_EXIT;
 
   if (readytoflip && gettime() - fliptime > FLIP_TIMEOUT_TOTAL) {

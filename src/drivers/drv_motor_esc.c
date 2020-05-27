@@ -157,7 +157,7 @@ void motor_set(uint8_t number, float pwmf) {
 
   pwmf = mapf(pwmf, 0.0, 1.0, (float)ESC_MIN / ESC_uS, (float)ESC_MAX / ESC_uS);
 
-  if (onground)
+  if (flags.onground)
     pwmf = (float)ESC_OFF / ESC_uS;
 
   if (failsafe) {
