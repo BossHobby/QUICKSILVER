@@ -35,6 +35,7 @@ control_flags_t flags = {
     .onground = 1,
     .in_air = 0,
     .failsafe = 1,
+    .lowbatt = 1,
 };
 
 float throttle;

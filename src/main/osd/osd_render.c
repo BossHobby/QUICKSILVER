@@ -268,7 +268,6 @@ uint8_t print_osd_system_status(void) {
   static uint8_t throttle_safety_state_printing;
   static uint8_t last_binding_while_armed_state;
   static uint8_t binding_while_armed_state_printing;
-  extern int lowbatt;
   static uint8_t last_lowbatt_state;
   static uint8_t lowbatt_state_printing;
   static uint8_t index = 0;
@@ -455,9 +454,9 @@ uint8_t print_osd_system_status(void) {
       }
     }
   }
-  if ((lowbatt != last_lowbatt_state && !flags.binding_while_armed && !throttle_safety && !flags.failsafe) || lowbatt_state_printing) {
-    last_lowbatt_state = lowbatt;
-    if (lowbatt == 0) {
+  if ((flags.lowbatt != last_lowbatt_state && !flags.binding_while_armed && !throttle_safety && !flags.failsafe) || lowbatt_state_printing) {
+    last_lowbatt_state = flags.lowbatt;
+    if (flags.lowbatt == 0) {
       uint8_t character[] = {system_status_labels[0][index]};
       osd_print_data(character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
       index++;
@@ -470,7 +469,7 @@ uint8_t print_osd_system_status(void) {
         return 1;
       }
     }
-    if (lowbatt == 1) {
+    if (flags.lowbatt == 1) {
       uint8_t character[] = {system_status_labels[8][index]};
       osd_print_data(character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
       index++;
@@ -666,7 +665,6 @@ void osd_display(void) {
   extern float vbattfilt_corr;
   extern float vbatt_comp;
   extern float lipo_cell_count;
-  extern int lowbatt;
   extern float throttle;
   extern float osd_totaltime;
   //first check if video signal autodetect needs to run - run if necessary
@@ -749,14 +747,14 @@ void osd_display(void) {
 
     case 2:
       if (osd_decode(*fuelgauge_volts, ACTIVE)) {
-        if (lowbatt != last_lowbatt_state) {
+        if (flags.lowbatt != last_lowbatt_state) {
           uint8_t osd_cellcount[2] = {lipo_cell_count + 48, 'S'};
-          if (!lowbatt) {
+          if (!flags.lowbatt) {
             osd_print_data(osd_cellcount, 2, osd_decode(*fuelgauge_volts, ATTRIBUTE), osd_decode(*fuelgauge_volts, POSITIONX), osd_decode(*fuelgauge_volts, POSITIONY));
           } else {
             osd_print_data(osd_cellcount, 2, BLINK | INVERT, osd_decode(*fuelgauge_volts, POSITIONX), osd_decode(*fuelgauge_volts, POSITIONY));
           }
-          last_lowbatt_state = lowbatt;
+          last_lowbatt_state = flags.lowbatt;
         }
       }
       osd_display_element++;
@@ -774,14 +772,14 @@ void osd_display(void) {
 
     case 4:
       if (osd_decode(*filtered_volts, ACTIVE)) {
-        if (lowbatt != last_lowbatt_state2) {
+        if (flags.lowbatt != last_lowbatt_state2) {
           uint8_t osd_cellcount2[2] = {lipo_cell_count + 48, 'S'};
-          if (!lowbatt) {
+          if (!flags.lowbatt) {
             osd_print_data(osd_cellcount2, 2, osd_decode(*filtered_volts, ATTRIBUTE), osd_decode(*filtered_volts, POSITIONX), osd_decode(*filtered_volts, POSITIONY));
           } else {
             osd_print_data(osd_cellcount2, 2, BLINK | INVERT, osd_decode(*filtered_volts, POSITIONX), osd_decode(*filtered_volts, POSITIONY));
           }
-          last_lowbatt_state2 = lowbatt;
+          last_lowbatt_state2 = flags.lowbatt;
         }
       }
       osd_display_element++;
@@ -799,14 +797,14 @@ void osd_display(void) {
 
     case 6:
       if (osd_decode(*exact_volts, ACTIVE)) {
-        if (lowbatt != last_lowbatt_state3) {
+        if (flags.lowbatt != last_lowbatt_state3) {
           uint8_t osd_cellcount3[2] = {lipo_cell_count + 48, 'S'};
-          if (!lowbatt) {
+          if (!flags.lowbatt) {
             osd_print_data(osd_cellcount3, 2, osd_decode(*exact_volts, ATTRIBUTE), osd_decode(*exact_volts, POSITIONX), osd_decode(*exact_volts, POSITIONY));
           } else {
             osd_print_data(osd_cellcount3, 2, BLINK | INVERT, osd_decode(*exact_volts, POSITIONX), osd_decode(*exact_volts, POSITIONY));
           }
-          last_lowbatt_state3 = lowbatt;
+          last_lowbatt_state3 = flags.lowbatt;
         }
       }
       osd_display_element++;

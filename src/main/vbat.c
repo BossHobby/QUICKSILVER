@@ -1,5 +1,6 @@
 #include "vbat.h"
 
+#include "control.h"
 #include "drv_adc.h"
 #include "profile.h"
 
@@ -17,7 +18,7 @@ float lipo_cell_count = 1.0;
 float thrfilt = 0;
 
 extern profile_t profile;
-extern int lowbatt;
+extern control_flags_t flags;
 
 void vbat_init() {
   int count = 0;
@@ -116,15 +117,15 @@ void vbat_calc() {
 #endif
 
   float hyst;
-  if (lowbatt)
+  if (flags.lowbatt)
     hyst = HYST;
   else
     hyst = 0.0f;
 
   if ((tempvolt + (float)VDROP_FACTOR * thrfilt < (profile.voltage.vbattlow * lipo_cell_count) + hyst) || (vbattfilt < (float)2.7f))
-    lowbatt = 1;
+    flags.lowbatt = 1;
   else
-    lowbatt = 0;
+    flags.lowbatt = 0;
 
   vbatt_comp = tempvolt + (float)VDROP_FACTOR * thrfilt;
 }

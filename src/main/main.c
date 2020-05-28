@@ -54,9 +54,6 @@ uint32_t lastlooptime;
 // running sum of looptimes
 float osd_totaltime;
 
-// signal for lowbattery
-int lowbatt = 1;
-
 //int minindex = 0;
 
 extern profile_t profile;
@@ -262,7 +259,7 @@ int main(void) {
 
     if (LED_NUMBER > 0) {
       // led flash logic
-      if (lowbatt)
+      if (flags.lowbatt)
         ledflash(500000, 8);
       else {
         if (rxmode == RXMODE_BIND) { // bind mode

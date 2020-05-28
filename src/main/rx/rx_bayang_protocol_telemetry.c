@@ -203,7 +203,6 @@ void beacon_sequence() {
   }
 }
 
-extern int lowbatt;
 extern float vbattfilt;
 extern float vbatt_comp;
 
@@ -213,7 +212,7 @@ void send_telemetry() {
   for (int i = 0; i < 15; i++)
     txdata[i] = i;
   txdata[0] = 133;
-  txdata[1] = lowbatt;
+  txdata[1] = flags.lowbatt;
 
   int vbatt = vbattfilt * 100;
   // battery volt filtered
@@ -231,7 +230,7 @@ void send_telemetry() {
 
   txdata[7] = temp; // rx strenght
 
-  if (lowbatt)
+  if (flags.lowbatt)
     txdata[3] |= (1 << 3);
 
   int sum = 0;

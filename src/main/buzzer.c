@@ -28,7 +28,6 @@ int gpio_init_buzzer(void) {
 }
 
 void buzzer() {
-  extern int lowbatt;
   // extern int rxmode;
 
   static int toggle;
@@ -41,14 +40,14 @@ void buzzer() {
   // before configuring the gpio buzzer pin to ensure
   // there is time to program the chip (if using SWDAT or SWCLK)
 
-  if (lowbatt || flags.failsafe || rx_aux_on(AUX_BUZZER_ENABLE)) {
+  if (flags.lowbatt || flags.failsafe || rx_aux_on(AUX_BUZZER_ENABLE)) {
     unsigned long time = gettime();
     if (buzzertime == 0)
       buzzertime = time;
     else {
 
       // rank lowbatt > failsafe > throttle
-      if (lowbatt)
+      if (flags.lowbatt)
         pulse_rate = 200000; // 1/5th second
       else if (flags.failsafe)
         pulse_rate = 400000; // 2/5ths second
@@ -56,7 +55,7 @@ void buzzer() {
         pulse_rate = 600000; // 3/5ths second
 
       // start the buzzer if timeout has elapsed
-      if (time - buzzertime > BUZZER_DELAY || lowbatt || rx_aux_on(AUX_BUZZER_ENABLE)) {
+      if (time - buzzertime > BUZZER_DELAY || flags.lowbatt || rx_aux_on(AUX_BUZZER_ENABLE)) {
         // initialize pin only after minimum 10 seconds from powerup
         if (!buzzer_init && time > 10e6) {
           buzzer_init = gpio_init_buzzer();

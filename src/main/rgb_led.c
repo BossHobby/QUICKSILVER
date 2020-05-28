@@ -6,7 +6,6 @@
 #include "drv_time.h"
 #include "util.h"
 
-extern int lowbatt;
 extern int rxmode;
 extern int ledcommand;
 extern control_flags_t flags;
@@ -132,7 +131,7 @@ void rgb_led_lvc(void) {
   if (rgb_loopcount > DOWNSAMPLE) {
     rgb_loopcount = 0;
     // led flash logic
-    if (lowbatt) {
+    if (flags.lowbatt) {
       //rgb_led_set_all( RGB( 255 , 0 , 0 ) );
       rgb_ledflash(RGB(255, 0, 0), RGB(255, 32, 0), 500000, 8);
     } else {
