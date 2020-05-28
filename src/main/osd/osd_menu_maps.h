@@ -86,7 +86,7 @@ extern const uint8_t osd_text_style_positions[12][2];
 //osd callsign edit submenu map
 extern const char osd_callsign_edit_labels[23][21];
 extern const uint8_t osd_callsign_edit_positions[23][2];
-extern const uint8_t osd_callsign_grid [20][2];
+extern const uint8_t osd_callsign_grid[20][2];
 extern const uint8_t osd_callsign_edit_data_positions[20][2];
 extern const uint8_t callsign_shift_index[20][2];
 
@@ -124,7 +124,7 @@ extern const float stickboost_adjust_limits[6][2];
 extern float *low_batt_ptr[1];
 extern const char lowbatt_labels[3][21];
 extern const uint8_t lowbatt_positions[3][2];
-extern const uint8_t lowbatt_grid [1][2];
+extern const uint8_t lowbatt_grid[1][2];
 extern const uint8_t lowbatt_data_positions[1][2];
 extern const float lowbatt_adjust_limits[1][2];
 
@@ -137,7 +137,7 @@ extern const uint8_t level_submenu_map[];
 extern float *level_maxangle_ptr[1];
 extern const char maxangle_labels[3][21];
 extern const uint8_t maxangle_positions[3][2];
-extern const uint8_t maxangle_grid [6][2];
+extern const uint8_t maxangle_grid[6][2];
 extern const uint8_t maxangle_data_positions[1][2];
 extern const float maxangle_adjust_limits[1][2];
 
@@ -145,7 +145,7 @@ extern const float maxangle_adjust_limits[1][2];
 extern float *level_pid_ptr[4];
 extern const char levelmode_labels[6][21];
 extern const uint8_t levelmode_positions[6][2];
-extern const uint8_t levelmode_grid [4][2];
+extern const uint8_t levelmode_grid[4][2];
 extern const uint8_t levelmode_data_positions[4][2];
 extern const float levelmode_adjust_limits[4][2];
 
@@ -158,7 +158,7 @@ extern const uint8_t motor_boost_map[];
 extern float *torqueboost_ptr[1];
 extern const char torqueboost_labels[3][21];
 extern const uint8_t torqueboost_positions[3][2];
-extern const uint8_t torqueboost_grid [1][2];
+extern const uint8_t torqueboost_grid[1][2];
 extern const uint8_t torqueboost_data_positions[1][2];
 extern const float torqueboost_adjust_limits[1][2];
 
@@ -166,7 +166,7 @@ extern const float torqueboost_adjust_limits[1][2];
 extern float *throttleboost_ptr[1];
 extern const char throttleboost_labels[3][21];
 extern const uint8_t throttleboost_positions[3][2];
-extern const uint8_t throttleboost_grid [1][2];
+extern const uint8_t throttleboost_grid[1][2];
 extern const uint8_t throttleboost_data_positions[1][2];
 extern const float throttleboost_adjust_limits[1][2];
 
@@ -174,7 +174,7 @@ extern const float throttleboost_adjust_limits[1][2];
 extern float *motoridle_ptr[1];
 extern const char motoridle_labels[3][21];
 extern const uint8_t motoridle_positions[3][2];
-extern const uint8_t motoridle_grid [1][2];
+extern const uint8_t motoridle_grid[1][2];
 extern const uint8_t motoridle_data_positions[1][2];
 extern const float motoridle_adjust_limits[1][2];
 
@@ -182,7 +182,7 @@ extern const float motoridle_adjust_limits[1][2];
 extern float *turtlethrottle_ptr[1];
 extern const char turtlethrottle_labels[3][21];
 extern const uint8_t turtlethrottle_positions[3][2];
-extern const uint8_t turtlethrottle_grid [1][2];
+extern const uint8_t turtlethrottle_grid[1][2];
 extern const uint8_t turtlethrottle_data_positions[1][2];
 extern const float turtlethrottle_adjust_limits[1][2];
 
@@ -217,6 +217,6 @@ extern const uint8_t pidmodify_reboot_request[4];
 extern const char pidmodify_labels[6][21];
 extern const char pidmodify_type_labels[2][21];
 extern const uint8_t pidmodify_positions[6][2];
-extern const uint8_t pidmodify_grid [4][2];
+extern const uint8_t pidmodify_grid[4][2];
 extern const uint8_t pidmodify_data_positions[4][2];
 extern const float pidmodify_adjust_limits[4][2];
