@@ -62,7 +62,6 @@ static float current_kd[PIDNUMBER] = {0, 0, 0};
 extern float error[PIDNUMBER];
 extern float setpoint[PIDNUMBER];
 extern float looptime;
-extern float gyro[3];
 extern float looptime;
 extern float vbattfilt_corr;
 extern float rx_filtered[4];
@@ -183,7 +182,7 @@ float pid(int x) {
   // P term
   pidoutput[x] = error[x] * (b[x]) * current_kp[x];
   // b
-  pidoutput[x] += -(1.0f - b[x]) * current_kp[x] * gyro[x];
+  pidoutput[x] += -(1.0f - b[x]) * current_kp[x] * state.gyro.axis[x];
 #else
   // P term with b disabled
   pidoutput[x] = error[x] * current_kp[x];
@@ -225,13 +224,13 @@ float pid(int x) {
     setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
 #endif
 
-    float gyro_derivative = (gyro[x] - lastrate[x]) * current_kd[x] * timefactor;
+    float gyro_derivative = (state.gyro.axis[x] - lastrate[x]) * current_kd[x] * timefactor;
     if (profile.pid.throttle_dterm_attenuation.tda_active)
       gyro_derivative *= tda_compensation;
 
     const float dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - (gyro_derivative);
     lastsetpoint[x] = setpoint[x];
-    lastrate[x] = gyro[x];
+    lastrate[x] = state.gyro.axis[x];
 
     //D term filtering
     float dlpf = dterm;
@@ -346,15 +345,15 @@ int decrease_pid() {
 void rotateErrors() {
 #ifdef YAW_FIX
   // rotation around x axis:
-  ierror[1] -= ierror[2] * gyro[0] * looptime;
-  ierror[2] += ierror[1] * gyro[0] * looptime;
+  ierror[1] -= ierror[2] * state.gyro.axis[0] * looptime;
+  ierror[2] += ierror[1] * state.gyro.axis[0] * looptime;
 
   // rotation around y axis:
-  ierror[2] -= ierror[0] * gyro[1] * looptime;
-  ierror[0] += ierror[2] * gyro[1] * looptime;
+  ierror[2] -= ierror[0] * state.gyro.axis[1] * looptime;
+  ierror[0] += ierror[2] * state.gyro.axis[1] * looptime;
 
   // rotation around z axis:
-  ierror[0] -= ierror[1] * gyro[2] * looptime;
-  ierror[1] += ierror[0] * gyro[2] * looptime;
+  ierror[0] -= ierror[1] * state.gyro.axis[2] * looptime;
+  ierror[1] += ierror[0] * state.gyro.axis[2] * looptime;
 #endif
 }

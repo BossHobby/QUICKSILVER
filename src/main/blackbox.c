@@ -9,7 +9,7 @@
 
 uint32_t blackbox_rate = 2;
 uint8_t blackbox_override = 0;
-blackbox_t state;
+blackbox_t blackbox;
 
 static uint8_t blackbox_enabled = 0;
 
@@ -21,12 +21,6 @@ extern float vbattfilt;
 extern float rx[4];
 extern float rx_filtered[4];
 extern uint8_t aux[AUX_CHANNEL_MAX];
-
-extern vec3_t gyro_raw;
-extern float gyro[3];
-
-extern vec3_t accel_raw;
-extern float accel[3];
 
 extern float GEstG[3];
 extern float pidoutput[3];
@@ -143,55 +137,51 @@ void blackbox_update() {
   if (blackbox_enabled == 0 && blackbox_override == 0)
     return;
 
-  state.time = timer_millis();
+  blackbox.time = timer_millis();
 
-  state.cpu_load = cpu_load;
+  blackbox.cpu_load = cpu_load;
 
-  state.vbat_filter = vbattfilt * 10;
+  blackbox.vbat_filter = vbattfilt * 10;
 
-  state.rx_raw[0] = rx[0];
-  state.rx_raw[1] = rx[1];
-  state.rx_raw[2] = rx[2];
-  state.rx_raw[3] = rx[3];
+  blackbox.rx_raw[0] = rx[0];
+  blackbox.rx_raw[1] = rx[1];
+  blackbox.rx_raw[2] = rx[2];
+  blackbox.rx_raw[3] = rx[3];
 
-  state.rx_filter[0] = rx_filtered[0];
-  state.rx_filter[1] = rx_filtered[1];
-  state.rx_filter[2] = rx_filtered[2];
-  state.rx_filter[3] = rx_filtered[3];
+  blackbox.rx_filter[0] = rx_filtered[0];
+  blackbox.rx_filter[1] = rx_filtered[1];
+  blackbox.rx_filter[2] = rx_filtered[2];
+  blackbox.rx_filter[3] = rx_filtered[3];
 
-  state.rx_aux = 0;
+  blackbox.rx_aux = 0;
   for (uint32_t i = 0; i < AUX_CHANNEL_MAX; i++) {
     if (aux[i]) {
-      state.rx_aux = state.rx_aux | (0x1 << i);
+      blackbox.rx_aux = blackbox.rx_aux | (0x1 << i);
     }
   }
 
-  vec3_t temp;
+  vec3_compress(&blackbox.gyro_filter, &state.gyro, 1024);
+  vec3_compress(&blackbox.gyro_raw, &state.gyro_raw, 1024);
 
-  vec3_from_array(&temp, gyro);
-  vec3_compress(&state.gyro_filter, &temp, 1024);
-  vec3_compress(&state.gyro_raw, &gyro_raw, 1024);
+  vec3_compress(&blackbox.accel_filter, &state.accel, 1024);
+  vec3_compress(&blackbox.accel_raw, &state.accel_raw, 1024);
 
-  vec3_from_array(&temp, accel);
-  vec3_compress(&state.accel_filter, &temp, 1024);
-  vec3_compress(&state.accel_raw, &accel_raw, 1024);
+  blackbox.gyro_vector[0] = GEstG[0];
+  blackbox.gyro_vector[1] = GEstG[1];
+  blackbox.gyro_vector[2] = GEstG[2];
 
-  state.gyro_vector[0] = GEstG[0];
-  state.gyro_vector[1] = GEstG[1];
-  state.gyro_vector[2] = GEstG[2];
-
-  state.pid_output[0] = pidoutput[0];
-  state.pid_output[1] = pidoutput[1];
-  state.pid_output[2] = pidoutput[2];
+  blackbox.pid_output[0] = pidoutput[0];
+  blackbox.pid_output[1] = pidoutput[1];
+  blackbox.pid_output[2] = pidoutput[2];
 
   if ((loop_counter % (uint32_t)((1000000.0f / (float)blackbox_rate) / LOOPTIME)) == 0) {
     if (flags.usb_active != 0) {
-      quic_blackbox(&state);
+      quic_blackbox(&blackbox);
     }
   }
 
   if (rx_aux_on(AUX_ARMING) && (loop_counter % 4 == 0)) {
-    data_flash_write_backbox(&state);
+    data_flash_write_backbox(&blackbox);
   }
 
   loop_counter++;

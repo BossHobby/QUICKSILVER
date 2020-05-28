@@ -14,6 +14,8 @@ typedef union {
 cbor_result_t cbor_encode_vec3_t(cbor_value_t *enc, const vec3_t *vec);
 cbor_result_t cbor_decode_vec3_t(cbor_value_t *dec, vec3_t *vec);
 
+float vec3_magnitude(vec3_t *v);
+
 typedef union {
   struct {
     int16_t roll;

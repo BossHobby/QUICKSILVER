@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include "util/vector.h"
+
 // THE UN OF STRUCTS
 typedef struct {
   uint8_t armed_state : 1;
@@ -13,5 +15,14 @@ typedef struct {
   uint8_t throttle_safety : 1; // throttle is above safety limit
   uint8_t usb_active : 1;
 } control_flags_t;
+
+typedef struct {
+  vec3_t accel_raw;
+  vec3_t accel;
+  vec3_t gyro_raw;
+  vec3_t gyro;
+} control_state_t;
+
+extern control_state_t state;
 
 void control(void);
