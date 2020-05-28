@@ -10,8 +10,8 @@ typedef struct {
   uint8_t onground : 1;
   uint8_t failsafe : 1; // failsafe on / off
   uint8_t lowbatt : 1;  // signal for lowbattery
+  uint8_t throttle_safety : 1;
   // usb_active
-  // throttle_safety
 } control_flags_t;
 
 void control(void);

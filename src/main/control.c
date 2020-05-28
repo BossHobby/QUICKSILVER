@@ -60,7 +60,6 @@ extern float attitude[];
 float error[PIDNUMBER];
 
 float yawangle;
-uint8_t throttle_safety;
 //extern float looptime;
 
 extern int ledcommand;
@@ -257,13 +256,13 @@ void control(void) {
   if (rx_aux_on(AUX_ARMING)) {
     // CONDITION: throttle is above safety limit and ARMING RELEASE FLAG IS NOT CLEARED
     if ((rx[3] > THROTTLE_SAFETY) && (arming_release == 0)) {
-      throttle_safety = 1;
+      flags.throttle_safety = 1;
     } else {
-      throttle_safety = 0;
+      flags.throttle_safety = 0;
     }
 
     // CONDITION: (throttle is above safety limit and ARMING RELEASE FLAG IS NOT CLEARED) OR (bind just took place with transmitter armed)
-    if ((throttle_safety == 1) || (flags.binding_while_armed == 1)) {
+    if ((flags.throttle_safety == 1) || (flags.binding_while_armed == 1)) {
       // override to disarmed state
       flags.armed_state = 0;
 

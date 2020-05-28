@@ -263,7 +263,6 @@ uint8_t print_osd_system_status(void) {
   static uint8_t motortest_state_printing;
   static uint8_t last_failsafe_state = 1;
   static uint8_t failsafe_state_printing;
-  extern uint8_t throttle_safety;
   static uint8_t last_throttle_safety_state;
   static uint8_t throttle_safety_state_printing;
   static uint8_t last_binding_while_armed_state;
@@ -425,9 +424,9 @@ uint8_t print_osd_system_status(void) {
       }
     }
   }
-  if ((throttle_safety != last_throttle_safety_state && !flags.binding_while_armed) || throttle_safety_state_printing) {
-    last_throttle_safety_state = throttle_safety;
-    if (throttle_safety == 0) {
+  if ((flags.throttle_safety != last_throttle_safety_state && !flags.binding_while_armed) || throttle_safety_state_printing) {
+    last_throttle_safety_state = flags.throttle_safety;
+    if (flags.throttle_safety == 0) {
       uint8_t character[] = {system_status_labels[0][index]};
       osd_print_data(character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
       index++;
@@ -440,7 +439,7 @@ uint8_t print_osd_system_status(void) {
         return 1;
       }
     }
-    if (throttle_safety == 1) {
+    if (flags.throttle_safety == 1) {
       uint8_t character[] = {system_status_labels[6][index]};
       osd_print_data(character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
       index++;
@@ -454,7 +453,7 @@ uint8_t print_osd_system_status(void) {
       }
     }
   }
-  if ((flags.lowbatt != last_lowbatt_state && !flags.binding_while_armed && !throttle_safety && !flags.failsafe) || lowbatt_state_printing) {
+  if ((flags.lowbatt != last_lowbatt_state && !flags.binding_while_armed && !flags.throttle_safety && !flags.failsafe) || lowbatt_state_printing) {
     last_lowbatt_state = flags.lowbatt;
     if (flags.lowbatt == 0) {
       uint8_t character[] = {system_status_labels[0][index]};
@@ -483,7 +482,7 @@ uint8_t print_osd_system_status(void) {
       }
     }
   }
-  if ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) && !flags.binding_while_armed && !throttle_safety && !flags.failsafe) || (motortest_state_printing && !flags.binding_while_armed && !throttle_safety && !flags.failsafe)) {
+  if ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) && !flags.binding_while_armed && !flags.throttle_safety && !flags.failsafe) || (motortest_state_printing && !flags.binding_while_armed && !flags.throttle_safety && !flags.failsafe)) {
     if ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) == 0)) {
       uint8_t character[] = {system_status_labels[0][index]};
       osd_print_data(character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
@@ -515,7 +514,7 @@ uint8_t print_osd_system_status(void) {
     turtle_state = 1;
   else
     turtle_state = 0;
-  if ((turtle_state != last_turtle_state && !flags.binding_while_armed && !throttle_safety && !flags.failsafe) || (turtle_state_printing && !flags.binding_while_armed && !throttle_safety && !flags.failsafe)) {
+  if ((turtle_state != last_turtle_state && !flags.binding_while_armed && !flags.throttle_safety && !flags.failsafe) || (turtle_state_printing && !flags.binding_while_armed && !flags.throttle_safety && !flags.failsafe)) {
     last_turtle_state = turtle_state;
     if (turtle_state == 0) {
       uint8_t character[] = {system_status_labels[0][index]};
