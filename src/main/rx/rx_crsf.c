@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "control.h"
 #include "drv_fmc.h"
 #include "drv_serial.h"
 #include "drv_time.h"
@@ -14,7 +15,7 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
-int failsafe = 0;
+extern control_flags_t flags;
 int rxmode = 0;
 int rx_ready = 0;
 int bind_safety = 0;
@@ -239,7 +240,7 @@ void crsfFrameStatus(void) {
 }
 
 void crsf_init(void) {
-  failsafe = 1; //kill motors while initializing usart (maybe not necessary)
+  flags.failsafe = 1; //kill motors while initializing usart (maybe not necessary)
   serial_rx_init(RX_PROTOCOL_CRSF);
   // set setup complete flag
   framestarted = 0;
@@ -256,7 +257,7 @@ void rx_check() {
   }
 
   if (framestarted == 0) { // this is the failsafe condition
-    failsafe = 1;          //keeps motors off while waiting for first frame and if no new frame for more than 1s
+    flags.failsafe = 1;    //keeps motors off while waiting for first frame and if no new frame for more than 1s
   }
 
   rx_frame_pending_last = rx_frame_pending;
@@ -298,7 +299,7 @@ void rx_check() {
 
     if (bind_safety > 100) { //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
       rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
-      failsafe = 0;          // turn off failsafe delayed a bit to emmulate led behavior of sbus protocol - optional either here or just above here
+      flags.failsafe = 0;    // turn off failsafe delayed a bit to emmulate led behavior of sbus protocol - optional either here or just above here
       rxmode = !RXMODE_BIND; // restores normal led operation
       bind_safety = 101;     // reset counter so it doesnt wrap
     }

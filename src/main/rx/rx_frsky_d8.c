@@ -1,5 +1,6 @@
 #include "rx_frsky.h"
 
+#include "control.h"
 #include "drv_spi_cc2500.h"
 #include "drv_time.h"
 #include "profile.h"
@@ -37,11 +38,11 @@ extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
 
-extern int failsafe;
 extern int rxmode;
 extern int rx_ready;
 extern int rx_bind_enable;
 extern float vbattfilt;
+extern control_flags_t flags;
 
 uint8_t frsky_extract_rssi(uint8_t rssi_raw);
 uint8_t frsky_detect();
@@ -78,7 +79,7 @@ static void frsky_d8_set_rc_data() {
 
   // if we made it this far, data is ready
   rx_ready = 1;
-  failsafe = 0;
+  flags.failsafe = 0;
 
   // AETR channel order
   rx[0] = (channels[0] - 1500) - 750;
@@ -296,7 +297,7 @@ static uint8_t frsky_d8_handle_packet() {
       if (frames_lost >= FRSKY_MAX_MISSING_FRAMES) {
         quic_debugf("FRSKY_D8: failsafe");
         max_sync_delay = 10 * FRSKY_SYNC_DELAY_MAX;
-        failsafe = 1;
+        flags.failsafe = 1;
       }
 
       quic_debugf("FRSKY_D8: frame lost %u=%u (%u)", frame_index, (frame_index % 4), (current_packet_received_time - last_packet_received_time));

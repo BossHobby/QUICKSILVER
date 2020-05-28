@@ -1,5 +1,6 @@
 #include "rx_frsky.h"
 
+#include "control.h"
 #include "drv_spi_cc2500.h"
 #include "drv_time.h"
 #include "profile.h"
@@ -28,8 +29,8 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
+extern control_flags_t flags;
 
-extern int failsafe;
 extern int rxmode;
 extern int rx_ready;
 extern int rx_bind_enable;
@@ -53,7 +54,7 @@ static void redpine_set_rc_data() {
 
   // if we made it this far, data is ready
   rx_ready = 1;
-  failsafe = 0;
+  flags.failsafe = 0;
 
   const uint16_t channels[4] = {
       (uint16_t)((packet[REDPINE_CHANNEL_START + 1] << 8) & 0x700) | packet[REDPINE_CHANNEL_START],
@@ -189,7 +190,7 @@ static uint8_t redpine_handle_packet() {
       redpine_fast = redpine_fast == 1 ? 0 : 1;
       max_sync_delay = REDPINE_PACKET_TIME_US;
       protocol_time = timer_micros();
-      failsafe = 1;
+      flags.failsafe = 1;
       protocol_state = FRSKY_STATE_INIT;
       rx_init();
       reset_looptime();

@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "binary.h"
+#include "control.h"
 #include "drv_spi.h"
 #include "drv_spi_xn297.h"
 #include "drv_time.h"
@@ -334,8 +335,6 @@ unsigned long lastrxtime;
 unsigned long failsafetime;
 unsigned long secondtimer;
 
-int failsafe = 0;
-
 unsigned int skipchannel = 0;
 int lastrxchan;
 int timingfail = 0;
@@ -407,7 +406,7 @@ void rx_check(void) {
         lastrxchan = rf_chan;
         lastrxtime = temptime;
         failsafetime = temptime;
-        failsafe = 0;
+        flags.failsafe = 0;
         if (!telemetry_send)
           nextchannel();
       } else {
@@ -456,7 +455,7 @@ void rx_check(void) {
   }
 
   if (time - failsafetime > FAILSAFETIME) { //  failsafe
-    failsafe = 1;
+    flags.failsafe = 1;
     rx[0] = 0;
     rx[1] = 0;
     rx[2] = 0;

@@ -82,8 +82,7 @@
 #endif
 #endif
 
-extern int failsafe;
-extern int onground;
+extern control_flags_t flags;
 
 int pwmdir = 0;
 static unsigned long pwm_failsafe_time = 1;
@@ -172,7 +171,7 @@ void motor_set(uint8_t number, float pwm) {
     value = 0; // stop the motors
   }
 
-  if (failsafe) {
+  if (flags.failsafe) {
     if (!pwm_failsafe_time) {
       pwm_failsafe_time = gettime();
     } else {
@@ -493,7 +492,7 @@ void bitbang_data() {
 
 void motor_beep() {
   static unsigned long motor_beep_time = 0;
-  if (failsafe) {
+  if (flags.failsafe) {
     unsigned long time = gettime();
     if (motor_beep_time == 0) {
       motor_beep_time = time;

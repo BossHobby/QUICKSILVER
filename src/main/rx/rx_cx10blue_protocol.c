@@ -5,6 +5,7 @@
 
 #include "binary.h"
 #include "config.h"
+#include "control.h"
 #include "drv_spi.h"
 #include "drv_spi_xn297.h"
 #include "drv_time.h"
@@ -19,9 +20,9 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
+extern control_flags_t flags;
 
 int rxmode = 0;
-int failsafe = 0;
 
 void writeregs(const uint8_t data[], uint8_t size) {
   spi_cson();
@@ -201,7 +202,7 @@ void rx_check(void) {
         rxdebug.channelcount[chan]++;
 #endif
         failsafetime = lastrxtime;
-        failsafe = 0;
+        flags.failsafe = 0;
         nextchannel();
 
       } else {
@@ -221,7 +222,7 @@ void rx_check(void) {
     nextchannel();
   }
   if (time - failsafetime > FAILSAFETIME) { //  failsafe
-    failsafe = 1;
+    flags.failsafe = 1;
     rx[0] = 0;
     rx[1] = 0;
     rx[2] = 0;

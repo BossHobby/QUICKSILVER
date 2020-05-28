@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "control.h"
 #include "debug.h"
 #include "drv_fmc.h"
 #include "drv_serial.h"
@@ -41,8 +42,8 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 //extern char lastaux[AUX_CHANNEL_MAX];  //I dont think this is used
 //extern char auxchange[AUX_CHANNEL_MAX]; //I dont think this is used either
+extern control_flags_t flags;
 
-int failsafe = 01134; //hello
 int rxmode = 0;
 int rx_ready = 0;
 
@@ -197,7 +198,7 @@ void rx_check() {
 
     // add the 3 failsafes together
     if (rx_ready)
-      failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
+      flags.failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
 
     if (frame_status == 1) { //USART ISR says there's enough frame to look at. Look at it.
       switch (rx_serial_protocol) {

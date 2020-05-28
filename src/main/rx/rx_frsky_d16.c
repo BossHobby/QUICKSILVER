@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "control.h"
 #include "drv_spi_cc2500.h"
 #include "drv_time.h"
 #include "profile.h"
@@ -98,8 +99,8 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
+extern control_flags_t flags;
 
-extern int failsafe; // It isn't safe if we haven't checked it!
 extern int rxmode;
 extern int rx_ready;
 extern int rx_bind_enable;
@@ -145,7 +146,7 @@ static void frsky_d16_set_rc_data() {
 
   // if we made it this far, data is ready
   rx_ready = 1;
-  failsafe = 0;
+  flags.failsafe = 0;
 
   // AETR channel order
   rx[0] = (channels[0] - 960) * 1.f / 760.f;
@@ -363,7 +364,7 @@ static uint8_t frsky_d16_handle_packet() {
     if ((timer_micros() - last_packet_received_time) >= max_sync_delay) {
       if (frames_lost >= FRSKY_MAX_MISSING_FRAMES) {
         max_sync_delay = 50 * FRSKY_SYNC_DELAY_MAX;
-        failsafe = 1;
+        flags.failsafe = 1;
         rx_rssi = 0;
         channel_skip = 1;
         send_telemetry = 0;
@@ -422,7 +423,7 @@ static uint8_t frsky_d16_handle_packet() {
 
       if (frames_lost >= FRSKY_MAX_MISSING_FRAMES) {
         max_sync_delay = 50 * FRSKY_SYNC_DELAY_MAX;
-        failsafe = 1;
+        flags.failsafe = 1;
         rx_rssi = 0;
         channel_skip = 1;
         send_telemetry = 0;

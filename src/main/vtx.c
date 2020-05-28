@@ -14,8 +14,6 @@
 
 // bind / normal rx mode
 extern int rxmode;
-// failsafe on / off
-extern int failsafe;
 
 extern control_flags_t flags;
 
@@ -232,7 +230,7 @@ void vtx_update() {
   } else {
     // fpv switch off
     if (fpv_init) {
-      if (failsafe) {
+      if (flags.failsafe) {
         GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_SET);
       } else {
         GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);

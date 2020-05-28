@@ -4,6 +4,7 @@
 
 #include "binary.h"
 #include "config.h"
+#include "control.h"
 #include "drv_spi.h"
 #include "drv_spi_xn297.h"
 #include "drv_time.h"
@@ -38,7 +39,7 @@ extern char lastaux[AUX_CHANNEL_MAX];
 // 1 if change in aux from last value
 extern char auxchange[AUX_CHANNEL_MAX];
 
-int failsafe = 0;
+extern control_flags_t flags;
 
 void writeregs(uint8_t data[], uint8_t size) {
   spi_cson();
@@ -278,7 +279,7 @@ void rx_check(void) {
         lastrxtime = temptime;
         failsafetime = temptime;
         // reset failsafe flag
-        failsafe = 0;
+        flags.failsafe = 0;
         //statistics
         packetrx++;
 
@@ -305,7 +306,7 @@ void rx_check(void) {
   // failsafe check
   if (time - failsafetime > FAILSAFETIME) {
     // set failsafe flag
-    failsafe = 1;
+    flags.failsafe = 1;
 
     // set sticks to zero
     rx[0] = 0;

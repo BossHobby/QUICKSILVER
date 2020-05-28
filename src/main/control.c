@@ -33,6 +33,8 @@
 control_flags_t flags = {
     .binding_while_armed = 1,
     .onground = 1,
+    .in_air = 0,
+    .failsafe = 1,
 };
 
 float throttle;
@@ -48,7 +50,6 @@ extern float thrsum;
 extern float rx[];
 extern float rx_filtered[];
 extern float gyro[3];
-extern int failsafe;
 extern float pidoutput[PIDNUMBER];
 extern float setpoint[3];
 
@@ -356,7 +357,7 @@ void control(void) {
     float mix[4] = {0, 0, 0, 0};
     motor_mixer_calc(mix);
     motor_output_calc(mix);
-  } else if ((flags.armed_state == 0) || failsafe || (throttle < 0.001f)) {
+  } else if ((flags.armed_state == 0) || flags.failsafe || (throttle < 0.001f)) {
     // CONDITION: disarmed OR failsafe OR throttle off
 
     if (onground_long && (timer_micros() - onground_long > ON_GROUND_LONG_TIMEOUT)) {

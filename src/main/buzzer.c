@@ -1,10 +1,13 @@
 
 #include "buzzer.h"
 
+#include "control.h"
 #include "drv_time.h"
 #include "project.h"
 
 #ifdef BUZZER_ENABLE
+
+extern control_flags_t flags;
 
 //#define PIN_OFF( port , pin ) GPIO_ResetBits( port , pin)   //moved to defines.h
 //#define PIN_ON( port , pin ) GPIO_SetBits( port , pin)   //moved to defines.h
@@ -25,7 +28,6 @@ int gpio_init_buzzer(void) {
 }
 
 void buzzer() {
-  extern int failsafe;
   extern int lowbatt;
   // extern int rxmode;
 
@@ -39,7 +41,7 @@ void buzzer() {
   // before configuring the gpio buzzer pin to ensure
   // there is time to program the chip (if using SWDAT or SWCLK)
 
-  if (lowbatt || failsafe || rx_aux_on(AUX_BUZZER_ENABLE)) {
+  if (lowbatt || flags.failsafe || rx_aux_on(AUX_BUZZER_ENABLE)) {
     unsigned long time = gettime();
     if (buzzertime == 0)
       buzzertime = time;
@@ -48,7 +50,7 @@ void buzzer() {
       // rank lowbatt > failsafe > throttle
       if (lowbatt)
         pulse_rate = 200000; // 1/5th second
-      else if (failsafe)
+      else if (flags.failsafe)
         pulse_rate = 400000; // 2/5ths second
       else
         pulse_rate = 600000; // 3/5ths second

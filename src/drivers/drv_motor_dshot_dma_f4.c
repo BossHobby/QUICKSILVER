@@ -95,8 +95,6 @@ static uint8_t DSHOT_GPIO_C = 0;
 //sum = total number of dshot GPIO ports
 #define DSHOT_PORT_COUNT (DSHOT_GPIO_A + DSHOT_GPIO_B + DSHOT_GPIO_C)
 
-extern int failsafe;
-extern int onground;
 extern profile_t profile;
 extern control_flags_t flags;
 
@@ -449,7 +447,7 @@ void motor_set(uint8_t number, float pwm) {
     value = 0;                                                                                                                                      // stop the motors
   }
 
-  if (failsafe && !motortest_override) {
+  if (flags.failsafe && !motortest_override) {
     if (!pwm_failsafe_time) {
       pwm_failsafe_time = gettime();
     } else {
@@ -509,7 +507,7 @@ void motor_set(uint8_t number, float pwm) {
 
 void motor_beep() {
   static unsigned long motor_beep_time = 0;
-  if (failsafe) {
+  if (flags.failsafe) {
     unsigned long time = gettime();
     if (motor_beep_time == 0) {
       motor_beep_time = time;

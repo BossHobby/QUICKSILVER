@@ -86,9 +86,9 @@
 
 #ifndef DISABLE_PWM_PINS
 unsigned long pwm_failsafe_time = 1;
-extern int failsafe;
-extern int onground;
+
 extern profile_t profile;
+extern control_flags_t flags;
 
 void init_timer(TIM_TypeDef *TIMx, int period) {
   TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
@@ -160,7 +160,7 @@ void motor_set(uint8_t number, float pwmf) {
   if (flags.onground)
     pwmf = (float)ESC_OFF / ESC_uS;
 
-  if (failsafe) {
+  if (flags.failsafe) {
     if (!pwm_failsafe_time) {
       pwm_failsafe_time = gettime();
     } else {

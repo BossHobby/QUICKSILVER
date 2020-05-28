@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "binary.h"
+#include "control.h"
 #include "drv_spi.h"
 #include "drv_spi_xn297.h"
 #include "drv_time.h"
@@ -32,6 +33,7 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
+extern control_flags_t flags;
 
 char lasttrim[4];
 
@@ -381,8 +383,6 @@ unsigned long lastrxtime;
 unsigned long failsafetime;
 unsigned long secondtimer;
 
-int failsafe = 0;
-
 unsigned int skipchannel = 0;
 int lastrxchan;
 int timingfail = 0;
@@ -454,7 +454,7 @@ void rx_check(void) {
         lastrxchan = rf_chan;
         lastrxtime = temptime;
         failsafetime = temptime;
-        failsafe = 0;
+        flags.failsafe = 0;
         if (!telemetry_send)
           nextchannel();
       } else {
@@ -503,14 +503,14 @@ void rx_check(void) {
   }
 
   if (time - failsafetime > FAILSAFETIME) { //  failsafe
-    failsafe = 1;
+    flags.failsafe = 1;
     rx[0] = 0;
     rx[1] = 0;
     rx[2] = 0;
     rx[3] = 0;
   }
 
-  if (!failsafe)
+  if (!flags.failsafe)
     autobind_inhibit = 1;
   else if (!autobind_inhibit && time - autobindtime > 15000000) {
     autobind_inhibit = 1;

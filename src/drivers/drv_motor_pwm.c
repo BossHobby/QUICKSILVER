@@ -1,5 +1,6 @@
 #include <math.h>
 
+#include "control.h"
 #include "defines.h"
 #include "drv_motor.h"
 #include "drv_time.h"
@@ -42,8 +43,7 @@
 #warning PWM FREQUENCY TOO LOW
 #endif
 // end pwm frequency macros
-
-extern int failsafe;
+extern control_flags_t flags;
 extern profile_t profile;
 
 unsigned long motorbeeptime = 0;
@@ -155,7 +155,7 @@ void motor_init(void) {
 }
 
 void motor_beep(void) {
-  if (failsafe) {
+  if (flags.failsafe) {
     unsigned long time = gettime();
     if (!motorbeeptime)
       motorbeeptime = time;

@@ -261,7 +261,6 @@ uint8_t print_osd_system_status(void) {
   static uint8_t last_aux_state;
   static uint8_t aux_state_printing;
   static uint8_t motortest_state_printing;
-  extern int failsafe;
   static uint8_t last_failsafe_state = 1;
   static uint8_t failsafe_state_printing;
   extern uint8_t throttle_safety;
@@ -369,9 +368,9 @@ uint8_t print_osd_system_status(void) {
       }
     }
   }
-  if (failsafe != last_failsafe_state || failsafe_state_printing) {
-    last_failsafe_state = failsafe;
-    if (failsafe == 0) {
+  if (flags.failsafe != last_failsafe_state || failsafe_state_printing) {
+    last_failsafe_state = flags.failsafe;
+    if (flags.failsafe == 0) {
       uint8_t character[] = {system_status_labels[0][index]};
       osd_print_data(character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
       index++;
@@ -384,7 +383,7 @@ uint8_t print_osd_system_status(void) {
         return 1;
       }
     }
-    if (failsafe == 1) {
+    if (flags.failsafe == 1) {
       uint8_t character[] = {system_status_labels[5][index]};
       osd_print_data(character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
       index++;
@@ -398,7 +397,7 @@ uint8_t print_osd_system_status(void) {
       }
     }
   }
-  if ((flags.binding_while_armed != last_binding_while_armed_state && !failsafe) || binding_while_armed_state_printing) {
+  if ((flags.binding_while_armed != last_binding_while_armed_state && !flags.failsafe) || binding_while_armed_state_printing) {
     last_binding_while_armed_state = flags.binding_while_armed;
     if (flags.binding_while_armed == 0) {
       uint8_t character[] = {system_status_labels[0][index]};
@@ -456,7 +455,7 @@ uint8_t print_osd_system_status(void) {
       }
     }
   }
-  if ((lowbatt != last_lowbatt_state && !flags.binding_while_armed && !throttle_safety && !failsafe) || lowbatt_state_printing) {
+  if ((lowbatt != last_lowbatt_state && !flags.binding_while_armed && !throttle_safety && !flags.failsafe) || lowbatt_state_printing) {
     last_lowbatt_state = lowbatt;
     if (lowbatt == 0) {
       uint8_t character[] = {system_status_labels[0][index]};
@@ -485,7 +484,7 @@ uint8_t print_osd_system_status(void) {
       }
     }
   }
-  if ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) && !flags.binding_while_armed && !throttle_safety && !failsafe) || (motortest_state_printing && !flags.binding_while_armed && !throttle_safety && !failsafe)) {
+  if ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) && !flags.binding_while_armed && !throttle_safety && !flags.failsafe) || (motortest_state_printing && !flags.binding_while_armed && !throttle_safety && !flags.failsafe)) {
     if ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) == 0)) {
       uint8_t character[] = {system_status_labels[0][index]};
       osd_print_data(character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
@@ -517,7 +516,7 @@ uint8_t print_osd_system_status(void) {
     turtle_state = 1;
   else
     turtle_state = 0;
-  if ((turtle_state != last_turtle_state && !flags.binding_while_armed && !throttle_safety && !failsafe) || (turtle_state_printing && !flags.binding_while_armed && !throttle_safety && !failsafe)) {
+  if ((turtle_state != last_turtle_state && !flags.binding_while_armed && !throttle_safety && !flags.failsafe) || (turtle_state_printing && !flags.binding_while_armed && !throttle_safety && !flags.failsafe)) {
     last_turtle_state = turtle_state;
     if (turtle_state == 0) {
       uint8_t character[] = {system_status_labels[0][index]};
@@ -550,11 +549,10 @@ uint8_t print_osd_system_status(void) {
 }
 
 void print_osd_rssi(void) {
-  extern int failsafe;
   extern float rx_rssi;
   static float rx_rssi_filt;
   uint8_t osd_rssi[5];
-  if (failsafe)
+  if (flags.failsafe)
     rx_rssi = 0.0f;
   lpf(&rx_rssi_filt, rx_rssi, FILTERCALC(LOOPTIME * 133, 2e6)); //2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
   fast_fprint(osd_rssi, 5, (rx_rssi_filt - 0.5f), 0);

@@ -1,5 +1,6 @@
 #include <math.h>
 
+#include "control.h"
 #include "defines.h"
 #include "drv_rgb_led.h"
 #include "drv_time.h"
@@ -7,8 +8,8 @@
 
 extern int lowbatt;
 extern int rxmode;
-extern int failsafe;
 extern int ledcommand;
+extern control_flags_t flags;
 
 // normal flight rgb colour - LED switch ON
 #define RGB_VALUE_INFLIGHT_ON RGB(255, 255, 255)
@@ -142,7 +143,7 @@ void rgb_led_lvc(void) {
         rgb_led_set_all(RGB_VALUE_BEFORE_BIND);
         //	rgb_knight_rider();
       } else { // non bind
-        if (failsafe) {
+        if (flags.failsafe) {
           // failsafe flash
           rgb_ledflash(RGB(0, 128, 0), RGB(0, 0, 128), 500000, 8);
           //rgb_led_set_all( RGB( 0 , 128 , 128 ) );

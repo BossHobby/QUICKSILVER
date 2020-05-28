@@ -9,6 +9,7 @@
 
 #include "binary.h"
 #include "config.h"
+#include "control.h"
 #include "defines.h"
 #include "rx_bayang.h" // for struct rxdebug;
 
@@ -104,7 +105,7 @@ void send_g_frame() {
 //  Status, uchar
 
 extern float vbattfilt;
-extern int failsafe;
+extern control_flags_t flags;
 extern int rxmode;
 
 //extern int packetpersecond;
@@ -124,7 +125,7 @@ void send_s_frame() {
   sendbyte(rssi); // rssi
   sendbyte(0);    // airspeed
 #define ARMED ((rxmode != RXMODE_BIND))
-#define FAILSAFE failsafe
+#define FAILSAFE flags.failsafe
 #define MODE ((rx_aux_on(AUX_LEVELMODE)) ? 3 : 4)
 
   //0 : Manual

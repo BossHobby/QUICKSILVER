@@ -135,6 +135,7 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
+extern control_flags_t flags;
 
 char lasttrim[4];
 
@@ -625,8 +626,7 @@ void send_beacon() {
   int rate_and_mode_value = (rx_aux_on(AUX_HIGH_RATES) << 1) + !!(rx_aux_on(AUX_LEVELMODE));
 
   extern int bound_for_BLE_packet;
-  extern int failsafe;
-  int onground_and_bind = (failsafe << 2) + (flags.onground << 1) + (bound_for_BLE_packet);
+  int onground_and_bind = (flags.failsafe << 2) + (flags.onground << 1) + (bound_for_BLE_packet);
   onground_and_bind = 8 + onground_and_bind;
 
   int packetpersecond_short = packetpersecond / 2;
@@ -933,8 +933,6 @@ unsigned long lastrxtime;
 unsigned long failsafetime;
 unsigned long secondtimer;
 
-int failsafe = 0;
-
 unsigned int skipchannel = 0;
 int lastrxchan;
 int timingfail = 0;
@@ -997,7 +995,7 @@ void rx_check(void) {
         lastrxchan = rf_chan;
         lastrxtime = temptime;
         failsafetime = temptime;
-        failsafe = 0;
+        flags.failsafe = 0;
       } else {
 #ifdef RXDEBUG
         failcount++;
@@ -1042,7 +1040,7 @@ void rx_check(void) {
   }
 
   if (time - failsafetime > FAILSAFETIME) { //  failsafe
-    failsafe = 1;
+    flags.failsafe = 1;
     rx[0] = 0;
     rx[1] = 0;
     rx[2] = 0;

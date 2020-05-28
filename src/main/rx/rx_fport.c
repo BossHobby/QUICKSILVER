@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "control.h"
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "profile.h"
@@ -30,7 +31,8 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
-int failsafe = 9001; //OVER 9000
+extern control_flags_t flags;
+
 int rxmode = 0;
 int rx_ready = 0;
 
@@ -248,7 +250,7 @@ void rx_check() {
         {
           // wait for valid sbus signal
           static int frame_count = 0;
-          failsafe = 1;
+          flags.failsafe = 1;
           rxmode = RXMODE_BIND;
           // if throttle < 10%
           if (channels[2] < 336)
@@ -439,7 +441,7 @@ void rx_check() {
     failsafe_noframes = 0;
 
   // add the 3 failsafes together
-  failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
+  flags.failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
 }
 
 #endif

@@ -74,8 +74,6 @@ char auxchange[AUX_CHANNEL_MAX];
 
 // bind / normal rx mode
 extern int rxmode;
-// failsafe on / off
-extern int failsafe;
 
 //Flash Memory Feature defaults for a flash w/full chip erase
 int flash_feature_1 = 1; //SETUP WIZARD
@@ -270,7 +268,7 @@ int main(void) {
         if (rxmode == RXMODE_BIND) { // bind mode
           ledflash(100000, 12);
         } else { // non bind
-          if (failsafe) {
+          if (flags.failsafe) {
             ledflash(500000, 15);
           } else {
             int leds_on = !rx_aux_on(AUX_LEDS_ON);
