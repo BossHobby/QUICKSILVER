@@ -31,11 +31,14 @@
 #define ON_GROUND_LONG_TIMEOUT 1e6
 
 control_flags_t flags = {
+    .armed_state = 0,
+    .in_air = 0,
     .binding_while_armed = 1,
     .onground = 1,
-    .in_air = 0,
     .failsafe = 1,
     .lowbatt = 1,
+    .throttle_safety = 1,
+    .usb_active = 0,
 };
 
 float throttle;

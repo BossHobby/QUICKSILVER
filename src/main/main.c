@@ -360,7 +360,12 @@ int main(void) {
 
 #ifdef F4
     blackbox_update();
-    usb_detect();
+    if (usb_detect()) {
+      flags.usb_active = 1;
+      usb_configurator();
+    } else {
+      flags.usb_active = 0;
+    }
 #endif
 
     cpu_load = (timer_micros() - lastlooptime);

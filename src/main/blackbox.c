@@ -1,5 +1,6 @@
 #include "blackbox.h"
 
+#include "control.h"
 #include "data_flash.h"
 #include "drv_time.h"
 #include "usb_configurator.h"
@@ -12,7 +13,7 @@ blackbox_t state;
 
 static uint8_t blackbox_enabled = 0;
 
-extern uint8_t usb_is_active;
+extern control_flags_t flags;
 
 extern float cpu_load;
 extern float vbattfilt;
@@ -184,7 +185,7 @@ void blackbox_update() {
   state.pid_output[2] = pidoutput[2];
 
   if ((loop_counter % (uint32_t)((1000000.0f / (float)blackbox_rate) / LOOPTIME)) == 0) {
-    if (usb_is_active != 0) {
+    if (flags.usb_active != 0) {
       quic_blackbox(&state);
     }
   }

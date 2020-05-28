@@ -18,8 +18,6 @@
 
 __ALIGN_BEGIN USB_OTG_CORE_HANDLE USB_OTG_dev __ALIGN_END;
 
-uint8_t usb_is_active = 0;
-
 void usb_init(void) {
   USBD_Init(&USB_OTG_dev,
             USB_OTG_FS_CORE_ID,
@@ -39,31 +37,28 @@ void usb_init(void) {
 #endif
 }
 
-void usb_detect(void) {
+uint8_t usb_detect(void) {
 #ifdef USB_DETECT_PIN
   const uint8_t usb_connect = GPIO_ReadInputDataBit(USB_DETECT_PORT, USB_DETECT_PIN);
   if (usb_connect != 1) {
     // no usb connetion, bail
-    usb_is_active = 0;
-    return;
+    return 0;
   }
 #endif
 
   if (bDeviceState != CONFIGURED) {
     // only read if we are configured
-    usb_is_active = 0;
-    return;
+    return 0;
   }
 
-  usb_is_active = 1;
-  usb_configurator();
+  return 1;
 }
 
 uint32_t usb_serial_read(uint8_t *data, uint32_t len) {
   if (data == NULL || len == 0) {
     return 0;
   }
-  if (!usb_is_active || CDC_Receive_BytesAvailable() == 0) {
+  if (bDeviceState != CONFIGURED || CDC_Receive_BytesAvailable() == 0) {
     return 0;
   }
   return CDC_Receive_DATA(data, len);
@@ -82,7 +77,7 @@ void usb_serial_write(uint8_t *data, uint32_t len) {
   if (data == NULL || len == 0) {
     return;
   }
-  if (!usb_is_active) {
+  if (bDeviceState != CONFIGURED) {
     return;
   }
 
@@ -94,7 +89,7 @@ void usb_serial_print(char *str) {
 }
 
 void usb_serial_printf(const char *fmt, ...) {
-  if (!usb_is_active) {
+  if (bDeviceState != CONFIGURED) {
     return;
   }
 
