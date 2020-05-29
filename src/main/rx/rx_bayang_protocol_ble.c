@@ -27,7 +27,6 @@ extern control_flags_t flags;
 
 char rfchannel[4];
 int rxaddress[5];
-int rxmode = 0;
 int rf_chan = 0;
 int rx_ready = 0;
 int bind_safety = 0;
@@ -394,7 +393,7 @@ void beacon_sequence() {
     // restore radio settings to protocol compatible
     // mainly channel here
     ble_send = 0;
-    if (rxmode == 0) {
+    if (flags.rxmode == 0) {
       xn_writereg(0x25, 0); // Set channel frequency	, bind
     }
     beacon_seq_state++;
@@ -595,7 +594,7 @@ void rx_check(void) {
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {
-    if (rxmode == RXMODE_BIND) { // rx startup , bind mode
+    if (flags.rxmode == RXMODE_BIND) { // rx startup , bind mode
       xn_readpayload(rxdata, 15);
 
       if (rxdata[0] == 164) { // bind packet
@@ -613,7 +612,7 @@ void rx_check(void) {
 
         xn_writerxaddress(rxaddress);
         xn_writereg(0x25, rfchannel[rf_chan]); // Set channel frequency
-        rxmode = RXMODE_NORMAL;
+        flags.rxmode = RXMODE_NORMAL;
 
 #ifdef SERIAL
         printf(" BIND \n");
@@ -667,7 +666,7 @@ void rx_check(void) {
   unsigned long time = gettime();
 
   // sequence period 12000
-  if (time - lastrxtime > (HOPPING_NUMBER * PACKET_PERIOD + 1000) && rxmode != RXMODE_BIND) {
+  if (time - lastrxtime > (HOPPING_NUMBER * PACKET_PERIOD + 1000) && flags.rxmode != RXMODE_BIND) {
     //  channel with no reception
     lastrxtime = time;
     // set channel to last with reception
@@ -679,7 +678,7 @@ void rx_check(void) {
     timingfail = 1;
   }
 
-  if (!timingfail && !ble_send && skipchannel < HOPPING_NUMBER + 1 && rxmode != RXMODE_BIND) {
+  if (!timingfail && !ble_send && skipchannel < HOPPING_NUMBER + 1 && flags.rxmode != RXMODE_BIND) {
     unsigned int temp = time - lastrxtime;
 
     if (temp > 1000 && (temp - (PACKET_OFFSET)) / ((int)PACKET_PERIOD) >= (skipchannel + 1)) {

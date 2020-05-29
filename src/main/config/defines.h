@@ -29,9 +29,6 @@ static const float pid_scales[PIDNUMBER][PIDNUMBER] = {
 //(1 - alpha. filtertime = 1 / filter-cutoff-frequency) as long as filtertime > sampleperiod
 #define FILTERCALC(sampleperiod, filtertime) (1.0f - (6.0f * (float)sampleperiod) / (3.0f * (float)sampleperiod + (float)filtertime))
 
-#define RXMODE_BIND 0
-#define RXMODE_NORMAL (!RXMODE_BIND)
-
 #ifdef BETAFLIGHT_RATES
 #define ACRO_EXPO_ROLL BF_EXPO_ROLL
 #define ACRO_EXPO_PITCH BF_EXPO_PITCH

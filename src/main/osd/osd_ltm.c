@@ -106,7 +106,6 @@ void send_g_frame() {
 
 extern float vbattfilt;
 extern control_flags_t flags;
-extern int rxmode;
 
 //extern int packetpersecond;
 extern struct rxdebug rxdebug;
@@ -124,7 +123,8 @@ void send_s_frame() {
 
   sendbyte(rssi); // rssi
   sendbyte(0);    // airspeed
-#define ARMED ((rxmode != RXMODE_BIND))
+
+#define ARMED ((flags.rxmode != RXMODE_BIND))
 #define FAILSAFE flags.failsafe
 #define MODE ((rx_aux_on(AUX_LEVELMODE)) ? 3 : 4)
 

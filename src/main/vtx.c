@@ -12,9 +12,6 @@
 #include "usb_configurator.h"
 #include "util.h"
 
-// bind / normal rx mode
-extern int rxmode;
-
 extern control_flags_t flags;
 
 #if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
@@ -221,8 +218,8 @@ void vtx_update() {
 #if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
   if (rx_aux_on(AUX_FPV_ON)) {
     // fpv switch on
-    if (!fpv_init && rxmode == RXMODE_NORMAL) {
-      fpv_init = gpio_init_fpv();
+    if (!fpv_init && flags.rxmode == RXMODE_NORMAL) {
+      fpv_init = gpio_init_fpv(flags.rxmode);
     }
     if (fpv_init) {
       GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_SET);

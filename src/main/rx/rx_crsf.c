@@ -16,7 +16,6 @@ extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
 extern control_flags_t flags;
-int rxmode = 0;
 int rx_ready = 0;
 int bind_safety = 0;
 int rx_bind_enable = 0;
@@ -244,7 +243,7 @@ void crsf_init(void) {
   serial_rx_init(RX_PROTOCOL_CRSF);
   // set setup complete flag
   framestarted = 0;
-  rxmode = !RXMODE_BIND; // put LEDS in normal signal status
+  flags.rxmode = !RXMODE_BIND; // put LEDS in normal signal status
 }
 
 void rx_init(void) {
@@ -269,7 +268,7 @@ void rx_check() {
 
   if (framestarted == 1) {
     if ((bind_safety < 900) && (bind_safety > 0))
-      rxmode = RXMODE_BIND; // normal rx mode - removes waiting for bind led leaving failsafe flashes as data starts to come in
+      flags.rxmode = RXMODE_BIND; // normal rx mode - removes waiting for bind led leaving failsafe flashes as data starts to come in
 
     // AETR channel order
     rx[0] = (crsfChannelData[0] - 990.5f) * 0.00125707103f;
@@ -297,11 +296,11 @@ void rx_check() {
     aux[AUX_CHANNEL_10] = (crsfChannelData[14] > 1100) ? 1 : 0;
     aux[AUX_CHANNEL_11] = (crsfChannelData[15] > 1100) ? 1 : 0;
 
-    if (bind_safety > 100) { //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
-      rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
-      flags.failsafe = 0;    // turn off failsafe delayed a bit to emmulate led behavior of sbus protocol - optional either here or just above here
-      rxmode = !RXMODE_BIND; // restores normal led operation
-      bind_safety = 101;     // reset counter so it doesnt wrap
+    if (bind_safety > 100) {       //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
+      rx_ready = 1;                // because aux channels initialize low and clear the binding while armed flag before aux updates high
+      flags.failsafe = 0;          // turn off failsafe delayed a bit to emmulate led behavior of sbus protocol - optional either here or just above here
+      flags.rxmode = !RXMODE_BIND; // restores normal led operation
+      bind_safety = 101;           // reset counter so it doesnt wrap
     }
   }
 }

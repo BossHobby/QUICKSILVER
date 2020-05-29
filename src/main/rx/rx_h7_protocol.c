@@ -51,7 +51,6 @@ extern control_flags_t flags;
 #define SKIPCHANNELTIME 28000
 
 int rxdata[PACKET_SIZE];
-int rxmode = 0;
 
 void writeregs(const uint8_t data[], uint8_t size) {
 
@@ -169,12 +168,12 @@ void rx_check(void) {
   if (checkpacket()) {
     unsigned long time = gettime();
     xn_readpayload(rxdata, PACKET_SIZE);
-    if (rxmode == RXMODE_BIND) { // rx startup , bind mode
-      if (rxdata[0] == 0x20) {   // bind packet received
+    if (flags.rxmode == RXMODE_BIND) { // rx startup , bind mode
+      if (rxdata[0] == 0x20) {         // bind packet received
         rxaddress[0] = rxdata[4];
         rxaddress[1] = rxdata[5];
         rxaddress[2] = 0;
-        rxmode = RXMODE_NORMAL;
+        flags.rxmode = RXMODE_NORMAL;
         xn_writerxaddress(rxaddress);
 
         channeloffset = (((rxdata[7] & 0xf0) >> 4) + (rxdata[7] & 0x0f)) % 8;
@@ -202,7 +201,7 @@ void rx_check(void) {
 
   unsigned long time = gettime();
 
-  if (time - lastrxtime > SKIPCHANNELTIME && rxmode != RXMODE_BIND) {
+  if (time - lastrxtime > SKIPCHANNELTIME && flags.rxmode != RXMODE_BIND) {
     nextchannel();
     lastrxtime = time;
   }

@@ -22,8 +22,6 @@ extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
 extern control_flags_t flags;
 
-int rxmode = 0;
-
 void writeregs(const uint8_t data[], uint8_t size) {
   spi_cson();
   for (uint8_t i = 0; i < size; i++) {
@@ -142,7 +140,7 @@ void rx_check(void) {
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {
-    if (rxmode == 0) { // rx startup , bind mode
+    if (flags.rxmode == 0) { // rx startup , bind mode
       xn_readpayload(rxdata, 15);
 
       if (rxdata[0] == 0xAA) { // bind packet
@@ -178,7 +176,7 @@ void rx_check(void) {
           //xn_writereg( STATUS , B00100000 );
           delay(1000);
         }
-        rxmode = RXMODE_NORMAL;
+        flags.rxmode = RXMODE_NORMAL;
 
         nextchannel();
         reset_looptime();
@@ -217,7 +215,7 @@ void rx_check(void) {
 
   unsigned long time = gettime();
 
-  if (time - lastrxtime > 20000 && rxmode != RXMODE_BIND) { //  channel with no reception
+  if (time - lastrxtime > 20000 && flags.rxmode != RXMODE_BIND) { //  channel with no reception
     lastrxtime = time;
     nextchannel();
   }

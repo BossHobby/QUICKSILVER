@@ -4,6 +4,9 @@
 
 #include "util/vector.h"
 
+#define RXMODE_BIND 0
+#define RXMODE_NORMAL 1
+
 // THE UN OF STRUCTS
 typedef struct {
   uint8_t armed_state : 1;
@@ -14,6 +17,7 @@ typedef struct {
   uint8_t lowbatt : 1;         // signal for lowbattery
   uint8_t throttle_safety : 1; // throttle is above safety limit
   uint8_t usb_active : 1;
+  uint8_t rxmode : 1; // bind / normal rx mode
 } control_flags_t;
 
 typedef struct {

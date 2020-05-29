@@ -25,7 +25,6 @@ extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
 extern control_flags_t flags;
 
-int rxmode = 0;
 int rx_ready = 0;
 
 // internal sbus variables
@@ -122,7 +121,7 @@ void RX_USART_ISR(void) {
 // initialize sbus
 void sbus_init(void) {
   serial_rx_init(RX_PROTOCOL_SBUS); //initialize usart in drv_rx_serial
-  rxmode = !RXMODE_BIND;
+  flags.rxmode = !RXMODE_BIND;
   // set setup complete flag
   framestarted = 0;
 }
@@ -187,14 +186,14 @@ void rx_check() {
       // wait for valid sbus signal
       static int frame_count = 0;
       flags.failsafe = 1;
-      rxmode = RXMODE_BIND;
+      flags.rxmode = RXMODE_BIND;
       // if throttle < 10%
       if (channels[2] < 300)
         frame_count++; //AETR!
       if (frame_count > 130) {
         if (stat_frames_second > 30) {
           rx_state++;
-          rxmode = !RXMODE_BIND;
+          flags.rxmode = !RXMODE_BIND;
         } else {
           frame_count = 0;
         }
@@ -386,7 +385,7 @@ void rx_check() {
       // wait for valid sbus signal
       static int frame_count = 0;
       flags.failsafe = 1;
-      rxmode = RXMODE_BIND;
+      flags.rxmode = RXMODE_BIND;
       // if throttle < 10%
       if (  channels[2] < 336 ) frame_count++;
       if (frame_count  > 130 )
@@ -394,7 +393,7 @@ void rx_check() {
         if ( stat_frames_second > 30 )
         {
           rx_state++;
-          rxmode = !RXMODE_BIND;
+          flags.rxmode = !RXMODE_BIND;
         }
         else
         {

@@ -39,6 +39,7 @@ control_flags_t flags = {
     .lowbatt = 1,
     .throttle_safety = 1,
     .usb_active = 0,
+    .rxmode = RXMODE_BIND,
 };
 
 control_state_t state = {

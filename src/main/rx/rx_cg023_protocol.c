@@ -108,7 +108,6 @@ static char checkpacket() {
 int rxdata[15];
 
 int txid[2];
-int rxmode = 0;
 
 #define CG023_FLIP_MASK 0x01  // right shoulder (3D flip switch), resets after aileron or elevator has moved and came back to neutral
 #define CG023_EASY_MASK 0x02  // left shoulder (headless mode)
@@ -196,13 +195,13 @@ unsigned long secondtimer;
 void rx_check(void) {
   if (checkpacket()) {
     xn_readpayload(rxdata, 15);
-    if (rxmode == RXMODE_BIND) { // rx startup , bind mode
-      if (rxdata[0] == 0xAA) {   // bind packet received
+    if (flags.rxmode == RXMODE_BIND) { // rx startup , bind mode
+      if (rxdata[0] == 0xAA) {         // bind packet received
 
         txid[0] = rxdata[1];
         txid[1] = rxdata[2];
 
-        rxmode = RXMODE_NORMAL;
+        flags.rxmode = RXMODE_NORMAL;
 
         xn_writereg(0x25, (uint8_t)(rxdata[1] - 0x7D)); // Set channel frequency
       }

@@ -6,7 +6,6 @@
 #include "drv_time.h"
 #include "util.h"
 
-extern int rxmode;
 extern int ledcommand;
 extern control_flags_t flags;
 
@@ -135,7 +134,7 @@ void rgb_led_lvc(void) {
       //rgb_led_set_all( RGB( 255 , 0 , 0 ) );
       rgb_ledflash(RGB(255, 0, 0), RGB(255, 32, 0), 500000, 8);
     } else {
-      if (rxmode == RXMODE_BIND) {
+      if (flags.rxmode == RXMODE_BIND) {
         // bind mode
         //rgb_ledflash ( RGB( 0 , 0 , 255 ), RGB( 0 , 128 , 0 ), 1000000, 12);
         //	rgb_ledflash_twin( RGB( 0 , 0 , 255 ), RGB( 0 , 128 , 0 ), 1000000);

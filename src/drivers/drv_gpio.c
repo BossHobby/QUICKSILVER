@@ -53,10 +53,9 @@ void gpio_init(void) {
 }
 
 // init fpv pin separately because it may use SWDAT/SWCLK don't want to enable it right away
-int gpio_init_fpv(void) {
+int gpio_init_fpv(uint8_t rxmode) {
 #if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
   // only repurpose the pin after rx/tx have bound
-  extern int rxmode;
   if (rxmode == RXMODE_NORMAL) {
     // set gpio pin as output
     GPIO_InitTypeDef GPIO_InitStructure;

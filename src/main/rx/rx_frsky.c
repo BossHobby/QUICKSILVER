@@ -21,7 +21,6 @@ static unsigned long time_tuned_ms;
 
 frsky_bind_data frsky_bind = {{0xff, 0xff}};
 
-int rxmode = RXMODE_BIND;
 int rx_ready = 0;
 int rx_bind_enable = 0;
 
@@ -362,7 +361,7 @@ void frsky_handle_bind() {
   case FRSKY_STATE_BIND_COMPLETE:
     quic_debugf("FRSKY: bound rx_num %d", frsky_bind.rx_num);
     cc2500_strobe(CC2500_SIDLE);
-    rxmode = RXMODE_NORMAL;
+    flags.rxmode = RXMODE_NORMAL;
     protocol_state = FRSKY_STATE_STARTING;
     break;
   default:

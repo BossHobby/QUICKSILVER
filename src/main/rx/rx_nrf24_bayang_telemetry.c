@@ -148,7 +148,6 @@ extern char auxchange[AUX_CHANNEL_MAX];
 char lasttrim[4];
 char rfchannel[4];
 int rxaddress[5];
-int rxmode = 0;
 int rf_chan = 0;
 int rx_ready = 0;
 int bind_safety = 0;
@@ -393,7 +392,7 @@ void rx_check(void) {
   int packetreceived = checkpacket();
 
   if (packetreceived) {
-    if (rxmode == RX_MODE_BIND) {
+    if (flags.rxmode == RX_MODE_BIND) {
       // rx startup , bind mode
 
       if (nrf24_read_xn297_payload(rxdata, 15 + 2 * crc_en))
@@ -420,7 +419,7 @@ void rx_check(void) {
 
         xn_writereg(0x25, rfchannel[rf_chan]); // Set channel frequency
 
-        rxmode = RX_MODE_NORMAL;
+        flags.rxmode = RX_MODE_NORMAL;
       }
     } else { // normal mode
 #ifdef RXDEBUG
@@ -475,7 +474,7 @@ void rx_check(void) {
 
   unsigned long time = gettime();
 
-  if (time - lastrxtime > (HOPPING_NUMBER * packet_period + 1000) && rxmode != RX_MODE_BIND) {
+  if (time - lastrxtime > (HOPPING_NUMBER * packet_period + 1000) && flags.rxmode != RX_MODE_BIND) {
     //  channel with no reception
     lastrxtime = time;
     // set channel to last with reception
@@ -487,7 +486,7 @@ void rx_check(void) {
     timingfail = 1;
   }
 
-  if (!timingfail && !telemetry_send && skipchannel < HOPPING_NUMBER + 1 && rxmode != RX_MODE_BIND) {
+  if (!timingfail && !telemetry_send && skipchannel < HOPPING_NUMBER + 1 && flags.rxmode != RX_MODE_BIND) {
     unsigned int temp = time - lastrxtime;
 
     if (temp > 1000 && (temp - (PACKET_OFFSET)) / ((int)packet_period) >=

@@ -69,9 +69,6 @@ char lastaux[AUX_CHANNEL_MAX];
 // if an aux channel has just changed
 char auxchange[AUX_CHANNEL_MAX];
 
-// bind / normal rx mode
-extern int rxmode;
-
 //Flash Memory Feature defaults for a flash w/full chip erase
 int flash_feature_1 = 1; //SETUP WIZARD
 int flash_feature_2 = 0; //LVC
@@ -262,7 +259,7 @@ int main(void) {
       if (flags.lowbatt)
         ledflash(500000, 8);
       else {
-        if (rxmode == RXMODE_BIND) { // bind mode
+        if (flags.rxmode == RXMODE_BIND) { // bind mode
           ledflash(100000, 12);
         } else { // non bind
           if (flags.failsafe) {

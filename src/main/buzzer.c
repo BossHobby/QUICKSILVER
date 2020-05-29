@@ -28,8 +28,6 @@ int gpio_init_buzzer(void) {
 }
 
 void buzzer() {
-  // extern int rxmode;
-
   static int toggle;
   static unsigned long buzzertime;
   static int buzzer_init = 0;
