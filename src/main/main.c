@@ -57,7 +57,6 @@ float osd_totaltime;
 //int minindex = 0;
 
 extern profile_t profile;
-extern control_flags_t flags;
 
 // holds the main four channels, roll, pitch , yaw , throttle
 float rx[4];

@@ -12,8 +12,6 @@
 #include "usb_configurator.h"
 #include "util.h"
 
-extern control_flags_t flags;
-
 #if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
 static int fpv_init = 0;
 #endif

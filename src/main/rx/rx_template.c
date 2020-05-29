@@ -39,8 +39,6 @@ extern char lastaux[AUX_CHANNEL_MAX];
 // 1 if change in aux from last value
 extern char auxchange[AUX_CHANNEL_MAX];
 
-extern control_flags_t flags;
-
 void writeregs(uint8_t data[], uint8_t size) {
   spi_cson();
   for (uint8_t i = 0; i < size; i++) {

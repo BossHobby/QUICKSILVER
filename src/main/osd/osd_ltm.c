@@ -105,7 +105,6 @@ void send_g_frame() {
 //  Status, uchar
 
 extern float vbattfilt;
-extern control_flags_t flags;
 
 //extern int packetpersecond;
 extern struct rxdebug rxdebug;

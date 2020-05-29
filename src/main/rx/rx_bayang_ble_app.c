@@ -135,7 +135,6 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
-extern control_flags_t flags;
 
 char lasttrim[4];
 
@@ -612,7 +611,6 @@ void send_beacon() {
   TLMorPID = 1; // 0 = TLM, 1 = PID+TLM
 #endif
 
-  extern control_flags_t flags;
   if (flags.onground == 1) {
     time_throttle_on = uptime;
   } else {

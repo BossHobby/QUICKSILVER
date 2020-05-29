@@ -53,7 +53,6 @@ extern float GEstG[3];
 extern float rx[];
 
 extern profile_t profile;
-extern control_flags_t flags;
 
 #ifdef STANDARD_TURTLE
 extern int pwmdir;

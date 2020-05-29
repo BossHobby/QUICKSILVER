@@ -43,7 +43,6 @@ BIT
 //Flash Variables - 32bit					# of osd elements and flash memory start position in defines.h
 extern profile_t profile;
 extern vtx_settings_t vtx_settings;
-extern control_flags_t flags;
 
 //pointers to flash variable array
 unsigned long *callsign1 = profile.osd.elements;

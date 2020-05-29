@@ -96,7 +96,6 @@ static uint8_t DSHOT_GPIO_C = 0;
 #define DSHOT_PORT_COUNT (DSHOT_GPIO_A + DSHOT_GPIO_B + DSHOT_GPIO_C)
 
 extern profile_t profile;
-extern control_flags_t flags;
 
 int pwmdir = 0;
 int last_pwmdir = 0;

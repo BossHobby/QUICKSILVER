@@ -96,7 +96,6 @@ int lastgesture;
 int setgesture;
 static unsigned gesturetime;
 
-extern control_flags_t flags;
 extern float rx[];
 #ifdef ENABLE_OSD
 extern uint8_t osd_display_phase; //if phase == 1 then osd menu is active

@@ -13,8 +13,6 @@ blackbox_t blackbox;
 
 static uint8_t blackbox_enabled = 0;
 
-extern control_flags_t flags;
-
 extern float cpu_load;
 extern float vbattfilt;
 

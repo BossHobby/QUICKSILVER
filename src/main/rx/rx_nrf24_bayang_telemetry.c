@@ -35,8 +35,6 @@
 
 #ifdef RX_NRF24_BAYANG_TELEMETRY
 
-extern control_flags_t flags;
-
 // crc enable - rx side
 #define crc_en 1 // zero or one only
 

@@ -20,7 +20,6 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
-extern control_flags_t flags;
 
 void writeregs(const uint8_t data[], uint8_t size) {
   spi_cson();

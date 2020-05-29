@@ -42,8 +42,6 @@
 float GEstG[3] = {0, 0, ACC_1G};
 float attitude[3];
 
-extern control_flags_t flags;
-
 extern float looptime;
 
 float calcmagnitude(float vector[3]) {

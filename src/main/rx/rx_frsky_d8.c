@@ -41,7 +41,6 @@ extern char auxchange[AUX_CHANNEL_MAX];
 extern int rx_ready;
 extern int rx_bind_enable;
 extern float vbattfilt;
-extern control_flags_t flags;
 
 uint8_t frsky_extract_rssi(uint8_t rssi_raw);
 uint8_t frsky_detect();

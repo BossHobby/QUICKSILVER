@@ -20,6 +20,8 @@ typedef struct {
   uint8_t rxmode : 1; // bind / normal rx mode
 } control_flags_t;
 
+extern control_flags_t flags;
+
 typedef struct {
   vec3_t accel_raw;
   vec3_t accel;

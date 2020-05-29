@@ -43,7 +43,7 @@
 #warning PWM FREQUENCY TOO LOW
 #endif
 // end pwm frequency macros
-extern control_flags_t flags;
+
 extern profile_t profile;
 
 unsigned long motorbeeptime = 0;

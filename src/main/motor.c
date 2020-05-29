@@ -69,8 +69,6 @@ float thrsum;
 float overthrottlefilt = 0;
 float underthrottlefilt = 0;
 
-extern control_flags_t flags;
-
 extern int pwmdir;
 extern int motortest_override;
 

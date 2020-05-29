@@ -82,8 +82,6 @@
 #endif
 #endif
 
-extern control_flags_t flags;
-
 int pwmdir = 0;
 static unsigned long pwm_failsafe_time = 1;
 static int motor_data[48] = {0};

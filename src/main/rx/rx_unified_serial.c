@@ -42,7 +42,6 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 //extern char lastaux[AUX_CHANNEL_MAX];  //I dont think this is used
 //extern char auxchange[AUX_CHANNEL_MAX]; //I dont think this is used either
-extern control_flags_t flags;
 
 int rx_ready = 0;
 

@@ -7,7 +7,6 @@
 #include "util.h"
 
 extern int ledcommand;
-extern control_flags_t flags;
 
 // normal flight rgb colour - LED switch ON
 #define RGB_VALUE_INFLIGHT_ON RGB(255, 255, 255)

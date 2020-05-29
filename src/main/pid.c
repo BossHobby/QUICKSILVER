@@ -41,7 +41,6 @@ const float integrallimit[PIDNUMBER] = {1.7, 1.7, 0.5};
 
 // non changable things below
 extern profile_t profile;
-extern control_flags_t flags;
 
 int number_of_increments[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 int current_pid_axis = 0;

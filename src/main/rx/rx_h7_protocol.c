@@ -41,7 +41,6 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
-extern control_flags_t flags;
 
 #define H7_FLIP_MASK 0x80 // right shoulder (3D flip switch), resets after aileron or elevator has moved and came back to neutral
 #define H7_F_S_MASK 0x01

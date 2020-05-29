@@ -23,7 +23,6 @@ extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
-extern control_flags_t flags;
 
 char rfchannel[4];
 int rxaddress[5];

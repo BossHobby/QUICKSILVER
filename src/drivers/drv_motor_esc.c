@@ -88,7 +88,6 @@
 unsigned long pwm_failsafe_time = 1;
 
 extern profile_t profile;
-extern control_flags_t flags;
 
 void init_timer(TIM_TypeDef *TIMx, int period) {
   TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;

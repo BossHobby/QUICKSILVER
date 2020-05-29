@@ -7,8 +7,6 @@
 
 #ifdef BUZZER_ENABLE
 
-extern control_flags_t flags;
-
 //#define PIN_OFF( port , pin ) GPIO_ResetBits( port , pin)   //moved to defines.h
 //#define PIN_ON( port , pin ) GPIO_SetBits( port , pin)   //moved to defines.h
 

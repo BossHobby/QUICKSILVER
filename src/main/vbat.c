@@ -18,7 +18,6 @@ float lipo_cell_count = 1.0;
 float thrfilt = 0;
 
 extern profile_t profile;
-extern control_flags_t flags;
 
 void vbat_init() {
   int count = 0;
