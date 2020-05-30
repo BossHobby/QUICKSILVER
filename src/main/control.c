@@ -56,7 +56,6 @@ extern int pwmdir;
 extern int rx_ready;
 
 extern float thrsum;
-extern float rx[];
 extern float rx_filtered[];
 extern float pidoutput[PIDNUMBER];
 extern float setpoint[3];
@@ -262,7 +261,7 @@ void control(void) {
   // CONDITION: switch is ARMED
   if (rx_aux_on(AUX_ARMING)) {
     // CONDITION: throttle is above safety limit and ARMING RELEASE FLAG IS NOT CLEARED
-    if ((rx[3] > THROTTLE_SAFETY) && (arming_release == 0)) {
+    if ((state.rx.throttle > THROTTLE_SAFETY) && (arming_release == 0)) {
       flags.throttle_safety = 1;
     } else {
       flags.throttle_safety = 0;
@@ -320,7 +319,7 @@ void control(void) {
     if (idle_state == 0) {
       // CONDITION: idle up is turned OFF
 
-      if (rx[3] < 0.05f) {
+      if (state.rx.throttle < 0.05f) {
         // set a small dead zone where throttle is zero and
         throttle = 0;
 
@@ -328,7 +327,7 @@ void control(void) {
         flags.in_air = 0;
       } else {
         // map the remainder of the the active throttle region to 100%
-        throttle = (rx[3] - 0.05f) * 1.05623158f;
+        throttle = (state.rx.throttle - 0.05f) * 1.05623158f;
 
         // activate mix increase since throttle is on
         flags.in_air = 1;
@@ -337,9 +336,9 @@ void control(void) {
       // CONDITION: idle up is turned ON
 
       // throttle range is mapped from idle throttle value to 100%
-      throttle = (float)IDLE_THR + rx[3] * (1.0f - (float)IDLE_THR);
+      throttle = (float)IDLE_THR + state.rx.throttle * (1.0f - (float)IDLE_THR);
 
-      if ((rx[3] > THROTTLE_SAFETY) && (flags.in_air == 0)) {
+      if ((state.rx.throttle > THROTTLE_SAFETY) && (flags.in_air == 0)) {
         // change the state of in air flag when first crossing the throttle
         // safety value to indicate craft has taken off for mix increase safety
         flags.in_air = 1;
@@ -351,7 +350,10 @@ void control(void) {
   //Stick endpoints check tied to aux channel stick gesture
   if (rx_aux_on(AUX_TRAVEL_CHECK)) {
     throttle = 0;
-    if ((rx[0] <= -0.99f) || (rx[0] >= 0.99f) || (rx[1] <= -0.99f) || (rx[1] >= 0.99f) || (rx[2] <= -0.99f) || (rx[2] >= 0.99f) || (rx[3] <= 0.0f) || (rx[3] >= 0.99f)) {
+    if ((state.rx.axis[0] <= -0.99f) || (state.rx.axis[0] >= 0.99f) ||
+        (state.rx.axis[1] <= -0.99f) || (state.rx.axis[1] >= 0.99f) ||
+        (state.rx.axis[2] <= -0.99f) || (state.rx.axis[2] >= 0.99f) ||
+        (state.rx.axis[3] <= 0.0f) || (state.rx.axis[3] >= 0.99f)) {
       ledcommand = 1;
     }
   }

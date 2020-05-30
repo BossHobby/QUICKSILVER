@@ -31,7 +31,7 @@
 // RPY and Throttle
 // range -1.0f to 1.0f 1.0 = full rate as configured
 // throttle range 0.0f to 1.0f = under 0.1f it's interpreted as off
-extern float rx[4];
+
 // digital on / off channels
 extern char aux[AUX_CHANNEL_MAX];
 // last value of above
@@ -167,11 +167,11 @@ static int decodepacket(void) {
       sum += rxdata[i];
     }
     if ((sum & 0xFF) == rxdata[14]) {
-      rx[0] = packettodata(&rxdata[4]);
-      rx[1] = packettodata(&rxdata[6]);
-      rx[2] = packettodata(&rxdata[10]);
+      state.rx.axis[0] = packettodata(&rxdata[4]);
+      state.rx.axis[1] = packettodata(&rxdata[6]);
+      state.rx.axis[2] = packettodata(&rxdata[10]);
       // throttle
-      rx[3] = ((rxdata[8] & 0x0003) * 256 + rxdata[9]) * 0.000976562;
+      state.rx.axis[3] = ((rxdata[8] & 0x0003) * 256 + rxdata[9]) * 0.000976562;
 
 #ifndef DISABLE_EXPO
       rx_apply_expo();
@@ -306,11 +306,11 @@ void rx_check(void) {
     flags.failsafe = 1;
 
     // set sticks to zero
-    rx[0] = 0;
-    rx[1] = 0;
-    rx[2] = 0;
-    rx[3] = 0; // throttle zero just in case
-               // failsafe flag should cut throttle anyway
+    state.rx.axis[0] = 0;
+    state.rx.axis[1] = 0;
+    state.rx.axis[2] = 0;
+    state.rx.axis[3] = 0; // throttle zero just in case
+                          // failsafe flag should cut throttle anyway
   }
 
   // calculate packet rate for debugging

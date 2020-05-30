@@ -29,7 +29,6 @@
 
 #ifdef RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
 
-extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
@@ -327,11 +326,11 @@ static int decodepacket(void) {
       sum += rxdata[i];
     }
     if ((sum & 0xFF) == rxdata[14]) {
-      rx[0] = packettodata(&rxdata[4]);
-      rx[1] = packettodata(&rxdata[6]);
-      rx[2] = packettodata(&rxdata[10]);
+      state.rx.axis[0] = packettodata(&rxdata[4]);
+      state.rx.axis[1] = packettodata(&rxdata[6]);
+      state.rx.axis[2] = packettodata(&rxdata[10]);
       // throttle
-      rx[3] =
+      state.rx.axis[3] =
           ((rxdata[8] & 0x0003) * 256 +
            rxdata[9]) *
           0.000976562f;
@@ -501,10 +500,10 @@ void rx_check(void) {
 
   if (time - failsafetime > FAILSAFETIME) { //  failsafe
     flags.failsafe = 1;
-    rx[0] = 0;
-    rx[1] = 0;
-    rx[2] = 0;
-    rx[3] = 0;
+    state.rx.axis[0] = 0;
+    state.rx.axis[1] = 0;
+    state.rx.axis[2] = 0;
+    state.rx.axis[3] = 0;
   }
 
   if (!flags.failsafe)

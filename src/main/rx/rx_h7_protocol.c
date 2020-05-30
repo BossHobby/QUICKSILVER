@@ -36,8 +36,6 @@
 
 #ifdef RX_H7_PROTOCOL
 
-extern float rx[4];
-
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
@@ -123,13 +121,13 @@ int decode_h7(void) {
   if (rxdata[8] != calc_checksum())
     return 0;
 
-  rx[3] = 0.0045000f * (225 - rxdata[0]);
+  state.rx.axis[3] = 0.0045000f * (225 - rxdata[0]);
 
-  rx[1] = (((int)rxdata[3]) - 112) * 0.00888888f;
+  state.rx.axis[1] = (((int)rxdata[3]) - 112) * 0.00888888f;
 
-  rx[0] = (((int)rxdata[2]) - 112) * 0.00888888f; // roll
+  state.rx.axis[0] = (((int)rxdata[2]) - 112) * 0.00888888f; // roll
 
-  rx[2] = (-((int)rxdata[1]) + 112) * 0.00888888f;
+  state.rx.axis[2] = (-((int)rxdata[1]) + 112) * 0.00888888f;
 
   //rxdata[4] L-R: default:32, (63..1)
   //rxdata[5] F-B: default:32, (1..63)
@@ -207,10 +205,10 @@ void rx_check(void) {
 
   if (time - failsafetime > FAILSAFETIME) { //  failsafe
     flags.failsafe = 1;
-    rx[0] = 0;
-    rx[1] = 0;
-    rx[2] = 0;
-    rx[3] = 0;
+    state.rx.axis[0] = 0;
+    state.rx.axis[1] = 0;
+    state.rx.axis[2] = 0;
+    state.rx.axis[3] = 0;
   }
 }
 

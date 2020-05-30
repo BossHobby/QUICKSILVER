@@ -21,7 +21,6 @@
 #define RADIO_XN297
 #endif
 
-extern float rx[4];
 // the last 2 are always on and off respectively
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
@@ -125,18 +124,18 @@ int decode_cg023(void) {
       return 0;
 
     // throttle
-    rx[3] = 0.00390625f * rxdata[5];
+    state.rx.axis[3] = 0.00390625f * rxdata[5];
 
     // swapped yaw - roll (mode 3)
     if (rxdata[6] >= 0x80) {
-      rx[0] = -rxdata[6] * 0.0166666f + 2.1166582f; // yaw
+      state.rx.axis[0] = -rxdata[6] * 0.0166666f + 2.1166582f; // yaw
     } else if (rxdata[6] <= 0x3C)
-      rx[0] = (1.0f + (rxdata[6] - 60) * 0.0166666f); // yaw
+      state.rx.axis[0] = (1.0f + (rxdata[6] - 60) * 0.0166666f); // yaw
     else
-      rx[0] = 0.0;
-    rx[2] = -rxdata[8] * 0.0166666f + 2.1166582f; // roll
+      state.rx.axis[0] = 0.0;
+    state.rx.axis[2] = -rxdata[8] * 0.0166666f + 2.1166582f; // roll
 
-    rx[1] = -rxdata[7] * 0.0166666f + 2.1166582f;
+    state.rx.axis[1] = -rxdata[7] * 0.0166666f + 2.1166582f;
 
 #ifndef DISABLE_EXPO
     rx_apply_expo();
@@ -159,7 +158,7 @@ int decode_cg023(void) {
     }
 
     for (int i = 0; i <= 2; i++) {
-      rx[i] = rx[i] * ratemulti;
+      state.rx.axis[i] = state.rx.axis[i] * ratemulti;
     }
   skip:
     for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
@@ -230,10 +229,10 @@ void rx_check(void) {
 
   if (time - failsafetime > FAILSAFETIME) { //  failsafe
     flags.failsafe = 1;
-    rx[0] = 0;
-    rx[1] = 0;
-    rx[2] = 0;
-    rx[3] = 0;
+    state.rx.axis[0] = 0;
+    state.rx.axis[1] = 0;
+    state.rx.axis[2] = 0;
+    state.rx.axis[3] = 0;
   }
 #ifdef RXDEBUG
   // packets per second counter

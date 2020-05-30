@@ -1,5 +1,6 @@
 #include "usb_configurator.h"
 
+#include "control.h"
 #include "debug.h"
 #include "drv_usb.h"
 #include "profile.h"
@@ -11,8 +12,6 @@
 #include "stm32f4xx.h"
 
 #ifdef DEBUG
-extern float rx[];
-
 #ifdef RX_FRSKY
 #include "rx.h"
 #include "rx_frsky.h"
@@ -59,7 +58,7 @@ void usb_configurator(void) {
     usb_serial_printf("looptime: %f\r\n", debug.timefilt);
     usb_serial_printf("cpu_load: %f\r\n", debug.cpu_load * 100);
     usb_serial_printf("max_cpu_load: %f\r\n", debug.max_cpu_load * 100);
-    usb_serial_printf("RX: %f %f %f %f\r\n", rx[0], rx[1], rx[2], rx[3]);
+    usb_serial_printf("RX: %f %f %f %f\r\n", state.rx.axis[0], state.rx.axis[1], state.rx.axis[2], state.rx.axis[3]);
 #ifdef RX_FRSKY
     usb_serial_print("FRSKY_BIND\r\n");
     usb_serial_printf("idx: %d\r\n", frsky_bind.idx);

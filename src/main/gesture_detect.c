@@ -10,14 +10,14 @@
 #define STICKMAX 0.7f
 #define STICKCENTER 0.2f
 
-#define GMACRO_LEFT (rx[0] < -STICKMAX || rx[2] < -STICKMAX)
-#define GMACRO_RIGHT (rx[0] > STICKMAX || rx[2] > STICKMAX)
-#define GMACRO_XCENTER (fabsf(rx[0]) < STICKCENTER && fabsf(rx[2]) < STICKCENTER)
+#define GMACRO_LEFT (state.rx.axis[0] < -STICKMAX || state.rx.axis[2] < -STICKMAX)
+#define GMACRO_RIGHT (state.rx.axis[0] > STICKMAX || state.rx.axis[2] > STICKMAX)
+#define GMACRO_XCENTER (fabsf(state.rx.axis[0]) < STICKCENTER && fabsf(state.rx.axis[2]) < STICKCENTER)
 
-#define GMACRO_DOWN (rx[1] < -STICKMAX)
-#define GMACRO_UP (rx[1] > STICKMAX)
+#define GMACRO_DOWN (state.rx.axis[1] < -STICKMAX)
+#define GMACRO_UP (state.rx.axis[1] > STICKMAX)
 
-#define GMACRO_PITCHCENTER (fabsf(rx[1]) < STICKCENTER)
+#define GMACRO_PITCHCENTER (fabsf(state.rx.axis[1]) < STICKCENTER)
 
 #define GESTURE_CENTER 0
 #define GESTURE_CENTER_IDLE 12
@@ -96,7 +96,6 @@ int lastgesture;
 int setgesture;
 static unsigned gesturetime;
 
-extern float rx[];
 #ifdef ENABLE_OSD
 extern uint8_t osd_display_phase; //if phase == 1 then osd menu is active
 #endif

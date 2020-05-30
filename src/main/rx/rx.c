@@ -2,6 +2,7 @@
 
 #include <math.h>
 
+#include "control.h"
 #include "drv_serial.h"
 #include "filter.h"
 #include "profile.h"
@@ -10,7 +11,6 @@
 
 float rx_filtered[4];
 
-extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
 
@@ -90,22 +90,22 @@ void rx_apply_expo(void) {
   }
 
   if (expo.roll > 0.01)
-    rx[0] = rx_expo(rx[0], expo.roll);
+    state.rx.axis[0] = rx_expo(state.rx.axis[0], expo.roll);
   if (expo.pitch > 0.01)
-    rx[1] = rx_expo(rx[1], expo.pitch);
+    state.rx.axis[1] = rx_expo(state.rx.axis[1], expo.pitch);
   if (expo.yaw > 0.01)
-    rx[2] = rx_expo(rx[2], expo.yaw);
+    state.rx.axis[2] = rx_expo(state.rx.axis[2], expo.yaw);
 }
 
 void rx_precalc() {
   for (int i = 0; i < 3; ++i) {
 #ifdef RX_SMOOTHING
     static float rx_temp[4] = {0, 0, 0, 0};
-    lpf(&rx_temp[i], rx[i], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / rx_smoothing_hz(RX_PROTOCOL)));
+    lpf(&rx_temp[i], state.rx.axis[i], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / rx_smoothing_hz(RX_PROTOCOL)));
     rx_filtered[i] = rx_temp[i];
     limitf(&rx_filtered[i], 1.0);
 #else
-    rx_filtered[i] = rx[i];
+    rx_filtered[i] = state.rx.axis[i];
     limitf(&rx_filtered[i], 1.0);
 #endif
 
@@ -121,5 +121,5 @@ void rx_precalc() {
       }
     }
   }
-  rx_filtered[3] = rx[3];
+  rx_filtered[3] = state.rx.axis[3];
 }

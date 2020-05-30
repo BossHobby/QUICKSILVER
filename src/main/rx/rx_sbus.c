@@ -19,7 +19,6 @@
 //#define SBUS_INVERT 1            //now handled by a function in rx_serial driver and a config define
 
 // global use rx variables
-extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
@@ -207,21 +206,21 @@ void rx_check() {
       channels[1] -= 993;
       channels[3] -= 993;
 
-      rx[0] = channels[0];
-      rx[1] = channels[1];
-      rx[2] = channels[3];
+      state.rx.axis[0] = channels[0];
+      state.rx.axis[1] = channels[1];
+      state.rx.axis[2] = channels[3];
 
       for (int i = 0; i < 3; i++) {
-        rx[i] *= 0.00122026f;
+        state.rx.axis[i] *= 0.00122026f;
       }
 
       channels[2] -= 173;
-      rx[3] = 0.000610128f * channels[2];
+      state.rx.axis[3] = 0.000610128f * channels[2];
 
-      if (rx[3] > 1)
-        rx[3] = 1;
-      if (rx[3] < 0)
-        rx[3] = 0;
+      if (state.rx.axis[3] > 1)
+        state.rx.axis[3] = 1;
+      if (state.rx.axis[3] < 0)
+        state.rx.axis[3] = 0;
 
       rx_apply_expo();
 
@@ -411,38 +410,38 @@ void rx_check() {
       channels[1] -= 993;
       channels[3] -= 993;
 
-      rx[0] = channels[0];
-      rx[1] = channels[1];
-      rx[2] = channels[3];
+      state.rx.axis[0] = channels[0];
+      state.rx.axis[1] = channels[1];
+      state.rx.axis[2] = channels[3];
 
       for ( int i = 0 ; i < 3 ; i++)
       {
-        rx[i] *= 0.00122026f;
+        state.rx.axis[i] *= 0.00122026f;
       }
 
       channels[2] -= 173;
-      rx[3] = 0.000610128f * channels[2];
+      state.rx.axis[3] = 0.000610128f * channels[2];
 
-      if ( rx[3] > 1 ) rx[3] = 1;
+      if ( state.rx.axis[3] > 1 ) state.rx.axis[3] = 1;
 
       if (aux[LEVELMODE]) {
         if (aux[RACEMODE] && !aux[HORIZON]) {
-          if ( ANGLE_EXPO_ROLL > 0.01) rx[0] = rx_expo(rx[0], ANGLE_EXPO_ROLL);
-          if ( ACRO_EXPO_PITCH > 0.01) rx[1] = rx_expo(rx[1], ACRO_EXPO_PITCH);
-          if ( ANGLE_EXPO_YAW > 0.01) rx[2] = rx_expo(rx[2], ANGLE_EXPO_YAW);
+          if ( ANGLE_EXPO_ROLL > 0.01) state.rx.axis[0] = rx_expo(state.rx.axis[0], ANGLE_EXPO_ROLL);
+          if ( ACRO_EXPO_PITCH > 0.01) state.rx.axis[1] = rx_expo(state.rx.axis[1], ACRO_EXPO_PITCH);
+          if ( ANGLE_EXPO_YAW > 0.01) state.rx.axis[2] = rx_expo(state.rx.axis[2], ANGLE_EXPO_YAW);
         } else if (aux[HORIZON]) {
-          if ( ANGLE_EXPO_ROLL > 0.01) rx[0] = rx_expo(rx[0], ACRO_EXPO_ROLL);
-          if ( ACRO_EXPO_PITCH > 0.01) rx[1] = rx_expo(rx[1], ACRO_EXPO_PITCH);
-          if ( ANGLE_EXPO_YAW > 0.01) rx[2] = rx_expo(rx[2], ANGLE_EXPO_YAW);
+          if ( ANGLE_EXPO_ROLL > 0.01) state.rx.axis[0] = rx_expo(state.rx.axis[0], ACRO_EXPO_ROLL);
+          if ( ACRO_EXPO_PITCH > 0.01) state.rx.axis[1] = rx_expo(state.rx.axis[1], ACRO_EXPO_PITCH);
+          if ( ANGLE_EXPO_YAW > 0.01) state.rx.axis[2] = rx_expo(state.rx.axis[2], ANGLE_EXPO_YAW);
         } else {
-          if ( ANGLE_EXPO_ROLL > 0.01) rx[0] = rx_expo(rx[0], ANGLE_EXPO_ROLL);
-          if ( ANGLE_EXPO_PITCH > 0.01) rx[1] = rx_expo(rx[1], ANGLE_EXPO_PITCH);
-          if ( ANGLE_EXPO_YAW > 0.01) rx[2] = rx_expo(rx[2], ANGLE_EXPO_YAW);
+          if ( ANGLE_EXPO_ROLL > 0.01) state.rx.axis[0] = rx_expo(state.rx.axis[0], ANGLE_EXPO_ROLL);
+          if ( ANGLE_EXPO_PITCH > 0.01) state.rx.axis[1] = rx_expo(state.rx.axis[1], ANGLE_EXPO_PITCH);
+          if ( ANGLE_EXPO_YAW > 0.01) state.rx.axis[2] = rx_expo(state.rx.axis[2], ANGLE_EXPO_YAW);
         }
       } else {
-        if ( ACRO_EXPO_ROLL > 0.01) rx[0] = rx_expo(rx[0], ACRO_EXPO_ROLL);
-        if ( ACRO_EXPO_PITCH > 0.01) rx[1] = rx_expo(rx[1], ACRO_EXPO_PITCH);
-        if ( ACRO_EXPO_YAW > 0.01) rx[2] = rx_expo(rx[2], ACRO_EXPO_YAW);
+        if ( ACRO_EXPO_ROLL > 0.01) state.rx.axis[0] = rx_expo(state.rx.axis[0], ACRO_EXPO_ROLL);
+        if ( ACRO_EXPO_PITCH > 0.01) state.rx.axis[1] = rx_expo(state.rx.axis[1], ACRO_EXPO_PITCH);
+        if ( ACRO_EXPO_YAW > 0.01) state.rx.axis[2] = rx_expo(state.rx.axis[2], ACRO_EXPO_YAW);
       }
 
       aux[AUX_CHANNEL_0] = (channels[4] > 993) ? 1 : 0;

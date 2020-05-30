@@ -50,7 +50,6 @@ int flipindex = 0;
 int flipdir = 0;
 
 extern float GEstG[3];
-extern float rx[];
 
 extern profile_t profile;
 
@@ -77,11 +76,11 @@ void start_flip() {
 
   flipindex = 0;
   flipdir = 0;
-  if (fabsf(rx[0]) < fabsf(rx[1])) {
+  if (fabsf(state.rx.axis[0]) < fabsf(state.rx.axis[1])) {
     flipindex = 1;
-    if (rx[1] > 0)
+    if (state.rx.axis[1] > 0)
       flipdir = 1;
-  } else if (rx[0] > 0)
+  } else if (state.rx.axis[0] > 0)
     flipdir = 1;
 #endif
 }
@@ -130,15 +129,15 @@ void flip_sequencer() {
     pwmdir = REVERSE;
     flipindex = 0;
     flipdir = 0;
-    if (fabsf(rx[0]) > 0.5f || fabsf(rx[1]) > 0.5f) {
-      if (fabsf(rx[0]) < fabsf(rx[1])) {
+    if (fabsf(state.rx.axis[0]) > 0.5f || fabsf(state.rx.axis[1]) > 0.5f) {
+      if (fabsf(state.rx.axis[0]) < fabsf(state.rx.axis[1])) {
         flipindex = 1;
-        if (rx[1] > 0)
+        if (state.rx.axis[1] > 0)
           flipdir = 1;
         flipstage = STAGE_FLIP_ROTATING;
         fliptime = gettime();
       } else {
-        if (rx[0] > 0)
+        if (state.rx.axis[0] > 0)
           flipdir = 1;
         flipstage = STAGE_FLIP_ROTATING;
         fliptime = gettime();
@@ -256,9 +255,9 @@ void flip_sequencer() {
 
   case STAGE_FLIP_LEVELMODE:
     // allow control in other axis at this point
-    rx_override[0] = rx[0];
-    rx_override[1] = rx[1];
-    rx_override[2] = rx[2];
+    rx_override[0] = state.rx.axis[0];
+    rx_override[1] = state.rx.axis[1];
+    rx_override[2] = state.rx.axis[2];
 
     if (flipdir)
       rx_override[flipindex] = (float)LEVEL_MODE_ANGLE / profile.rate.level_max_angle;

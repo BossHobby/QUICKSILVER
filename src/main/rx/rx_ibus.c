@@ -21,7 +21,6 @@
 #define SERIAL_BAUDRATE 115200
 
 // global use rx variables
-extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
@@ -212,20 +211,20 @@ void rx_check() {
         channels[2] -= 1000;
         channels[3] -= 1500;
 
-        rx[0] = channels[0];
-        rx[1] = channels[1];
-        rx[2] = channels[3];
-        rx[3] = channels[2];
+        state.rx.axis[0] = channels[0];
+        state.rx.axis[1] = channels[1];
+        state.rx.axis[2] = channels[3];
+        state.rx.axis[3] = channels[2];
 
         for (int i = 0; i < 3; i++) {
-          rx[i] *= 0.002f;
+          state.rx.axis[i] *= 0.002f;
         }
-        rx[3] *= 0.001f;
+        state.rx.axis[3] *= 0.001f;
 
-        if (rx[3] > 1)
-          rx[3] = 1;
-        if (rx[3] < 0)
-          rx[3] = 0;
+        if (state.rx.axis[3] > 1)
+          state.rx.axis[3] = 1;
+        if (state.rx.axis[3] < 0)
+          state.rx.axis[3] = 0;
 
         rx_apply_expo();
 

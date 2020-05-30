@@ -58,9 +58,6 @@ float osd_totaltime;
 
 extern profile_t profile;
 
-// holds the main four channels, roll, pitch , yaw , throttle
-float rx[4];
-
 // holds auxilliary channels
 // the last 2 are always on and off respectively
 char aux[AUX_CHANNEL_MAX] = {0, 0, 0, 0, 0, 0};

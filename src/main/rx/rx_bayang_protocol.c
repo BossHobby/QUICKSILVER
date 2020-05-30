@@ -14,7 +14,6 @@
 
 int rx_ready = 1;
 int bind_safety = 0;
-extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
@@ -95,18 +94,18 @@ static int decodepacket(void) {
       sum += rxdata[i];
     }
     if ((sum & 0xFF) == rxdata[14]) {
-      rx[0] = packettodata(&rxdata[4]);
-      rx[1] = packettodata(&rxdata[6]);
-      rx[2] = packettodata(&rxdata[10]);
+      state.rx.axis[0] = packettodata(&rxdata[4]);
+      state.rx.axis[1] = packettodata(&rxdata[6]);
+      state.rx.axis[2] = packettodata(&rxdata[10]);
       // throttle
-      rx[3] = ((rxdata[8] & 0x0003) * 256 + rxdata[9]) * 0.000976562;
+      state.rx.axis[3] = ((rxdata[8] & 0x0003) * 256 + rxdata[9]) * 0.000976562;
 
       // trims are 50% of controls at max
       // trims are not used because they interfere with dynamic trims feature of devo firmware
 
-      //			rx[0] = rx[0] + 0.03225 * 0.5 * (float)(((rxdata[4])>>2) - 31);
-      //			rx[1] = rx[1] + 0.03225 * 0.5 * (float)(((rxdata[6])>>2) - 31);
-      //			rx[2] = rx[2] + 0.03225 * 0.5 * (float)(((rxdata[10])>>2) - 31);
+      //			state.rx.axis[0] = state.rx.axis[0] + 0.03225 * 0.5 * (float)(((rxdata[4])>>2) - 31);
+      //			state.rx.axis[1] = state.rx.axis[1] + 0.03225 * 0.5 * (float)(((rxdata[6])>>2) - 31);
+      //			state.rx.axis[2] = state.rx.axis[2] + 0.03225 * 0.5 * (float)(((rxdata[10])>>2) - 31);
 
       aux[CH_INV] = (rxdata[3] & 0x80) ? 1 : 0; // inverted flag
 
@@ -280,10 +279,10 @@ void rx_check(void) {
 
   if (time - failsafetime > FAILSAFETIME) { //  failsafe
     flags.failsafe = 1;
-    rx[0] = 0;
-    rx[1] = 0;
-    rx[2] = 0;
-    rx[3] = 0;
+    state.rx.axis[0] = 0;
+    state.rx.axis[1] = 0;
+    state.rx.axis[2] = 0;
+    state.rx.axis[3] = 0;
   }
 #ifdef RXDEBUG
   if (gettime() - secondtimer > 1000000) {

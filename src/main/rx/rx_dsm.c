@@ -11,7 +11,6 @@
 #if defined(RX_DSMX_2048) || defined(RX_DSM2_1024)
 
 // global use rx variables
-extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 //extern char lastaux[AUX_CHANNEL_MAX];
 //extern char auxchange[AUX_CHANNEL_MAX];
@@ -220,27 +219,27 @@ void rx_check() {
 
       // TAER channel order
 #ifdef RX_DSMX_2048
-    rx[0] = (channels[1] - 1024.0f) * dsmx_scalefactor;
-    rx[1] = (channels[2] - 1024.0f) * dsmx_scalefactor;
-    rx[2] = (channels[3] - 1024.0f) * dsmx_scalefactor;
-    rx[3] = ((channels[0] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f;
+    state.rx.axis[0] = (channels[1] - 1024.0f) * dsmx_scalefactor;
+    state.rx.axis[1] = (channels[2] - 1024.0f) * dsmx_scalefactor;
+    state.rx.axis[2] = (channels[3] - 1024.0f) * dsmx_scalefactor;
+    state.rx.axis[3] = ((channels[0] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f;
 
-    if (rx[3] > 1)
-      rx[3] = 1;
-    if (rx[3] < 0)
-      rx[3] = 0;
+    if (state.rx.axis[3] > 1)
+      state.rx.axis[3] = 1;
+    if (state.rx.axis[3] < 0)
+      state.rx.axis[3] = 0;
 #endif
 
 #ifdef RX_DSM2_1024
-    rx[0] = (channels[1] - 512.0f) * dsm2_scalefactor;
-    rx[1] = (channels[2] - 512.0f) * dsm2_scalefactor;
-    rx[2] = (channels[3] - 512.0f) * dsm2_scalefactor;
-    rx[3] = ((channels[0] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f;
+    state.rx.axis[0] = (channels[1] - 512.0f) * dsm2_scalefactor;
+    state.rx.axis[1] = (channels[2] - 512.0f) * dsm2_scalefactor;
+    state.rx.axis[2] = (channels[3] - 512.0f) * dsm2_scalefactor;
+    state.rx.axis[3] = ((channels[0] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f;
 
-    if (rx[3] > 1)
-      rx[3] = 1;
-    if (rx[3] < 0)
-      rx[3] = 0;
+    if (state.rx.axis[3] > 1)
+      state.rx.axis[3] = 1;
+    if (state.rx.axis[3] < 0)
+      state.rx.axis[3] = 0;
 #endif
 
     rx_apply_expo();

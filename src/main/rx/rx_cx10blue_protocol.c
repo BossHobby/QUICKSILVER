@@ -16,7 +16,6 @@
 
 #define PAYLOAD_LENGHT 19
 
-extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
@@ -83,10 +82,10 @@ float cx10scale(int num) {
 
 static int decodepacket(void) {
   if (rxdata[0] == 0x55) {
-    rx[0] = -cx10scale(9);                 // aileron
-    rx[1] = -cx10scale(11);                // elev
-    rx[3] = (cx10scale(13) + 1.0f) * 0.5f; // throttle
-    rx[2] = cx10scale(15);                 // throttle
+    state.rx.axis[0] = -cx10scale(9);                 // aileron
+    state.rx.axis[1] = -cx10scale(11);                // elev
+    state.rx.axis[3] = (cx10scale(13) + 1.0f) * 0.5f; // throttle
+    state.rx.axis[2] = cx10scale(15);                 // throttle
 
 #ifndef DISABLE_EXPO
     rx_apply_expo();
@@ -220,10 +219,10 @@ void rx_check(void) {
   }
   if (time - failsafetime > FAILSAFETIME) { //  failsafe
     flags.failsafe = 1;
-    rx[0] = 0;
-    rx[1] = 0;
-    rx[2] = 0;
-    rx[3] = 0;
+    state.rx.axis[0] = 0;
+    state.rx.axis[1] = 0;
+    state.rx.axis[2] = 0;
+    state.rx.axis[3] = 0;
   }
 #ifdef RXDEBUG
   if (gettime() - secondtimer > 1000000) {

@@ -7,7 +7,7 @@ typedef struct {
   uint16_t cpu_load;
   uint16_t vbat_filter;
 
-  float rx_raw[4];
+  vec4_t rx_raw;
   float rx_filter[4];
   uint32_t rx_aux;
 

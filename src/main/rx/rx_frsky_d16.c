@@ -95,7 +95,6 @@ extern uint8_t protocol_state;
 extern frsky_bind_data frsky_bind;
 extern uint8_t list_length;
 
-extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
@@ -147,10 +146,10 @@ static void frsky_d16_set_rc_data() {
   flags.failsafe = 0;
 
   // AETR channel order
-  rx[0] = (channels[0] - 960) * 1.f / 760.f;
-  rx[1] = (channels[1] - 960) * 1.f / 760.f;
-  rx[2] = (channels[3] - 960) * 1.f / 760.f;
-  rx[3] = constrainf((channels[2] - 200) * 1.f / 1520.f, 0.f, 1.f);
+  state.rx.axis[0] = (channels[0] - 960) * 1.f / 760.f;
+  state.rx.axis[1] = (channels[1] - 960) * 1.f / 760.f;
+  state.rx.axis[2] = (channels[3] - 960) * 1.f / 760.f;
+  state.rx.axis[3] = constrainf((channels[2] - 200) * 1.f / 1520.f, 0.f, 1.f);
 
   rx_apply_expo();
 

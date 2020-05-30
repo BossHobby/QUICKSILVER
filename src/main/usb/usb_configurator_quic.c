@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "blackbox.h"
+#include "control.h"
 #include "data_flash.h"
 #include "drv_serial_4way.h"
 #include "drv_spi_max7456.h"
@@ -37,7 +38,6 @@ extern uint32_t pid_rate_presets_count;
 
 extern vtx_settings_t vtx_settings;
 
-extern float rx[4];
 extern float rx_filtered[4];
 extern uint8_t aux[AUX_CHANNEL_MAX];
 extern float vbattfilt;

@@ -11,7 +11,6 @@
 #ifdef RX_CRSF
 
 // global use rx variables
-extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
@@ -271,15 +270,15 @@ void rx_check() {
       flags.rxmode = RXMODE_BIND; // normal rx mode - removes waiting for bind led leaving failsafe flashes as data starts to come in
 
     // AETR channel order
-    rx[0] = (crsfChannelData[0] - 990.5f) * 0.00125707103f;
-    rx[1] = (crsfChannelData[1] - 990.5f) * 0.00125707103f;
-    rx[2] = (crsfChannelData[3] - 990.5f) * 0.00125707103f;
-    rx[3] = (crsfChannelData[2] - 191.0f) * 0.00062853551f;
+    state.rx.axis[0] = (crsfChannelData[0] - 990.5f) * 0.00125707103f;
+    state.rx.axis[1] = (crsfChannelData[1] - 990.5f) * 0.00125707103f;
+    state.rx.axis[2] = (crsfChannelData[3] - 990.5f) * 0.00125707103f;
+    state.rx.axis[3] = (crsfChannelData[2] - 191.0f) * 0.00062853551f;
 
-    if (rx[3] > 1)
-      rx[3] = 1;
-    if (rx[3] < 0)
-      rx[3] = 0;
+    if (state.rx.axis[3] > 1)
+      state.rx.axis[3] = 1;
+    if (state.rx.axis[3] < 0)
+      state.rx.axis[3] = 0;
 
     rx_apply_expo();
 

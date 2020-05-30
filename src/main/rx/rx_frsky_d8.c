@@ -33,7 +33,6 @@ extern uint8_t packet[128];
 extern uint8_t protocol_state;
 extern frsky_bind_data frsky_bind;
 
-extern float rx[4];
 extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
@@ -80,20 +79,20 @@ static void frsky_d8_set_rc_data() {
   flags.failsafe = 0;
 
   // AETR channel order
-  rx[0] = (channels[0] - 1500) - 750;
-  rx[1] = (channels[1] - 1500) - 750;
-  rx[2] = (channels[3] - 1500) - 750;
-  rx[3] = channels[2] - 1500;
+  state.rx.axis[0] = (channels[0] - 1500) - 750;
+  state.rx.axis[1] = (channels[1] - 1500) - 750;
+  state.rx.axis[2] = (channels[3] - 1500) - 750;
+  state.rx.axis[3] = channels[2] - 1500;
 
   for (int i = 0; i < 3; i++) {
-    rx[i] *= 1.f / 750.f;
+    state.rx.axis[i] *= 1.f / 750.f;
   }
-  rx[3] *= 1.f / 1500.f;
+  state.rx.axis[3] *= 1.f / 1500.f;
 
-  if (rx[3] > 1)
-    rx[3] = 1;
-  if (rx[3] < 0)
-    rx[3] = 0;
+  if (state.rx.axis[3] > 1)
+    state.rx.axis[3] = 1;
+  if (state.rx.axis[3] < 0)
+    state.rx.axis[3] = 0;
 
   rx_apply_expo();
 

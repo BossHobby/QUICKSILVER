@@ -23,8 +23,11 @@ typedef struct {
 extern control_flags_t flags;
 
 typedef struct {
+  vec4_t rx; // holds the main four channels, roll, pitch , yaw , throttle
+
   vec3_t accel_raw;
   vec3_t accel;
+
   vec3_t gyro_raw;
   vec3_t gyro;
 } control_state_t;
