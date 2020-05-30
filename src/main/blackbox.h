@@ -8,7 +8,7 @@ typedef struct {
   uint16_t vbat_filter;
 
   vec4_t rx_raw;
-  float rx_filter[4];
+  vec4_t rx_filter;
   uint32_t rx_aux;
 
   compact_vec3_t accel_raw;

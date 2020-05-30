@@ -9,8 +9,6 @@
 #include "project.h"
 #include "util.h"
 
-float rx_filtered[4];
-
 extern char aux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
 
@@ -102,24 +100,24 @@ void rx_precalc() {
 #ifdef RX_SMOOTHING
     static float rx_temp[4] = {0, 0, 0, 0};
     lpf(&rx_temp[i], state.rx.axis[i], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / rx_smoothing_hz(RX_PROTOCOL)));
-    rx_filtered[i] = rx_temp[i];
-    limitf(&rx_filtered[i], 1.0);
+    state.rx_filtered.axis[i] = rx_temp[i];
+    limitf(&state.rx_filtered.axis[i], 1.0);
 #else
-    rx_filtered[i] = state.rx.axis[i];
-    limitf(&rx_filtered[i], 1.0);
+    state.rx_filtered.axis[i] = state.rx.axis[i];
+    limitf(&state.rx_filtered.axis[i], 1.0);
 #endif
 
     if (profile.rate.sticks_deadband > 0.0f) {
-      if (fabsf(rx_filtered[i]) <= profile.rate.sticks_deadband) {
-        rx_filtered[i] = 0.0f;
+      if (fabsf(state.rx_filtered.axis[i]) <= profile.rate.sticks_deadband) {
+        state.rx_filtered.axis[i] = 0.0f;
       } else {
-        if (rx_filtered[i] >= 0) {
-          rx_filtered[i] = mapf(rx_filtered[i], profile.rate.sticks_deadband, 1, 0, 1);
+        if (state.rx_filtered.axis[i] >= 0) {
+          state.rx_filtered.axis[i] = mapf(state.rx_filtered.axis[i], profile.rate.sticks_deadband, 1, 0, 1);
         } else {
-          rx_filtered[i] = mapf(rx_filtered[i], -profile.rate.sticks_deadband, -1, 0, -1);
+          state.rx_filtered.axis[i] = mapf(state.rx_filtered.axis[i], -profile.rate.sticks_deadband, -1, 0, -1);
         }
       }
     }
   }
-  rx_filtered[3] = state.rx.axis[3];
+  state.rx_filtered.throttle = state.rx.throttle;
 }

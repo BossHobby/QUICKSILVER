@@ -16,7 +16,6 @@ static uint8_t blackbox_enabled = 0;
 extern float cpu_load;
 extern float vbattfilt;
 
-extern float rx_filtered[4];
 extern uint8_t aux[AUX_CHANNEL_MAX];
 
 extern float GEstG[3];
@@ -44,7 +43,7 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "rx_raw"));
   CBOR_CHECK_ERROR(res = cbor_encode_vec4_t(enc, &b->rx_raw));
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "rx_filter"));
-  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->rx_filter, 4));
+  CBOR_CHECK_ERROR(res = cbor_encode_vec4_t(enc, &b->rx_filter));
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "rx_aux"));
   CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->rx_aux));
 
@@ -74,7 +73,7 @@ cbor_result_t cbor_encode_compact_blackbox_t(cbor_value_t *enc, const blackbox_t
   CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->gyro_filter));
 
   CBOR_CHECK_ERROR(res = cbor_encode_vec4_t(enc, &b->rx_raw));
-  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->rx_filter, 4));
+  CBOR_CHECK_ERROR(res = cbor_encode_vec4_t(enc, &b->rx_filter));
   CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->rx_aux));
 
   CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->accel_raw));
@@ -103,7 +102,7 @@ cbor_result_t cbor_decode_compact_blackbox_t(cbor_value_t *dec, blackbox_t *b) {
   CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->gyro_vector, 3));
 
   CBOR_CHECK_ERROR(res = cbor_encode_vec4_t(dec, &b->rx_raw));
-  CBOR_CHECK_ERROR(res = cbor_decode_float_array(dec, b->rx_filter, 4));
+  CBOR_CHECK_ERROR(res = cbor_encode_vec4_t(dec, &b->rx_filter));
   CBOR_CHECK_ERROR(res = cbor_decode_uint32(dec, &b->rx_aux));
 
   CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(dec, &b->accel_raw));
@@ -141,11 +140,7 @@ void blackbox_update() {
   blackbox.vbat_filter = vbattfilt * 10;
 
   blackbox.rx_raw = state.rx;
-
-  blackbox.rx_filter[0] = rx_filtered[0];
-  blackbox.rx_filter[1] = rx_filtered[1];
-  blackbox.rx_filter[2] = rx_filtered[2];
-  blackbox.rx_filter[3] = rx_filtered[3];
+  blackbox.rx_filter = state.rx_filtered;
 
   blackbox.rx_aux = 0;
   for (uint32_t i = 0; i < AUX_CHANNEL_MAX; i++) {

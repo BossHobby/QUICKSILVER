@@ -63,7 +63,6 @@ extern float setpoint[PIDNUMBER];
 extern float looptime;
 extern float looptime;
 extern float vbattfilt_corr;
-extern float rx_filtered[4];
 
 // multiplier for pids at 3V - for PID_VOLTAGE_COMPENSATION - default 1.33f from H101 code
 #define PID_VC_FACTOR 1.33f
@@ -208,9 +207,9 @@ float pid(int x) {
       stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_OFF].transition.axis[x];
     }
     if (stickAccelerator[x] < 1) {
-      transitionSetpointWeight[x] = (fabsf(rx_filtered[x]) * stickTransition[x]) + (1 - stickTransition[x]);
+      transitionSetpointWeight[x] = (fabsf(state.rx_filtered.axis[x]) * stickTransition[x]) + (1 - stickTransition[x]);
     } else {
-      transitionSetpointWeight[x] = (fabsf(rx_filtered[x]) * (stickTransition[x] / stickAccelerator[x])) + (1 - stickTransition[x]);
+      transitionSetpointWeight[x] = (fabsf(state.rx_filtered.axis[x]) * (stickTransition[x] / stickAccelerator[x])) + (1 - stickTransition[x]);
     }
 
     static float lastrate[3];

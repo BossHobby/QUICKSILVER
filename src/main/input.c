@@ -3,14 +3,13 @@
 #include <math.h>
 #include <string.h>
 
+#include "control.h"
 #include "profile.h"
 #include "util.h"
 
 extern float GEstG[3];
 extern float Q_rsqrt(float number);
 extern profile_t profile;
-
-extern float rx_filtered[];
 
 // error vector between stick position and quad orientation
 // this is the output of this function
@@ -147,8 +146,8 @@ static float calc_bf_rates(int axis) {
   if (rcRate > 2.0f) {
     rcRate += RC_RATE_INCREMENTAL * (rcRate - 2.0f);
   }
-  const float rcCommandfAbs = rx_filtered[axis] > 0 ? rx_filtered[axis] : -rx_filtered[axis];
-  float angleRate = 200.0f * rcRate * rx_filtered[axis];
+  const float rcCommandfAbs = state.rx_filtered.axis[axis] > 0 ? state.rx_filtered.axis[axis] : -state.rx_filtered.axis[axis];
+  float angleRate = 200.0f * rcRate * state.rx_filtered.axis[axis];
   if (superExpo) {
     const float rcSuperfactor = 1.0f / (constrainf(1.0f - (rcCommandfAbs * superExpo), 0.01f, 1.00f));
     angleRate *= rcSuperfactor;
@@ -168,8 +167,8 @@ void input_rates_calc(float rates[]) {
     rates[1] = rate_multiplier * calc_bf_rates(1);
     rates[2] = rate_multiplier * calc_bf_rates(2);
   } else {
-    rates[0] = rate_multiplier * rx_filtered[0] * profile.rate.silverware.max_rate.roll * DEGTORAD;
-    rates[1] = rate_multiplier * rx_filtered[1] * profile.rate.silverware.max_rate.pitch * DEGTORAD;
-    rates[2] = rate_multiplier * rx_filtered[2] * profile.rate.silverware.max_rate.yaw * DEGTORAD;
+    rates[0] = rate_multiplier * state.rx_filtered.axis[0] * profile.rate.silverware.max_rate.roll * DEGTORAD;
+    rates[1] = rate_multiplier * state.rx_filtered.axis[1] * profile.rate.silverware.max_rate.pitch * DEGTORAD;
+    rates[2] = rate_multiplier * state.rx_filtered.axis[2] * profile.rate.silverware.max_rate.yaw * DEGTORAD;
   }
 }

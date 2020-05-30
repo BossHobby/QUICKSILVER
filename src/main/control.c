@@ -56,7 +56,6 @@ extern int pwmdir;
 extern int rx_ready;
 
 extern float thrsum;
-extern float rx_filtered[];
 extern float pidoutput[PIDNUMBER];
 extern float setpoint[3];
 
@@ -103,7 +102,7 @@ void control(void) {
 
   if (controls_override) {
     for (int i = 0; i < 3; i++) {
-      rx_filtered[i] = rx_override[i];
+      state.rx_filtered.axis[i] = rx_override[i];
     }
   }
 #endif
@@ -119,7 +118,7 @@ void control(void) {
     float yawerror[3] = {0};  // yaw rotation vector
 
     // calculate roll / pitch error
-    input_stick_vector(rx_filtered, 0);
+    input_stick_vector(state.rx_filtered.axis, 0);
 
     // apply yaw from the top of the quad
     yawerror[0] = GEstG[1] * rates[2];
@@ -169,7 +168,7 @@ void control(void) {
         angleFade = 1;
       }
       float stickFade;
-      float deflection = fabsf(rx_filtered[0]);
+      float deflection = fabsf(state.rx_filtered.axis[0]);
       if (deflection <= HORIZON_STICK_TRANSITION) {
         stickFade = deflection / HORIZON_STICK_TRANSITION;
       } else {
@@ -210,7 +209,7 @@ void control(void) {
           angleFade = 1;
         }
         float stickFade;
-        float deflection = fabsf(rx_filtered[i]);
+        float deflection = fabsf(state.rx_filtered.axis[i]);
         if (deflection <= HORIZON_STICK_TRANSITION) {
           stickFade = deflection / HORIZON_STICK_TRANSITION;
         } else {

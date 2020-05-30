@@ -73,7 +73,6 @@ extern int pwmdir;
 extern int motortest_override;
 
 extern float throttle;
-extern float rx_filtered[];
 extern float pidoutput[PIDNUMBER];
 
 extern profile_t profile;
@@ -268,25 +267,25 @@ void motor_mixer_calc(float mix[4]) {
       mix[MOTOR_BL] = usb_motor_test.value[MOTOR_BL];
     } else {
       // motor test mode, we set mix according to sticks
-      if (rx_filtered[ROLL] < -0.5f || rx_filtered[PITCH] < -0.5f) {
+      if (state.rx_filtered.roll < -0.5f || state.rx_filtered.pitch < -0.5f) {
         mix[MOTOR_FR] = 0;
       } else {
         mix[MOTOR_FR] = throttle;
       }
 
-      if (rx_filtered[ROLL] > 0.5f || rx_filtered[PITCH] < -0.5f) {
+      if (state.rx_filtered.roll > 0.5f || state.rx_filtered.pitch < -0.5f) {
         mix[MOTOR_FL] = 0;
       } else {
         mix[MOTOR_FL] = throttle;
       }
 
-      if (rx_filtered[ROLL] < -0.5f || rx_filtered[PITCH] > 0.5f) {
+      if (state.rx_filtered.roll < -0.5f || state.rx_filtered.pitch > 0.5f) {
         mix[MOTOR_BR] = 0;
       } else {
         mix[MOTOR_BR] = throttle;
       }
 
-      if (rx_filtered[ROLL] > 0.5f || rx_filtered[PITCH] > 0.5f) {
+      if (state.rx_filtered.roll > 0.5f || state.rx_filtered.pitch > 0.5f) {
         mix[MOTOR_BL] = 0;
       } else {
         mix[MOTOR_BL] = throttle;
