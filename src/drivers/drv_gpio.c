@@ -56,7 +56,7 @@ void gpio_init(void) {
 int gpio_init_fpv(uint8_t rxmode) {
 #if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
   // only repurpose the pin after rx/tx have bound
-  if (rxmode == RXMODE_NORMAL) {
+  if (rxmode == 1) {
     // set gpio pin as output
     GPIO_InitTypeDef GPIO_InitStructure;
 
