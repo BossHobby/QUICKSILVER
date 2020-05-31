@@ -37,7 +37,7 @@ control_flags_t flags = {
     .onground = 1,
     .failsafe = 1,
     .lowbatt = 1,
-    .throttle_safety = 1,
+    .throttle_safety = 0,
     .usb_active = 0,
     .rxmode = RXMODE_BIND,
 };
