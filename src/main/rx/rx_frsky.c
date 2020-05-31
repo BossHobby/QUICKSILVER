@@ -21,7 +21,6 @@ static unsigned long time_tuned_ms;
 
 frsky_bind_data frsky_bind = {{0xff, 0xff}};
 
-int rx_ready = 0;
 int rx_bind_enable = 0;
 
 uint16_t frsky_extract_rssi(uint8_t rssi_raw) {

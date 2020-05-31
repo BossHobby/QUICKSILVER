@@ -33,7 +33,6 @@ extern uint8_t packet[128];
 extern uint8_t protocol_state;
 extern frsky_bind_data frsky_bind;
 
-extern int rx_ready;
 extern int rx_bind_enable;
 extern float vbattfilt;
 
@@ -71,7 +70,7 @@ static void frsky_d8_set_rc_data() {
   }
 
   // if we made it this far, data is ready
-  rx_ready = 1;
+  flags.rx_ready = 1;
   flags.failsafe = 0;
 
   // AETR channel order

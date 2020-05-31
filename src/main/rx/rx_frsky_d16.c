@@ -95,7 +95,6 @@ extern uint8_t protocol_state;
 extern frsky_bind_data frsky_bind;
 extern uint8_t list_length;
 
-extern int rx_ready;
 extern int rx_bind_enable;
 
 uint8_t frsky_extract_rssi(uint8_t rssi_raw);
@@ -138,7 +137,7 @@ static void frsky_d16_set_rc_data() {
   }
 
   // if we made it this far, data is ready
-  rx_ready = 1;
+  flags.rx_ready = 1;
   flags.failsafe = 0;
 
   // AETR channel order

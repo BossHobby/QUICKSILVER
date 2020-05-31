@@ -25,7 +25,6 @@ extern uint8_t list_length;
 extern uint8_t protocol_state;
 extern frsky_bind_data frsky_bind;
 
-extern int rx_ready;
 extern int rx_bind_enable;
 
 static uint8_t redpine_fast = 1;
@@ -46,7 +45,7 @@ static void redpine_set_rc_data() {
   }
 
   // if we made it this far, data is ready
-  rx_ready = 1;
+  flags.rx_ready = 1;
   flags.failsafe = 0;
 
   const uint16_t channels[4] = {

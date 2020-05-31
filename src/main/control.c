@@ -55,7 +55,6 @@ static uint8_t arming_release;
 static uint32_t onground_long = 1;
 
 extern int pwmdir;
-extern int rx_ready;
 extern int controls_override;
 extern int acro_override;
 
@@ -281,7 +280,7 @@ void control(void) {
     // disarm the quad by setting armed state variable to zero
     flags.armed_state = 0;
 
-    if (rx_ready == 1) {
+    if (flags.rx_ready == 1) {
       // rx is bound and has been disarmed so clear binding while armed flag
       flags.binding_while_armed = 0;
     }

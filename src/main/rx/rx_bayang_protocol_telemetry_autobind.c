@@ -38,7 +38,6 @@ int rx_bind_enable = 0;
 int rx_bind_load = 0;
 
 int rf_chan = 0;
-int rx_ready = 0;
 int bind_safety = 0;
 
 unsigned long autobindtime = 0;
@@ -449,7 +448,7 @@ void rx_check(void) {
       }
       bind_safety++;
       if (bind_safety > 9) { //requires 10 good frames to come in before rx_ready safety can be toggled to 1
-        rx_ready = 1;        // because aux channels initialize low and clear the binding while armed flag before aux updates high
+        flags.rx_ready = 1;  // because aux channels initialize low and clear the binding while armed flag before aux updates high
         bind_safety = 10;
       }
     } // end normal rx mode

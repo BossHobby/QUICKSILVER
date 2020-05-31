@@ -21,6 +21,7 @@ typedef struct {
   uint8_t throttle_safety : 1; // throttle is above safety limit
   uint8_t usb_active : 1;
   uint8_t rxmode : 1; // bind / normal rx mode
+  uint8_t rx_ready : 1;
 } control_flags_t;
 
 extern control_flags_t flags;

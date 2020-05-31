@@ -18,8 +18,6 @@
 // sbus is normally inverted
 //#define SBUS_INVERT 1            //now handled by a function in rx_serial driver and a config define
 
-int rx_ready = 0;
-
 // internal sbus variables
 #define RX_BUFF_SIZE 32          //25 byte frames, plus some spare
 uint8_t rx_buffer[RX_BUFF_SIZE]; //Create the buffer
@@ -242,7 +240,7 @@ void rx_check() {
       if (sbus_stats)
         stat_frames_accepted++;
       if (bind_safety > 141) { //requires one second worth of good frames to come in before rx_ready safety can be toggled to 1
-        rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
+        flags.rx_ready = 1;    // because aux channels initialize low and clear the binding while armed flag before aux updates high
         bind_safety = 142;
       }
     }
@@ -448,7 +446,7 @@ void rx_check() {
       time_lastframe = gettime();
       if (sbus_stats) stat_frames_accepted++;
       if (bind_safety > 9) {              //requires 10 good frames to come in before rx_ready safety can be toggled to 1
-        rx_ready = 1;                     // because aux channels initialize low and clear the binding while armed flag before aux updates high
+        flags.rx_ready = 1;                     // because aux channels initialize low and clear the binding while armed flag before aux updates high
         bind_safety = 10;
       }
     }

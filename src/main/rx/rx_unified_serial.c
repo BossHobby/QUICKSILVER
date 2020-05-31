@@ -36,8 +36,6 @@
 //*****************************************
 //*****************************************
 
-int rx_ready = 0;
-
 rx_serial_protocol_t rx_serial_protocol = RX_SERIAL_PROTOCOL_INVALID;
 
 static uint8_t rx_buffer[RX_BUFF_SIZE];
@@ -188,7 +186,7 @@ void rx_check() {
       failsafe_noframes = 0;
 
     // add the 3 failsafes together
-    if (rx_ready)
+    if (flags.rx_ready)
       flags.failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
 
     if (frame_status == 1) { //USART ISR says there's enough frame to look at. Look at it.
@@ -390,7 +388,7 @@ void rx_serial_process_dsmx(void) {
     frame_status = 3; //We're done with this frame now.
 
     if (bind_safety > 120) {       //requires 120 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
-      rx_ready = 1;                // because aux channels initialize low and clear the binding while armed flag before aux updates high
+      flags.rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
       flags.rxmode = !RXMODE_BIND; // restores normal led operation
       bind_safety = 121;           // reset counter so it doesnt wrap
     }
@@ -510,7 +508,7 @@ void rx_serial_process_sbus(void) {
     frame_status = 3; //We're done with this frame now.
 
     if (bind_safety > 131) {       //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
-      rx_ready = 1;                // because aux channels initialize low and clear the binding while armed flag before aux updates high
+      flags.rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
       flags.rxmode = !RXMODE_BIND; // restores normal led operation
       bind_safety = 131;           // reset counter so it doesnt wrap
     }
@@ -627,7 +625,7 @@ void rx_serial_process_ibus(void) {
     frame_status = 3; //We're done with this frame now.
 
     if (bind_safety > 131) {       //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
-      rx_ready = 1;                // because aux channels initialize low and clear the binding while armed flag before aux updates high
+      flags.rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
       flags.rxmode = !RXMODE_BIND; // restores normal led operation
       bind_safety = 131;           // reset counter so it doesnt wrap
     }
@@ -788,7 +786,7 @@ void rx_serial_process_fport(void) {
       telemetry_counter++; // Let the telemetry section know it's time to send.
 
       if (bind_safety > 131) {       //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
-        rx_ready = 1;                // because aux channels initialize low and clear the binding while armed flag before aux updates high
+        flags.rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
         flags.rxmode = !RXMODE_BIND; // restores normal led operation
         bind_safety = 131;           // reset counter so it doesnt wrap
       }

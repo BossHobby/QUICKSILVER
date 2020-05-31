@@ -20,8 +20,6 @@
 
 #define SERIAL_BAUDRATE 115200
 
-int rx_ready = 0;
-
 // internal iBus variables
 #define RX_BUFF_SIZE 40
 uint8_t rx_buffer[RX_BUFF_SIZE];
@@ -245,7 +243,7 @@ void rx_check() {
         if (ibus_stats)
           stat_frames_accepted++;
         if (bind_safety > 141) { //requires one second worth of good frames to come in before rx_ready safety can be toggled to 1
-          rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
+          flags.rx_ready = 1;    // because aux channels initialize low and clear the binding while armed flag before aux updates high
           bind_safety = 142;
         }
       }

@@ -9,8 +9,6 @@
 #include "util.h"
 
 #if defined(RX_DSMX_2048) || defined(RX_DSM2_1024)
-
-int rx_ready = 0;
 int bind_safety = 0;
 int rx_bind_enable = 0;
 
@@ -263,7 +261,7 @@ void rx_check() {
       rx_rssi = 0.0f;
 
     if (bind_safety > 900) {       //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
-      rx_ready = 1;                // because aux channels initialize low and clear the binding while armed flag before aux updates high
+      flags.rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
       flags.failsafe = 0;          // turn off failsafe delayed a bit to emmulate led behavior of sbus protocol - optional either here or just above here
       flags.rxmode = !RXMODE_BIND; // restores normal led operation
       bind_safety = 901;           // reset counter so it doesnt wrap

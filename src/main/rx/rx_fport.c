@@ -26,8 +26,6 @@
 // FPort is normally inverted
 //#define INVERT_UART    //now handled by a function in rx_serial driver and a config define
 
-int rx_ready = 0;
-
 // internal FPORT variables
 #define RX_BUFF_SIZE 86
 uint8_t rx_buffer[RX_BUFF_SIZE];
@@ -308,7 +306,7 @@ void rx_check() {
           if (sbus_stats)
             stat_frames_accepted++;
           if (bind_safety > 111) { //requires one second worth of good frames to come in before rx_ready safety can be toggled to 1
-            rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
+            flags.rx_ready = 1;    // because aux channels initialize low and clear the binding while armed flag before aux updates high
             bind_safety = 112;
           }
         }
