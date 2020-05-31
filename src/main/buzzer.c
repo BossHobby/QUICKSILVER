@@ -7,9 +7,6 @@
 
 #ifdef BUZZER_ENABLE
 
-//#define PIN_OFF( port , pin ) GPIO_ResetBits( port , pin)   //moved to defines.h
-//#define PIN_ON( port , pin ) GPIO_SetBits( port , pin)   //moved to defines.h
-
 int gpio_init_buzzer(void) {
   // set gpio pin as output
   GPIO_InitTypeDef GPIO_InitStructure;

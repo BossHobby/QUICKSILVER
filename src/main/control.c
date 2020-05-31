@@ -47,6 +47,8 @@ control_state_t state = {
 };
 
 float throttle;
+float yawangle;
+float error[PIDNUMBER];
 
 static uint8_t idle_state;
 static uint8_t arming_release;
@@ -54,6 +56,8 @@ static uint32_t onground_long = 1;
 
 extern int pwmdir;
 extern int rx_ready;
+extern int controls_override;
+extern int acro_override;
 
 extern float thrsum;
 extern float pidoutput[PIDNUMBER];
@@ -62,17 +66,7 @@ extern float setpoint[3];
 extern float angleerror[];
 extern float attitude[];
 
-float error[PIDNUMBER];
-
-float yawangle;
-
 extern int ledcommand;
-//extern int ledblink;
-
-unsigned long timecommand = 0;
-
-extern int controls_override;
-extern int acro_override;
 
 extern profile_t profile;
 extern usb_motor_test_t usb_motor_test;

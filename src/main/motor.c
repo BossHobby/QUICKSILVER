@@ -140,8 +140,6 @@ static void motor_mixer_scale_calc(float mix[4]) {
   }
 
   if (mix_scaling) {
-    //ledcommand=1;
-
     float mix_min = 1000.0f;
     float mix_max = -1000.0f;
 

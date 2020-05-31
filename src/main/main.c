@@ -60,7 +60,6 @@ int ledcommand = 0;
 int ledblink = 0;
 unsigned long ledcommandtime = 0;
 
-uint32_t loopCounter = 0; //For tagging loops that ran long, short, freaked out, etc. Yes, Bobnova was here.
 float cpu_load = 0;
 
 void failloop(int val);
@@ -351,33 +350,35 @@ int main(void) {
 
 #ifdef DEBUG
     extern float vbatt_comp;
+    static uint32_t loop_counter = 0; //For tagging loops that ran long, short, freaked out, etc. Yes, Bobnova was here.
+
     debug.vbatt_comp = vbatt_comp;
     debug.cpu_load = cpu_load; // * 1e-3f;
 
-    if (loopCounter > 10000) {
+    if (loop_counter > 10000) {
       if (debug.cpu_load > debug.max_cpu_load) // First "few" loops are messy
       {
-        if (loopCounter < 11000) {
+        if (loop_counter < 11000) {
           debug.min_cpu_load = 1337.0f;
         }
         debug.max_cpu_load = debug.cpu_load;
-        debug.loops_between_max_cpu_load = loopCounter - debug.max_cpu_loop_number;
-        debug.max_cpu_loop_number = loopCounter;
+        debug.loops_between_max_cpu_load = loop_counter - debug.max_cpu_loop_number;
+        debug.max_cpu_loop_number = loop_counter;
       } else if (debug.cpu_load == debug.max_cpu_load) {
-        debug.loops_between_max_cpu_load = loopCounter - debug.max_cpu_loop_number;
-        debug.max_cpu_loop_number = loopCounter;
+        debug.loops_between_max_cpu_load = loop_counter - debug.max_cpu_loop_number;
+        debug.max_cpu_loop_number = loop_counter;
       } else if (debug.cpu_load < debug.min_cpu_load) // First "few" loops are messy
       {
         debug.min_cpu_load = debug.cpu_load;
-        debug.loops_between_min_cpu_load = loopCounter - debug.min_cpu_loop_number;
-        debug.min_cpu_loop_number = loopCounter;
+        debug.loops_between_min_cpu_load = loop_counter - debug.min_cpu_loop_number;
+        debug.min_cpu_loop_number = loop_counter;
       } else if (debug.cpu_load == debug.min_cpu_load) {
-        debug.loops_between_min_cpu_load = loopCounter - debug.min_cpu_loop_number;
-        debug.min_cpu_loop_number = loopCounter + 0x0001000;
+        debug.loops_between_min_cpu_load = loop_counter - debug.min_cpu_loop_number;
+        debug.min_cpu_loop_number = loop_counter + 0x0001000;
       }
     }
 
-    loopCounter++;
+    loop_counter++;
 #endif
 
     while ((timer_micros() - time) < LOOPTIME)
