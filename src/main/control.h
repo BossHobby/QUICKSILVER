@@ -27,8 +27,10 @@ typedef struct {
   float looptime;      // looptime in seconds
   float osd_totaltime; // running sum of looptimes
 
-  vec4_t rx;                    // holds the main four channels, roll, pitch, yaw, throttle
-  vec4_t rx_filtered;           // same as above, but filtered by the rx smoothing
+  vec4_t rx;          // holds the main four channels, roll, pitch, yaw, throttle
+  vec4_t rx_filtered; // same as above, but filtered by the rx smoothing
+  vec4_t rx_override;
+
   uint8_t aux[AUX_CHANNEL_MAX]; // digital on / off channels
 
   vec3_t accel_raw;

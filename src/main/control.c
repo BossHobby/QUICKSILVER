@@ -72,7 +72,6 @@ extern int ledcommand;
 unsigned long timecommand = 0;
 
 extern int controls_override;
-extern float rx_override[];
 extern int acro_override;
 
 extern profile_t profile;
@@ -101,7 +100,7 @@ void control(void) {
 
   if (controls_override) {
     for (int i = 0; i < 3; i++) {
-      state.rx_filtered.axis[i] = rx_override[i];
+      state.rx_filtered.axis[i] = state.rx_override.axis[i];
     }
   }
 #endif
@@ -396,7 +395,7 @@ void control(void) {
     }
 
     if (controls_override) { // change throttle in flip mode
-      throttle = rx_override[3];
+      throttle = state.rx_override.axis[3];
     }
 
     // throttle angle compensation
