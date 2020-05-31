@@ -581,9 +581,7 @@ void send_beacon() {
 #warning WARNING!!! USING RANDOM MAC ADDRESS! PLEASE READ COMMENT INSIDE rx_bayang_ble_app.c REGARDING POSSIBLE PROBLEMS WITH BLUETOOTH DUE TO ANDROID BUG!
 #endif
   // SilverVISE - end
-
-  extern float vbatt_comp;
-  int vbatt_comp_int = vbatt_comp * 1000.0f;
+  int vbatt_comp_int = state.vbatt_comp * 1000.0f;
 
   unsigned int time = gettime();
 

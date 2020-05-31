@@ -80,8 +80,6 @@ bool fport_debug_telemetry = false;
 uint8_t telemetry_offset = 0;
 uint8_t telemetry_packet[14];
 
-extern float vbattfilt;
-extern float vbatt_comp;
 extern int current_pid_axis;
 extern int current_pid_term;
 
@@ -828,7 +826,6 @@ void rx_serial_send_fport_telemetry() {
         0x0720, //ACC-X, misused for PID-D
     };
 
-    extern float lipo_cell_count; // For telemetry
     //Telemetry time! Let's have some variables
     telemetry_packet[0] = 0x08; //Bytes 0 through 2 are static in this implementation
     telemetry_packet[1] = 0x81;
@@ -836,22 +833,22 @@ void rx_serial_send_fport_telemetry() {
     if (telemetry_position == 0) {                                 //vbat_comp
       telemetry_packet[3] = telemetryIDs[telemetry_position];      //0x10;
       telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8; //0x02;
-      telemetry_packet[5] = (int)(vbatt_comp * 100);
-      telemetry_packet[6] = (int)(vbatt_comp * 100) >> 8;
+      telemetry_packet[5] = (int)(state.vbatt_comp * 100);
+      telemetry_packet[6] = (int)(state.vbatt_comp * 100) >> 8;
       telemetry_packet[7] = 0x00;
       telemetry_packet[8] = 0x00;
     } else if (telemetry_position == 1) {                          //vbattfilt
       telemetry_packet[3] = telemetryIDs[telemetry_position];      //x11;
       telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8; //0x02;
-      telemetry_packet[5] = (int)(vbattfilt * 100);
-      telemetry_packet[6] = (int)(vbattfilt * 100) >> 8;
+      telemetry_packet[5] = (int)(state.vbattfilt * 100);
+      telemetry_packet[6] = (int)(state.vbattfilt * 100) >> 8;
       telemetry_packet[7] = 0x00;
       telemetry_packet[8] = 0x00;
     } else if (telemetry_position == 2) { //Cell count
       telemetry_packet[3] = telemetryIDs[telemetry_position];
       telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8;
-      telemetry_packet[5] = (int)(lipo_cell_count * 100);
-      telemetry_packet[6] = (int)(lipo_cell_count * 100) >> 8;
+      telemetry_packet[5] = (int)(state.lipo_cell_count * 100);
+      telemetry_packet[6] = (int)(state.lipo_cell_count * 100) >> 8;
       telemetry_packet[7] = 0x00;
       telemetry_packet[8] = 0x00;
     } else if (telemetry_position == 3) {                          //PID axis(hundreds column) and P/I/D (ones column) being adjusted currently

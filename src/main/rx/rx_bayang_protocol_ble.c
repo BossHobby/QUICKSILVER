@@ -414,9 +414,7 @@ void send_beacon() {
 
   uint8_t L = 0;
 
-  extern float vbattfilt;
-
-  int vbatt = vbattfilt * 1000.0f;
+  int vbatt = state.vbattfilt * 1000.0f;
 
   unsigned int time = gettime();
 

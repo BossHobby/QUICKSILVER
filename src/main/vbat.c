@@ -4,27 +4,14 @@
 #include "drv_adc.h"
 #include "profile.h"
 
-// filtered battery in volts
-float vbattfilt = 0.0;
-float vbattfilt_corr = 4.2;
-float vbatt_comp = 4.2;
-
-// voltage reference for vcc compensation
-float vreffilt = 1.0;
-
-float lipo_cell_count = 1.0;
-
-// average of all motors
-float thrfilt = 0;
-
 extern profile_t profile;
 
 void vbat_init() {
   int count = 0;
   while (count < 5000) {
-    float bootadc = adc_read(0) * vreffilt;
-    lpf(&vreffilt, adc_read(1), 0.9968f);
-    lpf(&vbattfilt, bootadc, 0.9968f);
+    float bootadc = adc_read(0) * state.vreffilt;
+    lpf(&state.vreffilt, adc_read(1), 0.9968f);
+    lpf(&state.vbattfilt, bootadc, 0.9968f);
     count++;
   }
 
@@ -32,42 +19,45 @@ void vbat_init() {
     // Lipo count not specified, trigger auto detect
     for (int i = 6; i > 0; i--) {
       float cells = i;
-      if (vbattfilt / cells > 3.7f) {
-        lipo_cell_count = (float)cells;
+      if (state.vbattfilt / cells > 3.7f) {
+        state.lipo_cell_count = (float)cells;
         break;
       }
     }
   } else {
-    lipo_cell_count = (float)profile.voltage.lipo_cell_count;
+    state.lipo_cell_count = (float)profile.voltage.lipo_cell_count;
   }
 
-  vbattfilt_corr *= (float)lipo_cell_count;
+  state.vbattfilt_corr *= (float)state.lipo_cell_count;
 }
 
 void vbat_calc() {
   // read acd and scale based on processor voltage
-  float battadc = adc_read(0) * vreffilt;
+  float battadc = adc_read(0) * state.vreffilt;
   // read and filter internal reference
-  lpf(&vreffilt, adc_read(1), 0.9968f);
+  lpf(&state.vreffilt, adc_read(1), 0.9968f);
 
   // average of all 4 motor thrusts
   // should be proportional with battery current
   extern float thrsum; // from control.c
+
+  // average of all motors
+  static float thrfilt = 0;
 
   // filter motorpwm so it has the same delay as the filtered voltage
   // ( or they can use a single filter)
   lpf(&thrfilt, thrsum, 0.9968f); // 0.5 sec at 1.6ms loop time
 
   // li-ion battery model compensation time decay ( 18 seconds )
-  lpf(&vbattfilt_corr, vbattfilt, FILTERCALC(1000, 18000e3));
+  lpf(&state.vbattfilt_corr, state.vbattfilt, FILTERCALC(1000, 18000e3));
 
-  lpf(&vbattfilt, battadc, 0.9968f);
+  lpf(&state.vbattfilt, battadc, 0.9968f);
 
   // compensation factor for li-ion internal model
   // zero to bypass
 #define CF1 0.25f
 
-  float tempvolt = vbattfilt * (1.00f + CF1) - vbattfilt_corr * (CF1);
+  float tempvolt = state.vbattfilt * (1.00f + CF1) - state.vbattfilt_corr * (CF1);
 
 #ifdef AUTO_VDROP_FACTOR
 
@@ -121,10 +111,10 @@ void vbat_calc() {
   else
     hyst = 0.0f;
 
-  if ((tempvolt + (float)VDROP_FACTOR * thrfilt < (profile.voltage.vbattlow * lipo_cell_count) + hyst) || (vbattfilt < (float)2.7f))
+  if ((tempvolt + (float)VDROP_FACTOR * thrfilt < (profile.voltage.vbattlow * state.lipo_cell_count) + hyst) || (state.vbattfilt < (float)2.7f))
     flags.lowbatt = 1;
   else
     flags.lowbatt = 0;
 
-  vbatt_comp = tempvolt + (float)VDROP_FACTOR * thrfilt;
+  state.vbatt_comp = tempvolt + (float)VDROP_FACTOR * thrfilt;
 }

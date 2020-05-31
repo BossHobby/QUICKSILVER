@@ -34,7 +34,6 @@ extern uint8_t protocol_state;
 extern frsky_bind_data frsky_bind;
 
 extern int rx_bind_enable;
-extern float vbattfilt;
 
 uint8_t frsky_extract_rssi(uint8_t rssi_raw);
 uint8_t frsky_detect();
@@ -237,8 +236,8 @@ static uint8_t frsky_d8_handle_packet() {
           telemetry[0] = 0x11; // length
           telemetry[1] = frsky_bind.tx_id[0];
           telemetry[2] = frsky_bind.tx_id[1];
-          telemetry[3] = (uint8_t)(vbattfilt * 100);
-          telemetry[4] = (uint8_t)(vbattfilt * 100);
+          telemetry[3] = (uint8_t)(state.vbattfilt * 100);
+          telemetry[4] = (uint8_t)(state.vbattfilt * 100);
           telemetry[5] = frsky_extract_rssi(packet[18]);
 #ifdef FRSKY_ENABLE_HUB_TELEMETRY
           telemetry[6] = frsky_d8_append_hub_telemetry(telemetry_id, telemetry + 8);

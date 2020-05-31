@@ -69,8 +69,6 @@ uint32 ticksLongest = 0;
 //Telemetry variables
 
 //Global values to send as telemetry
-extern float vbattfilt;
-extern float vbatt_comp;
 uint8_t telemetryPacket[10];
 
 uint16_t telemetryIDs[] = {

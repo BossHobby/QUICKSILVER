@@ -659,10 +659,6 @@ void print_osd_mixed_data(uint8_t string_element_qty, uint8_t data_element_qty, 
 //************************************************************************************************************************************************************************************
 
 void osd_display(void) {
-  extern float vbattfilt;
-  extern float vbattfilt_corr;
-  extern float vbatt_comp;
-  extern float lipo_cell_count;
   extern float throttle;
 
   //first check if video signal autodetect needs to run - run if necessary
@@ -736,7 +732,7 @@ void osd_display(void) {
     case 1:
       if (osd_decode(*fuelgauge_volts, ACTIVE)) {
         uint8_t osd_fuelgauge_volts[5];
-        fast_fprint(osd_fuelgauge_volts, 4, vbatt_comp, 1);
+        fast_fprint(osd_fuelgauge_volts, 4, state.vbatt_comp, 1);
         osd_fuelgauge_volts[4] = 'V';
         osd_print_data(osd_fuelgauge_volts, 5, osd_decode(*fuelgauge_volts, ATTRIBUTE), osd_decode(*fuelgauge_volts, POSITIONX) + 3, osd_decode(*fuelgauge_volts, POSITIONY));
       }
@@ -746,7 +742,7 @@ void osd_display(void) {
     case 2:
       if (osd_decode(*fuelgauge_volts, ACTIVE)) {
         if (flags.lowbatt != last_lowbatt_state) {
-          uint8_t osd_cellcount[2] = {lipo_cell_count + 48, 'S'};
+          uint8_t osd_cellcount[2] = {state.lipo_cell_count + 48, 'S'};
           if (!flags.lowbatt) {
             osd_print_data(osd_cellcount, 2, osd_decode(*fuelgauge_volts, ATTRIBUTE), osd_decode(*fuelgauge_volts, POSITIONX), osd_decode(*fuelgauge_volts, POSITIONY));
           } else {
@@ -761,7 +757,7 @@ void osd_display(void) {
     case 3:
       if (osd_decode(*filtered_volts, ACTIVE)) {
         uint8_t osd_filtered_volts[5];
-        fast_fprint(osd_filtered_volts, 4, vbattfilt_corr, 1);
+        fast_fprint(osd_filtered_volts, 4, state.vbattfilt_corr, 1);
         osd_filtered_volts[4] = 'V';
         osd_print_data(osd_filtered_volts, 5, osd_decode(*filtered_volts, ATTRIBUTE), osd_decode(*filtered_volts, POSITIONX) + 3, osd_decode(*filtered_volts, POSITIONY));
       }
@@ -771,7 +767,7 @@ void osd_display(void) {
     case 4:
       if (osd_decode(*filtered_volts, ACTIVE)) {
         if (flags.lowbatt != last_lowbatt_state2) {
-          uint8_t osd_cellcount2[2] = {lipo_cell_count + 48, 'S'};
+          uint8_t osd_cellcount2[2] = {state.lipo_cell_count + 48, 'S'};
           if (!flags.lowbatt) {
             osd_print_data(osd_cellcount2, 2, osd_decode(*filtered_volts, ATTRIBUTE), osd_decode(*filtered_volts, POSITIONX), osd_decode(*filtered_volts, POSITIONY));
           } else {
@@ -786,7 +782,7 @@ void osd_display(void) {
     case 5:
       if (osd_decode(*exact_volts, ACTIVE)) {
         uint8_t osd_exact_volts[5];
-        fast_fprint(osd_exact_volts, 4, vbattfilt, 1);
+        fast_fprint(osd_exact_volts, 4, state.vbattfilt, 1);
         osd_exact_volts[4] = 'V';
         osd_print_data(osd_exact_volts, 5, osd_decode(*exact_volts, ATTRIBUTE), osd_decode(*exact_volts, POSITIONX) + 3, osd_decode(*exact_volts, POSITIONY));
       }
@@ -796,7 +792,7 @@ void osd_display(void) {
     case 6:
       if (osd_decode(*exact_volts, ACTIVE)) {
         if (flags.lowbatt != last_lowbatt_state3) {
-          uint8_t osd_cellcount3[2] = {lipo_cell_count + 48, 'S'};
+          uint8_t osd_cellcount3[2] = {state.lipo_cell_count + 48, 'S'};
           if (!flags.lowbatt) {
             osd_print_data(osd_cellcount3, 2, osd_decode(*exact_volts, ATTRIBUTE), osd_decode(*exact_volts, POSITIONX), osd_decode(*exact_volts, POSITIONY));
           } else {

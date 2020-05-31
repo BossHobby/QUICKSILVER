@@ -150,7 +150,7 @@ int main(void) {
 
 #ifdef RX_BAYANG_BLE_APP
   // for randomising MAC adddress of ble app - this will make the int = raw float value
-  random_seed = *(int *)&vbattfilt;
+  random_seed = *(int *)&state.vbattfilt;
   random_seed = random_seed & 0xff;
 #endif
 
@@ -349,10 +349,9 @@ int main(void) {
     cpu_load = (timer_micros() - lastlooptime);
 
 #ifdef DEBUG
-    extern float vbatt_comp;
     static uint32_t loop_counter = 0; //For tagging loops that ran long, short, freaked out, etc. Yes, Bobnova was here.
 
-    debug.vbatt_comp = vbatt_comp;
+    debug.vbatt_comp = state.vbatt_comp;
     debug.cpu_load = cpu_load; // * 1e-3f;
 
     if (loop_counter > 10000) {

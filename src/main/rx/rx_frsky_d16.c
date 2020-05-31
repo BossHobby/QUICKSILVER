@@ -227,8 +227,6 @@ static void frsky_d16_build_telemetry(uint8_t *telemetry) {
   static uint8_t even_odd = 0;
   static uint8_t local_packet_id = 0;
 
-  extern float vbattfilt;
-
   telemetry[0] = 0x0E; // length
   telemetry[1] = frsky_bind.tx_id[0];
   telemetry[2] = frsky_bind.tx_id[1];
@@ -236,7 +234,7 @@ static void frsky_d16_build_telemetry(uint8_t *telemetry) {
   if (even_odd) {
     telemetry[4] = rssi | 0x80;
   } else {
-    telemetry[4] = (uint8_t)(vbattfilt * 10) & 0x7f;
+    telemetry[4] = (uint8_t)(state.vbattfilt * 10) & 0x7f;
   }
   even_odd = even_odd == 1 ? 0 : 1;
 

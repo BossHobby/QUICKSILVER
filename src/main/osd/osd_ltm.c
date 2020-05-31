@@ -104,8 +104,6 @@ void send_g_frame() {
 //  Airspeed, uchar8, [m/s]
 //  Status, uchar
 
-extern float vbattfilt;
-
 //extern int packetpersecond;
 extern struct rxdebug rxdebug;
 
@@ -113,8 +111,8 @@ void send_s_frame() {
   sendheader();
   Serial_print('S');
   crc = 0;
-  sendint((unsigned int)vbattfilt * 10 + 0.5f); // vbatt mV 126 = 12.6
-  sendint(1000);                                // current mA
+  sendint((unsigned int)state.vbattfilt * 10 + 0.5f); // vbatt mV 126 = 12.6
+  sendint(1000);                                      // current mA
 
   int rssi = rxdebug.packetpersecond;
   if (rssi > 255)

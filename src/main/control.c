@@ -44,6 +44,15 @@ control_flags_t flags = {
 
 control_state_t state = {
     .aux = {0},
+
+    .vbattfilt = 0.0,
+    .vbattfilt_corr = 4.2,
+    .vbatt_comp = 4.2,
+
+    // voltage reference for vcc compensation
+    .vreffilt = 1.0,
+
+    .lipo_cell_count = 1.0,
 };
 
 float throttle;
@@ -411,18 +420,16 @@ void control(void) {
 #ifdef LVC_LOWER_THROTTLE
 
 #ifdef SWITCHABLE_FEATURE_2
-    extern float vbatt_comp;
-    extern float vbattfilt;
     extern int flash_feature_2;
     static float throttle_i = 0.0f;
     float throttle_p = 0.0f;
     if (flash_feature_2 == 1) {
       // can be made into a function
-      if (vbattfilt < (float)LVC_LOWER_THROTTLE_VOLTAGE_RAW)
-        throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE_RAW - vbattfilt) * (float)LVC_LOWER_THROTTLE_KP;
+      if (state.vbattfilt < (float)LVC_LOWER_THROTTLE_VOLTAGE_RAW)
+        throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE_RAW - state.vbattfilt) * (float)LVC_LOWER_THROTTLE_KP;
       // can be made into a function
-      if (vbatt_comp < (float)LVC_LOWER_THROTTLE_VOLTAGE)
-        throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE - vbatt_comp) * (float)LVC_LOWER_THROTTLE_KP;
+      if (state.vbatt_comp < (float)LVC_LOWER_THROTTLE_VOLTAGE)
+        throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE - state.vbatt_comp) * (float)LVC_LOWER_THROTTLE_KP;
 
       if (throttle_p > 1.0f)
         throttle_p = 1.0f;
@@ -442,16 +449,14 @@ void control(void) {
       //do nothing - feature is disabled via stick gesture
     }
 #else
-    extern float vbatt_comp;
-    extern float vbattfilt;
     static float throttle_i = 0.0f;
     float throttle_p = 0.0f;
     // can be made into a function
-    if (vbattfilt < (float)LVC_LOWER_THROTTLE_VOLTAGE_RAW)
-      throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE_RAW - vbattfilt) * (float)LVC_LOWER_THROTTLE_KP;
+    if (state.vbattfilt < (float)LVC_LOWER_THROTTLE_VOLTAGE_RAW)
+      throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE_RAW - state.vbattfilt) * (float)LVC_LOWER_THROTTLE_KP;
     // can be made into a function
-    if (vbatt_comp < (float)LVC_LOWER_THROTTLE_VOLTAGE)
-      throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE - vbatt_comp) * (float)LVC_LOWER_THROTTLE_KP;
+    if (state.vbatt_comp < (float)LVC_LOWER_THROTTLE_VOLTAGE)
+      throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE - state.vbatt_comp) * (float)LVC_LOWER_THROTTLE_KP;
 
     if (throttle_p > 1.0f)
       throttle_p = 1.0f;

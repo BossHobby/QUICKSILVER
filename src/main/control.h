@@ -36,6 +36,12 @@ typedef struct {
   vec4_t rx_filtered; // same as above, but filtered by the rx smoothing
   vec4_t rx_override;
 
+  float lipo_cell_count;
+  float vbattfilt; // filtered battery in volts
+  float vbattfilt_corr;
+  float vbatt_comp;
+  float vreffilt; // voltage reference for vcc compensation
+
   uint8_t aux[AUX_CHANNEL_MAX]; // digital on / off channels
 
   vec3_t accel_raw;

@@ -14,7 +14,6 @@ blackbox_t blackbox;
 static uint8_t blackbox_enabled = 0;
 
 extern float cpu_load;
-extern float vbattfilt;
 
 extern float GEstG[3];
 extern float pidoutput[3];
@@ -135,7 +134,7 @@ void blackbox_update() {
 
   blackbox.cpu_load = cpu_load;
 
-  blackbox.vbat_filter = vbattfilt * 10;
+  blackbox.vbat_filter = state.vbattfilt * 10;
 
   blackbox.rx_raw = state.rx;
   blackbox.rx_filter = state.rx_filtered;

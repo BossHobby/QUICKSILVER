@@ -196,9 +196,6 @@ void beacon_sequence() {
   }
 }
 
-extern float vbattfilt;
-extern float vbatt_comp;
-
 void send_telemetry() {
 
   int txdata[15];
@@ -207,12 +204,12 @@ void send_telemetry() {
   txdata[0] = 133;
   txdata[1] = flags.lowbatt;
 
-  int vbatt = vbattfilt * 100;
+  int vbatt = state.vbattfilt * 100;
   // battery volt filtered
   txdata[3] = (vbatt >> 8) & 0xff;
   txdata[4] = vbatt & 0xff;
 
-  vbatt = vbatt_comp * 100;
+  vbatt = state.vbatt_comp * 100;
   // battery volt compensated
   txdata[5] = (vbatt >> 8) & 0xff;
   txdata[6] = vbatt & 0xff;

@@ -60,7 +60,6 @@ static float current_kd[PIDNUMBER] = {0, 0, 0};
 
 extern float error[PIDNUMBER];
 extern float setpoint[PIDNUMBER];
-extern float vbattfilt_corr;
 
 // multiplier for pids at 3V - for PID_VOLTAGE_COMPENSATION - default 1.33f from H101 code
 #define PID_VC_FACTOR 1.33f
@@ -95,8 +94,7 @@ void pid_precalc() {
   filter_coeff(profile.filter.dterm[1].type, &filter[1], profile.filter.dterm[1].cutoff_freq);
 
   if (profile.voltage.pid_voltage_compensation) {
-    extern float lipo_cell_count;
-    v_compensation = mapf((vbattfilt_corr / (float)lipo_cell_count), 2.5f, 3.85f, PID_VC_FACTOR, 1.0f);
+    v_compensation = mapf((state.vbattfilt_corr / (float)state.lipo_cell_count), 2.5f, 3.85f, PID_VC_FACTOR, 1.0f);
     v_compensation = constrainf(v_compensation, 1.0f, PID_VC_FACTOR);
 
 #ifdef LEVELMODE_PID_ATTENUATION

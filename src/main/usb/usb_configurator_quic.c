@@ -38,9 +38,6 @@ extern uint32_t pid_rate_presets_count;
 
 extern vtx_settings_t vtx_settings;
 
-extern float vbattfilt;
-extern float vbatt_comp;
-
 extern uint8_t blackbox_override;
 extern uint32_t blackbox_rate;
 
