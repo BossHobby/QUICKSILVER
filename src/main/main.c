@@ -47,8 +47,6 @@ void clk_init(void);
 extern void flash_load(void);
 extern void flash_hard_coded_pid_identifier(void);
 
-// looptime in seconds
-float looptime;
 uint32_t lastlooptime;
 
 // running sum of looptimes
@@ -206,17 +204,17 @@ int main(void) {
     }
 
     uint32_t time = timer_micros();
-    looptime = ((uint32_t)(time - lastlooptime));
-    if (looptime <= 0)
-      looptime = 1;
-    looptime = looptime * 1e-6f;
-    if (looptime > 0.02f) { // max loop 20ms
+    state.looptime = ((uint32_t)(time - lastlooptime));
+    if (state.looptime <= 0)
+      state.looptime = 1;
+    state.looptime = state.looptime * 1e-6f;
+    if (state.looptime > 0.02f) { // max loop 20ms
       failloop(6);
       //endless loop
     }
-    osd_totaltime += looptime;
+    osd_totaltime += state.looptime;
 #ifdef DEBUG
-    debug.totaltime += looptime;
+    debug.totaltime += state.looptime;
     lpf(&debug.timefilt, looptime, 0.998);
 #endif
     lastlooptime = time;

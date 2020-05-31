@@ -24,6 +24,8 @@ typedef struct {
 extern control_flags_t flags;
 
 typedef struct {
+  float looptime; // looptime in seconds
+
   vec4_t rx;                    // holds the main four channels, roll, pitch, yaw, throttle
   vec4_t rx_filtered;           // same as above, but filtered by the rx smoothing
   uint8_t aux[AUX_CHANNEL_MAX]; // digital on / off channels

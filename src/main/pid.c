@@ -60,8 +60,6 @@ static float current_kd[PIDNUMBER] = {0, 0, 0};
 
 extern float error[PIDNUMBER];
 extern float setpoint[PIDNUMBER];
-extern float looptime;
-extern float looptime;
 extern float vbattfilt_corr;
 
 // multiplier for pids at 3V - for PID_VOLTAGE_COMPENSATION - default 1.33f from H101 code
@@ -90,7 +88,7 @@ void pid_init() {
 // 0.0032f is there for legacy purposes, should be 0.001f = looptime
 // this is called in advance as an optimization because it has division
 void pid_precalc() {
-  timefactor = 0.0032f / looptime;
+  timefactor = 0.0032f / state.looptime;
   extern float throttle;
 
   filter_coeff(profile.filter.dterm[0].type, &filter[0], profile.filter.dterm[0].cutoff_freq);
@@ -170,7 +168,7 @@ float pid(int x) {
   //SIMPSON_RULE_INTEGRAL
   if (!iwindup) {
     // assuming similar time intervals
-    ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + error[x]) * current_ki[x] * looptime;
+    ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + error[x]) * current_ki[x] * state.looptime;
     lasterror2[x] = lasterror[x];
     lasterror[x] = error[x];
   }
@@ -343,15 +341,15 @@ int decrease_pid() {
 void rotateErrors() {
 #ifdef YAW_FIX
   // rotation around x axis:
-  ierror[1] -= ierror[2] * state.gyro.axis[0] * looptime;
-  ierror[2] += ierror[1] * state.gyro.axis[0] * looptime;
+  ierror[1] -= ierror[2] * state.gyro.axis[0] * state.looptime;
+  ierror[2] += ierror[1] * state.gyro.axis[0] * state.looptime;
 
   // rotation around y axis:
-  ierror[2] -= ierror[0] * state.gyro.axis[1] * looptime;
-  ierror[0] += ierror[2] * state.gyro.axis[1] * looptime;
+  ierror[2] -= ierror[0] * state.gyro.axis[1] * state.looptime;
+  ierror[0] += ierror[2] * state.gyro.axis[1] * state.looptime;
 
   // rotation around z axis:
-  ierror[0] -= ierror[1] * state.gyro.axis[2] * looptime;
-  ierror[1] += ierror[0] * state.gyro.axis[2] * looptime;
+  ierror[0] -= ierror[1] * state.gyro.axis[2] * state.looptime;
+  ierror[1] += ierror[0] * state.gyro.axis[2] * state.looptime;
 #endif
 }

@@ -65,7 +65,6 @@ extern float attitude[];
 float error[PIDNUMBER];
 
 float yawangle;
-//extern float looptime;
 
 extern int ledcommand;
 //extern int ledblink;

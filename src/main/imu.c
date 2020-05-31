@@ -42,8 +42,6 @@
 float GEstG[3] = {0, 0, ACC_1G};
 float attitude[3];
 
-extern float looptime;
-
 float calcmagnitude(float vector[3]) {
   float accmag = 0;
   for (uint8_t axis = 0; axis < 3; axis++) {
@@ -103,7 +101,7 @@ void imu_calc() {
 
   float gyros[3];
   for (int i = 0; i < 3; i++) {
-    gyros[i] = state.gyro.axis[i] * looptime;
+    gyros[i] = state.gyro.axis[i] * state.looptime;
   }
 
   const float cosx = _cosf(gyros[1]);
@@ -145,7 +143,7 @@ void imu_calc() {
         state.accel.axis[axis] = state.accel.axis[axis] * (ACC_1G / accmag);
       }
 
-      float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FASTFILTER);
+      float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FASTFILTER);
       for (int x = 0; x < 3; x++) {
         lpf(&GEstG[x], state.accel.axis[x], filtcoeff);
       }
@@ -155,7 +153,7 @@ void imu_calc() {
     for (int axis = 0; axis < 3; axis++) {
       state.accel.axis[axis] = state.accel.axis[axis] * (ACC_1G / accmag);
     }
-    float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FILTERTIME);
+    float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FILTERTIME);
     for (int x = 0; x < 3; x++) {
       lpf(&GEstG[x], state.accel.axis[x], filtcoeff);
     }
@@ -177,9 +175,9 @@ void imu_calc() {
 #ifdef SILVERWARE_IMU
 void imu_calc() {
   const float gyro_delta_angle[3] = {
-      state.gyro.axis[0] * looptime,
-      state.gyro.axis[1] * looptime,
-      state.gyro.axis[2] * looptime,
+      state.gyro.axis[0] * state.looptime,
+      state.gyro.axis[1] * state.looptime,
+      state.gyro.axis[2] * state.looptime,
   };
 
   GEstG[2] = GEstG[2] - (gyro_delta_angle[0]) * GEstG[0];
@@ -200,7 +198,7 @@ void imu_calc() {
         state.accel_raw.axis[axis] = state.accel_raw.axis[axis] * (ACC_1G / accmag);
       }
 
-      float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FASTFILTER);
+      float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FASTFILTER);
       for (int x = 0; x < 3; x++) {
         lpf(&GEstG[x], state.accel_raw.axis[x], filtcoeff);
       }
@@ -209,7 +207,7 @@ void imu_calc() {
     //lateshift bartender - quad is IN AIR and things are getting wild
     // hit state.accel_raw.axis[3] with a sledgehammer
 #ifdef PREFILTER
-    float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)PREFILTER);
+    float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)PREFILTER);
     for (int x = 0; x < 3; x++) {
       lpf(&state.accel.axis[x], state.accel_raw.axis[x], filtcoeff);
     }
@@ -227,7 +225,7 @@ void imu_calc() {
         state.accel.axis[axis] = state.accel.axis[axis] * (ACC_1G / accmag);
       }
       // filter accel on to GEstG
-      float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FILTERTIME);
+      float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FILTERTIME);
       for (int x = 0; x < 3; x++) {
         lpf(&GEstG[x], state.accel.axis[x], filtcoeff);
       }
@@ -249,9 +247,9 @@ void imu_calc() {
 #ifdef QUICKSILVER_IMU
 void imu_calc() {
   const float gyro_delta_angle[3] = {
-      state.gyro.axis[0] * looptime,
-      state.gyro.axis[1] * looptime,
-      state.gyro.axis[2] * looptime,
+      state.gyro.axis[0] * state.looptime,
+      state.gyro.axis[1] * state.looptime,
+      state.gyro.axis[2] * state.looptime,
   };
 
   GEstG[2] = GEstG[2] - (gyro_delta_angle[0]) * GEstG[0];
@@ -281,13 +279,13 @@ void imu_calc() {
 
     if (flags.onground) {
       //happyhour bartender - quad is ON GROUND and disarmed
-      const float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FASTFILTER);
+      const float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FASTFILTER);
       lpf(&GEstG[0], state.accel.axis[0], filtcoeff);
       lpf(&GEstG[1], state.accel.axis[1], filtcoeff);
       lpf(&GEstG[2], state.accel.axis[2], filtcoeff);
     } else {
       //lateshift bartender - quad is IN AIR and things are getting wild
-      const float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FILTERTIME);
+      const float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FILTERTIME);
       lpf(&GEstG[0], state.accel.axis[0], filtcoeff);
       lpf(&GEstG[1], state.accel.axis[1], filtcoeff);
       lpf(&GEstG[2], state.accel.axis[2], filtcoeff);

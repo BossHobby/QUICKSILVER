@@ -1,9 +1,8 @@
 #include "filter.h"
 
+#include "control.h"
 #include "math.h"
 #include "project.h"
-
-extern float looptime;
 
 // calculates the coefficient for lpf filter, times in the same units
 float lpfcalc(float sampleperiod, float filtertime) {
@@ -39,7 +38,7 @@ void filter_lp_pt1_init(filter_lp_pt1 *filter, filter_state_t *state, uint8_t co
 }
 
 void filter_lp_pt1_coeff(filter_lp_pt1 *filter, float hz) {
-  filter->alpha = FILTERCALC(looptime, (1.0f / hz));
+  filter->alpha = FILTERCALC(state.looptime, (1.0f / hz));
 }
 
 float filter_lp_pt1_step(filter_lp_pt1 *filter, filter_state_t *state, float in) {
@@ -64,7 +63,7 @@ void filter_lp2_pt1_init(filter_lp2_pt1 *filter, filter_state_t *state, uint8_t 
 }
 
 void filter_lp2_pt1_coeff(filter_lp2_pt1 *filter, float hz) {
-  const float alpha = FILTERCALC(looptime, (1.0f / hz));
+  const float alpha = FILTERCALC(state.looptime, (1.0f / hz));
 
   filter->two_one_minus_alpha = 2 * alpha;
   filter->one_minus_alpha_sqr = (alpha) * (alpha);
