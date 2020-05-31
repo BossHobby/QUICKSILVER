@@ -8,6 +8,8 @@
 #define RXMODE_BIND 0
 #define RXMODE_NORMAL 1
 
+#define ANGLE_PID_SIZE 2
+
 // THE UN OF STRUCTS
 typedef struct {
   uint8_t armed_state : 1;
@@ -38,6 +40,8 @@ typedef struct {
 
   vec3_t gyro_raw;
   vec3_t gyro;
+
+  float angleerror[ANGLE_PID_SIZE];
 } control_state_t;
 
 extern control_state_t state;

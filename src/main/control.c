@@ -63,7 +63,6 @@ extern float thrsum;
 extern float pidoutput[PIDNUMBER];
 extern float setpoint[3];
 
-extern float angleerror[];
 extern float attitude[];
 
 extern int ledcommand;
@@ -135,7 +134,7 @@ void control(void) {
         error[1] = rates[1] - state.gyro.axis[1];
       } else {
         //roll is leveled to max angle limit
-        angleerror[0] = errorvect[0];
+        state.angleerror[0] = errorvect[0];
         error[0] = angle_pid(0) + yawerror[0] - state.gyro.axis[0];
         //pitch is acro
         error[1] = rates[1] - state.gyro.axis[1];
@@ -172,7 +171,7 @@ void control(void) {
         error[0] = rates[0] - state.gyro.axis[0];
         error[1] = rates[1] - state.gyro.axis[1];
       } else { // apply a transitioning mix of acro and level behavior inside of stick HORIZON_TRANSITION point and full acro beyond stick HORIZON_TRANSITION point
-        angleerror[0] = errorvect[0];
+        state.angleerror[0] = errorvect[0];
         // roll angle strength fades out as sticks approach HORIZON_TRANSITION while acro stength fades in according to value of acroFade factor
         error[0] = ((angle_pid(0) + yawerror[0] - state.gyro.axis[0]) * (1 - fade)) + (fade * (rates[0] - state.gyro.axis[0]));
         //pitch is acro
@@ -212,7 +211,7 @@ void control(void) {
         if (GEstG[2] < 0) {
           error[i] = rates[i] - state.gyro.axis[i];
         } else { // apply a transitioning mix of acro and level behavior inside of stick HORIZON_TRANSITION point and full acro beyond stick HORIZON_TRANSITION point
-          angleerror[i] = errorvect[i];
+          state.angleerror[i] = errorvect[i];
           //  angle strength fades out as sticks approach HORIZON_TRANSITION while acro stength fades in according to value of acroFade factor
           error[i] = ((angle_pid(i) + yawerror[i] - state.gyro.axis[i]) * (1 - fade)) + (fade * (rates[i] - state.gyro.axis[i]));
         }
@@ -223,7 +222,7 @@ void control(void) {
     } else { //standard level mode
       // pitch and roll
       for (int i = 0; i <= 1; i++) {
-        angleerror[i] = errorvect[i];
+        state.angleerror[i] = errorvect[i];
         error[i] = angle_pid(i) + yawerror[i] - state.gyro.axis[i];
       }
       // yaw
