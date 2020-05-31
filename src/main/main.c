@@ -49,11 +49,6 @@ extern void flash_hard_coded_pid_identifier(void);
 
 uint32_t lastlooptime;
 
-// running sum of looptimes
-float osd_totaltime;
-
-//int minindex = 0;
-
 extern profile_t profile;
 
 //Flash Memory Feature defaults for a flash w/full chip erase
@@ -212,7 +207,7 @@ int main(void) {
       failloop(6);
       //endless loop
     }
-    osd_totaltime += state.looptime;
+    state.osd_totaltime += state.looptime;
 #ifdef DEBUG
     debug.totaltime += state.looptime;
     lpf(&debug.timefilt, looptime, 0.998);
