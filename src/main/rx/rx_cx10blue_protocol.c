@@ -16,7 +16,6 @@
 
 #define PAYLOAD_LENGHT 19
 
-extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
 
@@ -91,15 +90,15 @@ static int decodepacket(void) {
     rx_apply_expo();
 #endif
 
-    aux[0] = (rxdata[16] & 0x10) ? 1 : 0;
+    state.aux[0] = (rxdata[16] & 0x10) ? 1 : 0;
 
-    aux[2] = (rxdata[17] & 0x01) ? 1 : 0; // rates mid
+    state.aux[2] = (rxdata[17] & 0x01) ? 1 : 0; // rates mid
 
     for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
       auxchange[i] = 0;
-      if (lastaux[i] != aux[i])
+      if (lastaux[i] != state.aux[i])
         auxchange[i] = 1;
-      lastaux[i] = aux[i];
+      lastaux[i] = state.aux[i];
     }
 
     return 1; // valid packet

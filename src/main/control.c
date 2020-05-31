@@ -43,7 +43,7 @@ control_flags_t flags = {
 };
 
 control_state_t state = {
-
+    .aux = {0},
 };
 
 float throttle;

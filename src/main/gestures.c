@@ -1,5 +1,6 @@
 #include "gestures.h"
 
+#include "control.h"
 #include "osd_adjust.h"
 #include "pid.h"
 #include "profile.h"
@@ -9,7 +10,6 @@
 
 extern int ledcommand;
 extern int ledblink;
-extern char aux[AUX_CHANNEL_MAX];
 extern profile_t profile;
 
 int pid_gestures_used = 0;
@@ -94,12 +94,12 @@ void gestures(void) {
     }
 
     if (command == GESTURE_RRD) {
-      aux[AUX_CHANNEL_GESTURE] = 1;
+      state.aux[AUX_CHANNEL_GESTURE] = 1;
       ledcommand = 1;
     }
     if (command == GESTURE_LLD) {
       ledcommand = 1;
-      aux[AUX_CHANNEL_GESTURE] = 0;
+      state.aux[AUX_CHANNEL_GESTURE] = 0;
     }
 
 #ifdef ENABLE_OSD

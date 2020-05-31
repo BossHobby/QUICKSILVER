@@ -16,8 +16,6 @@ static uint8_t blackbox_enabled = 0;
 extern float cpu_load;
 extern float vbattfilt;
 
-extern uint8_t aux[AUX_CHANNEL_MAX];
-
 extern float GEstG[3];
 extern float pidoutput[3];
 
@@ -144,7 +142,7 @@ void blackbox_update() {
 
   blackbox.rx_aux = 0;
   for (uint32_t i = 0; i < AUX_CHANNEL_MAX; i++) {
-    if (aux[i]) {
+    if (state.aux[i]) {
       blackbox.rx_aux = blackbox.rx_aux | (0x1 << i);
     }
   }

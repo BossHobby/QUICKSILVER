@@ -33,7 +33,6 @@ extern uint8_t packet[128];
 extern uint8_t protocol_state;
 extern frsky_bind_data frsky_bind;
 
-extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
 
@@ -97,24 +96,24 @@ static void frsky_d8_set_rc_data() {
   rx_apply_expo();
 
   //Here we have the AUX channels Silverware supports
-  aux[AUX_CHANNEL_0] = (channels[4] > 2000) ? 1 : 0;
-  aux[AUX_CHANNEL_1] = (channels[5] > 2000) ? 1 : 0;
-  aux[AUX_CHANNEL_2] = (channels[6] > 2000) ? 1 : 0;
-  aux[AUX_CHANNEL_3] = (channels[7] > 2000) ? 1 : 0;
-  aux[AUX_CHANNEL_4] = 0;
-  aux[AUX_CHANNEL_5] = 0;
-  aux[AUX_CHANNEL_6] = 0;
-  aux[AUX_CHANNEL_7] = 0;
-  aux[AUX_CHANNEL_8] = 0;
-  aux[AUX_CHANNEL_9] = 0;
-  aux[AUX_CHANNEL_10] = 0;
-  aux[AUX_CHANNEL_11] = 0;
+  state.aux[AUX_CHANNEL_0] = (channels[4] > 2000) ? 1 : 0;
+  state.aux[AUX_CHANNEL_1] = (channels[5] > 2000) ? 1 : 0;
+  state.aux[AUX_CHANNEL_2] = (channels[6] > 2000) ? 1 : 0;
+  state.aux[AUX_CHANNEL_3] = (channels[7] > 2000) ? 1 : 0;
+  state.aux[AUX_CHANNEL_4] = 0;
+  state.aux[AUX_CHANNEL_5] = 0;
+  state.aux[AUX_CHANNEL_6] = 0;
+  state.aux[AUX_CHANNEL_7] = 0;
+  state.aux[AUX_CHANNEL_8] = 0;
+  state.aux[AUX_CHANNEL_9] = 0;
+  state.aux[AUX_CHANNEL_10] = 0;
+  state.aux[AUX_CHANNEL_11] = 0;
 
   for (uint8_t i = 0; i < AUX_CHANNEL_MAX - 3; i++) {
     auxchange[i] = 0;
-    if (lastaux[i] != aux[i])
+    if (lastaux[i] != state.aux[i])
       auxchange[i] = 1;
-    lastaux[i] = aux[i];
+    lastaux[i] = state.aux[i];
   }
 
   rx_rssi = constrainf(frsky_extract_rssi(packet[18]), 0.f, 100.f);

@@ -9,13 +9,12 @@
 #include "project.h"
 #include "util.h"
 
-extern char aux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
 
 extern profile_t profile;
 
 uint8_t rx_aux_on(aux_function_t function) {
-  return aux[profile.channel.aux[function]];
+  return state.aux[profile.channel.aux[function]];
 }
 
 uint8_t rx_auxchange(aux_function_t function) {

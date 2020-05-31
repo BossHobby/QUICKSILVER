@@ -60,7 +60,6 @@ extern profile_t profile;
 
 // holds auxilliary channels
 // the last 2 are always on and off respectively
-char aux[AUX_CHANNEL_MAX] = {0, 0, 0, 0, 0, 0};
 char lastaux[AUX_CHANNEL_MAX];
 // if an aux channel has just changed
 char auxchange[AUX_CHANNEL_MAX];
@@ -141,11 +140,11 @@ int main(void) {
   adc_init();
 
   //set always on channel to on
-  aux[AUX_CHANNEL_ON] = 1;
-  aux[AUX_CHANNEL_OFF] = 0;
+  state.aux[AUX_CHANNEL_ON] = 1;
+  state.aux[AUX_CHANNEL_OFF] = 0;
 
 #ifdef GESTURE_AUX_START_ON
-  aux[AUX_CHANNEL_GESTURE] = 1;
+  state.aux[AUX_CHANNEL_GESTURE] = 1;
 #endif
 
   vtx_init();

@@ -32,8 +32,6 @@
 // range -1.0f to 1.0f 1.0 = full rate as configured
 // throttle range 0.0f to 1.0f = under 0.1f it's interpreted as off
 
-// digital on / off channels
-extern char aux[AUX_CHANNEL_MAX];
 // last value of above
 extern char lastaux[AUX_CHANNEL_MAX];
 // 1 if change in aux from last value
@@ -177,25 +175,25 @@ static int decodepacket(void) {
       rx_apply_expo();
 #endif
 
-      aux[CH_INV] = (rxdata[3] & 0x80) ? 1 : 0; // inverted flag
+      state.aux[CH_INV] = (rxdata[3] & 0x80) ? 1 : 0; // inverted flag
 
-      aux[CH_VID] = (rxdata[2] & 0x10) ? 1 : 0;
+      state.aux[CH_VID] = (rxdata[2] & 0x10) ? 1 : 0;
 
-      aux[CH_PIC] = (rxdata[2] & 0x20) ? 1 : 0;
+      state.aux[CH_PIC] = (rxdata[2] & 0x20) ? 1 : 0;
 
-      aux[CH_FLIP] = (rxdata[2] & 0x08) ? 1 : 0;
+      state.aux[CH_FLIP] = (rxdata[2] & 0x08) ? 1 : 0;
 
-      aux[CH_EXPERT] = (rxdata[1] == 0xfa) ? 1 : 0;
+      state.aux[CH_EXPERT] = (rxdata[1] == 0xfa) ? 1 : 0;
 
-      aux[CH_HEADFREE] = (rxdata[2] & 0x02) ? 1 : 0;
+      state.aux[CH_HEADFREE] = (rxdata[2] & 0x02) ? 1 : 0;
 
-      aux[CH_RTH] = (rxdata[2] & 0x01) ? 1 : 0; // rth channel
+      state.aux[CH_RTH] = (rxdata[2] & 0x01) ? 1 : 0; // rth channel
 
       for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
         auxchange[i] = 0;
-        if (lastaux[i] != aux[i])
+        if (lastaux[i] != state.aux[i])
           auxchange[i] = 1;
-        lastaux[i] = aux[i];
+        lastaux[i] = state.aux[i];
       }
 
       return 1; // valid packet

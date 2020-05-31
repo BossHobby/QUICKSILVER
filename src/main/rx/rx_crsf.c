@@ -11,7 +11,6 @@
 #ifdef RX_CRSF
 
 // global use rx variables
-extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
 
@@ -282,18 +281,18 @@ void rx_check() {
 
     rx_apply_expo();
 
-    aux[AUX_CHANNEL_0] = (crsfChannelData[4] > 1100) ? 1 : 0; //1100 cutoff intentionally selected to force aux channels low if
-    aux[AUX_CHANNEL_1] = (crsfChannelData[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
-    aux[AUX_CHANNEL_2] = (crsfChannelData[6] > 1100) ? 1 : 0;
-    aux[AUX_CHANNEL_3] = (crsfChannelData[7] > 1100) ? 1 : 0;
-    aux[AUX_CHANNEL_4] = (crsfChannelData[8] > 1100) ? 1 : 0;
-    aux[AUX_CHANNEL_5] = (crsfChannelData[9] > 1100) ? 1 : 0;
-    aux[AUX_CHANNEL_6] = (crsfChannelData[10] > 1100) ? 1 : 0;
-    aux[AUX_CHANNEL_7] = (crsfChannelData[11] > 1100) ? 1 : 0;
-    aux[AUX_CHANNEL_8] = (crsfChannelData[12] > 1100) ? 1 : 0;
-    aux[AUX_CHANNEL_9] = (crsfChannelData[13] > 1100) ? 1 : 0;
-    aux[AUX_CHANNEL_10] = (crsfChannelData[14] > 1100) ? 1 : 0;
-    aux[AUX_CHANNEL_11] = (crsfChannelData[15] > 1100) ? 1 : 0;
+    state.aux[AUX_CHANNEL_0] = (crsfChannelData[4] > 1100) ? 1 : 0; //1100 cutoff intentionally selected to force aux channels low if
+    state.aux[AUX_CHANNEL_1] = (crsfChannelData[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
+    state.aux[AUX_CHANNEL_2] = (crsfChannelData[6] > 1100) ? 1 : 0;
+    state.aux[AUX_CHANNEL_3] = (crsfChannelData[7] > 1100) ? 1 : 0;
+    state.aux[AUX_CHANNEL_4] = (crsfChannelData[8] > 1100) ? 1 : 0;
+    state.aux[AUX_CHANNEL_5] = (crsfChannelData[9] > 1100) ? 1 : 0;
+    state.aux[AUX_CHANNEL_6] = (crsfChannelData[10] > 1100) ? 1 : 0;
+    state.aux[AUX_CHANNEL_7] = (crsfChannelData[11] > 1100) ? 1 : 0;
+    state.aux[AUX_CHANNEL_8] = (crsfChannelData[12] > 1100) ? 1 : 0;
+    state.aux[AUX_CHANNEL_9] = (crsfChannelData[13] > 1100) ? 1 : 0;
+    state.aux[AUX_CHANNEL_10] = (crsfChannelData[14] > 1100) ? 1 : 0;
+    state.aux[AUX_CHANNEL_11] = (crsfChannelData[15] > 1100) ? 1 : 0;
 
     if (bind_safety > 100) {       //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
       rx_ready = 1;                // because aux channels initialize low and clear the binding while armed flag before aux updates high

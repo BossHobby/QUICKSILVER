@@ -27,7 +27,6 @@
 //#define INVERT_UART    //now handled by a function in rx_serial driver and a config define
 
 // global use rx variables
-extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
 
@@ -290,18 +289,18 @@ void rx_check() {
           rx_apply_expo();
 
           //Here we have the AUX channels Silverware supports
-          aux[AUX_CHANNEL_0] = (channels[4] > 993) ? 1 : 0;
-          aux[AUX_CHANNEL_1] = (channels[5] > 993) ? 1 : 0;
-          aux[AUX_CHANNEL_2] = (channels[6] > 993) ? 1 : 0;
-          aux[AUX_CHANNEL_3] = (channels[7] > 993) ? 1 : 0;
-          aux[AUX_CHANNEL_4] = (channels[8] > 993) ? 1 : 0;
-          aux[AUX_CHANNEL_5] = (channels[9] > 993) ? 1 : 0;
-          aux[AUX_CHANNEL_6] = (channels[10] > 993) ? 1 : 0;
-          aux[AUX_CHANNEL_7] = (channels[11] > 993) ? 1 : 0;
-          aux[AUX_CHANNEL_8] = (channels[12] > 993) ? 1 : 0;
-          aux[AUX_CHANNEL_9] = (channels[13] > 993) ? 1 : 0;
-          aux[AUX_CHANNEL_10] = (channels[14] > 993) ? 1 : 0;
-          aux[AUX_CHANNEL_11] = (channels[15] > 993) ? 1 : 0;
+          state.aux[AUX_CHANNEL_0] = (channels[4] > 993) ? 1 : 0;
+          state.aux[AUX_CHANNEL_1] = (channels[5] > 993) ? 1 : 0;
+          state.aux[AUX_CHANNEL_2] = (channels[6] > 993) ? 1 : 0;
+          state.aux[AUX_CHANNEL_3] = (channels[7] > 993) ? 1 : 0;
+          state.aux[AUX_CHANNEL_4] = (channels[8] > 993) ? 1 : 0;
+          state.aux[AUX_CHANNEL_5] = (channels[9] > 993) ? 1 : 0;
+          state.aux[AUX_CHANNEL_6] = (channels[10] > 993) ? 1 : 0;
+          state.aux[AUX_CHANNEL_7] = (channels[11] > 993) ? 1 : 0;
+          state.aux[AUX_CHANNEL_8] = (channels[12] > 993) ? 1 : 0;
+          state.aux[AUX_CHANNEL_9] = (channels[13] > 993) ? 1 : 0;
+          state.aux[AUX_CHANNEL_10] = (channels[14] > 993) ? 1 : 0;
+          state.aux[AUX_CHANNEL_11] = (channels[15] > 993) ? 1 : 0;
 
           if (channels[12] > 993) { // Channel 13 is now FPORT Debug Telemetry switch. Integrate this better sometime
             FPORTDebugTelemetry = true;

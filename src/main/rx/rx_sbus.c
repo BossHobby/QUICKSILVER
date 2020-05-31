@@ -19,7 +19,6 @@
 //#define SBUS_INVERT 1            //now handled by a function in rx_serial driver and a config define
 
 // global use rx variables
-extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
 
@@ -224,18 +223,18 @@ void rx_check() {
 
       rx_apply_expo();
 
-      aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
-      aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
+      state.aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
+      state.aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
+      state.aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
+      state.aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
+      state.aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
+      state.aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
+      state.aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
+      state.aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
+      state.aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
+      state.aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
+      state.aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
+      state.aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
 
       rx_rssi = 0.0610128f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 173);
       if (rx_rssi > 100.0f)
@@ -424,12 +423,12 @@ void rx_check() {
 
       if ( state.rx.axis[3] > 1 ) state.rx.axis[3] = 1;
 
-      if (aux[LEVELMODE]) {
-        if (aux[RACEMODE] && !aux[HORIZON]) {
+      if (state.aux[LEVELMODE]) {
+        if (state.aux[RACEMODE] && !state.aux[HORIZON]) {
           if ( ANGLE_EXPO_ROLL > 0.01) state.rx.axis[0] = rx_expo(state.rx.axis[0], ANGLE_EXPO_ROLL);
           if ( ACRO_EXPO_PITCH > 0.01) state.rx.axis[1] = rx_expo(state.rx.axis[1], ACRO_EXPO_PITCH);
           if ( ANGLE_EXPO_YAW > 0.01) state.rx.axis[2] = rx_expo(state.rx.axis[2], ANGLE_EXPO_YAW);
-        } else if (aux[HORIZON]) {
+        } else if (state.aux[HORIZON]) {
           if ( ANGLE_EXPO_ROLL > 0.01) state.rx.axis[0] = rx_expo(state.rx.axis[0], ACRO_EXPO_ROLL);
           if ( ACRO_EXPO_PITCH > 0.01) state.rx.axis[1] = rx_expo(state.rx.axis[1], ACRO_EXPO_PITCH);
           if ( ANGLE_EXPO_YAW > 0.01) state.rx.axis[2] = rx_expo(state.rx.axis[2], ANGLE_EXPO_YAW);
@@ -444,11 +443,11 @@ void rx_check() {
         if ( ACRO_EXPO_YAW > 0.01) state.rx.axis[2] = rx_expo(state.rx.axis[2], ACRO_EXPO_YAW);
       }
 
-      aux[AUX_CHANNEL_0] = (channels[4] > 993) ? 1 : 0;
-      aux[AUX_CHANNEL_1] = (channels[5] > 993) ? 1 : 0;
-      aux[AUX_CHANNEL_2] = (channels[6] > 993) ? 1 : 0;
-      aux[AUX_CHANNEL_3] = (channels[7] > 993) ? 1 : 0;
-      aux[AUX_CHANNEL_4] = (channels[8] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_0] = (channels[4] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_1] = (channels[5] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_2] = (channels[6] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_3] = (channels[7] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_4] = (channels[8] > 993) ? 1 : 0;
 
       time_lastframe = gettime();
       if (sbus_stats) stat_frames_accepted++;

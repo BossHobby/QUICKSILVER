@@ -38,7 +38,7 @@
 
 // global use rx variables
 //****************************
-extern char aux[AUX_CHANNEL_MAX];
+
 //extern char lastaux[AUX_CHANNEL_MAX];  //I dont think this is used
 //extern char auxchange[AUX_CHANNEL_MAX]; //I dont think this is used either
 
@@ -335,20 +335,20 @@ void rx_serial_process_dsmx(void) {
     rx_apply_expo();
 
 #ifdef RX_DSMX_2048_UNIFIED
-    aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0; //1100 cutoff intentionally selected to force aux channels low if
-    aux[AUX_CHANNEL_1] = (channels[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
-    aux[AUX_CHANNEL_2] = (channels[6] > 1100) ? 1 : 0;
-    aux[AUX_CHANNEL_3] = (channels[7] > 1100) ? 1 : 0;
-    aux[AUX_CHANNEL_4] = (channels[8] > 1100) ? 1 : 0;
-    aux[AUX_CHANNEL_5] = (channels[9] > 1100) ? 1 : 0;
-    aux[AUX_CHANNEL_6] = (channels[10] > 1100) ? 1 : 0;
-    aux[AUX_CHANNEL_7] = (channels[11] > 1100) ? 1 : 0;
+    state.aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0; //1100 cutoff intentionally selected to force aux channels low if
+    state.aux[AUX_CHANNEL_1] = (channels[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
+    state.aux[AUX_CHANNEL_2] = (channels[6] > 1100) ? 1 : 0;
+    state.aux[AUX_CHANNEL_3] = (channels[7] > 1100) ? 1 : 0;
+    state.aux[AUX_CHANNEL_4] = (channels[8] > 1100) ? 1 : 0;
+    state.aux[AUX_CHANNEL_5] = (channels[9] > 1100) ? 1 : 0;
+    state.aux[AUX_CHANNEL_6] = (channels[10] > 1100) ? 1 : 0;
+    state.aux[AUX_CHANNEL_7] = (channels[11] > 1100) ? 1 : 0;
 #endif
 
 #ifdef RX_DSM2_1024_TEMP
-    aux[AUX_CHANNEL_0] = (channels[4] > 550) ? 1 : 0; //550 cutoff intentionally selected to force aux channels low if
-    aux[AUX_CHANNEL_1] = (channels[5] > 550) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
-    aux[AUX_CHANNEL_2] = (channels[6] > 550) ? 1 : 0;
+    state.aux[AUX_CHANNEL_0] = (channels[4] > 550) ? 1 : 0; //550 cutoff intentionally selected to force aux channels low if
+    state.aux[AUX_CHANNEL_1] = (channels[5] > 550) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
+    state.aux[AUX_CHANNEL_2] = (channels[6] > 550) ? 1 : 0;
 #endif
 
     //for failsafe_noframes
@@ -478,18 +478,18 @@ void rx_serial_process_sbus(void) {
     rx_apply_expo();
 
     //Here we have the AUX channels Silverware supports
-    aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
 
     time_lastframe = gettime();
 
@@ -593,18 +593,18 @@ void rx_serial_process_ibus(void) {
     rx_apply_expo();
 
     //Here we have the AUX channels Silverware supports
-    aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
-    aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
+    state.aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
 
     time_lastframe = gettime();
 
@@ -749,18 +749,18 @@ void rx_serial_process_fport(void) {
       rx_apply_expo();
 
       //Here we have the AUX channels Silverware supports
-      aux[AUX_CHANNEL_0] = (channels[4] > 993) ? 1 : 0;
-      aux[AUX_CHANNEL_1] = (channels[5] > 993) ? 1 : 0;
-      aux[AUX_CHANNEL_2] = (channels[6] > 993) ? 1 : 0;
-      aux[AUX_CHANNEL_3] = (channels[7] > 993) ? 1 : 0;
-      aux[AUX_CHANNEL_4] = (channels[8] > 993) ? 1 : 0;
-      aux[AUX_CHANNEL_5] = (channels[9] > 993) ? 1 : 0;
-      aux[AUX_CHANNEL_6] = (channels[10] > 993) ? 1 : 0;
-      aux[AUX_CHANNEL_7] = (channels[11] > 993) ? 1 : 0;
-      aux[AUX_CHANNEL_8] = (channels[12] > 993) ? 1 : 0;
-      aux[AUX_CHANNEL_9] = (channels[13] > 993) ? 1 : 0;
-      aux[AUX_CHANNEL_10] = (channels[14] > 993) ? 1 : 0;
-      aux[AUX_CHANNEL_11] = (channels[15] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_0] = (channels[4] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_1] = (channels[5] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_2] = (channels[6] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_3] = (channels[7] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_4] = (channels[8] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_5] = (channels[9] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_6] = (channels[10] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_7] = (channels[11] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_8] = (channels[12] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_9] = (channels[13] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_10] = (channels[14] > 993) ? 1 : 0;
+      state.aux[AUX_CHANNEL_11] = (channels[15] > 993) ? 1 : 0;
 
       if (channels[12] > 993) { // Channel 13 is now FPORT Debug Telemetry switch. Integrate this better sometime
         fport_debug_telemetry = true;

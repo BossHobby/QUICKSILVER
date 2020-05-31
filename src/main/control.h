@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "rx.h"
 #include "util/vector.h"
 
 #define RXMODE_BIND 0
@@ -23,8 +24,9 @@ typedef struct {
 extern control_flags_t flags;
 
 typedef struct {
-  vec4_t rx;          // holds the main four channels, roll, pitch, yaw, throttle
-  vec4_t rx_filtered; // same as above, but filtered by the rx smoothing
+  vec4_t rx;                    // holds the main four channels, roll, pitch, yaw, throttle
+  vec4_t rx_filtered;           // same as above, but filtered by the rx smoothing
+  uint8_t aux[AUX_CHANNEL_MAX]; // digital on / off channels
 
   vec3_t accel_raw;
   vec3_t accel;

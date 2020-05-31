@@ -131,7 +131,6 @@ int PID_index_delay = 0;
 
 #ifdef RX_BAYANG_BLE_APP
 
-extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
 
@@ -164,12 +163,12 @@ char quad_name[6] = {'N', 'O', 'N', 'A', 'M', 'E'};
 void rx_init() {
 
   // always on (AUX_CHANNEL_ON) channel set 1
-  aux[AUX_CHANNEL_MAX - 2] = 1;
+  state.aux[AUX_CHANNEL_MAX - 2] = 1;
   // always off (AUX_CHANNEL_OFF) channel set 0
-  aux[AUX_CHANNEL_MAX - 1] = 0;
+  state.aux[AUX_CHANNEL_MAX - 1] = 0;
 
 #ifdef AUX4_START_ON
-  aux[CH_AUX4] = 1;
+  state.aux[CH_AUX4] = 1;
 #endif
 
 #ifdef RADIO_XN297L
@@ -889,27 +888,27 @@ static int decodepacket(void) {
       //                      state.rx.axis[2] = state.rx.axis[2] + 0.03225 * 0.5 * (float)(((rxdata[10])>>2) - 31);
 
       // this share the same numbers to the above CH_PIT_TRIM etc
-      aux[CH_VID] = (rxdata[2] & 0x10) ? 1 : 0;
+      state.aux[CH_VID] = (rxdata[2] & 0x10) ? 1 : 0;
 
-      aux[CH_PIC] = (rxdata[2] & 0x20) ? 1 : 0;
+      state.aux[CH_PIC] = (rxdata[2] & 0x20) ? 1 : 0;
 
-      aux[CH_INV] = (rxdata[3] & 0x80) ? 1 : 0; // inverted flag
+      state.aux[CH_INV] = (rxdata[3] & 0x80) ? 1 : 0; // inverted flag
 
-      aux[CH_FLIP] = (rxdata[2] & 0x08) ? 1 : 0;
+      state.aux[CH_FLIP] = (rxdata[2] & 0x08) ? 1 : 0;
 
-      //aux[CH_EXPERT] = (rxdata[1] == 0xfa) ? 1 : 0;
+      //state.aux[CH_EXPERT] = (rxdata[1] == 0xfa) ? 1 : 0;
 
-      aux[CH_HEADFREE] = (rxdata[2] & 0x02) ? 1 : 0;
+      state.aux[CH_HEADFREE] = (rxdata[2] & 0x02) ? 1 : 0;
 
-      aux[CH_RTH] = (rxdata[2] & 0x01) ? 1 : 0; // rth channel
+      state.aux[CH_RTH] = (rxdata[2] & 0x01) ? 1 : 0; // rth channel
 
       rx_apply_expo();
 
       for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
         auxchange[i] = 0;
-        if (lastaux[i] != aux[i])
+        if (lastaux[i] != state.aux[i])
           auxchange[i] = 1;
-        lastaux[i] = aux[i];
+        lastaux[i] = state.aux[i];
       }
 
       return 1; // valid packet

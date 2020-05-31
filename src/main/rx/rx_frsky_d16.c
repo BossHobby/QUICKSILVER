@@ -95,7 +95,6 @@ extern uint8_t protocol_state;
 extern frsky_bind_data frsky_bind;
 extern uint8_t list_length;
 
-extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
 
@@ -154,24 +153,24 @@ static void frsky_d16_set_rc_data() {
   rx_apply_expo();
 
   //Here we have the AUX channels Silverware supports
-  aux[AUX_CHANNEL_0] = (channels[4] > 1023) ? 1 : 0;
-  aux[AUX_CHANNEL_1] = (channels[5] > 1023) ? 1 : 0;
-  aux[AUX_CHANNEL_2] = (channels[6] > 1023) ? 1 : 0;
-  aux[AUX_CHANNEL_3] = (channels[7] > 1023) ? 1 : 0;
-  aux[AUX_CHANNEL_4] = (channels[8] > 1023) ? 1 : 0;
-  aux[AUX_CHANNEL_5] = (channels[9] > 1023) ? 1 : 0;
-  aux[AUX_CHANNEL_6] = (channels[10] > 1023) ? 1 : 0;
-  aux[AUX_CHANNEL_7] = (channels[11] > 1023) ? 1 : 0;
-  aux[AUX_CHANNEL_8] = (channels[12] > 1023) ? 1 : 0;
-  aux[AUX_CHANNEL_9] = (channels[13] > 1023) ? 1 : 0;
-  aux[AUX_CHANNEL_10] = (channels[14] > 1023) ? 1 : 0;
-  aux[AUX_CHANNEL_11] = (channels[15] > 1023) ? 1 : 0;
+  state.aux[AUX_CHANNEL_0] = (channels[4] > 1023) ? 1 : 0;
+  state.aux[AUX_CHANNEL_1] = (channels[5] > 1023) ? 1 : 0;
+  state.aux[AUX_CHANNEL_2] = (channels[6] > 1023) ? 1 : 0;
+  state.aux[AUX_CHANNEL_3] = (channels[7] > 1023) ? 1 : 0;
+  state.aux[AUX_CHANNEL_4] = (channels[8] > 1023) ? 1 : 0;
+  state.aux[AUX_CHANNEL_5] = (channels[9] > 1023) ? 1 : 0;
+  state.aux[AUX_CHANNEL_6] = (channels[10] > 1023) ? 1 : 0;
+  state.aux[AUX_CHANNEL_7] = (channels[11] > 1023) ? 1 : 0;
+  state.aux[AUX_CHANNEL_8] = (channels[12] > 1023) ? 1 : 0;
+  state.aux[AUX_CHANNEL_9] = (channels[13] > 1023) ? 1 : 0;
+  state.aux[AUX_CHANNEL_10] = (channels[14] > 1023) ? 1 : 0;
+  state.aux[AUX_CHANNEL_11] = (channels[15] > 1023) ? 1 : 0;
 
   for (uint8_t i = 0; i < AUX_CHANNEL_MAX - 3; i++) {
     auxchange[i] = 0;
-    if (lastaux[i] != aux[i])
+    if (lastaux[i] != state.aux[i])
       auxchange[i] = 1;
-    lastaux[i] = aux[i];
+    lastaux[i] = state.aux[i];
   }
 
   rx_rssi = constrainf(frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]), 0.f, 100.f);

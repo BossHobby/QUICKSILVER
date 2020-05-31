@@ -36,7 +36,6 @@
 
 #ifdef RX_H7_PROTOCOL
 
-extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
 
@@ -133,11 +132,11 @@ int decode_h7(void) {
   //rxdata[5] F-B: default:32, (1..63)
   //rxdata[6] default:0, 1: F/S, 128: flip
 
-  aux[0] = (rxdata[6] & H7_FLIP_MASK) ? 1 : 0;
+  state.aux[0] = (rxdata[6] & H7_FLIP_MASK) ? 1 : 0;
 
-  aux[1] = (rxdata[6] & H7_FLAG_VIDEO) ? 1 : 0;
+  state.aux[1] = (rxdata[6] & H7_FLAG_VIDEO) ? 1 : 0;
 
-  aux[2] = (rxdata[6] & H7_F_S_MASK) ? 1 : 0; //??
+  state.aux[2] = (rxdata[6] & H7_F_S_MASK) ? 1 : 0; //??
 
 #ifndef DISABLE_EXPO
   rx_apply_expo();
@@ -145,9 +144,9 @@ int decode_h7(void) {
 
   for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
     auxchange[i] = 0;
-    if (lastaux[i] != aux[i])
+    if (lastaux[i] != state.aux[i])
       auxchange[i] = 1;
-    lastaux[i] = aux[i];
+    lastaux[i] = state.aux[i];
   }
 
   return 1;

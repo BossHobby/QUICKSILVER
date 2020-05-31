@@ -22,7 +22,6 @@
 #endif
 
 // the last 2 are always on and off respectively
-extern char aux[AUX_CHANNEL_MAX];
 extern char lastaux[AUX_CHANNEL_MAX];
 extern char auxchange[AUX_CHANNEL_MAX];
 
@@ -143,10 +142,10 @@ int decode_cg023(void) {
 
     // switch flags
 
-    aux[0] = (rxdata[13] & CG023_FLIP_MASK) ? 1 : 0;
-    aux[1] = (rxdata[13] & CG023_VIDEO_MASK) ? 1 : 0;
-    aux[2] = (rxdata[13] & CG023_STILL_MASK) ? 1 : 0;
-    aux[3] = (rxdata[13] & CG023_LED_OFF_MASK) ? 1 : 0;
+    state.aux[0] = (rxdata[13] & CG023_FLIP_MASK) ? 1 : 0;
+    state.aux[1] = (rxdata[13] & CG023_VIDEO_MASK) ? 1 : 0;
+    state.aux[2] = (rxdata[13] & CG023_STILL_MASK) ? 1 : 0;
+    state.aux[3] = (rxdata[13] & CG023_LED_OFF_MASK) ? 1 : 0;
 
     float ratemulti = 1.0;
     if (rxdata[13] & CG023_RATE_100_MASK) {
@@ -163,9 +162,9 @@ int decode_cg023(void) {
   skip:
     for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
       auxchange[i] = 0;
-      if (lastaux[i] != aux[i])
+      if (lastaux[i] != state.aux[i])
         auxchange[i] = 1;
-      lastaux[i] = aux[i];
+      lastaux[i] = state.aux[i];
     }
 
     return 1;
