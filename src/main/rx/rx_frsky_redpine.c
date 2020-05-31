@@ -8,8 +8,6 @@
 
 #if defined(RX_REDPINE) && defined(USE_CC2500)
 
-#define REDPINE_FEC
-
 #define REDPINE_PACKET_SIZE 11
 #define REDPINE_PACKET_SIZE_W_ADDONS (REDPINE_PACKET_SIZE + 2)
 
@@ -212,9 +210,6 @@ void rx_init(void) {
   // enable gdo0 on read
   cc2500_write_reg(CC2500_IOCFG0, 0x01);
 
-  cc2500_write_reg(CC2500_MCSM1, 0x0C);
-  cc2500_write_reg(CC2500_MCSM0, 0x18);
-
   cc2500_write_reg(CC2500_PKTLEN, REDPINE_PACKET_SIZE); // max packet lenght of 25
   cc2500_write_reg(CC2500_PKTCTRL1, 0x0C);              // only append status
   cc2500_write_reg(CC2500_PKTCTRL0, 0x05);              // variable pkt lenth, enable crc
@@ -231,16 +226,13 @@ void rx_init(void) {
     cc2500_write_reg(CC2500_MDMCFG4, 0x2D);
     cc2500_write_reg(CC2500_MDMCFG3, 0x3B);
     cc2500_write_reg(CC2500_MDMCFG2, 0x73);
-#ifdef REDPINE_FEC
-    // FEC active
-    cc2500_write_reg(CC2500_MDMCFG1, 0xA3);
-#else
-    // FEC not active
     cc2500_write_reg(CC2500_MDMCFG1, 0x23);
-#endif
     cc2500_write_reg(CC2500_MDMCFG0, 0x56);
 
     cc2500_write_reg(CC2500_DEVIATN, 0x00);
+
+    cc2500_write_reg(CC2500_MCSM1, 0x0C);
+    cc2500_write_reg(CC2500_MCSM0, 0x08);
 
     cc2500_write_reg(CC2500_FOCCFG, 0x1D);
     cc2500_write_reg(CC2500_BSCFG, 0x1C);
@@ -257,26 +249,23 @@ void rx_init(void) {
     cc2500_write_reg(CC2500_FSCAL1, 0x00);
     cc2500_write_reg(CC2500_FSCAL0, 0x11);
   } else {
-    cc2500_write_reg(CC2500_FSCTRL1, 0x0A);
+    cc2500_write_reg(CC2500_FSCTRL1, 0x06);
     cc2500_write_reg(CC2500_FSCTRL0, 0x00);
 
-    cc2500_write_reg(CC2500_FREQ2, 0x5c);
-    cc2500_write_reg(CC2500_FREQ1, 0x76);
-    cc2500_write_reg(CC2500_FREQ0, 0x27);
+    cc2500_write_reg(CC2500_FREQ2, 0x5D);
+    cc2500_write_reg(CC2500_FREQ1, 0x93);
+    cc2500_write_reg(CC2500_FREQ0, 0xB1);
 
-    cc2500_write_reg(CC2500_MDMCFG4, 0x7B);
-    cc2500_write_reg(CC2500_MDMCFG3, 0x61);
-    cc2500_write_reg(CC2500_MDMCFG2, 0x13);
-#ifdef REDPINE_FEC
-    // FEC active
-    cc2500_write_reg(CC2500_MDMCFG1, 0xA3);
-#else
-    // FEC not active
-    cc2500_write_reg(CC2500_MDMCFG1, 0x23);
-#endif
-    cc2500_write_reg(CC2500_MDMCFG0, 0x7a);
+    cc2500_write_reg(CC2500_MDMCFG4, 0x78);
+    cc2500_write_reg(CC2500_MDMCFG3, 0x93);
+    cc2500_write_reg(CC2500_MDMCFG2, 0x03);
+    cc2500_write_reg(CC2500_MDMCFG1, 0x22);
+    cc2500_write_reg(CC2500_MDMCFG0, 0xF8);
 
-    cc2500_write_reg(CC2500_DEVIATN, 0x51);
+    cc2500_write_reg(CC2500_DEVIATN, 0x44);
+
+    cc2500_write_reg(CC2500_MCSM1, 0x0C);
+    cc2500_write_reg(CC2500_MCSM0, 0x08);
 
     cc2500_write_reg(CC2500_FOCCFG, 0x16);
     cc2500_write_reg(CC2500_BSCFG, 0x6C);
