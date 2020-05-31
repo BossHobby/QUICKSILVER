@@ -95,9 +95,6 @@ extern uint8_t protocol_state;
 extern frsky_bind_data frsky_bind;
 extern uint8_t list_length;
 
-extern char lastaux[AUX_CHANNEL_MAX];
-extern char auxchange[AUX_CHANNEL_MAX];
-
 extern int rx_ready;
 extern int rx_bind_enable;
 
@@ -165,13 +162,6 @@ static void frsky_d16_set_rc_data() {
   state.aux[AUX_CHANNEL_9] = (channels[13] > 1023) ? 1 : 0;
   state.aux[AUX_CHANNEL_10] = (channels[14] > 1023) ? 1 : 0;
   state.aux[AUX_CHANNEL_11] = (channels[15] > 1023) ? 1 : 0;
-
-  for (uint8_t i = 0; i < AUX_CHANNEL_MAX - 3; i++) {
-    auxchange[i] = 0;
-    if (lastaux[i] != state.aux[i])
-      auxchange[i] = 1;
-    lastaux[i] = state.aux[i];
-  }
 
   rx_rssi = constrainf(frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]), 0.f, 100.f);
 }

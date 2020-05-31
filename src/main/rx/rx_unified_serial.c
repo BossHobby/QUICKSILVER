@@ -36,12 +36,6 @@
 //*****************************************
 //*****************************************
 
-// global use rx variables
-//****************************
-
-//extern char lastaux[AUX_CHANNEL_MAX];  //I dont think this is used
-//extern char auxchange[AUX_CHANNEL_MAX]; //I dont think this is used either
-
 int rx_ready = 0;
 
 rx_serial_protocol_t rx_serial_protocol = RX_SERIAL_PROTOCOL_INVALID;

@@ -21,10 +21,6 @@
 #define RADIO_XN297
 #endif
 
-// the last 2 are always on and off respectively
-extern char lastaux[AUX_CHANNEL_MAX];
-extern char auxchange[AUX_CHANNEL_MAX];
-
 void writeregs(uint8_t data[], uint8_t size) {
 
   spi_cson();
@@ -159,14 +155,8 @@ int decode_cg023(void) {
     for (int i = 0; i <= 2; i++) {
       state.rx.axis[i] = state.rx.axis[i] * ratemulti;
     }
-  skip:
-    for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
-      auxchange[i] = 0;
-      if (lastaux[i] != state.aux[i])
-        auxchange[i] = 1;
-      lastaux[i] = state.aux[i];
-    }
 
+  skip:
     return 1;
   } else {
     // non data packet

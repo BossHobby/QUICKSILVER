@@ -15,9 +15,6 @@
 int rx_ready = 1;
 int bind_safety = 0;
 
-extern char lastaux[AUX_CHANNEL_MAX];
-extern char auxchange[AUX_CHANNEL_MAX];
-
 void writeregs(uint8_t data[], uint8_t size) {
   spi_cson();
   for (uint8_t i = 0; i < size; i++) {
@@ -122,13 +119,6 @@ static int decodepacket(void) {
       state.aux[CH_RTH] = (rxdata[2] & 0x01) ? 1 : 0; // rth channel
 
       rx_apply_expo();
-
-      for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
-        auxchange[i] = 0;
-        if (lastaux[i] != state.aux[i])
-          auxchange[i] = 1;
-        lastaux[i] = state.aux[i];
-      }
 
       return 1; // valid packet
     }

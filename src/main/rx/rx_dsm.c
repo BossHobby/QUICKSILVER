@@ -10,10 +10,6 @@
 
 #if defined(RX_DSMX_2048) || defined(RX_DSM2_1024)
 
-// global use rx variables
-//extern char lastaux[AUX_CHANNEL_MAX];
-//extern char auxchange[AUX_CHANNEL_MAX];
-
 int rx_ready = 0;
 int bind_safety = 0;
 int rx_bind_enable = 0;

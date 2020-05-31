@@ -28,15 +28,6 @@
 // it also scrambles payloads and has a reverse bit order
 // xn297 is actually closer to BLE then it is to nrf24
 
-// RPY and Throttle
-// range -1.0f to 1.0f 1.0 = full rate as configured
-// throttle range 0.0f to 1.0f = under 0.1f it's interpreted as off
-
-// last value of above
-extern char lastaux[AUX_CHANNEL_MAX];
-// 1 if change in aux from last value
-extern char auxchange[AUX_CHANNEL_MAX];
-
 void writeregs(uint8_t data[], uint8_t size) {
   spi_cson();
   for (uint8_t i = 0; i < size; i++) {
@@ -174,27 +165,13 @@ static int decodepacket(void) {
 #ifndef DISABLE_EXPO
       rx_apply_expo();
 #endif
-
       state.aux[CH_INV] = (rxdata[3] & 0x80) ? 1 : 0; // inverted flag
-
       state.aux[CH_VID] = (rxdata[2] & 0x10) ? 1 : 0;
-
       state.aux[CH_PIC] = (rxdata[2] & 0x20) ? 1 : 0;
-
       state.aux[CH_FLIP] = (rxdata[2] & 0x08) ? 1 : 0;
-
       state.aux[CH_EXPERT] = (rxdata[1] == 0xfa) ? 1 : 0;
-
       state.aux[CH_HEADFREE] = (rxdata[2] & 0x02) ? 1 : 0;
-
       state.aux[CH_RTH] = (rxdata[2] & 0x01) ? 1 : 0; // rth channel
-
-      for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
-        auxchange[i] = 0;
-        if (lastaux[i] != state.aux[i])
-          auxchange[i] = 1;
-        lastaux[i] = state.aux[i];
-      }
 
       return 1; // valid packet
     }

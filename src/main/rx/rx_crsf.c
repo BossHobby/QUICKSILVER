@@ -9,11 +9,6 @@
 #include "util.h"
 
 #ifdef RX_CRSF
-
-// global use rx variables
-extern char lastaux[AUX_CHANNEL_MAX];
-extern char auxchange[AUX_CHANNEL_MAX];
-
 int rx_ready = 0;
 int bind_safety = 0;
 int rx_bind_enable = 0;

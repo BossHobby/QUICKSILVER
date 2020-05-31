@@ -131,9 +131,6 @@ int PID_index_delay = 0;
 
 #ifdef RX_BAYANG_BLE_APP
 
-extern char lastaux[AUX_CHANNEL_MAX];
-extern char auxchange[AUX_CHANNEL_MAX];
-
 char lasttrim[4];
 
 char rfchannel[4];
@@ -903,13 +900,6 @@ static int decodepacket(void) {
       state.aux[CH_RTH] = (rxdata[2] & 0x01) ? 1 : 0; // rth channel
 
       rx_apply_expo();
-
-      for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
-        auxchange[i] = 0;
-        if (lastaux[i] != state.aux[i])
-          auxchange[i] = 1;
-        lastaux[i] = state.aux[i];
-      }
 
       return 1; // valid packet
     }

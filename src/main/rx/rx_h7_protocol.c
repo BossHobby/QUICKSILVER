@@ -36,9 +36,6 @@
 
 #ifdef RX_H7_PROTOCOL
 
-extern char lastaux[AUX_CHANNEL_MAX];
-extern char auxchange[AUX_CHANNEL_MAX];
-
 #define H7_FLIP_MASK 0x80 // right shoulder (3D flip switch), resets after aileron or elevator has moved and came back to neutral
 #define H7_F_S_MASK 0x01
 #define H7_FLAG_VIDEO 0x10
@@ -141,13 +138,6 @@ int decode_h7(void) {
 #ifndef DISABLE_EXPO
   rx_apply_expo();
 #endif
-
-  for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
-    auxchange[i] = 0;
-    if (lastaux[i] != state.aux[i])
-      auxchange[i] = 1;
-    lastaux[i] = state.aux[i];
-  }
 
   return 1;
 }

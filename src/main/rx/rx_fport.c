@@ -26,10 +26,6 @@
 // FPort is normally inverted
 //#define INVERT_UART    //now handled by a function in rx_serial driver and a config define
 
-// global use rx variables
-extern char lastaux[AUX_CHANNEL_MAX];
-extern char auxchange[AUX_CHANNEL_MAX];
-
 int rx_ready = 0;
 
 // internal FPORT variables

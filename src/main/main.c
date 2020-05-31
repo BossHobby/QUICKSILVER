@@ -58,12 +58,6 @@ float osd_totaltime;
 
 extern profile_t profile;
 
-// holds auxilliary channels
-// the last 2 are always on and off respectively
-char lastaux[AUX_CHANNEL_MAX];
-// if an aux channel has just changed
-char auxchange[AUX_CHANNEL_MAX];
-
 //Flash Memory Feature defaults for a flash w/full chip erase
 int flash_feature_1 = 1; //SETUP WIZARD
 int flash_feature_2 = 0; //LVC

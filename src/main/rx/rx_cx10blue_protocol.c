@@ -16,9 +16,6 @@
 
 #define PAYLOAD_LENGHT 19
 
-extern char lastaux[AUX_CHANNEL_MAX];
-extern char auxchange[AUX_CHANNEL_MAX];
-
 void writeregs(const uint8_t data[], uint8_t size) {
   spi_cson();
   for (uint8_t i = 0; i < size; i++) {
@@ -93,13 +90,6 @@ static int decodepacket(void) {
     state.aux[0] = (rxdata[16] & 0x10) ? 1 : 0;
 
     state.aux[2] = (rxdata[17] & 0x01) ? 1 : 0; // rates mid
-
-    for (int i = 0; i < AUX_CHANNEL_MAX - 2; i++) {
-      auxchange[i] = 0;
-      if (lastaux[i] != state.aux[i])
-        auxchange[i] = 1;
-      lastaux[i] = state.aux[i];
-    }
 
     return 1; // valid packet
   }

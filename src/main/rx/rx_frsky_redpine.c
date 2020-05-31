@@ -25,9 +25,6 @@ extern uint8_t list_length;
 extern uint8_t protocol_state;
 extern frsky_bind_data frsky_bind;
 
-extern char lastaux[AUX_CHANNEL_MAX];
-extern char auxchange[AUX_CHANNEL_MAX];
-
 extern int rx_ready;
 extern int rx_bind_enable;
 
@@ -86,13 +83,6 @@ static void redpine_set_rc_data() {
   state.aux[AUX_CHANNEL_9] = (packet[REDPINE_CHANNEL_START + 6] & 0x20) ? 1 : 0;
   state.aux[AUX_CHANNEL_10] = (packet[REDPINE_CHANNEL_START + 6] & 0x40) ? 1 : 0;
   state.aux[AUX_CHANNEL_11] = (packet[REDPINE_CHANNEL_START + 6] & 0x80) ? 1 : 0;
-
-  for (uint8_t i = 0; i < AUX_CHANNEL_MAX - 3; i++) {
-    auxchange[i] = 0;
-    if (lastaux[i] != state.aux[i])
-      auxchange[i] = 1;
-    lastaux[i] = state.aux[i];
-  }
 }
 
 static uint8_t redpine_handle_packet() {
