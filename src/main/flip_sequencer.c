@@ -39,9 +39,8 @@
 #define STAGE_FLIP_EXIT 6
 
 int motortest_override;
-int acro_override = 0;
 int level_override = 0;
-int controls_override = 0;
+
 unsigned long fliptime;
 int readytoflip = 0;
 int flipstage = STAGE_FLIP_NONE;
@@ -91,7 +90,7 @@ void flip_sequencer() {
       flags.binding_while_armed = 1; //just in case absolutely require that the quad be disarmed when turning off turtle mode with a started sequencer
     }
     flipstage = STAGE_FLIP_NONE;
-    controls_override = 0;
+    flags.controls_override = 0;
     motortest_override = 0;
     return; //turtle mode off or flying away from a successful turtle will return here
   }         // a disarmed quad with turtle mode on will continue past
@@ -118,7 +117,7 @@ void flip_sequencer() {
     break;
 
   case STAGE_FLIP_START:
-    controls_override = 1;
+    flags.controls_override = 1;
     state.rx_override.axis[0] = 0;
     state.rx_override.axis[1] = 0;
     state.rx_override.axis[2] = 0;
@@ -159,7 +158,7 @@ void flip_sequencer() {
   case STAGE_FLIP_EXIT:
     readytoflip = 0;
     flipstage = STAGE_FLIP_NONE;
-    controls_override = 0;
+    flags.controls_override = 0;
     motortest_override = 0;
     pwmdir = FORWARD;
     flags.binding_while_armed = 1;
@@ -193,8 +192,8 @@ void flip_sequencer() {
 
   case STAGE_FLIP_START:
     //
-    acro_override = 1;
-    controls_override = 1;
+    flags.acro_override = 1;
+    flags.controls_override = 1;
 
     state.rx_override.axis[1] = 0;
     state.rx_override.axis[2] = 0;
@@ -245,7 +244,7 @@ void flip_sequencer() {
       levelmodetime = gettime();
 
       state.rx_override.axis[3] = THROTTLE_EXIT;
-      acro_override = 0;
+      flags.acro_override = 0;
       level_override = 1;
       flipstage = STAGE_FLIP_LEVELMODE;
     }
@@ -268,9 +267,9 @@ void flip_sequencer() {
   case STAGE_FLIP_EXIT:
     readytoflip = 0;
     flipstage = STAGE_FLIP_NONE;
-    acro_override = 0;
+    flags.acro_override = 0;
     level_override = 0;
-    controls_override = 0;
+    flags.controls_override = 0;
     break;
 
   default:

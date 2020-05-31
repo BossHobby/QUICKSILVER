@@ -55,8 +55,6 @@ static uint8_t arming_release;
 static uint32_t onground_long = 1;
 
 extern int pwmdir;
-extern int controls_override;
-extern int acro_override;
 
 extern float thrsum;
 extern float pidoutput[PIDNUMBER];
@@ -90,7 +88,7 @@ void control(void) {
 
   flip_sequencer();
 
-  if (controls_override) {
+  if (flags.controls_override) {
     for (int i = 0; i < 3; i++) {
       state.rx_filtered.axis[i] = state.rx_override.axis[i];
     }
@@ -102,7 +100,7 @@ void control(void) {
 
   input_rates_calc(rates);
 
-  if (rx_aux_on(AUX_LEVELMODE) && !acro_override) {
+  if (rx_aux_on(AUX_LEVELMODE) && !flags.acro_override) {
     extern float errorvect[]; // level mode angle error calculated by stick_vector.c
     extern float GEstG[3];    // gravity vector for yaw feedforward
     float yawerror[3] = {0};  // yaw rotation vector
@@ -386,7 +384,7 @@ void control(void) {
         throttle = 1.0f;
     }
 
-    if (controls_override) { // change throttle in flip mode
+    if (flags.controls_override) { // change throttle in flip mode
       throttle = state.rx_override.axis[3];
     }
 

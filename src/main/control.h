@@ -22,6 +22,8 @@ typedef struct {
   uint8_t usb_active : 1;
   uint8_t rxmode : 1; // bind / normal rx mode
   uint8_t rx_ready : 1;
+  uint8_t controls_override : 1;
+  uint8_t acro_override : 1;
 } control_flags_t;
 
 extern control_flags_t flags;
