@@ -48,8 +48,6 @@ unsigned int levelmodetime;
 int flipindex = 0;
 int flipdir = 0;
 
-extern float GEstG[3];
-
 extern profile_t profile;
 
 #ifdef STANDARD_TURTLE
@@ -104,11 +102,11 @@ void flip_sequencer() {
       turtle_trigger = 1;      //trigger will reinit to 0 next go round
   }
 
-  if ((GEstG[2] < 0) && turtle_trigger) { //begin the turtle sequence only once and with turtle_trigger flag ready and while upside down.
+  if ((state.GEstG.axis[2] < 0) && turtle_trigger) { //begin the turtle sequence only once and with turtle_trigger flag ready and while upside down.
     flipstage = STAGE_FLIP_START;
   }
 
-  if (GEstG[2] > 0.5f && flipstage) { //exit the sequence if you failed to turtle, picked up the quad, and flipped it over your damn self
+  if (state.GEstG.axis[2] > 0.5f && flipstage) { //exit the sequence if you failed to turtle, picked up the quad, and flipped it over your damn self
     flipstage = STAGE_FLIP_EXIT;
   }
 
@@ -151,7 +149,7 @@ void flip_sequencer() {
     }
     if (gettime() - fliptime > TURTLE_TIMEOUT)
       flipstage = STAGE_FLIP_START;
-    if (GEstG[2] > 0.50f)
+    if (state.GEstG.axis[2] > 0.50f)
       flipstage = STAGE_FLIP_EXIT;
     break;
 
@@ -199,7 +197,7 @@ void flip_sequencer() {
     state.rx_override.axis[2] = 0;
     state.rx_override.axis[3] = THROTTLE_UP;
 
-    if (GEstG[2] < 0) {
+    if (state.GEstG.axis[2] < 0) {
       // flip initiated inverted
       if (flipdir)
         state.rx_override.axis[flipindex] = (float)FLIP_RATE / max_rate;
@@ -230,7 +228,7 @@ void flip_sequencer() {
       // abort
       flipstage = STAGE_FLIP_EXIT;
     }
-    if (GEstG[2] < 0) {
+    if (state.GEstG.axis[2] < 0) {
       //we are inverted
       state.rx_override.axis[3] = THROTTLE_HOVER;
       flipstage = STAGE_FLIP_ROTATING_INVERTED;
@@ -238,7 +236,7 @@ void flip_sequencer() {
     break;
 
   case STAGE_FLIP_ROTATING_INVERTED:
-    if (GEstG[2] > 0) {
+    if (state.GEstG.axis[2] > 0) {
 
       //we no longer inverted
       levelmodetime = gettime();

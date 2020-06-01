@@ -659,7 +659,6 @@ void print_osd_mixed_data(uint8_t string_element_qty, uint8_t data_element_qty, 
 //************************************************************************************************************************************************************************************
 
 void osd_display(void) {
-  extern float throttle;
 
   //first check if video signal autodetect needs to run - run if necessary
   extern uint8_t lastsystem; //initialized at 99 for none then becomes 0 or 1 for ntsc/pal
@@ -827,7 +826,7 @@ void osd_display(void) {
     case 9:
       if (osd_decode(*osd_throttle, ACTIVE)) {
         uint8_t osd_throttle_value[5];
-        fast_fprint(osd_throttle_value, 5, (throttle * 100.0f), 0);
+        fast_fprint(osd_throttle_value, 5, (state.throttle * 100.0f), 0);
         osd_throttle_value[4] = 4;
         osd_print_data(osd_throttle_value, 5, osd_decode(*osd_throttle, ATTRIBUTE), osd_decode(*osd_throttle, POSITIONX), osd_decode(*osd_throttle, POSITIONY));
       }

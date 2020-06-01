@@ -13,8 +13,6 @@
 #include "util.h"
 #include "util/vector.h"
 
-#define ACC_1G 1.0f
-
 // disable drift correction ( for testing)
 #define DISABLE_ACC 0
 
@@ -39,7 +37,6 @@
 #define _sinf(val) sinf(val)
 #define _cosf(val) cosf(val)
 
-float GEstG[3] = {0, 0, ACC_1G};
 float attitude[3];
 
 float calcmagnitude(float vector[3]) {
@@ -73,7 +70,7 @@ void imu_init() {
     sixaxis_read();
 
     for (int x = 0; x < 3; x++) {
-      lpf(&GEstG[x], state.accel_raw.axis[x], 0.85);
+      lpf(&state.GEstG.axis[x], state.accel_raw.axis[x], 0.85);
     }
     delay(1000);
   }
@@ -97,7 +94,7 @@ void imu_calc() {
   state.accel.axis[2] = filter_lp2_iir_step(&filter[2], state.accel_raw.axis[2]);
 
   float EstG[3];
-  vectorcopy(&EstG[0], &GEstG[0]);
+  vectorcopy(&EstG[0], &state.GEstG.axis[0]);
 
   float gyros[3];
   for (int i = 0; i < 3; i++) {
@@ -128,11 +125,11 @@ void imu_calc() {
   mat[2][1] = (coszsinx) + (sinzcosx * siny);
   mat[2][2] = cosy * cosx;
 
-  EstG[0] = GEstG[0] * mat[0][0] + GEstG[1] * mat[1][0] + GEstG[2] * mat[2][0];
-  EstG[1] = GEstG[0] * mat[0][1] + GEstG[1] * mat[1][1] + GEstG[2] * mat[2][1];
-  EstG[2] = GEstG[0] * mat[0][2] + GEstG[1] * mat[1][2] + GEstG[2] * mat[2][2];
+  EstG[0] = state.GEstG.axis[0] * mat[0][0] + state.GEstG.axis[1] * mat[1][0] + state.GEstG.axis[2] * mat[2][0];
+  EstG[1] = state.GEstG.axis[0] * mat[0][1] + state.GEstG.axis[1] * mat[1][1] + state.GEstG.axis[2] * mat[2][1];
+  EstG[2] = state.GEstG.axis[0] * mat[0][2] + state.GEstG.axis[1] * mat[1][2] + state.GEstG.axis[2] * mat[2][2];
 
-  vectorcopy(&GEstG[0], &EstG[0]);
+  vectorcopy(&state.GEstG.axis[0], &EstG[0]);
 
   if (flags.onground) { //happyhour bartender - quad is ON GROUND and disarmed
     // calc acc mag
@@ -145,7 +142,7 @@ void imu_calc() {
 
       float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FASTFILTER);
       for (int x = 0; x < 3; x++) {
-        lpf(&GEstG[x], state.accel.axis[x], filtcoeff);
+        lpf(&state.GEstG.axis[x], state.accel.axis[x], filtcoeff);
       }
     }
   } else {
@@ -155,19 +152,19 @@ void imu_calc() {
     }
     float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FILTERTIME);
     for (int x = 0; x < 3; x++) {
-      lpf(&GEstG[x], state.accel.axis[x], filtcoeff);
+      lpf(&state.GEstG.axis[x], state.accel.axis[x], filtcoeff);
     }
 
     //heal the gravity vector after fusion with accel
-    float GEstGmag = calcmagnitude(&GEstG[0]);
+    float GEstGmag = calcmagnitude(&state.GEstG.axis[0]);
     for (int axis = 0; axis < 3; axis++) {
-      GEstG[axis] = GEstG[axis] * (ACC_1G / GEstGmag);
+      state.GEstG.axis[axis] = state.GEstG.axis[axis] * (ACC_1G / GEstGmag);
     }
   }
 
   if (rx_aux_on(AUX_HORIZON)) {
-    attitude[0] = atan2approx(GEstG[0], GEstG[2]);
-    attitude[1] = atan2approx(GEstG[1], GEstG[2]);
+    attitude[0] = atan2approx(state.GEstG.axis[0], state.GEstG.axis[2]);
+    attitude[1] = atan2approx(state.GEstG.axis[1], state.GEstG.axis[2]);
   }
 }
 #endif
@@ -180,14 +177,14 @@ void imu_calc() {
       state.gyro.axis[2] * state.looptime,
   };
 
-  GEstG[2] = GEstG[2] - (gyro_delta_angle[0]) * GEstG[0];
-  GEstG[0] = (gyro_delta_angle[0]) * GEstG[2] + GEstG[0];
+  state.GEstG.axis[2] = state.GEstG.axis[2] - (gyro_delta_angle[0]) * state.GEstG.axis[0];
+  state.GEstG.axis[0] = (gyro_delta_angle[0]) * state.GEstG.axis[2] + state.GEstG.axis[0];
 
-  GEstG[1] = GEstG[1] + (gyro_delta_angle[1]) * GEstG[2];
-  GEstG[2] = -(gyro_delta_angle[1]) * GEstG[1] + GEstG[2];
+  state.GEstG.axis[1] = state.GEstG.axis[1] + (gyro_delta_angle[1]) * state.GEstG.axis[2];
+  state.GEstG.axis[2] = -(gyro_delta_angle[1]) * state.GEstG.axis[1] + state.GEstG.axis[2];
 
-  GEstG[0] = GEstG[0] - (gyro_delta_angle[2]) * GEstG[1];
-  GEstG[1] = (gyro_delta_angle[2]) * GEstG[0] + GEstG[1];
+  state.GEstG.axis[0] = state.GEstG.axis[0] - (gyro_delta_angle[2]) * state.GEstG.axis[1];
+  state.GEstG.axis[1] = (gyro_delta_angle[2]) * state.GEstG.axis[0] + state.GEstG.axis[1];
 
   if (flags.onground) { //happyhour bartender - quad is ON GROUND and disarmed
     // calc acc mag
@@ -200,7 +197,7 @@ void imu_calc() {
 
       float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FASTFILTER);
       for (int x = 0; x < 3; x++) {
-        lpf(&GEstG[x], state.accel_raw.axis[x], filtcoeff);
+        lpf(&state.GEstG.axis[x], state.accel_raw.axis[x], filtcoeff);
       }
     }
   } else {
@@ -225,21 +222,21 @@ void imu_calc() {
         state.accel.axis[axis] = state.accel.axis[axis] * (ACC_1G / accmag);
       }
       // filter accel on to GEstG
-      float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FILTERTIME);
+      float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FILTERTIME);
       for (int x = 0; x < 3; x++) {
-        lpf(&GEstG[x], state.accel.axis[x], filtcoeff);
+        lpf(&state.GEstG.axis[x], state.accel.axis[x], filtcoeff);
       }
     }
     //heal the gravity vector after fusion with accel
-    float GEstGmag = calcmagnitude(&GEstG[0]);
+    float GEstGmag = calcmagnitude(&state.GEstG.axis[0]);
     for (int axis = 0; axis < 3; axis++) {
-      GEstG[axis] = GEstG[axis] * (ACC_1G / GEstGmag);
+      state.GEstG.axis[axis] = state.GEstG.axis[axis] * (ACC_1G / GEstGmag);
     }
   }
 
   if (rx_aux_on(AUX_HORIZON)) {
-    attitude[0] = atan2approx(GEstG[0], GEstG[2]);
-    attitude[1] = atan2approx(GEstG[1], GEstG[2]);
+    attitude[0] = atan2approx(state.GEstG.axis[0], state.GEstG.axis[2]);
+    attitude[1] = atan2approx(state.GEstG.axis[1], state.GEstG.axis[2]);
   }
 }
 #endif
@@ -252,14 +249,14 @@ void imu_calc() {
       state.gyro.axis[2] * state.looptime,
   };
 
-  GEstG[2] = GEstG[2] - (gyro_delta_angle[0]) * GEstG[0];
-  GEstG[0] = (gyro_delta_angle[0]) * GEstG[2] + GEstG[0];
+  state.GEstG.axis[2] = state.GEstG.axis[2] - (gyro_delta_angle[0]) * state.GEstG.axis[0];
+  state.GEstG.axis[0] = (gyro_delta_angle[0]) * state.GEstG.axis[2] + state.GEstG.axis[0];
 
-  GEstG[1] = GEstG[1] + (gyro_delta_angle[1]) * GEstG[2];
-  GEstG[2] = -(gyro_delta_angle[1]) * GEstG[1] + GEstG[2];
+  state.GEstG.axis[1] = state.GEstG.axis[1] + (gyro_delta_angle[1]) * state.GEstG.axis[2];
+  state.GEstG.axis[2] = -(gyro_delta_angle[1]) * state.GEstG.axis[1] + state.GEstG.axis[2];
 
-  GEstG[0] = GEstG[0] - (gyro_delta_angle[2]) * GEstG[1];
-  GEstG[1] = (gyro_delta_angle[2]) * GEstG[0] + GEstG[1];
+  state.GEstG.axis[0] = state.GEstG.axis[0] - (gyro_delta_angle[2]) * state.GEstG.axis[1];
+  state.GEstG.axis[1] = (gyro_delta_angle[2]) * state.GEstG.axis[0] + state.GEstG.axis[1];
 
   filter_lp_pt1_coeff(&filter, PT1_FILTER_HZ);
 
@@ -280,27 +277,27 @@ void imu_calc() {
     if (flags.onground) {
       //happyhour bartender - quad is ON GROUND and disarmed
       const float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FASTFILTER);
-      lpf(&GEstG[0], state.accel.axis[0], filtcoeff);
-      lpf(&GEstG[1], state.accel.axis[1], filtcoeff);
-      lpf(&GEstG[2], state.accel.axis[2], filtcoeff);
+      lpf(&state.GEstG.axis[0], state.accel.axis[0], filtcoeff);
+      lpf(&state.GEstG.axis[1], state.accel.axis[1], filtcoeff);
+      lpf(&state.GEstG.axis[2], state.accel.axis[2], filtcoeff);
     } else {
       //lateshift bartender - quad is IN AIR and things are getting wild
       const float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FILTERTIME);
-      lpf(&GEstG[0], state.accel.axis[0], filtcoeff);
-      lpf(&GEstG[1], state.accel.axis[1], filtcoeff);
-      lpf(&GEstG[2], state.accel.axis[2], filtcoeff);
+      lpf(&state.GEstG.axis[0], state.accel.axis[0], filtcoeff);
+      lpf(&state.GEstG.axis[1], state.accel.axis[1], filtcoeff);
+      lpf(&state.GEstG.axis[2], state.accel.axis[2], filtcoeff);
     }
   }
 
   //heal the gravity vector after fusion with accel
-  const float GEstGmag = calcmagnitude(GEstG);
-  GEstG[0] = GEstG[0] * (ACC_1G / GEstGmag);
-  GEstG[1] = GEstG[1] * (ACC_1G / GEstGmag);
-  GEstG[2] = GEstG[2] * (ACC_1G / GEstGmag);
+  const float GEstGmag = vec3_magnitude(&state.GEstG);
+  state.GEstG.axis[0] = state.GEstG.axis[0] * (ACC_1G / GEstGmag);
+  state.GEstG.axis[1] = state.GEstG.axis[1] * (ACC_1G / GEstGmag);
+  state.GEstG.axis[2] = state.GEstG.axis[2] * (ACC_1G / GEstGmag);
 
   if (rx_aux_on(AUX_HORIZON)) {
-    attitude[0] = atan2approx(GEstG[0], GEstG[2]);
-    attitude[1] = atan2approx(GEstG[1], GEstG[2]);
+    attitude[0] = atan2approx(state.GEstG.axis[0], state.GEstG.axis[2]);
+    attitude[1] = atan2approx(state.GEstG.axis[1], state.GEstG.axis[2]);
   }
 }
 #endif

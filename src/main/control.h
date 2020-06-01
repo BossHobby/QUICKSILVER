@@ -10,6 +10,8 @@
 
 #define ANGLE_PID_SIZE 2
 
+#define ACC_1G 1.0f
+
 // THE UN OF STRUCTS
 typedef struct {
   uint8_t armed_state : 1;
@@ -32,15 +34,18 @@ typedef struct {
   float looptime;      // looptime in seconds
   float osd_totaltime; // running sum of looptimes
 
-  vec4_t rx;          // holds the main four channels, roll, pitch, yaw, throttle
-  vec4_t rx_filtered; // same as above, but filtered by the rx smoothing
-  vec4_t rx_override;
-
   float lipo_cell_count;
   float vbattfilt; // filtered battery in volts
   float vbattfilt_corr;
   float vbatt_comp;
   float vreffilt; // voltage reference for vcc compensation
+
+  vec4_t rx;          // holds the main four channels, roll, pitch, yaw, throttle
+  vec4_t rx_filtered; // same as above, but filtered by the rx smoothing
+  vec4_t rx_override;
+
+  float throttle;
+  float thrsum; // average of all 4 motor thrusts
 
   uint8_t aux[AUX_CHANNEL_MAX]; // digital on / off channels
 
@@ -49,6 +54,8 @@ typedef struct {
 
   vec3_t gyro_raw;
   vec3_t gyro;
+
+  vec3_t GEstG;
 
   float angleerror[ANGLE_PID_SIZE];
 } control_state_t;

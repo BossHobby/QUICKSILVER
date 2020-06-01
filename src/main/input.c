@@ -7,7 +7,6 @@
 #include "profile.h"
 #include "util.h"
 
-extern float GEstG[3];
 extern float Q_rsqrt(float number);
 extern profile_t profile;
 
@@ -58,8 +57,8 @@ void input_stick_vector(float rx_input[], float maxangle) {
 
   // find error between stick vector and quad orientation
   // vector cross product
-  errorvect[1] = -((GEstG[1] * stickvector[2]) - (GEstG[2] * stickvector[1]));
-  errorvect[0] = (GEstG[2] * stickvector[0]) - (GEstG[0] * stickvector[2]);
+  errorvect[1] = -((state.GEstG.axis[1] * stickvector[2]) - (state.GEstG.axis[2] * stickvector[1]));
+  errorvect[0] = (state.GEstG.axis[2] * stickvector[0]) - (state.GEstG.axis[0] * stickvector[2]);
 
   // some limits just in case
 
@@ -81,7 +80,7 @@ void input_stick_vector(float rx_input[], float maxangle) {
 #define g_treshold 0.125f
 #define roll_bias 0.25f
 
-  if (rx_aux_on(AUX_FN_INVERTED) && (GEstG[2] > g_treshold)) {
+  if (rx_aux_on(AUX_FN_INVERTED) && (state.GEstG.axis[2] > g_treshold)) {
     flip_active = 1;
     // rotate around axis with larger leaning angle
 
@@ -91,7 +90,7 @@ void input_stick_vector(float rx_input[], float maxangle) {
       errorvect[flipaxis] = -rollrate;
     }
 
-  } else if (!rx_aux_on(AUX_FN_INVERTED) && (GEstG[2] < -g_treshold)) {
+  } else if (!rx_aux_on(AUX_FN_INVERTED) && (state.GEstG.axis[2] < -g_treshold)) {
     flip_active = 1;
 
     if (flipdir) {
@@ -108,13 +107,13 @@ void input_stick_vector(float rx_input[], float maxangle) {
     if (!flip_active_once) {
       // check which axis is further from center, with a bias towards roll
       // because a roll flip does not leave the quad facing the wrong way
-      if (fabsf(GEstG[0]) + roll_bias > fabsf(GEstG[1])) {
+      if (fabsf(state.GEstG.axis[0]) + roll_bias > fabsf(state.GEstG.axis[1])) {
         // flip in roll axis
         flipaxis = 0;
       } else
         flipaxis = 1;
 
-      if (GEstG[flipaxis] > 0)
+      if (state.GEstG.axis[flipaxis] > 0)
         flipdir = 1;
       else
         flipdir = 0;
@@ -123,7 +122,7 @@ void input_stick_vector(float rx_input[], float maxangle) {
     }
 
     // set the error in other axis to return to zero
-    errorvect[!flipaxis] = GEstG[!flipaxis];
+    errorvect[!flipaxis] = state.GEstG.axis[!flipaxis];
   }
 #endif
 }

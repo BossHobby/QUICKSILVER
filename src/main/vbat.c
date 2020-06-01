@@ -37,16 +37,12 @@ void vbat_calc() {
   // read and filter internal reference
   lpf(&state.vreffilt, adc_read(1), 0.9968f);
 
-  // average of all 4 motor thrusts
-  // should be proportional with battery current
-  extern float thrsum; // from control.c
-
   // average of all motors
   static float thrfilt = 0;
 
   // filter motorpwm so it has the same delay as the filtered voltage
   // ( or they can use a single filter)
-  lpf(&thrfilt, thrsum, 0.9968f); // 0.5 sec at 1.6ms loop time
+  lpf(&thrfilt, state.thrsum, 0.9968f); // 0.5 sec at 1.6ms loop time
 
   // li-ion battery model compensation time decay ( 18 seconds )
   lpf(&state.vbattfilt_corr, state.vbattfilt, FILTERCALC(1000, 18000e3));

@@ -15,7 +15,6 @@ static uint8_t blackbox_enabled = 0;
 
 extern float cpu_load;
 
-extern float GEstG[3];
 extern float pidoutput[3];
 
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
@@ -152,9 +151,9 @@ void blackbox_update() {
   vec3_compress(&blackbox.accel_filter, &state.accel, 1024);
   vec3_compress(&blackbox.accel_raw, &state.accel_raw, 1024);
 
-  blackbox.gyro_vector[0] = GEstG[0];
-  blackbox.gyro_vector[1] = GEstG[1];
-  blackbox.gyro_vector[2] = GEstG[2];
+  blackbox.gyro_vector[0] = state.GEstG.axis[0];
+  blackbox.gyro_vector[1] = state.GEstG.axis[1];
+  blackbox.gyro_vector[2] = state.GEstG.axis[2];
 
   blackbox.pid_output[0] = pidoutput[0];
   blackbox.pid_output[1] = pidoutput[1];

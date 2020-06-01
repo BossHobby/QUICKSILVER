@@ -65,14 +65,12 @@ float tempx[4];
 
 #endif
 
-float thrsum;
 float overthrottlefilt = 0;
 float underthrottlefilt = 0;
 
 extern int pwmdir;
 extern int motortest_override;
 
-extern float throttle;
 extern float pidoutput[PIDNUMBER];
 
 extern profile_t profile;
@@ -268,25 +266,25 @@ void motor_mixer_calc(float mix[4]) {
       if (state.rx_filtered.roll < -0.5f || state.rx_filtered.pitch < -0.5f) {
         mix[MOTOR_FR] = 0;
       } else {
-        mix[MOTOR_FR] = throttle;
+        mix[MOTOR_FR] = state.throttle;
       }
 
       if (state.rx_filtered.roll > 0.5f || state.rx_filtered.pitch < -0.5f) {
         mix[MOTOR_FL] = 0;
       } else {
-        mix[MOTOR_FL] = throttle;
+        mix[MOTOR_FL] = state.throttle;
       }
 
       if (state.rx_filtered.roll < -0.5f || state.rx_filtered.pitch > 0.5f) {
         mix[MOTOR_BR] = 0;
       } else {
-        mix[MOTOR_BR] = throttle;
+        mix[MOTOR_BR] = state.throttle;
       }
 
       if (state.rx_filtered.roll > 0.5f || state.rx_filtered.pitch > 0.5f) {
         mix[MOTOR_BL] = 0;
       } else {
-        mix[MOTOR_BL] = throttle;
+        mix[MOTOR_BL] = state.throttle;
       }
     }
 
@@ -296,19 +294,19 @@ void motor_mixer_calc(float mix[4]) {
 #ifdef INVERTED_ENABLE
     if (pwmdir == REVERSE) {
       // inverted flight
-      mix[MOTOR_FR] = throttle + pidoutput[ROLL] + pidoutput[PITCH] - pidoutput[YAW]; // FR
-      mix[MOTOR_FL] = throttle - pidoutput[ROLL] + pidoutput[PITCH] + pidoutput[YAW]; // FL
-      mix[MOTOR_BR] = throttle + pidoutput[ROLL] - pidoutput[PITCH] + pidoutput[YAW]; // BR
-      mix[MOTOR_BL] = throttle - pidoutput[ROLL] - pidoutput[PITCH] - pidoutput[YAW]; // BL
+      mix[MOTOR_FR] = state.throttle + pidoutput[ROLL] + pidoutput[PITCH] - pidoutput[YAW]; // FR
+      mix[MOTOR_FL] = state.throttle - pidoutput[ROLL] + pidoutput[PITCH] + pidoutput[YAW]; // FL
+      mix[MOTOR_BR] = state.throttle + pidoutput[ROLL] - pidoutput[PITCH] + pidoutput[YAW]; // BR
+      mix[MOTOR_BL] = state.throttle - pidoutput[ROLL] - pidoutput[PITCH] - pidoutput[YAW]; // BL
 
     } else
 #endif
     {
       // normal mixer
-      mix[MOTOR_FR] = throttle - pidoutput[ROLL] - pidoutput[PITCH] + pidoutput[YAW]; // FR
-      mix[MOTOR_FL] = throttle + pidoutput[ROLL] - pidoutput[PITCH] - pidoutput[YAW]; // FL
-      mix[MOTOR_BR] = throttle - pidoutput[ROLL] + pidoutput[PITCH] - pidoutput[YAW]; // BR
-      mix[MOTOR_BL] = throttle + pidoutput[ROLL] + pidoutput[PITCH] + pidoutput[YAW]; // BL
+      mix[MOTOR_FR] = state.throttle - pidoutput[ROLL] - pidoutput[PITCH] + pidoutput[YAW]; // FR
+      mix[MOTOR_FL] = state.throttle + pidoutput[ROLL] - pidoutput[PITCH] - pidoutput[YAW]; // FL
+      mix[MOTOR_BR] = state.throttle - pidoutput[ROLL] + pidoutput[PITCH] - pidoutput[YAW]; // BR
+      mix[MOTOR_BL] = state.throttle + pidoutput[ROLL] + pidoutput[PITCH] + pidoutput[YAW]; // BL
     }
 
     for (int i = 0; i <= 3; i++) {
@@ -331,7 +329,7 @@ void motor_mixer_calc(float mix[4]) {
 
 //********************************MOTOR OUTPUT***********************************************************
 void motor_output_calc(float mix[4]) {
-  thrsum = 0; //reset throttle sum for voltage monitoring logic in main loop
+  state.thrsum = 0; //reset throttle sum for voltage monitoring logic in main loop
 
   //Begin for-loop to send motor commands
   for (int i = 0; i <= 3; i++) {
@@ -358,9 +356,9 @@ void motor_output_calc(float mix[4]) {
 
     // clip mixer outputs (if not already done) before applying calculating throttle sum
     mix[i] = constrainf(mix[i], 0, 1);
-    thrsum += mix[i];
+    state.thrsum += mix[i];
   }
 
   //calculate throttle sum for voltage monitoring logic in main loop
-  thrsum = thrsum / 4;
+  state.thrsum = state.thrsum / 4;
 }

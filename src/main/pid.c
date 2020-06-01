@@ -88,7 +88,6 @@ void pid_init() {
 // this is called in advance as an optimization because it has division
 void pid_precalc() {
   timefactor = 0.0032f / state.looptime;
-  extern float throttle;
 
   filter_coeff(profile.filter.dterm[0].type, &filter[0], profile.filter.dterm[0].cutoff_freq);
   filter_coeff(profile.filter.dterm[1].type, &filter[1], profile.filter.dterm[1].cutoff_freq);
@@ -104,12 +103,12 @@ void pid_precalc() {
   }
 
   if (profile.pid.throttle_dterm_attenuation.tda_active) {
-    tda_compensation = mapf(throttle, profile.pid.throttle_dterm_attenuation.tda_breakpoint, 1.0f, 1.0f, profile.pid.throttle_dterm_attenuation.tda_percent);
+    tda_compensation = mapf(state.throttle, profile.pid.throttle_dterm_attenuation.tda_breakpoint, 1.0f, 1.0f, profile.pid.throttle_dterm_attenuation.tda_percent);
     tda_compensation = constrainf(tda_compensation, profile.pid.throttle_dterm_attenuation.tda_percent, 1.0f);
   }
 
   if (profile.filter.dterm_dynamic_enable) {
-    float dynamic_throttle = throttle * (1 - throttle / 2.0f) * 2.0f;
+    float dynamic_throttle = state.throttle * (1 - state.throttle / 2.0f) * 2.0f;
     float d_term_dynamic_freq = mapf(dynamic_throttle, 0.0f, 1.0f, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
     d_term_dynamic_freq = constrainf(d_term_dynamic_freq, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
 

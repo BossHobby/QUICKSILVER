@@ -53,10 +53,12 @@ control_state_t state = {
     .vreffilt = 1.0,
 
     .lipo_cell_count = 1.0,
+
+    .GEstG = {
+        .axis = {0, 0, ACC_1G},
+    },
 };
 
-float throttle;
-float yawangle;
 float error[PIDNUMBER];
 
 static uint8_t idle_state;
@@ -65,7 +67,6 @@ static uint32_t onground_long = 1;
 
 extern int pwmdir;
 
-extern float thrsum;
 extern float pidoutput[PIDNUMBER];
 extern float setpoint[3];
 
@@ -111,16 +112,15 @@ void control(void) {
 
   if (rx_aux_on(AUX_LEVELMODE) && !flags.acro_override) {
     extern float errorvect[]; // level mode angle error calculated by stick_vector.c
-    extern float GEstG[3];    // gravity vector for yaw feedforward
     float yawerror[3] = {0};  // yaw rotation vector
 
     // calculate roll / pitch error
     input_stick_vector(state.rx_filtered.axis, 0);
 
     // apply yaw from the top of the quad
-    yawerror[0] = GEstG[1] * rates[2];
-    yawerror[1] = -GEstG[0] * rates[2];
-    yawerror[2] = GEstG[2] * rates[2];
+    yawerror[0] = state.GEstG.axis[1] * rates[2];
+    yawerror[1] = -state.GEstG.axis[0] * rates[2];
+    yawerror[2] = state.GEstG.axis[2] * rates[2];
 
     // *************************************************************************
     //horizon modes tuning variables
@@ -135,7 +135,7 @@ void control(void) {
     // *************************************************************************
 
     if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON)) { //racemode with angle behavior on roll ais
-      if (GEstG[2] < 0) {                                     // acro on roll and pitch when inverted
+      if (state.GEstG.axis[2] < 0) {                          // acro on roll and pitch when inverted
         error[0] = rates[0] - state.gyro.axis[0];
         error[1] = rates[1] - state.gyro.axis[1];
       } else {
@@ -173,7 +173,7 @@ void control(void) {
       }
       float fade = (stickFade * (1 - HORIZON_SLIDER)) + (HORIZON_SLIDER * angleFade);
       // apply acro to roll for inverted behavior
-      if (GEstG[2] < 0) {
+      if (state.GEstG.axis[2] < 0) {
         error[0] = rates[0] - state.gyro.axis[0];
         error[1] = rates[1] - state.gyro.axis[1];
       } else { // apply a transitioning mix of acro and level behavior inside of stick HORIZON_TRANSITION point and full acro beyond stick HORIZON_TRANSITION point
@@ -214,7 +214,7 @@ void control(void) {
         }
         float fade = (stickFade * (1 - HORIZON_SLIDER)) + (HORIZON_SLIDER * angleFade);
         // apply acro to roll and pitch sticks for inverted behavior
-        if (GEstG[2] < 0) {
+        if (state.GEstG.axis[2] < 0) {
           error[i] = rates[i] - state.gyro.axis[i];
         } else { // apply a transitioning mix of acro and level behavior inside of stick HORIZON_TRANSITION point and full acro beyond stick HORIZON_TRANSITION point
           state.angleerror[i] = errorvect[i];
@@ -302,7 +302,7 @@ void control(void) {
   // CONDITION: armed state variable is 0 so quad is DISARMED
   if (flags.armed_state == 0) {
     // override throttle to 0
-    throttle = 0;
+    state.throttle = 0;
 
     // flag in air variable as NOT IN THE AIR for mix throttle increase safety
     flags.in_air = 0;
@@ -317,13 +317,13 @@ void control(void) {
 
       if (state.rx.throttle < 0.05f) {
         // set a small dead zone where throttle is zero and
-        throttle = 0;
+        state.throttle = 0;
 
         // deactivate mix increase 3 since throttle is off
         flags.in_air = 0;
       } else {
         // map the remainder of the the active throttle region to 100%
-        throttle = (state.rx.throttle - 0.05f) * 1.05623158f;
+        state.throttle = (state.rx.throttle - 0.05f) * 1.05623158f;
 
         // activate mix increase since throttle is on
         flags.in_air = 1;
@@ -332,7 +332,7 @@ void control(void) {
       // CONDITION: idle up is turned ON
 
       // throttle range is mapped from idle throttle value to 100%
-      throttle = (float)IDLE_THR + state.rx.throttle * (1.0f - (float)IDLE_THR);
+      state.throttle = (float)IDLE_THR + state.rx.throttle * (1.0f - (float)IDLE_THR);
 
       if ((state.rx.throttle > THROTTLE_SAFETY) && (flags.in_air == 0)) {
         // change the state of in air flag when first crossing the throttle
@@ -345,7 +345,7 @@ void control(void) {
 #ifdef STICK_TRAVEL_CHECK //This feature completely disables throttle and allows visual feedback if control inputs reach full throws
   //Stick endpoints check tied to aux channel stick gesture
   if (rx_aux_on(AUX_TRAVEL_CHECK)) {
-    throttle = 0;
+    state.throttle = 0;
     if ((state.rx.axis[0] <= -0.99f) || (state.rx.axis[0] >= 0.99f) ||
         (state.rx.axis[1] <= -0.99f) || (state.rx.axis[1] >= 0.99f) ||
         (state.rx.axis[2] <= -0.99f) || (state.rx.axis[2] >= 0.99f) ||
@@ -362,7 +362,7 @@ void control(void) {
     float mix[4] = {0, 0, 0, 0};
     motor_mixer_calc(mix);
     motor_output_calc(mix);
-  } else if ((flags.armed_state == 0) || flags.failsafe || (throttle < 0.001f)) {
+  } else if ((flags.armed_state == 0) || flags.failsafe || (state.throttle < 0.001f)) {
     // CONDITION: disarmed OR failsafe OR throttle off
 
     if (onground_long && (timer_micros() - onground_long > ON_GROUND_LONG_TIMEOUT)) {
@@ -376,9 +376,9 @@ void control(void) {
     motor_beep();
 #endif
 
-    throttle = 0; //zero out throttle so it does not come back on as idle up value if enabled
+    state.throttle = 0; //zero out throttle so it does not come back on as idle up value if enabled
     flags.onground = 1;
-    thrsum = 0;
+    state.thrsum = 0;
 
   } else { // motors on - normal flight
 
@@ -386,34 +386,33 @@ void control(void) {
     onground_long = timer_micros();
 
     if (profile.motor.throttle_boost > 0.0f) {
-      throttle += (float)(profile.motor.throttle_boost) * throttlehpf(throttle);
-      if (throttle < 0)
-        throttle = 0;
-      if (throttle > 1.0f)
-        throttle = 1.0f;
+      state.throttle += (float)(profile.motor.throttle_boost) * throttlehpf(state.throttle);
+      if (state.throttle < 0)
+        state.throttle = 0;
+      if (state.throttle > 1.0f)
+        state.throttle = 1.0f;
     }
 
     if (flags.controls_override) { // change throttle in flip mode
-      throttle = state.rx_override.axis[3];
+      state.throttle = state.rx_override.axis[3];
     }
 
     // throttle angle compensation
 #ifdef AUTO_THROTTLE
     if (rx_aux_on(AUX_LEVELMODE)) {
       //float autothrottle = fastcos(attitude[0] * DEGTORAD) * fastcos(attitude[1] * DEGTORAD);
-      extern float GEstG[];
-      float autothrottle = GEstG[2];
-      float old_throttle = throttle;
+      float autothrottle = state.GEstG.axis[2];
+      float old_throttle = state.throttle;
       if (autothrottle <= 0.5f)
         autothrottle = 0.5f;
-      throttle = throttle / autothrottle;
+      state.throttle = state.throttle / autothrottle;
       // limit to 90%
       if (old_throttle < 0.9f)
-        if (throttle > 0.9f)
-          throttle = 0.9f;
+        if (state.throttle > 0.9f)
+          state.throttle = 0.9f;
 
-      if (throttle > 1.0f)
-        throttle = 1.0f;
+      if (state.throttle > 1.0f)
+        state.throttle = 1.0f;
     }
 #endif
 
@@ -444,7 +443,7 @@ void control(void) {
       if (throttle_i < 0.0f)
         throttle_i = 0.0f;
 
-      throttle -= throttle_p + throttle_i;
+      state.throttle -= throttle_p + throttle_i;
     } else {
       //do nothing - feature is disabled via stick gesture
     }
@@ -471,7 +470,7 @@ void control(void) {
     if (throttle_i < 0.0f)
       throttle_i = 0.0f;
 
-    throttle -= throttle_p + throttle_i;
+    state.throttle -= throttle_p + throttle_i;
 #endif
 #endif
 
