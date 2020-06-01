@@ -442,8 +442,8 @@ void motor_set(uint8_t number, float pwm) {
 
 #endif
   extern int motortest_override;
-  if (flags.onground || !flags.armed_state || (motortest_override && pwm < 0.002f) || ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE)) && pwm < 0.002f)) { //turn off the slow motors during turtle or motortest
-    value = 0;                                                                                                                                      // stop the motors
+  if (flags.on_ground || !flags.arm_state || (motortest_override && pwm < 0.002f) || ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE)) && pwm < 0.002f)) { //turn off the slow motors during turtle or motortest
+    value = 0;                                                                                                                                     // stop the motors
   }
 
   if (flags.failsafe && !motortest_override) {

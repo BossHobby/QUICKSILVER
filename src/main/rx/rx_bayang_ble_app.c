@@ -542,7 +542,7 @@ void beacon_sequence() {
     //SilverVISE - end
 
     ble_send = 0;
-    if (flags.rxmode == 0) {
+    if (flags.rx_mode == 0) {
       xn_writereg(0x25, 0); // Set channel frequency	, bind
     }
     beacon_seq_state++;
@@ -603,7 +603,7 @@ void send_beacon() {
   TLMorPID = 1; // 0 = TLM, 1 = PID+TLM
 #endif
 
-  if (flags.onground == 1) {
+  if (flags.on_ground == 1) {
     time_throttle_on = uptime;
   } else {
     total_time_in_air += (uptime - time_throttle_on);
@@ -615,7 +615,7 @@ void send_beacon() {
   int rate_and_mode_value = (rx_aux_on(AUX_HIGH_RATES) << 1) + !!(rx_aux_on(AUX_LEVELMODE));
 
   extern int bound_for_BLE_packet;
-  int onground_and_bind = (flags.failsafe << 2) + (flags.onground << 1) + (bound_for_BLE_packet);
+  int onground_and_bind = (flags.failsafe << 2) + (flags.on_ground << 1) + (bound_for_BLE_packet);
   onground_and_bind = 8 + onground_and_bind;
 
   int packetpersecond_short = packetpersecond / 2;
@@ -924,7 +924,7 @@ void rx_check(void) {
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {
-    if (flags.rxmode == RX_MODE_BIND) { // rx startup , bind mode
+    if (flags.rx_mode == RX_MODE_BIND) { // rx startup , bind mode
       xn_readpayload(rxdata, 15);
 
       if (rxdata[0] == 164) { // bind packet
@@ -942,7 +942,7 @@ void rx_check(void) {
 
         xn_writerxaddress(rxaddress);
         xn_writereg(0x25, rfchannel[rf_chan]); // Set channel frequency
-        flags.rxmode = RX_MODE_NORMAL;
+        flags.rx_mode = RX_MODE_NORMAL;
         bound_for_BLE_packet = 1; //SilverVISE
 
 #ifdef SERIAL
@@ -997,7 +997,7 @@ void rx_check(void) {
   unsigned long time = gettime();
 
   // sequence period 12000
-  if (time - lastrxtime > (HOPPING_NUMBER * PACKET_PERIOD + 1000) && flags.rxmode != RX_MODE_BIND) {
+  if (time - lastrxtime > (HOPPING_NUMBER * PACKET_PERIOD + 1000) && flags.rx_mode != RX_MODE_BIND) {
     //  channel with no reception
     lastrxtime = time;
     // set channel to last with reception
@@ -1009,7 +1009,7 @@ void rx_check(void) {
     timingfail = 1;
   }
 
-  if (!timingfail && !ble_send && skipchannel < HOPPING_NUMBER + 1 && flags.rxmode != RX_MODE_BIND) {
+  if (!timingfail && !ble_send && skipchannel < HOPPING_NUMBER + 1 && flags.rx_mode != RX_MODE_BIND) {
     unsigned int temp = time - lastrxtime;
 
     if (temp > 1000 && (temp - (PACKET_OFFSET)) / ((int)PACKET_PERIOD) >= (skipchannel + 1)) {

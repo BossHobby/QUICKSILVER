@@ -132,7 +132,7 @@ void dsm_init(void) {
   flags.failsafe = 1;              //kill motors while initializing usart (maybe not necessary)
   serial_rx_init(RX_PROTOCOL_DSM); //initialize usart in drv_rx_serial
   framestarted = 0;                // set setup complete flag
-  flags.rxmode = !RXMODE_BIND;     // put LEDS in normal signal status
+  flags.rx_mode = !RXMODE_BIND;    // put LEDS in normal signal status
 }
 
 // Send Spektrum bind pulses to a GPIO e.g. TX1
@@ -208,7 +208,7 @@ void rx_check() {
 
   if (framestarted == 1) {
     if ((bind_safety < 900) && (bind_safety > 0))
-      flags.rxmode = RXMODE_BIND; // normal rx mode - removes waiting for bind led leaving failsafe flashes as data starts to come in
+      flags.rx_mode = RXMODE_BIND; // normal rx mode - removes waiting for bind led leaving failsafe flashes as data starts to come in
 
       // TAER channel order
 #ifdef RX_DSMX_2048
@@ -260,11 +260,11 @@ void rx_check() {
     if (rx_rssi < 0.0f)
       rx_rssi = 0.0f;
 
-    if (bind_safety > 900) {       //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
-      flags.rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
-      flags.failsafe = 0;          // turn off failsafe delayed a bit to emmulate led behavior of sbus protocol - optional either here or just above here
-      flags.rxmode = !RXMODE_BIND; // restores normal led operation
-      bind_safety = 901;           // reset counter so it doesnt wrap
+    if (bind_safety > 900) {        //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
+      flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
+      flags.failsafe = 0;           // turn off failsafe delayed a bit to emmulate led behavior of sbus protocol - optional either here or just above here
+      flags.rx_mode = !RXMODE_BIND; // restores normal led operation
+      bind_safety = 901;            // reset counter so it doesnt wrap
     }
   }
 }

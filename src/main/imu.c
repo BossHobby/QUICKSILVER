@@ -24,7 +24,7 @@
 // filter times in seconds
 // time to correct gyro readings using the accelerometer
 // 1-4 are generally good
-#define FASTFILTER 0.05 //onground filter
+#define FASTFILTER 0.05 //on_ground filter
 //#define PREFILTER 0.2   //in_air prefilter (this can be commented out)
 #define FILTERTIME 2.0 //in_air fusion filter
 
@@ -120,7 +120,7 @@ void imu_calc() {
 
   vectorcopy(&state.GEstG.axis[0], &EstG[0]);
 
-  if (flags.onground) { //happyhour bartender - quad is ON GROUND and disarmed
+  if (flags.on_ground) { //happyhour bartender - quad is ON GROUND and disarmed
     // calc acc mag
     float accmag = vec3_magnitude(&state.accel);
     if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
@@ -175,7 +175,7 @@ void imu_calc() {
   state.GEstG.axis[0] = state.GEstG.axis[0] - (gyro_delta_angle[2]) * state.GEstG.axis[1];
   state.GEstG.axis[1] = (gyro_delta_angle[2]) * state.GEstG.axis[0] + state.GEstG.axis[1];
 
-  if (flags.onground) { //happyhour bartender - quad is ON GROUND and disarmed
+  if (flags.on_ground) { //happyhour bartender - quad is ON GROUND and disarmed
     // calc acc mag
     float accmag = vec3_magnitude(&state.accel_raw);
     if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
@@ -263,7 +263,7 @@ void imu_calc() {
     state.accel.axis[1] = state.accel.axis[1] * (ACC_1G / accmag);
     state.accel.axis[2] = state.accel.axis[2] * (ACC_1G / accmag);
 
-    if (flags.onground) {
+    if (flags.on_ground) {
       //happyhour bartender - quad is ON GROUND and disarmed
       const float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FASTFILTER);
       lpf(&state.GEstG.axis[0], state.accel.axis[0], filtcoeff);

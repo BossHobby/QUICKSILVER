@@ -119,7 +119,7 @@ void send_s_frame() {
   sendbyte(rssi); // rssi
   sendbyte(0);    // airspeed
 
-#define ARMED ((flags.rxmode != RXMODE_BIND))
+#define ARMED ((flags.rx_mode != RXMODE_BIND))
 #define FAILSAFE flags.failsafe
 #define MODE ((rx_aux_on(AUX_LEVELMODE)) ? 3 : 4)
 

@@ -127,7 +127,7 @@ void rx_check(void) {
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {
-    if (flags.rxmode == 0) { // rx startup , bind mode
+    if (flags.rx_mode == 0) { // rx startup , bind mode
       xn_readpayload(rxdata, 15);
 
       if (rxdata[0] == 0xAA) { // bind packet
@@ -163,7 +163,7 @@ void rx_check(void) {
           //xn_writereg( STATUS , B00100000 );
           delay(1000);
         }
-        flags.rxmode = RXMODE_NORMAL;
+        flags.rx_mode = RXMODE_NORMAL;
 
         nextchannel();
         reset_looptime();
@@ -202,7 +202,7 @@ void rx_check(void) {
 
   unsigned long time = gettime();
 
-  if (time - lastrxtime > 20000 && flags.rxmode != RXMODE_BIND) { //  channel with no reception
+  if (time - lastrxtime > 20000 && flags.rx_mode != RXMODE_BIND) { //  channel with no reception
     lastrxtime = time;
     nextchannel();
   }

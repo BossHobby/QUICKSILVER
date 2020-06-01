@@ -182,13 +182,13 @@ unsigned long secondtimer;
 void rx_check(void) {
   if (checkpacket()) {
     xn_readpayload(rxdata, 15);
-    if (flags.rxmode == RXMODE_BIND) { // rx startup , bind mode
-      if (rxdata[0] == 0xAA) {         // bind packet received
+    if (flags.rx_mode == RXMODE_BIND) { // rx startup , bind mode
+      if (rxdata[0] == 0xAA) {          // bind packet received
 
         txid[0] = rxdata[1];
         txid[1] = rxdata[2];
 
-        flags.rxmode = RXMODE_NORMAL;
+        flags.rx_mode = RXMODE_NORMAL;
 
         xn_writereg(0x25, (uint8_t)(rxdata[1] - 0x7D)); // Set channel frequency
       }

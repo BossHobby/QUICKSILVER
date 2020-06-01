@@ -216,8 +216,8 @@ void vtx_update() {
 #if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
   if (rx_aux_on(AUX_FPV_ON)) {
     // fpv switch on
-    if (!fpv_init && flags.rxmode == RXMODE_NORMAL) {
-      fpv_init = gpio_init_fpv(flags.rxmode);
+    if (!fpv_init && flags.rx_mode == RXMODE_NORMAL) {
+      fpv_init = gpio_init_fpv(flags.rx_mode);
     }
     if (fpv_init) {
       GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_SET);
@@ -241,7 +241,7 @@ void vtx_update() {
   }
 
 #ifdef ENABLE_SMART_AUDIO
-  if (flags.onground && has_smart_audio_configured()) {
+  if (flags.on_ground && has_smart_audio_configured()) {
     vtx_smart_audio_update();
   }
 #endif

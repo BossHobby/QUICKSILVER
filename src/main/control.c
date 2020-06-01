@@ -31,15 +31,15 @@
 #define ON_GROUND_LONG_TIMEOUT 1e6
 
 control_flags_t flags = {
-    .armed_state = 0,
+    .arm_state = 0,
     .in_air = 0,
-    .binding_while_armed = 1,
-    .onground = 1,
+    .arm_safety = 1,
+    .on_ground = 1,
     .failsafe = 1,
     .lowbatt = 1,
     .throttle_safety = 0,
     .usb_active = 0,
-    .rxmode = RXMODE_BIND,
+    .rx_mode = RXMODE_BIND,
 };
 
 control_state_t state = {
@@ -255,9 +255,9 @@ void control(void) {
     }
 
     // CONDITION: (throttle is above safety limit and ARMING RELEASE FLAG IS NOT CLEARED) OR (bind just took place with transmitter armed)
-    if ((flags.throttle_safety == 1) || (flags.binding_while_armed == 1)) {
+    if ((flags.throttle_safety == 1) || (flags.arm_safety == 1)) {
       // override to disarmed state
-      flags.armed_state = 0;
+      flags.arm_state = 0;
 
       // rapid blink the leds
       ledcommand = 1;
@@ -265,7 +265,7 @@ void control(void) {
       // CONDITION: quad is being armed in a safe state
 
       // arm the quad by setting armed state variable to 1
-      flags.armed_state = 1;
+      flags.arm_state = 1;
 
       // clear the arming release flag - the arming release flag being cleared
       // is what stops the quad from automatically disarming again the next time
@@ -276,11 +276,11 @@ void control(void) {
     // CONDITION: switch is DISARMED
 
     // disarm the quad by setting armed state variable to zero
-    flags.armed_state = 0;
+    flags.arm_state = 0;
 
     if (flags.rx_ready == 1) {
       // rx is bound and has been disarmed so clear binding while armed flag
-      flags.binding_while_armed = 0;
+      flags.arm_safety = 0;
     }
   }
 
@@ -291,7 +291,7 @@ void control(void) {
   }
 
   // CONDITION: armed state variable is 0 so quad is DISARMED
-  if (flags.armed_state == 0) {
+  if (flags.arm_state == 0) {
     // override throttle to 0
     state.throttle = 0;
 
@@ -347,13 +347,13 @@ void control(void) {
 #endif
 
   if (usb_motor_test.active) {
-    flags.armed_state = 1;
-    flags.onground = 0;
+    flags.arm_state = 1;
+    flags.on_ground = 0;
 
     float mix[4] = {0, 0, 0, 0};
     motor_mixer_calc(mix);
     motor_output_calc(mix);
-  } else if ((flags.armed_state == 0) || flags.failsafe || (state.throttle < 0.001f)) {
+  } else if ((flags.arm_state == 0) || flags.failsafe || (state.throttle < 0.001f)) {
     // CONDITION: disarmed OR failsafe OR throttle off
 
     if (onground_long && (timer_micros() - onground_long > ON_GROUND_LONG_TIMEOUT)) {
@@ -368,12 +368,12 @@ void control(void) {
 #endif
 
     state.throttle = 0; //zero out throttle so it does not come back on as idle up value if enabled
-    flags.onground = 1;
+    flags.on_ground = 1;
     state.thrsum = 0;
 
   } else { // motors on - normal flight
 
-    flags.onground = 0;
+    flags.on_ground = 0;
     onground_long = timer_micros();
 
     if (profile.motor.throttle_boost > 0.0f) {

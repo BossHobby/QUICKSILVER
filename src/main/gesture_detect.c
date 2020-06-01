@@ -101,7 +101,7 @@ extern uint8_t osd_display_phase; //if phase == 1 then osd menu is active
 #endif
 
 int gestures2() {
-  if (flags.onground) {
+  if (flags.on_ground) {
     if (GMACRO_XCENTER && GMACRO_PITCHCENTER) {
       gesture_start = GESTURE_CENTER;
     } else if (GMACRO_LEFT && GMACRO_PITCHCENTER) {

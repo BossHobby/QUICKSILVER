@@ -206,7 +206,7 @@ int main(void) {
       failloop(6);
       //endless loop
     }
-    state.osd_totaltime += state.looptime;
+    state.uptime += state.looptime;
 #ifdef DEBUG
     debug.totaltime += state.looptime;
     lpf(&debug.timefilt, looptime, 0.998);
@@ -231,7 +231,7 @@ int main(void) {
     vbat_calc();
 
     // check gestures
-    if (flags.onground) {
+    if (flags.on_ground) {
       gestures();
     }
 
@@ -240,7 +240,7 @@ int main(void) {
       if (flags.lowbatt)
         ledflash(500000, 8);
       else {
-        if (flags.rxmode == RXMODE_BIND) { // bind mode
+        if (flags.rx_mode == RXMODE_BIND) { // bind mode
           ledflash(100000, 12);
         } else { // non bind
           if (flags.failsafe) {
@@ -301,7 +301,7 @@ int main(void) {
     vtx_update();
 
 #if defined(USE_SERIAL_4WAY_BLHELI_INTERFACE) && defined(F0)
-    if (flags.onground) {
+    if (flags.on_ground) {
       NVIC_EnableIRQ(EXTI4_15_IRQn);
 
       if (switch_to_4way) {

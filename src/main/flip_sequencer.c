@@ -56,14 +56,14 @@ extern int pwmdir;
 
 void start_flip() {
 #ifdef STANDARD_TURTLE
-  if (!readytoflip && flags.onground) { //if not currently queued up for a turtle sequence and disarmed
-    readytoflip = 1;                    //queue up for a turtle event
+  if (!readytoflip && flags.on_ground) { //if not currently queued up for a turtle sequence and disarmed
+    readytoflip = 1;                     //queue up for a turtle event
     flipstage = STAGE_FLIP_NONE;
   }
 #endif
 
 #ifdef AUTOMATED_FLIP //depreciated - needs a proper going through if it is to be restored
-  if (readytoflip == 0 && !flags.onground) {
+  if (readytoflip == 0 && !flags.on_ground) {
     readytoflip = 1;
     fliptime = gettime();
     flipstage = STAGE_FLIP_START;
@@ -84,8 +84,8 @@ void flip_sequencer() {
 #ifdef STANDARD_TURTLE
   if (!readytoflip) { //turtle can't be initiated without the all clear flag - hold control variables at 0 state
     if (flipstage != STAGE_FLIP_NONE) {
-      pwmdir = FORWARD;              //forward pwmdir only once as its last state may be unknown from previously interrupted turtle event
-      flags.binding_while_armed = 1; //just in case absolutely require that the quad be disarmed when turning off turtle mode with a started sequencer
+      pwmdir = FORWARD;     //forward pwmdir only once as its last state may be unknown from previously interrupted turtle event
+      flags.arm_safety = 1; //just in case absolutely require that the quad be disarmed when turning off turtle mode with a started sequencer
     }
     flipstage = STAGE_FLIP_NONE;
     flags.controls_override = 0;
@@ -93,7 +93,7 @@ void flip_sequencer() {
     return; //turtle mode off or flying away from a successful turtle will return here
   }         // a disarmed quad with turtle mode on will continue past
 
-  //  track the change of onground and flag a potential turtle trigger event only on disarmed to armed event.
+  //  track the change of on_ground and flag a potential turtle trigger event only on disarmed to armed event.
   int turtle_trigger = 0;
   static int last_armed_state_turtle;
   if (rx_aux_on(AUX_ARMING) != last_armed_state_turtle) {
@@ -159,7 +159,7 @@ void flip_sequencer() {
     flags.controls_override = 0;
     motortest_override = 0;
     pwmdir = FORWARD;
-    flags.binding_while_armed = 1;
+    flags.arm_safety = 1;
     break;
   }
 #endif
@@ -168,7 +168,7 @@ void flip_sequencer() {
   if (!readytoflip)
     return;
 
-  if (flags.onground)
+  if (flags.on_ground)
     flipstage = STAGE_FLIP_EXIT;
 
   if (readytoflip && gettime() - fliptime > FLIP_TIMEOUT_TOTAL) {

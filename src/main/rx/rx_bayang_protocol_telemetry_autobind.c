@@ -165,7 +165,7 @@ void rx_init() {
     writeregs(rxaddr_regs, sizeof(rxaddr_regs));
 
     xn_writereg(0x25, rfchannel[rf_chan]); // Set channel frequency
-    flags.rxmode = RX_MODE_NORMAL;
+    flags.rx_mode = RX_MODE_NORMAL;
 
     if (telemetry_enabled)
       packet_period = PACKET_PERIOD_TELEMETRY;
@@ -372,7 +372,7 @@ void rx_check(void) {
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {
-    if (flags.rxmode == RX_MODE_BIND) { // rx startup , bind mode
+    if (flags.rx_mode == RX_MODE_BIND) { // rx startup , bind mode
       xn_readpayload(rxdata, 15);
 
       if (rxdata[0] == 0xa4 || rxdata[0] == 0xa3) { // bind packet
@@ -403,7 +403,7 @@ void rx_check(void) {
 
         xn_writereg(0x25, rfchannel[rf_chan]); // Set channel frequency
 
-        flags.rxmode = RX_MODE_NORMAL;
+        flags.rx_mode = RX_MODE_NORMAL;
 
 #ifdef SERIAL
         printf(" BIND \n");
@@ -458,7 +458,7 @@ void rx_check(void) {
 
   unsigned long time = gettime();
 
-  if (time - lastrxtime > (HOPPING_NUMBER * packet_period + 1000) && flags.rxmode != RX_MODE_BIND) {
+  if (time - lastrxtime > (HOPPING_NUMBER * packet_period + 1000) && flags.rx_mode != RX_MODE_BIND) {
     //  channel with no reception
     lastrxtime = time;
     // set channel to last with reception
@@ -470,7 +470,7 @@ void rx_check(void) {
     timingfail = 1;
   }
 
-  if (!timingfail && !telemetry_send && skipchannel < HOPPING_NUMBER + 1 && flags.rxmode != RX_MODE_BIND) {
+  if (!timingfail && !telemetry_send && skipchannel < HOPPING_NUMBER + 1 && flags.rx_mode != RX_MODE_BIND) {
     unsigned int temp = time - lastrxtime;
 
     if (temp > 1000 && (temp - (PACKET_OFFSET)) / ((int)packet_period) >=
@@ -495,7 +495,7 @@ void rx_check(void) {
     autobind_inhibit = 1;
   else if (!autobind_inhibit && time - autobindtime > 15000000) {
     autobind_inhibit = 1;
-    flags.rxmode = RX_MODE_BIND;
+    flags.rx_mode = RX_MODE_BIND;
     static uint8_t rxaddr[6] = {0x2a, 0, 0, 0, 0, 0};
     writeregs(rxaddr, sizeof(rxaddr));
     xn_writereg(RF_CH, 0); // bind on channel 0

@@ -235,7 +235,7 @@ void crsf_init(void) {
   serial_rx_init(RX_PROTOCOL_CRSF);
   // set setup complete flag
   framestarted = 0;
-  flags.rxmode = !RXMODE_BIND; // put LEDS in normal signal status
+  flags.rx_mode = !RXMODE_BIND; // put LEDS in normal signal status
 }
 
 void rx_init(void) {
@@ -260,7 +260,7 @@ void rx_check() {
 
   if (framestarted == 1) {
     if ((bind_safety < 900) && (bind_safety > 0))
-      flags.rxmode = RXMODE_BIND; // normal rx mode - removes waiting for bind led leaving failsafe flashes as data starts to come in
+      flags.rx_mode = RXMODE_BIND; // normal rx mode - removes waiting for bind led leaving failsafe flashes as data starts to come in
 
     // AETR channel order
     state.rx.axis[0] = (crsfChannelData[0] - 990.5f) * 0.00125707103f;
@@ -288,11 +288,11 @@ void rx_check() {
     state.aux[AUX_CHANNEL_10] = (crsfChannelData[14] > 1100) ? 1 : 0;
     state.aux[AUX_CHANNEL_11] = (crsfChannelData[15] > 1100) ? 1 : 0;
 
-    if (bind_safety > 100) {       //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
-      flags.rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
-      flags.failsafe = 0;          // turn off failsafe delayed a bit to emmulate led behavior of sbus protocol - optional either here or just above here
-      flags.rxmode = !RXMODE_BIND; // restores normal led operation
-      bind_safety = 101;           // reset counter so it doesnt wrap
+    if (bind_safety > 100) {        //requires 10 good frames to come in before rx_ready safety can be toggled to 1.  900 is about 2 seconds of good data
+      flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
+      flags.failsafe = 0;           // turn off failsafe delayed a bit to emmulate led behavior of sbus protocol - optional either here or just above here
+      flags.rx_mode = !RXMODE_BIND; // restores normal led operation
+      bind_safety = 101;            // reset counter so it doesnt wrap
     }
   }
 }

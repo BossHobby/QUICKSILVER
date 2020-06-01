@@ -133,7 +133,7 @@ void RX_USART_ISR(void) {
 void rx_init(void) {
   //if (rx_bind_enable == 0)
   //rx_serial_protocol = 0;
-  flags.rxmode = !RXMODE_BIND; // put LEDS in normal signal status
+  flags.rx_mode = !RXMODE_BIND; // put LEDS in normal signal status
   rx_serial_init();
 }
 
@@ -235,7 +235,7 @@ void rx_check() {
       }
     } else if (frame_status == -1) { //RX/USART not set up.
       rx_serial_init();              //Set it up. This includes autodetecting protocol if necesary
-      flags.rxmode = !RXMODE_BIND;
+      flags.rx_mode = !RXMODE_BIND;
     }
   }
 }
@@ -296,8 +296,8 @@ void rx_serial_process_dsmx(void) {
   if (frame_status == 2) {
     bind_safety++;
     if (bind_safety < 120)
-      flags.rxmode = RXMODE_BIND; // this is rapid flash during bind safety
-                                  // TAER channel order
+      flags.rx_mode = RXMODE_BIND; // this is rapid flash during bind safety
+                                   // TAER channel order
 #ifdef RX_DSMX_2048_UNIFIED
     state.rx.axis[0] = (channels[1] - 1024.0f) * dsmx_scalefactor;
     state.rx.axis[1] = (channels[2] - 1024.0f) * dsmx_scalefactor;
@@ -385,10 +385,10 @@ void rx_serial_process_dsmx(void) {
 
     frame_status = 3; //We're done with this frame now.
 
-    if (bind_safety > 120) {       //requires 120 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
-      flags.rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
-      flags.rxmode = !RXMODE_BIND; // restores normal led operation
-      bind_safety = 121;           // reset counter so it doesnt wrap
+    if (bind_safety > 120) {        //requires 120 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
+      flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
+      flags.rx_mode = !RXMODE_BIND; // restores normal led operation
+      bind_safety = 121;            // reset counter so it doesnt wrap
     }
   }
 }
@@ -442,7 +442,7 @@ void rx_serial_process_sbus(void) {
     // normal rx mode
     bind_safety++;
     if (bind_safety < 130)
-      flags.rxmode = RXMODE_BIND; // this is rapid flash during bind safety
+      flags.rx_mode = RXMODE_BIND; // this is rapid flash during bind safety
 
     // AETR channel order
     channels[0] -= 993;
@@ -505,10 +505,10 @@ void rx_serial_process_sbus(void) {
 
     frame_status = 3; //We're done with this frame now.
 
-    if (bind_safety > 131) {       //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
-      flags.rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
-      flags.rxmode = !RXMODE_BIND; // restores normal led operation
-      bind_safety = 131;           // reset counter so it doesnt wrap
+    if (bind_safety > 131) {        //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
+      flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
+      flags.rx_mode = !RXMODE_BIND; // restores normal led operation
+      bind_safety = 131;            // reset counter so it doesnt wrap
     }
   }
 }
@@ -557,7 +557,7 @@ void rx_serial_process_ibus(void) {
     // normal rx mode
     bind_safety++;
     if (bind_safety < 130)
-      flags.rxmode = RXMODE_BIND; // this is rapid flash during bind safety
+      flags.rx_mode = RXMODE_BIND; // this is rapid flash during bind safety
 
     // AETR channel order
     channels[0] -= 1500;
@@ -622,10 +622,10 @@ void rx_serial_process_ibus(void) {
 
     frame_status = 3; //We're done with this frame now.
 
-    if (bind_safety > 131) {       //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
-      flags.rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
-      flags.rxmode = !RXMODE_BIND; // restores normal led operation
-      bind_safety = 131;           // reset counter so it doesnt wrap
+    if (bind_safety > 131) {        //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
+      flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
+      flags.rx_mode = !RXMODE_BIND; // restores normal led operation
+      bind_safety = 131;            // reset counter so it doesnt wrap
     }
   }
 }
@@ -714,7 +714,7 @@ void rx_serial_process_fport(void) {
       // normal rx mode
       bind_safety++;
       if (bind_safety < 130)
-        flags.rxmode = RXMODE_BIND; // this is rapid flash during bind safety
+        flags.rx_mode = RXMODE_BIND; // this is rapid flash during bind safety
 
       // AETR channel order
       channels[0] -= 993;
@@ -783,10 +783,10 @@ void rx_serial_process_fport(void) {
       frame_status = 3;    //We're done with this frame now.
       telemetry_counter++; // Let the telemetry section know it's time to send.
 
-      if (bind_safety > 131) {       //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
-        flags.rx_ready = 1;          // because aux channels initialize low and clear the binding while armed flag before aux updates high
-        flags.rxmode = !RXMODE_BIND; // restores normal led operation
-        bind_safety = 131;           // reset counter so it doesnt wrap
+      if (bind_safety > 131) {        //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
+        flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
+        flags.rx_mode = !RXMODE_BIND; // restores normal led operation
+        bind_safety = 131;            // reset counter so it doesnt wrap
       }
     }
   } // end frame received

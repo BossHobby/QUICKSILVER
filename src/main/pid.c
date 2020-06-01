@@ -124,10 +124,10 @@ void pid_precalc() {
 float pid(int x) {
 
   // in level mode or horizon but not racemode and while on the ground...
-  if ((rx_aux_on(AUX_LEVELMODE)) && (!rx_aux_on(AUX_RACEMODE)) && ((flags.onground) || (flags.in_air == 0))) {
+  if ((rx_aux_on(AUX_LEVELMODE)) && (!rx_aux_on(AUX_RACEMODE)) && ((flags.on_ground) || (flags.in_air == 0))) {
     // wind down the integral error
     ierror[x] *= 0.98f;
-  } else if (flags.onground) {
+  } else if (flags.on_ground) {
     //in acro mode - only wind down integral when idle up is off and throttle is 0
     ierror[x] *= 0.98f;
   }

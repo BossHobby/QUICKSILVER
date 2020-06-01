@@ -360,7 +360,7 @@ void frsky_handle_bind() {
   case FRSKY_STATE_BIND_COMPLETE:
     quic_debugf("FRSKY: bound rx_num %d", frsky_bind.rx_num);
     cc2500_strobe(CC2500_SIDLE);
-    flags.rxmode = RXMODE_NORMAL;
+    flags.rx_mode = RXMODE_NORMAL;
     protocol_state = FRSKY_STATE_STARTING;
     break;
   default:

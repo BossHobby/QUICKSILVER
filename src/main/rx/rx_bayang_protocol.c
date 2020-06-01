@@ -172,7 +172,7 @@ void rx_check(void) {
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {
-    if (flags.rxmode == RXMODE_BIND) { // rx startup , bind mode
+    if (flags.rx_mode == RXMODE_BIND) { // rx startup , bind mode
       xn_readpayload(rxdata, 15);
 
       if (rxdata[0] == 164) { // bind packet
@@ -190,7 +190,7 @@ void rx_check(void) {
 
         xn_writerxaddress(rxaddress);
         xn_writereg(0x25, rfchannel[chan]); // Set channel frequency
-        flags.rxmode = RXMODE_NORMAL;
+        flags.rx_mode = RXMODE_NORMAL;
 
 #ifdef SERIAL
         printf(" BIND \n");
@@ -242,7 +242,7 @@ void rx_check(void) {
   unsigned long time = gettime();
 
   // sequence period 12000
-  if (time - lastrxtime > (HOPPING_NUMBER * PACKET_PERIOD + 1000) && flags.rxmode != RXMODE_BIND) {
+  if (time - lastrxtime > (HOPPING_NUMBER * PACKET_PERIOD + 1000) && flags.rx_mode != RXMODE_BIND) {
     //  channel with no reception
     lastrxtime = time;
     // set channel to last with reception
@@ -254,7 +254,7 @@ void rx_check(void) {
     timingfail = 1;
   }
 
-  if (!timingfail && skipchannel < HOPPING_NUMBER + 1 && flags.rxmode != RXMODE_BIND) {
+  if (!timingfail && skipchannel < HOPPING_NUMBER + 1 && flags.rx_mode != RXMODE_BIND) {
     unsigned int temp = time - lastrxtime;
 
     if (temp > 1000 && (temp + (PACKET_OFFSET)) / ((int)PACKET_PERIOD) >= (skipchannel + 1)) {

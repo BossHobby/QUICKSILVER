@@ -212,7 +212,7 @@ void rx_check(void) {
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {
-    if (flags.rxmode == RXMODE_BIND) {
+    if (flags.rx_mode == RXMODE_BIND) {
       // rx bind mode , packet received
       xn_readpayload(rxdata, 15);
 
@@ -234,7 +234,7 @@ void rx_check(void) {
         xn_writereg(0x25, rfchannel[chan]);
 
         // set mode to data packets
-        flags.rxmode = RXMODE_NORMAL;
+        flags.rx_mode = RXMODE_NORMAL;
       }
     } else {
       // normal mode
@@ -267,7 +267,7 @@ void rx_check(void) {
 
   // sequence period 12000
   // if nothing received for a while, we change channel
-  if (time - lastrxtime > (PACKET_PERIOD * 3) && flags.rxmode != RXMODE_BIND) {
+  if (time - lastrxtime > (PACKET_PERIOD * 3) && flags.rx_mode != RXMODE_BIND) {
     //  channel with no reception
     lastrxtime = time;
 

@@ -126,7 +126,7 @@ void RX_USART_ISR(void) {
 void ibus_init(void) {
   //Serial init bits are all in drv_rx_serial.c now
   serial_rx_init(RX_PROTOCOL_IBUS); //Which is called here.
-  flags.rxmode = !RXMODE_BIND;
+  flags.rx_mode = !RXMODE_BIND;
 
   // set setup complete flag
   frameStatus = 0;
@@ -179,14 +179,14 @@ void rx_check() {
         // wait for valid ibus signal
         static int frame_count = 0;
         flags.failsafe = 1;
-        flags.rxmode = RXMODE_BIND;
+        flags.rx_mode = RXMODE_BIND;
         // if throttle < 10%
         if (channels[2] < 1100)
           frame_count++; //AETR!
         if (frame_count > 130) {
           if (stat_frames_second > 30) {
             rx_state++;
-            flags.rxmode = !RXMODE_BIND;
+            flags.rx_mode = !RXMODE_BIND;
           } else {
             frame_count = 0;
           }

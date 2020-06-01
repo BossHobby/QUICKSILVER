@@ -129,7 +129,7 @@ static void motor_mixer_scale_calc(float mix[4]) {
   uint8_t mix_scaling = 0;
 
   // only enable once really in the air
-  if (flags.onground) {
+  if (flags.on_ground) {
     mix_scaling = 0;
   } else {
     mix_scaling = flags.in_air;

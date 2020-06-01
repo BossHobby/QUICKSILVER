@@ -415,7 +415,7 @@ void motor_set(uint8_t number, float pwm) {
 
 #endif
 
-  if (flags.onground || !flags.armed_state) {
+  if (flags.on_ground || !flags.arm_state) {
     value = 0; // stop the motors
   }
 
