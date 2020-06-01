@@ -56,6 +56,7 @@ typedef struct {
   vec3_t gyro;
 
   vec3_t GEstG;
+  vec3_t attitude;
 
   float angleerror[ANGLE_PID_SIZE];
 } control_state_t;

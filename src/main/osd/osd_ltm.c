@@ -50,15 +50,13 @@ void sendheader() {
 //    Roll, int16, [degrees]
 //    Heading, int16, [degrees]
 
-extern float attitude[];
-
 void send_a_frame() {
   sendheader();
   Serial_print((char)'A');
   crc = 0;
-  sendint(attitude[0] + 0.5f); //
-  sendint(attitude[1] + 0.5f); // roll (pitch?)
-  sendint(0);                  //heading
+  sendint(state.attitude.axis[0] + 0.5f); //
+  sendint(state.attitude.axis[1] + 0.5f); // roll (pitch?)
+  sendint(0);                             //heading
   sendcrc();
 }
 

@@ -37,8 +37,6 @@
 #define _sinf(val) sinf(val)
 #define _cosf(val) cosf(val)
 
-float attitude[3];
-
 void vectorcopy(float *vector1, float *vector2) {
   for (int axis = 0; axis < 3; axis++) {
     vector1[axis] = vector2[axis];
@@ -154,8 +152,8 @@ void imu_calc() {
   }
 
   if (rx_aux_on(AUX_HORIZON)) {
-    attitude[0] = atan2approx(state.GEstG.axis[0], state.GEstG.axis[2]);
-    attitude[1] = atan2approx(state.GEstG.axis[1], state.GEstG.axis[2]);
+    state.attitude.axis[0] = atan2approx(state.GEstG.axis[0], state.GEstG.axis[2]);
+    state.attitude.axis[1] = atan2approx(state.GEstG.axis[1], state.GEstG.axis[2]);
   }
 }
 #endif
@@ -226,8 +224,8 @@ void imu_calc() {
   }
 
   if (rx_aux_on(AUX_HORIZON)) {
-    attitude[0] = atan2approx(state.GEstG.axis[0], state.GEstG.axis[2]);
-    attitude[1] = atan2approx(state.GEstG.axis[1], state.GEstG.axis[2]);
+    state.attitude.axis[0] = atan2approx(state.GEstG.axis[0], state.GEstG.axis[2]);
+    state.attitude.axis[1] = atan2approx(state.GEstG.axis[1], state.GEstG.axis[2]);
   }
 }
 #endif
@@ -287,8 +285,8 @@ void imu_calc() {
   state.GEstG.axis[2] = state.GEstG.axis[2] * (ACC_1G / GEstGmag);
 
   if (rx_aux_on(AUX_HORIZON)) {
-    attitude[0] = atan2approx(state.GEstG.axis[0], state.GEstG.axis[2]);
-    attitude[1] = atan2approx(state.GEstG.axis[1], state.GEstG.axis[2]);
+    state.attitude.axis[0] = atan2approx(state.GEstG.axis[0], state.GEstG.axis[2]);
+    state.attitude.axis[1] = atan2approx(state.GEstG.axis[1], state.GEstG.axis[2]);
   }
 }
 #endif

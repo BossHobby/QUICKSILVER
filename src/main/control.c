@@ -70,8 +70,6 @@ extern int pwmdir;
 extern float pidoutput[PIDNUMBER];
 extern float setpoint[3];
 
-extern float attitude[];
-
 extern int ledcommand;
 
 extern profile_t profile;
@@ -149,8 +147,8 @@ void control(void) {
       error[2] = yawerror[2] - state.gyro.axis[2];
 
     } else if (rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON)) { //racemode with horizon behavior on roll axis
-      float inclinationRoll = attitude[0];
-      float inclinationPitch = attitude[1];
+      float inclinationRoll = state.attitude.axis[0];
+      float inclinationPitch = state.attitude.axis[1];
       float inclinationMax;
       if (fabsf(inclinationRoll) >= fabsf(inclinationPitch)) {
         inclinationMax = fabsf(inclinationRoll);
@@ -190,8 +188,8 @@ void control(void) {
     } else if (!rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON)) { //horizon overrites standard level behavior
       //pitch and roll
       for (int i = 0; i <= 1; i++) {
-        float inclinationRoll = attitude[0];
-        float inclinationPitch = attitude[1];
+        float inclinationRoll = state.attitude.axis[0];
+        float inclinationPitch = state.attitude.axis[1];
         float inclinationMax;
         if (fabsf(inclinationRoll) >= fabsf(inclinationPitch)) {
           inclinationMax = fabsf(inclinationRoll);
@@ -400,7 +398,7 @@ void control(void) {
     // throttle angle compensation
 #ifdef AUTO_THROTTLE
     if (rx_aux_on(AUX_LEVELMODE)) {
-      //float autothrottle = fastcos(attitude[0] * DEGTORAD) * fastcos(attitude[1] * DEGTORAD);
+      //float autothrottle = fastcos(state.attitude.axis[0] * DEGTORAD) * fastcos(state.attitude.axis[1] * DEGTORAD);
       float autothrottle = state.GEstG.axis[2];
       float old_throttle = state.throttle;
       if (autothrottle <= 0.5f)
