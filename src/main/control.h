@@ -24,7 +24,7 @@ typedef struct {
   uint8_t rx_mode : 1; // bind / normal rx mode
   uint8_t rx_ready : 1;
 
-  uint8_t controls_override : 1;
+  uint8_t controls_override : 1; // will activate rx_override below
   uint8_t acro_override : 1;
 
   uint8_t usb_active : 1;
@@ -44,18 +44,18 @@ typedef struct {
 
   vec4_t rx;          // holds the main four channels, roll, pitch, yaw, throttle
   vec4_t rx_filtered; // same as above, but filtered by the rx smoothing
-  vec4_t rx_override;
+  vec4_t rx_override; // override values, activated by controls_override
 
   float throttle; // input throttle with idle etc applied
   float thrsum;   // average of all 4 motor thrusts
 
   uint8_t aux[AUX_CHANNEL_MAX]; // digital on / off channels
 
-  vec3_t accel_raw;
-  vec3_t accel;
+  vec3_t accel_raw; // raw accel reading with rotation and scaling applied
+  vec3_t accel;     // filtered accel readings
 
-  vec3_t gyro_raw;
-  vec3_t gyro;
+  vec3_t gyro_raw; // raw gyro reading with rotation and scaling applied
+  vec3_t gyro;     // filtered gyro reading
 
   vec3_t GEstG; // gravity vector
   vec3_t attitude;
