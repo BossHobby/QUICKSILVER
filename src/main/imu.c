@@ -39,15 +39,6 @@
 
 float attitude[3];
 
-float calcmagnitude(float vector[3]) {
-  float accmag = 0;
-  for (uint8_t axis = 0; axis < 3; axis++) {
-    accmag += vector[axis] * vector[axis];
-  }
-  accmag = 1.0f / Q_rsqrt(accmag);
-  return accmag;
-}
-
 void vectorcopy(float *vector1, float *vector2) {
   for (int axis = 0; axis < 3; axis++) {
     vector1[axis] = vector2[axis];
@@ -156,7 +147,7 @@ void imu_calc() {
     }
 
     //heal the gravity vector after fusion with accel
-    float GEstGmag = calcmagnitude(&state.GEstG.axis[0]);
+    float GEstGmag = vec3_magnitude(&state.GEstG);
     for (int axis = 0; axis < 3; axis++) {
       state.GEstG.axis[axis] = state.GEstG.axis[axis] * (ACC_1G / GEstGmag);
     }
@@ -228,7 +219,7 @@ void imu_calc() {
       }
     }
     //heal the gravity vector after fusion with accel
-    float GEstGmag = calcmagnitude(&state.GEstG.axis[0]);
+    float GEstGmag = vec3_magnitude(&state.GEstG);
     for (int axis = 0; axis < 3; axis++) {
       state.GEstG.axis[axis] = state.GEstG.axis[axis] * (ACC_1G / GEstGmag);
     }
