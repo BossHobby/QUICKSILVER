@@ -141,7 +141,7 @@ void flip_sequencer() {
     break;
 
   case STAGE_FLIP_ROTATING:
-    state.rx_override.axis[3] = profile.motor.turtle_throttle_percent / 100.0f;
+    state.rx_override.throttle = profile.motor.turtle_throttle_percent / 100.0f;
     if (flipdir) {
       state.rx_override.axis[flipindex] = 1.0f;
     } else {
@@ -195,7 +195,7 @@ void flip_sequencer() {
 
     state.rx_override.axis[1] = 0;
     state.rx_override.axis[2] = 0;
-    state.rx_override.axis[3] = THROTTLE_UP;
+    state.rx_override.throttle = THROTTLE_UP;
 
     if (state.GEstG.axis[2] < 0) {
       // flip initiated inverted
@@ -203,7 +203,7 @@ void flip_sequencer() {
         state.rx_override.axis[flipindex] = (float)FLIP_RATE / max_rate;
       else
         state.rx_override.axis[flipindex] = (float)-FLIP_RATE / max_rate;
-      state.rx_override.axis[3] = THROTTLE_HOVER;
+      state.rx_override.throttle = THROTTLE_HOVER;
       flipstage = STAGE_FLIP_ROTATING_INVERTED;
     }
     flipstage = STAGE_FLIP_THROTTLEUP;
@@ -217,7 +217,7 @@ void flip_sequencer() {
         state.rx_override.axis[flipindex] = (float)FLIP_RATE / max_rate;
       else
         state.rx_override.axis[flipindex] = (float)-FLIP_RATE / max_rate;
-      state.rx_override.axis[3] = THROTTLE_UP;
+      state.rx_override.throttle = THROTTLE_UP;
       flipstage = STAGE_FLIP_ROTATING;
     }
 
@@ -230,7 +230,7 @@ void flip_sequencer() {
     }
     if (state.GEstG.axis[2] < 0) {
       //we are inverted
-      state.rx_override.axis[3] = THROTTLE_HOVER;
+      state.rx_override.throttle = THROTTLE_HOVER;
       flipstage = STAGE_FLIP_ROTATING_INVERTED;
     }
     break;
@@ -241,7 +241,7 @@ void flip_sequencer() {
       //we no longer inverted
       levelmodetime = gettime();
 
-      state.rx_override.axis[3] = THROTTLE_EXIT;
+      state.rx_override.throttle = THROTTLE_EXIT;
       flags.acro_override = 0;
       level_override = 1;
       flipstage = STAGE_FLIP_LEVELMODE;

@@ -41,8 +41,8 @@ typedef struct {
   vec4_t rx_filtered; // same as above, but filtered by the rx smoothing
   vec4_t rx_override;
 
-  float throttle;
-  float thrsum; // average of all 4 motor thrusts
+  float throttle; // input throttle with idle etc applied
+  float thrsum;   // average of all 4 motor thrusts
 
   uint8_t aux[AUX_CHANNEL_MAX]; // digital on / off channels
 
@@ -52,7 +52,7 @@ typedef struct {
   vec3_t gyro_raw;
   vec3_t gyro;
 
-  vec3_t GEstG;
+  vec3_t GEstG; // gravity vector
   vec3_t attitude;
 
   vec3_t setpoint;  // angular velocity setpoint from stick input

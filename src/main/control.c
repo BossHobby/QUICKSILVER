@@ -64,7 +64,6 @@ static uint8_t arming_release;
 static uint32_t onground_long = 1;
 
 extern int pwmdir;
-
 extern int ledcommand;
 
 extern profile_t profile;
@@ -386,7 +385,7 @@ void control(void) {
     }
 
     if (flags.controls_override) { // change throttle in flip mode
-      state.throttle = state.rx_override.axis[3];
+      state.throttle = state.rx_override.throttle;
     }
 
     // throttle angle compensation
@@ -467,7 +466,7 @@ void control(void) {
 #endif
 
     if (profile.motor.invert_yaw) {
-      state.pidoutput.axis[2] = -state.pidoutput.axis[2];
+      state.pidoutput.yaw = -state.pidoutput.yaw;
     }
 
     float mix[4] = {0, 0, 0, 0};
@@ -476,7 +475,7 @@ void control(void) {
 
     // we invert again cause it's used by the pid internally (for limit)
     if (profile.motor.invert_yaw) {
-      state.pidoutput.axis[2] = -state.pidoutput.axis[2];
+      state.pidoutput.yaw = -state.pidoutput.yaw;
     }
   }
   // end motors on

@@ -7,7 +7,6 @@
 #include "profile.h"
 #include "util.h"
 
-extern float Q_rsqrt(float number);
 extern profile_t profile;
 
 // cache the last result so it does not get calculated everytime
