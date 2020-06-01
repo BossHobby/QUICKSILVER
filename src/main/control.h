@@ -2,15 +2,12 @@
 
 #include <stdint.h>
 
+#include "defines.h"
 #include "rx.h"
 #include "util/vector.h"
 
 #define RXMODE_BIND 0
 #define RXMODE_NORMAL 1
-
-#define ANGLE_PID_SIZE 2
-
-#define ACC_1G 1.0f
 
 // THE UN OF STRUCTS
 typedef struct {
@@ -57,6 +54,10 @@ typedef struct {
 
   vec3_t GEstG;
   vec3_t attitude;
+
+  vec3_t setpoint;  // angular velocity setpoint from stick input
+  vec3_t error;     // setpoint - gyro = error in angular velocity
+  vec3_t pidoutput; // combinded output of the pid controller
 
   float angleerror[ANGLE_PID_SIZE];
 } control_state_t;

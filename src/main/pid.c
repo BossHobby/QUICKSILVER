@@ -15,10 +15,10 @@
 #ifdef BRUSHLESS_TARGET
 
 /// output limit
-const float outlimit[PIDNUMBER] = {0.8, 0.8, 0.4};
+const float outlimit[PID_SIZE] = {0.8, 0.8, 0.4};
 
 // limit of integral term (abs)
-const float integrallimit[PIDNUMBER] = {0.8, 0.8, 0.4};
+const float integrallimit[PID_SIZE] = {0.8, 0.8, 0.4};
 
 #else //BRUSHED TARGET
 
@@ -29,10 +29,10 @@ const float integrallimit[PIDNUMBER] = {0.8, 0.8, 0.4};
 float b[3] = {0.93, 0.93, 0.9}; //BRUSHED FREESTYLE
 
 /// output limit
-const float outlimit[PIDNUMBER] = {1.7, 1.7, 0.5};
+const float outlimit[PID_SIZE] = {1.7, 1.7, 0.5};
 
 // limit of integral term (abs)
-const float integrallimit[PIDNUMBER] = {1.7, 1.7, 0.5};
+const float integrallimit[PID_SIZE] = {1.7, 1.7, 0.5};
 
 #endif
 
@@ -46,20 +46,16 @@ int number_of_increments[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 int current_pid_axis = 0;
 int current_pid_term = 0;
 
-float ierror[PIDNUMBER] = {0, 0, 0};
-float pidoutput[PIDNUMBER];
-float setpoint[PIDNUMBER];
-float v_compensation = 1.00;
-float tda_compensation = 1.00;
+static float lasterror[PID_SIZE];
+static float lasterror2[PID_SIZE];
+static float current_kp[PID_SIZE] = {0, 0, 0};
+static float current_ki[PID_SIZE] = {0, 0, 0};
+static float current_kd[PID_SIZE] = {0, 0, 0};
 
-static float lasterror[PIDNUMBER];
-static float lasterror2[PIDNUMBER];
-static float current_kp[PIDNUMBER] = {0, 0, 0};
-static float current_ki[PIDNUMBER] = {0, 0, 0};
-static float current_kd[PIDNUMBER] = {0, 0, 0};
+static float ierror[PID_SIZE] = {0, 0, 0};
 
-extern float error[PIDNUMBER];
-extern float setpoint[PIDNUMBER];
+static float v_compensation = 1.00;
+static float tda_compensation = 1.00;
 
 // multiplier for pids at 3V - for PID_VOLTAGE_COMPENSATION - default 1.33f from H101 code
 #define PID_VC_FACTOR 1.33f
@@ -115,7 +111,7 @@ void pid_precalc() {
     filter_lp_pt1_coeff(&dynamic_filter, d_term_dynamic_freq);
   }
 
-  for (uint8_t i = 0; i < PIDNUMBER; i++) {
+  for (uint8_t i = 0; i < PID_SIZE; i++) {
     current_kp[i] = profile_current_pid_rates()->kp.axis[i] / pid_scales[0][i];
     current_ki[i] = profile_current_pid_rates()->ki.axis[i] / pid_scales[1][i];
     current_kd[i] = profile_current_pid_rates()->kd.axis[i] / pid_scales[2][i];
@@ -124,7 +120,7 @@ void pid_precalc() {
 
 // pid calculation for acro ( rate ) mode
 // input: error[x] = setpoint - gyro
-// output: pidoutput[x] = change required from motors
+// output: state.pidoutput.axis[x] = change required from motors
 float pid(int x) {
 
   // in level mode or horizon but not racemode and while on the ground...
@@ -137,11 +133,11 @@ float pid(int x) {
   }
 
   int iwindup = 0; // (iwidup = 0  windup is permitted)   (iwindup = 1 windup is squashed)
-  if ((pidoutput[x] >= outlimit[x]) && (error[x] > 0)) {
+  if ((state.pidoutput.axis[x] >= outlimit[x]) && (state.error.axis[x] > 0)) {
     iwindup = 1;
   }
 
-  if ((pidoutput[x] == -outlimit[x]) && (error[x] < 0)) {
+  if ((state.pidoutput.axis[x] == -outlimit[x]) && (state.error.axis[x] < 0)) {
     iwindup = 1;
   }
 
@@ -154,8 +150,8 @@ float pid(int x) {
 #endif
   static float avgSetpoint[2];
   if (x < 2) {
-    lpf(&avgSetpoint[x], setpoint[x], FILTERCALC((LOOPTIME * 1e-6f), 1.0f / (float)RELAX_FREQUENCY_HZ)); // 20 Hz filter
-    const float hpfSetpoint = setpoint[x] - avgSetpoint[x];
+    lpf(&avgSetpoint[x], state.setpoint.axis[x], FILTERCALC((LOOPTIME * 1e-6f), 1.0f / (float)RELAX_FREQUENCY_HZ)); // 20 Hz filter
+    const float hpfSetpoint = state.setpoint.axis[x] - avgSetpoint[x];
     if (fabsf(hpfSetpoint) > (float)RELAX_FACTOR * 1e-2f) {
       iwindup = 1;
     }
@@ -165,28 +161,28 @@ float pid(int x) {
   //SIMPSON_RULE_INTEGRAL
   if (!iwindup) {
     // assuming similar time intervals
-    ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + error[x]) * current_ki[x] * state.looptime;
+    ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + state.error.axis[x]) * current_ki[x] * state.looptime;
     lasterror2[x] = lasterror[x];
-    lasterror[x] = error[x];
+    lasterror[x] = state.error.axis[x];
   }
   limitf(&ierror[x], integrallimit[x]);
 
 #ifdef ENABLE_SETPOINT_WEIGHTING
   // P term
-  pidoutput[x] = error[x] * (b[x]) * current_kp[x];
+  state.pidoutput.axis[x] = state.error.axis[x] * (b[x]) * current_kp[x];
   // b
-  pidoutput[x] += -(1.0f - b[x]) * current_kp[x] * state.gyro.axis[x];
+  state.pidoutput.axis[x] += -(1.0f - b[x]) * current_kp[x] * state.gyro.axis[x];
 #else
   // P term with b disabled
-  pidoutput[x] = error[x] * current_kp[x];
+  state.pidoutput.axis[x] = state.error.axis[x] * current_kp[x];
 #endif
 
   // Pid Voltage Comp applied to P term only
   if (profile.voltage.pid_voltage_compensation)
-    pidoutput[x] *= v_compensation;
+    state.pidoutput.axis[x] *= v_compensation;
 
   // I term
-  pidoutput[x] += ierror[x];
+  state.pidoutput.axis[x] += ierror[x];
 
   // D term
   // skip yaw D term if not set
@@ -212,9 +208,9 @@ float pid(int x) {
     static float setpoint_derivative[3];
 
 #ifdef RX_SMOOTHING
-    lpf(&setpoint_derivative[x], ((setpoint[x] - lastsetpoint[x]) * current_kd[x] * timefactor), FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / rx_smoothing_hz(RX_PROTOCOL)));
+    lpf(&setpoint_derivative[x], ((state.setpoint.axis[x] - lastsetpoint[x]) * current_kd[x] * timefactor), FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / rx_smoothing_hz(RX_PROTOCOL)));
 #else
-    setpoint_derivative[x] = (setpoint[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
+    setpoint_derivative[x] = (state.setpoint.axis[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
 #endif
 
     float gyro_derivative = (state.gyro.axis[x] - lastrate[x]) * current_kd[x] * timefactor;
@@ -222,7 +218,7 @@ float pid(int x) {
       gyro_derivative *= tda_compensation;
 
     const float dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - (gyro_derivative);
-    lastsetpoint[x] = setpoint[x];
+    lastsetpoint[x] = state.setpoint.axis[x];
     lastrate[x] = state.gyro.axis[x];
 
     //D term filtering
@@ -235,12 +231,12 @@ float pid(int x) {
       dlpf = filter_lp_pt1_step(&dynamic_filter, &dynamic_filter_state[x], dlpf);
     }
 
-    pidoutput[x] += dlpf;
+    state.pidoutput.axis[x] += dlpf;
   }
 
-  limitf(&pidoutput[x], outlimit[x]);
+  limitf(&state.pidoutput.axis[x], outlimit[x]);
 
-  return pidoutput[x];
+  return state.pidoutput.axis[x];
 }
 
 // below are functions used with gestures for changing pids by a percentage

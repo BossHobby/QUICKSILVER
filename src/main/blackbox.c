@@ -15,8 +15,6 @@ static uint8_t blackbox_enabled = 0;
 
 extern float cpu_load;
 
-extern float pidoutput[3];
-
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
   CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_map_indefinite(enc));
 
@@ -155,9 +153,9 @@ void blackbox_update() {
   blackbox.gyro_vector[1] = state.GEstG.axis[1];
   blackbox.gyro_vector[2] = state.GEstG.axis[2];
 
-  blackbox.pid_output[0] = pidoutput[0];
-  blackbox.pid_output[1] = pidoutput[1];
-  blackbox.pid_output[2] = pidoutput[2];
+  blackbox.pid_output[0] = state.pidoutput.axis[0];
+  blackbox.pid_output[1] = state.pidoutput.axis[1];
+  blackbox.pid_output[2] = state.pidoutput.axis[2];
 
   if ((loop_counter % (uint32_t)((1000000.0f / (float)blackbox_rate) / LOOPTIME)) == 0) {
     if (flags.usb_active != 0) {

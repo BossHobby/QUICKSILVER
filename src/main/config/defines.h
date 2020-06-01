@@ -7,11 +7,12 @@
 
 // defines for things that do not normally need changing
 
-//#pragma diag_warning 1035 , 177 , 4017
-//#pragma diag_error 260
+#define ACC_1G 1.0f
 
-#define PIDNUMBER 3
-static const float pid_scales[PIDNUMBER][PIDNUMBER] = {
+#define PID_SIZE 3
+#define ANGLE_PID_SIZE 2
+
+static const float pid_scales[PID_SIZE][PID_SIZE] = {
     // roll, pitch, yaw
     {628.0f, 628.0f, 314.0f}, //kp
     {50.0f, 50.0f, 50.0f},    //ki
