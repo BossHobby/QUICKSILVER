@@ -104,8 +104,7 @@ void control(void) {
   input_rates_calc(rates);
 
   if (rx_aux_on(AUX_LEVELMODE) && !flags.acro_override) {
-    extern float errorvect[]; // level mode angle error calculated by stick_vector.c
-    float yawerror[3] = {0};  // yaw rotation vector
+    float yawerror[3] = {0}; // yaw rotation vector
 
     // calculate roll / pitch error
     input_stick_vector(state.rx_filtered.axis, 0);
@@ -133,7 +132,7 @@ void control(void) {
         state.error.axis[1] = rates[1] - state.gyro.axis[1];
       } else {
         //roll is leveled to max angle limit
-        state.angleerror[0] = errorvect[0];
+        state.angleerror[0] = state.errorvect.axis[0];
         state.error.axis[0] = angle_pid(0) + yawerror[0] - state.gyro.axis[0];
         //pitch is acro
         state.error.axis[1] = rates[1] - state.gyro.axis[1];
@@ -170,7 +169,7 @@ void control(void) {
         state.error.axis[0] = rates[0] - state.gyro.axis[0];
         state.error.axis[1] = rates[1] - state.gyro.axis[1];
       } else { // apply a transitioning mix of acro and level behavior inside of stick HORIZON_TRANSITION point and full acro beyond stick HORIZON_TRANSITION point
-        state.angleerror[0] = errorvect[0];
+        state.angleerror[0] = state.errorvect.axis[0];
         // roll angle strength fades out as sticks approach HORIZON_TRANSITION while acro stength fades in according to value of acroFade factor
         state.error.axis[0] = ((angle_pid(0) + yawerror[0] - state.gyro.axis[0]) * (1 - fade)) + (fade * (rates[0] - state.gyro.axis[0]));
         //pitch is acro
@@ -210,7 +209,7 @@ void control(void) {
         if (state.GEstG.axis[2] < 0) {
           state.error.axis[i] = rates[i] - state.gyro.axis[i];
         } else { // apply a transitioning mix of acro and level behavior inside of stick HORIZON_TRANSITION point and full acro beyond stick HORIZON_TRANSITION point
-          state.angleerror[i] = errorvect[i];
+          state.angleerror[i] = state.errorvect.axis[i];
           //  angle strength fades out as sticks approach HORIZON_TRANSITION while acro stength fades in according to value of acroFade factor
           state.error.axis[i] = ((angle_pid(i) + yawerror[i] - state.gyro.axis[i]) * (1 - fade)) + (fade * (rates[i] - state.gyro.axis[i]));
         }
@@ -221,7 +220,7 @@ void control(void) {
     } else { //standard level mode
       // pitch and roll
       for (int i = 0; i <= 1; i++) {
-        state.angleerror[i] = errorvect[i];
+        state.angleerror[i] = state.errorvect.axis[i];
         state.error.axis[i] = angle_pid(i) + yawerror[i] - state.gyro.axis[i];
       }
       // yaw

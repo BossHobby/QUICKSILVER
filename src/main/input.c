@@ -10,10 +10,6 @@
 extern float Q_rsqrt(float number);
 extern profile_t profile;
 
-// error vector between stick position and quad orientation
-// this is the output of this function
-float errorvect[3];
-
 // cache the last result so it does not get calculated everytime
 static float last_rx[2] = {13.13f, 12.12f};
 static float stickvector[3] = {0, 0, 1};
@@ -57,13 +53,13 @@ void input_stick_vector(float rx_input[], float maxangle) {
 
   // find error between stick vector and quad orientation
   // vector cross product
-  errorvect[1] = -((state.GEstG.axis[1] * stickvector[2]) - (state.GEstG.axis[2] * stickvector[1]));
-  errorvect[0] = (state.GEstG.axis[2] * stickvector[0]) - (state.GEstG.axis[0] * stickvector[2]);
+  state.errorvect.axis[1] = -((state.GEstG.axis[1] * stickvector[2]) - (state.GEstG.axis[2] * stickvector[1]));
+  state.errorvect.axis[0] = (state.GEstG.axis[2] * stickvector[0]) - (state.GEstG.axis[0] * stickvector[2]);
 
   // some limits just in case
 
-  limitf(&errorvect[0], 1.0);
-  limitf(&errorvect[1], 1.0);
+  limitf(&state.errorvect.axis[0], 1.0);
+  limitf(&state.errorvect.axis[1], 1.0);
 
   // fix to recover if triggered inverted
   // the vector cross product results in zero for opposite vectors, so it's bad at 180 error
@@ -85,18 +81,18 @@ void input_stick_vector(float rx_input[], float maxangle) {
     // rotate around axis with larger leaning angle
 
     if (flipdir) {
-      errorvect[flipaxis] = rollrate;
+      state.errorvect.axis[flipaxis] = rollrate;
     } else {
-      errorvect[flipaxis] = -rollrate;
+      state.errorvect.axis[flipaxis] = -rollrate;
     }
 
   } else if (!rx_aux_on(AUX_FN_INVERTED) && (state.GEstG.axis[2] < -g_treshold)) {
     flip_active = 1;
 
     if (flipdir) {
-      errorvect[flipaxis] = -rollrate;
+      state.errorvect.axis[flipaxis] = -rollrate;
     } else {
-      errorvect[flipaxis] = rollrate;
+      state.errorvect.axis[flipaxis] = rollrate;
     }
 
   } else
@@ -122,7 +118,7 @@ void input_stick_vector(float rx_input[], float maxangle) {
     }
 
     // set the error in other axis to return to zero
-    errorvect[!flipaxis] = state.GEstG.axis[!flipaxis];
+    state.errorvect.axis[!flipaxis] = state.GEstG.axis[!flipaxis];
   }
 #endif
 }
