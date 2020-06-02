@@ -117,7 +117,7 @@ void blackbox_update() {
     return;
   }
 
-  if (blackbox_enabled == 0 && blackbox_override == 0)
+  if (blackbox_enabled == 0)
     return;
 
   blackbox.time = timer_millis();
@@ -144,7 +144,7 @@ void blackbox_update() {
   blackbox.pid_output = state.pidoutput;
 
   if (blackbox_enabled != 0 && (loop_counter % blackbox_rate) == 0) {
-    data_flash_write_backbox(&state);
+    data_flash_write_backbox(&blackbox);
   }
 
   loop_counter++;
