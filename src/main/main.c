@@ -60,8 +60,6 @@ int ledcommand = 0;
 int ledblink = 0;
 unsigned long ledcommandtime = 0;
 
-float cpu_load = 0;
-
 void failloop(int val);
 #if defined(USE_SERIAL_4WAY_BLHELI_INTERFACE) && defined(F0)
 volatile int switch_to_4way = 0;
@@ -346,13 +344,13 @@ int main(void) {
     }
 #endif
 
-    cpu_load = (timer_micros() - lastlooptime);
+    state.cpu_load = (timer_micros() - lastlooptime);
 
 #ifdef DEBUG
     static uint32_t loop_counter = 0; //For tagging loops that ran long, short, freaked out, etc. Yes, Bobnova was here.
 
     debug.vbatt_comp = state.vbatt_comp;
-    debug.cpu_load = cpu_load; // * 1e-3f;
+    debug.cpu_load = state.cpu_load; // * 1e-3f;
 
     if (loop_counter > 10000) {
       if (debug.cpu_load > debug.max_cpu_load) // First "few" loops are messy

@@ -35,6 +35,7 @@ extern control_flags_t flags;
 typedef struct {
   float looptime; // looptime in seconds
   float uptime;   // running sum of looptimes
+  float cpu_load; // micros we have had left last loop
 
   float lipo_cell_count;
   float vbattfilt; // filtered battery in volts

@@ -13,8 +13,6 @@ blackbox_t blackbox;
 
 static uint8_t blackbox_enabled = 0;
 
-extern float cpu_load;
-
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
   CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_map_indefinite(enc));
 
@@ -129,7 +127,7 @@ void blackbox_update() {
 
   blackbox.time = timer_millis();
 
-  blackbox.cpu_load = cpu_load;
+  blackbox.cpu_load = state.cpu_load;
 
   blackbox.vbat_filter = state.vbattfilt * 10;
 
