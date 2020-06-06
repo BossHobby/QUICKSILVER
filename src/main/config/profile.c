@@ -489,6 +489,7 @@ target_info_t target_info = {
     .target_name = MACRO_STR(TARGET),
     .git_version = MACRO_STR(GIT_VERSION),
 
+    .rx_protocol = RX_PROTOCOL,
     .quic_protocol_version = QUIC_PROTOCOL_VERSION,
 
 #define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) "P" #port #pin,
