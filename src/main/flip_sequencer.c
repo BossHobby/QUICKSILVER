@@ -38,7 +38,6 @@
 #define STAGE_FLIP_LEVELMODE 5
 #define STAGE_FLIP_EXIT 6
 
-int motortest_override;
 int level_override = 0;
 
 unsigned long fliptime;
@@ -89,7 +88,7 @@ void flip_sequencer() {
     }
     flipstage = STAGE_FLIP_NONE;
     flags.controls_override = 0;
-    motortest_override = 0;
+    flags.motortest_override = 0;
     return; //turtle mode off or flying away from a successful turtle will return here
   }         // a disarmed quad with turtle mode on will continue past
 
@@ -120,7 +119,7 @@ void flip_sequencer() {
     state.rx_override.axis[1] = 0;
     state.rx_override.axis[2] = 0;
     state.rx_override.axis[3] = 0;
-    motortest_override = 1;
+    flags.motortest_override = 1;
     pwmdir = REVERSE;
     flipindex = 0;
     flipdir = 0;
@@ -157,7 +156,7 @@ void flip_sequencer() {
     readytoflip = 0;
     flipstage = STAGE_FLIP_NONE;
     flags.controls_override = 0;
-    motortest_override = 0;
+    flags.motortest_override = 0;
     pwmdir = FORWARD;
     flags.arm_safety = 1;
     break;

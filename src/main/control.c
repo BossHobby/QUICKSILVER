@@ -32,14 +32,23 @@
 
 control_flags_t flags = {
     .arm_state = 0,
-    .in_air = 0,
     .arm_safety = 1,
+    .throttle_safety = 0,
+
+    .in_air = 0,
     .on_ground = 1,
+
     .failsafe = 1,
     .lowbatt = 1,
-    .throttle_safety = 0,
-    .usb_active = 0,
+
     .rx_mode = RXMODE_BIND,
+    .rx_ready = 0,
+
+    .controls_override = 0,
+    .acro_override = 0,
+    .motortest_override = 0,
+
+    .usb_active = 0,
 };
 
 control_state_t state = {
