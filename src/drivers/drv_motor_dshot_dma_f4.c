@@ -46,35 +46,11 @@
 
 #ifdef F4
 
-// Select Dshot150 or Dshot300. Dshot150 consumes quite some main loop time.
-// DShot300 may require removing the input filter cap on the ESC:
-#ifndef DSHOT
-#define DSHOT600
-//#define DSHOT300
-//#define DSHOT150
-#endif
-
-#ifdef DSHOT
-#define DSHOT_BIT_TIME ((PWM_CLOCK_FREQ_HZ / 1000 / DSHOT) - 1)
+// Tim_1 is running at 84mhz with APB2 clock currently configured at 42MHZ
+// clock cycles per bit for a bit timing period of 1.67us
+#define DSHOT_BIT_TIME ((PWM_CLOCK_FREQ_HZ / 1000 / profile.motor.dshot_time) - 1)
 #define DSHOT_T0H_TIME (DSHOT_BIT_TIME * 0.30 + 0.05)
 #define DSHOT_T1H_TIME (DSHOT_BIT_TIME * 0.60 + 0.05)
-#endif
-#ifdef DSHOT150
-#define DSHOT_BIT_TIME ((PWM_CLOCK_FREQ_HZ / 1000 / 150) - 1)
-#define DSHOT_T0H_TIME (DSHOT_BIT_TIME * 0.30 + 0.05)
-#define DSHOT_T1H_TIME (DSHOT_BIT_TIME * 0.60 + 0.05)
-#endif
-#ifdef DSHOT300
-#define DSHOT_BIT_TIME ((PWM_CLOCK_FREQ_HZ / 1000 / 300) - 1)
-#define DSHOT_T0H_TIME (DSHOT_BIT_TIME * 0.30 + 0.05)
-#define DSHOT_T1H_TIME (DSHOT_BIT_TIME * 0.60 + 0.05)
-#endif
-#ifdef DSHOT600                                               // Tim_1 is running at 84mhz with APB2 clock currently configured at 42MHZ
-#define DSHOT_BIT_TIME ((PWM_CLOCK_FREQ_HZ / 1000 / 600) - 1) // clock cycles per bit for a bit timing period of 1.67us
-#define DSHOT_T0H_TIME (DSHOT_BIT_TIME * 0.30 + 0.05)
-#define DSHOT_T1H_TIME (DSHOT_BIT_TIME * 0.60 + 0.05)
-
-#endif
 
 #ifdef USE_DSHOT_DMA_DRIVER
 

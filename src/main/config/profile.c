@@ -180,6 +180,7 @@ const profile_t default_profile = {
         .invert_yaw = 0,
 #endif
         .digital_idle = DIGITAL_IDLE,
+        .dshot_time = DSHOT_TIME_600,
 
 #ifdef TORQUE_BOOST
         .torque_boost = TORQUE_BOOST,

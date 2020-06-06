@@ -6,8 +6,8 @@
 //***********************************************HARDWARE SELECTION*****************************************************
 
 // *************DEFINE FLIGHT CONTROLLER MOTOR OUTPUT - *****warning*****  GETTING THIS WRONG CAN SMOKE YOUR BOARD :)
-#define BRUSHLESS_TARGET 
-//#define BRUSHED_TARGET 
+#define BRUSHLESS_TARGET
+//#define BRUSHED_TARGET
 
 //**********************************************************************************************************************
 //***********************************************NEW STUFF TO PLAY WITH*****************************************************
@@ -69,9 +69,9 @@
 
 // *************Receiver protocol selection
 
-#define RX_UNIFIED_SERIAL 
+#define RX_UNIFIED_SERIAL
 //#define RX_SBUS
-//#define RX_CRSF 
+//#define RX_CRSF
 //#define RX_IBUS
 //#define RX_FPORT
 //#define RX_DSMX_2048
@@ -79,10 +79,10 @@
 //#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
-//#define RX_FRSKY_D8 
+//#define RX_FRSKY_D8
 //#define RX_FRSKY_D16_FCC
 //#define RX_FRSKY_D16_LBT
-//#define RX_REDPINE 
+//#define RX_REDPINE
 
 // *************Serial Receiver UART Selection (uncomment all for default from target or if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
 //#define RX_USART USART_PORT1
@@ -210,9 +210,6 @@
 
 //**********************************************************************************************************************
 //***********************************************MOTOR OUTPUT SETTINGS**************************************************
-
-// *************DSHOT protocol speed
-//#define DSHOT 300
 
 // *************brushed motor minimum idle percent / dshot digital idle
 #define DIGITAL_IDLE 4.5

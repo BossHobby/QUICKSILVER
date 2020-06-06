@@ -27,13 +27,6 @@
     "name": "matekf411rx",
     "configurations": [
       {
-        "name": "brushless.frsky",
-        "defines": {
-          "BRUSHLESS_TARGET": "",
-          "RX_FRSKY_D8": ""
-        }
-      },
-      {
         "name": "brushed.frsky",
         "defines": {
           "BRUSHED_TARGET": "",
@@ -41,19 +34,17 @@
         }
       },
       {
-        "name": "dshot300.frsky",
+        "name": "brushless.frsky",
         "defines": {
           "BRUSHLESS_TARGET": "",
-          "RX_FRSKY_D8": "",
-          "DSHOT": "300"
+          "RX_FRSKY_D8": ""
         }
       },
       {
-        "name": "dshot300.redpine",
+        "name": "brushless.redpine",
         "defines": {
           "BRUSHLESS_TARGET": "",
-          "RX_REDPINE": "",
-          "DSHOT": "300"
+          "RX_REDPINE": ""
         }
       }
     ]
@@ -73,14 +64,6 @@
         "defines": {
           "BRUSHLESS_TARGET": "",
           "RX_CRSF": ""
-        }
-      },
-      {
-        "name": "dshot300.serial",
-        "defines": {
-          "BRUSHLESS_TARGET": "",
-          "RX_UNIFIED_SERIAL": "",
-          "DSHOT": "300"
         }
       }
     ]

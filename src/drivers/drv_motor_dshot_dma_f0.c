@@ -40,25 +40,9 @@
 
 #ifdef F0
 
-#define DSHOT600
-//#define DSHOT300
-//#define DSHOT150
-
-#ifdef DSHOT150
-#define DSHOT_BIT_TIME ((SYS_CLOCK_FREQ_HZ / 1000 / 150) - 1)
+#define DSHOT_BIT_TIME ((SYS_CLOCK_FREQ_HZ / 1000 / profile.motor.dshot_time) - 1)
 #define DSHOT_T0H_TIME (DSHOT_BIT_TIME * 0.30 + 0.05)
 #define DSHOT_T1H_TIME (DSHOT_BIT_TIME * 0.60 + 0.05)
-#endif
-#ifdef DSHOT300
-#define DSHOT_BIT_TIME ((SYS_CLOCK_FREQ_HZ / 1000 / 300) - 1)
-#define DSHOT_T0H_TIME (DSHOT_BIT_TIME * 0.30 + 0.05)
-#define DSHOT_T1H_TIME (DSHOT_BIT_TIME * 0.60 + 0.05)
-#endif
-#ifdef DSHOT600
-#define DSHOT_BIT_TIME ((SYS_CLOCK_FREQ_HZ / 1000 / 600) - 1) // clock cycles per bit for a bit timing period of 1.67us
-#define DSHOT_T0H_TIME (DSHOT_BIT_TIME * 0.30 + 0.05)
-#define DSHOT_T1H_TIME (DSHOT_BIT_TIME * 0.60 + 0.05)
-#endif
 
 // READ THIS:
 

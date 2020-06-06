@@ -16,7 +16,6 @@ DEFINES=(
   "RX_FRSKY_D8"
   "RX_FRSKY_D16"
   "RX_REDPINE"
-  "DSHOT"
 )
 OUTPUT_FOLDER="output"
 SCRIPT_FOLDER="$(dirname "$0")"
