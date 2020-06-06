@@ -207,7 +207,7 @@ int main(void) {
     state.uptime += state.looptime;
 #ifdef DEBUG
     debug.totaltime += state.looptime;
-    lpf(&debug.timefilt, looptime, 0.998);
+    lpf(&debug.timefilt, state.looptime, 0.998);
 #endif
     lastlooptime = time;
 
