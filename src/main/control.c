@@ -19,6 +19,7 @@
 #include "sixaxis.h"
 #include "usb_configurator.h"
 #include "util.h"
+#include "util/cbor_helper.h"
 
 #ifndef THROTTLE_SAFETY
 #define THROTTLE_SAFETY .15f
@@ -77,6 +78,20 @@ extern int ledcommand;
 
 extern profile_t profile;
 extern usb_motor_test_t usb_motor_test;
+
+#define MEMBER CBOR_ENCODE_MEMBER
+#define STR_MEMBER CBOR_ENCODE_STR_MEMBER
+#define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
+#define STR_ARRAY_MEMBER CBOR_ENCODE_STR_ARRAY_MEMBER
+
+CBOR_START_STRUCT_ENCODER(control_state_t)
+STATE_MEMBERS
+CBOR_END_STRUCT_ENCODER()
+
+#undef MEMBER
+#undef STR_MEMBER
+#undef ARRAY_MEMBER
+#undef STR_ARRAY_MEMBER
 
 void control(void) {
 #ifdef INVERTED_ENABLE

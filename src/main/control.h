@@ -70,6 +70,34 @@ typedef struct {
   float angleerror[ANGLE_PID_SIZE];
 } control_state_t;
 
+#define STATE_MEMBERS                       \
+  MEMBER(looptime, float)                   \
+  MEMBER(uptime, float)                     \
+  MEMBER(cpu_load, float)                   \
+  MEMBER(lipo_cell_count, float)            \
+  MEMBER(vbattfilt, float)                  \
+  MEMBER(vbattfilt_corr, float)             \
+  MEMBER(vbatt_comp, float)                 \
+  MEMBER(vreffilt, float)                   \
+  MEMBER(rx, vec4_t)                        \
+  MEMBER(rx_filtered, vec4_t)               \
+  MEMBER(rx_override, vec4_t)               \
+  MEMBER(throttle, float)                   \
+  MEMBER(thrsum, float)                     \
+  ARRAY_MEMBER(aux, AUX_CHANNEL_MAX, uint8) \
+  MEMBER(accel_raw, vec3_t)                 \
+  MEMBER(accel, vec3_t)                     \
+  MEMBER(gyro_raw, vec3_t)                  \
+  MEMBER(gyro, vec3_t)                      \
+  MEMBER(GEstG, vec3_t)                     \
+  MEMBER(attitude, vec3_t)                  \
+  MEMBER(setpoint, vec3_t)                  \
+  MEMBER(error, vec3_t)                     \
+  MEMBER(errorvect, vec3_t)                 \
+  MEMBER(pidoutput, vec3_t)
+
 extern control_state_t state;
+
+cbor_result_t cbor_encode_control_state_t(cbor_value_t *enc, const control_state_t *s);
 
 void control(void);
