@@ -7,6 +7,8 @@
 #include "util.h"
 #include "util/cbor_helper.h"
 
+#define BLACKBOX_SCALE 1000
+
 uint32_t blackbox_rate = 4;
 blackbox_t blackbox;
 
@@ -61,22 +63,22 @@ void blackbox_update() {
   blackbox.loop = loop_counter;
   blackbox.time = timer_micros();
 
-  vec3_compress(&blackbox.pid_p_term, &state.pid_p_term, 1024);
-  vec3_compress(&blackbox.pid_i_term, &state.pid_i_term, 1024);
-  vec3_compress(&blackbox.pid_d_term, &state.pid_d_term, 1024);
+  vec3_compress(&blackbox.pid_p_term, &state.pid_p_term, BLACKBOX_SCALE);
+  vec3_compress(&blackbox.pid_i_term, &state.pid_i_term, BLACKBOX_SCALE);
+  vec3_compress(&blackbox.pid_d_term, &state.pid_d_term, BLACKBOX_SCALE);
 
-  vec4_compress(&blackbox.rx, &state.rx, 1024);
+  vec4_compress(&blackbox.rx, &state.rx, BLACKBOX_SCALE);
 
-  blackbox.setpoint.axis[0] = state.setpoint.axis[0] * 1024;
-  blackbox.setpoint.axis[1] = state.setpoint.axis[1] * 1024;
-  blackbox.setpoint.axis[2] = state.setpoint.axis[2] * 1024;
-  blackbox.setpoint.axis[3] = state.throttle * 1024;
+  blackbox.setpoint.axis[0] = state.setpoint.axis[0] * BLACKBOX_SCALE;
+  blackbox.setpoint.axis[1] = state.setpoint.axis[1] * BLACKBOX_SCALE;
+  blackbox.setpoint.axis[2] = state.setpoint.axis[2] * BLACKBOX_SCALE;
+  blackbox.setpoint.axis[3] = state.throttle * BLACKBOX_SCALE;
 
-  vec3_compress(&blackbox.gyro_filter, &state.gyro, 1024);
-  vec3_compress(&blackbox.gyro_raw, &state.gyro_raw, 1024);
+  vec3_compress(&blackbox.gyro_filter, &state.gyro, BLACKBOX_SCALE);
+  vec3_compress(&blackbox.gyro_raw, &state.gyro_raw, BLACKBOX_SCALE);
 
-  vec3_compress(&blackbox.accel_filter, &state.accel, 1024);
-  vec3_compress(&blackbox.accel_raw, &state.accel_raw, 1024);
+  vec3_compress(&blackbox.accel_filter, &state.accel, BLACKBOX_SCALE);
+  vec3_compress(&blackbox.accel_raw, &state.accel_raw, BLACKBOX_SCALE);
 
   if (blackbox_enabled != 0 && (loop_counter % blackbox_rate) == 0) {
     data_flash_write_backbox(&blackbox);
