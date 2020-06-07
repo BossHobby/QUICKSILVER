@@ -15,13 +15,15 @@ static uint8_t blackbox_enabled = 0;
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
   CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_array_indefinite(enc));
 
+  CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->loop));
   CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->time));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &b->cpu_load));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &b->vbat_filter));
 
-  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec4_t(enc, &b->rx_raw));
-  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec4_t(enc, &b->rx_filter));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->rx_aux));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->pid_p_term));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->pid_i_term));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->pid_d_term));
+
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec4_t(enc, &b->rx));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec4_t(enc, &b->setpoint));
 
   CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->gyro_raw));
   CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->gyro_filter));
@@ -29,8 +31,7 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
   CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->accel_raw));
   CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->accel_filter));
 
-  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->gyro_vector));
-  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->pid_output));
+  CBOR_CHECK_ERROR(res = cbor_encode_compact_vec4_t(enc, &b->motor));
 
   CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
 
@@ -57,28 +58,25 @@ void blackbox_update() {
   if (blackbox_enabled == 0)
     return;
 
-  blackbox.time = timer_millis();
-  blackbox.cpu_load = state.cpu_load;
-  blackbox.vbat_filter = state.vbattfilt * 10;
+  blackbox.loop = loop_counter;
+  blackbox.time = timer_micros();
 
-  vec4_compress(&blackbox.rx_raw, &state.rx, 1024);
-  vec4_compress(&blackbox.rx_filter, &state.rx_filtered, 1024);
+  vec3_compress(&blackbox.pid_p_term, &state.pid_p_term, 1024);
+  vec3_compress(&blackbox.pid_i_term, &state.pid_i_term, 1024);
+  vec3_compress(&blackbox.pid_d_term, &state.pid_d_term, 1024);
 
-  blackbox.rx_aux = 0;
-  for (uint32_t i = 0; i < AUX_CHANNEL_MAX; i++) {
-    if (state.aux[i]) {
-      blackbox.rx_aux = blackbox.rx_aux | (0x1 << i);
-    }
-  }
+  vec4_compress(&blackbox.rx, &state.rx, 1024);
+
+  blackbox.setpoint.axis[0] = state.setpoint.axis[0] * 1024;
+  blackbox.setpoint.axis[1] = state.setpoint.axis[1] * 1024;
+  blackbox.setpoint.axis[2] = state.setpoint.axis[2] * 1024;
+  blackbox.setpoint.axis[3] = state.throttle * 1024;
 
   vec3_compress(&blackbox.gyro_filter, &state.gyro, 1024);
   vec3_compress(&blackbox.gyro_raw, &state.gyro_raw, 1024);
 
   vec3_compress(&blackbox.accel_filter, &state.accel, 1024);
   vec3_compress(&blackbox.accel_raw, &state.accel_raw, 1024);
-
-  vec3_compress(&blackbox.gyro_vector, &state.GEstG, 1024);
-  vec3_compress(&blackbox.pid_output, &state.pidoutput, 1024);
 
   if (blackbox_enabled != 0 && (loop_counter % blackbox_rate) == 0) {
     data_flash_write_backbox(&blackbox);

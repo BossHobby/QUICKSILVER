@@ -169,20 +169,20 @@ float pid(int x) {
 
 #ifdef ENABLE_SETPOINT_WEIGHTING
   // P term
-  state.pidoutput.axis[x] = state.error.axis[x] * (b[x]) * current_kp[x];
+  state.pid_p_term.axis[x] = state.error.axis[x] * (b[x]) * current_kp[x];
   // b
-  state.pidoutput.axis[x] += -(1.0f - b[x]) * current_kp[x] * state.gyro.axis[x];
+  state.pid_p_term.axis[x] += -(1.0f - b[x]) * current_kp[x] * state.gyro.axis[x];
 #else
   // P term with b disabled
-  state.pidoutput.axis[x] = state.error.axis[x] * current_kp[x];
+  state.pid_p_term.axis[x] = state.error.axis[x] * current_kp[x];
 #endif
 
   // Pid Voltage Comp applied to P term only
   if (profile.voltage.pid_voltage_compensation)
-    state.pidoutput.axis[x] *= v_compensation;
+    state.pid_p_term.axis[x] *= v_compensation;
 
   // I term
-  state.pidoutput.axis[x] += ierror[x];
+  state.pid_i_term.axis[x] = ierror[x];
 
   // D term
   // skip yaw D term if not set
@@ -231,9 +231,10 @@ float pid(int x) {
       dlpf = filter_lp_pt1_step(&dynamic_filter, &dynamic_filter_state[x], dlpf);
     }
 
-    state.pidoutput.axis[x] += dlpf;
+    state.pid_d_term.axis[x] = dlpf;
   }
 
+  state.pidoutput.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x];
   limitf(&state.pidoutput.axis[x], outlimit[x]);
 
   return state.pidoutput.axis[x];

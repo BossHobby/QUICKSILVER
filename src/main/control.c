@@ -374,9 +374,8 @@ void control(void) {
     flags.arm_state = 1;
     flags.on_ground = 0;
 
-    float mix[4] = {0, 0, 0, 0};
-    motor_mixer_calc(mix);
-    motor_output_calc(mix);
+    motor_mixer_calc(state.motor_mix.axis);
+    motor_output_calc(state.motor_mix.axis);
   } else if ((flags.arm_state == 0) || flags.failsafe || (state.throttle < 0.001f)) {
     // CONDITION: disarmed OR failsafe OR throttle off
 
@@ -493,9 +492,8 @@ void control(void) {
       state.pidoutput.yaw = -state.pidoutput.yaw;
     }
 
-    float mix[4] = {0, 0, 0, 0};
-    motor_mixer_calc(mix);
-    motor_output_calc(mix);
+    motor_mixer_calc(state.motor_mix.axis);
+    motor_output_calc(state.motor_mix.axis);
 
     // we invert again cause it's used by the pid internally (for limit)
     if (profile.motor.invert_yaw) {

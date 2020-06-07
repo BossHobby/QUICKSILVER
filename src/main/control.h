@@ -65,7 +65,13 @@ typedef struct {
   vec3_t setpoint;  // angular velocity setpoint from stick input
   vec3_t error;     // setpoint - gyro = error in angular velocity
   vec3_t errorvect; // error vector between stick vector and quad orientation
+
+  vec3_t pid_p_term;
+  vec3_t pid_i_term;
+  vec3_t pid_d_term;
   vec3_t pidoutput; // combinded output of the pid controller
+
+  vec4_t motor_mix;
 
   float angleerror[ANGLE_PID_SIZE];
 } control_state_t;
