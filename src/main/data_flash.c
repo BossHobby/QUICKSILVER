@@ -111,10 +111,14 @@ cbor_result_t data_flash_read_backbox(const uint32_t index, blackbox_t *b) {
 
 cbor_result_t data_flash_write_backbox(const blackbox_t *b) {
 #ifdef USE_M25P16
+  const uint32_t offset = FILES_SECTOR_OFFSET + current_file()->start_sector * bounds.sector_size + current_file()->entries * 0x80;
+  if (offset >= bounds.total_size) {
+    return CBOR_ERR_EOF;
+  }
+
   m25p16_wait_for_ready();
   m25p16_command(M25P16_WRITE_ENABLE);
 
-  const uint32_t offset = FILES_SECTOR_OFFSET + current_file()->start_sector * bounds.sector_size + current_file()->entries * 0x80;
   m25p16_write_addr(M25P16_PAGE_PROGRAM, offset, (uint8_t *)b, sizeof(blackbox_t));
 
   current_file()->entries += 1;
