@@ -64,8 +64,7 @@ cbor_result_t cbor_encode_status_t(cbor_value_t *enc) {
   const uint32_t time = timer_millis();
   CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &time));
 
-  extern float cpu_load;
-  const uint16_t load = cpu_load;
+  const uint16_t load = state.cpu_load;
   CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &load));
 
   const uint16_t vbat = state.vbattfilt * 10;
