@@ -80,6 +80,8 @@ void blackbox_update() {
   vec3_compress(&blackbox.accel_filter, &state.accel, BLACKBOX_SCALE);
   vec3_compress(&blackbox.accel_raw, &state.accel_raw, BLACKBOX_SCALE);
 
+  vec4_compress(&blackbox.motor, &state.motor_mix, BLACKBOX_SCALE);
+
   if (blackbox_enabled != 0 && (loop_counter % blackbox_rate) == 0) {
     data_flash_write_backbox(&blackbox);
   }
