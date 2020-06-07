@@ -61,8 +61,8 @@ void blackbox_update() {
   blackbox.cpu_load = state.cpu_load;
   blackbox.vbat_filter = state.vbattfilt * 10;
 
-  vec3_compress(&blackbox.rx_raw, &state.rx, 1024);
-  vec3_compress(&blackbox.rx_filter, &state.rx_filtered, 1024);
+  vec4_compress(&blackbox.rx_raw, &state.rx, 1024);
+  vec4_compress(&blackbox.rx_filter, &state.rx_filtered, 1024);
 
   blackbox.rx_aux = 0;
   for (uint32_t i = 0; i < AUX_CHANNEL_MAX; i++) {
