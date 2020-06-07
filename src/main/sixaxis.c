@@ -24,6 +24,9 @@
 #define CAL_TIME 2e6
 #define GLOW_TIME 62500
 
+// gyro has +-2000 divided over 16bit.
+#define GYRO_RANGE 1 / (65536 / 4000)
+
 // this is the value of both cos 45 and sin 45 = 1/sqrt(2)
 #define INVSQRT2 0.707106781f
 
@@ -216,9 +219,9 @@ void sixaxis_read(void) {
     state.gyro_raw.axis[2] = -state.gyro_raw.axis[2];
   }
 
-  state.gyro_raw.axis[0] = state.gyro_raw.axis[0] * 0.061035156f * DEGTORAD;
-  state.gyro_raw.axis[1] = -state.gyro_raw.axis[1] * 0.061035156f * DEGTORAD;
-  state.gyro_raw.axis[2] = -state.gyro_raw.axis[2] * 0.061035156f * DEGTORAD;
+  state.gyro_raw.axis[0] = state.gyro_raw.axis[0] * GYRO_RANGE * DEGTORAD;
+  state.gyro_raw.axis[1] = -state.gyro_raw.axis[1] * GYRO_RANGE * DEGTORAD;
+  state.gyro_raw.axis[2] = -state.gyro_raw.axis[2] * GYRO_RANGE * DEGTORAD;
 
   filter_coeff(profile.filter.gyro[0].type, &filter[0], profile.filter.gyro[0].cutoff_freq);
   filter_coeff(profile.filter.gyro[1].type, &filter[1], profile.filter.gyro[1].cutoff_freq);
