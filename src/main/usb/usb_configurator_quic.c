@@ -366,6 +366,7 @@ void process_blackbox(uint8_t *data, uint32_t len) {
     check_cbor_error(QUIC_CMD_BLACKBOX);
 
     send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
+    cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
 
     if (data_flash_header.file_num > file_index) {
       blackbox_t blackbox;
@@ -376,11 +377,15 @@ void process_blackbox(uint8_t *data, uint32_t len) {
           continue;
         }
 
-        cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+        const uint32_t len = cbor_encoder_len(&enc);
         res = cbor_encode_blackbox_t(&enc, &blackbox);
-        check_cbor_error(QUIC_CMD_BLACKBOX);
+        if (res == CBOR_ERR_EOF) {
+          send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, len);
+          cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
 
-        send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
+          res = cbor_encode_blackbox_t(&enc, &blackbox);
+        }
+        check_cbor_error(QUIC_CMD_BLACKBOX);
       }
     }
 
