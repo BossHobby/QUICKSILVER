@@ -272,10 +272,17 @@ typedef struct {
   MEMBER(pid, profile_pid_t)         \
   MEMBER(voltage, profile_voltage_t)
 
+typedef enum {
+  FEATURE_BRUSHLESS = (1 << 1),
+  FEATURE_OSD = (1 << 2),
+  FEATURE_BLACKBOX = (1 << 3),
+} target_feature_t;
+
 typedef struct {
   const char *target_name;
   const char *git_version;
 
+  uint32_t features;
   uint32_t rx_protocol;
   uint32_t quic_protocol_version;
 
@@ -286,6 +293,7 @@ typedef struct {
 #define TARGET_INFO_MEMBERS                         \
   STR_MEMBER(target_name)                           \
   STR_MEMBER(git_version)                           \
+  MEMBER(features, uint32)                          \
   MEMBER(rx_protocol, uint32)                       \
   MEMBER(quic_protocol_version, uint32)             \
   STR_ARRAY_MEMBER(motor_pins, MOTOR_PIN_IDENT_MAX) \

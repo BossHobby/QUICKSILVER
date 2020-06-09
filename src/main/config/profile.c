@@ -490,6 +490,17 @@ target_info_t target_info = {
     .target_name = MACRO_STR(TARGET),
     .git_version = MACRO_STR(GIT_VERSION),
 
+    .features = 0
+#ifdef BRUSHLESS_TARGET
+                | FEATURE_BRUSHLESS
+#endif
+#ifdef ENABLE_OSD
+                | FEATURE_OSD
+#endif
+#ifdef USE_M25P16
+                | FEATURE_BLACKBOX
+#endif
+    ,
     .rx_protocol = RX_PROTOCOL,
     .quic_protocol_version = QUIC_PROTOCOL_VERSION,
 
