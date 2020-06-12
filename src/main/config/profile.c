@@ -450,7 +450,7 @@ target_info_t target_info = {
 #ifdef ENABLE_OSD
                 | FEATURE_OSD
 #endif
-#ifdef USE_M25P16
+#if defined(USE_M25P16) || defined(USE_SDCARD)
                 | FEATURE_BLACKBOX
 #endif
 #ifdef DEBUG

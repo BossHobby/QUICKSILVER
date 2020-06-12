@@ -22,6 +22,8 @@ typedef struct {
   compact_vec4_t motor;
 } blackbox_t;
 
+#define BLACKBOX_MAX_SIZE 128
+
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b);
 
 void blackbox_init();

@@ -381,6 +381,13 @@ static void handle_dma_rx_isr(spi_ports_t port) {
       max7456_dma_rx_isr();
     }
 #endif
+
+#if defined(USE_SDCARD) && defined(SDCARD_SPI_PORT)
+    if (port == SDCARD_SPI_PORT) {
+      extern void sdcard_dma_rx_isr();
+      sdcard_dma_rx_isr();
+    }
+#endif
   }
 }
 
