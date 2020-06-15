@@ -170,7 +170,7 @@ cbor_result_t data_flash_write_backbox(const blackbox_t *b) {
 
   if (index == ENTRIES_PER_BLOCK - 1) {
     if (!sdcard_finish_write_sector()) {
-      current_file()->entries -= 3;
+      current_file()->entries -= 4;
     }
   }
   volatile uint32_t delta = timer_micros() - start;
