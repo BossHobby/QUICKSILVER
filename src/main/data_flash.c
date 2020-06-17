@@ -79,6 +79,7 @@ void data_flash_init() {
   data_flash_header.file_num = 0;
   data_flash_read_header(&data_flash_header);
   if (data_flash_header.magic != DATA_FLASH_HEADER_MAGIC) {
+    data_flash_header.magic = DATA_FLASH_HEADER_MAGIC;
     data_flash_header.file_num = 0;
   }
 }
@@ -121,7 +122,7 @@ void data_flash_finish() {
   reset_looptime();
 }
 
-cbor_result_t data_flash_read_backbox(const uint32_t index, blackbox_t *b, const uint8_t count) {
+cbor_result_t data_flash_read_backbox(const uint32_t index, blackbox_t b[], const uint8_t count) {
 #ifdef USE_M25P16
   m25p16_wait_for_ready();
 
@@ -135,7 +136,8 @@ cbor_result_t data_flash_read_backbox(const uint32_t index, blackbox_t *b, const
   const uint32_t sectors = count / ENTRIES_PER_BLOCK + (count % ENTRIES_PER_BLOCK ? 1 : 0);
 
   uint8_t buf[sectors * 512];
-  sdcard_read_sectors(buf, offset, sectors);
+  while (!sdcard_read_sectors(buf, offset, sectors))
+    ;
 
   for (uint32_t i = 0; i < count; i++) {
     memcpy(b + i, buf + ((index % ENTRIES_PER_BLOCK) + i) * BLACKBOX_MAX_SIZE, sizeof(blackbox_t));
@@ -159,21 +161,19 @@ cbor_result_t data_flash_write_backbox(const blackbox_t *b) {
 
 #endif
 #ifdef USE_SDCARD
-  volatile uint32_t start = timer_micros();
   const uint32_t index = current_file()->entries % ENTRIES_PER_BLOCK;
+  const uint32_t offset = FILES_SECTOR_OFFSET + current_file()->start_sector + (current_file()->entries / ENTRIES_PER_BLOCK);
   if (index == 0) {
-    const uint32_t offset = FILES_SECTOR_OFFSET + current_file()->start_sector + (current_file()->entries / ENTRIES_PER_BLOCK);
     sdcard_start_write_sector(offset);
   }
 
   sdcard_continue_write_sector(index * BLACKBOX_MAX_SIZE, b, sizeof(blackbox_t));
 
   if (index == ENTRIES_PER_BLOCK - 1) {
-    if (!sdcard_finish_write_sector()) {
+    if (!sdcard_finish_write_sector(offset)) {
       current_file()->entries -= 4;
     }
   }
-  volatile uint32_t delta = timer_micros() - start;
 #endif
 
   current_file()->entries += 1;
