@@ -364,8 +364,6 @@ static void handle_dma_rx_isr(spi_ports_t port) {
 
     LL_DMA_DisableIT_TC(PORT.dma.dma, PORT.dma.rx_stream_index);
 
-    DMA_TRANSFER_DONE = 1;
-
     LL_SPI_DisableDMAReq_TX(PORT.channel);
     LL_SPI_DisableDMAReq_RX(PORT.channel);
 
@@ -388,6 +386,7 @@ static void handle_dma_rx_isr(spi_ports_t port) {
       sdcard_dma_rx_isr();
     }
 #endif
+    DMA_TRANSFER_DONE = 1;
   }
 }
 
