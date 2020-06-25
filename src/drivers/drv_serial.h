@@ -21,12 +21,11 @@ typedef enum {
   RX_SERIAL_PROTOCOL_FPORT_INVERTED,
 } rx_serial_protocol_t;
 
-// if we have inversion, include inverted protocols, if not stop at end of list
-#if defined(F4) && defined(USART_INVERTER_PIN) && defined(USART_INVERTER_PORT)
+// potentially a debug tool to limit the detection sequence of universal serial
+// todo:  purge this if deemed unnecessary
+//#define RX_SERIAL_PROTOCOL_MAX RX_SERIAL_PROTOCOL_CRSF
 #define RX_SERIAL_PROTOCOL_MAX RX_SERIAL_PROTOCOL_FPORT_INVERTED
-#else
-#define RX_SERIAL_PROTOCOL_MAX RX_SERIAL_PROTOCOL_CRSF
-#endif
+
 
 typedef struct {
   uint8_t channel_index;
