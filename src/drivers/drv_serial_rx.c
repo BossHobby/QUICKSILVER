@@ -10,123 +10,110 @@
 // Will init gpio pins for uart inverters once on every boot, but will only toggle the inverter on if hard defined INVERT_UART
 // Universal serial will overwrite inverter pin state only if INVERT_UART
 void usart_invert(void) {
-#if defined(F4) && ( defined(USART1_INVERTER_PIN) || defined(USART2_INVERTER_PIN) || defined(USART3_INVERTER_PIN) || defined(USART4_INVERTER_PIN) || defined(USART5_INVERTER_PIN) || defined(USART6_INVERTER_PIN) ) && ( defined(USART1_INVERTER_PORT) || defined(USART2_INVERTER_PORT) || defined(USART3_INVERTER_PORT) || defined(USART4_INVERTER_PORT) || defined(USART5_INVERTER_PORT) || defined(USART_INVERTER_PORT) || defined(USART6_INVERTER_PORT) )
-#if defined(USART1_INVERTER_PIN) && defined(USART1_INVERTER_PORT)
-  GPIO_InitTypeDef GPIO_Inverter1InitStructure;
-  GPIO_Inverter1InitStructure.GPIO_Pin = USART1_INVERTER_PIN;
-  GPIO_Inverter1InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_Inverter1InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_Inverter1InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(USART1_INVERTER_PORT, &GPIO_Inverter1InitStructure);
+#if defined(F4) && (defined(USART1_INVERTER_PIN) || defined(USART2_INVERTER_PIN) || defined(USART3_INVERTER_PIN) || defined(USART4_INVERTER_PIN) || defined(USART5_INVERTER_PIN) || defined(USART6_INVERTER_PIN))
+  GPIO_InitTypeDef gpio_init;
+  gpio_init.GPIO_Mode = GPIO_Mode_OUT;
+  gpio_init.GPIO_OType = GPIO_OType_PP;
+  gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+
+#if defined(USART1_INVERTER_PIN)
+  gpio_init.GPIO_Pin = gpio_pin_defs[USART1_INVERTER_PIN].pin;
+  GPIO_Init(gpio_pin_defs[USART1_INVERTER_PIN].port, &gpio_init);
 #endif
-#if defined(USART2_INVERTER_PIN) && defined(USART2_INVERTER_PORT)
-  GPIO_InitTypeDef GPIO_Inverter2InitStructure;
-  GPIO_Inverter2InitStructure.GPIO_Pin = USART2_INVERTER_PIN;
-  GPIO_Inverter2InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_Inverter2InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_Inverter2InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(USART2_INVERTER_PORT, &GPIO_Inverter2InitStructure);
+
+#if defined(USART2_INVERTER_PIN)
+  gpio_init.GPIO_Pin = gpio_pin_defs[USART2_INVERTER_PIN].pin;
+  GPIO_Init(gpio_pin_defs[USART2_INVERTER_PIN].port, &gpio_init);
 #endif
-#if defined(USART3_INVERTER_PIN) && defined(USART3_INVERTER_PORT)
-  GPIO_InitTypeDef GPIO_Inverter3InitStructure;
-  GPIO_Inverter3InitStructure.GPIO_Pin = USART3_INVERTER_PIN;
-  GPIO_Inverter3InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_Inverter3InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_Inverter3InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(USART3_INVERTER_PORT, &GPIO_Inverter3InitStructure);
+
+#if defined(USART3_INVERTER_PIN)
+  gpio_init.GPIO_Pin = gpio_pin_defs[USART3_INVERTER_PIN].pin;
+  GPIO_Init(gpio_pin_defs[USART3_INVERTER_PIN].port, &gpio_init);
 #endif
-#if defined(USART4_INVERTER_PIN) && defined(USART4_INVERTER_PORT)
-  GPIO_InitTypeDef GPIO_Inverter4InitStructure;
-  GPIO_Inverter4InitStructure.GPIO_Pin = USART4_INVERTER_PIN;
-  GPIO_Inverter4InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_Inverter4InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_Inverter4InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(USART4_INVERTER_PORT, &GPIO_Inverter4InitStructure);
+
+#if defined(USART4_INVERTER_PIN)
+  gpio_init.GPIO_Pin = gpio_pin_defs[USART4_INVERTER_PIN].pin;
+  GPIO_Init(gpio_pin_defs[USART4_INVERTER_PIN].port, &gpio_init);
 #endif
-#if defined(USART5_INVERTER_PIN) && defined(USART5_INVERTER_PORT)
-  GPIO_InitTypeDef GPIO_Inverter5InitStructure;
-  GPIO_Inverter5InitStructure.GPIO_Pin = USART5_INVERTER_PIN;
-  GPIO_Inverter5InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_Inverter5InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_Inverter5InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(USART5_INVERTER_PORT, &GPIO_Inverter5InitStructure);
+
+#if defined(USART5_INVERTER_PIN)
+  gpio_init.GPIO_Pin = gpio_pin_defs[USART5_INVERTER_PIN].pin;
+  GPIO_Init(gpio_pin_defs[USART5_INVERTER_PIN].port, &gpio_init);
 #endif
-#if defined(USART6_INVERTER_PIN) && defined(USART6_INVERTER_PORT)
-  GPIO_InitTypeDef GPIO_Inverter6InitStructure;
-  GPIO_Inverter6InitStructure.GPIO_Pin = USART6_INVERTER_PIN;
-  GPIO_Inverter6InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_Inverter6InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_Inverter6InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(USART6_INVERTER_PORT, &GPIO_Inverter6InitStructure);
+
+#if defined(USART6_INVERTER_PIN)
+  gpio_init.GPIO_Pin = gpio_pin_defs[USART6_INVERTER_PIN].pin;
+  GPIO_Init(gpio_pin_defs[USART6_INVERTER_PIN].port, &gpio_init);
 #endif
+
 #ifdef INVERT_UART
   // Inverter control line, set high
-  switch(usart_port_defs[profile.serial.rx].channel_index){
-	case 1:
-		#if defined(USART1_INVERTER_PIN) && defined(USART1_INVERTER_PORT)
-			GPIO_SetBits(USART1_INVERTER_PORT, USART1_INVERTER_PIN);
-		#endif
-		break;
-	case 2:
-		#if defined(USART2_INVERTER_PIN) && defined(USART2_INVERTER_PORT)
-			GPIO_SetBits(USART2_INVERTER_PORT, USART2_INVERTER_PIN);
-		#endif
-		break;
-	case 3:
-		#if defined(USART3_INVERTER_PIN) && defined(USART3_INVERTER_PORT)
-			GPIO_SetBits(USART3_INVERTER_PORT, USART3_INVERTER_PIN);
-		#endif
-		break;
-	case 4:
-		#if defined(USART4_INVERTER_PIN) && defined(USART4_INVERTER_PORT)
-			GPIO_SetBits(USART4_INVERTER_PORT, USART4_INVERTER_PIN);
-		#endif
-		break;
-	case 5:
-		#if defined(USART5_INVERTER_PIN) && defined(USART5_INVERTER_PORT)
-			GPIO_SetBits(USART5_INVERTER_PORT, USART5_INVERTER_PIN);
-		#endif
-		break;
-	case 6:
-		#if defined(USART6_INVERTER_PIN) && defined(USART6_INVERTER_PORT)
-			GPIO_SetBits(USART6_INVERTER_PORT, USART6_INVERTER_PIN);
-		#endif
-		break;
-	}
+  switch (usart_port_defs[profile.serial.rx].channel_index) {
+  case 1:
+#if defined(USART1_INVERTER_PIN)
+    GPIO_SetBits(gpio_pin_defs[USART1_INVERTER_PIN].port, gpio_pin_defs[USART1_INVERTER_PIN].pin);
+#endif
+    break;
+  case 2:
+#if defined(USART2_INVERTER_PIN)
+    GPIO_SetBits(gpio_pin_defs[USART2_INVERTER_PIN].port, gpio_pin_defs[USART2_INVERTER_PIN].pin);
+#endif
+    break;
+  case 3:
+#if defined(USART3_INVERTER_PIN)
+    GPIO_SetBits(gpio_pin_defs[USART3_INVERTER_PIN].port, gpio_pin_defs[USART3_INVERTER_PIN].pin);
+#endif
+    break;
+  case 4:
+#if defined(USART4_INVERTER_PIN)
+    GPIO_SetBits(gpio_pin_defs[USART4_INVERTER_PIN].port, gpio_pin_defs[USART4_INVERTER_PIN].pin);
+#endif
+    break;
+  case 5:
+#if defined(USART5_INVERTER_PIN)
+    GPIO_SetBits(gpio_pin_defs[USART5_INVERTER_PIN].port, gpio_pin_defs[USART5_INVERTER_PIN].pin);
+#endif
+    break;
+  case 6:
+#if defined(USART6_INVERTER_PIN)
+    GPIO_SetBits(gpio_pin_defs[USART6_INVERTER_PIN].port, gpio_pin_defs[USART6_INVERTER_PIN].pin);
+#endif
+    break;
+  }
 #else
   // Inverter control line, set low
-  switch(usart_port_defs[profile.serial.rx].channel_index){
-	case 1:
-		#if defined(USART1_INVERTER_PIN) && defined(USART1_INVERTER_PORT)
-			GPIO_ResetBits(USART1_INVERTER_PORT, USART1_INVERTER_PIN);
-		#endif
-		break;
-	case 2:
-		#if defined(USART2_INVERTER_PIN) && defined(USART2_INVERTER_PORT)
-			GPIO_ResetBits(USART2_INVERTER_PORT, USART2_INVERTER_PIN);
-		#endif
-		break;
-	case 3:
-		#if defined(USART3_INVERTER_PIN) && defined(USART3_INVERTER_PORT)
-			GPIO_ResetBits(USART3_INVERTER_PORT, USART3_INVERTER_PIN);
-		#endif
-		break;
-	case 4:
-		#if defined(USART4_INVERTER_PIN) && defined(USART4_INVERTER_PORT)
-			GPIO_ResetBits(USART4_INVERTER_PORT, USART4_INVERTER_PIN);
-		#endif
-		break;
-	case 5:
-		#if defined(USART5_INVERTER_PIN) && defined(USART5_INVERTER_PORT)
-			GPIO_ResetBits(USART5_INVERTER_PORT, USART5_INVERTER_PIN);
-		#endif
-		break;
-	case 6:
-		#if defined(USART6_INVERTER_PIN) && defined(USART6_INVERTER_PORT)
-			GPIO_ResetBits(USART6_INVERTER_PORT, USART6_INVERTER_PIN);
-		#endif
-		break;
-	}
+  switch (usart_port_defs[profile.serial.rx].channel_index) {
+  case 1:
+#if defined(USART1_INVERTER_PIN)
+    GPIO_ResetBits(gpio_pin_defs[USART1_INVERTER_PIN].port, gpio_pin_defs[USART1_INVERTER_PIN].pin);
+#endif
+    break;
+  case 2:
+#if defined(USART2_INVERTER_PIN)
+    GPIO_ResetBits(gpio_pin_defs[USART2_INVERTER_PIN].port, gpio_pin_defs[USART2_INVERTER_PIN].pin);
+#endif
+    break;
+  case 3:
+#if defined(USART3_INVERTER_PIN)
+    GPIO_ResetBits(gpio_pin_defs[USART3_INVERTER_PIN].port, gpio_pin_defs[USART3_INVERTER_PIN].pin);
+#endif
+    break;
+  case 4:
+#if defined(USART4_INVERTER_PIN)
+    GPIO_ResetBits(gpio_pin_defs[USART4_INVERTER_PIN].port, gpio_pin_defs[USART4_INVERTER_PIN].pin);
+#endif
+    break;
+  case 5:
+#if defined(USART5_INVERTER_PIN)
+    GPIO_ResetBits(gpio_pin_defs[USART5_INVERTER_PIN].port, gpio_pin_defs[USART5_INVERTER_PIN].pin);
+#endif
+    break;
+  case 6:
+#if defined(USART6_INVERTER_PIN)
+    GPIO_ResetBits(gpio_pin_defs[USART6_INVERTER_PIN].port, gpio_pin_defs[USART6_INVERTER_PIN].pin);
+#endif
+    break;
+  }
 #endif
 
 #else
@@ -156,64 +143,64 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
 
   //If the board supports inversion & inversion is not hard defined, prepare it.
 #if !defined(INVERT_UART)
-#if defined(F4) && ( defined(USART1_INVERTER_PIN) || defined(USART2_INVERTER_PIN) || defined(USART3_INVERTER_PIN) || defined(USART4_INVERTER_PIN) || defined(USART5_INVERTER_PIN) || defined(USART6_INVERTER_PIN) ) && ( defined(USART1_INVERTER_PORT) || defined(USART2_INVERTER_PORT) || defined(USART3_INVERTER_PORT) || defined(USART4_INVERTER_PORT) || defined(USART5_INVERTER_PORT) || defined(USART_INVERTER_PORT) || defined(USART6_INVERTER_PORT) )
+#if defined(F4) && (defined(USART1_INVERTER_PIN) || defined(USART2_INVERTER_PIN) || defined(USART3_INVERTER_PIN) || defined(USART4_INVERTER_PIN) || defined(USART5_INVERTER_PIN) || defined(USART6_INVERTER_PIN))
 
-  switch(usart_port_defs[profile.serial.rx].channel_index){
-	case 1:
-		#if defined(USART1_INVERTER_PIN) && defined(USART1_INVERTER_PORT)
-			if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
-				GPIO_SetBits(USART1_INVERTER_PORT, USART1_INVERTER_PIN);
-			}else{
-				GPIO_ResetBits(USART1_INVERTER_PORT, USART1_INVERTER_PIN);
-			}
-		#endif
-		break;
-	case 2:
-		#if defined(USART2_INVERTER_PIN) && defined(USART2_INVERTER_PORT)
-			if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
-				GPIO_SetBits(USART2_INVERTER_PORT, USART2_INVERTER_PIN);
-			}else{
-				GPIO_ResetBits(USART2_INVERTER_PORT, USART2_INVERTER_PIN);
-			}
-		#endif
-		break;
-	case 3:
-		#if defined(USART3_INVERTER_PIN) && defined(USART3_INVERTER_PORT)
-			if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
-				GPIO_SetBits(USART3_INVERTER_PORT, USART3_INVERTER_PIN);
-			}else{
-				GPIO_ResetBits(USART3_INVERTER_PORT, USART3_INVERTER_PIN);
-			}
-		#endif
-		break;
-	case 4:
-		#if defined(USART4_INVERTER_PIN) && defined(USART4_INVERTER_PORT)
-			if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
-				GPIO_SetBits(USART4_INVERTER_PORT, USART4_INVERTER_PIN);
-			}else{
-				GPIO_ResetBits(USART4_INVERTER_PORT, USART4_INVERTER_PIN);
-			}
-		#endif
-		break;
-	case 5:
-		#if defined(USART5_INVERTER_PIN) && defined(USART5_INVERTER_PORT)
-			if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
-				GPIO_SetBits(USART5_INVERTER_PORT, USART5_INVERTER_PIN);
-			}else{
-				GPIO_ResetBits(USART5_INVERTER_PORT, USART5_INVERTER_PIN);
-			}
-		#endif
-		break;
-	case 6:
-		#if defined(USART6_INVERTER_PIN) && defined(USART6_INVERTER_PORT)
-			if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
-				GPIO_SetBits(USART6_INVERTER_PORT, USART6_INVERTER_PIN);
-			}else{
-				GPIO_ResetBits(USART6_INVERTER_PORT, USART6_INVERTER_PIN);
-			}
-		#endif
-		break;
-	}
+  switch (usart_port_defs[profile.serial.rx].channel_index) {
+  case 1:
+#if defined(USART1_INVERTER_PIN)
+    if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
+      GPIO_SetBits(gpio_pin_defs[USART1_INVERTER_PIN].port, gpio_pin_defs[USART1_INVERTER_PIN].pin);
+    } else {
+      GPIO_ResetBits(gpio_pin_defs[USART1_INVERTER_PIN].port, gpio_pin_defs[USART1_INVERTER_PIN].pin);
+    }
+#endif
+    break;
+  case 2:
+#if defined(USART2_INVERTER_PIN)
+    if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
+      GPIO_SetBits(gpio_pin_defs[USART2_INVERTER_PIN].port, gpio_pin_defs[USART2_INVERTER_PIN].pin);
+    } else {
+      GPIO_ResetBits(gpio_pin_defs[USART2_INVERTER_PIN].port, gpio_pin_defs[USART2_INVERTER_PIN].pin);
+    }
+#endif
+    break;
+  case 3:
+#if defined(USART3_INVERTER_PIN)
+    if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
+      GPIO_SetBits(gpio_pin_defs[USART3_INVERTER_PIN].port, gpio_pin_defs[USART3_INVERTER_PIN].pin);
+    } else {
+      GPIO_ResetBits(gpio_pin_defs[USART3_INVERTER_PIN].port, gpio_pin_defs[USART3_INVERTER_PIN].pin);
+    }
+#endif
+    break;
+  case 4:
+#if defined(USART4_INVERTER_PIN)
+    if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
+      GPIO_SetBits(gpio_pin_defs[USART4_INVERTER_PIN].port, gpio_pin_defs[USART4_INVERTER_PIN].pin);
+    } else {
+      GPIO_ResetBits(gpio_pin_defs[USART4_INVERTER_PIN].port, gpio_pin_defs[USART4_INVERTER_PIN].pin);
+    }
+#endif
+    break;
+  case 5:
+#if defined(USART5_INVERTER_PIN)
+    if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
+      GPIO_SetBits(gpio_pin_defs[USART5_INVERTER_PIN].port, gpio_pin_defs[USART5_INVERTER_PIN].pin);
+    } else {
+      GPIO_ResetBits(gpio_pin_defs[USART5_INVERTER_PIN].port, gpio_pin_defs[USART5_INVERTER_PIN].pin);
+    }
+#endif
+    break;
+  case 6:
+#if defined(USART6_INVERTER_PIN)
+    if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
+      GPIO_SetBits(gpio_pin_defs[USART6_INVERTER_PIN].port, gpio_pin_defs[USART6_INVERTER_PIN].pin);
+    } else {
+      GPIO_ResetBits(gpio_pin_defs[USART6_INVERTER_PIN].port, gpio_pin_defs[USART6_INVERTER_PIN].pin);
+    }
+#endif
+    break;
+  }
 #endif
 #endif
 
