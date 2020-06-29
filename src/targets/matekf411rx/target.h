@@ -53,9 +53,6 @@
 #define SOFTSPI_NONE
 #endif
 
-#define ENABLE_SMART_AUDIO
-#define SMART_AUDIO_USART USART_PORT2
-
 #ifdef SERIAL_RX
 #define RX_USART USART_PORT1
 #define SOFTSPI_NONE

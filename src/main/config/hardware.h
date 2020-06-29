@@ -34,6 +34,8 @@
 
 #ifdef F4
 
+#define ENABLE_SMART_AUDIO
+
 #ifdef F411
 #define SYS_CLOCK_FREQ_HZ 84000000
 #define PWM_CLOCK_FREQ_HZ 84000000
