@@ -179,6 +179,44 @@
     ]
   },
   {
+    "name": "omnibusf4",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      },
+      {
+        "name": "brushless.crsf",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_CRSF": ""
+        }
+      }
+    ]
+  },
+  {
+    "name": "omnibusf4sd",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      },
+      {
+        "name": "brushless.crsf",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_CRSF": ""
+        }
+      }
+    ]
+  },
+  {
     "name": "nfe_breadboard",
     "configurations": [
       {
