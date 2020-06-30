@@ -27,6 +27,15 @@ bump() {
     next_minor=$(($(echo $latest_semver | cut -d "." -f 2) + "$2"))
     next_patch=$(($(echo $latest_semver | cut -d "." -f 3) + "$3"))
 
+    if [ $1 -gt 0 ]; then
+      next_minor="0"
+      next_patch="0"
+    fi
+
+    if [ $2 -gt 0 ]; then
+      next_patch="0"
+    fi
+
     next_ver="${PREFIX}${next_major}.${next_minor}.${next_patch}"
 
     echo "tagging $next_ver $head_commit"
