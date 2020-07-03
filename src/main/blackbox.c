@@ -47,11 +47,11 @@ void blackbox_init() {
 void blackbox_update() {
   static uint32_t loop_counter = 0;
 
-  if (!rx_aux_on(AUX_ARMING) && blackbox_enabled == 1) {
+  if ((!rx_aux_on(AUX_ARMING) || !rx_aux_on(AUX_BLACKBOX)) && blackbox_enabled == 1) {
     data_flash_finish();
     blackbox_enabled = 0;
     return;
-  } else if (rx_aux_on(AUX_ARMING) && blackbox_enabled == 0) {
+  } else if ((rx_aux_on(AUX_ARMING) && rx_aux_on(AUX_BLACKBOX)) && blackbox_enabled == 0) {
     data_flash_restart();
     blackbox_enabled = 1;
     return;
