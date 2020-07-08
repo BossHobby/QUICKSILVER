@@ -240,7 +240,9 @@ static void motor_mixer_scale_calc(float mix[4]) {
 
 void motor_mixer_calc(float mix[4]) {
 
-  if (usb_motor_test.active) {
+extern uint8_t flip_sequencer_request_motortest_override;
+
+  if ((flags.usb_active && usb_motor_test.active) || flip_sequencer_request_motortest_override) {
     flags.motortest_override = 1;
   } else {
     flags.motortest_override = 0;

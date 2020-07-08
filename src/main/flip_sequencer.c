@@ -46,6 +46,7 @@ int flipstage = STAGE_FLIP_NONE;
 unsigned int levelmodetime;
 int flipindex = 0;
 int flipdir = 0;
+uint8_t flip_sequencer_request_motortest_override = 0;
 
 extern profile_t profile;
 
@@ -88,7 +89,7 @@ void flip_sequencer() {
     }
     flipstage = STAGE_FLIP_NONE;
     flags.controls_override = 0;
-    flags.motortest_override = 0;
+    flip_sequencer_request_motortest_override = 0;
     return; //turtle mode off or flying away from a successful turtle will return here
   }         // a disarmed quad with turtle mode on will continue past
 
@@ -119,7 +120,7 @@ void flip_sequencer() {
     state.rx_override.axis[1] = 0;
     state.rx_override.axis[2] = 0;
     state.rx_override.axis[3] = 0;
-    flags.motortest_override = 1;
+    flip_sequencer_request_motortest_override = 1;
     pwmdir = REVERSE;
     flipindex = 0;
     flipdir = 0;
@@ -156,7 +157,7 @@ void flip_sequencer() {
     readytoflip = 0;
     flipstage = STAGE_FLIP_NONE;
     flags.controls_override = 0;
-    flags.motortest_override = 0;
+    flip_sequencer_request_motortest_override = 0;
     pwmdir = FORWARD;
     flags.arm_safety = 1;
     break;
