@@ -56,6 +56,7 @@ typedef struct {
   vec3_t accel_raw; // raw accel reading with rotation and scaling applied
   vec3_t accel;     // filtered accel readings
 
+  float gyro_temp; // gyro temparture reading
   vec3_t gyro_raw; // raw gyro reading with rotation and scaling applied
   vec3_t gyro;     // filtered gyro reading
 
@@ -93,6 +94,7 @@ typedef struct {
   ARRAY_MEMBER(aux, AUX_CHANNEL_MAX, uint8) \
   MEMBER(accel_raw, vec3_t)                 \
   MEMBER(accel, vec3_t)                     \
+  MEMBER(gyro_temp, float)                  \
   MEMBER(gyro_raw, vec3_t)                  \
   MEMBER(gyro, vec3_t)                      \
   MEMBER(GEstG, vec3_t)                     \

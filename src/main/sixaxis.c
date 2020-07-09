@@ -176,6 +176,8 @@ void sixaxis_read(void) {
   state.accel_raw.axis[1] = (state.accel_raw.axis[1] - accelcal[1]) * (1 / 2048.0f);
   state.accel_raw.axis[2] = (state.accel_raw.axis[2] - accelcal[2]) * (1 / 2048.0f);
 
+  state.gyro_temp = (float)((int16_t)((data[6] << 8) + data[7])) / 333.87f + 21.f;
+
   //order
   state.gyro_raw.axis[1] = (int16_t)((data[8] << 8) + data[9]);
   state.gyro_raw.axis[0] = (int16_t)((data[10] << 8) + data[11]);
