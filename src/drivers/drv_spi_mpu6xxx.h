@@ -4,7 +4,7 @@
 #define MPU_BIT_H_RESET 0x80
 #define MPU_BITS_CLKSEL 0x07
 #define MPU_CLK_SEL_PLLGYROX 0x01
-#define MPU_RESET_SIGNAL_PATHWAYS 0x03
+#define MPU_RESET_SIGNAL_PATHWAYS 0x07
 #define MPU_EXT_SYNC_GYROX 0x02
 #define MPU_BITS_STDBY_MODE_OFF 0x00
 #define MPU_BITS_FS_250DPS 0x00
@@ -134,5 +134,4 @@ void MPU6XXX_read_data(uint8_t reg, int *data, int size);
 void MPU6XXX_dma_spi_write(uint8_t reg, uint8_t data);
 uint8_t MPU6XXX_dma_spi_read(uint8_t reg);
 void MPU6XXX_dma_read_data(uint8_t reg, int *data, int size);
-
 
