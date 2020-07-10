@@ -8,29 +8,182 @@
 #include "usb_configurator.h"
 #include "util.h"
 
+#ifdef USE_M25P16
+#define FILES_SECTOR_OFFSET bounds.sector_size
+#define ENTRIES_PER_BLOCK (256 / BLACKBOX_MAX_SIZE)
+#endif
+#ifdef USE_SDCARD
+#define FILES_SECTOR_OFFSET 1
+#define FLUSH_INTERVAL 4
+#define ENTRIES_PER_BLOCK (512 / BLACKBOX_MAX_SIZE)
+#endif
+
+typedef enum {
+  STATE_IDLE,
+  STATE_START_MULTI_WRITE,
+  STATE_START_WRITE,
+  STATE_CONTINUE_WRITE,
+  STATE_FINISH_WRITE,
+  STATE_FINISH_MULTI_WRITE,
+  STATE_FLUSH,
+} data_flash_state_t;
+
 data_flash_header_t data_flash_header;
+
+static data_flash_state_t state = STATE_IDLE;
+static blackbox_t write_buffer[16];
+static uint32_t write_offset = 0;
+static uint32_t written_offset = 0;
 
 static data_flash_bounds_t bounds;
 static data_flash_file_t *current_file() {
   return &data_flash_header.files[data_flash_header.file_num - 1];
 }
 
-#ifdef USE_M25P16
-#define FILES_SECTOR_OFFSET bounds.sector_size
-#endif
+static volatile uint32_t update_delta = 0;
+
+void data_flash_update(uint32_t loop) {
+  static uint32_t offset = 0;
+
+  uint32_t start = timer_micros();
+  const uint32_t to_write = write_offset >= written_offset ? write_offset - written_offset : 16 + write_offset - written_offset;
+
+  switch (state) {
+  case STATE_IDLE:
+    if (to_write > 0) {
 #ifdef USE_SDCARD
-#define FILES_SECTOR_OFFSET 1
-#define ENTRIES_PER_BLOCK (512 / BLACKBOX_MAX_SIZE)
+      state = STATE_START_MULTI_WRITE;
 #endif
+#ifdef USE_M25P16
+      state = STATE_START_WRITE;
+#endif
+    }
+    break;
+
+  case STATE_START_MULTI_WRITE: {
+#ifdef USE_SDCARD
+    if (sdcard_start_multi_write(offset)) {
+      is_multi = 1;
+      state = STATE_START_WRITE;
+    }
+#endif
+    break;
+  }
+
+  case STATE_START_WRITE: {
+#ifdef USE_SDCARD
+    offset = FILES_SECTOR_OFFSET + current_file()->start_sector + (current_file()->entries / ENTRIES_PER_BLOCK);
+    if (sdcard_start_write_sector(offset)) {
+      state = STATE_CONTINUE_WRITE;
+    }
+#endif
+#ifdef USE_M25P16
+    offset = FILES_SECTOR_OFFSET + current_file()->start_sector * bounds.sector_size + (current_file()->entries / ENTRIES_PER_BLOCK) * 256;
+    if (m25p16_start_page_program(offset)) {
+      state = STATE_CONTINUE_WRITE;
+    }
+#endif
+    break;
+  }
+
+  case STATE_CONTINUE_WRITE: {
+    if (to_write <= 0) {
+      break;
+    }
+
+    const uint32_t index = current_file()->entries % ENTRIES_PER_BLOCK;
+#ifdef USE_SDCARD
+    sdcard_continue_write_sector(index * BLACKBOX_MAX_SIZE, &write_buffer[written_offset], sizeof(blackbox_t));
+#endif
+#ifdef USE_M25P16
+    if (!m25p16_continue_page_program(index * BLACKBOX_MAX_SIZE, (const uint8_t *)&write_buffer[written_offset], sizeof(blackbox_t))) {
+      break;
+    }
+#endif
+    written_offset = (written_offset + 1) % 16;
+
+    if (index == ENTRIES_PER_BLOCK - 1) {
+      state = STATE_FINISH_WRITE;
+    } else {
+      state = STATE_CONTINUE_WRITE;
+    }
+
+    current_file()->entries += 1;
+    break;
+  }
+
+  case STATE_FINISH_WRITE: {
+#ifdef USE_SDCARD
+    static uint32_t count = 0;
+    if (!sdcard_finish_write_sector(offset)) {
+      break;
+    }
+    count++;
+
+    if (count == FLUSH_INTERVAL) {
+      count = 0;
+      state = STATE_FINISH_MULTI_WRITE;
+    } else {
+      state = STATE_START_WRITE;
+    }
+#endif
+#ifdef USE_M25P16
+    if (m25p16_finish_page_program(offset)) {
+      state = STATE_IDLE;
+    }
+#endif
+    break;
+  }
+
+  case STATE_FINISH_MULTI_WRITE: {
+#ifdef USE_SDCARD
+    if (sdcard_finish_multi_write(offset)) {
+      state = STATE_IDLE;
+    }
+#endif
+    break;
+  }
+
+  case STATE_FLUSH: {
+#ifdef USE_SDCARD
+    if (!sdcard_finish_write_sector(offset)) {
+      break;
+    }
+    state = STATE_FINISH_MULTI_WRITE;
+#endif
+#ifdef USE_M25P16
+    state = STATE_FINISH_WRITE;
+#endif
+    break;
+  }
+
+  default:
+    break;
+  }
+  update_delta = timer_micros() - start;
+  return;
+}
+
+void data_flash_flush() {
+  uint32_t loop = 0;
+  while (state != STATE_IDLE) {
+    if (state == STATE_CONTINUE_WRITE) {
+      state = STATE_FLUSH;
+    }
+    data_flash_update(loop++);
+  }
+}
 
 cbor_result_t data_flash_read_header(data_flash_header_t *h) {
+  data_flash_flush();
+
 #ifdef USE_M25P16
-  m25p16_wait_for_ready();
   m25p16_read_addr(M25P16_READ_DATA_BYTES, 0x0, (uint8_t *)h, sizeof(data_flash_header_t));
 #endif
 #ifdef USE_SDCARD
   uint8_t buf[512];
-  sdcard_read_sectors(buf, 0, 1);
+  while (!sdcard_read_sectors(buf, 0, 1))
+    ;
 
   memcpy(h, buf, sizeof(data_flash_header_t));
 #endif
@@ -38,20 +191,18 @@ cbor_result_t data_flash_read_header(data_flash_header_t *h) {
 }
 
 cbor_result_t data_flash_write_header(data_flash_header_t *h) {
-#ifdef USE_M25P16
-  m25p16_wait_for_ready();
-  m25p16_command(M25P16_WRITE_ENABLE);
-  m25p16_write_addr(M25P16_SECTOR_ERASE, 0x0, NULL, 0);
+  data_flash_flush();
 
-  m25p16_wait_for_ready();
-  m25p16_command(M25P16_WRITE_ENABLE);
+#ifdef USE_M25P16
+  m25p16_write_addr(M25P16_SECTOR_ERASE, 0x0, NULL, 0);
   m25p16_write_addr(M25P16_PAGE_PROGRAM, 0x0, (uint8_t *)h, sizeof(data_flash_header_t));
 #endif
 #ifdef USE_SDCARD
   uint8_t buf[512];
   memcpy(buf, h, sizeof(data_flash_header_t));
 
-  sdcard_write_sectors(buf, 0, 1);
+  while (!sdcard_write_sectors(buf, 0, 1))
+    ;
 #endif
   return CBOR_OK;
 }
@@ -119,16 +270,18 @@ void data_flash_restart() {
 
 void data_flash_finish() {
   data_flash_write_header(&data_flash_header);
+  data_flash_read_header(&data_flash_header);
   reset_looptime();
 }
 
 cbor_result_t data_flash_read_backbox(const uint32_t index, blackbox_t b[], const uint8_t count) {
+  data_flash_flush();
+
 #ifdef USE_M25P16
-  m25p16_wait_for_ready();
 
   for (uint32_t i = 0; i < count; i++) {
     const uint32_t offset = FILES_SECTOR_OFFSET + current_file()->start_sector * bounds.sector_size + (index + i) * BLACKBOX_MAX_SIZE;
-    m25p16_read_addr(M25P16_READ_DATA_BYTES, offset, (uint8_t *)b, sizeof(blackbox_t));
+    m25p16_read_addr(M25P16_READ_DATA_BYTES, offset, (uint8_t *)&b[i], sizeof(blackbox_t));
   }
 #endif
 #ifdef USE_SDCARD
@@ -147,35 +300,7 @@ cbor_result_t data_flash_read_backbox(const uint32_t index, blackbox_t b[], cons
 }
 
 cbor_result_t data_flash_write_backbox(const blackbox_t *b) {
-
-#ifdef USE_M25P16
-  const uint32_t offset = FILES_SECTOR_OFFSET + current_file()->start_sector * bounds.sector_size + current_file()->entries * BLACKBOX_MAX_SIZE;
-  if (offset >= bounds.total_size) {
-    return CBOR_ERR_EOF;
-  }
-
-  m25p16_wait_for_ready();
-  m25p16_command(M25P16_WRITE_ENABLE);
-
-  m25p16_write_addr(M25P16_PAGE_PROGRAM, offset, (uint8_t *)b, sizeof(blackbox_t));
-
-#endif
-#ifdef USE_SDCARD
-  const uint32_t index = current_file()->entries % ENTRIES_PER_BLOCK;
-  const uint32_t offset = FILES_SECTOR_OFFSET + current_file()->start_sector + (current_file()->entries / ENTRIES_PER_BLOCK);
-  if (index == 0) {
-    sdcard_start_write_sector(offset);
-  }
-
-  sdcard_continue_write_sector(index * BLACKBOX_MAX_SIZE, b, sizeof(blackbox_t));
-
-  if (index == ENTRIES_PER_BLOCK - 1) {
-    if (!sdcard_finish_write_sector(offset)) {
-      current_file()->entries -= 4;
-    }
-  }
-#endif
-
-  current_file()->entries += 1;
+  write_buffer[write_offset] = *b;
+  write_offset = (write_offset + 1) % 16;
   return CBOR_OK;
 }

@@ -62,6 +62,35 @@ void sdcard_reinit_fast() {
   SPI_Cmd(SPI_PORT.channel, ENABLE);
 }
 
+uint8_t sdcard_wait_non_idle() {
+  for (uint16_t timeout = 8;; timeout--) {
+    if (timeout == 0) {
+      return 0xFF;
+    }
+    const uint8_t ret = spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
+    if (ret != 0xFF) {
+      return ret;
+    }
+  }
+  return 0xFF;
+}
+
+uint8_t sdcard_wait_for_value(uint8_t value) {
+  uint8_t ret = spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
+  while (ret != value)
+    ret = spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
+  return ret;
+}
+
+uint8_t sdcard_wait_for_ready(uint32_t time) {
+  for (uint16_t timeout = time; spi_transfer_byte_timeout(SDCARD_SPI_PORT, 0xff, 256) == 0x0; timeout--) {
+    if (timeout == 0) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
 uint8_t sdcard_build_command(uint8_t *buf, const uint8_t cmd, const uint32_t args) {
   buf[0] = 0x40 | cmd;
   buf[1] = args >> 24;
@@ -72,6 +101,8 @@ uint8_t sdcard_build_command(uint8_t *buf, const uint8_t cmd, const uint32_t arg
   buf[5] = 0xff;
   buf[6] = 0xff;
   buf[7] = 0xff;
+
+  return 1;
 }
 
 uint8_t sdcard_command(const uint8_t cmd, const uint32_t args) {
@@ -93,23 +124,7 @@ uint8_t sdcard_command(const uint8_t cmd, const uint32_t args) {
     spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
   }
 
-  spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
-  return spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
-}
-
-void sdcard_wait_for_value(uint8_t value) {
-  while (spi_transfer_byte(SDCARD_SPI_PORT, 0xff) != value)
-    ;
-}
-
-uint8_t sdcard_wait_for_ready(uint32_t time) {
-  for (uint16_t timeout = time; spi_transfer_byte(SDCARD_SPI_PORT, 0xff) == 0x0; timeout--) {
-    if (timeout == 0) {
-      return 0;
-    }
-    timer_delay_us(1);
-  }
-  return 1;
+  return sdcard_wait_non_idle();
 }
 
 uint32_t sdcard_read_response() {
@@ -213,7 +228,10 @@ uint8_t sdcard_read_sectors(uint8_t *buf, uint32_t sector, uint32_t count) {
   spi_csn_enable(SDCARD_NSS_PIN);
 
   // wait for not busy
-  sdcard_wait_for_ready(0x400);
+  if (!sdcard_wait_for_ready(0x400)) {
+    spi_csn_disable(SDCARD_NSS_PIN);
+    return 0;
+  }
 
   uint8_t ret = sdcard_command(SDCARD_READ_MULTIPLE_BLOCK, sector);
   if (ret != 0x0) {
@@ -236,21 +254,29 @@ uint8_t sdcard_read_sectors(uint8_t *buf, uint32_t sector, uint32_t count) {
 
 static uint8_t dma_write_buf[2][512 + COMMAND_SIZE + TRAILER_SIZE];
 static uint8_t dma_curr_buf = 0;
-static uint8_t dma_data_ready = 0;
 
-uint8_t sdcard_start_write_sector(uint32_t sector) {
-  if (dma_data_ready == 1) {
-    if (!sdcard_wait_for_ready(8)) {
-      spi_csn_disable(SDCARD_NSS_PIN);
-      return 0;
-    }
-
-    spi_dma_transfer_begin(SDCARD_SPI_PORT, (uint8_t *)dma_write_buf[dma_curr_buf], 512 + COMMAND_SIZE + TRAILER_SIZE);
-    dma_curr_buf = !dma_curr_buf;
+uint8_t sdcard_start_multi_write(uint32_t sector) {
+  if (!spi_dma_is_ready(SDCARD_SPI_PORT)) {
+    return 0;
   }
 
+  spi_csn_enable(SDCARD_NSS_PIN);
+
+  if (!sdcard_wait_for_ready(1)) {
+    return 0;
+  }
+
+  uint8_t ret = sdcard_command(SDCARD_WRITE_MULTIPLE_BLOCK, sector);
+  if (ret != 0x0) {
+    return 0;
+  }
+
+  return 1;
+}
+
+uint8_t sdcard_start_write_sector(uint32_t sector) {
   // start block
-  dma_write_buf[dma_curr_buf][0] = 0xFE;
+  dma_write_buf[dma_curr_buf][0] = 0xFC;
   return 1;
 }
 
@@ -259,6 +285,15 @@ void sdcard_continue_write_sector(const uint32_t offset, const uint8_t *buf, con
 }
 
 uint8_t sdcard_finish_write_sector(uint32_t sector) {
+  // wait for the last write to finish
+  if (!spi_dma_is_ready(SDCARD_SPI_PORT)) {
+    return 0;
+  }
+
+  if (!sdcard_wait_for_ready(1)) {
+    return 0;
+  }
+
   // two bytes CRC
   dma_write_buf[dma_curr_buf][512 + COMMAND_SIZE + 0] = 0xFF;
   dma_write_buf[dma_curr_buf][512 + COMMAND_SIZE + 1] = 0xFF;
@@ -266,23 +301,29 @@ uint8_t sdcard_finish_write_sector(uint32_t sector) {
   // write response
   dma_write_buf[dma_curr_buf][512 + COMMAND_SIZE + 2] = 0xFF;
 
-  spi_dma_wait_for_ready(SDCARD_SPI_PORT);
-  spi_csn_enable(SDCARD_NSS_PIN);
+  spi_dma_transfer_begin(SDCARD_SPI_PORT, (uint8_t *)dma_write_buf[dma_curr_buf], 512 + COMMAND_SIZE + TRAILER_SIZE);
+  dma_curr_buf = !dma_curr_buf;
+  return 1;
+}
 
-  if (!sdcard_wait_for_ready(8)) {
-    spi_csn_disable(SDCARD_NSS_PIN);
-    dma_data_ready = 0;
+uint8_t sdcard_finish_multi_write(uint32_t sector) {
+  if (!spi_dma_is_ready(SDCARD_SPI_PORT)) {
     return 0;
   }
 
-  sdcard_command(SDCARD_WRITE_BLOCK, sector);
-  dma_data_ready = 1;
+  if (!sdcard_wait_for_ready(1)) {
+    return 0;
+  }
 
+  spi_transfer_byte(SDCARD_SPI_PORT, 0xfd);
+  spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
+
+  spi_csn_disable(SDCARD_NSS_PIN);
   return 1;
 }
 
 void sdcard_dma_rx_isr() {
-  spi_csn_disable(SDCARD_NSS_PIN);
+  //spi_csn_disable(SDCARD_NSS_PIN);
 }
 
 uint8_t sdcard_write_sectors(const uint8_t *buf, uint32_t sector, uint32_t count) {
@@ -294,24 +335,8 @@ uint8_t sdcard_write_sectors(const uint8_t *buf, uint32_t sector, uint32_t count
     return 0;
   }
 
-  // pre-erase all blocks we are about to write to
-  /*
-  uint8_t ret = 0x0;
-  ret = sdcard_command(SDCARD_APP_CMD, 0);
-  ret = sdcard_command(SDCARD_ACMD_SET_WR_BLK_ERASE_COUNT, count);
-  if (ret != 0x0) {
-    spi_csn_disable(SDCARD_NSS_PIN);
-    return 0;
-  }
-  */
-
   uint8_t ret = sdcard_command(SDCARD_WRITE_MULTIPLE_BLOCK, sector);
   if (ret != 0x0) {
-    spi_csn_disable(SDCARD_NSS_PIN);
-    return 0;
-  }
-
-  if (!sdcard_wait_for_ready(0x400)) {
     spi_csn_disable(SDCARD_NSS_PIN);
     return 0;
   }

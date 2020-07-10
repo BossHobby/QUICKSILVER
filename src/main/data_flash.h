@@ -26,6 +26,8 @@ typedef struct {
 } data_flash_header_t;
 
 void data_flash_init();
+void data_flash_update(uint32_t loop);
+
 void data_flash_reset();
 void data_flash_restart();
 void data_flash_finish();

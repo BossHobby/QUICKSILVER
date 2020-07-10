@@ -1,6 +1,7 @@
 #include "drv_spi_m25p16.h"
 
 #include <stm32f4xx_ll_spi.h>
+#include <string.h>
 
 #include "drv_spi.h"
 #include "project.h"
@@ -69,6 +70,21 @@ uint8_t m25p16_read_command(const uint8_t cmd, uint8_t *data, const uint32_t len
   return ret;
 }
 
+uint8_t m25p16_read_status() {
+  spi_csn_enable(M25P16_NSS_PIN);
+  spi_transfer_byte_timeout(M25P16_SPI_PORT, M25P16_READ_STATUS_REGISTER, 0x100);
+  uint8_t status = spi_transfer_byte_timeout(M25P16_SPI_PORT, 0x0, 0x100);
+  spi_csn_disable(M25P16_NSS_PIN);
+  return status;
+}
+
+void m25p16_wait_for_ready() {
+  while (!spi_dma_is_ready(M25P16_SPI_PORT))
+    ;
+  while ((m25p16_read_status() & 0x01) != 0)
+    ;
+}
+
 static void m25p16_set_addr(const uint32_t addr) {
   spi_transfer_byte(M25P16_SPI_PORT, (addr >> 16) & 0xFF);
   spi_transfer_byte(M25P16_SPI_PORT, (addr >> 8) & 0xFF);
@@ -76,6 +92,8 @@ static void m25p16_set_addr(const uint32_t addr) {
 }
 
 uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, const uint32_t len) {
+  m25p16_wait_for_ready();
+
   spi_csn_enable(M25P16_NSS_PIN);
   const uint8_t ret = spi_transfer_byte(M25P16_SPI_PORT, cmd);
   m25p16_set_addr(addr);
@@ -86,7 +104,53 @@ uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, 
   return ret;
 }
 
+static uint32_t current_page = 0;
+
+uint8_t m25p16_start_page_program(const uint32_t page) {
+  current_page = page;
+  return 1;
+}
+
+uint8_t m25p16_continue_page_program(const uint32_t offset, const uint8_t *buf, const uint32_t size) {
+  if (!spi_dma_is_ready(M25P16_SPI_PORT)) {
+    return 0;
+  }
+
+  if ((m25p16_read_status() & 0x01) != 0) {
+    return 0;
+  }
+
+  m25p16_command(M25P16_WRITE_ENABLE);
+
+  spi_csn_enable(M25P16_NSS_PIN);
+
+  const uint32_t addr = current_page + offset;
+  uint8_t command[4] = {
+      M25P16_PAGE_PROGRAM,
+      (addr >> 16) & 0xFF,
+      (addr >> 8) & 0xFF,
+      addr & 0xFF,
+  };
+  spi_dma_transfer_bytes(M25P16_SPI_PORT, command, 4);
+
+  static uint8_t dma_buf[256];
+  memcpy(dma_buf, buf, size);
+  spi_dma_transfer_begin(M25P16_SPI_PORT, dma_buf, size);
+  return 1;
+}
+
+uint8_t m25p16_finish_page_program(const uint32_t page) {
+  return 1;
+}
+
+void m25p16_dma_rx_isr() {
+  spi_csn_disable(M25P16_NSS_PIN);
+}
+
 uint8_t m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, const uint32_t len) {
+  m25p16_wait_for_ready();
+  m25p16_command(M25P16_WRITE_ENABLE);
+
   spi_csn_enable(M25P16_NSS_PIN);
   const uint8_t ret = spi_transfer_byte(M25P16_SPI_PORT, cmd);
   m25p16_set_addr(addr);
@@ -95,17 +159,6 @@ uint8_t m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data,
   }
   spi_csn_disable(M25P16_NSS_PIN);
   return ret;
-}
-
-uint8_t m25p16_read_status() {
-  uint8_t status = 0;
-  m25p16_read_command(M25P16_READ_STATUS_REGISTER, &status, 1);
-  return status;
-}
-
-void m25p16_wait_for_ready() {
-  while ((m25p16_read_status() & 0x01) != 0)
-    ;
 }
 
 void m25p16_get_bounds(data_flash_bounds_t *bounds) {

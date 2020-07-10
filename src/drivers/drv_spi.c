@@ -386,6 +386,14 @@ static void handle_dma_rx_isr(spi_ports_t port) {
       sdcard_dma_rx_isr();
     }
 #endif
+
+#if defined(USE_M25P16) && defined(M25P16_SPI_PORT)
+    if (port == M25P16_SPI_PORT) {
+      extern void m25p16_dma_rx_isr();
+      m25p16_dma_rx_isr();
+    }
+#endif
+
     DMA_TRANSFER_DONE = 1;
   }
 }

@@ -60,7 +60,9 @@ void blackbox_update() {
   if (blackbox_enabled == 0)
     return;
 
-  blackbox.loop = loop_counter;
+  data_flash_update(loop_counter);
+
+  blackbox.loop = loop_counter / blackbox_rate;
   blackbox.time = timer_micros();
 
   vec3_compress(&blackbox.pid_p_term, &state.pid_p_term, BLACKBOX_SCALE);

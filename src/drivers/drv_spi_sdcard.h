@@ -38,8 +38,10 @@ uint8_t sdcard_detect();
 
 uint8_t sdcard_read_sectors(uint8_t *buf, uint32_t sector, uint32_t count);
 
+uint8_t sdcard_start_multi_write(uint32_t sector);
 uint8_t sdcard_start_write_sector(uint32_t sector);
 void sdcard_continue_write_sector(const uint32_t offset, const uint8_t *buf, const uint32_t size);
 uint8_t sdcard_finish_write_sector(uint32_t sector);
+uint8_t sdcard_finish_multi_write(uint32_t sector);
 
 uint8_t sdcard_write_sectors(const uint8_t *buf, uint32_t sector, uint32_t count);
