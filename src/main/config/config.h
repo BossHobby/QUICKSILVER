@@ -293,6 +293,7 @@
 // debug things ( debug struct and other)
 //#define DEBUG
 //#define RESET_ON_FAULT
+//#define ALLOW_USB_ARMING		//allow transmitter aux to arm motors while connected to usb gui
 
 // disable motors for testing
 //#define NOMOTORS
