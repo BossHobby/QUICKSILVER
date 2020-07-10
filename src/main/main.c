@@ -338,6 +338,8 @@ int main(void) {
     blackbox_update();
     if (usb_detect()) {
       flags.usb_active = 1;
+      if (rx_aux_on(AUX_ARMING))
+        flags.arm_safety = 1; //final safety check to disallow arming during USB operation
       usb_configurator();
     } else {
       flags.usb_active = 0;
