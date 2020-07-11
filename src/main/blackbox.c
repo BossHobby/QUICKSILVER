@@ -34,6 +34,7 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
   CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->accel_filter));
 
   CBOR_CHECK_ERROR(res = cbor_encode_compact_vec4_t(enc, &b->motor));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &b->cpu_load));
 
   CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
 
@@ -83,6 +84,8 @@ void blackbox_update() {
   vec3_compress(&blackbox.accel_raw, &state.accel_raw, BLACKBOX_SCALE);
 
   vec4_compress(&blackbox.motor, &state.motor_mix, BLACKBOX_SCALE);
+
+  blackbox.cpu_load = state.cpu_load;
 
   if (blackbox_enabled != 0 && (loop_counter % blackbox_rate) == 0) {
     data_flash_write_backbox(&blackbox);

@@ -20,6 +20,8 @@ typedef struct {
   compact_vec3_t gyro_filter;
 
   compact_vec4_t motor;
+
+  uint16_t cpu_load;
 } blackbox_t;
 
 #define BLACKBOX_MAX_SIZE 128
