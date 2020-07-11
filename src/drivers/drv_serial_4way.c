@@ -659,6 +659,7 @@ serial_esc4way_ack_t serial_4way_read_settings(blheli_settings_t *settings, uint
     quic_debugf("ERROR ESC4WAY_DEVICE_INIT_FLASH 0x%x", ack);
     return ack;
   }
+  timer_delay_us(200); // give the device some time to wake up
 
   payload.flash_addr_h = BLHELI_SETTINGS_OFFSET >> 8;
   payload.flash_addr_l = BLHELI_SETTINGS_OFFSET & 0xFF;
@@ -696,6 +697,7 @@ serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uin
     quic_debugf("ERROR ESC4WAY_DEVICE_INIT_FLASH 0x%x", ack);
     return ack;
   }
+  timer_delay_us(200); // give the device some time to wake up
 
   payload.params[0] = BLHELI_SETTINGS_OFFSET / SILABS_PAGE_SIZE;
   payload.params_len = 1;
@@ -705,6 +707,7 @@ serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uin
     quic_debugf("ERROR ESC4WAY_DEVICE_PAGE_ERASE 0x%x", ack);
     return ack;
   }
+  timer_delay_us(100);
 
   payload.flash_addr_h = BLHELI_SETTINGS_OFFSET >> 8;
   payload.flash_addr_l = BLHELI_SETTINGS_OFFSET & 0xFF;
@@ -716,7 +719,18 @@ serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uin
     quic_debugf("ERROR ESC4WAY_DEVICE_WRITE 0x%x", ack);
     return ack;
   }
+  timer_delay_us(100);
 
+  payload.flash_addr_h = 0;
+  payload.flash_addr_l = 0;
+  payload.params_len = 0;
+
+  ack = serial_4way_send(ESC4WAY_DEVICE_RESET, payload, output, &output_len);
+  if (ack != ESC4WAY_ACK_OK) {
+    quic_debugf("ERROR ESC4WAY_DEVICE_RESET 0x%x", ack);
+    return ack;
+  }
+  timer_delay_us(100);
   return ack;
 }
 
