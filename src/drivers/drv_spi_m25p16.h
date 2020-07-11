@@ -31,7 +31,4 @@ uint8_t m25p16_command(const uint8_t cmd);
 uint8_t m25p16_read_command(const uint8_t cmd, uint8_t *data, const uint32_t len);
 uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, const uint32_t len);
 uint8_t m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, const uint32_t len);
-
-uint8_t m25p16_start_page_program(const uint32_t page);
-uint8_t m25p16_continue_page_program(const uint32_t offset, const uint8_t *buf, const uint32_t size);
-uint8_t m25p16_finish_page_program(const uint32_t page);
+uint8_t m25p16_continue_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t size);

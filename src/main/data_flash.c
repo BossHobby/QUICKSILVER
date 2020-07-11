@@ -79,9 +79,7 @@ void data_flash_update(uint32_t loop) {
 #endif
 #ifdef USE_M25P16
     offset = FILES_SECTOR_OFFSET + current_file()->start_sector * bounds.sector_size + (current_file()->entries / ENTRIES_PER_BLOCK) * 256;
-    if (m25p16_start_page_program(offset)) {
-      state = STATE_CONTINUE_WRITE;
-    }
+    state = STATE_CONTINUE_WRITE;
 #endif
     break;
   }
@@ -96,7 +94,7 @@ void data_flash_update(uint32_t loop) {
     sdcard_continue_write_sector(index * BLACKBOX_MAX_SIZE, &write_buffer[written_offset], sizeof(blackbox_t));
 #endif
 #ifdef USE_M25P16
-    if (!m25p16_continue_page_program(index * BLACKBOX_MAX_SIZE, (const uint8_t *)&write_buffer[written_offset], sizeof(blackbox_t))) {
+    if (!m25p16_page_program(offset + index * BLACKBOX_MAX_SIZE, (const uint8_t *)&write_buffer[written_offset], sizeof(blackbox_t))) {
       break;
     }
 #endif
@@ -128,9 +126,7 @@ void data_flash_update(uint32_t loop) {
     }
 #endif
 #ifdef USE_M25P16
-    if (m25p16_finish_page_program(offset)) {
-      state = STATE_IDLE;
-    }
+    state = STATE_IDLE;
 #endif
     break;
   }

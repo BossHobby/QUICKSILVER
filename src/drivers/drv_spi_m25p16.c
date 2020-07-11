@@ -104,14 +104,7 @@ uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, 
   return ret;
 }
 
-static uint32_t current_page = 0;
-
-uint8_t m25p16_start_page_program(const uint32_t page) {
-  current_page = page;
-  return 1;
-}
-
-uint8_t m25p16_continue_page_program(const uint32_t offset, const uint8_t *buf, const uint32_t size) {
+uint8_t m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t size) {
   if (!spi_dma_is_ready(M25P16_SPI_PORT)) {
     return 0;
   }
@@ -124,7 +117,6 @@ uint8_t m25p16_continue_page_program(const uint32_t offset, const uint8_t *buf, 
 
   spi_csn_enable(M25P16_NSS_PIN);
 
-  const uint32_t addr = current_page + offset;
   uint8_t command[4] = {
       M25P16_PAGE_PROGRAM,
       (addr >> 16) & 0xFF,
@@ -136,10 +128,6 @@ uint8_t m25p16_continue_page_program(const uint32_t offset, const uint8_t *buf, 
   static uint8_t dma_buf[256];
   memcpy(dma_buf, buf, size);
   spi_dma_transfer_begin(M25P16_SPI_PORT, dma_buf, size);
-  return 1;
-}
-
-uint8_t m25p16_finish_page_program(const uint32_t page) {
   return 1;
 }
 
