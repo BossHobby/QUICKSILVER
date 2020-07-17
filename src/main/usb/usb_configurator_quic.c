@@ -386,14 +386,14 @@ void process_blackbox(uint8_t *data, uint32_t len) {
     cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
 
     if (data_flash_header.file_num > file_index) {
-      blackbox_t blackbox[4];
+      blackbox_t blackbox[8];
       const data_flash_file_t *file = &data_flash_header.files[file_index];
-      for (uint32_t i = 0; i < file->entries; i += 4) {
-        res = data_flash_read_backbox(i, blackbox, 4);
+      for (uint32_t i = 0; i < file->entries; i += 8) {
+        res = data_flash_read_backbox(i, blackbox, 8);
         if (res < CBOR_OK) {
           continue;
         }
-        for (uint32_t j = 0; j < 4; j++) {
+        for (uint32_t j = 0; j < 8; j++) {
           const uint32_t len = cbor_encoder_len(&enc);
           res = cbor_encode_blackbox_t(&enc, &blackbox[j]);
           if (res == CBOR_ERR_EOF) {
