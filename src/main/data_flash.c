@@ -63,7 +63,6 @@ void data_flash_update(uint32_t loop) {
   case STATE_START_MULTI_WRITE: {
 #ifdef USE_SDCARD
     if (sdcard_start_multi_write(offset)) {
-      is_multi = 1;
       state = STATE_START_WRITE;
     }
 #endif
@@ -274,7 +273,6 @@ cbor_result_t data_flash_read_backbox(const uint32_t index, blackbox_t b[], cons
   data_flash_flush();
 
 #ifdef USE_M25P16
-
   for (uint32_t i = 0; i < count; i++) {
     const uint32_t offset = FILES_SECTOR_OFFSET + current_file()->start_sector * bounds.sector_size + (index + i) * BLACKBOX_MAX_SIZE;
     m25p16_read_addr(M25P16_READ_DATA_BYTES, offset, (uint8_t *)&b[i], sizeof(blackbox_t));

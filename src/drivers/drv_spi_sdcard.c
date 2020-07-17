@@ -91,20 +91,6 @@ uint8_t sdcard_wait_for_ready(uint32_t time) {
   return 1;
 }
 
-uint8_t sdcard_build_command(uint8_t *buf, const uint8_t cmd, const uint32_t args) {
-  buf[0] = 0x40 | cmd;
-  buf[1] = args >> 24;
-  buf[2] = args >> 16;
-  buf[3] = args >> 8;
-  buf[4] = args >> 0;
-
-  buf[5] = 0xff;
-  buf[6] = 0xff;
-  buf[7] = 0xff;
-
-  return 1;
-}
-
 uint8_t sdcard_command(const uint8_t cmd, const uint32_t args) {
   spi_transfer_byte(SDCARD_SPI_PORT, 0x40 | cmd);
   spi_transfer_byte(SDCARD_SPI_PORT, args >> 24);
@@ -249,83 +235,6 @@ uint8_t sdcard_read_sectors(uint8_t *buf, uint32_t sector, uint32_t count) {
   return 1;
 }
 
-#define COMMAND_SIZE 1
-#define TRAILER_SIZE 3
-
-static uint8_t dma_write_buf[2][512 + COMMAND_SIZE + TRAILER_SIZE];
-static uint8_t dma_curr_buf = 0;
-
-uint8_t sdcard_start_multi_write(uint32_t sector) {
-  if (!spi_dma_is_ready(SDCARD_SPI_PORT)) {
-    return 0;
-  }
-
-  spi_csn_enable(SDCARD_NSS_PIN);
-
-  if (!sdcard_wait_for_ready(1)) {
-    return 0;
-  }
-
-  uint8_t ret = sdcard_command(SDCARD_WRITE_MULTIPLE_BLOCK, sector);
-  if (ret != 0x0) {
-    return 0;
-  }
-
-  return 1;
-}
-
-uint8_t sdcard_start_write_sector(uint32_t sector) {
-  // start block
-  dma_write_buf[dma_curr_buf][0] = 0xFC;
-  return 1;
-}
-
-void sdcard_continue_write_sector(const uint32_t offset, const uint8_t *buf, const uint32_t size) {
-  memcpy(dma_write_buf[dma_curr_buf] + COMMAND_SIZE + offset, buf, size);
-}
-
-uint8_t sdcard_finish_write_sector(uint32_t sector) {
-  // wait for the last write to finish
-  if (!spi_dma_is_ready(SDCARD_SPI_PORT)) {
-    return 0;
-  }
-
-  if (!sdcard_wait_for_ready(1)) {
-    return 0;
-  }
-
-  // two bytes CRC
-  dma_write_buf[dma_curr_buf][512 + COMMAND_SIZE + 0] = 0xFF;
-  dma_write_buf[dma_curr_buf][512 + COMMAND_SIZE + 1] = 0xFF;
-
-  // write response
-  dma_write_buf[dma_curr_buf][512 + COMMAND_SIZE + 2] = 0xFF;
-
-  spi_dma_transfer_begin(SDCARD_SPI_PORT, (uint8_t *)dma_write_buf[dma_curr_buf], 512 + COMMAND_SIZE + TRAILER_SIZE);
-  dma_curr_buf = !dma_curr_buf;
-  return 1;
-}
-
-uint8_t sdcard_finish_multi_write(uint32_t sector) {
-  if (!spi_dma_is_ready(SDCARD_SPI_PORT)) {
-    return 0;
-  }
-
-  if (!sdcard_wait_for_ready(1)) {
-    return 0;
-  }
-
-  spi_transfer_byte(SDCARD_SPI_PORT, 0xfd);
-  spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
-
-  spi_csn_disable(SDCARD_NSS_PIN);
-  return 1;
-}
-
-void sdcard_dma_rx_isr() {
-  //spi_csn_disable(SDCARD_NSS_PIN);
-}
-
 uint8_t sdcard_write_sectors(const uint8_t *buf, uint32_t sector, uint32_t count) {
   spi_csn_enable(SDCARD_NSS_PIN);
 
@@ -355,6 +264,137 @@ uint8_t sdcard_write_sectors(const uint8_t *buf, uint32_t sector, uint32_t count
 
   spi_csn_disable(SDCARD_NSS_PIN);
   return 1;
+}
+
+// DMA WRITE CODE
+
+#define COMMAND_SIZE 1
+#define TRAILER_SIZE 3
+
+static uint8_t dma_write_buf[2][512 + COMMAND_SIZE + TRAILER_SIZE];
+static uint8_t dma_curr_buf = 0;
+static uint8_t chip_is_ready = 0;
+
+uint8_t sdcard_wait_for_ready_dma() {
+  if (!spi_dma_is_ready(SDCARD_SPI_PORT)) {
+    return 0;
+  }
+
+  static uint8_t read_status_in_progress = 0;
+  static uint8_t read_status;
+
+  if (chip_is_ready == 0) {
+    if (read_status_in_progress == 0) {
+      read_status = 0xff;
+
+      spi_csn_enable(SDCARD_NSS_PIN);
+      spi_dma_transfer_begin(SDCARD_SPI_PORT, &read_status, 1);
+      read_status_in_progress = 1;
+      return 0;
+    } else {
+      chip_is_ready = read_status != 0x0;
+      read_status_in_progress = 0;
+    }
+  }
+
+  return chip_is_ready;
+}
+
+uint8_t sdcard_start_multi_write(uint32_t sector) {
+  if (!sdcard_wait_for_ready_dma()) {
+    return 0;
+  }
+
+  static uint8_t command_in_progress = 0;
+  static uint8_t command[6];
+
+  if (command_in_progress == 0) {
+    command[0] = 0x40 | SDCARD_WRITE_MULTIPLE_BLOCK;
+    command[1] = sector >> 24;
+    command[2] = sector >> 16;
+    command[3] = sector >> 8;
+    command[4] = sector >> 0;
+    command[5] = 0xff; // CRC
+
+    spi_csn_enable(SDCARD_NSS_PIN);
+    spi_dma_transfer_begin(SDCARD_SPI_PORT, command, 6);
+    command_in_progress = 1;
+    return 0;
+  } else {
+    static uint8_t read_status_in_progress = 0;
+    static uint8_t read_status_tries = 0;
+    static uint8_t read_status;
+
+    if (read_status_in_progress == 0) {
+      read_status = 0xff;
+
+      spi_csn_enable(SDCARD_NSS_PIN);
+      spi_dma_transfer_begin(SDCARD_SPI_PORT, &read_status, 1);
+      read_status_in_progress = 1;
+      read_status_tries++;
+      return 0;
+    } else {
+      read_status_in_progress = 0;
+
+      if (read_status == 0x0) {
+        command_in_progress = 0;
+        read_status_tries = 0;
+        chip_is_ready = 0;
+        return 1;
+      } else if (read_status_tries == 8) {
+        command_in_progress = 0;
+        read_status_tries = 0;
+        chip_is_ready = 0;
+        return 0;
+      }
+    }
+  }
+  return 0;
+}
+
+uint8_t sdcard_start_write_sector(uint32_t sector) {
+  // start block
+  dma_write_buf[dma_curr_buf][0] = 0xFC;
+  return 1;
+}
+
+void sdcard_continue_write_sector(const uint32_t offset, const uint8_t *buf, const uint32_t size) {
+  memcpy(dma_write_buf[dma_curr_buf] + COMMAND_SIZE + offset, buf, size);
+}
+
+uint8_t sdcard_finish_write_sector(uint32_t sector) {
+  // wait for the last write to finish
+  if (!sdcard_wait_for_ready_dma()) {
+    return 0;
+  }
+  chip_is_ready = 0;
+
+  // two bytes CRC
+  dma_write_buf[dma_curr_buf][512 + COMMAND_SIZE + 0] = 0xFF;
+  dma_write_buf[dma_curr_buf][512 + COMMAND_SIZE + 1] = 0xFF;
+
+  // write response
+  dma_write_buf[dma_curr_buf][512 + COMMAND_SIZE + 2] = 0xFF;
+
+  spi_csn_enable(SDCARD_NSS_PIN);
+  spi_dma_transfer_begin(SDCARD_SPI_PORT, (uint8_t *)dma_write_buf[dma_curr_buf], 512 + COMMAND_SIZE + TRAILER_SIZE);
+  dma_curr_buf = !dma_curr_buf;
+  return 1;
+}
+
+uint8_t sdcard_finish_multi_write(uint32_t sector) {
+  if (!sdcard_wait_for_ready_dma()) {
+    return 0;
+  }
+  chip_is_ready = 0;
+  spi_transfer_byte(SDCARD_SPI_PORT, 0xfd);
+
+  spi_csn_disable(SDCARD_NSS_PIN);
+  return 1;
+}
+
+void sdcard_dma_rx_isr() {
+  spi_csn_disable(SDCARD_NSS_PIN);
 }
 
 #endif
