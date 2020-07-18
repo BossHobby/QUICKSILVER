@@ -198,7 +198,7 @@ void get_quic(uint8_t *data, uint32_t len) {
       blheli_settings_t settings;
       serial_esc4way_ack_t ack = serial_4way_read_settings(&settings, i);
       if (ack != ESC4WAY_ACK_OK) {
-        break;
+        continue;
       }
 
       cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
@@ -209,6 +209,8 @@ void get_quic(uint8_t *data, uint32_t len) {
     }
 
     serial_4way_release();
+    timer_delay_us(100000);
+
     send_quic_header(QUIC_CMD_GET, QUIC_FLAG_STREAMING, 0);
     break;
   }
@@ -300,6 +302,7 @@ void set_quic(uint8_t *data, uint32_t len) {
     }
 
     serial_4way_release();
+    timer_delay_us(100000);
 
     res = cbor_encode_str(&enc, "OK");
     check_cbor_error(QUIC_CMD_SET);
