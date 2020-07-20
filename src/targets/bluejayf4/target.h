@@ -1,7 +1,7 @@
 #include "config.h"
 #include "config_helper.h"
 
-#define Aikon_F4
+#define BluejayF4
 
 #define F4
 #define F405
@@ -9,43 +9,40 @@
 //PORTS
 #define SPI_PORTS \
   SPI1_PA5PA6PA7  \
-  SPI2_PB13B14B15 \
   SPI3_PC10PC11PC12
 
 #define USART_PORTS \
   USART1_PA10PA9    \
-  USART2_PA3PA2     \
   USART3_PB11PB10   \
-  USART4_PA1PA0
-
-// #define USB_DETECT_PIN GPIO_Pin_2
-// #define USB_DETECT_PORT GPIOD
+  USART6_PC7PC6
 
 //LEDS
-#define LED_NUMBER 1
-#define LED1PIN GPIO_Pin_4
+//target has third led on b06 not supported by QS
+#define LED_NUMBER 2
+#define LED1PIN GPIO_Pin_5
 #define LED1PORT GPIOB
 #define LED1_INVERT
-//#define BUZZER_PIN GPIO_Pin_4
-//#define BUZZER_PIN_PORT GPIOB
-//#define BUZZER_INVERT
-//#define FPV_PIN GPIO_Pin_13
-//#define FPV_PORT GPIOA
+#define LED2PIN GPIO_Pin_4
+#define LED2PORT GPIOB
+#define BUZZER_PIN GPIO_Pin_1
+#define BUZZER_PIN_PORT GPIOC
+#define BUZZER_INVERT
+#define FPV_PIN GPIO_Pin_13
+#define FPV_PORT GPIOA
 
 //GYRO
 #define MPU6XXX_SPI_PORT SPI_PORT1
-#define MPU6XXX_NSS PIN_A4
-#define MPU6XXX_INT PIN_C4
+#define MPU6XXX_NSS PIN_C4
+#define MPU6XXX_INT PIN_C5
 #define USE_DUMMY_I2C
-// #define DISABLE_GYRO_CHECK
-#define GYRO_ID_1 0x12
-#define GYRO_ID_2 0xaf
-#define GYRO_ID_3 0xac
-#define GYRO_ID_4 0x98
-#define SENSOR_ROTATE_90_CW
+#define GYRO_ID_1 0x68
+#define GYRO_ID_2 0x73
+#define GYRO_ID_3 0x78
+#define GYRO_ID_4 0x71
+#define SENSOR_ROTATE_90_CCW
 
 //RADIO
-#define USART1_INVERTER_PIN PIN_C0
+#define USART6_INVERTER_PIN PIN_B15
 
 #ifdef SERIAL_RX
 #define SOFTSPI_NONE
@@ -64,14 +61,12 @@
 #endif
 
 //OSD
-#define ENABLE_OSD
-#define MAX7456_SPI_PORT SPI_PORT3
-#define MAX7456_NSS PIN_A15
+//not supported by fc
 
 //VOLTAGE DIVIDER
-#define BATTERYPIN GPIO_Pin_2
+#define BATTERYPIN GPIO_Pin_3
 #define BATTERYPORT GPIOC
-#define BATTERY_ADC_CHANNEL ADC_Channel_12
+#define BATTERY_ADC_CHANNEL ADC_Channel_13
 #ifndef VOLTAGE_DIVIDER_R1
 #define VOLTAGE_DIVIDER_R1 10000
 #endif
@@ -83,7 +78,12 @@
 #endif
 
 // MOTOR PINS
-#define MOTOR_PIN0 MOTOR_PIN_PC8
-#define MOTOR_PIN1 MOTOR_PIN_PC9
-#define MOTOR_PIN2 MOTOR_PIN_PC6
-#define MOTOR_PIN3 MOTOR_PIN_PC7
+#define MOTOR_PIN0 MOTOR_PIN_PA3
+#define MOTOR_PIN1 MOTOR_PIN_PA2
+#define MOTOR_PIN2 MOTOR_PIN_PA1
+#define MOTOR_PIN3 MOTOR_PIN_PA0
+
+// BLACKBOX
+//resource SDCARD_CS 1 A15  SPI3
+//resource SDCARD_DETECT 1 D02
+//resource FLASH_CS 1 B07 SPI3 - alternative dataflash chip to sdcard

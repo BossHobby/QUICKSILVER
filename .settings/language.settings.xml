@@ -686,7 +686,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -698,16 +698,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="2b54e89d43ca815aee490fd931c366150bede42f"/>
+						<entry kind="macro" name="GIT_VERSION" value="0c6f61398f5017d6a14697aae527ef013648985f"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="Libraries/cbor/src">
@@ -735,7 +735,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -747,16 +747,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="2b54e89d43ca815aee490fd931c366150bede42f"/>
+						<entry kind="macro" name="GIT_VERSION" value="0c6f61398f5017d6a14697aae527ef013648985f"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main">
@@ -784,7 +784,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -796,16 +796,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="2b54e89d43ca815aee490fd931c366150bede42f"/>
+						<entry kind="macro" name="GIT_VERSION" value="0c6f61398f5017d6a14697aae527ef013648985f"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/config">
@@ -833,7 +833,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -845,16 +845,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="2b54e89d43ca815aee490fd931c366150bede42f"/>
+						<entry kind="macro" name="GIT_VERSION" value="0c6f61398f5017d6a14697aae527ef013648985f"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/util">
@@ -882,7 +882,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -894,16 +894,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="2b54e89d43ca815aee490fd931c366150bede42f"/>
+						<entry kind="macro" name="GIT_VERSION" value="0c6f61398f5017d6a14697aae527ef013648985f"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/usb">
@@ -931,7 +931,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -943,16 +943,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="2b54e89d43ca815aee490fd931c366150bede42f"/>
+						<entry kind="macro" name="GIT_VERSION" value="0c6f61398f5017d6a14697aae527ef013648985f"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/drivers">
@@ -980,7 +980,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -992,16 +992,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="2b54e89d43ca815aee490fd931c366150bede42f"/>
+						<entry kind="macro" name="GIT_VERSION" value="0c6f61398f5017d6a14697aae527ef013648985f"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/system/stm32f405">
@@ -1041,16 +1041,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/omnibusf4sd">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="df4b15df876ee1e2fee52915e8cf91c73c4b438f"/>
+						<entry kind="macro" name="GIT_VERSION" value="0c6f61398f5017d6a14697aae527ef013648985f"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="omnibusf4sd"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/rx">
@@ -1078,7 +1078,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -1090,16 +1090,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="2b54e89d43ca815aee490fd931c366150bede42f"/>
+						<entry kind="macro" name="GIT_VERSION" value="0c6f61398f5017d6a14697aae527ef013648985f"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/drivers/usb">
@@ -1127,7 +1127,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -1139,16 +1139,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="2b54e89d43ca815aee490fd931c366150bede42f"/>
+						<entry kind="macro" name="GIT_VERSION" value="0c6f61398f5017d6a14697aae527ef013648985f"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/system/stm32f411">
@@ -1188,16 +1188,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/flywoof411">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="2b54e89d43ca815aee490fd931c366150bede42f"/>
+						<entry kind="macro" name="GIT_VERSION" value="0c6f61398f5017d6a14697aae527ef013648985f"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="flywoof411"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="Libraries/STM32F0xx_StdPeriph_Driver/src">
@@ -1293,7 +1293,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -1305,16 +1305,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="2b54e89d43ca815aee490fd931c366150bede42f"/>
+						<entry kind="macro" name="GIT_VERSION" value="0c6f61398f5017d6a14697aae527ef013648985f"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 				</language>

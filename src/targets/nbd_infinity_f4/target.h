@@ -1,7 +1,7 @@
 #include "config.h"
 #include "config_helper.h"
 
-#define Aikon_F4
+#define NBD_Infinity_F4
 
 #define F4
 #define F405
@@ -10,42 +10,39 @@
 #define SPI_PORTS \
   SPI1_PA5PA6PA7  \
   SPI2_PB13B14B15 \
-  SPI3_PC10PC11PC12
+  SPI3_PB3PB4PB5
 
 #define USART_PORTS \
   USART1_PA10PA9    \
   USART2_PA3PA2     \
   USART3_PB11PB10   \
-  USART4_PA1PA0
-
-// #define USB_DETECT_PIN GPIO_Pin_2
-// #define USB_DETECT_PORT GPIOD
+  USART4_PA1PA0     \
+  USART6_PC7PC6
 
 //LEDS
 #define LED_NUMBER 1
-#define LED1PIN GPIO_Pin_4
-#define LED1PORT GPIOB
+#define LED1PIN GPIO_Pin_0
+#define LED1PORT GPIOC
 #define LED1_INVERT
-//#define BUZZER_PIN GPIO_Pin_4
-//#define BUZZER_PIN_PORT GPIOB
-//#define BUZZER_INVERT
-//#define FPV_PIN GPIO_Pin_13
-//#define FPV_PORT GPIOA
+#define BUZZER_PIN GPIO_Pin_6
+#define BUZZER_PIN_PORT GPIOB
+#define BUZZER_INVERT
+#define FPV_PIN GPIO_Pin_13
+#define FPV_PORT GPIOA
 
 //GYRO
-#define MPU6XXX_SPI_PORT SPI_PORT1
-#define MPU6XXX_NSS PIN_A4
-#define MPU6XXX_INT PIN_C4
+#define MPU6XXX_SPI_PORT SPI_PORT2
+#define MPU6XXX_NSS PIN_B12
+#define MPU6XXX_INT PIN_C13
 #define USE_DUMMY_I2C
-// #define DISABLE_GYRO_CHECK
-#define GYRO_ID_1 0x12
-#define GYRO_ID_2 0xaf
-#define GYRO_ID_3 0xac
-#define GYRO_ID_4 0x98
-#define SENSOR_ROTATE_90_CW
+#define GYRO_ID_1 0x68
+#define GYRO_ID_2 0x73
+#define GYRO_ID_3 0x78
+#define GYRO_ID_4 0x71
+
 
 //RADIO
-#define USART1_INVERTER_PIN PIN_C0
+#define USART1_INVERTER_PIN PIN_A0
 
 #ifdef SERIAL_RX
 #define SOFTSPI_NONE
@@ -65,13 +62,13 @@
 
 //OSD
 #define ENABLE_OSD
-#define MAX7456_SPI_PORT SPI_PORT3
-#define MAX7456_NSS PIN_A15
+#define MAX7456_SPI_PORT SPI_PORT1
+#define MAX7456_NSS PIN_A4
 
 //VOLTAGE DIVIDER
-#define BATTERYPIN GPIO_Pin_2
+#define BATTERYPIN GPIO_Pin_4
 #define BATTERYPORT GPIOC
-#define BATTERY_ADC_CHANNEL ADC_Channel_12
+#define BATTERY_ADC_CHANNEL ADC_Channel_14
 #ifndef VOLTAGE_DIVIDER_R1
 #define VOLTAGE_DIVIDER_R1 10000
 #endif
@@ -83,7 +80,11 @@
 #endif
 
 // MOTOR PINS
-#define MOTOR_PIN0 MOTOR_PIN_PC8
-#define MOTOR_PIN1 MOTOR_PIN_PC9
-#define MOTOR_PIN2 MOTOR_PIN_PC6
-#define MOTOR_PIN3 MOTOR_PIN_PC7
+#define MOTOR_PIN0 MOTOR_PIN_PC9
+#define MOTOR_PIN1 MOTOR_PIN_PA8
+#define MOTOR_PIN2 MOTOR_PIN_PB1
+#define MOTOR_PIN3 MOTOR_PIN_PB0
+
+//BLACKBOX
+//spi3 - flash chip
+//resource FLASH_CS 1 A15
