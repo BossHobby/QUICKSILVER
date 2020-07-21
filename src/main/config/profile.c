@@ -511,6 +511,8 @@ target_info_t target_info = {
 #define USART_PORT(channel, rx_pin, tx_pin) "USART_" #channel,
     .usart_ports = {"NONE", USART_PORTS},
 #undef USART_PORT
+
+    .gyro_id = 0x0,
 };
 
 #pragma GCC diagnostic pop

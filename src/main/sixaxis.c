@@ -104,8 +104,9 @@ void sixaxis_init(void) {
   }
 }
 
+extern target_info_t target_info;
+
 int sixaxis_check(void) {
-#ifndef DISABLE_GYRO_CHECK
 // read "who am I" register
 #ifdef F4
   uint8_t id = MPU6XXX_dma_spi_read(MPU_RA_WHO_AM_I);
@@ -113,10 +114,13 @@ int sixaxis_check(void) {
 #ifdef F0
   int id = i2c_readreg(117);
 #endif
+
 #ifdef DEBUG
   debug.gyroid = id;
 #endif
+  target_info.gyro_id = id;
 
+#ifndef DISABLE_GYRO_CHECK
   return (GYRO_ID_1 == id || GYRO_ID_2 == id || GYRO_ID_3 == id || GYRO_ID_4 == id);
 #else
   return 1;

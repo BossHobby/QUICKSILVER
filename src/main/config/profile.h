@@ -288,6 +288,8 @@ typedef struct {
 
   const char *motor_pins[MOTOR_PIN_IDENT_MAX];
   const char *usart_ports[USART_PORTS_MAX];
+
+  uint8_t gyro_id;
 } target_info_t;
 
 #define TARGET_INFO_MEMBERS                         \
@@ -297,7 +299,8 @@ typedef struct {
   MEMBER(rx_protocol, uint32)                       \
   MEMBER(quic_protocol_version, uint32)             \
   STR_ARRAY_MEMBER(motor_pins, MOTOR_PIN_IDENT_MAX) \
-  STR_ARRAY_MEMBER(usart_ports, USART_PORTS_MAX)
+  STR_ARRAY_MEMBER(usart_ports, USART_PORTS_MAX)    \
+  MEMBER(gyro_id, uint8)
 
 extern profile_t profile;
 extern target_info_t target_info;
