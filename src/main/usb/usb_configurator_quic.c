@@ -7,6 +7,7 @@
 #include "blackbox.h"
 #include "control.h"
 #include "data_flash.h"
+#include "debug.h"
 #include "drv_serial_4way.h"
 #include "drv_spi_max7456.h"
 #include "drv_time.h"
@@ -220,6 +221,14 @@ void get_quic(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
+#ifdef DEBUG
+  case QUIC_VAL_PERF_COUNTERS: {
+    res = cbor_encode_perf_counters(&enc);
+    check_cbor_error(QUIC_CMD_GET);
+    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  }
+#endif
   default:
     quic_errorf(QUIC_CMD_GET, "INVALID VALUE %d", value);
     break;

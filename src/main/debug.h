@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cbor.h>
+
 #include "project.h"
 
 #ifdef DEBUG
@@ -44,3 +46,8 @@ extern perf_counter_t perf_counters[PERF_COUNTER_MAX];
 
 void perf_counter_start(perf_counters_t counter);
 void perf_counter_end(perf_counters_t counter);
+
+void perf_counter_init();
+void perf_counter_update();
+
+cbor_result_t cbor_encode_perf_counters(cbor_value_t *enc);

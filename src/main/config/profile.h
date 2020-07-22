@@ -290,6 +290,7 @@ typedef enum {
   FEATURE_BRUSHLESS = (1 << 1),
   FEATURE_OSD = (1 << 2),
   FEATURE_BLACKBOX = (1 << 3),
+  FEATURE_DEBUG = (1 << 4),
 } target_feature_t;
 
 typedef struct {

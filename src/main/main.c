@@ -143,6 +143,8 @@ int main() {
     failloop(7);
   }
 
+  perf_counter_init();
+
   lastlooptime = timer_micros();
 
   //
@@ -317,6 +319,7 @@ int main() {
 #endif
 
     perf_counter_end(PERF_COUNTER_TOTAL);
+    perf_counter_update();
 
     while ((timer_micros() - time) < state.looptime_autodetect)
       __NOP();

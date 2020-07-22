@@ -59,6 +59,7 @@ typedef enum {
   QUIC_VAL_OSD_FONT,
   QUIC_VAL_BLHEL_SETTINGS,
   QUIC_VAL_BIND_INFO,
+  QUIC_VAL_PERF_COUNTERS,
 } quic_values;
 
 typedef struct {

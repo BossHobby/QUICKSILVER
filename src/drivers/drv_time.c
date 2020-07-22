@@ -42,6 +42,10 @@ void timer_init() {
   debug_timer_init();
 }
 
+uint32_t timer_cycles() {
+  return DWT->CYCCNT;
+}
+
 void timer_delay_us(uint32_t us) {
   volatile uint32_t delay = us * (SystemCoreClock / 1000000L);
   volatile uint32_t start = DWT->CYCCNT;

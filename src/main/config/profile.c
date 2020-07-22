@@ -453,6 +453,9 @@ target_info_t target_info = {
 #ifdef USE_M25P16
                 | FEATURE_BLACKBOX
 #endif
+#ifdef DEBUG
+                | FEATURE_DEBUG
+#endif
     ,
     .rx_protocol = RX_PROTOCOL,
     .quic_protocol_version = QUIC_PROTOCOL_VERSION,
