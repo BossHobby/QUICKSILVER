@@ -78,6 +78,9 @@ void data_flash_update(uint32_t loop) {
 #endif
 #ifdef USE_M25P16
     offset = FILES_SECTOR_OFFSET + current_file()->start_sector * bounds.sector_size + (current_file()->entries / ENTRIES_PER_BLOCK) * 256;
+    if (offset >= bounds.total_size) {
+      break;
+    }
     state = STATE_CONTINUE_WRITE;
 #endif
     break;
