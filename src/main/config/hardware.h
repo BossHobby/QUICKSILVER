@@ -55,6 +55,10 @@
 #define BIDIRECTIONAL
 #endif
 
+#if defined(USE_M25P16) || defined(USE_SDCARD)
+#define ENABLE_BLACKBOX
+#endif
+
 //*************************************Features that still need to be moved into targets and checked for compatability************************************************
 // RGB led type ws2812 - ws2813
 // numbers over 8 could decrease performance

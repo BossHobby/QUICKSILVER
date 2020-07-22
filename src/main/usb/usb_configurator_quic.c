@@ -331,6 +331,7 @@ void set_quic(uint8_t *data, uint32_t len) {
   }
 }
 
+#ifdef ENABLE_BLACKBOX
 void process_blackbox(uint8_t *data, uint32_t len) {
   cbor_result_t res = CBOR_OK;
 
@@ -416,6 +417,7 @@ void process_blackbox(uint8_t *data, uint32_t len) {
     break;
   }
 }
+#endif
 
 void process_motor_test(uint8_t *data, uint32_t len) {
   cbor_result_t res = CBOR_OK;
@@ -527,9 +529,11 @@ void usb_process_quic() {
 
     send_quic(QUIC_CMD_CAL_IMU, QUIC_FLAG_NONE, NULL, 0);
     break;
+#ifdef ENABLE_BLACKBOX
   case QUIC_CMD_BLACKBOX:
     process_blackbox(buffer, size);
     break;
+#endif
   case QUIC_CMD_MOTOR:
     process_motor_test(buffer, size);
     break;

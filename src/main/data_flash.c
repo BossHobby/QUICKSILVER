@@ -8,6 +8,8 @@
 #include "usb_configurator.h"
 #include "util.h"
 
+#ifdef ENABLE_BLACKBOX
+
 #ifdef USE_M25P16
 #define FILES_SECTOR_OFFSET bounds.sector_size
 #define ENTRIES_PER_BLOCK (256 / BLACKBOX_MAX_SIZE)
@@ -301,3 +303,5 @@ cbor_result_t data_flash_write_backbox(const blackbox_t *b) {
   write_offset = (write_offset + 1) % 16;
   return CBOR_OK;
 }
+
+#endif

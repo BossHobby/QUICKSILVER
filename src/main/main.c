@@ -131,7 +131,11 @@ int main() {
 
   sixaxis_gyro_cal();
   rgb_init();
+
+#ifdef ENABLE_BLACKBOX
   blackbox_init();
+#endif
+
   imu_init();
 
 #ifdef ENABLE_OSD
@@ -256,7 +260,7 @@ int main() {
     perf_counter_end(PERF_COUNTER_OSD);
 #endif
 
-#ifdef STM32F4
+#ifdef ENABLE_BLACKBOX
     perf_counter_start(PERF_COUNTER_BLACKBOX);
     blackbox_update();
     perf_counter_end(PERF_COUNTER_BLACKBOX);

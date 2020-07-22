@@ -7,6 +7,8 @@
 #include "util.h"
 #include "util/cbor_helper.h"
 
+#ifdef ENABLE_BLACKBOX
+
 #define BLACKBOX_SCALE 1000
 
 uint32_t blackbox_rate = 4;
@@ -93,3 +95,4 @@ void blackbox_update() {
 
   loop_counter++;
 }
+#endif
