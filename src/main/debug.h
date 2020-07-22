@@ -1,0 +1,46 @@
+#pragma once
+
+#include "project.h"
+
+#ifdef DEBUG
+
+typedef struct debug {
+  float vbatt_comp;
+  float adcfilt;
+  float totaltime;
+  float timefilt;
+  float adcreffilt;
+  float cpu_load;
+  float max_cpu_load;
+  unsigned int max_cpu_loop_number;
+  unsigned int loops_between_max_cpu_load;
+  float min_cpu_load;
+  unsigned int min_cpu_loop_number;
+  unsigned int loops_between_min_cpu_load;
+} debug_type;
+
+extern debug_type debug;
+
+#endif
+
+typedef enum {
+  PERF_COUNTER_TOTAL,
+  PERF_COUNTER_GYRO,
+  PERF_COUNTER_CONTROL,
+  PERF_COUNTER_RX,
+  PERF_COUNTER_OSD,
+  PERF_COUNTER_BLACKBOX,
+
+  PERF_COUNTER_MAX
+} perf_counters_t;
+
+typedef struct {
+  uint32_t min;
+  uint32_t max;
+  uint32_t current;
+} perf_counter_t;
+
+extern perf_counter_t perf_counters[PERF_COUNTER_MAX];
+
+void perf_counter_start(perf_counters_t counter);
+void perf_counter_end(perf_counters_t counter);
