@@ -25,6 +25,14 @@
 #endif
 #endif
 
+#if defined(ICM20608_SPI_PORT) && defined(ICM20608_NSS)
+#define MPU6XXX_SPI_PORT ICM20608_SPI_PORT
+#define MPU6XXX_NSS ICM20608_NSS
+#ifdef ICM20608_INT
+#define MPU6XXX_INT ICM20608_INT
+#endif
+#endif
+
 #define PORT spi_port_defs[MPU6XXX_SPI_PORT]
 #define SCLK_PIN gpio_pin_defs[PORT.sck]
 #define MISO_PIN gpio_pin_defs[PORT.miso]
@@ -129,7 +137,7 @@ void spi_MPU6XXX_reinit_slow(void) {
   SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
   SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
   SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-#if defined(ICM20601_SPI_PORT) //5.25mhz SPI
+#if defined(ICM20601_SPI_PORT) || defined(ICM20608_SPI_PORT) //5.25mhz SPI
   SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
 #else
 #if defined(ICM20602_SPI_PORT) //10mhz SPI
@@ -157,7 +165,7 @@ void spi_MPU6XXX_reinit_fast(void) {
   SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
   SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
   SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-#if defined(ICM20601_SPI_PORT) //5.25mhz SPI
+#if defined(ICM20601_SPI_PORT) || defined(ICM20608_SPI_PORT) //5.25mhz SPI
   SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
 #else
 #if defined(ICM20602_SPI_PORT) //10mhz SPI
