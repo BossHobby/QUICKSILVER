@@ -47,23 +47,23 @@ void blackbox_init() {
   data_flash_init();
 }
 
-void blackbox_update() {
+uint8_t blackbox_update() {
   static uint32_t loop_counter = 0;
 
   if ((!rx_aux_on(AUX_ARMING) || !rx_aux_on(AUX_BLACKBOX)) && blackbox_enabled == 1) {
     data_flash_finish();
     blackbox_enabled = 0;
-    return;
+    return 0;
   } else if ((rx_aux_on(AUX_ARMING) && rx_aux_on(AUX_BLACKBOX)) && blackbox_enabled == 0) {
     data_flash_restart();
     blackbox_enabled = 1;
-    return;
+    return 0;
   }
 
   if (blackbox_enabled == 0)
-    return;
+    return 0;
 
-  data_flash_update(loop_counter);
+  uint8_t write_in_progress = data_flash_update(loop_counter);
 
   blackbox.loop = loop_counter / blackbox_rate;
   blackbox.time = timer_micros();
@@ -94,5 +94,7 @@ void blackbox_update() {
   }
 
   loop_counter++;
+
+  return write_in_progress;
 }
 #endif

@@ -44,11 +44,11 @@ static data_flash_file_t *current_file() {
 
 static volatile uint32_t update_delta = 0;
 
-void data_flash_update(uint32_t loop) {
+uint8_t data_flash_update(uint32_t loop) {
   static uint32_t offset = 0;
 
-  uint32_t start = timer_micros();
   const uint32_t to_write = write_offset >= written_offset ? write_offset - written_offset : 16 + write_offset - written_offset;
+  uint8_t write_in_progress = 0;
 
   switch (state) {
   case STATE_IDLE:
@@ -98,6 +98,7 @@ void data_flash_update(uint32_t loop) {
     sdcard_continue_write_sector(index * BLACKBOX_MAX_SIZE, &write_buffer[written_offset], sizeof(blackbox_t));
 #endif
 #ifdef USE_M25P16
+    write_in_progress = 1;
     if (!m25p16_page_program(offset + index * BLACKBOX_MAX_SIZE, (const uint8_t *)&write_buffer[written_offset], sizeof(blackbox_t))) {
       break;
     }
@@ -160,8 +161,8 @@ void data_flash_update(uint32_t loop) {
   default:
     break;
   }
-  update_delta = timer_micros() - start;
-  return;
+
+  return write_in_progress;
 }
 
 void data_flash_flush() {

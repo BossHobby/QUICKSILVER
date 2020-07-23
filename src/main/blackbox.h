@@ -29,4 +29,4 @@ typedef struct {
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b);
 
 void blackbox_init();
-void blackbox_update();
+uint8_t blackbox_update();

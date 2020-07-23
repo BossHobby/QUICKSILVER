@@ -254,16 +254,20 @@ int main() {
 #endif
     perf_counter_end(PERF_COUNTER_RX);
 
-#ifdef ENABLE_OSD
-    perf_counter_start(PERF_COUNTER_OSD);
-    osd_display();
-    perf_counter_end(PERF_COUNTER_OSD);
-#endif
+    uint8_t blackbox_active = 0;
 
 #ifdef ENABLE_BLACKBOX
     perf_counter_start(PERF_COUNTER_BLACKBOX);
-    blackbox_update();
+    blackbox_active = blackbox_update();
     perf_counter_end(PERF_COUNTER_BLACKBOX);
+#endif
+
+#ifdef ENABLE_OSD
+    if (!blackbox_active) {
+      perf_counter_start(PERF_COUNTER_OSD);
+      osd_display();
+      perf_counter_end(PERF_COUNTER_OSD);
+    }
 #endif
 
     state.cpu_load = (timer_micros() - lastlooptime);
