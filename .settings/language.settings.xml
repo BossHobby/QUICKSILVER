@@ -44,16 +44,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="Libraries/cbor/src">
@@ -93,16 +93,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main">
@@ -142,16 +142,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/usb">
@@ -191,16 +191,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/drivers">
@@ -240,16 +240,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/config">
@@ -289,16 +289,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/system/stm32f405">
@@ -338,16 +338,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/rx">
@@ -387,16 +387,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/util">
@@ -436,16 +436,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/drivers/usb">
@@ -485,16 +485,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/system/stm32f411">
@@ -583,16 +583,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 				</language>
@@ -698,16 +698,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
+						<entry kind="macro" name="GIT_VERSION" value="b5204df8717e29f5c937c4779493c8f2fc2d5c41"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="Libraries/cbor/src">
@@ -747,16 +747,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
+						<entry kind="macro" name="GIT_VERSION" value="b5204df8717e29f5c937c4779493c8f2fc2d5c41"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main">
@@ -796,16 +796,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
+						<entry kind="macro" name="GIT_VERSION" value="b5204df8717e29f5c937c4779493c8f2fc2d5c41"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/config">
@@ -845,16 +845,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
+						<entry kind="macro" name="GIT_VERSION" value="b5204df8717e29f5c937c4779493c8f2fc2d5c41"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/util">
@@ -894,16 +894,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
+						<entry kind="macro" name="GIT_VERSION" value="b5204df8717e29f5c937c4779493c8f2fc2d5c41"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/usb">
@@ -943,16 +943,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
+						<entry kind="macro" name="GIT_VERSION" value="b5204df8717e29f5c937c4779493c8f2fc2d5c41"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/drivers">
@@ -992,16 +992,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
+						<entry kind="macro" name="GIT_VERSION" value="b5204df8717e29f5c937c4779493c8f2fc2d5c41"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/system/stm32f405">
@@ -1041,16 +1041,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
+						<entry kind="macro" name="GIT_VERSION" value="b5204df8717e29f5c937c4779493c8f2fc2d5c41"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/rx">
@@ -1090,16 +1090,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
+						<entry kind="macro" name="GIT_VERSION" value="b5204df8717e29f5c937c4779493c8f2fc2d5c41"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/drivers/usb">
@@ -1139,16 +1139,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
+						<entry kind="macro" name="GIT_VERSION" value="b5204df8717e29f5c937c4779493c8f2fc2d5c41"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/system/stm32f411">
@@ -1305,16 +1305,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/quicksilver_f4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/pyrodrone_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
+						<entry kind="macro" name="GIT_VERSION" value="b5204df8717e29f5c937c4779493c8f2fc2d5c41"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
+						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 				</language>

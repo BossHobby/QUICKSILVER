@@ -1,40 +1,22 @@
 
-// Dshot driver for H101_dual firmware. Written by Markus Gritsch.
+// History & props :)
+// Origional F0 Silverware Dshot driver for H101_dual firmware. Written by Markus Gritsch.
 // Modified by JazzMac to support DMA transfer
 // Ported to F4 by NotFastEnuf
+// Supporting runtime configuration by Hanfer
+// Modified to run on only one DMA stream instead of three by NFE
 
-// DShot timer/DMA init
-// TIM1_UP  DMA_CH5: set all output to HIGH		at TIM1 update
-// TIM1_CH1 DMA_CH2: reset output if data=0		at T0H timing
-// TIM1_CH4 DMA_CH4: reset all output					at T1H timing
-
-// this DMA driver is done with the reference to http://www.cnblogs.com/shangdawei/p/4762035.html
+// this DMA driver was origionally done with the reference to http://www.cnblogs.com/shangdawei/p/4762035.html
 
 // No throttle jitter, no min/max calibration, just pure digital goodness :)
-
-// The ESC signal must be taken before the FET, i.e. non-inverted. The
-// signal after the FET with a pull-up resistor is not good enough.
-// Bit-bang timing tested only with Keil compiler.
-
-// Dshot capable ESCs required. Consider removing the input filter cap,
-// especially if you get drop outs. Tested on "Racerstar MS Series 15A ESC
-// BLHeLi_S OPTO 2-4S" ESCs (rebranded ZTW Polaris) with A_H_20_REV16_43.HEX
-// and removed filter cap.
+// FC with motor pins on multiple gpio ports will fire ports sequentially.
+// A dshot600 frame takes about ~30us, dshot300 frame ~60us, and dshot150 frame ~120us
+// It is important to consider how many motor gpio ports are used in a target and to allow time for each port to fire within set looptime.
+// examples:  motor pins on 3 gpio ports - 8k looptime - dshot600 = safe 90us of dshot data fits in 125us loop
+// 			  motor pins on 3 gpio ports - 8k looptime - dshot300 = unsafe 180us of dshot data DOES NOT fit in 125us loop
+// 			  motor pins on 3 gpio ports - 4k looptime - dshot300 = safe 180us of dshot data fits in 250us loop
 
 // USE AT YOUR OWN RISK. ALWAYS REMOVE PROPS WHEN TESTING.
-
-// READ THIS:
-
-// Test the whole throttle range before flight!
-// If motors don't stop, turn off TX and wait 2 seconds
-
-// Dshot600 is sensitive to capacitance from wires,
-// but should be insensitive to gpio combinations
-
-// Dshot300 is most sensitive to mixes of gpioA
-// it has fastest send time in this implementation
-
-// Dshot150 is pretty insensitive to pin mixes and wire capacitance
 
 #include "control.h"
 #include "defines.h"
@@ -89,16 +71,15 @@ volatile uint16_t dshot_portA[1] = {0}; // sum of all motor pins at portA
 volatile uint16_t dshot_portB[1] = {0}; // sum of all motor pins at portB
 volatile uint16_t dshot_portC[1] = {0}; // sum of all motor pins at portC
 
-volatile uint32_t testA[32] = {256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216};
-volatile uint32_t testB[32] = { 3,196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608};
-volatile uint32_t testC[32] = {512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432};
+//new dma buffer to simulate firing out '0' bits in dshot.  Motor data would fall in the middle of every group of 3 members in the following format {pins_high, motor_data_t0h, pins_low_t1h, repeating total of 16 times in buffer}
+volatile uint32_t testA[48] = {256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216 };
+volatile uint32_t testB[48] = { 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608 };
+volatile uint32_t testC[48] = {512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432 };
 
+//to simulate pyrodronef4 test case
 //A pin 256, 16777216  shifted pin
 //B pin   3, 196608    shifted pin
 //C pin 512, 33554432  shifted pin
-
-
-
 
 
 typedef enum { false,
@@ -138,9 +119,10 @@ void motor_init() {
 #undef MOTOR_PIN
 
   // DShot timer/DMA2 init
-  // TIM1_UP  DMA2_STREAM_5/CH6: set all output to HIGH		at TIM1 update
-  // TIM1_CH1 DMA2_STREAM_1/CH6: reset output if data=0		at T0H timing
-  // TIM1_CH4 DMA2_STREAM_4/CH6: reset all output					at T1H timing
+  // TIM1_UP: set all output to HIGH		                at TIM1 update - no dma event
+  // TIM1_CH1 DMA2_STREAM_6/CH0: reset output if data=0		at TIM1 update - TIM_Pulse = 0
+  // TIM1_CH2 DMA2_STREAM_6/CH0: reset output if data=0		at T0H timing
+  // TIM1_CH3 DMA2_STREAM_6/CH0: reset all output			at T1H timing
 
   TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
   TIM_OCInitTypeDef TIM_OCInitStructure;
@@ -165,25 +147,32 @@ void motor_init() {
   TIM_OC1Init(TIM1, &TIM_OCInitStructure);
   TIM_OC1PreloadConfig(TIM1, TIM_OCPreload_Disable);
 
-  /* Timing Mode configuration: Channel 4 */
+  /* Timing Mode configuration: Channel 2 */
   TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_Timing;
   TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Disable;
   TIM_OCInitStructure.TIM_Pulse = DSHOT_T0H_TIME;
   TIM_OC2Init(TIM1, &TIM_OCInitStructure);
   TIM_OC2PreloadConfig(TIM1, TIM_OCPreload_Disable);
 
+  /* Timing Mode configuration: Channel 3 */
+  TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_Timing;
+  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Disable;
+  TIM_OCInitStructure.TIM_Pulse = DSHOT_T1H_TIME;
+  TIM_OC3Init(TIM1, &TIM_OCInitStructure);
+  TIM_OC3PreloadConfig(TIM1, TIM_OCPreload_Disable);
+
   DMA_InitTypeDef DMA_InitStructure;
 
   DMA_StructInit(&DMA_InitStructure);
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
 
-  /* DMA2 Stream5_Channel6 configuration ----------------------------------------------*/
+  /* DMA2 Stream6_Channel0 configuration ----------------------------------------------*/
   DMA_DeInit(DMA2_Stream6);
   DMA_InitStructure.DMA_Channel = DMA_Channel_0;
   DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&GPIOA->BSRRL;
   DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)testA;
   DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
-  DMA_InitStructure.DMA_BufferSize = 32;
+  DMA_InitStructure.DMA_BufferSize = 48;
   DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
   DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
   DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
@@ -231,10 +220,10 @@ void motor_init() {
   //DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
   //DMA_Init(DMA2_Stream4, &DMA_InitStructure);
 
-  TIM_DMACmd(TIM1, TIM_DMA_CC2 | TIM_DMA_CC1, ENABLE);
+  TIM_DMACmd(TIM1, TIM_DMA_CC3 | TIM_DMA_CC2 | TIM_DMA_CC1, ENABLE);
 
   NVIC_InitTypeDef NVIC_InitStructure;
-  /* configure DMA1 Channel4 interrupt */
+  /* configure DMA2 Stream 6 interrupt */
   NVIC_InitStructure.NVIC_IRQChannel = DMA2_Stream6_IRQn;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x00;
@@ -260,7 +249,7 @@ void dshot_dma_portA() {
  // DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4 | DMA_FLAG_HTIF4 | DMA_FLAG_TEIF4);
  // DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5 | DMA_FLAG_HTIF5 | DMA_FLAG_TEIF5);
 
-  DMA2_Stream6->NDTR = 32;
+  DMA2_Stream6->NDTR = 48;
 //  DMA2_Stream1->NDTR = 16;
 //  DMA2_Stream4->NDTR = 16;
 
@@ -270,7 +259,7 @@ void dshot_dma_portA() {
  // DMA_Cmd(DMA2_Stream4, ENABLE);
  // DMA_Cmd(DMA2_Stream5, ENABLE);
 
-  TIM_DMACmd(TIM1, TIM_DMA_CC2 | TIM_DMA_CC1, ENABLE);
+  TIM_DMACmd(TIM1, TIM_DMA_CC3 | TIM_DMA_CC2 | TIM_DMA_CC1, ENABLE);
 
   TIM_SetCounter(TIM1, DSHOT_BIT_TIME);
   TIM_Cmd(TIM1, ENABLE);
@@ -288,7 +277,7 @@ void dshot_dma_portB() {
 //  DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4 | DMA_FLAG_HTIF4 | DMA_FLAG_TEIF4);
 //  DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5 | DMA_FLAG_HTIF5 | DMA_FLAG_TEIF5);
 
-  DMA2_Stream6->NDTR = 32;
+  DMA2_Stream6->NDTR = 48;
 //  DMA2_Stream1->NDTR = 16;
 //  DMA2_Stream4->NDTR = 16;
 
@@ -298,7 +287,7 @@ void dshot_dma_portB() {
 //  DMA_Cmd(DMA2_Stream4, ENABLE);
 //  DMA_Cmd(DMA2_Stream5, ENABLE);
 
-  TIM_DMACmd(TIM1, TIM_DMA_CC2 | TIM_DMA_CC1, ENABLE);
+  TIM_DMACmd(TIM1, TIM_DMA_CC3 | TIM_DMA_CC2 | TIM_DMA_CC1, ENABLE);
 
   TIM_SetCounter(TIM1, DSHOT_BIT_TIME);
   TIM_Cmd(TIM1, ENABLE);
@@ -316,7 +305,7 @@ void dshot_dma_portC() {
 //  DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4 | DMA_FLAG_HTIF4 | DMA_FLAG_TEIF4);
 //  DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5 | DMA_FLAG_HTIF5 | DMA_FLAG_TEIF5);
 
-  DMA2_Stream6->NDTR = 32;
+  DMA2_Stream6->NDTR = 48;
 //  DMA2_Stream1->NDTR = 16;
 //  DMA2_Stream4->NDTR = 16;
 
@@ -326,7 +315,7 @@ void dshot_dma_portC() {
 //  DMA_Cmd(DMA2_Stream4, ENABLE);
 //  DMA_Cmd(DMA2_Stream5, ENABLE);
 
-  TIM_DMACmd(TIM1, TIM_DMA_CC2 | TIM_DMA_CC1, ENABLE);
+  TIM_DMACmd(TIM1, TIM_DMA_CC3 | TIM_DMA_CC2 | TIM_DMA_CC1, ENABLE);
 
   TIM_SetCounter(TIM1, DSHOT_BIT_TIME);
   TIM_Cmd(TIM1, ENABLE);
@@ -388,6 +377,7 @@ void dshot_dma_start() {
   TIM1->ARR = DSHOT_BIT_TIME;
   TIM1->CCR1 = 0;
   TIM1->CCR2 = DSHOT_T0H_TIME;
+  TIM1->CCR3 = DSHOT_T1H_TIME;
 
  // DMA2_Stream1->CR |= DMA_MemoryDataSize_HalfWord | DMA_PeripheralDataSize_HalfWord; // switch from byte to halfword
 
@@ -531,7 +521,7 @@ void DMA2_Stream6_IRQHandler(void) {
 //  DMA_Cmd(DMA2_Stream1, DISABLE);
 //  DMA_Cmd(DMA2_Stream4, DISABLE);
 
-  TIM_DMACmd(TIM1, TIM_DMA_CC2 | TIM_DMA_CC1, DISABLE);
+  TIM_DMACmd(TIM1, TIM_DMA_CC3 | TIM_DMA_CC2 | TIM_DMA_CC1, DISABLE);
   DMA_ClearITPendingBit(DMA2_Stream6, DMA_IT_TCIF6);
   TIM_Cmd(TIM1, DISABLE);
 
