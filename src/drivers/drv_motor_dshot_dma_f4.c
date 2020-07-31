@@ -89,6 +89,18 @@ volatile uint16_t dshot_portA[1] = {0}; // sum of all motor pins at portA
 volatile uint16_t dshot_portB[1] = {0}; // sum of all motor pins at portB
 volatile uint16_t dshot_portC[1] = {0}; // sum of all motor pins at portC
 
+volatile uint32_t testA[32] = {256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216,256, 16777216};
+volatile uint32_t testB[32] = { 3,196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608,3, 196608};
+volatile uint32_t testC[32] = {512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432, 512, 33554432};
+
+//A pin 256, 16777216  shifted pin
+//B pin   3, 196608    shifted pin
+//C pin 512, 33554432  shifted pin
+
+
+
+
+
 typedef enum { false,
                true } bool;
 
@@ -149,16 +161,16 @@ void motor_init() {
   /* Timing Mode configuration: Channel 1 */
   TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_Timing;
   TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Disable;
-  TIM_OCInitStructure.TIM_Pulse = DSHOT_T0H_TIME;
+  TIM_OCInitStructure.TIM_Pulse = 0;
   TIM_OC1Init(TIM1, &TIM_OCInitStructure);
   TIM_OC1PreloadConfig(TIM1, TIM_OCPreload_Disable);
 
   /* Timing Mode configuration: Channel 4 */
   TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_Timing;
   TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Disable;
-  TIM_OCInitStructure.TIM_Pulse = DSHOT_T1H_TIME;
-  TIM_OC4Init(TIM1, &TIM_OCInitStructure);
-  TIM_OC4PreloadConfig(TIM1, TIM_OCPreload_Disable);
+  TIM_OCInitStructure.TIM_Pulse = DSHOT_T0H_TIME;
+  TIM_OC2Init(TIM1, &TIM_OCInitStructure);
+  TIM_OC2PreloadConfig(TIM1, TIM_OCPreload_Disable);
 
   DMA_InitTypeDef DMA_InitStructure;
 
@@ -166,70 +178,70 @@ void motor_init() {
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
 
   /* DMA2 Stream5_Channel6 configuration ----------------------------------------------*/
-  DMA_DeInit(DMA2_Stream5);
-  DMA_InitStructure.DMA_Channel = DMA_Channel_6;
+  DMA_DeInit(DMA2_Stream6);
+  DMA_InitStructure.DMA_Channel = DMA_Channel_0;
   DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&GPIOA->BSRRL;
-  DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)dshot_portA;
+  DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)testA;
   DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
-  DMA_InitStructure.DMA_BufferSize = 16;
-  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Disable;
-  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
-  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
-  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
-  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
-  DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
-  DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
-  DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-  DMA_Init(DMA2_Stream5, &DMA_InitStructure);
-
-  /* DMA2	Stream1_Channel6 configuration ----------------------------------------------*/
-  DMA_DeInit(DMA2_Stream1);
-  DMA_InitStructure.DMA_Channel = DMA_Channel_6;
-  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&GPIOA->BSRRH;
-  DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)motor_data_portA;
-  DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
-  DMA_InitStructure.DMA_BufferSize = 16;
+  DMA_InitStructure.DMA_BufferSize = 32;
   DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
   DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
-  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
-  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
+  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
   DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
-  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructure.DMA_Priority = DMA_Priority_VeryHigh;
   DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
   DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
   DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-  DMA_Init(DMA2_Stream1, &DMA_InitStructure);
+  DMA_Init(DMA2_Stream6, &DMA_InitStructure);
+
+  /* DMA2	Stream1_Channel6 configuration ----------------------------------------------*/
+  //DMA_DeInit(DMA2_Stream1);
+  //DMA_InitStructure.DMA_Channel = DMA_Channel_6;
+  //DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&GPIOA->BSRRH;
+  //DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)motor_data_portA;
+  //DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
+  //DMA_InitStructure.DMA_BufferSize = 16;
+  //DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  //DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  //DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
+  //DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
+  //DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
+  //DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  //DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  //DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  //DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  //DMA_Init(DMA2_Stream1, &DMA_InitStructure);
 
   /* DMA2 Stream4_Channel6 configuration ----------------------------------------------*/
-  DMA_DeInit(DMA2_Stream4);
-  DMA_InitStructure.DMA_Channel = DMA_Channel_6;
-  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&GPIOA->BSRRH;
-  DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)dshot_portA;
-  DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
-  DMA_InitStructure.DMA_BufferSize = 16;
-  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Disable;
-  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
-  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
-  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
-  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
-  DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
-  DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
-  DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-  DMA_Init(DMA2_Stream4, &DMA_InitStructure);
+  //DMA_DeInit(DMA2_Stream4);
+  //DMA_InitStructure.DMA_Channel = DMA_Channel_6;
+  //DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&GPIOA->BSRRH;
+  //DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)dshot_portA;
+  //DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
+  //DMA_InitStructure.DMA_BufferSize = 16;
+  //DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  //DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Disable;
+  //DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
+  //DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
+  //DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
+  //DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  //DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  //DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  //DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  //DMA_Init(DMA2_Stream4, &DMA_InitStructure);
 
-  TIM_DMACmd(TIM1, TIM_DMA_Update | TIM_DMA_CC4 | TIM_DMA_CC1, ENABLE);
+  TIM_DMACmd(TIM1, TIM_DMA_CC2 | TIM_DMA_CC1, ENABLE);
 
   NVIC_InitTypeDef NVIC_InitStructure;
   /* configure DMA1 Channel4 interrupt */
-  NVIC_InitStructure.NVIC_IRQChannel = DMA2_Stream4_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannel = DMA2_Stream6_IRQn;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x00;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x00;
   NVIC_Init(&NVIC_InitStructure);
   /* enable DMA2 Stream6 transfer complete interrupt */
-  DMA_ITConfig(DMA2_Stream4, DMA_IT_TC, ENABLE);
+  DMA_ITConfig(DMA2_Stream6, DMA_IT_TC, ENABLE);
 
   // set failsafetime so signal is off at start
   pwm_failsafe_time = gettime() - 100000;
@@ -237,84 +249,84 @@ void motor_init() {
 }
 
 void dshot_dma_portA() {
-  DMA2_Stream5->PAR = (uint32_t)&GPIOA->BSRRL;
-  DMA2_Stream5->M0AR = (uint32_t)dshot_portA;
-  DMA2_Stream1->PAR = (uint32_t)&GPIOA->BSRRH;
-  DMA2_Stream1->M0AR = (uint32_t)motor_data_portA;
-  DMA2_Stream4->PAR = (uint32_t)&GPIOA->BSRRH;
-  DMA2_Stream4->M0AR = (uint32_t)dshot_portA;
+  DMA2_Stream6->PAR = (uint32_t)&GPIOA->BSRRL;
+  DMA2_Stream6->M0AR = (uint32_t)testA;
+//  DMA2_Stream1->PAR = (uint32_t)&GPIOA->BSRRH;
+//  DMA2_Stream1->M0AR = (uint32_t)motor_data_portA;
+//  DMA2_Stream4->PAR = (uint32_t)&GPIOA->BSRRH;
+//  DMA2_Stream4->M0AR = (uint32_t)dshot_portA;
 
-  DMA_ClearFlag(DMA2_Stream1, DMA_FLAG_TCIF1 | DMA_FLAG_HTIF1 | DMA_FLAG_TEIF1);
-  DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4 | DMA_FLAG_HTIF4 | DMA_FLAG_TEIF4);
-  DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5 | DMA_FLAG_HTIF5 | DMA_FLAG_TEIF5);
+  DMA_ClearFlag(DMA2_Stream6, DMA_FLAG_TCIF6 | DMA_FLAG_HTIF6 | DMA_FLAG_TEIF6);
+ // DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4 | DMA_FLAG_HTIF4 | DMA_FLAG_TEIF4);
+ // DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5 | DMA_FLAG_HTIF5 | DMA_FLAG_TEIF5);
 
-  DMA2_Stream5->NDTR = 16;
-  DMA2_Stream1->NDTR = 16;
-  DMA2_Stream4->NDTR = 16;
+  DMA2_Stream6->NDTR = 32;
+//  DMA2_Stream1->NDTR = 16;
+//  DMA2_Stream4->NDTR = 16;
 
   TIM1->SR = 0;
 
-  DMA_Cmd(DMA2_Stream1, ENABLE);
-  DMA_Cmd(DMA2_Stream4, ENABLE);
-  DMA_Cmd(DMA2_Stream5, ENABLE);
+  DMA_Cmd(DMA2_Stream6, ENABLE);
+ // DMA_Cmd(DMA2_Stream4, ENABLE);
+ // DMA_Cmd(DMA2_Stream5, ENABLE);
 
-  TIM_DMACmd(TIM1, TIM_DMA_Update | TIM_DMA_CC4 | TIM_DMA_CC1, ENABLE);
+  TIM_DMACmd(TIM1, TIM_DMA_CC2 | TIM_DMA_CC1, ENABLE);
 
   TIM_SetCounter(TIM1, DSHOT_BIT_TIME);
   TIM_Cmd(TIM1, ENABLE);
 }
 
 void dshot_dma_portB() {
-  DMA2_Stream5->PAR = (uint32_t)&GPIOB->BSRRL;
-  DMA2_Stream5->M0AR = (uint32_t)dshot_portB;
-  DMA2_Stream1->PAR = (uint32_t)&GPIOB->BSRRH;
-  DMA2_Stream1->M0AR = (uint32_t)motor_data_portB;
-  DMA2_Stream4->PAR = (uint32_t)&GPIOB->BSRRH;
-  DMA2_Stream4->M0AR = (uint32_t)dshot_portB;
+  DMA2_Stream6->PAR = (uint32_t)&GPIOB->BSRRL;
+  DMA2_Stream6->M0AR = (uint32_t)testB;
+//  DMA2_Stream1->PAR = (uint32_t)&GPIOB->BSRRH;
+//  DMA2_Stream1->M0AR = (uint32_t)motor_data_portB;
+//  DMA2_Stream4->PAR = (uint32_t)&GPIOB->BSRRH;
+//  DMA2_Stream4->M0AR = (uint32_t)dshot_portB;
 
-  DMA_ClearFlag(DMA2_Stream1, DMA_FLAG_TCIF1 | DMA_FLAG_HTIF1 | DMA_FLAG_TEIF1);
-  DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4 | DMA_FLAG_HTIF4 | DMA_FLAG_TEIF4);
-  DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5 | DMA_FLAG_HTIF5 | DMA_FLAG_TEIF5);
+  DMA_ClearFlag(DMA2_Stream6, DMA_FLAG_TCIF6 | DMA_FLAG_HTIF6 | DMA_FLAG_TEIF6);
+//  DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4 | DMA_FLAG_HTIF4 | DMA_FLAG_TEIF4);
+//  DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5 | DMA_FLAG_HTIF5 | DMA_FLAG_TEIF5);
 
-  DMA2_Stream5->NDTR = 16;
-  DMA2_Stream1->NDTR = 16;
-  DMA2_Stream4->NDTR = 16;
+  DMA2_Stream6->NDTR = 32;
+//  DMA2_Stream1->NDTR = 16;
+//  DMA2_Stream4->NDTR = 16;
 
   TIM1->SR = 0;
 
-  DMA_Cmd(DMA2_Stream1, ENABLE);
-  DMA_Cmd(DMA2_Stream4, ENABLE);
-  DMA_Cmd(DMA2_Stream5, ENABLE);
+  DMA_Cmd(DMA2_Stream6, ENABLE);
+//  DMA_Cmd(DMA2_Stream4, ENABLE);
+//  DMA_Cmd(DMA2_Stream5, ENABLE);
 
-  TIM_DMACmd(TIM1, TIM_DMA_Update | TIM_DMA_CC4 | TIM_DMA_CC1, ENABLE);
+  TIM_DMACmd(TIM1, TIM_DMA_CC2 | TIM_DMA_CC1, ENABLE);
 
   TIM_SetCounter(TIM1, DSHOT_BIT_TIME);
   TIM_Cmd(TIM1, ENABLE);
 }
 
 void dshot_dma_portC() {
-  DMA2_Stream5->PAR = (uint32_t)&GPIOC->BSRRL;
-  DMA2_Stream5->M0AR = (uint32_t)dshot_portC;
-  DMA2_Stream1->PAR = (uint32_t)&GPIOC->BSRRH;
-  DMA2_Stream1->M0AR = (uint32_t)motor_data_portC;
-  DMA2_Stream4->PAR = (uint32_t)&GPIOC->BSRRH;
-  DMA2_Stream4->M0AR = (uint32_t)dshot_portC;
+  DMA2_Stream6->PAR = (uint32_t)&GPIOC->BSRRL;
+  DMA2_Stream6->M0AR = (uint32_t)testC;
+//  DMA2_Stream1->PAR = (uint32_t)&GPIOC->BSRRH;
+//  DMA2_Stream1->M0AR = (uint32_t)motor_data_portC;
+//  DMA2_Stream4->PAR = (uint32_t)&GPIOC->BSRRH;
+//  DMA2_Stream4->M0AR = (uint32_t)dshot_portC;
 
-  DMA_ClearFlag(DMA2_Stream1, DMA_FLAG_TCIF1 | DMA_FLAG_HTIF1 | DMA_FLAG_TEIF1);
-  DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4 | DMA_FLAG_HTIF4 | DMA_FLAG_TEIF4);
-  DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5 | DMA_FLAG_HTIF5 | DMA_FLAG_TEIF5);
+  DMA_ClearFlag(DMA2_Stream6, DMA_FLAG_TCIF6 | DMA_FLAG_HTIF6 | DMA_FLAG_TEIF6);
+//  DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4 | DMA_FLAG_HTIF4 | DMA_FLAG_TEIF4);
+//  DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5 | DMA_FLAG_HTIF5 | DMA_FLAG_TEIF5);
 
-  DMA2_Stream5->NDTR = 16;
-  DMA2_Stream1->NDTR = 16;
-  DMA2_Stream4->NDTR = 16;
+  DMA2_Stream6->NDTR = 32;
+//  DMA2_Stream1->NDTR = 16;
+//  DMA2_Stream4->NDTR = 16;
 
   TIM1->SR = 0;
 
-  DMA_Cmd(DMA2_Stream1, ENABLE);
-  DMA_Cmd(DMA2_Stream4, ENABLE);
-  DMA_Cmd(DMA2_Stream5, ENABLE);
+  DMA_Cmd(DMA2_Stream6, ENABLE);
+//  DMA_Cmd(DMA2_Stream4, ENABLE);
+//  DMA_Cmd(DMA2_Stream5, ENABLE);
 
-  TIM_DMACmd(TIM1, TIM_DMA_Update | TIM_DMA_CC4 | TIM_DMA_CC1, ENABLE);
+  TIM_DMACmd(TIM1, TIM_DMA_CC2 | TIM_DMA_CC1, ENABLE);
 
   TIM_SetCounter(TIM1, DSHOT_BIT_TIME);
   TIM_Cmd(TIM1, ENABLE);
@@ -374,10 +386,10 @@ void dshot_dma_start() {
   dshot_dma_phase = DSHOT_PORT_COUNT;
 
   TIM1->ARR = DSHOT_BIT_TIME;
-  TIM1->CCR1 = DSHOT_T0H_TIME;
-  TIM1->CCR4 = DSHOT_T1H_TIME;
+  TIM1->CCR1 = 0;
+  TIM1->CCR2 = DSHOT_T0H_TIME;
 
-  DMA2_Stream1->CR |= DMA_MemoryDataSize_HalfWord | DMA_PeripheralDataSize_HalfWord; // switch from byte to halfword
+ // DMA2_Stream1->CR |= DMA_MemoryDataSize_HalfWord | DMA_PeripheralDataSize_HalfWord; // switch from byte to halfword
 
   if (DSHOT_GPIO_A == 1)
     dshot_dma_portA();
@@ -514,13 +526,13 @@ void motor_beep() {
 
 #if defined(USE_DSHOT_DMA_DRIVER)
 
-void DMA2_Stream4_IRQHandler(void) {
-  DMA_Cmd(DMA2_Stream5, DISABLE);
-  DMA_Cmd(DMA2_Stream1, DISABLE);
-  DMA_Cmd(DMA2_Stream4, DISABLE);
+void DMA2_Stream6_IRQHandler(void) {
+  DMA_Cmd(DMA2_Stream6, DISABLE);
+//  DMA_Cmd(DMA2_Stream1, DISABLE);
+//  DMA_Cmd(DMA2_Stream4, DISABLE);
 
-  TIM_DMACmd(TIM1, TIM_DMA_Update | TIM_DMA_CC4 | TIM_DMA_CC1, DISABLE);
-  DMA_ClearITPendingBit(DMA2_Stream4, DMA_IT_TCIF4);
+  TIM_DMACmd(TIM1, TIM_DMA_CC2 | TIM_DMA_CC1, DISABLE);
+  DMA_ClearITPendingBit(DMA2_Stream6, DMA_IT_TCIF6);
   TIM_Cmd(TIM1, DISABLE);
 
   switch (dshot_dma_phase) {

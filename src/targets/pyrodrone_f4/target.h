@@ -39,7 +39,7 @@
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x73
 #define GYRO_ID_3 0x78
-#define GYRO_ID_4 0x72
+#define GYRO_ID_4 0x71
 #define SENSOR_ROTATE_90_CW
 
 //RADIO
