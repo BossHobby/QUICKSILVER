@@ -105,11 +105,11 @@ void motor_init() {
   GPIO_Init(GPIO##port, &GPIO_InitStructure);              \
   if (GPIO##port == GPIOA) {                               \
     DSHOT_GPIO_A = 1;                                      \
-    dshot_portA_low |= (GPIO_Pin_##pin);    		       \
-    dshot_portA_high |= (GPIO_Pin_##pin << 16); 		   \
+    dshot_portA_low |= (GPIO_Pin_##pin);                   \
+    dshot_portA_high |= (GPIO_Pin_##pin << 16);            \
   } else if (GPIO##port == GPIOB) {                        \
     DSHOT_GPIO_B = 1;                                      \
-    dshot_portB_low |= (GPIO_Pin_##pin);        		   \
+    dshot_portB_low |= (GPIO_Pin_##pin);                   \
     dshot_portB_high |= (GPIO_Pin_##pin << 16);            \
   } else if (GPIO##port == GPIOC) {                        \
     DSHOT_GPIO_C = 1;                                      \
