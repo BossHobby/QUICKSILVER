@@ -28,9 +28,9 @@
 
 #ifdef F4
 //watch variables to be removed after testing
-static volatile GPIO_TypeDef *gpioA = GPIOA;
-static volatile GPIO_TypeDef *gpioB = GPIOB;
-static volatile GPIO_TypeDef *gpioC = GPIOC;
+//static volatile GPIO_TypeDef *gpioA = GPIOA;
+//static volatile GPIO_TypeDef *gpioB = GPIOB;
+//static volatile GPIO_TypeDef *gpioC = GPIOC;
 
 // Tim_1 is running at 84mhz with APB2 clock currently configured at 42MHZ
 // clock cycles per bit for a bit timing period of 1.67us
@@ -67,24 +67,20 @@ static unsigned long pwm_failsafe_time = 1;
 volatile int dshot_dma_phase = 0;  // 0:idle, 1: also idles in interrupt handler as single phase gets called by dshot_dma_start(), 2: & 3: handle remaining phases
 volatile uint16_t dshot_packet[4]; // 16bits dshot data for 4 motors
 
-volatile uint16_t motor_data_portA[16] = {0}; // DMA buffer: reset output when bit data=0 at TOH timing
-volatile uint16_t motor_data_portB[16] = {0}; //
-volatile uint16_t motor_data_portC[16] = {0}; //
+volatile uint32_t motor_data_portA[16] = {0}; //motor pins at portA with commanded '0' bit at T0H timing
+volatile uint32_t motor_data_portB[16] = {0}; //motor pins at portB with commanded '0' bit at T0H timing
+volatile uint32_t motor_data_portC[16] = {0}; //motor pins at portC with commanded '0' bit at T0H timing
 
-volatile uint16_t dshot_portA[1] = {0}; // sum of all motor pins at portA
-volatile uint16_t dshot_portB[1] = {0}; // sum of all motor pins at portB
-volatile uint16_t dshot_portC[1] = {0}; // sum of all motor pins at portC
+volatile uint32_t dshot_portA_low = 0; // sum of all motor pins at portA
+volatile uint32_t dshot_portB_low = 0; // sum of all motor pins at portB
+volatile uint32_t dshot_portC_low = 0; // sum of all motor pins at portC
+volatile uint32_t dshot_portA_high = 0; // shifted motor pins at portA for T1H timing
+volatile uint32_t dshot_portB_high = 0; // shifted motor pins at portB for T1H timing
+volatile uint32_t dshot_portC_high = 0; // shifted motor pins at portC for T1H timing
 
-//new dma buffer to simulate firing out '0' bits in dshot.  Motor data would fall in the middle of every group of 3 members in the following format {pins_high, motor_data_t0h, pins_low_t1h, repeating total of 16 times in buffer}
-volatile uint32_t testA[48] = {256, 0, 16777216, 256, 0, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216, 256, 16777216, 16777216 };
-volatile uint32_t testB[48] = { 3, 0, 196608, 3, 0, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608, 3, 196608, 196608 };
-volatile uint32_t testC[48] = {512, 0, 33554432, 512, 0, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432, 512, 33554432, 33554432 };
-
-//to simulate pyrodronef4 test case
-//A pin 256, 16777216  shifted pin
-//B pin   3, 196608    shifted pin
-//C pin 512, 33554432  shifted pin
-
+volatile uint32_t portA_buffer[48] = {0};	// dma buffers
+volatile uint32_t portB_buffer[48] = {0};
+volatile uint32_t portC_buffer[48] = {0};
 
 typedef enum { false,
                true } bool;
@@ -109,18 +105,33 @@ void motor_init() {
   GPIO_Init(GPIO##port, &GPIO_InitStructure);              \
   if (GPIO##port == GPIOA) {                               \
     DSHOT_GPIO_A = 1;                                      \
-    *dshot_portA |= GPIO_Pin_##pin;                        \
+    dshot_portA_low |= (GPIO_Pin_##pin);    		       \
+    dshot_portA_high |= (GPIO_Pin_##pin << 16); 		   \
   } else if (GPIO##port == GPIOB) {                        \
     DSHOT_GPIO_B = 1;                                      \
-    *dshot_portB |= GPIO_Pin_##pin;                        \
+    dshot_portB_low |= (GPIO_Pin_##pin);        		   \
+    dshot_portB_high |= (GPIO_Pin_##pin << 16);            \
   } else if (GPIO##port == GPIOC) {                        \
     DSHOT_GPIO_C = 1;                                      \
-    *dshot_portC |= GPIO_Pin_##pin;                        \
+    dshot_portC_low |= (GPIO_Pin_##pin);                   \
+    dshot_portC_high |= (GPIO_Pin_##pin << 16);            \
   }
 
   MOTOR_PINS
 
 #undef MOTOR_PIN
+
+  for (int i = 0; i < 48; i = i+3){
+	  portA_buffer[i] = dshot_portA_low;
+	  portB_buffer[i] = dshot_portB_low;
+	  portC_buffer[i] = dshot_portC_low;
+  }
+
+  for (int i = 2; i < 48; i = i+3){
+	  portA_buffer[i] = dshot_portA_high;
+	  portB_buffer[i] = dshot_portB_high;
+	  portC_buffer[i] = dshot_portC_high;
+  }
 
   // DShot timer/DMA2 init
   // TIM1_UP: set all output to HIGH		                at TIM1 update - no dma event
@@ -174,7 +185,7 @@ void motor_init() {
   DMA_DeInit(DMA2_Stream6);
   DMA_InitStructure.DMA_Channel = DMA_Channel_0;
   DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&GPIOA->BSRRL;
-  DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)testA;
+  DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)portA_buffer;
   DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
   DMA_InitStructure.DMA_BufferSize = 48;
   DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
@@ -187,42 +198,6 @@ void motor_init() {
   DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
   DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
   DMA_Init(DMA2_Stream6, &DMA_InitStructure);
-
-  /* DMA2	Stream1_Channel6 configuration ----------------------------------------------*/
-  //DMA_DeInit(DMA2_Stream1);
-  //DMA_InitStructure.DMA_Channel = DMA_Channel_6;
-  //DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&GPIOA->BSRRH;
-  //DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)motor_data_portA;
-  //DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
-  //DMA_InitStructure.DMA_BufferSize = 16;
-  //DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  //DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
-  //DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
-  //DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
-  //DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
-  //DMA_InitStructure.DMA_Priority = DMA_Priority_High;
-  //DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
-  //DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
-  //DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-  //DMA_Init(DMA2_Stream1, &DMA_InitStructure);
-
-  /* DMA2 Stream4_Channel6 configuration ----------------------------------------------*/
-  //DMA_DeInit(DMA2_Stream4);
-  //DMA_InitStructure.DMA_Channel = DMA_Channel_6;
-  //DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&GPIOA->BSRRH;
-  //DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)dshot_portA;
-  //DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
-  //DMA_InitStructure.DMA_BufferSize = 16;
-  //DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  //DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Disable;
-  //DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
-  //DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
-  //DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
-  //DMA_InitStructure.DMA_Priority = DMA_Priority_High;
-  //DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
-  //DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
-  //DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-  //DMA_Init(DMA2_Stream4, &DMA_InitStructure);
 
   TIM_DMACmd(TIM1, TIM_DMA_CC3 | TIM_DMA_CC2 | TIM_DMA_CC1, ENABLE);
 
@@ -243,84 +218,36 @@ void motor_init() {
 
 void dshot_dma_portA() {
   DMA2_Stream6->PAR = (uint32_t)&GPIOA->BSRRL;
-  DMA2_Stream6->M0AR = (uint32_t)testA;
-//  DMA2_Stream1->PAR = (uint32_t)&GPIOA->BSRRH;
-//  DMA2_Stream1->M0AR = (uint32_t)motor_data_portA;
-//  DMA2_Stream4->PAR = (uint32_t)&GPIOA->BSRRH;
-//  DMA2_Stream4->M0AR = (uint32_t)dshot_portA;
-
+  DMA2_Stream6->M0AR = (uint32_t)portA_buffer;
   DMA_ClearFlag(DMA2_Stream6, DMA_FLAG_TCIF6 | DMA_FLAG_HTIF6 | DMA_FLAG_TEIF6);
- // DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4 | DMA_FLAG_HTIF4 | DMA_FLAG_TEIF4);
- // DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5 | DMA_FLAG_HTIF5 | DMA_FLAG_TEIF5);
-
   DMA2_Stream6->NDTR = 48;
-//  DMA2_Stream1->NDTR = 16;
-//  DMA2_Stream4->NDTR = 16;
-
   TIM1->SR = 0;
-
   DMA_Cmd(DMA2_Stream6, ENABLE);
- // DMA_Cmd(DMA2_Stream4, ENABLE);
- // DMA_Cmd(DMA2_Stream5, ENABLE);
-
   TIM_DMACmd(TIM1, TIM_DMA_CC3 | TIM_DMA_CC2 | TIM_DMA_CC1, ENABLE);
-
   TIM_SetCounter(TIM1, DSHOT_BIT_TIME);
   TIM_Cmd(TIM1, ENABLE);
 }
 
 void dshot_dma_portB() {
   DMA2_Stream6->PAR = (uint32_t)&GPIOB->BSRRL;
-  DMA2_Stream6->M0AR = (uint32_t)testB;
-//  DMA2_Stream1->PAR = (uint32_t)&GPIOB->BSRRH;
-//  DMA2_Stream1->M0AR = (uint32_t)motor_data_portB;
-//  DMA2_Stream4->PAR = (uint32_t)&GPIOB->BSRRH;
-//  DMA2_Stream4->M0AR = (uint32_t)dshot_portB;
-
+  DMA2_Stream6->M0AR = (uint32_t)portB_buffer;
   DMA_ClearFlag(DMA2_Stream6, DMA_FLAG_TCIF6 | DMA_FLAG_HTIF6 | DMA_FLAG_TEIF6);
-//  DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4 | DMA_FLAG_HTIF4 | DMA_FLAG_TEIF4);
-//  DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5 | DMA_FLAG_HTIF5 | DMA_FLAG_TEIF5);
-
   DMA2_Stream6->NDTR = 48;
-//  DMA2_Stream1->NDTR = 16;
-//  DMA2_Stream4->NDTR = 16;
-
   TIM1->SR = 0;
-
   DMA_Cmd(DMA2_Stream6, ENABLE);
-//  DMA_Cmd(DMA2_Stream4, ENABLE);
-//  DMA_Cmd(DMA2_Stream5, ENABLE);
-
   TIM_DMACmd(TIM1, TIM_DMA_CC3 | TIM_DMA_CC2 | TIM_DMA_CC1, ENABLE);
-
   TIM_SetCounter(TIM1, DSHOT_BIT_TIME);
   TIM_Cmd(TIM1, ENABLE);
 }
 
 void dshot_dma_portC() {
   DMA2_Stream6->PAR = (uint32_t)&GPIOC->BSRRL;
-  DMA2_Stream6->M0AR = (uint32_t)testC;
-//  DMA2_Stream1->PAR = (uint32_t)&GPIOC->BSRRH;
-//  DMA2_Stream1->M0AR = (uint32_t)motor_data_portC;
-//  DMA2_Stream4->PAR = (uint32_t)&GPIOC->BSRRH;
-//  DMA2_Stream4->M0AR = (uint32_t)dshot_portC;
-
+  DMA2_Stream6->M0AR = (uint32_t)portC_buffer;
   DMA_ClearFlag(DMA2_Stream6, DMA_FLAG_TCIF6 | DMA_FLAG_HTIF6 | DMA_FLAG_TEIF6);
-//  DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF4 | DMA_FLAG_HTIF4 | DMA_FLAG_TEIF4);
-//  DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5 | DMA_FLAG_HTIF5 | DMA_FLAG_TEIF5);
-
   DMA2_Stream6->NDTR = 48;
-//  DMA2_Stream1->NDTR = 16;
-//  DMA2_Stream4->NDTR = 16;
-
   TIM1->SR = 0;
-
   DMA_Cmd(DMA2_Stream6, ENABLE);
-//  DMA_Cmd(DMA2_Stream4, ENABLE);
-//  DMA_Cmd(DMA2_Stream5, ENABLE);
-
   TIM_DMACmd(TIM1, TIM_DMA_CC3 | TIM_DMA_CC2 | TIM_DMA_CC1, ENABLE);
-
   TIM_SetCounter(TIM1, DSHOT_BIT_TIME);
   TIM_Cmd(TIM1, ENABLE);
 }
@@ -359,11 +286,11 @@ void dshot_dma_start() {
 #define MOTOR_PIN(port, pin, pin_af, timer, timer_channel)    \
   if (!(dshot_packet[MOTOR_PIN_IDENT(port, pin)] & 0x8000)) { \
     if (GPIO##port == GPIOA)                                  \
-      motor_data_portA[i] |= GPIO_Pin_##pin;                  \
+      motor_data_portA[i] |= (GPIO_Pin_##pin << 16);          \
     else if (GPIO##port == GPIOB)                             \
-      motor_data_portB[i] |= GPIO_Pin_##pin;                  \
+      motor_data_portB[i] |= (GPIO_Pin_##pin << 16);          \
     else if (GPIO##port == GPIOC)                             \
-      motor_data_portC[i] |= GPIO_Pin_##pin;                  \
+      motor_data_portC[i] |= (GPIO_Pin_##pin << 16);          \
   }
 
     MOTOR_PINS
@@ -376,14 +303,18 @@ void dshot_dma_start() {
     dshot_packet[3] <<= 1;
   }
 
+  for (int i = 1, j = 0; i < 48 && j < 16; i += 3, j++){
+	  portA_buffer[i] = motor_data_portA[j];
+	  portB_buffer[i] = motor_data_portB[j];
+	  portC_buffer[i] = motor_data_portC[j];
+  }
+
   dshot_dma_phase = DSHOT_PORT_COUNT;
 
   TIM1->ARR = DSHOT_BIT_TIME;
   TIM1->CCR1 = 0;
   TIM1->CCR2 = DSHOT_T0H_TIME;
   TIM1->CCR3 = DSHOT_T1H_TIME;
-
- // DMA2_Stream1->CR |= DMA_MemoryDataSize_HalfWord | DMA_PeripheralDataSize_HalfWord; // switch from byte to halfword
 
   if (DSHOT_GPIO_A == 1)
     dshot_dma_portA();
@@ -522,9 +453,6 @@ void motor_beep() {
 
 void DMA2_Stream6_IRQHandler(void) {
   DMA_Cmd(DMA2_Stream6, DISABLE);
-//  DMA_Cmd(DMA2_Stream1, DISABLE);
-//  DMA_Cmd(DMA2_Stream4, DISABLE);
-
   TIM_DMACmd(TIM1, TIM_DMA_CC3 | TIM_DMA_CC2 | TIM_DMA_CC1, DISABLE);
   DMA_ClearITPendingBit(DMA2_Stream6, DMA_IT_TCIF6);
   TIM_Cmd(TIM1, DISABLE);
