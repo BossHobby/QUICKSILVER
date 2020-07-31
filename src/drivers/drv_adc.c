@@ -94,7 +94,7 @@ void adc_init(void) {
   //																			 stream 2, channel 1 / stream 3, channel 1 for adc2
   //																			 stream 0, channel 2 / stream 1, channel 2 for adc3
   //adc typedef for struct
-//  ADC_CommonInitTypeDef ADC_CommonInitStructure;		//we may want to use the common init to slow adc down & reduce dma bandwidth taken up on DMA2
+  ADC_CommonInitTypeDef ADC_CommonInitStructure;		//we may want to use the common init to slow adc down & reduce dma bandwidth taken up on DMA2
   ADC_InitTypeDef ADC_InitStructure;
 
   //gpio struct
@@ -133,23 +133,17 @@ void adc_init(void) {
     DMA_Init(DMA2_Stream0, &DMA_InitStructure);
   }
 
-
-
-
   // Enables or disables the ADC DMA request after last transfer
   ADC_DMARequestAfterLastTransferCmd(ADC1, ENABLE);
   // link it up
   ADC_DMACmd(ADC1, ENABLE);
-  //initialize adc
-  //ADC_StructInit(&ADC_InitStructure);														//potential bug contributing to corruption in dshot gpio writes
 
   // ADC Common Init		//we may want to use the common init to slow adc down
-  //ADC_CommonInitStructure.ADC_Mode = ADC_Mode_Independent;
-  //ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div2;
-  //ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_Disabled;
-  //ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_5Cycles;
-  //ADC_CommonInit(&ADC_CommonInitStructure);
-
+  ADC_CommonInitStructure.ADC_Mode = ADC_Mode_Independent;
+  ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div8;
+  ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_Disabled;
+  ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_20Cycles;
+  ADC_CommonInit(&ADC_CommonInitStructure);
 
   //adc struct
   ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
