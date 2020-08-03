@@ -34,7 +34,6 @@ typedef struct {
 extern control_flags_t flags;
 
 typedef struct {
-  uint16_t looptime_autodetect;
   float looptime; // looptime in seconds
   float uptime;   // running sum of looptimes
   float cpu_load; // micros we have had left last loop
@@ -76,6 +75,7 @@ typedef struct {
   vec4_t motor_mix;
 
   float angleerror[ANGLE_PID_SIZE];
+  float looptime_autodetect;
 } control_state_t;
 
 #define STATE_MEMBERS                       \
