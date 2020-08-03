@@ -34,6 +34,7 @@ typedef struct {
 extern control_flags_t flags;
 
 typedef struct {
+  float looptime_autodetect;
   float looptime; // looptime in seconds
   float uptime;   // running sum of looptimes
   float cpu_load; // micros we have had left last loop
@@ -102,7 +103,9 @@ typedef struct {
   MEMBER(setpoint, vec3_t)                  \
   MEMBER(error, vec3_t)                     \
   MEMBER(errorvect, vec3_t)                 \
-  MEMBER(pidoutput, vec3_t)
+  MEMBER(pidoutput, vec3_t)                 \
+  MEMBER(looptime_autodetect, float)
+
 
 extern control_state_t state;
 

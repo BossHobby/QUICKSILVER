@@ -6,6 +6,9 @@
 #include "rx.h"
 
 // defines for things that do not normally need changing
+#define LOOPTIME_2K 500
+#define LOOPTIME_4K 250
+#define LOOPTIME_8K 125
 
 #define ACC_1G 1.0f
 

@@ -7,7 +7,7 @@
 #include "project.h"
 #include "util.h"
 
-uint16_t adcarray[2];
+
 extern profile_t profile;
 
 #ifndef DISABLE_ADC
@@ -25,145 +25,58 @@ uint16_t adcref_read(adcrefcal *adcref_address) {
 float vref_cal;
 
 void adc_init(void) {
-#ifdef F0
-  ADC_InitTypeDef ADC_InitStructure;
 
-  {
-    GPIO_InitTypeDef GPIO_InitStructure;
-
-    GPIO_InitStructure.GPIO_Pin = BATTERYPIN;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(BATTERYPORT, &GPIO_InitStructure);
-  }
-
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
-
-  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
-  {
-    DMA_InitTypeDef DMA_InitStructure;
-
-    DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)0x40012440;
-    DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)adcarray;
-    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
-    DMA_InitStructure.DMA_BufferSize = 2;
-    DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-    DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
-    DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
-    DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
-    DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
-    DMA_InitStructure.DMA_Priority = DMA_Priority_High;
-    DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
-    DMA_Init(DMA1_Channel1, &DMA_InitStructure);
-  }
-
-  ADC_DMARequestModeConfig(ADC1, ADC_DMAMode_Circular);
-
-  ADC_DMACmd(ADC1, ENABLE);
-
-  ADC_StructInit(&ADC_InitStructure);
-
-  ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
-  ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
-  ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
-  ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
-  ADC_InitStructure.ADC_ScanDirection = ADC_ScanDirection_Backward;
-  ADC_Init(ADC1, &ADC_InitStructure);
-
-  ADC_ChannelConfig(ADC1, ADC_Channel_Vrefint, ADC_SampleTime_239_5Cycles);
-
-  ADC_ChannelConfig(ADC1, BATTERY_ADC_CHANNEL, ADC_SampleTime_239_5Cycles);
-
-  ADC_VrefintCmd(ENABLE);
-
-  ADC_GetCalibrationFactor(ADC1);
-
-  ADC_Cmd(ADC1, ENABLE);
-
-  ADC_StartOfConversion(ADC1);
-
-  DMA_Cmd(DMA1_Channel1, ENABLE);
-#endif
-
-#ifdef F4
   //vref_int only exists on ADC1
-  //pc2 additional function ADC123_IN12
+  //example case: pc2 additional function ADC123_IN12
   //adc1,2,3 connected to APB2 bus
-  //dma2 connected on AHB1 bus to APB2 peripherals
-  //dma2 transmit bufer empty signal is on stream 0, channel 0 / stream 4, channel 0 for adc1
-  //																			 stream 2, channel 1 / stream 3, channel 1 for adc2
-  //																			 stream 0, channel 2 / stream 1, channel 2 for adc3
-  //adc typedef for struct
-  ADC_CommonInitTypeDef ADC_CommonInitStructure;		//we may want to use the common init to slow adc down & reduce dma bandwidth taken up on DMA2
-  ADC_InitTypeDef ADC_InitStructure;
-
-  //gpio struct
-  {
-    GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.GPIO_Pin = BATTERYPIN;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(BATTERYPORT, &GPIO_InitStructure);
-  }
 
   //enable APB2 clock for adc1
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
 
-  //enable AHB1 clock for dma2
-  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
+  //adc typedef for struct
+  ADC_CommonInitTypeDef ADC_CommonInitStructure;		//we may want to use the common init to slow adc down & reduce dma bandwidth taken up on DMA2
+  ADC_InitTypeDef ADC_InitStructure;
 
-  //dma struct
+  //gpio configuration
   {
-    DMA_InitTypeDef DMA_InitStructure;
-    DMA_InitStructure.DMA_Channel = DMA_Channel_0;
-    DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&ADC1->DR;
-    DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)adcarray;
-    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
-    DMA_InitStructure.DMA_BufferSize = 2;
-    DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-    DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
-    DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
-    DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
-    DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
-    DMA_InitStructure.DMA_Priority = DMA_Priority_Low;
-    DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
-    //	DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_HalfFull;    //maybe not needed with fifo disabled
-    DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
-    DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-    DMA_Init(DMA2_Stream0, &DMA_InitStructure);
+    GPIO_InitTypeDef GPIO_InitStructure;
+    GPIO_InitStructure.GPIO_Pin = BATTERYPIN;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
+    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    GPIO_Init(BATTERYPORT, &GPIO_InitStructure);
   }
 
-  // Enables or disables the ADC DMA request after last transfer
-  ADC_DMARequestAfterLastTransferCmd(ADC1, ENABLE);
-  // link it up
-  ADC_DMACmd(ADC1, ENABLE);
-
-  // ADC Common Init		//we may want to use the common init to slow adc down
+  // ADC Common Configuration
   ADC_CommonInitStructure.ADC_Mode = ADC_Mode_Independent;
-  ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div8;
+  ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div2;
   ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_Disabled;
-  ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_20Cycles;
+  ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_5Cycles;
   ADC_CommonInit(&ADC_CommonInitStructure);
 
-  //adc struct
+  // ADC1 Configuration
+  /* Set ADC resolution */
   ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
-  ADC_InitStructure.ADC_ScanConvMode = ENABLE;
-  ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
+  /* Disable the scan conversion so we do one at a time */
+  ADC_InitStructure.ADC_ScanConvMode = DISABLE;
+  /* Don't do contimuous conversions - do them on demand */
+  ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;
+  /* Start conversin by software, not an external trigger */
   ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
-  //ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_Rising;							//should it be this or none?
-  //ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T2_TRGO;  									//
+  /* Conversions are 12 bit - put them in the lower 12 bits of the result */
   ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
-  ADC_InitStructure.ADC_NbrOfConversion = 2;
+  /* Say how many channels would be used by the sequencer */
+  ADC_InitStructure.ADC_NbrOfConversion = 1;
+  /* Now do the setup */
   ADC_Init(ADC1, &ADC_InitStructure);
-
-  ADC_RegularChannelConfig(ADC1, BATTERY_ADC_CHANNEL, 1, ADC_SampleTime_480Cycles);
-  ADC_RegularChannelConfig(ADC1, ADC_Channel_Vrefint, 2, ADC_SampleTime_480Cycles);
 
   ADC_TempSensorVrefintCmd(ENABLE);
   ADC_Cmd(ADC1, ENABLE);
-  ADC_SoftwareStartConv(ADC1);
-  DMA_Cmd(DMA2_Stream0, ENABLE);
-#endif
+
+  // ADC1 calibration sequence
+//  ADC_ResetCalibration(ADC1);
+//  while(ADC_GetResetCalibrationStatus(ADC1));
+//  ADC_StartCalibration(ADC1);
+//  while(ADC_GetCalibrationStatus(ADC1));
 
   // reference is measured a 3.3v, toy boards are powered by 2.8, so a 1.17 multiplier
   // different vccs will translate to a different adc scale factor,
@@ -177,6 +90,23 @@ void adc_init(void) {
 #endif
 }
 
+uint16_t readADC1(int channel){
+  switch (channel) {  // Select the channel to read
+	case 1:
+		ADC_RegularChannelConfig(ADC1, ADC_Channel_Vrefint, 1, ADC_SampleTime_3Cycles);
+		break;
+	case 0:
+		ADC_RegularChannelConfig(ADC1, BATTERY_ADC_CHANNEL, 1, ADC_SampleTime_3Cycles);
+		break;
+	}
+  // Start the conversion
+  ADC_SoftwareStartConv(ADC1);
+  // Wait until conversion completion
+  while(ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == RESET);
+  // Get the conversion value
+  return ADC_GetConversionValue(ADC1);
+}
+
 #ifndef ADC_SCALEFACTOR
 // 12 bit ADC has 4096 steps
 //scalefactor = (vref/4096) * (R1 + R2)/R2
@@ -185,17 +115,17 @@ void adc_init(void) {
 
 float adc_read(int channel) {
   switch (channel) {
-  case 0:
+  case 0:	//vbat
 #ifdef DEBUG
-    lpf(&debug.adcfilt, (float)adcarray[0], 0.998);
+    lpf(&debug.adcfilt, (float)readADC1(channel), 0.998);
 #endif
-    return (float)adcarray[0] * ((float)(ADC_SCALEFACTOR * (profile.voltage.actual_battery_voltage / profile.voltage.reported_telemetry_voltage)));
+    return (float)readADC1(channel) * ((float)(ADC_SCALEFACTOR * (profile.voltage.actual_battery_voltage / profile.voltage.reported_telemetry_voltage)));
 
-  case 1:
+  case 1:	//reference
 #ifdef DEBUG
-    lpf(&debug.adcreffilt, (float)adcarray[1], 0.998);
+    lpf(&debug.adcreffilt, (float)readADC1(channel), 0.998);
 #endif
-    return vref_cal / (float)adcarray[1];
+    return vref_cal / (float)readADC1(channel);
 
   default:
     return 0;

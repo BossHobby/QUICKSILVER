@@ -48,7 +48,7 @@ extern void flash_load(void);
 extern void flash_hard_coded_pid_identifier(void);
 
 uint32_t lastlooptime;
-
+float looptime_buffer[255];
 extern profile_t profile;
 
 //Flash Memory Feature defaults for a flash w/full chip erase
@@ -68,6 +68,9 @@ static void setup_4way_external_interrupt(void);
 int random_seed = 0;
 
 int main(void) {
+  //attempt 8k looptime
+  state.looptime_autodetect = LOOPTIME;
+
   // load default profile
   profile_set_defaults();
 
@@ -189,14 +192,17 @@ int main(void) {
   setup_4way_external_interrupt();
 #endif
   while (1) {
-    // gettime() needs to be called at least once per second
-    {
-      volatile uint32_t _ = gettime();
-      _;
-    }
+	//uint32_t time = timer_micros();
+	//lastlooptime = time;
+
+   // {// gettime() needs to be called at least once per second
+    //  volatile uint32_t _ = gettime();
+    //  _;
+   // }
 
     uint32_t time = timer_micros();
     state.looptime = ((uint32_t)(time - lastlooptime));
+    lastlooptime = time;
     if (state.looptime <= 0)
       state.looptime = 1;
     state.looptime = state.looptime * 1e-6f;
@@ -204,12 +210,25 @@ int main(void) {
       failloop(6);
       //endless loop
     }
+    static uint8_t loop_ctr = 0;
+    if (loop_ctr < 255){
+      looptime_buffer[loop_ctr] = state.looptime;
+      loop_ctr++;
+      if (loop_ctr == 255){
+    	 float sum = 0;
+    	 for (uint8_t i=2; i<255; i++) sum += looptime_buffer[i];
+    	 float average_looptime = sum/253.0f;
+    	 if (average_looptime < .000130f) state.looptime_autodetect = LOOPTIME_8K;
+    	 else if (average_looptime < .000260f) state.looptime_autodetect = LOOPTIME_4K;
+    	 else state.looptime_autodetect = LOOPTIME_2K;
+      }
+    }
     state.uptime += state.looptime;
 #ifdef DEBUG
     debug.totaltime += state.looptime;
     lpf(&debug.timefilt, state.looptime, 0.998);
 #endif
-    lastlooptime = time;
+   // lastlooptime = time;
 
     if (liberror > 20) {
       failloop(8);
@@ -351,6 +370,10 @@ int main(void) {
 #endif
 
     state.cpu_load = (timer_micros() - lastlooptime);
+    {// gettime() needs to be called at least once per second
+      volatile uint32_t _ = gettime();
+      _;
+    }
 
 #ifdef DEBUG
     static uint32_t loop_counter = 0; //For tagging loops that ran long, short, freaked out, etc. Yes, Bobnova was here.
@@ -384,7 +407,7 @@ int main(void) {
     loop_counter++;
 #endif
 
-    while ((timer_micros() - time) < LOOPTIME)
+    while ((timer_micros() - time) < state.looptime_autodetect)
       __NOP();
 
   } // end loop

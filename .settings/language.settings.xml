@@ -50,11 +50,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-<<<<<<< HEAD
 						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
-=======
-						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
->>>>>>> removed bugged adc init call, moar dshot single dma stream testing
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
@@ -103,11 +99,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-<<<<<<< HEAD
 						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
-=======
-						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
->>>>>>> removed bugged adc init call, moar dshot single dma stream testing
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
@@ -156,11 +148,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-<<<<<<< HEAD
 						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
-=======
-						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
->>>>>>> removed bugged adc init call, moar dshot single dma stream testing
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
@@ -209,11 +197,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-<<<<<<< HEAD
 						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
-=======
-						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
->>>>>>> removed bugged adc init call, moar dshot single dma stream testing
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
@@ -311,11 +295,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-<<<<<<< HEAD
 						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
-=======
-						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
->>>>>>> removed bugged adc init call, moar dshot single dma stream testing
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
@@ -364,11 +344,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-<<<<<<< HEAD
 						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
-=======
-						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
->>>>>>> removed bugged adc init call, moar dshot single dma stream testing
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
@@ -417,11 +393,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-<<<<<<< HEAD
 						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
-=======
-						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
->>>>>>> removed bugged adc init call, moar dshot single dma stream testing
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
@@ -470,11 +442,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-<<<<<<< HEAD
 						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
-=======
-						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
->>>>>>> removed bugged adc init call, moar dshot single dma stream testing
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
@@ -523,11 +491,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-<<<<<<< HEAD
 						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
-=======
-						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
->>>>>>> removed bugged adc init call, moar dshot single dma stream testing
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
@@ -625,11 +589,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-<<<<<<< HEAD
 						<entry kind="macro" name="GIT_VERSION" value="679df3045d0ec4e971b10b3587b5794e542ffafa"/>
-=======
-						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
->>>>>>> removed bugged adc init call, moar dshot single dma stream testing
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="pyrodrone_f4"/>
