@@ -120,7 +120,6 @@ int debug_led;
 #endif
 
 #include "util.h"
-#include "control.h"
 
 // delta- sigma first order modulator.
 uint8_t led_pwm(uint8_t pwmval) {
@@ -136,7 +135,7 @@ uint8_t led_pwm(uint8_t pwmval) {
 
   limitf(&ds_integrator, 2);
 
-  ds_integrator += (desiredbrightness - lastledbrightness) * ledtime * (1.0f / state.looptime);
+  ds_integrator += (desiredbrightness - lastledbrightness) * ledtime * (1.0f / LOOPTIME);
 
   if (ds_integrator > 0.49f) {
     ledon(255);

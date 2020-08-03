@@ -193,7 +193,8 @@ int main(void) {
 #endif
   while (1) {
 	uint32_t time = timer_micros();
-	lastlooptime = time;
+    state.looptime = ((uint32_t)(time - lastlooptime));
+    lastlooptime = time;
 
     {// gettime() needs to be called at least once per second
       volatile uint32_t _ = gettime();
