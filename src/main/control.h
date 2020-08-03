@@ -34,7 +34,7 @@ typedef struct {
 extern control_flags_t flags;
 
 typedef struct {
-  float looptime_autodetect;
+  uint16_t looptime_autodetect;
   float looptime; // looptime in seconds
   float uptime;   // running sum of looptimes
   float cpu_load; // micros we have had left last loop

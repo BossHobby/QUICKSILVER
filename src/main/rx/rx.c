@@ -92,7 +92,7 @@ void rx_precalc() {
   for (int i = 0; i < 3; ++i) {
 #ifdef RX_SMOOTHING
     static float rx_temp[4] = {0, 0, 0, 0};
-    lpf(&rx_temp[i], state.rx.axis[i], FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / rx_smoothing_hz(RX_PROTOCOL)));
+    lpf(&rx_temp[i], state.rx.axis[i], FILTERCALC(state.looptime, 1.0f / (float)rx_smoothing_hz(RX_PROTOCOL)));
     state.rx_filtered.axis[i] = rx_temp[i];
     limitf(&state.rx_filtered.axis[i], 1.0);
 #else

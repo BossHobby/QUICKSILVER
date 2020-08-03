@@ -6,9 +6,14 @@
 #include "rx.h"
 
 // defines for things that do not normally need changing
-#define LOOPTIME_2K 500
-#define LOOPTIME_4K 250
-#define LOOPTIME_8K 125
+typedef enum {
+  LOOPTIME_2K = 500,
+  LOOPTIME_4K = 250,
+  LOOPTIME_8K = 125,
+} looptime_autodetect_t;
+//#define LOOPTIME_2K 500
+//#define LOOPTIME_4K 250
+//#define LOOPTIME_8K 125
 
 #define ACC_1G 1.0f
 

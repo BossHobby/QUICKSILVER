@@ -150,7 +150,7 @@ float pid(int x) {
 #endif
   static float avgSetpoint[2];
   if (x < 2) {
-    lpf(&avgSetpoint[x], state.setpoint.axis[x], FILTERCALC((LOOPTIME * 1e-6f), 1.0f / (float)RELAX_FREQUENCY_HZ)); // 20 Hz filter
+    lpf(&avgSetpoint[x], state.setpoint.axis[x], FILTERCALC(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ)); // 20 Hz filter
     const float hpfSetpoint = state.setpoint.axis[x] - avgSetpoint[x];
     if (fabsf(hpfSetpoint) > (float)RELAX_FACTOR * 1e-2f) {
       iwindup = 1;
@@ -208,7 +208,7 @@ float pid(int x) {
     static float setpoint_derivative[3];
 
 #ifdef RX_SMOOTHING
-    lpf(&setpoint_derivative[x], ((state.setpoint.axis[x] - lastsetpoint[x]) * current_kd[x] * timefactor), FILTERCALC(LOOPTIME * (float)1e-6, 1.0f / rx_smoothing_hz(RX_PROTOCOL)));
+    lpf(&setpoint_derivative[x], ((state.setpoint.axis[x] - lastsetpoint[x]) * current_kd[x] * timefactor), FILTERCALC(state.looptime, 1.0f / (float)rx_smoothing_hz(RX_PROTOCOL)));
 #else
     setpoint_derivative[x] = (state.setpoint.axis[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
 #endif

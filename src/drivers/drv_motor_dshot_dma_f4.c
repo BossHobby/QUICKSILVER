@@ -272,7 +272,7 @@ void make_packet(uint8_t number, uint16_t value, bool telemetry) {
 // make dshot dma packet, then fire
 void dshot_dma_start() {
   uint32_t time = gettime();
-  while (dshot_dma_phase != 0 && (gettime() - time) < LOOPTIME) {
+  while (dshot_dma_phase != 0 && (gettime() - time) < state.looptime * 1e6f) {
   } // wait maximum a LOOPTIME for dshot dma to complete
   if (dshot_dma_phase != 0)
     return; // skip this dshot command
