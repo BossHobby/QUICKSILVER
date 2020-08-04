@@ -32,7 +32,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -44,16 +44,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="7c74252bd9e3165292b9b3cd929822bbce5dd356"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="Libraries/cbor/src">
@@ -81,7 +81,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -93,16 +93,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="7c74252bd9e3165292b9b3cd929822bbce5dd356"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main">
@@ -130,7 +130,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -142,16 +142,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="7c74252bd9e3165292b9b3cd929822bbce5dd356"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/usb">
@@ -179,7 +179,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -191,16 +191,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="7c74252bd9e3165292b9b3cd929822bbce5dd356"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/drivers">
@@ -228,7 +228,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -240,16 +240,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="7c74252bd9e3165292b9b3cd929822bbce5dd356"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/config">
@@ -277,7 +277,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -289,16 +289,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="7c74252bd9e3165292b9b3cd929822bbce5dd356"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/system/stm32f405">
@@ -338,16 +338,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/omnibusf4sd">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="487f46ea02b02fcdffee0a75479e4196fb908034"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="omnibusf4sd"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/rx">
@@ -375,7 +375,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -387,16 +387,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="7c74252bd9e3165292b9b3cd929822bbce5dd356"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/util">
@@ -424,7 +424,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -436,16 +436,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="7c74252bd9e3165292b9b3cd929822bbce5dd356"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/drivers/usb">
@@ -473,7 +473,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -485,16 +485,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="7c74252bd9e3165292b9b3cd929822bbce5dd356"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/system/stm32f411">
@@ -571,7 +571,7 @@
 						<entry kind="includePath" name="/${ProjName}/src/drivers/usb">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/system/stm32f411">
+						<entry kind="includePath" name="/${ProjName}/src/system/stm32f405">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/CMSIS/Include">
@@ -583,16 +583,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/nox">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="7c74252bd9e3165292b9b3cd929822bbce5dd356"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="nox"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 				</language>
@@ -648,7 +648,7 @@
 					</resource>
 				</language>
 			</provider>
-			<provider class="com.st.stm32cube.ide.mcu.toolchain.armnone.setup.CrossBuiltinSpecsDetector" console="false" env-hash="1116006768254785745" id="com.st.stm32cube.ide.mcu.toolchain.armnone.setup.CrossBuiltinSpecsDetector" keep-relative-paths="false" name="MCU ARM GCC Built-in Compiler Settings" parameter="${COMMAND} ${FLAGS} -E -P -v -dD &quot;${INPUTS}&quot;" prefer-non-shared="true">
+			<provider class="com.st.stm32cube.ide.mcu.toolchain.armnone.setup.CrossBuiltinSpecsDetector" console="false" env-hash="995535593722431306" id="com.st.stm32cube.ide.mcu.toolchain.armnone.setup.CrossBuiltinSpecsDetector" keep-relative-paths="false" name="MCU ARM GCC Built-in Compiler Settings" parameter="${COMMAND} ${FLAGS} -E -P -v -dD &quot;${INPUTS}&quot;" prefer-non-shared="true">
 				<language-scope id="org.eclipse.cdt.core.gcc"/>
 				<language-scope id="org.eclipse.cdt.core.g++"/>
 			</provider>
@@ -698,16 +698,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/bluejayf4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="1577a5e6f6a02722ce826e411905295851e3b0b6"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="bluejayf4"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="Libraries/cbor/src">
@@ -747,16 +747,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/bluejayf4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="1577a5e6f6a02722ce826e411905295851e3b0b6"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="bluejayf4"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main">
@@ -796,16 +796,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/bluejayf4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="1577a5e6f6a02722ce826e411905295851e3b0b6"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="bluejayf4"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/config">
@@ -845,16 +845,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/bluejayf4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="1577a5e6f6a02722ce826e411905295851e3b0b6"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="bluejayf4"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/util">
@@ -894,16 +894,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/bluejayf4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="1577a5e6f6a02722ce826e411905295851e3b0b6"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="bluejayf4"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/usb">
@@ -943,16 +943,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/bluejayf4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="1577a5e6f6a02722ce826e411905295851e3b0b6"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="bluejayf4"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/drivers">
@@ -992,16 +992,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/bluejayf4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="1577a5e6f6a02722ce826e411905295851e3b0b6"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="bluejayf4"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/system/stm32f405">
@@ -1041,16 +1041,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/bluejayf4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="1577a5e6f6a02722ce826e411905295851e3b0b6"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="bluejayf4"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/main/rx">
@@ -1090,16 +1090,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/bluejayf4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="1577a5e6f6a02722ce826e411905295851e3b0b6"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="bluejayf4"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/drivers/usb">
@@ -1139,16 +1139,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/bluejayf4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="1577a5e6f6a02722ce826e411905295851e3b0b6"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="bluejayf4"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 					<resource project-relative-path="src/system/stm32f411">
@@ -1194,7 +1194,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="0c6f61398f5017d6a14697aae527ef013648985f"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="flywoof411"/>
@@ -1305,16 +1305,16 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/STM32F4xx_StdPeriph_Driver/inc">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/src/targets/bluejayf4">
+						<entry kind="includePath" name="/${ProjName}/src/targets/aikon_f4">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="1577a5e6f6a02722ce826e411905295851e3b0b6"/>
+						<entry kind="macro" name="GIT_VERSION" value="0cd22646da275e749d8aa10c44a07166c216a103"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
-						<entry kind="macro" name="TARGET" value="bluejayf4"/>
+						<entry kind="macro" name="TARGET" value="aikon_f4"/>
 						<entry kind="macro" name="USE_STDPERIPH_DRIVER" value="1"/>
 					</resource>
 				</language>
@@ -1370,7 +1370,7 @@
 					</resource>
 				</language>
 			</provider>
-			<provider class="com.st.stm32cube.ide.mcu.toolchain.armnone.setup.CrossBuiltinSpecsDetector" console="false" env-hash="1116006768254785745" id="com.st.stm32cube.ide.mcu.toolchain.armnone.setup.CrossBuiltinSpecsDetector" keep-relative-paths="false" name="MCU ARM GCC Built-in Compiler Settings" parameter="${COMMAND} ${FLAGS} -E -P -v -dD &quot;${INPUTS}&quot;" prefer-non-shared="true">
+			<provider class="com.st.stm32cube.ide.mcu.toolchain.armnone.setup.CrossBuiltinSpecsDetector" console="false" env-hash="995535593722431306" id="com.st.stm32cube.ide.mcu.toolchain.armnone.setup.CrossBuiltinSpecsDetector" keep-relative-paths="false" name="MCU ARM GCC Built-in Compiler Settings" parameter="${COMMAND} ${FLAGS} -E -P -v -dD &quot;${INPUTS}&quot;" prefer-non-shared="true">
 				<language-scope id="org.eclipse.cdt.core.gcc"/>
 				<language-scope id="org.eclipse.cdt.core.g++"/>
 			</provider>
