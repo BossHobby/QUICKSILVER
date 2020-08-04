@@ -64,8 +64,11 @@ CFLAGS   = $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(TARGET_FLAGS) $(COM
 CXXFLAGS = $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(TARGET_FLAGS) $(COMMON_FLAGS)  \
 	-std=gnu++17 -fno-rtti -fno-exceptions -fvtable-gc -fno-threadsafe-statics -fno-use-cxa-atexit
 
-LDFLAGS  += -static -lc -lnosys -lm -Wl,-L$(SYSTEM_DIR),-T$(SYSTEM_LD_SCRIPT),-Map,$(BUILD_DIR)/$(BINARY).map,--verbose,--gc-sections,--print-gc-sections \
-	$(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(TARGET_FLAGS) $(COMMON_FLAGS)
+LDFLAGS   += -static -lc -lnosys -lm -Wl,-L$(SYSTEM_DIR),-T$(SYSTEM_LD_SCRIPT),-Map,$(BUILD_DIR)/$(BINARY).map,--gc-sections
+ifneq ($(VERBOSE),)
+	LDFLAGS += --verbose,--print-gc-sections
+endif
+LDFLAGS   += $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(TARGET_FLAGS) $(COMMON_FLAGS)
 
 ASFLAGS  += $(OPTIMIZE_FLAGS) $(ARCH_FLAGS) $(DEVICE_FLAGS) $(TARGET_FLAGS) $(COMMON_FLAGS) -x assembler-with-cpp $(addprefix -I,$(INCLUDE)) -MMD -MP
 
