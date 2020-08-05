@@ -704,7 +704,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
@@ -753,7 +753,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
@@ -802,7 +802,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
@@ -851,7 +851,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
@@ -900,7 +900,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
@@ -949,7 +949,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
@@ -998,7 +998,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
@@ -1047,7 +1047,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
@@ -1096,7 +1096,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
@@ -1145,7 +1145,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>
@@ -1311,7 +1311,7 @@
 						<entry kind="includePath" name="/${ProjName}/Libraries/cbor/src">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="macro" name="GIT_VERSION" value="f5a94f8a73cd508a792cf3fc96456f24462e5747"/>
+						<entry kind="macro" name="GIT_VERSION" value="cb3808af65a659b813718d895b17c88db6e5faed"/>
 						<entry kind="macro" name="STM32F40XX" value="1"/>
 						<entry kind="macro" name="STM32F4XX" value="1"/>
 						<entry kind="macro" name="TARGET" value="quicksilver_f4"/>

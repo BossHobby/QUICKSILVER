@@ -139,7 +139,7 @@ void rx_init(void) {
 
 void rx_serial_init(void) {
 
-  //rx_serial_protocol = 4;  //Remove meeeeeeeee
+  //rx_serial_protocol = 7;  //Remove meeeeeeeee
 
   frame_status = 0;                                       //Let the uart ISR do its stuff.
   if (rx_serial_protocol == RX_SERIAL_PROTOCOL_INVALID) { //No known protocol? Can't really set the radio up yet then can we?
@@ -970,7 +970,9 @@ void rx_serial_find_protocol(void) {
     case RX_SERIAL_PROTOCOL_FPORT:          // FPORT
     case RX_SERIAL_PROTOCOL_FPORT_INVERTED: // FPORT
       if (rx_buffer[0] == 0x7E) {
-        rx_serial_protocol = protocol_to_check;
+          rx_serial_process_fport();
+          if (bind_safety > 5)				//FPORT INVERTED will trigger a frame on FPORT HALF DUPLEX - require >5 frames for good measure
+            rx_serial_protocol = protocol_to_check;
       }
       break;
     case RX_SERIAL_PROTOCOL_CRSF:           // CRSF
