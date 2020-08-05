@@ -388,6 +388,14 @@
 				<useDefaultCommand>true</useDefaultCommand>
 				<runAllBuilders>true</runAllBuilders>
 			</target>
+			<target name="quicksilver_f4" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+				<buildCommand>make</buildCommand>
+				<buildArguments>-j12</buildArguments>
+				<buildTarget>quicksilver_f4</buildTarget>
+				<stopOnError>true</stopOnError>
+				<useDefaultCommand>true</useDefaultCommand>
+				<runAllBuilders>true</runAllBuilders>
+			</target>
 		</buildTargets>
 	</storageModule>
 </cproject>
