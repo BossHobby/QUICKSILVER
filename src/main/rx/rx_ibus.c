@@ -80,6 +80,9 @@ uint8_t teleCounter = 0;
 
 #define USART usart_port_defs[serial_rx_port]
 
+void TX_USART_ISR(void){															    //USART_ClearITPendingBit() for TC handled in drv_serial.c
+}
+
 //void SERIAL_RX_USART _IRQHandler(void)
 void RX_USART_ISR(void) {
   rx_buffer[rx_end] = USART_ReceiveData(USART.channel);

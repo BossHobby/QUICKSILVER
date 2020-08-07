@@ -46,7 +46,8 @@
 void clk_init(void);
 extern void flash_load(void);
 extern void flash_hard_coded_pid_identifier(void);
-
+int nfe;
+int bobnova_buffer[500];
 uint32_t lastlooptime;
 float looptime_buffer[255];
 extern profile_t profile;

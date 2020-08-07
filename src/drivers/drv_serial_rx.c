@@ -277,7 +277,6 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
 
   USART_ITConfig(USART.channel, USART_IT_RXNE, ENABLE);
   USART_Cmd(USART.channel, ENABLE);
-
   serial_enable_isr(serial_rx_port);
 }
 #endif

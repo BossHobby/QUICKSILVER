@@ -92,8 +92,23 @@ uint16_t telemetryIDs[] = {
 };
 uint8_t telemetryPosition = 0; //This iterates through the above, you can only send one sensor per frame.
 uint8_t teleCounter = 0;
+static uint8_t ready_for_next_telemetry = 1;
 
 #define USART usart_port_defs[serial_rx_port]
+
+void TX_USART_ISR(void){															    //USART_ClearITPendingBit() for TC handled in drv_serial.c
+	  static uint8_t increment_transmit_buffer = 1;									        // buffer position 0 has already been called by the telemetry process so we start at 1
+	  if(increment_transmit_buffer < 10 + telemetry_offset){								// check the index to see if we have drained the buffer yet
+	    while (USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET) 				// just in case - but this should do nothing since irq was called based on TXE
+	      ;
+		USART_SendData(USART.channel, telemetry_packet[increment_transmit_buffer]);			// send a byte out of the buffer indexed by the counter
+		increment_transmit_buffer++;														// increment the counter
+	  }else{																				// this interrupt ran because the last byte was sent
+		increment_transmit_buffer = 1;														// reset the counter to the right index for the next telemetry irq event
+		ready_for_next_telemetry = 1;														// set the flag to alllow the telemetry process to run again
+		USART_ITConfig(USART.channel, USART_IT_TC, DISABLE);
+	  }
+}
 
 void RX_USART_ISR(void) {
   rx_buffer[rx_end] = USART_ReceiveData(USART.channel);
@@ -396,11 +411,13 @@ void rx_check() {
           teleCRC = teleCRC << 8;
           teleCRC = teleCRC >> 8;
           telemetryPacket[9] = teleCRC;      //0x34;
-          for (uint8_t x = 0; x < 10; x++) { //Shove the packet out the UART. This also doesn't support escaped characters
-            while (USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET)
-              ; // Wait for Empty
-            USART_SendData(USART.channel, telemetryPacket[x]);
-          } //That's it, telemetry sent
+          //Shove the packet out the UART. This *should* support escaped characters, but it doesn't work.
+          while (USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET) //just in case - but this should do nothing if ready_for_next_telemetry flag is properly cleared by irq
+            ;
+          USART_SendData(USART.channel, telemetry_packet[0]);
+          ready_for_next_telemetry = 0;
+          USART_ITConfig(USART.channel, USART_IT_TC, ENABLE);  //turn on the transmit transfer complete interrupt so that the rest of the telemetry packet gets sent
+          //That's it, telemetry has sent the first byte - the rest will be sent by the telemetry tx irq
           telemetryPosition++;
           if (FPORTDebugTelemetry) {
             if (telemetryPosition >= sizeof(telemetryIDs) / 2) // 2 byte ints, so this should give the number of entries. It just incremented, which takes care of the count with 0 or 1
@@ -414,7 +431,7 @@ void rx_check() {
           }
 
         } else {
-          telemetryCounter++;
+          if(ready_for_next_telemetry) telemetryCounter++;
         }
       } else { // if CRC fails, do this:
         //while(1){} Enable for debugging to lock the FC if CRC fails. In the air we just drop CRC-failed packets

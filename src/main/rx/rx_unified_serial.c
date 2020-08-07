@@ -75,6 +75,7 @@ int failsafe_noframes = 0;
 //Telemetry variables
 //***********************************
 //Global values to send as telemetry
+static uint8_t ready_for_next_telemetry = 1;
 bool fport_debug_telemetry = false;
 
 uint8_t telemetry_offset = 0;
@@ -96,6 +97,25 @@ uint16_t SbusTelemetryIDs[] = {
 uint8_t telemetry_position = 0; //This iterates through the above, you can only send one sensor per frame.
 
 #define USART usart_port_defs[serial_rx_port]
+
+
+void TX_USART_ISR(void){															    //USART_ClearITPendingBit() for TC handled in drv_serial.c
+  static uint8_t increment_transmit_buffer = 1;									        // buffer position 0 has already been called by the telemetry process so we start at 1
+  uint8_t bytes_to_send = 0;															// reset this to 0 so that a protocol switch will not create a tx isr that does stuff without need
+  if ((rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT) || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED){
+	bytes_to_send = 10 + telemetry_offset;												//upload total telemetry bytes to send so telemetry transmit triggers action appropriate to protocol
+  }
+  if(increment_transmit_buffer < bytes_to_send){										// check the index to see if we have drained the buffer yet
+    while (USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET) 				// just in case - but this should do nothing since irq was called based on TXE
+      ;
+	USART_SendData(USART.channel, telemetry_packet[increment_transmit_buffer]);			// send a byte out of the buffer indexed by the counter
+	increment_transmit_buffer++;														// increment the counter
+  }else{																				// this interrupt ran because the last byte was sent
+	increment_transmit_buffer = 1;														// reset the counter to the right index for the next telemetry irq event
+	ready_for_next_telemetry = 1;														// set the flag to allow the telemetry process to run again
+	USART_ITConfig(USART.channel, USART_IT_TC, DISABLE);
+  }
+}
 
 void RX_USART_ISR(void) {
   //static uint32_t rx_framerate[3]
@@ -130,6 +150,7 @@ void RX_USART_ISR(void) {
   rx_frame_position %= (RX_BUFF_SIZE);
 }
 
+
 void rx_init(void) {
   //if (rx_bind_enable == 0)
   //rx_serial_protocol = 0;
@@ -139,7 +160,7 @@ void rx_init(void) {
 
 void rx_serial_init(void) {
 
-  //rx_serial_protocol = 7;  //Remove meeeeeeeee
+  //rx_serial_protocol = 4;  //debug only - Remove meeeeeeeee
 
   frame_status = 0;                                       //Let the uart ISR do its stuff.
   if (rx_serial_protocol == RX_SERIAL_PROTOCOL_INVALID) { //No known protocol? Can't really set the radio up yet then can we?
@@ -224,7 +245,7 @@ void rx_check() {
         break;
       case RX_SERIAL_PROTOCOL_FPORT:          // FPORT
       case RX_SERIAL_PROTOCOL_FPORT_INVERTED: // FPORT
-        rx_serial_send_fport_telemetry();
+    	  if (ready_for_next_telemetry) rx_serial_send_fport_telemetry();
         break;
       case RX_SERIAL_PROTOCOL_CRSF: // CRSF
         //CRSF telemetry function call yo
@@ -910,11 +931,13 @@ void rx_serial_send_fport_telemetry() {
     teleCRC = teleCRC << 8;
     teleCRC = teleCRC >> 8;
     telemetry_packet[9 + telemetry_offset] = teleCRC;     //0x34;
-    for (uint8_t x = 0; x < 10 + telemetry_offset; x++) { //Shove the packet out the UART. This *should* support escaped characters, but it doesn't work.
-      while (USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET)
-        ;
-      USART_SendData(USART.channel, telemetry_packet[x]);
-    } //That's it, telemetry sent
+    //Shove the packet out the UART. This *should* support escaped characters, but it doesn't work.
+    while (USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET) //just in case - but this should do nothing if ready_for_next_telemetry flag is properly cleared by irq
+      ;
+    USART_SendData(USART.channel, telemetry_packet[0]);
+    ready_for_next_telemetry = 0;
+    USART_ITConfig(USART.channel, USART_IT_TC, ENABLE);  //turn on the transmit transfer complete interrupt so that the rest of the telemetry packet gets sent
+    //That's it, telemetry has sent the first byte - the rest will be sent by the telemetry tx irq
     telemetry_position++;
     if (fport_debug_telemetry) {
       if (telemetry_position >= sizeof(telemetryIDs) / 2) // 2 byte ints, so this should give the number of entries. It just incremented, which takes care of the count with 0 or 1
@@ -928,6 +951,7 @@ void rx_serial_send_fport_telemetry() {
     }
   }
 }
+
 
 void rx_serial_process_crsf(void) {
   //We should probably put something here.

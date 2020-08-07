@@ -151,6 +151,9 @@ uint8_t crsfFrameCRC(void) {
   return crc;
 }
 
+void TX_USART_ISR(void){															    //USART_ClearITPendingBit() for TC handled in drv_serial.c
+}
+
 // Receive ISR callback, called back from serial port
 void RX_USART_ISR(void) {
   static uint8_t crsfFramePosition = 0;
