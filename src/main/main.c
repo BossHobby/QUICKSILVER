@@ -46,9 +46,9 @@
 void clk_init(void);
 extern void flash_load(void);
 extern void flash_hard_coded_pid_identifier(void);
-int nfe;
-int bobnova_buffer[500];
 uint32_t lastlooptime;
+uint8_t looptime_warning;
+uint8_t blown_loop_counter;
 float looptime_buffer[255];
 extern profile_t profile;
 
@@ -374,11 +374,11 @@ int main(void) {
     state.cpu_load = (timer_micros() - lastlooptime);
     //one last check to make sure we catch any looptime problems and rerun autodetect live
     if (loop_ctr == 255 && state.cpu_load > state.looptime_autodetect + 5){
-    	static uint8_t blown_loop_counter;
     	blown_loop_counter++;
     	if (blown_loop_counter > 100){
     		blown_loop_counter = 0;
     		loop_ctr = 0;
+    		looptime_warning++;
     	}
     }
 
