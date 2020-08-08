@@ -7,7 +7,7 @@
 #include "project.h"
 #include "util.h"
 
-
+uint16_t adc_array[2];
 extern profile_t profile;
 
 #ifndef DISABLE_ADC
@@ -71,6 +71,8 @@ void adc_init(void) {
 
   ADC_TempSensorVrefintCmd(ENABLE);
   ADC_Cmd(ADC1, ENABLE);
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_Vrefint, 1, ADC_SampleTime_480Cycles);
+  ADC_SoftwareStartConv(ADC1);
 
   // ADC1 calibration sequence
 //  ADC_ResetCalibration(ADC1);
@@ -90,21 +92,32 @@ void adc_init(void) {
 #endif
 }
 
+#define ADC_CHANNELS 2
+// internal adc channels:
+// 0 - vbat
+// 1 - vref
+
 uint16_t readADC1(int channel){
-  switch (channel) {  // Select the channel to read
-	case 1:
-		ADC_RegularChannelConfig(ADC1, ADC_Channel_Vrefint, 1, ADC_SampleTime_3Cycles);
+  static uint8_t adc_channel_synchronizer;  														//the next adc channel to run when ready
+  static uint8_t adc_last_conversion = 1;																//the last adc channel to run
+  uint8_t ready_to_convert = ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC);									//check to see if the last conversion is done
+  if(ready_to_convert){																				//will skip if adc is still busy or update the adc_array and request the next conversion
+	  adc_array[adc_last_conversion] = ADC_GetConversionValue(ADC1);								// Shove the last adc conversion into the array
+	  switch (adc_channel_synchronizer) {  															// Select the new channel to read
+	  case 1:
+		ADC_RegularChannelConfig(ADC1, ADC_Channel_Vrefint, 1, ADC_SampleTime_480Cycles);			// Reconfigure the new adc channel
+		adc_last_conversion = 1;																	// Take note of what channel conversion has just been requested
 		break;
-	case 0:
-		ADC_RegularChannelConfig(ADC1, BATTERY_ADC_CHANNEL, 1, ADC_SampleTime_3Cycles);
+	  case 0:
+		ADC_RegularChannelConfig(ADC1, BATTERY_ADC_CHANNEL, 1, ADC_SampleTime_480Cycles);			// Reconfigure the new adc channel
+		adc_last_conversion = 0;																	// Take note of what channel conversion has just been requested
 		break;
-	}
-  // Start the conversion
-  ADC_SoftwareStartConv(ADC1);
-  // Wait until conversion completion
-  while(ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == RESET);
-  // Get the conversion value
-  return ADC_GetConversionValue(ADC1);
+	  }
+	  ADC_SoftwareStartConv(ADC1);																	// Start the conversion
+	  adc_channel_synchronizer++;																	// Advance the index
+	  if (adc_channel_synchronizer == ADC_CHANNELS ) adc_channel_synchronizer = 0;					// Start the index over if we reached the end of the list
+  }
+  return adc_array[channel];
 }
 
 #ifndef ADC_SCALEFACTOR
