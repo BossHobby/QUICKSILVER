@@ -213,18 +213,21 @@ void vtx_init() {
 }
 
 void vtx_update() {
+  static volatile uint32_t delay_loops = 5000;
 #if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
   if (rx_aux_on(AUX_FPV_ON)) {
     // fpv switch on
-    if (!fpv_init && flags.rx_mode == RXMODE_NORMAL) {
+    if (!fpv_init && flags.rx_mode == RXMODE_NORMAL && flags.on_ground == 1) {
       fpv_init = gpio_init_fpv(flags.rx_mode);
+      delay_loops = 1000;
+      vtx_connect_tries = 0;
     }
     if (fpv_init) {
       GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_SET);
     }
   } else {
     // fpv switch off
-    if (fpv_init) {
+    if (fpv_init && flags.on_ground == 1) {
       if (flags.failsafe) {
         GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_SET);
       } else {
@@ -234,7 +237,6 @@ void vtx_update() {
   }
 #endif
 
-  static volatile uint32_t delay_loops = 5000;
   if (delay_loops > 0) {
     delay_loops--;
     return;
