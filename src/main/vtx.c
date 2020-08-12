@@ -229,7 +229,7 @@ void vtx_update() {
     // fpv switch off
     if (fpv_init && flags.on_ground == 1) {
       if (flags.failsafe) {
-        GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_SET);
+        //do nothing = hold last state
       } else {
         GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);
       }
