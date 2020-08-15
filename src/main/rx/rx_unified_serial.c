@@ -434,6 +434,7 @@ void rx_serial_process_sbus(void) {
   }
   if (rx_data[23] & (1 << 3)) {
     failsafe_sbus_failsafe = 1; // Sbus packets have a failsafe bit. This is cool. If you forget to trust it you get programs though.
+    flags.failsafe = failsafe_sbus_failsafe; //set failsafe rtf-now
   } else {
     failsafe_sbus_failsafe = 0;
   }
@@ -702,6 +703,7 @@ void rx_serial_process_fport(void) {
         }
         if (rx_data[25] & (1 << 3)) {
           failsafe_sbus_failsafe = 1; // Sbus packets have a failsafe bit. This is cool.
+          flags.failsafe = failsafe_sbus_failsafe; //set failsafe rtf-now
         } else {
           failsafe_sbus_failsafe = 0;
         }

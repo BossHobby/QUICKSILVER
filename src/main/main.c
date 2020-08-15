@@ -94,7 +94,6 @@ int main(void) {
 #endif
 
   gpio_init();
-  gpio_init_fpv(2);  //special mode to skip init if swd
 
 #ifdef F4
   usb_init();

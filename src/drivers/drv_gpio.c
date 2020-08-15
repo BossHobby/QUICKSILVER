@@ -2,6 +2,8 @@
 
 #include "defines.h"
 
+static volatile uint8_t fpv_init_done = 0;
+
 void gpio_init(void) {
 
 // clocks on to all ports
@@ -50,6 +52,17 @@ void gpio_init(void) {
   GPIO_InitStructure.GPIO_Pin = AUX_LED2PIN;
   GPIO_Init(AUX_LED2PORT, &GPIO_InitStructure);
 #endif
+
+#if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
+  if (FPV_PORT == GPIOA && (FPV_PIN == GPIO_Pin_13 || FPV_PIN == GPIO_Pin_14)){
+	  //skip repurpose of swd pin @boot
+  }else{
+	  GPIO_InitStructure.GPIO_Pin = FPV_PIN;
+	  GPIO_Init(FPV_PORT, &GPIO_InitStructure);
+	  GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);
+	  fpv_init_done = 1;
+  }
+#endif
 }
 
 // init fpv pin separately because it may use SWDAT/SWCLK don't want to enable it right away
@@ -63,24 +76,12 @@ int gpio_init_fpv(uint8_t mode) {
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  static volatile uint8_t fpv_swd_skip = 0;
-  static volatile uint8_t fpv_init_done = 0;
-  if (FPV_PORT == GPIOA && (FPV_PIN == GPIO_Pin_13 || FPV_PIN == GPIO_Pin_13)){
-	  fpv_swd_skip = 1;
-  }
   if (mode == 1 && fpv_init_done == 0) {
     // set gpio pin as output no matter what
 	GPIO_Init(FPV_PORT, &GPIO_InitStructure);
     return 1;
   }
   if (mode == 1 && fpv_init_done == 1) {
-    return 1;
-  }
-  if (mode == 2 && fpv_swd_skip == 0) {
-    // set gpio pin as output only if it isn't swd and pull it low
-    GPIO_Init(FPV_PORT, &GPIO_InitStructure);
-    GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);
-    fpv_init_done = 1;
     return 1;
   }
 #endif
