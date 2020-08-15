@@ -22,6 +22,8 @@ extern uint8_t reboot_fc_requested;
 extern int flash_feature_1; //currently used for auto entry into wizard menu
 extern profile_t profile;
 extern vtx_settings_t vtx_settings;
+vtx_settings_t vtx_settings_copy;
+static uint8_t vtx_buffer_populated = 0;
 
 //**************************************************************** utility and tracking functions*********************************************************
 
@@ -32,7 +34,8 @@ void osd_save_exit(void) {
     last_osd_cursor[i] = 0;
   }
   osd_display_phase = 0;
-
+  //check if vtx settings need to be updated
+  if(vtx_buffer_populated) vtx_settings = vtx_settings_copy;
   //check for fc reboot request
 #ifdef FLASH_SAVE1
   extern int pid_gestures_used;
@@ -101,6 +104,15 @@ void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_m
         osd_save_exit(); //include save&exit in main menu
     }
   }
+}
+
+//populate a vtx_status_temp_buffer with current settings only once
+void populate_vtx_buffer_once(void){
+  if (!vtx_buffer_populated){
+    vtx_settings_copy = vtx_settings;
+    vtx_buffer_populated = 1;
+  }
+  return;
 }
 
 //**********************************************************encoded flash memory adjust functions**********************************************************

@@ -69,9 +69,9 @@
 
 // *************Receiver protocol selection
 
-#define RX_UNIFIED_SERIAL
+//#define RX_UNIFIED_SERIAL
 //#define RX_SBUS
-//#define RX_CRSF
+#define RX_CRSF
 //#define RX_IBUS
 //#define RX_FPORT
 //#define RX_DSMX_2048

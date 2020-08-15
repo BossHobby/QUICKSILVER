@@ -6,7 +6,7 @@
 
 extern profile_t profile;
 extern vtx_settings_t vtx_settings;
-
+extern vtx_settings_t vtx_settings_copy;
 //main menu maps
 const char main_menu_labels[10][21] = {"MENU", "VTX", "PIDS", "FILTERS", "RATES", "FLIGHT MODES", "OSD ELEMENTS", "SPECIAL FEATURES", "SETUP WIZARD", "SAVE AND EXIT"};
 const uint8_t main_menu_positions[10][2] = {{13, 1}, {7, 3}, {7, 4}, {7, 5}, {7, 6}, {7, 7}, {7, 8}, {7, 9}, {7, 10}, {7, 11}};
@@ -101,7 +101,7 @@ const uint8_t callsign_shift_index[20][2] = {{1, 0}, {1, 8}, {1, 16}, {1, 24}, {
 const char vtx_na_labels[3][21] = {{"VTX CONTROLS"}, {"SMART AUDIO"}, {"NOT CONFIGURED"}};
 const uint8_t vtx_na_positions[3][2] = {{9, 1}, {7, 4}, {7, 5}};
 //vtx menu map
-uint8_t *vtx_ptr[4] = {&vtx_settings.band, &vtx_settings.channel, &vtx_settings.power_level, &vtx_settings.pit_mode};
+uint8_t *vtx_ptr[4] = {&vtx_settings_copy.band, &vtx_settings_copy.channel, &vtx_settings_copy.power_level, &vtx_settings_copy.pit_mode};
 const char vtx_labels[6][21] = {"VTX CONTROLS", "BAND", "CHANNEL", "POWER LEVEL", "PITMODE", "SAVE AND EXIT"};
 const uint8_t vtx_positions[6][2] = {{9, 1}, {4, 4}, {4, 5}, {4, 6}, {4, 7}, {4, 14}};
 const uint8_t vtx_data_positions[4][2] = {{20, 4}, {20, 5}, {20, 6}, {20, 7}};

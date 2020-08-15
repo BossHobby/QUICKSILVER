@@ -53,21 +53,34 @@ void gpio_init(void) {
 }
 
 // init fpv pin separately because it may use SWDAT/SWCLK don't want to enable it right away
-int gpio_init_fpv(uint8_t rx_mode) {
+int gpio_init_fpv(uint8_t mode) {
 #if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
-  // only repurpose the pin after rx/tx have bound
-  if (rx_mode == 1) {
-    // set gpio pin as output
-    GPIO_InitTypeDef GPIO_InitStructure;
-
-    // common settings to set ports
-    GPIO_InitStructure.GPIO_Pin = FPV_PIN;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  // only repurpose the pin after rx/tx have bound if it is swd
+  // common settings to set ports
+  GPIO_InitTypeDef GPIO_InitStructure;
+  GPIO_InitStructure.GPIO_Pin = FPV_PIN;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  static volatile uint8_t fpv_swd_skip = 0;
+  static volatile uint8_t fpv_init_done = 0;
+  if (FPV_PORT == GPIOA && (FPV_PIN == GPIO_Pin_13 || FPV_PIN == GPIO_Pin_13)){
+	  fpv_swd_skip = 1;
+  }
+  if (mode == 1 && fpv_init_done == 0) {
+    // set gpio pin as output no matter what
+	GPIO_Init(FPV_PORT, &GPIO_InitStructure);
+    return 1;
+  }
+  if (mode == 1 && fpv_init_done == 1) {
+    return 1;
+  }
+  if (mode == 2 && fpv_swd_skip == 0) {
+    // set gpio pin as output only if it isn't swd and pull it low
     GPIO_Init(FPV_PORT, &GPIO_InitStructure);
-
+    GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);
+    fpv_init_done = 1;
     return 1;
   }
 #endif

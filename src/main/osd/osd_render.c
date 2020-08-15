@@ -43,6 +43,7 @@ BIT
 //Flash Variables - 32bit					# of osd elements and flash memory start position in defines.h
 extern profile_t profile;
 extern vtx_settings_t vtx_settings;
+extern vtx_settings_t vtx_settings_copy;
 
 //pointers to flash variable array
 unsigned long *callsign1 = profile.osd.elements;
@@ -935,10 +936,14 @@ void osd_display(void) {
   case 11: //vtx
     last_display_phase = 1;
     if (vtx_settings.detected) {
+      populate_vtx_buffer_once();
       print_osd_menu_strings(6, 5, vtx_labels, vtx_positions);
+      // print the buffer and not the actual status
       print_osd_adjustable_enums(6, 4, get_vtx_status(osd_menu_phase - 7), vtx_grid, vtx_data_positions);
       if (osd_menu_phase == 11)
+    	//adjust the buffer and not the actual settings
         osd_enum_adjust(vtx_ptr, 4, vtx_limits);
+        //save & exit needs a function to write the buffer to the actual settings
     } else {
       print_osd_menu_strings(3, 0, vtx_na_labels, vtx_na_positions);
       if (osd_select)

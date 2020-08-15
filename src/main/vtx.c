@@ -231,7 +231,7 @@ void vtx_update() {
       if (flags.failsafe) {
         //do nothing = hold last state
       } else {
-        GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);
+    	GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);
       }
     }
   }
