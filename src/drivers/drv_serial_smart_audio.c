@@ -11,7 +11,7 @@
 #ifdef ENABLE_SMART_AUDIO
 
 #define SMART_AUDIO_BAUDRATE_MIN 4650
-#define SMART_AUDIO_BAUDRATE_MAX 4950
+#define SMART_AUDIO_BAUDRATE_MAX 5050
 #define SMART_AUDIO_BUFFER_SIZE 512
 
 #define SA_HEADER_SIZE 5
@@ -56,7 +56,7 @@ static void serial_smart_audio_reconfigure() {
   GPIO_InitStructure.GPIO_Pin = USART.tx_pin.pin;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_Init(USART.tx_pin.port, &GPIO_InitStructure);
   GPIO_PinAFConfig(USART.tx_pin.port, USART.tx_pin.pin_source, USART.gpio_af);
@@ -91,8 +91,8 @@ static void smart_audio_auto_baud() {
   if (current_percent < 70) {
     static int8_t direction = 1;
 
-    // if we degraded by 10, switch it up
-    if (last_percent < current_percent) {
+    // if the percentage degraded, switch it up
+    if (last_percent > current_percent) {
       direction = direction == 1 ? -1 : 1;
     }
 
