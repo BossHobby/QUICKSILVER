@@ -225,11 +225,11 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
 
     GPIO_PinAFConfig(USART.tx_pin.port, USART.tx_pin.pin_source, USART.gpio_af);
   }
-    GPIO_InitStructure.GPIO_Pin = USART.rx_pin.pin;
-    GPIO_Init(USART.rx_pin.port, &GPIO_InitStructure);
 
-    GPIO_PinAFConfig(USART.rx_pin.port, USART.rx_pin.pin_source, USART.gpio_af);
+  GPIO_InitStructure.GPIO_Pin = USART.rx_pin.pin;
+  GPIO_Init(USART.rx_pin.port, &GPIO_InitStructure);
 
+  GPIO_PinAFConfig(USART.rx_pin.port, USART.rx_pin.pin_source, USART.gpio_af);
 
   USART_InitTypeDef USART_InitStructure;
   if (rx_serial_protocol == RX_SERIAL_PROTOCOL_DSM || rx_serial_protocol == RX_SERIAL_PROTOCOL_IBUS || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
@@ -257,7 +257,7 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
     USART_InitStructure.USART_Mode = USART_Mode_Rx; //USART_Mode_Rx | USART_Mode_Tx;
   }
 
-  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT){     //RX_SERIAL_PROTOCOL_FPORT_INVERTED requires half duplex off) {
+  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT) { //RX_SERIAL_PROTOCOL_FPORT_INVERTED requires half duplex off) {
     USART_HalfDuplexCmd(USART.channel, ENABLE);
   } else {
     USART_HalfDuplexCmd(USART.channel, DISABLE);

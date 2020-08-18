@@ -193,11 +193,11 @@ int main(void) {
   setup_4way_external_interrupt();
 #endif
   while (1) {
-	uint32_t time = timer_micros();
+    uint32_t time = timer_micros();
     state.looptime = ((uint32_t)(time - lastlooptime));
     lastlooptime = time;
 
-    {// gettime() needs to be called at least once per second
+    { // gettime() needs to be called at least once per second
       volatile uint32_t _ = gettime();
       _;
     }
@@ -212,16 +212,20 @@ int main(void) {
 
     //looptime_autodetect sequence
     static uint8_t loop_ctr = 0;
-    if (loop_ctr < 255){
+    if (loop_ctr < 255) {
       looptime_buffer[loop_ctr] = state.looptime;
       loop_ctr++;
-      if (loop_ctr == 255){
-    	 float sum = 0;
-    	 for (uint8_t i=2; i<255; i++) sum += looptime_buffer[i];
-    	 float average_looptime = sum/253.0f;
-    	 if (average_looptime < .000130f) state.looptime_autodetect = LOOPTIME_8K;
-    	 else if (average_looptime < .000255f) state.looptime_autodetect = LOOPTIME_4K;
-    	 else state.looptime_autodetect = LOOPTIME_2K;
+      if (loop_ctr == 255) {
+        float sum = 0;
+        for (uint8_t i = 2; i < 255; i++)
+          sum += looptime_buffer[i];
+        float average_looptime = sum / 253.0f;
+        if (average_looptime < .000130f)
+          state.looptime_autodetect = LOOPTIME_8K;
+        else if (average_looptime < .000255f)
+          state.looptime_autodetect = LOOPTIME_4K;
+        else
+          state.looptime_autodetect = LOOPTIME_2K;
       }
     }
 
@@ -373,13 +377,13 @@ int main(void) {
 
     state.cpu_load = (timer_micros() - lastlooptime);
     //one last check to make sure we catch any looptime problems and rerun autodetect live
-    if (loop_ctr == 255 && state.cpu_load > state.looptime_autodetect + 5){
-    	blown_loop_counter++;
-    	if (blown_loop_counter > 100){
-    		blown_loop_counter = 0;
-    		loop_ctr = 0;
-    		looptime_warning++;
-    	}
+    if (loop_ctr == 255 && state.cpu_load > state.looptime_autodetect + 5) {
+      blown_loop_counter++;
+      if (blown_loop_counter > 100) {
+        blown_loop_counter = 0;
+        loop_ctr = 0;
+        looptime_warning++;
+      }
     }
 
 #ifdef DEBUG

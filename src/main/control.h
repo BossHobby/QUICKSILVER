@@ -106,7 +106,6 @@ typedef struct {
   MEMBER(errorvect, vec3_t)                 \
   MEMBER(pidoutput, vec3_t)
 
-
 extern control_state_t state;
 
 cbor_result_t cbor_encode_control_state_t(cbor_value_t *enc, const control_state_t *s);

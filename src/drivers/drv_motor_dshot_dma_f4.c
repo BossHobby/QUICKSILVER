@@ -71,14 +71,14 @@ volatile uint32_t motor_data_portA[16] = {0}; //motor pins at portA with command
 volatile uint32_t motor_data_portB[16] = {0}; //motor pins at portB with commanded '0' bit at T0H timing
 volatile uint32_t motor_data_portC[16] = {0}; //motor pins at portC with commanded '0' bit at T0H timing
 
-volatile uint32_t dshot_portA_low = 0; // sum of all motor pins at portA
-volatile uint32_t dshot_portB_low = 0; // sum of all motor pins at portB
-volatile uint32_t dshot_portC_low = 0; // sum of all motor pins at portC
+volatile uint32_t dshot_portA_low = 0;  // sum of all motor pins at portA
+volatile uint32_t dshot_portB_low = 0;  // sum of all motor pins at portB
+volatile uint32_t dshot_portC_low = 0;  // sum of all motor pins at portC
 volatile uint32_t dshot_portA_high = 0; // shifted motor pins at portA for T1H timing
 volatile uint32_t dshot_portB_high = 0; // shifted motor pins at portB for T1H timing
 volatile uint32_t dshot_portC_high = 0; // shifted motor pins at portC for T1H timing
 
-volatile uint32_t portA_buffer[48] = {0};	// dma buffers
+volatile uint32_t portA_buffer[48] = {0}; // dma buffers
 volatile uint32_t portB_buffer[48] = {0};
 volatile uint32_t portC_buffer[48] = {0};
 
@@ -121,16 +121,16 @@ void motor_init() {
 
 #undef MOTOR_PIN
 
-  for (int i = 0; i < 48; i = i+3){
-	  portA_buffer[i] = dshot_portA_low;
-	  portB_buffer[i] = dshot_portB_low;
-	  portC_buffer[i] = dshot_portC_low;
+  for (int i = 0; i < 48; i = i + 3) {
+    portA_buffer[i] = dshot_portA_low;
+    portB_buffer[i] = dshot_portB_low;
+    portC_buffer[i] = dshot_portC_low;
   }
 
-  for (int i = 2; i < 48; i = i+3){
-	  portA_buffer[i] = dshot_portA_high;
-	  portB_buffer[i] = dshot_portB_high;
-	  portC_buffer[i] = dshot_portC_high;
+  for (int i = 2; i < 48; i = i + 3) {
+    portA_buffer[i] = dshot_portA_high;
+    portB_buffer[i] = dshot_portB_high;
+    portC_buffer[i] = dshot_portC_high;
   }
 
   // DShot timer/DMA2 init
@@ -303,10 +303,10 @@ void dshot_dma_start() {
     dshot_packet[3] <<= 1;
   }
 
-  for (int i = 1, j = 0; i < 48 && j < 16; i += 3, j++){
-	  portA_buffer[i] = motor_data_portA[j];
-	  portB_buffer[i] = motor_data_portB[j];
-	  portC_buffer[i] = motor_data_portC[j];
+  for (int i = 1, j = 0; i < 48 && j < 16; i += 3, j++) {
+    portA_buffer[i] = motor_data_portA[j];
+    portB_buffer[i] = motor_data_portB[j];
+    portC_buffer[i] = motor_data_portC[j];
   }
 
   dshot_dma_phase = DSHOT_PORT_COUNT;

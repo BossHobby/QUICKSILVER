@@ -113,12 +113,12 @@ void handle_usart_isr(usart_ports_t channel) {
   extern void RX_USART_ISR(void);
   extern void TX_USART_ISR(void);
   if (serial_rx_port == channel) {
-	if (USART_GetITStatus(USART.channel, USART_IT_TC) == SET){
+    if (USART_GetITStatus(USART.channel, USART_IT_TC) == SET) {
       TX_USART_ISR();
       USART_ClearITPendingBit(USART.channel, USART_IT_TC);
-	}else{
+    } else {
       RX_USART_ISR();
-	}
+    }
     return;
   }
 #endif
