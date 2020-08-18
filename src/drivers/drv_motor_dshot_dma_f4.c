@@ -21,6 +21,7 @@
 #include "control.h"
 #include "defines.h"
 #include "drv_motor.h"
+#include "drv_spi.h"
 #include "drv_time.h"
 #include "profile.h"
 #include "project.h"
@@ -271,10 +272,13 @@ void make_packet(uint8_t number, uint16_t value, bool telemetry) {
 
 // make dshot dma packet, then fire
 void dshot_dma_start() {
-  uint32_t time = gettime();
-  while (dshot_dma_phase != 0 && (gettime() - time) < state.looptime * 1e6f) {
-  } // wait maximum a LOOPTIME for dshot dma to complete
-  if (dshot_dma_phase != 0)
+  uint32_t time = timer_micros();
+
+  // wait maximum a LOOPTIME for dshot dma to complete
+  while ((dshot_dma_phase != 0 || spi_dma_is_ready(SPI_PORT1) == 0) && (timer_micros() - time) < state.looptime * 1e6f)
+    ;
+
+  if (dshot_dma_phase != 0 || spi_dma_is_ready(SPI_PORT1) == 0)
     return; // skip this dshot command
 
   // generate dshot dma packet
