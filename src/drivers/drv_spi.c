@@ -213,11 +213,16 @@ void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, uint32_t
   DMA_Init(PORT.dma.tx_stream, &DMA_InitStructure);
 }
 
+uint8_t spi_dma_is_ready(spi_ports_t port) {
+  return DMA_TRANSFER_DONE;
+}
+
 void spi_dma_wait_for_ready(spi_ports_t port) {
 #ifdef BRUSHLESS_TARGET
-  if (port == SPI_PORT1){
-	  extern volatile int dshot_dma_phase;
-	  while (dshot_dma_phase != 0);
+  if (port == SPI_PORT1) {
+    extern volatile int dshot_dma_phase;
+    while (dshot_dma_phase != 0)
+      ;
   }
 #endif
   for (uint16_t timeout = 0x400; DMA_TRANSFER_DONE == 0; timeout--) {

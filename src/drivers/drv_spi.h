@@ -55,6 +55,7 @@ void spi_dma_enable_rcc(spi_ports_t port);
 void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uint32_t buffer_size);
 void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, uint32_t buffer_size);
 
+uint8_t spi_dma_is_ready(spi_ports_t port);
 void spi_dma_wait_for_ready(spi_ports_t port);
 void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length);
 void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length);
