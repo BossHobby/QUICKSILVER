@@ -72,7 +72,7 @@ const uint8_t osd_elements_menu_positions[5][2] = {{9, 1}, {7, 4}, {7, 5}, {7, 6
 const uint8_t osd_elements_map[] = {15, 16, 17, 18};
 
 //osd element add/remove & text/invert submenu map
-const char osd_display_labels[12][21] = {{"OSD DISPLAY ITEMS"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"EXACT VOLTS"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"SYSTEM STATUS"}, {"THROTTLE"}, {"VTX"}, {"SAVE AND EXIT"}};
+const char osd_display_labels[12][21] = {{"OSD DISPLAY ITEMS"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"GYRO TEMP"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"SYSTEM STATUS"}, {"THROTTLE"}, {"VTX"}, {"SAVE AND EXIT"}};
 const uint8_t osd_display_positions[12][2] = {{6, 1}, {4, 2}, {4, 3}, {4, 4}, {4, 5}, {4, 6}, {4, 7}, {4, 8}, {4, 9}, {4, 10}, {4, 11}, {4, 14}};
 const uint8_t osd_display_data_positions[10][2] = {{20, 2}, {20, 3}, {20, 4}, {20, 5}, {20, 6}, {20, 7}, {20, 8}, {20, 9}, {20, 10}, {20, 11}};
 const uint8_t osd_display_grid[10][2] = {{1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}, {1, 6}, {1, 7}, {1, 8}, {1, 9}, {1, 10}};

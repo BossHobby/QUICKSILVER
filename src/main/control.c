@@ -301,7 +301,8 @@ void control(void) {
 
     // disarm the quad by setting armed state variable to zero
     flags.arm_state = 0;
-
+    // clear the throttle safety flag
+    flags.throttle_safety = 0;
     if (flags.rx_ready == 1) {
       // rx is bound and has been disarmed so clear binding while armed flag
       flags.arm_safety = 0;
@@ -324,6 +325,7 @@ void control(void) {
 
     // arming release flag is set to not cleared to reactivate the throttle safety limit for the next arming event
     arming_release = 0;
+
   } else {
     // CONDITION: armed state variable is 1 so quad is ARMED
 

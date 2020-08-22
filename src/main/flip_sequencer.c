@@ -82,6 +82,10 @@ void start_flip() {
 
 void flip_sequencer() {
 #ifdef STANDARD_TURTLE
+  if (flipstage > 0 && flags.arm_state == 1)
+    flags.turtle = 1;
+  else
+    flags.turtle = 0;
   if (!readytoflip) { //turtle can't be initiated without the all clear flag - hold control variables at 0 state
     if (flipstage != STAGE_FLIP_NONE) {
       pwmdir = FORWARD;     //forward pwmdir only once as its last state may be unknown from previously interrupted turtle event

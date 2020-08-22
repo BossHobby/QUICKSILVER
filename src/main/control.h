@@ -27,6 +27,7 @@ typedef struct {
   uint8_t controls_override : 1; // will activate rx_override below
   uint8_t acro_override : 1;
   uint8_t motortest_override : 1;
+  uint8_t turtle : 1;
 
   uint8_t usb_active : 1;
 } control_flags_t;
