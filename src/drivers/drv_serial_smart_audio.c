@@ -382,7 +382,7 @@ smart_audio_update_result_t serial_smart_audio_update() {
 }
 
 void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const uint32_t size) {
-  frame_length = size + 1 + SA_HEADER_SIZE;
+  frame_length = size + 2 + SA_HEADER_SIZE;
 
   frame[0] = 0x00;
   frame[1] = 0xAA;
@@ -392,14 +392,13 @@ void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const 
   for (uint8_t i = 0; i < size; i++) {
     frame[i + SA_HEADER_SIZE] = payload[i];
   }
-  frame[size + SA_HEADER_SIZE] = crc8_data(frame + 1, frame_length - 2);
-
+  frame[size + SA_HEADER_SIZE] = crc8_data(frame + 1, frame_length - 3);
+  frame[size + 1 + SA_HEADER_SIZE] = 0x00;
   circular_buffer_clear(&smart_audio_rx_buffer);
   smart_audio_auto_baud();
 
   quic_debugf("SMART_AUDIO: send cmd %d (%d)", cmd, size);
   serial_smart_audio_send_data(frame, frame_length);
-
   parser_state = PARSER_INIT;
   last_valid_read = timer_millis();
 }
