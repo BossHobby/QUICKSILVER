@@ -20,6 +20,8 @@
 
 #ifdef RX_UNIFIED_SERIAL
 
+#define LQ_EXPO 0.9f
+
 #define RX_BUFF_SIZE 68
 
 //*****************************************
@@ -37,7 +39,10 @@
 //*****************************************
 //*****************************************
 
+// externally accessable variables
 rx_serial_protocol_t rx_serial_protocol = RX_SERIAL_PROTOCOL_INVALID;
+int rx_bind_enable = 0;
+float rx_rssi = 0;
 
 static uint8_t rx_buffer[RX_BUFF_SIZE];
 static uint8_t rx_data[RX_BUFF_SIZE]; //A place to put the RX frame so nothing can get overwritten during processing.  //reduce size?
@@ -57,54 +62,35 @@ static frame_status_t frame_status = FRAME_INVALID;
 static uint8_t telemetry_counter = 0;
 static uint8_t expected_frame_length = 10;
 
-int rx_bind_enable = 0;
-
-//uint32_t rx_framerate[3] = {0, 0, 1}; //new from NFE - do we wanna keep this?
-//uint32_t rx_framerate_ticks = 0;      //new from NFE - do we wanna keep this?
-
 static uint8_t stat_frames_second;
 static uint32_t time_siglost;
 static uint32_t time_lastframe;
 
-int bind_safety = 0;
-int channels[16];
+static uint16_t bind_safety = 0;
+static int32_t channels[16];
 
 static uint16_t crc_byte = 0;              //Defined here to allow Debug to see it.
 static uint8_t protocol_to_check = 1;      //Defined here to allow Debug to see it.
 static uint16_t protocol_detect_timer = 0; //Defined here to allow Debug to see it.
 
 extern profile_t profile;
-uint16_t link_quality_raw;
-#define LQ_EXPO 0.9f
-float rx_rssi;
+static uint16_t link_quality_raw;
 
-int failsafe_sbus_failsafe = 0;
-int failsafe_siglost = 0;
-int failsafe_noframes = 0;
+static uint8_t failsafe_sbus_failsafe = 0;
+static uint8_t failsafe_siglost = 0;
+static uint8_t failsafe_noframes = 0;
 
 //Telemetry variables
 //***********************************
 //Global values to send as telemetry
 static uint8_t ready_for_next_telemetry = 1;
-bool fport_debug_telemetry = false;
+static bool fport_debug_telemetry = false;
 
-uint8_t telemetry_offset = 0;
-uint8_t telemetry_packet[14];
+static uint8_t telemetry_offset = 0;
+static uint8_t telemetry_packet[14];
 
 extern int current_pid_axis;
 extern int current_pid_term;
-
-uint16_t SbusTelemetryIDs[] = {
-    0x0210, //VFAS, use for vbat_comp
-    0x0211, //VFAS1, use for vbattfilt
-    //Everything past here is only active in FPORT-Debug-Telemetry mode
-    0x0900, //A3_FIRST_ID, used for cell count
-    0x0400, //T1, used for Axis Identifier
-    0x0700, //ACC-X, misused for PID-P
-    0x0710, //ACC-X, misused for PID-I
-    0x0720, //ACC-X, misused for PID-D
-};
-uint8_t telemetry_position = 0; //This iterates through the above, you can only send one sensor per frame.
 
 #define USART usart_port_defs[serial_rx_port]
 
@@ -861,7 +847,7 @@ void rx_serial_send_fport_telemetry() {
     telemetry_counter = 0;
     frame_status = FRAME_DONE;
 
-    uint16_t telemetryIDs[] = {
+    uint16_t telemetry_ids[] = {
         0x0210, //VFAS, use for vbat_comp
         0x0211, //VFAS1, use for vbattfilt
         //Everything past here is only active in FPORT-Debug-Telemetry mode
@@ -871,57 +857,59 @@ void rx_serial_send_fport_telemetry() {
         0x0710, //ACC-X, misused for PID-I
         0x0720, //ACC-X, misused for PID-D
     };
+    //This iterates through the above, you can only send one sensor per frame.
+    static uint8_t telemetry_position = 0;
 
     //Telemetry time! Let's have some variables
     telemetry_packet[0] = 0x08; //Bytes 0 through 2 are static in this implementation
     telemetry_packet[1] = 0x81;
     telemetry_packet[2] = 0x10;
-    if (telemetry_position == 0) {                                 //vbat_comp
-      telemetry_packet[3] = telemetryIDs[telemetry_position];      //0x10;
-      telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8; //0x02;
+    if (telemetry_position == 0) {                                  //vbat_comp
+      telemetry_packet[3] = telemetry_ids[telemetry_position];      //0x10;
+      telemetry_packet[4] = telemetry_ids[telemetry_position] >> 8; //0x02;
       telemetry_packet[5] = (int)(state.vbatt_comp * 100);
       telemetry_packet[6] = (int)(state.vbatt_comp * 100) >> 8;
       telemetry_packet[7] = 0x00;
       telemetry_packet[8] = 0x00;
-    } else if (telemetry_position == 1) {                          //vbattfilt
-      telemetry_packet[3] = telemetryIDs[telemetry_position];      //x11;
-      telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8; //0x02;
+    } else if (telemetry_position == 1) {                           //vbattfilt
+      telemetry_packet[3] = telemetry_ids[telemetry_position];      //x11;
+      telemetry_packet[4] = telemetry_ids[telemetry_position] >> 8; //0x02;
       telemetry_packet[5] = (int)(state.vbattfilt * 100);
       telemetry_packet[6] = (int)(state.vbattfilt * 100) >> 8;
       telemetry_packet[7] = 0x00;
       telemetry_packet[8] = 0x00;
     } else if (telemetry_position == 2) { //Cell count
-      telemetry_packet[3] = telemetryIDs[telemetry_position];
-      telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8;
+      telemetry_packet[3] = telemetry_ids[telemetry_position];
+      telemetry_packet[4] = telemetry_ids[telemetry_position] >> 8;
       telemetry_packet[5] = (int)(state.lipo_cell_count * 100);
       telemetry_packet[6] = (int)(state.lipo_cell_count * 100) >> 8;
       telemetry_packet[7] = 0x00;
       telemetry_packet[8] = 0x00;
-    } else if (telemetry_position == 3) {                          //PID axis(hundreds column) and P/I/D (ones column) being adjusted currently
-      uint16_t axisAndPidID = (current_pid_axis + 1) * 100;        //Adding one so there's always a value. 1 for Pitch (or Pitch/roll), 2 for Roll, 3 for Yaw
-      axisAndPidID += current_pid_term + 1;                        //Adding one here too, humans don't deal well with counting starting at zero for this sort of thing
-      telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8; // Adding one to the above makes it match the LED flash codes too
+    } else if (telemetry_position == 3) {                           //PID axis(hundreds column) and P/I/D (ones column) being adjusted currently
+      uint16_t axisAndPidID = (current_pid_axis + 1) * 100;         //Adding one so there's always a value. 1 for Pitch (or Pitch/roll), 2 for Roll, 3 for Yaw
+      axisAndPidID += current_pid_term + 1;                         //Adding one here too, humans don't deal well with counting starting at zero for this sort of thing
+      telemetry_packet[4] = telemetry_ids[telemetry_position] >> 8; // Adding one to the above makes it match the LED flash codes too
       telemetry_packet[5] = (int)(axisAndPidID);
       telemetry_packet[6] = (int)(axisAndPidID) >> 8;
       telemetry_packet[7] = 0x00;
       telemetry_packet[8] = 0x00;
     } else if (telemetry_position == 4) { //PID-P
-      telemetry_packet[3] = telemetryIDs[telemetry_position];
-      telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8;
+      telemetry_packet[3] = telemetry_ids[telemetry_position];
+      telemetry_packet[4] = telemetry_ids[telemetry_position] >> 8;
       telemetry_packet[5] = (int)(get_pid_value(0)->axis[current_pid_axis] * 100);
       telemetry_packet[6] = (int)(get_pid_value(0)->axis[current_pid_axis] * 100) >> 8;
       telemetry_packet[7] = 0x00;
       telemetry_packet[8] = 0x00;
     } else if (telemetry_position == 5) { //PID-I
-      telemetry_packet[3] = telemetryIDs[telemetry_position];
-      telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8;
+      telemetry_packet[3] = telemetry_ids[telemetry_position];
+      telemetry_packet[4] = telemetry_ids[telemetry_position] >> 8;
       telemetry_packet[5] = (int)(get_pid_value(1)->axis[current_pid_axis] * 100);
       telemetry_packet[6] = (int)(get_pid_value(1)->axis[current_pid_axis] * 100) >> 8;
       telemetry_packet[7] = 0x00;
       telemetry_packet[8] = 0x00;
     } else if (telemetry_position == 6) { //PID-D
-      telemetry_packet[3] = telemetryIDs[telemetry_position];
-      telemetry_packet[4] = telemetryIDs[telemetry_position] >> 8;
+      telemetry_packet[3] = telemetry_ids[telemetry_position];
+      telemetry_packet[4] = telemetry_ids[telemetry_position] >> 8;
       telemetry_packet[5] = (int)(get_pid_value(2)->axis[current_pid_axis] * 100);
       telemetry_packet[6] = (int)(get_pid_value(2)->axis[current_pid_axis] * 100) >> 8;
       telemetry_packet[7] = 0x00;
@@ -965,7 +953,7 @@ void rx_serial_send_fport_telemetry() {
     //That's it, telemetry has sent the first byte - the rest will be sent by the telemetry tx irq
     telemetry_position++;
     if (fport_debug_telemetry) {
-      if (telemetry_position >= sizeof(telemetryIDs) / 2) // 2 byte ints, so this should give the number of entries. It just incremented, which takes care of the count with 0 or 1
+      if (telemetry_position >= sizeof(telemetry_ids) / 2) // 2 byte ints, so this should give the number of entries. It just incremented, which takes care of the count with 0 or 1
       {
         telemetry_position = 0;
       }
