@@ -17,15 +17,16 @@ typedef enum {
   RX_SERIAL_PROTOCOL_IBUS,
   RX_SERIAL_PROTOCOL_FPORT,
   RX_SERIAL_PROTOCOL_CRSF,
+  RX_SERIAL_PROTOCOL_REDPINE,
   RX_SERIAL_PROTOCOL_SBUS_INVERTED,
   RX_SERIAL_PROTOCOL_FPORT_INVERTED,
+  RX_SERIAL_PROTOCOL_REDPINE_INVERTED,
 } rx_serial_protocol_t;
 
 // potentially a debug tool to limit the detection sequence of universal serial
 // todo:  purge this if deemed unnecessary
 //#define RX_SERIAL_PROTOCOL_MAX RX_SERIAL_PROTOCOL_CRSF
-#define RX_SERIAL_PROTOCOL_MAX RX_SERIAL_PROTOCOL_FPORT_INVERTED
-
+#define RX_SERIAL_PROTOCOL_MAX RX_SERIAL_PROTOCOL_REDPINE_INVERTED
 
 typedef struct {
   uint8_t channel_index;

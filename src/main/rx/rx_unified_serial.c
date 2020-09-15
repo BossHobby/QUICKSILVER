@@ -23,7 +23,7 @@
 
 //*****************************************
 //*****************************************
-#define RX_FRAME_INTERVAL_TRIGGER_TICKS (3000 * (TICK_CLOCK_FREQ_HZ / 1000000)) //This is the microsecond threshold for triggering a new frame to re-index to position 0 in the ISR
+#define RX_FRAME_INTERVAL_TRIGGER_TICKS (1500 * (TICK_CLOCK_FREQ_HZ / 1000000)) //This is the microsecond threshold for triggering a new frame to re-index to position 0 in the ISR
 //*****************************************
 //*****************************************
 #define DSM_SCALE_PERCENT 147 //this might stay somewhere or be replaced with wizard scaling
@@ -101,7 +101,7 @@ uint8_t telemetry_position = 0; //This iterates through the above, you can only 
 void TX_USART_ISR(void) {                       //USART_ClearITPendingBit() for TC handled in drv_serial.c
   static uint8_t increment_transmit_buffer = 1; // buffer position 0 has already been called by the telemetry process so we start at 1
   uint8_t bytes_to_send = 0;                    // reset this to 0 so that a protocol switch will not create a tx isr that does stuff without need
-  if ((rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT) || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
+  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
     bytes_to_send = 10 + telemetry_offset; //upload total telemetry bytes to send so telemetry transmit triggers action appropriate to protocol
   }
   if (increment_transmit_buffer < bytes_to_send) {                      // check the index to see if we have drained the buffer yet
@@ -117,12 +117,11 @@ void TX_USART_ISR(void) {                       //USART_ClearITPendingBit() for 
 }
 
 void RX_USART_ISR(void) {
-  //static uint32_t rx_framerate[3]
-  unsigned long rx_byte_interval;
-  unsigned long maxticks = SysTick->LOAD;
-  unsigned long ticks = SysTick->VAL;
+  uint32_t rx_byte_interval = 0;
+  uint32_t maxticks = SysTick->LOAD;
+  uint32_t ticks = SysTick->VAL;
 
-  static unsigned long lastticks;
+  static uint32_t lastticks;
   if (ticks < lastticks)
     rx_byte_interval = lastticks - ticks;
   else { // overflow ( underflow really)
@@ -136,7 +135,7 @@ void RX_USART_ISR(void) {
     rx_frame_position = 0;
   }
 
-  if (rx_byte_interval > RX_FRAME_INTERVAL_TRIGGER_TICKS) {
+  if (rx_byte_interval > RX_FRAME_INTERVAL_TRIGGER_TICKS || frame_status == 3) {
     rx_frame_position = 0;
     frame_status = 0;
   }
@@ -150,17 +149,13 @@ void RX_USART_ISR(void) {
 }
 
 void rx_init(void) {
-  //if (rx_bind_enable == 0)
-  //rx_serial_protocol = 0;
   flags.rx_mode = !RXMODE_BIND; // put LEDS in normal signal status
   rx_serial_init();
 }
 
 void rx_serial_init(void) {
+  frame_status = 0; //Let the uart ISR do its stuff.
 
-  //rx_serial_protocol = 4;  //debug only - Remove meeeeeeeee
-
-  frame_status = 0;                                       //Let the uart ISR do its stuff.
   if (rx_serial_protocol == RX_SERIAL_PROTOCOL_INVALID) { //No known protocol? Can't really set the radio up yet then can we?
     rx_serial_find_protocol();
   } else {
@@ -168,95 +163,100 @@ void rx_serial_init(void) {
   }
 
   switch (rx_serial_protocol) {
-  case RX_SERIAL_PROTOCOL_DSM: // DSM
+  case RX_SERIAL_PROTOCOL_DSM:
     expected_frame_length = 16;
     break;
-  case RX_SERIAL_PROTOCOL_SBUS:          // SBUS
-  case RX_SERIAL_PROTOCOL_SBUS_INVERTED: // SBUS
+  case RX_SERIAL_PROTOCOL_SBUS:
+  case RX_SERIAL_PROTOCOL_SBUS_INVERTED:
     expected_frame_length = 24;
     break;
-  case RX_SERIAL_PROTOCOL_IBUS: // IBUS
+  case RX_SERIAL_PROTOCOL_IBUS:
     expected_frame_length = 32;
     break;
-  case RX_SERIAL_PROTOCOL_FPORT:          // FPORT
-  case RX_SERIAL_PROTOCOL_FPORT_INVERTED: // FPORT
-    expected_frame_length = 28;           //Minimum.
+  case RX_SERIAL_PROTOCOL_FPORT:
+  case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
+    expected_frame_length = 28; //Minimum.
     break;
-  case RX_SERIAL_PROTOCOL_CRSF: // CRSF
+  case RX_SERIAL_PROTOCOL_CRSF:
     expected_frame_length = 64; //Maybe 65? Not sure where the Sync Byte comes in
     break;
-
+  case RX_SERIAL_PROTOCOL_REDPINE:
+  case RX_SERIAL_PROTOCOL_REDPINE_INVERTED:
+    expected_frame_length = 11;
+    break;
   default:
     break;
   }
-  // RXProtocolNextBoot = rx_serial_protocol; //Remove meeeeeeeee toooooooooooo
 }
 
 void rx_check() {
   if (rx_serial_protocol == RX_SERIAL_PROTOCOL_INVALID) { //If there's no protocol, there's no reason to check failsafe.
     rx_serial_find_protocol();
+    return;
+  }
+  //FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!
+  if (gettime() - time_lastframe > 1000000) {
+    failsafe_noframes = 1;
   } else {
-    //FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!
-    if (gettime() - time_lastframe > 1000000) {
-      failsafe_noframes = 1;
-    } else
-      failsafe_noframes = 0;
+    failsafe_noframes = 0;
+  }
 
-    // add the 3 failsafes together
-    if (flags.rx_ready)
-      flags.failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
+  // add the 3 failsafes together
+  if (flags.rx_ready)
+    flags.failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
 
-    if (frame_status == 1) { //USART ISR says there's enough frame to look at. Look at it.
-      switch (rx_serial_protocol) {
-      case RX_SERIAL_PROTOCOL_DSM: // DSM
-        rx_serial_process_dsmx();
-        break;
-      case RX_SERIAL_PROTOCOL_SBUS:          // SBUS
-      case RX_SERIAL_PROTOCOL_SBUS_INVERTED: // SBUS
-        rx_serial_process_sbus();
-        break;
-      case RX_SERIAL_PROTOCOL_IBUS: // IBUS
-        rx_serial_process_ibus();
-        break;
-      case RX_SERIAL_PROTOCOL_FPORT:          // FPORT
-      case RX_SERIAL_PROTOCOL_FPORT_INVERTED: // FPORT
-        rx_serial_process_fport();
-        break;
-      case RX_SERIAL_PROTOCOL_CRSF: // CRSF
-        rx_serial_process_crsf();
-        break;
-
-      default:
-        break;
-      }
-    } else if (frame_status == 3) {
-      switch (rx_serial_protocol) {
-      case RX_SERIAL_PROTOCOL_DSM: // DSM
-        // Run DSM Telemetry
-        break;
-      case RX_SERIAL_PROTOCOL_SBUS:          // SBUS
-      case RX_SERIAL_PROTOCOL_SBUS_INVERTED: // SBUS
-        //Run smartport telemetry?
-        break;
-      case RX_SERIAL_PROTOCOL_IBUS: // IBUS
-        //IBUS Telemetry function call goes here
-        break;
-      case RX_SERIAL_PROTOCOL_FPORT:          // FPORT
-      case RX_SERIAL_PROTOCOL_FPORT_INVERTED: // FPORT
-        if (ready_for_next_telemetry)
-          rx_serial_send_fport_telemetry();
-        break;
-      case RX_SERIAL_PROTOCOL_CRSF: // CRSF
-        //CRSF telemetry function call yo
-        break;
-
-      default:
-        break;
-      }
-    } else if (frame_status == -1) { //RX/USART not set up.
-      rx_serial_init();              //Set it up. This includes autodetecting protocol if necesary
-      flags.rx_mode = !RXMODE_BIND;
+  if (frame_status == 1) { //USART ISR says there's enough frame to look at. Look at it.
+    switch (rx_serial_protocol) {
+    case RX_SERIAL_PROTOCOL_DSM:
+      rx_serial_process_dsmx();
+      break;
+    case RX_SERIAL_PROTOCOL_SBUS:
+    case RX_SERIAL_PROTOCOL_SBUS_INVERTED:
+      rx_serial_process_sbus();
+      break;
+    case RX_SERIAL_PROTOCOL_IBUS:
+      rx_serial_process_ibus();
+      break;
+    case RX_SERIAL_PROTOCOL_FPORT:
+    case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
+      rx_serial_process_fport();
+      break;
+    case RX_SERIAL_PROTOCOL_CRSF:
+      rx_serial_process_crsf();
+      break;
+    case RX_SERIAL_PROTOCOL_REDPINE:
+    case RX_SERIAL_PROTOCOL_REDPINE_INVERTED:
+      rx_serial_process_redpine();
+    default:
+      break;
     }
+  } else if (frame_status == 3) {
+    switch (rx_serial_protocol) {
+    case RX_SERIAL_PROTOCOL_DSM:
+      // Run DSM Telemetry
+      break;
+    case RX_SERIAL_PROTOCOL_SBUS:
+    case RX_SERIAL_PROTOCOL_SBUS_INVERTED:
+      //Run smartport telemetry?
+      break;
+    case RX_SERIAL_PROTOCOL_IBUS:
+      //IBUS Telemetry function call goes here
+      break;
+    case RX_SERIAL_PROTOCOL_FPORT:
+    case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
+      if (ready_for_next_telemetry)
+        rx_serial_send_fport_telemetry();
+      break;
+    case RX_SERIAL_PROTOCOL_CRSF:
+      //CRSF telemetry function call yo
+      break;
+
+    default:
+      break;
+    }
+  } else if (frame_status == -1) { //RX/USART not set up.
+    rx_serial_init();              //Set it up. This includes autodetecting protocol if necesary
+    flags.rx_mode = !RXMODE_BIND;
   }
 }
 
@@ -957,15 +957,88 @@ void rx_serial_process_crsf(void) {
   //We should probably put something here.
 }
 
+void rx_serial_process_redpine(void) {
+#define REDPINE_CHANNEL_START 3
+  for (uint8_t i = 0; i < 11; i++) {
+    rx_data[i] = rx_buffer[i % RX_BUFF_SIZE];
+  }
+
+  const uint16_t channels[4] = {
+      (uint16_t)((rx_data[REDPINE_CHANNEL_START + 1] << 8) & 0x700) | rx_data[REDPINE_CHANNEL_START],
+      (uint16_t)((rx_data[REDPINE_CHANNEL_START + 2] << 4) & 0x7F0) | ((rx_data[REDPINE_CHANNEL_START + 1] >> 4) & 0xF),
+      (uint16_t)((rx_data[REDPINE_CHANNEL_START + 4] << 8) & 0x700) | rx_data[REDPINE_CHANNEL_START + 3],
+      (uint16_t)((rx_data[REDPINE_CHANNEL_START + 5] << 4) & 0x7F0) | ((rx_data[REDPINE_CHANNEL_START + 4] >> 4) & 0xF),
+  };
+
+  // normal rx mode
+  bind_safety++;
+  if (bind_safety < 130)
+    flags.rx_mode = RXMODE_BIND; // this is rapid flash during bind safety
+
+  // AETR channel order
+  state.rx.axis[0] = channels[0] - 1020;
+  state.rx.axis[1] = channels[1] - 1020;
+  state.rx.axis[2] = channels[3] - 1020;
+  state.rx.axis[3] = channels[2] - 210;
+
+  for (int i = 0; i < 3; i++) {
+    state.rx.axis[i] *= 1.f / 820.f;
+  }
+  state.rx.axis[3] *= 1.f / 1640.f;
+  state.rx.axis[3] = constrainf(state.rx.axis[3], 0, 1);
+
+  rx_apply_expo();
+
+  //Here we have the AUX channels Silverware supports
+  state.aux[AUX_CHANNEL_0] = (rx_data[REDPINE_CHANNEL_START + 1] & 0x08) ? 1 : 0;
+  state.aux[AUX_CHANNEL_1] = (rx_data[REDPINE_CHANNEL_START + 2] & 0x80) ? 1 : 0;
+  state.aux[AUX_CHANNEL_2] = (rx_data[REDPINE_CHANNEL_START + 4] & 0x08) ? 1 : 0;
+  state.aux[AUX_CHANNEL_3] = (rx_data[REDPINE_CHANNEL_START + 5] & 0x80) ? 1 : 0;
+  state.aux[AUX_CHANNEL_4] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x01) ? 1 : 0;
+  state.aux[AUX_CHANNEL_5] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x02) ? 1 : 0;
+  state.aux[AUX_CHANNEL_6] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x04) ? 1 : 0;
+  state.aux[AUX_CHANNEL_7] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x08) ? 1 : 0;
+  state.aux[AUX_CHANNEL_8] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x10) ? 1 : 0;
+  state.aux[AUX_CHANNEL_9] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x20) ? 1 : 0;
+  state.aux[AUX_CHANNEL_10] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x40) ? 1 : 0;
+  state.aux[AUX_CHANNEL_11] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x80) ? 1 : 0;
+
+  time_lastframe = gettime();
+
+  // link quality & rssi
+  static unsigned long secondtime = 0;
+  if (time_lastframe - secondtime > 1000000) {
+    stat_frames_second = 112 - link_quality_raw;
+    link_quality_raw = 0;
+    secondtime = time_lastframe;
+  }
+
+  int16_t rssi = rx_data[REDPINE_CHANNEL_START + 7];
+  if (rssi >= 128) {
+    rssi = ((rssi - 256) / 2) - 71;
+  } else {
+    rssi = (rssi / 2) - 71;
+  }
+
+  rx_rssi = rssi;
+
+  frame_status = 3; //We're done with this frame now.
+
+  if (bind_safety > 131) {        //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
+    flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
+    flags.rx_mode = !RXMODE_BIND; // restores normal led operation
+    bind_safety = 131;            // reset counter so it doesnt wrap
+  }
+}
+
 //NOTE TO SELF: Put in some double-check code on the detections somehow.
 //NFE note:  how about we force hold failsafe until protocol is saved.  This acts like kind of a check on proper mapping/decoding as stick gesture must be used as a test
 // also, we ought to be able to clear noframes_failsafe in addition to satisfying the start byte check in order to hard select a radio protocol
-
 void rx_serial_find_protocol(void) {
   if (protocol_detect_timer == 0) {
     protocol_to_check++; //Check the next protocol down the list.
     if (protocol_to_check > RX_SERIAL_PROTOCOL_MAX) {
-      protocol_to_check = RX_SERIAL_PROTOCOL_DSM; //AKA 1
+      protocol_to_check = RX_SERIAL_PROTOCOL_DSM;
     }
     serial_rx_init(protocol_to_check); //Configure a protocol!
   }
@@ -974,33 +1047,40 @@ void rx_serial_find_protocol(void) {
 
   if (frame_status == 1) { //We got something! What is it?
     switch (protocol_to_check) {
-    case RX_SERIAL_PROTOCOL_DSM:                                                  // DSM
-      if (rx_buffer[0] == 0x00 && rx_buffer[1] <= 0x04 && rx_buffer[2] != 0x00) { // allow up to 4 fades or detection will fail.  Some dsm rx will log a fade or two during binding
+    case RX_SERIAL_PROTOCOL_DSM:
+      if (rx_buffer[0] == 0x00 && rx_buffer[1] <= 0x04 && rx_buffer[2] != 0x00) {
+        // allow up to 4 fades or detection will fail.  Some dsm rx will log a fade or two during binding
         rx_serial_process_dsmx();
         if (bind_safety > 0)
           rx_serial_protocol = protocol_to_check;
       }
-    case RX_SERIAL_PROTOCOL_SBUS:          // SBUS
-    case RX_SERIAL_PROTOCOL_SBUS_INVERTED: // SBUS
+    case RX_SERIAL_PROTOCOL_SBUS:
+    case RX_SERIAL_PROTOCOL_SBUS_INVERTED:
       if (rx_buffer[0] == 0x0F) {
         rx_serial_protocol = protocol_to_check;
       }
       break;
-    case RX_SERIAL_PROTOCOL_IBUS: // IBUS
+    case RX_SERIAL_PROTOCOL_IBUS:
       if (rx_buffer[0] == 0x20) {
         rx_serial_protocol = protocol_to_check;
       }
       break;
-    case RX_SERIAL_PROTOCOL_FPORT:          // FPORT
-    case RX_SERIAL_PROTOCOL_FPORT_INVERTED: // FPORT
+    case RX_SERIAL_PROTOCOL_FPORT:
+    case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
       if (rx_buffer[0] == 0x7E) {
         rx_serial_process_fport();
         if (bind_safety > 5) //FPORT INVERTED will trigger a frame on FPORT HALF DUPLEX - require >5 frames for good measure
           rx_serial_protocol = protocol_to_check;
       }
       break;
-    case RX_SERIAL_PROTOCOL_CRSF:           // CRSF
+    case RX_SERIAL_PROTOCOL_CRSF:
       if (rx_buffer[0] != 0xFF && 1 == 2) { //Need to look up the expected start value.
+        rx_serial_protocol = protocol_to_check;
+      }
+      break;
+    case RX_SERIAL_PROTOCOL_REDPINE:
+    case RX_SERIAL_PROTOCOL_REDPINE_INVERTED:
+      if (rx_buffer[0] == 11) {
         rx_serial_protocol = protocol_to_check;
       }
       break;

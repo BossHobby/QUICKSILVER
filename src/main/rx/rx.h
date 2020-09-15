@@ -77,6 +77,7 @@ void rx_serial_process_sbus(void);
 void rx_serial_process_ibus(void);
 void rx_serial_process_fport(void);
 void rx_serial_process_crsf(void);
+void rx_serial_process_redpine(void);
 
 void rx_serial_send_fport_telemetry(void);
 
