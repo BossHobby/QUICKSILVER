@@ -194,8 +194,9 @@ void rx_check() {
     rx_serial_find_protocol();
     return;
   }
-  //FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!     FAILSAFE! It gets checked every time!
-  if (gettime() - time_lastframe > 1000000) {
+
+  //FAILSAFE! It gets checked every time!
+  if (timer_micros() - time_lastframe > 1000000) {
     failsafe_noframes = 1;
   } else {
     failsafe_noframes = 0;
@@ -286,7 +287,7 @@ void rx_serial_process_dsmx(void) {
   // Fade to rssi hack
 #ifdef DSM_RSSI_FADES
   uint16_t fade_count = (rx_data[0] << 8) + rx_data[1];
-  uint32_t timestamp = gettime() / 1000 / (1000 / SPEKTRUM_FADE_REPORTS_PER_SEC);
+  uint32_t timestamp = timer_micros() / 1000 / (1000 / SPEKTRUM_FADE_REPORTS_PER_SEC);
   static uint32_t last_fade_timestamp = 0; // Stores the timestamp of the last fade read.
   static uint16_t last_fade_count = 0;     // Stores the fade count at the last fade read.
   if (last_fade_timestamp == 0) {          //first frame received
@@ -362,7 +363,7 @@ void rx_serial_process_dsmx(void) {
 #endif
 
     //for failsafe_noframes
-    time_lastframe = gettime();
+    time_lastframe = timer_micros();
 
     /*    //for framerate calculation - totally unnecessary but cool to see
     rx_framerate[2] = !(rx_framerate[2]);
@@ -422,8 +423,8 @@ void rx_serial_process_sbus(void) {
   {
     link_quality_raw++;
     if (!time_siglost)
-      time_siglost = gettime();
-    if (gettime() - time_siglost > TICK_CLOCK_FREQ_HZ) //8,000,000 ticks on F0, 21M on F4. One second.
+      time_siglost = timer_micros();
+    if (timer_micros() - time_siglost > TICK_CLOCK_FREQ_HZ) //8,000,000 ticks on F0, 21M on F4. One second.
     {
       failsafe_siglost = 1;
     }
@@ -502,7 +503,7 @@ void rx_serial_process_sbus(void) {
     state.aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
     state.aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
 
-    time_lastframe = gettime();
+    time_lastframe = timer_micros();
 
     // link quality & rssi
     static unsigned long secondtime = 0;
@@ -617,7 +618,7 @@ void rx_serial_process_ibus(void) {
     state.aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
     state.aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
 
-    time_lastframe = gettime();
+    time_lastframe = timer_micros();
 
     // stats & rssi
     static int fps_counter = 0;
@@ -691,8 +692,8 @@ void rx_serial_process_fport(void) {
         {
           link_quality_raw++;
           if (!time_siglost)
-            time_siglost = gettime();
-          if (gettime() - time_siglost > TICK_CLOCK_FREQ_HZ) //8,000,000 ticks on F0, 21M on F4. One second.
+            time_siglost = timer_micros();
+          if (timer_micros() - time_siglost > TICK_CLOCK_FREQ_HZ) //8,000,000 ticks on F0, 21M on F4. One second.
           {
             failsafe_siglost = 1;
           }
@@ -780,7 +781,7 @@ void rx_serial_process_fport(void) {
         fport_debug_telemetry = false;
       }
 
-      time_lastframe = gettime();
+      time_lastframe = timer_micros();
 
       // link quality & rssi
       static unsigned long secondtime = 0;
@@ -1003,7 +1004,7 @@ void rx_serial_process_redpine(void) {
   state.aux[AUX_CHANNEL_10] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x40) ? 1 : 0;
   state.aux[AUX_CHANNEL_11] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x80) ? 1 : 0;
 
-  time_lastframe = gettime();
+  time_lastframe = timer_micros();
 
   // link quality & rssi
   static unsigned long secondtime = 0;
