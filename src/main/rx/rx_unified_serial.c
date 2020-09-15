@@ -12,6 +12,7 @@
 #include "led.h"
 #include "profile.h"
 #include "project.h"
+#include "usb_configurator.h"
 #include "util.h"
 
 // sbus input ( pin SWCLK after calibration)
@@ -1064,6 +1065,7 @@ void rx_serial_find_protocol(void) {
       protocol_to_check = RX_SERIAL_PROTOCOL_DSM;
     }
     serial_rx_init(protocol_to_check); //Configure a protocol!
+    quic_debugf("UNIFIED: trying protocol %d", protocol_to_check);
   }
 
   protocol_detect_timer++; //Should increment once per main loop
