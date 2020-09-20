@@ -330,7 +330,7 @@ void rx_serial_find_protocol(void) {
       break;
     case RX_SERIAL_PROTOCOL_REDPINE:
     case RX_SERIAL_PROTOCOL_REDPINE_INVERTED:
-      if (rx_buffer[0] == 11) {
+      if ((rx_buffer[0] & 0x3F) == 0x2A) {
         rx_serial_protocol = protocol_to_check;
       }
       break;
@@ -1044,6 +1044,16 @@ void rx_serial_process_redpine(void) {
 #define REDPINE_CHANNEL_START 3
   for (uint8_t i = 0; i < 11; i++) {
     rx_data[i] = rx_buffer[i % RX_BUFF_SIZE];
+  }
+
+  if ((rx_data[0] & 0xc0) == 0x40) {
+    // packet lost flag, do not process
+    return;
+  }
+  if ((rx_data[0] & 0xc0) != 0x0) {
+    // invalid flag, skip this packet
+    frame_status = FRAME_IDLE;
+    return;
   }
 
   const uint16_t channels[4] = {
