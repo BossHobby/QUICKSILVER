@@ -1040,10 +1040,40 @@ void rx_serial_process_crsf(void) {
   //We should probably put something here.
 }
 
+uint16_t redpine_crc16(uint8_t *data, uint16_t len) {
+
+#define REDPINE_CRC16_POLY 0x8005
+
+  uint16_t crc = 0xFFFF;
+
+  for (uint16_t i = 0; i < len; i++) {
+    uint8_t val = data[i];
+
+    for (uint8_t i = 0; i < 8; i++) {
+      if (((crc & 0x8000) >> 8) ^ (val & 0x80))
+        crc = (crc << 1) ^ REDPINE_CRC16_POLY;
+      else
+        crc = (crc << 1);
+      val <<= 1;
+    }
+  }
+
+  return crc;
+}
+
 void rx_serial_process_redpine(void) {
 #define REDPINE_CHANNEL_START 3
   for (uint8_t i = 0; i < 11; i++) {
     rx_data[i] = rx_buffer[i % RX_BUFF_SIZE];
+  }
+
+  const uint16_t crc_our = redpine_crc16(rx_data + REDPINE_CHANNEL_START, 11 - REDPINE_CHANNEL_START);
+  const uint16_t crc_theirs = (uint16_t)(rx_data[1] << 8) | rx_data[2];
+
+  if (crc_our != crc_theirs) {
+    // invalid crc, bail
+    frame_status = FRAME_IDLE;
+    return;
   }
 
   if ((rx_data[0] & 0xc0) == 0x40) {
