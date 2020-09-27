@@ -58,13 +58,6 @@
           "BRUSHLESS_TARGET": "",
           "RX_UNIFIED_SERIAL": ""
         }
-      },
-      {
-        "name": "brushless.crsf",
-        "defines": {
-          "BRUSHLESS_TARGET": "",
-          "RX_CRSF": ""
-        }
       }
     ]
   },
@@ -139,13 +132,6 @@
           "BRUSHLESS_TARGET": "",
           "RX_UNIFIED_SERIAL": ""
         }
-      },
-      {
-        "name": "brushless.crsf",
-        "defines": {
-          "BRUSHLESS_TARGET": "",
-          "RX_CRSF": ""
-        }
       }
     ]
   },
@@ -157,13 +143,6 @@
         "defines": {
           "BRUSHLESS_TARGET": "",
           "RX_UNIFIED_SERIAL": ""
-        }
-      },
-      {
-        "name": "brushless.crsf",
-        "defines": {
-          "BRUSHLESS_TARGET": "",
-          "RX_CRSF": ""
         }
       }
     ]
@@ -177,13 +156,6 @@
           "BRUSHLESS_TARGET": "",
           "RX_UNIFIED_SERIAL": ""
         }
-      },
-      {
-        "name": "brushless.crsf",
-        "defines": {
-          "BRUSHLESS_TARGET": "",
-          "RX_CRSF": ""
-        }
       }
     ]
   },
@@ -195,13 +167,6 @@
         "defines": {
           "BRUSHLESS_TARGET": "",
           "RX_UNIFIED_SERIAL": ""
-        }
-      },
-      {
-        "name": "brushless.crsf",
-        "defines": {
-          "BRUSHLESS_TARGET": "",
-          "RX_CRSF": ""
         }
       }
     ]
@@ -227,17 +192,10 @@
           "BRUSHLESS_TARGET": "",
           "RX_UNIFIED_SERIAL": ""
         }
-      },
-      {
-        "name": "brushless.crsf",
-        "defines": {
-          "BRUSHLESS_TARGET": "",
-          "RX_CRSF": ""
-        }
       }
     ]
   },
-    {
+  {
     "name": "bluejayf4",
     "configurations": [
       {
