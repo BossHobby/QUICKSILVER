@@ -209,7 +209,7 @@ void rx_check() {
   }
 
   //FAILSAFE! It gets checked every time!
-  if (timer_micros() - time_lastframe > 1000000) {
+  if (timer_micros() - time_lastframe > FAILSAFETIME) {
     failsafe_noframes = 1;
   } else {
     failsafe_noframes = 0;
