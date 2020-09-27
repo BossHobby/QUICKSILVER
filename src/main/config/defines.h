@@ -292,26 +292,27 @@ static const float pid_scales[PID_SIZE][PID_SIZE] = {
 
 //#define DISABLE_FLIP_SEQUENCER //****************turtle / crashflip recovery available by default
 
-#ifdef RX_UNIFIED_SERIAL
-#define RX_PROTOCOL RX_PROTOCOL_UNIFIED_SERIAL
-#endif
 #ifdef RX_SBUS
-#define RX_PROTOCOL RX_PROTOCOL_SBUS
+#define RX_UNIFIED_SERIAL
 #endif
 #ifdef RX_CRSF
-#define RX_PROTOCOL RX_PROTOCOL_CRSF
+#define RX_UNIFIED_SERIAL
 #endif
 #ifdef RX_IBUS
-#define RX_PROTOCOL RX_PROTOCOL_IBUS
+#define RX_UNIFIED_SERIAL
 #endif
 #ifdef RX_FPORT
-#define RX_PROTOCOL RX_PROTOCOL_FPORT
+#define RX_UNIFIED_SERIAL
 #endif
 #ifdef RX_DSMX_2048
-#define RX_PROTOCOL RX_PROTOCOL_DSMX_2048
+#define RX_UNIFIED_SERIAL
 #endif
 #ifdef RX_DSM2_1024
-#define RX_PROTOCOL RX_PROTOCOL_DSM2_1024
+#define RX_UNIFIED_SERIAL
+#endif
+
+#ifdef RX_UNIFIED_SERIAL
+#define RX_PROTOCOL RX_PROTOCOL_UNIFIED_SERIAL
 #endif
 #ifdef RX_NRF24_BAYANG_TELEMETRY
 #define RX_PROTOCOL RX_PROTOCOL_NRF24_BAYANG_TELEMETRY

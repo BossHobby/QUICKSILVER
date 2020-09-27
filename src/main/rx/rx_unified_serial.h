@@ -1,5 +1,6 @@
 #pragma once
 
+#include "profile.h"
 #include "rx.h"
 
 #define RX_BUFF_SIZE 68

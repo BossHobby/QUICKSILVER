@@ -194,6 +194,25 @@ void rx_serial_init(void) {
   //Let the uart ISR do its stuff.
   frame_status = FRAME_IDLE;
 
+#ifdef RX_SBUS
+  rx_serial_protocol = RX_SERIAL_PROTOCOL_SBUS;
+#endif
+#ifdef RX_CRSF
+  rx_serial_protocol = RX_SERIAL_PROTOCOL_CRSF;
+#endif
+#ifdef RX_IBUS
+  rx_serial_protocol = RX_SERIAL_PROTOCOL_IBUS;
+#endif
+#ifdef RX_FPORT
+  rx_serial_protocol = RX_SERIAL_PROTOCOL_FPORT;
+#endif
+#ifdef RX_DSMX_2048
+  rx_serial_protocol = RX_SERIAL_PROTOCOL_DSM;
+#endif
+#ifdef RX_DSM2_1024
+  rx_serial_protocol = RX_SERIAL_PROTOCOL_DSM;
+#endif
+
   if (rx_serial_protocol == RX_SERIAL_PROTOCOL_INVALID) { //No known protocol? Can't really set the radio up yet then can we?
     rx_serial_find_protocol();
   } else {
