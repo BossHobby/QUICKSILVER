@@ -25,3 +25,10 @@ void rx_serial_process_crsf();
 void rx_serial_process_redpine();
 
 void rx_serial_send_fport_telemetry();
+
+void rx_lqi_lost_packet();
+void rx_lqi_got_packet();
+
+void rx_lqi_update_fps(uint16_t fixed_fps);
+void rx_lqi_update_rssi_from_lqi(float expected_fps);
+void rx_lqi_update_rssi_direct(float rssi);

@@ -10,6 +10,8 @@
 #include "drv_time.h"
 #include "profile.h"
 
+#define LQI_FPS 112
+
 static bool fport_debug_telemetry = false;
 static uint8_t telemetry_counter = 0;
 
@@ -21,11 +23,6 @@ extern uint8_t rx_data[RX_BUFF_SIZE];
 extern uint8_t rx_frame_position;
 
 extern frame_status_t frame_status;
-
-extern uint16_t link_quality_raw;
-extern uint8_t stat_frames_second;
-extern uint32_t time_siglost;
-extern uint32_t time_lastframe;
 
 extern uint16_t bind_safety;
 extern int32_t channels[16];
@@ -49,18 +46,11 @@ void rx_serial_process_sbus() {
     rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
   }
 
-  if (rx_data[23] & (1 << 2)) //RX sets this bit when it knows it missed a frame. Presumably this is a timer in the RX.
-  {
-    link_quality_raw++;
-    if (!time_siglost)
-      time_siglost = timer_micros();
-    if (timer_micros() - time_siglost > TICK_CLOCK_FREQ_HZ) //8,000,000 ticks on F0, 21M on F4. One second.
-    {
-      failsafe_siglost = 1;
-    }
+  if (rx_data[23] & (1 << 2)) {
+    //RX sets this bit when it knows it missed a frame. Presumably this is a timer in the RX.
+    rx_lqi_lost_packet();
   } else {
-    time_siglost = 0;
-    failsafe_siglost = 0;
+    rx_lqi_got_packet();
   }
   if (rx_data[23] & (1 << 3)) {
     failsafe_sbus_failsafe = 1;              // Sbus packets have a failsafe bit. This is cool. If you forget to trust it you get programs though.
@@ -130,27 +120,13 @@ void rx_serial_process_sbus() {
   state.aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
   state.aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
 
-  time_lastframe = timer_micros();
-
-  // link quality & rssi
-  static unsigned long secondtime = 0;
-  if (time_lastframe - secondtime > 1000000) {
-    stat_frames_second = 112 - link_quality_raw;
-    link_quality_raw = 0;
-    secondtime = time_lastframe;
-  }
+  rx_lqi_update_fps(LQI_FPS);
 
   if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11) { //rssi set to internal link quality
-    rx_rssi = stat_frames_second / 112.0f;
-    rx_rssi = rx_rssi * rx_rssi * rx_rssi * LQ_EXPO + rx_rssi * (1 - LQ_EXPO);
-    rx_rssi *= 100.0f;
+    rx_lqi_update_rssi_from_lqi(LQI_FPS);
   } else { //rssi set to value decoded from aux channel input from receiver
-    rx_rssi = 0.0610128f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 173);
+    rx_lqi_update_rssi_direct(0.0610128f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 173));
   }
-  if (rx_rssi > 100.0f)
-    rx_rssi = 100.0f;
-  if (rx_rssi < 0.0f)
-    rx_rssi = 0.0f;
 
   frame_status = FRAME_TX; //We're done with this frame now.
 
@@ -195,20 +171,16 @@ void rx_serial_process_fport() {
       crc_byte = crc_byte + (crc_byte >> 8);
       crc_byte = crc_byte << 8;
       crc_byte = crc_byte >> 8;
-      if (crc_byte == 0x00FF) {     //CRC is good, check Failsafe bit(s) and shove it into controls
-                                    //FPORT uses SBUS style data, but starts further in the packet
-        if (rx_data[25] & (1 << 2)) //RX appears to set this bit when it knows it missed a frame.
-        {
-          link_quality_raw++;
-          if (!time_siglost)
-            time_siglost = timer_micros();
-          if (timer_micros() - time_siglost > TICK_CLOCK_FREQ_HZ) //8,000,000 ticks on F0, 21M on F4. One second.
-          {
-            failsafe_siglost = 1;
-          }
+
+      if (crc_byte == 0x00FF) {
+        //CRC is good, check Failsafe bit(s) and shove it into controls
+        //FPORT uses SBUS style data, but starts further in the packet
+
+        //RX appears to set this bit when it knows it missed a frame.
+        if (rx_data[25] & (1 << 2)) {
+          rx_lqi_lost_packet();
         } else {
-          time_siglost = 0;
-          failsafe_siglost = 0;
+          rx_lqi_got_packet();
         }
         if (rx_data[25] & (1 << 3)) {
           failsafe_sbus_failsafe = 1;              // Sbus packets have a failsafe bit. This is cool.
@@ -290,27 +262,13 @@ void rx_serial_process_fport() {
         fport_debug_telemetry = false;
       }
 
-      time_lastframe = timer_micros();
-
-      // link quality & rssi
-      static unsigned long secondtime = 0;
-      if (time_lastframe - secondtime > 1000000) {
-        stat_frames_second = 112 - link_quality_raw;
-        link_quality_raw = 0;
-        secondtime = time_lastframe;
-      }
+      rx_lqi_update_fps(LQI_FPS);
 
       if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11) { //rssi set to internal link quality
-        rx_rssi = stat_frames_second / 112.0f;
-        rx_rssi = rx_rssi * rx_rssi * rx_rssi * LQ_EXPO + rx_rssi * (1 - LQ_EXPO);
-        rx_rssi *= 100.0f;
+        rx_lqi_update_rssi_from_lqi(LQI_FPS);
       } else { //rssi set to value decoded from aux channel input from receiver
-        rx_rssi = 0.0610128f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 173);
+        rx_lqi_update_rssi_direct(0.0610128f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 173));
       }
-      if (rx_rssi > 100.0f)
-        rx_rssi = 100.0f;
-      if (rx_rssi < 0.0f)
-        rx_rssi = 0.0f;
 
       frame_status = FRAME_TX; //We're done with this frame now.
       telemetry_counter++;     // Let the telemetry section know it's time to send.

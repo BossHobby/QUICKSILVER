@@ -105,6 +105,59 @@ void RX_USART_ISR(void) {
   rx_frame_position %= (RX_BUFF_SIZE);
 }
 
+void rx_lqi_lost_packet() {
+  link_quality_raw++;
+  if (!time_siglost) {
+    time_siglost = timer_micros();
+  }
+
+  // was TICK_CLOCK_FREQ_HZ 8,000,000 ticks on F0, 21M on F4. One second.
+  // however gettime and timer_micros are in us.
+  if (timer_micros() - time_siglost > FAILSAFETIME) {
+    failsafe_siglost = 1;
+  }
+}
+
+void rx_lqi_got_packet() {
+  time_siglost = 0;
+  failsafe_siglost = 0;
+}
+
+void rx_lqi_update_fps(uint16_t fixed_fps) {
+  time_lastframe = timer_micros();
+
+  // link quality & rssi
+  static uint32_t fps_counter = 0;
+  static uint32_t time_last_fps_update = 0;
+  if (time_lastframe - time_last_fps_update > 1000000) {
+    // two cases here: we have a fixed fps (fixed_fps > 0)
+    // or we calculate fps on the fly
+    if (fixed_fps > 0) {
+      stat_frames_second = fixed_fps - link_quality_raw;
+    } else {
+      stat_frames_second = fps_counter;
+      fps_counter = 0;
+    }
+
+    link_quality_raw = 0;
+    time_last_fps_update = time_lastframe;
+  }
+
+  fps_counter++;
+}
+
+void rx_lqi_update_rssi_from_lqi(float expected_fps) {
+  rx_rssi = stat_frames_second / expected_fps;
+  rx_rssi = rx_rssi * rx_rssi * rx_rssi * LQ_EXPO + rx_rssi * (1 - LQ_EXPO);
+  rx_rssi *= 100.0f;
+
+  rx_rssi = constrainf(rx_rssi, 0.f, 100.f);
+}
+
+void rx_lqi_update_rssi_direct(float rssi) {
+  rx_rssi = constrainf(rssi, 0.f, 100.f);
+}
+
 void rx_init(void) {
   flags.rx_mode = !RXMODE_BIND; // put LEDS in normal signal status
   rx_serial_init();

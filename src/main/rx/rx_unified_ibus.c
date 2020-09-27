@@ -10,6 +10,8 @@
 #include "drv_time.h"
 #include "profile.h"
 
+#define LQI_FPS (1000.0f / 7.0f)
+
 extern int rx_bind_enable;
 extern float rx_rssi;
 
@@ -19,11 +21,6 @@ extern uint8_t rx_frame_position;
 extern uint8_t expected_frame_length;
 
 extern frame_status_t frame_status;
-
-extern uint16_t link_quality_raw;
-extern uint8_t stat_frames_second;
-extern uint32_t time_siglost;
-extern uint32_t time_lastframe;
 
 extern uint16_t bind_safety;
 extern int32_t channels[16];
@@ -125,29 +122,13 @@ void rx_serial_process_ibus() {
     state.aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
     state.aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
 
-    time_lastframe = timer_micros();
-
-    // stats & rssi
-    static int fps_counter = 0;
-    static unsigned long secondtime = 0;
-    if (time_lastframe - secondtime > 1000000) {
-      stat_frames_second = fps_counter;
-      fps_counter = 0;
-      secondtime = time_lastframe;
-    }
-    fps_counter++;
+    rx_lqi_update_fps(0);
 
     if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11) { //rssi set to internal link quality
-      rx_rssi = stat_frames_second / 111.0f;              //**this needs adjusting to actual ibus expected packets per second
-      rx_rssi = rx_rssi * rx_rssi * rx_rssi * LQ_EXPO + rx_rssi * (1 - LQ_EXPO);
-      rx_rssi *= 100.0f;
+      rx_lqi_update_rssi_from_lqi(LQI_FPS);
     } else { //rssi set to value decoded from aux channel input from receiver
-      rx_rssi = 0.1f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 1000);
+      rx_lqi_update_rssi_direct(0.1f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 1000));
     }
-    if (rx_rssi > 100.0f)
-      rx_rssi = 100.0f;
-    if (rx_rssi < 0.0f)
-      rx_rssi = 0.0f;
 
     frame_status = FRAME_TX; //We're done with this frame now.
 

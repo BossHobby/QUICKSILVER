@@ -9,6 +9,7 @@
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "profile.h"
+#include "util.h"
 
 #define REDPINE_CHANNEL_START 3
 #define REDPINE_CRC16_POLY 0x8005
@@ -22,11 +23,6 @@ extern uint8_t rx_frame_position;
 extern uint8_t expected_frame_length;
 
 extern frame_status_t frame_status;
-
-extern uint16_t link_quality_raw;
-extern uint8_t stat_frames_second;
-extern uint32_t time_siglost;
-extern uint32_t time_lastframe;
 
 extern uint16_t bind_safety;
 extern int32_t channels[16];
@@ -76,14 +72,12 @@ void rx_serial_process_redpine() {
     return;
   }
 
+  // packet lost flag
   if ((rx_data[0] & 0xc0) == 0x40) {
-    // packet lost flag, do not process
+    rx_lqi_lost_packet();
     return;
-  }
-  if ((rx_data[0] & 0xc0) != 0x0) {
-    // invalid flag, skip this packet
-    frame_status = FRAME_IDLE;
-    return;
+  } else {
+    rx_lqi_got_packet();
   }
 
   const uint16_t channels[4] = {
@@ -126,24 +120,15 @@ void rx_serial_process_redpine() {
   state.aux[AUX_CHANNEL_10] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x40) ? 1 : 0;
   state.aux[AUX_CHANNEL_11] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x80) ? 1 : 0;
 
-  time_lastframe = timer_micros();
-
-  // link quality & rssi
-  static unsigned long secondtime = 0;
-  if (time_lastframe - secondtime > 1000000) {
-    stat_frames_second = 112 - link_quality_raw;
-    link_quality_raw = 0;
-    secondtime = time_lastframe;
-  }
+  rx_lqi_update_fps(0);
 
   int16_t rssi = rx_data[REDPINE_CHANNEL_START + 7];
   if (rssi >= 128) {
-    rssi = ((rssi - 256) / 2) - 71;
+    rssi = ((rssi - 256) / 2);
   } else {
-    rssi = (rssi / 2) - 71;
+    rssi = (rssi / 2);
   }
-
-  rx_rssi = rssi;
+  rx_lqi_update_rssi_direct(rssi);
 
   frame_status = FRAME_TX; //We're done with this frame now.
 

@@ -30,8 +30,6 @@ extern frame_status_t frame_status;
 
 extern uint16_t link_quality_raw;
 extern uint8_t stat_frames_second;
-extern uint32_t time_siglost;
-extern uint32_t time_lastframe;
 
 extern uint16_t bind_safety;
 extern int32_t channels[16];
@@ -150,23 +148,7 @@ void rx_serial_process_dsmx() {
     state.aux[AUX_CHANNEL_2] = (channels[6] > 550) ? 1 : 0;
 #endif
 
-    //for failsafe_noframes
-    time_lastframe = timer_micros();
-
-    /*    //for framerate calculation - totally unnecessary but cool to see
-    rx_framerate[2] = !(rx_framerate[2]);
-    rx_framerate[rx_framerate[2]] = time_lastframe;
-    rx_framerate_ticks = abs(rx_framerate[0] - rx_framerate[1]);*/
-
-    // link quality & rssi
-    static int fps_counter = 0;
-    static unsigned long secondtime = 0;
-    if (time_lastframe - secondtime > 1000000) {
-      stat_frames_second = fps_counter;
-      fps_counter = 0;
-      secondtime = time_lastframe;
-    }
-    fps_counter++;
+    rx_lqi_update_fps(0);
 
     if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11) { //rssi set to internal link quality
 #ifdef DSM_RSSI_FADES
