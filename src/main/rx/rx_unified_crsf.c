@@ -10,6 +10,33 @@
 #include "drv_time.h"
 #include "profile.h"
 
+/*
+ * CRSF protocol
+ *
+ * CRSF protocol uses a single wire half duplex uart connection.
+ * The master sends one frame every 4ms and the slave replies between two frames from the master.
+ *
+ * 420000 baud
+ * not inverted
+ * 8 Bit
+ * 1 Stop bit
+ * Big endian
+ * 420000 bit/s = 46667 byte/s (including stop bit) = 21.43us per byte
+ * Max frame size is 64 bytes
+ * A 64 byte frame plus 1 sync byte can be transmitted in 1393 microseconds.
+ *
+ * CRSF_TIME_NEEDED_PER_FRAME_US is set conservatively at 1500 microseconds
+ *
+ * Every frame has the structure:
+ * <Device address><Frame length><Type><Payload><CRC>
+ *
+ * Device address: (uint8_t)
+ * Frame length:   length in  bytes including Type (uint8_t)
+ * Type:           (uint8_t)
+ * CRC:            (uint8_t)
+ *
+ */
+
 typedef enum {
   CRSF_FRAMETYPE_GPS = 0x02,
   CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
@@ -43,6 +70,19 @@ typedef struct {
   unsigned int chan14 : 11;
   unsigned int chan15 : 11;
 } __attribute__((__packed__)) crsf_channels_t;
+
+typedef struct {
+  uint8_t uplink_rssi_2;
+  uint8_t uplink_rssi_1;
+  uint8_t uplink_link_quality;
+  int8_t uplink_snr;
+  uint8_t active_antenna;
+  uint8_t rf_mode;
+  uint8_t uplink_tx_power;
+  uint8_t downlink_rssi;
+  uint8_t downlink_link_quality;
+  int8_t downlink_snr;
+} crsf_stats_t;
 
 extern int rx_bind_enable;
 extern float rx_rssi;
@@ -116,6 +156,8 @@ void rx_serial_process_crsf() {
     return;
   }
 
+  rx_lqi_update_fps(0);
+
   switch (rx_data[2]) {
   case CRSF_FRAMETYPE_RC_CHANNELS_PACKED: {
     const crsf_channels_t *chan = (crsf_channels_t *)&rx_data[3];
@@ -161,16 +203,18 @@ void rx_serial_process_crsf() {
     state.aux[AUX_CHANNEL_9] = (channels[13] > 1100) ? 1 : 0;
     state.aux[AUX_CHANNEL_10] = (channels[14] > 1100) ? 1 : 0;
     state.aux[AUX_CHANNEL_11] = (channels[15] > 1100) ? 1 : 0;
-
     break;
+  }
+
+  case CRSF_FRAMETYPE_LINK_STATISTICS: {
+    const crsf_stats_t *stats = (crsf_stats_t *)&rx_data[3];
+    rx_lqi_update_rssi_direct(stats->uplink_link_quality);
   }
 
   default:
     // ? handle ?
     break;
   }
-
-  rx_lqi_update_fps(0);
 
   frame_status = FRAME_TX; //We're done with this frame now.
 
