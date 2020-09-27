@@ -209,6 +209,7 @@ void rx_serial_process_crsf() {
   case CRSF_FRAMETYPE_LINK_STATISTICS: {
     const crsf_stats_t *stats = (crsf_stats_t *)&rx_data[3];
     rx_lqi_update_rssi_direct(stats->uplink_link_quality);
+    break;
   }
 
   default:
