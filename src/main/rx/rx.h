@@ -1,7 +1,8 @@
 #pragma once
 
-#include "config.h"
 #include <stdint.h>
+
+#include "config.h"
 
 typedef enum {
   RX_PROTOCOL_INVALID,
@@ -69,17 +70,6 @@ void rx_serial_init(void);
 
 void rx_precalc();
 void rx_check(void);
-
-void rx_serial_find_protocol(void);
-
-void rx_serial_process_dsmx(void);
-void rx_serial_process_sbus(void);
-void rx_serial_process_ibus(void);
-void rx_serial_process_fport(void);
-void rx_serial_process_crsf(void);
-void rx_serial_process_redpine(void);
-
-void rx_serial_send_fport_telemetry(void);
 
 float rx_expo(float x, float exp);
 float rx_smoothing_hz(rx_protocol_t proto);
