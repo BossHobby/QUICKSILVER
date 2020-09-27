@@ -346,7 +346,9 @@ void rx_serial_find_protocol(void) {
       }
       break;
     case RX_SERIAL_PROTOCOL_CRSF:
-      if (rx_buffer[0] == 0xC8) {
+      if (rx_buffer[0] == 0xC8 &&
+          rx_buffer[1] <= 64 &&
+          (rx_buffer[2] == 0x16 || rx_buffer[2] == 0x14)) {
         rx_serial_protocol = protocol_to_check;
       }
       break;
@@ -360,6 +362,10 @@ void rx_serial_find_protocol(void) {
       frame_status = FRAME_TX; //Whatever we got, it didn't make sense. Mark the frame as Checked and start over.
       break;
     }
+  }
+
+  if (rx_serial_protocol == protocol_to_check) {
+    quic_debugf("UNIFIED: protocol %d found", protocol_to_check);
   }
 
   if (protocol_detect_timer > 4000) { //4000 loops, half a second
