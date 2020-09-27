@@ -246,8 +246,10 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
   case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
   case RX_SERIAL_PROTOCOL_CRSF:
     gpio_init.GPIO_Pin = USART.tx_pin.pin;
-    GPIO_Init(USART.tx_pin.port, &gpio_init);
+    gpio_init.GPIO_OType = GPIO_OType_PP;
+    gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
 
+    GPIO_Init(USART.tx_pin.port, &gpio_init);
     GPIO_PinAFConfig(USART.tx_pin.port, USART.tx_pin.pin_source, USART.gpio_af);
     break;
 

@@ -15,10 +15,8 @@
 
 #ifdef RX_UNIFIED_SERIAL
 
-//*****************************************
-//*****************************************
-#define RX_FRAME_INTERVAL_TRIGGER_TICKS (1500 * (TICK_CLOCK_FREQ_HZ / 1000000)) //This is the microsecond threshold for triggering a new frame to re-index to position 0 in the ISR
-//*****************************************
+//This is the microsecond threshold for triggering a new frame to re-index to position 0 in the ISR
+#define RX_FRAME_INTERVAL_TRIGGER_TICKS (1500 * (TICK_CLOCK_FREQ_HZ / 1000000))
 
 // externally accessable variables
 rx_serial_protocol_t rx_serial_protocol = RX_SERIAL_PROTOCOL_INVALID;
@@ -48,7 +46,7 @@ uint8_t telemetry_offset = 0;
 uint8_t telemetry_packet[14];
 uint8_t ready_for_next_telemetry = 1;
 
-static uint8_t protocol_to_check = 1;
+static rx_serial_protocol_t protocol_to_check = 1;
 static uint16_t protocol_detect_timer = 0;
 
 extern profile_t profile;
@@ -163,17 +161,8 @@ void rx_init(void) {
   rx_serial_init();
 }
 
-void rx_serial_init(void) {
-  //Let the uart ISR do its stuff.
-  frame_status = FRAME_IDLE;
-
-  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_INVALID) { //No known protocol? Can't really set the radio up yet then can we?
-    rx_serial_find_protocol();
-  } else {
-    serial_rx_init(rx_serial_protocol); //There's already a known protocol, we're good.
-  }
-
-  switch (rx_serial_protocol) {
+void rx_serial_update_frame_length(rx_serial_protocol_t proto) {
+  switch (proto) {
   case RX_SERIAL_PROTOCOL_DSM:
     expected_frame_length = 16;
     break;
@@ -189,7 +178,8 @@ void rx_serial_init(void) {
     expected_frame_length = 28; //Minimum.
     break;
   case RX_SERIAL_PROTOCOL_CRSF:
-    expected_frame_length = 64; //Maybe 65? Not sure where the Sync Byte comes in
+    // crsf has variable frame length, assume 3 (header size) until we receive it
+    expected_frame_length = 3;
     break;
   case RX_SERIAL_PROTOCOL_REDPINE:
   case RX_SERIAL_PROTOCOL_REDPINE_INVERTED:
@@ -197,6 +187,18 @@ void rx_serial_init(void) {
     break;
   default:
     break;
+  }
+}
+
+void rx_serial_init(void) {
+  //Let the uart ISR do its stuff.
+  frame_status = FRAME_IDLE;
+
+  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_INVALID) { //No known protocol? Can't really set the radio up yet then can we?
+    rx_serial_find_protocol();
+  } else {
+    serial_rx_init(rx_serial_protocol); //There's already a known protocol, we're good.
+    rx_serial_update_frame_length(rx_serial_protocol);
   }
 }
 
@@ -282,6 +284,10 @@ void rx_check() {
       break;
     case RX_SERIAL_PROTOCOL_CRSF:
       //CRSF telemetry function call yo
+
+      // reset frame length for next run
+      expected_frame_length = 3;
+
       frame_status = FRAME_DONE;
       break;
 
@@ -303,8 +309,10 @@ void rx_serial_find_protocol(void) {
     if (protocol_to_check > RX_SERIAL_PROTOCOL_MAX) {
       protocol_to_check = RX_SERIAL_PROTOCOL_DSM;
     }
-    serial_rx_init(protocol_to_check); //Configure a protocol!
     quic_debugf("UNIFIED: trying protocol %d", protocol_to_check);
+
+    serial_rx_init(protocol_to_check); //Configure a protocol!
+    rx_serial_update_frame_length(protocol_to_check);
   }
 
   protocol_detect_timer++; //Should increment once per main loop
@@ -338,7 +346,7 @@ void rx_serial_find_protocol(void) {
       }
       break;
     case RX_SERIAL_PROTOCOL_CRSF:
-      if (rx_buffer[0] != 0xFF && 1 == 2) { //Need to look up the expected start value.
+      if (rx_buffer[0] == 0xC8) {
         rx_serial_protocol = protocol_to_check;
       }
       break;
