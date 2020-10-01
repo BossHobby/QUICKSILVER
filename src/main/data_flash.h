@@ -34,6 +34,3 @@ void data_flash_finish();
 
 cbor_result_t data_flash_read_backbox(const uint32_t addr, blackbox_t *b, const uint8_t count);
 cbor_result_t data_flash_write_backbox(const blackbox_t *b);
-
-cbor_result_t data_flash_read_header(data_flash_header_t *h);
-cbor_result_t data_flash_write_header(data_flash_header_t *h);

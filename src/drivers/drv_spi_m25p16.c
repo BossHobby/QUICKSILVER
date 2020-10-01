@@ -85,6 +85,28 @@ void m25p16_wait_for_ready() {
     ;
 }
 
+uint8_t m25p16_is_ready() {
+  if (!spi_dma_is_ready(M25P16_SPI_PORT)) {
+    return 0;
+  }
+
+  static uint8_t read_status_in_progress = 0;
+  static uint8_t read_status[2];
+
+  if (read_status_in_progress != 0) {
+    read_status_in_progress = 0;
+    return (read_status[1] & 0x01) == 0;
+  }
+
+  read_status[0] = M25P16_READ_STATUS_REGISTER;
+  read_status[1] = 0x0;
+
+  spi_csn_enable(M25P16_NSS_PIN);
+  spi_dma_transfer_begin(M25P16_SPI_PORT, read_status, 2);
+  read_status_in_progress = 1;
+  return 0;
+}
+
 static void m25p16_set_addr(const uint32_t addr) {
   spi_transfer_byte(M25P16_SPI_PORT, (addr >> 16) & 0xFF);
   spi_transfer_byte(M25P16_SPI_PORT, (addr >> 8) & 0xFF);
@@ -106,29 +128,6 @@ uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, 
 
 uint8_t m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t size) {
   if (!spi_dma_is_ready(M25P16_SPI_PORT)) {
-    return 0;
-  }
-
-  static uint8_t chip_is_ready = 0;
-  static uint8_t read_status_in_progress = 0;
-  static uint8_t read_status[2];
-
-  if (chip_is_ready == 0) {
-    if (read_status_in_progress == 0) {
-      read_status[0] = M25P16_READ_STATUS_REGISTER;
-      read_status[1] = 0x0;
-
-      spi_csn_enable(M25P16_NSS_PIN);
-      spi_dma_transfer_begin(M25P16_SPI_PORT, read_status, 2);
-      read_status_in_progress = 1;
-      return 0;
-    } else {
-      chip_is_ready = (read_status[1] & 0x01) == 0;
-      read_status_in_progress = 0;
-    }
-  }
-
-  if (chip_is_ready == 0) {
     return 0;
   }
 
@@ -154,7 +153,6 @@ uint8_t m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint3
 
   spi_dma_transfer_begin(M25P16_SPI_PORT, dma_buf, size + 4);
 
-  chip_is_ready = 0;
   write_enabled = 0;
   return 1;
 }

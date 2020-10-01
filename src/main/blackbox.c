@@ -60,10 +60,10 @@ uint8_t blackbox_update() {
     return 0;
   }
 
+  uint8_t write_in_progress = data_flash_update(loop_counter);
+
   if (blackbox_enabled == 0)
     return 0;
-
-  uint8_t write_in_progress = data_flash_update(loop_counter);
 
   blackbox.loop = loop_counter / blackbox_rate;
   blackbox.time = timer_micros();
