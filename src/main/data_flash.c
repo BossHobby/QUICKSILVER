@@ -256,7 +256,6 @@ void data_flash_init() {
 
 void data_flash_reset() {
 #ifdef USE_M25P16
-  m25p16_wait_for_ready();
   m25p16_command(M25P16_WRITE_ENABLE);
   m25p16_command(M25P16_BULK_ERASE);
 #endif
