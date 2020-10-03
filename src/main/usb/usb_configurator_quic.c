@@ -4,15 +4,20 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <stm32f4xx_ll_usart.h>
+
 #include "blackbox.h"
 #include "control.h"
 #include "data_flash.h"
 #include "debug.h"
+#include "drv_serial.h"
 #include "drv_serial_4way.h"
+#include "drv_serial_soft.h"
 #include "drv_spi_max7456.h"
 #include "drv_time.h"
 #include "drv_usb.h"
 #include "flash.h"
+#include "led.h"
 #include "profile.h"
 #include "project.h"
 #include "sixaxis.h"
@@ -505,6 +510,63 @@ void process_motor_test(uint8_t *data, uint32_t len) {
   }
 }
 
+void process_serial(uint8_t *data, uint32_t len) {
+  cbor_result_t res = CBOR_OK;
+
+  cbor_value_t dec;
+  cbor_decoder_init(&dec, data, len);
+
+  cbor_value_t enc;
+  cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+
+  quic_motor_command cmd;
+  res = cbor_decode_uint8(&dec, &cmd);
+  check_cbor_error(QUIC_CMD_SERIAL);
+
+  switch (cmd) {
+  case QUIC_SERIAL_ENABLE: {
+    usart_ports_t port = USART_PORT_INVALID;
+    res = cbor_decode_uint8(&dec, &port);
+    check_cbor_error(QUIC_CMD_SERIAL);
+
+    uint32_t baudrate = 0;
+    res = cbor_decode_uint32(&dec, &baudrate);
+    check_cbor_error(QUIC_CMD_SERIAL);
+
+    res = cbor_encode_uint8(&enc, &port);
+    check_cbor_error(QUIC_CMD_SERIAL);
+
+    send_quic(QUIC_CMD_SERIAL, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+
+#define USART usart_port_defs[port]
+    LL_USART_Disable(USART.channel);
+
+    soft_serial_t serial;
+    soft_serial_init(&serial, USART.tx_pin, USART.rx_pin, baudrate);
+
+    while (1) {
+      uint8_t data = 0;
+
+      if (usb_serial_read(&data, 1) == 1) {
+        soft_serial_set_output(&serial);
+        soft_serial_write_byte(&serial, data);
+      }
+
+      soft_serial_set_input(&serial);
+      if (soft_serial_read_byte(&serial, &data)) {
+        usb_serial_write(&data, 1);
+      }
+    }
+#undef USART
+    break;
+  }
+
+  default:
+    quic_errorf(QUIC_CMD_SERIAL, "INVALID CMD %d", cmd);
+    break;
+  }
+}
+
 void usb_process_quic() {
   const uint8_t cmd = usb_serial_read_byte();
   if (cmd == QUIC_CMD_INVALID) {
@@ -559,6 +621,9 @@ void usb_process_quic() {
   case QUIC_CMD_CAL_STICKS:
     request_stick_calibration_wizard();
     send_quic(QUIC_CMD_CAL_STICKS, QUIC_FLAG_NONE, NULL, 0);
+    break;
+  case QUIC_CMD_SERIAL:
+    process_serial(buffer, size);
     break;
   default:
     quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);

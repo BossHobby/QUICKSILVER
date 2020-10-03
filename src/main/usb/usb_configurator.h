@@ -25,6 +25,7 @@ typedef enum {
   QUIC_CMD_BLACKBOX,
   QUIC_CMD_MOTOR,
   QUIC_CMD_CAL_STICKS,
+  QUIC_CMD_SERIAL
 } quic_command;
 
 typedef enum {
@@ -40,6 +41,10 @@ typedef enum {
   QUIC_MOTOR_TEST_SET_VALUE,
   QUIC_MOTOR_ESC4WAY_IF
 } quic_motor_command;
+
+typedef enum {
+  QUIC_SERIAL_ENABLE,
+} quic_serial_command;
 
 typedef enum {
   QUIC_FLAG_NONE,
