@@ -2,6 +2,12 @@
 
 PREFIX="v"
 
+DEVELOP=false
+
+if [ "$(git branch --show-current)" = "develop" ]; then
+  DEVELOP=true
+fi
+
 find_latest_semver() {
   pattern="^$PREFIX([0-9]+\.[0-9]+\.[0-9]+)$"
   versions=$(for tag in $(git tag); do
@@ -38,9 +44,18 @@ bump() {
 
     next_ver="${PREFIX}${next_major}.${next_minor}.${next_patch}"
 
+    if [ $DEVELOP = true ]; then
+      next_ver="$next_ver-dev"
+
+      if git rev-parse "$next_ver" >/dev/null 2>&1; then
+        git push origin ":refs/tags/$next_ver"
+        git tag -d "$next_ver"
+      fi
+    fi
+
     echo "tagging $next_ver $head_commit"
     git tag "$next_ver" $head_commit
-    git push origin master --tags
+    git push --tags
   fi
 }
 
@@ -50,8 +65,7 @@ usage() {
   exit 1
 }
 
-
-case $1 in
+case "$1" in
   major) bump 1 0 0;;
   minor) bump 0 1 0;;
   patch) bump 0 0 1;;
