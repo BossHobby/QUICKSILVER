@@ -8,6 +8,7 @@
 #include "profile.h"
 #include "usb_configurator.h"
 #include "util.h"
+#include "util/circular_buffer.h"
 
 #if defined(USE_CC2500) && (defined(RX_FRSKY_D16_FCC) || defined(RX_FRSKY_D16_LBT))
 
