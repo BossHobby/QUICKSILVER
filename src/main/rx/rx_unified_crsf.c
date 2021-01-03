@@ -9,6 +9,7 @@
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "profile.h"
+#include "usb_configurator.h"
 
 /*
  * CRSF protocol
@@ -137,6 +138,12 @@ void rx_serial_process_crsf() {
     //got the header
     memcpy(rx_data, rx_buffer, 3);
 
+    if (rx_data[0] != 0xC8 || rx_data[1] > 64) {
+      quic_debugf("CRSF: invalid header");
+      frame_status = FRAME_IDLE;
+      return;
+    }
+
     // set real frame length
     expected_frame_length = rx_data[1] + 2;
     return;
@@ -152,6 +159,7 @@ void rx_serial_process_crsf() {
 
   if (crc_ours != crc_theirs) {
     // invalid crc, bail
+    quic_debugf("CRSF: invalid crc, bail");
     frame_status = FRAME_IDLE;
     return;
   }
