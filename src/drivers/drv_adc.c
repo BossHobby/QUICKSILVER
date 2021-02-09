@@ -34,7 +34,7 @@ void adc_init(void) {
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
 
   //adc typedef for struct
-  ADC_CommonInitTypeDef ADC_CommonInitStructure;		//we may want to use the common init to slow adc down & reduce dma bandwidth taken up on DMA2
+  ADC_CommonInitTypeDef ADC_CommonInitStructure; //we may want to use the common init to slow adc down & reduce dma bandwidth taken up on DMA2
   ADC_InitTypeDef ADC_InitStructure;
 
   //gpio configuration
@@ -75,10 +75,10 @@ void adc_init(void) {
   ADC_SoftwareStartConv(ADC1);
 
   // ADC1 calibration sequence
-//  ADC_ResetCalibration(ADC1);
-//  while(ADC_GetResetCalibrationStatus(ADC1));
-//  ADC_StartCalibration(ADC1);
-//  while(ADC_GetCalibrationStatus(ADC1));
+  //  ADC_ResetCalibration(ADC1);
+  //  while(ADC_GetResetCalibrationStatus(ADC1));
+  //  ADC_StartCalibration(ADC1);
+  //  while(ADC_GetCalibrationStatus(ADC1));
 
   // reference is measured a 3.3v, toy boards are powered by 2.8, so a 1.17 multiplier
   // different vccs will translate to a different adc scale factor,
@@ -97,25 +97,26 @@ void adc_init(void) {
 // 0 - vbat
 // 1 - vref
 
-uint16_t readADC1(int channel){
-  static uint8_t adc_channel_synchronizer;  														//the next adc channel to run when ready
-  static uint8_t adc_last_conversion = 1;																//the last adc channel to run
-  uint8_t ready_to_convert = ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC);									//check to see if the last conversion is done
-  if(ready_to_convert){																				//will skip if adc is still busy or update the adc_array and request the next conversion
-	  adc_array[adc_last_conversion] = ADC_GetConversionValue(ADC1);								// Shove the last adc conversion into the array
-	  switch (adc_channel_synchronizer) {  															// Select the new channel to read
-	  case 1:
-		ADC_RegularChannelConfig(ADC1, ADC_Channel_Vrefint, 1, ADC_SampleTime_480Cycles);			// Reconfigure the new adc channel
-		adc_last_conversion = 1;																	// Take note of what channel conversion has just been requested
-		break;
-	  case 0:
-		ADC_RegularChannelConfig(ADC1, BATTERY_ADC_CHANNEL, 1, ADC_SampleTime_480Cycles);			// Reconfigure the new adc channel
-		adc_last_conversion = 0;																	// Take note of what channel conversion has just been requested
-		break;
-	  }
-	  ADC_SoftwareStartConv(ADC1);																	// Start the conversion
-	  adc_channel_synchronizer++;																	// Advance the index
-	  if (adc_channel_synchronizer == ADC_CHANNELS ) adc_channel_synchronizer = 0;					// Start the index over if we reached the end of the list
+uint16_t readADC1(int channel) {
+  static uint8_t adc_channel_synchronizer;                          //the next adc channel to run when ready
+  static uint8_t adc_last_conversion = 1;                           //the last adc channel to run
+  uint8_t ready_to_convert = ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC); //check to see if the last conversion is done
+  if (ready_to_convert) {                                           //will skip if adc is still busy or update the adc_array and request the next conversion
+    adc_array[adc_last_conversion] = ADC_GetConversionValue(ADC1);  // Shove the last adc conversion into the array
+    switch (adc_channel_synchronizer) {                             // Select the new channel to read
+    case 1:
+      ADC_RegularChannelConfig(ADC1, ADC_Channel_Vrefint, 1, ADC_SampleTime_480Cycles); // Reconfigure the new adc channel
+      adc_last_conversion = 1;                                                          // Take note of what channel conversion has just been requested
+      break;
+    case 0:
+      ADC_RegularChannelConfig(ADC1, BATTERY_ADC_CHANNEL, 1, ADC_SampleTime_480Cycles); // Reconfigure the new adc channel
+      adc_last_conversion = 0;                                                          // Take note of what channel conversion has just been requested
+      break;
+    }
+    ADC_SoftwareStartConv(ADC1); // Start the conversion
+    adc_channel_synchronizer++;  // Advance the index
+    if (adc_channel_synchronizer == ADC_CHANNELS)
+      adc_channel_synchronizer = 0; // Start the index over if we reached the end of the list
   }
   return adc_array[channel];
 }
@@ -128,13 +129,13 @@ uint16_t readADC1(int channel){
 
 float adc_read(int channel) {
   switch (channel) {
-  case 0:	//vbat
+  case 0: //vbat
 #ifdef DEBUG
     lpf(&debug.adcfilt, (float)readADC1(channel), 0.998);
 #endif
     return (float)readADC1(channel) * ((float)(ADC_SCALEFACTOR * (profile.voltage.actual_battery_voltage / profile.voltage.reported_telemetry_voltage)));
 
-  case 1:	//reference
+  case 1: //reference
 #ifdef DEBUG
     lpf(&debug.adcreffilt, (float)readADC1(channel), 0.998);
 #endif
