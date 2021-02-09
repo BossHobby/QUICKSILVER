@@ -129,18 +129,27 @@ uint16_t readADC1(int channel) {
 
 float adc_read(int channel) {
   switch (channel) {
-  case 0: //vbat
+  case 0: {
+    //vbat
+    const float raw_value = readADC1(channel);
 #ifdef DEBUG
-    lpf(&debug.adcfilt, (float)readADC1(channel), 0.998);
+    lpf(&debug.adcfilt, raw_value, 0.998);
 #endif
-    return (float)readADC1(channel) * ((float)(ADC_SCALEFACTOR * (profile.voltage.actual_battery_voltage / profile.voltage.reported_telemetry_voltage)));
-
-  case 1: //reference
+    return raw_value * ((float)(ADC_SCALEFACTOR * (profile.voltage.actual_battery_voltage / profile.voltage.reported_telemetry_voltage)));
+  }
+  case 1: {
+    //reference
+    const float raw_value = readADC1(channel);
 #ifdef DEBUG
-    lpf(&debug.adcreffilt, (float)readADC1(channel), 0.998);
+    lpf(&debug.adcreffilt, raw_value, 0.998);
 #endif
-    return vref_cal / (float)readADC1(channel);
 
+    if (raw_value == 0) {
+      // avoid devision by zero below
+      return 0;
+    }
+    return vref_cal / raw_value;
+  }
   default:
     return 0;
   }
