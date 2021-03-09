@@ -7,7 +7,6 @@
 // the routine sends attitude, fc volts and rssi ( if available)
 #include <stdio.h>
 
-#include "binary.h"
 #include "config.h"
 #include "control.h"
 #include "defines.h"
@@ -90,7 +89,7 @@ void send_g_frame() {
     sendint(0);
   }
 
-  sendbyte(B00111111); // sats
+  sendbyte(0b00111111); // sats
   sendcrc();
 }
 // S frame

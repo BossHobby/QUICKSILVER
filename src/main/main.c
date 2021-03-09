@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "binary.h"
 #include "buzzer.h"
 #include "control.h"
 #include "debug.h"

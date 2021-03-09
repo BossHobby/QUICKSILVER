@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 
-#include "binary.h"
 #include "config.h"
 #include "control.h"
 #include "drv_spi.h"
@@ -43,14 +42,14 @@ writeregs( demodcal , sizeof(demodcal) );
 
   xn_writereg(EN_AA, 0);     // aa disabled
   xn_writereg(EN_RXADDR, 1); // pipe 0 only
-                             //	xn_writereg( RF_SETUP , B00000001);  // lna high current on ( better performance )
-  xn_writereg(RF_SETUP, B00000111);
+                             //	xn_writereg( RF_SETUP , 0b00000001);  // lna high current on ( better performance )
+  xn_writereg(RF_SETUP, 0b00000111);
   xn_writereg(RX_PW_P0, PAYLOAD_LENGHT); // payload size
   xn_writereg(SETUP_RETR, 0);            // no retransmissions ( redundant?)
   xn_writereg(SETUP_AW, 3);              // address size (5 bits)
   xn_command(FLUSH_RX);
-  xn_writereg(RF_CH, 2);     // bind  channel
-  xn_writereg(0, B00001111); // power up, crc enabled
+  xn_writereg(RF_CH, 2);      // bind  channel
+  xn_writereg(0, 0b00001111); // power up, crc enabled
 }
 
 static char checkpacket() {
@@ -62,7 +61,7 @@ static char checkpacket() {
                                     //RX packet received
                                     //return 1;
   }
-  if ((status & B00001110) != B00001110) {
+  if ((status & 0b00001110) != 0b00001110) {
     // rx fifo not empty
     return 2;
   }
@@ -143,7 +142,7 @@ void rx_check(void) {
         for (int i = 200; i != 0; i--) {
           // sent confirmation to tx
 
-          xn_writereg(0, B00001110);
+          xn_writereg(0, 0b00001110);
           delay(130);
 
           xn_writepayload(rxdata, PAYLOAD_LENGHT);
@@ -151,7 +150,7 @@ void rx_check(void) {
 					int status;
 					status = 0;
 					int txcount = 0;
-					while( !(status&B00100000) && txcount < 0x100 ) 
+					while( !(status&0b00100000) && txcount < 0x100 ) 
 					{
 						status = xn_command(NOP);
 						delay(10);
@@ -159,8 +158,8 @@ void rx_check(void) {
 					}
 					*/
           delay(1000);
-          xn_writereg(0, B00001111);
-          //xn_writereg( STATUS , B00100000 );
+          xn_writereg(0, 0b00001111);
+          //xn_writereg( STATUS , 0b00100000 );
           delay(1000);
         }
         flags.rx_mode = RXMODE_NORMAL;

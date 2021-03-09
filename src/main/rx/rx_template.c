@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 
-#include "binary.h"
 #include "config.h"
 #include "control.h"
 #include "drv_spi.h"
@@ -46,16 +45,16 @@ void writeregs(uint8_t data[], uint8_t size) {
 #endif
 
 // Gauss filter amplitude - lowest to fix telemetry issue
-//static uint8_t demodcal[2] = { 0x39 , B00000001 };
+//static uint8_t demodcal[2] = { 0x39 , 0b00000001 };
 //writeregs( demodcal , sizeof(demodcal) );
 
 // powerup defaults
 //static uint8_t rfcal2[7] = { 0x3a , 0x45 , 0x21 , 0xef , 0xac , 0x3a , 0x50};
 //writeregs( rfcal2 , sizeof(rfcal2) );
 
-#define XN_TO_RX B10001111
-#define XN_TO_TX B10000010
-#define XN_POWER B00000111 | ((TX_POWER & 7) << 3)
+#define XN_TO_RX 0b10001111
+#define XN_TO_TX 0b10000010
+#define XN_POWER 0b00000111 | ((TX_POWER & 7) << 3)
 
 #endif
 
@@ -68,7 +67,7 @@ writeregs(bbcal, sizeof(bbcal));
 static uint8_t rfcal[8] = {0x3e, 0xc9, 0x9a, 0xA0, 0x61, 0xbb, 0xab, 0x9c};
 writeregs(rfcal, sizeof(rfcal));
 
-static uint8_t demodcal[6] = {0x39, 0x0b, 0xdf, 0xc4, B00100111, B00000000};
+static uint8_t demodcal[6] = {0x39, 0x0b, 0xdf, 0xc4, 0b00100111, 0b00000000};
 writeregs(demodcal, sizeof(demodcal));
 
 // tx power 0-3
@@ -76,9 +75,9 @@ writeregs(demodcal, sizeof(demodcal));
 #define TX_POWER 3
 #endif
 
-#define XN_TO_RX B00001111
-#define XN_TO_TX B00000010
-#define XN_POWER (B00000001 | ((TX_POWER & 3) << 1))
+#define XN_TO_RX 0b00001111
+#define XN_TO_TX 0b00000010
+#define XN_POWER (0b00000001 | ((TX_POWER & 3) << 1))
 #endif
 
 void rx_init() {
@@ -101,7 +100,7 @@ void rx_init() {
 
 #ifdef RADIO_XN297L
   // it should work without as well
-  xn_writereg(0x1d, B00111000); // 64 bit payload , software ce
+  xn_writereg(0x1d, 0b00111000); // 64 bit payload , software ce
   spi_cson();
   spi_sendbyte(0xFD); // internal CE high command
   spi_sendbyte(0);    // required for above
@@ -109,7 +108,7 @@ void rx_init() {
 #endif
 
 #ifdef RADIO_XN297
-  xn_writereg(0x1d, B00011000); // 64 bit payload , software ce
+  xn_writereg(0x1d, 0b00011000); // 64 bit payload , software ce
 #endif
 
   xn_writereg(0, XN_TO_RX); // power up, crc enabled, rx mode
@@ -132,7 +131,7 @@ static char checkpacket() {
                                     //RX packet received
                                     //return 1;
   }
-  if ((status & B00001110) != B00001110) {
+  if ((status & 0b00001110) != 0b00001110) {
     // rx fifo not empty
     return 2;
   }

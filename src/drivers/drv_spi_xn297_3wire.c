@@ -1,8 +1,6 @@
-
-#include "binary.h"
-#include "drv_spi.h"
-
 #include "drv_spi_xn297.h"
+
+#include "drv_spi.h"
 #include "project.h"
 
 #ifdef SOFTSPI_3WIRE
@@ -40,7 +38,7 @@ int xn_command(int command) {
 void xn_readpayload(int *data, int size) {
   int index = 0;
   spi_cson();
-  spi_sendbyte(B01100001); // read rx payload
+  spi_sendbyte(0b01100001); // read rx payload
   mosi_input();
   while (index < size) {
     data[index] = spi_recvbyte();

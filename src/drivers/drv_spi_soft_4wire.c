@@ -1,6 +1,5 @@
 #include "drv_spi.h"
 
-#include "binary.h"
 #include "project.h"
 
 #ifdef SOFTSPI_4WIRE

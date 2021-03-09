@@ -1,4 +1,3 @@
-#include "binary.h"
 #include "defines.h"
 #include "project.h"
 
@@ -12,7 +11,7 @@ void setclock(void) {
   // set clock source HSI
   RCC->CFGR &= (0xFFFFFFFC);
   // wait for switch
-  while ((RCC->CFGR & B00001100)) {
+  while ((RCC->CFGR & 0b00001100)) {
   }
   // turn pll off
   RCC->CR &= (uint32_t)0xFEFFFFFF;
@@ -40,7 +39,7 @@ void setclock(void) {
   }
   //set PLL as source
   //	RCC->CFGR&=(0xFFFFFF|B11111110);
-  RCC->CFGR |= (B00000010);
+  RCC->CFGR |= (0b00000010);
 
   //	RCC->CFGR &= (uint32_t)((uint32_t)~(RCC_CFGR_SW));
   //  RCC->CFGR |= (uint32_t)RCC_CFGR_SW_PLL;
@@ -48,7 +47,7 @@ void setclock(void) {
   //wait until PLL is the clock
 #ifdef ENABLE_OVERCLOCK
   // only if overclocked as it is redundant
-  while ((RCC->CFGR & B00001100) != B00001000) {
+  while ((RCC->CFGR & 0b00001100) != 0b00001000) {
   }
 #endif
 }

@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 
-#include "binary.h"
 #include "control.h"
 #include "drv_spi.h"
 #include "drv_spi_xn297.h"
@@ -25,8 +24,8 @@
 //#define RX_DATARATE_250K
 
 //
-#define XN_TO_TX B00000010
-#define XN_TO_RX B00000011
+#define XN_TO_TX 0b00000010
+#define XN_TO_RX 0b00000011
 
 #define RX_MODE_NORMAL RXMODE_NORMAL
 #define RX_MODE_BIND RXMODE_BIND
@@ -168,9 +167,9 @@ void rx_init() {
   xn_writereg(EN_AA, 0);     // aa disabled
   xn_writereg(EN_RXADDR, 1); // pipe 0 only
 #ifdef RX_DATARATE_250K
-  xn_writereg(RF_SETUP, B00100110); // power / data rate 250K
+  xn_writereg(RF_SETUP, 0b00100110); // power / data rate 250K
 #else
-  xn_writereg(RF_SETUP, B00000110); // power / data rate 1000K
+  xn_writereg(RF_SETUP, 0b00000110); // power / data rate 1000K
 #endif
 
   xn_writereg(RX_PW_P0, 15 + crc_en * 2); // payload size
@@ -219,7 +218,7 @@ void beacon_sequence() {
 
   case 1:
     // wait for data to finish transmitting
-    if ((xn_readreg(0x17) & B00010000)) {
+    if ((xn_readreg(0x17) & 0b00010000)) {
       xn_writereg(0, XN_TO_RX);
       beacon_seq_state = 0;
       telemetry_send = 0;
@@ -294,7 +293,7 @@ static char checkpacket() {
     //RX packet received
     // return 1;
   }
-  if ((status & B00001110) != B00001110) {
+  if ((status & 0b00001110) != 0b00001110) {
     // rx fifo not empty
     return 2;
   }

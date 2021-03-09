@@ -13,7 +13,6 @@
 
 #include <stdio.h>
 
-#include "binary.h"
 #include "control.h"
 #include "drv_spi.h"
 #include "drv_spi_xn297.h"
@@ -174,7 +173,7 @@ void rx_init() {
 #endif
 
   // Gauss filter amplitude - lowest
-  static uint8_t demodcal[2] = {0x39, B00000001};
+  static uint8_t demodcal[2] = {0x39, 0b00000001};
   writeregs(demodcal, sizeof(demodcal));
 
   // powerup defaults
@@ -190,11 +189,11 @@ void rx_init() {
   static uint8_t regs_1e[4] = {0x3e, 0xf6, 0x37, 0x5d};
   writeregs(regs_1e, sizeof(regs_1e));
 
-#define XN_POWER B00000001 | ((TX_POWER & 7) << 3)
+#define XN_POWER 0b00000001 | ((TX_POWER & 7) << 3)
 
-#define XN_TO_RX B10001111
-#define XN_TO_TX B10000010
-  //#define XN_POWER B00111111
+#define XN_TO_RX 0b10001111
+#define XN_TO_TX 0b10000010
+  //#define XN_POWER 0b00111111
 
 #endif
 
@@ -206,18 +205,18 @@ void rx_init() {
   writeregs(rfcal, sizeof(rfcal));
 
   static uint8_t demodcal[6] = {0x39, 0x0b, 0xdf, 0xc4, 0xa7, 0x03};
-  //static uint8_t demodcal[6] = { 0x39 , 0x0b , 0xdf , 0xc4 , B00100111 , B00000000};
+  //static uint8_t demodcal[6] = { 0x39 , 0x0b , 0xdf , 0xc4 , 0b00100111 , 0b00000000};
   writeregs(demodcal, sizeof(demodcal));
 
-#define XN_TO_RX B00001111
-#define XN_TO_TX B00000010
-//#define XN_POWER B00000111 // disabled by silverAG for SilverVISE - value is added from config.h
+#define XN_TO_RX 0b00001111
+#define XN_TO_TX 0b00000010
+//#define XN_POWER 0b00000111 // disabled by silverAG for SilverVISE - value is added from config.h
 // SilverVISE - start:
 #ifdef TX_POWER_GENERAL
 // use value from config.h
 #define XN_POWER TX_POWER_GENERAL
 #else
-#define XN_POWER B00000111
+#define XN_POWER 0b00000111
 #endif
   // SilverVISE - end
 
@@ -240,7 +239,7 @@ void rx_init() {
   xn_writereg(RF_CH, 0); // bind on channel 0
 
 #ifdef RADIO_XN297L
-  xn_writereg(0x1d, B00111000); // 64 bit payload , software ce
+  xn_writereg(0x1d, 0b00111000); // 64 bit payload , software ce
   spi_cson();
   spi_sendbyte(0xFD); // internal CE high command
   spi_sendbyte(0);    // required for above
@@ -248,7 +247,7 @@ void rx_init() {
 #endif
 
 #ifdef RADIO_XN297
-  xn_writereg(0x1d, B00011000); // 64 bit payload , software ce
+  xn_writereg(0x1d, 0b00011000); // 64 bit payload , software ce
 #endif
 
   xn_writereg(0, XN_TO_RX); // power up, crc enabled, rx mode
@@ -468,12 +467,12 @@ txaddr[4] = 0;
   xn_writetxaddress(txaddr);
 
   //	xn_writereg( EN_AA , 0 );	// aa disabled -- duplicated
-  //	xn_writereg( RF_SETUP , B00111011);  // high power xn297L only
+  //	xn_writereg( RF_SETUP , 0b00111011);  // high power xn297L only
   //	xn_writereg( SETUP_RETR , 0 ); // no retransmissions  -- duplicated
   // -- duplicated
   //	xn_writereg( SETUP_AW , XN297_ADDRESS_SIZE_BLE - 2 ); // address size (4 bytes for ble)
 
-  //  xn_writereg( 0x1d, B00111000 ); // 64 bit payload , software ce
+  //  xn_writereg( 0x1d, 0b00111000 ); // 64 bit payload , software ce
 }
 
 void send_beacon(void);
@@ -509,7 +508,7 @@ void beacon_sequence() {
 
   case 1:
     // wait for data to finish transmitting
-    if ((xn_readreg(0x17) & B00010000)) {
+    if ((xn_readreg(0x17) & 0b00010000)) {
       xn_writereg(0, XN_TO_RX);
       xn_writereg(0x25, rfchannel[oldchan]);
       beacon_seq_state++;
@@ -622,7 +621,7 @@ void send_beacon() {
   if (packetpersecond_short > 0xff)
     packetpersecond = 0xff;
 
-  buf[L++] = B00100010; //PDU type, given address is random; 0x42 for Android and 0x40 for iPhone
+  buf[L++] = 0b00100010; //PDU type, given address is random; 0x42 for Android and 0x40 for iPhone
   //buf[L++] = 0x42; //PDU type, given address is random; 0x42 for Android and 0x40 for iPhone
 
   // max len 27 with 5 byte address = 37 total payload bytes
@@ -675,7 +674,7 @@ buf[L++] =  onground_and_bind; //binary xxxxabcd - xxxx = error code or warning,
 */
 
 #ifdef COMBINE_PITCH_ROLL_PID_TUNING
-    buf[L++] = B01000000 + ((rate_and_mode_value << 4) + onground_and_bind); //binary xxRMabcd - x = error code or warning, 1 = combined roll+pitch tuning, R = rate (0 - normal, 1 - fast) , M = mode (1 - level, 0 - acro); a -> 0 = stock TX, 1= other TX, b -> 0 = not failsafe, 1 = failsafe, c = 0 -> not bound, 1 -> bound, d = 0 -> in the air, 1 = on the ground;
+    buf[L++] = 0b01000000 + ((rate_and_mode_value << 4) + onground_and_bind); //binary xxRMabcd - x = error code or warning, 1 = combined roll+pitch tuning, R = rate (0 - normal, 1 - fast) , M = mode (1 - level, 0 - acro); a -> 0 = stock TX, 1= other TX, b -> 0 = not failsafe, 1 = failsafe, c = 0 -> not bound, 1 -> bound, d = 0 -> in the air, 1 = on the ground;
     int PID_pause = 8;
 #else
     buf[L++] = (rate_and_mode_value << 4) + onground_and_bind; //binary x0RMabcd - x = error code or warning, 0 = no combined roll+pitch tuning, R = rate (0 - normal, 1 - fast) , M = mode (1 - level, 0 - acro); a -> 0 = stock TX, 1= other TX, b -> 0 = not failsafe, 1 = failsafe, c = 0 -> not bound, 1 -> bound, d = 0 -> in the air, 1 = on the ground;
@@ -846,7 +845,7 @@ static char checkpacket() {
                                     //RX packet received
                                     //return 1;
   }
-  if ((status & B00001110) != B00001110) {
+  if ((status & 0b00001110) != 0b00001110) {
     // rx fifo not empty
     return 2;
   }

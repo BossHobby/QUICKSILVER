@@ -1,8 +1,6 @@
-
-#include "binary.h"
-#include "drv_spi.h"
-
 #include "drv_spi_xn297.h"
+
+#include "drv_spi.h"
 #include "project.h"
 
 // all cases except 3 wires radio

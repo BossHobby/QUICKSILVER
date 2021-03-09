@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 
-#include "binary.h"
 #include "control.h"
 #include "drv_spi.h"
 #include "drv_spi_xn297.h"
@@ -69,7 +68,7 @@ void rx_init() {
 #endif
 
   // Gauss filter amplitude - lowest
-  static uint8_t demodcal[2] = {0x39, B00000001};
+  static uint8_t demodcal[2] = {0x39, 0b00000001};
   writeregs(demodcal, sizeof(demodcal));
 
   // powerup defaults
@@ -85,9 +84,9 @@ void rx_init() {
   static uint8_t regs_1e[4] = {0x3e, 0xf6, 0x37, 0x5d};
   writeregs(regs_1e, sizeof(regs_1e));
 
-#define XN_TO_RX B10001111
-#define XN_TO_TX B10000010
-#define XN_POWER (B00000001 | ((TX_POWER & 3) << 1))
+#define XN_TO_RX 0b10001111
+#define XN_TO_TX 0b10000010
+#define XN_POWER (0b00000001 | ((TX_POWER & 3) << 1))
 #endif
 
 #ifdef RADIO_XN297
@@ -100,16 +99,16 @@ void rx_init() {
 
   // 0xa7 0x03
   static uint8_t demodcal[6] =
-      {0x39, 0x0b, 0xdf, 0xc4, B00100111, B00000000};
+      {0x39, 0x0b, 0xdf, 0xc4, 0b00100111, 0b00000000};
   writeregs(demodcal, sizeof(demodcal));
 
 #ifndef TX_POWER
 #define TX_POWER 3
 #endif
 
-#define XN_TO_RX B00001111
-#define XN_TO_TX B00000010
-#define XN_POWER ((B00000001 | ((TX_POWER & 3) << 1)) | 0xa0) // | 0x80 rssi  // | 0xa0 filtered rssi
+#define XN_TO_RX 0b00001111
+#define XN_TO_TX 0b00000010
+#define XN_POWER ((0b00000001 | ((TX_POWER & 3) << 1)) | 0xa0) // | 0x80 rssi  // | 0xa0 filtered rssi
 #endif
 
   delay(100);
@@ -129,7 +128,7 @@ void rx_init() {
   xn_writereg(RF_CH, 0); // bind on channel 0
 
 #ifdef RADIO_XN297L
-  xn_writereg(0x1d, B00111000); // 64 bit payload , software ce
+  xn_writereg(0x1d, 0b00111000); // 64 bit payload , software ce
   spi_cson();
   spi_sendbyte(0xFD); // internal CE high command
   spi_sendbyte(0);    // required for above
@@ -137,7 +136,7 @@ void rx_init() {
 #endif
 
 #ifdef RADIO_XN297
-  xn_writereg(0x1d, B00011000); // 64 bit payload , software ce
+  xn_writereg(0x1d, 0b00011000); // 64 bit payload , software ce
 #endif
 
   xn_writereg(0, XN_TO_RX); // power up, crc enabled, rx mode
@@ -212,7 +211,7 @@ void beacon_sequence() {
 
   case 1:
     // wait for data to finish transmitting
-    if ((xn_readreg(0x17) & B00010000)) {
+    if ((xn_readreg(0x17) & 0b00010000)) {
       xn_writereg(0, XN_TO_RX);
       beacon_seq_state = 0;
       telemetry_send = 0;
@@ -297,7 +296,7 @@ static char checkpacket() {
 #endif
   }
 #else
-  if ((status & B00001110) != B00001110) { // rx fifo not empty
+  if ((status & 0b00001110) != 0b00001110) { // rx fifo not empty
     return 2;
   }
 #endif

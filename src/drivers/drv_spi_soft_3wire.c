@@ -1,6 +1,5 @@
 #include "drv_spi.h"
 
-#include "binary.h"
 #include "drv_time.h"
 #include "project.h"
 

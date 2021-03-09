@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 
-#include "binary.h"
 #include "config.h"
 #include "control.h"
 #include "drv_spi.h"
@@ -50,21 +49,21 @@ void rx_init() {
 
   xn_writerxaddress(rxaddress);
 
-  xn_writereg(EN_AA, 0);            // aa disabled
-  xn_writereg(EN_RXADDR, 1);        // pipe 0 only
-  xn_writereg(RF_SETUP, B00000001); // lna high current on ( better performance )
-  xn_writereg(RX_PW_P0, 15);        // payload size
-  xn_writereg(SETUP_RETR, 0);       // no retransmissions ( redundant?)
-  xn_writereg(SETUP_AW, 3);         // address size (5 bits)
+  xn_writereg(EN_AA, 0);             // aa disabled
+  xn_writereg(EN_RXADDR, 1);         // pipe 0 only
+  xn_writereg(RF_SETUP, 0b00000001); // lna high current on ( better performance )
+  xn_writereg(RX_PW_P0, 15);         // payload size
+  xn_writereg(SETUP_RETR, 0);        // no retransmissions ( redundant?)
+  xn_writereg(SETUP_AW, 3);          // address size (5 bits)
   xn_command(FLUSH_RX);
   xn_writereg(RF_CH, 0x2D); // bind  channel
 
 #ifdef RADIO_XN297
-  xn_writereg(0, B00001111); // power up, crc enabled
+  xn_writereg(0, 0b00001111); // power up, crc enabled
 #endif
 
 #ifdef RADIO_XN297L
-  xn_writereg(0, B10001111); // power up, crc enabled
+  xn_writereg(0, 0b10001111); // power up, crc enabled
 #endif
 
 #ifdef RADIO_CHECK
@@ -90,7 +89,7 @@ static char checkpacket() {
                                     //RX packet received
                                     //return 1;
   }
-  if ((status & B00001110) != B00001110) {
+  if ((status & 0b00001110) != 0b00001110) {
     // rx fifo not empty
     return 2;
   }

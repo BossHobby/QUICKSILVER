@@ -1,6 +1,5 @@
+#include "drv_rgb_led.h"
 
-
-#include "binary.h"
 #include "defines.h"
 #include "drv_spi.h"
 #include "drv_time.h"

@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "binary.h"
 #include "control.h"
 #include "debug.h"
 #include "drv_i2c.h"
@@ -88,7 +87,7 @@ void sixaxis_init(void) {
   int newboard = !(0x68 == i2c_readreg(117));
   delay(100);
   // set accelerometer scale to 16G
-  i2c_writereg(28, B00011000);
+  i2c_writereg(28, 0b00011000);
   // acc lpf for the new gyro type
   //       0-6 ( same as gyro)
   if (newboard)
