@@ -2,8 +2,6 @@
 
 #include "rx.h"
 
-
-
 // defines for bayang protocol radio
 
 #if (!defined(USE_DEVO) && !defined(USE_MULTI))
@@ -35,10 +33,9 @@
 #define CH_HEADFREE AUX_CHANNEL_4
 #define CH_INV AUX_CHANNEL_5
 //#define CH_EXPERT AUX_CHANNEL_6		//multimodule channel behavior unknown
-#define CH_EMG AUX_CHANNEL_7			//multimodule channel behavior unknown
+#define CH_EMG AUX_CHANNEL_7 //multimodule channel behavior unknown
 //#define CH_TO AUX_CHANNEL_8			//multimodule channel behavior unknown
 #endif
-
 
 /*	//legacy stuff to sort through later
 // trims numbers have to be sequential, start at CH_PIT_TRIM
@@ -63,6 +60,12 @@
 #define CH_AUX3 AUX_CHANNEL_OFF
 #define CH_AUX4 AUX_CHANNEL_OFF
 */
+
+typedef struct {
+  char rfchannel[4];
+  char rxaddress[5];
+  uint8_t telemetry_enabled;
+} rx_bayang_bind_data_t;
 
 void rx_init(void);
 void rx_check(void);

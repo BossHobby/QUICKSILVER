@@ -16,6 +16,10 @@ typedef enum {
   FRAME_DONE
 } frame_status_t;
 
+typedef struct {
+  rx_serial_protocol_t protocol;
+} rx_unified_bind_data_t;
+
 void rx_serial_find_protocol();
 
 void rx_serial_process_dsmx();
