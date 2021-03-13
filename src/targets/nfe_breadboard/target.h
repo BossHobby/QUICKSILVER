@@ -7,9 +7,9 @@
 #define F405
 
 //PORTS
-#define SPI_PORTS \
-  SPI1_PA5PA6PA7  \
-  SPI2_PB13B14B15 \
+#define SPI_PORTS   \
+  SPI1_PA5PA6PA7    \
+  SPI2_PB13PB14PB15 \
   SPI3_PB3PB4PB5
 
 #define USART_PORTS \
