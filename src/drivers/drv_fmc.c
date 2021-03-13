@@ -62,7 +62,7 @@ float fmc_read_float(unsigned long address) {
 }
 
 void fmc_write(uint32_t addr, uint32_t value) {
-  int result = FLASH_ProgramWord(FLASH_ADDR + (addr << 2), value);
+  int result = FLASH_ProgramWord(FLASH_ADDR + (addr * 4), value);
   if (result != FLASH_COMPLETE) {
     FLASH_Lock();
     failloop(5);

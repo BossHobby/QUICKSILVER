@@ -9,12 +9,14 @@
 
 extern const profile_t default_profile;
 extern profile_t profile;
-extern float accelcal[];
 
 #define FMC_HEADER 0x12AA0001
 #define FRSKY_BIND_OFFSET 57
 
-float initial_pid_identifier = -10;
+static float initial_pid_identifier = -10;
+
+flash_storage_t flash_storage;
+rx_bind_storage_t bind_storage;
 
 float flash_get_hard_coded_pid_identifier(void) {
   float result = 0;
@@ -35,214 +37,103 @@ void flash_save(void) {
   fmc_unlock();
   fmc_erase();
 
-  uint32_t addr = 0;
-
-  fmc_write(addr++, FMC_HEADER);
-
-  fmc_write_float(addr++, initial_pid_identifier);
-
-  fmc_write_float(addr++, accelcal[0]);
-  fmc_write_float(addr++, accelcal[1]);
-  fmc_write_float(addr++, accelcal[2]);
-
-#ifdef RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
-  // autobind info
-  extern char rfchannel[4];
-  extern char rxaddress[5];
-  extern int telemetry_enabled;
-  extern int rx_bind_enable;
-
-  // save radio bind info
-  if (rx_bind_enable) {
-    fmc_write(50, rxaddress[4] | telemetry_enabled << 8);
-    fmc_write(51, rxaddress[0] | (rxaddress[1] << 8) | (rxaddress[2] << 16) | (rxaddress[3] << 24));
-    fmc_write(52, rfchannel[0] | (rfchannel[1] << 8) | (rfchannel[2] << 16) | (rfchannel[3] << 24));
-  } else {
-    // this will leave 255's so it will be picked up as disabled
-  }
-#endif
-
-#ifdef SWITCHABLE_FEATURE_1
-  extern int flash_feature_1;
-
-  //save filter cut info
-
-  if (flash_feature_1) {
-    fmc_write_float(53, 1);
-  } else {
-    fmc_write_float(53, 0);
-  }
-#endif
-
-#ifdef SWITCHABLE_FEATURE_2
-  extern int flash_feature_2;
-
-  //save LVC info
-
-  if (flash_feature_2) {
-    fmc_write_float(54, 1);
-  } else {
-    fmc_write_float(54, 0);
-  }
-#endif
-
-#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_UNIFIED_SERIAL)
-  extern int rx_bind_enable;
-  if (rx_bind_enable) {
-    fmc_write_float(56, 1);
-  } else {
-    fmc_write_float(56, 0);
-  }
-#endif
-
-#ifdef RX_UNIFIED_SERIAL
-  if (rx_bind_enable) {
-    extern rx_serial_protocol_t rx_serial_protocol;
-    fmc_write(50, rx_serial_protocol);
-  } else {
-    fmc_write(50, 0);
-  }
-#endif
-
-#ifdef RX_FRSKY
-  extern int rx_bind_enable;
-  extern frsky_bind_data frsky_bind;
-
-  frsky_bind_data dummy_frsky_bind = {
-      .offset = 0xff,
-      .idx = 0xff,
-  };
-
-  for (int i = 0; i < sizeof(frsky_bind_data) / 4; i++) {
-    if (rx_bind_enable == 1) {
-      // we want to bind to next bootup
-      // so lets write dummy data
-      fmc_write(i + FRSKY_BIND_OFFSET, dummy_frsky_bind.raw[i]);
-    } else {
-      fmc_write(i + FRSKY_BIND_OFFSET, frsky_bind.raw[i]);
-    }
-  }
-#endif
+  fmc_write(0, FMC_HEADER);
 
   {
-    uint8_t buffer[PROFILE_FLASH_SIZE];
-    memset(buffer, 0, PROFILE_FLASH_SIZE);
+    uint8_t buffer[FLASH_STORAGE_SIZE];
+    memset(buffer, 0, FLASH_STORAGE_SIZE);
+
+    flash_storage.pid_identifier = initial_pid_identifier;
+
+    memcpy(buffer, (uint8_t *)&flash_storage, sizeof(flash_storage_t));
+
+    uint32_t *proxy = (uint32_t *)buffer;
+    for (int i = 0; i < (FLASH_STORAGE_SIZE / 4); i++) {
+      fmc_write((FLASH_STORAGE_OFFSET / 4) + i, proxy[i]);
+    }
+  }
+
+  {
+    uint8_t buffer[BIND_STORAGE_SIZE];
+    memset(buffer, 0, BIND_STORAGE_SIZE);
+
+    if (bind_storage.bind_enable == 0) {
+      // reset all bind data
+      memset(bind_storage.raw, 0, 63);
+    }
+
+    memcpy(buffer, (uint8_t *)&bind_storage, sizeof(rx_bind_storage_t));
+
+    uint32_t *proxy = (uint32_t *)buffer;
+    for (int i = 0; i < (BIND_STORAGE_SIZE / 4); i++) {
+      fmc_write((BIND_STORAGE_OFFSET / 4) + i, proxy[i]);
+    }
+  }
+
+  {
+    uint8_t buffer[PROFILE_STORAGE_SIZE];
+    memset(buffer, 0, PROFILE_STORAGE_SIZE);
 
     cbor_value_t enc;
-    cbor_encoder_init(&enc, buffer, PROFILE_FLASH_SIZE);
+    cbor_encoder_init(&enc, buffer, PROFILE_STORAGE_SIZE);
     cbor_encode_profile_t(&enc, &profile);
 
     uint32_t *proxy = (uint32_t *)buffer;
-    for (int i = 0; i < (PROFILE_FLASH_SIZE / 8); i++) {
-      fmc_write(i + 256, proxy[i]);
+    for (int i = 0; i < (PROFILE_STORAGE_SIZE / 4); i++) {
+      fmc_write((PROFILE_STORAGE_OFFSET / 4) + i, proxy[i]);
     }
   }
 
-  fmc_write(256 + (PROFILE_FLASH_SIZE / 8), FMC_HEADER);
+  fmc_write(1024, FMC_HEADER);
   fmc_lock();
 }
 
 void flash_load(void) {
   // check if saved data is present
-  uint32_t addr = 0;
-  if (FMC_HEADER != fmc_read(addr++) || FMC_HEADER != fmc_read(256 + (PROFILE_FLASH_SIZE / 8))) {
+  if (FMC_HEADER != fmc_read(0) || FMC_HEADER != fmc_read(1024)) {
     // Flash was empty, load defaults?
     return;
   }
 
-  float saved_pid_identifier = fmc_read_float(addr++);
-
-  accelcal[0] = fmc_read_float(addr++);
-  accelcal[1] = fmc_read_float(addr++);
-  accelcal[2] = fmc_read_float(addr++);
-
-#ifdef RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
-  extern char rfchannel[4];
-  extern char rxaddress[5];
-  extern int telemetry_enabled;
-  extern int rx_bind_load;
-  extern int rx_bind_enable;
-
-  // save radio bind info
-
-  int temp = fmc_read(52);
-  int error = 0;
-  for (int i = 0; i < 4; i++) {
-    if (((temp >> (i * 8)) & 0xff) > 127) {
-      error = 1;
-    }
-  }
-
-  if (!error) {
-    rx_bind_load = rx_bind_enable = 1;
-
-    rxaddress[4] = fmc_read(50);
-
-    telemetry_enabled = fmc_read(50) >> 8;
-    int temp = fmc_read(51);
-    for (int i = 0; i < 4; i++) {
-      rxaddress[i] = temp >> (i * 8);
-    }
-
-    temp = fmc_read(52);
-    for (int i = 0; i < 4; i++) {
-      rfchannel[i] = temp >> (i * 8);
-    }
-  }
-#endif
-
-#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_UNIFIED_SERIAL)
-  extern int rx_bind_enable;
-  rx_bind_enable = fmc_read_float(56);
-#endif
-
-#ifdef RX_UNIFIED_SERIAL
-  extern rx_serial_protocol_t rx_serial_protocol;
-  if (rx_bind_enable != 1) {
-    rx_serial_protocol = 0;
-  } else {
-    rx_serial_protocol = fmc_read(50);
-  }
-#endif
-
-#ifdef SWITCHABLE_FEATURE_1
-  extern int flash_feature_1;
-  flash_feature_1 = fmc_read_float(53);
-#endif
-
-#ifdef SWITCHABLE_FEATURE_2
-  extern int flash_feature_2;
-  flash_feature_2 = fmc_read_float(54);
-#endif
-
-#ifdef RX_FRSKY
-  extern int rx_bind_enable;
-
-  // only load data if we did not just overwrite it
-  if (rx_bind_enable != 1) {
-    extern frsky_bind_data frsky_bind;
-    for (int i = 0; i < sizeof(frsky_bind_data) / 4; i++) {
-      frsky_bind.raw[i] = fmc_read(i + FRSKY_BIND_OFFSET);
-    }
-  }
-#endif
-
-  //profile
   {
-    uint8_t buffer[PROFILE_FLASH_SIZE];
-    memset(buffer, 0, PROFILE_FLASH_SIZE);
+    uint8_t buffer[FLASH_STORAGE_SIZE];
+    memset(buffer, 0, FLASH_STORAGE_SIZE);
 
     uint32_t *proxy = (uint32_t *)buffer;
-    for (int i = 0; i < (PROFILE_FLASH_SIZE / 8); i++) {
-      proxy[i] = fmc_read(i + 256);
+    for (int i = 0; i < (FLASH_STORAGE_SIZE / 4); i++) {
+      proxy[i] = fmc_read((FLASH_STORAGE_OFFSET / 4) + i);
+    }
+
+    memcpy((uint8_t *)&flash_storage, buffer, sizeof(flash_storage_t));
+  }
+
+  {
+    uint8_t buffer[BIND_STORAGE_SIZE];
+    memset(buffer, 0, BIND_STORAGE_SIZE);
+
+    uint32_t *proxy = (uint32_t *)buffer;
+    for (int i = 0; i < (BIND_STORAGE_SIZE / 4); i++) {
+      proxy[i] = fmc_read((BIND_STORAGE_OFFSET / 4) + i);
+    }
+
+    memcpy((uint8_t *)&bind_storage, buffer, sizeof(rx_bind_storage_t));
+  }
+
+  {
+    uint8_t buffer[PROFILE_STORAGE_SIZE];
+    memset(buffer, 0, PROFILE_STORAGE_SIZE);
+
+    uint32_t *proxy = (uint32_t *)buffer;
+    for (int i = 0; i < (PROFILE_STORAGE_SIZE / 4); i++) {
+      proxy[i] = fmc_read((PROFILE_STORAGE_OFFSET / 4) + i);
     }
 
     cbor_value_t dec;
-    cbor_decoder_init(&dec, buffer, PROFILE_FLASH_SIZE);
+    cbor_decoder_init(&dec, buffer, PROFILE_STORAGE_SIZE);
     cbor_decode_profile_t(&dec, &profile);
 
     // values in profile.c (was pid.c) changed, overwrite with defaults form profile.c
-    if (saved_pid_identifier != initial_pid_identifier) {
+    if (flash_storage.pid_identifier != initial_pid_identifier) {
       profile.pid = default_profile.pid;
     }
   }

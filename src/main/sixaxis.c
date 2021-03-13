@@ -11,6 +11,7 @@
 #include "drv_spi_mpu6xxx.h"
 #include "drv_time.h"
 #include "filter.h"
+#include "flash.h"
 #include "led.h"
 #include "profile.h"
 #include "project.h"
@@ -48,7 +49,6 @@ static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
 
 extern profile_t profile;
 
-float accelcal[3];
 float gyrocal[3];
 
 void sixaxis_init(void) {
@@ -175,9 +175,9 @@ void sixaxis_read(void) {
   }
 
   // remove bias and reduce to state.accel_raw in G
-  state.accel_raw.axis[0] = (state.accel_raw.axis[0] - accelcal[0]) * (1 / 2048.0f);
-  state.accel_raw.axis[1] = (state.accel_raw.axis[1] - accelcal[1]) * (1 / 2048.0f);
-  state.accel_raw.axis[2] = (state.accel_raw.axis[2] - accelcal[2]) * (1 / 2048.0f);
+  state.accel_raw.axis[0] = (state.accel_raw.axis[0] - flash_storage.accelcal[0]) * (1 / 2048.0f);
+  state.accel_raw.axis[1] = (state.accel_raw.axis[1] - flash_storage.accelcal[1]) * (1 / 2048.0f);
+  state.accel_raw.axis[2] = (state.accel_raw.axis[2] - flash_storage.accelcal[2]) * (1 / 2048.0f);
 
   state.gyro_temp = (float)((int16_t)((data[6] << 8) + data[7])) / 333.87f + 21.f;
 
@@ -311,17 +311,17 @@ void gyro_cal(void) {
 }
 
 void acc_cal(void) {
-  accelcal[2] = 2048;
+  flash_storage.accelcal[2] = 2048;
   for (int y = 0; y < 500; y++) {
     sixaxis_read();
     for (int x = 0; x < 3; x++) {
-      lpf(&accelcal[x], state.accel_raw.axis[x], 0.92);
+      lpf(&flash_storage.accelcal[x], state.accel_raw.axis[x], 0.92);
     }
     gettime(); // if it takes too long time will overflow so we call it here
   }
-  accelcal[2] -= 2048;
+  flash_storage.accelcal[2] -= 2048;
 
   for (int x = 0; x < 3; x++) {
-    limitf(&accelcal[x], 500);
+    limitf(&flash_storage.accelcal[x], 500);
   }
 }
