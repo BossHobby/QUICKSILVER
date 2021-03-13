@@ -24,7 +24,7 @@ typedef struct {
   uint8_t rx_mode : 1; // bind / normal rx mode
   uint8_t rx_ready : 1;
 
-  uint8_t controls_override : 1; // will activate rx_override below
+  uint8_t controls_override : 1; // will activate rx_override below & will write directly to the motors (motor_test)
   uint8_t acro_override : 1;
   uint8_t motortest_override : 1;
   uint8_t turtle : 1;

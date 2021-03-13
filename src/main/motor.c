@@ -65,8 +65,7 @@ float tempx[4];
 
 #endif
 
-float overthrottlefilt = 0;
-float underthrottlefilt = 0;
+static float overthrottlefilt = 0;
 
 extern int pwmdir;
 
@@ -239,10 +238,7 @@ static void motor_mixer_scale_calc(float mix[4]) {
 }
 
 void motor_mixer_calc(float mix[4]) {
-
-extern uint8_t flip_sequencer_request_motortest_override;
-
-  if ((flags.usb_active && usb_motor_test.active) || flip_sequencer_request_motortest_override) {
+  if ((flags.usb_active && usb_motor_test.active)) {
     flags.motortest_override = 1;
   } else {
     flags.motortest_override = 0;
@@ -252,7 +248,7 @@ extern uint8_t flip_sequencer_request_motortest_override;
   flags.motortest_override = 1;
 #endif
 
-  if (rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) || flags.motortest_override) {
+  if (rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) || flags.motortest_override || flags.controls_override) {
     // TODO: investigate how skipping all that code below affects looptime
     if (usb_motor_test.active) {
       // set mix according to values we got via usb
