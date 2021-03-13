@@ -2,7 +2,7 @@
 
 #include "profile.h"
 
-typedef struct __attribute__((packed)) {
+typedef struct {
   uint32_t loop;
   uint32_t time;
 
