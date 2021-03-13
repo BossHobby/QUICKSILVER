@@ -10,8 +10,12 @@ SE=arm-none-eabi-size
 GCC_VERSION = $(shell arm-none-eabi-gcc -dumpversion)
 GIT_VERSION = unkown
 
-ifneq (,$(wildcard .git/refs/heads/master))
-	GIT_VERSION = $(shell sh -c 'cat .git/refs/heads/master')
+ifneq ($(DRONE_COMMIT),)
+	GIT_VERSION = $(DRONE_COMMIT)
+else
+	ifneq ($(wildcard .git/refs/heads/master),)
+		GIT_VERSION = $(shell sh -c 'cat .git/refs/heads/master')
+	endif
 endif
 
 INCLUDE = src \
