@@ -32,19 +32,18 @@ void flash_hard_coded_pid_identifier(void) {
 }
 
 void flash_save(void) {
-
   fmc_unlock();
   fmc_erase();
 
-  unsigned long addresscount = 0;
+  uint32_t addr = 0;
 
-  fmc_write(addresscount++, FMC_HEADER);
+  fmc_write(addr++, FMC_HEADER);
 
-  fmc_write_float(addresscount++, initial_pid_identifier);
+  fmc_write_float(addr++, initial_pid_identifier);
 
-  fmc_write_float(addresscount++, accelcal[0]);
-  fmc_write_float(addresscount++, accelcal[1]);
-  fmc_write_float(addresscount++, accelcal[2]);
+  fmc_write_float(addr++, accelcal[0]);
+  fmc_write_float(addr++, accelcal[1]);
+  fmc_write_float(addr++, accelcal[2]);
 
 #ifdef RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
   // autobind info
@@ -124,6 +123,7 @@ void flash_save(void) {
     }
   }
 #endif
+
   {
     uint8_t buffer[PROFILE_FLASH_SIZE];
     memset(buffer, 0, PROFILE_FLASH_SIZE);
@@ -143,110 +143,107 @@ void flash_save(void) {
 }
 
 void flash_load(void) {
-
-  unsigned long addresscount = 0;
   // check if saved data is present
-  if (FMC_HEADER == fmc_read(addresscount++) && FMC_HEADER == fmc_read(256 + (PROFILE_FLASH_SIZE / 8))) {
+  uint32_t addr = 0;
+  if (FMC_HEADER != fmc_read(addr++) || FMC_HEADER != fmc_read(256 + (PROFILE_FLASH_SIZE / 8))) {
+    // Flash was empty, load defaults?
+    return;
+  }
 
-    float saved_pid_identifier = fmc_read_float(addresscount++);
+  float saved_pid_identifier = fmc_read_float(addr++);
 
-    accelcal[0] = fmc_read_float(addresscount++);
-    accelcal[1] = fmc_read_float(addresscount++);
-    accelcal[2] = fmc_read_float(addresscount++);
+  accelcal[0] = fmc_read_float(addr++);
+  accelcal[1] = fmc_read_float(addr++);
+  accelcal[2] = fmc_read_float(addr++);
 
 #ifdef RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
-    extern char rfchannel[4];
-    extern char rxaddress[5];
-    extern int telemetry_enabled;
-    extern int rx_bind_load;
-    extern int rx_bind_enable;
+  extern char rfchannel[4];
+  extern char rxaddress[5];
+  extern int telemetry_enabled;
+  extern int rx_bind_load;
+  extern int rx_bind_enable;
 
-    // save radio bind info
+  // save radio bind info
 
-    int temp = fmc_read(52);
-    int error = 0;
+  int temp = fmc_read(52);
+  int error = 0;
+  for (int i = 0; i < 4; i++) {
+    if (((temp >> (i * 8)) & 0xff) > 127) {
+      error = 1;
+    }
+  }
+
+  if (!error) {
+    rx_bind_load = rx_bind_enable = 1;
+
+    rxaddress[4] = fmc_read(50);
+
+    telemetry_enabled = fmc_read(50) >> 8;
+    int temp = fmc_read(51);
     for (int i = 0; i < 4; i++) {
-      if (((temp >> (i * 8)) & 0xff) > 127) {
-        error = 1;
-      }
+      rxaddress[i] = temp >> (i * 8);
     }
 
-    if (!error) {
-      rx_bind_load = rx_bind_enable = 1;
-
-      rxaddress[4] = fmc_read(50);
-
-      telemetry_enabled = fmc_read(50) >> 8;
-      int temp = fmc_read(51);
-      for (int i = 0; i < 4; i++) {
-        rxaddress[i] = temp >> (i * 8);
-      }
-
-      temp = fmc_read(52);
-      for (int i = 0; i < 4; i++) {
-        rfchannel[i] = temp >> (i * 8);
-      }
+    temp = fmc_read(52);
+    for (int i = 0; i < 4; i++) {
+      rfchannel[i] = temp >> (i * 8);
     }
+  }
 #endif
 
 #if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_UNIFIED_SERIAL)
-    extern int rx_bind_enable;
-    rx_bind_enable = fmc_read_float(56);
+  extern int rx_bind_enable;
+  rx_bind_enable = fmc_read_float(56);
 #endif
 
 #ifdef RX_UNIFIED_SERIAL
-    extern rx_serial_protocol_t rx_serial_protocol;
-    if (rx_bind_enable != 1) {
-      rx_serial_protocol = 0;
-    } else {
-      rx_serial_protocol = fmc_read(50);
-    }
-
+  extern rx_serial_protocol_t rx_serial_protocol;
+  if (rx_bind_enable != 1) {
+    rx_serial_protocol = 0;
+  } else {
+    rx_serial_protocol = fmc_read(50);
+  }
 #endif
 
 #ifdef SWITCHABLE_FEATURE_1
-    extern int flash_feature_1;
-    flash_feature_1 = fmc_read_float(53);
+  extern int flash_feature_1;
+  flash_feature_1 = fmc_read_float(53);
 #endif
 
 #ifdef SWITCHABLE_FEATURE_2
-    extern int flash_feature_2;
-    flash_feature_2 = fmc_read_float(54);
+  extern int flash_feature_2;
+  flash_feature_2 = fmc_read_float(54);
 #endif
 
 #ifdef RX_FRSKY
-    extern int rx_bind_enable;
+  extern int rx_bind_enable;
 
-    // only load data if we did not just overwrite it
-    if (rx_bind_enable != 1) {
-      extern frsky_bind_data frsky_bind;
-      for (int i = 0; i < sizeof(frsky_bind_data) / 4; i++) {
-        frsky_bind.raw[i] = fmc_read(i + FRSKY_BIND_OFFSET);
-      }
+  // only load data if we did not just overwrite it
+  if (rx_bind_enable != 1) {
+    extern frsky_bind_data frsky_bind;
+    for (int i = 0; i < sizeof(frsky_bind_data) / 4; i++) {
+      frsky_bind.raw[i] = fmc_read(i + FRSKY_BIND_OFFSET);
     }
+  }
 #endif
 
-    //profile
-    {
-      uint8_t buffer[PROFILE_FLASH_SIZE];
-      memset(buffer, 0, PROFILE_FLASH_SIZE);
+  //profile
+  {
+    uint8_t buffer[PROFILE_FLASH_SIZE];
+    memset(buffer, 0, PROFILE_FLASH_SIZE);
 
-      uint32_t *proxy = (uint32_t *)buffer;
-      for (int i = 0; i < (PROFILE_FLASH_SIZE / 8); i++) {
-        proxy[i] = fmc_read(i + 256);
-      }
-
-      cbor_value_t dec;
-      cbor_decoder_init(&dec, buffer, PROFILE_FLASH_SIZE);
-      cbor_decode_profile_t(&dec, &profile);
-
-      // values in profile.c (was pid.c) changed, overwrite with defaults form profile.c
-      if (saved_pid_identifier != initial_pid_identifier) {
-        profile.pid = default_profile.pid;
-      }
+    uint32_t *proxy = (uint32_t *)buffer;
+    for (int i = 0; i < (PROFILE_FLASH_SIZE / 8); i++) {
+      proxy[i] = fmc_read(i + 256);
     }
 
-  } else {
-    // Flash was empty, load defaults?
+    cbor_value_t dec;
+    cbor_decoder_init(&dec, buffer, PROFILE_FLASH_SIZE);
+    cbor_decode_profile_t(&dec, &profile);
+
+    // values in profile.c (was pid.c) changed, overwrite with defaults form profile.c
+    if (saved_pid_identifier != initial_pid_identifier) {
+      profile.pid = default_profile.pid;
+    }
   }
 }
