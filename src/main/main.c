@@ -6,7 +6,7 @@
 #include "control.h"
 #include "debug.h"
 #include "drv_adc.h"
-#include "drv_fmc2.h"
+#include "drv_fmc.h"
 #include "drv_gpio.h"
 #include "drv_i2c.h"
 #include "drv_motor.h"

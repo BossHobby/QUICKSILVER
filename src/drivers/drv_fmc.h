@@ -1,17 +1,14 @@
 #pragma once
 
-int readdata(unsigned int data);
-void writeword(unsigned long address, unsigned long value);
+#include <stdint.h>
 
-unsigned long fmc_read(unsigned long address);
-void fmc_read2(void);
-float fmc_read_float(unsigned long address);
+void fmc_lock();
+void fmc_unlock();
 
-int fmc_write(int data1, int data2);
-int fmc_write2(void);
-void fmc_write_float(unsigned long address, float float_to_write);
+uint8_t fmc_erase();
 
-void fmc_unlock(void);
-void fmc_lock(void);
+uint32_t fmc_read(uint32_t addr);
+float fmc_read_float(uint32_t addr);
 
-int fmc_erase(void);
+void fmc_write(uint32_t addr, uint32_t value);
+void fmc_write_float(uint32_t addr, float value);

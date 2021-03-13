@@ -38,7 +38,7 @@ void flash_save(void) {
 
   unsigned long addresscount = 0;
 
-  writeword(addresscount++, FMC_HEADER);
+  fmc_write(addresscount++, FMC_HEADER);
 
   fmc_write_float(addresscount++, initial_pid_identifier);
 
@@ -55,9 +55,9 @@ void flash_save(void) {
 
   // save radio bind info
   if (rx_bind_enable) {
-    writeword(50, rxaddress[4] | telemetry_enabled << 8);
-    writeword(51, rxaddress[0] | (rxaddress[1] << 8) | (rxaddress[2] << 16) | (rxaddress[3] << 24));
-    writeword(52, rfchannel[0] | (rfchannel[1] << 8) | (rfchannel[2] << 16) | (rfchannel[3] << 24));
+    fmc_write(50, rxaddress[4] | telemetry_enabled << 8);
+    fmc_write(51, rxaddress[0] | (rxaddress[1] << 8) | (rxaddress[2] << 16) | (rxaddress[3] << 24));
+    fmc_write(52, rfchannel[0] | (rfchannel[1] << 8) | (rfchannel[2] << 16) | (rfchannel[3] << 24));
   } else {
     // this will leave 255's so it will be picked up as disabled
   }
@@ -99,9 +99,9 @@ void flash_save(void) {
 #ifdef RX_UNIFIED_SERIAL
   if (rx_bind_enable) {
     extern rx_serial_protocol_t rx_serial_protocol;
-    writeword(50, rx_serial_protocol);
+    fmc_write(50, rx_serial_protocol);
   } else {
-    writeword(50, 0);
+    fmc_write(50, 0);
   }
 #endif
 
@@ -118,9 +118,9 @@ void flash_save(void) {
     if (rx_bind_enable == 1) {
       // we want to bind to next bootup
       // so lets write dummy data
-      writeword(i + FRSKY_BIND_OFFSET, dummy_frsky_bind.raw[i]);
+      fmc_write(i + FRSKY_BIND_OFFSET, dummy_frsky_bind.raw[i]);
     } else {
-      writeword(i + FRSKY_BIND_OFFSET, frsky_bind.raw[i]);
+      fmc_write(i + FRSKY_BIND_OFFSET, frsky_bind.raw[i]);
     }
   }
 #endif
@@ -134,11 +134,11 @@ void flash_save(void) {
 
     uint32_t *proxy = (uint32_t *)buffer;
     for (int i = 0; i < (PROFILE_FLASH_SIZE / 8); i++) {
-      writeword(i + 256, proxy[i]);
+      fmc_write(i + 256, proxy[i]);
     }
   }
 
-  writeword(256 + (PROFILE_FLASH_SIZE / 8), FMC_HEADER);
+  fmc_write(256 + (PROFILE_FLASH_SIZE / 8), FMC_HEADER);
   fmc_lock();
 }
 
