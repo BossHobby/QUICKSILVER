@@ -78,13 +78,11 @@ int main(void) {
   filter_global_init();
   pid_init();
 
-#ifdef FLASH_SAVE1
   // read pid identifier for values in file pid.c
   flash_hard_coded_pid_identifier();
 
   // load flash saved variables
   flash_load();
-#endif
 
   delay(1000);
 
@@ -164,12 +162,6 @@ int main(void) {
 #endif
 
   imu_init();
-#ifdef FLASH_SAVE2
-  // read accelerometer calibration values from option bytes ( 2* 8bit)
-  extern float accelcal[3];
-  accelcal[0] = flash2_readdata(OB->DATA0) - 127;
-  accelcal[1] = flash2_readdata(OB->DATA1) - 127;
-#endif
 
 #ifdef ENABLE_OSD
   osd_clear();

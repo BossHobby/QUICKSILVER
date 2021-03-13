@@ -220,12 +220,6 @@ static const float pid_scales[PID_SIZE][PID_SIZE] = {
 // *************Feel free to change 1.0 value to your liking
 #define PID_TUNING_ADJUST_AMOUNT 1.0 //fixed inc/dec values for PID tuning
 
-// *************flash save method
-// *************flash_save 1: pids + accel calibration
-// *************flash_save 2: accel calibration to option bytes - probably depreciated or broken
-#define FLASH_SAVE1
-//#define FLASH_SAVE2
-
 // flash saving features  - best left alone or many things might break
 //#define DISABLE_GESTURES2
 

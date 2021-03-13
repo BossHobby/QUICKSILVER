@@ -5,6 +5,7 @@
 #include "defines.h"
 #include "drv_spi_max7456.h"
 #include "drv_time.h"
+#include "flash.h"
 #include "osd_menu_maps.h"
 #include "osd_render.h"
 #include "profile.h"
@@ -34,26 +35,30 @@ void osd_save_exit(void) {
     last_osd_cursor[i] = 0;
   }
   osd_display_phase = 0;
+
   //check if vtx settings need to be updated
-  if(vtx_buffer_populated) vtx_settings = vtx_settings_copy;
+  if (vtx_buffer_populated)
+    vtx_settings = vtx_settings_copy;
+
   //check for fc reboot request
-#ifdef FLASH_SAVE1
   extern int pid_gestures_used;
   extern int ledcommand;
-  extern void flash_save(void);
-  extern void flash_load(void);
+
   pid_gestures_used = 0;
   ledcommand = 1;
+
   flash_save();
   flash_load();
+
   // reset flash numbers for pids
   extern int number_of_increments[3][3];
   for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
       number_of_increments[i][j] = 0;
+
   // reset loop time - maybe not necessary cause it gets reset in the next screen clear
   reset_looptime();
-#endif
+
   if (reboot_fc_requested)
     NVIC_SystemReset();
 }
@@ -107,8 +112,8 @@ void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_m
 }
 
 //populate a vtx_status_temp_buffer with current settings only once
-void populate_vtx_buffer_once(void){
-  if (!vtx_buffer_populated){
+void populate_vtx_buffer_once(void) {
+  if (!vtx_buffer_populated) {
     vtx_settings_copy = vtx_settings;
     vtx_buffer_populated = 1;
   }

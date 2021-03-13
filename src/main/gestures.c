@@ -1,6 +1,7 @@
 #include "gestures.h"
 
 #include "control.h"
+#include "flash.h"
 #include "osd_adjust.h"
 #include "pid.h"
 #include "profile.h"
@@ -35,22 +36,15 @@ void gestures(void) {
         ledcommand = 1;
         pid_gestures_used = 0;
       }
-#ifdef FLASH_SAVE2
-      extern float accelcal[3];
-      flash2_fmc_write(accelcal[0] + 127, accelcal[1] + 127);
-#endif
 
-#ifdef FLASH_SAVE1
-      extern void flash_save(void);
-      extern void flash_load(void);
       flash_save();
       flash_load();
+
       // reset flash numbers
       extern int number_of_increments[3][3];
       for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
           number_of_increments[i][j] = 0;
-#endif
 
       // reset loop time
       reset_looptime();

@@ -507,15 +507,9 @@ void usb_process_quic() {
     gyro_cal(); // for flashing lights
     acc_cal();
 
-#ifdef FLASH_SAVE2
-    extern float accelcal[3];
-    flash2_fmc_write(accelcal[0] + 127, accelcal[1] + 127);
-#endif
-
-#ifdef FLASH_SAVE1
     flash_save();
     flash_load();
-#endif
+
     send_quic(QUIC_CMD_CAL_IMU, QUIC_FLAG_NONE, NULL, 0);
     break;
   case QUIC_CMD_BLACKBOX:
