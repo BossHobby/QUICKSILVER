@@ -83,6 +83,7 @@ $(BUILD_DIR)/target: FORCE
 	@if test -r /doesntreallymatterjustneedadelay; then echo got a delay > /dev/null; fi
 	@mkdir -p $(BUILD_DIR)
 	@echo "Setting target to $(TARGET)"
+	@echo "Building version $(GIT_VERSION)"
 	@echo "$(TARGET)" > $(BUILD_DIR)/target.tmp
 	@if test -r $(BUILD_DIR)/target; then \
 		cmp $(BUILD_DIR)/target.tmp $(BUILD_DIR)/target || mv -f $(BUILD_DIR)/target.tmp $(BUILD_DIR)/target; \
