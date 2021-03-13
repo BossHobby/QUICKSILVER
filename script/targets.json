@@ -218,5 +218,17 @@
         }
       }
     ]
+  },
+  {
+    "name": "iflight_succex_e_f4",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      }
+    ]
   }
 ]
