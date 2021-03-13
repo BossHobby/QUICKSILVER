@@ -19,7 +19,6 @@
 #define SPEKTRUM_FADE_REPORTS_PER_SEC 2
 
 extern int rx_bind_enable;
-extern float rx_rssi;
 
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
 extern uint8_t rx_data[RX_BUFF_SIZE];
@@ -153,26 +152,26 @@ void rx_serial_process_dsmx() {
     if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11) { //rssi set to internal link quality
 #ifdef DSM_RSSI_FADES
 #ifdef RX_DSMX_2048_UNIFIED
-      rx_rssi = 0.000488281 * link_quality_raw;
+      state.rx_rssi = 0.000488281 * link_quality_raw;
 #else
-      rx_rssi = 0.000976563 * link_quality_raw;
+      state.rx_rssi = 0.000976563 * link_quality_raw;
 #endif
 #else
-      rx_rssi = stat_frames_second / 91.0f;
+      state.rx_rssi = stat_frames_second / 91.0f;
 #endif
-      rx_rssi = rx_rssi * rx_rssi * rx_rssi * LQ_EXPO + rx_rssi * (1 - LQ_EXPO);
-      rx_rssi *= 100.0f;
+      state.rx_rssi = state.rx_rssi * state.rx_rssi * state.rx_rssi * LQ_EXPO + state.rx_rssi * (1 - LQ_EXPO);
+      state.rx_rssi *= 100.0f;
     } else { //rssi set to value decoded from aux channel input from receiver
 #ifdef RX_DSMX_2048_UNIFIED
-      rx_rssi = ((channels[(profile.channel.aux[AUX_RSSI] + 4)] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f;
+      state.rx_rssi = ((channels[(profile.channel.aux[AUX_RSSI] + 4)] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f;
 #else
-      rx_rssi = ((channels[(profile.channel.aux[AUX_RSSI] + 4)] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f;
+      state.rx_rssi = ((channels[(profile.channel.aux[AUX_RSSI] + 4)] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f;
 #endif
     }
-    if (rx_rssi > 100.0f)
-      rx_rssi = 100.0f;
-    if (rx_rssi < 0.0f)
-      rx_rssi = 0.0f;
+    if (state.rx_rssi > 100.0f)
+      state.rx_rssi = 100.0f;
+    if (state.rx_rssi < 0.0f)
+      state.rx_rssi = 0.0f;
 
     frame_status = FRAME_TX; //We're done with this frame now.
 

@@ -21,7 +21,6 @@
 // externally accessable variables
 rx_serial_protocol_t rx_serial_protocol = RX_SERIAL_PROTOCOL_INVALID;
 int rx_bind_enable = 0;
-float rx_rssi = 0;
 
 uint8_t rx_buffer[RX_BUFF_SIZE];
 uint8_t rx_data[RX_BUFF_SIZE]; //A place to put the RX frame so nothing can get overwritten during processing.  //reduce size?
@@ -145,15 +144,15 @@ void rx_lqi_update_fps(uint16_t fixed_fps) {
 }
 
 void rx_lqi_update_rssi_from_lqi(float expected_fps) {
-  rx_rssi = stat_frames_second / expected_fps;
-  rx_rssi = rx_rssi * rx_rssi * rx_rssi * LQ_EXPO + rx_rssi * (1 - LQ_EXPO);
-  rx_rssi *= 100.0f;
+  state.rx_rssi = stat_frames_second / expected_fps;
+  state.rx_rssi = state.rx_rssi * state.rx_rssi * state.rx_rssi * LQ_EXPO + state.rx_rssi * (1 - LQ_EXPO);
+  state.rx_rssi *= 100.0f;
 
-  rx_rssi = constrainf(rx_rssi, 0.f, 100.f);
+  state.rx_rssi = constrainf(state.rx_rssi, 0.f, 100.f);
 }
 
 void rx_lqi_update_rssi_direct(float rssi) {
-  rx_rssi = constrainf(rssi, 0.f, 100.f);
+  state.rx_rssi = constrainf(rssi, 0.f, 100.f);
 }
 
 void rx_init(void) {

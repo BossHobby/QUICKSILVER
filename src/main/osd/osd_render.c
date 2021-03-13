@@ -420,12 +420,11 @@ uint8_t print_osd_system_status(void) {
 }
 
 void print_osd_rssi(void) {
-  extern float rx_rssi;
   static float rx_rssi_filt;
   uint8_t osd_rssi[5];
   if (flags.failsafe)
-    rx_rssi = 0.0f;
-  lpf(&rx_rssi_filt, rx_rssi, FILTERCALC(state.looptime* 1e6f * 133.0f, 2e6f)); //2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
+    state.rx_rssi = 0.0f;
+  lpf(&rx_rssi_filt, state.rx_rssi, FILTERCALC(state.looptime* 1e6f * 133.0f, 2e6f)); //2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
   fast_fprint(osd_rssi, 5, (rx_rssi_filt - 0.5f), 0);
   osd_rssi[4] = 1;
   osd_print_data(osd_rssi, 5, osd_decode(*rssi, ATTRIBUTE), osd_decode(*rssi, POSITIONX), osd_decode(*rssi, POSITIONY));

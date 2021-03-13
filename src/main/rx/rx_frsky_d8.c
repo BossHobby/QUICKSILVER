@@ -27,8 +27,6 @@ typedef struct {
   uint8_t crc[2];
 } frsky_d8_frame;
 
-float rx_rssi;
-
 extern uint8_t packet[128];
 extern uint8_t protocol_state;
 extern frsky_bind_data frsky_bind;
@@ -104,7 +102,7 @@ static void frsky_d8_set_rc_data() {
   state.aux[AUX_CHANNEL_10] = 0;
   state.aux[AUX_CHANNEL_11] = 0;
 
-  rx_rssi = constrainf(frsky_extract_rssi(packet[18]), 0.f, 100.f);
+  state.rx_rssi = constrainf(frsky_extract_rssi(packet[18]), 0.f, 100.f);
 }
 
 #ifdef FRSKY_ENABLE_HUB_TELEMETRY
@@ -286,7 +284,7 @@ static uint8_t frsky_d8_handle_packet() {
 
       quic_debugf("FRSKY_D8: frame lost %u=%u (%u)", frame_index, (frame_index % 4), (current_packet_received_time - last_packet_received_time));
       frames_lost++;
-      rx_rssi = 0;
+      state.rx_rssi = 0;
 
       cc2500_enter_rxmode();
       next_channel(1);

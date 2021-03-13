@@ -86,7 +86,6 @@ typedef struct {
 } crsf_stats_t;
 
 extern int rx_bind_enable;
-extern float rx_rssi;
 
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
 extern uint8_t rx_data[RX_BUFF_SIZE];

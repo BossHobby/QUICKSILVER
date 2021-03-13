@@ -18,8 +18,6 @@
 #define REDPINE_CHANNEL_START 3
 #define REDPINE_CHANNEL_COUNT 16
 
-float rx_rssi;
-
 extern uint8_t packet[128];
 extern uint8_t list_length;
 extern uint8_t protocol_state;
@@ -136,7 +134,7 @@ static uint8_t redpine_handle_packet() {
         next_channel(1);
         cc2500_strobe(CC2500_SRX);
 
-        rx_rssi = constrainf(frsky_extract_rssi(packet[REDPINE_PACKET_SIZE_W_ADDONS - 2]), 0.f, 100.f);
+        state.rx_rssi = constrainf(frsky_extract_rssi(packet[REDPINE_PACKET_SIZE_W_ADDONS - 2]), 0.f, 100.f);
         frames_lost = 0;
         ret = 1;
       } else {
@@ -153,7 +151,7 @@ static uint8_t redpine_handle_packet() {
     if ((timer_micros() - total_time) > 50 * max_sync_delay) {
       //out of sync with packets - do a complete resysnc
       quic_debugf("REDPINE: resync %u", (timer_micros() - total_time));
-      rx_rssi = 0;
+      state.rx_rssi = 0;
       next_channel(1);
       cc2500_strobe(CC2500_SRX);
 

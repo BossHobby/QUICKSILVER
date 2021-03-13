@@ -50,6 +50,8 @@ typedef struct {
   vec4_t rx_filtered; // same as above, but filtered by the rx smoothing
   vec4_t rx_override; // override values, activated by controls_override
 
+  float rx_rssi;
+
   float throttle; // input throttle with idle etc applied
   float thrsum;   // average of all 4 motor thrusts
 
@@ -92,6 +94,7 @@ typedef struct {
   MEMBER(rx, vec4_t)                        \
   MEMBER(rx_filtered, vec4_t)               \
   MEMBER(rx_override, vec4_t)               \
+  MEMBER(rx_rssi, float)                    \
   MEMBER(throttle, float)                   \
   MEMBER(thrsum, float)                     \
   ARRAY_MEMBER(aux, AUX_CHANNEL_MAX, uint8) \

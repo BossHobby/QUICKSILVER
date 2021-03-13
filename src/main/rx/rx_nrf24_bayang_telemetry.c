@@ -364,8 +364,6 @@ int timingfail = 0;
 int telemetry_enabled = 0;
 int packet_period = PACKET_PERIOD;
 
-float rx_rssi;
-
 uint8_t rxaddr[5];
 int packets = 0;
 
@@ -493,13 +491,13 @@ void rx_check(void) {
     packetrx = 0;
     secondtimer = gettime();
 
-    rx_rssi = packetpersecond / 200.0f;
-    rx_rssi = rx_rssi * rx_rssi * rx_rssi * RSSI_EXP + rx_rssi * (1 - RSSI_EXP);
-    rx_rssi *= 100.0f;
-    if (rx_rssi > 100.0f)
-      rx_rssi = 100.0f;
-    if (rx_rssi < 0.0f)
-      rx_rssi = 0.0f;
+    state.rx_rssi = packetpersecond / 200.0f;
+    state.rx_rssi = state.rx_rssi * state.rx_rssi * state.rx_rssi * RSSI_EXP + state.rx_rssi * (1 - RSSI_EXP);
+    state.rx_rssi *= 100.0f;
+    if (state.rx_rssi > 100.0f)
+      state.rx_rssi = 100.0f;
+    if (state.rx_rssi < 0.0f)
+      state.rx_rssi = 0.0f;
   }
 }
 

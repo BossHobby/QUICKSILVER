@@ -89,8 +89,6 @@ typedef struct {
   frsky_d16_telemetry_flag_t telemetry;
 } __attribute__((__packed__)) frsky_d16_frame_header;
 
-float rx_rssi;
-
 extern uint8_t packet[128];
 extern uint8_t protocol_state;
 extern frsky_bind_data frsky_bind;
@@ -163,7 +161,7 @@ static void frsky_d16_set_rc_data() {
   state.aux[AUX_CHANNEL_10] = (channels[14] > 1023) ? 1 : 0;
   state.aux[AUX_CHANNEL_11] = (channels[15] > 1023) ? 1 : 0;
 
-  rx_rssi = constrainf(frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]), 0.f, 100.f);
+  state.rx_rssi = constrainf(frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]), 0.f, 100.f);
 }
 
 uint8_t frsky_d16_is_valid_packet(uint8_t *packet) {
@@ -349,7 +347,7 @@ static uint8_t frsky_d16_handle_packet() {
       if (frames_lost >= FRSKY_MAX_MISSING_FRAMES) {
         max_sync_delay = 50 * FRSKY_SYNC_DELAY_MAX;
         flags.failsafe = 1;
-        rx_rssi = 0;
+        state.rx_rssi = 0;
         channel_skip = 1;
         send_telemetry = 0;
         protocol_state = FRSKY_STATE_UPDATE;
@@ -361,7 +359,7 @@ static uint8_t frsky_d16_handle_packet() {
       }
 
       if (frame_had_packet == 0) {
-        rx_rssi = 0;
+        state.rx_rssi = 0;
         frames_lost++;
       }
 
@@ -408,7 +406,7 @@ static uint8_t frsky_d16_handle_packet() {
       if (frames_lost >= FRSKY_MAX_MISSING_FRAMES) {
         max_sync_delay = 50 * FRSKY_SYNC_DELAY_MAX;
         flags.failsafe = 1;
-        rx_rssi = 0;
+        state.rx_rssi = 0;
         channel_skip = 1;
         send_telemetry = 0;
         protocol_state = FRSKY_STATE_UPDATE;

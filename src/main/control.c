@@ -59,6 +59,8 @@ control_state_t state = {
     .vbattfilt_corr = 4.2,
     .vbatt_comp = 4.2,
 
+    .rx_rssi = 0,
+
     // voltage reference for vcc compensation
     .vreffilt = 1.0,
 
