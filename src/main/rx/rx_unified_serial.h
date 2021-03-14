@@ -1,5 +1,6 @@
 #pragma once
 
+#include "drv_serial.h"
 #include "profile.h"
 #include "rx.h"
 

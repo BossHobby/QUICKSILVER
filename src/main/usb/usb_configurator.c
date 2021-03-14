@@ -11,14 +11,6 @@
 
 #include "stm32f4xx.h"
 
-#ifdef DEBUG
-#ifdef RX_FRSKY
-#include "rx.h"
-#include "rx_frsky.h"
-extern frsky_bind_data frsky_bind;
-#endif
-#endif
-
 extern profile_t profile;
 uint8_t encode_buffer[USB_BUFFER_SIZE];
 uint8_t decode_buffer[USB_BUFFER_SIZE];

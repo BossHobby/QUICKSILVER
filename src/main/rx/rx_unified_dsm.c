@@ -9,6 +9,7 @@
 #include "drv_fmc.h"
 #include "drv_serial.h"
 #include "drv_time.h"
+#include "flash.h"
 #include "profile.h"
 
 #define DSM_SCALE_PERCENT 147 //this might stay somewhere or be replaced with wizard scaling
@@ -17,8 +18,6 @@
 
 #define SPEKTRUM_MAX_FADE_PER_SEC 40
 #define SPEKTRUM_FADE_REPORTS_PER_SEC 2
-
-extern int rx_bind_enable;
 
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
 extern uint8_t rx_data[RX_BUFF_SIZE];
@@ -189,8 +188,7 @@ void rx_spektrum_bind() {
     return;
   }
 
-  rx_bind_enable = fmc_read_float(56);
-  if (rx_bind_enable == 0) {
+  if (bind_storage.bind_enable == 0) {
     GPIO_InitTypeDef GPIO_InitStructure;
     GPIO_InitStructure.GPIO_Pin = SPECTRUM_BIND_PIN.pin;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;

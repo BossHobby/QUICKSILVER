@@ -9,8 +9,8 @@ typedef struct {
   float pid_identifier;
   float accelcal[3];
 
-  uint8_t flash_feature_1;
-  uint8_t flash_feature_2;
+  uint8_t flash_feature_1; //SETUP WIZARD
+  uint8_t flash_feature_2; //LVC
 } flash_storage_t;
 
 extern flash_storage_t flash_storage;

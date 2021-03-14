@@ -51,10 +51,6 @@ uint8_t blown_loop_counter;
 float looptime_buffer[255];
 extern profile_t profile;
 
-//Flash Memory Feature defaults for a flash w/full chip erase
-int flash_feature_1 = 1; //SETUP WIZARD
-int flash_feature_2 = 0; //LVC
-
 // for led flash on gestures
 int ledcommand = 0;
 int ledblink = 0;

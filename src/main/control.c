@@ -436,10 +436,9 @@ void control(void) {
 #ifdef LVC_LOWER_THROTTLE
 
 #ifdef SWITCHABLE_FEATURE_2
-    extern int flash_feature_2;
     static float throttle_i = 0.0f;
     float throttle_p = 0.0f;
-    if (flash_feature_2 == 1) {
+    if (flash_storage.flash_feature_2 == 1) {
       // can be made into a function
       if (state.vbattfilt < (float)LVC_LOWER_THROTTLE_VOLTAGE_RAW)
         throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE_RAW - state.vbattfilt) * (float)LVC_LOWER_THROTTLE_KP;

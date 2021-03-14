@@ -5,6 +5,7 @@
 #include "control.h"
 #include "drv_serial.h"
 #include "filter.h"
+#include "flash.h"
 #include "profile.h"
 #include "project.h"
 #include "util.h"
@@ -28,8 +29,7 @@ float rx_expo(float in, float exp) {
 float rx_smoothing_hz(rx_protocol_t proto) {
 #ifdef RX_UNIFIED_SERIAL
   if (proto == RX_PROTOCOL_UNIFIED_SERIAL) {
-    extern rx_serial_protocol_t rx_serial_protocol;
-    return RX_SMOOTHING_HZ[SERIAL_PROTO_MAP[rx_serial_protocol]];
+    return RX_SMOOTHING_HZ[SERIAL_PROTO_MAP[bind_storage.unified.protocol]];
   }
 #endif
   return RX_SMOOTHING_HZ[proto];

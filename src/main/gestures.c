@@ -30,8 +30,7 @@ void gestures(void) {
         //#ifdef ENABLE_OSD
         //extern uint8_t osd_display_phase;
         //osd_display_phase = 0;						//Turn off menu
-        //extern int flash_feature_1;
-        //flash_feature_1= 0;							//set flash status for setup wizard to OFF
+        //flash_storage.flash_feature_1= 0;							//set flash status for setup wizard to OFF
         //#endif
         ledcommand = 1;
         pid_gestures_used = 0;
@@ -57,12 +56,9 @@ void gestures(void) {
     }
 
     if (command == GESTURE_UUU) {
-#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND) || defined(RX_FRSKY) || defined(RX_UNIFIED_SERIAL)
-      extern int rx_bind_enable;
-      rx_bind_enable = !rx_bind_enable;
-      ledblink = 2 - rx_bind_enable;
+      bind_storage.bind_enable = !bind_storage.bind_enable;
+      ledblink = 2 - bind_storage.bind_enable;
       pid_gestures_used = 1;
-#endif
     }
 
     if (command == GESTURE_RRR) {
@@ -75,14 +71,12 @@ void gestures(void) {
     }
 
     if (command == GESTURE_LLL) {
-      extern int flash_feature_1;
-      flash_feature_1 = !flash_feature_1;
-      ledblink = 1 - flash_feature_1;
+      flash_storage.flash_feature_1 = !flash_storage.flash_feature_1;
+      ledblink = 1 - flash_storage.flash_feature_1;
       pid_gestures_used = 1;
 #ifdef SWITCHABLE_FEATURE_2
-      extern int flash_feature_2;
-      flash_feature_2 = !flash_feature_2;
-      ledblink = 2 - flash_feature_2;
+      flash_storage.flash_feature_2 = !flash_storage.flash_feature_2;
+      ledblink = 2 - flash_storage.flash_feature_2;
       pid_gestures_used = 1;
 #endif
     }

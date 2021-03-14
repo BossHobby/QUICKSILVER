@@ -14,8 +14,6 @@
 #define REDPINE_CHANNEL_START 3
 #define REDPINE_CRC16_POLY 0x8005
 
-extern int rx_bind_enable;
-
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
 extern uint8_t rx_data[RX_BUFF_SIZE];
 extern uint8_t rx_frame_position;

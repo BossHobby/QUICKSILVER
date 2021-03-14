@@ -85,8 +85,6 @@ typedef struct {
   int8_t downlink_snr;
 } crsf_stats_t;
 
-extern int rx_bind_enable;
-
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
 extern uint8_t rx_data[RX_BUFF_SIZE];
 extern uint8_t rx_frame_position;

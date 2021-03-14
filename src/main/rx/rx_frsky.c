@@ -3,6 +3,7 @@
 #include "control.h"
 #include "drv_spi_cc2500.h"
 #include "drv_time.h"
+#include "flash.h"
 #include "profile.h"
 #include "usb_configurator.h"
 #include "util.h"
@@ -18,10 +19,6 @@ uint8_t list_length = FRSKY_HOPTABLE_SIZE;
 static uint8_t cal_data[255][3];
 
 static unsigned long time_tuned_ms;
-
-frsky_bind_data frsky_bind = {{0xff, 0xff}};
-
-int rx_bind_enable = 0;
 
 uint16_t frsky_extract_rssi(uint8_t rssi_raw) {
   if (rssi_raw >= 128) {
@@ -60,13 +57,13 @@ void set_address(uint8_t is_bind) {
   cc2500_strobe(CC2500_SIDLE);
 
   // freq offset
-  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)frsky_bind.offset);
+  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)bind_storage.frsky.offset);
 
   // never automatically calibrate, po_timeout count = 64
   // no autotune as (we use our pll map)
   cc2500_write_reg(CC2500_MCSM0, 0x8);
 
-  cc2500_write_reg(CC2500_ADDR, is_bind ? 0x03 : frsky_bind.tx_id[0]);
+  cc2500_write_reg(CC2500_ADDR, is_bind ? 0x03 : bind_storage.frsky.tx_id[0]);
 
   // ADR_CHK, APPEND_STATUS, CRC_AUTOFLUSH
   cc2500_write_reg(CC2500_PKTCTRL1, 0x0D);
@@ -95,7 +92,7 @@ uint8_t next_channel(uint8_t skip) {
     channr -= list_length;
   }
 
-  set_channel(frsky_bind.hop_data[channr]);
+  set_channel(bind_storage.frsky.hop_data[channr]);
 
 #ifdef RX_FRSKY_D8
   // FRSKY D only
@@ -141,9 +138,9 @@ static void init_tune_rx(void) {
   cc2500_write_reg(CC2500_FOCCFG, 0x14);
 
   time_tuned_ms = timer_millis();
-  frsky_bind.offset = -126;
+  bind_storage.frsky.offset = -126;
 
-  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)frsky_bind.offset);
+  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)bind_storage.frsky.offset);
   cc2500_write_reg(CC2500_PKTCTRL1, 0x0C);
   cc2500_write_reg(CC2500_MCSM0, 0x8);
 
@@ -153,12 +150,12 @@ static void init_tune_rx(void) {
 }
 
 static void tune_rx_offset(int8_t offset) {
-  frsky_bind.offset = offset;
-  if (frsky_bind.offset >= 126) {
-    frsky_bind.offset = -126;
+  bind_storage.frsky.offset = offset;
+  if (bind_storage.frsky.offset >= 126) {
+    bind_storage.frsky.offset = -126;
   }
 
-  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)frsky_bind.offset);
+  cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)bind_storage.frsky.offset);
 
   time_tuned_ms = timer_millis();
 }
@@ -168,7 +165,7 @@ static uint8_t tune_delay = 50;
 static uint8_t tune_rx() {
   if ((timer_millis() - time_tuned_ms) > tune_delay) {
     // switch to fine tuning after first hit
-    tune_rx_offset(frsky_bind.offset + 5);
+    tune_rx_offset(bind_storage.frsky.offset + 5);
     tune_delay = 50;
   }
 
@@ -202,7 +199,7 @@ static void init_get_bind(void) {
 
   cc2500_strobe(CC2500_SRX);
   list_length = 0;
-  frsky_bind.idx = 0x05;
+  bind_storage.frsky.idx = 0x05;
 }
 
 static uint8_t get_bind1() {
@@ -222,12 +219,12 @@ static uint8_t get_bind1() {
     if (packet[2] == 0x01) {
       if (packet[5] == 0x00) {
 
-        frsky_bind.tx_id[0] = packet[3];
-        frsky_bind.tx_id[1] = packet[4];
+        bind_storage.frsky.tx_id[0] = packet[3];
+        bind_storage.frsky.tx_id[1] = packet[4];
         for (uint8_t n = 0; n < 5; n++) {
-          frsky_bind.hop_data[packet[5] + n] = packet[6 + n];
+          bind_storage.frsky.hop_data[packet[5] + n] = packet[6 + n];
         }
-        frsky_bind.rx_num = packet[12];
+        bind_storage.frsky.rx_num = packet[12];
         return 1;
       }
     }
@@ -237,7 +234,7 @@ static uint8_t get_bind1() {
 }
 
 static uint8_t get_bind2(uint8_t *packet) {
-  if (frsky_bind.idx > 120) {
+  if (bind_storage.frsky.idx > 120) {
     return 1;
   }
 
@@ -252,19 +249,19 @@ static uint8_t get_bind2(uint8_t *packet) {
 
   if (packet[len - 1] & 0x80) {
     if (packet[2] == 0x01) {
-      if ((packet[3] == frsky_bind.tx_id[0]) && (packet[4] == frsky_bind.tx_id[1])) {
-        if (packet[5] == frsky_bind.idx) {
+      if ((packet[3] == bind_storage.frsky.tx_id[0]) && (packet[4] == bind_storage.frsky.tx_id[1])) {
+        if (packet[5] == bind_storage.frsky.idx) {
           for (uint8_t n = 0; n < 5; n++) {
             if (packet[6 + n] == packet[len - 3] || (packet[6 + n] == 0)) {
-              if (frsky_bind.idx >= 0x2D) {
+              if (bind_storage.frsky.idx >= 0x2D) {
                 list_length = packet[5] + n;
                 return 1;
               }
             }
-            frsky_bind.hop_data[packet[5] + n] = packet[6 + n];
+            bind_storage.frsky.hop_data[packet[5] + n] = packet[6 + n];
           }
 
-          frsky_bind.idx = frsky_bind.idx + 5;
+          bind_storage.frsky.idx = bind_storage.frsky.idx + 5;
           return 0;
         }
       }
@@ -302,7 +299,10 @@ void frsky_handle_bind() {
   case FRSKY_STATE_INIT:
     cc2500_enter_rxmode();
     cc2500_strobe(CC2500_SRX);
-    if (frsky_bind.idx == 0xff) {
+    if (bind_storage.frsky.offset == 0x0 &&
+        bind_storage.frsky.idx == 0x0 &&
+        bind_storage.frsky.tx_id[0] == 0x0 &&
+        bind_storage.frsky.hop_data[3] == 0x0) {
       protocol_state = FRSKY_STATE_BIND;
     } else {
       protocol_state = FRSKY_STATE_BIND_COMPLETE;
@@ -319,7 +319,7 @@ void frsky_handle_bind() {
     static int8_t min_offset = 127;
     static int8_t max_offset = -127;
 
-    const int8_t current_offset = frsky_bind.offset;
+    const int8_t current_offset = bind_storage.frsky.offset;
 
     handle_overflows();
 
@@ -338,7 +338,7 @@ void frsky_handle_bind() {
     if (tune_samples == 1) {
       tune_rx_offset((max_offset + min_offset) / 2 - 1);
 
-      quic_debugf("FRSKY: tuned offset %d", frsky_bind.offset);
+      quic_debugf("FRSKY: tuned offset %d", bind_storage.frsky.offset);
       set_address(1);
       init_get_bind();
       protocol_state = FRSKY_STATE_BIND_BINDING1;
@@ -358,7 +358,7 @@ void frsky_handle_bind() {
     }
     break;
   case FRSKY_STATE_BIND_COMPLETE:
-    quic_debugf("FRSKY: bound rx_num %d", frsky_bind.rx_num);
+    quic_debugf("FRSKY: bound rx_num %d", bind_storage.frsky.rx_num);
     cc2500_strobe(CC2500_SIDLE);
     flags.rx_mode = RXMODE_NORMAL;
     protocol_state = FRSKY_STATE_STARTING;

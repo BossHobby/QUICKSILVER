@@ -14,6 +14,7 @@
 #include "stdio.h"
 #include "string.h"
 #include "util.h"
+#include "flash.h"
 #include "vtx.h"
 
 #ifdef ENABLE_OSD
@@ -121,7 +122,6 @@ const char *get_decode_element_string(uint32_t input, uint8_t status) {
 //																					STATE VARIABLES
 //************************************************************************************************************************************************************************************
 // case & state variables for switch logic and profile adjustments
-extern int flash_feature_1; //currently used for auto entry into wizard menu
 uint8_t osd_display_phase = 2;
 uint8_t last_display_phase;
 uint8_t osd_wizard_phase = 0;
@@ -266,46 +266,46 @@ typedef enum {
   MOTOR_TEST,
   TURTL,
   LOOP
-}status_label;
+} status_label;
 
-uint8_t print_status(uint8_t delay_clear, uint8_t label){     //3 stage return - 0 = stick and hold, 1 = move on but come back to clear, 2 = status print done
+uint8_t print_status(uint8_t delay_clear, uint8_t label) { //3 stage return - 0 = stick and hold, 1 = move on but come back to clear, 2 = status print done
   const char system_status_labels[12][21] = {{"               "}, {" **DISARMED**  "}, {"  **ARMED**    "}, {" STICK BOOST 1 "}, {" STICK BOOST 2 "}, {" **FAILSAFE**  "}, {"THROTTLE SAFETY"}, {" ARMING SAFETY "}, {"**LOW BATTERY**"}, {"**MOTOR TEST** "}, {"  **TURTLE**   "}, {" **LOOPTIME**  "}};
   static uint8_t last_label;
   static uint8_t index;
   static uint8_t delay_counter = 25;
-  if (last_label != label){   //critical to reset indexers if a print sequence is interrupted by a new request
+  if (last_label != label) { //critical to reset indexers if a print sequence is interrupted by a new request
     index = 0;
     delay_counter = 25;
   }
-  uint8_t clear[1] = {32};    //prints a space
+  uint8_t clear[1] = {32}; //prints a space
   uint8_t character[] = {system_status_labels[label][index]};
   last_label = label;
-  if (index < 15){
+  if (index < 15) {
     osd_print_data(character, 1, osd_decode(*arm_disarm, ATTRIBUTE) | BLINK, osd_decode(*arm_disarm, POSITIONX) + index, osd_decode(*arm_disarm, POSITIONY));
     index++;
     return 0;
   } else {
-    if (delay_clear){
-      if(!delay_counter){
-        if (index < 30){
-          osd_print_data(clear, 1, osd_decode(*arm_disarm, ATTRIBUTE), osd_decode(*arm_disarm, POSITIONX) + (index-15), osd_decode(*arm_disarm, POSITIONY));
+    if (delay_clear) {
+      if (!delay_counter) {
+        if (index < 30) {
+          osd_print_data(clear, 1, osd_decode(*arm_disarm, ATTRIBUTE), osd_decode(*arm_disarm, POSITIONX) + (index - 15), osd_decode(*arm_disarm, POSITIONY));
           index++;
           return 0;
-        }else{
+        } else {
           delay_counter = 25;
           index = 0;
           return 2;
         }
-      }else{
+      } else {
         delay_counter--;
         return 1;
       }
-    }else{
+    } else {
       index = 0;
       return 2;
     }
   }
-return 2;
+  return 2;
 }
 
 #define TEMP 1
@@ -318,98 +318,114 @@ typedef struct {
 } sys_status_t;
 uint8_t print_osd_system_status(void) {
   static uint8_t ready = 0;
-  uint8_t print_stage = 2;  // 0 makes the main osd function stick and non zero lets it pass on
+  uint8_t print_stage = 2; // 0 makes the main osd function stick and non zero lets it pass on
   static sys_status_t last_sys_status;
   static sys_status_t printing = {
-    .loop_warning = 0,
-    .aux_boost = 0,
-    .aux_motor_test = 0,
-    .flags = {0}
-  };
+      .loop_warning = 0,
+      .aux_boost = 0,
+      .aux_motor_test = 0,
+      .flags = {0}};
   extern uint8_t looptime_warning;
- //things happen here
-  if(ready){
-    if ((flags.arm_state != last_sys_status.flags.arm_state) || printing.flags.arm_state){
+  //things happen here
+  if (ready) {
+    if ((flags.arm_state != last_sys_status.flags.arm_state) || printing.flags.arm_state) {
       last_sys_status.flags.arm_state = flags.arm_state;
       printing.flags.arm_state = 1;
-      if (flags.arm_state) print_stage = print_status(TEMP, ARM);
-      else print_stage = print_status(TEMP, DISARM);
-      if (print_stage == 2) printing.flags.arm_state = 0;
+      if (flags.arm_state)
+        print_stage = print_status(TEMP, ARM);
+      else
+        print_stage = print_status(TEMP, DISARM);
+      if (print_stage == 2)
+        printing.flags.arm_state = 0;
       return print_stage;
     }
-    if ((looptime_warning != last_sys_status.loop_warning) || printing.loop_warning){
+    if ((looptime_warning != last_sys_status.loop_warning) || printing.loop_warning) {
       last_sys_status.loop_warning = looptime_warning;
       printing.loop_warning = 1;
       print_stage = print_status(TEMP, LOOP);
-      if (print_stage == 2) printing.loop_warning = 0;
+      if (print_stage == 2)
+        printing.loop_warning = 0;
       return print_stage;
     }
     if (rx_aux_on(AUX_STICK_BOOST_PROFILE) != last_sys_status.aux_boost || printing.aux_boost) {
       last_sys_status.aux_boost = rx_aux_on(AUX_STICK_BOOST_PROFILE);
       printing.aux_boost = 1;
-      if (rx_aux_on(AUX_STICK_BOOST_PROFILE)) print_stage = print_status(TEMP, BOOST_2);
-      else print_stage = print_status(TEMP, BOOST_1);
-      if (print_stage == 2) printing.aux_boost = 0;
+      if (rx_aux_on(AUX_STICK_BOOST_PROFILE))
+        print_stage = print_status(TEMP, BOOST_2);
+      else
+        print_stage = print_status(TEMP, BOOST_1);
+      if (print_stage == 2)
+        printing.aux_boost = 0;
       return print_stage;
     }
     if (flags.failsafe != last_sys_status.flags.failsafe || printing.flags.failsafe) {
       last_sys_status.flags.failsafe = flags.failsafe;
       printing.flags.failsafe = 1;
-      if (flags.failsafe) print_stage = print_status(HOLD, FAILSAFE);
-      else print_stage = print_status(HOLD, CLEAR);
-      if (print_stage == 2) printing.flags.failsafe = 0;
+      if (flags.failsafe)
+        print_stage = print_status(HOLD, FAILSAFE);
+      else
+        print_stage = print_status(HOLD, CLEAR);
+      if (print_stage == 2)
+        printing.flags.failsafe = 0;
       return print_stage;
     }
     if ((flags.arm_safety && !flags.failsafe) || printing.flags.arm_safety) {
       printing.flags.arm_safety = 1;
-      if (flags.arm_safety){
+      if (flags.arm_safety) {
         print_stage = print_status(HOLD, ARM_SFTY);
-      }else{
+      } else {
         print_stage = print_status(HOLD, CLEAR);
-        if (print_stage == 2) printing.flags.arm_safety = 0;
+        if (print_stage == 2)
+          printing.flags.arm_safety = 0;
       }
       return print_stage;
     }
     if ((flags.throttle_safety && !flags.arm_safety) || printing.flags.throttle_safety) {
       printing.flags.throttle_safety = 1;
-      if (flags.throttle_safety){
+      if (flags.throttle_safety) {
         print_stage = print_status(HOLD, THRTL_SFTY);
-      }else{
+      } else {
         print_stage = print_status(HOLD, CLEAR);
-        if (print_stage == 2) printing.flags.throttle_safety = 0;
+        if (print_stage == 2)
+          printing.flags.throttle_safety = 0;
       }
       return print_stage;
     }
     if ((flags.lowbatt != last_sys_status.flags.lowbatt && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe) || printing.flags.lowbatt) {
       last_sys_status.flags.lowbatt = flags.lowbatt;
       printing.flags.lowbatt = 1;
-      if (flags.lowbatt) print_stage = print_status(HOLD, LOW_BAT);
-      else print_stage = print_status(HOLD, CLEAR);
-      if (print_stage == 2) printing.flags.lowbatt = 0;
+      if (flags.lowbatt)
+        print_stage = print_status(HOLD, LOW_BAT);
+      else
+        print_stage = print_status(HOLD, CLEAR);
+      if (print_stage == 2)
+        printing.flags.lowbatt = 0;
       return print_stage;
     }
     if ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe) || (printing.aux_motor_test && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe)) {
       printing.aux_motor_test = 1;
-      if (rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE)){
+      if (rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE)) {
         print_stage = print_status(HOLD, MOTOR_TEST);
-      }else{
+      } else {
         print_stage = print_status(HOLD, CLEAR);
-        if (print_stage == 2) printing.aux_motor_test = 0;
+        if (print_stage == 2)
+          printing.aux_motor_test = 0;
       }
       return print_stage;
     }
     if ((flags.turtle && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe) || (printing.flags.turtle && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe)) {
       printing.flags.turtle = 1;
-      if (flags.turtle){
+      if (flags.turtle) {
         print_stage = print_status(HOLD, TURTL);
-      }else{
+      } else {
         print_stage = print_status(HOLD, CLEAR);
-        if (print_stage == 2) printing.flags.turtle = 0;
+        if (print_stage == 2)
+          printing.flags.turtle = 0;
       }
       return print_stage;
     }
   }
-  if (ready == 0){
+  if (ready == 0) {
     last_sys_status.loop_warning = looptime_warning;
     last_sys_status.aux_boost = rx_aux_on(AUX_STICK_BOOST_PROFILE);
     last_sys_status.aux_motor_test = rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE);
@@ -424,7 +440,7 @@ void print_osd_rssi(void) {
   uint8_t osd_rssi[5];
   if (flags.failsafe)
     state.rx_rssi = 0.0f;
-  lpf(&rx_rssi_filt, state.rx_rssi, FILTERCALC(state.looptime* 1e6f * 133.0f, 2e6f)); //2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
+  lpf(&rx_rssi_filt, state.rx_rssi, FILTERCALC(state.looptime * 1e6f * 133.0f, 2e6f)); //2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
   fast_fprint(osd_rssi, 5, (rx_rssi_filt - 0.5f), 0);
   osd_rssi[4] = 1;
   osd_print_data(osd_rssi, 5, osd_decode(*rssi, ATTRIBUTE), osd_decode(*rssi, POSITIONX), osd_decode(*rssi, POSITIONY));
@@ -552,7 +568,7 @@ void osd_display(void) {
     break; //screen has been cleared for this loop - break out of display function
 
   case 1:                //osd menu is active
-    if (flash_feature_1) //setup wizard
+    if (flash_storage.flash_feature_1) //setup wizard
     {
       last_display_phase = 2;
       print_osd_menu_strings(10, 9, main_menu_labels, main_menu_positions);
@@ -798,9 +814,9 @@ void osd_display(void) {
       // print the buffer and not the actual status
       print_osd_adjustable_enums(6, 4, get_vtx_status(osd_menu_phase - 7), vtx_grid, vtx_data_positions);
       if (osd_menu_phase == 11)
-    	//adjust the buffer and not the actual settings
+        //adjust the buffer and not the actual settings
         osd_enum_adjust(vtx_ptr, 4, vtx_limits);
-        //save & exit needs a function to write the buffer to the actual settings
+      //save & exit needs a function to write the buffer to the actual settings
     } else {
       print_osd_menu_strings(3, 0, vtx_na_labels, vtx_na_positions);
       if (osd_select)

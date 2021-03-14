@@ -124,21 +124,21 @@ void usart_invert(void) {
 //FUNCTION TO INITIALIZE USART FOR A SERIAL RX CALLED FROM RECEIVER PROTOCOL
 
 #ifdef SERIAL_RX
-void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
+void serial_rx_init(rx_serial_protocol_t proto) {
 #if defined(RX_DSM2_1024) || defined(RX_DSMX_2028)
-  rx_serial_protocol = RX_SERIAL_PROTOCOL_DSM;
+  proto = RX_SERIAL_PROTOCOL_DSM;
 #endif
 #if defined(RX_SBUS)
-  rx_serial_protocol = RX_SERIAL_PROTOCOL_SBUS;
+  proto = RX_SERIAL_PROTOCOL_SBUS;
 #endif
 #if defined(RX_IBUS)
-  rx_serial_protocol = RX_SERIAL_PROTOCOL_IBUS;
+  proto = RX_SERIAL_PROTOCOL_IBUS;
 #endif
 #if defined(RX_FPORT)
-  rx_serial_protocol = RX_SERIAL_PROTOCOL_FPORT;
+  proto = RX_SERIAL_PROTOCOL_FPORT;
 #endif
 #if defined(RX_CRSF)
-  rx_serial_protocol = RX_SERIAL_PROTOCOL_CRSF;
+  proto = RX_SERIAL_PROTOCOL_CRSF;
 #endif
 
   //If the board supports inversion & inversion is not hard defined, prepare it.
@@ -148,7 +148,7 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
   switch (usart_port_defs[profile.serial.rx].channel_index) {
   case 1:
 #if defined(USART1_INVERTER_PIN)
-    if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_REDPINE_INVERTED) {
+    if (proto == RX_SERIAL_PROTOCOL_SBUS_INVERTED || proto == RX_SERIAL_PROTOCOL_FPORT_INVERTED || proto == RX_SERIAL_PROTOCOL_REDPINE_INVERTED) {
       GPIO_SetBits(gpio_pin_defs[USART1_INVERTER_PIN].port, gpio_pin_defs[USART1_INVERTER_PIN].pin);
     } else {
       GPIO_ResetBits(gpio_pin_defs[USART1_INVERTER_PIN].port, gpio_pin_defs[USART1_INVERTER_PIN].pin);
@@ -157,7 +157,7 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
     break;
   case 2:
 #if defined(USART2_INVERTER_PIN)
-    if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_REDPINE_INVERTED) {
+    if (proto == RX_SERIAL_PROTOCOL_SBUS_INVERTED || proto == RX_SERIAL_PROTOCOL_FPORT_INVERTED || proto == RX_SERIAL_PROTOCOL_REDPINE_INVERTED) {
       GPIO_SetBits(gpio_pin_defs[USART2_INVERTER_PIN].port, gpio_pin_defs[USART2_INVERTER_PIN].pin);
     } else {
       GPIO_ResetBits(gpio_pin_defs[USART2_INVERTER_PIN].port, gpio_pin_defs[USART2_INVERTER_PIN].pin);
@@ -166,7 +166,7 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
     break;
   case 3:
 #if defined(USART3_INVERTER_PIN)
-    if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_REDPINE_INVERTED) {
+    if (proto == RX_SERIAL_PROTOCOL_SBUS_INVERTED || proto == RX_SERIAL_PROTOCOL_FPORT_INVERTED || proto == RX_SERIAL_PROTOCOL_REDPINE_INVERTED) {
       GPIO_SetBits(gpio_pin_defs[USART3_INVERTER_PIN].port, gpio_pin_defs[USART3_INVERTER_PIN].pin);
     } else {
       GPIO_ResetBits(gpio_pin_defs[USART3_INVERTER_PIN].port, gpio_pin_defs[USART3_INVERTER_PIN].pin);
@@ -175,7 +175,7 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
     break;
   case 4:
 #if defined(USART4_INVERTER_PIN)
-    if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_REDPINE_INVERTED) {
+    if (proto == RX_SERIAL_PROTOCOL_SBUS_INVERTED || proto == RX_SERIAL_PROTOCOL_FPORT_INVERTED || proto == RX_SERIAL_PROTOCOL_REDPINE_INVERTED) {
       GPIO_SetBits(gpio_pin_defs[USART4_INVERTER_PIN].port, gpio_pin_defs[USART4_INVERTER_PIN].pin);
     } else {
       GPIO_ResetBits(gpio_pin_defs[USART4_INVERTER_PIN].port, gpio_pin_defs[USART4_INVERTER_PIN].pin);
@@ -184,7 +184,7 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
     break;
   case 5:
 #if defined(USART5_INVERTER_PIN)
-    if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_REDPINE_INVERTED) {
+    if (proto == RX_SERIAL_PROTOCOL_SBUS_INVERTED || proto == RX_SERIAL_PROTOCOL_FPORT_INVERTED || proto == RX_SERIAL_PROTOCOL_REDPINE_INVERTED) {
       GPIO_SetBits(gpio_pin_defs[USART5_INVERTER_PIN].port, gpio_pin_defs[USART5_INVERTER_PIN].pin);
     } else {
       GPIO_ResetBits(gpio_pin_defs[USART5_INVERTER_PIN].port, gpio_pin_defs[USART5_INVERTER_PIN].pin);
@@ -193,7 +193,7 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
     break;
   case 6:
 #if defined(USART6_INVERTER_PIN)
-    if (rx_serial_protocol == RX_SERIAL_PROTOCOL_SBUS_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED || rx_serial_protocol == RX_SERIAL_PROTOCOL_REDPINE_INVERTED) {
+    if (proto == RX_SERIAL_PROTOCOL_SBUS_INVERTED || proto == RX_SERIAL_PROTOCOL_FPORT_INVERTED || proto == RX_SERIAL_PROTOCOL_REDPINE_INVERTED) {
       GPIO_SetBits(gpio_pin_defs[USART6_INVERTER_PIN].port, gpio_pin_defs[USART6_INVERTER_PIN].pin);
     } else {
       GPIO_ResetBits(gpio_pin_defs[USART6_INVERTER_PIN].port, gpio_pin_defs[USART6_INVERTER_PIN].pin);
@@ -210,7 +210,7 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
   gpio_init.GPIO_Mode = GPIO_Mode_AF;
   gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
 
-  switch (rx_serial_protocol) {
+  switch (proto) {
   case RX_SERIAL_PROTOCOL_DSM:
   case RX_SERIAL_PROTOCOL_IBUS:
   case RX_SERIAL_PROTOCOL_CRSF:
@@ -241,7 +241,7 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
     break;
   }
 
-  switch (rx_serial_protocol) {
+  switch (proto) {
   case RX_SERIAL_PROTOCOL_FPORT:
   case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
   case RX_SERIAL_PROTOCOL_CRSF:
@@ -264,7 +264,7 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
   usart_init.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
   usart_init.USART_WordLength = USART_WordLength_8b;
 
-  switch (rx_serial_protocol) {
+  switch (proto) {
   case RX_SERIAL_PROTOCOL_DSM:
   case RX_SERIAL_PROTOCOL_IBUS:
     usart_init.USART_BaudRate = 115200;
@@ -308,7 +308,7 @@ void serial_rx_init(rx_serial_protocol_t rx_serial_protocol) {
     break;
   }
 
-  if (rx_serial_protocol == RX_SERIAL_PROTOCOL_FPORT) {
+  if (proto == RX_SERIAL_PROTOCOL_FPORT) {
     //RX_SERIAL_PROTOCOL_FPORT_INVERTED requires half duplex off
     USART_HalfDuplexCmd(USART.channel, ENABLE);
   } else {

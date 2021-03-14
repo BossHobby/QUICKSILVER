@@ -6,6 +6,7 @@
 #include "drv_spi.h"
 #include "drv_spi_xn297.h"
 #include "drv_time.h"
+#include "flash.h"
 #include "profile.h"
 #include "project.h"
 #include "util.h"
@@ -30,10 +31,6 @@
 
 char lasttrim[4];
 
-char rfchannel[4];
-char rxaddress[5];
-int telemetry_enabled = 0;
-int rx_bind_enable = 0;
 int rx_bind_load = 0;
 
 int rf_chan = 0;
@@ -153,7 +150,7 @@ void rx_init() {
         0x2a,
     };
     for (int i = 1; i < 6; i++) {
-      rxaddr_regs[i] = rxaddress[i - 1];
+      rxaddr_regs[i] = bind_storage.bayang.rxaddress[i - 1];
     }
     // write new rx address
     writeregs(rxaddr_regs, sizeof(rxaddr_regs));
@@ -162,10 +159,10 @@ void rx_init() {
     // write new tx address
     writeregs(rxaddr_regs, sizeof(rxaddr_regs));
 
-    xn_writereg(0x25, rfchannel[rf_chan]); // Set channel frequency
+    xn_writereg(0x25, bind_storage.bayang.rfchannel[rf_chan]); // Set channel frequency
     flags.rx_mode = RX_MODE_NORMAL;
 
-    if (telemetry_enabled)
+    if (bind_storage.bayang.telemetry_enabled)
       packet_period = PACKET_PERIOD_TELEMETRY;
   } else {
     autobind_inhibit = 1;
@@ -355,7 +352,7 @@ static int decodepacket(void) {
 void nextchannel() {
   rf_chan++;
   rf_chan &= 3; // same as %4
-  xn_writereg(0x25, rfchannel[rf_chan]);
+  xn_writereg(0x25, bind_storage.bayang.rfchannel[rf_chan]);
 }
 
 unsigned long lastrxtime;
@@ -375,14 +372,14 @@ void rx_check(void) {
 
       if (rxdata[0] == 0xa4 || rxdata[0] == 0xa3) { // bind packet
         if (rxdata[0] == 0xa3) {
-          telemetry_enabled = 1;
+          bind_storage.bayang.telemetry_enabled = 1;
           packet_period = PACKET_PERIOD_TELEMETRY;
         }
 
-        rfchannel[0] = rxdata[6];
-        rfchannel[1] = rxdata[7];
-        rfchannel[2] = rxdata[8];
-        rfchannel[3] = rxdata[9];
+        bind_storage.bayang.rfchannel[0] = rxdata[6];
+        bind_storage.bayang.rfchannel[1] = rxdata[7];
+        bind_storage.bayang.rfchannel[2] = rxdata[8];
+        bind_storage.bayang.rfchannel[3] = rxdata[9];
 
         uint8_t rxaddr_regs[6] = {
             0x2a,
@@ -390,7 +387,7 @@ void rx_check(void) {
 
         for (int i = 1; i < 6; i++) {
           rxaddr_regs[i] = rxdata[i];
-          rxaddress[i - 1] = rxdata[i];
+          bind_storage.bayang.rxaddress[i - 1] = rxdata[i];
         }
         // write new rx address
         writeregs(rxaddr_regs, sizeof(rxaddr_regs));
@@ -399,7 +396,7 @@ void rx_check(void) {
         // write new tx address
         writeregs(rxaddr_regs, sizeof(rxaddr_regs));
 
-        xn_writereg(0x25, rfchannel[rf_chan]); // Set channel frequency
+        xn_writereg(0x25, bind_storage.bayang.rfchannel[rf_chan]); // Set channel frequency
 
         flags.rx_mode = RX_MODE_NORMAL;
 
@@ -426,7 +423,7 @@ void rx_check(void) {
 
       if (pass) {
         packetrx++;
-        if (telemetry_enabled)
+        if (bind_storage.bayang.telemetry_enabled)
           beacon_sequence();
         skipchannel = 0;
         timingfail = 0;

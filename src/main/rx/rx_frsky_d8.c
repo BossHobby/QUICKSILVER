@@ -3,6 +3,7 @@
 #include "control.h"
 #include "drv_spi_cc2500.h"
 #include "drv_time.h"
+#include "flash.h"
 #include "profile.h"
 #include "usb_configurator.h"
 #include "util.h"
@@ -29,9 +30,6 @@ typedef struct {
 
 extern uint8_t packet[128];
 extern uint8_t protocol_state;
-extern frsky_bind_data frsky_bind;
-
-extern int rx_bind_enable;
 
 uint8_t frsky_extract_rssi(uint8_t rssi_raw);
 uint8_t frsky_detect();
@@ -214,8 +212,8 @@ static uint8_t frsky_d8_handle_packet() {
 
       if (frame->length == 0x11 &&
           (frame->crc[1] & 0x80) &&
-          frame->tx_id[0] == frsky_bind.tx_id[0] &&
-          frame->tx_id[1] == frsky_bind.tx_id[1]) {
+          frame->tx_id[0] == bind_storage.frsky.tx_id[0] &&
+          frame->tx_id[1] == bind_storage.frsky.tx_id[1]) {
 
         if (frame_index >= 188) {
           frame_index = 0;
@@ -232,8 +230,8 @@ static uint8_t frsky_d8_handle_packet() {
         if ((frame->counter % 4) == 2) {
           const uint8_t telemetry_id = packet[4];
           telemetry[0] = 0x11; // length
-          telemetry[1] = frsky_bind.tx_id[0];
-          telemetry[2] = frsky_bind.tx_id[1];
+          telemetry[1] = bind_storage.frsky.tx_id[0];
+          telemetry[2] = bind_storage.frsky.tx_id[1];
           telemetry[3] = (uint8_t)(state.vbattfilt * 100);
           telemetry[4] = (uint8_t)(state.vbattfilt * 100);
           telemetry[5] = frsky_extract_rssi(packet[18]);

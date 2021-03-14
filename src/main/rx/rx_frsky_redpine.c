@@ -3,6 +3,7 @@
 #include "control.h"
 #include "drv_spi_cc2500.h"
 #include "drv_time.h"
+#include "flash.h"
 #include "profile.h"
 #include "usb_configurator.h"
 #include "util.h"
@@ -21,9 +22,6 @@
 extern uint8_t packet[128];
 extern uint8_t list_length;
 extern uint8_t protocol_state;
-extern frsky_bind_data frsky_bind;
-
-extern int rx_bind_enable;
 
 static uint8_t redpine_fast = 1;
 
@@ -116,8 +114,8 @@ static uint8_t redpine_handle_packet() {
       cc2500_read_fifo(packet, len);
 
       if ((packet[0] == REDPINE_PACKET_SIZE - 1) &&
-          (packet[1] == frsky_bind.tx_id[0]) &&
-          (packet[2] == frsky_bind.tx_id[1])) {
+          (packet[1] == bind_storage.frsky.tx_id[0]) &&
+          (packet[2] == bind_storage.frsky.tx_id[1])) {
 
         if (redpine_fast) {
           max_sync_delay = packet[REDPINE_CHANNEL_START + 7] * 100;
