@@ -304,6 +304,7 @@ void frsky_handle_bind() {
         bind_storage.frsky.tx_id[0] == 0x0 &&
         bind_storage.frsky.hop_data[3] == 0x0) {
       protocol_state = FRSKY_STATE_BIND;
+      state.rx_status = RX_STATUS_BINDING;
     } else {
       protocol_state = FRSKY_STATE_BIND_COMPLETE;
     }
@@ -358,6 +359,7 @@ void frsky_handle_bind() {
     }
     break;
   case FRSKY_STATE_BIND_COMPLETE:
+    state.rx_status = RX_STATUS_BOUND;
     quic_debugf("FRSKY: bound rx_num %d", bind_storage.frsky.rx_num);
     cc2500_strobe(CC2500_SIDLE);
     flags.rx_mode = RXMODE_NORMAL;

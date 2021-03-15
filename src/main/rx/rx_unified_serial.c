@@ -209,9 +209,12 @@ void rx_serial_init(void) {
   bind_storage.unified.protocol = RX_SERIAL_PROTOCOL_DSM;
 #endif
 
-  if (bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_INVALID) { //No known protocol? Can't really set the radio up yet then can we?
+  if (bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_INVALID) {
+    //No known protocol? Can't really set the radio up yet then can we?
+    state.rx_status = RX_STATUS_DETECTING;
     rx_serial_find_protocol();
   } else {
+    state.rx_status = RX_STATUS_DETECTED + bind_storage.unified.protocol;
     serial_rx_init(bind_storage.unified.protocol); //There's already a known protocol, we're good.
     rx_serial_update_frame_length(bind_storage.unified.protocol);
   }
@@ -222,6 +225,8 @@ void rx_check() {
     rx_serial_find_protocol();
     return;
   }
+
+  state.rx_status = RX_STATUS_DETECTED + bind_storage.unified.protocol;
 
   //FAILSAFE! It gets checked every time!
   if (timer_micros() - time_lastframe > FAILSAFETIME) {
@@ -326,6 +331,7 @@ void rx_serial_find_protocol(void) {
     }
     quic_debugf("UNIFIED: trying protocol %d", protocol_to_check);
 
+    state.rx_status = RX_STATUS_DETECTING + protocol_to_check;
     serial_rx_init(protocol_to_check); //Configure a protocol!
     rx_serial_update_frame_length(protocol_to_check);
   }
