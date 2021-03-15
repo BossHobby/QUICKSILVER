@@ -117,6 +117,11 @@ void flash_load(void) {
     }
 
     memcpy((uint8_t *)&bind_storage, buffer, sizeof(rx_bind_storage_t));
+
+#ifdef RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
+    extern int rx_bind_load;
+    rx_bind_load = bind_storage.bind_enable;
+#endif
   }
 
   {
