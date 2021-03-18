@@ -11,6 +11,7 @@
 #include "rx.h"
 #include "usb_configurator.h"
 #include "util.h"
+#include "util/cbor_helper.h"
 
 #if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
 static int fpv_init = 0;
@@ -262,60 +263,24 @@ void vtx_set(vtx_settings_t *vtx) {
 cbor_result_t cbor_encode_vtx_settings_t(cbor_value_t *enc, const vtx_settings_t *vtx) {
   cbor_result_t res = CBOR_OK;
 
-  res = cbor_encode_map_indefinite(enc);
-  if (res < CBOR_OK) {
-    return res;
-  }
+  CBOR_CHECK_ERROR(res = cbor_encode_map_indefinite(enc));
 
-  res = cbor_encode_str(enc, "detected");
-  if (res < CBOR_OK) {
-    return res;
-  }
-  res = cbor_encode_uint8(enc, &vtx->detected);
-  if (res < CBOR_OK) {
-    return res;
-  }
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "detected"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &vtx->detected));
 
-  res = cbor_encode_str(enc, "band");
-  if (res < CBOR_OK) {
-    return res;
-  }
-  res = cbor_encode_uint8(enc, &vtx->band);
-  if (res < CBOR_OK) {
-    return res;
-  }
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "band"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &vtx->band));
 
-  res = cbor_encode_str(enc, "channel");
-  if (res < CBOR_OK) {
-    return res;
-  }
-  res = cbor_encode_uint8(enc, &vtx->channel);
-  if (res < CBOR_OK) {
-    return res;
-  }
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "channel"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &vtx->channel));
 
-  res = cbor_encode_str(enc, "pit_mode");
-  if (res < CBOR_OK) {
-    return res;
-  }
-  res = cbor_encode_uint8(enc, &vtx->pit_mode);
-  if (res < CBOR_OK) {
-    return res;
-  }
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "pit_mode"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &vtx->pit_mode));
 
-  res = cbor_encode_str(enc, "power_level");
-  if (res < CBOR_OK) {
-    return res;
-  }
-  res = cbor_encode_uint8(enc, &vtx->power_level);
-  if (res < CBOR_OK) {
-    return res;
-  }
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "power_level"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &vtx->power_level));
 
-  res = cbor_encode_end_indefinite(enc);
-  if (res < CBOR_OK) {
-    return res;
-  }
+  CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
   return res;
 }
 
@@ -323,52 +288,34 @@ cbor_result_t cbor_decode_vtx_settings_t(cbor_value_t *dec, vtx_settings_t *vtx)
   cbor_result_t res = CBOR_OK;
 
   cbor_container_t map;
-  res = cbor_decode_map(dec, &map);
-  if (res < CBOR_OK)
-    return res;
+  CBOR_CHECK_ERROR(res = cbor_decode_map(dec, &map));
 
   const uint8_t *name;
   uint32_t name_len;
   for (uint32_t i = 0; i < cbor_decode_map_size(dec, &map); i++) {
-    res = cbor_decode_tstr(dec, &name, &name_len);
-    if (res < CBOR_OK)
-      return res;
+    CBOR_CHECK_ERROR(res = cbor_decode_tstr(dec, &name, &name_len));
 
     if (buf_equal_string(name, name_len, "band")) {
-      res = cbor_decode_uint8(dec, &vtx->band);
-      if (res < CBOR_OK) {
-        return res;
-      }
+      CBOR_CHECK_ERROR(res = cbor_decode_uint8(dec, &vtx->band));
       continue;
     }
 
     if (buf_equal_string(name, name_len, "channel")) {
-      res = cbor_decode_uint8(dec, &vtx->channel);
-      if (res < CBOR_OK) {
-        return res;
-      }
+      CBOR_CHECK_ERROR(res = cbor_decode_uint8(dec, &vtx->channel));
       continue;
     }
 
     if (buf_equal_string(name, name_len, "pit_mode")) {
-      res = cbor_decode_uint8(dec, &vtx->pit_mode);
-      if (res < CBOR_OK) {
-        return res;
-      }
+      CBOR_CHECK_ERROR(res = cbor_decode_uint8(dec, &vtx->pit_mode));
       continue;
     }
 
     if (buf_equal_string(name, name_len, "power_level")) {
-      res = cbor_decode_uint8(dec, &vtx->power_level);
-      if (res < CBOR_OK) {
-        return res;
-      }
+      CBOR_CHECK_ERROR(res = cbor_decode_uint8(dec, &vtx->power_level));
       continue;
     }
 
-    res = cbor_decode_skip(dec);
-    if (res < CBOR_OK)
-      return res;
+    CBOR_CHECK_ERROR(res = cbor_decode_skip(dec));
   }
   return res;
 }
