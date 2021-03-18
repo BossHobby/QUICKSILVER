@@ -26,7 +26,8 @@ typedef enum {
   RX_STATUS_NONE = 0,
   RX_STATUS_DETECTING = 100,
   // RX_STATUS_DETECTING + RX_SERIAL_PROTOCOL_X = detecting proto X
-  RX_STATUS_DETECTED = 200 + RX_SERIAL_PROTOCOL_MAX,
+  RX_STATUS_DETECTED = 200,
+  // RX_STATUS_DETECTED + RX_SERIAL_PROTOCOL_X = detected proto X
 } rx_status_t;
 
 void rx_serial_find_protocol();
