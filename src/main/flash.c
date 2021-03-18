@@ -6,6 +6,7 @@
 #include "drv_serial.h"
 #include "profile.h"
 #include "project.h"
+#include "util/cbor_helper.h"
 
 extern const profile_t default_profile;
 extern profile_t profile;
@@ -31,6 +32,20 @@ float flash_get_hard_coded_pid_identifier(void) {
 
 void flash_hard_coded_pid_identifier(void) {
   initial_pid_identifier = flash_get_hard_coded_pid_identifier();
+}
+
+cbor_result_t cbor_encode_rx_bind_storage_t(cbor_value_t *enc, const rx_bind_storage_t *s) {
+  CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_map_indefinite(enc));
+
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "bind_enable"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &s->bind_enable));
+
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "raw"));
+  CBOR_CHECK_ERROR(res = cbor_encode_bstr(enc, s->raw, BIND_RAW_STORAGE_SIZE));
+
+  CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
+
+  return res;
 }
 
 void flash_save(void) {
@@ -59,7 +74,7 @@ void flash_save(void) {
 
     if (bind_storage.bind_enable == 0) {
       // reset all bind data
-      memset(bind_storage.raw, 0, 63);
+      memset(bind_storage.raw, 0, BIND_RAW_STORAGE_SIZE);
     }
 
     memcpy(buffer, (uint8_t *)&bind_storage, sizeof(rx_bind_storage_t));

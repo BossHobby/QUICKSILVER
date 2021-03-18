@@ -5,6 +5,9 @@
 #include "rx_frsky.h"
 #include "rx_unified_serial.h"
 
+#define FLASH_STORAGE_OFFSET 4
+#define FLASH_STORAGE_SIZE 32
+
 typedef struct {
   float pid_identifier;
   float accelcal[3];
@@ -15,8 +18,9 @@ typedef struct {
 
 extern flash_storage_t flash_storage;
 
-#define FLASH_STORAGE_OFFSET 4
-#define FLASH_STORAGE_SIZE 32
+#define BIND_STORAGE_OFFSET (FLASH_STORAGE_OFFSET + FLASH_STORAGE_SIZE)
+#define BIND_STORAGE_SIZE 64
+#define BIND_RAW_STORAGE_SIZE 63
 
 typedef struct {
   uint8_t bind_enable;
@@ -24,14 +28,13 @@ typedef struct {
     rx_frsky_bind_data_t frsky;
     rx_bayang_bind_data_t bayang;
     rx_unified_bind_data_t unified;
-    uint8_t raw[63];
+    uint8_t raw[BIND_RAW_STORAGE_SIZE];
   };
 } rx_bind_storage_t;
 
 extern rx_bind_storage_t bind_storage;
 
-#define BIND_STORAGE_OFFSET (FLASH_STORAGE_OFFSET + FLASH_STORAGE_SIZE)
-#define BIND_STORAGE_SIZE 64
+cbor_result_t cbor_encode_rx_bind_storage_t(cbor_value_t *enc, const rx_bind_storage_t *s);
 
 #define PROFILE_STORAGE_OFFSET (BIND_STORAGE_OFFSET + BIND_STORAGE_SIZE)
 #define PROFILE_STORAGE_SIZE 2048

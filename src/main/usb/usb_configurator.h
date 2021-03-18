@@ -57,6 +57,7 @@ typedef enum {
   QUIC_VAL_VTX_SETTINGS,
   QUIC_VAL_OSD_FONT,
   QUIC_VAL_BLHEL_SETTINGS,
+  QUIC_VAL_BIND_INFO,
 } quic_values;
 
 typedef struct {
