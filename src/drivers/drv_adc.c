@@ -2,6 +2,7 @@
 
 #include "debug.h"
 #include "defines.h"
+#include "drv_gpio.h"
 #include "filter.h"
 #include "profile.h"
 #include "project.h"
@@ -39,11 +40,10 @@ void adc_init(void) {
 
   //gpio configuration
   {
-    GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.GPIO_Pin = BATTERYPIN;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(BATTERYPORT, &GPIO_InitStructure);
+    GPIO_InitTypeDef gpio_init;
+    gpio_init.GPIO_Mode = GPIO_Mode_AN;
+    gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    gpio_pin_init(&gpio_init, BATTERYPIN);
   }
 
   // ADC Common Configuration
