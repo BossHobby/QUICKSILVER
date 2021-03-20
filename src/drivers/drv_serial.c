@@ -69,8 +69,6 @@ void serial_enable_isr(usart_ports_t port) {
   NVIC_Init(&NVIC_InitStructure);
 }
 
-#define GPIO_PIN(port_num, num) MAKE_PIN_DEF(port_num, num)
-
 #ifdef F4
 
 #define USART4 UART4
@@ -105,7 +103,6 @@ usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {
     USART_PORTS};
 
 #undef USART_PORT
-#undef GPIO_PIN
 
 #define USART usart_port_defs[channel]
 void handle_usart_isr(usart_ports_t channel) {

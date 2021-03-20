@@ -54,13 +54,11 @@ static void serial_smart_audio_reconfigure() {
   USART_Cmd(USART.channel, DISABLE);
 
   GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.GPIO_Pin = USART.tx_pin.pin;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_Init(USART.tx_pin.port, &GPIO_InitStructure);
-  GPIO_PinAFConfig(USART.tx_pin.port, USART.tx_pin.pin_source, USART.gpio_af);
+  gpio_pin_init_af(&GPIO_InitStructure, USART.tx_pin, USART.gpio_af);
 
   USART_InitTypeDef USART_InitStructure;
   USART_InitStructure.USART_BaudRate = baud_rate;

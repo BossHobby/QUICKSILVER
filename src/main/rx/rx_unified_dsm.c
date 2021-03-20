@@ -190,24 +190,23 @@ void rx_spektrum_bind() {
 
   if (bind_storage.bind_enable == 0) {
     GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.GPIO_Pin = SPECTRUM_BIND_PIN.pin;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(SPECTRUM_BIND_PIN.port, &GPIO_InitStructure);
+    gpio_pin_init(&GPIO_InitStructure, SPECTRUM_BIND_PIN);
 
     // RX line, set high
-    GPIO_SetBits(SPECTRUM_BIND_PIN.port, SPECTRUM_BIND_PIN.pin);
+    gpio_pin_set(SPECTRUM_BIND_PIN);
     // Bind window is around 20-140ms after powerup
     delay(60000);
 
     for (uint8_t i = 0; i < 9; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
       // RX line, drive low for 120us
-      GPIO_ResetBits(SPECTRUM_BIND_PIN.port, SPECTRUM_BIND_PIN.pin);
+      gpio_pin_reset(SPECTRUM_BIND_PIN);
       delay(120);
 
       // RX line, drive high for 120us
-      GPIO_SetBits(SPECTRUM_BIND_PIN.port, SPECTRUM_BIND_PIN.pin);
+      gpio_pin_set(SPECTRUM_BIND_PIN);
       delay(120);
     }
   }

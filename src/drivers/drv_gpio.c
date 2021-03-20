@@ -62,6 +62,11 @@ void gpio_pin_init(GPIO_InitTypeDef *init, gpio_pins_t pin) {
   GPIO_Init(gpio_pin_defs[pin].port, init);
 }
 
+void gpio_pin_init_af(GPIO_InitTypeDef *init, gpio_pins_t pin, uint32_t af) {
+  gpio_pin_init(init, pin);
+  GPIO_PinAFConfig(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin, af);
+}
+
 void gpio_pin_set(gpio_pins_t pin) {
   GPIO_WriteBit(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin, Bit_SET);
 }

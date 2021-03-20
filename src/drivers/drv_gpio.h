@@ -24,6 +24,7 @@ extern const volatile gpio_pin_def_t gpio_pin_defs[GPIO_PINS_MAX];
 void gpio_init();
 
 void gpio_pin_init(GPIO_InitTypeDef *init, gpio_pins_t pin);
+void gpio_pin_init_af(GPIO_InitTypeDef *init, gpio_pins_t pin, uint32_t af);
 void gpio_pin_set(gpio_pins_t pin);
 void gpio_pin_reset(gpio_pins_t pin);
 

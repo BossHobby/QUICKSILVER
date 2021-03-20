@@ -34,8 +34,8 @@ typedef struct {
 
   uint32_t gpio_af;
 
-  gpio_pin_def_t rx_pin;
-  gpio_pin_def_t tx_pin;
+  gpio_pins_t rx_pin;
+  gpio_pins_t tx_pin;
 } usart_port_def_t;
 
 extern usart_port_def_t usart_port_defs[USART_PORTS_MAX];
