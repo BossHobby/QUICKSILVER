@@ -13,10 +13,6 @@
 
 //SPI PINS
 #define PORT spi_port_defs[MAX7456_SPI_PORT]
-#define SCLK_PIN gpio_pin_defs[PORT.sck]
-#define MISO_PIN gpio_pin_defs[PORT.miso]
-#define MOSI_PIN gpio_pin_defs[PORT.mosi]
-#define NSS_PIN gpio_pin_defs[MAX7456_NSS]
 
 #define DMA_RX_STREAM PORT.dma.rx_stream
 #define DMA_TX_STREAM PORT.dma.tx_stream
@@ -31,46 +27,7 @@
 void spi_max7456_init(void) {
 
   //*********************GPIO**************************************
-
-  // GPIO & Alternate Function Setting
-  GPIO_InitTypeDef GPIO_InitStructure;
-  // Clock, Miso, Mosi GPIO
-  GPIO_InitStructure.GPIO_Pin = SCLK_PIN.pin;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-  GPIO_Init(SCLK_PIN.port, &GPIO_InitStructure);
-
-  GPIO_InitStructure.GPIO_Pin = MOSI_PIN.pin;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(MOSI_PIN.port, &GPIO_InitStructure);
-
-  GPIO_InitStructure.GPIO_Pin = MISO_PIN.pin;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(MISO_PIN.port, &GPIO_InitStructure);
-
-  // Chip Select GPIO
-  GPIO_InitStructure.GPIO_Pin = NSS_PIN.pin;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-  GPIO_Init(NSS_PIN.port, &GPIO_InitStructure);
-
-  // Chip Select Set High
-  GPIO_SetBits(NSS_PIN.port, NSS_PIN.pin);
-
-  // Connect SPI pins to AF_SPI1
-  GPIO_PinAFConfig(SCLK_PIN.port, SCLK_PIN.pin_source, PORT.gpio_af); //SCLK
-  GPIO_PinAFConfig(MISO_PIN.port, MISO_PIN.pin_source, PORT.gpio_af); //MISO
-  GPIO_PinAFConfig(MOSI_PIN.port, MOSI_PIN.pin_source, PORT.gpio_af); //MOSI
+  spi_init_pins(MAX7456_SPI_PORT, MAX7456_NSS);
 
   //*********************SPI/DMA**********************************
   spi_enable_rcc(MAX7456_SPI_PORT);

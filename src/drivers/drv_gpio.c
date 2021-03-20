@@ -64,7 +64,7 @@ void gpio_pin_init(GPIO_InitTypeDef *init, gpio_pins_t pin) {
 
 void gpio_pin_init_af(GPIO_InitTypeDef *init, gpio_pins_t pin, uint32_t af) {
   gpio_pin_init(init, pin);
-  GPIO_PinAFConfig(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin, af);
+  GPIO_PinAFConfig(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin_source, af);
 }
 
 void gpio_pin_set(gpio_pins_t pin) {

@@ -2,7 +2,6 @@
 
 #include "usb_configurator.h"
 
-#define GPIO_PIN MAKE_PIN_DEF
 #define SPI_DMA(spi_prt, dma_prt, chan, rx, tx) \
   {                                             \
     .dma_port = dma_prt,                        \
@@ -38,12 +37,8 @@ const volatile spi_port_def_t spi_port_defs[SPI_PORTS_MAX] = {
 
 #undef SPI_PORT
 #undef SPI_DMA
-#undef GPIO_PIN
 
 #define PORT spi_port_defs[port]
-#define SCK_PIN gpio_pin_defs[PORT.sck]
-#define MISO_PIN gpio_pin_defs[PORT.miso]
-#define MOSI_PIN gpio_pin_defs[PORT.mosi]
 
 extern int liberror;
 
@@ -73,48 +68,40 @@ void spi_dma_enable_rcc(spi_ports_t port) {
 }
 
 void spi_csn_enable(gpio_pins_t nss) {
-  GPIO_ResetBits(gpio_pin_defs[nss].port, gpio_pin_defs[nss].pin);
+  gpio_pin_reset(nss);
 }
 
 void spi_csn_disable(gpio_pins_t nss) {
-  GPIO_SetBits(gpio_pin_defs[nss].port, gpio_pin_defs[nss].pin);
+  gpio_pin_set(nss);
 }
 
 void spi_init_pins(spi_ports_t port, gpio_pins_t nss) {
-  GPIO_InitTypeDef GPIO_InitStructure;
+  GPIO_InitTypeDef gpio_init;
 
-  GPIO_InitStructure.GPIO_Pin = SCK_PIN.pin;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-  GPIO_Init(SCK_PIN.port, &GPIO_InitStructure);
+  gpio_init.GPIO_Mode = GPIO_Mode_AF;
+  gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
+  gpio_init.GPIO_OType = GPIO_OType_PP;
+  gpio_init.GPIO_PuPd = GPIO_PuPd_UP;
+  gpio_pin_init_af(&gpio_init, PORT.sck, PORT.gpio_af);
 
-  GPIO_InitStructure.GPIO_Pin = MOSI_PIN.pin;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(MOSI_PIN.port, &GPIO_InitStructure);
+  gpio_init.GPIO_Mode = GPIO_Mode_AF;
+  gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
+  gpio_init.GPIO_OType = GPIO_OType_PP;
+  gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  gpio_pin_init_af(&gpio_init, PORT.miso, PORT.gpio_af);
 
-  GPIO_InitStructure.GPIO_Pin = MISO_PIN.pin;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(MISO_PIN.port, &GPIO_InitStructure);
+  gpio_init.GPIO_Mode = GPIO_Mode_AF;
+  gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
+  gpio_init.GPIO_OType = GPIO_OType_PP;
+  gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  gpio_pin_init_af(&gpio_init, PORT.mosi, PORT.gpio_af);
 
-  GPIO_InitStructure.GPIO_Pin = gpio_pin_defs[nss].pin;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-  GPIO_Init(gpio_pin_defs[nss].port, &GPIO_InitStructure);
-  GPIO_SetBits(gpio_pin_defs[nss].port, gpio_pin_defs[nss].pin);
-
-  GPIO_PinAFConfig(SCK_PIN.port, SCK_PIN.pin_source, PORT.gpio_af);
-  GPIO_PinAFConfig(MISO_PIN.port, MISO_PIN.pin_source, PORT.gpio_af);
-  GPIO_PinAFConfig(MOSI_PIN.port, MOSI_PIN.pin_source, PORT.gpio_af);
+  gpio_init.GPIO_Mode = GPIO_Mode_OUT;
+  gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
+  gpio_init.GPIO_OType = GPIO_OType_PP;
+  gpio_init.GPIO_PuPd = GPIO_PuPd_UP;
+  gpio_pin_init(&gpio_init, nss);
+  gpio_pin_set(nss);
 }
 
 uint8_t spi_transfer_byte(spi_ports_t port, uint8_t data) {
