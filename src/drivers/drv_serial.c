@@ -44,6 +44,7 @@ void serial_enable_isr(usart_ports_t port) {
   case 2:
     NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
     break;
+#ifdef F405
   case 3:
     NVIC_InitStructure.NVIC_IRQChannel = USART3_IRQn;
     break;
@@ -53,6 +54,7 @@ void serial_enable_isr(usart_ports_t port) {
   case 5:
     NVIC_InitStructure.NVIC_IRQChannel = UART5_IRQn;
     break;
+#endif
   case 6:
     NVIC_InitStructure.NVIC_IRQChannel = USART6_IRQn;
     break;
