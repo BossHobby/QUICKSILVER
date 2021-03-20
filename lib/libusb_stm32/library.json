@@ -1,0 +1,6 @@
+{
+  "name": "libusb_stm32",
+  "build": {
+    "includeDir": "inc"
+  }
+}
