@@ -10,8 +10,7 @@
 #define LED2PIN PIN_A3
 #define LED1_INVERT
 #define LED2_INVERT
-#define BUZZER_PIN GPIO_Pin_14
-#define BUZZER_PIN_PORT GPIOA
+#define BUZZER_PIN PIN_A14
 #define FPV_PIN GPIO_Pin_13
 #define FPV_PORT GPIOA
 

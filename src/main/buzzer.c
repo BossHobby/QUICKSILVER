@@ -2,23 +2,27 @@
 #include "buzzer.h"
 
 #include "control.h"
+#include "drv_gpio.h"
 #include "drv_time.h"
 #include "project.h"
 
 #ifdef BUZZER_ENABLE
 
+#ifdef BUZZER_INVERT
+#define PIN_ON(pin) gpio_pin_reset(pin)
+#define PIN_OFF(pin) gpio_pin_set(pin)
+#else
+#define PIN_ON(pin) gpio_pin_set(pin)
+#define PIN_OFF(pin) gpio_pin_reset(pin)
+#endif
+
 int gpio_init_buzzer(void) {
-  // set gpio pin as output
-  GPIO_InitTypeDef GPIO_InitStructure;
+  GPIO_InitTypeDef gpio_init;
+  gpio_init.GPIO_Mode = GPIO_Mode_OUT;
+  gpio_init.GPIO_OType = GPIO_OType_PP;
+  gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  gpio_pin_init(&gpio_init, BUZZER_PIN);
 
-  // common settings to set ports
-  GPIO_InitStructure.GPIO_Pin = BUZZER_PIN;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  //GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-
-  GPIO_Init(BUZZER_PIN_PORT, &GPIO_InitStructure);
   return 1;
 }
 
@@ -62,13 +66,13 @@ void buzzer() {
         if (time % pulse_rate > pulse_rate / 2) {
           if (toggle) // cycle the buzzer
           {
-            PIN_ON(BUZZER_PIN_PORT, BUZZER_PIN); // on
+            PIN_ON(BUZZER_PIN); // on
           } else {
-            PIN_OFF(BUZZER_PIN_PORT, BUZZER_PIN); // off
+            PIN_OFF(BUZZER_PIN); // off
           }
           toggle = !toggle;
         } else {
-          PIN_OFF(BUZZER_PIN_PORT, BUZZER_PIN);
+          PIN_OFF(BUZZER_PIN);
         }
       }
     }
@@ -77,7 +81,7 @@ void buzzer() {
     buzzertime = 0;
     // set buzzer to off if beeping condition stopped
     if (buzzer_init)
-      PIN_OFF(BUZZER_PIN_PORT, BUZZER_PIN);
+      PIN_OFF(BUZZER_PIN);
   }
 }
 
