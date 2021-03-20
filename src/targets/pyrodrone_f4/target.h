@@ -26,8 +26,7 @@
 #define LED1_INVERT
 #define BUZZER_PIN PIN_B5
 #define BUZZER_INVERT
-#define FPV_PIN GPIO_Pin_15
-#define FPV_PORT GPIOA
+#define FPV_PIN PIN_A15
 
 //GYRO
 #define MPU6XXX_SPI_PORT SPI_PORT1

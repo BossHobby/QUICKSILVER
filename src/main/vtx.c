@@ -13,7 +13,7 @@
 #include "util.h"
 #include "util/cbor_helper.h"
 
-#if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
+#if defined(FPV_ON) && defined(FPV_PIN)
 static int fpv_init = 0;
 #endif
 
@@ -215,7 +215,7 @@ void vtx_init() {
 
 void vtx_update() {
   static volatile uint32_t delay_loops = 5000;
-#if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
+#if defined(FPV_ON) && defined(FPV_PIN)
   if (rx_aux_on(AUX_FPV_ON)) {
     // fpv switch on
     if (!fpv_init && flags.rx_mode == RXMODE_NORMAL && flags.on_ground == 1) {
@@ -224,7 +224,7 @@ void vtx_update() {
       vtx_connect_tries = 0;
     }
     if (fpv_init) {
-      GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_SET);
+      gpio_pin_set(FPV_PIN);
     }
   } else {
     // fpv switch off
@@ -232,7 +232,7 @@ void vtx_update() {
       if (flags.failsafe) {
         //do nothing = hold last state
       } else {
-        GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);
+        gpio_pin_reset(FPV_PIN);
       }
     }
   }

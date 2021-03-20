@@ -9,8 +9,7 @@
 #define LED1PIN PIN_F1
 #define LED2PIN PIN_A3
 #define BUZZER_PIN PIN_A14
-#define FPV_PIN GPIO_Pin_13
-#define FPV_PORT GPIOA
+#define FPV_PIN PIN_A13
 
 //I2C & GYRO
 #define USE_SOFTWARE_I2C

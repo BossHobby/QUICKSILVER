@@ -23,8 +23,7 @@
 #define LED1_INVERT
 #define BUZZER_PIN PIN_A14
 #define BUZZER_INVERT
-#define FPV_PIN GPIO_Pin_13
-#define FPV_PORT GPIOC
+#define FPV_PIN PIN_C13
 
 //GYRO
 #define ICM20602_SPI_PORT SPI_PORT1

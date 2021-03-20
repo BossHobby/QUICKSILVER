@@ -45,13 +45,12 @@ void gpio_init(void) {
   gpio_pin_init(&GPIO_InitStructure, AUX_LED2PIN);
 #endif
 
-#if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
-  if (FPV_PORT == GPIOA && (FPV_PIN == GPIO_Pin_13 || FPV_PIN == GPIO_Pin_14)) {
+#if defined(FPV_ON) && defined(FPV_PIN)
+  if (FPV_PIN == PIN_A13 || FPV_PIN == PIN_A14) {
     //skip repurpose of swd pin @boot
   } else {
-    GPIO_InitStructure.GPIO_Pin = FPV_PIN;
-    GPIO_Init(FPV_PORT, &GPIO_InitStructure);
-    GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);
+    gpio_pin_init(&GPIO_InitStructure, FPV_PIN);
+    gpio_pin_reset(FPV_PIN);
     fpv_init_done = 1;
   }
 #endif
@@ -81,18 +80,17 @@ uint32_t gpio_pin_read(gpio_pins_t pin) {
 
 // init fpv pin separately because it may use SWDAT/SWCLK don't want to enable it right away
 int gpio_init_fpv(uint8_t mode) {
-#if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
+#if defined(FPV_ON) && defined(FPV_PIN)
   // only repurpose the pin after rx/tx have bound if it is swd
   // common settings to set ports
   GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.GPIO_Pin = FPV_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   if (mode == 1 && fpv_init_done == 0) {
     // set gpio pin as output no matter what
-    GPIO_Init(FPV_PORT, &GPIO_InitStructure);
+    gpio_pin_init(&GPIO_InitStructure, FPV_PIN);
     return 1;
   }
   if (mode == 1 && fpv_init_done == 1) {
