@@ -20,10 +20,8 @@
 
 //LEDS, Buzzer, FPV
 #define LED_NUMBER 2
-#define LED1PIN GPIO_Pin_14
-#define LED1PORT GPIOC
-#define LED2PIN GPIO_Pin_13
-#define LED2PORT GPIOC
+#define LED1PIN PIN_C14
+#define LED2PIN PIN_C13
 #define LED1_INVERT
 #define BUZZER_PIN GPIO_Pin_13
 #define BUZZER_PIN_PORT GPIOC

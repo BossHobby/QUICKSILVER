@@ -21,10 +21,8 @@
 
 //LEDS
 #define LED_NUMBER 2
-#define LED1PIN GPIO_Pin_13 // red led
-#define LED1PORT GPIOC
-#define LED2PIN GPIO_Pin_14 // green led
-#define LED2PORT GPIOC
+#define LED1PIN PIN_C13
+#define LED2PIN PIN_C14
 
 #define BUZZER_PIN GPIO_Pin_2
 #define BUZZER_PIN_PORT GPIOB

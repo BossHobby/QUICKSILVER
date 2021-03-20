@@ -6,10 +6,8 @@
 
 //LEDS & BUZZER
 #define LED_NUMBER 1
-#define LED1PIN GPIO_Pin_0
-#define LED1PORT GPIOF
-#define LED2PIN GPIO_Pin_0
-#define LED2PORT GPIOA
+#define LED1PIN PIN_F0
+#define LED2PIN PIN_A0
 #define BUZZER_PIN GPIO_Pin_14
 #define BUZZER_PIN_PORT GPIOA
 #define FPV_PIN GPIO_Pin_13

@@ -15,54 +15,59 @@ void gpio_init(void) {
 #endif
 
   GPIO_InitTypeDef GPIO_InitStructure;
-
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 
 #ifdef ENABLE_VREG_PIN
-  GPIO_InitStructure.GPIO_Pin = VREG_PIN_1;
-  GPIO_Init(VREG_PORT_1, &GPIO_InitStructure);
-  GPIO_SetBits(VREG_PORT_1, VREG_PIN_1);
+  gpio_pin_init(&GPIO_InitStructure, VREG_PIN_1);
+  gpio_pin_set(VREG_PIN_1);
 #endif
 
 #if (LED_NUMBER > 0)
-  GPIO_InitStructure.GPIO_Pin = LED1PIN;
-  GPIO_Init(LED1PORT, &GPIO_InitStructure);
+  gpio_pin_init(&GPIO_InitStructure, LED1PIN);
 #if (LED_NUMBER > 1)
-  GPIO_InitStructure.GPIO_Pin = LED2PIN;
-  GPIO_Init(LED2PORT, &GPIO_InitStructure);
+  gpio_pin_init(&GPIO_InitStructure, LED2PIN);
 #if (LED_NUMBER > 2)
-  GPIO_InitStructure.GPIO_Pin = LED3PIN;
-  GPIO_Init(LED3PORT, &GPIO_InitStructure);
+  gpio_pin_init(&GPIO_InitStructure, LED3PIN);
 #if (LED_NUMBER > 3)
-  GPIO_InitStructure.GPIO_Pin = LED4PIN;
-  GPIO_Init(LED4PORT, &GPIO_InitStructure);
+  gpio_pin_init(&GPIO_InitStructure, LED4PIN);
 #endif
 #endif
 #endif
 #endif
 
 #if (AUX_LED_NUMBER > 0)
-  GPIO_InitStructure.GPIO_Pin = AUX_LED1PIN;
-  GPIO_Init(AUX_LED1PORT, &GPIO_InitStructure);
+  gpio_pin_init(&GPIO_InitStructure, AUX_LED1PIN);
 #endif
 #if (AUX_LED_NUMBER > 1)
-  GPIO_InitStructure.GPIO_Pin = AUX_LED2PIN;
-  GPIO_Init(AUX_LED2PORT, &GPIO_InitStructure);
+  gpio_pin_init(&GPIO_InitStructure, AUX_LED2PIN);
 #endif
 
 #if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)
-  if (FPV_PORT == GPIOA && (FPV_PIN == GPIO_Pin_13 || FPV_PIN == GPIO_Pin_14)){
-	  //skip repurpose of swd pin @boot
-  }else{
-	  GPIO_InitStructure.GPIO_Pin = FPV_PIN;
-	  GPIO_Init(FPV_PORT, &GPIO_InitStructure);
-	  GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);
-	  fpv_init_done = 1;
+  if (FPV_PORT == GPIOA && (FPV_PIN == GPIO_Pin_13 || FPV_PIN == GPIO_Pin_14)) {
+    //skip repurpose of swd pin @boot
+  } else {
+    GPIO_InitStructure.GPIO_Pin = FPV_PIN;
+    GPIO_Init(FPV_PORT, &GPIO_InitStructure);
+    GPIO_WriteBit(FPV_PORT, FPV_PIN, Bit_RESET);
+    fpv_init_done = 1;
   }
 #endif
+}
+
+void gpio_pin_init(GPIO_InitTypeDef *init, gpio_pins_t pin) {
+  init->GPIO_Pin = gpio_pin_defs[pin].pin;
+  GPIO_Init(gpio_pin_defs[pin].port, init);
+}
+
+void gpio_pin_set(gpio_pins_t pin) {
+  GPIO_WriteBit(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin, Bit_SET);
+}
+
+void gpio_pin_reset(gpio_pins_t pin) {
+  GPIO_WriteBit(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin, Bit_RESET);
 }
 
 // init fpv pin separately because it may use SWDAT/SWCLK don't want to enable it right away
@@ -78,7 +83,7 @@ int gpio_init_fpv(uint8_t mode) {
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   if (mode == 1 && fpv_init_done == 0) {
     // set gpio pin as output no matter what
-	GPIO_Init(FPV_PORT, &GPIO_InitStructure);
+    GPIO_Init(FPV_PORT, &GPIO_InitStructure);
     return 1;
   }
   if (mode == 1 && fpv_init_done == 1) {

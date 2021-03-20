@@ -1,5 +1,6 @@
 #include "led.h"
 
+#include "drv_gpio.h"
 #include "drv_time.h"
 #include "project.h"
 
@@ -9,37 +10,37 @@ void ledon(uint8_t val) {
 #if (LED_NUMBER > 0)
 #ifdef LED1_INVERT
   if (val & 1)
-    GPIO_ResetBits(LED1PORT, LED1PIN);
+    gpio_pin_reset(LED1PIN);
 #else
   if (val & 1)
-    GPIO_SetBits(LED1PORT, LED1PIN);
+    gpio_pin_set(LED1PIN);
 #endif
 #endif
 #if (LED_NUMBER > 1)
 #ifdef LED2_INVERT
   if (val & 2)
-    GPIO_ResetBits(LED2PORT, LED2PIN);
+    gpio_pin_reset(LED2PIN);
 #else
   if (val & 2)
-    GPIO_SetBits(LED2PORT, LED2PIN);
+    gpio_pin_set(LED2PIN);
 #endif
 #endif
 #if (LED_NUMBER > 2)
 #ifdef LED3_INVERT
   if (val & 4)
-    GPIO_ResetBits(LED3PORT, LED3PIN);
+    gpio_pin_reset(LED3PIN);
 #else
   if (val & 4)
-    GPIO_SetBits(LED3PORT, LED3PIN);
+    gpio_pin_set(LED3PIN);
 #endif
 #endif
 #if (LED_NUMBER > 3)
 #ifdef LED4_INVERT
   if (val & 8)
-    GPIO_ResetBits(LED4PORT, LED4PIN);
+    gpio_pin_reset(LED4PIN);
 #else
   if (val & 8)
-    GPIO_SetBits(LED4PORT, LED4PIN);
+    gpio_pin_set(LED4PIN);
 #endif
 #endif
 }
@@ -48,37 +49,37 @@ void ledoff(uint8_t val) {
 #if (LED_NUMBER > 0)
 #ifdef LED1_INVERT
   if (val & 1)
-    GPIO_SetBits(LED1PORT, LED1PIN);
+    gpio_pin_set(LED1PIN);
 #else
   if (val & 1)
-    GPIO_ResetBits(LED1PORT, LED1PIN);
+    gpio_pin_reset(LED1PIN);
 #endif
 #endif
 #if (LED_NUMBER > 1)
 #ifdef LED2_INVERT
   if (val & 2)
-    GPIO_SetBits(LED2PORT, LED2PIN);
+    gpio_pin_set(LED2PIN);
 #else
   if (val & 2)
-    GPIO_ResetBits(LED2PORT, LED2PIN);
+    gpio_pin_reset(LED2PIN);
 #endif
 #endif
 #if (LED_NUMBER > 2)
 #ifdef LED3_INVERT
   if (val & 4)
-    GPIO_SetBits(LED3PORT, LED3PIN);
+    gpio_pin_set(LED3PIN);
 #else
   if (val & 4)
-    GPIO_ResetBits(LED3PORT, LED3PIN);
+    gpio_pin_reset(LED3PIN);
 #endif
 #endif
 #if (LED_NUMBER > 3)
 #ifdef LED1_INVERT
   if (val & 8)
-    GPIO_SetBits(LED4PORT, LED4PIN);
+    gpio_pin_set(LED4PIN);
 #else
   if (val & 8)
-    GPIO_ResetBits(LED4PORT, LED4PIN);
+    gpio_pin_reset(LED4PIN);
 #endif
 #endif
 }

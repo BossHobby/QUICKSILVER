@@ -21,5 +21,10 @@ typedef struct {
 
 extern const volatile gpio_pin_def_t gpio_pin_defs[GPIO_PINS_MAX];
 
-void gpio_init(void);
+void gpio_init();
+
+void gpio_pin_init(GPIO_InitTypeDef *init, gpio_pins_t pin);
+void gpio_pin_set(gpio_pins_t pin);
+void gpio_pin_reset(gpio_pins_t pin);
+
 int gpio_init_fpv(uint8_t mode);

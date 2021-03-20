@@ -21,8 +21,7 @@
 
 //LEDS
 #define LED_NUMBER 1
-#define LED1PIN GPIO_Pin_0
-#define LED1PORT GPIOC
+#define LED1PIN PIN_C0
 #define LED1_INVERT
 #define BUZZER_PIN GPIO_Pin_6
 #define BUZZER_PIN_PORT GPIOB

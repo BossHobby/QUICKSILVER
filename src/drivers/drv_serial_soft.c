@@ -24,6 +24,7 @@ SOFTWARE.
 #include "drv_serial_soft.h"
 
 #include "defines.h"
+#include "drv_gpio.h"
 
 uint32_t softserial_micros_per_bit = (uint32_t)(1000000 / 9600);
 uint32_t softserial_micros_per_bit_half = (uint32_t)(1000000 / 9600) * .5;
@@ -38,6 +39,13 @@ uint32_t esc_micros_per_bit = (uint32_t)(1000000 / 19200);
 #define SET_RX_HIGH(data) data->rx_port->BSRR = data->rx_pin
 #define SET_TX_LOW(data) data->tx_port->BRR = data->tx_pin
 #endif
+
+#define SET_LED1_ON gpio_pin_set(LED1PIN)
+#define SET_LED1_OFF gpio_pin_reset(LED1PIN)
+
+#define SET_LED2_ON gpio_pin_set(LED2PIN)
+#define SET_LED2_OFF gpio_pin_reset(LED2PIN)
+
 #define START_BIT(data) SET_TX_LOW(data)
 #define STOP_BIT(data) SET_TX_HIGH(data)
 #define IS_RX_HIGH(data) (data->rx_port->IDR & data->rx_pin)
@@ -97,22 +105,13 @@ SoftSerialData_t softserial_init(GPIO_TypeDef *tx_port, uint16_t tx_pin, GPIO_Ty
 int softserial_read_byte(uint8_t *byte) {
   return softserial_read_byte_ex(&globalSerialData, byte);
 }
-#ifdef F4
-#define SET_LED1_ON LED1PORT->BSRRL = LED1PIN
-#define SET_LED1_OFF LED1PORT->BSRRH = LED1PIN
-#define SET_LED2_ON LED2PORT->BSRRL = LED2PIN
-#define SET_LED2_OFF LED2PORT->BSRRH = LED2PIN
-#else
-#define SET_LED1_ON LED1PORT->BSRR = LED1PIN
-#define SET_LED1_OFF LED1PORT->BRR = LED1PIN
-#define SET_LED2_ON LED2PORT->BSRR = LED2PIN
-#define SET_LED2_OFF LED2PORT->BRR = LED2PIN
-#endif
+
 void softserial_set_input(const SoftSerialData_t *data) {
   SET_LED1_ON;
   if (softserial_is_1wire(data))
     softserial_init_rx(data);
 }
+
 void softserial_set_output(const SoftSerialData_t *data) {
   SET_LED1_OFF;
   if (softserial_is_1wire(data))

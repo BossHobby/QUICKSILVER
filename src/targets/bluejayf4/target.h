@@ -19,11 +19,9 @@
 //LEDS
 //target has third led on b06 not supported by QS
 #define LED_NUMBER 2
-#define LED1PIN GPIO_Pin_5
-#define LED1PORT GPIOB
+#define LED1PIN PIN_B5
 #define LED1_INVERT
-#define LED2PIN GPIO_Pin_4
-#define LED2PORT GPIOB
+#define LED2PIN PIN_B4
 #define BUZZER_PIN GPIO_Pin_1
 #define BUZZER_PIN_PORT GPIOC
 #define BUZZER_INVERT
