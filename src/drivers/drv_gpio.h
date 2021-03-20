@@ -27,5 +27,6 @@ void gpio_pin_init(GPIO_InitTypeDef *init, gpio_pins_t pin);
 void gpio_pin_init_af(GPIO_InitTypeDef *init, gpio_pins_t pin, uint32_t af);
 void gpio_pin_set(gpio_pins_t pin);
 void gpio_pin_reset(gpio_pins_t pin);
+uint32_t gpio_pin_read(gpio_pins_t pin);
 
 int gpio_init_fpv(uint8_t mode);

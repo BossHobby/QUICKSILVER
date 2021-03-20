@@ -75,6 +75,10 @@ void gpio_pin_reset(gpio_pins_t pin) {
   GPIO_WriteBit(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin, Bit_RESET);
 }
 
+uint32_t gpio_pin_read(gpio_pins_t pin) {
+  return GPIO_ReadInputDataBit(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin);
+}
+
 // init fpv pin separately because it may use SWDAT/SWCLK don't want to enable it right away
 int gpio_init_fpv(uint8_t mode) {
 #if defined(FPV_ON) && defined(FPV_PORT) && defined(FPV_PIN)

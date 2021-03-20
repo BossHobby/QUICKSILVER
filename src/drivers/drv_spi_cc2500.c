@@ -8,82 +8,41 @@
 
 #define PORT spi_port_defs[CC2500_SPI_PORT]
 
-#ifdef CC2500_GDO0_PC14
-#define CC2500_GDO0_PINSOURCE GPIO_PinSource14
-#define CC2500_GDO0_PIN GPIO_Pin_14
-#define CC2500_GDO0_PORT GPIOC
-#endif
-
-#ifdef CC2500_GDO0_PB6
-#define CC2500_GDO0_PINSOURCE GPIO_PinSource6
-#define CC2500_GDO0_PIN GPIO_Pin_6
-#define CC2500_GDO0_PORT GPIOB
-#endif
-
-#ifdef USE_CC2500_PA_LNA
-
-#ifdef CC2500_TX_EN_PA8
-#define CC2500_TX_EN_PINSOURCE GPIO_PinSource8
-#define CC2500_TX_EN_PIN GPIO_Pin_8
-#define CC2500_TX_EN_PORT GPIOA
-#endif
-
-#ifdef CC2500_LNA_EN_PA13
-#define CC2500_LNA_EN_PINSOURCE GPIO_PinSource13
-#define CC2500_LNA_EN_PIN GPIO_Pin_13
-#define CC2500_LNA_EN_PORT GPIOA
-#endif
-
-#if defined(USE_CC2500_DIVERSITY)
-#ifdef CC2500_ANT_SEL_PA14
-#define CC2500_ANT_SEL_PINSOURCE GPIO_PinSource14
-#define CC2500_ANT_SEL_PIN GPIO_Pin_14
-#define CC2500_ANT_SEL_PORT GPIOA
-#endif
-#endif
-
-#endif
-
 uint8_t cc2500_read_gdo0() {
-  return GPIO_ReadInputDataBit(CC2500_GDO0_PORT, CC2500_GDO0_PIN);
+  return gpio_pin_read(CC2500_GDO0_PIN);
 }
 
 static void cc2500_hardware_init() {
   spi_init_pins(CC2500_SPI_PORT, CC2500_NSS);
 
-  GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_InitTypeDef gpio_init;
+  gpio_init.GPIO_Mode = GPIO_Mode_OUT;
+  gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
+  gpio_init.GPIO_OType = GPIO_OType_PP;
+  gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
 
 #if defined(USE_CC2500_PA_LNA)
-  GPIO_InitStructure.GPIO_Pin = CC2500_LNA_EN_PIN;
-  GPIO_Init(CC2500_LNA_EN_PORT, &GPIO_InitStructure);
   // turn antenna on
-  GPIO_SetBits(CC2500_LNA_EN_PORT, CC2500_LNA_EN_PIN);
+  gpio_pin_init(&gpio_init, CC2500_LNA_EN_PIN);
+  gpio_pin_set(CC2500_LNA_EN_PIN);
 
-  GPIO_InitStructure.GPIO_Pin = CC2500_TX_EN_PIN;
-  GPIO_Init(CC2500_TX_EN_PORT, &GPIO_InitStructure);
   // turn tx off
-  GPIO_ResetBits(CC2500_TX_EN_PORT, CC2500_TX_EN_PIN);
-
+  gpio_pin_init(&gpio_init, CC2500_TX_EN_PIN);
+  gpio_pin_reset(CC2500_TX_EN_PIN);
 #if defined(USE_CC2500_DIVERSITY)
-  GPIO_InitStructure.GPIO_Pin = CC2500_ANT_SEL_PIN;
-  GPIO_Init(CC2500_ANT_SEL_PORT, &GPIO_InitStructure);
   // choose b?
-  GPIO_SetBits(CC2500_ANT_SEL_PORT, CC2500_ANT_SEL_PIN);
+  gpio_pin_init(&gpio_init, CC2500_ANT_SEL_PIN);
+  gpio_pin_set(CC2500_ANT_SEL_PIN);
 #endif
 
 #endif // USE_CC2500_PA_LNA
 
   // GDO0
-  GPIO_InitStructure.GPIO_Pin = CC2500_GDO0_PIN;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
-  GPIO_Init(CC2500_GDO0_PORT, &GPIO_InitStructure);
+  gpio_init.GPIO_Mode = GPIO_Mode_IN;
+  gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
+  gpio_init.GPIO_OType = GPIO_OType_OD;
+  gpio_init.GPIO_PuPd = GPIO_PuPd_DOWN;
+  gpio_pin_init(&gpio_init, CC2500_GDO0_PIN);
 
   spi_enable_rcc(CC2500_SPI_PORT);
 
@@ -211,9 +170,9 @@ void cc2500_switch_antenna() {
 #if defined(USE_CC2500_PA_LNA) && defined(USE_CC2500_DIVERSITY)
   static uint8_t alternative_selected = 1;
   if (alternative_selected == 1) {
-    GPIO_ResetBits(CC2500_ANT_SEL_PORT, CC2500_ANT_SEL_PIN);
+    gpio_pin_reset(CC2500_ANT_SEL_PIN);
   } else {
-    GPIO_SetBits(CC2500_ANT_SEL_PORT, CC2500_ANT_SEL_PIN);
+    gpio_pin_set(CC2500_ANT_SEL_PIN);
   }
   alternative_selected = alternative_selected ? 0 : 1;
 #endif
@@ -221,15 +180,15 @@ void cc2500_switch_antenna() {
 
 void cc2500_enter_rxmode() {
 #if defined(USE_CC2500_PA_LNA)
-  GPIO_SetBits(CC2500_LNA_EN_PORT, CC2500_LNA_EN_PIN);
-  GPIO_ResetBits(CC2500_TX_EN_PORT, CC2500_TX_EN_PIN);
+  gpio_pin_set(CC2500_LNA_EN_PIN);
+  gpio_pin_reset(CC2500_TX_EN_PIN);
 #endif
 }
 
 void cc2500_enter_txmode() {
 #if defined(USE_CC2500_PA_LNA)
-  GPIO_ResetBits(CC2500_LNA_EN_PORT, CC2500_LNA_EN_PIN);
-  GPIO_SetBits(CC2500_TX_EN_PORT, CC2500_TX_EN_PIN);
+  gpio_pin_reset(CC2500_LNA_EN_PIN);
+  gpio_pin_set(CC2500_TX_EN_PIN);
 #endif
 }
 

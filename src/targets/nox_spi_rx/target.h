@@ -53,7 +53,7 @@
 #define USE_CC2500
 #define CC2500_SPI_PORT SPI_PORT1
 #define CC2500_NSS PIN_B7
-#define CC2500_GDO0_PB6
+#define CC2500_GDO0_PIN PIN_B6
 
 #define SOFTSPI_NONE
 #endif
