@@ -16,8 +16,8 @@
   USART1_PA10PA9    \
   USART2_PA3PA2     \
   USART3_PC11PC10   \
-  USART4_PA1PA0
-// USART5_PD2PC12 we do not support "split" spi pins at the moment
+  USART4_PA1PA0     \
+  USART5_PD2PC12
 
 #define USB_DETECT_PIN GPIO_Pin_12
 #define USB_DETECT_PORT GPIOB
