@@ -8,6 +8,9 @@
 #include "project.h"
 #include "util.h"
 
+#include <stm32f4xx_ll_adc.h>
+#include <stm32f4xx_ll_bus.h>
+
 uint16_t adc_array[2];
 extern profile_t profile;
 
@@ -32,48 +35,41 @@ void adc_init(void) {
   //adc1,2,3 connected to APB2 bus
 
   //enable APB2 clock for adc1
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
-
-  //adc typedef for struct
-  ADC_CommonInitTypeDef ADC_CommonInitStructure; //we may want to use the common init to slow adc down & reduce dma bandwidth taken up on DMA2
-  ADC_InitTypeDef ADC_InitStructure;
+  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_ADC1);
 
   //gpio configuration
   {
-    GPIO_InitTypeDef gpio_init;
-    gpio_init.GPIO_Mode = GPIO_Mode_AN;
-    gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    LL_GPIO_InitTypeDef gpio_init;
+    gpio_init.Mode = LL_GPIO_MODE_ANALOG;
+    gpio_init.Pull = LL_GPIO_PULL_NO;
     gpio_pin_init(&gpio_init, BATTERYPIN);
   }
 
-  // ADC Common Configuration
-  ADC_CommonInitStructure.ADC_Mode = ADC_Mode_Independent;
-  ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div2;
-  ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_Disabled;
-  ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_5Cycles;
-  ADC_CommonInit(&ADC_CommonInitStructure);
+  LL_ADC_CommonInitTypeDef adc_common_init;
+  adc_common_init.CommonClock = LL_ADC_CLOCK_SYNC_PCLK_DIV2;
+  LL_ADC_CommonInit(ADC1, &adc_common_init);
 
-  // ADC1 Configuration
-  /* Set ADC resolution */
-  ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
-  /* Disable the scan conversion so we do one at a time */
-  ADC_InitStructure.ADC_ScanConvMode = DISABLE;
-  /* Don't do contimuous conversions - do them on demand */
-  ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;
-  /* Start conversin by software, not an external trigger */
-  ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
-  /* Conversions are 12 bit - put them in the lower 12 bits of the result */
-  ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
-  /* Say how many channels would be used by the sequencer */
-  ADC_InitStructure.ADC_NbrOfConversion = 1;
-  /* Now do the setup */
-  ADC_Init(ADC1, &ADC_InitStructure);
+  LL_ADC_REG_InitTypeDef adc_reg_init;
+  adc_reg_init.TriggerSource = LL_ADC_REG_TRIG_SOFTWARE;
+  adc_reg_init.ContinuousMode = LL_ADC_REG_CONV_SINGLE;
+  adc_reg_init.DMATransfer = LL_ADC_REG_DMA_TRANSFER_NONE;
+  LL_ADC_REG_Init(ADC1, &adc_reg_init);
 
-  ADC_TempSensorVrefintCmd(ENABLE);
-  ADC_Cmd(ADC1, ENABLE);
-  ADC_RegularChannelConfig(ADC1, ADC_Channel_Vrefint, 1, ADC_SampleTime_480Cycles);
-  ADC_SoftwareStartConv(ADC1);
+  LL_ADC_InitTypeDef adc_init;
+  adc_init.Resolution = LL_ADC_RESOLUTION_12B;
+  adc_init.DataAlignment = LL_ADC_DATA_ALIGN_RIGHT;
+  adc_init.SequencersScanMode = LL_ADC_SEQ_SCAN_DISABLE;
+  LL_ADC_Init(ADC1, &adc_init);
 
+  LL_ADC_SetCommonPathInternalCh(ADC1, LL_ADC_PATH_INTERNAL_VREFINT);
+  LL_ADC_Enable(ADC1);
+
+  LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_VREFINT);
+  LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_VREFINT, LL_ADC_SAMPLINGTIME_480CYCLES);
+
+  LL_ADC_REG_StartConversionSWStart(ADC1);
+
+  // reference is measured a 3.3v, toy boards are powered by 2.8, so a 1.17 multiplier
   // different vccs will translate to a different adc scale factor,
   // so actual vcc is not important as long as the voltage is correct in the end
 #ifdef F4
@@ -87,26 +83,44 @@ void adc_init(void) {
 // 1 - vref
 
 uint16_t readADC1(int channel) {
-  static uint8_t adc_channel_synchronizer;                          //the next adc channel to run when ready
-  static uint8_t adc_last_conversion = 1;                           //the last adc channel to run
-  uint8_t ready_to_convert = ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC); //check to see if the last conversion is done
-  if (ready_to_convert) {                                           //will skip if adc is still busy or update the adc_array and request the next conversion
-    adc_array[adc_last_conversion] = ADC_GetConversionValue(ADC1);  // Shove the last adc conversion into the array
-    switch (adc_channel_synchronizer) {                             // Select the new channel to read
-    case 1:
-      ADC_RegularChannelConfig(ADC1, ADC_Channel_Vrefint, 1, ADC_SampleTime_480Cycles); // Reconfigure the new adc channel
-      adc_last_conversion = 1;                                                          // Take note of what channel conversion has just been requested
-      break;
+  static uint8_t adc_channel_synchronizer; //the next adc channel to run when ready
+  static uint8_t adc_last_conversion = 1;  //the last adc channel to run
+
+  uint8_t ready_to_convert = LL_ADC_IsActiveFlag_EOCS(ADC1); //check to see if the last conversion is done
+
+  //will skip if adc is still busy or update the adc_array and request the next conversion
+  if (ready_to_convert) {
+    // Shove the last adc conversion into the array
+    adc_array[adc_last_conversion] = LL_ADC_REG_ReadConversionData12(ADC1);
+
+    // Select the new channel to read
+    switch (adc_channel_synchronizer) {
     case 0:
-      ADC_RegularChannelConfig(ADC1, BATTERY_ADC_CHANNEL, 1, ADC_SampleTime_480Cycles); // Reconfigure the new adc channel
-      adc_last_conversion = 0;                                                          // Take note of what channel conversion has just been requested
+      // Reconfigure the new adc channel
+      LL_ADC_SetChannelSamplingTime(ADC1, BATTERY_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_480CYCLES);
+      LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, BATTERY_ADC_CHANNEL);
+
+      // Take note of what channel conversion has just been requested
+      adc_last_conversion = 0;
+      break;
+
+    case 1:
+      // Reconfigure the new adc channel
+      LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_VREFINT, LL_ADC_SAMPLINGTIME_480CYCLES);
+      LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_VREFINT);
+
+      // Take note of what channel conversion has just been requested
+      adc_last_conversion = 1;
       break;
     }
-    ADC_SoftwareStartConv(ADC1); // Start the conversion
-    adc_channel_synchronizer++;  // Advance the index
+
+    LL_ADC_REG_StartConversionSWStart(ADC1); // Start the conversion
+    adc_channel_synchronizer++;              // Advance the index
+
     if (adc_channel_synchronizer == ADC_CHANNELS)
       adc_channel_synchronizer = 0; // Start the index over if we reached the end of the list
   }
+
   return adc_array[channel];
 }
 

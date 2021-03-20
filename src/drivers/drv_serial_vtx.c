@@ -1,5 +1,7 @@
 #include "drv_serial_vtx.h"
 
+#include <stm32f4xx_ll_usart.h>
+
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "util/circular_buffer.h"
@@ -32,15 +34,14 @@ void serial_vtx_send_data(uint8_t *data, uint32_t size) {
 
   vtx_transfer_done = 0;
 
-  USART_ClearITPendingBit(USART.channel, USART_IT_RXNE);
-  USART_ClearITPendingBit(USART.channel, USART_IT_TXE);
-  USART_ClearITPendingBit(USART.channel, USART_IT_TC);
+  LL_USART_ClearFlag_RXNE(USART.channel);
+  LL_USART_ClearFlag_TC(USART.channel);
 
   vtx_frame_offset = 0;
 
-  USART_ITConfig(USART.channel, USART_IT_RXNE, ENABLE);
-  USART_ITConfig(USART.channel, USART_IT_TXE, ENABLE);
-  USART_ITConfig(USART.channel, USART_IT_TC, ENABLE);
+  LL_USART_EnableIT_RXNE(USART.channel);
+  LL_USART_EnableIT_TXE(USART.channel);
+  LL_USART_EnableIT_TC(USART.channel);
 
   vtx_last_request = timer_millis();
   vtx_last_valid_read = timer_millis();
@@ -55,31 +56,30 @@ uint8_t serial_vtx_read_byte(uint8_t *data) {
 }
 
 void vtx_uart_isr(void) {
-  if (USART_GetITStatus(USART.channel, USART_IT_TC) != RESET) {
-    USART_ClearITPendingBit(USART.channel, USART_IT_TC);
+  if (LL_USART_IsActiveFlag_TC(USART.channel)) {
+    LL_USART_ClearFlag_TC(USART.channel);
     if (vtx_frame_offset == vtx_frame_length && vtx_transfer_done == 0) {
       vtx_transfer_done = 1;
-      USART_ITConfig(USART.channel, USART_IT_TXE, DISABLE);
+      LL_USART_DisableIT_TXE(USART.channel);
     }
   }
 
-  if (USART_GetITStatus(USART.channel, USART_IT_TXE) != RESET) {
-    USART_ClearITPendingBit(USART.channel, USART_IT_TXE);
+  if (LL_USART_IsActiveFlag_TXE(USART.channel)) {
     if (vtx_frame_offset < vtx_frame_length) {
-      USART_SendData(USART.channel, vtx_frame[vtx_frame_offset]);
+      LL_USART_TransmitData8(USART.channel, vtx_frame[vtx_frame_offset]);
       vtx_frame_offset++;
       vtx_transfer_done = 0;
     }
   }
 
-  if (USART_GetITStatus(USART.channel, USART_IT_RXNE) != RESET) {
-    USART_ClearITPendingBit(USART.channel, USART_IT_RXNE);
-    const uint8_t data = USART_ReceiveData(USART.channel);
+  if (LL_USART_IsActiveFlag_RXNE(USART.channel)) {
+    const uint8_t data = LL_USART_ReceiveData8(USART.channel);
+    LL_USART_ClearFlag_RXNE(USART.channel);
     circular_buffer_write(&vtx_rx_buffer, data);
   }
 
-  if (USART_GetFlagStatus(USART.channel, USART_FLAG_ORE)) {
-    USART_ClearFlag(USART.channel, USART_FLAG_ORE);
+  if (LL_USART_IsActiveFlag_ORE(USART.channel)) {
+    LL_USART_ClearFlag_ORE(USART.channel);
   }
 }
 #endif

@@ -74,19 +74,19 @@
 //#define RGB_LED_DMA
 
 // pin / port for the RGB led ( programming port ok )
-//#define RGB_PIN GPIO_Pin_11
+//#define RGB_PIN LL_GPIO_PIN_11
 //#define RGB_PORT GPIOA
 
 //*************************************Legacy stuff moved into targets - remaining for future reference************************************************
 
 // pin for fpv switch ( turns off at failsafe )
-// GPIO_Pin_13 // SWDAT - GPIO_Pin_14 // SWCLK
+// LL_GPIO_PIN_13 // SWDAT - LL_GPIO_PIN_14 // SWCLK
 // if programming pin, will not flash after bind
 
 // BUZZER pin settings - buzzer active "high"
 // SWDAT and SWCLK pins OK here
-// GPIO_Pin_13 // SWDAT - GPIO_Pin_14 // SWCLK
-//#define BUZZER_PIN       GPIO_Pin_14
+// LL_GPIO_PIN_13 // SWDAT - LL_GPIO_PIN_14 // SWCLK
+//#define BUZZER_PIN       LL_GPIO_PIN_14
 //#define BUZZER_PIN_PORT  GPIOA
 // x (micro)seconds after loss of tx or low bat before buzzer starts
 //#define BUZZER_DELAY     30e6

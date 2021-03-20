@@ -136,20 +136,20 @@ void set_esc_low(uint8_t esc) {
 }
 
 void set_esc_input(uint8_t esc) {
-  GPIO_InitTypeDef gpio_init = {0};
-  gpio_init.GPIO_Mode = GPIO_Mode_IN;
-  gpio_init.GPIO_OType = GPIO_OType_OD;
-  gpio_init.GPIO_PuPd = GPIO_PuPd_UP;
-  gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
+  LL_GPIO_InitTypeDef gpio_init = {0};
+  gpio_init.Mode = LL_GPIO_MODE_INPUT;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
+  gpio_init.Pull = LL_GPIO_PULL_UP;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   gpio_pin_init(&gpio_init, esc_pins[esc]);
 }
 
 void set_esc_output(uint8_t esc) {
-  GPIO_InitTypeDef gpio_init = {0};
-  gpio_init.GPIO_Mode = GPIO_Mode_OUT;
-  gpio_init.GPIO_OType = GPIO_OType_PP;
-  gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
+  LL_GPIO_InitTypeDef gpio_init = {0};
+  gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  gpio_init.Pull = LL_GPIO_PULL_NO;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   gpio_pin_init(&gpio_init, esc_pins[esc]);
 }
 

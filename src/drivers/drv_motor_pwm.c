@@ -128,21 +128,21 @@ void motor_init(void) {
 #undef MOTOR_PIN
 
   TIM_OCInitTypeDef TIM_OCInitStructure;
-  TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
-  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+  TIM_OCInitStructure.OCMode = TIM_OCMode_PWM1;
+  TIM_OCInitStructure.OCState = TIM_OutputState_Enable;
   TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
   TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
-  TIM_OCInitStructure.TIM_Pulse = 0;
+  TIM_OCInitStructure.CompareValue = 0;
 
-  GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  LL_GPIO_InitTypeDef GPIO_InitStructure;
+  GPIO_InitStructure.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStructure.Pull = LL_GPIO_PULL_NO;
 
 #define MOTOR_PIN(port, pin, pin_af, timer, timer_channel)   \
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_##pin;              \
-  GPIO_Init(GPIO##port, &GPIO_InitStructure);                \
+  GPIO_InitStructure.Pin = LL_GPIO_PIN_##pin;                \
+  LL_GPIO_Init(GPIO##port, &GPIO_InitStructure);             \
   GPIO_PinAFConfig(GPIO##port, GPIO_PinSource##pin, pin_af); \
   TIM_OC##timer_channel##Init(timer, &TIM_OCInitStructure);  \
   TIM_Cmd(timer, ENABLE);                                    \

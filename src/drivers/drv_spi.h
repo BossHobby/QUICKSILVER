@@ -8,21 +8,18 @@
 #include "project.h"
 
 typedef struct {
+  DMA_TypeDef *dma;
   uint32_t dma_port;
   uint32_t channel;
   uint8_t channel_index;
 
   uint8_t rx_stream_index;
   DMA_Stream_TypeDef *rx_stream;
-  uint32_t rx_tci_flag;
   IRQn_Type rx_it;
-  uint32_t rx_it_flag;
 
   uint8_t tx_stream_index;
   DMA_Stream_TypeDef *tx_stream;
-  uint32_t tx_tci_flag;
   IRQn_Type tx_it;
-  uint32_t tx_it_flag;
 } spi_dma_def_t;
 
 typedef struct {

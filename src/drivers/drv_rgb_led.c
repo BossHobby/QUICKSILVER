@@ -26,29 +26,29 @@ volatile int rgb_dma_phase = 0; // 3:rgb data ready
 // 1:rgb dma busy
 // 0:idle
 
-const int offset = RGB_PIN > GPIO_Pin_7;
+const int offset = RGB_PIN > LL_GPIO_PIN_7;
 
 volatile uint32_t rgb_data_portA[RGB_LED_NUMBER * 24 / 4] = {0}; // DMA buffer: reset output when bit data=0 at TOH timing
 volatile uint16_t rgb_portX[1] = {RGB_PIN};                      // sum of all rgb pins at port
 volatile uint32_t RGB_DATA16[16];                                // 4-bit look-up table for dma buffer making
 
 void rgb_init() {
-  if ((RGB_PIN == GPIO_Pin_13 || RGB_PIN == GPIO_Pin_14) && RGB_PORT == GPIOA) {
+  if ((RGB_PIN == LL_GPIO_PIN_13 || RGB_PIN == LL_GPIO_PIN_14) && RGB_PORT == GPIOA) {
     // programming port used
     // wait until 2 seconds from powerup passed
     while (timer_micros() < 2e6)
       ;
   }
 
-  GPIO_InitTypeDef GPIO_InitStructure;
+  LL_GPIO_InitTypeDef GPIO_InitStructure;
 
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStructure.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
 
-  GPIO_InitStructure.GPIO_Pin = RGB_PIN;
-  GPIO_Init(RGB_PORT, &GPIO_InitStructure);
+  GPIO_InitStructure.Pin = RGB_PIN;
+  LL_GPIO_Init(RGB_PORT, &GPIO_InitStructure);
 
 #ifndef USE_DSHOT_DMA_DRIVER
   // RGB timer/DMA init
@@ -73,66 +73,66 @@ void rgb_init() {
   TIM_ARRPreloadConfig(TIM1, DISABLE);
 
   /* Timing Mode configuration: Channel 1 */
-  TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_Timing;
-  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Disable;
-  TIM_OCInitStructure.TIM_Pulse = RGB_T0H_TIME;
-  TIM_OC1Init(TIM1, &TIM_OCInitStructure);
-  TIM_OC1PreloadConfig(TIM1, TIM_OCPreload_Disable);
+  TIM_OCInitStructure.OCMode = LL_TIM_OCMODE_FROZEN;
+  TIM_OCInitStructure.OCState = LL_TIM_OCSTATE_DISABLE;
+  TIM_OCInitStructure.CompareValue = RGB_T0H_TIME;
+  LL_TIM_OC_Init(TIM1, LL_TIM_CHANNEL_CH1, &TIM_OCInitStructure);
+  LL_TIM_OC_DisablePreload(TIM1, LL_TIM_CHANNEL_CH1);
 
   /* Timing Mode configuration: Channel 4 */
-  TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_Timing;
-  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Disable;
-  TIM_OCInitStructure.TIM_Pulse = RGB_T1H_TIME;
-  TIM_OC4Init(TIM1, &TIM_OCInitStructure);
-  TIM_OC4PreloadConfig(TIM1, TIM_OCPreload_Disable);
+  TIM_OCInitStructure.OCMode = LL_TIM_OCMODE_FROZEN;
+  TIM_OCInitStructure.OCState = LL_TIM_OCSTATE_DISABLE;
+  TIM_OCInitStructure.CompareValue = RGB_T1H_TIME;
+  LL_TIM_OC_Init(TIM1, LL_TIM_CHANNEL_CH4, &TIM_OCInitStructure);
+  LL_TIM_OC_DisablePreload(TIM1, LL_TIM_CHANNEL_CH4);
 
-  DMA_InitTypeDef DMA_InitStructure;
+  LL_LL_DMA_InitTypeDef DMA_InitStructure;
 
-  DMA_StructInit(&DMA_InitStructure);
+  LL_DMA_StructInit(&DMA_InitStructure);
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
 
   /* DMA1 Channe5 configuration ----------------------------------------------*/
-  DMA_DeInit(DMA1_Channel3);
-  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&RGB_PORT->BSRR;
+  LL_DMA_DeInit(DMA1_Channel3);
+  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&RGB_PORT->BSRR;
   DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)rgb_portX;
-  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
-  DMA_InitStructure.DMA_BufferSize = RGB_LED_NUMBER * 24;
-  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Disable;
-  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
-  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
-  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
-  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructure.Direction = DMA_DIR_PeripheralDST;
+  DMA_InitStructure.NbData = RGB_LED_NUMBER * 24;
+  DMA_InitStructure.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
+  DMA_InitStructure.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_NOINCREMENT;
+  DMA_InitStructure.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_HALFWORD;
+  DMA_InitStructure.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_HALFWORD;
+  DMA_InitStructure.Mode = LL_DMA_MODE_NORMAL;
+  DMA_InitStructure.Priority = LL_DMA_PRIORITY_HIGH;
   DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
   DMA_Init(DMA1_Channel5, &DMA_InitStructure);
 
   /* DMA1 Channel2 configuration ----------------------------------------------*/
-  DMA_DeInit(DMA1_Channel2);
-  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&RGB_PORT->BRR + offset;
+  LL_DMA_DeInit(DMA1_Channel2);
+  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&RGB_PORT->BRR + offset;
   DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)rgb_data_portA;
-  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
-  DMA_InitStructure.DMA_BufferSize = RGB_LED_NUMBER * 24;
-  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
-  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
-  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
-  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
-  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructure.Direction = DMA_DIR_PeripheralDST;
+  DMA_InitStructure.NbData = RGB_LED_NUMBER * 24;
+  DMA_InitStructure.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
+  DMA_InitStructure.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
+  DMA_InitStructure.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_BYTE;
+  DMA_InitStructure.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_BYTE;
+  DMA_InitStructure.Mode = LL_DMA_MODE_NORMAL;
+  DMA_InitStructure.Priority = LL_DMA_PRIORITY_HIGH;
   DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
   DMA_Init(DMA1_Channel2, &DMA_InitStructure);
 
   /* DMA1 Channel4 configuration ----------------------------------------------*/
-  DMA_DeInit(DMA1_Channel4);
-  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&RGB_PORT->BRR;
+  LL_DMA_DeInit(DMA1_Channel4);
+  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&RGB_PORT->BRR;
   DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)rgb_portX;
-  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
-  DMA_InitStructure.DMA_BufferSize = RGB_LED_NUMBER * 24;
-  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Disable;
-  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
-  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
-  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
-  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructure.Direction = DMA_DIR_PeripheralDST;
+  DMA_InitStructure.NbData = RGB_LED_NUMBER * 24;
+  DMA_InitStructure.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
+  DMA_InitStructure.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_NOINCREMENT;
+  DMA_InitStructure.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_HALFWORD;
+  DMA_InitStructure.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_HALFWORD;
+  DMA_InitStructure.Mode = LL_DMA_MODE_NORMAL;
+  DMA_InitStructure.Priority = LL_DMA_PRIORITY_HIGH;
   DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
   DMA_Init(DMA1_Channel4, &DMA_InitStructure);
 
@@ -141,7 +141,7 @@ void rgb_init() {
   NVIC_InitTypeDef NVIC_InitStructure;
   /* configure DMA1 Channel4 interrupt */
   NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel4_5_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPriority = (uint8_t)DMA_Priority_High;
+  NVIC_InitStructure.NVIC_IRQChannelPriority = (uint8_t)LL_DMA_PRIORITY_HIGH;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
   /* enable DMA1 Channel4 transfer complete interrupt */
@@ -263,7 +263,7 @@ void DMA1_Channel4_5_IRQHandler(void) {
 void rgb_init(void) {
   // spi port inits
 
-  if ((RGB_PIN == GPIO_Pin_13 || RGB_PIN == GPIO_Pin_14) && RGB_PORT == GPIOA) {
+  if ((RGB_PIN == LL_GPIO_PIN_13 || RGB_PIN == LL_GPIO_PIN_14) && RGB_PORT == GPIOA) {
     // programming port used
 
     // wait until 2 seconds from powerup passed
@@ -271,15 +271,15 @@ void rgb_init(void) {
       ;
   }
 
-  GPIO_InitTypeDef GPIO_InitStructure;
+  LL_GPIO_InitTypeDef GPIO_InitStructure;
 
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStructure.Pull = LL_GPIO_PULL_UP;
+  GPIO_InitStructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
 
-  GPIO_InitStructure.GPIO_Pin = RGB_PIN;
-  GPIO_Init(RGB_PORT, &GPIO_InitStructure);
+  GPIO_InitStructure.Pin = RGB_PIN;
+  LL_GPIO_Init(RGB_PORT, &GPIO_InitStructure);
 
   for (int i = 0; i < RGB_LED_NUMBER; i++) {
     rgb_send(0);

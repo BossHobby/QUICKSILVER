@@ -25,20 +25,19 @@ SOFTWARE.
 #ifndef DRV_SOFTSERIAL_H
 #define DRV_SOFTSERIAL_H
 
+#include "drv_gpio.h"
 #include "drv_time.h"
 #include "project.h"
 
 typedef struct SoftSerialData_s {
-  GPIO_TypeDef *tx_port;
-  uint16_t tx_pin;
-  GPIO_TypeDef *rx_port;
-  uint16_t rx_pin;
+  gpio_pins_t tx_pin;
+  gpio_pins_t rx_pin;
   uint32_t baud;
   uint32_t micros_per_bit;
   uint32_t micros_per_bit_half;
 } SoftSerialData_t;
 
-SoftSerialData_t softserial_init(GPIO_TypeDef *tx_port, uint16_t tx_pin, GPIO_TypeDef *rx_port, uint16_t rx_pin, uint32_t baudrate);
+SoftSerialData_t softserial_init(gpio_pins_t tx_pin, gpio_pins_t rx_pin, uint32_t baudrate);
 int softserial_read_byte(uint8_t *byte);
 void softserial_write_byte(uint8_t byte);
 int softserial_read_byte_ex(const SoftSerialData_t *data, uint8_t *byte);

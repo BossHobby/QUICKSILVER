@@ -1,8 +1,10 @@
 #include "drv_spi_mpu6xxx.h"
 
 #include <stdio.h>
+#include <stm32f4xx_ll_spi.h>
 
 #include "defines.h"
+#include "drv_gpio.h"
 #include "drv_spi.h"
 #include "drv_time.h"
 #include "project.h"
@@ -44,11 +46,11 @@ void spi_gyro_init(void) {
 
 // Interrupt GPIO
 #ifdef MPU6XXX_INT
-  GPIO_InitTypeDef gpio_init;
-  gpio_init.GPIO_Mode = GPIO_Mode_IN;
-  gpio_init.GPIO_OType = GPIO_OType_PP;
-  gpio_init.GPIO_PuPd = GPIO_PuPd_UP;
-  gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_INPUT;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  gpio_init.Pull = LL_GPIO_PULL_UP;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   gpio_pin_init(&gpio_init, MPU6XXX_INT);
 #endif
 
@@ -56,24 +58,27 @@ void spi_gyro_init(void) {
   spi_enable_rcc(MPU6XXX_SPI_PORT);
 
   // SPI Config
-  SPI_I2S_DeInit(PORT.channel);
-  SPI_InitTypeDef SPI_InitStructure;
-  SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-  SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
-  SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
-  SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
-  SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
-  SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64;
-  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
-  SPI_InitStructure.SPI_CRCPolynomial = 7;
-  SPI_Init(PORT.channel, &SPI_InitStructure);
-  SPI_Cmd(PORT.channel, ENABLE);
+  LL_SPI_DeInit(PORT.channel);
+
+  LL_SPI_InitTypeDef spi_init;
+  spi_init.TransferDirection = LL_SPI_FULL_DUPLEX;
+  spi_init.Mode = LL_SPI_MODE_MASTER;
+  spi_init.DataWidth = LL_SPI_DATAWIDTH_8BIT;
+  spi_init.ClockPolarity = LL_SPI_POLARITY_HIGH;
+  spi_init.ClockPhase = LL_SPI_PHASE_2EDGE;
+  spi_init.NSS = LL_SPI_NSS_SOFT;
+  spi_init.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV64;
+  spi_init.BitOrder = LL_SPI_MSB_FIRST;
+  spi_init.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
+  spi_init.CRCPoly = 7;
+  LL_SPI_Init(PORT.channel, &spi_init);
+
+  LL_SPI_Enable(PORT.channel);
 
   // Dummy read to clear receive buffer
-  while (SPI_I2S_GetFlagStatus(PORT.channel, SPI_I2S_FLAG_TXE) == RESET)
+  while (LL_SPI_IsActiveFlag_TXE(PORT.channel) == RESET)
     ;
-  SPI_I2S_ReceiveData(PORT.channel);
+  LL_SPI_ReceiveData8(PORT.channel);
 
   spi_dma_init(MPU6XXX_SPI_PORT);
 }
@@ -81,58 +86,62 @@ void spi_gyro_init(void) {
 //deinit/reinit spi for unique slave configuration
 void spi_MPU6XXX_reinit_slow(void) {
   spi_dma_wait_for_ready(MPU6XXX_SPI_PORT);
-  SPI_Cmd(PORT.channel, DISABLE);
+  LL_SPI_Disable(PORT.channel);
 
   // SPI Config
-  SPI_I2S_DeInit(PORT.channel);
-  SPI_InitTypeDef SPI_InitStructure;
-  SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-  SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
-  SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
-  SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
-  SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
-  SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
+  LL_SPI_DeInit(PORT.channel);
+  LL_SPI_InitTypeDef spi_init;
+  spi_init.TransferDirection = LL_SPI_FULL_DUPLEX;
+  spi_init.Mode = LL_SPI_MODE_MASTER;
+  spi_init.DataWidth = LL_SPI_DATAWIDTH_8BIT;
+  spi_init.ClockPolarity = LL_SPI_POLARITY_HIGH;
+  spi_init.ClockPhase = LL_SPI_PHASE_2EDGE;
+  spi_init.NSS = LL_SPI_NSS_SOFT;
 #if defined(ICM20601_SPI_PORT) || defined(ICM20608_SPI_PORT) //5.25mhz SPI
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
+  spi_init.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV8;
 #else
 #if defined(ICM20602_SPI_PORT) //10mhz SPI
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+  spi_init.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV4;
 #else                          //(MPUXXXX)			 //20mhz SPI
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64;
+  spi_init.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV64;
 #endif
 #endif
-  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
-  SPI_InitStructure.SPI_CRCPolynomial = 7;
-  SPI_Init(PORT.channel, &SPI_InitStructure);
-  SPI_Cmd(PORT.channel, ENABLE);
+  spi_init.BitOrder = LL_SPI_MSB_FIRST;
+  spi_init.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
+  spi_init.CRCPoly = 7;
+  LL_SPI_Init(PORT.channel, &spi_init);
+
+  LL_SPI_Enable(PORT.channel);
 }
 
 void spi_MPU6XXX_reinit_fast(void) {
   spi_dma_wait_for_ready(MPU6XXX_SPI_PORT);
-  SPI_Cmd(PORT.channel, DISABLE);
+  LL_SPI_Disable(PORT.channel);
 
   // SPI Config
-  SPI_I2S_DeInit(PORT.channel);
-  SPI_InitTypeDef SPI_InitStructure;
-  SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-  SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
-  SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
-  SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
-  SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
-  SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
+  LL_SPI_DeInit(PORT.channel);
+  LL_SPI_InitTypeDef spi_init;
+  spi_init.TransferDirection = LL_SPI_FULL_DUPLEX;
+  spi_init.Mode = LL_SPI_MODE_MASTER;
+  spi_init.DataWidth = LL_SPI_DATAWIDTH_8BIT;
+  spi_init.ClockPolarity = LL_SPI_POLARITY_HIGH;
+  spi_init.ClockPhase = LL_SPI_PHASE_2EDGE;
+  spi_init.NSS = LL_SPI_NSS_SOFT;
 #if defined(ICM20601_SPI_PORT) || defined(ICM20608_SPI_PORT) //5.25mhz SPI
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
+  spi_init.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV8;
 #else
 #if defined(ICM20602_SPI_PORT) //10mhz SPI
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+  spi_init.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV4;
 #else                          //(MPUXXXX)			 //20mhz SPI
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
+  spi_init.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV2;
 #endif
 #endif
-  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
-  SPI_InitStructure.SPI_CRCPolynomial = 7;
-  SPI_Init(PORT.channel, &SPI_InitStructure);
-  SPI_Cmd(PORT.channel, ENABLE);
+  spi_init.BitOrder = LL_SPI_MSB_FIRST;
+  spi_init.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
+  spi_init.CRCPoly = 7;
+  LL_SPI_Init(PORT.channel, &spi_init);
+
+  LL_SPI_Enable(PORT.channel);
 }
 
 //*******************************************************************************SPI / DMA FUNCTIONS********************************************************************************

@@ -5,30 +5,30 @@
 
 #ifdef SOFTSPI_3WIRE
 
-GPIO_InitTypeDef mosi_init_struct;
+LL_GPIO_InitTypeDef mosi_init_struct;
 int mosi_out = 0;
 
 void spi_init(void) {
-  GPIO_InitTypeDef GPIO_InitStructure;
+  LL_GPIO_InitTypeDef GPIO_InitStructure;
 
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStructure.Pull = LL_GPIO_PULL_UP;
+  GPIO_InitStructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
 
-  GPIO_InitStructure.GPIO_Pin = SPI_CLK_PIN;
-  GPIO_Init(SPI_CLK_PORT, &GPIO_InitStructure);
+  GPIO_InitStructure.Pin = SPI_CLK_PIN;
+  LL_GPIO_Init(SPI_CLK_PORT, &GPIO_InitStructure);
 
-  GPIO_InitStructure.GPIO_Pin = SPI_SS_PIN;
-  GPIO_Init(SPI_SS_PORT, &GPIO_InitStructure);
+  GPIO_InitStructure.Pin = SPI_SS_PIN;
+  LL_GPIO_Init(SPI_SS_PORT, &GPIO_InitStructure);
 
-  mosi_init_struct.GPIO_Pin = SPI_MOSI_PIN;
-  mosi_init_struct.GPIO_Mode = GPIO_Mode_IN;
-  mosi_init_struct.GPIO_OType = GPIO_OType_PP;
-  mosi_init_struct.GPIO_PuPd = GPIO_PuPd_UP;
-  mosi_init_struct.GPIO_Speed = GPIO_Speed_50MHz;
+  mosi_init_struct.Pin = SPI_MOSI_PIN;
+  mosi_init_struct.Mode = LL_GPIO_MODE_INPUT;
+  mosi_init_struct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  mosi_init_struct.Pull = LL_GPIO_PULL_UP;
+  mosi_init_struct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
 
-  GPIO_Init(SPI_MOSI_PORT, &mosi_init_struct);
+  LL_GPIO_Init(SPI_MOSI_PORT, &mosi_init_struct);
 
   //mosi_out = 0; // already
 
@@ -38,16 +38,16 @@ void spi_init(void) {
 void mosi_input(void) {
   if (mosi_out) {
     mosi_out = 0;
-    mosi_init_struct.GPIO_Mode = GPIO_Mode_IN;
-    GPIO_Init(SPI_MOSI_PORT, &mosi_init_struct);
+    mosi_init_struct.Mode = LL_GPIO_MODE_INPUT;
+    LL_GPIO_Init(SPI_MOSI_PORT, &mosi_init_struct);
   }
 }
 
 void mosi_output(void) {
   if (!mosi_out) {
     mosi_out = 1;
-    mosi_init_struct.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_Init(SPI_MOSI_PORT, &mosi_init_struct);
+    mosi_init_struct.Mode = LL_GPIO_MODE_OUTPUT;
+    LL_GPIO_Init(SPI_MOSI_PORT, &mosi_init_struct);
   }
 }
 

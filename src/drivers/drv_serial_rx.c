@@ -1,5 +1,7 @@
 #include "drv_serial.h"
 
+#include <stm32f4xx_ll_usart.h>
+
 #include "drv_time.h"
 #include "profile.h"
 
@@ -11,10 +13,10 @@
 // Universal serial will overwrite inverter pin state only if INVERT_UART
 void usart_invert(void) {
 #if defined(F4) && (defined(USART1_INVERTER_PIN) || defined(USART2_INVERTER_PIN) || defined(USART3_INVERTER_PIN) || defined(USART4_INVERTER_PIN) || defined(USART5_INVERTER_PIN) || defined(USART6_INVERTER_PIN))
-  GPIO_InitTypeDef gpio_init;
-  gpio_init.GPIO_Mode = GPIO_Mode_OUT;
-  gpio_init.GPIO_OType = GPIO_OType_PP;
-  gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  gpio_init.Pull = LL_GPIO_PULL_NO;
 
 #if defined(USART1_INVERTER_PIN)
   gpio_pin_init(&gpio_init, USART1_INVERTER_PIN);
@@ -200,16 +202,16 @@ void serial_rx_init(rx_serial_protocol_t proto) {
 
   serial_rx_port = profile.serial.rx;
 
-  GPIO_InitTypeDef gpio_init;
-  gpio_init.GPIO_Mode = GPIO_Mode_AF;
-  gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
 
   switch (proto) {
   case RX_SERIAL_PROTOCOL_DSM:
   case RX_SERIAL_PROTOCOL_IBUS:
   case RX_SERIAL_PROTOCOL_CRSF:
-    gpio_init.GPIO_OType = GPIO_OType_OD;
-    gpio_init.GPIO_PuPd = GPIO_PuPd_UP;
+    gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
+    gpio_init.Pull = LL_GPIO_PULL_UP;
 
     gpio_pin_init_af(&gpio_init, USART.rx_pin, USART.gpio_af);
     break;
@@ -220,8 +222,8 @@ void serial_rx_init(rx_serial_protocol_t proto) {
   case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
   case RX_SERIAL_PROTOCOL_REDPINE:
   case RX_SERIAL_PROTOCOL_REDPINE_INVERTED:
-    gpio_init.GPIO_OType = GPIO_OType_PP;
-    gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+    gpio_init.Pull = LL_GPIO_PULL_NO;
 
     gpio_pin_init_af(&gpio_init, USART.rx_pin, USART.gpio_af);
     break;
@@ -235,8 +237,8 @@ void serial_rx_init(rx_serial_protocol_t proto) {
   case RX_SERIAL_PROTOCOL_FPORT:
   case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
   case RX_SERIAL_PROTOCOL_CRSF:
-    gpio_init.GPIO_OType = GPIO_OType_PP;
-    gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+    gpio_init.Pull = LL_GPIO_PULL_NO;
 
     gpio_pin_init_af(&gpio_init, USART.tx_pin, USART.gpio_af);
     break;
@@ -248,48 +250,51 @@ void serial_rx_init(rx_serial_protocol_t proto) {
 
   serial_enable_rcc(serial_rx_port);
 
-  USART_InitTypeDef usart_init;
-  usart_init.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-  usart_init.USART_WordLength = USART_WordLength_8b;
+  LL_USART_DeInit(USART.channel);
+
+  LL_USART_InitTypeDef usart_init;
+  usart_init.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
+  usart_init.DataWidth = LL_USART_DATAWIDTH_8B;
+  usart_init.OverSampling = LL_USART_OVERSAMPLING_16;
 
   switch (proto) {
   case RX_SERIAL_PROTOCOL_DSM:
   case RX_SERIAL_PROTOCOL_IBUS:
-    usart_init.USART_BaudRate = 115200;
-    usart_init.USART_StopBits = USART_StopBits_1;
-    usart_init.USART_Parity = USART_Parity_No;
-    usart_init.USART_Mode = USART_Mode_Rx;
+    usart_init.BaudRate = 115200;
+    usart_init.StopBits = LL_USART_STOPBITS_1;
+    usart_init.Parity = LL_USART_PARITY_NONE;
+    usart_init.TransferDirection = LL_USART_DIRECTION_RX;
     break;
 
   case RX_SERIAL_PROTOCOL_FPORT:
   case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
-    usart_init.USART_BaudRate = 115200;
-    usart_init.USART_StopBits = USART_StopBits_1;
-    usart_init.USART_Parity = USART_Parity_No;
-    usart_init.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+    usart_init.BaudRate = 115200;
+    usart_init.StopBits = LL_USART_STOPBITS_1;
+    usart_init.Parity = LL_USART_PARITY_NONE;
+    usart_init.TransferDirection = LL_USART_DIRECTION_RX | LL_USART_DIRECTION_TX;
     break;
 
   case RX_SERIAL_PROTOCOL_SBUS:
   case RX_SERIAL_PROTOCOL_SBUS_INVERTED:
-    usart_init.USART_BaudRate = 100000;
-    usart_init.USART_StopBits = USART_StopBits_2;
-    usart_init.USART_Parity = USART_Parity_Even;
-    usart_init.USART_Mode = USART_Mode_Rx;
+    usart_init.BaudRate = 100000;
+    usart_init.StopBits = LL_USART_STOPBITS_2;
+    usart_init.Parity = LL_USART_PARITY_EVEN;
+    usart_init.TransferDirection = LL_USART_DIRECTION_RX;
     break;
 
   case RX_SERIAL_PROTOCOL_CRSF:
-    usart_init.USART_BaudRate = 420000;
-    usart_init.USART_StopBits = USART_StopBits_1;
-    usart_init.USART_Parity = USART_Parity_No;
-    usart_init.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+    usart_init.BaudRate = 420000;
+    usart_init.StopBits = LL_USART_STOPBITS_1;
+    usart_init.Parity = LL_USART_PARITY_NONE;
+    usart_init.TransferDirection = LL_USART_DIRECTION_RX | LL_USART_DIRECTION_TX;
     break;
 
   case RX_SERIAL_PROTOCOL_REDPINE:
   case RX_SERIAL_PROTOCOL_REDPINE_INVERTED:
-    usart_init.USART_BaudRate = 230400;
-    usart_init.USART_StopBits = USART_StopBits_1;
-    usart_init.USART_Parity = USART_Parity_No;
-    usart_init.USART_Mode = USART_Mode_Rx;
+    usart_init.BaudRate = 230400;
+    usart_init.StopBits = LL_USART_STOPBITS_1;
+    usart_init.Parity = LL_USART_PARITY_NONE;
+    usart_init.TransferDirection = LL_USART_DIRECTION_RX;
     break;
 
   default:
@@ -298,15 +303,16 @@ void serial_rx_init(rx_serial_protocol_t proto) {
 
   if (proto == RX_SERIAL_PROTOCOL_FPORT) {
     //RX_SERIAL_PROTOCOL_FPORT_INVERTED requires half duplex off
-    USART_HalfDuplexCmd(USART.channel, ENABLE);
+    LL_USART_EnableHalfDuplex(USART.channel);
   } else {
-    USART_HalfDuplexCmd(USART.channel, DISABLE);
+    LL_USART_DisableHalfDuplex(USART.channel);
   }
 
-  USART_Init(USART.channel, &usart_init);
+  LL_USART_Init(USART.channel, &usart_init);
 
-  USART_ITConfig(USART.channel, USART_IT_RXNE, ENABLE);
-  USART_Cmd(USART.channel, ENABLE);
+  LL_USART_EnableIT_RXNE(USART.channel);
+  LL_USART_Enable(USART.channel);
+
   serial_enable_isr(serial_rx_port);
 }
 #endif

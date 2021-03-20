@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <stm32f4xx_ll_usart.h>
+
 #include "control.h"
 #include "drv_serial.h"
 #include "drv_time.h"
@@ -63,15 +65,15 @@ void TX_USART_ISR(void) {
     bytes_to_send = 10 + telemetry_offset;
   }
 
-  if (increment_transmit_buffer < bytes_to_send) {                      // check the index to see if we have drained the buffer yet
-    while (USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET) // just in case - but this should do nothing since irq was called based on TXE
+  if (increment_transmit_buffer < bytes_to_send) {            // check the index to see if we have drained the buffer yet
+    while (LL_USART_IsActiveFlag_TXE(USART.channel) == RESET) // just in case - but this should do nothing since irq was called based on TXE
       ;
-    USART_SendData(USART.channel, telemetry_packet[increment_transmit_buffer]); // send a byte out of the buffer indexed by the counter
-    increment_transmit_buffer++;                                                // increment the counter
-  } else {                                                                      // this interrupt ran because the last byte was sent
-    increment_transmit_buffer = 1;                                              // reset the counter to the right index for the next telemetry irq event
-    ready_for_next_telemetry = 1;                                               // set the flag to allow the telemetry process to run again
-    USART_ITConfig(USART.channel, USART_IT_TC, DISABLE);
+    LL_USART_TransmitData8(USART.channel, telemetry_packet[increment_transmit_buffer]); // send a byte out of the buffer indexed by the counter
+    increment_transmit_buffer++;                                                        // increment the counter
+  } else {                                                                              // this interrupt ran because the last byte was sent
+    increment_transmit_buffer = 1;                                                      // reset the counter to the right index for the next telemetry irq event
+    ready_for_next_telemetry = 1;                                                       // set the flag to allow the telemetry process to run again
+    LL_USART_DisableIT_TC(USART.channel);
   }
 }
 
@@ -92,16 +94,16 @@ void RX_USART_ISR(void) {
     frame_status = FRAME_IDLE;
   }
 
-  if (USART_GetFlagStatus(USART.channel, USART_FLAG_ORE)) {
+  if (LL_USART_IsActiveFlag_ORE(USART.channel)) {
     // overflow means something was lost
-    USART_ClearFlag(USART.channel, USART_FLAG_ORE);
+    LL_USART_ClearFlag_ORE(USART.channel);
     rx_frame_position = 0;
   }
 
-  if (USART_GetITStatus(USART.channel, USART_IT_RXNE)) {
-    USART_ClearITPendingBit(USART.channel, USART_IT_RXNE);
+  if (LL_USART_IsActiveFlag_RXNE(USART.channel)) {
+    rx_buffer[rx_frame_position++] = LL_USART_ReceiveData8(USART.channel);
+    LL_USART_ClearFlag_RXNE(USART.channel);
 
-    rx_buffer[rx_frame_position++] = USART_ReceiveData(USART.channel);
     if (rx_frame_position >= expected_frame_length && frame_status == FRAME_IDLE) {
       frame_status = FRAME_RX;
     }

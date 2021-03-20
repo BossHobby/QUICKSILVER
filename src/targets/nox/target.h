@@ -16,7 +16,7 @@
   USART1_PB7PB6     \
   USART2_PA3PA2
 
-//#define USB_DETECT_PIN GPIO_Pin_5
+//#define USB_DETECT_PIN LL_GPIO_PIN_5
 //#define USB_DETECT_PORT GPIOC
 
 //LEDS, Buzzer, FPV
@@ -48,13 +48,13 @@
 
 #ifndef SOFTSPI_NONE //sort this out later for use of bayang
 #define RADIO_CHECK
-#define SPI_MISO_PIN GPIO_Pin_7
+#define SPI_MISO_PIN LL_GPIO_PIN_7
 #define SPI_MISO_PORT GPIOB
-#define SPI_MOSI_PIN GPIO_Pin_6
+#define SPI_MOSI_PIN LL_GPIO_PIN_6
 #define SPI_MOSI_PORT GPIOB
-#define SPI_CLK_PIN GPIO_Pin_3
+#define SPI_CLK_PIN LL_GPIO_PIN_3
 #define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN GPIO_Pin_2
+#define SPI_SS_PIN LL_GPIO_PIN_2
 #define SPI_SS_PORT GPIOA
 #endif
 
@@ -65,7 +65,7 @@
 
 //VOLTAGE DIVIDER
 #define BATTERYPIN PIN_A5
-#define BATTERY_ADC_CHANNEL ADC_Channel_5
+#define BATTERY_ADC_CHANNEL LL_ADC_CHANNEL_5
 
 #ifndef VOLTAGE_DIVIDER_R1
 #define VOLTAGE_DIVIDER_R1 10000

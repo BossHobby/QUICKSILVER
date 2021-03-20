@@ -4,75 +4,55 @@
 
 static volatile uint8_t fpv_init_done = 0;
 
-void gpio_init(void) {
-
+void gpio_init() {
 // clocks on to all ports
 #ifdef F4
-  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOD, ENABLE);
+  SET_BIT(
+      RCC->AHB1ENR,
+      RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOBEN | RCC_AHB1ENR_GPIOCEN |
+          RCC_AHB1ENR_GPIODEN | RCC_AHB1ENR_GPIOEEN | RCC_AHB1ENR_GPIOHEN);
 #endif
 
-  GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  LL_GPIO_InitTypeDef init;
+  init.Mode = LL_GPIO_MODE_OUTPUT;
+  init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  init.Pull = LL_GPIO_PULL_NO;
+  init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
 
 #ifdef ENABLE_VREG_PIN
-  gpio_pin_init(&GPIO_InitStructure, VREG_PIN_1);
+  gpio_pin_init(&init, VREG_PIN_1);
   gpio_pin_set(VREG_PIN_1);
 #endif
 
 #if (LED_NUMBER > 0)
-  gpio_pin_init(&GPIO_InitStructure, LED1PIN);
+  gpio_pin_init(&init, LED1PIN);
+#endif
 #if (LED_NUMBER > 1)
-  gpio_pin_init(&GPIO_InitStructure, LED2PIN);
+  gpio_pin_init(&init, LED2PIN);
+#endif
 #if (LED_NUMBER > 2)
-  gpio_pin_init(&GPIO_InitStructure, LED3PIN);
+  gpio_pin_init(&init, LED3PIN);
+#endif
 #if (LED_NUMBER > 3)
-  gpio_pin_init(&GPIO_InitStructure, LED4PIN);
-#endif
-#endif
-#endif
+  gpio_pin_init(&init, LED4PIN);
 #endif
 
 #if (AUX_LED_NUMBER > 0)
-  gpio_pin_init(&GPIO_InitStructure, AUX_LED1PIN);
+  gpio_pin_init(&init, AUX_LED1PIN);
 #endif
 #if (AUX_LED_NUMBER > 1)
-  gpio_pin_init(&GPIO_InitStructure, AUX_LED2PIN);
+  gpio_pin_init(&init, AUX_LED2PIN);
 #endif
 
 #if defined(FPV_SWITCH) && defined(FPV_PIN)
   if (FPV_PIN == PIN_A13 || FPV_PIN == PIN_A14) {
     //skip repurpose of swd pin @boot
   } else {
-    gpio_pin_init(&GPIO_InitStructure, FPV_PIN);
+    gpio_pin_init(&init, FPV_PIN);
     gpio_pin_reset(FPV_PIN);
     fpv_init_done = 1;
   }
 #endif
-}
-
-void gpio_pin_init(GPIO_InitTypeDef *init, gpio_pins_t pin) {
-  init->GPIO_Pin = gpio_pin_defs[pin].pin;
-  GPIO_Init(gpio_pin_defs[pin].port, init);
-}
-
-void gpio_pin_init_af(GPIO_InitTypeDef *init, gpio_pins_t pin, uint32_t af) {
-  gpio_pin_init(init, pin);
-  GPIO_PinAFConfig(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin_source, af);
-}
-
-void gpio_pin_set(gpio_pins_t pin) {
-  GPIO_WriteBit(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin, Bit_SET);
-}
-
-void gpio_pin_reset(gpio_pins_t pin) {
-  GPIO_WriteBit(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin, Bit_RESET);
-}
-
-uint32_t gpio_pin_read(gpio_pins_t pin) {
-  return GPIO_ReadInputDataBit(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin);
 }
 
 // init fpv pin separately because it may use SWDAT/SWCLK don't want to enable it right away
@@ -80,14 +60,14 @@ int gpio_init_fpv(uint8_t mode) {
 #if defined(FPV_SWITCH) && defined(FPV_PIN)
   // only repurpose the pin after rx/tx have bound if it is swd
   // common settings to set ports
-  GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  LL_GPIO_InitTypeDef init;
+  init.Mode = LL_GPIO_MODE_OUTPUT;
+  init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  init.Pull = LL_GPIO_PULL_NO;
+  init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   if (mode == 1 && fpv_init_done == 0) {
     // set gpio pin as output no matter what
-    gpio_pin_init(&GPIO_InitStructure, FPV_PIN);
+    gpio_pin_init(&init, FPV_PIN);
     return 1;
   }
   if (mode == 1 && fpv_init_done == 1) {
@@ -95,6 +75,28 @@ int gpio_init_fpv(uint8_t mode) {
   }
 #endif
   return 0;
+}
+
+void gpio_pin_init(LL_GPIO_InitTypeDef *init, gpio_pins_t pin) {
+  init->Pin = gpio_pin_defs[pin].pin;
+  LL_GPIO_Init(gpio_pin_defs[pin].port, init);
+}
+
+void gpio_pin_init_af(LL_GPIO_InitTypeDef *init, gpio_pins_t pin, uint32_t af) {
+  init->Alternate = af;
+  gpio_pin_init(init, pin);
+}
+
+void gpio_pin_set(gpio_pins_t pin) {
+  LL_GPIO_SetOutputPin(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin);
+}
+
+void gpio_pin_reset(gpio_pins_t pin) {
+  LL_GPIO_ResetOutputPin(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin);
+}
+
+uint32_t gpio_pin_read(gpio_pins_t pin) {
+  return LL_GPIO_IsInputPinSet(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin);
 }
 
 #define GPIO_PIN(port_num, num) MAKE_PIN_DEF(port_num, num),

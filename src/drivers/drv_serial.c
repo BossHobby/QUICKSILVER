@@ -1,5 +1,8 @@
 #include "drv_serial.h"
 
+#include <stm32f4xx_ll_bus.h>
+#include <stm32f4xx_ll_usart.h>
+
 #include "profile.h"
 #include "project.h"
 #include "usb_configurator.h"
@@ -10,61 +13,72 @@ usart_ports_t serial_smart_audio_port = USART_PORT_INVALID;
 //FUNCTION TO SET APB CLOCK TO USART BASED ON GIVEN UART
 void serial_enable_rcc(usart_ports_t port) {
   switch (usart_port_defs[port].channel_index) {
+#ifdef USART1
   case 1:
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_USART1);
     break;
+#endif
+#ifdef USART2
   case 2:
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_USART2);
     break;
+#endif
+#ifdef USART3
   case 3:
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_USART3);
     break;
+#endif
+#ifdef UART4
   case 4:
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_UART4, ENABLE);
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_UART4);
     break;
+#endif
+#ifdef UART5
   case 5:
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_UART5, ENABLE);
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_UART5);
     break;
+#endif
+#ifdef USART6
   case 6:
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART6, ENABLE);
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_USART6);
     break;
+#endif
   }
 }
 
 void serial_enable_isr(usart_ports_t port) {
-  NVIC_InitTypeDef NVIC_InitStructure;
-
   switch (usart_port_defs[port].channel_index) {
-#ifdef F4
+#ifdef USART1
   case 1:
-    NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
-    break;
-  case 2:
-    NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
-    break;
-#ifdef F405
-  case 3:
-    NVIC_InitStructure.NVIC_IRQChannel = USART3_IRQn;
-    break;
-  case 4:
-    NVIC_InitStructure.NVIC_IRQChannel = UART4_IRQn;
-    break;
-  case 5:
-    NVIC_InitStructure.NVIC_IRQChannel = UART5_IRQn;
+    NVIC_EnableIRQ(USART1_IRQn);
     break;
 #endif
+#ifdef USART2
+  case 2:
+    NVIC_EnableIRQ(USART2_IRQn);
+    break;
+#endif
+#ifdef USART3
+  case 3:
+    NVIC_EnableIRQ(USART3_IRQn);
+    break;
+#endif
+#ifdef UART4
+  case 4:
+    NVIC_EnableIRQ(UART4_IRQn);
+    break;
+#endif
+#ifdef UART5
+  case 5:
+    NVIC_EnableIRQ(UART5_IRQn);
+    break;
+#endif
+#ifdef USART6
   case 6:
-    NVIC_InitStructure.NVIC_IRQChannel = USART6_IRQn;
+    NVIC_EnableIRQ(USART6_IRQn);
     break;
 #endif
   }
-
-#ifdef F4
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-#endif
-  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&NVIC_InitStructure);
 }
 
 #ifdef F4
@@ -72,8 +86,12 @@ void serial_enable_isr(usart_ports_t port) {
 #define USART4 UART4
 #define USART5 UART5
 
-#define GPIO_AF_USART4 GPIO_AF_UART4
-#define GPIO_AF_USART5 GPIO_AF_UART5
+#define GPIO_AF_USART1 GPIO_AF7_USART1
+#define GPIO_AF_USART2 GPIO_AF7_USART2
+#define GPIO_AF_USART3 GPIO_AF7_USART3
+#define GPIO_AF_USART4 GPIO_AF8_UART4
+#define GPIO_AF_USART5 GPIO_AF8_UART5
+#define GPIO_AF_USART6 GPIO_AF8_USART6
 
 #define USART_PORT(chan, rx, tx)      \
   {                                   \
@@ -84,7 +102,6 @@ void serial_enable_isr(usart_ports_t port) {
       .tx_pin = tx,                   \
   },
 #endif
-
 
 usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {
     {},
@@ -98,9 +115,9 @@ void handle_usart_isr(usart_ports_t channel) {
   extern void RX_USART_ISR(void);
   extern void TX_USART_ISR(void);
   if (serial_rx_port == channel) {
-    if (USART_GetITStatus(USART.channel, USART_IT_TC) == SET) {
+    if (LL_USART_IsEnabledIT_TC(USART.channel) && LL_USART_IsActiveFlag_TC(USART.channel)) {
+      LL_USART_ClearFlag_TC(USART.channel);
       TX_USART_ISR();
-      USART_ClearITPendingBit(USART.channel, USART_IT_TC);
     } else {
       RX_USART_ISR();
     }

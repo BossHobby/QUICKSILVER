@@ -2,6 +2,8 @@
 
 #include <stddef.h>
 
+#include <stm32f4xx_ll_usart.h>
+
 #include "drv_serial.h"
 #include "drv_serial_vtx.h"
 #include "drv_time.h"
@@ -50,33 +52,34 @@ extern volatile uint8_t vtx_frame_length;
 extern volatile uint8_t vtx_frame_offset;
 
 static void serial_smart_audio_reconfigure() {
-  USART_Cmd(USART.channel, DISABLE);
+  LL_USART_Disable(USART.channel);
 
-  GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  LL_GPIO_InitTypeDef GPIO_InitStructure;
+  GPIO_InitStructure.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStructure.Pull = LL_GPIO_PULL_DOWN;
+  GPIO_InitStructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   gpio_pin_init_af(&GPIO_InitStructure, USART.tx_pin, USART.gpio_af);
 
-  USART_InitTypeDef USART_InitStructure;
-  USART_InitStructure.USART_BaudRate = baud_rate;
-  USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-  USART_InitStructure.USART_StopBits = USART_StopBits_2;
-  USART_InitStructure.USART_Parity = USART_Parity_No;
-  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-  USART_InitStructure.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
-  USART_Init(USART.channel, &USART_InitStructure);
+  LL_USART_InitTypeDef USART_InitStructure;
+  USART_InitStructure.BaudRate = baud_rate;
+  USART_InitStructure.DataWidth = LL_USART_DATAWIDTH_8B;
+  USART_InitStructure.StopBits = LL_USART_STOPBITS_2;
+  USART_InitStructure.Parity = LL_USART_PARITY_NONE;
+  USART_InitStructure.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
+  USART_InitStructure.TransferDirection = LL_USART_DIRECTION_TX | LL_USART_DIRECTION_RX;
+  USART_InitStructure.OverSampling = LL_USART_OVERSAMPLING_16;
+  LL_USART_Init(USART.channel, &USART_InitStructure);
 
-  USART_ClearFlag(USART.channel, USART_FLAG_RXNE | USART_FLAG_TC | USART_FLAG_TXE);
-  USART_ClearITPendingBit(USART.channel, USART_IT_RXNE | USART_IT_TC | USART_IT_TXE);
+  LL_USART_ClearFlag_RXNE(USART.channel);
+  LL_USART_ClearFlag_TC(USART.channel);
 
-  USART_ITConfig(USART.channel, USART_IT_TXE, DISABLE);
-  USART_ITConfig(USART.channel, USART_IT_RXNE, DISABLE);
-  USART_ITConfig(USART.channel, USART_IT_TC, ENABLE);
+  LL_USART_DisableIT_TXE(USART.channel);
+  LL_USART_DisableIT_RXNE(USART.channel);
+  LL_USART_EnableIT_TC(USART.channel);
 
-  USART_HalfDuplexCmd(USART.channel, ENABLE);
-  USART_Cmd(USART.channel, ENABLE);
+  LL_USART_EnableHalfDuplex(USART.channel);
+  LL_USART_Enable(USART.channel);
 }
 
 static void smart_audio_auto_baud() {

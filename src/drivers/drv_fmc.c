@@ -3,6 +3,8 @@
 #include "defines.h"
 #include "project.h"
 
+#include <stm32f4xx_hal_flash.h>
+
 #ifdef F4
 /*
 Sector 0    0x08000000 - 0x08003FFF 16 Kbytes
@@ -24,25 +26,19 @@ Sector 11   0x080E0000 - 0x080FFFFF 128 Kbytes
 extern void failloop(int);
 
 void fmc_lock() {
-  FLASH_Lock();
+  HAL_FLASH_Lock();
 }
 
 void fmc_unlock() {
-  FLASH_Unlock();
+  HAL_FLASH_Unlock();
 }
 
 uint8_t fmc_erase() {
 #ifdef F4
-  FLASH_ClearFlag(FLASH_FLAG_PGSERR | FLASH_FLAG_PGPERR |
-                  FLASH_FLAG_PGAERR | FLASH_FLAG_WRPERR |
-                  FLASH_FLAG_OPERR | FLASH_FLAG_EOP); // clear error status
-  int result = FLASH_EraseSector(FLASH_Sector_3, VoltageRange_3);
+  // clear error status
+  __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR);
+  FLASH_Erase_Sector(FLASH_SECTOR_3, FLASH_VOLTAGE_RANGE_3);
 #endif
-
-  if (result != FLASH_COMPLETE) {
-    FLASH_Lock();
-    return 1; // error occured
-  }
   return 0;
 }
 
@@ -56,9 +52,9 @@ float fmc_read_float(unsigned long address) {
 }
 
 void fmc_write(uint32_t addr, uint32_t value) {
-  int result = FLASH_ProgramWord(FLASH_ADDR + (addr * 4), value);
-  if (result != FLASH_COMPLETE) {
-    FLASH_Lock();
+  HAL_StatusTypeDef result = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_ADDR + (addr * 4), value);
+  if (result != HAL_OK) {
+    fmc_lock();
     failloop(5);
   }
 }

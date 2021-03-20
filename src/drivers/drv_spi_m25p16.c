@@ -1,5 +1,7 @@
 #include "drv_spi_m25p16.h"
 
+#include <stm32f4xx_ll_spi.h>
+
 #include "drv_spi.h"
 #include "project.h"
 
@@ -28,25 +30,26 @@ void m25p16_init() {
 
   spi_enable_rcc(M25P16_SPI_PORT);
 
-  SPI_I2S_DeInit(SPI_PORT.channel);
-  SPI_InitTypeDef SPI_InitStructure;
-  SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-  SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
-  SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
-  SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
-  SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
-  SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
-  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
-  SPI_InitStructure.SPI_CRCPolynomial = 7;
-  SPI_Init(SPI_PORT.channel, &SPI_InitStructure);
-  SPI_Cmd(SPI_PORT.channel, ENABLE);
+  LL_SPI_DeInit(SPI_PORT.channel);
+  LL_SPI_InitTypeDef SPI_InitStructure;
+  SPI_InitStructure.TransferDirection = LL_SPI_FULL_DUPLEX;
+  SPI_InitStructure.Mode = LL_SPI_MODE_MASTER;
+  SPI_InitStructure.DataWidth = LL_SPI_DATAWIDTH_8BIT;
+  SPI_InitStructure.ClockPolarity = LL_SPI_POLARITY_LOW;
+  SPI_InitStructure.ClockPhase = LL_SPI_PHASE_1EDGE;
+  SPI_InitStructure.NSS = LL_SPI_NSS_SOFT;
+  SPI_InitStructure.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV2;
+  SPI_InitStructure.BitOrder = LL_SPI_MSB_FIRST;
+  SPI_InitStructure.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
+  SPI_InitStructure.CRCPoly = 7;
+  LL_SPI_Init(SPI_PORT.channel, &SPI_InitStructure);
+  LL_SPI_Enable(SPI_PORT.channel);
 
   // Dummy read to clear receive buffer
-  while (SPI_I2S_GetFlagStatus(SPI_PORT.channel, SPI_I2S_FLAG_TXE) == RESET)
+  while (LL_SPI_IsActiveFlag_TXE(SPI_PORT.channel) == RESET)
     ;
 
-  SPI_I2S_ReceiveData(SPI_PORT.channel);
+  LL_SPI_ReceiveData8(SPI_PORT.channel);
 }
 
 uint8_t m25p16_command(const uint8_t cmd) {

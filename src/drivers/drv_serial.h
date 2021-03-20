@@ -3,10 +3,6 @@
 #include "defines.h"
 #include "drv_gpio.h"
 
-#ifdef F4
-#include "stm32f4xx_usart.h"
-#endif
-
 typedef enum {
   RX_SERIAL_PROTOCOL_INVALID,
   RX_SERIAL_PROTOCOL_DSM,

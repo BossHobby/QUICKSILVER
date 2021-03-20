@@ -2,9 +2,8 @@ Import("env")
 
 exclude = [
   "startup_stm32f40xx.S",
+  "startup_stm32f411xe.S",
   "system_stm32f4xx.c",
-  "stm32f4xx_fmc.c",
-  "stm32f4xx_fsmc.c"
 ]
 
 def replace_system(node):
@@ -16,15 +15,12 @@ def replace_system(node):
 
 env.AddBuildMiddleware(
   replace_system,
-  "*/framework-spl/*"
+  "*/framework-stm32cubef4/*"
 )
 
 optimze_flags = [s for s in env.GetProjectOption("system_flags", "").splitlines() if s]
 
-linker_flags = [
-  "--specs=nano.specs",
-  "--specs=nosys.specs",
-]
+linker_flags = []
 
 common_flags = [
   "-Wdouble-promotion",
@@ -47,7 +43,7 @@ else:
   common_flags.append("-O1")
 
 env.Append(
-  BUILD_FLAGS=["-lnosys", "-std=gnu11"],
+  BUILD_FLAGS=["-std=gnu11"],
   BUILD_UNFLAGS=["-Og", "-Os"],
   ASFLAGS=optimze_flags + common_flags,
   CCFLAGS=linker_flags + optimze_flags + common_flags,

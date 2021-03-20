@@ -17,10 +17,10 @@
 #endif
 
 int gpio_init_buzzer(void) {
-  GPIO_InitTypeDef gpio_init;
-  gpio_init.GPIO_Mode = GPIO_Mode_OUT;
-  gpio_init.GPIO_OType = GPIO_OType_PP;
-  gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  gpio_init.Pull = LL_GPIO_PULL_NO;
   gpio_pin_init(&gpio_init, BUZZER_PIN);
 
   return 1;

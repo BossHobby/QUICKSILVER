@@ -30,62 +30,62 @@ uint32_t softserial_micros_per_bit = (uint32_t)(1000000 / 9600);
 uint32_t softserial_micros_per_bit_half = (uint32_t)(1000000 / 9600) * .5;
 uint32_t esc_micros_per_bit = (uint32_t)(1000000 / 19200);
 
-#ifdef F4
-#define SET_TX_HIGH(data) data->tx_port->BSRRL = data->tx_pin
-#define SET_RX_HIGH(data) data->rx_port->BSRRL = data->rx_pin
-#define SET_TX_LOW(data) data->tx_port->BSRRH = data->tx_pin
-#endif
+#define SET_LED1_ON gpio_pin_set(LED1PIN);
+#define SET_LED1_OFF gpio_pin_reset(LED1PIN);
 
-#define SET_LED1_ON gpio_pin_set(LED1PIN)
-#define SET_LED1_OFF gpio_pin_reset(LED1PIN)
+#define SET_LED2_ON gpio_pin_set(LED2PIN);
+#define SET_LED2_OFF gpio_pin_reset(LED2PIN);
 
-#define SET_LED2_ON gpio_pin_set(LED2PIN)
-#define SET_LED2_OFF gpio_pin_reset(LED2PIN)
+#define SET_TX_HIGH(data) gpio_pin_set(data->tx_pin)
+#define SET_RX_HIGH(data) gpio_pin_set(data->rx_pin)
+#define SET_TX_LOW(data) gpio_pin_reset(data->tx_pin)
+#define IS_RX_HIGH(data) gpio_pin_read(data->rx_pin)
 
 #define START_BIT(data) SET_TX_LOW(data)
 #define STOP_BIT(data) SET_TX_HIGH(data)
-#define IS_RX_HIGH(data) (data->rx_port->IDR & data->rx_pin)
 
 static SoftSerialData_t globalSerialData = {0};
 
 static int softserial_is_1wire(const SoftSerialData_t *data) {
-  return data->tx_port == data->rx_port && data->tx_pin == data->rx_pin;
+  return data->tx_pin == data->rx_pin;
 }
 
 static void softserial_init_rx(const SoftSerialData_t *data) {
-  if (0 != data->rx_port) {
-    GPIO_InitTypeDef gpio_init = {0};
-    gpio_init.GPIO_Mode = GPIO_Mode_IN;
-    gpio_init.GPIO_Pin = data->rx_pin;
-    gpio_init.GPIO_OType = GPIO_OType_OD;
-    gpio_init.GPIO_PuPd = GPIO_PuPd_UP;
-    gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_Init(data->rx_port, &gpio_init);
-    SET_RX_HIGH(data);
+  if (data->rx_pin == GPIO_PIN_INVALID) {
+    return;
   }
+
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_INPUT;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
+  gpio_init.Pull = LL_GPIO_PULL_UP;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  gpio_pin_init(&gpio_init, data->rx_pin);
+
+  SET_RX_HIGH(data);
 }
 static void softserial_init_tx(const SoftSerialData_t *data) {
-  if (0 != data->tx_port) {
-    GPIO_InitTypeDef gpio_init = {0};
-    gpio_init.GPIO_Mode = GPIO_Mode_OUT;
-    gpio_init.GPIO_Pin = data->tx_pin;
-    gpio_init.GPIO_OType = GPIO_OType_PP;
-    gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_Init(data->tx_port, &gpio_init);
-    SET_TX_HIGH(data);
+  if (data->tx_pin == GPIO_PIN_INVALID) {
+    return;
   }
+
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  gpio_init.Pull = LL_GPIO_PULL_NO;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  gpio_pin_init(&gpio_init, data->tx_pin);
+
+  SET_TX_HIGH(data);
 }
 
-SoftSerialData_t softserial_init(GPIO_TypeDef *tx_port, uint16_t tx_pin, GPIO_TypeDef *rx_port, uint16_t rx_pin, uint32_t baudrate) {
-  if (0 == tx_port && 0 == rx_port) {
+SoftSerialData_t softserial_init(gpio_pins_t tx_pin, gpio_pins_t rx_pin, uint32_t baudrate) {
+  if (tx_pin == GPIO_PIN_INVALID && rx_pin == GPIO_PIN_INVALID) {
     SoftSerialData_t data = {0};
     return data;
   }
 
-  globalSerialData.tx_port = tx_port;
   globalSerialData.tx_pin = tx_pin;
-  globalSerialData.rx_port = rx_port;
   globalSerialData.rx_pin = rx_pin;
 
   softserial_init_tx(&globalSerialData);

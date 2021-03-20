@@ -1,5 +1,7 @@
 #include "drv_spi_cc2500.h"
 
+#include <stm32f4xx_ll_spi.h>
+
 #include "drv_spi.h"
 #include "drv_time.h"
 #include "project.h"
@@ -15,11 +17,11 @@ uint8_t cc2500_read_gdo0() {
 static void cc2500_hardware_init() {
   spi_init_pins(CC2500_SPI_PORT, CC2500_NSS);
 
-  GPIO_InitTypeDef gpio_init;
-  gpio_init.GPIO_Mode = GPIO_Mode_OUT;
-  gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
-  gpio_init.GPIO_OType = GPIO_OType_PP;
-  gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  gpio_init.Pull = LL_GPIO_PULL_NO;
 
 #if defined(USE_CC2500_PA_LNA)
   // turn antenna on
@@ -41,32 +43,33 @@ static void cc2500_hardware_init() {
 #endif // USE_CC2500_PA_LNA
 
   // GDO0
-  gpio_init.GPIO_Mode = GPIO_Mode_IN;
-  gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
-  gpio_init.GPIO_OType = GPIO_OType_OD;
-  gpio_init.GPIO_PuPd = GPIO_PuPd_DOWN;
+  gpio_init.Mode = LL_GPIO_MODE_INPUT;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
+  gpio_init.Pull = LL_GPIO_PULL_DOWN;
   gpio_pin_init(&gpio_init, CC2500_GDO0_PIN);
 
   spi_enable_rcc(CC2500_SPI_PORT);
 
-  SPI_I2S_DeInit(PORT.channel);
-  SPI_InitTypeDef SPI_InitStructure;
-  SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-  SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
-  SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
-  SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
-  SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
-  SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
-  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
-  SPI_InitStructure.SPI_CRCPolynomial = 7;
-  SPI_Init(PORT.channel, &SPI_InitStructure);
-  SPI_Cmd(PORT.channel, ENABLE);
+  LL_SPI_DeInit(PORT.channel);
+  LL_SPI_InitTypeDef SPI_InitStructure;
+  SPI_InitStructure.TransferDirection = LL_SPI_FULL_DUPLEX;
+  SPI_InitStructure.Mode = LL_SPI_MODE_MASTER;
+  SPI_InitStructure.DataWidth = LL_SPI_DATAWIDTH_8BIT;
+  SPI_InitStructure.ClockPolarity = LL_SPI_POLARITY_LOW;
+  SPI_InitStructure.ClockPhase = LL_SPI_PHASE_1EDGE;
+  SPI_InitStructure.NSS = LL_SPI_NSS_SOFT;
+  SPI_InitStructure.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV4;
+  SPI_InitStructure.BitOrder = LL_SPI_MSB_FIRST;
+  SPI_InitStructure.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
+  SPI_InitStructure.CRCPoly = 7;
+  LL_SPI_Init(PORT.channel, &SPI_InitStructure);
+  LL_SPI_Enable(PORT.channel);
 
   // Dummy read to clear receive buffer
-  while (SPI_I2S_GetFlagStatus(PORT.channel, SPI_I2S_FLAG_TXE) == RESET)
+  while (LL_SPI_IsActiveFlag_TXE(PORT.channel) == RESET)
     ;
-  SPI_I2S_ReceiveData(PORT.channel);
+  LL_SPI_ReceiveData8(PORT.channel);
 
   spi_dma_init(CC2500_SPI_PORT);
 }

@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include <stm32f4xx_ll_usart.h>
+
 #include "control.h"
 #include "drv_serial.h"
 #include "drv_time.h"
@@ -407,11 +409,11 @@ void rx_serial_send_fport_telemetry() {
     teleCRC = teleCRC >> 8;
     telemetry_packet[9 + telemetry_offset] = teleCRC; //0x34;
     //Shove the packet out the UART. This *should* support escaped characters, but it doesn't work.
-    while (USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET) //just in case - but this should do nothing if ready_for_next_telemetry flag is properly cleared by irq
+    while (LL_USART_IsActiveFlag_TXE(USART.channel) == RESET) //just in case - but this should do nothing if ready_for_next_telemetry flag is properly cleared by irq
       ;
-    USART_SendData(USART.channel, telemetry_packet[0]);
+    LL_USART_TransmitData8(USART.channel, telemetry_packet[0]);
     ready_for_next_telemetry = 0;
-    USART_ITConfig(USART.channel, USART_IT_TC, ENABLE); //turn on the transmit transfer complete interrupt so that the rest of the telemetry packet gets sent
+    LL_USART_EnableIT_TC(USART.channel); //turn on the transmit transfer complete interrupt so that the rest of the telemetry packet gets sent
     //That's it, telemetry has sent the first byte - the rest will be sent by the telemetry tx irq
     telemetry_position++;
     if (fport_debug_telemetry) {

@@ -8,31 +8,16 @@
 
 #include <stdarg.h>
 #include <stdio.h>
-
-#include "stm32f4xx.h"
-#include "string.h"
-#include "usb_conf.h"
-#include "usbd_cdc_core.h"
-#include "usbd_cdc_vcp.h"
-#include "usbd_desc.h"
-#include "usbd_usr.h"
-
-__ALIGN_BEGIN USB_OTG_CORE_HANDLE USB_OTG_dev __ALIGN_END;
+#include <string.h>
 
 void usb_init(void) {
-  USBD_Init(&USB_OTG_dev,
-            USB_OTG_FS_CORE_ID,
-            &USR_desc,
-            &USBD_CDC_cb,
-            &USR_cb);
 
 #ifdef USB_DETECT_PIN
-  GPIO_InitTypeDef gpio_init;
-  gpio_init.GPIO_Pin = USB_DETECT_PIN;
-  gpio_init.GPIO_Mode = GPIO_Mode_IN;
-  gpio_init.GPIO_OType = GPIO_OType_OD;
-  gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
-  gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_INPUT;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  gpio_init.Pull = LL_GPIO_PULL_NO;
   gpio_pin_init(&gpio_init, USB_DETECT_PIN);
 #endif
 }
@@ -46,11 +31,6 @@ uint8_t usb_detect(void) {
   }
 #endif
 
-  if (bDeviceState != CONFIGURED) {
-    // only read if we are configured
-    return 0;
-  }
-
   return 1;
 }
 
@@ -58,10 +38,8 @@ uint32_t usb_serial_read(uint8_t *data, uint32_t len) {
   if (data == NULL || len == 0) {
     return 0;
   }
-  if (bDeviceState != CONFIGURED || CDC_Receive_BytesAvailable() == 0) {
-    return 0;
-  }
-  return CDC_Receive_DATA(data, len);
+  // TODO
+  return 0;
 }
 
 uint8_t usb_serial_read_byte(void) {
@@ -77,11 +55,7 @@ void usb_serial_write(uint8_t *data, uint32_t len) {
   if (data == NULL || len == 0) {
     return;
   }
-  if (bDeviceState != CONFIGURED) {
-    return;
-  }
-
-  CDC_Send_DATA(data, len);
+  // TODO
 }
 
 void usb_serial_print(char *str) {
@@ -89,10 +63,6 @@ void usb_serial_print(char *str) {
 }
 
 void usb_serial_printf(const char *fmt, ...) {
-  if (bDeviceState != CONFIGURED) {
-    return;
-  }
-
   const size_t size = strlen(fmt) + 128;
   char str[size];
 
