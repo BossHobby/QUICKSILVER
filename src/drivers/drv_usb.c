@@ -1,6 +1,7 @@
 #include "drv_usb.h"
 
 #include "defines.h"
+#include "drv_gpio.h"
 #include "drv_time.h"
 
 #ifdef F4
@@ -26,20 +27,19 @@ void usb_init(void) {
             &USR_cb);
 
 #ifdef USB_DETECT_PIN
-  //RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-  GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.GPIO_Pin = USB_DETECT_PIN;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(USB_DETECT_PORT, &GPIO_InitStructure);
+  GPIO_InitTypeDef gpio_init;
+  gpio_init.GPIO_Pin = USB_DETECT_PIN;
+  gpio_init.GPIO_Mode = GPIO_Mode_IN;
+  gpio_init.GPIO_OType = GPIO_OType_OD;
+  gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
+  gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  gpio_pin_init(&gpio_init, USB_DETECT_PIN);
 #endif
 }
 
 uint8_t usb_detect(void) {
 #ifdef USB_DETECT_PIN
-  const uint8_t usb_connect = GPIO_ReadInputDataBit(USB_DETECT_PORT, USB_DETECT_PIN);
+  const uint8_t usb_connect = gpio_pin_read(USB_DETECT_PIN);
   if (usb_connect != 1) {
     // no usb connetion, bail
     return 0;
