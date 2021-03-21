@@ -5,7 +5,7 @@ name: default
 
 steps:
   - name: build
-    image: hanfer/docker-gcc-arm-none-eabi:latest
+    image: suculent/platformio-docker-build
     commands:
       - bash script/build-tester.sh
   - name: publish
