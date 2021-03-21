@@ -1,5 +1,3 @@
-import os
-
 Import("env")
 
 exclude = [
@@ -21,20 +19,37 @@ env.AddBuildMiddleware(
   "*/framework-spl/*"
 )
 
+optimze_flags = [s for s in env.GetProjectOption("system_flags", "").splitlines() if s]
 
-git_version = "unknown"
+linker_flags = [
+  "--specs=nano.specs",
+  "--specs=nosys.specs",
+]
 
-if 'DRONE_COMMIT' in os.environ:
-  git_version = os.environ.get('DRONE_COMMIT')
+common_flags = [
+  "-Wdouble-promotion",
+  "-fsingle-precision-constant",
+  "-fno-exceptions",
+  "-fno-strict-aliasing",
+	"-fstack-usage",
+	"-fno-stack-protector",
+  "-fomit-frame-pointer",
+	"-fno-unwind-tables",
+  "-fno-asynchronous-unwind-tables",
+	"-fno-math-errno",
+  "-fmerge-all-constants"
+]
+
+if env.GetBuildType() == "release":
+  common_flags.append("-s")
+  common_flags.append("-O3")
 else:
-  try:
-    with open('.git/refs/heads/master' 'r') as file:
-      git_version = file.read()
-  except FileNotFoundError:
-    pass
+  common_flags.append("-O1")
 
-env.Append(CPPDEFINES=[
-  ("TARGET", env["PIOENV"]),
-  ("GIT_VERSION", git_version)
-])
-
+env.Append(
+  BUILD_FLAGS=["-lnosys", "-std=gnu11"],
+  BUILD_UNFLAGS=["-Og", "-Os"],
+  ASFLAGS=optimze_flags + common_flags,
+  CCFLAGS=linker_flags + optimze_flags + common_flags,
+  LINKFLAGS=linker_flags + optimze_flags + common_flags
+)
