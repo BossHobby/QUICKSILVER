@@ -37,3 +37,4 @@ env.Append(CPPDEFINES=[
   ("TARGET", env["PIOENV"]),
   ("GIT_VERSION", git_version)
 ])
+

@@ -1,4 +1,6 @@
 #! /bin/bash
+set -e
+
 MODE="release"
 DEFINES=(
   "BRUSHLESS_TARGET"
@@ -20,12 +22,10 @@ DEFINES=(
 OUTPUT_FOLDER="output"
 SCRIPT_FOLDER="$(dirname "$0")"
 SOURCE_FOLDER="$SCRIPT_FOLDER/.."
-BUILD_FOLDER="$SOURCE_FOLDER/build"
+BUILD_FOLDER="$SOURCE_FOLDER/.pio/build"
 
 CONFIG_FILE="$SOURCE_FOLDER/src/main/config/config.h"
 TARGETS_FILE="$SCRIPT_FOLDER/targets.json"
-
-VERSION=$(git -C $SOURCE_FOLDER describe --always --long)
 
 function resetConfig() {
   for DEFINE in "${DEFINES[@]}"; do
@@ -64,8 +64,8 @@ for target in $(jq -r '.[] | @base64' $TARGETS_FILE); do
     resetConfig
     setConfig "$(config_get '.defines | to_entries[] | @base64')"
 
-    if make -j32 -C "$SOURCE_FOLDER" MODE="$MODE" $TARGET_NAME; then 
-      cp "$BUILD_FOLDER/$MODE/quicksilver.$TARGET_NAME.$MODE.hex" "$OUTPUT_FOLDER/$BUILD_NAME.hex"
+    if pio run -e $TARGET_NAME; then 
+      cp "$BUILD_FOLDER/$TARGET_NAME/firmware.hex" "$OUTPUT_FOLDER/$BUILD_NAME.hex"
       echo -e "\e[32mSuccessfully\e[39m built target $BUILD_NAME"
     else
       echo -e "\e[31mError\e[39m building target $BUILD_NAME"
