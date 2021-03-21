@@ -9,6 +9,7 @@ compile_commands.json
 .vscode
 *.xml
 !language.settings.xml
+!extensions.json
 
 *.elf
 *.elf.launch
