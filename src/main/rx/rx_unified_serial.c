@@ -17,14 +17,14 @@
 #ifdef RX_UNIFIED_SERIAL
 
 //This is the microsecond threshold for triggering a new frame to re-index to position 0 in the ISR
-#define RX_FRAME_INTERVAL_TRIGGER_TICKS (1500 * (TICK_CLOCK_FREQ_HZ / 1000000))
+#define RX_FRAME_INTERVAL_TRIGGER_TICKS (1500 * (SYS_CLOCK_FREQ_HZ / 1000000L))
 
 uint8_t rx_buffer[RX_BUFF_SIZE];
 uint8_t rx_data[RX_BUFF_SIZE]; //A place to put the RX frame so nothing can get overwritten during processing.  //reduce size?
-uint8_t rx_frame_position = 0;
-uint8_t expected_frame_length = 10;
 
-frame_status_t frame_status = FRAME_INVALID;
+volatile uint8_t rx_frame_position = 0;
+volatile uint8_t expected_frame_length = 10;
+volatile frame_status_t frame_status = FRAME_INVALID;
 
 uint16_t link_quality_raw;
 uint8_t stat_frames_second;
@@ -49,12 +49,20 @@ extern profile_t profile;
 
 #define USART usart_port_defs[serial_rx_port]
 
-void TX_USART_ISR(void) {                       //USART_ClearITPendingBit() for TC handled in drv_serial.c
-  static uint8_t increment_transmit_buffer = 1; // buffer position 0 has already been called by the telemetry process so we start at 1
-  uint8_t bytes_to_send = 0;                    // reset this to 0 so that a protocol switch will not create a tx isr that does stuff without need
-  if (bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_FPORT || bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
-    bytes_to_send = 10 + telemetry_offset; //upload total telemetry bytes to send so telemetry transmit triggers action appropriate to protocol
+void TX_USART_ISR(void) {
+  //USART_ClearITPendingBit() for TC handled in drv_serial.c
+
+  // buffer position 0 has already been called by the telemetry process so we start at 1
+  static uint8_t increment_transmit_buffer = 1;
+
+  // reset this to 0 so that a protocol switch will not create a tx isr that does stuff without need
+  uint8_t bytes_to_send = 0;
+  if (bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_FPORT ||
+      bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED) {
+    //upload total telemetry bytes to send so telemetry transmit triggers action appropriate to protocol
+    bytes_to_send = 10 + telemetry_offset;
   }
+
   if (increment_transmit_buffer < bytes_to_send) {                      // check the index to see if we have drained the buffer yet
     while (USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET) // just in case - but this should do nothing since irq was called based on TXE
       ;
@@ -68,17 +76,21 @@ void TX_USART_ISR(void) {                       //USART_ClearITPendingBit() for 
 }
 
 void RX_USART_ISR(void) {
-  uint32_t rx_byte_interval = 0;
-  uint32_t maxticks = SysTick->LOAD;
-  uint32_t ticks = SysTick->VAL;
+  volatile uint32_t ticks = DWT->CYCCNT;
+  static volatile uint32_t last_ticks = 0;
 
-  static uint32_t lastticks;
-  if (ticks < lastticks)
-    rx_byte_interval = lastticks - ticks;
-  else { // overflow ( underflow really)
-    rx_byte_interval = lastticks + (maxticks - ticks);
+  volatile uint32_t rx_byte_interval = 0;
+  if (ticks >= last_ticks) {
+    rx_byte_interval = ticks - last_ticks;
+  } else {
+    rx_byte_interval = (UINT32_MAX + ticks) - last_ticks;
   }
-  lastticks = ticks;
+  last_ticks = ticks;
+
+  if ((rx_byte_interval > RX_FRAME_INTERVAL_TRIGGER_TICKS) || frame_status == FRAME_DONE) {
+    rx_frame_position = 0;
+    frame_status = FRAME_IDLE;
+  }
 
   if (USART_GetFlagStatus(USART.channel, USART_FLAG_ORE)) {
     // overflow means something was lost
@@ -86,17 +98,16 @@ void RX_USART_ISR(void) {
     rx_frame_position = 0;
   }
 
-  if (rx_byte_interval > RX_FRAME_INTERVAL_TRIGGER_TICKS || frame_status == FRAME_DONE) {
-    rx_frame_position = 0;
-    frame_status = FRAME_IDLE;
-  }
+  if (USART_GetITStatus(USART.channel, USART_IT_RXNE)) {
+    USART_ClearITPendingBit(USART.channel, USART_IT_RXNE);
 
-  rx_buffer[rx_frame_position++] = USART_ReceiveData(USART.channel);
-  if (rx_frame_position >= expected_frame_length && frame_status == FRAME_IDLE) {
-    frame_status = FRAME_RX;
-  }
+    rx_buffer[rx_frame_position++] = USART_ReceiveData(USART.channel);
+    if (rx_frame_position >= expected_frame_length && frame_status == FRAME_IDLE) {
+      frame_status = FRAME_RX;
+    }
 
-  rx_frame_position %= (RX_BUFF_SIZE);
+    rx_frame_position %= (RX_BUFF_SIZE);
+  }
 }
 
 void rx_lqi_lost_packet() {
