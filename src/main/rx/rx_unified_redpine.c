@@ -9,6 +9,7 @@
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "profile.h"
+#include "usb_configurator.h"
 #include "util.h"
 
 #define REDPINE_CHANNEL_START 3
@@ -55,6 +56,9 @@ uint16_t redpine_crc16(uint8_t *data, uint16_t len) {
 }
 
 void rx_serial_process_redpine() {
+  if (rx_frame_position != 11) {
+    quic_debugf("REDPINE: unexpected frame length %d vs %d", rx_frame_position, expected_frame_length);
+  }
 
   for (uint8_t i = 0; i < 11; i++) {
     rx_data[i] = rx_buffer[i % RX_BUFF_SIZE];
@@ -65,6 +69,7 @@ void rx_serial_process_redpine() {
 
   if (crc_our != crc_theirs) {
     // invalid crc, bail
+    quic_debugf("REDPINE: invalid crc");
     frame_status = FRAME_IDLE;
     return;
   }
