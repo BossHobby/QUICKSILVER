@@ -129,39 +129,10 @@ uint8_t crsf_crc8(uint8_t *data, uint16_t len) {
   return crc;
 }
 
-void rx_serial_process_crsf() {
-
-  if (expected_frame_length == 3) {
-    //got the header
-    memcpy(rx_data, rx_buffer, 3);
-
-    if (rx_data[0] != 0xC8 || rx_data[1] > 64) {
-      quic_debugf("CRSF: invalid header");
-      frame_status = FRAME_IDLE;
-      return;
-    }
-
-    // set real frame length
-    expected_frame_length = rx_data[1] + 2;
-    return;
-  } else if (rx_frame_position < expected_frame_length) {
-    return;
-  }
-
-  // copy rest of the data
-  memcpy(rx_data, rx_buffer, expected_frame_length);
-
-  const uint8_t crc_ours = crsf_crc8(&rx_data[2], expected_frame_length - 3);
-  const uint8_t crc_theirs = rx_data[expected_frame_length - 1];
-
-  if (crc_ours != crc_theirs) {
-    // invalid crc, bail
-    quic_debugf("CRSF: invalid crc, bail");
-    frame_status = FRAME_IDLE;
-    return;
-  }
-
+static void rx_serial_crsf_process_frame() {
   rx_lqi_update_fps(0);
+
+  quic_debugf("CRSF: packet type 0x%x", rx_data[2]);
 
   switch (rx_data[2]) {
   case CRSF_FRAMETYPE_RC_CHANNELS_PACKED: {
@@ -213,16 +184,30 @@ void rx_serial_process_crsf() {
 
   case CRSF_FRAMETYPE_LINK_STATISTICS: {
     const crsf_stats_t *stats = (crsf_stats_t *)&rx_data[3];
+
+    static uint8_t debug_counter = 0;
+    if (debug_counter % 10 == 0) {
+      quic_debugf("CRSF: uplink_rssi_2: %d", stats->uplink_rssi_2);
+      quic_debugf("CRSF: uplink_rssi_1: %d", stats->uplink_rssi_1);
+      quic_debugf("CRSF: uplink_link_quality: %d", stats->uplink_link_quality);
+      quic_debugf("CRSF: uplink_snr: %d", stats->uplink_snr);
+      quic_debugf("CRSF: active_antenna: %d", stats->active_antenna);
+      quic_debugf("CRSF: rf_mode: %d", stats->rf_mode);
+      quic_debugf("CRSF: uplink_tx_power: %d", stats->uplink_tx_power);
+      quic_debugf("CRSF: downlink_rssi: %d", stats->downlink_rssi);
+      quic_debugf("CRSF: downlink_link_quality: %d", stats->downlink_link_quality);
+      quic_debugf("CRSF: downlink_snr: %d", stats->downlink_snr);
+    }
+    debug_counter++;
+
     rx_lqi_update_rssi_direct(stats->uplink_link_quality);
     break;
   }
 
   default:
-    // ? handle ?
+    quic_debugf("CRSF: unhandled packet type 0x%x", rx_data[2]);
     break;
   }
-
-  frame_status = FRAME_TX; //We're done with this frame now.
 
   bind_safety++;
   if (bind_safety > 131) {        //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
@@ -231,6 +216,61 @@ void rx_serial_process_crsf() {
     bind_safety = 131;            // reset counter so it doesnt wrap
   } else {
     flags.rx_mode = RXMODE_BIND; // this is rapid flash during bind safety
+  }
+}
+
+void rx_serial_process_crsf() {
+  static int32_t rx_buffer_offset = 0;
+
+  if ((rx_frame_position - rx_buffer_offset) < 3) {
+    // not enough data
+    frame_status = FRAME_IDLE;
+    return;
+  }
+
+  // copy the header
+  memcpy(rx_data, rx_buffer + rx_buffer_offset, 3);
+
+  if (rx_data[0] != 0xC8 || rx_data[1] > 64) {
+    quic_debugf("CRSF: invalid header");
+    frame_status = FRAME_IDLE;
+    rx_buffer_offset = 0;
+    return;
+  }
+
+  // set real frame length
+  expected_frame_length = rx_buffer_offset + rx_data[1] + 2;
+
+  if ((rx_frame_position - rx_buffer_offset) < expected_frame_length) {
+    frame_status = FRAME_IDLE;
+    return;
+  }
+
+  // copy rest of the data
+  memcpy(rx_data, rx_buffer + rx_buffer_offset, expected_frame_length);
+
+  const uint8_t crc_ours = crsf_crc8(&rx_data[2], expected_frame_length - 3);
+  const uint8_t crc_theirs = rx_data[expected_frame_length - 1];
+  if (crc_ours != crc_theirs) {
+    // invalid crc, bail
+    quic_debugf("CRSF: invalid crc, bail");
+    frame_status = FRAME_IDLE;
+    rx_buffer_offset = 0;
+    return;
+  }
+
+  // we got a valid frame, update offset to potentially read another frame
+  rx_buffer_offset = expected_frame_length;
+  rx_serial_crsf_process_frame();
+
+  if ((rx_frame_position - rx_buffer_offset) > 0) {
+    // we got some data left. maybe another frame?
+    expected_frame_length = rx_buffer_offset + 3;
+    frame_status = FRAME_IDLE;
+  } else {
+    //We're done with this frame now.
+    frame_status = FRAME_TX;
+    rx_buffer_offset = 0;
   }
 }
 
