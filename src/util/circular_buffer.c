@@ -20,6 +20,19 @@ uint8_t circular_buffer_write(volatile circular_buffer_t *c, uint8_t data) {
   return 1;
 }
 
+uint32_t circular_buffer_write_multi(volatile circular_buffer_t *c, const uint8_t *data, const uint32_t len) {
+  for (uint32_t i = 0; i < len; i++) {
+    uint32_t next = (c->head + 1) % c->size;
+
+    if (next == c->tail)
+      return i;
+
+    c->buffer[c->head] = data[i];
+    c->head = next;
+  }
+  return len;
+}
+
 uint32_t circular_buffer_available(volatile circular_buffer_t *c) {
   if (c->head >= c->tail) {
     return c->head - c->tail;
@@ -38,6 +51,18 @@ uint8_t circular_buffer_read(volatile circular_buffer_t *c, uint8_t *data) {
   *data = c->buffer[c->tail];
   c->tail = next;
   return 1;
+}
+
+uint32_t circular_buffer_read_multi(volatile circular_buffer_t *c, uint8_t *data, const uint32_t len) {
+  for (uint32_t i = 0; i < len; i++) {
+    if (c->head == c->tail)
+      return i;
+
+    uint32_t next = (c->tail + 1) % c->size;
+    data[i] = c->buffer[c->tail];
+    c->tail = next;
+  }
+  return len;
 }
 
 void circular_buffer_clear(volatile circular_buffer_t *c) {
