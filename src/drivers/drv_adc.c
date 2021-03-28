@@ -47,7 +47,7 @@ void adc_init(void) {
 
   LL_ADC_CommonInitTypeDef adc_common_init;
   adc_common_init.CommonClock = LL_ADC_CLOCK_SYNC_PCLK_DIV2;
-  LL_ADC_CommonInit(ADC1_COMMON, &adc_common_init);
+  LL_ADC_CommonInit(ADC, &adc_common_init);
 
   LL_ADC_REG_InitTypeDef adc_reg_init;
   adc_reg_init.TriggerSource = LL_ADC_REG_TRIG_SOFTWARE;
@@ -63,7 +63,7 @@ void adc_init(void) {
   adc_init.SequencersScanMode = LL_ADC_SEQ_SCAN_DISABLE;
   LL_ADC_Init(ADC1, &adc_init);
 
-  LL_ADC_SetCommonPathInternalCh(ADC1_COMMON, LL_ADC_PATH_INTERNAL_VREFINT);
+  LL_ADC_SetCommonPathInternalCh(ADC, LL_ADC_PATH_INTERNAL_VREFINT);
   LL_ADC_Enable(ADC1);
 
   LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_VREFINT);
