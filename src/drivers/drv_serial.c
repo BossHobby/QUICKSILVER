@@ -47,34 +47,42 @@ void serial_enable_rcc(usart_ports_t port) {
 }
 
 void serial_enable_isr(usart_ports_t port) {
+  NVIC_SetPriorityGrouping(2);
+
   switch (usart_port_defs[port].channel_index) {
 #ifdef USART1
   case 1:
+    NVIC_SetPriority(USART1_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 0));
     NVIC_EnableIRQ(USART1_IRQn);
     break;
 #endif
 #ifdef USART2
   case 2:
+    NVIC_SetPriority(USART2_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 0));
     NVIC_EnableIRQ(USART2_IRQn);
     break;
 #endif
 #ifdef USART3
   case 3:
+    NVIC_SetPriority(USART3_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 0));
     NVIC_EnableIRQ(USART3_IRQn);
     break;
 #endif
 #ifdef UART4
   case 4:
+    NVIC_SetPriority(UART4_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 0));
     NVIC_EnableIRQ(UART4_IRQn);
     break;
 #endif
 #ifdef UART5
   case 5:
+    NVIC_SetPriority(UART5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 0));
     NVIC_EnableIRQ(UART5_IRQn);
     break;
 #endif
 #ifdef USART6
   case 6:
+    NVIC_SetPriority(USART6_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 0));
     NVIC_EnableIRQ(USART6_IRQn);
     break;
 #endif

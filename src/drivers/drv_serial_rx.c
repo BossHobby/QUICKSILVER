@@ -250,9 +250,12 @@ void serial_rx_init(rx_serial_protocol_t proto) {
 
   serial_enable_rcc(serial_rx_port);
 
+  LL_USART_Disable(USART.channel);
   LL_USART_DeInit(USART.channel);
 
   LL_USART_InitTypeDef usart_init;
+  LL_USART_StructInit(&usart_init);
+
   usart_init.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
   usart_init.DataWidth = LL_USART_DATAWIDTH_8B;
   usart_init.OverSampling = LL_USART_OVERSAMPLING_16;
@@ -271,7 +274,7 @@ void serial_rx_init(rx_serial_protocol_t proto) {
     usart_init.BaudRate = 115200;
     usart_init.StopBits = LL_USART_STOPBITS_1;
     usart_init.Parity = LL_USART_PARITY_NONE;
-    usart_init.TransferDirection = LL_USART_DIRECTION_RX | LL_USART_DIRECTION_TX;
+    usart_init.TransferDirection = LL_USART_DIRECTION_TX_RX;
     break;
 
   case RX_SERIAL_PROTOCOL_SBUS:
@@ -286,7 +289,7 @@ void serial_rx_init(rx_serial_protocol_t proto) {
     usart_init.BaudRate = 420000;
     usart_init.StopBits = LL_USART_STOPBITS_1;
     usart_init.Parity = LL_USART_PARITY_NONE;
-    usart_init.TransferDirection = LL_USART_DIRECTION_RX | LL_USART_DIRECTION_TX;
+    usart_init.TransferDirection = LL_USART_DIRECTION_TX_RX;
     break;
 
   case RX_SERIAL_PROTOCOL_REDPINE:
@@ -300,6 +303,7 @@ void serial_rx_init(rx_serial_protocol_t proto) {
   default:
     break;
   }
+  LL_USART_Init(USART.channel, &usart_init);
 
   if (proto == RX_SERIAL_PROTOCOL_FPORT) {
     //RX_SERIAL_PROTOCOL_FPORT_INVERTED requires half duplex off
@@ -308,11 +312,10 @@ void serial_rx_init(rx_serial_protocol_t proto) {
     LL_USART_DisableHalfDuplex(USART.channel);
   }
 
-  LL_USART_Init(USART.channel, &usart_init);
-
-  LL_USART_EnableIT_RXNE(USART.channel);
+  LL_USART_ConfigAsyncMode(USART.channel);
   LL_USART_Enable(USART.channel);
 
   serial_enable_isr(serial_rx_port);
+  LL_USART_EnableIT_RXNE(USART.channel);
 }
 #endif
