@@ -47,10 +47,12 @@ void adc_init(void) {
 
   LL_ADC_CommonInitTypeDef adc_common_init;
   adc_common_init.CommonClock = LL_ADC_CLOCK_SYNC_PCLK_DIV2;
-  LL_ADC_CommonInit(ADC1, &adc_common_init);
+  LL_ADC_CommonInit(ADC1_COMMON, &adc_common_init);
 
   LL_ADC_REG_InitTypeDef adc_reg_init;
   adc_reg_init.TriggerSource = LL_ADC_REG_TRIG_SOFTWARE;
+  adc_reg_init.SequencerLength = LL_ADC_REG_SEQ_SCAN_DISABLE;
+  adc_reg_init.SequencerDiscont = LL_ADC_REG_SEQ_DISCONT_DISABLE;
   adc_reg_init.ContinuousMode = LL_ADC_REG_CONV_SINGLE;
   adc_reg_init.DMATransfer = LL_ADC_REG_DMA_TRANSFER_NONE;
   LL_ADC_REG_Init(ADC1, &adc_reg_init);
@@ -61,7 +63,7 @@ void adc_init(void) {
   adc_init.SequencersScanMode = LL_ADC_SEQ_SCAN_DISABLE;
   LL_ADC_Init(ADC1, &adc_init);
 
-  LL_ADC_SetCommonPathInternalCh(ADC1, LL_ADC_PATH_INTERNAL_VREFINT);
+  LL_ADC_SetCommonPathInternalCh(ADC1_COMMON, LL_ADC_PATH_INTERNAL_VREFINT);
   LL_ADC_Enable(ADC1);
 
   LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_VREFINT);
