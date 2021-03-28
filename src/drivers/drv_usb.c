@@ -22,7 +22,7 @@
 #define CDC_NTF_EP 0x82
 #define CDC_NTF_SZ 0x08
 
-#define BUFFER_SIZE 2048
+#define BUFFER_SIZE 4096
 
 #define CDC_PROTOCOL USB_PROTO_NONE
 
