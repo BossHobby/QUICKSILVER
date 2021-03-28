@@ -166,6 +166,10 @@ void motor_init(void) {
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
 
+#ifndef TIM14
+#define TIM14 NULL
+#endif
+
 #define MOTOR_PIN(port, pin, pin_af, timer, timer_channel)               \
   gpio_init.Pin = LL_GPIO_PIN_##pin;                                     \
   gpio_init.Alternate = pin_af;                                          \
