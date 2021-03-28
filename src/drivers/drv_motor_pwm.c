@@ -1,7 +1,11 @@
 #include <math.h>
 
+#include <stm32f4xx_ll_bus.h>
+#include <stm32f4xx_ll_tim.h>
+
 #include "control.h"
 #include "defines.h"
+#include "drv_gpio.h"
 #include "drv_motor.h"
 #include "drv_time.h"
 #include "profile.h"
@@ -61,60 +65,82 @@ int beepon = 0;
 
 void init_timer(TIM_TypeDef *TIMx, int period) {
   switch ((uint32_t)TIMx) {
+#ifdef TIM1
   case (uint32_t)TIM1:
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM1);
     break;
+#endif
+#ifdef TIM2
   case (uint32_t)TIM2:
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM2);
     break;
+#endif
+#ifdef TIM3
   case (uint32_t)TIM3:
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM3);
     break;
-#ifdef F4
+#endif
+#ifdef TIM4
   case (uint32_t)TIM4:
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM4);
     break;
+#endif
+#ifdef TIM5
   case (uint32_t)TIM5:
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5, ENABLE);
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM5);
     break;
 #endif
+#ifdef TIM6
   case (uint32_t)TIM6:
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);
-    break;
-  case (uint32_t)TIM7:
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7, ENABLE);
-    break;
-#ifdef F4
-  case (uint32_t)TIM8:
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM8, ENABLE);
-    break;
-  case (uint32_t)TIM9:
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM9, ENABLE);
-    break;
-  case (uint32_t)TIM11:
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM11, ENABLE);
-    break;
-  case (uint32_t)TIM12:
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM12, ENABLE);
-    break;
-  case (uint32_t)TIM13:
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM13, ENABLE);
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM6);
     break;
 #endif
-  case (uint32_t)TIM14:
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM14, ENABLE);
+#ifdef TIM7
+  case (uint32_t)TIM7:
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM7);
     break;
+#endif
+#ifdef TIM8
+  case (uint32_t)TIM8:
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM8);
+    break;
+#endif
+#ifdef TIM9
+  case (uint32_t)TIM9:
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM9);
+    break;
+#endif
+#ifdef TIM11
+  case (uint32_t)TIM11:
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM11);
+    break;
+#endif
+#ifdef TIM12
+  case (uint32_t)TIM12:
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM12);
+    break;
+#endif
+#ifdef TIM13
+  case (uint32_t)TIM13:
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM13);
+    break;
+#endif
+#ifdef TIM14
+  case (uint32_t)TIM14:
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM14);
+    break;
+#endif
   }
 
-  TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+  LL_TIM_InitTypeDef tim_init;
 
-  TIM_TimeBaseStructure.TIM_Prescaler = PWM_DIVIDER - 1;
-  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-  TIM_TimeBaseStructure.TIM_Period = period;
-  TIM_TimeBaseStructure.TIM_ClockDivision = 0;
-  TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;
+  tim_init.Prescaler = PWM_DIVIDER - 1;
+  tim_init.CounterMode = LL_TIM_COUNTERMODE_UP;
+  tim_init.Autoreload = period;
+  tim_init.ClockDivision = 0;
+  tim_init.RepetitionCounter = 0;
 
-  TIM_TimeBaseInit(TIMx, &TIM_TimeBaseStructure);
+  LL_TIM_Init(TIMx, &tim_init);
 }
 
 void motor_init(void) {
@@ -127,27 +153,27 @@ void motor_init(void) {
 
 #undef MOTOR_PIN
 
-  TIM_OCInitTypeDef TIM_OCInitStructure;
-  TIM_OCInitStructure.OCMode = TIM_OCMode_PWM1;
-  TIM_OCInitStructure.OCState = TIM_OutputState_Enable;
-  TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
-  TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
-  TIM_OCInitStructure.CompareValue = 0;
+  LL_TIM_OC_InitTypeDef tim_oc_init;
+  tim_oc_init.OCMode = LL_TIM_OCMODE_PWM1;
+  tim_oc_init.OCState = LL_TIM_OCSTATE_ENABLE;
+  tim_oc_init.OCPolarity = LL_TIM_OCPOLARITY_HIGH;
+  tim_oc_init.OCIdleState = LL_TIM_OCIDLESTATE_HIGH;
+  tim_oc_init.CompareValue = 0;
 
-  LL_GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStructure.Pull = LL_GPIO_PULL_NO;
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  gpio_init.Pull = LL_GPIO_PULL_NO;
 
-#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel)   \
-  GPIO_InitStructure.Pin = LL_GPIO_PIN_##pin;                \
-  LL_GPIO_Init(GPIO##port, &GPIO_InitStructure);             \
-  GPIO_PinAFConfig(GPIO##port, GPIO_PinSource##pin, pin_af); \
-  TIM_OC##timer_channel##Init(timer, &TIM_OCInitStructure);  \
-  TIM_Cmd(timer, ENABLE);                                    \
-  if (timer != TIM14)                                        \
-    TIM_CtrlPWMOutputs(timer, ENABLE);
+#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel)               \
+  gpio_init.Pin = LL_GPIO_PIN_##pin;                                     \
+  gpio_init.Alternate = pin_af;                                          \
+  LL_GPIO_Init(GPIO##port, &gpio_init);                                  \
+  LL_TIM_OC_Init(timer, LL_TIM_CHANNEL_CH##timer_channel, &tim_oc_init); \
+  LL_TIM_EnableCounter(timer);                                           \
+  if (timer != TIM14)                                                    \
+    LL_TIM_EnableAllOutputs(timer);
 
   MOTOR_PINS
 
