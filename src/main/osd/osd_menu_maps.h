@@ -1,8 +1,8 @@
 #include "stdio.h"
 
 //main menu maps
-extern const char main_menu_labels[10][21];
-extern const uint8_t main_menu_positions[10][2];
+extern const char main_menu_labels[9][21];
+extern const uint8_t main_menu_positions[9][2];
 extern const uint8_t main_menu_map[];
 
 //pid profiles submenu map

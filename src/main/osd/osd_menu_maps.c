@@ -8,8 +8,8 @@ extern profile_t profile;
 extern vtx_settings_t vtx_settings;
 extern vtx_settings_t vtx_settings_copy;
 //main menu maps
-const char main_menu_labels[10][21] = {"MENU", "VTX", "PIDS", "FILTERS", "RATES", "FLIGHT MODES", "OSD ELEMENTS", "SPECIAL FEATURES", "SETUP WIZARD", "SAVE AND EXIT"};
-const uint8_t main_menu_positions[10][2] = {{13, 1}, {7, 3}, {7, 4}, {7, 5}, {7, 6}, {7, 7}, {7, 8}, {7, 9}, {7, 10}, {7, 11}};
+const char main_menu_labels[9][21] = {"MENU", "VTX", "PIDS", "FILTERS", "RATES", "FLIGHT MODES", "OSD ELEMENTS", "SPECIAL FEATURES", "SAVE AND EXIT"};
+const uint8_t main_menu_positions[9][2] = {{13, 1}, {7, 3}, {7, 4}, {7, 5}, {7, 6}, {7, 7}, {7, 8}, {7, 9}, {7, 11}};
 const uint8_t main_menu_map[] = {11, 3, 5, 6, 9, 10, 12}; //case numbers for {vtx, pids, filters, rates, flight modes, osd elements, special features}
 
 //pid profiles submenu map

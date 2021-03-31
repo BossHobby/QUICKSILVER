@@ -92,8 +92,7 @@ void osd_submenu_select(uint8_t *pointer, uint8_t rows, const uint8_t next_menu[
 }
 
 void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_menu) {
-  if (osd_select == 1 && flash_storage.flash_feature_1 == 1) //main menu
-  {
+  if (osd_select == 1){ //main menu
     osd_select = 0; //reset the trigger
     last_cursor_array_stuffer(osd_cursor, STORE_VALUE);
     if (osd_cursor <= rows) {
@@ -103,8 +102,6 @@ void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_m
     }
     if (main_menu) {
       if (osd_cursor == rows + 1)
-        flash_storage.flash_feature_1 = 0; //flag the setup wizard in main menu
-      if (osd_cursor == rows + 2)
         osd_save_exit(); //include save&exit in main menu
     }
   }

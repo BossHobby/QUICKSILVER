@@ -568,40 +568,10 @@ void osd_display(void) {
     break; //screen has been cleared for this loop - break out of display function
 
   case 1:                //osd menu is active
-    if (flash_storage.flash_feature_1) //setup wizard
-    {
-      last_display_phase = 2;
-      print_osd_menu_strings(10, 9, main_menu_labels, main_menu_positions);
-      if (osd_menu_phase == 11)
-        osd_select_menu_item(7, main_menu_map, MAIN_MENU);
-    } else {
-      last_display_phase = 2;
-      switch (osd_wizard_phase) {
-      case 0:
-        if (osd_runtime_screen_clear())
-          osd_wizard_phase++;
-        ;
-        break;
-      case 1:
-        osd_print("SETUP WIZARD", INVERT, 9, 1);
-        osd_wizard_phase++;
-        break;
-      case 2:
-        osd_print("PROPS OFF", BLINK, 7, 6);
-        osd_wizard_phase++;
-        break;
-      case 3:
-        osd_print("THROTTLE UP", TEXT, 7, 8);
-        osd_wizard_phase++;
-        break;
-      case 4:
-        osd_print("TO CONTINUE", TEXT, 7, 9);
-        osd_wizard_phase++;
-        break;
-      case 5:
-        break;
-      }
-    }
+    last_display_phase = 2;
+    print_osd_menu_strings(9, 8, main_menu_labels, main_menu_positions);
+    if (osd_menu_phase == 10)
+      osd_select_menu_item(7, main_menu_map, MAIN_MENU);
     break; //osd menu or wizard has been displayed for this loop	- break out of display function
 
   case 2: //regular osd display
