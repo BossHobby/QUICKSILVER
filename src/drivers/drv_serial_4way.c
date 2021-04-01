@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "drv_gpio.h"
 #include "drv_motor.h"
 #include "drv_serial_4way.h"
 #include "drv_serial_soft.h"
@@ -95,7 +96,8 @@
 #define SILABS_PAGE_SIZE 0x0200
 
 uint8_t selected_esc;
-SoftSerialData_t escSerial[ESC_COUNT] = {0};
+
+static gpio_pins_t esc_pins[ESC_COUNT] = {GPIO_PIN_INVALID};
 
 static uint8_32_u device_info;
 static uint8_16_u crc_in;
@@ -118,7 +120,7 @@ bool is_mcu_connected(void) {
 }
 
 bool is_esc_high(uint8_t esc) {
-  return GPIO_ReadInputDataBit(escSerial[esc].rx_port, escSerial[esc].rx_pin) > 0;
+  return gpio_pin_read(esc_pins[esc]) > 0;
 }
 
 bool is_esc_low(uint8_t esc) {
@@ -126,19 +128,29 @@ bool is_esc_low(uint8_t esc) {
 }
 
 void set_esc_high(uint8_t esc) {
-  GPIO_SetBits(escSerial[esc].rx_port, escSerial[esc].rx_pin);
+  gpio_pin_set(esc_pins[esc]);
 }
 
 void set_esc_low(uint8_t esc) {
-  GPIO_ResetBits(escSerial[esc].rx_port, escSerial[esc].rx_pin);
+  gpio_pin_reset(esc_pins[esc]);
 }
 
 void set_esc_input(uint8_t esc) {
-  softserial_set_input(&escSerial[esc]);
+  GPIO_InitTypeDef gpio_init = {0};
+  gpio_init.GPIO_Mode = GPIO_Mode_IN;
+  gpio_init.GPIO_OType = GPIO_OType_OD;
+  gpio_init.GPIO_PuPd = GPIO_PuPd_UP;
+  gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
+  gpio_pin_init(&gpio_init, esc_pins[esc]);
 }
 
 void set_esc_output(uint8_t esc) {
-  softserial_set_output(&escSerial[esc]);
+  GPIO_InitTypeDef gpio_init = {0};
+  gpio_init.GPIO_Mode = GPIO_Mode_OUT;
+  gpio_init.GPIO_OType = GPIO_OType_PP;
+  gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
+  gpio_pin_init(&gpio_init, esc_pins[esc]);
 }
 
 static uint8_t read_byte(void) {
@@ -221,8 +233,10 @@ uint8_t serial_4way_init() {
 
   // set up 1wire serial to each esc
 
-#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) \
-  escSerial[MOTOR_PIN_IDENT(port, pin)] = softserial_init(GPIO##port, GPIO_Pin_##pin, GPIO##port, GPIO_Pin_##pin, 19200);
+#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel)     \
+  esc_pins[MOTOR_PIN_IDENT(port, pin)] = PIN_IDENT(port, pin); \
+  set_esc_input(MOTOR_PIN_IDENT(port, pin));                   \
+  set_esc_high(MOTOR_PIN_IDENT(port, pin));
 
   MOTOR_PINS
 

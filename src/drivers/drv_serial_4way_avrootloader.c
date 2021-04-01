@@ -62,13 +62,7 @@
 #define micros timer_micros
 #define millis timer_millis
 
-#include "drv_serial_soft.h"
-extern SoftSerialData_t escSerial[4];
-
 static uint8_t suart_getc_(uint8_t *bt) {
-#ifdef F0
-  return softserial_read_byte_ex(&escSerial[selected_esc], bt);
-#else
   uint32_t btime;
   uint32_t start_time = micros();
 
@@ -102,13 +96,9 @@ static uint8_t suart_getc_(uint8_t *bt) {
   }
   *bt = bitmask >> 1;
   return 1;
-#endif
 }
 
 static void suart_putc_(uint8_t *tx_b) {
-#ifdef F0
-  softserial_write_byte_ex(&escSerial[selected_esc], *tx_b);
-#else
   // shift out stopbit first
   uint32_t btime = 0;
   uint32_t start_time = micros();
@@ -126,7 +116,6 @@ static void suart_putc_(uint8_t *tx_b) {
     while (micros() - start_time < btime)
       ;
   }
-#endif
 }
 
 static uint8_16_u CRC_16;
