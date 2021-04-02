@@ -1,23 +1,5 @@
 Import("env")
 
-exclude = [
-  "startup_stm32f40xx.S",
-  "startup_stm32f411xe.S",
-  "system_stm32f4xx.c",
-]
-
-def replace_system(node):
-  if node.name in exclude:
-    print("dropping ", node)
-    return None
-
-  return node
-
-env.AddBuildMiddleware(
-  replace_system,
-  "*/framework-stm32cubef4/*"
-)
-
 optimze_flags = [s for s in env.GetProjectOption("system_flags", "").splitlines() if s]
 
 linker_flags = []
