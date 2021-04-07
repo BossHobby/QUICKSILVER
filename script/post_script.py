@@ -1,6 +1,18 @@
 import os
+import time
+
+import serial
+import serial.tools.list_ports
 
 Import("env", "projenv")
+
+def before_upload(source, target, env):
+  for port in serial.tools.list_ports.grep("USB VID:PID=0483:5740 SER=0x8000000"):
+    with serial.Serial(port.device) as ser:
+      ser.write(b'R\r\n')
+      time.sleep(2)
+
+env.AddPreAction("upload", before_upload)
 
 env.AddPostAction(
     "$BUILD_DIR/${PROGNAME}.elf",
