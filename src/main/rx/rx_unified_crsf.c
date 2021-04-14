@@ -241,16 +241,16 @@ void rx_serial_process_crsf() {
   // set real frame length
   expected_frame_length = rx_buffer_offset + rx_data[1] + 2;
 
-  if ((rx_frame_position - rx_buffer_offset) < expected_frame_length) {
+  if (rx_frame_position < expected_frame_length) {
     frame_status = FRAME_IDLE;
     return;
   }
 
   // copy rest of the data
-  memcpy(rx_data, rx_buffer + rx_buffer_offset, expected_frame_length);
+  memcpy(rx_data, rx_buffer + rx_buffer_offset, expected_frame_length - rx_buffer_offset);
 
-  const uint8_t crc_ours = crsf_crc8(&rx_data[2], expected_frame_length - 3);
-  const uint8_t crc_theirs = rx_data[expected_frame_length - 1];
+  const uint8_t crc_ours = crsf_crc8(&rx_data[2], expected_frame_length - rx_buffer_offset - 3);
+  const uint8_t crc_theirs = rx_data[expected_frame_length - rx_buffer_offset - 1];
   if (crc_ours != crc_theirs) {
     // invalid crc, bail
     quic_debugf("CRSF: invalid crc, bail");
