@@ -238,12 +238,13 @@ static void motor_mixer_scale_calc(float mix[4]) {
 }
 
 void motor_mixer_calc(float mix[4]) {
-  if ((flags.usb_active && usb_motor_test.active)) {
-    flags.motortest_override = 1;
-  } else {
-    flags.motortest_override = 0;
+  if (flags.usb_active){  //necessary to check if usb is active first or the else statement hijacks the state of global flag from turtle & motortest
+    if (usb_motor_test.active){
+      flags.motortest_override = 1;
+    } else {
+      flags.motortest_override = 0;
+    }
   }
-
 #if defined(MOTORS_TO_THROTTLE)
   flags.motortest_override = 1;
 #endif
