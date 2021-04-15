@@ -132,8 +132,6 @@ uint8_t crsf_crc8(uint8_t *data, uint16_t len) {
 static void rx_serial_crsf_process_frame() {
   rx_lqi_update_fps(0);
 
-  quic_debugf("CRSF: packet type 0x%x", rx_data[2]);
-
   switch (rx_data[2]) {
   case CRSF_FRAMETYPE_RC_CHANNELS_PACKED: {
     const crsf_channels_t *chan = (crsf_channels_t *)&rx_data[3];
@@ -184,22 +182,6 @@ static void rx_serial_crsf_process_frame() {
 
   case CRSF_FRAMETYPE_LINK_STATISTICS: {
     const crsf_stats_t *stats = (crsf_stats_t *)&rx_data[3];
-
-    static uint8_t debug_counter = 0;
-    if (debug_counter % 10 == 0) {
-      quic_debugf("CRSF: uplink_rssi_2: %d", stats->uplink_rssi_2);
-      quic_debugf("CRSF: uplink_rssi_1: %d", stats->uplink_rssi_1);
-      quic_debugf("CRSF: uplink_link_quality: %d", stats->uplink_link_quality);
-      quic_debugf("CRSF: uplink_snr: %d", stats->uplink_snr);
-      quic_debugf("CRSF: active_antenna: %d", stats->active_antenna);
-      quic_debugf("CRSF: rf_mode: %d", stats->rf_mode);
-      quic_debugf("CRSF: uplink_tx_power: %d", stats->uplink_tx_power);
-      quic_debugf("CRSF: downlink_rssi: %d", stats->downlink_rssi);
-      quic_debugf("CRSF: downlink_link_quality: %d", stats->downlink_link_quality);
-      quic_debugf("CRSF: downlink_snr: %d", stats->downlink_snr);
-    }
-    debug_counter++;
-
     rx_lqi_update_rssi_direct(stats->uplink_link_quality);
     break;
   }
