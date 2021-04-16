@@ -92,8 +92,6 @@ extern volatile uint8_t rx_frame_position;
 extern volatile uint8_t expected_frame_length;
 extern volatile frame_status_t frame_status;
 
-extern uint16_t link_quality_raw;
-extern uint8_t stat_frames_second;
 extern uint32_t time_siglost;
 extern uint32_t time_lastframe;
 

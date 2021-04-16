@@ -26,8 +26,8 @@ volatile uint8_t rx_frame_position = 0;
 volatile uint8_t expected_frame_length = 10;
 volatile frame_status_t frame_status = FRAME_INVALID;
 
-uint16_t link_quality_raw;
-uint8_t stat_frames_second;
+uint32_t link_quality_raw;
+uint32_t stat_frames_second;
 uint32_t time_siglost;
 uint32_t time_lastframe;
 
