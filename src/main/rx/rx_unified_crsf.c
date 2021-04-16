@@ -112,6 +112,15 @@ extern uint8_t telemetry_offset;
 extern uint8_t telemetry_packet[14];
 extern uint8_t ready_for_next_telemetry;
 
+static uint8_t crsf_rf_mode = 0;
+static uint16_t crsf_rf_mode_fps[] = {
+    4,   // CRSF
+    50,  // CRSF
+    150, // CRSF
+    100, // ELRS
+    200, // ELRS
+};
+
 #define USART usart_port_defs[serial_rx_port]
 
 uint8_t crsf_crc8(uint8_t *data, uint16_t len) {
@@ -130,7 +139,6 @@ uint8_t crsf_crc8(uint8_t *data, uint16_t len) {
 }
 
 static void rx_serial_crsf_process_frame() {
-  rx_lqi_update_fps(0);
 
   switch (rx_data[2]) {
   case CRSF_FRAMETYPE_RC_CHANNELS_PACKED: {
@@ -177,12 +185,27 @@ static void rx_serial_crsf_process_frame() {
     state.aux[AUX_CHANNEL_9] = (channels[13] > 1100) ? 1 : 0;
     state.aux[AUX_CHANNEL_10] = (channels[14] > 1100) ? 1 : 0;
     state.aux[AUX_CHANNEL_11] = (channels[15] > 1100) ? 1 : 0;
+
+    if (profile.channel.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
+      rx_lqi_update_fps(0);
+      rx_lqi_update_rssi_from_lqi(crsf_rf_mode_fps[crsf_rf_mode]);
+    }
+    if (profile.channel.lqi_source == RX_LQI_SOURCE_CHANNEL) {
+      if (profile.channel.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
+        rx_lqi_update_rssi_direct(0.00062853551f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 191.0f));
+      }
+    }
     break;
   }
 
   case CRSF_FRAMETYPE_LINK_STATISTICS: {
     const crsf_stats_t *stats = (crsf_stats_t *)&rx_data[3];
-    rx_lqi_update_rssi_direct(stats->uplink_link_quality);
+
+    crsf_rf_mode = stats->rf_mode;
+
+    if (profile.channel.lqi_source == RX_LQI_SOURCE_DIRECT) {
+      rx_lqi_update_rssi_direct(stats->uplink_link_quality);
+    }
     break;
   }
 
