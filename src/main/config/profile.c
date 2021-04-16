@@ -481,6 +481,7 @@ const profile_t default_profile = {
             AUX_CHANNEL_OFF,
 #endif
         },
+        .lqi_source = RX_LQI_SOURCE_PACKET_RATE,
     },
     .osd = {
         .elements = {

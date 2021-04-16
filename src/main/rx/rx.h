@@ -23,6 +23,13 @@ typedef enum {
 } rx_protocol_t;
 
 typedef enum {
+  RX_LQI_SOURCE_INVALID,
+  RX_LQI_SOURCE_DIRECT,
+  RX_LQI_SOURCE_CHANNEL,
+  RX_LQI_SOURCE_PACKET_RATE,
+} rx_lqi_source_t;
+
+typedef enum {
   AUX_CHANNEL_0,
   AUX_CHANNEL_1,
   AUX_CHANNEL_2,

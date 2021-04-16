@@ -198,10 +198,12 @@ typedef struct {
 
 typedef struct {
   aux_channel_t aux[AUX_FUNCTION_MAX];
+  rx_lqi_source_t lqi_source;
 } profile_channel_t;
 
-#define CHANNEL_MEMBERS \
-  ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, uint8)
+#define CHANNEL_MEMBERS                      \
+  ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, uint8) \
+  MEMBER(lqi_source, uint8)
 
 typedef struct {
   usart_ports_t rx;
