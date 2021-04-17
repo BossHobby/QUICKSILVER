@@ -118,14 +118,7 @@ void rx_serial_process_redpine() {
   state.aux[AUX_CHANNEL_11] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x80) ? 1 : 0;
 
   rx_lqi_update_fps(0);
-
-  int16_t rssi = rx_data[REDPINE_CHANNEL_START + 7];
-  if (rssi >= 128) {
-    rssi = ((rssi - 256) / 2);
-  } else {
-    rssi = (rssi / 2);
-  }
-  rx_lqi_update_rssi_direct(rssi);
+  rx_lqi_update_rssi_direct(rx_data[REDPINE_CHANNEL_START + 7]);
 
   frame_status = FRAME_TX; //We're done with this frame now.
 
