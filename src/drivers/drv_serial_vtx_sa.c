@@ -55,7 +55,7 @@ static void serial_smart_audio_reconfigure() {
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   gpio_pin_init_af(&GPIO_InitStructure, USART.tx_pin, USART.gpio_af);
 
@@ -230,12 +230,20 @@ vtx_update_result_t serial_smart_audio_update() {
     return VTX_IDLE;
 
   case PARSER_INIT: {
-    mirror_offset = 0;
-    payload_offset = 0;
-    crc = 0;
-    cmd = 0;
-    length = 0;
-    parser_state = PARSER_CHECK_MIRROR;
+    if ((timer_millis() - vtx_last_request) > 500) {
+      smart_audio_auto_baud();
+
+      mirror_offset = 0;
+      payload_offset = 0;
+      crc = 0;
+      cmd = 0;
+      length = 0;
+      parser_state = PARSER_CHECK_MIRROR;
+
+      quic_debugf("SMART_AUDIO: send cmd %d (%d)", cmd, size);
+      serial_vtx_send_data(vtx_frame, vtx_frame_length);
+    }
+
     return VTX_WAIT;
   }
   case PARSER_CHECK_MIRROR: {
@@ -355,10 +363,7 @@ void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const 
   vtx_frame[size + SA_HEADER_SIZE] = crc8_data(vtx_frame + 1, vtx_frame_length - 3);
   vtx_frame[size + 1 + SA_HEADER_SIZE] = 0x00;
   circular_buffer_clear(&vtx_rx_buffer);
-  smart_audio_auto_baud();
 
-  quic_debugf("SMART_AUDIO: send cmd %d (%d)", cmd, size);
-  serial_vtx_send_data(vtx_frame, vtx_frame_length);
   parser_state = PARSER_INIT;
 }
 #endif
