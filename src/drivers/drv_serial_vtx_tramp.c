@@ -1,16 +1,15 @@
-#include "drv_serial_tramp.h"
+#include "drv_serial_vtx_tramp.h"
 
 #include <string.h>
 
 #include "drv_serial.h"
+#include "drv_serial_vtx.h"
 #include "drv_time.h"
 #include "profile.h"
 #include "usb_configurator.h"
 #include "util/circular_buffer.h"
 
 #ifdef ENABLE_TRAMP
-
-#define TRAMP_BUFFER_SIZE 128
 
 #define USART usart_port_defs[serial_smart_audio_port]
 
@@ -26,23 +25,18 @@ typedef enum {
 
 tramp_settings_t tramp_settings;
 
-static uint8_t tramp_rx_data[TRAMP_BUFFER_SIZE];
-static volatile circular_buffer_t tramp_rx_buffer = {
-    .buffer = tramp_rx_data,
-    .head = 0,
-    .tail = 0,
-    .size = TRAMP_BUFFER_SIZE,
-};
-
-static volatile uint8_t transfer_done = 1;
-
 static tramp_parser_state_t parser_state = PARSER_IDLE;
-static uint32_t last_valid_read = 0;
-static uint32_t last_request = 0;
 
-static uint8_t frame[TRAMP_BUFFER_SIZE];
-static uint8_t volatile frame_length = 0;
-static uint8_t volatile frame_offset = 0;
+extern uint32_t vtx_last_valid_read;
+extern uint32_t vtx_last_request;
+
+extern volatile uint8_t vtx_transfer_done;
+
+extern volatile circular_buffer_t vtx_rx_buffer;
+
+extern uint8_t vtx_frame[VTX_BUFFER_SIZE];
+extern uint8_t volatile vtx_frame_length;
+extern uint8_t volatile vtx_frame_offset;
 
 static uint8_t crc8_data(const uint8_t *data) {
   uint8_t crc = 0;
@@ -52,46 +46,21 @@ static uint8_t crc8_data(const uint8_t *data) {
   return crc;
 }
 
-static void serial_tramp_send_data(uint8_t *data, uint32_t size) {
-  while (transfer_done == 0)
-    __WFI();
-  transfer_done = 0;
-
-  USART_ClearITPendingBit(USART.channel, USART_IT_RXNE);
-  USART_ClearITPendingBit(USART.channel, USART_IT_TXE);
-  USART_ClearITPendingBit(USART.channel, USART_IT_TC);
-
-  frame_offset = 0;
-
-  USART_ITConfig(USART.channel, USART_IT_RXNE, ENABLE);
-  USART_ITConfig(USART.channel, USART_IT_TXE, ENABLE);
-
-  last_request = timer_millis();
-}
-
-static uint8_t serial_tramp_read_byte(uint8_t *data) {
-  if (circular_buffer_read(&tramp_rx_buffer, data) == 1) {
-    last_valid_read = timer_millis();
-    return 1;
-  }
-  return 0;
-}
-
 void serial_tramp_send_payload(uint8_t cmd, const uint16_t payload) {
-  frame_length = 16;
+  vtx_frame_length = 16;
 
-  memset(frame, 0, frame_length);
+  memset(vtx_frame, 0, vtx_frame_length);
 
-  frame[0] = 0x0F;
-  frame[1] = cmd;
-  frame[2] = payload & 0xff;
-  frame[3] = (payload >> 8) & 0xff;
-  frame[14] = crc8_data(frame + 1);
+  vtx_frame[0] = 0x0F;
+  vtx_frame[1] = cmd;
+  vtx_frame[2] = payload & 0xff;
+  vtx_frame[3] = (payload >> 8) & 0xff;
+  vtx_frame[14] = crc8_data(vtx_frame + 1);
 
-  circular_buffer_clear(&tramp_rx_buffer);
+  circular_buffer_clear(&vtx_rx_buffer);
 
   parser_state = PARSER_INIT;
-  last_valid_read = timer_millis();
+  vtx_last_valid_read = timer_millis();
 }
 
 static void serial_tramp_reconfigure() {
@@ -157,10 +126,10 @@ static uint8_t tramp_parse_packet(uint8_t *payload) {
 }
 
 vtx_update_result_t serial_tramp_update() {
-  if (transfer_done == 0) {
+  if (vtx_transfer_done == 0) {
     return VTX_WAIT;
   }
-  if (parser_state > PARSER_INIT && (timer_millis() - last_valid_read) > 500) {
+  if (parser_state > PARSER_INIT && (timer_millis() - vtx_last_valid_read) > 500) {
     quic_debugf("TRAMP: timeout waiting for packet");
     parser_state = ERROR;
     return VTX_ERROR;
@@ -179,23 +148,23 @@ vtx_update_result_t serial_tramp_update() {
     return VTX_IDLE;
 
   case PARSER_INIT: {
-    if ((timer_millis() - last_request) > 500) {
+    if ((timer_millis() - vtx_last_request) > 500) {
       mirror_offset = 0;
       payload_offset = 0;
       parser_state = PARSER_CHECK_MIRROR;
-      serial_tramp_send_data(frame, frame_length);
+      serial_vtx_send_data(vtx_frame, vtx_frame_length);
     }
     return VTX_WAIT;
   }
   case PARSER_CHECK_MIRROR: {
     uint8_t data = 0;
-    if (serial_tramp_read_byte(&data) == 0) {
+    if (serial_vtx_read_byte(&data) == 0) {
       return VTX_WAIT;
     }
 
     quic_debugf("TRAMP: mirror 0x%x (%d)", data, mirror_offset);
 
-    if (frame[mirror_offset] != data) {
+    if (vtx_frame[mirror_offset] != data) {
       quic_debugf("TRAMP: invalid mirror (%d:0x%x)", mirror_offset, data);
       parser_state = ERROR;
       return VTX_ERROR;
@@ -203,8 +172,8 @@ vtx_update_result_t serial_tramp_update() {
 
     mirror_offset++;
 
-    if (mirror_offset == frame_length) {
-      if (frame[1] != 'r' && frame[1] != 'v' && frame[1] != 's') {
+    if (mirror_offset == vtx_frame_length) {
+      if (vtx_frame[1] != 'r' && vtx_frame[1] != 'v' && vtx_frame[1] != 's') {
         // param is set, this is not a query but a command
         // we are done here, no response will follow
         parser_state = PARSER_IDLE;
@@ -216,7 +185,7 @@ vtx_update_result_t serial_tramp_update() {
   }
   case PARSER_READ_MAGIC: {
     uint8_t data = 0;
-    if (serial_tramp_read_byte(&data) == 0) {
+    if (serial_vtx_read_byte(&data) == 0) {
       return VTX_WAIT;
     }
 
@@ -236,7 +205,7 @@ vtx_update_result_t serial_tramp_update() {
   }
   case PARSER_READ_PAYLOAD: {
     uint8_t data = 0;
-    if (serial_tramp_read_byte(&data) == 0) {
+    if (serial_vtx_read_byte(&data) == 0) {
       return VTX_WAIT;
     }
 
@@ -271,35 +240,6 @@ vtx_update_result_t serial_tramp_update() {
   }
 
   return VTX_ERROR;
-}
-
-void tramp_uart_isr(void) {
-  if (USART_GetITStatus(USART.channel, USART_IT_TC) != RESET) {
-    USART_ClearITPendingBit(USART.channel, USART_IT_TC);
-    if (frame_offset == frame_length && transfer_done == 0) {
-      transfer_done = 1;
-      USART_ITConfig(USART.channel, USART_IT_TXE, DISABLE);
-    }
-  }
-
-  if (USART_GetITStatus(USART.channel, USART_IT_TXE) != RESET) {
-    USART_ClearITPendingBit(USART.channel, USART_IT_TXE);
-    if (frame_offset < frame_length) {
-      USART_SendData(USART.channel, frame[frame_offset]);
-      frame_offset++;
-      transfer_done = 0;
-    }
-  }
-
-  if (USART_GetITStatus(USART.channel, USART_IT_RXNE) != RESET) {
-    USART_ClearITPendingBit(USART.channel, USART_IT_RXNE);
-    const uint8_t data = USART_ReceiveData(USART.channel);
-    circular_buffer_write(&tramp_rx_buffer, data);
-  }
-
-  if (USART_GetFlagStatus(USART.channel, USART_FLAG_ORE)) {
-    USART_ClearFlag(USART.channel, USART_FLAG_ORE);
-  }
 }
 
 #endif

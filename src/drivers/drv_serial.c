@@ -121,17 +121,10 @@ void handle_usart_isr(usart_ports_t channel) {
     return;
   }
 #endif
-#ifdef ENABLE_SMART_AUDIO
-  extern void smart_audio_uart_isr(void);
+#if defined(ENABLE_SMART_AUDIO) || defined(ENABLE_TRAMP)
+  extern void vtx_uart_isr(void);
   if (serial_smart_audio_port == channel) {
-    smart_audio_uart_isr();
-    return;
-  }
-#endif
-#ifdef ENABLE_TRAMP
-  extern void tramp_uart_isr();
-  if (serial_smart_audio_port == channel) {
-    tramp_uart_isr();
+    vtx_uart_isr();
     return;
   }
 #endif

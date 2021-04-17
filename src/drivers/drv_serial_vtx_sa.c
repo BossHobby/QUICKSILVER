@@ -1,8 +1,9 @@
-#include "drv_serial_smart_audio.h"
+#include "drv_serial_vtx_sa.h"
 
 #include <stddef.h>
 
 #include "drv_serial.h"
+#include "drv_serial_vtx.h"
 #include "drv_time.h"
 #include "profile.h"
 #include "usb_configurator.h"
@@ -31,25 +32,22 @@ typedef enum {
 
 smart_audio_settings_t smart_audio_settings;
 
-static uint8_t smart_audio_rx_data[SMART_AUDIO_BUFFER_SIZE];
-static volatile circular_buffer_t smart_audio_rx_buffer = {
-    .buffer = smart_audio_rx_data,
-    .head = 0,
-    .tail = 0,
-    .size = SMART_AUDIO_BUFFER_SIZE,
-};
-
-static volatile uint8_t transfer_done = 0;
 static uint32_t baud_rate = 4800;
 static uint32_t packets_sent = 0;
 static uint32_t packets_recv = 0;
 
 static smart_audio_parser_state_t parser_state = PARSER_IDLE;
-static uint32_t last_valid_read = 0;
 
-static uint8_t frame[SMART_AUDIO_BUFFER_SIZE];
-static uint8_t volatile frame_length = 0;
-static uint8_t volatile frame_offset = 0;
+extern uint32_t vtx_last_valid_read;
+extern uint32_t vtx_last_request;
+
+extern volatile uint8_t vtx_transfer_done;
+
+extern volatile circular_buffer_t vtx_rx_buffer;
+
+extern uint8_t vtx_frame[VTX_BUFFER_SIZE];
+extern uint8_t volatile vtx_frame_length;
+extern uint8_t volatile vtx_frame_offset;
 
 static void serial_smart_audio_reconfigure() {
   USART_Cmd(USART.channel, DISABLE);
@@ -141,32 +139,8 @@ static uint8_t crc8_data(const uint8_t *data, const int8_t len) {
   return crc;
 }
 
-static void serial_smart_audio_send_data(uint8_t *data, uint32_t size) {
-  while (transfer_done == 0)
-    __WFI();
-  transfer_done = 0;
-
-  USART_ClearITPendingBit(USART.channel, USART_IT_RXNE);
-  USART_ClearITPendingBit(USART.channel, USART_IT_TXE);
-
-  frame_offset = 0;
-
-  USART_ITConfig(USART.channel, USART_IT_RXNE, ENABLE);
-  USART_ITConfig(USART.channel, USART_IT_TXE, ENABLE);
-
-  packets_sent++;
-}
-
-static uint8_t serial_smart_audio_read_byte(uint8_t *data) {
-  if (circular_buffer_read(&smart_audio_rx_buffer, data) == 1) {
-    last_valid_read = timer_millis();
-    return 1;
-  }
-  return 0;
-}
-
 static uint8_t serial_smart_audio_read_byte_crc(uint8_t *crc, uint8_t *data) {
-  if (serial_smart_audio_read_byte(data) == 0) {
+  if (serial_vtx_read_byte(data) == 0) {
     return 0;
   }
   *crc = crc8(*crc, *data);
@@ -224,40 +198,11 @@ void serial_smart_audio_init(void) {
   serial_enable_isr(serial_smart_audio_port);
 }
 
-void smart_audio_uart_isr(void) {
-  if (USART_GetITStatus(USART.channel, USART_IT_TC) != RESET) {
-    USART_ClearITPendingBit(USART.channel, USART_IT_TC);
-    if (frame_offset == frame_length && transfer_done == 0) {
-      transfer_done = 1;
-      USART_ITConfig(USART.channel, USART_IT_TXE, DISABLE);
-    }
-  }
-
-  if (USART_GetITStatus(USART.channel, USART_IT_TXE) != RESET) {
-    USART_ClearITPendingBit(USART.channel, USART_IT_TXE);
-    if (frame_offset < frame_length) {
-      USART_SendData(USART.channel, frame[frame_offset]);
-      frame_offset++;
-      transfer_done = 0;
-    }
-  }
-
-  if (USART_GetITStatus(USART.channel, USART_IT_RXNE) != RESET) {
-    USART_ClearITPendingBit(USART.channel, USART_IT_RXNE);
-    const uint8_t data = USART_ReceiveData(USART.channel);
-    circular_buffer_write(&smart_audio_rx_buffer, data);
-  }
-
-  if (USART_GetFlagStatus(USART.channel, USART_FLAG_ORE)) {
-    USART_ClearFlag(USART.channel, USART_FLAG_ORE);
-  }
-}
-
 vtx_update_result_t serial_smart_audio_update() {
-  if (transfer_done == 0) {
+  if (vtx_transfer_done == 0) {
     return VTX_WAIT;
   }
-  if (parser_state > PARSER_INIT && (timer_millis() - last_valid_read) > 500) {
+  if (parser_state > PARSER_INIT && (timer_millis() - vtx_last_valid_read) > 500) {
     quic_debugf("SMART_AUDIO: timeout waiting for packet");
     parser_state = ERROR;
     return VTX_ERROR;
@@ -295,7 +240,7 @@ vtx_update_result_t serial_smart_audio_update() {
   }
   case PARSER_CHECK_MIRROR: {
     uint8_t data = 0;
-    if (serial_smart_audio_read_byte(&data) == 0) {
+    if (serial_vtx_read_byte(&data) == 0) {
       return VTX_WAIT;
     }
 
@@ -306,8 +251,8 @@ vtx_update_result_t serial_smart_audio_update() {
       return VTX_WAIT;
     }
 
-    if (frame[mirror_offset] != data) {
-      if (frame[mirror_offset + 1] == data) {
+    if (vtx_frame[mirror_offset] != data) {
+      if (vtx_frame[mirror_offset + 1] == data) {
         mirror_offset++;
       } else {
         quic_debugf("SMART_AUDIO: invalid mirror (%d:0x%x)", mirror_offset, data);
@@ -318,14 +263,14 @@ vtx_update_result_t serial_smart_audio_update() {
 
     mirror_offset++;
 
-    if (mirror_offset == frame_length) {
+    if (mirror_offset == vtx_frame_length) {
       parser_state = PARSER_READ_MAGIC;
     }
     return VTX_WAIT;
   }
   case PARSER_READ_MAGIC: {
     uint8_t data = 0;
-    if (serial_smart_audio_read_byte(&data) == 0) {
+    if (serial_vtx_read_byte(&data) == 0) {
       return VTX_WAIT;
     }
 
@@ -371,7 +316,7 @@ vtx_update_result_t serial_smart_audio_update() {
   }
   case PARSER_READ_CRC: {
     uint8_t data = 0;
-    if (serial_smart_audio_read_byte(&data) == 0) {
+    if (serial_vtx_read_byte(&data) == 0) {
       return VTX_WAIT;
     }
 
@@ -397,24 +342,23 @@ vtx_update_result_t serial_smart_audio_update() {
 }
 
 void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const uint32_t size) {
-  frame_length = size + 2 + SA_HEADER_SIZE;
+  vtx_frame_length = size + 2 + SA_HEADER_SIZE;
 
-  frame[0] = 0x00;
-  frame[1] = 0xAA;
-  frame[2] = 0x55;
-  frame[3] = (cmd << 1) | 0x1;
-  frame[4] = size;
+  vtx_frame[0] = 0x00;
+  vtx_frame[1] = 0xAA;
+  vtx_frame[2] = 0x55;
+  vtx_frame[3] = (cmd << 1) | 0x1;
+  vtx_frame[4] = size;
   for (uint8_t i = 0; i < size; i++) {
-    frame[i + SA_HEADER_SIZE] = payload[i];
+    vtx_frame[i + SA_HEADER_SIZE] = payload[i];
   }
-  frame[size + SA_HEADER_SIZE] = crc8_data(frame + 1, frame_length - 3);
-  frame[size + 1 + SA_HEADER_SIZE] = 0x00;
-  circular_buffer_clear(&smart_audio_rx_buffer);
+  vtx_frame[size + SA_HEADER_SIZE] = crc8_data(vtx_frame + 1, vtx_frame_length - 3);
+  vtx_frame[size + 1 + SA_HEADER_SIZE] = 0x00;
+  circular_buffer_clear(&vtx_rx_buffer);
   smart_audio_auto_baud();
 
   quic_debugf("SMART_AUDIO: send cmd %d (%d)", cmd, size);
-  serial_smart_audio_send_data(frame, frame_length);
+  serial_vtx_send_data(vtx_frame, vtx_frame_length);
   parser_state = PARSER_INIT;
-  last_valid_read = timer_millis();
 }
 #endif
