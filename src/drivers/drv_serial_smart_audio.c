@@ -48,7 +48,8 @@ static smart_audio_parser_state_t parser_state = PARSER_IDLE;
 static uint32_t last_valid_read = 0;
 
 static uint8_t frame[SMART_AUDIO_BUFFER_SIZE];
-static uint8_t frame_length = 0;
+static uint8_t volatile frame_length = 0;
+static uint8_t volatile frame_offset = 0;
 
 static void serial_smart_audio_reconfigure() {
   USART_Cmd(USART.channel, DISABLE);
@@ -69,11 +70,16 @@ static void serial_smart_audio_reconfigure() {
   USART_InitStructure.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
   USART_Init(USART.channel, &USART_InitStructure);
 
-  USART_HalfDuplexCmd(USART.channel, ENABLE);
-  USART_ClearFlag(USART.channel, USART_FLAG_RXNE | USART_FLAG_TC);
-  USART_ClearITPendingBit(USART.channel, USART_IT_RXNE | USART_IT_TC);
+  USART_SetAddress(USART.channel, 0);
+
+  USART_ClearFlag(USART.channel, USART_FLAG_RXNE | USART_FLAG_TC | USART_FLAG_TXE);
+  USART_ClearITPendingBit(USART.channel, USART_IT_RXNE | USART_IT_TC | USART_IT_TXE);
+
+  USART_ITConfig(USART.channel, USART_IT_TXE, DISABLE);
+  USART_ITConfig(USART.channel, USART_IT_RXNE, DISABLE);
   USART_ITConfig(USART.channel, USART_IT_TC, ENABLE);
-  USART_ITConfig(USART.channel, USART_IT_RXNE, ENABLE);
+
+  USART_HalfDuplexCmd(USART.channel, ENABLE);
   USART_Cmd(USART.channel, ENABLE);
 }
 
@@ -140,17 +146,14 @@ static void serial_smart_audio_send_data(uint8_t *data, uint32_t size) {
     __WFI();
   transfer_done = 0;
 
-  for (uint32_t i = 0; i < size; i++) {
-    for (uint32_t timeout = 0x1000; USART_GetFlagStatus(USART.channel, USART_FLAG_TXE) == RESET; timeout--) {
-      if (timeout == 0) {
-        quic_debugf("SMART_AUDIO: send timeout");
-        return;
-      }
-      timer_delay_us(1);
-      __WFI();
-    }
-    USART_SendData(USART.channel, data[i]);
-  }
+  USART_ClearITPendingBit(USART.channel, USART_IT_RXNE);
+  USART_ClearITPendingBit(USART.channel, USART_IT_TXE);
+
+  frame_offset = 0;
+
+  USART_ITConfig(USART.channel, USART_IT_RXNE, ENABLE);
+  USART_ITConfig(USART.channel, USART_IT_TXE, ENABLE);
+
   packets_sent++;
 }
 
@@ -223,13 +226,26 @@ void serial_smart_audio_init(void) {
 
 void smart_audio_uart_isr(void) {
   if (USART_GetITStatus(USART.channel, USART_IT_TC) != RESET) {
-    transfer_done = 1;
     USART_ClearITPendingBit(USART.channel, USART_IT_TC);
+    if (frame_offset == frame_length && transfer_done == 0) {
+      transfer_done = 1;
+      USART_ITConfig(USART.channel, USART_IT_TXE, DISABLE);
+    }
+  }
+
+  if (USART_GetITStatus(USART.channel, USART_IT_TXE) != RESET) {
+    USART_ClearITPendingBit(USART.channel, USART_IT_TXE);
+    if (frame_offset < frame_length) {
+      USART_SendData(USART.channel, frame[frame_offset]);
+      frame_offset++;
+      transfer_done = 0;
+    }
   }
 
   if (USART_GetITStatus(USART.channel, USART_IT_RXNE) != RESET) {
     USART_ClearITPendingBit(USART.channel, USART_IT_RXNE);
-    circular_buffer_write(&smart_audio_rx_buffer, USART_ReceiveData(USART.channel));
+    const uint8_t data = USART_ReceiveData(USART.channel);
+    circular_buffer_write(&smart_audio_rx_buffer, data);
   }
 
   if (USART_GetFlagStatus(USART.channel, USART_FLAG_ORE)) {
@@ -315,7 +331,7 @@ smart_audio_update_result_t serial_smart_audio_update() {
 
     quic_debugf("SMART_AUDIO: magic 0x%x (%d)", data, payload_offset);
 
-    if (data != magic_bytes[payload_offset]) {
+    if (data != magic_bytes[payload_offset] && (payload_offset != 0 || data != 0xff)) {
       quic_debugf("SMART_AUDIO: invalid magic (%d:0x%x)", payload_offset, data);
       parser_state = ERROR;
       return SA_ERROR;
