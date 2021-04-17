@@ -284,7 +284,8 @@ vtx_update_result_t serial_smart_audio_update() {
 
     quic_debugf("SMART_AUDIO: magic 0x%x (%d)", data, payload_offset);
 
-    if (data != magic_bytes[payload_offset] && (payload_offset != 0 || data != 0xff)) {
+    // ignore the first magic byte, because of the framing issues it will be garbage half ot the time
+    if (data != magic_bytes[payload_offset] && payload_offset != 0) {
       quic_debugf("SMART_AUDIO: invalid magic (%d:0x%x)", payload_offset, data);
       parser_state = ERROR;
       return VTX_ERROR;

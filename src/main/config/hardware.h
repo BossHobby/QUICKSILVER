@@ -35,7 +35,7 @@
 #ifdef F4
 
 #define ENABLE_SMART_AUDIO
-//#define ENABLE_TRAMP
+#define ENABLE_TRAMP
 
 #ifdef F411
 #define SYS_CLOCK_FREQ_HZ 84000000

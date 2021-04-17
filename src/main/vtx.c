@@ -112,7 +112,7 @@ void vtx_smart_audio_update() {
       quic_debugf("smart audio version: %d", smart_audio_settings.version);
       smart_audio_detected = 1;
       vtx_settings = actual;
-      vtx_settings.detected = 1;
+      vtx_settings.detected = VTX_PROTOCOL_SMART_AUDIO;
       vtx_connect_tries = 0;
     }
     return;
@@ -259,7 +259,7 @@ void vtx_tramp_update() {
     if (tramp_settings.freq_min != 0 && tramp_settings.frequency != 0 && tramp_detected == 0) {
       tramp_detected = 1;
       vtx_settings = actual;
-      vtx_settings.detected = 1;
+      vtx_settings.detected = VTX_PROTOCOL_TRAMP;
       vtx_connect_tries = 0;
     }
     return;
@@ -290,18 +290,7 @@ void vtx_tramp_update() {
 #endif
 
 void vtx_init() {
-  vtx_settings.detected = 0;
-
-#ifdef ENABLE_SMART_AUDIO
-  if (profile.serial.smart_audio != USART_PORT_INVALID) {
-    serial_smart_audio_init();
-  }
-#endif
-#ifdef ENABLE_TRAMP
-  if (profile.serial.smart_audio != USART_PORT_INVALID) {
-    serial_tramp_init();
-  }
-#endif
+  vtx_settings.detected = VTX_PROTOCOL_INVALID;
 }
 
 void vtx_update() {
@@ -334,17 +323,68 @@ void vtx_update() {
     return;
   }
 
-#ifdef ENABLE_SMART_AUDIO
-  if (flags.on_ground && has_vtx_configured()) {
-    vtx_smart_audio_update();
+  if (!flags.on_ground) {
+    // never try to do vtx stuff in-air
+    return;
   }
-#endif
 
-#ifdef ENABLE_TRAMP
-  if (flags.on_ground && has_vtx_configured()) {
-    vtx_tramp_update();
+  if (profile.serial.smart_audio == USART_PORT_INVALID) {
+    // no serial assigned to vtx
+    return;
   }
-#endif
+
+  if (!vtx_settings.detected) {
+    static vtx_protocol_t protocol_to_check = VTX_PROTOCOL_TRAMP;
+    static uint8_t protocol_is_init = 0;
+
+    switch (protocol_to_check) {
+    case VTX_PROTOCOL_TRAMP:
+      if (!protocol_is_init) {
+        serial_tramp_init();
+        protocol_is_init = 1;
+        return;
+      }
+      vtx_tramp_update();
+      break;
+
+    case VTX_PROTOCOL_SMART_AUDIO:
+      if (!protocol_is_init) {
+        serial_smart_audio_init();
+        protocol_is_init = 1;
+        return;
+      }
+      vtx_smart_audio_update();
+      break;
+
+    default:
+      break;
+    }
+
+    if (vtx_connect_tries >= VTX_DETECT_TRIES) {
+      vtx_connect_tries = 0;
+      protocol_is_init = 0;
+
+      protocol_to_check++;
+
+      if (protocol_to_check == VTX_PROTOCOL_MAX) {
+        protocol_to_check = VTX_PROTOCOL_INVALID;
+      }
+    }
+    return;
+  }
+
+  switch (vtx_settings.detected) {
+  case VTX_PROTOCOL_TRAMP:
+    vtx_tramp_update();
+    break;
+
+  case VTX_PROTOCOL_SMART_AUDIO:
+    vtx_smart_audio_update();
+    break;
+
+  default:
+    break;
+  }
 }
 
 void vtx_set(vtx_settings_t *vtx) {

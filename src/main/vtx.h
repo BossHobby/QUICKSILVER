@@ -42,8 +42,16 @@ typedef enum {
   VTX_PIT_MODE_MAX,
 } vtx_pit_mode_t;
 
+typedef enum {
+  VTX_PROTOCOL_INVALID,
+  VTX_PROTOCOL_TRAMP,
+  VTX_PROTOCOL_SMART_AUDIO,
+
+  VTX_PROTOCOL_MAX,
+} vtx_protocol_t;
+
 typedef struct {
-  uint8_t detected;
+  vtx_protocol_t detected;
 
   vtx_band_t band;
   vtx_channel_t channel;
