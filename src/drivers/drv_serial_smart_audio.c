@@ -13,7 +13,7 @@
 
 #define SMART_AUDIO_BAUDRATE_MIN 4650
 #define SMART_AUDIO_BAUDRATE_MAX 5050
-#define SMART_AUDIO_BUFFER_SIZE 512
+#define SMART_AUDIO_BUFFER_SIZE 128
 
 #define SA_HEADER_SIZE 5
 
@@ -253,14 +253,14 @@ void smart_audio_uart_isr(void) {
   }
 }
 
-smart_audio_update_result_t serial_smart_audio_update() {
+vtx_update_result_t serial_smart_audio_update() {
   if (transfer_done == 0) {
-    return SA_WAIT;
+    return VTX_WAIT;
   }
   if (parser_state > PARSER_INIT && (timer_millis() - last_valid_read) > 500) {
     quic_debugf("SMART_AUDIO: timeout waiting for packet");
     parser_state = ERROR;
-    return SA_ERROR;
+    return VTX_ERROR;
   }
 
   static const uint8_t magic_bytes[3] = {
@@ -279,10 +279,10 @@ smart_audio_update_result_t serial_smart_audio_update() {
 
   switch (parser_state) {
   case PARSER_ERROR:
-    return SA_ERROR;
+    return VTX_ERROR;
 
   case PARSER_IDLE:
-    return SA_IDLE;
+    return VTX_IDLE;
 
   case PARSER_INIT: {
     mirror_offset = 0;
@@ -291,19 +291,19 @@ smart_audio_update_result_t serial_smart_audio_update() {
     cmd = 0;
     length = 0;
     parser_state = PARSER_CHECK_MIRROR;
-    return SA_WAIT;
+    return VTX_WAIT;
   }
   case PARSER_CHECK_MIRROR: {
     uint8_t data = 0;
     if (serial_smart_audio_read_byte(&data) == 0) {
-      return SA_WAIT;
+      return VTX_WAIT;
     }
 
     quic_debugf("SMART_AUDIO: mirror 0x%x (%d)", data, mirror_offset);
 
     // handle optional first zero byte
     if (mirror_offset == 1 && data == 0x0) {
-      return SA_WAIT;
+      return VTX_WAIT;
     }
 
     if (frame[mirror_offset] != data) {
@@ -312,7 +312,7 @@ smart_audio_update_result_t serial_smart_audio_update() {
       } else {
         quic_debugf("SMART_AUDIO: invalid mirror (%d:0x%x)", mirror_offset, data);
         parser_state = ERROR;
-        return SA_ERROR;
+        return VTX_ERROR;
       }
     }
 
@@ -321,12 +321,12 @@ smart_audio_update_result_t serial_smart_audio_update() {
     if (mirror_offset == frame_length) {
       parser_state = PARSER_READ_MAGIC;
     }
-    return SA_WAIT;
+    return VTX_WAIT;
   }
   case PARSER_READ_MAGIC: {
     uint8_t data = 0;
     if (serial_smart_audio_read_byte(&data) == 0) {
-      return SA_WAIT;
+      return VTX_WAIT;
     }
 
     quic_debugf("SMART_AUDIO: magic 0x%x (%d)", data, payload_offset);
@@ -334,19 +334,19 @@ smart_audio_update_result_t serial_smart_audio_update() {
     if (data != magic_bytes[payload_offset] && (payload_offset != 0 || data != 0xff)) {
       quic_debugf("SMART_AUDIO: invalid magic (%d:0x%x)", payload_offset, data);
       parser_state = ERROR;
-      return SA_ERROR;
+      return VTX_ERROR;
     }
     payload_offset++;
 
     if (payload_offset == 3) {
       parser_state = PARSER_READ_PAYLOAD;
     }
-    return SA_WAIT;
+    return VTX_WAIT;
   }
   case PARSER_READ_PAYLOAD: {
     uint8_t data = 0;
     if (serial_smart_audio_read_byte_crc(&crc, &data) == 0) {
-      return SA_WAIT;
+      return VTX_WAIT;
     }
 
     if (payload_offset == 3) {
@@ -367,33 +367,33 @@ smart_audio_update_result_t serial_smart_audio_update() {
       parser_state = PARSER_READ_CRC;
     }
 
-    return SA_WAIT;
+    return VTX_WAIT;
   }
   case PARSER_READ_CRC: {
     uint8_t data = 0;
     if (serial_smart_audio_read_byte(&data) == 0) {
-      return SA_WAIT;
+      return VTX_WAIT;
     }
 
     if (data != crc) {
       quic_debugf("SMART_AUDIO: invalid crc 0x%x vs 0x%x", crc, data);
       parser_state = ERROR;
-      return SA_ERROR;
+      return VTX_ERROR;
     }
 
     quic_debugf("SMART_AUDIO: read cmd %d (%d)", cmd, length);
     if (serial_smart_audio_parse_packet(cmd, payload, length)) {
       parser_state = PARSER_IDLE;
-      return SA_SUCCESS;
+      return VTX_SUCCESS;
     }
 
     parser_state = ERROR;
-    return SA_ERROR;
+    return VTX_ERROR;
   }
   }
 
   // we should not reach this, something is wrong
-  return SA_ERROR;
+  return VTX_ERROR;
 }
 
 void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const uint32_t size) {

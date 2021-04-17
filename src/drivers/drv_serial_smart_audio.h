@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include "drv_serial_vtx.h"
+
 typedef enum {
   SA_CMD_GET_SETTINGS = 0x01,
   SA_CMD_SET_POWER = 0x02,
@@ -28,13 +30,6 @@ typedef struct {
   uint16_t frequency;
 } smart_audio_settings_t;
 
-typedef enum {
-  SA_ERROR,
-  SA_IDLE,
-  SA_WAIT,
-  SA_SUCCESS
-} smart_audio_update_result_t;
-
 void serial_smart_audio_init();
-smart_audio_update_result_t serial_smart_audio_update();
+vtx_update_result_t serial_smart_audio_update();
 void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const uint32_t size);

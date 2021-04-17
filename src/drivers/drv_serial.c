@@ -128,6 +128,13 @@ void handle_usart_isr(usart_ports_t channel) {
     return;
   }
 #endif
+#ifdef ENABLE_TRAMP
+  extern void tramp_uart_isr();
+  if (serial_smart_audio_port == channel) {
+    tramp_uart_isr();
+    return;
+  }
+#endif
 }
 
 // we need handlers for both U_S_ART and UART.
