@@ -230,7 +230,7 @@ vtx_update_result_t serial_smart_audio_update() {
     return VTX_IDLE;
 
   case PARSER_INIT: {
-    if ((timer_millis() - vtx_last_request) > 500) {
+    if ((timer_millis() - vtx_last_request) > 200) {
       smart_audio_auto_baud();
 
       mirror_offset = 0;

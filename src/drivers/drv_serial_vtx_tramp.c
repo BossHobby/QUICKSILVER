@@ -148,7 +148,7 @@ vtx_update_result_t serial_tramp_update() {
     return VTX_IDLE;
 
   case PARSER_INIT: {
-    if ((timer_millis() - vtx_last_request) > 500) {
+    if ((timer_millis() - vtx_last_request) > 200) {
       mirror_offset = 0;
       payload_offset = 0;
       parser_state = PARSER_CHECK_MIRROR;
