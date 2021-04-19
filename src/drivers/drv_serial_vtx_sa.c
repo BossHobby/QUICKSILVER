@@ -240,7 +240,7 @@ vtx_update_result_t serial_smart_audio_update() {
       length = 0;
       parser_state = PARSER_CHECK_MIRROR;
 
-      quic_debugf("SMART_AUDIO: send cmd %d (%d)", cmd, size);
+      quic_debugf("SMART_AUDIO: send cmd %d (%d)", cmd, vtx_frame_length);
       serial_vtx_send_data(vtx_frame, vtx_frame_length);
     }
 
