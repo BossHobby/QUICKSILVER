@@ -335,8 +335,8 @@ void vtx_update() {
     return;
   }
 
-  if (profile.serial.smart_audio == USART_PORT_INVALID) {
-    // no serial assigned to vtx
+  if (profile.serial.smart_audio == USART_PORT_INVALID || profile.serial.smart_audio == serial_rx_port) {
+    // no serial assigned to vtx or still in use by rx
     return;
   }
 
@@ -375,6 +375,10 @@ void vtx_update() {
         protocol_to_check = VTX_PROTOCOL_INVALID;
       }
     }
+    return;
+  }
+
+  if (!has_vtx_configured()) {
     return;
   }
 
