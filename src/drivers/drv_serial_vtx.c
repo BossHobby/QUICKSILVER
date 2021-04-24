@@ -26,8 +26,9 @@ uint8_t volatile vtx_frame_length = 0;
 uint8_t volatile vtx_frame_offset = 0;
 
 void serial_vtx_send_data(uint8_t *data, uint32_t size) {
-  while (vtx_transfer_done == 0)
+  for (uint32_t timeout = 0x1000; vtx_transfer_done == 0 && timeout; --timeout) {
     __WFI();
+  }
 
   vtx_transfer_done = 0;
 
