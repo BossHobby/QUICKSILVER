@@ -10,6 +10,8 @@
 
 #ifdef ENABLE_BLACKBOX
 
+#define BLACKBOX_BUFFER_COUNT 16
+
 #ifdef USE_M25P16
 #define FILES_SECTOR_OFFSET bounds.sector_size
 #define ENTRIES_PER_BLOCK (256 / BLACKBOX_MAX_SIZE)
@@ -35,9 +37,9 @@ typedef enum {
 data_flash_header_t data_flash_header;
 
 static data_flash_state_t state = STATE_IDLE;
-static blackbox_t write_buffer[16];
-static uint32_t write_offset = 0;
-static uint32_t written_offset = 0;
+static blackbox_t write_buffer[BLACKBOX_BUFFER_COUNT];
+static int32_t write_offset = 0;
+static int32_t written_offset = 0;
 
 static data_flash_bounds_t bounds;
 static data_flash_file_t *current_file() {
@@ -49,7 +51,7 @@ static volatile uint32_t update_delta = 0;
 uint8_t data_flash_update(uint32_t loop) {
   static uint32_t offset = 0;
 
-  const uint32_t to_write = write_offset >= written_offset ? write_offset - written_offset : 16 + write_offset - written_offset;
+  const uint32_t to_write = write_offset >= written_offset ? (write_offset - written_offset) : (BLACKBOX_BUFFER_COUNT + write_offset - written_offset);
   uint8_t write_in_progress = 0;
 
 #ifdef USE_SDCARD
@@ -85,7 +87,7 @@ uint8_t data_flash_update(uint32_t loop) {
 
     const uint32_t index = current_file()->entries % ENTRIES_PER_BLOCK;
     sdcard_continue_write_sector(index * BLACKBOX_MAX_SIZE, &write_buffer[written_offset], sizeof(blackbox_t));
-    written_offset = (written_offset + 1) % 16;
+    written_offset = (written_offset + 1) % BLACKBOX_BUFFER_COUNT;
 
     if (index == ENTRIES_PER_BLOCK - 1) {
       state = STATE_FINISH_WRITE;
@@ -157,7 +159,7 @@ uint8_t data_flash_update(uint32_t loop) {
     if (!m25p16_page_program(offset + index * BLACKBOX_MAX_SIZE, (const uint8_t *)&write_buffer[written_offset], sizeof(blackbox_t))) {
       break;
     }
-    written_offset = (written_offset + 1) % 16;
+    written_offset = (written_offset + 1) % BLACKBOX_BUFFER_COUNT;
 
     if (index == ENTRIES_PER_BLOCK - 1) {
       state = STATE_FINISH_WRITE;
@@ -188,6 +190,7 @@ uint8_t data_flash_update(uint32_t loop) {
     break;
   }
 
+  case STATE_FLUSH:
   case STATE_START_MULTI_WRITE:
   case STATE_FINISH_MULTI_WRITE:
     break;
@@ -313,7 +316,7 @@ cbor_result_t data_flash_read_backbox(const uint32_t index, blackbox_t b[], cons
 
 cbor_result_t data_flash_write_backbox(const blackbox_t *b) {
   write_buffer[write_offset] = *b;
-  write_offset = (write_offset + 1) % 16;
+  write_offset = (write_offset + 1) % BLACKBOX_BUFFER_COUNT;
   return CBOR_OK;
 }
 
