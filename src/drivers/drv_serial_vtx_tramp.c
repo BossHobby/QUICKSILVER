@@ -35,8 +35,8 @@ extern volatile uint8_t vtx_transfer_done;
 extern volatile circular_buffer_t vtx_rx_buffer;
 
 extern uint8_t vtx_frame[VTX_BUFFER_SIZE];
-extern uint8_t volatile vtx_frame_length;
-extern uint8_t volatile vtx_frame_offset;
+extern volatile uint8_t vtx_frame_length;
+extern volatile uint8_t vtx_frame_offset;
 
 static uint8_t crc8_data(const uint8_t *data) {
   uint8_t crc = 0;
