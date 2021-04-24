@@ -206,8 +206,7 @@ vtx_update_result_t serial_smart_audio_update() {
     return VTX_ERROR;
   }
 
-  static const uint8_t magic_bytes[3] = {
-      0x0,
+  static const uint8_t magic_bytes[2] = {
       0xaa,
       0x55,
   };
@@ -288,9 +287,14 @@ vtx_update_result_t serial_smart_audio_update() {
       parser_state = ERROR;
       return VTX_ERROR;
     }
-    payload_offset++;
+    if (data == magic_bytes[payload_offset]) {
+      // only increment if we actually matched
+      payload_offset++;
+    }
 
-    if (payload_offset == 3) {
+    if (payload_offset == 2) {
+      // account for first (skipped) byte;
+      payload_offset++;
       parser_state = PARSER_READ_PAYLOAD;
     }
     return VTX_WAIT;
