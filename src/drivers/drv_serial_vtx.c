@@ -40,6 +40,7 @@ void serial_vtx_send_data(uint8_t *data, uint32_t size) {
 
   USART_ITConfig(USART.channel, USART_IT_RXNE, ENABLE);
   USART_ITConfig(USART.channel, USART_IT_TXE, ENABLE);
+  USART_ITConfig(USART.channel, USART_IT_TC, ENABLE);
 
   vtx_last_request = timer_millis();
   vtx_last_valid_read = timer_millis();
