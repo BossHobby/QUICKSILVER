@@ -141,6 +141,6 @@ uint8_t sdcard_update();
 uint8_t sdcard_read_sectors(uint8_t *buf, uint32_t sector, uint32_t count);
 uint8_t sdcard_write_sector(uint8_t *buf, uint32_t sector);
 
-uint8_t sdcard_write_sectors_start(uint32_t sector);
+uint8_t sdcard_write_sectors_start(uint32_t sector, uint32_t count);
 uint8_t sdcard_write_sectors_continue(uint8_t *buf);
 uint8_t sdcard_write_sectors_finish();

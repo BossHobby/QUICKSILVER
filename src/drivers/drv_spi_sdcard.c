@@ -103,7 +103,7 @@ static void sdcard_reinit_fast() {
   SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
   SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
   SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
+  SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
   SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
   SPI_InitStructure.SPI_CRCPolynomial = 7;
   SPI_Init(SPI_PORT.channel, &SPI_InitStructure);
@@ -487,7 +487,7 @@ uint8_t sdcard_read_sectors(uint8_t *buf, uint32_t sector, uint32_t count) {
   return 0;
 }
 
-uint8_t sdcard_write_sectors_start(uint32_t sector) {
+uint8_t sdcard_write_sectors_start(uint32_t sector, uint32_t count) {
   if (state != SDCARD_READY) {
     if (state == SDCARD_WRITE_MULTIPLE_START) {
       return 1;
@@ -497,7 +497,7 @@ uint8_t sdcard_write_sectors_start(uint32_t sector) {
 
   sdcard_select();
 
-  if (sdcard_app_command(SDCARD_ACMD_SET_WR_BLK_ERASE_COUNT, 1) != 0x0) {
+  if (sdcard_app_command(SDCARD_ACMD_SET_WR_BLK_ERASE_COUNT, count * 2) != 0x0) {
     sdcard_deselect();
     return 0;
   }
@@ -536,6 +536,10 @@ uint8_t sdcard_write_sectors_continue(uint8_t *buf) {
 }
 
 uint8_t sdcard_write_sectors_finish() {
+  if (state == SDCARD_WRITE_MULTIPLE_SECTOR_SUCCESS) {
+    state = SDCARD_WRITE_MULTIPLE_START;
+    return 0;
+  }
   if (state == SDCARD_WRITE_MULTIPLE_START) {
     state = SDCARD_WRITE_MULTIPLE_FINISH;
     return 0;
@@ -550,7 +554,7 @@ uint8_t sdcard_write_sectors_finish() {
 
 uint8_t sdcard_write_sector(uint8_t *buf, uint32_t sector) {
   if (state == SDCARD_READY) {
-    sdcard_write_sectors_start(sector);
+    sdcard_write_sectors_start(sector, 1);
   }
   if (state == SDCARD_WRITE_MULTIPLE_SECTOR_SUCCESS) {
     sdcard_write_sectors_continue(buf);
