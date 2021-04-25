@@ -64,6 +64,15 @@ uint8_t data_flash_update(uint32_t loop) {
   case STATE_DETECT:
     if (sdcard_ready) {
       state = STATE_READ_HEADER;
+
+      bounds.page_size = 512;
+      bounds.pages_per_sector = 1;
+
+      // TODO: fetch
+      bounds.sectors = 512;
+
+      bounds.sector_size = bounds.pages_per_sector * bounds.page_size;
+      bounds.total_size = bounds.sector_size * bounds.sectors;
     }
     break;
 
@@ -147,14 +156,40 @@ uint8_t data_flash_update(uint32_t loop) {
 #endif
 
 #ifdef USE_M25P16
-  if (!m25p16_is_ready()) {
-    return 0;
-  }
 
   switch (state) {
+  case STATE_DETECT:
+    if (!m25p16_is_ready()) {
+      break;
+    }
+
+    m25p16_get_bounds(&bounds);
+    state = STATE_READ_HEADER;
+    break;
+
+  case STATE_READ_HEADER:
+    if (!m25p16_is_ready()) {
+      break;
+    }
+
+    m25p16_read_addr(M25P16_READ_DATA_BYTES, 0x0, (uint8_t *)&data_flash_header, sizeof(data_flash_header_t));
+    if (data_flash_header.magic != DATA_FLASH_HEADER_MAGIC) {
+      data_flash_header.magic = DATA_FLASH_HEADER_MAGIC;
+      data_flash_header.file_num = 0;
+
+      state = STATE_ERASE_HEADER;
+      break;
+    }
+
+    state = STATE_IDLE;
+    break;
+
   case STATE_IDLE:
-    if (to_write > 0) {
+    if (to_write >= ENTRIES_PER_BLOCK) {
       state = STATE_START_WRITE;
+    } else if (should_flush == 1) {
+      state = STATE_ERASE_HEADER;
+      should_flush = 0;
     }
     break;
 
@@ -168,24 +203,25 @@ uint8_t data_flash_update(uint32_t loop) {
   }
 
   case STATE_CONTINUE_WRITE: {
-    if (to_write <= 0) {
+    if (to_write < ENTRIES_PER_BLOCK) {
+      if (should_flush == 1) {
+        state = STATE_FINISH_WRITE;
+      }
+      break;
+    }
+    if (!m25p16_is_ready()) {
       break;
     }
 
     const uint32_t index = current_file()->entries % ENTRIES_PER_BLOCK;
-    write_in_progress = 1;
-    if (!m25p16_page_program(offset + index * BLACKBOX_MAX_SIZE, (const uint8_t *)&write_buffer[written_offset], sizeof(blackbox_t))) {
+    if (!m25p16_page_program(offset + index * BLACKBOX_MAX_SIZE, write_buffer + (written_offset * BLACKBOX_MAX_SIZE), ENTRIES_PER_BLOCK * sizeof(blackbox_t))) {
       break;
     }
-    written_offset = (written_offset + 1) % BLACKBOX_BUFFER_COUNT;
+    write_in_progress = 1;
+    written_offset = (written_offset + ENTRIES_PER_BLOCK) % BLACKBOX_BUFFER_COUNT;
+    current_file()->entries += ENTRIES_PER_BLOCK;
 
-    if (index == ENTRIES_PER_BLOCK - 1) {
-      state = STATE_FINISH_WRITE;
-    } else {
-      state = STATE_CONTINUE_WRITE;
-    }
-
-    current_file()->entries += 1;
+    state = STATE_FINISH_WRITE;
     break;
   }
 
@@ -195,22 +231,24 @@ uint8_t data_flash_update(uint32_t loop) {
   }
 
   case STATE_ERASE_HEADER: {
+    if (!m25p16_is_ready()) {
+      break;
+    }
     m25p16_write_addr(M25P16_SECTOR_ERASE, 0x0, NULL, 0);
     state = STATE_WRITE_HEADER;
     break;
   }
 
   case STATE_WRITE_HEADER: {
+    if (!m25p16_is_ready()) {
+      break;
+    }
     if (!m25p16_page_program(0x0, (uint8_t *)&data_flash_header, sizeof(data_flash_header_t))) {
       break;
     }
     state = STATE_IDLE;
     break;
   }
-
-  case STATE_START_MULTI_WRITE:
-  case STATE_FINISH_MULTI_WRITE:
-    break;
   }
 #endif
 
@@ -220,19 +258,9 @@ uint8_t data_flash_update(uint32_t loop) {
 void data_flash_init() {
 #ifdef USE_M25P16
   m25p16_init();
-  m25p16_get_bounds(&bounds);
 #endif
 #ifdef USE_SDCARD
   sdcard_init();
-
-  bounds.page_size = 512;
-  bounds.pages_per_sector = 1;
-
-  // TODO: fetch
-  bounds.sectors = 512;
-
-  bounds.sector_size = bounds.pages_per_sector * bounds.page_size;
-  bounds.total_size = bounds.sector_size * bounds.sectors;
 #endif
 
   data_flash_header.magic = DATA_FLASH_HEADER_MAGIC;
@@ -245,6 +273,8 @@ void data_flash_reset() {
 #ifdef USE_M25P16
   m25p16_command(M25P16_WRITE_ENABLE);
   m25p16_command(M25P16_BULK_ERASE);
+
+  m25p16_wait_for_ready();
 #endif
 
   data_flash_header.magic = DATA_FLASH_HEADER_MAGIC;
@@ -270,6 +300,9 @@ void data_flash_restart() {
   data_flash_header.file_num++;
 
   state = STATE_ERASE_HEADER;
+
+  write_offset = 0;
+  written_offset = 0;
 }
 
 void data_flash_finish() {

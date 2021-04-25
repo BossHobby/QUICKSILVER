@@ -66,22 +66,14 @@ uint8_t m25p16_is_ready() {
     return 0;
   }
 
-  static uint8_t read_status_in_progress = 0;
-  static uint8_t read_status[2];
-
-  if (read_status_in_progress != 0) {
-    read_status_in_progress = 0;
-    return (read_status[1] & 0x01) == 0;
-  }
-
-  read_status[0] = M25P16_READ_STATUS_REGISTER;
-  read_status[1] = 0x0;
-
   m25p16_reinit();
+
   spi_csn_enable(M25P16_NSS_PIN);
-  spi_dma_transfer_begin(M25P16_SPI_PORT, read_status, 2);
-  read_status_in_progress = 1;
-  return 0;
+  spi_transfer_byte(M25P16_SPI_PORT, M25P16_READ_STATUS_REGISTER);
+  const uint8_t ret = spi_transfer_byte(M25P16_SPI_PORT, 0x0);
+  spi_csn_disable(M25P16_NSS_PIN);
+
+  return (ret & 0x01) == 0;
 }
 
 void m25p16_wait_for_ready() {
@@ -134,21 +126,11 @@ uint8_t m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint3
     return 0;
   }
 
-  static uint8_t write_enabled = 0;
-  static uint8_t write_enable[1];
-
-  if (write_enabled == 0) {
-    write_enable[0] = M25P16_WRITE_ENABLE;
-
-    m25p16_reinit();
-
-    spi_csn_enable(M25P16_NSS_PIN);
-    spi_dma_transfer_begin(M25P16_SPI_PORT, write_enable, 1);
-    write_enabled = 1;
-    return 0;
-  }
-
   m25p16_reinit();
+
+  spi_csn_enable(M25P16_NSS_PIN);
+  spi_transfer_byte(M25P16_SPI_PORT, M25P16_WRITE_ENABLE);
+  spi_csn_disable(M25P16_NSS_PIN);
 
   spi_csn_enable(M25P16_NSS_PIN);
 
@@ -160,8 +142,6 @@ uint8_t m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint3
   memcpy(dma_buf + 4, buf, size);
 
   spi_dma_transfer_begin(M25P16_SPI_PORT, dma_buf, size + 4);
-
-  write_enabled = 0;
   return 1;
 }
 
