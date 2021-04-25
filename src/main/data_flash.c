@@ -18,28 +18,30 @@
 #endif
 #ifdef USE_SDCARD
 #define FILES_SECTOR_OFFSET 1
-#define FLUSH_INTERVAL 4
-#define ENTRIES_PER_BLOCK (512 / BLACKBOX_MAX_SIZE)
+#define ENTRIES_PER_BLOCK (SDCARD_BLOCK_SIZE / BLACKBOX_MAX_SIZE)
 #endif
 
 typedef enum {
+  STATE_DETECT,
   STATE_IDLE,
-  STATE_START_MULTI_WRITE,
+
   STATE_START_WRITE,
   STATE_CONTINUE_WRITE,
   STATE_FINISH_WRITE,
-  STATE_FINISH_MULTI_WRITE,
+
+  STATE_READ_HEADER,
+
   STATE_ERASE_HEADER,
   STATE_WRITE_HEADER,
-  STATE_FLUSH,
 } data_flash_state_t;
 
 data_flash_header_t data_flash_header;
 
-static data_flash_state_t state = STATE_IDLE;
-static blackbox_t write_buffer[BLACKBOX_BUFFER_COUNT];
+static data_flash_state_t state = STATE_DETECT;
+static uint8_t write_buffer[BLACKBOX_BUFFER_COUNT * BLACKBOX_MAX_SIZE];
 static int32_t write_offset = 0;
 static int32_t written_offset = 0;
+static uint8_t should_flush = 0;
 
 static data_flash_bounds_t bounds;
 static data_flash_file_t *current_file() {
@@ -55,75 +57,82 @@ uint8_t data_flash_update(uint32_t loop) {
   uint8_t write_in_progress = 0;
 
 #ifdef USE_SDCARD
+  static uint8_t block_buffer[SDCARD_BLOCK_SIZE];
+
+  uint8_t sdcard_ready = sdcard_update();
+
   switch (state) {
-  case STATE_IDLE:
-    if (to_write > 0) {
-      state = STATE_START_MULTI_WRITE;
+  case STATE_DETECT:
+    if (sdcard_ready) {
+      state = STATE_READ_HEADER;
     }
     break;
 
-  case STATE_WAIT_FOR_READY:
-    break;
+  case STATE_READ_HEADER: {
+    if (sdcard_read_sectors(block_buffer, 0, 1)) {
+      memcpy((uint8_t *)&data_flash_header, block_buffer, sizeof(data_flash_header_t));
 
-  case STATE_START_MULTI_WRITE: {
-    if (sdcard_start_multi_write(offset)) {
-      state = STATE_START_WRITE;
+      if (data_flash_header.magic != DATA_FLASH_HEADER_MAGIC) {
+        data_flash_header.magic = DATA_FLASH_HEADER_MAGIC;
+        data_flash_header.file_num = 0;
+
+        state = STATE_ERASE_HEADER;
+        break;
+      }
+
+      state = STATE_IDLE;
     }
     break;
   }
 
+  case STATE_IDLE:
+    if (to_write >= ENTRIES_PER_BLOCK) {
+      state = STATE_START_WRITE;
+    } else if (should_flush == 1) {
+      state = STATE_ERASE_HEADER;
+      should_flush = 0;
+    }
+    break;
+
   case STATE_START_WRITE: {
     offset = FILES_SECTOR_OFFSET + current_file()->start_sector + (current_file()->entries / ENTRIES_PER_BLOCK);
-    if (sdcard_start_write_sector(offset)) {
+    if (sdcard_write_sectors_start(offset)) {
       state = STATE_CONTINUE_WRITE;
     }
     break;
   }
 
   case STATE_CONTINUE_WRITE: {
-    if (to_write <= 0) {
+    if (to_write < ENTRIES_PER_BLOCK) {
       break;
     }
 
-    const uint32_t index = current_file()->entries % ENTRIES_PER_BLOCK;
-    sdcard_continue_write_sector(index * BLACKBOX_MAX_SIZE, &write_buffer[written_offset], sizeof(blackbox_t));
-    written_offset = (written_offset + 1) % BLACKBOX_BUFFER_COUNT;
-
-    if (index == ENTRIES_PER_BLOCK - 1) {
+    if (sdcard_write_sectors_continue(write_buffer + (written_offset * BLACKBOX_MAX_SIZE))) {
+      written_offset = (written_offset + ENTRIES_PER_BLOCK) % BLACKBOX_BUFFER_COUNT;
+      current_file()->entries += ENTRIES_PER_BLOCK;
       state = STATE_FINISH_WRITE;
-    } else {
-      state = STATE_WAIT_FOR_READY;
-      state_after_ready = STATE_CONTINUE_WRITE;
     }
-
-    current_file()->entries += 1;
     break;
   }
 
   case STATE_FINISH_WRITE: {
-    static uint32_t count = 0;
-    if (!sdcard_finish_write_sector(offset)) {
-      break;
-    }
-    count++;
-
-    if (count == FLUSH_INTERVAL) {
-      count = 0;
-      state = STATE_FINISH_MULTI_WRITE;
-    } else {
-      state = STATE_START_WRITE;
-    }
-    break;
-  }
-
-  case STATE_FINISH_MULTI_WRITE: {
-    if (sdcard_finish_multi_write(offset)) {
+    if (sdcard_write_sectors_finish()) {
       state = STATE_IDLE;
     }
     break;
   }
 
   case STATE_ERASE_HEADER: {
+    memcpy(block_buffer, (uint8_t *)&data_flash_header, sizeof(data_flash_header_t));
+    state = STATE_WRITE_HEADER;
+    break;
+  }
+
+  case STATE_WRITE_HEADER: {
+    if (sdcard_write_sector(block_buffer, 0)) {
+      state = STATE_IDLE;
+    }
+    break;
   }
   }
 #endif
@@ -190,7 +199,6 @@ uint8_t data_flash_update(uint32_t loop) {
     break;
   }
 
-  case STATE_FLUSH:
   case STATE_START_MULTI_WRITE:
   case STATE_FINISH_MULTI_WRITE:
     break;
@@ -200,35 +208,6 @@ uint8_t data_flash_update(uint32_t loop) {
   return write_in_progress;
 }
 
-cbor_result_t data_flash_read_header(data_flash_header_t *h) {
-#ifdef USE_M25P16
-  m25p16_read_addr(M25P16_READ_DATA_BYTES, 0x0, (uint8_t *)h, sizeof(data_flash_header_t));
-#endif
-#ifdef USE_SDCARD
-  uint8_t buf[512];
-  while (!sdcard_read_sectors(buf, 0, 1))
-    ;
-
-  memcpy(h, buf, sizeof(data_flash_header_t));
-#endif
-  return CBOR_OK;
-}
-
-cbor_result_t data_flash_write_header(data_flash_header_t *h) {
-#ifdef USE_M25P16
-  m25p16_write_addr(M25P16_SECTOR_ERASE, 0x0, NULL, 0);
-  m25p16_write_addr(M25P16_PAGE_PROGRAM, 0x0, (uint8_t *)h, sizeof(data_flash_header_t));
-#endif
-#ifdef USE_SDCARD
-  uint8_t buf[512];
-  memcpy(buf, h, sizeof(data_flash_header_t));
-
-  while (!sdcard_write_sectors(buf, 0, 1))
-    ;
-#endif
-  return CBOR_OK;
-}
-
 void data_flash_init() {
 #ifdef USE_M25P16
   m25p16_init();
@@ -236,7 +215,6 @@ void data_flash_init() {
 #endif
 #ifdef USE_SDCARD
   sdcard_init();
-  sdcard_detect();
 
   bounds.page_size = 512;
   bounds.pages_per_sector = 1;
@@ -250,11 +228,8 @@ void data_flash_init() {
 
   data_flash_header.magic = DATA_FLASH_HEADER_MAGIC;
   data_flash_header.file_num = 0;
-  data_flash_read_header(&data_flash_header);
-  if (data_flash_header.magic != DATA_FLASH_HEADER_MAGIC) {
-    data_flash_header.magic = DATA_FLASH_HEADER_MAGIC;
-    data_flash_header.file_num = 0;
-  }
+
+  state = STATE_DETECT;
 }
 
 void data_flash_reset() {
@@ -265,8 +240,8 @@ void data_flash_reset() {
 
   data_flash_header.magic = DATA_FLASH_HEADER_MAGIC;
   data_flash_header.file_num = 0;
-  data_flash_write_header(&data_flash_header);
-  reset_looptime();
+
+  state = STATE_ERASE_HEADER;
 }
 
 void data_flash_restart() {
@@ -289,7 +264,7 @@ void data_flash_restart() {
 }
 
 void data_flash_finish() {
-  state = STATE_ERASE_HEADER;
+  should_flush = 1;
 }
 
 cbor_result_t data_flash_read_backbox(const uint32_t index, blackbox_t b[], const uint8_t count) {
@@ -303,9 +278,14 @@ cbor_result_t data_flash_read_backbox(const uint32_t index, blackbox_t b[], cons
   const uint32_t offset = FILES_SECTOR_OFFSET + current_file()->start_sector + (index / ENTRIES_PER_BLOCK);
   const uint32_t sectors = count / ENTRIES_PER_BLOCK + (count % ENTRIES_PER_BLOCK ? 1 : 0);
 
-  uint8_t buf[sectors * 512];
-  while (!sdcard_read_sectors(buf, offset, sectors))
-    ;
+  static uint8_t buf[4 * SDCARD_BLOCK_SIZE];
+  while (1) {
+    sdcard_update();
+    if (sdcard_read_sectors(buf, offset, sectors)) {
+      break;
+    }
+    timer_delay_us(100);
+  }
 
   for (uint32_t i = 0; i < count; i++) {
     memcpy(b + i, buf + ((index % ENTRIES_PER_BLOCK) + i) * BLACKBOX_MAX_SIZE, sizeof(blackbox_t));
@@ -315,7 +295,7 @@ cbor_result_t data_flash_read_backbox(const uint32_t index, blackbox_t b[], cons
 }
 
 cbor_result_t data_flash_write_backbox(const blackbox_t *b) {
-  write_buffer[write_offset] = *b;
+  memcpy(write_buffer + (write_offset * BLACKBOX_MAX_SIZE), (uint8_t *)b, sizeof(blackbox_t));
   write_offset = (write_offset + 1) % BLACKBOX_BUFFER_COUNT;
   return CBOR_OK;
 }
