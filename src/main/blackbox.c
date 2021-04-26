@@ -50,6 +50,15 @@ void blackbox_init() {
 uint8_t blackbox_update() {
   static uint32_t loop_counter = 0;
 
+  data_flash_result_t flash_result = data_flash_update();
+
+  if (flash_result == DATA_FLASH_DETECT) {
+    // flash is still detecting, dont do anything
+    return 0;
+  }
+
+  // flash is either idle or writing, do blackbox
+
   if ((!rx_aux_on(AUX_ARMING) || !rx_aux_on(AUX_BLACKBOX)) && blackbox_enabled == 1) {
     data_flash_finish();
     blackbox_enabled = 0;
@@ -60,10 +69,9 @@ uint8_t blackbox_update() {
     return 0;
   }
 
-  uint8_t write_in_progress = data_flash_update(loop_counter);
-
-  if (blackbox_enabled == 0)
+  if (blackbox_enabled == 0) {
     return 0;
+  }
 
   blackbox.loop = loop_counter / blackbox_rate;
   blackbox.time = timer_micros();
@@ -95,6 +103,7 @@ uint8_t blackbox_update() {
 
   loop_counter++;
 
-  return write_in_progress;
+  // tell the rest of the code that flash is occuping the spi bus
+  return flash_result == DATA_FLASH_WRITE;
 }
 #endif

@@ -51,11 +51,10 @@ static data_flash_file_t *current_file() {
 
 static volatile uint32_t update_delta = 0;
 
-uint8_t data_flash_update(uint32_t loop) {
+data_flash_result_t data_flash_update() {
   static uint32_t offset = 0;
 
   const uint32_t to_write = write_offset >= written_offset ? (write_offset - written_offset) : (BLACKBOX_BUFFER_COUNT + write_offset - written_offset);
-  uint8_t write_in_progress = 0;
 
 #ifdef USE_SDCARD
   uint8_t sdcard_ready = sdcard_update();
@@ -74,7 +73,7 @@ uint8_t data_flash_update(uint32_t loop) {
       bounds.sector_size = bounds.pages_per_sector * bounds.page_size;
       bounds.total_size = bounds.sector_size * bounds.sectors;
     }
-    break;
+    return DATA_FLASH_DETECT;
 
   case STATE_READ_HEADER: {
     if (sdcard_read_sectors(write_buffer, 0, 1)) {
@@ -156,16 +155,15 @@ uint8_t data_flash_update(uint32_t loop) {
 #endif
 
 #ifdef USE_M25P16
-
   switch (state) {
   case STATE_DETECT:
     if (!m25p16_is_ready()) {
-      break;
+      return DATA_FLASH_DETECT;
     }
 
     m25p16_get_bounds(&bounds);
     state = STATE_READ_HEADER;
-    break;
+    return DATA_FLASH_DETECT;
 
   case STATE_READ_HEADER:
     if (!m25p16_is_ready()) {
@@ -217,12 +215,12 @@ uint8_t data_flash_update(uint32_t loop) {
     if (!m25p16_page_program(offset + index * BLACKBOX_MAX_SIZE, write_buffer + (written_offset * BLACKBOX_MAX_SIZE), M25P16_BLOCK_SIZE)) {
       break;
     }
-    write_in_progress = 1;
     written_offset = (written_offset + ENTRIES_PER_BLOCK) % BLACKBOX_BUFFER_COUNT;
     current_file()->entries += ENTRIES_PER_BLOCK;
 
     state = STATE_FINISH_WRITE;
-    break;
+
+    return DATA_FLASH_WRITE;
   }
 
   case STATE_FINISH_WRITE: {
@@ -252,7 +250,7 @@ uint8_t data_flash_update(uint32_t loop) {
   }
 #endif
 
-  return write_in_progress;
+  return DATA_FLASH_IDLE;
 }
 
 void data_flash_init() {

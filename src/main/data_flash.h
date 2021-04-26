@@ -25,8 +25,14 @@ typedef struct {
   data_flash_file_t files[16];
 } data_flash_header_t;
 
+typedef enum {
+  DATA_FLASH_IDLE,
+  DATA_FLASH_DETECT,
+  DATA_FLASH_WRITE,
+} data_flash_result_t;
+
 void data_flash_init();
-uint8_t data_flash_update(uint32_t loop);
+data_flash_result_t data_flash_update();
 
 void data_flash_reset();
 void data_flash_restart();
