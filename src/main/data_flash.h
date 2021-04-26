@@ -32,5 +32,5 @@ void data_flash_reset();
 void data_flash_restart();
 void data_flash_finish();
 
-cbor_result_t data_flash_read_backbox(const uint32_t addr, blackbox_t *b, const uint8_t count);
+cbor_result_t data_flash_read_backbox(const uint32_t file, const uint32_t addr, blackbox_t *b, const uint8_t count);
 cbor_result_t data_flash_write_backbox(const blackbox_t *b);

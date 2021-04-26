@@ -390,7 +390,7 @@ void process_blackbox(uint8_t *data, uint32_t len) {
       blackbox_t blackbox[8];
       const data_flash_file_t *file = &data_flash_header.files[file_index];
       for (uint32_t i = 0; i < file->entries; i += 8) {
-        res = data_flash_read_backbox(i, blackbox, 8);
+        res = data_flash_read_backbox(file_index, i, blackbox, 8);
         if (res < CBOR_OK) {
           continue;
         }

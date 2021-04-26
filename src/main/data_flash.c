@@ -309,15 +309,17 @@ void data_flash_finish() {
   should_flush = 1;
 }
 
-cbor_result_t data_flash_read_backbox(const uint32_t index, blackbox_t b[], const uint8_t count) {
+cbor_result_t data_flash_read_backbox(const uint32_t file_index, const uint32_t index, blackbox_t b[], const uint8_t count) {
+  const data_flash_file_t *file = &data_flash_header.files[file_index];
+
 #ifdef USE_M25P16
   for (uint32_t i = 0; i < count; i++) {
-    const uint32_t offset = FILES_SECTOR_OFFSET + current_file()->start_sector * bounds.sector_size + (index + i) * BLACKBOX_MAX_SIZE;
+    const uint32_t offset = FILES_SECTOR_OFFSET + file->start_sector * bounds.sector_size + (index + i) * BLACKBOX_MAX_SIZE;
     m25p16_read_addr(M25P16_READ_DATA_BYTES, offset, (uint8_t *)&b[i], sizeof(blackbox_t));
   }
 #endif
 #ifdef USE_SDCARD
-  const uint32_t offset = FILES_SECTOR_OFFSET + current_file()->start_sector + (index / ENTRIES_PER_BLOCK);
+  const uint32_t offset = FILES_SECTOR_OFFSET + file->start_sector + (index / ENTRIES_PER_BLOCK);
   const uint32_t sectors = count / ENTRIES_PER_BLOCK + (count % ENTRIES_PER_BLOCK ? 1 : 0);
 
   static uint8_t buf[4 * SDCARD_BLOCK_SIZE];
