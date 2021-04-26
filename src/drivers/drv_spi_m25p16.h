@@ -4,6 +4,8 @@
 
 #include "data_flash.h"
 
+#define M25P16_BLOCK_SIZE 256
+
 enum m25p16_commands {
   M25P16_WRITE_ENABLE = 0x06,
   M25P16_WRITE_DISABLE = 0x04,

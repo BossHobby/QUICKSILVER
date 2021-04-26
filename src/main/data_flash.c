@@ -14,7 +14,7 @@
 
 #ifdef USE_M25P16
 #define FILES_SECTOR_OFFSET bounds.sector_size
-#define ENTRIES_PER_BLOCK (256 / BLACKBOX_MAX_SIZE)
+#define ENTRIES_PER_BLOCK (M25P16_BLOCK_SIZE / BLACKBOX_MAX_SIZE)
 #endif
 #ifdef USE_SDCARD
 #define FLUSH_INTERVAL 8
@@ -194,7 +194,7 @@ uint8_t data_flash_update(uint32_t loop) {
     break;
 
   case STATE_START_WRITE: {
-    offset = FILES_SECTOR_OFFSET + current_file()->start_sector * bounds.sector_size + (current_file()->entries / ENTRIES_PER_BLOCK) * 256;
+    offset = FILES_SECTOR_OFFSET + current_file()->start_sector * bounds.sector_size + (current_file()->entries / ENTRIES_PER_BLOCK) * M25P16_BLOCK_SIZE;
     if (offset >= bounds.total_size) {
       break;
     }
@@ -214,7 +214,7 @@ uint8_t data_flash_update(uint32_t loop) {
     }
 
     const uint32_t index = current_file()->entries % ENTRIES_PER_BLOCK;
-    if (!m25p16_page_program(offset + index * BLACKBOX_MAX_SIZE, write_buffer + (written_offset * BLACKBOX_MAX_SIZE), ENTRIES_PER_BLOCK * sizeof(blackbox_t))) {
+    if (!m25p16_page_program(offset + index * BLACKBOX_MAX_SIZE, write_buffer + (written_offset * BLACKBOX_MAX_SIZE), M25P16_BLOCK_SIZE)) {
       break;
     }
     write_in_progress = 1;
