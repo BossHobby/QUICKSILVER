@@ -281,11 +281,11 @@ void data_flash_reset() {
   state = STATE_ERASE_HEADER;
 }
 
-void data_flash_restart() {
+void data_flash_restart(uint32_t blackbox_rate) {
   uint32_t offset = 0;
 
   for (uint16_t i = 0; i < data_flash_header.file_num; i++) {
-    const uint32_t size = data_flash_header.files[i].entries * 0x80;
+    const uint32_t size = data_flash_header.files[i].entries * BLACKBOX_MAX_SIZE;
 
     offset += size / bounds.sector_size;
     if (size % bounds.sector_size > 0) {
@@ -293,6 +293,12 @@ void data_flash_restart() {
     }
   }
 
+  if (offset >= bounds.total_size) {
+    // flash is full
+    return;
+  }
+
+  data_flash_header.files[data_flash_header.file_num].blackbox_rate = blackbox_rate;
   data_flash_header.files[data_flash_header.file_num].entries = 0;
   data_flash_header.files[data_flash_header.file_num].start_sector = offset;
   data_flash_header.file_num++;
