@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#define SDCARD_BLOCK_SIZE 512
+#define SDCARD_PAGE_SIZE 512
 
 typedef enum {
   SDCARD_GO_IDLE = 0,
@@ -138,9 +138,9 @@ void sdcard_init();
 
 uint8_t sdcard_update();
 
-uint8_t sdcard_read_sectors(uint8_t *buf, uint32_t sector, uint32_t count);
-uint8_t sdcard_write_sector(uint8_t *buf, uint32_t sector);
+uint8_t sdcard_read_pages(uint8_t *buf, uint32_t page, uint32_t count);
+uint8_t sdcard_write_page(uint8_t *buf, uint32_t page);
 
-uint8_t sdcard_write_sectors_start(uint32_t sector, uint32_t count);
-uint8_t sdcard_write_sectors_continue(uint8_t *buf);
-uint8_t sdcard_write_sectors_finish();
+uint8_t sdcard_write_pages_start(uint32_t page, uint32_t count);
+uint8_t sdcard_write_pages_continue(uint8_t *buf);
+uint8_t sdcard_write_pages_finish();

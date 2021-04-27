@@ -209,7 +209,7 @@ void m25p16_get_bounds(data_flash_bounds_t *bounds) {
     return;
   }
 
-  bounds->page_size = 256;
+  bounds->page_size = M25P16_PAGE_SIZE;
   bounds->sector_size = bounds->pages_per_sector * bounds->page_size;
   bounds->total_size = bounds->sector_size * bounds->sectors;
 }
