@@ -346,6 +346,7 @@ void process_blackbox(uint8_t *data, uint32_t len) {
   check_cbor_error(QUIC_CMD_BLACKBOX);
 
   extern data_flash_header_t data_flash_header;
+  extern data_flash_bounds_t bounds;
 
   switch (cmd) {
   case QUIC_BLACKBOX_RESET:
@@ -354,6 +355,11 @@ void process_blackbox(uint8_t *data, uint32_t len) {
     break;
   case QUIC_BLACKBOX_LIST:
     res = cbor_encode_map_indefinite(&enc);
+    check_cbor_error(QUIC_CMD_BLACKBOX);
+
+    res = cbor_encode_str(&enc, "flash_size");
+    check_cbor_error(QUIC_CMD_BLACKBOX);
+    res = cbor_encode_uint32(&enc, &bounds.total_size);
     check_cbor_error(QUIC_CMD_BLACKBOX);
 
     res = cbor_encode_str(&enc, "file_num");

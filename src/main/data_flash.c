@@ -36,6 +36,7 @@ typedef enum {
   STATE_WRITE_HEADER,
 } data_flash_state_t;
 
+data_flash_bounds_t bounds;
 data_flash_header_t data_flash_header;
 
 static data_flash_state_t state = STATE_DETECT;
@@ -44,7 +45,6 @@ static int32_t write_offset = 0;
 static int32_t written_offset = 0;
 static uint8_t should_flush = 0;
 
-static data_flash_bounds_t bounds;
 static data_flash_file_t *current_file() {
   return &data_flash_header.files[data_flash_header.file_num - 1];
 }
