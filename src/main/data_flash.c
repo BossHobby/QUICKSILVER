@@ -293,7 +293,7 @@ void data_flash_restart(uint32_t blackbox_rate) {
     }
   }
 
-  if (offset >= bounds.total_size) {
+  if ((offset + 1) >= bounds.sectors) {
     // flash is full
     return;
   }
