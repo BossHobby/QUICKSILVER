@@ -6,7 +6,6 @@
 
 #include "control.h"
 #include "debug.h"
-#include "drv_i2c.h"
 #include "drv_serial.h"
 #include "drv_spi_mpu6xxx.h"
 #include "drv_time.h"
@@ -52,7 +51,6 @@ extern profile_t profile;
 float gyrocal[3];
 
 void sixaxis_init(void) {
-#ifdef F4
   //Initialize SPI
   spi_gyro_init();
   //Initialize Gyro
@@ -76,27 +74,6 @@ void sixaxis_init(void) {
   delay(1500);
   MPU6XXX_dma_spi_write(MPU_RA_INT_ENABLE, MPU_BIT_INT_STATUS_DATA); //reg 56 data ready enable interrupt to 1
   delay(1500);
-#endif
-
-#ifdef F0
-  // gyro soft reset
-  i2c_writereg(107, 128);
-  delay(40000);
-  // set pll to 1, clear sleep bit old type gyro (mpu-6050)
-  i2c_writereg(107, 1);
-  int newboard = !(0x68 == i2c_readreg(117));
-  delay(100);
-  // set accelerometer scale to 16G
-  i2c_writereg(28, 0b00011000);
-  // acc lpf for the new gyro type
-  //       0-6 ( same as gyro)
-  if (newboard)
-    i2c_writereg(29, ACC_LOW_PASS_FILTER);
-  // gyro scale 2000 deg (FS =3)
-  i2c_writereg(27, 24);
-  // Gyro DLPF low pass filter
-  i2c_writereg(26, GYRO_LOW_PASS_FILTER);
-#endif
 
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
     filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq);
@@ -107,12 +84,7 @@ extern target_info_t target_info;
 
 int sixaxis_check(void) {
 // read "who am I" register
-#ifdef F4
   uint8_t id = MPU6XXX_dma_spi_read(MPU_RA_WHO_AM_I);
-#endif
-#ifdef F0
-  int id = i2c_readreg(117);
-#endif
 
 #ifdef DEBUG
   debug.gyroid = id;
@@ -128,13 +100,7 @@ int sixaxis_check(void) {
 
 void sixaxis_read(void) {
   int data[14];
-
-#ifdef F0
-  i2c_readdata(59, data, 14);
-#endif
-#ifdef F4
   MPU6XXX_dma_read_data(59, data, 14);
-#endif
 
   state.accel_raw.axis[0] = -(int16_t)((data[0] << 8) + data[1]);
   state.accel_raw.axis[1] = -(int16_t)((data[2] << 8) + data[3]);
@@ -262,12 +228,7 @@ void gyro_cal(void) {
     if (looptime == 0)
       looptime = 1;
 
-#ifdef F0
-    i2c_readdata(67, data, 6);
-#endif
-#ifdef F4
     MPU6XXX_dma_read_data(67, data, 6);
-#endif
 
     gyro[1] = (int16_t)((data[0] << 8) + data[1]);
     gyro[0] = (int16_t)((data[2] << 8) + data[3]);

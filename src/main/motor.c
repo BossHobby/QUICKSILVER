@@ -65,7 +65,6 @@ float tempx[4];
 
 #endif
 
-static float overthrottlefilt = 0;
 
 extern int pwmdir;
 
@@ -178,6 +177,7 @@ static void motor_mixer_scale_calc(float mix[4]) {
   //throttle reduction
   float overthrottle = 0;
   float underthrottle = 0.001f;
+  static float overthrottlefilt = 0;
 
   for (int i = 0; i < 4; i++) {
     if (mix[i] > overthrottle)

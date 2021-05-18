@@ -34,10 +34,6 @@ uint32_t esc_micros_per_bit = (uint32_t)(1000000 / 19200);
 #define SET_TX_HIGH(data) data->tx_port->BSRRL = data->tx_pin
 #define SET_RX_HIGH(data) data->rx_port->BSRRL = data->rx_pin
 #define SET_TX_LOW(data) data->tx_port->BSRRH = data->tx_pin
-#else
-#define SET_TX_HIGH(data) data->tx_port->BSRR = data->tx_pin
-#define SET_RX_HIGH(data) data->rx_port->BSRR = data->rx_pin
-#define SET_TX_LOW(data) data->tx_port->BRR = data->tx_pin
 #endif
 
 #define SET_LED1_ON gpio_pin_set(LED1PIN)

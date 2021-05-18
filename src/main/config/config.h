@@ -76,9 +76,10 @@
 //#define RX_FPORT
 //#define RX_DSMX_2048
 //#define RX_DSM2_1024
-//#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
+//#define RX_BAYANG_BLE_APP
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
+//#define RX_NRF24_BAYANG_TELEMETRY
 //#define RX_FRSKY_D8
 //#define RX_FRSKY_D16_FCC
 //#define RX_FRSKY_D16_LBT
@@ -303,7 +304,7 @@
 
 //***********************************************************TODO LIST************************************************************
 
-//MAINTAIN THIS LIST (probably the most important thing on this list)
+//MAINTAIN THIS LIST (probably the most important thing on this list) ..... and we didn't  ROFL
 
 //rgb led port to f4
 

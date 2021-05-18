@@ -40,7 +40,7 @@ const volatile spi_port_def_t spi_port_defs[SPI_PORTS_MAX] = {
 
 #define PORT spi_port_defs[port]
 
-extern int liberror;
+int liberror = 0;
 
 void spi_enable_rcc(spi_ports_t port) {
   switch (PORT.channel_index) {

@@ -97,6 +97,7 @@ CBOR_END_STRUCT_ENCODER()
 
 void control(void) {
 #ifdef INVERTED_ENABLE
+//not supported yet
   if (rx_aux_on(AUX_FN_INVERTED))
     pwmdir = REVERSE;
   else

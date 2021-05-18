@@ -3,10 +3,6 @@
 #include "defines.h"
 #include "project.h"
 
-#ifdef F0
-// address 32768 - 1024 = 31k - last flash block
-#define FLASH_ADDR 0x08007C00
-#endif
 #ifdef F4
 /*
 Sector 0    0x08000000 - 0x08003FFF 16 Kbytes
@@ -42,9 +38,7 @@ uint8_t fmc_erase() {
                   FLASH_FLAG_OPERR | FLASH_FLAG_EOP); // clear error status
   int result = FLASH_EraseSector(FLASH_Sector_3, VoltageRange_3);
 #endif
-#ifdef F0
-  int result = FLASH_ErasePage(FLASH_ADDR);
-#endif
+
   if (result != FLASH_COMPLETE) {
     FLASH_Lock();
     return 1; // error occured

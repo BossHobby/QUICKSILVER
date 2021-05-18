@@ -74,19 +74,8 @@ void adc_init(void) {
   ADC_RegularChannelConfig(ADC1, ADC_Channel_Vrefint, 1, ADC_SampleTime_480Cycles);
   ADC_SoftwareStartConv(ADC1);
 
-  // ADC1 calibration sequence
-  //  ADC_ResetCalibration(ADC1);
-  //  while(ADC_GetResetCalibrationStatus(ADC1));
-  //  ADC_StartCalibration(ADC1);
-  //  while(ADC_GetCalibrationStatus(ADC1));
-
-  // reference is measured a 3.3v, toy boards are powered by 2.8, so a 1.17 multiplier
   // different vccs will translate to a different adc scale factor,
   // so actual vcc is not important as long as the voltage is correct in the end
-  // vref_cal =  1.17857f * (float) ( adcref_read ((adcrefcal *) 0x1FFFF7BA) );
-#ifdef F0
-  vref_cal = (3.3f / (float)ADC_REF_VOLTAGE) * (float)(adcref_read((adcrefcal *)0x1FFFF7BA));
-#endif
 #ifdef F4
   vref_cal = (3.3f / (float)ADC_REF_VOLTAGE) * (float)(adcref_read((adcrefcal *)0x1FFF7A2A));
 #endif

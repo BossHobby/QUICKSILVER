@@ -63,63 +63,6 @@ void input_stick_vector(float rx_input[], float maxangle) {
   // fix to recover if triggered inverted
   // the vector cross product results in zero for opposite vectors, so it's bad at 180 error
   // without this the quad will not invert if angle difference = 180
-
-#ifdef INVERTED_ENABLE
-
-  static int flip_active_once = 0;
-  static int flipaxis = 0;
-  static int flipdir = 0;
-  int flip_active = 0;
-
-#define rollrate 2.0f
-#define g_treshold 0.125f
-#define roll_bias 0.25f
-
-  if (rx_aux_on(AUX_FN_INVERTED) && (state.GEstG.axis[2] > g_treshold)) {
-    flip_active = 1;
-    // rotate around axis with larger leaning angle
-
-    if (flipdir) {
-      state.errorvect.axis[flipaxis] = rollrate;
-    } else {
-      state.errorvect.axis[flipaxis] = -rollrate;
-    }
-
-  } else if (!rx_aux_on(AUX_FN_INVERTED) && (state.GEstG.axis[2] < -g_treshold)) {
-    flip_active = 1;
-
-    if (flipdir) {
-      state.errorvect.axis[flipaxis] = -rollrate;
-    } else {
-      state.errorvect.axis[flipaxis] = rollrate;
-    }
-
-  } else
-    flip_active_once = 0;
-
-  // set common things here to avoid duplication
-  if (flip_active) {
-    if (!flip_active_once) {
-      // check which axis is further from center, with a bias towards roll
-      // because a roll flip does not leave the quad facing the wrong way
-      if (fabsf(state.GEstG.axis[0]) + roll_bias > fabsf(state.GEstG.axis[1])) {
-        // flip in roll axis
-        flipaxis = 0;
-      } else
-        flipaxis = 1;
-
-      if (state.GEstG.axis[flipaxis] > 0)
-        flipdir = 1;
-      else
-        flipdir = 0;
-
-      flip_active_once = 1;
-    }
-
-    // set the error in other axis to return to zero
-    state.errorvect.axis[!flipaxis] = state.GEstG.axis[!flipaxis];
-  }
-#endif
 }
 
 static float calc_bf_rates(int axis) {
