@@ -29,7 +29,6 @@
 #define ICM20602_SPI_PORT SPI_PORT1
 #define ICM20602_NSS PIN_A4
 #define ICM20602_INT PIN_C14
-#define USE_DUMMY_I2C
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x12
 #define GYRO_ID_3 0x69

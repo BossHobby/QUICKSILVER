@@ -30,7 +30,6 @@
 #define ICM20608_SPI_PORT SPI_PORT1
 #define ICM20608_NSS PIN_C4
 #define ICM20608_INT PIN_C5
-#define USE_DUMMY_I2C
 #define GYRO_ID_1 0xAF
 #define GYRO_ID_2 0x73
 #define GYRO_ID_3 0x78

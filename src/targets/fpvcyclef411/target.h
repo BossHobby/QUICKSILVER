@@ -25,7 +25,6 @@
 #define MPU6XXX_SPI_PORT SPI_PORT1
 #define MPU6XXX_NSS PIN_A4
 #define MPU6XXX_INT PIN_A1
-#define USE_DUMMY_I2C
 //#define SENSOR_ROTATE_NONE
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x73
