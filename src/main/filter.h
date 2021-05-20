@@ -49,13 +49,6 @@ typedef struct {
 } filter_lp2_iir;
 
 typedef struct {
-  float x_est_last;
-  float P_last;
-  float Q;
-  float R;
-} filter_kalman;
-
-typedef struct {
   float v[2];
 } filter_hp_be;
 
@@ -82,9 +75,6 @@ float filter_lp2_iir_step(filter_lp2_iir *filter, float sample);
 
 void filter_hp_be_init(filter_hp_be *filter);
 float filter_hp_be_step(filter_hp_be *filter, float x);
-
-void filter_kalman_init(filter_kalman *filter, uint8_t count, float coeff);
-float filter_kalman_step(filter_kalman *filter, float in);
 
 void filter_init(filter_type_t type, filter_t *filter, filter_state_t *state, uint8_t count, float hz);
 void filter_coeff(filter_type_t type, filter_t *filter, float hz);

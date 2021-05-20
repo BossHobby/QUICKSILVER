@@ -22,6 +22,7 @@
 
 #define ENABLE_SMART_AUDIO
 #define ENABLE_TRAMP
+#define GYRO_LOW_PASS_FILTER 0
 
 #ifdef F411
 #define SYS_CLOCK_FREQ_HZ 84000000
@@ -58,9 +59,14 @@
 #define USE_PWM_DRIVER
 #endif
 
+#if defined(BRUSHLESS_TARGET) && defined(INVERTED_ENABLE)  //WARNING _ HAS NEVER BEEN TESTED
+// Enable this for 3D. The 'Motor Direction' setting in BLHeliSuite must
+// be set to 'Bidirectional' (or 'Bidirectional Rev.') accordingly:
+#define BIDIRECTIONAL
+#endif
 //*************************************Features that still need to be moved into targets and checked for compatability************************************************
 
-#define GYRO_LOW_PASS_FILTER 0
+
 
 // RGB led type ws2812 - ws2813
 // numbers over 8 could decrease performance
@@ -85,54 +91,15 @@
 // x (micro)seconds after loss of tx or low bat before buzzer starts
 //#define BUZZER_DELAY     30e6
 
-// i2c driver to use ( dummy - disables i2c )
-// hardware i2c used PB6 and 7 by default ( can also use PA9 and 10)
-//#define USE_HARDWARE_I2C
-//#define USE_SOFTWARE_I2C
-//#define USE_DUMMY_I2C
-
-// I2C speed: fast = no delays
-// slow1 = for i2c without pull-up resistors
-// slow2 = i2c failsafe speed
-//#define SOFTI2C_SPEED_FAST
-//#define SOFTI2C_SPEED_SLOW1
-//#define SOFTI2C_SPEED_SLOW2
-
-// hardware i2c speed ( 1000, 400 , 200 , 100Khz)
-//#define HW_I2C_SPEED_FAST2
-//#define HW_I2C_SPEED_FAST
-//#define HW_I2C_SPEED_SLOW1
-//#define HW_I2C_SPEED_SLOW2
-
-// pins for hw i2c , select one only
-// select pins PB6 and PB7 OR select pins PA9 and PA10
-//#define HW_I2C_PINS_PB67
-//#define HW_I2C_PINS_PA910
-
 // disable the check for known gyro that causes the 4 times flash
 //#define DISABLE_GYRO_CHECK
 
 // disable lvc functions
 //#define DISABLE_ADC
 
-// pwm driver = brushed motors
-// esc driver = servo type signal for brushless esc
-
-//**DO NOT ENABLE ESC DRIVER WITH BRUSHED MOTORS ATTACHED**
-
-//#define USE_PWM_DRIVER
-//#define USE_ESC_DRIVER
-//#define USE_DSHOT_DMA_DRIVER
-//#define USE_DSHOT_DRIVER_BETA
-
-// pwm pins disable
 // disable all pwm pins / function
 //#define DISABLE_PWM_PINS
 
-#if defined(BRUSHLESS_TARGET) && defined(INVERTED_ENABLE)
-// Enable this for 3D. The 'Motor Direction' setting in BLHeliSuite must
-// be set to 'Bidirectional' (or 'Bidirectional Rev.') accordingly:
-#define BIDIRECTIONAL
-#endif
+
 
 //***********************************************END LEGACY REFERENCE LIST*****************************************************

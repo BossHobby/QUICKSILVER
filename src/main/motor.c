@@ -2,7 +2,6 @@
 
 #include "control.h"
 #include "drv_motor.h"
-#include "motorcurve.h"
 #include "profile.h"
 #include "project.h"
 #include "usb_configurator.h"
@@ -70,40 +69,6 @@ extern int pwmdir;
 
 extern profile_t profile;
 extern usb_motor_test_t usb_motor_test;
-
-#ifdef MOTOR_FILTER2_ALPHA
-static float motorlpf(float in, int x) {
-  static float motor_filt[4];
-  lpf(&motor_filt[x], in, 1 - MOTOR_FILTER2_ALPHA);
-  return motor_filt[x];
-}
-#endif
-
-#ifdef MOTOR_KAL
-static float motor_kalman(float in, int x) {
-  //the noise in the system ( variance -  squared )
-  const float Q = 0.02;
-  const float R = Q / (float)MOTOR_KAL;
-
-  //initial values for the kalman filter
-  static float x_est_last[4];
-  static float P_last[4];
-
-  //do a prediction
-  float x_temp_est = x_est_last[x];
-  float P_temp = P_last[x] + Q;
-
-  float K = P_temp * (1.0f / (P_temp + R));
-  float x_est = x_temp_est + K * (in - x_temp_est);
-  float P = (1 - K) * P_temp;
-
-  //update our last's
-  P_last[x] = P;
-  x_est_last[x] = x_est;
-
-  return x_est;
-}
-#endif
 
 static float motord(float in, int x) {
   float factor = profile.motor.torque_boost;
@@ -343,7 +308,7 @@ void motor_output_calc(float mix[4]) {
 
 #ifndef NOMOTORS
     //normal mode
-    motor_set(i, motormap(mix[i]));
+    motor_set(i, mix[i]);
 #else
     // no motors mode
     // to maintain timing or it will be optimized away

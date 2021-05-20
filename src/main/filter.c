@@ -79,34 +79,6 @@ float filter_lp2_pt1_step(filter_lp2_pt1 *filter, filter_state_t *state, float i
   return out;
 }
 
-#if defined(KALMAN_GYRO)
-void filter_kalman_init(filter_kalman *filter, uint8_t count, float coeff) {
-  for (uint8_t i = 0; i < count; i++) {
-    filter[i].Q = 0.02;
-    filter[i].R = 0.1;
-
-    if (coeff > 0) {
-      filter[i].R = filter[i].Q / coeff;
-    }
-  }
-}
-
-float filter_kalman_step(filter_kalman *filter, float in) {
-  //do a prediction
-  float x_temp_est = filter->x_est_last;
-  float P_temp = filter->P_last + filter->Q;
-
-  float K = P_temp * (1.0f / (P_temp + filter->R));
-  float x_est = x_temp_est + K * (in - x_temp_est);
-  float P = (1 - K) * P_temp;
-
-  //update our last's
-  filter->P_last = P;
-  filter->x_est_last = x_est;
-
-  return x_est;
-}
-#endif
 
 // 16Hz hpf filter for throttle compensation
 // High pass bessel filter order=1 alpha1=0.016

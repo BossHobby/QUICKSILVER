@@ -170,23 +170,21 @@
 //**********************************************************************************************************************
 //***********************************************FILTER SETTINGS********************************************************
 
-//#define WEAK_FILTERING
-//#define STRONG_FILTERING
-//#define VERY_STRONG_FILTERING
-//#define ALIENWHOOP_ZERO_FILTERING
-#define BETA_FILTERING
+//Gyro Filters
+//GYRO FILTER PASS 1 - FILTER TYPE  - define only one or none to disable this pass
+#define GYRO_FILTER_PASS1_PT1
+//#define GYRO_FILTER_PASS1_PT2
+//GYRO FILTER PASS 2 - FILTER TYPE  - define only one or none to disable this pass
+#define GYRO_FILTER_PASS2_PT1
+//#define GYRO_FILTER_PASS2_PT2
 
-#ifdef BETA_FILTERING //*** ABOVE 100 ADJUST IN INCRIMENTS OF 20, BELOW 100 ADJUST IN INCRIMENTS OF 10, nothing coded beyond 500hz
+//GYRO FILTER PASS 1 CUTOFF FREQUENCY
+#define GYRO_FREQ_PASS1 90
+//GYRO FILTER PASS 2 CUTOFF FREQUENCY
+#define GYRO_FREQ_PASS2 90
 
-//Select Gyro Filter Type *** Select Only One type
-//#define KALMAN_GYRO
-#define PT1_GYRO
 
-//Select Gyro Filter Cut Frequency
-#define GYRO_FILTER_PASS1 HZ_90
-#define GYRO_FILTER_PASS2 HZ_90
-
-//dynamic D term filter
+//Dynamic D term filter
 //a pt1 filter that moves up in cut hz with a parabolic relationship to applied throttle.  The theory here is
 //that propwash is most likely to occur as throttle is applied in dirty air - and propwash is most significantly
 // caused by latency in the D term filtering.  Therefore, the approach is to reduce latency in the lowest frequency
@@ -200,14 +198,21 @@
 #define DYNAMIC_FREQ_MIN 70
 #define DYNAMIC_FREQ_MAX 260
 
-//Select fixed D Term Filter Cut Frequency *** Select Only One *** (This fixed filter is best applied near the FREQ_MAX of the dynamic D term filter)
-//#define DTERM_LPF_2ND_HZ 260
-#define DTERM_LPF_1ST_HZ 260
 
-//Select Motor Filter Type  (last resort filtering stage)
-//#define MOTOR_FILTER2_ALPHA MFILT1_HZ_90
+//Fixed D-Term Filters
+//D-Term FILTER PASS 1 - FILTER TYPE  - define only one or none to disable this pass
+#define DTERM_FILTER_PASS1_PT1
+//#define DTERM_FILTER_PASS1_PT2
+//D-Term FILTER PASS 2 - FILTER TYPE  - define only one or none to disable this pass
+//#define DTERM_FILTER_PASS2_PT1
+//#define DTERM_FILTER_PASS2_PT2
 
-#endif
+
+//D-Term FILTER PASS 1 CUTOFF FREQUENCY
+#define DTERM_FREQ_PASS1 260
+//D-Term FILTER PASS 2 CUTOFF FREQUENCY
+#define DTERM_FREQ_PASS2 150
+
 
 //**********************************************************************************************************************
 //***********************************************MOTOR OUTPUT SETTINGS**************************************************
@@ -266,8 +271,9 @@
 
 // *************lost quad beeps using motors (30 sec timeout) - pulses motors after timeout period to help find a lost model
 //#define MOTOR_BEEPS
+//#define MOTOR_BEEPS_TIMEOUT 1e6
 
-// *************enable inverted flight code ( brushless only )
+// *************enable inverted flight code ( brushless only ) - WARNING - NEVER TESTED 
 //#define INVERTED_ENABLE
 //#define FN_INVERTED AUX_CHANNEL_OFF //for brushless only
 
@@ -302,35 +308,3 @@
 // throttle direct to motors for thrust measure
 //#define MOTORS_TO_THROTTLE
 
-//***********************************************************TODO LIST************************************************************
-
-//MAINTAIN THIS LIST (probably the most important thing on this list) ..... and we didn't  ROFL
-
-//rgb led port to f4
-
-//USB Support & Passthrough Support for F0 (repurpose swd clk pin as half duplex serial)
-
-//SETUP WIZARD
-
-//investigate softserial driver - is it working?, what is it being used for?, can we develop it into a useful feature?
-
-//softserial not throwing errors anymore but needs review for proper configuration - i think I mixed up BSRRH and BSRRL
-
-//find other places I mixed up BSRRH and BSRRL like all the i2c drivers
-
-//reorganize control() in control.c to call functions from new files intuitively named for said functions
-
-// BOBNOVA Section -------- BOBNOVA Section -------- BOBNOVA Section -------- BOBNOVA Section -------- BOBNOVA Section
-
-//FPORT Debug Telemetry is in. Add a "You're on this axis" feature? If you're at all familiar with Quicksilver PIDs the D is a dead giveaway for pitchRoll vs yaw
-
-// There were other things on my list that I don't remember now. I'll add them.
-
-//Moar stuff that needs attention
-
-// *************motor curve to use - select one																//***************This could become something like tpa
-// *************the pwm frequency has to be set independently
-#define MOTOR_CURVE_NONE
-
-// rxdebug structure																													//**************** Does this even work???
-//#define RXDEBUG
