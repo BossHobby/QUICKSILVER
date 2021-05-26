@@ -226,7 +226,7 @@ float adjust_rounded_float(float input, float adjust_amount) {
 }
 
 const char *get_rssi_source_status(void) {
-  static char *rssi_source_status[] = {"PROTOCOL  " , "CHANNEL   " , "PACKET RATE"};
+  static char *rssi_source_status[] = {"PACKET RATE" , "CHANNEL    " , "PROTOCOL   "  };
   return rssi_source_status[profile.channel.lqi_source];
 }
 
