@@ -11,13 +11,14 @@
 #include "drv_time.h"
 #include "flash.h"
 #include "profile.h"
+#include "util.h"
 
 #define DSM_SCALE_PERCENT 147 //this might stay somewhere or be replaced with wizard scaling
 //#define RX_DSM2_1024_TEMP     //for legacy override to dsm2 in place of dsmx
-//#define DSM_RSSI_FADES		//for internal dsm link quality rssi based on satellite fades instead of packets per second
 
 #define SPEKTRUM_MAX_FADE_PER_SEC 40
 #define SPEKTRUM_FADE_REPORTS_PER_SEC 2
+#define LQI_FPS 91
 
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
 extern uint8_t rx_data[RX_BUFF_SIZE];
@@ -27,7 +28,6 @@ extern volatile uint8_t expected_frame_length;
 extern volatile frame_status_t frame_status;
 
 extern uint32_t link_quality_raw;
-extern uint32_t stat_frames_second;
 
 extern uint16_t bind_safety;
 extern int32_t channels[16];
@@ -68,25 +68,26 @@ void rx_serial_process_dsmx() {
   static uint8_t dsm_channel_count = 12;
 #endif
 
-  // Fade to rssi hack
-#ifdef DSM_RSSI_FADES
-  uint16_t fade_count = (rx_data[0] << 8) + rx_data[1];
-  uint32_t timestamp = timer_micros() / 1000 / (1000 / SPEKTRUM_FADE_REPORTS_PER_SEC);
-  static uint32_t last_fade_timestamp = 0; // Stores the timestamp of the last fade read.
-  static uint16_t last_fade_count = 0;     // Stores the fade count at the last fade read.
-  if (last_fade_timestamp == 0) {          //first frame received
-    last_fade_count = fade_count;
-    last_fade_timestamp = timestamp;
-  } else if ((timestamp - last_fade_timestamp) >= 1) {
+  // Fade to rssi hack for LQI_SOURCE_DIRECT from protocol
+  if (profile.channel.lqi_source == RX_LQI_SOURCE_DIRECT) {
+    uint16_t fade_count = (rx_data[0] << 8) + rx_data[1];
+    uint32_t timestamp = timer_micros() / 1000 / (1000 / SPEKTRUM_FADE_REPORTS_PER_SEC);
+    static uint32_t last_fade_timestamp = 0; // Stores the timestamp of the last fade read.
+    static uint16_t last_fade_count = 0;     // Stores the fade count at the last fade read.
+    if (last_fade_timestamp == 0) {          //first frame received
+      last_fade_count = fade_count;
+      last_fade_timestamp = timestamp;
+    } else if ((timestamp - last_fade_timestamp) >= 1) {
 #ifdef RX_DSMX_2048_UNIFIED
-    link_quality_raw = 2048 - ((fade_count - last_fade_count) * 2048 / (SPEKTRUM_MAX_FADE_PER_SEC / SPEKTRUM_FADE_REPORTS_PER_SEC));
+      link_quality_raw = 2048 - ((fade_count - last_fade_count) * 2048 / (SPEKTRUM_MAX_FADE_PER_SEC / SPEKTRUM_FADE_REPORTS_PER_SEC));
 #else
-    link_quality_raw = 1024 - ((fade_count - last_fade_count) * 1024 / (SPEKTRUM_MAX_FADE_PER_SEC / SPEKTRUM_FADE_REPORTS_PER_SEC));
+      link_quality_raw = 1024 - ((fade_count - last_fade_count) * 1024 / (SPEKTRUM_MAX_FADE_PER_SEC / SPEKTRUM_FADE_REPORTS_PER_SEC));
 #endif
-    last_fade_count = fade_count;
-    last_fade_timestamp = timestamp;
+      last_fade_count = fade_count;
+      last_fade_timestamp = timestamp;
+    }
   }
-#endif
+
 
   for (int b = 3; b < expected_frame_length; b += 2) { //stick data in channels buckets
     const uint8_t spekChannel = 0x0F & (rx_data[b - 1] >> spek_chan_shift);
@@ -146,31 +147,31 @@ void rx_serial_process_dsmx() {
     state.aux[AUX_CHANNEL_2] = (channels[6] > 550) ? 1 : 0;
 #endif
 
-    rx_lqi_update_fps(0);
+    if (profile.channel.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
+      rx_lqi_update_fps(LQI_FPS);
+      rx_lqi_update_rssi_from_lqi(LQI_FPS);
+    }
 
-    if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11) { //rssi set to internal link quality
-#ifdef DSM_RSSI_FADES
+    if (profile.channel.lqi_source == RX_LQI_SOURCE_DIRECT) {
 #ifdef RX_DSMX_2048_UNIFIED
       state.rx_rssi = 0.000488281 * link_quality_raw;
 #else
       state.rx_rssi = 0.000976563 * link_quality_raw;
 #endif
-#else
-      state.rx_rssi = stat_frames_second / 91.0f;
-#endif
       state.rx_rssi = state.rx_rssi * state.rx_rssi * state.rx_rssi * LQ_EXPO + state.rx_rssi * (1 - LQ_EXPO);
       state.rx_rssi *= 100.0f;
-    } else { //rssi set to value decoded from aux channel input from receiver
-#ifdef RX_DSMX_2048_UNIFIED
-      state.rx_rssi = ((channels[(profile.channel.aux[AUX_RSSI] + 4)] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f;
-#else
-      state.rx_rssi = ((channels[(profile.channel.aux[AUX_RSSI] + 4)] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f;
-#endif
+      state.rx_rssi = constrainf(state.rx_rssi, 0.f, 100.f);
     }
-    if (state.rx_rssi > 100.0f)
-      state.rx_rssi = 100.0f;
-    if (state.rx_rssi < 0.0f)
-      state.rx_rssi = 0.0f;
+
+    if (profile.channel.lqi_source == RX_LQI_SOURCE_CHANNEL) {
+      if (profile.channel.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
+#ifdef RX_DSMX_2048_UNIFIED
+        rx_lqi_update_rssi_direct(100 * (((channels[(profile.channel.aux[AUX_RSSI] + 4)] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f));
+#else
+        rx_lqi_update_rssi_direct(100 * (((channels[(profile.channel.aux[AUX_RSSI] + 4)] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f));
+#endif       
+      }
+    }
 
     frame_status = FRAME_TX; //We're done with this frame now.
 
