@@ -225,6 +225,11 @@ float adjust_rounded_float(float input, float adjust_amount) {
   return input;
 }
 
+const char *get_rssi_source_status(void) {
+  static char *rssi_source_status[] = {"PROTOCOL  " , "CHANNEL   " , "PACKET RATE"};
+  return rssi_source_status[profile.channel.lqi_source];
+}
+
 const char *get_aux_status(int input) {
   static char *respond[] = {"CHANNEL 5  ", "CHANNEL 6  ", "CHANNEL 7  ", "CHANNEL 8  ", "CHANNEL 9  ", "CHANNEL 10 ", "CHANNEL 11 ", "CHANNEL 12 ", "CHANNEL 13 ", "CHANNEL 14 ", "CHANNEL 15 ", "CHANNEL 16 ", "ALWAYS OFF ", "ALWAYS ON  ", "GESTURE AUX", "ERROR      "};
   return respond[input];

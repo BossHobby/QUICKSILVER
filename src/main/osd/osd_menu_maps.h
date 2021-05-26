@@ -1,8 +1,8 @@
 #include "stdio.h"
 
 //main menu maps
-extern const char main_menu_labels[9][21];
-extern const uint8_t main_menu_positions[9][2];
+extern const char main_menu_labels[10][21];
+extern const uint8_t main_menu_positions[10][2];
 extern const uint8_t main_menu_map[];
 
 //pid profiles submenu map
@@ -220,3 +220,21 @@ extern const uint8_t pidmodify_positions[6][2];
 extern const uint8_t pidmodify_grid[4][2];
 extern const uint8_t pidmodify_data_positions[4][2];
 extern const float pidmodify_adjust_limits[4][2];
+
+//rc link map
+extern const char rc_link_labels[3][21];
+extern const uint8_t rc_link_positions[3][2];
+extern const uint8_t rc_link_map[];
+
+//rssi source map
+extern uint8_t *rssi_source_ptr[1];
+extern const char rssi_menu_labels[3][21];
+extern const uint8_t rssi_menu_positions[3][2];
+extern const char rssi_source_labels[3][21];
+extern const uint8_t rssi_source_limits[];
+extern const uint8_t rssi_source_data_positions[1][2];
+extern const uint8_t rssi_source_data_grid[1][2];
+
+//stick wizard map
+extern const char stick_wizard_labels[1][21];
+extern const uint8_t stick_wizard_positions[1][2];

@@ -569,10 +569,10 @@ void osd_display(void) {
 
   case 1:                //osd menu is active
     last_display_phase = 2;
-    print_osd_menu_strings(9, 8, main_menu_labels, main_menu_positions);
-    if (osd_menu_phase == 10)
-      osd_select_menu_item(7, main_menu_map, MAIN_MENU);
-    break; //osd menu or wizard has been displayed for this loop	- break out of display function
+    print_osd_menu_strings(10, 9, main_menu_labels, main_menu_positions);
+    if (osd_menu_phase == 11)
+      osd_select_menu_item(8, main_menu_map, MAIN_MENU);
+    break; //osd menu has been displayed for this loop	- break out of display function
 
   case 2: //regular osd display
 
@@ -943,6 +943,28 @@ void osd_display(void) {
     print_osd_mixed_data(6, 4, pidmodify_ptr, pidmodify_ptr2, pidmodify_type_labels, pidmodify_grid, pidmodify_data_positions, 2);
     if (osd_menu_phase == 11)
       osd_mixed_data_adjust(pidmodify_ptr, pidmodify_ptr2, 4, 1, pidmodify_adjust_limits, 0.05, pidmodify_reboot_request);
+    break;
+
+  case 31: //rc link
+    last_display_phase = 1;
+    print_osd_menu_strings(3, 2, rc_link_labels, rc_link_positions);
+    if (osd_menu_phase == 4)
+      osd_select_menu_item(7, rc_link_map, SUB_MENU);
+    break;
+
+  case 32:
+    last_display_phase = 31;
+    print_osd_menu_strings(3, 2, rssi_menu_labels, rssi_menu_positions);
+    print_osd_adjustable_enums(3, 1, get_rssi_source_status(), rssi_source_data_grid, rssi_source_data_positions);
+    if (osd_menu_phase == 5)
+      osd_enum_adjust(rssi_source_ptr, 1, rssi_source_limits);
+    break;
+
+  case 33:
+    last_display_phase = 31;
+    print_osd_menu_strings(1, 0, stick_wizard_labels, stick_wizard_positions);
+    if (osd_select) //temp placeholder till feature is developed
+      osd_select = 0;
     break;
   }
   if (osd_display_phase != 2 && rx_aux_on(AUX_ARMING))

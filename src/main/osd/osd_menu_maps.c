@@ -8,9 +8,9 @@ extern profile_t profile;
 extern vtx_settings_t vtx_settings;
 extern vtx_settings_t vtx_settings_copy;
 //main menu maps
-const char main_menu_labels[9][21] = {"MENU", "VTX", "PIDS", "FILTERS", "RATES", "FLIGHT MODES", "OSD ELEMENTS", "SPECIAL FEATURES", "SAVE AND EXIT"};
-const uint8_t main_menu_positions[9][2] = {{13, 1}, {7, 3}, {7, 4}, {7, 5}, {7, 6}, {7, 7}, {7, 8}, {7, 9}, {7, 11}};
-const uint8_t main_menu_map[] = {11, 3, 5, 6, 9, 10, 12}; //case numbers for {vtx, pids, filters, rates, flight modes, osd elements, special features}
+const char main_menu_labels[10][21] = {"MENU", "VTX", "PIDS", "FILTERS", "RATES", "FLIGHT MODES", "OSD ELEMENTS", "SPECIAL FEATURES", "RC LINK" , "SAVE AND EXIT"};
+const uint8_t main_menu_positions[10][2] = {{13, 1}, {7, 3}, {7, 4}, {7, 5}, {7, 6}, {7, 7}, {7, 8}, {7, 9}, {7, 10}, {7, 11}};
+const uint8_t main_menu_map[] = {11, 3, 5, 6, 9, 10, 12, 31}; //case numbers for {vtx, pids, filters, rates, flight modes, osd elements, special features}
 
 //pid profiles submenu map
 const char pid_profiles_labels[3][21] = {{"PID PROFILES"}, {"PID PROFILE 1"}, {"PID PROFILE 2"}};
@@ -62,7 +62,7 @@ uint8_t *flight_modes_ptr[10] = {&profile.channel.aux[0], &profile.channel.aux[1
 const char flight_modes_labels[12][21] = {"FLIGHT MODES", "ARMING", "IDLE UP", "LEVELMODE", "RACEMODE", "HORIZON", "STICK BOOST", "BUZZER", "TURTLE", "MOTOR TEST", "RSSI", "SAVE AND EXIT"};
 const uint8_t flight_modes_positions[12][2] = {{9, 1}, {4, 2}, {4, 3}, {4, 4}, {4, 5}, {4, 6}, {4, 7}, {4, 8}, {4, 9}, {4, 10}, {4, 11}, {4, 14}};
 const uint8_t flight_modes_data_positions[10][2] = {{17, 2}, {17, 3}, {17, 4}, {17, 5}, {17, 6}, {17, 7}, {17, 8}, {17, 9}, {17, 10}, {17, 11}};
-const uint8_t flight_modes_aux_limits[] = {11, 14, 14, 14, 14, 14, 14, 14, 14, 12}; //from aux_channel_t
+const uint8_t flight_modes_aux_limits[] = {11, 14, 14, 14, 14, 14, 14, 14, 14, 11}; //from aux_channel_t
 const uint8_t flight_modes_aux_items[] = {0, 1, 2, 3, 4, 5, 9, 10, 11, 12};         //from aux_function_t
 const uint8_t flight_modes_grid[10][2] = {{1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}, {1, 6}, {1, 7}, {1, 8}, {1, 9}, {1, 10}};
 
@@ -226,3 +226,21 @@ const uint8_t pidmodify_positions[6][2] = {{8, 1}, {2, 4}, {2, 5}, {2, 6}, {2, 7
 const uint8_t pidmodify_grid[4][2] = {{1, 1}, {1, 2}, {1, 3}, {1, 4}};
 const uint8_t pidmodify_data_positions[4][2] = {{23, 4}, {23, 5}, {23, 6}, {23, 7}};
 const float pidmodify_adjust_limits[4][2] = {{0, 1}, {0, 1}, {0, 1}, {0, 1}};
+
+//rc link map
+const char rc_link_labels[3][21] = {{"RC LINK"}, {"STICK WIZARD"}, {"RSSI SOURCE"}};
+const uint8_t rc_link_positions[3][2] = {{12, 1}, {7, 4}, {7, 5}};
+const uint8_t rc_link_map[] = {33, 32};
+
+//rssi source map
+uint8_t *rssi_source_ptr[1] = {&profile.channel.lqi_source};
+const char rssi_menu_labels[3][21] = {{"RSSI SOURCE"}, {"RSSI FROM"}, {"SAVE AND EXIT"}};
+const uint8_t rssi_menu_positions[3][2] = {{10, 1}, {4, 4}, {4, 14}};
+const char rssi_source_labels[3][21] = {{"CHANNEL"}, {"PROTOCOL"}, {"PACKET RATE"}};
+const uint8_t rssi_source_limits[] = {2};
+const uint8_t rssi_source_data_positions[1][2] = {{15, 4}};
+const uint8_t rssi_source_data_grid[1][2] = {{1, 1}};
+
+//stick wizard map
+const char stick_wizard_labels[1][21] = {{"UNDER DEVELOPMENT"}};
+const uint8_t stick_wizard_positions[1][2] = {{7, 1}};
