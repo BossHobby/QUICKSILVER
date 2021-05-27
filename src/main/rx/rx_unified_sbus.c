@@ -120,10 +120,18 @@ void rx_serial_process_sbus() {
 
   rx_lqi_update_fps(LQI_FPS);
 
-  if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11) { //rssi set to internal link quality
+  if (profile.channel.lqi_source == RX_LQI_SOURCE_CHANNEL) {
+    if (profile.channel.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
+      rx_lqi_update_rssi_direct(0.0610128f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 173));
+    }
+  }
+
+  if (profile.channel.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
     rx_lqi_update_rssi_from_lqi(LQI_FPS);
-  } else { //rssi set to value decoded from aux channel input from receiver
-    rx_lqi_update_rssi_direct(0.0610128f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 173));
+  }
+
+  if (profile.channel.lqi_source == RX_LQI_SOURCE_DIRECT) {
+    rx_lqi_update_rssi_direct(0);  //no internal rssi data
   }
 
   frame_status = FRAME_TX; //We're done with this frame now.
@@ -262,10 +270,18 @@ void rx_serial_process_fport() {
 
       rx_lqi_update_fps(LQI_FPS);
 
-      if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11) { //rssi set to internal link quality
-        rx_lqi_update_rssi_from_lqi(LQI_FPS);
-      } else { //rssi set to value decoded from aux channel input from receiver
-        rx_lqi_update_rssi_direct(0.0610128f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 173));
+      if (profile.channel.lqi_source == RX_LQI_SOURCE_CHANNEL) {
+        if (profile.channel.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
+          rx_lqi_update_rssi_direct(0.0610128f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 173));
+        }
+      }
+
+      if (profile.channel.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
+       rx_lqi_update_rssi_from_lqi(LQI_FPS);
+      }
+
+      if (profile.channel.lqi_source == RX_LQI_SOURCE_DIRECT) {
+        rx_lqi_update_rssi_direct(0);  //no internal rssi data
       }
 
       frame_status = FRAME_TX; //We're done with this frame now.
