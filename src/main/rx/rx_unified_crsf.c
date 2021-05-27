@@ -184,8 +184,9 @@ static void rx_serial_crsf_process_frame() {
     state.aux[AUX_CHANNEL_10] = (channels[14] > 1100) ? 1 : 0;
     state.aux[AUX_CHANNEL_11] = (channels[15] > 1100) ? 1 : 0;
 
+    rx_lqi_update_fps(0);
+    
     if (profile.channel.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-      rx_lqi_update_fps(0);
       rx_lqi_update_rssi_from_lqi(crsf_rf_mode_fps[crsf_rf_mode]);
     }
     if (profile.channel.lqi_source == RX_LQI_SOURCE_CHANNEL) {
