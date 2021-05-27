@@ -227,13 +227,12 @@ extern const uint8_t rc_link_positions[3][2];
 extern const uint8_t rc_link_map[];
 
 //rssi source map
-extern uint8_t *rssi_source_ptr[1];
-extern const char rssi_menu_labels[3][21];
-extern const uint8_t rssi_menu_positions[3][2];
-extern const char rssi_source_labels[3][21];
+extern uint8_t *rssi_source_ptr[2];
+extern const char rssi_menu_labels[4][21];
+extern const uint8_t rssi_menu_positions[4][2];
 extern const uint8_t rssi_source_limits[];
-extern const uint8_t rssi_source_data_positions[1][2];
-extern const uint8_t rssi_source_data_grid[1][2];
+extern const uint8_t rssi_source_data_positions[2][2];
+extern const uint8_t rssi_source_data_grid[2][2];
 
 //stick wizard map
 extern const char stick_wizard_labels[1][21];

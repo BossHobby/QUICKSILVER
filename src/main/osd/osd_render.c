@@ -954,10 +954,10 @@ void osd_display(void) {
 
   case 32:
     last_display_phase = 31;
-    print_osd_menu_strings(3, 2, rssi_menu_labels, rssi_menu_positions);
-    print_osd_adjustable_enums(3, 1, get_rssi_source_status(), rssi_source_data_grid, rssi_source_data_positions);
-    if (osd_menu_phase == 5)
-      osd_enum_adjust(rssi_source_ptr, 1, rssi_source_limits);
+    print_osd_menu_strings(4, 3, rssi_menu_labels, rssi_menu_positions);
+    print_osd_adjustable_enums(4, 2, get_rssi_source_status(osd_menu_phase - 5), rssi_source_data_grid, rssi_source_data_positions);
+    if (osd_menu_phase == 7)
+      osd_enum_adjust(rssi_source_ptr, 2, rssi_source_limits);
     break;
 
   case 33:

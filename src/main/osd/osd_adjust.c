@@ -225,9 +225,14 @@ float adjust_rounded_float(float input, float adjust_amount) {
   return input;
 }
 
-const char *get_rssi_source_status(void) {
+const char *get_rssi_source_status(uint8_t data_to_print) {
   static char *rssi_source_status[] = {"PACKET RATE" , "CHANNEL    " , "PROTOCOL   "  };
-  return rssi_source_status[profile.channel.lqi_source];
+  static char *rssi_source_channel[] = {"CHANNEL 5  ", "CHANNEL 6  ", "CHANNEL 7  ", "CHANNEL 8  ", "CHANNEL 9  ", "CHANNEL 10 ", "CHANNEL 11 ", "CHANNEL 12 ", "CHANNEL 13 ", "CHANNEL 14 ", "CHANNEL 15 ", "CHANNEL 16 ", "ALWAYS OFF ", "ALWAYS ON  ", "GESTURE AUX", "ERROR      "};
+  if (data_to_print == 0){
+    return rssi_source_status[profile.channel.lqi_source];
+  }else{
+    return rssi_source_channel[profile.channel.aux[12]];
+  }
 }
 
 const char *get_aux_status(int input) {

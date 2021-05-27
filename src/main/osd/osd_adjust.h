@@ -17,7 +17,7 @@ uint8_t last_cursor_array_stuffer(uint8_t cursor, uint8_t add_new);
 void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_t status);
 void osd_encoded_adjust_callsign(void);
 
-const char *get_rssi_source_status(void);
+const char *get_rssi_source_status(uint8_t data_to_print);
 const char *get_aux_status(int input);
 const char *get_vtx_status(int input);
 vec3_t *get_pid_term(uint8_t term);

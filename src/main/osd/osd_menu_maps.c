@@ -233,13 +233,12 @@ const uint8_t rc_link_positions[3][2] = {{12, 1}, {7, 4}, {7, 5}};
 const uint8_t rc_link_map[] = {33, 32};
 
 //rssi source map
-uint8_t *rssi_source_ptr[1] = {&profile.channel.lqi_source};
-const char rssi_menu_labels[3][21] = {{"RSSI SOURCE"}, {"RSSI FROM"}, {"SAVE AND EXIT"}};
-const uint8_t rssi_menu_positions[3][2] = {{10, 1}, {4, 4}, {4, 14}};
-const char rssi_source_labels[3][21] = {{"CHANNEL"}, {"PROTOCOL"}, {"PACKET RATE"}};
-const uint8_t rssi_source_limits[] = {2};
-const uint8_t rssi_source_data_positions[1][2] = {{15, 4}};
-const uint8_t rssi_source_data_grid[1][2] = {{1, 1}};
+uint8_t *rssi_source_ptr[2] = {&profile.channel.lqi_source, &profile.channel.aux[12]};
+const char rssi_menu_labels[4][21] = {{"RSSI SOURCE"}, {"RSSI FROM"}, {"SELECT AUX"}, {"SAVE AND EXIT"}};
+const uint8_t rssi_menu_positions[4][2] = {{10, 1}, {4, 4}, {4, 5}, {4, 14}};
+const uint8_t rssi_source_limits[] = {2, 12};
+const uint8_t rssi_source_data_positions[2][2] = {{16, 4}, {16, 5}};
+const uint8_t rssi_source_data_grid[2][2] = {{1, 1}, {1, 2}};
 
 //stick wizard map
 const char stick_wizard_labels[1][21] = {{"UNDER DEVELOPMENT"}};
