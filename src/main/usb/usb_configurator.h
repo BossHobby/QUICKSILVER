@@ -5,7 +5,7 @@
 
 #include "blackbox.h"
 
-#define QUIC_PROTOCOL_VERSION 3
+#define QUIC_PROTOCOL_VERSION 4
 
 #define USB_BUFFER_SIZE 2048
 
