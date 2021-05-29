@@ -122,8 +122,9 @@ void rx_serial_process_redpine() {
     rx_lqi_lost_packet();
   }
 
-  if (profile.channel.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-    rx_lqi_update_fps(LQI_FPS);
+  rx_lqi_update_fps(LQI_FPS);
+
+  if (profile.channel.lqi_source == RX_LQI_SOURCE_PACKET_RATE) { 
     rx_lqi_update_rssi_from_lqi(LQI_FPS);
   }
   if (profile.channel.lqi_source == RX_LQI_SOURCE_DIRECT) {
