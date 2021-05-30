@@ -126,11 +126,9 @@ void rx_serial_process_ibus() {
         rx_lqi_update_rssi_direct(0.1f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 1000));
       }
     }
-
     if (profile.channel.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
       rx_lqi_update_rssi_from_lqi(LQI_FPS);
     }
-
     if (profile.channel.lqi_source == RX_LQI_SOURCE_DIRECT) {
       rx_lqi_update_rssi_direct(0);  //no internal rssi data
     }

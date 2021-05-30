@@ -1,7 +1,7 @@
 #include "rx_frsky.h"
 
 #include <string.h>
-
+#include "flash.h"
 #include "control.h"
 #include "drv_spi_cc2500.h"
 #include "drv_time.h"
@@ -15,6 +15,7 @@
 //Source https://www.rcgroups.com/forums/showpost.php?p=21864861
 
 #define FRSKY_ENABLE_TELEMETRY
+#define LQI_FPS 112
 
 #define FRSKY_D16_CHANNEL_COUNT 16
 #define FRSKY_D16_TELEMETRY_SEQUENCE_LENGTH 4
@@ -158,7 +159,17 @@ static void frsky_d16_set_rc_data() {
   state.aux[AUX_CHANNEL_10] = (channels[14] > 1023) ? 1 : 0;
   state.aux[AUX_CHANNEL_11] = (channels[15] > 1023) ? 1 : 0;
 
-  state.rx_rssi = constrainf(frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]), 0.f, 100.f);
+  if (profile.channel.lqi_source == RX_LQI_SOURCE_DIRECT) {
+    state.rx_rssi = constrainf(frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]), 0.f, 100.f);
+  }
+  if (profile.channel.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
+    rx_update_spi_fps_lqi(LQI_FPS);
+  }
+  if (profile.channel.lqi_source == RX_LQI_SOURCE_CHANNEL) {
+    if (profile.channel.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
+      state.rx_rssi = constrainf(((channels[(profile.channel.aux[AUX_RSSI] + 4)]) - 200) * 100.f / 1520.f, 0.f, 100.f);
+    }
+  }
 }
 
 uint8_t frsky_d16_is_valid_packet(uint8_t *packet) {

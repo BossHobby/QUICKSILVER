@@ -20,6 +20,8 @@
 #define FRSKY_D8_CHANNEL_COUNT 8
 #define FRSKY_D8_HUB_FIRST_USER_ID 0x31
 
+#define LQI_FPS 112
+
 typedef struct {
   uint8_t length;
   uint8_t tx_id[2];
@@ -100,7 +102,17 @@ static void frsky_d8_set_rc_data() {
   state.aux[AUX_CHANNEL_10] = 0;
   state.aux[AUX_CHANNEL_11] = 0;
 
-  state.rx_rssi = constrainf(frsky_extract_rssi(packet[18]), 0.f, 100.f);
+  if (profile.channel.lqi_source == RX_LQI_SOURCE_DIRECT) {
+    state.rx_rssi = constrainf(frsky_extract_rssi(packet[18]), 0.f, 100.f);
+  }
+  if (profile.channel.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
+    rx_update_spi_fps_lqi(LQI_FPS);
+  }
+  if (profile.channel.lqi_source == RX_LQI_SOURCE_CHANNEL) {
+    if (profile.channel.aux[AUX_RSSI] <= AUX_CHANNEL_8) {
+      state.rx_rssi = constrainf(((channels[(profile.channel.aux[AUX_RSSI] + 4)]) - 1500) * 100.f / 1500.f, 0.f, 100.f);
+    }
+  }
 }
 
 #ifdef FRSKY_ENABLE_HUB_TELEMETRY

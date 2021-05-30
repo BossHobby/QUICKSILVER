@@ -130,6 +130,9 @@ void rx_serial_process_redpine() {
   if (profile.channel.lqi_source == RX_LQI_SOURCE_DIRECT) {
     rx_lqi_update_rssi_direct(rx_data[REDPINE_CHANNEL_START + 7]);
   }
+  if (profile.channel.lqi_source == RX_LQI_SOURCE_CHANNEL) {
+    rx_lqi_update_rssi_direct(0);  //aux channels are binary and cannot carry rssi
+  }
 
   frame_status = FRAME_TX; //We're done with this frame now.
 
