@@ -86,7 +86,7 @@ static void frsky_d8_set_rc_data() {
   if (state.rx.axis[3] < 0)
     state.rx.axis[3] = 0;
 
-  rx_apply_expo();
+  //rx_apply_expo()  no longer needed here;
 
   //Here we have the AUX channels Silverware supports
   state.aux[AUX_CHANNEL_0] = (channels[4] > 2000) ? 1 : 0;

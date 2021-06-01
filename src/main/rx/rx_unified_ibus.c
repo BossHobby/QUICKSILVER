@@ -103,7 +103,7 @@ void rx_serial_process_ibus() {
     if (state.rx.axis[3] < 0)
       state.rx.axis[3] = 0;
 
-    rx_apply_expo();
+    //rx_apply_expo()  no longer needed here;
 
     //Here we have the AUX channels Silverware supports
     state.aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;

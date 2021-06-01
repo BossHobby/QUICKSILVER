@@ -103,7 +103,7 @@ void rx_serial_process_dsmx() {
       state.rx.axis[3] = 0;
 #endif
 
-    rx_apply_expo();
+    //rx_apply_expo()  no longer needed here;
 
 #ifdef RX_DSMX_2048_UNIFIED
     state.aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0; //1100 cutoff intentionally selected to force aux channels low if

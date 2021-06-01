@@ -169,7 +169,7 @@ static void rx_serial_crsf_process_frame() {
     if (state.rx.axis[3] < 0)
       state.rx.axis[3] = 0;
 
-    rx_apply_expo();
+    //rx_apply_expo()  no longer needed here;
 
     state.aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0; //1100 cutoff intentionally selected to force aux channels low if
     state.aux[AUX_CHANNEL_1] = (channels[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state

@@ -103,7 +103,7 @@ void rx_serial_process_redpine() {
     state.rx.axis[3] *= 1.f / 1640.f;
     state.rx.axis[3] = constrainf(state.rx.axis[3], 0, 1);
 
-    rx_apply_expo();
+    //rx_apply_expo()  no longer needed here;
 
     //Here we have the AUX channels Silverware supports
     state.aux[AUX_CHANNEL_0] = (rx_data[REDPINE_CHANNEL_START + 1] & 0x08) ? 1 : 0;

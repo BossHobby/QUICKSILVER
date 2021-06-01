@@ -80,23 +80,33 @@ void rx_apply_expo(void) {
     expo.axis[2] = acro_expo.yaw;
   }
 
-  if (expo.roll > 0.01)
-    state.rx.axis[0] = rx_expo(state.rx.axis[0], expo.roll);
-  if (expo.pitch > 0.01)
-    state.rx.axis[1] = rx_expo(state.rx.axis[1], expo.pitch);
-  if (expo.yaw > 0.01)
-    state.rx.axis[2] = rx_expo(state.rx.axis[2], expo.yaw);
+  if (expo.roll > 0.01) {
+    state.rx_filtered.axis[0] = rx_expo(state.rx.axis[0], expo.roll);
+  } else {
+    state.rx_filtered.axis[0] = state.rx.axis[0];
+  }
+  if (expo.pitch > 0.01) {
+    state.rx_filtered.axis[1] = rx_expo(state.rx.axis[1], expo.pitch);
+  } else {
+    state.rx_filtered.axis[1] = state.rx.axis[1];
+  }
+  if (expo.yaw > 0.01) {
+    state.rx_filtered.axis[2] = rx_expo(state.rx.axis[2], expo.yaw);
+  } else {
+    state.rx_filtered.axis[2] = state.rx.axis[2];
+  }
 }
 
 void rx_precalc() {
+  rx_apply_expo();
   for (int i = 0; i < 3; ++i) {
 #ifdef RX_SMOOTHING
     static float rx_temp[4] = {0, 0, 0, 0};
-    lpf(&rx_temp[i], state.rx.axis[i], FILTERCALC(state.looptime, 1.0f / (float)rx_smoothing_hz(RX_PROTOCOL)));
+    lpf(&rx_temp[i], state.rx_filtered.axis[i], FILTERCALC(state.looptime, 1.0f / (float)rx_smoothing_hz(RX_PROTOCOL)));
     state.rx_filtered.axis[i] = rx_temp[i];
     limitf(&state.rx_filtered.axis[i], 1.0);
 #else
-    state.rx_filtered.axis[i] = state.rx.axis[i];
+    //state.rx_filtered.axis[i] = state.rx.axis[i]; no longer needed
     limitf(&state.rx_filtered.axis[i], 1.0);
 #endif
 
@@ -122,6 +132,7 @@ void rx_capture_stick_range(void) {
     if (state.rx.axis[i] < profile.receiver.stick_calibration_limits[i].min)
       profile.receiver.stick_calibration_limits[i].min = state.rx.axis[i]; //record min value during calibration to array
   }
+  //problem - this function needs to compare to the inverse(sort of) of the saved profile defaults to grab stick limits < full expected throw
 }
 
 void rx_apply_stick_calibration_scale(void) {
@@ -132,8 +143,10 @@ void rx_apply_stick_calibration_scale(void) {
       mapf(state.rx.axis[i], profile.receiver.stick_calibration_limits[i].min, profile.receiver.stick_calibration_limits[i].max, -1.f, 1.f);
     }
   }
-  constrainf(state.rx.axis[3], 0.f, 1.f); //constrain throttle min and max
+  constrainf(state.rx.axis[3], 0.f, 1.f); //constrain throttle min and max --- when is the right time to constrain this
 }
+
+//  One more function needed to reset defaults
 
 /*stick calibration wizard sequence notes
 1. user selects start stick calibration sequence
