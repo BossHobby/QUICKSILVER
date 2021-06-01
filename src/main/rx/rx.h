@@ -28,11 +28,6 @@ typedef enum {
   RX_LQI_SOURCE_DIRECT,
 } rx_lqi_source_t;
 
-typedef struct {
-  float min;
-  float max;
-} rx_stick_calibration_limits_t;
-
 typedef enum {
   AUX_CHANNEL_0,
   AUX_CHANNEL_1,

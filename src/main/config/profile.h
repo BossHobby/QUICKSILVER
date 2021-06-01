@@ -197,14 +197,24 @@ typedef struct {
   MEMBER(reported_telemetry_voltage, float)
 
 typedef struct {
+  float min;
+  float max;
+} profile_stick_calibration_limits_t;
+
+#define CALIBRATION_LIMIT_MEMBERS \
+  MEMBER(min, float)              \
+  MEMBER(max, float)
+
+typedef struct {
   aux_channel_t aux[AUX_FUNCTION_MAX];
   rx_lqi_source_t lqi_source;
-  rx_stick_calibration_limits_t stick_calibration_limits[4];
+  profile_stick_calibration_limits_t stick_calibration_limits[4];
 } profile_receiver_t;
 
 #define RECEIVER_MEMBERS                     \
   ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, uint8) \
-  MEMBER(lqi_source, uint8)
+  MEMBER(lqi_source, uint8)                  \
+  ARRAY_MEMBER(stick_calibration_limits, 4, profile_stick_calibration_limits_t)
 
 typedef struct {
   usart_ports_t rx;
