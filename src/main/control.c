@@ -275,7 +275,7 @@ void control(void) {
   // CONDITION: switch is ARMED
   if (rx_aux_on(AUX_ARMING)) {
     // CONDITION: throttle is above safety limit and ARMING RELEASE FLAG IS NOT CLEARED
-    if ((state.rx.throttle > THROTTLE_SAFETY) && (arming_release == 0)) {
+    if ((state.rx_filtered.throttle > THROTTLE_SAFETY) && (arming_release == 0)) {
       flags.throttle_safety = 1;
     } else {
       flags.throttle_safety = 0;
@@ -335,7 +335,7 @@ void control(void) {
     if (idle_state == 0) {
       // CONDITION: idle up is turned OFF
 
-      if (state.rx.throttle < 0.05f) {
+      if (state.rx_filtered.throttle < 0.05f) {
         // set a small dead zone where throttle is zero and
         state.throttle = 0;
 
@@ -343,7 +343,7 @@ void control(void) {
         flags.in_air = 0;
       } else {
         // map the remainder of the the active throttle region to 100%
-        state.throttle = (state.rx.throttle - 0.05f) * 1.05623158f;
+        state.throttle = (state.rx_filtered.throttle - 0.05f) * 1.05623158f;
 
         // activate mix increase since throttle is on
         flags.in_air = 1;
@@ -352,9 +352,9 @@ void control(void) {
       // CONDITION: idle up is turned ON
 
       // throttle range is mapped from idle throttle value to 100%
-      state.throttle = (float)IDLE_THR + state.rx.throttle * (1.0f - (float)IDLE_THR);
+      state.throttle = (float)IDLE_THR + state.rx_filtered.throttle * (1.0f - (float)IDLE_THR);
 
-      if ((state.rx.throttle > THROTTLE_SAFETY) && (flags.in_air == 0)) {
+      if ((state.rx_filtered.throttle > THROTTLE_SAFETY) && (flags.in_air == 0)) {
         // change the state of in air flag when first crossing the throttle
         // safety value to indicate craft has taken off for mix increase safety
         flags.in_air = 1;

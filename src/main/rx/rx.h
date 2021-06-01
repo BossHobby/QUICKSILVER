@@ -86,8 +86,8 @@ float rx_expo(float x, float exp);
 float rx_smoothing_hz(rx_protocol_t proto);
 
 void rx_apply_expo(void);
-void rx_apply_stick_calibration_scale (void);
-void rx_capture_stick_range (void);
+void rx_apply_stick_calibration_scale(void);
+void rx_capture_stick_range(void);
 
 #if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_UNIFIED_SERIAL)
 void rx_spektrum_bind(void);

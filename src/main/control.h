@@ -46,8 +46,8 @@ typedef struct {
   float vbatt_comp;
   float vreffilt; // voltage reference for vcc compensation
 
-  vec4_t rx;          // holds the main four channels, roll, pitch, yaw, throttle
-  vec4_t rx_filtered; // same as above, but filtered by the rx smoothing
+  vec4_t rx;          // holds the raw or calibrated main four channels, roll, pitch, yaw, throttle
+  vec4_t rx_filtered; // same as above, but with constraints(just in case), expo applied smoothing applied and deadband applied
   vec4_t rx_override; // override values, activated by controls_override
 
   float rx_rssi;

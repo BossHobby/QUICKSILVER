@@ -97,9 +97,8 @@ void rx_apply_expo(void) {
   }
 }
 
-void rx_precalc() {
-  rx_apply_expo();
-  for (int i = 0; i < 3; ++i) {
+void rx_apply_smoothing(void) {
+  for (int i = 0; i < 4; ++i) {
 #ifdef RX_SMOOTHING
     static float rx_temp[4] = {0, 0, 0, 0};
     lpf(&rx_temp[i], state.rx_filtered.axis[i], FILTERCALC(state.looptime, 1.0f / (float)rx_smoothing_hz(RX_PROTOCOL)));
@@ -109,7 +108,11 @@ void rx_precalc() {
     //state.rx_filtered.axis[i] = state.rx.axis[i]; no longer needed
     limitf(&state.rx_filtered.axis[i], 1.0);
 #endif
+  }
+}
 
+void rx_apply_deadband(void) {
+  for (int i = 0; i < 3; ++i) {
     if (profile.rate.sticks_deadband > 0.0f) {
       if (fabsf(state.rx_filtered.axis[i]) <= profile.rate.sticks_deadband) {
         state.rx_filtered.axis[i] = 0.0f;
@@ -122,7 +125,13 @@ void rx_precalc() {
       }
     }
   }
-  state.rx_filtered.throttle = state.rx.throttle;
+}
+
+void rx_precalc() {
+  state.rx_filtered.throttle = constrainf(state.rx.throttle, 0.f, 1.f); //constrain throttle min and max and copy into next bucket
+  rx_apply_expo();                                                      //this also constrains and copies the rest of the sticks into rx_filtered.axis[i]
+  rx_apply_smoothing();
+  rx_apply_deadband();
 }
 
 void rx_capture_stick_range(void) {
@@ -143,7 +152,6 @@ void rx_apply_stick_calibration_scale(void) {
       mapf(state.rx.axis[i], profile.receiver.stick_calibration_limits[i].min, profile.receiver.stick_calibration_limits[i].max, -1.f, 1.f);
     }
   }
-  constrainf(state.rx.axis[3], 0.f, 1.f); //constrain throttle min and max --- when is the right time to constrain this
 }
 
 //  One more function needed to reset defaults
@@ -159,3 +167,5 @@ void rx_apply_stick_calibration_scale(void) {
   if pattern is input(is this the best idea?) - save profile
 4.  feedback?  failed or completed?
 */
+
+//todo next: apply the profile calibration scaling in all rx files then commit
