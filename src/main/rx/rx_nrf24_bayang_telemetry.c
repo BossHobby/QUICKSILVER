@@ -320,6 +320,8 @@ static int decodepacket(void) {
           ((rxdata[8] & 0x0003) * 256 +
            rxdata[9]) *
           0.000976562f;
+      
+      rx_apply_stick_calibration_scale();
 
       state.aux[CH_INV] = (rxdata[3] & 0x80) ? 1 : 0; // inverted flag
 

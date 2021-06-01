@@ -871,6 +871,8 @@ static int decodepacket(void) {
       state.rx.axis[2] = packettodata(&rxdata[10]);
       // throttle
       state.rx.axis[3] = ((rxdata[8] & 0x0003) * 256 + rxdata[9]) * 0.000976562f;
+      
+      rx_apply_stick_calibration_scale();
 
       // trims are 50% of controls at max
       // trims are not used as trims because they interfere

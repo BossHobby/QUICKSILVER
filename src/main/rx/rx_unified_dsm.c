@@ -84,11 +84,6 @@ void rx_serial_process_dsmx() {
     state.rx.axis[1] = (channels[2] - 1024.0f) * dsmx_scalefactor;
     state.rx.axis[2] = (channels[3] - 1024.0f) * dsmx_scalefactor;
     state.rx.axis[3] = ((channels[0] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f;
-
-    if (state.rx.axis[3] > 1)
-      state.rx.axis[3] = 1;
-    if (state.rx.axis[3] < 0)
-      state.rx.axis[3] = 0;
 #endif
 
 #ifdef RX_DSM2_1024_TEMP
@@ -96,14 +91,9 @@ void rx_serial_process_dsmx() {
     state.rx.axis[1] = (channels[2] - 512.0f) * dsm2_scalefactor;
     state.rx.axis[2] = (channels[3] - 512.0f) * dsm2_scalefactor;
     state.rx.axis[3] = ((channels[0] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f;
-
-    if (state.rx.axis[3] > 1)
-      state.rx.axis[3] = 1;
-    if (state.rx.axis[3] < 0)
-      state.rx.axis[3] = 0;
 #endif
 
-    //rx_apply_expo()  no longer needed here;
+    rx_apply_stick_calibration_scale();
 
 #ifdef RX_DSMX_2048_UNIFIED
     state.aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0; //1100 cutoff intentionally selected to force aux channels low if

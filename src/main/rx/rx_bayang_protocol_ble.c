@@ -520,6 +520,8 @@ static int decodepacket(void) {
       // throttle
       state.rx.axis[3] = ((rxdata[8] & 0x0003) * 256 + rxdata[9]) * 0.000976562;
 
+      rx_apply_stick_calibration_scale();
+
       if (rxdata[1] != 0xfa) { // low rates
         for (int i = 0; i < 3; i++) {
           state.rx.axis[i] = state.rx.axis[i] * (float)BAYANG_LOWRATE_MULTIPLIER;

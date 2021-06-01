@@ -74,19 +74,14 @@ static void frsky_d8_set_rc_data() {
   state.rx.axis[0] = (channels[0] - 1500) - 750;
   state.rx.axis[1] = (channels[1] - 1500) - 750;
   state.rx.axis[2] = (channels[3] - 1500) - 750;
-  state.rx.axis[3] = channels[2] - 1500;
+  state.rx.axis[3] = (channels[2] - 1500);
 
   for (int i = 0; i < 3; i++) {
     state.rx.axis[i] *= 1.f / 750.f;
   }
   state.rx.axis[3] *= 1.f / 1500.f;
 
-  if (state.rx.axis[3] > 1)
-    state.rx.axis[3] = 1;
-  if (state.rx.axis[3] < 0)
-    state.rx.axis[3] = 0;
-
-  //rx_apply_expo()  no longer needed here;
+  rx_apply_stick_calibration_scale();
 
   //Here we have the AUX channels Silverware supports
   state.aux[AUX_CHANNEL_0] = (channels[4] > 2000) ? 1 : 0;

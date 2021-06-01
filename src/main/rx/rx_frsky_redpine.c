@@ -63,9 +63,8 @@ static void redpine_set_rc_data() {
     state.rx.axis[i] *= 1.f / 820.f;
   }
   state.rx.axis[3] *= 1.f / 1640.f;
-  state.rx.axis[3] = constrainf(state.rx.axis[3], 0, 1);
 
-  //rx_apply_expo()  no longer needed here;
+  rx_apply_stick_calibration_scale();
 
   //Here we have the AUX channels Silverware supports
   state.aux[AUX_CHANNEL_0] = (packet[REDPINE_CHANNEL_START + 1] & 0x08) ? 1 : 0;
