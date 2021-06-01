@@ -482,6 +482,12 @@ const profile_t default_profile = {
 #endif
         },
         .lqi_source = RX_LQI_SOURCE_PACKET_RATE,
+        .stick_calibration_limits = {
+            {.min = -1, .max = 1}, //axis[0]
+            {.min = -1, .max = 1}, //axis[1]
+            {.min = -1, .max = 1}, //axis[2]
+            {.min = 0, .max = 1}   //axis[3]
+        },
     },
     .osd = {
         .elements = {

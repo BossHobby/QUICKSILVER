@@ -114,3 +114,35 @@ void rx_precalc() {
   }
   state.rx_filtered.throttle = state.rx.throttle;
 }
+
+void rx_capture_stick_range(void) {
+  for (uint8_t i = 0; i < 4; i++) {
+    if (state.rx.axis[i] > profile.receiver.stick_calibration_limits[i].max)
+      profile.receiver.stick_calibration_limits[i].max = state.rx.axis[i]; //record max value during calibration to array
+    if (state.rx.axis[i] < profile.receiver.stick_calibration_limits[i].min)
+      profile.receiver.stick_calibration_limits[i].min = state.rx.axis[i]; //record min value during calibration to array
+  }
+}
+
+void rx_apply_stick_calibration_scale(void) {
+  for (uint8_t i = 0; i < 4; i++) {
+    if (i == 3) {
+      mapf(state.rx.axis[i], profile.receiver.stick_calibration_limits[i].min, profile.receiver.stick_calibration_limits[i].max, 0.f, 1.f);
+    } else {
+      mapf(state.rx.axis[i], profile.receiver.stick_calibration_limits[i].min, profile.receiver.stick_calibration_limits[i].max, -1.f, 1.f);
+    }
+  }
+  constrainf(state.rx.axis[3], 0.f, 1.f); //constrain throttle min and max
+}
+
+/*stick calibration wizard sequence notes
+1. user selects start stick calibration sequence
+
+2. a timeout timer runs for 5 seconds - user is instructed to move sticks around
+  somehow stick values need to be ignored
+   rx_capture_stick_range() runs
+
+3. another timeout timer runs for 5 seconds - user is instructed to input a pattern to save and apply
+  if pattern is input(is this the best idea?) - save profile
+4.  feedback?  failed or completed?
+*/

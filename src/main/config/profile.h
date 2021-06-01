@@ -199,6 +199,7 @@ typedef struct {
 typedef struct {
   aux_channel_t aux[AUX_FUNCTION_MAX];
   rx_lqi_source_t lqi_source;
+  rx_stick_calibration_limits_t stick_calibration_limits[4];
 } profile_receiver_t;
 
 #define RECEIVER_MEMBERS                     \
