@@ -4,6 +4,7 @@
 
 #include "control.h"
 #include "drv_serial.h"
+#include "drv_time.h"
 #include "filter.h"
 #include "flash.h"
 #include "profile.h"
@@ -11,6 +12,7 @@
 #include "util.h"
 
 extern profile_t profile;
+//extern control_flags_t flags;
 
 uint8_t rx_aux_on(aux_function_t function) {
   return state.aux[profile.receiver.aux[function]];
@@ -105,7 +107,6 @@ void rx_apply_smoothing(void) {
     state.rx_filtered.axis[i] = rx_temp[i];
     limitf(&state.rx_filtered.axis[i], 1.0);
 #else
-    //state.rx_filtered.axis[i] = state.rx.axis[i]; no longer needed
     limitf(&state.rx_filtered.axis[i], 1.0);
 #endif
   }
@@ -141,31 +142,144 @@ void rx_capture_stick_range(void) {
     if (state.rx.axis[i] < profile.receiver.stick_calibration_limits[i].min)
       profile.receiver.stick_calibration_limits[i].min = state.rx.axis[i]; //record min value during calibration to array
   }
-  //problem - this function needs to compare to the inverse(sort of) of the saved profile defaults to grab stick limits < full expected throw
 }
 
-void rx_apply_stick_calibration_scale(void) {
+void rx_reset_stick_calibration_scale(void) {
+  profile.receiver.stick_calibration_limits[0].min = -1;
+  profile.receiver.stick_calibration_limits[0].max = 1;
+  profile.receiver.stick_calibration_limits[1].min = -1;
+  profile.receiver.stick_calibration_limits[1].max = 1;
+  profile.receiver.stick_calibration_limits[2].min = -1;
+  profile.receiver.stick_calibration_limits[2].max = 1;
+  profile.receiver.stick_calibration_limits[3].min = 0;
+  profile.receiver.stick_calibration_limits[3].max = 1;
+}
+
+void rx_apply_temp_calibration_scale(void) {
+  profile.receiver.stick_calibration_limits[0].min = 1;
+  profile.receiver.stick_calibration_limits[0].max = -1;
+  profile.receiver.stick_calibration_limits[1].min = 1;
+  profile.receiver.stick_calibration_limits[1].max = -1;
+  profile.receiver.stick_calibration_limits[2].min = 1;
+  profile.receiver.stick_calibration_limits[2].max = -1;
+  profile.receiver.stick_calibration_limits[3].min = 1;
+  profile.receiver.stick_calibration_limits[3].max = 0;
+}
+
+static float stick_calibration_test_buffer[4][2] = {{-1, 1}, {-1, 1}, {-1, 1}, {1, 0}};
+void reset_stick_calibration_test_buffer(void) {
+  for (uint8_t i = 0; i < 3; i++) {
+    stick_calibration_test_buffer[i][0] = -1;
+    stick_calibration_test_buffer[i][1] = 1;
+  }
+  stick_calibration_test_buffer[3][0] = 1;
+  stick_calibration_test_buffer[3][1] = 0;
+}
+
+uint8_t check_for_perfect_sticks(void) {
+  //first scale the sticks
+  state.rx.axis[0] = mapf(state.rx.axis[0], profile.receiver.stick_calibration_limits[0].min, profile.receiver.stick_calibration_limits[0].max, -1.f, 1.f);
+  state.rx.axis[1] = mapf(state.rx.axis[1], profile.receiver.stick_calibration_limits[1].min, profile.receiver.stick_calibration_limits[1].max, -1.f, 1.f);
+  state.rx.axis[2] = mapf(state.rx.axis[2], profile.receiver.stick_calibration_limits[2].min, profile.receiver.stick_calibration_limits[2].max, -1.f, 1.f);
+  state.rx.axis[3] = mapf(state.rx.axis[3], profile.receiver.stick_calibration_limits[3].min, profile.receiver.stick_calibration_limits[3].max, 0.f, 1.f);
+  //listen for the max stick values and update buffer
   for (uint8_t i = 0; i < 4; i++) {
-    if (i == 3) {
-      mapf(state.rx.axis[i], profile.receiver.stick_calibration_limits[i].min, profile.receiver.stick_calibration_limits[i].max, 0.f, 1.f);
-    } else {
-      mapf(state.rx.axis[i], profile.receiver.stick_calibration_limits[i].min, profile.receiver.stick_calibration_limits[i].max, -1.f, 1.f);
+    if (state.rx.axis[i] > stick_calibration_test_buffer[i][0])
+      stick_calibration_test_buffer[i][0] = state.rx.axis[i]; //record max value during calibration to array
+    if (state.rx.axis[i] < stick_calibration_test_buffer[i][1])
+      stick_calibration_test_buffer[i][1] = state.rx.axis[i]; //record min value during calibration to array
+  }
+  //test the "4 corners key"
+  uint8_t sum = 0;
+  for (uint8_t i = 0; i < 4; i++) {
+    if (stick_calibration_test_buffer[i][0] > 0.99f && stick_calibration_test_buffer[i][0] < 1.01f)
+      sum += 1;
+    if (stick_calibration_test_buffer[i][1] < -0.99f && stick_calibration_test_buffer[i][1] > -1.01f)
+      sum += 1;
+  }
+  if (stick_calibration_test_buffer[3][0] < .01 && stick_calibration_test_buffer[3][0] > -.01)
+    sum += 1; // yes we tested throttle low twice because it doesnt go negative
+  if (sum == 8)
+    return 1;
+  //else
+  return 0;
+}
+
+void rx_stick_calibration_wizard(void) {
+  extern int ledcommand;
+  static uint8_t sequence_is_running = 0;
+  static uint32_t first_timestamp;
+  //get a timestamp and set the initial conditions
+  if (!sequence_is_running) {          //calibration has just been called
+    first_timestamp = gettime();       //so we flag the time
+    flags.gestures_disabled = 1;       //and disable gestures
+    sequence_is_running = 1;           //just once
+    rx_apply_temp_calibration_scale(); //and shove temp values into profile that are the inverse of expected values from sticks
+    wizard_phase = CAPTURE_STICKS;     // and kick the sequence off
+  }
+  //sequence the phase of the wizard in automatic 5 second intervals
+  if (wizard_phase == CALIBRATION_CONFIRMED) {
+    //leave it alone
+  } else {
+    uint32_t time_now = gettime();
+    if ((time_now - first_timestamp > 5e6) && (time_now - first_timestamp < 10e6))
+      wizard_phase = WAIT_FOR_CONFIRM;
+    if (time_now - first_timestamp > 10e6)
+      wizard_phase = TIMEOUT;
+  }
+  //take appropriate action based on the wizard phase
+  switch (wizard_phase) {
+
+  case CAPTURE_STICKS:
+    rx_capture_stick_range();
+    break;
+
+  case WAIT_FOR_CONFIRM:
+    if (check_for_perfect_sticks()) {
+      wizard_phase = CALIBRATION_CONFIRMED;
     }
+    break;
+
+  case CALIBRATION_CONFIRMED:
+
+    ledcommand = 1;
+    flash_save();
+    flash_load();
+    reset_looptime();
+    sequence_is_running = 0;
+    flags.gestures_disabled = 0;
+    flags.rx_calibration_wizard_active = 0;
+    reset_stick_calibration_test_buffer();
+    break;
+
+  case TIMEOUT:
+    reset_stick_calibration_test_buffer();
+    rx_reset_stick_calibration_scale();
+    sequence_is_running = 0;
+    flags.gestures_disabled = 0;
+    flags.rx_calibration_wizard_active = 0;
+    break;
   }
 }
 
-//  One more function needed to reset defaults
+void rx_apply_stick_calibration_scale(void) {
+  if (flags.rx_calibration_wizard_active) {
+    rx_stick_calibration_wizard();
+  } else {
+    state.rx.axis[0] = mapf(state.rx.axis[0], profile.receiver.stick_calibration_limits[0].min, profile.receiver.stick_calibration_limits[0].max, -1.f, 1.f);
+    state.rx.axis[1] = mapf(state.rx.axis[1], profile.receiver.stick_calibration_limits[1].min, profile.receiver.stick_calibration_limits[1].max, -1.f, 1.f);
+    state.rx.axis[2] = mapf(state.rx.axis[2], profile.receiver.stick_calibration_limits[2].min, profile.receiver.stick_calibration_limits[2].max, -1.f, 1.f);
+    state.rx.axis[3] = mapf(state.rx.axis[3], profile.receiver.stick_calibration_limits[3].min, profile.receiver.stick_calibration_limits[3].max, 0.f, 1.f);
+  }
+}
+
+void request_stick_calibration_wizard(void) {
+  flags.rx_calibration_wizard_active = 1;
+}
 
 /*stick calibration wizard sequence notes
 1. user selects start stick calibration sequence
-
-2. a timeout timer runs for 5 seconds - user is instructed to move sticks around
-  somehow stick values need to be ignored
-   rx_capture_stick_range() runs
-
-3. another timeout timer runs for 5 seconds - user is instructed to input a pattern to save and apply
-  if pattern is input(is this the best idea?) - save profile
-4.  feedback?  failed or completed?
+2. From time 0s to time 5s - user is instructed to move sticks to all extents
+3. From time 5s to time 10s - user is instructed to move sticks to all extents again so that they can be tested
+4. If sticks test +/- 1% perfect - calibration passes and profile with scaling data saves.  wizard_phase enum will hold results that indicate CALIBRATION_CONFIRMED or TIMEOUT after the sequence.
 */
-
-//todo next: apply the profile calibration scaling in all rx files then commit

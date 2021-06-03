@@ -71,6 +71,15 @@ typedef enum {
 
 uint8_t rx_aux_on(aux_function_t function);
 
+typedef enum {
+  CAPTURE_STICKS,
+  WAIT_FOR_CONFIRM,
+  CALIBRATION_CONFIRMED,
+  TIMEOUT
+}stick_calibration_wizard_t;
+
+stick_calibration_wizard_t wizard_phase;
+
 void rx_init(void);
 void rx_serial_init(void);
 
@@ -82,7 +91,7 @@ float rx_smoothing_hz(rx_protocol_t proto);
 
 void rx_apply_expo(void);
 void rx_apply_stick_calibration_scale(void);
-void rx_capture_stick_range(void);
+void request_stick_calibration_wizard(void);
 
 #if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_UNIFIED_SERIAL)
 void rx_spektrum_bind(void);

@@ -217,7 +217,7 @@ int main(void) {
     vbat_calc();
 
     // check gestures
-    if (flags.on_ground) {
+    if (flags.on_ground && !flags.gestures_disabled) {
       gestures();
     }
 
