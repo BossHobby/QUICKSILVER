@@ -145,28 +145,24 @@ void rx_capture_stick_range(void) {
 }
 
 void rx_reset_stick_calibration_scale(void) {
-  profile.receiver.stick_calibration_limits[0].min = -1;
-  profile.receiver.stick_calibration_limits[0].max = 1;
-  profile.receiver.stick_calibration_limits[1].min = -1;
-  profile.receiver.stick_calibration_limits[1].max = 1;
-  profile.receiver.stick_calibration_limits[2].min = -1;
-  profile.receiver.stick_calibration_limits[2].max = 1;
-  profile.receiver.stick_calibration_limits[3].min = 0;
+  for (uint8_t i = 0; i < 3; i++) {
+    profile.receiver.stick_calibration_limits[i].min = -1;
+    profile.receiver.stick_calibration_limits[i].max = 1;
+  }
   profile.receiver.stick_calibration_limits[3].max = 1;
+  profile.receiver.stick_calibration_limits[3].min = 0;
 }
 
 void rx_apply_temp_calibration_scale(void) {
-  profile.receiver.stick_calibration_limits[0].min = 1;
-  profile.receiver.stick_calibration_limits[0].max = -1;
-  profile.receiver.stick_calibration_limits[1].min = 1;
-  profile.receiver.stick_calibration_limits[1].max = -1;
-  profile.receiver.stick_calibration_limits[2].min = 1;
-  profile.receiver.stick_calibration_limits[2].max = -1;
-  profile.receiver.stick_calibration_limits[3].min = 1;
+  for (uint8_t i = 0; i < 3; i++) {
+    profile.receiver.stick_calibration_limits[i].min = 1;
+    profile.receiver.stick_calibration_limits[i].max = -1;
+  }
   profile.receiver.stick_calibration_limits[3].max = 0;
+  profile.receiver.stick_calibration_limits[3].min = 1;
 }
 
-static float stick_calibration_test_buffer[4][2] = {{-1, 1}, {-1, 1}, {-1, 1}, {1, 0}};
+static float stick_calibration_test_buffer[4][2] = {{-1, 1}, {-1, 1}, {-1, 1}, {1, 0}}; //{max, min}
 void reset_stick_calibration_test_buffer(void) {
   for (uint8_t i = 0; i < 3; i++) {
     stick_calibration_test_buffer[i][0] = -1;
@@ -210,12 +206,13 @@ void rx_stick_calibration_wizard(void) {
   static uint8_t sequence_is_running = 0;
   static uint32_t first_timestamp;
   //get a timestamp and set the initial conditions
-  if (!sequence_is_running) {          //calibration has just been called
-    first_timestamp = gettime();       //so we flag the time
-    flags.gestures_disabled = 1;       //and disable gestures
-    sequence_is_running = 1;           //just once
-    rx_apply_temp_calibration_scale(); //and shove temp values into profile that are the inverse of expected values from sticks
-    wizard_phase = CAPTURE_STICKS;     // and kick the sequence off
+  if (!sequence_is_running) {              //calibration has just been called
+    first_timestamp = gettime();           //so we flag the time
+    flags.gestures_disabled = 1;           //and disable gestures
+    sequence_is_running = 1;               //just once
+    rx_apply_temp_calibration_scale();     //and shove temp values into profile that are the inverse of expected values from sticks
+    reset_stick_calibration_test_buffer(); //make sure we test with a fresh comparison buffer
+    wizard_phase = CAPTURE_STICKS;         // and kick the sequence off
   }
   //sequence the phase of the wizard in automatic 5 second intervals
   if (wizard_phase == CALIBRATION_CONFIRMED) {
@@ -229,19 +226,15 @@ void rx_stick_calibration_wizard(void) {
   }
   //take appropriate action based on the wizard phase
   switch (wizard_phase) {
-
   case CAPTURE_STICKS:
     rx_capture_stick_range();
     break;
-
   case WAIT_FOR_CONFIRM:
     if (check_for_perfect_sticks()) {
       wizard_phase = CALIBRATION_CONFIRMED;
     }
     break;
-
   case CALIBRATION_CONFIRMED:
-
     ledcommand = 1;
     flash_save();
     flash_load();
@@ -249,11 +242,8 @@ void rx_stick_calibration_wizard(void) {
     sequence_is_running = 0;
     flags.gestures_disabled = 0;
     flags.rx_calibration_wizard_active = 0;
-    reset_stick_calibration_test_buffer();
     break;
-
   case TIMEOUT:
-    reset_stick_calibration_test_buffer();
     rx_reset_stick_calibration_scale();
     sequence_is_running = 0;
     flags.gestures_disabled = 0;
