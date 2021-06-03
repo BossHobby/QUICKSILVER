@@ -234,6 +234,22 @@ extern const uint8_t rssi_source_limits[];
 extern const uint8_t rssi_source_data_positions[2][2];
 extern const uint8_t rssi_source_data_grid[2][2];
 
-//stick wizard map
-extern const char stick_wizard_labels[1][21];
-extern const uint8_t stick_wizard_positions[1][2];
+//stick wizard map 1
+extern const char stick_wizard_labels_1[3][21];
+extern const uint8_t stick_wizard_positions_1[3][2];
+
+//stick wizard map 2
+extern const char stick_wizard_labels_2[3][21];
+extern const uint8_t stick_wizard_positions_2[3][2];
+
+//stick wizard map 3
+extern const char stick_wizard_labels_3[3][21];
+extern const uint8_t stick_wizard_positions_3[3][2];
+
+//stick wizard map 4
+extern const char stick_wizard_labels_4[3][21];
+extern const uint8_t stick_wizard_positions_4[3][2];
+
+//stick wizard map 5
+extern const char stick_wizard_labels_5[3][21];
+extern const uint8_t stick_wizard_positions_5[3][2];

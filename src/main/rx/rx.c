@@ -162,14 +162,14 @@ void rx_apply_temp_calibration_scale(void) {
   profile.receiver.stick_calibration_limits[3].min = 1;
 }
 
-static float stick_calibration_test_buffer[4][2] = {{-1, 1}, {-1, 1}, {-1, 1}, {1, 0}}; //{max, min}
+static float stick_calibration_test_buffer[4][2] = {{-1, 1}, {-1, 1}, {-1, 1}, {0, 1}}; //{max, min}
 void reset_stick_calibration_test_buffer(void) {
   for (uint8_t i = 0; i < 3; i++) {
     stick_calibration_test_buffer[i][0] = -1;
     stick_calibration_test_buffer[i][1] = 1;
   }
-  stick_calibration_test_buffer[3][0] = 1;
-  stick_calibration_test_buffer[3][1] = 0;
+  stick_calibration_test_buffer[3][0] = 0;
+  stick_calibration_test_buffer[3][1] = 1;
 }
 
 uint8_t check_for_perfect_sticks(void) {
@@ -188,12 +188,12 @@ uint8_t check_for_perfect_sticks(void) {
   //test the "4 corners key"
   uint8_t sum = 0;
   for (uint8_t i = 0; i < 4; i++) {
-    if (stick_calibration_test_buffer[i][0] > 0.99f && stick_calibration_test_buffer[i][0] < 1.01f)
-      sum += 1;
-    if (stick_calibration_test_buffer[i][1] < -0.99f && stick_calibration_test_buffer[i][1] > -1.01f)
-      sum += 1;
+    if (stick_calibration_test_buffer[i][0] > 0.98f && stick_calibration_test_buffer[i][0] < 1.02f)
+      sum += 1; //test the max
+    if (stick_calibration_test_buffer[i][1] < -0.98f && stick_calibration_test_buffer[i][1] > -1.02f)
+      sum += 1; //test the min - throttle should fail
   }
-  if (stick_calibration_test_buffer[3][0] < .01 && stick_calibration_test_buffer[3][0] > -.01)
+  if (stick_calibration_test_buffer[3][1] < .01 && stick_calibration_test_buffer[3][1] > -.01)
     sum += 1; // yes we tested throttle low twice because it doesnt go negative
   if (sum == 8)
     return 1;

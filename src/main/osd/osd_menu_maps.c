@@ -228,7 +228,7 @@ const uint8_t pidmodify_data_positions[4][2] = {{23, 4}, {23, 5}, {23, 6}, {23, 
 const float pidmodify_adjust_limits[4][2] = {{0, 1}, {0, 1}, {0, 1}, {0, 1}};
 
 //rc link map
-const char rc_link_labels[3][21] = {{"RC LINK"}, {"STICK WIZARD"}, {"RSSI SOURCE"}};
+const char rc_link_labels[3][21] = {{"RC LINK"}, {"STICK CALIBRATION"}, {"RSSI SOURCE"}};
 const uint8_t rc_link_positions[3][2] = {{12, 1}, {7, 4}, {7, 5}};
 const uint8_t rc_link_map[] = {33, 32};
 
@@ -240,6 +240,23 @@ const uint8_t rssi_source_limits[] = {2, 12};
 const uint8_t rssi_source_data_positions[2][2] = {{16, 4}, {16, 5}};
 const uint8_t rssi_source_data_grid[2][2] = {{1, 1}, {1, 2}};
 
-//stick wizard map
-const char stick_wizard_labels[1][21] = {{"UNDER DEVELOPMENT"}};
-const uint8_t stick_wizard_positions[1][2] = {{7, 1}};
+//stick wizard map 1 - enter/exit
+const char stick_wizard_labels_1[3][21] = {{"STICK CALIBRATION"}, {"LEFT TO EXIT"}, {"RIGHT TO BEGIN"}};
+const uint8_t stick_wizard_positions_1[3][2] = {{4, 1}, {7, 5}, {7, 7}};
+
+//stick wizard map 2 - move sticks to calibrate
+const char stick_wizard_labels_2[3][21] = {{"CALIBRATION RECORDING"}, {"MOVE STICKS"}, {"TO EXTENTS"}};
+const uint8_t stick_wizard_positions_2[3][2] = {{4, 3}, {7, 5}, {7, 7}};
+
+//stick wizard map 3 - move sticks to test
+const char stick_wizard_labels_3[3][21] = {{"TESTING CALIBRATION"}, {"MOVE STICKS"}, {"TO ALL 4 CORNERS"}};
+const uint8_t stick_wizard_positions_3[3][2] = {{4, 3}, {7, 5}, {7, 7}};
+
+//stick wizard map 4 - calibration success
+const char stick_wizard_labels_4[3][21] = {{"STICK CALIBRATION"}, {"CALIBRATION"}, {"SUCCESS"}};
+const uint8_t stick_wizard_positions_4[3][2] = {{4, 1}, {7, 5}, {7, 7}};
+
+//stick wizard map 5 - calibration failed
+const char stick_wizard_labels_5[3][21] = {{"STICK CALIBRATION"}, {"CALIBRATION"}, {"FAILED"}};
+const uint8_t stick_wizard_positions_5[3][2] = {{4, 1}, {7, 5}, {7, 7}};
+

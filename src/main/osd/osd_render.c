@@ -945,14 +945,14 @@ void osd_display(void) {
       osd_mixed_data_adjust(pidmodify_ptr, pidmodify_ptr2, 4, 1, pidmodify_adjust_limits, 0.05, pidmodify_reboot_request);
     break;
 
-  case 31: //rc link
+  case 31: //rc link menu
     last_display_phase = 1;
     print_osd_menu_strings(3, 2, rc_link_labels, rc_link_positions);
     if (osd_menu_phase == 4)
       osd_select_menu_item(7, rc_link_map, SUB_MENU);
     break;
 
-  case 32:
+  case 32: //rssi adjust
     last_display_phase = 31;
     print_osd_menu_strings(4, 3, rssi_menu_labels, rssi_menu_positions);
     print_osd_adjustable_enums(4, 2, get_rssi_source_status(osd_menu_phase - 5), rssi_source_data_grid, rssi_source_data_positions);
@@ -960,12 +960,55 @@ void osd_display(void) {
       osd_enum_adjust(rssi_source_ptr, 2, rssi_source_limits);
     break;
 
-  case 33:
+  case 33:  //stick wizard select menu
     last_display_phase = 31;
-    print_osd_menu_strings(1, 0, stick_wizard_labels, stick_wizard_positions);
-    if (osd_select) //temp placeholder till feature is developed
-      osd_select = 0;
+    print_osd_menu_strings(3, 0, stick_wizard_labels_1, stick_wizard_positions_1);
+    if (osd_menu_phase == 4){
+      if (osd_select) {
+        request_stick_calibration_wizard();
+        osd_display_phase = 34;
+        osd_select = 0;
+        osd_menu_phase = 0;
+      }
+    }
     break;
+
+  case 34:  //change this to move sticks for 5 sec to calibrate
+    print_osd_menu_strings(3, 0, stick_wizard_labels_2, stick_wizard_positions_2);
+    if (osd_menu_phase == 4){
+      if (wizard_phase ==  WAIT_FOR_CONFIRM) {
+        osd_display_phase = 35;
+        osd_menu_phase = 0;
+      }
+    }
+    break;
+
+  case 35:  //change this to move sticks to confirm calibration
+    print_osd_menu_strings(3, 0, stick_wizard_labels_3, stick_wizard_positions_3);
+    if (osd_menu_phase == 4){
+      if ((wizard_phase ==  CALIBRATION_CONFIRMED) || (wizard_phase ==  TIMEOUT)) {
+        osd_display_phase = 36;
+        osd_menu_phase = 0;
+      }
+    }
+    break;
+
+  case 36:  //results of calibration
+    last_display_phase = 31;
+    if (wizard_phase ==  CALIBRATION_CONFIRMED){
+      print_osd_menu_strings(3, 0, stick_wizard_labels_4, stick_wizard_positions_4);  //osd_menu_phase will be 4 after this
+    }
+    if (wizard_phase ==  TIMEOUT){
+      print_osd_menu_strings(3, 0, stick_wizard_labels_5, stick_wizard_positions_5);  //osd_menu_phase will be 4 after this
+    }     
+    //if (osd_menu_phase == 4){
+    //  if (3 second timer) {
+    //    osd_display_phase = 31;
+    //    osd_menu_phase = 0;
+        //maybe clear cursor tracking here too
+    //  }
+    //}
+    break; 
   }
   if (osd_display_phase != 2 && rx_aux_on(AUX_ARMING))
     flags.arm_safety = 1; //final safety check to disallow arming during OSD operation
