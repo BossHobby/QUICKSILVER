@@ -973,7 +973,7 @@ void osd_display(void) {
     }
     break;
 
-  case 34:  //change this to move sticks for 5 sec to calibrate
+  case 34:  //5 sec to calibrate
     print_osd_menu_strings(3, 0, stick_wizard_labels_2, stick_wizard_positions_2);
     if (osd_menu_phase == 4){
       if (wizard_phase ==  WAIT_FOR_CONFIRM) {
@@ -983,7 +983,7 @@ void osd_display(void) {
     }
     break;
 
-  case 35:  //change this to move sticks to confirm calibration
+  case 35:  //5 sec to test / confirm calibration
     print_osd_menu_strings(3, 0, stick_wizard_labels_3, stick_wizard_positions_3);
     if (osd_menu_phase == 4){
       if ((wizard_phase ==  CALIBRATION_CONFIRMED) || (wizard_phase ==  TIMEOUT)) {
@@ -1000,14 +1000,8 @@ void osd_display(void) {
     }
     if (wizard_phase ==  TIMEOUT){
       print_osd_menu_strings(3, 0, stick_wizard_labels_5, stick_wizard_positions_5);  //osd_menu_phase will be 4 after this
-    }     
-    //if (osd_menu_phase == 4){
-    //  if (3 second timer) {
-    //    osd_display_phase = 31;
-    //    osd_menu_phase = 0;
-        //maybe clear cursor tracking here too
-    //  }
-    //}
+    }
+    if (osd_select > 0) osd_select = 0;
     break; 
   }
   if (osd_display_phase != 2 && rx_aux_on(AUX_ARMING))

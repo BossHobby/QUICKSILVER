@@ -242,21 +242,21 @@ const uint8_t rssi_source_data_grid[2][2] = {{1, 1}, {1, 2}};
 
 //stick wizard map 1 - enter/exit
 const char stick_wizard_labels_1[3][21] = {{"STICK CALIBRATION"}, {"LEFT TO EXIT"}, {"RIGHT TO BEGIN"}};
-const uint8_t stick_wizard_positions_1[3][2] = {{4, 1}, {7, 5}, {7, 7}};
+const uint8_t stick_wizard_positions_1[3][2] = {{7, 1}, {9, 5}, {8, 7}};
 
 //stick wizard map 2 - move sticks to calibrate
-const char stick_wizard_labels_2[3][21] = {{"CALIBRATION RECORDING"}, {"MOVE STICKS"}, {"TO EXTENTS"}};
-const uint8_t stick_wizard_positions_2[3][2] = {{4, 3}, {7, 5}, {7, 7}};
+const char stick_wizard_labels_2[3][21] = {{"RECORDING"}, {"MOVE STICKS"}, {"TO EXTENTS"}};
+const uint8_t stick_wizard_positions_2[3][2] = {{10, 3}, {9, 5}, {9, 7}};
 
 //stick wizard map 3 - move sticks to test
 const char stick_wizard_labels_3[3][21] = {{"TESTING CALIBRATION"}, {"MOVE STICKS"}, {"TO ALL 4 CORNERS"}};
-const uint8_t stick_wizard_positions_3[3][2] = {{4, 3}, {7, 5}, {7, 7}};
+const uint8_t stick_wizard_positions_3[3][2] = {{6, 3}, {9, 5}, {7, 7}};
 
 //stick wizard map 4 - calibration success
 const char stick_wizard_labels_4[3][21] = {{"STICK CALIBRATION"}, {"CALIBRATION"}, {"SUCCESS"}};
-const uint8_t stick_wizard_positions_4[3][2] = {{4, 1}, {7, 5}, {7, 7}};
+const uint8_t stick_wizard_positions_4[3][2] = {{7, 1}, {10, 5}, {12, 7}};
 
 //stick wizard map 5 - calibration failed
 const char stick_wizard_labels_5[3][21] = {{"STICK CALIBRATION"}, {"CALIBRATION"}, {"FAILED"}};
-const uint8_t stick_wizard_positions_5[3][2] = {{4, 1}, {7, 5}, {7, 7}};
+const uint8_t stick_wizard_positions_5[3][2] = {{7, 1}, {10, 5}, {12, 7}};
 
