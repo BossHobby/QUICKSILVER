@@ -86,7 +86,7 @@ void ledoff(uint8_t val) {
 
 void ledflash(uint32_t period, int duty) {
 #if (LED_NUMBER > 0)
-  if (gettime() % period > (period * duty) >> 4) {
+  if (timer_micros() % period > (period * duty) >> 4) {
     ledon(LEDALL);
   } else {
     ledoff(LEDALL);
@@ -125,7 +125,7 @@ int debug_led;
 // delta- sigma first order modulator.
 uint8_t led_pwm(uint8_t pwmval) {
   static float ds_integrator = 0;
-  unsigned int time = gettime();
+  unsigned int time = timer_micros();
   unsigned int ledtime = time - lastledtime;
 
   lastledtime = time;

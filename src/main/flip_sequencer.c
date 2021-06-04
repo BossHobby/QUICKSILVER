@@ -101,12 +101,12 @@ void flip_sequencer() {
         if (state.rx.axis[1] > 0)
           flipdir = 1;
         flipstage = STAGE_FLIP_ROTATING;
-        fliptime = gettime();
+        fliptime = timer_micros();
       } else {
         if (state.rx.axis[0] > 0)
           flipdir = 1;
         flipstage = STAGE_FLIP_ROTATING;
-        fliptime = gettime();
+        fliptime = timer_micros();
       }
     }
     break;
@@ -118,7 +118,7 @@ void flip_sequencer() {
     } else {
       state.rx_override.axis[flipindex] = -1.0f;
     }
-    if (gettime() - fliptime > TURTLE_TIMEOUT)
+    if (timer_micros() - fliptime > TURTLE_TIMEOUT)
       flipstage = STAGE_FLIP_START;
     if (state.GEstG.axis[2] > 0.50f)
       flipstage = STAGE_FLIP_EXIT;

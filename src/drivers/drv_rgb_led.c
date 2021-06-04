@@ -36,7 +36,7 @@ void rgb_init() {
   if ((RGB_PIN == GPIO_Pin_13 || RGB_PIN == GPIO_Pin_14) && RGB_PORT == GPIOA) {
     // programming port used
     // wait until 2 seconds from powerup passed
-    while (gettime() < 2e6)
+    while (timer_micros() < 2e6)
       ;
   }
 
@@ -267,7 +267,7 @@ void rgb_init(void) {
     // programming port used
 
     // wait until 2 seconds from powerup passed
-    while (gettime() < 2e6)
+    while (timer_micros() < 2e6)
       ;
   }
 

@@ -91,7 +91,7 @@ void set_address(uint8_t is_bind) {
   // FOC_LIMIT 10, FOC_POST_K, FOC_PRE_K 10
   cc2500_write_reg(CC2500_FOCCFG, 0x16);
 
-  delay(10);
+  timer_delay_us(10);
 }
 
 static void set_channel(uint8_t channel) {
@@ -215,7 +215,7 @@ static uint8_t tune_rx() {
 static void init_get_bind(void) {
   set_channel(0);
   cc2500_strobe(CC2500_SFRX);
-  delay(20); // waiting flush FIFO
+  timer_delay_us(20); // waiting flush FIFO
 
   cc2500_strobe(CC2500_SRX);
   list_length = 0;

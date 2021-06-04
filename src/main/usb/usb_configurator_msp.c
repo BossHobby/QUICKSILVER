@@ -76,7 +76,7 @@ void usb_process_msp() {
     uint32_t len = usb_serial_read(decode_buffer, size);
     for (uint32_t timeout = 1000; len < size && timeout; --timeout) {
       len += usb_serial_read(decode_buffer + len, size - len);
-      delay(10);
+      timer_delay_us(10);
       __WFI();
     }
     if (len != size) {

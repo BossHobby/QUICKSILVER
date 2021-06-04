@@ -112,7 +112,7 @@ void softserial_set_output(const SoftSerialData_t *data) {
   SET_LED1_OFF;
   if (softserial_is_1wire(data))
     softserial_init_tx(data);
-  delay(20);
+  timer_delay_us(20);
 }
 
 // return 1 on success
@@ -120,16 +120,16 @@ int softserial_read_byte_ex(const SoftSerialData_t *data, uint8_t *byte) {
   int i = 0;
   uint8_t b = 0;
 
-  uint32_t time_start = gettime();
+  uint32_t time_start = timer_micros();
   uint32_t time_next = time_start;
   while (!IS_RX_HIGH(data)) {
-    time_next = gettime(); //wait for start bit
+    time_next = timer_micros(); //wait for start bit
     if (time_next - time_start > 10000)
       return 0;
   }
   while (IS_RX_HIGH(data)) // start bit falling edge
   {
-    time_next = gettime(); //wait for start bit
+    time_next = timer_micros(); //wait for start bit
     if (time_next - time_start > 10000)
       return 0;
   }
@@ -138,14 +138,14 @@ int softserial_read_byte_ex(const SoftSerialData_t *data, uint8_t *byte) {
 
   for (; i < 8; ++i) {
     time_next += data->micros_per_bit;
-    delay_until(time_next);
+    timer_delay_until(time_next);
     b >>= 1;
     if (IS_RX_HIGH(data))
       b |= 0x80;
   }
 
   time_next += data->micros_per_bit;
-  delay_until(time_next); // move away from edge
+  timer_delay_until(time_next); // move away from edge
 
   if (!(IS_RX_HIGH(data))) // stop bit
   {
@@ -167,11 +167,11 @@ void softserial_write_byte_ex(const SoftSerialData_t *data, uint8_t byte) {
   int i = 0;
 
   START_BIT(data);
-  uint32_t next_time = gettime();
+  uint32_t next_time = timer_micros();
 
   for (; i < 8; ++i) {
     next_time += data->micros_per_bit;
-    delay_until(next_time);
+    timer_delay_until(next_time);
 
     if (0x01 & byte)
       SET_TX_HIGH(data);
@@ -180,9 +180,9 @@ void softserial_write_byte_ex(const SoftSerialData_t *data, uint8_t byte) {
     byte = byte >> 1;
   }
   next_time += data->micros_per_bit;
-  delay_until(next_time);
+  timer_delay_until(next_time);
 
   STOP_BIT(data);
   next_time += data->micros_per_bit;
-  delay_until(next_time);
+  timer_delay_until(next_time);
 }

@@ -160,7 +160,7 @@ uint8_t cc2500_write_fifo(uint8_t *data, uint8_t len) {
 
 void cc2500_reset() {
   cc2500_strobe(CC2500_SRES);
-  delay(1000); // 1000us
+  timer_delay_us(1000); // 1000us
   cc2500_strobe(CC2500_SIDLE);
 }
 

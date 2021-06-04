@@ -67,7 +67,7 @@ void rgb_led_set_one(int led_number, int rgb) {
 
 // flashes between 2 colours, duty cycle 1 - 15
 void rgb_ledflash(int color1, int color2, uint32_t period, int duty) {
-  if (gettime() % period > (period * duty) >> 4) {
+  if (timer_micros() % period > (period * duty) >> 4) {
     rgb_led_set_all(color1);
   } else {
     rgb_led_set_all(color2);
@@ -106,7 +106,7 @@ void rgb_knight_rider(void) {
 
 // 2 led flasher
 void rgb_ledflash_twin(int color1, int color2, uint32_t period) {
-  if (gettime() % period > (period / 2)) {
+  if (timer_micros() % period > (period / 2)) {
     for (int i = 0; i < RGB_LED_NUMBER; i++) {
       if ((i / 2) * 2 == i)
         rgb_led_set_one(i, color1);

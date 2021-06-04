@@ -205,18 +205,18 @@ void rx_stick_calibration_wizard(void) {
   static uint8_t sequence_is_running = 0;
   static uint32_t first_timestamp;
   //get a timestamp and set the initial conditions
-  if (!sequence_is_running) {                        //calibration has just been called
-    first_timestamp = gettime();                     //so we flag the time
-    flags.gestures_disabled = 1;                     //and disable gestures
-    sequence_is_running = 1;                         //just once
-    rx_apply_temp_calibration_scale();               //and shove temp values into profile that are the inverse of expected values from sticks
-    reset_stick_calibration_test_buffer();           //make sure we test with a fresh comparison buffer
+  if (!sequence_is_running) {              //calibration has just been called
+    first_timestamp = timer_micros();      //so we flag the time
+    flags.gestures_disabled = 1;           //and disable gestures
+    sequence_is_running = 1;               //just once
+    rx_apply_temp_calibration_scale();     //and shove temp values into profile that are the inverse of expected values from sticks
+    reset_stick_calibration_test_buffer(); //make sure we test with a fresh comparison buffer
   }
   //sequence the phase of the wizard in automatic 5 second intervals
   if (state.stick_calibration_wizard == CALIBRATION_CONFIRMED) {
     //leave it alone
   } else {
-    uint32_t time_now = gettime();
+    uint32_t time_now = timer_micros();
     if ((time_now - first_timestamp > 5e6) && (time_now - first_timestamp < 10e6))
       state.stick_calibration_wizard = WAIT_FOR_CONFIRM;
     if (time_now - first_timestamp > 10e6)

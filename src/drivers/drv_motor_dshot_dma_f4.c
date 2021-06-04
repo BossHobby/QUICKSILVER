@@ -213,7 +213,7 @@ void motor_init() {
   DMA_ITConfig(DMA2_Stream6, DMA_IT_TC, ENABLE);
 
   // set failsafetime so signal is off at start
-  pwm_failsafe_time = gettime() - 100000;
+  pwm_failsafe_time = timer_micros() - 100000;
   pwmdir = FORWARD;
 }
 
@@ -364,12 +364,12 @@ void motor_set(uint8_t number, float pwm) {
 
   if (flags.failsafe && !flags.motortest_override) {
     if (!pwm_failsafe_time) {
-      pwm_failsafe_time = gettime();
+      pwm_failsafe_time = timer_micros();
     } else {
       // 1s after failsafe we turn off the signal for safety
       // this means the escs won't rearm correctly after 2 secs of signal lost
       // usually the quad should be gone by then
-      if (gettime() - pwm_failsafe_time > 4000000) {
+      if (timer_micros() - pwm_failsafe_time > 4000000) {
         value = 0;
         //  return;    -   esc reboots are annoying
       }
@@ -423,7 +423,7 @@ void motor_set(uint8_t number, float pwm) {
 void motor_beep() {
   static unsigned long motor_beep_time = 0;
   if (flags.failsafe) {
-    unsigned long time = gettime();
+    unsigned long time = timer_micros();
     if (motor_beep_time == 0) {
       motor_beep_time = time;
     }

@@ -156,7 +156,7 @@ void motor_init(void) {
 
 void motor_beep(void) {
   if (flags.failsafe) {
-    unsigned long time = gettime();
+    unsigned long time = timer_micros();
     if (!motorbeeptime)
       motorbeeptime = time;
     else if (time - motorbeeptime > MOTOR_BEEPS_TIMEOUT) {

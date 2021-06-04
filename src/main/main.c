@@ -59,35 +59,40 @@ void failloop(int val);
 int random_seed = 0;
 
 int main(void) {
-//init some initial values
+  //init some initial values
   //attempt 8k looptime for f405 or 4k looptime for f411
   state.looptime_autodetect = LOOPTIME;
+
+  // init timer so we can use delays etc
+  timer_init();
+
   // load default profile
   profile_set_defaults();
+
   // setup filters early
   filter_global_init();
   pid_init();
+
   // read pid identifier for values in file pid.c
   flash_hard_coded_pid_identifier();
+
   // load flash saved variables
   flash_load();
+  timer_delay_us(1000);
 
-  delay(1000);
-
-//init some hardware things
+  //init some hardware things
   gpio_init();
   usb_init();
   ledon(255); //Turn on LED during boot so that if a delay is used as part of using programming pins for other functions, the FC does not appear inactive while programming times out
   spi_init();
-  timer_init();
   usart_invert();
 #if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_UNIFIED_SERIAL)
   rx_spektrum_bind();
 #endif
 
-  delay(100000);
+  timer_delay_us(100000);
 
-//init the firmware things
+  //init the firmware things
   motor_init();
   motor_set_all(0);
   sixaxis_init();
@@ -96,7 +101,7 @@ int main(void) {
     failloop(4);
   }
 #ifdef ENABLE_OSD
-  delay(300000);
+  timer_delay_us(300000);
   osd_init();
 #endif
 
@@ -121,7 +126,7 @@ int main(void) {
   rx_init();
 #endif
 
-  delay(1000);
+  timer_delay_us(1000);
   vbat_init();
 
 #ifdef RX_BAYANG_BLE_APP
@@ -156,11 +161,6 @@ int main(void) {
     uint32_t time = timer_micros();
     state.looptime = ((uint32_t)(time - lastlooptime));
     lastlooptime = time;
-
-    { // gettime() needs to be called at least once per second
-      volatile uint32_t _ = gettime();
-      _;
-    }
 
     if (state.looptime <= 0)
       state.looptime = 1;
@@ -231,14 +231,14 @@ int main(void) {
           } else {
             if (ledcommand) {
               if (!ledcommandtime)
-                ledcommandtime = gettime();
-              if (gettime() - ledcommandtime > 500000) {
+                ledcommandtime = timer_micros();
+              if (timer_micros() - ledcommandtime > 500000) {
                 ledcommand = 0;
                 ledcommandtime = 0;
               }
               ledflash(100000, 8);
             } else if (ledblink) {
-              unsigned long time = gettime();
+              unsigned long time = timer_micros();
               if (!ledcommandtime) {
                 ledcommandtime = time;
                 ledoff(255);
@@ -250,7 +250,7 @@ int main(void) {
               if (time - ledcommandtime > 300000) {
                 ledon(255);
               }
-            } else {  //led is normally on
+            } else { //led is normally on
               if (LED_BRIGHTNESS != 15)
                 led_pwm(LED_BRIGHTNESS);
               else
@@ -396,11 +396,11 @@ void failloop(int val) {
 #endif
     for (int i = 0; i < val; i++) {
       ledon(255);
-      delay(500000);
+      timer_delay_us(500000);
       ledoff(255);
-      delay(500000);
+      timer_delay_us(500000);
     }
-    delay(800000);
+    timer_delay_us(800000);
   }
 }
 
@@ -425,4 +425,3 @@ void BusFault_Handler(void) {
 void UsageFault_Handler(void) {
   handle_fault();
 }
-

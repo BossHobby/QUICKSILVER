@@ -55,25 +55,25 @@ void sixaxis_init(void) {
   spi_gyro_init();
   //Initialize Gyro
   MPU6XXX_dma_spi_write(MPU_RA_PWR_MGMT_1, MPU_BIT_H_RESET); //reg 107 soft reset  MPU_BIT_H_RESET
-  delay(100000);
+  timer_delay_us(100000);
   MPU6XXX_dma_spi_write(MPU_RA_SIGNAL_PATH_RESET, MPU_RESET_SIGNAL_PATHWAYS);
-  delay(100000);
+  timer_delay_us(100000);
   MPU6XXX_dma_spi_write(MPU_RA_PWR_MGMT_1, MPU_CLK_SEL_PLLGYROX); //reg 107 set pll clock to 1 for x axis reference
-  delay(100000);
+  timer_delay_us(100000);
   MPU6XXX_dma_spi_write(MPU_RA_USER_CTRL, MPU_BIT_I2C_IF_DIS); //reg 106 to 16 enabling spi
-  delay(1500);
+  timer_delay_us(1500);
   MPU6XXX_dma_spi_write(MPU_RA_PWR_MGMT_2, MPU_BITS_STDBY_MODE_OFF); //reg 108 disable standbye mode to 0
-  delay(1500);
+  timer_delay_us(1500);
   MPU6XXX_dma_spi_write(MPU_RA_SMPLRT_DIV, MPU_BIT_SMPLRT_DIVIDER_OFF); //reg 25 sample rate divider to 0
-  delay(1500);
+  timer_delay_us(1500);
   MPU6XXX_dma_spi_write(MPU_RA_CONFIG, MPU_BITS_DLPF_CFG_256HZ); //reg 26 dlpf to 0 - 8khz
-  delay(1500);
+  timer_delay_us(1500);
   MPU6XXX_dma_spi_write(MPU_RA_ACCEL_CONFIG, MPU_BITS_FS_16G); //reg 28 accel scale to 16G
-  delay(1500);
+  timer_delay_us(1500);
   MPU6XXX_dma_spi_write(MPU_RA_GYRO_CONFIG, MPU_BITS_FS_2000DPS); //reg 27 gyro scale to 2000deg/s
-  delay(1500);
+  timer_delay_us(1500);
   MPU6XXX_dma_spi_write(MPU_RA_INT_ENABLE, MPU_BIT_INT_STATUS_DATA); //reg 56 data ready enable interrupt to 1
-  delay(1500);
+  timer_delay_us(1500);
 
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
     filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq);
@@ -83,7 +83,7 @@ void sixaxis_init(void) {
 extern target_info_t target_info;
 
 int sixaxis_check(void) {
-// read "who am I" register
+  // read "who am I" register
   uint8_t id = MPU6XXX_dma_spi_read(MPU_RA_WHO_AM_I);
 
 #ifdef DEBUG
@@ -208,7 +208,7 @@ void sixaxis_read(void) {
 void gyro_cal(void) {
   int data[6];
   float limit[3];
-  unsigned long time = gettime();
+  unsigned long time = timer_micros();
   unsigned long timestart = time;
   unsigned long timemax = time;
   unsigned long lastlooptime = time;
@@ -252,16 +252,16 @@ void gyro_cal(void) {
       limitf(&limit[i], 800);
 
       if (fabsf(gyro[i]) > 100 + fabsf(limit[i])) {
-        timestart = gettime();
+        timestart = timer_micros();
         brightness = 1;
       } else {
         lpf(&gyrocal[i], gyro[i], lpfcalc((float)looptime, 0.5 * 1e6));
       }
     }
 
-    while ((gettime() - time) < 1000)
-      delay(10);
-    time = gettime();
+    while ((timer_micros() - time) < 1000)
+      timer_delay_us(10);
+    time = timer_micros();
   }
 
   if (time - timestart < CAL_TIME) {
@@ -278,7 +278,7 @@ void acc_cal(void) {
     for (int x = 0; x < 3; x++) {
       lpf(&flash_storage.accelcal[x], state.accel_raw.axis[x], 0.92);
     }
-    gettime(); // if it takes too long time will overflow so we call it here
+    timer_micros(); // if it takes too long time will overflow so we call it here
   }
   flash_storage.accelcal[2] -= 2048;
 

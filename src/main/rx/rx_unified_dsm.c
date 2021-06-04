@@ -158,16 +158,16 @@ void rx_spektrum_bind() {
     // RX line, set high
     gpio_pin_set(SPECTRUM_BIND_PIN);
     // Bind window is around 20-140ms after powerup
-    delay(60000);
+    timer_delay_us(60000);
 
     for (uint8_t i = 0; i < 9; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
       // RX line, drive low for 120us
       gpio_pin_reset(SPECTRUM_BIND_PIN);
-      delay(120);
+      timer_delay_us(120);
 
       // RX line, drive high for 120us
       gpio_pin_set(SPECTRUM_BIND_PIN);
-      delay(120);
+      timer_delay_us(120);
     }
   }
 }

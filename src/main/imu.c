@@ -61,7 +61,7 @@ void imu_init() {
     for (int x = 0; x < 3; x++) {
       lpf(&state.GEstG.axis[x], state.accel_raw.axis[x], 0.85);
     }
-    delay(1000);
+    timer_delay_us(1000);
   }
 
 #ifdef BFPV_IMU

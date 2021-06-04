@@ -352,7 +352,7 @@ void osd_checksystem(void) {
 void max7456_init(void) {
   uint8_t x;
   max7456_dma_spi_write(VM0, 0x02); //soft reset
-  delay(200);
+  timer_delay_us(200);
   x = max7456_dma_spi_read(OSDBL_R);
   max7456_dma_spi_write(OSDBL_W, x | 0x10);
   if (osdsystem == PAL) {
@@ -386,7 +386,7 @@ void check_osd(void) {
   uint8_t x = max7456_dma_spi_read(VM0_R);
   if (x != lastvm0) {                 // the register is not what it's supposed to be
     max7456_dma_spi_write(VM0, 0x02); // soft reset
-    delay(200);
+    timer_delay_us(200);
     // only set minimum number of registers for functionality
     if (osdsystem == PAL) {
       max7456_dma_spi_write(VM0, 0x72); // Set pal mode ( ntsc by default) and enable display
@@ -405,7 +405,7 @@ void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size) {
 
   // disable osd
   max7456_dma_spi_write(VM0, 0x0);
-  delay(10);
+  timer_delay_us(10);
 
   max7456_dma_spi_write(CMAH, addr);
   max7456_dma_spi_write(CMM, 0x50);
@@ -417,7 +417,7 @@ void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size) {
   for (uint8_t i = 0; i < size; i++) {
     max7456_dma_spi_write(CMAL, i);
     out[i] = max7456_dma_spi_read(CMDO);
-    delay(1);
+    timer_delay_us(1);
   }
 
   // enable osd
@@ -431,13 +431,13 @@ void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size) {
 
   // disable osd
   max7456_dma_spi_write(VM0, 0x0);
-  delay(10);
+  timer_delay_us(10);
 
   max7456_dma_spi_write(CMAH, addr);
   for (uint8_t i = 0; i < size; i++) {
     max7456_dma_spi_write(CMAL, i);
     max7456_dma_spi_write(CMDI, in[i]);
-    delay(1);
+    timer_delay_us(1);
   }
 
   max7456_dma_spi_write(CMM, 0xA0);
