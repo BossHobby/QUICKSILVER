@@ -5,6 +5,7 @@
 #include "drv_spi_max7456.h"
 #include "drv_time.h"
 #include "filter.h"
+#include "flash.h"
 #include "float.h"
 #include "osd_adjust.h"
 #include "osd_menu_maps.h"
@@ -14,7 +15,6 @@
 #include "stdio.h"
 #include "string.h"
 #include "util.h"
-#include "flash.h"
 #include "vtx.h"
 
 #ifdef ENABLE_OSD
@@ -567,7 +567,7 @@ void osd_display(void) {
       osd_display_reset();
     break; //screen has been cleared for this loop - break out of display function
 
-  case 1:                //osd menu is active
+  case 1: //osd menu is active
     last_display_phase = 2;
     print_osd_menu_strings(10, 9, main_menu_labels, main_menu_positions);
     if (osd_menu_phase == 11)
@@ -764,7 +764,7 @@ void osd_display(void) {
   case 9: //flight modes menu
     last_display_phase = 1;
     print_osd_menu_strings(12, 11, flight_modes_labels, flight_modes_positions);
-    print_osd_adjustable_enums(12, 10, get_aux_status(profile.channel.aux[flight_modes_aux_items[osd_menu_phase - 13]]), flight_modes_grid, flight_modes_data_positions);
+    print_osd_adjustable_enums(12, 10, get_aux_status(profile.receiver.aux[flight_modes_aux_items[osd_menu_phase - 13]]), flight_modes_grid, flight_modes_data_positions);
     if (osd_menu_phase == 23)
       osd_enum_adjust(flight_modes_ptr, 10, flight_modes_aux_limits);
     break;

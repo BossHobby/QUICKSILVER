@@ -282,7 +282,7 @@ static char checkpacket() {
     return 1;
   } else {
 #ifdef RADIO_XN297
-    if (profile.channel.aux[AUX_RSSI] <= AUX_CHANNEL_11) { //rssi set to actual rssi register value
+    if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) { //rssi set to actual rssi register value
       state.rx_rssi = 10.0f * ((xn_readreg(9)) & 0x0f);
       if (state.rx_rssi > 100.0f)
         state.rx_rssi = 100.0f;
@@ -511,7 +511,7 @@ void rx_check(void) {
       state.rx_rssi = 0.0f;
 #endif
 #ifdef RADIO_XN297
-    if (profile.channel.aux[AUX_RSSI] > AUX_CHANNEL_11) { //rssi set to internal link quality
+    if (profile.receiver.aux[AUX_RSSI] > AUX_CHANNEL_11) { //rssi set to internal link quality
       state.rx_rssi = packetpersecond / 200.0f;
       state.rx_rssi = state.rx_rssi * state.rx_rssi * state.rx_rssi * RSSI_EXP + state.rx_rssi * (1 - RSSI_EXP);
       state.rx_rssi *= 100.0f;

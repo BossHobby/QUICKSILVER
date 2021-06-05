@@ -199,9 +199,9 @@ typedef struct {
 typedef struct {
   aux_channel_t aux[AUX_FUNCTION_MAX];
   rx_lqi_source_t lqi_source;
-} profile_channel_t;
+} profile_receiver_t;
 
-#define CHANNEL_MEMBERS                      \
+#define RECEIVER_MEMBERS                     \
   ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, uint8) \
   MEMBER(lqi_source, uint8)
 
@@ -258,20 +258,20 @@ typedef struct {
   profile_filter_t filter;
   profile_osd_t osd;
   profile_rate_t rate;
-  profile_channel_t channel;
+  profile_receiver_t receiver;
   profile_pid_t pid;
   profile_voltage_t voltage;
 } profile_t;
 
-#define PROFILE_MEMBERS              \
-  MEMBER(meta, profile_metadata_t)   \
-  MEMBER(motor, profile_motor_t)     \
-  MEMBER(serial, profile_serial_t)   \
-  MEMBER(filter, profile_filter_t)   \
-  MEMBER(osd, profile_osd_t)         \
-  MEMBER(rate, profile_rate_t)       \
-  MEMBER(channel, profile_channel_t) \
-  MEMBER(pid, profile_pid_t)         \
+#define PROFILE_MEMBERS                \
+  MEMBER(meta, profile_metadata_t)     \
+  MEMBER(motor, profile_motor_t)       \
+  MEMBER(serial, profile_serial_t)     \
+  MEMBER(filter, profile_filter_t)     \
+  MEMBER(osd, profile_osd_t)           \
+  MEMBER(rate, profile_rate_t)         \
+  MEMBER(receiver, profile_receiver_t) \
+  MEMBER(pid, profile_pid_t)           \
   MEMBER(voltage, profile_voltage_t)
 
 typedef enum {

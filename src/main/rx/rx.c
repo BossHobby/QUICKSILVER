@@ -13,7 +13,7 @@
 extern profile_t profile;
 
 uint8_t rx_aux_on(aux_function_t function) {
-  return state.aux[profile.channel.aux[function]];
+  return state.aux[profile.receiver.aux[function]];
 }
 
 float rx_expo(float in, float exp) {

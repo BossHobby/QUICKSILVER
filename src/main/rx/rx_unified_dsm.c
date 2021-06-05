@@ -124,22 +124,22 @@ void rx_serial_process_dsmx() {
 
     rx_lqi_update_fps(0);
 
-    if (profile.channel.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
+    if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
       rx_lqi_update_rssi_from_lqi(LQI_FPS);
     }
 
-    if (profile.channel.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-      if (profile.channel.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
+    if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
+      if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
 #ifdef RX_DSMX_2048_UNIFIED
-        rx_lqi_update_rssi_direct(100 * (((channels[(profile.channel.aux[AUX_RSSI] + 4)] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f));
+        rx_lqi_update_rssi_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f));
 #else
-        rx_lqi_update_rssi_direct(100 * (((channels[(profile.channel.aux[AUX_RSSI] + 4)] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f));
-#endif       
+        rx_lqi_update_rssi_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f));
+#endif
       }
     }
 
-    if (profile.channel.lqi_source == RX_LQI_SOURCE_DIRECT) {
-      rx_lqi_update_rssi_direct(0);  //no internal rssi data
+    if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
+      rx_lqi_update_rssi_direct(0); //no internal rssi data
     }
 
     frame_status = FRAME_TX; //We're done with this frame now.

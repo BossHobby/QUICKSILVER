@@ -92,8 +92,8 @@ void osd_submenu_select(uint8_t *pointer, uint8_t rows, const uint8_t next_menu[
 }
 
 void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_menu) {
-  if (osd_select == 1){ //main menu
-    osd_select = 0; //reset the trigger
+  if (osd_select == 1) { //main menu
+    osd_select = 0;      //reset the trigger
     last_cursor_array_stuffer(osd_cursor, STORE_VALUE);
     if (osd_cursor <= rows) {
       osd_display_phase = menu_map[osd_cursor - 1];
@@ -226,12 +226,12 @@ float adjust_rounded_float(float input, float adjust_amount) {
 }
 
 const char *get_rssi_source_status(uint8_t data_to_print) {
-  static char *rssi_source_status[] = {"PACKET RATE" , "CHANNEL    " , "PROTOCOL   "  };
+  static char *rssi_source_status[] = {"PACKET RATE", "CHANNEL    ", "PROTOCOL   "};
   static char *rssi_source_channel[] = {"CHANNEL 5  ", "CHANNEL 6  ", "CHANNEL 7  ", "CHANNEL 8  ", "CHANNEL 9  ", "CHANNEL 10 ", "CHANNEL 11 ", "CHANNEL 12 ", "CHANNEL 13 ", "CHANNEL 14 ", "CHANNEL 15 ", "CHANNEL 16 ", "ALWAYS OFF ", "ALWAYS ON  ", "GESTURE AUX", "ERROR      "};
-  if (data_to_print == 0){
-    return rssi_source_status[profile.channel.lqi_source];
-  }else{
-    return rssi_source_channel[profile.channel.aux[12]];
+  if (data_to_print == 0) {
+    return rssi_source_status[profile.receiver.lqi_source];
+  } else {
+    return rssi_source_channel[profile.receiver.aux[12]];
   }
 }
 

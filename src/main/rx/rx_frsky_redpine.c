@@ -81,11 +81,11 @@ static void redpine_set_rc_data() {
   state.aux[AUX_CHANNEL_10] = (packet[REDPINE_CHANNEL_START + 6] & 0x40) ? 1 : 0;
   state.aux[AUX_CHANNEL_11] = (packet[REDPINE_CHANNEL_START + 6] & 0x80) ? 1 : 0;
 
-  if (profile.channel.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
     rx_update_spi_fps_lqi(LQI_FPS);
   }
-  if (profile.channel.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-      state.rx_rssi = 0.f; 
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
+    state.rx_rssi = 0.f;
   }
 }
 
@@ -140,7 +140,7 @@ static uint8_t redpine_handle_packet() {
 
         next_channel(1);
         cc2500_strobe(CC2500_SRX);
-        if (profile.channel.lqi_source == RX_LQI_SOURCE_DIRECT) {
+        if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
           state.rx_rssi = constrainf(frsky_extract_rssi(packet[REDPINE_PACKET_SIZE_W_ADDONS - 2]), 0.f, 100.f);
         }
         frames_lost = 0;

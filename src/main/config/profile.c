@@ -244,9 +244,9 @@ const profile_t default_profile = {
 
     .filter = {
         .gyro = {
-#if  defined(GYRO_FILTER_PASS1_PT1) || defined(GYRO_FILTER_PASS1_PT2)
+#if defined(GYRO_FILTER_PASS1_PT1) || defined(GYRO_FILTER_PASS1_PT2)
             {
-#ifdef GYRO_FILTER_PASS1_PT1                
+#ifdef GYRO_FILTER_PASS1_PT1
                 .type = FILTER_LP_PT1,
                 .cutoff_freq = GYRO_FREQ_PASS1,
 #else //GYRO_FILTER_PASS1_PT2
@@ -261,7 +261,7 @@ const profile_t default_profile = {
 #endif
 #if defined(GYRO_FILTER_PASS2_PT1) || defined(GYRO_FILTER_PASS2_PT2)
             {
-#ifdef GYRO_FILTER_PASS2_PT1                
+#ifdef GYRO_FILTER_PASS2_PT1
                 .type = FILTER_LP_PT1,
                 .cutoff_freq = GYRO_FREQ_PASS1,
 #else //GYRO_FILTER_PASS2_PT2
@@ -442,7 +442,7 @@ const profile_t default_profile = {
         .actual_battery_voltage = ACTUAL_BATTERY_VOLTAGE,
         .reported_telemetry_voltage = REPORTED_TELEMETRY_VOLTAGE,
     },
-    .channel = {
+    .receiver = {
         .aux = {
             ARMING,              //AUX_ARMING
             IDLE_UP,             //AUX_IDLE_UP
@@ -633,8 +633,8 @@ CBOR_START_STRUCT_ENCODER(profile_pid_t)
 PID_MEMBERS
 CBOR_END_STRUCT_ENCODER()
 
-CBOR_START_STRUCT_ENCODER(profile_channel_t)
-CHANNEL_MEMBERS
+CBOR_START_STRUCT_ENCODER(profile_receiver_t)
+RECEIVER_MEMBERS
 CBOR_END_STRUCT_ENCODER()
 
 CBOR_START_STRUCT_ENCODER(profile_t)
@@ -749,8 +749,8 @@ CBOR_START_STRUCT_DECODER(profile_pid_t)
 PID_MEMBERS
 CBOR_END_STRUCT_DECODER()
 
-CBOR_START_STRUCT_DECODER(profile_channel_t)
-CHANNEL_MEMBERS
+CBOR_START_STRUCT_DECODER(profile_receiver_t)
+RECEIVER_MEMBERS
 CBOR_END_STRUCT_DECODER()
 
 CBOR_START_STRUCT_DECODER(profile_t)

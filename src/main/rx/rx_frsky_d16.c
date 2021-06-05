@@ -1,14 +1,14 @@
 #include "rx_frsky.h"
 
-#include <string.h>
-#include "flash.h"
 #include "control.h"
 #include "drv_spi_cc2500.h"
 #include "drv_time.h"
+#include "flash.h"
 #include "profile.h"
 #include "usb_configurator.h"
 #include "util.h"
 #include "util/circular_buffer.h"
+#include <string.h>
 
 #if defined(USE_CC2500) && (defined(RX_FRSKY_D16_FCC) || defined(RX_FRSKY_D16_LBT))
 
@@ -159,15 +159,15 @@ static void frsky_d16_set_rc_data() {
   state.aux[AUX_CHANNEL_10] = (channels[14] > 1023) ? 1 : 0;
   state.aux[AUX_CHANNEL_11] = (channels[15] > 1023) ? 1 : 0;
 
-  if (profile.channel.lqi_source == RX_LQI_SOURCE_DIRECT) {
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
     state.rx_rssi = constrainf(frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]), 0.f, 100.f);
   }
-  if (profile.channel.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
     rx_update_spi_fps_lqi(LQI_FPS);
   }
-  if (profile.channel.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-    if (profile.channel.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
-      state.rx_rssi = constrainf(((channels[(profile.channel.aux[AUX_RSSI] + 4)]) - 200) * 100.f / 1520.f, 0.f, 100.f);
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
+    if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
+      state.rx_rssi = constrainf(((channels[(profile.receiver.aux[AUX_RSSI] + 4)]) - 200) * 100.f / 1520.f, 0.f, 100.f);
     }
   }
 }

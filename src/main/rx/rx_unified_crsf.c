@@ -185,13 +185,13 @@ static void rx_serial_crsf_process_frame() {
     state.aux[AUX_CHANNEL_11] = (channels[15] > 1100) ? 1 : 0;
 
     rx_lqi_update_fps(0);
-    
-    if (profile.channel.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
+
+    if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
       rx_lqi_update_rssi_from_lqi(crsf_rf_mode_fps[crsf_rf_mode]);
     }
-    if (profile.channel.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-      if (profile.channel.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
-        rx_lqi_update_rssi_direct(0.00062853551f * (channels[(profile.channel.aux[AUX_RSSI] + 4)] - 191.0f));
+    if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
+      if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
+        rx_lqi_update_rssi_direct(0.00062853551f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 191.0f));
       }
     }
     break;
@@ -202,7 +202,7 @@ static void rx_serial_crsf_process_frame() {
 
     crsf_rf_mode = stats->rf_mode;
 
-    if (profile.channel.lqi_source == RX_LQI_SOURCE_DIRECT) {
+    if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
       rx_lqi_update_rssi_direct(stats->uplink_link_quality);
     }
     break;

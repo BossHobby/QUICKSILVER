@@ -124,14 +124,14 @@ void rx_serial_process_redpine() {
 
   rx_lqi_update_fps(LQI_FPS);
 
-  if (profile.channel.lqi_source == RX_LQI_SOURCE_PACKET_RATE) { 
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
     rx_lqi_update_rssi_from_lqi(LQI_FPS);
   }
-  if (profile.channel.lqi_source == RX_LQI_SOURCE_DIRECT) {
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
     rx_lqi_update_rssi_direct(rx_data[REDPINE_CHANNEL_START + 7]);
   }
-  if (profile.channel.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-    rx_lqi_update_rssi_direct(0);  //aux channels are binary and cannot carry rssi
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
+    rx_lqi_update_rssi_direct(0); //aux channels are binary and cannot carry rssi
   }
 
   frame_status = FRAME_TX; //We're done with this frame now.
