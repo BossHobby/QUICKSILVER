@@ -76,9 +76,7 @@ typedef enum {
   WAIT_FOR_CONFIRM,
   CALIBRATION_CONFIRMED,
   TIMEOUT
-}stick_calibration_wizard_t;
-
-stick_calibration_wizard_t wizard_phase;
+} stick_calibration_wizard_t;
 
 void rx_init(void);
 void rx_serial_init(void);

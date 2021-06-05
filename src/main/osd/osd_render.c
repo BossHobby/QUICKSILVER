@@ -976,7 +976,7 @@ void osd_display(void) {
   case 34:  //5 sec to calibrate
     print_osd_menu_strings(3, 0, stick_wizard_labels_2, stick_wizard_positions_2);
     if (osd_menu_phase == 4){
-      if (wizard_phase ==  WAIT_FOR_CONFIRM) {
+      if (state.stick_calibration_wizard ==  WAIT_FOR_CONFIRM) {
         osd_display_phase = 35;
         osd_menu_phase = 0;
       }
@@ -986,7 +986,7 @@ void osd_display(void) {
   case 35:  //5 sec to test / confirm calibration
     print_osd_menu_strings(3, 0, stick_wizard_labels_3, stick_wizard_positions_3);
     if (osd_menu_phase == 4){
-      if ((wizard_phase ==  CALIBRATION_CONFIRMED) || (wizard_phase ==  TIMEOUT)) {
+      if ((state.stick_calibration_wizard ==  CALIBRATION_CONFIRMED) || (state.stick_calibration_wizard ==  TIMEOUT)) {
         osd_display_phase = 36;
         osd_menu_phase = 0;
       }
@@ -995,10 +995,10 @@ void osd_display(void) {
 
   case 36:  //results of calibration
     last_display_phase = 31;
-    if (wizard_phase ==  CALIBRATION_CONFIRMED){
+    if (state.stick_calibration_wizard ==  CALIBRATION_CONFIRMED){
       print_osd_menu_strings(3, 0, stick_wizard_labels_4, stick_wizard_positions_4);  //osd_menu_phase will be 4 after this
     }
-    if (wizard_phase ==  TIMEOUT){
+    if (state.stick_calibration_wizard ==  TIMEOUT){
       print_osd_menu_strings(3, 0, stick_wizard_labels_5, stick_wizard_positions_5);  //osd_menu_phase will be 4 after this
     }
     if (osd_select > 0) osd_select = 0;

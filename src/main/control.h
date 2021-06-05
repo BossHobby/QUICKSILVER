@@ -52,6 +52,8 @@ typedef struct {
   vec4_t rx_filtered; // same as above, but with constraints(just in case), expo applied smoothing applied and deadband applied
   vec4_t rx_override; // override values, activated by controls_override
 
+  stick_calibration_wizard_t stick_calibration_wizard; // current phase of the calibration wizard
+
   float rx_rssi;
   uint32_t rx_status;
 
@@ -97,6 +99,7 @@ typedef struct {
   MEMBER(rx, vec4_t)                        \
   MEMBER(rx_filtered, vec4_t)               \
   MEMBER(rx_override, vec4_t)               \
+  MEMBER(stick_calibration_wizard, uint8)   \
   MEMBER(rx_rssi, float)                    \
   MEMBER(rx_status, uint32)                 \
   MEMBER(throttle, float)                   \

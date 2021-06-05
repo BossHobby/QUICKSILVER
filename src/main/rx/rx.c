@@ -206,32 +206,32 @@ void rx_stick_calibration_wizard(void) {
   static uint8_t sequence_is_running = 0;
   static uint32_t first_timestamp;
   //get a timestamp and set the initial conditions
-  if (!sequence_is_running) {              //calibration has just been called
-    first_timestamp = gettime();           //so we flag the time
-    flags.gestures_disabled = 1;           //and disable gestures
-    sequence_is_running = 1;               //just once
-    rx_apply_temp_calibration_scale();     //and shove temp values into profile that are the inverse of expected values from sticks
-    reset_stick_calibration_test_buffer(); //make sure we test with a fresh comparison buffer
-    wizard_phase = CAPTURE_STICKS;         // and kick the sequence off
+  if (!sequence_is_running) {                        //calibration has just been called
+    first_timestamp = gettime();                     //so we flag the time
+    flags.gestures_disabled = 1;                     //and disable gestures
+    sequence_is_running = 1;                         //just once
+    rx_apply_temp_calibration_scale();               //and shove temp values into profile that are the inverse of expected values from sticks
+    reset_stick_calibration_test_buffer();           //make sure we test with a fresh comparison buffer
+    state.stick_calibration_wizard = CAPTURE_STICKS; // and kick the sequence off
   }
   //sequence the phase of the wizard in automatic 5 second intervals
-  if (wizard_phase == CALIBRATION_CONFIRMED) {
+  if (state.stick_calibration_wizard == CALIBRATION_CONFIRMED) {
     //leave it alone
   } else {
     uint32_t time_now = gettime();
     if ((time_now - first_timestamp > 5e6) && (time_now - first_timestamp < 10e6))
-      wizard_phase = WAIT_FOR_CONFIRM;
+      state.stick_calibration_wizard = WAIT_FOR_CONFIRM;
     if (time_now - first_timestamp > 10e6)
-      wizard_phase = TIMEOUT;
+      state.stick_calibration_wizard = TIMEOUT;
   }
   //take appropriate action based on the wizard phase
-  switch (wizard_phase) {
+  switch (state.stick_calibration_wizard) {
   case CAPTURE_STICKS:
     rx_capture_stick_range();
     break;
   case WAIT_FOR_CONFIRM:
     if (check_for_perfect_sticks()) {
-      wizard_phase = CALIBRATION_CONFIRMED;
+      state.stick_calibration_wizard = CALIBRATION_CONFIRMED;
     }
     break;
   case CALIBRATION_CONFIRMED:
