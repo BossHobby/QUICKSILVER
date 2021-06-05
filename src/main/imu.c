@@ -211,7 +211,7 @@ void imu_calc() {
         state.accel.axis[axis] = state.accel.axis[axis] * (ACC_1G / accmag);
       }
       // filter accel on to GEstG
-      float filtcoeff = lpfcalc_hz(looptime, 1.0f / (float)FILTERTIME);
+      float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FILTERTIME);
       for (int x = 0; x < 3; x++) {
         lpf(&state.GEstG.axis[x], state.accel.axis[x], filtcoeff);
       }

@@ -339,7 +339,7 @@ uint8_t print_osd_system_status(void) {
         printing.flags.arm_state = 0;
       return print_stage;
     }
-    if ((looptime_warning != last_sys_status.loop_warning) || printing.loop_warning) {
+    if (((looptime_warning != last_sys_status.loop_warning) || printing.loop_warning) && (state.looptime_autodetect != LOOPTIME_8K)) { //mute warnings till we are on the edge of 4k->2k
       last_sys_status.loop_warning = looptime_warning;
       printing.loop_warning = 1;
       print_stage = print_status(TEMP, LOOP);
