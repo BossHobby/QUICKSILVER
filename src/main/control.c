@@ -364,19 +364,6 @@ void control(void) {
     }
   }
 
-#ifdef STICK_TRAVEL_CHECK //This feature completely disables throttle and allows visual feedback if control inputs reach full throws
-  //Stick endpoints check tied to aux channel stick gesture
-  if (rx_aux_on(AUX_TRAVEL_CHECK)) {
-    state.throttle = 0;
-    if ((state.rx.axis[0] <= -0.99f) || (state.rx.axis[0] >= 0.99f) ||
-        (state.rx.axis[1] <= -0.99f) || (state.rx.axis[1] >= 0.99f) ||
-        (state.rx.axis[2] <= -0.99f) || (state.rx.axis[2] >= 0.99f) ||
-        (state.rx.axis[3] <= 0.0f) || (state.rx.axis[3] >= 0.99f)) {
-      ledcommand = 1;
-    }
-  }
-#endif
-
   if (usb_motor_test.active) {
     flags.arm_state = 1;
     flags.on_ground = 0;
