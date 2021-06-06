@@ -212,7 +212,6 @@ void rx_stick_calibration_wizard(void) {
     sequence_is_running = 1;                         //just once
     rx_apply_temp_calibration_scale();               //and shove temp values into profile that are the inverse of expected values from sticks
     reset_stick_calibration_test_buffer();           //make sure we test with a fresh comparison buffer
-    state.stick_calibration_wizard = CAPTURE_STICKS; // and kick the sequence off
   }
   //sequence the phase of the wizard in automatic 5 second intervals
   if (state.stick_calibration_wizard == CALIBRATION_CONFIRMED) {
@@ -244,19 +243,17 @@ void rx_stick_calibration_wizard(void) {
     reset_looptime();
     sequence_is_running = 0;
     flags.gestures_disabled = 0;
-    state.stick_calibration_wizard = INACTIVE;
     break;
   case TIMEOUT:
     rx_reset_stick_calibration_scale();
     sequence_is_running = 0;
     flags.gestures_disabled = 0;
-    state.stick_calibration_wizard = INACTIVE;
     break;
   }
 }
 
 void rx_apply_stick_calibration_scale(void) {
-  if (state.stick_calibration_wizard > INACTIVE) {
+  if ((state.stick_calibration_wizard == CAPTURE_STICKS) || (state.stick_calibration_wizard == WAIT_FOR_CONFIRM)) {
     rx_stick_calibration_wizard();
   } else {
     state.rx.axis[0] = mapf(state.rx.axis[0], profile.receiver.stick_calibration_limits[0].min, profile.receiver.stick_calibration_limits[0].max, -1.f, 1.f);
