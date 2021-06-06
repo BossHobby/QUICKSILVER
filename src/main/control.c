@@ -58,6 +58,8 @@ control_state_t state = {
     .vbattfilt_corr = 4.2,
     .vbatt_comp = 4.2,
 
+    .stick_calibration_wizard = INACTIVE,
+
     .rx_rssi = 0,
     .rx_status = 0,
 
