@@ -14,7 +14,7 @@
 #include "util.h"
 #include "util/cbor_helper.h"
 
-#if defined(FPV_ON) && defined(FPV_PIN)
+#if defined(FPV_SWITCH) && defined(FPV_PIN)
 static int fpv_init = 0;
 #endif
 
@@ -302,8 +302,8 @@ void vtx_init() {
 void vtx_update() {
   static volatile uint32_t delay_loops = 5000;
 
-#if defined(FPV_ON) && defined(FPV_PIN)
-  if (rx_aux_on(AUX_FPV_ON)) {
+#if defined(FPV_SWITCH) && defined(FPV_PIN)
+  if (rx_aux_on(AUX_FPV_SWITCH)) {
     // fpv switch on
     if (!fpv_init && flags.rx_mode == RXMODE_NORMAL && flags.on_ground == 1) {
       fpv_init = gpio_init_fpv(flags.rx_mode);

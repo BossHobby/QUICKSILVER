@@ -58,8 +58,8 @@ const uint8_t bf_rates_data_positions[9][2] = {{13, 6}, {18, 6}, {23, 6}, {13, 7
 const float bf_rates_adjust_limits[9][2] = {{0, 3.0}, {0, 3.0}, {0, 3.0}, {0, 3.0}, {0, 3.0}, {0, 3.0}, {0, 0.99}, {0, 0.99}, {0, 0.99}};
 
 //flight modes map
-uint8_t *flight_modes_ptr[10] = {&profile.receiver.aux[0], &profile.receiver.aux[1], &profile.receiver.aux[2], &profile.receiver.aux[3], &profile.receiver.aux[4], &profile.receiver.aux[5], &profile.receiver.aux[9], &profile.receiver.aux[10], &profile.receiver.aux[11], &profile.receiver.aux[12]};
-const char flight_modes_labels[12][21] = {"FLIGHT MODES", "ARMING", "IDLE UP", "LEVELMODE", "RACEMODE", "HORIZON", "STICK BOOST", "BUZZER", "TURTLE", "MOTOR TEST", "RSSI", "SAVE AND EXIT"};
+uint8_t *flight_modes_ptr[10] = {&profile.receiver.aux[AUX_ARMING], &profile.receiver.aux[AUX_IDLE_UP], &profile.receiver.aux[AUX_LEVELMODE], &profile.receiver.aux[AUX_RACEMODE], &profile.receiver.aux[AUX_HORIZON], &profile.receiver.aux[AUX_STICK_BOOST_PROFILE], &profile.receiver.aux[AUX_BUZZER_ENABLE], &profile.receiver.aux[AUX_TURTLE], &profile.receiver.aux[AUX_MOTORS_TO_THROTTLE_MODE], &profile.receiver.aux[AUX_FPV_SWITCH]};
+const char flight_modes_labels[12][21] = {"FLIGHT MODES", "ARMING", "IDLE UP", "LEVELMODE", "RACEMODE", "HORIZON", "STICK BOOST", "BUZZER", "TURTLE", "MOTOR TEST", "FPV SWITCH", "SAVE AND EXIT"};
 const uint8_t flight_modes_positions[12][2] = {{9, 1}, {4, 2}, {4, 3}, {4, 4}, {4, 5}, {4, 6}, {4, 7}, {4, 8}, {4, 9}, {4, 10}, {4, 11}, {4, 14}};
 const uint8_t flight_modes_data_positions[10][2] = {{17, 2}, {17, 3}, {17, 4}, {17, 5}, {17, 6}, {17, 7}, {17, 8}, {17, 9}, {17, 10}, {17, 11}};
 const uint8_t flight_modes_aux_limits[] = {11, 14, 14, 14, 14, 14, 14, 14, 14, 12}; //from aux_channel_t

@@ -42,7 +42,7 @@ void gpio_init(void) {
   gpio_pin_init(&GPIO_InitStructure, AUX_LED2PIN);
 #endif
 
-#if defined(FPV_ON) && defined(FPV_PIN)
+#if defined(FPV_SWITCH) && defined(FPV_PIN)
   if (FPV_PIN == PIN_A13 || FPV_PIN == PIN_A14) {
     //skip repurpose of swd pin @boot
   } else {
@@ -77,7 +77,7 @@ uint32_t gpio_pin_read(gpio_pins_t pin) {
 
 // init fpv pin separately because it may use SWDAT/SWCLK don't want to enable it right away
 int gpio_init_fpv(uint8_t mode) {
-#if defined(FPV_ON) && defined(FPV_PIN)
+#if defined(FPV_SWITCH) && defined(FPV_PIN)
   // only repurpose the pin after rx/tx have bound if it is swd
   // common settings to set ports
   GPIO_InitTypeDef GPIO_InitStructure;
