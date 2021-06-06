@@ -226,6 +226,9 @@ void rx_stick_calibration_wizard(void) {
   }
   //take appropriate action based on the wizard phase
   switch (state.stick_calibration_wizard) {
+  case INACTIVE:
+    // how the fuck did we get here?
+    break;
   case CAPTURE_STICKS:
     rx_capture_stick_range();
     break;
@@ -241,19 +244,19 @@ void rx_stick_calibration_wizard(void) {
     reset_looptime();
     sequence_is_running = 0;
     flags.gestures_disabled = 0;
-    flags.rx_calibration_wizard_active = 0;
+    state.stick_calibration_wizard = INACTIVE;
     break;
   case TIMEOUT:
     rx_reset_stick_calibration_scale();
     sequence_is_running = 0;
     flags.gestures_disabled = 0;
-    flags.rx_calibration_wizard_active = 0;
+    state.stick_calibration_wizard = INACTIVE;
     break;
   }
 }
 
 void rx_apply_stick_calibration_scale(void) {
-  if (flags.rx_calibration_wizard_active) {
+  if (state.stick_calibration_wizard > INACTIVE) {
     rx_stick_calibration_wizard();
   } else {
     state.rx.axis[0] = mapf(state.rx.axis[0], profile.receiver.stick_calibration_limits[0].min, profile.receiver.stick_calibration_limits[0].max, -1.f, 1.f);
@@ -264,7 +267,7 @@ void rx_apply_stick_calibration_scale(void) {
 }
 
 void request_stick_calibration_wizard(void) {
-  flags.rx_calibration_wizard_active = 1;
+  state.stick_calibration_wizard = CAPTURE_STICKS;
 }
 
 /*stick calibration wizard sequence notes

@@ -72,6 +72,7 @@ typedef enum {
 uint8_t rx_aux_on(aux_function_t function);
 
 typedef enum {
+  INACTIVE,
   CAPTURE_STICKS,
   WAIT_FOR_CONFIRM,
   CALIBRATION_CONFIRMED,
