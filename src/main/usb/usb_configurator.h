@@ -23,7 +23,8 @@ typedef enum {
   QUIC_CMD_LOG,
   QUIC_CMD_CAL_IMU,
   QUIC_CMD_BLACKBOX,
-  QUIC_CMD_MOTOR
+  QUIC_CMD_MOTOR,
+  QUIC_CMD_CAL_STICKS,
 } quic_command;
 
 typedef enum {

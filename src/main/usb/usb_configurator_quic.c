@@ -525,6 +525,10 @@ void usb_process_quic() {
   case QUIC_CMD_MOTOR:
     process_motor_test(buffer, size);
     break;
+  case QUIC_CMD_CAL_STICKS:
+    request_stick_calibration_wizard();
+    send_quic(QUIC_CMD_CAL_STICKS, QUIC_FLAG_NONE, NULL, 0);
+    break;
   default:
     quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);
     break;
