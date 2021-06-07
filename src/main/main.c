@@ -232,7 +232,7 @@ int main(void) {
           if (flags.failsafe) {
             ledflash(500000, 15);
           } else {
-            int leds_on = !rx_aux_on(AUX_LEDS_ON);
+            int leds_on = rx_aux_on(AUX_LEDS_ON);
             if (ledcommand) {
               if (!ledcommandtime)
                 ledcommandtime = gettime();
