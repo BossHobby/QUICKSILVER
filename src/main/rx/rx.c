@@ -12,7 +12,6 @@
 #include "util.h"
 
 extern profile_t profile;
-//extern control_flags_t flags;
 
 uint8_t rx_aux_on(aux_function_t function) {
   return state.aux[profile.receiver.aux[function]];

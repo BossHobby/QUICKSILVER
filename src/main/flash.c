@@ -72,7 +72,7 @@ void flash_save(void) {
     uint8_t buffer[BIND_STORAGE_SIZE];
     memset(buffer, 0, BIND_STORAGE_SIZE);
 
-    if (bind_storage.bind_enable == 0) {
+    if (bind_storage.bind_enable) {
       // reset all bind data
       memset(bind_storage.raw, 0, BIND_RAW_STORAGE_SIZE);
     }
@@ -135,7 +135,7 @@ void flash_load(void) {
 
 #ifdef RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
     extern int rx_bind_load;
-    rx_bind_load = bind_storage.bind_enable;
+    rx_bind_load = !bind_storage.bind_enable;
 #endif
   }
 

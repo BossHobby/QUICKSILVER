@@ -148,7 +148,7 @@ void rx_spektrum_bind() {
     return;
   }
 
-  if (bind_storage.bind_enable == 0) {
+  if (bind_storage.bind_enable) {
     GPIO_InitTypeDef GPIO_InitStructure;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;

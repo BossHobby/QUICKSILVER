@@ -57,7 +57,7 @@ void gestures(void) {
 
     if (command == GESTURE_UUU) {
       bind_storage.bind_enable = !bind_storage.bind_enable;
-      ledblink = 2 - bind_storage.bind_enable;
+      ledblink = bind_storage.bind_enable + 1;
       pid_gestures_used = 1;
     }
 
