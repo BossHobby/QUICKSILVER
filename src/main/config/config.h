@@ -113,7 +113,6 @@
 #define HORIZON AUX_CHANNEL_OFF
 #define STICK_BOOST_PROFILE AUX_CHANNEL_4
 #define HIGH_RATES AUX_CHANNEL_ON
-#define LEDS_ON AUX_CHANNEL_ON
 #define TURTLE AUX_CHANNEL_OFF //****************turtle mode
 // *************enable buzzer functionality
 // *************change channel assignment from AUX_CHANNEL_OFF to a numbered aux switch if you want switch control

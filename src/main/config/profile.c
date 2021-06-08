@@ -451,7 +451,6 @@ const profile_t default_profile = {
             HORIZON,             //AUX_HORIZON
             STICK_BOOST_PROFILE, //AUX_STICK_BOOST_PROFILE
             HIGH_RATES, //AUX_HIGH_RATES
-            LEDS_ON,    //AUX_LEDS_ON
 #ifdef BUZZER_ENABLE    //AUX_BUZZER_ENABLE
             BUZZER_ENABLE,
 #else

@@ -232,7 +232,6 @@ int main(void) {
           if (flags.failsafe) {
             ledflash(500000, 15);
           } else {
-            int leds_on = rx_aux_on(AUX_LEDS_ON);
             if (ledcommand) {
               if (!ledcommandtime)
                 ledcommandtime = gettime();
@@ -245,28 +244,21 @@ int main(void) {
               unsigned long time = gettime();
               if (!ledcommandtime) {
                 ledcommandtime = time;
-                if (leds_on)
-                  ledoff(255);
-                else
-                  ledon(255);
+                ledoff(255);
               }
               if (time - ledcommandtime > 500000) {
                 ledblink--;
                 ledcommandtime = 0;
               }
               if (time - ledcommandtime > 300000) {
-                if (leds_on)
-                  ledon(255);
-                else
-                  ledoff(255);
+                ledon(255);
               }
-            } else if (leds_on) {
+            } else {  //led is normally on
               if (LED_BRIGHTNESS != 15)
                 led_pwm(LED_BRIGHTNESS);
               else
                 ledon(255);
-            } else
-              ledoff(255);
+            }
           }
         }
       }
