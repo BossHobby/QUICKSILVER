@@ -243,6 +243,10 @@ void rx_stick_calibration_wizard(void) {
     reset_looptime();
     sequence_is_running = 0;
     flags.gestures_disabled = 0;
+    state.stick_calibration_wizard = CALIBRATION_SUCCESS;
+    break;
+  case CALIBRATION_SUCCESS:
+    //or here?
     break;
   case TIMEOUT:
     rx_reset_stick_calibration_scale();
@@ -253,7 +257,7 @@ void rx_stick_calibration_wizard(void) {
 }
 
 void rx_apply_stick_calibration_scale(void) {
-  if ((state.stick_calibration_wizard == CAPTURE_STICKS) || (state.stick_calibration_wizard == WAIT_FOR_CONFIRM)) {
+  if (state.stick_calibration_wizard == CAPTURE_STICKS || state.stick_calibration_wizard == WAIT_FOR_CONFIRM || state.stick_calibration_wizard == CALIBRATION_CONFIRMED) {
     rx_stick_calibration_wizard();
   } else {
     state.rx.axis[0] = mapf(state.rx.axis[0], profile.receiver.stick_calibration_limits[0].min, profile.receiver.stick_calibration_limits[0].max, -1.f, 1.f);

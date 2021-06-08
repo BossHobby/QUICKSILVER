@@ -76,7 +76,8 @@ typedef enum {
   CAPTURE_STICKS,
   WAIT_FOR_CONFIRM,
   CALIBRATION_CONFIRMED,
-  TIMEOUT
+  CALIBRATION_SUCCESS,
+  TIMEOUT,
 } stick_calibration_wizard_t;
 
 void rx_init(void);

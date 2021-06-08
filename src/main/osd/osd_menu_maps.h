@@ -247,9 +247,9 @@ extern const char stick_wizard_labels_3[3][21];
 extern const uint8_t stick_wizard_positions_3[3][2];
 
 //stick wizard map 4
-extern const char stick_wizard_labels_4[3][21];
-extern const uint8_t stick_wizard_positions_4[3][2];
+extern const char stick_wizard_labels_4[4][21];
+extern const uint8_t stick_wizard_positions_4[4][2];
 
 //stick wizard map 5
-extern const char stick_wizard_labels_5[3][21];
-extern const uint8_t stick_wizard_positions_5[3][2];
+extern const char stick_wizard_labels_5[4][21];
+extern const uint8_t stick_wizard_positions_5[4][2];

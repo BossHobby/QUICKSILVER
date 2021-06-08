@@ -253,10 +253,10 @@ const char stick_wizard_labels_3[3][21] = {{"TESTING CALIBRATION"}, {"MOVE STICK
 const uint8_t stick_wizard_positions_3[3][2] = {{5, 3}, {6, 5}, {9, 7}};
 
 //stick wizard map 4 - calibration success
-const char stick_wizard_labels_4[3][21] = {{"STICK CALIBRATION"}, {"CALIBRATION"}, {"SUCCESS"}};
-const uint8_t stick_wizard_positions_4[3][2] = {{7, 1}, {10, 5}, {12, 7}};
+const char stick_wizard_labels_4[4][21] = {{"STICK CALIBRATION"}, {"CALIBRATION"}, {"SUCCESS"}, {"PUSH LEFT TO EXIT"}};
+const uint8_t stick_wizard_positions_4[4][2] = {{7, 1}, {10, 4}, {12, 6}, {7, 8}};
 
 //stick wizard map 5 - calibration failed
-const char stick_wizard_labels_5[3][21] = {{"STICK CALIBRATION"}, {"CALIBRATION"}, {"FAILED"}};
-const uint8_t stick_wizard_positions_5[3][2] = {{7, 1}, {10, 5}, {12, 7}};
+const char stick_wizard_labels_5[4][21] = {{"STICK CALIBRATION"}, {"CALIBRATION"}, {"FAILED"}, {"PUSH LEFT TO EXIT"}};
+const uint8_t stick_wizard_positions_5[4][2] = {{7, 1}, {10, 4}, {12, 6}, {7, 8}};
 
