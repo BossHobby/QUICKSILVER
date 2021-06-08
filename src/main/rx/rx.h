@@ -63,7 +63,6 @@ typedef enum {
   AUX_RSSI,
   AUX_FPV_SWITCH,
   AUX_BLACKBOX,
-  AUX_FN_INVERTED,
 
   AUX_FUNCTION_MAX
 } aux_function_t;
