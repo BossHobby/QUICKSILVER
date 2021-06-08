@@ -23,7 +23,7 @@ extern flash_storage_t flash_storage;
 #define BIND_RAW_STORAGE_SIZE 63
 
 typedef struct {
-  uint8_t bind_enable;
+  uint8_t ready_to_bind;
   union {
     rx_frsky_bind_data_t frsky;
     rx_bayang_bind_data_t bayang;
