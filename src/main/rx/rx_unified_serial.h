@@ -4,7 +4,7 @@
 #include "profile.h"
 #include "rx.h"
 
-#define RX_BUFF_SIZE 68
+#define RX_BUFF_SIZE 128
 
 #define LQ_EXPO 0.9f
 
