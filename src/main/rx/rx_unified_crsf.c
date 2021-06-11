@@ -226,6 +226,14 @@ static void rx_serial_crsf_process_frame() {
 void rx_serial_process_crsf() {
   static int32_t rx_buffer_offset = 0;
 
+  if (rx_frame_position < rx_buffer_offset || rx_buffer[rx_buffer_offset] != 0xC8) {
+    // we should have at least one byte by now.
+    // fail if its not a magic
+    frame_status = FRAME_TX;
+    rx_buffer_offset = 0;
+    return;
+  }
+
   if ((rx_frame_position - rx_buffer_offset) < 3) {
     // not enough data
     frame_status = FRAME_IDLE;
@@ -237,41 +245,38 @@ void rx_serial_process_crsf() {
 
   if (rx_data[0] != 0xC8 || rx_data[1] > 64) {
     quic_debugf("CRSF: invalid header");
-    frame_status = FRAME_IDLE;
+    frame_status = FRAME_TX;
     rx_buffer_offset = 0;
     return;
   }
 
-  // set real frame length
-  expected_frame_length = rx_buffer_offset + rx_data[1] + 2;
+  // get real frame length
+  const uint32_t frame_length = rx_data[1] + 2;
 
-  if (rx_frame_position < expected_frame_length) {
+  if ((rx_frame_position - rx_buffer_offset) < frame_length) {
+    // not enough data
     frame_status = FRAME_IDLE;
     return;
   }
 
   // copy rest of the data
-  memcpy(rx_data, rx_buffer + rx_buffer_offset, expected_frame_length - rx_buffer_offset);
+  memcpy(rx_data, rx_buffer + rx_buffer_offset, frame_length);
 
-  const uint8_t crc_ours = crsf_crc8(&rx_data[2], expected_frame_length - rx_buffer_offset - 3);
-  const uint8_t crc_theirs = rx_data[expected_frame_length - rx_buffer_offset - 1];
+  const uint8_t crc_ours = crsf_crc8(&rx_data[2], frame_length - 3);
+  const uint8_t crc_theirs = rx_data[frame_length - 1];
   if (crc_ours != crc_theirs) {
     // invalid crc, bail
     quic_debugf("CRSF: invalid crc, bail");
-    frame_status = FRAME_IDLE;
+    frame_status = FRAME_TX;
     rx_buffer_offset = 0;
     return;
   }
 
   // we got a valid frame, update offset to potentially read another frame
-  rx_buffer_offset = expected_frame_length;
+  rx_buffer_offset += frame_length;
   rx_serial_crsf_process_frame();
 
-  if ((rx_frame_position - rx_buffer_offset) > 0) {
-    // we got some data left. maybe another frame?
-    expected_frame_length = rx_buffer_offset + 3;
-    frame_status = FRAME_IDLE;
-  } else {
+  if ((rx_frame_position - rx_buffer_offset) <= 0) {
     //We're done with this frame now.
     frame_status = FRAME_TX;
     rx_buffer_offset = 0;

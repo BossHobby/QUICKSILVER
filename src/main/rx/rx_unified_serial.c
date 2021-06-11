@@ -315,10 +315,6 @@ void rx_check() {
       break;
     case RX_SERIAL_PROTOCOL_CRSF:
       //CRSF telemetry function call yo
-
-      // reset frame length for next run
-      expected_frame_length = 3;
-
       frame_status = FRAME_DONE;
       break;
 
