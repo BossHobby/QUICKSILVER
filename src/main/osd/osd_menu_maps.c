@@ -62,8 +62,8 @@ uint8_t *flight_modes_ptr[10] = {&profile.receiver.aux[AUX_ARMING], &profile.rec
 const char flight_modes_labels[12][21] = {"FLIGHT MODES", "ARMING", "IDLE UP", "LEVELMODE", "RACEMODE", "HORIZON", "STICK BOOST", "BUZZER", "TURTLE", "MOTOR TEST", "FPV SWITCH", "SAVE AND EXIT"};
 const uint8_t flight_modes_positions[12][2] = {{9, 1}, {4, 2}, {4, 3}, {4, 4}, {4, 5}, {4, 6}, {4, 7}, {4, 8}, {4, 9}, {4, 10}, {4, 11}, {4, 14}};
 const uint8_t flight_modes_data_positions[10][2] = {{17, 2}, {17, 3}, {17, 4}, {17, 5}, {17, 6}, {17, 7}, {17, 8}, {17, 9}, {17, 10}, {17, 11}};
-const uint8_t flight_modes_aux_limits[] = {11, 14, 14, 14, 14, 14, 14, 14, 14, 12}; //from aux_channel_t
-const uint8_t flight_modes_aux_items[] = {0, 1, 2, 3, 4, 5, 9, 10, 11, 12};         //from aux_function_t
+const uint8_t flight_modes_aux_limits[] = {11, 14, 14, 14, 14, 14, 14, 14, 14, 14}; //from aux_channel_t
+const uint8_t flight_modes_aux_items[] = {AUX_ARMING, AUX_IDLE_UP, AUX_LEVELMODE, AUX_RACEMODE, AUX_HORIZON, AUX_STICK_BOOST_PROFILE, AUX_BUZZER_ENABLE, AUX_TURTLE, AUX_MOTORS_TO_THROTTLE_MODE, AUX_FPV_SWITCH};         //from aux_function_t
 const uint8_t flight_modes_grid[10][2] = {{1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}, {1, 6}, {1, 7}, {1, 8}, {1, 9}, {1, 10}};
 
 //osd elements submenu map
