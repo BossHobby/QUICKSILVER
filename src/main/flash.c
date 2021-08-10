@@ -37,8 +37,8 @@ void flash_hard_coded_pid_identifier(void) {
 cbor_result_t cbor_encode_rx_bind_storage_t(cbor_value_t *enc, const rx_bind_storage_t *s) {
   CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_map_indefinite(enc));
 
-  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "ready_to_bind"));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &s->ready_to_bind));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "bind_saved"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &s->bind_saved));
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "raw"));
   CBOR_CHECK_ERROR(res = cbor_encode_bstr(enc, s->raw, BIND_RAW_STORAGE_SIZE));
@@ -72,7 +72,7 @@ void flash_save(void) {
     uint8_t buffer[BIND_STORAGE_SIZE];
     memset(buffer, 0, BIND_STORAGE_SIZE);
 
-    if (bind_storage.ready_to_bind == 0) {
+    if (bind_storage.bind_saved == 0) {
       // reset all bind data
       memset(bind_storage.raw, 0, BIND_RAW_STORAGE_SIZE);
     }
@@ -135,7 +135,7 @@ void flash_load(void) {
 
 #ifdef RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
     extern int rx_bind_load;
-    rx_bind_load = bind_storage.ready_to_bind;
+    rx_bind_load = bind_storage.bind_saved;
 #endif
   }
 
