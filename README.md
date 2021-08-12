@@ -1,9 +1,13 @@
 # QUICKSILVER [![Build Status](https://ci.bkleiner.codes/api/badges/NotFastEnuf/Guano/status.svg)](https://ci.bkleiner.codes/NotFastEnuf/Guano)
 Flight Controller Firmware based on Silverware by Silver13
 
-**NFE NOTES:**
+**DEVELOPER NOTES:**
 
-This is the GCC dev branch of QUICKSILVER using STM's CUBE IDE
+The development team of QUICKSILVER is currently "OUT TO LUNCH"
+
+All development on this repo is currently paused while the development team takes a break to contemplate the future direction of, and participate in life away from this project.  We may occasionally be available or even enthusiastic to participate in subject related discussion through typical social media outlets, but engagement directly with this project may be limited or nonexistent until we return from break.
+
+IMPORTANT:  This is an unfinished and undocumented project and is NOT intended or ready for general consumption yet.
 
 -----
 
