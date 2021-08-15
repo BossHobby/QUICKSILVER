@@ -11,47 +11,47 @@
 // ignore -Wmissing-braces here, gcc bug with nested structs
 #pragma GCC diagnostic ignored "-Wmissing-braces"
 
-#define DEFAULT_PID_RATE_PRESET 3
+#define DEFAULT_PID_RATE_PRESET 0
 
 const pid_rate_preset_t pid_rate_presets[] = {
     //Brushless Pids
     {
         .index = 0,
-        .name = "TWR <8:1 2in",
+        .name = "Thrust/Weight Ratio 14:1 5in",
         .rate = {
-            .kp = {91, 91, 78.5},
+            .kp = {47, 54, 56.5},
             .ki = {70, 70, 70},
-            .kd = {54, 54, 6},
+            .kd = {27.5, 33.5, 4.5},
         },
     },
 
     {
         .index = 1,
-        .name = "TWR 8:1 3in",
+        .name = "Thrust/Weight Ratio 12:1 4in",
         .rate = {
-            .kp = {78.5, 91, 78.5},
+            .kp = {65.5, 70.5, 63},
             .ki = {70, 70, 70},
-            .kd = {27.5, 39.5, 6},
+            .kd = {35.5, 39.5, 6},
         },
     },
 
     {
         .index = 2,
-        .name = "TWR 12:1 4in",
+        .name = "Thrust/Weight Ratio 10:1 3in",
         .rate = {
-            .kp = {59.5, 78.5, 63},
+            .kp = {78.5, 80.5, 78.5},
             .ki = {70, 70, 70},
-            .kd = {27.5, 39.5, 6},
+            .kd = {42.5, 44.5, 6},
         },
     },
 
     {
         .index = 3,
-        .name = "TWR 14:1 5in",
+        .name = "Thrust/Weight Ratio <8:1 2in",
         .rate = {
-            .kp = {47, 47, 56.5},
+            .kp = {91, 91, 78.5},
             .ki = {70, 70, 70},
-            .kd = {27.5, 27.5, 4.5},
+            .kd = {54, 54, 6},
         },
     },
 
@@ -62,32 +62,26 @@ const pid_rate_preset_t pid_rate_presets[] = {
             .kp = {117, 117, 150},
             .ki = {77, 77, 77},
             .kd = {83, 83, 13},
+            //.kp = {123, 123, 150},
+            //.ki = {77, 77, 77},
+            //.kd = {91, 91, 13},
         },
     },
 
     {
         .index = 5,
-        .name = "65mm 1s brushless whoop - Hanfer Edition",
+        .name = "75mm 1s brushless whoop",
         .rate = {
-            .kp = {123, 123, 150},
+            .kp = {127, 127, 148},
             .ki = {77, 77, 77},
-            .kd = {91, 91, 13},
+            .kd = {101, 101, 13},
+        
         },
     },
 
     {
         .index = 6,
-        .name = "75mm brushless whoop",
-        .rate = {
-            .kp = {127, 127, 148},
-            .ki = {77, 77, 77},
-            .kd = {101, 101, 13},
-        },
-    },
-
-    {
-        .index = 7,
-        .name = "6mm & 7mm Abduction Pids for whoops (Team Alienwhoop)",
+        .name = "6mm & 7mm brushed whoop (Alienwhoop ZER0)",
         //  - set filtering ALIENWHOOP_ZERO_FILTERING
         .rate = {
             .kp = {135, 135, 330},
@@ -97,71 +91,12 @@ const pid_rate_preset_t pid_rate_presets[] = {
     },
 
     {
-        .index = 8,
-        .name = "5in Chameleon, T - Motor 2306 2600kV HQ 5x4.3x3 - Bobnova edition",
-        .rate = {
-            .kp = {41, 47, 47},
-            .ki = {60, 60, 60},
-            .kd = {20.5, 29, 3.5},
-        },
-    },
-
-    {
-        .index = 9,
-        .name = "BOSS 7 with 716 motors and 46mm Props",
-        // set filtering to BETA_FILTERING and adjust pass 1 and pass 2 for KALMAN_GYRO both to 70hz, set DTERM_LPF_2ND_HZ to 120hz, disable motor filtering
-        // set TORQUE_BOOST to 1.0, and add #define THROTTLE_TRANSIENT_COMPENSATION and #define THROTTLE_TRANSIENT_COMPENSATION_FACTOR 4.0
+        .index = 7,
+        .name = "7mm brushed micro",
         .rate = {
             .kp = {122.5, 122.5, 298},
             .ki = {60, 60, 40},
             .kd = {128.5, 128.5, 24},
-        },
-    },
-
-    //***************  The following tunes beyond this point are all pretty dated.  I have not built/flown/tuned any of these in a long time and there have been alot of changes.
-    //***************  If your build best matches some of the specs below ... consider the tune a starting point and give me feedback/adjust as necessary.
-
-    {
-        .index = 10,
-        .name = "(OLD) 6mm experimental AwesomeSauce 20000kv Pids (Team Alienwhoop)",
-        //  - set filtering ALIENWHOOP_ZERO_FILTERING
-        .rate = {
-            .kp = {160, 160, 361},
-            .ki = {102.5, 102.5, 80},
-            .kd = {137, 137, 59},
-        },
-    },
-
-    {
-        .index = 11,
-        .name = "(OLD) BOSS 6 & 7 - 615 and 716 motors, hm830 46mm props",
-        //   - set filtering to VERY_STRONG_FILTERING
-        .rate = {
-            .kp = {154, 154, 298},
-            .ki = {60, 60, 40},
-            .kd = {169, 169, 84},
-        },
-    },
-
-    {
-        .index = 12,
-        .name = "(OLD) BOSS 8.0 - 816 motors, kingkong 66mm props",
-        //   - set filtering to WEAK_FILTERING
-        .rate = {
-            .kp = {167.5, 167.5, 298},
-            .ki = {60, 60, 40},
-            .kd = {194.5, 194.5, 84},
-        },
-    },
-
-    {
-        .index = 13,
-        .name = "(OLD) BOSS 8.5 - 820 motors, kingkong 66mm props",
-        //   - set filtering to STRONG_FILTERING
-        .rate = {
-            .kp = {185, 185, 361},
-            .ki = {60, 60, 60},
-            .kd = {210, 210, 84},
         },
     },
 };
