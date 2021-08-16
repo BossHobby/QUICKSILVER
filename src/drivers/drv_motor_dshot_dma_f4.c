@@ -385,20 +385,20 @@ void motor_set(uint8_t number, float pwm) {
     make_packet(profile.motor.motor_pins[number], value, false);
   } else { //make a series of dshot command packets
     static uint16_t counter;
-    if (counter <= 8000) {
+    if (counter <= 10000) {
       counter++;
       if (pwmdir == REVERSE)
         value = 21; //DSHOT_CMD_ROTATE_REVERSE 21
       if (pwmdir == FORWARD)
         value = 20;        //DSHOT_CMD_ROTATE_NORMAL 20
-      if (counter <= 4000) //override to disarmed for a few cycles just since case blheli wants that
+      if (counter <= 8000) //override to disarmed for a few cycles just since case blheli wants that
         make_packet(profile.motor.motor_pins[number], 0, false);
-      if (counter > 4000 && counter <= 4060) //send the command 6 times plus a few extra times for good measure
+      if (counter > 8000 && counter <= 8060) //send the command 6 times plus a few extra times for good measure
         make_packet(profile.motor.motor_pins[number], value, true);
-      if (counter > 4600) //override to disarmed for a few cycles just since case blheli wants that
+      if (counter > 8600) //override to disarmed for a few cycles just since case blheli wants that
         make_packet(profile.motor.motor_pins[number], 0, false);
     }
-    if (counter == 8001) {
+    if (counter == 10001) {
       counter = 0;
       last_pwmdir = pwmdir;
     }
