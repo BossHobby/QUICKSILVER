@@ -110,7 +110,7 @@ void control(void) {
   pid_precalc();
 
 #ifndef DISABLE_FLIP_SEQUENCER
-  if (rx_aux_on(AUX_TURTLE) && !rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE)) { //turtle active when aux high
+  if (rx_aux_on(AUX_TURTLE) && !rx_aux_on(AUX_MOTOR_TEST)) { //turtle active when aux high
     start_flip();
   } else {
     extern int readytoflip;

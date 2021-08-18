@@ -214,7 +214,7 @@ void motor_mixer_calc(float mix[4]) {
   flags.motortest_override = 1;
 #endif
 
-  if (rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) || flags.motortest_override || flags.controls_override) {
+  if (rx_aux_on(AUX_MOTOR_TEST) || flags.motortest_override || flags.controls_override) {
     // TODO: investigate how skipping all that code below affects looptime
     if (usb_motor_test.active) {
       // set mix according to values we got via usb
@@ -296,7 +296,7 @@ void motor_output_calc(float mix[4]) {
   for (int i = 0; i <= 3; i++) {
 
 #if defined(BRUSHED_TARGET)
-    if (profile.motor.digital_idle && !(rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) || flags.motortest_override)) {
+    if (profile.motor.digital_idle && !(rx_aux_on(AUX_MOTOR_TEST) || flags.motortest_override)) {
       float motor_min_value = (float)profile.motor.digital_idle * 0.01f;
       //Clip all mixer values into 0 to 1 range before remapping
       mix[i] = constrainf(mix[i], 0, 1);

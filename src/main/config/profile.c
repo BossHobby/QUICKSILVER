@@ -393,7 +393,7 @@ const profile_t default_profile = {
 #endif
             TURTLE, //AUX_TURTLE
 
-#ifdef MOTORS_TO_THROTTLE_MODE //AUX_MOTORS_TO_THROTTLE_MODE
+#ifdef MOTORS_TO_THROTTLE_MODE //AUX_MOTOR_TEST
             MOTORS_TO_THROTTLE_MODE,
 #else
             AUX_CHANNEL_OFF,

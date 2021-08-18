@@ -402,9 +402,9 @@ uint8_t print_osd_system_status(void) {
         printing.flags.lowbatt = 0;
       return print_stage;
     }
-    if ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE) && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe) || (printing.aux_motor_test && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe)) {
+    if ((rx_aux_on(AUX_MOTOR_TEST) && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe) || (printing.aux_motor_test && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe)) {
       printing.aux_motor_test = 1;
-      if (rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE)) {
+      if (rx_aux_on(AUX_MOTOR_TEST)) {
         print_stage = print_status(HOLD, MOTOR_TEST);
       } else {
         print_stage = print_status(HOLD, CLEAR);
@@ -428,7 +428,7 @@ uint8_t print_osd_system_status(void) {
   if (ready == 0) {
     last_sys_status.loop_warning = looptime_warning;
     last_sys_status.aux_boost = rx_aux_on(AUX_STICK_BOOST_PROFILE);
-    last_sys_status.aux_motor_test = rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE);
+    last_sys_status.aux_motor_test = rx_aux_on(AUX_MOTOR_TEST);
     last_sys_status.flags = flags;
     ready = 1;
   }

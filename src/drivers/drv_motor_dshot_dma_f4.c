@@ -358,7 +358,7 @@ void motor_set(uint8_t number, float pwm) {
   value = 48 + (profile.motor.digital_idle * 20) + (uint16_t)(pwm * (2001 - (profile.motor.digital_idle * 20)));
 
 #endif
-  if (flags.on_ground || !flags.arm_state || (flags.motortest_override && pwm < 0.002f) || ((rx_aux_on(AUX_MOTORS_TO_THROTTLE_MODE)) && pwm < 0.002f)) { //turn off the slow motors during turtle or motortest
+  if (flags.on_ground || !flags.arm_state || (flags.motortest_override && pwm < 0.002f) || ((rx_aux_on(AUX_MOTOR_TEST)) && pwm < 0.002f)) { //turn off the slow motors during turtle or motortest
     value = 0;                                                                                                                                           // stop the motors
   }
 
