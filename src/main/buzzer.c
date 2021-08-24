@@ -37,7 +37,7 @@ void buzzer() {
   // before configuring the gpio buzzer pin to ensure
   // there is time to program the chip (if using SWDAT or SWCLK)
 
-  if (flags.lowbatt || flags.failsafe || rx_aux_on(AUX_BUZZER_ENABLE)) {
+  if ((flags.lowbatt || flags.failsafe || rx_aux_on(AUX_BUZZER_ENABLE)) && !flags.usb_active) {
     uint32_t time = time_micros();
     if (buzzertime == 0)
       buzzertime = time;
