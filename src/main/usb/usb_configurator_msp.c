@@ -1,10 +1,12 @@
 #include "usb_configurator.h"
 
+#include "control.h"
 #include "debug.h"
 #include "drv_serial_4way.h"
 #include "drv_time.h"
 #include "drv_usb.h"
 #include "project.h"
+#include "util.h"
 
 #if defined(F4)
 
@@ -14,12 +16,21 @@
 #define MSP_BOARD_INFO 4  //out message
 #define MSP_BUILD_INFO 5  //out message
 
-#define MSP_UID 160         //out message         Unique device ID
+#define MSP_FEATURE_CONFIG 36
+
+#define MSP_BATTERY_STATE 130 //out message         Connected/Disconnected, Voltage, Current Used
+
+#define MSP_UID 160   //out message         Unique device ID
+#define MSP_MOTOR 104 //out message         motors
+
+#define MSP_SET_MOTOR 214   //in message          PropBalance function
 #define MSP_SET_4WAY_IF 245 //in message          Sets 4way interface
 
 #define MSP_HEADER_LEN 5
 
 #define MSP_BUILD_DATE_TIME __DATE__ __TIME__
+
+extern usb_motor_test_t usb_motor_test;
 
 void send_msp(uint8_t code, uint8_t *data, uint8_t len) {
   const uint8_t size = len + MSP_HEADER_LEN + 1;
@@ -137,10 +148,56 @@ void usb_process_msp() {
     send_msp(code, data, 12);
     break;
   }
+  case MSP_BATTERY_STATE: {
+    uint8_t data[9] = {
+        state.lipo_cell_count,                              // battery detected
+        0x0, 0x0,                                           // battery capacity
+        (uint8_t)constrainf(state.vbattfilt / 0.1, 0, 255), // battery voltage
+        0x0, 0x0,                                           // battery drawn in mAh
+        0x0, 0x0,                                           // battery current draw in A
+        0x0                                                 // battery status
+    };
+    send_msp(code, data, 9);
+    break;
+  }
+  case MSP_FEATURE_CONFIG: {
+    uint8_t data[4] = {
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+    };
+    send_msp(code, data, 4);
+    break;
+  }
+  case MSP_MOTOR: {
+    // we always have 4 motors
+    // these are pwm values
+    uint16_t data[4] = {
+        (uint16_t)mapf(usb_motor_test.value[0], 0.0f, 1.0f, 1000.f, 2000.f),
+        (uint16_t)mapf(usb_motor_test.value[1], 0.0f, 1.0f, 1000.f, 2000.f),
+        (uint16_t)mapf(usb_motor_test.value[2], 0.0f, 1.0f, 1000.f, 2000.f),
+        (uint16_t)mapf(usb_motor_test.value[3], 0.0f, 1.0f, 1000.f, 2000.f),
+    };
+    send_msp(code, (uint8_t *)data, 4 * sizeof(uint16_t));
+    break;
+  }
+  case MSP_SET_MOTOR: {
+    for (uint8_t i = 0; i < 4; i++) {
+      const uint16_t value = (uint16_t)(decode_buffer[MSP_HEADER_LEN + i * 2] << 8) || decode_buffer[MSP_HEADER_LEN + i * 2 + 1];
+      usb_motor_test.value[i] = mapf(value, 1000.f, 2000.f, 0.0f, 1.0f);
+    }
+    usb_motor_test.active = 1;
+
+    send_msp(code, NULL, 0);
+    break;
+  }
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
   case MSP_SET_4WAY_IF: {
     uint8_t data[1] = {4};
     send_msp(code, data, 1);
+
+    usb_motor_test.active = 0;
 
     serial_4way_init();
     serial_4way_process();
