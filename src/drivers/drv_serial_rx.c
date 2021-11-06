@@ -305,16 +305,6 @@ void serial_rx_init(rx_serial_protocol_t proto) {
 
   USART_Init(USART.channel, &usart_init);
 
-#ifdef F0
-#ifdef INVERT_UART
-  USART_InvPinCmd(USART.channel, USART_InvPin_Rx | USART_InvPin_Tx, ENABLE);
-#endif
-  // swap rx/tx pins - available on F0 targets
-#ifdef F0_USART_PINSWAP
-  USART_SWAPPinCmd(USART.channel, ENABLE);
-#endif
-#endif
-
   USART_ITConfig(USART.channel, USART_IT_RXNE, ENABLE);
   USART_Cmd(USART.channel, ENABLE);
   serial_enable_isr(serial_rx_port);

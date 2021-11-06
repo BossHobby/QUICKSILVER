@@ -155,13 +155,8 @@ void set_esc_output(uint8_t esc) {
 
 static uint8_t read_byte(void) {
   uint8_t byte = 0;
-#ifdef F0
-  // need timeout?
-  softserial_read_byte(&byte);
-#else
   while (usb_serial_read(&byte, 1) == 0)
     ;
-#endif
   return byte;
 }
 
@@ -172,11 +167,7 @@ static uint8_t read_byte_crc(void) {
 }
 
 static void write_byte(uint8_t b) {
-#ifdef F0
-  softserial_write_byte(b);
-#else
   usb_serial_write(&b, 1);
-#endif
 }
 
 static void write_byte_crc(uint8_t b) {
@@ -242,11 +233,6 @@ uint8_t serial_4way_init() {
   MOTOR_PINS
 
 #undef MOTOR_PIN
-
-#ifdef F0
-  // tx = dat (PA13), rx = clk (PA14)
-  softserial_init(GPIOA, GPIO_Pin_13, GPIOA, GPIO_Pin_14, 38400);
-#endif
 
   return ESC_COUNT;
 }

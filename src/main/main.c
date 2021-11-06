@@ -55,10 +55,7 @@ int ledblink = 0;
 unsigned long ledcommandtime = 0;
 
 void failloop(int val);
-#if defined(USE_SERIAL_4WAY_BLHELI_INTERFACE) && defined(F0)
-volatile int switch_to_4way = 0;
-static void setup_4way_external_interrupt(void);
-#endif
+
 int random_seed = 0;
 
 int main(void) {

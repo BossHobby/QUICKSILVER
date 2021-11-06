@@ -32,10 +32,6 @@ void spi_init(void) {
 #define gpioset(port, pin) port->BSRRL = pin
 #define gpioreset(port, pin) port->BSRRH = pin
 #endif
-#ifdef F0
-#define gpioset(port, pin) port->BSRR = pin
-#define gpioreset(port, pin) port->BRR = pin
-#endif
 
 #define MOSIHIGH gpioset(SPI_MOSI_PORT, SPI_MOSI_PIN)
 #define MOSILOW gpioreset(SPI_MOSI_PORT, SPI_MOSI_PIN);
@@ -54,17 +50,11 @@ void spi_cson() {
 #ifdef F4
   SPI_SS_PORT->BSRRH = SPI_SS_PIN;
 #endif
-#ifdef F0
-  SPI_SS_PORT->BRR = SPI_SS_PIN;
-#endif
 }
 
 void spi_csoff() {
 #ifdef F4
   SPI_SS_PORT->BSRRL = SPI_SS_PIN;
-#endif
-#ifdef F0
-  SPI_SS_PORT->BSRR = SPI_SS_PIN;
 #endif
 }
 
