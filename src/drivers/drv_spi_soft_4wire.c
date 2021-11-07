@@ -1,5 +1,7 @@
 #include "drv_spi.h"
 
+#include <stm32f4xx_ll_gpio.h>
+
 #include "project.h"
 
 #ifdef SOFTSPI_4WIRE
@@ -28,34 +30,19 @@ void spi_init(void) {
   spi_csoff();
 }
 
-#ifdef F4
-#define gpioset(port, pin) port->BSRRL = pin
-#define gpioreset(port, pin) port->BSRRH = pin
-#endif
+#define MOSIHIGH LL_GPIO_SetOutputPin(SPI_MOSI_PORT, SPI_MOSI_PIN);
+#define MOSILOW LL_GPIO_ResetOutputPin(SPI_MOSI_PORT, SPI_MOSI_PIN);
+#define SCKHIGH LL_GPIO_SetOutputPin(SPI_CLK_PORT, SPI_CLK_PIN);
+#define SCKLOW LL_GPIO_ResetOutputPin(SPI_CLK_PORT, SPI_CLK_PIN);
 
-#define MOSIHIGH gpioset(SPI_MOSI_PORT, SPI_MOSI_PIN)
-#define MOSILOW gpioreset(SPI_MOSI_PORT, SPI_MOSI_PIN);
-#define SCKHIGH gpioset(SPI_CLK_PORT, SPI_CLK_PIN);
-#define SCKLOW gpioreset(SPI_CLK_PORT, SPI_CLK_PIN);
-
-//#define READMISO (GPIO_ReadInputDataBit(SPI_MISO_PORT, SPI_MISO_PIN) )
-#define READMISO (SPI_MISO_PORT->IDR & SPI_MISO_PIN)
-
-//#pragma push
-
-//#pragma Otime
-//#pragma O2
+#define READMISO LL_GPIO_IsInputPinSet(SPI_MISO_PORT, SPI_MISO_PIN)
 
 void spi_cson() {
-#ifdef F4
-  SPI_SS_PORT->BSRRH = SPI_SS_PIN;
-#endif
+  LL_GPIO_ResetOutputPin(SPI_SS_PORT, SPI_SS_PIN);
 }
 
 void spi_csoff() {
-#ifdef F4
-  SPI_SS_PORT->BSRRL = SPI_SS_PIN;
-#endif
+  LL_GPIO_SetOutputPin(SPI_SS_PORT, SPI_SS_PIN);
 }
 
 void spi_sendbyte(int data) {
@@ -155,7 +142,5 @@ int spi_sendzerorecvbyte() {
   }
   return recv;
 }
-
-//#pragma pop
 
 #endif
