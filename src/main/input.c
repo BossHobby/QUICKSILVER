@@ -22,8 +22,8 @@ void input_stick_vector(float rx_input[], float maxangle) {
     float pitch, roll;
 
     // rotate down vector to match stick position
-    pitch = rx_input[1] * profile.rate.level_max_angle * DEGTORAD + (float)TRIM_PITCH * DEGTORAD;
-    roll = rx_input[0] * profile.rate.level_max_angle * DEGTORAD + (float)TRIM_ROLL * DEGTORAD;
+    pitch = rx_input[1] * profile.rate.level_max_angle * DEGTORAD;
+    roll = rx_input[0] * profile.rate.level_max_angle * DEGTORAD;
 
     stickvector[0] = fastsin(roll);
     stickvector[1] = fastsin(pitch);

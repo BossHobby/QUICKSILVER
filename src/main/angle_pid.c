@@ -8,8 +8,8 @@
 
 extern profile_t profile;
 
-// code variables below
-#define OUTLIMIT_FLOAT (profile.pid.small_angle.kp + profile.pid.big_angle.kp) //set angle pid output limit to sum of both P terms just in case
+//set angle pid output limit to sum of both P terms just in case
+#define OUTLIMIT_FLOAT (profile.pid.small_angle.kp + profile.pid.big_angle.kp)
 
 static float apidoutput1[ANGLE_PID_SIZE];
 static float apidoutput2[ANGLE_PID_SIZE];

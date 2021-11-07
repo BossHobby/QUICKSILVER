@@ -16,7 +16,6 @@ extern profile_t profile;
 int pid_gestures_used = 0;
 
 void gestures(void) {
-#ifndef DISABLE_GESTURES2
   int command = gestures2();
 
   if (command != GESTURE_NONE) {
@@ -181,5 +180,4 @@ void gestures(void) {
       // ledblink = blink; //Will cause led logic to blink the number of times ledblink has stored in it.
 #endif
   }
-#endif
 }

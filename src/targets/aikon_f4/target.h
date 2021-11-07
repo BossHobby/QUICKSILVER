@@ -25,9 +25,7 @@
 #define LED_NUMBER 1
 #define LED1PIN PIN_B4
 #define LED1_INVERT
-//#define BUZZER_PIN LL_GPIO_PIN_4
-//#define BUZZER_PIN_PORT GPIOB
-//#define BUZZER_INVERT
+
 //#define FPV_PIN LL_GPIO_PIN_13
 //#define FPV_PORT GPIOA
 

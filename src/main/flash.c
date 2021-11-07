@@ -12,7 +12,6 @@ extern const profile_t default_profile;
 extern profile_t profile;
 
 #define FMC_HEADER 0x12AA0001
-#define FRSKY_BIND_OFFSET 57
 
 static float initial_pid_identifier = -10;
 

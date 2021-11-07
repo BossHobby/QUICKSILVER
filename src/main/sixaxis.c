@@ -17,14 +17,11 @@
 #include "sixaxis.h"
 #include "util.h"
 
-// this works only on newer boards (non mpu-6050)
-// on older boards the hw gyro setting controls the acc as well
-#define ACC_LOW_PASS_FILTER 5
 #define CAL_TIME 2e6
 #define GLOW_TIME 62500
 
 // gyro has +-2000 divided over 16bit.
-#define GYRO_RANGE 1 / (65536 / 4000)
+#define GYRO_RANGE (1 / (65536 / 4000))
 
 // this is the value of both cos 45 and sin 45 = 1/sqrt(2)
 #define INVSQRT2 0.707106781f

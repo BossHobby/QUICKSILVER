@@ -1,5 +1,7 @@
 #include "filter.h"
 
+#include <math.h>
+
 #include "control.h"
 #include "math.h"
 #include "project.h"
@@ -79,7 +81,6 @@ float filter_lp2_pt1_step(filter_lp2_pt1 *filter, filter_state_t *state, float i
   return out;
 }
 
-
 // 16Hz hpf filter for throttle compensation
 // High pass bessel filter order=1 alpha1=0.016
 void filter_hp_be_init(filter_hp_be *filter) {
@@ -108,8 +109,8 @@ float filter_lp_sp_step(filter_lp_sp *filter, float x) { //class II
 
 void filter_lp2_iir_init(filter_lp2_iir *filter, float sample_freq, float cutoff_freq) {
   const float fr = sample_freq / cutoff_freq;
-  const float ohm = tanf(M_PI_F / fr);
-  const float c = 1.0f + 2.0f * cosf(M_PI_F / 4.0f) * ohm + ohm * ohm;
+  const float ohm = tanf(M_PI / fr);
+  const float c = 1.0f + 2.0f * cosf(M_PI / 4.0f) * ohm + ohm * ohm;
 
   filter->cutoff_freq = cutoff_freq;
 
@@ -118,7 +119,7 @@ void filter_lp2_iir_init(filter_lp2_iir *filter, float sample_freq, float cutoff
     filter->b1 = 2.0f * filter->b0;
     filter->b2 = filter->b0;
     filter->a1 = 2.0f * (ohm * ohm - 1.0f) / c;
-    filter->a2 = (1.0f - 2.0f * cosf(M_PI_F / 4.0f) * ohm + ohm * ohm) / c;
+    filter->a2 = (1.0f - 2.0f * cosf(M_PI / 4.0f) * ohm + ohm * ohm) / c;
   }
 }
 

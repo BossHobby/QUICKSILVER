@@ -125,8 +125,6 @@ float atan2approx(float y, float x) {
   return RADTODEG * dphi;
 }
 
-//#pragma GCC push_options
-//#pragma GCC optimize ("O0")
 // from http://en.wikipedia.org/wiki/Fast_inverse_square_root
 // originally from quake3 code
 float Q_rsqrt(float number) {
@@ -145,7 +143,6 @@ float Q_rsqrt(float number) {
 
   return y;
 }
-
 
 int8_t buf_equal(const uint8_t *str1, size_t len1, const uint8_t *str2, size_t len2) {
   if (len2 != len1) {

@@ -13,9 +13,6 @@
 #include "util.h"
 #include "util/vector.h"
 
-// disable drift correction ( for testing)
-#define DISABLE_ACC 0
-
 // IMU fusion algo, CHOOSE ONE
 //#define BFPV_IMU
 //#define SILVERWARE_IMU

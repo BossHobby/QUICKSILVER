@@ -3,6 +3,8 @@
 #include "hardware.h"
 
 #include "config_helper.h"
+
+#include "config.h"
 #include "rx.h"
 
 // defines for things that do not normally need changing
@@ -11,8 +13,6 @@ typedef enum {
   LOOPTIME_4K = 250,
   LOOPTIME_8K = 125,
 } looptime_autodetect_t;
-
-#define ACC_1G 1.0f
 
 #define PID_SIZE 3
 #define ANGLE_PID_SIZE 2
@@ -24,9 +24,6 @@ static const float pid_scales[PID_SIZE][PID_SIZE] = {
     {120.0f, 120.0f, 120.0f}, //kd
 };
 
-#define DEGTORAD 0.017453292f
-#define RADTODEG 57.29577951f
-
 #define ROLL 0
 #define PITCH 1
 #define YAW 2
@@ -35,92 +32,16 @@ static const float pid_scales[PID_SIZE][PID_SIZE] = {
 //(1 - alpha. filtertime = 1 / filter-cutoff-frequency) as long as filtertime > sampleperiod
 #define FILTERCALC(sampleperiod, filtertime) (1.0f - (6.0f * (float)sampleperiod) / (3.0f * (float)sampleperiod + (float)filtertime))
 
-#ifdef BETAFLIGHT_RATES
-#define ACRO_EXPO_ROLL BF_EXPO_ROLL
-#define ACRO_EXPO_PITCH BF_EXPO_PITCH
-#define ACRO_EXPO_YAW BF_EXPO_YAW
-#define ANGLE_EXPO_ROLL BF_EXPO_ROLL
-#define ANGLE_EXPO_PITCH BF_EXPO_PITCH
-#define ANGLE_EXPO_YAW BF_EXPO_YAW
-#define MAX_RATE 200 * (float)BF_RC_RATE_ROLL *(1 / 1 - (float)BF_SUPER_RATE_ROLL) // roll max rate used for flip sequencer when bf rates selected
-#endif
-
-// used for the pwm driver
-#define CH1 0
-#define CH2 1
-#define CH3 2
-#define CH4 3
-
-#define int32 int_fast32_t
-#define int16 int_fast16_t
-#define int8 int_fast8_t
-
-#define uint32 uint_fast32_t
-#define uint16 uint_fast16_t
-#define uint8 uint_fast8_t
-
-// for h-bridge states
-#define FREE 2
-#define BRAKE 3
-#define DIR1 1
-#define DIR2 0
-
 // for inverted flight motor direction
-#define FORWARD DIR2
-#define REVERSE DIR1
-
-// *************0 - 7 - power for bayang telemetry
-#define TX_POWER 7
-
-// *************led brightness in-flight ( solid lights only)
-// *************0- 15 range
-#define LED_BRIGHTNESS 15
-
-// *************Comment out to disable pid tuning gestures - originally created by SilverAG
-#define PID_GESTURE_TUNING
-// *************Comment out to adjust each axis individually - otherwise they move at the same time
-#define COMBINE_PITCH_ROLL_PID_TUNING
-// *************Feel free to change 1.0 value to your liking
-#define PID_TUNING_ADJUST_AMOUNT 1.0 //fixed inc/dec values for PID tuning
-
-// flash saving features  - best left alone or many things might break
-//#define DISABLE_GESTURES2
-
-//enables use of stick accelerator and stick transition for d term lpf 1 & 2
-#define ADVANCED_PID_CONTROLLER
+#define FORWARD 0
+#define REVERSE 1
 
 //Throttle must drop below this value if arming feature is enabled for arming to take place.  MIX_INCREASE_THROTTLE_3 if enabled
 //will also not activate on the ground untill this threshold is passed during takeoff for safety and better staging behavior.
 #define THROTTLE_SAFETY .10f
 
-// level mode "manual" trims ( in degrees)
-// pitch positive forward
-// roll positive right
-#define TRIM_PITCH 0.0
-#define TRIM_ROLL 0.0
-
 #ifdef LVC_LOWER_THROTTLE
 #define SWITCHABLE_FEATURE_2
-#endif
-
-// for the ble beacon to work after in-flight reset
-#ifdef RX_BAYANG_PROTOCOL_BLE_BEACON
-#undef STOP_LOWBATTERY
-#endif
-
-#if defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND) || defined(RX_NRF24_BAYANG_TELEMETRY)
-#undef UART_1
-#undef UART_2
-#undef UART_3
-#undef UART_4
-#undef UART_6
-#endif
-
-#ifdef SOFTSPI_NONE
-#undef RADIO_XN297L
-#undef RADIO_XN297
-#undef SOFTSPI_3WIRE
-#undef SOFTSPI_4WIRE
 #endif
 
 #if defined(BUZZER_ENABLE) && !defined(BUZZER_PIN)
@@ -132,14 +53,6 @@ static const float pid_scales[PID_SIZE][PID_SIZE] = {
 
 #define OSD_NUMBER_ELEMENTS 32
 #define SWITCHABLE_FEATURE_1 //CONFIGURATION WIZARD
-
-// IDLE_OFFSET is added to the throttle. Adjust its value so that the motors
-// still spin at minimum throttle.
-#ifndef DIGITAL_IDLE
-#define DIGITAL_IDLE 4
-#endif
-
-//#define DISABLE_FLIP_SEQUENCER //****************turtle / crashflip recovery available by default
 
 #ifdef RX_SBUS
 #define RX_UNIFIED_SERIAL

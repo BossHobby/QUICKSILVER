@@ -355,18 +355,20 @@ int main(void) {
   } // end loop
 }
 
-// 2 - low battery at powerup - if enabled by config
-// 3 - radio chip not detected
+// the error codes indicate a failure that prevents normal operation
+// led flash codes - the quad will not fly / bind if flashing a code
+// 2 - low battery at powerup - currently unused
+// 3 - radio chip not found
 // 4 - Gyro not found
-// 5 - clock , intterrupts , systick
-// 6 - loop time issue
-// 7 - i2c error
-// 8 - i2c error main loop
+// 5 - clock , intterrupts , systick , gcc bad code , bad memory access (code issues like bad pointers)- this should not come up
+// 6 - loop time issue - if loop time exceeds 20mS
+// 7 - spi error  - triggered by hardware spi driver only
+// 8 - i2c error main loop  - triggered by depreciated hardware i2c driver only
 
 const char *failloop_string(int val) {
   switch (val) {
   case 2:
-    return "low battery at powerup - if enabled by config";
+    return "low battery at powerup - unused";
   case 3:
     return "radio chip not detected";
   case 4:

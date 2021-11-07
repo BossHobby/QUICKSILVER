@@ -10,6 +10,7 @@
 #include "filter.h"
 #include "flip_sequencer.h"
 #include "gestures.h"
+#include "imu.h"
 #include "input.h"
 #include "led.h"
 #include "motor.h"
@@ -99,7 +100,7 @@ CBOR_END_STRUCT_ENCODER()
 
 void control(void) {
 #ifdef INVERTED_ENABLE
-//not supported yet
+  //not supported yet
   if (rx_aux_on(AUX_FN_INVERTED))
     pwmdir = REVERSE;
   else

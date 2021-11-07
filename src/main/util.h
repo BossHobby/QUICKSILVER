@@ -3,7 +3,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define M_PI 3.14159265358979323846 /* pi */
+#define DEGTORAD 0.017453292f
+#define RADTODEG 57.29577951f
 
 float mapf(float x, float in_min, float in_max, float out_min, float out_max);
 void limitf(float *input, const float limit);

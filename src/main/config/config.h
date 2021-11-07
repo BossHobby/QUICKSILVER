@@ -95,15 +95,15 @@
 // *************Serial Receiver Inversion Selection  (Normally true for SBUS and FPORT)
 //#define INVERT_UART
 
-// *************Type Selection For Bayang Protocol Only
+// *************Bayang Specific Settings
 //#define USE_DEVO
 //#define USE_MULTI
 
 //#define RADIO_XN297L
-#define RADIO_XN297
+//#define RADIO_XN297
 
 //#define SOFTSPI_3WIRE
-#define SOFTSPI_4WIRE
+//#define SOFTSPI_4WIRE
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING AUX_CHANNEL_0
@@ -182,7 +182,6 @@
 //GYRO FILTER PASS 2 CUTOFF FREQUENCY
 #define GYRO_FREQ_PASS2 90
 
-
 //Dynamic D term filter
 //a pt1 filter that moves up in cut hz with a parabolic relationship to applied throttle.  The theory here is
 //that propwash is most likely to occur as throttle is applied in dirty air - and propwash is most significantly
@@ -197,7 +196,6 @@
 #define DYNAMIC_FREQ_MIN 70
 #define DYNAMIC_FREQ_MAX 260
 
-
 //Fixed D-Term Filters
 //D-Term FILTER PASS 1 - FILTER TYPE  - define only one or none to disable this pass
 #define DTERM_FILTER_PASS1_PT1
@@ -206,17 +204,17 @@
 //#define DTERM_FILTER_PASS2_PT1
 //#define DTERM_FILTER_PASS2_PT2
 
-
 //D-Term FILTER PASS 1 CUTOFF FREQUENCY
 #define DTERM_FREQ_PASS1 260
 //D-Term FILTER PASS 2 CUTOFF FREQUENCY
 #define DTERM_FREQ_PASS2 150
 
-
 //**********************************************************************************************************************
 //***********************************************MOTOR OUTPUT SETTINGS**************************************************
 
 // *************brushed motor minimum idle percent / dshot digital idle
+// IDLE_OFFSET is added to the throttle. Adjust its value so that the motors
+// still spin at minimum throttle.
 #define DIGITAL_IDLE 4.5
 
 // *************invert yaw pid for "PROPS OUT" configuration - This feature is switchable to "PROPS IN" when active with stick gesture DOWN-UP-DOWN, Save selection with DOWN-DOWN-DOWN
@@ -272,10 +270,20 @@
 //#define MOTOR_BEEPS
 //#define MOTOR_BEEPS_TIMEOUT 1e6
 
-// *************enable inverted flight code ( brushless only ) - WARNING - NEVER TESTED 
+// *************enable inverted flight code ( brushless only ) - WARNING - NEVER TESTED
 //#define INVERTED_ENABLE
 //#define FN_INVERTED AUX_CHANNEL_OFF //for brushless only
 
+// *************led brightness in-flight ( solid lights only)
+// *************0- 15 range
+#define LED_BRIGHTNESS 15
+
+// *************Comment out to disable pid tuning gestures - originally created by SilverAG
+#define PID_GESTURE_TUNING
+// *************Comment out to adjust each axis individually - otherwise they move at the same time
+#define COMBINE_PITCH_ROLL_PID_TUNING
+// *************Feel free to change 1.0 value to your liking
+#define PID_TUNING_ADJUST_AMOUNT 1.0 //fixed inc/dec values for PID tuning
 
 //#############################################################################################################################
 //#############################################################################################################################
@@ -301,3 +309,11 @@
 // throttle direct to motors for thrust measure
 //#define MOTORS_TO_THROTTLE
 
+// disable the check for known gyro that causes the 4 times flash
+//#define DISABLE_GYRO_CHECK
+
+// disable all pwm pins / function
+//#define DISABLE_PWM_PINS
+
+// disable turtle / crashflip recovery
+//#define DISABLE_FLIP_SEQUENCER
