@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "drv_usb.h"
+#include "rx.h"
 #include "usb_configurator.h"
 #include "util.h"
 #include "util/cbor_helper.h"
@@ -62,9 +63,6 @@ const pid_rate_preset_t pid_rate_presets[] = {
             .kp = {117, 117, 150},
             .ki = {77, 77, 77},
             .kd = {83, 83, 13},
-            //.kp = {123, 123, 150},
-            //.ki = {77, 77, 77},
-            //.kd = {91, 91, 13},
         },
     },
 
@@ -75,7 +73,6 @@ const pid_rate_preset_t pid_rate_presets[] = {
             .kp = {127, 127, 148},
             .ki = {77, 77, 77},
             .kd = {101, 101, 13},
-        
         },
     },
 
@@ -385,8 +382,8 @@ const profile_t default_profile = {
             RACEMODE,            //AUX_RACEMODE
             HORIZON,             //AUX_HORIZON
             STICK_BOOST_PROFILE, //AUX_STICK_BOOST_PROFILE
-            HIGH_RATES, //AUX_HIGH_RATES
-#ifdef BUZZER_ENABLE    //AUX_BUZZER_ENABLE
+            HIGH_RATES,          //AUX_HIGH_RATES
+#ifdef BUZZER_ENABLE             //AUX_BUZZER_ENABLE
             BUZZER_ENABLE,
 #else
             AUX_CHANNEL_OFF,

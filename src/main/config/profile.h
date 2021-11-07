@@ -4,6 +4,7 @@
 
 #include "filter.h"
 #include "project.h"
+#include "rx.h"
 #include "util/vector.h"
 
 // Rates

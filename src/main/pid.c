@@ -9,7 +9,14 @@
 #include "led.h"
 #include "profile.h"
 #include "project.h"
+#include "rx.h"
 #include "util.h"
+
+// multiplier for pids at 3V - for PID_VOLTAGE_COMPENSATION - default 1.33f from H101 code
+#define PID_VC_FACTOR 1.33f
+
+// TODO: re-implement?
+//#define ANTI_WINDUP_DISABLE
 
 //************************************Setpoint Weight****************************************
 #ifdef BRUSHLESS_TARGET
@@ -36,10 +43,13 @@ const float integrallimit[PID_SIZE] = {1.7, 1.7, 0.5};
 
 #endif
 
-// TODO: re-implement?
-//#define ANTI_WINDUP_DISABLE
+static const float pid_scales[PID_SIZE][PID_SIZE] = {
+    // roll, pitch, yaw
+    {628.0f, 628.0f, 314.0f}, //kp
+    {50.0f, 50.0f, 50.0f},    //ki
+    {120.0f, 120.0f, 120.0f}, //kd
+};
 
-// non changable things below
 extern profile_t profile;
 
 int number_of_increments[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
@@ -57,8 +67,6 @@ static float ierror[PID_SIZE] = {0, 0, 0};
 static float v_compensation = 1.00;
 static float tda_compensation = 1.00;
 
-// multiplier for pids at 3V - for PID_VOLTAGE_COMPENSATION - default 1.33f from H101 code
-#define PID_VC_FACTOR 1.33f
 float timefactor;
 
 static filter_t filter[FILTER_MAX_SLOTS];

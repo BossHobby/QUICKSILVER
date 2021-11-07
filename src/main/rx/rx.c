@@ -13,6 +13,40 @@
 
 extern profile_t profile;
 
+// Select filter cut 25hz for SBUS, 67hz for CRSF, 40hz for DSMX, 20hz for DSM2, 90hz for bayang, 45hz for frsky   Formula is [(1/rx framerate)/2] * 0.9
+static const uint8_t RX_SMOOTHING_HZ[RX_PROTOCOL_MAX] = {
+    0,  //RX_PROTOCOL_INVALID, wont happen
+    0,  //RX_PROTOCOL_UNIFIED_SERIAL, will autodetect following
+    25, //RX_PROTOCOL_SBUS,
+    67, //RX_PROTOCOL_CRSF,
+    50, //RX_PROTOCOL_IBUS, check these
+    50, //RX_PROTOCOL_FPORT, check these
+    40, //RX_PROTOCOL_DSMX_2048,
+    20, //RX_PROTOCOL_DSM2_1024,
+    90, //RX_PROTOCOL_NRF24_BAYANG_TELEMETRY,
+    90, //RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON,
+    90, //RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND,
+    50, //RX_PROTOCOL_FRSKY_D8,
+    50, //RX_PROTOCOL_FRSKY_D16,
+    75, //RX_PROTOCOL_FRSKY_REDPINE,
+};
+
+#ifdef RX_UNIFIED_SERIAL
+static const uint8_t SERIAL_PROTO_MAP[] = {
+    RX_PROTOCOL_INVALID,   //RX_SERIAL_PROTOCOL_INVALID
+    RX_PROTOCOL_DSMX_2048, //RX_SERIAL_PROTOCOL_DSM
+    RX_PROTOCOL_SBUS,      //RX_SERIAL_PROTOCOL_SBUS
+    RX_PROTOCOL_IBUS,      //RX_SERIAL_PROTOCOL_IBUS
+    RX_PROTOCOL_FPORT,     //RX_SERIAL_PROTOCOL_FPORT
+    RX_PROTOCOL_CRSF,      //RX_SERIAL_PROTOCOL_CRSF
+    RX_PROTOCOL_REDPINE,   //RX_SERIAL_PROTOCOL_REDPINE
+    // No need to filter differently for inverted.
+    RX_PROTOCOL_SBUS,    //RX_SERIAL_PROTOCOL_SBUS_INVERTED
+    RX_PROTOCOL_FPORT,   //RX_SERIAL_PROTOCOL_FPORT_INVERTED
+    RX_PROTOCOL_REDPINE, //RX_SERIAL_PROTOCOL_REDPINE_INVERTED
+};
+#endif
+
 uint8_t rx_aux_on(aux_function_t function) {
   return state.aux[profile.receiver.aux[function]];
 }

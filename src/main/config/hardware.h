@@ -54,8 +54,8 @@
 // be set to 'Bidirectional' (or 'Bidirectional Rev.') accordingly:
 #define BIDIRECTIONAL
 #endif
-//*************************************Features that still need to be moved into targets and checked for compatability************************************************
 
+//*************************************Features that still need to be moved into targets and checked for compatability************************************************
 // RGB led type ws2812 - ws2813
 // numbers over 8 could decrease performance
 //#define RGB_LED_NUMBER 0
