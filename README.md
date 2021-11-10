@@ -16,6 +16,12 @@ Flight Controller Firmware
 QUICKSILVER comes with configuration application for Windows, MacOS and Linux.
 It's source and pre-compiled binaries can be found [here](https://github.com/BossHobby/Configurator).
 
+## In-Action
+
+* [Youtube - Tarkusx FPV - DIY Frame](https://www.youtube.com/watch?v=ZXH9SbvfqHQ)
+* [Youtube - FPV_EvilMunkey - T Minus 2 Weeks till Whoop Wars](https://www.youtube.com/watch?v=s61xWGj3SnI)
+* [Youtube - Tinywhoop, Toothpick and co ! - iFlight Baby Nazgul](https://www.youtube.com/watch?v=pGUtswiukks)
+
 ## Contributing
 
 Contributions are welcome and encouraged.
