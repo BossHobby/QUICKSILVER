@@ -23,8 +23,11 @@ static void cc2500_hardware_init() {
 
 #if defined(USE_CC2500_PA_LNA)
   // turn antenna on
+
+#if defined(CC2500_LNA_EN_PIN)
   gpio_pin_init(&gpio_init, CC2500_LNA_EN_PIN);
   gpio_pin_set(CC2500_LNA_EN_PIN);
+#endif
 
   // turn tx off
   gpio_pin_init(&gpio_init, CC2500_TX_EN_PIN);
@@ -180,14 +183,22 @@ void cc2500_switch_antenna() {
 
 void cc2500_enter_rxmode() {
 #if defined(USE_CC2500_PA_LNA)
+
+#if defined(CC2500_LNA_EN_PIN)
   gpio_pin_set(CC2500_LNA_EN_PIN);
+#endif
+
   gpio_pin_reset(CC2500_TX_EN_PIN);
 #endif
 }
 
 void cc2500_enter_txmode() {
 #if defined(USE_CC2500_PA_LNA)
+
+#if defined(CC2500_LNA_EN_PIN)
   gpio_pin_reset(CC2500_LNA_EN_PIN);
+#endif
+
   gpio_pin_set(CC2500_TX_EN_PIN);
 #endif
 }
