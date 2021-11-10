@@ -4,9 +4,7 @@
 
 #include "project.h"
 
-#ifdef DEBUG
-
-typedef struct debug {
+typedef struct {
   float vbatt_comp;
   float adcfilt;
   float totaltime;
@@ -19,11 +17,7 @@ typedef struct debug {
   float min_cpu_load;
   unsigned int min_cpu_loop_number;
   unsigned int loops_between_min_cpu_load;
-} debug_type;
-
-extern debug_type debug;
-
-#endif
+} debug_t;
 
 typedef enum {
   PERF_COUNTER_TOTAL,
@@ -42,6 +36,7 @@ typedef struct {
   uint32_t current;
 } perf_counter_t;
 
+extern debug_t debug;
 extern perf_counter_t perf_counters[PERF_COUNTER_MAX];
 
 void perf_counter_start(perf_counters_t counter);
@@ -49,5 +44,7 @@ void perf_counter_end(perf_counters_t counter);
 
 void perf_counter_init();
 void perf_counter_update();
+
+void debug_update();
 
 cbor_result_t cbor_encode_perf_counters(cbor_value_t *enc);
