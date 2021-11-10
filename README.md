@@ -13,12 +13,12 @@ Flight Controller Firmware
 
 ## Configurator
 
-QUICKSILVER comes with configuration application for Windows, MacOS and Linux.
+QUICKSILVER comes with configuration application for Windows, MacOS and Linux.  
 It's source and pre-compiled binaries can be found [here](https://github.com/BossHobby/Configurator).
 
 ## Building
 
-This firmware uses the awesome [PlatformIO](https://platformio.org/) project as it's development environment.
+This firmware uses the awesome [PlatformIO](https://platformio.org/) project as it's development environment.  
 [Install it](https://platformio.org/install/ide?install=vscode), download the source-code and start hacking away.
 
 
