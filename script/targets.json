@@ -256,5 +256,17 @@
         }
       }
     ]
+  },
+  {
+    "name": "zeusf4evo",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      }
+    ]
   }
 ]
