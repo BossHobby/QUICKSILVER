@@ -21,6 +21,7 @@ It's source and pre-compiled binaries can be found [here](https://github.com/Bos
 * [Youtube - Tarkusx FPV - DIY Frame](https://www.youtube.com/watch?v=ZXH9SbvfqHQ)
 * [Youtube - FPV_EvilMunkey - T Minus 2 Weeks till Whoop Wars](https://www.youtube.com/watch?v=s61xWGj3SnI)
 * [Youtube - Tinywhoop, Toothpick and co ! - iFlight Baby Nazgul](https://www.youtube.com/watch?v=pGUtswiukks)
+* [Youtube - PerryEarl - 5in Proximity Fun](https://www.youtube.com/watch?v=wiuZrl3PMPI)
 
 ## Contributing
 
