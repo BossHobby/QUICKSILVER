@@ -11,7 +11,7 @@ typedef struct {
   uint32_t pages_per_sector;
   uint32_t sectors;
   uint32_t sector_size;
-  uint32_t total_size;
+  uint64_t total_size;
 } data_flash_bounds_t;
 
 typedef struct {

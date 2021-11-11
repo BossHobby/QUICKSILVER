@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include "data_flash.h"
+
 #define SDCARD_PAGE_SIZE 512
 
 typedef enum {
@@ -47,85 +49,72 @@ typedef struct {
   uint8_t crc;
 } __attribute((packed)) sdcard_cid_t;
 
-typedef union {
-  uint8_t raw[16];
+typedef struct {
+  uint32_t CSD_STRUCTURE_VER : 2;
 
-  struct {
-    uint32_t CSD_STRUCTURE_VER : 2;
-    uint32_t _RESERVED1 : 6;
-    uint32_t TAAC : 8;
-    uint32_t NSAC : 8;
-    uint32_t TRAN_SPEED : 8;
-    uint32_t CCC : 12;
-    uint32_t READ_BLOCK_LEN : 4;
-    uint32_t READ_BLOCK_PARTIAL_ALLOWED : 1;
-    uint32_t WRITE_BLOCK_MISALIGN : 1;
-    uint32_t READ_BLOCK_MISALIGN : 1;
-    uint32_t DSR_IMPLEMENTED : 1;
-    uint32_t _RESERVED2 : 2;
-    uint32_t CSIZE : 12;
-    uint32_t VDD_READ_CURR_MIN : 3;
-    uint32_t VDD_READ_CURR_MAX : 3;
-    uint32_t VDD_WRITE_CURR_MIN : 3;
-    uint32_t VDD_WRITE_CURR_MAX : 3;
-    uint32_t CSIZE_MULT : 3;
-    uint32_t ERASE_SINGLE_BLOCK_ALLOWED : 1;
-    uint32_t SECTOR_SIZE : 7;
-    uint32_t WRITE_PROTECT_GROUP_SIZE : 7;
-    uint32_t WRITE_PROTECT_GROUP_ENABLE : 1;
-    uint32_t _RESERVED3 : 2;
-    uint32_t R2W_FACTOR : 3;
-    uint32_t WRITE_BLOCK_LEN : 4;
-    uint32_t WRITE_BLOCK_PARTIAL_ALLOWED : 1;
-    uint32_t FILE_FORMAT_GROUP : 1;
-    uint32_t COPY : 1;
-    uint32_t PERMANENT_WRITE_PROTECT : 1;
-    uint32_t TEMPORARY_WRITE_PROTECT : 1;
-    uint32_t FILE_FORMAT : 2;
-    uint32_t _RESERVED4 : 2;
-    uint32_t CRC_VAL : 7;
-    uint32_t TRAILER : 1;
-  } v1;
+  union {
+    struct {
+      uint8_t TAAC : 8;
+      uint8_t NSAC : 8;
+      uint8_t TRAN_SPEED : 8;
+      uint16_t CCC : 12;
+      uint8_t READ_BL_LEN : 4;
+      uint8_t READ_BL_PARTIAL : 1;
+      uint8_t WRITE_BLK_MISALIGN : 1;
+      uint8_t READ_BLK_MISALIGN : 1;
+      uint8_t DSR_IMP : 1;
+      uint16_t C_SIZE : 12;
+      uint8_t VDD_R_CURR_MIN : 3;
+      uint8_t VDD_R_CURR_MAX : 3;
+      uint8_t VDD_W_CURR_MIN : 3;
+      uint8_t VDD_W_CURR_MAX : 3;
+      uint8_t C_SIZE_MULT : 3;
+      uint8_t ERASE_BLK_EN : 1;
+      uint8_t SECTOR_SIZE : 7;
+      uint8_t WP_GRP_SIZE : 7;
+      uint8_t WP_GRP_ENABLE : 1;
+      uint8_t R2W_FACTOR : 3;
+      uint8_t WRITE_BL_LEN : 4;
+      uint8_t WRITE_BL_PARTIAL : 1;
+      uint8_t FILE_FORMAT_GRP : 1;
+      uint8_t COPY : 1;
+      uint8_t PERM_WRITE_PROTECT : 1;
+      uint8_t TMP_WRITE_PROTECT : 1;
+      uint8_t FILE_FORMAT : 2;
+      uint8_t CSD_CRC : 8;
+    } v1;
 
-  struct {
-    uint32_t CSD_STRUCTURE_VER : 2;
-    uint32_t _RESERVED1 : 6;
-    uint32_t TAAC : 8;
-    uint32_t NSAC : 8;
-    uint32_t TRAN_SPEED : 8;
-    uint32_t CCC : 12;
-    uint32_t READ_BLOCK_LEN : 4;
-    uint32_t READ_BLOCK_PARTIAL_ALLOWED : 1;
-    uint32_t WRITE_BLOCK_MISALIGN : 1;
-    uint32_t READ_BLOCK_MISALIGN : 1;
-    uint32_t DSR_IMPLEMENTED : 1;
-    uint32_t _RESERVED2 : 6;
-    uint32_t CSIZE : 22;
-    uint32_t _RESERVED3 : 1;
-    uint32_t ERASE_SINGLE_BLOCK_ALLOWED : 1;
-    uint32_t SECTOR_SIZE : 7;
-    uint32_t WRITE_PROTECT_GROUP_SIZE : 7;
-    uint32_t WRITE_PROTECT_GROUP_ENABLE : 1;
-    uint32_t R2W_FACTOR : 3;
-    uint32_t WRITE_BLOCK_LEN : 4;
-    uint32_t WRITE_BLOCK_PARTIAL_ALLOWED : 1;
-    uint32_t _RESERVED4 : 5;
-    uint32_t FILE_FORMAT_GROUP : 1;
-    uint32_t COPY : 1;
-    uint32_t PERMANENT_WRITE_PROTECT : 1;
-    uint32_t TEMPORARY_WRITE_PROTECT : 1;
-    uint32_t FILE_FORMAT : 2;
-    uint32_t _RESERVED5 : 2;
-    uint32_t CRC_VAL : 7;
-    uint32_t TRAILER : 1;
-  } v2;
-
+    struct {
+      uint8_t TAAC : 8;
+      uint8_t NSAC : 8;
+      uint8_t TRAN_SPEED : 8;
+      uint16_t CCC : 12;
+      uint8_t READ_BL_LEN : 4;
+      uint8_t READ_BL_PARTIAL : 1;
+      uint8_t WRITE_BLK_MISALIGN : 1;
+      uint8_t READ_BLK_MISALIGN : 1;
+      uint8_t DSR_IMP : 1;
+      uint32_t C_SIZE : 22;
+      uint8_t ERASE_BLK_EN : 1;
+      uint8_t SECTOR_SIZE : 7;
+      uint8_t WP_GRP_SIZE : 7;
+      uint8_t WP_GRP_ENABLE : 1;
+      uint8_t R2W_FACTOR : 3;
+      uint8_t WRITE_BL_LEN : 4;
+      uint8_t WRITE_BL_PARTIAL : 1;
+      uint8_t FILE_FORMAT_GRP : 1;
+      uint8_t COPY : 1;
+      uint8_t PERM_WRITE_PROTECT : 1;
+      uint8_t TMP_WRITE_PROTECT : 1;
+      uint8_t FILE_FORMAT : 2;
+      uint8_t CSD_CRC : 8;
+    } v2;
+  };
 } sdcard_csd_t;
 
 typedef struct {
   uint8_t version;
 
-  uint32_t block_count;
   uint8_t high_capacity;
 
   uint32_t ocr;
@@ -137,6 +126,8 @@ typedef struct {
 void sdcard_init();
 
 uint8_t sdcard_update();
+
+void sdcard_get_bounds(data_flash_bounds_t *bounds);
 
 uint8_t sdcard_read_pages(uint8_t *buf, uint32_t page, uint32_t count);
 uint8_t sdcard_write_page(uint8_t *buf, uint32_t page);

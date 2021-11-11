@@ -359,7 +359,8 @@ void process_blackbox(uint8_t *data, uint32_t len) {
 
     res = cbor_encode_str(&enc, "flash_size");
     check_cbor_error(QUIC_CMD_BLACKBOX);
-    res = cbor_encode_uint32(&enc, &bounds.total_size);
+    const uint32_t size_in_kb = bounds.total_size / 1024;
+    res = cbor_encode_uint32(&enc, &size_in_kb);
     check_cbor_error(QUIC_CMD_BLACKBOX);
 
     res = cbor_encode_str(&enc, "file_num");

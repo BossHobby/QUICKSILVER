@@ -219,6 +219,65 @@ void sdcard_write_data(const uint8_t token, const uint8_t *buf, const uint32_t s
   spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
 }
 
+static void sdcard_parse_csd(sdcard_csd_t *csd, uint8_t *c) {
+  csd->CSD_STRUCTURE_VER = c[0] >> 6;
+
+  if (csd->CSD_STRUCTURE_VER == 0) {
+    csd->v1.TAAC = c[1];
+    csd->v1.NSAC = c[2];
+    csd->v1.TRAN_SPEED = c[3];
+    csd->v1.CCC = (c[4] << 4) | ((c[5] & 0xF0) >> 4);
+    csd->v1.READ_BL_LEN = (c[5] & 0x0F);
+    csd->v1.READ_BL_PARTIAL = (c[6] & (1 << 7)) >> 7;
+    csd->v1.WRITE_BLK_MISALIGN = (c[6] & (1 << 6)) >> 6;
+    csd->v1.READ_BLK_MISALIGN = (c[6] & (1 << 5)) >> 5;
+    csd->v1.DSR_IMP = (c[6] & (1 << 4)) >> 4;
+    csd->v1.C_SIZE = ((c[6] & 0x03) << 10) | (c[7] << 2) | (c[8] >> 6);
+    csd->v1.VDD_R_CURR_MIN = (c[8] & 0x38) >> 3;
+    csd->v1.VDD_R_CURR_MAX = (c[8] & 0x07);
+    csd->v1.VDD_W_CURR_MIN = (c[9] & 0xE0) >> 5;
+    csd->v1.VDD_W_CURR_MAX = (c[9] & 0x1C) >> 2;
+    csd->v1.C_SIZE_MULT = ((c[9] & 0x03) << 1) | (c[10] >> 7);
+    csd->v1.ERASE_BLK_EN = (c[10] & (1 << 6)) >> 6;
+    csd->v1.SECTOR_SIZE = ((c[10] & 0x3F) << 1) | (c[11] >> 7);
+    csd->v1.WP_GRP_SIZE = (c[11] & 0x7F);
+    csd->v1.WP_GRP_ENABLE = c[12] >> 7;
+    csd->v1.R2W_FACTOR = (c[12] & 0x1C) >> 2;
+    csd->v1.WRITE_BL_LEN = (c[12] & 0x03) << 2 | (c[13] >> 6);
+    csd->v1.WRITE_BL_PARTIAL = (c[13] & (1 << 5)) >> 5;
+    csd->v1.FILE_FORMAT_GRP = (c[14] & (1 << 7)) >> 7;
+    csd->v1.COPY = (c[14] & (1 << 6)) >> 6;
+    csd->v1.PERM_WRITE_PROTECT = (c[14] & (1 << 5)) >> 5;
+    csd->v1.TMP_WRITE_PROTECT = (c[14] & (1 << 4)) >> 4;
+    csd->v1.FILE_FORMAT = (c[14] & 0x0C) >> 2;
+    csd->v1.CSD_CRC = c[15];
+  } else if (csd->CSD_STRUCTURE_VER == 1) {
+    csd->v2.TAAC = c[1];
+    csd->v2.NSAC = c[2];
+    csd->v2.TRAN_SPEED = c[3];
+    csd->v2.CCC = (c[4] << 4) | ((c[5] & 0xF0) >> 4);
+    csd->v2.READ_BL_LEN = (c[5] & 0x0F);
+    csd->v2.READ_BL_PARTIAL = (c[6] & (1 << 7)) >> 7;
+    csd->v2.WRITE_BLK_MISALIGN = (c[6] & (1 << 6)) >> 6;
+    csd->v2.READ_BLK_MISALIGN = (c[6] & (1 << 5)) >> 5;
+    csd->v2.DSR_IMP = (c[6] & (1 << 4)) >> 4;
+    csd->v2.C_SIZE = (((uint32_t)c[7] & 0x3F) << 16) | (c[8] << 8) | c[9];
+    csd->v2.ERASE_BLK_EN = (c[10] & (1 << 6)) >> 6;
+    csd->v2.SECTOR_SIZE = (c[10] & 0x3F) << 1 | (c[11] >> 7);
+    csd->v2.WP_GRP_SIZE = (c[11] & 0x7F);
+    csd->v2.WP_GRP_ENABLE = (c[12] & (1 << 7)) >> 7;
+    csd->v2.R2W_FACTOR = (c[12] & 0x1C) >> 2;
+    csd->v2.WRITE_BL_LEN = ((c[12] & 0x03) << 2) | (c[13] >> 6);
+    csd->v2.WRITE_BL_PARTIAL = (c[13] & (1 << 5)) >> 5;
+    csd->v2.FILE_FORMAT_GRP = (c[14] & (1 << 7)) >> 7;
+    csd->v2.COPY = (c[14] & (1 << 6)) >> 6;
+    csd->v2.PERM_WRITE_PROTECT = (c[14] & (1 << 5)) >> 5;
+    csd->v2.TMP_WRITE_PROTECT = (c[14] & (1 << 4)) >> 4;
+    csd->v2.FILE_FORMAT = (c[14] & 0x0C) >> 2;
+    csd->v2.CSD_CRC = c[15];
+  }
+}
+
 uint8_t sdcard_update() {
   static uint32_t delay_loops = 1000;
   if (delay_loops > 0) {
@@ -315,7 +374,9 @@ uint8_t sdcard_update() {
       state = SDCARD_DETECT_FAILED;
       break;
     }
-    sdcard_read_data((uint8_t *)&sdcard_info.csd, 16);
+    uint8_t csd_buffer[sizeof(sdcard_cid_t)];
+    sdcard_read_data(csd_buffer, sizeof(sdcard_cid_t));
+    sdcard_parse_csd(&sdcard_info.csd, csd_buffer);
     sdcard_deselect();
 
     state = SDCARD_DETECT_FINISH;
@@ -489,6 +550,27 @@ uint8_t sdcard_read_pages(uint8_t *buf, uint32_t sector, uint32_t count) {
 
   state = SDCARD_READ_MULTIPLE_START;
   return 0;
+}
+
+void sdcard_get_bounds(data_flash_bounds_t *bounds) {
+  uint64_t size = 0;
+  if (sdcard_info.csd.CSD_STRUCTURE_VER == 0) {
+    uint32_t block_len = (1 << sdcard_info.csd.v1.READ_BL_LEN);
+    uint32_t mult = 1 << (sdcard_info.csd.v1.C_SIZE_MULT + 2);
+    uint32_t blocknr = (sdcard_info.csd.v1.C_SIZE + 1) * mult;
+
+    size = blocknr * block_len;
+  } else {
+    size = (sdcard_info.csd.v2.C_SIZE + 1) * (((uint64_t)512) << 10);
+  }
+
+  bounds->page_size = SDCARD_PAGE_SIZE;
+  bounds->pages_per_sector = 1;
+
+  bounds->sectors = size / SDCARD_PAGE_SIZE;
+
+  bounds->sector_size = SDCARD_PAGE_SIZE;
+  bounds->total_size = size;
 }
 
 uint8_t sdcard_write_pages_start(uint32_t sector, uint32_t count) {

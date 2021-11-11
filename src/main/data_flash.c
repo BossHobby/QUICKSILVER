@@ -63,15 +63,7 @@ data_flash_result_t data_flash_update() {
   case STATE_DETECT:
     if (sdcard_ready) {
       state = STATE_READ_HEADER;
-
-      bounds.page_size = 512;
-      bounds.pages_per_sector = 1;
-
-      // TODO: fetch
-      bounds.sectors = 512;
-
-      bounds.sector_size = bounds.pages_per_sector * bounds.page_size;
-      bounds.total_size = bounds.sector_size * bounds.sectors;
+      sdcard_get_bounds(&bounds);
     }
     return DATA_FLASH_DETECT;
 
