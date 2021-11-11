@@ -24,7 +24,9 @@ env.AddPostAction(
 
 git_version = "unknown"
 
-if 'DRONE_COMMIT' in os.environ:
+if 'DRONE_TAG' in os.environ:
+  git_version = os.environ.get('DRONE_TAG')
+elif 'DRONE_COMMIT' in os.environ:
   git_version = os.environ.get('DRONE_COMMIT')
 else:
   try:
