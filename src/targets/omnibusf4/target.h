@@ -3,9 +3,6 @@
 
 #define OmnibusF4
 
-#define F4
-#define F405
-
 //PORTS
 #define SPI_PORTS   \
   SPI1_PA5PA6PA7    \

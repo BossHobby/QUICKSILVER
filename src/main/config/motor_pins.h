@@ -2,7 +2,7 @@
 
 #include "target.h"
 
-#ifdef F4
+#ifdef STM32F4
 #define MOTOR_PIN_PA0 MOTOR_PIN(A, 0, GPIO_AF2_TIM5, TIM5, 1)
 #define MOTOR_PIN_PA1 MOTOR_PIN(A, 1, GPIO_AF1_TIM2, TIM2, 2)
 #define MOTOR_PIN_PA2 MOTOR_PIN(A, 2, GPIO_AF1_TIM2, TIM2, 3)

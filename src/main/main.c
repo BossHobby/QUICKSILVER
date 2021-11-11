@@ -33,7 +33,7 @@
 #include "drv_serial_soft.h"
 #endif
 
-#ifdef F4
+#ifdef STM32F4
 #include "blackbox.h"
 #include "drv_usb.h"
 #include "usb_configurator.h"
@@ -290,7 +290,7 @@ int main(void) {
     osd_display();
 #endif
 
-#ifdef F4
+#ifdef STM32F4
     blackbox_update();
     if (usb_detect()) {
       flags.usb_active = 1;
@@ -392,7 +392,7 @@ void failloop(int val) {
   }
 
   while (1) {
-#if defined(F4) && defined(DEBUG)
+#if defined(STM32F4) && defined(DEBUG)
     quic_debugf("failloop %s (%d)", failloop_string(val), val);
     usb_detect();
 #endif
@@ -407,7 +407,7 @@ void failloop(int val) {
 }
 
 void handle_fault() {
-#if defined(F4) && defined(RESET_ON_FAULT)
+#if defined(STM32F4) && defined(RESET_ON_FAULT)
   extern void systemResetToBootloader(void);
   systemResetToBootloader();
 #endif

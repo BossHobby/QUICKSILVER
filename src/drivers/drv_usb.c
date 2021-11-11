@@ -6,7 +6,7 @@
 
 #include "util/circular_buffer.h"
 
-#ifdef F4
+#ifdef STM32F4
 
 #include <stdarg.h>
 #include <stdio.h>

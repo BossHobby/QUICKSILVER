@@ -1,8 +1,6 @@
 #include "config.h"
 #include "config_helper.h"
 
-#define F4
-#define F405
 #define Alienwhoop_V3
 
 //PORTS

@@ -6,7 +6,7 @@
 #include "drv_time.h"
 #include "project.h"
 
-#if defined(F4) && defined(USE_CC2500)
+#if defined(STM32F4) && defined(USE_CC2500)
 
 #define PORT spi_port_defs[CC2500_SPI_PORT]
 

@@ -3,8 +3,6 @@
 
 //******************UNCONFIRMED TARGET******************
 
-#define F4
-#define F405
 #define LuxF4osd
 
 //PORTS

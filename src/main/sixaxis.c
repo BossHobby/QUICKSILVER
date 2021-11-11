@@ -21,7 +21,7 @@
 #define GLOW_TIME 62500
 
 // gyro has +-2000 divided over 16bit.
-#define GYRO_RANGE (1 / (65536 / 4000))
+#define GYRO_RANGE (1.f / (65536.f / 4000.f))
 
 // this is the value of both cos 45 and sin 45 = 1/sqrt(2)
 #define INVSQRT2 0.707106781f

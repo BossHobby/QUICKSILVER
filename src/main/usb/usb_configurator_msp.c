@@ -8,7 +8,7 @@
 #include "project.h"
 #include "util.h"
 
-#if defined(F4)
+#if defined(STM32F4)
 
 #define MSP_API_VERSION 1 //out message
 #define MSP_FC_VARIANT 2  //out message

@@ -2,6 +2,6 @@
 
 #include "defines.h"
 
-#ifdef F4
+#ifdef STM32F4
 #include "stm32f4xx.h"
 #endif

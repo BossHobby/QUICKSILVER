@@ -7,19 +7,19 @@
 
 #include "target.h"
 
-#ifdef F4
+#ifdef STM32F4
 
 #define ENABLE_SMART_AUDIO
 #define ENABLE_TRAMP
 
-#ifdef F411
+#ifdef STM32F411
 #define SYS_CLOCK_FREQ_HZ 84000000
 #define PWM_CLOCK_FREQ_HZ 84000000
 #define TICK_CLOCK_FREQ_HZ 10500000
 #define LOOPTIME LOOPTIME_4K
 #endif
 
-#ifdef F405
+#ifdef STM32F405
 #define SYS_CLOCK_FREQ_HZ 168000000
 #define PWM_CLOCK_FREQ_HZ 84000000
 #define TICK_CLOCK_FREQ_HZ 21000000
@@ -32,8 +32,8 @@
 
 #endif
 
-#if defined(F411) && defined(F405)
-#error "multiple chip types (F411, F405) defined!"
+#if defined(STM32F411) && defined(STM32F405)
+#error "multiple chip types (STM32F411, STM32F405) defined!"
 #endif
 
 #endif

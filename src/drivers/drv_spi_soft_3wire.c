@@ -74,7 +74,7 @@ void spi_sendbyte(int data) {
     } else {
       MOSILOW;
     }
-#ifdef F4
+#ifdef STM32F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");
@@ -85,7 +85,7 @@ void spi_sendbyte(int data) {
     __asm("NOP");
 #endif
     SCKHIGH;
-#ifdef F4
+#ifdef STM32F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");
@@ -103,7 +103,7 @@ void spi_sendbyte(int data) {
     __asm("NOP");
 #endif
     SCKLOW;
-#ifdef F4
+#ifdef STM32F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");
@@ -120,7 +120,7 @@ int spi_recvbyte(void) {
   int recv = 0;
 
   for (int i = 7; i >= 0; i--) {
-#ifdef F4
+#ifdef STM32F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");
@@ -130,7 +130,7 @@ int spi_recvbyte(void) {
     __asm("NOP");
 #endif
     SCKHIGH;
-#ifdef F4
+#ifdef STM32F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");
@@ -149,7 +149,7 @@ int spi_recvbyte(void) {
     recv = recv | ((SPI_MOSI_PORT->IDR & (int)SPI_MOSI_PIN) ? 1 : 0);
 
     SCKLOW;
-#ifdef F4
+#ifdef STM32F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");

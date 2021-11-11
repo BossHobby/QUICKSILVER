@@ -12,7 +12,7 @@
 // Will init gpio pins for uart inverters once on every boot, but will only toggle the inverter on if hard defined INVERT_UART
 // Universal serial will overwrite inverter pin state only if INVERT_UART
 void usart_invert(void) {
-#if defined(F4) && (defined(USART1_INVERTER_PIN) || defined(USART2_INVERTER_PIN) || defined(USART3_INVERTER_PIN) || defined(USART4_INVERTER_PIN) || defined(USART5_INVERTER_PIN) || defined(USART6_INVERTER_PIN))
+#if defined(STM32F4) && (defined(USART1_INVERTER_PIN) || defined(USART2_INVERTER_PIN) || defined(USART3_INVERTER_PIN) || defined(USART4_INVERTER_PIN) || defined(USART5_INVERTER_PIN) || defined(USART6_INVERTER_PIN))
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
@@ -139,7 +139,7 @@ void serial_rx_init(rx_serial_protocol_t proto) {
 
   //If the board supports inversion & inversion is not hard defined, prepare it.
 #if !defined(INVERT_UART)
-#if defined(F4) && (defined(USART1_INVERTER_PIN) || defined(USART2_INVERTER_PIN) || defined(USART3_INVERTER_PIN) || defined(USART4_INVERTER_PIN) || defined(USART5_INVERTER_PIN) || defined(USART6_INVERTER_PIN))
+#if defined(STM32F4) && (defined(USART1_INVERTER_PIN) || defined(USART2_INVERTER_PIN) || defined(USART3_INVERTER_PIN) || defined(USART4_INVERTER_PIN) || defined(USART5_INVERTER_PIN) || defined(USART6_INVERTER_PIN))
 
   switch (usart_port_defs[profile.serial.rx].channel_index) {
   case 1:

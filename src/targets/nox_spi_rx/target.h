@@ -5,9 +5,6 @@
 
 #define NoxSpiRx
 
-#define F4
-#define F411
-
 //PORTS
 #define SPI_PORTS \
   SPI1_PB3PB4PB5  \

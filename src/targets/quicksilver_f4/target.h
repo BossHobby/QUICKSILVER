@@ -1,8 +1,6 @@
 #include "config.h"
 #include "config_helper.h"
 
-#define F4
-#define F405
 #define Quicksilver_F4
 
 //PORTS			//pa15 nss on spi3

@@ -8,7 +8,7 @@
 #include "drv_time.h"
 #include "project.h"
 
-#ifdef F4
+#ifdef STM32F4
 
 #if defined(ICM20602_SPI_PORT) && defined(ICM20602_NSS)
 #define MPU6XXX_SPI_PORT ICM20602_SPI_PORT

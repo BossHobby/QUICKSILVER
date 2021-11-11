@@ -92,7 +92,7 @@ int spi_sendrecvbyte(int data) {
     }
 
     data = data << 1;
-#ifdef F4
+#ifdef STM32F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");
@@ -117,7 +117,7 @@ int spi_sendzerorecvbyte() {
 
   for (int i = 7; i >= 0; i--) {
     recv = recv << 1;
-#ifdef F4
+#ifdef STM32F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");
@@ -131,7 +131,7 @@ int spi_sendzerorecvbyte() {
       recv = recv | 1;
 
     SCKLOW;
-#ifdef F4
+#ifdef STM32F4
     __asm("NOP");
     __asm("NOP");
     __asm("NOP");

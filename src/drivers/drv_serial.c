@@ -89,7 +89,7 @@ void serial_enable_isr(usart_ports_t port) {
   }
 }
 
-#ifdef F4
+#ifdef STM32F4
 
 #define USART4 UART4
 #define USART5 UART5

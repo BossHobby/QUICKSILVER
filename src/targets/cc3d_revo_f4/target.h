@@ -1,8 +1,6 @@
 #include "config.h"
 #include "config_helper.h"
 
-#define F4
-#define F405
 #define CC3D_REVO_F4
 
 //PORTS

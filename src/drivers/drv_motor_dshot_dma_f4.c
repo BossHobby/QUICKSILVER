@@ -33,7 +33,7 @@
 #include "project.h"
 #include "util.h"
 
-#ifdef F4
+#ifdef STM32F4
 typedef struct {
   __IO uint32_t MODER;   /*!< GPIO port mode register,               Address offset: 0x00      */
   __IO uint32_t OTYPER;  /*!< GPIO port output type register,        Address offset: 0x04      */

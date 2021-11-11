@@ -4,7 +4,7 @@
 
 void failloop(int val);
 
-#ifdef F4
+#ifdef STM32F4
 
 void debug_timer_init() {
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
@@ -29,7 +29,7 @@ static __INLINE uint32_t SysTick_Config2(uint32_t ticks) {
 }
 
 void timer_init() {
-#ifdef F4
+#ifdef STM32F4
   SystemCoreClockUpdate();
 
   if (SysTick_Config2(SystemCoreClock / 100)) {

@@ -2,7 +2,7 @@
 
 #include "target.h"
 
-#ifdef F4
+#ifdef STM32F4
 
 //                      spi_port, sck_pin, miso_pin, mosi_pin
 #define SPI1_PA5PA6PA7 SPI_PORT(1, PIN_A5, PIN_A6, PIN_A7)

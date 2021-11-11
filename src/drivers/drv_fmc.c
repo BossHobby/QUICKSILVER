@@ -4,7 +4,7 @@
 
 #include <stm32f4xx_hal_flash.h>
 
-#ifdef F4
+#ifdef STM32F4
 /*
 Sector 0    0x08000000 - 0x08003FFF 16 Kbytes
 Sector 1    0x08004000 - 0x08007FFF 16 Kbytes
@@ -33,7 +33,7 @@ void fmc_unlock() {
 }
 
 uint8_t fmc_erase() {
-#ifdef F4
+#ifdef STM32F4
   // clear error status
   __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR);
   FLASH_Erase_Sector(FLASH_SECTOR_3, FLASH_VOLTAGE_RANGE_3);

@@ -3,9 +3,6 @@
 
 #define FPVCycleF411
 
-#define F4
-#define F411
-
 //PORTS
 #define SPI_PORTS \
   SPI1_PA5PA6PA7  \

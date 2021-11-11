@@ -6,7 +6,7 @@ static volatile uint8_t fpv_init_done = 0;
 
 void gpio_init() {
 // clocks on to all ports
-#ifdef F4
+#ifdef STM32F4
   SET_BIT(
       RCC->AHB1ENR,
       RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOBEN | RCC_AHB1ENR_GPIOCEN |
