@@ -27,6 +27,7 @@
 #include "pid.h"
 #include "profile.h"
 #include "project.h"
+#include "reset.h"
 #include "rgb_led.h"
 #include "rx.h"
 #include "sixaxis.h"
@@ -59,6 +60,8 @@ void memory_section_init() {
 }
 
 int main() {
+  system_check_for_bootloader();
+
   //init some initial values
   //attempt 8k looptime for f405 or 4k looptime for f411
   state.looptime_autodetect = LOOPTIME;
