@@ -1,4 +1,6 @@
-#include "stdint.h"
+#pragma once
+
+#include <stdint.h>
 
 #define MPU_BIT_SLEEP 0x40
 #define MPU_BIT_H_RESET 0x80
@@ -123,15 +125,8 @@
 #define MPU_RA_FIFO_R_W 0x74
 #define MPU_RA_WHO_AM_I 0x75
 
-void spi_gyro_init(void);
+void mpu6xxx_init();
 
-void spi_reset_prescaler(void);
-
-uint8_t MPU6XXX_write(uint8_t reg, uint8_t data);
-uint8_t MPU6XXX_read(uint8_t reg);
-void MPU6XXX_read_data(uint8_t reg, int *data, int size);
-
-void MPU6XXX_dma_spi_write(uint8_t reg, uint8_t data);
-uint8_t MPU6XXX_dma_spi_read(uint8_t reg);
-void MPU6XXX_dma_read_data(uint8_t reg, int *data, int size);
-
+void mpu6xxx_write(uint8_t reg, uint8_t data);
+uint8_t mpu6xxx_read(uint8_t reg);
+void mpu6xxx_read_data(uint8_t reg, uint8_t *data, int size);

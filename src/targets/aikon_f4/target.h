@@ -27,10 +27,11 @@
 //#define FPV_PORT GPIOA
 
 //GYRO
-#define ICM20602_SPI_PORT SPI_PORT1
-#define ICM20602_NSS PIN_A4
-#define ICM20602_INT PIN_C4
-// #define DISABLE_GYRO_CHECK
+#define GYRO_TYPE ICM20602
+#define GYRO_SPI_PORT SPI_PORT1
+#define GYRO_NSS PIN_A4
+#define GYRO_INT PIN_C4
+
 #define GYRO_ID_1 0x12
 #define GYRO_ID_2 0xaf
 #define GYRO_ID_3 0xac

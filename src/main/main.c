@@ -95,11 +95,12 @@ int main(void) {
   //init the firmware things
   motor_init();
   motor_set_all(0);
-  sixaxis_init();
-  if (!sixaxis_check()) {
+
+  if (!sixaxis_init()) {
     //gyro not found
     failloop(4);
   }
+
 #ifdef ENABLE_OSD
   timer_delay_us(300000);
   osd_init();
@@ -135,7 +136,7 @@ int main(void) {
   random_seed = random_seed & 0xff;
 #endif
 
-  gyro_cal();
+  sixaxis_gyro_cal();
   rgb_init();
   blackbox_init();
   imu_init();

@@ -23,8 +23,8 @@ void gestures(void) {
 
       //skip accel calibration if pid gestures used
       if (!pid_gestures_used) {
-        gyro_cal(); // for flashing lights
-        acc_cal();
+        sixaxis_gyro_cal(); // for flashing lights
+        sixaxis_acc_cal();
       } else {
         //#ifdef ENABLE_OSD
         //extern uint8_t osd_display_phase;

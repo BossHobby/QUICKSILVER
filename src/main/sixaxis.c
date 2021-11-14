@@ -7,7 +7,7 @@
 #include "control.h"
 #include "debug.h"
 #include "drv_serial.h"
-#include "drv_spi_mpu6xxx.h"
+#include "drv_spi_gyro.h"
 #include "drv_time.h"
 #include "filter.h"
 #include "flash.h"
@@ -44,49 +44,18 @@ static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
 
 extern profile_t profile;
+extern target_info_t target_info;
 
 float gyrocal[3];
 
-void sixaxis_init(void) {
-  //Initialize SPI
-  spi_gyro_init();
-  //Initialize Gyro
-  MPU6XXX_dma_spi_write(MPU_RA_PWR_MGMT_1, MPU_BIT_H_RESET); //reg 107 soft reset  MPU_BIT_H_RESET
-  timer_delay_us(100000);
-  MPU6XXX_dma_spi_write(MPU_RA_SIGNAL_PATH_RESET, MPU_RESET_SIGNAL_PATHWAYS);
-  timer_delay_us(100000);
-  MPU6XXX_dma_spi_write(MPU_RA_PWR_MGMT_1, MPU_CLK_SEL_PLLGYROX); //reg 107 set pll clock to 1 for x axis reference
-  timer_delay_us(100000);
-  MPU6XXX_dma_spi_write(MPU_RA_USER_CTRL, MPU_BIT_I2C_IF_DIS); //reg 106 to 16 enabling spi
-  timer_delay_us(1500);
-  MPU6XXX_dma_spi_write(MPU_RA_PWR_MGMT_2, MPU_BITS_STDBY_MODE_OFF); //reg 108 disable standbye mode to 0
-  timer_delay_us(1500);
-  MPU6XXX_dma_spi_write(MPU_RA_SMPLRT_DIV, MPU_BIT_SMPLRT_DIVIDER_OFF); //reg 25 sample rate divider to 0
-  timer_delay_us(1500);
-  MPU6XXX_dma_spi_write(MPU_RA_CONFIG, MPU_BITS_DLPF_CFG_256HZ); //reg 26 dlpf to 0 - 8khz
-  timer_delay_us(1500);
-  MPU6XXX_dma_spi_write(MPU_RA_ACCEL_CONFIG, MPU_BITS_FS_16G); //reg 28 accel scale to 16G
-  timer_delay_us(1500);
-  MPU6XXX_dma_spi_write(MPU_RA_GYRO_CONFIG, MPU_BITS_FS_2000DPS); //reg 27 gyro scale to 2000deg/s
-  timer_delay_us(1500);
-  MPU6XXX_dma_spi_write(MPU_RA_INT_ENABLE, MPU_BIT_INT_STATUS_DATA); //reg 56 data ready enable interrupt to 1
-  timer_delay_us(1500);
+uint8_t sixaxis_init() {
+  const uint8_t id = spi_gyro_init();
+
+  target_info.gyro_id = id;
 
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
     filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq);
   }
-}
-
-extern target_info_t target_info;
-
-int sixaxis_check(void) {
-  // read "who am I" register
-  uint8_t id = MPU6XXX_dma_spi_read(MPU_RA_WHO_AM_I);
-
-#ifdef DEBUG
-  debug.gyroid = id;
-#endif
-  target_info.gyro_id = id;
 
 #ifndef DISABLE_GYRO_CHECK
   return (GYRO_ID_1 == id || GYRO_ID_2 == id || GYRO_ID_3 == id || GYRO_ID_4 == id);
@@ -95,13 +64,12 @@ int sixaxis_check(void) {
 #endif
 }
 
-void sixaxis_read(void) {
-  int data[14];
-  MPU6XXX_dma_read_data(59, data, 14);
+void sixaxis_read() {
+  const gyro_data_t data = spi_gyro_read();
 
-  state.accel_raw.axis[0] = -(int16_t)((data[0] << 8) + data[1]);
-  state.accel_raw.axis[1] = -(int16_t)((data[2] << 8) + data[3]);
-  state.accel_raw.axis[2] = (int16_t)((data[4] << 8) + data[5]);
+  state.accel_raw = data.accel;
+  state.gyro_temp = data.temp;
+  state.gyro_raw = data.gyro;
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CW) {
     float temp = state.accel_raw.axis[1];
@@ -141,13 +109,6 @@ void sixaxis_read(void) {
   state.accel_raw.axis[0] = (state.accel_raw.axis[0] - flash_storage.accelcal[0]) * (1 / 2048.0f);
   state.accel_raw.axis[1] = (state.accel_raw.axis[1] - flash_storage.accelcal[1]) * (1 / 2048.0f);
   state.accel_raw.axis[2] = (state.accel_raw.axis[2] - flash_storage.accelcal[2]) * (1 / 2048.0f);
-
-  state.gyro_temp = (float)((int16_t)((data[6] << 8) + data[7])) / 333.87f + 21.f;
-
-  //order
-  state.gyro_raw.axis[1] = (int16_t)((data[8] << 8) + data[9]);
-  state.gyro_raw.axis[0] = (int16_t)((data[10] << 8) + data[11]);
-  state.gyro_raw.axis[2] = (int16_t)((data[12] << 8) + data[13]);
 
   state.gyro_raw.axis[0] = state.gyro_raw.axis[0] - gyrocal[0];
   state.gyro_raw.axis[1] = state.gyro_raw.axis[1] - gyrocal[1];
@@ -202,15 +163,12 @@ void sixaxis_read(void) {
   }
 }
 
-void gyro_cal(void) {
-  int data[6];
+void sixaxis_gyro_cal() {
   float limit[3];
   unsigned long time = timer_micros();
   unsigned long timestart = time;
   unsigned long timemax = time;
   unsigned long lastlooptime = time;
-
-  float gyro[3];
 
   for (int i = 0; i < 3; i++) {
     limit[i] = gyrocal[i];
@@ -225,11 +183,7 @@ void gyro_cal(void) {
     if (looptime == 0)
       looptime = 1;
 
-    MPU6XXX_dma_read_data(67, data, 6);
-
-    gyro[1] = (int16_t)((data[0] << 8) + data[1]);
-    gyro[0] = (int16_t)((data[2] << 8) + data[3]);
-    gyro[2] = (int16_t)((data[4] << 8) + data[5]);
+    const gyro_data_t data = spi_gyro_read();
 
     static int brightness = 0;
     led_pwm(brightness);
@@ -241,18 +195,18 @@ void gyro_cal(void) {
 
     for (int i = 0; i < 3; i++) {
 
-      if (gyro[i] > limit[i])
+      if (data.gyro.axis[i] > limit[i])
         limit[i] += 0.1f; // 100 gyro bias / second change
-      if (gyro[i] < limit[i])
+      if (data.gyro.axis[i] < limit[i])
         limit[i] -= 0.1f;
 
       limitf(&limit[i], 800);
 
-      if (fabsf(gyro[i]) > 100 + fabsf(limit[i])) {
+      if (fabsf(data.gyro.axis[i]) > 100 + fabsf(limit[i])) {
         timestart = timer_micros();
         brightness = 1;
       } else {
-        lpf(&gyrocal[i], gyro[i], lpfcalc((float)looptime, 0.5 * 1e6));
+        lpf(&gyrocal[i], data.gyro.axis[i], lpfcalc((float)looptime, 0.5 * 1e6));
       }
     }
 
@@ -268,7 +222,7 @@ void gyro_cal(void) {
   }
 }
 
-void acc_cal(void) {
+void sixaxis_acc_cal() {
   flash_storage.accelcal[2] = 2048;
   for (int y = 0; y < 500; y++) {
     sixaxis_read();

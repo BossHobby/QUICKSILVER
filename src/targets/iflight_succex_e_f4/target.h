@@ -23,9 +23,10 @@
 #define BUZZER_PIN PIN_B4
 
 //GYRO
-#define MPU6XXX_SPI_PORT SPI_PORT1
-#define MPU6XXX_NSS PIN_A4
-// #define MPU6XXX_INT
+#define GYRO_TYPE MPU6XXX
+#define GYRO_SPI_PORT SPI_PORT1
+#define GYRO_NSS PIN_A4
+// #define GYRO_INT
 #define SENSOR_ROTATE_90_CCW
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x73

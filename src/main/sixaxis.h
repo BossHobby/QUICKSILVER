@@ -1,8 +1,9 @@
 #pragma once
 
-void sixaxis_init(void);
-int sixaxis_check(void);
-void sixaxis_read(void);
+#include <stdint.h>
 
-void gyro_cal(void);
-void acc_cal(void);
+uint8_t sixaxis_init();
+void sixaxis_read();
+
+void sixaxis_gyro_cal();
+void sixaxis_acc_cal();

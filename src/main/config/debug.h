@@ -5,7 +5,6 @@
 #ifdef DEBUG
 
 typedef struct debug {
-  int gyroid;
   float vbatt_comp;
   float adcfilt;
   float totaltime;

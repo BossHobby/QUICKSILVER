@@ -509,8 +509,8 @@ void usb_process_quic() {
     set_quic(buffer, size);
     break;
   case QUIC_CMD_CAL_IMU:
-    gyro_cal(); // for flashing lights
-    acc_cal();
+    sixaxis_gyro_cal(); // for flashing lights
+    sixaxis_acc_cal();
 
     flash_save();
     flash_load();

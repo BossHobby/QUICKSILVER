@@ -26,9 +26,10 @@
 #define FPV_PIN PIN_A15
 
 //GYRO
-#define MPU6XXX_SPI_PORT SPI_PORT1
-#define MPU6XXX_NSS PIN_A4
-#define MPU6XXX_INT PIN_C4
+#define GYRO_TYPE MPU6XXX
+#define GYRO_SPI_PORT SPI_PORT1
+#define GYRO_NSS PIN_A4
+#define GYRO_INT PIN_C4
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x73
 #define GYRO_ID_3 0x78
