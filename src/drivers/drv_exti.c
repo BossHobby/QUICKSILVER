@@ -2,9 +2,6 @@
 
 #include <stdbool.h>
 
-#include <stm32f4xx_ll_exti.h>
-#include <stm32f4xx_ll_system.h>
-
 #include "drv_interrupt.h"
 #include "project.h"
 
@@ -169,7 +166,7 @@ void EXTI15_10_IRQHandler() {
   handle_exit_isr();
 }
 
-#ifdef STM32F4
+#if defined(STM32F4) || defined(STM32F7)
 
 #define EXTI5_IRQn EXTI9_5_IRQn
 #define EXTI6_IRQn EXTI9_5_IRQn

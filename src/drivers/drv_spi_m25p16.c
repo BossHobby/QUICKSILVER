@@ -1,12 +1,11 @@
 #include "drv_spi_m25p16.h"
 
-#include <stm32f4xx_ll_spi.h>
 #include <string.h>
 
 #include "drv_spi.h"
 #include "project.h"
 
-#if defined(STM32F4) && defined(USE_M25P16)
+#if defined(USE_M25P16)
 
 #define SPI_PORT spi_port_defs[M25P16_SPI_PORT]
 #define NSS_PIN gpio_pin_defs[M25P16_NSS_PIN]

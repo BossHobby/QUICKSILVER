@@ -8,8 +8,6 @@
 #include "project.h"
 #include "util.h"
 
-#if defined(STM32F4)
-
 #define MSP_API_VERSION 1 //out message
 #define MSP_FC_VARIANT 2  //out message
 #define MSP_FC_VERSION 3  //out message
@@ -210,5 +208,3 @@ void usb_process_msp() {
     break;
   }
 }
-
-#endif

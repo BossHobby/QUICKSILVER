@@ -7,10 +7,6 @@
 #include "project.h"
 #include "util.h"
 
-#ifdef STM32F4
-
-#include "stm32f4xx.h"
-
 extern profile_t profile;
 uint8_t encode_buffer[USB_BUFFER_SIZE];
 uint8_t decode_buffer[USB_BUFFER_SIZE];
@@ -49,5 +45,3 @@ void usb_configurator() {
   reset_looptime();
 }
 #pragma GCC diagnostic pop
-
-#endif

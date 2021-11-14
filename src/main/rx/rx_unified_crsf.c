@@ -4,13 +4,13 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
-#include <stm32f4xx_ll_usart.h>
 #include <string.h>
 
 #include "control.h"
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "profile.h"
+#include "project.h"
 #include "rx_crsf.h"
 #include "usb_configurator.h"
 
