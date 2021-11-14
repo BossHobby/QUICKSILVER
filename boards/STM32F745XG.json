@@ -1,0 +1,34 @@
+{
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m7",
+    "extra_flags": "-DSTM32F745xx -DSTM32F745 -DSTM32F7 -DHSE_VALUE=8000000U",
+    "f_cpu": "216000000L",
+    "mcu": "stm32f745xg",
+    "product_line": "STM32F745xx",
+    "variant": "Generic_F74x"
+  },
+  "debug": {
+    "jlink_device": "stm32f745xg",
+    "openocd_target": "stm32f7x",
+    "svd_path": "STM32F7x5.svd"
+  },
+  "frameworks": [
+    "stm32cube"
+  ],
+  "name": "stm32f745xg",
+  "upload": {
+    "maximum_ram_size": 327680,
+    "maximum_size": 1048576,
+    "protocol": "serial",
+    "protocols": [
+      "blackmagic",
+      "dfu",
+      "jlink",
+      "serial",
+      "stlink"
+    ]
+  },
+  "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32f745xg.html",
+  "vendor": "Generic"
+}

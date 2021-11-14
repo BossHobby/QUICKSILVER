@@ -1,8 +1,8 @@
 /*
 *****************************************************************************
 **
-** Linker script for STM32F765VIHx Device with
-**                2048KByte FLASH, 512KByte RAM
+** Linker script for STM32F745xG Device with
+**                1024KByte FLASH, 320KByte RAM
 **
 *****************************************************************************
 */
@@ -19,10 +19,10 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 /* Memories definition */
 MEMORY
 {
-  FLASH (rx)         : ORIGIN = 0x08000000, LENGTH = 96K /* AXIM interface */
+  FLASH (rx)         : ORIGIN = 0x08000000, LENGTH = 96K
   FLASH_CONFIG (r)   : ORIGIN = 0x08018000, LENGTH = 32K
-  FLASH_CODE   (rx)  : ORIGIN = 0x08020000, LENGTH = 1920K
-  RAM    (xrw)    : ORIGIN = 0x20000000,   LENGTH = 512K
+  FLASH_CODE   (rx)  : ORIGIN = 0x08020000, LENGTH = 920K
+  RAM    (xrw)    : ORIGIN = 0x20000000,   LENGTH = 320K
 }
 
 /* Sections */

@@ -218,8 +218,10 @@ bool serial_write_bytes(usart_ports_t port, const uint8_t *data, const uint32_t 
 #endif
 
 #ifdef STM32F7
-#define USART7 UART4
-#define USART8 UART5
+#define USART4 UART4
+#define USART5 UART5
+#define USART7 UART7
+#define USART8 UART8
 #endif
 
 #define GPIO_AF_USART1 GPIO_AF7_USART1
