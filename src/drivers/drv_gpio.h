@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stm32f4xx_ll_gpio.h>
-
 #include "gpio_pins.h"
 #include "project.h"
 

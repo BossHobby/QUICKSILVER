@@ -2,10 +2,7 @@
 
 #include <string.h>
 
-#include <stm32f4xx_ll_bus.h>
-#include <stm32f4xx_ll_dma.h>
-#include <stm32f4xx_ll_spi.h>
-
+#include "project.h"
 #include "usb_configurator.h"
 
 #include "drv_interrupt.h"
@@ -13,6 +10,9 @@
 #define GPIO_AF_SPI1 GPIO_AF5_SPI1
 #define GPIO_AF_SPI2 GPIO_AF5_SPI2
 #define GPIO_AF_SPI3 GPIO_AF6_SPI3
+#define GPIO_AF_SPI4 GPIO_AF5_SPI4
+#define GPIO_AF_SPI5 GPIO_AF5_SPI5
+#define GPIO_AF_SPI6 GPIO_AF5_SPI6
 
 #define SPI_DMA(spi_prt, dma_prt, chan, rx, tx) \
   {                                             \
@@ -144,6 +144,11 @@ void spi_enable_rcc(spi_ports_t port) {
   case 3:
     LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_SPI3);
     break;
+#if defined(STM32F7)
+  case 4:
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI4);
+    break;
+#endif
   }
 }
 
@@ -236,7 +241,7 @@ uint8_t spi_transfer_byte(spi_ports_t port, uint8_t data) {
 uint8_t spi_transfer_byte_timeout(spi_ports_t port, uint8_t data, uint32_t timeout_max) {
   for (uint16_t timeout = timeout_max; LL_SPI_IsActiveFlag_TXE(PORT.channel) == RESET; timeout--) {
     if (timeout == 0) {
-      //liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
+      // liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
       liberror++;
       return 0;
     }
@@ -246,7 +251,7 @@ uint8_t spi_transfer_byte_timeout(spi_ports_t port, uint8_t data, uint32_t timeo
 
   for (uint16_t timeout = timeout_max; LL_SPI_IsActiveFlag_RXNE(PORT.channel) == RESET; timeout--) {
     if (timeout == 0) {
-      //liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
+      // liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
       liberror++;
       return 0;
     }
@@ -254,7 +259,7 @@ uint8_t spi_transfer_byte_timeout(spi_ports_t port, uint8_t data, uint32_t timeo
 
   for (uint16_t timeout = timeout_max; LL_SPI_IsActiveFlag_BSY(PORT.channel) == SET; timeout--) {
     if (timeout == 0) {
-      //liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
+      // liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
       liberror++;
       return 0;
     }
@@ -281,7 +286,7 @@ static void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uin
 
   LL_DMA_InitTypeDef DMA_InitStructure;
   DMA_InitStructure.Channel = PORT.dma.channel;
-  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)(&(PORT.channel->DR));
+  DMA_InitStructure.PeriphOrM2MSrcAddress = LL_SPI_DMA_GetRegAddr(PORT.channel);
   DMA_InitStructure.MemoryOrM2MDstAddress = (uint32_t)base_address_in;
   DMA_InitStructure.Direction = LL_DMA_DIRECTION_PERIPH_TO_MEMORY;
   DMA_InitStructure.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
@@ -334,7 +339,7 @@ uint8_t spi_dma_is_ready(spi_ports_t port) {
 bool spi_dma_wait_for_ready(spi_ports_t port) {
   for (uint16_t timeout = 0x400; spi_dma_is_ready(port) == 0; timeout--) {
     if (timeout == 0) {
-      //liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
+      // liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
       liberror++;
       return false;
     }
@@ -357,20 +362,20 @@ void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) 
   LL_SPI_EnableDMAReq_RX(PORT.channel);
 
   // if everything goes right, those are not required.
-  //DMA_ClearFlag(PORT.dma.rx_stream, PORT.dma.rx_tci_flag);
-  //DMA_ClearFlag(PORT.dma.tx_stream, PORT.dma.tx_tci_flag);
+  // DMA_ClearFlag(PORT.dma.rx_stream, PORT.dma.rx_tci_flag);
+  // DMA_ClearFlag(PORT.dma.tx_stream, PORT.dma.tx_tci_flag);
 
-  //DMA_ClearITPendingBit(PORT.dma.rx_stream, PORT.dma.rx_it_flag);
+  // DMA_ClearITPendingBit(PORT.dma.rx_stream, PORT.dma.rx_it_flag);
   LL_DMA_EnableIT_TC(PORT.dma.dma, PORT.dma.rx_stream_index);
 
   LL_DMA_EnableStream(PORT.dma.dma, PORT.dma.rx_stream_index);
   LL_DMA_EnableStream(PORT.dma.dma, PORT.dma.tx_stream_index);
 
   // now we can enable the peripheral
-  //LL_SPI_Enable(PORT.channel);
+  // LL_SPI_Enable(PORT.channel);
 }
 
-//blocking dma transmit bytes
+// blocking dma transmit bytes
 void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length) {
   if (!spi_dma_wait_for_ready(port)) {
     return;

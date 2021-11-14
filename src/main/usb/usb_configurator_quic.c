@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <stm32f4xx_ll_usart.h>
-
 #include "blackbox.h"
 #include "control.h"
 #include "data_flash.h"

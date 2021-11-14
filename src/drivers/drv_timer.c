@@ -1,8 +1,5 @@
 #include "drv_timer.h"
 
-#include <stm32f4xx_ll_bus.h>
-#include <stm32f4xx_ll_tim.h>
-
 static void timer_enable_rcc(TIM_TypeDef *tim) {
   switch ((uint32_t)tim) {
 #ifdef TIM1

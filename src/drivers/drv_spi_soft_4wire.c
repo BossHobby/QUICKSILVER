@@ -1,7 +1,5 @@
 #include "drv_spi.h"
 
-#include <stm32f4xx_ll_gpio.h>
-
 #include "project.h"
 
 #ifdef USE_SOFT_SPI_4WIRE

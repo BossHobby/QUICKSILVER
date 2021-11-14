@@ -2,8 +2,6 @@
 
 #include <stddef.h>
 
-#include <stm32f4xx_ll_usart.h>
-
 #include "drv_serial.h"
 #include "drv_serial_vtx.h"
 #include "drv_time.h"
@@ -81,7 +79,7 @@ static void serial_smart_audio_reconfigure() {
   USART_InitStructure.OverSampling = LL_USART_OVERSAMPLING_16;
   LL_USART_Init(USART.channel, &USART_InitStructure);
 
-  LL_USART_ClearFlag_RXNE(USART.channel);
+  //LL_USART_ClearFlag_RXNE(USART.channel);
   LL_USART_ClearFlag_TC(USART.channel);
 
   LL_USART_DisableIT_TXE(USART.channel);
