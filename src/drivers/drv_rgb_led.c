@@ -2,7 +2,6 @@
 
 #include "drv_rgb_led.h"
 
-#include "defines.h"
 #include "drv_spi.h"
 #include "drv_time.h"
 #include "project.h"

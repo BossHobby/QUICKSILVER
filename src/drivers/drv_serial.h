@@ -1,7 +1,7 @@
 #pragma once
 
-#include "defines.h"
 #include "drv_gpio.h"
+#include "project.h"
 
 typedef enum {
   RX_SERIAL_PROTOCOL_INVALID,

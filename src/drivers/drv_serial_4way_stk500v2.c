@@ -21,9 +21,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "defines.h"
 #include "drv_serial_4way.h"
 #include "drv_time.h"
+#include "project.h"
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 #ifdef USE_SERIAL_4WAY_SK_BOOTLOADER

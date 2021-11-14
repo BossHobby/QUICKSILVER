@@ -1,8 +1,8 @@
 #include "drv_usb.h"
 
-#include "defines.h"
 #include "drv_gpio.h"
 #include "drv_time.h"
+#include "project.h"
 
 #include "util/circular_buffer.h"
 

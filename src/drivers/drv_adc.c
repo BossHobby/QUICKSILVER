@@ -1,7 +1,6 @@
 #include "drv_adc.h"
 
 #include "debug.h"
-#include "defines.h"
 #include "drv_gpio.h"
 #include "filter.h"
 #include "profile.h"

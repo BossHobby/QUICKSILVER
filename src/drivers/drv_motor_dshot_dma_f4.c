@@ -25,7 +25,6 @@
 #include <stm32f4xx_ll_tim.h>
 
 #include "control.h"
-#include "defines.h"
 #include "drv_gpio.h"
 #include "drv_motor.h"
 #include "drv_spi.h"
@@ -373,7 +372,7 @@ void motor_set(uint8_t number, float pwm) {
 
 #endif
   if (flags.on_ground || !flags.arm_state || (flags.motortest_override && pwm < 0.002f) || ((rx_aux_on(AUX_MOTOR_TEST)) && pwm < 0.002f)) { //turn off the slow motors during turtle or motortest
-    value = 0;                                                                                                                                           // stop the motors
+    value = 0;                                                                                                                              // stop the motors
   }
 
   if (flags.failsafe && !flags.motortest_override) {

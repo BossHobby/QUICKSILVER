@@ -1,6 +1,5 @@
 #include "drv_fmc.h"
 
-#include "defines.h"
 #include "project.h"
 
 #include <stm32f4xx_hal_flash.h>

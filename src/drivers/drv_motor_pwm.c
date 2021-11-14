@@ -4,7 +4,6 @@
 #include <stm32f4xx_ll_tim.h>
 
 #include "control.h"
-#include "defines.h"
 #include "drv_gpio.h"
 #include "drv_motor.h"
 #include "drv_time.h"

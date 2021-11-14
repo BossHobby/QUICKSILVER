@@ -1,9 +1,9 @@
 #include <math.h>
 
 #include "control.h"
-#include "defines.h"
 #include "drv_rgb_led.h"
 #include "drv_time.h"
+#include "project.h"
 #include "util.h"
 
 extern int ledcommand;

@@ -2,13 +2,13 @@
 
 #include <stdio.h>
 
-#include "defines.h"
 #include "drv_spi_max7456.h"
 #include "drv_time.h"
 #include "flash.h"
 #include "osd_menu_maps.h"
 #include "osd_render.h"
 #include "profile.h"
+#include "project.h"
 #include "util.h"
 #include "vtx.h"
 

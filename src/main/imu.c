@@ -6,9 +6,9 @@
 #include <stdlib.h>
 
 #include "control.h"
-#include "defines.h"
 #include "drv_time.h"
 #include "filter.h"
+#include "project.h"
 #include "sixaxis.h"
 #include "util.h"
 #include "util/vector.h"

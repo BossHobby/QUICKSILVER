@@ -1,6 +1,6 @@
 #include "drv_gpio.h"
 
-#include "defines.h"
+#include "project.h"
 
 static volatile uint8_t fpv_init_done = 0;
 

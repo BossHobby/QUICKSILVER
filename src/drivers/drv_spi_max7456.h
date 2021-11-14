@@ -1,6 +1,6 @@
 #pragma once
 
-#include "defines.h"
+#include "project.h"
 #include "stdint.h"
 
 #define MAX7456_READ_FLAG 0x80

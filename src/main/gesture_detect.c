@@ -4,8 +4,8 @@
 #include <stdint.h>
 
 #include "control.h"
-#include "defines.h"
 #include "drv_time.h"
+#include "project.h"
 
 #define STICKMAX 0.7f
 #define STICKCENTER 0.2f

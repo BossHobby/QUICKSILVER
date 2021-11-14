@@ -23,8 +23,8 @@ SOFTWARE.
 */
 #include "drv_serial_soft.h"
 
-#include "defines.h"
 #include "drv_gpio.h"
+#include "project.h"
 
 uint32_t softserial_micros_per_bit = (uint32_t)(1000000 / 9600);
 uint32_t softserial_micros_per_bit_half = (uint32_t)(1000000 / 9600) * .5;

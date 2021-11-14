@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "defines.h"
+#include "project.h"
 #include "rx.h"
 #include "util/vector.h"
 

@@ -19,7 +19,7 @@
 */
 
 #pragma once
-#include "defines.h"
+#include "project.h"
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 #include "drv_serial_4way.h"
 #ifdef USE_SERIAL_4WAY_BLHELI_BOOTLOADER
