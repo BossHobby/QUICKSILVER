@@ -1,7 +1,5 @@
 #include "drv_gpio.h"
 
-#include <stm32f4xx_ll_bus.h>
-
 #include "project.h"
 
 static volatile uint8_t fpv_init_done = 0;
@@ -16,6 +14,15 @@ void gpio_init() {
 
   // for exit
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
+#endif
+
+#ifdef STM32F7
+  SET_BIT(
+      RCC->AHB1ENR,
+      RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOBEN | RCC_AHB1ENR_GPIOCEN |
+          RCC_AHB1ENR_GPIODEN | RCC_AHB1ENR_GPIOEEN | RCC_AHB1ENR_GPIOFEN |
+          RCC_AHB1ENR_GPIOGEN | RCC_AHB1ENR_GPIOHEN | RCC_AHB1ENR_GPIOIEN |
+          RCC_AHB1ENR_GPIOJEN | RCC_AHB1ENR_GPIOKEN);
 #endif
 
   LL_GPIO_InitTypeDef init;
@@ -112,6 +119,7 @@ uint32_t gpio_pin_read(gpio_pins_t pin) {
 
 const volatile gpio_pin_def_t gpio_pin_defs[GPIO_PINS_MAX] = {
     {},
-    GPIO_PINS};
+#include "gpio_pins.in"
+};
 
 #undef GPIO_PIN

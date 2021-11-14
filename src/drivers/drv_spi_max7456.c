@@ -2,8 +2,6 @@
 
 #include <stdio.h>
 
-#include <stm32f4xx_ll_spi.h>
-
 #include "drv_spi.h"
 #include "drv_time.h"
 #include "project.h"

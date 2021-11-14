@@ -7,9 +7,6 @@
 #include "project.h"
 #include "util.h"
 
-#include <stm32f4xx_ll_adc.h>
-#include <stm32f4xx_ll_bus.h>
-
 uint16_t adc_array[2];
 extern profile_t profile;
 
@@ -73,9 +70,7 @@ void adc_init() {
   // reference is measured a 3.3v, toy boards are powered by 2.8, so a 1.17 multiplier
   // different vccs will translate to a different adc scale factor,
   // so actual vcc is not important as long as the voltage is correct in the end
-#ifdef STM32F4
   vref_cal = (3.3f / (float)ADC_REF_VOLTAGE) * (float)(adcref_read((adcrefcal *)0x1FFF7A2A));
-#endif
 }
 
 #define ADC_CHANNELS 2

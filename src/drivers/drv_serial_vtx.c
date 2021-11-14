@@ -1,7 +1,5 @@
 #include "drv_serial_vtx.h"
 
-#include <stm32f4xx_ll_usart.h>
-
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "usb_configurator.h"
@@ -46,7 +44,7 @@ void serial_vtx_send_data(uint8_t *data, uint32_t size) {
 
   vtx_transfer_done = 0;
 
-  LL_USART_ClearFlag_RXNE(USART.channel);
+  //LL_USART_ClearFlag_RXNE(USART.channel);
   LL_USART_ClearFlag_TC(USART.channel);
 
   vtx_frame_offset = 0;

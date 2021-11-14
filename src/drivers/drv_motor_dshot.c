@@ -20,10 +20,6 @@
 
 #include <stdbool.h>
 
-#include <stm32f4xx_ll_bus.h>
-#include <stm32f4xx_ll_dma.h>
-#include <stm32f4xx_ll_tim.h>
-
 #include "control.h"
 #include "drv_gpio.h"
 #include "drv_motor.h"
@@ -33,7 +29,7 @@
 #include "project.h"
 #include "util.h"
 
-#if defined(STM32F4) && defined(USE_DSHOT_DMA_DRIVER)
+#if (defined(STM32F4) || defined(STM32F7)) && defined(USE_DSHOT_DMA_DRIVER)
 
 // Tim_1 is running at 84mhz with APB2 clock currently configured at 42MHZ
 // clock cycles per bit for a bit timing period of 1.67us

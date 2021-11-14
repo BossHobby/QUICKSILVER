@@ -3,12 +3,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <stm32f4xx_ll_spi.h>
-
 #include "drv_gpio.h"
-#include "spi_ports.h"
-
 #include "project.h"
+#include "spi_ports.h"
 
 typedef struct {
   DMA_TypeDef *dma;

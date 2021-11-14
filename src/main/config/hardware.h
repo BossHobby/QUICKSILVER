@@ -9,9 +9,6 @@
 
 #ifdef STM32F4
 
-#define ENABLE_SMART_AUDIO
-#define ENABLE_TRAMP
-
 #ifdef STM32F411
 #define SYS_CLOCK_FREQ_HZ 108000000
 #define PWM_CLOCK_FREQ_HZ 108000000
@@ -39,11 +36,24 @@
 
 #endif
 
+#ifdef STM32F7
+
+#define SYS_CLOCK_FREQ_HZ 216000000
+#define PWM_CLOCK_FREQ_HZ 84000000
+#define SPI_CLOCK_FREQ_HZ (SYS_CLOCK_FREQ_HZ / 4)
+
+#define LOOPTIME LOOPTIME_8K
+
+#endif
+
 #ifdef USE_FAST_RAM
 #define FAST_RAM __attribute__((section(".fast_ram"), aligned(4)))
 #else
 #define FAST_RAM
 #endif
+
+#define ENABLE_SMART_AUDIO
+#define ENABLE_TRAMP
 
 #ifdef BRUSHLESS_TARGET
 // dshot pin initialization & usb interface to esc

@@ -1,15 +1,12 @@
 #include "drv_spi_mpu6xxx.h"
 
 #include <stdio.h>
-#include <stm32f4xx_ll_spi.h>
 
 #include "drv_gpio.h"
 #include "drv_spi.h"
 #include "drv_spi_gyro.h"
 #include "drv_time.h"
 #include "project.h"
-
-#ifdef STM32F4
 
 #define PORT spi_port_defs[GYRO_SPI_PORT]
 
@@ -153,5 +150,3 @@ void mpu6xxx_read_data(uint8_t reg, uint8_t *data, int size) {
     data[i - 1] = buffer[i];
   }
 }
-
-#endif

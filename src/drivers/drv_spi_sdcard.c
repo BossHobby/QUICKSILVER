@@ -1,13 +1,12 @@
 #include "drv_spi_sdcard.h"
 
-#include <stm32f4xx_ll_spi.h>
 #include <string.h>
 
 #include "drv_spi.h"
 #include "drv_time.h"
 #include "project.h"
 
-#if defined(STM32F4) && defined(USE_SDCARD)
+#if defined(USE_SDCARD)
 
 #define SPI_PORT spi_port_defs[SDCARD_SPI_PORT]
 #define NSS_PIN gpio_pin_defs[SDCARD_NSS_PIN]
