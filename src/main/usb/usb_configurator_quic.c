@@ -19,8 +19,6 @@
 #include "util/cbor_helper.h"
 #include "vtx.h"
 
-#if defined(F4)
-
 #define QUIC_HEADER_LEN 4
 
 #define quic_errorf(cmd, args...) send_quic_strf(cmd, QUIC_FLAG_ERROR, args)
@@ -169,21 +167,21 @@ void get_quic(uint8_t *data, uint32_t len) {
     break;
 #ifdef ENABLE_OSD
   case QUIC_VAL_OSD_FONT: {
-    uint8_t font[54];
-    uint8_t buffer[256 * 56];
+    send_quic(QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
 
-    cbor_encoder_init(&enc, buffer, 256 * 56 + 1);
-    res = cbor_encode_uint8(&enc, &value);
-    check_cbor_error(QUIC_CMD_GET);
+    uint8_t font[54];
 
     for (uint16_t i = 0; i < 256; i++) {
       osd_read_character(i, font, 54);
 
+      cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
       res = cbor_encode_bstr(&enc, font, 54);
       check_cbor_error(QUIC_CMD_GET);
+
+      send_quic(QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
     }
 
-    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, buffer, cbor_encoder_len(&enc));
+    send_quic_header(QUIC_CMD_GET, QUIC_FLAG_STREAMING, 0);
     break;
   }
 #endif
@@ -203,7 +201,7 @@ void get_quic(uint8_t *data, uint32_t len) {
 
       cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
       res = cbor_encode_blheli_settings_t(&enc, &settings);
-      check_cbor_error(QUIC_CMD_MOTOR);
+      check_cbor_error(QUIC_CMD_GET);
 
       send_quic(QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
     }
@@ -534,4 +532,3 @@ void usb_process_quic() {
     break;
   }
 }
-#endif
