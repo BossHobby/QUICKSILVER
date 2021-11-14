@@ -256,8 +256,6 @@ void SystemClock_Config(void) {
   * @retval None
   */
 void SystemInit(void) {
-  initialiseMemorySections();
-
 /* FPU settings ------------------------------------------------------------*/
 #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
   SCB->CPACR |= ((3UL << 10 * 2) | (3UL << 11 * 2)); /* set CP10 and CP11 Full Access */
@@ -285,8 +283,7 @@ void SystemInit(void) {
 #ifdef VECT_TAB_SRAM
   SCB->VTOR = RAMDTCM_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal SRAM */
 #else
-  extern uint8_t isr_vector_table_base; /* Vector Table Relocation in Internal FLASH */
-  SCB->VTOR = (uint32_t)&isr_vector_table_base;
+  SCB->VTOR = FLASH_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal FLASH */
 #endif
 
   /* Enable I-Cache */
