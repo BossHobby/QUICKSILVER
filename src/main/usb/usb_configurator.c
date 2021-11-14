@@ -5,16 +5,12 @@
 #include "drv_usb.h"
 #include "profile.h"
 #include "project.h"
+#include "reset.h"
 #include "util.h"
 
 extern profile_t profile;
 uint8_t encode_buffer[USB_BUFFER_SIZE];
 uint8_t decode_buffer[USB_BUFFER_SIZE];
-
-void systemResetToBootloader() {
-  *((uint32_t *)0x2001FFFC) = 0xDEADBEEF; // 128KB SRAM STM32F4XX
-  NVIC_SystemReset();
-}
 
 // double promition in the following is intended
 #pragma GCC diagnostic ignored "-Wdouble-promotion"
@@ -28,10 +24,10 @@ void usb_configurator() {
   switch (magic) {
   case USB_MAGIC_REBOOT:
     //  The following bits will reboot to DFU upon receiving 'R' (which is sent by BF configurator)
-    systemResetToBootloader();
+    system_reset_to_bootloader();
     break;
   case USB_MAGIC_SOFT_REBOOT:
-    NVIC_SystemReset();
+    system_reset();
     break;
   case USB_MAGIC_MSP:
     usb_process_msp();
