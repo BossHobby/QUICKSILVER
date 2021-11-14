@@ -1,8 +1,5 @@
 #include "drv_serial.h"
 
-#include <stm32f4xx_ll_bus.h>
-#include <stm32f4xx_ll_usart.h>
-
 #include "drv_interrupt.h"
 #include "drv_time.h"
 #include "profile.h"
@@ -157,7 +154,9 @@ void serial_init(usart_ports_t port, uint32_t buadrate, bool half_duplex) {
   usart_init.OverSampling = LL_USART_OVERSAMPLING_16;
   LL_USART_Init(USART.channel, &usart_init);
 
+#if !defined(STM32F7)
   LL_USART_ClearFlag_RXNE(USART.channel);
+#endif
   LL_USART_ClearFlag_TC(USART.channel);
 
   LL_USART_DisableIT_TXE(USART.channel);
@@ -214,9 +213,14 @@ bool serial_write_bytes(usart_ports_t port, const uint8_t *data, const uint32_t 
 }
 
 #ifdef STM32F4
-
 #define USART4 UART4
 #define USART5 UART5
+#endif
+
+#ifdef STM32F7
+#define USART7 UART4
+#define USART8 UART5
+#endif
 
 #define GPIO_AF_USART1 GPIO_AF7_USART1
 #define GPIO_AF_USART2 GPIO_AF7_USART2
@@ -224,6 +228,8 @@ bool serial_write_bytes(usart_ports_t port, const uint8_t *data, const uint32_t 
 #define GPIO_AF_USART4 GPIO_AF8_UART4
 #define GPIO_AF_USART5 GPIO_AF8_UART5
 #define GPIO_AF_USART6 GPIO_AF8_USART6
+#define GPIO_AF_USART7 GPIO_AF8_UART7
+#define GPIO_AF_USART8 GPIO_AF8_UART8
 
 #define USART_PORT(chan, rx, tx)      \
   {                                   \
@@ -233,7 +239,6 @@ bool serial_write_bytes(usart_ports_t port, const uint8_t *data, const uint32_t 
       .rx_pin = rx,                   \
       .tx_pin = tx,                   \
   },
-#endif
 
 usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {
     {},

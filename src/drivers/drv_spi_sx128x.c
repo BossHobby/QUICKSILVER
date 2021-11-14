@@ -3,11 +3,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include <stm32f4xx_ll_bus.h>
-#include <stm32f4xx_ll_exti.h>
-#include <stm32f4xx_ll_spi.h>
-#include <stm32f4xx_ll_system.h>
-
 #include "drv_exti.h"
 #include "drv_spi.h"
 #include "drv_time.h"

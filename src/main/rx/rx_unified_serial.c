@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <stm32f4xx_ll_usart.h>
-
 #include "control.h"
 #include "drv_serial.h"
 #include "drv_time.h"
@@ -101,7 +99,7 @@ void RX_USART_ISR() {
 
   if (LL_USART_IsActiveFlag_RXNE(USART.channel)) {
     rx_buffer[rx_frame_position++] = LL_USART_ReceiveData8(USART.channel);
-    LL_USART_ClearFlag_RXNE(USART.channel);
+    //LL_USART_ClearFlag_RXNE(USART.channel);
 
     if (rx_frame_position >= expected_frame_length && frame_status == FRAME_IDLE) {
       frame_status = FRAME_RX;

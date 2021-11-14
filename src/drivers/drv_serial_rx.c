@@ -1,7 +1,5 @@
 #include "drv_serial.h"
 
-#include <stm32f4xx_ll_usart.h>
-
 #include "drv_time.h"
 #include "profile.h"
 

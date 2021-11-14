@@ -1,12 +1,10 @@
 #include "drv_spi_cc2500.h"
 
-#include <stm32f4xx_ll_spi.h>
-
 #include "drv_spi.h"
 #include "drv_time.h"
 #include "project.h"
 
-#if defined(STM32F4) && defined(USE_CC2500)
+#if defined(USE_CC2500)
 
 #define PORT spi_port_defs[CC2500_SPI_PORT]
 

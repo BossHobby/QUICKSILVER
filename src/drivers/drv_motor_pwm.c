@@ -1,8 +1,5 @@
 #include <math.h>
 
-#include <stm32f4xx_ll_bus.h>
-#include <stm32f4xx_ll_tim.h>
-
 #include "control.h"
 #include "drv_gpio.h"
 #include "drv_motor.h"
