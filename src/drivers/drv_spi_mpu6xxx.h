@@ -129,4 +129,4 @@ void mpu6xxx_init();
 
 void mpu6xxx_write(uint8_t reg, uint8_t data);
 uint8_t mpu6xxx_read(uint8_t reg);
-void mpu6xxx_read_data(uint8_t reg, uint8_t *data, int size);
+void mpu6xxx_read_data(uint8_t reg, uint8_t *data, uint32_t size);
