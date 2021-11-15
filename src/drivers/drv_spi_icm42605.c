@@ -1,6 +1,4 @@
-#include "drv_spi_mpu6xxx.h"
-
-#include <stdio.h>
+#include "drv_spi_icm42605.h"
 
 #include "drv_gpio.h"
 #include "drv_spi.h"
@@ -10,7 +8,7 @@
 
 #define PORT spi_port_defs[GYRO_SPI_PORT]
 
-static void mpu6xxx_reinit_slow() {
+static void icm42605_reinit_slow() {
   spi_dma_wait_for_ready(GYRO_SPI_PORT);
   LL_SPI_Disable(PORT.channel);
 
@@ -23,23 +21,7 @@ static void mpu6xxx_reinit_slow() {
   spi_init.ClockPolarity = LL_SPI_POLARITY_HIGH;
   spi_init.ClockPhase = LL_SPI_PHASE_2EDGE;
   spi_init.NSS = LL_SPI_NSS_SOFT;
-
-  switch (GYRO_TYPE) {
-  case ICM20601:
-  case ICM20608:
-    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(5.25));
-    break;
-
-  case ICM20602:
-    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(10.5));
-    break;
-
-  case MPU6XXX:
-  default:
-    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(0.5));
-    break;
-  }
-
+  spi_init.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV64;
   spi_init.BitOrder = LL_SPI_MSB_FIRST;
   spi_init.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
   spi_init.CRCPoly = 7;
@@ -48,7 +30,7 @@ static void mpu6xxx_reinit_slow() {
   LL_SPI_Enable(PORT.channel);
 }
 
-static void mpu6xxx_reinit_fast() {
+static void icm42605_reinit_fast(void) {
   spi_dma_wait_for_ready(GYRO_SPI_PORT);
   LL_SPI_Disable(PORT.channel);
 
@@ -61,23 +43,7 @@ static void mpu6xxx_reinit_fast() {
   spi_init.ClockPolarity = LL_SPI_POLARITY_HIGH;
   spi_init.ClockPhase = LL_SPI_PHASE_2EDGE;
   spi_init.NSS = LL_SPI_NSS_SOFT;
-
-  switch (GYRO_TYPE) {
-  case ICM20601:
-  case ICM20608:
-    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(5.25));
-    break;
-
-  case ICM20602:
-    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(10.5));
-    break;
-
-  case MPU6XXX:
-  default:
-    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(21));
-    break;
-  }
-
+  spi_init.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV4;
   spi_init.BitOrder = LL_SPI_MSB_FIRST;
   spi_init.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
   spi_init.CRCPoly = 7;
@@ -86,8 +52,7 @@ static void mpu6xxx_reinit_fast() {
   LL_SPI_Enable(PORT.channel);
 }
 
-//  Initialize SPI Connection to Gyro
-void mpu6xxx_init() {
+void icm42605_init() {
 
   spi_init_pins(GYRO_SPI_PORT, GYRO_NSS);
 
@@ -103,7 +68,7 @@ void mpu6xxx_init() {
 
   spi_enable_rcc(GYRO_SPI_PORT);
 
-  mpu6xxx_reinit_slow();
+  icm42605_reinit_slow();
 
   // Dummy read to clear receive buffer
   while (LL_SPI_IsActiveFlag_TXE(PORT.channel) == RESET)
@@ -113,9 +78,8 @@ void mpu6xxx_init() {
   spi_dma_init(GYRO_SPI_PORT);
 }
 
-// blocking dma read of a single register
-uint8_t mpu6xxx_read(uint8_t reg) {
-  mpu6xxx_reinit_slow();
+uint8_t icm42605_read(uint8_t reg) {
+  icm42605_reinit_slow();
 
   uint8_t buffer[2] = {reg | 0x80, 0x00};
 
@@ -126,9 +90,8 @@ uint8_t mpu6xxx_read(uint8_t reg) {
   return buffer[1];
 }
 
-// blocking dma write of a single register
-void mpu6xxx_write(uint8_t reg, uint8_t data) {
-  mpu6xxx_reinit_slow();
+void icm42605_write(uint8_t reg, uint8_t data) {
+  icm42605_reinit_slow();
 
   uint8_t buffer[2] = {reg, data};
 
@@ -137,8 +100,8 @@ void mpu6xxx_write(uint8_t reg, uint8_t data) {
   spi_csn_disable(GYRO_NSS);
 }
 
-void mpu6xxx_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
-  mpu6xxx_reinit_fast();
+void icm42605_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
+  icm42605_reinit_fast();
 
   uint8_t buffer[size + 1];
 

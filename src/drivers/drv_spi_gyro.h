@@ -7,6 +7,7 @@ typedef enum {
   ICM20601,
   ICM20608,
   ICM20602,
+  ICM42605,
 } gyro_types_t;
 
 typedef struct {
