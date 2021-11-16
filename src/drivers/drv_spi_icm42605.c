@@ -52,7 +52,7 @@ static void icm42605_reinit_fast(void) {
   LL_SPI_Enable(PORT.channel);
 }
 
-void icm42605_init() {
+static void icm42605_init() {
 
   spi_init_pins(GYRO_SPI_PORT, GYRO_NSS);
 
@@ -76,6 +76,33 @@ void icm42605_init() {
   LL_SPI_ReceiveData8(PORT.channel);
 
   spi_dma_init(GYRO_SPI_PORT);
+}
+
+uint8_t icm42605_configure() {
+  icm42605_init();
+
+  icm42605_write(ICM42605_PWR_MGMT0, 0x00); // reset
+  time_delay_ms(150);
+
+  icm42605_write(ICM42605_PWR_MGMT0, ICM42605_PWR_MGMT0_ACCEL_MODE_LN | ICM42605_PWR_MGMT0_GYRO_MODE_LN | ICM42605_PWR_MGMT0_TEMP_DISABLE_OFF);
+  time_delay_ms(15);
+
+  icm42605_write(ICM42605_GYRO_CONFIG0, ICM42605_GFS_2000DPS | ICM42605_GODR_8000Hz);
+  time_delay_ms(15);
+
+  icm42605_write(ICM42605_ACCEL_CONFIG0, ICM42605_AFS_16G | ICM42605_AODR_8000Hz);
+  time_delay_ms(15);
+
+  icm42605_write(ICM42605_GYRO_ACCEL_CONFIG0, (14 << 4) | 14); // low latency
+  time_delay_ms(15);
+
+  icm42605_write(ICM42605_INT_CONFIG, ICM42605_INT1_MODE_PULSED | ICM42605_INT1_DRIVE_CIRCUIT_PP | ICM42605_INT1_POLARITY_ACTIVE_HIGH);
+  time_delay_ms(15);
+
+  icm42605_write(ICM42605_INT_CONFIG0, ICM42605_UI_DRDY_INT_CLEAR_ON_SBR);
+  time_delay_ms(100);
+
+  return icm42605_read(ICM42605_WHO_AM_I);
 }
 
 uint8_t icm42605_read(uint8_t reg) {
