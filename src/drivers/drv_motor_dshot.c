@@ -322,7 +322,11 @@ static void dshot_dma_start() {
 }
 
 void motor_wait_for_ready() {
+#ifdef STM32F4
   while (dshot_dma_phase != 0 || spi_dma_is_ready(SPI_PORT1) == 0)
+#else
+  while (dshot_dma_phase != 0)
+#endif
     __WFI();
 }
 
