@@ -325,7 +325,7 @@ static void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, u
 }
 
 uint8_t spi_dma_is_ready(spi_ports_t port) {
-#ifdef BRUSHLESS_TARGET
+#if defined(BRUSHLESS_TARGET) && defined(STM32F4)
   if (port == SPI_PORT1) {
     extern volatile int dshot_dma_phase;
     if (dshot_dma_phase != 0) {
