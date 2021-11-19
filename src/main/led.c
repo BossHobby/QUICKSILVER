@@ -1,10 +1,17 @@
 #include "led.h"
 
+#include "control.h"
 #include "drv_gpio.h"
 #include "drv_time.h"
 #include "project.h"
+#include "util.h"
 
 #define LEDALL 15
+
+// for led flash on gestures
+int ledcommand = 0;
+int ledblink = 0;
+unsigned long ledcommandtime = 0;
 
 void ledon(uint8_t val) {
 #if (LED_NUMBER > 0)
@@ -94,46 +101,18 @@ void ledflash(uint32_t period, int duty) {
 #endif
 }
 
-int ledlevel = 0;
-
-uint8_t led_pwm2(uint8_t pwmval) {
-  static int loopcount = 0;
-
-  ledlevel = pwmval;
-  loopcount++;
-  loopcount &= 0xF;
-  if (ledlevel > loopcount) {
-    ledon(255);
-  } else {
-    ledoff(255);
-  }
-  return ledlevel;
-}
-
-int ledlevel2 = 0;
-unsigned long lastledtime;
-float lastledbrightness = 0;
-
-//#define DEBUG
-
-#ifdef DEBUG
-int debug_led;
-#endif
-
-#include "util.h"
-
 // delta- sigma first order modulator.
 uint8_t led_pwm(uint8_t pwmval) {
+  static float lastledbrightness = 0;
+  static unsigned long lastledtime = 0;
   static float ds_integrator = 0;
+
   unsigned int time = timer_micros();
   unsigned int ledtime = time - lastledtime;
 
   lastledtime = time;
 
   float desiredbrightness = pwmval * (1.0f / 15.0f);
-
-  //	limitf( &lastledbrightness, 2);
-
   limitf(&ds_integrator, 2);
 
   ds_integrator += (desiredbrightness - lastledbrightness) * ledtime * (1.0f / LOOPTIME);
@@ -141,17 +120,62 @@ uint8_t led_pwm(uint8_t pwmval) {
   if (ds_integrator > 0.49f) {
     ledon(255);
     lastledbrightness = 1.0f;
-#ifdef DEBUG
-    debug_led <<= 1;
-    debug_led |= 1;
-#endif
   } else {
     ledoff(255);
     lastledbrightness = 0;
-#ifdef DEBUG
-    debug_led <<= 1;
-    debug_led &= 0xFFFFFFFE;
-#endif
   }
   return 0;
+}
+
+void led_update() {
+  if (LED_NUMBER <= 0) {
+    return;
+  }
+
+  // led flash logic
+  if (flags.lowbatt) {
+    ledflash(500000, 8);
+    return;
+  }
+
+  if (flags.rx_mode == RXMODE_BIND) { // bind mode
+    ledflash(100000, 12);
+    return;
+  }
+
+  if (flags.failsafe) {
+    ledflash(500000, 15);
+    return;
+  }
+
+  if (ledcommand) {
+    if (!ledcommandtime)
+      ledcommandtime = timer_micros();
+    if (timer_micros() - ledcommandtime > 500000) {
+      ledcommand = 0;
+      ledcommandtime = 0;
+    }
+    ledflash(100000, 8);
+    return;
+  }
+
+  if (ledblink) {
+    unsigned long time = timer_micros();
+    if (!ledcommandtime) {
+      ledcommandtime = time;
+      ledoff(255);
+    }
+    if (time - ledcommandtime > 500000) {
+      ledblink--;
+      ledcommandtime = 0;
+    }
+    if (time - ledcommandtime > 300000) {
+      ledon(255);
+    }
+  } else { //led is normally on
+    if (LED_BRIGHTNESS != 15)
+      led_pwm(LED_BRIGHTNESS);
+    else
+      ledon(255);
+  }
 }

@@ -47,11 +47,6 @@ uint8_t looptime_warning;
 uint8_t blown_loop_counter;
 float looptime_buffer[255];
 
-// for led flash on gestures
-int ledcommand = 0;
-int ledblink = 0;
-unsigned long ledcommandtime = 0;
-
 void failloop(int val);
 
 int random_seed = 0;
@@ -217,48 +212,8 @@ int main() {
       gestures();
     }
 
-    if (LED_NUMBER > 0) {
-      // led flash logic
-      if (flags.lowbatt)
-        ledflash(500000, 8);
-      else {
-        if (flags.rx_mode == RXMODE_BIND) { // bind mode
-          ledflash(100000, 12);
-        } else { // non bind
-          if (flags.failsafe) {
-            ledflash(500000, 15);
-          } else {
-            if (ledcommand) {
-              if (!ledcommandtime)
-                ledcommandtime = timer_micros();
-              if (timer_micros() - ledcommandtime > 500000) {
-                ledcommand = 0;
-                ledcommandtime = 0;
-              }
-              ledflash(100000, 8);
-            } else if (ledblink) {
-              unsigned long time = timer_micros();
-              if (!ledcommandtime) {
-                ledcommandtime = time;
-                ledoff(255);
-              }
-              if (time - ledcommandtime > 500000) {
-                ledblink--;
-                ledcommandtime = 0;
-              }
-              if (time - ledcommandtime > 300000) {
-                ledon(255);
-              }
-            } else { //led is normally on
-              if (LED_BRIGHTNESS != 15)
-                led_pwm(LED_BRIGHTNESS);
-              else
-                ledon(255);
-            }
-          }
-        }
-      }
-    }
+    // handle led commands
+    led_update();
 
 #if (RGB_LED_NUMBER > 0)
     // RGB led control
