@@ -30,10 +30,6 @@ typedef enum {
 //will also not activate on the ground untill this threshold is passed during takeoff for safety and better staging behavior.
 #define THROTTLE_SAFETY .10f
 
-#ifdef LVC_LOWER_THROTTLE
-#define SWITCHABLE_FEATURE_2
-#endif
-
 #if defined(BUZZER_ENABLE) && !defined(BUZZER_PIN)
 #undef BUZZER_ENABLE
 #endif

@@ -20,6 +20,7 @@
 #include "usb_configurator.h"
 #include "util.h"
 #include "util/cbor_helper.h"
+#include "vbat.h"
 
 #ifndef THROTTLE_SAFETY
 #define THROTTLE_SAFETY .15f
@@ -418,62 +419,7 @@ void control(void) {
     }
 #endif
 
-#ifdef LVC_LOWER_THROTTLE
-
-#ifdef SWITCHABLE_FEATURE_2
-    static float throttle_i = 0.0f;
-    float throttle_p = 0.0f;
-    if (flash_storage.flash_feature_2 == 1) {
-      // can be made into a function
-      if (state.vbattfilt < (float)LVC_LOWER_THROTTLE_VOLTAGE_RAW)
-        throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE_RAW - state.vbattfilt) * (float)LVC_LOWER_THROTTLE_KP;
-      // can be made into a function
-      if (state.vbatt_comp < (float)LVC_LOWER_THROTTLE_VOLTAGE)
-        throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE - state.vbatt_comp) * (float)LVC_LOWER_THROTTLE_KP;
-
-      if (throttle_p > 1.0f)
-        throttle_p = 1.0f;
-
-      if (throttle_p > 0) {
-        throttle_i += throttle_p * 0.0001f; //ki
-      } else
-        throttle_i -= 0.001f; // ki on release
-
-      if (throttle_i > 0.5f)
-        throttle_i = 0.5f;
-      if (throttle_i < 0.0f)
-        throttle_i = 0.0f;
-
-      state.throttle -= throttle_p + throttle_i;
-    } else {
-      //do nothing - feature is disabled via stick gesture
-    }
-#else
-    static float throttle_i = 0.0f;
-    float throttle_p = 0.0f;
-    // can be made into a function
-    if (state.vbattfilt < (float)LVC_LOWER_THROTTLE_VOLTAGE_RAW)
-      throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE_RAW - state.vbattfilt) * (float)LVC_LOWER_THROTTLE_KP;
-    // can be made into a function
-    if (state.vbatt_comp < (float)LVC_LOWER_THROTTLE_VOLTAGE)
-      throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE - state.vbatt_comp) * (float)LVC_LOWER_THROTTLE_KP;
-
-    if (throttle_p > 1.0f)
-      throttle_p = 1.0f;
-
-    if (throttle_p > 0) {
-      throttle_i += throttle_p * 0.0001f; //ki
-    } else
-      throttle_i -= 0.001f; // ki on release
-
-    if (throttle_i > 0.5f)
-      throttle_i = 0.5f;
-    if (throttle_i < 0.0f)
-      throttle_i = 0.0f;
-
-    state.throttle -= throttle_p + throttle_i;
-#endif
-#endif
+    vbat_lvc_throttle();
 
     if (profile.motor.invert_yaw) {
       state.pidoutput.yaw = -state.pidoutput.yaw;

@@ -73,9 +73,10 @@ void gestures(void) {
       flash_storage.flash_feature_1 = !flash_storage.flash_feature_1;
       ledblink = 1 - flash_storage.flash_feature_1;
       pid_gestures_used = 1;
-#ifdef SWITCHABLE_FEATURE_2
-      flash_storage.flash_feature_2 = !flash_storage.flash_feature_2;
-      ledblink = 2 - flash_storage.flash_feature_2;
+
+#ifdef LVC_LOWER_THROTTLE
+      flash_storage.lvc_lower_throttle = !flash_storage.lvc_lower_throttle;
+      ledblink = 2 - flash_storage.lvc_lower_throttle;
       pid_gestures_used = 1;
 #endif
     }

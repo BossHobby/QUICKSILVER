@@ -2,6 +2,7 @@
 
 #include "control.h"
 #include "drv_adc.h"
+#include "flash.h"
 #include "profile.h"
 
 extern profile_t profile;
@@ -113,4 +114,36 @@ void vbat_calc() {
     flags.lowbatt = 0;
 
   state.vbatt_comp = tempvolt + (float)VDROP_FACTOR * thrfilt;
+}
+
+void vbat_lvc_throttle() {
+#ifdef LVC_LOWER_THROTTLE
+  static float throttle_i = 0.0f;
+
+  if (flash_storage.lvc_lower_throttle == 1) {
+    float throttle_p = 0.0f;
+
+    if (state.vbattfilt < (float)LVC_LOWER_THROTTLE_VOLTAGE_RAW)
+      throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE_RAW - state.vbattfilt) * (float)LVC_LOWER_THROTTLE_KP;
+
+    if (state.vbatt_comp < (float)LVC_LOWER_THROTTLE_VOLTAGE)
+      throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE - state.vbatt_comp) * (float)LVC_LOWER_THROTTLE_KP;
+
+    if (throttle_p > 1.0f)
+      throttle_p = 1.0f;
+
+    if (throttle_p > 0) {
+      throttle_i += throttle_p * 0.0001f; //ki
+    } else
+      throttle_i -= 0.001f; // ki on release
+
+    if (throttle_i > 0.5f)
+      throttle_i = 0.5f;
+    if (throttle_i < 0.0f)
+      throttle_i = 0.0f;
+
+    state.throttle -= throttle_p + throttle_i;
+  }
+
+#endif
 }
