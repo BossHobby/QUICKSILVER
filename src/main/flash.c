@@ -18,7 +18,7 @@ static float initial_pid_identifier = -10;
 flash_storage_t flash_storage;
 rx_bind_storage_t bind_storage;
 
-float flash_get_hard_coded_pid_identifier(void) {
+float flash_get_hard_coded_pid_identifier() {
   float result = 0;
 
   for (int i = 0; i < 3; i++) {
@@ -29,7 +29,7 @@ float flash_get_hard_coded_pid_identifier(void) {
   return result;
 }
 
-void flash_hard_coded_pid_identifier(void) {
+void flash_hard_coded_pid_identifier() {
   initial_pid_identifier = flash_get_hard_coded_pid_identifier();
 }
 
@@ -47,7 +47,7 @@ cbor_result_t cbor_encode_rx_bind_storage_t(cbor_value_t *enc, const rx_bind_sto
   return res;
 }
 
-void flash_save(void) {
+void flash_save() {
   fmc_unlock();
   fmc_erase();
 
@@ -102,7 +102,7 @@ void flash_save(void) {
   fmc_lock();
 }
 
-void flash_load(void) {
+void flash_load() {
   // check if saved data is present
   if (FMC_HEADER != fmc_read(0) || FMC_HEADER != fmc_read(1024)) {
     // Flash was empty, load defaults?

@@ -39,5 +39,7 @@ cbor_result_t cbor_encode_rx_bind_storage_t(cbor_value_t *enc, const rx_bind_sto
 #define PROFILE_STORAGE_OFFSET (BIND_STORAGE_OFFSET + BIND_STORAGE_SIZE)
 #define PROFILE_STORAGE_SIZE 2048
 
-void flash_save(void);
-void flash_load(void);
+void flash_save();
+void flash_load();
+
+void flash_hard_coded_pid_identifier();

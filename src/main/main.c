@@ -14,6 +14,7 @@
 #include "drv_spi.h"
 #include "drv_time.h"
 #include "filter.h"
+#include "flash.h"
 #include "gestures.h"
 #include "imu.h"
 #include "led.h"
@@ -39,15 +40,12 @@
 #include "usb_configurator.h"
 #endif
 
-// hal
-void clk_init(void);
-extern void flash_load(void);
-extern void flash_hard_coded_pid_identifier(void);
+extern profile_t profile;
+
 uint32_t lastlooptime;
 uint8_t looptime_warning;
 uint8_t blown_loop_counter;
 float looptime_buffer[255];
-extern profile_t profile;
 
 // for led flash on gestures
 int ledcommand = 0;
