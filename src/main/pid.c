@@ -15,6 +15,16 @@
 // multiplier for pids at 3V - for PID_VOLTAGE_COMPENSATION - default 1.33f from H101 code
 #define PID_VC_FACTOR 1.33f
 
+// i-term relax factor
+#ifndef RELAX_FACTOR
+#define RELAX_FACTOR 10 //  5.7 degrees/s
+#endif
+
+// i-term relax filter frequency
+#ifndef RELAX_FREQUENCY_HZ
+#define RELAX_FREQUENCY_HZ 20
+#endif
+
 // TODO: re-implement?
 //#define ANTI_WINDUP_DISABLE
 
@@ -27,13 +37,13 @@ const float outlimit[PID_SIZE] = {0.8, 0.8, 0.4};
 // limit of integral term (abs)
 const float integrallimit[PID_SIZE] = {0.8, 0.8, 0.4};
 
-#else //BRUSHED TARGET
+#else // BRUSHED TARGET
 
 // "p term setpoint weighting" 0.0 - 1.0 where 1.0 = normal pid
 #define ENABLE_SETPOINT_WEIGHTING
 //            Roll   Pitch   Yaw
-//float b[3] = { 0.97 , 0.98 , 0.95};   //BRUSHED RACE
-float b[3] = {0.93, 0.93, 0.9}; //BRUSHED FREESTYLE
+// float b[3] = { 0.97 , 0.98 , 0.95};   //BRUSHED RACE
+float b[3] = {0.93, 0.93, 0.9}; // BRUSHED FREESTYLE
 
 /// output limit
 const float outlimit[PID_SIZE] = {1.7, 1.7, 0.5};
@@ -45,9 +55,9 @@ const float integrallimit[PID_SIZE] = {1.7, 1.7, 0.5};
 
 static const float pid_scales[PID_SIZE][PID_SIZE] = {
     // roll, pitch, yaw
-    {628.0f, 628.0f, 314.0f}, //kp
-    {50.0f, 50.0f, 50.0f},    //ki
-    {120.0f, 120.0f, 120.0f}, //kd
+    {628.0f, 628.0f, 314.0f}, // kp
+    {50.0f, 50.0f, 50.0f},    // ki
+    {120.0f, 120.0f, 120.0f}, // kd
 };
 
 extern profile_t profile;
@@ -129,14 +139,14 @@ void pid_precalc() {
 // pid calculation for acro ( rate ) mode
 // input: error[x] = setpoint - gyro
 // output: state.pidoutput.axis[x] = change required from motors
-float pid(int x) {
+static void pid(uint8_t x) {
 
   // in level mode or horizon but not racemode and while on the ground...
   if ((rx_aux_on(AUX_LEVELMODE)) && (!rx_aux_on(AUX_RACEMODE)) && ((flags.on_ground) || (flags.in_air == 0))) {
     // wind down the integral error
     ierror[x] *= 0.98f;
   } else if (flags.on_ground) {
-    //in acro mode - only wind down integral when idle up is off and throttle is 0
+    // in acro mode - only wind down integral when idle up is off and throttle is 0
     ierror[x] *= 0.98f;
   }
 
@@ -150,12 +160,6 @@ float pid(int x) {
   }
 
 #ifdef I_TERM_RELAX //  Roll - Pitch  Setpoint based I term relax method
-#ifndef RELAX_FACTOR
-#define RELAX_FACTOR 10 //  5.7 degrees/s
-#endif
-#ifndef RELAX_FREQUENCY
-#define RELAX_FREQUENCY_HZ 20
-#endif
   static float avgSetpoint[2];
   if (x < 2) {
     lpf(&avgSetpoint[x], state.setpoint.axis[x], FILTERCALC(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ)); // 20 Hz filter
@@ -166,7 +170,7 @@ float pid(int x) {
   }
 #endif
 
-  //SIMPSON_RULE_INTEGRAL
+  // SIMPSON_RULE_INTEGRAL
   if (!iwindup) {
     // assuming similar time intervals
     ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + state.error.axis[x]) * current_ki[x] * state.looptime;
@@ -229,7 +233,7 @@ float pid(int x) {
     lastsetpoint[x] = state.setpoint.axis[x];
     lastrate[x] = state.gyro.axis[x];
 
-    //D term filtering
+    // D term filtering
     float dlpf = dterm;
 
     dlpf = filter_step(profile.filter.dterm[0].type, &filter[0], &filter_state[0][x], dlpf);
@@ -244,8 +248,26 @@ float pid(int x) {
 
   state.pidoutput.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x];
   limitf(&state.pidoutput.axis[x], outlimit[x]);
+}
 
-  return state.pidoutput.axis[x];
+void pid_calc() {
+  // rotates errors, originally by joelucid
+
+  // rotation around x axis:
+  ierror[1] -= ierror[2] * state.gyro.axis[0] * state.looptime;
+  ierror[2] += ierror[1] * state.gyro.axis[0] * state.looptime;
+
+  // rotation around y axis:
+  ierror[2] -= ierror[0] * state.gyro.axis[1] * state.looptime;
+  ierror[0] += ierror[2] * state.gyro.axis[1] * state.looptime;
+
+  // rotation around z axis:
+  ierror[0] -= ierror[1] * state.gyro.axis[2] * state.looptime;
+  ierror[1] += ierror[0] * state.gyro.axis[2] * state.looptime;
+
+  pid(0);
+  pid(1);
+  pid(2);
 }
 
 // below are functions used with gestures for changing pids by a percentage
@@ -338,20 +360,4 @@ int increase_pid() {
 // Same as increase_pid but... you guessed it... decrease!
 int decrease_pid() {
   return change_pid_value(0);
-}
-
-void rotateErrors() {
-#ifdef YAW_FIX
-  // rotation around x axis:
-  ierror[1] -= ierror[2] * state.gyro.axis[0] * state.looptime;
-  ierror[2] += ierror[1] * state.gyro.axis[0] * state.looptime;
-
-  // rotation around y axis:
-  ierror[2] -= ierror[0] * state.gyro.axis[1] * state.looptime;
-  ierror[0] += ierror[2] * state.gyro.axis[1] * state.looptime;
-
-  // rotation around z axis:
-  ierror[0] -= ierror[1] * state.gyro.axis[2] * state.looptime;
-  ierror[1] += ierror[0] * state.gyro.axis[2] * state.looptime;
-#endif
 }

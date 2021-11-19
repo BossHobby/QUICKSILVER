@@ -255,9 +255,6 @@
 //	#define AIRMODE_STRENGTH  1.0f
 //	#define CLIPPING_LIMIT  1.0f
 
-//**************joelucid's yaw fix
-#define YAW_FIX
-
 //**************I-term relax.  Removes roll and pitch bounce back after flips
 #define I_TERM_RELAX
 //#define RELAX_FACTOR 10

@@ -266,14 +266,7 @@ void control(void) {
     }
   }
 
-  {
-#ifdef YAW_FIX
-    rotateErrors();
-#endif
-    pid(0);
-    pid(1);
-    pid(2);
-  }
+  pid_calc();
 
   // CONDITION: switch is ARMED
   if (rx_aux_on(AUX_ARMING)) {
