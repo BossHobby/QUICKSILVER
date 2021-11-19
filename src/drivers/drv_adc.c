@@ -27,7 +27,7 @@ uint16_t adcref_read(adcrefcal *adcref_address) {
 
 float vref_cal;
 
-void adc_init(void) {
+void adc_init() {
 
   //vref_int only exists on ADC1
   //example case: pc2 additional function ADC123_IN12
@@ -160,7 +160,7 @@ float adc_read(int channel) {
 }
 #else
 // // lvc disabled
-void adc_init(void) {
+void adc_init() {
 }
 // dummy function with lvc disabled
 float adc_read(int channel) {

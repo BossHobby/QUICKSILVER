@@ -27,7 +27,7 @@ static uint8_t vtx_buffer_populated = 0;
 
 //**************************************************************** utility and tracking functions*********************************************************
 
-void osd_save_exit(void) {
+void osd_save_exit() {
   osd_select = 0;
   osd_cursor = 0;
   for (uint8_t i = 0; i < 6; i++) {
@@ -108,7 +108,7 @@ void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_m
 }
 
 //populate a vtx_status_temp_buffer with current settings only once
-void populate_vtx_buffer_once(void) {
+void populate_vtx_buffer_once() {
   if (!vtx_buffer_populated) {
     vtx_settings_copy = vtx_settings;
     vtx_buffer_populated = 1;
@@ -128,7 +128,7 @@ uint32_t get_callsign_bitmask(uint8_t input) {
   return 0;
 }
 
-void osd_encoded_adjust_callsign(void) {
+void osd_encoded_adjust_callsign() {
   if (osd_select > 20) {
     osd_select = 20;    //limit osd select variable from accumulating past 1 columns of adjustable items
     osd_menu_phase = 1; //repaint the screen again

@@ -23,7 +23,7 @@ int rxaddress[5];
 int rf_chan = 0;
 int bind_safety = 0;
 
-void bleinit(void);
+void bleinit();
 
 void writeregs(uint8_t data[], uint8_t size) {
   spi_cson();
@@ -127,7 +127,7 @@ void rx_init() {
   xn_writereg(0, XN_TO_RX); // power up, crc enabled, rx mode
 
 #ifdef RADIO_CHECK
-  void check_radio(void);
+  void check_radio();
   check_radio();
 #endif
 }
@@ -340,7 +340,7 @@ txaddr[4] = 0;
   //  xn_writereg( 0x1d, 0b00111000 ); // 64 bit payload , software ce
 }
 
-void send_beacon(void);
+void send_beacon();
 
 int loopcounter = 0;
 unsigned int ble_txtime;
@@ -507,7 +507,7 @@ float packettodata(int *data) {
   return (((data[0] & 0x0003) * 256 + data[1]) - 512) * 0.001953125;
 }
 
-static int decodepacket(void) {
+static int decodepacket() {
   if (rxdata[0] == 165) {
     int sum = 0;
     for (int i = 0; i < 14; i++) {
@@ -575,7 +575,7 @@ int timingfail = 0;
 // how many times to hop ahead if no reception
 #define HOPPING_NUMBER 4
 
-void rx_check(void) {
+void rx_check() {
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {

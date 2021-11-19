@@ -15,7 +15,7 @@ extern profile_t profile;
 
 int pid_gestures_used = 0;
 
-void gestures(void) {
+void gestures() {
   int command = gestures2();
 
   if (command != GESTURE_NONE) {

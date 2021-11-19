@@ -20,6 +20,6 @@ enum gestures_enum {
   GESTURE_OSD_LEFT
 };
 
-int gestures2(void);
+int gestures2();
 int gesture_sequence(int gesture);
-void gestures(void);
+void gestures();

@@ -25,7 +25,7 @@
 #define DMA_RX_IT_FLAG PORT.dma.rx_it_flag
 
 //  Initialize SPI Connection to max7456
-void spi_max7456_init(void) {
+void spi_max7456_init() {
 
   //*********************GPIO**************************************
   spi_init_pins(MAX7456_SPI_PORT, MAX7456_NSS);
@@ -58,7 +58,7 @@ void spi_max7456_init(void) {
 }
 
 //deinit/reinit spi for unique slave configuration
-void spi_max7556_reinit(void) {
+void spi_max7556_reinit() {
   spi_dma_wait_for_ready(MAX7456_SPI_PORT);
 
   LL_SPI_Disable(PORT.channel);
@@ -267,7 +267,7 @@ void osd_print(const char *buffer, uint8_t dmm_attribute, uint8_t x, uint8_t y) 
 }
 
 //clears off entire display    This function is a blocking use of non blocking print (not looptime friendly)
-void osd_clear(void) {
+void osd_clear() {
   for (uint8_t y = 0; y < MAXROWS; y++) { // CHAR , ATTRIBUTE , COL , ROW
     osd_print("          ", TEXT, 0, y);
     while (osd_dma_status == BUSY) {
@@ -281,7 +281,7 @@ void osd_clear(void) {
   }
 }
 
-uint8_t osd_runtime_screen_clear(void) {
+uint8_t osd_runtime_screen_clear() {
   static uint8_t clr_col = 0;
   static uint8_t clr_row = 0;
   osd_print("               ", TEXT, clr_col, clr_row);
@@ -310,7 +310,7 @@ void osd_setsystem(uint8_t sys) {
 }
 
 //function to autodetect and correct ntsc/pal mode or mismatch
-void osd_checksystem(void) {
+void osd_checksystem() {
   //check detected video system
   uint8_t x = max7456_dma_spi_read(STAT);
   if ((x & 0x01) == 0x01) { //PAL
@@ -352,7 +352,7 @@ void osd_checksystem(void) {
 }
 
 //establish initial boot-up state
-void max7456_init(void) {
+void max7456_init() {
   uint8_t x;
   max7456_dma_spi_write(VM0, 0x02); //soft reset
   timer_delay_us(200);
@@ -371,7 +371,7 @@ void max7456_init(void) {
 }
 
 //splash screen
-void osd_intro(void) {
+void osd_intro() {
   osd_print("QUICKSILVER", INVERT, 9, 5); //char, col, row
   while (osd_dma_status == BUSY) {
   };
@@ -385,7 +385,7 @@ void osd_intro(void) {
 // possibly caused by low or unstable voltage
 // MAX resets somewhere between 4.2V and 4.6V
 //  Clone chips are unknown to me but obviously below 3.3v
-void check_osd(void) {
+void check_osd() {
   uint8_t x = max7456_dma_spi_read(VM0_R);
   if (x != lastvm0) {                 // the register is not what it's supposed to be
     max7456_dma_spi_write(VM0, 0x02); // soft reset

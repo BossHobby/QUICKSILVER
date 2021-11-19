@@ -70,7 +70,7 @@ float rx_smoothing_hz(rx_protocol_t proto) {
   return RX_SMOOTHING_HZ[proto];
 }
 
-void rx_apply_expo(void) {
+void rx_apply_expo() {
   vec3_t angle_expo = {
       .roll = 0,
       .pitch = 0,
@@ -132,7 +132,7 @@ void rx_apply_expo(void) {
   }
 }
 
-void rx_apply_smoothing(void) {
+void rx_apply_smoothing() {
   for (int i = 0; i < 4; ++i) {
 #ifdef RX_SMOOTHING
     static float rx_temp[4] = {0, 0, 0, 0};
@@ -145,7 +145,7 @@ void rx_apply_smoothing(void) {
   }
 }
 
-void rx_apply_deadband(void) {
+void rx_apply_deadband() {
   for (int i = 0; i < 3; ++i) {
     if (profile.rate.sticks_deadband > 0.0f) {
       if (fabsf(state.rx_filtered.axis[i]) <= profile.rate.sticks_deadband) {
@@ -168,7 +168,7 @@ void rx_precalc() {
   rx_apply_deadband();
 }
 
-void rx_capture_stick_range(void) {
+void rx_capture_stick_range() {
   for (uint8_t i = 0; i < 4; i++) {
     if (state.rx.axis[i] > profile.receiver.stick_calibration_limits[i].max)
       profile.receiver.stick_calibration_limits[i].max = state.rx.axis[i]; //record max value during calibration to array
@@ -177,7 +177,7 @@ void rx_capture_stick_range(void) {
   }
 }
 
-void rx_reset_stick_calibration_scale(void) {
+void rx_reset_stick_calibration_scale() {
   for (uint8_t i = 0; i < 3; i++) {
     profile.receiver.stick_calibration_limits[i].min = -1;
     profile.receiver.stick_calibration_limits[i].max = 1;
@@ -186,7 +186,7 @@ void rx_reset_stick_calibration_scale(void) {
   profile.receiver.stick_calibration_limits[3].min = 0;
 }
 
-void rx_apply_temp_calibration_scale(void) {
+void rx_apply_temp_calibration_scale() {
   for (uint8_t i = 0; i < 3; i++) {
     profile.receiver.stick_calibration_limits[i].min = 1;
     profile.receiver.stick_calibration_limits[i].max = -1;
@@ -196,7 +196,7 @@ void rx_apply_temp_calibration_scale(void) {
 }
 
 static float stick_calibration_test_buffer[4][2] = {{-1, 1}, {-1, 1}, {-1, 1}, {0, 1}}; //{max, min}
-void reset_stick_calibration_test_buffer(void) {
+void reset_stick_calibration_test_buffer() {
   for (uint8_t i = 0; i < 3; i++) {
     stick_calibration_test_buffer[i][0] = -1;
     stick_calibration_test_buffer[i][1] = 1;
@@ -205,7 +205,7 @@ void reset_stick_calibration_test_buffer(void) {
   stick_calibration_test_buffer[3][1] = 1;
 }
 
-uint8_t check_for_perfect_sticks(void) {
+uint8_t check_for_perfect_sticks() {
   //first scale the sticks
   state.rx.axis[0] = mapf(state.rx.axis[0], profile.receiver.stick_calibration_limits[0].min, profile.receiver.stick_calibration_limits[0].max, -1.f, 1.f);
   state.rx.axis[1] = mapf(state.rx.axis[1], profile.receiver.stick_calibration_limits[1].min, profile.receiver.stick_calibration_limits[1].max, -1.f, 1.f);
@@ -234,7 +234,7 @@ uint8_t check_for_perfect_sticks(void) {
   return 0;
 }
 
-void rx_stick_calibration_wizard(void) {
+void rx_stick_calibration_wizard() {
   extern int ledcommand;
   static uint8_t sequence_is_running = 0;
   static uint32_t first_timestamp;
@@ -293,7 +293,7 @@ void rx_stick_calibration_wizard(void) {
   }
 }
 
-void rx_apply_stick_calibration_scale(void) {
+void rx_apply_stick_calibration_scale() {
   if (state.stick_calibration_wizard == CAPTURE_STICKS || state.stick_calibration_wizard == WAIT_FOR_CONFIRM || state.stick_calibration_wizard == CALIBRATION_CONFIRMED || state.stick_calibration_wizard == TIMEOUT) {
     rx_stick_calibration_wizard();
   } else {
@@ -304,7 +304,7 @@ void rx_apply_stick_calibration_scale(void) {
   }
 }
 
-void request_stick_calibration_wizard(void) {
+void request_stick_calibration_wizard() {
   state.stick_calibration_wizard = CAPTURE_STICKS;
 }
 

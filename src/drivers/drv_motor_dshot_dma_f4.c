@@ -468,7 +468,7 @@ void motor_beep() {
 
 #if defined(USE_DSHOT_DMA_DRIVER)
 
-void DMA2_Stream6_IRQHandler(void) {
+void DMA2_Stream6_IRQHandler() {
   LL_DMA_EnableStream(DMA2, LL_DMA_STREAM_6);
 
   LL_TIM_DisableDMAReq_CC3(TIM1);

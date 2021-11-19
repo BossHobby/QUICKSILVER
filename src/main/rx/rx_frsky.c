@@ -50,7 +50,7 @@ void rx_update_spi_fps_lqi(float expected_fps) {
   state.rx_rssi = constrainf(state.rx_rssi, 0.f, 100.f);
 }
 
-static uint8_t frsky_dectect(void) {
+static uint8_t frsky_dectect() {
   const uint8_t chipPartNum = cc2500_read_reg(CC2500_PARTNUM | CC2500_READ_BURST); //CC2500 read registers chip part num
   const uint8_t chipVersion = cc2500_read_reg(CC2500_VERSION | CC2500_READ_BURST); //CC2500 read registers chip version
   if (chipPartNum == 0x80 && chipVersion == 0x03) {
@@ -59,7 +59,7 @@ static uint8_t frsky_dectect(void) {
   return 0;
 }
 
-void handle_overflows(void) {
+void handle_overflows() {
   // fetch marc status
   uint8_t marc_state = cc2500_read_reg(CC2500_MARCSTATE) & 0x1F;
   if (marc_state == 0x11) {
@@ -154,7 +154,7 @@ static uint8_t read_packet() {
   return len;
 }
 
-static void init_tune_rx(void) {
+static void init_tune_rx() {
   cc2500_write_reg(CC2500_FOCCFG, 0x14);
 
   time_tuned_ms = timer_millis();
@@ -212,7 +212,7 @@ static uint8_t tune_rx() {
   return 0;
 }
 
-static void init_get_bind(void) {
+static void init_get_bind() {
   set_channel(0);
   cc2500_strobe(CC2500_SFRX);
   timer_delay_us(20); // waiting flush FIFO

@@ -15,7 +15,7 @@ extern profile_t profile;
 uint8_t encode_buffer[USB_BUFFER_SIZE];
 uint8_t decode_buffer[USB_BUFFER_SIZE];
 
-void systemResetToBootloader(void) {
+void systemResetToBootloader() {
   *((uint32_t *)0x2001FFFC) = 0xDEADBEEF; // 128KB SRAM STM32F4XX
   NVIC_SystemReset();
 }
@@ -23,7 +23,7 @@ void systemResetToBootloader(void) {
 // double promition in the following is intended
 #pragma GCC diagnostic ignored "-Wdouble-promotion"
 //This function will be where all usb send/receive coms live
-void usb_configurator(void) {
+void usb_configurator() {
   static uint8_t magic = 0;
   if (usb_serial_read(&magic, 1) != 1) {
     return;

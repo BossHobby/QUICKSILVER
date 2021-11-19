@@ -55,7 +55,7 @@ uint8_t serial_vtx_read_byte(uint8_t *data) {
   return 0;
 }
 
-void vtx_uart_isr(void) {
+void vtx_uart_isr() {
   if (LL_USART_IsActiveFlag_TC(USART.channel)) {
     LL_USART_ClearFlag_TC(USART.channel);
     if (vtx_frame_offset == vtx_frame_length && vtx_transfer_done == 0) {

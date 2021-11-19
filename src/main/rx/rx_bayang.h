@@ -67,8 +67,8 @@ typedef struct {
   uint8_t telemetry_enabled;
 } rx_bayang_bind_data_t;
 
-void rx_init(void);
-void rx_check(void);
+void rx_init();
+void rx_check();
 
 struct rxdebug {
   unsigned long packettime;

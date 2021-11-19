@@ -51,7 +51,7 @@ extern profile_t profile;
 
 #define USART usart_port_defs[serial_rx_port]
 
-void TX_USART_ISR(void) {
+void TX_USART_ISR() {
   //USART_ClearITPendingBit() for TC handled in drv_serial.c
 
   // buffer position 0 has already been called by the telemetry process so we start at 1
@@ -77,7 +77,7 @@ void TX_USART_ISR(void) {
   }
 }
 
-void RX_USART_ISR(void) {
+void RX_USART_ISR() {
   volatile uint32_t ticks = DWT->CYCCNT;
   static volatile uint32_t last_ticks = 0;
 
@@ -165,7 +165,7 @@ void rx_lqi_update_rssi_direct(float rssi) {
   state.rx_rssi = constrainf(rssi, 0.f, 100.f);
 }
 
-void rx_init(void) {
+void rx_init() {
   flags.rx_mode = !RXMODE_BIND; // put LEDS in normal signal status
   rx_serial_init();
 }
@@ -199,7 +199,7 @@ void rx_serial_update_frame_length(rx_serial_protocol_t proto) {
   }
 }
 
-void rx_serial_init(void) {
+void rx_serial_init() {
   //Let the uart ISR do its stuff.
   frame_status = FRAME_IDLE;
 
@@ -332,7 +332,7 @@ void rx_check() {
 //NOTE TO SELF: Put in some double-check code on the detections somehow.
 //NFE note:  how about we force hold failsafe until protocol is saved.  This acts like kind of a check on proper mapping/decoding as stick gesture must be used as a test
 // also, we ought to be able to clear noframes_failsafe in addition to satisfying the start byte check in order to hard select a radio protocol
-void rx_serial_find_protocol(void) {
+void rx_serial_find_protocol() {
   if (protocol_detect_timer == 0) {
     protocol_to_check++; //Check the next protocol down the list.
     if (protocol_to_check > RX_SERIAL_PROTOCOL_MAX) {

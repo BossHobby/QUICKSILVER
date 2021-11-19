@@ -19,7 +19,7 @@
 
 #ifdef ENABLE_OSD
 
-void osd_init(void) {
+void osd_init() {
   spi_max7456_init(); //init spi
   max7456_init();     //init the max chip
   osd_intro();        //print the splash screen
@@ -144,7 +144,7 @@ uint8_t reboot_fc_requested = 0;
 //																					UTILITY FUNCTIONS
 //************************************************************************************************************************************************************************************
 
-void osd_display_reset(void) {
+void osd_display_reset() {
   osd_wizard_phase = 0;    //reset the wizard
   osd_menu_phase = 0;      //reset menu to to main menu
   osd_display_phase = 2;   //jump to regular osd display next loop
@@ -200,7 +200,7 @@ void print_osd_callsign_adjustable(uint8_t string_element_qty, uint8_t data_elem
   osd_menu_phase++;
 }
 
-uint8_t print_osd_callsign(void) {
+uint8_t print_osd_callsign() {
   static uint8_t index = 0;
   static uint8_t callsign_length = 0;
   if (index == 0) {
@@ -227,7 +227,7 @@ uint8_t print_osd_callsign(void) {
   return 1;
 }
 
-uint8_t print_osd_flightmode(void) {
+uint8_t print_osd_flightmode() {
   const char flightmode_labels[5][21] = {{"   ACRO   "}, {"  LEVEL   "}, {" RACEMODE "}, {" HORIZON  "}, {"RM HORIZON"}};
   static uint8_t index = 0;
   uint8_t flightmode;
@@ -316,7 +316,7 @@ typedef struct {
   uint8_t aux_motor_test;
   control_flags_t flags;
 } sys_status_t;
-uint8_t print_osd_system_status(void) {
+uint8_t print_osd_system_status() {
   static uint8_t ready = 0;
   uint8_t print_stage = 2; // 0 makes the main osd function stick and non zero lets it pass on
   static sys_status_t last_sys_status;
@@ -435,7 +435,7 @@ uint8_t print_osd_system_status(void) {
   return ready;
 }
 
-void print_osd_rssi(void) {
+void print_osd_rssi() {
   static float rx_rssi_filt;
   uint8_t osd_rssi[5];
   if (flags.failsafe)
@@ -547,7 +547,7 @@ void print_osd_mixed_data(uint8_t string_element_qty, uint8_t data_element_qty, 
 //************************************************************************************************************************************************************************************
 //************************************************************************************************************************************************************************************
 
-void osd_display(void) {
+void osd_display() {
 
   //first check if video signal autodetect needs to run - run if necessary
   extern uint8_t lastsystem; //initialized at 99 for none then becomes 0 or 1 for ntsc/pal
@@ -960,10 +960,10 @@ void osd_display(void) {
       osd_enum_adjust(rssi_source_ptr, 2, rssi_source_limits);
     break;
 
-  case 33:  //stick wizard select menu
+  case 33: //stick wizard select menu
     last_display_phase = 31;
     print_osd_menu_strings(3, 0, stick_wizard_labels_1, stick_wizard_positions_1);
-    if (osd_menu_phase == 4){
+    if (osd_menu_phase == 4) {
       if (osd_select) {
         request_stick_calibration_wizard();
         osd_display_phase = 34;
@@ -973,36 +973,37 @@ void osd_display(void) {
     }
     break;
 
-  case 34:  //5 sec to calibrate
+  case 34: //5 sec to calibrate
     print_osd_menu_strings(3, 0, stick_wizard_labels_2, stick_wizard_positions_2);
-    if (osd_menu_phase == 4){
-      if (state.stick_calibration_wizard ==  WAIT_FOR_CONFIRM) {
+    if (osd_menu_phase == 4) {
+      if (state.stick_calibration_wizard == WAIT_FOR_CONFIRM) {
         osd_display_phase = 35;
         osd_menu_phase = 0;
       }
     }
     break;
 
-  case 35:  //5 sec to test / confirm calibration
+  case 35: //5 sec to test / confirm calibration
     print_osd_menu_strings(3, 0, stick_wizard_labels_3, stick_wizard_positions_3);
-    if (osd_menu_phase == 4){
-      if ((state.stick_calibration_wizard ==  CALIBRATION_SUCCESS) || (state.stick_calibration_wizard ==  TIMEOUT)) {
+    if (osd_menu_phase == 4) {
+      if ((state.stick_calibration_wizard == CALIBRATION_SUCCESS) || (state.stick_calibration_wizard == TIMEOUT)) {
         osd_display_phase = 36;
         osd_menu_phase = 0;
       }
     }
     break;
 
-  case 36:  //results of calibration
+  case 36: //results of calibration
     last_display_phase = 31;
-    if (state.stick_calibration_wizard ==  CALIBRATION_SUCCESS){
-      print_osd_menu_strings(4, 0, stick_wizard_labels_4, stick_wizard_positions_4);  //osd_menu_phase will be 4 after this
+    if (state.stick_calibration_wizard == CALIBRATION_SUCCESS) {
+      print_osd_menu_strings(4, 0, stick_wizard_labels_4, stick_wizard_positions_4); //osd_menu_phase will be 4 after this
     }
-    if (state.stick_calibration_wizard ==  TIMEOUT){
-      print_osd_menu_strings(4, 0, stick_wizard_labels_5, stick_wizard_positions_5);  //osd_menu_phase will be 4 after this
+    if (state.stick_calibration_wizard == TIMEOUT) {
+      print_osd_menu_strings(4, 0, stick_wizard_labels_5, stick_wizard_positions_5); //osd_menu_phase will be 4 after this
     }
-    if (osd_select > 0) osd_select = 0;
-    break; 
+    if (osd_select > 0)
+      osd_select = 0;
+    break;
   }
   if (osd_display_phase != 2 && rx_aux_on(AUX_ARMING))
     flags.arm_safety = 1; //final safety check to disallow arming during OSD operation

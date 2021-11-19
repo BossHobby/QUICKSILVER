@@ -192,7 +192,7 @@ static uint8_t redpine_handle_packet() {
   return ret;
 }
 
-void rx_init(void) {
+void rx_init() {
   if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
     return;
 

@@ -5,8 +5,8 @@
 
 #ifdef SOFTSPI_3WIRE
 
-extern void mosi_input(void);
-extern int spi_recvbyte(void);
+extern void mosi_input();
+extern int spi_recvbyte();
 
 void xn_writereg(int reg, int val) {
   reg = reg & 0x3F;

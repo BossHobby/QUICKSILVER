@@ -225,7 +225,7 @@ static uint8_t BL_GetACK(uint32_t Timeout) {
   return (LastACK);
 }
 
-uint8_t BL_SendCMDKeepAlive(void) {
+uint8_t BL_SendCMDKeepAlive() {
   uint8_t sCMD[] = {CMD_KEEP_ALIVE, 0};
   BL_SendBuf(sCMD, 2);
   if (BL_GetACK(1) != brERRORCOMMAND) {
@@ -818,7 +818,7 @@ uint8_t BL_ConnectEx(uint8_32_u *pDeviceInfo) {
   return true;
 }
 
-uint8_t BL_SendCMDKeepAlive(void) {
+uint8_t BL_SendCMDKeepAlive() {
   return true;
 }
 

@@ -142,7 +142,7 @@ unsigned int time_throttle_on = 0;
 int bound_for_BLE_packet;
 extern int random_seed;
 
-void bleinit(void);
+void bleinit();
 
 void writeregs(uint8_t data[], uint8_t size) {
   spi_cson();
@@ -475,7 +475,7 @@ txaddr[4] = 0;
   //  xn_writereg( 0x1d, 0b00111000 ); // 64 bit payload , software ce
 }
 
-void send_beacon(void);
+void send_beacon();
 
 int loopcounter = 0;
 unsigned int ble_txtime;
@@ -859,7 +859,7 @@ float packettodata(int *data) {
   return (((data[0] & 0x0003) * 256 + data[1]) - 512) * 0.001953125;
 }
 
-static int decodepacket(void) {
+static int decodepacket() {
   if (rxdata[0] == 165) {
     int sum = 0;
     for (int i = 0; i < 14; i++) {
@@ -921,7 +921,7 @@ int lastrxchan;
 int timingfail = 0;
 extern int bound_for_BLE_packet; //SilverVISE
 
-void rx_check(void) {
+void rx_check() {
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {

@@ -189,9 +189,9 @@ const uint8_t APBPrescTable[8] = {0, 0, 0, 0, 1, 2, 3, 4};
   * @{
   */
 
-static void SetSysClock(void);
+static void SetSysClock();
 #ifdef DATA_IN_ExtSRAM
-static void SystemInit_ExtMemCtl(void);
+static void SystemInit_ExtMemCtl();
 #endif /* DATA_IN_ExtSRAM */
 
 /**
@@ -209,13 +209,13 @@ static void SystemInit_ExtMemCtl(void);
   * @param  None
   * @retval None
   */
-void (*DfuBootJump)(void);
-void SystemInit(void) {
+void (*DfuBootJump)();
+void SystemInit() {
 
   if (*((uint32_t *)0x2001FFFC) == 0xDEADBEEF) {
     *((uint32_t *)0x2001FFFC) = 0x0;
     __set_MSP(*((uint32_t *)0x1FFF0000));
-    DfuBootJump = (void (*)(void))(*((uint32_t *)0x1FFF0004));
+    DfuBootJump = (void (*)())(*((uint32_t *)0x1FFF0004));
     DfuBootJump();
     while (1)
       ;
@@ -296,7 +296,7 @@ void SystemInit(void) {
   * @param  None
   * @retval None
   */
-void SystemCoreClockUpdate(void) {
+void SystemCoreClockUpdate() {
   uint32_t tmp = 0, pllvco = 0, pllp = 2, pllsource = 0, pllm = 2;
 
   /* Get SYSCLK source -------------------------------------------------------*/
@@ -347,7 +347,7 @@ void SystemCoreClockUpdate(void) {
   * @param  None
   * @retval None
   */
-static void SetSysClock(void) {
+static void SetSysClock() {
   /******************************************************************************/
   /*            PLL (clocked by HSE) used as System clock source                */
   /******************************************************************************/
@@ -424,7 +424,7 @@ static void SetSysClock(void) {
   * @param  None
   * @retval None
   */
-void SystemInit_ExtMemCtl(void) {
+void SystemInit_ExtMemCtl() {
   /*-- GPIOs Configuration -----------------------------------------------------*/
   /*
  +-------------------+--------------------+------------------+------------------+

@@ -88,5 +88,5 @@ void timer_delay_until(uint32_t uS) {
   }
 }
 
-void SysTick_Handler(void) {
+void SysTick_Handler() {
 }

@@ -8,7 +8,7 @@
 LL_GPIO_InitTypeDef mosi_init_struct;
 int mosi_out = 0;
 
-void spi_init(void) {
+void spi_init() {
   LL_GPIO_InitTypeDef GPIO_InitStructure;
 
   GPIO_InitStructure.Mode = LL_GPIO_MODE_OUTPUT;
@@ -35,7 +35,7 @@ void spi_init(void) {
   spi_csoff();
 }
 
-void mosi_input(void) {
+void mosi_input() {
   if (mosi_out) {
     mosi_out = 0;
     mosi_init_struct.Mode = LL_GPIO_MODE_INPUT;
@@ -43,7 +43,7 @@ void mosi_input(void) {
   }
 }
 
-void mosi_output(void) {
+void mosi_output() {
   if (!mosi_out) {
     mosi_out = 1;
     mosi_init_struct.Mode = LL_GPIO_MODE_OUTPUT;
@@ -116,7 +116,7 @@ void spi_sendbyte(int data) {
   }
 }
 
-int spi_recvbyte(void) {
+int spi_recvbyte() {
   int recv = 0;
 
   for (int i = 7; i >= 0; i--) {
@@ -164,7 +164,7 @@ int spi_recvbyte(void) {
   return recv;
 }
 
-int spi_recvbyte_unrolled(void) {
+int spi_recvbyte_unrolled() {
   uint8_t recv = 0;
 
   SCKHIGH;

@@ -39,6 +39,6 @@ extern usart_ports_t serial_smart_audio_port;
 void serial_enable_rcc(usart_ports_t port);
 void serial_enable_isr(usart_ports_t port);
 
-void serial_debug_init(void);
+void serial_debug_init();
 void serial_rx_init(rx_serial_protocol_t rx_serial_protocol);
-void serial_smart_audio_init(void);
+void serial_smart_audio_init();

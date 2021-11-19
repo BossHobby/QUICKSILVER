@@ -16,7 +16,7 @@
 #define PIN_OFF(pin) gpio_pin_reset(pin)
 #endif
 
-int gpio_init_buzzer(void) {
+int gpio_init_buzzer() {
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;

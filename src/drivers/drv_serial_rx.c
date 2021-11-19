@@ -11,7 +11,7 @@
 // Always called during boot in main.c
 // Will init gpio pins for uart inverters once on every boot, but will only toggle the inverter on if hard defined INVERT_UART
 // Universal serial will overwrite inverter pin state only if INVERT_UART
-void usart_invert(void) {
+void usart_invert() {
 #if defined(STM32F4) && (defined(USART1_INVERTER_PIN) || defined(USART2_INVERTER_PIN) || defined(USART3_INVERTER_PIN) || defined(USART4_INVERTER_PIN) || defined(USART5_INVERTER_PIN) || defined(USART6_INVERTER_PIN))
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;

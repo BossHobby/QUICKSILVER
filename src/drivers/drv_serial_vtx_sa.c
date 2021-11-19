@@ -191,7 +191,7 @@ static uint8_t serial_smart_audio_parse_packet(uint8_t cmd, uint8_t *payload, ui
   return 1;
 }
 
-void serial_smart_audio_init(void) {
+void serial_smart_audio_init() {
   serial_smart_audio_port = profile.serial.smart_audio;
 
   serial_enable_rcc(serial_smart_audio_port);

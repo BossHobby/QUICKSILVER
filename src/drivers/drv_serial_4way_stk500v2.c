@@ -110,7 +110,7 @@ static void StkSendByte(uint8_t dat) {
   }
 }
 
-static void StkSendPacketHeader(void) {
+static void StkSendPacketHeader() {
   IRQ_OFF;
   ESC_OUTPUT;
   StkSendByte(0xFF);
@@ -121,7 +121,7 @@ static void StkSendPacketHeader(void) {
   StkSendByte(++SeqNumber);
 }
 
-static void StkSendPacketFooter(void) {
+static void StkSendPacketFooter() {
   StkSendByte(ckSumOut);
   ESC_SET_HI;
   delay_us(BIT_LO_US);
@@ -129,7 +129,7 @@ static void StkSendPacketFooter(void) {
   IRQ_ON;
 }
 
-static int8_t ReadBit(void) {
+static int8_t ReadBit() {
   uint32_t btimer = micros();
   uint32_t timeout_timer = btimer + STK_BIT_TIMEOUT;
   WaitPinLo;
@@ -164,7 +164,7 @@ timeout:
   return 0;
 }
 
-static uint8_t StkReadLeader(void) {
+static uint8_t StkReadLeader() {
 
   // Reset learned timing
   HiLoTsh = BIT_HI_US + BIT_LO_US;
@@ -345,7 +345,7 @@ static uint8_t _CMD_PROGRAM_MEM_ISP(ioMem_t *pMem) {
   return StkRcvPacket((void *)StkInBuf);
 }
 
-uint8_t Stk_SignOn(void) {
+uint8_t Stk_SignOn() {
   StkCmd = CMD_SIGN_ON;
   StkSendPacketHeader();
   StkSendByte(0); // hi byte Msg len
@@ -367,7 +367,7 @@ uint8_t Stk_ConnectEx(uint8_32_u *pDeviceInfo) {
   return 0;
 }
 
-uint8_t Stk_Chip_Erase(void) {
+uint8_t Stk_Chip_Erase() {
   StkCmd = CMD_CHIP_ERASE_ISP;
   StkSendPacketHeader();
   StkSendByte(0); // high byte Msg len

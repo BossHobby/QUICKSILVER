@@ -315,7 +315,7 @@ void OTG_FS_IRQHandler() {
   usbd_poll(&udev);
 }
 
-void usb_init(void) {
+void usb_init() {
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
@@ -343,7 +343,7 @@ void usb_init(void) {
   usbd_connect(&udev, true);
 }
 
-uint8_t usb_detect(void) {
+uint8_t usb_detect() {
 #ifdef USB_DETECT_PIN
   const uint8_t usb_connect = gpio_pin_read(USB_DETECT_PIN);
   if (usb_connect != 1) {
@@ -362,7 +362,7 @@ uint32_t usb_serial_read(uint8_t *data, uint32_t len) {
   return circular_buffer_read_multi(&rx_buffer, data, len);
 }
 
-uint8_t usb_serial_read_byte(void) {
+uint8_t usb_serial_read_byte() {
   uint8_t byte = 0;
   for (uint32_t timeout = 1000; usb_serial_read(&byte, 1) != 1 && timeout; --timeout) {
     timer_delay_us(10);

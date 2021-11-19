@@ -100,20 +100,20 @@ typedef enum {
   CALIBRATION_FAILED
 } stick_calibration_wizard_t;
 
-void rx_init(void);
-void rx_serial_init(void);
+void rx_init();
+void rx_serial_init();
 
 void rx_precalc();
-void rx_check(void);
+void rx_check();
 
 float rx_expo(float x, float exp);
 float rx_smoothing_hz(rx_protocol_t proto);
 
-void rx_apply_expo(void);
-void rx_apply_stick_calibration_scale(void);
-void request_stick_calibration_wizard(void);
+void rx_apply_expo();
+void rx_apply_stick_calibration_scale();
+void request_stick_calibration_wizard();
 
 #if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_UNIFIED_SERIAL)
-void rx_spektrum_bind(void);
+void rx_spektrum_bind();
 #endif
-void usart_invert(void);
+void usart_invert();

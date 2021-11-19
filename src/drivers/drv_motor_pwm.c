@@ -142,7 +142,7 @@ void init_timer(TIM_TypeDef *TIMx, int period) {
   LL_TIM_Init(TIMx, &tim_init);
 }
 
-void motor_init(void) {
+void motor_init() {
 
 // timer clock enable
 #define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) \
@@ -183,7 +183,7 @@ void motor_init(void) {
 #undef MOTOR_PIN
 }
 
-void motor_beep(void) {
+void motor_beep() {
   if (flags.failsafe) {
     unsigned long time = timer_micros();
     if (!motorbeeptime)
@@ -230,7 +230,7 @@ void motor_set(uint8_t number, float pwmf) {
 
 #else
 // pwm pins disabled
-void motor_init(void) {
+void motor_init() {
 }
 
 void motor_set(uint8_t number, float pwm) {

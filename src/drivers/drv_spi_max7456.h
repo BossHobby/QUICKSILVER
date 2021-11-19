@@ -53,13 +53,13 @@
 #define OSDBL_R 0xEC
 #define OSDBL_W 0x6C
 
-void spi_max7456_init(void);
-void max7456_init(void);
+void spi_max7456_init();
+void max7456_init();
 
-void osd_intro(void);
-void osd_clear(void);
-uint8_t osd_runtime_screen_clear(void);
-void osd_checksystem(void);
+void osd_intro();
+void osd_clear();
+uint8_t osd_runtime_screen_clear();
+void osd_checksystem();
 void osd_print(const char *buffer, uint8_t dmm_attribute, uint8_t x, uint8_t y);
 void osd_print_data(uint8_t *buffer, uint8_t length, uint8_t dmm_attribute, uint8_t x, uint8_t y);
 void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size);

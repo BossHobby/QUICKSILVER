@@ -15,7 +15,7 @@ void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_m
 uint8_t last_cursor_array_stuffer(uint8_t cursor, uint8_t add_new);
 
 void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_t status);
-void osd_encoded_adjust_callsign(void);
+void osd_encoded_adjust_callsign();
 
 const char *get_rssi_source_status(uint8_t data_to_print);
 const char *get_aux_status(int input);
@@ -29,4 +29,4 @@ void osd_vector_adjust(vec3_t *pointer, uint8_t rows, uint8_t columns, uint8_t s
 void osd_float_adjust(float *pointer[], uint8_t rows, uint8_t columns, const float adjust_limit[rows * columns][2], float adjust_amount);
 void osd_enum_adjust(uint8_t *pointer[], uint8_t rows, const uint8_t increase_limit[]);
 void osd_mixed_data_adjust(float *pointer[], uint8_t *pointer2[], uint8_t rows, uint8_t columns, const float adjust_limit[rows * columns][2], float adjust_amount, const uint8_t reboot_request[rows * columns]);
-void populate_vtx_buffer_once(void);
+void populate_vtx_buffer_once();

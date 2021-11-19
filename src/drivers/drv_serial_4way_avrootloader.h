@@ -36,9 +36,9 @@
 #define brERRORCRC 0xC2
 #define brNONE 0xFF
 
-void BL_SendBootInit(void);
+void BL_SendBootInit();
 uint8_t BL_ConnectEx(uint8_32_u *pDeviceInfo);
-uint8_t BL_SendCMDKeepAlive(void);
+uint8_t BL_SendCMDKeepAlive();
 uint8_t BL_PageErase(ioMem_t *pMem);
 uint8_t BL_ReadEEprom(ioMem_t *pMem);
 uint8_t BL_WriteEEprom(ioMem_t *pMem);

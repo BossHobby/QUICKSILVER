@@ -120,8 +120,8 @@ usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {
 #define USART usart_port_defs[channel]
 void handle_usart_isr(usart_ports_t channel) {
 #ifdef SERIAL_RX
-  extern void RX_USART_ISR(void);
-  extern void TX_USART_ISR(void);
+  extern void RX_USART_ISR();
+  extern void TX_USART_ISR();
   if (serial_rx_port == channel) {
     if (LL_USART_IsEnabledIT_TC(USART.channel) && LL_USART_IsActiveFlag_TC(USART.channel)) {
       LL_USART_ClearFlag_TC(USART.channel);
@@ -133,7 +133,7 @@ void handle_usart_isr(usart_ports_t channel) {
   }
 #endif
 #if defined(ENABLE_SMART_AUDIO) || defined(ENABLE_TRAMP)
-  extern void vtx_uart_isr(void);
+  extern void vtx_uart_isr();
   if (serial_smart_audio_port == channel) {
     vtx_uart_isr();
     return;
@@ -144,10 +144,10 @@ void handle_usart_isr(usart_ports_t channel) {
 // we need handlers for both U_S_ART and UART.
 // simply define both for every enabled port.
 #define USART_PORT(channel, rx_pin, tx_pin) \
-  void USART##channel##_IRQHandler(void) {  \
+  void USART##channel##_IRQHandler() {      \
     handle_usart_isr(USART_IDENT(channel)); \
   }                                         \
-  void UART##channel##_IRQHandler(void) {   \
+  void UART##channel##_IRQHandler() {       \
     handle_usart_isr(USART_IDENT(channel)); \
   }
 

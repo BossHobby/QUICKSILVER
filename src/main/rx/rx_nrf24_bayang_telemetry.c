@@ -195,8 +195,8 @@ int afterskip[12];
 int packetrx;
 int packetpersecond;
 
-void send_telemetry(void);
-void nextchannel(void);
+void send_telemetry();
+void nextchannel();
 
 int loopcounter = 0;
 unsigned int send_time;
@@ -305,7 +305,7 @@ float packettodata(int *data) {
   return (((data[0] & 0x0003) * 256 + data[1]) - 512) * 0.001953125;
 }
 
-static int decodepacket(void) {
+static int decodepacket() {
   if (rxdata[0] == 165) {
     int sum = 0;
     for (int i = 0; i < 14; i++) {
@@ -369,7 +369,7 @@ int packet_period = PACKET_PERIOD;
 uint8_t rxaddr[5];
 int packets = 0;
 
-void rx_check(void) {
+void rx_check() {
   int packetreceived = checkpacket();
 
   if (packetreceived) {

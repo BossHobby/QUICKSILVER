@@ -56,7 +56,7 @@ void failloop(int val);
 
 int random_seed = 0;
 
-int main(void) {
+int main() {
   //init some initial values
   //attempt 8k looptime for f405 or 4k looptime for f411
   state.looptime_autodetect = LOOPTIME;
@@ -407,22 +407,22 @@ void failloop(int val) {
 
 void handle_fault() {
 #if defined(STM32F4) && defined(RESET_ON_FAULT)
-  extern void systemResetToBootloader(void);
+  extern void systemResetToBootloader();
   systemResetToBootloader();
 #endif
 
   failloop(5);
 }
 
-void HardFault_Handler(void) {
+void HardFault_Handler() {
   handle_fault();
 }
-void MemManage_Handler(void) {
+void MemManage_Handler() {
   handle_fault();
 }
-void BusFault_Handler(void) {
+void BusFault_Handler() {
   handle_fault();
 }
-void UsageFault_Handler(void) {
+void UsageFault_Handler() {
   handle_fault();
 }

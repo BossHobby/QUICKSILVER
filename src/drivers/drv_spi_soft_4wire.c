@@ -6,7 +6,7 @@
 
 #ifdef SOFTSPI_4WIRE
 
-void spi_init(void) {
+void spi_init() {
   // spi port inits
 
   LL_GPIO_InitTypeDef GPIO_InitStructure;

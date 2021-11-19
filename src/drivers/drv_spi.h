@@ -58,9 +58,9 @@ void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length);
 void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length);
 
 // soft spi  header file
-void spi_init(void);
-void spi_cson(void);
-void spi_csoff(void);
+void spi_init();
+void spi_cson();
+void spi_csoff();
 void spi_sendbyte(int);
 int spi_sendrecvbyte(int);
-int spi_sendzerorecvbyte(void);
+int spi_sendzerorecvbyte();

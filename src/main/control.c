@@ -99,7 +99,7 @@ CBOR_END_STRUCT_ENCODER()
 #undef ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER
 
-void control(void) {
+void control() {
 #ifdef INVERTED_ENABLE
   //not supported yet
   if (rx_aux_on(AUX_FN_INVERTED))

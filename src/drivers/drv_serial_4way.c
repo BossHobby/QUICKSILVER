@@ -115,7 +115,7 @@ uint16_t _crc_xmodem_update(uint16_t crc, uint8_t data) {
   return crc;
 }
 
-bool is_mcu_connected(void) {
+bool is_mcu_connected() {
   return (device_info.bytes[0] > 0);
 }
 
@@ -153,14 +153,14 @@ void set_esc_output(uint8_t esc) {
   gpio_pin_init(&gpio_init, esc_pins[esc]);
 }
 
-static uint8_t read_byte(void) {
+static uint8_t read_byte() {
   uint8_t byte = 0;
   while (usb_serial_read(&byte, 1) == 0)
     ;
   return byte;
 }
 
-static uint8_t read_byte_crc(void) {
+static uint8_t read_byte_crc() {
   uint8_t b = read_byte();
   crc_in.word = _crc_xmodem_update(crc_in.word, b);
   return b;

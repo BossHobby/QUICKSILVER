@@ -185,7 +185,7 @@ SECTIONS
   } >RAM
 
   /* MEMORY_bank1 section, code must be located here explicitly            */
-  /* Example: extern int foo(void) __attribute__ ((section (".mb1text"))); */
+  /* Example: extern int foo() __attribute__ ((section (".mb1text"))); */
   .memory_b1_text :
   {
     *(.mb1text)        /* .mb1text sections (code) */

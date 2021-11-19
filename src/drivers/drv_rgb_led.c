@@ -243,7 +243,7 @@ void rgb_send(int data) {
 // if dshot dma is used the routine is in that file
 #if !defined(USE_DSHOT_DMA_DRIVER) && defined(RGB_LED_DMA) && (RGB_LED_NUMBER > 0)
 
-void DMA1_Channel4_5_IRQHandler(void) {
+void DMA1_Channel4_5_IRQHandler() {
   DMA_Cmd(DMA1_Channel5, DISABLE);
   DMA_Cmd(DMA1_Channel2, DISABLE);
   DMA_Cmd(DMA1_Channel4, DISABLE);
@@ -259,7 +259,7 @@ void DMA1_Channel4_5_IRQHandler(void) {
 #else
 
 // sets all leds to a brightness
-void rgb_init(void) {
+void rgb_init() {
   // spi port inits
 
   if ((RGB_PIN == LL_GPIO_PIN_13 || RGB_PIN == LL_GPIO_PIN_14) && RGB_PORT == GPIOA) {
@@ -339,7 +339,7 @@ void rgb_send(int data) {
 #else
 // rgb led not found
 // some dummy headers just in case
-void rgb_init(void) {
+void rgb_init() {
 }
 
 void rgb_send(int data) {

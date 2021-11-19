@@ -81,7 +81,7 @@ float kr_position = 0;
 int kr_dir = 0;
 
 // knight rider style led movement
-void rgb_knight_rider(void) {
+void rgb_knight_rider() {
   if (kr_dir) {
     kr_position += KR_SPEED;
     if (kr_position > RGB_LED_NUMBER - 1)
@@ -124,7 +124,7 @@ void rgb_ledflash_twin(int color1, int color2, uint32_t period) {
 }
 
 // main function
-void rgb_led_lvc(void) {
+void rgb_led_lvc() {
   rgb_loopcount++;
   if (rgb_loopcount > DOWNSAMPLE) {
     rgb_loopcount = 0;

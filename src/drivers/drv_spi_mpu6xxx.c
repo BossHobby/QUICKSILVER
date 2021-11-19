@@ -51,7 +51,7 @@ static void mpu6xxx_reinit_slow() {
   LL_SPI_Enable(PORT.channel);
 }
 
-static void mpu6xxx_reinit_fast(void) {
+static void mpu6xxx_reinit_fast() {
   spi_dma_wait_for_ready(GYRO_SPI_PORT);
   LL_SPI_Disable(PORT.channel);
 
