@@ -165,10 +165,10 @@ void sixaxis_read() {
 
 void sixaxis_gyro_cal() {
   float limit[3];
-  unsigned long time = timer_micros();
-  unsigned long timestart = time;
-  unsigned long timemax = time;
-  unsigned long lastlooptime = time;
+  uint32_t time = timer_micros();
+  uint32_t timestart = time;
+  uint32_t timemax = time;
+  uint32_t lastlooptime = time;
 
   for (int i = 0; i < 3; i++) {
     limit[i] = gyrocal[i];
@@ -177,7 +177,7 @@ void sixaxis_gyro_cal() {
   // 2 and 15 seconds
   while (time - timestart < CAL_TIME && time - timemax < 15e6) {
 
-    unsigned long looptime;
+    uint32_t looptime;
     looptime = time - lastlooptime;
     lastlooptime = time;
     if (looptime == 0)

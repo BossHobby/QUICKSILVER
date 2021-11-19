@@ -11,7 +11,7 @@
 // for led flash on gestures
 int ledcommand = 0;
 int ledblink = 0;
-unsigned long ledcommandtime = 0;
+uint32_t ledcommandtime = 0;
 
 void ledon(uint8_t val) {
 #if (LED_NUMBER > 0)
@@ -104,11 +104,11 @@ void ledflash(uint32_t period, int duty) {
 // delta- sigma first order modulator.
 uint8_t led_pwm(uint8_t pwmval) {
   static float lastledbrightness = 0;
-  static unsigned long lastledtime = 0;
+  static uint32_t lastledtime = 0;
   static float ds_integrator = 0;
 
-  unsigned int time = timer_micros();
-  unsigned int ledtime = time - lastledtime;
+  uint32_t time = timer_micros();
+  uint32_t ledtime = time - lastledtime;
 
   lastledtime = time;
 
@@ -160,7 +160,7 @@ void led_update() {
   }
 
   if (ledblink) {
-    unsigned long time = timer_micros();
+    uint32_t time = timer_micros();
     if (!ledcommandtime) {
       ledcommandtime = time;
       ledoff(255);

@@ -18,7 +18,7 @@ uint8_t list_length = FRSKY_HOPTABLE_SIZE;
 
 static uint8_t cal_data[255][3];
 
-static unsigned long time_tuned_ms;
+static uint32_t time_tuned_ms;
 
 uint16_t frsky_extract_rssi(uint8_t rssi_raw) {
   if (rssi_raw >= 128) {

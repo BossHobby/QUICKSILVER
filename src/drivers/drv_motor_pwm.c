@@ -49,7 +49,7 @@
 
 extern profile_t profile;
 
-unsigned long motorbeeptime = 0;
+uint32_t motorbeeptime = 0;
 int beepon = 0;
 
 // default value if not defined elsewhere
@@ -185,7 +185,7 @@ void motor_init() {
 
 void motor_beep() {
   if (flags.failsafe) {
-    unsigned long time = timer_micros();
+    uint32_t time = timer_micros();
     if (!motorbeeptime)
       motorbeeptime = time;
     else if (time - motorbeeptime > MOTOR_BEEPS_TIMEOUT) {

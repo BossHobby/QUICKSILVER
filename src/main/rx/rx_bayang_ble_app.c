@@ -137,8 +137,8 @@ int rxaddress[5];
 int rf_chan = 0;
 int bind_safety = 0;
 
-unsigned int total_time_in_air = 0;
-unsigned int time_throttle_on = 0;
+uint32_t total_time_in_air = 0;
+uint32_t time_throttle_on = 0;
 int bound_for_BLE_packet;
 extern int random_seed;
 
@@ -278,7 +278,7 @@ void rx_init() {
 void btLeCrc(uint8_t *buf, uint8_t len, uint8_t *dst) {
 
   union {
-    unsigned int int32;
+    uint32_t int32;
     uint8_t u8[4];
   } myint;
 
@@ -350,7 +350,7 @@ return v;
 // from https://graphics.stanford.edu/~seander/bithacks.html#ReverseByteWith32Bits
 // reverse the bit order in a single byte
 uint8_t swapbits(uint8_t a){
-unsigned int b = a;
+uint32_t b = a;
 b = ((b * 0x0802LU & 0x22110LU) | (b * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16;
 return b;
 }
@@ -358,7 +358,7 @@ return b;
 // cortex m3 intrinsic bitswap
 uint8_t swapbits_m3(uint8_t a)
 {
-return (unsigned int) __rbit( (unsigned int) a); 
+return (uint32_t) __rbit( (uint32_t) a); 
 }
 */
 
@@ -408,7 +408,7 @@ void btLePacketEncode(uint8_t *packet, uint8_t len, uint8_t chan) {
 #define RXDEBUG
 
 #ifdef RXDEBUG
-unsigned long packettime;
+uint32_t packettime;
 int channelcount[4];
 int failcount;
 int packetrx;
@@ -478,7 +478,7 @@ txaddr[4] = 0;
 void send_beacon();
 
 int loopcounter = 0;
-unsigned int ble_txtime;
+uint32_t ble_txtime;
 int ble_send = 0;
 int oldchan = 0;
 
@@ -582,7 +582,7 @@ void send_beacon() {
   // SilverVISE - end
   int vbatt_comp_int = state.vbatt_comp * 1000.0f;
 
-  unsigned int time = timer_micros();
+  uint32_t time = timer_micros();
 
   time = time >> 20; // divide by 1024*1024, no time for accuracy here
   time = time * 10;
@@ -592,9 +592,9 @@ void send_beacon() {
   //if ( rx_aux_on(AUX_LEVELMODE) ) acro_or_level_mode = 1;
   //else acro_or_level_mode = 0;
 
-  extern unsigned int total_time_in_air;
-  extern unsigned int time_throttle_on;
-  unsigned int uptime = timer_micros();
+  extern uint32_t total_time_in_air;
+  extern uint32_t time_throttle_on;
+  uint32_t uptime = timer_micros();
 
   int TLMorPID = 0; // 0 = TLM, 1 = PID+TLM
 
@@ -608,7 +608,7 @@ void send_beacon() {
     total_time_in_air += (uptime - time_throttle_on);
     time_throttle_on = uptime;
   }
-  unsigned int total_time_in_air_time = total_time_in_air >> 20;
+  uint32_t total_time_in_air_time = total_time_in_air >> 20;
   total_time_in_air_time = total_time_in_air_time * 10;
 
   int rate_and_mode_value = (rx_aux_on(AUX_HIGH_RATES) << 1) + !!(rx_aux_on(AUX_LEVELMODE));
@@ -689,7 +689,7 @@ buf[L++] =  onground_and_bind; //binary xxxxabcd - xxxx = error code or warning,
     extern float apidki[]; //  current_PID_for_display = 11, 12
     extern float apidkd[]; //  current_PID_for_display = 13, 14
 
-    unsigned long pid_for_display = 0;
+    uint32_t pid_for_display = 0;
 
     switch (current_PID_for_display) {
     case 0:
@@ -912,11 +912,11 @@ void nextchannel() {
   xn_writereg(0x25, rfchannel[rf_chan]);
 }
 
-unsigned long lastrxtime;
-unsigned long failsafetime;
-unsigned long secondtimer;
+uint32_t lastrxtime;
+uint32_t failsafetime;
+uint32_t secondtimer;
 
-unsigned int skipchannel = 0;
+uint32_t skipchannel = 0;
 int lastrxchan;
 int timingfail = 0;
 extern int bound_for_BLE_packet; //SilverVISE
@@ -962,7 +962,7 @@ void rx_check() {
 
 #endif
 
-      unsigned long temptime = timer_micros();
+      uint32_t temptime = timer_micros();
 
       nextchannel();
 
@@ -995,7 +995,7 @@ void rx_check() {
 
   beacon_sequence();
 
-  unsigned long time = timer_micros();
+  uint32_t time = timer_micros();
 
   // sequence period 12000
   if (time - lastrxtime > (HOPPING_NUMBER * PACKET_PERIOD + 1000) && flags.rx_mode != RX_MODE_BIND) {
@@ -1011,7 +1011,7 @@ void rx_check() {
   }
 
   if (!timingfail && !ble_send && skipchannel < HOPPING_NUMBER + 1 && flags.rx_mode != RX_MODE_BIND) {
-    unsigned int temp = time - lastrxtime;
+    uint32_t temp = time - lastrxtime;
 
     if (temp > 1000 && (temp - (PACKET_OFFSET)) / ((int)PACKET_PERIOD) >= (skipchannel + 1)) {
       nextchannel();

@@ -47,21 +47,21 @@ extern vtx_settings_t vtx_settings;
 extern vtx_settings_t vtx_settings_copy;
 
 //pointers to flash variable array
-unsigned long *callsign1 = profile.osd.elements;
-unsigned long *callsign2 = (profile.osd.elements + 1);
-unsigned long *callsign3 = (profile.osd.elements + 2);
-unsigned long *callsign4 = (profile.osd.elements + 3);
-unsigned long *callsign5 = (profile.osd.elements + 4);
-unsigned long *callsign6 = (profile.osd.elements + 5);
-unsigned long *fuelgauge_volts = (profile.osd.elements + 6);
-unsigned long *filtered_volts = (profile.osd.elements + 7);
-unsigned long *gyro_degrees = (profile.osd.elements + 8);
-unsigned long *flight_mode = (profile.osd.elements + 9);
-unsigned long *rssi = (profile.osd.elements + 10);
-unsigned long *stopwatch = (profile.osd.elements + 11);
-unsigned long *arm_disarm = (profile.osd.elements + 12);
-unsigned long *osd_throttle = (profile.osd.elements + 13);
-unsigned long *osd_vtx = (profile.osd.elements + 14);
+uint32_t *callsign1 = profile.osd.elements;
+uint32_t *callsign2 = (profile.osd.elements + 1);
+uint32_t *callsign3 = (profile.osd.elements + 2);
+uint32_t *callsign4 = (profile.osd.elements + 3);
+uint32_t *callsign5 = (profile.osd.elements + 4);
+uint32_t *callsign6 = (profile.osd.elements + 5);
+uint32_t *fuelgauge_volts = (profile.osd.elements + 6);
+uint32_t *filtered_volts = (profile.osd.elements + 7);
+uint32_t *gyro_degrees = (profile.osd.elements + 8);
+uint32_t *flight_mode = (profile.osd.elements + 9);
+uint32_t *rssi = (profile.osd.elements + 10);
+uint32_t *stopwatch = (profile.osd.elements + 11);
+uint32_t *arm_disarm = (profile.osd.elements + 12);
+uint32_t *osd_throttle = (profile.osd.elements + 13);
+uint32_t *osd_vtx = (profile.osd.elements + 14);
 
 #define ACTIVE 0
 #define ATTRIBUTE 1

@@ -25,10 +25,10 @@
 
 int level_override = 0;
 
-unsigned long fliptime;
+uint32_t fliptime;
 int readytoflip = 0;
 int flipstage = STAGE_FLIP_NONE;
-unsigned int levelmodetime;
+uint32_t levelmodetime;
 int flipindex = 0;
 int flipdir = 0;
 

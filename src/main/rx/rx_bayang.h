@@ -71,7 +71,7 @@ void rx_init();
 void rx_check();
 
 struct rxdebug {
-  unsigned long packettime;
+  uint32_t packettime;
   int failcount;
   int packetpersecond;
   int channelcount[4];

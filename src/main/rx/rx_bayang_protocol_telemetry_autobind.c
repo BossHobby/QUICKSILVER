@@ -36,7 +36,7 @@ int rx_bind_load = 0;
 int rf_chan = 0;
 int bind_safety = 0;
 
-unsigned long autobindtime = 0;
+uint32_t autobindtime = 0;
 int autobind_inhibit = 0;
 int packet_period = PACKET_PERIOD;
 
@@ -172,7 +172,7 @@ void rx_init() {
 //#define RXDEBUG
 
 #ifdef RXDEBUG
-unsigned long packettime;
+uint32_t packettime;
 int channelcount[4];
 int failcount;
 int skipstats[12];
@@ -188,7 +188,7 @@ void send_telemetry();
 void nextchannel();
 
 int loopcounter = 0;
-unsigned int send_time;
+uint32_t send_time;
 int telemetry_send = 0;
 int oldchan = 0;
 
@@ -357,11 +357,11 @@ void nextchannel() {
   xn_writereg(0x25, bind_storage.bayang.rfchannel[rf_chan]);
 }
 
-unsigned long lastrxtime;
-unsigned long failsafetime;
-unsigned long secondtimer;
+uint32_t lastrxtime;
+uint32_t failsafetime;
+uint32_t secondtimer;
 
-unsigned int skipchannel = 0;
+uint32_t skipchannel = 0;
 int lastrxchan;
 int timingfail = 0;
 
@@ -418,7 +418,7 @@ void rx_check() {
 
 #endif
 
-      unsigned long temptime = timer_micros();
+      uint32_t temptime = timer_micros();
 
       xn_readpayload(rxdata, 15);
       pass = decodepacket();
@@ -453,7 +453,7 @@ void rx_check() {
   if (telemetry_send)
     beacon_sequence();
 
-  unsigned long time = timer_micros();
+  uint32_t time = timer_micros();
 
   if (time - lastrxtime > (HOPPING_NUMBER * packet_period + 1000) && flags.rx_mode != RX_MODE_BIND) {
     //  channel with no reception
@@ -468,7 +468,7 @@ void rx_check() {
   }
 
   if (!timingfail && !telemetry_send && skipchannel < HOPPING_NUMBER + 1 && flags.rx_mode != RX_MODE_BIND) {
-    unsigned int temp = time - lastrxtime;
+    uint32_t temp = time - lastrxtime;
 
     if (temp > 1000 && (temp - (PACKET_OFFSET)) / ((int)packet_period) >=
                            (skipchannel + 1)) {

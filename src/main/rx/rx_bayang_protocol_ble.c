@@ -218,7 +218,7 @@ uint8_t swapbits_old(uint8_t a) {
 // from https://graphics.stanford.edu/~seander/bithacks.html#ReverseByteWith32Bits
 // reverse the bit order in a single byte
 uint8_t swapbits(uint8_t a) {
-  unsigned int b = a;
+  uint32_t b = a;
   b = ((b * 0x0802LU & 0x22110LU) | (b * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16;
   return b;
 }
@@ -267,7 +267,7 @@ void btLePacketEncode(uint8_t *packet, uint8_t len, uint8_t chan) {
 #define RXDEBUG
 
 #ifdef RXDEBUG
-unsigned long packettime;
+uint32_t packettime;
 int channelcount[4];
 int failcount;
 int packetrx;
@@ -343,7 +343,7 @@ txaddr[4] = 0;
 void send_beacon();
 
 int loopcounter = 0;
-unsigned int ble_txtime;
+uint32_t ble_txtime;
 int ble_send = 0;
 int oldchan = 0;
 
@@ -415,7 +415,7 @@ void send_beacon() {
 
   int vbatt = state.vbattfilt * 1000.0f;
 
-  unsigned int time = timer_micros();
+  uint32_t time = timer_micros();
 
   time = time >> 20; // divide by 1024*1024, no time for accuracy here
   time = time * 10;
@@ -558,11 +558,11 @@ void nextchannel() {
   xn_writereg(0x25, rfchannel[rf_chan]);
 }
 
-unsigned long lastrxtime;
-unsigned long failsafetime;
-unsigned long secondtimer;
+uint32_t lastrxtime;
+uint32_t failsafetime;
+uint32_t secondtimer;
 
-unsigned int skipchannel = 0;
+uint32_t skipchannel = 0;
 int lastrxchan;
 int timingfail = 0;
 
@@ -615,7 +615,7 @@ void rx_check() {
 
 #endif
 
-      unsigned long temptime = timer_micros();
+      uint32_t temptime = timer_micros();
 
       nextchannel();
 
@@ -648,7 +648,7 @@ void rx_check() {
 
   beacon_sequence();
 
-  unsigned long time = timer_micros();
+  uint32_t time = timer_micros();
 
   // sequence period 12000
   if (time - lastrxtime > (HOPPING_NUMBER * PACKET_PERIOD + 1000) && flags.rx_mode != RXMODE_BIND) {
@@ -664,7 +664,7 @@ void rx_check() {
   }
 
   if (!timingfail && !ble_send && skipchannel < HOPPING_NUMBER + 1 && flags.rx_mode != RXMODE_BIND) {
-    unsigned int temp = time - lastrxtime;
+    uint32_t temp = time - lastrxtime;
 
     if (temp > 1000 && (temp - (PACKET_OFFSET)) / ((int)PACKET_PERIOD) >= (skipchannel + 1)) {
       nextchannel();

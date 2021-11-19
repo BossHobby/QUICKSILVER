@@ -28,17 +28,17 @@ int gpio_init_buzzer() {
 
 void buzzer() {
   static int toggle;
-  static unsigned long buzzertime;
+  static uint32_t buzzertime;
   static int buzzer_init = 0;
 
-  unsigned long pulse_rate;
+  uint32_t pulse_rate;
 
   // waits 5 seconds
   // before configuring the gpio buzzer pin to ensure
   // there is time to program the chip (if using SWDAT or SWCLK)
 
   if (flags.lowbatt || flags.failsafe || rx_aux_on(AUX_BUZZER_ENABLE)) {
-    unsigned long time = timer_micros();
+    uint32_t time = timer_micros();
     if (buzzertime == 0)
       buzzertime = time;
     else {

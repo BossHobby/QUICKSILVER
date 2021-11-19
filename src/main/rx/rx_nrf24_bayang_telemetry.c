@@ -57,7 +57,7 @@ const uint8_t xn297_scramble[] = {
 // from https://graphics.stanford.edu/~seander/bithacks.html#ReverseByteWith32Bits
 // reverse the bit order in a single byte
 uint8_t swapbits(uint8_t a) {
-  unsigned int b = a;
+  uint32_t b = a;
   b = ((b * 0x0802LU & 0x22110LU) | (b * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16;
   return b;
 }
@@ -183,7 +183,7 @@ void rx_init() {
 //#define RXDEBUG
 
 #ifdef RXDEBUG
-unsigned long packettime;
+uint32_t packettime;
 int channelcount[4];
 int failcount;
 int skipstats[12];
@@ -199,7 +199,7 @@ void send_telemetry();
 void nextchannel();
 
 int loopcounter = 0;
-unsigned int send_time;
+uint32_t send_time;
 int telemetry_send = 0;
 int oldchan = 0;
 
@@ -356,11 +356,11 @@ void nextchannel() {
   xn_writereg(0x25, rfchannel[rf_chan]);
 }
 
-unsigned long lastrxtime;
-unsigned long failsafetime;
-unsigned long secondtimer;
+uint32_t lastrxtime;
+uint32_t failsafetime;
+uint32_t secondtimer;
 
-unsigned int skipchannel = 0;
+uint32_t skipchannel = 0;
 int lastrxchan;
 int timingfail = 0;
 int telemetry_enabled = 0;
@@ -414,7 +414,7 @@ void rx_check() {
 
 #endif
 
-      unsigned long temptime = timer_micros();
+      uint32_t temptime = timer_micros();
 
       int pass = nrf24_read_xn297_payload(rxdata, 15 + 2 * crc_en);
       if (pass)
@@ -453,7 +453,7 @@ void rx_check() {
   if (telemetry_send)
     beacon_sequence();
 
-  unsigned long time = timer_micros();
+  uint32_t time = timer_micros();
 
   if (time - lastrxtime > (HOPPING_NUMBER * packet_period + 1000) && flags.rx_mode != RX_MODE_BIND) {
     //  channel with no reception
@@ -468,7 +468,7 @@ void rx_check() {
   }
 
   if (!timingfail && !telemetry_send && skipchannel < HOPPING_NUMBER + 1 && flags.rx_mode != RX_MODE_BIND) {
-    unsigned int temp = time - lastrxtime;
+    uint32_t temp = time - lastrxtime;
 
     if (temp > 1000 && (temp - (PACKET_OFFSET)) / ((int)packet_period) >=
                            (skipchannel + 1)) {

@@ -82,7 +82,7 @@ extern profile_t profile;
 int pwmdir = 0;
 int last_pwmdir = 0;
 
-static unsigned long pwm_failsafe_time = 1;
+static uint32_t pwm_failsafe_time = 1;
 
 volatile int dshot_dma_phase = 0;  // 0:idle, 1: also idles in interrupt handler as single phase gets called by dshot_dma_start(), 2: & 3: handle remaining phases
 volatile uint16_t dshot_packet[4]; // 16bits dshot data for 4 motors
@@ -434,13 +434,13 @@ void motor_set(uint8_t number, float pwm) {
 #endif
 
 void motor_beep() {
-  static unsigned long motor_beep_time = 0;
+  static uint32_t motor_beep_time = 0;
   if (flags.failsafe) {
-    unsigned long time = timer_micros();
+    uint32_t time = timer_micros();
     if (motor_beep_time == 0) {
       motor_beep_time = time;
     }
-    const unsigned long delta_time = time - motor_beep_time;
+    const uint32_t delta_time = time - motor_beep_time;
     if (delta_time > MOTOR_BEEPS_TIMEOUT) {
       uint8_t beep_command = 0;
       if (delta_time % 2000000 < 250000) {

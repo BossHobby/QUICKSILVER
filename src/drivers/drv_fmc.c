@@ -45,7 +45,7 @@ uint32_t fmc_read(uint32_t addr) {
   return *((uint32_t *)(FLASH_ADDR + addr * 4));
 }
 
-float fmc_read_float(unsigned long address) {
+float fmc_read_float(uint32_t address) {
   uint32_t result = fmc_read(address);
   return *((float *)&result);
 }

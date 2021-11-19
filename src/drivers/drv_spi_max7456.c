@@ -254,7 +254,7 @@ void osd_print(const char *buffer, uint8_t dmm_attribute, uint8_t x, uint8_t y) 
   osd_string_buffer[4] = DMAL;
   osd_string_buffer[5] = (uint8_t)pos;
 
-  for (unsigned int i = 0; i < strlen(buffer); i++) {
+  for (uint32_t i = 0; i < strlen(buffer); i++) {
     osd_string_buffer[(i * 2) + 6] = DMDI;
     osd_string_buffer[(i * 2) + 7] = buffer[i];
   }
