@@ -4,10 +4,12 @@
 
 #include <cbor.h>
 
-#define CBOR_CHECK_ERROR(expr) \
-  expr;                        \
-  if (res < CBOR_OK) {         \
-    return res;                \
+cbor_result_t cbor_handle_error(cbor_result_t err);
+
+#define CBOR_CHECK_ERROR(expr)     \
+  expr;                            \
+  if (res < CBOR_OK) {             \
+    return cbor_handle_error(res); \
   }
 
 #define CBOR_START_STRUCT_ENCODER(type)                                \

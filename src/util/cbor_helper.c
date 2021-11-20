@@ -2,6 +2,11 @@
 
 #include <string.h>
 
+// really just exists to hook with a debugger
+cbor_result_t cbor_handle_error(cbor_result_t err) {
+  return err;
+}
+
 cbor_result_t cbor_encode_float_array(cbor_value_t *enc, const float *array, uint32_t size) {
   CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_array(enc, size))
 
