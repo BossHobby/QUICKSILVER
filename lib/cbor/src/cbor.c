@@ -377,7 +377,7 @@ float _cbor_decode_half_float(uint32_t half) {
   return half & 0x8000 ? -val : val;
 }
 
-cbor_result_t cbor_decode_float(cbor_value_t *dec, float *val) {
+cbor_result_t _cbor_decode_float(cbor_value_t *dec, float *val) {
   cbor_result_t res = _cbor_decode_ensure_type(dec, CBOR_TYPE_FLOAT);
   if (res < CBOR_OK) {
     return res;
@@ -397,6 +397,37 @@ cbor_result_t cbor_decode_float(cbor_value_t *dec, float *val) {
   }
 
   return _cbor_advance(dec, size);
+}
+
+cbor_result_t cbor_decode_float(cbor_value_t *dec, float *val) {
+  cbor_major_type_t type = (cbor_major_type_t)_cbor_decode_type(*dec->curr);
+  switch (type) {
+  case CBOR_TYPE_NINT: {
+    int32_t intval = 0;
+    cbor_result_t res = cbor_decode_int32(dec, &intval);
+    if (res < CBOR_OK) {
+      return res;
+    }
+    *val = intval;
+    return CBOR_OK;
+  }
+
+  case CBOR_TYPE_UINT: {
+    uint32_t intval = 0;
+    cbor_result_t res = cbor_decode_uint32(dec, &intval);
+    if (res < CBOR_OK) {
+      return res;
+    }
+    *val = intval;
+    return CBOR_OK;
+  }
+
+  case CBOR_TYPE_FLOAT:
+    return _cbor_decode_float(dec, val);
+
+  default:
+    return CBOR_ERR_INVALID_TYPE;
+  }
 }
 
 cbor_result_t cbor_decode_bstr(cbor_value_t *dec, const uint8_t **buf, uint32_t *len) {
