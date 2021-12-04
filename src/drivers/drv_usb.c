@@ -379,9 +379,12 @@ void usb_serial_write(uint8_t *data, uint32_t len) {
   while (tx_buffer_in_use)
     ;
 
-  tx_buffer_in_use = true;
-  circular_buffer_write_multi(&tx_buffer, data, len);
-  tx_buffer_in_use = false;
+  uint32_t written = 0;
+  while (written < len) {
+    tx_buffer_in_use = true;
+    written += circular_buffer_write_multi(&tx_buffer, data + written, len - written);
+    tx_buffer_in_use = false;
+  }
 }
 
 void usb_serial_print(char *str) {
