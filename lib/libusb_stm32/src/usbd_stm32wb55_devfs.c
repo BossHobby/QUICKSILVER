@@ -18,23 +18,16 @@
 #include "stm32.h"
 #include "usb.h"
 
-#if defined(USBD_STM32L052)
-
-#if defined(STM32F070x6) || defined(STM32F070xB) || \
-    defined(STM32F042x6) || defined(STM32F048xx) || \
-    defined(STM32F072xB) || defined(STM32F078xx)
-    #define UID_OFFSET_0    0x00
-    #define UID_OFFSET_1    0x04
-    #define UID_OFFSET_2    0x08
-#else
-    #define UID_OFFSET_0    0x00
-    #define UID_OFFSET_1    0x04
-    #define UID_OFFSET_2    0x14
-#endif
+#if defined(USBD_STM32WB55)
 
 #ifndef USB_PMASIZE
     #pragma message "PMA memory size is not defined. Use 1k by default"
     #define USB_PMASIZE 0x400
+#endif
+
+#if !defined(RCC_APB1ENR1_USBFSEN)
+    #define RCC_APB1ENR1_USBFSEN RCC_APB1ENR1_USBEN
+    #define RCC_APB1RSTR1_USBFSRST RCC_APB1RSTR1_USBRST
 #endif
 
 #define USB_EP_SWBUF_TX     USB_EP_DTOG_RX
@@ -77,14 +70,14 @@ typedef union pma_table {
 /** \brief Helper function. Returns pointer to the buffer descriptor table.
  */
 inline static pma_table *EPT(uint8_t ep) {
-    return (pma_table*)((ep & 0x07) * 8 + USB_PMAADDR);
+    return (pma_table*)((ep & 0x07) * 8 + USB1_PMAADDR);
 
 }
 
 /** \brief Helper function. Returns pointer to the endpoint control register.
  */
 inline static volatile uint16_t *EPR(uint8_t ep) {
-    return (uint16_t*)((ep & 0x07) * 4 + USB_BASE);
+    return (uint16_t*)((ep & 0x07) * 4 + USB1_BASE);
 }
 
 
@@ -105,7 +98,7 @@ static uint16_t get_next_pma(uint16_t sz) {
 }
 
 static uint32_t getinfo(void) {
-    if (!(RCC->APB1ENR & RCC_APB1ENR_USBEN)) return STATUS_VAL(0);
+    if (!(RCC->APB1ENR1 & RCC_APB1ENR1_USBFSEN)) return STATUS_VAL(0);
     if (USB->BCDR & USB_BCDR_DPPU) return STATUS_VAL(USBD_HW_ENABLED | USBD_HW_SPEED_FS);
     return STATUS_VAL(USBD_HW_ENABLED);
 }
@@ -157,22 +150,18 @@ static bool ep_isstalled(uint8_t ep) {
 
 static void enable(bool enable) {
     if (enable) {
-        RCC->APB1ENR  |=  RCC_APB1ENR_USBEN;
-        RCC->APB1RSTR |= RCC_APB1RSTR_USBRST;
-        RCC->APB1RSTR &= ~RCC_APB1RSTR_USBRST;
-#if defined(USBD_PINS_REMAP) && (defined(STM32F042x6) || defined(STM32F048xx) || defined(STM32F070x6))
-        RCC->APB2ENR  |= RCC_APB2ENR_SYSCFGCOMPEN;
-        SYSCFG->CFGR1 |= SYSCFG_CFGR1_PA11_PA12_RMP;	// remap USB pins for small packages
-#endif
+        RCC->APB1ENR1  |=  RCC_APB1ENR1_USBFSEN;
+        RCC->APB1RSTR1 |= RCC_APB1RSTR1_USBFSRST;
+        RCC->APB1RSTR1 &= ~RCC_APB1RSTR1_USBFSRST;
         USB->CNTR = USB_CNTR_CTRM | USB_CNTR_RESETM | USB_CNTR_ERRM |
 #if !defined(USBD_SOF_DISABLED)
         USB_CNTR_SOFM |
 #endif
         USB_CNTR_SUSPM | USB_CNTR_WKUPM;
-    } else if (RCC->APB1ENR & RCC_APB1ENR_USBEN) {
+    } else if (RCC->APB1ENR1 & RCC_APB1ENR1_USBFSEN) {
         USB->BCDR = 0;
-        RCC->APB1RSTR |= RCC_APB1RSTR_USBRST;
-        RCC->APB1ENR &= ~RCC_APB1ENR_USBEN;
+        RCC->APB1RSTR1 |= RCC_APB1RSTR1_USBFSRST;
+        RCC->APB1ENR1 &= ~RCC_APB1ENR1_USBFSEN;
     }
 }
 
@@ -283,20 +272,22 @@ static void ep_deconfig(uint8_t ep) {
 }
 
 static uint16_t pma_read (uint8_t *buf, uint16_t blen, pma_rec *rx) {
-    uint16_t tmp;
-    uint16_t *pma = (void*)(USB_PMAADDR + rx->addr);
+    uint16_t *pma = (void*)(USB1_PMAADDR + rx->addr);
     uint16_t rxcnt = rx->cnt & 0x03FF;
     rx->cnt &= ~0x3FF;
-    for(int idx = 0; idx < rxcnt; idx++) {
-        if ((idx & 0x01) == 0) {
-            tmp = *pma++;
-        }
-        if (idx < blen) {
-            buf[idx] = tmp & 0xFF;
-            tmp >>= 8;
-        } else {
-            return blen;
-        }
+
+    if (blen > rxcnt) {
+        blen = rxcnt;
+    }
+    rxcnt = blen;
+    while (blen) {
+        uint16_t _t = *pma;
+        *buf++ = _t & 0xFF;
+        if (--blen) {
+            *buf++ = _t >> 8;
+            pma++;
+            blen--;
+        } else break;
     }
     return rxcnt;
 }
@@ -345,16 +336,14 @@ static int32_t ep_read(uint8_t ep, void *buf, uint16_t blen) {
 }
 
 static void pma_write(uint8_t *buf, uint16_t blen, pma_rec *tx) {
-    uint16_t *pma = (void*)(USB_PMAADDR + tx->addr);
-    uint16_t tmp = 0;
+    uint16_t *pma = (void*)(USB1_PMAADDR + tx->addr);
     tx->cnt = blen;
-    for (int idx=0; idx < blen; idx++) {
-        tmp |= buf[idx] << ((idx & 0x01) ? 8 : 0);
-        if ((idx & 0x01) || (idx + 1) == blen) {
-            *pma++ = tmp;
-            tmp = 0;
-        }
+    while (blen > 1) {
+        *pma++ = buf[1] << 8 | buf[0];
+        buf += 2;
+        blen -= 2;
     }
+    if (blen) *pma = *buf;
 }
 
 static int32_t ep_write(uint8_t ep, void *buf, uint16_t blen) {
@@ -452,9 +441,9 @@ static uint16_t get_serialno_desc(void *buffer) {
     struct  usb_string_descriptor *dsc = buffer;
     uint16_t *str = dsc->wString;
     uint32_t fnv = 2166136261;
-    fnv = fnv1a32_turn(fnv, *(uint32_t*)(UID_BASE + UID_OFFSET_0));
-    fnv = fnv1a32_turn(fnv, *(uint32_t*)(UID_BASE + UID_OFFSET_1));
-    fnv = fnv1a32_turn(fnv, *(uint32_t*)(UID_BASE + UID_OFFSET_2));
+    fnv = fnv1a32_turn(fnv, *(uint32_t*)(UID_BASE + 0x00));
+    fnv = fnv1a32_turn(fnv, *(uint32_t*)(UID_BASE + 0x04));
+    fnv = fnv1a32_turn(fnv, *(uint32_t*)(UID_BASE + 0x14));
     for (int i = 28; i >= 0; i -= 4 ) {
         uint16_t c = (fnv >> i) & 0x0F;
         c += (c < 10) ? '0' : ('A' - 10);
@@ -481,4 +470,4 @@ static uint16_t get_serialno_desc(void *buffer) {
     get_serialno_desc,
 };
 
-#endif //USBD_STM32L052
+#endif //USBD_STM32WB55

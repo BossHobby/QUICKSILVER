@@ -53,6 +53,8 @@ help all:
 	@echo '  stm32l052x8   CDC loopback demo for STM32L052x8 based boards'
 	@echo '  32f429zi-nucleo'
 	@echo '  stm32f429xi   CDC loopback demo for STM32F429xI based boards'
+	@echo '  stm32f401xc   CDC loopback demo for STM32F401xC based boards'
+	@echo '  stm32f401xe   CDC loopback demo for STM32F401xE based boards'
 	@echo '  cmsis         Download CMSIS 5 and stm32.h into a $$(CMSIS) directory'
 	@echo '  doc           DOXYGEN documentation'
 	@echo '  module        static library module using following envars (defaults)'
@@ -70,7 +72,7 @@ help all:
 	@echo ' '
 	@echo 'Examples:'
 	@echo '  make bluepill program'
-	@echo '  make module MODULE="usbd.a" CFLAGS="-mcpu=cotrex-m4" DEFINES="STM32L4 STM32L476xx USBD_VBUS_DETECT"'
+	@echo '  make module MODULE="usbd.a" CFLAGS="-mcpu=cortex-m4" DEFINES="STM32L4 STM32L476xx USBD_VBUS_DETECT"'
 
 cmsis: $(CMSISDEV)/ST
 
@@ -145,6 +147,11 @@ stm32f303xe 32f303re-nucleo: clean
 						DEFINES='STM32F3 STM32F303xE USBD_SOF_DISABLED' \
 						CFLAGS='-mcpu=cortex-m4'
 
+stm32f303xc: clean
+	@$(MAKE) demo STARTUP='$(CMSISDEV)/ST/STM32F3xx/Source/Templates/gcc/startup_stm32f303xc.s' \
+						LDSCRIPT='demo/stm32f303xc.ld' \
+						DEFINES='STM32F3 STM32F303xC USBD_SOF_DISABLED' \
+						CFLAGS='-mcpu=cortex-m4'
 
 stm32f105xb: clean
 	@$(MAKE) demo STARTUP='$(CMSISDEV)/ST/STM32F1xx/Source/Templates/gcc/startup_stm32f105xc.s' \
@@ -194,6 +201,7 @@ stm32l433cc: clean
 						DEFINES='STM32L4 STM32L433xx USBD_SOF_DISABLED' \
 						CFLAGS='-mcpu=cortex-m4'
 
+
 stm32f070xb: clean
 	@$(MAKE) demo STARTUP='$(CMSISDEV)/ST/STM32F0xx/Source/Templates/gcc/startup_stm32f070xb.s' \
 						LDSCRIPT='demo/stm32f070xb.ld' \
@@ -242,9 +250,44 @@ stm32f405xg_hs: clean
 						DEFINES='STM32F4 STM32F405xx USBD_SOF_DISABLED USBD_PRIMARY_OTGHS' \
 						CFLAGS='-mcpu=cortex-m4'
 
-
 stm32f401xc: clean
 	@$(MAKE) demo STARTUP='$(CMSISDEV)/ST/STM32F4xx/Source/Templates/gcc/startup_stm32f401xc.s' \
 						LDSCRIPT='demo/stm32f401xc.ld' \
 						DEFINES='STM32F4 STM32F401xC USBD_SOF_DISABLED' \
-						CFLAGS='-mcpu=cortex-m4'						
+						CFLAGS='-mcpu=cortex-m4'
+
+stm32f401xe: clean
+	@$(MAKE) demo STARTUP='$(CMSISDEV)/ST/STM32F4xx/Source/Templates/gcc/startup_stm32f401xe.s' \
+						LDSCRIPT='demo/stm32f401xe.ld' \
+						DEFINES='STM32F4 STM32F401xE USBD_SOF_DISABLED' \
+						CFLAGS='-mcpu=cortex-m4'
+
+stm32f745xe: clean
+	@$(MAKE) demo STARTUP='$(CMSISDEV)/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f745xx.s' \
+						LDSCRIPT='demo/stm32f745xe.ld' \
+						DEFINES='STM32F7 STM32F745xx USBD_SOF_DISABLED' \
+						CFLAGS='-mcpu=cortex-m7'
+
+stm32f745xe_hs: clean
+	@$(MAKE) demo STARTUP='$(CMSISDEV)/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f745xx.s' \
+						LDSCRIPT='demo/stm32f745xe.ld' \
+						DEFINES='STM32F7 STM32F745xx USBD_SOF_DISABLED USBD_PRIMARY_OTGHS' \
+						CFLAGS='-mcpu=cortex-m7'
+
+stm32f042f6: clean
+	@$(MAKE) demo STARTUP='$(CMSISDEV)/ST/STM32F0xx/Source/Templates/gcc/startup_stm32f042x6.s' \
+						LDSCRIPT='demo/stm32f042x6.ld' \
+						DEFINES='STM32F0 STM32F042x6 USBD_SOF_DISABLED' \
+						CFLAGS='-mcpu=cortex-m0 -DUSBD_PINS_REMAP'
+
+stm32wb55xg: clean
+	@$(MAKE) demo STARTUP='$(CMSISDEV)/ST/STM32WBxx/Source/Templates/gcc/startup_stm32wb55xx_cm4.s' \
+						LDSCRIPT='demo/stm32wb55xg.ld' \
+						DEFINES='STM32WB STM32WB55xx USBD_SOF_DISABLED' \
+						CFLAGS='-mcpu=cortex-m4'
+
+stm32f411xe stm32f411e-disco: clean
+	@$(MAKE) demo STARTUP='$(CMSISDEV)/ST/STM32F4xx/Source/Templates/gcc/startup_stm32f411xe.s' \
+						LDSCRIPT='demo/stm32f401xe.ld' \
+						DEFINES='STM32F4 STM32F411xE USBD_SOF_DISABLED' \
+						CFLAGS='-mcpu=cortex-m4'

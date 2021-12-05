@@ -308,7 +308,7 @@ static usbd_respond cdc_control(usbd_device *dev, usbd_ctlreq *req, usbd_rqc_cal
         case USB_CDC_SET_CONTROL_LINE_STATE:
             return usbd_ack;
         case USB_CDC_SET_LINE_CODING:
-            memcpy( req->data, &cdc_line, sizeof(cdc_line));
+            memcpy(&cdc_line, req->data, sizeof(cdc_line));
             return usbd_ack;
         case USB_CDC_GET_LINE_CODING:
             dev->status.data_ptr = &cdc_line;
@@ -470,8 +470,9 @@ static void cdc_init_usbd(void) {
 }
 
 #if defined(CDC_USE_IRQ)
-#if defined(STM32L052xx) || defined(STM32F070xB)
-    #define USB_HANDLER     USB_IRQHandler
+#if defined(STM32L052xx) || defined(STM32F070xB) || \
+	defined(STM32F042x6)
+#define USB_HANDLER     USB_IRQHandler
     #define USB_NVIC_IRQ    USB_IRQn
 #elif defined(STM32L100xC) || defined(STM32G4)
     #define USB_HANDLER     USB_LP_IRQHandler
@@ -487,7 +488,7 @@ static void cdc_init_usbd(void) {
     #define __WFI __NOP
 #elif defined(STM32L476xx) || defined(STM32F429xx) || \
       defined(STM32F105xC) || defined(STM32F107xC) || \
-      defined(STM32F446xx)
+      defined(STM32F446xx) || defined(STM32F411xE)
     #define USB_HANDLER     OTG_FS_IRQHandler
     #define USB_NVIC_IRQ    OTG_FS_IRQn
 #elif defined(STM32F103x6)
