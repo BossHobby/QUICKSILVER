@@ -154,14 +154,18 @@ void control(void) {
     // *************************************************************************
     // *************************************************************************
 
-    if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON)) { //racemode with angle behavior on roll ais
+    if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON)) { // racemode with angle behavior on roll axis
       if (state.GEstG.axis[2] < 0) {                          // acro on roll and pitch when inverted
         state.error.axis[0] = rates[0] - state.gyro.axis[0];
         state.error.axis[1] = rates[1] - state.gyro.axis[1];
       } else {
         //roll is leveled to max angle limit
         state.angleerror[0] = state.errorvect.axis[0];
+#ifdef ANGLE_AROUND_GRAVITY
         state.error.axis[0] = angle_pid(0) + yawerror[0] - state.gyro.axis[0];
+#else
+        state.error.axis[0] = angle_pid(0) - state.gyro.axis[0];
+#endif
         //pitch is acro
         state.error.axis[1] = rates[1] - state.gyro.axis[1];
       }
@@ -249,7 +253,11 @@ void control(void) {
       // pitch and roll
       for (int i = 0; i <= 1; i++) {
         state.angleerror[i] = state.errorvect.axis[i];
+#ifdef ANGLE_AROUND_GRAVITY
         state.error.axis[i] = angle_pid(i) + yawerror[i] - state.gyro.axis[i];
+#else
+        state.error.axis[i] = angle_pid(i) - state.gyro.axis[i];
+#endif
       }
       // yaw
       state.error.axis[2] = yawerror[2] - state.gyro.axis[2];

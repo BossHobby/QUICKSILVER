@@ -50,10 +50,15 @@ void input_stick_vector(float rx_input[], float maxangle) {
 #endif
   }
 
+#ifdef ANGLE_AROUND_GRAVITY
   // find error between stick vector and quad orientation
   // vector cross product
   state.errorvect.axis[1] = -((state.GEstG.axis[1] * stickvector[2]) - (state.GEstG.axis[2] * stickvector[1]));
   state.errorvect.axis[0] = (state.GEstG.axis[2] * stickvector[0]) - (state.GEstG.axis[0] * stickvector[2]);
+#else
+  state.errorvect.axis[1] = -((state.GEstG.axis[1] * pitch) - (state.GEstG.axis[2] * pitch));
+  state.errorvect.axis[0] = (state.GEstG.axis[2] * roll) - (state.GEstG.axis[0] * roll);
+#endif
 
   // some limits just in case
 
