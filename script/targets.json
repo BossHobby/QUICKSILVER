@@ -1,5 +1,17 @@
 [
   {
+    "name": "aikon_f4",
+    "configurations": [
+      {
+        "name": "brushed.serial",
+        "defines": {
+          "BRUSHED_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      }
+    ]
+  },
+  {
     "name": "alienwhoop_v2",
     "configurations": [
       {
