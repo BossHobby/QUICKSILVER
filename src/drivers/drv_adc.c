@@ -7,22 +7,25 @@
 #include "project.h"
 #include "util.h"
 
-uint16_t adc_array[2];
+float vref_cal = 0;
+uint16_t adc_array[2] = {0, 0};
 extern profile_t profile;
 
 #ifndef DISABLE_ADC
 
-typedef struct {
-  __IO uint16_t word1;
-  __IO uint16_t word2;
+#ifndef ADC_SCALEFACTOR
+// 12 bit ADC has 4096 steps
+//scalefactor = (vref/4096) * (R1 + R2)/R2
+#define ADC_SCALEFACTOR ((float)ADC_REF_VOLTAGE / 4096) * ((float)(VOLTAGE_DIVIDER_R1) + (float)(VOLTAGE_DIVIDER_R2)) * (1.0f / (float)(VOLTAGE_DIVIDER_R2))
+#endif
 
-} adcrefcal;
-
-uint16_t adcref_read(adcrefcal *adcref_address) {
-  return adcref_address->word1;
+static uint16_t adc_calibration_value() {
+#if defined(STM32F4)
+  return *((uint16_t *)0x1FFF7A2A);
+#elif defined(STM32F7)
+  return *((uint16_t *)0x1FF0F44A);
+#endif
 }
-
-float vref_cal;
 
 void adc_init() {
 
@@ -34,12 +37,10 @@ void adc_init() {
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_ADC1);
 
   //gpio configuration
-  {
-    LL_GPIO_InitTypeDef gpio_init;
-    gpio_init.Mode = LL_GPIO_MODE_ANALOG;
-    gpio_init.Pull = LL_GPIO_PULL_NO;
-    gpio_pin_init(&gpio_init, BATTERYPIN);
-  }
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_ANALOG;
+  gpio_init.Pull = LL_GPIO_PULL_NO;
+  gpio_pin_init(&gpio_init, BATTERYPIN);
 
   LL_ADC_CommonInitTypeDef adc_common_init;
   adc_common_init.CommonClock = LL_ADC_CLOCK_SYNC_PCLK_DIV2;
@@ -70,17 +71,12 @@ void adc_init() {
   // reference is measured a 3.3v, toy boards are powered by 2.8, so a 1.17 multiplier
   // different vccs will translate to a different adc scale factor,
   // so actual vcc is not important as long as the voltage is correct in the end
-  vref_cal = (3.3f / (float)ADC_REF_VOLTAGE) * (float)(adcref_read((adcrefcal *)0x1FFF7A2A));
+  vref_cal = (3.3f / (float)ADC_REF_VOLTAGE) * (float)(adc_calibration_value());
 }
 
-#define ADC_CHANNELS 2
-// internal adc channels:
-// 0 - vbat
-// 1 - vref
-
-uint16_t readADC1(int channel) {
-  static uint8_t adc_channel_synchronizer; //the next adc channel to run when ready
-  static uint8_t adc_last_conversion = 1;  //the last adc channel to run
+static uint16_t readADC1(adc_chan_t chan) {
+  static adc_chan_t adc_channel_synchronizer = 0; //the next adc channel to run when ready
+  static adc_chan_t adc_last_conversion = 1;      //the last adc channel to run
 
   uint8_t ready_to_convert = LL_ADC_IsActiveFlag_EOCS(ADC1); //check to see if the last conversion is done
 
@@ -91,7 +87,7 @@ uint16_t readADC1(int channel) {
 
     // Select the new channel to read
     switch (adc_channel_synchronizer) {
-    case 0:
+    case ADC_CHAN_VBAT:
       // Reconfigure the new adc channel
       LL_ADC_SetChannelSamplingTime(ADC1, BATTERY_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_480CYCLES);
       LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, BATTERY_ADC_CHANNEL);
@@ -100,7 +96,7 @@ uint16_t readADC1(int channel) {
       adc_last_conversion = 0;
       break;
 
-    case 1:
+    case ADC_CHAN_VREF:
       // Reconfigure the new adc channel
       LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_VREFINT, LL_ADC_SAMPLINGTIME_480CYCLES);
       LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_VREFINT);
@@ -113,32 +109,29 @@ uint16_t readADC1(int channel) {
     LL_ADC_REG_StartConversionSWStart(ADC1); // Start the conversion
     adc_channel_synchronizer++;              // Advance the index
 
-    if (adc_channel_synchronizer == ADC_CHANNELS)
+    if (adc_channel_synchronizer == ADC_CHAN_MAX)
       adc_channel_synchronizer = 0; // Start the index over if we reached the end of the list
   }
 
-  return adc_array[channel];
+  return adc_array[chan];
 }
 
-#ifndef ADC_SCALEFACTOR
-// 12 bit ADC has 4096 steps
-//scalefactor = (vref/4096) * (R1 + R2)/R2
-#define ADC_SCALEFACTOR ((float)ADC_REF_VOLTAGE / 4096) * ((float)VOLTAGE_DIVIDER_R1 + (float)VOLTAGE_DIVIDER_R2) * (1 / (float)VOLTAGE_DIVIDER_R2)
-#endif
-
-float adc_read(int channel) {
-  switch (channel) {
-  case 0: {
+float adc_read(adc_chan_t chan) {
+  switch (chan) {
+  case ADC_CHAN_VBAT: {
     //vbat
-    const float raw_value = readADC1(channel);
+    const float raw_value = readADC1(chan);
+
 #ifdef DEBUG
     lpf(&debug.adcfilt, raw_value, 0.998);
 #endif
+
     return raw_value * ((float)(ADC_SCALEFACTOR * (profile.voltage.actual_battery_voltage / profile.voltage.reported_telemetry_voltage)));
   }
-  case 1: {
+  case ADC_CHAN_VREF: {
     //reference
-    const float raw_value = readADC1(channel);
+    const float raw_value = readADC1(chan);
+
 #ifdef DEBUG
     lpf(&debug.adcreffilt, raw_value, 0.998);
 #endif
@@ -153,13 +146,15 @@ float adc_read(int channel) {
     return 0;
   }
 }
+
 #else
-// // lvc disabled
-void adc_init() {
-}
+
+// lvc disabled
+void adc_init() {}
+
 // dummy function with lvc disabled
-float adc_read(int channel) {
-  switch (channel) {
+float adc_read(adc_chan_t chan) {
+  switch (chan) {
   case 0:
     return 4.20f;
 
