@@ -22,7 +22,6 @@
 // LEDS
 #define LED_NUMBER 1
 #define LED1PIN PIN_C13
-#define LED2_INVERT
 
 #define BUZZER_PIN PIN_D2
 #define BUZZER_INVERT
@@ -35,7 +34,6 @@
 #define GYRO_ID_1 0x24
 
 // RADIO
-#define SOFTSPI_NONE
 #ifdef SERIAL_RX
 #define RX_USART USART_PORT1
 #endif
@@ -44,6 +42,10 @@
 #define ENABLE_OSD
 #define MAX7456_SPI_PORT SPI_PORT4
 #define MAX7456_NSS PIN_E4
+
+#define USE_M25P16
+#define M25P16_SPI_PORT SPI_PORT3
+#define M25P16_NSS_PIN PIN_A15
 
 // VOLTAGE DIVIDER
 #define BATTERYPIN PIN_C3
