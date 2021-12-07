@@ -1,12 +1,4 @@
-#include "rx.h"
-
-#include <string.h>
-
-#include "control.h"
-#include "drv_spi_sx12xx.h"
-#include "drv_time.h"
-#include "project.h"
-#include "usb_configurator.h"
+#include "rx_express_lrs.h"
 
 #if defined(RX_EXPRESS_LRS) && defined(USE_SX12XX)
 
