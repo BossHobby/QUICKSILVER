@@ -8,25 +8,25 @@ static uint8_t mpu6xxx_configure() {
   mpu6xxx_init();
 
   mpu6xxx_write(MPU_RA_PWR_MGMT_1, MPU_BIT_H_RESET); //reg 107 soft reset  MPU_BIT_H_RESET
-  timer_delay_us(100000);
+  time_delay_us(100000);
   mpu6xxx_write(MPU_RA_SIGNAL_PATH_RESET, MPU_RESET_SIGNAL_PATHWAYS);
-  timer_delay_us(100000);
+  time_delay_us(100000);
   mpu6xxx_write(MPU_RA_PWR_MGMT_1, MPU_CLK_SEL_PLLGYROX); //reg 107 set pll clock to 1 for x axis reference
-  timer_delay_us(100000);
+  time_delay_us(100000);
   mpu6xxx_write(MPU_RA_USER_CTRL, MPU_BIT_I2C_IF_DIS); //reg 106 to 16 enabling spi
-  timer_delay_us(1500);
+  time_delay_us(1500);
   mpu6xxx_write(MPU_RA_PWR_MGMT_2, MPU_BITS_STDBY_MODE_OFF); //reg 108 disable standbye mode to 0
-  timer_delay_us(1500);
+  time_delay_us(1500);
   mpu6xxx_write(MPU_RA_SMPLRT_DIV, MPU_BIT_SMPLRT_DIVIDER_OFF); //reg 25 sample rate divider to 0
-  timer_delay_us(1500);
+  time_delay_us(1500);
   mpu6xxx_write(MPU_RA_CONFIG, MPU_BITS_DLPF_CFG_256HZ); //reg 26 dlpf to 0 - 8khz
-  timer_delay_us(1500);
+  time_delay_us(1500);
   mpu6xxx_write(MPU_RA_ACCEL_CONFIG, MPU_BITS_FS_16G); //reg 28 accel scale to 16G
-  timer_delay_us(1500);
+  time_delay_us(1500);
   mpu6xxx_write(MPU_RA_GYRO_CONFIG, MPU_BITS_FS_2000DPS); //reg 27 gyro scale to 2000deg/s
-  timer_delay_us(1500);
+  time_delay_us(1500);
   mpu6xxx_write(MPU_RA_INT_ENABLE, MPU_BIT_INT_STATUS_DATA); //reg 56 data ready enable interrupt to 1
-  timer_delay_us(1500);
+  time_delay_us(1500);
 
   return mpu6xxx_read(MPU_RA_WHO_AM_I);
 }

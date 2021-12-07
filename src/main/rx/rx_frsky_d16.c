@@ -306,7 +306,7 @@ static uint8_t frsky_d16_handle_packet() {
     frame_had_packet = 0;
     protocol_state = FRSKY_STATE_DATA;
     rx_delay = FRSKY_D16_PACKET_DELAY;
-    last_packet_received_time = timer_micros();
+    last_packet_received_time = time_micros();
     // fallthrough
   case FRSKY_STATE_DATA: {
     uint8_t len = packet_size();
@@ -315,7 +315,7 @@ static uint8_t frsky_d16_handle_packet() {
       frsky_d16_frame_header *header = (frsky_d16_frame_header *)packet;
 
       if (frsky_d16_is_valid_packet(packet)) {
-        last_packet_received_time = timer_micros();
+        last_packet_received_time = time_micros();
         max_sync_delay = FRSKY_SYNC_DELAY_MAX;
 
         if (channel_skip) {
@@ -346,12 +346,12 @@ static uint8_t frsky_d16_handle_packet() {
 
     handle_overflows();
 
-    if (send_telemetry == 1 && (timer_micros() - last_packet_received_time) >= rx_delay) {
+    if (send_telemetry == 1 && (time_micros() - last_packet_received_time) >= rx_delay) {
       frsky_d16_build_telemetry(telemetry);
       protocol_state = FRSKY_STATE_TELEMETRY;
     }
 
-    if ((timer_micros() - last_packet_received_time) >= max_sync_delay) {
+    if ((time_micros() - last_packet_received_time) >= max_sync_delay) {
       if (frames_lost >= FRSKY_MAX_MISSING_FRAMES) {
         max_sync_delay = 50 * FRSKY_SYNC_DELAY_MAX;
         flags.failsafe = 1;
@@ -394,7 +394,7 @@ static uint8_t frsky_d16_handle_packet() {
       cc2500_enter_txmode();
       cc2500_strobe(CC2500_SIDLE);
     }
-    if ((timer_micros() - last_packet_received_time) >= (rx_delay + FRSKY_D16_TELEMETRY_DELAY)) {
+    if ((time_micros() - last_packet_received_time) >= (rx_delay + FRSKY_D16_TELEMETRY_DELAY)) {
       cc2500_write_fifo(telemetry, telemetry[0] + 1);
 
       protocol_state = FRSKY_STATE_RESUME;
@@ -406,7 +406,7 @@ static uint8_t frsky_d16_handle_packet() {
       next_channel(channels_to_skip);
       cc2500_strobe(CC2500_SRX);
     }
-    if ((timer_micros() - last_packet_received_time) >= (rx_delay + 3700)) {
+    if ((time_micros() - last_packet_received_time) >= (rx_delay + 3700)) {
       if (frames_lost >= 2) {
         cc2500_switch_antenna();
       }
@@ -425,7 +425,7 @@ static uint8_t frsky_d16_handle_packet() {
         frames_lost++;
       }
 
-      last_packet_received_time = timer_micros();
+      last_packet_received_time = time_micros();
       rx_delay = FRSKY_D16_PACKET_DELAY;
       frame_had_packet = 0;
       protocol_state = FRSKY_STATE_DATA;

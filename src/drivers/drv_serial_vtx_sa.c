@@ -109,7 +109,7 @@ static void smart_audio_auto_baud() {
     baud_rate += direction * 50;
     quic_debugf("SMART_AUDIO: auto baud %d (%d) change %d vs %d", baud_rate, direction * 50, last_percent, current_percent);
     serial_smart_audio_reconfigure();
-    timer_delay_us(100);
+    time_delay_us(100);
   }
 
   last_percent = current_percent;
@@ -203,7 +203,7 @@ vtx_update_result_t serial_smart_audio_update() {
   if (vtx_transfer_done == 0) {
     return VTX_WAIT;
   }
-  if (parser_state > PARSER_INIT && (timer_millis() - vtx_last_valid_read) > 500) {
+  if (parser_state > PARSER_INIT && (time_millis() - vtx_last_valid_read) > 500) {
     quic_debugf("SMART_AUDIO: timeout waiting for packet");
     parser_state = ERROR;
     return VTX_ERROR;
@@ -230,7 +230,7 @@ vtx_update_result_t serial_smart_audio_update() {
     return VTX_IDLE;
 
   case PARSER_INIT: {
-    if ((timer_millis() - vtx_last_request) > 200) {
+    if ((time_millis() - vtx_last_request) > 200) {
       smart_audio_auto_baud();
 
       mirror_offset = 0;

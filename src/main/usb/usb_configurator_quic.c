@@ -191,7 +191,7 @@ void get_quic(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
 
     uint8_t count = serial_4way_init();
-    timer_delay_us(500000);
+    time_delay_us(500000);
 
     for (uint8_t i = 0; i < count; i++) {
       blheli_settings_t settings;
@@ -208,7 +208,7 @@ void get_quic(uint8_t *data, uint32_t len) {
     }
 
     serial_4way_release();
-    timer_delay_us(100000);
+    time_delay_us(100000);
 
     send_quic_header(QUIC_CMD_GET, QUIC_FLAG_STREAMING, 0);
     break;
@@ -301,7 +301,7 @@ void set_quic(uint8_t *data, uint32_t len) {
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
   case QUIC_VAL_BLHEL_SETTINGS: {
     uint8_t count = serial_4way_init();
-    timer_delay_us(500000);
+    time_delay_us(500000);
 
     for (uint8_t i = 0; i < count; i++) {
       blheli_settings_t settings;
@@ -316,7 +316,7 @@ void set_quic(uint8_t *data, uint32_t len) {
     }
 
     serial_4way_release();
-    timer_delay_us(100000);
+    time_delay_us(100000);
 
     res = cbor_encode_str(&enc, "OK");
     check_cbor_error(QUIC_CMD_SET);

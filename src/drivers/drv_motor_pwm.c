@@ -106,7 +106,7 @@ void motor_init() {
 
 void motor_beep() {
   if (flags.failsafe) {
-    uint32_t time = timer_micros();
+    uint32_t time = time_micros();
     if (!motorbeeptime)
       motorbeeptime = time;
     else if (time - motorbeeptime > MOTOR_BEEPS_TIMEOUT) {

@@ -324,7 +324,7 @@ cbor_result_t data_flash_read_backbox(const uint32_t file_index, const uint32_t 
     if (sdcard_read_pages(buf, offset, sectors)) {
       break;
     }
-    timer_delay_us(100);
+    time_delay_us(100);
   }
 
   for (uint32_t i = 0; i < count; i++) {

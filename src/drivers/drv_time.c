@@ -6,7 +6,7 @@ void failloop(int val);
 
 #ifdef STM32F4
 
-void debug_timer_init() {
+void debug_time_init() {
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
   CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
   DWT->CYCCNT = 0;
@@ -28,7 +28,7 @@ static __INLINE uint32_t SysTick_Config2(uint32_t ticks) {
   return 0;
 }
 
-void timer_init() {
+void time_init() {
 #ifdef STM32F4
   SystemCoreClockUpdate();
 
@@ -39,14 +39,14 @@ void timer_init() {
   }
 #endif
 
-  debug_timer_init();
+  debug_time_init();
 }
 
-uint32_t timer_cycles() {
+uint32_t time_cycles() {
   return DWT->CYCCNT;
 }
 
-void timer_delay_us(uint32_t us) {
+void time_delay_us(uint32_t us) {
   volatile uint32_t delay = us * (SystemCoreClock / 1000000L);
   volatile uint32_t start = DWT->CYCCNT;
   while (DWT->CYCCNT - start < delay) {
@@ -54,7 +54,7 @@ void timer_delay_us(uint32_t us) {
   }
 }
 
-uint32_t timer_micros() {
+uint32_t time_micros() {
   static uint32_t total_micros = 0;
   static uint32_t last_micros = 0;
 
@@ -69,11 +69,11 @@ uint32_t timer_micros() {
   return total_micros;
 }
 
-uint32_t timer_millis() {
+uint32_t time_millis() {
   static uint32_t total_millis = 0;
   static uint32_t last_millis = 0;
 
-  const uint32_t millis = timer_micros() / 1000;
+  const uint32_t millis = time_micros() / 1000;
   if (millis >= last_millis) {
     total_millis += millis - last_millis;
   } else {
@@ -86,8 +86,8 @@ uint32_t timer_millis() {
 
 #endif
 
-void timer_delay_until(uint32_t uS) {
-  while (timer_micros() < uS) {
+void time_delay_until(uint32_t uS) {
+  while (time_micros() < uS) {
     __asm("NOP");
   }
 }

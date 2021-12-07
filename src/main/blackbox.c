@@ -74,7 +74,7 @@ uint8_t blackbox_update() {
   }
 
   blackbox.loop = loop_counter / blackbox_rate;
-  blackbox.time = timer_micros();
+  blackbox.time = time_micros();
 
   vec3_compress(&blackbox.pid_p_term, &state.pid_p_term, BLACKBOX_SCALE);
   vec3_compress(&blackbox.pid_i_term, &state.pid_i_term, BLACKBOX_SCALE);

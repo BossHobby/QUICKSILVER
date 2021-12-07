@@ -145,7 +145,7 @@ static void sdcard_select() {
 }
 
 static void sdcard_deselect() {
-  timer_delay_us(10);
+  time_delay_us(10);
   spi_csn_disable(SDCARD_NSS_PIN);
 }
 

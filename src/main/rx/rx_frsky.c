@@ -32,7 +32,7 @@ uint16_t frsky_extract_rssi(uint8_t rssi_raw) {
 
 void rx_update_spi_fps_lqi(float expected_fps) {
   static uint32_t time_lastframe;
-  time_lastframe = timer_micros();
+  time_lastframe = time_micros();
   static uint16_t stat_frames_second;
   // link quality & rssi
   static uint32_t fps_counter = 0;
@@ -91,7 +91,7 @@ void set_address(uint8_t is_bind) {
   // FOC_LIMIT 10, FOC_POST_K, FOC_PRE_K 10
   cc2500_write_reg(CC2500_FOCCFG, 0x16);
 
-  timer_delay_us(10);
+  time_delay_us(10);
 }
 
 static void set_channel(uint8_t channel) {
@@ -157,7 +157,7 @@ static uint8_t read_packet() {
 static void init_tune_rx() {
   cc2500_write_reg(CC2500_FOCCFG, 0x14);
 
-  time_tuned_ms = timer_millis();
+  time_tuned_ms = time_millis();
   bind_storage.frsky.offset = -126;
 
   cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)bind_storage.frsky.offset);
@@ -177,13 +177,13 @@ static void tune_rx_offset(int8_t offset) {
 
   cc2500_write_reg(CC2500_FSCTRL0, (uint8_t)bind_storage.frsky.offset);
 
-  time_tuned_ms = timer_millis();
+  time_tuned_ms = time_millis();
 }
 
 static uint8_t tune_delay = 50;
 
 static uint8_t tune_rx() {
-  if ((timer_millis() - time_tuned_ms) > tune_delay) {
+  if ((time_millis() - time_tuned_ms) > tune_delay) {
     // switch to fine tuning after first hit
     tune_rx_offset(bind_storage.frsky.offset + 5);
     tune_delay = 50;
@@ -215,7 +215,7 @@ static uint8_t tune_rx() {
 static void init_get_bind() {
   set_channel(0);
   cc2500_strobe(CC2500_SFRX);
-  timer_delay_us(20); // waiting flush FIFO
+  time_delay_us(20); // waiting flush FIFO
 
   cc2500_strobe(CC2500_SRX);
   list_length = 0;

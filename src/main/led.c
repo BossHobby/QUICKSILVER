@@ -93,7 +93,7 @@ void ledoff(uint8_t val) {
 
 void ledflash(uint32_t period, int duty) {
 #if (LED_NUMBER > 0)
-  if (timer_micros() % period > (period * duty) >> 4) {
+  if (time_micros() % period > (period * duty) >> 4) {
     ledon(LEDALL);
   } else {
     ledoff(LEDALL);
@@ -107,7 +107,7 @@ uint8_t led_pwm(uint8_t pwmval) {
   static uint32_t lastledtime = 0;
   static float ds_integrator = 0;
 
-  uint32_t time = timer_micros();
+  uint32_t time = time_micros();
   uint32_t ledtime = time - lastledtime;
 
   lastledtime = time;
@@ -150,8 +150,8 @@ void led_update() {
 
   if (ledcommand) {
     if (!ledcommandtime)
-      ledcommandtime = timer_micros();
-    if (timer_micros() - ledcommandtime > 500000) {
+      ledcommandtime = time_micros();
+    if (time_micros() - ledcommandtime > 500000) {
       ledcommand = 0;
       ledcommandtime = 0;
     }
@@ -160,7 +160,7 @@ void led_update() {
   }
 
   if (ledblink) {
-    uint32_t time = timer_micros();
+    uint32_t time = time_micros();
     if (!ledcommandtime) {
       ledcommandtime = time;
       ledoff(255);

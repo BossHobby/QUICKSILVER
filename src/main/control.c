@@ -368,7 +368,7 @@ void control() {
   } else if ((flags.arm_state == 0) || flags.failsafe || (state.throttle < 0.001f)) {
     // CONDITION: disarmed OR failsafe OR throttle off
 
-    if (onground_long && (timer_micros() - onground_long > ON_GROUND_LONG_TIMEOUT)) {
+    if (onground_long && (time_micros() - onground_long > ON_GROUND_LONG_TIMEOUT)) {
       onground_long = 0;
     }
 
@@ -386,7 +386,7 @@ void control() {
   } else { // motors on - normal flight
 
     flags.on_ground = 0;
-    onground_long = timer_micros();
+    onground_long = time_micros();
 
     if (profile.motor.throttle_boost > 0.0f) {
       state.throttle += (float)(profile.motor.throttle_boost) * throttlehpf(state.throttle);

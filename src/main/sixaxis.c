@@ -165,7 +165,7 @@ void sixaxis_read() {
 
 void sixaxis_gyro_cal() {
   float limit[3];
-  uint32_t time = timer_micros();
+  uint32_t time = time_micros();
   uint32_t timestart = time;
   uint32_t timemax = time;
   uint32_t lastlooptime = time;
@@ -203,16 +203,16 @@ void sixaxis_gyro_cal() {
       limitf(&limit[i], 800);
 
       if (fabsf(data.gyro.axis[i]) > 100 + fabsf(limit[i])) {
-        timestart = timer_micros();
+        timestart = time_micros();
         brightness = 1;
       } else {
         lpf(&gyrocal[i], data.gyro.axis[i], lpfcalc((float)looptime, 0.5 * 1e6));
       }
     }
 
-    while ((timer_micros() - time) < 1000)
-      timer_delay_us(10);
-    time = timer_micros();
+    while ((time_micros() - time) < 1000)
+      time_delay_us(10);
+    time = time_micros();
   }
 
   if (time - timestart < CAL_TIME) {
@@ -229,7 +229,7 @@ void sixaxis_acc_cal() {
     for (int x = 0; x < 3; x++) {
       lpf(&flash_storage.accelcal[x], state.accel_raw.axis[x], 0.92);
     }
-    timer_micros(); // if it takes too long time will overflow so we call it here
+    time_micros(); // if it takes too long time will overflow so we call it here
   }
   flash_storage.accelcal[2] -= 2048;
 

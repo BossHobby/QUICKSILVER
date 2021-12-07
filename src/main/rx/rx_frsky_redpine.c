@@ -107,12 +107,12 @@ static uint8_t redpine_handle_packet() {
     cc2500_strobe(CC2500_SRX);
 
     protocol_state = FRSKY_STATE_UPDATE;
-    protocol_time = timer_micros();
+    protocol_time = time_micros();
     break;
 
   case FRSKY_STATE_UPDATE:
     packet_time = 0;
-    total_time = timer_micros();
+    total_time = time_micros();
     protocol_state = FRSKY_STATE_DATA;
 
     // fallthrough
@@ -133,9 +133,9 @@ static uint8_t redpine_handle_packet() {
 
         max_sync_delay += max_sync_delay / 8;
 
-        packet_time = timer_micros();
-        total_time = timer_micros();
-        protocol_time = timer_micros();
+        packet_time = time_micros();
+        total_time = time_micros();
+        protocol_time = time_micros();
 
         next_channel(1);
         cc2500_strobe(CC2500_SRX);
@@ -155,18 +155,18 @@ static uint8_t redpine_handle_packet() {
 
     handle_overflows();
 
-    if ((timer_micros() - total_time) > 50 * max_sync_delay) {
+    if ((time_micros() - total_time) > 50 * max_sync_delay) {
       //out of sync with packets - do a complete resysnc
-      quic_debugf("REDPINE: resync %u", (timer_micros() - total_time));
+      quic_debugf("REDPINE: resync %u", (time_micros() - total_time));
       state.rx_rssi = 0;
       next_channel(1);
       cc2500_strobe(CC2500_SRX);
 
       protocol_state = FRSKY_STATE_UPDATE;
-    } else if (packet_time > 0 && (timer_micros() - packet_time) > max_sync_delay) {
+    } else if (packet_time > 0 && (time_micros() - packet_time) > max_sync_delay) {
       // missed a packet
-      quic_debugf("REDPINE: frame lost #%d at %u (%d)", frames_lost, (timer_micros() - packet_time), max_sync_delay);
-      packet_time = timer_micros();
+      quic_debugf("REDPINE: frame lost #%d at %u (%d)", frames_lost, (time_micros() - packet_time), max_sync_delay);
+      packet_time = time_micros();
       next_channel(1);
       cc2500_strobe(CC2500_SRX);
 
@@ -175,11 +175,11 @@ static uint8_t redpine_handle_packet() {
       }
 
       frames_lost++;
-    } else if ((timer_micros() - protocol_time) > REDPINE_SWITCH_SPEED_US) {
+    } else if ((time_micros() - protocol_time) > REDPINE_SWITCH_SPEED_US) {
       quic_debugf("REDPINE: switching speed");
       redpine_fast = redpine_fast == 1 ? 0 : 1;
       max_sync_delay = REDPINE_PACKET_TIME_US;
-      protocol_time = timer_micros();
+      protocol_time = time_micros();
       flags.failsafe = 1;
       protocol_state = FRSKY_STATE_INIT;
       rx_init();

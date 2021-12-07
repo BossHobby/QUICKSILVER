@@ -162,5 +162,5 @@ int8_t buf_equal_string(const uint8_t *str1, size_t len1, const char *str2) {
 
 void reset_looptime() {
   extern uint32_t lastlooptime;
-  lastlooptime = timer_micros();
+  lastlooptime = time_micros();
 }

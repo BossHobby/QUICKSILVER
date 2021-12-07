@@ -43,13 +43,13 @@ void serial_vtx_send_data(uint8_t *data, uint32_t size) {
   LL_USART_EnableIT_TXE(USART.channel);
   LL_USART_EnableIT_TC(USART.channel);
 
-  vtx_last_request = timer_millis();
-  vtx_last_valid_read = timer_millis();
+  vtx_last_request = time_millis();
+  vtx_last_valid_read = time_millis();
 }
 
 uint8_t serial_vtx_read_byte(uint8_t *data) {
   if (circular_buffer_read(&vtx_rx_buffer, data) == 1) {
-    vtx_last_valid_read = timer_millis();
+    vtx_last_valid_read = time_millis();
     return 1;
   }
   return 0;

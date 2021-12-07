@@ -179,7 +179,7 @@ static uint8_t frsky_d8_handle_packet() {
   static uint8_t telemetry[20];
 #endif
 
-  const uint32_t current_packet_received_time = timer_micros();
+  const uint32_t current_packet_received_time = time_micros();
 
   uint8_t ret = 0;
   switch (protocol_state) {
@@ -202,7 +202,7 @@ static uint8_t frsky_d8_handle_packet() {
       cc2500_strobe(CC2500_SRX);
     }
 
-    if ((timer_micros() - last_packet_received_time) > FRSKY_SYNC_DELAY_MAX) {
+    if ((time_micros() - last_packet_received_time) > FRSKY_SYNC_DELAY_MAX) {
       frame_index++;
       protocol_state = FRSKY_STATE_UPDATE;
     }
@@ -304,7 +304,7 @@ static uint8_t frsky_d8_handle_packet() {
   case FRSKY_STATE_TELEMETRY: {
 
     // telemetry has to be done ~2000us after rx
-    if ((timer_micros() - last_packet_received_time) >= 1500) {
+    if ((time_micros() - last_packet_received_time) >= 1500) {
       const uint8_t rssi = frsky_extract_rssi(packet[18]);
 
       cc2500_strobe(CC2500_SIDLE);

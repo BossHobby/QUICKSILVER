@@ -107,7 +107,7 @@ void rx_init() {
 #define XN_POWER ((0b00000001 | ((TX_POWER & 3) << 1)) | 0xa0) // | 0x80 rssi  // | 0xa0 filtered rssi
 #endif
 
-  timer_delay_us(100);
+  time_delay_us(100);
 
   // write rx address " 0 0 0 0 0 "
 
@@ -213,7 +213,7 @@ void beacon_sequence() {
       telemetry_send = 0;
       nextchannel();
     } else { // if it takes too long we get rid of it
-      if (timer_micros() - send_time > TELEMETRY_TIMEOUT) {
+      if (time_micros() - send_time > TELEMETRY_TIMEOUT) {
         xn_command(FLUSH_TX);
         xn_writereg(0, XN_TO_RX);
         beacon_seq_state = 0;
@@ -268,7 +268,7 @@ void send_telemetry() {
 
   xn_writepayload(txdata, 15);
 
-  send_time = timer_micros();
+  send_time = time_micros();
 
   return;
 }
@@ -409,7 +409,7 @@ void rx_check() {
     } else { // normal mode
 #ifdef RXDEBUG
       channelcount[rf_chan]++;
-      packettime = timer_micros() - lastrxtime;
+      packettime = time_micros() - lastrxtime;
 
       if (skipchannel && !timingfail)
         afterskip[skipchannel]++;
@@ -418,7 +418,7 @@ void rx_check() {
 
 #endif
 
-      uint32_t temptime = timer_micros();
+      uint32_t temptime = time_micros();
 
       xn_readpayload(rxdata, 15);
       pass = decodepacket();
@@ -453,7 +453,7 @@ void rx_check() {
   if (telemetry_send)
     beacon_sequence();
 
-  uint32_t time = timer_micros();
+  uint32_t time = time_micros();
 
   if (time - lastrxtime > (HOPPING_NUMBER * packet_period + 1000) && flags.rx_mode != RX_MODE_BIND) {
     //  channel with no reception
@@ -498,10 +498,10 @@ void rx_check() {
     xn_writereg(RF_CH, 0); // bind on channel 0
   }
 
-  if (timer_micros() - secondtimer > 1000000) {
+  if (time_micros() - secondtimer > 1000000) {
     packetpersecond = packetrx;
     packetrx = 0;
-    secondtimer = timer_micros();
+    secondtimer = time_micros();
 
 #ifdef RADIO_XN297L
     state.rx_rssi = packetpersecond / 200.0f;

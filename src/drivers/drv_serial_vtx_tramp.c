@@ -62,7 +62,7 @@ void serial_tramp_send_payload(uint8_t cmd, const uint16_t payload) {
   circular_buffer_clear(&vtx_rx_buffer);
 
   parser_state = PARSER_INIT;
-  vtx_last_valid_read = timer_millis();
+  vtx_last_valid_read = time_millis();
 }
 
 static void serial_tramp_reconfigure() {
@@ -132,7 +132,7 @@ vtx_update_result_t serial_tramp_update() {
   if (vtx_transfer_done == 0) {
     return VTX_WAIT;
   }
-  if (parser_state > PARSER_INIT && (timer_millis() - vtx_last_valid_read) > 500) {
+  if (parser_state > PARSER_INIT && (time_millis() - vtx_last_valid_read) > 500) {
     quic_debugf("TRAMP: timeout waiting for packet");
     parser_state = ERROR;
     return VTX_ERROR;
@@ -151,7 +151,7 @@ vtx_update_result_t serial_tramp_update() {
     return VTX_IDLE;
 
   case PARSER_INIT: {
-    if ((timer_millis() - vtx_last_request) > 200) {
+    if ((time_millis() - vtx_last_request) > 200) {
       mirror_offset = 0;
       payload_offset = 0;
       parser_state = PARSER_CHECK_MIRROR;

@@ -38,7 +38,7 @@ void buzzer() {
   // there is time to program the chip (if using SWDAT or SWCLK)
 
   if (flags.lowbatt || flags.failsafe || rx_aux_on(AUX_BUZZER_ENABLE)) {
-    uint32_t time = timer_micros();
+    uint32_t time = time_micros();
     if (buzzertime == 0)
       buzzertime = time;
     else {

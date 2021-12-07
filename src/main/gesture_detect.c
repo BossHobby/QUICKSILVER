@@ -116,7 +116,7 @@ int gestures2() {
       //      gesture_start = GESTURE_OTHER;
     }
 
-    uint32_t time = timer_micros();
+    uint32_t time = time_micros();
 
     if (gesture_start != lastgesture) {
       gesturetime = time;

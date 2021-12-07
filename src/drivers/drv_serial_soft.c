@@ -59,29 +59,29 @@ void soft_serial_set_input(const soft_serial_t *dev) {
   if (soft_serial_is_1wire(dev))
     soft_serial_init_rx(dev);
 
-  timer_delay_us(20);
+  time_delay_us(20);
 }
 
 void soft_serial_set_output(const soft_serial_t *dev) {
   if (soft_serial_is_1wire(dev))
     soft_serial_init_tx(dev);
 
-  timer_delay_us(20);
+  time_delay_us(20);
 }
 
 uint8_t soft_serial_read_byte(const soft_serial_t *dev, uint8_t *byte) {
 
-  uint32_t time_start = timer_micros();
+  uint32_t time_start = time_micros();
   uint32_t time_next = time_start;
   while (!gpio_pin_read(dev->rx_pin)) {
-    time_next = timer_micros(); //wait for start bit
+    time_next = time_micros(); //wait for start bit
     if (time_next - time_start > 10000)
       return 0;
   }
 
   // start bit falling edge
   while (gpio_pin_read(dev->rx_pin)) {
-    time_next = timer_micros(); //wait for start bit
+    time_next = time_micros(); //wait for start bit
     if (time_next - time_start > 10000)
       return 0;
   }
@@ -91,14 +91,14 @@ uint8_t soft_serial_read_byte(const soft_serial_t *dev, uint8_t *byte) {
   uint8_t b = 0;
   for (int i = 0; i < 8; ++i) {
     time_next += dev->micros_per_bit;
-    timer_delay_until(time_next);
+    time_delay_until(time_next);
     b >>= 1;
     if (gpio_pin_read(dev->rx_pin))
       b |= 0x80;
   }
 
   time_next += dev->micros_per_bit;
-  timer_delay_until(time_next); // move away from edge
+  time_delay_until(time_next); // move away from edge
 
   // stop bit
   if (!(gpio_pin_read(dev->rx_pin))) {
@@ -114,10 +114,10 @@ uint8_t soft_serial_read_byte(const soft_serial_t *dev, uint8_t *byte) {
 void soft_serial_write_byte(const soft_serial_t *dev, uint8_t byte) {
   gpio_pin_reset(dev->tx_pin);
 
-  uint32_t next_time = timer_micros();
+  uint32_t next_time = time_micros();
   for (int i = 0; i < 8; ++i) {
     next_time += dev->micros_per_bit;
-    timer_delay_until(next_time);
+    time_delay_until(next_time);
 
     if (0x01 & byte)
       gpio_pin_set(dev->tx_pin);
@@ -127,10 +127,10 @@ void soft_serial_write_byte(const soft_serial_t *dev, uint8_t byte) {
     byte = byte >> 1;
   }
   next_time += dev->micros_per_bit;
-  timer_delay_until(next_time);
+  time_delay_until(next_time);
 
   // stop bit
   gpio_pin_set(dev->tx_pin);
   next_time += dev->micros_per_bit;
-  timer_delay_until(next_time);
+  time_delay_until(next_time);
 }

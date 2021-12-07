@@ -59,8 +59,8 @@
 #define START_BIT_TIME (BIT_TIME_3_4)
 //#define STOP_BIT_TIME     ((BIT_TIME * 9) + BIT_TIME_HALVE)
 
-#define micros timer_micros
-#define millis timer_millis
+#define micros time_micros
+#define millis time_millis
 
 static uint8_t suart_getc_(uint8_t *bt) {
   uint32_t btime;

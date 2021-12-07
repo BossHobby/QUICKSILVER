@@ -23,7 +23,7 @@ void perf_counter_init() {
 }
 
 void perf_counter_start(perf_counters_t counter) {
-  perf_counter_start_time[counter] = timer_cycles();
+  perf_counter_start_time[counter] = time_cycles();
 }
 
 void perf_counter_end(perf_counters_t counter) {
@@ -31,7 +31,7 @@ void perf_counter_end(perf_counters_t counter) {
     return;
   }
 
-  uint32_t delta = timer_cycles() - perf_counter_start_time[counter];
+  uint32_t delta = time_cycles() - perf_counter_start_time[counter];
 
   if (delta > perf_counters[counter].max) {
     perf_counters[counter].max = delta;

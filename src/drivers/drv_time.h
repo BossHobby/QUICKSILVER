@@ -2,12 +2,12 @@
 
 #include <stdint.h>
 
-void timer_init();
+void time_init();
 
-uint32_t timer_cycles();
+uint32_t time_cycles();
 
-uint32_t timer_micros();
-uint32_t timer_millis();
+uint32_t time_micros();
+uint32_t time_millis();
 
-void timer_delay_us(uint32_t us);
-void timer_delay_until(uint32_t us);
+void time_delay_us(uint32_t us);
+void time_delay_until(uint32_t us);

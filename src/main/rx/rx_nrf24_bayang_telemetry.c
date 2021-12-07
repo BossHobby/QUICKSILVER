@@ -159,7 +159,7 @@ void rx_init() {
     failloop(3);
 #endif
 
-  timer_delay_us(100);
+  time_delay_us(100);
 
   static uint8_t rxaddr[5] = {0, 0, 0, 0, 0};
   nrf24_set_xn297_address(rxaddr);
@@ -224,7 +224,7 @@ void beacon_sequence() {
       telemetry_send = 0;
       nextchannel();
     } else { // if it takes too long we get rid of it
-      if (timer_micros() - send_time > TELEMETRY_TIMEOUT) {
+      if (time_micros() - send_time > TELEMETRY_TIMEOUT) {
         xn_command(FLUSH_TX);
         xn_writereg(0, XN_TO_RX);
         beacon_seq_state = 0;
@@ -278,7 +278,7 @@ void send_telemetry() {
 
   nrf24_write_xn297_payload(txdata, 15);
   xn_writereg(0, 0);
-  send_time = timer_micros();
+  send_time = time_micros();
   xn_writereg(0, XN_TO_TX);
 
   return;
@@ -405,7 +405,7 @@ void rx_check() {
     } else { // normal mode
 #ifdef RXDEBUG
       channelcount[rf_chan]++;
-      packettime = timer_micros() - lastrxtime;
+      packettime = time_micros() - lastrxtime;
 
       if (skipchannel && !timingfail)
         afterskip[skipchannel]++;
@@ -414,7 +414,7 @@ void rx_check() {
 
 #endif
 
-      uint32_t temptime = timer_micros();
+      uint32_t temptime = time_micros();
 
       int pass = nrf24_read_xn297_payload(rxdata, 15 + 2 * crc_en);
       if (pass)
@@ -453,7 +453,7 @@ void rx_check() {
   if (telemetry_send)
     beacon_sequence();
 
-  uint32_t time = timer_micros();
+  uint32_t time = time_micros();
 
   if (time - lastrxtime > (HOPPING_NUMBER * packet_period + 1000) && flags.rx_mode != RX_MODE_BIND) {
     //  channel with no reception
@@ -488,10 +488,10 @@ void rx_check() {
     state.rx.axis[3] = 0;
   }
 
-  if (timer_micros() - secondtimer > 1000000) {
+  if (time_micros() - secondtimer > 1000000) {
     packetpersecond = packetrx;
     packetrx = 0;
-    secondtimer = timer_micros();
+    secondtimer = time_micros();
 
     state.rx_rssi = packetpersecond / 200.0f;
     state.rx_rssi = state.rx_rssi * state.rx_rssi * state.rx_rssi * RSSI_EXP + state.rx_rssi * (1 - RSSI_EXP);

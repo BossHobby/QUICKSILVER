@@ -150,7 +150,7 @@ void writeregs(uint8_t data[], uint8_t size) {
     spi_sendbyte(data[i]);
   }
   spi_csoff();
-  timer_delay_us(1000);
+  time_delay_us(1000);
 }
 
 char quad_name[6] = {'N', 'O', 'N', 'A', 'M', 'E'};
@@ -224,7 +224,7 @@ void rx_init() {
 
   bleinit();
 
-  timer_delay_us(100);
+  time_delay_us(100);
 
   int rxaddress[5] = {0, 0, 0, 0, 0};
   xn_writerxaddress(rxaddress);
@@ -490,7 +490,7 @@ void beacon_sequence() {
   switch (beacon_seq_state) {
   case 0:
     // send data if enough time passed since last send
-    if (timer_micros() - ble_txtime > BLE_INTERVAL) {
+    if (time_micros() - ble_txtime > BLE_INTERVAL) {
       ble_send = 1;
       oldchan = rf_chan;
 
@@ -514,7 +514,7 @@ void beacon_sequence() {
       beacon_seq_state++;
       goto next;
     } else { // if it takes too long we get rid of it
-      if (timer_micros() - ble_txtime > BLE_TX_TIMEOUT) {
+      if (time_micros() - ble_txtime > BLE_TX_TIMEOUT) {
 //SilverVISE - start
 #ifdef TX_POWER_ON_TLM
         xn_writereg(RF_SETUP, XN_POWER); // lna high current on ( better performance )
@@ -582,7 +582,7 @@ void send_beacon() {
   // SilverVISE - end
   int vbatt_comp_int = state.vbatt_comp * 1000.0f;
 
-  uint32_t time = timer_micros();
+  uint32_t time = time_micros();
 
   time = time >> 20; // divide by 1024*1024, no time for accuracy here
   time = time * 10;
@@ -594,7 +594,7 @@ void send_beacon() {
 
   extern uint32_t total_time_in_air;
   extern uint32_t time_throttle_on;
-  uint32_t uptime = timer_micros();
+  uint32_t uptime = time_micros();
 
   int TLMorPID = 0; // 0 = TLM, 1 = PID+TLM
 
@@ -831,7 +831,7 @@ buf[L++] =  time;
   payloadsize = L;
   xn_writepayload(buffint, L);
 
-  ble_txtime = timer_micros();
+  ble_txtime = time_micros();
 
   return;
 }
@@ -953,7 +953,7 @@ void rx_check() {
     } else { // normal mode
 #ifdef RXDEBUG
       channelcount[rf_chan]++;
-      packettime = timer_micros() - lastrxtime;
+      packettime = time_micros() - lastrxtime;
 
       if (skipchannel && !timingfail)
         afterskip[skipchannel]++;
@@ -962,7 +962,7 @@ void rx_check() {
 
 #endif
 
-      uint32_t temptime = timer_micros();
+      uint32_t temptime = time_micros();
 
       nextchannel();
 
@@ -995,7 +995,7 @@ void rx_check() {
 
   beacon_sequence();
 
-  uint32_t time = timer_micros();
+  uint32_t time = time_micros();
 
   // sequence period 12000
   if (time - lastrxtime > (HOPPING_NUMBER * PACKET_PERIOD + 1000) && flags.rx_mode != RX_MODE_BIND) {
@@ -1030,10 +1030,10 @@ void rx_check() {
     state.rx.axis[3] = 0;
   }
 #ifdef RXDEBUG
-  if (timer_micros() - secondtimer > 1000000) {
+  if (time_micros() - secondtimer > 1000000) {
     packetpersecond = packetrx;
     packetrx = 0;
-    secondtimer = timer_micros();
+    secondtimer = time_micros();
   }
 #endif
 }

@@ -28,8 +28,8 @@
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 #ifdef USE_SERIAL_4WAY_SK_BOOTLOADER
 
-#define micros timer_micros
-#define millis timer_millis
+#define micros time_micros
+#define millis time_millis
 
 #define BIT_LO_US (32) //32uS
 #define BIT_HI_US (2 * BIT_LO_US)
@@ -82,7 +82,7 @@ static uint8_t ckSumOut;
 #define EnterIspCmd2 0x53
 #define signature_r 0x30
 
-#define delay_us(x) timer_delay_us(x)
+#define delay_us(x) time_delay_us(x)
 #define IRQ_OFF // dummy
 #define IRQ_ON  // dummy
 

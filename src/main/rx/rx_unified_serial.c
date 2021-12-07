@@ -115,12 +115,12 @@ void RX_USART_ISR() {
 void rx_lqi_lost_packet() {
   link_quality_raw++;
   if (!time_siglost) {
-    time_siglost = timer_micros();
+    time_siglost = time_micros();
   }
 
   // was TICK_CLOCK_FREQ_HZ 8,000,000 ticks on F0, 21M on F4. One second.
-  // however timer_micros are in us.
-  if (timer_micros() - time_siglost > FAILSAFETIME) {
+  // however time_micros are in us.
+  if (time_micros() - time_siglost > FAILSAFETIME) {
     failsafe_siglost = 1;
   }
 }
@@ -131,7 +131,7 @@ void rx_lqi_got_packet() {
 }
 
 void rx_lqi_update_fps(uint16_t fixed_fps) {
-  time_lastframe = timer_micros();
+  time_lastframe = time_micros();
 
   // link quality & rssi
   static uint32_t fps_counter = 0;
@@ -242,7 +242,7 @@ void rx_check() {
   state.rx_status = RX_STATUS_DETECTED + bind_storage.unified.protocol;
 
   //FAILSAFE! It gets checked every time!
-  if (timer_micros() - time_lastframe > FAILSAFETIME) {
+  if (time_micros() - time_lastframe > FAILSAFETIME) {
     failsafe_noframes = 1;
   } else {
     failsafe_noframes = 0;

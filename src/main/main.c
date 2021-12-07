@@ -57,7 +57,7 @@ int main() {
   state.looptime_autodetect = LOOPTIME;
 
   // init timer so we can use delays etc
-  timer_init();
+  time_init();
 
   // load default profile
   profile_set_defaults();
@@ -71,7 +71,7 @@ int main() {
 
   // load flash saved variables
   flash_load();
-  timer_delay_us(1000);
+  time_delay_us(1000);
 
   //init some hardware things
   gpio_init();
@@ -83,7 +83,7 @@ int main() {
   rx_spektrum_bind();
 #endif
 
-  timer_delay_us(100000);
+  time_delay_us(100000);
 
   //init the firmware things
   motor_init();
@@ -95,7 +95,7 @@ int main() {
   }
 
 #ifdef ENABLE_OSD
-  timer_delay_us(300000);
+  time_delay_us(300000);
   osd_init();
 #endif
 
@@ -120,7 +120,7 @@ int main() {
   rx_init();
 #endif
 
-  timer_delay_us(1000);
+  time_delay_us(1000);
   vbat_init();
 
 #ifdef RX_BAYANG_BLE_APP
@@ -149,7 +149,7 @@ int main() {
 
   perf_counter_init();
 
-  lastlooptime = timer_micros();
+  lastlooptime = time_micros();
 
   //
   //
@@ -158,7 +158,7 @@ int main() {
   //
 
   while (1) {
-    uint32_t time = timer_micros();
+    uint32_t time = time_micros();
     state.looptime = ((uint32_t)(time - lastlooptime));
     lastlooptime = time;
 
@@ -270,7 +270,7 @@ int main() {
     }
 #endif
 
-    state.cpu_load = (timer_micros() - lastlooptime);
+    state.cpu_load = (time_micros() - lastlooptime);
     //one last check to make sure we catch any looptime problems and rerun autodetect live
     if (loop_ctr == 255 && state.cpu_load > state.looptime_autodetect + 5) {
       blown_loop_counter++;
@@ -301,7 +301,7 @@ int main() {
     }
 #endif
 
-    while ((timer_micros() - time) < state.looptime_autodetect)
+    while ((time_micros() - time) < state.looptime_autodetect)
       __NOP();
 
   } // end loop
@@ -350,11 +350,11 @@ void failloop(int val) {
 #endif
     for (int i = 0; i < val; i++) {
       ledon(255);
-      timer_delay_us(500000);
+      time_delay_us(500000);
       ledoff(255);
-      timer_delay_us(500000);
+      time_delay_us(500000);
     }
-    timer_delay_us(800000);
+    time_delay_us(800000);
   }
 }
 
