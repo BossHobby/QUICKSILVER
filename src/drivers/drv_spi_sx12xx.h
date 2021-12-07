@@ -170,6 +170,7 @@ void sx12xx_set_mode(sx12xx_radio_op_modes_t mode);
 
 uint8_t sx12xx_read_reg(uint8_t reg);
 uint8_t sx12xx_write_reg(uint8_t reg, uint8_t data);
+uint8_t sx12xx_set_reg(uint8_t reg, uint8_t value, uint8_t msb, uint8_t lsb);
 
 void sx12xx_write_reg_burst(uint8_t reg, uint8_t *data, uint8_t size);
 

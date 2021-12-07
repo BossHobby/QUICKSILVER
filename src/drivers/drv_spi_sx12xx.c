@@ -99,6 +99,17 @@ uint8_t sx12xx_write_reg(uint8_t reg, uint8_t data) {
   return ret;
 }
 
+uint8_t sx12xx_set_reg(uint8_t reg, uint8_t value, uint8_t msb, uint8_t lsb) {
+  if ((msb > 7) || (lsb > 7) || (lsb > msb)) {
+    return 0;
+  }
+
+  uint8_t current_value = sx12xx_read_reg(reg);
+  uint8_t mask = ~((0b11111111 << (msb + 1)) | (0b11111111 >> (8 - lsb)));
+  uint8_t new_value = (current_value & ~mask) | (value & mask);
+  return sx12xx_write_reg(reg, new_value);
+}
+
 void sx12xx_write_reg_burst(uint8_t reg, uint8_t *data, uint8_t size) {
   spi_csn_enable(SX12XX_NSS_PIN);
 
@@ -111,11 +122,7 @@ void sx12xx_write_reg_burst(uint8_t reg, uint8_t *data, uint8_t size) {
 }
 
 void sx12xx_set_mode(sx12xx_radio_op_modes_t mode) {
-  const uint8_t new_mode = SX127x_OPMODE_LORA | 0x8 | mode;
-  const uint8_t current_mode = sx12xx_read_reg(SX127x_OP_MODE);
-  if (current_mode != new_mode) {
-    sx12xx_write_reg(SX127x_OP_MODE, SX127x_OPMODE_LORA | 0x8 | mode);
-  }
+  sx12xx_write_reg(SX127x_OP_MODE | SX127x_OPMODE_LORA, mode);
 }
 
 uint8_t sx12xx_detect() {
