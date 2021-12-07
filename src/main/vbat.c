@@ -17,8 +17,8 @@ extern profile_t profile;
 void vbat_init() {
   int count = 0;
   while (count < 5000) {
-    float bootadc = adc_read(0) * state.vreffilt;
-    lpf(&state.vreffilt, adc_read(1), 0.9968f);
+    float bootadc = adc_read(ADC_CHAN_VBAT) * state.vreffilt;
+    lpf(&state.vreffilt, adc_read(ADC_CHAN_VREF), 0.9968f);
     lpf(&state.vbattfilt, bootadc, 0.9968f);
     count++;
   }
@@ -41,9 +41,9 @@ void vbat_init() {
 
 void vbat_calc() {
   // read acd and scale based on processor voltage
-  float battadc = adc_read(0) * state.vreffilt;
+  float battadc = adc_read(ADC_CHAN_VBAT) * state.vreffilt;
   // read and filter internal reference
-  lpf(&state.vreffilt, adc_read(1), 0.9968f);
+  lpf(&state.vreffilt, adc_read(ADC_CHAN_VREF), 0.9968f);
 
   // average of all motors
   static float thrfilt = 0;
