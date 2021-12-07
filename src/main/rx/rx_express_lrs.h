@@ -1,3 +1,5 @@
+#pragma once
+
 #include "rx.h"
 
 #include "drv_spi_sx12xx.h"
@@ -13,7 +15,7 @@ typedef enum {
   TLM_RATIO_1_128 = 128,
 } expresslrs_tlm_ratio_t;
 
-const expresslrs_tlm_ratio_t tlm_ration_map[] = {
+static const expresslrs_tlm_ratio_t tlm_ration_map[] = {
     TLM_RATIO_NO_TLM,
     TLM_RATIO_1_2,
     TLM_RATIO_1_4,
