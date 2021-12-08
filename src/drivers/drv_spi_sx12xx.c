@@ -18,9 +18,9 @@ void sx12xx_init() {
 
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_INPUT;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
   gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-  gpio_init.Pull = LL_GPIO_PULL_DOWN;
+  gpio_init.Pull = LL_GPIO_PULL_NO;
   gpio_pin_init(&gpio_init, SX12XX_DIO0_PIN);
 
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
@@ -48,7 +48,7 @@ void sx12xx_init() {
   SPI_InitStructure.ClockPolarity = LL_SPI_POLARITY_LOW;
   SPI_InitStructure.ClockPhase = LL_SPI_PHASE_1EDGE;
   SPI_InitStructure.NSS = LL_SPI_NSS_SOFT;
-  SPI_InitStructure.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV32;
+  SPI_InitStructure.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV8;
   SPI_InitStructure.BitOrder = LL_SPI_MSB_FIRST;
   SPI_InitStructure.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
   SPI_InitStructure.CRCPoly = 7;
