@@ -64,6 +64,7 @@ float rx_rssi;
 
 static volatile elrs_state_t elrs_state = DISCONNECTED;
 static volatile bool already_hop = false;
+static volatile bool needs_hop = false;
 
 // nonce that we THINK we are up to.
 static uint8_t nonce_rx = 0;
@@ -110,7 +111,7 @@ static void elrs_set_rate(uint8_t index) {
   sx12xx_set_reg(SX127x_INVERT_IQ, (uint8_t)(UID[5] & 0x01), 6, 6);
 
   sx12xx_set_mode(SX127x_OPMODE_STANDBY);
-  sx12xx_write_reg(SX127x_PA_CONFIG, SX127x_PA_SELECT_BOOST | SX127x_MAX_OUTPUT_POWER | 0b0000);
+  sx12xx_write_reg(SX127x_PA_CONFIG, SX127x_PA_SELECT_BOOST | SX127x_MAX_OUTPUT_POWER | 0b1111);
 
   sx12xx_set_reg(SX127x_MODEM_CONFIG_2, air_rate_config[index].sf | SX127X_TX_MODE_SINGLE | SX1278_RX_CRC_MODE_OFF, 7, 2);
   if (air_rate_config[index].sf == SX127x_SF_6) {
@@ -154,7 +155,7 @@ static void elrs_enter_tx() {
 }
 
 static bool elrs_hop() {
-  if (!already_hop) {
+  if (already_hop) {
     return false;
   }
 
@@ -249,12 +250,7 @@ void elrs_handle_tick() {
 
 void elrs_handle_tock() {
   elrs_phase_int_event(time_micros());
-
-  const bool did_hop = elrs_hop();
-  if (!did_hop) {
-    const int32_t offset = fhss_update_freq_correction(((sx12xx_read_reg(SX127x_FEI_MSB) & 0b1000) >> 3) ? 1 : 0);
-    sx12xx_write_reg(SX127x_PPMOFFSET, (uint8_t)offset);
-  }
+  needs_hop = true;
 }
 
 void elrs_process_packet(uint32_t packet_time) {
@@ -289,6 +285,8 @@ void elrs_process_packet(uint32_t packet_time) {
       nonce_rx = packet[2];
 
       elrs_connection_tentative();
+    } else {
+      quic_debugf("sync???");
     }
     break;
   }
@@ -318,6 +316,16 @@ void rx_check() {
   const uint32_t packet_time = time_micros();
   if (elrs_vaild_packet()) {
     elrs_process_packet(packet_time);
+  }
+
+  if (needs_hop) {
+    needs_hop = false;
+
+    const bool did_hop = elrs_hop();
+    if (!did_hop) {
+      const int32_t offset = fhss_update_freq_correction(((sx12xx_read_reg(SX127x_FEI_MSB) & 0b1000) >> 3) ? 1 : 0);
+      sx12xx_write_reg(SX127x_PPMOFFSET, (uint8_t)offset);
+    }
   }
 
   if (elrs_state == TENTATIVE && ((time_millis() - sync_packet_time) > rf_pref_params[current_rate].rf_mode_cycle_addtional_time)) {
