@@ -119,22 +119,23 @@ uint32_t fhss_next_freq() {
   return fhss_get_freq(fhss_sequence[fhss_index++]);
 }
 
-void fhss_update_freq_correction(uint8_t value) {
+int32_t fhss_update_freq_correction(uint8_t value) {
   if (!value) {
     if (freq_correction < FREQ_CORRECTION_MAX) {
       freq_correction += 1; //min freq step is ~ 61hz but don't forget we use FREQ_HZ_TO_REG_VAL so the units here are not hz!
     } else {
-      freq_correction = FREQ_CORRECTION_MAX;
       freq_correction = 0; //reset because something went wrong
     }
   } else {
     if (freq_correction > FREQ_CORRECTION_MIN) {
       freq_correction -= 1; //min freq step is ~ 61hz
     } else {
-      freq_correction = FREQ_CORRECTION_MIN;
       freq_correction = 0; //reset because something went wrong
     }
   }
+
+  const current_freq = fhss_get_freq(fhss_sequence[fhss_index]);
+  return (freq_correction * 1e6 / current_freq) * 95 / 100;
 }
 
 void fhss_reset() {
