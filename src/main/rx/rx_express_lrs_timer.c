@@ -76,7 +76,16 @@ void elrs_timer_resume(uint32_t interval_us) {
 }
 
 void elrs_timer_set_phase_shift(int32_t shift) {
-  phase_shift = constrain(shift, -(current_interval / 4), (current_interval / 4));
+  const int32_t min = -(current_interval / 4);
+  const int32_t max = (current_interval / 4);
+
+  if (shift < min) {
+    phase_shift = min;
+  } else if (shift > max) {
+    phase_shift = max;
+  } else {
+    phase_shift = shift;
+  }
 }
 
 void elrs_phase_int_event(uint32_t time) {
