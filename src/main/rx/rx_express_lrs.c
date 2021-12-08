@@ -42,7 +42,7 @@ static const expresslrs_rf_pref_params_t rf_pref_params[4] = {
 };
 
 extern uint8_t fhss_index;
-extern void fhss_update_freq_correction(uint8_t value);
+extern int32_t fhss_update_freq_correction(uint8_t value);
 extern void fhss_randomize(int32_t seed);
 extern uint32_t fhss_get_freq(uint16_t index);
 extern uint32_t fhss_next_freq();
@@ -63,6 +63,7 @@ extern void elrs_phase_reset();
 float rx_rssi;
 
 static volatile elrs_state_t elrs_state = DISCONNECTED;
+static volatile bool already_hop = false;
 
 // nonce that we THINK we are up to.
 static uint8_t nonce_rx = 0;
@@ -72,7 +73,7 @@ static uint32_t current_rate = 0;
 static uint8_t UID[6] = {221, 251, 226, 34, 222, 25};
 // static uint8_t UID[6] = {0, 1, 2, 3, 4, 5};
 
-static bool already_hop = false;
+static uint32_t sync_packet_time = 0;
 
 static void elrs_set_frequency(int32_t FRQ) {
   sx12xx_set_mode(SX127x_OPMODE_STANDBY);
@@ -249,39 +250,14 @@ void elrs_handle_tick() {
 void elrs_handle_tock() {
   elrs_phase_int_event(time_micros());
 
-  elrs_hop();
+  const bool did_hop = elrs_hop();
+  if (!did_hop) {
+    const int32_t offset = fhss_update_freq_correction(((sx12xx_read_reg(SX127x_FEI_MSB) & 0b1000) >> 3) ? 1 : 0);
+    sx12xx_write_reg(SX127x_PPMOFFSET, (uint8_t)offset);
+  }
 }
 
-void rx_init() {
-  sx12xx_init();
-  if (!sx12xx_detect()) {
-    return;
-  }
-
-  const int32_t seed = ((int32_t)UID[2] << 24) + ((int32_t)UID[3] << 16) + ((int32_t)UID[4] << 8) + UID[5];
-  fhss_randomize(seed);
-  crc14_init();
-
-  elrs_set_rate(2);
-  elrs_timer_init(air_rate_config[current_rate].interval);
-  elrs_set_frequency(fhss_get_freq(0));
-  elrs_enter_rx();
-}
-
-void rx_check() {
-  static uint32_t sync_packet_time = 0;
-
-  if (elrs_state == TENTATIVE && ((time_millis() - sync_packet_time) > rf_pref_params[current_rate].rf_mode_cycle_addtional_time)) {
-    sync_packet_time = time_millis();
-    elrs_connection_lost();
-    return;
-  }
-
-  const uint32_t packet_time = time_micros();
-  if (!elrs_vaild_packet()) {
-    return;
-  }
-
+void elrs_process_packet(uint32_t packet_time) {
   elrs_phase_ext_event(packet_time + PACKET_TO_TOCK_SLACK);
 
   const uint8_t type = packet[0] & 0b11;
@@ -313,14 +289,41 @@ void rx_check() {
       nonce_rx = packet[2];
 
       elrs_connection_tentative();
-    } else {
-      elrs_state = CONNECTED;
     }
     break;
   }
 
   default:
     break;
+  }
+}
+
+void rx_init() {
+  sx12xx_init();
+  if (!sx12xx_detect()) {
+    return;
+  }
+
+  const int32_t seed = ((int32_t)UID[2] << 24) + ((int32_t)UID[3] << 16) + ((int32_t)UID[4] << 8) + UID[5];
+  fhss_randomize(seed);
+  crc14_init();
+
+  elrs_set_rate(2);
+  elrs_timer_init(air_rate_config[current_rate].interval);
+  elrs_set_frequency(fhss_get_freq(0));
+  elrs_enter_rx();
+}
+
+void rx_check() {
+  const uint32_t packet_time = time_micros();
+  if (elrs_vaild_packet()) {
+    elrs_process_packet(packet_time);
+  }
+
+  if (elrs_state == TENTATIVE && ((time_millis() - sync_packet_time) > rf_pref_params[current_rate].rf_mode_cycle_addtional_time)) {
+    sync_packet_time = time_millis();
+    elrs_connection_lost();
+    return;
   }
 }
 
