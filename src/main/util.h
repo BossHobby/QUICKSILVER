@@ -6,6 +6,8 @@
 #define DEGTORAD 0.017453292f
 #define RADTODEG 57.29577951f
 
+#define constrain(val, min, max) ((val) < (min) ? (min) : ((val) > (max) ? (max) : (val)))
+
 float mapf(float x, float in_min, float in_max, float out_min, float out_max);
 void limitf(float *input, const float limit);
 float constrainf(const float in, const float min, const float max);

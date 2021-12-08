@@ -137,4 +137,8 @@ void fhss_update_freq_correction(uint8_t value) {
   }
 }
 
+void fhss_reset() {
+  freq_correction = 0;
+}
+
 #endif

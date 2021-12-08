@@ -1,5 +1,6 @@
 #include "rx_express_lrs.h"
 
+#include <stdbool.h>
 #include <string.h>
 
 #include "control.h"
@@ -9,8 +10,9 @@
 
 #if defined(RX_EXPRESS_LRS) && defined(USE_SX12XX)
 
+#define SYNC_WORD 0x12 // default LoRa sync word
+
 #define BUFFER_SIZE 8
-#define SYNC_WORD UID[3]
 #define DEVICE_ADDR (UID[5] & 0b111111)
 #define CRC_CIPHER UID[4]
 
@@ -19,10 +21,10 @@
 #define TLM_PACKET 0b11
 #define SYNC_PACKET 0b10
 
-//  7     0     allocate the entire FIFO buffer for TX only
-#define FIFO_TX_BASE_ADDR_MAX 0b00000000
+// Desired buffer time between Packet ISR and Tock ISR
+#define PACKET_TO_TOCK_SLACK 200
 
-//  7     0     allocate the entire FIFO buffer for RX only
+#define FIFO_TX_BASE_ADDR_MAX 0b00000000
 #define FIFO_RX_BASE_ADDR_MAX 0b00000000
 
 static expresslrs_mod_settings_t air_rate_config[4] = {
@@ -44,36 +46,51 @@ extern void fhss_update_freq_correction(uint8_t value);
 extern void fhss_randomize(int32_t seed);
 extern uint32_t fhss_get_freq(uint16_t index);
 extern uint32_t fhss_next_freq();
+extern void fhss_reset();
 
 extern void crc14_init();
 extern uint16_t crc14_calc(uint8_t *data, uint8_t len, uint16_t crc);
 
+extern void elrs_timer_init(uint32_t interval_us);
+extern void elrs_timer_resume(uint32_t interval_us);
+extern void elrs_timer_stop();
+
+extern void elrs_phase_update(elrs_state_t state);
+extern void elrs_phase_int_event(uint32_t time);
+extern void elrs_phase_ext_event(uint32_t time);
+extern void elrs_phase_reset();
+
 float rx_rssi;
+
+static volatile elrs_state_t elrs_state = DISCONNECTED;
 
 // nonce that we THINK we are up to.
 static uint8_t nonce_rx = 0;
 
 static uint32_t current_rate = 0;
-static uint32_t max_sync_delay = 0;
 
-static uint8_t UID[6] = {'h', 'a', 'n', 'f', 'e', 'r'};
+static uint8_t UID[6] = {221, 251, 226, 34, 222, 25};
+// static uint8_t UID[6] = {0, 1, 2, 3, 4, 5};
 
-void elrs_set_frequency(int32_t FRQ) {
+static bool already_hop = false;
+
+static void elrs_set_frequency(int32_t FRQ) {
   sx12xx_set_mode(SX127x_OPMODE_STANDBY);
 
-  uint8_t buf[4] = {
+  uint8_t buf[3] = {
       (uint8_t)((FRQ >> 16) & 0xFF),
       (uint8_t)((FRQ >> 8) & 0xFF),
       (uint8_t)(FRQ & 0xFF),
-      0, // 32-bit aligned
   };
-  sx12xx_write_reg_burst(SX127x_FRF_MSB, buf, 4);
+  sx12xx_write_reg_burst(SX127x_FRF_MSB, buf, 3);
 }
 
-void elrs_set_rate(uint8_t index) {
-  sx12xx_write_reg(SX127x_OP_MODE, 0x8 | SX127x_OPMODE_SLEEP);
-  sx12xx_write_reg(SX127x_OP_MODE, 0x8 | SX127x_OPMODE_LORA);
+static void elrs_set_rate(uint8_t index) {
+  sx12xx_write_reg(SX127x_OP_MODE, SX127x_OPMODE_SLEEP);
+  sx12xx_write_reg(SX127x_OP_MODE, SX127x_OPMODE_LORA);
   sx12xx_set_mode(SX127x_OPMODE_STANDBY);
+
+  sx12xx_write_reg(SX127x_IRQ_FLAGS, 0b11111111);
 
   sx12xx_write_reg(SX127x_PAYLOAD_LENGTH, BUFFER_SIZE);
   sx12xx_write_reg(SX127x_SYNC_WORD, SYNC_WORD);
@@ -81,25 +98,27 @@ void elrs_set_rate(uint8_t index) {
   sx12xx_write_reg(SX127x_FIFO_RX_BASE_ADDR, FIFO_RX_BASE_ADDR_MAX);
   sx12xx_write_reg(SX127x_FIFO_TX_BASE_ADDR, FIFO_TX_BASE_ADDR_MAX);
 
-  sx12xx_write_reg(SX127x_DIO_MAPPING_1, 0b11000000);
+  sx12xx_set_reg(SX127x_DIO_MAPPING_1, 0b11000000, 7, 6);
 
   sx12xx_write_reg(SX127x_LNA, SX127x_LNA_BOOST_ON);
   sx12xx_write_reg(SX127x_MODEM_CONFIG_3, SX1278_AGC_AUTO_ON | SX1278_LOW_DATA_RATE_OPT_OFF);
-  sx12xx_write_reg(SX127x_OCP, SX127X_OCP_ON | SX127X_OCP_150MA);
+  sx12xx_set_reg(SX127x_OCP, SX127X_OCP_ON | SX127X_OCP_150MA, 5, 0);
 
   sx12xx_write_reg(SX127x_PREAMBLE_LSB, air_rate_config[index].preamble_len);
 
-  sx12xx_set_mode(SX127x_OPMODE_STANDBY);
-  sx12xx_write_reg(SX127x_PA_CONFIG, SX127x_PA_SELECT_BOOST | SX127x_MAX_OUTPUT_POWER | 0b1111);
+  sx12xx_set_reg(SX127x_INVERT_IQ, (uint8_t)(UID[5] & 0x01), 6, 6);
 
-  sx12xx_write_reg(SX127x_MODEM_CONFIG_2, air_rate_config[index].sf | SX127X_TX_MODE_SINGLE | SX1278_RX_CRC_MODE_OFF);
+  sx12xx_set_mode(SX127x_OPMODE_STANDBY);
+  sx12xx_write_reg(SX127x_PA_CONFIG, SX127x_PA_SELECT_BOOST | SX127x_MAX_OUTPUT_POWER | 0b0000);
+
+  sx12xx_set_reg(SX127x_MODEM_CONFIG_2, air_rate_config[index].sf | SX127X_TX_MODE_SINGLE | SX1278_RX_CRC_MODE_OFF, 7, 2);
   if (air_rate_config[index].sf == SX127x_SF_6) {
-    sx12xx_write_reg(SX127x_DETECT_OPTIMIZE, SX127x_DETECT_OPTIMIZE_SF_6);
+    sx12xx_set_reg(SX127x_DETECT_OPTIMIZE, SX127x_DETECT_OPTIMIZE_SF_6, 2, 0);
     sx12xx_write_reg(SX127x_DETECTION_THRESHOLD, SX127x_DETECTION_THRESHOLD_SF_6);
 
     sx12xx_write_reg(SX127x_MODEM_CONFIG_1, air_rate_config[index].bw | air_rate_config[index].cr | SX1278_HEADER_IMPL_MODE);
   } else {
-    sx12xx_write_reg(SX127x_DETECT_OPTIMIZE, 0b10000000 | SX127x_DETECT_OPTIMIZE_SF_7_12);
+    sx12xx_set_reg(SX127x_DETECT_OPTIMIZE, SX127x_DETECT_OPTIMIZE_SF_7_12, 2, 0);
     sx12xx_write_reg(SX127x_DETECTION_THRESHOLD, SX127x_DETECTION_THRESHOLD_SF_7_12);
 
     sx12xx_write_reg(SX127x_MODEM_CONFIG_1, air_rate_config[index].bw | air_rate_config[index].cr | SX1278_HEADER_IMPL_MODE);
@@ -113,19 +132,18 @@ void elrs_set_rate(uint8_t index) {
     sx12xx_write_reg(0x36, 0x03);
   }
 
-  max_sync_delay = air_rate_config[index].interval;
   current_rate = index;
 }
 
 static uint8_t packet[BUFFER_SIZE];
 
-void elrs_enter_rx() {
+static void elrs_enter_rx() {
   sx12xx_set_mode(SX127x_OPMODE_STANDBY);
   sx12xx_write_reg(SX127x_FIFO_ADDR_PTR, 0x0);
   sx12xx_set_mode(SX127x_OPMODE_RXCONTINUOUS);
 }
 
-void elrs_enter_tx() {
+static void elrs_enter_tx() {
   sx12xx_set_mode(SX127x_OPMODE_STANDBY);
 
   sx12xx_write_reg(SX127x_FIFO_ADDR_PTR, 0x0);
@@ -134,22 +152,27 @@ void elrs_enter_tx() {
   sx12xx_set_mode(SX127x_OPMODE_TX);
 }
 
-void elrs_hop() {
+static bool elrs_hop() {
+  if (!already_hop) {
+    return false;
+  }
+
   const uint8_t modresult = (nonce_rx + 1) % air_rate_config[current_rate].fhss_hop_interval;
   if (modresult != 0) {
-    return;
+    return false;
   }
 
   elrs_set_frequency(fhss_next_freq());
+  already_hop = true;
 
-  if (air_rate_config[current_rate].tlm_interval == 0) {
-    elrs_enter_rx();
-  } else if (((nonce_rx + 1) % air_rate_config[current_rate].tlm_interval) != 0) {
+  const uint8_t tlm_mod = ((nonce_rx + 1) % air_rate_config[current_rate].tlm_interval);
+  if (tlm_mod != 0 || air_rate_config[current_rate].tlm_interval == 0) {
     elrs_enter_rx();
   }
+  return true;
 }
 
-void elrs_tlm() {
+static void elrs_tlm() {
   if (air_rate_config[current_rate].tlm_interval == 0) {
     return;
   }
@@ -169,18 +192,17 @@ void elrs_tlm() {
   packet[7] = 0; // TODO: CRC
 }
 
-void elrs_read_packet() {
-  uint8_t addr = sx12xx_read_reg(SX127x_FIFO_RX_CURRENT_ADDR);
-  sx12xx_write_reg(SX127x_FIFO_ADDR_PTR, addr);
-
+static void elrs_read_packet() {
   sx12xx_read_fifo(packet, BUFFER_SIZE);
-
   sx12xx_write_reg(SX127x_IRQ_FLAGS, 0b11111111);
 }
 
-uint8_t elrs_vaild_packet() {
+static bool elrs_vaild_packet() {
+  if (!sx12xx_read_dio0()) {
+    return false;
+  }
+
   elrs_read_packet();
-  fhss_update_freq_correction(((sx12xx_read_reg(SX127x_FEI_MSB) & 0b1000) >> 3) ? 1 : 0);
 
   const uint8_t type = packet[0] & 0b11;
   const uint16_t their_crc = (((uint16_t)(packet[0] & 0b11111100)) << 6) | packet[7];
@@ -190,52 +212,44 @@ uint8_t elrs_vaild_packet() {
 
   const uint16_t crc_initializer = (UID[4] << 8) | UID[5];
   const uint16_t our_crc = crc14_calc(packet, 7, crc_initializer);
-  if (their_crc != our_crc) {
-    return 0;
-  }
 
-  const uint8_t addr = (packet[0] & 0b11111100) >> 2;
-  if (addr != DEVICE_ADDR) {
-    return 0;
-  }
-  return 1;
+  return their_crc == our_crc;
 }
 
-uint8_t elrs_process_packet() {
+static void elrs_connection_lost() {
+  elrs_state = DISCONNECTED;
+  elrs_timer_stop();
 
-  const uint8_t type = packet[0] & 0b11;
-  switch (type) {
-  case RC_DATA_PACKET: {
-    state.rx.axis[0] = (packet[1] << 3) + ((packet[5] & 0b11100000) >> 5);
-    state.rx.axis[1] = (packet[2] << 3) + ((packet[5] & 0b00011100) >> 2);
-    state.rx.axis[2] = (packet[3] << 3) + ((packet[5] & 0b00000011) << 1) + (packet[6] & 0b10000000 >> 7);
-    state.rx.axis[3] = (packet[4] << 3) + ((packet[6] & 0b01110000) >> 4);
-    state.aux[AUX_CHANNEL_0] = (packet[6] & 0b00001000) ? 1 : 0;
-    state.aux[AUX_CHANNEL_1] = (packet[6] & 0b00000100) ? 1 : 0;
-    state.aux[AUX_CHANNEL_2] = (packet[6] & 0b00000010) ? 1 : 0;
-    state.aux[AUX_CHANNEL_3] = (packet[6] & 0b00000001) ? 1 : 0;
-    break;
-  }
+  already_hop = false;
 
-  case SYNC_PACKET: {
-    if (packet[4] != UID[3] || packet[5] != UID[4] || packet[6] != UID[5]) {
-      break;
-    }
-    if ((nonce_rx == packet[2]) && (fhss_index == packet[1])) {
-      //GotConnection();
-    } else {
-      fhss_index = packet[1];
-      nonce_rx = packet[2];
-    }
+  fhss_reset();
+  elrs_phase_reset();
 
-    break;
-  }
+  elrs_set_rate(current_rate);
+  elrs_set_frequency(fhss_get_freq(0));
+  elrs_enter_rx();
+}
 
-  default:
-    break;
-  }
+static void elrs_connection_tentative() {
+  elrs_state = TENTATIVE;
 
-  return 1;
+  fhss_reset();
+  elrs_phase_reset();
+
+  elrs_timer_resume(air_rate_config[current_rate].interval);
+}
+
+// this is 180 out of phase with the other callback, occurs mid-packet reception
+void elrs_handle_tick() {
+  elrs_phase_update(elrs_state);
+  nonce_rx++;
+  already_hop = false;
+}
+
+void elrs_handle_tock() {
+  elrs_phase_int_event(time_micros());
+
+  elrs_hop();
 }
 
 void rx_init() {
@@ -244,142 +258,64 @@ void rx_init() {
     return;
   }
 
-  fhss_randomize(((int64_t)UID[2] << 24) + ((int64_t)UID[3] << 16) + ((int64_t)UID[4] << 8) + UID[5]);
+  const int32_t seed = ((int32_t)UID[2] << 24) + ((int32_t)UID[3] << 16) + ((int32_t)UID[4] << 8) + UID[5];
+  fhss_randomize(seed);
   crc14_init();
 
-  elrs_set_rate(0);
+  elrs_set_rate(2);
+  elrs_timer_init(air_rate_config[current_rate].interval);
   elrs_set_frequency(fhss_get_freq(0));
   elrs_enter_rx();
 }
 
-typedef enum {
-  CONNECTION_LOST,
-  DISCONNECTED,
-  TENTATIVE,
-  CONNECTED
-} elrs_state_t;
-
 void rx_check() {
-  static elrs_state_t state = DISCONNECTED;
-
-  static uint32_t packet_time = 0;
   static uint32_t sync_packet_time = 0;
 
-  static uint8_t timer_tick = 0;
-
-  static uint8_t did_hop = 0;
-  static uint8_t did_tlm = 0;
-
-  switch (state) {
-  case CONNECTION_LOST:
-    elrs_set_frequency(fhss_get_freq(0));
-    elrs_enter_rx();
-    state = DISCONNECTED;
-    break;
-
-  case DISCONNECTED: {
-    if (sx12xx_read_dio0() && elrs_vaild_packet()) {
-      packet_time = timer_micros();
-
-      const uint8_t type = packet[0] & 0b11;
-      if (type != SYNC_PACKET) {
-        break;
-      }
-
-      if (packet[4] != UID[3] || packet[5] != UID[4] || packet[6] != UID[5]) {
-        break;
-      }
-
-      sync_packet_time = timer_millis();
-
-      quic_debugf("ELRS: sync packet fhss %d vs %d nonce %d vs %d (disconnected)", packet[1], fhss_index, packet[2], nonce_rx);
-
-      const uint8_t rate_index = ((packet[3] & 0b11100000) >> 5);
-      if (rate_index != current_rate) {
-        current_rate = rate_index;
-      }
-      const uint8_t telemetry_rate_index = ((packet[3] & 0b00011100) >> 2);
-      if (air_rate_config[current_rate].tlm_interval != tlm_ration_map[telemetry_rate_index]) {
-        air_rate_config[current_rate].tlm_interval = tlm_ration_map[telemetry_rate_index];
-      }
-
-      if ((nonce_rx == packet[2]) && (fhss_index == packet[1])) {
-        //state = CONNECTED;
-      } else {
-        fhss_index = packet[1];
-        nonce_rx = packet[2];
-
-        state = TENTATIVE;
-      }
-    }
-    break;
+  if (elrs_state == TENTATIVE && ((time_millis() - sync_packet_time) > rf_pref_params[current_rate].rf_mode_cycle_addtional_time)) {
+    sync_packet_time = time_millis();
+    elrs_connection_lost();
+    return;
   }
 
-  case TENTATIVE: {
-    if (!did_hop && (timer_micros() - packet_time) > ((max_sync_delay / 2) - 200)) {
-      nonce_rx++;
+  const uint32_t packet_time = time_micros();
+  if (!elrs_vaild_packet()) {
+    return;
+  }
 
-      elrs_hop();
-      //elrs_tlm();
+  elrs_phase_ext_event(packet_time + PACKET_TO_TOCK_SLACK);
 
-      did_hop = 1;
+  const uint8_t type = packet[0] & 0b11;
+  switch (type) {
+  case SYNC_PACKET: {
+    if (packet[4] != UID[3] || packet[5] != UID[4] || packet[6] != UID[5]) {
       break;
     }
 
-    if ((timer_micros() - packet_time) > (max_sync_delay + 50)) {
-      packet_time = timer_micros();
-      //sx12xx_reset_dio();
-      did_hop = 0;
-      break;
+    sync_packet_time = time_millis();
+
+    const uint8_t rate_index = ((packet[3] & 0b11000000) >> 6);
+    const uint8_t telemetry_rate_index = ((packet[3] & 0b00111000) >> 3);
+    //const uint8_t switch_mode = ((packet[3] & 0b00000110) >> 1);
+
+    if (rate_index != current_rate) {
+      current_rate = rate_index;
+      elrs_connection_lost();
     }
 
-    if (did_hop && sx12xx_read_dio0() && elrs_vaild_packet()) {
-      packet_time = timer_micros();
-      did_hop = 0;
-
-      const uint8_t type = packet[0] & 0b11;
-      switch (type) {
-      case SYNC_PACKET:
-        if (packet[4] != UID[3] || packet[5] != UID[4] || packet[6] != UID[5]) {
-          break;
-        }
-
-        sync_packet_time = timer_millis();
-        //quic_debugf("ELRS: sync packet fhss %d vs %d nonce %d vs %d (tentative)", packet[1], fhss_index, packet[2], nonce_rx);
-
-        const uint8_t rate_index = ((packet[3] & 0b11100000) >> 5);
-        if (rate_index != current_rate) {
-          current_rate = rate_index;
-        }
-
-        const uint8_t telemetry_rate_index = ((packet[3] & 0b00011100) >> 2);
-        if (air_rate_config[current_rate].tlm_interval != tlm_ration_map[telemetry_rate_index]) {
-          air_rate_config[current_rate].tlm_interval = tlm_ration_map[telemetry_rate_index];
-        }
-
-        if ((nonce_rx == packet[2]) && (fhss_index == packet[1])) {
-          quic_debugf("ELRS: CONNECTED");
-          //state = CONNECTED;
-        } else {
-          fhss_index = packet[1];
-          nonce_rx = packet[2];
-          state = TENTATIVE;
-        }
-        break;
-
-      default:
-        break;
-      }
-      break;
+    if (air_rate_config[current_rate].tlm_interval != tlm_ration_map[telemetry_rate_index]) {
+      air_rate_config[current_rate].tlm_interval = tlm_ration_map[telemetry_rate_index];
     }
 
-    if ((timer_millis() - sync_packet_time) > (rf_pref_params[current_rate].rf_mode_cycle_addtional_time + 5000)) {
-      sync_packet_time = timer_millis();
+    if (elrs_state == DISCONNECTED ||
+        (nonce_rx != packet[2]) ||
+        (fhss_index != packet[1])) {
+      fhss_index = packet[1];
+      nonce_rx = packet[2];
 
-      state = CONNECTION_LOST;
-      break;
+      elrs_connection_tentative();
+    } else {
+      elrs_state = CONNECTED;
     }
-
     break;
   }
 
