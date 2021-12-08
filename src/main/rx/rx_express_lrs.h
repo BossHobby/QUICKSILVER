@@ -5,6 +5,12 @@
 #include "drv_spi_sx12xx.h"
 
 typedef enum {
+  DISCONNECTED,
+  TENTATIVE,
+  CONNECTED
+} elrs_state_t;
+
+typedef enum {
   TLM_RATIO_NO_TLM = 0,
   TLM_RATIO_1_2 = 2,
   TLM_RATIO_1_4 = 4,
