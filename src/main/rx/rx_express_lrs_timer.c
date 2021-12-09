@@ -7,7 +7,7 @@
 #include "project.h"
 #include "util.h"
 
-#if defined(RX_EXPRESS_LRS) && defined(USE_SX12XX)
+#if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
 
 #define TIMER_HZ 1000000
 #define TIMER_INSTANCE TIM3
@@ -132,15 +132,11 @@ void TIM3_IRQHandler() {
   }
 
   if (is_tick) {
-    gpio_pin_reset(DEBUG_PIN);
-
     const uint32_t adjusted_period = ((current_interval / 2) + timer_freq_offset - 1);
     LL_TIM_SetAutoReload(TIMER_INSTANCE, adjusted_period);
 
     elrs_handle_tick();
   } else {
-    gpio_pin_set(DEBUG_PIN);
-
     const uint32_t adjusted_period = ((current_interval / 2) + phase_shift + timer_freq_offset - 1);
     LL_TIM_SetAutoReload(TIMER_INSTANCE, adjusted_period);
     phase_shift = 0;

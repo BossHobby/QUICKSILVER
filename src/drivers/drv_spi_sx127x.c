@@ -1,19 +1,22 @@
-#include "drv_spi_sx12xx.h"
+#include "drv_spi_sx127x.h"
 
 #include <stm32f4xx_ll_bus.h>
 #include <stm32f4xx_ll_exti.h>
 #include <stm32f4xx_ll_spi.h>
 #include <stm32f4xx_ll_system.h>
 
+#include "drv_exti.h"
 #include "drv_spi.h"
 #include "drv_time.h"
 #include "project.h"
 
+#if defined(USE_SX127X)
+
 #define PORT spi_port_defs[SX12XX_SPI_PORT]
 
-#define EXTI_LINE LL_EXTI_LINE_9
+static volatile uint8_t dio0_active = 0;
 
-void sx12xx_init() {
+void sx127x_init() {
   spi_init_pins(SX12XX_SPI_PORT, SX12XX_NSS_PIN);
 
   LL_GPIO_InitTypeDef gpio_init;
@@ -23,20 +26,7 @@ void sx12xx_init() {
   gpio_init.Pull = LL_GPIO_PULL_NO;
   gpio_pin_init(&gpio_init, SX12XX_DIO0_PIN);
 
-  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
-  LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTA, LL_SYSCFG_EXTI_LINE9);
-
-  LL_EXTI_InitTypeDef exti_init;
-  exti_init.Line_0_31 = EXTI_LINE;
-  exti_init.LineCommand = ENABLE;
-  exti_init.Mode = LL_EXTI_MODE_IT;
-  exti_init.Trigger = LL_EXTI_TRIGGER_RISING;
-  LL_EXTI_Init(&exti_init);
-
-  LL_EXTI_EnableIT_0_31(EXTI_LINE);
-
-  NVIC_EnableIRQ(EXTI9_5_IRQn);
-  NVIC_SetPriority(EXTI9_5_IRQn, 0);
+  exti_enable(SX12XX_DIO0_PIN);
 
   spi_enable_rcc(SX12XX_SPI_PORT);
 
@@ -61,17 +51,17 @@ void sx12xx_init() {
   LL_SPI_ReceiveData8(PORT.channel);
 }
 
-static volatile uint8_t dio0_active = 0;
-static volatile uint32_t packet_time = 0;
-
-void EXTI9_5_IRQHandler() {
+void sx127x_handle_exti() {
   if (LL_EXTI_IsActiveFlag_0_31(EXTI_LINE) != RESET) {
     LL_EXTI_ClearFlag_0_31(EXTI_LINE);
-    dio0_active = 1;
+
+    if (gpio_pin_read(SX12XX_DIO0_PIN)) {
+      dio0_active = 1;
+    }
   }
 }
 
-uint8_t sx12xx_read_dio0() {
+uint8_t sx127x_read_dio0() {
   if (dio0_active) {
     dio0_active = 0;
     return 1;
@@ -79,11 +69,7 @@ uint8_t sx12xx_read_dio0() {
   return 0;
 }
 
-uint32_t sx12xx_packet_time() {
-  return packet_time;
-}
-
-uint8_t sx12xx_read_reg(uint8_t reg) {
+uint8_t sx127x_read_reg(uint8_t reg) {
   spi_csn_enable(SX12XX_NSS_PIN);
   spi_transfer_byte(SX12XX_SPI_PORT, reg | SX127x_READ);
   const uint8_t ret = spi_transfer_byte(SX12XX_SPI_PORT, 0xFF);
@@ -91,7 +77,7 @@ uint8_t sx12xx_read_reg(uint8_t reg) {
   return ret;
 }
 
-uint8_t sx12xx_write_reg(uint8_t reg, uint8_t data) {
+uint8_t sx127x_write_reg(uint8_t reg, uint8_t data) {
   spi_csn_enable(SX12XX_NSS_PIN);
   spi_transfer_byte(SX12XX_SPI_PORT, reg | SX127x_WRITE);
   const uint8_t ret = spi_transfer_byte(SX12XX_SPI_PORT, data);
@@ -99,18 +85,18 @@ uint8_t sx12xx_write_reg(uint8_t reg, uint8_t data) {
   return ret;
 }
 
-uint8_t sx12xx_set_reg(uint8_t reg, uint8_t value, uint8_t msb, uint8_t lsb) {
+uint8_t sx127x_set_reg(uint8_t reg, uint8_t value, uint8_t msb, uint8_t lsb) {
   if ((msb > 7) || (lsb > 7) || (lsb > msb)) {
     return 0;
   }
 
-  uint8_t current_value = sx12xx_read_reg(reg);
+  uint8_t current_value = sx127x_read_reg(reg);
   uint8_t mask = ~((0b11111111 << (msb + 1)) | (0b11111111 >> (8 - lsb)));
   uint8_t new_value = (current_value & ~mask) | (value & mask);
-  return sx12xx_write_reg(reg, new_value);
+  return sx127x_write_reg(reg, new_value);
 }
 
-void sx12xx_write_reg_burst(uint8_t reg, uint8_t *data, uint8_t size) {
+void sx127x_write_reg_burst(uint8_t reg, uint8_t *data, uint8_t size) {
   spi_csn_enable(SX12XX_NSS_PIN);
 
   spi_transfer_byte(SX12XX_SPI_PORT, reg | SX127x_WRITE);
@@ -121,13 +107,13 @@ void sx12xx_write_reg_burst(uint8_t reg, uint8_t *data, uint8_t size) {
   spi_csn_disable(SX12XX_NSS_PIN);
 }
 
-void sx12xx_set_mode(sx12xx_radio_op_modes_t mode) {
-  sx12xx_write_reg(SX127x_OP_MODE | SX127x_OPMODE_LORA, mode);
+void sx127x_set_mode(sx127x_radio_op_modes_t mode) {
+  sx127x_write_reg(SX127x_OP_MODE | SX127x_OPMODE_LORA, mode);
 }
 
-uint8_t sx12xx_detect() {
+uint8_t sx127x_detect() {
   for (uint8_t tries = 0; tries < 10; tries++) {
-    volatile uint8_t version = sx12xx_read_reg(SX127x_VERSION);
+    volatile uint8_t version = sx127x_read_reg(SX127x_VERSION);
     if (version == 0x12) {
       return 1;
     }
@@ -136,7 +122,7 @@ uint8_t sx12xx_detect() {
   return 0;
 }
 
-void sx12xx_read_fifo(uint8_t *data, uint8_t size) {
+void sx127x_read_fifo(uint8_t *data, uint8_t size) {
   spi_csn_enable(SX12XX_NSS_PIN);
 
   spi_transfer_byte(SX12XX_SPI_PORT, SX127x_FIFO | SX127x_READ);
@@ -147,7 +133,7 @@ void sx12xx_read_fifo(uint8_t *data, uint8_t size) {
   spi_csn_disable(SX12XX_NSS_PIN);
 }
 
-void sx12xx_write_fifo(uint8_t *data, uint8_t size) {
+void sx127x_write_fifo(uint8_t *data, uint8_t size) {
   spi_csn_enable(SX12XX_NSS_PIN);
 
   spi_transfer_byte(SX12XX_SPI_PORT, SX127x_FIFO | SX127x_WRITE);
@@ -157,3 +143,5 @@ void sx12xx_write_fifo(uint8_t *data, uint8_t size) {
 
   spi_csn_disable(SX12XX_NSS_PIN);
 }
+
+#endif
