@@ -1,6 +1,6 @@
 #include "rx_express_lrs.h"
 
-#if defined(RX_EXPRESS_LRS) && defined(USE_SX12XX)
+#if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
 
 #define ELRS_CRC_POLY 0x07     // 0x83
 #define ELRS_CRC14_POLY 0x2E57 // 0x372B
