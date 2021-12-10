@@ -16,6 +16,12 @@ typedef enum {
 } elrs_state_t;
 
 typedef enum {
+  TIMER_DISCONNECTED,
+  TIMER_TENTATIVE,
+  TIMER_LOCKED
+} elrs_timer_state_t;
+
+typedef enum {
   TLM_RATIO_NO_TLM = 0,
   TLM_RATIO_1_2 = 2,
   TLM_RATIO_1_4 = 4,
@@ -48,6 +54,32 @@ typedef enum {
   RATE_4HZ = 7
 } expresslrs_rf_rates_t;
 
+typedef struct {
+  int32_t beta;     // Length = 16
+  int32_t fp_shift; // Number of fractional bits
+
+  int32_t smooth_data_int;
+  int32_t smooth_data_fp;
+} elrs_lpf_t;
+
+typedef struct {
+  bool int_event_active;
+  uint32_t int_event_time_us;
+
+  bool ext_event_active;
+  uint32_t ext_event_time_us;
+
+  int32_t raw_offset_us;
+  int32_t prev_raw_offset_us;
+
+  int32_t offset;
+  elrs_lpf_t offset_lpf;
+
+  int32_t offset_dx;
+  elrs_lpf_t offset_dx_lpf;
+
+} elrs_phase_lock_state_t;
+
 #ifdef USE_SX127X
 typedef struct {
   int8_t index;
@@ -55,7 +87,7 @@ typedef struct {
   sx127x_bandwidth_t bw;
   sx127x_spreading_factor_t sf;
   sx127x_coding_rate_t cr;
-  uint32_t interval;                   //interval in us seconds that corresponds to that frequnecy
+  uint32_t interval;                   // interval in us seconds that corresponds to that frequnecy
   expresslrs_tlm_ratio_t tlm_interval; // every X packets is a response TLM packet, should be a power of 2
   uint8_t fhss_hop_interval;           // every X packets we hope to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
   uint8_t preamble_len;
@@ -79,8 +111,8 @@ typedef struct {
 typedef struct {
   int8_t index;
   expresslrs_rf_rates_t rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
-  int32_t rx_sensitivity;     //expected RF sensitivity based on
-  uint32_t toa;               //time on air in microseconds
+  int32_t rx_sensitivity;     // expected RF sensitivity based on
+  uint32_t toa;               // time on air in microseconds
   uint32_t rf_mode_cycle_interval;
   uint32_t rf_mode_cycle_addtional_time;
   uint32_t sync_pkt_interval_disconnected;
@@ -103,7 +135,11 @@ void elrs_timer_init(uint32_t interval_us);
 void elrs_timer_resume(uint32_t interval_us);
 void elrs_timer_stop();
 
+void elrs_phase_init();
 void elrs_phase_update(elrs_state_t state);
 void elrs_phase_int_event(uint32_t time);
 void elrs_phase_ext_event(uint32_t time);
 void elrs_phase_reset();
+
+void elrs_lpf_init(elrs_lpf_t *lpf, int32_t beta);
+int32_t elrs_lpf_update(elrs_lpf_t *lpf, int32_t data);
