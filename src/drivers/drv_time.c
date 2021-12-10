@@ -6,7 +6,13 @@ void failloop(int val);
 
 #ifdef STM32F4
 
-void debug_time_init() {
+#define TICKS_PER_US (SYS_CLOCK_FREQ_HZ / 1000000)
+
+static volatile uint32_t systick_count = 0;
+static volatile uint32_t systick_val = 0;
+static volatile uint32_t systick_pending = 0;
+
+static void debug_time_init() {
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
   CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
   DWT->CYCCNT = 0;
@@ -15,7 +21,55 @@ void debug_time_init() {
 
 void time_init() {
   SystemCoreClockUpdate();
+
+  // interrupt only every 1ms
+  SysTick_Config(SystemCoreClock / 1000);
+
   debug_time_init();
+}
+
+void SysTick_Handler() {
+  systick_count++;
+  systick_val = SysTick->VAL;
+  systick_pending = 0;
+  (void)(SysTick->CTRL);
+}
+
+uint32_t time_micros_isr() {
+  register uint32_t ticks = SysTick->VAL;
+
+  if (SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) {
+    systick_pending = 1;
+    ticks = SysTick->VAL;
+  }
+
+  register uint32_t count = systick_count;
+  register uint32_t pending = systick_pending;
+
+  return ((count + pending) * 1000) + (TICKS_PER_US * 1000 - ticks) / TICKS_PER_US;
+}
+
+uint32_t time_micros() {
+  if ((SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) || (__get_BASEPRI())) {
+    return time_micros_isr();
+  }
+
+  register uint32_t count = 0;
+  register uint32_t ticks = 0;
+
+  do {
+    // number of 1ms systicks
+    count = systick_count;
+
+    // number of ticks _between_ 1ms systicks
+    ticks = SysTick->VAL;
+  } while (count != systick_count || ticks > systick_val);
+
+  return (count * 1000) + (TICKS_PER_US * 1000 - ticks) / TICKS_PER_US;
+}
+
+uint32_t time_millis() {
+  return systick_count;
 }
 
 uint32_t time_cycles() {
@@ -30,43 +84,10 @@ void time_delay_us(uint32_t us) {
   }
 }
 
-uint32_t time_micros() {
-  static uint32_t total_micros = 0;
-  static uint32_t last_micros = 0;
-
-  const uint32_t micros = DWT->CYCCNT / (SystemCoreClock / 1000000L);
-  if (micros >= last_micros) {
-    total_micros += micros - last_micros;
-  } else {
-    total_micros += ((UINT32_MAX / (SystemCoreClock / 1000000L)) + micros) - last_micros;
-  }
-
-  last_micros = micros;
-  return total_micros;
-}
-
-uint32_t time_millis() {
-  static uint32_t total_millis = 0;
-  static uint32_t last_millis = 0;
-
-  const uint32_t millis = time_micros() / 1000;
-  if (millis >= last_millis) {
-    total_millis += millis - last_millis;
-  } else {
-    total_millis += ((UINT32_MAX / 1000) + millis) - last_millis;
-  }
-
-  last_millis = millis;
-  return total_millis;
-}
-
-#endif
-
 void time_delay_until(uint32_t uS) {
   while (time_micros() < uS) {
     __asm("NOP");
   }
 }
 
-void SysTick_Handler() {
-}
+#endif
