@@ -22,6 +22,12 @@ typedef enum {
 } elrs_timer_state_t;
 
 typedef enum {
+  IRQ_NONE,
+  IRQ_RX_DONE,
+  IRQ_TX_DONE
+} elrs_irq_status_t;
+
+typedef enum {
   TLM_RATIO_NO_TLM = 0,
   TLM_RATIO_1_2 = 2,
   TLM_RATIO_1_4 = 4,
@@ -127,7 +133,8 @@ void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq);
 void elrs_enter_rx(uint8_t *packet);
 void elrs_enter_tx(uint8_t *packet);
 
-bool elrs_read_packet(uint8_t *packet);
+elrs_irq_status_t elrs_get_irq_status();
+void elrs_read_packet(uint8_t *packet);
 
 void elrs_freq_correct();
 

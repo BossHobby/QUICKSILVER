@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #include "drv_gpio.h"
+#include "drv_interrupt.h"
 #include "drv_timer.h"
 #include "project.h"
 #include "util.h"
@@ -46,8 +47,7 @@ void elrs_timer_init(uint32_t interval_us) {
   current_interval = interval_us;
   timer_init(TIMER_INSTANCE, PWM_CLOCK_FREQ_HZ / TIMER_HZ, (current_interval >> 1) - 1);
 
-  NVIC_SetPriority(TIMER_IRQN, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 0));
-  NVIC_EnableIRQ(TIMER_IRQN);
+  interrupt_enable(TIMER_IRQN, TIMER_PRIORITY);
 
   elrs_timer_stop();
 }

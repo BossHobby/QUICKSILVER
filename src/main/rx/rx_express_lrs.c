@@ -15,6 +15,9 @@
 #define DEVICE_ADDR (UID[5] & 0b111111)
 #define CRC_CIPHER UID[4]
 
+#define TELEMETRY_TYPE_LINK 0x01
+#define TELEMETRY_TYPE_DATA 0x02
+
 #define RC_DATA_PACKET 0b00
 #define MSP_DATA_PACKET 0b01
 #define SYNC_PACKET 0b10
@@ -43,7 +46,10 @@ extern expresslrs_rf_pref_params_t *current_rf_pref_params();
 extern volatile elrs_phase_lock_state_t pl_state;
 
 static volatile elrs_state_t elrs_state = DISCONNECTED;
+
 static volatile bool already_hop = false;
+static volatile bool already_tlm = false;
+
 static volatile bool needs_hop = false;
 
 uint8_t packet[ELRS_BUFFER_SIZE];
@@ -88,30 +94,39 @@ static bool elrs_hop() {
   return true;
 }
 
-static void elrs_tlm() {
-  if (current_air_rate_config()->tlm_interval == 0) {
-    return;
+static bool elrs_tlm() {
+  if (already_tlm) {
+    return false;
   }
 
   const uint8_t modresult = (nonce_rx + 1) % current_air_rate_config()->tlm_interval;
-  if (modresult != 0) {
-    return;
+  if (current_air_rate_config()->tlm_interval == 0 || modresult != 0) {
+    return false;
   }
 
-  packet[0] = (DEVICE_ADDR << 2) + 0b11;
-  packet[1] = 0x14;
-  packet[2] = 88;
-  packet[3] = 0;
-  packet[4] = 0;
-  packet[5] = 0;
-  packet[6] = 0;
-  packet[7] = 0; // TODO: CRC
+  packet[0] = 0b11;
+  packet[1] = TELEMETRY_TYPE_LINK;
+  packet[2] = 200; // rssi
+  packet[3] = 0;   // no diversity
+  packet[4] = 100; // snr
+  packet[5] = 100; // uplink_lq
+  packet[6] = 0;   // msq confirm
+  packet[7] = 0;
+
+  const uint16_t crc_initializer = (UID[4] << 8) | UID[5];
+  const uint16_t crc = crc14_calc(packet, 7, crc_initializer);
+  packet[0] |= (crc >> 6) & 0xFC;
+  packet[7] = crc & 0xFF;
+
+  already_tlm = true;
+
+  elrs_enter_tx(packet);
+
+  return true;
 }
 
 static bool elrs_vaild_packet() {
-  if (!elrs_read_packet(packet)) {
-    return false;
-  }
+  elrs_read_packet(packet);
 
   const uint8_t type = packet[0] & 0b11;
   volatile const uint16_t their_crc = (((uint16_t)(packet[0] & 0b11111100)) << 6) | packet[7];
@@ -170,14 +185,20 @@ void elrs_handle_tick() {
   elrs_phase_update(elrs_state);
   nonce_rx++;
   already_hop = false;
+  already_tlm = false;
 }
 
 void elrs_handle_tock() {
-  elrs_phase_int_event(time_micros());
+  const uint32_t time = time_micros();
+  elrs_phase_int_event(time);
   needs_hop = true;
 }
 
 void elrs_process_packet(uint32_t packet_time) {
+  if (!elrs_vaild_packet()) {
+    return;
+  }
+
   elrs_phase_ext_event(packet_time + PACKET_TO_TOCK_SLACK);
 
   last_valid_packet_millis = time_millis();
@@ -257,15 +278,20 @@ void rx_init() {
 
 void rx_check() {
   const uint32_t packet_time = time_micros();
-  if (elrs_vaild_packet()) {
+
+  const elrs_irq_status_t irq = elrs_get_irq_status();
+  if (irq == IRQ_RX_DONE) {
     elrs_process_packet(packet_time);
+  } else if (irq == IRQ_TX_DONE) {
+    elrs_enter_rx(packet);
   }
 
   if (needs_hop) {
     needs_hop = false;
 
     const bool did_hop = elrs_hop();
-    if (!did_hop) {
+    const bool did_tlm = elrs_tlm();
+    if (!did_hop && !did_tlm) {
       elrs_freq_correct();
     }
   }
