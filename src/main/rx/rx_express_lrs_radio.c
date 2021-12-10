@@ -208,15 +208,26 @@ void elrs_enter_rx(uint8_t *packet) {
 }
 
 void elrs_enter_tx(uint8_t *packet) {
+  sx128x_clear_irq_status(SX1280_IRQ_RADIO_ALL);
+  sx128x_write_tx_buffer(0x0, packet, ELRS_BUFFER_SIZE);
+  sx128x_set_mode(SX1280_MODE_TX);
 }
 
-bool elrs_read_packet(uint8_t *packet) {
-  if (!sx128x_read_dio0()) {
-    return false;
+elrs_irq_status_t elrs_get_irq_status() {
+  if (sx128x_read_dio0()) {
+    const uint16_t irq = sx128x_get_irq_status();
+    sx128x_clear_irq_status(SX1280_IRQ_RADIO_ALL);
+    if ((irq & SX1280_IRQ_TX_DONE)) {
+      return IRQ_TX_DONE;
+    } else if ((irq & SX1280_IRQ_RX_DONE)) {
+      return IRQ_RX_DONE;
+    }
   }
-  sx128x_clear_irq_status(SX1280_IRQ_RADIO_ALL);
+  return IRQ_NONE;
+}
+
+void elrs_read_packet(uint8_t *packet) {
   sx128x_read_rx_buffer(packet, ELRS_BUFFER_SIZE);
-  return true;
 }
 
 void elrs_freq_correct() {
