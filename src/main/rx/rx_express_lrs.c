@@ -132,6 +132,8 @@ static void elrs_connection_lost() {
 
   already_hop = false;
 
+  fhss_index = 0;
+
   fhss_reset();
   elrs_phase_reset();
 

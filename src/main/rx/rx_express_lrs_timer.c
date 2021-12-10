@@ -131,11 +131,16 @@ void elrs_phase_update(elrs_state_t state) {
 }
 
 void elrs_phase_reset() {
+  timer_freq_offset = 0;
+
   pl_state.ext_event_active = false;
   pl_state.int_event_active = false;
 
   pl_state.raw_offset_us = 0;
   pl_state.prev_raw_offset_us = 0;
+
+  pl_state.offset = 0;
+  pl_state.offset_dx = 0;
 }
 
 void TIM3_IRQHandler() {
