@@ -29,25 +29,14 @@ typedef enum {
 
 typedef enum {
   TLM_RATIO_NO_TLM = 0,
-  TLM_RATIO_1_2 = 2,
-  TLM_RATIO_1_4 = 4,
-  TLM_RATIO_1_8 = 8,
-  TLM_RATIO_1_16 = 16,
-  TLM_RATIO_1_32 = 32,
-  TLM_RATIO_1_64 = 64,
-  TLM_RATIO_1_128 = 128,
+  TLM_RATIO_1_128 = 1,
+  TLM_RATIO_1_64 = 2,
+  TLM_RATIO_1_32 = 3,
+  TLM_RATIO_1_16 = 4,
+  TLM_RATIO_1_8 = 5,
+  TLM_RATIO_1_4 = 6,
+  TLM_RATIO_1_2 = 7,
 } expresslrs_tlm_ratio_t;
-
-static const expresslrs_tlm_ratio_t tlm_ration_map[] = {
-    TLM_RATIO_NO_TLM,
-    TLM_RATIO_1_2,
-    TLM_RATIO_1_4,
-    TLM_RATIO_1_8,
-    TLM_RATIO_1_16,
-    TLM_RATIO_1_32,
-    TLM_RATIO_1_64,
-    TLM_RATIO_1_128,
-};
 
 typedef enum {
   RATE_500HZ = 0,
