@@ -6,6 +6,8 @@
 
 #include "usb_configurator.h"
 
+#include "drv_interrupt.h"
+
 #define GPIO_AF_SPI1 GPIO_AF5_SPI1
 #define GPIO_AF_SPI2 GPIO_AF5_SPI2
 #define GPIO_AF_SPI3 GPIO_AF6_SPI3
@@ -217,12 +219,7 @@ void spi_dma_init(spi_ports_t port) {
   // Enable DMA clock
   spi_dma_enable_rcc(port);
 
-  // 2bits for priority, 2bit for subpriority
-  NVIC_SetPriorityGrouping(2);
-
-  uint32_t priority = NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0x02, 0x02);
-  NVIC_SetPriority(PORT.dma.rx_it, priority);
-  NVIC_EnableIRQ(PORT.dma.rx_it);
+  interrupt_enable(PORT.dma.rx_it, DMA_PRIORITY);
 
   DMA_TRANSFER_DONE = 1;
 }
