@@ -124,6 +124,7 @@ void elrs_enter_tx(uint8_t *packet);
 
 elrs_irq_status_t elrs_get_irq_status();
 void elrs_read_packet(uint8_t *packet);
+void elrs_last_packet_stats(int8_t *rssi, int8_t *snr);
 
 void elrs_freq_correct();
 
@@ -139,3 +140,9 @@ void elrs_phase_reset();
 
 void elrs_lpf_init(elrs_lpf_t *lpf, int32_t beta);
 int32_t elrs_lpf_update(elrs_lpf_t *lpf, int32_t data);
+
+void elrs_lq_add();
+void elrs_lq_inc();
+uint8_t elrs_lq_get();
+bool elrs_lq_current_is_set();
+void elrs_lq_reset();
