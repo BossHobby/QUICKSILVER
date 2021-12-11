@@ -230,6 +230,13 @@ void elrs_read_packet(uint8_t *packet) {
   sx128x_read_rx_buffer(packet, ELRS_BUFFER_SIZE);
 }
 
+void elrs_last_packet_stats(int8_t *rssi, int8_t *snr) {
+  uint8_t status[2] = {0, 0};
+  sx128x_read_command_burst(SX1280_RADIO_GET_PACKETSTATUS, status, 2);
+  *rssi = -(int8_t)(status[0] / 2);
+  *snr = (int8_t)status[1] / 4;
+}
+
 void elrs_freq_correct() {
   // do nothing for 2400ghz
 }

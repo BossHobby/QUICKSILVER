@@ -109,8 +109,7 @@ void elrs_phase_update(elrs_state_t state) {
   pl_state.offset = elrs_lpf_update((elrs_lpf_t *)&pl_state.offset_lpf, pl_state.raw_offset_us);
   pl_state.offset_dx = elrs_lpf_update((elrs_lpf_t *)&pl_state.offset_dx_lpf, pl_state.raw_offset_us - pl_state.prev_raw_offset_us);
 
-  // TODO && LQCalc.currentIsSet()
-  if (elrs_timer_state == TIMER_LOCKED) {
+  if (elrs_timer_state == TIMER_LOCKED && elrs_lq_current_is_set()) {
     // limit rate of freq offset adjustment slightly
     if (nonce_rx % 8 == 0) {
       if (pl_state.offset > 0) {

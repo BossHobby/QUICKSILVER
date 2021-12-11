@@ -12,9 +12,6 @@
 
 #if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
 
-#define DEVICE_ADDR (UID[5] & 0b111111)
-#define CRC_CIPHER UID[4]
-
 #define TELEMETRY_TYPE_LINK 0x01
 #define TELEMETRY_TYPE_DATA 0x02
 
@@ -37,6 +34,7 @@ extern void fhss_randomize(int32_t seed);
 extern uint32_t fhss_get_freq(uint16_t index);
 extern uint32_t fhss_next_freq();
 extern void fhss_reset();
+extern uint8_t fhss_min_lq_for_chaos();
 
 extern void crc14_init();
 extern uint16_t crc14_calc(uint8_t *data, uint8_t len, uint16_t crc);
@@ -62,6 +60,10 @@ static uint32_t last_valid_packet_millis = 0;
 static uint32_t connected_millis = 0;
 
 static uint32_t next_rate = 0;
+
+static int8_t raw_rssi = 0;
+static int8_t raw_snr = 0;
+static uint8_t uplink_lq = 0;
 
 static uint8_t UID[6] = {221, 251, 226, 34, 222, 25};
 // static uint8_t UID[6] = {0, 1, 2, 3, 4, 5};
@@ -138,11 +140,11 @@ static bool elrs_tlm() {
 
   packet[0] = 0b11;
   packet[1] = TELEMETRY_TYPE_LINK;
-  packet[2] = 200; // rssi
-  packet[3] = 0;   // no diversity
-  packet[4] = 100; // snr
-  packet[5] = 100; // uplink_lq
-  packet[6] = 0;   // msq confirm
+  packet[2] = -raw_rssi; // rssi
+  packet[3] = 0;         // no diversity
+  packet[4] = -raw_snr;  // snr
+  packet[5] = uplink_lq; // uplink_lq
+  packet[6] = 0;         // msq confirm
   packet[7] = 0;
 
   const uint16_t crc_initializer = (UID[4] << 8) | UID[5];
@@ -181,6 +183,7 @@ static void elrs_connection_lost() {
 
   fhss_index = 0;
 
+  elrs_lq_reset();
   fhss_reset();
   elrs_phase_reset();
 
@@ -216,6 +219,14 @@ static void elrs_connected() {
 void elrs_handle_tick() {
   elrs_phase_update(elrs_state);
   nonce_rx++;
+
+  uplink_lq = elrs_lq_get();
+
+  // Only advance the LQI period counter if we didn't send Telemetry this period
+  if (!already_tlm) {
+    elrs_lq_inc();
+  }
+
   already_hop = false;
   already_tlm = false;
 }
@@ -232,8 +243,10 @@ void elrs_process_packet(uint32_t packet_time) {
   }
 
   elrs_phase_ext_event(packet_time + PACKET_TO_TOCK_SLACK);
-
   last_valid_packet_millis = time_millis();
+
+  elrs_last_packet_stats(&raw_rssi, &raw_snr);
+  elrs_lq_add();
 
   const uint8_t type = packet[0] & 0b11;
   switch (type) {
@@ -301,7 +314,9 @@ void rx_init() {
   const int32_t seed = ((int32_t)UID[2] << 24) + ((int32_t)UID[3] << 16) + ((int32_t)UID[4] << 8) + UID[5];
   fhss_randomize(seed);
   crc14_init();
+
   elrs_phase_init();
+  elrs_lq_reset();
 
   elrs_set_rate(next_rate, fhss_get_freq(0), (UID[5] & 0x01));
   elrs_timer_init(current_air_rate_config()->interval);
@@ -323,7 +338,7 @@ void rx_check() {
 
     const bool did_hop = elrs_hop();
     const bool did_tlm = elrs_tlm();
-    if (!did_hop && !did_tlm) {
+    if (!did_hop && !did_tlm && elrs_lq_current_is_set()) {
       elrs_freq_correct();
     }
   }
@@ -337,8 +352,7 @@ void rx_check() {
     elrs_connection_lost();
   }
 
-  // TODO: && (uplinkLQ > minLqForChaos())
-  if ((elrs_state == TENTATIVE) && (abs(pl_state.offset_dx) <= 10) && (pl_state.offset < 100)) {
+  if ((elrs_state == TENTATIVE) && (abs(pl_state.offset_dx) <= 10) && (pl_state.offset < 100) && (uplink_lq > fhss_min_lq_for_chaos())) {
     elrs_connected();
   }
 

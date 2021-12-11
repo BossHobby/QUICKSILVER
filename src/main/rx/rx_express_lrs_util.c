@@ -5,7 +5,19 @@
 #define ELRS_CRC_POLY 0x07     // 0x83
 #define ELRS_CRC14_POLY 0x2E57 // 0x372B
 
+#define ELRS_LQ_SIZE ((100 + 31) / 32)
+
 #define CRC_LENGTH 256
+
+typedef struct {
+  uint8_t val;
+  uint8_t byte;
+
+  uint32_t mask;
+  uint32_t buffer[ELRS_LQ_SIZE];
+} elrs_lq_t;
+
+static elrs_lq_t lq;
 
 static uint16_t crc14tab[CRC_LENGTH];
 
@@ -46,6 +58,53 @@ int32_t elrs_lpf_update(elrs_lpf_t *lpf, int32_t data) {
   lpf->smooth_data_int = lpf->smooth_data_fp >> lpf->fp_shift;
 
   return lpf->smooth_data_int;
+}
+
+void elrs_lq_add() {
+  if (elrs_lq_current_is_set()) {
+    return;
+  }
+  lq.buffer[lq.byte] |= lq.mask;
+  lq.val += 1;
+}
+
+void elrs_lq_inc() {
+  // Increment the counter by shifting one bit higher
+  // If we've shifted out all the bits, move to next idx
+  lq.mask <<= 1;
+  if (lq.mask == 0) {
+    lq.mask = (1 << 0);
+    lq.byte += 1;
+  }
+
+  // At idx N / 32 and bit N % 32, wrap back to idx=0, bit=0
+  if ((lq.byte == 3) && (lq.mask & (1 << ELRS_LQ_SIZE))) {
+    lq.byte = 0;
+    lq.mask = (1 << 0);
+  }
+
+  if ((lq.buffer[lq.byte] & lq.mask) != 0) {
+    lq.buffer[lq.byte] &= ~lq.mask;
+    lq.val -= 1;
+  }
+}
+
+uint8_t elrs_lq_get() {
+  return lq.val;
+}
+
+bool elrs_lq_current_is_set() {
+  return lq.buffer[lq.byte] & lq.mask;
+}
+
+void elrs_lq_reset() {
+  lq.val = 0;
+  lq.byte = 0;
+  lq.mask = (1 << 0);
+
+  for (uint32_t i = 0; i < ELRS_LQ_SIZE; i++) {
+    lq.buffer[i] = 0;
+  }
 }
 
 #endif

@@ -22,6 +22,8 @@
 
 #define FREQ_HZ_TO_REG_VAL(freq) ((uint32_t)((double)freq / (double)FREQ_STEP))
 
+extern expresslrs_mod_settings_t *current_air_rate_config();
+
 const uint32_t fhss_freqs[] = {
 #ifdef USE_SX127X
     FREQ_HZ_TO_REG_VAL(863275000), // band H1, 863 - 865MHz, 0.1% duty cycle or CSMA techniques, 25mW EIRP
@@ -250,6 +252,20 @@ int32_t fhss_update_freq_correction(uint8_t value) {
 
 void fhss_reset() {
   freq_correction = 0;
+}
+
+uint8_t fhss_min_lq_for_chaos() {
+  // Determine the most number of CRC-passing packets we could receive on
+  // a single channel out of 100 packets that fill the LQcalc span.
+  // The LQ must be GREATER THAN this value, not >=
+  // The amount of time we coexist on the same channel is
+  // 100 divided by the total number of packets in a FHSS loop (rounded up)
+  // and there would be 4x packets received each time it passes by so
+  // FHSShopInterval * ceil(100 / FHSShopInterval * NR_FHSS_ENTRIES) or
+  // FHSShopInterval * trunc((100 + (FHSShopInterval * NR_FHSS_ENTRIES) - 1) / (FHSShopInterval * NR_FHSS_ENTRIES))
+  // With a interval of 4 this works out to: 2.4=4, FCC915=4, AU915=8, EU868=8, EU/AU433=36
+  uint8_t interval = current_air_rate_config()->fhss_hop_interval;
+  return interval * ((interval * NR_FHSS_ENTRIES + 99) / (interval * NR_FHSS_ENTRIES));
 }
 
 #endif
