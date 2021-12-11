@@ -65,6 +65,9 @@ static int8_t raw_rssi = 0;
 static int8_t raw_snr = 0;
 static uint8_t uplink_lq = 0;
 
+static elrs_lpf_t rssi_lpf;
+static int8_t rssi;
+
 static uint8_t UID[6] = {221, 251, 226, 34, 222, 25};
 // static uint8_t UID[6] = {0, 1, 2, 3, 4, 5};
 
@@ -140,7 +143,7 @@ static bool elrs_tlm() {
 
   packet[0] = 0b11;
   packet[1] = TELEMETRY_TYPE_LINK;
-  packet[2] = -raw_rssi; // rssi
+  packet[2] = -rssi;     // rssi
   packet[3] = 0;         // no diversity
   packet[4] = -raw_snr;  // snr
   packet[5] = uplink_lq; // uplink_lq
@@ -246,6 +249,8 @@ void elrs_process_packet(uint32_t packet_time) {
   last_valid_packet_millis = time_millis();
 
   elrs_last_packet_stats(&raw_rssi, &raw_snr);
+  rssi = elrs_lpf_update(&rssi_lpf, raw_rssi);
+
   elrs_lq_add();
 
   const uint8_t type = packet[0] & 0b11;
@@ -317,6 +322,7 @@ void rx_init() {
 
   elrs_phase_init();
   elrs_lq_reset();
+  elrs_lpf_init(&rssi_lpf, 5);
 
   elrs_set_rate(next_rate, fhss_get_freq(0), (UID[5] & 0x01));
   elrs_timer_init(current_air_rate_config()->interval);
