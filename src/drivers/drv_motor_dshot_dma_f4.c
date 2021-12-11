@@ -435,13 +435,13 @@ void motor_set(uint8_t number, float pwm) {
 
 void motor_beep() {
   static uint32_t motor_beep_time = 0;
-  if (flags.failsafe) {
+  if (flags.failsafe || rx_aux_on(AUX_BUZZER_ENABLE)) {
     uint32_t time = timer_micros();
     if (motor_beep_time == 0) {
       motor_beep_time = time;
     }
     const uint32_t delta_time = time - motor_beep_time;
-    if (delta_time > MOTOR_BEEPS_TIMEOUT) {
+    if (delta_time > MOTOR_BEEPS_TIMEOUT || rx_aux_on(AUX_BUZZER_ENABLE)) {
       uint8_t beep_command = 0;
       if (delta_time % 2000000 < 250000) {
         beep_command = DSHOT_CMD_BEEP1;
