@@ -264,7 +264,7 @@
 //***********************************************ADDITIONAL FEATURES****************************************************
 
 // *************lost quad beeps using motors (30 sec timeout) - pulses motors after timeout period to help find a lost model
-//#define MOTOR_BEEPS
+#define MOTOR_BEEPS
 //#define MOTOR_BEEPS_TIMEOUT 1e6
 
 // *************enable inverted flight code ( brushless only ) - WARNING - NEVER TESTED
