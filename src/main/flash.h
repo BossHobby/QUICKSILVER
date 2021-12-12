@@ -2,6 +2,7 @@
 
 #include "rx.h"
 #include "rx_bayang.h"
+#include "rx_express_lrs.h"
 #include "rx_frsky.h"
 #include "rx_unified_serial.h"
 
@@ -28,6 +29,7 @@ typedef struct {
     rx_frsky_bind_data_t frsky;
     rx_bayang_bind_data_t bayang;
     rx_unified_bind_data_t unified;
+    rx_elrs_bind_data_t elrs;
     uint8_t raw[BIND_RAW_STORAGE_SIZE];
   };
 } rx_bind_storage_t;

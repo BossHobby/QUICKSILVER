@@ -7,10 +7,15 @@
 #include "control.h"
 #include "drv_gpio.h"
 #include "drv_time.h"
+#include "flash.h"
 #include "project.h"
 #include "usb_configurator.h"
 
 #if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
+
+#define DEBUG_PIN PIN_A10
+
+#define ELRS_MSP_BIND 0x09
 
 #define TELEMETRY_TYPE_LINK 0x01
 #define TELEMETRY_TYPE_DATA 0x02
@@ -20,14 +25,12 @@
 #define SYNC_PACKET 0b10
 #define TLM_PACKET 0b11
 
-#define RF_MODE_CYCLE_MULTIPLIER_SLOW 10
-
-#define DEBUG_PIN PIN_A10
-
 // Desired buffer time between Packet ISR and Tock ISR
 #define PACKET_TO_TOCK_SLACK 200
-
 #define CONSIDER_CONN_GOOD_MILLIS 1000
+#define RF_MODE_CYCLE_MULTIPLIER_SLOW 10
+
+#define UID bind_storage.elrs.uid
 
 extern volatile uint8_t fhss_index;
 extern volatile elrs_phase_lock_state_t pl_state;
@@ -58,12 +61,14 @@ static volatile bool already_hop = false;
 static volatile bool already_tlm = false;
 static volatile bool needs_hop = false;
 
+static bool in_binding_mode = false;
+
 static uint32_t connected_millis = 0;
 static uint32_t sync_packet_millis = 0;
 static uint32_t last_valid_packet_millis = 0;
 static uint32_t last_rf_mode_cycle_millis = 0;
 
-static uint32_t next_rate = 0;
+static uint32_t next_rate = ELRS_RATE_DEFAULT;
 static uint32_t rf_mode_cycle_multiplier = 1;
 
 static int8_t raw_rssi = 0;
@@ -73,11 +78,11 @@ static uint8_t uplink_lq = 0;
 static elrs_lpf_t rssi_lpf;
 static int8_t rssi;
 
-static uint8_t UID[6] = {221, 251, 226, 34, 222, 25};
-// static uint8_t UID[6] = {0, 1, 2, 3, 4, 5};
+static uint16_t crc_initializer = 0;
+static uint8_t bind_uid[6] = {0, 1, 2, 3, 4, 5};
 
 static bool elrs_hop() {
-  if (already_hop) {
+  if (already_hop || in_binding_mode) {
     return false;
   }
 
@@ -124,7 +129,6 @@ static bool elrs_tlm() {
   packet[6] = 0;         // msq confirm
   packet[7] = 0;
 
-  const uint16_t crc_initializer = (UID[4] << 8) | UID[5];
   const uint16_t crc = crc14_calc(packet, 7, crc_initializer);
   packet[0] |= (crc >> 6) & 0xFC;
   packet[7] = crc & 0xFF;
@@ -140,13 +144,12 @@ static bool elrs_vaild_packet() {
   elrs_read_packet(packet);
 
   const uint8_t type = packet[0] & 0b11;
-  volatile const uint16_t their_crc = (((uint16_t)(packet[0] & 0b11111100)) << 6) | packet[7];
+  const uint16_t their_crc = (((uint16_t)(packet[0] & 0b11111100)) << 6) | packet[7];
 
   // reset first byte to type only so crc passes
   packet[0] = type;
 
-  const uint16_t crc_initializer = (UID[4] << 8) | UID[5];
-  volatile const uint16_t our_crc = crc14_calc(packet, 7, crc_initializer);
+  const uint16_t our_crc = crc14_calc(packet, 7, crc_initializer);
 
   return their_crc == our_crc;
 }
@@ -195,7 +198,7 @@ static void elrs_connected() {
 }
 
 static void elrs_cycle_rf_mode() {
-  if (elrs_state == CONNECTED) {
+  if (elrs_state == CONNECTED || in_binding_mode) {
     return;
   }
 
@@ -217,6 +220,47 @@ static void elrs_cycle_rf_mode() {
   elrs_enter_rx(packet);
 
   rf_mode_cycle_multiplier = 1;
+}
+
+static void elrs_enter_binding_mode() {
+  if ((elrs_state == CONNECTED) || in_binding_mode) {
+    return;
+  }
+
+  UID[0] = bind_uid[0];
+  UID[1] = bind_uid[1];
+  UID[2] = bind_uid[2];
+  UID[3] = bind_uid[3];
+  UID[4] = bind_uid[4];
+  UID[5] = bind_uid[5];
+
+  crc_initializer = 0;
+  in_binding_mode = true;
+
+  next_rate = ELRS_RATE_DEFAULT;
+  fhss_index = 0;
+
+  elrs_set_rate(next_rate, fhss_get_freq(0), UID[5] & 0x01);
+  elrs_enter_rx(packet);
+}
+
+static void elrs_setup_bind(uint8_t *packet) {
+  for (uint8_t i = 0; i < 4; i++) {
+    UID[i + 2] = packet[i + 3];
+  }
+
+  bind_storage.elrs.is_set = 0x1;
+  bind_storage.elrs._pad = 0x1;
+
+  crc_initializer = (UID[4] << 8) | UID[5];
+
+  const int32_t seed = ((int32_t)UID[2] << 24) + ((int32_t)UID[3] << 16) + ((int32_t)UID[4] << 8) + UID[5];
+  fhss_randomize(seed);
+
+  last_rf_mode_cycle_millis = 0;
+  in_binding_mode = false;
+
+  elrs_connection_lost();
 }
 
 static void elrs_process_packet(uint32_t packet_time) {
@@ -286,6 +330,12 @@ static void elrs_process_packet(uint32_t packet_time) {
     state.aux[AUX_CHANNEL_3] = (packet[6] & 0b00000001) ? 1 : 0;
     break;
   }
+  case MSP_DATA_PACKET: {
+    if (packet[1] == 1 && packet[2] == ELRS_MSP_BIND) {
+      elrs_setup_bind(packet);
+    }
+    break;
+  }
   default:
     break;
   }
@@ -326,6 +376,7 @@ void rx_init() {
   elrs_lq_reset();
   elrs_lpf_init(&rssi_lpf, 5);
 
+  crc_initializer = (UID[4] << 8) | UID[5];
   rf_mode_cycle_multiplier = 1;
 
   elrs_set_rate(next_rate, fhss_get_freq(0), (UID[5] & 0x01));
@@ -375,6 +426,10 @@ void rx_check() {
 
   if ((elrs_timer_state == TIMER_TENTATIVE) && ((time_millis() - connected_millis) > CONSIDER_CONN_GOOD_MILLIS) && (abs(pl_state.offset_dx) <= 5)) {
     elrs_timer_state = TIMER_LOCKED;
+  }
+
+  if (bind_storage.elrs.is_set == 0x0 && bind_storage.elrs._pad == 0x0 && !in_binding_mode) {
+    elrs_enter_binding_mode();
   }
 }
 
