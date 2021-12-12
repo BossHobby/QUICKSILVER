@@ -20,6 +20,8 @@
 #define SYNC_PACKET 0b10
 #define TLM_PACKET 0b11
 
+#define RF_MODE_CYCLE_MULTIPLIER_SLOW 10
+
 #define DEBUG_PIN PIN_A10
 
 // Desired buffer time between Packet ISR and Tock ISR
@@ -28,6 +30,7 @@
 #define CONSIDER_CONN_GOOD_MILLIS 1000
 
 extern volatile uint8_t fhss_index;
+extern volatile elrs_phase_lock_state_t pl_state;
 
 extern int32_t fhss_update_freq_correction(uint8_t value);
 extern void fhss_randomize(int32_t seed);
@@ -35,6 +38,7 @@ extern uint32_t fhss_get_freq(uint16_t index);
 extern uint32_t fhss_next_freq();
 extern void fhss_reset();
 extern uint8_t fhss_min_lq_for_chaos();
+extern uint32_t fhss_rf_mode_cycle_interval();
 
 extern void crc14_init();
 extern uint16_t crc14_calc(uint8_t *data, uint8_t len, uint16_t crc);
@@ -42,24 +46,25 @@ extern uint16_t crc14_calc(uint8_t *data, uint8_t len, uint16_t crc);
 extern expresslrs_mod_settings_t *current_air_rate_config();
 extern expresslrs_rf_pref_params_t *current_rf_pref_params();
 
-extern volatile elrs_phase_lock_state_t pl_state;
-
-static volatile elrs_state_t elrs_state = DISCONNECTED;
-
-static volatile bool already_hop = false;
-static volatile bool already_tlm = false;
-
-static volatile bool needs_hop = false;
+extern uint8_t tlm_ratio_enum_to_value(expresslrs_tlm_ratio_t val);
 
 uint8_t packet[ELRS_BUFFER_SIZE];
 elrs_timer_state_t elrs_timer_state = TIMER_DISCONNECTED;
 volatile uint8_t nonce_rx = 0;
 
+static volatile elrs_state_t elrs_state = DISCONNECTED;
+
+static volatile bool already_hop = false;
+static volatile bool already_tlm = false;
+static volatile bool needs_hop = false;
+
+static uint32_t connected_millis = 0;
 static uint32_t sync_packet_millis = 0;
 static uint32_t last_valid_packet_millis = 0;
-static uint32_t connected_millis = 0;
+static uint32_t last_rf_mode_cycle_millis = 0;
 
 static uint32_t next_rate = 0;
+static uint32_t rf_mode_cycle_multiplier = 1;
 
 static int8_t raw_rssi = 0;
 static int8_t raw_snr = 0;
@@ -70,37 +75,6 @@ static int8_t rssi;
 
 static uint8_t UID[6] = {221, 251, 226, 34, 222, 25};
 // static uint8_t UID[6] = {0, 1, 2, 3, 4, 5};
-
-uint8_t tlm_ratio_enum_to_value(expresslrs_tlm_ratio_t val) {
-  switch (val) {
-  case TLM_RATIO_NO_TLM:
-    return 1;
-    break;
-  case TLM_RATIO_1_2:
-    return 2;
-    break;
-  case TLM_RATIO_1_4:
-    return 4;
-    break;
-  case TLM_RATIO_1_8:
-    return 8;
-    break;
-  case TLM_RATIO_1_16:
-    return 16;
-    break;
-  case TLM_RATIO_1_32:
-    return 32;
-    break;
-  case TLM_RATIO_1_64:
-    return 64;
-    break;
-  case TLM_RATIO_1_128:
-    return 128;
-    break;
-  default:
-    return 0;
-  }
-}
 
 static bool elrs_hop() {
   if (already_hop) {
@@ -182,8 +156,10 @@ static void elrs_connection_lost() {
   elrs_timer_state = TIMER_DISCONNECTED;
   elrs_timer_stop();
 
-  already_hop = false;
+  flags.failsafe = 1;
 
+  already_hop = false;
+  rf_mode_cycle_multiplier = 1;
   fhss_index = 0;
 
   elrs_lq_reset();
@@ -218,29 +194,32 @@ static void elrs_connected() {
   elrs_timer_state = TIMER_TENTATIVE;
 }
 
-// this is 180 out of phase with the other callback, occurs mid-packet reception
-void elrs_handle_tick() {
-  elrs_phase_update(elrs_state);
-  nonce_rx++;
-
-  uplink_lq = elrs_lq_get();
-
-  // Only advance the LQI period counter if we didn't send Telemetry this period
-  if (!already_tlm) {
-    elrs_lq_inc();
+static void elrs_cycle_rf_mode() {
+  if (elrs_state == CONNECTED) {
+    return;
   }
 
-  already_hop = false;
-  already_tlm = false;
+  if ((time_millis() - last_rf_mode_cycle_millis) <= (fhss_rf_mode_cycle_interval() * rf_mode_cycle_multiplier)) {
+    return;
+  }
+
+  last_rf_mode_cycle_millis = time_millis();
+  sync_packet_millis = time_millis();
+
+  next_rate = (current_air_rate_config()->index + 1) % ELRS_RATE_MAX;
+  fhss_index = 0;
+
+  elrs_lq_reset();
+  fhss_reset();
+  elrs_phase_reset();
+
+  elrs_set_rate(next_rate, fhss_get_freq(0), UID[5] & 0x01);
+  elrs_enter_rx(packet);
+
+  rf_mode_cycle_multiplier = 1;
 }
 
-void elrs_handle_tock() {
-  const uint32_t time = time_micros();
-  elrs_phase_int_event(time);
-  needs_hop = true;
-}
-
-void elrs_process_packet(uint32_t packet_time) {
+static void elrs_process_packet(uint32_t packet_time) {
   if (!elrs_vaild_packet()) {
     return;
   }
@@ -252,6 +231,8 @@ void elrs_process_packet(uint32_t packet_time) {
   rssi = elrs_lpf_update(&rssi_lpf, raw_rssi);
 
   elrs_lq_add();
+
+  rf_mode_cycle_multiplier = RF_MODE_CYCLE_MULTIPLIER_SLOW;
 
   const uint8_t type = packet[0] & 0b11;
   switch (type) {
@@ -268,7 +249,6 @@ void elrs_process_packet(uint32_t packet_time) {
 
     if (rate_index != current_air_rate_config()->index) {
       next_rate = rate_index;
-      elrs_connection_lost();
     }
 
     if (current_air_rate_config()->tlm_interval != telemetry_rate_index) {
@@ -311,6 +291,28 @@ void elrs_process_packet(uint32_t packet_time) {
   }
 }
 
+// this is 180 out of phase with the other callback, occurs mid-packet reception
+void elrs_handle_tick() {
+  elrs_phase_update(elrs_state);
+  nonce_rx++;
+
+  uplink_lq = elrs_lq_get();
+
+  // Only advance the LQI period counter if we didn't send Telemetry this period
+  if (!already_tlm) {
+    elrs_lq_inc();
+  }
+
+  already_hop = false;
+  already_tlm = false;
+}
+
+void elrs_handle_tock() {
+  const uint32_t time = time_micros();
+  elrs_phase_int_event(time);
+  needs_hop = true;
+}
+
 void rx_init() {
   if (!elrs_radio_init()) {
     return;
@@ -323,6 +325,8 @@ void rx_init() {
   elrs_phase_init();
   elrs_lq_reset();
   elrs_lpf_init(&rssi_lpf, 5);
+
+  rf_mode_cycle_multiplier = 1;
 
   elrs_set_rate(next_rate, fhss_get_freq(0), (UID[5] & 0x01));
   elrs_timer_init(current_air_rate_config()->interval);
@@ -349,10 +353,17 @@ void rx_check() {
     }
   }
 
+  if ((elrs_state != DISCONNECTED) && next_rate != current_air_rate_config()->index) {
+    sync_packet_millis = time_millis();
+    elrs_connection_lost();
+  }
+
   if ((elrs_state == TENTATIVE) && ((time_millis() - sync_packet_millis) > current_rf_pref_params()->rf_mode_cycle_addtional_time)) {
     sync_packet_millis = time_millis();
     elrs_connection_lost();
   }
+
+  elrs_cycle_rf_mode();
 
   if ((elrs_state == CONNECTED) && ((time_millis() - last_valid_packet_millis) > current_rf_pref_params()->rf_mode_cycle_interval)) {
     elrs_connection_lost();

@@ -268,4 +268,9 @@ uint8_t fhss_min_lq_for_chaos() {
   return interval * ((interval * NR_FHSS_ENTRIES + 99) / (interval * NR_FHSS_ENTRIES));
 }
 
+uint32_t fhss_rf_mode_cycle_interval() {
+  expresslrs_mod_settings_t *config = current_air_rate_config();
+  return ((uint32_t)11U * NR_FHSS_ENTRIES * config->fhss_hop_interval * config->interval) / (10U * 1000U);
+}
+
 #endif
