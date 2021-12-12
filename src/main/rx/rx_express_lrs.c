@@ -459,13 +459,6 @@ void rx_init() {
 void rx_check() {
   const uint32_t packet_time = time_micros();
 
-  const elrs_irq_status_t irq = elrs_get_irq_status();
-  if (irq == IRQ_RX_DONE) {
-    elrs_process_packet(packet_time);
-  } else if (irq == IRQ_TX_DONE) {
-    elrs_enter_rx(packet);
-  }
-
   if (needs_hop) {
     needs_hop = false;
 
@@ -473,6 +466,13 @@ void rx_check() {
     const bool did_tlm = elrs_tlm();
     if (!did_hop && !did_tlm && elrs_lq_current_is_set()) {
       elrs_freq_correct();
+    }
+  } else {
+    const elrs_irq_status_t irq = elrs_get_irq_status();
+    if (irq == IRQ_RX_DONE) {
+      elrs_process_packet(packet_time);
+    } else if (irq == IRQ_TX_DONE) {
+      elrs_enter_rx(packet);
     }
   }
 
@@ -488,7 +488,7 @@ void rx_check() {
 
   elrs_cycle_rf_mode();
 
-  if ((elrs_state == CONNECTED) && ((time_millis() - last_valid_packet_millis) > current_rf_pref_params()->rf_mode_cycle_interval)) {
+  if ((elrs_state == CONNECTED) && (current_rf_pref_params()->rf_mode_cycle_interval < (int32_t)(time_millis() - last_valid_packet_millis))) {
     elrs_connection_lost();
   }
 
