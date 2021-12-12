@@ -14,8 +14,6 @@
 #define TIMER_INSTANCE TIM3
 #define TIMER_IRQN TIM3_IRQn
 
-#define DEBUG_PIN PIN_A10
-
 static volatile bool is_tick = false;
 
 static volatile int32_t phase_shift = 0;
@@ -37,13 +35,6 @@ void elrs_timer_stop() {
 }
 
 void elrs_timer_init(uint32_t interval_us) {
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_pin_init(&gpio_init, DEBUG_PIN);
-
   current_interval = interval_us;
   timer_init(TIMER_INSTANCE, PWM_CLOCK_FREQ_HZ / TIMER_HZ, (current_interval >> 1) - 1);
 
