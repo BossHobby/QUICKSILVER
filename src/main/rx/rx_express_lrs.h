@@ -54,7 +54,8 @@ typedef enum {
 typedef struct {
   uint8_t is_set;
   uint8_t uid[6];
-  uint8_t _pad;
+  uint8_t magic;
+  uint8_t switch_mode;
 } rx_elrs_bind_data_t;
 
 typedef struct {
