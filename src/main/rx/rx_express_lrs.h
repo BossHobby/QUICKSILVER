@@ -9,6 +9,7 @@
 
 #define ELRS_BUFFER_SIZE 8
 #define ELRS_RATE_MAX 4
+#define ELRS_RATE_DEFAULT 0
 
 typedef enum {
   DISCONNECTED,
@@ -49,6 +50,12 @@ typedef enum {
   RATE_25HZ = 6,
   RATE_4HZ = 7
 } expresslrs_rf_rates_t;
+
+typedef struct {
+  uint8_t is_set;
+  uint8_t uid[6];
+  uint8_t _pad;
+} rx_elrs_bind_data_t;
 
 typedef struct {
   int32_t beta;     // Length = 16
