@@ -211,7 +211,7 @@ int main() {
     // all flight calculations and motors
     perf_counter_start(PERF_COUNTER_CONTROL);
     control();
-    perf_counter_start(PERF_COUNTER_CONTROL);
+    perf_counter_end(PERF_COUNTER_CONTROL);
 
     // attitude calculations for level mode
     imu_calc();
