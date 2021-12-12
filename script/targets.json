@@ -115,6 +115,13 @@
         }
       },
       {
+        "name": "brushless.expresslrs",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_EXPRESS_LRS": ""
+        }
+      },
+      {
         "name": "brushless.serial",
         "defines": {
           "BRUSHLESS_TARGET": "",
