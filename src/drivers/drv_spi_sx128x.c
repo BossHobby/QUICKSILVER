@@ -1,6 +1,7 @@
 #include "drv_spi_sx128x.h"
 
 #include <stdbool.h>
+#include <string.h>
 
 #include <stm32f4xx_ll_bus.h>
 #include <stm32f4xx_ll_exti.h>
@@ -58,6 +59,8 @@ void sx128x_init() {
   while (LL_SPI_IsActiveFlag_TXE(PORT.channel) == RESET)
     ;
   LL_SPI_ReceiveData8(PORT.channel);
+
+  spi_dma_init(SX12XX_SPI_PORT);
 }
 
 void sx128x_reset() {
@@ -127,21 +130,16 @@ uint8_t sx128x_read_register(const uint16_t reg) {
 }
 
 void sx128x_write_register_burst(const uint16_t reg, const uint8_t *data, const uint8_t size) {
-  const uint8_t buf[3] = {
-      (uint8_t)SX1280_RADIO_WRITE_REGISTER,
-      ((reg & 0xFF00) >> 8),
-      (reg & 0x00FF),
-  };
+  uint8_t buf[size + 3];
+  buf[0] = (uint8_t)SX1280_RADIO_WRITE_REGISTER;
+  buf[1] = ((reg & 0xFF00) >> 8);
+  buf[2] = (reg & 0x00FF);
+  memcpy(buf + 3, data, size);
 
   sx128x_wait_for_ready();
 
   spi_csn_enable(SX12XX_NSS_PIN);
-  for (uint8_t i = 0; i < 3; i++) {
-    spi_transfer_byte(SX12XX_SPI_PORT, buf[i]);
-  }
-  for (uint8_t i = 0; i < size; i++) {
-    spi_transfer_byte(SX12XX_SPI_PORT, data[i]);
-  }
+  spi_dma_transfer_bytes(SX12XX_SPI_PORT, buf, size + 3);
   spi_csn_disable(SX12XX_NSS_PIN);
 }
 
@@ -150,21 +148,18 @@ void sx128x_write_register(const uint16_t reg, const uint8_t val) {
 }
 
 void sx128x_read_command_burst(const sx128x_commands_t cmd, uint8_t *data, const uint8_t size) {
-  const uint8_t buf[2] = {
-      (uint8_t)cmd,
-      0x0,
-  };
+  uint8_t buf[size + 2];
+  buf[0] = (uint8_t)cmd;
+  buf[1] = 0x0;
+  memset(buf + 2, 0xFF, size);
 
   sx128x_wait_for_ready();
 
   spi_csn_enable(SX12XX_NSS_PIN);
-  for (uint8_t i = 0; i < 2; i++) {
-    spi_transfer_byte(SX12XX_SPI_PORT, buf[i]);
-  }
-  for (uint8_t i = 0; i < size; i++) {
-    data[i] = spi_transfer_byte(SX12XX_SPI_PORT, 0xFF);
-  }
+  spi_dma_transfer_bytes(SX12XX_SPI_PORT, buf, size + 2);
   spi_csn_disable(SX12XX_NSS_PIN);
+
+  memcpy(data, buf + 2, size);
 }
 
 void sx128x_write_command(const sx128x_commands_t cmd, const uint8_t val) {
@@ -177,13 +172,14 @@ void sx128x_write_command(const sx128x_commands_t cmd, const uint8_t val) {
 }
 
 void sx128x_write_command_burst(const sx128x_commands_t cmd, const uint8_t *data, const uint8_t size) {
+  uint8_t buf[size + 1];
+  buf[0] = (uint8_t)cmd;
+  memcpy(buf + 1, data, size);
+
   sx128x_wait_for_ready();
 
   spi_csn_enable(SX12XX_NSS_PIN);
-  spi_transfer_byte(SX12XX_SPI_PORT, (uint8_t)cmd);
-  for (uint8_t i = 0; i < size; i++) {
-    spi_transfer_byte(SX12XX_SPI_PORT, data[i]);
-  }
+  spi_dma_transfer_bytes(SX12XX_SPI_PORT, buf, size + 1);
   spi_csn_disable(SX12XX_NSS_PIN);
 }
 
@@ -321,37 +317,31 @@ void sx128x_read_rx_buffer(uint8_t *data, const uint8_t size) {
   uint8_t buffer_status[2] = {0, 0};
   sx128x_read_command_burst(SX1280_RADIO_GET_RXBUFFERSTATUS, buffer_status, 2);
 
-  const uint8_t buf[3] = {
-      (uint8_t)SX1280_RADIO_READ_BUFFER,
-      buffer_status[1],
-      0x00,
-  };
+  uint8_t buf[size + 3];
+  buf[0] = (uint8_t)SX1280_RADIO_READ_BUFFER;
+  buf[1] = buffer_status[1];
+  buf[2] = 0x00;
+  memset(buf + 3, 0xFF, size);
+
   sx128x_wait_for_ready();
 
   spi_csn_enable(SX12XX_NSS_PIN);
-  for (uint8_t i = 0; i < 3; i++) {
-    spi_transfer_byte(SX12XX_SPI_PORT, buf[i]);
-  }
-  for (uint8_t i = 0; i < size; i++) {
-    data[i] = spi_transfer_byte(SX12XX_SPI_PORT, 0xFF);
-  }
+  spi_dma_transfer_bytes(SX12XX_SPI_PORT, buf, size + 3);
   spi_csn_disable(SX12XX_NSS_PIN);
+
+  memcpy(data, buf + 3, size);
 }
 
 void sx128x_write_tx_buffer(const uint8_t offset, const uint8_t *data, const uint8_t size) {
-  const uint8_t buf[2] = {
-      (uint8_t)SX1280_RADIO_WRITE_BUFFER,
-      offset,
-  };
+  uint8_t buf[size + 2];
+  buf[0] = (uint8_t)SX1280_RADIO_WRITE_BUFFER;
+  buf[1] = offset;
+  memcpy(buf + 2, data, size);
+
   sx128x_wait_for_ready();
 
   spi_csn_enable(SX12XX_NSS_PIN);
-  for (uint8_t i = 0; i < 2; i++) {
-    spi_transfer_byte(SX12XX_SPI_PORT, buf[i]);
-  }
-  for (uint8_t i = 0; i < size; i++) {
-    spi_transfer_byte(SX12XX_SPI_PORT, data[i]);
-  }
+  spi_dma_transfer_bytes(SX12XX_SPI_PORT, buf, size + 2);
   spi_csn_disable(SX12XX_NSS_PIN);
 }
 
