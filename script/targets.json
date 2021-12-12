@@ -3,9 +3,9 @@
     "name": "aikon_f4",
     "configurations": [
       {
-        "name": "brushed.serial",
+        "name": "brushless.serial",
         "defines": {
-          "BRUSHED_TARGET": "",
+          "BRUSHLESS_TARGET": "",
           "RX_UNIFIED_SERIAL": ""
         }
       }
