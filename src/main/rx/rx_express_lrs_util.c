@@ -107,4 +107,35 @@ void elrs_lq_reset() {
   }
 }
 
+uint8_t tlm_ratio_enum_to_value(expresslrs_tlm_ratio_t val) {
+  switch (val) {
+  case TLM_RATIO_NO_TLM:
+    return 1;
+    break;
+  case TLM_RATIO_1_2:
+    return 2;
+    break;
+  case TLM_RATIO_1_4:
+    return 4;
+    break;
+  case TLM_RATIO_1_8:
+    return 8;
+    break;
+  case TLM_RATIO_1_16:
+    return 16;
+    break;
+  case TLM_RATIO_1_32:
+    return 32;
+    break;
+  case TLM_RATIO_1_64:
+    return 64;
+    break;
+  case TLM_RATIO_1_128:
+    return 128;
+    break;
+  default:
+    return 0;
+  }
+}
+
 #endif

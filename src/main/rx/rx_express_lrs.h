@@ -8,6 +8,7 @@
 #include "drv_spi_sx128x.h"
 
 #define ELRS_BUFFER_SIZE 8
+#define ELRS_RATE_MAX 4
 
 typedef enum {
   DISCONNECTED,
