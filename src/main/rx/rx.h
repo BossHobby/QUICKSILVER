@@ -117,6 +117,8 @@ void rx_apply_expo();
 void rx_apply_stick_calibration_scale();
 void request_stick_calibration_wizard();
 
+void rx_lqi_update_spi_fps(float expected_fps);
+
 #if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_UNIFIED_SERIAL)
 void rx_spektrum_bind();
 #endif

@@ -50,6 +50,7 @@ extern expresslrs_mod_settings_t *current_air_rate_config();
 extern expresslrs_rf_pref_params_t *current_rf_pref_params();
 
 extern uint8_t tlm_ratio_enum_to_value(expresslrs_tlm_ratio_t val);
+extern uint16_t rate_enum_to_hz(expresslrs_rf_rates_t val);
 
 uint8_t packet[ELRS_BUFFER_SIZE];
 elrs_timer_state_t elrs_timer_state = TIMER_DISCONNECTED;
@@ -120,6 +121,10 @@ static bool elrs_tlm() {
     return false;
   }
 
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
+    rx_lqi_update_spi_fps(rate_enum_to_hz(current_rf_pref_params()->rate));
+  }
+
   packet[0] = 0b11;
   packet[1] = TELEMETRY_TYPE_LINK;
   packet[2] = -rssi;     // rssi
@@ -164,6 +169,7 @@ static void elrs_connection_lost() {
   already_hop = false;
   rf_mode_cycle_multiplier = 1;
   fhss_index = 0;
+  uplink_lq = 0;
 
   elrs_lq_reset();
   fhss_reset();
@@ -273,6 +279,16 @@ static void elrs_process_packet(uint32_t packet_time) {
 
   elrs_last_packet_stats(&raw_rssi, &raw_snr);
   rssi = elrs_lpf_update(&rssi_lpf, raw_rssi);
+
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
+    state.rx_rssi = uplink_lq;
+  }
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
+    rx_lqi_update_spi_fps(rate_enum_to_hz(current_rf_pref_params()->rate));
+  }
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
+    state.rx_rssi = 0.f;
+  }
 
   elrs_lq_add();
 

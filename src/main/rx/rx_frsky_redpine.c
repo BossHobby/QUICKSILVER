@@ -81,7 +81,7 @@ static void redpine_set_rc_data() {
   state.aux[AUX_CHANNEL_11] = (packet[REDPINE_CHANNEL_START + 6] & 0x80) ? 1 : 0;
 
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-    rx_update_spi_fps_lqi(LQI_FPS);
+    rx_lqi_update_spi_fps(LQI_FPS);
   }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
     state.rx_rssi = 0.f;

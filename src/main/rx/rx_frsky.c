@@ -30,26 +30,6 @@ uint16_t frsky_extract_rssi(uint8_t rssi_raw) {
   }
 }
 
-void rx_update_spi_fps_lqi(float expected_fps) {
-  static uint32_t time_lastframe;
-  time_lastframe = time_micros();
-  static uint16_t stat_frames_second;
-  // link quality & rssi
-  static uint32_t fps_counter = 0;
-  static uint32_t time_last_fps_update = 0;
-  if (time_lastframe - time_last_fps_update > 1000000) {
-    //calculate fps on the fly
-    stat_frames_second = fps_counter;
-    fps_counter = 0;
-    time_last_fps_update = time_lastframe;
-  }
-  fps_counter++;
-  state.rx_rssi = stat_frames_second / expected_fps;
-  state.rx_rssi = state.rx_rssi * state.rx_rssi * state.rx_rssi * LQ_EXPO + state.rx_rssi * (1 - LQ_EXPO);
-  state.rx_rssi *= 100.0f;
-  state.rx_rssi = constrainf(state.rx_rssi, 0.f, 100.f);
-}
-
 static uint8_t frsky_dectect() {
   const uint8_t chipPartNum = cc2500_read_reg(CC2500_PARTNUM | CC2500_READ_BURST); //CC2500 read registers chip part num
   const uint8_t chipVersion = cc2500_read_reg(CC2500_VERSION | CC2500_READ_BURST); //CC2500 read registers chip version

@@ -71,6 +71,27 @@ float rx_smoothing_hz(rx_protocol_t proto) {
   return RX_SMOOTHING_HZ[proto];
 }
 
+// TODO: merge this function with what lives in unified_serial
+void rx_lqi_update_spi_fps(float expected_fps) {
+  static uint32_t time_lastframe;
+  time_lastframe = time_micros();
+  static uint16_t stat_frames_second;
+  // link quality & rssi
+  static uint32_t fps_counter = 0;
+  static uint32_t time_last_fps_update = 0;
+  if (time_lastframe - time_last_fps_update > 1000000) {
+    //calculate fps on the fly
+    stat_frames_second = fps_counter;
+    fps_counter = 0;
+    time_last_fps_update = time_lastframe;
+  }
+  fps_counter++;
+  state.rx_rssi = stat_frames_second / expected_fps;
+  state.rx_rssi = state.rx_rssi * state.rx_rssi * state.rx_rssi * LQ_EXPO + state.rx_rssi * (1 - LQ_EXPO);
+  state.rx_rssi *= 100.0f;
+  state.rx_rssi = constrainf(state.rx_rssi, 0.f, 100.f);
+}
+
 void rx_apply_expo() {
   vec3_t angle_expo = {
       .roll = 0,
