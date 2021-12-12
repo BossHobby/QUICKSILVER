@@ -19,18 +19,20 @@
 
 static volatile uint8_t dio0_active = 0;
 
+static uint32_t busy_timeout = 1000;
+
 void sx128x_init() {
   spi_init_pins(SX12XX_SPI_PORT, SX12XX_NSS_PIN);
 
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
   gpio_pin_init(&gpio_init, SX12XX_RESET_PIN);
 
   gpio_init.Mode = LL_GPIO_MODE_INPUT;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
   gpio_init.Pull = LL_GPIO_PULL_NO;
   gpio_pin_init(&gpio_init, SX12XX_BUSY_PIN);
@@ -70,6 +72,10 @@ void sx128x_reset() {
   time_delay_us(10);
 }
 
+void sx128x_set_busy_timeout(uint32_t timeout) {
+  busy_timeout = timeout;
+}
+
 void sx128x_handle_dio0_exti(bool level) {
   if (!level) {
     return;
@@ -95,7 +101,7 @@ static bool sx128x_is_busy() {
 static bool sx128x_wait_for_ready() {
   const uint32_t start = time_micros();
   while (sx128x_is_busy()) {
-    if ((time_micros() - start) > 1000) {
+    if ((time_micros() - start) > busy_timeout) {
       return false;
     }
     __NOP();
