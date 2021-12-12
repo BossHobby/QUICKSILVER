@@ -163,7 +163,7 @@ static void frsky_d16_set_rc_data() {
     state.rx_rssi = constrainf(frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]), 0.f, 100.f);
   }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-    rx_update_spi_fps_lqi(LQI_FPS);
+    rx_lqi_update_spi_fps(LQI_FPS);
   }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
     if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
