@@ -13,8 +13,6 @@
 
 #if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
 
-#define DEBUG_PIN PIN_A10
-
 #define ELRS_MSP_BIND 0x09
 
 #define TELEMETRY_TYPE_LINK 0x01
@@ -94,15 +92,6 @@ static bool elrs_hop() {
 
   elrs_set_frequency(fhss_next_freq());
   already_hop = true;
-
-  static bool debug_pin_state = false;
-  if (debug_pin_state) {
-    gpio_pin_reset(DEBUG_PIN);
-    debug_pin_state = false;
-  } else {
-    gpio_pin_set(DEBUG_PIN);
-    debug_pin_state = true;
-  }
 
   const uint8_t tlm_mod = (nonce_rx + 1) % tlm_ratio_enum_to_value(current_air_rate_config()->tlm_interval);
   if (current_air_rate_config()->tlm_interval == TLM_RATIO_NO_TLM || tlm_mod != 0) {
