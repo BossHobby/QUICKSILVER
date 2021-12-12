@@ -376,7 +376,9 @@ void control() {
     motor_set_all(0);
 
 #ifdef MOTOR_BEEPS
-    motor_beep();
+    if (flags.usb_active == 0) {
+      motor_beep();
+    }
 #endif
 
     state.throttle = 0; //zero out throttle so it does not come back on as idle up value if enabled
