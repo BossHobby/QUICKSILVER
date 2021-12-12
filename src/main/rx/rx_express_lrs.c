@@ -245,7 +245,7 @@ static void elrs_setup_bind(uint8_t *packet) {
   }
 
   bind_storage.elrs.is_set = 0x1;
-  bind_storage.elrs._pad = 0x1;
+  bind_storage.elrs.magic = 0x37;
 
   crc_initializer = (UID[4] << 8) | UID[5];
 
@@ -256,6 +256,70 @@ static void elrs_setup_bind(uint8_t *packet) {
   in_binding_mode = false;
 
   elrs_connection_lost();
+}
+
+static void elrs_unpack_1bit_switches(uint8_t *packet) {
+  state.aux[AUX_CHANNEL_0] = (packet[6] & 0b10000000);
+  state.aux[AUX_CHANNEL_1] = (packet[6] & 0b01000000);
+  state.aux[AUX_CHANNEL_2] = (packet[6] & 0b00100000);
+  state.aux[AUX_CHANNEL_3] = (packet[6] & 0b00010000);
+  state.aux[AUX_CHANNEL_4] = (packet[6] & 0b00001000);
+  state.aux[AUX_CHANNEL_5] = (packet[6] & 0b00000100);
+  state.aux[AUX_CHANNEL_6] = (packet[6] & 0b00000010);
+  state.aux[AUX_CHANNEL_7] = (packet[6] & 0b00000001);
+  state.aux[AUX_CHANNEL_8] = 0;
+  state.aux[AUX_CHANNEL_9] = 0;
+  state.aux[AUX_CHANNEL_10] = 0;
+  state.aux[AUX_CHANNEL_11] = 0;
+}
+
+static inline uint8_t elrs_unpack_3b_switch(uint16_t val) {
+  switch (val) {
+  case 6:
+  case 7:
+  case 0:
+    return 0;
+  case 5:
+    return 1;
+  default:
+    return val > 3 ? 1 : 0;
+  }
+}
+
+static void elrs_unpack_hybrid_switches(uint8_t *packet) {
+  state.aux[AUX_CHANNEL_0] = (packet[6] & 0b01000000);
+
+  const uint8_t index = (packet[6] & 0b111000) >> 3;
+  const uint16_t value = elrs_unpack_3b_switch(packet[6] & 0b111);
+  switch (index) {
+  case 0:
+    state.aux[AUX_CHANNEL_1] = value;
+    break;
+  case 1:
+    state.aux[AUX_CHANNEL_2] = value;
+    break;
+  case 2:
+    state.aux[AUX_CHANNEL_3] = value;
+    break;
+  case 3:
+    state.aux[AUX_CHANNEL_4] = value;
+    break;
+  case 4:
+    state.aux[AUX_CHANNEL_5] = value;
+    break;
+  case 5:
+    state.aux[AUX_CHANNEL_6] = value;
+    break;
+  case 6: // Because AUX1 (index 0) is the low latency switch, the low bit
+  case 7: // of the switchIndex can be used as data, and arrives as index "6"
+    state.aux[AUX_CHANNEL_7] = (packet[6] & 0b1111) >= 6 ? 1 : 0;
+    break;
+  }
+
+  state.aux[AUX_CHANNEL_8] = 0;
+  state.aux[AUX_CHANNEL_9] = 0;
+  state.aux[AUX_CHANNEL_10] = 0;
+  state.aux[AUX_CHANNEL_11] = 0;
 }
 
 static void elrs_process_packet(uint32_t packet_time) {
@@ -294,7 +358,7 @@ static void elrs_process_packet(uint32_t packet_time) {
 
     const uint8_t rate_index = ((packet[3] & 0b11000000) >> 6);
     const uint8_t telemetry_rate_index = ((packet[3] & 0b00111000) >> 3);
-    // const uint8_t switch_mode = ((packet[3] & 0b00000110) >> 1);
+    const uint8_t switch_mode = ((packet[3] & 0b00000110) >> 1);
 
     if (rate_index != current_air_rate_config()->index) {
       next_rate = rate_index;
@@ -303,6 +367,8 @@ static void elrs_process_packet(uint32_t packet_time) {
     if (current_air_rate_config()->tlm_interval != telemetry_rate_index) {
       current_air_rate_config()->tlm_interval = telemetry_rate_index;
     }
+
+    bind_storage.elrs.switch_mode = switch_mode;
 
     if (elrs_state == DISCONNECTED ||
         (nonce_rx != packet[2]) ||
@@ -329,10 +395,11 @@ static void elrs_process_packet(uint32_t packet_time) {
 
     rx_apply_stick_calibration_scale();
 
-    state.aux[AUX_CHANNEL_0] = (packet[6] & 0b00001000) ? 1 : 0;
-    state.aux[AUX_CHANNEL_1] = (packet[6] & 0b00000100) ? 1 : 0;
-    state.aux[AUX_CHANNEL_2] = (packet[6] & 0b00000010) ? 1 : 0;
-    state.aux[AUX_CHANNEL_3] = (packet[6] & 0b00000001) ? 1 : 0;
+    if (bind_storage.elrs.switch_mode == 0b01) {
+      elrs_unpack_hybrid_switches(packet);
+    } else {
+      elrs_unpack_1bit_switches(packet);
+    }
     break;
   }
   case MSP_DATA_PACKET: {
@@ -433,7 +500,7 @@ void rx_check() {
     elrs_timer_state = TIMER_LOCKED;
   }
 
-  if (bind_storage.elrs.is_set == 0x0 && bind_storage.elrs._pad == 0x0 && !in_binding_mode) {
+  if (bind_storage.elrs.is_set == 0x0 && bind_storage.elrs.magic != 0x37 && !in_binding_mode) {
     elrs_enter_binding_mode();
   }
 }
