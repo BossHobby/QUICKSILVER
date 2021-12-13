@@ -159,6 +159,7 @@ static void elrs_connection_lost() {
   rf_mode_cycle_multiplier = 1;
   fhss_index = 0;
   uplink_lq = 0;
+  state.rx_rssi = 0;
 
   elrs_lq_reset();
   fhss_reset();
@@ -254,6 +255,7 @@ static void elrs_setup_bind(uint8_t *packet) {
 
   last_rf_mode_cycle_millis = 0;
   in_binding_mode = false;
+  next_rate = ELRS_RATE_DEFAULT;
 
   elrs_connection_lost();
 }
@@ -457,7 +459,15 @@ void rx_init() {
 }
 
 void rx_check() {
-  const uint32_t packet_time = time_micros();
+  const uint32_t time = time_micros();
+
+  static uint32_t last_time = 0;
+  if ((elrs_state == CONNECTED) && (time - last_time) > 10000) {
+    // we lost 10000us since last visit (flash save, etc)
+    // link has become unsustainable
+    elrs_connection_lost();
+  }
+  last_time = time;
 
   if (needs_hop) {
     needs_hop = false;
@@ -470,7 +480,7 @@ void rx_check() {
   } else {
     const elrs_irq_status_t irq = elrs_get_irq_status();
     if (irq == IRQ_RX_DONE) {
-      elrs_process_packet(packet_time);
+      elrs_process_packet(time);
     } else if (irq == IRQ_TX_DONE) {
       elrs_enter_rx(packet);
     }
