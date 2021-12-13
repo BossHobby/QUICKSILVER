@@ -325,6 +325,18 @@ void set_quic(uint8_t *data, uint32_t len) {
     break;
   }
 #endif
+  case QUIC_VAL_BIND_INFO: {
+    res = cbor_decode_rx_bind_storage_t(&dec, &bind_storage);
+    check_cbor_error(QUIC_CMD_SET);
+
+    flash_save();
+
+    res = cbor_encode_rx_bind_storage_t(&enc, &bind_storage);
+    check_cbor_error(QUIC_CMD_SET);
+
+    send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  }
   default:
     quic_errorf(QUIC_CMD_SET, "INVALID VALUE %d", value);
     break;

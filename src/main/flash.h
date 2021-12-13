@@ -35,6 +35,7 @@ typedef struct {
 extern rx_bind_storage_t bind_storage;
 
 cbor_result_t cbor_encode_rx_bind_storage_t(cbor_value_t *enc, const rx_bind_storage_t *s);
+cbor_result_t cbor_decode_rx_bind_storage_t(cbor_value_t *enc, rx_bind_storage_t *s);
 
 #define PROFILE_STORAGE_OFFSET (BIND_STORAGE_OFFSET + BIND_STORAGE_SIZE)
 #define PROFILE_STORAGE_SIZE 2048

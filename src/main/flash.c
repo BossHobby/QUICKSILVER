@@ -33,19 +33,15 @@ void flash_hard_coded_pid_identifier() {
   initial_pid_identifier = flash_get_hard_coded_pid_identifier();
 }
 
-cbor_result_t cbor_encode_rx_bind_storage_t(cbor_value_t *enc, const rx_bind_storage_t *s) {
-  CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_map_indefinite(enc));
+CBOR_START_STRUCT_ENCODER(rx_bind_storage_t)
+CBOR_ENCODE_MEMBER(bind_saved, uint8)
+CBOR_ENCODE_BSTR_MEMBER(raw, BIND_RAW_STORAGE_SIZE)
+CBOR_END_STRUCT_ENCODER()
 
-  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "bind_saved"));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &s->bind_saved));
-
-  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "raw"));
-  CBOR_CHECK_ERROR(res = cbor_encode_bstr(enc, s->raw, BIND_RAW_STORAGE_SIZE));
-
-  CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
-
-  return res;
-}
+CBOR_START_STRUCT_DECODER(rx_bind_storage_t)
+CBOR_DECODE_MEMBER(bind_saved, uint8)
+CBOR_DECODE_BSTR_MEMBER(raw, BIND_RAW_STORAGE_SIZE)
+CBOR_END_STRUCT_DECODER()
 
 void flash_save() {
   fmc_unlock();
