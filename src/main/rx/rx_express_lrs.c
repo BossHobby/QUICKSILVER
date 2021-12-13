@@ -189,6 +189,8 @@ static void elrs_connected() {
   flags.rx_ready = 1;
   flags.failsafe = 0;
 
+  flags.rx_mode = RXMODE_NORMAL;
+
   elrs_state = CONNECTED;
   elrs_timer_state = TIMER_TENTATIVE;
 }
@@ -222,6 +224,9 @@ static void elrs_enter_binding_mode() {
   if ((elrs_state == CONNECTED) || in_binding_mode) {
     return;
   }
+
+  flags.rx_mode = RXMODE_BIND;
+  state.rx_status = RX_SPI_STATUS_BINDING;
 
   UID[0] = bind_uid[0];
   UID[1] = bind_uid[1];
@@ -512,6 +517,8 @@ void rx_check() {
 
   if (bind_storage.elrs.is_set == 0x0 && bind_storage.elrs.magic != 0x37 && !in_binding_mode) {
     elrs_enter_binding_mode();
+  } else {
+    state.rx_status = RX_SPI_STATUS_BOUND;
   }
 }
 
