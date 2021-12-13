@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 
-#include "rx.h"
+#include "rx_spi.h"
 
 #include "drv_spi_sx127x.h"
 #include "drv_spi_sx128x.h"

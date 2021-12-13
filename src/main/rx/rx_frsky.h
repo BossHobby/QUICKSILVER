@@ -17,12 +17,6 @@ typedef struct {
 #ifdef RX_FRSKY
 
 typedef enum {
-  RX_STATUS_NONE = 0,
-  RX_STATUS_BINDING,
-  RX_STATUS_BOUND,
-} rx_status_t;
-
-typedef enum {
   FRSKY_STATE_DETECT = 0,
   FRSKY_STATE_INIT,
   FRSKY_STATE_BIND,
