@@ -199,7 +199,7 @@ void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq) {
   sx128x_set_packet_params(air_rate_config[index].preamble_len, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, (sx128x_lora_iq_modes_t)((uint8_t)!invert_iq << 6));
   sx128x_set_frequency(freq);
 
-  sx128x_set_busy_timeout(30);
+  sx128x_set_busy_timeout(100);
 
   current_rate = index;
 }
