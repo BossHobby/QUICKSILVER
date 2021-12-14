@@ -330,7 +330,7 @@ void vtx_update() {
     return;
   }
 
-  if (!flags.on_ground) {
+  if (!flags.on_ground || flags.arm_state == 1) {
     // never try to do vtx stuff in-air
     return;
   }
