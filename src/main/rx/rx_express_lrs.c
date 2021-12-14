@@ -367,6 +367,10 @@ static void elrs_process_packet(uint32_t packet_time) {
     const uint8_t telemetry_rate_index = ((packet[3] & 0b00111000) >> 3);
     const uint8_t switch_mode = ((packet[3] & 0b00000110) >> 1);
 
+    if (switch_mode != bind_storage.elrs.switch_mode) {
+      break;
+    }
+
     if (rate_index != current_air_rate_config()->index) {
       next_rate = rate_index;
     }
@@ -374,8 +378,6 @@ static void elrs_process_packet(uint32_t packet_time) {
     if (current_air_rate_config()->tlm_interval != telemetry_rate_index) {
       current_air_rate_config()->tlm_interval = telemetry_rate_index;
     }
-
-    bind_storage.elrs.switch_mode = switch_mode;
 
     if (elrs_state == DISCONNECTED ||
         (nonce_rx != packet[2]) ||
@@ -402,7 +404,7 @@ static void elrs_process_packet(uint32_t packet_time) {
 
     rx_apply_stick_calibration_scale();
 
-    if (bind_storage.elrs.switch_mode == 0b01) {
+    if (bind_storage.elrs.switch_mode == 1) {
       elrs_unpack_hybrid_switches(packet);
     } else {
       elrs_unpack_1bit_switches(packet);
@@ -457,6 +459,9 @@ void rx_init() {
 
   crc_initializer = (UID[4] << 8) | UID[5];
   rf_mode_cycle_multiplier = 1;
+
+  // only hybrid switches for now
+  bind_storage.elrs.switch_mode = 1;
 
   elrs_set_rate(next_rate, fhss_get_freq(0), (UID[5] & 0x01));
   elrs_timer_init(current_air_rate_config()->interval);
