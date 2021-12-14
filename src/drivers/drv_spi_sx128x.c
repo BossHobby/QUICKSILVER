@@ -32,8 +32,8 @@ void sx128x_init() {
   gpio_pin_init(&gpio_init, SX12XX_RESET_PIN);
 
   gpio_init.Mode = LL_GPIO_MODE_INPUT;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
   gpio_pin_init(&gpio_init, SX12XX_BUSY_PIN);
 
@@ -314,7 +314,7 @@ void sx128x_clear_irq_status(const uint16_t irq_mask) {
 }
 
 uint16_t sx128x_get_irq_status() {
-  uint8_t status[2];
+  uint8_t status[2] = {0, 0};
   sx128x_read_command_burst(SX1280_RADIO_GET_IRQSTATUS, status, 2);
   return status[0] << 8 | status[1];
 }
