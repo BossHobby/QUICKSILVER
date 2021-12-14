@@ -100,6 +100,8 @@ static void exti_set_source(gpio_pins_t pin) {
 void exti_enable(gpio_pins_t pin, uint32_t trigger) {
   exti_set_source(pin);
 
+  LL_EXTI_ClearFlag_0_31(LINE.exti_line);
+
   LL_EXTI_InitTypeDef exti_init;
   exti_init.Line_0_31 = LINE.exti_line;
   exti_init.LineCommand = ENABLE;
