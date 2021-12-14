@@ -213,6 +213,8 @@ int main() {
     control();
     perf_counter_end(PERF_COUNTER_CONTROL);
 
+    perf_counter_start(PERF_COUNTER_MISC);
+
     // attitude calculations for level mode
     imu_calc();
 
@@ -240,6 +242,8 @@ int main() {
 #endif
 
     vtx_update();
+
+    perf_counter_end(PERF_COUNTER_MISC);
 
     // receiver function
     perf_counter_start(PERF_COUNTER_RX);
