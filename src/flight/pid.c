@@ -32,10 +32,10 @@
 #ifdef BRUSHLESS_TARGET
 
 /// output limit
-const float outlimit[PID_SIZE] = {0.8, 0.8, 0.4};
+const float outlimit[PID_SIZE] = {1.0, 1.0, 1.0};
 
 // limit of integral term (abs)
-const float integrallimit[PID_SIZE] = {0.8, 0.8, 0.4};
+const float integrallimit[PID_SIZE] = {0.8, 0.8, 0.6};
 
 #else // BRUSHED TARGET
 
