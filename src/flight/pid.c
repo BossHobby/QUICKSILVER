@@ -155,33 +155,44 @@ static void pid(uint8_t x) {
     ierror[x] *= 0.98f;
   }
 
-  int iwindup = 0; // (iwidup = 0  windup is permitted)   (iwindup = 1 windup is squashed)
+  float iwindup = 0.0f; // (iwindup = 0  windup is not allowed)   (iwindup = 1 windup is allowed)
   if ((state.pidoutput.axis[x] >= outlimit[x]) && (state.error.axis[x] > 0)) {
-    iwindup = 1;
+    iwindup = 0.0f;
   }
 
   if ((state.pidoutput.axis[x] == -outlimit[x]) && (state.error.axis[x] < 0)) {
-    iwindup = 1;
+    iwindup = 0.0f;
   }
 
 #ifdef I_TERM_RELAX //  Roll - Pitch  Setpoint based I term relax method
-  static float avgSetpoint[2];
-  if (x < 2) {
-    lpf(&avgSetpoint[x], state.setpoint.axis[x], FILTERCALC(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ)); // 20 Hz filter
-    const float hpfSetpoint = state.setpoint.axis[x] - avgSetpoint[x];
-    if (fabsf(hpfSetpoint) > (float)RELAX_FACTOR * 1e-2f) {
-      iwindup = 1;
+  static float avgSetpoint[3];
+  if (iwindup != 0.0f) {
+    if (x < 2) {
+      lpf(&avgSetpoint[x], state.setpoint.axis[x], FILTERCALC(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ)); // 11 Hz filter
+      const float hpfSetpoint = state.setpoint.axis[x] - avgSetpoint[x];
+      iwindup = 1.0f - hpfSetpoint / RELAX_FACTOR;
+      if (iwindup < 0.0f) {
+        iwindup = 0.0;
+      }
     }
+#ifdef ITERM_RELAX_YAW
+    else { // axis is yaw
+      lpf(&avgSetpoint[x], state.setpoint.axis[x], FILTERCALC(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ_YAW)); // 25 Hz filter
+      const float hpfSetpoint = state.setpoint.axis[x] - avgSetpoint[x];
+      iwindup = 1.0f - hpfSetpoint / RELAX_FACTOR_YAW;
+      if (iwindup < 0.0f) {
+        iwindup = 0.0;
+      }
+    }
+#endif
   }
 #endif
 
   // SIMPSON_RULE_INTEGRAL
-  if (!iwindup) {
-    // assuming similar time intervals
-    ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + state.error.axis[x]) * current_ki[x] * state.looptime;
-    lasterror2[x] = lasterror[x];
-    lasterror[x] = state.error.axis[x];
-  }
+  // assuming similar time intervals
+  ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + state.error.axis[x]) * current_ki[x] * iwindup * state.looptime;
+  lasterror2[x] = lasterror[x];
+  lasterror[x] = state.error.axis[x];
   limitf(&ierror[x], integrallimit[x]);
 
 #ifdef ENABLE_SETPOINT_WEIGHTING

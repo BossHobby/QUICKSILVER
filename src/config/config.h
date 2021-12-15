@@ -267,8 +267,12 @@
 
 //**************I-term relax.  Removes roll and pitch bounce back after flips
 #define I_TERM_RELAX
-//#define RELAX_FACTOR 10
-//#define RELAX_FREQUENCY_HZ 20
+#define RELAX_FACTOR 35 * 0.01745329251 // convert to rad
+#define RELAX_FREQUENCY_HZ 11 // from my experience the frequency is better to tune than the factor
+
+#define I_TERM_RELAX_YAW // adds iterm relax to yaw with its own values as it responds much different
+#define RELAX_FACTOR_YAW 35 * 0.01745329251 // convert to rad
+#define RELAX_FREQUENCY_HZ_YAW 25
 
 //**********************************************************************************************************************
 //***********************************************ADDITIONAL FEATURES****************************************************
