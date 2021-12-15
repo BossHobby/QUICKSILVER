@@ -17,8 +17,8 @@ static float apidoutput[ANGLE_PID_SIZE];
 static float lasterror[ANGLE_PID_SIZE];
 
 float angle_pid(int x) {
-  float inverse_angle_error = 1 - fabsf(state.angleerror[x]);
-  float abs_angle_error = fabsf(state.angleerror[x]);
+  const float inverse_angle_error = 1 - fabsf(state.angleerror[x]);
+  const float abs_angle_error = fabsf(state.angleerror[x]);
 
   // P term 1 weighted
   apidoutput1[x] = inverse_angle_error * state.angleerror[x] * profile.pid.small_angle.kp;
