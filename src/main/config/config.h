@@ -1,6 +1,8 @@
 
+#define KDFF_ROLL 0.0f // TODO, move and allow tunable, just unsure how atm
+#define KDFF_PITCH 0.0f
+#define KDFF_YAW 0.000286479f
 
-//Universal pids are already loaded for 5" brushless by default.  Adjust pids in pid.c file for your build.
 
 //**********************************************************************************************************************
 //***********************************************HARDWARE SELECTION*****************************************************

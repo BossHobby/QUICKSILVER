@@ -72,6 +72,9 @@ static float current_kp[PID_SIZE] = {0, 0, 0};
 static float current_ki[PID_SIZE] = {0, 0, 0};
 static float current_kd[PID_SIZE] = {0, 0, 0};
 
+static float current_kdff[PID_SIZE] = {KDFF_ROLL, KDFF_PITCH, KDFF_YAW};
+static float kdff_output[PID_SIZE] = {0, 0, 0}; // move later
+
 static float ierror[PID_SIZE] = {0, 0, 0};
 
 static float v_compensation = 1.00;
@@ -257,7 +260,9 @@ static void pid(uint8_t x) {
     state.pid_d_term.axis[x] = dlpf;
   }
 
-  state.pidoutput.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x];
+  kdff_output[x] = state.setpoint.axis[x] * current_kdff[x]; // TODO add it to the states
+
+  state.pidoutput.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x] + kdff_output[x];
   limitf(&state.pidoutput.axis[x], outlimit[x]);
 }
 
