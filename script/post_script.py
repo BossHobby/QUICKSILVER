@@ -1,5 +1,6 @@
 import os
 import time
+import subprocess
 
 import serial
 import serial.tools.list_ports
@@ -30,10 +31,13 @@ elif 'DRONE_COMMIT' in os.environ:
   git_version = os.environ.get('DRONE_COMMIT')
 else:
   try:
-    with open('.git/refs/heads/master', 'r') as file:
-      git_version = file.read().rstrip()
-  except FileNotFoundError:
+    ret = subprocess.run(['git', 'rev-parse', 'HEAD'], stdout=subprocess.PIPE, text=True)
+    full_hash = ret.stdout.strip()
+    git_version = full_hash[:7]
+  except Exception:
     pass
+
+print("GIT_VERSION: " + git_version)
 
 projenv.Append(CPPDEFINES=[
   ("TARGET", env["PIOENV"]),
