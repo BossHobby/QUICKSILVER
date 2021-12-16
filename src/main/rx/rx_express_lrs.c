@@ -280,7 +280,7 @@ static void elrs_unpack_1bit_switches(uint8_t *packet) {
   state.aux[AUX_CHANNEL_11] = 0;
 }
 
-static inline uint8_t elrs_unpack_3b_switch(uint16_t val) {
+static uint8_t elrs_unpack_3b_switch(uint16_t val) {
   switch (val) {
   case 6:
   case 7:
@@ -294,7 +294,10 @@ static inline uint8_t elrs_unpack_3b_switch(uint16_t val) {
 }
 
 static void elrs_unpack_hybrid_switches(uint8_t *packet) {
-  state.aux[AUX_CHANNEL_0] = (packet[6] & 0b01000000);
+  static uint8_t last_aux0_value = 0;
+  const uint8_t aux0_value = (packet[6] & 0b01000000) >> 6;
+  state.aux[AUX_CHANNEL_0] = (!last_aux0_value && !aux0_value) ? 0 : 1;
+  last_aux0_value = aux0_value;
 
   const uint8_t index = (packet[6] & 0b111000) >> 3;
   const uint16_t value = elrs_unpack_3b_switch(packet[6] & 0b111);
