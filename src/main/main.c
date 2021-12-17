@@ -192,7 +192,9 @@ int main() {
     }
 
     state.uptime += state.looptime;
-
+    if (flags.arm_state)
+      state.armtime += state.looptime;
+      
 #ifdef DEBUG
     debug.totaltime += state.looptime;
     lpf(&debug.timefilt, state.looptime, 0.998);
