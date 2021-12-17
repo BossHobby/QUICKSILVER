@@ -2,8 +2,10 @@
 
 #ifdef RX_UNIFIED_SERIAL
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stm32f4xx_ll_usart.h>
 
 #include "control.h"
 #include "drv_serial.h"
@@ -37,6 +39,43 @@
  * CRC:            (uint8_t)
  *
  */
+
+#define CRSF_FRAME_SIZE_MAX 64
+#define CRSF_PAYLOAD_SIZE_MAX   60
+#define CRSF_SYNC_BYTE 0xC8
+
+typedef struct crsfFrameDef_s {
+    uint8_t deviceAddress;
+    uint8_t frameLength;
+    uint8_t type;
+    uint8_t payload[CRSF_PAYLOAD_SIZE_MAX + 1]; // +1 for CRC at end of payload
+} crsfFrameDef_t; 
+ 
+
+typedef union crsfFrame_u {
+    uint8_t bytes[CRSF_FRAME_SIZE_MAX];
+    crsfFrameDef_t frame;
+} crsfFrame_t; 
+
+crsfFrame_t crsfFrame;
+//static uint8_t crsfTelemetryFrame[CRSF_FRAME_SIZE_MAX];
+ 
+enum {
+    CRSF_FRAME_GPS_PAYLOAD_SIZE = 15,
+    CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = 8,
+    CRSF_FRAME_LINK_STATISTICS_PAYLOAD_SIZE = 10,
+    CRSF_FRAME_RC_CHANNELS_PAYLOAD_SIZE = 22, // 11 bits per channel * 16 channels = 22 bytes.
+    CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = 6,
+    CRSF_FRAME_TX_MSP_FRAME_SIZE = 58,
+    CRSF_FRAME_RX_MSP_FRAME_SIZE = 8,
+    CRSF_FRAME_ORIGIN_DEST_SIZE = 2,
+    CRSF_FRAME_LENGTH_ADDRESS = 1, // length of ADDRESS field
+    CRSF_FRAME_LENGTH_FRAMELENGTH = 1, // length of FRAMELENGTH field
+    CRSF_FRAME_LENGTH_TYPE = 1, // length of TYPE field
+    CRSF_FRAME_LENGTH_CRC = 1, // length of CRC field
+    CRSF_FRAME_LENGTH_TYPE_CRC = 2, // length of TYPE and CRC fields combined
+    CRSF_FRAME_LENGTH_EXT_TYPE_CRC = 4 // length of Extended Dest/Origin, TYPE and CRC fields combined
+};
 
 typedef enum {
   CRSF_FRAMETYPE_GPS = 0x02,
@@ -88,6 +127,9 @@ typedef struct {
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
 extern uint8_t rx_data[RX_BUFF_SIZE];
 
+//static bool crsf_debug_telemetry = false;
+static uint8_t telemetry_counter = 0;
+
 extern volatile uint8_t rx_frame_position;
 extern volatile uint8_t expected_frame_length;
 extern volatile frame_status_t frame_status;
@@ -117,6 +159,8 @@ static uint16_t crsf_rf_mode_fps[] = {
     150, // CRSF
     100, // ELRS
     200, // ELRS
+    250, // ELRS
+    500, // ELRS
 };
 
 #define USART usart_port_defs[serial_rx_port]
@@ -275,6 +319,70 @@ void rx_serial_process_crsf() {
     //We're done with this frame now.
     frame_status = FRAME_TX;
     rx_buffer_offset = 0;
+    telemetry_counter++;   // Telemetry will send data out when this reaches 10
+  }
+}
+
+
+// Telemetry sending back to receiver (only voltage for now)
+/*
+CRSF frame has the structure:
+<Device address> <Frame length> <Type> <Payload> <CRC>
+Device address: (uint8_t)
+Frame length:   length in  bytes including Type (uint8_t)
+Type:           (uint8_t)
+CRC:            (uint8_t), crc of <Type> and <Payload>
+*/
+
+/*
+0x08 Battery sensor (CRSF_FRAMETYPE_BATTERY_SENSOR)
+Payload:
+uint16_t    Voltage ( mV * 100 )
+uint16_t    Current ( mA * 100 )
+uint24_t    Fuel ( drawn mAh )
+uint8_t     Battery remaining ( percent )
+*/
+
+void crsfFrameBatterySensor()
+{
+    telemetry_packet[1] = CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE + CRSF_FRAME_LENGTH_TYPE_CRC;
+    telemetry_packet[2] = CRSF_FRAMETYPE_BATTERY_SENSOR;
+    telemetry_packet[3] = (int)(state.vbatt_comp * 10) >> 8;
+    telemetry_packet[4] = (int)(state.vbatt_comp * 10);
+    telemetry_packet[5] = (int)(state.vbattfilt * 10) >> 8;
+    telemetry_packet[6] = (int)(state.vbattfilt * 10);
+    const uint32_t mAhDrawn = 0;
+    const uint8_t batteryRemainingPercentage = 0;
+    telemetry_packet[7] = mAhDrawn >> 16;
+    telemetry_packet[8] = mAhDrawn >> 8;
+    telemetry_packet[9] = mAhDrawn;
+    telemetry_packet[10] = batteryRemainingPercentage;
+}
+
+// rx_frame_position >= 41 && 
+void rx_serial_send_crsf_telemetry() {
+  if (telemetry_counter > 10 && frame_status == FRAME_TX) { // Send telemetry back once every 10 packets. This gives the RX time to send ITS telemetry back
+    telemetry_counter = 0;
+    frame_status = FRAME_DONE;
+
+    //Sync byte
+    telemetry_packet[0] = CRSF_SYNC_BYTE; 
+    crsfFrameBatterySensor();
+    //CRC byte
+    telemetry_packet[11] = crsf_crc8(&telemetry_packet[2], CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE + 1);
+
+    // QS Telemetry send function assumes 10 bytes of telemetry + the offset for escaped bytes
+    // Since we are not escaping anything, and since we know there are 12 bytes (packets) in
+    // CRSF telemetry for the battery sensor, Offset is 12-10=2
+    telemetry_offset = 2;
+
+    //Shove the packet out the UART. 
+    while (LL_USART_IsActiveFlag_TXE(USART.channel) == RESET) //just in case - but this should do nothing if ready_for_next_telemetry flag is properly cleared by irq
+      ;
+    LL_USART_TransmitData8(USART.channel, telemetry_packet[0]);
+    ready_for_next_telemetry = 0;
+    LL_USART_EnableIT_TC(USART.channel); //turn on the transmit transfer complete interrupt so that the rest of the telemetry packet gets sent
+    //That's it, telemetry has sent the first byte - the rest will be sent by the telemetry tx irq  
   }
 }
 
