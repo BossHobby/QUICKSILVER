@@ -51,11 +51,18 @@ typedef enum {
   RATE_4HZ = 7
 } expresslrs_rf_rates_t;
 
+typedef enum {
+  SWITCH_1BIT,
+  SWITCH_HYBRID,
+  SWITCH_HYBRID_WIDE,
+} elrs_switch_mode_t;
+
 typedef struct {
   uint8_t is_set;
   uint8_t uid[6];
   uint8_t magic;
   uint8_t switch_mode;
+  uint8_t model_id;
 } rx_elrs_bind_data_t;
 
 typedef struct {
@@ -95,6 +102,7 @@ typedef struct {
   expresslrs_tlm_ratio_t tlm_interval; // every X packets is a response TLM packet, should be a power of 2
   uint8_t fhss_hop_interval;           // every X packets we hope to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
   uint8_t preamble_len;
+  uint8_t payload_len; // Number of OTA bytes to be sent.
 } expresslrs_mod_settings_t;
 #endif
 
@@ -109,18 +117,19 @@ typedef struct {
   expresslrs_tlm_ratio_t tlm_interval; // every X packets is a response TLM packet, should be a power of 2
   uint8_t fhss_hop_interval;           // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
   uint8_t preamble_len;
+  uint8_t payload_len; // Number of OTA bytes to be sent.
 } expresslrs_mod_settings_t;
 #endif
 
 typedef struct {
   int8_t index;
-  expresslrs_rf_rates_t rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
-  int32_t rx_sensitivity;     // expected RF sensitivity based on
-  uint32_t toa;               // time on air in microseconds
-  uint32_t rf_mode_cycle_interval;
-  uint32_t rf_mode_cycle_addtional_time;
-  uint32_t sync_pkt_interval_disconnected;
-  uint32_t sync_pkt_interval_connected;
+  expresslrs_rf_rates_t rate;              // Max value of 16 since only 4 bits have been assigned in the sync package.
+  int32_t rx_sensitivity;                  // expected RF sensitivity based on
+  uint32_t toa;                            // time on air in microseconds
+  uint32_t disconnect_timeout_ms;          // Time without a packet before receiver goes to disconnected (ms)
+  uint32_t rx_lock_timeout_ms;             // Max time to go from tentative -> connected state on receiver (ms)
+  uint32_t sync_pkt_interval_disconnected; // how often to send the SYNC_PACKET packet (ms) when there is no response from RX
+  uint32_t sync_pkt_interval_connected;    // how often to send the SYNC_PACKET packet (ms) when there we have a connection
 } expresslrs_rf_pref_params_t;
 
 bool elrs_radio_init();

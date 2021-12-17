@@ -14,34 +14,34 @@ static uint32_t current_rate = 0;
 #ifdef USE_SX127X
 
 static expresslrs_mod_settings_t air_rate_config[ELRS_RATE_MAX] = {
-    {0, RATE_200HZ, SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7, 5000, TLM_RATIO_1_64, 4, 8},
-    {1, RATE_100HZ, SX127x_BW_500_00_KHZ, SX127x_SF_7, SX127x_CR_4_7, 10000, TLM_RATIO_1_64, 4, 8},
-    {2, RATE_50HZ, SX127x_BW_500_00_KHZ, SX127x_SF_8, SX127x_CR_4_7, 20000, TLM_RATIO_NO_TLM, 4, 10},
-    {3, RATE_25HZ, SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_7, 40000, TLM_RATIO_NO_TLM, 4, 10},
+    {0, RATE_200HZ, SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7, 5000, TLM_RATIO_1_64, 4, 8, 8},
+    {1, RATE_100HZ, SX127x_BW_500_00_KHZ, SX127x_SF_7, SX127x_CR_4_7, 10000, TLM_RATIO_1_64, 4, 8, 8},
+    {2, RATE_50HZ, SX127x_BW_500_00_KHZ, SX127x_SF_8, SX127x_CR_4_7, 20000, TLM_RATIO_NO_TLM, 4, 10, 8},
+    {3, RATE_25HZ, SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_7, 40000, TLM_RATIO_NO_TLM, 2, 10, 8},
 };
 
 static expresslrs_rf_pref_params_t rf_pref_params[ELRS_RATE_MAX] = {
-    {0, RATE_200HZ, -112, 4380, 3000, 2500, 2000, 4000},
-    {1, RATE_100HZ, -117, 8770, 3500, 2500, 2000, 4000},
-    {2, RATE_50HZ, -120, 17540, 4000, 2500, 2000, 4000},
-    {3, RATE_25HZ, -123, 17540, 6000, 4000, 2000, 4000},
+    {0, RATE_200HZ, -112, 4380, 3000, 2500, 600, 5000},
+    {1, RATE_100HZ, -117, 8770, 3500, 2500, 600, 5000},
+    {2, RATE_50HZ, -120, 18560, 4000, 2500, 600, 5000},
+    {3, RATE_25HZ, -123, 29950, 6000, 4000, 0, 5000},
 };
 
 #endif
 
 #ifdef USE_SX128X
 static expresslrs_mod_settings_t air_rate_config[ELRS_RATE_MAX] = {
-    {0, RATE_500HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF5, SX1280_LORA_CR_LI_4_6, 2000, TLM_RATIO_1_128, 4, 12},
-    {1, RATE_250HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_LI_4_7, 4000, TLM_RATIO_1_64, 4, 14},
-    {2, RATE_150HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF7, SX1280_LORA_CR_LI_4_7, 6666, TLM_RATIO_1_32, 4, 12},
-    {3, RATE_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF9, SX1280_LORA_CR_LI_4_6, 20000, TLM_RATIO_NO_TLM, 4, 12},
+    {0, RATE_500HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF5, SX1280_LORA_CR_LI_4_6, 2000, TLM_RATIO_1_128, 4, 12, 8},
+    {1, RATE_250HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_LI_4_7, 4000, TLM_RATIO_1_64, 4, 14, 8},
+    {2, RATE_150HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF7, SX1280_LORA_CR_LI_4_7, 6666, TLM_RATIO_1_32, 4, 12, 8},
+    {3, RATE_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF9, SX1280_LORA_CR_LI_4_6, 20000, TLM_RATIO_NO_TLM, 2, 12, 8},
 };
 
 static expresslrs_rf_pref_params_t rf_pref_params[ELRS_RATE_MAX] = {
-    {0, RATE_500HZ, -105, 1507, 2500, 2500, 2000, 4000},
-    {1, RATE_250HZ, -108, 3300, 3000, 2500, 2000, 4000},
-    {2, RATE_150HZ, -112, 5871, 3500, 2500, 2000, 4000},
-    {3, RATE_50HZ, -117, 18443, 4000, 2500, 2000, 4000},
+    {0, RATE_500HZ, -105, 1665, 2500, 2500, 3, 5000},
+    {1, RATE_250HZ, -108, 3300, 3000, 2500, 6, 5000},
+    {2, RATE_150HZ, -112, 5871, 3500, 2500, 10, 5000},
+    {3, RATE_50HZ, -117, 18443, 4000, 2500, 0, 5000},
 };
 #endif
 
@@ -189,7 +189,7 @@ void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq) {
   sx128x_config_lora_mod_params(SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_4_7);
   sx128x_write_command(SX1280_RADIO_SET_AUTOFS, 0x01);
   sx128x_write_register(0x0891, (sx128x_read_register(0x0891) | 0xC0));
-  sx128x_set_packet_params(12, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL);
+  sx128x_set_packet_params(12, SX1280_LORA_PACKET_IMPLICIT, air_rate_config[index].payload_len, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL);
   sx128x_set_frequency(12098953);
   sx128x_set_fifo_addr(0x00, 0x00);
   sx128x_set_dio_irq_params(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
@@ -198,7 +198,7 @@ void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq) {
   sx128x_set_mode(SX1280_MODE_STDBY_XOSC);
   sx128x_clear_irq_status(SX1280_IRQ_RADIO_ALL);
   sx128x_config_lora_mod_params(air_rate_config[index].bw, air_rate_config[index].sf, air_rate_config[index].cr);
-  sx128x_set_packet_params(air_rate_config[index].preamble_len, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, (sx128x_lora_iq_modes_t)((uint8_t)!invert_iq << 6));
+  sx128x_set_packet_params(air_rate_config[index].preamble_len, SX1280_LORA_PACKET_IMPLICIT, air_rate_config[index].payload_len, SX1280_LORA_CRC_OFF, (sx128x_lora_iq_modes_t)((uint8_t)!invert_iq << 6));
   sx128x_set_frequency(freq);
 
   sx128x_set_busy_timeout(100);
