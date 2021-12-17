@@ -12,10 +12,8 @@
 #define FREQ_STEP ((double)(SX1280_XTAL_FREQ / POW_2_18))
 #endif
 
-#define FHSS_RNG_MAX 0x7FFF
-
-#define NR_FHSS_ENTRIES (sizeof(fhss_freqs) / sizeof(uint32_t))
-#define NR_SEQUENCE_ENTRIES 256
+#define FHSS_FREQ_CNT (sizeof(fhss_freqs) / sizeof(uint32_t))
+#define FHSS_SEQUENCE_CNT ((256 / FHSS_FREQ_CNT) * FHSS_FREQ_CNT)
 
 #define FREQ_CORRECTION_MAX ((int32_t)(100000 / FREQ_STEP))
 #define FREQ_CORRECTION_MIN ((int32_t)(-100000 / FREQ_STEP))
@@ -142,83 +140,50 @@ const uint32_t fhss_freqs[] = {
 
 uint8_t fhss_index = 0;
 
+static uint8_t fhss_sync_index = 0;
+
 static int32_t freq_correction = 0;
 
-static uint8_t fhss_sequence[NR_SEQUENCE_ENTRIES] = {0};
+static uint8_t fhss_sequence[FHSS_SEQUENCE_CNT];
 static uint32_t fhss_rng_seed = 0;
 
-static unsigned int fhss_rng_max(unsigned int max) {
-  unsigned long m = 2147483648;
-  long a = 214013;
-  long c = 2531011;
+static uint8_t fhss_rng_max(const uint8_t max) {
+  const uint32_t m = 2147483648;
+  const uint32_t a = 214013;
+  const uint32_t c = 2531011;
   fhss_rng_seed = (a * fhss_rng_seed + c) % m;
-  unsigned int result = ((fhss_rng_seed >> 16) * max) / FHSS_RNG_MAX;
-  return result;
-}
 
-static void fhss_reset_is_available(uint8_t *is_available) {
-  // channel 0 is the sync channel and is never considered available
-  is_available[0] = 0;
-
-  for (uint32_t i = 1; i < NR_FHSS_ENTRIES; i++)
-    is_available[i] = 1;
+  const uint16_t result = fhss_rng_seed >> 16;
+  return result % max;
 }
 
 void fhss_randomize(int32_t seed) {
   fhss_rng_seed = seed;
+  fhss_index = 0;
 
-  uint8_t is_available[NR_FHSS_ENTRIES];
-  fhss_reset_is_available(is_available);
+  fhss_sync_index = FHSS_FREQ_CNT / 2;
 
-  // Fill the fhss_sequence with channel indices
-  // The 0 index is special - the 'sync' channel. The sync channel appears every
-  // syncInterval hops. The other channels are randomly distributed between the
-  // sync channels
-  const int32_t SYNC_INTERVAL = NR_FHSS_ENTRIES;
-
-  int nLeft = NR_FHSS_ENTRIES - 1; // how many channels are left to be allocated. Does not include the sync channel
-  unsigned int prev = 0;           // needed to prevent repeats of the same index
-
-  for (int i = 0; i < NR_SEQUENCE_ENTRIES; i++) {
-    if (i % SYNC_INTERVAL == 0) {
-      // assign sync channel 0
+  // initialize the sequence array
+  for (uint8_t i = 0; i < FHSS_SEQUENCE_CNT; i++) {
+    if (i % FHSS_FREQ_CNT == 0) {
+      fhss_sequence[i] = fhss_sync_index;
+    } else if (i % FHSS_FREQ_CNT == fhss_sync_index) {
       fhss_sequence[i] = 0;
-      prev = 0;
     } else {
-      // pick one of the available channels. May need to loop to avoid repeats
-      unsigned int index;
-      do {
-        int c = fhss_rng_max(nLeft); // returnc 0<c<nLeft
-        // find the c'th entry in the is_available array
-        // can skip 0 as that's the sync channel and is never available for normal allocation
-        index = 1;
-        int found = 0;
-        while (index < NR_FHSS_ENTRIES) {
-          if (is_available[index]) {
-            if (found == c)
-              break;
-            found++;
-          }
-          index++;
-        }
-        if (index == NR_FHSS_ENTRIES) {
-          // This should never happen
-          // What to do? We don't want to hang as that will stop us getting to the wifi hotspot
-          // Use the sync channel
-          index = 0;
-          break;
-        }
-      } while (index == prev); // can't use index if it repeats the previous value
+      fhss_sequence[i] = i % FHSS_FREQ_CNT;
+    }
+  }
 
-      fhss_sequence[i] = index; // assign the value to the sequence array
-      is_available[index] = 0;  // clear the flag
-      prev = index;             // remember for next iteration
-      nLeft--;                  // reduce the count of available channels
-      if (nLeft == 0) {
-        // we've assigned all of the channels, so reset for next cycle
-        fhss_reset_is_available(is_available);
-        nLeft = NR_FHSS_ENTRIES - 1;
-      }
+  for (uint8_t i = 0; i < FHSS_SEQUENCE_CNT; i++) {
+    // if it's not the sync channel
+    if (i % FHSS_FREQ_CNT != 0) {
+      const uint8_t offset = (i / FHSS_FREQ_CNT) * FHSS_FREQ_CNT; // offset to start of current block
+      const uint8_t rand = fhss_rng_max(FHSS_FREQ_CNT - 1) + 1;   // random number between 1 and FHSS_FREQ_CNT
+
+      // switch this entry and another random entry in the same block
+      const uint8_t temp = fhss_sequence[i];
+      fhss_sequence[i] = fhss_sequence[offset + rand];
+      fhss_sequence[offset + rand] = temp;
     }
   }
 }
@@ -227,8 +192,13 @@ uint32_t fhss_get_freq(uint16_t index) {
   return fhss_freqs[index] - freq_correction;
 }
 
+uint32_t fhss_get_sync_freq() {
+  return fhss_freqs[fhss_sync_index] - freq_correction;
+}
+
 uint32_t fhss_next_freq() {
-  return fhss_get_freq(fhss_sequence[fhss_index++]);
+  fhss_index = (fhss_index + 1) % FHSS_SEQUENCE_CNT;
+  return fhss_get_freq(fhss_sequence[fhss_index]);
 }
 
 int32_t fhss_update_freq_correction(uint8_t value) {
@@ -261,16 +231,16 @@ uint8_t fhss_min_lq_for_chaos() {
   // The amount of time we coexist on the same channel is
   // 100 divided by the total number of packets in a FHSS loop (rounded up)
   // and there would be 4x packets received each time it passes by so
-  // FHSShopInterval * ceil(100 / FHSShopInterval * NR_FHSS_ENTRIES) or
-  // FHSShopInterval * trunc((100 + (FHSShopInterval * NR_FHSS_ENTRIES) - 1) / (FHSShopInterval * NR_FHSS_ENTRIES))
+  // FHSShopInterval * ceil(100 / FHSShopInterval * FHSS_FREQ_CNT) or
+  // FHSShopInterval * trunc((100 + (FHSShopInterval * FHSS_FREQ_CNT) - 1) / (FHSShopInterval * FHSS_FREQ_CNT))
   // With a interval of 4 this works out to: 2.4=4, FCC915=4, AU915=8, EU868=8, EU/AU433=36
-  uint8_t interval = current_air_rate_config()->fhss_hop_interval;
-  return interval * ((interval * NR_FHSS_ENTRIES + 99) / (interval * NR_FHSS_ENTRIES));
+  const uint8_t interval = current_air_rate_config()->fhss_hop_interval;
+  return interval * ((interval * FHSS_FREQ_CNT + 99) / (interval * FHSS_FREQ_CNT));
 }
 
 uint32_t fhss_rf_mode_cycle_interval() {
   expresslrs_mod_settings_t *config = current_air_rate_config();
-  return ((uint32_t)11U * NR_FHSS_ENTRIES * config->fhss_hop_interval * config->interval) / (10U * 1000U);
+  return ((uint32_t)11U * FHSS_FREQ_CNT * config->fhss_hop_interval * config->interval) / (10U * 1000U);
 }
 
 #endif
