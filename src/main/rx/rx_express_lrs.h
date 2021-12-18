@@ -149,6 +149,7 @@ void elrs_freq_correct();
 void elrs_timer_init(uint32_t interval_us);
 void elrs_timer_resume(uint32_t interval_us);
 void elrs_timer_stop();
+bool elrs_timer_is_running();
 
 void elrs_phase_init();
 void elrs_phase_update(elrs_state_t state);

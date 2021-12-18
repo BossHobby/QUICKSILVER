@@ -194,7 +194,7 @@ static void elrs_connection_tentative(uint32_t now) {
   fhss_reset();
   elrs_phase_reset();
 
-  if (!in_binding_mode) {
+  if (!in_binding_mode && !elrs_timer_is_running()) {
     elrs_timer_resume(current_air_rate_config()->interval);
   }
 }
