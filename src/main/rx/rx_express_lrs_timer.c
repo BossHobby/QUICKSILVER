@@ -14,6 +14,7 @@
 #define TIMER_INSTANCE TIM3
 #define TIMER_IRQN TIM3_IRQn
 
+static bool is_running = false;
 static volatile bool is_tick = false;
 
 static volatile int32_t phase_shift = 0;
@@ -28,7 +29,13 @@ extern volatile uint8_t nonce_rx;
 extern void elrs_handle_tick();
 extern void elrs_handle_tock();
 
+bool elrs_timer_is_running() {
+  return is_running;
+}
+
 void elrs_timer_stop() {
+  is_running = false;
+
   LL_TIM_DisableIT_UPDATE(TIMER_INSTANCE);
   LL_TIM_DisableCounter(TIMER_INSTANCE);
   LL_TIM_SetCounter(TIMER_INSTANCE, 0);
@@ -46,6 +53,7 @@ void elrs_timer_init(uint32_t interval_us) {
 void elrs_timer_resume(uint32_t interval_us) {
   current_interval = interval_us;
   is_tick = false;
+  is_running = true;
 
   LL_TIM_SetAutoReload(TIMER_INSTANCE, (current_interval >> 1) - 1);
   LL_TIM_SetCounter(TIMER_INSTANCE, 0);
