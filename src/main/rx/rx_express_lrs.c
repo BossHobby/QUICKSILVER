@@ -580,20 +580,20 @@ void rx_check() {
   }
   last_time = time;
 
-  if (needs_hop) {
+  const elrs_irq_status_t irq = elrs_get_irq_status();
+  if (irq == IRQ_RX_DONE) {
+    elrs_process_packet(time);
+  } else if (irq == IRQ_TX_DONE) {
+    elrs_enter_rx(packet);
+  }
+
+  if (needs_hop && irq != IRQ_RX_DONE) {
     needs_hop = false;
 
     const bool did_hop = elrs_hop();
     const bool did_tlm = elrs_tlm();
     if (!did_hop && !did_tlm && elrs_lq_current_is_set()) {
       elrs_freq_correct();
-    }
-  } else {
-    const elrs_irq_status_t irq = elrs_get_irq_status();
-    if (irq == IRQ_RX_DONE) {
-      elrs_process_packet(time);
-    } else if (irq == IRQ_TX_DONE) {
-      elrs_enter_rx(packet);
     }
   }
 
