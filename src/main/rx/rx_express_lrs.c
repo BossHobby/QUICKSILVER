@@ -361,7 +361,7 @@ static bool elrs_unpack_hybrid_switches_wide(uint8_t *packet) {
 
   const uint8_t switch_byte = packet[6];
 
-  elrs_sample_aux0((switch_byte & 0b01000000) >> 6);
+  elrs_sample_aux0((switch_byte & 0b10000000) >> 7);
 
   const uint8_t index = elrs_hybrid_wide_nonce_to_switch_index(nonce_rx);
   const uint8_t tlm_denom = tlm_ratio_enum_to_value(current_air_rate_config()->tlm_interval);
