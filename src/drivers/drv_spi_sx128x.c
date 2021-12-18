@@ -50,7 +50,7 @@ void sx128x_init() {
   SPI_InitStructure.ClockPolarity = LL_SPI_POLARITY_LOW;
   SPI_InitStructure.ClockPhase = LL_SPI_PHASE_1EDGE;
   SPI_InitStructure.NSS = LL_SPI_NSS_SOFT;
-  SPI_InitStructure.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV4;
+  SPI_InitStructure.BaudRate = spi_find_divder(MHZ_TO_HZ(10.5));
   SPI_InitStructure.BitOrder = LL_SPI_MSB_FIRST;
   SPI_InitStructure.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
   SPI_InitStructure.CRCPoly = 7;
@@ -87,7 +87,13 @@ void sx128x_handle_busy_exti(bool level) {
 }
 
 uint8_t sx128x_read_dio0() {
-  if (dio0_active) {
+  register uint8_t active = 0;
+
+  do {
+    active = dio0_active;
+  } while (active != dio0_active);
+
+  if (active) {
     dio0_active = 0;
     return 1;
   }
