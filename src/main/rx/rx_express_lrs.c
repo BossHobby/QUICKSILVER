@@ -183,11 +183,13 @@ static void elrs_connection_lost() {
   elrs_enter_rx(packet);
 }
 
-static void elrs_connection_tentative() {
+static void elrs_connection_tentative(uint32_t now) {
   elrs_state = TENTATIVE;
   elrs_timer_state = TIMER_DISCONNECTED;
 
   has_model_match = false;
+
+  last_rf_mode_cycle_millis = now;
 
   fhss_reset();
   elrs_phase_reset();
@@ -197,12 +199,12 @@ static void elrs_connection_tentative() {
   }
 }
 
-static void elrs_connected() {
+static void elrs_connected(uint32_t now) {
   if (elrs_state == CONNECTED) {
     return;
   }
 
-  connected_millis = time_millis();
+  connected_millis = now;
 
   flags.rx_ready = 1;
   flags.failsafe = 0;
@@ -213,17 +215,17 @@ static void elrs_connected() {
   elrs_timer_state = TIMER_TENTATIVE;
 }
 
-static void elrs_cycle_rf_mode() {
+static void elrs_cycle_rf_mode(uint32_t now) {
   if (elrs_state == CONNECTED || in_binding_mode) {
     return;
   }
 
-  if ((time_millis() - last_rf_mode_cycle_millis) <= (fhss_rf_mode_cycle_interval() * rf_mode_cycle_multiplier)) {
+  if ((now - last_rf_mode_cycle_millis) <= (fhss_rf_mode_cycle_interval() * rf_mode_cycle_multiplier)) {
     return;
   }
 
-  last_rf_mode_cycle_millis = time_millis();
-  sync_packet_millis = time_millis();
+  last_rf_mode_cycle_millis = now;
+  sync_packet_millis = now;
 
   next_rate = (current_air_rate_config()->index + 1) % ELRS_RATE_MAX;
 
@@ -471,7 +473,7 @@ static void elrs_process_packet(uint32_t packet_time) {
       fhss_index = packet[1];
       nonce_rx = packet[2];
 
-      elrs_connection_tentative();
+      elrs_connection_tentative(time_millis());
 
       has_model_match = model_match;
     }
@@ -598,26 +600,28 @@ void rx_check() {
   const uint32_t time_ms = time_millis();
 
   if ((elrs_state != DISCONNECTED) && next_rate != current_air_rate_config()->index) {
-    sync_packet_millis = time_millis();
     elrs_connection_lost();
+    sync_packet_millis = time_ms;
+    last_rf_mode_cycle_millis = time_ms;
   }
 
   if ((elrs_state == TENTATIVE) && ((time_ms - sync_packet_millis) > current_rf_pref_params()->rx_lock_timeout_ms)) {
-    sync_packet_millis = time_millis();
     elrs_connection_lost();
+    sync_packet_millis = time_ms;
+    last_rf_mode_cycle_millis = time_ms;
   }
 
-  elrs_cycle_rf_mode();
+  elrs_cycle_rf_mode(time_ms);
 
   if ((elrs_state == CONNECTED) && ((int32_t)(time_ms - last_valid_packet_millis) > current_rf_pref_params()->disconnect_timeout_ms)) {
-    elrs_connection_lost();
+    elrs_connection_lost(time_ms);
   }
 
   if ((elrs_state == TENTATIVE) && (abs(pl_state.offset_dx) <= 10) && (pl_state.offset < 100) && (elrs_lq_get() > fhss_min_lq_for_chaos())) {
-    elrs_connected();
+    elrs_connected(time_ms);
   }
 
-  if ((elrs_timer_state == TIMER_TENTATIVE) && ((time_millis() - connected_millis) > CONSIDER_CONN_GOOD_MILLIS) && (abs(pl_state.offset_dx) <= 5)) {
+  if ((elrs_timer_state == TIMER_TENTATIVE) && ((time_ms - connected_millis) > CONSIDER_CONN_GOOD_MILLIS) && (abs(pl_state.offset_dx) <= 5)) {
     elrs_timer_state = TIMER_LOCKED;
   }
 
