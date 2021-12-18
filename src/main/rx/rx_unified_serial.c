@@ -118,7 +118,6 @@ void rx_lqi_lost_packet() {
     time_siglost = time_micros();
   }
 
-  // was TICK_CLOCK_FREQ_HZ 8,000,000 ticks on F0, 21M on F4. One second.
   // however time_micros are in us.
   if (time_micros() - time_siglost > FAILSAFETIME) {
     failsafe_siglost = 1;

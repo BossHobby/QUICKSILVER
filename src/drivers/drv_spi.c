@@ -149,6 +149,40 @@ void spi_csn_disable(gpio_pins_t nss) {
   gpio_pin_set(nss);
 }
 
+static uint32_t spi_divider_to_ll(uint32_t divider) {
+  switch (divider) {
+  default:
+  case 2:
+    return LL_SPI_BAUDRATEPRESCALER_DIV2;
+  case 4:
+    return LL_SPI_BAUDRATEPRESCALER_DIV4;
+  case 8:
+    return LL_SPI_BAUDRATEPRESCALER_DIV8;
+  case 16:
+    return LL_SPI_BAUDRATEPRESCALER_DIV16;
+  case 32:
+    return LL_SPI_BAUDRATEPRESCALER_DIV32;
+  case 64:
+    return LL_SPI_BAUDRATEPRESCALER_DIV64;
+  case 128:
+    return LL_SPI_BAUDRATEPRESCALER_DIV128;
+  case 256:
+    return LL_SPI_BAUDRATEPRESCALER_DIV256;
+  }
+}
+
+uint32_t spi_find_divder(uint32_t clk_hz) {
+  uint32_t divider = 2;
+  uint32_t clock = SPI_CLOCK_FREQ_HZ / divider;
+
+  while ((clock > clk_hz) && (divider < 256)) {
+    divider = divider << 1;
+    clock = clock >> 1;
+  }
+
+  return spi_divider_to_ll(divider);
+}
+
 void spi_init_pins(spi_ports_t port, gpio_pins_t nss) {
   LL_GPIO_InitTypeDef gpio_init;
 

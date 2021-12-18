@@ -40,6 +40,8 @@ extern const volatile spi_port_def_t spi_port_defs[SPI_PORTS_MAX];
 void spi_enable_rcc(spi_ports_t port);
 void spi_init_pins(spi_ports_t port, gpio_pins_t nss);
 
+uint32_t spi_find_divder(uint32_t clk_hz);
+
 void spi_csn_enable(gpio_pins_t nss);
 void spi_csn_disable(gpio_pins_t nss);
 
