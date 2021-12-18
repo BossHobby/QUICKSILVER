@@ -207,12 +207,10 @@ void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq) {
 }
 
 void elrs_enter_rx(uint8_t *packet) {
-  sx128x_clear_irq_status(SX1280_IRQ_RADIO_ALL);
   sx128x_set_mode(SX1280_MODE_RX);
 }
 
 void elrs_enter_tx(uint8_t *packet) {
-  sx128x_clear_irq_status(SX1280_IRQ_RADIO_ALL);
   sx128x_write_tx_buffer(0x0, packet, ELRS_BUFFER_SIZE);
   sx128x_set_mode(SX1280_MODE_TX);
 }
