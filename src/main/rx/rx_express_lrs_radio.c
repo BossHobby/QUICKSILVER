@@ -182,6 +182,7 @@ void elrs_set_frequency(int32_t freq) {
 }
 
 void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq) {
+  sx128x_set_mode(SX1280_MODE_SLEEP);
   sx128x_set_busy_timeout(1000);
 
   sx128x_set_mode(SX1280_MODE_STDBY_RC);
