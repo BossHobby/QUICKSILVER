@@ -42,7 +42,7 @@ void elrs_setup_msp(const uint8_t max_length, uint8_t *buffer, const uint8_t byt
   finished_data = false;
 }
 
-void elrs_receive_msp(const uint8_t package_index, const uint8_t *data) {
+void elrs_receive_msp(const uint8_t package_index, const volatile uint8_t *data) {
   if (package_index == 0 && current_package > 1) {
     finished_data = true;
     msp_confirm = !msp_confirm;

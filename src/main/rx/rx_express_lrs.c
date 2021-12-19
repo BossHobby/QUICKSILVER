@@ -59,7 +59,7 @@ extern uint8_t fhss_min_lq_for_chaos();
 extern uint32_t fhss_rf_mode_cycle_interval();
 
 extern void crc14_init();
-extern uint16_t crc14_calc(uint8_t *data, uint8_t len, uint16_t crc);
+extern uint16_t crc14_calc(const volatile uint8_t *data, uint8_t len, uint16_t crc);
 
 extern expresslrs_mod_settings_t *current_air_rate_config();
 extern expresslrs_rf_pref_params_t *current_rf_pref_params();
@@ -67,7 +67,7 @@ extern expresslrs_rf_pref_params_t *current_rf_pref_params();
 extern uint8_t tlm_ratio_enum_to_value(expresslrs_tlm_ratio_t val);
 extern uint16_t rate_enum_to_hz(expresslrs_rf_rates_t val);
 
-uint8_t packet[ELRS_BUFFER_SIZE];
+volatile uint8_t packet[ELRS_BUFFER_SIZE];
 elrs_timer_state_t elrs_timer_state = TIMER_DISCONNECTED;
 volatile uint8_t nonce_rx = 0;
 
@@ -280,7 +280,7 @@ static void elrs_enter_binding_mode() {
   elrs_enter_rx(packet);
 }
 
-static void elrs_setup_bind(uint8_t *packet) {
+static void elrs_setup_bind(const volatile uint8_t *packet) {
   for (uint8_t i = 0; i < 4; i++) {
     UID[i + 2] = packet[i + 3];
   }
@@ -323,7 +323,7 @@ static void elrs_sample_aux0(uint8_t aux0_value) {
   last_aux0_value = aux0_value;
 }
 
-static bool elrs_unpack_hybrid_switches(uint8_t *packet) {
+static bool elrs_unpack_hybrid_switches(const volatile uint8_t *packet) {
   const uint8_t switch_byte = packet[6];
 
   elrs_sample_aux0((switch_byte & 0b01000000) >> 6);
@@ -375,7 +375,7 @@ static uint8_t elrs_hybrid_wide_nonce_to_switch_index(uint8_t nonce) {
   return ((nonce & 0b111) + ((nonce >> 3) & 0b1)) % 8;
 }
 
-static bool elrs_unpack_hybrid_switches_wide(uint8_t *packet) {
+static bool elrs_unpack_hybrid_switches_wide(const volatile uint8_t *packet) {
   static bool telemetry_status = false;
 
   const uint8_t switch_byte = packet[6];

@@ -31,7 +31,7 @@ void crc14_init() {
   }
 }
 
-uint16_t crc14_calc(uint8_t *data, uint8_t len, uint16_t crc) {
+uint16_t crc14_calc(const volatile uint8_t *data, uint8_t len, uint16_t crc) {
   while (len--) {
     crc = (crc << 8) ^ crc14tab[((crc >> 6) ^ (uint16_t)*data++) & 0x00FF];
   }

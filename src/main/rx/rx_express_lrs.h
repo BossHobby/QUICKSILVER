@@ -145,11 +145,11 @@ bool elrs_radio_init();
 void elrs_set_frequency(int32_t freq);
 void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq);
 
-void elrs_enter_rx(uint8_t *packet);
-void elrs_enter_tx(uint8_t *packet);
+void elrs_enter_rx(volatile uint8_t *packet);
+void elrs_enter_tx(volatile uint8_t *packet);
 
 elrs_irq_status_t elrs_get_irq_status();
-void elrs_read_packet(uint8_t *packet);
+void elrs_read_packet(volatile uint8_t *packet);
 void elrs_last_packet_stats(int8_t *rssi, int8_t *snr);
 
 void elrs_freq_correct();
@@ -176,6 +176,6 @@ void elrs_lq_reset();
 
 bool elrs_get_msp_confirm();
 void elrs_setup_msp(const uint8_t max_length, uint8_t *buffer, const uint8_t bytes_per_call);
-void elrs_receive_msp(const uint8_t package_index, const uint8_t *data);
+void elrs_receive_msp(const uint8_t package_index, const volatile uint8_t *data);
 bool elrs_msp_finished_data();
 void elrs_msp_restart();

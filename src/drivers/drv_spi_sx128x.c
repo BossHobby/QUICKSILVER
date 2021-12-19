@@ -163,7 +163,7 @@ void sx128x_read_command_burst(const sx128x_commands_t cmd, uint8_t *data, const
   uint8_t buf[size + 2];
   buf[0] = (uint8_t)cmd;
   buf[1] = 0x0;
-  memset(buf + 2, 0xFF, size);
+  memcpy(buf + 2, data, size);
 
   sx128x_wait_for_ready();
 
@@ -325,7 +325,7 @@ uint16_t sx128x_get_irq_status() {
   return status[0] << 8 | status[1];
 }
 
-void sx128x_read_rx_buffer(uint8_t *data, const uint8_t size) {
+void sx128x_read_rx_buffer(volatile uint8_t *data, const uint8_t size) {
   uint8_t buffer_status[2] = {0, 0};
   sx128x_read_command_burst(SX1280_RADIO_GET_RXBUFFERSTATUS, buffer_status, 2);
 
@@ -333,7 +333,7 @@ void sx128x_read_rx_buffer(uint8_t *data, const uint8_t size) {
   buf[0] = (uint8_t)SX1280_RADIO_READ_BUFFER;
   buf[1] = buffer_status[1];
   buf[2] = 0x00;
-  memset(buf + 3, 0xFF, size);
+  memset(buf + 3, 0x0, size);
 
   sx128x_wait_for_ready();
 
@@ -341,14 +341,14 @@ void sx128x_read_rx_buffer(uint8_t *data, const uint8_t size) {
   spi_dma_transfer_bytes(SX12XX_SPI_PORT, buf, size + 3);
   spi_csn_disable(SX12XX_NSS_PIN);
 
-  memcpy(data, buf + 3, size);
+  memcpy((uint8_t *)data, buf + 3, size);
 }
 
-void sx128x_write_tx_buffer(const uint8_t offset, const uint8_t *data, const uint8_t size) {
+void sx128x_write_tx_buffer(const uint8_t offset, const volatile uint8_t *data, const uint8_t size) {
   uint8_t buf[size + 2];
   buf[0] = (uint8_t)SX1280_RADIO_WRITE_BUFFER;
   buf[1] = offset;
-  memcpy(buf + 2, data, size);
+  memcpy(buf + 2, (uint8_t *)data, size);
 
   sx128x_wait_for_ready();
 
