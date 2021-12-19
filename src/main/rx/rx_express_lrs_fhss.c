@@ -188,7 +188,15 @@ void fhss_randomize(int32_t seed) {
   }
 }
 
-uint32_t fhss_get_freq(uint16_t index) {
+void fhss_set_index(const uint8_t value) {
+  fhss_index = value % FHSS_SEQUENCE_CNT;
+}
+
+uint8_t fhss_get_index() {
+  return fhss_index;
+}
+
+uint32_t fhss_get_freq(const uint8_t index) {
   return fhss_freqs[index] - freq_correction;
 }
 
