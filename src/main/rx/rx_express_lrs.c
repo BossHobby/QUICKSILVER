@@ -46,12 +46,13 @@
 
 #define UID bind_storage.elrs.uid
 
-extern volatile uint8_t fhss_index;
 extern volatile elrs_phase_lock_state_t pl_state;
 
 extern int32_t fhss_update_freq_correction(uint8_t value);
 extern void fhss_randomize(int32_t seed);
-extern uint32_t fhss_get_freq(uint16_t index);
+extern uint8_t fhss_get_index();
+extern void fhss_set_index(const uint8_t value);
+extern uint32_t fhss_get_freq(const uint8_t index);
 extern uint32_t fhss_get_sync_freq();
 extern uint32_t fhss_next_freq();
 extern void fhss_reset();
@@ -484,10 +485,10 @@ static void elrs_process_packet(uint32_t packet_time) {
 
     if (elrs_state == DISCONNECTED ||
         (nonce_rx != packet[2]) ||
-        (fhss_index != packet[1]) ||
+        (fhss_get_index() != packet[1]) ||
         (has_model_match != model_match)) {
 
-      fhss_index = packet[1];
+      fhss_set_index(packet[1]);
       nonce_rx = packet[2];
 
       elrs_connection_tentative(time_millis());
