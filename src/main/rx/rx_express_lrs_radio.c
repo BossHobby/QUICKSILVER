@@ -207,11 +207,11 @@ void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq) {
   current_rate = index;
 }
 
-void elrs_enter_rx(uint8_t *packet) {
+void elrs_enter_rx(volatile uint8_t *packet) {
   sx128x_set_mode(SX1280_MODE_RX);
 }
 
-void elrs_enter_tx(uint8_t *packet) {
+void elrs_enter_tx(volatile uint8_t *packet) {
   sx128x_write_tx_buffer(0x0, packet, ELRS_BUFFER_SIZE);
   sx128x_set_mode(SX1280_MODE_TX);
 }
@@ -229,7 +229,7 @@ elrs_irq_status_t elrs_get_irq_status() {
   return IRQ_NONE;
 }
 
-void elrs_read_packet(uint8_t *packet) {
+void elrs_read_packet(volatile uint8_t *packet) {
   sx128x_read_rx_buffer(packet, ELRS_BUFFER_SIZE);
 }
 

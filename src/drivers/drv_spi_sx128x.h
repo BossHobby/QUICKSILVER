@@ -166,8 +166,8 @@ void sx128x_write_command_burst(const sx128x_commands_t cmd, const uint8_t *data
 
 void sx128x_read_command_burst(const sx128x_commands_t cmd, uint8_t *data, const uint8_t size);
 
-void sx128x_read_rx_buffer(uint8_t *data, const uint8_t size);
-void sx128x_write_tx_buffer(const uint8_t offset, const uint8_t *data, const uint8_t size);
+void sx128x_read_rx_buffer(volatile uint8_t *data, const uint8_t size);
+void sx128x_write_tx_buffer(const uint8_t offset, const volatile uint8_t *data, const uint8_t size);
 
 void sx128x_config_lora_mod_params(const sx128x_lora_bandwidths_t bw, const sx128x_lora_spreading_factors_t sf, const sx128x_lora_coding_rates_t cr);
 void sx128x_set_packet_params(const uint8_t preamble_length, const sx128x_lora_packet_lengths_modes_t header_type, const uint8_t payload_length, const sx128x_lora_crc_modes_t crc, const sx128x_lora_iq_modes_t invert_iq);
