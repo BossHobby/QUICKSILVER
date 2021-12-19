@@ -11,6 +11,14 @@
 #define ELRS_RATE_MAX 4
 #define ELRS_RATE_DEFAULT 0
 
+#define ELRS_TELEMETRY_SHIFT 2
+#define ELRS_TELEMETRY_BYTES_PER_CALL 5
+#define ELRS_TELEMETRY_MAX_PACKAGES (255 >> ELRS_TELEMETRY_SHIFT)
+
+#define ELRS_MSP_BYTES_PER_CALL 5
+#define ELRS_MSP_BUFFER_SIZE 65
+#define ELRS_MSP_MAX_PACKAGES ((ELRS_MSP_BUFFER_SIZE / ELRS_MSP_BYTES_PER_CALL) + 1)
+
 typedef enum {
   DISCONNECTED,
   TENTATIVE,
@@ -165,3 +173,9 @@ void elrs_lq_inc();
 uint8_t elrs_lq_get();
 bool elrs_lq_current_is_set();
 void elrs_lq_reset();
+
+bool elrs_get_msp_confirm();
+void elrs_setup_msp(const uint8_t max_length, uint8_t *buffer, const uint8_t bytes_per_call);
+void elrs_receive_msp(const uint8_t package_index, const uint8_t *data);
+bool elrs_msp_finished_data();
+void elrs_msp_restart();
