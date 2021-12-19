@@ -30,16 +30,16 @@ static void mpu6xxx_reinit_slow() {
   switch (GYRO_TYPE) {
   case ICM20601:
   case ICM20608:
-    spi_init.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV8;
+    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(5.25));
     break;
 
   case ICM20602:
-    spi_init.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV4;
+    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(10.5));
     break;
 
   case MPU6XXX:
   default:
-    spi_init.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV64;
+    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(0.5));
     break;
   }
 
@@ -68,16 +68,16 @@ static void mpu6xxx_reinit_fast() {
   switch (GYRO_TYPE) {
   case ICM20601:
   case ICM20608:
-    spi_init.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV8;
+    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(5.25));
     break;
 
   case ICM20602:
-    spi_init.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV4;
+    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(10.5));
     break;
 
   case MPU6XXX:
   default:
-    spi_init.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV2;
+    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(21));
     break;
   }
 

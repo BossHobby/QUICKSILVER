@@ -37,7 +37,7 @@ static void m25p16_reinit() {
   SPI_InitStructure.ClockPolarity = LL_SPI_POLARITY_LOW;
   SPI_InitStructure.ClockPhase = LL_SPI_PHASE_1EDGE;
   SPI_InitStructure.NSS = LL_SPI_NSS_SOFT;
-  SPI_InitStructure.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV2;
+  SPI_InitStructure.BaudRate = spi_find_divder(MHZ_TO_HZ(21));
   SPI_InitStructure.BitOrder = LL_SPI_MSB_FIRST;
   SPI_InitStructure.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
   SPI_InitStructure.CRCPoly = 7;

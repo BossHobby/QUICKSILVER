@@ -42,7 +42,7 @@ void spi_max7456_init() {
   SPI_InitStructure.ClockPolarity = LL_SPI_POLARITY_LOW;
   SPI_InitStructure.ClockPhase = LL_SPI_PHASE_1EDGE;
   SPI_InitStructure.NSS = LL_SPI_NSS_SOFT;
-  SPI_InitStructure.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV4;
+  SPI_InitStructure.BaudRate = spi_find_divder(MHZ_TO_HZ(10.5));
   SPI_InitStructure.BitOrder = LL_SPI_MSB_FIRST;
   SPI_InitStructure.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
   SPI_InitStructure.CRCPoly = 7;
@@ -72,7 +72,7 @@ void spi_max7556_reinit() {
   SPI_InitStructure.ClockPolarity = LL_SPI_POLARITY_LOW;
   SPI_InitStructure.ClockPhase = LL_SPI_PHASE_1EDGE;
   SPI_InitStructure.NSS = LL_SPI_NSS_SOFT;
-  SPI_InitStructure.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV4;
+  SPI_InitStructure.BaudRate = spi_find_divder(MHZ_TO_HZ(10.5));
   SPI_InitStructure.BitOrder = LL_SPI_MSB_FIRST;
   SPI_InitStructure.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
   SPI_InitStructure.CRCPoly = 7;
