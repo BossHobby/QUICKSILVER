@@ -112,6 +112,7 @@ static bool sx128x_wait_for_ready() {
     }
     __NOP();
   }
+  __NOP();
   return true;
 }
 
