@@ -13,7 +13,21 @@
 
 #if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
 
-#define ELRS_MSP_BIND 0x09
+#define MSP_SET_RX_CONFIG 45
+#define MSP_VTX_CONFIG 88     //out message         Get vtx settings - betaflight
+#define MSP_SET_VTX_CONFIG 89 //in message          Set vtx settings - betaflight
+#define MSP_EEPROM_WRITE 250  //in message          no param
+
+// ELRS specific opcodes
+#define MSP_ELRS_RF_MODE 0x06
+#define MSP_ELRS_TX_PWR 0x07
+#define MSP_ELRS_TLM_RATE 0x08
+#define MSP_ELRS_BIND 0x09
+#define MSP_ELRS_MODEL_ID 0x0A
+#define MSP_ELRS_REQU_VTX_PKT 0x0B
+#define MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE 0x0C
+#define MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE 0x0D
+#define MSP_ELRS_SET_RX_WIFI_MODE 0x0E
 
 #define TELEMETRY_TYPE_LINK 0x01
 #define TELEMETRY_TYPE_DATA 0x02
@@ -84,6 +98,9 @@ static int8_t rssi;
 static uint16_t crc_initializer = 0;
 static uint8_t bind_uid[6] = {0, 1, 2, 3, 4, 5};
 
+static uint8_t msp_buffer[ELRS_MSP_BUFFER_SIZE];
+static uint8_t next_telemetry_type = TELEMETRY_TYPE_LINK;
+
 static uint8_t elrs_get_model_id() {
   // invert value so default (0x0) equals no model match
   return bind_storage.elrs.model_id ^ 0xFF;
@@ -125,11 +142,11 @@ static bool elrs_tlm() {
 
   packet[0] = 0b11;
   packet[1] = TELEMETRY_TYPE_LINK;
-  packet[2] = -rssi;                  // rssi
-  packet[3] = (has_model_match << 7); // no diversity
-  packet[4] = -raw_snr;               // snr
-  packet[5] = uplink_lq;              // uplink_lq
-  packet[6] = 0;                      // msq confirm
+  packet[2] = -rssi;                          // rssi
+  packet[3] = (has_model_match << 7);         // no diversity
+  packet[4] = -raw_snr;                       // snr
+  packet[5] = uplink_lq;                      // uplink_lq
+  packet[6] = elrs_get_msp_confirm() ? 1 : 0; // msq confirm
   packet[7] = 0;
 
   const uint16_t crc = crc14_calc(packet, 7, crc_initializer);
@@ -513,9 +530,29 @@ static void elrs_process_packet(uint32_t packet_time) {
     break;
   }
   case MSP_DATA_PACKET: {
-    if (packet[1] == 1 && packet[2] == ELRS_MSP_BIND) {
+    if (in_binding_mode && packet[1] == 1 && packet[2] == MSP_ELRS_BIND) {
       elrs_setup_bind(packet);
+      break;
     }
+
+    if (elrs_state != CONNECTED) {
+      break;
+    }
+
+    const bool confirm = elrs_get_msp_confirm();
+    elrs_receive_msp(packet[1], packet + 2);
+    if (confirm != elrs_get_msp_confirm()) {
+      next_telemetry_type = TELEMETRY_TYPE_LINK;
+    }
+
+    if (elrs_msp_finished_data()) {
+      if (msp_buffer[7] == MSP_SET_RX_CONFIG && msp_buffer[8] == MSP_ELRS_MODEL_ID) {
+        bind_storage.elrs.model_id = msp_buffer[9] ^ 0xFF;
+      }
+
+      elrs_msp_restart();
+    }
+
     break;
   }
   default:
@@ -557,6 +594,7 @@ void rx_init() {
   elrs_phase_init();
   elrs_lq_reset();
   elrs_lpf_init(&rssi_lpf, 5);
+  elrs_setup_msp(ELRS_MSP_BUFFER_SIZE, msp_buffer, ELRS_MSP_BYTES_PER_CALL);
 
   crc_initializer = (UID[4] << 8) | UID[5];
   rf_mode_cycle_multiplier = 1;
