@@ -179,65 +179,58 @@ uint8_t grid_selection(uint8_t element, uint8_t row) {
   }
 }
 
-//convert a time in seconds into into a 5 char array in the format mm:ss. 
+//convert a time in seconds into into a 5 char array in the format mm:ss.
 void format_time(uint8_t *str, float time_s) {
-  uint8_t minutes10;
-  uint8_t minutes1;
-  uint8_t seconds10;
-  uint8_t seconds1;
-  
   // Will only display up to 59:59 as realistically no quad will fly that long (currently). Reset to zero at on reaching 1 hr
-  while (time_s >= 3600){
+  while (time_s >= 3600) {
     time_s -= 3600;
   }
   // Surely there is a modulus operator in C??
-  minutes10 = time_s/600;
-  minutes1 = (time_s - (minutes10 * 600))/60;
-  seconds10 = (time_s - ((minutes10 * 600)+(minutes1 * 60)))/10;
-  seconds1 = time_s - ((minutes10 * 600)+(minutes1 * 60)+(seconds10 * 10));
+  uint8_t minutes10 = time_s / 600;
+  uint8_t minutes1 = (time_s - (minutes10 * 600)) / 60;
+  uint8_t seconds10 = (time_s - ((minutes10 * 600) + (minutes1 * 60))) / 10;
+  uint8_t seconds1 = time_s - ((minutes10 * 600) + (minutes1 * 60) + (seconds10 * 10));
 
   str[0] = minutes10 + 48;
   str[1] = minutes1 + 48;
-  str[2] = 58;  //:
+  str[2] = 58; //:
   str[3] = seconds10 + 48;
   str[4] = seconds1 + 48;
 }
 
 //Create a 5 char string to represent the current vtx settings in the Band:Channel:Power
 void format_vtx(uint8_t *str) {
-  switch (vtx_settings.band){
-    case 0: // VTX_BAND_A
-      str[0] = 65;
-      break; 
-    case 1: // VTX_BAND_B
-      str[0] = 66;
-      break; 
-    case 2: // VTX_BAND_E
-      str[0] = 69;
-      break; 
-    case 3: // VTX_BAND_F
-      str[0] = 70;
-      break; 
-    case 4: // VTX_BAND_R
-      str[0] = 82;
-      break; 
-    case 5: // VTX_BAND_MAX
-      str[0] = 77;  // M
-      break; 
+  switch (vtx_settings.band) {
+  case VTX_BAND_A:
+    str[0] = 65;
+    break;
+  case VTX_BAND_B:
+    str[0] = 66;
+    break;
+  case VTX_BAND_E:
+    str[0] = 69;
+    break;
+  case VTX_BAND_F:
+    str[0] = 70;
+    break;
+  case VTX_BAND_R:
+    str[0] = 82;
+    break;
+  default:
+    str[0] = 77; // M
+    break;
   }
-  str[1] = 58;  //:
+  str[1] = 58; //:
   str[2] = vtx_settings.channel + 49;
-  str[3] = 58;  //:
-  if (vtx_settings.pit_mode == 1){
-    str[4] = 21;  // "pit", probably from Pitch, but we will use it here
-  }
-  else{
+  str[3] = 58; //:
+  if (vtx_settings.pit_mode == 1) {
+    str[4] = 21; // "pit", probably from Pitch, but we will use it here
+  } else {
     if (vtx_settings.power_level == 4)
-      str[4] = 36;  // "max"
+      str[4] = 36; // "max"
     else
       str[4] = vtx_settings.power_level + 49;
   }
-  
 }
 
 //************************************************************************************************************************************************************************************
@@ -711,9 +704,7 @@ void osd_display() {
     case 6:
       if (osd_decode(*stopwatch, ACTIVE)) {
         uint8_t osd_stopwatch[5];
-        // fast_fprint(osd_stopwatch, 5, state.uptime, 0);
-        // osd_stopwatch[4] = 112; //Z+23 is fly hr
-       format_time(osd_stopwatch, state.armtime);        
+        format_time(osd_stopwatch, state.armtime);
         osd_print_data(osd_stopwatch, 5, osd_decode(*stopwatch, ATTRIBUTE), osd_decode(*stopwatch, POSITIONX), osd_decode(*stopwatch, POSITIONY));
       }
       osd_display_element++;
@@ -759,8 +750,7 @@ void osd_display() {
     case 11:
       if (osd_decode(*osd_vtx, ACTIVE) && vtx_settings.detected) {
         uint8_t osd_vtx_freq[5];
-        // fast_fprint(osd_vtx_freq, 5, vtx_frequency_from_channel(vtx_settings.band, vtx_settings.channel), 0);
-        format_vtx(osd_vtx_freq);        
+        format_vtx(osd_vtx_freq);
         osd_print_data(osd_vtx_freq, 5, osd_decode(*osd_vtx, ATTRIBUTE), osd_decode(*osd_vtx, POSITIONX), osd_decode(*osd_vtx, POSITIONY));
       }
       osd_display_element++;
