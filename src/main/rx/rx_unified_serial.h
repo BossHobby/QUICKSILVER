@@ -40,6 +40,7 @@ void rx_serial_process_crsf();
 void rx_serial_process_redpine();
 
 void rx_serial_send_fport_telemetry();
+void rx_serial_send_crsf_telemetry();
 
 void rx_lqi_lost_packet();
 void rx_lqi_got_packet();
