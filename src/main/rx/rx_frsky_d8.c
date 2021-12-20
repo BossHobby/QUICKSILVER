@@ -12,10 +12,9 @@
 
 //Source https://www.rcgroups.com/forums/showpost.php?p=21864861
 
-//#ifdef USE_CC2500_PA_LNA
+// these will get absimal range without pa/lna
 #define FRSKY_ENABLE_TELEMETRY
 #define FRSKY_ENABLE_HUB_TELEMETRY
-//#endif
 
 #define FRSKY_D8_CHANNEL_COUNT 8
 #define FRSKY_D8_HUB_FIRST_USER_ID 0x31
