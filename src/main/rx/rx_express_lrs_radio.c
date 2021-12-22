@@ -2,6 +2,8 @@
 
 #include <stdbool.h>
 
+#include "util.h"
+
 #if defined(RX_EXPRESS_LRS)
 
 #define SYNC_WORD 0x12 // default LoRa sync word
@@ -205,6 +207,7 @@ void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq) {
   sx128x_set_busy_timeout(100);
 
   current_rate = index;
+  reset_looptime();
 }
 
 void elrs_enter_rx(volatile uint8_t *packet) {
