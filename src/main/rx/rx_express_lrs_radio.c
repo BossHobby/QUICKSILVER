@@ -220,14 +220,11 @@ void elrs_enter_tx(volatile uint8_t *packet) {
 }
 
 elrs_irq_status_t elrs_get_irq_status() {
-  if (sx128x_read_dio0()) {
-    const uint16_t irq = sx128x_get_irq_status();
-    sx128x_clear_irq_status(SX1280_IRQ_RADIO_ALL);
-    if ((irq & SX1280_IRQ_TX_DONE)) {
-      return IRQ_TX_DONE;
-    } else if ((irq & SX1280_IRQ_RX_DONE)) {
-      return IRQ_RX_DONE;
-    }
+  const uint16_t irq = sx128x_read_dio0();
+  if ((irq & SX1280_IRQ_TX_DONE)) {
+    return IRQ_TX_DONE;
+  } else if ((irq & SX1280_IRQ_RX_DONE)) {
+    return IRQ_RX_DONE;
   }
   return IRQ_NONE;
 }

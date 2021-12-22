@@ -17,7 +17,8 @@
 
 #define PORT spi_port_defs[SX12XX_SPI_PORT]
 
-static volatile uint8_t dio0_active = 0;
+volatile uint8_t dio0_active = 0;
+volatile uint16_t irq_status = 0;
 
 static uint32_t busy_timeout = 1000;
 
@@ -36,6 +37,7 @@ void sx128x_init() {
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
   gpio_pin_init(&gpio_init, SX12XX_BUSY_PIN);
+  exti_enable(SX12XX_BUSY_PIN, LL_EXTI_TRIGGER_FALLING);
 
   gpio_pin_init(&gpio_init, SX12XX_DIO0_PIN);
   exti_enable(SX12XX_DIO0_PIN, LL_EXTI_TRIGGER_RISING);
@@ -80,24 +82,28 @@ void sx128x_handle_dio0_exti(bool level) {
   if (!level) {
     return;
   }
+
+  irq_status = sx128x_get_irq_status();
+  sx128x_clear_irq_status(SX1280_IRQ_RADIO_ALL);
   dio0_active = 1;
 }
 
 void sx128x_handle_busy_exti(bool level) {
 }
 
-uint8_t sx128x_read_dio0() {
+uint16_t sx128x_read_dio0() {
   register uint8_t active = 0;
 
   do {
     active = dio0_active;
   } while (active != dio0_active);
 
-  if (active) {
-    dio0_active = 0;
-    return 1;
+  if (!active) {
+    return 0;
   }
-  return 0;
+
+  dio0_active = 0;
+  return irq_status;
 }
 
 static bool sx128x_is_busy() {
@@ -105,6 +111,8 @@ static bool sx128x_is_busy() {
 }
 
 static bool sx128x_wait_for_ready() {
+  spi_dma_wait_for_ready(SX12XX_SPI_PORT);
+
   const uint32_t start = time_micros();
   while (sx128x_is_busy()) {
     if ((time_micros() - start) > busy_timeout) {
