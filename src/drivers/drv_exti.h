@@ -10,4 +10,4 @@ typedef struct {
 
 extern const exti_line_def_t exti_line_defs[16];
 
-void exti_enable(gpio_pins_t pin);
+void exti_enable(gpio_pins_t pin, uint32_t trigger);
