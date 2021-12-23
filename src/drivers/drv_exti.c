@@ -95,14 +95,14 @@ static void exti_set_source(gpio_pins_t pin) {
   }
 }
 
-void exti_enable(gpio_pins_t pin) {
+void exti_enable(gpio_pins_t pin, uint32_t trigger) {
   exti_set_source(pin);
 
   LL_EXTI_InitTypeDef exti_init;
   exti_init.Line_0_31 = LINE.exti_line;
   exti_init.LineCommand = ENABLE;
   exti_init.Mode = LL_EXTI_MODE_IT;
-  exti_init.Trigger = LL_EXTI_TRIGGER_RISING;
+  exti_init.Trigger = trigger;
   LL_EXTI_Init(&exti_init);
 
   LL_EXTI_EnableIT_0_31(LINE.exti_line);
@@ -113,7 +113,7 @@ void exti_enable(gpio_pins_t pin) {
 bool exti_line_active(gpio_pins_t pin) {
   if (LL_EXTI_IsActiveFlag_0_31(LINE.exti_line) != RESET) {
     LL_EXTI_ClearFlag_0_31(LINE.exti_line);
-    return gpio_pin_read(pin);
+    return true;
   }
   return false;
 }
@@ -130,8 +130,15 @@ static void handle_exit_isr() {
 
 #if defined(USE_SX128X) && defined(SX12XX_DIO0_PIN)
   if (exti_line_active(SX12XX_DIO0_PIN)) {
-    extern void sx128x_handle_exti();
-    sx128x_handle_exti();
+    extern void sx128x_handle_dio0_exti(bool);
+    sx128x_handle_dio0_exti(gpio_pin_read(SX12XX_DIO0_PIN));
+  }
+#endif
+
+#if defined(USE_SX128X) && defined(SX12XX_BUSY_PIN)
+  if (exti_line_active(SX12XX_BUSY_PIN)) {
+    extern void sx128x_handle_busy_exti(bool);
+    sx128x_handle_busy_exti(gpio_pin_read(SX12XX_BUSY_PIN));
   }
 #endif
 }
