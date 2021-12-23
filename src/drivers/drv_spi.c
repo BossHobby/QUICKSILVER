@@ -621,13 +621,6 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   if (spi_port_config[port].active_device) {
     spi_txn_dma_rx_isr(port);
   } else {
-#if defined(ENABLE_OSD) && defined(MAX7456_SPI_PORT)
-    if (port == MAX7456_SPI_PORT) {
-      extern void max7456_dma_rx_isr();
-      max7456_dma_rx_isr();
-    }
-#endif
-
 #if defined(USE_SDCARD) && defined(SDCARD_SPI_PORT)
     if (port == SDCARD_SPI_PORT) {
       extern void sdcard_dma_rx_isr();
