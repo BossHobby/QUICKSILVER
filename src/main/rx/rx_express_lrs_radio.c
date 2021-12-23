@@ -170,6 +170,7 @@ bool elrs_radio_init() {
   for (size_t i = 0; i < 10; i++) {
     uint8_t buf[2];
     sx128x_read_register_burst(SX128x_LR_FIRMWARE_VERSION_MSB, buf, 2);
+    sx128x_wait();
 
     uint16_t version = (((buf[0]) << 8) | (buf[1]));
     if ((version != 0) && (version != 65535)) {
@@ -189,11 +190,16 @@ void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq) {
 
   sx128x_set_mode(SX1280_MODE_STDBY_RC);
   sx128x_write_command(SX1280_RADIO_SET_PACKETTYPE, SX1280_PACKET_TYPE_LORA);
+  sx128x_wait();
+
   sx128x_config_lora_mod_params(SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_4_7);
   sx128x_write_command(SX1280_RADIO_SET_AUTOFS, 0x01);
+  sx128x_wait();
+
   sx128x_write_register(0x0891, (sx128x_read_register(0x0891) | 0xC0));
   sx128x_set_packet_params(12, SX1280_LORA_PACKET_IMPLICIT, air_rate_config[index].payload_len, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL);
   sx128x_set_frequency(12098953);
+  sx128x_wait();
   sx128x_set_fifo_addr(0x00, 0x00);
   sx128x_set_dio_irq_params(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
   sx128x_set_output_power(13);
@@ -211,12 +217,12 @@ void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq) {
 }
 
 void elrs_enter_rx(volatile uint8_t *packet) {
-  sx128x_set_mode(SX1280_MODE_RX);
+  sx128x_set_mode_async(SX1280_MODE_RX);
 }
 
 void elrs_enter_tx(volatile uint8_t *packet) {
   sx128x_write_tx_buffer(0x0, packet, ELRS_BUFFER_SIZE);
-  sx128x_set_mode(SX1280_MODE_TX);
+  sx128x_set_mode_async(SX1280_MODE_TX);
 }
 
 elrs_irq_status_t elrs_get_irq_status() {
@@ -230,12 +236,13 @@ elrs_irq_status_t elrs_get_irq_status() {
 }
 
 void elrs_read_packet(volatile uint8_t *packet) {
-  sx128x_read_rx_buffer(packet, ELRS_BUFFER_SIZE);
+  // async
 }
 
 void elrs_last_packet_stats(int8_t *rssi, int8_t *snr) {
   uint8_t status[2] = {0, 0};
   sx128x_read_command_burst(SX1280_RADIO_GET_PACKETSTATUS, status, 2);
+  sx128x_wait();
   *rssi = -(int8_t)(status[0] / 2);
   *snr = (int8_t)status[1] / 4;
 }
