@@ -37,19 +37,6 @@
 //RADIO
 #ifdef SERIAL_RX
 #define RX_USART USART_PORT1
-#define SOFTSPI_NONE
-#endif
-
-#ifndef SOFTSPI_NONE
-#define RADIO_CHECK
-#define SPI_MISO_PIN LL_GPIO_PIN_10
-#define SPI_MISO_PORT GPIOA
-#define SPI_MOSI_PIN LL_GPIO_PIN_9
-#define SPI_MOSI_PORT GPIOA
-#define SPI_CLK_PIN LL_GPIO_PIN_1
-#define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN LL_GPIO_PIN_0
-#define SPI_SS_PORT GPIOA
 #endif
 
 // OSD

@@ -41,7 +41,6 @@
 
 #ifdef SERIAL_RX
 #define RX_USART USART_PORT2
-#define SOFTSPI_NONE
 #endif
 
 #ifdef RX_FRSKY
@@ -49,20 +48,6 @@
 #define CC2500_SPI_PORT SPI_PORT1
 #define CC2500_NSS PIN_B7
 #define CC2500_GDO0_PIN PIN_B6
-
-#define SOFTSPI_NONE
-#endif
-
-#ifndef SOFTSPI_NONE //sort this out later for use of bayang
-#define RADIO_CHECK
-#define SPI_MISO_PIN LL_GPIO_PIN_7
-#define SPI_MISO_PORT GPIOB
-#define SPI_MOSI_PIN LL_GPIO_PIN_6
-#define SPI_MOSI_PORT GPIOB
-#define SPI_CLK_PIN LL_GPIO_PIN_3
-#define SPI_CLK_PORT GPIOA
-#define SPI_SS_PIN LL_GPIO_PIN_2
-#define SPI_SS_PORT GPIOA
 #endif
 
 // OSD

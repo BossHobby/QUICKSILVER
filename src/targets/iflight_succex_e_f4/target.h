@@ -35,7 +35,6 @@
 
 //RADIO
 #define RX_USART USART_PORT2
-#define SOFTSPI_NONE
 
 // OSD
 #define ENABLE_OSD

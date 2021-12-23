@@ -1,9 +1,9 @@
 #include "drv_spi_xn297.h"
 
-#include "drv_spi.h"
+#include "drv_spi_soft.h"
 #include "project.h"
 
-#ifdef SOFTSPI_3WIRE
+#ifdef USE_SOFT_SPI_3WIRE
 
 extern void mosi_input();
 extern int spi_recvbyte();
