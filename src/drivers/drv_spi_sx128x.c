@@ -17,14 +17,23 @@
 
 #define PORT spi_port_defs[SX12XX_SPI_PORT]
 
+static volatile uint8_t dma_buffer[1024];
+static volatile spi_bus_device_t bus = {
+    .port = SX12XX_SPI_PORT,
+    .nss = SX12XX_NSS_PIN,
+
+    .buffer = dma_buffer,
+    .buffer_size = 1024,
+
+    .auto_continue = false,
+};
+
 volatile uint8_t dio0_active = 0;
 volatile uint16_t irq_status = 0;
 
 static uint32_t busy_timeout = 1000;
 
 void sx128x_init() {
-  spi_init_pins(SX12XX_SPI_PORT, SX12XX_NSS_PIN);
-
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
@@ -42,29 +51,8 @@ void sx128x_init() {
   gpio_pin_init(&gpio_init, SX12XX_DIO0_PIN);
   exti_enable(SX12XX_DIO0_PIN, LL_EXTI_TRIGGER_RISING);
 
-  spi_enable_rcc(SX12XX_SPI_PORT);
-
-  LL_SPI_DeInit(PORT.channel);
-  LL_SPI_InitTypeDef SPI_InitStructure;
-  SPI_InitStructure.TransferDirection = LL_SPI_FULL_DUPLEX;
-  SPI_InitStructure.Mode = LL_SPI_MODE_MASTER;
-  SPI_InitStructure.DataWidth = LL_SPI_DATAWIDTH_8BIT;
-  SPI_InitStructure.ClockPolarity = LL_SPI_POLARITY_LOW;
-  SPI_InitStructure.ClockPhase = LL_SPI_PHASE_1EDGE;
-  SPI_InitStructure.NSS = LL_SPI_NSS_SOFT;
-  SPI_InitStructure.BaudRate = spi_find_divder(MHZ_TO_HZ(10.5));
-  SPI_InitStructure.BitOrder = LL_SPI_MSB_FIRST;
-  SPI_InitStructure.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
-  SPI_InitStructure.CRCPoly = 7;
-  LL_SPI_Init(PORT.channel, &SPI_InitStructure);
-  LL_SPI_Enable(PORT.channel);
-
-  // Dummy read to clear receive buffer
-  while (LL_SPI_IsActiveFlag_TXE(PORT.channel) == RESET)
-    ;
-  LL_SPI_ReceiveData8(PORT.channel);
-
-  spi_dma_init(SX12XX_SPI_PORT);
+  spi_bus_device_init(&bus);
+  spi_bus_device_reconfigure(&bus, true, spi_find_divder(MHZ_TO_HZ(10.5)));
 }
 
 void sx128x_reset() {
@@ -78,17 +66,90 @@ void sx128x_set_busy_timeout(uint32_t timeout) {
   busy_timeout = timeout;
 }
 
+static bool sx128x_is_busy() {
+  return gpio_pin_read(SX12XX_BUSY_PIN);
+}
+
+static bool sx128x_wait_for_ready() {
+  const uint32_t start = time_micros();
+  while (sx128x_is_busy()) {
+    if ((time_micros() - start) > busy_timeout) {
+      return false;
+    }
+    __NOP();
+  }
+  __NOP();
+  return true;
+}
+
+void read_command_txn(spi_txn_t *txn, const sx128x_commands_t cmd, uint8_t *data, const uint8_t size) {
+  const uint8_t buf[2] = {
+      (uint8_t)cmd,
+      0x0,
+  };
+  spi_txn_add_seg(txn, NULL, buf, 2);
+  spi_txn_add_seg(txn, data, NULL, size);
+}
+
+void clear_irq_status_txn(spi_txn_t *txn, const uint16_t irq_mask) {
+  const uint8_t buf[3] = {
+      SX1280_RADIO_CLR_IRQSTATUS,
+      (uint8_t)(((uint16_t)irq_mask >> 8) & 0x00FF),
+      (uint8_t)((uint16_t)irq_mask & 0x00FF),
+  };
+  spi_txn_add_seg(txn, NULL, buf, 3);
+}
+
+static void sx128x_set_dio0_active() {
+  dio0_active = 1;
+}
+
+static void sx128x_handle_irq_status() {
+  const uint16_t irq = ((irq_status & 0xFF) << 8 | ((irq_status >> 8) & 0xFF));
+  if ((irq & SX1280_IRQ_RX_DONE)) {
+    extern volatile uint8_t packet[8];
+    sx128x_read_rx_buffer(packet, 8);
+  } else {
+    dio0_active = 1;
+  }
+}
+
+static void sx128x_txn_wait() {
+  if (!sx128x_is_busy() || !sx128x_wait_for_ready()) {
+    // it we are not busy or we timeout, kick manually
+    spi_txn_continue(&bus);
+  }
+  while (!spi_txn_ready(&bus)) {
+    __WFI();
+  }
+}
+
 void sx128x_handle_dio0_exti(bool level) {
   if (!level) {
     return;
   }
 
-  irq_status = sx128x_get_irq_status();
-  sx128x_clear_irq_status(SX1280_IRQ_RADIO_ALL);
-  dio0_active = 1;
+  {
+    spi_txn_t *txn = spi_txn_init(&bus, NULL);
+    read_command_txn(txn, SX1280_RADIO_GET_IRQSTATUS, (uint8_t *)&irq_status, 2);
+    spi_txn_submit(txn);
+  }
+
+  {
+    spi_txn_t *txn = spi_txn_init(&bus, sx128x_handle_irq_status);
+    clear_irq_status_txn(txn, SX1280_IRQ_RADIO_ALL);
+    spi_txn_submit(txn);
+  }
+
+  if (!sx128x_is_busy()) {
+    spi_txn_continue(&bus);
+  }
 }
 
 void sx128x_handle_busy_exti(bool level) {
+  if (!level) {
+    spi_txn_continue(&bus);
+  }
 }
 
 uint16_t sx128x_read_dio0() {
@@ -103,25 +164,7 @@ uint16_t sx128x_read_dio0() {
   }
 
   dio0_active = 0;
-  return irq_status;
-}
-
-static bool sx128x_is_busy() {
-  return gpio_pin_read(SX12XX_BUSY_PIN);
-}
-
-static bool sx128x_wait_for_ready() {
-  spi_dma_wait_for_ready(SX12XX_SPI_PORT);
-
-  const uint32_t start = time_micros();
-  while (sx128x_is_busy()) {
-    if ((time_micros() - start) > busy_timeout) {
-      return false;
-    }
-    __NOP();
-  }
-  __NOP();
-  return true;
+  return ((irq_status & 0xFF) << 8 | ((irq_status >> 8) & 0xFF));
 }
 
 void sx128x_read_register_burst(const uint16_t reg, uint8_t *data, const uint8_t size) {
@@ -132,36 +175,30 @@ void sx128x_read_register_burst(const uint16_t reg, uint8_t *data, const uint8_t
       0x00,
   };
 
-  sx128x_wait_for_ready();
-
-  spi_csn_enable(SX12XX_NSS_PIN);
-  for (uint8_t i = 0; i < 4; i++) {
-    spi_transfer_byte(SX12XX_SPI_PORT, buf[i]);
-  }
-  for (uint8_t i = 0; i < size; i++) {
-    data[i] = spi_transfer_byte(SX12XX_SPI_PORT, 0xFF);
-  }
-  spi_csn_disable(SX12XX_NSS_PIN);
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg(txn, NULL, buf, 4);
+  spi_txn_add_seg(txn, data, NULL, size);
+  spi_txn_submit(txn);
 }
 
 uint8_t sx128x_read_register(const uint16_t reg) {
   uint8_t data = 0;
   sx128x_read_register_burst(reg, &data, 1);
+  sx128x_txn_wait();
   return data;
 }
 
 void sx128x_write_register_burst(const uint16_t reg, const uint8_t *data, const uint8_t size) {
-  uint8_t buf[size + 3];
-  buf[0] = (uint8_t)SX1280_RADIO_WRITE_REGISTER;
-  buf[1] = ((reg & 0xFF00) >> 8);
-  buf[2] = (reg & 0x00FF);
-  memcpy(buf + 3, data, size);
+  uint8_t buf[3] = {
+      (uint8_t)SX1280_RADIO_WRITE_REGISTER,
+      ((reg & 0xFF00) >> 8),
+      (reg & 0x00FF),
+  };
 
-  sx128x_wait_for_ready();
-
-  spi_csn_enable(SX12XX_NSS_PIN);
-  spi_dma_transfer_bytes(SX12XX_SPI_PORT, buf, size + 3);
-  spi_csn_disable(SX12XX_NSS_PIN);
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg(txn, NULL, buf, 3);
+  spi_txn_add_seg(txn, NULL, data, size);
+  spi_txn_submit(txn);
 }
 
 void sx128x_write_register(const uint16_t reg, const uint8_t val) {
@@ -169,42 +206,56 @@ void sx128x_write_register(const uint16_t reg, const uint8_t val) {
 }
 
 void sx128x_read_command_burst(const sx128x_commands_t cmd, uint8_t *data, const uint8_t size) {
-  uint8_t buf[size + 2];
-  buf[0] = (uint8_t)cmd;
-  buf[1] = 0x0;
-  memcpy(buf + 2, data, size);
-
-  sx128x_wait_for_ready();
-
-  spi_csn_enable(SX12XX_NSS_PIN);
-  spi_dma_transfer_bytes(SX12XX_SPI_PORT, buf, size + 2);
-  spi_csn_disable(SX12XX_NSS_PIN);
-
-  memcpy(data, buf + 2, size);
-}
-
-void sx128x_write_command(const sx128x_commands_t cmd, const uint8_t val) {
-  sx128x_wait_for_ready();
-
-  spi_csn_enable(SX12XX_NSS_PIN);
-  spi_transfer_byte(SX12XX_SPI_PORT, (uint8_t)cmd);
-  spi_transfer_byte(SX12XX_SPI_PORT, val);
-  spi_csn_disable(SX12XX_NSS_PIN);
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  read_command_txn(txn, cmd, data, size);
+  spi_txn_submit(txn);
 }
 
 void sx128x_write_command_burst(const sx128x_commands_t cmd, const uint8_t *data, const uint8_t size) {
-  uint8_t buf[size + 1];
-  buf[0] = (uint8_t)cmd;
-  memcpy(buf + 1, data, size);
-
-  sx128x_wait_for_ready();
-
-  spi_csn_enable(SX12XX_NSS_PIN);
-  spi_dma_transfer_bytes(SX12XX_SPI_PORT, buf, size + 1);
-  spi_csn_disable(SX12XX_NSS_PIN);
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg(txn, NULL, &cmd, 1);
+  spi_txn_add_seg(txn, NULL, data, size);
+  spi_txn_submit(txn);
 }
 
-void sx128x_set_mode(const sx128x_modes_t mode) {
+void sx128x_write_command(const sx128x_commands_t cmd, const uint8_t val) {
+  sx128x_write_command_burst(cmd, &val, 1);
+}
+
+void sx128x_read_rx_buffer(volatile uint8_t *data, const uint8_t size) {
+  static uint8_t buffer_status[2] = {0, 0};
+  {
+    spi_txn_t *txn = spi_txn_init(&bus, NULL);
+    read_command_txn(txn, SX1280_RADIO_GET_RXBUFFERSTATUS, buffer_status, 2);
+    spi_txn_submit(txn);
+  }
+  {
+    spi_txn_t *txn = spi_txn_init(&bus, sx128x_set_dio0_active);
+    spi_txn_add_seg_const(txn, SX1280_RADIO_READ_BUFFER);
+    spi_txn_add_seg_delay(txn, NULL, buffer_status + 1, 1);
+    spi_txn_add_seg_const(txn, 0x00);
+    spi_txn_add_seg(txn, (uint8_t *)data, NULL, size);
+    spi_txn_submit(txn);
+  }
+}
+
+void sx128x_write_tx_buffer(const uint8_t offset, const volatile uint8_t *data, const uint8_t size) {
+  const uint8_t buf[2] = {
+      (uint8_t)SX1280_RADIO_WRITE_BUFFER,
+      offset,
+  };
+
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg(txn, NULL, buf, 2);
+  spi_txn_add_seg(txn, NULL, (uint8_t *)data, size);
+  spi_txn_submit(txn);
+}
+
+void sx128x_wait() {
+  sx128x_txn_wait();
+}
+
+void sx128x_set_mode_async(const sx128x_modes_t mode) {
   switch (mode) {
   case SX1280_MODE_SLEEP:
     sx128x_write_command(SX1280_RADIO_SET_SLEEP, 0x01);
@@ -248,6 +299,15 @@ void sx128x_set_mode(const sx128x_modes_t mode) {
   default:
     break;
   }
+
+  if (!sx128x_is_busy()) {
+    spi_txn_continue(&bus);
+  }
+}
+
+void sx128x_set_mode(const sx128x_modes_t mode) {
+  sx128x_set_mode_async(mode);
+  sx128x_txn_wait();
 }
 
 void sx128x_config_lora_mod_params(const sx128x_lora_bandwidths_t bw, const sx128x_lora_spreading_factors_t sf, const sx128x_lora_coding_rates_t cr) {
@@ -261,6 +321,7 @@ void sx128x_config_lora_mod_params(const sx128x_lora_bandwidths_t bw, const sx12
   rfparams[2] = (uint8_t)cr;
 
   sx128x_write_command_burst(SX1280_RADIO_SET_MODULATIONPARAMS, rfparams, 3);
+  sx128x_txn_wait();
 
   switch (sf) {
   case SX1280_LORA_SF5:
@@ -274,6 +335,7 @@ void sx128x_config_lora_mod_params(const sx128x_lora_bandwidths_t bw, const sx12
   default:
     sx128x_write_register(0x925, 0x32); // for SF9, SF10, SF11, SF12
   }
+  sx128x_txn_wait();
 }
 
 void sx128x_set_packet_params(const uint8_t preamble_length, const sx128x_lora_packet_lengths_modes_t header_type, const uint8_t payload_length, const sx128x_lora_crc_modes_t crc, const sx128x_lora_iq_modes_t invert_iq) {
@@ -287,6 +349,7 @@ void sx128x_set_packet_params(const uint8_t preamble_length, const sx128x_lora_p
       0x00,
   };
   sx128x_write_command_burst(SX1280_RADIO_SET_PACKETPARAMS, buf, 7);
+  sx128x_txn_wait();
 }
 
 void sx128x_set_frequency(const uint32_t freq) {
@@ -304,6 +367,7 @@ void sx128x_set_fifo_addr(const uint8_t tx_base_addr, const uint8_t rx_base_addr
       rx_base_addr,
   };
   sx128x_write_command_burst(SX1280_RADIO_SET_BUFFERBASEADDRESS, buf, 2);
+  sx128x_txn_wait();
 }
 
 void sx128x_set_dio_irq_params(const uint16_t irq_mask, const uint16_t dio1_mask, const uint16_t dio2_mask, const uint16_t dio3_mask) {
@@ -318,6 +382,7 @@ void sx128x_set_dio_irq_params(const uint16_t irq_mask, const uint16_t dio1_mask
       (uint8_t)(dio3_mask & 0x00FF),
   };
   sx128x_write_command_burst(SX1280_RADIO_SET_DIOIRQPARAMS, buf, 8);
+  sx128x_txn_wait();
 }
 
 void sx128x_clear_irq_status(const uint16_t irq_mask) {
@@ -326,44 +391,14 @@ void sx128x_clear_irq_status(const uint16_t irq_mask) {
       (uint8_t)((uint16_t)irq_mask & 0x00FF),
   };
   sx128x_write_command_burst(SX1280_RADIO_CLR_IRQSTATUS, buf, 2);
+  sx128x_txn_wait();
 }
 
 uint16_t sx128x_get_irq_status() {
   uint8_t status[2] = {0, 0};
   sx128x_read_command_burst(SX1280_RADIO_GET_IRQSTATUS, status, 2);
+  sx128x_txn_wait();
   return status[0] << 8 | status[1];
-}
-
-void sx128x_read_rx_buffer(volatile uint8_t *data, const uint8_t size) {
-  uint8_t buffer_status[2] = {0, 0};
-  sx128x_read_command_burst(SX1280_RADIO_GET_RXBUFFERSTATUS, buffer_status, 2);
-
-  uint8_t buf[size + 3];
-  buf[0] = (uint8_t)SX1280_RADIO_READ_BUFFER;
-  buf[1] = buffer_status[1];
-  buf[2] = 0x00;
-  memset(buf + 3, 0x0, size);
-
-  sx128x_wait_for_ready();
-
-  spi_csn_enable(SX12XX_NSS_PIN);
-  spi_dma_transfer_bytes(SX12XX_SPI_PORT, buf, size + 3);
-  spi_csn_disable(SX12XX_NSS_PIN);
-
-  memcpy((uint8_t *)data, buf + 3, size);
-}
-
-void sx128x_write_tx_buffer(const uint8_t offset, const volatile uint8_t *data, const uint8_t size) {
-  uint8_t buf[size + 2];
-  buf[0] = (uint8_t)SX1280_RADIO_WRITE_BUFFER;
-  buf[1] = offset;
-  memcpy(buf + 2, (uint8_t *)data, size);
-
-  sx128x_wait_for_ready();
-
-  spi_csn_enable(SX12XX_NSS_PIN);
-  spi_dma_transfer_bytes(SX12XX_SPI_PORT, buf, size + 2);
-  spi_csn_disable(SX12XX_NSS_PIN);
 }
 
 void sx128x_set_output_power(const int8_t power) {
@@ -372,6 +407,7 @@ void sx128x_set_output_power(const int8_t power) {
       (uint8_t)SX1280_RADIO_RAMP_04_US,
   };
   sx128x_write_command_burst(SX1280_RADIO_SET_TXPARAMS, buf, 2);
+  sx128x_txn_wait();
 }
 
 #endif

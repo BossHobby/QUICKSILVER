@@ -149,12 +149,14 @@ typedef enum {
 
 void sx128x_init();
 void sx128x_reset();
+void sx128x_wait();
 
 void sx128x_set_busy_timeout(uint32_t timeout);
 
 uint16_t sx128x_read_dio0();
 
 void sx128x_set_mode(const sx128x_modes_t mode);
+void sx128x_set_mode_async(const sx128x_modes_t mode);
 
 void sx128x_read_register_burst(const uint16_t reg, uint8_t *data, const uint8_t size);
 uint8_t sx128x_read_register(const uint16_t reg);

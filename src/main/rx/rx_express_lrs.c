@@ -76,7 +76,6 @@ static volatile elrs_state_t elrs_state = DISCONNECTED;
 
 static volatile bool already_hop = false;
 static volatile bool already_tlm = false;
-static volatile bool needs_hop = false;
 
 static bool in_binding_mode = false;
 static bool has_model_match = false;
@@ -580,7 +579,12 @@ void elrs_handle_tick() {
 void elrs_handle_tock() {
   const uint32_t time = time_micros();
   elrs_phase_int_event(time);
-  needs_hop = true;
+
+  const bool did_hop = elrs_hop();
+  const bool did_tlm = elrs_tlm();
+  if (!did_hop && !did_tlm && elrs_lq_current_is_set()) {
+    elrs_freq_correct();
+  }
 }
 
 void rx_init() {
@@ -624,16 +628,6 @@ void rx_check() {
     elrs_process_packet(time);
   } else if (irq == IRQ_TX_DONE) {
     elrs_enter_rx(packet);
-  }
-
-  if (needs_hop && irq != IRQ_RX_DONE) {
-    needs_hop = false;
-
-    const bool did_hop = elrs_hop();
-    const bool did_tlm = elrs_tlm();
-    if (!did_hop && !did_tlm && elrs_lq_current_is_set()) {
-      elrs_freq_correct();
-    }
   }
 
   const uint32_t time_ms = time_millis();
