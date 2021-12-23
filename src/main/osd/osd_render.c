@@ -637,9 +637,8 @@ void print_osd_mixed_data(uint8_t string_element_qty, uint8_t data_element_qty, 
 //************************************************************************************************************************************************************************************
 //************************************************************************************************************************************************************************************
 void osd_init() {
-  spi_max7456_init(); // init spi
-  max7456_init();     // init the max chip
-  osd_intro();        // print the splash screen
+  max7456_init(); // init the max chip
+  osd_intro();    // print the splash screen
 }
 
 static void osd_display_regular() {
