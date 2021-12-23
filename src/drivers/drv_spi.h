@@ -1,6 +1,9 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
+
+#include <stm32f4xx_ll_spi.h>
 
 #include "drv_gpio.h"
 #include "spi_ports.h"
@@ -35,6 +38,51 @@ typedef struct {
   spi_dma_def_t dma;
 } spi_port_def_t;
 
+#define SPI_TXN_MAX 16
+#define SPI_TXN_SEG_MAX 8
+
+typedef struct {
+  bool live;
+  const uint8_t *tx_data;
+  uint8_t *rx_data;
+  uint32_t size;
+} spi_txn_segment_t;
+
+struct spi_bus_device;
+
+typedef enum {
+  TXN_WAITING,
+  TXN_READY,
+  TXN_IN_PROGRESS,
+  TXN_DONE,
+} spi_txn_status_t;
+
+typedef struct {
+  volatile struct spi_bus_device *bus;
+
+  spi_txn_status_t status;
+
+  spi_txn_segment_t segments[SPI_TXN_SEG_MAX];
+  uint8_t segment_count;
+
+  uint32_t offset;
+  uint32_t size;
+
+  void (*done_fn)();
+} spi_txn_t;
+
+typedef struct spi_bus_device {
+  spi_ports_t port;
+  gpio_pins_t nss;
+
+  uint8_t *buffer;
+  uint32_t buffer_size;
+
+  uint8_t txn_head;
+  uint8_t txn_tail;
+  spi_txn_t txns[SPI_TXN_MAX];
+} spi_bus_device_t;
+
 extern const volatile spi_port_def_t spi_port_defs[SPI_PORTS_MAX];
 
 void spi_enable_rcc(spi_ports_t port);
@@ -49,20 +97,16 @@ uint8_t spi_transfer_byte(spi_ports_t port, uint8_t data);
 uint8_t spi_transfer_byte_timeout(spi_ports_t port, uint8_t data, uint32_t timeout);
 
 void spi_dma_init(spi_ports_t port);
-void spi_dma_enable_rcc(spi_ports_t port);
-
-void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uint32_t buffer_size);
-void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, uint32_t buffer_size);
 
 uint8_t spi_dma_is_ready(spi_ports_t port);
-void spi_dma_wait_for_ready(spi_ports_t port);
+bool spi_dma_wait_for_ready(spi_ports_t port);
 void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length);
 void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length);
 
-// soft spi  header file
-void spi_init();
-void spi_cson();
-void spi_csoff();
-void spi_sendbyte(int);
-int spi_sendrecvbyte(int);
-int spi_sendzerorecvbyte();
+void spi_bus_device_init(volatile spi_bus_device_t *bus, LL_SPI_InitTypeDef *init);
+spi_txn_t *spi_txn_init(volatile spi_bus_device_t *bus, void (*done_fn)());
+void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size);
+void spi_txn_add_live_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size);
+void spi_txn_submit(spi_txn_t *txn);
+void spi_txn_continue(volatile spi_bus_device_t *bus);
+void spi_txn_wait(volatile spi_bus_device_t *bus);

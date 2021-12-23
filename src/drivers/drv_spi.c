@@ -1,5 +1,7 @@
 #include "drv_spi.h"
 
+#include <string.h>
+
 #include <stm32f4xx_ll_bus.h>
 #include <stm32f4xx_ll_dma.h>
 #include <stm32f4xx_ll_spi.h>
@@ -38,9 +40,7 @@
       .dma = SPI_DMA##chan,                         \
   },
 
-const volatile spi_port_def_t spi_port_defs[SPI_PORTS_MAX] = {
-    {},
-    SPI_PORTS};
+const volatile spi_port_def_t spi_port_defs[SPI_PORTS_MAX] = {{}, SPI_PORTS};
 
 #undef SPI_PORT
 #undef SPI_DMA
@@ -130,7 +130,7 @@ void spi_enable_rcc(spi_ports_t port) {
   }
 }
 
-void spi_dma_enable_rcc(spi_ports_t port) {
+static void spi_dma_enable_rcc(spi_ports_t port) {
   switch (PORT.dma.dma_port) {
   case 1:
     LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
@@ -258,7 +258,7 @@ void spi_dma_init(spi_ports_t port) {
   DMA_TRANSFER_DONE = 1;
 }
 
-void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uint32_t buffer_size) {
+static void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uint32_t buffer_size) {
   //RX Stream
   LL_DMA_DeInit(PORT.dma.dma, PORT.dma.rx_stream_index);
 
@@ -280,7 +280,7 @@ void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uint32_t b
   LL_DMA_Init(PORT.dma.dma, PORT.dma.rx_stream_index, &DMA_InitStructure);
 }
 
-void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, uint32_t buffer_size) {
+static void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, uint32_t buffer_size) {
   //TX Stream
   LL_DMA_DeInit(PORT.dma.dma, PORT.dma.tx_stream_index);
 
@@ -306,7 +306,7 @@ uint8_t spi_dma_is_ready(spi_ports_t port) {
   return DMA_TRANSFER_DONE;
 }
 
-void spi_dma_wait_for_ready(spi_ports_t port) {
+bool spi_dma_wait_for_ready(spi_ports_t port) {
 #ifdef BRUSHLESS_TARGET
   if (port == SPI_PORT1) {
     extern volatile int dshot_dma_phase;
@@ -318,14 +318,17 @@ void spi_dma_wait_for_ready(spi_ports_t port) {
     if (timeout == 0) {
       //liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
       liberror++;
-      return;
+      return false;
     }
     __WFI();
   }
+  return true;
 }
 
 void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) {
-  spi_dma_wait_for_ready(port);
+  if (!spi_dma_wait_for_ready(port)) {
+    return;
+  }
   DMA_TRANSFER_DONE = 0;
 
   spi_dma_receive_init(port, buffer, length);
@@ -351,7 +354,9 @@ void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) 
 
 //blocking dma transmit bytes
 void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length) {
-  spi_dma_wait_for_ready(port);
+  if (!spi_dma_wait_for_ready(port)) {
+    return;
+  }
   DMA_TRANSFER_DONE = 0;
 
   spi_dma_receive_init(port, buffer, length);
@@ -381,29 +386,162 @@ void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length) 
   DMA_TRANSFER_DONE = 1;
 }
 
-/* could also be solved with the IT, but seems to be slower by 4us worstcase 
-void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length) {
-  spi_dma_transfer_begin(port, buffer, length);
-  spi_dma_wait_for_ready(port);
+static volatile spi_bus_device_t *active_device[SPI_PORTS_MAX];
+
+void spi_bus_device_init(volatile spi_bus_device_t *bus, LL_SPI_InitTypeDef *init) {
+  bus->txn_head = 0;
+  bus->txn_tail = 0;
+
+  spi_init_pins(bus->port, bus->nss);
+
+  spi_enable_rcc(bus->port);
+
+  LL_SPI_DeInit(spi_port_defs[bus->port].channel);
+  LL_SPI_Init(spi_port_defs[bus->port].channel, init);
+  LL_SPI_Enable(spi_port_defs[bus->port].channel);
+
+  // Dummy read to clear receive buffer
+  while (LL_SPI_IsActiveFlag_TXE(spi_port_defs[bus->port].channel) == RESET)
+    ;
+  LL_SPI_ReceiveData8(spi_port_defs[bus->port].channel);
+
+  spi_dma_init(bus->port);
 }
-*/
+
+spi_txn_t *spi_txn_init(volatile spi_bus_device_t *bus, void (*done_fn)()) {
+  bus->txn_head = (bus->txn_head + 1) % SPI_TXN_MAX;
+
+  volatile spi_txn_t *txn = &bus->txns[bus->txn_head];
+  txn->bus = bus;
+  txn->status = TXN_WAITING;
+  txn->segment_count = 0;
+
+  const uint32_t last = bus->txn_head == 0 ? (SPI_TXN_MAX - 1) : bus->txn_head - 1;
+  if (last != bus->txn_tail) {
+    txn->offset = bus->txns[last].offset + bus->txns[last].size;
+  } else {
+    txn->offset = 0;
+  }
+
+  txn->size = 0;
+  txn->done_fn = done_fn;
+  return (spi_txn_t *)txn;
+}
+
+void spi_txn_add_live_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size) {
+  txn->size += size;
+
+  txn->segments[txn->segment_count].live = true;
+  txn->segments[txn->segment_count].rx_data = rx_data;
+  txn->segments[txn->segment_count].tx_data = tx_data;
+  txn->segments[txn->segment_count].size = size;
+  txn->segment_count++;
+}
+
+void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size) {
+  if (tx_data) {
+    memcpy(txn->bus->buffer + txn->offset + txn->size, tx_data, size);
+  } else {
+    memset(txn->bus->buffer + txn->offset + txn->size, 0xFF, size);
+  }
+  txn->size += size;
+
+  txn->segments[txn->segment_count].live = false;
+  txn->segments[txn->segment_count].rx_data = rx_data;
+  txn->segments[txn->segment_count].tx_data = tx_data;
+  txn->segments[txn->segment_count].size = size;
+  txn->segment_count++;
+}
+
+void spi_txn_submit(spi_txn_t *txn) {
+  txn->status = TXN_READY;
+}
+
+void spi_txn_continue(volatile spi_bus_device_t *bus) {
+  if (bus->txn_head == bus->txn_tail) {
+    return;
+  }
+  if (!spi_dma_is_ready(bus->port)) {
+    return;
+  }
+
+  const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
+
+  volatile spi_txn_t *txn = &bus->txns[tail];
+  if (txn->status != TXN_READY) {
+    return;
+  }
+
+  active_device[bus->port] = bus;
+  txn->status = TXN_IN_PROGRESS;
+
+  uint32_t txn_size = 0;
+  for (uint32_t i = 0; i < txn->segment_count; ++i) {
+    volatile spi_txn_segment_t *seg = &txn->segments[i];
+    if (seg->live && seg->tx_data) {
+      memcpy(txn->bus->buffer + txn->offset + txn_size, seg->tx_data, seg->size);
+    }
+    txn_size += seg->size;
+  }
+
+  spi_csn_enable(bus->nss);
+  spi_dma_transfer_begin(bus->port, bus->buffer + txn->offset, txn->size);
+}
+
+void spi_txn_wait(volatile spi_bus_device_t *bus) {
+  while (bus->txn_head != bus->txn_tail) {
+    __WFI();
+  }
+}
+
+static void spi_txn_dma_rx_isr(spi_ports_t port) {
+  volatile spi_bus_device_t *bus = active_device[port];
+  spi_csn_disable(bus->nss);
+
+  const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
+  volatile spi_txn_t *txn = &bus->txns[tail];
+
+  uint32_t txn_size = 0;
+  for (uint32_t i = 0; i < txn->segment_count; ++i) {
+    volatile spi_txn_segment_t *seg = &txn->segments[i];
+    if (seg->rx_data) {
+      memcpy(seg->rx_data, txn->bus->buffer + txn->offset + txn_size, seg->size);
+    }
+    txn_size += seg->size;
+  }
+
+  DMA_TRANSFER_DONE = 1;
+  active_device[port] = NULL;
+  txn->status = TXN_DONE;
+  bus->txn_tail = tail;
+
+  if (txn->done_fn) {
+    txn->done_fn();
+  }
+}
 
 static void handle_dma_rx_isr(spi_ports_t port) {
-  if (dma_is_flag_active_tc(PORT.dma.dma, PORT.dma.rx_stream_index)) {
-    dma_clear_flag_tc(PORT.dma.dma, PORT.dma.rx_stream_index);
-    dma_clear_flag_tc(PORT.dma.dma, PORT.dma.tx_stream_index);
+  if (!dma_is_flag_active_tc(PORT.dma.dma, PORT.dma.rx_stream_index)) {
+    return;
+  }
 
-    LL_DMA_DisableIT_TC(PORT.dma.dma, PORT.dma.rx_stream_index);
+  dma_clear_flag_tc(PORT.dma.dma, PORT.dma.rx_stream_index);
+  dma_clear_flag_tc(PORT.dma.dma, PORT.dma.tx_stream_index);
 
-    LL_SPI_DisableDMAReq_TX(PORT.channel);
-    LL_SPI_DisableDMAReq_RX(PORT.channel);
+  LL_DMA_DisableIT_TC(PORT.dma.dma, PORT.dma.rx_stream_index);
 
-    LL_DMA_DisableStream(PORT.dma.dma, PORT.dma.rx_stream_index);
-    LL_DMA_DisableStream(PORT.dma.dma, PORT.dma.tx_stream_index);
+  LL_SPI_DisableDMAReq_TX(PORT.channel);
+  LL_SPI_DisableDMAReq_RX(PORT.channel);
 
-    // now we can disable the peripheral
-    //LL_SPI_Disable(PORT.channel);
+  LL_DMA_DisableStream(PORT.dma.dma, PORT.dma.rx_stream_index);
+  LL_DMA_DisableStream(PORT.dma.dma, PORT.dma.tx_stream_index);
 
+  // now we can disable the peripheral
+  //LL_SPI_Disable(PORT.channel);
+
+  if (active_device[port]) {
+    spi_txn_dma_rx_isr(port);
+  } else {
 #if defined(ENABLE_OSD) && defined(MAX7456_SPI_PORT)
     if (port == MAX7456_SPI_PORT) {
       extern void max7456_dma_rx_isr();
