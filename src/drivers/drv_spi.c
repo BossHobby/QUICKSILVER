@@ -522,9 +522,13 @@ void spi_txn_continue(volatile spi_bus_device_t *bus) {
   spi_dma_transfer_begin(bus->port, (uint8_t *)bus->buffer + txn->offset, txn->size);
 }
 
+bool spi_txn_ready(volatile spi_bus_device_t *bus) {
+  return bus->txn_head == bus->txn_tail;
+}
+
 void spi_txn_wait(volatile spi_bus_device_t *bus) {
   spi_txn_continue(bus);
-  while (bus->txn_head != bus->txn_tail) {
+  while (!spi_txn_ready(bus)) {
     __WFI();
   }
 }
