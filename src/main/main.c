@@ -12,6 +12,7 @@
 #include "drv_rgb_led.h"
 #include "drv_serial.h"
 #include "drv_spi.h"
+#include "drv_spi_soft.h"
 #include "drv_time.h"
 #include "filter.h"
 #include "flash.h"
@@ -194,7 +195,7 @@ int main() {
     state.uptime += state.looptime;
     if (flags.arm_state)
       state.armtime += state.looptime;
-      
+
 #ifdef DEBUG
     debug.totaltime += state.looptime;
     lpf(&debug.timefilt, state.looptime, 0.998);

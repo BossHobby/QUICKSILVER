@@ -3,7 +3,7 @@
 #include "drv_time.h"
 #include "project.h"
 
-#ifdef SOFTSPI_3WIRE
+#ifdef USE_SOFT_SPI_3WIRE
 
 LL_GPIO_InitTypeDef mosi_init_struct;
 int mosi_out = 0;

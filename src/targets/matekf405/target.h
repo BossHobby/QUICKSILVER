@@ -37,7 +37,6 @@
 #define GYRO_ID_3 0x69
 
 //RADIO
-#define SOFTSPI_NONE
 #ifdef SERIAL_RX
 #define RX_USART USART_PORT1
 #endif

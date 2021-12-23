@@ -2,7 +2,7 @@
 
 #include "project.h"
 
-#ifdef SOFTSPI_NONE
+#if !defined(USE_SOFT_SPI_4WIRE) && !defined(USE_SOFT_SPI_3WIRE)
 // spi disabled (for pin setting)
 int lastbyte = 0;
 

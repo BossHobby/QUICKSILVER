@@ -102,8 +102,8 @@
 //#define RADIO_XN297L
 //#define RADIO_XN297
 
-//#define SOFTSPI_3WIRE
-//#define SOFTSPI_4WIRE
+//#define USE_SOFT_SPI_3WIRE
+//#define USE_SOFT_SPI_4WIRE
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING AUX_CHANNEL_0

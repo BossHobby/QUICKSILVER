@@ -4,7 +4,7 @@
 
 #include "project.h"
 
-#ifdef SOFTSPI_4WIRE
+#ifdef USE_SOFT_SPI_4WIRE
 
 void spi_init() {
   // spi port inits

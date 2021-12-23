@@ -42,13 +42,10 @@
 #define CC2500_NSS PIN_A15
 #define CC2500_GDO0_PIN PIN_C14
 #define CC2500_TX_EN_PIN PIN_A8
-
-#define SOFTSPI_NONE
 #endif
 
 #ifdef SERIAL_RX
 #define RX_USART USART_PORT2
-#define SOFTSPI_NONE
 #endif
 
 // OSD
