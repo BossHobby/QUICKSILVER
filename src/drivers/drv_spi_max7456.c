@@ -11,133 +11,97 @@
 
 #ifdef ENABLE_OSD
 
-// SPI PINS
-#define PORT spi_port_defs[MAX7456_SPI_PORT]
-
-#define DMA_RX_STREAM PORT.dma.rx_stream
-#define DMA_TX_STREAM PORT.dma.tx_stream
-#define DMA_RX_CHANNEL PORT.dma.channel
-#define DMA_TX_CHANNEL PORT.dma.channel
-#define DMA_RX_TCI_FLAG PORT.dma.rx_tci_flag
-#define DMA_TX_TCI_FLAG PORT.dma.tx_tci_flag
-#define DMA_RX_STREAM_IRQ PORT.dma.rx_it
-#define DMA_RX_IT_FLAG PORT.dma.rx_it_flag
-
-//  Initialize SPI Connection to max7456
-void spi_max7456_init() {
-
-  //*********************GPIO**************************************
-  spi_init_pins(MAX7456_SPI_PORT, MAX7456_NSS);
-
-  //*********************SPI/DMA**********************************
-  spi_enable_rcc(MAX7456_SPI_PORT);
-
-  // SPI Config
-  LL_SPI_DeInit(PORT.channel);
-  LL_SPI_InitTypeDef SPI_InitStructure;
-  SPI_InitStructure.TransferDirection = LL_SPI_FULL_DUPLEX;
-  SPI_InitStructure.Mode = LL_SPI_MODE_MASTER;
-  SPI_InitStructure.DataWidth = LL_SPI_DATAWIDTH_8BIT;
-  SPI_InitStructure.ClockPolarity = LL_SPI_POLARITY_LOW;
-  SPI_InitStructure.ClockPhase = LL_SPI_PHASE_1EDGE;
-  SPI_InitStructure.NSS = LL_SPI_NSS_SOFT;
-  SPI_InitStructure.BaudRate = spi_find_divder(MHZ_TO_HZ(10.5));
-  SPI_InitStructure.BitOrder = LL_SPI_MSB_FIRST;
-  SPI_InitStructure.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
-  SPI_InitStructure.CRCPoly = 7;
-  LL_SPI_Init(PORT.channel, &SPI_InitStructure);
-  LL_SPI_Enable(PORT.channel);
-
-  // Dummy read to clear receive buffer
-  while (LL_SPI_IsActiveFlag_TXE(PORT.channel) == RESET)
-    ;
-  LL_SPI_ReceiveData8(PORT.channel);
-
-  spi_dma_init(MAX7456_SPI_PORT);
-}
-
-// deinit/reinit spi for unique slave configuration
-void spi_max7556_reinit() {
-  spi_dma_wait_for_ready(MAX7456_SPI_PORT);
-
-  LL_SPI_Disable(PORT.channel);
-
-  // SPI Config
-  LL_SPI_DeInit(PORT.channel);
-  LL_SPI_InitTypeDef SPI_InitStructure;
-  SPI_InitStructure.TransferDirection = LL_SPI_FULL_DUPLEX;
-  SPI_InitStructure.Mode = LL_SPI_MODE_MASTER;
-  SPI_InitStructure.DataWidth = LL_SPI_DATAWIDTH_8BIT;
-  SPI_InitStructure.ClockPolarity = LL_SPI_POLARITY_LOW;
-  SPI_InitStructure.ClockPhase = LL_SPI_PHASE_1EDGE;
-  SPI_InitStructure.NSS = LL_SPI_NSS_SOFT;
-  SPI_InitStructure.BaudRate = spi_find_divder(MHZ_TO_HZ(10.5));
-  SPI_InitStructure.BitOrder = LL_SPI_MSB_FIRST;
-  SPI_InitStructure.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
-  SPI_InitStructure.CRCPoly = 7;
-  LL_SPI_Init(PORT.channel, &SPI_InitStructure);
-  LL_SPI_Enable(PORT.channel);
-}
-
-//*******************************************************************************SPI / DMA FUNCTIONS********************************************************************************
-
-#define BUSY 1
-#define READY 0
-volatile uint8_t osd_dma_status = READY; // for tracking the non blocking dma transactions - can be used to make non blocking into blocking
-
-// blocking dma read of a single register
-uint8_t max7456_dma_spi_read(uint8_t reg) {
-  spi_max7556_reinit();
-
-  uint8_t buffer[2] = {reg, 0xFF};
-
-  spi_csn_enable(MAX7456_NSS);
-  spi_dma_transfer_bytes(MAX7456_SPI_PORT, buffer, 2);
-  spi_csn_disable(MAX7456_NSS);
-
-  return buffer[1];
-}
-
-// blocking dma write of a single register
-void max7456_dma_spi_write(uint8_t reg, uint8_t data) {
-  spi_max7556_reinit();
-
-  uint8_t buffer[2] = {reg, data};
-  spi_csn_enable(MAX7456_NSS);
-  spi_dma_transfer_bytes(MAX7456_SPI_PORT, buffer, 2);
-  spi_csn_disable(MAX7456_NSS);
-}
-
-// non blocking bulk dma transmit for interrupt callback configuration
-void max7456_dma_it_transfer_bytes(uint8_t *buffer_address, uint8_t buffer_length) {
-  osd_dma_status = BUSY;
-  spi_max7556_reinit();
-
-  spi_csn_enable(MAX7456_NSS);
-  spi_dma_transfer_begin(MAX7456_SPI_PORT, buffer_address, buffer_length);
-}
-
-// callback function to disable csn
-void max7456_dma_rx_isr() {
-  spi_csn_disable(MAX7456_NSS);
-  osd_dma_status = READY;
-}
-
-//*******************************************************************************OSD FUNCTIONS********************************************************************************
+#define MAX7456_BAUD_RATE spi_find_divder(MHZ_TO_HZ(10.5))
 
 // osd video system ( PAL /NTSC) at startup if no video input is present
 // after input is present the last detected system will be used.
-uint8_t osdsystem = NTSC;
+static uint8_t osdsystem = NTSC;
+
 // detected osd video system starts at 99 and gets updated here by osd_checksystem()
 uint8_t lastsystem = 99;
-uint8_t lastvm0 = 0x55;
+static uint8_t lastvm0 = 0x55;
 
 static uint8_t dma_buffer[64];
 
 // TODO ... should we monitor lastvm0 and handle any unexpected changes using check_osd() ... not sure if/when an osd chip becomes unstable due to voltage or some other reason
 
-// stuffs a float into a char array.  parameters are array length and precision.  only pads spaces for 0's up to the thousands place.
+static volatile uint8_t buffer[128];
+static volatile spi_bus_device_t bus = {
+    .port = MAX7456_SPI_PORT,
+    .nss = MAX7456_NSS,
 
+    .buffer = buffer,
+    .buffer_size = 128,
+
+    .auto_continue = true,
+};
+
+// blocking dma read of a single register
+static uint8_t max7456_dma_spi_read(uint8_t reg) {
+  spi_bus_device_reconfigure(&bus, true, MAX7456_BAUD_RATE);
+
+  uint8_t buffer[2] = {reg, 0xFF};
+
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg(txn, buffer, buffer, 2);
+  spi_txn_submit(txn);
+
+  spi_txn_wait(&bus);
+
+  return buffer[1];
+}
+
+// blocking dma write of a single register
+static void max7456_dma_spi_write(uint8_t reg, uint8_t data) {
+  spi_bus_device_reconfigure(&bus, true, MAX7456_BAUD_RATE);
+
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg_const(txn, reg);
+  spi_txn_add_seg_const(txn, data);
+  spi_txn_submit(txn);
+
+  spi_txn_wait(&bus);
+}
+
+// establish initial boot-up state
+void max7456_init() {
+  spi_bus_device_init(&bus);
+  spi_bus_device_reconfigure(&bus, true, MAX7456_BAUD_RATE);
+
+  max7456_dma_spi_write(VM0, 0x02); // soft reset
+  time_delay_us(200);
+
+  const uint8_t x = max7456_dma_spi_read(OSDBL_R);
+  max7456_dma_spi_write(OSDBL_W, x | 0x10);
+
+  if (osdsystem == PAL) {
+    max7456_dma_spi_write(VM0, 0x72); // Set pal mode ( ntsc by default) and enable display
+    lastvm0 = 0x72;
+  } else {
+    max7456_dma_spi_write(VM0, 0x08); // Set ntsc mode and enable display
+    lastvm0 = 0x08;
+  }
+
+  max7456_dma_spi_write(VM1, 0x0C);  // set background brightness (bits 456), blinking time(bits 23), blinking duty cycle (bits 01)
+  max7456_dma_spi_write(OSDM, 0x2D); // osd mux & rise/fall ( lowest sharpness)
+
+  osd_checksystem();
+}
+
+// non blocking bulk dma transmit for interrupt callback configuration
+static void max7456_dma_it_transfer_bytes(const uint8_t *buffer, const uint8_t size) {
+  spi_bus_device_reconfigure(&bus, true, MAX7456_BAUD_RATE);
+
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg(txn, NULL, buffer, size);
+  spi_txn_submit(txn);
+
+  spi_txn_continue(&bus);
+}
+
+//*******************************************************************************OSD FUNCTIONS********************************************************************************
+
+// stuffs a float into a char array.  parameters are array length and precision.  only pads spaces for 0's up to the thousands place.
 uint8_t count_digits(uint32_t value) {
   uint8_t count = 0;
   while (value > 0) {
@@ -239,14 +203,13 @@ void osd_print(const char *buffer, uint8_t dmm_attribute, uint8_t x, uint8_t y) 
 void osd_clear() {
   for (uint8_t y = 0; y < MAXROWS; y++) { // CHAR , ATTRIBUTE , COL , ROW
     osd_print("          ", TEXT, 0, y);
-    while (osd_dma_status == BUSY) {
-    };
+    spi_txn_wait(&bus);
+
     osd_print("          ", TEXT, 10, y);
-    while (osd_dma_status == BUSY) {
-    };
+    spi_txn_wait(&bus);
+
     osd_print("          ", TEXT, 20, y);
-    while (osd_dma_status == BUSY) {
-    };
+    spi_txn_wait(&bus);
   }
 }
 
@@ -311,32 +274,13 @@ void osd_checksystem() {
       {
         if (warning_sent == 1)
           osd_print("NO CAMERA SIGNAL", BLINK, SYSTEMXPOS, SYSTEMYPOS);
-        while (osd_dma_status == BUSY) {
-        };
+
+        spi_txn_wait(&bus);
         warning_sent++;
         lastsystem = 2;
       }
     }
   }
-}
-
-// establish initial boot-up state
-void max7456_init() {
-  uint8_t x;
-  max7456_dma_spi_write(VM0, 0x02); // soft reset
-  time_delay_us(200);
-  x = max7456_dma_spi_read(OSDBL_R);
-  max7456_dma_spi_write(OSDBL_W, x | 0x10);
-  if (osdsystem == PAL) {
-    max7456_dma_spi_write(VM0, 0x72); // Set pal mode ( ntsc by default) and enable display
-    lastvm0 = 0x72;
-  } else {
-    max7456_dma_spi_write(VM0, 0x08); // Set ntsc mode and enable display
-    lastvm0 = 0x08;
-  }
-  max7456_dma_spi_write(VM1, 0x0C);  // set background brightness (bits 456), blinking time(bits 23), blinking duty cycle (bits 01)
-  max7456_dma_spi_write(OSDM, 0x2D); // osd mux & rise/fall ( lowest sharpness)
-  osd_checksystem();
 }
 
 // splash screen
@@ -348,8 +292,7 @@ void osd_intro() {
       buffer[i] = start + i;
     }
     osd_print_data(buffer, 24, TEXT, 3, row + 5);
-    while (osd_dma_status == BUSY)
-      ;
+    spi_txn_wait(&bus);
   }
 }
 
@@ -376,8 +319,7 @@ void check_osd() {
 
 void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size) {
   // make sure we do not collide with a dma write
-  while (osd_dma_status == BUSY)
-    ;
+  spi_txn_wait(&bus);
 
   // disable osd
   max7456_dma_spi_write(VM0, 0x0);
@@ -402,8 +344,7 @@ void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size) {
 
 void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size) {
   // make sure we do not collide with a dma write
-  while (osd_dma_status == BUSY)
-    ;
+  spi_txn_wait(&bus);
 
   // disable osd
   max7456_dma_spi_write(VM0, 0x0);
@@ -463,7 +404,7 @@ void osd_txn_submit(osd_transaction_t *txn) {
 }
 
 bool osd_is_ready() {
-  return osd_dma_status == READY;
+  return spi_txn_ready(&bus);
 }
 
 #endif
