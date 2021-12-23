@@ -103,10 +103,14 @@ bool spi_dma_wait_for_ready(spi_ports_t port);
 void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length);
 void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length);
 
-void spi_bus_device_init(volatile spi_bus_device_t *bus, LL_SPI_InitTypeDef *init);
+void spi_bus_device_init(volatile spi_bus_device_t *bus);
+void spi_bus_device_reconfigure(volatile spi_bus_device_t *bus, bool leading_edge, uint32_t baud_rate);
+
 spi_txn_t *spi_txn_init(volatile spi_bus_device_t *bus, void (*done_fn)());
 void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size);
-void spi_txn_add_live_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size);
+void spi_txn_add_seg_delay(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size);
+void spi_txn_add_seg_const(spi_txn_t *txn, const uint8_t tx_data);
 void spi_txn_submit(spi_txn_t *txn);
+
 void spi_txn_continue(volatile spi_bus_device_t *bus);
 void spi_txn_wait(volatile spi_bus_device_t *bus);

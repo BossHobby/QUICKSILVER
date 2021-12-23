@@ -388,16 +388,28 @@ void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length) 
 
 static volatile spi_bus_device_t *active_device[SPI_PORTS_MAX];
 
-void spi_bus_device_init(volatile spi_bus_device_t *bus, LL_SPI_InitTypeDef *init) {
+void spi_bus_device_init(volatile spi_bus_device_t *bus) {
   bus->txn_head = 0;
   bus->txn_tail = 0;
 
   spi_init_pins(bus->port, bus->nss);
-
   spi_enable_rcc(bus->port);
 
   LL_SPI_DeInit(spi_port_defs[bus->port].channel);
-  LL_SPI_Init(spi_port_defs[bus->port].channel, init);
+
+  LL_SPI_InitTypeDef default_init;
+  default_init.TransferDirection = LL_SPI_FULL_DUPLEX;
+  default_init.Mode = LL_SPI_MODE_MASTER;
+  default_init.DataWidth = LL_SPI_DATAWIDTH_8BIT;
+  default_init.ClockPolarity = LL_SPI_POLARITY_LOW;
+  default_init.ClockPhase = LL_SPI_PHASE_1EDGE;
+  default_init.NSS = LL_SPI_NSS_SOFT;
+  default_init.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV256;
+  default_init.BitOrder = LL_SPI_MSB_FIRST;
+  default_init.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
+  default_init.CRCPoly = 7;
+  LL_SPI_Init(spi_port_defs[bus->port].channel, &default_init);
+
   LL_SPI_Enable(spi_port_defs[bus->port].channel);
 
   // Dummy read to clear receive buffer
@@ -406,6 +418,21 @@ void spi_bus_device_init(volatile spi_bus_device_t *bus, LL_SPI_InitTypeDef *ini
   LL_SPI_ReceiveData8(spi_port_defs[bus->port].channel);
 
   spi_dma_init(bus->port);
+}
+
+void spi_bus_device_reconfigure(volatile spi_bus_device_t *bus, bool leading_edge, uint32_t baud_rate) {
+  spi_dma_wait_for_ready(bus->port);
+
+  LL_SPI_Disable(spi_port_defs[bus->port].channel);
+  LL_SPI_SetBaudRatePrescaler(spi_port_defs[bus->port].channel, baud_rate);
+  if (leading_edge) {
+    LL_SPI_SetClockPhase(spi_port_defs[bus->port].channel, LL_SPI_PHASE_1EDGE);
+    LL_SPI_SetClockPolarity(spi_port_defs[bus->port].channel, LL_SPI_POLARITY_LOW);
+  } else {
+    LL_SPI_SetClockPhase(spi_port_defs[bus->port].channel, LL_SPI_PHASE_2EDGE);
+    LL_SPI_SetClockPolarity(spi_port_defs[bus->port].channel, LL_SPI_POLARITY_HIGH);
+  }
+  LL_SPI_Enable(spi_port_defs[bus->port].channel);
 }
 
 spi_txn_t *spi_txn_init(volatile spi_bus_device_t *bus, void (*done_fn)()) {
@@ -428,7 +455,7 @@ spi_txn_t *spi_txn_init(volatile spi_bus_device_t *bus, void (*done_fn)()) {
   return (spi_txn_t *)txn;
 }
 
-void spi_txn_add_live_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size) {
+void spi_txn_add_seg_delay(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size) {
   txn->size += size;
 
   txn->segments[txn->segment_count].live = true;
@@ -451,6 +478,10 @@ void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, u
   txn->segments[txn->segment_count].tx_data = tx_data;
   txn->segments[txn->segment_count].size = size;
   txn->segment_count++;
+}
+
+void spi_txn_add_seg_const(spi_txn_t *txn, const uint8_t tx_data) {
+  spi_txn_add_seg(txn, NULL, &tx_data, 1);
 }
 
 void spi_txn_submit(spi_txn_t *txn) {
@@ -489,6 +520,7 @@ void spi_txn_continue(volatile spi_bus_device_t *bus) {
 }
 
 void spi_txn_wait(volatile spi_bus_device_t *bus) {
+  spi_txn_continue(bus);
   while (bus->txn_head != bus->txn_tail) {
     __WFI();
   }
