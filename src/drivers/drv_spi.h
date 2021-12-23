@@ -115,4 +115,5 @@ void spi_txn_add_seg_const(spi_txn_t *txn, const uint8_t tx_data);
 void spi_txn_submit(spi_txn_t *txn);
 
 void spi_txn_continue(volatile spi_bus_device_t *bus);
+bool spi_txn_ready(volatile spi_bus_device_t *bus);
 void spi_txn_wait(volatile spi_bus_device_t *bus);
