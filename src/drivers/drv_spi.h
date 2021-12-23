@@ -75,8 +75,10 @@ typedef struct spi_bus_device {
   spi_ports_t port;
   gpio_pins_t nss;
 
-  uint8_t *buffer;
+  volatile uint8_t *buffer;
   uint32_t buffer_size;
+
+  bool auto_continue;
 
   uint8_t txn_head;
   uint8_t txn_tail;

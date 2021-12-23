@@ -467,9 +467,9 @@ void spi_txn_add_seg_delay(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_d
 
 void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size) {
   if (tx_data) {
-    memcpy(txn->bus->buffer + txn->offset + txn->size, tx_data, size);
+    memcpy((uint8_t *)txn->bus->buffer + txn->offset + txn->size, tx_data, size);
   } else {
-    memset(txn->bus->buffer + txn->offset + txn->size, 0xFF, size);
+    memset((uint8_t *)txn->bus->buffer + txn->offset + txn->size, 0xFF, size);
   }
   txn->size += size;
 
@@ -495,6 +495,9 @@ void spi_txn_continue(volatile spi_bus_device_t *bus) {
   if (!spi_dma_is_ready(bus->port)) {
     return;
   }
+  if (active_device[bus->port] != NULL && active_device[bus->port] != bus) {
+    return;
+  }
 
   const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
 
@@ -510,13 +513,13 @@ void spi_txn_continue(volatile spi_bus_device_t *bus) {
   for (uint32_t i = 0; i < txn->segment_count; ++i) {
     volatile spi_txn_segment_t *seg = &txn->segments[i];
     if (seg->live && seg->tx_data) {
-      memcpy(txn->bus->buffer + txn->offset + txn_size, seg->tx_data, seg->size);
+      memcpy((uint8_t *)txn->bus->buffer + txn->offset + txn_size, seg->tx_data, seg->size);
     }
     txn_size += seg->size;
   }
 
   spi_csn_enable(bus->nss);
-  spi_dma_transfer_begin(bus->port, bus->buffer + txn->offset, txn->size);
+  spi_dma_transfer_begin(bus->port, (uint8_t *)bus->buffer + txn->offset, txn->size);
 }
 
 void spi_txn_wait(volatile spi_bus_device_t *bus) {
@@ -537,18 +540,22 @@ static void spi_txn_dma_rx_isr(spi_ports_t port) {
   for (uint32_t i = 0; i < txn->segment_count; ++i) {
     volatile spi_txn_segment_t *seg = &txn->segments[i];
     if (seg->rx_data) {
-      memcpy(seg->rx_data, txn->bus->buffer + txn->offset + txn_size, seg->size);
+      memcpy(seg->rx_data, (uint8_t *)txn->bus->buffer + txn->offset + txn_size, seg->size);
     }
     txn_size += seg->size;
   }
 
-  DMA_TRANSFER_DONE = 1;
   active_device[port] = NULL;
   txn->status = TXN_DONE;
   bus->txn_tail = tail;
+  DMA_TRANSFER_DONE = 1;
 
   if (txn->done_fn) {
     txn->done_fn();
+  }
+
+  if (txn->bus->auto_continue) {
+    spi_txn_continue(bus);
   }
 }
 
