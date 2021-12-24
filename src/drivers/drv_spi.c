@@ -40,14 +40,25 @@
       .dma = SPI_DMA##chan,                         \
   },
 
-const volatile spi_port_def_t spi_port_defs[SPI_PORTS_MAX] = {{}, SPI_PORTS};
+const spi_port_def_t spi_port_defs[SPI_PORTS_MAX] = {{}, SPI_PORTS};
 
 #undef SPI_PORT
 #undef SPI_DMA
 
-#define SPI_PORT(chan, sck_pin, miso_pin, mosi_pin) NULL,
+typedef struct {
+  volatile spi_bus_device_t *active_device;
+  spi_mode_t mode;
+  uint32_t divider;
+} spi_port_config_t;
 
-static volatile spi_bus_device_t *active_device[SPI_PORTS_MAX] = {NULL, SPI_PORTS};
+#define SPI_PORT(chan, sck_pin, miso_pin, mosi_pin) \
+  {                                                 \
+      .active_device = NULL,                        \
+      .mode = SPI_MODE_INVALID,                     \
+      .divider = 0,                                 \
+  },
+
+static volatile spi_port_config_t spi_port_config[SPI_PORTS_MAX] = {{}, SPI_PORTS};
 
 #undef SPI_PORT
 
@@ -424,15 +435,21 @@ void spi_bus_device_init(volatile spi_bus_device_t *bus) {
   spi_dma_init(bus->port);
 }
 
-void spi_bus_device_reconfigure(volatile spi_bus_device_t *bus, bool leading_edge, uint32_t baud_rate) {
+void spi_bus_device_reconfigure(volatile spi_bus_device_t *bus, spi_mode_t mode, uint32_t divider) {
+  if (spi_port_config[bus->port].mode == mode && spi_port_config[bus->port].divider == divider) {
+    return;
+  }
+  spi_port_config[bus->port].mode = mode;
+  spi_port_config[bus->port].divider = divider;
+
   spi_dma_wait_for_ready(bus->port);
 
   LL_SPI_Disable(spi_port_defs[bus->port].channel);
-  LL_SPI_SetBaudRatePrescaler(spi_port_defs[bus->port].channel, baud_rate);
-  if (leading_edge) {
+  LL_SPI_SetBaudRatePrescaler(spi_port_defs[bus->port].channel, divider);
+  if (mode == SPI_MODE_LEADING_EDGE) {
     LL_SPI_SetClockPhase(spi_port_defs[bus->port].channel, LL_SPI_PHASE_1EDGE);
     LL_SPI_SetClockPolarity(spi_port_defs[bus->port].channel, LL_SPI_POLARITY_LOW);
-  } else {
+  } else if (mode == SPI_MODE_TRAILING_EDGE) {
     LL_SPI_SetClockPhase(spi_port_defs[bus->port].channel, LL_SPI_PHASE_2EDGE);
     LL_SPI_SetClockPolarity(spi_port_defs[bus->port].channel, LL_SPI_POLARITY_HIGH);
   }
@@ -499,7 +516,8 @@ void spi_txn_continue(volatile spi_bus_device_t *bus) {
   if (!spi_dma_is_ready(bus->port)) {
     return;
   }
-  if (active_device[bus->port] != NULL && active_device[bus->port] != bus) {
+  if (spi_port_config[bus->port].active_device != NULL &&
+      spi_port_config[bus->port].active_device != bus) {
     return;
   }
 
@@ -510,7 +528,7 @@ void spi_txn_continue(volatile spi_bus_device_t *bus) {
     return;
   }
 
-  active_device[bus->port] = bus;
+  spi_port_config[bus->port].active_device = bus;
   txn->status = TXN_IN_PROGRESS;
 
   uint32_t txn_size = 0;
@@ -538,7 +556,7 @@ void spi_txn_wait(volatile spi_bus_device_t *bus) {
 }
 
 static void spi_txn_dma_rx_isr(spi_ports_t port) {
-  volatile spi_bus_device_t *bus = active_device[port];
+  volatile spi_bus_device_t *bus = spi_port_config[port].active_device;
   spi_csn_disable(bus->nss);
 
   const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
@@ -553,7 +571,7 @@ static void spi_txn_dma_rx_isr(spi_ports_t port) {
     txn_size += seg->size;
   }
 
-  active_device[port] = NULL;
+  spi_port_config[port].active_device = NULL;
   txn->status = TXN_DONE;
   bus->txn_tail = tail;
   DMA_TRANSFER_DONE = 1;
@@ -586,7 +604,7 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   // now we can disable the peripheral
   //LL_SPI_Disable(PORT.channel);
 
-  if (active_device[port]) {
+  if (spi_port_config[port].active_device) {
     spi_txn_dma_rx_isr(port);
   } else {
 #if defined(ENABLE_OSD) && defined(MAX7456_SPI_PORT)
