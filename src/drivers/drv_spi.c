@@ -45,6 +45,12 @@ const volatile spi_port_def_t spi_port_defs[SPI_PORTS_MAX] = {{}, SPI_PORTS};
 #undef SPI_PORT
 #undef SPI_DMA
 
+#define SPI_PORT(chan, sck_pin, miso_pin, mosi_pin) NULL,
+
+static volatile spi_bus_device_t *active_device[SPI_PORTS_MAX] = {NULL, SPI_PORTS};
+
+#undef SPI_PORT
+
 #define PORT spi_port_defs[port]
 
 int liberror = 0;
@@ -385,8 +391,6 @@ void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length) 
 
   DMA_TRANSFER_DONE = 1;
 }
-
-static volatile spi_bus_device_t *active_device[SPI_PORTS_MAX];
 
 void spi_bus_device_init(volatile spi_bus_device_t *bus) {
   bus->txn_head = 0;
