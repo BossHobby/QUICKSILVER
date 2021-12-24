@@ -439,7 +439,7 @@ void spi_bus_device_reconfigure(volatile spi_bus_device_t *bus, bool leading_edg
   LL_SPI_Enable(spi_port_defs[bus->port].channel);
 }
 
-spi_txn_t *spi_txn_init(volatile spi_bus_device_t *bus, void (*done_fn)()) {
+spi_txn_t *spi_txn_init(volatile spi_bus_device_t *bus, spi_txn_done_fn_t done_fn) {
   bus->txn_head = (bus->txn_head + 1) % SPI_TXN_MAX;
 
   volatile spi_txn_t *txn = &bus->txns[bus->txn_head];
