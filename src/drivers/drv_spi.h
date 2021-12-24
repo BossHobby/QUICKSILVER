@@ -57,6 +57,8 @@ typedef enum {
   TXN_DONE,
 } spi_txn_status_t;
 
+typedef void (*spi_txn_done_fn_t)();
+
 typedef struct {
   volatile struct spi_bus_device *bus;
 
@@ -68,7 +70,7 @@ typedef struct {
   uint32_t offset;
   uint32_t size;
 
-  void (*done_fn)();
+  spi_txn_done_fn_t done_fn;
 } spi_txn_t;
 
 typedef struct spi_bus_device {
@@ -108,7 +110,7 @@ void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length);
 void spi_bus_device_init(volatile spi_bus_device_t *bus);
 void spi_bus_device_reconfigure(volatile spi_bus_device_t *bus, bool leading_edge, uint32_t baud_rate);
 
-spi_txn_t *spi_txn_init(volatile spi_bus_device_t *bus, void (*done_fn)());
+spi_txn_t *spi_txn_init(volatile spi_bus_device_t *bus, spi_txn_done_fn_t done_fn);
 void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size);
 void spi_txn_add_seg_delay(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size);
 void spi_txn_add_seg_const(spi_txn_t *txn, const uint8_t tx_data);
