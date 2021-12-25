@@ -32,7 +32,7 @@
 
 #define ON_GROUND_LONG_TIMEOUT 1e6
 
-control_flags_t flags = {
+FAST_RAM control_flags_t flags = {
     .arm_state = 0,
     .arm_safety = 1,
     .throttle_safety = 0,
@@ -53,7 +53,7 @@ control_flags_t flags = {
     .usb_active = 0,
 };
 
-control_state_t state = {
+FAST_RAM control_state_t state = {
     .aux = {0},
 
     .vbattfilt = 0.0,

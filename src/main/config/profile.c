@@ -474,7 +474,7 @@ target_info_t target_info = {
 #pragma GCC diagnostic pop
 
 // the actual profile
-profile_t profile;
+FAST_RAM profile_t profile;
 
 void profile_set_defaults() {
   memcpy(&profile, &default_profile, sizeof(profile_t));
