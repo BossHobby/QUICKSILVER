@@ -39,6 +39,12 @@
 
 #endif
 
+#ifdef USE_FAST_RAM
+#define FAST_RAM __attribute__((section(".fast_ram"), aligned(4)))
+#else
+#define FAST_RAM
+#endif
+
 #ifdef BRUSHLESS_TARGET
 // dshot pin initialization & usb interface to esc
 #define USE_DSHOT_DMA_DRIVER
