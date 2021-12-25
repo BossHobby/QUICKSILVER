@@ -54,6 +54,8 @@
 #define BMI270_ACC_RANGE_8G 0x02          // set acc to 8G full scale
 #define BMI270_ACC_RANGE_16G 0x03         // set acc to 16G full scale
 #define BMI270_GYRO_CONF_ODR3200 0x0D     // set gyro sample rate to 3200hz
+#define BMI270_GYRO_CONF_ODR6400 0x0e     // set gyro sample rate to 6400hz
+#define BMI270_GYRO_CONF_ODR12800 0x0f    // set gyro sample rate to 12800hz
 #define BMI270_GYRO_CONF_BWP 0x02         // set gyro filter in normal mode
 #define BMI270_GYRO_CONF_NOISE_PERF 0x01  // set gyro in high performance noise mode
 #define BMI270_GYRO_CONF_FILTER_PERF 0x01 // set gyro in high performance filter mode

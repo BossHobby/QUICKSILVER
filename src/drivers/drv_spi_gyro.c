@@ -53,10 +53,6 @@ gyro_data_t spi_gyro_read() {
     data.gyro.axis[1] = (int16_t)((buf[7] << 8) + buf[6]);
     data.gyro.axis[0] = (int16_t)((buf[9] << 8) + buf[8]);
     data.gyro.axis[2] = (int16_t)((buf[11] << 8) + buf[10]);
-
-    bmi270_read_data(BMI270_REG_TEMPERATURE_LSB, buf, 3);
-    data.temp = 23 + ((int32_t)((int16_t)((buf[2] << 8) | buf[1])) >> 9);
-
     break;
   }
   case MPU6XXX:
