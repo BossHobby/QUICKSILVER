@@ -48,6 +48,12 @@ void perf_counter_update() {
   loop_counter++;
 }
 
+#define ENCODE_CYCLES(val)                                     \
+  {                                                            \
+    const uint32_t us = (val) / (SYS_CLOCK_FREQ_HZ / 1000000); \
+    CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &us));      \
+  }
+
 cbor_result_t cbor_encode_perf_counters(cbor_value_t *enc) {
   CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_array_indefinite(enc));
 
@@ -55,13 +61,13 @@ cbor_result_t cbor_encode_perf_counters(cbor_value_t *enc) {
     CBOR_CHECK_ERROR(res = cbor_encode_map_indefinite(enc));
 
     CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "min"));
-    CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &perf_counters[i].min));
+    ENCODE_CYCLES(perf_counters[i].min)
 
     CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "max"));
-    CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &perf_counters[i].max));
+    ENCODE_CYCLES(perf_counters[i].max)
 
     CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "current"));
-    CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &perf_counters[i].current));
+    ENCODE_CYCLES(perf_counters[i].current)
 
     CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
   }
