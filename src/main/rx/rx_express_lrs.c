@@ -77,6 +77,7 @@ static volatile elrs_state_t elrs_state = DISCONNECTED;
 static volatile bool already_hop = false;
 static volatile bool already_tlm = false;
 
+static bool radio_is_init = false;
 static bool in_binding_mode = false;
 static bool has_model_match = false;
 
@@ -589,6 +590,7 @@ void elrs_handle_tock() {
 
 void rx_init() {
   if (!elrs_radio_init()) {
+    radio_is_init = false;
     return;
   }
 
@@ -610,9 +612,15 @@ void rx_init() {
   elrs_set_rate(next_rate, fhss_get_sync_freq(), (UID[5] & 0x01));
   elrs_timer_init(current_air_rate_config()->interval);
   elrs_enter_rx(packet);
+
+  radio_is_init = true;
 }
 
 void rx_check() {
+  if (!radio_is_init) {
+    return;
+  }
+
   const uint32_t time = time_micros();
 
   static uint32_t last_time = 0;
