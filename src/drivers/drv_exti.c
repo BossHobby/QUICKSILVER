@@ -69,11 +69,13 @@ static void exti_set_source(gpio_pins_t pin) {
   case (uint32_t)GPIOG:
     LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTG, LINE.syscfg_exti_line);
     break;
-
 #endif
+
+#if defined(GPIOH)
   case (uint32_t)GPIOH:
     LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTH, LINE.syscfg_exti_line);
     break;
+#endif
 
 #if defined(GPIOI)
   case (uint32_t)GPIOI:
