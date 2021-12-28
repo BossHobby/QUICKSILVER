@@ -139,7 +139,7 @@ static void handle_exit_isr() {
   }
 #endif
 
-#if defined(USE_SX128X) && defined(SX12XX_BUSY_PIN)
+#if defined(USE_SX128X) && defined(USE_SX128X_BUSY_EXTI) && defined(SX12XX_BUSY_PIN)
   if (exti_line_active(SX12XX_BUSY_PIN)) {
     extern void sx128x_handle_busy_exti(bool);
     sx128x_handle_busy_exti(gpio_pin_read(SX12XX_BUSY_PIN));
