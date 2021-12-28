@@ -87,6 +87,7 @@ typedef struct spi_bus_device {
   uint32_t buffer_size;
 
   bool auto_continue;
+  bool (*poll_fn)();
 
   uint8_t txn_head;
   uint8_t txn_tail;

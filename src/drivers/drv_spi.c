@@ -520,6 +520,9 @@ void spi_txn_continue(volatile spi_bus_device_t *bus) {
       spi_port_config[bus->port].active_device != bus) {
     return;
   }
+  if (bus->poll_fn && !bus->poll_fn()) {
+    return;
+  }
 
   const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
 
