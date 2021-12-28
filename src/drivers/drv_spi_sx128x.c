@@ -17,6 +17,8 @@
 
 #define PORT spi_port_defs[SX12XX_SPI_PORT]
 
+static bool sx128x_poll_for_not_busy();
+
 static volatile uint8_t dma_buffer[1024];
 static volatile spi_bus_device_t bus = {
     .port = SX12XX_SPI_PORT,
@@ -25,7 +27,8 @@ static volatile spi_bus_device_t bus = {
     .buffer = dma_buffer,
     .buffer_size = 1024,
 
-    .auto_continue = false,
+    .auto_continue = true,
+    .poll_fn = sx128x_poll_for_not_busy,
 };
 
 volatile uint8_t dio0_active = 0;
@@ -46,7 +49,9 @@ void sx128x_init() {
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
   gpio_pin_init(&gpio_init, SX12XX_BUSY_PIN);
+#ifdef USE_SX128X_BUSY_EXTI
   exti_enable(SX12XX_BUSY_PIN, LL_EXTI_TRIGGER_FALLING);
+#endif
 
   gpio_pin_init(&gpio_init, SX12XX_DIO0_PIN);
   exti_enable(SX12XX_DIO0_PIN, LL_EXTI_TRIGGER_RISING);
@@ -70,16 +75,19 @@ static bool sx128x_is_busy() {
   return gpio_pin_read(SX12XX_BUSY_PIN);
 }
 
-static bool sx128x_wait_for_ready() {
+static bool sx128x_poll_for_not_busy() {
+#ifdef USE_SX128X_BUSY_EXTI
+  return !sx128x_is_busy();
+#else
   const uint32_t start = time_micros();
   while (sx128x_is_busy()) {
     if ((time_micros() - start) > busy_timeout) {
-      return false;
+      break;
     }
     __NOP();
   }
-  __NOP();
   return true;
+#endif
 }
 
 void read_command_txn(spi_txn_t *txn, const sx128x_commands_t cmd, uint8_t *data, const uint8_t size) {
@@ -115,11 +123,17 @@ static void sx128x_handle_irq_status() {
 }
 
 static void sx128x_txn_wait() {
-  if (!sx128x_is_busy() || !sx128x_wait_for_ready()) {
-    // it we are not busy or we timeout, kick manually
-    spi_txn_continue(&bus);
-  }
+  const uint32_t start = time_micros();
   while (!spi_txn_ready(&bus)) {
+    if ((time_micros() - start) > busy_timeout) {
+#ifdef USE_SX128X_BUSY_EXTI
+      bus.poll_fn = NULL;
+      spi_txn_continue(&bus);
+      bus.poll_fn = sx128x_poll_for_not_busy;
+#endif
+      return;
+    }
+    spi_txn_continue(&bus);
     __WFI();
   }
 }
@@ -141,16 +155,16 @@ void sx128x_handle_dio0_exti(bool level) {
     spi_txn_submit(txn);
   }
 
-  if (!sx128x_is_busy()) {
-    spi_txn_continue(&bus);
-  }
+  spi_txn_continue(&bus);
 }
 
+#ifdef USE_SX128X_BUSY_EXTI
 void sx128x_handle_busy_exti(bool level) {
   if (!level) {
     spi_txn_continue(&bus);
   }
 }
+#endif
 
 uint16_t sx128x_read_dio0() {
   register uint8_t active = 0;
@@ -300,9 +314,7 @@ void sx128x_set_mode_async(const sx128x_modes_t mode) {
     break;
   }
 
-  if (!sx128x_is_busy()) {
-    spi_txn_continue(&bus);
-  }
+  spi_txn_continue(&bus);
 }
 
 void sx128x_set_mode(const sx128x_modes_t mode) {
