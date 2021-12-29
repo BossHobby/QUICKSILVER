@@ -179,4 +179,3 @@ void sx128x_set_dio_irq_params(const uint16_t irq_mask, const uint16_t dio1_mask
 void sx128x_set_output_power(const int8_t power);
 
 void sx128x_clear_irq_status(const uint16_t irq_mask);
-uint16_t sx128x_get_irq_status();
