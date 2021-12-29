@@ -122,7 +122,7 @@ static void sx128x_handle_irq_status() {
   }
 }
 
-static void sx128x_txn_wait() {
+void sx128x_wait() {
   const uint32_t start = time_micros();
   while (!spi_txn_ready(&bus)) {
     if ((time_micros() - start) > busy_timeout) {
@@ -198,7 +198,7 @@ void sx128x_read_register_burst(const uint16_t reg, uint8_t *data, const uint8_t
 uint8_t sx128x_read_register(const uint16_t reg) {
   uint8_t data = 0;
   sx128x_read_register_burst(reg, &data, 1);
-  sx128x_txn_wait();
+  sx128x_wait();
   return data;
 }
 
@@ -265,10 +265,6 @@ void sx128x_write_tx_buffer(const uint8_t offset, const volatile uint8_t *data, 
   spi_txn_submit(txn);
 }
 
-void sx128x_wait() {
-  sx128x_txn_wait();
-}
-
 void sx128x_set_mode_async(const sx128x_modes_t mode) {
   switch (mode) {
   case SX1280_MODE_SLEEP:
@@ -319,7 +315,7 @@ void sx128x_set_mode_async(const sx128x_modes_t mode) {
 
 void sx128x_set_mode(const sx128x_modes_t mode) {
   sx128x_set_mode_async(mode);
-  sx128x_txn_wait();
+  sx128x_wait();
 }
 
 void sx128x_config_lora_mod_params(const sx128x_lora_bandwidths_t bw, const sx128x_lora_spreading_factors_t sf, const sx128x_lora_coding_rates_t cr) {
@@ -333,7 +329,6 @@ void sx128x_config_lora_mod_params(const sx128x_lora_bandwidths_t bw, const sx12
   rfparams[2] = (uint8_t)cr;
 
   sx128x_write_command_burst(SX1280_RADIO_SET_MODULATIONPARAMS, rfparams, 3);
-  sx128x_txn_wait();
 
   switch (sf) {
   case SX1280_LORA_SF5:
@@ -347,7 +342,7 @@ void sx128x_config_lora_mod_params(const sx128x_lora_bandwidths_t bw, const sx12
   default:
     sx128x_write_register(0x925, 0x32); // for SF9, SF10, SF11, SF12
   }
-  sx128x_txn_wait();
+  sx128x_wait();
 }
 
 void sx128x_set_packet_params(const uint8_t preamble_length, const sx128x_lora_packet_lengths_modes_t header_type, const uint8_t payload_length, const sx128x_lora_crc_modes_t crc, const sx128x_lora_iq_modes_t invert_iq) {
@@ -361,7 +356,7 @@ void sx128x_set_packet_params(const uint8_t preamble_length, const sx128x_lora_p
       0x00,
   };
   sx128x_write_command_burst(SX1280_RADIO_SET_PACKETPARAMS, buf, 7);
-  sx128x_txn_wait();
+  sx128x_wait();
 }
 
 void sx128x_set_frequency(const uint32_t freq) {
@@ -379,7 +374,7 @@ void sx128x_set_fifo_addr(const uint8_t tx_base_addr, const uint8_t rx_base_addr
       rx_base_addr,
   };
   sx128x_write_command_burst(SX1280_RADIO_SET_BUFFERBASEADDRESS, buf, 2);
-  sx128x_txn_wait();
+  sx128x_wait();
 }
 
 void sx128x_set_dio_irq_params(const uint16_t irq_mask, const uint16_t dio1_mask, const uint16_t dio2_mask, const uint16_t dio3_mask) {
@@ -394,7 +389,7 @@ void sx128x_set_dio_irq_params(const uint16_t irq_mask, const uint16_t dio1_mask
       (uint8_t)(dio3_mask & 0x00FF),
   };
   sx128x_write_command_burst(SX1280_RADIO_SET_DIOIRQPARAMS, buf, 8);
-  sx128x_txn_wait();
+  sx128x_wait();
 }
 
 void sx128x_clear_irq_status(const uint16_t irq_mask) {
@@ -403,14 +398,7 @@ void sx128x_clear_irq_status(const uint16_t irq_mask) {
       (uint8_t)((uint16_t)irq_mask & 0x00FF),
   };
   sx128x_write_command_burst(SX1280_RADIO_CLR_IRQSTATUS, buf, 2);
-  sx128x_txn_wait();
-}
-
-uint16_t sx128x_get_irq_status() {
-  uint8_t status[2] = {0, 0};
-  sx128x_read_command_burst(SX1280_RADIO_GET_IRQSTATUS, status, 2);
-  sx128x_txn_wait();
-  return status[0] << 8 | status[1];
+  sx128x_wait();
 }
 
 void sx128x_set_output_power(const int8_t power) {
@@ -419,7 +407,7 @@ void sx128x_set_output_power(const int8_t power) {
       (uint8_t)SX1280_RADIO_RAMP_04_US,
   };
   sx128x_write_command_burst(SX1280_RADIO_SET_TXPARAMS, buf, 2);
-  sx128x_txn_wait();
+  sx128x_wait();
 }
 
 #endif
