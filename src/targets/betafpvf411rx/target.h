@@ -23,7 +23,6 @@
 #define GYRO_SPI_PORT SPI_PORT1
 #define GYRO_NSS PIN_A4
 #define GYRO_INT PIN_B6
-#define SENSOR_ROTATE_90_CCW
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x73
 #define GYRO_ID_3 0x78
