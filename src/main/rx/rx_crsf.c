@@ -1,6 +1,7 @@
 #include "rx_crsf.h"
 
 #include "control.h"
+#include "profile.h"
 
 uint8_t crsf_crc8(uint8_t *data, uint16_t len) {
   uint8_t crc = 0;
@@ -24,6 +25,39 @@ void crsf_tlm_frame_start(uint8_t *buf) {
 uint32_t crsf_tlm_frame_finish(uint8_t *buf, uint32_t payload_size) {
   buf[payload_size + CRSF_FRAME_LENGTH_TYPE_CRC + 1] = crsf_crc8(buf + 2, payload_size + 1);
   return payload_size + CRSF_FRAME_LENGTH_TYPE_CRC + 1;
+}
+
+/*
+0x29 Device Info
+Payload:
+uint8_t     Destination
+uint8_t     Origin
+char[]      Device Name ( Null terminated string )
+uint32_t    Null Bytes
+uint32_t    Null Bytes
+uint32_t    Null Bytes
+uint8_t     255 (Max MSP Parameter)
+uint8_t     0x01 (Parameter version 1)
+*/
+uint32_t crsf_tlm_frame_device_info(uint8_t *buf) {
+  buf[2] = CRSF_FRAMETYPE_DEVICE_INFO;
+  buf[3] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+  buf[4] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+
+  uint32_t offset = 5;
+  for (uint32_t i = 0; i < 36; i++) {
+    buf[offset++] = profile.meta.name[i];
+  }
+  for (uint32_t i = 0; i < 12; i++) {
+    buf[offset++] = 0x0;
+  }
+  buf[offset++] = CRSF_DEVICEINFO_PARAMETER_COUNT;
+  buf[offset++] = CRSF_DEVICEINFO_VERSION;
+
+  // set frame length
+  buf[1] = offset;
+
+  return offset - 2;
 }
 
 // Telemetry sending back to receiver (only voltage for now)

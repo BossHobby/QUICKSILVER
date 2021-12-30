@@ -33,6 +33,9 @@
 #define CRSF_PAYLOAD_SIZE_MAX 60
 #define CRSF_SYNC_BYTE 0xC8
 
+#define CRSF_DEVICEINFO_VERSION 0x01
+#define CRSF_DEVICEINFO_PARAMETER_COUNT 0
+
 enum {
   CRSF_FRAME_GPS_PAYLOAD_SIZE = 15,
   CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = 8,
@@ -63,6 +66,22 @@ typedef enum {
   CRSF_FRAMETYPE_MSP_RESP = 0x7B, // reply with 58 byte chunked binary
   CRSF_FRAMETYPE_MSP_WRITE = 0x7C // write with 8 byte chunked binary (OpenTX outbound telemetry buffer limit)
 } crsf_frame_type_t;
+
+typedef enum {
+  CRSF_ADDRESS_BROADCAST = 0x00,
+  CRSF_ADDRESS_USB = 0x10,
+  CRSF_ADDRESS_TBS_CORE_PNP_PRO = 0x80,
+  CRSF_ADDRESS_RESERVED1 = 0x8A,
+  CRSF_ADDRESS_CURRENT_SENSOR = 0xC0,
+  CRSF_ADDRESS_GPS = 0xC2,
+  CRSF_ADDRESS_TBS_BLACKBOX = 0xC4,
+  CRSF_ADDRESS_FLIGHT_CONTROLLER = 0xC8,
+  CRSF_ADDRESS_RESERVED2 = 0xCA,
+  CRSF_ADDRESS_RACE_TAG = 0xCC,
+  CRSF_ADDRESS_RADIO_TRANSMITTER = 0xEA,
+  CRSF_ADDRESS_CRSF_RECEIVER = 0xEC,
+  CRSF_ADDRESS_CRSF_TRANSMITTER = 0xEE
+} crsf_address_t;
 
 typedef struct {
   // 176 bits of data (11 bits per channel * 16 channels) = 22 bytes.
@@ -113,4 +132,5 @@ uint8_t crsf_crc8(uint8_t *data, uint16_t len);
 
 void crsf_tlm_frame_start(uint8_t *buf);
 uint32_t crsf_tlm_frame_battery_sensor(uint8_t *buf);
+uint32_t crsf_tlm_frame_device_info(uint8_t *buf);
 uint32_t crsf_tlm_frame_finish(uint8_t *buf, uint32_t payload_size);

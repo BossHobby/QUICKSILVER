@@ -109,6 +109,7 @@ static uint8_t tlm_burst_count = 1;
 static uint8_t tlm_burst_max = 1;
 static bool tlm_burst_valid = false;
 static uint8_t tlm_buffer[CRSF_FRAME_SIZE_MAX];
+static bool tlm_device_info_pending = false;
 
 static uint8_t elrs_get_model_id() {
   // invert value so default (0x0) equals no model match
@@ -218,10 +219,19 @@ static void elrs_update_telemetry() {
   }
 
   if (!elrs_tlm_sender_active()) {
-    crsf_tlm_frame_start(tlm_buffer);
-    const uint32_t payload_size = crsf_tlm_frame_battery_sensor(tlm_buffer);
-    const uint32_t full_size = crsf_tlm_frame_finish(tlm_buffer, payload_size);
-    elrs_tlm_sender_set_data(ELRS_TELEMETRY_BYTES_PER_CALL, tlm_buffer, full_size);
+    if (tlm_device_info_pending) {
+      crsf_tlm_frame_start(tlm_buffer);
+      const uint32_t payload_size = crsf_tlm_frame_device_info(tlm_buffer);
+      const uint32_t full_size = crsf_tlm_frame_finish(tlm_buffer, payload_size);
+      elrs_tlm_sender_set_data(ELRS_TELEMETRY_BYTES_PER_CALL, tlm_buffer, full_size);
+
+      tlm_device_info_pending = false;
+    } else {
+      crsf_tlm_frame_start(tlm_buffer);
+      const uint32_t payload_size = crsf_tlm_frame_battery_sensor(tlm_buffer);
+      const uint32_t full_size = crsf_tlm_frame_finish(tlm_buffer, payload_size);
+      elrs_tlm_sender_set_data(ELRS_TELEMETRY_BYTES_PER_CALL, tlm_buffer, full_size);
+    }
   }
 
   elrs_update_telemetry_burst();
@@ -500,6 +510,17 @@ static bool elrs_unpack_hybrid_switches_wide(const volatile uint8_t *packet) {
   return telemetry_status;
 }
 
+static void elrs_msp_process(uint8_t *buf) {
+  switch (buf[2]) {
+  case CRSF_FRAMETYPE_DEVICE_PING:
+    tlm_device_info_pending = true;
+    break;
+
+  default:
+    break;
+  }
+}
+
 static void elrs_process_packet(uint32_t packet_time) {
   if (!elrs_vaild_packet()) {
     return;
@@ -618,8 +639,9 @@ static void elrs_process_packet(uint32_t packet_time) {
     if (elrs_msp_finished_data()) {
       if (msp_buffer[7] == MSP_SET_RX_CONFIG && msp_buffer[8] == MSP_ELRS_MODEL_ID) {
         bind_storage.elrs.model_id = msp_buffer[9] ^ 0xFF;
+      } else {
+        elrs_msp_process(msp_buffer);
       }
-
       elrs_msp_restart();
     }
 
