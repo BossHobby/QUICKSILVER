@@ -45,6 +45,9 @@
 #define CONSIDER_CONN_GOOD_MILLIS 1000
 #define RF_MODE_CYCLE_MULTIPLIER_SLOW 10
 
+#define LOCKUP_TIMEOUT_MS 10000
+#define SYNC_TIMEOUT_MS 50000
+
 // Maximum ms between LINK_STATISTICS packets for determining burst max
 #define TELEM_MIN_LINK_INTERVAL 512U
 
@@ -718,7 +721,7 @@ void rx_check() {
   const uint32_t time = time_micros();
 
   static uint32_t last_time = 0;
-  if ((elrs_state == CONNECTED) && (time - last_time) > 10000) {
+  if ((elrs_state == CONNECTED) && (time - last_time) > LOCKUP_TIMEOUT_MS) {
     // we lost 10000us since last visit (flash save, etc)
     // link has become unsustainable
     elrs_connection_lost();
@@ -749,6 +752,10 @@ void rx_check() {
   elrs_cycle_rf_mode(time_ms);
 
   if ((elrs_state == CONNECTED) && ((int32_t)(time_ms - last_valid_packet_millis) > current_rf_pref_params()->disconnect_timeout_ms)) {
+    elrs_connection_lost(time_ms);
+  }
+
+  if ((elrs_state == CONNECTED) && ((int32_t)(time_ms - sync_packet_millis) > SYNC_TIMEOUT_MS)) {
     elrs_connection_lost(time_ms);
   }
 
