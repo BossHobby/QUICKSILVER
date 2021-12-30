@@ -73,6 +73,7 @@ extern uint8_t tlm_ratio_enum_to_value(expresslrs_tlm_ratio_t val);
 extern uint16_t rate_enum_to_hz(expresslrs_rf_rates_t val);
 
 volatile uint8_t packet[ELRS_BUFFER_SIZE];
+volatile uint32_t packet_time = 0;
 elrs_timer_state_t elrs_timer_state = TIMER_DISCONNECTED;
 volatile uint8_t nonce_rx = 0;
 
@@ -697,6 +698,7 @@ void rx_init() {
 
   crc_initializer = (UID[4] << 8) | UID[5];
   rf_mode_cycle_multiplier = 1;
+  last_rf_mode_cycle_millis = time_millis();
 
   // only hybrid switches for now
   bind_storage.elrs.switch_mode = 1;
@@ -725,7 +727,7 @@ void rx_check() {
 
   const elrs_irq_status_t irq = elrs_get_irq_status();
   if (irq == IRQ_RX_DONE) {
-    elrs_process_packet(time);
+    elrs_process_packet(packet_time);
   } else if (irq == IRQ_TX_DONE) {
     elrs_enter_rx(packet);
   }
