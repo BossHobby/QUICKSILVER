@@ -287,5 +287,17 @@
         }
       }
     ]
+  },
+  {
+    "name": "betafpvf411rx",
+    "configurations": [
+      {
+        "name": "brushless.expresslrs",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_EXPRESS_LRS": ""
+        }
+      }
+    ]
   }
 ]
