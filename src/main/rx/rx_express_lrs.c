@@ -9,6 +9,7 @@
 #include "drv_time.h"
 #include "flash.h"
 #include "project.h"
+#include "rx_crsf.h"
 #include "usb_configurator.h"
 
 #if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
@@ -43,6 +44,9 @@
 #define PACKET_TO_TOCK_SLACK 200
 #define CONSIDER_CONN_GOOD_MILLIS 1000
 #define RF_MODE_CYCLE_MULTIPLIER_SLOW 10
+
+// Maximum ms between LINK_STATISTICS packets for determining burst max
+#define TELEM_MIN_LINK_INTERVAL 512U
 
 #define UID bind_storage.elrs.uid
 
@@ -100,7 +104,11 @@ static uint16_t crc_initializer = 0;
 static uint8_t bind_uid[6] = {0, 1, 2, 3, 4, 5};
 
 static uint8_t msp_buffer[ELRS_MSP_BUFFER_SIZE];
-static uint8_t next_telemetry_type = TELEMETRY_TYPE_LINK;
+static uint8_t next_tlm_type = TELEMETRY_TYPE_LINK;
+static uint8_t tlm_burst_count = 1;
+static uint8_t tlm_burst_max = 1;
+static bool tlm_burst_valid = false;
+static uint8_t tlm_buffer[CRSF_FRAME_SIZE_MAX];
 
 static uint8_t elrs_get_model_id() {
   // invert value so default (0x0) equals no model match
@@ -141,24 +149,82 @@ static bool elrs_tlm() {
     rx_lqi_update_spi_fps(rate_enum_to_hz(current_rf_pref_params()->rate));
   }
 
-  packet[0] = 0b11;
-  packet[1] = TELEMETRY_TYPE_LINK;
-  packet[2] = -rssi;                          // rssi
-  packet[3] = (has_model_match << 7);         // no diversity
-  packet[4] = -raw_snr;                       // snr
-  packet[5] = uplink_lq;                      // uplink_lq
-  packet[6] = elrs_get_msp_confirm() ? 1 : 0; // msq confirm
-  packet[7] = 0;
+  packet[0] = TLM_PACKET;
+  already_tlm = true;
+
+  if (next_tlm_type == TELEMETRY_TYPE_LINK || !elrs_tlm_sender_active()) {
+    packet[1] = TELEMETRY_TYPE_LINK;
+    packet[2] = -rssi;                          // rssi
+    packet[3] = (has_model_match << 7);         // no diversity
+    packet[4] = -raw_snr;                       // snr
+    packet[5] = uplink_lq;                      // uplink_lq
+    packet[6] = elrs_get_msp_confirm() ? 1 : 0; // msq confirm
+
+    next_tlm_type = TELEMETRY_TYPE_DATA;
+    tlm_burst_count = 1;
+  } else {
+    if (tlm_burst_count < tlm_burst_max) {
+      tlm_burst_count++;
+    } else {
+      next_tlm_type = TELEMETRY_TYPE_LINK;
+    }
+
+    uint8_t *data = NULL;
+    uint8_t length = 0;
+    uint8_t package_index = 0;
+    elrs_tlm_current_payload(&package_index, &length, &data);
+
+    packet[1] = (package_index << ELRS_TELEMETRY_SHIFT) + TELEMETRY_TYPE_DATA;
+    packet[2] = length > 0 ? *data : 0;
+    packet[3] = length >= 1 ? *(data + 1) : 0;
+    packet[4] = length >= 2 ? *(data + 2) : 0;
+    packet[5] = length >= 3 ? *(data + 3) : 0;
+    packet[6] = length >= 4 ? *(data + 4) : 0;
+  }
 
   const uint16_t crc = crc14_calc(packet, 7, crc_initializer);
   packet[0] |= (crc >> 6) & 0xFC;
   packet[7] = crc & 0xFF;
 
-  already_tlm = true;
-
   elrs_enter_tx(packet);
 
   return true;
+}
+
+static void elrs_update_telemetry_burst() {
+  if (tlm_burst_valid) {
+    return;
+  }
+  tlm_burst_valid = true;
+
+  uint32_t hz = rate_enum_to_hz(current_rf_pref_params()->rate);
+  uint32_t ratiodiv = tlm_ratio_enum_to_value(current_air_rate_config()->tlm_interval);
+  tlm_burst_max = TELEM_MIN_LINK_INTERVAL * hz / ratiodiv / 1000U;
+
+  // Reserve one slot for LINK telemetry
+  if (tlm_burst_max > 1) {
+    --tlm_burst_max;
+  } else {
+    tlm_burst_max = 1;
+  }
+
+  // Notify the sender to adjust its expected throughput
+  elrs_tlm_update_rate(hz, ratiodiv, tlm_burst_max);
+}
+
+static void elrs_update_telemetry() {
+  if (elrs_state != CONNECTED || current_air_rate_config()->tlm_interval == TLM_RATIO_NO_TLM) {
+    return;
+  }
+
+  if (!elrs_tlm_sender_active()) {
+    crsf_tlm_frame_start(tlm_buffer);
+    const uint32_t payload_size = crsf_tlm_frame_battery_sensor(tlm_buffer);
+    const uint32_t full_size = crsf_tlm_frame_finish(tlm_buffer, payload_size);
+    elrs_tlm_sender_set_data(ELRS_TELEMETRY_BYTES_PER_CALL, tlm_buffer, full_size);
+  }
+
+  elrs_update_telemetry_burst();
 }
 
 static bool elrs_vaild_packet() {
@@ -517,17 +583,20 @@ static void elrs_process_packet(uint32_t packet_time) {
 
     rx_apply_stick_calibration_scale();
 
+    bool tlm_confirm = false;
     switch (bind_storage.elrs.switch_mode) {
     default:
     case SWITCH_1BIT:
     case SWITCH_HYBRID:
-      elrs_unpack_hybrid_switches(packet);
+      tlm_confirm = elrs_unpack_hybrid_switches(packet);
       break;
 
     case SWITCH_HYBRID_WIDE:
-      elrs_unpack_hybrid_switches_wide(packet);
+      tlm_confirm = elrs_unpack_hybrid_switches_wide(packet);
       break;
     }
+
+    elrs_tlm_confirm_payload(tlm_confirm);
     break;
   }
   case MSP_DATA_PACKET: {
@@ -543,7 +612,7 @@ static void elrs_process_packet(uint32_t packet_time) {
     const bool confirm = elrs_get_msp_confirm();
     elrs_receive_msp(packet[1], packet + 2);
     if (confirm != elrs_get_msp_confirm()) {
-      next_telemetry_type = TELEMETRY_TYPE_LINK;
+      next_tlm_type = TELEMETRY_TYPE_LINK;
     }
 
     if (elrs_msp_finished_data()) {
@@ -601,6 +670,7 @@ void rx_init() {
   elrs_phase_init();
   elrs_lq_reset();
   elrs_lpf_init(&rssi_lpf, 5);
+  elrs_tlm_sender_reset();
   elrs_setup_msp(ELRS_MSP_BUFFER_SIZE, msp_buffer, ELRS_MSP_BYTES_PER_CALL);
 
   crc_initializer = (UID[4] << 8) | UID[5];
@@ -671,6 +741,8 @@ void rx_check() {
   } else {
     state.rx_status = RX_SPI_STATUS_BOUND;
   }
+
+  elrs_update_telemetry();
 }
 
 #endif
