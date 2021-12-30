@@ -36,6 +36,9 @@ volatile uint16_t irq_status = 0;
 
 static uint32_t busy_timeout = 1000;
 
+extern volatile uint8_t packet[8];
+extern volatile uint8_t packet_status[2];
+
 void sx128x_init() {
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
@@ -115,8 +118,8 @@ static void sx128x_set_dio0_active() {
 static void sx128x_handle_irq_status() {
   const uint16_t irq = ((irq_status & 0xFF) << 8 | ((irq_status >> 8) & 0xFF));
   if ((irq & SX1280_IRQ_RX_DONE)) {
-    extern volatile uint8_t packet[8];
     sx128x_read_rx_buffer(packet, 8);
+    sx128x_read_command_burst(SX1280_RADIO_GET_PACKETSTATUS, (uint8_t *)packet_status, 2);
   } else {
     dio0_active = 1;
   }
