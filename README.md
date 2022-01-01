@@ -18,7 +18,7 @@ It's source and pre-compiled binaries can be found [here](https://github.com/Bos
 
 ## Community
 
-- [Offical Discord](https://discord.gg/gH49zBrK)
+- [Offical Discord](https://discord.gg/8StVhvB6Tm)
 - [Unoffical Facebook Group](https://www.facebook.com/groups/quicksilverfirmware/?ref=share)
 
 ## Building
