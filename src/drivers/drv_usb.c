@@ -1,6 +1,7 @@
 #include "drv_usb.h"
 
 #include "drv_gpio.h"
+#include "drv_interrupt.h"
 #include "drv_time.h"
 #include "project.h"
 
@@ -332,7 +333,7 @@ void usb_init() {
   gpio_pin_init(&gpio_init, USB_DETECT_PIN);
 #endif
 
-  NVIC_EnableIRQ(OTG_FS_IRQn);
+  interrupt_enable(OTG_FS_IRQn, USB_PRIORITY);
 
   usbd_init(&udev, &usbd_hw, CDC_EP0_SIZE, ubuf, sizeof(ubuf));
   usbd_reg_config(&udev, cdc_setconf);
