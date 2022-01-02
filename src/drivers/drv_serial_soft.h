@@ -10,8 +10,8 @@ typedef struct {
 
   uint32_t baud;
 
-  uint32_t micros_per_bit;
-  uint32_t micros_per_bit_half;
+  uint32_t cycles_per_bit;
+  uint32_t cycles_per_bit_half;
 } soft_serial_t;
 
 uint8_t soft_serial_init(soft_serial_t *dev, gpio_pins_t tx_pin, gpio_pins_t rx_pin, uint32_t baudrate);

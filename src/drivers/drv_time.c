@@ -84,10 +84,4 @@ void time_delay_us(uint32_t us) {
   }
 }
 
-void time_delay_until(uint32_t uS) {
-  while (time_micros() < uS) {
-    __asm("NOP");
-  }
-}
-
 #endif

@@ -3,6 +3,14 @@
 #include "drv_gpio.h"
 #include "project.h"
 
+#define CYCLES_TIMEOUT (10000 * (SYS_CLOCK_FREQ_HZ / 1000000))
+
+static void delay_until_cycles(uint32_t cycles) {
+  while (time_cycles() < cycles) {
+    __NOP();
+  }
+}
+
 static int soft_serial_is_1wire(const soft_serial_t *dev) {
   return dev->tx_pin == dev->rx_pin;
 }
@@ -49,8 +57,8 @@ uint8_t soft_serial_init(soft_serial_t *dev, gpio_pins_t tx_pin, gpio_pins_t rx_
   soft_serial_init_rx(dev);
 
   dev->baud = baudrate;
-  dev->micros_per_bit = (uint32_t)(1000000 / baudrate);
-  dev->micros_per_bit_half = dev->micros_per_bit * .5;
+  dev->cycles_per_bit = SYS_CLOCK_FREQ_HZ / baudrate;
+  dev->cycles_per_bit_half = dev->cycles_per_bit * .5;
 
   return 1;
 }
@@ -71,34 +79,34 @@ void soft_serial_set_output(const soft_serial_t *dev) {
 
 uint8_t soft_serial_read_byte(const soft_serial_t *dev, uint8_t *byte) {
 
-  uint32_t time_start = time_micros();
+  uint32_t time_start = time_cycles();
   uint32_t time_next = time_start;
   while (!gpio_pin_read(dev->rx_pin)) {
-    time_next = time_micros(); //wait for start bit
-    if (time_next - time_start > 10000)
+    time_next = time_cycles(); //wait for start bit
+    if (time_next - time_start > CYCLES_TIMEOUT)
       return 0;
   }
 
   // start bit falling edge
   while (gpio_pin_read(dev->rx_pin)) {
-    time_next = time_micros(); //wait for start bit
-    if (time_next - time_start > 10000)
+    time_next = time_cycles(); //wait for start bit
+    if (time_next - time_start > CYCLES_TIMEOUT)
       return 0;
   }
 
-  time_next += dev->micros_per_bit_half; // move away from edge to center of bit
+  time_next += dev->cycles_per_bit_half; // move away from edge to center of bit
 
   uint8_t b = 0;
   for (int i = 0; i < 8; ++i) {
-    time_next += dev->micros_per_bit;
-    time_delay_until(time_next);
+    time_next += dev->cycles_per_bit;
+    delay_until_cycles(time_next);
     b >>= 1;
     if (gpio_pin_read(dev->rx_pin))
       b |= 0x80;
   }
 
-  time_next += dev->micros_per_bit;
-  time_delay_until(time_next); // move away from edge
+  time_next += dev->cycles_per_bit;
+  delay_until_cycles(time_next); // move away from edge
 
   // stop bit
   if (!(gpio_pin_read(dev->rx_pin))) {
@@ -114,10 +122,10 @@ uint8_t soft_serial_read_byte(const soft_serial_t *dev, uint8_t *byte) {
 void soft_serial_write_byte(const soft_serial_t *dev, uint8_t byte) {
   gpio_pin_reset(dev->tx_pin);
 
-  uint32_t next_time = time_micros();
+  uint32_t next_time = time_cycles();
   for (int i = 0; i < 8; ++i) {
-    next_time += dev->micros_per_bit;
-    time_delay_until(next_time);
+    next_time += dev->cycles_per_bit;
+    delay_until_cycles(next_time);
 
     if (0x01 & byte)
       gpio_pin_set(dev->tx_pin);
@@ -126,11 +134,11 @@ void soft_serial_write_byte(const soft_serial_t *dev, uint8_t byte) {
 
     byte = byte >> 1;
   }
-  next_time += dev->micros_per_bit;
-  time_delay_until(next_time);
+  next_time += dev->cycles_per_bit;
+  delay_until_cycles(next_time);
 
   // stop bit
   gpio_pin_set(dev->tx_pin);
-  next_time += dev->micros_per_bit;
-  time_delay_until(next_time);
+  next_time += dev->cycles_per_bit;
+  delay_until_cycles(next_time);
 }
