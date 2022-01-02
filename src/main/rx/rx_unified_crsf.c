@@ -200,6 +200,7 @@ void rx_serial_process_crsf() {
 void rx_serial_send_crsf_telemetry() {
   // Send telemetry back once every 10 packets. This gives the RX time to send ITS telemetry back
   if (telemetry_counter <= 10 || frame_status != FRAME_TX) {
+    frame_status = FRAME_DONE;
     return;
   }
 
