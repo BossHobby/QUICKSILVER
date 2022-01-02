@@ -44,9 +44,10 @@ extern uint8_t ready_for_next_telemetry;
 static uint8_t crsf_rf_mode = 0;
 static uint16_t crsf_rf_mode_fps[] = {
     4,   // CRSF
+    25,  // ELRS??
     50,  // CRSF
-    150, // CRSF
     100, // ELRS
+    150, // CRSF
     200, // ELRS
     250, // ELRS
     500, // ELRS
