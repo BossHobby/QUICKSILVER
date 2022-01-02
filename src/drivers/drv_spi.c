@@ -320,18 +320,19 @@ static void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, u
 }
 
 uint8_t spi_dma_is_ready(spi_ports_t port) {
+#ifdef BRUSHLESS_TARGET
+  if (port == SPI_PORT1) {
+    extern volatile int dshot_dma_phase;
+    if (dshot_dma_phase != 0) {
+      return 0;
+    }
+  }
+#endif
   return DMA_TRANSFER_DONE;
 }
 
 bool spi_dma_wait_for_ready(spi_ports_t port) {
-#ifdef BRUSHLESS_TARGET
-  if (port == SPI_PORT1) {
-    extern volatile int dshot_dma_phase;
-    while (dshot_dma_phase != 0)
-      ;
-  }
-#endif
-  for (uint16_t timeout = 0x400; DMA_TRANSFER_DONE == 0; timeout--) {
+  for (uint16_t timeout = 0x400; spi_dma_is_ready(port) == 0; timeout--) {
     if (timeout == 0) {
       //liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
       liberror++;
