@@ -60,8 +60,8 @@ void TX_USART_ISR() {
   // reset this to 0 so that a protocol switch will not create a tx isr that does stuff without need
   uint8_t bytes_to_send = 0;
   if (bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_FPORT ||
-+     bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED ||
-      bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_CRSF ) {
+      bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED ||
+      bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_CRSF) {
     //upload total telemetry bytes to send so telemetry transmit triggers action appropriate to protocol
     bytes_to_send = 10 + telemetry_offset;
   }
