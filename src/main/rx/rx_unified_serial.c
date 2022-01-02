@@ -19,7 +19,7 @@
 #ifdef RX_UNIFIED_SERIAL
 
 //This is the microsecond threshold for triggering a new frame to re-index to position 0 in the ISR
-#define RX_FRAME_INTERVAL_TRIGGER_TICKS (1500 * (SYS_CLOCK_FREQ_HZ / 1000000L))
+#define RX_FRAME_INTERVAL_TRIGGER_TICKS (1000 * (SYS_CLOCK_FREQ_HZ / 1000000L))
 
 uint8_t rx_buffer[RX_BUFF_SIZE];
 uint8_t rx_data[RX_BUFF_SIZE]; //A place to put the RX frame so nothing can get overwritten during processing.  //reduce size?
@@ -52,8 +52,6 @@ extern profile_t profile;
 #define USART usart_port_defs[serial_rx_port]
 
 void TX_USART_ISR() {
-  //USART_ClearITPendingBit() for TC handled in drv_serial.c
-
   // buffer position 0 has already been called by the telemetry process so we start at 1
   static uint8_t increment_transmit_buffer = 1;
 
