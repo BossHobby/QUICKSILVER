@@ -1,4 +1,4 @@
-![QUICKSILVER](https://raw.githubusercontent.com/BossHobby/QUICKSILVER/master/misc/logo_fixed.png)
+![QUICKSILVER](https://github.com/BossHobby/QUICKSILVER/blob/master/misc/Logo_fixed.png?raw=true)
 
 # QUICKSILVER [![Build Status](https://ci.bkleiner.codes/api/badges/BossHobby/QUICKSILVER/status.svg)](https://ci.bkleiner.codes/BossHobby/QUICKSILVER)
 Flight Controller Firmware
