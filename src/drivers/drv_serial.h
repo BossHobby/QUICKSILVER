@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 #include "drv_gpio.h"
 #include "project.h"
 
@@ -37,8 +39,10 @@ extern usart_ports_t serial_rx_port;
 extern usart_ports_t serial_smart_audio_port;
 
 void serial_enable_rcc(usart_ports_t port);
+void serial_init(usart_ports_t port, uint32_t buadrate, bool half_duplex);
 void serial_enable_isr(usart_ports_t port);
 
-void serial_debug_init();
+bool serial_read_bytes(usart_ports_t port, uint8_t *data, const uint32_t size);
+bool serial_write_bytes(usart_ports_t port, const uint8_t *data, const uint32_t size);
+
 void serial_rx_init(rx_serial_protocol_t rx_serial_protocol);
-void serial_smart_audio_init();

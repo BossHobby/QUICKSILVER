@@ -4,12 +4,15 @@
 #include <stm32f4xx_ll_usart.h>
 
 #include "drv_interrupt.h"
+#include "drv_time.h"
 #include "profile.h"
 #include "project.h"
 #include "usb_configurator.h"
 
 usart_ports_t serial_rx_port = USART_PORT_INVALID;
 usart_ports_t serial_smart_audio_port = USART_PORT_INVALID;
+
+#define USART usart_port_defs[port]
 
 //FUNCTION TO SET APB CLOCK TO USART BASED ON GIVEN UART
 void serial_enable_rcc(usart_ports_t port) {
@@ -82,6 +85,89 @@ void serial_enable_isr(usart_ports_t port) {
   }
 }
 
+void serial_init(usart_ports_t port, uint32_t buadrate, bool half_duplex) {
+  LL_USART_Disable(USART.channel);
+
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  if (half_duplex) {
+    gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
+    gpio_init.Pull = LL_GPIO_PULL_NO;
+    gpio_pin_init_af(&gpio_init, USART.tx_pin, USART.gpio_af);
+  } else {
+    gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+    gpio_init.Pull = LL_GPIO_PULL_UP;
+    gpio_pin_init_af(&gpio_init, USART.rx_pin, USART.gpio_af);
+    gpio_pin_init_af(&gpio_init, USART.tx_pin, USART.gpio_af);
+  }
+
+  LL_USART_InitTypeDef usart_init;
+  usart_init.BaudRate = buadrate;
+  usart_init.DataWidth = LL_USART_DATAWIDTH_8B;
+  usart_init.StopBits = LL_USART_STOPBITS_1;
+  usart_init.Parity = LL_USART_PARITY_NONE;
+  usart_init.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
+  usart_init.TransferDirection = LL_USART_DIRECTION_TX | LL_USART_DIRECTION_RX;
+  usart_init.OverSampling = LL_USART_OVERSAMPLING_16;
+  LL_USART_Init(USART.channel, &usart_init);
+
+  LL_USART_ClearFlag_RXNE(USART.channel);
+  LL_USART_ClearFlag_TC(USART.channel);
+
+  LL_USART_DisableIT_TXE(USART.channel);
+  LL_USART_DisableIT_RXNE(USART.channel);
+  LL_USART_DisableIT_TC(USART.channel);
+
+  if (half_duplex) {
+    LL_USART_EnableHalfDuplex(USART.channel);
+  }
+  LL_USART_Enable(USART.channel);
+}
+
+bool serial_read_bytes(usart_ports_t port, uint8_t *data, const uint32_t size) {
+  for (uint32_t i = 0; i < size; i++) {
+    uint32_t start = time_micros();
+    while (!LL_USART_IsActiveFlag_RXNE(USART.channel)) {
+      if ((time_micros() - start) > 1000) {
+        return false;
+      }
+      __NOP();
+    }
+
+    data[i] = LL_USART_ReceiveData8(USART.channel);
+  }
+  return true;
+}
+
+bool serial_write_bytes(usart_ports_t port, const uint8_t *data, const uint32_t size) {
+  for (uint32_t i = 0; i < size; i++) {
+    uint32_t start = time_micros();
+    while (!LL_USART_IsActiveFlag_TXE(USART.channel)) {
+      if ((time_micros() - start) > 1000) {
+        return false;
+      }
+      __NOP();
+    }
+
+    if (i == (size - 1)) {
+      LL_USART_ClearFlag_TC(USART.channel);
+    }
+
+    LL_USART_TransmitData8(USART.channel, data[i]);
+  }
+
+  uint32_t start = time_micros();
+  while (!LL_USART_IsActiveFlag_TC(USART.channel)) {
+    if ((time_micros() - start) > 1000) {
+      return false;
+    }
+    __NOP();
+  }
+
+  return true;
+}
+
 #ifdef STM32F4
 
 #define USART4 UART4
@@ -110,12 +196,11 @@ usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {
 
 #undef USART_PORT
 
-#define USART usart_port_defs[channel]
-void handle_usart_isr(usart_ports_t channel) {
+void handle_usart_isr(usart_ports_t port) {
 #ifdef SERIAL_RX
   extern void RX_USART_ISR();
   extern void TX_USART_ISR();
-  if (serial_rx_port == channel) {
+  if (serial_rx_port == port) {
     if (LL_USART_IsEnabledIT_TC(USART.channel) && LL_USART_IsActiveFlag_TC(USART.channel)) {
       LL_USART_ClearFlag_TC(USART.channel);
       TX_USART_ISR();
@@ -127,7 +212,7 @@ void handle_usart_isr(usart_ports_t channel) {
 #endif
 #if defined(ENABLE_SMART_AUDIO) || defined(ENABLE_TRAMP)
   extern void vtx_uart_isr();
-  if (serial_smart_audio_port == channel) {
+  if (serial_smart_audio_port == port) {
     vtx_uart_isr();
     return;
   }
