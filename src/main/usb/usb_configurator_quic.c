@@ -538,26 +538,21 @@ void process_serial(uint8_t *data, uint32_t len) {
 
     send_quic(QUIC_CMD_SERIAL, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
 
-#define USART usart_port_defs[port]
-    LL_USART_Disable(USART.channel);
-
-    soft_serial_t serial;
-    soft_serial_init(&serial, USART.tx_pin, USART.rx_pin, baudrate);
+    serial_enable_rcc(port);
+    serial_init(port, baudrate, false);
 
     while (1) {
       uint8_t data = 0;
 
-      if (usb_serial_read(&data, 1) == 1) {
-        soft_serial_set_output(&serial);
-        soft_serial_write_byte(&serial, data);
+      while (usb_serial_read(&data, 1)) {
+        serial_write_bytes(port, &data, 1);
       }
 
-      soft_serial_set_input(&serial);
-      if (soft_serial_read_byte(&serial, &data)) {
+      while (serial_read_bytes(port, &data, 1)) {
         usb_serial_write(&data, 1);
       }
     }
-#undef USART
+
     break;
   }
 
