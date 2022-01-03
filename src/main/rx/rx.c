@@ -13,39 +13,49 @@
 
 extern profile_t profile;
 
-// Select filter cut 25hz for SBUS, 67hz for CRSF, 40hz for DSMX, 20hz for DSM2, 90hz for bayang, 45hz for frsky   Formula is [(1/rx framerate)/2] * 0.9
-static const uint8_t RX_SMOOTHING_HZ[RX_PROTOCOL_MAX] = {
-    0,  //RX_PROTOCOL_INVALID, wont happen
-    0,  //RX_PROTOCOL_UNIFIED_SERIAL, will autodetect following
-    25, //RX_PROTOCOL_SBUS,
-    67, //RX_PROTOCOL_CRSF,
-    50, //RX_PROTOCOL_IBUS, check these
-    50, //RX_PROTOCOL_FPORT, check these
-    40, //RX_PROTOCOL_DSMX_2048,
-    20, //RX_PROTOCOL_DSM2_1024,
-    90, //RX_PROTOCOL_NRF24_BAYANG_TELEMETRY,
-    90, //RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON,
-    90, //RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND,
-    50, //RX_PROTOCOL_FRSKY_D8,
-    50, //RX_PROTOCOL_FRSKY_D16,
-    75, //RX_PROTOCOL_FRSKY_REDPINE,
-    75, // RX_PROTOCOL_EXPRESS_LRS
+// Select filter cut, Formula is [(1/rx framerate)/2] * 0.9
+// 0 will trigger selection via rx_smoothing_cutoff
+static const uint16_t RX_SMOOTHING_HZ[RX_PROTOCOL_MAX] = {
+    0,   // RX_PROTOCOL_INVALID, wont happen
+    0,   // RX_PROTOCOL_UNIFIED_SERIAL, will autodetect following
+    25,  // RX_PROTOCOL_SBUS,
+    67,  // RX_PROTOCOL_CRSF,
+    50,  // RX_PROTOCOL_IBUS, check these
+    50,  // RX_PROTOCOL_FPORT, check these
+    40,  // RX_PROTOCOL_DSMX_2048,
+    20,  // RX_PROTOCOL_DSM2_1024,
+    90,  // RX_PROTOCOL_NRF24_BAYANG_TELEMETRY,
+    90,  // RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON,
+    90,  // RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND,
+    50,  // RX_PROTOCOL_FRSKY_D8,
+    50,  // RX_PROTOCOL_FRSKY_D16,
+    225, // RX_PROTOCOL_FRSKY_REDPINE,
+    0,   // RX_PROTOCOL_EXPRESS_LRS
 };
 
 #ifdef RX_UNIFIED_SERIAL
-static const uint8_t SERIAL_PROTO_MAP[] = {
-    RX_PROTOCOL_INVALID,   //RX_SERIAL_PROTOCOL_INVALID
-    RX_PROTOCOL_DSMX_2048, //RX_SERIAL_PROTOCOL_DSM
-    RX_PROTOCOL_SBUS,      //RX_SERIAL_PROTOCOL_SBUS
-    RX_PROTOCOL_IBUS,      //RX_SERIAL_PROTOCOL_IBUS
-    RX_PROTOCOL_FPORT,     //RX_SERIAL_PROTOCOL_FPORT
-    RX_PROTOCOL_CRSF,      //RX_SERIAL_PROTOCOL_CRSF
-    RX_PROTOCOL_REDPINE,   //RX_SERIAL_PROTOCOL_REDPINE
+static const uint16_t SERIAL_PROTO_MAP[] = {
+    RX_PROTOCOL_INVALID,   // RX_SERIAL_PROTOCOL_INVALID
+    RX_PROTOCOL_DSMX_2048, // RX_SERIAL_PROTOCOL_DSM
+    RX_PROTOCOL_SBUS,      // RX_SERIAL_PROTOCOL_SBUS
+    RX_PROTOCOL_IBUS,      // RX_SERIAL_PROTOCOL_IBUS
+    RX_PROTOCOL_FPORT,     // RX_SERIAL_PROTOCOL_FPORT
+    RX_PROTOCOL_CRSF,      // RX_SERIAL_PROTOCOL_CRSF
+    RX_PROTOCOL_REDPINE,   // RX_SERIAL_PROTOCOL_REDPINE
     // No need to filter differently for inverted.
-    RX_PROTOCOL_SBUS,    //RX_SERIAL_PROTOCOL_SBUS_INVERTED
-    RX_PROTOCOL_FPORT,   //RX_SERIAL_PROTOCOL_FPORT_INVERTED
-    RX_PROTOCOL_REDPINE, //RX_SERIAL_PROTOCOL_REDPINE_INVERTED
+    RX_PROTOCOL_SBUS,    // RX_SERIAL_PROTOCOL_SBUS_INVERTED
+    RX_PROTOCOL_FPORT,   // RX_SERIAL_PROTOCOL_FPORT_INVERTED
+    RX_PROTOCOL_REDPINE, // RX_SERIAL_PROTOCOL_REDPINE_INVERTED
 };
+
+uint16_t rx_smoothing_cutoff() {
+  return RX_SMOOTHING_HZ[SERIAL_PROTO_MAP[bind_storage.unified.protocol]];
+}
+#else
+__weak uint16_t rx_smoothing_cutoff() {
+  // default implementation, will be overwritten by non __weak functions
+  return 0;
+}
 #endif
 
 uint8_t rx_aux_on(aux_function_t function) {
@@ -63,12 +73,11 @@ float rx_expo(float in, float exp) {
 }
 
 float rx_smoothing_hz(rx_protocol_t proto) {
-#ifdef RX_UNIFIED_SERIAL
-  if (proto == RX_PROTOCOL_UNIFIED_SERIAL) {
-    return RX_SMOOTHING_HZ[SERIAL_PROTO_MAP[bind_storage.unified.protocol]];
+  uint16_t cutoff = RX_SMOOTHING_HZ[proto];
+  if (cutoff == 0) {
+    cutoff = rx_smoothing_cutoff();
   }
-#endif
-  return RX_SMOOTHING_HZ[proto];
+  return cutoff;
 }
 
 // TODO: merge this function with what lives in unified_serial
@@ -80,7 +89,7 @@ void rx_lqi_update_spi_fps(float expected_fps) {
   static uint32_t fps_counter = 0;
   static uint32_t time_last_fps_update = 0;
   if (time_lastframe - time_last_fps_update > 1000000) {
-    //calculate fps on the fly
+    // calculate fps on the fly
     stat_frames_second = fps_counter;
     fps_counter = 0;
     time_last_fps_update = time_lastframe;
@@ -184,8 +193,8 @@ void rx_apply_deadband() {
 }
 
 void rx_precalc() {
-  state.rx_filtered.throttle = constrainf(state.rx.throttle, 0.f, 1.f); //constrain throttle min and max and copy into next bucket
-  rx_apply_expo();                                                      //this also constrains and copies the rest of the sticks into rx_filtered.axis[i]
+  state.rx_filtered.throttle = constrainf(state.rx.throttle, 0.f, 1.f); // constrain throttle min and max and copy into next bucket
+  rx_apply_expo();                                                      // this also constrains and copies the rest of the sticks into rx_filtered.axis[i]
   rx_apply_smoothing();
   rx_apply_deadband();
 }
@@ -193,9 +202,9 @@ void rx_precalc() {
 void rx_capture_stick_range() {
   for (uint8_t i = 0; i < 4; i++) {
     if (state.rx.axis[i] > profile.receiver.stick_calibration_limits[i].max)
-      profile.receiver.stick_calibration_limits[i].max = state.rx.axis[i]; //record max value during calibration to array
+      profile.receiver.stick_calibration_limits[i].max = state.rx.axis[i]; // record max value during calibration to array
     if (state.rx.axis[i] < profile.receiver.stick_calibration_limits[i].min)
-      profile.receiver.stick_calibration_limits[i].min = state.rx.axis[i]; //record min value during calibration to array
+      profile.receiver.stick_calibration_limits[i].min = state.rx.axis[i]; // record min value during calibration to array
   }
 }
 
@@ -228,31 +237,31 @@ void reset_stick_calibration_test_buffer() {
 }
 
 uint8_t check_for_perfect_sticks() {
-  //first scale the sticks
+  // first scale the sticks
   state.rx.axis[0] = mapf(state.rx.axis[0], profile.receiver.stick_calibration_limits[0].min, profile.receiver.stick_calibration_limits[0].max, -1.f, 1.f);
   state.rx.axis[1] = mapf(state.rx.axis[1], profile.receiver.stick_calibration_limits[1].min, profile.receiver.stick_calibration_limits[1].max, -1.f, 1.f);
   state.rx.axis[2] = mapf(state.rx.axis[2], profile.receiver.stick_calibration_limits[2].min, profile.receiver.stick_calibration_limits[2].max, -1.f, 1.f);
   state.rx.axis[3] = mapf(state.rx.axis[3], profile.receiver.stick_calibration_limits[3].min, profile.receiver.stick_calibration_limits[3].max, 0.f, 1.f);
-  //listen for the max stick values and update buffer
+  // listen for the max stick values and update buffer
   for (uint8_t i = 0; i < 4; i++) {
     if (state.rx.axis[i] > stick_calibration_test_buffer[i][0])
-      stick_calibration_test_buffer[i][0] = state.rx.axis[i]; //record max value during calibration to array
+      stick_calibration_test_buffer[i][0] = state.rx.axis[i]; // record max value during calibration to array
     if (state.rx.axis[i] < stick_calibration_test_buffer[i][1])
-      stick_calibration_test_buffer[i][1] = state.rx.axis[i]; //record min value during calibration to array
+      stick_calibration_test_buffer[i][1] = state.rx.axis[i]; // record min value during calibration to array
   }
-  //test the "4 corners key"
+  // test the "4 corners key"
   uint8_t sum = 0;
   for (uint8_t i = 0; i < 4; i++) {
     if (stick_calibration_test_buffer[i][0] > 0.98f && stick_calibration_test_buffer[i][0] < 1.02f)
-      sum += 1; //test the max
+      sum += 1; // test the max
     if (stick_calibration_test_buffer[i][1] < -0.98f && stick_calibration_test_buffer[i][1] > -1.02f)
-      sum += 1; //test the min - throttle should fail
+      sum += 1; // test the min - throttle should fail
   }
   if (stick_calibration_test_buffer[3][1] < .01 && stick_calibration_test_buffer[3][1] > -.01)
     sum += 1; // yes we tested throttle low twice because it doesnt go negative
   if (sum == 8)
     return 1;
-  //else
+  // else
   return 0;
 }
 
@@ -260,17 +269,17 @@ void rx_stick_calibration_wizard() {
   extern int ledcommand;
   static uint8_t sequence_is_running = 0;
   static uint32_t first_timestamp;
-  //get a timestamp and set the initial conditions
-  if (!sequence_is_running) {              //calibration has just been called
-    first_timestamp = time_micros();       //so we flag the time
-    flags.gestures_disabled = 1;           //and disable gestures
-    sequence_is_running = 1;               //just once
-    rx_apply_temp_calibration_scale();     //and shove temp values into profile that are the inverse of expected values from sticks
-    reset_stick_calibration_test_buffer(); //make sure we test with a fresh comparison buffer
+  // get a timestamp and set the initial conditions
+  if (!sequence_is_running) {              // calibration has just been called
+    first_timestamp = time_micros();       // so we flag the time
+    flags.gestures_disabled = 1;           // and disable gestures
+    sequence_is_running = 1;               // just once
+    rx_apply_temp_calibration_scale();     // and shove temp values into profile that are the inverse of expected values from sticks
+    reset_stick_calibration_test_buffer(); // make sure we test with a fresh comparison buffer
   }
-  //sequence the phase of the wizard in automatic 5 second intervals
+  // sequence the phase of the wizard in automatic 5 second intervals
   if (state.stick_calibration_wizard == CALIBRATION_CONFIRMED) {
-    //leave it alone
+    // leave it alone
   } else {
     uint32_t time_now = time_micros();
     if ((time_now - first_timestamp > 5e6) && (time_now - first_timestamp < 10e6))
@@ -278,7 +287,7 @@ void rx_stick_calibration_wizard() {
     if (time_now - first_timestamp > 10e6)
       state.stick_calibration_wizard = TIMEOUT;
   }
-  //take appropriate action based on the wizard phase
+  // take appropriate action based on the wizard phase
   switch (state.stick_calibration_wizard) {
   case INACTIVE:
     // how the fuck did we get here?
@@ -307,10 +316,10 @@ void rx_stick_calibration_wizard() {
     state.stick_calibration_wizard = CALIBRATION_FAILED;
     break;
   case CALIBRATION_SUCCESS:
-    //or here?
+    // or here?
     break;
   case CALIBRATION_FAILED:
-    //here too
+    // here too
     break;
   }
 }

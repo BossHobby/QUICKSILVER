@@ -713,6 +713,29 @@ void rx_init() {
   radio_is_init = true;
 }
 
+uint16_t rx_smoothing_cutoff() {
+  switch (current_air_rate_config()->rate) {
+  case RATE_500HZ:
+    return 225;
+  case RATE_250HZ:
+    return 112;
+  case RATE_200HZ:
+    return 90;
+  case RATE_150HZ:
+    return 67;
+  case RATE_100HZ:
+    return 45;
+  case RATE_50HZ:
+    return 22;
+  case RATE_25HZ:
+    return 11;
+  case RATE_4HZ:
+    return 1;
+  }
+
+  return 1;
+}
+
 void rx_check() {
   if (!radio_is_init) {
     return;
