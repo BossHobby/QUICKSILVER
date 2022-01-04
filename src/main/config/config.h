@@ -264,9 +264,9 @@
 //**********************************************************************************************************************
 //***********************************************ADDITIONAL FEATURES****************************************************
 
-// *************lost quad beeps using motors (30 sec timeout) - pulses motors after timeout period to help find a lost model
+// *************lost quad beeps using motors (30 sec timeout in ms) - pulses motors after timeout period to help find a lost model
 #define MOTOR_BEEPS
-//#define MOTOR_BEEPS_TIMEOUT 1e6
+//#define MOTOR_BEEPS_TIMEOUT 30e3
 
 // *************led brightness in-flight ( solid lights only)
 // *************0- 15 range

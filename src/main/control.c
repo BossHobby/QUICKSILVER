@@ -54,6 +54,8 @@ FAST_RAM control_flags_t flags = {
 };
 
 FAST_RAM control_state_t state = {
+    .failsafe_time_ms = 0,
+
     .aux = {0},
 
     .vbattfilt = 0.0,
@@ -261,6 +263,15 @@ void control() {
 
   pid_calc();
 
+  if (flags.failsafe) {
+    // failsafe first occured, record time
+    if (state.failsafe_time_ms == 0) {
+      state.failsafe_time_ms = time_millis();
+    }
+  } else {
+    state.failsafe_time_ms = 0;
+  }
+
   // CONDITION: switch is ARMED
   if (rx_aux_on(AUX_ARMING)) {
     // CONDITION: throttle is above safety limit and ARMING RELEASE FLAG IS NOT CLEARED
@@ -368,7 +379,8 @@ void control() {
     motor_set_all(0);
 
 #ifdef MOTOR_BEEPS
-    if ((flags.usb_active == 0 && flags.failsafe) || rx_aux_on(AUX_BUZZER_ENABLE)) {
+    if ((flags.usb_active == 0 && flags.rx_ready && flags.failsafe && (time_millis() - state.failsafe_time_ms) > MOTOR_BEEPS_TIMEOUT) ||
+        rx_aux_on(AUX_BUZZER_ENABLE)) {
       motor_beep();
     }
 #endif

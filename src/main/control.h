@@ -42,6 +42,8 @@ typedef struct {
   float armtime;  // running sum of looptimes (while armed)
   float cpu_load; // micros we have had left last loop
 
+  uint32_t failsafe_time_ms; // time the last failsafe occured in ms
+
   float lipo_cell_count;
   float vbattfilt; // filtered battery in volts
   float vbattfilt_corr;

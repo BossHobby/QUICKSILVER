@@ -35,6 +35,10 @@ typedef enum {
 // x (micro)seconds after loss of tx or low bat before buzzer starts
 #define BUZZER_DELAY 30e6
 
+#ifndef MOTOR_BEEPS_TIMEOUT
+#define MOTOR_BEEPS_TIMEOUT 30e3
+#endif
+
 #define OSD_NUMBER_ELEMENTS 32
 #define SWITCHABLE_FEATURE_1 //CONFIGURATION WIZARD
 
