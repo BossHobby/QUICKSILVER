@@ -31,6 +31,7 @@
 #define GYRO_SPI_PORT SPI_PORT1
 #define GYRO_NSS PIN_A4
 #define GYRO_INT PIN_D0
+#define SENSOR_ROTATE_135_CW
 #define GYRO_ID_1 0x24
 
 // RADIO
