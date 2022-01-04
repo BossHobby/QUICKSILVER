@@ -33,7 +33,40 @@
 #include "project.h"
 #include "util.h"
 
-#ifdef STM32F4
+#if defined(STM32F4) && defined(USE_DSHOT_DMA_DRIVER)
+
+// Tim_1 is running at 84mhz with APB2 clock currently configured at 42MHZ
+// clock cycles per bit for a bit timing period of 1.67us
+#define DSHOT_BIT_TIME ((PWM_CLOCK_FREQ_HZ / 1000 / profile.motor.dshot_time) - 1)
+#define DSHOT_T0H_TIME (DSHOT_BIT_TIME * 0.30 + 0.05)
+#define DSHOT_T1H_TIME (DSHOT_BIT_TIME * 0.60 + 0.05)
+
+#define DSHOT_CMD_BEEP1 1
+#define DSHOT_CMD_BEEP2 2
+#define DSHOT_CMD_BEEP3 3
+#define DSHOT_CMD_BEEP4 4
+#define DSHOT_CMD_BEEP5 5 // 5 currently uses the same tone as 4 in BLHeli_S.
+
+#define DSHOT_CMD_ROTATE_NORMAL 20
+#define DSHOT_CMD_ROTATE_REVERSE 21
+
+#ifndef MOTOR_BEEPS_TIMEOUT
+#define MOTOR_BEEPS_TIMEOUT 1e6
+#endif
+
+#ifdef THREE_D_THROTTLE
+#error "Not tested with THREE_D_THROTTLE config option"
+#endif
+
+#ifdef INVERTED_ENABLE
+#ifndef BIDIRECTIONAL
+#error INVERTED_ENABLE is on but not BIDIRECTIONAL in dshot driver
+#endif
+#endif
+
+//sum = total number of dshot GPIO ports
+#define DSHOT_PORT_COUNT (DSHOT_GPIO_A + DSHOT_GPIO_B + DSHOT_GPIO_C)
+
 typedef struct {
   __IO uint32_t MODER;   /*!< GPIO port mode register,               Address offset: 0x00      */
   __IO uint32_t OTYPER;  /*!< GPIO port output type register,        Address offset: 0x04      */
@@ -47,35 +80,9 @@ typedef struct {
   __IO uint32_t AFR[2];  /*!< GPIO alternate function registers,     Address offset: 0x20-0x24 */
 } dshot_gpio_t;
 
-// use your own struct to use BSRR as a 16-bit register
-static volatile dshot_gpio_t *gpioA = (dshot_gpio_t *)GPIOA;
-static volatile dshot_gpio_t *gpioB = (dshot_gpio_t *)GPIOB;
-static volatile dshot_gpio_t *gpioC = (dshot_gpio_t *)GPIOC;
-
-// Tim_1 is running at 84mhz with APB2 clock currently configured at 42MHZ
-// clock cycles per bit for a bit timing period of 1.67us
-#define DSHOT_BIT_TIME ((PWM_CLOCK_FREQ_HZ / 1000 / profile.motor.dshot_time) - 1)
-#define DSHOT_T0H_TIME (DSHOT_BIT_TIME * 0.30 + 0.05)
-#define DSHOT_T1H_TIME (DSHOT_BIT_TIME * 0.60 + 0.05)
-
-#ifdef USE_DSHOT_DMA_DRIVER
-
-#ifdef THREE_D_THROTTLE
-#error "Not tested with THREE_D_THROTTLE config option"
-#endif
-
-#ifdef INVERTED_ENABLE
-#ifndef BIDIRECTIONAL
-#error INVERTED_ENABLE is on but not BIDIRECTIONAL in dshot driver
-#endif
-#endif
-
 static uint8_t DSHOT_GPIO_A = 0;
 static uint8_t DSHOT_GPIO_B = 0;
 static uint8_t DSHOT_GPIO_C = 0;
-
-//sum = total number of dshot GPIO ports
-#define DSHOT_PORT_COUNT (DSHOT_GPIO_A + DSHOT_GPIO_B + DSHOT_GPIO_C)
 
 extern profile_t profile;
 
@@ -102,12 +109,12 @@ volatile uint32_t portA_buffer[48] = {0}; // dma buffers
 volatile uint32_t portB_buffer[48] = {0};
 volatile uint32_t portC_buffer[48] = {0};
 
-void make_packet(uint8_t number, uint16_t value, bool telemetry);
+// use your own struct to use BSRR as a 16-bit register
+static volatile dshot_gpio_t *gpioA = (dshot_gpio_t *)GPIOA;
+static volatile dshot_gpio_t *gpioB = (dshot_gpio_t *)GPIOB;
+static volatile dshot_gpio_t *gpioC = (dshot_gpio_t *)GPIOC;
 
-#ifndef FORWARD
-#define FORWARD 0
-#define REVERSE 1
-#endif
+void make_packet(uint8_t number, uint16_t value, bool telemetry);
 
 void motor_init() {
   LL_GPIO_InitTypeDef gpio_init;
@@ -397,18 +404,18 @@ void motor_set(uint8_t number, float pwm) {
   if (pwmdir == last_pwmdir) { //make a regular packet
     make_packet(profile.motor.motor_pins[number], value, false);
   } else { //make a series of dshot command packets
-    static uint16_t counter;
+    static uint16_t counter = 0;
     if (counter <= 10000) {
       counter++;
       if (pwmdir == REVERSE)
-        value = 21; //DSHOT_CMD_ROTATE_REVERSE 21
+        value = DSHOT_CMD_ROTATE_REVERSE;
       if (pwmdir == FORWARD)
-        value = 20;        //DSHOT_CMD_ROTATE_NORMAL 20
-      if (counter <= 8000) //override to disarmed for a few cycles just since case blheli wants that
+        value = DSHOT_CMD_ROTATE_NORMAL;
+      if (counter <= 8000) //override to disarmed for a few cycles just in case blheli wants that
         make_packet(profile.motor.motor_pins[number], 0, false);
       if (counter > 8000 && counter <= 8060) //send the command 6 times plus a few extra times for good measure
         make_packet(profile.motor.motor_pins[number], value, true);
-      if (counter > 8600) //override to disarmed for a few cycles just since case blheli wants that
+      if (counter > 8600) //override to disarmed for a few cycles just in case blheli wants that
         make_packet(profile.motor.motor_pins[number], 0, false);
     }
     if (counter == 10001) {
@@ -422,16 +429,6 @@ void motor_set(uint8_t number, float pwm) {
     dshot_dma_start();
   }
 }
-
-#define DSHOT_CMD_BEEP1 1
-#define DSHOT_CMD_BEEP2 2
-#define DSHOT_CMD_BEEP3 3
-#define DSHOT_CMD_BEEP4 4
-#define DSHOT_CMD_BEEP5 5 // 5 currently uses the same tone as 4 in BLHeli_S.
-
-#ifndef MOTOR_BEEPS_TIMEOUT
-#define MOTOR_BEEPS_TIMEOUT 1e6
-#endif
 
 void motor_beep() {
   static uint32_t motor_beep_time = 0;
@@ -466,8 +463,6 @@ void motor_beep() {
   }
 }
 
-#if defined(USE_DSHOT_DMA_DRIVER)
-
 void DMA2_Stream6_IRQHandler() {
   LL_DMA_EnableStream(DMA2, LL_DMA_STREAM_6);
 
@@ -500,8 +495,5 @@ void DMA2_Stream6_IRQHandler() {
     break;
   }
 }
-#endif
-
-#endif
 
 #endif

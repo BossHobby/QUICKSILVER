@@ -24,10 +24,6 @@ typedef enum {
 
 #define MHZ_TO_HZ(mhz) (mhz * 1000000)
 
-// for inverted flight motor direction
-#define FORWARD 0
-#define REVERSE 1
-
 //Throttle must drop below this value if arming feature is enabled for arming to take place.  MIX_INCREASE_THROTTLE_3 if enabled
 //will also not activate on the ground untill this threshold is passed during takeoff for safety and better staging behavior.
 #define THROTTLE_SAFETY .10f

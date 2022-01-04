@@ -2,6 +2,9 @@
 
 #include <stdint.h>
 
+#define FORWARD 0
+#define REVERSE 1
+
 #define MOTOR_BL 0
 #define MOTOR_FL 1
 #define MOTOR_BR 2

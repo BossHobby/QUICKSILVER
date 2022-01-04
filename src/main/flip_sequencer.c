@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "control.h"
+#include "drv_motor.h"
 #include "drv_time.h"
 #include "profile.h"
 
