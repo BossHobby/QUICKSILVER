@@ -72,9 +72,9 @@ static uint8_t DSHOT_GPIO_C = 0;
 
 extern profile_t profile;
 
-int pwmdir = 0;
-int last_pwmdir = 0;
+uint8_t pwmdir = 0;
 
+static uint8_t last_pwmdir = 0;
 static uint32_t pwm_failsafe_time = 1;
 
 volatile int dshot_dma_phase = 0;  // 0:idle, 1: also idles in interrupt handler as single phase gets called by dshot_dma_start(), 2: & 3: handle remaining phases

@@ -64,8 +64,6 @@ float tempx[4];
 
 #endif
 
-extern int pwmdir;
-
 extern profile_t profile;
 extern usb_motor_test_t usb_motor_test;
 

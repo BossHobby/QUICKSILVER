@@ -36,7 +36,7 @@ int flipdir = 0;
 extern profile_t profile;
 
 #ifdef STANDARD_TURTLE
-extern int pwmdir;
+extern uint8_t pwmdir;
 #endif
 
 void start_flip() {

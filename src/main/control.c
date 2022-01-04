@@ -81,7 +81,6 @@ static uint8_t idle_state;
 static uint8_t arming_release;
 static uint32_t onground_long = 1;
 
-extern int pwmdir;
 extern int ledcommand;
 
 extern profile_t profile;
