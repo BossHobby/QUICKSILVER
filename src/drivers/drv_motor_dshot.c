@@ -100,8 +100,6 @@ static volatile dshot_gpio_t *gpioA = (dshot_gpio_t *)GPIOA;
 static volatile dshot_gpio_t *gpioB = (dshot_gpio_t *)GPIOB;
 static volatile dshot_gpio_t *gpioC = (dshot_gpio_t *)GPIOC;
 
-void make_packet(uint8_t number, uint16_t value, bool telemetry);
-
 void motor_init() {
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
@@ -241,26 +239,26 @@ static void dshot_dma_stream_enable() {
   LL_TIM_EnableCounter(TIM1);
 }
 
-void dshot_dma_portA() {
+static void dshot_dma_portA() {
   DMA2_Stream6->PAR = (uint32_t)&gpioA->BSRRL;
   DMA2_Stream6->M0AR = (uint32_t)portA_buffer;
   dshot_dma_stream_enable();
 }
 
-void dshot_dma_portB() {
+static void dshot_dma_portB() {
   DMA2_Stream6->PAR = (uint32_t)&gpioB->BSRRL;
   DMA2_Stream6->M0AR = (uint32_t)portB_buffer;
   dshot_dma_stream_enable();
 }
 
-void dshot_dma_portC() {
+static void dshot_dma_portC() {
   DMA2_Stream6->PAR = (uint32_t)&gpioC->BSRRL;
   DMA2_Stream6->M0AR = (uint32_t)portC_buffer;
   dshot_dma_stream_enable();
 }
 
 // make dshot packet
-void make_packet(uint8_t number, uint16_t value, bool telemetry) {
+static void make_packet(uint8_t number, uint16_t value, bool telemetry) {
   uint16_t packet = (value << 1) | (telemetry ? 1 : 0); // Here goes telemetry bit
   // compute checksum
   uint16_t csum = 0;
@@ -277,15 +275,9 @@ void make_packet(uint8_t number, uint16_t value, bool telemetry) {
 }
 
 // make dshot dma packet, then fire
-void dshot_dma_start() {
-  uint32_t time = time_micros();
-
-  // wait maximum a LOOPTIME for dshot dma to complete
-  while ((dshot_dma_phase != 0 || spi_dma_is_ready(SPI_PORT1) == 0) && (time_micros() - time) < state.looptime * 1e6f)
-    ;
-
-  if (dshot_dma_phase != 0 || spi_dma_is_ready(SPI_PORT1) == 0)
-    return; // skip this dshot command
+static void dshot_dma_start() {
+  while (dshot_dma_phase != 0 || spi_dma_is_ready(SPI_PORT1) == 0)
+    __WFI();
 
   // generate dshot dma packet
   for (uint8_t i = 0; i < 16; i++) {
