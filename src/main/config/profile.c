@@ -401,11 +401,7 @@ const profile_t default_profile = {
 #else
             AUX_CHANNEL_OFF,
 #endif
-#ifdef FN_INVERTED //AUX_FN_INVERTED
-            FN_INVERTED,
-#else
-            AUX_CHANNEL_OFF,
-#endif
+            AUX_CHANNEL_OFF, //AUX_BLACKBOX
         },
         .lqi_source = RX_LQI_SOURCE_PACKET_RATE,
         .stick_calibration_limits = {

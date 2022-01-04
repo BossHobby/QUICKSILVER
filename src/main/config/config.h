@@ -268,10 +268,6 @@
 #define MOTOR_BEEPS
 //#define MOTOR_BEEPS_TIMEOUT 1e6
 
-// *************enable inverted flight code ( brushless only ) - WARNING - NEVER TESTED
-//#define INVERTED_ENABLE
-//#define FN_INVERTED AUX_CHANNEL_OFF //for brushless only
-
 // *************led brightness in-flight ( solid lights only)
 // *************0- 15 range
 #define LED_BRIGHTNESS 15

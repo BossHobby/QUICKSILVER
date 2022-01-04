@@ -64,7 +64,6 @@ float tempx[4];
 
 #endif
 
-
 extern int pwmdir;
 
 extern profile_t profile;
@@ -203,8 +202,8 @@ static void motor_mixer_scale_calc(float mix[4]) {
 }
 
 void motor_mixer_calc(float mix[4]) {
-  if (flags.usb_active){  //necessary to check if usb is active first or the else statement hijacks the state of global flag from turtle & motortest
-    if (usb_motor_test.active){
+  if (flags.usb_active) { //necessary to check if usb is active first or the else statement hijacks the state of global flag from turtle & motortest
+    if (usb_motor_test.active) {
       flags.motortest_override = 1;
     } else {
       flags.motortest_override = 0;
@@ -251,24 +250,10 @@ void motor_mixer_calc(float mix[4]) {
 
   } else {
     // normal mode, we set mix according to pidoutput
-
-#ifdef INVERTED_ENABLE
-    if (pwmdir == REVERSE) {
-      // inverted flight
-      mix[MOTOR_FR] = state.throttle + state.pidoutput.axis[ROLL] + state.pidoutput.axis[PITCH] - state.pidoutput.axis[YAW]; // FR
-      mix[MOTOR_FL] = state.throttle - state.pidoutput.axis[ROLL] + state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // FL
-      mix[MOTOR_BR] = state.throttle + state.pidoutput.axis[ROLL] - state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // BR
-      mix[MOTOR_BL] = state.throttle - state.pidoutput.axis[ROLL] - state.pidoutput.axis[PITCH] - state.pidoutput.axis[YAW]; // BL
-
-    } else
-#endif
-    {
-      // normal mixer
-      mix[MOTOR_FR] = state.throttle - state.pidoutput.axis[ROLL] - state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // FR
-      mix[MOTOR_FL] = state.throttle + state.pidoutput.axis[ROLL] - state.pidoutput.axis[PITCH] - state.pidoutput.axis[YAW]; // FL
-      mix[MOTOR_BR] = state.throttle - state.pidoutput.axis[ROLL] + state.pidoutput.axis[PITCH] - state.pidoutput.axis[YAW]; // BR
-      mix[MOTOR_BL] = state.throttle + state.pidoutput.axis[ROLL] + state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // BL
-    }
+    mix[MOTOR_FR] = state.throttle - state.pidoutput.axis[ROLL] - state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // FR
+    mix[MOTOR_FL] = state.throttle + state.pidoutput.axis[ROLL] - state.pidoutput.axis[PITCH] - state.pidoutput.axis[YAW]; // FL
+    mix[MOTOR_BR] = state.throttle - state.pidoutput.axis[ROLL] + state.pidoutput.axis[PITCH] - state.pidoutput.axis[YAW]; // BR
+    mix[MOTOR_BL] = state.throttle + state.pidoutput.axis[ROLL] + state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // BL
 
     for (int i = 0; i <= 3; i++) {
 #ifdef MOTOR_FILTER2_ALPHA

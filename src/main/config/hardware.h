@@ -56,12 +56,6 @@
 #define USE_PWM_DRIVER
 #endif
 
-#if defined(BRUSHLESS_TARGET) && defined(INVERTED_ENABLE) //WARNING _ HAS NEVER BEEN TESTED
-// Enable this for 3D. The 'Motor Direction' setting in BLHeliSuite must
-// be set to 'Bidirectional' (or 'Bidirectional Rev.') accordingly:
-#define BIDIRECTIONAL
-#endif
-
 #if defined(USE_M25P16) || defined(USE_SDCARD)
 #define ENABLE_BLACKBOX
 #endif

@@ -100,14 +100,6 @@ CBOR_END_STRUCT_ENCODER()
 #undef STR_ARRAY_MEMBER
 
 void control() {
-#ifdef INVERTED_ENABLE
-  //not supported yet
-  if (rx_aux_on(AUX_FN_INVERTED))
-    pwmdir = REVERSE;
-  else
-    pwmdir = FORWARD;
-#endif
-
   rx_precalc();
   pid_precalc();
 

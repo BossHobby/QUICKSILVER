@@ -38,16 +38,6 @@ void input_stick_vector(float rx_input[], float maxangle) {
 
     stickvector[0] *= mag2;
     stickvector[1] *= mag2;
-
-#ifdef INVERTED_ENABLE
-    extern int pwmdir;
-
-    if (pwmdir == REVERSE) {
-      stickvector[0] = -stickvector[0];
-      stickvector[1] = -stickvector[1];
-      stickvector[2] = -stickvector[2];
-    }
-#endif
   }
 
   // find error between stick vector and quad orientation

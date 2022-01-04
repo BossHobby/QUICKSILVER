@@ -54,16 +54,6 @@
 #define MOTOR_BEEPS_TIMEOUT 1e6
 #endif
 
-#ifdef THREE_D_THROTTLE
-#error "Not tested with THREE_D_THROTTLE config option"
-#endif
-
-#ifdef INVERTED_ENABLE
-#ifndef BIDIRECTIONAL
-#error INVERTED_ENABLE is on but not BIDIRECTIONAL in dshot driver
-#endif
-#endif
-
 //sum = total number of dshot GPIO ports
 #define DSHOT_PORT_COUNT (DSHOT_GPIO_A + DSHOT_GPIO_B + DSHOT_GPIO_C)
 
@@ -360,24 +350,9 @@ void motor_set(uint8_t number, float pwm) {
     pwm = 0.999;
   }
 
-  uint16_t value = 0;
-
-#ifdef BIDIRECTIONAL
-
-  if (pwmdir == FORWARD) {
-    // maps 0.0 .. 0.999 to 48 + IDLE_OFFSET .. 1047
-    value = 48 + (profile.motor.digital_idle * 10) + (uint16_t)(pwm * (1000 - (profile.motor.digital_idle * 10)));
-  } else if (pwmdir == REVERSE) {
-    // maps 0.0 .. 0.999 to 1048 + IDLE_OFFSET .. 2047
-    value = 1048 + (profile.motor.digital_idle * 10) + (uint16_t)(pwm * (1000 - (profile.motor.digital_idle * 10)));
-  }
-
-#else
-
   // maps 0.0 .. 0.999 to 48 + IDLE_OFFSET * 2 .. 2047
-  value = 48 + (profile.motor.digital_idle * 20) + (uint16_t)(pwm * (2001 - (profile.motor.digital_idle * 20)));
+  uint16_t value = 48 + (profile.motor.digital_idle * 20) + (uint16_t)(pwm * (2001 - (profile.motor.digital_idle * 20)));
 
-#endif
   if (flags.on_ground || !flags.arm_state || (flags.motortest_override && pwm < 0.002f) || ((rx_aux_on(AUX_MOTOR_TEST)) && pwm < 0.002f)) { //turn off the slow motors during turtle or motortest
     value = 0;                                                                                                                              // stop the motors
   }
@@ -398,9 +373,6 @@ void motor_set(uint8_t number, float pwm) {
     pwm_failsafe_time = 0;
   }
 
-#ifdef BIDIRECTIONAL
-  make_packet(profile.motor.motor_pins[number], value, false);
-#else
   if (pwmdir == last_pwmdir) { //make a regular packet
     make_packet(profile.motor.motor_pins[number], value, false);
   } else { //make a series of dshot command packets
@@ -423,7 +395,6 @@ void motor_set(uint8_t number, float pwm) {
       last_pwmdir = pwmdir;
     }
   }
-#endif
 
   if (number == 3) {
     dshot_dma_start();
