@@ -53,11 +53,6 @@ extern profile_t profile;
 uint32_t motorbeeptime = 0;
 int beepon = 0;
 
-// default value if not defined elsewhere
-#ifndef MOTOR_BEEPS_TIMEOUT
-#define MOTOR_BEEPS_TIMEOUT 30e6
-#endif
-
 #define MOTOR_BEEPS_PWM_ON 0.2
 #define MOTOR_BEEPS_PWM_OFF 0.0
 
@@ -105,25 +100,18 @@ void motor_init() {
 }
 
 void motor_beep() {
-  if (flags.failsafe) {
-    uint32_t time = time_micros();
-    if (!motorbeeptime)
-      motorbeeptime = time;
-    else if (time - motorbeeptime > MOTOR_BEEPS_TIMEOUT) {
-      if (!beepon && (time % 2000000 < 125000)) {
-        for (int i = 0; i <= 3; i++) {
-          motor_set(i, MOTOR_BEEPS_PWM_ON);
-          beepon = 1;
-        }
-      } else {
-        for (int i = 0; i <= 3; i++) {
-          motor_set(i, MOTOR_BEEPS_PWM_OFF);
-          beepon = 0;
-        }
-      }
+  uint32_t time = time_millis();
+  if (!beepon && (time % 2000 < 125)) {
+    for (int i = 0; i <= 3; i++) {
+      motor_set(i, MOTOR_BEEPS_PWM_ON);
+      beepon = 1;
     }
-  } else
-    motorbeeptime = 0;
+  } else {
+    for (int i = 0; i <= 3; i++) {
+      motor_set(i, MOTOR_BEEPS_PWM_OFF);
+      beepon = 0;
+    }
+  }
 }
 
 void motor_set(uint8_t number, float pwmf) {
