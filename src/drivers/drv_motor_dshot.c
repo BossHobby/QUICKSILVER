@@ -50,10 +50,6 @@
 #define DSHOT_CMD_ROTATE_NORMAL 20
 #define DSHOT_CMD_ROTATE_REVERSE 21
 
-#ifndef MOTOR_BEEPS_TIMEOUT
-#define MOTOR_BEEPS_TIMEOUT 1e6
-#endif
-
 //sum = total number of dshot GPIO ports
 #define DSHOT_PORT_COUNT (DSHOT_GPIO_A + DSHOT_GPIO_B + DSHOT_GPIO_C)
 
@@ -402,35 +398,27 @@ void motor_set(uint8_t number, float pwm) {
 }
 
 void motor_beep() {
-  static uint32_t motor_beep_time = 0;
-  if (flags.failsafe || rx_aux_on(AUX_BUZZER_ENABLE)) {
-    uint32_t time = time_micros();
-    if (motor_beep_time == 0) {
-      motor_beep_time = time;
-    }
-    const uint32_t delta_time = time - motor_beep_time;
-    if (delta_time > MOTOR_BEEPS_TIMEOUT || rx_aux_on(AUX_BUZZER_ENABLE)) {
-      uint8_t beep_command = 0;
-      if (delta_time % 2000000 < 250000) {
-        beep_command = DSHOT_CMD_BEEP1;
-      } else if (delta_time % 2000000 < 500000) {
-        beep_command = DSHOT_CMD_BEEP3;
-      } else if (delta_time % 2000000 < 750000) {
-        beep_command = DSHOT_CMD_BEEP2;
-      } else if (delta_time % 2000000 < 1000000) {
-        beep_command = DSHOT_CMD_BEEP4;
-      }
+  const uint32_t time = time_millis();
 
-      if (beep_command != 0) {
-        make_packet(0, beep_command, true);
-        make_packet(1, beep_command, true);
-        make_packet(2, beep_command, true);
-        make_packet(3, beep_command, true);
-        dshot_dma_start();
-      }
-    }
-  } else {
-    motor_beep_time = 0;
+  uint8_t beep_command = 0;
+  if (time % 2000 <= 250) {
+    beep_command = DSHOT_CMD_BEEP1;
+  } else if (time % 2000 <= 500) {
+    beep_command = DSHOT_CMD_BEEP3;
+  } else if (time % 2000 <= 750) {
+    beep_command = DSHOT_CMD_BEEP2;
+  } else if (time % 2000 <= 1000) {
+    beep_command = DSHOT_CMD_BEEP4;
+  } else if (time % 2000 <= 1250) {
+    beep_command = DSHOT_CMD_BEEP5;
+  }
+
+  if (beep_command != 0) {
+    make_packet(0, beep_command, true);
+    make_packet(1, beep_command, true);
+    make_packet(2, beep_command, true);
+    make_packet(3, beep_command, true);
+    dshot_dma_start();
   }
 }
 

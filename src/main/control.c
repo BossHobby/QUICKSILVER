@@ -368,7 +368,7 @@ void control() {
     motor_set_all(0);
 
 #ifdef MOTOR_BEEPS
-    if (flags.usb_active == 0) {
+    if ((flags.usb_active == 0 && flags.failsafe) || rx_aux_on(AUX_BUZZER_ENABLE)) {
       motor_beep();
     }
 #endif
