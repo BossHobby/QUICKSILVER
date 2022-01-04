@@ -19,7 +19,6 @@ typedef enum {
   PARSER_IDLE,
   PARSER_ERROR,
   PARSER_INIT,
-  PARSER_CHECK_MIRROR,
   PARSER_READ_MAGIC,
   PARSER_READ_PAYLOAD,
   PARSER_READ_CRC,
@@ -88,8 +87,8 @@ static void serial_tramp_reconfigure() {
   LL_USART_ClearFlag_RXNE(USART.channel);
   LL_USART_ClearFlag_TC(USART.channel);
 
+  LL_USART_EnableIT_RXNE(USART.channel);
   LL_USART_DisableIT_TXE(USART.channel);
-  LL_USART_DisableIT_RXNE(USART.channel);
   LL_USART_EnableIT_TC(USART.channel);
 
   LL_USART_EnableHalfDuplex(USART.channel);
@@ -138,10 +137,8 @@ vtx_update_result_t serial_tramp_update() {
     return VTX_ERROR;
   }
 
-  static uint8_t mirror_offset = 0;
-  static uint8_t payload_offset = 0;
-
   static uint8_t payload[32];
+  static uint8_t payload_offset = 0;
 
   switch (parser_state) {
   case PARSER_ERROR:
@@ -152,37 +149,9 @@ vtx_update_result_t serial_tramp_update() {
 
   case PARSER_INIT: {
     if ((time_millis() - vtx_last_request) > 200) {
-      mirror_offset = 0;
       payload_offset = 0;
-      parser_state = PARSER_CHECK_MIRROR;
-      serial_vtx_send_data(vtx_frame, vtx_frame_length);
-    }
-    return VTX_WAIT;
-  }
-  case PARSER_CHECK_MIRROR: {
-    uint8_t data = 0;
-    if (serial_vtx_read_byte(&data) == 0) {
-      return VTX_WAIT;
-    }
-
-    quic_debugf("TRAMP: mirror 0x%x (%d)", data, mirror_offset);
-
-    if (vtx_frame[mirror_offset] != data) {
-      quic_debugf("TRAMP: invalid mirror (%d:0x%x)", mirror_offset, data);
-      parser_state = ERROR;
-      return VTX_ERROR;
-    }
-
-    mirror_offset++;
-
-    if (mirror_offset == vtx_frame_length) {
-      if (vtx_frame[1] != 'r' && vtx_frame[1] != 'v' && vtx_frame[1] != 's') {
-        // param is set, this is not a query but a command
-        // we are done here, no response will follow
-        parser_state = PARSER_IDLE;
-        return VTX_SUCCESS;
-      }
       parser_state = PARSER_READ_MAGIC;
+      serial_vtx_send_data(vtx_frame, vtx_frame_length);
     }
     return VTX_WAIT;
   }

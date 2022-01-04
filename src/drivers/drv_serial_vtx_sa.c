@@ -26,7 +26,6 @@ typedef enum {
   PARSER_IDLE,
   PARSER_ERROR,
   PARSER_INIT,
-  PARSER_CHECK_MIRROR,
   PARSER_READ_MAGIC,
   PARSER_READ_PAYLOAD,
   PARSER_READ_CRC,
@@ -57,7 +56,7 @@ static void serial_smart_audio_reconfigure() {
   LL_GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStructure.Pull = LL_GPIO_PULL_DOWN;
+  GPIO_InitStructure.Pull = LL_GPIO_PULL_NO;
   GPIO_InitStructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   gpio_pin_init_af(&GPIO_InitStructure, USART.tx_pin, USART.gpio_af);
 
@@ -75,7 +74,7 @@ static void serial_smart_audio_reconfigure() {
   LL_USART_ClearFlag_TC(USART.channel);
 
   LL_USART_DisableIT_TXE(USART.channel);
-  LL_USART_DisableIT_RXNE(USART.channel);
+  LL_USART_EnableIT_RXNE(USART.channel);
   LL_USART_EnableIT_TC(USART.channel);
 
   LL_USART_EnableHalfDuplex(USART.channel);
@@ -214,7 +213,6 @@ vtx_update_result_t serial_smart_audio_update() {
       0x55,
   };
 
-  static uint8_t mirror_offset = 0;
   static uint8_t payload_offset = 0;
 
   static uint8_t crc = 0;
@@ -233,47 +231,16 @@ vtx_update_result_t serial_smart_audio_update() {
     if ((time_millis() - vtx_last_request) > 200) {
       smart_audio_auto_baud();
 
-      mirror_offset = 0;
       payload_offset = 0;
       crc = 0;
       cmd = 0;
       length = 0;
-      parser_state = PARSER_CHECK_MIRROR;
+      parser_state = PARSER_READ_MAGIC;
 
       quic_debugf("SMART_AUDIO: send cmd %d (%d)", cmd, vtx_frame_length);
       serial_vtx_send_data(vtx_frame, vtx_frame_length);
     }
 
-    return VTX_WAIT;
-  }
-  case PARSER_CHECK_MIRROR: {
-    uint8_t data = 0;
-    if (serial_vtx_read_byte(&data) == 0) {
-      return VTX_WAIT;
-    }
-
-    quic_debugf("SMART_AUDIO: mirror 0x%x (%d)", data, mirror_offset);
-
-    // handle optional first zero byte
-    if (mirror_offset == 1 && data == 0x0) {
-      return VTX_WAIT;
-    }
-
-    if (vtx_frame[mirror_offset] != data) {
-      if (vtx_frame[mirror_offset + 1] == data) {
-        mirror_offset++;
-      } else {
-        quic_debugf("SMART_AUDIO: invalid mirror (%d:0x%x)", mirror_offset, data);
-        parser_state = ERROR;
-        return VTX_ERROR;
-      }
-    }
-
-    mirror_offset++;
-
-    if (mirror_offset == vtx_frame_length) {
-      parser_state = PARSER_READ_MAGIC;
-    }
     return VTX_WAIT;
   }
   case PARSER_READ_MAGIC: {
@@ -322,7 +289,7 @@ vtx_update_result_t serial_smart_audio_update() {
     payload_offset++;
 
     // payload done, lets check crc
-    if (payload_offset > SA_HEADER_SIZE && (payload_offset - SA_HEADER_SIZE) == length) {
+    if (payload_offset >= SA_HEADER_SIZE && (payload_offset - SA_HEADER_SIZE) == length) {
       parser_state = PARSER_READ_CRC;
     }
 

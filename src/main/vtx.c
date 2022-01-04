@@ -225,6 +225,11 @@ vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual) {
   }
 
   if (result == VTX_SUCCESS) {
+    if (tramp_settings.freq_min == 0) {
+      // tramp reset was successful but returned empty data
+      return VTX_DETECT_WAIT;
+    }
+
     if (tramp_settings.frequency == 0) {
       serial_tramp_send_payload('v', 0);
       return VTX_DETECT_WAIT;
