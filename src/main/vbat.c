@@ -5,6 +5,13 @@
 #include "flash.h"
 #include "profile.h"
 
+// compensation factor for li-ion internal model
+// zero to bypass
+#define CF1 0.25f
+
+// the lowest vbatt is ever allowed to go
+#define VBATTLOW_ABS 2.7f
+
 extern profile_t profile;
 
 void vbat_init() {
@@ -50,10 +57,6 @@ void vbat_calc() {
 
   lpf(&state.vbattfilt, battadc, 0.9968f);
 
-  // compensation factor for li-ion internal model
-  // zero to bypass
-#define CF1 0.25f
-
   float tempvolt = state.vbattfilt * (1.00f + CF1) - state.vbattfilt_corr * (CF1);
 
 #ifdef AUTO_VDROP_FACTOR
@@ -98,8 +101,9 @@ void vbat_calc() {
     }
   }
 
-#undef VDROP_FACTOR
-#define VDROP_FACTOR minindex * 0.1f
+  const float vdrop_factor = minindex * 0.1f;
+#else
+  const float vdrop_factor = VDROP_FACTOR;
 #endif
 
   float hyst;
@@ -108,12 +112,12 @@ void vbat_calc() {
   else
     hyst = 0.0f;
 
-  if ((tempvolt + (float)VDROP_FACTOR * thrfilt < (profile.voltage.vbattlow * state.lipo_cell_count) + hyst) || (state.vbattfilt < (float)2.7f))
+  state.vbatt_comp = tempvolt + vdrop_factor * thrfilt;
+
+  if ((state.vbatt_comp < profile.voltage.vbattlow * state.lipo_cell_count + hyst) || (state.vbattfilt < VBATTLOW_ABS * state.lipo_cell_count))
     flags.lowbatt = 1;
   else
     flags.lowbatt = 0;
-
-  state.vbatt_comp = tempvolt + (float)VDROP_FACTOR * thrfilt;
 }
 
 void vbat_lvc_throttle() {
