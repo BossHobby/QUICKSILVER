@@ -131,8 +131,7 @@ uint8_t bmi270_configure() {
   bmi270_write(BMI270_REG_ACC_RANGE, BMI270_ACC_RANGE_16G);
   time_delay_ms(1);
 
-  // HACK: this ODR is marked "reserved" in the datasheet, no idea if it will really go this fast
-  bmi270_write(BMI270_REG_GYRO_CONF, (BMI270_GYRO_CONF_FILTER_PERF << 7) | (BMI270_GYRO_CONF_NOISE_PERF << 6) | (BMI270_GYRO_CONF_BWP << 4) | BMI270_GYRO_CONF_ODR12800);
+  bmi270_write(BMI270_REG_GYRO_CONF, (BMI270_GYRO_CONF_FILTER_PERF << 7) | (BMI270_GYRO_CONF_NOISE_PERF << 6) | (BMI270_GYRO_CONF_BWP << 4) | BMI270_GYRO_CONF_ODR3200);
   time_delay_ms(1);
 
   bmi270_write(BMI270_REG_GYRO_RANGE, BMI270_GYRO_RANGE_2000DPS);
