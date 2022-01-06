@@ -244,6 +244,10 @@ static usbd_respond cdc_control(usbd_device *dev, usbd_ctlreq *req, usbd_rqc_cal
 }
 
 static void cdc_rxonly(usbd_device *dev, uint8_t event, uint8_t ep) {
+  if (circular_buffer_free(&rx_buffer) <= CDC_DATA_SZ) {
+    return;
+  }
+
   uint8_t buf[CDC_DATA_SZ];
   const int32_t len = usbd_ep_read(dev, ep, buf, CDC_DATA_SZ);
   if (len == 0) {
