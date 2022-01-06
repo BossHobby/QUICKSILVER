@@ -221,7 +221,9 @@ static uint8_t connect_esc(uint8_32_u *pDeviceInfo) {
 
 uint8_t serial_4way_init() {
   motor_set_all(0);
-  time_delay_us(250000);
+  motor_wait_for_ready();
+
+  time_delay_ms(250);
 
   // set up 1wire serial to each esc
 
