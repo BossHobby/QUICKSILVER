@@ -84,4 +84,8 @@ void time_delay_us(uint32_t us) {
   }
 }
 
+void time_delay_ms(uint32_t ms) {
+  while (ms--)
+    time_delay_us(1000);
+}
 #endif
