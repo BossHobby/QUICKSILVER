@@ -183,9 +183,9 @@ void usb_process_msp() {
     break;
   }
   case MSP_SET_MOTOR: {
+    uint16_t *values = (uint16_t *)(decode_buffer);
     for (uint8_t i = 0; i < 4; i++) {
-      const uint16_t value = (uint16_t)(decode_buffer[MSP_HEADER_LEN + i * 2] << 8) || decode_buffer[MSP_HEADER_LEN + i * 2 + 1];
-      usb_motor_test.value[i] = mapf(value, 1000.f, 2000.f, 0.0f, 1.0f);
+      usb_motor_test.value[i] = mapf(values[i], 1000.f, 2000.f, 0.0f, 1.0f);
     }
     usb_motor_test.active = 1;
 
