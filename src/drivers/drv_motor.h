@@ -12,5 +12,6 @@
 
 void motor_init();
 void motor_set(uint8_t number, float pwm);
+void motor_wait_for_ready();
 void motor_set_all(float pwm);
 void motor_beep();

@@ -147,4 +147,7 @@ void motor_set(uint8_t number, float pwm) {
 
 #endif
 
+void motor_wait_for_ready() {
+}
+
 #endif // end USE_PWM_DRIVER

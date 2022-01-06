@@ -276,8 +276,7 @@ static void make_packet(uint8_t number, uint16_t value, bool telemetry) {
 
 // make dshot dma packet, then fire
 static void dshot_dma_start() {
-  while (dshot_dma_phase != 0 || spi_dma_is_ready(SPI_PORT1) == 0)
-    __WFI();
+  motor_wait_for_ready();
 
   // generate dshot dma packet
   for (uint8_t i = 0; i < 16; i++) {
@@ -324,6 +323,11 @@ static void dshot_dma_start() {
     dshot_dma_portB();
   else if (DSHOT_GPIO_C == 1)
     dshot_dma_portC();
+}
+
+void motor_wait_for_ready() {
+  while (dshot_dma_phase != 0 || spi_dma_is_ready(SPI_PORT1) == 0)
+    __WFI();
 }
 
 void motor_set(uint8_t number, float pwm) {
