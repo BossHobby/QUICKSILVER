@@ -211,7 +211,7 @@ int main() {
 #endif
 
     if (liberror > 20) {
-      failloop(FAILLOOP_SPI);
+      failloop(FAILLOOP_I2C);
       // endless loop
     }
 
