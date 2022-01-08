@@ -2,8 +2,6 @@
 
 #include "project.h"
 
-void failloop(int val);
-
 #ifdef STM32F4
 
 #define TICKS_PER_US (SYS_CLOCK_FREQ_HZ / 1000000)

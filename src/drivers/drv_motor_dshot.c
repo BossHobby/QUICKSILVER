@@ -331,7 +331,6 @@ void motor_wait_for_ready() {
 }
 
 void motor_set(uint8_t number, float pwm) {
-  // if ( number > 3 ) failloop(5);
   if (number > 3)
     return;
 

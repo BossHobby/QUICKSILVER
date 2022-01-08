@@ -1,5 +1,6 @@
 #include "drv_fmc.h"
 
+#include "failloop.h"
 #include "project.h"
 
 #include <stm32f4xx_hal_flash.h>
@@ -21,8 +22,6 @@ Sector 11   0x080E0000 - 0x080FFFFF 128 Kbytes
 */
 #define FLASH_ADDR 0x0800C000 //sector 3 address
 #endif
-
-extern void failloop(int);
 
 void fmc_lock() {
   HAL_FLASH_Lock();
@@ -54,7 +53,7 @@ void fmc_write(uint32_t addr, uint32_t value) {
   HAL_StatusTypeDef result = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_ADDR + (addr * 4), value);
   if (result != HAL_OK) {
     fmc_lock();
-    failloop(5);
+    failloop(FAILLOOP_FAULT);
   }
 }
 

@@ -6,6 +6,7 @@
 #include "drv_spi.h"
 #include "drv_spi_xn297.h"
 #include "drv_time.h"
+#include "failloop.h"
 #include "project.h"
 #include "util.h"
 
@@ -135,9 +136,8 @@ void rx_init() {
 void check_radio() {
   int rxcheck = xn_readreg(0x0f); // rx address pipe 5
   // should be 0xc6
-  extern void failloop(int);
   if (rxcheck != 0xc6)
-    failloop(3);
+    failloop(FAILLOOP_RADIO);
 }
 
 ///////////////////

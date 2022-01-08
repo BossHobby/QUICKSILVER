@@ -15,6 +15,7 @@
 #include "drv_spi.h"
 #include "drv_spi_soft.h"
 #include "drv_time.h"
+#include "failloop.h"
 #include "filter.h"
 #include "flash.h"
 #include "gestures.h"
@@ -48,8 +49,6 @@ uint32_t lastlooptime;
 uint8_t looptime_warning;
 uint8_t blown_loop_counter;
 float looptime_buffer[255];
-
-void failloop(int val);
 
 int random_seed = 0;
 
@@ -102,7 +101,7 @@ int main() {
 
   if (!sixaxis_init()) {
     //gyro not found
-    failloop(4);
+    failloop(FAILLOOP_GYRO);
   }
 
 #ifdef ENABLE_OSD
@@ -155,7 +154,7 @@ int main() {
 
   extern int liberror;
   if (liberror) {
-    failloop(7);
+    failloop(FAILLOOP_SPI);
   }
 
   perf_counter_init();
@@ -179,7 +178,7 @@ int main() {
       state.looptime = 1;
     state.looptime = state.looptime * 1e-6f;
     if (state.looptime > 0.02f) { // max loop 20ms
-      failloop(6);
+      failloop(FAILLOOP_LOOPTIME);
       //endless loop
     }
 
@@ -212,7 +211,7 @@ int main() {
 #endif
 
     if (liberror > 20) {
-      failloop(8);
+      failloop(FAILLOOP_SPI);
       // endless loop
     }
 
@@ -322,77 +321,4 @@ int main() {
       __NOP();
 
   } // end loop
-}
-
-// the error codes indicate a failure that prevents normal operation
-// led flash codes - the quad will not fly / bind if flashing a code
-// 2 - low battery at powerup - currently unused
-// 3 - radio chip not found
-// 4 - Gyro not found
-// 5 - clock , intterrupts , systick , gcc bad code , bad memory access (code issues like bad pointers)- this should not come up
-// 6 - loop time issue - if loop time exceeds 20mS
-// 7 - spi error  - triggered by hardware spi driver only
-// 8 - i2c error main loop  - triggered by depreciated hardware i2c driver only
-
-const char *failloop_string(int val) {
-  switch (val) {
-  case 2:
-    return "low battery at powerup - unused";
-  case 3:
-    return "radio chip not detected";
-  case 4:
-    return "Gyro not found";
-  case 5:
-    return "clock , intterrupts , systick";
-  case 6:
-    return "loop time issue";
-  case 7:
-    return "i2c error";
-  case 8:
-    return "i2c error main loop";
-  default:
-    return "unknown error";
-  }
-}
-
-void failloop(int val) {
-  for (int i = 0; i <= 3; i++) {
-    motor_set(i, 0);
-  }
-
-  while (1) {
-#if defined(STM32F4) && defined(DEBUG)
-    quic_debugf("failloop %s (%d)", failloop_string(val), val);
-    usb_detect();
-#endif
-    for (int i = 0; i < val; i++) {
-      ledon(255);
-      time_delay_us(500000);
-      ledoff(255);
-      time_delay_us(500000);
-    }
-    time_delay_us(800000);
-  }
-}
-
-void handle_fault() {
-#if defined(STM32F4) && defined(RESET_ON_FAULT)
-  extern void systemResetToBootloader();
-  systemResetToBootloader();
-#endif
-
-  failloop(5);
-}
-
-void HardFault_Handler() {
-  handle_fault();
-}
-void MemManage_Handler() {
-  handle_fault();
-}
-void BusFault_Handler() {
-  handle_fault();
-}
-void UsageFault_Handler() {
-  handle_fault();
 }
