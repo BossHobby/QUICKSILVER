@@ -12,17 +12,17 @@ const char *failloop_string(failloop_t val) {
   case FAILLOOP_LOW_BATTERY:
     return "low battery at powerup - unused";
   case FAILLOOP_RADIO:
-    return "radio chip not detected";
+    return "radio chip not found";
   case FAILLOOP_GYRO:
-    return "Gyro not found";
+    return "gyro not found";
   case FAILLOOP_FAULT:
     return "clock, intterrupts, systick";
   case FAILLOOP_LOOPTIME:
     return "loop time issue";
   case FAILLOOP_SPI:
-    return "i2c error";
-  case FAILLOOP_I2C:
-    return "i2c error main loop";
+    return "spi error";
+  case FAILLOOP_SPI_MAIN:
+    return "spi error main loop";
   default:
     return "unknown error";
   }
