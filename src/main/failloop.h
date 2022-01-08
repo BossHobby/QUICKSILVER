@@ -4,6 +4,7 @@
 // led flash codes - the quad will not fly / bind if flashing a code
 
 typedef enum {
+  FAILLOOP_NONE = 0,
   FAILLOOP_LOW_BATTERY = 2, // - low battery at powerup - currently unused
   FAILLOOP_RADIO = 3,       // - radio chip not found
   FAILLOOP_GYRO = 4,        // - Gyro not found

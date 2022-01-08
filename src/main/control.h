@@ -2,8 +2,10 @@
 
 #include <stdint.h>
 
+#include "failloop.h"
 #include "project.h"
 #include "rx.h"
+
 #include "util/vector.h"
 
 #define RXMODE_BIND 0
@@ -36,6 +38,8 @@ typedef struct {
 extern control_flags_t flags;
 
 typedef struct {
+  failloop_t failloop;
+
   uint16_t looptime_autodetect;
   float looptime; // looptime in seconds
   float uptime;   // running sum of looptimes
@@ -89,6 +93,7 @@ typedef struct {
 } control_state_t;
 
 #define STATE_MEMBERS                       \
+  MEMBER(failloop, uint8)                   \
   MEMBER(looptime_autodetect, uint16)       \
   MEMBER(looptime, float)                   \
   MEMBER(uptime, float)                     \

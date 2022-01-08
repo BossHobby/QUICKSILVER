@@ -1,8 +1,11 @@
 #include "failloop.h"
 
+#include "control.h"
 #include "drv_motor.h"
 #include "drv_time.h"
+#include "drv_usb.h"
 #include "led.h"
+#include "usb_configurator.h"
 
 const char *failloop_string(failloop_t val) {
   switch (val) {
@@ -26,20 +29,37 @@ const char *failloop_string(failloop_t val) {
 }
 
 void failloop(failloop_t val) {
-  motor_set_all(0);
+  uint32_t blink_counter = 0;
+  uint32_t blink_start = time_millis();
 
   while (1) {
-#if defined(STM32F4) && defined(DEBUG)
-    quic_debugf("failloop %s (%d)", failloop_string(val), val);
-    usb_detect();
-#endif
-    for (int i = 0; i < val; i++) {
-      ledon(255);
-      time_delay_us(500000);
-      ledoff(255);
-      time_delay_us(500000);
+    motor_set_all(0);
+
+    state.failloop = val;
+
+    if (usb_detect()) {
+      usb_configurator();
     }
-    time_delay_us(800000);
+
+    if ((time_millis() - blink_start) >= 1000) {
+      send_quic_strf(QUIC_CMD_LOG, QUIC_FLAG_NONE, "failloop %s (%d)", failloop_string(val), val);
+    }
+
+    if (blink_counter < val) {
+      if ((time_millis() - blink_start) < 500) {
+        ledon(LEDALL);
+      } else if ((time_millis() - blink_start) < 1000) {
+        ledoff(LEDALL);
+      } else if ((time_millis() - blink_start) >= 1000) {
+        blink_counter++;
+        blink_start = time_millis();
+      }
+    } else if ((time_millis() - blink_start) >= 1000) {
+      blink_counter = 0;
+      blink_start = time_millis();
+    }
+
+    time_delay_us(100);
   }
 }
 
