@@ -9,3 +9,4 @@
 #define USB_PRIORITY 0x3, 0x3
 
 void interrupt_enable(IRQn_Type irq, uint32_t preempt_priority, uint32_t sub_priority);
+void interrupt_disable(IRQn_Type irq);

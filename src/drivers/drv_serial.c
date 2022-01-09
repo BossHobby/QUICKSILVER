@@ -85,6 +85,51 @@ void serial_enable_isr(usart_ports_t port) {
   }
 }
 
+void serial_disable_isr(usart_ports_t port) {
+  switch (usart_port_defs[port].channel_index) {
+#ifdef USART1
+  case 1:
+    interrupt_disable(USART1_IRQn);
+    break;
+#endif
+#ifdef USART2
+  case 2:
+    interrupt_disable(USART2_IRQn);
+    break;
+#endif
+#ifdef USART3
+  case 3:
+    interrupt_disable(USART3_IRQn);
+    break;
+#endif
+#ifdef UART4
+  case 4:
+    interrupt_disable(UART4_IRQn);
+    break;
+#endif
+#ifdef UART5
+  case 5:
+    interrupt_disable(UART5_IRQn);
+    break;
+#endif
+#ifdef USART6
+  case 6:
+    interrupt_disable(USART6_IRQn);
+    break;
+#endif
+#ifdef UART7
+  case 7:
+    interrupt_disable(UART7_IRQn);
+    break;
+#endif
+#ifdef UART8
+  case 8:
+    interrupt_disable(UART8_IRQn);
+    break;
+#endif
+  }
+}
+
 void serial_init(usart_ports_t port, uint32_t buadrate, bool half_duplex) {
   LL_USART_Disable(USART.channel);
 
