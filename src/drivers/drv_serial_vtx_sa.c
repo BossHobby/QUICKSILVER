@@ -51,12 +51,14 @@ extern volatile uint8_t vtx_frame_length;
 extern volatile uint8_t vtx_frame_offset;
 
 static void serial_smart_audio_reconfigure() {
-  LL_USART_Disable(USART.channel);
+  serial_disable_isr(serial_smart_audio_port);
+
+  LL_USART_DeInit(USART.channel);
 
   LL_GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStructure.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStructure.Pull = LL_GPIO_PULL_DOWN;
   GPIO_InitStructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   gpio_pin_init_af(&GPIO_InitStructure, USART.tx_pin, USART.gpio_af);
 
@@ -66,7 +68,7 @@ static void serial_smart_audio_reconfigure() {
   USART_InitStructure.StopBits = LL_USART_STOPBITS_2;
   USART_InitStructure.Parity = LL_USART_PARITY_NONE;
   USART_InitStructure.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
-  USART_InitStructure.TransferDirection = LL_USART_DIRECTION_TX | LL_USART_DIRECTION_RX;
+  USART_InitStructure.TransferDirection = LL_USART_DIRECTION_TX_RX;
   USART_InitStructure.OverSampling = LL_USART_OVERSAMPLING_16;
   LL_USART_Init(USART.channel, &USART_InitStructure);
 
@@ -77,8 +79,10 @@ static void serial_smart_audio_reconfigure() {
   LL_USART_EnableIT_RXNE(USART.channel);
   LL_USART_EnableIT_TC(USART.channel);
 
-  LL_USART_EnableHalfDuplex(USART.channel);
+  LL_USART_ConfigHalfDuplexMode(USART.channel);
   LL_USART_Enable(USART.channel);
+
+  serial_enable_isr(serial_smart_audio_port);
 }
 
 static void smart_audio_auto_baud() {
@@ -195,7 +199,6 @@ void serial_smart_audio_init() {
 
   serial_enable_rcc(serial_smart_audio_port);
   serial_smart_audio_reconfigure();
-  serial_enable_isr(serial_smart_audio_port);
 }
 
 vtx_update_result_t serial_smart_audio_update() {
@@ -323,6 +326,10 @@ vtx_update_result_t serial_smart_audio_update() {
 }
 
 void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const uint32_t size) {
+  if (!serial_vtx_wait_for_ready()) {
+    return;
+  }
+
   vtx_frame_length = size + 2 + SA_HEADER_SIZE;
 
   vtx_frame[0] = 0x00;
@@ -335,8 +342,8 @@ void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const 
   }
   vtx_frame[size + SA_HEADER_SIZE] = crc8_data(vtx_frame + 1, vtx_frame_length - 3);
   vtx_frame[size + 1 + SA_HEADER_SIZE] = 0x00;
-  circular_buffer_clear(&vtx_rx_buffer);
 
   parser_state = PARSER_INIT;
+  vtx_last_valid_read = time_millis();
 }
 #endif

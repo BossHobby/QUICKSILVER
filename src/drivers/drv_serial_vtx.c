@@ -4,6 +4,7 @@
 
 #include "drv_serial.h"
 #include "drv_time.h"
+#include "usb_configurator.h"
 #include "util/circular_buffer.h"
 
 #if defined(ENABLE_SMART_AUDIO) || defined(ENABLE_TRAMP)
@@ -24,14 +25,21 @@ uint32_t vtx_last_request = 0;
 volatile uint8_t vtx_transfer_done = 1;
 
 uint8_t vtx_frame[VTX_BUFFER_SIZE];
-uint8_t volatile vtx_frame_length = 0;
-uint8_t volatile vtx_frame_offset = 0;
+volatile uint8_t vtx_frame_length = 0;
+volatile uint8_t vtx_frame_offset = 0;
 
-void serial_vtx_send_data(uint8_t *data, uint32_t size) {
-  for (uint32_t timeout = 0x1000; vtx_transfer_done == 0 && timeout; --timeout) {
+bool serial_vtx_wait_for_ready() {
+  const uint32_t start = time_millis();
+  while (vtx_transfer_done == 0) {
+    if ((time_millis() - start) > 100) {
+      return false;
+    }
     __WFI();
   }
+  return true;
+}
 
+void serial_vtx_send_data(uint8_t *data, uint32_t size) {
   vtx_transfer_done = 0;
 
   LL_USART_ClearFlag_RXNE(USART.channel);
@@ -39,9 +47,14 @@ void serial_vtx_send_data(uint8_t *data, uint32_t size) {
 
   vtx_frame_offset = 0;
 
+  circular_buffer_clear(&vtx_rx_buffer);
+
   LL_USART_EnableIT_RXNE(USART.channel);
   LL_USART_EnableIT_TXE(USART.channel);
   LL_USART_EnableIT_TC(USART.channel);
+
+  LL_USART_DisableDirectionRx(USART.channel);
+  LL_USART_EnableDirectionTx(USART.channel);
 
   vtx_last_request = time_millis();
   vtx_last_valid_read = time_millis();
@@ -59,8 +72,9 @@ void vtx_uart_isr() {
   if (LL_USART_IsActiveFlag_TC(USART.channel)) {
     LL_USART_ClearFlag_TC(USART.channel);
     if (vtx_frame_offset == vtx_frame_length && vtx_transfer_done == 0) {
+      LL_USART_DisableDirectionTx(USART.channel);
+      LL_USART_EnableDirectionRx(USART.channel);
       vtx_transfer_done = 1;
-      LL_USART_DisableIT_TXE(USART.channel);
     }
   }
 
@@ -70,11 +84,13 @@ void vtx_uart_isr() {
       vtx_frame_offset++;
       vtx_transfer_done = 0;
     }
+    if (vtx_frame_offset == vtx_frame_length) {
+      LL_USART_DisableIT_TXE(USART.channel);
+    }
   }
 
   if (LL_USART_IsActiveFlag_RXNE(USART.channel)) {
     const uint8_t data = LL_USART_ReceiveData8(USART.channel);
-    LL_USART_ClearFlag_RXNE(USART.channel);
     circular_buffer_write(&vtx_rx_buffer, data);
   }
 

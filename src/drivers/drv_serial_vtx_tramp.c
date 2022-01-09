@@ -33,8 +33,6 @@ extern uint32_t vtx_last_request;
 
 extern volatile uint8_t vtx_transfer_done;
 
-extern volatile circular_buffer_t vtx_rx_buffer;
-
 extern uint8_t vtx_frame[VTX_BUFFER_SIZE];
 extern volatile uint8_t vtx_frame_length;
 extern volatile uint8_t vtx_frame_offset;
@@ -47,30 +45,15 @@ static uint8_t crc8_data(const uint8_t *data) {
   return crc;
 }
 
-void serial_tramp_send_payload(uint8_t cmd, const uint16_t payload) {
-  vtx_frame_length = 16;
-
-  memset(vtx_frame, 0, vtx_frame_length);
-
-  vtx_frame[0] = 0x0F;
-  vtx_frame[1] = cmd;
-  vtx_frame[2] = payload & 0xff;
-  vtx_frame[3] = (payload >> 8) & 0xff;
-  vtx_frame[14] = crc8_data(vtx_frame + 1);
-
-  circular_buffer_clear(&vtx_rx_buffer);
-
-  parser_state = PARSER_INIT;
-  vtx_last_valid_read = time_millis();
-}
-
 static void serial_tramp_reconfigure() {
-  LL_USART_Disable(USART.channel);
+  serial_disable_isr(serial_smart_audio_port);
+
+  LL_USART_DeInit(USART.channel);
 
   LL_GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-  GPIO_InitStructure.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStructure.Pull = LL_GPIO_PULL_UP;
   GPIO_InitStructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   gpio_pin_init_af(&GPIO_InitStructure, USART.tx_pin, USART.gpio_af);
 
@@ -80,19 +63,21 @@ static void serial_tramp_reconfigure() {
   USART_InitStructure.StopBits = LL_USART_STOPBITS_1;
   USART_InitStructure.Parity = LL_USART_PARITY_NONE;
   USART_InitStructure.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
-  USART_InitStructure.TransferDirection = LL_USART_DIRECTION_TX | LL_USART_DIRECTION_RX;
+  USART_InitStructure.TransferDirection = LL_USART_DIRECTION_TX_RX;
   USART_InitStructure.OverSampling = LL_USART_OVERSAMPLING_16;
   LL_USART_Init(USART.channel, &USART_InitStructure);
 
   LL_USART_ClearFlag_RXNE(USART.channel);
   LL_USART_ClearFlag_TC(USART.channel);
 
-  LL_USART_EnableIT_RXNE(USART.channel);
   LL_USART_DisableIT_TXE(USART.channel);
+  LL_USART_EnableIT_RXNE(USART.channel);
   LL_USART_EnableIT_TC(USART.channel);
 
-  LL_USART_EnableHalfDuplex(USART.channel);
+  LL_USART_ConfigHalfDuplexMode(USART.channel);
   LL_USART_Enable(USART.channel);
+
+  serial_enable_isr(serial_smart_audio_port);
 }
 
 void serial_tramp_init() {
@@ -100,7 +85,16 @@ void serial_tramp_init() {
 
   serial_enable_rcc(serial_smart_audio_port);
   serial_tramp_reconfigure();
-  serial_enable_isr(serial_smart_audio_port);
+}
+
+static bool tramp_is_query(uint8_t cmd) {
+  switch (cmd) {
+  case 'r':
+  case 'v':
+  case 's':
+    return true;
+  }
+  return false;
 }
 
 static uint8_t tramp_parse_packet(uint8_t *payload) {
@@ -148,12 +142,20 @@ vtx_update_result_t serial_tramp_update() {
     return VTX_IDLE;
 
   case PARSER_INIT: {
-    if ((time_millis() - vtx_last_request) > 200) {
-      payload_offset = 0;
-      parser_state = PARSER_READ_MAGIC;
-      serial_vtx_send_data(vtx_frame, vtx_frame_length);
+    if ((time_millis() - vtx_last_request) < 200) {
+      return VTX_WAIT;
     }
-    return VTX_WAIT;
+
+    payload_offset = 0;
+    serial_vtx_send_data(vtx_frame, vtx_frame_length);
+
+    if (tramp_is_query(vtx_frame[1])) {
+      parser_state = PARSER_READ_MAGIC;
+      return VTX_WAIT;
+    } else {
+      parser_state = PARSER_IDLE;
+      return VTX_WAIT;
+    }
   }
   case PARSER_READ_MAGIC: {
     uint8_t data = 0;
@@ -212,6 +214,25 @@ vtx_update_result_t serial_tramp_update() {
   }
 
   return VTX_ERROR;
+}
+
+void serial_tramp_send_payload(uint8_t cmd, const uint16_t payload) {
+  if (!serial_vtx_wait_for_ready()) {
+    return;
+  }
+
+  vtx_frame_length = 16;
+
+  memset(vtx_frame, 0, vtx_frame_length);
+
+  vtx_frame[0] = 0x0F;
+  vtx_frame[1] = cmd;
+  vtx_frame[2] = payload & 0xff;
+  vtx_frame[3] = (payload >> 8) & 0xff;
+  vtx_frame[14] = crc8_data(vtx_frame + 1);
+
+  parser_state = PARSER_INIT;
+  vtx_last_valid_read = time_millis();
 }
 
 #endif

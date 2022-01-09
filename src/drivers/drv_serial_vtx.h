@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #define VTX_BUFFER_SIZE 128
@@ -11,5 +12,6 @@ typedef enum {
   VTX_SUCCESS
 } vtx_update_result_t;
 
+bool serial_vtx_wait_for_ready();
 void serial_vtx_send_data(uint8_t *data, uint32_t size);
 uint8_t serial_vtx_read_byte(uint8_t *data);
