@@ -21,6 +21,7 @@
 #include <stdbool.h>
 
 #include "control.h"
+#include "drv_dma.h"
 #include "drv_gpio.h"
 #include "drv_motor.h"
 #include "drv_spi.h"
@@ -236,18 +237,21 @@ static void dshot_dma_stream_enable() {
 }
 
 static void dshot_dma_portA() {
+  dma_prepare_tx_memory((uint8_t *)portA_buffer, 48);
   DMA2_Stream6->PAR = (uint32_t)&gpioA->BSRRL;
   DMA2_Stream6->M0AR = (uint32_t)portA_buffer;
   dshot_dma_stream_enable();
 }
 
 static void dshot_dma_portB() {
+  dma_prepare_tx_memory((uint8_t *)portB_buffer, 48);
   DMA2_Stream6->PAR = (uint32_t)&gpioB->BSRRL;
   DMA2_Stream6->M0AR = (uint32_t)portB_buffer;
   dshot_dma_stream_enable();
 }
 
 static void dshot_dma_portC() {
+  dma_prepare_tx_memory((uint8_t *)portC_buffer, 48);
   DMA2_Stream6->PAR = (uint32_t)&gpioC->BSRRL;
   DMA2_Stream6->M0AR = (uint32_t)portC_buffer;
   dshot_dma_stream_enable();
