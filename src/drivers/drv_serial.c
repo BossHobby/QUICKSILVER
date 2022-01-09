@@ -44,6 +44,16 @@ void serial_enable_rcc(usart_ports_t port) {
     LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_USART6);
     break;
 #endif
+#ifdef UART7
+  case 7:
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_UART7);
+    break;
+#endif
+#ifdef UART8
+  case 8:
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_UART8);
+    break;
+#endif
   }
 }
 
@@ -77,6 +87,16 @@ void serial_enable_isr(usart_ports_t port) {
 #ifdef USART6
   case 6:
     interrupt_enable(USART6_IRQn, UART_PRIORITY);
+    break;
+#endif
+#ifdef UART7
+  case 7:
+    interrupt_enable(UART7_IRQn, UART_PRIORITY);
+    break;
+#endif
+#ifdef UART8
+  case 8:
+    interrupt_enable(UART8_IRQn, UART_PRIORITY);
     break;
 #endif
   }
