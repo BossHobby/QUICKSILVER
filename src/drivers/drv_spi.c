@@ -5,6 +5,7 @@
 #include "project.h"
 #include "usb_configurator.h"
 
+#include "drv_dma.h"
 #include "drv_interrupt.h"
 
 #define GPIO_AF_SPI1 GPIO_AF5_SPI1
@@ -284,6 +285,8 @@ static void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uin
   //RX Stream
   LL_DMA_DeInit(PORT.dma.dma, PORT.dma.rx_stream_index);
 
+  dma_prepare_rx_memory(base_address_in, buffer_size);
+
   LL_DMA_InitTypeDef DMA_InitStructure;
   DMA_InitStructure.Channel = PORT.dma.channel;
   DMA_InitStructure.PeriphOrM2MSrcAddress = LL_SPI_DMA_GetRegAddr(PORT.channel);
@@ -305,6 +308,8 @@ static void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uin
 static void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, uint32_t buffer_size) {
   //TX Stream
   LL_DMA_DeInit(PORT.dma.dma, PORT.dma.tx_stream_index);
+
+  dma_prepare_tx_memory(base_address_out, buffer_size);
 
   LL_DMA_InitTypeDef DMA_InitStructure;
   DMA_InitStructure.Channel = PORT.dma.channel;
