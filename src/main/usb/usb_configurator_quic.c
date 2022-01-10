@@ -276,6 +276,7 @@ void set_quic(uint8_t *data, uint32_t len) {
     check_cbor_error(QUIC_CMD_SET);
 
     vtx_set(&settings);
+    flash_save();
 
     res = cbor_encode_vtx_settings_t(&enc, &vtx_settings);
     check_cbor_error(QUIC_CMD_SET);

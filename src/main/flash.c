@@ -7,11 +7,15 @@
 #include "profile.h"
 #include "project.h"
 #include "util/cbor_helper.h"
+#include "vtx.h"
+
+#define FMC_HEADER 0x12AA0001
+#define FMC_END_OFFSET 8192
 
 extern const profile_t default_profile;
 extern profile_t profile;
 
-#define FMC_HEADER 0x12AA0001
+extern vtx_settings_t vtx_settings;
 
 static float initial_pid_identifier = -10;
 
@@ -94,13 +98,27 @@ void flash_save() {
     }
   }
 
-  fmc_write(1024, FMC_HEADER);
+  {
+    uint8_t buffer[VTX_STORAGE_SIZE];
+    memset(buffer, 0, VTX_STORAGE_SIZE);
+
+    cbor_value_t enc;
+    cbor_encoder_init(&enc, buffer, VTX_STORAGE_SIZE);
+    cbor_encode_vtx_settings_t(&enc, &vtx_settings);
+
+    uint32_t *proxy = (uint32_t *)buffer;
+    for (int i = 0; i < (VTX_STORAGE_SIZE / 4); i++) {
+      fmc_write((VTX_STORAGE_OFFSET / 4) + i, proxy[i]);
+    }
+  }
+
+  fmc_write(FMC_END_OFFSET / 4, FMC_HEADER);
   fmc_lock();
 }
 
 void flash_load() {
   // check if saved data is present
-  if (FMC_HEADER != fmc_read(0) || FMC_HEADER != fmc_read(1024)) {
+  if (FMC_HEADER != fmc_read(0) || FMC_HEADER != fmc_read(FMC_END_OFFSET / 4)) {
     // Flash was empty, load defaults?
     return;
   }
@@ -151,5 +169,19 @@ void flash_load() {
     if (flash_storage.pid_identifier != initial_pid_identifier) {
       profile.pid = default_profile.pid;
     }
+  }
+
+  {
+    uint8_t buffer[VTX_STORAGE_SIZE];
+    memset(buffer, 0, VTX_STORAGE_SIZE);
+
+    uint32_t *proxy = (uint32_t *)buffer;
+    for (int i = 0; i < (VTX_STORAGE_SIZE / 4); i++) {
+      proxy[i] = fmc_read((VTX_STORAGE_OFFSET / 4) + i);
+    }
+
+    cbor_value_t dec;
+    cbor_decoder_init(&dec, buffer, VTX_STORAGE_SIZE);
+    cbor_decode_vtx_settings_t(&dec, &vtx_settings);
   }
 }

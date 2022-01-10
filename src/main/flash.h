@@ -42,6 +42,9 @@ cbor_result_t cbor_decode_rx_bind_storage_t(cbor_value_t *enc, rx_bind_storage_t
 #define PROFILE_STORAGE_OFFSET (BIND_STORAGE_OFFSET + BIND_STORAGE_SIZE)
 #define PROFILE_STORAGE_SIZE 2048
 
+#define VTX_STORAGE_OFFSET (PROFILE_STORAGE_OFFSET + PROFILE_STORAGE_SIZE)
+#define VTX_STORAGE_SIZE 64
+
 void flash_save();
 void flash_load();
 
