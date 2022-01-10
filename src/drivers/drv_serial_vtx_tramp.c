@@ -114,7 +114,7 @@ static uint8_t tramp_parse_packet(uint8_t *payload) {
     break;
 
   case 's':
-    tramp_settings.temp = payload[1] | (payload[2] << 8);
+    tramp_settings.temp = payload[5] | (payload[6] << 8);
     break;
   }
 
