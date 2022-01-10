@@ -28,8 +28,10 @@ typedef struct {
   uint8_t power;
   uint8_t mode;
   uint16_t frequency;
+  uint8_t dac_power_levels[4];
 } smart_audio_settings_t;
 
 void serial_smart_audio_init();
 vtx_update_result_t serial_smart_audio_update();
 void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const uint32_t size);
+int8_t smart_audio_dac_power_level_index(uint8_t dac);

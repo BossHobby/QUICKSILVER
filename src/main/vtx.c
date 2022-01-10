@@ -64,22 +64,6 @@ uint8_t has_vtx_configured() {
 extern smart_audio_settings_t smart_audio_settings;
 uint8_t smart_audio_detected = 0;
 
-const uint8_t smart_audio_dac_power_level[4] = {
-    7,
-    16,
-    25,
-    40,
-};
-
-int8_t smart_audio_dac_power_level_index(uint8_t dac) {
-  for (uint8_t level = 0; level < VTX_POWER_LEVEL_MAX; level++) {
-    if (dac == smart_audio_dac_power_level[level]) {
-      return level;
-    }
-  }
-  return -1;
-}
-
 vtx_detect_status_t vtx_smart_audio_update(vtx_settings_t *actual) {
   if (smart_audio_settings.version == 0 && vtx_connect_tries > SMART_AUDIO_DETECT_TRIES) {
     return VTX_DETECT_ERROR;
@@ -155,8 +139,11 @@ static void smart_audio_set_frequency(vtx_band_t band, vtx_channel_t channel) {
 
 static void smart_audio_set_power_level(vtx_power_level_t power) {
   uint8_t level = power;
-  if (smart_audio_settings.version < 2) {
-    level = smart_audio_dac_power_level[power];
+  if (smart_audio_settings.version != 2) {
+    level = smart_audio_settings.dac_power_levels[power];
+  }
+  if (smart_audio_settings.version == 3) {
+    level |= 0x80;
   }
   serial_smart_audio_send_payload(SA_CMD_SET_POWER, &level, 1);
 }

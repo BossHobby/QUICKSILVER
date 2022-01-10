@@ -50,6 +50,13 @@ extern uint8_t vtx_frame[VTX_BUFFER_SIZE];
 extern volatile uint8_t vtx_frame_length;
 extern volatile uint8_t vtx_frame_offset;
 
+const uint8_t default_dac_power_levels[4] = {
+    7,
+    16,
+    25,
+    40,
+};
+
 static void serial_smart_audio_reconfigure() {
   serial_disable_isr(serial_smart_audio_port);
 
@@ -161,6 +168,18 @@ static uint8_t serial_smart_audio_parse_packet(uint8_t cmd, uint8_t *payload, ui
     smart_audio_settings.power = payload[1];
     smart_audio_settings.mode = payload[2];
     smart_audio_settings.frequency = (uint16_t)(((uint16_t)payload[3] << 8) | payload[4]);
+
+    if (cmd == SA_CMD_GET_SETTINGS_V21) {
+      smart_audio_settings.power = payload[5];
+
+      for (uint8_t i = 0; i < 4; i++) {
+        smart_audio_settings.dac_power_levels[i] = payload[7 + i];
+      }
+    } else {
+      for (uint8_t i = 0; i < 4; i++) {
+        smart_audio_settings.dac_power_levels[i] = default_dac_power_levels[i];
+      }
+    }
     break;
 
   case SA_CMD_SET_FREQUENCY:
@@ -234,13 +253,14 @@ vtx_update_result_t serial_smart_audio_update() {
     if ((time_millis() - vtx_last_request) > 200) {
       smart_audio_auto_baud();
 
+      quic_debugf("SMART_AUDIO: send cmd %d (%d)", cmd, vtx_frame_length);
+
       payload_offset = 0;
       crc = 0;
       cmd = 0;
       length = 0;
       parser_state = PARSER_READ_MAGIC;
 
-      quic_debugf("SMART_AUDIO: send cmd %d (%d)", cmd, vtx_frame_length);
       serial_vtx_send_data(vtx_frame, vtx_frame_length);
     }
 
@@ -346,4 +366,14 @@ void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const 
   parser_state = PARSER_INIT;
   vtx_last_valid_read = time_millis();
 }
+
+int8_t smart_audio_dac_power_level_index(uint8_t dac) {
+  for (uint8_t level = 0; level < 4; level++) {
+    if (dac == smart_audio_settings.dac_power_levels[level]) {
+      return level;
+    }
+  }
+  return -1;
+}
+
 #endif
