@@ -15,9 +15,9 @@
 #if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
 
 #define MSP_SET_RX_CONFIG 45
-#define MSP_VTX_CONFIG 88     //out message         Get vtx settings - betaflight
-#define MSP_SET_VTX_CONFIG 89 //in message          Set vtx settings - betaflight
-#define MSP_EEPROM_WRITE 250  //in message          no param
+#define MSP_VTX_CONFIG 88     // out message         Get vtx settings - betaflight
+#define MSP_SET_VTX_CONFIG 89 // in message          Set vtx settings - betaflight
+#define MSP_EEPROM_WRITE 250  // in message          no param
 
 // ELRS specific opcodes
 #define MSP_ELRS_RF_MODE 0x06
@@ -46,7 +46,7 @@
 #define RF_MODE_CYCLE_MULTIPLIER_SLOW 10
 
 #define LOCKUP_TIMEOUT_MS 10000
-#define SYNC_TIMEOUT_MS 50000
+#define SYNC_TIMEOUT_MS 30000
 
 // Maximum ms between LINK_STATISTICS packets for determining burst max
 #define TELEM_MIN_LINK_INTERVAL 512U
@@ -472,7 +472,7 @@ static bool elrs_unpack_hybrid_switches_wide(const volatile uint8_t *packet) {
   }
 
   if (index == 7) {
-    //crsf->LinkStatistics.uplink_TX_Power = switch_byte & 0b111111;
+    // crsf->LinkStatistics.uplink_TX_Power = switch_byte & 0b111111;
     return telemetry_status;
   }
 
