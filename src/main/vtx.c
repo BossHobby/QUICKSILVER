@@ -106,7 +106,6 @@ vtx_detect_status_t vtx_smart_audio_update(vtx_settings_t *actual) {
     if (smart_audio_settings.version != 0 && smart_audio_detected == 0) {
       quic_debugf("smart audio version: %d", smart_audio_settings.version);
       smart_audio_detected = 1;
-      vtx_settings = *actual;
       vtx_settings.detected = VTX_PROTOCOL_SMART_AUDIO;
       vtx_connect_tries = 0;
     }
@@ -240,7 +239,6 @@ vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual) {
 
     if (tramp_settings.freq_min != 0 && tramp_settings.frequency != 0 && tramp_detected == 0) {
       tramp_detected = 1;
-      vtx_settings = *actual;
       vtx_settings.detected = VTX_PROTOCOL_TRAMP;
       vtx_connect_tries = 0;
     }
