@@ -69,7 +69,7 @@ uint8_t serial_vtx_read_byte(uint8_t *data) {
 }
 
 void vtx_uart_isr() {
-  if (LL_USART_IsActiveFlag_TC(USART.channel)) {
+  if (LL_USART_IsEnabledIT_TC(USART.channel) && LL_USART_IsActiveFlag_TC(USART.channel)) {
     LL_USART_ClearFlag_TC(USART.channel);
     if (vtx_frame_offset == vtx_frame_length && vtx_transfer_done == 0) {
       LL_USART_DisableDirectionTx(USART.channel);
@@ -78,7 +78,7 @@ void vtx_uart_isr() {
     }
   }
 
-  if (LL_USART_IsActiveFlag_TXE(USART.channel)) {
+  if (LL_USART_IsEnabledIT_TXE(USART.channel) && LL_USART_IsActiveFlag_TXE(USART.channel)) {
     if (vtx_frame_offset < vtx_frame_length) {
       LL_USART_TransmitData8(USART.channel, vtx_frame[vtx_frame_offset]);
       vtx_frame_offset++;
@@ -88,7 +88,7 @@ void vtx_uart_isr() {
     }
   }
 
-  if (LL_USART_IsActiveFlag_RXNE(USART.channel)) {
+  if (LL_USART_IsEnabledIT_RXNE(USART.channel) && LL_USART_IsActiveFlag_RXNE(USART.channel)) {
     const uint8_t data = LL_USART_ReceiveData8(USART.channel);
     circular_buffer_write(&vtx_rx_buffer, data);
   }

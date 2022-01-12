@@ -46,6 +46,8 @@ static uint8_t crc8_data(const uint8_t *data) {
 }
 
 static void serial_tramp_reconfigure() {
+  serial_vtx_wait_for_ready();
+
   serial_disable_isr(serial_smart_audio_port);
 
   LL_USART_DeInit(USART.channel);

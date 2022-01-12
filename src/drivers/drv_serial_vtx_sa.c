@@ -58,6 +58,8 @@ const uint8_t default_dac_power_levels[4] = {
 };
 
 static void serial_smart_audio_reconfigure() {
+  serial_vtx_wait_for_ready();
+
   serial_disable_isr(serial_smart_audio_port);
 
   LL_USART_DeInit(USART.channel);
