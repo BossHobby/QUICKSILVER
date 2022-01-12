@@ -191,13 +191,7 @@ static uint8_t serial_smart_audio_parse_packet(uint8_t cmd, uint8_t *payload, ui
     break;
 
   case SA_CMD_SET_POWER: {
-    // workaround for buggy vtxes which swap the channel and the power arguments
-    const uint8_t weird_channel = (smart_audio_settings.channel / 8) * 10 + smart_audio_settings.channel % 8;
-    if (payload[0] == smart_audio_settings.channel || payload[0] == weird_channel) {
-      smart_audio_settings.power = payload[1];
-    } else if (payload[1] == 1) {
-      smart_audio_settings.power = payload[0];
-    }
+    smart_audio_settings.power = payload[0];
     break;
   }
   case SA_CMD_SET_MODE:
