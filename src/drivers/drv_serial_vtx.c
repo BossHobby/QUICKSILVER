@@ -40,6 +40,10 @@ bool serial_vtx_wait_for_ready() {
 }
 
 void serial_vtx_send_data(uint8_t *data, uint32_t size) {
+  if (!serial_vtx_wait_for_ready()) {
+    return;
+  }
+
   vtx_transfer_done = 0;
 
   LL_USART_ClearFlag_RXNE(USART.channel);
