@@ -91,7 +91,7 @@ vtx_detect_status_t vtx_smart_audio_update(vtx_settings_t *actual) {
       actual->channel = channel_index % VTX_CHANNEL_MAX;
     }
 
-    if (smart_audio_settings.version >= 2) {
+    if (smart_audio_settings.version == 2) {
       actual->power_level = smart_audio_settings.power;
     } else {
       actual->power_level = smart_audio_dac_power_level_index(smart_audio_settings.power);
