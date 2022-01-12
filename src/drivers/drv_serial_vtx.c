@@ -82,7 +82,6 @@ void vtx_uart_isr() {
     if (vtx_frame_offset < vtx_frame_length) {
       LL_USART_TransmitData8(USART.channel, vtx_frame[vtx_frame_offset]);
       vtx_frame_offset++;
-      vtx_transfer_done = 0;
     }
     if (vtx_frame_offset == vtx_frame_length) {
       LL_USART_DisableIT_TXE(USART.channel);
