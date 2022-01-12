@@ -158,7 +158,7 @@ vtx_update_result_t serial_tramp_update() {
       return VTX_WAIT;
     } else {
       parser_state = PARSER_IDLE;
-      return VTX_WAIT;
+      return VTX_SUCCESS;
     }
   }
   case PARSER_READ_MAGIC: {
