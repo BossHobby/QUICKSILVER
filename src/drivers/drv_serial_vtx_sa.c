@@ -253,7 +253,9 @@ vtx_update_result_t serial_smart_audio_update() {
     if ((time_millis() - vtx_last_request) > 200) {
       smart_audio_auto_baud();
 
-      quic_debugf("SMART_AUDIO: send cmd %d (%d)", cmd, vtx_frame_length);
+      for (uint32_t i = 0; i < vtx_frame_length; i++) {
+        quic_debugf("SMART_AUDIO: sending  0x%x (%d)", vtx_frame[i], i);
+      }
 
       payload_offset = 0;
       crc = 0;

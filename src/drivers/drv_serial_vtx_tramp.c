@@ -146,6 +146,10 @@ vtx_update_result_t serial_tramp_update() {
       return VTX_WAIT;
     }
 
+    for (uint32_t i = 0; i < vtx_frame_length; i++) {
+      quic_debugf("TRAMP: sending  0x%x (%d)", vtx_frame[i], i);
+    }
+
     payload_offset = 0;
     serial_vtx_send_data(vtx_frame, vtx_frame_length);
 
