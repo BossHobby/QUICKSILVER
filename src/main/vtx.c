@@ -231,10 +231,12 @@ vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual) {
     actual->power_level = tramp_power_level_index(tramp_settings.power);
     actual->pit_mode = tramp_settings.pit_mode;
 
-    if (tramp_settings.temp == 0) {
-      serial_tramp_send_payload('s', 0);
-      return VTX_DETECT_WAIT;
-    }
+    // not all vtxes seem to return a non-zero value. :(
+    // as its unused lets just drop it.
+    // if (tramp_settings.temp == 0) {
+    //   serial_tramp_send_payload('s', 0);
+    //   return VTX_DETECT_WAIT;
+    // }
 
     if (tramp_settings.freq_min != 0 && tramp_settings.frequency != 0 && tramp_detected == 0) {
       tramp_detected = 1;
