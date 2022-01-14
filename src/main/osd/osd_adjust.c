@@ -36,8 +36,9 @@ void osd_save_exit() {
   osd_display_phase = 0;
 
   //check if vtx settings need to be updated
-  if (vtx_buffer_populated)
-    vtx_settings = vtx_settings_copy;
+  if (vtx_buffer_populated) {
+    vtx_set(&vtx_settings_copy);
+  }
 
   //check for fc reboot request
   extern int pid_gestures_used;

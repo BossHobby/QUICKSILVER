@@ -18,7 +18,8 @@
 static int fpv_init = 0;
 #endif
 
-#define VTX_APPLY_TRIES 30
+#define VTX_SETTINGS_MAGIC 0xdeed
+#define VTX_APPLY_TRIES 10
 
 typedef enum {
   VTX_DETECT_WAIT,
@@ -106,6 +107,8 @@ vtx_detect_status_t vtx_smart_audio_update(vtx_settings_t *actual) {
     if (smart_audio_settings.version != 0 && smart_audio_detected == 0) {
       quic_debugf("smart audio version: %d", smart_audio_settings.version);
       smart_audio_detected = 1;
+      if (vtx_settings.magic != VTX_SETTINGS_MAGIC)
+        vtx_settings = *actual;
       vtx_settings.detected = VTX_PROTOCOL_SMART_AUDIO;
       vtx_connect_tries = 0;
     }
@@ -239,6 +242,8 @@ vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual) {
 
     if (tramp_settings.freq_min != 0 && tramp_settings.frequency != 0 && tramp_detected == 0) {
       tramp_detected = 1;
+      if (vtx_settings.magic != VTX_SETTINGS_MAGIC)
+        vtx_settings = *actual;
       vtx_settings.detected = VTX_PROTOCOL_TRAMP;
       vtx_connect_tries = 0;
     }
@@ -467,6 +472,8 @@ void vtx_update() {
 }
 
 void vtx_set(vtx_settings_t *vtx) {
+  vtx_settings.magic = VTX_SETTINGS_MAGIC;
+
   if (vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT)
     vtx_settings.pit_mode = vtx->pit_mode;
 
@@ -480,6 +487,9 @@ cbor_result_t cbor_encode_vtx_settings_t(cbor_value_t *enc, const vtx_settings_t
   cbor_result_t res = CBOR_OK;
 
   CBOR_CHECK_ERROR(res = cbor_encode_map_indefinite(enc));
+
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "magic"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &vtx->magic));
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "detected"));
   CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &vtx->detected));
@@ -510,6 +520,11 @@ cbor_result_t cbor_decode_vtx_settings_t(cbor_value_t *dec, vtx_settings_t *vtx)
   uint32_t name_len;
   for (uint32_t i = 0; i < cbor_decode_map_size(dec, &map); i++) {
     CBOR_CHECK_ERROR(res = cbor_decode_tstr(dec, &name, &name_len));
+
+    if (buf_equal_string(name, name_len, "magic")) {
+      CBOR_CHECK_ERROR(res = cbor_decode_uint16(dec, &vtx->magic));
+      continue;
+    }
 
     if (buf_equal_string(name, name_len, "band")) {
       CBOR_CHECK_ERROR(res = cbor_decode_uint8(dec, &vtx->band));

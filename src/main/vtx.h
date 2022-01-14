@@ -51,6 +51,8 @@ typedef enum {
 } vtx_protocol_t;
 
 typedef struct {
+  uint16_t magic;
+
   vtx_protocol_t detected;
 
   vtx_band_t band;
