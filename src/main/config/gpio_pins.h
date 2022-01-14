@@ -8,7 +8,7 @@
 typedef enum {
   PIN_NONE,
 #include "gpio_pins.in"
-  GPIO_PINS_MAX,
+  PINS_MAX,
 } gpio_pins_t;
 
 #undef GPIO_PIN

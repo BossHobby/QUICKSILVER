@@ -306,19 +306,19 @@ typedef struct {
   uint32_t quic_protocol_version;
 
   const char *motor_pins[MOTOR_PIN_MAX];
-  const char *usart_ports[USART_PORTS_MAX];
+  const char *usart_ports[SOFT_SERIAL_PORTS_MAX];
 
   uint8_t gyro_id;
 } target_info_t;
 
-#define TARGET_INFO_MEMBERS                      \
-  STR_MEMBER(target_name)                        \
-  STR_MEMBER(git_version)                        \
-  MEMBER(features, uint32)                       \
-  MEMBER(rx_protocol, uint32)                    \
-  MEMBER(quic_protocol_version, uint32)          \
-  STR_ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX)    \
-  STR_ARRAY_MEMBER(usart_ports, USART_PORTS_MAX) \
+#define TARGET_INFO_MEMBERS                            \
+  STR_MEMBER(target_name)                              \
+  STR_MEMBER(git_version)                              \
+  MEMBER(features, uint32)                             \
+  MEMBER(rx_protocol, uint32)                          \
+  MEMBER(quic_protocol_version, uint32)                \
+  STR_ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX)          \
+  STR_ARRAY_MEMBER(usart_ports, SOFT_SERIAL_PORTS_MAX) \
   MEMBER(gyro_id, uint8)
 
 extern profile_t profile;

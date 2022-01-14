@@ -467,6 +467,7 @@ target_info_t target_info = {
 #undef MOTOR_PIN
 
 #define USART_PORT(channel, rx_pin, tx_pin) "USART_" #channel,
+#define SOFT_SERIAL_PORT(index, rx_pin, tx_pin) "SOFT_SERIAL_" #index,
     .usart_ports = {"NONE", USART_PORTS},
 #undef USART_PORT
 
