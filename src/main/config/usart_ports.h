@@ -38,12 +38,23 @@
 #endif
 
 #define USART_IDENT(channel) USART_PORT##channel
-#define USART_PORT(channel, rx_pin, tx_pin) USART_IDENT(channel),
+#define SOFT_SERIAL_IDENT(channel) SOFT_SERIAL_PORT##channel
 
 typedef enum {
   USART_PORT_INVALID,
-  USART_PORTS
-      USART_PORTS_MAX,
-} usart_ports_t;
 
+#define USART_PORT(channel, rx_pin, tx_pin) USART_IDENT(channel),
+#define SOFT_SERIAL_PORT(index, rx_pin, tx_pin)
+  USART_PORTS
 #undef USART_PORT
+#undef SOFT_SERIAL_PORT
+  USART_PORTS_MAX,
+
+#define USART_PORT(channel, rx_pin, tx_pin)
+#define SOFT_SERIAL_PORT(index, rx_pin, tx_pin) SOFT_SERIAL_IDENT(index) = (USART_PORTS_MAX + index - 1),
+  USART_PORTS
+#undef USART_PORT
+#undef SOFT_SERIAL_PORT
+  SOFT_SERIAL_PORTS_MAX,
+
+} usart_ports_t;
