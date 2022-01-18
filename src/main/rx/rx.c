@@ -13,6 +13,13 @@
 
 extern profile_t profile;
 
+uint8_t failsafe_siglost = 0;
+
+uint32_t last_frame_time_us = 0;
+static uint32_t frame_missed_time_us = 0;
+static uint32_t frames_per_second = 0;
+static uint32_t frames_missed = 0;
+
 // Select filter cut, Formula is [(1/rx framerate)/2] * 0.9
 // 0 will trigger selection via rx_smoothing_cutoff
 static const uint16_t RX_SMOOTHING_HZ[RX_PROTOCOL_MAX] = {
@@ -80,25 +87,56 @@ float rx_smoothing_hz(rx_protocol_t proto) {
   return cutoff;
 }
 
-// TODO: merge this function with what lives in unified_serial
-void rx_lqi_update_spi_fps(float expected_fps) {
-  static uint32_t time_lastframe;
-  time_lastframe = time_micros();
-  static uint16_t stat_frames_second;
+void rx_lqi_lost_packet() {
+  frames_missed++;
+
+  if (frame_missed_time_us == 0) {
+    frame_missed_time_us = time_micros();
+  }
+
+  if (time_micros() - frame_missed_time_us > FAILSAFETIME) {
+    failsafe_siglost = 1;
+  }
+}
+
+void rx_lqi_got_packet() {
+  frame_missed_time_us = 0;
+  failsafe_siglost = 0;
+}
+
+void rx_lqi_update_fps(uint16_t fixed_fps) {
+  last_frame_time_us = time_micros();
+
   // link quality & rssi
   static uint32_t fps_counter = 0;
   static uint32_t time_last_fps_update = 0;
-  if (time_lastframe - time_last_fps_update > 1000000) {
-    // calculate fps on the fly
-    stat_frames_second = fps_counter;
-    fps_counter = 0;
-    time_last_fps_update = time_lastframe;
+  if (last_frame_time_us - time_last_fps_update > 1000000) {
+    // two cases here: we have a fixed fps (fixed_fps > 0)
+    // or we calculate fps on the fly
+    if (fixed_fps > 0) {
+      frames_per_second = fixed_fps - frames_missed;
+    } else {
+      frames_per_second = fps_counter;
+      fps_counter = 0;
+    }
+
+    frames_missed = 0;
+    time_last_fps_update = last_frame_time_us;
   }
+
   fps_counter++;
-  state.rx_rssi = stat_frames_second / expected_fps;
+}
+
+void rx_lqi_update_from_fps(float expected_fps) {
+  state.rx_rssi = frames_per_second / expected_fps;
   state.rx_rssi = state.rx_rssi * state.rx_rssi * state.rx_rssi * LQ_EXPO + state.rx_rssi * (1 - LQ_EXPO);
   state.rx_rssi *= 100.0f;
+
   state.rx_rssi = constrainf(state.rx_rssi, 0.f, 100.f);
+}
+
+void rx_lqi_update_direct(float rssi) {
+  state.rx_rssi = constrainf(rssi, 0.f, 100.f);
 }
 
 void rx_apply_expo() {

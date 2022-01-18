@@ -159,16 +159,8 @@ static void frsky_d16_set_rc_data() {
   state.aux[AUX_CHANNEL_10] = (channels[14] > 1023) ? 1 : 0;
   state.aux[AUX_CHANNEL_11] = (channels[15] > 1023) ? 1 : 0;
 
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-    state.rx_rssi = constrainf(frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]), 0.f, 100.f);
-  }
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-    rx_lqi_update_spi_fps(LQI_FPS);
-  }
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-    if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
-      state.rx_rssi = constrainf(((channels[(profile.receiver.aux[AUX_RSSI] + 4)]) - 200) * 100.f / 1520.f, 0.f, 100.f);
-    }
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
+    rx_lqi_update_direct(((channels[(profile.receiver.aux[AUX_RSSI] + 4)]) - 200) * 100.f / 1520.f);
   }
 }
 
@@ -333,6 +325,11 @@ static uint8_t frsky_d16_handle_packet() {
           channel_skip = 0;
         }
 
+        rx_lqi_got_packet();
+        if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
+          rx_lqi_update_direct(frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]));
+        }
+
         frame_had_packet = 1;
         rx_delay = 0;
         frames_lost = 0;
@@ -367,6 +364,7 @@ static uint8_t frsky_d16_handle_packet() {
       }
 
       if (frame_had_packet == 0) {
+        rx_lqi_lost_packet();
         state.rx_rssi = 0;
         frames_lost++;
       }
@@ -520,6 +518,12 @@ void rx_check() {
 
   if (frsky_d16_handle_packet()) {
     frsky_d16_set_rc_data();
+  }
+
+  rx_lqi_update_fps(LQI_FPS);
+
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
+    rx_lqi_update_from_fps(LQI_FPS);
   }
 }
 

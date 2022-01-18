@@ -96,16 +96,8 @@ static void frsky_d8_set_rc_data() {
   state.aux[AUX_CHANNEL_10] = 0;
   state.aux[AUX_CHANNEL_11] = 0;
 
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-    state.rx_rssi = constrainf(frsky_extract_rssi(packet[18]), 0.f, 100.f);
-  }
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-    rx_lqi_update_spi_fps(LQI_FPS);
-  }
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-    if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_8) {
-      state.rx_rssi = constrainf(((channels[(profile.receiver.aux[AUX_RSSI] + 4)]) - 1500) * 100.f / 1500.f, 0.f, 100.f);
-    }
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_8) {
+    rx_lqi_update_direct(((channels[(profile.receiver.aux[AUX_RSSI] + 4)]) - 1500) * 100.f / 1500.f);
   }
 }
 
@@ -260,6 +252,11 @@ static uint8_t frsky_d8_handle_packet() {
           protocol_state = FRSKY_STATE_UPDATE;
         }
 
+        rx_lqi_got_packet();
+        if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
+          rx_lqi_update_direct(frsky_extract_rssi(packet[18]));
+        }
+
         last_packet_received_time = current_packet_received_time;
         max_sync_delay = FRSKY_SYNC_DELAY_MAX;
         // make sure we dont read the packet a second time
@@ -287,6 +284,7 @@ static uint8_t frsky_d8_handle_packet() {
       }
 
       quic_debugf("FRSKY_D8: frame lost %u=%u (%u)", frame_index, (frame_index % 4), (current_packet_received_time - last_packet_received_time));
+      rx_lqi_lost_packet();
       frames_lost++;
       state.rx_rssi = 0;
 
@@ -396,6 +394,12 @@ void rx_check() {
 
   if (frsky_d8_handle_packet()) {
     frsky_d8_set_rc_data();
+  }
+
+  rx_lqi_update_fps(LQI_FPS);
+
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
+    rx_lqi_update_from_fps(LQI_FPS);
   }
 }
 

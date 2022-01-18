@@ -149,9 +149,7 @@ static bool elrs_tlm() {
     return false;
   }
 
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-    rx_lqi_update_spi_fps(rate_enum_to_hz(current_rf_pref_params()->rate));
-  }
+  rx_lqi_got_packet();
 
   packet[0] = TLM_PACKET;
   already_tlm = true;
@@ -535,14 +533,13 @@ static void elrs_process_packet(uint32_t packet_time) {
   elrs_last_packet_stats(&raw_rssi, &raw_snr);
   rssi = elrs_lpf_update(&rssi_lpf, raw_rssi);
 
+  rx_lqi_got_packet();
+
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-    state.rx_rssi = uplink_lq;
-  }
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-    rx_lqi_update_spi_fps(rate_enum_to_hz(current_rf_pref_params()->rate));
+    rx_lqi_update_direct(uplink_lq);
   }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-    state.rx_rssi = 0.f;
+    rx_lqi_update_direct(0.f);
   }
 
   elrs_lq_add();
@@ -807,6 +804,12 @@ void rx_check() {
   }
 
   elrs_update_telemetry();
+
+  rx_lqi_update_fps(0);
+
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
+    rx_lqi_update_from_fps(rate_enum_to_hz(current_rf_pref_params()->rate));
+  }
 }
 
 #endif

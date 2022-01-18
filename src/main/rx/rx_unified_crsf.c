@@ -23,15 +23,8 @@ extern volatile uint8_t rx_frame_position;
 extern volatile uint8_t expected_frame_length;
 extern volatile frame_status_t frame_status;
 
-extern uint32_t time_siglost;
-extern uint32_t time_lastframe;
-
 extern uint16_t bind_safety;
 extern int32_t channels[16];
-
-extern uint8_t failsafe_sbus_failsafe;
-extern uint8_t failsafe_siglost;
-extern uint8_t failsafe_noframes;
 
 extern profile_t profile;
 extern int current_pid_axis;
@@ -85,8 +78,8 @@ static void rx_serial_crsf_process_frame() {
 
     rx_apply_stick_calibration_scale();
 
-    state.aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0; //1100 cutoff intentionally selected to force aux channels low if
-    state.aux[AUX_CHANNEL_1] = (channels[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
+    state.aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0; // 1100 cutoff intentionally selected to force aux channels low if
+    state.aux[AUX_CHANNEL_1] = (channels[5] > 1100) ? 1 : 0; // being controlled by a transmitter using a 3 pos switch in center state
     state.aux[AUX_CHANNEL_2] = (channels[6] > 1100) ? 1 : 0;
     state.aux[AUX_CHANNEL_3] = (channels[7] > 1100) ? 1 : 0;
     state.aux[AUX_CHANNEL_4] = (channels[8] > 1100) ? 1 : 0;
@@ -101,11 +94,11 @@ static void rx_serial_crsf_process_frame() {
     rx_lqi_update_fps(0);
 
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-      rx_lqi_update_rssi_from_lqi(crsf_rf_mode_fps[crsf_rf_mode]);
+      rx_lqi_update_from_fps(crsf_rf_mode_fps[crsf_rf_mode]);
     }
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
       if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
-        rx_lqi_update_rssi_direct(0.00062853551f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 191.0f));
+        rx_lqi_update_direct(0.00062853551f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 191.0f));
       }
     }
     break;
@@ -117,7 +110,7 @@ static void rx_serial_crsf_process_frame() {
     crsf_rf_mode = stats->rf_mode;
 
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-      rx_lqi_update_rssi_direct(stats->uplink_link_quality);
+      rx_lqi_update_direct(stats->uplink_link_quality);
     }
     break;
   }
@@ -128,7 +121,7 @@ static void rx_serial_crsf_process_frame() {
   }
 
   bind_safety++;
-  if (bind_safety > 131) {        //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
+  if (bind_safety > 131) {        // requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
     flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
     flags.rx_mode = !RXMODE_BIND; // restores normal led operation
     bind_safety = 131;            // reset counter so it doesnt wrap
@@ -191,7 +184,7 @@ void rx_serial_process_crsf() {
   rx_serial_crsf_process_frame();
 
   if ((rx_frame_position - rx_buffer_offset) <= 0) {
-    //We're done with this frame now.
+    // We're done with this frame now.
     frame_status = FRAME_TX;
     rx_buffer_offset = 0;
     telemetry_counter++; // Telemetry will send data out when this reaches 10
@@ -217,14 +210,14 @@ void rx_serial_send_crsf_telemetry() {
   // CRSF telemetry for the battery sensor, Offset is 12-10=2
   telemetry_offset = 2;
 
-  //Shove the packet out the UART.
+  // Shove the packet out the UART.
   while (LL_USART_IsActiveFlag_TXE(USART.channel) == RESET)
     ;
   LL_USART_TransmitData8(USART.channel, telemetry_packet[0]);
   ready_for_next_telemetry = 0;
 
-  //turn on the transmit transfer complete interrupt so that the rest of the telemetry packet gets sent
-  //That's it, telemetry has sent the first byte - the rest will be sent by the telemetry tx irq
+  // turn on the transmit transfer complete interrupt so that the rest of the telemetry packet gets sent
+  // That's it, telemetry has sent the first byte - the rest will be sent by the telemetry tx irq
   LL_USART_EnableIT_TC(USART.channel);
 }
 
