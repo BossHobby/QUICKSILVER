@@ -80,9 +80,6 @@ static void redpine_set_rc_data() {
   state.aux[AUX_CHANNEL_10] = (packet[REDPINE_CHANNEL_START + 6] & 0x40) ? 1 : 0;
   state.aux[AUX_CHANNEL_11] = (packet[REDPINE_CHANNEL_START + 6] & 0x80) ? 1 : 0;
 
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-    rx_lqi_update_spi_fps(LQI_FPS);
-  }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
     state.rx_rssi = 0.f;
   }
@@ -139,9 +136,12 @@ static uint8_t redpine_handle_packet() {
 
         next_channel(1);
         cc2500_strobe(CC2500_SRX);
+
+        rx_lqi_got_packet();
         if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-          state.rx_rssi = constrainf(frsky_extract_rssi(packet[REDPINE_PACKET_SIZE_W_ADDONS - 2]), 0.f, 100.f);
+          rx_lqi_update_direct(frsky_extract_rssi(packet[REDPINE_PACKET_SIZE_W_ADDONS - 2]));
         }
+
         frames_lost = 0;
         ret = 1;
       } else {
@@ -166,6 +166,7 @@ static uint8_t redpine_handle_packet() {
     } else if (packet_time > 0 && (time_micros() - packet_time) > max_sync_delay) {
       // missed a packet
       quic_debugf("REDPINE: frame lost #%d at %u (%d)", frames_lost, (time_micros() - packet_time), max_sync_delay);
+      rx_lqi_lost_packet();
       packet_time = time_micros();
       next_channel(1);
       cc2500_strobe(CC2500_SRX);
@@ -297,6 +298,12 @@ void rx_check() {
 
   if (redpine_handle_packet()) {
     redpine_set_rc_data();
+  }
+
+  rx_lqi_update_fps(LQI_FPS);
+
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
+    rx_lqi_update_from_fps(LQI_FPS);
   }
 }
 

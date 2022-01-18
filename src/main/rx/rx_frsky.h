@@ -59,5 +59,3 @@ void frsky_d16_write_telemetry(smart_port_payload_t *payload);
 #endif
 
 #endif
-
-void rx_lqi_update_spi_fps(float expected_fps);

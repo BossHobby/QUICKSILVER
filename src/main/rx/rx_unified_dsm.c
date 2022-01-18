@@ -28,10 +28,6 @@ extern volatile frame_status_t frame_status;
 extern uint16_t bind_safety;
 extern int32_t channels[16];
 
-extern uint8_t failsafe_sbus_failsafe;
-extern uint8_t failsafe_siglost;
-extern uint8_t failsafe_noframes;
-
 extern profile_t profile;
 extern int current_pid_axis;
 extern int current_pid_term;
@@ -115,21 +111,21 @@ void rx_serial_process_dsmx() {
     rx_lqi_update_fps(0);
 
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-      rx_lqi_update_rssi_from_lqi(LQI_FPS);
+      rx_lqi_update_from_fps(LQI_FPS);
     }
 
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
       if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
 #ifdef RX_DSMX_2048_UNIFIED
-        rx_lqi_update_rssi_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f));
+        rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f));
 #else
-        rx_lqi_update_rssi_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f));
+        rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f));
 #endif
       }
     }
 
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-      rx_lqi_update_rssi_direct(0); //no internal rssi data
+      rx_lqi_update_direct(0); //no internal rssi data
     }
 
     frame_status = FRAME_TX; //We're done with this frame now.

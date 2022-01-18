@@ -26,10 +26,6 @@ extern volatile frame_status_t frame_status;
 extern uint16_t bind_safety;
 extern int32_t channels[16];
 
-extern uint8_t failsafe_sbus_failsafe;
-extern uint8_t failsafe_siglost;
-extern uint8_t failsafe_noframes;
-
 extern profile_t profile;
 extern int current_pid_axis;
 extern int current_pid_term;
@@ -101,7 +97,7 @@ void rx_serial_process_redpine() {
       state.rx.axis[i] *= 1.f / 820.f;
     }
     state.rx.axis[3] *= 1.f / 1640.f;
- 
+
     rx_apply_stick_calibration_scale();
 
     //Here we have the AUX channels Silverware supports
@@ -124,13 +120,13 @@ void rx_serial_process_redpine() {
   rx_lqi_update_fps(LQI_FPS);
 
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-    rx_lqi_update_rssi_from_lqi(LQI_FPS);
+    rx_lqi_update_from_fps(LQI_FPS);
   }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-    rx_lqi_update_rssi_direct(rx_data[REDPINE_CHANNEL_START + 7]);
+    rx_lqi_update_direct(rx_data[REDPINE_CHANNEL_START + 7]);
   }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-    rx_lqi_update_rssi_direct(0); //aux channels are binary and cannot carry rssi
+    rx_lqi_update_direct(0); //aux channels are binary and cannot carry rssi
   }
 
   frame_status = FRAME_TX; //We're done with this frame now.
