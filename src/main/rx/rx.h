@@ -120,7 +120,7 @@ void request_stick_calibration_wizard();
 void rx_lqi_lost_packet();
 void rx_lqi_got_packet();
 
-void rx_lqi_update_fps(uint16_t fixed_fps);
+void rx_lqi_update();
 void rx_lqi_update_from_fps(float expected_fps);
 void rx_lqi_update_direct(float rssi);
 

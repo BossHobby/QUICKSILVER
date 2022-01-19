@@ -117,7 +117,7 @@ void rx_serial_process_redpine() {
     rx_lqi_lost_packet();
   }
 
-  rx_lqi_update_fps(LQI_FPS);
+  rx_lqi_update();
 
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
     rx_lqi_update_from_fps(LQI_FPS);
