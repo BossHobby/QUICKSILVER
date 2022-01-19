@@ -139,6 +139,34 @@ void rx_serial_update_frame_length(rx_serial_protocol_t proto) {
   }
 }
 
+float rx_serial_expected_fps() {
+  switch (bind_storage.unified.protocol) {
+  case RX_SERIAL_PROTOCOL_INVALID:
+    return 0;
+
+  case RX_SERIAL_PROTOCOL_DSM:
+    return 91;
+
+  case RX_SERIAL_PROTOCOL_FPORT:
+  case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
+  case RX_SERIAL_PROTOCOL_SBUS:
+  case RX_SERIAL_PROTOCOL_SBUS_INVERTED:
+    return 112;
+
+  case RX_SERIAL_PROTOCOL_IBUS:
+    return (1000.0f / 7.0f);
+
+  case RX_SERIAL_PROTOCOL_CRSF:
+    return rx_serial_crsf_expected_fps();
+
+  case RX_SERIAL_PROTOCOL_REDPINE:
+  case RX_SERIAL_PROTOCOL_REDPINE_INVERTED:
+    return 500;
+  }
+
+  return 0;
+}
+
 void rx_serial_init() {
   // Let the uart ISR do its stuff.
   frame_status = FRAME_IDLE;
@@ -198,12 +226,7 @@ void rx_check() {
     // Set it up. This includes autodetecting protocol if necesary
     rx_serial_init();
     flags.rx_mode = !RXMODE_BIND;
-
-    // bail
-    return;
-  }
-
-  if (frame_status == FRAME_RX) {
+  } else if (frame_status == FRAME_RX) {
     // USART ISR says there's enough frame to look at. Look at it.
     switch (bind_storage.unified.protocol) {
     case RX_SERIAL_PROTOCOL_DSM:
@@ -229,11 +252,7 @@ void rx_check() {
     default:
       break;
     }
-
-    return;
-  }
-
-  if (frame_status == FRAME_TX) {
+  } else if (frame_status == FRAME_TX) {
     switch (bind_storage.unified.protocol) {
     case RX_SERIAL_PROTOCOL_DSM:
       // Run DSM Telemetry
@@ -266,8 +285,12 @@ void rx_check() {
       frame_status = FRAME_DONE;
       break;
     }
+  }
 
-    return;
+  rx_lqi_update();
+
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
+    rx_lqi_update_from_fps(rx_serial_expected_fps());
   }
 }
 

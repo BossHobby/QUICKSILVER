@@ -48,6 +48,10 @@ static uint16_t crsf_rf_mode_fps[] = {
 
 #define USART usart_port_defs[serial_rx_port]
 
+float rx_serial_crsf_expected_fps() {
+  return crsf_rf_mode_fps[crsf_rf_mode];
+}
+
 static void rx_serial_crsf_process_frame() {
 
   switch (rx_data[2]) {
@@ -92,11 +96,7 @@ static void rx_serial_crsf_process_frame() {
     state.aux[AUX_CHANNEL_11] = (channels[15] > 1100) ? 1 : 0;
 
     rx_lqi_got_packet();
-    rx_lqi_update();
 
-    if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-      rx_lqi_update_from_fps(crsf_rf_mode_fps[crsf_rf_mode]);
-    }
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
       rx_lqi_update_direct(0.00062853551f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 191.0f));
     }

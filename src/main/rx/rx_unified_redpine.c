@@ -14,7 +14,6 @@
 
 #define REDPINE_CHANNEL_START 3
 #define REDPINE_CRC16_POLY 0x8005
-#define LQI_FPS 500
 
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
 extern uint8_t rx_data[RX_BUFF_SIZE];
@@ -100,7 +99,7 @@ void rx_serial_process_redpine() {
 
     rx_apply_stick_calibration_scale();
 
-    //Here we have the AUX channels Silverware supports
+    // Here we have the AUX channels Silverware supports
     state.aux[AUX_CHANNEL_0] = (rx_data[REDPINE_CHANNEL_START + 1] & 0x08) ? 1 : 0;
     state.aux[AUX_CHANNEL_1] = (rx_data[REDPINE_CHANNEL_START + 2] & 0x80) ? 1 : 0;
     state.aux[AUX_CHANNEL_2] = (rx_data[REDPINE_CHANNEL_START + 4] & 0x08) ? 1 : 0;
@@ -117,21 +116,16 @@ void rx_serial_process_redpine() {
     rx_lqi_lost_packet();
   }
 
-  rx_lqi_update();
-
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-    rx_lqi_update_from_fps(LQI_FPS);
-  }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
     rx_lqi_update_direct(rx_data[REDPINE_CHANNEL_START + 7]);
   }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-    rx_lqi_update_direct(0); //aux channels are binary and cannot carry rssi
+    rx_lqi_update_direct(0); // aux channels are binary and cannot carry rssi
   }
 
-  frame_status = FRAME_TX; //We're done with this frame now.
+  frame_status = FRAME_TX; // We're done with this frame now.
 
-  if (bind_safety > 131) {        //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
+  if (bind_safety > 131) {        // requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
     flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
     flags.rx_mode = !RXMODE_BIND; // restores normal led operation
     bind_safety = 131;            // reset counter so it doesnt wrap

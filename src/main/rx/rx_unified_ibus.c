@@ -10,8 +10,6 @@
 #include "drv_time.h"
 #include "profile.h"
 
-#define LQI_FPS (1000.0f / 7.0f)
-
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
 extern uint8_t rx_data[RX_BUFF_SIZE];
 
@@ -111,15 +109,9 @@ void rx_serial_process_ibus() {
     state.aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
 
     rx_lqi_got_packet();
-    rx_lqi_update();
 
-    if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-      if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
-        rx_lqi_update_direct(0.1f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 1000));
-      }
-    }
-    if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-      rx_lqi_update_from_fps(LQI_FPS);
+    if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
+      rx_lqi_update_direct(0.1f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 1000));
     }
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
       rx_lqi_update_direct(0); //no internal rssi data

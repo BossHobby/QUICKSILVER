@@ -10,8 +10,6 @@
 #include "drv_time.h"
 #include "profile.h"
 
-#define LQI_FPS 112
-
 static bool fport_debug_telemetry = false;
 static uint8_t telemetry_counter = 0;
 
@@ -111,16 +109,8 @@ void rx_serial_process_sbus() {
   state.aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
   state.aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
 
-  rx_lqi_update();
-
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-    if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
-      rx_lqi_update_direct(0.0610128f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 173));
-    }
-  }
-
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-    rx_lqi_update_from_fps(LQI_FPS);
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
+    rx_lqi_update_direct(0.0610128f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 173));
   }
 
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
@@ -256,16 +246,10 @@ void rx_serial_process_fport() {
         fport_debug_telemetry = false;
       }
 
-      rx_lqi_update();
-
       if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
         if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
           rx_lqi_update_direct(0.0610128f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 173));
         }
-      }
-
-      if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-        rx_lqi_update_from_fps(LQI_FPS);
       }
 
       if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
