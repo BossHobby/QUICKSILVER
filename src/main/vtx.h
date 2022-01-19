@@ -53,6 +53,7 @@ typedef enum {
 typedef struct {
   uint16_t magic;
 
+  vtx_protocol_t protocol;
   vtx_protocol_t detected;
 
   vtx_band_t band;

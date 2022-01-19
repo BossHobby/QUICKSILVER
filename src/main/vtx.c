@@ -54,10 +54,6 @@ int8_t vtx_find_frequency_index(uint16_t frequency) {
   return -1;
 }
 
-uint8_t has_vtx_configured() {
-  return serial_smart_audio_port == profile.serial.smart_audio && serial_smart_audio_port != USART_PORT_INVALID;
-}
-
 #ifdef ENABLE_SMART_AUDIO
 
 #define SMART_AUDIO_DETECT_TRIES 30
@@ -346,6 +342,10 @@ void vtx_update() {
     static vtx_protocol_t protocol_to_check = VTX_PROTOCOL_TRAMP;
     static uint8_t protocol_is_init = 0;
 
+    if (vtx_settings.protocol != VTX_PROTOCOL_INVALID) {
+      protocol_to_check = vtx_settings.protocol;
+    }
+
     if (!protocol_is_init) {
       switch (protocol_to_check) {
       case VTX_PROTOCOL_TRAMP:
@@ -365,20 +365,22 @@ void vtx_update() {
 
     const vtx_detect_status_t status = vtx_update_protocol(protocol_to_check, &actual);
 
-    if (status == VTX_DETECT_ERROR) {
+    if (status == VTX_DETECT_SUCCESS) {
+      // detect success, save detected proto
+      vtx_settings.protocol = protocol_to_check;
+    } else if (status == VTX_DETECT_ERROR) {
       vtx_connect_tries = 0;
       protocol_is_init = 0;
 
-      protocol_to_check++;
+      if (vtx_settings.protocol == VTX_PROTOCOL_INVALID) {
+        // only switch protocol if we are not fixed to one
+        protocol_to_check++;
 
-      if (protocol_to_check == VTX_PROTOCOL_MAX) {
-        protocol_to_check = VTX_PROTOCOL_INVALID;
+        if (protocol_to_check == VTX_PROTOCOL_MAX) {
+          protocol_to_check = VTX_PROTOCOL_INVALID;
+        }
       }
     }
-    return;
-  }
-
-  if (!has_vtx_configured()) {
     return;
   }
 
@@ -475,7 +477,18 @@ void vtx_update() {
 }
 
 void vtx_set(vtx_settings_t *vtx) {
+  if (vtx_settings.protocol != vtx->protocol) {
+    // if the selected protocol was changed, restart detection
+    vtx_settings.detected = VTX_PROTOCOL_INVALID;
+
+    smart_audio_settings.version = 0;
+    smart_audio_detected = 0;
+    tramp_settings.freq_min = 0;
+    tramp_detected = 0;
+  }
+
   vtx_settings.magic = VTX_SETTINGS_MAGIC;
+  vtx_settings.protocol = vtx->protocol;
 
   if (vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT)
     vtx_settings.pit_mode = vtx->pit_mode;
@@ -493,6 +506,9 @@ cbor_result_t cbor_encode_vtx_settings_t(cbor_value_t *enc, const vtx_settings_t
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "magic"));
   CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &vtx->magic));
+
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "protocol"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &vtx->protocol));
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "detected"));
   CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &vtx->detected));
@@ -526,6 +542,11 @@ cbor_result_t cbor_decode_vtx_settings_t(cbor_value_t *dec, vtx_settings_t *vtx)
 
     if (buf_equal_string(name, name_len, "magic")) {
       CBOR_CHECK_ERROR(res = cbor_decode_uint16(dec, &vtx->magic));
+      continue;
+    }
+
+    if (buf_equal_string(name, name_len, "protocol")) {
+      CBOR_CHECK_ERROR(res = cbor_decode_uint8(dec, &vtx->protocol));
       continue;
     }
 
