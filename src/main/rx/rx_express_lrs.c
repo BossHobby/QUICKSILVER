@@ -805,7 +805,7 @@ void rx_check() {
 
   elrs_update_telemetry();
 
-  rx_lqi_update_fps(0);
+  rx_lqi_update();
 
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
     rx_lqi_update_from_fps(rate_enum_to_hz(current_rf_pref_params()->rate));

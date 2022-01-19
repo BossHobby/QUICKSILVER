@@ -108,7 +108,8 @@ void rx_serial_process_dsmx() {
     state.aux[AUX_CHANNEL_2] = (channels[6] > 550) ? 1 : 0;
 #endif
 
-    rx_lqi_update_fps(0);
+    rx_lqi_got_packet();
+    rx_lqi_update();
 
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
       rx_lqi_update_from_fps(LQI_FPS);

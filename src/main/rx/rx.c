@@ -19,6 +19,7 @@ uint32_t last_frame_time_us = 0;
 static uint32_t frame_missed_time_us = 0;
 static uint32_t frames_per_second = 0;
 static uint32_t frames_missed = 0;
+static uint32_t frames_received = 0;
 
 // Select filter cut, Formula is [(1/rx framerate)/2] * 0.9
 // 0 will trigger selection via rx_smoothing_cutoff
@@ -100,31 +101,29 @@ void rx_lqi_lost_packet() {
 }
 
 void rx_lqi_got_packet() {
+  frames_received++;
+  last_frame_time_us = time_micros();
+
   frame_missed_time_us = 0;
   failsafe_siglost = 0;
 }
 
-void rx_lqi_update_fps(uint16_t fixed_fps) {
-  last_frame_time_us = time_micros();
+void rx_lqi_update() {
+  const uint32_t time = time_micros();
 
   // link quality & rssi
-  static uint32_t fps_counter = 0;
-  static uint32_t time_last_fps_update = 0;
-  if (last_frame_time_us - time_last_fps_update > 1000000) {
-    // two cases here: we have a fixed fps (fixed_fps > 0)
-    // or we calculate fps on the fly
-    if (fixed_fps > 0) {
-      frames_per_second = fixed_fps - frames_missed;
-    } else {
-      frames_per_second = fps_counter;
-      fps_counter = 0;
-    }
-
-    frames_missed = 0;
-    time_last_fps_update = last_frame_time_us;
+  static uint32_t last_time = 0;
+  if (time - last_time < 1000000) {
+    // we only run once per second
+    return;
   }
 
-  fps_counter++;
+  frames_per_second = frames_received;
+
+  frames_received = 0;
+  frames_missed = 0;
+
+  last_time = time;
 }
 
 void rx_lqi_update_from_fps(float expected_fps) {

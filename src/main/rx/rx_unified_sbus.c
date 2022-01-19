@@ -111,7 +111,7 @@ void rx_serial_process_sbus() {
   state.aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
   state.aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
 
-  rx_lqi_update_fps(LQI_FPS);
+  rx_lqi_update();
 
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
     if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
@@ -256,7 +256,7 @@ void rx_serial_process_fport() {
         fport_debug_telemetry = false;
       }
 
-      rx_lqi_update_fps(LQI_FPS);
+      rx_lqi_update();
 
       if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
         if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {

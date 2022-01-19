@@ -110,7 +110,8 @@ void rx_serial_process_ibus() {
     state.aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
     state.aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
 
-    rx_lqi_update_fps(0);
+    rx_lqi_got_packet();
+    rx_lqi_update();
 
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
       if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
