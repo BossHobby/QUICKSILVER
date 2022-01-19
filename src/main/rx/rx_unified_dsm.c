@@ -16,8 +16,6 @@
 #define DSM_SCALE_PERCENT 147 //this might stay somewhere or be replaced with wizard scaling
 //#define RX_DSM2_1024_TEMP     //for legacy override to dsm2 in place of dsmx
 
-#define LQI_FPS 91
-
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
 extern uint8_t rx_data[RX_BUFF_SIZE];
 
@@ -109,20 +107,13 @@ void rx_serial_process_dsmx() {
 #endif
 
     rx_lqi_got_packet();
-    rx_lqi_update();
 
-    if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-      rx_lqi_update_from_fps(LQI_FPS);
-    }
-
-    if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-      if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
+    if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
 #ifdef RX_DSMX_2048_UNIFIED
-        rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f));
+      rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f));
 #else
-        rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f));
+      rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f));
 #endif
-      }
     }
 
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
