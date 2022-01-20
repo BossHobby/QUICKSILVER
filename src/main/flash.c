@@ -10,7 +10,6 @@
 #include "vtx.h"
 
 #define FMC_HEADER 0x12AA0001
-#define FMC_END_OFFSET 8192
 
 extern const profile_t default_profile;
 extern profile_t profile;
