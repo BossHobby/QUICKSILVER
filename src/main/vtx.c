@@ -270,7 +270,7 @@ static void tramp_set_power_level(vtx_power_level_t power) {
 }
 
 static void tramp_set_pit_mode(vtx_pit_mode_t pit_mode) {
-  serial_tramp_send_payload('I', pit_mode == VTX_PIT_MODE_ON ? 1 : 0);
+  serial_tramp_send_payload('I', pit_mode == VTX_PIT_MODE_ON ? 0 : 1);
   tramp_settings.frequency = 0;
 }
 
