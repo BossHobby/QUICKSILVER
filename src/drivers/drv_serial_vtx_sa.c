@@ -196,10 +196,22 @@ static uint8_t serial_smart_audio_parse_packet(uint8_t cmd, uint8_t *payload, ui
     smart_audio_settings.power = payload[0];
     break;
   }
-  case SA_CMD_SET_MODE:
-    smart_audio_settings.mode = payload[0];
-    break;
+  case SA_CMD_SET_MODE: {
+    const uint8_t mode = payload[0];
 
+    // in-range pitmode
+    smart_audio_settings.mode |= ((mode >> 0) & 0x1) << 2;
+
+    // out-range pitmode
+    smart_audio_settings.mode |= ((mode >> 1) & 0x1) << 3;
+
+    // pit mode runnig
+    smart_audio_settings.mode |= ((mode >> 2) & 0x1) << 1;
+
+    // locked bit
+    smart_audio_settings.mode |= ((mode >> 3) & 0x1) << 4;
+    break;
+  }
   default:
     quic_debugf("SMART_AUDIO: invalid cmd %d (%d)", cmd, length);
     return 0;
