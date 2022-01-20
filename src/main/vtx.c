@@ -60,6 +60,7 @@ int8_t vtx_find_frequency_index(uint16_t frequency) {
 
 extern smart_audio_settings_t smart_audio_settings;
 uint8_t smart_audio_detected = 0;
+static bool smart_audio_needs_update = false;
 
 vtx_detect_status_t vtx_smart_audio_update(vtx_settings_t *actual) {
   if (smart_audio_settings.version == 0 && vtx_connect_tries > SMART_AUDIO_DETECT_TRIES) {
@@ -108,6 +109,13 @@ vtx_detect_status_t vtx_smart_audio_update(vtx_settings_t *actual) {
       vtx_settings.detected = VTX_PROTOCOL_SMART_AUDIO;
       vtx_connect_tries = 0;
     }
+
+    if (smart_audio_needs_update) {
+      serial_smart_audio_send_payload(SA_CMD_GET_SETTINGS, NULL, 0);
+      smart_audio_needs_update = false;
+      return VTX_DETECT_WAIT;
+    }
+
     return VTX_DETECT_SUCCESS;
   }
 
@@ -161,6 +169,7 @@ static void smart_audio_set_pit_mode(vtx_pit_mode_t pit_mode) {
     }
 
     serial_smart_audio_send_payload(SA_CMD_SET_MODE, &mode, 1);
+    smart_audio_needs_update = true;
   } else {
     vtx_settings.pit_mode = VTX_PIT_MODE_NO_SUPPORT;
   }
