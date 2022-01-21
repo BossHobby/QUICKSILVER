@@ -133,6 +133,8 @@ uint8_t osdsystem = NTSC;
 uint8_t lastsystem = 99;
 uint8_t lastvm0 = 0x55;
 
+static uint8_t dma_buffer[64];
+
 //TODO ... should we monitor lastvm0 and handle any unexpected changes using check_osd() ... not sure if/when an osd chip becomes unstable due to voltage or some other reason
 
 //stuffs a float into a char array.  parameters are array length and precision.  only pads spaces for 0's up to the thousands place.
@@ -204,29 +206,28 @@ void osd_print_data(uint8_t *buffer, uint8_t length, uint8_t dmm_attribute, uint
     y = MAXROWS - 1;
 
   const uint32_t size = (length * 2) + 8;
-  static uint8_t osd_buffer[18]; //allows for a maximum of 5 characters to be written to screen per loop
-  if (size > 18) {
+  if (size > 64) {
     return;
   }
 
   // 16 bit mode, auto increment mode
   uint16_t pos = x + y * 30;
-  osd_buffer[0] = DMM;
-  osd_buffer[1] = dmm_attribute;
-  osd_buffer[2] = DMAH;
-  osd_buffer[3] = 0x01 & (pos >> 8);
-  osd_buffer[4] = DMAL;
-  osd_buffer[5] = (uint8_t)pos;
+  dma_buffer[0] = DMM;
+  dma_buffer[1] = dmm_attribute;
+  dma_buffer[2] = DMAH;
+  dma_buffer[3] = 0x01 & (pos >> 8);
+  dma_buffer[4] = DMAL;
+  dma_buffer[5] = (uint8_t)pos;
 
   for (int i = 0; i < length; i++) {
-    osd_buffer[(i * 2) + 6] = DMDI;
-    osd_buffer[(i * 2) + 7] = buffer[i];
+    dma_buffer[(i * 2) + 6] = DMDI;
+    dma_buffer[(i * 2) + 7] = buffer[i];
   }
   // off autoincrement mode
-  osd_buffer[(length * 2) + 6] = DMDI;
-  osd_buffer[(length * 2) + 7] = 0xFF;
+  dma_buffer[(length * 2) + 6] = DMDI;
+  dma_buffer[(length * 2) + 7] = 0xFF;
   //non blocking dma print
-  max7456_dma_it_transfer_bytes(osd_buffer, (length * 2) + 8);
+  max7456_dma_it_transfer_bytes(dma_buffer, (length * 2) + 8);
 }
 
 // prints string to screen with dmm_attribute TEXT, BLINK, or INVERT.  CAUTION:  strlen() is used in this so only use this for compile time strings
@@ -240,30 +241,29 @@ void osd_print(const char *buffer, uint8_t dmm_attribute, uint8_t x, uint8_t y) 
     y = MAXROWS - 1;
 
   const uint32_t size = (strlen(buffer) * 2) + 8;
-  static uint8_t osd_string_buffer[48]; //allows for a maximum of 20 characters to be written to screen per loop
-  if (size > 48) {
+  if (size > 64) {
     return;
   }
 
   // 16 bit mode, auto increment mode
   uint16_t pos = x + y * 30;
-  osd_string_buffer[0] = DMM;
-  osd_string_buffer[1] = dmm_attribute;
-  osd_string_buffer[2] = DMAH;
-  osd_string_buffer[3] = 0x01 & (pos >> 8);
-  osd_string_buffer[4] = DMAL;
-  osd_string_buffer[5] = (uint8_t)pos;
+  dma_buffer[0] = DMM;
+  dma_buffer[1] = dmm_attribute;
+  dma_buffer[2] = DMAH;
+  dma_buffer[3] = 0x01 & (pos >> 8);
+  dma_buffer[4] = DMAL;
+  dma_buffer[5] = (uint8_t)pos;
 
   for (uint32_t i = 0; i < strlen(buffer); i++) {
-    osd_string_buffer[(i * 2) + 6] = DMDI;
-    osd_string_buffer[(i * 2) + 7] = buffer[i];
+    dma_buffer[(i * 2) + 6] = DMDI;
+    dma_buffer[(i * 2) + 7] = buffer[i];
   }
   // off autoincrement mode
-  osd_string_buffer[(strlen(buffer) * 2) + 6] = DMDI;
-  osd_string_buffer[(strlen(buffer) * 2) + 7] = 0xFF;
+  dma_buffer[(strlen(buffer) * 2) + 6] = DMDI;
+  dma_buffer[(strlen(buffer) * 2) + 7] = 0xFF;
 
   //non blocking dma print
-  max7456_dma_it_transfer_bytes(osd_string_buffer, size);
+  max7456_dma_it_transfer_bytes(dma_buffer, size);
 }
 
 //clears off entire display    This function is a blocking use of non blocking print (not looptime friendly)
@@ -372,12 +372,16 @@ void max7456_init() {
 
 //splash screen
 void osd_intro() {
-  osd_print("QUICKSILVER", INVERT, 9, 5); //char, col, row
-  while (osd_dma_status == BUSY) {
-  };
-  osd_print("LIKE A BOSS", TEXT, 18, 14); //char, col, row
-  while (osd_dma_status == BUSY) {
-  }; //this wait may not be necessary
+  uint8_t buffer[24];
+  for (uint8_t row = 0; row < 4; row++) {
+    uint8_t start = 160 + row * 24;
+    for (uint8_t i = 0; i < 24; i++) {
+      buffer[i] = start + i;
+    }
+    osd_print_data(buffer, 24, TEXT, 3, row + 5);
+    while (osd_dma_status == BUSY)
+      ;
+  }
 }
 
 //NOT USING THIS FUNCTION YET OR EVEN SURE IF IT IS NEEDED
