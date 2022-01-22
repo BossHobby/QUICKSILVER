@@ -14,7 +14,7 @@
 #include "util.h"
 #include "util/cbor_helper.h"
 
-#if defined(FPV_SWITCH) && defined(FPV_PIN)
+#if defined(FPV_PIN)
 static int fpv_init = 0;
 #endif
 
@@ -300,7 +300,7 @@ void vtx_init() {
 void vtx_update() {
   static volatile uint32_t delay_loops = 5000;
 
-#if defined(FPV_SWITCH) && defined(FPV_PIN)
+#if defined(FPV_PIN)
   if (rx_aux_on(AUX_FPV_SWITCH)) {
     // fpv switch on
     if (!fpv_init && flags.rx_mode == RXMODE_NORMAL && flags.on_ground == 1) {
@@ -328,7 +328,7 @@ void vtx_update() {
     return;
   }
 
-  if (!flags.on_ground || flags.arm_state == 1) {
+  if (!flags.on_ground) {
     // never try to do vtx stuff in-air
     return;
   }
@@ -448,6 +448,17 @@ void vtx_update() {
     return;
   } else {
     power_level_tries = 0;
+  }
+
+  if (!flags.usb_active &&
+      profile.receiver.aux[AUX_FPV_SWITCH] <= AUX_CHANNEL_11 &&
+      vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT) {
+    // we got a aux switch set, switch pit_mode accordingly
+    if (rx_aux_on(AUX_FPV_SWITCH)) {
+      vtx_settings.pit_mode = 0;
+    } else {
+      vtx_settings.pit_mode = 1;
+    }
   }
 
   static uint8_t pit_mode_tries = 0;
