@@ -139,6 +139,9 @@ void elrs_phase_reset() {
 
   pl_state.offset = 0;
   pl_state.offset_dx = 0;
+
+  elrs_lpf_init((elrs_lpf_t *)&pl_state.offset_lpf, 2);
+  elrs_lpf_init((elrs_lpf_t *)&pl_state.offset_dx_lpf, 4);
 }
 
 void TIM3_IRQHandler() {
