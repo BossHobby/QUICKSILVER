@@ -328,7 +328,7 @@ void vtx_update() {
     return;
   }
 
-  if (!flags.on_ground) {
+  if (flags.in_air) {
     // never try to do vtx stuff in-air
     return;
   }
