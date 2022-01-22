@@ -179,4 +179,3 @@ void sx127x_read_fifo(uint8_t *data, uint8_t size);
 void sx127x_write_fifo(uint8_t *data, uint8_t size);
 
 uint8_t sx127x_read_dio0();
-uint32_t sx127x_packet_time();

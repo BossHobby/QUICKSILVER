@@ -302,7 +302,7 @@ void sx128x_set_mode_async(const sx128x_modes_t mode) {
 
   case SX1280_MODE_TX: {
     uint8_t buf[3];
-    //uses timeout Time-out duration = periodBase * periodBaseCount
+    // uses timeout Time-out duration = periodBase * periodBaseCount
     buf[0] = 0x00; // periodBase = 1ms, page 71 datasheet
     buf[1] = 0xFF; // no timeout set for now
     buf[2] = 0xFF; // TODO dynamic timeout based on expected onairtime

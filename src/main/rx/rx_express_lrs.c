@@ -752,6 +752,17 @@ void rx_check() {
   last_time = time;
 
   const elrs_irq_status_t irq = elrs_get_irq_status();
+
+  // it is possible we caught a packet during boot, but it will be stale by now
+  // read the irq state above, but ignore it during the first run of this function
+  static bool has_run_once = false;
+  if (!has_run_once) {
+    // delay mode cycle a bit
+    last_rf_mode_cycle_millis = time_millis();
+    has_run_once = true;
+    return;
+  }
+
   if (irq == IRQ_RX_DONE) {
     elrs_process_packet(packet_time);
   } else if (irq == IRQ_TX_DONE) {
