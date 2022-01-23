@@ -318,5 +318,17 @@
         }
       }
     ]
+  },
+  {
+    "name": "iflight_f745_aio_v2",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      }
+    ]
   }
 ]
