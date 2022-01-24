@@ -37,12 +37,12 @@
 #endif
 
 #define SPI_IDENT(channel) SPI_PORT##channel
+#define SPI_PORT(chan, sck_pin, miso_pin, mosi_pin) SPI_IDENT(chan),
 
 typedef enum {
   SPI_PORT_INVALID,
-  SPI_PORT1,
-  SPI_PORT2,
-  SPI_PORT3,
-  SPI_PORT4,
+  SPI_PORTS
   SPI_PORTS_MAX,
 } spi_ports_t;
+
+#undef SPI_PORT
