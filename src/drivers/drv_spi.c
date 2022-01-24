@@ -269,7 +269,7 @@ uint8_t spi_transfer_byte_timeout(spi_ports_t port, uint8_t data, uint32_t timeo
   return LL_SPI_ReceiveData8(PORT.channel);
 }
 
-volatile uint8_t dma_transfer_done[2 * 8] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+volatile uint8_t dma_transfer_done[4 * 8];
 #define DMA_TRANSFER_DONE dma_transfer_done[(PORT.dma.dma_port - 1) * 8 + PORT.dma.rx_stream_index]
 
 void spi_dma_init(spi_ports_t port) {
