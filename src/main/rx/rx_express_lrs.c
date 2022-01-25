@@ -354,7 +354,7 @@ static void elrs_enter_binding_mode() {
   crc_initializer = 0;
   in_binding_mode = true;
 
-  next_rate = ELRS_RATE_DEFAULT;
+  next_rate = ERLS_RATE_BIND;
 
   elrs_set_rate(next_rate, fhss_get_sync_freq(), UID[5] & 0x01);
   elrs_enter_rx(packet);
@@ -800,7 +800,7 @@ void rx_check() {
     elrs_timer_state = TIMER_LOCKED;
   }
 
-  if (bind_storage.elrs.is_set == 0x0 && bind_storage.elrs.magic != 0x37 && !in_binding_mode) {
+  if (bind_storage.elrs.is_set == 0x0 && bind_storage.elrs.magic != 0x37) {
     elrs_enter_binding_mode();
   } else {
     state.rx_status = RX_SPI_STATUS_BOUND;
