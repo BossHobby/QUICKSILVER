@@ -8,6 +8,8 @@
 #include "drv_time.h"
 #include "project.h"
 
+#define SPI_SPEED_INIT MHZ_TO_HZ(0.5)
+
 #define PORT spi_port_defs[GYRO_SPI_PORT]
 
 static void mpu6xxx_reinit_slow() {
@@ -23,23 +25,7 @@ static void mpu6xxx_reinit_slow() {
   spi_init.ClockPolarity = LL_SPI_POLARITY_HIGH;
   spi_init.ClockPhase = LL_SPI_PHASE_2EDGE;
   spi_init.NSS = LL_SPI_NSS_SOFT;
-
-  switch (GYRO_TYPE) {
-  case ICM20601:
-  case ICM20608:
-    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(5.25));
-    break;
-
-  case ICM20602:
-    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(10.5));
-    break;
-
-  case MPU6XXX:
-  default:
-    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(0.5));
-    break;
-  }
-
+  spi_init.BaudRate = spi_find_divder(SPI_SPEED_INIT);
   spi_init.BitOrder = LL_SPI_MSB_FIRST;
   spi_init.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
   spi_init.CRCPoly = 7;
