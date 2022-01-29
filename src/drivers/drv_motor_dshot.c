@@ -35,8 +35,8 @@
 // Tim_1 is running at 84mhz with APB2 clock currently configured at 42MHZ
 // clock cycles per bit for a bit timing period of 1.67us
 #define DSHOT_BIT_TIME ((PWM_CLOCK_FREQ_HZ / 1000 / profile.motor.dshot_time) - 1)
-#define DSHOT_T0H_TIME (DSHOT_BIT_TIME * 0.30 + 0.05)
-#define DSHOT_T1H_TIME (DSHOT_BIT_TIME * 0.60 + 0.05)
+#define DSHOT_T0H_TIME (DSHOT_BIT_TIME * 0.35 + 0.05)
+#define DSHOT_T1H_TIME (DSHOT_BIT_TIME * 0.70 + 0.05)
 
 #define DSHOT_CMD_BEEP1 1
 #define DSHOT_CMD_BEEP2 2
