@@ -62,7 +62,7 @@
 
 typedef enum {
   MOTOR_PINS
-      MOTOR_PIN_IDENT_MAX
+  MOTOR_PIN_MAX
 } motor_pin_ident_t;
 
 #undef MOTOR_PIN

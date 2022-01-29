@@ -47,8 +47,16 @@
 #define DSHOT_CMD_ROTATE_NORMAL 20
 #define DSHOT_CMD_ROTATE_REVERSE 21
 
-//sum = total number of dshot GPIO ports
-#define DSHOT_PORT_COUNT (DSHOT_GPIO_A + DSHOT_GPIO_B + DSHOT_GPIO_C)
+#define DSHOT_MAX_PORT_COUNT 3
+
+typedef struct {
+  motor_pin_ident_t id;
+
+  GPIO_TypeDef *port;
+  uint32_t pin;
+
+  uint32_t dshot_port;
+} motor_pin_t;
 
 typedef struct {
   __IO uint32_t MODER;   /*!< GPIO port mode register,               Address offset: 0x00      */
@@ -63,9 +71,14 @@ typedef struct {
   __IO uint32_t AFR[2];  /*!< GPIO alternate function registers,     Address offset: 0x20-0x24 */
 } dshot_gpio_t;
 
-static uint8_t DSHOT_GPIO_A = 0;
-static uint8_t DSHOT_GPIO_B = 0;
-static uint8_t DSHOT_GPIO_C = 0;
+typedef struct {
+  dshot_gpio_t *gpio;
+
+  uint32_t port_low;  // sum of all motor pins of this port
+  uint32_t port_high; // shifted motor pins of this port for T1H timing
+
+  uint32_t motor_data[16]; //motor pins at this port with commanded '0' bit at T0H timing
+} dshot_gpio_port_t;
 
 extern profile_t profile;
 
@@ -74,67 +87,69 @@ uint8_t pwmdir = 0;
 static uint8_t last_pwmdir = 0;
 static uint32_t pwm_failsafe_time = 1;
 
-volatile int dshot_dma_phase = 0;  // 0:idle, 1: also idles in interrupt handler as single phase gets called by dshot_dma_start(), 2: & 3: handle remaining phases
-volatile uint16_t dshot_packet[4]; // 16bits dshot data for 4 motors
+volatile uint32_t dshot_dma_phase = 0;       // 0: idle, 1 - (gpio_port_count + 1): handle port n
+static uint16_t dshot_packet[MOTOR_PIN_MAX]; // 16bits dshot data for 4 motors
+static uint8_t gpio_port_count = 0;
+static dshot_gpio_port_t gpio_ports[DSHOT_MAX_PORT_COUNT];
+static volatile uint32_t port_dma_buffer[DSHOT_MAX_PORT_COUNT][48];
 
-volatile uint32_t motor_data_portA[16] = {0}; //motor pins at portA with commanded '0' bit at T0H timing
-volatile uint32_t motor_data_portB[16] = {0}; //motor pins at portB with commanded '0' bit at T0H timing
-volatile uint32_t motor_data_portC[16] = {0}; //motor pins at portC with commanded '0' bit at T0H timing
+#define MOTOR_PIN(_port, _pin, pin_af, timer, timer_channel) \
+  {                                                          \
+      .id = MOTOR_PIN_IDENT(_port, _pin),                    \
+      .port = GPIO##_port,                                   \
+      .pin = LL_GPIO_PIN_##_pin,                             \
+      .dshot_port = 0,                                       \
+  },
 
-volatile uint32_t dshot_portA_low = 0;  // sum of all motor pins at portA
-volatile uint32_t dshot_portB_low = 0;  // sum of all motor pins at portB
-volatile uint32_t dshot_portC_low = 0;  // sum of all motor pins at portC
-volatile uint32_t dshot_portA_high = 0; // shifted motor pins at portA for T1H timing
-volatile uint32_t dshot_portB_high = 0; // shifted motor pins at portB for T1H timing
-volatile uint32_t dshot_portC_high = 0; // shifted motor pins at portC for T1H timing
+static motor_pin_t motor_pins[MOTOR_PIN_MAX] = {MOTOR_PINS};
 
-volatile uint32_t portA_buffer[48] = {0}; // dma buffers
-volatile uint32_t portB_buffer[48] = {0};
-volatile uint32_t portC_buffer[48] = {0};
+#undef MOTOR_PIN
 
-// use your own struct to use BSRR as a 16-bit register
-static volatile dshot_gpio_t *gpioA = (dshot_gpio_t *)GPIOA;
-static volatile dshot_gpio_t *gpioB = (dshot_gpio_t *)GPIOB;
-static volatile dshot_gpio_t *gpioC = (dshot_gpio_t *)GPIOC;
-
-void motor_init() {
+static void dshot_init_motor_pin(uint32_t index) {
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  gpio_init.Pin = motor_pins[index].pin;
+  LL_GPIO_Init(motor_pins[index].port, &gpio_init);
 
-#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) \
-  gpio_init.Pin = LL_GPIO_PIN_##pin;                       \
-  LL_GPIO_Init(GPIO##port, &gpio_init);                    \
-  if (GPIO##port == GPIOA) {                               \
-    DSHOT_GPIO_A = 1;                                      \
-    dshot_portA_low |= (LL_GPIO_PIN_##pin);                \
-    dshot_portA_high |= (LL_GPIO_PIN_##pin << 16);         \
-  } else if (GPIO##port == GPIOB) {                        \
-    DSHOT_GPIO_B = 1;                                      \
-    dshot_portB_low |= (LL_GPIO_PIN_##pin);                \
-    dshot_portB_high |= (LL_GPIO_PIN_##pin << 16);         \
-  } else if (GPIO##port == GPIOC) {                        \
-    DSHOT_GPIO_C = 1;                                      \
-    dshot_portC_low |= (LL_GPIO_PIN_##pin);                \
-    dshot_portC_high |= (LL_GPIO_PIN_##pin << 16);         \
+  dshot_gpio_t *dshot_gpio = (dshot_gpio_t *)motor_pins[index].port;
+
+  for (uint8_t i = 0; i < DSHOT_MAX_PORT_COUNT; i++) {
+    if (gpio_ports[i].gpio == dshot_gpio || i == gpio_port_count) {
+      // we already got a matching port in our array
+      // or we reached the first empty spot
+      gpio_ports[i].gpio = dshot_gpio;
+      gpio_ports[i].port_low |= motor_pins[index].pin;
+      gpio_ports[i].port_high |= (motor_pins[index].pin << 16);
+
+      motor_pins[index].dshot_port = i;
+
+      if (i + 1 > gpio_port_count) {
+        gpio_port_count = i + 1;
+      }
+
+      break;
+    }
+  }
+}
+
+void motor_init() {
+  gpio_port_count = 0;
+
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    dshot_init_motor_pin(i);
   }
 
-  MOTOR_PINS
+  for (uint32_t j = 0; j < gpio_port_count; j++) {
+    for (uint32_t i = 0; i < 48; i = i + 3) {
+      port_dma_buffer[j][i] = gpio_ports[j].port_low;
+    }
 
-#undef MOTOR_PIN
-
-  for (int i = 0; i < 48; i = i + 3) {
-    portA_buffer[i] = dshot_portA_low;
-    portB_buffer[i] = dshot_portB_low;
-    portC_buffer[i] = dshot_portC_low;
-  }
-
-  for (int i = 2; i < 48; i = i + 3) {
-    portA_buffer[i] = dshot_portA_high;
-    portB_buffer[i] = dshot_portB_high;
-    portC_buffer[i] = dshot_portC_high;
+    for (uint32_t i = 2; i < 48; i = i + 3) {
+      port_dma_buffer[j][i] = gpio_ports[j].port_high;
+    }
   }
 
   // DShot timer/DMA2 init
@@ -189,8 +204,8 @@ void motor_init() {
   /* DMA2 Stream6_Channel0 configuration ----------------------------------------------*/
   LL_DMA_DeInit(DMA2, LL_DMA_STREAM_6);
   DMA_InitStructure.Channel = LL_DMA_CHANNEL_0;
-  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&gpioA->BSRRL;
-  DMA_InitStructure.MemoryOrM2MDstAddress = (uint32_t)portA_buffer;
+  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&gpio_ports[0].gpio->BSRRL;
+  DMA_InitStructure.MemoryOrM2MDstAddress = (uint32_t)port_dma_buffer[0];
   DMA_InitStructure.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
   DMA_InitStructure.NbData = 48;
   DMA_InitStructure.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
@@ -236,24 +251,10 @@ static void dshot_dma_stream_enable() {
   LL_TIM_EnableCounter(TIM1);
 }
 
-static void dshot_dma_portA() {
-  dma_prepare_tx_memory((uint8_t *)portA_buffer, 48);
-  DMA2_Stream6->PAR = (uint32_t)&gpioA->BSRRL;
-  DMA2_Stream6->M0AR = (uint32_t)portA_buffer;
-  dshot_dma_stream_enable();
-}
-
-static void dshot_dma_portB() {
-  dma_prepare_tx_memory((uint8_t *)portB_buffer, 48);
-  DMA2_Stream6->PAR = (uint32_t)&gpioB->BSRRL;
-  DMA2_Stream6->M0AR = (uint32_t)portB_buffer;
-  dshot_dma_stream_enable();
-}
-
-static void dshot_dma_portC() {
-  dma_prepare_tx_memory((uint8_t *)portC_buffer, 48);
-  DMA2_Stream6->PAR = (uint32_t)&gpioC->BSRRL;
-  DMA2_Stream6->M0AR = (uint32_t)portC_buffer;
+static void dshot_dma_setup_port(uint32_t index) {
+  dma_prepare_tx_memory((uint8_t *)port_dma_buffer[index], 48);
+  DMA2_Stream6->PAR = (uint32_t)&gpio_ports[index].gpio->BSRRL;
+  DMA2_Stream6->M0AR = (uint32_t)port_dma_buffer[index];
   dshot_dma_stream_enable();
 }
 
@@ -280,23 +281,15 @@ static void dshot_dma_start() {
 
   // generate dshot dma packet
   for (uint8_t i = 0; i < 16; i++) {
-    motor_data_portA[i] = 0;
-    motor_data_portB[i] = 0;
-    motor_data_portC[i] = 0;
+    for (uint32_t port = 0; port < gpio_port_count; port++) {
+      gpio_ports[port].motor_data[i] = 0;
+    }
 
-#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel)    \
-  if (!(dshot_packet[MOTOR_PIN_IDENT(port, pin)] & 0x8000)) { \
-    if (GPIO##port == GPIOA)                                  \
-      motor_data_portA[i] |= (LL_GPIO_PIN_##pin << 16);       \
-    else if (GPIO##port == GPIOB)                             \
-      motor_data_portB[i] |= (LL_GPIO_PIN_##pin << 16);       \
-    else if (GPIO##port == GPIOC)                             \
-      motor_data_portC[i] |= (LL_GPIO_PIN_##pin << 16);       \
-  }
-
-    MOTOR_PINS
-
-#undef MOTOR_PIN
+    for (uint8_t j = 0; j < MOTOR_PIN_MAX; j++) {
+      if (!(dshot_packet[j] & 0x8000)) {
+        gpio_ports[motor_pins[j].dshot_port].motor_data[i] |= (motor_pins[j].pin << 16);
+      }
+    }
 
     dshot_packet[0] <<= 1;
     dshot_packet[1] <<= 1;
@@ -305,24 +298,19 @@ static void dshot_dma_start() {
   }
 
   for (int i = 1, j = 0; i < 48 && j < 16; i += 3, j++) {
-    portA_buffer[i] = motor_data_portA[j];
-    portB_buffer[i] = motor_data_portB[j];
-    portC_buffer[i] = motor_data_portC[j];
+    for (uint32_t port = 0; port < gpio_port_count; port++) {
+      port_dma_buffer[port][i] = gpio_ports[port].motor_data[j];
+    }
   }
 
-  dshot_dma_phase = DSHOT_PORT_COUNT;
+  dshot_dma_phase = gpio_port_count;
 
   TIM1->ARR = DSHOT_BIT_TIME;
   TIM1->CCR1 = 0;
   TIM1->CCR2 = DSHOT_T0H_TIME;
   TIM1->CCR3 = DSHOT_T1H_TIME;
 
-  if (DSHOT_GPIO_A == 1)
-    dshot_dma_portA();
-  else if (DSHOT_GPIO_B == 1)
-    dshot_dma_portB();
-  else if (DSHOT_GPIO_C == 1)
-    dshot_dma_portC();
+  dshot_dma_setup_port(dshot_dma_phase - 1);
 }
 
 void motor_wait_for_ready() {
@@ -431,26 +419,11 @@ void DMA2_Stream6_IRQHandler() {
   LL_DMA_ClearFlag_TC6(DMA2);
   LL_TIM_DisableCounter(TIM1);
 
-  switch (dshot_dma_phase) {
-  case 3: //has to be port B here because we are in 3 phase mode and port A runs first in dshot_dma_start()
-    dshot_dma_phase = 2;
-    dshot_dma_portB();
-    return;
-  case 2: //could be port B or C here
-    dshot_dma_phase = 1;
-    //if 3 phase, B already fired in case 3, its just C left ... if 2 phase AC or BC, then first phase has fired and its just C left
-    if (DSHOT_PORT_COUNT == 3 || (DSHOT_PORT_COUNT == 2 && DSHOT_GPIO_B == 0) || (DSHOT_PORT_COUNT == 2 && DSHOT_GPIO_A == 0))
-      dshot_dma_portC();
-    //last possible GPIO phase combo is 2 phase AB, where A has already fired off and now we need B
-    else
-      dshot_dma_portB();
-    return;
-  case 1:
-    dshot_dma_phase = 0;
-    return;
-  default:
-    dshot_dma_phase = 0;
-    break;
+  dshot_dma_phase--;
+
+  if (dshot_dma_phase) {
+    // not yet idle, more work to do
+    dshot_dma_setup_port(dshot_dma_phase - 1);
   }
 }
 
