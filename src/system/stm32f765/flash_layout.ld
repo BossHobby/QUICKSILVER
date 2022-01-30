@@ -28,6 +28,14 @@ MEMORY
 /* Sections */
 SECTIONS
 {
+  .config_flash  :
+  {
+    . = ALIGN(4);
+    _config_flash_start = .;
+    KEEP(*(.config_flash))
+    _config_flash_end = .;
+  } >FLASH_CONFIG
+
   /* The startup code into "FLASH" Rom type memory */
   .isr_vector :
   {
