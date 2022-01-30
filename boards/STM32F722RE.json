@@ -1,0 +1,34 @@
+{
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m7",
+    "extra_flags": "-DSTM32F722xx -DSTM32F722 -DSTM32F7 -DHSE_VALUE=8000000U",
+    "f_cpu": "216000000L",
+    "mcu": "stm32f722re",
+    "product_line": "STM32F722xx",
+    "variant": "Generic_F72x"
+  },
+  "debug": {
+    "jlink_device": "stm32f722re",
+    "openocd_target": "stm32f7x",
+    "svd_path": "STM32F72x.svd"
+  },
+  "frameworks": [
+    "stm32cube"
+  ],
+  "name": "stm32f722re",
+  "upload": {
+    "maximum_ram_size": 262144,
+    "maximum_size": 524288,
+    "protocol": "serial",
+    "protocols": [
+      "blackmagic",
+      "dfu",
+      "jlink",
+      "serial",
+      "stlink"
+    ]
+  },
+  "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32f722re.html",
+  "vendor": "Generic"
+}
