@@ -59,6 +59,13 @@ MEMORY
 /* Define output sections */
 SECTIONS
 {
+  .config_flash  :
+  {
+    _config_flash_start = .;
+    KEEP(*(.config_flash))
+    _config_flash_end = .;
+  } >FLASH_CONFIG
+
   /* The startup code goes first into FLASH */
   .isr_vector :
   {
