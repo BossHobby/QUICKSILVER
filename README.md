@@ -36,4 +36,12 @@ This firmware uses the awesome [PlatformIO](https://platformio.org/) project as 
 
 ## Contributing
 
+Any contributions of code, ideas, help with documentation are most welcome. 
+
+If you cannot help with any of those but would still like to contribute we are able to accept donations through open collective (https://opencollective.com/) This way any funding is fully transparent.
+
+Any money donated will be used to provide hardware and equipment when necessary to continue development and expand hardware support.
+
+[![Donate](https://img.shields.io/badge/Quicksilver-Open--Collective--Donate-brightgreen)](https://opencollective.com/quicksilver)
+
 Contributions are welcome and encouraged.
