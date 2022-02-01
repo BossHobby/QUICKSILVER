@@ -22,8 +22,10 @@ extern profile_t profile;
 static uint16_t adc_calibration_value() {
 #if defined(STM32F4)
   return *((uint16_t *)0x1FFF7A2A);
-#elif defined(STM32F7)
+#elif defined(STM32F745) || defined(STM32F765)
   return *((uint16_t *)0x1FF0F44A);
+#elif defined(STM32F722)
+  return *((uint16_t *)0x1FF07A2A);
 #endif
 }
 
