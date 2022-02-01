@@ -13,6 +13,10 @@ extern profile_t profile;
 
 #ifndef DISABLE_ADC
 
+#ifndef ADC_REF_VOLTAGE
+#define ADC_REF_VOLTAGE 3.3
+#endif
+
 #ifndef ADC_SCALEFACTOR
 // 12 bit ADC has 4096 steps
 //scalefactor = (vref/4096) * (R1 + R2)/R2
