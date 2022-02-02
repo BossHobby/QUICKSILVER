@@ -602,6 +602,8 @@ void print_osd_mixed_data(uint8_t string_element_qty, uint8_t data_element_qty, 
 //************************************************************************************************************************************************************************************
 
 static void osd_display_regular() {
+  uint8_t print_buffer[16];
+
   switch (osd_display_element) {
   case OSD_CALLSIGN:
     if (osd_decode(*callsign1, ACTIVE)) {
@@ -615,10 +617,9 @@ static void osd_display_regular() {
 
   case OSD_FUELGAUGE_VOLTS:
     if (osd_decode(*fuelgauge_volts, ACTIVE)) {
-      uint8_t osd_fuelgauge_volts[5];
-      fast_fprint(osd_fuelgauge_volts, 4, state.vbatt_comp, 1);
-      osd_fuelgauge_volts[4] = 'V';
-      osd_print_data(osd_fuelgauge_volts, 5, osd_decode(*fuelgauge_volts, ATTRIBUTE), osd_decode(*fuelgauge_volts, POSITIONX) + 3, osd_decode(*fuelgauge_volts, POSITIONY));
+      fast_fprint(print_buffer, 4, state.vbatt_comp, 1);
+      print_buffer[4] = 'V';
+      osd_print_data(print_buffer, 5, osd_decode(*fuelgauge_volts, ATTRIBUTE), osd_decode(*fuelgauge_volts, POSITIONX) + 3, osd_decode(*fuelgauge_volts, POSITIONY));
     }
     osd_display_element++;
     break;
@@ -640,10 +641,9 @@ static void osd_display_regular() {
 
   case OSD_FILTERED_VOLTS:
     if (osd_decode(*filtered_volts, ACTIVE)) {
-      uint8_t osd_filtered_volts[5];
-      fast_fprint(osd_filtered_volts, 4, state.vbattfilt_corr, 1);
-      osd_filtered_volts[4] = 'V';
-      osd_print_data(osd_filtered_volts, 5, osd_decode(*filtered_volts, ATTRIBUTE), osd_decode(*filtered_volts, POSITIONX) + 3, osd_decode(*filtered_volts, POSITIONY));
+      fast_fprint(print_buffer, 4, state.vbattfilt_corr, 1);
+      print_buffer[4] = 'V';
+      osd_print_data(print_buffer, 5, osd_decode(*filtered_volts, ATTRIBUTE), osd_decode(*filtered_volts, POSITIONX) + 3, osd_decode(*filtered_volts, POSITIONY));
     }
     osd_display_element++;
     break;
@@ -665,10 +665,9 @@ static void osd_display_regular() {
 
   case OSD_GYRO_TEMP:
     if (osd_decode(*gyro_degrees, ACTIVE)) {
-      uint8_t osd_gyro_temp[5];
-      fast_fprint(osd_gyro_temp, 5, state.gyro_temp, 0);
-      osd_gyro_temp[4] = 14; //degrees C
-      osd_print_data(osd_gyro_temp, 5, osd_decode(*gyro_degrees, ATTRIBUTE), osd_decode(*gyro_degrees, POSITIONX) + 3, osd_decode(*gyro_degrees, POSITIONY));
+      fast_fprint(print_buffer, 5, state.gyro_temp, 0);
+      print_buffer[4] = 14; //degrees C
+      osd_print_data(print_buffer, 5, osd_decode(*gyro_degrees, ATTRIBUTE), osd_decode(*gyro_degrees, POSITIONX) + 3, osd_decode(*gyro_degrees, POSITIONY));
     }
     osd_display_element++;
     break;
@@ -692,9 +691,8 @@ static void osd_display_regular() {
 
   case OSD_STOPWATCH:
     if (osd_decode(*stopwatch, ACTIVE)) {
-      uint8_t osd_stopwatch[5];
-      format_time(osd_stopwatch, state.armtime);
-      osd_print_data(osd_stopwatch, 5, osd_decode(*stopwatch, ATTRIBUTE), osd_decode(*stopwatch, POSITIONX), osd_decode(*stopwatch, POSITIONY));
+      format_time(print_buffer, state.armtime);
+      osd_print_data(print_buffer, 5, osd_decode(*stopwatch, ATTRIBUTE), osd_decode(*stopwatch, POSITIONX), osd_decode(*stopwatch, POSITIONY));
     }
     osd_display_element++;
     break;
@@ -711,19 +709,17 @@ static void osd_display_regular() {
 
   case OSD_THROTTLE:
     if (osd_decode(*osd_throttle, ACTIVE)) {
-      uint8_t osd_throttle_value[5];
-      fast_fprint(osd_throttle_value, 5, (state.throttle * 100.0f), 0);
-      osd_throttle_value[4] = 4;
-      osd_print_data(osd_throttle_value, 5, osd_decode(*osd_throttle, ATTRIBUTE), osd_decode(*osd_throttle, POSITIONX), osd_decode(*osd_throttle, POSITIONY));
+      fast_fprint(print_buffer, 5, (state.throttle * 100.0f), 0);
+      print_buffer[4] = 4;
+      osd_print_data(print_buffer, 5, osd_decode(*osd_throttle, ATTRIBUTE), osd_decode(*osd_throttle, POSITIONX), osd_decode(*osd_throttle, POSITIONY));
     }
     osd_display_element++;
     break;
 
   case OSD_VTX_CHANNEL:
     if (osd_decode(*osd_vtx, ACTIVE) && vtx_settings.detected) {
-      uint8_t osd_vtx_freq[5];
-      format_vtx(osd_vtx_freq);
-      osd_print_data(osd_vtx_freq, 5, osd_decode(*osd_vtx, ATTRIBUTE), osd_decode(*osd_vtx, POSITIONX), osd_decode(*osd_vtx, POSITIONY));
+      format_vtx(print_buffer);
+      osd_print_data(print_buffer, 5, osd_decode(*osd_vtx, ATTRIBUTE), osd_decode(*osd_vtx, POSITIONX), osd_decode(*osd_vtx, POSITIONY));
     }
     osd_display_element++;
     break;
