@@ -147,12 +147,13 @@ void usb_process_msp() {
     break;
   }
   case MSP_BATTERY_STATE: {
+    const uint16_t current = state.ibat / 1000;
     uint8_t data[9] = {
         state.lipo_cell_count,                              // battery detected
         0x0, 0x0,                                           // battery capacity
         (uint8_t)constrainf(state.vbattfilt / 0.1, 0, 255), // battery voltage
         0x0, 0x0,                                           // battery drawn in mAh
-        0x0, 0x0,                                           // battery current draw in A
+        (current >> 8) & 0xFF, current & 0xFF,              // battery current draw in A
         0x0                                                 // battery status
     };
     send_msp(code, data, 9);

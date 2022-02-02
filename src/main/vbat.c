@@ -45,6 +45,9 @@ void vbat_calc() {
   // read and filter internal reference
   lpf(&state.vreffilt, adc_read(ADC_CHAN_VREF), 0.9968f);
 
+  state.ibat = adc_read(ADC_CHAN_IBAT);
+  lpf(&state.ibat_filtered, state.ibat, FILTERCALC(1000, 5000e3));
+
   // average of all motors
   static float thrfilt = 0;
 
