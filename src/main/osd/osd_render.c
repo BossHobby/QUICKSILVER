@@ -62,6 +62,7 @@ uint32_t *stopwatch = (profile.osd.elements + 11);
 uint32_t *arm_disarm = (profile.osd.elements + 12);
 uint32_t *osd_throttle = (profile.osd.elements + 13);
 uint32_t *osd_vtx = (profile.osd.elements + 14);
+uint32_t *osd_current = (profile.osd.elements + 15);
 
 #define ACTIVE 0
 #define ATTRIBUTE 1
@@ -603,6 +604,7 @@ void print_osd_mixed_data(uint8_t string_element_qty, uint8_t data_element_qty, 
 
 static void osd_display_regular() {
   uint8_t print_buffer[16];
+  memset(print_buffer, ' ', 16);
 
   switch (osd_display_element) {
   case OSD_CALLSIGN:
@@ -613,7 +615,7 @@ static void osd_display_regular() {
     } else {
       osd_display_element++;
     }
-    break; //screen has been displayed for this loop - break out of display function
+    break;
 
   case OSD_FUELGAUGE_VOLTS:
     if (osd_decode(*fuelgauge_volts, ACTIVE)) {
@@ -720,6 +722,15 @@ static void osd_display_regular() {
     if (osd_decode(*osd_vtx, ACTIVE) && vtx_settings.detected) {
       format_vtx(print_buffer);
       osd_print_data(print_buffer, 5, osd_decode(*osd_vtx, ATTRIBUTE), osd_decode(*osd_vtx, POSITIONX), osd_decode(*osd_vtx, POSITIONY));
+    }
+    osd_display_element++;
+    break;
+
+  case OSD_CURRENT_DRAW:
+    if (osd_decode(*osd_current, ACTIVE)) {
+      fast_fprint(print_buffer, 5, state.ibat_filtered, 0);
+      print_buffer[4] = 154; // AMP icon
+      osd_print_data(print_buffer, 5, osd_decode(*osd_current, ATTRIBUTE), osd_decode(*osd_current, POSITIONX), osd_decode(*osd_current, POSITIONY));
     }
     osd_display_element++;
     break;
