@@ -16,7 +16,7 @@ static int soft_serial_is_1wire(const soft_serial_t *dev) {
 }
 
 static void soft_serial_init_rx(const soft_serial_t *dev) {
-  if (dev->rx_pin == GPIO_PIN_INVALID) {
+  if (dev->rx_pin == PIN_NONE) {
     return;
   }
 
@@ -31,7 +31,7 @@ static void soft_serial_init_rx(const soft_serial_t *dev) {
 }
 
 static void soft_serial_init_tx(const soft_serial_t *dev) {
-  if (dev->tx_pin == GPIO_PIN_INVALID) {
+  if (dev->tx_pin == PIN_NONE) {
     return;
   }
 
@@ -46,7 +46,7 @@ static void soft_serial_init_tx(const soft_serial_t *dev) {
 }
 
 uint8_t soft_serial_init(soft_serial_t *dev, gpio_pins_t tx_pin, gpio_pins_t rx_pin, uint32_t baudrate) {
-  if (tx_pin == GPIO_PIN_INVALID && rx_pin == GPIO_PIN_INVALID) {
+  if (tx_pin == PIN_NONE && rx_pin == PIN_NONE) {
     return 0;
   }
 
@@ -82,14 +82,14 @@ uint8_t soft_serial_read_byte(const soft_serial_t *dev, uint8_t *byte) {
   uint32_t time_start = time_cycles();
   uint32_t time_next = time_start;
   while (!gpio_pin_read(dev->rx_pin)) {
-    time_next = time_cycles(); //wait for start bit
+    time_next = time_cycles(); // wait for start bit
     if (time_next - time_start > CYCLES_TIMEOUT)
       return 0;
   }
 
   // start bit falling edge
   while (gpio_pin_read(dev->rx_pin)) {
-    time_next = time_cycles(); //wait for start bit
+    time_next = time_cycles(); // wait for start bit
     if (time_next - time_start > CYCLES_TIMEOUT)
       return 0;
   }

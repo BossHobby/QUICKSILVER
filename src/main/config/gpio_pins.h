@@ -6,7 +6,7 @@
 #define GPIO_PIN(port, num) PIN_IDENT(port, num),
 
 typedef enum {
-  GPIO_PIN_INVALID,
+  PIN_NONE,
 #include "gpio_pins.in"
   GPIO_PINS_MAX,
 } gpio_pins_t;
