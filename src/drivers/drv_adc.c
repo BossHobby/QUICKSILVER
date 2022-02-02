@@ -9,17 +9,15 @@
 
 #ifndef DISABLE_ADC
 
-#ifndef ADC_REF_VOLTAGE
-#define ADC_REF_VOLTAGE 3.3
-#endif
-
-#ifndef ADC_SCALEFACTOR
-// 12 bit ADC has 4096 steps
-// scalefactor = (vref/4096) * (R1 + R2)/R2
-#define ADC_SCALEFACTOR ((float)ADC_REF_VOLTAGE / 4096) * ((float)(VBAT_DIVIDER_R1) + (float)(VBAT_DIVIDER_R2)) * (1.0f / (float)(VBAT_DIVIDER_R2))
-#endif
-
 #define ADC_CHANNEL_MAP_SIZE 16
+
+#ifndef ADC_REF_VOLTAGE
+#define ADC_REF_VOLTAGE 3300
+#endif
+
+// 12 bit ADC has 4096 steps
+#define ADC_SCALEFACTOR ((float)(ADC_REF_VOLTAGE) / 4096.f)
+#define VBAT_SCALE ((float)(VBAT_DIVIDER_R1 + VBAT_DIVIDER_R2) / (float)(VBAT_DIVIDER_R2) * (1.f / 1000000.f))
 
 typedef struct {
   gpio_pins_t pin;
@@ -95,6 +93,10 @@ void adc_init() {
   adc_init_pin(ADC_CHAN_VBAT, VBAT_PIN);
 #endif
 
+#ifdef IBAT_PIN
+  adc_init_pin(ADC_CHAN_IBAT, IBAT_PIN);
+#endif
+
   LL_ADC_CommonInitTypeDef adc_common_init;
   adc_common_init.CommonClock = LL_ADC_CLOCK_SYNC_PCLK_DIV2;
   LL_ADC_CommonInit(ADC, &adc_common_init);
@@ -136,10 +138,13 @@ static uint16_t adc_read_raw(adc_chan_t chan) {
     // Shove the last adc conversion into the array
     adc_array[last_adc_channel] = LL_ADC_REG_ReadConversionData12(ADC1);
 
-    last_adc_channel++;
-    if (last_adc_channel == ADC_CHAN_MAX) {
-      last_adc_channel = 0; // Start the index over if we reached the end of the list
-    }
+    // skip through all channels without a pin
+    do {
+      last_adc_channel++;
+      if (last_adc_channel == ADC_CHAN_MAX) {
+        last_adc_channel = 0; // Start the index over if we reached the end of the list
+      }
+    } while (last_adc_channel != ADC_CHAN_VREF && adc_pins[last_adc_channel].pin == PIN_NONE);
 
     // Select the new channel to read
     switch (last_adc_channel) {
@@ -162,12 +167,17 @@ static uint16_t adc_read_raw(adc_chan_t chan) {
 
 float adc_read(adc_chan_t chan) {
   switch (chan) {
-  case ADC_CHAN_VBAT: {
-    return (float)adc_read_raw(chan) * ((float)(ADC_SCALEFACTOR * (profile.voltage.actual_battery_voltage / profile.voltage.reported_telemetry_voltage)));
-  }
-  case ADC_CHAN_VREF: {
+  case ADC_CHAN_VREF:
     return (float)adc_read_raw(chan) * vref_cal;
-  }
+
+  case ADC_CHAN_VBAT:
+    return (float)adc_read_raw(chan) * ADC_SCALEFACTOR * VBAT_SCALE * (profile.voltage.actual_battery_voltage / profile.voltage.reported_telemetry_voltage);
+
+#ifdef IBAT_PIN
+  case ADC_CHAN_IBAT:
+    return (float)adc_read_raw(chan) * ADC_SCALEFACTOR * (10000.0f / IBAT_SCALE);
+#endif
+
   default:
     return 0;
   }
