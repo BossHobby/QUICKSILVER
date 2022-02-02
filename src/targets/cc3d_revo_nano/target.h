@@ -3,7 +3,7 @@
 
 #define CC3D_Revo_Nano
 
-//PORTS
+// PORTS
 #define SPI_PORTS   \
   SPI1_PA5PA6PA7    \
   SPI2_PB13PB14PB15 \
@@ -15,7 +15,7 @@
 
 //***********MOTORS NOT YET SUPPORTED*************
 
-//LEDS, Buzzer, FPV
+// LEDS, Buzzer, FPV
 #define LED_NUMBER 2
 #define LED1PIN PIN_C14
 #define LED2PIN PIN_C13
@@ -24,7 +24,7 @@
 #define BUZZER_INVERT
 #define FPV_PIN PIN_A13
 
-//GYRO
+// GYRO
 #define GYRO_TYPE MPU6XXX
 #define GYRO_SPI_PORT SPI_PORT2
 #define GYRO_NSS PIN_B12
@@ -36,20 +36,17 @@
 #define GYRO_ID_4 0x71
 //#define DISABLE_GYRO_CHECK
 
-//RADIO
+// RADIO
 #define USART2_INVERTER_PIN PIN_C15
 
 #ifdef SERIAL_RX
 #define RX_USART USART_PORT2
 #endif
 
-//VOLTAGE DIVIDER
-#define BATTERYPIN PIN_A6
-#define BATTERY_ADC_CHANNEL LL_ADC_CHANNEL_6
-
-#define VOLTAGE_DIVIDER_R1 10000
-
-#define VOLTAGE_DIVIDER_R2 1000
+// VOLTAGE DIVIDER
+#define VBAT_PIN PIN_A6
+#define VBAT_DIVIDER_R1 10000
+#define VBAT_DIVIDER_R2 1000
 
 // MOTOR PINS		dummy pins					***********MOTORS NOT YET SUPPORTED*************
 #define MOTOR_PIN0 MOTOR_PIN_PB8

@@ -3,7 +3,7 @@
 
 #define NBD_Infinity_F4
 
-//PORTS
+// PORTS
 #define SPI_PORTS   \
   SPI1_PA5PA6PA7    \
   SPI2_PB13PB14PB15 \
@@ -16,7 +16,7 @@
   USART4_PA1PA0     \
   USART6_PC7PC6
 
-//LEDS
+// LEDS
 #define LED_NUMBER 1
 #define LED1PIN PIN_C0
 #define LED1_INVERT
@@ -24,7 +24,7 @@
 #define BUZZER_INVERT
 #define FPV_PIN PIN_A13
 
-//GYRO
+// GYRO
 #define GYRO_TYPE MPU6XXX
 #define GYRO_SPI_PORT SPI_PORT2
 #define GYRO_NSS PIN_B12
@@ -34,23 +34,22 @@
 #define GYRO_ID_3 0x78
 #define GYRO_ID_4 0x71
 
-//RADIO
+// RADIO
 #define USART1_INVERTER_PIN PIN_A0
 
 #ifdef SERIAL_RX
 #define RX_USART USART_PORT1
 #endif
 
-//OSD
+// OSD
 #define ENABLE_OSD
 #define MAX7456_SPI_PORT SPI_PORT1
 #define MAX7456_NSS PIN_A4
 
-//VOLTAGE DIVIDER
-#define BATTERYPIN PIN_C4
-#define BATTERY_ADC_CHANNEL LL_ADC_CHANNEL_14
-#define VOLTAGE_DIVIDER_R1 10000
-#define VOLTAGE_DIVIDER_R2 1000
+// VOLTAGE DIVIDER
+#define VBAT_PIN PIN_C4
+#define VBAT_DIVIDER_R1 10000
+#define VBAT_DIVIDER_R2 1000
 
 // MOTOR PINS
 #define MOTOR_PIN0 MOTOR_PIN_PC9
@@ -58,6 +57,6 @@
 #define MOTOR_PIN2 MOTOR_PIN_PB1
 #define MOTOR_PIN3 MOTOR_PIN_PB0
 
-//BLACKBOX
-//spi3 - flash chip
-//resource FLASH_CS 1 A15
+// BLACKBOX
+// spi3 - flash chip
+// resource FLASH_CS 1 A15
