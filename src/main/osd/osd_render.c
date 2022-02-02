@@ -126,7 +126,7 @@ uint8_t osd_display_phase = 2;
 uint8_t last_display_phase;
 uint8_t osd_wizard_phase = 0;
 uint8_t osd_menu_phase = 0;
-uint8_t osd_display_element = 0;
+osd_elements_t osd_display_element = 0;
 uint8_t display_trigger = 0;
 uint8_t last_lowbatt_state = 2;
 uint8_t last_lowbatt_state2 = 2;
@@ -601,6 +601,141 @@ void print_osd_mixed_data(uint8_t string_element_qty, uint8_t data_element_qty, 
 //************************************************************************************************************************************************************************************
 //************************************************************************************************************************************************************************************
 
+static void osd_display_regular() {
+  switch (osd_display_element) {
+  case OSD_CALLSIGN:
+    if (osd_decode(*callsign1, ACTIVE)) {
+      uint8_t callsign_done = print_osd_callsign();
+      if (callsign_done)
+        osd_display_element++;
+    } else {
+      osd_display_element++;
+    }
+    break; //screen has been displayed for this loop - break out of display function
+
+  case OSD_FUELGAUGE_VOLTS:
+    if (osd_decode(*fuelgauge_volts, ACTIVE)) {
+      uint8_t osd_fuelgauge_volts[5];
+      fast_fprint(osd_fuelgauge_volts, 4, state.vbatt_comp, 1);
+      osd_fuelgauge_volts[4] = 'V';
+      osd_print_data(osd_fuelgauge_volts, 5, osd_decode(*fuelgauge_volts, ATTRIBUTE), osd_decode(*fuelgauge_volts, POSITIONX) + 3, osd_decode(*fuelgauge_volts, POSITIONY));
+    }
+    osd_display_element++;
+    break;
+
+  case OSD_FUELGAUGE_VOLTS_CELLS:
+    if (osd_decode(*fuelgauge_volts, ACTIVE)) {
+      if (flags.lowbatt != last_lowbatt_state) {
+        uint8_t osd_cellcount[2] = {state.lipo_cell_count + 48, 'S'};
+        if (!flags.lowbatt) {
+          osd_print_data(osd_cellcount, 2, osd_decode(*fuelgauge_volts, ATTRIBUTE), osd_decode(*fuelgauge_volts, POSITIONX), osd_decode(*fuelgauge_volts, POSITIONY));
+        } else {
+          osd_print_data(osd_cellcount, 2, BLINK | INVERT, osd_decode(*fuelgauge_volts, POSITIONX), osd_decode(*fuelgauge_volts, POSITIONY));
+        }
+        last_lowbatt_state = flags.lowbatt;
+      }
+    }
+    osd_display_element++;
+    break;
+
+  case OSD_FILTERED_VOLTS:
+    if (osd_decode(*filtered_volts, ACTIVE)) {
+      uint8_t osd_filtered_volts[5];
+      fast_fprint(osd_filtered_volts, 4, state.vbattfilt_corr, 1);
+      osd_filtered_volts[4] = 'V';
+      osd_print_data(osd_filtered_volts, 5, osd_decode(*filtered_volts, ATTRIBUTE), osd_decode(*filtered_volts, POSITIONX) + 3, osd_decode(*filtered_volts, POSITIONY));
+    }
+    osd_display_element++;
+    break;
+
+  case OSD_FILTERED_VOLTS_CELLS:
+    if (osd_decode(*filtered_volts, ACTIVE)) {
+      if (flags.lowbatt != last_lowbatt_state2) {
+        uint8_t osd_cellcount2[2] = {state.lipo_cell_count + 48, 'S'};
+        if (!flags.lowbatt) {
+          osd_print_data(osd_cellcount2, 2, osd_decode(*filtered_volts, ATTRIBUTE), osd_decode(*filtered_volts, POSITIONX), osd_decode(*filtered_volts, POSITIONY));
+        } else {
+          osd_print_data(osd_cellcount2, 2, BLINK | INVERT, osd_decode(*filtered_volts, POSITIONX), osd_decode(*filtered_volts, POSITIONY));
+        }
+        last_lowbatt_state2 = flags.lowbatt;
+      }
+    }
+    osd_display_element++;
+    break;
+
+  case OSD_GYRO_TEMP:
+    if (osd_decode(*gyro_degrees, ACTIVE)) {
+      uint8_t osd_gyro_temp[5];
+      fast_fprint(osd_gyro_temp, 5, state.gyro_temp, 0);
+      osd_gyro_temp[4] = 14; //degrees C
+      osd_print_data(osd_gyro_temp, 5, osd_decode(*gyro_degrees, ATTRIBUTE), osd_decode(*gyro_degrees, POSITIONX) + 3, osd_decode(*gyro_degrees, POSITIONY));
+    }
+    osd_display_element++;
+    break;
+
+  case OSD_FLIGHT_MODE:
+    if (osd_decode(*flight_mode, ACTIVE)) {
+      uint8_t flightmode_done = print_osd_flightmode();
+      if (flightmode_done)
+        osd_display_element++;
+    } else {
+      osd_display_element++;
+    }
+    break;
+
+  case OSD_RSSI:
+    if (osd_decode(*rssi, ACTIVE)) {
+      print_osd_rssi();
+    }
+    osd_display_element++;
+    break;
+
+  case OSD_STOPWATCH:
+    if (osd_decode(*stopwatch, ACTIVE)) {
+      uint8_t osd_stopwatch[5];
+      format_time(osd_stopwatch, state.armtime);
+      osd_print_data(osd_stopwatch, 5, osd_decode(*stopwatch, ATTRIBUTE), osd_decode(*stopwatch, POSITIONX), osd_decode(*stopwatch, POSITIONY));
+    }
+    osd_display_element++;
+    break;
+
+  case OSD_SYSTEM_STATUS:
+    if (osd_decode(*arm_disarm, ACTIVE)) {
+      uint8_t system_status_done = print_osd_system_status();
+      if (system_status_done)
+        osd_display_element++;
+    } else {
+      osd_display_element++;
+    }
+    break;
+
+  case OSD_THROTTLE:
+    if (osd_decode(*osd_throttle, ACTIVE)) {
+      uint8_t osd_throttle_value[5];
+      fast_fprint(osd_throttle_value, 5, (state.throttle * 100.0f), 0);
+      osd_throttle_value[4] = 4;
+      osd_print_data(osd_throttle_value, 5, osd_decode(*osd_throttle, ATTRIBUTE), osd_decode(*osd_throttle, POSITIONX), osd_decode(*osd_throttle, POSITIONY));
+    }
+    osd_display_element++;
+    break;
+
+  case OSD_VTX_CHANNEL:
+    if (osd_decode(*osd_vtx, ACTIVE) && vtx_settings.detected) {
+      uint8_t osd_vtx_freq[5];
+      format_vtx(osd_vtx_freq);
+      osd_print_data(osd_vtx_freq, 5, osd_decode(*osd_vtx, ATTRIBUTE), osd_decode(*osd_vtx, POSITIONX), osd_decode(*osd_vtx, POSITIONY));
+    }
+    osd_display_element++;
+    break;
+
+  case OSD_ELEMENT_MAX: //end of regular display - display_trigger counter sticks here till it wraps
+    display_trigger++;
+    if (display_trigger == 0)
+      osd_display_element = 1;
+    break;
+  }
+}
+
 void osd_display() {
 
   //first check if video signal autodetect needs to run - run if necessary
@@ -629,140 +764,9 @@ void osd_display() {
     break; //osd menu has been displayed for this loop	- break out of display function
 
   case 2: //regular osd display
-
-    switch (osd_display_element) {
-    case 0:
-      if (osd_decode(*callsign1, ACTIVE)) {
-        uint8_t callsign_done = print_osd_callsign();
-        if (callsign_done)
-          osd_display_element++;
-      } else {
-        osd_display_element++;
-      }
-      break; //screen has been displayed for this loop - break out of display function
-
-    case 1:
-      if (osd_decode(*fuelgauge_volts, ACTIVE)) {
-        uint8_t osd_fuelgauge_volts[5];
-        fast_fprint(osd_fuelgauge_volts, 4, state.vbatt_comp, 1);
-        osd_fuelgauge_volts[4] = 'V';
-        osd_print_data(osd_fuelgauge_volts, 5, osd_decode(*fuelgauge_volts, ATTRIBUTE), osd_decode(*fuelgauge_volts, POSITIONX) + 3, osd_decode(*fuelgauge_volts, POSITIONY));
-      }
-      osd_display_element++;
-      break;
-
-    case 2:
-      if (osd_decode(*fuelgauge_volts, ACTIVE)) {
-        if (flags.lowbatt != last_lowbatt_state) {
-          uint8_t osd_cellcount[2] = {state.lipo_cell_count + 48, 'S'};
-          if (!flags.lowbatt) {
-            osd_print_data(osd_cellcount, 2, osd_decode(*fuelgauge_volts, ATTRIBUTE), osd_decode(*fuelgauge_volts, POSITIONX), osd_decode(*fuelgauge_volts, POSITIONY));
-          } else {
-            osd_print_data(osd_cellcount, 2, BLINK | INVERT, osd_decode(*fuelgauge_volts, POSITIONX), osd_decode(*fuelgauge_volts, POSITIONY));
-          }
-          last_lowbatt_state = flags.lowbatt;
-        }
-      }
-      osd_display_element++;
-      break;
-
-    case 3:
-      if (osd_decode(*filtered_volts, ACTIVE)) {
-        uint8_t osd_filtered_volts[5];
-        fast_fprint(osd_filtered_volts, 4, state.vbattfilt_corr, 1);
-        osd_filtered_volts[4] = 'V';
-        osd_print_data(osd_filtered_volts, 5, osd_decode(*filtered_volts, ATTRIBUTE), osd_decode(*filtered_volts, POSITIONX) + 3, osd_decode(*filtered_volts, POSITIONY));
-      }
-      osd_display_element++;
-      break;
-
-    case 4:
-      if (osd_decode(*filtered_volts, ACTIVE)) {
-        if (flags.lowbatt != last_lowbatt_state2) {
-          uint8_t osd_cellcount2[2] = {state.lipo_cell_count + 48, 'S'};
-          if (!flags.lowbatt) {
-            osd_print_data(osd_cellcount2, 2, osd_decode(*filtered_volts, ATTRIBUTE), osd_decode(*filtered_volts, POSITIONX), osd_decode(*filtered_volts, POSITIONY));
-          } else {
-            osd_print_data(osd_cellcount2, 2, BLINK | INVERT, osd_decode(*filtered_volts, POSITIONX), osd_decode(*filtered_volts, POSITIONY));
-          }
-          last_lowbatt_state2 = flags.lowbatt;
-        }
-      }
-      osd_display_element++;
-      break;
-
-    case 5:
-      if (osd_decode(*gyro_degrees, ACTIVE)) {
-        uint8_t osd_gyro_temp[5];
-        fast_fprint(osd_gyro_temp, 5, state.gyro_temp, 0);
-        osd_gyro_temp[4] = 14; //degrees C
-        osd_print_data(osd_gyro_temp, 5, osd_decode(*gyro_degrees, ATTRIBUTE), osd_decode(*gyro_degrees, POSITIONX) + 3, osd_decode(*gyro_degrees, POSITIONY));
-      }
-      osd_display_element++;
-      break;
-
-    case 6:
-      if (osd_decode(*stopwatch, ACTIVE)) {
-        uint8_t osd_stopwatch[5];
-        format_time(osd_stopwatch, state.armtime);
-        osd_print_data(osd_stopwatch, 5, osd_decode(*stopwatch, ATTRIBUTE), osd_decode(*stopwatch, POSITIONX), osd_decode(*stopwatch, POSITIONY));
-      }
-      osd_display_element++;
-      break;
-
-    case 7:
-      if (osd_decode(*flight_mode, ACTIVE)) {
-        uint8_t flightmode_done = print_osd_flightmode();
-        if (flightmode_done)
-          osd_display_element++;
-      } else {
-        osd_display_element++;
-      }
-      break;
-
-    case 8:
-      if (osd_decode(*osd_throttle, ACTIVE)) {
-        uint8_t osd_throttle_value[5];
-        fast_fprint(osd_throttle_value, 5, (state.throttle * 100.0f), 0);
-        osd_throttle_value[4] = 4;
-        osd_print_data(osd_throttle_value, 5, osd_decode(*osd_throttle, ATTRIBUTE), osd_decode(*osd_throttle, POSITIONX), osd_decode(*osd_throttle, POSITIONY));
-      }
-      osd_display_element++;
-      break;
-
-    case 9:
-      if (osd_decode(*arm_disarm, ACTIVE)) {
-        uint8_t system_status_done = print_osd_system_status();
-        if (system_status_done)
-          osd_display_element++;
-      } else {
-        osd_display_element++;
-      }
-      break;
-
-    case 10:
-      if (osd_decode(*rssi, ACTIVE)) {
-        print_osd_rssi();
-      }
-      osd_display_element++;
-      break;
-
-    case 11:
-      if (osd_decode(*osd_vtx, ACTIVE) && vtx_settings.detected) {
-        uint8_t osd_vtx_freq[5];
-        format_vtx(osd_vtx_freq);
-        osd_print_data(osd_vtx_freq, 5, osd_decode(*osd_vtx, ATTRIBUTE), osd_decode(*osd_vtx, POSITIONX), osd_decode(*osd_vtx, POSITIONY));
-      }
-      osd_display_element++;
-      break;
-
-    case 12: //end of regular display - display_trigger counter sticks here till it wraps
-      display_trigger++;
-      if (display_trigger == 0)
-        osd_display_element = 1;
-      break;
-    }
+    osd_display_regular();
     break;
+
     //**********************************************************************************************************************************************************************************************
     //																				OSD MENUS BELOW THIS POINT
     //**********************************************************************************************************************************************************************************************
