@@ -39,7 +39,7 @@
 #define SILABS_PAGE_SIZE 0x0200
 
 static serial_esc4way_device_t device;
-static gpio_pins_t esc_pins[ESC_COUNT] = {GPIO_PIN_INVALID};
+static gpio_pins_t esc_pins[ESC_COUNT] = {PIN_NONE};
 
 #define ESC_PIN (esc_pins[device.selected_esc])
 
