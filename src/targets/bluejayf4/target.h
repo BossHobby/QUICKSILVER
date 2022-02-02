@@ -3,7 +3,7 @@
 
 #define BluejayF4
 
-//PORTS
+// PORTS
 #define SPI_PORTS \
   SPI1_PA5PA6PA7  \
   SPI3_PC10PC11PC12
@@ -13,8 +13,8 @@
   USART3_PB11PB10   \
   USART6_PC7PC6
 
-//LEDS
-//target has third led on b06 not supported by QS
+// LEDS
+// target has third led on b06 not supported by QS
 #define LED_NUMBER 2
 #define LED1PIN PIN_B5
 #define LED1_INVERT
@@ -23,7 +23,7 @@
 #define BUZZER_INVERT
 #define FPV_PIN PIN_A13
 
-//GYRO
+// GYRO
 #define GYRO_TYPE ICM20608
 #define GYRO_SPI_PORT SPI_PORT1
 #define GYRO_NSS PIN_C4
@@ -34,21 +34,20 @@
 #define GYRO_ID_4 0x71
 #define SENSOR_ROTATE_90_CW
 
-//RADIO
+// RADIO
 #define USART6_INVERTER_PIN PIN_B15
 
 #ifdef SERIAL_RX
 #define RX_USART USART_PORT1
 #endif
 
-//OSD
-//not supported by fc
+// OSD
+// not supported by fc
 
-//VOLTAGE DIVIDER
-#define BATTERYPIN PIN_C3
-#define BATTERY_ADC_CHANNEL LL_ADC_CHANNEL_13
-#define VOLTAGE_DIVIDER_R1 10000
-#define VOLTAGE_DIVIDER_R2 1000
+// VOLTAGE DIVIDER
+#define VBAT_PIN PIN_C3
+#define VBAT_DIVIDER_R1 10000
+#define VBAT_DIVIDER_R2 1000
 
 // MOTOR PINS
 #define MOTOR_PIN0 MOTOR_PIN_PA3
@@ -57,6 +56,6 @@
 #define MOTOR_PIN3 MOTOR_PIN_PA0
 
 // BLACKBOX
-//resource SDCARD_CS 1 A15  SPI3
-//resource SDCARD_DETECT 1 D02
-//resource FLASH_CS 1 B07 SPI3 - alternative dataflash chip to sdcard
+// resource SDCARD_CS 1 A15  SPI3
+// resource SDCARD_DETECT 1 D02
+// resource FLASH_CS 1 B07 SPI3 - alternative dataflash chip to sdcard
