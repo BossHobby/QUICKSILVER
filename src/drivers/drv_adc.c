@@ -7,10 +7,6 @@
 #include "project.h"
 #include "util.h"
 
-float vref_cal = 0;
-uint16_t adc_array[2] = {0, 0};
-extern profile_t profile;
-
 #ifndef DISABLE_ADC
 
 #ifndef ADC_REF_VOLTAGE
@@ -19,9 +15,41 @@ extern profile_t profile;
 
 #ifndef ADC_SCALEFACTOR
 // 12 bit ADC has 4096 steps
-//scalefactor = (vref/4096) * (R1 + R2)/R2
-#define ADC_SCALEFACTOR ((float)ADC_REF_VOLTAGE / 4096) * ((float)(VOLTAGE_DIVIDER_R1) + (float)(VOLTAGE_DIVIDER_R2)) * (1.0f / (float)(VOLTAGE_DIVIDER_R2))
+// scalefactor = (vref/4096) * (R1 + R2)/R2
+#define ADC_SCALEFACTOR ((float)ADC_REF_VOLTAGE / 4096) * ((float)(VBAT_DIVIDER_R1) + (float)(VBAT_DIVIDER_R2)) * (1.0f / (float)(VBAT_DIVIDER_R2))
 #endif
+
+#define ADC_CHANNEL_MAP_SIZE 16
+
+typedef struct {
+  gpio_pins_t pin;
+  uint32_t channel;
+} adc_channel_t;
+
+extern profile_t profile;
+
+float vref_cal = 0;
+uint16_t adc_array[ADC_CHAN_MAX];
+adc_channel_t adc_pins[ADC_CHAN_MAX];
+
+static const adc_channel_t adc_channel_map[ADC_CHANNEL_MAP_SIZE] = {
+    {.pin = PIN_C0, .channel = LL_ADC_CHANNEL_10},
+    {.pin = PIN_C1, .channel = LL_ADC_CHANNEL_11},
+    {.pin = PIN_C2, .channel = LL_ADC_CHANNEL_12},
+    {.pin = PIN_C3, .channel = LL_ADC_CHANNEL_13},
+    {.pin = PIN_C4, .channel = LL_ADC_CHANNEL_14},
+    {.pin = PIN_C5, .channel = LL_ADC_CHANNEL_15},
+    {.pin = PIN_B0, .channel = LL_ADC_CHANNEL_8},
+    {.pin = PIN_B1, .channel = LL_ADC_CHANNEL_9},
+    {.pin = PIN_A0, .channel = LL_ADC_CHANNEL_0},
+    {.pin = PIN_A1, .channel = LL_ADC_CHANNEL_1},
+    {.pin = PIN_A2, .channel = LL_ADC_CHANNEL_2},
+    {.pin = PIN_A3, .channel = LL_ADC_CHANNEL_3},
+    {.pin = PIN_A4, .channel = LL_ADC_CHANNEL_4},
+    {.pin = PIN_A5, .channel = LL_ADC_CHANNEL_5},
+    {.pin = PIN_A6, .channel = LL_ADC_CHANNEL_6},
+    {.pin = PIN_A7, .channel = LL_ADC_CHANNEL_7},
+};
 
 static uint16_t adc_calibration_value() {
 #if defined(STM32F4)
@@ -33,20 +61,39 @@ static uint16_t adc_calibration_value() {
 #endif
 }
 
-void adc_init() {
+static void adc_init_pin(adc_chan_t chan, gpio_pins_t pin) {
+  adc_array[chan] = 0;
+  adc_pins[chan].pin = PIN_NONE;
 
-  //vref_int only exists on ADC1
-  //example case: pc2 additional function ADC123_IN12
-  //adc1,2,3 connected to APB2 bus
+  for (uint32_t i = 0; i < ADC_CHANNEL_MAP_SIZE; i++) {
+    if (adc_channel_map[i].pin == pin) {
+      adc_pins[chan].pin = pin;
+      adc_pins[chan].channel = adc_channel_map[i].channel;
+      break;
+    }
+  }
 
-  //enable APB2 clock for adc1
-  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_ADC1);
+  if (adc_pins[chan].pin == PIN_NONE) {
+    return;
+  }
 
-  //gpio configuration
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_ANALOG;
   gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_pin_init(&gpio_init, BATTERYPIN);
+  gpio_pin_init(&gpio_init, pin);
+}
+
+void adc_init() {
+  // vref_int only exists on ADC1
+  // example case: pc2 additional function ADC123_IN12
+  // adc1,2,3 connected to APB2 bus
+
+  // enable APB2 clock for adc1
+  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_ADC1);
+
+#ifdef VBAT_PIN
+  adc_init_pin(ADC_CHAN_VBAT, VBAT_PIN);
+#endif
 
   LL_ADC_CommonInitTypeDef adc_common_init;
   adc_common_init.CommonClock = LL_ADC_CLOCK_SYNC_PCLK_DIV2;
@@ -77,76 +124,49 @@ void adc_init() {
   // reference is measured a 3.3v, toy boards are powered by 2.8, so a 1.17 multiplier
   // different vccs will translate to a different adc scale factor,
   // so actual vcc is not important as long as the voltage is correct in the end
-  vref_cal = (3.3f / (float)ADC_REF_VOLTAGE) * (float)(adc_calibration_value());
+  vref_cal = 1.0f / ((3.3f / (float)ADC_REF_VOLTAGE) * (float)(adc_calibration_value()));
 }
 
-static uint16_t readADC1(adc_chan_t chan) {
-  static adc_chan_t adc_channel_synchronizer = 0; //the next adc channel to run when ready
-  static adc_chan_t adc_last_conversion = 1;      //the last adc channel to run
-
-  uint8_t ready_to_convert = LL_ADC_IsActiveFlag_EOCS(ADC1); //check to see if the last conversion is done
-
-  //will skip if adc is still busy or update the adc_array and request the next conversion
+static uint16_t adc_read_raw(adc_chan_t chan) {
+  // will skip if adc is still busy or update the adc_array and request the next conversion
+  uint8_t ready_to_convert = LL_ADC_IsActiveFlag_EOCS(ADC1);
   if (ready_to_convert) {
+    static adc_chan_t last_adc_channel = ADC_CHAN_VREF;
+
     // Shove the last adc conversion into the array
-    adc_array[adc_last_conversion] = LL_ADC_REG_ReadConversionData12(ADC1);
+    adc_array[last_adc_channel] = LL_ADC_REG_ReadConversionData12(ADC1);
 
-    // Select the new channel to read
-    switch (adc_channel_synchronizer) {
-    case ADC_CHAN_VBAT:
-      // Reconfigure the new adc channel
-      LL_ADC_SetChannelSamplingTime(ADC1, BATTERY_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_480CYCLES);
-      LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, BATTERY_ADC_CHANNEL);
-
-      // Take note of what channel conversion has just been requested
-      adc_last_conversion = 0;
-      break;
-
-    case ADC_CHAN_VREF:
-      // Reconfigure the new adc channel
-      LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_VREFINT, LL_ADC_SAMPLINGTIME_480CYCLES);
-      LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_VREFINT);
-
-      // Take note of what channel conversion has just been requested
-      adc_last_conversion = 1;
-      break;
+    last_adc_channel++;
+    if (last_adc_channel == ADC_CHAN_MAX) {
+      last_adc_channel = 0; // Start the index over if we reached the end of the list
     }
 
-    LL_ADC_REG_StartConversionSWStart(ADC1); // Start the conversion
-    adc_channel_synchronizer++;              // Advance the index
+    // Select the new channel to read
+    switch (last_adc_channel) {
+    case ADC_CHAN_VREF:
+      LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_VREFINT, LL_ADC_SAMPLINGTIME_480CYCLES);
+      LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_VREFINT);
+      break;
 
-    if (adc_channel_synchronizer == ADC_CHAN_MAX)
-      adc_channel_synchronizer = 0; // Start the index over if we reached the end of the list
+    default: {
+      LL_ADC_SetChannelSamplingTime(ADC1, adc_pins[last_adc_channel].channel, LL_ADC_SAMPLINGTIME_480CYCLES);
+      LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, adc_pins[last_adc_channel].channel);
+      break;
+    }
+    }
+
+    LL_ADC_REG_StartConversionSWStart(ADC1);
   }
-
   return adc_array[chan];
 }
 
 float adc_read(adc_chan_t chan) {
   switch (chan) {
   case ADC_CHAN_VBAT: {
-    //vbat
-    const float raw_value = readADC1(chan);
-
-#ifdef DEBUG
-    lpf(&debug.adcfilt, raw_value, 0.998);
-#endif
-
-    return raw_value * ((float)(ADC_SCALEFACTOR * (profile.voltage.actual_battery_voltage / profile.voltage.reported_telemetry_voltage)));
+    return (float)adc_read_raw(chan) * ((float)(ADC_SCALEFACTOR * (profile.voltage.actual_battery_voltage / profile.voltage.reported_telemetry_voltage)));
   }
   case ADC_CHAN_VREF: {
-    //reference
-    const float raw_value = readADC1(chan);
-
-#ifdef DEBUG
-    lpf(&debug.adcreffilt, raw_value, 0.998);
-#endif
-
-    if (raw_value == 0) {
-      // avoid devision by zero below
-      return 0;
-    }
-    return vref_cal / raw_value;
+    return (float)adc_read_raw(chan) * vref_cal;
   }
   default:
     return 0;
