@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#define TICKS_PER_US (SYS_CLOCK_FREQ_HZ / 1000000)
+
 void time_init();
 
 uint32_t time_cycles();

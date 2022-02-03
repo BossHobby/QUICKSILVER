@@ -1,20 +1,3 @@
-/*
- * This file is part of Cleanflight.
- *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
- * Author: 4712
-*/
 #pragma once
 
 #include <cbor.h>
@@ -24,11 +7,20 @@
 #include "project.h"
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
-#define USE_SERIAL_4WAY_BLHELI_BOOTLOADER
-// #define USE_SERIAL_4WAY_SK_BOOTLOADER
-// #define USE_FAKE_ESC
 
-#include "drv_serial_4way_impl.h"
+#define SERIAL_4WAY_INTERFACE_NAME_STR "m4wFCIntf"
+
+#define SERIAL_4WAY_VER_MAIN 20
+#define SERIAL_4WAY_VER_SUB_1 (uint8_t)0
+#define SERIAL_4WAY_VER_SUB_2 (uint8_t)04
+
+#define SERIAL_4WAY_PROTOCOL_VER 108
+
+#define SERIAL_4WAY_VERSION (uint16_t)((SERIAL_4WAY_VER_MAIN * 1000) + (SERIAL_4WAY_VER_SUB_1 * 100) + SERIAL_4WAY_VER_SUB_2)
+#define SERIAL_4WAY_VERSION_HI (uint8_t)(SERIAL_4WAY_VERSION / 100)
+#define SERIAL_4WAY_VERSION_LO (uint8_t)(SERIAL_4WAY_VERSION % 100)
+
+#define SERIAL_4WAY_DEVICE_INFO_SIZE 4
 
 typedef enum {
   ESC4WAY_SIL_C2 = 0,
@@ -126,10 +118,6 @@ typedef enum {
 
   // Set Interface Mode
   ESC4WAY_INTERFACE_SET_MODE = 0x3F, // '?'
-  // #define imC2 0
-  // #define imSIL_BLB 1
-  // #define imATM_BLB 2
-  // #define imSK 3
   // PARAM: uint8_t Mode
   // RETURN: ACK or ACK_I_INVALID_CHANNEL
 
@@ -153,6 +141,12 @@ typedef enum {
   ESC4WAY_ACK_I_INVALID_PARAM = 0x09,
   ESC4WAY_ACK_D_GENERAL_ERROR = 0x0F,
 } serial_esc4way_ack_t;
+
+typedef struct {
+  uint8_t info[SERIAL_4WAY_DEVICE_INFO_SIZE];
+  serial_esc4way_mode_t mode;
+  uint8_t selected_esc;
+} serial_esc4way_device_t;
 
 typedef struct {
   uint8_t flash_addr_h;
