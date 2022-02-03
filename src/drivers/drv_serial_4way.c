@@ -25,6 +25,7 @@
 #include "drv_serial_4way.h"
 #include "drv_serial_soft.h"
 #include "drv_usb.h"
+#include "led.h"
 #include "usb_configurator.h"
 #include "util/cbor_helper.h"
 
@@ -38,30 +39,18 @@
 #include "drv_serial_4way_stk500v2.h"
 #endif
 
-#define USE_TXRX_LED
-
-#ifdef USE_TXRX_LED
-#include "led.h"
 #define RX_LED_OFF ledoff(1)
 #define RX_LED_ON ledon(1)
 #define TX_LED_OFF ledoff(2)
 #define TX_LED_ON ledon(2)
-#else
-#define RX_LED_OFF
-#define RX_LED_ON
-#define TX_LED_OFF
-#define TX_LED_ON
-#endif
 
 #define SERIAL_4WAY_INTERFACE_NAME_STR "m4wFCIntf"
 
-// *** change to adapt Revision
 #define SERIAL_4WAY_VER_MAIN 20
 #define SERIAL_4WAY_VER_SUB_1 (uint8_t)0
 #define SERIAL_4WAY_VER_SUB_2 (uint8_t)04
 
 #define SERIAL_4WAY_PROTOCOL_VER 108
-// *** end
 
 #if (SERIAL_4WAY_VER_MAIN > 24)
 #error "beware of SERIAL_4WAY_VER_SUB_1 is uint8_t"
@@ -676,7 +665,19 @@ serial_esc4way_ack_t serial_4way_read_settings(blheli_settings_t *settings, uint
   }
   time_delay_us(200);
 
-  memcpy(settings, output, output_len);
+  {
+    blheli_settings_raw_t settings_raw;
+    memcpy(&settings_raw, output, output_len);
+
+    settings->MAIN_REVISION = settings_raw.MAIN_REVISION;
+    settings->SUB_REVISION = settings_raw.SUB_REVISION;
+    settings->LAYOUT_REVISION = settings_raw.LAYOUT_REVISION;
+    settings->MOTOR_DIRECTION = settings_raw.MOTOR_DIRECTION;
+
+    memcpy(settings->LAYOUT, settings_raw.LAYOUT, 16);
+    memcpy(settings->MCU, settings_raw.MCU, 16);
+    memcpy(settings->NAME, settings_raw.NAME, 16);
+  }
 
   payload.flash_addr_h = 0;
   payload.flash_addr_l = 0;
@@ -716,6 +717,32 @@ serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uin
   }
   time_delay_us(250000); // give the device some time to wake up
 
+  payload.flash_addr_h = BLHELI_SETTINGS_OFFSET >> 8;
+  payload.flash_addr_l = BLHELI_SETTINGS_OFFSET & 0xFF;
+  payload.params[0] = BLHELI_SETTINGS_SIZE;
+  payload.params_len = 1;
+
+  ack = serial_4way_send(ESC4WAY_DEVICE_READ, payload, output, &output_len);
+  if (ack != ESC4WAY_ACK_OK) {
+    quic_debugf("ERROR ESC4WAY_DEVICE_READ 0x%x", ack);
+    return ack;
+  }
+  time_delay_us(200);
+
+  blheli_settings_raw_t settings_raw;
+  {
+    memcpy(&settings_raw, output, output_len);
+
+    settings_raw.MAIN_REVISION = settings->MAIN_REVISION;
+    settings_raw.SUB_REVISION = settings->SUB_REVISION;
+    settings_raw.LAYOUT_REVISION = settings->LAYOUT_REVISION;
+    settings_raw.MOTOR_DIRECTION = settings->MOTOR_DIRECTION;
+
+    memcpy(settings_raw.LAYOUT, settings->LAYOUT, 16);
+    memcpy(settings_raw.MCU, settings->MCU, 16);
+    memcpy(settings_raw.NAME, settings->NAME, 16);
+  }
+
   payload.params[0] = BLHELI_SETTINGS_OFFSET / SILABS_PAGE_SIZE;
   payload.params_len = 1;
 
@@ -728,7 +755,7 @@ serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uin
 
   payload.flash_addr_h = BLHELI_SETTINGS_OFFSET >> 8;
   payload.flash_addr_l = BLHELI_SETTINGS_OFFSET & 0xFF;
-  memcpy(payload.params, settings, BLHELI_SETTINGS_SIZE);
+  memcpy(payload.params, &settings_raw, BLHELI_SETTINGS_SIZE);
   payload.params_len = BLHELI_SETTINGS_SIZE;
 
   ack = serial_4way_send(ESC4WAY_DEVICE_WRITE, payload, output, &output_len);
