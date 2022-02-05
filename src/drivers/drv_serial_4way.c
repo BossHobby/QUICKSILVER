@@ -43,9 +43,6 @@ static gpio_pins_t esc_pins[ESC_COUNT] = {GPIO_PIN_INVALID};
 
 #define ESC_PIN (esc_pins[device.selected_esc])
 
-static uint8_16_u crc_in;
-static uint8_16_u crc_out;
-
 uint16_t _crc_xmodem_update(uint16_t crc, uint8_t data) {
   crc = crc ^ ((uint16_t)data << 8);
   for (uint8_t i = 0; i < 8; i++) {
@@ -72,9 +69,9 @@ static uint8_t read_byte() {
   return byte;
 }
 
-static uint8_t read_byte_crc() {
+static uint8_t read_byte_crc(uint16_t *crc) {
   uint8_t b = read_byte();
-  crc_in.word = _crc_xmodem_update(crc_in.word, b);
+  *crc = _crc_xmodem_update(*crc, b);
   return b;
 }
 
@@ -82,9 +79,9 @@ static void write_byte(uint8_t b) {
   usb_serial_write(&b, 1);
 }
 
-static void write_byte_crc(uint8_t b) {
+static void write_byte_crc(uint16_t *crc, uint8_t b) {
   write_byte(b);
-  crc_out.word = _crc_xmodem_update(crc_out.word, b);
+  *crc = _crc_xmodem_update(*crc, b);
 }
 
 static uint8_t connect_esc(gpio_pins_t pin, uint8_t *data) {
@@ -134,10 +131,10 @@ void serial_4way_release() {
   motor_set_all(0);
 }
 
-serial_esc4way_ack_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t *output, uint8_t *output_len) {
-  serial_esc4way_ack_t ACK_OUT = ESC4WAY_ACK_OK;
+serial_esc4way_ack_t serial_4way_send(uint8_t cmd, uint16_t addr, const uint8_t *input, const uint8_t input_size, uint8_t *output, uint8_t *output_size) {
+  serial_esc4way_ack_t ack_out = ESC4WAY_ACK_OK;
 
-  *output_len = 1;
+  *output_size = 1;
 
   switch (cmd) {
   default:
@@ -150,14 +147,14 @@ serial_esc4way_ack_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payl
       case ESC4WAY_SIL_BLB:
       case ESC4WAY_ARM_BLB: {
         if (!avr_bl_send_keepalive(ESC_PIN)) {
-          ACK_OUT = ESC4WAY_ACK_D_GENERAL_ERROR;
+          ack_out = ESC4WAY_ACK_D_GENERAL_ERROR;
         }
         break;
       }
       default:
-        ACK_OUT = ESC4WAY_ACK_D_GENERAL_ERROR;
+        ack_out = ESC4WAY_ACK_D_GENERAL_ERROR;
       }
-      if (ACK_OUT != ESC4WAY_ACK_OK) {
+      if (ack_out != ESC4WAY_ACK_OK) {
         device_set_disconnected();
       }
     }
@@ -172,7 +169,7 @@ serial_esc4way_ack_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payl
 
   case ESC4WAY_INTERFACE_GET_NAME: {
     // Only interface itself, no matter what Device
-    *output_len = strlen(SERIAL_4WAY_INTERFACE_NAME_STR);
+    *output_size = strlen(SERIAL_4WAY_INTERFACE_NAME_STR);
     memcpy(output, SERIAL_4WAY_INTERFACE_NAME_STR, strlen(SERIAL_4WAY_INTERFACE_NAME_STR));
     break;
   }
@@ -181,7 +178,7 @@ serial_esc4way_ack_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payl
     // Only interface itself, no matter what Device
     output[0] = SERIAL_4WAY_VERSION_HI;
     output[1] = SERIAL_4WAY_VERSION_LO;
-    *output_len = 2;
+    *output_size = 2;
     break;
   }
 
@@ -191,24 +188,24 @@ serial_esc4way_ack_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payl
   }
 
   case ESC4WAY_INTERFACE_SET_MODE: {
-    if (((payload.params[0] <= ESC4WAY_ATM_BLB) || (payload.params[0] == ESC4WAY_ARM_BLB)) && (payload.params[0] >= ESC4WAY_SIL_BLB)) {
-      device.mode = payload.params[0];
+    if (((input[0] <= ESC4WAY_ATM_BLB) || (input[0] == ESC4WAY_ARM_BLB)) && (input[0] >= ESC4WAY_SIL_BLB)) {
+      device.mode = input[0];
     } else {
-      ACK_OUT = ESC4WAY_ACK_I_INVALID_PARAM;
+      ack_out = ESC4WAY_ACK_I_INVALID_PARAM;
     }
     break;
   }
 
   case ESC4WAY_DEVICE_RESET: {
-    if (payload.params[0] >= ESC_COUNT) {
+    if (input[0] >= ESC_COUNT) {
       return ESC4WAY_ACK_I_INVALID_CHANNEL;
     }
 
     // Channel may change here
-    device.selected_esc = payload.params[0];
+    device.selected_esc = input[0];
 
     bool reboot_esc = false;
-    if (payload.flash_addr_l == 1) {
+    if ((addr & 0xFF) == 1) {
       reboot_esc = true;
     }
 
@@ -221,6 +218,8 @@ serial_esc4way_ack_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payl
         avr_bl_reboot(ESC_PIN);
       }
       break;
+    default:
+      break;
     }
     }
     device_set_disconnected();
@@ -230,22 +229,22 @@ serial_esc4way_ack_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payl
   case ESC4WAY_DEVICE_INIT_FLASH: {
     device_set_disconnected();
 
-    if (payload.params[0] >= ESC_COUNT) {
+    if (input[0] >= ESC_COUNT) {
       return ESC4WAY_ACK_I_INVALID_CHANNEL;
     }
 
     //Channel may change here
     //ESC_LO or ESC_HI; Halt state for prev channel
-    device.selected_esc = payload.params[0];
+    device.selected_esc = input[0];
 
     if (connect_esc(ESC_PIN, device.info)) {
       device.info[INTF_MODE_IDX] = device.mode;
     } else {
-      ACK_OUT = ESC4WAY_ACK_D_GENERAL_ERROR;
+      ack_out = ESC4WAY_ACK_D_GENERAL_ERROR;
       device_set_disconnected();
     }
 
-    *output_len = SERIAL_4WAY_DEVICE_INFO_SIZE;
+    *output_size = SERIAL_4WAY_DEVICE_INFO_SIZE;
     memcpy(output, device.info, SERIAL_4WAY_DEVICE_INFO_SIZE);
     break;
   }
@@ -254,7 +253,7 @@ serial_esc4way_ack_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payl
     switch (device.mode) {
     case ESC4WAY_SIL_BLB:
     case ESC4WAY_ARM_BLB: {
-      uint8_t addr = output[0] = payload.params[0];
+      uint8_t addr = output[0] = input[0];
 
       uint16_t full_addr = 0;
       if (device.mode == ESC4WAY_ARM_BLB) {
@@ -266,92 +265,88 @@ serial_esc4way_ack_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payl
       }
 
       if (!avr_bl_page_erase(ESC_PIN, full_addr)) {
-        ACK_OUT = ESC4WAY_ACK_D_GENERAL_ERROR;
+        ack_out = ESC4WAY_ACK_D_GENERAL_ERROR;
       }
       break;
     }
     default:
-      ACK_OUT = ESC4WAY_ACK_I_INVALID_CMD;
+      ack_out = ESC4WAY_ACK_I_INVALID_CMD;
     }
     break;
   }
 
   case ESC4WAY_DEVICE_READ: {
-    const uint8_t size = payload.params[0];
-    const uint16_t addr = (payload.flash_addr_h << 8) | (uint16_t)(payload.flash_addr_l);
+    const uint8_t size = input[0];
 
     switch (device.mode) {
     case ESC4WAY_SIL_BLB:
     case ESC4WAY_ATM_BLB:
     case ESC4WAY_ARM_BLB: {
       if (!avr_bl_read_flash(ESC_PIN, device.mode, addr, output, size)) {
-        ACK_OUT = ESC4WAY_ACK_D_GENERAL_ERROR;
+        ack_out = ESC4WAY_ACK_D_GENERAL_ERROR;
       }
       break;
     }
     default:
-      ACK_OUT = ESC4WAY_ACK_I_INVALID_CMD;
+      ack_out = ESC4WAY_ACK_I_INVALID_CMD;
     }
-    if (ACK_OUT == ESC4WAY_ACK_OK) {
-      *output_len = size;
+    if (ack_out == ESC4WAY_ACK_OK) {
+      *output_size = size;
     }
     break;
   }
 
   case ESC4WAY_DEVICE_READ_E_EPROM: {
-    const uint8_t size = payload.params[0];
-    const uint16_t addr = (payload.flash_addr_h << 8) | (uint16_t)(payload.flash_addr_l);
+    const uint8_t size = input[0];
 
     switch (device.mode) {
     case ESC4WAY_ATM_BLB: {
       if (!avr_bl_read_eeprom(ESC_PIN, addr, output, size)) {
-        ACK_OUT = ESC4WAY_ACK_D_GENERAL_ERROR;
+        ack_out = ESC4WAY_ACK_D_GENERAL_ERROR;
       }
       break;
     }
     default:
-      ACK_OUT = ESC4WAY_ACK_I_INVALID_CMD;
+      ack_out = ESC4WAY_ACK_I_INVALID_CMD;
     }
-    if (ACK_OUT == ESC4WAY_ACK_OK) {
-      *output_len = size;
+    if (ack_out == ESC4WAY_ACK_OK) {
+      *output_size = size;
     }
     break;
   }
 
   case ESC4WAY_DEVICE_WRITE: {
-    const uint8_t size = payload.params_len;
-    const uint16_t addr = (payload.flash_addr_h << 8) | (uint16_t)(payload.flash_addr_l);
-
     switch (device.mode) {
     case ESC4WAY_SIL_BLB:
     case ESC4WAY_ATM_BLB:
     case ESC4WAY_ARM_BLB: {
-      if (!avr_bl_write_flash(ESC_PIN, addr, payload.params, size)) {
-        ACK_OUT = ESC4WAY_ACK_D_GENERAL_ERROR;
+      if (!avr_bl_write_flash(ESC_PIN, addr, input, input_size)) {
+        ack_out = ESC4WAY_ACK_D_GENERAL_ERROR;
       }
       break;
+    default:
+      ack_out = ESC4WAY_ACK_I_INVALID_CMD;
     }
     }
     break;
   }
 
   case ESC4WAY_DEVICE_WRITE_E_EPROM: {
-    const uint8_t size = payload.params_len;
-    const uint16_t addr = (payload.flash_addr_h << 8) | (uint16_t)(payload.flash_addr_l);
-
-    ACK_OUT = ESC4WAY_ACK_D_GENERAL_ERROR;
+    ack_out = ESC4WAY_ACK_D_GENERAL_ERROR;
 
     switch (device.mode) {
     case ESC4WAY_SIL_BLB: {
-      ACK_OUT = ESC4WAY_ACK_I_INVALID_CMD;
+      ack_out = ESC4WAY_ACK_I_INVALID_CMD;
       break;
     }
     case ESC4WAY_ATM_BLB: {
-      if (avr_bl_write_eeprom(ESC_PIN, addr, payload.params, size)) {
-        ACK_OUT = ESC4WAY_ACK_OK;
+      if (avr_bl_write_eeprom(ESC_PIN, addr, input, input_size)) {
+        ack_out = ESC4WAY_ACK_OK;
       }
       break;
     }
+    default:
+      ack_out = ESC4WAY_ACK_I_INVALID_CMD;
     }
     break;
   }
@@ -359,32 +354,29 @@ serial_esc4way_ack_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payl
   case ESC4WAY_DEVICE_VERIFY: {
     switch (device.mode) {
     case ESC4WAY_ARM_BLB: {
-      const uint8_t size = payload.params_len;
-      const uint16_t addr = (payload.flash_addr_h << 8) | (uint16_t)(payload.flash_addr_l);
-
-      switch (avr_bl_verify_flash(ESC_PIN, addr, payload.params, size)) {
+      switch (avr_bl_verify_flash(ESC_PIN, addr, input, input_size)) {
       case brSUCCESS:
-        ACK_OUT = ESC4WAY_ACK_OK;
+        ack_out = ESC4WAY_ACK_OK;
         break;
       case brERRORVERIFY:
-        ACK_OUT = ESC4WAY_ACK_I_VERIFY_ERROR;
+        ack_out = ESC4WAY_ACK_I_VERIFY_ERROR;
         break;
       default:
-        ACK_OUT = ESC4WAY_ACK_D_GENERAL_ERROR;
+        ack_out = ESC4WAY_ACK_D_GENERAL_ERROR;
         break;
       }
       break;
     }
 
     default:
-      ACK_OUT = ESC4WAY_ACK_I_INVALID_CMD;
+      ack_out = ESC4WAY_ACK_I_INVALID_CMD;
       break;
     }
     break;
   }
   }
 
-  return ACK_OUT;
+  return ack_out;
 }
 
 #define MEMBER CBOR_ENCODE_MEMBER
@@ -420,34 +412,20 @@ CBOR_END_STRUCT_DECODER()
 #undef STR_ARRAY_MEMBER
 
 serial_esc4way_ack_t serial_4way_read_settings(blheli_settings_t *settings, uint8_t esc) {
-  uint8_t input[256];
   uint8_t output[256];
-  uint8_t output_len = 0;
+  uint8_t output_size = 0;
 
   serial_esc4way_ack_t ack = ESC4WAY_ACK_OK;
-  serial_esc4way_payload_t payload = {
-      .flash_addr_h = 0,
-      .flash_addr_l = 0,
-      .params = input,
-      .params_len = 1,
-  };
 
-  payload.params[0] = esc;
-  payload.params_len = 1;
-
-  ack = serial_4way_send(ESC4WAY_DEVICE_INIT_FLASH, payload, output, &output_len);
+  ack = serial_4way_send(ESC4WAY_DEVICE_INIT_FLASH, 0, &esc, 1, output, &output_size);
   if (ack != ESC4WAY_ACK_OK) {
     quic_debugf("ERROR ESC4WAY_DEVICE_INIT_FLASH 0x%x", ack);
     return ack;
   }
   time_delay_us(500); // give the device some time to wake up
 
-  payload.flash_addr_h = BLHELI_SETTINGS_OFFSET >> 8;
-  payload.flash_addr_l = BLHELI_SETTINGS_OFFSET & 0xFF;
-  payload.params[0] = BLHELI_SETTINGS_SIZE;
-  payload.params_len = 1;
-
-  ack = serial_4way_send(ESC4WAY_DEVICE_READ, payload, output, &output_len);
+  uint8_t size = BLHELI_SETTINGS_SIZE;
+  ack = serial_4way_send(ESC4WAY_DEVICE_READ, BLHELI_SETTINGS_OFFSET, &size, 1, output, &output_size);
   if (ack != ESC4WAY_ACK_OK) {
     quic_debugf("ERROR ESC4WAY_DEVICE_READ 0x%x", ack);
     return ack;
@@ -456,7 +434,7 @@ serial_esc4way_ack_t serial_4way_read_settings(blheli_settings_t *settings, uint
 
   {
     blheli_settings_raw_t settings_raw;
-    memcpy(&settings_raw, output, output_len);
+    memcpy(&settings_raw, output, output_size);
 
     settings->MAIN_REVISION = settings_raw.MAIN_REVISION;
     settings->SUB_REVISION = settings_raw.SUB_REVISION;
@@ -468,12 +446,7 @@ serial_esc4way_ack_t serial_4way_read_settings(blheli_settings_t *settings, uint
     memcpy(settings->NAME, settings_raw.NAME, 16);
   }
 
-  payload.flash_addr_h = 0;
-  payload.flash_addr_l = 0;
-  payload.params[0] = esc;
-  payload.params_len = 1;
-
-  ack = serial_4way_send(ESC4WAY_DEVICE_RESET, payload, output, &output_len);
+  ack = serial_4way_send(ESC4WAY_DEVICE_RESET, 0, &esc, 1, output, &output_size);
   if (ack != ESC4WAY_ACK_OK) {
     quic_debugf("ERROR ESC4WAY_DEVICE_RESET 0x%x", ack);
     return ack;
@@ -484,34 +457,20 @@ serial_esc4way_ack_t serial_4way_read_settings(blheli_settings_t *settings, uint
 }
 
 serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uint8_t esc) {
-  uint8_t input[256];
   uint8_t output[256];
-  uint8_t output_len = 0;
+  uint8_t output_size = 0;
 
   uint8_t ack = ESC4WAY_ACK_OK;
-  serial_esc4way_payload_t payload = {
-      .flash_addr_h = 0,
-      .flash_addr_l = 0,
-      .params = input,
-      .params_len = 1,
-  };
 
-  payload.params[0] = esc;
-  payload.params_len = 1;
-
-  ack = serial_4way_send(ESC4WAY_DEVICE_INIT_FLASH, payload, output, &output_len);
+  ack = serial_4way_send(ESC4WAY_DEVICE_INIT_FLASH, 0, &esc, 1, output, &output_size);
   if (ack != ESC4WAY_ACK_OK) {
     quic_debugf("ERROR ESC4WAY_DEVICE_INIT_FLASH 0x%x", ack);
     return ack;
   }
   time_delay_us(500); // give the device some time to wake up
 
-  payload.flash_addr_h = BLHELI_SETTINGS_OFFSET >> 8;
-  payload.flash_addr_l = BLHELI_SETTINGS_OFFSET & 0xFF;
-  payload.params[0] = BLHELI_SETTINGS_SIZE;
-  payload.params_len = 1;
-
-  ack = serial_4way_send(ESC4WAY_DEVICE_READ, payload, output, &output_len);
+  uint8_t size = BLHELI_SETTINGS_SIZE;
+  ack = serial_4way_send(ESC4WAY_DEVICE_READ, BLHELI_SETTINGS_OFFSET, &size, 1, output, &output_size);
   if (ack != ESC4WAY_ACK_OK) {
     quic_debugf("ERROR ESC4WAY_DEVICE_READ 0x%x", ack);
     return ack;
@@ -520,7 +479,7 @@ serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uin
 
   blheli_settings_raw_t settings_raw;
   {
-    memcpy(&settings_raw, output, output_len);
+    memcpy(&settings_raw, output, output_size);
 
     settings_raw.MAIN_REVISION = settings->MAIN_REVISION;
     settings_raw.SUB_REVISION = settings->SUB_REVISION;
@@ -532,34 +491,22 @@ serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uin
     memcpy(settings_raw.NAME, settings->NAME, 16);
   }
 
-  payload.params[0] = BLHELI_SETTINGS_OFFSET / SILABS_PAGE_SIZE;
-  payload.params_len = 1;
-
-  ack = serial_4way_send(ESC4WAY_DEVICE_PAGE_ERASE, payload, output, &output_len);
+  size = BLHELI_SETTINGS_OFFSET / SILABS_PAGE_SIZE;
+  ack = serial_4way_send(ESC4WAY_DEVICE_PAGE_ERASE, 0, &size, 1, output, &output_size);
   if (ack != ESC4WAY_ACK_OK) {
     quic_debugf("ERROR ESC4WAY_DEVICE_PAGE_ERASE 0x%x", ack);
     return ack;
   }
   time_delay_us(200);
 
-  payload.flash_addr_h = BLHELI_SETTINGS_OFFSET >> 8;
-  payload.flash_addr_l = BLHELI_SETTINGS_OFFSET & 0xFF;
-  memcpy(payload.params, &settings_raw, BLHELI_SETTINGS_SIZE);
-  payload.params_len = BLHELI_SETTINGS_SIZE;
-
-  ack = serial_4way_send(ESC4WAY_DEVICE_WRITE, payload, output, &output_len);
+  ack = serial_4way_send(ESC4WAY_DEVICE_WRITE, BLHELI_SETTINGS_OFFSET, (const uint8_t *)&settings_raw, BLHELI_SETTINGS_SIZE, output, &output_size);
   if (ack != ESC4WAY_ACK_OK) {
     quic_debugf("ERROR ESC4WAY_DEVICE_WRITE 0x%x", ack);
     return ack;
   }
   time_delay_us(200);
 
-  payload.flash_addr_h = 0;
-  payload.flash_addr_l = 0;
-  payload.params[0] = esc;
-  payload.params_len = 1;
-
-  ack = serial_4way_send(ESC4WAY_DEVICE_RESET, payload, output, &output_len);
+  ack = serial_4way_send(ESC4WAY_DEVICE_RESET, 0, &esc, 1, output, &output_size);
   if (ack != ESC4WAY_ACK_OK) {
     quic_debugf("ERROR ESC4WAY_DEVICE_RESET 0x%x", ack);
     return ack;
@@ -576,73 +523,68 @@ serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uin
 void serial_4way_process() {
   uint8_t input_buffer[256];
   uint8_t output_buffer[256];
-  uint8_t output_len = 0;
+  uint8_t output_size = 0;
+
+  uint16_t crc_in = 0;
+  uint16_t crc_out = 0;
 
   RX_LED_OFF;
   TX_LED_OFF;
 
   while (1) {
     // restart looking for new sequence from host
-    uint8_t ESC;
+    uint8_t magic;
     do {
       RX_LED_ON;
-      crc_in.word = 0;
-      ESC = read_byte_crc();
+      crc_in = 0;
+      magic = read_byte_crc(&crc_in);
       RX_LED_OFF;
-    } while (ESC != ESC4WAY_LOCAL_ESCAPE);
+    } while (magic != ESC4WAY_LOCAL_ESCAPE);
 
     RX_LED_ON;
 
-    const uint8_t CMD = read_byte_crc();
+    const uint8_t cmd = read_byte_crc(&crc_in);
+    const uint16_t addr = (read_byte_crc(&crc_in) << 8) | (uint16_t)(read_byte_crc(&crc_in));
 
-    serial_esc4way_payload_t payload;
-    payload.flash_addr_h = read_byte_crc();
-    payload.flash_addr_l = read_byte_crc();
-
-    payload.params_len = read_byte_crc();
-
-    const uint16_t size = payload.params_len == 0 ? 256 : payload.params_len;
-    for (uint16_t i = 0; i < size; i++) {
-      input_buffer[i] = read_byte_crc();
+    const uint8_t size = read_byte_crc(&crc_in);
+    for (uint16_t i = 0; i < (size == 0 ? 256 : size); i++) {
+      input_buffer[i] = read_byte_crc(&crc_in);
     }
 
-    payload.params = input_buffer;
-
-    uint8_16_u CRC_check;
-    CRC_check.bytes[1] = read_byte();
-    CRC_check.bytes[0] = read_byte();
+    const uint16_t their_crc = (uint16_t)(read_byte() << 8) | (uint16_t)(read_byte());
 
     memset(output_buffer, 0, 256);
 
     RX_LED_OFF;
 
-    serial_esc4way_ack_t ACK_OUT = ESC4WAY_ACK_OK;
-    if (CRC_check.word == crc_in.word) {
+    serial_esc4way_ack_t ack_out = ESC4WAY_ACK_OK;
+    if (their_crc == crc_in) {
       TX_LED_ON;
-      ACK_OUT = serial_4way_send(CMD, payload, output_buffer, &output_len);
+      ack_out = serial_4way_send(cmd, addr, input_buffer, size, output_buffer, &output_size);
     } else {
-      ACK_OUT = ESC4WAY_ACK_I_INVALID_CRC;
+      ack_out = ESC4WAY_ACK_I_INVALID_CRC;
     }
 
-    crc_out.word = 0;
+    crc_out = 0;
 
-    write_byte_crc(ESC4WAY_REMOTE_ESCAPE);
-    write_byte_crc(CMD);
-    write_byte_crc(payload.flash_addr_h);
-    write_byte_crc(payload.flash_addr_l);
+    write_byte_crc(&crc_out, ESC4WAY_REMOTE_ESCAPE);
+    write_byte_crc(&crc_out, cmd);
+    write_byte_crc(&crc_out, addr >> 8);
+    write_byte_crc(&crc_out, addr & 0xFF);
 
-    write_byte_crc(output_len);
-    for (uint16_t i = 0; i < output_len; i++) {
-      write_byte_crc(output_buffer[i]);
+    write_byte_crc(&crc_out, output_size);
+    for (uint16_t i = 0; i < output_size; i++) {
+      write_byte_crc(&crc_out, output_buffer[i]);
     }
 
-    write_byte_crc(ACK_OUT);
-    write_byte(crc_out.bytes[1]);
-    write_byte(crc_out.bytes[0]);
+    write_byte_crc(&crc_out, ack_out);
+    write_byte(crc_out >> 8);
+    write_byte(crc_out & 0xFF);
+
     TX_LED_OFF;
     RX_LED_OFF;
 
-    if (CMD == ESC4WAY_INTERFACE_EXIT) {
+    if (cmd == ESC4WAY_INTERFACE_EXIT) {
       return;
     }
   };

@@ -30,17 +30,6 @@ typedef enum {
   ESC4WAY_ARM_BLB = 4,
 } serial_esc4way_mode_t;
 
-typedef union __attribute__((packed)) {
-  uint8_t bytes[2];
-  uint16_t word;
-} uint8_16_u;
-
-typedef union __attribute__((packed)) {
-  uint8_t bytes[4];
-  uint16_t words[2];
-  uint32_t dword;
-} uint8_32_u;
-
 typedef enum {
   ESC4WAY_REMOTE_ESCAPE = 0x2E, // '.'
   ESC4WAY_LOCAL_ESCAPE = 0x2F,  // '/'
@@ -130,13 +119,13 @@ typedef enum {
 
 typedef enum {
   ESC4WAY_ACK_OK = 0x00,
-  //ESC4WAY_ACK_I_UNKNOWN_ERROR = 0x01,
+  ESC4WAY_ACK_I_UNKNOWN_ERROR = 0x01,
   ESC4WAY_ACK_I_INVALID_CMD = 0x02,
   ESC4WAY_ACK_I_INVALID_CRC = 0x03,
   ESC4WAY_ACK_I_VERIFY_ERROR = 0x04,
-  //ESC4WAY_ACK_D_INVALID_COMMAND = 0x05,
-  //ESC4WAY_ACK_D_COMMAND_FAILED = 0x06,
-  //ESC4WAY_ACK_D_UNKNOWN_ERROR = 0x07,
+  ESC4WAY_ACK_D_INVALID_COMMAND = 0x05,
+  ESC4WAY_ACK_D_COMMAND_FAILED = 0x06,
+  ESC4WAY_ACK_D_UNKNOWN_ERROR = 0x07,
   ESC4WAY_ACK_I_INVALID_CHANNEL = 0x08,
   ESC4WAY_ACK_I_INVALID_PARAM = 0x09,
   ESC4WAY_ACK_D_GENERAL_ERROR = 0x0F,
@@ -147,13 +136,6 @@ typedef struct {
   serial_esc4way_mode_t mode;
   uint8_t selected_esc;
 } serial_esc4way_device_t;
-
-typedef struct {
-  uint8_t flash_addr_h;
-  uint8_t flash_addr_l;
-  uint8_t *params;
-  uint8_t params_len;
-} serial_esc4way_payload_t;
 
 typedef struct __attribute__((__packed__)) {
   uint8_t MAIN_REVISION;            //offset 0x00
@@ -231,7 +213,7 @@ cbor_result_t cbor_encode_blheli_settings_t(cbor_value_t *enc, const blheli_sett
 uint8_t serial_4way_init();
 void serial_4way_release();
 
-serial_esc4way_ack_t serial_4way_send(uint8_t cmd, serial_esc4way_payload_t payload, uint8_t *output, uint8_t *output_len);
+serial_esc4way_ack_t serial_4way_send(uint8_t cmd, uint16_t addr, const uint8_t *input, const uint8_t input_size, uint8_t *output, uint8_t *output_size);
 
 serial_esc4way_ack_t serial_4way_read_settings(blheli_settings_t *settings, uint8_t esc);
 serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uint8_t esc);
