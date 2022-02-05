@@ -194,7 +194,6 @@ void get_quic(uint8_t *data, uint32_t len) {
     send_quic(QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
 
     const uint8_t count = serial_4way_init();
-    time_delay_ms(500);
 
     for (uint8_t i = 0; i < count; i++) {
       blheli_settings_t settings;
@@ -211,7 +210,6 @@ void get_quic(uint8_t *data, uint32_t len) {
     }
 
     serial_4way_release();
-    time_delay_ms(100);
 
     send_quic_header(QUIC_CMD_GET, QUIC_FLAG_STREAMING, 0);
     break;
