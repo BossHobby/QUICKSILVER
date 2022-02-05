@@ -225,7 +225,7 @@ static uint8_t avr_bl_send_set_addr(gpio_pins_t pin, uint16_t addr) {
   return avr_bl_get_ack(pin, 2) == brSUCCESS;
 }
 
-static uint8_t avr_bl_send_set_buffer(gpio_pins_t pin, uint8_t *data, uint8_t size) {
+static uint8_t avr_bl_send_set_buffer(gpio_pins_t pin, const uint8_t *data, uint8_t size) {
   uint8_t buf[] = {
       CMD_SET_BUFFER,
       0,
@@ -314,7 +314,7 @@ static uint8_t avr_bl_read_cmd(gpio_pins_t pin, uint8_t cmd, uint16_t addr, uint
   return avr_bl_read(pin, data, size);
 }
 
-static uint8_t avr_bl_write_cmd(gpio_pins_t pin, uint8_t cmd, uint16_t addr, uint8_t *data, uint8_t size, uint32_t timeout) {
+static uint8_t avr_bl_write_cmd(gpio_pins_t pin, uint8_t cmd, uint16_t addr, const uint8_t *data, uint8_t size, uint32_t timeout) {
   if (!avr_bl_send_set_addr(pin, addr)) {
     return 0;
   }
@@ -352,15 +352,15 @@ uint8_t avr_bl_page_erase(gpio_pins_t pin, uint16_t addr) {
   return avr_bl_get_ack(pin, (3000 / START_BIT_TIMEOUT_MS)) == brSUCCESS;
 }
 
-uint8_t avr_bl_write_eeprom(gpio_pins_t pin, uint16_t addr, uint8_t *data, uint8_t size) {
+uint8_t avr_bl_write_eeprom(gpio_pins_t pin, uint16_t addr, const uint8_t *data, uint8_t size) {
   return avr_bl_write_cmd(pin, CMD_PROG_EEPROM, addr, data, size, (3000 / START_BIT_TIMEOUT_MS));
 }
 
-uint8_t avr_bl_write_flash(gpio_pins_t pin, uint16_t addr, uint8_t *data, uint8_t size) {
+uint8_t avr_bl_write_flash(gpio_pins_t pin, uint16_t addr, const uint8_t *data, uint8_t size) {
   return avr_bl_write_cmd(pin, CMD_PROG_FLASH, addr, data, size, (500 / START_BIT_TIMEOUT_MS));
 }
 
-uint8_t avr_bl_verify_flash(gpio_pins_t pin, uint16_t addr, uint8_t *data, uint8_t size) {
+uint8_t avr_bl_verify_flash(gpio_pins_t pin, uint16_t addr, const uint8_t *data, uint8_t size) {
   if (!avr_bl_send_set_addr(pin, addr)) {
     return 0;
   }
