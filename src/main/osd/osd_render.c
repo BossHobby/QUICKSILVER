@@ -20,9 +20,9 @@
 #ifdef ENABLE_OSD
 
 void osd_init() {
-  spi_max7456_init(); //init spi
-  max7456_init();     //init the max chip
-  osd_intro();        //print the splash screen
+  spi_max7456_init(); // init spi
+  max7456_init();     // init the max chip
+  osd_intro();        // print the splash screen
 }
 
 //************************************************************************************************************************************************************************************
@@ -41,12 +41,12 @@ BIT
 16:31	-		available for two binary ascii characters but not currently used
 */
 
-//Flash Variables - 32bit					# of osd elements and flash memory start position in defines.h
+// Flash Variables - 32bit					# of osd elements and flash memory start position in defines.h
 extern profile_t profile;
 extern vtx_settings_t vtx_settings;
 extern vtx_settings_t vtx_settings_copy;
 
-//pointers to flash variable array
+// pointers to flash variable array
 uint32_t *callsign1 = profile.osd.elements;
 uint32_t *callsign2 = (profile.osd.elements + 1);
 uint32_t *callsign3 = (profile.osd.elements + 2);
@@ -97,13 +97,13 @@ const char *get_position_string(int input) {
 
 const char *get_decode_element_string(uint32_t input, uint8_t status) {
   switch (status) {
-  case 0: //ACTIVE
+  case 0: // ACTIVE
     if (osd_decode(input, status))
       return "ACTIVE  ";
     else
       return "INACTIVE";
     break;
-  case 1: //ATTRIBUTE
+  case 1: // ATTRIBUTE
     if (osd_decode(input, status) == INVERT)
       return "INVERT";
     else
@@ -146,11 +146,11 @@ uint8_t reboot_fc_requested = 0;
 //************************************************************************************************************************************************************************************
 
 void osd_display_reset() {
-  osd_wizard_phase = 0;    //reset the wizard
-  osd_menu_phase = 0;      //reset menu to to main menu
-  osd_display_phase = 2;   //jump to regular osd display next loop
-  osd_display_element = 0; //start with first screen element
-  last_lowbatt_state = 2;  //reset last lowbatt comparator
+  osd_wizard_phase = 0;    // reset the wizard
+  osd_menu_phase = 0;      // reset menu to to main menu
+  osd_display_phase = 2;   // jump to regular osd display next loop
+  osd_display_element = 0; // start with first screen element
+  last_lowbatt_state = 2;  // reset last lowbatt comparator
   last_lowbatt_state2 = 2;
   last_lowbatt_state3 = 2;
 }
@@ -180,7 +180,7 @@ uint8_t grid_selection(uint8_t element, uint8_t row) {
   }
 }
 
-//convert a time in seconds into into a 5 char array in the format mm:ss.
+// convert a time in seconds into into a 5 char array in the format mm:ss.
 void format_time(uint8_t *str, float time_s) {
   // Will only display up to 59:59 as realistically no quad will fly that long (currently). Reset to zero at on reaching 1 hr
   while (time_s >= 3600) {
@@ -199,7 +199,7 @@ void format_time(uint8_t *str, float time_s) {
   str[4] = seconds1 + 48;
 }
 
-//Create a 5 char string to represent the current vtx settings in the Band:Channel:Power
+// Create a 5 char string to represent the current vtx settings in the Band:Channel:Power
 void format_vtx(uint8_t *str) {
   switch (vtx_settings.band) {
   case VTX_BAND_A:
@@ -244,7 +244,7 @@ void print_osd_callsign_adjustable(uint8_t string_element_qty, uint8_t data_elem
   if (osd_menu_phase > string_element_qty + data_element_qty)
     return;
   static uint8_t skip_loop = 0;
-  if (osd_menu_phase == string_element_qty + 1 && skip_loop == 0) { //skip a loop to prevent dma collision with previous print function
+  if (osd_menu_phase == string_element_qty + 1 && skip_loop == 0) { // skip a loop to prevent dma collision with previous print function
     skip_loop++;
     return;
   }
@@ -267,7 +267,7 @@ uint8_t print_osd_callsign() {
         return 0;
       }
     }
-    callsign_length = 0; //for loop found callsign is all spaces so set length to 0 and return
+    callsign_length = 0; // for loop found callsign is all spaces so set length to 0 and return
     index = 0;
     return 1;
   }
@@ -323,16 +323,16 @@ typedef enum {
   LOOP
 } status_label;
 
-uint8_t print_status(uint8_t delay_clear, uint8_t label) { //3 stage return - 0 = stick and hold, 1 = move on but come back to clear, 2 = status print done
+uint8_t print_status(uint8_t delay_clear, uint8_t label) { // 3 stage return - 0 = stick and hold, 1 = move on but come back to clear, 2 = status print done
   const char system_status_labels[12][21] = {{"               "}, {" **DISARMED**  "}, {"  **ARMED**    "}, {" STICK BOOST 1 "}, {" STICK BOOST 2 "}, {" **FAILSAFE**  "}, {"THROTTLE SAFETY"}, {" ARMING SAFETY "}, {"**LOW BATTERY**"}, {"**MOTOR TEST** "}, {"  **TURTLE**   "}, {" **LOOPTIME**  "}};
   static uint8_t last_label;
   static uint8_t index;
   static uint8_t delay_counter = 25;
-  if (last_label != label) { //critical to reset indexers if a print sequence is interrupted by a new request
+  if (last_label != label) { // critical to reset indexers if a print sequence is interrupted by a new request
     index = 0;
     delay_counter = 25;
   }
-  uint8_t clear[1] = {32}; //prints a space
+  uint8_t clear[1] = {32}; // prints a space
   uint8_t character[] = {system_status_labels[label][index]};
   last_label = label;
   if (index < 15) {
@@ -381,7 +381,7 @@ uint8_t print_osd_system_status() {
       .aux_motor_test = 0,
       .flags = {0}};
   extern uint8_t looptime_warning;
-  //things happen here
+  // things happen here
   if (ready) {
     if ((flags.arm_state != last_sys_status.flags.arm_state) || printing.flags.arm_state) {
       last_sys_status.flags.arm_state = flags.arm_state;
@@ -394,7 +394,7 @@ uint8_t print_osd_system_status() {
         printing.flags.arm_state = 0;
       return print_stage;
     }
-    if (((looptime_warning != last_sys_status.loop_warning) || printing.loop_warning) && (state.looptime_autodetect != LOOPTIME_8K)) { //mute warnings till we are on the edge of 4k->2k
+    if (((looptime_warning != last_sys_status.loop_warning) || printing.loop_warning) && (state.looptime_autodetect != LOOPTIME_8K)) { // mute warnings till we are on the edge of 4k->2k
       last_sys_status.loop_warning = looptime_warning;
       printing.loop_warning = 1;
       print_stage = print_status(TEMP, LOOP);
@@ -495,7 +495,7 @@ void print_osd_rssi() {
   uint8_t osd_rssi[5];
   if (flags.failsafe)
     state.rx_rssi = 0.0f;
-  lpf(&rx_rssi_filt, state.rx_rssi, FILTERCALC(state.looptime * 1e6f * 133.0f, 2e6f)); //2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
+  lpf(&rx_rssi_filt, state.rx_rssi, FILTERCALC(state.looptime * 1e6f * 133.0f, 2e6f)); // 2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
   fast_fprint(osd_rssi, 5, (rx_rssi_filt - 0.5f), 0);
   osd_rssi[4] = 1;
   osd_print_data(osd_rssi, 5, osd_decode(*rssi, ATTRIBUTE), osd_decode(*rssi, POSITIONX), osd_decode(*rssi, POSITIONY));
@@ -519,7 +519,7 @@ void print_osd_adjustable_enums(uint8_t string_element_qty, uint8_t data_element
   if (osd_menu_phase > string_element_qty + data_element_qty)
     return;
   static uint8_t skip_loop = 0;
-  if (osd_menu_phase == string_element_qty + 1 && skip_loop == 0) { //skip a loop to prevent dma collision with previous print function
+  if (osd_menu_phase == string_element_qty + 1 && skip_loop == 0) { // skip a loop to prevent dma collision with previous print function
     skip_loop++;
     return;
   }
@@ -535,7 +535,7 @@ void print_osd_adjustable_vectors(uint8_t menu_type, uint8_t string_element_qty,
   if (osd_menu_phase > string_element_qty + data_element_qty)
     return;
   static uint8_t skip_loop = 0;
-  if (osd_menu_phase == string_element_qty + 1 && skip_loop == 0) { //skip a loop to prevent dma collision with previous print function
+  if (osd_menu_phase == string_element_qty + 1 && skip_loop == 0) { // skip a loop to prevent dma collision with previous print function
     skip_loop++;
     return;
   }
@@ -562,7 +562,7 @@ void print_osd_adjustable_float(uint8_t string_element_qty, uint8_t data_element
   if (osd_menu_phase > string_element_qty + data_element_qty)
     return;
   static uint8_t skip_loop = 0;
-  if (osd_menu_phase == string_element_qty + 1 && skip_loop == 0) { //skip a loop to prevent dma collision with previous print function
+  if (osd_menu_phase == string_element_qty + 1 && skip_loop == 0) { // skip a loop to prevent dma collision with previous print function
     skip_loop++;
     return;
   }
@@ -580,7 +580,7 @@ void print_osd_mixed_data(uint8_t string_element_qty, uint8_t data_element_qty, 
   if (osd_menu_phase > string_element_qty + data_element_qty)
     return;
   static uint8_t skip_loop = 0;
-  if (osd_menu_phase == string_element_qty + 1 && skip_loop == 0) { //skip a loop to prevent dma collision with previous print function
+  if (osd_menu_phase == string_element_qty + 1 && skip_loop == 0) { // skip a loop to prevent dma collision with previous print function
     skip_loop++;
     return;
   }
@@ -668,7 +668,7 @@ static void osd_display_regular() {
   case OSD_GYRO_TEMP:
     if (osd_decode(*gyro_degrees, ACTIVE)) {
       fast_fprint(print_buffer, 5, state.gyro_temp, 0);
-      print_buffer[4] = 14; //degrees C
+      print_buffer[4] = 14; // degrees C
       osd_print_data(print_buffer, 5, osd_decode(*gyro_degrees, ATTRIBUTE), osd_decode(*gyro_degrees, POSITIONX) + 3, osd_decode(*gyro_degrees, POSITIONY));
     }
     osd_display_element++;
@@ -735,7 +735,7 @@ static void osd_display_regular() {
     osd_display_element++;
     break;
 
-  case OSD_ELEMENT_MAX: //end of regular display - display_trigger counter sticks here till it wraps
+  case OSD_ELEMENT_MAX: // end of regular display - display_trigger counter sticks here till it wraps
     display_trigger++;
     if (display_trigger == 0)
       osd_display_element = 1;
@@ -745,46 +745,46 @@ static void osd_display_regular() {
 
 void osd_display() {
 
-  //first check if video signal autodetect needs to run - run if necessary
-  extern uint8_t lastsystem; //initialized at 99 for none then becomes 0 or 1 for ntsc/pal
-  if (lastsystem > 1)        //if no camera was detected at boot up
+  // first check if video signal autodetect needs to run - run if necessary
+  extern uint8_t lastsystem; // initialized at 99 for none then becomes 0 or 1 for ntsc/pal
+  if (lastsystem > 1)        // if no camera was detected at boot up
   {
-    osd_checksystem(); //try to detect camera
+    osd_checksystem(); // try to detect camera
     if (lastsystem < 2) {
-      osd_display_reset(); //camera has been detected while in the main loop and screen has been cleared again - reset screen cases
+      osd_display_reset(); // camera has been detected while in the main loop and screen has been cleared again - reset screen cases
     }
   }
 
   //************OSD MENU DISPLAY ROUTINES HERE*************
-  switch (osd_display_phase) //phase starts at 2, RRR gesture subtracts 1 to enter the menu, RRR again or DDD subtracts 1 to clear the screen and return to regular display
+  switch (osd_display_phase) // phase starts at 2, RRR gesture subtracts 1 to enter the menu, RRR again or DDD subtracts 1 to clear the screen and return to regular display
   {
-  case 0: //osd screen clears, resets to regular display, and resets wizard and menu starting points
+  case 0: // osd screen clears, resets to regular display, and resets wizard and menu starting points
     if (osd_runtime_screen_clear())
       osd_display_reset();
-    break; //screen has been cleared for this loop - break out of display function
+    break; // screen has been cleared for this loop - break out of display function
 
-  case 1: //osd menu is active
+  case 1: // osd menu is active
     last_display_phase = 2;
     print_osd_menu_strings(10, 9, main_menu_labels, main_menu_positions);
     if (osd_menu_phase == 11)
       osd_select_menu_item(8, main_menu_map, MAIN_MENU);
-    break; //osd menu has been displayed for this loop	- break out of display function
+    break; // osd menu has been displayed for this loop	- break out of display function
 
-  case 2: //regular osd display
+  case 2: // regular osd display
     osd_display_regular();
     break;
 
     //**********************************************************************************************************************************************************************************************
     //																				OSD MENUS BELOW THIS POINT
     //**********************************************************************************************************************************************************************************************
-  case 3: //pids profile menu
+  case 3: // pids profile menu
     last_display_phase = 1;
     print_osd_menu_strings(3, 2, pid_profiles_labels, pid_profiles_positions);
     if (osd_menu_phase == 4)
       osd_submenu_select(&profile.pid.pid_profile, 2, pid_submenu_map);
     break;
 
-  case 4: //pids profiles
+  case 4: // pids profiles
     last_display_phase = 3;
     if (profile.pid.pid_profile == PID_PROFILE_1)
       print_osd_menu_strings(8, 4, pid_profile1_labels, pid_profile_positions);
@@ -795,21 +795,21 @@ void osd_display() {
       osd_vector_adjust(get_pid_term(osd_cursor), 3, 3, BF_PIDS, pid_profile_adjust_limits);
     break;
 
-  case 5: //filters menu
+  case 5: // filters menu
     last_display_phase = 1;
     print_osd_menu_strings(3, 2, filter_labels, filter_positions);
     if (osd_menu_phase == 4)
       osd_select_menu_item(2, filter_submenu_map, SUB_MENU);
     break;
 
-  case 6: //main rates menu
+  case 6: // main rates menu
     last_display_phase = 1;
     print_osd_menu_strings(3, 2, rates_profile_labels, rates_profile_positions);
     if (osd_menu_phase == 4)
       osd_submenu_select(&profile_current_rates()->mode, 2, rates_submenu_map);
     break;
 
-  case 7: //silverware rates submenu
+  case 7: // silverware rates submenu
     last_display_phase = 6;
     print_osd_menu_strings(8, 4, sw_rates_labels, sw_rates_positions);
     print_osd_adjustable_vectors(SW_RATES, 8, 9, get_sw_rate_term(sw_rates_data_index[osd_menu_phase - 9][0]), sw_rates_data_index, sw_rates_grid, sw_rates_data_positions);
@@ -817,7 +817,7 @@ void osd_display() {
       osd_vector_adjust(get_sw_rate_term(osd_cursor), 3, 3, SW_RATES, sw_rates_adjust_limits);
     break;
 
-  case 8: //betaflight rates submenu
+  case 8: // betaflight rates submenu
     last_display_phase = 6;
     print_osd_menu_strings(8, 4, bf_rates_labels, bf_rates_positions);
     print_osd_adjustable_vectors(ROUNDED, 8, 9, get_bf_rate_term(bf_rates_data_index[osd_menu_phase - 9][0]), bf_rates_data_index, bf_rates_grid, bf_rates_data_positions);
@@ -825,7 +825,7 @@ void osd_display() {
       osd_vector_adjust(get_bf_rate_term(osd_cursor), 3, 3, ROUNDED, bf_rates_adjust_limits);
     break;
 
-  case 9: //flight modes menu
+  case 9: // flight modes menu
     last_display_phase = 1;
     print_osd_menu_strings(12, 11, flight_modes_labels, flight_modes_positions);
     print_osd_adjustable_enums(12, 10, get_aux_status(profile.receiver.aux[flight_modes_aux_items[osd_menu_phase - 13]]), flight_modes_grid, flight_modes_data_positions);
@@ -833,14 +833,14 @@ void osd_display() {
       osd_enum_adjust(flight_modes_ptr, 10, flight_modes_aux_limits);
     break;
 
-  case 10: //osd elements menu
+  case 10: // osd elements menu
     last_display_phase = 1;
     print_osd_menu_strings(5, 4, osd_elements_menu_labels, osd_elements_menu_positions);
     if (osd_menu_phase == 6)
       osd_select_menu_item(4, osd_elements_map, SUB_MENU);
     break;
 
-  case 11: //vtx
+  case 11: // vtx
     last_display_phase = 1;
     if (vtx_settings.detected) {
       populate_vtx_buffer_once();
@@ -848,9 +848,9 @@ void osd_display() {
       // print the buffer and not the actual status
       print_osd_adjustable_enums(6, 4, get_vtx_status(osd_menu_phase - 7), vtx_grid, vtx_data_positions);
       if (osd_menu_phase == 11)
-        //adjust the buffer and not the actual settings
+        // adjust the buffer and not the actual settings
         osd_enum_adjust(vtx_ptr, 4, vtx_limits);
-      //save & exit needs a function to write the buffer to the actual settings
+      // save & exit needs a function to write the buffer to the actual settings
     } else {
       print_osd_menu_strings(3, 0, vtx_na_labels, vtx_na_positions);
       if (osd_select)
@@ -858,21 +858,21 @@ void osd_display() {
     }
     break;
 
-  case 12: //special features
+  case 12: // special features
     last_display_phase = 1;
     print_osd_menu_strings(8, 7, special_features_labels, special_features_positions);
     if (osd_menu_phase == 9)
       osd_select_menu_item(7, special_features_map, SUB_MENU);
     break;
 
-  case 13: //stick boost profiles
+  case 13: // stick boost profiles
     last_display_phase = 12;
     print_osd_menu_strings(3, 2, stickboost_labels, stickboost_profile_positions);
     if (osd_menu_phase == 4)
       osd_submenu_select(&profile.pid.stick_profile, 2, stickboost_submenu_map);
     break;
 
-  case 14: //adjustable stick boost profiles
+  case 14: // adjustable stick boost profiles
     last_display_phase = 13;
     if (profile.pid.stick_profile == STICK_PROFILE_OFF)
       print_osd_menu_strings(7, 3, stickboost1_labels, stickboost_positions);
@@ -883,7 +883,7 @@ void osd_display() {
       osd_vector_adjust(get_stick_profile_term(osd_cursor), 2, 3, ROUNDED, stickboost_adjust_limits);
     break;
 
-  case 15: //add or remove osd elements to display
+  case 15: // add or remove osd elements to display
     last_display_phase = 10;
     print_osd_menu_strings(12, 11, osd_display_labels, osd_display_positions);
     print_osd_adjustable_enums(12, 10, get_decode_element_string(profile.osd.elements[osd_elements_active_items[osd_menu_phase - 13]], ACTIVE), osd_display_grid, osd_display_data_positions);
@@ -891,7 +891,7 @@ void osd_display() {
       osd_encoded_adjust(&profile.osd.elements[osd_elements_active_items[osd_cursor - 1]], 10, 1, ACTIVE);
     break;
 
-  case 16: //edit element positions
+  case 16: // edit element positions
     last_display_phase = 10;
     print_osd_menu_strings(14, 11, osd_position_labels, osd_position_adjust_positions);
     print_osd_adjustable_enums(14, 20, get_decode_element_string(profile.osd.elements[osd_position_active_items[osd_menu_phase - 15]], osd_position_index[osd_menu_phase - 15]), osd_position_grid, osd_position_data_positions);
@@ -899,7 +899,7 @@ void osd_display() {
       osd_encoded_adjust(&profile.osd.elements[osd_elements_active_items[osd_cursor - 1]], 10, 2, osd_select + 1);
     break;
 
-  case 17: //edit display text style
+  case 17: // edit display text style
     last_display_phase = 10;
     print_osd_menu_strings(12, 11, osd_text_style, osd_text_style_positions);
     print_osd_adjustable_enums(12, 10, get_decode_element_string(profile.osd.elements[osd_elements_active_items[osd_menu_phase - 13]], ATTRIBUTE), osd_display_grid, osd_display_data_positions);
@@ -907,7 +907,7 @@ void osd_display() {
       osd_encoded_adjust(&profile.osd.elements[osd_elements_active_items[osd_cursor - 1]], 10, 1, ATTRIBUTE);
     break;
 
-  case 18: //edit callsign text
+  case 18: // edit callsign text
     last_display_phase = 10;
     print_osd_menu_strings(23, 2, osd_callsign_edit_labels, osd_callsign_edit_positions);
     print_osd_callsign_adjustable(23, 20, osd_callsign_grid, osd_callsign_edit_data_positions);
@@ -915,7 +915,7 @@ void osd_display() {
       osd_encoded_adjust_callsign();
     break;
 
-  case 19: //edit lowbatt threshold
+  case 19: // edit lowbatt threshold
     last_display_phase = 12;
     print_osd_menu_strings(3, 2, lowbatt_labels, lowbatt_positions);
     print_osd_adjustable_float(3, 1, low_batt_ptr, lowbatt_grid, lowbatt_data_positions, 1);
@@ -923,21 +923,21 @@ void osd_display() {
       osd_float_adjust(low_batt_ptr, 1, 1, lowbatt_adjust_limits, 0.1);
     break;
 
-  case 20: //edit levelmode
+  case 20: // edit levelmode
     last_display_phase = 12;
     print_osd_menu_strings(3, 2, level_submenu_labels, level_submenu_positions);
     if (osd_menu_phase == 4)
       osd_select_menu_item(2, level_submenu_map, SUB_MENU);
     break;
 
-  case 21: //motor boost submenu
+  case 21: // motor boost submenu
     last_display_phase = 12;
     print_osd_menu_strings(3, 2, motor_boost_labels, motor_boost_positions);
     if (osd_menu_phase == 4)
       osd_select_menu_item(2, motor_boost_map, SUB_MENU);
     break;
 
-  case 22: //edit digital idle
+  case 22: // edit digital idle
     last_display_phase = 12;
     print_osd_menu_strings(3, 2, motoridle_labels, motoridle_positions);
     print_osd_adjustable_float(3, 1, motoridle_ptr, motoridle_grid, motoridle_data_positions, 1);
@@ -945,7 +945,7 @@ void osd_display() {
       osd_float_adjust(motoridle_ptr, 1, 1, motoridle_adjust_limits, 0.1);
     break;
 
-  case 23: //edit level max angle
+  case 23: // edit level max angle
     last_display_phase = 20;
     print_osd_menu_strings(3, 2, maxangle_labels, maxangle_positions);
     print_osd_adjustable_float(3, 1, level_maxangle_ptr, maxangle_grid, maxangle_data_positions, 0);
@@ -953,7 +953,7 @@ void osd_display() {
       osd_float_adjust(level_maxangle_ptr, 1, 1, maxangle_adjust_limits, 1.0);
     break;
 
-  case 24: //edit level strength
+  case 24: // edit level strength
     last_display_phase = 20;
     print_osd_menu_strings(6, 3, levelmode_labels, levelmode_positions);
     print_osd_adjustable_float(6, 4, level_pid_ptr, levelmode_grid, levelmode_data_positions, 1);
@@ -961,7 +961,7 @@ void osd_display() {
       osd_float_adjust(level_pid_ptr, 2, 2, levelmode_adjust_limits, 0.5);
     break;
 
-  case 25: //edit torque boost
+  case 25: // edit torque boost
     last_display_phase = 21;
     print_osd_menu_strings(3, 2, torqueboost_labels, torqueboost_positions);
     print_osd_adjustable_float(3, 1, torqueboost_ptr, torqueboost_grid, torqueboost_data_positions, 1);
@@ -969,7 +969,7 @@ void osd_display() {
       osd_float_adjust(torqueboost_ptr, 1, 1, torqueboost_adjust_limits, 0.1);
     break;
 
-  case 26: //edit throttle boost
+  case 26: // edit throttle boost
     last_display_phase = 21;
     print_osd_menu_strings(3, 2, throttleboost_labels, throttleboost_positions);
     print_osd_adjustable_float(3, 1, throttleboost_ptr, throttleboost_grid, throttleboost_data_positions, 1);
@@ -977,7 +977,7 @@ void osd_display() {
       osd_float_adjust(throttleboost_ptr, 1, 1, throttleboost_adjust_limits, 0.5);
     break;
 
-  case 27: //edit turtle throttle percent
+  case 27: // edit turtle throttle percent
     last_display_phase = 12;
     print_osd_menu_strings(3, 2, turtlethrottle_labels, turtlethrottle_positions);
     print_osd_adjustable_float(3, 1, turtlethrottle_ptr, turtlethrottle_grid, turtlethrottle_data_positions, 0);
@@ -985,7 +985,7 @@ void osd_display() {
       osd_float_adjust(turtlethrottle_ptr, 1, 1, turtlethrottle_adjust_limits, 10.0);
     break;
 
-  case 28: //edit gyro filters
+  case 28: // edit gyro filters
     last_display_phase = 5;
     print_osd_menu_strings(6, 5, gyrofilter_labels, gyrofilter_positions);
     print_osd_mixed_data(6, 4, gyrofilter_ptr, gyrofilter_ptr2, gyrofilter_type_labels, gyrofilter_grid, gyrofilter_data_positions, 0);
@@ -993,7 +993,7 @@ void osd_display() {
       osd_mixed_data_adjust(gyrofilter_ptr, gyrofilter_ptr2, 4, 1, gyrofilter_adjust_limits, 10.0, gyrofilter_reboot_request);
     break;
 
-  case 29: //edit dterm filters
+  case 29: // edit dterm filters
     last_display_phase = 5;
     print_osd_menu_strings(9, 8, dtermfilter_labels, dtermfilter_positions);
     print_osd_mixed_data(9, 7, dtermfilter_ptr, dtermfilter_ptr2, dtermfilter_type_labels, dtermfilter_grid, dtermfilter_data_positions, 0);
@@ -1001,7 +1001,7 @@ void osd_display() {
       osd_mixed_data_adjust(dtermfilter_ptr, dtermfilter_ptr2, 7, 1, dtermfilter_adjust_limits, 10.0, dtermfilter_reboot_request);
     break;
 
-  case 30: //edit pid modifiers
+  case 30: // edit pid modifiers
     last_display_phase = 12;
     print_osd_menu_strings(6, 5, pidmodify_labels, pidmodify_positions);
     print_osd_mixed_data(6, 4, pidmodify_ptr, pidmodify_ptr2, pidmodify_type_labels, pidmodify_grid, pidmodify_data_positions, 2);
@@ -1009,14 +1009,14 @@ void osd_display() {
       osd_mixed_data_adjust(pidmodify_ptr, pidmodify_ptr2, 4, 1, pidmodify_adjust_limits, 0.05, pidmodify_reboot_request);
     break;
 
-  case 31: //rc link menu
+  case 31: // rc link menu
     last_display_phase = 1;
     print_osd_menu_strings(3, 2, rc_link_labels, rc_link_positions);
     if (osd_menu_phase == 4)
       osd_select_menu_item(7, rc_link_map, SUB_MENU);
     break;
 
-  case 32: //rssi adjust
+  case 32: // rssi adjust
     last_display_phase = 31;
     print_osd_menu_strings(4, 3, rssi_menu_labels, rssi_menu_positions);
     print_osd_adjustable_enums(4, 2, get_rssi_source_status(osd_menu_phase - 5), rssi_source_data_grid, rssi_source_data_positions);
@@ -1024,7 +1024,7 @@ void osd_display() {
       osd_enum_adjust(rssi_source_ptr, 2, rssi_source_limits);
     break;
 
-  case 33: //stick wizard select menu
+  case 33: // stick wizard select menu
     last_display_phase = 31;
     print_osd_menu_strings(3, 0, stick_wizard_labels_1, stick_wizard_positions_1);
     if (osd_menu_phase == 4) {
@@ -1037,7 +1037,7 @@ void osd_display() {
     }
     break;
 
-  case 34: //5 sec to calibrate
+  case 34: // 5 sec to calibrate
     print_osd_menu_strings(3, 0, stick_wizard_labels_2, stick_wizard_positions_2);
     if (osd_menu_phase == 4) {
       if (state.stick_calibration_wizard == WAIT_FOR_CONFIRM) {
@@ -1047,7 +1047,7 @@ void osd_display() {
     }
     break;
 
-  case 35: //5 sec to test / confirm calibration
+  case 35: // 5 sec to test / confirm calibration
     print_osd_menu_strings(3, 0, stick_wizard_labels_3, stick_wizard_positions_3);
     if (osd_menu_phase == 4) {
       if ((state.stick_calibration_wizard == CALIBRATION_SUCCESS) || (state.stick_calibration_wizard == TIMEOUT)) {
@@ -1057,20 +1057,20 @@ void osd_display() {
     }
     break;
 
-  case 36: //results of calibration
+  case 36: // results of calibration
     last_display_phase = 31;
     if (state.stick_calibration_wizard == CALIBRATION_SUCCESS) {
-      print_osd_menu_strings(4, 0, stick_wizard_labels_4, stick_wizard_positions_4); //osd_menu_phase will be 4 after this
+      print_osd_menu_strings(4, 0, stick_wizard_labels_4, stick_wizard_positions_4); // osd_menu_phase will be 4 after this
     }
     if (state.stick_calibration_wizard == TIMEOUT) {
-      print_osd_menu_strings(4, 0, stick_wizard_labels_5, stick_wizard_positions_5); //osd_menu_phase will be 4 after this
+      print_osd_menu_strings(4, 0, stick_wizard_labels_5, stick_wizard_positions_5); // osd_menu_phase will be 4 after this
     }
     if (osd_select > 0)
       osd_select = 0;
     break;
   }
   if (osd_display_phase != 2 && rx_aux_on(AUX_ARMING))
-    flags.arm_safety = 1; //final safety check to disallow arming during OSD operation
-} //end osd_display()
+    flags.arm_safety = 1; // final safety check to disallow arming during OSD operation
+} // end osd_display()
 //******************************************************************************************************************************
 #endif
