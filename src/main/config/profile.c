@@ -373,6 +373,11 @@ const profile_t default_profile = {
         .vbattlow = VBATTLOW,
         .actual_battery_voltage = ACTUAL_BATTERY_VOLTAGE,
         .reported_telemetry_voltage = REPORTED_TELEMETRY_VOLTAGE,
+#ifdef IBAT_SCALE
+        .ibat_scale = IBAT_SCALE,
+#else
+        .ibat_scale = 0,
+#endif
     },
     .receiver = {
         .aux = {
