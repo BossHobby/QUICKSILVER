@@ -62,6 +62,9 @@ FAST_RAM control_state_t state = {
     .vbattfilt_corr = 4.2,
     .vbatt_comp = 4.2,
 
+    .ibat = 0.0,
+    .ibat_filtered = 0.0,
+
     .stick_calibration_wizard = INACTIVE,
 
     .rx_rssi = 0,
