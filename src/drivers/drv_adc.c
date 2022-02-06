@@ -175,7 +175,10 @@ float adc_read(adc_chan_t chan) {
 
 #ifdef IBAT_PIN
   case ADC_CHAN_IBAT:
-    return (float)adc_read_raw(chan) * ADC_SCALEFACTOR * (10000.0f / IBAT_SCALE);
+    if (profile.voltage.ibat_scale == 0) {
+      return 0;
+    }
+    return (float)adc_read_raw(chan) * ADC_SCALEFACTOR * (10000.0f / profile.voltage.ibat_scale);
 #endif
 
   default:

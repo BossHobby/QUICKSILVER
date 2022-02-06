@@ -188,14 +188,16 @@ typedef struct {
   float vbattlow;
   float actual_battery_voltage;
   float reported_telemetry_voltage;
+  float ibat_scale;
 } profile_voltage_t;
 
-#define VOLTAGE_MEMBERS                   \
-  MEMBER(lipo_cell_count, uint8)          \
-  MEMBER(pid_voltage_compensation, uint8) \
-  MEMBER(vbattlow, float)                 \
-  MEMBER(actual_battery_voltage, float)   \
-  MEMBER(reported_telemetry_voltage, float)
+#define VOLTAGE_MEMBERS                     \
+  MEMBER(lipo_cell_count, uint8)            \
+  MEMBER(pid_voltage_compensation, uint8)   \
+  MEMBER(vbattlow, float)                   \
+  MEMBER(actual_battery_voltage, float)     \
+  MEMBER(reported_telemetry_voltage, float) \
+  MEMBER(ibat_scale, float)
 
 typedef struct {
   float min;
