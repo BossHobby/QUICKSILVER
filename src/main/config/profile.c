@@ -297,7 +297,6 @@ const profile_t default_profile = {
         },
 
         .level_max_angle = LEVEL_MAX_ANGLE,
-        .low_rate_mulitplier = LOW_RATES_MULTI,
         .sticks_deadband = STICKS_DEADBAND,
     },
 
@@ -387,7 +386,7 @@ const profile_t default_profile = {
             RACEMODE,            // AUX_RACEMODE
             HORIZON,             // AUX_HORIZON
             STICK_BOOST_PROFILE, // AUX_STICK_BOOST_PROFILE
-            HIGH_RATES,          // AUX_HIGH_RATES
+            AUX_CHANNEL_OFF,     // AUX_RATE_PROFILE
 #ifdef BUZZER_ENABLE             // AUX_BUZZER_ENABLE
             BUZZER_ENABLE,
 #else

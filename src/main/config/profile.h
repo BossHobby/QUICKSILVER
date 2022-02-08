@@ -42,7 +42,6 @@ typedef struct {
   rate_mode_silverware_t silverware;
   rate_mode_betaflight_t betaflight;
   float level_max_angle;
-  float low_rate_mulitplier;
   float sticks_deadband;
 } profile_rate_t;
 
@@ -51,7 +50,6 @@ typedef struct {
   MEMBER(silverware, rate_mode_silverware_t) \
   MEMBER(betaflight, rate_mode_betaflight_t) \
   MEMBER(level_max_angle, float)             \
-  MEMBER(low_rate_mulitplier, float)         \
   MEMBER(sticks_deadband, float)
 
 typedef struct {
