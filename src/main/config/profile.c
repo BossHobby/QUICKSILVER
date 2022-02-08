@@ -15,7 +15,7 @@
 #define DEFAULT_PID_RATE_PRESET 0
 
 const pid_rate_preset_t pid_rate_presets[] = {
-    //Brushless Pids
+    // Brushless Pids
     {
         .index = 0,
         .name = "Thrust/Weight Ratio 14:1 5in",
@@ -181,7 +181,7 @@ const profile_t default_profile = {
 #ifdef GYRO_FILTER_PASS1_PT1
                 .type = FILTER_LP_PT1,
                 .cutoff_freq = GYRO_FREQ_PASS1,
-#else //GYRO_FILTER_PASS1_PT2
+#else // GYRO_FILTER_PASS1_PT2
                 .type = FILTER_LP2_PT1,
                 .cutoff_freq = GYRO_FREQ_PASS1,
 #endif
@@ -196,7 +196,7 @@ const profile_t default_profile = {
 #ifdef GYRO_FILTER_PASS2_PT1
                 .type = FILTER_LP_PT1,
                 .cutoff_freq = GYRO_FREQ_PASS1,
-#else //GYRO_FILTER_PASS2_PT2
+#else // GYRO_FILTER_PASS2_PT2
                 .type = FILTER_LP2_PT1,
                 .cutoff_freq = GYRO_FREQ_PASS1,
 #endif
@@ -214,7 +214,7 @@ const profile_t default_profile = {
 #ifdef DTERM_FILTER_PASS1_PT1
                 .type = FILTER_LP_PT1,
                 .cutoff_freq = DTERM_FREQ_PASS1,
-#else //DTERM_FILTER_PASS1_PT2
+#else // DTERM_FILTER_PASS1_PT2
                 .type = FILTER_LP2_PT1,
                 .cutoff_freq = DTERM_FREQ_PASS1,
 #endif
@@ -229,7 +229,7 @@ const profile_t default_profile = {
 #ifdef DTERM_FILTER_PASS2_PT1
                 .type = FILTER_LP_PT1,
                 .cutoff_freq = DTERM_FREQ_PASS2,
-#else //DTERM_FILTER_PASS2_PT2
+#else // DTERM_FILTER_PASS2_PT2
                 .type = FILTER_LP2_PT1,
                 .cutoff_freq = DTERM_FREQ_PASS2,
 #endif
@@ -316,7 +316,7 @@ const profile_t default_profile = {
             // The final differences are that you can adjust each axis independently and also set up two seperate profiles so that you can switch "feels" in flight with the STICK_BOOST_PROFILE aux
             // channel selection set up in the receiver section of config.h
             //
-            //HOW TO USE THIS FEATURE:
+            // HOW TO USE THIS FEATURE:
             // Safe values for stickAccelerator are from 0 to about 2.5 where 0 represents a "MEASUREMENT" based D term calculation and is the traditional Silverware PID controller, and a
             // a value of 1 represents an "ERROR" based D term calculation.  Values above 1 add even more acceleration but be reasonable and keep this below about 2.5.
 
@@ -325,14 +325,14 @@ const profile_t default_profile = {
             // stick deflection and is reduced by whatever percentage you enter here at stick center.  For example accelerator at 1 and transition at .3 means that there will be 30% reduction
             // of acceleration at stick center, and acceleration strength of 1 at full stick.
             {
-                //pid profile A	Roll  PITCH  YAW
-                .accelerator = {0.0, 0.0, 0.0}, //keep values between 0 and 2.5
-                .transition = {0.0, 0.0, 0.0},  //keep values between -1 and 1
+                // pid profile A	Roll  PITCH  YAW
+                .accelerator = {0.0, 0.0, 0.0}, // keep values between 0 and 2.5
+                .transition = {0.0, 0.0, 0.0},  // keep values between -1 and 1
             },
             {
-                //pid profile B	Roll  PITCH  YAW
-                .accelerator = {1.5, 1.5, 1.0}, //keep values between 0 and 2.5
-                .transition = {0.3, 0.3, 0.0},  //keep values between -1 and 1
+                // pid profile B	Roll  PITCH  YAW
+                .accelerator = {1.5, 1.5, 1.0}, // keep values between 0 and 2.5
+                .transition = {0.3, 0.3, 0.0},  // keep values between -1 and 1
             },
         },
         //**************************** ANGLE PIDS - used in level mode to set leveling strength
@@ -381,39 +381,39 @@ const profile_t default_profile = {
     },
     .receiver = {
         .aux = {
-            ARMING,              //AUX_ARMING
-            IDLE_UP,             //AUX_IDLE_UP
-            LEVELMODE,           //AUX_LEVELMODE
-            RACEMODE,            //AUX_RACEMODE
-            HORIZON,             //AUX_HORIZON
-            STICK_BOOST_PROFILE, //AUX_STICK_BOOST_PROFILE
-            HIGH_RATES,          //AUX_HIGH_RATES
-#ifdef BUZZER_ENABLE             //AUX_BUZZER_ENABLE
+            ARMING,              // AUX_ARMING
+            IDLE_UP,             // AUX_IDLE_UP
+            LEVELMODE,           // AUX_LEVELMODE
+            RACEMODE,            // AUX_RACEMODE
+            HORIZON,             // AUX_HORIZON
+            STICK_BOOST_PROFILE, // AUX_STICK_BOOST_PROFILE
+            HIGH_RATES,          // AUX_HIGH_RATES
+#ifdef BUZZER_ENABLE             // AUX_BUZZER_ENABLE
             BUZZER_ENABLE,
 #else
             AUX_CHANNEL_OFF,
 #endif
-            TURTLE, //AUX_TURTLE
+            TURTLE, // AUX_TURTLE
 
-#ifdef MOTORS_TO_THROTTLE_MODE //AUX_MOTOR_TEST
+#ifdef MOTORS_TO_THROTTLE_MODE // AUX_MOTOR_TEST
             MOTORS_TO_THROTTLE_MODE,
 #else
             AUX_CHANNEL_OFF,
 #endif
             RSSI,
-#ifdef FPV_SWITCH //AUX_FPV_SWITCH
+#ifdef FPV_SWITCH // AUX_FPV_SWITCH
             FPV_SWITCH,
 #else
             AUX_CHANNEL_OFF,
 #endif
-            AUX_CHANNEL_OFF, //AUX_BLACKBOX
+            AUX_CHANNEL_OFF, // AUX_BLACKBOX
         },
         .lqi_source = RX_LQI_SOURCE_PACKET_RATE,
         .stick_calibration_limits = {
-            {.min = -1, .max = 1}, //axis[0]
-            {.min = -1, .max = 1}, //axis[1]
-            {.min = -1, .max = 1}, //axis[2]
-            {.min = 0, .max = 1}   //axis[3]
+            {.min = -1, .max = 1}, // axis[0]
+            {.min = -1, .max = 1}, // axis[1]
+            {.min = -1, .max = 1}, // axis[2]
+            {.min = 0, .max = 1}   // axis[3]
         },
     },
     .osd = {
@@ -494,6 +494,10 @@ cbor_result_t cbor_encode_profile_metadata_t(cbor_value_t *enc, const profile_me
   cbor_result_t res = CBOR_OK;
 
   CBOR_CHECK_ERROR(res = cbor_encode_map_indefinite(enc));
+
+  const uint32_t version = PROFILE_VERSION;
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "version"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &version));
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "name"));
   CBOR_CHECK_ERROR(res = cbor_encode_tstr(enc, meta->name, 36));
