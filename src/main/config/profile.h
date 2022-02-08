@@ -7,6 +7,8 @@
 #include "rx.h"
 #include "util/vector.h"
 
+#define PROFILE_VERSION MAKE_SEMVER(0, 1, 0)
+
 // Rates
 typedef enum {
   RATE_MODE_SILVERWARE,
