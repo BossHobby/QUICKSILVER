@@ -55,9 +55,6 @@
 // *************max angle for level mode
 #define LEVEL_MAX_ANGLE 65.0f
 
-// ************* low rates multiplier if rates are assigned to a channel
-#define LOW_RATES_MULTI 0.5f
-
 // *************transmitter stick adjustable deadband for roll/pitch/yaw
 // *************.01f = 1% of stick range - comment out to disable
 #define STICKS_DEADBAND .01f
@@ -113,7 +110,6 @@
 #define RACEMODE AUX_CHANNEL_OFF
 #define HORIZON AUX_CHANNEL_OFF
 #define STICK_BOOST_PROFILE AUX_CHANNEL_4
-#define HIGH_RATES AUX_CHANNEL_ON
 #define TURTLE AUX_CHANNEL_OFF //****************turtle mode
 // *************enable buzzer functionality
 // *************change channel assignment from AUX_CHANNEL_OFF to a numbered aux switch if you want switch control
