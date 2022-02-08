@@ -83,19 +83,13 @@ static float calc_bf_rates(int axis) {
 }
 
 void input_rates_calc(float rates[]) {
-  // high-low rates switch
-  float rate_multiplier = 1.0;
-  if (rx_aux_on(AUX_HIGH_RATES) <= 0) {
-    rate_multiplier = profile.rate.low_rate_mulitplier;
-  }
-
   if (profile.rate.mode == RATE_MODE_BETAFLIGHT) {
-    rates[0] = rate_multiplier * calc_bf_rates(0);
-    rates[1] = rate_multiplier * calc_bf_rates(1);
-    rates[2] = rate_multiplier * calc_bf_rates(2);
+    rates[0] = calc_bf_rates(0);
+    rates[1] = calc_bf_rates(1);
+    rates[2] = calc_bf_rates(2);
   } else {
-    rates[0] = rate_multiplier * state.rx_filtered.axis[0] * profile.rate.silverware.max_rate.roll * DEGTORAD;
-    rates[1] = rate_multiplier * state.rx_filtered.axis[1] * profile.rate.silverware.max_rate.pitch * DEGTORAD;
-    rates[2] = rate_multiplier * state.rx_filtered.axis[2] * profile.rate.silverware.max_rate.yaw * DEGTORAD;
+    rates[0] = state.rx_filtered.axis[0] * profile.rate.silverware.max_rate.roll * DEGTORAD;
+    rates[1] = state.rx_filtered.axis[1] * profile.rate.silverware.max_rate.pitch * DEGTORAD;
+    rates[2] = state.rx_filtered.axis[2] * profile.rate.silverware.max_rate.yaw * DEGTORAD;
   }
 }
