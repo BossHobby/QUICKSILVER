@@ -118,8 +118,6 @@ static void rx_serial_crsf_process_frame() {
     state.aux[AUX_CHANNEL_10] = (channels[14] > 1100) ? 1 : 0;
     state.aux[AUX_CHANNEL_11] = (channels[15] > 1100) ? 1 : 0;
 
-    rx_lqi_got_packet();
-
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
       rx_lqi_update_direct(0.00062853551f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 191.0f));
     }
@@ -141,6 +139,8 @@ static void rx_serial_crsf_process_frame() {
     quic_debugf("CRSF: unhandled packet type 0x%x", rx_data[2]);
     break;
   }
+
+  rx_lqi_got_packet();
 
   bind_safety++;
   if (bind_safety > 131) {        // requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
