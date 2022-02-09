@@ -125,9 +125,9 @@ void control() {
 #endif
 
   // flight control
-  float rates[3];
+  vec3_t rates;
 
-  input_rates_calc(rates);
+  input_rates_calc(&rates);
 
   if (rx_aux_on(AUX_LEVELMODE) && !flags.acro_override) {
     float yawerror[3] = {0}; // yaw rotation vector
@@ -136,9 +136,9 @@ void control() {
     input_stick_vector(state.rx_filtered.axis, 0);
 
     // apply yaw from the top of the quad
-    yawerror[0] = state.GEstG.axis[1] * rates[2];
-    yawerror[1] = -state.GEstG.axis[0] * rates[2];
-    yawerror[2] = state.GEstG.axis[2] * rates[2];
+    yawerror[0] = state.GEstG.axis[1] * rates.axis[2];
+    yawerror[1] = -state.GEstG.axis[0] * rates.axis[2];
+    yawerror[2] = state.GEstG.axis[2] * rates.axis[2];
 
     // *************************************************************************
     //horizon modes tuning variables
@@ -154,14 +154,14 @@ void control() {
 
     if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON)) { //racemode with angle behavior on roll ais
       if (state.GEstG.axis[2] < 0) {                          // acro on roll and pitch when inverted
-        state.error.axis[0] = rates[0] - state.gyro.axis[0];
-        state.error.axis[1] = rates[1] - state.gyro.axis[1];
+        state.error.axis[0] = rates.axis[0] - state.gyro.axis[0];
+        state.error.axis[1] = rates.axis[1] - state.gyro.axis[1];
       } else {
         //roll is leveled to max angle limit
         state.angleerror[0] = state.errorvect.axis[0];
         state.error.axis[0] = angle_pid(0) + yawerror[0] - state.gyro.axis[0];
         //pitch is acro
-        state.error.axis[1] = rates[1] - state.gyro.axis[1];
+        state.error.axis[1] = rates.axis[1] - state.gyro.axis[1];
       }
       // yaw
       state.error.axis[2] = yawerror[2] - state.gyro.axis[2];
@@ -192,14 +192,14 @@ void control() {
       float fade = (stickFade * (1 - HORIZON_SLIDER)) + (HORIZON_SLIDER * angleFade);
       // apply acro to roll for inverted behavior
       if (state.GEstG.axis[2] < 0) {
-        state.error.axis[0] = rates[0] - state.gyro.axis[0];
-        state.error.axis[1] = rates[1] - state.gyro.axis[1];
+        state.error.axis[0] = rates.axis[0] - state.gyro.axis[0];
+        state.error.axis[1] = rates.axis[1] - state.gyro.axis[1];
       } else { // apply a transitioning mix of acro and level behavior inside of stick HORIZON_TRANSITION point and full acro beyond stick HORIZON_TRANSITION point
         state.angleerror[0] = state.errorvect.axis[0];
         // roll angle strength fades out as sticks approach HORIZON_TRANSITION while acro stength fades in according to value of acroFade factor
-        state.error.axis[0] = ((angle_pid(0) + yawerror[0] - state.gyro.axis[0]) * (1 - fade)) + (fade * (rates[0] - state.gyro.axis[0]));
+        state.error.axis[0] = ((angle_pid(0) + yawerror[0] - state.gyro.axis[0]) * (1 - fade)) + (fade * (rates.axis[0] - state.gyro.axis[0]));
         //pitch is acro
-        state.error.axis[1] = rates[1] - state.gyro.axis[1];
+        state.error.axis[1] = rates.axis[1] - state.gyro.axis[1];
       }
 
       // yaw
@@ -233,11 +233,11 @@ void control() {
         float fade = (stickFade * (1 - HORIZON_SLIDER)) + (HORIZON_SLIDER * angleFade);
         // apply acro to roll and pitch sticks for inverted behavior
         if (state.GEstG.axis[2] < 0) {
-          state.error.axis[i] = rates[i] - state.gyro.axis[i];
+          state.error.axis[i] = rates.axis[i] - state.gyro.axis[i];
         } else { // apply a transitioning mix of acro and level behavior inside of stick HORIZON_TRANSITION point and full acro beyond stick HORIZON_TRANSITION point
           state.angleerror[i] = state.errorvect.axis[i];
           //  angle strength fades out as sticks approach HORIZON_TRANSITION while acro stength fades in according to value of acroFade factor
-          state.error.axis[i] = ((angle_pid(i) + yawerror[i] - state.gyro.axis[i]) * (1 - fade)) + (fade * (rates[i] - state.gyro.axis[i]));
+          state.error.axis[i] = ((angle_pid(i) + yawerror[i] - state.gyro.axis[i]) * (1 - fade)) + (fade * (rates.axis[i] - state.gyro.axis[i]));
         }
       }
       // yaw
@@ -254,9 +254,9 @@ void control() {
     }
   } else { // rate mode
 
-    state.setpoint.axis[0] = rates[0];
-    state.setpoint.axis[1] = rates[1];
-    state.setpoint.axis[2] = rates[2];
+    state.setpoint.axis[0] = rates.axis[0];
+    state.setpoint.axis[1] = rates.axis[1];
+    state.setpoint.axis[2] = rates.axis[2];
 
     for (int i = 0; i < 3; i++) {
       state.error.axis[i] = state.setpoint.axis[i] - state.gyro.axis[i];

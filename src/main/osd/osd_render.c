@@ -806,7 +806,7 @@ void osd_display() {
     last_display_phase = 1;
     print_osd_menu_strings(3, 2, rates_profile_labels, rates_profile_positions);
     if (osd_menu_phase == 4)
-      osd_submenu_select(&profile.rate.mode, 2, rates_submenu_map);
+      osd_submenu_select(&profile_current_rates()->mode, 2, rates_submenu_map);
     break;
 
   case 7: //silverware rates submenu

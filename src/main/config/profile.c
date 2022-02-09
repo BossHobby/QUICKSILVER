@@ -255,45 +255,92 @@ const profile_t default_profile = {
     },
 
     .rate = {
+        .profile = STICK_RATE_PROFILE_1,
+        .rates = {
 #ifdef SILVERWARE_RATES
-        .mode = RATE_MODE_SILVERWARE,
+            {
+                .mode = RATE_MODE_SILVERWARE,
+                .rate = {
+                    {
+                        MAX_RATE,
+                        MAX_RATE,
+                        MAX_RATEYAW,
+                    },
+                    {
+                        ACRO_EXPO_ROLL,
+                        ACRO_EXPO_PITCH,
+                        ACRO_EXPO_YAW,
+                    },
+                    {
+                        ANGLE_EXPO_ROLL,
+                        ANGLE_EXPO_PITCH,
+                        ANGLE_EXPO_YAW,
+                    },
+                },
+            },
+            {
+                .mode = RATE_MODE_BETAFLIGHT,
+                .rate = {
+                    {
+                        BF_RC_RATE_ROLL,
+                        BF_RC_RATE_PITCH,
+                        BF_RC_RATE_YAW,
+                    },
+                    {
+                        BF_SUPER_RATE_ROLL,
+                        BF_SUPER_RATE_PITCH,
+                        BF_SUPER_RATE_YAW,
+                    },
+                    {
+                        BF_EXPO_ROLL,
+                        BF_EXPO_PITCH,
+                        BF_EXPO_YAW,
+                    },
+                },
+            },
 #endif
 #ifdef BETAFLIGHT_RATES
-        .mode = RATE_MODE_BETAFLIGHT,
+            {
+                .mode = RATE_MODE_BETAFLIGHT,
+                .rate = {
+                    {
+                        BF_RC_RATE_ROLL,
+                        BF_RC_RATE_PITCH,
+                        BF_RC_RATE_YAW,
+                    },
+                    {
+                        BF_SUPER_RATE_ROLL,
+                        BF_SUPER_RATE_PITCH,
+                        BF_SUPER_RATE_YAW,
+                    },
+                    {
+                        BF_EXPO_ROLL,
+                        BF_EXPO_PITCH,
+                        BF_EXPO_YAW,
+                    },
+                },
+            },
+            {
+                .mode = RATE_MODE_SILVERWARE,
+                .rate = {
+                    {
+                        MAX_RATE,
+                        MAX_RATE,
+                        MAX_RATEYAW,
+                    },
+                    {
+                        ACRO_EXPO_ROLL,
+                        ACRO_EXPO_PITCH,
+                        ACRO_EXPO_YAW,
+                    },
+                    {
+                        ANGLE_EXPO_ROLL,
+                        ANGLE_EXPO_PITCH,
+                        ANGLE_EXPO_YAW,
+                    },
+                },
+            },
 #endif
-        .silverware = {
-            .max_rate = {
-                MAX_RATE,
-                MAX_RATE,
-                MAX_RATEYAW,
-            },
-            .acro_expo = {
-                ACRO_EXPO_ROLL,
-                ACRO_EXPO_PITCH,
-                ACRO_EXPO_YAW,
-            },
-            .angle_expo = {
-                ANGLE_EXPO_ROLL,
-                ANGLE_EXPO_PITCH,
-                ANGLE_EXPO_YAW,
-            },
-        },
-        .betaflight = {
-            .rc_rate = {
-                BF_RC_RATE_ROLL,
-                BF_RC_RATE_PITCH,
-                BF_RC_RATE_YAW,
-            },
-            .super_rate = {
-                BF_SUPER_RATE_ROLL,
-                BF_SUPER_RATE_PITCH,
-                BF_SUPER_RATE_YAW,
-            },
-            .expo = {
-                BF_EXPO_ROLL,
-                BF_EXPO_PITCH,
-                BF_EXPO_YAW,
-            },
         },
 
         .level_max_angle = LEVEL_MAX_ANGLE,
@@ -490,6 +537,10 @@ pid_rate_t *profile_current_pid_rates() {
   return &profile.pid.pid_rates[profile.pid.pid_profile];
 }
 
+rate_t *profile_current_rates() {
+  return &profile.rate.rates[profile.rate.profile];
+}
+
 cbor_result_t cbor_encode_profile_metadata_t(cbor_value_t *enc, const profile_metadata_t *meta) {
   cbor_result_t res = CBOR_OK;
 
@@ -514,16 +565,12 @@ cbor_result_t cbor_encode_profile_metadata_t(cbor_value_t *enc, const profile_me
 #define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
 #define STR_ARRAY_MEMBER CBOR_ENCODE_STR_ARRAY_MEMBER
 
-CBOR_START_STRUCT_ENCODER(rate_mode_silverware_t)
-SILVERWARE_RATE_MEMBERS
-CBOR_END_STRUCT_ENCODER()
-
-CBOR_START_STRUCT_ENCODER(rate_mode_betaflight_t)
-BETAFLIGHT_RATE_MEMBERS
+CBOR_START_STRUCT_ENCODER(rate_t)
+RATE_MEMBERS
 CBOR_END_STRUCT_ENCODER()
 
 CBOR_START_STRUCT_ENCODER(profile_rate_t)
-RATE_MEMBERS
+PROFILE_RATE_MEMBERS
 CBOR_END_STRUCT_ENCODER()
 
 CBOR_START_STRUCT_ENCODER(profile_motor_t)
@@ -638,16 +685,12 @@ cbor_result_t cbor_decode_profile_metadata_t(cbor_value_t *dec, profile_metadata
 #define ARRAY_MEMBER CBOR_DECODE_ARRAY_MEMBER
 #define STR_ARRAY_MEMBER CBOR_DECODE_STR_ARRAY_MEMBER
 
-CBOR_START_STRUCT_DECODER(rate_mode_silverware_t)
-SILVERWARE_RATE_MEMBERS
-CBOR_END_STRUCT_DECODER()
-
-CBOR_START_STRUCT_DECODER(rate_mode_betaflight_t)
-BETAFLIGHT_RATE_MEMBERS
+CBOR_START_STRUCT_DECODER(rate_t)
+RATE_MEMBERS
 CBOR_END_STRUCT_DECODER()
 
 CBOR_START_STRUCT_DECODER(profile_rate_t)
-RATE_MEMBERS
+PROFILE_RATE_MEMBERS
 CBOR_END_STRUCT_DECODER()
 
 CBOR_START_STRUCT_DECODER(profile_motor_t)

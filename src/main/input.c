@@ -7,6 +7,9 @@
 #include "profile.h"
 #include "util.h"
 
+#define BF_SETPOINT_RATE_LIMIT 1998.0f
+#define BF_RC_RATE_INCREMENTAL 14.54f
+
 extern profile_t profile;
 
 // cache the last result so it does not get calculated everytime
@@ -55,41 +58,142 @@ void input_stick_vector(float rx_input[], float maxangle) {
   // without this the quad will not invert if angle difference = 180
 }
 
-static float calc_bf_rates(int axis) {
-#define SETPOINT_RATE_LIMIT 1998.0f
-#define RC_RATE_INCREMENTAL 14.54f
+float input_apply_expo(float in, float expo) {
+  if (expo < 0.01f) {
+    return in;
+  }
 
-  float rcRate, superExpo;
-  if (axis == ROLL) {
-    rcRate = profile.rate.betaflight.rc_rate.roll;
-    superExpo = profile.rate.betaflight.super_rate.roll;
-  } else if (axis == PITCH) {
-    rcRate = profile.rate.betaflight.rc_rate.pitch;
-    superExpo = profile.rate.betaflight.super_rate.pitch;
-  } else {
-    rcRate = profile.rate.betaflight.rc_rate.yaw;
-    superExpo = profile.rate.betaflight.super_rate.yaw;
+  limitf(&expo, 1.0);
+
+  float result = 0.0f;
+
+  switch (profile_current_rates()->mode) {
+  case RATE_MODE_SILVERWARE:
+    result = in * in * in * expo + in * (1 - expo);
+    break;
+  case RATE_MODE_BETAFLIGHT:
+    result = fabsf(in) * in * in * in * expo + in * (1 - expo);
+    break;
+  case RATE_MODE_ACTUAL:
+    result = fabsf(in) * in * in * in * in * in * expo + in * (1 - expo);
+    break;
   }
-  if (rcRate > 2.0f) {
-    rcRate += RC_RATE_INCREMENTAL * (rcRate - 2.0f);
-  }
-  const float rcCommandfAbs = state.rx_filtered.axis[axis] > 0 ? state.rx_filtered.axis[axis] : -state.rx_filtered.axis[axis];
-  float angleRate = 200.0f * rcRate * state.rx_filtered.axis[axis];
-  if (superExpo) {
-    const float rcSuperfactor = 1.0f / (constrainf(1.0f - (rcCommandfAbs * superExpo), 0.01f, 1.00f));
-    angleRate *= rcSuperfactor;
-  }
-  return constrainf(angleRate, -SETPOINT_RATE_LIMIT, SETPOINT_RATE_LIMIT) * (float)DEGTORAD;
+
+  limitf(&result, 1.0);
+  return result;
 }
 
-void input_rates_calc(float rates[]) {
-  if (profile.rate.mode == RATE_MODE_BETAFLIGHT) {
-    rates[0] = calc_bf_rates(0);
-    rates[1] = calc_bf_rates(1);
-    rates[2] = calc_bf_rates(2);
+static void input_get_expo(vec3_t *expo) {
+  vec3_t angle_expo = {
+      .roll = 0,
+      .pitch = 0,
+      .yaw = 0,
+  };
+  vec3_t acro_expo = {
+      .roll = 0,
+      .pitch = 0,
+      .yaw = 0,
+  };
+
+  switch (profile_current_rates()->mode) {
+  case RATE_MODE_SILVERWARE:
+    acro_expo = profile_current_rates()->rate[SILVERWARE_ACRO_EXPO];
+    angle_expo = profile_current_rates()->rate[SILVERWARE_ANGLE_EXPO];
+    break;
+  case RATE_MODE_BETAFLIGHT:
+    acro_expo = profile_current_rates()->rate[BETAFLIGHT_EXPO];
+    angle_expo = profile_current_rates()->rate[BETAFLIGHT_EXPO];
+    break;
+  case RATE_MODE_ACTUAL:
+    acro_expo = profile_current_rates()->rate[ACTUAL_EXPO];
+    angle_expo = profile_current_rates()->rate[ACTUAL_EXPO];
+    break;
+  }
+
+  if (rx_aux_on(AUX_LEVELMODE)) {
+    if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON)) {
+      expo->roll = angle_expo.roll;
+      expo->pitch = acro_expo.pitch;
+      expo->yaw = angle_expo.yaw;
+    } else if (rx_aux_on(AUX_HORIZON)) {
+      expo->roll = acro_expo.roll;
+      expo->pitch = acro_expo.pitch;
+      expo->yaw = angle_expo.yaw;
+    } else {
+      expo->roll = angle_expo.roll;
+      expo->pitch = angle_expo.pitch;
+      expo->yaw = angle_expo.yaw;
+    }
   } else {
-    rates[0] = state.rx_filtered.axis[0] * profile.rate.silverware.max_rate.roll * DEGTORAD;
-    rates[1] = state.rx_filtered.axis[1] * profile.rate.silverware.max_rate.pitch * DEGTORAD;
-    rates[2] = state.rx_filtered.axis[2] * profile.rate.silverware.max_rate.yaw * DEGTORAD;
+    expo->roll = acro_expo.roll;
+    expo->pitch = acro_expo.pitch;
+    expo->yaw = acro_expo.yaw;
+  }
+}
+
+static void calc_bf_rates(vec3_t *rates) {
+  vec3_t expo;
+  input_get_expo(&expo);
+
+  for (uint32_t i = 0; i < 3; i++) {
+    const float rate = input_apply_expo(state.rx_filtered.axis[i], expo.axis[i]);
+
+    float rc_rate = profile_current_rates()->rate[BETAFLIGHT_RC_RATE].axis[i];
+    if (rc_rate > 2.0f) {
+      rc_rate += BF_RC_RATE_INCREMENTAL * (rc_rate - 2.0f);
+    }
+
+    float angleRate = 200.0f * rc_rate * rate;
+
+    const float super_rate = profile_current_rates()->rate[BETAFLIGHT_SUPER_RATE].axis[i];
+    if (super_rate) {
+      const float super_factor = 1.0f / (constrainf(1.0f - (fabsf(rate) * super_rate), 0.01f, 1.00f));
+      angleRate *= super_factor;
+    }
+
+    rates->axis[i] = constrainf(angleRate, -BF_SETPOINT_RATE_LIMIT, BF_SETPOINT_RATE_LIMIT) * DEGTORAD;
+  }
+}
+
+static void calc_sw_rates(vec3_t *rates) {
+  vec3_t expo;
+  input_get_expo(&expo);
+
+  rates->roll = input_apply_expo(state.rx_filtered.roll, expo.roll) * profile_current_rates()->rate[SILVERWARE_MAX_RATE].roll * DEGTORAD;
+  rates->pitch = input_apply_expo(state.rx_filtered.pitch, expo.pitch) * profile_current_rates()->rate[SILVERWARE_MAX_RATE].pitch * DEGTORAD;
+  rates->yaw = input_apply_expo(state.rx_filtered.yaw, expo.yaw) * profile_current_rates()->rate[SILVERWARE_MAX_RATE].yaw * DEGTORAD;
+}
+
+static void calc_actual_rates(vec3_t *rates) {
+  vec3_t expo;
+  input_get_expo(&expo);
+
+  for (uint32_t i = 0; i < 3; i++) {
+    const float rate_no_expo = state.rx_filtered.axis[i];
+    const float rate_expo = input_apply_expo(rate_no_expo, expo.axis[i]);
+
+    const float center_sensitivity = profile_current_rates()->rate[ACTUAL_CENTER_SENSITIVITY].axis[i];
+    const float max_rate = profile_current_rates()->rate[ACTUAL_MAX_RATE].axis[i];
+
+    float stick_movement = max_rate - center_sensitivity;
+    if (stick_movement < 0) {
+      stick_movement = 0;
+    }
+
+    rates->axis[i] = rate_no_expo * center_sensitivity + stick_movement * rate_expo;
+  }
+}
+
+void input_rates_calc(vec3_t *rates) {
+  switch (profile_current_rates()->mode) {
+  case RATE_MODE_SILVERWARE:
+    calc_sw_rates(rates);
+    break;
+  case RATE_MODE_BETAFLIGHT:
+    calc_bf_rates(rates);
+    break;
+  case RATE_MODE_ACTUAL:
+    calc_actual_rates(rates);
+    break;
   }
 }
