@@ -13,43 +13,53 @@
 typedef enum {
   RATE_MODE_SILVERWARE,
   RATE_MODE_BETAFLIGHT,
+  RATE_MODE_ACTUAL,
 } rate_modes_t;
 
-typedef struct {
-  vec3_t max_rate;
-  vec3_t acro_expo;
-  vec3_t angle_expo;
-} rate_mode_silverware_t;
+typedef enum {
+  SILVERWARE_MAX_RATE,
+  SILVERWARE_ACRO_EXPO,
+  SILVERWARE_ANGLE_EXPO,
+} silverware_rates_t;
 
-#define SILVERWARE_RATE_MEMBERS \
-  MEMBER(max_rate, vec3_t)      \
-  MEMBER(acro_expo, vec3_t)     \
-  MEMBER(angle_expo, vec3_t)
+typedef enum {
+  BETAFLIGHT_RC_RATE,
+  BETAFLIGHT_SUPER_RATE,
+  BETAFLIGHT_EXPO,
+} betaflight_rates_t;
 
-typedef struct {
-  vec3_t rc_rate;
-  vec3_t super_rate;
-  vec3_t expo;
-} rate_mode_betaflight_t;
+typedef enum {
+  ACTUAL_CENTER_SENSITIVITY,
+  ACTUAL_MAX_RATE,
+  ACTUAL_EXPO,
+} actual_rates_t;
 
-#define BETAFLIGHT_RATE_MEMBERS \
-  MEMBER(rc_rate, vec3_t)       \
-  MEMBER(super_rate, vec3_t)    \
-  MEMBER(expo, vec3_t)
+typedef enum {
+  STICK_RATE_PROFILE_1,
+  STICK_RATE_PROFILE_2,
+  STICK_RATE_PROFILE_MAX
+} rate_profiles_t;
 
 typedef struct {
   rate_modes_t mode;
-  rate_mode_silverware_t silverware;
-  rate_mode_betaflight_t betaflight;
+  vec3_t rate[3];
+} rate_t;
+
+#define RATE_MEMBERS  \
+  MEMBER(mode, uint8) \
+  ARRAY_MEMBER(rate, 3, vec3_t)
+
+typedef struct {
+  rate_profiles_t profile;
+  rate_t rates[STICK_RATE_PROFILE_MAX];
   float level_max_angle;
   float sticks_deadband;
 } profile_rate_t;
 
-#define RATE_MEMBERS                         \
-  MEMBER(mode, uint8)                        \
-  MEMBER(silverware, rate_mode_silverware_t) \
-  MEMBER(betaflight, rate_mode_betaflight_t) \
-  MEMBER(level_max_angle, float)             \
+#define PROFILE_RATE_MEMBERS                          \
+  MEMBER(profile, uint8)                              \
+  ARRAY_MEMBER(rates, STICK_RATE_PROFILE_MAX, rate_t) \
+  MEMBER(level_max_angle, float)                      \
   MEMBER(sticks_deadband, float)
 
 typedef struct {
@@ -324,6 +334,7 @@ extern target_info_t target_info;
 
 void profile_set_defaults();
 pid_rate_t *profile_current_pid_rates();
+rate_t *profile_current_rates();
 
 cbor_result_t cbor_encode_profile_t(cbor_value_t *enc, const profile_t *p);
 cbor_result_t cbor_decode_profile_t(cbor_value_t *dec, profile_t *p);
