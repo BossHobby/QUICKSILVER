@@ -76,16 +76,6 @@ uint8_t rx_aux_on(aux_function_t function) {
   return state.aux[profile.receiver.aux[function]];
 }
 
-float rx_expo(float in, float exp) {
-  if (exp > 1)
-    exp = 1;
-  if (exp < -1)
-    exp = -1;
-  float ans = in * in * in * exp + in * (1 - exp);
-  limitf(&ans, 1.0);
-  return ans;
-}
-
 float rx_smoothing_hz(rx_protocol_t proto) {
   uint16_t cutoff = RX_SMOOTHING_HZ[proto];
   if (cutoff == 0) {
@@ -144,100 +134,40 @@ void rx_lqi_update_direct(float rssi) {
   state.rx_rssi = constrainf(rssi, 0.f, 100.f);
 }
 
-void rx_apply_expo() {
-  vec3_t angle_expo = {
-      .roll = 0,
-      .pitch = 0,
-      .yaw = 0,
-  };
-  vec3_t acro_expo = {
-      .roll = 0,
-      .pitch = 0,
-      .yaw = 0,
-  };
-
-  if (profile.rate.mode == RATE_MODE_BETAFLIGHT) {
-    angle_expo = profile.rate.betaflight.expo;
-    acro_expo = profile.rate.betaflight.expo;
-  } else {
-    angle_expo = profile.rate.silverware.angle_expo;
-    acro_expo = profile.rate.silverware.acro_expo;
-  }
-
-  vec3_t expo = {
-      .roll = 0,
-      .pitch = 0,
-      .yaw = 0,
-  };
-  if (rx_aux_on(AUX_LEVELMODE)) {
-    if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON)) {
-      expo.axis[0] = angle_expo.roll;
-      expo.axis[1] = acro_expo.pitch;
-      expo.axis[2] = angle_expo.yaw;
-    } else if (rx_aux_on(AUX_HORIZON)) {
-      expo.axis[0] = acro_expo.roll;
-      expo.axis[1] = acro_expo.pitch;
-      expo.axis[2] = angle_expo.yaw;
-    } else {
-      expo.axis[0] = angle_expo.roll;
-      expo.axis[1] = angle_expo.pitch;
-      expo.axis[2] = angle_expo.yaw;
-    }
-  } else {
-    expo.axis[0] = acro_expo.roll;
-    expo.axis[1] = acro_expo.pitch;
-    expo.axis[2] = acro_expo.yaw;
-  }
-
-  if (expo.roll > 0.01) {
-    state.rx_filtered.axis[0] = rx_expo(state.rx.axis[0], expo.roll);
-  } else {
-    state.rx_filtered.axis[0] = state.rx.axis[0];
-  }
-  if (expo.pitch > 0.01) {
-    state.rx_filtered.axis[1] = rx_expo(state.rx.axis[1], expo.pitch);
-  } else {
-    state.rx_filtered.axis[1] = state.rx.axis[1];
-  }
-  if (expo.yaw > 0.01) {
-    state.rx_filtered.axis[2] = rx_expo(state.rx.axis[2], expo.yaw);
-  } else {
-    state.rx_filtered.axis[2] = state.rx.axis[2];
-  }
-}
-
 void rx_apply_smoothing() {
   for (int i = 0; i < 4; ++i) {
 #ifdef RX_SMOOTHING
-    static float rx_temp[4] = {0, 0, 0, 0};
-    lpf(&rx_temp[i], state.rx_filtered.axis[i], FILTERCALC(state.looptime, 1.0f / (float)rx_smoothing_hz(RX_PROTOCOL)));
-    state.rx_filtered.axis[i] = rx_temp[i];
-    limitf(&state.rx_filtered.axis[i], 1.0);
-#else
-    limitf(&state.rx_filtered.axis[i], 1.0);
+    lpf(&state.rx_filtered.axis[i], state.rx.axis[i], FILTERCALC(state.looptime, 1.0f / (float)rx_smoothing_hz(RX_PROTOCOL)));
 #endif
+    if (i == 3) {
+      // throttle is 0 - 1.0
+      state.rx_filtered.axis[i] = constrainf(state.rx_filtered.axis[i], 0.0, 1.0);
+    } else {
+      // other channels are -1.0 - 1.0
+      state.rx_filtered.axis[i] = constrainf(state.rx_filtered.axis[i], -1.0, 1.0);
+    }
   }
 }
 
 void rx_apply_deadband() {
   for (int i = 0; i < 3; ++i) {
-    if (profile.rate.sticks_deadband > 0.0f) {
-      if (fabsf(state.rx_filtered.axis[i]) <= profile.rate.sticks_deadband) {
-        state.rx_filtered.axis[i] = 0.0f;
+    if (profile.rate.sticks_deadband <= 0.0f) {
+      continue;
+    }
+
+    if (fabsf(state.rx_filtered.axis[i]) <= profile.rate.sticks_deadband) {
+      state.rx_filtered.axis[i] = 0.0f;
+    } else {
+      if (state.rx_filtered.axis[i] >= 0) {
+        state.rx_filtered.axis[i] = mapf(state.rx_filtered.axis[i], profile.rate.sticks_deadband, 1, 0, 1);
       } else {
-        if (state.rx_filtered.axis[i] >= 0) {
-          state.rx_filtered.axis[i] = mapf(state.rx_filtered.axis[i], profile.rate.sticks_deadband, 1, 0, 1);
-        } else {
-          state.rx_filtered.axis[i] = mapf(state.rx_filtered.axis[i], -profile.rate.sticks_deadband, -1, 0, -1);
-        }
+        state.rx_filtered.axis[i] = mapf(state.rx_filtered.axis[i], -profile.rate.sticks_deadband, -1, 0, -1);
       }
     }
   }
 }
 
 void rx_precalc() {
-  state.rx_filtered.throttle = constrainf(state.rx.throttle, 0.f, 1.f); // constrain throttle min and max and copy into next bucket
-  rx_apply_expo();                                                      // this also constrains and copies the rest of the sticks into rx_filtered.axis[i]
   rx_apply_smoothing();
   rx_apply_deadband();
 }
