@@ -52,6 +52,29 @@ float rx_serial_crsf_expected_fps() {
   return crsf_rf_mode_fps[crsf_rf_mode];
 }
 
+uint16_t rx_serial_crsf_smoothing_cutoff() {
+  switch (crsf_rf_mode) {
+  case 7:
+    return 225;
+  case 6:
+    return 112;
+  case 5:
+    return 90;
+  case 4:
+    return 67;
+  case 3:
+    return 45;
+  case 2:
+    return 22;
+  case 1:
+    return 11;
+  case 0:
+    return 1;
+  }
+
+  return 67;
+}
+
 static void rx_serial_crsf_process_frame() {
 
   switch (rx_data[2]) {

@@ -33,6 +33,7 @@ typedef enum {
 void rx_serial_find_protocol();
 
 float rx_serial_crsf_expected_fps();
+uint16_t rx_serial_crsf_smoothing_cutoff();
 
 void rx_serial_process_dsmx();
 void rx_serial_process_sbus();
