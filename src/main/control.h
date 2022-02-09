@@ -58,7 +58,7 @@ typedef struct {
   float ibat_filtered;
 
   vec4_t rx;          // holds the raw or calibrated main four channels, roll, pitch, yaw, throttle
-  vec4_t rx_filtered; // same as above, but with constraints(just in case), expo applied smoothing applied and deadband applied
+  vec4_t rx_filtered; // same as above, but with constraints (just in case), smoothing and deadband applied
   vec4_t rx_override; // override values, activated by controls_override
 
   stick_calibration_wizard_t stick_calibration_wizard; // current phase of the calibration wizard
