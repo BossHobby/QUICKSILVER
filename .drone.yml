@@ -8,7 +8,7 @@ steps:
     image: suculent/platformio-docker-build
     commands:
       - bash script/build-tester.sh
-  - name: publish
+  - name: publish-github
     image: plugins/github-release
     settings:
       api_key:
@@ -18,3 +18,18 @@ steps:
     when:
       event:
         - tag
+  - name: publish-hanfer
+    image: appleboy/drone-scp
+    settings:
+      host: hanfer.org
+      user: drone
+      password:
+        from_secret: ssh_password
+      source:
+        - output/index.html
+        - output/quicksilver*.hex
+      target: /mnt/hanfer/public/quicksilver
+      strip_components: 1
+    when:
+      branch:
+        - develop

@@ -49,6 +49,29 @@ function setConfig() {
 rm -rf $OUTPUT_FOLDER
 mkdir $OUTPUT_FOLDER
 
+cat <<-EOF > $OUTPUT_FOLDER/index.html
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+  <title>Quicksilver Develop</title>
+</head>
+
+<body>
+  <main>
+    <div class="px-4 py-5 my-3 text-center">
+      <h1 class="display-5 mb-4 fw-bold">Quicksilver Develop</h1>
+      <div class="col-lg-6 mx-auto">
+        <p class="lead mb-4">
+          Commit <a href="https://github.com/BossHobby/QUICKSILVER/commit/$DRONE_COMMIT">$DRONE_COMMIT</a>
+        </p>
+        <div class="list-group">
+EOF
+
 for target in $(jq -r '.[] | @base64' $TARGETS_FILE); do
   target_get() {
     echo ${target} | base64 --decode | jq -r "${1}"
@@ -68,9 +91,20 @@ for target in $(jq -r '.[] | @base64' $TARGETS_FILE); do
     if pio run -e $TARGET_NAME; then 
       cp "$BUILD_FOLDER/$TARGET_NAME/firmware.hex" "$OUTPUT_FOLDER/$BUILD_NAME.hex"
       echo -e "\e[32mSuccessfully\e[39m built target $BUILD_NAME"
+      echo "<a class=\"list-group-item list-group-item-action\" href=\"$BUILD_NAME.hex\" download target=\"_blank\">$BUILD_NAME</a>" >> $OUTPUT_FOLDER/index.html
     else
       echo -e "\e[31mError\e[39m building target $BUILD_NAME"
       exit 1
     fi
   done
 done
+
+cat <<-EOF >> $OUTPUT_FOLDER/index.html
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+
+</html>
+EOF
