@@ -385,5 +385,17 @@
         }
       }
     ]
+  },
+  {
+    "name": "kakutef7miniv3",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      }
+    ]
   }
 ]
