@@ -2,6 +2,7 @@
 
 #include "control.h"
 #include "debug.h"
+#include "drv_osd.h"
 #include "drv_spi_max7456.h"
 #include "drv_time.h"
 #include "filter.h"
@@ -18,6 +19,10 @@
 #include "vtx.h"
 
 #ifdef ENABLE_OSD
+
+// double promotions the following are unavoidable
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdouble-promotion"
 
 //************************************************************************************************************************************************************************************
 //																					FLASH MEMORY
@@ -50,23 +55,37 @@ typedef struct {
   uint32_t _unused : 21;
 } __attribute__((packed)) osd_element_t;
 
+typedef enum {
+  CLEAR,
+  DISARM,
+  ARM,
+  BOOST_1,
+  BOOST_2,
+  FAILSAFE,
+  THRTL_SFTY,
+  ARM_SFTY,
+  LOW_BAT,
+  MOTOR_TEST,
+  TURTL,
+  LOOP
+} osd_status_labels_t;
+
+typedef struct {
+  uint8_t loop_warning;
+  uint8_t aux_boost;
+  uint8_t aux_motor_test;
+  control_flags_t flags;
+} osd_sys_status_t;
+
+#define ICON_RSSI 0x1
+#define ICON_CELSIUS 0xe
+#define ICON_THROTTLE 0x4
+#define ICON_AMP 0x9a
+
 // Flash Variables - 32bit					# of osd elements and flash memory start position in defines.h
 extern profile_t profile;
 extern vtx_settings_t vtx_settings;
 extern vtx_settings_t vtx_settings_copy;
-
-// pointers to flash variable array
-osd_element_t *callsign = (osd_element_t *)(&profile.osd.elements[0]);
-osd_element_t *fuelgauge_volts = (osd_element_t *)(&profile.osd.elements[1]);
-osd_element_t *filtered_volts = (osd_element_t *)(&profile.osd.elements[2]);
-osd_element_t *gyro_degrees = (osd_element_t *)(&profile.osd.elements[3]);
-osd_element_t *flight_mode = (osd_element_t *)(&profile.osd.elements[4]);
-osd_element_t *rssi = (osd_element_t *)(&profile.osd.elements[5]);
-osd_element_t *stopwatch = (osd_element_t *)(&profile.osd.elements[6]);
-osd_element_t *arm_disarm = (osd_element_t *)(&profile.osd.elements[7]);
-osd_element_t *osd_throttle = (osd_element_t *)(&profile.osd.elements[8]);
-osd_element_t *osd_vtx = (osd_element_t *)(&profile.osd.elements[9]);
-osd_element_t *osd_current = (osd_element_t *)(&profile.osd.elements[10]);
 
 static uint8_t osd_attr(osd_element_t *el) {
   return el->attribute ? INVERT : TEXT;
@@ -124,9 +143,6 @@ uint8_t osd_wizard_phase = 0;
 uint8_t osd_menu_phase = 0;
 osd_elements_t osd_display_element = 0;
 uint8_t display_trigger = 0;
-uint8_t last_lowbatt_state = 2;
-uint8_t last_lowbatt_state2 = 2;
-uint8_t last_lowbatt_state3 = 2;
 uint8_t osd_cursor;
 uint8_t last_osd_cursor[6];
 uint8_t osd_select;
@@ -145,9 +161,6 @@ void osd_display_reset() {
   osd_menu_phase = 0;      // reset menu to to main menu
   osd_display_phase = 2;   // jump to regular osd display next loop
   osd_display_element = 0; // start with first screen element
-  last_lowbatt_state = 2;  // reset last lowbatt comparator
-  last_lowbatt_state2 = 2;
-  last_lowbatt_state3 = 2;
 }
 
 uint8_t user_select(uint8_t active_elements, uint8_t total_elements) {
@@ -175,84 +188,19 @@ uint8_t grid_selection(uint8_t element, uint8_t row) {
   }
 }
 
-// convert a time in seconds into into a 5 char array in the format mm:ss.
-void format_time(uint8_t *str, float time_s) {
-  // Will only display up to 59:59 as realistically no quad will fly that long (currently). Reset to zero at on reaching 1 hr
-  while (time_s >= 3600) {
-    time_s -= 3600;
-  }
-  // Surely there is a modulus operator in C??
-  uint8_t minutes10 = time_s / 600;
-  uint8_t minutes1 = (time_s - (minutes10 * 600)) / 60;
-  uint8_t seconds10 = (time_s - ((minutes10 * 600) + (minutes1 * 60))) / 10;
-  uint8_t seconds1 = time_s - ((minutes10 * 600) + (minutes1 * 60) + (seconds10 * 10));
-
-  str[0] = minutes10 + 48;
-  str[1] = minutes1 + 48;
-  str[2] = 58; //:
-  str[3] = seconds10 + 48;
-  str[4] = seconds1 + 48;
-}
-
-// Create a 5 char string to represent the current vtx settings in the Band:Channel:Power
-void format_vtx(uint8_t *str) {
-  switch (vtx_settings.band) {
-  case VTX_BAND_A:
-    str[0] = 65;
-    break;
-  case VTX_BAND_B:
-    str[0] = 66;
-    break;
-  case VTX_BAND_E:
-    str[0] = 69;
-    break;
-  case VTX_BAND_F:
-    str[0] = 70;
-    break;
-  case VTX_BAND_R:
-    str[0] = 82;
-    break;
-  default:
-    str[0] = 77; // M
-    break;
-  }
-  str[1] = 58; //:
-  str[2] = vtx_settings.channel + 49;
-  str[3] = 58; //:
-  if (vtx_settings.pit_mode == 1) {
-    str[4] = 21; // "pit", probably from Pitch, but we will use it here
-  } else {
-    if (vtx_settings.power_level == 4)
-      str[4] = 36; // "max"
-    else
-      str[4] = vtx_settings.power_level + 49;
-  }
-}
-
 //************************************************************************************************************************************************************************************
 //																					PRINT FUNCTIONS
 //************************************************************************************************************************************************************************************
 
-void print_osd_callsign_adjustable(uint8_t string_element_qty, uint8_t data_element_qty, const uint8_t grid[data_element_qty][2], const uint8_t print_position[data_element_qty][2]) {
-  if (osd_menu_phase <= string_element_qty)
-    return;
-  if (osd_menu_phase > string_element_qty + data_element_qty)
-    return;
-  static uint8_t skip_loop = 0;
-  if (osd_menu_phase == string_element_qty + 1 && skip_loop == 0) { // skip a loop to prevent dma collision with previous print function
-    skip_loop++;
-    return;
-  }
-  skip_loop = 0;
-  uint8_t index = osd_menu_phase - string_element_qty - 1;
-  uint8_t character[] = {(profile.osd.elements[callsign_shift_index[index][0]] >> callsign_shift_index[index][1]) & 0xFF};
-  osd_print_data(character, 1, grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
-  osd_menu_phase++;
-}
+void print_osd_flightmode(osd_element_t *el) {
+  const uint8_t flightmode_labels[5][21] = {
+      {"   ACRO   "},
+      {"  LEVEL   "},
+      {" RACEMODE "},
+      {" HORIZON  "},
+      {"RM HORIZON"},
+  };
 
-uint8_t print_osd_flightmode() {
-  const char flightmode_labels[5][21] = {{"   ACRO   "}, {"  LEVEL   "}, {" RACEMODE "}, {" HORIZON  "}, {"RM HORIZON"}};
-  static uint8_t index = 0;
   uint8_t flightmode;
   if (rx_aux_on(AUX_LEVELMODE)) {
     if (rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON))
@@ -266,98 +214,180 @@ uint8_t print_osd_flightmode() {
   } else {
     flightmode = 0;
   }
-  if (index < 10) {
-    uint8_t character[] = {flightmode_labels[flightmode][index]};
-    osd_print_data(character, 1, osd_attr(flight_mode), flight_mode->pos_x + index, flight_mode->pos_y);
-    index++;
+
+  osd_transaction_t *txn = osd_txn_init();
+  osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
+  osd_txn_write_data(flightmode_labels[flightmode], 21);
+  osd_txn_submit(txn);
+}
+
+void print_osd_rssi(osd_element_t *el) {
+  static float rx_rssi_filt;
+  if (flags.failsafe)
+    state.rx_rssi = 0.0f;
+
+  lpf(&rx_rssi_filt, state.rx_rssi, FILTERCALC(state.looptime * 1e6f * 133.0f, 2e6f)); // 2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
+
+  osd_transaction_t *txn = osd_txn_init();
+  osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
+  osd_txn_write_uint(rx_rssi_filt - 0.5f, 4);
+  osd_txn_write_char(ICON_RSSI);
+  osd_txn_submit(txn);
+}
+
+void print_osd_armtime(osd_element_t *el) {
+  uint32_t time_s = state.armtime;
+
+  // Will only display up to 59:59 as realistically no quad will fly that long (currently).
+  // Reset to zero at on reaching 1 hr
+  while (time_s >= 3600) {
+    time_s -= 3600;
+  }
+
+  osd_transaction_t *txn = osd_txn_init();
+  osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
+
+  const uint32_t minutes = time_s / 60;
+  osd_txn_write_uint(minutes % 10, 1);
+  osd_txn_write_uint(minutes / 10, 1);
+
+  osd_txn_write_char(':');
+
+  const uint32_t seconds = time_s % 60;
+  osd_txn_write_uint(seconds % 10, 1);
+  osd_txn_write_uint(seconds / 10, 1);
+
+  osd_txn_submit(txn);
+}
+
+// print the current vtx settings as Band:Channel:Power
+void print_osd_vtx(osd_element_t *el) {
+  uint8_t str[5];
+
+  switch (vtx_settings.band) {
+  case VTX_BAND_A:
+    str[0] = 'A';
+    break;
+  case VTX_BAND_B:
+    str[0] = 'B';
+    break;
+  case VTX_BAND_E:
+    str[0] = 'E';
+    break;
+  case VTX_BAND_F:
+    str[0] = 'F';
+    break;
+  case VTX_BAND_R:
+    str[0] = 'R';
+    break;
+  default:
+    str[0] = 'M';
+    break;
+  }
+
+  str[1] = ':';
+  str[2] = vtx_settings.channel + 49;
+  str[3] = ':';
+
+  if (vtx_settings.pit_mode == 1) {
+    str[4] = 21; // "pit", probably from Pitch, but we will use it here
+  } else {
+    if (vtx_settings.power_level == 4)
+      str[4] = 36; // "max"
+    else
+      str[4] = vtx_settings.power_level + 49;
+  }
+
+  osd_transaction_t *txn = osd_txn_init();
+  osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
+  osd_txn_write_data(str, 5);
+  osd_txn_submit(txn);
+}
+
+#define HOLD 0
+#define TEMP 1
+
+// 3 stage return - 0 = stick and hold, 1 = move on but come back to clear, 2 = status print done
+uint8_t print_status(osd_element_t *el, uint8_t persistence, uint8_t label) {
+  const uint8_t system_status_labels[12][21] = {
+      {"               "},
+      {" **DISARMED**  "},
+      {"  **ARMED**    "},
+      {" STICK BOOST 1 "},
+      {" STICK BOOST 2 "},
+      {" **FAILSAFE**  "},
+      {"THROTTLE SAFETY"},
+      {" ARMING SAFETY "},
+      {"**LOW BATTERY**"},
+      {"**MOTOR TEST** "},
+      {"  **TURTLE**   "},
+      {" **LOOPTIME**  "},
+  };
+
+  static uint8_t last_label;
+  static uint8_t delay_counter = 25;
+  if (last_label != label) { // critical to reset indexers if a print sequence is interrupted by a new request
+    delay_counter = 25;
+  }
+  last_label = label;
+
+  if (delay_counter == 25) {
+    // First run, print the label
+    osd_transaction_t *txn = osd_txn_init();
+    osd_txn_start(osd_attr(el) | BLINK, el->pos_x, el->pos_y);
+    osd_txn_write_data(system_status_labels[label], 21);
+    osd_txn_submit(txn);
+
+    delay_counter--;
+
     return 0;
   }
-  index = 0;
+
+  if (persistence == HOLD) {
+    // label printed and we should hold
+    return 2;
+  }
+
+  // label printed and its temporary
+  if (!delay_counter) {
+    // timer is elapsed, print clear label
+    osd_transaction_t *txn = osd_txn_init();
+    osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_txn_write_data(system_status_labels[0], 21);
+    osd_txn_submit(txn);
+
+    delay_counter = 25;
+
+    return 2;
+  }
+
+  delay_counter--;
   return 1;
 }
 
-typedef enum {
-  CLEAR,
-  DISARM,
-  ARM,
-  BOOST_1,
-  BOOST_2,
-  FAILSAFE,
-  THRTL_SFTY,
-  ARM_SFTY,
-  LOW_BAT,
-  MOTOR_TEST,
-  TURTL,
-  LOOP
-} status_label;
-
-uint8_t print_status(uint8_t delay_clear, uint8_t label) { // 3 stage return - 0 = stick and hold, 1 = move on but come back to clear, 2 = status print done
-  const char system_status_labels[12][21] = {{"               "}, {" **DISARMED**  "}, {"  **ARMED**    "}, {" STICK BOOST 1 "}, {" STICK BOOST 2 "}, {" **FAILSAFE**  "}, {"THROTTLE SAFETY"}, {" ARMING SAFETY "}, {"**LOW BATTERY**"}, {"**MOTOR TEST** "}, {"  **TURTLE**   "}, {" **LOOPTIME**  "}};
-  static uint8_t last_label;
-  static uint8_t index;
-  static uint8_t delay_counter = 25;
-  if (last_label != label) { // critical to reset indexers if a print sequence is interrupted by a new request
-    index = 0;
-    delay_counter = 25;
-  }
-  uint8_t clear[1] = {32}; // prints a space
-  uint8_t character[] = {system_status_labels[label][index]};
-  last_label = label;
-  if (index < 15) {
-    osd_print_data(character, 1, osd_attr(arm_disarm) | BLINK, arm_disarm->pos_x + index, arm_disarm->pos_y);
-    index++;
-    return 0;
-  } else {
-    if (delay_clear) {
-      if (!delay_counter) {
-        if (index < 30) {
-          osd_print_data(clear, 1, osd_attr(arm_disarm), arm_disarm->pos_x + (index - 15), arm_disarm->pos_y);
-          index++;
-          return 0;
-        } else {
-          delay_counter = 25;
-          index = 0;
-          return 2;
-        }
-      } else {
-        delay_counter--;
-        return 1;
-      }
-    } else {
-      index = 0;
-      return 2;
-    }
-  }
-  return 2;
-}
-
-#define TEMP 1
-#define HOLD 0
-typedef struct {
-  uint8_t loop_warning;
-  uint8_t aux_boost;
-  uint8_t aux_motor_test;
-  control_flags_t flags;
-} sys_status_t;
-uint8_t print_osd_system_status() {
+uint8_t print_osd_system_status(osd_element_t *el) {
   static uint8_t ready = 0;
   uint8_t print_stage = 2; // 0 makes the main osd function stick and non zero lets it pass on
-  static sys_status_t last_sys_status;
-  static sys_status_t printing = {
+
+  static osd_sys_status_t last_sys_status;
+  static osd_sys_status_t printing = {
       .loop_warning = 0,
       .aux_boost = 0,
       .aux_motor_test = 0,
-      .flags = {0}};
+      .flags = {0},
+  };
+
   extern uint8_t looptime_warning;
+
   // things happen here
   if (ready) {
     if ((flags.arm_state != last_sys_status.flags.arm_state) || printing.flags.arm_state) {
       last_sys_status.flags.arm_state = flags.arm_state;
       printing.flags.arm_state = 1;
       if (flags.arm_state)
-        print_stage = print_status(TEMP, ARM);
+        print_stage = print_status(el, TEMP, ARM);
       else
-        print_stage = print_status(TEMP, DISARM);
+        print_stage = print_status(el, TEMP, DISARM);
       if (print_stage == 2)
         printing.flags.arm_state = 0;
       return print_stage;
@@ -365,7 +395,7 @@ uint8_t print_osd_system_status() {
     if (((looptime_warning != last_sys_status.loop_warning) || printing.loop_warning) && (state.looptime_autodetect != LOOPTIME_8K)) { // mute warnings till we are on the edge of 4k->2k
       last_sys_status.loop_warning = looptime_warning;
       printing.loop_warning = 1;
-      print_stage = print_status(TEMP, LOOP);
+      print_stage = print_status(el, TEMP, LOOP);
       if (print_stage == 2)
         printing.loop_warning = 0;
       return print_stage;
@@ -374,9 +404,9 @@ uint8_t print_osd_system_status() {
       last_sys_status.aux_boost = rx_aux_on(AUX_STICK_BOOST_PROFILE);
       printing.aux_boost = 1;
       if (rx_aux_on(AUX_STICK_BOOST_PROFILE))
-        print_stage = print_status(TEMP, BOOST_2);
+        print_stage = print_status(el, TEMP, BOOST_2);
       else
-        print_stage = print_status(TEMP, BOOST_1);
+        print_stage = print_status(el, TEMP, BOOST_1);
       if (print_stage == 2)
         printing.aux_boost = 0;
       return print_stage;
@@ -385,9 +415,9 @@ uint8_t print_osd_system_status() {
       last_sys_status.flags.failsafe = flags.failsafe;
       printing.flags.failsafe = 1;
       if (flags.failsafe)
-        print_stage = print_status(HOLD, FAILSAFE);
+        print_stage = print_status(el, HOLD, FAILSAFE);
       else
-        print_stage = print_status(HOLD, CLEAR);
+        print_stage = print_status(el, HOLD, CLEAR);
       if (print_stage == 2)
         printing.flags.failsafe = 0;
       return print_stage;
@@ -395,9 +425,9 @@ uint8_t print_osd_system_status() {
     if ((flags.arm_safety && !flags.failsafe) || printing.flags.arm_safety) {
       printing.flags.arm_safety = 1;
       if (flags.arm_safety) {
-        print_stage = print_status(HOLD, ARM_SFTY);
+        print_stage = print_status(el, HOLD, ARM_SFTY);
       } else {
-        print_stage = print_status(HOLD, CLEAR);
+        print_stage = print_status(el, HOLD, CLEAR);
         if (print_stage == 2)
           printing.flags.arm_safety = 0;
       }
@@ -406,9 +436,9 @@ uint8_t print_osd_system_status() {
     if ((flags.throttle_safety && !flags.arm_safety) || printing.flags.throttle_safety) {
       printing.flags.throttle_safety = 1;
       if (flags.throttle_safety) {
-        print_stage = print_status(HOLD, THRTL_SFTY);
+        print_stage = print_status(el, HOLD, THRTL_SFTY);
       } else {
-        print_stage = print_status(HOLD, CLEAR);
+        print_stage = print_status(el, HOLD, CLEAR);
         if (print_stage == 2)
           printing.flags.throttle_safety = 0;
       }
@@ -418,9 +448,9 @@ uint8_t print_osd_system_status() {
       last_sys_status.flags.lowbatt = flags.lowbatt;
       printing.flags.lowbatt = 1;
       if (flags.lowbatt)
-        print_stage = print_status(HOLD, LOW_BAT);
+        print_stage = print_status(el, HOLD, LOW_BAT);
       else
-        print_stage = print_status(HOLD, CLEAR);
+        print_stage = print_status(el, HOLD, CLEAR);
       if (print_stage == 2)
         printing.flags.lowbatt = 0;
       return print_stage;
@@ -428,9 +458,9 @@ uint8_t print_osd_system_status() {
     if ((rx_aux_on(AUX_MOTOR_TEST) && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe) || (printing.aux_motor_test && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe)) {
       printing.aux_motor_test = 1;
       if (rx_aux_on(AUX_MOTOR_TEST)) {
-        print_stage = print_status(HOLD, MOTOR_TEST);
+        print_stage = print_status(el, HOLD, MOTOR_TEST);
       } else {
-        print_stage = print_status(HOLD, CLEAR);
+        print_stage = print_status(el, HOLD, CLEAR);
         if (print_stage == 2)
           printing.aux_motor_test = 0;
       }
@@ -439,9 +469,9 @@ uint8_t print_osd_system_status() {
     if ((flags.turtle && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe) || (printing.flags.turtle && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe)) {
       printing.flags.turtle = 1;
       if (flags.turtle) {
-        print_stage = print_status(HOLD, TURTL);
+        print_stage = print_status(el, HOLD, TURTL);
       } else {
-        print_stage = print_status(HOLD, CLEAR);
+        print_stage = print_status(el, HOLD, CLEAR);
         if (print_stage == 2)
           printing.flags.turtle = 0;
       }
@@ -458,15 +488,21 @@ uint8_t print_osd_system_status() {
   return ready;
 }
 
-void print_osd_rssi() {
-  static float rx_rssi_filt;
-  uint8_t osd_rssi[5];
-  if (flags.failsafe)
-    state.rx_rssi = 0.0f;
-  lpf(&rx_rssi_filt, state.rx_rssi, FILTERCALC(state.looptime * 1e6f * 133.0f, 2e6f)); // 2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
-  fast_fprint(osd_rssi, 5, (rx_rssi_filt - 0.5f), 0);
-  osd_rssi[4] = 1;
-  osd_print_data(osd_rssi, 5, osd_attr(rssi), rssi->pos_x, rssi->pos_y);
+void print_osd_callsign_adjustable(uint8_t string_element_qty, uint8_t data_element_qty, const uint8_t grid[data_element_qty][2], const uint8_t print_position[data_element_qty][2]) {
+  if (osd_menu_phase <= string_element_qty)
+    return;
+  if (osd_menu_phase > string_element_qty + data_element_qty)
+    return;
+  static uint8_t skip_loop = 0;
+  if (osd_menu_phase == string_element_qty + 1 && skip_loop == 0) { // skip a loop to prevent dma collision with previous print function
+    skip_loop++;
+    return;
+  }
+  skip_loop = 0;
+  uint8_t index = osd_menu_phase - string_element_qty - 1;
+  uint8_t character[] = {(profile.osd.elements[callsign_shift_index[index][0]] >> callsign_shift_index[index][1]) & 0xFF};
+  osd_print_data(character, 1, grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
+  osd_menu_phase++;
 }
 
 void print_osd_menu_strings(uint8_t string_element_qty, uint8_t active_element_qty, const char element_names[string_element_qty][21], const uint8_t print_position[string_element_qty][2]) {
@@ -576,145 +612,134 @@ void osd_init() {
 }
 
 static void osd_display_regular() {
-  uint8_t print_buffer[16];
-  memset(print_buffer, ' ', 16);
+  osd_element_t *el = (osd_element_t *)&profile.osd.elements[osd_display_element];
+  if (osd_display_element < OSD_ELEMENT_MAX && !el->active) {
+    osd_display_element++;
+    return;
+  }
 
   switch (osd_display_element) {
-  case OSD_CALLSIGN:
-    if (callsign->active) {
-      osd_print((const char *)profile.osd.callsign, osd_attr(callsign), callsign->pos_x, callsign->pos_y);
-    }
+  case OSD_CALLSIGN: {
+    osd_transaction_t *txn = osd_txn_init();
+    osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_txn_write_str((const char *)profile.osd.callsign);
+    osd_txn_submit(txn);
     osd_display_element++;
     break;
+  }
 
-  case OSD_FUELGAUGE_VOLTS:
-    if (fuelgauge_volts->active) {
-      fast_fprint(print_buffer, 4, state.vbatt_comp, 1);
-      print_buffer[4] = 'V';
-      osd_print_data(print_buffer, 5, osd_attr(fuelgauge_volts), fuelgauge_volts->pos_x + 3, fuelgauge_volts->pos_y);
-    }
-    osd_display_element++;
-    break;
-
-  case OSD_FUELGAUGE_VOLTS_CELLS:
-    if (fuelgauge_volts->active) {
-      if (flags.lowbatt != last_lowbatt_state) {
-        uint8_t osd_cellcount[2] = {state.lipo_cell_count + 48, 'S'};
-        if (!flags.lowbatt) {
-          osd_print_data(osd_cellcount, 2, osd_attr(fuelgauge_volts), fuelgauge_volts->pos_x, fuelgauge_volts->pos_y);
-        } else {
-          osd_print_data(osd_cellcount, 2, BLINK | INVERT, fuelgauge_volts->pos_x, fuelgauge_volts->pos_y);
-        }
-        last_lowbatt_state = flags.lowbatt;
-      }
-    }
-    osd_display_element++;
-    break;
-
-  case OSD_FILTERED_VOLTS:
-    if (filtered_volts->active) {
-      fast_fprint(print_buffer, 4, state.vbattfilt_corr, 1);
-      print_buffer[4] = 'V';
-      osd_print_data(print_buffer, 5, osd_attr(filtered_volts), filtered_volts->pos_x + 3, filtered_volts->pos_y);
-    }
-    osd_display_element++;
-    break;
-
-  case OSD_FILTERED_VOLTS_CELLS:
-    if (filtered_volts->active) {
-      if (flags.lowbatt != last_lowbatt_state2) {
-        uint8_t osd_cellcount2[2] = {state.lipo_cell_count + 48, 'S'};
-        if (!flags.lowbatt) {
-          osd_print_data(osd_cellcount2, 2, osd_attr(filtered_volts), filtered_volts->pos_x, filtered_volts->pos_y);
-        } else {
-          osd_print_data(osd_cellcount2, 2, BLINK | INVERT, filtered_volts->pos_x, filtered_volts->pos_y);
-        }
-        last_lowbatt_state2 = flags.lowbatt;
-      }
-    }
-    osd_display_element++;
-    break;
-
-  case OSD_GYRO_TEMP:
-    if (gyro_degrees->active) {
-      fast_fprint(print_buffer, 5, state.gyro_temp, 0);
-      print_buffer[4] = 14; // degrees C
-      osd_print_data(print_buffer, 5, osd_attr(gyro_degrees), gyro_degrees->pos_x + 3, gyro_degrees->pos_y);
-    }
-    osd_display_element++;
-    break;
-
-  case OSD_FLIGHT_MODE:
-    if (flight_mode->active) {
-      uint8_t flightmode_done = print_osd_flightmode();
-      if (flightmode_done)
-        osd_display_element++;
+  case OSD_FUELGAUGE_VOLTS: {
+    osd_transaction_t *txn = osd_txn_init();
+    if (!flags.lowbatt) {
+      osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
     } else {
-      osd_display_element++;
+      osd_txn_start(BLINK | INVERT, el->pos_x, el->pos_y);
     }
-    break;
+    osd_txn_write_uint(state.lipo_cell_count, 1);
+    osd_txn_write_char('S');
 
-  case OSD_RSSI:
-    if (rssi->active) {
-      print_osd_rssi();
-    }
+    osd_txn_start(osd_attr(el), el->pos_x + 3, el->pos_y);
+    osd_txn_write_float(state.vbatt_comp, 4, 1);
+    osd_txn_write_char('V');
+
+    osd_txn_submit(txn);
     osd_display_element++;
     break;
+  }
 
-  case OSD_STOPWATCH:
-    if (stopwatch->active) {
-      format_time(print_buffer, state.armtime);
-      osd_print_data(print_buffer, 5, osd_attr(stopwatch), stopwatch->pos_x, stopwatch->pos_y);
-    }
-    osd_display_element++;
-    break;
-
-  case OSD_SYSTEM_STATUS:
-    if (arm_disarm->active) {
-      uint8_t system_status_done = print_osd_system_status();
-      if (system_status_done)
-        osd_display_element++;
+  case OSD_FILTERED_VOLTS: {
+    osd_transaction_t *txn = osd_txn_init();
+    if (!flags.lowbatt) {
+      osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
     } else {
+      osd_txn_start(BLINK | INVERT, el->pos_x, el->pos_y);
+    }
+    osd_txn_write_uint(state.lipo_cell_count, 1);
+    osd_txn_write_char('S');
+
+    osd_txn_start(osd_attr(el), el->pos_x + 3, el->pos_y);
+    osd_txn_write_float(state.vbattfilt_corr, 4, 1);
+    osd_txn_write_char('V');
+
+    osd_txn_submit(txn);
+    osd_display_element++;
+    break;
+  }
+
+  case OSD_GYRO_TEMP: {
+    osd_transaction_t *txn = osd_txn_init();
+    osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_txn_write_uint(state.gyro_temp, 4);
+    osd_txn_write_char(ICON_CELSIUS);
+    osd_txn_submit(txn);
+    osd_display_element++;
+    break;
+  }
+
+  case OSD_FLIGHT_MODE: {
+    print_osd_flightmode(el);
+    osd_display_element++;
+    break;
+  }
+
+  case OSD_RSSI: {
+    print_osd_rssi(el);
+    osd_display_element++;
+    break;
+  }
+
+  case OSD_STOPWATCH: {
+    print_osd_armtime(el);
+    osd_display_element++;
+    break;
+  }
+
+  case OSD_SYSTEM_STATUS: {
+    if (print_osd_system_status(el))
       osd_display_element++;
-    }
     break;
+  }
 
-  case OSD_THROTTLE:
-    if (osd_throttle->active) {
-      fast_fprint(print_buffer, 5, (state.throttle * 100.0f), 0);
-      print_buffer[4] = 4;
-      osd_print_data(print_buffer, 5, osd_attr(osd_throttle), osd_throttle->pos_x, osd_throttle->pos_y);
-    }
+  case OSD_THROTTLE: {
+    osd_transaction_t *txn = osd_txn_init();
+    osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_txn_write_uint(state.throttle * 100.0f, 4);
+    osd_txn_write_char(ICON_THROTTLE);
+    osd_txn_submit(txn);
     osd_display_element++;
     break;
+  }
 
-  case OSD_VTX_CHANNEL:
-    if (osd_vtx->active && vtx_settings.detected) {
-      format_vtx(print_buffer);
-      osd_print_data(print_buffer, 5, osd_attr(osd_vtx), osd_vtx->pos_x, osd_vtx->pos_y);
-    }
+  case OSD_VTX_CHANNEL: {
+    print_osd_vtx(el);
     osd_display_element++;
     break;
+  }
 
-  case OSD_CURRENT_DRAW:
-    if (osd_current->active) {
-      fast_fprint(print_buffer, 5, state.ibat_filtered / 1000.0f, 2);
-      print_buffer[4] = 154; // AMP icon
-      osd_print_data(print_buffer, 5, osd_attr(osd_current), osd_current->pos_x, osd_current->pos_y);
-    }
+  case OSD_CURRENT_DRAW: {
+    osd_transaction_t *txn = osd_txn_init();
+    osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_txn_write_float(state.ibat_filtered / 1000.0f, 4, 2);
+    osd_txn_write_char(ICON_AMP);
+    osd_txn_submit(txn);
     osd_display_element++;
     break;
+  }
 
-  case OSD_ELEMENT_MAX:
+  case OSD_ELEMENT_MAX: {
     // end of regular display - display_trigger counter sticks here till it wraps
     display_trigger++;
     if (display_trigger == 0)
       osd_display_element = 1;
     break;
   }
+  }
 }
 
 void osd_display() {
+  if (!osd_is_ready()) {
+    return;
+  }
 
   // first check if video signal autodetect needs to run - run if necessary
   extern uint8_t lastsystem; // initialized at 99 for none then becomes 0 or 1 for ntsc/pal
@@ -1044,4 +1069,6 @@ void osd_display() {
     flags.arm_safety = 1; // final safety check to disallow arming during OSD operation
 } // end osd_display()
 //******************************************************************************************************************************
+
+#pragma GCC diagnostic pop
 #endif

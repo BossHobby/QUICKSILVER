@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 
+#include "drv_osd.h"
 #include "drv_spi.h"
 #include "drv_time.h"
 #include "project.h"
@@ -231,7 +232,7 @@ void osd_print_data(const uint8_t *buffer, uint8_t length, uint8_t dmm_attribute
 
 // prints string to screen with dmm_attribute TEXT, BLINK, or INVERT.  CAUTION:  strlen() is used in this so only use this for compile time strings
 void osd_print(const char *buffer, uint8_t dmm_attribute, uint8_t x, uint8_t y) {
-  osd_print_data(buffer, strlen(buffer), dmm_attribute, x, y);
+  osd_print_data((const uint8_t *)buffer, strlen(buffer), dmm_attribute, x, y);
 }
 
 // clears off entire display    This function is a blocking use of non blocking print (not looptime friendly)
@@ -423,6 +424,46 @@ void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size) {
 
   // enable osd
   max7456_dma_spi_write(VM0, 0x1);
+}
+
+void osd_txn_submit(osd_transaction_t *txn) {
+  uint16_t offset = 0;
+
+  for (uint16_t i = 0; i < txn->segment_count; i++) {
+    osd_segment_t *seg = &txn->segments[i];
+
+    // NTSC adjustment 3 lines up if after line 12 or maybe this should be 8
+    if (lastsystem != PAL && seg->y > 12) {
+      seg->y = seg->y - 2;
+    }
+    if (seg->y > MAXROWS - 1) {
+      seg->y = MAXROWS - 1;
+    }
+
+    const uint16_t pos = seg->x + seg->y * 30;
+
+    dma_buffer[offset++] = DMM;
+    dma_buffer[offset++] = seg->attr;
+    dma_buffer[offset++] = DMAH;
+    dma_buffer[offset++] = (pos >> 8) & 0xFF;
+    dma_buffer[offset++] = DMAL;
+    dma_buffer[offset++] = pos & 0xFF;
+
+    for (uint16_t j = 0; j < seg->size; j++) {
+      dma_buffer[offset++] = DMDI;
+      dma_buffer[offset++] = txn->buffer[seg->offset + j];
+    }
+
+    // off autoincrement mode
+    dma_buffer[offset++] = DMDI;
+    dma_buffer[offset++] = 0xFF;
+  }
+
+  max7456_dma_it_transfer_bytes(dma_buffer, offset);
+}
+
+bool osd_is_ready() {
+  return osd_dma_status == READY;
 }
 
 #endif
