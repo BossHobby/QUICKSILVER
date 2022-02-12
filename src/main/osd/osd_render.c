@@ -56,22 +56,17 @@ extern vtx_settings_t vtx_settings;
 extern vtx_settings_t vtx_settings_copy;
 
 // pointers to flash variable array
-osd_element_t *callsign1 = (osd_element_t *)(profile.osd.elements);
-uint32_t *callsign2 = (profile.osd.elements + 1);
-uint32_t *callsign3 = (profile.osd.elements + 2);
-uint32_t *callsign4 = (profile.osd.elements + 3);
-uint32_t *callsign5 = (profile.osd.elements + 4);
-uint32_t *callsign6 = (profile.osd.elements + 5);
-osd_element_t *fuelgauge_volts = (osd_element_t *)(profile.osd.elements + 6);
-osd_element_t *filtered_volts = (osd_element_t *)(profile.osd.elements + 7);
-osd_element_t *gyro_degrees = (osd_element_t *)(profile.osd.elements + 8);
-osd_element_t *flight_mode = (osd_element_t *)(profile.osd.elements + 9);
-osd_element_t *rssi = (osd_element_t *)(profile.osd.elements + 10);
-osd_element_t *stopwatch = (osd_element_t *)(profile.osd.elements + 11);
-osd_element_t *arm_disarm = (osd_element_t *)(profile.osd.elements + 12);
-osd_element_t *osd_throttle = (osd_element_t *)(profile.osd.elements + 13);
-osd_element_t *osd_vtx = (osd_element_t *)(profile.osd.elements + 14);
-osd_element_t *osd_current = (osd_element_t *)(profile.osd.elements + 15);
+osd_element_t *callsign = (osd_element_t *)(&profile.osd.elements[0]);
+osd_element_t *fuelgauge_volts = (osd_element_t *)(&profile.osd.elements[1]);
+osd_element_t *filtered_volts = (osd_element_t *)(&profile.osd.elements[2]);
+osd_element_t *gyro_degrees = (osd_element_t *)(&profile.osd.elements[3]);
+osd_element_t *flight_mode = (osd_element_t *)(&profile.osd.elements[4]);
+osd_element_t *rssi = (osd_element_t *)(&profile.osd.elements[5]);
+osd_element_t *stopwatch = (osd_element_t *)(&profile.osd.elements[6]);
+osd_element_t *arm_disarm = (osd_element_t *)(&profile.osd.elements[7]);
+osd_element_t *osd_throttle = (osd_element_t *)(&profile.osd.elements[8]);
+osd_element_t *osd_vtx = (osd_element_t *)(&profile.osd.elements[9]);
+osd_element_t *osd_current = (osd_element_t *)(&profile.osd.elements[10]);
 
 static uint8_t osd_attr(osd_element_t *el) {
   return el->attribute ? INVERT : TEXT;
@@ -253,33 +248,6 @@ void print_osd_callsign_adjustable(uint8_t string_element_qty, uint8_t data_elem
   uint8_t character[] = {(profile.osd.elements[callsign_shift_index[index][0]] >> callsign_shift_index[index][1]) & 0xFF};
   osd_print_data(character, 1, grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
   osd_menu_phase++;
-}
-
-uint8_t print_osd_callsign() {
-  static uint8_t index = 0;
-  static uint8_t callsign_length = 0;
-  if (index == 0) {
-    for (uint8_t i = 19; i >= 0; i--) {
-      uint8_t last_user_input = (profile.osd.elements[callsign_shift_index[i][0]] >> callsign_shift_index[i][1]) & 0xFF;
-      if (last_user_input != 0x3F) {
-        callsign_length = i + 1;
-        index++;
-        return 0;
-      }
-    }
-    callsign_length = 0; // for loop found callsign is all spaces so set length to 0 and return
-    index = 0;
-    return 1;
-  }
-
-  if (index <= callsign_length && callsign_length > 0) {
-    uint8_t character[] = {(profile.osd.elements[callsign_shift_index[index - 1][0]] >> callsign_shift_index[index - 1][1]) & 0xFF};
-    osd_print_data(character, 1, osd_attr(callsign1), callsign1->pos_x + index - 1, callsign1->pos_y);
-    index++;
-    return 0;
-  }
-  index = 0;
-  return 1;
 }
 
 uint8_t print_osd_flightmode() {
@@ -613,13 +581,10 @@ static void osd_display_regular() {
 
   switch (osd_display_element) {
   case OSD_CALLSIGN:
-    if (callsign1->active) {
-      uint8_t callsign_done = print_osd_callsign();
-      if (callsign_done)
-        osd_display_element++;
-    } else {
-      osd_display_element++;
+    if (callsign->active) {
+      osd_print((const char *)profile.osd.callsign, osd_attr(callsign), callsign->pos_x, callsign->pos_y);
     }
+    osd_display_element++;
     break;
 
   case OSD_FUELGAUGE_VOLTS:
@@ -740,7 +705,8 @@ static void osd_display_regular() {
     osd_display_element++;
     break;
 
-  case OSD_ELEMENT_MAX: // end of regular display - display_trigger counter sticks here till it wraps
+  case OSD_ELEMENT_MAX:
+    // end of regular display - display_trigger counter sticks here till it wraps
     display_trigger++;
     if (display_trigger == 0)
       osd_display_element = 1;

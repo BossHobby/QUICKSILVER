@@ -239,10 +239,12 @@ typedef struct {
   MEMBER(smart_audio, uint8)
 
 typedef struct {
+  uint8_t callsign[36];
   uint32_t elements[OSD_NUMBER_ELEMENTS];
 } profile_osd_t;
 
-#define OSD_MEMBERS \
+#define OSD_MEMBERS         \
+  TSTR_MEMBER(callsign, 36) \
   ARRAY_MEMBER(elements, OSD_NUMBER_ELEMENTS, uint32)
 
 typedef struct {

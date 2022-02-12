@@ -10,7 +10,7 @@
 
 #ifdef ENABLE_OSD
 
-//SPI PINS
+// SPI PINS
 #define PORT spi_port_defs[MAX7456_SPI_PORT]
 
 #define DMA_RX_STREAM PORT.dma.rx_stream
@@ -55,7 +55,7 @@ void spi_max7456_init() {
   spi_dma_init(MAX7456_SPI_PORT);
 }
 
-//deinit/reinit spi for unique slave configuration
+// deinit/reinit spi for unique slave configuration
 void spi_max7556_reinit() {
   spi_dma_wait_for_ready(MAX7456_SPI_PORT);
 
@@ -82,7 +82,7 @@ void spi_max7556_reinit() {
 
 #define BUSY 1
 #define READY 0
-volatile uint8_t osd_dma_status = READY; //for tracking the non blocking dma transactions - can be used to make non blocking into blocking
+volatile uint8_t osd_dma_status = READY; // for tracking the non blocking dma transactions - can be used to make non blocking into blocking
 
 // blocking dma read of a single register
 uint8_t max7456_dma_spi_read(uint8_t reg) {
@@ -133,9 +133,9 @@ uint8_t lastvm0 = 0x55;
 
 static uint8_t dma_buffer[64];
 
-//TODO ... should we monitor lastvm0 and handle any unexpected changes using check_osd() ... not sure if/when an osd chip becomes unstable due to voltage or some other reason
+// TODO ... should we monitor lastvm0 and handle any unexpected changes using check_osd() ... not sure if/when an osd chip becomes unstable due to voltage or some other reason
 
-//stuffs a float into a char array.  parameters are array length and precision.  only pads spaces for 0's up to the thousands place.
+// stuffs a float into a char array.  parameters are array length and precision.  only pads spaces for 0's up to the thousands place.
 
 uint8_t count_digits(uint32_t value) {
   uint8_t count = 0;
@@ -146,7 +146,7 @@ uint8_t count_digits(uint32_t value) {
   return count;
 }
 
-//stuffs a float into a char array.  parameters are array length and precision.  only pads spaces for 0's up to the thousands place.
+// stuffs a float into a char array.  parameters are array length and precision.  only pads spaces for 0's up to the thousands place.
 void fast_fprint(uint8_t *str, uint8_t length, float v, uint8_t precision) {
   const uint8_t is_negative = v < 0 ? 1 : 0;
 
@@ -194,9 +194,9 @@ void fast_fprint(uint8_t *str, uint8_t length, float v, uint8_t precision) {
 }
 
 // prints array to screen with array length, dmm_attribute TEXT, BLINK, or INVERT, and xy position
-void osd_print_data(uint8_t *buffer, uint8_t length, uint8_t dmm_attribute, uint8_t x, uint8_t y) {
+void osd_print_data(const uint8_t *buffer, uint8_t length, uint8_t dmm_attribute, uint8_t x, uint8_t y) {
   if (lastsystem != PAL) {
-    //NTSC adjustment 3 lines up if after line 12 or maybe this should be 8
+    // NTSC adjustment 3 lines up if after line 12 or maybe this should be 8
     if (y > 12)
       y = y - 2;
   }
@@ -213,9 +213,9 @@ void osd_print_data(uint8_t *buffer, uint8_t length, uint8_t dmm_attribute, uint
   dma_buffer[0] = DMM;
   dma_buffer[1] = dmm_attribute;
   dma_buffer[2] = DMAH;
-  dma_buffer[3] = 0x01 & (pos >> 8);
+  dma_buffer[3] = (pos >> 8) & 0xFF;
   dma_buffer[4] = DMAL;
-  dma_buffer[5] = (uint8_t)pos;
+  dma_buffer[5] = pos & 0xFF;
 
   for (int i = 0; i < length; i++) {
     dma_buffer[(i * 2) + 6] = DMDI;
@@ -224,47 +224,17 @@ void osd_print_data(uint8_t *buffer, uint8_t length, uint8_t dmm_attribute, uint
   // off autoincrement mode
   dma_buffer[(length * 2) + 6] = DMDI;
   dma_buffer[(length * 2) + 7] = 0xFF;
-  //non blocking dma print
+
+  // non blocking dma print
   max7456_dma_it_transfer_bytes(dma_buffer, (length * 2) + 8);
 }
 
 // prints string to screen with dmm_attribute TEXT, BLINK, or INVERT.  CAUTION:  strlen() is used in this so only use this for compile time strings
 void osd_print(const char *buffer, uint8_t dmm_attribute, uint8_t x, uint8_t y) {
-  if (lastsystem != PAL) {
-    //NTSC adjustment 3 lines up if after line 12 or maybe this should be 8
-    if (y > 12)
-      y = y - 2;
-  }
-  if (y > MAXROWS - 1)
-    y = MAXROWS - 1;
-
-  const uint32_t size = (strlen(buffer) * 2) + 8;
-  if (size > 64) {
-    return;
-  }
-
-  // 16 bit mode, auto increment mode
-  uint16_t pos = x + y * 30;
-  dma_buffer[0] = DMM;
-  dma_buffer[1] = dmm_attribute;
-  dma_buffer[2] = DMAH;
-  dma_buffer[3] = 0x01 & (pos >> 8);
-  dma_buffer[4] = DMAL;
-  dma_buffer[5] = (uint8_t)pos;
-
-  for (uint32_t i = 0; i < strlen(buffer); i++) {
-    dma_buffer[(i * 2) + 6] = DMDI;
-    dma_buffer[(i * 2) + 7] = buffer[i];
-  }
-  // off autoincrement mode
-  dma_buffer[(strlen(buffer) * 2) + 6] = DMDI;
-  dma_buffer[(strlen(buffer) * 2) + 7] = 0xFF;
-
-  //non blocking dma print
-  max7456_dma_it_transfer_bytes(dma_buffer, size);
+  osd_print_data(buffer, strlen(buffer), dmm_attribute, x, y);
 }
 
-//clears off entire display    This function is a blocking use of non blocking print (not looptime friendly)
+// clears off entire display    This function is a blocking use of non blocking print (not looptime friendly)
 void osd_clear() {
   for (uint8_t y = 0; y < MAXROWS; y++) { // CHAR , ATTRIBUTE , COL , ROW
     osd_print("          ", TEXT, 0, y);
@@ -307,36 +277,36 @@ void osd_setsystem(uint8_t sys) {
   }
 }
 
-//function to autodetect and correct ntsc/pal mode or mismatch
+// function to autodetect and correct ntsc/pal mode or mismatch
 void osd_checksystem() {
-  //check detected video system
+  // check detected video system
   uint8_t x = max7456_dma_spi_read(STAT);
-  if ((x & 0x01) == 0x01) { //PAL
+  if ((x & 0x01) == 0x01) { // PAL
     if (lastsystem != PAL) {
       lastsystem = PAL;
       if (osdsystem != PAL)
         osd_setsystem(PAL);
       osd_clear(); // initial screen clear off
-                   //osd_print( "PAL  DETECTED" , BLINK , SYSTEMXPOS+1 , SYSTEMYPOS );  //for debugging - remove later
+                   // osd_print( "PAL  DETECTED" , BLINK , SYSTEMXPOS+1 , SYSTEMYPOS );  //for debugging - remove later
     }
   }
 
-  if ((x & 0x02) == 0x02) { //NTSC
+  if ((x & 0x02) == 0x02) { // NTSC
     if (lastsystem != NTSC) {
       lastsystem = NTSC;
       if (osdsystem != NTSC)
         osd_setsystem(NTSC);
       osd_clear(); // initial screen clear off
-                   //osd_print( "NTSC DETECTED" , BLINK , SYSTEMXPOS+1 , SYSTEMYPOS );  //for debugging - remove later
+                   // osd_print( "NTSC DETECTED" , BLINK , SYSTEMXPOS+1 , SYSTEMYPOS );  //for debugging - remove later
     }
   }
 
-  if ((x & 0x03) == 0x00) { //No signal
+  if ((x & 0x03) == 0x00) { // No signal
     if (lastsystem > 1) {
       if (lastsystem > 2)
         osd_clear(); // initial screen clear off since lastsystem is set to 99 at boot
       static uint8_t warning_sent = 0;
-      if (warning_sent < 2) //incriments once at boot, and again the first time through main loop.  Then cleared by a incoming signal
+      if (warning_sent < 2) // incriments once at boot, and again the first time through main loop.  Then cleared by a incoming signal
       {
         if (warning_sent == 1)
           osd_print("NO CAMERA SIGNAL", BLINK, SYSTEMXPOS, SYSTEMYPOS);
@@ -349,10 +319,10 @@ void osd_checksystem() {
   }
 }
 
-//establish initial boot-up state
+// establish initial boot-up state
 void max7456_init() {
   uint8_t x;
-  max7456_dma_spi_write(VM0, 0x02); //soft reset
+  max7456_dma_spi_write(VM0, 0x02); // soft reset
   time_delay_us(200);
   x = max7456_dma_spi_read(OSDBL_R);
   max7456_dma_spi_write(OSDBL_W, x | 0x10);
@@ -368,7 +338,7 @@ void max7456_init() {
   osd_checksystem();
 }
 
-//splash screen
+// splash screen
 void osd_intro() {
   uint8_t buffer[24];
   for (uint8_t row = 0; row < 4; row++) {
@@ -382,11 +352,11 @@ void osd_intro() {
   }
 }
 
-//NOT USING THIS FUNCTION YET OR EVEN SURE IF IT IS NEEDED
-// check for osd "accidental" reset
-// possibly caused by low or unstable voltage
-// MAX resets somewhere between 4.2V and 4.6V
-//  Clone chips are unknown to me but obviously below 3.3v
+// NOT USING THIS FUNCTION YET OR EVEN SURE IF IT IS NEEDED
+//  check for osd "accidental" reset
+//  possibly caused by low or unstable voltage
+//  MAX resets somewhere between 4.2V and 4.6V
+//   Clone chips are unknown to me but obviously below 3.3v
 void check_osd() {
   uint8_t x = max7456_dma_spi_read(VM0_R);
   if (x != lastvm0) {                 // the register is not what it's supposed to be
