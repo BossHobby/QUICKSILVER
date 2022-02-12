@@ -463,13 +463,9 @@ const profile_t default_profile = {
         },
     },
     .osd = {
+        .callsign = "QUICKSILVER",
         .elements = {
             0xA7,
-            0x43495551,
-            0x4C49534B,
-            0x3F524556,
-            0x3F3F3F3F,
-            0x3F3F3F3F,
             0x704,
             0x72D,
             0x755,
@@ -562,6 +558,7 @@ cbor_result_t cbor_encode_profile_metadata_t(cbor_value_t *enc, const profile_me
 
 #define MEMBER CBOR_ENCODE_MEMBER
 #define STR_MEMBER CBOR_ENCODE_STR_MEMBER
+#define TSTR_MEMBER CBOR_ENCODE_TSTR_MEMBER
 #define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
 #define STR_ARRAY_MEMBER CBOR_ENCODE_STR_ARRAY_MEMBER
 
@@ -639,6 +636,7 @@ CBOR_END_STRUCT_ENCODER()
 
 #undef MEMBER
 #undef STR_MEMBER
+#undef TSTR_MEMBER
 #undef ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER
 
@@ -682,6 +680,7 @@ cbor_result_t cbor_decode_profile_metadata_t(cbor_value_t *dec, profile_metadata
 
 #define MEMBER CBOR_DECODE_MEMBER
 #define STR_MEMBER CBOR_DECODE_STR_MEMBER
+#define TSTR_MEMBER CBOR_DECODE_TSTR_MEMBER
 #define ARRAY_MEMBER CBOR_DECODE_ARRAY_MEMBER
 #define STR_ARRAY_MEMBER CBOR_DECODE_STR_ARRAY_MEMBER
 
@@ -751,5 +750,6 @@ CBOR_END_STRUCT_DECODER()
 
 #undef MEMBER
 #undef STR_MEMBER
+#undef TSTR_MEMBER
 #undef ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER

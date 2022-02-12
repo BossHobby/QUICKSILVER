@@ -23,12 +23,12 @@
 
 #define RB0 0x10
 
-#define STAT 0xA2 //Status register read address
+#define STAT 0xA2 // Status register read address
 
 #define DMDO 0XB0
 #define CMDO 0xC0
 
-#ifdef AIRBOT_OSD_PATCH //airbot ab7456 chip cant time blinks unless there is no incoming video signal
+#ifdef AIRBOT_OSD_PATCH // airbot ab7456 chip cant time blinks unless there is no incoming video signal
 #define BLINK 0x01
 #else
 #define BLINK 0x11
@@ -61,7 +61,7 @@ void osd_clear();
 uint8_t osd_runtime_screen_clear();
 void osd_checksystem();
 void osd_print(const char *buffer, uint8_t dmm_attribute, uint8_t x, uint8_t y);
-void osd_print_data(uint8_t *buffer, uint8_t length, uint8_t dmm_attribute, uint8_t x, uint8_t y);
+void osd_print_data(const uint8_t *buffer, uint8_t length, uint8_t dmm_attribute, uint8_t x, uint8_t y);
 void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size);
 void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size);
 
