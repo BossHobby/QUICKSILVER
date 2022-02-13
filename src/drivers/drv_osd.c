@@ -97,12 +97,14 @@ void osd_txn_write_float(float val, uint8_t width, uint8_t precision) {
     value /= 10;
     actual_width++;
   }
+  if (precision > 0) {
+    buf[width - precision - 1] = '.';
+    actual_width++;
+  }
 
-  buf[width - precision - 1] = '.';
-  actual_width++;
-
-  for (uint8_t i = precision + 1; i < width; i++) {
-    if (value != 0 || i == precision + 1) {
+  const uint8_t start = actual_width;
+  for (uint8_t i = start; i < width; i++) {
+    if (value != 0 || i == start) {
       buf[width - i - 1] = '0' + (value % 10);
       value /= 10;
       actual_width++;

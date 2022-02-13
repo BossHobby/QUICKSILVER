@@ -500,8 +500,12 @@ void print_osd_callsign_adjustable(uint8_t string_element_qty, uint8_t data_elem
   }
   skip_loop = 0;
   uint8_t index = osd_menu_phase - string_element_qty - 1;
-  uint8_t character[] = {(profile.osd.elements[callsign_shift_index[index][0]] >> callsign_shift_index[index][1]) & 0xFF};
-  osd_print_data(character, 1, grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
+
+  osd_transaction_t *txn = osd_txn_init();
+  osd_txn_start(grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
+  osd_txn_write_char((profile.osd.elements[callsign_shift_index[index][0]] >> callsign_shift_index[index][1]) & 0xFF);
+  osd_txn_submit(txn);
+
   osd_menu_phase++;
 }
 
@@ -513,7 +517,12 @@ void print_osd_menu_strings(uint8_t string_element_qty, uint8_t active_element_q
       osd_menu_phase++;
     return;
   }
-  osd_print(element_names[osd_menu_phase - 1], user_select(active_element_qty, string_element_qty), print_position[osd_menu_phase - 1][0], print_position[osd_menu_phase - 1][1]);
+
+  osd_transaction_t *txn = osd_txn_init();
+  osd_txn_start(user_select(active_element_qty, string_element_qty), print_position[osd_menu_phase - 1][0], print_position[osd_menu_phase - 1][1]);
+  osd_txn_write_str(element_names[osd_menu_phase - 1]);
+  osd_txn_submit(txn);
+
   osd_menu_phase++;
 }
 
@@ -529,7 +538,12 @@ void print_osd_adjustable_enums(uint8_t string_element_qty, uint8_t data_element
   }
   skip_loop = 0;
   uint8_t index = osd_menu_phase - string_element_qty - 1;
-  osd_print(data_to_print, grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
+
+  osd_transaction_t *txn = osd_txn_init();
+  osd_txn_start(grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
+  osd_txn_write_str(data_to_print);
+  osd_txn_submit(txn);
+
   osd_menu_phase++;
 }
 
@@ -544,19 +558,28 @@ void print_osd_adjustable_vectors(uint8_t menu_type, uint8_t string_element_qty,
     return;
   }
   skip_loop = 0;
+
   uint8_t index = osd_menu_phase - string_element_qty - 1;
-  uint8_t data_buffer[5];
-  if (menu_type == BF_PIDS)
-    fast_fprint(data_buffer, 5, pointer->axis[data_index[index][1]], 0);
-  if (menu_type == SW_RATES) {
+
+  osd_transaction_t *txn = osd_txn_init();
+  osd_txn_start(grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
+
+  switch (menu_type) {
+  case BF_PIDS:
+    osd_txn_write_uint(pointer->axis[data_index[index][1]], 4);
+    break;
+  case SW_RATES:
     if (index < 3)
-      fast_fprint(data_buffer, 5, pointer->axis[data_index[index][1]], 0);
+      osd_txn_write_uint(pointer->axis[data_index[index][1]], 4);
     else
-      fast_fprint(data_buffer, 5, pointer->axis[data_index[index][1]] + FLT_EPSILON, 2);
+      osd_txn_write_float(pointer->axis[data_index[index][1]] + FLT_EPSILON, 5, 2);
+    break;
+  case ROUNDED:
+    osd_txn_write_float(pointer->axis[data_index[index][1]] + FLT_EPSILON, 5, 2);
+    break;
   }
-  if (menu_type == ROUNDED)
-    fast_fprint(data_buffer, 5, pointer->axis[data_index[index][1]] + FLT_EPSILON, 2);
-  osd_print_data(data_buffer, 5, grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
+  osd_txn_submit(txn);
+
   osd_menu_phase++;
 }
 
@@ -571,10 +594,14 @@ void print_osd_adjustable_float(uint8_t string_element_qty, uint8_t data_element
     return;
   }
   skip_loop = 0;
-  uint8_t data_buffer[5];
+
   uint8_t index = osd_menu_phase - string_element_qty - 1;
-  fast_fprint(data_buffer, 5, *pointer[index] + FLT_EPSILON, precision);
-  osd_print_data(data_buffer, 5, grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
+
+  osd_transaction_t *txn = osd_txn_init();
+  osd_txn_start(grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
+  osd_txn_write_float(*pointer[index] + FLT_EPSILON, 4, precision);
+  osd_txn_submit(txn);
+
   osd_menu_phase++;
 }
 
@@ -589,14 +616,18 @@ void print_osd_mixed_data(uint8_t string_element_qty, uint8_t data_element_qty, 
     return;
   }
   skip_loop = 0;
-  uint8_t data_buffer[5];
+
   uint8_t index = osd_menu_phase - string_element_qty - 1;
+
+  osd_transaction_t *txn = osd_txn_init();
+  osd_txn_start(grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
   if (*pointer[index] != POINTER_REDIRECT) {
-    fast_fprint(data_buffer, 5, *pointer[index] + FLT_EPSILON, precision);
-    osd_print_data(data_buffer, 5, grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
+    osd_txn_write_float(*pointer[index] + FLT_EPSILON, 4, precision);
   } else {
-    osd_print(filtertype_labels[*pointer2[index]], grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
+    osd_txn_write_str(filtertype_labels[*pointer2[index]]);
   }
+  osd_txn_submit(txn);
+
   osd_menu_phase++;
 }
 
