@@ -36,6 +36,8 @@
 
 #define INVERT 0x09
 #define TEXT 0x01
+
+#define MAXCOLUMNS 32
 #define MAXROWS 16
 
 #define SYSTEMXPOS 7
@@ -60,8 +62,7 @@ void osd_intro();
 void osd_clear();
 uint8_t osd_runtime_screen_clear();
 void osd_checksystem();
-void osd_print(const char *buffer, uint8_t dmm_attribute, uint8_t x, uint8_t y);
-void osd_print_data(const uint8_t *buffer, uint8_t length, uint8_t dmm_attribute, uint8_t x, uint8_t y);
+
 void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size);
 void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size);
 
