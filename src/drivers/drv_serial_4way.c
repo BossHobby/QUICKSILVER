@@ -27,7 +27,7 @@
                                         (device_id == 0xF850) || (device_id == 0xE8B1) || \
                                         (device_id == 0xE8B2))
 
-#define ARM_DEVICE_MATCH(device_id) ((device_id == 0x1F06) || (device_id == 0x3306) || (device_id == 0x3406))
+#define ARM_DEVICE_MATCH(device_id) (((device_id >> 8) > 0x00 && (device_id >> 8) < 0x90) && (device_id & 0xFF) == 0x06)
 
 #define INTF_MODE_IDX 3 // index for DeviceInfostate
 
@@ -233,8 +233,8 @@ serial_esc4way_ack_t serial_4way_send(uint8_t cmd, uint16_t addr, const uint8_t 
       return ESC4WAY_ACK_I_INVALID_CHANNEL;
     }
 
-    //Channel may change here
-    //ESC_LO or ESC_HI; Halt state for prev channel
+    // Channel may change here
+    // ESC_LO or ESC_HI; Halt state for prev channel
     device.selected_esc = input[0];
 
     if (connect_esc(ESC_PIN, device.info)) {

@@ -12,7 +12,7 @@
 
 #define SERIAL_4WAY_VER_MAIN 20
 #define SERIAL_4WAY_VER_SUB_1 (uint8_t)0
-#define SERIAL_4WAY_VER_SUB_2 (uint8_t)04
+#define SERIAL_4WAY_VER_SUB_2 (uint8_t)05
 
 #define SERIAL_4WAY_PROTOCOL_VER 108
 
@@ -48,7 +48,7 @@ typedef enum {
   ESC4WAY_INTERFACE_GET_NAME = 0x32, // '2' name
   // RETURN: String + ACK
 
-  //get Version Number 01..255
+  // get Version Number 01..255
   ESC4WAY_INTERFACE_GET_VERSION = 0x33, // '3' version
   // RETURN: uint8_t AVersionNumber + ACK
 
@@ -110,11 +110,11 @@ typedef enum {
   // PARAM: uint8_t Mode
   // RETURN: ACK or ACK_I_INVALID_CHANNEL
 
-  //Write to Buffer for Verify Device Memory of connected Device //Buffer Len is Max 256 Bytes
-  //BuffLen = 0 means 256 Bytes
+  // Write to Buffer for Verify Device Memory of connected Device //Buffer Len is Max 256 Bytes
+  // BuffLen = 0 means 256 Bytes
   ESC4WAY_DEVICE_VERIFY = 0x40, //'@' write
-  //PARAM: uint8_t ADRESS_Hi + ADRESS_Lo + BUffLen + Buffer[0..255]
-  //RETURN: ACK
+  // PARAM: uint8_t ADRESS_Hi + ADRESS_Lo + BUffLen + Buffer[0..255]
+  // RETURN: ACK
 } serial_esc4way_cmd_t;
 
 typedef enum {
@@ -138,52 +138,52 @@ typedef struct {
 } serial_esc4way_device_t;
 
 typedef struct __attribute__((__packed__)) {
-  uint8_t MAIN_REVISION;            //offset 0x00
-  uint8_t SUB_REVISION;             //offset 0x01
-  uint8_t LAYOUT_REVISION;          //offset 0x02
-  uint8_t P_GAIN;                   //offset 0x03
-  uint8_t I_GAIN;                   //offset 0x04
-  uint8_t GOVERNOR_MODE;            //offset 0x05
-  uint8_t LOW_VOLTAGE_LIMIT;        //offset 0x06
-  uint8_t MOTOR_GAIN;               //offset 0x07
-  uint8_t MOTOR_IDLE;               //offset 0x08
-  uint8_t STARTUP_POWER;            //offset 0x09
-  uint8_t PWM_FREQUENCY;            //offset 0x0A
-  uint8_t MOTOR_DIRECTION;          //offset 0x0B
-  uint8_t INPUT_PWM_POLARITY;       //offset 0x0C
-  uint16_t MODE;                    //offset 0x0D
-  uint8_t PROGRAMMING_BY_TX;        //offset 0x0F
-  uint8_t REARM_AT_START;           //offset 0x10
-  uint8_t GOVERNOR_SETUP_TARGET;    //offset 0x11
-  uint8_t STARTUP_RPM;              //offset 0x12
-  uint8_t STARTUP_ACCELERATION;     //offset 0x13
-  uint8_t VOLT_COMP;                //offset 0x14
-  uint8_t COMMUTATION_TIMING;       //offset 0x15
-  uint8_t DAMPING_FORCE;            //offset 0x16
-  uint8_t GOVERNOR_RANGE;           //offset 0x17
-  uint8_t STARTUP_METHOD;           //offset 0x18
-  uint8_t PPM_MIN_THROTTLE;         //offset 0x19
-  uint8_t PPM_MAX_THROTTLE;         //offset 0x1A
-  uint8_t BEEP_STRENGTH;            //offset 0x1B
-  uint8_t BEACON_STRENGTH;          //offset 0x1C
-  uint8_t BEACON_DELAY;             //offset 0x1D
-  uint8_t THROTTLE_RATE;            //offset 0x1E
-  uint8_t DEMAG_COMPENSATION;       //offset 0x1F
-  uint8_t BEC_VOLTAGE;              //offset 0x20
-  uint8_t PPM_CENTER_THROTTLE;      //offset 0x21
-  uint8_t SPOOLUP_TIME;             //offset 0x22
-  uint8_t TEMPERATURE_PROTECTION;   //offset 0x23
-  uint8_t LOW_RPM_POWER_PROTECTION; //offset 0x24
-  uint8_t PWM_INPUT;                //offset 0x25
-  uint8_t PWM_DITHER;               //offset 0x26
-  uint8_t BRAKE_ON_STOP;            //offset 0x27
-  uint8_t LED_CONTROL;              //offset 0x28
+  uint8_t MAIN_REVISION;            // offset 0x00
+  uint8_t SUB_REVISION;             // offset 0x01
+  uint8_t LAYOUT_REVISION;          // offset 0x02
+  uint8_t P_GAIN;                   // offset 0x03
+  uint8_t I_GAIN;                   // offset 0x04
+  uint8_t GOVERNOR_MODE;            // offset 0x05
+  uint8_t LOW_VOLTAGE_LIMIT;        // offset 0x06
+  uint8_t MOTOR_GAIN;               // offset 0x07
+  uint8_t MOTOR_IDLE;               // offset 0x08
+  uint8_t STARTUP_POWER;            // offset 0x09
+  uint8_t PWM_FREQUENCY;            // offset 0x0A
+  uint8_t MOTOR_DIRECTION;          // offset 0x0B
+  uint8_t INPUT_PWM_POLARITY;       // offset 0x0C
+  uint16_t MODE;                    // offset 0x0D
+  uint8_t PROGRAMMING_BY_TX;        // offset 0x0F
+  uint8_t REARM_AT_START;           // offset 0x10
+  uint8_t GOVERNOR_SETUP_TARGET;    // offset 0x11
+  uint8_t STARTUP_RPM;              // offset 0x12
+  uint8_t STARTUP_ACCELERATION;     // offset 0x13
+  uint8_t VOLT_COMP;                // offset 0x14
+  uint8_t COMMUTATION_TIMING;       // offset 0x15
+  uint8_t DAMPING_FORCE;            // offset 0x16
+  uint8_t GOVERNOR_RANGE;           // offset 0x17
+  uint8_t STARTUP_METHOD;           // offset 0x18
+  uint8_t PPM_MIN_THROTTLE;         // offset 0x19
+  uint8_t PPM_MAX_THROTTLE;         // offset 0x1A
+  uint8_t BEEP_STRENGTH;            // offset 0x1B
+  uint8_t BEACON_STRENGTH;          // offset 0x1C
+  uint8_t BEACON_DELAY;             // offset 0x1D
+  uint8_t THROTTLE_RATE;            // offset 0x1E
+  uint8_t DEMAG_COMPENSATION;       // offset 0x1F
+  uint8_t BEC_VOLTAGE;              // offset 0x20
+  uint8_t PPM_CENTER_THROTTLE;      // offset 0x21
+  uint8_t SPOOLUP_TIME;             // offset 0x22
+  uint8_t TEMPERATURE_PROTECTION;   // offset 0x23
+  uint8_t LOW_RPM_POWER_PROTECTION; // offset 0x24
+  uint8_t PWM_INPUT;                // offset 0x25
+  uint8_t PWM_DITHER;               // offset 0x26
+  uint8_t BRAKE_ON_STOP;            // offset 0x27
+  uint8_t LED_CONTROL;              // offset 0x28
 
   uint8_t _padding[23]; // offset 0x29
 
-  uint8_t LAYOUT[16]; //offset 0x40
-  uint8_t MCU[16];    //offset 0x50
-  uint8_t NAME[16];   //offset 0x60
+  uint8_t LAYOUT[16]; // offset 0x40
+  uint8_t MCU[16];    // offset 0x50
+  uint8_t NAME[16];   // offset 0x60
 } blheli_settings_raw_t;
 
 typedef struct {
