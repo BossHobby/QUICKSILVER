@@ -397,5 +397,17 @@
         }
       }
     ]
+  },
+  {
+    "name": "mambaf722_i2c",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      }
+    ]
   }
 ]
