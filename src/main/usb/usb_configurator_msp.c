@@ -8,21 +8,21 @@
 #include "project.h"
 #include "util.h"
 
-#define MSP_API_VERSION 1 //out message
-#define MSP_FC_VARIANT 2  //out message
-#define MSP_FC_VERSION 3  //out message
-#define MSP_BOARD_INFO 4  //out message
-#define MSP_BUILD_INFO 5  //out message
+#define MSP_API_VERSION 1 // out message
+#define MSP_FC_VARIANT 2  // out message
+#define MSP_FC_VERSION 3  // out message
+#define MSP_BOARD_INFO 4  // out message
+#define MSP_BUILD_INFO 5  // out message
 
 #define MSP_FEATURE_CONFIG 36
 
-#define MSP_BATTERY_STATE 130 //out message         Connected/Disconnected, Voltage, Current Used
+#define MSP_BATTERY_STATE 130 // out message         Connected/Disconnected, Voltage, Current Used
 
-#define MSP_UID 160   //out message         Unique device ID
-#define MSP_MOTOR 104 //out message         motors
+#define MSP_UID 160   // out message         Unique device ID
+#define MSP_MOTOR 104 // out message         motors
 
-#define MSP_SET_MOTOR 214   //in message          PropBalance function
-#define MSP_SET_4WAY_IF 245 //in message          Sets 4way interface
+#define MSP_SET_MOTOR 214   // in message          PropBalance function
+#define MSP_SET_4WAY_IF 245 // in message          Sets 4way interface
 
 #define MSP_HEADER_LEN 5
 
@@ -30,7 +30,7 @@
 
 extern usb_motor_test_t usb_motor_test;
 
-void send_msp(uint8_t code, uint8_t *data, uint8_t len) {
+void send_msp(uint8_t direction, uint8_t code, uint8_t *data, uint8_t len) {
   const uint8_t size = len + MSP_HEADER_LEN + 1;
 
   static uint8_t frame[64];
@@ -52,6 +52,14 @@ void send_msp(uint8_t code, uint8_t *data, uint8_t len) {
   frame[len + MSP_HEADER_LEN] = chksum;
 
   usb_serial_write(frame, size);
+}
+
+void send_msp_reply(uint8_t code, uint8_t *data, uint8_t len) {
+  send_msp('>', code, data, len);
+}
+
+void send_msp_error(uint8_t code) {
+  send_msp('!', code, NULL, 0);
 }
 
 extern uint8_t encode_buffer[USB_BUFFER_SIZE];
@@ -99,12 +107,12 @@ void usb_process_msp() {
         1,  // API_VERSION_MAJOR
         41, // API_VERSION_MINOR
     };
-    send_msp(code, data, 3);
+    send_msp_reply(code, data, 3);
     break;
   }
   case MSP_FC_VARIANT: {
     uint8_t data[4] = {'Q', 'U', 'I', 'C'};
-    send_msp(code, data, 4);
+    send_msp_reply(code, data, 4);
     break;
   }
   case MSP_FC_VERSION: {
@@ -113,17 +121,17 @@ void usb_process_msp() {
         1, // FC_VERSION_MINOR
         0, // FC_VERSION_PATCH_LEVEL
     };
-    send_msp(code, data, 3);
+    send_msp_reply(code, data, 3);
     break;
   }
   case MSP_BUILD_INFO: {
     uint8_t data[19] = MSP_BUILD_DATE_TIME;
-    send_msp(code, data, 19);
+    send_msp_reply(code, data, 19);
     break;
   }
   case MSP_BOARD_INFO: {
     uint8_t data[6] = {'Q', 'U', 'I', 'C', 0, 0};
-    send_msp(code, data, 6);
+    send_msp_reply(code, data, 6);
     break;
   }
   case MSP_UID: {
@@ -143,7 +151,7 @@ void usb_process_msp() {
         0xe,
         0xf,
     };
-    send_msp(code, data, 12);
+    send_msp_reply(code, data, 12);
     break;
   }
   case MSP_BATTERY_STATE: {
@@ -156,7 +164,7 @@ void usb_process_msp() {
         (current >> 8) & 0xFF, current & 0xFF,              // battery current draw in A
         0x0                                                 // battery status
     };
-    send_msp(code, data, 9);
+    send_msp_reply(code, data, 9);
     break;
   }
   case MSP_FEATURE_CONFIG: {
@@ -166,7 +174,7 @@ void usb_process_msp() {
         0x0,
         0x0,
     };
-    send_msp(code, data, 4);
+    send_msp_reply(code, data, 4);
     break;
   }
   case MSP_MOTOR: {
@@ -178,7 +186,7 @@ void usb_process_msp() {
         (uint16_t)mapf(usb_motor_test.value[2], 0.0f, 1.0f, 1000.f, 2000.f),
         (uint16_t)mapf(usb_motor_test.value[3], 0.0f, 1.0f, 1000.f, 2000.f),
     };
-    send_msp(code, (uint8_t *)data, 4 * sizeof(uint16_t));
+    send_msp_reply(code, (uint8_t *)data, 4 * sizeof(uint16_t));
     break;
   }
   case MSP_SET_MOTOR: {
@@ -188,13 +196,13 @@ void usb_process_msp() {
     }
     usb_motor_test.active = 1;
 
-    send_msp(code, NULL, 0);
+    send_msp_reply(code, NULL, 0);
     break;
   }
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
   case MSP_SET_4WAY_IF: {
     uint8_t data[1] = {4};
-    send_msp(code, data, 1);
+    send_msp_reply(code, data, 1);
 
     usb_motor_test.active = 0;
 
@@ -205,7 +213,7 @@ void usb_process_msp() {
   }
 #endif
   default:
-    usb_serial_printf("ERROR unkown code (%d)\r\n", code);
+    send_msp_error(code);
     break;
   }
 }
