@@ -18,8 +18,9 @@
 
 #define MSP_BATTERY_STATE 130 // out message         Connected/Disconnected, Voltage, Current Used
 
-#define MSP_UID 160   // out message         Unique device ID
-#define MSP_MOTOR 104 // out message         motors
+#define MSP_UID 160          // out message         Unique device ID
+#define MSP_MOTOR 104        // out message         motors
+#define MSP_MOTOR_CONFIG 131 // out message         Motor configuration (min/max throttle, etc)
 
 #define MSP_SET_MOTOR 214   // in message          PropBalance function
 #define MSP_SET_4WAY_IF 245 // in message          Sets 4way interface
@@ -177,16 +178,29 @@ void usb_process_msp() {
     send_msp_reply(code, data, 4);
     break;
   }
+  case MSP_MOTOR_CONFIG: {
+    uint16_t data[3] = {
+        1070, // min throttle
+        2000, // max throttle
+        1000, // min command
+    };
+    send_msp_reply(code, (uint8_t *)data, 3 * sizeof(uint16_t));
+    break;
+  }
   case MSP_MOTOR: {
-    // we always have 4 motors
+    // we always have 4 motors, but blheli expects 8
     // these are pwm values
-    uint16_t data[4] = {
+    uint16_t data[8] = {
         (uint16_t)mapf(usb_motor_test.value[0], 0.0f, 1.0f, 1000.f, 2000.f),
         (uint16_t)mapf(usb_motor_test.value[1], 0.0f, 1.0f, 1000.f, 2000.f),
         (uint16_t)mapf(usb_motor_test.value[2], 0.0f, 1.0f, 1000.f, 2000.f),
         (uint16_t)mapf(usb_motor_test.value[3], 0.0f, 1.0f, 1000.f, 2000.f),
+        0,
+        0,
+        0,
+        0,
     };
-    send_msp_reply(code, (uint8_t *)data, 4 * sizeof(uint16_t));
+    send_msp_reply(code, (uint8_t *)data, 8 * sizeof(uint16_t));
     break;
   }
   case MSP_SET_MOTOR: {
