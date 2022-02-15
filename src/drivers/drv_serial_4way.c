@@ -422,6 +422,10 @@ serial_esc4way_ack_t serial_4way_read_settings(blheli_settings_t *settings, uint
     quic_debugf("ERROR ESC4WAY_DEVICE_INIT_FLASH 0x%x", ack);
     return ack;
   }
+  if (device.mode == ESC4WAY_ARM_BLB) {
+    return ESC4WAY_ACK_D_GENERAL_ERROR;
+  }
+
   time_delay_us(500); // give the device some time to wake up
 
   uint8_t size = BLHELI_SETTINGS_SIZE;
@@ -467,6 +471,10 @@ serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uin
     quic_debugf("ERROR ESC4WAY_DEVICE_INIT_FLASH 0x%x", ack);
     return ack;
   }
+  if (device.mode == ESC4WAY_ARM_BLB) {
+    return ESC4WAY_ACK_D_GENERAL_ERROR;
+  }
+
   time_delay_us(500); // give the device some time to wake up
 
   uint8_t size = BLHELI_SETTINGS_SIZE;
