@@ -573,7 +573,7 @@ void serial_4way_process() {
     write_byte_crc(&crc_out, addr & 0xFF);
 
     write_byte_crc(&crc_out, output_size);
-    for (uint16_t i = 0; i < output_size; i++) {
+    for (uint16_t i = 0; i < (output_size == 0 ? 256 : output_size); i++) {
       write_byte_crc(&crc_out, output_buffer[i]);
     }
 
