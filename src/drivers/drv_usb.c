@@ -16,7 +16,7 @@
 
 #define CDC_EP0_SIZE 0x08
 #define CDC_RXD_EP 0x01
-#define CDC_TXD_EP 0x81
+#define CDC_TXD_EP 0x83
 #define CDC_DATA_SZ 0x40
 #define CDC_NTF_EP 0x82
 #define CDC_NTF_SZ 0x08
@@ -269,14 +269,6 @@ static void cdc_txonly(usbd_device *dev, uint8_t event, uint8_t ep) {
   usbd_ep_write(dev, ep, buf, len);
 }
 
-static void cdc_rxtx(usbd_device *dev, uint8_t event, uint8_t ep) {
-  if (event == usbd_evt_eptx) {
-    cdc_txonly(dev, event, ep);
-  } else {
-    cdc_rxonly(dev, event, ep);
-  }
-}
-
 static usbd_respond cdc_setconf(usbd_device *dev, uint8_t cfg) {
   switch (cfg) {
   case 0:
@@ -292,16 +284,11 @@ static usbd_respond cdc_setconf(usbd_device *dev, uint8_t cfg) {
     return usbd_ack;
   case 1:
     /* configuring device */
-    usbd_ep_config(dev, CDC_RXD_EP, USB_EPTYPE_BULK /*| USB_EPTYPE_DBLBUF*/, CDC_DATA_SZ);
-    usbd_ep_config(dev, CDC_TXD_EP, USB_EPTYPE_BULK /*| USB_EPTYPE_DBLBUF*/, CDC_DATA_SZ);
+    usbd_ep_config(dev, CDC_RXD_EP, USB_EPTYPE_BULK | USB_EPTYPE_DBLBUF, CDC_DATA_SZ);
+    usbd_ep_config(dev, CDC_TXD_EP, USB_EPTYPE_BULK | USB_EPTYPE_DBLBUF, CDC_DATA_SZ);
     usbd_ep_config(dev, CDC_NTF_EP, USB_EPTYPE_INTERRUPT, CDC_NTF_SZ);
-#if ((CDC_TXD_EP & 0x7F) == (CDC_RXD_EP & 0x7F))
-    usbd_reg_endpoint(dev, CDC_RXD_EP, cdc_rxtx);
-    usbd_reg_endpoint(dev, CDC_TXD_EP, cdc_rxtx);
-#else
     usbd_reg_endpoint(dev, CDC_RXD_EP, cdc_rxonly);
     usbd_reg_endpoint(dev, CDC_TXD_EP, cdc_txonly);
-#endif
     usbd_ep_write(dev, CDC_TXD_EP, 0, 0);
 
     usb_device_configured = true;
@@ -380,7 +367,7 @@ void usb_serial_write(uint8_t *data, uint32_t len) {
   }
 
   while (tx_buffer_in_use)
-    ;
+    __WFI();
 
   uint32_t written = 0;
   while (written < len) {
