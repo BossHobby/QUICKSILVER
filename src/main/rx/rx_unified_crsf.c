@@ -209,13 +209,13 @@ void rx_serial_process_crsf() {
     // We're done with this frame now.
     frame_status = FRAME_TX;
     rx_buffer_offset = 0;
-    telemetry_counter++; // Telemetry will send data out when this reaches 10
+    telemetry_counter++; // Telemetry will send data out when this reaches 5
   }
 }
 
 void rx_serial_send_crsf_telemetry() {
-  // Send telemetry back once every 10 packets. This gives the RX time to send ITS telemetry back
-  if (telemetry_counter <= 10 || frame_status != FRAME_TX) {
+  // Send telemetry back once every 5 packets. This gives the RX time to send ITS telemetry back
+  if (telemetry_counter <= 5 || frame_status != FRAME_TX) {
     frame_status = FRAME_DONE;
     return;
   }
