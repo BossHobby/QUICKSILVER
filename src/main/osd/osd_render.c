@@ -728,7 +728,7 @@ static void osd_display_regular() {
 
   case OSD_CURRENT_DRAW:
     if (osd_decode(*osd_current, ACTIVE)) {
-      fast_fprint(print_buffer, 5, state.ibat_filtered, 0);
+      fast_fprint(print_buffer, 5, state.ibat_filtered / 1000.0f, 2);
       print_buffer[4] = 154; // AMP icon
       osd_print_data(print_buffer, 5, osd_decode(*osd_current, ATTRIBUTE), osd_decode(*osd_current, POSITIONX), osd_decode(*osd_current, POSITIONY));
     }
