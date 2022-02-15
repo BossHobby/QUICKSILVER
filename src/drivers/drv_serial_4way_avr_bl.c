@@ -33,7 +33,6 @@
 #define CMD_BOOTSIGN 0x08
 
 #define START_BIT_TIMEOUT_MS 10
-#define START_BIT_TIMEOUT (10000 * TICKS_PER_US)
 
 #define BIT_TIME (SYS_CLOCK_FREQ_HZ / 19200)
 #define BIT_TIME_HALF (BIT_TIME / 2)
@@ -60,7 +59,7 @@ static void esc_set_input(gpio_pins_t pin) {
   gpio_init.Mode = LL_GPIO_MODE_INPUT;
   gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
   gpio_init.Pull = LL_GPIO_PULL_UP;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_LOW;
   gpio_pin_init(&gpio_init, pin);
 }
 
@@ -69,16 +68,16 @@ static void esc_set_output(gpio_pins_t pin) {
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_LOW;
   gpio_pin_init(&gpio_init, pin);
 }
 
 static uint8_t serial_read(gpio_pins_t pin, uint8_t *bt) {
-  uint32_t start_time = time_cycles();
+  uint32_t start_time = time_millis();
 
   while (esc_is_high(pin)) {
     // check for startbit begin
-    if (time_cycles() - start_time >= START_BIT_TIMEOUT) {
+    if (time_millis() - start_time >= START_BIT_TIMEOUT_MS) {
       return 0;
     }
   }
@@ -163,7 +162,7 @@ static uint8_t avr_bl_read(gpio_pins_t esc, uint8_t *buf, uint8_t size) {
 
   uint8_t ack = brNONE;
   if (device_is_connected()) {
-    //With CRC read 3 more
+    // With CRC read 3 more
     uint8_t crc_buf[2];
     if (!serial_read(esc, &crc_buf[0])) {
       return 0;
@@ -269,7 +268,7 @@ uint8_t avr_bl_connect(gpio_pins_t pin, uint8_t *data) {
     }
   }
 
-  //only 2 bytes used $1E9307 -> 0x9307
+  // only 2 bytes used $1E9307 -> 0x9307
   data[2] = boot_info[BOOT_MSG_LEN - 1];
   data[1] = boot_info[DevSignHi];
   data[0] = boot_info[DevSignLo];
@@ -289,7 +288,7 @@ uint8_t avr_bl_send_keepalive(gpio_pins_t pin) {
 
 void avr_bl_send_restart(gpio_pins_t pin, uint8_t *data) {
   uint8_t buf[] = {RestartBootloader, 0};
-  avr_bl_write(pin, buf, 2); //sends simply 4 x 0x00 (CRC =00)
+  avr_bl_write(pin, buf, 2); // sends simply 4 x 0x00 (CRC =00)
   data[0] = 1;
 }
 
