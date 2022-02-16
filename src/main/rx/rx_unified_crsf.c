@@ -14,6 +14,19 @@
 #include "rx_crsf.h"
 #include "usb_configurator.h"
 
+typedef enum {
+  RATE_LORA_4HZ = 0,
+  RATE_LORA_25HZ,
+  RATE_LORA_50HZ,
+  RATE_LORA_100HZ,
+  RATE_LORA_150HZ,
+  RATE_LORA_200HZ,
+  RATE_LORA_250HZ,
+  RATE_LORA_500HZ,
+  RATE_FLRC_500HZ,
+  RATE_FLRC_1000HZ,
+} crsf_air_rates_t;
+
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
 extern uint8_t rx_data[RX_BUFF_SIZE];
 
@@ -36,14 +49,16 @@ extern uint8_t ready_for_next_telemetry;
 
 static uint8_t crsf_rf_mode = 0;
 static uint16_t crsf_rf_mode_fps[] = {
-    4,   // CRSF
-    25,  // ELRS??
-    50,  // CRSF
-    100, // ELRS
-    150, // CRSF
-    200, // ELRS
-    250, // ELRS
-    500, // ELRS
+    4,    // RATE_LORA_4HZ
+    25,   // RATE_LORA_25HZ
+    50,   // RATE_LORA_50HZ
+    100,  // RATE_LORA_100HZ
+    150,  // RATE_LORA_150HZ
+    200,  // RATE_LORA_200HZ
+    250,  // RATE_LORA_250HZ
+    500,  // RATE_LORA_500HZ
+    500,  // RATE_FLRC_500HZ
+    1000, // RATE_FLRC_1000HZ
 };
 
 #define USART usart_port_defs[serial_rx_port]
@@ -54,25 +69,54 @@ float rx_serial_crsf_expected_fps() {
 
 uint16_t rx_serial_crsf_smoothing_cutoff() {
   switch (crsf_rf_mode) {
-  case 7:
-    return 225;
-  case 6:
-    return 112;
-  case 5:
-    return 90;
-  case 4:
-    return 67;
-  case 3:
-    return 45;
-  case 2:
-    return 22;
-  case 1:
-    return 11;
-  case 0:
+  case RATE_LORA_4HZ:
     return 1;
+  case RATE_LORA_25HZ:
+    return 11;
+  case RATE_LORA_50HZ:
+    return 22;
+  case RATE_LORA_100HZ:
+    return 45;
+  case RATE_LORA_150HZ:
+    return 67;
+  case RATE_LORA_200HZ:
+    return 90;
+  case RATE_LORA_250HZ:
+    return 112;
+  case RATE_LORA_500HZ:
+  case RATE_FLRC_500HZ:
+    return 225;
+  case RATE_FLRC_1000HZ:
+    return 450;
   }
 
   return 67;
+}
+
+static uint16_t telemetry_interval() {
+  switch (crsf_rf_mode) {
+  case RATE_LORA_4HZ:
+    return 3;
+  case RATE_LORA_25HZ:
+    return 3;
+  case RATE_LORA_50HZ:
+    return 3;
+  case RATE_LORA_100HZ:
+    return 6;
+  case RATE_LORA_150HZ:
+    return 9;
+  case RATE_LORA_200HZ:
+    return 12;
+  case RATE_LORA_250HZ:
+    return 16;
+  case RATE_LORA_500HZ:
+  case RATE_FLRC_500HZ:
+    return 32;
+  case RATE_FLRC_1000HZ:
+    return 64;
+  }
+
+  return 5;
 }
 
 static void rx_serial_crsf_process_frame() {
@@ -215,7 +259,7 @@ void rx_serial_process_crsf() {
 
 void rx_serial_send_crsf_telemetry() {
   // Send telemetry back once every 5 packets. This gives the RX time to send ITS telemetry back
-  if (telemetry_counter <= 5 || frame_status != FRAME_TX) {
+  if (telemetry_counter < telemetry_interval() || frame_status != FRAME_TX) {
     frame_status = FRAME_DONE;
     return;
   }
