@@ -17,7 +17,7 @@
 #ifdef RX_UNIFIED_SERIAL
 
 // This is the microsecond threshold for triggering a new frame to re-index to position 0 in the ISR
-#define RX_FRAME_INTERVAL_TRIGGER_TICKS (1000 * (SYS_CLOCK_FREQ_HZ / 1000000L))
+#define RX_FRAME_INTERVAL_TRIGGER_TICKS (250 * (SYS_CLOCK_FREQ_HZ / 1000000L))
 
 uint8_t rx_buffer[RX_BUFF_SIZE];
 uint8_t rx_data[RX_BUFF_SIZE]; // A place to put the RX frame so nothing can get overwritten during processing.  //reduce size?
@@ -95,7 +95,7 @@ void RX_USART_ISR() {
 
   if (LL_USART_IsActiveFlag_RXNE(USART.channel)) {
     rx_buffer[rx_frame_position++] = LL_USART_ReceiveData8(USART.channel);
-    //LL_USART_ClearFlag_RXNE(USART.channel);
+    // LL_USART_ClearFlag_RXNE(USART.channel);
 
     if (rx_frame_position >= expected_frame_length && frame_status == FRAME_IDLE) {
       frame_status = FRAME_RX;
