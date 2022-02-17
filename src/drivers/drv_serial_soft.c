@@ -45,7 +45,7 @@ static void soft_serial_init_tx(const soft_serial_t *dev) {
   gpio_pin_set(dev->tx_pin);
 }
 
-uint8_t soft_serial_init(soft_serial_t *dev, gpio_pins_t tx_pin, gpio_pins_t rx_pin, uint32_t baudrate) {
+uint8_t soft_serial_init(soft_serial_t *dev, gpio_pins_t tx_pin, gpio_pins_t rx_pin, uint32_t baudrate, uint8_t stop_bits) {
   if (tx_pin == PIN_NONE && rx_pin == PIN_NONE) {
     return 0;
   }
@@ -57,6 +57,7 @@ uint8_t soft_serial_init(soft_serial_t *dev, gpio_pins_t tx_pin, gpio_pins_t rx_
   soft_serial_init_rx(dev);
 
   dev->baud = baudrate;
+  dev->stop_bits = stop_bits;
   dev->cycles_per_bit = SYS_CLOCK_FREQ_HZ / baudrate;
   dev->cycles_per_bit_half = dev->cycles_per_bit * .5;
 
@@ -66,15 +67,11 @@ uint8_t soft_serial_init(soft_serial_t *dev, gpio_pins_t tx_pin, gpio_pins_t rx_
 void soft_serial_set_input(const soft_serial_t *dev) {
   if (soft_serial_is_1wire(dev))
     soft_serial_init_rx(dev);
-
-  time_delay_us(20);
 }
 
 void soft_serial_set_output(const soft_serial_t *dev) {
   if (soft_serial_is_1wire(dev))
     soft_serial_init_tx(dev);
-
-  time_delay_us(20);
 }
 
 uint8_t soft_serial_read_byte(const soft_serial_t *dev, uint8_t *byte) {
@@ -109,10 +106,12 @@ uint8_t soft_serial_read_byte(const soft_serial_t *dev, uint8_t *byte) {
   delay_until_cycles(time_next); // move away from edge
 
   // stop bit
-  if (!(gpio_pin_read(dev->rx_pin))) {
-    // error no stop bit
-    *byte = 0;
-    return 0;
+  for (uint8_t i = 0; i < dev->stop_bits; i++) {
+    if (!(gpio_pin_read(dev->rx_pin))) {
+      // error no stop bit
+      *byte = 0;
+      return 0;
+    }
   }
 
   *byte = b;
@@ -137,8 +136,25 @@ void soft_serial_write_byte(const soft_serial_t *dev, uint8_t byte) {
   next_time += dev->cycles_per_bit;
   delay_until_cycles(next_time);
 
-  // stop bit
-  gpio_pin_set(dev->tx_pin);
-  next_time += dev->cycles_per_bit;
-  delay_until_cycles(next_time);
+  // stop bits
+  for (uint8_t i = 0; i < dev->stop_bits; i++) {
+    gpio_pin_set(dev->tx_pin);
+    next_time += dev->cycles_per_bit;
+    delay_until_cycles(next_time);
+  }
+}
+
+uint8_t soft_serial_read_bytes(const soft_serial_t *dev, uint8_t *byte, uint32_t size) {
+  for (uint32_t i = 0; i < size; i++) {
+    if (!soft_serial_read_byte(dev, byte + i)) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+void soft_serial_write_bytes(const soft_serial_t *dev, uint8_t *byte, uint32_t size) {
+  for (uint32_t i = 0; i < size; i++) {
+    soft_serial_write_byte(dev, byte[i]);
+  }
 }
