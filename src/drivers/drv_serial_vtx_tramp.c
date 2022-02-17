@@ -12,6 +12,7 @@
 #ifdef ENABLE_TRAMP
 
 #define USART usart_port_defs[serial_smart_audio_port]
+#define SOFT_SERIAL soft_serial_port_defs[serial_smart_audio_port - USART_PORTS_MAX]
 
 typedef enum {
   PARSER_IDLE,
@@ -35,6 +36,8 @@ extern uint8_t vtx_frame[VTX_BUFFER_SIZE];
 extern volatile uint8_t vtx_frame_length;
 extern volatile uint8_t vtx_frame_offset;
 
+extern soft_serial_t vtx_soft_serial;
+
 static uint8_t crc8_data(const uint8_t *data) {
   uint8_t crc = 0;
   for (int i = 0; i < 13; i++) {
@@ -45,6 +48,11 @@ static uint8_t crc8_data(const uint8_t *data) {
 
 static void serial_tramp_reconfigure() {
   serial_vtx_wait_for_ready();
+
+  if (serial_is_soft(serial_smart_audio_port)) {
+    soft_serial_init(&vtx_soft_serial, SOFT_SERIAL.tx_pin, SOFT_SERIAL.rx_pin, 9600, 1);
+    return;
+  }
 
   serial_disable_isr(serial_smart_audio_port);
 
@@ -67,7 +75,7 @@ static void serial_tramp_reconfigure() {
   USART_InitStructure.OverSampling = LL_USART_OVERSAMPLING_16;
   LL_USART_Init(USART.channel, &USART_InitStructure);
 
-  //LL_USART_ClearFlag_RXNE(USART.channel);
+  // LL_USART_ClearFlag_RXNE(USART.channel);
   LL_USART_ClearFlag_TC(USART.channel);
 
   LL_USART_DisableIT_TXE(USART.channel);
@@ -82,8 +90,9 @@ static void serial_tramp_reconfigure() {
 
 void serial_tramp_init() {
   serial_smart_audio_port = profile.serial.smart_audio;
-
-  serial_enable_rcc(serial_smart_audio_port);
+  if (!serial_is_soft(serial_smart_audio_port)) {
+    serial_enable_rcc(serial_smart_audio_port);
+  }
   serial_tramp_reconfigure();
 }
 

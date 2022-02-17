@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #include "drv_gpio.h"
+#include "drv_serial_soft.h"
 #include "project.h"
 
 typedef enum {
@@ -33,10 +34,20 @@ typedef struct {
   gpio_pins_t tx_pin;
 } usart_port_def_t;
 
+typedef struct {
+  uint8_t index;
+
+  gpio_pins_t rx_pin;
+  gpio_pins_t tx_pin;
+} soft_serial_port_def_t;
+
 extern usart_port_def_t usart_port_defs[USART_PORTS_MAX];
+extern soft_serial_port_def_t soft_serial_port_defs[SOFT_SERIAL_PORTS_MAX - USART_PORTS_MAX];
 
 extern usart_ports_t serial_rx_port;
 extern usart_ports_t serial_smart_audio_port;
+
+void serial_rx_init(rx_serial_protocol_t rx_serial_protocol);
 
 void serial_enable_rcc(usart_ports_t port);
 void serial_init(usart_ports_t port, uint32_t buadrate, bool half_duplex);
@@ -46,4 +57,4 @@ void serial_disable_isr(usart_ports_t port);
 bool serial_read_bytes(usart_ports_t port, uint8_t *data, const uint32_t size);
 bool serial_write_bytes(usart_ports_t port, const uint8_t *data, const uint32_t size);
 
-void serial_rx_init(rx_serial_protocol_t rx_serial_protocol);
+bool serial_is_soft(usart_ports_t port);

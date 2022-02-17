@@ -1,6 +1,7 @@
 #include "drv_serial_vtx.h"
 
 #include "drv_serial.h"
+#include "drv_serial_soft.h"
 #include "drv_time.h"
 #include "usb_configurator.h"
 #include "util/circular_buffer.h"
@@ -26,7 +27,13 @@ uint8_t vtx_frame[VTX_BUFFER_SIZE];
 volatile uint8_t vtx_frame_length = 0;
 volatile uint8_t vtx_frame_offset = 0;
 
+soft_serial_t vtx_soft_serial;
+
 bool serial_vtx_wait_for_ready() {
+  if (serial_is_soft(serial_smart_audio_port)) {
+    return true;
+  }
+
   const uint32_t start = time_millis();
   while (vtx_transfer_done == 0) {
     if ((time_millis() - start) > 100) {
@@ -42,9 +49,25 @@ void serial_vtx_send_data(uint8_t *data, uint32_t size) {
     return;
   }
 
+  if (serial_is_soft(serial_smart_audio_port)) {
+    soft_serial_set_output(&vtx_soft_serial);
+    soft_serial_write_bytes(&vtx_soft_serial, data, size);
+
+    soft_serial_set_input(&vtx_soft_serial);
+    while (true) {
+      uint8_t byte = 0;
+      if (!soft_serial_read_byte(&vtx_soft_serial, &byte)) {
+        break;
+      }
+      quic_debugf("VTX: read 0x%x", byte);
+      circular_buffer_write(&vtx_rx_buffer, byte);
+    }
+    return;
+  }
+
   vtx_transfer_done = 0;
 
-  //LL_USART_ClearFlag_RXNE(USART.channel);
+  // LL_USART_ClearFlag_RXNE(USART.channel);
   LL_USART_ClearFlag_TC(USART.channel);
 
   vtx_frame_offset = 0;
