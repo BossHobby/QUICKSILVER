@@ -113,16 +113,10 @@ uint8_t soft_serial_init(usart_ports_t port, uint32_t baudrate, uint8_t stop_bit
 
   DEV.busy = false;
 
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  gpio_pin_init(&gpio_init, PIN_C12);
-
   soft_serial_init_tx(port);
   soft_serial_init_rx(port);
 
+  soft_serial_timer_stop();
   timer_init(TIMER_INSTANCE, 1, PWM_CLOCK_FREQ_HZ / (baudrate * BAUD_DIVIDER));
   interrupt_enable(TIMER_IRQN, TIMER_PRIORITY);
 
@@ -198,7 +192,6 @@ void soft_serial_rx_update(usart_ports_t port) {
   if (DEV.rx_state == START_BIT) {
     if (gpio_pin_read(DEV.rx_pin)) {
       DEV.rx_state++;
-      gpio_pin_toggle(PIN_C12);
     }
     return;
   }
@@ -207,7 +200,6 @@ void soft_serial_rx_update(usart_ports_t port) {
     if (!gpio_pin_read(DEV.rx_pin)) {
       DEV.rx_byte = 0;
       DEV.rx_state++;
-      gpio_pin_toggle(PIN_C12);
     }
     return;
   }
@@ -215,14 +207,13 @@ void soft_serial_rx_update(usart_ports_t port) {
   if (DEV.rx_state > DATA_BITS && DEV.rx_state <= STOP_BITS && (DEV.rx_state % BAUD_DIVIDER) == 2) {
     const uint8_t bit_index = (DEV.rx_state - DATA_BITS) / BAUD_DIVIDER;
 
-    gpio_pin_toggle(PIN_C12);
-
     if (gpio_pin_read(DEV.rx_pin)) {
       DEV.rx_byte |= (0x01 << bit_index);
     }
   }
 
-  if (DEV.rx_state > (STOP_BITS + (BAUD_DIVIDER / 2)) && DEV.rx_state < (STOP_BITS + DEV.stop_bits * BAUD_DIVIDER)) {
+  // should be DEV.stop_bits * BAUD_DIVIDER
+  if (DEV.rx_state > (STOP_BITS + (BAUD_DIVIDER / 2)) && DEV.rx_state < (STOP_BITS + 1 * BAUD_DIVIDER)) {
     if (!gpio_pin_read(DEV.rx_pin)) {
       DEV.rx_state = START_BIT;
       return;
@@ -231,8 +222,8 @@ void soft_serial_rx_update(usart_ports_t port) {
 
   DEV.rx_state++;
 
-  if (DEV.rx_state == (STOP_BITS + DEV.stop_bits * BAUD_DIVIDER)) {
-    gpio_pin_toggle(PIN_C12);
+  // should be DEV.stop_bits * BAUD_DIVIDER
+  if (DEV.rx_state == (STOP_BITS + 1 * BAUD_DIVIDER)) {
     soft_serial_rx_isr();
     DEV.rx_state = START_BIT;
   }
