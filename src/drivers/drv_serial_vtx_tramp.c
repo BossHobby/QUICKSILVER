@@ -12,7 +12,6 @@
 #ifdef ENABLE_TRAMP
 
 #define USART usart_port_defs[serial_smart_audio_port]
-#define SOFT_SERIAL soft_serial_port_defs[serial_smart_audio_port - USART_PORTS_MAX]
 
 typedef enum {
   PARSER_IDLE,
@@ -36,8 +35,6 @@ extern uint8_t vtx_frame[VTX_BUFFER_SIZE];
 extern volatile uint8_t vtx_frame_length;
 extern volatile uint8_t vtx_frame_offset;
 
-extern soft_serial_t vtx_soft_serial;
-
 static uint8_t crc8_data(const uint8_t *data) {
   uint8_t crc = 0;
   for (int i = 0; i < 13; i++) {
@@ -50,7 +47,7 @@ static void serial_tramp_reconfigure() {
   serial_vtx_wait_for_ready();
 
   if (serial_is_soft(serial_smart_audio_port)) {
-    soft_serial_init(&vtx_soft_serial, SOFT_SERIAL.tx_pin, SOFT_SERIAL.rx_pin, 9600, 1);
+    soft_serial_init(serial_smart_audio_port, 9600, 1);
     return;
   }
 

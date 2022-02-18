@@ -27,11 +27,9 @@ uint8_t vtx_frame[VTX_BUFFER_SIZE];
 volatile uint8_t vtx_frame_length = 0;
 volatile uint8_t vtx_frame_offset = 0;
 
-soft_serial_t vtx_soft_serial;
-
 bool serial_vtx_wait_for_ready() {
   if (serial_is_soft(serial_smart_audio_port)) {
-    return true;
+    return !soft_serial_is_busy(serial_smart_audio_port);
   }
 
   const uint32_t start = time_millis();
@@ -50,36 +48,23 @@ void serial_vtx_send_data(uint8_t *data, uint32_t size) {
   }
 
   if (serial_is_soft(serial_smart_audio_port)) {
-    soft_serial_set_output(&vtx_soft_serial);
-    soft_serial_write_bytes(&vtx_soft_serial, data, size);
+    soft_serial_enable_write(serial_smart_audio_port);
+  } else {
+    // LL_USART_ClearFlag_RXNE(USART.channel);
+    LL_USART_ClearFlag_TC(USART.channel);
 
-    soft_serial_set_input(&vtx_soft_serial);
-    while (true) {
-      uint8_t byte = 0;
-      if (!soft_serial_read_byte(&vtx_soft_serial, &byte)) {
-        break;
-      }
-      quic_debugf("VTX: read 0x%x", byte);
-      circular_buffer_write(&vtx_rx_buffer, byte);
-    }
-    return;
+    circular_buffer_clear(&vtx_rx_buffer);
+
+    LL_USART_EnableIT_RXNE(USART.channel);
+    LL_USART_EnableIT_TXE(USART.channel);
+    LL_USART_EnableIT_TC(USART.channel);
+
+    LL_USART_DisableDirectionRx(USART.channel);
+    LL_USART_EnableDirectionTx(USART.channel);
   }
 
   vtx_transfer_done = 0;
-
-  // LL_USART_ClearFlag_RXNE(USART.channel);
-  LL_USART_ClearFlag_TC(USART.channel);
-
   vtx_frame_offset = 0;
-
-  circular_buffer_clear(&vtx_rx_buffer);
-
-  LL_USART_EnableIT_RXNE(USART.channel);
-  LL_USART_EnableIT_TXE(USART.channel);
-  LL_USART_EnableIT_TC(USART.channel);
-
-  LL_USART_DisableDirectionRx(USART.channel);
-  LL_USART_EnableDirectionTx(USART.channel);
 
   vtx_last_request = time_millis();
   vtx_last_valid_read = time_millis();
@@ -122,4 +107,22 @@ void vtx_uart_isr() {
     LL_USART_ClearFlag_ORE(USART.channel);
   }
 }
+
+void soft_serial_tx_isr() {
+  if (vtx_frame_offset < vtx_frame_length) {
+    soft_serial_write_byte(serial_smart_audio_port, vtx_frame[vtx_frame_offset]);
+    vtx_frame_offset++;
+    return;
+  }
+  if (vtx_frame_offset == vtx_frame_length && vtx_transfer_done == 0) {
+    soft_serial_enable_read(serial_smart_audio_port);
+    vtx_transfer_done = 1;
+  }
+}
+
+void soft_serial_rx_isr() {
+  const uint8_t data = soft_serial_read_byte(serial_smart_audio_port);
+  circular_buffer_write(&vtx_rx_buffer, data);
+}
+
 #endif

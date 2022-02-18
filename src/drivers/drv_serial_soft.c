@@ -1,22 +1,59 @@
 #include "drv_serial_soft.h"
 
 #include "drv_gpio.h"
+#include "drv_interrupt.h"
+#include "drv_timer.h"
 #include "project.h"
 
-#define CYCLES_TIMEOUT (10000 * (SYS_CLOCK_FREQ_HZ / 1000000))
+#define TIMER_INSTANCE TIM4
+#define TIMER_IRQN TIM4_IRQn
+#define BAUD_DIVIDER 4
 
-static void delay_until_cycles(uint32_t cycles) {
-  while (time_cycles() < cycles) {
-    __NOP();
-  }
+typedef enum {
+  SETTLE_DELAY = 0,
+  START_BIT = 8,
+  DATA_BITS = START_BIT + BAUD_DIVIDER,
+  STOP_BITS = START_BIT + BAUD_DIVIDER + BAUD_DIVIDER * 8,
+} soft_serial_tx_state_t;
+
+#define USART_PORT(chan, rx, tx)
+#define SOFT_SERIAL_PORT(_index, rx, tx) \
+  {                                      \
+      .index = _index,                   \
+      .rx_pin = rx,                      \
+      .tx_pin = tx,                      \
+  },
+
+static volatile soft_serial_t soft_serial_ports[SOFT_SERIAL_PORTS_MAX - USART_PORTS_MAX] = {USART_PORTS};
+
+#undef USART_PORT
+#undef SOFT_SERIAL_PORT
+
+#define DEV soft_serial_ports[port - USART_PORTS_MAX]
+
+extern void soft_serial_rx_isr();
+extern void soft_serial_tx_isr();
+
+static void soft_serial_timer_start() {
+  LL_TIM_SetCounter(TIMER_INSTANCE, 0);
+
+  LL_TIM_ClearFlag_UPDATE(TIMER_INSTANCE);
+  LL_TIM_EnableIT_UPDATE(TIMER_INSTANCE);
+
+  LL_TIM_EnableCounter(TIMER_INSTANCE);
 }
 
-static int soft_serial_is_1wire(const soft_serial_t *dev) {
-  return dev->tx_pin == dev->rx_pin;
+static void soft_serial_timer_stop() {
+  LL_TIM_DisableIT_UPDATE(TIMER_INSTANCE);
+  LL_TIM_DisableCounter(TIMER_INSTANCE);
 }
 
-static void soft_serial_init_rx(const soft_serial_t *dev) {
-  if (dev->rx_pin == PIN_NONE) {
+static int soft_serial_is_1wire(usart_ports_t port) {
+  return DEV.tx_pin == DEV.rx_pin;
+}
+
+static void soft_serial_init_rx(usart_ports_t port) {
+  if (DEV.rx_pin == PIN_NONE) {
     return;
   }
 
@@ -25,13 +62,18 @@ static void soft_serial_init_rx(const soft_serial_t *dev) {
   gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
   gpio_init.Pull = LL_GPIO_PULL_UP;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  gpio_pin_init(&gpio_init, dev->rx_pin);
+  gpio_pin_init(&gpio_init, DEV.rx_pin);
 
-  gpio_pin_set(dev->rx_pin);
+  gpio_pin_set(DEV.rx_pin);
+
+  if (soft_serial_is_1wire(port)) {
+    DEV.tx_active = false;
+  }
+  DEV.rx_active = true;
 }
 
-static void soft_serial_init_tx(const soft_serial_t *dev) {
-  if (dev->tx_pin == PIN_NONE) {
+static void soft_serial_init_tx(usart_ports_t port) {
+  if (DEV.tx_pin == PIN_NONE) {
     return;
   }
 
@@ -40,121 +82,168 @@ static void soft_serial_init_tx(const soft_serial_t *dev) {
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  gpio_pin_init(&gpio_init, dev->tx_pin);
+  gpio_pin_init(&gpio_init, DEV.tx_pin);
 
-  gpio_pin_set(dev->tx_pin);
+  gpio_pin_set(DEV.tx_pin);
+
+  if (soft_serial_is_1wire(port)) {
+    DEV.rx_active = false;
+  }
+  DEV.tx_active = true;
 }
 
-uint8_t soft_serial_init(soft_serial_t *dev, gpio_pins_t tx_pin, gpio_pins_t rx_pin, uint32_t baudrate, uint8_t stop_bits) {
-  if (tx_pin == PIN_NONE && rx_pin == PIN_NONE) {
-    return 0;
+static void soft_serial_set_input(usart_ports_t port) {
+  if (soft_serial_is_1wire(port) && !DEV.rx_active) {
+    soft_serial_init_rx(port);
   }
+}
 
-  dev->tx_pin = tx_pin;
-  dev->rx_pin = rx_pin;
+static void soft_serial_set_output(usart_ports_t port) {
+  if (soft_serial_is_1wire(port) && !DEV.tx_active) {
+    soft_serial_init_tx(port);
+  }
+}
 
-  soft_serial_init_tx(dev);
-  soft_serial_init_rx(dev);
+uint8_t soft_serial_init(usart_ports_t port, uint32_t baudrate, uint8_t stop_bits) {
+  DEV.baud = baudrate;
+  DEV.stop_bits = stop_bits;
 
-  dev->baud = baudrate;
-  dev->stop_bits = stop_bits;
-  dev->cycles_per_bit = SYS_CLOCK_FREQ_HZ / baudrate;
-  dev->cycles_per_bit_half = dev->cycles_per_bit * .5;
+  DEV.tx_state = SETTLE_DELAY;
+  DEV.rx_state = START_BIT;
+
+  DEV.busy = false;
+
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  gpio_init.Pull = LL_GPIO_PULL_NO;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  gpio_pin_init(&gpio_init, PIN_C12);
+
+  soft_serial_init_tx(port);
+  soft_serial_init_rx(port);
+
+  timer_init(TIMER_INSTANCE, 1, PWM_CLOCK_FREQ_HZ / (baudrate * BAUD_DIVIDER));
+  interrupt_enable(TIMER_IRQN, TIMER_PRIORITY);
 
   return 1;
 }
 
-void soft_serial_set_input(const soft_serial_t *dev) {
-  if (soft_serial_is_1wire(dev))
-    soft_serial_init_rx(dev);
+bool soft_serial_is_busy(usart_ports_t port) {
+  return DEV.busy;
 }
 
-void soft_serial_set_output(const soft_serial_t *dev) {
-  if (soft_serial_is_1wire(dev))
-    soft_serial_init_tx(dev);
+void soft_serial_enable_write(usart_ports_t port) {
+  soft_serial_timer_stop();
+  soft_serial_set_output(port);
+  soft_serial_timer_start();
 }
 
-uint8_t soft_serial_read_byte(const soft_serial_t *dev, uint8_t *byte) {
-
-  uint32_t time_start = time_cycles();
-  uint32_t time_next = time_start;
-  while (!gpio_pin_read(dev->rx_pin)) {
-    time_next = time_cycles(); // wait for start bit
-    if (time_next - time_start > CYCLES_TIMEOUT)
-      return 0;
-  }
-
-  // start bit falling edge
-  while (gpio_pin_read(dev->rx_pin)) {
-    time_next = time_cycles(); // wait for start bit
-    if (time_next - time_start > CYCLES_TIMEOUT)
-      return 0;
-  }
-
-  time_next += dev->cycles_per_bit_half; // move away from edge to center of bit
-
-  uint8_t b = 0;
-  for (int i = 0; i < 8; ++i) {
-    time_next += dev->cycles_per_bit;
-    delay_until_cycles(time_next);
-    b >>= 1;
-    if (gpio_pin_read(dev->rx_pin))
-      b |= 0x80;
-  }
-
-  time_next += dev->cycles_per_bit;
-  delay_until_cycles(time_next); // move away from edge
-
-  // stop bit
-  for (uint8_t i = 0; i < dev->stop_bits; i++) {
-    if (!(gpio_pin_read(dev->rx_pin))) {
-      // error no stop bit
-      *byte = 0;
-      return 0;
-    }
-  }
-
-  *byte = b;
-  return 1;
+void soft_serial_enable_read(usart_ports_t port) {
+  soft_serial_set_input(port);
+  soft_serial_timer_start();
 }
 
-void soft_serial_write_byte(const soft_serial_t *dev, uint8_t byte) {
-  gpio_pin_reset(dev->tx_pin);
+uint8_t soft_serial_read_byte(usart_ports_t port) {
+  return DEV.rx_byte;
+}
 
-  uint32_t next_time = time_cycles();
-  for (int i = 0; i < 8; ++i) {
-    next_time += dev->cycles_per_bit;
-    delay_until_cycles(next_time);
+void soft_serial_write_byte(usart_ports_t port, uint8_t byte) {
+  DEV.tx_byte = byte;
+}
 
-    if (0x01 & byte)
-      gpio_pin_set(dev->tx_pin);
+void soft_serial_tx_update(usart_ports_t port) {
+  if (!DEV.tx_active) {
+    return;
+  }
+
+  if (DEV.tx_state < START_BIT) {
+    // delay for pin to settle
+    DEV.tx_state++;
+    return;
+  }
+
+  if (DEV.tx_state == START_BIT) {
+    soft_serial_tx_isr();
+    gpio_pin_reset(DEV.tx_pin);
+  }
+
+  if (DEV.tx_state >= DATA_BITS && DEV.tx_state < STOP_BITS) {
+    const uint8_t bit_index = (DEV.tx_state - DATA_BITS) / BAUD_DIVIDER;
+
+    if ((DEV.tx_byte >> bit_index) & 0x01)
+      gpio_pin_set(DEV.tx_pin);
     else
-      gpio_pin_reset(dev->tx_pin);
-
-    byte = byte >> 1;
+      gpio_pin_reset(DEV.tx_pin);
   }
-  next_time += dev->cycles_per_bit;
-  delay_until_cycles(next_time);
 
-  // stop bits
-  for (uint8_t i = 0; i < dev->stop_bits; i++) {
-    gpio_pin_set(dev->tx_pin);
-    next_time += dev->cycles_per_bit;
-    delay_until_cycles(next_time);
+  if (DEV.tx_state >= STOP_BITS && DEV.tx_state < (STOP_BITS + DEV.stop_bits * BAUD_DIVIDER)) {
+    gpio_pin_set(DEV.tx_pin);
   }
+
+  if (DEV.tx_state == (STOP_BITS + DEV.stop_bits * BAUD_DIVIDER)) {
+    DEV.tx_state = SETTLE_DELAY;
+    DEV.busy = false;
+    return;
+  }
+
+  DEV.tx_state++;
 }
 
-uint8_t soft_serial_read_bytes(const soft_serial_t *dev, uint8_t *byte, uint32_t size) {
-  for (uint32_t i = 0; i < size; i++) {
-    if (!soft_serial_read_byte(dev, byte + i)) {
-      return 0;
+void soft_serial_rx_update(usart_ports_t port) {
+  if (!DEV.rx_active) {
+    return;
+  }
+
+  if (DEV.rx_state == START_BIT) {
+    if (gpio_pin_read(DEV.rx_pin)) {
+      DEV.rx_state++;
+      gpio_pin_toggle(PIN_C12);
+    }
+    return;
+  }
+
+  if (DEV.rx_state > START_BIT && DEV.rx_state <= DATA_BITS) {
+    if (!gpio_pin_read(DEV.rx_pin)) {
+      DEV.rx_byte = 0;
+      DEV.rx_state++;
+      gpio_pin_toggle(PIN_C12);
+    }
+    return;
+  }
+
+  if (DEV.rx_state > DATA_BITS && DEV.rx_state <= STOP_BITS && (DEV.rx_state % BAUD_DIVIDER) == 2) {
+    const uint8_t bit_index = (DEV.rx_state - DATA_BITS) / BAUD_DIVIDER;
+
+    gpio_pin_toggle(PIN_C12);
+
+    if (gpio_pin_read(DEV.rx_pin)) {
+      DEV.rx_byte |= (0x01 << bit_index);
     }
   }
-  return 1;
+
+  if (DEV.rx_state > (STOP_BITS + (BAUD_DIVIDER / 2)) && DEV.rx_state < (STOP_BITS + DEV.stop_bits * BAUD_DIVIDER)) {
+    if (!gpio_pin_read(DEV.rx_pin)) {
+      DEV.rx_state = START_BIT;
+      return;
+    }
+  }
+
+  DEV.rx_state++;
+
+  if (DEV.rx_state == (STOP_BITS + DEV.stop_bits * BAUD_DIVIDER)) {
+    gpio_pin_toggle(PIN_C12);
+    soft_serial_rx_isr();
+    DEV.rx_state = START_BIT;
+  }
 }
 
-void soft_serial_write_bytes(const soft_serial_t *dev, uint8_t *byte, uint32_t size) {
-  for (uint32_t i = 0; i < size; i++) {
-    soft_serial_write_byte(dev, byte[i]);
+void TIM4_IRQHandler() {
+  if (LL_TIM_IsActiveFlag_UPDATE(TIMER_INSTANCE)) {
+    for (uint8_t port = USART_PORTS_MAX; port < SOFT_SERIAL_PORTS_MAX; port++) {
+      soft_serial_tx_update(port);
+      soft_serial_rx_update(port);
+    }
+    LL_TIM_ClearFlag_UPDATE(TIMER_INSTANCE);
   }
 }
