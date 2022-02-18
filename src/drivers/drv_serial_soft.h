@@ -1,27 +1,37 @@
 #pragma once
 
+#include <stdbool.h>
+
 #include "drv_gpio.h"
 #include "drv_time.h"
 #include "project.h"
 
 typedef struct {
+  uint8_t index;
+
   gpio_pins_t tx_pin;
   gpio_pins_t rx_pin;
 
   uint32_t baud;
   uint8_t stop_bits;
 
-  uint32_t cycles_per_bit;
-  uint32_t cycles_per_bit_half;
+  bool tx_active;
+  uint8_t tx_byte;
+  uint8_t tx_state;
+
+  bool rx_active;
+  uint8_t rx_byte;
+  uint8_t rx_state;
+
+  volatile bool busy;
 } soft_serial_t;
 
-uint8_t soft_serial_init(soft_serial_t *dev, gpio_pins_t tx_pin, gpio_pins_t rx_pin, uint32_t baudrate, uint8_t stop_bits);
+uint8_t soft_serial_init(usart_ports_t port, uint32_t baudrate, uint8_t stop_bits);
 
-void soft_serial_set_input(const soft_serial_t *data);
-void soft_serial_set_output(const soft_serial_t *data);
+void soft_serial_enable_write(usart_ports_t port);
+void soft_serial_enable_read(usart_ports_t port);
 
-uint8_t soft_serial_read_byte(const soft_serial_t *dev, uint8_t *byte);
-void soft_serial_write_byte(const soft_serial_t *dev, uint8_t byte);
+uint8_t soft_serial_read_byte(usart_ports_t port);
+void soft_serial_write_byte(usart_ports_t port, uint8_t byte);
 
-uint8_t soft_serial_read_bytes(const soft_serial_t *dev, uint8_t *byte, uint32_t size);
-void soft_serial_write_bytes(const soft_serial_t *dev, uint8_t *byte, uint32_t size);
+bool soft_serial_is_busy(usart_ports_t port);

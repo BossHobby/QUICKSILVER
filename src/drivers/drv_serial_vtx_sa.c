@@ -19,7 +19,6 @@
 #define SA_HEADER_SIZE 5
 
 #define USART usart_port_defs[serial_smart_audio_port]
-#define SOFT_SERIAL soft_serial_port_defs[serial_smart_audio_port - USART_PORTS_MAX]
 
 typedef enum {
   PARSER_IDLE,
@@ -49,8 +48,6 @@ extern uint8_t vtx_frame[VTX_BUFFER_SIZE];
 extern volatile uint8_t vtx_frame_length;
 extern volatile uint8_t vtx_frame_offset;
 
-extern soft_serial_t vtx_soft_serial;
-
 const uint8_t default_dac_power_levels[4] = {
     7,
     16,
@@ -62,7 +59,7 @@ static void serial_smart_audio_reconfigure() {
   serial_vtx_wait_for_ready();
 
   if (serial_is_soft(serial_smart_audio_port)) {
-    soft_serial_init(&vtx_soft_serial, SOFT_SERIAL.tx_pin, SOFT_SERIAL.rx_pin, baud_rate, 2);
+    soft_serial_init(serial_smart_audio_port, baud_rate, 2);
     return;
   }
 

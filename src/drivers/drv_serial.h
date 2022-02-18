@@ -34,15 +34,7 @@ typedef struct {
   gpio_pins_t tx_pin;
 } usart_port_def_t;
 
-typedef struct {
-  uint8_t index;
-
-  gpio_pins_t rx_pin;
-  gpio_pins_t tx_pin;
-} soft_serial_port_def_t;
-
 extern usart_port_def_t usart_port_defs[USART_PORTS_MAX];
-extern soft_serial_port_def_t soft_serial_port_defs[SOFT_SERIAL_PORTS_MAX - USART_PORTS_MAX];
 
 extern usart_ports_t serial_rx_port;
 extern usart_ports_t serial_smart_audio_port;

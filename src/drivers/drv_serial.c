@@ -275,19 +275,6 @@ usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {{}, USART_PORTS};
 #undef USART_PORT
 #undef SOFT_SERIAL_PORT
 
-#define USART_PORT(chan, rx, tx)
-#define SOFT_SERIAL_PORT(_index, rx, tx) \
-  {                                      \
-      .index = _index,                   \
-      .rx_pin = rx,                      \
-      .tx_pin = tx,                      \
-  },
-
-soft_serial_port_def_t soft_serial_port_defs[SOFT_SERIAL_PORTS_MAX - USART_PORTS_MAX] = {USART_PORTS};
-
-#undef USART_PORT
-#undef SOFT_SERIAL_PORT
-
 void handle_usart_isr(usart_ports_t port) {
 #ifdef SERIAL_RX
   extern void RX_USART_ISR();
