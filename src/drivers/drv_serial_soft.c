@@ -105,6 +105,8 @@ static void soft_serial_set_output(usart_ports_t port) {
 }
 
 uint8_t soft_serial_init(usart_ports_t port, uint32_t baudrate, uint8_t stop_bits) {
+  soft_serial_timer_stop();
+
   DEV.baud = baudrate;
   DEV.stop_bits = stop_bits;
 
@@ -116,7 +118,6 @@ uint8_t soft_serial_init(usart_ports_t port, uint32_t baudrate, uint8_t stop_bit
   soft_serial_init_tx(port);
   soft_serial_init_rx(port);
 
-  soft_serial_timer_stop();
   timer_init(TIMER_INSTANCE, 1, PWM_CLOCK_FREQ_HZ / (baudrate * BAUD_DIVIDER));
   interrupt_enable(TIMER_IRQN, TIMER_PRIORITY);
 
@@ -190,7 +191,7 @@ void soft_serial_rx_update(usart_ports_t port) {
   }
 
   static uint32_t timeout = 0;
-  if (timeout == 10000) {
+  if (timeout == 100000) {
     DEV.rx_state = START_BIT;
     timeout = 0;
     soft_serial_timer_stop();
@@ -229,6 +230,7 @@ void soft_serial_rx_update(usart_ports_t port) {
   if (DEV.rx_state > (STOP_BITS + (BAUD_DIVIDER / 2)) && DEV.rx_state < (STOP_BITS + 1 * BAUD_DIVIDER)) {
     if (!gpio_pin_read(DEV.rx_pin)) {
       DEV.rx_state = START_BIT;
+      timeout = 0;
       return;
     }
   }
