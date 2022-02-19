@@ -10,8 +10,7 @@
 #define BAUD_DIVIDER 4
 
 typedef enum {
-  SETTLE_DELAY = 0,
-  START_BIT = 8,
+  START_BIT = 0,
   DATA_BITS = START_BIT + BAUD_DIVIDER,
   STOP_BITS = START_BIT + BAUD_DIVIDER + BAUD_DIVIDER * 8,
 } soft_serial_tx_state_t;
@@ -84,7 +83,7 @@ static void soft_serial_init_tx(usart_ports_t port) {
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   gpio_pin_init(&gpio_init, DEV.tx_pin);
 
-  gpio_pin_set(DEV.tx_pin);
+  gpio_pin_reset(DEV.tx_pin);
 
   if (soft_serial_is_1wire(port)) {
     DEV.rx_active = false;
@@ -110,7 +109,7 @@ uint8_t soft_serial_init(usart_ports_t port, uint32_t baudrate, uint8_t stop_bit
   DEV.baud = baudrate;
   DEV.stop_bits = stop_bits;
 
-  DEV.tx_state = SETTLE_DELAY;
+  DEV.tx_state = START_BIT;
   DEV.rx_state = START_BIT;
 
   DEV.busy = false;
@@ -129,12 +128,16 @@ bool soft_serial_is_busy(usart_ports_t port) {
 }
 
 void soft_serial_enable_write(usart_ports_t port) {
+  DEV.tx_state = START_BIT;
+
   soft_serial_timer_stop();
   soft_serial_set_output(port);
   soft_serial_timer_start();
 }
 
 void soft_serial_enable_read(usart_ports_t port) {
+  DEV.rx_state = START_BIT;
+
   soft_serial_set_input(port);
   soft_serial_timer_start();
 }
@@ -149,12 +152,6 @@ void soft_serial_write_byte(usart_ports_t port, uint8_t byte) {
 
 void soft_serial_tx_update(usart_ports_t port) {
   if (!DEV.tx_active) {
-    return;
-  }
-
-  if (DEV.tx_state < START_BIT) {
-    // delay for pin to settle
-    DEV.tx_state++;
     return;
   }
 
@@ -177,7 +174,7 @@ void soft_serial_tx_update(usart_ports_t port) {
   }
 
   if (DEV.tx_state == (STOP_BITS + DEV.stop_bits * BAUD_DIVIDER)) {
-    DEV.tx_state = SETTLE_DELAY;
+    DEV.tx_state = START_BIT;
     DEV.busy = false;
     return;
   }
