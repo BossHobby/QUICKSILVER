@@ -275,6 +275,7 @@ vtx_update_result_t serial_smart_audio_update() {
       parser_state = PARSER_READ_MAGIC;
 
       serial_vtx_send_data(vtx_frame, vtx_frame_length);
+      packets_sent++;
     }
 
     return VTX_WAIT;
