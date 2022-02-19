@@ -124,7 +124,6 @@ static void smart_audio_auto_baud() {
     baud_rate += direction * 50;
     quic_debugf("SMART_AUDIO: auto baud %d (%d) change %d vs %d", baud_rate, direction * 50, last_percent, current_percent);
     serial_smart_audio_reconfigure();
-    time_delay_us(100);
   }
 
   last_percent = current_percent;
@@ -262,8 +261,6 @@ vtx_update_result_t serial_smart_audio_update() {
 
   case PARSER_INIT: {
     if ((time_millis() - vtx_last_request) > 200) {
-      smart_audio_auto_baud();
-
       for (uint32_t i = 0; i < vtx_frame_length; i++) {
         quic_debugf("SMART_AUDIO: sending  0x%x (%d)", vtx_frame[i], i);
       }
@@ -376,6 +373,8 @@ void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const 
   }
   vtx_frame[size + SA_HEADER_SIZE] = crc8_data(vtx_frame + 1, vtx_frame_length - 3);
   vtx_frame[size + 1 + SA_HEADER_SIZE] = 0x00;
+
+  smart_audio_auto_baud();
 
   parser_state = PARSER_INIT;
   vtx_last_valid_read = time_millis();
