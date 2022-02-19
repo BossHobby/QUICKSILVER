@@ -48,13 +48,19 @@ typedef enum {
   USART_PORTS
 #undef USART_PORT
 #undef SOFT_SERIAL_PORT
-  USART_PORTS_MAX,
+      USART_PORTS_MAX,
+
+#ifdef USE_SOFT_SERIAL
 
 #define USART_PORT(channel, rx_pin, tx_pin)
 #define SOFT_SERIAL_PORT(index, rx_pin, tx_pin) SOFT_SERIAL_IDENT(index) = (USART_PORTS_MAX + index - 1),
   USART_PORTS
 #undef USART_PORT
 #undef SOFT_SERIAL_PORT
-  SOFT_SERIAL_PORTS_MAX,
+      SOFT_SERIAL_PORTS_MAX,
+
+#else
+  SOFT_SERIAL_PORTS_MAX = USART_PORTS_MAX,
+#endif
 
 } usart_ports_t;
