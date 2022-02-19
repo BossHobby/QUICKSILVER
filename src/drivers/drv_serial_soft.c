@@ -189,9 +189,19 @@ void soft_serial_rx_update(usart_ports_t port) {
     return;
   }
 
+  static uint32_t timeout = 0;
+  if (timeout == 10000) {
+    DEV.rx_state = START_BIT;
+    timeout = 0;
+    soft_serial_timer_stop();
+    return;
+  }
+
   if (DEV.rx_state == START_BIT) {
     if (gpio_pin_read(DEV.rx_pin)) {
       DEV.rx_state++;
+    } else {
+      timeout++;
     }
     return;
   }
@@ -200,6 +210,9 @@ void soft_serial_rx_update(usart_ports_t port) {
     if (!gpio_pin_read(DEV.rx_pin)) {
       DEV.rx_byte = 0;
       DEV.rx_state++;
+      timeout = 0;
+    } else {
+      timeout++;
     }
     return;
   }
@@ -226,6 +239,7 @@ void soft_serial_rx_update(usart_ports_t port) {
   if (DEV.rx_state == (STOP_BITS + 1 * BAUD_DIVIDER)) {
     soft_serial_rx_isr();
     DEV.rx_state = START_BIT;
+    timeout = 0;
   }
 }
 
