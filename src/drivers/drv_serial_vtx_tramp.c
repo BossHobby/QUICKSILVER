@@ -227,7 +227,7 @@ vtx_update_result_t serial_tramp_update() {
 }
 
 void serial_tramp_send_payload(uint8_t cmd, const uint16_t payload) {
-  if (!serial_vtx_wait_for_ready()) {
+  if (!serial_vtx_is_ready()) {
     return;
   }
 

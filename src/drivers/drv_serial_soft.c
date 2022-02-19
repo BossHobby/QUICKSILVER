@@ -112,8 +112,6 @@ uint8_t soft_serial_init(usart_ports_t port, uint32_t baudrate, uint8_t stop_bit
   DEV.tx_state = START_BIT;
   DEV.rx_state = START_BIT;
 
-  DEV.busy = false;
-
   soft_serial_init_tx(port);
   soft_serial_init_rx(port);
 
@@ -121,10 +119,6 @@ uint8_t soft_serial_init(usart_ports_t port, uint32_t baudrate, uint8_t stop_bit
   interrupt_enable(TIMER_IRQN, TIMER_PRIORITY);
 
   return 1;
-}
-
-bool soft_serial_is_busy(usart_ports_t port) {
-  return DEV.busy;
 }
 
 void soft_serial_enable_write(usart_ports_t port) {
@@ -175,7 +169,6 @@ void soft_serial_tx_update(usart_ports_t port) {
 
   if (DEV.tx_state == (STOP_BITS + DEV.stop_bits * BAUD_DIVIDER)) {
     DEV.tx_state = START_BIT;
-    DEV.busy = false;
     return;
   }
 

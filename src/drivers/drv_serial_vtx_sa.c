@@ -357,7 +357,7 @@ vtx_update_result_t serial_smart_audio_update() {
 }
 
 void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const uint32_t size) {
-  if (!serial_vtx_wait_for_ready()) {
+  if (!serial_vtx_is_ready()) {
     return;
   }
 
