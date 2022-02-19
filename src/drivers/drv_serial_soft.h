@@ -22,8 +22,6 @@ typedef struct {
   bool rx_active;
   uint8_t rx_byte;
   uint8_t rx_state;
-
-  volatile bool busy;
 } soft_serial_t;
 
 uint8_t soft_serial_init(usart_ports_t port, uint32_t baudrate, uint8_t stop_bits);
@@ -33,5 +31,3 @@ void soft_serial_enable_read(usart_ports_t port);
 
 uint8_t soft_serial_read_byte(usart_ports_t port);
 void soft_serial_write_byte(usart_ports_t port, uint8_t byte);
-
-bool soft_serial_is_busy(usart_ports_t port);

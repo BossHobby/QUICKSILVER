@@ -27,13 +27,13 @@ uint8_t vtx_frame[VTX_BUFFER_SIZE];
 volatile uint8_t vtx_frame_length = 0;
 volatile uint8_t vtx_frame_offset = 0;
 
-bool serial_vtx_wait_for_ready() {
-  if (serial_is_soft(serial_smart_audio_port)) {
-    return !soft_serial_is_busy(serial_smart_audio_port);
-  }
+bool serial_vtx_is_ready() {
+  return vtx_transfer_done;
+}
 
+bool serial_vtx_wait_for_ready() {
   const uint32_t start = time_millis();
-  while (vtx_transfer_done == 0) {
+  while (!serial_vtx_is_ready()) {
     if ((time_millis() - start) > 100) {
       return false;
     }
