@@ -47,6 +47,9 @@ void serial_vtx_send_data(uint8_t *data, uint32_t size) {
     return;
   }
 
+  vtx_transfer_done = 0;
+  vtx_frame_offset = 0;
+
   if (serial_is_soft(serial_smart_audio_port)) {
     soft_serial_enable_write(serial_smart_audio_port);
   } else {
@@ -62,9 +65,6 @@ void serial_vtx_send_data(uint8_t *data, uint32_t size) {
     LL_USART_DisableDirectionRx(USART.channel);
     LL_USART_EnableDirectionTx(USART.channel);
   }
-
-  vtx_transfer_done = 0;
-  vtx_frame_offset = 0;
 
   vtx_last_request = time_millis();
   vtx_last_valid_read = time_millis();
