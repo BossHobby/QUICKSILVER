@@ -38,6 +38,7 @@ extern usart_port_def_t usart_port_defs[USART_PORTS_MAX];
 
 extern usart_ports_t serial_rx_port;
 extern usart_ports_t serial_smart_audio_port;
+extern usart_ports_t serial_hdzero_port;
 
 void serial_rx_init(rx_serial_protocol_t rx_serial_protocol);
 
