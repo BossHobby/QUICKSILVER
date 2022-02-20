@@ -23,6 +23,12 @@ typedef struct {
   uint8_t segment_count;
 } osd_transaction_t;
 
+typedef enum {
+  OSD_SYS_NONE,
+  OSD_SYS_PAL,
+  OSD_SYS_NTSC,
+} osd_system_t;
+
 bool osd_is_ready();
 
 osd_transaction_t *osd_txn_init();
