@@ -89,7 +89,7 @@ void max7456_init() {
   max7456_dma_spi_write(VM1, 0x0C);  // set background brightness (bits 456), blinking time(bits 23), blinking duty cycle (bits 01)
   max7456_dma_spi_write(OSDM, 0x2D); // osd mux & rise/fall ( lowest sharpness)
 
-  osd_check_system();
+  max7456_check_system();
 }
 
 // non blocking bulk dma transmit for interrupt callback configuration
@@ -144,7 +144,7 @@ static osd_system_t max7456_current_system() {
   return OSD_SYS_NONE;
 }
 
-uint8_t osd_clear_async() {
+uint8_t max7456_clear_async() {
   spi_txn_wait(&bus);
 
   static uint8_t clr_col = 0;
@@ -168,15 +168,9 @@ uint8_t osd_clear_async() {
   return 0;
 }
 
-void osd_clear() {
-  while (!osd_clear_async())
-    ;
-  spi_txn_wait(&bus);
-}
-
 // function to detect and correct ntsc/pal mode or mismatch
 // return 1 when the system changes
-uint8_t osd_check_system() {
+uint8_t max7456_check_system() {
   const osd_system_t sys = max7456_current_system();
 
   switch (sys) {
@@ -238,7 +232,7 @@ uint8_t osd_check_system() {
 }
 
 // splash screen
-void osd_intro() {
+void max7456_intro() {
   uint8_t buffer[24];
   for (uint8_t row = 0; row < 4; row++) {
     uint8_t start = 160 + row * 24;
@@ -253,6 +247,46 @@ void osd_intro() {
 
     spi_txn_wait(&bus);
   }
+}
+
+void max7456_txn_submit(osd_transaction_t *txn) {
+  uint16_t offset = 0;
+
+  for (uint16_t i = 0; i < txn->segment_count; i++) {
+    osd_segment_t *seg = &txn->segments[i];
+
+    // NTSC adjustment 3 lines up if after line 12 or maybe this should be 8
+    if (last_osd_system != OSD_SYS_PAL && seg->y > 12) {
+      seg->y = seg->y - 2;
+    }
+    if (seg->y > MAXROWS - 1) {
+      seg->y = MAXROWS - 1;
+    }
+
+    const uint16_t pos = seg->x + seg->y * 30;
+
+    dma_buffer[offset++] = DMM;
+    dma_buffer[offset++] = seg->attr;
+    dma_buffer[offset++] = DMAH;
+    dma_buffer[offset++] = (pos >> 8) & 0xFF;
+    dma_buffer[offset++] = DMAL;
+    dma_buffer[offset++] = pos & 0xFF;
+
+    for (uint16_t j = 0; j < seg->size; j++) {
+      dma_buffer[offset++] = DMDI;
+      dma_buffer[offset++] = txn->buffer[seg->offset + j];
+    }
+
+    // off autoincrement mode
+    dma_buffer[offset++] = DMDI;
+    dma_buffer[offset++] = 0xFF;
+  }
+
+  max7456_dma_it_transfer_bytes(dma_buffer, offset);
+}
+
+bool max7456_is_ready() {
+  return spi_txn_ready(&bus);
 }
 
 void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size) {
@@ -303,46 +337,6 @@ void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size) {
 
   // enable osd
   max7456_dma_spi_write(VM0, 0x1);
-}
-
-void osd_txn_submit(osd_transaction_t *txn) {
-  uint16_t offset = 0;
-
-  for (uint16_t i = 0; i < txn->segment_count; i++) {
-    osd_segment_t *seg = &txn->segments[i];
-
-    // NTSC adjustment 3 lines up if after line 12 or maybe this should be 8
-    if (last_osd_system != OSD_SYS_PAL && seg->y > 12) {
-      seg->y = seg->y - 2;
-    }
-    if (seg->y > MAXROWS - 1) {
-      seg->y = MAXROWS - 1;
-    }
-
-    const uint16_t pos = seg->x + seg->y * 30;
-
-    dma_buffer[offset++] = DMM;
-    dma_buffer[offset++] = seg->attr;
-    dma_buffer[offset++] = DMAH;
-    dma_buffer[offset++] = (pos >> 8) & 0xFF;
-    dma_buffer[offset++] = DMAL;
-    dma_buffer[offset++] = pos & 0xFF;
-
-    for (uint16_t j = 0; j < seg->size; j++) {
-      dma_buffer[offset++] = DMDI;
-      dma_buffer[offset++] = txn->buffer[seg->offset + j];
-    }
-
-    // off autoincrement mode
-    dma_buffer[offset++] = DMDI;
-    dma_buffer[offset++] = 0xFF;
-  }
-
-  max7456_dma_it_transfer_bytes(dma_buffer, offset);
-}
-
-bool osd_is_ready() {
-  return spi_txn_ready(&bus);
 }
 
 #endif
