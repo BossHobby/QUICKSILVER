@@ -8,6 +8,7 @@
 
 usart_ports_t serial_rx_port = USART_PORT_INVALID;
 usart_ports_t serial_smart_audio_port = USART_PORT_INVALID;
+usart_ports_t serial_hdzero_port = USART_PORT_INVALID;
 
 #define USART usart_port_defs[port]
 
@@ -296,6 +297,11 @@ void handle_usart_isr(usart_ports_t port) {
     return;
   }
 #endif
+  extern void hdzero_uart_isr();
+  if (serial_hdzero_port == port) {
+    hdzero_uart_isr();
+    return;
+  }
 }
 
 // we need handlers for both U_S_ART and UART.
