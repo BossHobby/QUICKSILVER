@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "drv_serial_hdzero.h"
 #include "drv_spi_max7456.h"
 #include "util.h"
 
@@ -15,6 +16,11 @@ void osd_device_init(osd_device_t dev) {
     osd_device = OSD_DEVICE_MAX7456;
     break;
 
+  case OSD_DEVICE_HDZERO:
+    hdzero_init();
+    osd_device = OSD_DEVICE_HDZERO;
+    break;
+
   default:
     osd_device = OSD_DEVICE_NONE;
     break;
@@ -25,6 +31,10 @@ void osd_intro() {
   switch (osd_device) {
   case OSD_DEVICE_MAX7456:
     max7456_intro();
+    break;
+
+  case OSD_DEVICE_HDZERO:
+    hdzero_intro();
     break;
 
   default:
@@ -42,6 +52,9 @@ uint8_t osd_clear_async() {
   case OSD_DEVICE_MAX7456:
     return max7456_clear_async();
 
+  case OSD_DEVICE_HDZERO:
+    return hdzero_clear_async();
+
   default:
     return 0;
   }
@@ -52,6 +65,9 @@ uint8_t osd_check_system() {
   case OSD_DEVICE_MAX7456:
     return max7456_check_system();
 
+  case OSD_DEVICE_HDZERO:
+    return hdzero_check_system();
+
   default:
     return 0;
   }
@@ -61,6 +77,9 @@ bool osd_is_ready() {
   switch (osd_device) {
   case OSD_DEVICE_MAX7456:
     return max7456_is_ready();
+
+  case OSD_DEVICE_HDZERO:
+    return hdzero_is_ready();
 
   default:
     return false;
@@ -185,6 +204,10 @@ void osd_txn_submit(osd_transaction_t *txn) {
   switch (osd_device) {
   case OSD_DEVICE_MAX7456:
     max7456_txn_submit(txn);
+    break;
+
+  case OSD_DEVICE_HDZERO:
+    hdzero_txn_submit(txn);
     break;
 
   default:
