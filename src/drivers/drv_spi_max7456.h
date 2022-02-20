@@ -1,7 +1,8 @@
 #pragma once
 
-#include "project.h"
-#include "stdint.h"
+#include <stdint.h>
+
+#include "drv_osd.h"
 
 #define MAX7456_READ_FLAG 0x80
 
@@ -43,11 +44,6 @@
 #define SYSTEMXPOS 7
 #define SYSTEMYPOS 7
 
-// do not change defines below this line
-#define PAL 1
-#define NTSC 0
-#define NONE 2
-
 #define YES 1
 #define NO 0
 
@@ -58,11 +54,11 @@
 void max7456_init();
 
 void osd_intro();
+
 void osd_clear();
-uint8_t osd_runtime_screen_clear();
-void osd_checksystem();
+uint8_t osd_clear_async();
+
+uint8_t osd_check_system();
 
 void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size);
 void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size);
-
-void fast_fprint(uint8_t *str, uint8_t length, float v, uint8_t precision);

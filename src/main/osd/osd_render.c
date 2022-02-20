@@ -513,7 +513,7 @@ void print_osd_menu_strings(uint8_t string_element_qty, uint8_t active_element_q
   if (osd_menu_phase > string_element_qty)
     return;
   if (osd_menu_phase == 0) {
-    if (osd_runtime_screen_clear())
+    if (osd_clear_async())
       osd_menu_phase++;
     return;
   }
@@ -771,21 +771,18 @@ void osd_display() {
     return;
   }
 
-  // first check if video signal autodetect needs to run - run if necessary
-  extern uint8_t lastsystem; // initialized at 99 for none then becomes 0 or 1 for ntsc/pal
-  if (lastsystem > 1)        // if no camera was detected at boot up
-  {
-    osd_checksystem(); // try to detect camera
-    if (lastsystem < 2) {
-      osd_display_reset(); // camera has been detected while in the main loop and screen has been cleared again - reset screen cases
-    }
+  // check if the system changed
+  if (osd_check_system()) {
+    // sytem has changed, reset osd state
+    osd_display_reset();
+    return;
   }
 
   //************OSD MENU DISPLAY ROUTINES HERE*************
   switch (osd_display_phase) // phase starts at 2, RRR gesture subtracts 1 to enter the menu, RRR again or DDD subtracts 1 to clear the screen and return to regular display
   {
   case 0: // osd screen clears, resets to regular display, and resets wizard and menu starting points
-    if (osd_runtime_screen_clear())
+    if (osd_clear_async())
       osd_display_reset();
     break; // screen has been cleared for this loop - break out of display function
 
