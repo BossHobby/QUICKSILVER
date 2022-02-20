@@ -2,9 +2,70 @@
 
 #include <string.h>
 
+#include "drv_spi_max7456.h"
 #include "util.h"
 
 static osd_transaction_t osd_txn;
+static osd_device_t osd_device = OSD_DEVICE_NONE;
+
+void osd_device_init(osd_device_t dev) {
+  switch (dev) {
+  case OSD_DEVICE_MAX7456:
+    max7456_init();
+    osd_device = OSD_DEVICE_MAX7456;
+    break;
+
+  default:
+    osd_device = OSD_DEVICE_NONE;
+    break;
+  }
+}
+
+void osd_intro() {
+  switch (osd_device) {
+  case OSD_DEVICE_MAX7456:
+    max7456_intro();
+    break;
+
+  default:
+    break;
+  }
+}
+
+void osd_clear() {
+  while (!osd_clear_async())
+    ;
+}
+
+uint8_t osd_clear_async() {
+  switch (osd_device) {
+  case OSD_DEVICE_MAX7456:
+    return max7456_clear_async();
+
+  default:
+    return 0;
+  }
+}
+
+uint8_t osd_check_system() {
+  switch (osd_device) {
+  case OSD_DEVICE_MAX7456:
+    return max7456_check_system();
+
+  default:
+    return 0;
+  }
+}
+
+bool osd_is_ready() {
+  switch (osd_device) {
+  case OSD_DEVICE_MAX7456:
+    return max7456_is_ready();
+
+  default:
+    return false;
+  }
+}
 
 osd_transaction_t *osd_txn_init() {
   osd_txn.segment_count = 0;
@@ -118,4 +179,15 @@ void osd_txn_write_float(float val, uint8_t width, uint8_t precision) {
   }
 
   osd_txn_write_data(buf, width);
+}
+
+void osd_txn_submit(osd_transaction_t *txn) {
+  switch (osd_device) {
+  case OSD_DEVICE_MAX7456:
+    max7456_txn_submit(txn);
+    break;
+
+  default:
+    break;
+  }
 }

@@ -87,6 +87,8 @@ extern profile_t profile;
 extern vtx_settings_t vtx_settings;
 extern vtx_settings_t vtx_settings_copy;
 
+static osd_device_t osd_device = OSD_DEVICE_HDZERO;
+
 static uint8_t osd_attr(osd_element_t *el) {
   return el->attribute ? INVERT : TEXT;
 }
@@ -637,8 +639,10 @@ void print_osd_mixed_data(uint8_t string_element_qty, uint8_t data_element_qty, 
 //************************************************************************************************************************************************************************************
 //************************************************************************************************************************************************************************************
 void osd_init() {
-  max7456_init(); // init the max chip
-  osd_intro();    // print the splash screen
+  osd_device_init(osd_device);
+
+  // print the splash screen
+  osd_intro();
 }
 
 static void osd_display_regular() {

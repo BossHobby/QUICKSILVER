@@ -29,7 +29,21 @@ typedef enum {
   OSD_SYS_NTSC,
 } osd_system_t;
 
+typedef enum {
+  OSD_DEVICE_NONE,
+  OSD_DEVICE_MAX7456,
+  OSD_DEVICE_HDZERO
+} osd_device_t;
+
+void osd_device_init(osd_device_t dev);
+void osd_intro();
+
 bool osd_is_ready();
+
+void osd_clear();
+uint8_t osd_clear_async();
+
+uint8_t osd_check_system();
 
 osd_transaction_t *osd_txn_init();
 

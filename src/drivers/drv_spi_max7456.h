@@ -52,13 +52,13 @@
 #define OSDBL_W 0x6C
 
 void max7456_init();
+bool max7456_is_ready();
+void max7456_intro();
 
-void osd_intro();
+uint8_t max7456_clear_async();
+uint8_t max7456_check_system();
 
-void osd_clear();
-uint8_t osd_clear_async();
-
-uint8_t osd_check_system();
+void max7456_txn_submit(osd_transaction_t *txn);
 
 void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size);
 void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size);
