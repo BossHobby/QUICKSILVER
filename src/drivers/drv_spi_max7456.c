@@ -13,17 +13,14 @@
 
 #define MAX7456_BAUD_RATE spi_find_divder(MHZ_TO_HZ(10.5))
 
-// osd video system ( PAL /NTSC) at startup if no video input is present
+// osd video system (PAL/NTSC) at startup if no video input is present
 // after input is present the last detected system will be used.
-static uint8_t osdsystem = NTSC;
+static osd_system_t current_osd_system = OSD_SYS_NTSC;
+static osd_system_t last_osd_system = OSD_SYS_NONE;
 
 // detected osd video system starts at 99 and gets updated here by osd_checksystem()
-uint8_t lastsystem = 99;
 static uint8_t lastvm0 = 0x55;
-
 static uint8_t dma_buffer[64];
-
-// TODO ... should we monitor lastvm0 and handle any unexpected changes using check_osd() ... not sure if/when an osd chip becomes unstable due to voltage or some other reason
 
 static volatile uint8_t buffer[128];
 static volatile spi_bus_device_t bus = {
@@ -74,18 +71,25 @@ void max7456_init() {
   const uint8_t x = max7456_dma_spi_read(OSDBL_R);
   max7456_dma_spi_write(OSDBL_W, x | 0x10);
 
-  if (osdsystem == PAL) {
-    max7456_dma_spi_write(VM0, 0x72); // Set pal mode ( ntsc by default) and enable display
-    lastvm0 = 0x72;
-  } else {
+  switch (current_osd_system) {
+  case OSD_SYS_PAL:
+    max7456_dma_spi_write(VM0, 0x78); // Set pal mode and enable display
+    lastvm0 = 0x78;
+    break;
+
+  case OSD_SYS_NTSC:
     max7456_dma_spi_write(VM0, 0x08); // Set ntsc mode and enable display
     lastvm0 = 0x08;
+    break;
+
+  default:
+    break;
   }
 
   max7456_dma_spi_write(VM1, 0x0C);  // set background brightness (bits 456), blinking time(bits 23), blinking duty cycle (bits 01)
   max7456_dma_spi_write(OSDM, 0x2D); // osd mux & rise/fall ( lowest sharpness)
 
-  osd_checksystem();
+  osd_check_system();
 }
 
 // non blocking bulk dma transmit for interrupt callback configuration
@@ -99,124 +103,58 @@ static void max7456_dma_it_transfer_bytes(const uint8_t *buffer, const uint8_t s
   spi_txn_continue(&bus);
 }
 
-//*******************************************************************************OSD FUNCTIONS********************************************************************************
-
-// stuffs a float into a char array.  parameters are array length and precision.  only pads spaces for 0's up to the thousands place.
-uint8_t count_digits(uint32_t value) {
-  uint8_t count = 0;
-  while (value > 0) {
-    value /= 10;
-    count++;
-  }
-  return count;
-}
-
-// stuffs a float into a char array.  parameters are array length and precision.  only pads spaces for 0's up to the thousands place.
-void fast_fprint(uint8_t *str, uint8_t length, float v, uint8_t precision) {
-  const uint8_t is_negative = v < 0 ? 1 : 0;
-
-  uint32_t value = v * (is_negative ? -1.01f : 1.0f) * (ipow(10, precision));
-  uint8_t digitsinfrontofdecimal = length - (precision + 1);
-  static uint32_t last_cast = 0;
-  for (uint8_t i = 0; i < digitsinfrontofdecimal; i++) {
-    uint32_t cast_value = value / ipow(10, (digitsinfrontofdecimal + (precision - 1) - i));
-    str[i] = ((cast_value) - (10 * last_cast)) + 48;
-    last_cast = cast_value;
-  }
-
-  for (uint8_t i = digitsinfrontofdecimal; i < length; i++) {
-    if (i == digitsinfrontofdecimal) {
-      if (precision > 0)
-        str[i] = 46;
-      else
-        str[i] = ' ';
-    } else {
-      uint32_t cast_value = value / ipow(10, (digitsinfrontofdecimal + precision - i));
-      str[i] = ((cast_value) - (10 * last_cast)) + 48;
-      last_cast = cast_value;
-    }
-  }
-  last_cast = 0;
-
-  if (digitsinfrontofdecimal > 3) {
-    if ((str[0] == 48) && (str[1] == 48) && (str[2] == 48))
-      str[2] = is_negative ? '-' : ' ';
-    if ((str[0] == 48) && (str[1] == 48))
-      str[1] = ' ';
-    if (str[0] == 48)
-      str[0] = ' ';
-  }
-  if (digitsinfrontofdecimal > 2) {
-    if ((str[0] == 48) && (str[1] == 48))
-      str[1] = is_negative ? '-' : ' ';
-    if (str[0] == 48)
-      str[0] = ' ';
-  }
-  if (digitsinfrontofdecimal > 1) {
-    if (str[0] == 48)
-      str[0] = is_negative ? '-' : ' ';
-  }
-}
-
-// prints array to screen with array length, dmm_attribute TEXT, BLINK, or INVERT, and xy position
-void osd_print_data(const uint8_t *buffer, uint8_t length, uint8_t dmm_attribute, uint8_t x, uint8_t y) {
-  if (lastsystem != PAL) {
-    // NTSC adjustment 3 lines up if after line 12 or maybe this should be 8
-    if (y > 12)
-      y = y - 2;
-  }
-  if (y > MAXROWS - 1)
-    y = MAXROWS - 1;
-
-  const uint32_t size = (length * 2) + 8;
-  if (size > 64) {
+// set the video output system PAL /NTSC
+static void max7456_set_system(osd_system_t sys) {
+  if (current_osd_system == sys) {
     return;
   }
 
-  // 16 bit mode, auto increment mode
-  uint16_t pos = x + y * 30;
-  dma_buffer[0] = DMM;
-  dma_buffer[1] = dmm_attribute;
-  dma_buffer[2] = DMAH;
-  dma_buffer[3] = (pos >> 8) & 0xFF;
-  dma_buffer[4] = DMAL;
-  dma_buffer[5] = pos & 0xFF;
+  uint8_t x = max7456_dma_spi_read(VM0_R);
 
-  for (int i = 0; i < length; i++) {
-    dma_buffer[(i * 2) + 6] = DMDI;
-    dma_buffer[(i * 2) + 7] = buffer[i];
+  switch (sys) {
+  case OSD_SYS_PAL:
+    lastvm0 = x | 0x40;
+    max7456_dma_spi_write(VM0, x | 0x40);
+    break;
+
+  case OSD_SYS_NTSC:
+    lastvm0 = x & 0xBF;
+    max7456_dma_spi_write(VM0, x & 0xBF);
+    break;
+
+  default:
+    break;
   }
-  // off autoincrement mode
-  dma_buffer[(length * 2) + 6] = DMDI;
-  dma_buffer[(length * 2) + 7] = 0xFF;
 
-  // non blocking dma print
-  max7456_dma_it_transfer_bytes(dma_buffer, (length * 2) + 8);
+  current_osd_system = sys;
 }
 
-// prints string to screen with dmm_attribute TEXT, BLINK, or INVERT.  CAUTION:  strlen() is used in this so only use this for compile time strings
-void osd_print(const char *buffer, uint8_t dmm_attribute, uint8_t x, uint8_t y) {
-  osd_print_data((const uint8_t *)buffer, strlen(buffer), dmm_attribute, x, y);
-}
-
-// clears off entire display    This function is a blocking use of non blocking print (not looptime friendly)
-void osd_clear() {
-  for (uint8_t y = 0; y < MAXROWS; y++) { // CHAR , ATTRIBUTE , COL , ROW
-    osd_print("          ", TEXT, 0, y);
-    spi_txn_wait(&bus);
-
-    osd_print("          ", TEXT, 10, y);
-    spi_txn_wait(&bus);
-
-    osd_print("          ", TEXT, 20, y);
-    spi_txn_wait(&bus);
+static osd_system_t max7456_current_system() {
+  uint8_t x = max7456_dma_spi_read(STAT);
+  if ((x & 0x01) == 0x01) {
+    return OSD_SYS_PAL;
   }
+  if ((x & 0x02) == 0x02) {
+    return OSD_SYS_NTSC;
+  }
+
+  // really (x & 0x03) == 0x03 equals Loss-of-Sync
+  // but its probably safe to assume if we havent detected
+  // either NTSC or PAl we dont have a cam present
+  return OSD_SYS_NONE;
 }
 
-uint8_t osd_runtime_screen_clear() {
+uint8_t osd_clear_async() {
+  spi_txn_wait(&bus);
+
   static uint8_t clr_col = 0;
   static uint8_t clr_row = 0;
-  osd_print("               ", TEXT, clr_col, clr_row);
+
+  osd_transaction_t *txn = osd_txn_init();
+  osd_txn_start(TEXT, clr_col, clr_row);
+  osd_txn_write_str("               ");
+  osd_txn_submit(txn);
+
   clr_row++;
   if (clr_row > MAXROWS) {
     clr_row = 0;
@@ -226,61 +164,77 @@ uint8_t osd_runtime_screen_clear() {
       return 1;
     }
   }
+
   return 0;
 }
 
-// set the video output system PAL /NTSC
-void osd_setsystem(uint8_t sys) {
-  uint8_t x = max7456_dma_spi_read(VM0_R);
-  if (sys == PAL) {
-    lastvm0 = x | 0x40;
-    max7456_dma_spi_write(VM0, x | 0x40);
-  } else {
-    lastvm0 = x & 0xBF;
-    max7456_dma_spi_write(VM0, x & 0xBF);
-  }
+void osd_clear() {
+  while (!osd_clear_async())
+    ;
+  spi_txn_wait(&bus);
 }
 
-// function to autodetect and correct ntsc/pal mode or mismatch
-void osd_checksystem() {
-  // check detected video system
-  uint8_t x = max7456_dma_spi_read(STAT);
-  if ((x & 0x01) == 0x01) { // PAL
-    if (lastsystem != PAL) {
-      lastsystem = PAL;
-      if (osdsystem != PAL)
-        osd_setsystem(PAL);
-      osd_clear(); // initial screen clear off
-                   // osd_print( "PAL  DETECTED" , BLINK , SYSTEMXPOS+1 , SYSTEMYPOS );  //for debugging - remove later
+// function to detect and correct ntsc/pal mode or mismatch
+// return 1 when the system changes
+uint8_t osd_check_system() {
+  const osd_system_t sys = max7456_current_system();
+
+  switch (sys) {
+  case OSD_SYS_PAL:
+    if (last_osd_system != OSD_SYS_PAL) {
+      last_osd_system = OSD_SYS_PAL;
+      max7456_set_system(OSD_SYS_PAL);
+
+      // initial screen clear off
+      osd_clear();
+      return 1;
     }
+    break;
+
+  case OSD_SYS_NTSC:
+    if (last_osd_system != OSD_SYS_NTSC) {
+      last_osd_system = OSD_SYS_NTSC;
+      max7456_set_system(OSD_SYS_NTSC);
+
+      // initial screen clear off
+      osd_clear();
+      return 1;
+    }
+    break;
+
+  default: {
+    static uint8_t warning_sent = 0;
+
+    if (last_osd_system != OSD_SYS_NONE) {
+      // we lost sync
+      last_osd_system = OSD_SYS_NONE;
+      warning_sent = 0;
+      return 1;
+    }
+
+    if (warning_sent == 0) {
+      // initial screen clear off on first run
+      osd_clear();
+    } else if (warning_sent == 1) {
+      spi_txn_wait(&bus);
+
+      osd_transaction_t *txn = osd_txn_init();
+      osd_txn_start(BLINK, SYSTEMXPOS, SYSTEMYPOS);
+      osd_txn_write_str("NO CAMERA SIGNAL");
+      osd_txn_submit(txn);
+
+      spi_txn_wait(&bus);
+    } else if (warning_sent > 1) {
+      // done with this sequence, do not increment further
+      break;
+    }
+
+    warning_sent++;
+    break;
+  }
   }
 
-  if ((x & 0x02) == 0x02) { // NTSC
-    if (lastsystem != NTSC) {
-      lastsystem = NTSC;
-      if (osdsystem != NTSC)
-        osd_setsystem(NTSC);
-      osd_clear(); // initial screen clear off
-                   // osd_print( "NTSC DETECTED" , BLINK , SYSTEMXPOS+1 , SYSTEMYPOS );  //for debugging - remove later
-    }
-  }
-
-  if ((x & 0x03) == 0x00) { // No signal
-    if (lastsystem > 1) {
-      if (lastsystem > 2)
-        osd_clear(); // initial screen clear off since lastsystem is set to 99 at boot
-      static uint8_t warning_sent = 0;
-      if (warning_sent < 2) // incriments once at boot, and again the first time through main loop.  Then cleared by a incoming signal
-      {
-        if (warning_sent == 1)
-          osd_print("NO CAMERA SIGNAL", BLINK, SYSTEMXPOS, SYSTEMYPOS);
-
-        spi_txn_wait(&bus);
-        warning_sent++;
-        lastsystem = 2;
-      }
-    }
-  }
+  return 0;
 }
 
 // splash screen
@@ -291,29 +245,13 @@ void osd_intro() {
     for (uint8_t i = 0; i < 24; i++) {
       buffer[i] = start + i;
     }
-    osd_print_data(buffer, 24, TEXT, 3, row + 5);
-    spi_txn_wait(&bus);
-  }
-}
 
-// NOT USING THIS FUNCTION YET OR EVEN SURE IF IT IS NEEDED
-//  check for osd "accidental" reset
-//  possibly caused by low or unstable voltage
-//  MAX resets somewhere between 4.2V and 4.6V
-//   Clone chips are unknown to me but obviously below 3.3v
-void check_osd() {
-  uint8_t x = max7456_dma_spi_read(VM0_R);
-  if (x != lastvm0) {                 // the register is not what it's supposed to be
-    max7456_dma_spi_write(VM0, 0x02); // soft reset
-    time_delay_us(200);
-    // only set minimum number of registers for functionality
-    if (osdsystem == PAL) {
-      max7456_dma_spi_write(VM0, 0x72); // Set pal mode ( ntsc by default) and enable display
-      lastvm0 = 0x72;
-    } else {
-      max7456_dma_spi_write(VM0, 0x08); // Set ntsc mode and enable display
-      lastvm0 = 0x08;
-    }
+    osd_transaction_t *txn = osd_txn_init();
+    osd_txn_start(TEXT, 3, row + 5);
+    osd_txn_write_data(buffer, 24);
+    osd_txn_submit(txn);
+
+    spi_txn_wait(&bus);
   }
 }
 
@@ -374,7 +312,7 @@ void osd_txn_submit(osd_transaction_t *txn) {
     osd_segment_t *seg = &txn->segments[i];
 
     // NTSC adjustment 3 lines up if after line 12 or maybe this should be 8
-    if (lastsystem != PAL && seg->y > 12) {
+    if (last_osd_system != OSD_SYS_PAL && seg->y > 12) {
       seg->y = seg->y - 2;
     }
     if (seg->y > MAXROWS - 1) {
