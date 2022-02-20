@@ -33,3 +33,5 @@ steps:
     when:
       branch:
         - develop
+      event:
+        - push
