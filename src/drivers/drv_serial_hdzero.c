@@ -15,6 +15,17 @@ typedef enum {
   SUBCMD_SET_OPTIONS = 5,
 } displayport_subcmd_t;
 
+typedef enum {
+  ATTR_NONE = 0,
+  ATTR_INFO,
+  ATTR_WARNING,
+  ATTR_CRITICAL,
+  ATTR_BLINK = 0x80,
+} displayport_attr_t;
+
+#define ROWS 18
+#define COLS 50
+
 #define BUFFER_SIZE 128
 
 #define USART usart_port_defs[serial_hdzero_port]
@@ -27,11 +38,48 @@ static volatile uint8_t msp_frame_length = 0;
 static volatile uint8_t msp_frame_offset = 0;
 static volatile uint8_t msp_transfer_done = 1;
 
+static uint8_t hdzero_map_attr(uint8_t attr) {
+  uint8_t val = 0;
+  /*
+  if (attr & OSD_ATTR_INVERT) {
+    val |= ATTR_WARNING;
+  }
+
+  if (attr & OSD_ATTR_BLINK) {
+    val |= ATTR_BLINK;
+  }
+  */
+  return val;
+}
+
 static void hdzero_start() {
   while (!msp_transfer_done)
     ;
 
   msp_frame_length = 0;
+}
+
+static void hdzero_push_msp(const uint8_t code, const uint8_t *data, const uint8_t size) {
+  const uint8_t full_size = size + MSP_HEADER_LEN + 1;
+
+  uint8_t *frame = msp_frame + msp_frame_length;
+  frame[0] = '$';
+  frame[1] = 'M';
+  frame[2] = '>';
+  frame[3] = size;
+  frame[4] = code;
+
+  for (uint8_t i = 0; i < size; i++) {
+    frame[i + MSP_HEADER_LEN] = data[i];
+  }
+
+  uint8_t chksum = size;
+  for (uint8_t i = 4; i < full_size; i++) {
+    chksum ^= frame[i];
+  }
+  frame[size + MSP_HEADER_LEN] = chksum;
+
+  msp_frame_length += full_size;
 }
 
 static void hdzero_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data, const uint8_t size) {
@@ -80,21 +128,23 @@ void hdzero_init() {
   serial_enable_isr(serial_hdzero_port);
 
   LL_USART_EnableIT_RXNE(USART.channel);
+
+  hdzero_start();
+  uint8_t variant[6] = {'A', 'R', 'D', 'U', 0, 0};
+  hdzero_push_msp(MSP_FC_VARIANT, variant, 6);
+  hdzero_submit();
+
+  hdzero_start();
+  uint8_t options[2] = {0, 1};
+  hdzero_push_subcmd(SUBCMD_SET_OPTIONS, options, 2);
+  hdzero_submit();
 }
 
 void hdzero_intro() {
-  uint8_t buffer[24];
-  for (uint8_t row = 0; row < 4; row++) {
-    uint8_t start = 160 + row * 24;
-    for (uint8_t i = 0; i < 24; i++) {
-      buffer[i] = start + i;
-    }
-
-    osd_transaction_t *txn = osd_txn_init();
-    osd_txn_start(0, 3, row + 5);
-    osd_txn_write_data(buffer, 24);
-    osd_txn_submit(txn);
-  }
+  osd_transaction_t *txn = osd_txn_init();
+  osd_txn_start(OSD_ATTR_TEXT, COLS / 2 - 6, ROWS / 2 - 1);
+  osd_txn_write_str("QUICKSILVER");
+  osd_txn_submit(txn);
 }
 
 uint8_t hdzero_clear_async() {
@@ -130,7 +180,7 @@ void hdzero_txn_submit(osd_transaction_t *txn) {
     uint8_t buffer[size];
     buffer[0] = seg->y;
     buffer[1] = seg->x;
-    buffer[2] = 0;
+    buffer[2] = hdzero_map_attr(seg->attr);
 
     memcpy(buffer + 3, txn->buffer + seg->offset, seg->size);
 
