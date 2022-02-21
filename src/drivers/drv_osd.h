@@ -35,6 +35,12 @@ typedef enum {
   OSD_DEVICE_HDZERO
 } osd_device_t;
 
+typedef enum {
+  OSD_ATTR_TEXT,
+  OSD_ATTR_INVERT = (0x1 << 1),
+  OSD_ATTR_BLINK = (0x1 << 2),
+} osd_text_attr_t;
+
 void osd_device_init(osd_device_t dev);
 void osd_intro();
 
