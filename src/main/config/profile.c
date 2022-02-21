@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "drv_usb.h"
+#include "osd_render.h"
 #include "rx.h"
 #include "usb_configurator.h"
 #include "util.h"
@@ -465,17 +466,17 @@ const profile_t default_profile = {
     .osd = {
         .callsign = "QUICKSILVER",
         .elements = {
-            0xA7,
-            0x704,
-            0x72D,
-            0x755,
-            0x6A9,
-            0xE1,
-            0x6E1,
-            0x321,
-            0x681,
-            0x84,
-            0x701,
+            ENCODE_OSD_ELEMENT(1, 1, 9, 1),
+            ENCODE_OSD_ELEMENT(0, 0, 1, 14),
+            ENCODE_OSD_ELEMENT(1, 0, 11, 14),
+            ENCODE_OSD_ELEMENT(1, 0, 24, 14),
+            ENCODE_OSD_ELEMENT(1, 0, 10, 13),
+            ENCODE_OSD_ELEMENT(1, 0, 24, 1),
+            ENCODE_OSD_ELEMENT(1, 0, 24, 13),
+            ENCODE_OSD_ELEMENT(1, 0, 8, 6),
+            ENCODE_OSD_ELEMENT(1, 0, 0, 13),
+            ENCODE_OSD_ELEMENT(0, 0, 1, 1),
+            ENCODE_OSD_ELEMENT(1, 0, 0, 14),
         },
     },
 };
