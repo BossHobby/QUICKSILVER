@@ -103,6 +103,13 @@ const char *get_decode_element_string(osd_element_t *input, osd_element_attrs_t 
   return 0;
 }
 
+uint32_t *osd_elements() {
+  if (osd_system == OSD_SYS_HD) {
+    return profile.osd.elements_hd;
+  }
+  return profile.osd.elements;
+}
+
 //************************************************************************************************************************************************************************************
 //																					STATE VARIABLES
 //************************************************************************************************************************************************************************************
@@ -614,7 +621,7 @@ void osd_init() {
 }
 
 static void osd_display_regular() {
-  osd_element_t *el = (osd_element_t *)&profile.osd.elements[osd_display_element];
+  osd_element_t *el = (osd_element_t *)(osd_elements() + osd_display_element);
   if (osd_display_element < OSD_ELEMENT_MAX && !el->active) {
     osd_display_element++;
     return;
@@ -883,25 +890,25 @@ void osd_display() {
   case 15: // add or remove osd elements to display
     last_display_phase = 10;
     print_osd_menu_strings(12, 11, osd_display_labels, osd_display_positions);
-    print_osd_adjustable_enums(12, 10, get_decode_element_string((osd_element_t *)&profile.osd.elements[osd_elements_active_items[osd_menu_phase - 13]], ACTIVE), osd_display_grid, osd_display_data_positions);
+    print_osd_adjustable_enums(12, 10, get_decode_element_string((osd_element_t *)(osd_elements() + osd_elements_active_items[osd_menu_phase - 13]), ACTIVE), osd_display_grid, osd_display_data_positions);
     if (osd_menu_phase == 23)
-      osd_encoded_adjust(&profile.osd.elements[osd_elements_active_items[osd_cursor - 1]], 10, 1, ACTIVE);
+      osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_cursor - 1], 10, 1, ACTIVE);
     break;
 
   case 16: // edit element positions
     last_display_phase = 10;
     print_osd_menu_strings(14, 11, osd_position_labels, osd_position_adjust_positions);
-    print_osd_adjustable_enums(14, 20, get_decode_element_string((osd_element_t *)&profile.osd.elements[osd_position_active_items[osd_menu_phase - 15]], osd_position_index[osd_menu_phase - 15]), osd_position_grid, osd_position_data_positions);
+    print_osd_adjustable_enums(14, 20, get_decode_element_string((osd_element_t *)(osd_elements() + osd_position_active_items[osd_menu_phase - 15]), osd_position_index[osd_menu_phase - 15]), osd_position_grid, osd_position_data_positions);
     if (osd_menu_phase == 35 && osd_select > 0)
-      osd_encoded_adjust(&profile.osd.elements[osd_elements_active_items[osd_cursor - 1]], 10, 2, osd_select + 1);
+      osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_cursor - 1], 10, 2, osd_select + 1);
     break;
 
   case 17: // edit display text style
     last_display_phase = 10;
     print_osd_menu_strings(12, 11, osd_text_style, osd_text_style_positions);
-    print_osd_adjustable_enums(12, 10, get_decode_element_string((osd_element_t *)&profile.osd.elements[osd_elements_active_items[osd_menu_phase - 13]], ATTRIBUTE), osd_display_grid, osd_display_data_positions);
+    print_osd_adjustable_enums(12, 10, get_decode_element_string((osd_element_t *)(osd_elements() + osd_elements_active_items[osd_menu_phase - 13]), ATTRIBUTE), osd_display_grid, osd_display_data_positions);
     if (osd_menu_phase == 23)
-      osd_encoded_adjust(&profile.osd.elements[osd_elements_active_items[osd_cursor - 1]], 10, 1, ATTRIBUTE);
+      osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_cursor - 1], 10, 1, ATTRIBUTE);
     break;
 
   case 18: // edit callsign text
