@@ -479,6 +479,19 @@ const profile_t default_profile = {
             ENCODE_OSD_ELEMENT(0, 0, 1, 1),
             ENCODE_OSD_ELEMENT(1, 0, 0, 14),
         },
+        .elements_hd = {
+            ENCODE_OSD_ELEMENT(1, 1, 19, 1),
+            ENCODE_OSD_ELEMENT(0, 0, 1, 17),
+            ENCODE_OSD_ELEMENT(1, 0, 21, 17),
+            ENCODE_OSD_ELEMENT(1, 0, 44, 17),
+            ENCODE_OSD_ELEMENT(1, 0, 20, 16),
+            ENCODE_OSD_ELEMENT(1, 0, 44, 1),
+            ENCODE_OSD_ELEMENT(1, 0, 44, 16),
+            ENCODE_OSD_ELEMENT(1, 0, 18, 8),
+            ENCODE_OSD_ELEMENT(1, 0, 0, 16),
+            ENCODE_OSD_ELEMENT(0, 0, 1, 1),
+            ENCODE_OSD_ELEMENT(1, 0, 0, 17),
+        },
     },
 };
 

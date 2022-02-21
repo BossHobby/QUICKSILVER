@@ -243,11 +243,13 @@ typedef struct {
 typedef struct {
   uint8_t callsign[36];
   uint32_t elements[OSD_NUMBER_ELEMENTS];
+  uint32_t elements_hd[OSD_NUMBER_ELEMENTS];
 } profile_osd_t;
 
-#define OSD_MEMBERS         \
-  TSTR_MEMBER(callsign, 36) \
-  ARRAY_MEMBER(elements, OSD_NUMBER_ELEMENTS, uint32)
+#define OSD_MEMBERS                                   \
+  TSTR_MEMBER(callsign, 36)                           \
+  ARRAY_MEMBER(elements, OSD_NUMBER_ELEMENTS, uint32) \
+  ARRAY_MEMBER(elements_hd, OSD_NUMBER_ELEMENTS, uint32)
 
 typedef struct {
   filter_type_t type;
