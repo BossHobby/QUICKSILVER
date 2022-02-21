@@ -132,8 +132,12 @@ void hdzero_init() {
 }
 
 void hdzero_intro() {
-  while (!hdzero_is_ready())
-    ;
+  const uint32_t start = time_millis();
+  while (!hdzero_is_ready()) {
+    if ((time_millis() - start) > 500) {
+      return;
+    }
+  }
 
   osd_transaction_t *txn = osd_txn_init();
   osd_txn_start(OSD_ATTR_TEXT, COLS / 2 - 6, ROWS / 2 - 1);
