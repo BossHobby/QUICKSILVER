@@ -173,6 +173,7 @@ const profile_t default_profile = {
 #else
         .smart_audio = USART_PORT_INVALID,
 #endif
+        .hdzero = USART_PORT_INVALID,
     },
 
     .filter = {

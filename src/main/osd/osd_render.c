@@ -55,7 +55,7 @@ extern profile_t profile;
 extern vtx_settings_t vtx_settings;
 extern vtx_settings_t vtx_settings_copy;
 
-static osd_device_t osd_device = OSD_DEVICE_HDZERO;
+static osd_system_t osd_system = OSD_SYS_NONE;
 
 static uint8_t osd_attr(osd_element_t *el) {
   return el->attribute ? OSD_ATTR_INVERT : OSD_ATTR_TEXT;
@@ -607,7 +607,7 @@ void print_osd_mixed_data(uint8_t string_element_qty, uint8_t data_element_qty, 
 //************************************************************************************************************************************************************************************
 //************************************************************************************************************************************************************************************
 void osd_init() {
-  osd_device_init(osd_device);
+  osd_device_init();
 
   // print the splash screen
   osd_intro();
@@ -744,8 +744,10 @@ void osd_display() {
   }
 
   // check if the system changed
-  if (osd_check_system()) {
+  const osd_system_t sys = osd_check_system();
+  if (sys != osd_system) {
     // sytem has changed, reset osd state
+    osd_system = sys;
     osd_display_reset();
     return;
   }
