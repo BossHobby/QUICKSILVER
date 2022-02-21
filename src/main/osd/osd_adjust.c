@@ -119,27 +119,17 @@ void populate_vtx_buffer_once() {
 
 //**********************************************************encoded flash memory adjust functions**********************************************************
 
-uint32_t get_callsign_bitmask(uint8_t input) {
-  if (input == 8)
-    return 0xFF;
-  if (input == 16)
-    return 0xFFFF;
-  if (input == 24)
-    return 0xFFFFFF;
-  return 0;
-}
-
 void osd_encoded_adjust_callsign() {
   if (osd_select > 20) {
     osd_select = 20;    // limit osd select variable from accumulating past 1 columns of adjustable items
     osd_menu_phase = 1; // repaint the screen again
   }
   if (increase_osd_value) {
-    profile.osd.elements[callsign_shift_index[osd_select - 1][0]] = (((profile.osd.elements[callsign_shift_index[osd_select - 1][0]] >> callsign_shift_index[osd_select - 1][1]) + 1) << callsign_shift_index[osd_select - 1][1]) + (profile.osd.elements[callsign_shift_index[osd_select - 1][0]] & get_callsign_bitmask(callsign_shift_index[osd_select - 1][1]));
+    profile.osd.callsign[osd_select - 1]++;
     osd_menu_phase = 1; // repaint the screen again
   }
   if (decrease_osd_value) {
-    profile.osd.elements[callsign_shift_index[osd_select - 1][0]] = (((profile.osd.elements[callsign_shift_index[osd_select - 1][0]] >> callsign_shift_index[osd_select - 1][1]) - 1) << callsign_shift_index[osd_select - 1][1]) + (profile.osd.elements[callsign_shift_index[osd_select - 1][0]] & get_callsign_bitmask(callsign_shift_index[osd_select - 1][1]));
+    profile.osd.callsign[osd_select - 1]--;
     osd_menu_phase = 1; // repaint the screen again
   }
   increase_osd_value = 0;
