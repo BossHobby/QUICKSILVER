@@ -3,7 +3,6 @@
 #include "control.h"
 #include "debug.h"
 #include "drv_osd.h"
-#include "drv_spi_max7456.h"
 #include "drv_time.h"
 #include "filter.h"
 #include "flash.h"
@@ -90,7 +89,7 @@ extern vtx_settings_t vtx_settings_copy;
 static osd_device_t osd_device = OSD_DEVICE_HDZERO;
 
 static uint8_t osd_attr(osd_element_t *el) {
-  return el->attribute ? INVERT : TEXT;
+  return el->attribute ? OSD_ATTR_INVERT : OSD_ATTR_TEXT;
 }
 
 uint8_t osd_decode(uint32_t element, uint8_t status) {
@@ -99,9 +98,9 @@ uint8_t osd_decode(uint32_t element, uint8_t status) {
     return (element & 0x01);
   case ATTRIBUTE:
     if (((element >> 1) & 0x01) == 0x01)
-      return INVERT;
+      return OSD_ATTR_TEXT;
     else
-      return TEXT;
+      return OSD_ATTR_INVERT;
   case POSITIONX:
     return ((element >> 2) & 0x1F);
   case POSITIONY:
@@ -172,21 +171,21 @@ uint8_t user_select(uint8_t active_elements, uint8_t total_elements) {
     osd_cursor = active_elements;
   uint8_t inactive_elements = total_elements - active_elements;
   if (osd_menu_phase == 1)
-    return INVERT;
+    return OSD_ATTR_INVERT;
   if (osd_menu_phase > 1 && osd_menu_phase <= inactive_elements)
-    return TEXT;
+    return OSD_ATTR_TEXT;
   if (osd_cursor == (osd_menu_phase - inactive_elements) && osd_select == 0) {
-    return INVERT;
+    return OSD_ATTR_INVERT;
   } else {
-    return TEXT;
+    return OSD_ATTR_TEXT;
   }
 }
 
 uint8_t grid_selection(uint8_t element, uint8_t row) {
   if (osd_select == element && osd_cursor == row) {
-    return INVERT;
+    return OSD_ATTR_INVERT;
   } else {
-    return TEXT;
+    return OSD_ATTR_TEXT;
   }
 }
 
@@ -336,7 +335,7 @@ uint8_t print_status(osd_element_t *el, uint8_t persistence, uint8_t label) {
   if (delay_counter == 25) {
     // First run, print the label
     osd_transaction_t *txn = osd_txn_init();
-    osd_txn_start(osd_attr(el) | BLINK, el->pos_x, el->pos_y);
+    osd_txn_start(osd_attr(el) | OSD_ATTR_BLINK, el->pos_x, el->pos_y);
     osd_txn_write_data(system_status_labels[label], 21);
     osd_txn_submit(txn);
 
@@ -667,7 +666,7 @@ static void osd_display_regular() {
     if (!flags.lowbatt) {
       osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
     } else {
-      osd_txn_start(BLINK | INVERT, el->pos_x, el->pos_y);
+      osd_txn_start(OSD_ATTR_BLINK | OSD_ATTR_INVERT, el->pos_x, el->pos_y);
     }
     osd_txn_write_uint(state.lipo_cell_count, 1);
     osd_txn_write_char('S');
@@ -686,7 +685,7 @@ static void osd_display_regular() {
     if (!flags.lowbatt) {
       osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
     } else {
-      osd_txn_start(BLINK | INVERT, el->pos_x, el->pos_y);
+      osd_txn_start(OSD_ATTR_BLINK | OSD_ATTR_INVERT, el->pos_x, el->pos_y);
     }
     osd_txn_write_uint(state.lipo_cell_count, 1);
     osd_txn_write_char('S');
@@ -764,7 +763,7 @@ static void osd_display_regular() {
     // end of regular display - display_trigger counter sticks here till it wraps
     display_trigger++;
     if (display_trigger == 0)
-      osd_display_element = 1;
+      osd_display_element = OSD_CALLSIGN;
     break;
   }
   }

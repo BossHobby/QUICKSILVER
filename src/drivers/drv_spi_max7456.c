@@ -33,6 +33,21 @@ static volatile spi_bus_device_t bus = {
     .auto_continue = true,
 };
 
+static uint8_t max7456_map_attr(uint8_t attr) {
+  // we always want at least text
+  uint8_t val = TEXT;
+
+  if (attr & OSD_ATTR_INVERT) {
+    val |= INVERT;
+  }
+
+  if (attr & OSD_ATTR_BLINK) {
+    val |= BLINK;
+  }
+
+  return val;
+}
+
 // blocking dma read of a single register
 static uint8_t max7456_dma_spi_read(uint8_t reg) {
   spi_bus_device_reconfigure(&bus, true, MAX7456_BAUD_RATE);
@@ -151,7 +166,7 @@ uint8_t max7456_clear_async() {
   static uint8_t clr_row = 0;
 
   osd_transaction_t *txn = osd_txn_init();
-  osd_txn_start(TEXT, clr_col, clr_row);
+  osd_txn_start(OSD_ATTR_TEXT, clr_col, clr_row);
   osd_txn_write_str("               ");
   osd_txn_submit(txn);
 
@@ -213,7 +228,7 @@ uint8_t max7456_check_system() {
       spi_txn_wait(&bus);
 
       osd_transaction_t *txn = osd_txn_init();
-      osd_txn_start(BLINK, SYSTEMXPOS, SYSTEMYPOS);
+      osd_txn_start(OSD_ATTR_BLINK, SYSTEMXPOS, SYSTEMYPOS);
       osd_txn_write_str("NO CAMERA SIGNAL");
       osd_txn_submit(txn);
 
@@ -241,7 +256,7 @@ void max7456_intro() {
     }
 
     osd_transaction_t *txn = osd_txn_init();
-    osd_txn_start(TEXT, 3, row + 5);
+    osd_txn_start(OSD_ATTR_TEXT, 3, row + 5);
     osd_txn_write_data(buffer, 24);
     osd_txn_submit(txn);
 
@@ -266,7 +281,7 @@ void max7456_txn_submit(osd_transaction_t *txn) {
     const uint16_t pos = seg->x + seg->y * 30;
 
     dma_buffer[offset++] = DMM;
-    dma_buffer[offset++] = seg->attr;
+    dma_buffer[offset++] = max7456_map_attr(seg->attr);
     dma_buffer[offset++] = DMAH;
     dma_buffer[offset++] = (pos >> 8) & 0xFF;
     dma_buffer[offset++] = DMAL;
