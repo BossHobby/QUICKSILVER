@@ -27,6 +27,7 @@ typedef enum {
   OSD_SYS_NONE,
   OSD_SYS_PAL,
   OSD_SYS_NTSC,
+  OSD_SYS_HD,
 } osd_system_t;
 
 typedef enum {
@@ -41,7 +42,7 @@ typedef enum {
   OSD_ATTR_BLINK = (0x1 << 2),
 } osd_text_attr_t;
 
-void osd_device_init(osd_device_t dev);
+void osd_device_init();
 void osd_intro();
 
 bool osd_is_ready();
@@ -49,7 +50,7 @@ bool osd_is_ready();
 void osd_clear();
 uint8_t osd_clear_async();
 
-uint8_t osd_check_system();
+osd_system_t osd_check_system();
 
 osd_transaction_t *osd_txn_init();
 

@@ -4,26 +4,19 @@
 
 #include "drv_serial_hdzero.h"
 #include "drv_spi_max7456.h"
+#include "profile.h"
 #include "util.h"
 
 static osd_transaction_t osd_txn;
 static osd_device_t osd_device = OSD_DEVICE_NONE;
 
-void osd_device_init(osd_device_t dev) {
-  switch (dev) {
-  case OSD_DEVICE_MAX7456:
-    max7456_init();
-    osd_device = OSD_DEVICE_MAX7456;
-    break;
-
-  case OSD_DEVICE_HDZERO:
-    hdzero_init();
+void osd_device_init() {
+  if (profile.serial.hdzero != USART_PORT_INVALID) {
     osd_device = OSD_DEVICE_HDZERO;
-    break;
-
-  default:
-    osd_device = OSD_DEVICE_NONE;
-    break;
+    hdzero_init();
+  } else {
+    osd_device = OSD_DEVICE_MAX7456;
+    max7456_init();
   }
 }
 
@@ -60,7 +53,7 @@ uint8_t osd_clear_async() {
   }
 }
 
-uint8_t osd_check_system() {
+osd_system_t osd_check_system() {
   switch (osd_device) {
   case OSD_DEVICE_MAX7456:
     return max7456_check_system();
