@@ -121,26 +121,19 @@ static void hdzero_submit() {
 }
 
 void hdzero_init() {
-  serial_hdzero_port = USART_PORT5;
+  serial_hdzero_port = USART_PORT2;
 
   serial_enable_rcc(serial_hdzero_port);
   serial_init(serial_hdzero_port, 115200, false);
   serial_enable_isr(serial_hdzero_port);
 
   LL_USART_EnableIT_RXNE(USART.channel);
-
-  hdzero_start();
-  uint8_t variant[6] = {'A', 'R', 'D', 'U', 0, 0};
-  hdzero_push_msp(MSP_FC_VARIANT, variant, 6);
-  hdzero_submit();
-
-  hdzero_start();
-  uint8_t options[2] = {0, 1};
-  hdzero_push_subcmd(SUBCMD_SET_OPTIONS, options, 2);
-  hdzero_submit();
 }
 
 void hdzero_intro() {
+  while (!hdzero_is_ready())
+    ;
+
   osd_transaction_t *txn = osd_txn_init();
   osd_txn_start(OSD_ATTR_TEXT, COLS / 2 - 6, ROWS / 2 - 1);
   osd_txn_write_str("QUICKSILVER");
@@ -155,7 +148,28 @@ uint8_t hdzero_clear_async() {
 }
 
 bool hdzero_is_ready() {
-  return msp_transfer_done;
+  if (!msp_transfer_done) {
+    return false;
+  }
+  if ((time_millis() - last_heartbeat) > 500) {
+    return false;
+  }
+  static bool wants_heatbeat = true;
+  if (wants_heatbeat) {
+    hdzero_start();
+    uint8_t variant[6] = {'A', 'R', 'D', 'U', 0, 0};
+    hdzero_push_msp(MSP_FC_VARIANT, variant, 6);
+    hdzero_submit();
+
+    hdzero_start();
+    uint8_t options[2] = {0, 1};
+    hdzero_push_subcmd(SUBCMD_SET_OPTIONS, options, 2);
+    hdzero_submit();
+
+    wants_heatbeat = false;
+    return false;
+  }
+  return true;
 }
 
 uint8_t hdzero_check_system() {
