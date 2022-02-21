@@ -473,7 +473,7 @@ void print_osd_callsign_adjustable(uint8_t string_element_qty, uint8_t data_elem
 
   osd_transaction_t *txn = osd_txn_init();
   osd_txn_start(grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
-  osd_txn_write_char((profile.osd.elements[callsign_shift_index[index][0]] >> callsign_shift_index[index][1]) & 0xFF);
+  osd_txn_write_char(profile.osd.callsign[index]);
   osd_txn_submit(txn);
 
   osd_menu_phase++;
