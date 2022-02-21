@@ -4,6 +4,7 @@
 
 #include "drv_msp.h"
 #include "drv_serial.h"
+#include "profile.h"
 #include "util/circular_buffer.h"
 
 typedef enum {
@@ -121,7 +122,7 @@ static void hdzero_submit() {
 }
 
 void hdzero_init() {
-  serial_hdzero_port = USART_PORT2;
+  serial_hdzero_port = profile.serial.hdzero;
 
   serial_enable_rcc(serial_hdzero_port);
   serial_init(serial_hdzero_port, 115200, false);
@@ -172,16 +173,15 @@ bool hdzero_is_ready() {
   return true;
 }
 
-uint8_t hdzero_check_system() {
+osd_system_t hdzero_check_system() {
   if ((time_millis() - last_heartbeat) > 250) {
     // timeout
     is_detected = false;
   } else if (!is_detected) {
     // detected now, but previously was not
     is_detected = true;
-    return 1;
   }
-  return 0;
+  return OSD_SYS_HD;
 }
 
 void hdzero_txn_submit(osd_transaction_t *txn) {
