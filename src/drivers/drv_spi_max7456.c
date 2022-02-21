@@ -185,7 +185,7 @@ uint8_t max7456_clear_async() {
 
 // function to detect and correct ntsc/pal mode or mismatch
 // return 1 when the system changes
-uint8_t max7456_check_system() {
+osd_system_t max7456_check_system() {
   const osd_system_t sys = max7456_current_system();
 
   switch (sys) {
@@ -196,7 +196,6 @@ uint8_t max7456_check_system() {
 
       // initial screen clear off
       osd_clear();
-      return 1;
     }
     break;
 
@@ -207,7 +206,6 @@ uint8_t max7456_check_system() {
 
       // initial screen clear off
       osd_clear();
-      return 1;
     }
     break;
 
@@ -218,7 +216,7 @@ uint8_t max7456_check_system() {
       // we lost sync
       last_osd_system = OSD_SYS_NONE;
       warning_sent = 0;
-      return 1;
+      break;
     }
 
     if (warning_sent == 0) {
@@ -243,7 +241,7 @@ uint8_t max7456_check_system() {
   }
   }
 
-  return 0;
+  return current_osd_system;
 }
 
 // splash screen
