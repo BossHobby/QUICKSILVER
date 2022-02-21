@@ -23,37 +23,6 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdouble-promotion"
 
-//************************************************************************************************************************************************************************************
-//																					FLASH MEMORY
-//************************************************************************************************************************************************************************************
-/*screen elements characteristics written like registers in a 32bit binany number
-except callsign which will take 6 addresses.  callsign bit 1 will be enable/disable,
-bit 2 will be text/invert, and the remaining 5 addresses will be 4 characters each.  6 total addresses
-will allow callsign text to fill 20 characters
-BIT
-0			-		0 is display element inactive , 1 is display element active
-1			-		0 is TEXT, 1 is INVERT
-2:6		-		the X screen position (column)
-7:10	-		the Y screen position	(row)
-11:15	-		not currently used
-16:31	-		available for two binary ascii characters but not currently used
-*/
-
-typedef enum {
-  ACTIVE = 0,
-  ATTRIBUTE = 1,
-  POSITIONX = 2,
-  POSITIONY = 3,
-} osd_element_attrs_t;
-
-typedef struct {
-  uint32_t active : 1;
-  uint32_t attribute : 1;
-  uint32_t pos_x : 5;
-  uint32_t pos_y : 4;
-  uint32_t _unused : 21;
-} __attribute__((packed)) osd_element_t;
-
 typedef enum {
   CLEAR,
   DISARM,
@@ -102,9 +71,9 @@ uint8_t osd_decode(uint32_t element, uint8_t status) {
     else
       return OSD_ATTR_INVERT;
   case POSITIONX:
-    return ((element >> 2) & 0x1F);
+    return ((element >> 2) & 0xFF);
   case POSITIONY:
-    return ((element >> 7) & 0x0F);
+    return ((element >> 10) & 0x0F);
   }
   return 0;
 }
