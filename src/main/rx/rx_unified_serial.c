@@ -315,7 +315,7 @@ void rx_serial_find_protocol() {
   if (frame_status == FRAME_RX) { // We got something! What is it?
     switch (protocol_to_check) {
     case RX_SERIAL_PROTOCOL_DSM:
-      if (rx_buffer[0] == 0x00 && rx_buffer[1] <= 0x04 && rx_buffer[2] != 0x00) {
+      if (rx_buffer[0] < 4 && (rx_buffer[1] == 0x12 || rx_buffer[1] == 0x01 || rx_buffer[1] == 0xB2 || rx_buffer[1] == 0xA2)) {
         // allow up to 4 fades or detection will fail.  Some dsm rx will log a fade or two during binding
         rx_serial_process_dsmx();
         if (bind_safety > 0)
