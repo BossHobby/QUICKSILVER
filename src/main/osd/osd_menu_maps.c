@@ -10,12 +10,12 @@ extern vtx_settings_t vtx_settings_copy;
 // main menu maps
 const char main_menu_labels[10][21] = {"MENU", "VTX", "PIDS", "FILTERS", "RATES", "FLIGHT MODES", "OSD ELEMENTS", "SPECIAL FEATURES", "RC LINK", "SAVE AND EXIT"};
 const uint8_t main_menu_positions[10][2] = {{13, 1}, {7, 3}, {7, 4}, {7, 5}, {7, 6}, {7, 7}, {7, 8}, {7, 9}, {7, 10}, {7, 11}};
-const uint8_t main_menu_map[] = {11, 3, 5, 6, 9, 10, 12, 31}; // case numbers for {vtx, pids, filters, rates, flight modes, osd elements, special features}
+const uint8_t main_menu_map[] = {OSD_SCREEN_VTX, OSD_SCREEN_PID_PROFILE, OSD_SCREEN_FILTERS, OSD_SCREEN_RATES, OSD_SCREEN_FLIGHT_MODES, OSD_SCREEN_ELEMENTS, OSD_SCREEN_SPECIAL_FEATURES, OSD_SCREEN_RC_LINK};
 
 // pid profiles submenu map
 const char pid_profiles_labels[3][21] = {{"PID PROFILES"}, {"PID PROFILE 1"}, {"PID PROFILE 2"}};
 const uint8_t pid_profiles_positions[3][2] = {{9, 1}, {7, 4}, {7, 5}};
-const uint8_t pid_submenu_map[] = {4, 4}; // describes the menu case to call next for each submenu option
+const uint8_t pid_submenu_map[] = {OSD_SCREEN_PID, OSD_SCREEN_PID}; // describes the menu case to call next for each submenu option
 
 // adjust increments used in vector adjust functions
 const float bf_pids_increments[] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
@@ -34,12 +34,12 @@ const float pid_profile_adjust_limits[9][2] = {{0.0, 400.0}, {0.0, 400.0}, {0.0,
 // filters submenu map
 const char filter_labels[3][21] = {{"FILTERS"}, {"GYRO"}, {"D-TERM"}};
 const uint8_t filter_positions[3][2] = {{11, 1}, {7, 4}, {7, 5}};
-const uint8_t filter_submenu_map[2] = {28, 29};
+const uint8_t filter_submenu_map[2] = {OSD_SCREEN_GYRO_FILTER, OSD_SCREEN_DTERM_FILTER};
 
 // rates submenu map
 const char rates_profile_labels[3][21] = {{"RATES"}, {"SILVERWARE"}, {"BETAFLIGHT"}};
 const uint8_t rates_profile_positions[3][2] = {{13, 1}, {7, 4}, {7, 5}};
-const uint8_t rates_submenu_map[] = {7, 8};
+const uint8_t rates_submenu_map[] = {OSD_SCREEN_SW_RATES, OSD_SCREEN_BF_RATES};
 
 // silverware rates map
 const char sw_rates_labels[8][21] = {{"SILVERWARE RATES"}, {"ROLL"}, {"PITCH"}, {"YAW"}, {"RATE"}, {"ACRO EXPO"}, {"ANGLE EXPO"}, {"SAVE AND EXIT"}};
@@ -69,7 +69,7 @@ const uint8_t flight_modes_grid[10][2] = {{1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}
 // osd elements submenu map
 const char osd_elements_menu_labels[5][21] = {{"OSD ELEMENTS"}, {"ADD OR REMOVE"}, {"EDIT POSITIONS"}, {"EDIT TEXT STYLE"}, {"EDIT CALLSIGN"}};
 const uint8_t osd_elements_menu_positions[5][2] = {{9, 1}, {7, 4}, {7, 5}, {7, 6}, {7, 7}};
-const uint8_t osd_elements_map[] = {15, 16, 17, 18};
+const uint8_t osd_elements_map[] = {OSD_SCREEN_ELEMENTS_ADD_REMOVE, OSD_SCREEN_ELEMENTS_POSITION, OSD_SCREEN_ELEMENTS_STYLE, OSD_SCREEN_CALLSIGN};
 
 // osd element add/remove & text/invert submenu map
 const char osd_display_labels[12][21] = {{"OSD DISPLAY ITEMS"}, {"CALLSIGN"}, {"FUELGAUGE VOLTS"}, {"FILTERED VOLTS"}, {"GYRO TEMP"}, {"FLIGHT MODE"}, {"RSSI"}, {"STOPWATCH"}, {"SYSTEM STATUS"}, {"THROTTLE"}, {"VTX"}, {"SAVE AND EXIT"}};
@@ -110,12 +110,12 @@ const uint8_t vtx_grid[4][2] = {{1, 1}, {1, 2}, {1, 3}, {1, 4}};
 // special features menu map
 const char special_features_labels[8][21] = {{"SPECIAL FEATURES"}, {"STICK BOOST"}, {"MOTOR BOOST"}, {"PID MODIFIERS"}, {"DIGITAL IDLE"}, {"LOW BATTERY"}, {"LEVEL MODE"}, {"TURTLE THROTTLE"}};
 const uint8_t special_features_positions[8][2] = {{7, 1}, {7, 3}, {7, 4}, {7, 5}, {7, 6}, {7, 7}, {7, 8}, {7, 9}};
-const uint8_t special_features_map[] = {13, 21, 30, 22, 19, 20, 27}; // case numbers for {stickboost}, etc ...adding more soon
+const uint8_t special_features_map[] = {OSD_SCREEN_STICK_BOOST, OSD_SCREEN_MOTOR_BOOST, OSD_SCREEN_PID_MODIFIER, OSD_SCREEN_DIGITAL_IDLE, OSD_SCREEN_LOWBAT, OSD_SCREEN_LEVEL_MODE, OSD_SCREEN_TURTLE_THROTTLE};
 
 // stick boost submenu map
 const char stickboost_labels[3][21] = {{"STICK BOOST PROFILES"}, {"AUX OFF PROFILE 1"}, {"AUX ON  PROFILE 2"}};
 const uint8_t stickboost_profile_positions[3][2] = {{5, 1}, {7, 4}, {7, 5}};
-const uint8_t stickboost_submenu_map[] = {14, 14};
+const uint8_t stickboost_submenu_map[] = {OSD_SCREEN_STICK_BOOST_ADJUST, OSD_SCREEN_STICK_BOOST_ADJUST};
 
 // stick boost map
 const char stickboost1_labels[7][21] = {{"BOOST PROFILE 1"}, {"ROLL"}, {"PITCH"}, {"YAW"}, {"ACCELERATOR"}, {"TRANSITION"}, {"SAVE AND EXIT"}};
@@ -137,7 +137,7 @@ const float lowbatt_adjust_limits[1][2] = {{0, 4.2}};
 // levelmode submenu map
 const char level_submenu_labels[3][21] = {{"LEVEL MODE"}, {"MAX ANGLE"}, {"LEVEL STRENGTH"}};
 const uint8_t level_submenu_positions[3][2] = {{10, 1}, {7, 4}, {7, 5}};
-const uint8_t level_submenu_map[] = {23, 24};
+const uint8_t level_submenu_map[] = {OSD_SCREEN_LEVEL_MAX_ANGLE, OSD_SCREEN_LEVEL_STRENGTH};
 
 // levelmode maxangle map
 float *level_maxangle_ptr[1] = {&profile.rate.level_max_angle};
@@ -158,7 +158,7 @@ const float levelmode_adjust_limits[4][2] = {{0, 20.0}, {0, 10.0}, {0, 20.0}, {0
 // motor boost menu map
 const char motor_boost_labels[3][21] = {{"MOTOR BOOST TYPES"}, {"TORQUE BOOST"}, {"THROTTLE BOOST"}};
 const uint8_t motor_boost_positions[3][2] = {{7, 1}, {7, 4}, {7, 5}};
-const uint8_t motor_boost_map[] = {25, 26}; // case numbers for TORQUE BOOST, THROTTLE BOOST
+const uint8_t motor_boost_map[] = {OSD_SCREEN_TORQUE_BOOST, OSD_SCREEN_THROTTLE_BOOST};
 
 // torque boost map
 float *torqueboost_ptr[1] = {&profile.motor.torque_boost};
@@ -229,7 +229,7 @@ const float pidmodify_adjust_limits[4][2] = {{0, 1}, {0, 1}, {0, 1}, {0, 1}};
 // rc link map
 const char rc_link_labels[3][21] = {{"RC LINK"}, {"STICK CALIBRATION"}, {"RSSI SOURCE"}};
 const uint8_t rc_link_positions[3][2] = {{12, 1}, {7, 4}, {7, 5}};
-const uint8_t rc_link_map[] = {33, 32};
+const uint8_t rc_link_map[] = {OSD_SCREEN_STICK_WIZARD, OSD_SCREEN_RSSI};
 
 // rssi source map
 uint8_t *rssi_source_ptr[2] = {&profile.receiver.lqi_source, &profile.receiver.aux[12]};
