@@ -762,33 +762,33 @@ void osd_display() {
   //************OSD MENU DISPLAY ROUTINES HERE*************
   switch (osd_display_phase) // phase starts at 2, RRR gesture subtracts 1 to enter the menu, RRR again or DDD subtracts 1 to clear the screen and return to regular display
   {
-  case 0: // osd screen clears, resets to regular display, and resets wizard and menu starting points
+  case OSD_SCREEN_CLEAR: // osd screen clears, resets to regular display, and resets wizard and menu starting points
     if (osd_clear_async())
       osd_display_reset();
     break; // screen has been cleared for this loop - break out of display function
 
-  case 1: // osd menu is active
+  case OSD_SCREEN_MAIN_MENU: // osd menu is active
     last_display_phase = 2;
     print_osd_menu_strings(10, 9, main_menu_labels, main_menu_positions);
     if (osd_menu_phase == 11)
       osd_select_menu_item(8, main_menu_map, MAIN_MENU);
     break; // osd menu has been displayed for this loop	- break out of display function
 
-  case 2: // regular osd display
+  case OSD_SCREEN_REGULAR: // regular osd display
     osd_display_regular();
     break;
 
     //**********************************************************************************************************************************************************************************************
     //																				OSD MENUS BELOW THIS POINT
     //**********************************************************************************************************************************************************************************************
-  case 3: // pids profile menu
+  case OSD_SCREEN_PID_PROFILE:
     last_display_phase = 1;
     print_osd_menu_strings(3, 2, pid_profiles_labels, pid_profiles_positions);
     if (osd_menu_phase == 4)
       osd_submenu_select(&profile.pid.pid_profile, 2, pid_submenu_map);
     break;
 
-  case 4: // pids profiles
+  case OSD_SCREEN_PID:
     last_display_phase = 3;
     if (profile.pid.pid_profile == PID_PROFILE_1)
       print_osd_menu_strings(8, 4, pid_profile1_labels, pid_profile_positions);
@@ -799,21 +799,21 @@ void osd_display() {
       osd_vector_adjust(get_pid_term(osd_cursor), 3, 3, BF_PIDS, pid_profile_adjust_limits);
     break;
 
-  case 5: // filters menu
+  case OSD_SCREEN_FILTERS:
     last_display_phase = 1;
     print_osd_menu_strings(3, 2, filter_labels, filter_positions);
     if (osd_menu_phase == 4)
       osd_select_menu_item(2, filter_submenu_map, SUB_MENU);
     break;
 
-  case 6: // main rates menu
+  case OSD_SCREEN_RATES:
     last_display_phase = 1;
     print_osd_menu_strings(3, 2, rates_profile_labels, rates_profile_positions);
     if (osd_menu_phase == 4)
       osd_submenu_select(&profile_current_rates()->mode, 2, rates_submenu_map);
     break;
 
-  case 7: // silverware rates submenu
+  case OSD_SCREEN_SW_RATES:
     last_display_phase = 6;
     print_osd_menu_strings(8, 4, sw_rates_labels, sw_rates_positions);
     print_osd_adjustable_vectors(SW_RATES, 8, 9, get_sw_rate_term(sw_rates_data_index[osd_menu_phase - 9][0]), sw_rates_data_index, sw_rates_grid, sw_rates_data_positions);
@@ -821,7 +821,7 @@ void osd_display() {
       osd_vector_adjust(get_sw_rate_term(osd_cursor), 3, 3, SW_RATES, sw_rates_adjust_limits);
     break;
 
-  case 8: // betaflight rates submenu
+  case OSD_SCREEN_BF_RATES:
     last_display_phase = 6;
     print_osd_menu_strings(8, 4, bf_rates_labels, bf_rates_positions);
     print_osd_adjustable_vectors(ROUNDED, 8, 9, get_bf_rate_term(bf_rates_data_index[osd_menu_phase - 9][0]), bf_rates_data_index, bf_rates_grid, bf_rates_data_positions);
@@ -829,7 +829,7 @@ void osd_display() {
       osd_vector_adjust(get_bf_rate_term(osd_cursor), 3, 3, ROUNDED, bf_rates_adjust_limits);
     break;
 
-  case 9: // flight modes menu
+  case OSD_SCREEN_FLIGHT_MODES:
     last_display_phase = 1;
     print_osd_menu_strings(12, 11, flight_modes_labels, flight_modes_positions);
     print_osd_adjustable_enums(12, 10, get_aux_status(profile.receiver.aux[flight_modes_aux_items[osd_menu_phase - 13]]), flight_modes_grid, flight_modes_data_positions);
@@ -837,14 +837,14 @@ void osd_display() {
       osd_enum_adjust(flight_modes_ptr, 10, flight_modes_aux_limits);
     break;
 
-  case 10: // osd elements menu
+  case OSD_SCREEN_ELEMENTS:
     last_display_phase = 1;
     print_osd_menu_strings(5, 4, osd_elements_menu_labels, osd_elements_menu_positions);
     if (osd_menu_phase == 6)
       osd_select_menu_item(4, osd_elements_map, SUB_MENU);
     break;
 
-  case 11: // vtx
+  case OSD_SCREEN_VTX:
     last_display_phase = 1;
     if (vtx_settings.detected) {
       populate_vtx_buffer_once();
@@ -862,21 +862,21 @@ void osd_display() {
     }
     break;
 
-  case 12: // special features
+  case OSD_SCREEN_SPECIAL_FEATURES:
     last_display_phase = 1;
     print_osd_menu_strings(8, 7, special_features_labels, special_features_positions);
     if (osd_menu_phase == 9)
       osd_select_menu_item(7, special_features_map, SUB_MENU);
     break;
 
-  case 13: // stick boost profiles
+  case OSD_SCREEN_STICK_BOOST:
     last_display_phase = 12;
     print_osd_menu_strings(3, 2, stickboost_labels, stickboost_profile_positions);
     if (osd_menu_phase == 4)
       osd_submenu_select(&profile.pid.stick_profile, 2, stickboost_submenu_map);
     break;
 
-  case 14: // adjustable stick boost profiles
+  case OSD_SCREEN_STICK_BOOST_ADJUST:
     last_display_phase = 13;
     if (profile.pid.stick_profile == STICK_PROFILE_OFF)
       print_osd_menu_strings(7, 3, stickboost1_labels, stickboost_positions);
@@ -887,7 +887,7 @@ void osd_display() {
       osd_vector_adjust(get_stick_profile_term(osd_cursor), 2, 3, ROUNDED, stickboost_adjust_limits);
     break;
 
-  case 15: // add or remove osd elements to display
+  case OSD_SCREEN_ELEMENTS_ADD_REMOVE:
     last_display_phase = 10;
     print_osd_menu_strings(12, 11, osd_display_labels, osd_display_positions);
     print_osd_adjustable_enums(12, 10, get_decode_element_string((osd_element_t *)(osd_elements() + osd_elements_active_items[osd_menu_phase - 13]), ACTIVE), osd_display_grid, osd_display_data_positions);
@@ -895,7 +895,7 @@ void osd_display() {
       osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_cursor - 1], 10, 1, ACTIVE);
     break;
 
-  case 16: // edit element positions
+  case OSD_SCREEN_ELEMENTS_POSITION:
     last_display_phase = 10;
     print_osd_menu_strings(14, 11, osd_position_labels, osd_position_adjust_positions);
     print_osd_adjustable_enums(14, 20, get_decode_element_string((osd_element_t *)(osd_elements() + osd_position_active_items[osd_menu_phase - 15]), osd_position_index[osd_menu_phase - 15]), osd_position_grid, osd_position_data_positions);
@@ -903,7 +903,7 @@ void osd_display() {
       osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_cursor - 1], 10, 2, osd_select + 1);
     break;
 
-  case 17: // edit display text style
+  case OSD_SCREEN_ELEMENTS_STYLE:
     last_display_phase = 10;
     print_osd_menu_strings(12, 11, osd_text_style, osd_text_style_positions);
     print_osd_adjustable_enums(12, 10, get_decode_element_string((osd_element_t *)(osd_elements() + osd_elements_active_items[osd_menu_phase - 13]), ATTRIBUTE), osd_display_grid, osd_display_data_positions);
@@ -911,7 +911,7 @@ void osd_display() {
       osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_cursor - 1], 10, 1, ATTRIBUTE);
     break;
 
-  case 18: // edit callsign text
+  case OSD_SCREEN_CALLSIGN:
     last_display_phase = 10;
     print_osd_menu_strings(23, 2, osd_callsign_edit_labels, osd_callsign_edit_positions);
     print_osd_callsign_adjustable(23, 20, osd_callsign_grid, osd_callsign_edit_data_positions);
@@ -919,7 +919,7 @@ void osd_display() {
       osd_encoded_adjust_callsign();
     break;
 
-  case 19: // edit lowbatt threshold
+  case OSD_SCREEN_LOWBAT:
     last_display_phase = 12;
     print_osd_menu_strings(3, 2, lowbatt_labels, lowbatt_positions);
     print_osd_adjustable_float(3, 1, low_batt_ptr, lowbatt_grid, lowbatt_data_positions, 1);
@@ -927,21 +927,21 @@ void osd_display() {
       osd_float_adjust(low_batt_ptr, 1, 1, lowbatt_adjust_limits, 0.1);
     break;
 
-  case 20: // edit levelmode
+  case OSD_SCREEN_LEVEL_MODE:
     last_display_phase = 12;
     print_osd_menu_strings(3, 2, level_submenu_labels, level_submenu_positions);
     if (osd_menu_phase == 4)
       osd_select_menu_item(2, level_submenu_map, SUB_MENU);
     break;
 
-  case 21: // motor boost submenu
+  case OSD_SCREEN_MOTOR_BOOST:
     last_display_phase = 12;
     print_osd_menu_strings(3, 2, motor_boost_labels, motor_boost_positions);
     if (osd_menu_phase == 4)
       osd_select_menu_item(2, motor_boost_map, SUB_MENU);
     break;
 
-  case 22: // edit digital idle
+  case OSD_SCREEN_DIGITAL_IDLE:
     last_display_phase = 12;
     print_osd_menu_strings(3, 2, motoridle_labels, motoridle_positions);
     print_osd_adjustable_float(3, 1, motoridle_ptr, motoridle_grid, motoridle_data_positions, 1);
@@ -949,7 +949,7 @@ void osd_display() {
       osd_float_adjust(motoridle_ptr, 1, 1, motoridle_adjust_limits, 0.1);
     break;
 
-  case 23: // edit level max angle
+  case OSD_SCREEN_LEVEL_MAX_ANGLE:
     last_display_phase = 20;
     print_osd_menu_strings(3, 2, maxangle_labels, maxangle_positions);
     print_osd_adjustable_float(3, 1, level_maxangle_ptr, maxangle_grid, maxangle_data_positions, 0);
@@ -957,7 +957,7 @@ void osd_display() {
       osd_float_adjust(level_maxangle_ptr, 1, 1, maxangle_adjust_limits, 1.0);
     break;
 
-  case 24: // edit level strength
+  case OSD_SCREEN_LEVEL_STRENGTH:
     last_display_phase = 20;
     print_osd_menu_strings(6, 3, levelmode_labels, levelmode_positions);
     print_osd_adjustable_float(6, 4, level_pid_ptr, levelmode_grid, levelmode_data_positions, 1);
@@ -965,7 +965,7 @@ void osd_display() {
       osd_float_adjust(level_pid_ptr, 2, 2, levelmode_adjust_limits, 0.5);
     break;
 
-  case 25: // edit torque boost
+  case OSD_SCREEN_TORQUE_BOOST:
     last_display_phase = 21;
     print_osd_menu_strings(3, 2, torqueboost_labels, torqueboost_positions);
     print_osd_adjustable_float(3, 1, torqueboost_ptr, torqueboost_grid, torqueboost_data_positions, 1);
@@ -973,7 +973,7 @@ void osd_display() {
       osd_float_adjust(torqueboost_ptr, 1, 1, torqueboost_adjust_limits, 0.1);
     break;
 
-  case 26: // edit throttle boost
+  case OSD_SCREEN_THROTTLE_BOOST:
     last_display_phase = 21;
     print_osd_menu_strings(3, 2, throttleboost_labels, throttleboost_positions);
     print_osd_adjustable_float(3, 1, throttleboost_ptr, throttleboost_grid, throttleboost_data_positions, 1);
@@ -981,7 +981,7 @@ void osd_display() {
       osd_float_adjust(throttleboost_ptr, 1, 1, throttleboost_adjust_limits, 0.5);
     break;
 
-  case 27: // edit turtle throttle percent
+  case OSD_SCREEN_TURTLE_THROTTLE:
     last_display_phase = 12;
     print_osd_menu_strings(3, 2, turtlethrottle_labels, turtlethrottle_positions);
     print_osd_adjustable_float(3, 1, turtlethrottle_ptr, turtlethrottle_grid, turtlethrottle_data_positions, 0);
@@ -989,7 +989,7 @@ void osd_display() {
       osd_float_adjust(turtlethrottle_ptr, 1, 1, turtlethrottle_adjust_limits, 10.0);
     break;
 
-  case 28: // edit gyro filters
+  case OSD_SCREEN_GYRO_FILTER:
     last_display_phase = 5;
     print_osd_menu_strings(6, 5, gyrofilter_labels, gyrofilter_positions);
     print_osd_mixed_data(6, 4, gyrofilter_ptr, gyrofilter_ptr2, gyrofilter_type_labels, gyrofilter_grid, gyrofilter_data_positions, 0);
@@ -997,7 +997,7 @@ void osd_display() {
       osd_mixed_data_adjust(gyrofilter_ptr, gyrofilter_ptr2, 4, 1, gyrofilter_adjust_limits, 10.0, gyrofilter_reboot_request);
     break;
 
-  case 29: // edit dterm filters
+  case OSD_SCREEN_DTERM_FILTER:
     last_display_phase = 5;
     print_osd_menu_strings(9, 8, dtermfilter_labels, dtermfilter_positions);
     print_osd_mixed_data(9, 7, dtermfilter_ptr, dtermfilter_ptr2, dtermfilter_type_labels, dtermfilter_grid, dtermfilter_data_positions, 0);
@@ -1005,7 +1005,7 @@ void osd_display() {
       osd_mixed_data_adjust(dtermfilter_ptr, dtermfilter_ptr2, 7, 1, dtermfilter_adjust_limits, 10.0, dtermfilter_reboot_request);
     break;
 
-  case 30: // edit pid modifiers
+  case OSD_SCREEN_PID_MODIFIER:
     last_display_phase = 12;
     print_osd_menu_strings(6, 5, pidmodify_labels, pidmodify_positions);
     print_osd_mixed_data(6, 4, pidmodify_ptr, pidmodify_ptr2, pidmodify_type_labels, pidmodify_grid, pidmodify_data_positions, 2);
@@ -1013,14 +1013,14 @@ void osd_display() {
       osd_mixed_data_adjust(pidmodify_ptr, pidmodify_ptr2, 4, 1, pidmodify_adjust_limits, 0.05, pidmodify_reboot_request);
     break;
 
-  case 31: // rc link menu
+  case OSD_SCREEN_RC_LINK:
     last_display_phase = 1;
     print_osd_menu_strings(3, 2, rc_link_labels, rc_link_positions);
     if (osd_menu_phase == 4)
       osd_select_menu_item(7, rc_link_map, SUB_MENU);
     break;
 
-  case 32: // rssi adjust
+  case OSD_SCREEN_RSSI:
     last_display_phase = 31;
     print_osd_menu_strings(4, 3, rssi_menu_labels, rssi_menu_positions);
     print_osd_adjustable_enums(4, 2, get_rssi_source_status(osd_menu_phase - 5), rssi_source_data_grid, rssi_source_data_positions);
@@ -1028,7 +1028,7 @@ void osd_display() {
       osd_enum_adjust(rssi_source_ptr, 2, rssi_source_limits);
     break;
 
-  case 33: // stick wizard select menu
+  case OSD_SCREEN_STICK_WIZARD: // stick wizard select menu
     last_display_phase = 31;
     print_osd_menu_strings(3, 0, stick_wizard_labels_1, stick_wizard_positions_1);
     if (osd_menu_phase == 4) {
@@ -1041,7 +1041,7 @@ void osd_display() {
     }
     break;
 
-  case 34: // 5 sec to calibrate
+  case OSD_SCREEN_STICK_WIZARD_CALIBRATION: // 5 sec to calibrate
     print_osd_menu_strings(3, 0, stick_wizard_labels_2, stick_wizard_positions_2);
     if (osd_menu_phase == 4) {
       if (state.stick_calibration_wizard == WAIT_FOR_CONFIRM) {
@@ -1051,7 +1051,7 @@ void osd_display() {
     }
     break;
 
-  case 35: // 5 sec to test / confirm calibration
+  case OSD_SCREEN_STICK_CONFIRM: // 5 sec to test / confirm calibration
     print_osd_menu_strings(3, 0, stick_wizard_labels_3, stick_wizard_positions_3);
     if (osd_menu_phase == 4) {
       if ((state.stick_calibration_wizard == CALIBRATION_SUCCESS) || (state.stick_calibration_wizard == TIMEOUT)) {
@@ -1061,7 +1061,7 @@ void osd_display() {
     }
     break;
 
-  case 36: // results of calibration
+  case OSD_SCREEN_STICK_RESULT: // results of calibration
     last_display_phase = 31;
     if (state.stick_calibration_wizard == CALIBRATION_SUCCESS) {
       print_osd_menu_strings(4, 0, stick_wizard_labels_4, stick_wizard_positions_4); // osd_menu_phase will be 4 after this
@@ -1073,9 +1073,11 @@ void osd_display() {
       osd_select = 0;
     break;
   }
-  if (osd_display_phase != 2 && rx_aux_on(AUX_ARMING))
-    flags.arm_safety = 1; // final safety check to disallow arming during OSD operation
-} // end osd_display()
+
+  if (osd_display_phase != 2 && rx_aux_on(AUX_ARMING)) {
+    flags.arm_safety = 1;
+  }
+}
 //******************************************************************************************************************************
 
 #pragma GCC diagnostic pop
