@@ -124,6 +124,6 @@ void rx_lqi_update();
 void rx_lqi_update_from_fps(float expected_fps);
 void rx_lqi_update_direct(float rssi);
 
-#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_UNIFIED_SERIAL)
+#if defined(RX_DSMX) || defined(RX_DSM2) || defined(RX_UNIFIED_SERIAL)
 void rx_spektrum_bind();
 #endif

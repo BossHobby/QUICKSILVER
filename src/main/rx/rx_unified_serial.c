@@ -183,10 +183,10 @@ void rx_serial_init() {
 #ifdef RX_FPORT
   bind_storage.unified.protocol = RX_SERIAL_PROTOCOL_FPORT;
 #endif
-#ifdef RX_DSMX_2048
+#ifdef RX_DSMX
   bind_storage.unified.protocol = RX_SERIAL_PROTOCOL_DSM;
 #endif
-#ifdef RX_DSM2_1024
+#ifdef RX_DSM2
   bind_storage.unified.protocol = RX_SERIAL_PROTOCOL_DSM;
 #endif
 
@@ -230,7 +230,7 @@ void rx_check() {
     // USART ISR says there's enough frame to look at. Look at it.
     switch (bind_storage.unified.protocol) {
     case RX_SERIAL_PROTOCOL_DSM:
-      rx_serial_process_dsmx();
+      rx_serial_process_dsm();
       break;
     case RX_SERIAL_PROTOCOL_SBUS:
     case RX_SERIAL_PROTOCOL_SBUS_INVERTED:
@@ -317,7 +317,7 @@ void rx_serial_find_protocol() {
     case RX_SERIAL_PROTOCOL_DSM:
       if (rx_buffer[0] < 4 && (rx_buffer[1] == 0x12 || rx_buffer[1] == 0x01 || rx_buffer[1] == 0xB2 || rx_buffer[1] == 0xA2)) {
         // allow up to 4 fades or detection will fail.  Some dsm rx will log a fade or two during binding
-        rx_serial_process_dsmx();
+        rx_serial_process_dsm();
         if (bind_safety > 0)
           bind_storage.unified.protocol = protocol_to_check;
       }
