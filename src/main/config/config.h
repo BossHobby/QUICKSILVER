@@ -74,8 +74,8 @@
 //#define RX_CRSF
 //#define RX_IBUS
 //#define RX_FPORT
-//#define RX_DSMX_2048
-//#define RX_DSM2_1024
+//#define RX_DSMX
+//#define RX_DSM2
 //#define RX_BAYANG_PROTOCOL_BLE_BEACON
 //#define RX_BAYANG_BLE_APP
 //#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
