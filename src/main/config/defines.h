@@ -56,9 +56,9 @@ typedef enum {
 #ifdef RX_FPORT
 #define RX_UNIFIED_SERIAL
 #endif
-#ifdef RX_DSMX_2048
+#ifdef RX_DSMX
 #define RX_UNIFIED_SERIAL
 #endif
-#ifdef RX_DSM2_1024
+#ifdef RX_DSM2
 #define RX_UNIFIED_SERIAL
 #endif
