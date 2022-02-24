@@ -14,7 +14,7 @@
 #include "util.h"
 
 #define DSM_SCALE_PERCENT 147 //this might stay somewhere or be replaced with wizard scaling
-//#define RX_DSM2_1024_TEMP     //for legacy override to dsm2 in place of dsmx
+//#define RX_DSM2_TEMP     //for legacy override to dsm2 in place of dsmx
 
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
 extern uint8_t rx_data[RX_BUFF_SIZE];
@@ -43,7 +43,7 @@ static uint8_t dsm_protocol = 0;
 #define DSM2_11_2048 0x12
 #define DSM2_22_1024 0x01
 
-void rx_serial_process_dsmx() {
+void rx_serial_process_dsm() {
 
   for (uint8_t counter = 0; counter < 16; counter++) {    //First up, get the rx_data out of the RX buffer and into somewhere safe
     rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough

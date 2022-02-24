@@ -88,7 +88,7 @@ int main() {
   usb_init();
   ledon(255); //Turn on LED during boot so that if a delay is used as part of using programming pins for other functions, the FC does not appear inactive while programming times out
   spi_init();
-#if defined(RX_DSMX_2048) || defined(RX_DSM2_1024) || defined(RX_UNIFIED_SERIAL)
+#if defined(RX_DSMX) || defined(RX_DSM2) || defined(RX_UNIFIED_SERIAL)
   rx_spektrum_bind();
 #endif
 

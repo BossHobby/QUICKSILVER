@@ -93,7 +93,7 @@ static void handle_usart_invert(bool invert) {
 
 #ifdef SERIAL_RX
 void serial_rx_init(rx_serial_protocol_t proto) {
-#if defined(RX_DSM2_1024) || defined(RX_DSMX_2028)
+#if defined(RX_DSM2) || defined(RX_DSMX_2028)
   proto = RX_SERIAL_PROTOCOL_DSM;
 #endif
 #if defined(RX_SBUS)
