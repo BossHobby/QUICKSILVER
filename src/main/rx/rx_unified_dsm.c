@@ -50,7 +50,7 @@ void rx_serial_process_dsm() {
   }
 
   if (dsm_protocol == 0) {        //dsm variant has not been selected yet
-    dsm_protocol = rx_buffer[2];  //detect dsm variant on first contact and run with it
+    dsm_protocol = rx_buffer[1];  //detect dsm variant on first contact and run with it
   }
 
   uint8_t spek_chan_shift;
