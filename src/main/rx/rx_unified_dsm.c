@@ -59,7 +59,7 @@ void rx_serial_process_dsm() {
   float dsm_scalefactor;
   float dsm_offset;
 
-  if (dsm_protocol == DSMX_11_2048 ||  dsm_protocol == DSMX_22_2048){
+  if (dsm_protocol == DSMX_11_2048 || dsm_protocol == DSMX_22_2048){
     // 11 bit frames
     spek_chan_shift = 3;
     spek_chan_mask = 0x07;
@@ -75,7 +75,7 @@ void rx_serial_process_dsm() {
     dsm_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
     dsm_offset = 1024.0f;
   }
-  if (dsm_protocol == dsm_protocol == DSM2_22_1024){
+  if (dsm_protocol == DSM2_22_1024){
     // 10 bit frames
     spek_chan_shift = 2;
     spek_chan_mask = 0x03;
