@@ -37,26 +37,52 @@ extern uint8_t ready_for_next_telemetry;
 #define USART usart_port_defs[serial_rx_port]
 #define SPECTRUM_BIND_PIN usart_port_defs[profile.serial.rx].rx_pin
 
+static uint8_t dsm_protocol = 0;
+#define DSMX_11_2048 0xb2
+#define DSMX_22_2048 0xa2
+#define DSM2_11_2048 0x12
+#define DSM2_22_1024 0x01
+
 void rx_serial_process_dsmx() {
 
   for (uint8_t counter = 0; counter < 16; counter++) {    //First up, get the rx_data out of the RX buffer and into somewhere safe
     rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
   }
 
-#ifdef RX_DSM2_1024_TEMP
-  float dsm2_scalefactor = (0.29354210f / DSM_SCALE_PERCENT);
-  // 10 bit frames
-  static uint8_t spek_chan_shift = 2;
-  static uint8_t spek_chan_mask = 0x03;
-  static uint8_t dsm_channel_count = 7;
-#else //DSMX_2048
-#define RX_DSMX_2048_UNIFIED
-  float dsmx_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
-  // 11 bit frames
-  static uint8_t spek_chan_shift = 3;
-  static uint8_t spek_chan_mask = 0x07;
-  static uint8_t dsm_channel_count = 12;
-#endif
+  if (dsm_protocol == 0) {        //dsm variant has not been selected yet
+    dsm_protocol = rx_buffer[2];  //detect dsm variant on first contact and run with it
+  }
+
+  uint8_t spek_chan_shift;
+  uint8_t spek_chan_mask;
+  uint8_t dsm_channel_count;
+  float dsm_scalefactor;
+  float dsm_offset;
+
+  if (dsm_protocol == DSMX_11_2048 ||  dsm_protocol == DSMX_22_2048){
+    // 11 bit frames
+    spek_chan_shift = 3;
+    spek_chan_mask = 0x07;
+    dsm_channel_count = 12;
+    dsm_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
+    dsm_offset = 1024.0f;
+  }
+  if (dsm_protocol == DSM2_11_2048){
+    // 10 bit frames
+    spek_chan_shift = 2;
+    spek_chan_mask = 0x03;
+    dsm_channel_count = 7;
+    dsm_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
+    dsm_offset = 1024.0f;
+  }
+  if (dsm_protocol == dsm_protocol == DSM2_22_1024){
+    // 10 bit frames
+    spek_chan_shift = 2;
+    spek_chan_mask = 0x03;
+    dsm_channel_count = 7;
+    dsm_scalefactor = (0.29354210f / DSM_SCALE_PERCENT);
+    dsm_offset = 512.0f;
+  }
 
   for (int b = 3; b < expected_frame_length; b += 2) { //stick data in channels buckets
     const uint8_t spekChannel = 0x0F & (rx_data[b - 1] >> spek_chan_shift);
@@ -72,48 +98,27 @@ void rx_serial_process_dsmx() {
     bind_safety++;
     if (bind_safety < 120)
       flags.rx_mode = RXMODE_BIND; // this is rapid flash during bind safety
-                                   // TAER channel order
-#ifdef RX_DSMX_2048_UNIFIED
-    state.rx.axis[0] = (channels[1] - 1024.0f) * dsmx_scalefactor;
-    state.rx.axis[1] = (channels[2] - 1024.0f) * dsmx_scalefactor;
-    state.rx.axis[2] = (channels[3] - 1024.0f) * dsmx_scalefactor;
-    state.rx.axis[3] = ((channels[0] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f;
-#endif
-
-#ifdef RX_DSM2_1024_TEMP
-    state.rx.axis[0] = (channels[1] - 512.0f) * dsm2_scalefactor;
-    state.rx.axis[1] = (channels[2] - 512.0f) * dsm2_scalefactor;
-    state.rx.axis[2] = (channels[3] - 512.0f) * dsm2_scalefactor;
-    state.rx.axis[3] = ((channels[0] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f;
-#endif
+    // TAER channel order
+    state.rx.axis[0] = (channels[1] - dsm_offset) * dsm_scalefactor;
+    state.rx.axis[1] = (channels[2] - dsm_offset) * dsm_scalefactor;
+    state.rx.axis[2] = (channels[3] - dsm_offset) * dsm_scalefactor;
+    state.rx.axis[3] = ((channels[0] - dsm_offset) * dsm_scalefactor * 0.5f) + 0.5f;
 
     rx_apply_stick_calibration_scale();
 
-#ifdef RX_DSMX_2048_UNIFIED
-    state.aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0; //1100 cutoff intentionally selected to force aux channels low if
-    state.aux[AUX_CHANNEL_1] = (channels[5] > 1100) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
-    state.aux[AUX_CHANNEL_2] = (channels[6] > 1100) ? 1 : 0;
-    state.aux[AUX_CHANNEL_3] = (channels[7] > 1100) ? 1 : 0;
-    state.aux[AUX_CHANNEL_4] = (channels[8] > 1100) ? 1 : 0;
-    state.aux[AUX_CHANNEL_5] = (channels[9] > 1100) ? 1 : 0;
-    state.aux[AUX_CHANNEL_6] = (channels[10] > 1100) ? 1 : 0;
-    state.aux[AUX_CHANNEL_7] = (channels[11] > 1100) ? 1 : 0;
-#endif
-
-#ifdef RX_DSM2_1024_TEMP
-    state.aux[AUX_CHANNEL_0] = (channels[4] > 550) ? 1 : 0; //550 cutoff intentionally selected to force aux channels low if
-    state.aux[AUX_CHANNEL_1] = (channels[5] > 550) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
-    state.aux[AUX_CHANNEL_2] = (channels[6] > 550) ? 1 : 0;
-#endif
+    state.aux[AUX_CHANNEL_0] = (((channels[4] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0; //cutoff intentionally selected to force aux channels low if
+    state.aux[AUX_CHANNEL_1] = (((channels[5] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0; //being controlled by a transmitter using a 3 pos switch in center state
+    state.aux[AUX_CHANNEL_2] = (((channels[6] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
+    state.aux[AUX_CHANNEL_3] = (((channels[7] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
+    state.aux[AUX_CHANNEL_4] = (((channels[8] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
+    state.aux[AUX_CHANNEL_5] = (((channels[9] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
+    state.aux[AUX_CHANNEL_6] = (((channels[10] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
+    state.aux[AUX_CHANNEL_7] = (((channels[11] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
 
     rx_lqi_got_packet();
 
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
-#ifdef RX_DSMX_2048_UNIFIED
-      rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 1024.0f) * dsmx_scalefactor * 0.5f) + 0.5f));
-#else
-      rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 512.0f) * dsm2_scalefactor * 0.5f) + 0.5f));
-#endif
+      rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI] + 4)] - dsm_offset) * dsm_scalefactor * 0.5f) + 0.5f));
     }
 
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
@@ -122,7 +127,7 @@ void rx_serial_process_dsmx() {
 
     frame_status = FRAME_TX; //We're done with this frame now.
 
-    if (bind_safety > 120) {        //requires 120 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
+    if ((bind_safety > 120) && (rx_buffer[2] == dsm_protocol)) {        //requires 120 good frames to come in and one last sanity check the protocol still matches before rx_ready safety can be toggled to 1.  About a second of good data
       flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
       flags.rx_mode = !RXMODE_BIND; // restores normal led operation
       bind_safety = 121;            // reset counter so it doesnt wrap
