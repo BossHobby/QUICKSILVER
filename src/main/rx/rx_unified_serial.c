@@ -145,7 +145,7 @@ float rx_serial_expected_fps() {
     return 0;
 
   case RX_SERIAL_PROTOCOL_DSM:
-    return 91;
+    return rx_serial_dsm_expected_fps();
 
   case RX_SERIAL_PROTOCOL_FPORT:
   case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
