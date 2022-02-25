@@ -13,6 +13,15 @@
 #include "profile.h"
 #include "util.h"
 
+typedef enum {
+  PROTOCOL_INVALID,
+  DSMX_11_2048,
+  DSMX_22_2048,
+  DSM2_11_2048,
+  DSM2_22_1024,
+} dsm_protocol_t;
+dsm_protocol_t dsm_protocol;
+
 #define DSM_SCALE_PERCENT 147 //this might stay somewhere or be replaced with wizard scaling
 
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
@@ -36,11 +45,13 @@ extern uint8_t ready_for_next_telemetry;
 #define USART usart_port_defs[serial_rx_port]
 #define SPECTRUM_BIND_PIN usart_port_defs[profile.serial.rx].rx_pin
 
-static uint8_t dsm_protocol = 0;
-#define DSMX_11_2048 0xb2
-#define DSMX_22_2048 0xa2
-#define DSM2_11_2048 0x12
-#define DSM2_22_1024 0x01
+uint8_t check_dsm_id (uint8_t id_byte){
+  if (id_byte == 0xb2) return DSMX_11_2048;
+  if (id_byte == 0xa2) return DSMX_22_2048;
+  if (id_byte == 0x12) return DSM2_11_2048;
+  if (id_byte == 0x01) return DSM2_22_1024;
+  return PROTOCOL_INVALID;
+}
 
 void rx_serial_process_dsm() {
 
@@ -48,8 +59,8 @@ void rx_serial_process_dsm() {
     rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
   }
 
-  if (dsm_protocol == 0) {        //dsm variant has not been selected yet
-    dsm_protocol = rx_buffer[1];  //detect dsm variant on first contact and run with it
+  if (dsm_protocol == PROTOCOL_INVALID) {        //dsm variant has not been selected yet
+    dsm_protocol = check_dsm_id(rx_buffer[1]);  //detect dsm variant on first contact and run with it
   }
 
   uint8_t spek_chan_shift;
@@ -58,29 +69,29 @@ void rx_serial_process_dsm() {
   float dsm_scalefactor;
   float dsm_offset;
 
-  if (dsm_protocol == DSMX_11_2048 || dsm_protocol == DSMX_22_2048){
-    // 11 bit frames
-    spek_chan_shift = 3;
-    spek_chan_mask = 0x07;
-    dsm_channel_count = 12;
-    dsm_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
-    dsm_offset = 1024.0f;
-  }
-  if (dsm_protocol == DSM2_11_2048){
-    // 10 bit frames
-    spek_chan_shift = 2;
-    spek_chan_mask = 0x03;
-    dsm_channel_count = 7;
-    dsm_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
-    dsm_offset = 1024.0f;
-  }
-  if (dsm_protocol == DSM2_22_1024){
-    // 10 bit frames
+
+  switch (dsm_protocol){
+  case PROTOCOL_INVALID:
+    return;
+  case DSM2_22_1024:
+    //10 bit frames
     spek_chan_shift = 2;
     spek_chan_mask = 0x03;
     dsm_channel_count = 7;
     dsm_scalefactor = (0.29354210f / DSM_SCALE_PERCENT);
     dsm_offset = 512.0f;
+    break;
+  case DSMX_11_2048:
+  case DSMX_22_2048:
+  case DSM2_11_2048:
+  default:
+    //11 bit frames
+    spek_chan_shift = 3;
+    spek_chan_mask = 0x07;
+    dsm_channel_count = 12;
+    dsm_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
+    dsm_offset = 1024.0f;
+    break;
   }
 
   for (int b = 3; b < expected_frame_length; b += 2) { //stick data in channels buckets
@@ -126,7 +137,7 @@ void rx_serial_process_dsm() {
 
     frame_status = FRAME_TX; //We're done with this frame now.
 
-    if ((bind_safety > 120) && (rx_buffer[2] == dsm_protocol)) {        //requires 120 good frames to come in and one last sanity check the protocol still matches before rx_ready safety can be toggled to 1.  About a second of good data
+    if ((bind_safety > 120) && (check_dsm_id(rx_buffer[1]) == dsm_protocol)) {        //requires 120 good frames to come in and one last sanity check the protocol still matches before rx_ready safety can be toggled to 1.  About a second of good data
       flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
       flags.rx_mode = !RXMODE_BIND; // restores normal led operation
       bind_safety = 121;            // reset counter so it doesnt wrap
@@ -166,12 +177,11 @@ void rx_spektrum_bind() {
 
 uint16_t rx_serial_dsm_smoothing_cutoff() {
   switch (dsm_protocol) {
+  case PROTOCOL_INVALID:
   case DSMX_11_2048:
-    return 40;
-  case DSMX_22_2048:
-    return 20;
   case DSM2_11_2048:
     return 40;
+  case DSMX_22_2048:
   case DSM2_22_1024:
     return 20;
   }
@@ -180,12 +190,11 @@ uint16_t rx_serial_dsm_smoothing_cutoff() {
 
 float rx_serial_dsm_expected_fps() {
   switch (dsm_protocol) {
+  case PROTOCOL_INVALID:
   case DSMX_11_2048:
-    return 91;
-  case DSMX_22_2048:
-    return 45;
   case DSM2_11_2048:
     return 91;
+  case DSMX_22_2048:
   case DSM2_22_1024:
     return 45;
   }
