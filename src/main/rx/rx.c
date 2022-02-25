@@ -30,8 +30,7 @@ static const uint16_t RX_SMOOTHING_HZ[RX_PROTOCOL_MAX] = {
     67,  // RX_PROTOCOL_CRSF,
     50,  // RX_PROTOCOL_IBUS, check these
     50,  // RX_PROTOCOL_FPORT, check these
-    40,  // RX_PROTOCOL_DSMX_2048,
-    20,  // RX_PROTOCOL_DSM2_1024,
+    40,  // RX_PROTOCOL_DSM_11,
     90,  // RX_PROTOCOL_NRF24_BAYANG_TELEMETRY,
     90,  // RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON,
     90,  // RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND,
@@ -44,7 +43,7 @@ static const uint16_t RX_SMOOTHING_HZ[RX_PROTOCOL_MAX] = {
 #ifdef RX_UNIFIED_SERIAL
 static const uint16_t SERIAL_PROTO_MAP[] = {
     RX_PROTOCOL_INVALID,   // RX_SERIAL_PROTOCOL_INVALID
-    RX_PROTOCOL_DSMX_2048, // RX_SERIAL_PROTOCOL_DSM
+    RX_PROTOCOL_DSM, // RX_SERIAL_PROTOCOL_DSM
     RX_PROTOCOL_SBUS,      // RX_SERIAL_PROTOCOL_SBUS
     RX_PROTOCOL_IBUS,      // RX_SERIAL_PROTOCOL_IBUS
     RX_PROTOCOL_FPORT,     // RX_SERIAL_PROTOCOL_FPORT
@@ -60,6 +59,9 @@ uint16_t rx_smoothing_cutoff() {
   const uint16_t serial_proto = SERIAL_PROTO_MAP[bind_storage.unified.protocol];
   if (serial_proto == RX_PROTOCOL_CRSF) {
     return rx_serial_crsf_smoothing_cutoff();
+  }
+  if (serial_proto == RX_PROTOCOL_DSM){
+    return rx_serial_dsm_smoothing_cutoff();
   }
   return RX_SMOOTHING_HZ[serial_proto];
 }
