@@ -164,4 +164,33 @@ void rx_spektrum_bind() {
     }
   }
 }
+
+uint16_t rx_serial_dsm_smoothing_cutoff() {
+  switch (dsm_protocol) {
+  case DSMX_11_2048:
+    return 40;
+  case DSMX_22_2048:
+    return 20;
+  case DSM2_11_2048:
+    return 40;
+  case DSM2_22_1024:
+    return 20;
+  }
+  return 40;
+}
+
+float rx_serial_dsm_expected_fps() {
+  switch (dsm_protocol) {
+  case DSMX_11_2048:
+    return 91;
+  case DSMX_22_2048:
+    return 45;
+  case DSM2_11_2048:
+    return 91;
+  case DSM2_22_1024:
+    return 45;
+  }
+  return 91;
+}
+
 #endif
