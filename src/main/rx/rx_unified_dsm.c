@@ -14,13 +14,13 @@
 #include "util.h"
 
 typedef enum {
-  PROTOCOL_INVALID,
-  DSMX_11_2048,
-  DSMX_22_2048,
-  DSM2_11_2048,
-  DSM2_22_1024,
+  PROTOCOL_INVALID = 0,
+  DSMX_11_2048 = 0xb2,
+  DSMX_22_2048 = 0xa2,
+  DSM2_11_2048 = 0x12,
+  DSM2_22_1024 = 0x01
 } dsm_protocol_t;
-dsm_protocol_t dsm_protocol;
+static dsm_protocol_t dsm_protocol = PROTOCOL_INVALID;
 
 #define DSM_SCALE_PERCENT 147 //this might stay somewhere or be replaced with wizard scaling
 
@@ -45,14 +45,6 @@ extern uint8_t ready_for_next_telemetry;
 #define USART usart_port_defs[serial_rx_port]
 #define SPECTRUM_BIND_PIN usart_port_defs[profile.serial.rx].rx_pin
 
-uint8_t check_dsm_id (uint8_t id_byte){
-  if (id_byte == 0xb2) return DSMX_11_2048;
-  if (id_byte == 0xa2) return DSMX_22_2048;
-  if (id_byte == 0x12) return DSM2_11_2048;
-  if (id_byte == 0x01) return DSM2_22_1024;
-  return PROTOCOL_INVALID;
-}
-
 void rx_serial_process_dsm() {
 
   for (uint8_t counter = 0; counter < 16; counter++) {    //First up, get the rx_data out of the RX buffer and into somewhere safe
@@ -60,7 +52,7 @@ void rx_serial_process_dsm() {
   }
 
   if (dsm_protocol == PROTOCOL_INVALID) {        //dsm variant has not been selected yet
-    dsm_protocol = check_dsm_id(rx_buffer[1]);  //detect dsm variant on first contact and run with it
+    dsm_protocol = rx_buffer[1];  //detect dsm variant on first contact and run with it
   }
 
   uint8_t spek_chan_shift;
@@ -68,7 +60,6 @@ void rx_serial_process_dsm() {
   uint8_t dsm_channel_count;
   float dsm_scalefactor;
   float dsm_offset;
-
 
   switch (dsm_protocol){
   case PROTOCOL_INVALID:
@@ -137,7 +128,7 @@ void rx_serial_process_dsm() {
 
     frame_status = FRAME_TX; //We're done with this frame now.
 
-    if ((bind_safety > 120) && (check_dsm_id(rx_buffer[1]) == dsm_protocol)) {        //requires 120 good frames to come in and one last sanity check the protocol still matches before rx_ready safety can be toggled to 1.  About a second of good data
+    if ((bind_safety > 120) && (rx_buffer[1] == dsm_protocol)) {        //requires 120 good frames to come in and one last sanity check the protocol still matches before rx_ready safety can be toggled to 1.  About a second of good data
       flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
       flags.rx_mode = !RXMODE_BIND; // restores normal led operation
       bind_safety = 121;            // reset counter so it doesnt wrap
