@@ -4,6 +4,8 @@
 
 #include "osd_menu_maps.h"
 
+#define OSD_HISTORY_SIZE 8
+
 typedef enum {
   OSD_CALLSIGN,
   OSD_FUELGAUGE_VOLTS,
@@ -50,10 +52,10 @@ typedef struct {
 typedef struct {
   osd_elements_t element;
 
-  uint8_t menu_phase;
-
   osd_screens_t screen;
-  uint8_t last_display_phase;
+  osd_screens_t screen_history[OSD_HISTORY_SIZE];
+  uint8_t screen_history_size;
+  uint8_t screen_phase;
 } osd_state_t;
 
 extern osd_state_t osd_state;
@@ -61,4 +63,8 @@ extern osd_state_t osd_state;
 void osd_init();
 void osd_display();
 void osd_clear();
+
+osd_screens_t osd_push_screen(osd_screens_t screen);
+osd_screens_t osd_pop_screen();
+
 uint8_t osd_decode(uint32_t element, uint8_t status);
