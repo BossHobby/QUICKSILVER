@@ -130,9 +130,9 @@ uint8_t reboot_fc_requested = 0;
 //************************************************************************************************************************************************************************************
 
 void osd_display_reset() {
-  osd_state.menu_phase = 0;                     // reset menu to to main menu
-  osd_state.display_phase = OSD_SCREEN_REGULAR; // jump to regular osd display next loop
-  osd_state.element = 0;                        // start with first screen element
+  osd_state.menu_phase = 0;              // reset menu to to main menu
+  osd_state.screen = OSD_SCREEN_REGULAR; // jump to regular osd display next loop
+  osd_state.element = 0;                 // start with first screen element
 }
 
 uint8_t user_select(uint8_t active_elements, uint8_t total_elements) {
@@ -756,7 +756,7 @@ void osd_display() {
   }
 
   //************OSD MENU DISPLAY ROUTINES HERE*************
-  switch (osd_state.display_phase) // phase starts at 2, RRR gesture subtracts 1 to enter the menu, RRR again or DDD subtracts 1 to clear the screen and return to regular display
+  switch (osd_state.screen) // phase starts at 2, RRR gesture subtracts 1 to enter the menu, RRR again or DDD subtracts 1 to clear the screen and return to regular display
   {
   case OSD_SCREEN_CLEAR: // osd screen clears, resets to regular display, and resets wizard and menu starting points
     if (osd_clear_async())
@@ -1030,7 +1030,7 @@ void osd_display() {
     if (osd_state.menu_phase == 4) {
       if (osd_select) {
         request_stick_calibration_wizard();
-        osd_state.display_phase = OSD_SCREEN_STICK_WIZARD_CALIBRATION;
+        osd_state.screen = OSD_SCREEN_STICK_WIZARD_CALIBRATION;
         osd_select = 0;
         osd_state.menu_phase = 0;
       }
@@ -1041,7 +1041,7 @@ void osd_display() {
     print_osd_menu_strings(3, 0, stick_wizard_labels_2, stick_wizard_positions_2);
     if (osd_state.menu_phase == 4) {
       if (state.stick_calibration_wizard == WAIT_FOR_CONFIRM) {
-        osd_state.display_phase = OSD_SCREEN_STICK_CONFIRM;
+        osd_state.screen = OSD_SCREEN_STICK_CONFIRM;
         osd_state.menu_phase = 0;
       }
     }
@@ -1051,7 +1051,7 @@ void osd_display() {
     print_osd_menu_strings(3, 0, stick_wizard_labels_3, stick_wizard_positions_3);
     if (osd_state.menu_phase == 4) {
       if ((state.stick_calibration_wizard == CALIBRATION_SUCCESS) || (state.stick_calibration_wizard == TIMEOUT)) {
-        osd_state.display_phase = OSD_SCREEN_STICK_RESULT;
+        osd_state.screen = OSD_SCREEN_STICK_RESULT;
         osd_state.menu_phase = 0;
       }
     }
@@ -1070,7 +1070,7 @@ void osd_display() {
     break;
   }
 
-  if (osd_state.display_phase != OSD_SCREEN_REGULAR && rx_aux_on(AUX_ARMING)) {
+  if (osd_state.screen != OSD_SCREEN_REGULAR && rx_aux_on(AUX_ARMING)) {
     flags.arm_safety = 1;
   }
 }

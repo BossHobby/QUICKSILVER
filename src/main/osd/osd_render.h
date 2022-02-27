@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include "osd_menu_maps.h"
+
 typedef enum {
   OSD_CALLSIGN,
   OSD_FUELGAUGE_VOLTS,
@@ -50,7 +52,7 @@ typedef struct {
 
   uint8_t menu_phase;
 
-  uint8_t display_phase;
+  osd_screens_t screen;
   uint8_t last_display_phase;
 } osd_state_t;
 
