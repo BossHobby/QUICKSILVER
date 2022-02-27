@@ -34,10 +34,22 @@ typedef enum {
 static volatile uint32_t last_heartbeat = 0;
 static bool is_detected = false;
 
-static uint8_t msp_frame[BUFFER_SIZE];
-static volatile uint8_t msp_frame_length = 0;
-static volatile uint8_t msp_frame_offset = 0;
-static volatile uint8_t msp_transfer_done = 1;
+static uint8_t msp_tx_data[BUFFER_SIZE];
+static volatile circular_buffer_t msp_tx_buffer = {
+    .buffer = msp_tx_data,
+    .head = 0,
+    .tail = 0,
+    .size = BUFFER_SIZE,
+};
+static volatile bool msp_tx_buffer_in_use = false;
+
+static uint8_t msp_rx_data[BUFFER_SIZE];
+static volatile circular_buffer_t msp_rx_buffer = {
+    .buffer = msp_rx_data,
+    .head = 0,
+    .tail = 0,
+    .size = BUFFER_SIZE,
+};
 
 static uint8_t hdzero_map_attr(uint8_t attr) {
   uint8_t val = 0;
@@ -53,72 +65,45 @@ static uint8_t hdzero_map_attr(uint8_t attr) {
   return val;
 }
 
-static void hdzero_start() {
-  while (!msp_transfer_done)
-    ;
-
-  msp_frame_length = 0;
-}
-
 static void hdzero_push_msp(const uint8_t code, const uint8_t *data, const uint8_t size) {
-  const uint8_t full_size = size + MSP_HEADER_LEN + 1;
+  LL_USART_DisableIT_TXE(USART.channel);
 
-  uint8_t *frame = msp_frame + msp_frame_length;
-  frame[0] = '$';
-  frame[1] = 'M';
-  frame[2] = '>';
-  frame[3] = size;
-  frame[4] = code;
+  circular_buffer_write(&msp_tx_buffer, '$');
+  circular_buffer_write(&msp_tx_buffer, 'M');
+  circular_buffer_write(&msp_tx_buffer, '>');
+  circular_buffer_write(&msp_tx_buffer, size);
+  circular_buffer_write(&msp_tx_buffer, code);
 
+  circular_buffer_write_multi(&msp_tx_buffer, data, size);
+
+  uint8_t chksum = size ^ code;
   for (uint8_t i = 0; i < size; i++) {
-    frame[i + MSP_HEADER_LEN] = data[i];
+    chksum ^= data[i];
   }
+  circular_buffer_write(&msp_tx_buffer, chksum);
 
-  uint8_t chksum = size;
-  for (uint8_t i = 4; i < full_size; i++) {
-    chksum ^= frame[i];
-  }
-  frame[size + MSP_HEADER_LEN] = chksum;
-
-  msp_frame_length += full_size;
+  LL_USART_EnableIT_TXE(USART.channel);
 }
 
 static void hdzero_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data, const uint8_t size) {
-  const uint8_t full_size = size + MSP_HEADER_LEN + 2;
+  LL_USART_DisableIT_TXE(USART.channel);
 
-  uint8_t *frame = msp_frame + msp_frame_length;
-  frame[0] = '$';
-  frame[1] = 'M';
-  frame[2] = '>';
-  frame[3] = size + 1;
-  frame[4] = MSP_DISPLAYPORT;
-  frame[5] = subcmd;
+  circular_buffer_write(&msp_tx_buffer, '$');
+  circular_buffer_write(&msp_tx_buffer, 'M');
+  circular_buffer_write(&msp_tx_buffer, '>');
+  circular_buffer_write(&msp_tx_buffer, size + 1);
+  circular_buffer_write(&msp_tx_buffer, MSP_DISPLAYPORT);
+  circular_buffer_write(&msp_tx_buffer, subcmd);
 
+  circular_buffer_write_multi(&msp_tx_buffer, data, size);
+
+  uint8_t chksum = (size + 1) ^ MSP_DISPLAYPORT ^ subcmd;
   for (uint8_t i = 0; i < size; i++) {
-    frame[i + MSP_HEADER_LEN + 1] = data[i];
+    chksum ^= data[i];
   }
-
-  uint8_t chksum = size + 1;
-  for (uint8_t i = 4; i < (full_size - 1); i++) {
-    chksum ^= frame[i];
-  }
-  frame[size + MSP_HEADER_LEN + 1] = chksum;
-
-  msp_frame_length += full_size;
-}
-
-static void hdzero_submit() {
-  if (msp_frame_length == 0) {
-    return;
-  }
-
-  msp_transfer_done = 0;
-  msp_frame_offset = 0;
-
-  LL_USART_ClearFlag_TC(USART.channel);
+  circular_buffer_write(&msp_tx_buffer, chksum);
 
   LL_USART_EnableIT_TXE(USART.channel);
-  LL_USART_EnableIT_TC(USART.channel);
 }
 
 void hdzero_init() {
@@ -146,30 +131,28 @@ void hdzero_intro() {
 }
 
 uint8_t hdzero_clear_async() {
-  hdzero_start();
   hdzero_push_subcmd(SUBCMD_CLEAR_SCREEN, NULL, 0);
-  hdzero_submit();
   return 1;
 }
 
 bool hdzero_is_ready() {
-  if (!msp_transfer_done) {
-    return false;
-  }
   if ((time_millis() - last_heartbeat) > 500) {
     return false;
   }
+
+  if (circular_buffer_free(&msp_tx_buffer) < BUFFER_SIZE) {
+    return false;
+  }
+
   static bool wants_heatbeat = true;
   if (wants_heatbeat) {
-    hdzero_start();
     uint8_t variant[6] = {'A', 'R', 'D', 'U', 0, 0};
     hdzero_push_msp(MSP_FC_VARIANT, variant, 6);
-    hdzero_submit();
 
-    hdzero_start();
     uint8_t options[2] = {0, 1};
     hdzero_push_subcmd(SUBCMD_SET_OPTIONS, options, 2);
-    hdzero_submit();
+
+    hdzero_push_subcmd(SUBCMD_CLEAR_SCREEN, NULL, 0);
 
     wants_heatbeat = false;
     return false;
@@ -189,8 +172,6 @@ osd_system_t hdzero_check_system() {
 }
 
 void hdzero_txn_submit(osd_transaction_t *txn) {
-  hdzero_start();
-
   for (uint16_t i = 0; i < txn->segment_count; i++) {
     const osd_segment_t *seg = &txn->segments[i];
     const uint8_t size = seg->size + 3;
@@ -206,32 +187,26 @@ void hdzero_txn_submit(osd_transaction_t *txn) {
   }
 
   hdzero_push_subcmd(SUBCMD_DRAW_SCREEN, NULL, 0);
-  hdzero_submit();
 }
 
 void hdzero_uart_isr() {
   if (LL_USART_IsEnabledIT_TC(USART.channel) && LL_USART_IsActiveFlag_TC(USART.channel)) {
     LL_USART_ClearFlag_TC(USART.channel);
-    if (msp_frame_offset == msp_frame_length && msp_transfer_done == 0) {
-      msp_transfer_done = 1;
-    }
   }
 
   if (LL_USART_IsEnabledIT_TXE(USART.channel) && LL_USART_IsActiveFlag_TXE(USART.channel)) {
-    if (msp_frame_offset < msp_frame_length) {
-      LL_USART_TransmitData8(USART.channel, msp_frame[msp_frame_offset]);
-      msp_frame_offset++;
-    }
-    if (msp_frame_offset == msp_frame_length) {
+    uint8_t data = 0;
+    if (circular_buffer_read(&msp_tx_buffer, &data)) {
+      LL_USART_TransmitData8(USART.channel, data);
+    } else {
       LL_USART_DisableIT_TXE(USART.channel);
     }
   }
 
   if (LL_USART_IsEnabledIT_RXNE(USART.channel) && LL_USART_IsActiveFlag_RXNE(USART.channel)) {
     // clear the rx flag by reading, but discard the data
-    volatile uint8_t data = LL_USART_ReceiveData8(USART.channel);
-    data = data;
-
+    const uint8_t data = LL_USART_ReceiveData8(USART.channel);
+    circular_buffer_write(&msp_rx_buffer, data);
     last_heartbeat = time_millis();
   }
 
