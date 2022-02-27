@@ -46,6 +46,8 @@ typedef struct {
 #define ENCODE_OSD_ELEMENT(active, attr, x, y) ((y << 10) | (x << 2) | (attr << 1) | active)
 
 typedef struct {
+  osd_elements_t element;
+
   uint8_t menu_phase;
 
   uint8_t display_phase;
