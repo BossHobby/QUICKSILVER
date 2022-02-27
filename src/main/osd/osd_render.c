@@ -66,6 +66,10 @@ osd_state_t osd_state = {
 
     .cursor = 0,
     .cursor_history_size = 0,
+
+    .selection = 0,
+    .selection_increase = 0,
+    .selection_decrease = 0,
 };
 
 static uint8_t osd_attr(osd_element_t *el) {
@@ -125,9 +129,6 @@ uint32_t *osd_elements() {
 //																					STATE VARIABLES
 //************************************************************************************************************************************************************************************
 // case & state variables for switch logic and profile adjustments
-uint8_t osd_select;
-uint8_t increase_osd_value;
-uint8_t decrease_osd_value;
 uint8_t reboot_fc_requested = 0;
 #define MAIN_MENU 1
 #define SUB_MENU 0
@@ -185,7 +186,7 @@ uint8_t user_select(uint8_t active_elements, uint8_t total_elements) {
     return OSD_ATTR_INVERT;
   if (osd_state.screen_phase > 1 && osd_state.screen_phase <= inactive_elements)
     return OSD_ATTR_TEXT;
-  if (osd_state.cursor == (osd_state.screen_phase - inactive_elements) && osd_select == 0) {
+  if (osd_state.cursor == (osd_state.screen_phase - inactive_elements) && osd_state.selection == 0) {
     return OSD_ATTR_INVERT;
   } else {
     return OSD_ATTR_TEXT;
@@ -193,7 +194,7 @@ uint8_t user_select(uint8_t active_elements, uint8_t total_elements) {
 }
 
 uint8_t grid_selection(uint8_t element, uint8_t row) {
-  if (osd_select == element && osd_state.cursor == row) {
+  if (osd_state.selection == element && osd_state.cursor == row) {
     return OSD_ATTR_INVERT;
   } else {
     return OSD_ATTR_TEXT;
@@ -883,8 +884,8 @@ void osd_display() {
       // save & exit needs a function to write the buffer to the actual settings
     } else {
       print_osd_menu_strings(3, 0, vtx_na_labels, vtx_na_positions);
-      if (osd_select)
-        osd_select = 0;
+      if (osd_state.selection)
+        osd_state.selection = 0;
     }
     break;
 
@@ -920,8 +921,8 @@ void osd_display() {
   case OSD_SCREEN_ELEMENTS_POSITION:
     print_osd_menu_strings(14, 11, osd_position_labels, osd_position_adjust_positions);
     print_osd_adjustable_enums(14, 20, get_decode_element_string((osd_element_t *)(osd_elements() + osd_position_active_items[osd_state.screen_phase - 15]), osd_position_index[osd_state.screen_phase - 15]), osd_position_grid, osd_position_data_positions);
-    if (osd_state.screen_phase == 35 && osd_select > 0)
-      osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_state.cursor - 1], 10, 2, osd_select + 1);
+    if (osd_state.screen_phase == 35 && osd_state.selection > 0)
+      osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_state.cursor - 1], 10, 2, osd_state.selection + 1);
     break;
 
   case OSD_SCREEN_ELEMENTS_STYLE:
@@ -1036,10 +1037,10 @@ void osd_display() {
   case OSD_SCREEN_STICK_WIZARD: // stick wizard select menu
     print_osd_menu_strings(3, 0, stick_wizard_labels_1, stick_wizard_positions_1);
     if (osd_state.screen_phase == 4) {
-      if (osd_select) {
+      if (osd_state.selection) {
         request_stick_calibration_wizard();
         osd_push_screen(OSD_SCREEN_STICK_WIZARD_CALIBRATION);
-        osd_select = 0;
+        osd_state.selection = 0;
       }
     }
     break;
@@ -1069,8 +1070,8 @@ void osd_display() {
     if (state.stick_calibration_wizard == TIMEOUT) {
       print_osd_menu_strings(4, 0, stick_wizard_labels_5, stick_wizard_positions_5); // osd_state.screen_phase will be 4 after this
     }
-    if (osd_select > 0)
-      osd_select = 0;
+    if (osd_state.selection > 0)
+      osd_state.selection = 0;
     break;
   }
 
