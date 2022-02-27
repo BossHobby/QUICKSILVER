@@ -12,7 +12,6 @@
 #include "util.h"
 #include "vtx.h"
 
-extern uint8_t osd_menu_phase;
 extern uint8_t osd_display_phase;
 extern uint8_t osd_cursor;
 extern uint8_t last_osd_cursor[6];
@@ -87,7 +86,7 @@ void osd_submenu_select(uint8_t *pointer, uint8_t rows, const uint8_t next_menu[
       *pointer = osd_cursor - 1;                     // update profile
       osd_display_phase = next_menu[osd_cursor - 1]; // update display phase to the next menu screen
       osd_cursor = 0;                                // reset the cursor
-      osd_menu_phase = 0;                            // clear the screen
+      osd_state.menu_phase = 0;                      // clear the screen
     }
   }
 }
@@ -99,7 +98,7 @@ void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_m
     if (osd_cursor <= rows) {
       osd_display_phase = menu_map[osd_cursor - 1];
       osd_cursor = 0;
-      osd_menu_phase = 0;
+      osd_state.menu_phase = 0;
     }
     if (main_menu) {
       if (osd_cursor == rows + 1)
@@ -121,16 +120,16 @@ void populate_vtx_buffer_once() {
 
 void osd_encoded_adjust_callsign() {
   if (osd_select > 20) {
-    osd_select = 20;    // limit osd select variable from accumulating past 1 columns of adjustable items
-    osd_menu_phase = 1; // repaint the screen again
+    osd_select = 20;          // limit osd select variable from accumulating past 1 columns of adjustable items
+    osd_state.menu_phase = 1; // repaint the screen again
   }
   if (increase_osd_value) {
     profile.osd.callsign[osd_select - 1]++;
-    osd_menu_phase = 1; // repaint the screen again
+    osd_state.menu_phase = 1; // repaint the screen again
   }
   if (decrease_osd_value) {
     profile.osd.callsign[osd_select - 1]--;
-    osd_menu_phase = 1; // repaint the screen again
+    osd_state.menu_phase = 1; // repaint the screen again
   }
   increase_osd_value = 0;
   decrease_osd_value = 0;
@@ -143,49 +142,49 @@ void osd_encoded_adjust_callsign() {
 
 void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_t status) {
   if (osd_select > columns) {
-    osd_select = columns; // limit osd select variable from accumulating past 1 columns of adjustable items
-    osd_menu_phase = 1;   // repaint the screen again
+    osd_select = columns;     // limit osd select variable from accumulating past 1 columns of adjustable items
+    osd_state.menu_phase = 1; // repaint the screen again
   }
   if (osd_cursor <= rows) {
     switch (status) {
     case 0: // adjust active or inactive element
       if (increase_osd_value && osd_decode(*pointer, status) == 0x00) {
         *pointer = *pointer + 1;
-        osd_menu_phase = 1; // repaint the screen again
+        osd_state.menu_phase = 1; // repaint the screen again
       }
       if (decrease_osd_value && osd_decode(*pointer, status) == 0x01) {
         *pointer = *pointer - 1;
-        osd_menu_phase = 1; // repaint the screen again
+        osd_state.menu_phase = 1; // repaint the screen again
       }
       break;
     case 1:                                                             // adjust TEXT or INVERT
       if (increase_osd_value && osd_decode(*pointer, status) == TEXT) { // increase requested and currently on TEXT
         *pointer = *pointer | (0x02);                                   // flip the 2nd bit on
-        osd_menu_phase = 1;                                             // repaint the screen again
+        osd_state.menu_phase = 1;                                       // repaint the screen again
       }
       if (decrease_osd_value && osd_decode(*pointer, status) == INVERT) { // decrease requested and currently on INVERT
         *pointer = *pointer ^ (0x02);                                     // flip the 2nd bit off
-        osd_menu_phase = 1;                                               // repaint the screen again
+        osd_state.menu_phase = 1;                                         // repaint the screen again
       }
       break;
     case 2: // adjust positionX
       if (increase_osd_value && osd_decode(*pointer, status) != 30) {
         *pointer = (((*pointer >> 2) + 1) << 2) + (*pointer & 0x03);
-        osd_menu_phase = 1; // repaint the screen again
+        osd_state.menu_phase = 1; // repaint the screen again
       }
       if (decrease_osd_value && osd_decode(*pointer, status) != 0) {
         *pointer = (((*pointer >> 2) - 1) << 2) + (*pointer & 0x03);
-        osd_menu_phase = 1; // repaint the screen again
+        osd_state.menu_phase = 1; // repaint the screen again
       }
       break;
     case 3: // adjust positionY
       if (increase_osd_value && osd_decode(*pointer, status) != 15) {
         *pointer = (((*pointer >> 7) + 1) << 7) + (*pointer & 0x7F);
-        osd_menu_phase = 1; // repaint the screen again
+        osd_state.menu_phase = 1; // repaint the screen again
       }
       if (decrease_osd_value && osd_decode(*pointer, status) != 0) {
         *pointer = (((*pointer >> 7) - 1) << 7) + (*pointer & 0x7F);
-        osd_menu_phase = 1; // repaint the screen again
+        osd_state.menu_phase = 1; // repaint the screen again
       }
       break;
     }
@@ -205,12 +204,12 @@ float adjust_rounded_float(float input, float adjust_amount) {
   const float value = (int)(input * 100.0f + (input <= 0 ? -0.5f : 0.5f));
   if (increase_osd_value) {
     increase_osd_value = 0;
-    osd_menu_phase = 1; // repaint the screen again
+    osd_state.menu_phase = 1; // repaint the screen again
     return (float)(value + (100.0f * adjust_amount)) / 100.0f;
   }
   if (decrease_osd_value) {
     decrease_osd_value = 0;
-    osd_menu_phase = 1; // repaint the screen again
+    osd_state.menu_phase = 1; // repaint the screen again
     return (float)(value - (100.0f * adjust_amount)) / 100.0f;
   }
   return input;
@@ -270,8 +269,8 @@ vec3_t *get_stick_profile_term(uint8_t term) {
 
 void osd_vector_adjust(vec3_t *pointer, uint8_t rows, uint8_t columns, uint8_t special_case, const float adjust_limit[rows * columns][2]) {
   if (osd_select > columns) {
-    osd_select = columns; // limit osd select variable from accumulating past 3 columns of adjustable items
-    osd_menu_phase = 1;   // repaint the screen again
+    osd_select = columns;     // limit osd select variable from accumulating past 3 columns of adjustable items
+    osd_state.menu_phase = 1; // repaint the screen again
   }
   if (osd_cursor <= rows) {
     uint8_t adjust_tracker = ((osd_cursor - 1) * columns) + (osd_select - 1);
@@ -296,7 +295,7 @@ void osd_vector_adjust(vec3_t *pointer, uint8_t rows, uint8_t columns, uint8_t s
 void osd_float_adjust(float *pointer[], uint8_t rows, uint8_t columns, const float adjust_limit[rows * columns][2], float adjust_amount) {
   if (osd_select > columns) {
     osd_select = columns;
-    osd_menu_phase = 1; // repaint the screen again
+    osd_state.menu_phase = 1; // repaint the screen again
   }
   if (osd_cursor <= rows) {
     uint8_t adjust_tracker = ((osd_cursor - 1) * columns) + (osd_select - 1);
@@ -315,8 +314,8 @@ void osd_float_adjust(float *pointer[], uint8_t rows, uint8_t columns, const flo
 
 void osd_enum_adjust(uint8_t *pointer[], uint8_t rows, const uint8_t increase_limit[]) {
   if (osd_select > 1) {
-    osd_select = 1;     // limit osd select variable from accumulating past 1 columns of adjustable items
-    osd_menu_phase = 1; // repaint the screen again
+    osd_select = 1;           // limit osd select variable from accumulating past 1 columns of adjustable items
+    osd_state.menu_phase = 1; // repaint the screen again
   }
   if (osd_cursor <= rows && osd_select > 0) {
     uint8_t adjust_tracker = osd_cursor - 1;
@@ -324,12 +323,12 @@ void osd_enum_adjust(uint8_t *pointer[], uint8_t rows, const uint8_t increase_li
     if (increase_osd_value && i != increase_limit[adjust_tracker]) { // limits need to be 11 for arming, 14 for everything else on flight modes
       i++;
       *pointer[adjust_tracker] = i;
-      osd_menu_phase = 1; // repaint the screen again
+      osd_state.menu_phase = 1; // repaint the screen again
     }
     if (decrease_osd_value && i != 0) { // limit is always 0 for an enum
       i--;
       *pointer[adjust_tracker] = i;
-      osd_menu_phase = 1; // repaint the screen again
+      osd_state.menu_phase = 1; // repaint the screen again
     }
     increase_osd_value = 0;
     decrease_osd_value = 0;
@@ -344,7 +343,7 @@ void osd_enum_adjust(uint8_t *pointer[], uint8_t rows, const uint8_t increase_li
 void osd_mixed_data_adjust(float *pointer[], uint8_t *pointer2[], uint8_t rows, uint8_t columns, const float adjust_limit[rows * columns][2], float adjust_amount, const uint8_t reboot_request[rows * columns]) {
   if (osd_select > columns) {
     osd_select = columns;
-    osd_menu_phase = 1; // repaint the screen again
+    osd_state.menu_phase = 1; // repaint the screen again
   }
 
   if (osd_cursor <= rows && osd_select > 0) {
@@ -359,14 +358,14 @@ void osd_mixed_data_adjust(float *pointer[], uint8_t *pointer2[], uint8_t rows, 
       if (increase_osd_value && i != adjust_limit[adjust_tracker][1]) {
         i++;
         *pointer2[adjust_tracker] = i;
-        osd_menu_phase = 1; // repaint the screen again
+        osd_state.menu_phase = 1; // repaint the screen again
         if (reboot_request[adjust_tracker] == 1)
           reboot_fc_requested = 1;
       }
       if (decrease_osd_value && i != 0) { // limit is always 0 for an enum or uint8_t
         i--;
         *pointer2[adjust_tracker] = i;
-        osd_menu_phase = 1; // repaint the screen again
+        osd_state.menu_phase = 1; // repaint the screen again
         if (reboot_request[adjust_tracker] == 1)
           reboot_fc_requested = 1;
       }
