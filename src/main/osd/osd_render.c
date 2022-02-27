@@ -70,6 +70,8 @@ osd_state_t osd_state = {
     .selection = 0,
     .selection_increase = 0,
     .selection_decrease = 0,
+
+    .reboot_fc_requested = 0,
 };
 
 static uint8_t osd_attr(osd_element_t *el) {
@@ -129,7 +131,6 @@ uint32_t *osd_elements() {
 //																					STATE VARIABLES
 //************************************************************************************************************************************************************************************
 // case & state variables for switch logic and profile adjustments
-uint8_t reboot_fc_requested = 0;
 #define MAIN_MENU 1
 #define SUB_MENU 0
 
