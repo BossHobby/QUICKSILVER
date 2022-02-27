@@ -58,8 +58,7 @@ void gestures() {
 
     if (command == GESTURE_RRR) {
 #ifdef ENABLE_OSD
-      osd_state.screen--;
-      ledblink = 2 - osd_state.screen;
+      ledblink = 2 - osd_push_screen(OSD_SCREEN_MAIN_MENU);
 #endif
     }
 
@@ -93,7 +92,7 @@ void gestures() {
         increase_osd_value = 1;
       } else {
         osd_cursor--;
-        osd_state.menu_phase = 1;
+        osd_state.screen_phase = 1;
         ledblink = 1;
       }
     }
@@ -105,7 +104,7 @@ void gestures() {
         extern uint8_t decrease_osd_value;
         decrease_osd_value = 1;
       } else {
-        osd_state.menu_phase = 1;
+        osd_state.screen_phase = 1;
         osd_cursor++;
         ledblink = 1;
       }
@@ -114,7 +113,7 @@ void gestures() {
     if (command == GESTURE_OSD_RIGHT) {
       extern uint8_t osd_select;
       osd_select++;
-      osd_state.menu_phase = 1;
+      osd_state.screen_phase = 1;
       ledblink = 2;
     }
 
@@ -123,16 +122,10 @@ void gestures() {
       extern uint8_t osd_select;
       if (osd_select) {
         osd_select--;
-        osd_state.menu_phase = 1;
+        osd_state.screen_phase = 1;
       } else {
         osd_cursor = last_cursor_array_stuffer(osd_cursor, RETURN_VALUE); // this tracks like last display phase
-        if (osd_state.screen > OSD_SCREEN_REGULAR) {
-          osd_state.screen = osd_state.last_display_phase;
-          osd_state.menu_phase = 0;
-        } else {
-          osd_state.screen--;
-        }
-        ledblink = 2 - osd_state.screen;
+        ledblink = 2 - osd_pop_screen();
         pid_gestures_used = 0;
       }
     }
