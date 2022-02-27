@@ -85,27 +85,25 @@ void gestures() {
 
 #ifdef ENABLE_OSD
     if (command == GESTURE_OSD_UP) {
-      extern uint8_t osd_cursor;
       extern uint8_t osd_select;
       if (osd_select) {
         extern uint8_t increase_osd_value;
         increase_osd_value = 1;
       } else {
-        osd_cursor--;
+        osd_state.cursor--;
         osd_state.screen_phase = 1;
         ledblink = 1;
       }
     }
 
     if (command == GESTURE_OSD_DOWN) {
-      extern uint8_t osd_cursor;
       extern uint8_t osd_select;
       if (osd_select) {
         extern uint8_t decrease_osd_value;
         decrease_osd_value = 1;
       } else {
         osd_state.screen_phase = 1;
-        osd_cursor++;
+        osd_state.cursor++;
         ledblink = 1;
       }
     }
@@ -118,13 +116,12 @@ void gestures() {
     }
 
     if (command == GESTURE_OSD_LEFT) {
-      extern uint8_t osd_cursor;
       extern uint8_t osd_select;
       if (osd_select) {
         osd_select--;
         osd_state.screen_phase = 1;
       } else {
-        osd_cursor = last_cursor_array_stuffer(osd_cursor, RETURN_VALUE); // this tracks like last display phase
+        osd_pop_cursor();
         ledblink = 2 - osd_pop_screen();
         pid_gestures_used = 0;
       }

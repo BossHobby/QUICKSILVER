@@ -56,6 +56,10 @@ typedef struct {
   osd_screens_t screen_history[OSD_HISTORY_SIZE];
   uint8_t screen_history_size;
   uint8_t screen_phase;
+
+  uint8_t cursor;
+  uint8_t cursor_history[OSD_HISTORY_SIZE];
+  uint8_t cursor_history_size;
 } osd_state_t;
 
 extern osd_state_t osd_state;

@@ -4,15 +4,15 @@
 
 #include "util/vector.h"
 
-#define STORE_VALUE 1
-#define RETURN_VALUE 0
 #define BF_PIDS 0
 #define SW_RATES 1
 #define ROUNDED 2
 
+uint8_t osd_push_cursor();
+uint8_t osd_pop_cursor();
+
 void osd_submenu_select(uint8_t *pointer, uint8_t rows, const uint8_t next_menu[]);
 void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_menu);
-uint8_t last_cursor_array_stuffer(uint8_t cursor, uint8_t add_new);
 
 void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_t status);
 void osd_encoded_adjust_callsign();
