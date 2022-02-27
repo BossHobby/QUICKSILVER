@@ -63,6 +63,9 @@ osd_state_t osd_state = {
     .screen = OSD_SCREEN_REGULAR,
     .screen_history_size = 0,
     .screen_phase = 0,
+
+    .cursor = 0,
+    .cursor_history_size = 0,
 };
 
 static uint8_t osd_attr(osd_element_t *el) {
@@ -122,8 +125,6 @@ uint32_t *osd_elements() {
 //																					STATE VARIABLES
 //************************************************************************************************************************************************************************************
 // case & state variables for switch logic and profile adjustments
-uint8_t osd_cursor;
-uint8_t last_osd_cursor[6];
 uint8_t osd_select;
 uint8_t increase_osd_value;
 uint8_t decrease_osd_value;
@@ -136,9 +137,14 @@ uint8_t reboot_fc_requested = 0;
 //************************************************************************************************************************************************************************************
 
 void osd_display_reset() {
-  osd_state.screen = OSD_SCREEN_REGULAR; // jump to regular osd display next loop
-  osd_state.screen_phase = 0;            // reset menu to to main menu
-  osd_state.element = OSD_CALLSIGN;      // start with first screen element
+  osd_state.element = OSD_CALLSIGN;
+
+  osd_state.screen = OSD_SCREEN_REGULAR;
+  osd_state.screen_phase = 0;
+  osd_state.screen_history_size = 0;
+
+  osd_state.cursor = 0;
+  osd_state.cursor_history_size = 0;
 }
 
 static void osd_update_screen(osd_screens_t screen) {
@@ -170,16 +176,16 @@ osd_screens_t osd_pop_screen() {
 }
 
 uint8_t user_select(uint8_t active_elements, uint8_t total_elements) {
-  if (osd_cursor < 1)
-    osd_cursor = 1;
-  if (osd_cursor > active_elements)
-    osd_cursor = active_elements;
+  if (osd_state.cursor < 1)
+    osd_state.cursor = 1;
+  if (osd_state.cursor > active_elements)
+    osd_state.cursor = active_elements;
   uint8_t inactive_elements = total_elements - active_elements;
   if (osd_state.screen_phase == 1)
     return OSD_ATTR_INVERT;
   if (osd_state.screen_phase > 1 && osd_state.screen_phase <= inactive_elements)
     return OSD_ATTR_TEXT;
-  if (osd_cursor == (osd_state.screen_phase - inactive_elements) && osd_select == 0) {
+  if (osd_state.cursor == (osd_state.screen_phase - inactive_elements) && osd_select == 0) {
     return OSD_ATTR_INVERT;
   } else {
     return OSD_ATTR_TEXT;
@@ -187,7 +193,7 @@ uint8_t user_select(uint8_t active_elements, uint8_t total_elements) {
 }
 
 uint8_t grid_selection(uint8_t element, uint8_t row) {
-  if (osd_select == element && osd_cursor == row) {
+  if (osd_select == element && osd_state.cursor == row) {
     return OSD_ATTR_INVERT;
   } else {
     return OSD_ATTR_TEXT;
@@ -823,7 +829,7 @@ void osd_display() {
       print_osd_menu_strings(8, 4, pid_profile2_labels, pid_profile_positions);
     print_osd_adjustable_vectors(BF_PIDS, 8, 9, get_pid_term(pid_profile_data_index[osd_state.screen_phase - 9][0]), pid_profile_data_index, pid_profile_grid, pid_profile_data_positions);
     if (osd_state.screen_phase == 18)
-      osd_vector_adjust(get_pid_term(osd_cursor), 3, 3, BF_PIDS, pid_profile_adjust_limits);
+      osd_vector_adjust(get_pid_term(osd_state.cursor), 3, 3, BF_PIDS, pid_profile_adjust_limits);
     break;
 
   case OSD_SCREEN_FILTERS:
@@ -842,14 +848,14 @@ void osd_display() {
     print_osd_menu_strings(8, 4, sw_rates_labels, sw_rates_positions);
     print_osd_adjustable_vectors(SW_RATES, 8, 9, get_sw_rate_term(sw_rates_data_index[osd_state.screen_phase - 9][0]), sw_rates_data_index, sw_rates_grid, sw_rates_data_positions);
     if (osd_state.screen_phase == 18)
-      osd_vector_adjust(get_sw_rate_term(osd_cursor), 3, 3, SW_RATES, sw_rates_adjust_limits);
+      osd_vector_adjust(get_sw_rate_term(osd_state.cursor), 3, 3, SW_RATES, sw_rates_adjust_limits);
     break;
 
   case OSD_SCREEN_BF_RATES:
     print_osd_menu_strings(8, 4, bf_rates_labels, bf_rates_positions);
     print_osd_adjustable_vectors(ROUNDED, 8, 9, get_bf_rate_term(bf_rates_data_index[osd_state.screen_phase - 9][0]), bf_rates_data_index, bf_rates_grid, bf_rates_data_positions);
     if (osd_state.screen_phase == 18)
-      osd_vector_adjust(get_bf_rate_term(osd_cursor), 3, 3, ROUNDED, bf_rates_adjust_limits);
+      osd_vector_adjust(get_bf_rate_term(osd_state.cursor), 3, 3, ROUNDED, bf_rates_adjust_limits);
     break;
 
   case OSD_SCREEN_FLIGHT_MODES:
@@ -901,28 +907,28 @@ void osd_display() {
       print_osd_menu_strings(7, 3, stickboost2_labels, stickboost_positions);
     print_osd_adjustable_vectors(ROUNDED, 7, 6, get_stick_profile_term(stickboost_data_index[osd_state.screen_phase - 8][0]), stickboost_data_index, stickboost_grid, stickboost_data_positions);
     if (osd_state.screen_phase == 14)
-      osd_vector_adjust(get_stick_profile_term(osd_cursor), 2, 3, ROUNDED, stickboost_adjust_limits);
+      osd_vector_adjust(get_stick_profile_term(osd_state.cursor), 2, 3, ROUNDED, stickboost_adjust_limits);
     break;
 
   case OSD_SCREEN_ELEMENTS_ADD_REMOVE:
     print_osd_menu_strings(12, 11, osd_display_labels, osd_display_positions);
     print_osd_adjustable_enums(12, 10, get_decode_element_string((osd_element_t *)(osd_elements() + osd_elements_active_items[osd_state.screen_phase - 13]), ACTIVE), osd_display_grid, osd_display_data_positions);
     if (osd_state.screen_phase == 23)
-      osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_cursor - 1], 10, 1, ACTIVE);
+      osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_state.cursor - 1], 10, 1, ACTIVE);
     break;
 
   case OSD_SCREEN_ELEMENTS_POSITION:
     print_osd_menu_strings(14, 11, osd_position_labels, osd_position_adjust_positions);
     print_osd_adjustable_enums(14, 20, get_decode_element_string((osd_element_t *)(osd_elements() + osd_position_active_items[osd_state.screen_phase - 15]), osd_position_index[osd_state.screen_phase - 15]), osd_position_grid, osd_position_data_positions);
     if (osd_state.screen_phase == 35 && osd_select > 0)
-      osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_cursor - 1], 10, 2, osd_select + 1);
+      osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_state.cursor - 1], 10, 2, osd_select + 1);
     break;
 
   case OSD_SCREEN_ELEMENTS_STYLE:
     print_osd_menu_strings(12, 11, osd_text_style, osd_text_style_positions);
     print_osd_adjustable_enums(12, 10, get_decode_element_string((osd_element_t *)(osd_elements() + osd_elements_active_items[osd_state.screen_phase - 13]), ATTRIBUTE), osd_display_grid, osd_display_data_positions);
     if (osd_state.screen_phase == 23)
-      osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_cursor - 1], 10, 1, ATTRIBUTE);
+      osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_state.cursor - 1], 10, 1, ATTRIBUTE);
     break;
 
   case OSD_SCREEN_CALLSIGN:
