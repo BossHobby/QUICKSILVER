@@ -117,8 +117,6 @@ uint32_t *osd_elements() {
 //************************************************************************************************************************************************************************************
 // case & state variables for switch logic and profile adjustments
 uint8_t last_display_phase;
-uint8_t osd_wizard_phase = 0;
-uint8_t display_trigger = 0;
 uint8_t osd_cursor;
 uint8_t last_osd_cursor[6];
 uint8_t osd_select;
@@ -133,7 +131,6 @@ uint8_t reboot_fc_requested = 0;
 //************************************************************************************************************************************************************************************
 
 void osd_display_reset() {
-  osd_wizard_phase = 0;                         // reset the wizard
   osd_state.menu_phase = 0;                     // reset menu to to main menu
   osd_state.display_phase = OSD_SCREEN_REGULAR; // jump to regular osd display next loop
   osd_state.element = 0;                        // start with first screen element
@@ -736,6 +733,7 @@ static void osd_display_regular() {
 
   case OSD_ELEMENT_MAX: {
     // end of regular display - display_trigger counter sticks here till it wraps
+    static uint8_t display_trigger = 0;
     display_trigger++;
     if (display_trigger == 0)
       osd_state.element = OSD_CALLSIGN;
