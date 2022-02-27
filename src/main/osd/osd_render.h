@@ -45,6 +45,12 @@ typedef struct {
 
 #define ENCODE_OSD_ELEMENT(active, attr, x, y) ((y << 10) | (x << 2) | (attr << 1) | active)
 
+typedef struct {
+  uint8_t menu_phase;
+} osd_state_t;
+
+extern osd_state_t osd_state;
+
 void osd_init();
 void osd_display();
 void osd_clear();
