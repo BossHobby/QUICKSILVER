@@ -121,14 +121,13 @@ void gestures() {
     if (command == GESTURE_OSD_LEFT) {
       extern uint8_t osd_cursor;
       extern uint8_t osd_select;
-      extern uint8_t last_display_phase;
       if (osd_select) {
         osd_select--;
         osd_state.menu_phase = 1;
       } else {
         osd_cursor = last_cursor_array_stuffer(osd_cursor, RETURN_VALUE); // this tracks like last display phase
         if (osd_state.display_phase > 2) {
-          osd_state.display_phase = last_display_phase;
+          osd_state.display_phase = osd_state.last_display_phase;
           osd_state.menu_phase = 0;
         } else {
           osd_state.display_phase--;
