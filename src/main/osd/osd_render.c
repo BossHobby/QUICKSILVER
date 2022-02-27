@@ -118,7 +118,6 @@ uint32_t *osd_elements() {
 // case & state variables for switch logic and profile adjustments
 uint8_t last_display_phase;
 uint8_t osd_wizard_phase = 0;
-osd_elements_t osd_display_element = 0;
 uint8_t display_trigger = 0;
 uint8_t osd_cursor;
 uint8_t last_osd_cursor[6];
@@ -137,7 +136,7 @@ void osd_display_reset() {
   osd_wizard_phase = 0;                         // reset the wizard
   osd_state.menu_phase = 0;                     // reset menu to to main menu
   osd_state.display_phase = OSD_SCREEN_REGULAR; // jump to regular osd display next loop
-  osd_display_element = 0;                      // start with first screen element
+  osd_state.element = 0;                        // start with first screen element
 }
 
 uint8_t user_select(uint8_t active_elements, uint8_t total_elements) {
@@ -621,19 +620,19 @@ void osd_init() {
 }
 
 static void osd_display_regular() {
-  osd_element_t *el = (osd_element_t *)(osd_elements() + osd_display_element);
-  if (osd_display_element < OSD_ELEMENT_MAX && !el->active) {
-    osd_display_element++;
+  osd_element_t *el = (osd_element_t *)(osd_elements() + osd_state.element);
+  if (osd_state.element < OSD_ELEMENT_MAX && !el->active) {
+    osd_state.element++;
     return;
   }
 
-  switch (osd_display_element) {
+  switch (osd_state.element) {
   case OSD_CALLSIGN: {
     osd_transaction_t *txn = osd_txn_init();
     osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
     osd_txn_write_str((const char *)profile.osd.callsign);
     osd_txn_submit(txn);
-    osd_display_element++;
+    osd_state.element++;
     break;
   }
 
@@ -652,7 +651,7 @@ static void osd_display_regular() {
     osd_txn_write_char('V');
 
     osd_txn_submit(txn);
-    osd_display_element++;
+    osd_state.element++;
     break;
   }
 
@@ -671,7 +670,7 @@ static void osd_display_regular() {
     osd_txn_write_char('V');
 
     osd_txn_submit(txn);
-    osd_display_element++;
+    osd_state.element++;
     break;
   }
 
@@ -681,31 +680,31 @@ static void osd_display_regular() {
     osd_txn_write_uint(state.gyro_temp, 4);
     osd_txn_write_char(ICON_CELSIUS);
     osd_txn_submit(txn);
-    osd_display_element++;
+    osd_state.element++;
     break;
   }
 
   case OSD_FLIGHT_MODE: {
     print_osd_flightmode(el);
-    osd_display_element++;
+    osd_state.element++;
     break;
   }
 
   case OSD_RSSI: {
     print_osd_rssi(el);
-    osd_display_element++;
+    osd_state.element++;
     break;
   }
 
   case OSD_STOPWATCH: {
     print_osd_armtime(el);
-    osd_display_element++;
+    osd_state.element++;
     break;
   }
 
   case OSD_SYSTEM_STATUS: {
     if (print_osd_system_status(el))
-      osd_display_element++;
+      osd_state.element++;
     break;
   }
 
@@ -715,13 +714,13 @@ static void osd_display_regular() {
     osd_txn_write_uint(state.throttle * 100.0f, 4);
     osd_txn_write_char(ICON_THROTTLE);
     osd_txn_submit(txn);
-    osd_display_element++;
+    osd_state.element++;
     break;
   }
 
   case OSD_VTX_CHANNEL: {
     print_osd_vtx(el);
-    osd_display_element++;
+    osd_state.element++;
     break;
   }
 
@@ -731,7 +730,7 @@ static void osd_display_regular() {
     osd_txn_write_float(state.ibat_filtered / 1000.0f, 4, 2);
     osd_txn_write_char(ICON_AMP);
     osd_txn_submit(txn);
-    osd_display_element++;
+    osd_state.element++;
     break;
   }
 
@@ -739,7 +738,7 @@ static void osd_display_regular() {
     // end of regular display - display_trigger counter sticks here till it wraps
     display_trigger++;
     if (display_trigger == 0)
-      osd_display_element = OSD_CALLSIGN;
+      osd_state.element = OSD_CALLSIGN;
     break;
   }
   }
