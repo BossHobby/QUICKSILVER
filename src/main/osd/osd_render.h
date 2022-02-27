@@ -64,6 +64,8 @@ typedef struct {
   uint8_t selection;
   uint8_t selection_increase;
   uint8_t selection_decrease;
+
+  uint8_t reboot_fc_requested;
 } osd_state_t;
 
 extern osd_state_t osd_state;
