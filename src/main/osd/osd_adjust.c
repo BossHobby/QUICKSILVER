@@ -12,7 +12,6 @@
 #include "util.h"
 #include "vtx.h"
 
-extern uint8_t reboot_fc_requested;
 extern profile_t profile;
 extern vtx_settings_t vtx_settings;
 vtx_settings_t vtx_settings_copy;
@@ -50,7 +49,7 @@ void osd_save_exit() {
   // reset loop time - maybe not necessary cause it gets reset in the next screen clear
   reset_looptime();
 
-  if (reboot_fc_requested)
+  if (osd_state.reboot_fc_requested)
     NVIC_SystemReset();
 }
 
@@ -345,14 +344,14 @@ void osd_mixed_data_adjust(float *pointer[], uint8_t *pointer2[], uint8_t rows, 
         *pointer2[adjust_tracker] = i;
         osd_state.screen_phase = 1; // repaint the screen again
         if (reboot_request[adjust_tracker] == 1)
-          reboot_fc_requested = 1;
+          osd_state.reboot_fc_requested = 1;
       }
       if (osd_state.selection_decrease && i != 0) { // limit is always 0 for an enum or uint8_t
         i--;
         *pointer2[adjust_tracker] = i;
         osd_state.screen_phase = 1; // repaint the screen again
         if (reboot_request[adjust_tracker] == 1)
-          reboot_fc_requested = 1;
+          osd_state.reboot_fc_requested = 1;
       }
     }
     osd_state.selection_increase = 0;
