@@ -60,6 +60,10 @@ typedef struct {
   uint8_t cursor;
   uint8_t cursor_history[OSD_HISTORY_SIZE];
   uint8_t cursor_history_size;
+
+  uint8_t selection;
+  uint8_t selection_increase;
+  uint8_t selection_decrease;
 } osd_state_t;
 
 extern osd_state_t osd_state;
