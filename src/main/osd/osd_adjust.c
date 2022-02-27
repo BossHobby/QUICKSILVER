@@ -12,7 +12,6 @@
 #include "util.h"
 #include "vtx.h"
 
-extern uint8_t osd_display_phase;
 extern uint8_t osd_cursor;
 extern uint8_t last_osd_cursor[6];
 extern uint8_t osd_select;
@@ -32,7 +31,7 @@ void osd_save_exit() {
   for (uint8_t i = 0; i < 6; i++) {
     last_osd_cursor[i] = 0;
   }
-  osd_display_phase = 0;
+  osd_state.display_phase = 0;
 
   // check if vtx settings need to be updated
   if (vtx_buffer_populated) {
@@ -83,10 +82,10 @@ void osd_submenu_select(uint8_t *pointer, uint8_t rows, const uint8_t next_menu[
     osd_select = 0;      // reset the trigger
     last_cursor_array_stuffer(osd_cursor, STORE_VALUE);
     if (osd_cursor <= rows) {
-      *pointer = osd_cursor - 1;                     // update profile
-      osd_display_phase = next_menu[osd_cursor - 1]; // update display phase to the next menu screen
-      osd_cursor = 0;                                // reset the cursor
-      osd_state.menu_phase = 0;                      // clear the screen
+      *pointer = osd_cursor - 1;                           // update profile
+      osd_state.display_phase = next_menu[osd_cursor - 1]; // update display phase to the next menu screen
+      osd_cursor = 0;                                      // reset the cursor
+      osd_state.menu_phase = 0;                            // clear the screen
     }
   }
 }
@@ -96,7 +95,7 @@ void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_m
     osd_select = 0;      // reset the trigger
     last_cursor_array_stuffer(osd_cursor, STORE_VALUE);
     if (osd_cursor <= rows) {
-      osd_display_phase = menu_map[osd_cursor - 1];
+      osd_state.display_phase = menu_map[osd_cursor - 1];
       osd_cursor = 0;
       osd_state.menu_phase = 0;
     }
