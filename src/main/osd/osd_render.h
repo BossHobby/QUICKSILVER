@@ -51,6 +51,7 @@ typedef struct {
   uint8_t menu_phase;
 
   uint8_t display_phase;
+  uint8_t last_display_phase;
 } osd_state_t;
 
 extern osd_state_t osd_state;
