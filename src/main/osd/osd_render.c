@@ -19,10 +19,6 @@
 
 #ifdef ENABLE_OSD
 
-// double promotions the following are unavoidable
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdouble-promotion"
-
 typedef enum {
   CLEAR,
   DISARM,
@@ -50,7 +46,12 @@ typedef struct {
 #define ICON_THROTTLE 0x4
 #define ICON_AMP 0x9a
 
-// Flash Variables - 32bit					# of osd elements and flash memory start position in defines.h
+#define MAIN_MENU 1
+#define SUB_MENU 0
+
+#define HOLD 0
+#define TEMP 1
+
 extern profile_t profile;
 extern vtx_settings_t vtx_settings;
 extern vtx_settings_t vtx_settings_copy;
@@ -126,17 +127,6 @@ uint32_t *osd_elements() {
   }
   return profile.osd.elements;
 }
-
-//************************************************************************************************************************************************************************************
-//																					STATE VARIABLES
-//************************************************************************************************************************************************************************************
-// case & state variables for switch logic and profile adjustments
-#define MAIN_MENU 1
-#define SUB_MENU 0
-
-//************************************************************************************************************************************************************************************
-//																					UTILITY FUNCTIONS
-//************************************************************************************************************************************************************************************
 
 void osd_display_reset() {
   osd_state.element = OSD_CALLSIGN;
@@ -317,9 +307,6 @@ void print_osd_vtx(osd_element_t *el) {
   osd_txn_write_data(str, 5);
   osd_txn_submit(txn);
 }
-
-#define HOLD 0
-#define TEMP 1
 
 // 3 stage return - 0 = stick and hold, 1 = move on but come back to clear, 2 = status print done
 uint8_t print_status(osd_element_t *el, uint8_t persistence, uint8_t label) {
@@ -1080,7 +1067,5 @@ void osd_display() {
     flags.arm_safety = 1;
   }
 }
-//******************************************************************************************************************************
 
-#pragma GCC diagnostic pop
 #endif
