@@ -12,8 +12,6 @@
 #include "util.h"
 #include "vtx.h"
 
-extern uint8_t osd_cursor;
-extern uint8_t last_osd_cursor[6];
 extern uint8_t osd_select;
 extern uint8_t increase_osd_value;
 extern uint8_t decrease_osd_value;
@@ -27,10 +25,8 @@ static uint8_t vtx_buffer_populated = 0;
 
 void osd_save_exit() {
   osd_select = 0;
-  osd_cursor = 0;
-  for (uint8_t i = 0; i < 6; i++) {
-    last_osd_cursor[i] = 0;
-  }
+  osd_state.cursor = 0;
+  osd_state.cursor_history_size = 0;
   osd_state.screen = OSD_SCREEN_CLEAR;
 
   // check if vtx settings need to be updated
@@ -61,30 +57,31 @@ void osd_save_exit() {
     NVIC_SystemReset();
 }
 
-uint8_t last_cursor_array_stuffer(uint8_t cursor, uint8_t add_new) { // where add_new can be either STORE_VALUE or RETURN_VALUE
-  if (add_new) {
-    for (int i = 5; i >= 1; i--) { // shift all the values to the right one array position
-      last_osd_cursor[i] = last_osd_cursor[i - 1];
-    }
-    last_osd_cursor[0] = cursor; // add the most recent value to slot 0
+uint8_t osd_push_cursor() {
+  osd_state.cursor_history[osd_state.cursor_history_size] = osd_state.cursor;
+  osd_state.cursor_history_size++;
+  return osd_state.cursor;
+}
+
+uint8_t osd_pop_cursor() {
+  if (!osd_state.cursor_history_size) {
     return 0;
-  } else {
-    uint8_t next_cursor_value = last_osd_cursor[0]; // remove slot 0 for return and left shift the rest over
-    for (int i = 1; i <= 5; i++) {
-      last_osd_cursor[i - 1] = last_osd_cursor[i];
-    }
-    return next_cursor_value;
   }
+
+  osd_state.cursor = osd_state.cursor_history[osd_state.cursor_history_size - 1];
+  osd_state.cursor_history_size--;
+
+  return osd_state.cursor;
 }
 
 void osd_submenu_select(uint8_t *pointer, uint8_t rows, const uint8_t next_menu[]) {
   if (osd_select == 1) { // stick was pushed right to select a next menu
     osd_select = 0;      // reset the trigger
-    last_cursor_array_stuffer(osd_cursor, STORE_VALUE);
-    if (osd_cursor <= rows) {
-      *pointer = osd_cursor - 1; // update profile
-      osd_push_screen(next_menu[osd_cursor - 1]);
-      osd_cursor = 0; // reset the cursor
+    osd_push_cursor();
+    if (osd_state.cursor <= rows) {
+      *pointer = osd_state.cursor - 1; // update profile
+      osd_push_screen(next_menu[osd_state.cursor - 1]);
+      osd_state.cursor = 0; // reset the cursor
     }
   }
 }
@@ -92,14 +89,14 @@ void osd_submenu_select(uint8_t *pointer, uint8_t rows, const uint8_t next_menu[
 void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_menu) {
   if (osd_select == 1) { // main menu
     osd_select = 0;      // reset the trigger
-    last_cursor_array_stuffer(osd_cursor, STORE_VALUE);
-    if (osd_cursor <= rows) {
-      osd_push_screen(menu_map[osd_cursor - 1]);
-      osd_cursor = 0;
+    osd_push_cursor();
+    if (osd_state.cursor <= rows) {
+      osd_push_screen(menu_map[osd_state.cursor - 1]);
+      osd_state.cursor = 0;
       osd_state.screen_phase = 0;
     }
     if (main_menu) {
-      if (osd_cursor == rows + 1)
+      if (osd_state.cursor == rows + 1)
         osd_save_exit(); // include save&exit in main menu
     }
   }
@@ -131,7 +128,7 @@ void osd_encoded_adjust_callsign() {
   }
   increase_osd_value = 0;
   decrease_osd_value = 0;
-  if (osd_cursor == 2) {
+  if (osd_state.cursor == 2) {
     if (osd_select == 1) {
       osd_save_exit();
     }
@@ -143,7 +140,7 @@ void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_
     osd_select = columns;       // limit osd select variable from accumulating past 1 columns of adjustable items
     osd_state.screen_phase = 1; // repaint the screen again
   }
-  if (osd_cursor <= rows) {
+  if (osd_state.cursor <= rows) {
     switch (status) {
     case 0: // adjust active or inactive element
       if (increase_osd_value && osd_decode(*pointer, status) == 0x00) {
@@ -189,7 +186,7 @@ void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_
     increase_osd_value = 0;
     decrease_osd_value = 0;
   }
-  if (osd_cursor == rows + 1) {
+  if (osd_state.cursor == rows + 1) {
     if (osd_select == 1) {
       osd_save_exit();
     }
@@ -270,8 +267,8 @@ void osd_vector_adjust(vec3_t *pointer, uint8_t rows, uint8_t columns, uint8_t s
     osd_select = columns;       // limit osd select variable from accumulating past 3 columns of adjustable items
     osd_state.screen_phase = 1; // repaint the screen again
   }
-  if (osd_cursor <= rows) {
-    uint8_t adjust_tracker = ((osd_cursor - 1) * columns) + (osd_select - 1);
+  if (osd_state.cursor <= rows) {
+    uint8_t adjust_tracker = ((osd_state.cursor - 1) * columns) + (osd_select - 1);
     if ((increase_osd_value && pointer->axis[osd_select - 1] < adjust_limit[adjust_tracker][1]) || (decrease_osd_value && pointer->axis[osd_select - 1] > adjust_limit[adjust_tracker][0])) {
       if (special_case == BF_PIDS)
         pointer->axis[osd_select - 1] = adjust_rounded_float(pointer->axis[osd_select - 1], bf_pids_increments[adjust_tracker]);
@@ -283,7 +280,7 @@ void osd_vector_adjust(vec3_t *pointer, uint8_t rows, uint8_t columns, uint8_t s
     increase_osd_value = 0;
     decrease_osd_value = 0;
   }
-  if (osd_cursor == rows + 1) {
+  if (osd_state.cursor == rows + 1) {
     if (osd_select == 1) {
       osd_save_exit();
     }
@@ -295,15 +292,15 @@ void osd_float_adjust(float *pointer[], uint8_t rows, uint8_t columns, const flo
     osd_select = columns;
     osd_state.screen_phase = 1; // repaint the screen again
   }
-  if (osd_cursor <= rows) {
-    uint8_t adjust_tracker = ((osd_cursor - 1) * columns) + (osd_select - 1);
+  if (osd_state.cursor <= rows) {
+    uint8_t adjust_tracker = ((osd_state.cursor - 1) * columns) + (osd_select - 1);
     if ((increase_osd_value && *pointer[adjust_tracker] < adjust_limit[adjust_tracker][1]) || (decrease_osd_value && *pointer[adjust_tracker] > adjust_limit[adjust_tracker][0])) {
       *pointer[adjust_tracker] = adjust_rounded_float(*pointer[adjust_tracker], adjust_amount);
     }
     increase_osd_value = 0;
     decrease_osd_value = 0;
   }
-  if (osd_cursor == rows + 1) {
+  if (osd_state.cursor == rows + 1) {
     if (osd_select == 1) {
       osd_save_exit();
     }
@@ -315,8 +312,8 @@ void osd_enum_adjust(uint8_t *pointer[], uint8_t rows, const uint8_t increase_li
     osd_select = 1;             // limit osd select variable from accumulating past 1 columns of adjustable items
     osd_state.screen_phase = 1; // repaint the screen again
   }
-  if (osd_cursor <= rows && osd_select > 0) {
-    uint8_t adjust_tracker = osd_cursor - 1;
+  if (osd_state.cursor <= rows && osd_select > 0) {
+    uint8_t adjust_tracker = osd_state.cursor - 1;
     uint8_t i = *pointer[adjust_tracker];
     if (increase_osd_value && i != increase_limit[adjust_tracker]) { // limits need to be 11 for arming, 14 for everything else on flight modes
       i++;
@@ -331,7 +328,7 @@ void osd_enum_adjust(uint8_t *pointer[], uint8_t rows, const uint8_t increase_li
     increase_osd_value = 0;
     decrease_osd_value = 0;
   }
-  if (osd_cursor == rows + 1) {
+  if (osd_state.cursor == rows + 1) {
     if (osd_select == 1) {
       osd_save_exit();
     }
@@ -344,8 +341,8 @@ void osd_mixed_data_adjust(float *pointer[], uint8_t *pointer2[], uint8_t rows, 
     osd_state.screen_phase = 1; // repaint the screen again
   }
 
-  if (osd_cursor <= rows && osd_select > 0) {
-    uint8_t adjust_tracker = ((osd_cursor - 1) * columns) + (osd_select - 1);
+  if (osd_state.cursor <= rows && osd_select > 0) {
+    uint8_t adjust_tracker = ((osd_state.cursor - 1) * columns) + (osd_select - 1);
 
     if (*pointer[adjust_tracker] != POINTER_REDIRECT) { // POINTER_REDIRECT = -999.0 is a dummy value to indicate skipping to another data type
       if ((increase_osd_value && *pointer[adjust_tracker] < adjust_limit[adjust_tracker][1]) || (decrease_osd_value && *pointer[adjust_tracker] > adjust_limit[adjust_tracker][0])) {
@@ -372,7 +369,7 @@ void osd_mixed_data_adjust(float *pointer[], uint8_t *pointer2[], uint8_t rows, 
     decrease_osd_value = 0;
   }
 
-  if (osd_cursor == rows + 1) {
+  if (osd_state.cursor == rows + 1) {
     if (osd_select == 1) {
       osd_save_exit();
     }
