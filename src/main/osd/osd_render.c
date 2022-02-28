@@ -175,7 +175,11 @@ void osd_handle_input(osd_input_t input) {
     if (osd_state.selection) {
       osd_state.selection_increase = 1;
     } else {
-      osd_state.cursor--;
+      if (osd_state.cursor == 1) {
+        osd_state.cursor = osd_state.cursor_max - osd_state.cursor_min + 1;
+      } else {
+        osd_state.cursor--;
+      }
       osd_state.screen_phase = 1;
     }
     break;
@@ -184,7 +188,11 @@ void osd_handle_input(osd_input_t input) {
     if (osd_state.selection) {
       osd_state.selection_decrease = 1;
     } else {
-      osd_state.cursor++;
+      if (osd_state.cursor == (osd_state.cursor_max - osd_state.cursor_min + 1)) {
+        osd_state.cursor = 1;
+      } else {
+        osd_state.cursor++;
+      }
       osd_state.screen_phase = 1;
     }
     break;
@@ -206,28 +214,32 @@ void osd_handle_input(osd_input_t input) {
   }
 }
 
-uint8_t user_select(uint8_t active_elements, uint8_t total_elements) {
-  if (osd_state.cursor < 1) {
-    osd_state.cursor = active_elements;
+static bool osd_is_selected(const osd_label_t *labels, const uint8_t size) {
+  if (osd_state.screen_phase > 1 && osd_state.screen_phase <= osd_state.cursor_min) {
+    return false;
   }
 
-  if (osd_state.cursor > active_elements) {
-    osd_state.cursor = 1;
+  if (osd_state.cursor == (osd_state.screen_phase - osd_state.cursor_min) && osd_state.selection == 0) {
+    return true;
   }
 
-  const uint8_t inactive_elements = total_elements - active_elements;
-  if (osd_state.screen_phase == 1) {
-    return OSD_ATTR_INVERT;
-  }
+  return false;
+}
 
-  if (osd_state.screen_phase > 1 && osd_state.screen_phase <= inactive_elements) {
-    return OSD_ATTR_TEXT;
-  }
+void osd_update_cursor(const osd_label_t *labels, const uint8_t size) {
+  osd_state.cursor_min = size;
+  osd_state.cursor_max = 0;
 
-  if (osd_state.cursor == (osd_state.screen_phase - inactive_elements) && osd_state.selection == 0) {
-    return OSD_ATTR_INVERT;
-  } else {
-    return OSD_ATTR_TEXT;
+  for (uint32_t i = 0; i < size; i++) {
+    if (labels[i].type != OSD_LABEL_ACTIVE) {
+      continue;
+    }
+    if (i < osd_state.cursor_min) {
+      osd_state.cursor_min = i;
+    }
+    if (i > osd_state.cursor_max) {
+      osd_state.cursor_max = i;
+    }
   }
 }
 
@@ -557,18 +569,54 @@ void print_osd_callsign_adjustable(uint8_t string_element_qty, uint8_t data_elem
   osd_state.screen_phase++;
 }
 
-void print_osd_menu_strings(uint8_t string_element_qty, uint8_t active_element_qty, const char element_names[string_element_qty][21], const uint8_t print_position[string_element_qty][2]) {
-  if (osd_state.screen_phase > string_element_qty)
+void print_osd_menu_strings(const osd_label_t *labels, const uint8_t size) {
+  if (osd_state.screen_phase > size) {
     return;
+  }
   if (osd_state.screen_phase == 0) {
-    if (osd_clear_async())
+    if (osd_clear_async()) {
+      osd_update_cursor(labels, size);
       osd_state.screen_phase++;
+    }
     return;
   }
 
+  const osd_label_t *label = &labels[osd_state.screen_phase - 1];
+
   osd_transaction_t *txn = osd_txn_init();
-  osd_txn_start(user_select(active_element_qty, string_element_qty), print_position[osd_state.screen_phase - 1][0], print_position[osd_state.screen_phase - 1][1]);
-  osd_txn_write_str(element_names[osd_state.screen_phase - 1]);
+
+  switch (label->type) {
+  case OSD_LABEL_HEADER:
+    osd_txn_start(OSD_ATTR_INVERT, label->pos[0], label->pos[1]);
+    break;
+
+  case OSD_LABEL_INACTIVE:
+    osd_txn_start(OSD_ATTR_TEXT, label->pos[0], label->pos[1]);
+    break;
+
+  case OSD_LABEL_ACTIVE: {
+    const bool is_selected = osd_is_selected(labels, size);
+    if (osd_system == OSD_SYS_HD) {
+      if (is_selected) {
+        osd_txn_start(OSD_ATTR_INVERT, label->pos[0] - 1, label->pos[1]);
+        osd_txn_write_char('>');
+      } else {
+        osd_txn_start(OSD_ATTR_TEXT, label->pos[0] - 1, label->pos[1]);
+        osd_txn_write_char(' ');
+      }
+    } else {
+      if (is_selected) {
+        osd_txn_start(OSD_ATTR_INVERT, label->pos[0], label->pos[1]);
+      } else {
+        osd_txn_start(OSD_ATTR_TEXT, label->pos[0], label->pos[1]);
+      }
+    }
+
+    break;
+  }
+  }
+
+  osd_txn_write_str(label->text);
   osd_txn_submit(txn);
 
   osd_state.screen_phase++;
@@ -840,7 +888,7 @@ void osd_display() {
     break; // screen has been cleared for this loop - break out of display function
 
   case OSD_SCREEN_MAIN_MENU: // osd menu is active
-    print_osd_menu_strings(10, 9, main_menu_labels, main_menu_positions);
+    print_osd_menu_strings(main_menu_labels, main_menu_labels_size);
     if (osd_state.screen_phase == 11)
       osd_select_menu_item(8, main_menu_map, MAIN_MENU);
     break; // osd menu has been displayed for this loop	- break out of display function
@@ -853,56 +901,56 @@ void osd_display() {
     //																				OSD MENUS BELOW THIS POINT
     //**********************************************************************************************************************************************************************************************
   case OSD_SCREEN_PID_PROFILE:
-    print_osd_menu_strings(3, 2, pid_profiles_labels, pid_profiles_positions);
+    print_osd_menu_strings(pid_profiles_labels, pid_profiles_labels_size);
     if (osd_state.screen_phase == 4)
       osd_submenu_select(&profile.pid.pid_profile, 2, pid_submenu_map);
     break;
 
   case OSD_SCREEN_PID:
     if (profile.pid.pid_profile == PID_PROFILE_1)
-      print_osd_menu_strings(8, 4, pid_profile1_labels, pid_profile_positions);
+      print_osd_menu_strings(pid_profile1_labels, pid_profile1_labels_size);
     else
-      print_osd_menu_strings(8, 4, pid_profile2_labels, pid_profile_positions);
+      print_osd_menu_strings(pid_profile2_labels, pid_profile2_labels_size);
     print_osd_adjustable_vectors(BF_PIDS, 8, 9, get_pid_term(pid_profile_data_index[osd_state.screen_phase - 9][0]), pid_profile_data_index, pid_profile_grid, pid_profile_data_positions);
     if (osd_state.screen_phase == 18)
       osd_vector_adjust(get_pid_term(osd_state.cursor), 3, 3, BF_PIDS, pid_profile_adjust_limits);
     break;
 
   case OSD_SCREEN_FILTERS:
-    print_osd_menu_strings(3, 2, filter_labels, filter_positions);
+    print_osd_menu_strings(filter_labels, filter_labels_size);
     if (osd_state.screen_phase == 4)
       osd_select_menu_item(2, filter_submenu_map, SUB_MENU);
     break;
 
   case OSD_SCREEN_RATES:
-    print_osd_menu_strings(3, 2, rates_profile_labels, rates_profile_positions);
+    print_osd_menu_strings(rates_profile_labels, rates_profile_labels_size);
     if (osd_state.screen_phase == 4)
       osd_submenu_select(&profile_current_rates()->mode, 2, rates_submenu_map);
     break;
 
   case OSD_SCREEN_SW_RATES:
-    print_osd_menu_strings(8, 4, sw_rates_labels, sw_rates_positions);
+    print_osd_menu_strings(sw_rates_labels, sw_rates_labels_size);
     print_osd_adjustable_vectors(SW_RATES, 8, 9, get_sw_rate_term(sw_rates_data_index[osd_state.screen_phase - 9][0]), sw_rates_data_index, sw_rates_grid, sw_rates_data_positions);
     if (osd_state.screen_phase == 18)
       osd_vector_adjust(get_sw_rate_term(osd_state.cursor), 3, 3, SW_RATES, sw_rates_adjust_limits);
     break;
 
   case OSD_SCREEN_BF_RATES:
-    print_osd_menu_strings(8, 4, bf_rates_labels, bf_rates_positions);
+    print_osd_menu_strings(bf_rates_labels, bf_rates_labels_size);
     print_osd_adjustable_vectors(ROUNDED, 8, 9, get_bf_rate_term(bf_rates_data_index[osd_state.screen_phase - 9][0]), bf_rates_data_index, bf_rates_grid, bf_rates_data_positions);
     if (osd_state.screen_phase == 18)
       osd_vector_adjust(get_bf_rate_term(osd_state.cursor), 3, 3, ROUNDED, bf_rates_adjust_limits);
     break;
 
   case OSD_SCREEN_FLIGHT_MODES:
-    print_osd_menu_strings(12, 11, flight_modes_labels, flight_modes_positions);
+    print_osd_menu_strings(flight_modes_labels, flight_modes_labels_size);
     print_osd_adjustable_enums(12, 10, get_aux_status(profile.receiver.aux[flight_modes_aux_items[osd_state.screen_phase - 13]]), flight_modes_grid, flight_modes_data_positions);
     if (osd_state.screen_phase == 23)
       osd_enum_adjust(flight_modes_ptr, 10, flight_modes_aux_limits);
     break;
 
   case OSD_SCREEN_ELEMENTS:
-    print_osd_menu_strings(5, 4, osd_elements_menu_labels, osd_elements_menu_positions);
+    print_osd_menu_strings(osd_elements_menu_labels, osd_elements_menu_labels_size);
     if (osd_state.screen_phase == 6)
       osd_select_menu_item(4, osd_elements_map, SUB_MENU);
     break;
@@ -910,7 +958,7 @@ void osd_display() {
   case OSD_SCREEN_VTX:
     if (vtx_settings.detected) {
       populate_vtx_buffer_once();
-      print_osd_menu_strings(6, 5, vtx_labels, vtx_positions);
+      print_osd_menu_strings(vtx_labels, vtx_labels_size);
       // print the buffer and not the actual status
       print_osd_adjustable_enums(6, 4, get_vtx_status(osd_state.screen_phase - 7), vtx_grid, vtx_data_positions);
       if (osd_state.screen_phase == 11)
@@ -918,159 +966,159 @@ void osd_display() {
         osd_enum_adjust(vtx_ptr, 4, vtx_limits);
       // save & exit needs a function to write the buffer to the actual settings
     } else {
-      print_osd_menu_strings(3, 0, vtx_na_labels, vtx_na_positions);
+      print_osd_menu_strings(vtx_na_labels, vtx_na_labels_size);
       if (osd_state.selection)
         osd_state.selection = 0;
     }
     break;
 
   case OSD_SCREEN_SPECIAL_FEATURES:
-    print_osd_menu_strings(8, 7, special_features_labels, special_features_positions);
+    print_osd_menu_strings(special_features_labels, special_features_labels_size);
     if (osd_state.screen_phase == 9)
       osd_select_menu_item(7, special_features_map, SUB_MENU);
     break;
 
   case OSD_SCREEN_STICK_BOOST:
-    print_osd_menu_strings(3, 2, stickboost_labels, stickboost_profile_positions);
+    print_osd_menu_strings(stickboost_labels, stickboost_labels_size);
     if (osd_state.screen_phase == 4)
       osd_submenu_select(&profile.pid.stick_profile, 2, stickboost_submenu_map);
     break;
 
   case OSD_SCREEN_STICK_BOOST_ADJUST:
     if (profile.pid.stick_profile == STICK_PROFILE_OFF)
-      print_osd_menu_strings(7, 3, stickboost1_labels, stickboost_positions);
+      print_osd_menu_strings(stickboost1_labels, stickboost1_labels_size);
     else
-      print_osd_menu_strings(7, 3, stickboost2_labels, stickboost_positions);
+      print_osd_menu_strings(stickboost2_labels, stickboost2_labels_size);
     print_osd_adjustable_vectors(ROUNDED, 7, 6, get_stick_profile_term(stickboost_data_index[osd_state.screen_phase - 8][0]), stickboost_data_index, stickboost_grid, stickboost_data_positions);
     if (osd_state.screen_phase == 14)
       osd_vector_adjust(get_stick_profile_term(osd_state.cursor), 2, 3, ROUNDED, stickboost_adjust_limits);
     break;
 
   case OSD_SCREEN_ELEMENTS_ADD_REMOVE:
-    print_osd_menu_strings(12, 11, osd_display_labels, osd_display_positions);
+    print_osd_menu_strings(osd_display_labels, osd_display_labels_size);
     print_osd_adjustable_enums(12, 10, get_decode_element_string((osd_element_t *)(osd_elements() + osd_elements_active_items[osd_state.screen_phase - 13]), ACTIVE), osd_display_grid, osd_display_data_positions);
     if (osd_state.screen_phase == 23)
       osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_state.cursor - 1], 10, 1, ACTIVE);
     break;
 
   case OSD_SCREEN_ELEMENTS_POSITION:
-    print_osd_menu_strings(14, 11, osd_position_labels, osd_position_adjust_positions);
+    print_osd_menu_strings(osd_position_labels, osd_position_labels_size);
     print_osd_adjustable_enums(14, 20, get_decode_element_string((osd_element_t *)(osd_elements() + osd_position_active_items[osd_state.screen_phase - 15]), osd_position_index[osd_state.screen_phase - 15]), osd_position_grid, osd_position_data_positions);
     if (osd_state.screen_phase == 35 && osd_state.selection > 0)
       osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_state.cursor - 1], 10, 2, osd_state.selection + 1);
     break;
 
   case OSD_SCREEN_ELEMENTS_STYLE:
-    print_osd_menu_strings(12, 11, osd_text_style, osd_text_style_positions);
+    print_osd_menu_strings(osd_text_style, osd_text_style_size);
     print_osd_adjustable_enums(12, 10, get_decode_element_string((osd_element_t *)(osd_elements() + osd_elements_active_items[osd_state.screen_phase - 13]), ATTRIBUTE), osd_display_grid, osd_display_data_positions);
     if (osd_state.screen_phase == 23)
       osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_state.cursor - 1], 10, 1, ATTRIBUTE);
     break;
 
   case OSD_SCREEN_CALLSIGN:
-    print_osd_menu_strings(23, 2, osd_callsign_edit_labels, osd_callsign_edit_positions);
+    print_osd_menu_strings(osd_callsign_edit_labels, osd_callsign_edit_labels_size);
     print_osd_callsign_adjustable(23, 20, osd_callsign_grid, osd_callsign_edit_data_positions);
     if (osd_state.screen_phase == 44)
       osd_encoded_adjust_callsign();
     break;
 
   case OSD_SCREEN_LOWBAT:
-    print_osd_menu_strings(3, 2, lowbatt_labels, lowbatt_positions);
+    print_osd_menu_strings(lowbatt_labels, lowbatt_labels_size);
     print_osd_adjustable_float(3, 1, low_batt_ptr, lowbatt_grid, lowbatt_data_positions, 1);
     if (osd_state.screen_phase == 5)
       osd_float_adjust(low_batt_ptr, 1, 1, lowbatt_adjust_limits, 0.1);
     break;
 
   case OSD_SCREEN_LEVEL_MODE:
-    print_osd_menu_strings(3, 2, level_submenu_labels, level_submenu_positions);
+    print_osd_menu_strings(level_submenu_labels, level_submenu_labels_size);
     if (osd_state.screen_phase == 4)
       osd_select_menu_item(2, level_submenu_map, SUB_MENU);
     break;
 
   case OSD_SCREEN_MOTOR_BOOST:
-    print_osd_menu_strings(3, 2, motor_boost_labels, motor_boost_positions);
+    print_osd_menu_strings(motor_boost_labels, motor_boost_labels_size);
     if (osd_state.screen_phase == 4)
       osd_select_menu_item(2, motor_boost_map, SUB_MENU);
     break;
 
   case OSD_SCREEN_DIGITAL_IDLE:
-    print_osd_menu_strings(3, 2, motoridle_labels, motoridle_positions);
+    print_osd_menu_strings(motoridle_labels, motoridle_labels_size);
     print_osd_adjustable_float(3, 1, motoridle_ptr, motoridle_grid, motoridle_data_positions, 1);
     if (osd_state.screen_phase == 5)
       osd_float_adjust(motoridle_ptr, 1, 1, motoridle_adjust_limits, 0.1);
     break;
 
   case OSD_SCREEN_LEVEL_MAX_ANGLE:
-    print_osd_menu_strings(3, 2, maxangle_labels, maxangle_positions);
+    print_osd_menu_strings(maxangle_labels, maxangle_labels_size);
     print_osd_adjustable_float(3, 1, level_maxangle_ptr, maxangle_grid, maxangle_data_positions, 0);
     if (osd_state.screen_phase == 5)
       osd_float_adjust(level_maxangle_ptr, 1, 1, maxangle_adjust_limits, 1.0);
     break;
 
   case OSD_SCREEN_LEVEL_STRENGTH:
-    print_osd_menu_strings(6, 3, levelmode_labels, levelmode_positions);
+    print_osd_menu_strings(levelmode_labels, levelmode_labels_size);
     print_osd_adjustable_float(6, 4, level_pid_ptr, levelmode_grid, levelmode_data_positions, 1);
     if (osd_state.screen_phase == 11)
       osd_float_adjust(level_pid_ptr, 2, 2, levelmode_adjust_limits, 0.5);
     break;
 
   case OSD_SCREEN_TORQUE_BOOST:
-    print_osd_menu_strings(3, 2, torqueboost_labels, torqueboost_positions);
+    print_osd_menu_strings(torqueboost_labels, torqueboost_labels_size);
     print_osd_adjustable_float(3, 1, torqueboost_ptr, torqueboost_grid, torqueboost_data_positions, 1);
     if (osd_state.screen_phase == 5)
       osd_float_adjust(torqueboost_ptr, 1, 1, torqueboost_adjust_limits, 0.1);
     break;
 
   case OSD_SCREEN_THROTTLE_BOOST:
-    print_osd_menu_strings(3, 2, throttleboost_labels, throttleboost_positions);
+    print_osd_menu_strings(throttleboost_labels, throttleboost_labels_size);
     print_osd_adjustable_float(3, 1, throttleboost_ptr, throttleboost_grid, throttleboost_data_positions, 1);
     if (osd_state.screen_phase == 5)
       osd_float_adjust(throttleboost_ptr, 1, 1, throttleboost_adjust_limits, 0.5);
     break;
 
   case OSD_SCREEN_TURTLE_THROTTLE:
-    print_osd_menu_strings(3, 2, turtlethrottle_labels, turtlethrottle_positions);
+    print_osd_menu_strings(turtlethrottle_labels, turtlethrottle_labels_size);
     print_osd_adjustable_float(3, 1, turtlethrottle_ptr, turtlethrottle_grid, turtlethrottle_data_positions, 0);
     if (osd_state.screen_phase == 5)
       osd_float_adjust(turtlethrottle_ptr, 1, 1, turtlethrottle_adjust_limits, 10.0);
     break;
 
   case OSD_SCREEN_GYRO_FILTER:
-    print_osd_menu_strings(6, 5, gyrofilter_labels, gyrofilter_positions);
+    print_osd_menu_strings(gyrofilter_labels, gyrofilter_labels_size);
     print_osd_mixed_data(6, 4, gyrofilter_ptr, gyrofilter_ptr2, gyrofilter_type_labels, gyrofilter_grid, gyrofilter_data_positions, 0);
     if (osd_state.screen_phase == 11)
       osd_mixed_data_adjust(gyrofilter_ptr, gyrofilter_ptr2, 4, 1, gyrofilter_adjust_limits, 10.0, gyrofilter_reboot_request);
     break;
 
   case OSD_SCREEN_DTERM_FILTER:
-    print_osd_menu_strings(9, 8, dtermfilter_labels, dtermfilter_positions);
+    print_osd_menu_strings(dtermfilter_labels, dtermfilter_labels_size);
     print_osd_mixed_data(9, 7, dtermfilter_ptr, dtermfilter_ptr2, dtermfilter_type_labels, dtermfilter_grid, dtermfilter_data_positions, 0);
     if (osd_state.screen_phase == 17)
       osd_mixed_data_adjust(dtermfilter_ptr, dtermfilter_ptr2, 7, 1, dtermfilter_adjust_limits, 10.0, dtermfilter_reboot_request);
     break;
 
   case OSD_SCREEN_PID_MODIFIER:
-    print_osd_menu_strings(6, 5, pidmodify_labels, pidmodify_positions);
+    print_osd_menu_strings(pidmodify_labels, pidmodify_labels_size);
     print_osd_mixed_data(6, 4, pidmodify_ptr, pidmodify_ptr2, pidmodify_type_labels, pidmodify_grid, pidmodify_data_positions, 2);
     if (osd_state.screen_phase == 11)
       osd_mixed_data_adjust(pidmodify_ptr, pidmodify_ptr2, 4, 1, pidmodify_adjust_limits, 0.05, pidmodify_reboot_request);
     break;
 
   case OSD_SCREEN_RC_LINK:
-    print_osd_menu_strings(3, 2, rc_link_labels, rc_link_positions);
+    print_osd_menu_strings(rc_link_labels, rc_link_labels_size);
     if (osd_state.screen_phase == 4)
       osd_select_menu_item(7, rc_link_map, SUB_MENU);
     break;
 
   case OSD_SCREEN_RSSI:
-    print_osd_menu_strings(4, 3, rssi_menu_labels, rssi_menu_positions);
+    print_osd_menu_strings(rssi_menu_labels, rssi_menu_labels_size);
     print_osd_adjustable_enums(4, 2, get_rssi_source_status(osd_state.screen_phase - 5), rssi_source_data_grid, rssi_source_data_positions);
     if (osd_state.screen_phase == 7)
       osd_enum_adjust(rssi_source_ptr, 2, rssi_source_limits);
     break;
 
   case OSD_SCREEN_STICK_WIZARD: // stick wizard select menu
-    print_osd_menu_strings(3, 0, stick_wizard_labels_1, stick_wizard_positions_1);
+    print_osd_menu_strings(stick_wizard_labels_1, stick_wizard_labels_1_size);
     if (osd_state.screen_phase == 4) {
       if (osd_state.selection) {
         request_stick_calibration_wizard();
@@ -1081,7 +1129,7 @@ void osd_display() {
     break;
 
   case OSD_SCREEN_STICK_WIZARD_CALIBRATION: // 5 sec to calibrate
-    print_osd_menu_strings(3, 0, stick_wizard_labels_2, stick_wizard_positions_2);
+    print_osd_menu_strings(stick_wizard_labels_2, stick_wizard_labels_2_size);
     if (osd_state.screen_phase == 4) {
       if (state.stick_calibration_wizard == WAIT_FOR_CONFIRM) {
         osd_push_screen(OSD_SCREEN_STICK_CONFIRM);
@@ -1090,7 +1138,7 @@ void osd_display() {
     break;
 
   case OSD_SCREEN_STICK_CONFIRM: // 5 sec to test / confirm calibration
-    print_osd_menu_strings(3, 0, stick_wizard_labels_3, stick_wizard_positions_3);
+    print_osd_menu_strings(stick_wizard_labels_3, stick_wizard_labels_3_size);
     if (osd_state.screen_phase == 4) {
       if ((state.stick_calibration_wizard == CALIBRATION_SUCCESS) || (state.stick_calibration_wizard == TIMEOUT)) {
         osd_push_screen(OSD_SCREEN_STICK_RESULT);
@@ -1100,10 +1148,10 @@ void osd_display() {
 
   case OSD_SCREEN_STICK_RESULT: // results of calibration
     if (state.stick_calibration_wizard == CALIBRATION_SUCCESS) {
-      print_osd_menu_strings(4, 0, stick_wizard_labels_4, stick_wizard_positions_4); // osd_state.screen_phase will be 4 after this
+      print_osd_menu_strings(stick_wizard_labels_4, stick_wizard_labels_4_size); // osd_state.screen_phase will be 4 after this
     }
     if (state.stick_calibration_wizard == TIMEOUT) {
-      print_osd_menu_strings(4, 0, stick_wizard_labels_5, stick_wizard_positions_5); // osd_state.screen_phase will be 4 after this
+      print_osd_menu_strings(stick_wizard_labels_5, stick_wizard_labels_5_size); // osd_state.screen_phase will be 4 after this
     }
     if (osd_state.selection > 0)
       osd_state.selection = 0;

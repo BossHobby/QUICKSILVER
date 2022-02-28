@@ -21,7 +21,7 @@ static uint8_t vtx_buffer_populated = 0;
 
 void osd_save_exit() {
   osd_state.selection = 0;
-  osd_state.cursor = 0;
+  osd_state.cursor = 1;
   osd_state.cursor_history_size = 0;
   osd_state.screen = OSD_SCREEN_CLEAR;
 
