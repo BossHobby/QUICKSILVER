@@ -77,7 +77,6 @@ void osd_submenu_select(uint8_t *pointer, uint8_t rows, const uint8_t next_menu[
     if (osd_state.cursor <= rows) {
       *pointer = osd_state.cursor - 1; // update profile
       osd_push_screen(next_menu[osd_state.cursor - 1]);
-      osd_state.cursor = 0; // reset the cursor
     }
   }
 }
@@ -88,12 +87,9 @@ void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_m
     osd_push_cursor();
     if (osd_state.cursor <= rows) {
       osd_push_screen(menu_map[osd_state.cursor - 1]);
-      osd_state.cursor = 0;
-      osd_state.screen_phase = 0;
     }
-    if (main_menu) {
-      if (osd_state.cursor == rows + 1)
-        osd_save_exit(); // include save&exit in main menu
+    if (main_menu && osd_state.cursor == rows + 1) {
+      osd_save_exit(); // include save&exit in main menu
     }
   }
 }
