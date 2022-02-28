@@ -67,6 +67,8 @@ typedef struct {
   uint8_t cursor;
   uint8_t cursor_history[OSD_HISTORY_SIZE];
   uint8_t cursor_history_size;
+  uint8_t cursor_min;
+  uint8_t cursor_max;
 
   uint8_t selection;
   uint8_t selection_increase;
