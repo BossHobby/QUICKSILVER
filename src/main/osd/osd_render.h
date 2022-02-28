@@ -7,6 +7,13 @@
 #define OSD_HISTORY_SIZE 8
 
 typedef enum {
+  OSD_INPUT_UP,
+  OSD_INPUT_DOWN,
+  OSD_INPUT_LEFT,
+  OSD_INPUT_RIGHT,
+} osd_input_t;
+
+typedef enum {
   OSD_CALLSIGN,
   OSD_FUELGAUGE_VOLTS,
   OSD_FILTERED_VOLTS,
@@ -76,5 +83,7 @@ void osd_clear();
 
 osd_screens_t osd_push_screen(osd_screens_t screen);
 osd_screens_t osd_pop_screen();
+
+void osd_handle_input(osd_input_t input);
 
 uint8_t osd_decode(uint32_t element, uint8_t status);
