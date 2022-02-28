@@ -135,7 +135,7 @@ void osd_display_reset() {
   osd_state.screen_phase = 0;
   osd_state.screen_history_size = 0;
 
-  osd_state.cursor = 0;
+  osd_state.cursor = 1;
   osd_state.cursor_history_size = 0;
 }
 
@@ -148,6 +148,8 @@ osd_screens_t osd_push_screen(osd_screens_t screen) {
   osd_state.screen_history[osd_state.screen_history_size] = osd_state.screen;
   osd_update_screen(screen);
   osd_state.screen_history_size++;
+
+  osd_state.cursor = 1;
 
   return screen;
 }
@@ -167,16 +169,61 @@ osd_screens_t osd_pop_screen() {
   return screen;
 }
 
+void osd_handle_input(osd_input_t input) {
+  switch (input) {
+  case OSD_INPUT_UP:
+    if (osd_state.selection) {
+      osd_state.selection_increase = 1;
+    } else {
+      osd_state.cursor--;
+      osd_state.screen_phase = 1;
+    }
+    break;
+
+  case OSD_INPUT_DOWN:
+    if (osd_state.selection) {
+      osd_state.selection_decrease = 1;
+    } else {
+      osd_state.cursor++;
+      osd_state.screen_phase = 1;
+    }
+    break;
+
+  case OSD_INPUT_LEFT:
+    if (osd_state.selection) {
+      osd_state.selection--;
+      osd_state.screen_phase = 1;
+    } else {
+      osd_pop_cursor();
+      osd_pop_screen();
+    }
+    break;
+
+  case OSD_INPUT_RIGHT:
+    osd_state.selection++;
+    osd_state.screen_phase = 1;
+    break;
+  }
+}
+
 uint8_t user_select(uint8_t active_elements, uint8_t total_elements) {
-  if (osd_state.cursor < 1)
-    osd_state.cursor = 1;
-  if (osd_state.cursor > active_elements)
+  if (osd_state.cursor < 1) {
     osd_state.cursor = active_elements;
-  uint8_t inactive_elements = total_elements - active_elements;
-  if (osd_state.screen_phase == 1)
+  }
+
+  if (osd_state.cursor > active_elements) {
+    osd_state.cursor = 1;
+  }
+
+  const uint8_t inactive_elements = total_elements - active_elements;
+  if (osd_state.screen_phase == 1) {
     return OSD_ATTR_INVERT;
-  if (osd_state.screen_phase > 1 && osd_state.screen_phase <= inactive_elements)
+  }
+
+  if (osd_state.screen_phase > 1 && osd_state.screen_phase <= inactive_elements) {
     return OSD_ATTR_TEXT;
+  }
+
   if (osd_state.cursor == (osd_state.screen_phase - inactive_elements) && osd_state.selection == 0) {
     return OSD_ATTR_INVERT;
   } else {

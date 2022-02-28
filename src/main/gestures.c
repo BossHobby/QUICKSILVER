@@ -85,40 +85,19 @@ void gestures() {
 
 #ifdef ENABLE_OSD
     if (command == GESTURE_OSD_UP) {
-      if (osd_state.selection) {
-        osd_state.selection_increase = 1;
-      } else {
-        osd_state.cursor--;
-        osd_state.screen_phase = 1;
-        ledblink = 1;
-      }
+      osd_handle_input(OSD_INPUT_UP);
     }
 
     if (command == GESTURE_OSD_DOWN) {
-      if (osd_state.selection) {
-        osd_state.selection_decrease = 1;
-      } else {
-        osd_state.screen_phase = 1;
-        osd_state.cursor++;
-        ledblink = 1;
-      }
+      osd_handle_input(OSD_INPUT_DOWN);
     }
 
     if (command == GESTURE_OSD_RIGHT) {
-      osd_state.selection++;
-      osd_state.screen_phase = 1;
-      ledblink = 2;
+      osd_handle_input(OSD_INPUT_RIGHT);
     }
 
     if (command == GESTURE_OSD_LEFT) {
-      if (osd_state.selection) {
-        osd_state.selection--;
-        osd_state.screen_phase = 1;
-      } else {
-        osd_pop_cursor();
-        ledblink = 2 - osd_pop_screen();
-        pid_gestures_used = 0;
-      }
+      osd_handle_input(OSD_INPUT_LEFT);
     }
 #endif
 
