@@ -81,10 +81,10 @@ uint8_t     Battery remaining ( percent )
 uint32_t crsf_tlm_frame_battery_sensor(uint8_t *buf) {
   buf[1] = CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE + CRSF_FRAME_LENGTH_TYPE_CRC;
   buf[2] = CRSF_FRAMETYPE_BATTERY_SENSOR;
-  buf[3] = (int)(state.vbatt_comp * 10) >> 8;
-  buf[4] = (int)(state.vbatt_comp * 10);
-  buf[5] = (int)(state.vbattfilt * 10) >> 8;
-  buf[6] = (int)(state.vbattfilt * 10);
+  buf[3] = (int)(state.vbattfilt * 10) >> 8;
+  buf[4] = (int)(state.vbattfilt * 10);
+  buf[5] = (int)(state.ibat_filtered * 10) >> 8;
+  buf[6] = (int)(state.ibat_filtered * 10);
   const uint32_t mah_drawn = 0;
   const uint8_t battery_remaining_percentage = 0;
   buf[7] = mah_drawn >> 16;
