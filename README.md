@@ -5,7 +5,7 @@ Flight Controller Firmware
 
 ## Features
 
-* Supports F4 flight controllers
+* Supports F4 and F7 flight controllers
 * Sane defaults and simple configuration
 * Important configuration accesable via the OSD
 * Outstanding level-mode performance
