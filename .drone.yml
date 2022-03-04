@@ -5,7 +5,7 @@ name: default
 
 steps:
   - name: build
-    image: suculent/platformio-docker-build
+    image: hanfer/docker-platformio
     commands:
       - bash script/build-tester.sh
   - name: publish-github
