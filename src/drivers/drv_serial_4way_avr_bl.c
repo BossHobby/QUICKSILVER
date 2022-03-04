@@ -77,7 +77,7 @@ static uint8_t serial_read(gpio_pins_t pin, uint8_t *bt) {
 
   while (esc_is_high(pin)) {
     // check for startbit begin
-    if (time_millis() - start_time >= START_BIT_TIMEOUT_MS) {
+    if (time_millis() - start_time > START_BIT_TIMEOUT_MS) {
       return 0;
     }
   }
