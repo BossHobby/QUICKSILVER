@@ -1,6 +1,6 @@
 
 
-//Universal pids are already loaded for 5" brushless by default.  Adjust pids in pid.c file for your build.
+// Universal pids are already loaded for 5" brushless by default.  Adjust pids in pid.c file for your build.
 
 //**********************************************************************************************************************
 //***********************************************HARDWARE SELECTION*****************************************************
@@ -26,8 +26,8 @@
 // ******************** SILVERWARE_RATES ********************
 // *************rate in deg/sec
 // *************for acro mode
-#define MAX_RATE 860.0    //Roll & Pitch axis
-#define MAX_RATEYAW 500.0 //Yaw axis (used in acro and leveling modes)
+#define MAX_RATE 860.0    // Roll & Pitch axis
+#define MAX_RATEYAW 500.0 // Yaw axis (used in acro and leveling modes)
 
 // *************EXPO from 0.00 to 1.00 , 0 = no exp
 // *************positive = less sensitive near center
@@ -140,7 +140,7 @@
 
 // ************* Raises pids automatically as battery voltage drops in flight.  **CRITICAL** Ensure voltage is calibrated before use.
 #define PID_VOLTAGE_COMPENSATION
-#define LEVELMODE_PID_ATTENUATION 0.90f //used to prevent oscillations in angle modes with pid_voltage_compensation enabled due to high pids
+#define LEVELMODE_PID_ATTENUATION 0.90f // used to prevent oscillations in angle modes with pid_voltage_compensation enabled due to high pids
 
 // *************compensation for battery voltage vs throttle drop
 #define VDROP_FACTOR 0.7
@@ -170,44 +170,44 @@
 //**********************************************************************************************************************
 //***********************************************FILTER SETTINGS********************************************************
 
-//Gyro Filters
-//GYRO FILTER PASS 1 - FILTER TYPE  - define only one or none to disable this pass
+// Gyro Filters
+// GYRO FILTER PASS 1 - FILTER TYPE  - define only one or none to disable this pass
 #define GYRO_FILTER_PASS1_PT1
 //#define GYRO_FILTER_PASS1_PT2
-//GYRO FILTER PASS 2 - FILTER TYPE  - define only one or none to disable this pass
+// GYRO FILTER PASS 2 - FILTER TYPE  - define only one or none to disable this pass
 #define GYRO_FILTER_PASS2_PT1
 //#define GYRO_FILTER_PASS2_PT2
 
-//GYRO FILTER PASS 1 CUTOFF FREQUENCY
+// GYRO FILTER PASS 1 CUTOFF FREQUENCY
 #define GYRO_FREQ_PASS1 90
-//GYRO FILTER PASS 2 CUTOFF FREQUENCY
+// GYRO FILTER PASS 2 CUTOFF FREQUENCY
 #define GYRO_FREQ_PASS2 90
 
-//Dynamic D term filter
-//a pt1 filter that moves up in cut hz with a parabolic relationship to applied throttle.  The theory here is
-//that propwash is most likely to occur as throttle is applied in dirty air - and propwash is most significantly
-// caused by latency in the D term filtering.  Therefore, the approach is to reduce latency in the lowest frequency
-//range of d term filtering which is responsible for the most phase delay as increasing throttle is applied.  Noise pass-through
-//will obviously increase with this approach, but when used in combination with throttle_dterm_attenuation - that gains on D will
-//also be lowered with increasing throttle thereby mitigating much of the danger from reduced filtering while allowing D term to be more effective
-//at eliminating propwash.  Motor noise related to rpm is known to have a quadratic relationship with increasing throttle.  While a quadratic curve
-//could have been selected for this feature, a faster moving parabolic one was selected in its place as the goal is not to follow motor noise, but
-//to get the filter out of the way as fast as possible in the interest of better performance and handling through reduced D filter latency when you need it most.
+// Dynamic D term filter
+// a pt1 filter that moves up in cut hz with a parabolic relationship to applied throttle.  The theory here is
+// that propwash is most likely to occur as throttle is applied in dirty air - and propwash is most significantly
+//  caused by latency in the D term filtering.  Therefore, the approach is to reduce latency in the lowest frequency
+// range of d term filtering which is responsible for the most phase delay as increasing throttle is applied.  Noise pass-through
+// will obviously increase with this approach, but when used in combination with throttle_dterm_attenuation - that gains on D will
+// also be lowered with increasing throttle thereby mitigating much of the danger from reduced filtering while allowing D term to be more effective
+// at eliminating propwash.  Motor noise related to rpm is known to have a quadratic relationship with increasing throttle.  While a quadratic curve
+// could have been selected for this feature, a faster moving parabolic one was selected in its place as the goal is not to follow motor noise, but
+// to get the filter out of the way as fast as possible in the interest of better performance and handling through reduced D filter latency when you need it most.
 #define DTERM_DYNAMIC_LPF
 #define DYNAMIC_FREQ_MIN 70
 #define DYNAMIC_FREQ_MAX 260
 
-//Fixed D-Term Filters
-//D-Term FILTER PASS 1 - FILTER TYPE  - define only one or none to disable this pass
+// Fixed D-Term Filters
+// D-Term FILTER PASS 1 - FILTER TYPE  - define only one or none to disable this pass
 #define DTERM_FILTER_PASS1_PT1
 //#define DTERM_FILTER_PASS1_PT2
-//D-Term FILTER PASS 2 - FILTER TYPE  - define only one or none to disable this pass
+// D-Term FILTER PASS 2 - FILTER TYPE  - define only one or none to disable this pass
 //#define DTERM_FILTER_PASS2_PT1
 //#define DTERM_FILTER_PASS2_PT2
 
-//D-Term FILTER PASS 1 CUTOFF FREQUENCY
+// D-Term FILTER PASS 1 CUTOFF FREQUENCY
 #define DTERM_FREQ_PASS1 260
-//D-Term FILTER PASS 2 CUTOFF FREQUENCY
+// D-Term FILTER PASS 2 CUTOFF FREQUENCY
 #define DTERM_FREQ_PASS2 150
 
 //**********************************************************************************************************************
@@ -277,7 +277,7 @@
 // *************Comment out to adjust each axis individually - otherwise they move at the same time
 #define COMBINE_PITCH_ROLL_PID_TUNING
 // *************Feel free to change 1.0 value to your liking
-#define PID_TUNING_ADJUST_AMOUNT 1.0 //fixed inc/dec values for PID tuning
+#define PID_TUNING_ADJUST_AMOUNT 1.0 // fixed inc/dec values for PID tuning
 
 //#############################################################################################################################
 //#############################################################################################################################
@@ -286,7 +286,7 @@
 //#############################################################################################################################
 //#############################################################################################################################
 
-//The airbot made ab7456 osd chip will not support blink commands
+// The airbot made ab7456 osd chip will not support blink commands
 //#define AIRBOT_OSD_PATCH
 
 // failsafe time in uS
