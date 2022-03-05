@@ -77,11 +77,7 @@ static void max7456_dma_spi_write(uint8_t reg, uint8_t data) {
   spi_txn_wait(&bus);
 }
 
-// establish initial boot-up state
-void max7456_init() {
-  spi_bus_device_init(&bus);
-  spi_bus_device_reconfigure(&bus, true, MAX7456_BAUD_RATE);
-
+static void max7456_init_display() {
   max7456_dma_spi_write(VM0, 0x02); // soft reset
   time_delay_us(200);
 
@@ -106,7 +102,16 @@ void max7456_init() {
   max7456_dma_spi_write(VM1, 0x0C);  // set background brightness (bits 456), blinking time(bits 23), blinking duty cycle (bits 01)
   max7456_dma_spi_write(OSDM, 0x2D); // osd mux & rise/fall ( lowest sharpness)
 
+  last_osd_system = OSD_SYS_NONE;
   max7456_check_system();
+}
+
+// establish initial boot-up state
+void max7456_init() {
+  spi_bus_device_init(&bus);
+  spi_bus_device_reconfigure(&bus, true, MAX7456_BAUD_RATE);
+
+  max7456_init_display();
 }
 
 // non blocking bulk dma transmit for interrupt callback configuration
@@ -335,7 +340,7 @@ void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size) {
   }
 
   // enable osd
-  max7456_dma_spi_write(VM0, 0x1);
+  max7456_init_display();
 }
 
 void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size) {
@@ -360,7 +365,7 @@ void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size) {
     ;
 
   // enable osd
-  max7456_dma_spi_write(VM0, 0x1);
+  max7456_init_display();
 }
 
 #endif
