@@ -269,7 +269,7 @@ void max7456_intro() {
   }
 }
 
-void max7456_txn_start(uint8_t attr, uint8_t x, uint8_t y) {
+void max7456_txn_start(osd_transaction_t *txn, uint8_t attr, uint8_t x, uint8_t y) {
   if (dma_offset > 0) {
     // off autoincrement mode
     dma_buffer[dma_offset++] = DMDI;
@@ -294,14 +294,14 @@ void max7456_txn_start(uint8_t attr, uint8_t x, uint8_t y) {
   dma_buffer[dma_offset++] = pos & 0xFF;
 }
 
-void max7456_txn_write_char(const char val) {
+void max7456_txn_write_char(osd_transaction_t *txn, const char val) {
   dma_buffer[dma_offset++] = DMDI;
   dma_buffer[dma_offset++] = val;
 }
 
-void max7456_txn_write_data(const uint8_t *buffer, uint8_t size) {
+void max7456_txn_write_data(osd_transaction_t *txn, const uint8_t *buffer, uint8_t size) {
   for (uint8_t i = 0; i < size; i++) {
-    max7456_txn_write_char(buffer[i]);
+    max7456_txn_write_char(txn, buffer[i]);
   }
 }
 
