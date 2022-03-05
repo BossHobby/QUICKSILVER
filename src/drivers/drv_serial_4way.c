@@ -119,8 +119,6 @@ uint8_t serial_4way_init() {
 
 #undef MOTOR_PIN
 
-  time_delay_ms(500);
-
   return ESC_COUNT;
 }
 
