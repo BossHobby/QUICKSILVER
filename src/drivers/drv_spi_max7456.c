@@ -20,7 +20,9 @@ static osd_system_t last_osd_system = OSD_SYS_NONE;
 
 // detected osd video system starts at 99 and gets updated here by osd_checksystem()
 static uint8_t lastvm0 = 0x55;
+
 static uint8_t dma_buffer[64];
+static uint16_t dma_offset = 0;
 
 static volatile uint8_t buffer[128];
 static volatile spi_bus_device_t bus = {
@@ -184,7 +186,7 @@ uint8_t max7456_clear_async() {
 }
 
 // function to detect and correct ntsc/pal mode or mismatch
-// return 1 when the system changes
+// returns the current system
 osd_system_t max7456_check_system() {
   const osd_system_t sys = max7456_current_system();
 
@@ -262,40 +264,49 @@ void max7456_intro() {
   }
 }
 
-void max7456_txn_submit(osd_transaction_t *txn) {
-  uint16_t offset = 0;
-
-  for (uint16_t i = 0; i < txn->segment_count; i++) {
-    osd_segment_t *seg = &txn->segments[i];
-
-    // NTSC adjustment 3 lines up if after line 12 or maybe this should be 8
-    if (last_osd_system != OSD_SYS_PAL && seg->y > 12) {
-      seg->y = seg->y - 2;
-    }
-    if (seg->y > MAXROWS - 1) {
-      seg->y = MAXROWS - 1;
-    }
-
-    const uint16_t pos = seg->x + seg->y * 30;
-
-    dma_buffer[offset++] = DMM;
-    dma_buffer[offset++] = max7456_map_attr(seg->attr);
-    dma_buffer[offset++] = DMAH;
-    dma_buffer[offset++] = (pos >> 8) & 0xFF;
-    dma_buffer[offset++] = DMAL;
-    dma_buffer[offset++] = pos & 0xFF;
-
-    for (uint16_t j = 0; j < seg->size; j++) {
-      dma_buffer[offset++] = DMDI;
-      dma_buffer[offset++] = txn->buffer[seg->offset + j];
-    }
-
+void max7456_txn_start(uint8_t attr, uint8_t x, uint8_t y) {
+  if (dma_offset > 0) {
     // off autoincrement mode
-    dma_buffer[offset++] = DMDI;
-    dma_buffer[offset++] = 0xFF;
+    dma_buffer[dma_offset++] = DMDI;
+    dma_buffer[dma_offset++] = 0xFF;
   }
 
-  max7456_dma_it_transfer_bytes(dma_buffer, offset);
+  // NTSC adjustment 3 lines up if after line 12 or maybe this should be 8
+  if (last_osd_system != OSD_SYS_PAL && y > 12) {
+    y = y - 2;
+  }
+  if (y > MAXROWS - 1) {
+    y = MAXROWS - 1;
+  }
+
+  const uint16_t pos = x + y * 30;
+
+  dma_buffer[dma_offset++] = DMM;
+  dma_buffer[dma_offset++] = max7456_map_attr(attr);
+  dma_buffer[dma_offset++] = DMAH;
+  dma_buffer[dma_offset++] = (pos >> 8) & 0xFF;
+  dma_buffer[dma_offset++] = DMAL;
+  dma_buffer[dma_offset++] = pos & 0xFF;
+}
+
+void max7456_txn_write_char(const char val) {
+  dma_buffer[dma_offset++] = DMDI;
+  dma_buffer[dma_offset++] = val;
+}
+
+void max7456_txn_write_data(const uint8_t *buffer, uint8_t size) {
+  for (uint8_t i = 0; i < size; i++) {
+    max7456_txn_write_char(buffer[i]);
+  }
+}
+
+void max7456_txn_submit(osd_transaction_t *txn) {
+  // off autoincrement mode
+  dma_buffer[dma_offset++] = DMDI;
+  dma_buffer[dma_offset++] = 0xFF;
+
+  max7456_dma_it_transfer_bytes(dma_buffer, dma_offset);
+  dma_offset = 0;
 }
 
 bool max7456_is_ready() {
