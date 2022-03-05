@@ -17,8 +17,6 @@ typedef struct {
 } osd_segment_t;
 
 typedef struct {
-  uint8_t buffer[OSD_TXN_BUFFER];
-
   osd_segment_t segments[OSD_TXN_MAX];
   uint8_t segment_count;
 } osd_transaction_t;
