@@ -58,9 +58,9 @@ void max7456_intro();
 uint8_t max7456_clear_async();
 osd_system_t max7456_check_system();
 
-void max7456_txn_start(uint8_t attr, uint8_t x, uint8_t y);
-void max7456_txn_write_char(const char val);
-void max7456_txn_write_data(const uint8_t *buffer, uint8_t size);
+void max7456_txn_start(osd_transaction_t *txn, uint8_t attr, uint8_t x, uint8_t y);
+void max7456_txn_write_char(osd_transaction_t *txn, const char val);
+void max7456_txn_write_data(osd_transaction_t *txn, const uint8_t *buffer, uint8_t size);
 void max7456_txn_submit(osd_transaction_t *txn);
 
 void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size);
