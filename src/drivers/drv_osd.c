@@ -99,12 +99,30 @@ void osd_txn_start(uint8_t attr, uint8_t x, uint8_t y) {
   seg->size = 0;
 
   osd_txn.segment_count++;
+
+  switch (osd_device) {
+  case OSD_DEVICE_MAX7456:
+    max7456_txn_start(attr, x, y);
+    break;
+
+  default:
+    break;
+  }
 }
 
 void osd_txn_write_data(const uint8_t *buffer, uint8_t size) {
-  osd_segment_t *seg = &osd_txn.segments[osd_txn.segment_count - 1];
-  memcpy(osd_txn.buffer + seg->offset + seg->size, buffer, size);
-  seg->size += size;
+  switch (osd_device) {
+  case OSD_DEVICE_MAX7456:
+    max7456_txn_write_data(buffer, size);
+    break;
+
+  default: {
+    osd_segment_t *seg = &osd_txn.segments[osd_txn.segment_count - 1];
+    memcpy(osd_txn.buffer + seg->offset + seg->size, buffer, size);
+    seg->size += size;
+    break;
+  }
+  }
 }
 
 void osd_txn_write_str(const char *buffer) {
@@ -112,9 +130,18 @@ void osd_txn_write_str(const char *buffer) {
 }
 
 void osd_txn_write_char(const char val) {
-  osd_segment_t *seg = &osd_txn.segments[osd_txn.segment_count - 1];
-  osd_txn.buffer[seg->offset + seg->size] = val;
-  seg->size += 1;
+  switch (osd_device) {
+  case OSD_DEVICE_MAX7456:
+    max7456_txn_write_char(val);
+    break;
+
+  default: {
+    osd_segment_t *seg = &osd_txn.segments[osd_txn.segment_count - 1];
+    osd_txn.buffer[seg->offset + seg->size] = val;
+    seg->size += 1;
+    break;
+  }
+  }
 }
 
 void osd_txn_write_uint(uint32_t val, uint8_t width) {

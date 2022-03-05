@@ -56,8 +56,11 @@ bool max7456_is_ready();
 void max7456_intro();
 
 uint8_t max7456_clear_async();
-uint8_t max7456_check_system();
+osd_system_t max7456_check_system();
 
+void max7456_txn_start(uint8_t attr, uint8_t x, uint8_t y);
+void max7456_txn_write_char(const char val);
+void max7456_txn_write_data(const uint8_t *buffer, uint8_t size);
 void max7456_txn_submit(osd_transaction_t *txn);
 
 void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size);
