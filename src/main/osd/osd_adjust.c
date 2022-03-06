@@ -222,26 +222,6 @@ const char *get_vtx_status(int input) {
   return vtx_data_status[input][*vtx_ptr[input]];
 }
 
-vec3_t *get_pid_term(uint8_t term) {
-  switch (term) {
-  case 1:
-    return &profile.pid.pid_rates[profile.pid.pid_profile].kp;
-  case 2:
-    return &profile.pid.pid_rates[profile.pid.pid_profile].ki;
-  case 3:
-    return &profile.pid.pid_rates[profile.pid.pid_profile].kd;
-  }
-  return NULL;
-}
-
-vec3_t *get_sw_rate_term(uint8_t term) {
-  return &profile_current_rates()->rate[term - 1];
-}
-
-vec3_t *get_bf_rate_term(uint8_t term) {
-  return &profile_current_rates()->rate[term - 1];
-}
-
 vec3_t *get_stick_profile_term(uint8_t term) {
   switch (term) {
   case 1:
@@ -314,45 +294,6 @@ void osd_enum_adjust(uint8_t *pointer[], uint8_t rows, const uint8_t increase_li
     osd_state.selection_increase = 0;
     osd_state.selection_decrease = 0;
   }
-  if (osd_state.cursor == rows + 1 && osd_state.selection == 1) {
-    osd_save_exit();
-  }
-}
-
-void osd_mixed_data_adjust(float *pointer[], uint8_t *pointer2[], uint8_t rows, uint8_t columns, const float adjust_limit[rows * columns][2], float adjust_amount, const uint8_t reboot_request[rows * columns]) {
-  if (osd_state.selection > columns) {
-    osd_state.selection = columns;
-    osd_state.screen_phase = 1; // repaint the screen again
-  }
-
-  if (osd_state.cursor <= rows && osd_state.selection > 0) {
-    uint8_t adjust_tracker = ((osd_state.cursor - 1) * columns) + (osd_state.selection - 1);
-
-    if (*pointer[adjust_tracker] != POINTER_REDIRECT) { // POINTER_REDIRECT = -999.0 is a dummy value to indicate skipping to another data type
-      if ((osd_state.selection_increase && *pointer[adjust_tracker] < adjust_limit[adjust_tracker][1]) || (osd_state.selection_decrease && *pointer[adjust_tracker] > adjust_limit[adjust_tracker][0])) {
-        *pointer[adjust_tracker] = adjust_rounded_float(*pointer[adjust_tracker], adjust_amount);
-      }
-    } else {
-      uint8_t i = *pointer2[adjust_tracker];
-      if (osd_state.selection_increase && i != adjust_limit[adjust_tracker][1]) {
-        i++;
-        *pointer2[adjust_tracker] = i;
-        osd_state.screen_phase = 1; // repaint the screen again
-        if (reboot_request[adjust_tracker] == 1)
-          osd_state.reboot_fc_requested = 1;
-      }
-      if (osd_state.selection_decrease && i != 0) { // limit is always 0 for an enum or uint8_t
-        i--;
-        *pointer2[adjust_tracker] = i;
-        osd_state.screen_phase = 1; // repaint the screen again
-        if (reboot_request[adjust_tracker] == 1)
-          osd_state.reboot_fc_requested = 1;
-      }
-    }
-    osd_state.selection_increase = 0;
-    osd_state.selection_decrease = 0;
-  }
-
   if (osd_state.cursor == rows + 1 && osd_state.selection == 1) {
     osd_save_exit();
   }

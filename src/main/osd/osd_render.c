@@ -702,32 +702,6 @@ void print_osd_adjustable_float(uint8_t string_element_qty, uint8_t data_element
   osd_state.screen_phase++;
 }
 
-void print_osd_mixed_data(uint8_t string_element_qty, uint8_t data_element_qty, float *pointer[], uint8_t *pointer2[], const char filtertype_labels[5][21], const uint8_t grid[data_element_qty][2], const uint8_t print_position[data_element_qty][2], uint8_t precision) {
-  if (osd_state.screen_phase <= string_element_qty)
-    return;
-  if (osd_state.screen_phase > string_element_qty + data_element_qty)
-    return;
-  static uint8_t skip_loop = 0;
-  if (osd_state.screen_phase == string_element_qty + 1 && skip_loop == 0) { // skip a loop to prevent dma collision with previous print function
-    skip_loop++;
-    return;
-  }
-  skip_loop = 0;
-
-  uint8_t index = osd_state.screen_phase - string_element_qty - 1;
-
-  osd_transaction_t *txn = osd_txn_init();
-  osd_txn_start(grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
-  if (*pointer[index] != POINTER_REDIRECT) {
-    osd_txn_write_float(*pointer[index] + FLT_EPSILON, 4, precision);
-  } else {
-    osd_txn_write_str(filtertype_labels[*pointer2[index]]);
-  }
-  osd_txn_submit(txn);
-
-  osd_state.screen_phase++;
-}
-
 //************************************************************************************************************************************************************************************
 //************************************************************************************************************************************************************************************
 //																				MAIN OSD DISPLAY FUNCTION
@@ -895,7 +869,7 @@ void osd_display_rate_menu() {
   osd_menu_label(19, 5, "PITCH");
   osd_menu_label(25, 5, "YAW");
 
-  vec3_t *rate = &profile_current_rates()->rate;
+  vec3_t *rate = profile_current_rates()->rate;
   switch (profile_current_rates()->mode) {
   case RATE_MODE_SILVERWARE: {
     osd_menu_select(2, 6, "RATE");
@@ -968,48 +942,88 @@ void osd_display() {
     osd_display_reset();
     return;
   }
-
-  //************OSD MENU DISPLAY ROUTINES HERE*************
-  switch (osd_state.screen) // phase starts at 2, RRR gesture subtracts 1 to enter the menu, RRR again or DDD subtracts 1 to clear the screen and return to regular display
-  {
-  case OSD_SCREEN_CLEAR: // osd screen clears, resets to regular display, and resets wizard and menu starting points
+  switch (osd_state.screen) {
+  case OSD_SCREEN_CLEAR:
     if (osd_clear_async())
       osd_display_reset();
-    break; // screen has been cleared for this loop - break out of display function
+    break;
 
-  case OSD_SCREEN_MAIN_MENU: // osd menu is active
-    print_osd_menu_strings(main_menu_labels, main_menu_labels_size);
-    if (osd_state.screen_phase == 11)
-      osd_select_menu_item(8, main_menu_map, MAIN_MENU);
-    break; // osd menu has been displayed for this loop	- break out of display function
-
-  case OSD_SCREEN_REGULAR: // regular osd display
+  case OSD_SCREEN_REGULAR:
     osd_display_regular();
     break;
 
     //**********************************************************************************************************************************************************************************************
     //																				OSD MENUS BELOW THIS POINT
     //**********************************************************************************************************************************************************************************************
+
+  case OSD_SCREEN_MAIN_MENU: {
+    osd_menu_start();
+    osd_menu_header("MENU");
+
+    osd_menu_select_screen(7, 3, "VTX", OSD_SCREEN_VTX);
+    osd_menu_select_screen(7, 4, "PIDS", OSD_SCREEN_PID_PROFILE);
+    osd_menu_select_screen(7, 5, "FILTERS", OSD_SCREEN_FILTERS);
+    osd_menu_select_screen(7, 6, "RATES", OSD_SCREEN_RATE_PROFILES);
+    osd_menu_select_screen(7, 7, "FLIGHT MODES", OSD_SCREEN_FLIGHT_MODES);
+    osd_menu_select_screen(7, 8, "OSD ELEMENTS", OSD_SCREEN_ELEMENTS);
+    osd_menu_select_screen(7, 9, "SPECIAL FEATURES", OSD_SCREEN_SPECIAL_FEATURES);
+    osd_menu_select_screen(7, 10, "RC LINK", OSD_SCREEN_RC_LINK);
+
+    osd_menu_select_save_and_exit(7, 11);
+    osd_menu_finish();
+    break;
+  }
+
   case OSD_SCREEN_PID_PROFILE:
-    print_osd_menu_strings(pid_profiles_labels, pid_profiles_labels_size);
-    if (osd_state.screen_phase == 4)
-      osd_submenu_select(&profile.pid.pid_profile, 2, pid_submenu_map);
+    osd_menu_start();
+    osd_menu_header("PID PROFILES");
+
+    if (osd_menu_button(7, 4, "PID PROFILE 1")) {
+      profile.pid.pid_profile = PID_PROFILE_1;
+      osd_push_cursor();
+      osd_push_screen(OSD_SCREEN_PID);
+    }
+
+    if (osd_menu_button(7, 5, "PID PROFILE 2")) {
+      profile.pid.pid_profile = PID_PROFILE_2;
+      osd_push_cursor();
+      osd_push_screen(OSD_SCREEN_PID);
+    }
+
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_PID:
-    if (profile.pid.pid_profile == PID_PROFILE_1)
-      print_osd_menu_strings(pid_profile1_labels, pid_profile1_labels_size);
-    else
-      print_osd_menu_strings(pid_profile2_labels, pid_profile2_labels_size);
-    print_osd_adjustable_vectors(BF_PIDS, 8, 9, get_pid_term(pid_profile_data_index[osd_state.screen_phase - 9][0]), pid_profile_data_index, pid_profile_grid, pid_profile_data_positions);
-    if (osd_state.screen_phase == 18)
-      osd_vector_adjust(get_pid_term(osd_state.cursor), 3, 3, BF_PIDS, pid_profile_adjust_limits);
-    break;
+    osd_menu_start();
 
-  case OSD_SCREEN_FILTERS:
-    print_osd_menu_strings(filter_labels, filter_labels_size);
-    if (osd_state.screen_phase == 4)
-      osd_select_menu_item(2, filter_submenu_map, SUB_MENU);
+    if (profile.pid.pid_profile == PID_PROFILE_1)
+      osd_menu_header("PID PROFILE 1");
+    else
+      osd_menu_header("PID PROFILE 2");
+
+    osd_menu_label(10, 4, "ROLL");
+    osd_menu_label(16, 4, "PITCH");
+    osd_menu_label(23, 4, "YAW");
+
+    pid_rate_t *rates = profile_current_pid_rates();
+
+    osd_menu_select(4, 6, "KP");
+    if (osd_menu_select_vec3(8, 6, rates->kp, 6, 0)) {
+      rates->kp = osd_menu_adjust_vec3(rates->kp, 1, 0.0, 400.0);
+    }
+
+    osd_menu_select(4, 7, "KI");
+    if (osd_menu_select_vec3(8, 7, rates->ki, 6, 0)) {
+      rates->ki = osd_menu_adjust_vec3(rates->ki, 1, 0.0, 100.0);
+    }
+
+    osd_menu_select(4, 8, "KD");
+    if (osd_menu_select_vec3(8, 8, rates->kd, 6, 0)) {
+      rates->kd = osd_menu_adjust_vec3(rates->kd, 1, 0.0, 120.0);
+    }
+
+    osd_menu_select_save_and_exit(7, 11);
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_RATE_PROFILES:
@@ -1033,6 +1047,105 @@ void osd_display() {
 
   case OSD_SCREEN_RATES:
     osd_display_rate_menu();
+    break;
+
+  case OSD_SCREEN_FILTERS:
+    osd_menu_start();
+    osd_menu_header("FILTERS");
+
+    osd_menu_select_screen(7, 4, "GYRO", OSD_SCREEN_GYRO_FILTER);
+    osd_menu_select_screen(7, 5, "D-TERM", OSD_SCREEN_DTERM_FILTER);
+
+    osd_menu_finish();
+    break;
+
+  case OSD_SCREEN_GYRO_FILTER: {
+    osd_menu_start();
+    osd_menu_header("GYRO FILTERS");
+
+    const char *filter_type_labels[] = {
+        "NONE",
+        " PT1",
+        " PT2",
+    };
+
+    osd_menu_select(4, 4, "PASS 1 TYPE");
+    if (osd_menu_select_enum(18, 4, profile.filter.gyro[0].type, filter_type_labels)) {
+      profile.filter.gyro[0].type = osd_menu_adjust_int(profile.filter.gyro[0].type, 1, 0, FILTER_LP2_PT1);
+      osd_state.reboot_fc_requested = 1;
+    }
+
+    osd_menu_select(4, 5, "PASS 1 FREQ");
+    if (osd_menu_select_float(18, 5, profile.filter.gyro[0].cutoff_freq, 4, 0)) {
+      profile.filter.gyro[0].cutoff_freq = osd_menu_adjust_float(profile.filter.gyro[0].cutoff_freq, 10, 50, 500);
+    }
+
+    osd_menu_select(4, 6, "PASS 2 TYPE");
+    if (osd_menu_select_enum(18, 6, profile.filter.gyro[1].type, filter_type_labels)) {
+      profile.filter.gyro[1].type = osd_menu_adjust_int(profile.filter.gyro[1].type, 1, 0, FILTER_LP2_PT1);
+      osd_state.reboot_fc_requested = 1;
+    }
+
+    osd_menu_select(4, 7, "PASS 2 FREQ");
+    if (osd_menu_select_float(18, 7, profile.filter.gyro[1].cutoff_freq, 4, 0)) {
+      profile.filter.gyro[1].cutoff_freq = osd_menu_adjust_float(profile.filter.gyro[1].cutoff_freq, 10, 50, 500);
+    }
+
+    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_finish();
+    break;
+  }
+
+  case OSD_SCREEN_DTERM_FILTER:
+    osd_menu_start();
+    osd_menu_header("D-TERM FILTERS");
+
+    const char *filter_type_labels[] = {
+        "NONE",
+        " PT1",
+        " PT2",
+    };
+
+    osd_menu_select(4, 3, "PASS 1 TYPE");
+    if (osd_menu_select_enum(18, 3, profile.filter.dterm[0].type, filter_type_labels)) {
+      profile.filter.dterm[0].type = osd_menu_adjust_int(profile.filter.dterm[0].type, 1, 0, FILTER_LP2_PT1);
+      osd_state.reboot_fc_requested = 1;
+    }
+
+    osd_menu_select(4, 4, "PASS 1 FREQ");
+    if (osd_menu_select_float(18, 4, profile.filter.dterm[0].cutoff_freq, 4, 0)) {
+      profile.filter.dterm[0].cutoff_freq = osd_menu_adjust_float(profile.filter.dterm[0].cutoff_freq, 10, 50, 500);
+    }
+
+    osd_menu_select(4, 5, "PASS 2 TYPE");
+    if (osd_menu_select_enum(18, 5, profile.filter.dterm[1].type, filter_type_labels)) {
+      profile.filter.dterm[1].type = osd_menu_adjust_int(profile.filter.dterm[1].type, 1, 0, FILTER_LP2_PT1);
+      osd_state.reboot_fc_requested = 1;
+    }
+
+    osd_menu_select(4, 6, "PASS 2 FREQ");
+    if (osd_menu_select_float(18, 6, profile.filter.dterm[1].cutoff_freq, 4, 0)) {
+      profile.filter.dterm[1].cutoff_freq = osd_menu_adjust_float(profile.filter.dterm[1].cutoff_freq, 10, 50, 500);
+    }
+
+    osd_menu_select(4, 7, "DYNAMIC");
+    if (osd_menu_select_enum(18, 7, profile.filter.dterm_dynamic_enable, filter_type_labels)) {
+      profile.filter.dterm_dynamic_enable = osd_menu_adjust_int(profile.filter.dterm_dynamic_enable, 1, 0, FILTER_LP_PT1);
+      osd_state.reboot_fc_requested = 1;
+    }
+
+    osd_menu_select(4, 8, "FREQ MIN");
+    if (osd_menu_select_float(18, 8, profile.filter.dterm_dynamic_min, 4, 0)) {
+      profile.filter.dterm_dynamic_min = osd_menu_adjust_float(profile.filter.dterm_dynamic_min, 10, 50, 500);
+    }
+
+    osd_menu_select(4, 9, "FREQ MAX");
+    if (osd_menu_select_float(18, 9, profile.filter.dterm_dynamic_max, 4, 0)) {
+      profile.filter.dterm_dynamic_max = osd_menu_adjust_float(profile.filter.dterm_dynamic_max, 10, 50, 500);
+    }
+
+    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_FLIGHT_MODES:
@@ -1176,25 +1289,37 @@ void osd_display() {
       osd_float_adjust(turtlethrottle_ptr, 1, 1, turtlethrottle_adjust_limits, 10.0);
     break;
 
-  case OSD_SCREEN_GYRO_FILTER:
-    print_osd_menu_strings(gyrofilter_labels, gyrofilter_labels_size);
-    print_osd_mixed_data(6, 4, gyrofilter_ptr, gyrofilter_ptr2, gyrofilter_type_labels, gyrofilter_grid, gyrofilter_data_positions, 0);
-    if (osd_state.screen_phase == 11)
-      osd_mixed_data_adjust(gyrofilter_ptr, gyrofilter_ptr2, 4, 1, gyrofilter_adjust_limits, 10.0, gyrofilter_reboot_request);
-    break;
-
-  case OSD_SCREEN_DTERM_FILTER:
-    print_osd_menu_strings(dtermfilter_labels, dtermfilter_labels_size);
-    print_osd_mixed_data(9, 7, dtermfilter_ptr, dtermfilter_ptr2, dtermfilter_type_labels, dtermfilter_grid, dtermfilter_data_positions, 0);
-    if (osd_state.screen_phase == 17)
-      osd_mixed_data_adjust(dtermfilter_ptr, dtermfilter_ptr2, 7, 1, dtermfilter_adjust_limits, 10.0, dtermfilter_reboot_request);
-    break;
-
   case OSD_SCREEN_PID_MODIFIER:
-    print_osd_menu_strings(pidmodify_labels, pidmodify_labels_size);
-    print_osd_mixed_data(6, 4, pidmodify_ptr, pidmodify_ptr2, pidmodify_type_labels, pidmodify_grid, pidmodify_data_positions, 2);
-    if (osd_state.screen_phase == 11)
-      osd_mixed_data_adjust(pidmodify_ptr, pidmodify_ptr2, 4, 1, pidmodify_adjust_limits, 0.05, pidmodify_reboot_request);
+    osd_menu_start();
+    osd_menu_header("PID MODIFIERS");
+
+    const char *modifier_state_labels[] = {
+        " NONE ",
+        "ACTIVE",
+    };
+
+    osd_menu_select(2, 4, "P-TERM VOLTAGE COMP");
+    if (osd_menu_select_enum(23, 4, profile.voltage.pid_voltage_compensation, modifier_state_labels)) {
+      profile.voltage.pid_voltage_compensation = osd_menu_adjust_int(profile.voltage.pid_voltage_compensation, 1, 0, 1);
+    }
+
+    osd_menu_select(2, 5, "THROTTLE D ATTENUATE");
+    if (osd_menu_select_enum(23, 5, profile.pid.throttle_dterm_attenuation.tda_active, modifier_state_labels)) {
+      profile.pid.throttle_dterm_attenuation.tda_active = osd_menu_adjust_int(profile.pid.throttle_dterm_attenuation.tda_active, 1, 0, 1);
+    }
+
+    osd_menu_select(2, 6, "TDA BREAKPOINT");
+    if (osd_menu_select_float(23, 6, profile.pid.throttle_dterm_attenuation.tda_breakpoint, 4, 1)) {
+      profile.pid.throttle_dterm_attenuation.tda_breakpoint = osd_menu_adjust_float(profile.pid.throttle_dterm_attenuation.tda_breakpoint, 0.05, 0, 1);
+    }
+
+    osd_menu_select(2, 7, "TDA PERCENT");
+    if (osd_menu_select_float(23, 7, profile.pid.throttle_dterm_attenuation.tda_percent, 4, 1)) {
+      profile.pid.throttle_dterm_attenuation.tda_percent = osd_menu_adjust_float(profile.pid.throttle_dterm_attenuation.tda_percent, 0.05, 0, 1);
+    }
+
+    osd_menu_select_save_and_exit(2, 14);
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_RC_LINK:
