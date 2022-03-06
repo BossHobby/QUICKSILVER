@@ -17,6 +17,8 @@ void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_m
 void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_t status);
 void osd_encoded_adjust_callsign();
 
+void osd_save_exit();
+
 const char *get_rssi_source_status(uint8_t data_to_print);
 const char *get_aux_status(int input);
 const char *get_vtx_status(int input);
