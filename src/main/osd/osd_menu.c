@@ -27,6 +27,7 @@ void osd_menu_start() {
   if (osd_state.screen_phase == 1) {
     // re-render elements
     menu_state.rendered_elements = 0;
+    osd_state.selection_max = 1;
   }
 
   menu_state.onscreen_elements = 0;
@@ -35,14 +36,20 @@ void osd_menu_start() {
 }
 
 bool osd_menu_finish() {
+  if (osd_state.screen_phase == 0) {
+    return false;
+  }
+  if (osd_state.screen_phase < menu_state.onscreen_elements) {
+    osd_state.screen_phase++;
+    return false;
+  }
+
   osd_state.cursor_min = 0;
   osd_state.cursor_max = menu_state.active_elements - 1;
 
-  if (osd_state.screen_phase > 0 && osd_state.screen_phase <= (menu_state.onscreen_elements + 1)) {
-    osd_state.screen_phase++;
-  }
+  menu_state.grid_elements = 0;
 
-  return osd_state.screen_phase > (menu_state.onscreen_elements + 1);
+  return osd_state.screen_phase >= menu_state.onscreen_elements;
 }
 
 static bool should_render_element() {
@@ -78,6 +85,10 @@ static bool should_render_grid_element() {
   if (osd_state.screen_phase != menu_state.rendered_elements) {
     // not the correct screen phase
     return false;
+  }
+
+  if (osd_state.cursor == menu_state.active_elements) {
+    osd_state.selection_max = menu_state.grid_elements;
   }
 
   return true;
@@ -330,9 +341,9 @@ bool osd_menu_select_int(uint8_t x, uint8_t y, const int32_t val, uint8_t width)
 }
 
 bool osd_menu_select_str(uint8_t x, uint8_t y, const char *str) {
-  if (osd_state.selection > 20) {
-    osd_state.selection = 20;
-  }
+  // limit selection to 20
+  menu_state.grid_elements = 19;
+
   if (!should_render_grid_element()) {
     return osd_state.cursor == menu_state.active_elements && osd_state.selection >= 1 && has_adjust();
   }
