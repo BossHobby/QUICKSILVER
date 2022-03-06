@@ -70,6 +70,7 @@ osd_state_t osd_state = {
     .cursor_history_size = 0,
 
     .selection = 0,
+    .selection_max = 1,
     .selection_increase = 0,
     .selection_decrease = 0,
 
@@ -127,6 +128,9 @@ static void osd_display_reset() {
 
   osd_state.cursor = 1;
   osd_state.cursor_history_size = 0;
+
+  osd_state.selection = 0;
+  osd_state.selection_max = 1;
 }
 
 static void osd_update_screen(osd_screens_t screen) {
@@ -136,6 +140,7 @@ static void osd_update_screen(osd_screens_t screen) {
 
 osd_screens_t osd_push_screen(osd_screens_t screen) {
   osd_state.selection = 0;
+  osd_state.selection_max = 1;
 
   osd_state.cursor_history[osd_state.cursor_history_size] = osd_state.cursor;
   osd_state.cursor_history_size++;
@@ -208,6 +213,9 @@ void osd_handle_input(osd_input_t input) {
 
   case OSD_INPUT_RIGHT:
     osd_state.selection++;
+    if (osd_state.selection > osd_state.selection_max) {
+      osd_state.selection = osd_state.selection_max;
+    }
     osd_state.screen_phase = 1;
     break;
   }
