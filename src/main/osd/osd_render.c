@@ -89,6 +89,24 @@ static const char *osd_element_labels[] = {
     "VTX",
 };
 
+static const char *aux_channel_labels[] = {
+    "CHANNEL 5  ",
+    "CHANNEL 6  ",
+    "CHANNEL 7  ",
+    "CHANNEL 8  ",
+    "CHANNEL 9  ",
+    "CHANNEL 10 ",
+    "CHANNEL 11 ",
+    "CHANNEL 12 ",
+    "CHANNEL 13 ",
+    "CHANNEL 14 ",
+    "CHANNEL 15 ",
+    "CHANNEL 16 ",
+    "ALWAYS OFF ",
+    "ALWAYS ON  ",
+    "GESTURE AUX",
+};
+
 static uint8_t osd_attr(osd_element_t *el) {
   return el->attribute ? OSD_ATTR_INVERT : OSD_ATTR_TEXT;
 }
@@ -1065,71 +1083,53 @@ void osd_display() {
     osd_menu_start();
     osd_menu_header("FLIGHT MODES");
 
-    const char *channel_labels[] = {
-        "CHANNEL 5  ",
-        "CHANNEL 6  ",
-        "CHANNEL 7  ",
-        "CHANNEL 8  ",
-        "CHANNEL 9  ",
-        "CHANNEL 10 ",
-        "CHANNEL 11 ",
-        "CHANNEL 12 ",
-        "CHANNEL 13 ",
-        "CHANNEL 14 ",
-        "CHANNEL 15 ",
-        "CHANNEL 16 ",
-        "ALWAYS OFF ",
-        "ALWAYS ON  ",
-        "GESTURE AUX",
-    };
-
     osd_menu_select(4, 2, "ARMING");
-    if (osd_menu_select_enum(17, 2, profile.receiver.aux[AUX_ARMING], channel_labels)) {
+    if (osd_menu_select_enum(17, 2, profile.receiver.aux[AUX_ARMING], aux_channel_labels)) {
       profile.receiver.aux[AUX_ARMING] = osd_menu_adjust_int(profile.receiver.aux[AUX_ARMING], 1, AUX_CHANNEL_0, AUX_CHANNEL_11);
     }
 
     osd_menu_select(4, 3, "IDLE UP");
-    if (osd_menu_select_enum(17, 3, profile.receiver.aux[AUX_IDLE_UP], channel_labels)) {
+    if (osd_menu_select_enum(17, 3, profile.receiver.aux[AUX_IDLE_UP], aux_channel_labels)) {
       profile.receiver.aux[AUX_IDLE_UP] = osd_menu_adjust_int(profile.receiver.aux[AUX_IDLE_UP], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
     }
 
     osd_menu_select(4, 4, "LEVELMODE");
-    if (osd_menu_select_enum(17, 4, profile.receiver.aux[AUX_LEVELMODE], channel_labels)) {
+    if (osd_menu_select_enum(17, 4, profile.receiver.aux[AUX_LEVELMODE], aux_channel_labels)) {
       profile.receiver.aux[AUX_LEVELMODE] = osd_menu_adjust_int(profile.receiver.aux[AUX_LEVELMODE], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
     }
 
     osd_menu_select(4, 5, "RACEMODE");
-    if (osd_menu_select_enum(17, 5, profile.receiver.aux[AUX_RACEMODE], channel_labels)) {
+    if (osd_menu_select_enum(17, 5, profile.receiver.aux[AUX_RACEMODE], aux_channel_labels)) {
       profile.receiver.aux[AUX_RACEMODE] = osd_menu_adjust_int(profile.receiver.aux[AUX_RACEMODE], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
     }
 
     osd_menu_select(4, 6, "HORIZON");
-    if (osd_menu_select_enum(17, 6, profile.receiver.aux[AUX_HORIZON], channel_labels)) {
+    if (osd_menu_select_enum(17, 6, profile.receiver.aux[AUX_HORIZON], aux_channel_labels)) {
       profile.receiver.aux[AUX_HORIZON] = osd_menu_adjust_int(profile.receiver.aux[AUX_HORIZON], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
     }
 
     osd_menu_select(4, 7, "STICK BOOST");
-    if (osd_menu_select_enum(17, 7, profile.receiver.aux[AUX_STICK_BOOST_PROFILE], channel_labels)) {
+    if (osd_menu_select_enum(17, 7, profile.receiver.aux[AUX_STICK_BOOST_PROFILE], aux_channel_labels)) {
       profile.receiver.aux[AUX_STICK_BOOST_PROFILE] = osd_menu_adjust_int(profile.receiver.aux[AUX_STICK_BOOST_PROFILE], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
     }
 
     osd_menu_select(4, 8, "BUZZER");
-    if (osd_menu_select_enum(17, 8, profile.receiver.aux[AUX_BUZZER_ENABLE], channel_labels)) {
+    if (osd_menu_select_enum(17, 8, profile.receiver.aux[AUX_BUZZER_ENABLE], aux_channel_labels)) {
       profile.receiver.aux[AUX_BUZZER_ENABLE] = osd_menu_adjust_int(profile.receiver.aux[AUX_BUZZER_ENABLE], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
     }
 
     osd_menu_select(4, 9, "TURTLE");
-    if (osd_menu_select_enum(17, 9, profile.receiver.aux[AUX_TURTLE], channel_labels)) {
+    if (osd_menu_select_enum(17, 9, profile.receiver.aux[AUX_TURTLE], aux_channel_labels)) {
       profile.receiver.aux[AUX_TURTLE] = osd_menu_adjust_int(profile.receiver.aux[AUX_TURTLE], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
     }
 
     osd_menu_select(4, 10, "MOTOR TEST");
-    if (osd_menu_select_enum(17, 10, profile.receiver.aux[AUX_MOTOR_TEST], channel_labels)) {
+    if (osd_menu_select_enum(17, 10, profile.receiver.aux[AUX_MOTOR_TEST], aux_channel_labels)) {
       profile.receiver.aux[AUX_MOTOR_TEST] = osd_menu_adjust_int(profile.receiver.aux[AUX_MOTOR_TEST], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
     }
 
     osd_menu_select(4, 11, "FPV SWITCH");
-    if (osd_menu_select_enum(17, 11, profile.receiver.aux[AUX_FPV_SWITCH], channel_labels)) {
+    if (osd_menu_select_enum(17, 11, profile.receiver.aux[AUX_FPV_SWITCH], aux_channel_labels)) {
       profile.receiver.aux[AUX_FPV_SWITCH] = osd_menu_adjust_int(profile.receiver.aux[AUX_FPV_SWITCH], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
     }
 
@@ -1344,10 +1344,16 @@ void osd_display() {
     break;
 
   case OSD_SCREEN_LOWBAT:
-    print_osd_menu_strings(lowbatt_labels, lowbatt_labels_size);
-    print_osd_adjustable_float(3, 1, low_batt_ptr, lowbatt_grid, lowbatt_data_positions, 1);
-    if (osd_state.screen_phase == 5)
-      osd_float_adjust(low_batt_ptr, 1, 1, lowbatt_adjust_limits, 0.1);
+    osd_menu_start();
+    osd_menu_header("LOW BATTERY");
+
+    osd_menu_select(4, 5, "VOLTS/CELL ALERT");
+    if (osd_menu_select_float(21, 5, profile.voltage.vbattlow, 3, 1)) {
+      profile.voltage.vbattlow = osd_menu_adjust_float(profile.voltage.vbattlow, 0.1, 0, 4.2);
+    }
+
+    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_LEVEL_MODE:
@@ -1371,45 +1377,95 @@ void osd_display() {
     break;
 
   case OSD_SCREEN_DIGITAL_IDLE:
-    print_osd_menu_strings(motoridle_labels, motoridle_labels_size);
-    print_osd_adjustable_float(3, 1, motoridle_ptr, motoridle_grid, motoridle_data_positions, 1);
-    if (osd_state.screen_phase == 5)
-      osd_float_adjust(motoridle_ptr, 1, 1, motoridle_adjust_limits, 0.1);
+    osd_menu_start();
+    osd_menu_header("DIGITAL IDLE");
+
+    osd_menu_select(4, 5, "MOTOR IDLE %");
+    if (osd_menu_select_float(17, 5, profile.motor.digital_idle, 4, 1)) {
+      profile.motor.digital_idle = osd_menu_adjust_float(profile.motor.digital_idle, 0.1, 0, 25.0);
+    }
+
+    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_LEVEL_MAX_ANGLE:
-    print_osd_menu_strings(maxangle_labels, maxangle_labels_size);
-    print_osd_adjustable_float(3, 1, level_maxangle_ptr, maxangle_grid, maxangle_data_positions, 0);
-    if (osd_state.screen_phase == 5)
-      osd_float_adjust(level_maxangle_ptr, 1, 1, maxangle_adjust_limits, 1.0);
+    osd_menu_start();
+    osd_menu_header("LEVEL MODE");
+
+    osd_menu_select(1, 5, "MAX ANGLE DEGREES");
+    if (osd_menu_select_float(19, 5, profile.rate.level_max_angle, 4, 1)) {
+      profile.rate.level_max_angle = osd_menu_adjust_float(profile.rate.level_max_angle, 1, 0, 85.0);
+    }
+
+    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_LEVEL_STRENGTH:
-    print_osd_menu_strings(levelmode_labels, levelmode_labels_size);
-    print_osd_adjustable_float(6, 4, level_pid_ptr, levelmode_grid, levelmode_data_positions, 1);
-    if (osd_state.screen_phase == 11)
-      osd_float_adjust(level_pid_ptr, 2, 2, levelmode_adjust_limits, 0.5);
+    osd_menu_start();
+    osd_menu_header("LEVEL MODE");
+
+    osd_menu_label(21, 5, "KP");
+    osd_menu_label(26, 5, "KD");
+
+    osd_menu_select(1, 6, "SM ANGLE STRENGTH");
+    if (osd_menu_select_float(19, 6, profile.pid.small_angle.kp, 6, 2)) {
+      profile.pid.small_angle.kp = osd_menu_adjust_float(profile.pid.small_angle.kp, 0.5, 0, 20.0);
+    }
+    if (osd_menu_select_float(24, 6, profile.pid.small_angle.kd, 6, 2)) {
+      profile.pid.small_angle.kd = osd_menu_adjust_float(profile.pid.small_angle.kd, 0.5, 0, 10.0);
+    }
+
+    osd_menu_select(1, 7, "LRG ANGLE STRENGTH");
+    if (osd_menu_select_float(19, 7, profile.pid.big_angle.kp, 6, 2)) {
+      profile.pid.big_angle.kp = osd_menu_adjust_float(profile.pid.big_angle.kp, 0.5, 0, 20.0);
+    }
+    if (osd_menu_select_float(24, 7, profile.pid.big_angle.kd, 6, 2)) {
+      profile.pid.big_angle.kd = osd_menu_adjust_float(profile.pid.big_angle.kd, 0.5, 0, 10.0);
+    }
+
+    osd_menu_select_save_and_exit(1, 14);
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_TORQUE_BOOST:
-    print_osd_menu_strings(torqueboost_labels, torqueboost_labels_size);
-    print_osd_adjustable_float(3, 1, torqueboost_ptr, torqueboost_grid, torqueboost_data_positions, 1);
-    if (osd_state.screen_phase == 5)
-      osd_float_adjust(torqueboost_ptr, 1, 1, torqueboost_adjust_limits, 0.1);
+    osd_menu_start();
+    osd_menu_header("TORQUE BOOST");
+
+    osd_menu_select(4, 5, "MOTOR TORQUE BOOST");
+    if (osd_menu_select_float(22, 5, profile.motor.torque_boost, 4, 1)) {
+      profile.motor.torque_boost = osd_menu_adjust_float(profile.motor.torque_boost, 0.1, 0, 3.0);
+    }
+
+    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_THROTTLE_BOOST:
-    print_osd_menu_strings(throttleboost_labels, throttleboost_labels_size);
-    print_osd_adjustable_float(3, 1, throttleboost_ptr, throttleboost_grid, throttleboost_data_positions, 1);
-    if (osd_state.screen_phase == 5)
-      osd_float_adjust(throttleboost_ptr, 1, 1, throttleboost_adjust_limits, 0.5);
+    osd_menu_start();
+    osd_menu_header("THROTTLE BOOST");
+
+    osd_menu_select(2, 5, "MOTOR THROTTLE BOOST");
+    if (osd_menu_select_float(22, 5, profile.motor.throttle_boost, 4, 1)) {
+      profile.motor.throttle_boost = osd_menu_adjust_float(profile.motor.throttle_boost, 0.5, 0, 10.0);
+    }
+
+    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_TURTLE_THROTTLE:
-    print_osd_menu_strings(turtlethrottle_labels, turtlethrottle_labels_size);
-    print_osd_adjustable_float(3, 1, turtlethrottle_ptr, turtlethrottle_grid, turtlethrottle_data_positions, 0);
-    if (osd_state.screen_phase == 5)
-      osd_float_adjust(turtlethrottle_ptr, 1, 1, turtlethrottle_adjust_limits, 10.0);
+    osd_menu_start();
+    osd_menu_header("TURTLE MODE");
+
+    osd_menu_select(4, 5, "TURTLE THROTTLE %");
+    if (osd_menu_select_float(22, 5, profile.motor.throttle_boost, 4, 1)) {
+      profile.motor.throttle_boost = osd_menu_adjust_float(profile.motor.throttle_boost, 1, 0, 100);
+    }
+
+    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_PID_MODIFIER:
@@ -1455,12 +1511,32 @@ void osd_display() {
     osd_menu_finish();
     break;
 
-  case OSD_SCREEN_RSSI:
-    print_osd_menu_strings(rssi_menu_labels, rssi_menu_labels_size);
-    print_osd_adjustable_enums(4, 2, get_rssi_source_status(osd_state.screen_phase - 5), rssi_source_data_grid, rssi_source_data_positions);
-    if (osd_state.screen_phase == 7)
-      osd_enum_adjust(rssi_source_ptr, 2, rssi_source_limits);
+  case OSD_SCREEN_RSSI: {
+    osd_menu_start();
+    osd_menu_header("RSSI SOURCE");
+
+    const char *rssi_source_labels[] = {
+        "PACKET RATE",
+        "CHANNEL",
+        "DIRECT",
+    };
+
+    osd_menu_select(4, 4, "RSSI FROM");
+    if (osd_menu_select_enum(16, 4, profile.receiver.lqi_source, rssi_source_labels)) {
+      profile.receiver.lqi_source = osd_menu_adjust_int(profile.receiver.lqi_source, 1, RX_LQI_SOURCE_PACKET_RATE, RX_LQI_SOURCE_DIRECT);
+    }
+
+    if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
+      osd_menu_select(4, 5, "SELECT AUX");
+      if (osd_menu_select_enum(16, 5, profile.receiver.aux[AUX_RSSI], aux_channel_labels)) {
+        profile.receiver.aux[AUX_RSSI] = osd_menu_adjust_int(profile.receiver.aux[AUX_RSSI], 1, AUX_CHANNEL_0, AUX_CHANNEL_11);
+      }
+    }
+
+    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_finish();
     break;
+  }
 
   case OSD_SCREEN_STICK_WIZARD:
     osd_menu_start();
