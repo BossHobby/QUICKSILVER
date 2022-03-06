@@ -109,6 +109,7 @@ typedef struct {
   uint8_t cursor_max;
 
   uint8_t selection;
+  uint8_t selection_max;
   uint8_t selection_increase;
   uint8_t selection_decrease;
 
