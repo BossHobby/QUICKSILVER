@@ -54,6 +54,7 @@ void osd_save_exit() {
 }
 
 uint8_t osd_push_cursor() {
+  osd_state.selection = 0;
   osd_state.cursor_history[osd_state.cursor_history_size] = osd_state.cursor;
   osd_state.cursor_history_size++;
   return osd_state.cursor;
@@ -72,7 +73,6 @@ uint8_t osd_pop_cursor() {
 
 void osd_submenu_select(uint8_t *pointer, uint8_t rows, const uint8_t next_menu[]) {
   if (osd_state.selection == 1) { // stick was pushed right to select a next menu
-    osd_state.selection = 0;      // reset the trigger
     osd_push_cursor();
     if (osd_state.cursor <= rows) {
       *pointer = osd_state.cursor - 1; // update profile
@@ -83,7 +83,6 @@ void osd_submenu_select(uint8_t *pointer, uint8_t rows, const uint8_t next_menu[
 
 void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_menu) {
   if (osd_state.selection == 1) { // main menu
-    osd_state.selection = 0;      // reset the trigger
     osd_push_cursor();
     if (osd_state.cursor <= rows) {
       osd_push_screen(menu_map[osd_state.cursor - 1]);

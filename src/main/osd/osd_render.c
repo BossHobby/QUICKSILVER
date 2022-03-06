@@ -8,6 +8,7 @@
 #include "flash.h"
 #include "float.h"
 #include "osd_adjust.h"
+#include "osd_menu.h"
 #include "osd_menu_maps.h"
 #include "profile.h"
 #include "project.h"
@@ -56,7 +57,7 @@ extern profile_t profile;
 extern vtx_settings_t vtx_settings;
 extern vtx_settings_t vtx_settings_copy;
 
-static osd_system_t osd_system = OSD_SYS_NONE;
+osd_system_t osd_system = OSD_SYS_NONE;
 
 osd_state_t osd_state = {
     .element = OSD_CALLSIGN,
@@ -865,6 +866,95 @@ static void osd_display_regular() {
   }
 }
 
+void osd_display_rate_menu() {
+  osd_menu_start();
+
+  switch (profile_current_rates()->mode) {
+  case RATE_MODE_SILVERWARE:
+    osd_menu_header("SILVERWARE RATES");
+    break;
+  case RATE_MODE_BETAFLIGHT:
+    osd_menu_header("BETAFLIGHT RATES");
+    break;
+  case RATE_MODE_ACTUAL:
+    osd_menu_header("ACTUAL RATES");
+    break;
+  }
+
+  const char *mode_labels[] = {
+      "SILVERWARE",
+      "BETAFLIGHT",
+      "ACTUAL",
+  };
+  osd_menu_select(2, 3, "MODE");
+  if (osd_menu_select_enum(14, 3, profile_current_rates()->mode, mode_labels)) {
+    profile_current_rates()->mode = osd_menu_adjust_int(profile_current_rates()->mode, 1, 0, RATE_MODE_ACTUAL);
+  }
+
+  osd_menu_label(14, 5, "ROLL");
+  osd_menu_label(19, 5, "PITCH");
+  osd_menu_label(25, 5, "YAW");
+
+  vec3_t *rate = &profile_current_rates()->rate;
+  switch (profile_current_rates()->mode) {
+  case RATE_MODE_SILVERWARE: {
+    osd_menu_select(2, 6, "RATE");
+    if (osd_menu_select_vec3(13, 6, rate[SILVERWARE_MAX_RATE], 5, 0)) {
+      rate[SILVERWARE_MAX_RATE] = osd_menu_adjust_vec3(rate[SILVERWARE_MAX_RATE], 10, 0.0, 1800.0);
+    }
+
+    osd_menu_select(2, 7, "ACRO EXPO");
+    if (osd_menu_select_vec3(13, 7, rate[SILVERWARE_ACRO_EXPO], 5, 2)) {
+      rate[SILVERWARE_ACRO_EXPO] = osd_menu_adjust_vec3(rate[SILVERWARE_ACRO_EXPO], 0.01, 0.0, 0.99);
+    }
+
+    osd_menu_select(2, 8, "ANGLE EXPO");
+    if (osd_menu_select_vec3(13, 8, rate[SILVERWARE_ANGLE_EXPO], 5, 2)) {
+      rate[SILVERWARE_ANGLE_EXPO] = osd_menu_adjust_vec3(rate[SILVERWARE_ANGLE_EXPO], 0.01, 0.0, 0.99);
+    }
+    break;
+  }
+  case RATE_MODE_BETAFLIGHT: {
+    osd_menu_select(2, 6, "RC RATE");
+    if (osd_menu_select_vec3(13, 6, rate[BETAFLIGHT_RC_RATE], 5, 2)) {
+      rate[BETAFLIGHT_RC_RATE] = osd_menu_adjust_vec3(rate[BETAFLIGHT_RC_RATE], 0.01, 0.0, 3.0);
+    }
+
+    osd_menu_select(2, 7, "SUPER RATE");
+    if (osd_menu_select_vec3(13, 7, rate[BETAFLIGHT_SUPER_RATE], 5, 2)) {
+      rate[BETAFLIGHT_SUPER_RATE] = osd_menu_adjust_vec3(rate[BETAFLIGHT_SUPER_RATE], 0.01, 0.0, 3.0);
+    }
+
+    osd_menu_select(2, 8, "EXPO");
+    if (osd_menu_select_vec3(13, 8, rate[BETAFLIGHT_EXPO], 5, 2)) {
+      rate[BETAFLIGHT_EXPO] = osd_menu_adjust_vec3(rate[BETAFLIGHT_EXPO], 0.01, 0.0, 0.99);
+    }
+    break;
+  }
+  case RATE_MODE_ACTUAL: {
+    osd_menu_select(2, 6, "CENTER");
+    if (osd_menu_select_vec3(13, 6, rate[ACTUAL_CENTER_SENSITIVITY], 5, 2)) {
+      rate[ACTUAL_CENTER_SENSITIVITY] = osd_menu_adjust_vec3(rate[ACTUAL_CENTER_SENSITIVITY], 1.0, 0.0, 500);
+    }
+
+    osd_menu_select(2, 7, "MAX RATE");
+    if (osd_menu_select_vec3(13, 7, rate[ACTUAL_MAX_RATE], 5, 2)) {
+      rate[ACTUAL_MAX_RATE] = osd_menu_adjust_vec3(rate[ACTUAL_MAX_RATE], 10, 0.0, 1800);
+    }
+
+    osd_menu_select(2, 8, "EXPO");
+    if (osd_menu_select_vec3(13, 8, rate[ACTUAL_EXPO], 5, 2)) {
+      rate[ACTUAL_EXPO] = osd_menu_adjust_vec3(rate[ACTUAL_EXPO], 0.01, 0.0, 0.99);
+    }
+    break;
+  }
+  }
+
+  osd_menu_select_save_and_exit(2, 14);
+
+  osd_menu_finish();
+}
+
 void osd_display() {
   if (!osd_is_ready()) {
     return;
@@ -922,24 +1012,27 @@ void osd_display() {
       osd_select_menu_item(2, filter_submenu_map, SUB_MENU);
     break;
 
+  case OSD_SCREEN_RATE_PROFILES:
+    osd_menu_start();
+    osd_menu_header("RATE PROFILES");
+
+    if (osd_menu_button(7, 4, "PROFILE 1")) {
+      profile.rate.profile = STICK_RATE_PROFILE_1;
+      osd_push_cursor();
+      osd_push_screen(OSD_SCREEN_RATES);
+    }
+
+    if (osd_menu_button(7, 5, "PROFILE 2")) {
+      profile.rate.profile = STICK_RATE_PROFILE_2;
+      osd_push_cursor();
+      osd_push_screen(OSD_SCREEN_RATES);
+    }
+
+    osd_menu_finish();
+    break;
+
   case OSD_SCREEN_RATES:
-    print_osd_menu_strings(rates_profile_labels, rates_profile_labels_size);
-    if (osd_state.screen_phase == 4)
-      osd_submenu_select(&profile_current_rates()->mode, 2, rates_submenu_map);
-    break;
-
-  case OSD_SCREEN_SW_RATES:
-    print_osd_menu_strings(sw_rates_labels, sw_rates_labels_size);
-    print_osd_adjustable_vectors(SW_RATES, 8, 9, get_sw_rate_term(sw_rates_data_index[osd_state.screen_phase - 9][0]), sw_rates_data_index, sw_rates_grid, sw_rates_data_positions);
-    if (osd_state.screen_phase == 18)
-      osd_vector_adjust(get_sw_rate_term(osd_state.cursor), 3, 3, SW_RATES, sw_rates_adjust_limits);
-    break;
-
-  case OSD_SCREEN_BF_RATES:
-    print_osd_menu_strings(bf_rates_labels, bf_rates_labels_size);
-    print_osd_adjustable_vectors(ROUNDED, 8, 9, get_bf_rate_term(bf_rates_data_index[osd_state.screen_phase - 9][0]), bf_rates_data_index, bf_rates_grid, bf_rates_data_positions);
-    if (osd_state.screen_phase == 18)
-      osd_vector_adjust(get_bf_rate_term(osd_state.cursor), 3, 3, ROUNDED, bf_rates_adjust_limits);
+    osd_display_rate_menu();
     break;
 
   case OSD_SCREEN_FLIGHT_MODES:
