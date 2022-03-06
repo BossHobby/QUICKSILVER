@@ -71,28 +71,6 @@ uint8_t osd_pop_cursor() {
   return osd_state.cursor;
 }
 
-void osd_submenu_select(uint8_t *pointer, uint8_t rows, const uint8_t next_menu[]) {
-  if (osd_state.selection == 1) { // stick was pushed right to select a next menu
-    osd_push_cursor();
-    if (osd_state.cursor <= rows) {
-      *pointer = osd_state.cursor - 1; // update profile
-      osd_push_screen(next_menu[osd_state.cursor - 1]);
-    }
-  }
-}
-
-void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_menu) {
-  if (osd_state.selection == 1) { // main menu
-    osd_push_cursor();
-    if (osd_state.cursor <= rows) {
-      osd_push_screen(menu_map[osd_state.cursor - 1]);
-    }
-    if (main_menu && osd_state.cursor == rows + 1) {
-      osd_save_exit(); // include save&exit in main menu
-    }
-  }
-}
-
 // populate a vtx_status_temp_buffer with current settings only once
 void populate_vtx_buffer_once() {
   if (!vtx_buffer_populated) {
