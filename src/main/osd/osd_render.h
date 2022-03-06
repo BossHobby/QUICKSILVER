@@ -87,5 +87,3 @@ osd_screens_t osd_push_screen(osd_screens_t screen);
 osd_screens_t osd_pop_screen();
 
 void osd_handle_input(osd_input_t input);
-
-uint8_t osd_decode(uint32_t element, uint8_t status);
