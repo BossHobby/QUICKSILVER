@@ -20,7 +20,6 @@ void osd_encoded_adjust_callsign();
 void osd_save_exit();
 
 const char *get_rssi_source_status(uint8_t data_to_print);
-const char *get_aux_status(int input);
 const char *get_vtx_status(int input);
 
 void osd_float_adjust(float *pointer[], uint8_t rows, uint8_t columns, const float adjust_limit[rows * columns][2], float adjust_amount);
