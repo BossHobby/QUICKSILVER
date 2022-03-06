@@ -35,13 +35,15 @@ void osd_menu_start() {
   menu_state.grid_elements = 0;
 }
 
-void osd_menu_finish() {
+bool osd_menu_finish() {
   osd_state.cursor_min = 0;
   osd_state.cursor_max = menu_state.active_elements - 1;
 
   if (osd_state.screen_phase > 0 && osd_state.screen_phase <= (menu_state.onscreen_elements + 1)) {
     osd_state.screen_phase++;
   }
+
+  return osd_state.screen_phase > (menu_state.onscreen_elements + 1);
 }
 
 static bool should_render_element() {
