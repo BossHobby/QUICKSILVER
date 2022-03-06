@@ -317,3 +317,10 @@ void osd_menu_select_save_and_exit(uint8_t x, uint8_t y) {
     osd_save_exit();
   }
 }
+
+void osd_menu_select_screen(uint8_t x, uint8_t y, const char *text, osd_screens_t screen) {
+  if (osd_menu_button(x, y, text)) {
+    osd_push_cursor();
+    osd_push_screen(screen);
+  }
+}
