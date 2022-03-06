@@ -1462,44 +1462,64 @@ void osd_display() {
       osd_enum_adjust(rssi_source_ptr, 2, rssi_source_limits);
     break;
 
-  case OSD_SCREEN_STICK_WIZARD: // stick wizard select menu
-    print_osd_menu_strings(stick_wizard_labels_1, stick_wizard_labels_1_size);
-    if (osd_state.screen_phase == 4) {
-      if (osd_state.selection) {
-        request_stick_calibration_wizard();
-        osd_push_screen(OSD_SCREEN_STICK_WIZARD_CALIBRATION);
-        osd_state.selection = 0;
-      }
+  case OSD_SCREEN_STICK_WIZARD:
+    osd_menu_start();
+    osd_menu_header("STICK CALIBRATION");
+
+    osd_menu_label(9, 5, "LEFT TO EXIT");
+    osd_menu_label(9, 7, "RIGHT TO BEGIN");
+
+    if (osd_menu_finish() && osd_state.selection) {
+      request_stick_calibration_wizard();
+      osd_push_screen(OSD_SCREEN_STICK_WIZARD_CALIBRATION);
+      osd_state.selection = 0;
     }
     break;
 
-  case OSD_SCREEN_STICK_WIZARD_CALIBRATION: // 5 sec to calibrate
-    print_osd_menu_strings(stick_wizard_labels_2, stick_wizard_labels_2_size);
-    if (osd_state.screen_phase == 4) {
-      if (state.stick_calibration_wizard == WAIT_FOR_CONFIRM) {
-        osd_push_screen(OSD_SCREEN_STICK_CONFIRM);
-      }
+  case OSD_SCREEN_STICK_WIZARD_CALIBRATION:
+    osd_menu_start();
+    osd_menu_header("RECORDING");
+
+    osd_menu_label(9, 5, "MOVE STICKS");
+    osd_menu_label(9, 7, "TO EXTENTS");
+
+    if (osd_menu_finish() && state.stick_calibration_wizard == WAIT_FOR_CONFIRM) {
+      osd_push_screen(OSD_SCREEN_STICK_CONFIRM);
     }
     break;
 
   case OSD_SCREEN_STICK_CONFIRM: // 5 sec to test / confirm calibration
-    print_osd_menu_strings(stick_wizard_labels_3, stick_wizard_labels_3_size);
-    if (osd_state.screen_phase == 4) {
-      if ((state.stick_calibration_wizard == CALIBRATION_SUCCESS) || (state.stick_calibration_wizard == TIMEOUT)) {
-        osd_push_screen(OSD_SCREEN_STICK_RESULT);
-      }
+    osd_menu_start();
+    osd_menu_header("TESTING CALIBRATION");
+
+    osd_menu_label(6, 5, "MOVE STICKS AGAIN");
+    osd_menu_label(9, 7, "TO EXTENTS");
+
+    if (osd_menu_finish() && ((state.stick_calibration_wizard == CALIBRATION_SUCCESS) || (state.stick_calibration_wizard == TIMEOUT))) {
+      osd_push_screen(OSD_SCREEN_STICK_RESULT);
     }
     break;
 
   case OSD_SCREEN_STICK_RESULT: // results of calibration
+    osd_menu_start();
+    osd_menu_header("STICK CALIBRATION");
+
     if (state.stick_calibration_wizard == CALIBRATION_SUCCESS) {
-      print_osd_menu_strings(stick_wizard_labels_4, stick_wizard_labels_4_size); // osd_state.screen_phase will be 4 after this
+      osd_menu_label(10, 4, "CALIBRATION");
+      osd_menu_label(12, 6, "SUCCESS");
+      osd_menu_label(7, 8, "PUSH LEFT TO EXIT");
     }
     if (state.stick_calibration_wizard == TIMEOUT) {
-      print_osd_menu_strings(stick_wizard_labels_5, stick_wizard_labels_5_size); // osd_state.screen_phase will be 4 after this
+      osd_menu_label(10, 4, "CALIBRATION");
+      osd_menu_label(12, 6, "FAILED");
+      osd_menu_label(7, 8, "PUSH LEFT TO EXIT");
     }
-    if (osd_state.selection > 0)
+
+    osd_menu_finish();
+
+    if (osd_state.selection > 0) {
       osd_state.selection = 0;
+    }
     break;
   }
 
