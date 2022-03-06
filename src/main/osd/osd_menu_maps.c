@@ -10,43 +10,6 @@ extern profile_t profile;
 extern vtx_settings_t vtx_settings;
 extern vtx_settings_t vtx_settings_copy;
 
-// osd elements submenu map
-const osd_label_t osd_elements_menu_labels[] = {
-    {
-        .type = OSD_LABEL_HEADER,
-        .text = "OSD ELEMENTS",
-        .pos = {9, 1},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "ADD OR REMOVE",
-        .pos = {7, 4},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "EDIT POSITIONS",
-        .pos = {7, 5},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "EDIT TEXT STYLE",
-        .pos = {7, 6},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "EDIT CALLSIGN",
-        .pos = {7, 7},
-    },
-};
-MENU_SIZE(osd_elements_menu_labels);
-
-const uint8_t osd_elements_map[] = {
-    OSD_SCREEN_ELEMENTS_ADD_REMOVE,
-    OSD_SCREEN_ELEMENTS_POSITION,
-    OSD_SCREEN_ELEMENTS_STYLE,
-    OSD_SCREEN_CALLSIGN,
-};
-
 // osd element add/remove & text/invert submenu map
 const osd_label_t osd_display_labels[] = {
     {
@@ -565,53 +528,6 @@ const uint8_t vtx_grid[4][2] = {
     {1, 4},
 };
 
-// special features menu map
-const osd_label_t special_features_labels[] = {
-    {
-        .type = OSD_LABEL_HEADER,
-        .text = "SPECIAL FEATURES",
-        .pos = {7, 1},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "STICK BOOST",
-        .pos = {7, 3},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "MOTOR BOOST",
-        .pos = {7, 4},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "PID MODIFIERS",
-        .pos = {7, 5},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "DIGITAL IDLE",
-        .pos = {7, 6},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "LOW BATTERY",
-        .pos = {7, 7},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "LEVEL MODE",
-        .pos = {7, 8},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "TURTLE THROTTLE",
-        .pos = {7, 9},
-    },
-};
-MENU_SIZE(special_features_labels);
-
-const uint8_t special_features_map[] = {OSD_SCREEN_STICK_BOOST, OSD_SCREEN_MOTOR_BOOST, OSD_SCREEN_PID_MODIFIER, OSD_SCREEN_DIGITAL_IDLE, OSD_SCREEN_LOWBAT, OSD_SCREEN_LEVEL_MODE, OSD_SCREEN_TURTLE_THROTTLE};
-
 // low battery map
 float *low_batt_ptr[1] = {&profile.voltage.vbattlow};
 const osd_label_t lowbatt_labels[] = {
@@ -642,28 +558,6 @@ const uint8_t lowbatt_data_positions[1][2] = {
 const float lowbatt_adjust_limits[1][2] = {
     {0, 4.2},
 };
-
-// levelmode submenu map
-const osd_label_t level_submenu_labels[] = {
-    {
-        .type = OSD_LABEL_HEADER,
-        .text = "LEVEL MODE",
-        .pos = {10, 1},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "MAX ANGLE",
-        .pos = {7, 4},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "LEVEL STRENGTH",
-        .pos = {7, 5},
-    },
-};
-MENU_SIZE(level_submenu_labels);
-
-const uint8_t level_submenu_map[] = {OSD_SCREEN_LEVEL_MAX_ANGLE, OSD_SCREEN_LEVEL_STRENGTH};
 
 // levelmode maxangle map
 float *level_maxangle_ptr[1] = {&profile.rate.level_max_angle};
@@ -755,28 +649,6 @@ const float levelmode_adjust_limits[4][2] = {
     {0, 20.0},
     {0, 10.0},
 };
-
-// motor boost menu map
-const osd_label_t motor_boost_labels[] = {
-    {
-        .type = OSD_LABEL_HEADER,
-        .text = "MOTOR BOOST TYPES",
-        .pos = {7, 1},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "TORQUE BOOST",
-        .pos = {7, 4},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "THROTTLE BOOST",
-        .pos = {7, 5},
-    },
-};
-MENU_SIZE(motor_boost_labels);
-
-const uint8_t motor_boost_map[] = {OSD_SCREEN_TORQUE_BOOST, OSD_SCREEN_THROTTLE_BOOST};
 
 // torque boost map
 float *torqueboost_ptr[1] = {&profile.motor.torque_boost};
@@ -901,28 +773,6 @@ const uint8_t turtlethrottle_data_positions[1][2] = {
 const float turtlethrottle_adjust_limits[1][2] = {
     {0, 100},
 };
-
-// rc link map
-const osd_label_t rc_link_labels[] = {
-    {
-        .type = OSD_LABEL_HEADER,
-        .text = "RC LINK",
-        .pos = {12, 1},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "STICK CALIBRATION",
-        .pos = {7, 4},
-    },
-    {
-        .type = OSD_LABEL_ACTIVE,
-        .text = "RSSI SOURCE",
-        .pos = {7, 5},
-    },
-};
-MENU_SIZE(rc_link_labels);
-
-const uint8_t rc_link_map[] = {OSD_SCREEN_STICK_WIZARD, OSD_SCREEN_RSSI};
 
 // rssi source map
 uint8_t *rssi_source_ptr[2] = {

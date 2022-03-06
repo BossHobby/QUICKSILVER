@@ -1243,9 +1243,18 @@ void osd_display() {
     break;
 
   case OSD_SCREEN_SPECIAL_FEATURES:
-    print_osd_menu_strings(special_features_labels, special_features_labels_size);
-    if (osd_state.screen_phase == 9)
-      osd_select_menu_item(7, special_features_map, SUB_MENU);
+    osd_menu_start();
+    osd_menu_header("SPECIAL FEATURES");
+
+    osd_menu_select_screen(7, 3, "STICK BOOST", OSD_SCREEN_STICK_BOOST);
+    osd_menu_select_screen(7, 4, "MOTOR BOOST", OSD_SCREEN_MOTOR_BOOST);
+    osd_menu_select_screen(7, 5, "PID MODIFIERS", OSD_SCREEN_PID_MODIFIER);
+    osd_menu_select_screen(7, 6, "DIGITAL IDLE", OSD_SCREEN_DIGITAL_IDLE);
+    osd_menu_select_screen(7, 7, "LOW BATTERY", OSD_SCREEN_LOWBAT);
+    osd_menu_select_screen(7, 8, "LEVEL MODE", OSD_SCREEN_LEVEL_MODE);
+    osd_menu_select_screen(7, 9, "TURTLE THROTTLE", OSD_SCREEN_TURTLE_THROTTLE);
+
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_STICK_BOOST:
@@ -1297,9 +1306,15 @@ void osd_display() {
   }
 
   case OSD_SCREEN_ELEMENTS:
-    print_osd_menu_strings(osd_elements_menu_labels, osd_elements_menu_labels_size);
-    if (osd_state.screen_phase == 6)
-      osd_select_menu_item(4, osd_elements_map, SUB_MENU);
+    osd_menu_start();
+    osd_menu_header("OSD ELEMENTS");
+
+    osd_menu_select_screen(7, 4, "ADD OR REMOVE", OSD_SCREEN_ELEMENTS_ADD_REMOVE);
+    osd_menu_select_screen(7, 5, "EDIT POSITIONS", OSD_SCREEN_ELEMENTS_POSITION);
+    osd_menu_select_screen(7, 6, "EDIT TEXT STYLE", OSD_SCREEN_ELEMENTS_STYLE);
+    osd_menu_select_screen(7, 7, "EDIT CALLSIGN", OSD_SCREEN_CALLSIGN);
+
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_ELEMENTS_ADD_REMOVE:
@@ -1338,15 +1353,23 @@ void osd_display() {
     break;
 
   case OSD_SCREEN_LEVEL_MODE:
-    print_osd_menu_strings(level_submenu_labels, level_submenu_labels_size);
-    if (osd_state.screen_phase == 4)
-      osd_select_menu_item(2, level_submenu_map, SUB_MENU);
+    osd_menu_start();
+    osd_menu_header("LEVEL MODE");
+
+    osd_menu_select_screen(7, 4, "MAX ANGLE", OSD_SCREEN_LEVEL_MAX_ANGLE);
+    osd_menu_select_screen(7, 5, "LEVEL STRENGTH", OSD_SCREEN_LEVEL_STRENGTH);
+
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_MOTOR_BOOST:
-    print_osd_menu_strings(motor_boost_labels, motor_boost_labels_size);
-    if (osd_state.screen_phase == 4)
-      osd_select_menu_item(2, motor_boost_map, SUB_MENU);
+    osd_menu_start();
+    osd_menu_header("MOTOR BOOST TYPES");
+
+    osd_menu_select_screen(7, 4, "TORQUE BOOST", OSD_SCREEN_TORQUE_BOOST);
+    osd_menu_select_screen(7, 5, "THROTTLE BOOST", OSD_SCREEN_THROTTLE_BOOST);
+
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_DIGITAL_IDLE:
@@ -1425,9 +1448,13 @@ void osd_display() {
     break;
 
   case OSD_SCREEN_RC_LINK:
-    print_osd_menu_strings(rc_link_labels, rc_link_labels_size);
-    if (osd_state.screen_phase == 4)
-      osd_select_menu_item(7, rc_link_map, SUB_MENU);
+    osd_menu_start();
+    osd_menu_header("RC LINK");
+
+    osd_menu_select_screen(7, 4, "STICK CALIBRATION", OSD_SCREEN_STICK_WIZARD);
+    osd_menu_select_screen(7, 5, "RSSI SOURCE", OSD_SCREEN_RSSI);
+
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_RSSI:
