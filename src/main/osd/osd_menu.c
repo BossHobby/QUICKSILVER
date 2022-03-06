@@ -432,3 +432,10 @@ void osd_menu_select_screen(uint8_t x, uint8_t y, const char *text, osd_screens_
     osd_push_screen(screen);
   }
 }
+
+void osd_menu_select_enum_adjust(uint8_t x, uint8_t y, const char *text, uint8_t select_x, uint8_t *val, const char **labels, const int32_t min, const int32_t max) {
+  osd_menu_select(x, y, text);
+  if (osd_menu_select_enum(20, select_x, *val, labels)) {
+    *val = osd_menu_adjust_int(*val, 1, min, max);
+  }
+}

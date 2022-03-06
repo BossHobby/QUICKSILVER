@@ -29,4 +29,6 @@ bool osd_menu_select_str(uint8_t x, uint8_t y, const char *str);
 bool osd_menu_select_float(uint8_t x, uint8_t y, const float val, uint8_t width, uint8_t precision);
 bool osd_menu_select_vec3(uint8_t x, uint8_t y, const vec3_t val, uint8_t width, uint8_t precision);
 
+void osd_menu_select_enum_adjust(uint8_t x, uint8_t y, const char *text, uint8_t select_x, uint8_t *val, const char **labels, const int32_t min, const int32_t max);
+
 bool osd_menu_finish();
