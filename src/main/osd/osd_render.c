@@ -697,10 +697,7 @@ void osd_display_rate_menu() {
       "BETAFLIGHT",
       "ACTUAL",
   };
-  osd_menu_select(2, 3, "MODE");
-  if (osd_menu_select_enum(14, 3, profile_current_rates()->mode, mode_labels)) {
-    profile_current_rates()->mode = osd_menu_adjust_int(profile_current_rates()->mode, 1, 0, RATE_MODE_ACTUAL);
-  }
+  osd_menu_select_enum_adjust(2, 3, "MODE", 14, &profile_current_rates()->mode, mode_labels, 0, RATE_MODE_ACTUAL);
 
   osd_menu_label(14, 5, "ROLL");
   osd_menu_label(19, 5, "PITCH");
@@ -980,55 +977,16 @@ void osd_display() {
     osd_menu_start();
     osd_menu_header("FLIGHT MODES");
 
-    osd_menu_select(4, 2, "ARMING");
-    if (osd_menu_select_enum(17, 2, profile.receiver.aux[AUX_ARMING], aux_channel_labels)) {
-      profile.receiver.aux[AUX_ARMING] = osd_menu_adjust_int(profile.receiver.aux[AUX_ARMING], 1, AUX_CHANNEL_0, AUX_CHANNEL_11);
-    }
-
-    osd_menu_select(4, 3, "IDLE UP");
-    if (osd_menu_select_enum(17, 3, profile.receiver.aux[AUX_IDLE_UP], aux_channel_labels)) {
-      profile.receiver.aux[AUX_IDLE_UP] = osd_menu_adjust_int(profile.receiver.aux[AUX_IDLE_UP], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    }
-
-    osd_menu_select(4, 4, "LEVELMODE");
-    if (osd_menu_select_enum(17, 4, profile.receiver.aux[AUX_LEVELMODE], aux_channel_labels)) {
-      profile.receiver.aux[AUX_LEVELMODE] = osd_menu_adjust_int(profile.receiver.aux[AUX_LEVELMODE], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    }
-
-    osd_menu_select(4, 5, "RACEMODE");
-    if (osd_menu_select_enum(17, 5, profile.receiver.aux[AUX_RACEMODE], aux_channel_labels)) {
-      profile.receiver.aux[AUX_RACEMODE] = osd_menu_adjust_int(profile.receiver.aux[AUX_RACEMODE], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    }
-
-    osd_menu_select(4, 6, "HORIZON");
-    if (osd_menu_select_enum(17, 6, profile.receiver.aux[AUX_HORIZON], aux_channel_labels)) {
-      profile.receiver.aux[AUX_HORIZON] = osd_menu_adjust_int(profile.receiver.aux[AUX_HORIZON], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    }
-
-    osd_menu_select(4, 7, "STICK BOOST");
-    if (osd_menu_select_enum(17, 7, profile.receiver.aux[AUX_STICK_BOOST_PROFILE], aux_channel_labels)) {
-      profile.receiver.aux[AUX_STICK_BOOST_PROFILE] = osd_menu_adjust_int(profile.receiver.aux[AUX_STICK_BOOST_PROFILE], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    }
-
-    osd_menu_select(4, 8, "BUZZER");
-    if (osd_menu_select_enum(17, 8, profile.receiver.aux[AUX_BUZZER_ENABLE], aux_channel_labels)) {
-      profile.receiver.aux[AUX_BUZZER_ENABLE] = osd_menu_adjust_int(profile.receiver.aux[AUX_BUZZER_ENABLE], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    }
-
-    osd_menu_select(4, 9, "TURTLE");
-    if (osd_menu_select_enum(17, 9, profile.receiver.aux[AUX_TURTLE], aux_channel_labels)) {
-      profile.receiver.aux[AUX_TURTLE] = osd_menu_adjust_int(profile.receiver.aux[AUX_TURTLE], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    }
-
-    osd_menu_select(4, 10, "MOTOR TEST");
-    if (osd_menu_select_enum(17, 10, profile.receiver.aux[AUX_MOTOR_TEST], aux_channel_labels)) {
-      profile.receiver.aux[AUX_MOTOR_TEST] = osd_menu_adjust_int(profile.receiver.aux[AUX_MOTOR_TEST], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    }
-
-    osd_menu_select(4, 11, "FPV SWITCH");
-    if (osd_menu_select_enum(17, 11, profile.receiver.aux[AUX_FPV_SWITCH], aux_channel_labels)) {
-      profile.receiver.aux[AUX_FPV_SWITCH] = osd_menu_adjust_int(profile.receiver.aux[AUX_FPV_SWITCH], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    }
+    osd_menu_select_enum_adjust(4, 2, "ARMING", 17, &profile.receiver.aux[AUX_ARMING], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
+    osd_menu_select_enum_adjust(4, 3, "IDLE UP", 17, &profile.receiver.aux[AUX_IDLE_UP], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    osd_menu_select_enum_adjust(4, 4, "LEVELMODE", 17, &profile.receiver.aux[AUX_LEVELMODE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    osd_menu_select_enum_adjust(4, 5, "RACEMODE", 17, &profile.receiver.aux[AUX_RACEMODE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    osd_menu_select_enum_adjust(4, 6, "HORIZON", 17, &profile.receiver.aux[AUX_HORIZON], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    osd_menu_select_enum_adjust(4, 7, "STICK BOOST", 17, &profile.receiver.aux[AUX_STICK_BOOST_PROFILE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    osd_menu_select_enum_adjust(4, 8, "BUZZER", 17, &profile.receiver.aux[AUX_BUZZER_ENABLE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    osd_menu_select_enum_adjust(4, 9, "TURTLE", 17, &profile.receiver.aux[AUX_TURTLE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    osd_menu_select_enum_adjust(4, 10, "MOTOR TEST", 17, &profile.receiver.aux[AUX_MOTOR_TEST], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    osd_menu_select_enum_adjust(4, 11, "FPV SWITCH", 17, &profile.receiver.aux[AUX_FPV_SWITCH], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
 
     osd_menu_select_save_and_exit(4, 14);
     osd_menu_finish();
@@ -1046,22 +1004,13 @@ void osd_display() {
       osd_menu_header("VTX CONTROLS");
 
       const char *band_labels[] = {"A", "B", "E", "F", "R"};
-      osd_menu_select(4, 4, "BAND");
-      if (osd_menu_select_enum(20, 4, vtx_settings_copy.band, band_labels)) {
-        vtx_settings_copy.band = osd_menu_adjust_int(vtx_settings_copy.band, 1, VTX_BAND_A, VTX_BAND_R);
-      }
+      osd_menu_select_enum_adjust(4, 4, "BAND", 20, &vtx_settings_copy.band, band_labels, VTX_BAND_A, VTX_BAND_R);
 
       const char *channel_labels[] = {"1", "2", "3", "4", "5", "6", "7", "8"};
-      osd_menu_select(4, 5, "CHANNEL");
-      if (osd_menu_select_enum(20, 5, vtx_settings_copy.channel, channel_labels)) {
-        vtx_settings_copy.channel = osd_menu_adjust_int(vtx_settings_copy.channel, 1, VTX_CHANNEL_1, VTX_CHANNEL_8);
-      }
+      osd_menu_select_enum_adjust(4, 5, "CHANNEL", 20, &vtx_settings_copy.channel, channel_labels, VTX_CHANNEL_1, VTX_CHANNEL_8);
 
       const char *power_level_labels[] = {"1", "2", "3", "4"};
-      osd_menu_select(4, 6, "POWER LEVEL");
-      if (osd_menu_select_enum(20, 6, vtx_settings_copy.power_level, power_level_labels)) {
-        vtx_settings_copy.power_level = osd_menu_adjust_int(vtx_settings_copy.power_level, 1, VTX_POWER_LEVEL_1, VTX_POWER_LEVEL_4);
-      }
+      osd_menu_select_enum_adjust(4, 6, "POWER LEVEL", 20, &vtx_settings_copy.power_level, power_level_labels, VTX_POWER_LEVEL_1, VTX_POWER_LEVEL_4);
 
       const char *pit_mode_labels[] = {"OFF", "ON ", "N/A"};
       osd_menu_select(4, 7, "PITMODE");
@@ -1375,15 +1324,8 @@ void osd_display() {
         "ACTIVE",
     };
 
-    osd_menu_select(2, 4, "P-TERM VOLTAGE COMP");
-    if (osd_menu_select_enum(23, 4, profile.voltage.pid_voltage_compensation, modifier_state_labels)) {
-      profile.voltage.pid_voltage_compensation = osd_menu_adjust_int(profile.voltage.pid_voltage_compensation, 1, 0, 1);
-    }
-
-    osd_menu_select(2, 5, "THROTTLE D ATTENUATE");
-    if (osd_menu_select_enum(23, 5, profile.pid.throttle_dterm_attenuation.tda_active, modifier_state_labels)) {
-      profile.pid.throttle_dterm_attenuation.tda_active = osd_menu_adjust_int(profile.pid.throttle_dterm_attenuation.tda_active, 1, 0, 1);
-    }
+    osd_menu_select_enum_adjust(2, 4, "P-TERM VOLTAGE COMP", 23, &profile.voltage.pid_voltage_compensation, modifier_state_labels, 0, 1);
+    osd_menu_select_enum_adjust(2, 5, "THROTTLE D ATTENUATE", 23, &profile.pid.throttle_dterm_attenuation.tda_active, modifier_state_labels, 0, 1);
 
     osd_menu_select(2, 6, "TDA BREAKPOINT");
     if (osd_menu_select_float(23, 6, profile.pid.throttle_dterm_attenuation.tda_breakpoint, 4, 1)) {
@@ -1419,16 +1361,9 @@ void osd_display() {
         "DIRECT",
     };
 
-    osd_menu_select(4, 4, "RSSI FROM");
-    if (osd_menu_select_enum(16, 4, profile.receiver.lqi_source, rssi_source_labels)) {
-      profile.receiver.lqi_source = osd_menu_adjust_int(profile.receiver.lqi_source, 1, RX_LQI_SOURCE_PACKET_RATE, RX_LQI_SOURCE_DIRECT);
-    }
-
+    osd_menu_select_enum_adjust(4, 4, "RSSI FROM", 16, &profile.receiver.lqi_source, rssi_source_labels, RX_LQI_SOURCE_PACKET_RATE, RX_LQI_SOURCE_DIRECT);
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-      osd_menu_select(4, 5, "SELECT AUX");
-      if (osd_menu_select_enum(16, 5, profile.receiver.aux[AUX_RSSI], aux_channel_labels)) {
-        profile.receiver.aux[AUX_RSSI] = osd_menu_adjust_int(profile.receiver.aux[AUX_RSSI], 1, AUX_CHANNEL_0, AUX_CHANNEL_11);
-      }
+      osd_menu_select_enum_adjust(4, 5, "SELECT AUX", 16, &profile.receiver.aux[AUX_RSSI], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
     }
 
     osd_menu_select_save_and_exit(4, 14);
