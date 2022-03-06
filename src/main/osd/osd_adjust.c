@@ -222,39 +222,6 @@ const char *get_vtx_status(int input) {
   return vtx_data_status[input][*vtx_ptr[input]];
 }
 
-vec3_t *get_stick_profile_term(uint8_t term) {
-  switch (term) {
-  case 1:
-    return &profile.pid.stick_rates[profile.pid.stick_profile].accelerator;
-  case 2:
-    return &profile.pid.stick_rates[profile.pid.stick_profile].transition;
-  }
-  return NULL;
-}
-
-void osd_vector_adjust(vec3_t *pointer, uint8_t rows, uint8_t columns, uint8_t special_case, const float adjust_limit[rows * columns][2]) {
-  if (osd_state.selection > columns) {
-    osd_state.selection = columns; // limit osd select variable from accumulating past 3 columns of adjustable items
-    osd_state.screen_phase = 1;    // repaint the screen again
-  }
-  if (osd_state.cursor <= rows) {
-    uint8_t adjust_tracker = ((osd_state.cursor - 1) * columns) + (osd_state.selection - 1);
-    if ((osd_state.selection_increase && pointer->axis[osd_state.selection - 1] < adjust_limit[adjust_tracker][1]) || (osd_state.selection_decrease && pointer->axis[osd_state.selection - 1] > adjust_limit[adjust_tracker][0])) {
-      if (special_case == BF_PIDS)
-        pointer->axis[osd_state.selection - 1] = adjust_rounded_float(pointer->axis[osd_state.selection - 1], bf_pids_increments[adjust_tracker]);
-      if (special_case == SW_RATES)
-        pointer->axis[osd_state.selection - 1] = adjust_rounded_float(pointer->axis[osd_state.selection - 1], sw_rates_increments[adjust_tracker]);
-      if (special_case == ROUNDED)
-        pointer->axis[osd_state.selection - 1] = adjust_rounded_float(pointer->axis[osd_state.selection - 1], rounded_increments[adjust_tracker]);
-    }
-    osd_state.selection_increase = 0;
-    osd_state.selection_decrease = 0;
-  }
-  if (osd_state.cursor == rows + 1 && osd_state.selection == 1) {
-    osd_save_exit();
-  }
-}
-
 void osd_float_adjust(float *pointer[], uint8_t rows, uint8_t columns, const float adjust_limit[rows * columns][2], float adjust_amount) {
   if (osd_state.selection > columns) {
     osd_state.selection = columns;
