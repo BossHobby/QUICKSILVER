@@ -80,87 +80,6 @@ void populate_vtx_buffer_once() {
   return;
 }
 
-//**********************************************************encoded flash memory adjust functions**********************************************************
-
-void osd_encoded_adjust_callsign() {
-  if (osd_state.selection > 20) {
-    osd_state.selection = 20;   // limit osd select variable from accumulating past 1 columns of adjustable items
-    osd_state.screen_phase = 1; // repaint the screen again
-  }
-  if (osd_state.selection_increase) {
-    profile.osd.callsign[osd_state.selection - 1]++;
-    osd_state.screen_phase = 1; // repaint the screen again
-  }
-  if (osd_state.selection_decrease) {
-    profile.osd.callsign[osd_state.selection - 1]--;
-    osd_state.screen_phase = 1; // repaint the screen again
-  }
-
-  osd_state.selection_increase = 0;
-  osd_state.selection_decrease = 0;
-
-  if (osd_state.cursor == 2 && osd_state.selection == 1) {
-    osd_save_exit();
-  }
-}
-
-void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_t status) {
-  if (osd_state.selection > columns) {
-    osd_state.selection = columns; // limit osd select variable from accumulating past 1 columns of adjustable items
-    osd_state.screen_phase = 1;    // repaint the screen again
-  }
-  if (osd_state.cursor <= rows) {
-    switch (status) {
-    case 0: // adjust active or inactive element
-      if (osd_state.selection_increase && osd_decode(*pointer, status) == 0x00) {
-        *pointer = *pointer + 1;
-        osd_state.screen_phase = 1; // repaint the screen again
-      }
-      if (osd_state.selection_decrease && osd_decode(*pointer, status) == 0x01) {
-        *pointer = *pointer - 1;
-        osd_state.screen_phase = 1; // repaint the screen again
-      }
-      break;
-    case 1:                                                                       // adjust TEXT or INVERT
-      if (osd_state.selection_increase && osd_decode(*pointer, status) == TEXT) { // increase requested and currently on TEXT
-        *pointer = *pointer | (0x02);                                             // flip the 2nd bit on
-        osd_state.screen_phase = 1;                                               // repaint the screen again
-      }
-      if (osd_state.selection_decrease && osd_decode(*pointer, status) == INVERT) { // decrease requested and currently on INVERT
-        *pointer = *pointer ^ (0x02);                                               // flip the 2nd bit off
-        osd_state.screen_phase = 1;                                                 // repaint the screen again
-      }
-      break;
-    case 2: // adjust positionX
-      if (osd_state.selection_increase && osd_decode(*pointer, status) != 30) {
-        *pointer = (((*pointer >> 2) + 1) << 2) + (*pointer & 0x03);
-        osd_state.screen_phase = 1; // repaint the screen again
-      }
-      if (osd_state.selection_decrease && osd_decode(*pointer, status) != 0) {
-        *pointer = (((*pointer >> 2) - 1) << 2) + (*pointer & 0x03);
-        osd_state.screen_phase = 1; // repaint the screen again
-      }
-      break;
-    case 3: // adjust positionY
-      if (osd_state.selection_increase && osd_decode(*pointer, status) != 15) {
-        *pointer = (((*pointer >> 7) + 1) << 7) + (*pointer & 0x7F);
-        osd_state.screen_phase = 1; // repaint the screen again
-      }
-      if (osd_state.selection_decrease && osd_decode(*pointer, status) != 0) {
-        *pointer = (((*pointer >> 7) - 1) << 7) + (*pointer & 0x7F);
-        osd_state.screen_phase = 1; // repaint the screen again
-      }
-      break;
-    }
-    osd_state.selection_increase = 0;
-    osd_state.selection_decrease = 0;
-  }
-
-  if (osd_state.cursor == rows + 1 && osd_state.selection == 1) {
-    osd_save_exit();
-  }
-}
-
 //************************************************************profile variable adjust functions***********************************************************
 
 float adjust_rounded_float(float input, float adjust_amount) {
@@ -186,13 +105,6 @@ const char *get_rssi_source_status(uint8_t data_to_print) {
   } else {
     return rssi_source_channel[profile.receiver.aux[12]];
   }
-}
-
-const char *get_vtx_status(int input) {
-  if (input < 0)
-    return 0;
-  static char *vtx_data_status[4][8] = {{"A", "B", "E", "F", "R"}, {"1", "2", "3", "4", "5", "6", "7", "8"}, {"1", "2", "3", "4"}, {"OFF", "ON ", "N/A"}};
-  return vtx_data_status[input][*vtx_ptr[input]];
 }
 
 void osd_float_adjust(float *pointer[], uint8_t rows, uint8_t columns, const float adjust_limit[rows * columns][2], float adjust_amount) {
