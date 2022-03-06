@@ -1185,20 +1185,52 @@ void osd_display() {
     break;
 
   case OSD_SCREEN_STICK_BOOST:
-    print_osd_menu_strings(stickboost_labels, stickboost_labels_size);
-    if (osd_state.screen_phase == 4)
-      osd_submenu_select(&profile.pid.stick_profile, 2, stickboost_submenu_map);
+    osd_menu_start();
+    osd_menu_header("STICK BOOST PROFILES");
+
+    if (osd_menu_button(7, 4, "AUX OFF PROFILE 1")) {
+      profile.pid.stick_profile = STICK_PROFILE_OFF;
+      osd_push_cursor();
+      osd_push_screen(OSD_SCREEN_STICK_BOOST_ADJUST);
+    }
+
+    if (osd_menu_button(7, 5, "AUX ON  PROFILE 2")) {
+      profile.pid.stick_profile = STICK_PROFILE_ON;
+      osd_push_cursor();
+      osd_push_screen(OSD_SCREEN_STICK_BOOST_ADJUST);
+    }
+
+    osd_menu_finish();
     break;
 
-  case OSD_SCREEN_STICK_BOOST_ADJUST:
+  case OSD_SCREEN_STICK_BOOST_ADJUST: {
+    osd_menu_start();
+
     if (profile.pid.stick_profile == STICK_PROFILE_OFF)
-      print_osd_menu_strings(stickboost1_labels, stickboost1_labels_size);
+      osd_menu_header("BOOST PROFILE 1");
     else
-      print_osd_menu_strings(stickboost2_labels, stickboost2_labels_size);
-    print_osd_adjustable_vectors(ROUNDED, 7, 6, get_stick_profile_term(stickboost_data_index[osd_state.screen_phase - 8][0]), stickboost_data_index, stickboost_grid, stickboost_data_positions);
-    if (osd_state.screen_phase == 14)
-      osd_vector_adjust(get_stick_profile_term(osd_state.cursor), 2, 3, ROUNDED, stickboost_adjust_limits);
+      osd_menu_header("BOOST PROFILE 2");
+
+    osd_menu_label(14, 4, "ROLL");
+    osd_menu_label(19, 4, "PITCH");
+    osd_menu_label(25, 4, "YAW");
+
+    stick_rate_t *rates = &profile.pid.stick_rates[profile.pid.stick_profile];
+
+    osd_menu_select(2, 6, "ACCELERATOR");
+    if (osd_menu_select_vec3(13, 6, rates->accelerator, 5, 2)) {
+      rates->accelerator = osd_menu_adjust_vec3(rates->accelerator, 0.01, 0.0, 3.0);
+    }
+
+    osd_menu_select(2, 7, "TRANSITION");
+    if (osd_menu_select_vec3(13, 7, rates->transition, 5, 2)) {
+      rates->transition = osd_menu_adjust_vec3(rates->transition, 0.01, -1.0, -1.0);
+    }
+
+    osd_menu_select_save_and_exit(7, 11);
+    osd_menu_finish();
     break;
+  }
 
   case OSD_SCREEN_ELEMENTS_ADD_REMOVE:
     print_osd_menu_strings(osd_display_labels, osd_display_labels_size);
