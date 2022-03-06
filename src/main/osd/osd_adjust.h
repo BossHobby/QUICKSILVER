@@ -11,9 +11,6 @@
 uint8_t osd_push_cursor();
 uint8_t osd_pop_cursor();
 
-void osd_submenu_select(uint8_t *pointer, uint8_t rows, const uint8_t next_menu[]);
-void osd_select_menu_item(uint8_t rows, const uint8_t menu_map[], uint8_t main_menu);
-
 void osd_encoded_adjust(uint32_t *pointer, uint8_t rows, uint8_t columns, uint8_t status);
 void osd_encoded_adjust_callsign();
 
