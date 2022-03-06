@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "drv_osd.h"
-#include "osd_adjust.h"
 #include "osd_render.h"
 
 #define SCREEN_COLS 32
@@ -419,7 +418,6 @@ void osd_menu_select_save_and_exit(uint8_t x, uint8_t y) {
 
 void osd_menu_select_screen(uint8_t x, uint8_t y, const char *text, osd_screens_t screen) {
   if (osd_menu_button(x, y, text)) {
-    osd_push_cursor();
     osd_push_screen(screen);
   }
 }

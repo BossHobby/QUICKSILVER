@@ -7,9 +7,7 @@
 #include "filter.h"
 #include "flash.h"
 #include "float.h"
-#include "osd_adjust.h"
 #include "osd_menu.h"
-#include "osd_menu_maps.h"
 #include "profile.h"
 #include "project.h"
 #include "rx.h"
@@ -55,7 +53,9 @@ typedef struct {
 
 extern profile_t profile;
 extern vtx_settings_t vtx_settings;
-extern vtx_settings_t vtx_settings_copy;
+
+static vtx_settings_t vtx_settings_copy;
+static uint8_t vtx_buffer_populated = 0;
 
 osd_system_t osd_system = OSD_SYS_NONE;
 
@@ -111,14 +111,14 @@ static uint8_t osd_attr(osd_element_t *el) {
   return el->attribute ? OSD_ATTR_INVERT : OSD_ATTR_TEXT;
 }
 
-uint32_t *osd_elements() {
+static uint32_t *osd_elements() {
   if (osd_system == OSD_SYS_HD) {
     return profile.osd.elements_hd;
   }
   return profile.osd.elements;
 }
 
-void osd_display_reset() {
+static void osd_display_reset() {
   osd_state.element = OSD_CALLSIGN;
 
   osd_state.screen = OSD_SCREEN_REGULAR;
@@ -135,6 +135,11 @@ static void osd_update_screen(osd_screens_t screen) {
 }
 
 osd_screens_t osd_push_screen(osd_screens_t screen) {
+  osd_state.selection = 0;
+
+  osd_state.cursor_history[osd_state.cursor_history_size] = osd_state.cursor;
+  osd_state.cursor_history_size++;
+
   osd_state.screen_history[osd_state.screen_history_size] = osd_state.screen;
   osd_update_screen(screen);
   osd_state.screen_history_size++;
@@ -145,6 +150,11 @@ osd_screens_t osd_push_screen(osd_screens_t screen) {
 }
 
 osd_screens_t osd_pop_screen() {
+  if (osd_state.cursor_history_size) {
+    osd_state.cursor = osd_state.cursor_history[osd_state.cursor_history_size - 1];
+    osd_state.cursor_history_size--;
+  }
+
   if (osd_state.screen_history_size <= 1) {
     // first history entry is always the REGULAR display
     // clear everything off the screen and reset
@@ -192,7 +202,6 @@ void osd_handle_input(osd_input_t input) {
       osd_state.selection--;
       osd_state.screen_phase = 1;
     } else {
-      osd_pop_cursor();
       osd_pop_screen();
     }
     break;
@@ -204,48 +213,41 @@ void osd_handle_input(osd_input_t input) {
   }
 }
 
-static bool osd_is_selected(const osd_label_t *labels, const uint8_t size) {
-  if (osd_state.screen_phase > 1 && osd_state.screen_phase <= osd_state.cursor_min) {
-    return false;
+void osd_save_exit() {
+  osd_state.selection = 0;
+  osd_state.cursor = 1;
+  osd_state.cursor_history_size = 0;
+  osd_state.screen = OSD_SCREEN_CLEAR;
+
+  // check if vtx settings need to be updated
+  if (vtx_buffer_populated) {
+    vtx_set(&vtx_settings_copy);
   }
 
-  if (osd_state.cursor == (osd_state.screen_phase - osd_state.cursor_min) && osd_state.selection == 0) {
-    return true;
-  }
+  // check for fc reboot request
+  extern int pid_gestures_used;
+  extern int ledcommand;
 
-  return false;
+  pid_gestures_used = 0;
+  ledcommand = 1;
+
+  flash_save();
+  flash_load();
+
+  // reset flash numbers for pids
+  extern int number_of_increments[3][3];
+  for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+      number_of_increments[i][j] = 0;
+
+  // reset loop time - maybe not necessary cause it gets reset in the next screen clear
+  reset_looptime();
+
+  if (osd_state.reboot_fc_requested)
+    NVIC_SystemReset();
 }
 
-void osd_update_cursor(const osd_label_t *labels, const uint8_t size) {
-  osd_state.cursor_min = size;
-  osd_state.cursor_max = 0;
-
-  for (uint32_t i = 0; i < size; i++) {
-    if (labels[i].type != OSD_LABEL_ACTIVE) {
-      continue;
-    }
-    if (i < osd_state.cursor_min) {
-      osd_state.cursor_min = i;
-    }
-    if (i > osd_state.cursor_max) {
-      osd_state.cursor_max = i;
-    }
-  }
-}
-
-uint8_t grid_selection(uint8_t element, uint8_t row) {
-  if (osd_state.selection == element && osd_state.cursor == row) {
-    return OSD_ATTR_INVERT;
-  } else {
-    return OSD_ATTR_TEXT;
-  }
-}
-
-//************************************************************************************************************************************************************************************
-//																					PRINT FUNCTIONS
-//************************************************************************************************************************************************************************************
-
-void print_osd_flightmode(osd_element_t *el) {
+static void print_osd_flightmode(osd_element_t *el) {
   const uint8_t flightmode_labels[5][21] = {
       {"   ACRO   "},
       {"  LEVEL   "},
@@ -274,7 +276,7 @@ void print_osd_flightmode(osd_element_t *el) {
   osd_txn_submit(txn);
 }
 
-void print_osd_rssi(osd_element_t *el) {
+static void print_osd_rssi(osd_element_t *el) {
   static float rx_rssi_filt;
   if (flags.failsafe)
     state.rx_rssi = 0.0f;
@@ -288,7 +290,7 @@ void print_osd_rssi(osd_element_t *el) {
   osd_txn_submit(txn);
 }
 
-void print_osd_armtime(osd_element_t *el) {
+static void print_osd_armtime(osd_element_t *el) {
   uint32_t time_s = state.armtime;
 
   // Will only display up to 59:59 as realistically no quad will fly that long (currently).
@@ -314,51 +316,49 @@ void print_osd_armtime(osd_element_t *el) {
 }
 
 // print the current vtx settings as Band:Channel:Power
-void print_osd_vtx(osd_element_t *el) {
-  uint8_t str[5];
+static void print_osd_vtx(osd_element_t *el) {
+  osd_transaction_t *txn = osd_txn_init();
+  osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
 
   switch (vtx_settings.band) {
   case VTX_BAND_A:
-    str[0] = 'A';
+    osd_txn_write_char('A');
     break;
   case VTX_BAND_B:
-    str[0] = 'B';
+    osd_txn_write_char('B');
     break;
   case VTX_BAND_E:
-    str[0] = 'E';
+    osd_txn_write_char('E');
     break;
   case VTX_BAND_F:
-    str[0] = 'F';
+    osd_txn_write_char('F');
     break;
   case VTX_BAND_R:
-    str[0] = 'R';
+    osd_txn_write_char('R');
     break;
   default:
-    str[0] = 'M';
+    osd_txn_write_char('M');
     break;
   }
 
-  str[1] = ':';
-  str[2] = vtx_settings.channel + 49;
-  str[3] = ':';
+  osd_txn_write_char(':');
+  osd_txn_write_char(vtx_settings.channel + 49);
+  osd_txn_write_char(':');
 
   if (vtx_settings.pit_mode == 1) {
-    str[4] = 21; // "pit", probably from Pitch, but we will use it here
+    osd_txn_write_char(21); // "pit", probably from Pitch, but we will use it here
   } else {
     if (vtx_settings.power_level == 4)
-      str[4] = 36; // "max"
+      osd_txn_write_char(36); // "max"
     else
-      str[4] = vtx_settings.power_level + 49;
+      osd_txn_write_char(vtx_settings.power_level + 49);
   }
 
-  osd_transaction_t *txn = osd_txn_init();
-  osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
-  osd_txn_write_data(str, 5);
   osd_txn_submit(txn);
 }
 
 // 3 stage return - 0 = stick and hold, 1 = move on but come back to clear, 2 = status print done
-uint8_t print_status(osd_element_t *el, uint8_t persistence, uint8_t label) {
+static uint8_t print_status(osd_element_t *el, uint8_t persistence, uint8_t label) {
   const uint8_t system_status_labels[12][21] = {
       {"               "},
       {" **DISARMED**  "},
@@ -415,7 +415,7 @@ uint8_t print_status(osd_element_t *el, uint8_t persistence, uint8_t label) {
   return 1;
 }
 
-uint8_t print_osd_system_status(osd_element_t *el) {
+static uint8_t print_osd_system_status(osd_element_t *el) {
   static uint8_t ready = 0;
   uint8_t print_stage = 2; // 0 makes the main osd function stick and non zero lets it pass on
 
@@ -538,111 +538,8 @@ uint8_t print_osd_system_status(osd_element_t *el) {
   return ready;
 }
 
-void print_osd_menu_strings(const osd_label_t *labels, const uint8_t size) {
-  if (osd_state.screen_phase > size) {
-    return;
-  }
-  if (osd_state.screen_phase == 0) {
-    if (osd_clear_async()) {
-      osd_update_cursor(labels, size);
-      osd_state.screen_phase++;
-    }
-    return;
-  }
-
-  const osd_label_t *label = &labels[osd_state.screen_phase - 1];
-
-  osd_transaction_t *txn = osd_txn_init();
-
-  switch (label->type) {
-  case OSD_LABEL_HEADER:
-    osd_txn_start(OSD_ATTR_INVERT, label->pos[0], label->pos[1]);
-    break;
-
-  case OSD_LABEL_INACTIVE:
-    osd_txn_start(OSD_ATTR_TEXT, label->pos[0], label->pos[1]);
-    break;
-
-  case OSD_LABEL_ACTIVE: {
-    const bool is_selected = osd_is_selected(labels, size);
-    if (osd_system == OSD_SYS_HD) {
-      if (is_selected) {
-        osd_txn_start(OSD_ATTR_INVERT, label->pos[0] - 1, label->pos[1]);
-        osd_txn_write_char('>');
-      } else {
-        osd_txn_start(OSD_ATTR_TEXT, label->pos[0] - 1, label->pos[1]);
-        osd_txn_write_char(' ');
-      }
-    } else {
-      if (is_selected) {
-        osd_txn_start(OSD_ATTR_INVERT, label->pos[0], label->pos[1]);
-      } else {
-        osd_txn_start(OSD_ATTR_TEXT, label->pos[0], label->pos[1]);
-      }
-    }
-
-    break;
-  }
-  }
-
-  osd_txn_write_str(label->text);
-  osd_txn_submit(txn);
-
-  osd_state.screen_phase++;
-}
-
-void print_osd_adjustable_enums(uint8_t string_element_qty, uint8_t data_element_qty, const char data_to_print[21], const uint8_t grid[data_element_qty][2], const uint8_t print_position[data_element_qty][2]) {
-  if (osd_state.screen_phase <= string_element_qty)
-    return;
-  if (osd_state.screen_phase > string_element_qty + data_element_qty)
-    return;
-  static uint8_t skip_loop = 0;
-  if (osd_state.screen_phase == string_element_qty + 1 && skip_loop == 0) { // skip a loop to prevent dma collision with previous print function
-    skip_loop++;
-    return;
-  }
-  skip_loop = 0;
-  uint8_t index = osd_state.screen_phase - string_element_qty - 1;
-
-  osd_transaction_t *txn = osd_txn_init();
-  osd_txn_start(grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
-  osd_txn_write_str(data_to_print);
-  osd_txn_submit(txn);
-
-  osd_state.screen_phase++;
-}
-
-void print_osd_adjustable_float(uint8_t string_element_qty, uint8_t data_element_qty, float *pointer[], const uint8_t grid[data_element_qty][2], const uint8_t print_position[data_element_qty][2], uint8_t precision) {
-  if (osd_state.screen_phase <= string_element_qty)
-    return;
-  if (osd_state.screen_phase > string_element_qty + data_element_qty)
-    return;
-  static uint8_t skip_loop = 0;
-  if (osd_state.screen_phase == string_element_qty + 1 && skip_loop == 0) { // skip a loop to prevent dma collision with previous print function
-    skip_loop++;
-    return;
-  }
-  skip_loop = 0;
-
-  uint8_t index = osd_state.screen_phase - string_element_qty - 1;
-
-  osd_transaction_t *txn = osd_txn_init();
-  osd_txn_start(grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
-  osd_txn_write_float(*pointer[index] + FLT_EPSILON, 4, precision);
-  osd_txn_submit(txn);
-
-  osd_state.screen_phase++;
-}
-
-//************************************************************************************************************************************************************************************
-//************************************************************************************************************************************************************************************
-//																				MAIN OSD DISPLAY FUNCTION
-//************************************************************************************************************************************************************************************
-//************************************************************************************************************************************************************************************
 void osd_init() {
   osd_device_init();
-
-  // print the splash screen
   osd_intro();
 }
 
@@ -883,10 +780,6 @@ void osd_display() {
     osd_display_regular();
     break;
 
-    //**********************************************************************************************************************************************************************************************
-    //																				OSD MENUS BELOW THIS POINT
-    //**********************************************************************************************************************************************************************************************
-
   case OSD_SCREEN_MAIN_MENU: {
     osd_menu_start();
     osd_menu_header("MENU");
@@ -911,13 +804,11 @@ void osd_display() {
 
     if (osd_menu_button(7, 4, "PID PROFILE 1")) {
       profile.pid.pid_profile = PID_PROFILE_1;
-      osd_push_cursor();
       osd_push_screen(OSD_SCREEN_PID);
     }
 
     if (osd_menu_button(7, 5, "PID PROFILE 2")) {
       profile.pid.pid_profile = PID_PROFILE_2;
-      osd_push_cursor();
       osd_push_screen(OSD_SCREEN_PID);
     }
 
@@ -963,13 +854,11 @@ void osd_display() {
 
     if (osd_menu_button(7, 4, "PROFILE 1")) {
       profile.rate.profile = STICK_RATE_PROFILE_1;
-      osd_push_cursor();
       osd_push_screen(OSD_SCREEN_RATES);
     }
 
     if (osd_menu_button(7, 5, "PROFILE 2")) {
       profile.rate.profile = STICK_RATE_PROFILE_2;
-      osd_push_cursor();
       osd_push_screen(OSD_SCREEN_RATES);
     }
 
@@ -1140,7 +1029,10 @@ void osd_display() {
 
   case OSD_SCREEN_VTX:
     if (vtx_settings.detected) {
-      populate_vtx_buffer_once();
+      if (!vtx_buffer_populated) {
+        vtx_settings_copy = vtx_settings;
+        vtx_buffer_populated = 1;
+      }
 
       osd_menu_start();
       osd_menu_header("VTX CONTROLS");
@@ -1207,13 +1099,11 @@ void osd_display() {
 
     if (osd_menu_button(7, 4, "AUX OFF PROFILE 1")) {
       profile.pid.stick_profile = STICK_PROFILE_OFF;
-      osd_push_cursor();
       osd_push_screen(OSD_SCREEN_STICK_BOOST_ADJUST);
     }
 
     if (osd_menu_button(7, 5, "AUX ON  PROFILE 2")) {
       profile.pid.stick_profile = STICK_PROFILE_ON;
-      osd_push_cursor();
       osd_push_screen(OSD_SCREEN_STICK_BOOST_ADJUST);
     }
 
