@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "osd_menu_maps.h"
 #include "util/vector.h"
 
 // immediate mode ui for qs
@@ -19,6 +20,7 @@ vec3_t osd_menu_adjust_vec3(vec3_t val, const float delta, const float min, cons
 
 void osd_menu_select(uint8_t x, uint8_t y, const char *text);
 void osd_menu_select_save_and_exit(uint8_t x, uint8_t y);
+void osd_menu_select_screen(uint8_t x, uint8_t y, const char *text, osd_screens_t screen);
 bool osd_menu_select_enum(uint8_t x, uint8_t y, const uint8_t val, const char **labels);
 bool osd_menu_select_float(uint8_t x, uint8_t y, const float val, uint8_t width, uint8_t precision);
 bool osd_menu_select_vec3(uint8_t x, uint8_t y, const vec3_t val, uint8_t width, uint8_t precision);
