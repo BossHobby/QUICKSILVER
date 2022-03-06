@@ -1228,17 +1228,48 @@ void osd_display() {
   case OSD_SCREEN_VTX:
     if (vtx_settings.detected) {
       populate_vtx_buffer_once();
-      print_osd_menu_strings(vtx_labels, vtx_labels_size);
-      // print the buffer and not the actual status
-      print_osd_adjustable_enums(6, 4, get_vtx_status(osd_state.screen_phase - 7), vtx_grid, vtx_data_positions);
-      if (osd_state.screen_phase == 11)
-        // adjust the buffer and not the actual settings
-        osd_enum_adjust(vtx_ptr, 4, vtx_limits);
-      // save & exit needs a function to write the buffer to the actual settings
+
+      osd_menu_start();
+      osd_menu_header("VTX CONTROLS");
+
+      const char *band_labels[] = {"A", "B", "E", "F", "R"};
+      osd_menu_select(4, 4, "BAND");
+      if (osd_menu_select_enum(20, 4, vtx_settings_copy.band, band_labels)) {
+        vtx_settings_copy.band = osd_menu_adjust_int(vtx_settings_copy.band, 1, VTX_BAND_A, VTX_BAND_R);
+      }
+
+      const char *channel_labels[] = {"1", "2", "3", "4", "5", "6", "7", "8"};
+      osd_menu_select(4, 5, "CHANNEL");
+      if (osd_menu_select_enum(20, 5, vtx_settings_copy.channel, channel_labels)) {
+        vtx_settings_copy.channel = osd_menu_adjust_int(vtx_settings_copy.channel, 1, VTX_CHANNEL_1, VTX_CHANNEL_8);
+      }
+
+      const char *power_level_labels[] = {"1", "2", "3", "4"};
+      osd_menu_select(4, 6, "POWER LEVEL");
+      if (osd_menu_select_enum(20, 6, vtx_settings_copy.power_level, power_level_labels)) {
+        vtx_settings_copy.power_level = osd_menu_adjust_int(vtx_settings_copy.power_level, 1, VTX_POWER_LEVEL_1, VTX_POWER_LEVEL_4);
+      }
+
+      const char *pit_mode_labels[] = {"OFF", "ON ", "N/A"};
+      osd_menu_select(4, 7, "PITMODE");
+      if (osd_menu_select_enum(20, 7, vtx_settings_copy.pit_mode, pit_mode_labels) && vtx_settings_copy.pit_mode != VTX_PIT_MODE_NO_SUPPORT) {
+        vtx_settings_copy.pit_mode = osd_menu_adjust_int(vtx_settings_copy.pit_mode, 1, VTX_PIT_MODE_OFF, VTX_PIT_MODE_ON);
+      }
+
+      osd_menu_select_save_and_exit(4, 14);
+      osd_menu_finish();
     } else {
-      print_osd_menu_strings(vtx_na_labels, vtx_na_labels_size);
-      if (osd_state.selection)
+      osd_menu_start();
+      osd_menu_header("VTX CONTROLS");
+
+      osd_menu_label(7, 4, "SMART AUDIO");
+      osd_menu_label(7, 5, "NOT CONFIGURED");
+
+      osd_menu_finish();
+
+      if (osd_state.selection) {
         osd_state.selection = 0;
+      }
     }
     break;
 
