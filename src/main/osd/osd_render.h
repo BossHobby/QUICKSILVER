@@ -125,3 +125,5 @@ osd_screens_t osd_push_screen(osd_screens_t screen);
 osd_screens_t osd_pop_screen();
 
 void osd_handle_input(osd_input_t input);
+
+void osd_save_exit();

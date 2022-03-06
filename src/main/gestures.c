@@ -2,7 +2,6 @@
 
 #include "control.h"
 #include "flash.h"
-#include "osd_adjust.h"
 #include "osd_render.h"
 #include "pid.h"
 #include "profile.h"
