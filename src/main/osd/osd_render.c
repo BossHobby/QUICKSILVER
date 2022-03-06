@@ -1148,18 +1148,82 @@ void osd_display() {
     osd_menu_finish();
     break;
 
-  case OSD_SCREEN_FLIGHT_MODES:
-    print_osd_menu_strings(flight_modes_labels, flight_modes_labels_size);
-    print_osd_adjustable_enums(12, 10, get_aux_status(profile.receiver.aux[flight_modes_aux_items[osd_state.screen_phase - 13]]), flight_modes_grid, flight_modes_data_positions);
-    if (osd_state.screen_phase == 23)
-      osd_enum_adjust(flight_modes_ptr, 10, flight_modes_aux_limits);
-    break;
+  case OSD_SCREEN_FLIGHT_MODES: {
+    osd_menu_start();
+    osd_menu_header("FLIGHT MODES");
 
-  case OSD_SCREEN_ELEMENTS:
-    print_osd_menu_strings(osd_elements_menu_labels, osd_elements_menu_labels_size);
-    if (osd_state.screen_phase == 6)
-      osd_select_menu_item(4, osd_elements_map, SUB_MENU);
+    const char *channel_labels[] = {
+        "CHANNEL 5  ",
+        "CHANNEL 6  ",
+        "CHANNEL 7  ",
+        "CHANNEL 8  ",
+        "CHANNEL 9  ",
+        "CHANNEL 10 ",
+        "CHANNEL 11 ",
+        "CHANNEL 12 ",
+        "CHANNEL 13 ",
+        "CHANNEL 14 ",
+        "CHANNEL 15 ",
+        "CHANNEL 16 ",
+        "ALWAYS OFF ",
+        "ALWAYS ON  ",
+        "GESTURE AUX",
+    };
+
+    osd_menu_select(4, 2, "ARMING");
+    if (osd_menu_select_enum(17, 2, profile.receiver.aux[AUX_ARMING], channel_labels)) {
+      profile.receiver.aux[AUX_ARMING] = osd_menu_adjust_int(profile.receiver.aux[AUX_ARMING], 1, AUX_CHANNEL_0, AUX_CHANNEL_11);
+    }
+
+    osd_menu_select(4, 3, "IDLE UP");
+    if (osd_menu_select_enum(17, 3, profile.receiver.aux[AUX_IDLE_UP], channel_labels)) {
+      profile.receiver.aux[AUX_IDLE_UP] = osd_menu_adjust_int(profile.receiver.aux[AUX_IDLE_UP], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    }
+
+    osd_menu_select(4, 4, "LEVELMODE");
+    if (osd_menu_select_enum(17, 4, profile.receiver.aux[AUX_LEVELMODE], channel_labels)) {
+      profile.receiver.aux[AUX_LEVELMODE] = osd_menu_adjust_int(profile.receiver.aux[AUX_LEVELMODE], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    }
+
+    osd_menu_select(4, 5, "RACEMODE");
+    if (osd_menu_select_enum(17, 5, profile.receiver.aux[AUX_RACEMODE], channel_labels)) {
+      profile.receiver.aux[AUX_RACEMODE] = osd_menu_adjust_int(profile.receiver.aux[AUX_RACEMODE], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    }
+
+    osd_menu_select(4, 6, "HORIZON");
+    if (osd_menu_select_enum(17, 6, profile.receiver.aux[AUX_HORIZON], channel_labels)) {
+      profile.receiver.aux[AUX_HORIZON] = osd_menu_adjust_int(profile.receiver.aux[AUX_HORIZON], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    }
+
+    osd_menu_select(4, 7, "STICK BOOST");
+    if (osd_menu_select_enum(17, 7, profile.receiver.aux[AUX_STICK_BOOST_PROFILE], channel_labels)) {
+      profile.receiver.aux[AUX_STICK_BOOST_PROFILE] = osd_menu_adjust_int(profile.receiver.aux[AUX_STICK_BOOST_PROFILE], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    }
+
+    osd_menu_select(4, 8, "BUZZER");
+    if (osd_menu_select_enum(17, 8, profile.receiver.aux[AUX_BUZZER_ENABLE], channel_labels)) {
+      profile.receiver.aux[AUX_BUZZER_ENABLE] = osd_menu_adjust_int(profile.receiver.aux[AUX_BUZZER_ENABLE], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    }
+
+    osd_menu_select(4, 9, "TURTLE");
+    if (osd_menu_select_enum(17, 9, profile.receiver.aux[AUX_TURTLE], channel_labels)) {
+      profile.receiver.aux[AUX_TURTLE] = osd_menu_adjust_int(profile.receiver.aux[AUX_TURTLE], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    }
+
+    osd_menu_select(4, 10, "MOTOR TEST");
+    if (osd_menu_select_enum(17, 10, profile.receiver.aux[AUX_MOTOR_TEST], channel_labels)) {
+      profile.receiver.aux[AUX_MOTOR_TEST] = osd_menu_adjust_int(profile.receiver.aux[AUX_MOTOR_TEST], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    }
+
+    osd_menu_select(4, 11, "FPV SWITCH");
+    if (osd_menu_select_enum(17, 11, profile.receiver.aux[AUX_FPV_SWITCH], channel_labels)) {
+      profile.receiver.aux[AUX_FPV_SWITCH] = osd_menu_adjust_int(profile.receiver.aux[AUX_FPV_SWITCH], 1, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    }
+
+    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_finish();
     break;
+  }
 
   case OSD_SCREEN_VTX:
     if (vtx_settings.detected) {
@@ -1231,6 +1295,12 @@ void osd_display() {
     osd_menu_finish();
     break;
   }
+
+  case OSD_SCREEN_ELEMENTS:
+    print_osd_menu_strings(osd_elements_menu_labels, osd_elements_menu_labels_size);
+    if (osd_state.screen_phase == 6)
+      osd_select_menu_item(4, osd_elements_map, SUB_MENU);
+    break;
 
   case OSD_SCREEN_ELEMENTS_ADD_REMOVE:
     print_osd_menu_strings(osd_display_labels, osd_display_labels_size);
