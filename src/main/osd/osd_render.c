@@ -76,50 +76,21 @@ osd_state_t osd_state = {
     .reboot_fc_requested = 0,
 };
 
+static const char *osd_element_labels[] = {
+    "CALLSIGN",
+    "FUELGAUGE VOLTS",
+    "FILTERED VOLTS",
+    "GYRO TEMP",
+    "FLIGHT MODE",
+    "RSSI",
+    "STOPWATCH",
+    "SYSTEM STATUS",
+    "THROTTLE",
+    "VTX",
+};
+
 static uint8_t osd_attr(osd_element_t *el) {
   return el->attribute ? OSD_ATTR_INVERT : OSD_ATTR_TEXT;
-}
-
-uint8_t osd_decode(uint32_t element, uint8_t status) {
-  switch (status) {
-  case ACTIVE:
-    return (element & 0x01);
-  case ATTRIBUTE:
-    if (((element >> 1) & 0x01) == 0x01)
-      return OSD_ATTR_TEXT;
-    else
-      return OSD_ATTR_INVERT;
-  case POSITIONX:
-    return ((element >> 2) & 0xFF);
-  case POSITIONY:
-    return ((element >> 10) & 0x0F);
-  }
-  return 0;
-}
-
-const char *get_position_string(int input) {
-  static char *respond[] = {" 0", " 1", " 2", " 3", " 4", " 5", " 6", " 7", " 8", " 9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "ERROR"};
-  return respond[input];
-}
-
-const char *get_decode_element_string(osd_element_t *input, osd_element_attrs_t status) {
-  switch (status) {
-  case ACTIVE:
-    if (input->active)
-      return "ACTIVE  ";
-    else
-      return "INACTIVE";
-  case ATTRIBUTE:
-    if (osd_attr(input))
-      return "NORMAL";
-    else
-      return "INVERT";
-  case POSITIONX:
-    return get_position_string(input->pos_x);
-  case POSITIONY:
-    return get_position_string(input->pos_y);
-  }
-  return 0;
 }
 
 uint32_t *osd_elements() {
@@ -549,27 +520,6 @@ uint8_t print_osd_system_status(osd_element_t *el) {
   return ready;
 }
 
-void print_osd_callsign_adjustable(uint8_t string_element_qty, uint8_t data_element_qty, const uint8_t grid[data_element_qty][2], const uint8_t print_position[data_element_qty][2]) {
-  if (osd_state.screen_phase <= string_element_qty)
-    return;
-  if (osd_state.screen_phase > string_element_qty + data_element_qty)
-    return;
-  static uint8_t skip_loop = 0;
-  if (osd_state.screen_phase == string_element_qty + 1 && skip_loop == 0) { // skip a loop to prevent dma collision with previous print function
-    skip_loop++;
-    return;
-  }
-  skip_loop = 0;
-  uint8_t index = osd_state.screen_phase - string_element_qty - 1;
-
-  osd_transaction_t *txn = osd_txn_init();
-  osd_txn_start(grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
-  osd_txn_write_char(profile.osd.callsign[index]);
-  osd_txn_submit(txn);
-
-  osd_state.screen_phase++;
-}
-
 void print_osd_menu_strings(const osd_label_t *labels, const uint8_t size) {
   if (osd_state.screen_phase > size) {
     return;
@@ -639,42 +589,6 @@ void print_osd_adjustable_enums(uint8_t string_element_qty, uint8_t data_element
   osd_transaction_t *txn = osd_txn_init();
   osd_txn_start(grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
   osd_txn_write_str(data_to_print);
-  osd_txn_submit(txn);
-
-  osd_state.screen_phase++;
-}
-
-void print_osd_adjustable_vectors(uint8_t menu_type, uint8_t string_element_qty, uint8_t data_element_qty, vec3_t *pointer, const uint8_t data_index[data_element_qty][2], const uint8_t grid[data_element_qty][2], const uint8_t print_position[data_element_qty][2]) {
-  if (osd_state.screen_phase <= string_element_qty)
-    return;
-  if (osd_state.screen_phase > string_element_qty + data_element_qty)
-    return;
-  static uint8_t skip_loop = 0;
-  if (osd_state.screen_phase == string_element_qty + 1 && skip_loop == 0) { // skip a loop to prevent dma collision with previous print function
-    skip_loop++;
-    return;
-  }
-  skip_loop = 0;
-
-  uint8_t index = osd_state.screen_phase - string_element_qty - 1;
-
-  osd_transaction_t *txn = osd_txn_init();
-  osd_txn_start(grid_selection(grid[index][0], grid[index][1]), print_position[index][0], print_position[index][1]);
-
-  switch (menu_type) {
-  case BF_PIDS:
-    osd_txn_write_uint(pointer->axis[data_index[index][1]], 4);
-    break;
-  case SW_RATES:
-    if (index < 3)
-      osd_txn_write_uint(pointer->axis[data_index[index][1]], 4);
-    else
-      osd_txn_write_float(pointer->axis[data_index[index][1]] + FLT_EPSILON, 5, 2);
-    break;
-  case ROUNDED:
-    osd_txn_write_float(pointer->axis[data_index[index][1]] + FLT_EPSILON, 5, 2);
-    break;
-  }
   osd_txn_submit(txn);
 
   osd_state.screen_phase++;
@@ -925,7 +839,6 @@ void osd_display_rate_menu() {
   }
 
   osd_menu_select_save_and_exit(2, 14);
-
   osd_menu_finish();
 }
 
@@ -1348,32 +1261,86 @@ void osd_display() {
     osd_menu_finish();
     break;
 
-  case OSD_SCREEN_ELEMENTS_ADD_REMOVE:
-    print_osd_menu_strings(osd_display_labels, osd_display_labels_size);
-    print_osd_adjustable_enums(12, 10, get_decode_element_string((osd_element_t *)(osd_elements() + osd_elements_active_items[osd_state.screen_phase - 13]), ACTIVE), osd_display_grid, osd_display_data_positions);
-    if (osd_state.screen_phase == 23)
-      osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_state.cursor - 1], 10, 1, ACTIVE);
+  case OSD_SCREEN_ELEMENTS_ADD_REMOVE: {
+    osd_menu_start();
+    osd_menu_header("OSD DISPLAY ITEMS");
+
+    const char *active_labels[] = {
+        "INACTIVE",
+        "ACTIVE  ",
+    };
+
+    for (uint8_t i = 0; i < OSD_VTX_CHANNEL; i++) {
+      osd_element_t *el = (osd_element_t *)(osd_elements() + i);
+
+      osd_menu_select(4, 2 + i, osd_element_labels[i]);
+      if (osd_menu_select_enum(20, 2 + i, el->active, active_labels)) {
+        el->active = osd_menu_adjust_int(el->active, 1, 0, 1);
+      }
+    }
+
+    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_finish();
     break;
+  }
 
   case OSD_SCREEN_ELEMENTS_POSITION:
-    print_osd_menu_strings(osd_position_labels, osd_position_labels_size);
-    print_osd_adjustable_enums(14, 20, get_decode_element_string((osd_element_t *)(osd_elements() + osd_position_active_items[osd_state.screen_phase - 15]), osd_position_index[osd_state.screen_phase - 15]), osd_position_grid, osd_position_data_positions);
-    if (osd_state.screen_phase == 35 && osd_state.selection > 0)
-      osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_state.cursor - 1], 10, 2, osd_state.selection + 1);
+    osd_menu_start();
+
+    osd_menu_highlight(1, 1, "OSD POSITIONS");
+    osd_menu_label(18, 1, "ADJ X");
+    osd_menu_label(24, 1, "ADJ Y");
+
+    for (uint8_t i = 0; i < OSD_VTX_CHANNEL; i++) {
+      osd_element_t *el = (osd_element_t *)(osd_elements() + i);
+
+      osd_menu_select(3, 2 + i, osd_element_labels[i]);
+      if (osd_menu_select_int(20, 2 + i, el->pos_x, 2)) {
+        el->pos_x = osd_menu_adjust_int(el->pos_x, 1, 0, 30);
+      }
+      if (osd_menu_select_int(26, 2 + i, el->pos_y, 2)) {
+        el->pos_y = osd_menu_adjust_int(el->pos_y, 1, 0, 15);
+      }
+    }
+
+    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_ELEMENTS_STYLE:
-    print_osd_menu_strings(osd_text_style, osd_text_style_size);
-    print_osd_adjustable_enums(12, 10, get_decode_element_string((osd_element_t *)(osd_elements() + osd_elements_active_items[osd_state.screen_phase - 13]), ATTRIBUTE), osd_display_grid, osd_display_data_positions);
-    if (osd_state.screen_phase == 23)
-      osd_encoded_adjust(osd_elements() + osd_elements_active_items[osd_state.cursor - 1], 10, 1, ATTRIBUTE);
+    osd_menu_start();
+    osd_menu_header("OSD TEXT STYLE");
+
+    const char *attr_labels[] = {
+        "NORMAL",
+        "INVERT",
+    };
+
+    for (uint8_t i = 0; i < OSD_VTX_CHANNEL; i++) {
+      osd_element_t *el = (osd_element_t *)(osd_elements() + i);
+
+      osd_menu_select(4, 2 + i, osd_element_labels[i]);
+      if (osd_menu_select_enum(20, 2 + i, el->attribute, attr_labels)) {
+        el->attribute = osd_menu_adjust_int(el->attribute, 1, 0, 1);
+      }
+    }
+
+    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_CALLSIGN:
-    print_osd_menu_strings(osd_callsign_edit_labels, osd_callsign_edit_labels_size);
-    print_osd_callsign_adjustable(23, 20, osd_callsign_grid, osd_callsign_edit_data_positions);
-    if (osd_state.screen_phase == 44)
-      osd_encoded_adjust_callsign();
+    osd_menu_start();
+    osd_menu_header("CALLSIGN");
+
+    osd_menu_select(1, 5, "EDIT:");
+    if (osd_menu_select_str(8, 5, (char *)profile.osd.callsign)) {
+      osd_menu_adjust_str((char *)profile.osd.callsign);
+    }
+    osd_menu_label(8, 6, "-------------------");
+
+    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_finish();
     break;
 
   case OSD_SCREEN_LOWBAT:
