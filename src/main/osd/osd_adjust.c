@@ -210,11 +210,6 @@ const char *get_rssi_source_status(uint8_t data_to_print) {
   }
 }
 
-const char *get_aux_status(int input) {
-  static char *respond[] = {"CHANNEL 5  ", "CHANNEL 6  ", "CHANNEL 7  ", "CHANNEL 8  ", "CHANNEL 9  ", "CHANNEL 10 ", "CHANNEL 11 ", "CHANNEL 12 ", "CHANNEL 13 ", "CHANNEL 14 ", "CHANNEL 15 ", "CHANNEL 16 ", "ALWAYS OFF ", "ALWAYS ON  ", "GESTURE AUX", "ERROR      "};
-  return respond[input];
-}
-
 const char *get_vtx_status(int input) {
   if (input < 0)
     return 0;
