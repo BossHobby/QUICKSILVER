@@ -1236,7 +1236,7 @@ void osd_display() {
     osd_menu_header("LOW BATTERY");
 
     osd_menu_select(4, 5, "VOLTS/CELL ALERT");
-    if (osd_menu_select_float(21, 5, profile.voltage.vbattlow, 3, 1)) {
+    if (osd_menu_select_float(21, 5, profile.voltage.vbattlow, 4, 1)) {
       profile.voltage.vbattlow = osd_menu_adjust_float(profile.voltage.vbattlow, 0.1, 0, 4.2);
     }
 
@@ -1282,7 +1282,7 @@ void osd_display() {
     osd_menu_header("LEVEL MODE");
 
     osd_menu_select(1, 5, "MAX ANGLE DEGREES");
-    if (osd_menu_select_float(19, 5, profile.rate.level_max_angle, 4, 1)) {
+    if (osd_menu_select_float(19, 5, profile.rate.level_max_angle, 5, 1)) {
       profile.rate.level_max_angle = osd_menu_adjust_float(profile.rate.level_max_angle, 1, 0, 85.0);
     }
 
@@ -1294,19 +1294,19 @@ void osd_display() {
     osd_menu_start();
     osd_menu_header("LEVEL MODE");
 
-    osd_menu_label(21, 5, "KP");
+    osd_menu_label(20, 5, "KP");
     osd_menu_label(26, 5, "KD");
 
-    osd_menu_select(1, 6, "SM ANGLE STRENGTH");
-    if (osd_menu_select_float(19, 6, profile.pid.small_angle.kp, 6, 2)) {
+    osd_menu_select(1, 6, "SM ANGLE STREN");
+    if (osd_menu_select_float(18, 6, profile.pid.small_angle.kp, 6, 2)) {
       profile.pid.small_angle.kp = osd_menu_adjust_float(profile.pid.small_angle.kp, 0.5, 0, 20.0);
     }
     if (osd_menu_select_float(24, 6, profile.pid.small_angle.kd, 6, 2)) {
       profile.pid.small_angle.kd = osd_menu_adjust_float(profile.pid.small_angle.kd, 0.5, 0, 10.0);
     }
 
-    osd_menu_select(1, 7, "LRG ANGLE STRENGTH");
-    if (osd_menu_select_float(19, 7, profile.pid.big_angle.kp, 6, 2)) {
+    osd_menu_select(1, 7, "LRG ANGLE STREN");
+    if (osd_menu_select_float(18, 7, profile.pid.big_angle.kp, 6, 2)) {
       profile.pid.big_angle.kp = osd_menu_adjust_float(profile.pid.big_angle.kp, 0.5, 0, 20.0);
     }
     if (osd_menu_select_float(24, 7, profile.pid.big_angle.kd, 6, 2)) {
