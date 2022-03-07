@@ -120,6 +120,7 @@ extern osd_state_t osd_state;
 
 void osd_init();
 void osd_display();
+void osd_display_reset();
 void osd_clear();
 
 osd_screens_t osd_push_screen(osd_screens_t screen);

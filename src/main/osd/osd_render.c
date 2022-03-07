@@ -141,7 +141,7 @@ static uint32_t *osd_elements() {
   return profile.osd.elements;
 }
 
-static void osd_display_reset() {
+void osd_display_reset() {
   osd_state.element = OSD_CALLSIGN;
 
   osd_state.screen = OSD_SCREEN_REGULAR;
