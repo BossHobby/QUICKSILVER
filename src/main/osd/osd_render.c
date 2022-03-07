@@ -697,7 +697,11 @@ void osd_display_rate_menu() {
       "BETAFLIGHT",
       "ACTUAL",
   };
-  osd_menu_select_enum_adjust(2, 3, "MODE", 14, &profile_current_rates()->mode, mode_labels, 0, RATE_MODE_ACTUAL);
+  osd_menu_select(2, 3, "MODE");
+  if (osd_menu_select_enum(14, 3, profile_current_rates()->mode, mode_labels)) {
+    profile_current_rates()->mode = osd_menu_adjust_int(profile_current_rates()->mode, 1, 0, RATE_MODE_ACTUAL);
+    osd_state.screen_phase = 0;
+  }
 
   osd_menu_label(14, 5, "ROLL");
   osd_menu_label(19, 5, "PITCH");
