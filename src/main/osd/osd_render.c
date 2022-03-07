@@ -108,6 +108,28 @@ static const char *aux_channel_labels[] = {
     "GESTURE AUX",
 };
 
+#pragma GCC diagnostic ignored "-Wmissing-braces"
+
+static const vec3_t rate_defaults[RATE_MODE_ACTUAL + 1][3] = {
+    {
+        {MAX_RATE, MAX_RATE, MAX_RATEYAW},
+        {ACRO_EXPO_ROLL, ACRO_EXPO_PITCH, ACRO_EXPO_YAW},
+        {ANGLE_EXPO_ROLL, ANGLE_EXPO_PITCH, ANGLE_EXPO_YAW},
+    },
+    {
+        {BF_RC_RATE_ROLL, BF_RC_RATE_PITCH, BF_RC_RATE_YAW},
+        {BF_SUPER_RATE_ROLL, BF_SUPER_RATE_PITCH, BF_SUPER_RATE_YAW},
+        {BF_EXPO_ROLL, BF_EXPO_PITCH, BF_EXPO_YAW},
+    },
+    {
+        {ACTUAL_CENTER_SENS_ROLL, ACTUAL_CENTER_SENS_PITCH, ACTUAL_CENTER_SENS_YAW},
+        {ACTUAL_MAX_RATE_ROLL, ACTUAL_MAX_RATE_PITCH, ACTUAL_MAX_RATE_YAW},
+        {ACTUAL_EXPO_ROLL, ACTUAL_EXPO_PITCH, ACTUAL_EXPO_YAW},
+    },
+};
+
+#pragma GCC diagnostic pop
+
 static uint8_t osd_attr(osd_element_t *el) {
   return el->attribute ? OSD_ATTR_INVERT : OSD_ATTR_TEXT;
 }
@@ -699,7 +721,22 @@ void osd_display_rate_menu() {
   };
   osd_menu_select(2, 3, "MODE");
   if (osd_menu_select_enum(14, 3, profile_current_rates()->mode, mode_labels)) {
-    profile_current_rates()->mode = osd_menu_adjust_int(profile_current_rates()->mode, 1, 0, RATE_MODE_ACTUAL);
+    static vec3_t rate_backup[RATE_MODE_ACTUAL + 1][3];
+    static bool rate_backup_set[RATE_MODE_ACTUAL + 1];
+
+    const uint8_t current_mode = profile_current_rates()->mode;
+    const uint8_t new_mode = osd_menu_adjust_int(current_mode, 1, RATE_MODE_SILVERWARE, RATE_MODE_ACTUAL);
+
+    memcpy(rate_backup[current_mode], profile_current_rates()->rate, 3 * sizeof(vec3_t));
+    rate_backup_set[current_mode] = true;
+
+    if (rate_backup_set[new_mode]) {
+      memcpy(profile_current_rates()->rate, rate_backup[new_mode], 3 * sizeof(vec3_t));
+    } else {
+      memcpy(profile_current_rates()->rate, rate_defaults[new_mode], 3 * sizeof(vec3_t));
+    }
+
+    profile_current_rates()->mode = new_mode;
     osd_state.screen_phase = 0;
   }
 
@@ -745,12 +782,12 @@ void osd_display_rate_menu() {
   }
   case RATE_MODE_ACTUAL: {
     osd_menu_select(2, 6, "CENTER");
-    if (osd_menu_select_vec3(13, 6, rate[ACTUAL_CENTER_SENSITIVITY], 5, 2)) {
-      rate[ACTUAL_CENTER_SENSITIVITY] = osd_menu_adjust_vec3(rate[ACTUAL_CENTER_SENSITIVITY], 1.0, 0.0, 500);
+    if (osd_menu_select_vec3(13, 6, rate[ACTUAL_CENTER_SENSITIVITY], 5, 0)) {
+      rate[ACTUAL_CENTER_SENSITIVITY] = osd_menu_adjust_vec3(rate[ACTUAL_CENTER_SENSITIVITY], 10, 0.0, 500);
     }
 
     osd_menu_select(2, 7, "MAX RATE");
-    if (osd_menu_select_vec3(13, 7, rate[ACTUAL_MAX_RATE], 5, 2)) {
+    if (osd_menu_select_vec3(13, 7, rate[ACTUAL_MAX_RATE], 5, 0)) {
       rate[ACTUAL_MAX_RATE] = osd_menu_adjust_vec3(rate[ACTUAL_MAX_RATE], 10, 0.0, 1800);
     }
 
