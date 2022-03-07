@@ -45,11 +45,11 @@ typedef struct {
 #define ICON_THROTTLE 0x4
 #define ICON_AMP 0x9a
 
-#define MAIN_MENU 1
-#define SUB_MENU 0
-
 #define HOLD 0
 #define TEMP 1
+
+#define HD_ROWS 18
+#define HD_COLS 50
 
 extern profile_t profile;
 extern vtx_settings_t vtx_settings;
@@ -1183,11 +1183,11 @@ void osd_display() {
       osd_element_t *el = (osd_element_t *)(osd_elements() + i);
 
       osd_menu_select(3, 2 + i, osd_element_labels[i]);
-      if (osd_menu_select_int(20, 2 + i, el->pos_x, 2)) {
-        el->pos_x = osd_menu_adjust_int(el->pos_x, 1, 0, 30);
+      if (osd_menu_select_int(20, 2 + i, el->pos_x, 3)) {
+        el->pos_x = osd_menu_adjust_int(el->pos_x, 1, 0, osd_system == OSD_SYS_HD ? HD_COLS : 30);
       }
-      if (osd_menu_select_int(26, 2 + i, el->pos_y, 2)) {
-        el->pos_y = osd_menu_adjust_int(el->pos_y, 1, 0, 15);
+      if (osd_menu_select_int(26, 2 + i, el->pos_y, 3)) {
+        el->pos_y = osd_menu_adjust_int(el->pos_y, 1, 0, osd_system == OSD_SYS_HD ? HD_ROWS : 15);
       }
     }
 
