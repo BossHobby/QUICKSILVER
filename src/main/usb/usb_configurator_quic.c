@@ -16,6 +16,7 @@
 #include "drv_usb.h"
 #include "flash.h"
 #include "led.h"
+#include "osd_render.h"
 #include "profile.h"
 #include "project.h"
 #include "sixaxis.h"
@@ -259,6 +260,11 @@ void set_quic(uint8_t *data, uint32_t len) {
     check_cbor_error(QUIC_CMD_SET);
 
     flash_save();
+
+#ifdef ENABLE_OSD
+    osd_clear();
+    osd_display_reset();
+#endif
 
     res = cbor_encode_profile_t(&enc, &profile);
     check_cbor_error(QUIC_CMD_SET);
