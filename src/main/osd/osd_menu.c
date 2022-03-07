@@ -320,21 +320,22 @@ bool osd_menu_select_int(uint8_t x, uint8_t y, const int32_t val, uint8_t width)
   const bool is_selected = is_element_selected();
   if (osd_system == OSD_SYS_HD) {
     if (is_selected) {
-      osd_txn_start(OSD_ATTR_INVERT, x - 1, y);
+      osd_txn_start(OSD_ATTR_INVERT, x, y);
       osd_txn_write_char('>');
     } else {
-      osd_txn_start(OSD_ATTR_TEXT, x - 1, y);
+      osd_txn_start(OSD_ATTR_TEXT, x, y);
       osd_txn_write_char(' ');
     }
+    osd_txn_write_int(val, width - 1);
   } else {
     if (is_selected) {
       osd_txn_start(OSD_ATTR_INVERT, x, y);
     } else {
       osd_txn_start(OSD_ATTR_TEXT, x, y);
     }
+    osd_txn_write_int(val, width);
   }
 
-  osd_txn_write_int(val, width);
   osd_txn_submit(txn);
 
   return is_selected && has_adjust();
@@ -388,21 +389,22 @@ bool osd_menu_select_float(uint8_t x, uint8_t y, const float val, uint8_t width,
   const bool is_selected = is_element_selected();
   if (osd_system == OSD_SYS_HD) {
     if (is_selected) {
-      osd_txn_start(OSD_ATTR_INVERT, x - 1, y);
+      osd_txn_start(OSD_ATTR_INVERT, x, y);
       osd_txn_write_char('>');
     } else {
-      osd_txn_start(OSD_ATTR_TEXT, x - 1, y);
+      osd_txn_start(OSD_ATTR_TEXT, x, y);
       osd_txn_write_char(' ');
     }
+    osd_txn_write_float(val, width - 1, precision);
   } else {
     if (is_selected) {
       osd_txn_start(OSD_ATTR_INVERT, x, y);
     } else {
       osd_txn_start(OSD_ATTR_TEXT, x, y);
     }
+    osd_txn_write_float(val, width, precision);
   }
 
-  osd_txn_write_float(val, width, precision);
   osd_txn_submit(txn);
 
   return is_selected && has_adjust();
