@@ -8,6 +8,8 @@
 #define SCREEN_COLS 32
 
 typedef struct {
+  bool had_change;
+
   uint8_t onscreen_elements;
   uint8_t rendered_elements;
   uint8_t active_elements;
@@ -27,6 +29,7 @@ void osd_menu_start() {
   if (osd_state.screen_phase == 1) {
     // re-render elements
     menu_state.rendered_elements = 0;
+    menu_state.had_change = false;
     osd_state.selection_max = 1;
   }
 
@@ -35,8 +38,16 @@ void osd_menu_start() {
   menu_state.grid_elements = 0;
 }
 
+static void osd_menu_had_change() {
+  menu_state.had_change = true;
+
+  osd_state.selection_increase = 0;
+  osd_state.selection_decrease = 0;
+  osd_state.screen_phase = 1;
+}
+
 bool osd_menu_finish() {
-  if (osd_state.screen_phase == 0) {
+  if (osd_state.screen_phase == 0 || menu_state.had_change) {
     return false;
   }
   if (osd_state.screen_phase < menu_state.onscreen_elements) {
@@ -105,7 +116,7 @@ static bool has_adjust() {
 int32_t osd_menu_adjust_int(int32_t val, const int32_t delta, const int32_t min, const int32_t max) {
   if (osd_state.selection_increase) {
     osd_state.selection_increase = 0;
-    osd_state.screen_phase = 0;
+    osd_menu_had_change();
 
     val += delta;
     if (val > max) {
@@ -114,7 +125,7 @@ int32_t osd_menu_adjust_int(int32_t val, const int32_t delta, const int32_t min,
   }
   if (osd_state.selection_decrease) {
     osd_state.selection_decrease = 0;
-    osd_state.screen_phase = 0;
+    osd_menu_had_change();
 
     val -= delta;
     if (val < min) {
@@ -130,7 +141,7 @@ float osd_menu_adjust_float(float val, const float delta, const float min, const
 
   if (osd_state.selection_increase) {
     osd_state.selection_increase = 0;
-    osd_state.screen_phase = 0;
+    osd_menu_had_change();
 
     val = (rounded + (100.0f * delta)) / 100.0f;
     if (val > max) {
@@ -139,7 +150,7 @@ float osd_menu_adjust_float(float val, const float delta, const float min, const
   }
   if (osd_state.selection_decrease) {
     osd_state.selection_decrease = 0;
-    osd_state.screen_phase = 0;
+    osd_menu_had_change();
 
     val = (rounded - (100.0f * delta)) / 100.0f;
     if (val < min) {
@@ -152,17 +163,17 @@ float osd_menu_adjust_float(float val, const float delta, const float min, const
 
 void osd_menu_adjust_str(char *str) {
   if (osd_state.selection_increase) {
-    str[osd_state.selection - 1]++;
-
     osd_state.selection_increase = 0;
-    osd_state.screen_phase = 0;
+    osd_menu_had_change();
+
+    str[osd_state.selection - 1]++;
   }
 
   if (osd_state.selection_decrease) {
-    str[osd_state.selection - 1]--;
-
     osd_state.selection_decrease = 0;
-    osd_state.screen_phase = 0;
+    osd_menu_had_change();
+
+    str[osd_state.selection - 1]--;
   }
 }
 
@@ -437,7 +448,7 @@ void osd_menu_select_screen(uint8_t x, uint8_t y, const char *text, osd_screens_
 
 void osd_menu_select_enum_adjust(uint8_t x, uint8_t y, const char *text, uint8_t select_x, uint8_t *val, const char **labels, const int32_t min, const int32_t max) {
   osd_menu_select(x, y, text);
-  if (osd_menu_select_enum(20, select_x, *val, labels)) {
+  if (osd_menu_select_enum(select_x, y, *val, labels)) {
     *val = osd_menu_adjust_int(*val, 1, min, max);
   }
 }
