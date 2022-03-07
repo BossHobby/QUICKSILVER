@@ -333,14 +333,14 @@ static void print_osd_armtime(osd_element_t *el) {
   osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
 
   const uint32_t minutes = time_s / 60;
-  osd_txn_write_uint(minutes % 10, 1);
   osd_txn_write_uint(minutes / 10, 1);
+  osd_txn_write_uint(minutes % 10, 1);
 
   osd_txn_write_char(':');
 
   const uint32_t seconds = time_s % 60;
-  osd_txn_write_uint(seconds % 10, 1);
   osd_txn_write_uint(seconds / 10, 1);
+  osd_txn_write_uint(seconds % 10, 1);
 
   osd_txn_submit(txn);
 }
