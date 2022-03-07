@@ -121,7 +121,7 @@ static void hdzero_push_write_string(uint8_t attr, uint8_t x, uint8_t y, uint8_t
   uint8_t buffer[size + 3];
   buffer[0] = y;
   buffer[1] = x;
-  buffer[2] = hdzero_map_attr(attr);
+  buffer[2] = attr;
 
   memcpy(buffer + 3, data, size);
 
@@ -173,7 +173,9 @@ static bool hdzero_update_display() {
           offset = 0;
           start = COLS;
         }
-        continue;
+        if (!entry->dirty) {
+          continue;
+        }
       }
 
       if (col < start) {
@@ -247,35 +249,33 @@ void hdzero_txn_start(osd_transaction_t *txn, uint8_t attr, uint8_t x, uint8_t y
 void hdzero_txn_write_char(osd_transaction_t *txn, const char val) {
   osd_segment_t *seg = &txn->segments[txn->segment_count - 1];
 
+  const uint8_t attr = hdzero_map_attr(seg->attr);
   const uint16_t offset = seg->y * COLS + seg->x + seg->offset;
-  if (display[offset].val == val && display[offset].attr == seg->attr) {
+  if (display[offset].val == val && display[offset].attr == attr) {
     return;
   }
 
-  const displayport_char_t entry = {
-      .dirty = 1,
-      .attr = seg->attr,
-      .val = val,
-  };
-  display[seg->y * COLS + seg->x + seg->offset] = entry;
+  display[offset].dirty = 1;
+  display[offset].attr = attr;
+  display[offset].val = val;
+
   display_dirty = true;
 }
 
 void hdzero_txn_write_data(osd_transaction_t *txn, const uint8_t *buffer, uint8_t size) {
   osd_segment_t *seg = &txn->segments[txn->segment_count - 1];
 
+  const uint8_t attr = hdzero_map_attr(seg->attr);
   const uint16_t offset = seg->y * COLS + seg->x + seg->offset;
   for (uint8_t i = 0; i < size; i++) {
-    if (display[offset + i].val == buffer[i] && display[offset + i].attr == seg->attr) {
+    if (display[offset + i].val == buffer[i] && display[offset + i].attr == attr) {
       continue;
     }
 
-    const displayport_char_t entry = {
-        .dirty = 1,
-        .attr = seg->attr,
-        .val = buffer[i],
-    };
-    display[offset + i] = entry;
+    display[offset + i].dirty = 1;
+    display[offset + i].attr = attr;
+    display[offset + i].val = buffer[i];
+
     display_dirty = true;
   }
 }
