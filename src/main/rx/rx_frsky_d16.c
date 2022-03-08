@@ -12,7 +12,7 @@
 
 #if defined(USE_CC2500) && (defined(RX_FRSKY_D16_FCC) || defined(RX_FRSKY_D16_LBT))
 
-//Source https://www.rcgroups.com/forums/showpost.php?p=21864861
+// Source https://www.rcgroups.com/forums/showpost.php?p=21864861
 
 #define FRSKY_ENABLE_TELEMETRY
 #define LQI_FPS 112
@@ -145,7 +145,7 @@ static void frsky_d16_set_rc_data() {
 
   rx_apply_stick_calibration_scale();
 
-  //Here we have the AUX channels Silverware supports
+  // Here we have the AUX channels Silverware supports
   state.aux[AUX_CHANNEL_0] = (channels[4] > 1023) ? 1 : 0;
   state.aux[AUX_CHANNEL_1] = (channels[5] > 1023) ? 1 : 0;
   state.aux[AUX_CHANNEL_2] = (channels[6] > 1023) ? 1 : 0;
@@ -233,7 +233,7 @@ static void frsky_d16_build_telemetry(uint8_t *telemetry) {
   if (even_odd) {
     telemetry[4] = rssi | 0x80;
   } else {
-    telemetry[4] = (uint8_t)(state.vbattfilt * 10) & 0x7f;
+    telemetry[4] = (uint8_t)(state.vbat_filtered * 10) & 0x7f;
   }
   even_odd = even_odd == 1 ? 0 : 1;
 

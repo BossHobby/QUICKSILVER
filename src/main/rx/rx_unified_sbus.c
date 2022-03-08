@@ -36,25 +36,25 @@ extern uint8_t ready_for_next_telemetry;
 #define USART usart_port_defs[serial_rx_port]
 
 void rx_serial_process_sbus() {
-  for (uint8_t counter = 0; counter < 25; counter++) {    //First up, get therx_data out of the RX buffer and into somewhere safe
+  for (uint8_t counter = 0; counter < 25; counter++) {    // First up, get therx_data out of the RX buffer and into somewhere safe
     rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
   }
 
   if (rx_data[23] & (1 << 2)) {
-    //RX sets this bit when it knows it missed a frame. Presumably this is a timer in the RX.
+    // RX sets this bit when it knows it missed a frame. Presumably this is a timer in the RX.
     rx_lqi_lost_packet();
   } else {
     rx_lqi_got_packet();
   }
   if (rx_data[23] & (1 << 3)) {
     failsafe_sbus_failsafe = 1;              // Sbus packets have a failsafe bit. This is cool. If you forget to trust it you get programs though.
-    flags.failsafe = failsafe_sbus_failsafe; //set failsafe rtf-now
+    flags.failsafe = failsafe_sbus_failsafe; // set failsafe rtf-now
   } else {
     failsafe_sbus_failsafe = 0;
   }
 
-  //Sbus channels, this could be a struct and a memcpy but eh.
-  //All 16 are decoded, even if Quicksilver doesn't want to use them.
+  // Sbus channels, this could be a struct and a memcpy but eh.
+  // All 16 are decoded, even if Quicksilver doesn't want to use them.
   channels[0] = ((rx_data[1] | rx_data[2] << 8) & 0x07FF);
   channels[1] = ((rx_data[2] >> 3 | rx_data[3] << 5) & 0x07FF);
   channels[2] = ((rx_data[3] >> 6 | rx_data[4] << 2 | rx_data[5] << 10) & 0x07FF);
@@ -64,7 +64,7 @@ void rx_serial_process_sbus() {
   channels[6] = ((rx_data[9] >> 2 | rx_data[10] << 6) & 0x07FF);
   channels[7] = ((rx_data[10] >> 5 | rx_data[11] << 3) & 0x07FF);
   channels[8] = ((rx_data[12] | rx_data[13] << 8) & 0x07FF);
-  channels[9] = ((rx_data[13] >> 3 | rx_data[14] << 5) & 0x07FF); //This is the last channel Silverware previously supported.
+  channels[9] = ((rx_data[13] >> 3 | rx_data[14] << 5) & 0x07FF); // This is the last channel Silverware previously supported.
   channels[10] = ((rx_data[14] >> 6 | rx_data[15] << 2 | rx_data[16] << 10) & 0x07FF);
   channels[11] = ((rx_data[16] >> 1 | rx_data[17] << 7) & 0x07FF);
   channels[12] = ((rx_data[17] >> 4 | rx_data[18] << 4) & 0x07FF);
@@ -95,7 +95,7 @@ void rx_serial_process_sbus() {
 
   rx_apply_stick_calibration_scale();
 
-  //Here we have the AUX channels Silverware supports
+  // Here we have the AUX channels Silverware supports
   state.aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
   state.aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
   state.aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
@@ -114,12 +114,12 @@ void rx_serial_process_sbus() {
   }
 
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-    rx_lqi_update_direct(0); //no internal rssi data
+    rx_lqi_update_direct(0); // no internal rssi data
   }
 
-  frame_status = FRAME_TX; //We're done with this frame now.
+  frame_status = FRAME_TX; // We're done with this frame now.
 
-  if (bind_safety > 131) {        //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
+  if (bind_safety > 131) {        // requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
     flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
     flags.rx_mode = !RXMODE_BIND; // restores normal led operation
     bind_safety = 131;            // reset counter so it doesnt wrap
@@ -130,14 +130,14 @@ void rx_serial_process_fport() {
   uint8_t frameLength = 0;
   static uint8_t escapedChars = 0;
   uint8_t tempEscapedChars = 0;
-  for (uint8_t counter = 0; counter <= rx_frame_position; counter++) {         //First up, get the data out of the RX buffer and into somewhere safe
-    rx_data[counter] = rx_buffer[(counter + tempEscapedChars) % RX_BUFF_SIZE]; //We're going to be messing with the data and it wouldn't do to destroy a packet
+  for (uint8_t counter = 0; counter <= rx_frame_position; counter++) {         // First up, get the data out of the RX buffer and into somewhere safe
+    rx_data[counter] = rx_buffer[(counter + tempEscapedChars) % RX_BUFF_SIZE]; // We're going to be messing with the data and it wouldn't do to destroy a packet
     frameLength++;
 
-    if (rx_data[counter - 1] == 0x7D) { //0x7D and 0x7E are reserved, 0x7D is the marker for a reserved / escaped character
-      if (rx_data[counter] == 0x5E) {   //0x5E in the byte following 0x7D means it was a 0x7E data byte.
-        rx_data[counter - 1] = 0x7E;    //So, make it 0x7E.
-        escapedChars++;                 //Now we have to get rid of the "current" byte, and adjust the incoming frame length.
+    if (rx_data[counter - 1] == 0x7D) { // 0x7D and 0x7E are reserved, 0x7D is the marker for a reserved / escaped character
+      if (rx_data[counter] == 0x5E) {   // 0x5E in the byte following 0x7D means it was a 0x7E data byte.
+        rx_data[counter - 1] = 0x7E;    // So, make it 0x7E.
+        escapedChars++;                 // Now we have to get rid of the "current" byte, and adjust the incoming frame length.
         tempEscapedChars++;
         counter--;
         frameLength--;
@@ -149,10 +149,10 @@ void rx_serial_process_fport() {
       }
     }
 
-    if (rx_data[counter] == 0x7e && rx_data[counter - 1] == 0x7e && frameLength > 29) { //Looks like a complete frame, check CRC and process controls if it's good.
+    if (rx_data[counter] == 0x7e && rx_data[counter - 1] == 0x7e && frameLength > 29) { // Looks like a complete frame, check CRC and process controls if it's good.
       frame_status = FRAME_RX_DONE;
-      //counter = 200; //Breaks out of the for loop processing the data array. - NFE-IS THIS STILL NEEDED?
-      //The telemetry request packet is not read, as it never seems to change. Less control lag if we ignore it.
+      // counter = 200; //Breaks out of the for loop processing the data array. - NFE-IS THIS STILL NEEDED?
+      // The telemetry request packet is not read, as it never seems to change. Less control lag if we ignore it.
       uint16_t crc_byte = 0;
       for (int x = 1; x < frameLength - 2; x++) {
         crc_byte = crc_byte + rx_data[x];
@@ -162,10 +162,10 @@ void rx_serial_process_fport() {
       crc_byte = crc_byte >> 8;
 
       if (crc_byte == 0x00FF) {
-        //CRC is good, check Failsafe bit(s) and shove it into controls
-        //FPORT uses SBUS style data, but starts further in the packet
+        // CRC is good, check Failsafe bit(s) and shove it into controls
+        // FPORT uses SBUS style data, but starts further in the packet
 
-        //RX appears to set this bit when it knows it missed a frame.
+        // RX appears to set this bit when it knows it missed a frame.
         if (rx_data[25] & (1 << 2)) {
           rx_lqi_lost_packet();
         } else {
@@ -173,7 +173,7 @@ void rx_serial_process_fport() {
         }
         if (rx_data[25] & (1 << 3)) {
           failsafe_sbus_failsafe = 1;              // Sbus packets have a failsafe bit. This is cool.
-          flags.failsafe = failsafe_sbus_failsafe; //set failsafe rtf-now
+          flags.failsafe = failsafe_sbus_failsafe; // set failsafe rtf-now
         } else {
           failsafe_sbus_failsafe = 0;
         }
@@ -187,7 +187,7 @@ void rx_serial_process_fport() {
         channels[6] = ((rx_data[11] >> 2 | rx_data[12] << 6) & 0x07FF);
         channels[7] = ((rx_data[12] >> 5 | rx_data[13] << 3) & 0x07FF);
         channels[8] = ((rx_data[14] | rx_data[15] << 8) & 0x07FF);
-        channels[9] = ((rx_data[15] >> 3 | rx_data[16] << 5) & 0x07FF); //This is the last channel Silverware previously supported.
+        channels[9] = ((rx_data[15] >> 3 | rx_data[16] << 5) & 0x07FF); // This is the last channel Silverware previously supported.
         channels[10] = ((rx_data[16] >> 6 | rx_data[17] << 2 | rx_data[18] << 10) & 0x07FF);
         channels[11] = ((rx_data[18] >> 1 | rx_data[19] << 7) & 0x07FF);
         channels[12] = ((rx_data[19] >> 4 | rx_data[20] << 4) & 0x07FF);
@@ -195,11 +195,11 @@ void rx_serial_process_fport() {
         channels[14] = ((rx_data[22] >> 2 | rx_data[23] << 6) & 0x07FF);
         channels[15] = ((rx_data[23] >> 5 | rx_data[24] << 3) & 0x07FF);
 
-        //frame_status = 2;
+        // frame_status = 2;
 
       } else { // if CRC fails, do this:
-        //while(1){} Enable for debugging to lock the FC if CRC fails.
-        frame_status = FRAME_IDLE; //Most likely reason for failed CRC is a frame that isn't fully here yet. No need to check again until a new byte comes in.
+        // while(1){} Enable for debugging to lock the FC if CRC fails.
+        frame_status = FRAME_IDLE; // Most likely reason for failed CRC is a frame that isn't fully here yet. No need to check again until a new byte comes in.
       }
     }
 
@@ -226,7 +226,7 @@ void rx_serial_process_fport() {
 
       rx_apply_stick_calibration_scale();
 
-      //Here we have the AUX channels Silverware supports
+      // Here we have the AUX channels Silverware supports
       state.aux[AUX_CHANNEL_0] = (channels[4] > 993) ? 1 : 0;
       state.aux[AUX_CHANNEL_1] = (channels[5] > 993) ? 1 : 0;
       state.aux[AUX_CHANNEL_2] = (channels[6] > 993) ? 1 : 0;
@@ -253,13 +253,13 @@ void rx_serial_process_fport() {
       }
 
       if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-        rx_lqi_update_direct(0); //no internal rssi data
+        rx_lqi_update_direct(0); // no internal rssi data
       }
 
-      frame_status = FRAME_TX; //We're done with this frame now.
+      frame_status = FRAME_TX; // We're done with this frame now.
       telemetry_counter++;     // Let the telemetry section know it's time to send.
 
-      if (bind_safety > 131) {        //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
+      if (bind_safety > 131) {        // requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
         flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
         flags.rx_mode = !RXMODE_BIND; // restores normal led operation
         bind_safety = 131;            // reset counter so it doesnt wrap
@@ -292,66 +292,66 @@ void rx_serial_send_fport_telemetry() {
     frame_status = FRAME_DONE;
 
     uint16_t telemetry_ids[] = {
-        0x0210, //VFAS, use for vbat_comp
-        0x0211, //VFAS1, use for vbattfilt
-        //Everything past here is only active in FPORT-Debug-Telemetry mode
-        0x0900, //A3_FIRST_ID, used for cell count
-        0x0400, //T1, used for Axis Identifier
-        0x0700, //ACC-X, misused for PID-P
-        0x0710, //ACC-X, misused for PID-I
-        0x0720, //ACC-X, misused for PID-D
+        0x0210, // VFAS, use for vbat_compensated
+        0x0211, // VFAS1, use for vbat_filtered
+        // Everything past here is only active in FPORT-Debug-Telemetry mode
+        0x0900, // A3_FIRST_ID, used for cell count
+        0x0400, // T1, used for Axis Identifier
+        0x0700, // ACC-X, misused for PID-P
+        0x0710, // ACC-X, misused for PID-I
+        0x0720, // ACC-X, misused for PID-D
     };
-    //This iterates through the above, you can only send one sensor per frame.
+    // This iterates through the above, you can only send one sensor per frame.
     static uint8_t telemetry_position = 0;
 
-    //Telemetry time! Let's have some variables
-    telemetry_packet[0] = 0x08; //Bytes 0 through 2 are static in this implementation
+    // Telemetry time! Let's have some variables
+    telemetry_packet[0] = 0x08; // Bytes 0 through 2 are static in this implementation
     telemetry_packet[1] = 0x81;
     telemetry_packet[2] = 0x10;
-    if (telemetry_position == 0) {                                  //vbat_comp
-      telemetry_packet[3] = telemetry_ids[telemetry_position];      //0x10;
-      telemetry_packet[4] = telemetry_ids[telemetry_position] >> 8; //0x02;
-      telemetry_packet[5] = (int)(state.vbatt_comp * 100);
-      telemetry_packet[6] = (int)(state.vbatt_comp * 100) >> 8;
+    if (telemetry_position == 0) {                                  // vbat_compensated
+      telemetry_packet[3] = telemetry_ids[telemetry_position];      // 0x10;
+      telemetry_packet[4] = telemetry_ids[telemetry_position] >> 8; // 0x02;
+      telemetry_packet[5] = (int)(state.vbat_compensated * 100);
+      telemetry_packet[6] = (int)(state.vbat_compensated * 100) >> 8;
       telemetry_packet[7] = 0x00;
       telemetry_packet[8] = 0x00;
-    } else if (telemetry_position == 1) {                           //vbattfilt
-      telemetry_packet[3] = telemetry_ids[telemetry_position];      //x11;
-      telemetry_packet[4] = telemetry_ids[telemetry_position] >> 8; //0x02;
-      telemetry_packet[5] = (int)(state.vbattfilt * 100);
-      telemetry_packet[6] = (int)(state.vbattfilt * 100) >> 8;
+    } else if (telemetry_position == 1) {                           // vbat_filtered
+      telemetry_packet[3] = telemetry_ids[telemetry_position];      // x11;
+      telemetry_packet[4] = telemetry_ids[telemetry_position] >> 8; // 0x02;
+      telemetry_packet[5] = (int)(state.vbat_filtered * 100);
+      telemetry_packet[6] = (int)(state.vbat_filtered * 100) >> 8;
       telemetry_packet[7] = 0x00;
       telemetry_packet[8] = 0x00;
-    } else if (telemetry_position == 2) { //Cell count
+    } else if (telemetry_position == 2) { // Cell count
       telemetry_packet[3] = telemetry_ids[telemetry_position];
       telemetry_packet[4] = telemetry_ids[telemetry_position] >> 8;
       telemetry_packet[5] = (int)(state.lipo_cell_count * 100);
       telemetry_packet[6] = (int)(state.lipo_cell_count * 100) >> 8;
       telemetry_packet[7] = 0x00;
       telemetry_packet[8] = 0x00;
-    } else if (telemetry_position == 3) {                           //PID axis(hundreds column) and P/I/D (ones column) being adjusted currently
-      uint16_t axisAndPidID = (current_pid_axis + 1) * 100;         //Adding one so there's always a value. 1 for Pitch (or Pitch/roll), 2 for Roll, 3 for Yaw
-      axisAndPidID += current_pid_term + 1;                         //Adding one here too, humans don't deal well with counting starting at zero for this sort of thing
+    } else if (telemetry_position == 3) {                           // PID axis(hundreds column) and P/I/D (ones column) being adjusted currently
+      uint16_t axisAndPidID = (current_pid_axis + 1) * 100;         // Adding one so there's always a value. 1 for Pitch (or Pitch/roll), 2 for Roll, 3 for Yaw
+      axisAndPidID += current_pid_term + 1;                         // Adding one here too, humans don't deal well with counting starting at zero for this sort of thing
       telemetry_packet[4] = telemetry_ids[telemetry_position] >> 8; // Adding one to the above makes it match the LED flash codes too
       telemetry_packet[5] = (int)(axisAndPidID);
       telemetry_packet[6] = (int)(axisAndPidID) >> 8;
       telemetry_packet[7] = 0x00;
       telemetry_packet[8] = 0x00;
-    } else if (telemetry_position == 4) { //PID-P
+    } else if (telemetry_position == 4) { // PID-P
       telemetry_packet[3] = telemetry_ids[telemetry_position];
       telemetry_packet[4] = telemetry_ids[telemetry_position] >> 8;
       telemetry_packet[5] = (int)(get_pid_value(0)->axis[current_pid_axis] * 100);
       telemetry_packet[6] = (int)(get_pid_value(0)->axis[current_pid_axis] * 100) >> 8;
       telemetry_packet[7] = 0x00;
       telemetry_packet[8] = 0x00;
-    } else if (telemetry_position == 5) { //PID-I
+    } else if (telemetry_position == 5) { // PID-I
       telemetry_packet[3] = telemetry_ids[telemetry_position];
       telemetry_packet[4] = telemetry_ids[telemetry_position] >> 8;
       telemetry_packet[5] = (int)(get_pid_value(1)->axis[current_pid_axis] * 100);
       telemetry_packet[6] = (int)(get_pid_value(1)->axis[current_pid_axis] * 100) >> 8;
       telemetry_packet[7] = 0x00;
       telemetry_packet[8] = 0x00;
-    } else if (telemetry_position == 6) { //PID-D
+    } else if (telemetry_position == 6) { // PID-D
       telemetry_packet[3] = telemetry_ids[telemetry_position];
       telemetry_packet[4] = telemetry_ids[telemetry_position] >> 8;
       telemetry_packet[5] = (int)(get_pid_value(2)->axis[current_pid_axis] * 100);
@@ -379,7 +379,7 @@ void rx_serial_send_fport_telemetry() {
     telemetry_packet[0] += telemetry_offset;
 
     uint16_t teleCRC = 0;
-    //Calculate CRC for packet. This function does not support escaped characters.
+    // Calculate CRC for packet. This function does not support escaped characters.
     for (int x = 0; x < 9 + telemetry_offset; x++) {
       teleCRC = teleCRC + telemetry_packet[x];
     }
@@ -387,14 +387,14 @@ void rx_serial_send_fport_telemetry() {
     teleCRC = 0xff - teleCRC;
     teleCRC = teleCRC << 8;
     teleCRC = teleCRC >> 8;
-    telemetry_packet[9 + telemetry_offset] = teleCRC; //0x34;
-    //Shove the packet out the UART. This *should* support escaped characters, but it doesn't work.
-    while (LL_USART_IsActiveFlag_TXE(USART.channel) == RESET) //just in case - but this should do nothing if ready_for_next_telemetry flag is properly cleared by irq
+    telemetry_packet[9 + telemetry_offset] = teleCRC; // 0x34;
+    // Shove the packet out the UART. This *should* support escaped characters, but it doesn't work.
+    while (LL_USART_IsActiveFlag_TXE(USART.channel) == RESET) // just in case - but this should do nothing if ready_for_next_telemetry flag is properly cleared by irq
       ;
     LL_USART_TransmitData8(USART.channel, telemetry_packet[0]);
     ready_for_next_telemetry = 0;
-    LL_USART_EnableIT_TC(USART.channel); //turn on the transmit transfer complete interrupt so that the rest of the telemetry packet gets sent
-    //That's it, telemetry has sent the first byte - the rest will be sent by the telemetry tx irq
+    LL_USART_EnableIT_TC(USART.channel); // turn on the transmit transfer complete interrupt so that the rest of the telemetry packet gets sent
+    // That's it, telemetry has sent the first byte - the rest will be sent by the telemetry tx irq
     telemetry_position++;
     if (fport_debug_telemetry) {
       if (telemetry_position >= sizeof(telemetry_ids) / 2) // 2 byte ints, so this should give the number of entries. It just incremented, which takes care of the count with 0 or 1

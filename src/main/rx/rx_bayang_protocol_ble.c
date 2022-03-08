@@ -54,8 +54,8 @@ void rx_init() {
   writeregs(demodcal, sizeof(demodcal));
 
   // powerup defaults
-  //static uint8_t rfcal2[7] = { 0x3a , 0x45 , 0x21 , 0xef , 0xac , 0x3a , 0x50};
-  //writeregs( rfcal2 , sizeof(rfcal2) );
+  // static uint8_t rfcal2[7] = { 0x3a , 0x45 , 0x21 , 0xef , 0xac , 0x3a , 0x50};
+  // writeregs( rfcal2 , sizeof(rfcal2) );
 
   static uint8_t rfcal2[7] = {0x3a, 0x45, 0x21, 0xef, 0x2c, 0x5a, 0x50};
   writeregs(rfcal2, sizeof(rfcal2));
@@ -92,7 +92,7 @@ void rx_init() {
 #endif
 
   // dummy write
-  //xn_writereg( RF_CH , 1 );  // bind on channel 0
+  // xn_writereg( RF_CH , 1 );  // bind on channel 0
 
   bleinit();
 
@@ -238,7 +238,7 @@ void btLeWhiten(uint8_t *data, uint8_t len, uint8_t whitenCoeff) {
   }
 }
 static inline uint8_t btLeWhitenStart(uint8_t chan) {
-  //the value we actually use is what BT'd use left shifted one...makes our life easier
+  // the value we actually use is what BT'd use left shifted one...makes our life easier
   return swapbits(chan) | 2;
 }
 
@@ -247,7 +247,7 @@ void btLePacketEncode(uint8_t *packet, uint8_t len, uint8_t chan) {
   // Length is of packet, including crc. pre-populate crc in packet with initial crc value!
   uint8_t i, dataLen = len - 3;
 
-  packet[len - 3] = 0x55; //CRC start value: 0x555555
+  packet[len - 3] = 0x55; // CRC start value: 0x555555
   packet[len - 2] = 0x55;
   packet[len - 1] = 0x55;
 
@@ -303,8 +303,8 @@ void bleinit() {
 
   int txaddr[5];
 
-  /*	
-	// 4 byte address
+  /*
+  // 4 byte address
 txaddr[0] = swapbits(0x8E)^xn297_scramble[3];
 txaddr[1] = swapbits(0x89)^xn297_scramble[2];
 txaddr[2] = swapbits(0xBE)^xn297_scramble[1];
@@ -312,8 +312,8 @@ txaddr[3] = swapbits(0xD6)^xn297_scramble[0];
 txaddr[4] = 0;
 */
 
-  /*	
-		// 4 byte address - optimized
+  /*
+    // 4 byte address - optimized
 txaddr[0] = 0x71^0xea;
 txaddr[1] = 0x91^0x4b;
 txaddr[2] = 0x7d^0xb1;
@@ -413,7 +413,7 @@ void send_beacon() {
 
   uint8_t L = 0;
 
-  int vbatt = state.vbattfilt * 1000.0f;
+  int vbatt = state.vbat_filtered * 1000.0f;
 
   uint32_t time = time_micros();
 
@@ -421,8 +421,8 @@ void send_beacon() {
   time = time * 10;
 
   L = 0;
-  buf[L++] = 0b00100010; //PDU type, given address is random; 0x42 for Android and 0x40 for iPhone
-  //buf[L++] = 0x42; //PDU type, given address is random; 0x42 for Android and 0x40 for iPhone
+  buf[L++] = 0b00100010; // PDU type, given address is random; 0x42 for Android and 0x40 for iPhone
+  // buf[L++] = 0x42; //PDU type, given address is random; 0x42 for Android and 0x40 for iPhone
 
   // max len 27 with 5 byte address = 37 total payload bytes
   buf[L++] = 10 + 21; // length of payload
@@ -434,7 +434,7 @@ void send_beacon() {
   buf[L++] = MY_MAC_5;
 
   // packet data unit
-  buf[L++] = 2;                           //flags lenght(LE-only, limited discovery mode)
+  buf[L++] = 2;                           // flags lenght(LE-only, limited discovery mode)
   buf[L++] = 0x01;                        // compulsory flags
   buf[L++] = 0x06;                        // flag value
   buf[L++] = 0x03;                        // Length of next block
@@ -460,7 +460,7 @@ void send_beacon() {
   buf[L++] = time >> 8;                   // powerup time 2
   buf[L++] = time;                        // powerup time 3 in seconds times 10.
 
-  L = L + 3; //crc
+  L = L + 3; // crc
 
   btLePacketEncode(buf, L, chLe[ch]);
 
@@ -490,8 +490,8 @@ static char checkpacket() {
   if (status & (1 << MASK_RX_DR)) { // rx clear bit
                                     // this is not working well
                                     // xn_writereg( STATUS , (1<<MASK_RX_DR) );
-                                    //RX packet received
-                                    //return 1;
+                                    // RX packet received
+                                    // return 1;
   }
   if ((status & 0b00001110) != 0b00001110) {
     // rx fifo not empty
@@ -537,13 +537,13 @@ static int decodepacket() {
 
       state.aux[CH_FLIP] = (rxdata[2] & 0x08) ? 1 : 0;
 
-      //state.aux[CH_EXPERT] = (rxdata[1] == 0xfa) ? 1 : 0;
+      // state.aux[CH_EXPERT] = (rxdata[1] == 0xfa) ? 1 : 0;
 
       state.aux[CH_HEADFREE] = (rxdata[2] & 0x02) ? 1 : 0;
 
       state.aux[CH_RTH] = (rxdata[2] & 0x01) ? 1 : 0; // rth channel
 
-      //rx_apply_expo()  no longer needed here;
+      // rx_apply_expo()  no longer needed here;
 
       return 1; // valid packet
     }
@@ -640,7 +640,7 @@ void rx_check() {
 
     } // end normal rx mode
     bind_safety++;
-    if (bind_safety > 9) { //requires 10 good frames to come in before rx_ready safety can be toggled to 1
+    if (bind_safety > 9) { // requires 10 good frames to come in before rx_ready safety can be toggled to 1
       flags.rx_ready = 1;  // because aux channels initialize low and clear the binding while armed flag before aux updates high
       bind_safety = 10;
     }

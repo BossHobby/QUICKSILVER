@@ -62,8 +62,8 @@ void memory_section_init() {
 int main() {
   system_check_for_bootloader();
 
-  //init some initial values
-  //attempt 8k looptime for f405 or 4k looptime for f411
+  // init some initial values
+  // attempt 8k looptime for f405 or 4k looptime for f411
   state.looptime_autodetect = LOOPTIME;
 
   // init timer so we can use delays etc
@@ -83,10 +83,10 @@ int main() {
   flash_load();
   time_delay_us(1000);
 
-  //init some hardware things
+  // init some hardware things
   gpio_init();
   usb_init();
-  ledon(255); //Turn on LED during boot so that if a delay is used as part of using programming pins for other functions, the FC does not appear inactive while programming times out
+  ledon(255); // Turn on LED during boot so that if a delay is used as part of using programming pins for other functions, the FC does not appear inactive while programming times out
   spi_init();
 #if defined(RX_DSMX) || defined(RX_DSM2) || defined(RX_UNIFIED_SERIAL)
   rx_spektrum_bind();
@@ -94,12 +94,12 @@ int main() {
 
   time_delay_us(100000);
 
-  //init the firmware things
+  // init the firmware things
   motor_init();
   motor_set_all(0);
 
   if (!sixaxis_init()) {
-    //gyro not found
+    // gyro not found
     failloop(FAILLOOP_GYRO);
   }
 
@@ -110,7 +110,7 @@ int main() {
 
   adc_init();
 
-  //set always on channel to on
+  // set always on channel to on
   state.aux[AUX_CHANNEL_ON] = 1;
   state.aux[AUX_CHANNEL_OFF] = 0;
 #ifdef GESTURE_AUX_START_ON
@@ -134,7 +134,7 @@ int main() {
 
 #ifdef RX_BAYANG_BLE_APP
   // for randomising MAC adddress of ble app - this will make the int = raw float value
-  random_seed = *(int *)&state.vbattfilt;
+  random_seed = *(int *)&state.vbat_filtered;
   random_seed = random_seed & 0xff;
 #endif
 
@@ -178,10 +178,10 @@ int main() {
     state.looptime = state.looptime * 1e-6f;
     if (state.looptime > 0.02f) { // max loop 20ms
       failloop(FAILLOOP_LOOPTIME);
-      //endless loop
+      // endless loop
     }
 
-    //looptime_autodetect sequence
+    // looptime_autodetect sequence
     static uint8_t loop_ctr = 0;
     if (loop_ctr < 255) {
       looptime_buffer[loop_ctr] = state.looptime;
@@ -286,7 +286,7 @@ int main() {
 #endif
 
     state.cpu_load = (time_micros() - lastlooptime);
-    //one last check to make sure we catch any looptime problems and rerun autodetect live
+    // one last check to make sure we catch any looptime problems and rerun autodetect live
     if (loop_ctr == 255 && state.cpu_load > state.looptime_autodetect + 5) {
       blown_loop_counter++;
       if (blown_loop_counter > 100) {
@@ -305,7 +305,7 @@ int main() {
       flags.usb_active = 1;
 #ifndef ALLOW_USB_ARMING
       if (rx_aux_on(AUX_ARMING))
-        flags.arm_safety = 1; //final safety check to disallow arming during USB operation
+        flags.arm_safety = 1; // final safety check to disallow arming during USB operation
 #endif
       usb_configurator();
     } else {

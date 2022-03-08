@@ -17,9 +17,9 @@ extern profile_t profile;
 void vbat_init() {
   int count = 0;
   while (count < 5000) {
-    float bootadc = adc_read(ADC_CHAN_VBAT) * state.vreffilt;
-    lpf(&state.vreffilt, adc_read(ADC_CHAN_VREF), 0.9968f);
-    lpf(&state.vbattfilt, bootadc, 0.9968f);
+    float bootadc = adc_read(ADC_CHAN_VBAT) * state.vref_filtered;
+    lpf(&state.vref_filtered, adc_read(ADC_CHAN_VREF), 0.9968f);
+    lpf(&state.vbat_filtered, bootadc, 0.9968f);
     count++;
   }
 
@@ -27,7 +27,7 @@ void vbat_init() {
     // Lipo count not specified, trigger auto detect
     for (int i = 6; i > 0; i--) {
       float cells = i;
-      if (state.vbattfilt / cells > 3.7f) {
+      if (state.vbat_filtered / cells > 3.7f) {
         state.lipo_cell_count = (float)cells;
         break;
       }
@@ -36,14 +36,14 @@ void vbat_init() {
     state.lipo_cell_count = (float)profile.voltage.lipo_cell_count;
   }
 
-  state.vbattfilt_corr *= (float)state.lipo_cell_count;
+  state.vbat_filtered_decay *= (float)state.lipo_cell_count;
 }
 
 void vbat_calc() {
   // read acd and scale based on processor voltage
-  float battadc = adc_read(ADC_CHAN_VBAT) * state.vreffilt;
+  const float battadc = adc_read(ADC_CHAN_VBAT) * state.vref_filtered;
   // read and filter internal reference
-  lpf(&state.vreffilt, adc_read(ADC_CHAN_VREF), 0.9968f);
+  lpf(&state.vref_filtered, adc_read(ADC_CHAN_VREF), 0.9968f);
 
   state.ibat = adc_read(ADC_CHAN_IBAT);
   lpf(&state.ibat_filtered, state.ibat, FILTERCALC(1000, 5000e3));
@@ -56,11 +56,10 @@ void vbat_calc() {
   lpf(&thrfilt, state.thrsum, 0.9968f); // 0.5 sec at 1.6ms loop time
 
   // li-ion battery model compensation time decay ( 18 seconds )
-  lpf(&state.vbattfilt_corr, state.vbattfilt, FILTERCALC(1000, 18000e3));
+  lpf(&state.vbat_filtered_decay, state.vbat_filtered, FILTERCALC(1000, 18000e3));
+  lpf(&state.vbat_filtered, battadc, 0.9968f);
 
-  lpf(&state.vbattfilt, battadc, 0.9968f);
-
-  float tempvolt = state.vbattfilt * (1.00f + CF1) - state.vbattfilt_corr * (CF1);
+  float tempvolt = state.vbat_filtered * (1.00f + CF1) - state.vbat_filtered_decay * (CF1);
 
 #ifdef AUTO_VDROP_FACTOR
 
@@ -115,9 +114,9 @@ void vbat_calc() {
   else
     hyst = 0.0f;
 
-  state.vbatt_comp = tempvolt + vdrop_factor * thrfilt;
+  state.vbat_compensated = tempvolt + vdrop_factor * thrfilt;
 
-  if ((state.vbatt_comp < profile.voltage.vbattlow * state.lipo_cell_count + hyst) || (state.vbattfilt < VBATTLOW_ABS * state.lipo_cell_count))
+  if ((state.vbat_compensated < profile.voltage.vbattlow * state.lipo_cell_count + hyst) || (state.vbat_filtered < VBATTLOW_ABS * state.lipo_cell_count))
     flags.lowbatt = 1;
   else
     flags.lowbatt = 0;
@@ -130,17 +129,17 @@ void vbat_lvc_throttle() {
   if (flash_storage.lvc_lower_throttle == 1) {
     float throttle_p = 0.0f;
 
-    if (state.vbattfilt < (float)LVC_LOWER_THROTTLE_VOLTAGE_RAW)
-      throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE_RAW - state.vbattfilt) * (float)LVC_LOWER_THROTTLE_KP;
+    if (state.vbat_filtered < (float)LVC_LOWER_THROTTLE_VOLTAGE_RAW)
+      throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE_RAW - state.vbat_filtered) * (float)LVC_LOWER_THROTTLE_KP;
 
-    if (state.vbatt_comp < (float)LVC_LOWER_THROTTLE_VOLTAGE)
-      throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE - state.vbatt_comp) * (float)LVC_LOWER_THROTTLE_KP;
+    if (state.vbat_compensated < (float)LVC_LOWER_THROTTLE_VOLTAGE)
+      throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE - state.vbat_compensated) * (float)LVC_LOWER_THROTTLE_KP;
 
     if (throttle_p > 1.0f)
       throttle_p = 1.0f;
 
     if (throttle_p > 0) {
-      throttle_i += throttle_p * 0.0001f; //ki
+      throttle_i += throttle_p * 0.0001f; // ki
     } else
       throttle_i -= 0.001f; // ki on release
 
