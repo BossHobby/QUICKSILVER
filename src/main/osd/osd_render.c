@@ -590,7 +590,7 @@ static void osd_display_regular() {
     break;
   }
 
-  case OSD_FUELGAUGE_VOLTS: {
+  case OSD_CELL_COUNT: {
     osd_transaction_t *txn = osd_txn_init();
     if (!flags.lowbatt) {
       osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
@@ -599,11 +599,16 @@ static void osd_display_regular() {
     }
     osd_txn_write_uint(state.lipo_cell_count, 1);
     osd_txn_write_char('S');
+    osd_txn_submit(txn);
+    osd_state.element++;
+    break;
+  }
 
-    osd_txn_start(osd_attr(el), el->pos_x + 3, el->pos_y);
+  case OSD_FUELGAUGE_VOLTS: {
+    osd_transaction_t *txn = osd_txn_init();
+    osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
     osd_txn_write_float(state.vbatt_comp, 4, 1);
     osd_txn_write_char('V');
-
     osd_txn_submit(txn);
     osd_state.element++;
     break;
@@ -611,15 +616,7 @@ static void osd_display_regular() {
 
   case OSD_FILTERED_VOLTS: {
     osd_transaction_t *txn = osd_txn_init();
-    if (!flags.lowbatt) {
-      osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
-    } else {
-      osd_txn_start(OSD_ATTR_BLINK | OSD_ATTR_INVERT, el->pos_x, el->pos_y);
-    }
-    osd_txn_write_uint(state.lipo_cell_count, 1);
-    osd_txn_write_char('S');
-
-    osd_txn_start(osd_attr(el), el->pos_x + 3, el->pos_y);
+    osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
     osd_txn_write_float(state.vbattfilt_corr, 4, 1);
     osd_txn_write_char('V');
 
