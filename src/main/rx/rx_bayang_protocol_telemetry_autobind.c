@@ -69,8 +69,8 @@ void rx_init() {
   writeregs(demodcal, sizeof(demodcal));
 
   // powerup defaults
-  //static uint8_t rfcal2[7] = { 0x3a , 0x45 , 0x21 , 0xef , 0xac , 0x3a , 0x50};
-  //writeregs( rfcal2 , sizeof(rfcal2) );
+  // static uint8_t rfcal2[7] = { 0x3a , 0x45 , 0x21 , 0xef , 0xac , 0x3a , 0x50};
+  // writeregs( rfcal2 , sizeof(rfcal2) );
 
   static uint8_t rfcal2[7] = {0x3a, 0x45, 0x21, 0xef, 0x2c, 0x5a, 0x50};
   writeregs(rfcal2, sizeof(rfcal2));
@@ -236,12 +236,12 @@ void send_telemetry() {
   txdata[0] = 133;
   txdata[1] = flags.lowbatt;
 
-  int vbatt = state.vbattfilt * 100;
+  int vbatt = state.vbat_filtered * 100;
   // battery volt filtered
   txdata[3] = (vbatt >> 8) & 0xff;
   txdata[4] = vbatt & 0xff;
 
-  vbatt = state.vbatt_comp * 100;
+  vbatt = state.vbat_compensated * 100;
   // battery volt compensated
   txdata[5] = (vbatt >> 8) & 0xff;
   txdata[6] = vbatt & 0xff;
@@ -282,7 +282,7 @@ static char checkpacket() {
     return 1;
   } else {
 #ifdef RADIO_XN297
-    if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) { //rssi set to actual rssi register value
+    if (profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) { // rssi set to actual rssi register value
       state.rx_rssi = 10.0f * ((xn_readreg(9)) & 0x0f);
       if (state.rx_rssi > 100.0f)
         state.rx_rssi = 100.0f;
@@ -330,19 +330,19 @@ static int decodepacket() {
 
       state.aux[CH_PIC] = (rxdata[2] & 0x20) ? 1 : 0;
 
-      //state.aux[CH_TO] = (rxdata[3] & 0x20) ? 1 : 0; // take off flag
+      // state.aux[CH_TO] = (rxdata[3] & 0x20) ? 1 : 0; // take off flag
 
       state.aux[CH_EMG] = (rxdata[3] & 0x04) ? 1 : 0; // emg stop flag
 
       state.aux[CH_FLIP] = (rxdata[2] & 0x08) ? 1 : 0;
 
-      //state.aux[CH_EXPERT] = (rxdata[1] == 0xfa) ? 1 : 0;
+      // state.aux[CH_EXPERT] = (rxdata[1] == 0xfa) ? 1 : 0;
 
       state.aux[CH_HEADFREE] = (rxdata[2] & 0x02) ? 1 : 0;
 
       state.aux[CH_RTH] = (rxdata[2] & 0x01) ? 1 : 0; // rth channel
 
-      //rx_apply_expo()  no longer needed here;
+      // rx_apply_expo()  no longer needed here;
 
       return 1; // valid packet
     }
@@ -441,7 +441,7 @@ void rx_check() {
 #endif
       }
       bind_safety++;
-      if (bind_safety > 9) { //requires 10 good frames to come in before rx_ready safety can be toggled to 1
+      if (bind_safety > 9) { // requires 10 good frames to come in before rx_ready safety can be toggled to 1
         flags.rx_ready = 1;  // because aux channels initialize low and clear the binding while armed flag before aux updates high
         bind_safety = 10;
       }
@@ -513,7 +513,7 @@ void rx_check() {
       state.rx_rssi = 0.0f;
 #endif
 #ifdef RADIO_XN297
-    if (profile.receiver.aux[AUX_RSSI] > AUX_CHANNEL_11) { //rssi set to internal link quality
+    if (profile.receiver.aux[AUX_RSSI] > AUX_CHANNEL_11) { // rssi set to internal link quality
       state.rx_rssi = packetpersecond / 200.0f;
       state.rx_rssi = state.rx_rssi * state.rx_rssi * state.rx_rssi * RSSI_EXP + state.rx_rssi * (1 - RSSI_EXP);
       state.rx_rssi *= 100.0f;

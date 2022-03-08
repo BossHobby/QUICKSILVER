@@ -3,7 +3,7 @@
 // original bluetooth LE idea by Dmitry Grinberg
 // http://dmitry.gr/index.php?r=05.Projects&proj=11.%20Bluetooth%20LE%20fakery
 
-// some bluetooth LE functions adapted from nrf24 code by Lijun 
+// some bluetooth LE functions adapted from nrf24 code by Lijun
 // http://doc.lijun.li/misc-nrf24-ble.html
 // https://github.com/lijunhw/nRF24_BLE/blob/master/Arduino/nRF24_BLE_advertizer_demo/nRF24_BLE_advertizer_demo.ino
 
@@ -68,8 +68,8 @@
 // and get propper image in SilverVISE application.
 // To resume, fo this firmware, values are:
 //
-//0x51 - BWHOOP B-03 - blue canopy (default)
-//0x52 - BWHOOP B-03 - orange canopy
+// 0x51 - BWHOOP B-03 - blue canopy (default)
+// 0x52 - BWHOOP B-03 - orange canopy
 //
 // Value 0x00 represents unknown quad (generic image)
 
@@ -86,7 +86,7 @@
 //#define TX_POWER_GENERAL 3 // general value for quadcopter power (use odd numbers, but try with even also - smaller value is better for telemetry signal)
 
 //#define TX_POWER_ON_TLM 0 //quadcopter power during transmitting telemetry data (use even numbers but try odd also - smaller value is better for telemetry signal)
-//usually TX_POWER_ON_TLM need to be lower than TX_POWER_GENERAL, but experiment if that combination does not help...
+// usually TX_POWER_ON_TLM need to be lower than TX_POWER_GENERAL, but experiment if that combination does not help...
 // If TX_POWER_GENERAL/TX_POWER_ON_TLM still produces constant TLM DISCONNECTED errors when motors are on and on high throttle, try also enabling USE_ALL_BLE_CHANNELS.
 // You can use all three settings in the same time or experiment with one or two of them until you get better and stable bluetooth signal.
 
@@ -107,13 +107,13 @@
 // uses precalculated whitening data
 // possible values: 0 / 1
 //#define ONE_CHANNEL 1 //commented by silverAG for SilverVISE - not used for now
-//SilverVISE - start:
+// SilverVISE - start:
 #ifdef USE_ALL_BLE_CHANNELS
 #define ONE_CHANNEL 0
 #else
 #define ONE_CHANNEL 1
 #endif
-//SilverVISE - end
+// SilverVISE - end
 
 // radio settings
 
@@ -178,8 +178,8 @@ void rx_init() {
   writeregs(demodcal, sizeof(demodcal));
 
   // powerup defaults
-  //static uint8_t rfcal2[7] = { 0x3a , 0x45 , 0x21 , 0xef , 0xac , 0x3a , 0x50};
-  //writeregs( rfcal2 , sizeof(rfcal2) );
+  // static uint8_t rfcal2[7] = { 0x3a , 0x45 , 0x21 , 0xef , 0xac , 0x3a , 0x50};
+  // writeregs( rfcal2 , sizeof(rfcal2) );
 
   static uint8_t rfcal2[7] = {0x3a, 0x45, 0x21, 0xef, 0x2c, 0x5a, 0x50};
   writeregs(rfcal2, sizeof(rfcal2));
@@ -206,7 +206,7 @@ void rx_init() {
   writeregs(rfcal, sizeof(rfcal));
 
   static uint8_t demodcal[6] = {0x39, 0x0b, 0xdf, 0xc4, 0xa7, 0x03};
-  //static uint8_t demodcal[6] = { 0x39 , 0x0b , 0xdf , 0xc4 , 0b00100111 , 0b00000000};
+  // static uint8_t demodcal[6] = { 0x39 , 0x0b , 0xdf , 0xc4 , 0b00100111 , 0b00000000};
   writeregs(demodcal, sizeof(demodcal));
 
 #define XN_TO_RX 0b00001111
@@ -260,7 +260,7 @@ void rx_init() {
     failloop(FAILLOOP_RADIO);
 #endif
 
-  //fill with characters from MY_QUAD_NAME (just first 6 chars)
+  // fill with characters from MY_QUAD_NAME (just first 6 chars)
   int string_len = 0;
   while (string_len < 6) {
     if (MY_QUAD_NAME[string_len] == '\0')
@@ -269,9 +269,9 @@ void rx_init() {
     string_len++;
   }
 
-  //fill the rest (up to 6 bytes) with blanks
+  // fill the rest (up to 6 bytes) with blanks
   for (int i = string_len; i < 6; i++) {
-    quad_name[string_len] = ' '; //blank
+    quad_name[string_len] = ' '; // blank
   }
 }
 
@@ -358,7 +358,7 @@ return b;
 // cortex m3 intrinsic bitswap
 uint8_t swapbits_m3(uint8_t a)
 {
-return (uint32_t) __rbit( (uint32_t) a); 
+return (uint32_t) __rbit( (uint32_t) a);
 }
 */
 
@@ -388,13 +388,13 @@ void btLePacketEncode(uint8_t *packet, uint8_t len, uint8_t chan) {
   // Length is of packet, including crc. pre-populate crc in packet with initial crc value!
   uint8_t i, dataLen = len - 3;
 
-  packet[len - 3] = 0x55; //CRC start value: 0x555555
+  packet[len - 3] = 0x55; // CRC start value: 0x555555
   packet[len - 2] = 0x55;
   packet[len - 1] = 0x55;
 
   btLeCrc(packet, dataLen, packet + dataLen);
 
-  //for(i = 0; i < 3; i++, dataLen++)
+  // for(i = 0; i < 3; i++, dataLen++)
   //	packet[dataLen] = swapbits(packet[dataLen]);
 
   if (ONE_CHANNEL) {
@@ -438,8 +438,8 @@ void bleinit() {
 
   int txaddr[5];
 
-  /*	
-	// 4 byte address
+  /*
+  // 4 byte address
 txaddr[0] = swapbits(0x8E)^xn297_scramble[3];
 txaddr[1] = swapbits(0x89)^xn297_scramble[2];
 txaddr[2] = swapbits(0xBE)^xn297_scramble[1];
@@ -447,8 +447,8 @@ txaddr[3] = swapbits(0xD6)^xn297_scramble[0];
 txaddr[4] = 0;
 */
 
-  /*	
-		// 4 byte address - optimized
+  /*
+    // 4 byte address - optimized
 txaddr[0] = 0x71^0xea;
 txaddr[1] = 0x91^0x4b;
 txaddr[2] = 0x7d^0xb1;
@@ -494,11 +494,11 @@ void beacon_sequence() {
       ble_send = 1;
       oldchan = rf_chan;
 
-//SilverVISE - start
+// SilverVISE - start
 #ifdef TX_POWER_ON_TLM
       xn_writereg(RF_SETUP, TX_POWER_ON_TLM); // lna low current ( better BLE)
 #endif
-      //SilverVISE - end
+      // SilverVISE - end
 
       send_beacon();
 
@@ -515,11 +515,11 @@ void beacon_sequence() {
       goto next;
     } else { // if it takes too long we get rid of it
       if (time_micros() - ble_txtime > BLE_TX_TIMEOUT) {
-//SilverVISE - start
+// SilverVISE - start
 #ifdef TX_POWER_ON_TLM
         xn_writereg(RF_SETUP, XN_POWER); // lna high current on ( better performance )
 #endif
-        //SilverVISE - end
+        // SilverVISE - end
 
         xn_command(FLUSH_TX);
         xn_writereg(0, XN_TO_RX);
@@ -534,11 +534,11 @@ void beacon_sequence() {
 // restore radio settings to protocol compatible
 // mainly channel here
 
-//SilverVISE - start
+// SilverVISE - start
 #ifdef TX_POWER_ON_TLM
     xn_writereg(RF_SETUP, XN_POWER); // lna high current on ( better performance )
 #endif
-    //SilverVISE - end
+    // SilverVISE - end
 
     ble_send = 0;
     if (flags.rx_mode == 0) {
@@ -572,25 +572,25 @@ void send_beacon() {
 
   extern int random_seed;
 
-//extern int random_seed; //SilverVISE
-//SilverVISE - start
+// extern int random_seed; //SilverVISE
+// SilverVISE - start
 #ifdef MY_QUAD_ID
   random_seed = MY_QUAD_ID;
 #else
 #warning WARNING!!! USING RANDOM MAC ADDRESS! PLEASE READ COMMENT INSIDE rx_bayang_ble_app.c REGARDING POSSIBLE PROBLEMS WITH BLUETOOTH DUE TO ANDROID BUG!
 #endif
   // SilverVISE - end
-  int vbatt_comp_int = state.vbatt_comp * 1000.0f;
+  int vbatt_comp_int = state.vbat_compensated * 1000.0f;
 
   uint32_t time = time_micros();
 
   time = time >> 20; // divide by 1024*1024, no time for accuracy here
   time = time * 10;
 
-  //int acro_or_level_mode;
+  // int acro_or_level_mode;
 
-  //if ( rx_aux_on(AUX_LEVELMODE) ) acro_or_level_mode = 1;
-  //else acro_or_level_mode = 0;
+  // if ( rx_aux_on(AUX_LEVELMODE) ) acro_or_level_mode = 1;
+  // else acro_or_level_mode = 0;
 
   extern uint32_t total_time_in_air;
   extern uint32_t time_throttle_on;
@@ -621,12 +621,12 @@ void send_beacon() {
   if (packetpersecond_short > 0xff)
     packetpersecond = 0xff;
 
-  buf[L++] = 0b00100010; //PDU type, given address is random; 0x42 for Android and 0x40 for iPhone
-  //buf[L++] = 0x42; //PDU type, given address is random; 0x42 for Android and 0x40 for iPhone
+  buf[L++] = 0b00100010; // PDU type, given address is random; 0x42 for Android and 0x40 for iPhone
+  // buf[L++] = 0x42; //PDU type, given address is random; 0x42 for Android and 0x40 for iPhone
 
   // max len 27 with 5 byte address = 37 total payload bytes
   buf[L++] = 10 + 21;     // length of payload
-  buf[L++] = random_seed; //SilverVISE
+  buf[L++] = random_seed; // SilverVISE
   buf[L++] = MY_MAC_1;
   buf[L++] = MY_MAC_2;
   buf[L++] = MY_MAC_3;
@@ -634,7 +634,7 @@ void send_beacon() {
   buf[L++] = MY_MAC_5;
 
   // packet data unit
-  buf[L++] = 2;    //flags lenght(LE-only, limited discovery mode)
+  buf[L++] = 2;    // flags lenght(LE-only, limited discovery mode)
   buf[L++] = 0x01; // compulsory flags
   buf[L++] = 0x06; // flag value
   buf[L++] = 0x15; // Length of next block
@@ -642,15 +642,15 @@ void send_beacon() {
 
   // ------------------------- TLM+PID
   if (TLMorPID == 1) {
-    buf[L++] = 0x2F; //PID+TLM datatype_and_packetID;  // xxxxyyyy -> yyyy = 1111 packet type ID (custom BLE type), xxxx = type of data in packet: 0001 -> telemetry, 0002->PID
+    buf[L++] = 0x2F; // PID+TLM datatype_and_packetID;  // xxxxyyyy -> yyyy = 1111 packet type ID (custom BLE type), xxxx = type of data in packet: 0001 -> telemetry, 0002->PID
 
 #ifdef MY_QUAD_MODEL
     buf[L++] = MY_QUAD_MODEL;
 #else
-    buf[L++] = 0x51;                                           //quad model (00 - unknown, 51 - BWHOOP B-03 blue canopy, 52 - BWHOOP B-03 orange canopy... check comments at start of this file for details)
+    buf[L++] = 0x51;                                           // quad model (00 - unknown, 51 - BWHOOP B-03 blue canopy, 52 - BWHOOP B-03 orange canopy... check comments at start of this file for details)
 #endif
 
-    buf[L++] = random_seed; //already custom entry - need to be randomized
+    buf[L++] = random_seed; // already custom entry - need to be randomized
     buf[L++] = quad_name[0];
     buf[L++] = quad_name[1];
     buf[L++] = quad_name[2];
@@ -658,10 +658,10 @@ void send_beacon() {
     buf[L++] = quad_name[4];
     buf[L++] = quad_name[5];
 
-    extern int current_pid_term; //0 = pidkp, 1 = pidki, 2 = pidkd
-    extern int current_pid_axis; //0 = roll, 1 = pitch, 2 = yaw
+    extern int current_pid_term; // 0 = pidkp, 1 = pidki, 2 = pidkd
+    extern int current_pid_axis; // 0 = roll, 1 = pitch, 2 = yaw
 
-    //int selectedPID = 0; //inxed of selected PID for changing
+    // int selectedPID = 0; //inxed of selected PID for changing
 
     int selectedPID = ((current_pid_term)*3) + (current_pid_axis);
 
@@ -674,10 +674,10 @@ buf[L++] =  onground_and_bind; //binary xxxxabcd - xxxx = error code or warning,
 */
 
 #ifdef COMBINE_PITCH_ROLL_PID_TUNING
-    buf[L++] = 0b01000000 + ((rate_and_mode_value << 4) + onground_and_bind); //binary xxRMabcd - x = error code or warning, 1 = combined roll+pitch tuning, R = rate (0 - normal, 1 - fast) , M = mode (1 - level, 0 - acro); a -> 0 = stock TX, 1= other TX, b -> 0 = not failsafe, 1 = failsafe, c = 0 -> not bound, 1 -> bound, d = 0 -> in the air, 1 = on the ground;
+    buf[L++] = 0b01000000 + ((rate_and_mode_value << 4) + onground_and_bind); // binary xxRMabcd - x = error code or warning, 1 = combined roll+pitch tuning, R = rate (0 - normal, 1 - fast) , M = mode (1 - level, 0 - acro); a -> 0 = stock TX, 1= other TX, b -> 0 = not failsafe, 1 = failsafe, c = 0 -> not bound, 1 -> bound, d = 0 -> in the air, 1 = on the ground;
     int PID_pause = 8;
 #else
-    buf[L++] = (rate_and_mode_value << 4) + onground_and_bind; //binary x0RMabcd - x = error code or warning, 0 = no combined roll+pitch tuning, R = rate (0 - normal, 1 - fast) , M = mode (1 - level, 0 - acro); a -> 0 = stock TX, 1= other TX, b -> 0 = not failsafe, 1 = failsafe, c = 0 -> not bound, 1 -> bound, d = 0 -> in the air, 1 = on the ground;
+    buf[L++] = (rate_and_mode_value << 4) + onground_and_bind; // binary x0RMabcd - x = error code or warning, 0 = no combined roll+pitch tuning, R = rate (0 - normal, 1 - fast) , M = mode (1 - level, 0 - acro); a -> 0 = stock TX, 1= other TX, b -> 0 = not failsafe, 1 = failsafe, c = 0 -> not bound, 1 -> bound, d = 0 -> in the air, 1 = on the ground;
     int PID_pause = 12;
 #endif
 
@@ -720,13 +720,13 @@ buf[L++] =  onground_and_bind; //binary xxxxabcd - xxxx = error code or warning,
       pid_for_display = (uint16_t)(profile_current_pid_rates()->kd.axis[2] * 10000.0f);
       break;
       /*
-	 //level mode PIDs - disabled for now...
-	 case 9:pid_for_display =(uint16_t)(apidkp[0]*10000.0f);break;
-	 case 10:pid_for_display =(uint16_t)(apidkp[1]*10000.0f);break;
-	 case 11:pid_for_display =(uint16_t)(apidki[0]*10000.0f);break;
-	 case 12:pid_for_display =(uint16_t)(apidki[1]*10000.0f);break;
-	 case 13:pid_for_display =(uint16_t)(apidkd[0]*10000.0f);break;
-	 case 14:pid_for_display =(uint16_t)(apidkd[1]*10000.0f);break;
+   //level mode PIDs - disabled for now...
+   case 9:pid_for_display =(uint16_t)(apidkp[0]*10000.0f);break;
+   case 10:pid_for_display =(uint16_t)(apidkp[1]*10000.0f);break;
+   case 11:pid_for_display =(uint16_t)(apidki[0]*10000.0f);break;
+   case 12:pid_for_display =(uint16_t)(apidki[1]*10000.0f);break;
+   case 13:pid_for_display =(uint16_t)(apidkd[0]*10000.0f);break;
+   case 14:pid_for_display =(uint16_t)(apidkd[1]*10000.0f);break;
 */
     }
 
@@ -744,11 +744,11 @@ buf[L++] =  time;
     buf[L++] = pid_for_display >> 8;
     buf[L++] = pid_for_display;
 
-    L = L + 3; //crc
+    L = L + 3; // crc
 
     PID_index_delay++;
     int PID_index_limit = 8; // number of PIDs to display for acro mode tuning
-    //if ((rate_and_mode_value&1) == 1) PID_index_limit = 14; // number of PIDs to display for level mode tuning
+    // if ((rate_and_mode_value&1) == 1) PID_index_limit = 14; // number of PIDs to display for level mode tuning
     if (PID_index_delay > PID_pause) {
       PID_index_delay = 0;
       current_PID_for_display++;
@@ -768,7 +768,7 @@ buf[L++] =  time;
   }
 
   if (TLMorPID == 0) {
-    buf[L++] = 0x1F; //TLM datatype_and_packetID;  // xxxxyyyy -> yyyy = 1111 packet type ID (custom BLE type), xxxx = type of data in packet: 0001 -> telemetry, 0002->PID
+    buf[L++] = 0x1F; // TLM datatype_and_packetID;  // xxxxyyyy -> yyyy = 1111 packet type ID (custom BLE type), xxxx = type of data in packet: 0001 -> telemetry, 0002->PID
 
 #ifdef MY_QUAD_MODEL
     buf[L++] = MY_QUAD_MODEL;
@@ -776,9 +776,9 @@ buf[L++] =  time;
     buf[L++] = 0x11; // quad model (00 - unknown, 11- H8 mini blue board, 20 - H101... check comments at start of this file for details)
 #endif
 
-    buf[L++] = random_seed; //already custom entry - need to be randomized
+    buf[L++] = random_seed; // already custom entry - need to be randomized
 #ifdef MY_QUAD_NAME
-    //fill with characters from MY_QUAD_NAME (just first 6 chars)
+    // fill with characters from MY_QUAD_NAME (just first 6 chars)
     int string_len = 0;
     while (string_len < 6) {
       if (MY_QUAD_NAME[string_len] == '\0')
@@ -787,9 +787,9 @@ buf[L++] =  time;
       string_len++;
     }
 
-    //fill the rest (up to 6 bytes) with blanks
+    // fill the rest (up to 6 bytes) with blanks
     for (int i = string_len; i < 6; i++) {
-      buf[L++] = ' '; //blank
+      buf[L++] = ' '; // blank
     }
 #else
     buf[L++] = (char)'N';
@@ -799,19 +799,19 @@ buf[L++] =  time;
     buf[L++] = (char)'M';
     buf[L++] = (char)'E';
 #endif
-    buf[L++] = 0x00; //reserved for future use
+    buf[L++] = 0x00; // reserved for future use
     buf[L++] = packetpersecond_short;
-    buf[L++] = onground_and_bind;           //binary xxxxabcd - xxxx = error code or warning, a -> 0 = stock TX, 1= other TX, b -> 0 = not failsafe, 1 = failsafe, c = 0 -> not bound, 1 -> bound, d = 0 -> in the air, 1 = on the ground;
+    buf[L++] = onground_and_bind;           // binary xxxxabcd - xxxx = error code or warning, a -> 0 = stock TX, 1= other TX, b -> 0 = not failsafe, 1 = failsafe, c = 0 -> not bound, 1 -> bound, d = 0 -> in the air, 1 = on the ground;
     buf[L++] = vbatt_comp_int >> 8;         // Battery voltage compensated
     buf[L++] = vbatt_comp_int;              // Battery voltage compensated
     buf[L++] = total_time_in_air_time >> 8; // total time in air
     buf[L++] = total_time_in_air_time;      // total time in air
     buf[L++] = time >> 8;
     buf[L++] = time;
-    buf[L++] = rate_and_mode_value; //xxxxxxRM //rate + mode R = rate (0 - normal, 1 - fast) , M = mode (1 - level, 0 - acro)
-    buf[L++] = 0x00;                //reserved for future use
+    buf[L++] = rate_and_mode_value; // xxxxxxRM //rate + mode R = rate (0 - normal, 1 - fast) , M = mode (1 - level, 0 - acro)
+    buf[L++] = 0x00;                // reserved for future use
 
-    L = L + 3; //crc
+    L = L + 3; // crc
   }
 
   btLePacketEncode(buf, L, ch);
@@ -842,8 +842,8 @@ static char checkpacket() {
   if (status & (1 << MASK_RX_DR)) { // rx clear bit
                                     // this is not working well
                                     // xn_writereg( STATUS , (1<<MASK_RX_DR) );
-                                    //RX packet received
-                                    //return 1;
+                                    // RX packet received
+                                    // return 1;
   }
   if ((status & 0b00001110) != 0b00001110) {
     // rx fifo not empty
@@ -891,13 +891,13 @@ static int decodepacket() {
 
       state.aux[CH_FLIP] = (rxdata[2] & 0x08) ? 1 : 0;
 
-      //state.aux[CH_EXPERT] = (rxdata[1] == 0xfa) ? 1 : 0;
+      // state.aux[CH_EXPERT] = (rxdata[1] == 0xfa) ? 1 : 0;
 
       state.aux[CH_HEADFREE] = (rxdata[2] & 0x02) ? 1 : 0;
 
       state.aux[CH_RTH] = (rxdata[2] & 0x01) ? 1 : 0; // rth channel
 
-      //rx_apply_expo()  no longer needed here;
+      // rx_apply_expo()  no longer needed here;
 
       return 1; // valid packet
     }
@@ -919,7 +919,7 @@ uint32_t secondtimer;
 uint32_t skipchannel = 0;
 int lastrxchan;
 int timingfail = 0;
-extern int bound_for_BLE_packet; //SilverVISE
+extern int bound_for_BLE_packet; // SilverVISE
 
 void rx_check() {
   int packetreceived = checkpacket();
@@ -944,7 +944,7 @@ void rx_check() {
         xn_writerxaddress(rxaddress);
         xn_writereg(0x25, rfchannel[rf_chan]); // Set channel frequency
         flags.rx_mode = RX_MODE_NORMAL;
-        bound_for_BLE_packet = 1; //SilverVISE
+        bound_for_BLE_packet = 1; // SilverVISE
 
 #ifdef SERIAL
         printf(" BIND \n");
@@ -987,7 +987,7 @@ void rx_check() {
 
     } // end normal rx mode
     bind_safety++;
-    if (bind_safety > 9) { //requires 10 good frames to come in before rx_ready safety can be toggled to 1
+    if (bind_safety > 9) { // requires 10 good frames to come in before rx_ready safety can be toggled to 1
       flags.rx_ready = 1;  // because aux channels initialize low and clear the binding while armed flag before aux updates high
       bind_safety = 10;
     }
