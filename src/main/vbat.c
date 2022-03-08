@@ -59,6 +59,8 @@ void vbat_calc() {
   lpf(&state.vbat_filtered_decay, state.vbat_filtered, FILTERCALC(1000, 18000e3));
   lpf(&state.vbat_filtered, battadc, 0.9968f);
 
+  state.vbat_cell_avg = state.vbat_filtered_decay / state.lipo_cell_count;
+
   float tempvolt = state.vbat_filtered * (1.00f + CF1) - state.vbat_filtered_decay * (CF1);
 
 #ifdef AUTO_VDROP_FACTOR
@@ -115,8 +117,9 @@ void vbat_calc() {
     hyst = 0.0f;
 
   state.vbat_compensated = tempvolt + vdrop_factor * thrfilt;
+  state.vbat_compensated_cell_avg = state.vbat_compensated / state.lipo_cell_count;
 
-  if ((state.vbat_compensated < profile.voltage.vbattlow * state.lipo_cell_count + hyst) || (state.vbat_filtered < VBATTLOW_ABS * state.lipo_cell_count))
+  if ((state.vbat_compensated_cell_avg < profile.voltage.vbattlow + hyst) || (state.vbat_cell_avg < VBATTLOW_ABS))
     flags.lowbatt = 1;
   else
     flags.lowbatt = 0;
