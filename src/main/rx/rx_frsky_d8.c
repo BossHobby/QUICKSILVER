@@ -10,7 +10,7 @@
 
 #if defined(RX_FRSKY_D8) && defined(USE_CC2500)
 
-//Source https://www.rcgroups.com/forums/showpost.php?p=21864861
+// Source https://www.rcgroups.com/forums/showpost.php?p=21864861
 
 // these will get absimal range without pa/lna
 #define FRSKY_ENABLE_TELEMETRY
@@ -82,7 +82,7 @@ static void frsky_d8_set_rc_data() {
 
   rx_apply_stick_calibration_scale();
 
-  //Here we have the AUX channels Silverware supports
+  // Here we have the AUX channels Silverware supports
   state.aux[AUX_CHANNEL_0] = (channels[4] > 2000) ? 1 : 0;
   state.aux[AUX_CHANNEL_1] = (channels[5] > 2000) ? 1 : 0;
   state.aux[AUX_CHANNEL_2] = (channels[6] > 2000) ? 1 : 0;
@@ -230,8 +230,8 @@ static uint8_t frsky_d8_handle_packet() {
           telemetry[0] = 0x11; // length
           telemetry[1] = bind_storage.frsky.tx_id[0];
           telemetry[2] = bind_storage.frsky.tx_id[1];
-          telemetry[3] = (uint8_t)(state.vbattfilt * 100);
-          telemetry[4] = (uint8_t)(state.vbattfilt * 100);
+          telemetry[3] = (uint8_t)(state.vbat_filtered * 100);
+          telemetry[4] = (uint8_t)(state.vbat_filtered * 100);
           telemetry[5] = frsky_extract_rssi(packet[18]);
 #ifdef FRSKY_ENABLE_HUB_TELEMETRY
           telemetry[6] = frsky_d8_append_hub_telemetry(telemetry_id, telemetry + 8);

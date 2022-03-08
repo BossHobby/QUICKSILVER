@@ -107,7 +107,7 @@ void pid_precalc() {
   filter_coeff(profile.filter.dterm[1].type, &filter[1], profile.filter.dterm[1].cutoff_freq);
 
   if (profile.voltage.pid_voltage_compensation) {
-    v_compensation = mapf((state.vbattfilt_corr / (float)state.lipo_cell_count), 2.5f, 3.85f, PID_VC_FACTOR, 1.0f);
+    v_compensation = mapf((state.vbat_filtered_decay / (float)state.lipo_cell_count), 2.5f, 3.85f, PID_VC_FACTOR, 1.0f);
     v_compensation = constrainf(v_compensation, 1.0f, PID_VC_FACTOR);
 
 #ifdef LEVELMODE_PID_ATTENUATION

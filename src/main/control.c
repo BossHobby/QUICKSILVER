@@ -27,7 +27,7 @@
 #endif
 
 #ifndef IDLE_THR
-#define IDLE_THR .001f //just enough to override motor stop at 0 throttle
+#define IDLE_THR .001f // just enough to override motor stop at 0 throttle
 #endif
 
 #define ON_GROUND_LONG_TIMEOUT 1e6
@@ -58,9 +58,10 @@ FAST_RAM control_state_t state = {
 
     .aux = {0},
 
-    .vbattfilt = 0.0,
-    .vbattfilt_corr = 4.2,
-    .vbatt_comp = 4.2,
+    .vref_filtered = 1.0,
+    .vbat_filtered = 0.0,
+    .vbat_filtered_decay = 4.2,
+    .vbat_compensated = 4.2,
 
     .ibat = 0.0,
     .ibat_filtered = 0.0,
@@ -69,9 +70,6 @@ FAST_RAM control_state_t state = {
 
     .rx_rssi = 0,
     .rx_status = 0,
-
-    // voltage reference for vcc compensation
-    .vreffilt = 1.0,
 
     .lipo_cell_count = 1.0,
 
@@ -108,11 +106,11 @@ void control() {
   pid_precalc();
 
 #ifndef DISABLE_FLIP_SEQUENCER
-  if (rx_aux_on(AUX_TURTLE) && !rx_aux_on(AUX_MOTOR_TEST)) { //turtle active when aux high
+  if (rx_aux_on(AUX_TURTLE) && !rx_aux_on(AUX_MOTOR_TEST)) { // turtle active when aux high
     start_flip();
   } else {
     extern int readytoflip;
-    readytoflip = 0; //reset the flip sequencer state variable with aux low
+    readytoflip = 0; // reset the flip sequencer state variable with aux low
   }
 
   flip_sequencer();
@@ -141,32 +139,32 @@ void control() {
     yawerror[2] = state.GEstG.axis[2] * rates.axis[2];
 
     // *************************************************************************
-    //horizon modes tuning variables
+    // horizon modes tuning variables
     // *************************************************************************
     // 1.0 is pure angle based transition, 0.0 is pure stick defelction based transition, values inbetween are a mix of both.  Adjust from 0 to 1
     float HORIZON_SLIDER = 0.3f;
-    //leveling transitions into acro below this angle - above this angle is all acro.  DO NOT SET ABOVE 85 DEGREES!
+    // leveling transitions into acro below this angle - above this angle is all acro.  DO NOT SET ABOVE 85 DEGREES!
     float HORIZON_ANGLE_TRANSITION = 55.0f;
-    //leveling transitions into acro below this stick position - beyond this stick position is all acro. Adjust from 0 to 1
+    // leveling transitions into acro below this stick position - beyond this stick position is all acro. Adjust from 0 to 1
     float HORIZON_STICK_TRANSITION = 0.95f;
     // *************************************************************************
     // *************************************************************************
 
-    if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON)) { //racemode with angle behavior on roll ais
+    if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON)) { // racemode with angle behavior on roll ais
       if (state.GEstG.axis[2] < 0) {                          // acro on roll and pitch when inverted
         state.error.axis[0] = rates.axis[0] - state.gyro.axis[0];
         state.error.axis[1] = rates.axis[1] - state.gyro.axis[1];
       } else {
-        //roll is leveled to max angle limit
+        // roll is leveled to max angle limit
         state.angleerror[0] = state.errorvect.axis[0];
         state.error.axis[0] = angle_pid(0) + yawerror[0] - state.gyro.axis[0];
-        //pitch is acro
+        // pitch is acro
         state.error.axis[1] = rates.axis[1] - state.gyro.axis[1];
       }
       // yaw
       state.error.axis[2] = yawerror[2] - state.gyro.axis[2];
 
-    } else if (rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON)) { //racemode with horizon behavior on roll axis
+    } else if (rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON)) { // racemode with horizon behavior on roll axis
       float inclinationRoll = state.attitude.axis[0];
       float inclinationPitch = state.attitude.axis[1];
       float inclinationMax;
@@ -198,15 +196,15 @@ void control() {
         state.angleerror[0] = state.errorvect.axis[0];
         // roll angle strength fades out as sticks approach HORIZON_TRANSITION while acro stength fades in according to value of acroFade factor
         state.error.axis[0] = ((angle_pid(0) + yawerror[0] - state.gyro.axis[0]) * (1 - fade)) + (fade * (rates.axis[0] - state.gyro.axis[0]));
-        //pitch is acro
+        // pitch is acro
         state.error.axis[1] = rates.axis[1] - state.gyro.axis[1];
       }
 
       // yaw
       state.error.axis[2] = yawerror[2] - state.gyro.axis[2];
 
-    } else if (!rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON)) { //horizon overrites standard level behavior
-      //pitch and roll
+    } else if (!rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON)) { // horizon overrites standard level behavior
+      // pitch and roll
       for (int i = 0; i <= 1; i++) {
         float inclinationRoll = state.attitude.axis[0];
         float inclinationPitch = state.attitude.axis[1];
@@ -243,7 +241,7 @@ void control() {
       // yaw
       state.error.axis[2] = yawerror[2] - state.gyro.axis[2];
 
-    } else { //standard level mode
+    } else { // standard level mode
       // pitch and roll
       for (int i = 0; i <= 1; i++) {
         state.angleerror[i] = state.errorvect.axis[i];
@@ -387,7 +385,7 @@ void control() {
     }
 #endif
 
-    state.throttle = 0; //zero out throttle so it does not come back on as idle up value if enabled
+    state.throttle = 0; // zero out throttle so it does not come back on as idle up value if enabled
     flags.on_ground = 1;
     state.thrsum = 0;
 
@@ -411,7 +409,7 @@ void control() {
     // throttle angle compensation
 #ifdef AUTO_THROTTLE
     if (rx_aux_on(AUX_LEVELMODE)) {
-      //float autothrottle = fastcos(state.attitude.axis[0] * DEGTORAD) * fastcos(state.attitude.axis[1] * DEGTORAD);
+      // float autothrottle = fastcos(state.attitude.axis[0] * DEGTORAD) * fastcos(state.attitude.axis[1] * DEGTORAD);
       float autothrottle = state.GEstG.axis[2];
       float old_throttle = state.throttle;
       if (autothrottle <= 0.5f)

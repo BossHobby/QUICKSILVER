@@ -49,10 +49,11 @@ typedef struct {
   uint32_t failsafe_time_ms; // time the last failsafe occured in ms
 
   float lipo_cell_count;
-  float vbattfilt; // filtered battery in volts
-  float vbattfilt_corr;
-  float vbatt_comp;
-  float vreffilt; // voltage reference for vcc compensation
+
+  float vref_filtered;       // voltage reference for vcc compensation
+  float vbat_filtered;       // filtered battery in volts
+  float vbat_filtered_decay; // filtered battery with time decay
+  float vbat_compensated;    // battery compensated for sag
 
   float ibat;
   float ibat_filtered;
@@ -103,10 +104,10 @@ typedef struct {
   MEMBER(armtime, float)                    \
   MEMBER(cpu_load, float)                   \
   MEMBER(lipo_cell_count, float)            \
-  MEMBER(vbattfilt, float)                  \
-  MEMBER(vbattfilt_corr, float)             \
-  MEMBER(vbatt_comp, float)                 \
-  MEMBER(vreffilt, float)                   \
+  MEMBER(vbat_filtered, float)              \
+  MEMBER(vbat_filtered_decay, float)        \
+  MEMBER(vbat_compensated, float)           \
+  MEMBER(vref_filtered, float)              \
   MEMBER(ibat, float)                       \
   MEMBER(ibat_filtered, float)              \
   MEMBER(rx, vec4_t)                        \
