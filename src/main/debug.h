@@ -5,7 +5,7 @@
 #include "project.h"
 
 typedef struct {
-  float vbatt_comp;
+  float vbat_compensated;
   float adcfilt;
   float totaltime;
   float timefilt;

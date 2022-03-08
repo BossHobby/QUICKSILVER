@@ -121,7 +121,7 @@ int nrf24_read_xn297_payload(int *rxdata, int size) {
       return 0;
     }
   }
-  //29uS
+  // 29uS
   for (int i = 0; i < size - crc_en * 2; i++) {
     rxdata[i] = swapbits(rxdata[i] ^ xn297_scramble[i + 5]);
   }
@@ -247,12 +247,12 @@ void send_telemetry() {
   txdata[0] = 133;
   txdata[1] = flags.lowbatt;
 
-  int vbatt = state.vbattfilt * 100;
+  int vbatt = state.vbat_filtered * 100;
   // battery volt filtered
   txdata[3] = (vbatt >> 8) & 0xff;
   txdata[4] = vbatt & 0xff;
 
-  vbatt = state.vbatt_comp * 100;
+  vbatt = state.vbat_compensated * 100;
   // battery volt compensated
   txdata[5] = (vbatt >> 8) & 0xff;
   txdata[6] = vbatt & 0xff;
@@ -290,7 +290,7 @@ static char checkpacket() {
   if (status & (1 << MASK_RX_DR)) { // rx clear bit
 
     // xn_writereg( STATUS , (1<<MASK_RX_DR) );
-    //RX packet received
+    // RX packet received
     // return 1;
   }
   if ((status & 0b00001110) != 0b00001110) {
@@ -329,19 +329,19 @@ static int decodepacket() {
 
       state.aux[CH_PIC] = (rxdata[2] & 0x20) ? 1 : 0;
 
-      //state.aux[CH_TO] = (rxdata[3] & 0x20) ? 1 : 0; // take off flag
+      // state.aux[CH_TO] = (rxdata[3] & 0x20) ? 1 : 0; // take off flag
 
       state.aux[CH_EMG] = (rxdata[3] & 0x04) ? 1 : 0; // emg stop flag
 
       state.aux[CH_FLIP] = (rxdata[2] & 0x08) ? 1 : 0;
 
-      //state.aux[CH_EXPERT] = (rxdata[1] == 0xfa) ? 1 : 0;
+      // state.aux[CH_EXPERT] = (rxdata[1] == 0xfa) ? 1 : 0;
 
       state.aux[CH_HEADFREE] = (rxdata[2] & 0x02) ? 1 : 0;
 
       state.aux[CH_RTH] = (rxdata[2] & 0x01) ? 1 : 0; // rth channel
 
-      //rx_apply_expo()  no longer needed here;
+      // rx_apply_expo()  no longer needed here;
 
       return 1; // valid packet
     }
@@ -443,7 +443,7 @@ void rx_check() {
 
     } // end normal rx mode
     bind_safety++;
-    if (bind_safety > 9) { //requires 10 good frames to come in before rx_ready safety can be toggled to 1
+    if (bind_safety > 9) { // requires 10 good frames to come in before rx_ready safety can be toggled to 1
       flags.rx_ready = 1;  // because aux channels initialize low and clear the binding while armed flag before aux updates high
       bind_safety = 10;
     }

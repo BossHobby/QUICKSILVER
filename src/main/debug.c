@@ -78,9 +78,9 @@ cbor_result_t cbor_encode_perf_counters(cbor_value_t *enc) {
 }
 
 void debug_update() {
-  static uint32_t loop_counter = 0; //For tagging loops that ran long, short, freaked out, etc. Yes, Bobnova was here.
+  static uint32_t loop_counter = 0; // For tagging loops that ran long, short, freaked out, etc. Yes, Bobnova was here.
 
-  debug.vbatt_comp = state.vbatt_comp;
+  debug.vbat_compensated = state.vbat_compensated;
   debug.cpu_load = state.cpu_load; // * 1e-3f;
 
   if (loop_counter > 10000) {

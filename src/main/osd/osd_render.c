@@ -607,7 +607,7 @@ static void osd_display_regular() {
   case OSD_FUELGAUGE_VOLTS: {
     osd_transaction_t *txn = osd_txn_init();
     osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
-    osd_txn_write_float(state.vbatt_comp, 4, 1);
+    osd_txn_write_float(state.vbat_compensated, 4, 1);
     osd_txn_write_char('V');
     osd_txn_submit(txn);
     osd_state.element++;
@@ -617,7 +617,7 @@ static void osd_display_regular() {
   case OSD_FILTERED_VOLTS: {
     osd_transaction_t *txn = osd_txn_init();
     osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
-    osd_txn_write_float(state.vbattfilt_corr, 4, 1);
+    osd_txn_write_float(state.vbat_filtered_decay, 4, 1);
     osd_txn_write_char('V');
 
     osd_txn_submit(txn);
