@@ -53,6 +53,7 @@ typedef enum {
 
 typedef enum {
   OSD_CALLSIGN,
+  OSD_CELL_COUNT,
   OSD_FUELGAUGE_VOLTS,
   OSD_FILTERED_VOLTS,
   OSD_GYRO_TEMP,
