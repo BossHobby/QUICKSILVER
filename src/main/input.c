@@ -75,7 +75,7 @@ float input_apply_expo(float in, float expo) {
     result = fabsf(in) * in * in * in * expo + in * (1 - expo);
     break;
   case RATE_MODE_ACTUAL:
-    result = fabsf(in) * in * in * in * in * in * expo + in * (1 - expo);
+    result = fabsf(in) * (powf(in, 5) * expo + in * (1 - expo));
     break;
   }
 
@@ -180,7 +180,7 @@ static void calc_actual_rates(vec3_t *rates) {
       stick_movement = 0;
     }
 
-    rates->axis[i] = rate_no_expo * center_sensitivity + stick_movement * rate_expo;
+    rates->axis[i] = (rate_no_expo * center_sensitivity + stick_movement * rate_expo) * DEGTORAD;
   }
 }
 
