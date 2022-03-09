@@ -184,6 +184,8 @@ typedef struct __attribute__((__packed__)) {
   uint8_t LAYOUT[16]; // offset 0x40
   uint8_t MCU[16];    // offset 0x50
   uint8_t NAME[16];   // offset 0x60
+
+  uint8_t _unused[143] // offset 0x70
 } blheli_settings_raw_t;
 
 typedef struct {
