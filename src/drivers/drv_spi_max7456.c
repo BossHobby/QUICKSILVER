@@ -193,6 +193,10 @@ uint8_t max7456_clear_async() {
 // function to detect and correct ntsc/pal mode or mismatch
 // returns the current system
 osd_system_t max7456_check_system() {
+  if (last_osd_system > OSD_SYS_NONE) {
+    return last_osd_system;
+  }
+
   const osd_system_t sys = max7456_current_system();
 
   switch (sys) {
