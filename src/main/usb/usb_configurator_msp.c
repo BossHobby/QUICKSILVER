@@ -7,7 +7,7 @@
 #include "drv_usb.h"
 #include "flight/control.h"
 #include "project.h"
-#include "util.h"
+#include "util/util.h"
 
 extern usb_motor_test_t usb_motor_test;
 

@@ -12,7 +12,7 @@
 #include "profile.h"
 #include "project.h"
 #include "usb_configurator.h"
-#include "util.h"
+#include "util/util.h"
 
 #ifdef RX_UNIFIED_SERIAL
 

@@ -32,7 +32,7 @@
 #include "rgb_led.h"
 #include "rx.h"
 #include "usb_configurator.h"
-#include "util.h"
+#include "util/util.h"
 #include "vbat.h"
 #include "vtx.h"
 

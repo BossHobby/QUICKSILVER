@@ -4,8 +4,8 @@
 #include "drv_time.h"
 #include "flight/control.h"
 #include "usb_configurator.h"
-#include "util.h"
 #include "util/cbor_helper.h"
+#include "util/util.h"
 
 #ifdef ENABLE_BLACKBOX
 

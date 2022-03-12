@@ -6,7 +6,7 @@
 #include "flight/control.h"
 #include "profile.h"
 #include "usb_configurator.h"
-#include "util.h"
+#include "util/util.h"
 
 #if defined(RX_REDPINE) && defined(USE_CC2500)
 

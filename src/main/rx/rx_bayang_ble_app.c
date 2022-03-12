@@ -20,7 +20,7 @@
 #include "flight/control.h"
 #include "profile.h"
 #include "project.h"
-#include "util.h"
+#include "util/util.h"
 
 #define RX_MODE_BIND RXMODE_BIND
 #define RX_MODE_NORMAL RXMODE_NORMAL

@@ -15,7 +15,7 @@
 #include "led.h"
 #include "profile.h"
 #include "project.h"
-#include "util.h"
+#include "util/util.h"
 
 #define CAL_TIME 2e6
 #define GLOW_TIME 62500

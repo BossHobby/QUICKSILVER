@@ -5,7 +5,7 @@
 #include "drv_serial_hdzero.h"
 #include "drv_spi_max7456.h"
 #include "profile.h"
-#include "util.h"
+#include "util/util.h"
 
 static osd_transaction_t osd_txn;
 static osd_device_t osd_device = OSD_DEVICE_NONE;

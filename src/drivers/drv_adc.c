@@ -5,7 +5,7 @@
 #include "flight/filter.h"
 #include "profile.h"
 #include "project.h"
-#include "util.h"
+#include "util/util.h"
 
 #ifndef DISABLE_ADC
 

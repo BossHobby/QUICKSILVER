@@ -7,7 +7,7 @@
 #include "profile.h"
 #include "rx_spi.h"
 #include "usb_configurator.h"
-#include "util.h"
+#include "util/util.h"
 
 #if defined(RX_FRSKY) && defined(USE_CC2500)
 

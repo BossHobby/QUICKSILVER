@@ -10,7 +10,7 @@
 #include "profile.h"
 #include "project.h"
 #include "rx.h"
-#include "util.h"
+#include "util/util.h"
 
 // multiplier for pids at 3V - for PID_VOLTAGE_COMPENSATION - default 1.33f from H101 code
 #define PID_VC_FACTOR 1.33f

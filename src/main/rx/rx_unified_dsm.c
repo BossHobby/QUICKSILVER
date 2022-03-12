@@ -11,7 +11,7 @@
 #include "flash.h"
 #include "flight/control.h"
 #include "profile.h"
-#include "util.h"
+#include "util/util.h"
 
 typedef enum {
   PROTOCOL_INVALID = 0,
