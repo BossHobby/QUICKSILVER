@@ -2,7 +2,7 @@
 
 #include <cbor.h>
 
-#include "filter.h"
+#include "flight/filter.h"
 #include "project.h"
 #include "rx.h"
 #include "util/vector.h"

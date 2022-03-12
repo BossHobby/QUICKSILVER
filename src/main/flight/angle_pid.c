@@ -1,14 +1,14 @@
 #include <stdbool.h>
 
-#include "control.h"
+#include "flight/control.h"
+#include "flight/pid.h"
 #include "math.h"
-#include "pid.h"
 #include "profile.h"
 #include "util.h"
 
 extern profile_t profile;
 
-//set angle pid output limit to sum of both P terms just in case
+// set angle pid output limit to sum of both P terms just in case
 #define OUTLIMIT_FLOAT (profile.pid.small_angle.kp + profile.pid.big_angle.kp)
 
 static float apidoutput1[ANGLE_PID_SIZE];

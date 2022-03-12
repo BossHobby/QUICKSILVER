@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "blackbox.h"
-#include "control.h"
 #include "data_flash.h"
 #include "debug.h"
 #include "drv_serial.h"
@@ -15,11 +14,12 @@
 #include "drv_time.h"
 #include "drv_usb.h"
 #include "flash.h"
+#include "flight/control.h"
+#include "flight/sixaxis.h"
 #include "led.h"
 #include "osd_render.h"
 #include "profile.h"
 #include "project.h"
-#include "sixaxis.h"
 #include "util.h"
 #include "util/cbor_helper.h"
 #include "vtx.h"

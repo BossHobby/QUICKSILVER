@@ -1,20 +1,20 @@
-#include "sixaxis.h"
+#include "flight/sixaxis.h"
 
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 
-#include "control.h"
 #include "debug.h"
 #include "drv_serial.h"
 #include "drv_spi_gyro.h"
 #include "drv_time.h"
-#include "filter.h"
 #include "flash.h"
+#include "flight/control.h"
+#include "flight/filter.h"
+#include "flight/sixaxis.h"
 #include "led.h"
 #include "profile.h"
 #include "project.h"
-#include "sixaxis.h"
 #include "util.h"
 
 #define CAL_TIME 2e6

@@ -1,9 +1,9 @@
 #include "rx_frsky.h"
 
-#include "control.h"
 #include "drv_spi_cc2500.h"
 #include "drv_time.h"
 #include "flash.h"
+#include "flight/control.h"
 #include "profile.h"
 #include "usb_configurator.h"
 #include "util.h"

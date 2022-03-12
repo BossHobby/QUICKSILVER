@@ -1,11 +1,11 @@
 #include "usb_configurator.h"
 
-#include "control.h"
 #include "debug.h"
 #include "drv_msp.h"
 #include "drv_serial_4way.h"
 #include "drv_time.h"
 #include "drv_usb.h"
+#include "flight/control.h"
 #include "project.h"
 #include "util.h"
 

@@ -1,9 +1,9 @@
 #include "failloop.h"
 
-#include "control.h"
 #include "drv_motor.h"
 #include "drv_time.h"
 #include "drv_usb.h"
+#include "flight/control.h"
 #include "led.h"
 #include "usb_configurator.h"
 

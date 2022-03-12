@@ -1,9 +1,9 @@
 #include "rx_frsky.h"
 
-#include "control.h"
 #include "drv_spi_cc2500.h"
 #include "drv_time.h"
 #include "flash.h"
+#include "flight/control.h"
 #include "profile.h"
 #include "rx_spi.h"
 #include "usb_configurator.h"
@@ -32,8 +32,8 @@ uint16_t frsky_extract_rssi(uint8_t rssi_raw) {
 }
 
 static uint8_t frsky_dectect() {
-  const uint8_t chipPartNum = cc2500_read_reg(CC2500_PARTNUM | CC2500_READ_BURST); //CC2500 read registers chip part num
-  const uint8_t chipVersion = cc2500_read_reg(CC2500_VERSION | CC2500_READ_BURST); //CC2500 read registers chip version
+  const uint8_t chipPartNum = cc2500_read_reg(CC2500_PARTNUM | CC2500_READ_BURST); // CC2500 read registers chip part num
+  const uint8_t chipVersion = cc2500_read_reg(CC2500_VERSION | CC2500_READ_BURST); // CC2500 read registers chip version
   if (chipPartNum == 0x80 && chipVersion == 0x03) {
     return 1;
   }
@@ -273,7 +273,7 @@ static uint8_t get_bind2(uint8_t *packet) {
 }
 
 void calibrate_channels() {
-  //calibrate all channels
+  // calibrate all channels
   for (uint32_t c = 0; c < 0xFF; c++) {
     cc2500_strobe(CC2500_SIDLE);
     cc2500_write_reg(CC2500_CHANNR, c);
