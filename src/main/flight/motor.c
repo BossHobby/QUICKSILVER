@@ -5,7 +5,7 @@
 #include "profile.h"
 #include "project.h"
 #include "usb_configurator.h"
-#include "util.h"
+#include "util/util.h"
 
 #ifdef MOTORS_TO_THROTTLE
 #warning "MOTORS TEST MODE"

@@ -18,8 +18,8 @@
 #include "motor.h"
 #include "profile.h"
 #include "usb_configurator.h"
-#include "util.h"
 #include "util/cbor_helper.h"
+#include "util/util.h"
 #include "vbat.h"
 
 #ifndef THROTTLE_SAFETY

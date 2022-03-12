@@ -10,7 +10,7 @@
 #include "flight/filter.h"
 #include "flight/sixaxis.h"
 #include "project.h"
-#include "util.h"
+#include "util/util.h"
 #include "util/vector.h"
 
 // IMU fusion algo, CHOOSE ONE

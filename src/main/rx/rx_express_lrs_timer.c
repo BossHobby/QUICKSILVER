@@ -6,7 +6,7 @@
 #include "drv_interrupt.h"
 #include "drv_timer.h"
 #include "project.h"
-#include "util.h"
+#include "util/util.h"
 
 #if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
 

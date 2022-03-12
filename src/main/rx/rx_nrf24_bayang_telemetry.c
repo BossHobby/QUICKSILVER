@@ -8,7 +8,7 @@
 #include "failloop.h"
 #include "flight/control.h"
 #include "project.h"
-#include "util.h"
+#include "util/util.h"
 
 // radio settings
 

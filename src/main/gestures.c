@@ -7,7 +7,7 @@
 #include "osd_render.h"
 #include "profile.h"
 #include "rx.h"
-#include "util.h"
+#include "util/util.h"
 
 extern int ledcommand;
 extern int ledblink;

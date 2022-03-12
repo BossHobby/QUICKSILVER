@@ -28,7 +28,7 @@
 #include "flight/control.h"
 #include "profile.h"
 #include "project.h"
-#include "util.h"
+#include "util/util.h"
 
 #if (defined(STM32F4) || defined(STM32F7)) && defined(USE_DSHOT_DMA_DRIVER)
 
