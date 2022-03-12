@@ -4,7 +4,7 @@
 #include "flight/pid.h"
 #include "math.h"
 #include "profile.h"
-#include "util.h"
+#include "util/util.h"
 
 extern profile_t profile;
 

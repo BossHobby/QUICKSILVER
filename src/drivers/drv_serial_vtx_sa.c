@@ -7,8 +7,8 @@
 #include "drv_time.h"
 #include "profile.h"
 #include "usb_configurator.h"
-#include "util.h"
 #include "util/circular_buffer.h"
+#include "util/util.h"
 
 #ifdef ENABLE_SMART_AUDIO
 

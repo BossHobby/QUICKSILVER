@@ -6,7 +6,7 @@
 #include "flight/control.h"
 #include "profile.h"
 #include "usb_configurator.h"
-#include "util.h"
+#include "util/util.h"
 
 #if defined(RX_FRSKY_D8) && defined(USE_CC2500)
 

@@ -1,4 +1,4 @@
-#include "util.h"
+#include "util/util.h"
 
 #include <math.h>
 #include <string.h>
@@ -33,7 +33,7 @@ uint32_t min_uint32(uint32_t a, uint32_t b) {
 }
 
 float fastsin(float x) {
-  //always wrap input angle to -PI..PI
+  // always wrap input angle to -PI..PI
   while (x < -3.14159265f)
     x += 6.28318531f;
 
@@ -41,7 +41,7 @@ float fastsin(float x) {
     x -= 6.28318531f;
   float sin1;
 
-  //compute sine
+  // compute sine
   if (x < 0)
     sin1 = (1.27323954f + .405284735f * x) * x;
   else

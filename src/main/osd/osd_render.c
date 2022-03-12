@@ -13,7 +13,7 @@
 #include "rx.h"
 #include "stdio.h"
 #include "string.h"
-#include "util.h"
+#include "util/util.h"
 #include "vtx.h"
 
 #ifdef ENABLE_OSD

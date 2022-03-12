@@ -6,8 +6,8 @@
 #include "osd_render.h"
 #include "rx.h"
 #include "usb_configurator.h"
-#include "util.h"
 #include "util/cbor_helper.h"
+#include "util/util.h"
 
 // Default values for our profile
 // ignore -Wmissing-braces here, gcc bug with nested structs

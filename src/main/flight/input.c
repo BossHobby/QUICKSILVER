@@ -5,7 +5,7 @@
 
 #include "flight/control.h"
 #include "profile.h"
-#include "util.h"
+#include "util/util.h"
 
 #define BF_SETPOINT_RATE_LIMIT 1998.0f
 #define BF_RC_RATE_INCREMENTAL 14.54f

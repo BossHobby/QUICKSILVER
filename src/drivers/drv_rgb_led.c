@@ -5,7 +5,7 @@
 #include "drv_spi.h"
 #include "drv_time.h"
 #include "project.h"
-#include "util.h"
+#include "util/util.h"
 
 #if (RGB_LED_NUMBER > 0)
 void rgb_send(int data);
