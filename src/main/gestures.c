@@ -1,12 +1,12 @@
 #include "gestures.h"
 
-#include "control.h"
 #include "flash.h"
+#include "flight/control.h"
+#include "flight/pid.h"
+#include "flight/sixaxis.h"
 #include "osd_render.h"
-#include "pid.h"
 #include "profile.h"
 #include "rx.h"
-#include "sixaxis.h"
 #include "util.h"
 
 extern int ledcommand;

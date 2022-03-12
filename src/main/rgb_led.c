@@ -1,8 +1,8 @@
 #include <math.h>
 
-#include "control.h"
 #include "drv_rgb_led.h"
 #include "drv_time.h"
+#include "flight/control.h"
 #include "project.h"
 #include "util.h"
 
@@ -33,7 +33,7 @@ extern int ledcommand;
 int rgb_led_value[RGB_LED_NUMBER];
 // loop count for downsampling
 int rgb_loopcount = 0;
-//rgb low pass filter variables
+// rgb low pass filter variables
 float r_filt, g_filt, b_filt;
 
 // sets all leds to a brightness
@@ -130,12 +130,12 @@ void rgb_led_lvc() {
     rgb_loopcount = 0;
     // led flash logic
     if (flags.lowbatt) {
-      //rgb_led_set_all( RGB( 255 , 0 , 0 ) );
+      // rgb_led_set_all( RGB( 255 , 0 , 0 ) );
       rgb_ledflash(RGB(255, 0, 0), RGB(255, 32, 0), 500000, 8);
     } else {
       if (flags.rx_mode == RXMODE_BIND) {
         // bind mode
-        //rgb_ledflash ( RGB( 0 , 0 , 255 ), RGB( 0 , 128 , 0 ), 1000000, 12);
+        // rgb_ledflash ( RGB( 0 , 0 , 255 ), RGB( 0 , 128 , 0 ), 1000000, 12);
         //	rgb_ledflash_twin( RGB( 0 , 0 , 255 ), RGB( 0 , 128 , 0 ), 1000000);
         rgb_led_set_all(RGB_VALUE_BEFORE_BIND);
         //	rgb_knight_rider();
@@ -143,7 +143,7 @@ void rgb_led_lvc() {
         if (flags.failsafe) {
           // failsafe flash
           rgb_ledflash(RGB(0, 128, 0), RGB(0, 0, 128), 500000, 8);
-          //rgb_led_set_all( RGB( 0 , 128 , 128 ) );
+          // rgb_led_set_all( RGB( 0 , 128 , 128 ) );
         } else {
 
           if (rx_aux_on(AUX_LEDS_ON))

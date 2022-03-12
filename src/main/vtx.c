@@ -2,12 +2,12 @@
 
 #include <stddef.h>
 
-#include "control.h"
 #include "drv_gpio.h"
 #include "drv_serial.h"
 #include "drv_serial_vtx_sa.h"
 #include "drv_serial_vtx_tramp.h"
 #include "drv_time.h"
+#include "flight/control.h"
 #include "project.h"
 #include "rx.h"
 #include "usb_configurator.h"
@@ -315,7 +315,7 @@ void vtx_update() {
     // fpv switch off
     if (fpv_init && flags.on_ground == 1) {
       if (flags.failsafe) {
-        //do nothing = hold last state
+        // do nothing = hold last state
       } else {
         gpio_pin_reset(FPV_PIN);
       }

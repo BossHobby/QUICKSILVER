@@ -1,8 +1,8 @@
-#include "filter.h"
+#include "flight/filter.h"
 
 #include <math.h>
 
-#include "control.h"
+#include "flight/control.h"
 #include "math.h"
 #include "project.h"
 
@@ -87,7 +87,7 @@ void filter_hp_be_init(filter_hp_be *filter) {
   filter->v[0] = 0.0;
 }
 
-float filter_hp_be_step(filter_hp_be *filter, float x) { //class II
+float filter_hp_be_step(filter_hp_be *filter, float x) { // class II
   filter->v[0] = filter->v[1];
   filter->v[1] = (9.521017968695103528e-1f * x) + (0.90420359373902081668f * filter->v[0]);
   return (filter->v[1] - filter->v[0]);
@@ -101,7 +101,7 @@ void filter_lp_sp_init(filter_lp_sp *filter, uint8_t count) {
   }
 }
 
-float filter_lp_sp_step(filter_lp_sp *filter, float x) { //class II
+float filter_lp_sp_step(filter_lp_sp *filter, float x) { // class II
   filter->v[0] = filter->v[1];
   filter->v[1] = (6.749703162983405891e-2f * x) + (0.86500593674033188218f * filter->v[0]);
   return (filter->v[0] + filter->v[1]);

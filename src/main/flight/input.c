@@ -1,9 +1,9 @@
-#include "input.h"
+#include "flight/input.h"
 
 #include <math.h>
 #include <string.h>
 
-#include "control.h"
+#include "flight/control.h"
 #include "profile.h"
 #include "util.h"
 

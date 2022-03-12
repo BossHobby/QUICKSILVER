@@ -1,8 +1,8 @@
 #include "vbat.h"
 
-#include "control.h"
 #include "drv_adc.h"
 #include "flash.h"
+#include "flight/control.h"
 #include "profile.h"
 
 // compensation factor for li-ion internal model

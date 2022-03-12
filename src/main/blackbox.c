@@ -1,8 +1,8 @@
 #include "blackbox.h"
 
-#include "control.h"
 #include "data_flash.h"
 #include "drv_time.h"
+#include "flight/control.h"
 #include "usb_configurator.h"
 #include "util.h"
 #include "util/cbor_helper.h"

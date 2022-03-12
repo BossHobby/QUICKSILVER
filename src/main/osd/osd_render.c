@@ -1,11 +1,11 @@
 #include "osd_render.h"
 
-#include "control.h"
 #include "debug.h"
 #include "drv_osd.h"
 #include "drv_time.h"
-#include "filter.h"
 #include "flash.h"
+#include "flight/control.h"
+#include "flight/filter.h"
 #include "float.h"
 #include "osd_menu.h"
 #include "profile.h"

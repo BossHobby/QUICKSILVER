@@ -1,15 +1,15 @@
-#include "imu.h"
+#include "flight/imu.h"
 
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "control.h"
 #include "drv_time.h"
-#include "filter.h"
+#include "flight/control.h"
+#include "flight/filter.h"
+#include "flight/sixaxis.h"
 #include "project.h"
-#include "sixaxis.h"
 #include "util.h"
 #include "util/vector.h"
 
@@ -21,9 +21,9 @@
 // filter times in seconds
 // time to correct gyro readings using the accelerometer
 // 1-4 are generally good
-#define FASTFILTER 0.05 //on_ground filter
+#define FASTFILTER 0.05 // on_ground filter
 //#define PREFILTER 0.2   //in_air prefilter (this can be commented out)
-#define FILTERTIME 2.0 //in_air fusion filter
+#define FILTERTIME 2.0 // in_air fusion filter
 
 #define PT1_FILTER_HZ 10
 
@@ -117,7 +117,7 @@ void imu_calc() {
 
   vectorcopy(&state.GEstG.axis[0], &EstG[0]);
 
-  if (flags.on_ground) { //happyhour bartender - quad is ON GROUND and disarmed
+  if (flags.on_ground) { // happyhour bartender - quad is ON GROUND and disarmed
     // calc acc mag
     float accmag = vec3_magnitude(&state.accel);
     if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
@@ -141,7 +141,7 @@ void imu_calc() {
       lpf(&state.GEstG.axis[x], state.accel.axis[x], filtcoeff);
     }
 
-    //heal the gravity vector after fusion with accel
+    // heal the gravity vector after fusion with accel
     float GEstGmag = vec3_magnitude(&state.GEstG);
     for (int axis = 0; axis < 3; axis++) {
       state.GEstG.axis[axis] = state.GEstG.axis[axis] * (ACC_1G / GEstGmag);
@@ -172,7 +172,7 @@ void imu_calc() {
   state.GEstG.axis[0] = state.GEstG.axis[0] - (gyro_delta_angle[2]) * state.GEstG.axis[1];
   state.GEstG.axis[1] = (gyro_delta_angle[2]) * state.GEstG.axis[0] + state.GEstG.axis[1];
 
-  if (flags.on_ground) { //happyhour bartender - quad is ON GROUND and disarmed
+  if (flags.on_ground) { // happyhour bartender - quad is ON GROUND and disarmed
     // calc acc mag
     float accmag = vec3_magnitude(&state.accel_raw);
     if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
@@ -187,8 +187,8 @@ void imu_calc() {
       }
     }
   } else {
-    //lateshift bartender - quad is IN AIR and things are getting wild
-    // hit state.accel_raw.axis[3] with a sledgehammer
+    // lateshift bartender - quad is IN AIR and things are getting wild
+    //  hit state.accel_raw.axis[3] with a sledgehammer
 #ifdef PREFILTER
     float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)PREFILTER);
     for (int x = 0; x < 3; x++) {
@@ -213,7 +213,7 @@ void imu_calc() {
         lpf(&state.GEstG.axis[x], state.accel.axis[x], filtcoeff);
       }
     }
-    //heal the gravity vector after fusion with accel
+    // heal the gravity vector after fusion with accel
     float GEstGmag = vec3_magnitude(&state.GEstG);
     for (int axis = 0; axis < 3; axis++) {
       state.GEstG.axis[axis] = state.GEstG.axis[axis] * (ACC_1G / GEstGmag);
@@ -261,13 +261,13 @@ void imu_calc() {
     state.accel.axis[2] = state.accel.axis[2] * (ACC_1G / accmag);
 
     if (flags.on_ground) {
-      //happyhour bartender - quad is ON GROUND and disarmed
+      // happyhour bartender - quad is ON GROUND and disarmed
       const float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FASTFILTER);
       lpf(&state.GEstG.axis[0], state.accel.axis[0], filtcoeff);
       lpf(&state.GEstG.axis[1], state.accel.axis[1], filtcoeff);
       lpf(&state.GEstG.axis[2], state.accel.axis[2], filtcoeff);
     } else {
-      //lateshift bartender - quad is IN AIR and things are getting wild
+      // lateshift bartender - quad is IN AIR and things are getting wild
       const float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FILTERTIME);
       lpf(&state.GEstG.axis[0], state.accel.axis[0], filtcoeff);
       lpf(&state.GEstG.axis[1], state.accel.axis[1], filtcoeff);
@@ -275,7 +275,7 @@ void imu_calc() {
     }
   }
 
-  //heal the gravity vector after fusion with accel
+  // heal the gravity vector after fusion with accel
   const float GEstGmag = vec3_magnitude(&state.GEstG);
   state.GEstG.axis[0] = state.GEstG.axis[0] * (ACC_1G / GEstGmag);
   state.GEstG.axis[1] = state.GEstG.axis[1] * (ACC_1G / GEstGmag);

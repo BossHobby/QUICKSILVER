@@ -1,7 +1,7 @@
 #include "motor.h"
 
-#include "control.h"
 #include "drv_motor.h"
+#include "flight/control.h"
 #include "profile.h"
 #include "project.h"
 #include "usb_configurator.h"
@@ -49,7 +49,7 @@ float tempx[4];
 // limit reduction and increase to this amount ( 0.0 - 1.0)
 // 0.0 = no action
 // 0.5 = reduce up to 1/2 throttle
-//1.0 = reduce all the way to zero
+// 1.0 = reduce all the way to zero
 #ifndef MIX_THROTTLE_REDUCTION_MAX
 #define MIX_THROTTLE_REDUCTION_MAX 0.5
 #endif
@@ -136,7 +136,7 @@ static void motor_mixer_scale_calc(float mix[4]) {
 #endif
 
 #ifdef BRUSHED_MIX_SCALING
-  //throttle reduction
+  // throttle reduction
   float overthrottle = 0;
   float underthrottle = 0.001f;
   static float overthrottlefilt = 0;
@@ -178,7 +178,7 @@ static void motor_mixer_scale_calc(float mix[4]) {
     }
   }
 
-  //Brushed airmode - throttle increase
+  // Brushed airmode - throttle increase
   if (flags.in_air == 1) {
     float underthrottle = 0;
 
@@ -200,7 +200,7 @@ static void motor_mixer_scale_calc(float mix[4]) {
 }
 
 void motor_mixer_calc(float mix[4]) {
-  if (flags.usb_active) { //necessary to check if usb is active first or the else statement hijacks the state of global flag from turtle & motortest
+  if (flags.usb_active) { // necessary to check if usb is active first or the else statement hijacks the state of global flag from turtle & motortest
     if (usb_motor_test.active) {
       flags.motortest_override = 1;
     } else {
@@ -281,15 +281,15 @@ void motor_mixer_calc(float mix[4]) {
 
 //********************************MOTOR OUTPUT***********************************************************
 void motor_output_calc(float mix[4]) {
-  state.thrsum = 0; //reset throttle sum for voltage monitoring logic in main loop
+  state.thrsum = 0; // reset throttle sum for voltage monitoring logic in main loop
 
-  //Begin for-loop to send motor commands
+  // Begin for-loop to send motor commands
   for (int i = 0; i <= 3; i++) {
 
 #if defined(BRUSHED_TARGET)
     if (profile.motor.digital_idle && !(rx_aux_on(AUX_MOTOR_TEST) || flags.motortest_override)) {
       float motor_min_value = (float)profile.motor.digital_idle * 0.01f;
-      //Clip all mixer values into 0 to 1 range before remapping
+      // Clip all mixer values into 0 to 1 range before remapping
       mix[i] = constrainf(mix[i], 0, 1);
       mix[i] = motor_min_value + mix[i] * (1.0f - motor_min_value);
     }
@@ -298,7 +298,7 @@ void motor_output_calc(float mix[4]) {
 #endif
 
 #ifndef NOMOTORS
-    //normal mode
+    // normal mode
     motor_set(i, mix[i]);
 #else
     // no motors mode
@@ -311,6 +311,6 @@ void motor_output_calc(float mix[4]) {
     state.thrsum += mix[i];
   }
 
-  //calculate throttle sum for voltage monitoring logic in main loop
+  // calculate throttle sum for voltage monitoring logic in main loop
   state.thrsum = state.thrsum / 4;
 }
