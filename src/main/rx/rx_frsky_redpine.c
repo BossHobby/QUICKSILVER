@@ -1,9 +1,9 @@
 #include "rx_frsky.h"
 
-#include "control.h"
 #include "drv_spi_cc2500.h"
 #include "drv_time.h"
 #include "flash.h"
+#include "flight/control.h"
 #include "profile.h"
 #include "usb_configurator.h"
 #include "util.h"
@@ -66,7 +66,7 @@ static void redpine_set_rc_data() {
 
   rx_apply_stick_calibration_scale();
 
-  //Here we have the AUX channels Silverware supports
+  // Here we have the AUX channels Silverware supports
   state.aux[AUX_CHANNEL_0] = (packet[REDPINE_CHANNEL_START + 1] & 0x08) ? 1 : 0;
   state.aux[AUX_CHANNEL_1] = (packet[REDPINE_CHANNEL_START + 2] & 0x80) ? 1 : 0;
   state.aux[AUX_CHANNEL_2] = (packet[REDPINE_CHANNEL_START + 4] & 0x08) ? 1 : 0;
@@ -156,7 +156,7 @@ static uint8_t redpine_handle_packet() {
     handle_overflows();
 
     if ((time_micros() - total_time) > 50 * max_sync_delay) {
-      //out of sync with packets - do a complete resysnc
+      // out of sync with packets - do a complete resysnc
       quic_debugf("REDPINE: resync %u", (time_micros() - total_time));
       state.rx_rssi = 0;
       next_channel(1);

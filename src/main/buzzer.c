@@ -1,9 +1,9 @@
 
 #include "buzzer.h"
 
-#include "control.h"
 #include "drv_gpio.h"
 #include "drv_time.h"
+#include "flight/control.h"
 #include "project.h"
 
 #ifdef BUZZER_ENABLE

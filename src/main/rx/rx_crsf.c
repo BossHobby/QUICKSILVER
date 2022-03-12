@@ -1,6 +1,6 @@
 #include "rx_crsf.h"
 
-#include "control.h"
+#include "flight/control.h"
 #include "profile.h"
 
 uint8_t crsf_crc8(uint8_t *data, uint16_t len) {

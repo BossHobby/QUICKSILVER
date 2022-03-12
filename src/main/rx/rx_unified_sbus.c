@@ -5,9 +5,9 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "control.h"
 #include "drv_serial.h"
 #include "drv_time.h"
+#include "flight/control.h"
 #include "profile.h"
 
 static bool fport_debug_telemetry = false;

@@ -1,11 +1,11 @@
-#include "pid.h"
+#include "flight/pid.h"
 
 #include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "control.h"
-#include "filter.h"
+#include "flight/control.h"
+#include "flight/filter.h"
 #include "led.h"
 #include "profile.h"
 #include "project.h"

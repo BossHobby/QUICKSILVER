@@ -1,4 +1,4 @@
-#include "control.h"
+#include "flight/control.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -7,16 +7,16 @@
 #include "drv_fmc.h"
 #include "drv_motor.h"
 #include "drv_time.h"
-#include "filter.h"
+#include "flight/filter.h"
+#include "flight/imu.h"
+#include "flight/input.h"
+#include "flight/pid.h"
+#include "flight/sixaxis.h"
 #include "flip_sequencer.h"
 #include "gestures.h"
-#include "imu.h"
-#include "input.h"
 #include "led.h"
 #include "motor.h"
-#include "pid.h"
 #include "profile.h"
-#include "sixaxis.h"
 #include "usb_configurator.h"
 #include "util.h"
 #include "util/cbor_helper.h"

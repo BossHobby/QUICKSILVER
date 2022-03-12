@@ -1,7 +1,7 @@
 #include "debug.h"
 
-#include "control.h"
 #include "drv_time.h"
+#include "flight/control.h"
 #include "util/cbor_helper.h"
 
 #ifdef DEBUG

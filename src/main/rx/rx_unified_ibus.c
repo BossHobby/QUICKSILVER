@@ -5,9 +5,9 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "control.h"
 #include "drv_serial.h"
 #include "drv_time.h"
+#include "flight/control.h"
 #include "profile.h"
 
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
@@ -32,7 +32,7 @@ extern uint8_t ready_for_next_telemetry;
 
 void rx_serial_process_ibus() {
   uint8_t frameLength = 0;
-  for (uint8_t counter = 0; counter < 32; counter++) {    //First up, get the data out of the RX buffer and into somewhere safe
+  for (uint8_t counter = 0; counter < 32; counter++) {    // First up, get the data out of the RX buffer and into somewhere safe
     rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
     frameLength++;                                        // to accept telemetry requests without overwriting control data
   }
@@ -42,9 +42,9 @@ void rx_serial_process_ibus() {
     crc_byte = crc_byte - rx_data[x];
   }
 
-  if (crc_byte == rx_data[30] + (rx_data[31] << 8)) { //If the CRC is good, shove it into controls
+  if (crc_byte == rx_data[30] + (rx_data[31] << 8)) { // If the CRC is good, shove it into controls
 
-    //Flysky channels are delightfully straightforward
+    // Flysky channels are delightfully straightforward
     channels[0] = rx_data[2] + (rx_data[3] << 8);
     channels[1] = rx_data[4] + (rx_data[5] << 8);
     channels[2] = rx_data[6] + (rx_data[7] << 8);
@@ -64,8 +64,8 @@ void rx_serial_process_ibus() {
 
   } else {
     // if CRC fails, do this:
-    //while(1){} Enable for debugging to lock the FC if CRC fails. In the air we just drop CRC-failed packets
-    //Most likely reason for failed CRC is a frame that isn't fully here yet. No need to check again until a new byte comes in.
+    // while(1){} Enable for debugging to lock the FC if CRC fails. In the air we just drop CRC-failed packets
+    // Most likely reason for failed CRC is a frame that isn't fully here yet. No need to check again until a new byte comes in.
 
     frame_status = FRAME_IDLE;
   }
@@ -94,7 +94,7 @@ void rx_serial_process_ibus() {
 
     rx_apply_stick_calibration_scale();
 
-    //Here we have the AUX channels Silverware supports
+    // Here we have the AUX channels Silverware supports
     state.aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
     state.aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
     state.aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
@@ -114,12 +114,12 @@ void rx_serial_process_ibus() {
       rx_lqi_update_direct(0.1f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 1000));
     }
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-      rx_lqi_update_direct(0); //no internal rssi data
+      rx_lqi_update_direct(0); // no internal rssi data
     }
 
-    frame_status = FRAME_TX; //We're done with this frame now.
+    frame_status = FRAME_TX; // We're done with this frame now.
 
-    if (bind_safety > 131) {        //requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
+    if (bind_safety > 131) {        // requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
       flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
       flags.rx_mode = !RXMODE_BIND; // restores normal led operation
       bind_safety = 131;            // reset counter so it doesnt wrap
