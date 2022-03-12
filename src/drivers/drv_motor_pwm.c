@@ -1,10 +1,10 @@
 #include <math.h>
 
-#include "control.h"
 #include "drv_gpio.h"
 #include "drv_motor.h"
 #include "drv_time.h"
 #include "drv_timer.h"
+#include "flight/control.h"
 #include "profile.h"
 #include "project.h"
 

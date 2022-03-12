@@ -2,7 +2,7 @@
 
 #include "debug.h"
 #include "drv_gpio.h"
-#include "filter.h"
+#include "flight/filter.h"
 #include "profile.h"
 #include "project.h"
 #include "util.h"

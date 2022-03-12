@@ -2,11 +2,11 @@
 
 #include <math.h>
 
-#include "control.h"
 #include "drv_serial.h"
 #include "drv_time.h"
-#include "filter.h"
 #include "flash.h"
+#include "flight/control.h"
+#include "flight/filter.h"
 #include "profile.h"
 #include "project.h"
 #include "util.h"
@@ -42,13 +42,13 @@ static const uint16_t RX_SMOOTHING_HZ[RX_PROTOCOL_MAX] = {
 
 #ifdef RX_UNIFIED_SERIAL
 static const uint16_t SERIAL_PROTO_MAP[] = {
-    RX_PROTOCOL_INVALID,   // RX_SERIAL_PROTOCOL_INVALID
-    RX_PROTOCOL_DSM, // RX_SERIAL_PROTOCOL_DSM
-    RX_PROTOCOL_SBUS,      // RX_SERIAL_PROTOCOL_SBUS
-    RX_PROTOCOL_IBUS,      // RX_SERIAL_PROTOCOL_IBUS
-    RX_PROTOCOL_FPORT,     // RX_SERIAL_PROTOCOL_FPORT
-    RX_PROTOCOL_CRSF,      // RX_SERIAL_PROTOCOL_CRSF
-    RX_PROTOCOL_REDPINE,   // RX_SERIAL_PROTOCOL_REDPINE
+    RX_PROTOCOL_INVALID, // RX_SERIAL_PROTOCOL_INVALID
+    RX_PROTOCOL_DSM,     // RX_SERIAL_PROTOCOL_DSM
+    RX_PROTOCOL_SBUS,    // RX_SERIAL_PROTOCOL_SBUS
+    RX_PROTOCOL_IBUS,    // RX_SERIAL_PROTOCOL_IBUS
+    RX_PROTOCOL_FPORT,   // RX_SERIAL_PROTOCOL_FPORT
+    RX_PROTOCOL_CRSF,    // RX_SERIAL_PROTOCOL_CRSF
+    RX_PROTOCOL_REDPINE, // RX_SERIAL_PROTOCOL_REDPINE
     // No need to filter differently for inverted.
     RX_PROTOCOL_SBUS,    // RX_SERIAL_PROTOCOL_SBUS_INVERTED
     RX_PROTOCOL_FPORT,   // RX_SERIAL_PROTOCOL_FPORT_INVERTED
@@ -60,7 +60,7 @@ uint16_t rx_smoothing_cutoff() {
   if (serial_proto == RX_PROTOCOL_CRSF) {
     return rx_serial_crsf_smoothing_cutoff();
   }
-  if (serial_proto == RX_PROTOCOL_DSM){
+  if (serial_proto == RX_PROTOCOL_DSM) {
     return rx_serial_dsm_smoothing_cutoff();
   }
   return RX_SMOOTHING_HZ[serial_proto];

@@ -1,8 +1,8 @@
 #include "usb_configurator.h"
 
-#include "control.h"
 #include "debug.h"
 #include "drv_usb.h"
+#include "flight/control.h"
 #include "profile.h"
 #include "project.h"
 #include "reset.h"
@@ -14,7 +14,7 @@ uint8_t decode_buffer[USB_BUFFER_SIZE];
 
 // double promition in the following is intended
 #pragma GCC diagnostic ignored "-Wdouble-promotion"
-//This function will be where all usb send/receive coms live
+// This function will be where all usb send/receive coms live
 void usb_configurator() {
   static uint8_t magic = 0;
   if (usb_serial_read(&magic, 1) != 1) {

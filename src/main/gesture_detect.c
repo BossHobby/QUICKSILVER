@@ -3,8 +3,8 @@
 #include <math.h>
 #include <stdint.h>
 
-#include "control.h"
 #include "drv_time.h"
+#include "flight/control.h"
 #include "osd_render.h"
 #include "project.h"
 

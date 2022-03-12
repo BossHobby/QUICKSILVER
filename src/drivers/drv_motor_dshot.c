@@ -20,12 +20,12 @@
 
 #include <stdbool.h>
 
-#include "control.h"
 #include "drv_dma.h"
 #include "drv_gpio.h"
 #include "drv_motor.h"
 #include "drv_spi.h"
 #include "drv_time.h"
+#include "flight/control.h"
 #include "profile.h"
 #include "project.h"
 #include "util.h"
@@ -77,7 +77,7 @@ typedef struct {
   uint32_t port_low;  // sum of all motor pins of this port
   uint32_t port_high; // shifted motor pins of this port for T1H timing
 
-  uint32_t motor_data[16]; //motor pins at this port with commanded '0' bit at T0H timing
+  uint32_t motor_data[16]; // motor pins at this port with commanded '0' bit at T0H timing
 } dshot_gpio_port_t;
 
 extern profile_t profile;
@@ -336,7 +336,7 @@ void motor_set(uint8_t number, float pwm) {
   // maps 0.0 .. 0.999 to 48 + IDLE_OFFSET * 2 .. 2047
   uint16_t value = 48 + (profile.motor.digital_idle * 20) + (uint16_t)(pwm * (2001 - (profile.motor.digital_idle * 20)));
 
-  if (flags.on_ground || !flags.arm_state || (flags.motortest_override && pwm < 0.002f) || ((rx_aux_on(AUX_MOTOR_TEST)) && pwm < 0.002f)) { //turn off the slow motors during turtle or motortest
+  if (flags.on_ground || !flags.arm_state || (flags.motortest_override && pwm < 0.002f) || ((rx_aux_on(AUX_MOTOR_TEST)) && pwm < 0.002f)) { // turn off the slow motors during turtle or motortest
     value = 0;                                                                                                                              // stop the motors
   }
 
@@ -356,9 +356,9 @@ void motor_set(uint8_t number, float pwm) {
     pwm_failsafe_time = 0;
   }
 
-  if (pwmdir == last_pwmdir) { //make a regular packet
+  if (pwmdir == last_pwmdir) { // make a regular packet
     make_packet(profile.motor.motor_pins[number], value, false);
-  } else { //make a series of dshot command packets
+  } else { // make a series of dshot command packets
     static uint16_t counter = 0;
     if (counter <= 10000) {
       counter++;
@@ -366,11 +366,11 @@ void motor_set(uint8_t number, float pwm) {
         value = DSHOT_CMD_ROTATE_REVERSE;
       if (pwmdir == FORWARD)
         value = DSHOT_CMD_ROTATE_NORMAL;
-      if (counter <= 8000) //override to disarmed for a few cycles just in case blheli wants that
+      if (counter <= 8000) // override to disarmed for a few cycles just in case blheli wants that
         make_packet(profile.motor.motor_pins[number], 0, false);
-      if (counter > 8000 && counter <= 8060) //send the command 6 times plus a few extra times for good measure
+      if (counter > 8000 && counter <= 8060) // send the command 6 times plus a few extra times for good measure
         make_packet(profile.motor.motor_pins[number], value, true);
-      if (counter > 8600) //override to disarmed for a few cycles just in case blheli wants that
+      if (counter > 8600) // override to disarmed for a few cycles just in case blheli wants that
         make_packet(profile.motor.motor_pins[number], 0, false);
     }
     if (counter == 10001) {

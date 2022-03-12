@@ -2,9 +2,9 @@
 
 #include <math.h>
 
-#include "control.h"
 #include "drv_motor.h"
 #include "drv_time.h"
+#include "flight/control.h"
 #include "profile.h"
 
 #ifdef BRUSHLESS_TARGET
@@ -12,7 +12,7 @@
 #define STANDARD_TURTLE
 #endif
 
-#define TURTLE_TIMEOUT 1e6 //1 second timeout for auto turtle
+#define TURTLE_TIMEOUT 1e6 // 1 second timeout for auto turtle
 
 // don't change below
 
@@ -41,8 +41,8 @@ extern uint8_t pwmdir;
 
 void start_flip() {
 #ifdef STANDARD_TURTLE
-  if (!readytoflip && flags.on_ground) { //if not currently queued up for a turtle sequence and disarmed
-    readytoflip = 1;                     //queue up for a turtle event
+  if (!readytoflip && flags.on_ground) { // if not currently queued up for a turtle sequence and disarmed
+    readytoflip = 1;                     // queue up for a turtle event
     flipstage = STAGE_FLIP_NONE;
   }
 #endif
@@ -54,15 +54,15 @@ void flip_sequencer() {
     flags.turtle = 1;
   else
     flags.turtle = 0;
-  if (!readytoflip) { //turtle can't be initiated without the all clear flag - hold control variables at 0 state
+  if (!readytoflip) { // turtle can't be initiated without the all clear flag - hold control variables at 0 state
     if (flipstage != STAGE_FLIP_NONE) {
-      pwmdir = FORWARD;     //forward pwmdir only once as its last state may be unknown from previously interrupted turtle event
-      flags.arm_safety = 1; //just in case absolutely require that the quad be disarmed when turning off turtle mode with a started sequencer
+      pwmdir = FORWARD;     // forward pwmdir only once as its last state may be unknown from previously interrupted turtle event
+      flags.arm_safety = 1; // just in case absolutely require that the quad be disarmed when turning off turtle mode with a started sequencer
     }
     flipstage = STAGE_FLIP_NONE;
     flags.controls_override = 0;
     flags.motortest_override = 0;
-    return; //turtle mode off or flying away from a successful turtle will return here
+    return; // turtle mode off or flying away from a successful turtle will return here
   }         // a disarmed quad with turtle mode on will continue past
 
   //  track the change of on_ground and flag a potential turtle trigger event only on disarmed to armed event.
@@ -70,15 +70,15 @@ void flip_sequencer() {
   static int last_armed_state_turtle;
   if (rx_aux_on(AUX_ARMING) != last_armed_state_turtle) {
     last_armed_state_turtle = rx_aux_on(AUX_ARMING);
-    if (rx_aux_on(AUX_ARMING)) //quad was just armed - set the turtle_trigger flag to ready
-      turtle_trigger = 1;      //trigger will reinit to 0 next go round
+    if (rx_aux_on(AUX_ARMING)) // quad was just armed - set the turtle_trigger flag to ready
+      turtle_trigger = 1;      // trigger will reinit to 0 next go round
   }
 
-  if ((state.GEstG.axis[2] < 0) && turtle_trigger) { //begin the turtle sequence only once and with turtle_trigger flag ready and while upside down.
+  if ((state.GEstG.axis[2] < 0) && turtle_trigger) { // begin the turtle sequence only once and with turtle_trigger flag ready and while upside down.
     flipstage = STAGE_FLIP_START;
   }
 
-  if (state.GEstG.axis[2] > 0.5f && flipstage) { //exit the sequence if you failed to turtle, picked up the quad, and flipped it over your damn self
+  if (state.GEstG.axis[2] > 0.5f && flipstage) { // exit the sequence if you failed to turtle, picked up the quad, and flipped it over your damn self
     flipstage = STAGE_FLIP_EXIT;
   }
 

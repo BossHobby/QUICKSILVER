@@ -2,11 +2,11 @@
 
 #include <stdio.h>
 
-#include "control.h"
 #include "drv_spi.h"
 #include "drv_spi_xn297.h"
 #include "drv_time.h"
 #include "failloop.h"
+#include "flight/control.h"
 #include "project.h"
 #include "util.h"
 

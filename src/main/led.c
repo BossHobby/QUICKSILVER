@@ -1,8 +1,8 @@
 #include "led.h"
 
-#include "control.h"
 #include "drv_gpio.h"
 #include "drv_time.h"
+#include "flight/control.h"
 #include "project.h"
 #include "util.h"
 
@@ -172,7 +172,7 @@ void led_update() {
     if (time - ledcommandtime > 300000) {
       ledon(255);
     }
-  } else { //led is normally on
+  } else { // led is normally on
     if (LED_BRIGHTNESS != 15)
       led_pwm(LED_BRIGHTNESS);
     else

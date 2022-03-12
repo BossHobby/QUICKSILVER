@@ -6,9 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "control.h"
 #include "drv_serial.h"
 #include "drv_time.h"
+#include "flight/control.h"
 #include "profile.h"
 #include "project.h"
 #include "rx_crsf.h"
