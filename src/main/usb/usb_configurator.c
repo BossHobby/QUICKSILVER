@@ -6,7 +6,7 @@
 #include "profile.h"
 #include "project.h"
 #include "reset.h"
-#include "util.h"
+#include "util/util.h"
 
 extern profile_t profile;
 uint8_t encode_buffer[USB_BUFFER_SIZE];

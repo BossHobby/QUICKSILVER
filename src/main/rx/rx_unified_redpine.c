@@ -10,7 +10,7 @@
 #include "flight/control.h"
 #include "profile.h"
 #include "usb_configurator.h"
-#include "util.h"
+#include "util/util.h"
 
 #define REDPINE_CHANNEL_START 3
 #define REDPINE_CRC16_POLY 0x8005

@@ -11,8 +11,8 @@
 #include "project.h"
 #include "rx.h"
 #include "usb_configurator.h"
-#include "util.h"
 #include "util/cbor_helper.h"
+#include "util/util.h"
 
 #if defined(FPV_PIN)
 static int fpv_init = 0;

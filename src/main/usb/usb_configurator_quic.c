@@ -20,8 +20,8 @@
 #include "osd_render.h"
 #include "profile.h"
 #include "project.h"
-#include "util.h"
 #include "util/cbor_helper.h"
+#include "util/util.h"
 #include "vtx.h"
 
 #define QUIC_HEADER_LEN 4

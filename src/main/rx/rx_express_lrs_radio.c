@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 
-#include "util.h"
+#include "util/util.h"
 
 #if defined(RX_EXPRESS_LRS)
 
@@ -115,7 +115,7 @@ void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq) {
   }
 
   if (air_rate_config[index].bw == SX127x_BW_500_00_KHZ) {
-    //datasheet errata reconmendation http://caxapa.ru/thumbs/972894/SX1276_77_8_ErrataNote_1.1_STD.pdf
+    // datasheet errata reconmendation http://caxapa.ru/thumbs/972894/SX1276_77_8_ErrataNote_1.1_STD.pdf
     sx127x_write_reg(0x36, 0x02);
     sx127x_write_reg(0x3a, 0x64);
   } else {

@@ -7,7 +7,7 @@
 #include "drv_time.h"
 #include "project.h"
 #include "string.h"
-#include "util.h"
+#include "util/util.h"
 
 #ifdef ENABLE_OSD
 
