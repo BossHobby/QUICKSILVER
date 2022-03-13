@@ -897,8 +897,6 @@ static int decodepacket() {
 
       state.aux[CH_RTH] = (rxdata[2] & 0x01) ? 1 : 0; // rth channel
 
-      // rx_apply_expo()  no longer needed here;
-
       return 1; // valid packet
     }
     return 0; // sum fail
