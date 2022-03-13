@@ -288,16 +288,21 @@ void rx_init() {
   calibrate_channels();
 }
 
-void rx_check() {
-  if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
-    return;
+bool rx_check() {
+  bool channels_received = false;
+
+  if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk) {
+    return channels_received;
+  }
 
   if (protocol_state <= FRSKY_STATE_BIND_COMPLETE) {
-    return frsky_handle_bind();
+    frsky_handle_bind();
+    return channels_received;
   }
 
   if (redpine_handle_packet()) {
     redpine_set_rc_data();
+    channels_received = true;
   }
 
   rx_lqi_update();
@@ -305,6 +310,8 @@ void rx_check() {
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
     rx_lqi_update_from_fps(LQI_FPS);
   }
+
+  return channels_received;
 }
 
 #endif

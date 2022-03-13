@@ -68,7 +68,7 @@ typedef struct {
 } rx_bayang_bind_data_t;
 
 void rx_init();
-void rx_check();
+bool rx_check();
 
 struct rxdebug {
   uint32_t packettime;

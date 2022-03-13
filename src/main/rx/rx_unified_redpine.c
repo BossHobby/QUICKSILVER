@@ -51,7 +51,9 @@ uint16_t redpine_crc16(uint8_t *data, uint16_t len) {
   return crc;
 }
 
-void rx_serial_process_redpine() {
+bool rx_serial_process_redpine() {
+  bool channels_received = false;
+
   if (rx_frame_position != 11) {
     quic_debugf("REDPINE: unexpected frame length %d vs %d", rx_frame_position, expected_frame_length);
   }
@@ -67,7 +69,7 @@ void rx_serial_process_redpine() {
     // invalid crc, bail
     quic_debugf("REDPINE: invalid crc");
     frame_status = FRAME_IDLE;
-    return;
+    return channels_received;
   }
 
   // packet lost flag
@@ -112,6 +114,9 @@ void rx_serial_process_redpine() {
     state.aux[AUX_CHANNEL_9] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x20) ? 1 : 0;
     state.aux[AUX_CHANNEL_10] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x40) ? 1 : 0;
     state.aux[AUX_CHANNEL_11] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x80) ? 1 : 0;
+
+    channels_received = true;
+
   } else {
     rx_lqi_lost_packet();
   }
@@ -130,6 +135,8 @@ void rx_serial_process_redpine() {
     flags.rx_mode = !RXMODE_BIND; // restores normal led operation
     bind_safety = 131;            // reset counter so it doesnt wrap
   }
+
+  return channels_received;
 }
 
 #endif

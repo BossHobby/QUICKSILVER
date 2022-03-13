@@ -11,6 +11,7 @@
 #include "project.h"
 #include "util/util.h"
 
+extern bool rx_check();
 extern profile_t profile;
 
 uint8_t failsafe_siglost = 0;
@@ -143,7 +144,6 @@ static void rx_apply_smoothing() {
       // other channels are -1.0 - 1.0
       state.rx.axis[i] = constrainf(state.rx.axis[i], -1.0, 1.0);
     }
-
 #ifdef RX_SMOOTHING
     lpf(&state.rx_filtered.axis[i], state.rx.axis[i], FILTERCALC(state.looptime, 1.0f / (float)rx_smoothing_hz(RX_PROTOCOL)));
 #endif
@@ -157,27 +157,30 @@ static void rx_apply_smoothing() {
   }
 }
 
-static void rx_apply_deadband() {
-  for (int i = 0; i < 3; ++i) {
-    if (profile.rate.sticks_deadband <= 0.0f) {
-      continue;
-    }
+static float rx_apply_deadband(float val) {
+  if (profile.rate.sticks_deadband <= 0.0f) {
+    return val;
+  }
 
-    if (fabsf(state.rx_filtered.axis[i]) <= profile.rate.sticks_deadband) {
-      state.rx_filtered.axis[i] = 0.0f;
-    } else {
-      if (state.rx_filtered.axis[i] >= 0) {
-        state.rx_filtered.axis[i] = mapf(state.rx_filtered.axis[i], profile.rate.sticks_deadband, 1, 0, 1);
-      } else {
-        state.rx_filtered.axis[i] = mapf(state.rx_filtered.axis[i], -profile.rate.sticks_deadband, -1, 0, -1);
-      }
-    }
+  if (fabsf(val) <= profile.rate.sticks_deadband) {
+    return 0.0f;
+  }
+
+  if (val >= 0) {
+    return mapf(val, profile.rate.sticks_deadband, 1, 0, 1);
+  } else {
+    return mapf(val, -profile.rate.sticks_deadband, -1, 0, -1);
   }
 }
 
-void rx_precalc() {
+void rx_update() {
+  if (rx_check()) {
+    state.rx.roll = rx_apply_deadband(state.rx.roll);
+    state.rx.pitch = rx_apply_deadband(state.rx.pitch);
+    state.rx.yaw = rx_apply_deadband(state.rx.yaw);
+  }
+
   rx_apply_smoothing();
-  rx_apply_deadband();
 }
 
 void rx_capture_stick_range() {

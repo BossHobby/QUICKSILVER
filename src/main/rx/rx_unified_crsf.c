@@ -119,7 +119,8 @@ static uint16_t telemetry_interval() {
   return 5;
 }
 
-static void rx_serial_crsf_process_frame() {
+static bool rx_serial_crsf_process_frame() {
+  bool channels_received = false;
 
   switch (rx_data[2]) {
   case CRSF_FRAMETYPE_RC_CHANNELS_PACKED: {
@@ -162,6 +163,8 @@ static void rx_serial_crsf_process_frame() {
     state.aux[AUX_CHANNEL_10] = (channels[14] > 1100) ? 1 : 0;
     state.aux[AUX_CHANNEL_11] = (channels[15] > 1100) ? 1 : 0;
 
+    channels_received = true;
+
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
       rx_lqi_update_direct(0.00062853551f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 191.0f));
     }
@@ -194,9 +197,13 @@ static void rx_serial_crsf_process_frame() {
   } else {
     flags.rx_mode = RXMODE_BIND; // this is rapid flash during bind safety
   }
+
+  return channels_received;
 }
 
-void rx_serial_process_crsf() {
+bool rx_serial_process_crsf() {
+  bool channels_received = false;
+
   static int32_t rx_buffer_offset = 0;
 
   if (rx_frame_position < rx_buffer_offset || rx_buffer[rx_buffer_offset] != 0xC8) {
@@ -204,13 +211,13 @@ void rx_serial_process_crsf() {
     // fail if its not a magic
     frame_status = FRAME_TX;
     rx_buffer_offset = 0;
-    return;
+    return channels_received;
   }
 
   if ((rx_frame_position - rx_buffer_offset) < 3) {
     // not enough data
     frame_status = FRAME_IDLE;
-    return;
+    return channels_received;
   }
 
   // copy the header
@@ -220,7 +227,7 @@ void rx_serial_process_crsf() {
     quic_debugf("CRSF: invalid header");
     frame_status = FRAME_TX;
     rx_buffer_offset = 0;
-    return;
+    return channels_received;
   }
 
   // get real frame length
@@ -229,7 +236,7 @@ void rx_serial_process_crsf() {
   if ((rx_frame_position - rx_buffer_offset) < frame_length) {
     // not enough data
     frame_status = FRAME_IDLE;
-    return;
+    return channels_received;
   }
 
   // copy rest of the data
@@ -242,12 +249,12 @@ void rx_serial_process_crsf() {
     quic_debugf("CRSF: invalid crc, bail");
     frame_status = FRAME_TX;
     rx_buffer_offset = 0;
-    return;
+    return channels_received;
   }
 
   // we got a valid frame, update offset to potentially read another frame
   rx_buffer_offset += frame_length;
-  rx_serial_crsf_process_frame();
+  channels_received = rx_serial_crsf_process_frame();
 
   if ((rx_frame_position - rx_buffer_offset) <= 0) {
     // We're done with this frame now.
@@ -255,6 +262,8 @@ void rx_serial_process_crsf() {
     rx_buffer_offset = 0;
     telemetry_counter++; // Telemetry will send data out when this reaches 5
   }
+
+  return channels_received;
 }
 
 void rx_serial_send_crsf_telemetry() {

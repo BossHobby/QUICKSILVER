@@ -45,7 +45,8 @@ extern uint8_t ready_for_next_telemetry;
 #define USART usart_port_defs[serial_rx_port]
 #define SPECTRUM_BIND_PIN usart_port_defs[profile.serial.rx].rx_pin
 
-void rx_serial_process_dsm() {
+bool rx_serial_process_dsm() {
+  bool channels_received = false;
 
   for (uint8_t counter = 0; counter < 16; counter++) {    // First up, get the rx_data out of the RX buffer and into somewhere safe
     rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
@@ -63,7 +64,7 @@ void rx_serial_process_dsm() {
 
   switch (dsm_protocol) {
   case PROTOCOL_INVALID:
-    return;
+    return channels_received;
   case DSM2_22_1024:
     // 10 bit frames
     spek_chan_shift = 2;
@@ -116,6 +117,8 @@ void rx_serial_process_dsm() {
     state.aux[AUX_CHANNEL_6] = (((channels[10] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
     state.aux[AUX_CHANNEL_7] = (((channels[11] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
 
+    channels_received = true;
+
     rx_lqi_got_packet();
 
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
@@ -134,6 +137,8 @@ void rx_serial_process_dsm() {
       bind_safety = 121;                                         // reset counter so it doesnt wrap
     }
   }
+
+  return channels_received;
 }
 
 // Send Spektrum bind pulses to a GPIO e.g. TX1

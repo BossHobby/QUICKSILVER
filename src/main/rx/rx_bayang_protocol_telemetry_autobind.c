@@ -363,7 +363,9 @@ uint32_t skipchannel = 0;
 int lastrxchan;
 int timingfail = 0;
 
-void rx_check() {
+bool rx_check() {
+  bool channels_received = false;
+
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {
@@ -431,6 +433,7 @@ void rx_check() {
         lastrxtime = temptime;
         failsafetime = temptime;
         flags.failsafe = 0;
+        channels_received = true;
         if (!telemetry_send)
           nextchannel();
       } else {
@@ -522,6 +525,8 @@ void rx_check() {
     }
 #endif
   }
+
+  return channels_received;
 }
 
 #endif
