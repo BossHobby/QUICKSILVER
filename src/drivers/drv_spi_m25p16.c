@@ -7,8 +7,7 @@
 
 #if defined(USE_M25P16)
 
-#define SPI_PORT spi_port_defs[M25P16_SPI_PORT]
-#define NSS_PIN gpio_pin_defs[M25P16_NSS_PIN]
+#define M25P16_BAUD_RATE spi_find_divder(MHZ_TO_HZ(21))
 
 #define JEDEC_ID_MACRONIX_MX25L3206E 0xC22016
 #define JEDEC_ID_MACRONIX_MX25L6406E 0xC22017
@@ -25,54 +24,38 @@
 #define JEDEC_ID_CYPRESS_S25FL128L 0x016018
 #define JEDEC_ID_BERGMICRO_W25Q32 0xE04016
 
-static void m25p16_reinit() {
-  LL_SPI_Disable(SPI_PORT.channel);
+static volatile uint8_t buffer[512];
+static volatile spi_bus_device_t bus = {
+    .port = M25P16_SPI_PORT,
+    .nss = M25P16_NSS_PIN,
 
-  LL_SPI_DeInit(SPI_PORT.channel);
-  LL_SPI_InitTypeDef SPI_InitStructure;
-  SPI_InitStructure.TransferDirection = LL_SPI_FULL_DUPLEX;
-  SPI_InitStructure.Mode = LL_SPI_MODE_MASTER;
-  SPI_InitStructure.DataWidth = LL_SPI_DATAWIDTH_8BIT;
-  SPI_InitStructure.ClockPolarity = LL_SPI_POLARITY_LOW;
-  SPI_InitStructure.ClockPhase = LL_SPI_PHASE_1EDGE;
-  SPI_InitStructure.NSS = LL_SPI_NSS_SOFT;
-  SPI_InitStructure.BaudRate = spi_find_divder(MHZ_TO_HZ(21));
-  SPI_InitStructure.BitOrder = LL_SPI_MSB_FIRST;
-  SPI_InitStructure.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
-  SPI_InitStructure.CRCPoly = 7;
-  LL_SPI_Init(SPI_PORT.channel, &SPI_InitStructure);
-  LL_SPI_Enable(SPI_PORT.channel);
-}
+    .buffer = buffer,
+    .buffer_size = 512,
+
+    .auto_continue = true,
+};
 
 void m25p16_init() {
-  spi_init_pins(M25P16_SPI_PORT, M25P16_NSS_PIN);
-
-  spi_enable_rcc(M25P16_SPI_PORT);
-
-  m25p16_reinit();
-
-  // Dummy read to clear receive buffer
-  while (LL_SPI_IsActiveFlag_TXE(SPI_PORT.channel) == RESET)
-    ;
-
-  LL_SPI_ReceiveData8(SPI_PORT.channel);
-
-  spi_dma_init(M25P16_SPI_PORT);
+  spi_bus_device_init(&bus);
+  spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, M25P16_BAUD_RATE);
 }
 
 uint8_t m25p16_is_ready() {
-  if (!spi_dma_is_ready(M25P16_SPI_PORT)) {
+  if (!spi_txn_ready(&bus)) {
     return 0;
   }
 
-  m25p16_reinit();
+  spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, M25P16_BAUD_RATE);
 
-  spi_csn_enable(M25P16_NSS_PIN);
-  spi_transfer_byte(M25P16_SPI_PORT, M25P16_READ_STATUS_REGISTER);
-  const uint8_t ret = spi_transfer_byte(M25P16_SPI_PORT, 0x0);
-  spi_csn_disable(M25P16_NSS_PIN);
+  uint8_t buffer[2] = {M25P16_READ_STATUS_REGISTER, 0xFF};
 
-  return (ret & 0x01) == 0;
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg(txn, buffer, buffer, 2);
+  spi_txn_submit(txn);
+
+  spi_txn_wait(&bus);
+
+  return (buffer[1] & 0x01) == 0;
 }
 
 void m25p16_wait_for_ready() {
@@ -83,81 +66,93 @@ void m25p16_wait_for_ready() {
 uint8_t m25p16_command(const uint8_t cmd) {
   m25p16_wait_for_ready();
 
-  spi_csn_enable(M25P16_NSS_PIN);
-  const uint8_t ret = spi_transfer_byte(M25P16_SPI_PORT, cmd);
-  spi_csn_disable(M25P16_NSS_PIN);
+  uint8_t ret = 0;
+
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg(txn, &ret, &cmd, 1);
+  spi_txn_submit(txn);
+
+  spi_txn_wait(&bus);
+
   return ret;
 }
 
 uint8_t m25p16_read_command(const uint8_t cmd, uint8_t *data, const uint32_t len) {
   m25p16_wait_for_ready();
 
-  spi_csn_enable(M25P16_NSS_PIN);
-  const uint8_t ret = spi_transfer_byte(M25P16_SPI_PORT, cmd);
-  for (uint8_t i = 0; i < len; i++) {
-    data[i] = spi_transfer_byte(M25P16_SPI_PORT, 0x0);
-  }
-  spi_csn_disable(M25P16_NSS_PIN);
+  uint8_t ret = 0;
+
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg(txn, &ret, &cmd, 1);
+  spi_txn_add_seg(txn, data, NULL, len);
+  spi_txn_submit(txn);
+
+  spi_txn_wait(&bus);
+
   return ret;
 }
 
-static void m25p16_set_addr(const uint32_t addr) {
-  spi_transfer_byte(M25P16_SPI_PORT, (addr >> 16) & 0xFF);
-  spi_transfer_byte(M25P16_SPI_PORT, (addr >> 8) & 0xFF);
-  spi_transfer_byte(M25P16_SPI_PORT, addr & 0xFF);
+static void m25p16_set_addr(spi_txn_t *txn, const uint32_t addr) {
+  spi_txn_add_seg_const(txn, (addr >> 16) & 0xFF);
+  spi_txn_add_seg_const(txn, (addr >> 8) & 0xFF);
+  spi_txn_add_seg_const(txn, addr & 0xFF);
 }
 
 uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, const uint32_t len) {
   m25p16_wait_for_ready();
 
-  spi_csn_enable(M25P16_NSS_PIN);
-  const uint8_t ret = spi_transfer_byte(M25P16_SPI_PORT, cmd);
-  m25p16_set_addr(addr);
-  for (uint8_t i = 0; i < len; i++) {
-    data[i] = spi_transfer_byte(M25P16_SPI_PORT, 0x0);
-  }
-  spi_csn_disable(M25P16_NSS_PIN);
+  uint8_t ret = 0;
+
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg(txn, &ret, &cmd, 1);
+  m25p16_set_addr(txn, addr);
+  spi_txn_add_seg(txn, data, NULL, len);
+  spi_txn_submit(txn);
+
+  spi_txn_wait(&bus);
+
   return ret;
 }
 
 uint8_t m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t size) {
-  if (!spi_dma_is_ready(M25P16_SPI_PORT)) {
+  if (!spi_txn_ready(&bus) || !spi_dma_is_ready(M25P16_SPI_PORT)) {
     return 0;
   }
 
-  m25p16_reinit();
+  spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, M25P16_BAUD_RATE);
 
-  spi_csn_enable(M25P16_NSS_PIN);
-  spi_transfer_byte(M25P16_SPI_PORT, M25P16_WRITE_ENABLE);
-  spi_csn_disable(M25P16_NSS_PIN);
+  {
+    spi_txn_t *txn = spi_txn_init(&bus, NULL);
+    spi_txn_add_seg_const(txn, M25P16_WRITE_ENABLE);
+    spi_txn_submit(txn);
+  }
 
-  spi_csn_enable(M25P16_NSS_PIN);
+  {
+    spi_txn_t *txn = spi_txn_init(&bus, NULL);
+    spi_txn_add_seg_const(txn, M25P16_PAGE_PROGRAM);
+    m25p16_set_addr(txn, addr);
+    spi_txn_add_seg(txn, NULL, buf, size);
+    spi_txn_submit(txn);
+  }
 
-  static uint8_t dma_buf[256];
-  dma_buf[0] = M25P16_PAGE_PROGRAM;
-  dma_buf[1] = (addr >> 16) & 0xFF;
-  dma_buf[2] = (addr >> 8) & 0xFF;
-  dma_buf[3] = addr & 0xFF;
-  memcpy(dma_buf + 4, buf, size);
+  spi_txn_continue(&bus);
 
-  spi_dma_transfer_begin(M25P16_SPI_PORT, dma_buf, size + 4);
   return 1;
-}
-
-void m25p16_dma_rx_isr() {
-  spi_csn_disable(M25P16_NSS_PIN);
 }
 
 uint8_t m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, const uint32_t len) {
   m25p16_command(M25P16_WRITE_ENABLE);
 
-  spi_csn_enable(M25P16_NSS_PIN);
-  const uint8_t ret = spi_transfer_byte(M25P16_SPI_PORT, cmd);
-  m25p16_set_addr(addr);
-  for (uint8_t i = 0; i < len; i++) {
-    spi_transfer_byte(M25P16_SPI_PORT, data[i]);
-  }
-  spi_csn_disable(M25P16_NSS_PIN);
+  uint8_t ret = 0;
+
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg(txn, &ret, &cmd, 1);
+  m25p16_set_addr(txn, addr);
+  spi_txn_add_seg(txn, NULL, data, len);
+  spi_txn_submit(txn);
+
+  spi_txn_wait(&bus);
+
   return ret;
 }
 
