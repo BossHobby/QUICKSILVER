@@ -136,6 +136,14 @@ void rx_lqi_update_direct(float rssi) {
 
 static void rx_apply_smoothing() {
   for (int i = 0; i < 4; ++i) {
+    if (i == 3) {
+      // throttle is 0 - 1.0
+      state.rx.axis[i] = constrainf(state.rx.axis[i], 0.0, 1.0);
+    } else {
+      // other channels are -1.0 - 1.0
+      state.rx.axis[i] = constrainf(state.rx.axis[i], -1.0, 1.0);
+    }
+
 #ifdef RX_SMOOTHING
     lpf(&state.rx_filtered.axis[i], state.rx.axis[i], FILTERCALC(state.looptime, 1.0f / (float)rx_smoothing_hz(RX_PROTOCOL)));
 #endif
