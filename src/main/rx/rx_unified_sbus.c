@@ -93,8 +93,6 @@ bool rx_serial_process_sbus() {
   channels[2] -= 173;
   state.rx.axis[3] = 0.000610128f * channels[2];
 
-  rx_apply_stick_calibration_scale();
-
   // Here we have the AUX channels Silverware supports
   state.aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
   state.aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
@@ -226,8 +224,6 @@ bool rx_serial_process_fport() {
 
       channels[2] -= 173;
       state.rx.axis[3] = 0.000610128f * channels[2];
-
-      rx_apply_stick_calibration_scale();
 
       // Here we have the AUX channels Silverware supports
       state.aux[AUX_CHANNEL_0] = (channels[4] > 993) ? 1 : 0;

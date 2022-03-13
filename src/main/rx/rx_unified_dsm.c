@@ -106,8 +106,6 @@ bool rx_serial_process_dsm() {
     state.rx.axis[2] = (channels[3] - dsm_offset) * dsm_scalefactor;
     state.rx.axis[3] = ((channels[0] - dsm_offset) * dsm_scalefactor * 0.5f) + 0.5f;
 
-    rx_apply_stick_calibration_scale();
-
     state.aux[AUX_CHANNEL_0] = (((channels[4] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0; // cutoff intentionally selected to force aux channels low if
     state.aux[AUX_CHANNEL_1] = (((channels[5] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0; // being controlled by a transmitter using a 3 pos switch in center state
     state.aux[AUX_CHANNEL_2] = (((channels[6] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;

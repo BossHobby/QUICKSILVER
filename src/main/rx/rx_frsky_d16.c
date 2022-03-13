@@ -143,8 +143,6 @@ static void frsky_d16_set_rc_data() {
   state.rx.axis[2] = (channels[3] - 960) * 1.f / 760.f;
   state.rx.axis[3] = (channels[2] - 200) * 1.f / 1520.f;
 
-  rx_apply_stick_calibration_scale();
-
   // Here we have the AUX channels Silverware supports
   state.aux[AUX_CHANNEL_0] = (channels[4] > 1023) ? 1 : 0;
   state.aux[AUX_CHANNEL_1] = (channels[5] > 1023) ? 1 : 0;

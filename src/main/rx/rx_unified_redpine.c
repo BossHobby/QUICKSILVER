@@ -99,8 +99,6 @@ bool rx_serial_process_redpine() {
     }
     state.rx.axis[3] *= 1.f / 1640.f;
 
-    rx_apply_stick_calibration_scale();
-
     // Here we have the AUX channels Silverware supports
     state.aux[AUX_CHANNEL_0] = (rx_data[REDPINE_CHANNEL_START + 1] & 0x08) ? 1 : 0;
     state.aux[AUX_CHANNEL_1] = (rx_data[REDPINE_CHANNEL_START + 2] & 0x80) ? 1 : 0;
