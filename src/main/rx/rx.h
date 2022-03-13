@@ -109,10 +109,8 @@ void rx_serial_init();
 void rx_precalc();
 void rx_check();
 
-float rx_expo(float x, float exp);
 float rx_smoothing_hz(rx_protocol_t proto);
 
-void rx_apply_expo();
 void rx_apply_stick_calibration_scale();
 void request_stick_calibration_wizard();
 

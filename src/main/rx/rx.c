@@ -134,7 +134,7 @@ void rx_lqi_update_direct(float rssi) {
   state.rx_rssi = constrainf(rssi, 0.f, 100.f);
 }
 
-void rx_apply_smoothing() {
+static void rx_apply_smoothing() {
   for (int i = 0; i < 4; ++i) {
 #ifdef RX_SMOOTHING
     lpf(&state.rx_filtered.axis[i], state.rx.axis[i], FILTERCALC(state.looptime, 1.0f / (float)rx_smoothing_hz(RX_PROTOCOL)));
@@ -149,7 +149,7 @@ void rx_apply_smoothing() {
   }
 }
 
-void rx_apply_deadband() {
+static void rx_apply_deadband() {
   for (int i = 0; i < 3; ++i) {
     if (profile.rate.sticks_deadband <= 0.0f) {
       continue;
