@@ -445,5 +445,24 @@
         }
       }
     ]
+  },
+  {
+    "name": "zeusf4fr",
+    "configurations": [
+      {
+        "name": "brushless.frsky",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_FRSKY_D8": ""
+        }
+      },
+      {
+        "name": "brushless.redpine",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_REDPINE": ""
+        }
+      }
+    ]
   }
 ]
