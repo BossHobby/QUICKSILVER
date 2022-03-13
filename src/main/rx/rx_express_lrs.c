@@ -522,10 +522,12 @@ static void elrs_msp_process(uint8_t *buf) {
   }
 }
 
-static void elrs_process_packet(uint32_t packet_time) {
+static bool elrs_process_packet(uint32_t packet_time) {
   if (!elrs_vaild_packet()) {
-    return;
+    return false;
   }
+
+  bool channels_received = false;
 
   elrs_phase_ext_event(packet_time + PACKET_TO_TOCK_SLACK);
   last_valid_packet_millis = time_millis();
@@ -602,7 +604,7 @@ static void elrs_process_packet(uint32_t packet_time) {
     state.rx.axis[2] = (channels[3] - 990.5f) * 0.00125707103f;
     state.rx.axis[3] = (channels[2] - 191.0f) * 0.00062853551f;
 
-    rx_apply_stick_calibration_scale();
+    channels_received = true;
 
     bool tlm_confirm = false;
     switch (bind_storage.elrs.switch_mode) {
@@ -650,6 +652,8 @@ static void elrs_process_packet(uint32_t packet_time) {
   default:
     break;
   }
+
+  return channels_received;
 }
 
 // this is 180 out of phase with the other callback, occurs mid-packet reception
@@ -732,9 +736,11 @@ uint16_t rx_smoothing_cutoff() {
   return 1;
 }
 
-void rx_check() {
+bool rx_check() {
+  bool channels_received = false;
+
   if (!radio_is_init) {
-    return;
+    return channels_received;
   }
 
   const uint32_t time = time_micros();
@@ -756,7 +762,7 @@ void rx_check() {
     // delay mode cycle a bit
     last_rf_mode_cycle_millis = time_millis();
     has_run_once = true;
-    return;
+    return channels_received;
   }
 
   if (irq == IRQ_RX_DONE) {
@@ -810,6 +816,8 @@ void rx_check() {
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
     rx_lqi_update_from_fps(rate_enum_to_hz(current_rf_pref_params()->rate));
   }
+
+  return channels_received;
 }
 
 #endif

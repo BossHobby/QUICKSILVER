@@ -367,7 +367,9 @@ int packet_period = PACKET_PERIOD;
 uint8_t rxaddr[5];
 int packets = 0;
 
-void rx_check() {
+bool rx_check() {
+  bool channels_received = false;
+
   int packetreceived = checkpacket();
 
   if (packetreceived) {
@@ -431,6 +433,7 @@ void rx_check() {
         lastrxtime = temptime;
         failsafetime = temptime;
         flags.failsafe = 0;
+        channels_received = true;
         if (!telemetry_send)
           nextchannel();
       } else {
@@ -499,6 +502,8 @@ void rx_check() {
     if (state.rx_rssi < 0.0f)
       state.rx_rssi = 0.0f;
   }
+
+  return channels_received;
 }
 
 #endif

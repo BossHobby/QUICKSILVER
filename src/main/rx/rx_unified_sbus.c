@@ -35,7 +35,7 @@ extern uint8_t ready_for_next_telemetry;
 
 #define USART usart_port_defs[serial_rx_port]
 
-void rx_serial_process_sbus() {
+bool rx_serial_process_sbus() {
   for (uint8_t counter = 0; counter < 25; counter++) {    // First up, get therx_data out of the RX buffer and into somewhere safe
     rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
   }
@@ -124,9 +124,13 @@ void rx_serial_process_sbus() {
     flags.rx_mode = !RXMODE_BIND; // restores normal led operation
     bind_safety = 131;            // reset counter so it doesnt wrap
   }
+
+  return true;
 }
 
-void rx_serial_process_fport() {
+bool rx_serial_process_fport() {
+  bool channels_received = false;
+
   uint8_t frameLength = 0;
   static uint8_t escapedChars = 0;
   uint8_t tempEscapedChars = 0;
@@ -195,11 +199,10 @@ void rx_serial_process_fport() {
         channels[14] = ((rx_data[22] >> 2 | rx_data[23] << 6) & 0x07FF);
         channels[15] = ((rx_data[23] >> 5 | rx_data[24] << 3) & 0x07FF);
 
-        // frame_status = 2;
+        channels_received = true;
 
-      } else { // if CRC fails, do this:
-        // while(1){} Enable for debugging to lock the FC if CRC fails.
-        frame_status = FRAME_IDLE; // Most likely reason for failed CRC is a frame that isn't fully here yet. No need to check again until a new byte comes in.
+      } else {
+        frame_status = FRAME_IDLE;
       }
     }
 
@@ -240,6 +243,8 @@ void rx_serial_process_fport() {
       state.aux[AUX_CHANNEL_10] = (channels[14] > 993) ? 1 : 0;
       state.aux[AUX_CHANNEL_11] = (channels[15] > 993) ? 1 : 0;
 
+      channels_received = true;
+
       if (channels[12] > 993) { // Channel 13 is now FPORT Debug Telemetry switch. Integrate this better sometime
         fport_debug_telemetry = true;
       } else {
@@ -266,6 +271,8 @@ void rx_serial_process_fport() {
       }
     }
   } // end frame received
+
+  return channels_received;
 }
 
 vec3_t *get_pid_value(uint8_t term) {

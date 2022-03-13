@@ -258,15 +258,7 @@ int main() {
 
     // receiver function
     perf_counter_start(PERF_COUNTER_RX);
-#ifdef SERIAL_RX
-    // if our RX is a serial, only check if we have valid usart and its the one currently active
-    if (serial_rx_port == profile.serial.rx && serial_rx_port != USART_PORT_INVALID) {
-      rx_check();
-    }
-#else
-    // we have a spi RX
-    rx_check();
-#endif
+    rx_update();
     perf_counter_end(PERF_COUNTER_RX);
 
     uint8_t blackbox_active = 0;

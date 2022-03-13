@@ -201,11 +201,17 @@ void rx_serial_init() {
   }
 }
 
-void rx_check() {
+bool rx_check() {
+  if (serial_rx_port != USART_PORT_INVALID && serial_rx_port != profile.serial.rx) {
+    return false;
+  }
+
   if (bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_INVALID) { // If there's no protocol, there's no reason to check failsafe.
     rx_serial_find_protocol();
-    return;
+    return false;
   }
+
+  bool channels_received = false;
 
   state.rx_status = RX_STATUS_DETECTED + bind_storage.unified.protocol;
 
@@ -230,25 +236,25 @@ void rx_check() {
     // USART ISR says there's enough frame to look at. Look at it.
     switch (bind_storage.unified.protocol) {
     case RX_SERIAL_PROTOCOL_DSM:
-      rx_serial_process_dsm();
+      channels_received = rx_serial_process_dsm();
       break;
     case RX_SERIAL_PROTOCOL_SBUS:
     case RX_SERIAL_PROTOCOL_SBUS_INVERTED:
-      rx_serial_process_sbus();
+      channels_received = rx_serial_process_sbus();
       break;
     case RX_SERIAL_PROTOCOL_IBUS:
-      rx_serial_process_ibus();
+      channels_received = rx_serial_process_ibus();
       break;
     case RX_SERIAL_PROTOCOL_FPORT:
     case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
-      rx_serial_process_fport();
+      channels_received = rx_serial_process_fport();
       break;
     case RX_SERIAL_PROTOCOL_CRSF:
-      rx_serial_process_crsf();
+      channels_received = rx_serial_process_crsf();
       break;
     case RX_SERIAL_PROTOCOL_REDPINE:
     case RX_SERIAL_PROTOCOL_REDPINE_INVERTED:
-      rx_serial_process_redpine();
+      channels_received = rx_serial_process_redpine();
     default:
       break;
     }
@@ -292,6 +298,8 @@ void rx_check() {
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
     rx_lqi_update_from_fps(rx_serial_expected_fps());
   }
+
+  return channels_received;
 }
 
 // NOTE TO SELF: Put in some double-check code on the detections somehow.
