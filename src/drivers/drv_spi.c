@@ -282,7 +282,7 @@ void spi_dma_init(spi_ports_t port) {
 }
 
 static void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uint32_t buffer_size) {
-  //RX Stream
+  // RX Stream
   LL_DMA_DeInit(PORT.dma.dma, PORT.dma.rx_stream_index);
 
   dma_prepare_rx_memory(base_address_in, buffer_size);
@@ -306,7 +306,7 @@ static void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uin
 }
 
 static void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, uint32_t buffer_size) {
-  //TX Stream
+  // TX Stream
   LL_DMA_DeInit(PORT.dma.dma, PORT.dma.tx_stream_index);
 
   dma_prepare_tx_memory(base_address_out, buffer_size);
@@ -488,6 +488,10 @@ spi_txn_t *spi_txn_init(volatile spi_bus_device_t *bus, spi_txn_done_fn_t done_f
 }
 
 void spi_txn_add_seg_delay(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size) {
+  if (size == 0) {
+    return;
+  }
+
   txn->size += size;
 
   txn->segments[txn->segment_count].live = true;
@@ -498,6 +502,10 @@ void spi_txn_add_seg_delay(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_d
 }
 
 void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size) {
+  if (size == 0) {
+    return;
+  }
+
   if (tx_data) {
     memcpy((uint8_t *)txn->bus->buffer + txn->offset + txn->size, tx_data, size);
   } else {
@@ -616,7 +624,7 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   LL_DMA_DisableStream(PORT.dma.dma, PORT.dma.tx_stream_index);
 
   // now we can disable the peripheral
-  //LL_SPI_Disable(PORT.channel);
+  // LL_SPI_Disable(PORT.channel);
 
   if (spi_port_config[port].active_device) {
     spi_txn_dma_rx_isr(port);
@@ -625,13 +633,6 @@ static void handle_dma_rx_isr(spi_ports_t port) {
     if (port == SDCARD_SPI_PORT) {
       extern void sdcard_dma_rx_isr();
       sdcard_dma_rx_isr();
-    }
-#endif
-
-#if defined(USE_M25P16) && defined(M25P16_SPI_PORT)
-    if (port == M25P16_SPI_PORT) {
-      extern void m25p16_dma_rx_isr();
-      m25p16_dma_rx_isr();
     }
 #endif
 
