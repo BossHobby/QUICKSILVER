@@ -37,12 +37,12 @@ float rx_serial_dsm_expected_fps();
 uint16_t rx_serial_crsf_smoothing_cutoff();
 uint16_t rx_serial_dsm_smoothing_cutoff();
 
-void rx_serial_process_dsm();
-void rx_serial_process_sbus();
-void rx_serial_process_ibus();
-void rx_serial_process_fport();
-void rx_serial_process_crsf();
-void rx_serial_process_redpine();
+bool rx_serial_process_dsm();
+bool rx_serial_process_sbus();
+bool rx_serial_process_ibus();
+bool rx_serial_process_fport();
+bool rx_serial_process_crsf();
+bool rx_serial_process_redpine();
 
 void rx_serial_send_fport_telemetry();
 void rx_serial_send_crsf_telemetry();

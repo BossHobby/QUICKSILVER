@@ -30,7 +30,9 @@ extern uint8_t ready_for_next_telemetry;
 
 #define USART usart_port_defs[serial_rx_port]
 
-void rx_serial_process_ibus() {
+bool rx_serial_process_ibus() {
+  bool channels_received = false;
+
   uint8_t frameLength = 0;
   for (uint8_t counter = 0; counter < 32; counter++) {    // First up, get the data out of the RX buffer and into somewhere safe
     rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
@@ -108,6 +110,8 @@ void rx_serial_process_ibus() {
     state.aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
     state.aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
 
+    channels_received = true;
+
     rx_lqi_got_packet();
 
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
@@ -125,6 +129,8 @@ void rx_serial_process_ibus() {
       bind_safety = 131;            // reset counter so it doesnt wrap
     }
   }
+
+  return channels_received;
 }
 
 #endif

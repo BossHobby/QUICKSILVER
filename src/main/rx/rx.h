@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "project.h"
@@ -106,8 +107,7 @@ typedef enum {
 void rx_init();
 void rx_serial_init();
 
-void rx_precalc();
-void rx_check();
+void rx_update();
 
 float rx_smoothing_hz(rx_protocol_t proto);
 
