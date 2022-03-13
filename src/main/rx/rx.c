@@ -175,6 +175,8 @@ static float rx_apply_deadband(float val) {
 
 void rx_update() {
   if (rx_check()) {
+    rx_apply_stick_calibration_scale();
+
     state.rx.roll = rx_apply_deadband(state.rx.roll);
     state.rx.pitch = rx_apply_deadband(state.rx.pitch);
     state.rx.yaw = rx_apply_deadband(state.rx.yaw);

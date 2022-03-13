@@ -148,8 +148,6 @@ static bool rx_serial_crsf_process_frame() {
     state.rx.axis[2] = (channels[3] - 990.5f) * 0.00125707103f;
     state.rx.axis[3] = (channels[2] - 191.0f) * 0.00062853551f;
 
-    rx_apply_stick_calibration_scale();
-
     state.aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0; // 1100 cutoff intentionally selected to force aux channels low if
     state.aux[AUX_CHANNEL_1] = (channels[5] > 1100) ? 1 : 0; // being controlled by a transmitter using a 3 pos switch in center state
     state.aux[AUX_CHANNEL_2] = (channels[6] > 1100) ? 1 : 0;
