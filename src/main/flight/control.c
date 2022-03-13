@@ -102,7 +102,6 @@ CBOR_END_STRUCT_ENCODER()
 #undef STR_ARRAY_MEMBER
 
 void control() {
-  rx_precalc();
   pid_precalc();
 
 #ifndef DISABLE_FLIP_SEQUENCER

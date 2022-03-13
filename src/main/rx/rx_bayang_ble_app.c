@@ -919,7 +919,9 @@ int lastrxchan;
 int timingfail = 0;
 extern int bound_for_BLE_packet; // SilverVISE
 
-void rx_check() {
+bool rx_check() {
+  bool channels_received = false;
+
   int packetreceived = checkpacket();
   int pass = 0;
   if (packetreceived) {
@@ -976,6 +978,7 @@ void rx_check() {
         lastrxchan = rf_chan;
         lastrxtime = temptime;
         failsafetime = temptime;
+        channels_received = true;
         flags.failsafe = 0;
       } else {
 #ifdef RXDEBUG
@@ -1034,6 +1037,8 @@ void rx_check() {
     secondtimer = time_micros();
   }
 #endif
+
+  return channels_received;
 }
 
 #endif
