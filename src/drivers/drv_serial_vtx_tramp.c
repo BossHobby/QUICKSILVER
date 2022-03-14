@@ -20,6 +20,7 @@ typedef enum {
   PARSER_READ_MAGIC,
   PARSER_READ_PAYLOAD,
   PARSER_READ_CRC,
+  PRASER_WAIT_FOR_READY
 } tramp_parser_state_t;
 
 tramp_settings_t tramp_settings;
@@ -163,8 +164,8 @@ vtx_update_result_t serial_tramp_update() {
       parser_state = PARSER_READ_MAGIC;
       return VTX_WAIT;
     } else {
-      parser_state = PARSER_IDLE;
-      return VTX_SUCCESS;
+      parser_state = PRASER_WAIT_FOR_READY;
+      return VTX_WAIT;
     }
   }
   case PARSER_READ_MAGIC: {
@@ -218,8 +219,15 @@ vtx_update_result_t serial_tramp_update() {
       return VTX_ERROR;
     }
 
-    parser_state = PARSER_IDLE;
-    return VTX_SUCCESS;
+    parser_state = PRASER_WAIT_FOR_READY;
+    return VTX_WAIT;
+  }
+  case PRASER_WAIT_FOR_READY: {
+    if (vtx_transfer_done == 1) {
+      parser_state = PARSER_IDLE;
+      return VTX_SUCCESS;
+    }
+    return VTX_WAIT;
   }
   }
 
