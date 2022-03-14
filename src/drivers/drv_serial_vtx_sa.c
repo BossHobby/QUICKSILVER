@@ -380,13 +380,13 @@ void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const 
   vtx_last_valid_read = time_millis();
 }
 
-int8_t smart_audio_dac_power_level_index(uint8_t dac) {
+uint8_t smart_audio_dac_power_level_index(uint8_t dac) {
   for (uint8_t level = 0; level < 4; level++) {
     if (dac == smart_audio_settings.dac_power_levels[level]) {
       return level;
     }
   }
-  return -1;
+  return 0;
 }
 
 #endif
