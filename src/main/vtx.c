@@ -191,13 +191,13 @@ const uint16_t tramp_power_level[4] = {
     400,
 };
 
-int8_t tramp_power_level_index(uint16_t power) {
+vtx_power_level_t tramp_power_level_index(uint16_t power) {
   for (uint8_t level = 0; level < VTX_POWER_LEVEL_MAX; level++) {
     if (power >= tramp_power_level[level] && power <= tramp_power_level[level]) {
       return level;
     }
   }
-  return -1;
+  return VTX_POWER_LEVEL_1;
 }
 
 vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual) {
