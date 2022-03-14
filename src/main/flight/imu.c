@@ -69,7 +69,7 @@ void imu_init() {
 
 #ifdef QUICKSILVER_IMU
   filter_lp_pt1_init(&filter, filter_pass1, 3, PT1_FILTER_HZ);
-  filter_lp_pt1_init(&filter, filter_pass1, 3, PT1_FILTER_HZ);
+  filter_lp_pt1_init(&filter, filter_pass2, 3, PT1_FILTER_HZ);
 #endif
 }
 
