@@ -845,12 +845,17 @@ void osd_display() {
     osd_menu_start();
     osd_menu_header("PID PROFILES");
 
-    if (osd_menu_button(7, 4, "PID PROFILE 1")) {
+    if (profile.pid.pid_profile == PID_PROFILE_1)
+      osd_menu_label(7, 3, "ACTIVE: PROFILE 1");
+    else
+      osd_menu_label(7, 3, "ACTIVE: PROFILE 2");
+
+    if (osd_menu_button(7, 5, "PID PROFILE 1")) {
       profile.pid.pid_profile = PID_PROFILE_1;
       osd_push_screen(OSD_SCREEN_PID);
     }
 
-    if (osd_menu_button(7, 5, "PID PROFILE 2")) {
+    if (osd_menu_button(7, 6, "PID PROFILE 2")) {
       profile.pid.pid_profile = PID_PROFILE_2;
       osd_push_screen(OSD_SCREEN_PID);
     }
@@ -895,12 +900,17 @@ void osd_display() {
     osd_menu_start();
     osd_menu_header("RATE PROFILES");
 
-    if (osd_menu_button(7, 4, "PROFILE 1")) {
+    if (profile.rate.profile == STICK_RATE_PROFILE_1)
+      osd_menu_label(7, 3, "ACTIVE: PROFILE 1");
+    else
+      osd_menu_label(7, 3, "ACTIVE: PROFILE 2");
+
+    if (osd_menu_button(7, 5, "PROFILE 1")) {
       profile.rate.profile = STICK_RATE_PROFILE_1;
       osd_push_screen(OSD_SCREEN_RATES);
     }
 
-    if (osd_menu_button(7, 5, "PROFILE 2")) {
+    if (osd_menu_button(7, 6, "PROFILE 2")) {
       profile.rate.profile = STICK_RATE_PROFILE_2;
       osd_push_screen(OSD_SCREEN_RATES);
     }
