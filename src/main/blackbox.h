@@ -2,6 +2,9 @@
 
 #include "profile.h"
 
+#define BLACKBOX_SCALE 1000
+#define BLACKBOX_MAX_SIZE 128
+
 typedef struct {
   uint32_t loop;
   uint32_t time;
@@ -22,11 +25,12 @@ typedef struct {
   compact_vec4_t motor;
 
   uint16_t cpu_load;
-} blackbox_t;
 
-#define BLACKBOX_MAX_SIZE 128
+  int16_t debug[4];
+} blackbox_t;
 
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b);
 
 void blackbox_init();
+void blackbox_set_debug(uint8_t index, int16_t data);
 uint8_t blackbox_update();

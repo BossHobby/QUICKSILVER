@@ -9,10 +9,8 @@
 
 #ifdef ENABLE_BLACKBOX
 
-#define BLACKBOX_SCALE 1000
-
-uint32_t blackbox_rate = 4;
-blackbox_t blackbox;
+static uint32_t blackbox_rate = 4;
+static blackbox_t blackbox;
 
 static uint8_t blackbox_enabled = 0;
 
@@ -38,6 +36,11 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
   CBOR_CHECK_ERROR(res = cbor_encode_compact_vec4_t(enc, &b->motor));
   CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &b->cpu_load));
 
+  CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &b->debug[0]));
+  CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &b->debug[1]));
+  CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &b->debug[2]));
+  CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &b->debug[3]));
+
   CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
 
   return res;
@@ -45,6 +48,14 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
 
 void blackbox_init() {
   data_flash_init();
+}
+
+void blackbox_set_debug(uint8_t index, int16_t data) {
+  if (index >= 4) {
+    return;
+  }
+
+  blackbox.debug[index] = data;
 }
 
 uint8_t blackbox_update() {
