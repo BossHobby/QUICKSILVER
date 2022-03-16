@@ -41,7 +41,8 @@ void vectorcopy(float *vector1, float *vector2) {
 }
 
 #ifdef BFPV_IMU
-static filter_lp2_iir filter[3];
+static filter_lp2_iir filter;
+static filter_state_t filter_state[3];
 #endif
 
 #ifdef QUICKSILVER_IMU
@@ -62,9 +63,7 @@ void imu_init() {
   }
 
 #ifdef BFPV_IMU
-  filter_lp2_iir_init(&filter[0], IMU_SAMPLE_RATE, IMU_FILTER_CUTOFF_FREQ);
-  filter_lp2_iir_init(&filter[1], IMU_SAMPLE_RATE, IMU_FILTER_CUTOFF_FREQ);
-  filter_lp2_iir_init(&filter[2], IMU_SAMPLE_RATE, IMU_FILTER_CUTOFF_FREQ);
+  filter_lp2_iir_init(&filter, filter_state, 3, IMU_FILTER_CUTOFF_FREQ);
 #endif
 
 #ifdef QUICKSILVER_IMU
@@ -75,9 +74,9 @@ void imu_init() {
 
 #ifdef BFPV_IMU
 void imu_calc() {
-  state.accel.axis[0] = filter_lp2_iir_step(&filter[0], state.accel_raw.axis[0]);
-  state.accel.axis[1] = filter_lp2_iir_step(&filter[1], state.accel_raw.axis[1]);
-  state.accel.axis[2] = filter_lp2_iir_step(&filter[2], state.accel_raw.axis[2]);
+  state.accel.axis[0] = filter_lp2_iir_step(&filter, &filter_state[0], state.accel_raw.axis[0]);
+  state.accel.axis[1] = filter_lp2_iir_step(&filter, &filter_state[1], state.accel_raw.axis[1]);
+  state.accel.axis[2] = filter_lp2_iir_step(&filter, &filter_state[2], state.accel_raw.axis[2]);
 
   float EstG[3];
   vectorcopy(&EstG[0], &state.GEstG.axis[0]);
