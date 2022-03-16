@@ -81,6 +81,41 @@ float filter_lp2_pt1_step(filter_lp2_pt1 *filter, filter_state_t *state, float i
   return out;
 }
 
+static void filter_lp2_iir_coeff_sample_time(filter_lp2_iir *filter, float sample_time, float hz) {
+  const float fr = (1 / sample_time) / hz;
+  const float ohm = tanf(M_PI / fr);
+  const float c = 1.0f + 2.0f * cosf(M_PI / 4.0f) * ohm + ohm * ohm;
+
+  filter->b0 = ohm * ohm / c;
+  filter->b1 = 2.0f * filter->b0;
+  filter->b2 = filter->b0;
+  filter->a1 = 2.0f * (ohm * ohm - 1.0f) / c;
+  filter->a2 = (1.0f - 2.0f * cosf(M_PI / 4.0f) * ohm + ohm * ohm) / c;
+}
+
+void filter_lp2_iir_init(filter_lp2_iir *filter, filter_state_t *state, uint8_t count, float hz) {
+  filter_lp2_iir_coeff_sample_time(filter, LOOPTIME * 1e-6, hz);
+
+  for (uint8_t i = 0; i < count; i++) {
+    state[i].delay_element[0] = 0;
+    state[i].delay_element[1] = 0;
+  }
+}
+
+void filter_lp2_iir_coeff(filter_lp2_iir *filter, float hz) {
+  filter_lp2_iir_coeff_sample_time(filter, state.looptime, hz);
+}
+
+float filter_lp2_iir_step(filter_lp2_iir *filter, filter_state_t *state, float sample) {
+  const float delay_element_0 = sample - state->delay_element[0] * filter->a1 - state->delay_element[1] * filter->a2;
+  const float output = delay_element_0 * filter->b0 + state->delay_element[0] * filter->b1 + state->delay_element[1] * filter->b2;
+
+  state->delay_element[1] = state->delay_element[0];
+  state->delay_element[0] = delay_element_0;
+
+  return output;
+}
+
 // 16Hz hpf filter for throttle compensation
 // High pass bessel filter order=1 alpha1=0.016
 void filter_hp_be_init(filter_hp_be *filter) {
@@ -107,42 +142,6 @@ float filter_lp_sp_step(filter_lp_sp *filter, float x) { // class II
   return (filter->v[0] + filter->v[1]);
 }
 
-void filter_lp2_iir_init(filter_lp2_iir *filter, float sample_freq, float cutoff_freq) {
-  const float fr = sample_freq / cutoff_freq;
-  const float ohm = tanf(M_PI / fr);
-  const float c = 1.0f + 2.0f * cosf(M_PI / 4.0f) * ohm + ohm * ohm;
-
-  filter->cutoff_freq = cutoff_freq;
-
-  if (filter->cutoff_freq > 0.0f) {
-    filter->b0 = ohm * ohm / c;
-    filter->b1 = 2.0f * filter->b0;
-    filter->b2 = filter->b0;
-    filter->a1 = 2.0f * (ohm * ohm - 1.0f) / c;
-    filter->a2 = (1.0f - 2.0f * cosf(M_PI / 4.0f) * ohm + ohm * ohm) / c;
-  }
-}
-
-float filter_lp2_iir_step(filter_lp2_iir *filter, float sample) {
-  if (filter->cutoff_freq <= 0.0f) {
-    return sample; /* No filtering */
-  }
-
-  float delay_element_0 = sample - filter->delay_element_1 * filter->a1 - filter->delay_element_2 * filter->a2;
-  /* Do the filtering */
-  if (isnan(delay_element_0) || isinf(delay_element_0)) {
-    /* Don't allow bad values to propogate via the filter */
-    delay_element_0 = sample;
-  }
-
-  const float output = delay_element_0 * filter->b0 + filter->delay_element_1 * filter->b1 + filter->delay_element_2 * filter->b2;
-  filter->delay_element_2 = filter->delay_element_1;
-  filter->delay_element_1 = delay_element_0;
-
-  /* Return the value.  Should be no need to check limits */
-  return output;
-}
-
 filter_hp_be throttlehpf1;
 float throttlehpf(float in) {
   return filter_hp_be_step(&throttlehpf1, in);
@@ -166,6 +165,9 @@ void filter_init(filter_type_t type, filter_t *filter, filter_state_t *state, ui
   case FILTER_LP2_PT1:
     filter_lp2_pt1_init(&filter->lp2_pt1, state, count, hz);
     break;
+  case FILTER_LP_PT2:
+    filter_lp2_iir_init(&filter->lp_pt2, state, count, hz);
+    break;
   default:
     // no filter, do nothing
     break;
@@ -180,6 +182,9 @@ void filter_coeff(filter_type_t type, filter_t *filter, float hz) {
   case FILTER_LP2_PT1:
     filter_lp2_pt1_coeff(&filter->lp2_pt1, hz);
     break;
+  case FILTER_LP_PT2:
+    filter_lp2_iir_coeff(&filter->lp_pt2, hz);
+    break;
   default:
     // no filter, do nothing
     break;
@@ -192,6 +197,8 @@ float filter_step(filter_type_t type, filter_t *filter, filter_state_t *state, f
     return filter_lp_pt1_step(&filter->lp_pt1, state, in);
   case FILTER_LP2_PT1:
     return filter_lp2_pt1_step(&filter->lp2_pt1, state, in);
+  case FILTER_LP_PT2:
+    return filter_lp2_iir_step(&filter->lp_pt2, state, in);
   default:
     // no filter at all
     return in;
