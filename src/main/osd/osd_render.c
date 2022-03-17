@@ -940,11 +940,12 @@ void osd_display() {
         "NONE",
         " PT1",
         " PT2",
+        " PT3",
     };
 
     osd_menu_select(4, 4, "PASS 1 TYPE");
     if (osd_menu_select_enum(18, 4, profile.filter.gyro[0].type, filter_type_labels)) {
-      profile.filter.gyro[0].type = osd_menu_adjust_int(profile.filter.gyro[0].type, 1, 0, FILTER_LP_PT2);
+      profile.filter.gyro[0].type = osd_menu_adjust_int(profile.filter.gyro[0].type, 1, 0, FILTER_LP_PT3);
       osd_state.reboot_fc_requested = 1;
     }
 
@@ -955,7 +956,7 @@ void osd_display() {
 
     osd_menu_select(4, 6, "PASS 2 TYPE");
     if (osd_menu_select_enum(18, 6, profile.filter.gyro[1].type, filter_type_labels)) {
-      profile.filter.gyro[1].type = osd_menu_adjust_int(profile.filter.gyro[1].type, 1, 0, FILTER_LP_PT2);
+      profile.filter.gyro[1].type = osd_menu_adjust_int(profile.filter.gyro[1].type, 1, 0, FILTER_LP_PT3);
       osd_state.reboot_fc_requested = 1;
     }
 
