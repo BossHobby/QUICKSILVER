@@ -188,7 +188,7 @@ const profile_t default_profile = {
                 .type = FILTER_LP_PT1,
                 .cutoff_freq = GYRO_FREQ_PASS1,
 #else // GYRO_FILTER_PASS1_PT2
-                .type = FILTER_LP2_PT1,
+                .type = FILTER_LP_PT2,
                 .cutoff_freq = GYRO_FREQ_PASS1,
 #endif
             },
@@ -203,7 +203,7 @@ const profile_t default_profile = {
                 .type = FILTER_LP_PT1,
                 .cutoff_freq = GYRO_FREQ_PASS1,
 #else // GYRO_FILTER_PASS2_PT2
-                .type = FILTER_LP2_PT1,
+                .type = FILTER_LP_PT2,
                 .cutoff_freq = GYRO_FREQ_PASS1,
 #endif
             }
@@ -221,7 +221,7 @@ const profile_t default_profile = {
                 .type = FILTER_LP_PT1,
                 .cutoff_freq = DTERM_FREQ_PASS1,
 #else // DTERM_FILTER_PASS1_PT2
-                .type = FILTER_LP2_PT1,
+                .type = FILTER_LP_PT2,
                 .cutoff_freq = DTERM_FREQ_PASS1,
 #endif
             },
@@ -236,7 +236,7 @@ const profile_t default_profile = {
                 .type = FILTER_LP_PT1,
                 .cutoff_freq = DTERM_FREQ_PASS2,
 #else // DTERM_FILTER_PASS2_PT2
-                .type = FILTER_LP2_PT1,
+                .type = FILTER_LP_PT2,
                 .cutoff_freq = DTERM_FREQ_PASS2,
 #endif
             }
