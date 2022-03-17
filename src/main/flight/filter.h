@@ -10,11 +10,11 @@ typedef enum {
   FILTER_NONE,
   FILTER_LP_PT1,
   FILTER_LP2_PT1,
-  FILTER_LP_PT2,
+  FILTER_LP_PT3,
 } filter_type_t;
 
 typedef struct {
-  float delay_element[2];
+  float delay_element[3];
 } filter_state_t;
 
 typedef struct {
@@ -28,6 +28,10 @@ typedef struct {
 } filter_lp2_pt1;
 
 typedef struct {
+  float alpha;
+} filter_lp_pt3;
+
+typedef struct {
   float a1;
   float a2;
   float b0;
@@ -38,7 +42,7 @@ typedef struct {
 typedef union {
   filter_lp_pt1 lp_pt1;
   filter_lp2_pt1 lp2_pt1;
-  filter_lp2_iir lp_pt2;
+  filter_lp_pt3 lp_pt3;
 } filter_t;
 
 typedef struct {
@@ -63,6 +67,10 @@ float filter_lp_pt1_step(filter_lp_pt1 *filter, filter_state_t *state, float in)
 void filter_lp2_pt1_init(filter_lp2_pt1 *filter, filter_state_t *state, uint8_t count, float hz);
 void filter_lp2_pt1_coeff(filter_lp2_pt1 *filter, float hz);
 float filter_lp2_pt1_step(filter_lp2_pt1 *filter, filter_state_t *state, float in);
+
+void filter_lp_pt3_init(filter_lp_pt3 *filter, filter_state_t *state, uint8_t count, float hz);
+void filter_lp_pt3_coeff(filter_lp_pt3 *filter, float hz);
+float filter_lp_pt3_step(filter_lp_pt3 *filter, filter_state_t *state, float in);
 
 void filter_lp2_iir_init(filter_lp2_iir *filter, filter_state_t *state, uint8_t count, float hz);
 void filter_lp2_iir_coeff(filter_lp2_iir *filter, float hz);
