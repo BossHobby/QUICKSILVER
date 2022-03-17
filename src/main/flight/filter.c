@@ -51,8 +51,8 @@ float filter_lp_pt1_step(filter_lp_pt1 *filter, filter_state_t *state, float in)
   return out;
 }
 
-void filter_lp2_pt1_init(filter_lp2_pt1 *filter, filter_state_t *state, uint8_t count, float hz) {
-  filter_lp2_pt1_coeff(filter, hz);
+void filter_lp_pt2_init(filter_lp_pt2 *filter, filter_state_t *state, uint8_t count, float hz) {
+  filter_lp_pt2_coeff(filter, hz);
 
   for (uint8_t i = 0; i < count; i++) {
     state[i].delay_element[0] = 0;
@@ -60,7 +60,7 @@ void filter_lp2_pt1_init(filter_lp2_pt1 *filter, filter_state_t *state, uint8_t 
   }
 }
 
-void filter_lp2_pt1_coeff(filter_lp2_pt1 *filter, float hz) {
+void filter_lp_pt2_coeff(filter_lp_pt2 *filter, float hz) {
   const float alpha = FILTERCALC(state.looptime, (1.0f / hz));
 
   filter->two_one_minus_alpha = 2 * alpha;
@@ -68,7 +68,7 @@ void filter_lp2_pt1_coeff(filter_lp2_pt1 *filter, float hz) {
   filter->alpha_sqr = (1 - alpha) * (1 - alpha);
 }
 
-float filter_lp2_pt1_step(filter_lp2_pt1 *filter, filter_state_t *state, float in) {
+float filter_lp_pt2_step(filter_lp_pt2 *filter, filter_state_t *state, float in) {
   const float out = in * filter->alpha_sqr + filter->two_one_minus_alpha * state->delay_element[0] - filter->one_minus_alpha_sqr * state->delay_element[1];
 
   state->delay_element[1] = state->delay_element[0];
@@ -177,8 +177,8 @@ void filter_init(filter_type_t type, filter_t *filter, filter_state_t *state, ui
   case FILTER_LP_PT1:
     filter_lp_pt1_init(&filter->lp_pt1, state, count, hz);
     break;
-  case FILTER_LP2_PT1:
-    filter_lp2_pt1_init(&filter->lp2_pt1, state, count, hz);
+  case FILTER_LP_PT2:
+    filter_lp_pt2_init(&filter->lp_pt2, state, count, hz);
     break;
   case FILTER_LP_PT3:
     filter_lp_pt3_init(&filter->lp_pt3, state, count, hz);
@@ -194,8 +194,8 @@ void filter_coeff(filter_type_t type, filter_t *filter, float hz) {
   case FILTER_LP_PT1:
     filter_lp_pt1_coeff(&filter->lp_pt1, hz);
     break;
-  case FILTER_LP2_PT1:
-    filter_lp2_pt1_coeff(&filter->lp2_pt1, hz);
+  case FILTER_LP_PT2:
+    filter_lp_pt2_coeff(&filter->lp_pt2, hz);
     break;
   case FILTER_LP_PT3:
     filter_lp_pt3_coeff(&filter->lp_pt3, hz);
@@ -210,8 +210,8 @@ float filter_step(filter_type_t type, filter_t *filter, filter_state_t *state, f
   switch (type) {
   case FILTER_LP_PT1:
     return filter_lp_pt1_step(&filter->lp_pt1, state, in);
-  case FILTER_LP2_PT1:
-    return filter_lp2_pt1_step(&filter->lp2_pt1, state, in);
+  case FILTER_LP_PT2:
+    return filter_lp_pt2_step(&filter->lp_pt2, state, in);
   case FILTER_LP_PT3:
     return filter_lp_pt3_step(&filter->lp_pt3, state, in);
   default:

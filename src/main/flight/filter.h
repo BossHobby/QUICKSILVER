@@ -9,7 +9,7 @@
 typedef enum {
   FILTER_NONE,
   FILTER_LP_PT1,
-  FILTER_LP2_PT1,
+  FILTER_LP_PT2,
   FILTER_LP_PT3,
 } filter_type_t;
 
@@ -25,7 +25,7 @@ typedef struct {
   float two_one_minus_alpha;
   float one_minus_alpha_sqr;
   float alpha_sqr;
-} filter_lp2_pt1;
+} filter_lp_pt2;
 
 typedef struct {
   float alpha;
@@ -41,7 +41,7 @@ typedef struct {
 
 typedef union {
   filter_lp_pt1 lp_pt1;
-  filter_lp2_pt1 lp2_pt1;
+  filter_lp_pt2 lp_pt2;
   filter_lp_pt3 lp_pt3;
 } filter_t;
 
@@ -64,9 +64,9 @@ void filter_lp_pt1_init(filter_lp_pt1 *filter, filter_state_t *state, uint8_t co
 void filter_lp_pt1_coeff(filter_lp_pt1 *filter, float hz);
 float filter_lp_pt1_step(filter_lp_pt1 *filter, filter_state_t *state, float in);
 
-void filter_lp2_pt1_init(filter_lp2_pt1 *filter, filter_state_t *state, uint8_t count, float hz);
-void filter_lp2_pt1_coeff(filter_lp2_pt1 *filter, float hz);
-float filter_lp2_pt1_step(filter_lp2_pt1 *filter, filter_state_t *state, float in);
+void filter_lp_pt2_init(filter_lp_pt2 *filter, filter_state_t *state, uint8_t count, float hz);
+void filter_lp_pt2_coeff(filter_lp_pt2 *filter, float hz);
+float filter_lp_pt2_step(filter_lp_pt2 *filter, filter_state_t *state, float in);
 
 void filter_lp_pt3_init(filter_lp_pt3 *filter, filter_state_t *state, uint8_t count, float hz);
 void filter_lp_pt3_coeff(filter_lp_pt3 *filter, float hz);
