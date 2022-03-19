@@ -94,33 +94,6 @@ float filter_lp_pt3_step(filter_lp_pt3 *filter, filter_state_t *state, float in)
   return state->delay_element[0];
 }
 
-void filter_lp2_iir_init(filter_lp2_iir *filter, filter_state_t *state, uint8_t count, float hz) {
-  filter_lp2_iir_coeff(filter, hz);
-  filter_init_state(state, count);
-}
-
-void filter_lp2_iir_coeff(filter_lp2_iir *filter, float hz) {
-  const float fr = (1 / state.looptime) / hz;
-  const float ohm = tanf(M_PI_F / fr);
-  const float c = 1.0f + 2.0f * cosf(M_PI_F / 4.0f) * ohm + ohm * ohm;
-
-  filter->b0 = ohm * ohm / c;
-  filter->b1 = 2.0f * filter->b0;
-  filter->b2 = filter->b0;
-  filter->a1 = 2.0f * (ohm * ohm - 1.0f) / c;
-  filter->a2 = (1.0f - 2.0f * cosf(M_PI_F / 4.0f) * ohm + ohm * ohm) / c;
-}
-
-float filter_lp2_iir_step(filter_lp2_iir *filter, filter_state_t *state, float sample) {
-  const float delay_element_0 = sample - state->delay_element[0] * filter->a1 - state->delay_element[1] * filter->a2;
-  const float output = delay_element_0 * filter->b0 + state->delay_element[0] * filter->b1 + state->delay_element[1] * filter->b2;
-
-  state->delay_element[1] = state->delay_element[0];
-  state->delay_element[0] = delay_element_0;
-
-  return output;
-}
-
 // 16Hz hpf filter for throttle compensation
 // High pass bessel filter order=1 alpha1=0.016
 void filter_hp_be_init(filter_hp_be *filter) {
