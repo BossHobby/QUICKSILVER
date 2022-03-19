@@ -32,13 +32,17 @@ void lpf(float *out, float in, float coeff) {
   *out = (*out) * coeff + in * (1 - coeff);
 }
 
-void filter_lp_pt1_init(filter_lp_pt1 *filter, filter_state_t *state, uint8_t count, float hz) {
-  filter_lp_pt1_coeff(filter, hz);
-
+static void filter_init_state(filter_state_t *state, uint8_t count) {
   for (uint8_t i = 0; i < count; i++) {
     state[i].delay_element[0] = 0;
     state[i].delay_element[1] = 0;
+    state[i].delay_element[2] = 0;
   }
+}
+
+void filter_lp_pt1_init(filter_lp_pt1 *filter, filter_state_t *state, uint8_t count, float hz) {
+  filter_lp_pt1_coeff(filter, hz);
+  filter_init_state(state, count);
 }
 
 void filter_lp_pt1_coeff(filter_lp_pt1 *filter, float hz) {
@@ -55,11 +59,7 @@ float filter_lp_pt1_step(filter_lp_pt1 *filter, filter_state_t *state, float in)
 
 void filter_lp_pt2_init(filter_lp_pt2 *filter, filter_state_t *state, uint8_t count, float hz) {
   filter_lp_pt2_coeff(filter, hz);
-
-  for (uint8_t i = 0; i < count; i++) {
-    state[i].delay_element[0] = 0;
-    state[i].delay_element[1] = 0;
-  }
+  filter_init_state(state, count);
 }
 
 void filter_lp_pt2_coeff(filter_lp_pt2 *filter, float hz) {
@@ -77,11 +77,7 @@ float filter_lp_pt2_step(filter_lp_pt2 *filter, filter_state_t *state, float in)
 
 void filter_lp_pt3_init(filter_lp_pt3 *filter, filter_state_t *state, uint8_t count, float hz) {
   filter_lp_pt3_coeff(filter, hz);
-
-  for (uint8_t i = 0; i < count; i++) {
-    state[i].delay_element[0] = 0;
-    state[i].delay_element[1] = 0;
-  }
+  filter_init_state(state, count);
 }
 
 void filter_lp_pt3_coeff(filter_lp_pt3 *filter, float hz) {
@@ -100,11 +96,7 @@ float filter_lp_pt3_step(filter_lp_pt3 *filter, filter_state_t *state, float in)
 
 void filter_lp2_iir_init(filter_lp2_iir *filter, filter_state_t *state, uint8_t count, float hz) {
   filter_lp2_iir_coeff(filter, hz);
-
-  for (uint8_t i = 0; i < count; i++) {
-    state[i].delay_element[0] = 0;
-    state[i].delay_element[1] = 0;
-  }
+  filter_init_state(state, count);
 }
 
 void filter_lp2_iir_coeff(filter_lp2_iir *filter, float hz) {
