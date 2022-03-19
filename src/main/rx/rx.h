@@ -105,8 +105,6 @@ typedef enum {
 } stick_calibration_wizard_t;
 
 void rx_init();
-void rx_serial_init();
-
 void rx_update();
 
 float rx_smoothing_hz(rx_protocol_t proto);

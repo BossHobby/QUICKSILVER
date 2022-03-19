@@ -51,7 +51,7 @@ void writeregs(uint8_t data[], uint8_t size) {
   spi_csoff();
 }
 
-void rx_init() {
+void rx_protocol_init() {
 
   // always on (AUX_CHANNEL_ON) channel set 1
   state.aux[AUX_CHANNEL_MAX - 2] = 1;

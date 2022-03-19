@@ -118,16 +118,7 @@ int main() {
 #endif
 
   vtx_init();
-
-#ifdef SERIAL_RX
-  // if our RX is a serial, only init if we have valid usart
-  if (profile.serial.rx != USART_PORT_INVALID) {
-    rx_init();
-  }
-#else
-  // we have a spi RX
   rx_init();
-#endif
 
   time_delay_us(1000);
   vbat_init();
