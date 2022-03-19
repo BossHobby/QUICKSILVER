@@ -175,17 +175,18 @@ data_flash_result_t data_flash_update() {
     break;
 
   case STATE_IDLE:
-    if (to_write >= ENTRIES_PER_PAGE) {
-      state = STATE_START_WRITE;
-    } else if (should_flush == 1) {
+    if (should_flush == 1) {
       state = STATE_ERASE_HEADER;
       should_flush = 0;
+    } else if (to_write >= ENTRIES_PER_PAGE) {
+      state = STATE_START_WRITE;
     }
     break;
 
   case STATE_START_WRITE: {
     offset = FILES_SECTOR_OFFSET + current_file()->start_sector * bounds.sector_size + (current_file()->entries / ENTRIES_PER_PAGE) * M25P16_PAGE_SIZE;
     if (offset >= bounds.total_size) {
+      state = STATE_IDLE;
       break;
     }
     state = STATE_CONTINUE_WRITE;
