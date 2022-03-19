@@ -145,7 +145,7 @@ int rf_chan = 0;
 int bind_safety = 0;
 int rxdata[17 + 2 * crc_en];
 
-void rx_init() {
+void rx_protocol_init() {
 
   // always on (AUX_CHANNEL_ON) channel set 1
   state.aux[AUX_CHANNEL_MAX - 2] = 1;

@@ -33,7 +33,7 @@
 #define CH_HEADFREE AUX_CHANNEL_4
 #define CH_INV AUX_CHANNEL_5
 //#define CH_EXPERT AUX_CHANNEL_6		//multimodule channel behavior unknown
-#define CH_EMG AUX_CHANNEL_7 //multimodule channel behavior unknown
+#define CH_EMG AUX_CHANNEL_7 // multimodule channel behavior unknown
 //#define CH_TO AUX_CHANNEL_8			//multimodule channel behavior unknown
 #endif
 
@@ -67,7 +67,7 @@ typedef struct {
   uint8_t telemetry_enabled;
 } rx_bayang_bind_data_t;
 
-void rx_init();
+void rx_protocol_init();
 bool rx_check();
 
 struct rxdebug {

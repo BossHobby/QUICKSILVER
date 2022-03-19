@@ -181,7 +181,7 @@ static uint8_t redpine_handle_packet() {
       protocol_time = time_micros();
       flags.failsafe = 1;
       protocol_state = FRSKY_STATE_INIT;
-      rx_init();
+      rx_protocol_init();
       reset_looptime();
     }
     break;
@@ -191,7 +191,7 @@ static uint8_t redpine_handle_packet() {
   return ret;
 }
 
-void rx_init() {
+void rx_protocol_init() {
   if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
     return;
 

@@ -683,7 +683,7 @@ void elrs_handle_tock() {
   }
 }
 
-void rx_init() {
+void rx_protocol_init() {
   if (!elrs_radio_init()) {
     radio_is_init = false;
     return;

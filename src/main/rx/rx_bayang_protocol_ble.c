@@ -41,7 +41,7 @@ void writeregs(uint8_t data[], uint8_t size) {
 // 0 - 255 select a different number for each quad if you need several simultaneous
 #define BLE_QUAD_NUMBER 17
 
-void rx_init() {
+void rx_protocol_init() {
 
 #ifdef RADIO_XN297L
 

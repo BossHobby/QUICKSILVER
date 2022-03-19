@@ -105,11 +105,6 @@ void RX_USART_ISR() {
   }
 }
 
-void rx_init() {
-  flags.rx_mode = !RXMODE_BIND; // put LEDS in normal signal status
-  rx_serial_init();
-}
-
 void rx_serial_update_frame_length(rx_serial_protocol_t proto) {
   switch (proto) {
   case RX_SERIAL_PROTOCOL_DSM:
@@ -167,8 +162,13 @@ float rx_serial_expected_fps() {
   return 0;
 }
 
-void rx_serial_init() {
+void rx_protocol_init() {
+  if (profile.serial.rx == USART_PORT_INVALID) {
+    return;
+  }
+
   // Let the uart ISR do its stuff.
+  flags.rx_mode = !RXMODE_BIND; // put LEDS in normal signal status
   frame_status = FRAME_IDLE;
 
 #ifdef RX_SBUS
@@ -228,10 +228,8 @@ bool rx_check() {
 
   if (frame_status == FRAME_INVALID) {
     // RX/USART not set up.
-
     // Set it up. This includes autodetecting protocol if necesary
-    rx_serial_init();
-    flags.rx_mode = !RXMODE_BIND;
+    rx_protocol_init();
   } else if (frame_status == FRAME_RX) {
     // USART ISR says there's enough frame to look at. Look at it.
     switch (bind_storage.unified.protocol) {
