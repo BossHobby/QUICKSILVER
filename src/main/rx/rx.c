@@ -24,6 +24,9 @@ static uint32_t frames_per_second = 0;
 static uint32_t frames_missed = 0;
 static uint32_t frames_received = 0;
 
+static filter_lp_pt1 rx_filter;
+static filter_state_t rx_filter_state[4];
+
 // Select filter cut, Formula is [(1/rx framerate)/2] * 0.9
 // 0 will trigger selection via rx_smoothing_cutoff
 static const uint16_t RX_SMOOTHING_HZ[RX_PROTOCOL_MAX] = {
@@ -138,6 +141,8 @@ void rx_lqi_update_direct(float rssi) {
 }
 
 static void rx_apply_smoothing() {
+  filter_lp_pt1_coeff(&rx_filter, rx_smoothing_hz(RX_PROTOCOL));
+
   for (int i = 0; i < 4; ++i) {
     if (i == 3) {
       // throttle is 0 - 1.0
@@ -147,7 +152,7 @@ static void rx_apply_smoothing() {
       state.rx.axis[i] = constrainf(state.rx.axis[i], -1.0, 1.0);
     }
 #ifdef RX_SMOOTHING
-    lpf(&state.rx_filtered.axis[i], state.rx.axis[i], FILTERCALC(state.looptime, 1.0f / (float)rx_smoothing_hz(RX_PROTOCOL)));
+    state.rx_filtered.axis[i] = filter_lp_pt1_step(&rx_filter, &rx_filter_state[i], state.rx.axis[i]);
 #endif
     if (i == 3) {
       // throttle is 0 - 1.0
@@ -176,6 +181,8 @@ static float rx_apply_deadband(float val) {
 }
 
 void rx_init() {
+  filter_lp_pt1_init(&rx_filter, rx_filter_state, 4, rx_smoothing_hz(RX_PROTOCOL));
+
   rx_protocol_init();
 }
 
