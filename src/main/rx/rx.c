@@ -11,7 +11,9 @@
 #include "project.h"
 #include "util/util.h"
 
+extern void rx_protocol_init();
 extern bool rx_check();
+
 extern profile_t profile;
 
 uint8_t failsafe_siglost = 0;
@@ -171,6 +173,10 @@ static float rx_apply_deadband(float val) {
   } else {
     return mapf(val, -profile.rate.sticks_deadband, -1, 0, -1);
   }
+}
+
+void rx_init() {
+  rx_protocol_init();
 }
 
 void rx_update() {
