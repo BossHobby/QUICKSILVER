@@ -6,6 +6,8 @@
 #include "math.h"
 #include "project.h"
 
+#define M_PI_F 3.14159265358979323846f
+
 // calculates the coefficient for lpf filter, times in the same units
 float lpfcalc(float sampleperiod, float filtertime) {
   float ga = 1.0f - sampleperiod / filtertime;
@@ -40,15 +42,15 @@ void filter_lp_pt1_init(filter_lp_pt1 *filter, filter_state_t *state, uint8_t co
 }
 
 void filter_lp_pt1_coeff(filter_lp_pt1 *filter, float hz) {
-  filter->alpha = FILTERCALC(state.looptime, (1.0f / hz));
+  const float cutoff = 1 / sqrtf(powf(2, 1.0f / 1.0f) - 1);
+  const float rc = 1 / (2 * cutoff * M_PI_F * hz);
+
+  filter->alpha = state.looptime / (rc + state.looptime);
 }
 
 float filter_lp_pt1_step(filter_lp_pt1 *filter, filter_state_t *state, float in) {
-  const float out = state->delay_element[0] * filter->alpha + in * (1 - filter->alpha);
-
-  state->delay_element[0] = out;
-
-  return out;
+  state->delay_element[0] = state->delay_element[0] + filter->alpha * (in - state->delay_element[0]);
+  return state->delay_element[0];
 }
 
 void filter_lp_pt2_init(filter_lp_pt2 *filter, filter_state_t *state, uint8_t count, float hz) {
@@ -61,20 +63,16 @@ void filter_lp_pt2_init(filter_lp_pt2 *filter, filter_state_t *state, uint8_t co
 }
 
 void filter_lp_pt2_coeff(filter_lp_pt2 *filter, float hz) {
-  const float alpha = FILTERCALC(state.looptime, (1.0f / hz));
+  const float cutoff = 1 / sqrtf(powf(2, 1.0f / 2.0f) - 1);
+  const float rc = 1 / (2 * cutoff * M_PI_F * hz);
 
-  filter->two_one_minus_alpha = 2 * alpha;
-  filter->one_minus_alpha_sqr = (alpha) * (alpha);
-  filter->alpha_sqr = (1 - alpha) * (1 - alpha);
+  filter->alpha = state.looptime / (rc + state.looptime);
 }
 
 float filter_lp_pt2_step(filter_lp_pt2 *filter, filter_state_t *state, float in) {
-  const float out = in * filter->alpha_sqr + filter->two_one_minus_alpha * state->delay_element[0] - filter->one_minus_alpha_sqr * state->delay_element[1];
-
-  state->delay_element[1] = state->delay_element[0];
-  state->delay_element[0] = out;
-
-  return out;
+  state->delay_element[1] = state->delay_element[1] + filter->alpha * (in - state->delay_element[1]);
+  state->delay_element[0] = state->delay_element[0] + filter->alpha * (state->delay_element[1] - state->delay_element[0]);
+  return state->delay_element[0];
 }
 
 void filter_lp_pt3_init(filter_lp_pt3 *filter, filter_state_t *state, uint8_t count, float hz) {
@@ -88,7 +86,7 @@ void filter_lp_pt3_init(filter_lp_pt3 *filter, filter_state_t *state, uint8_t co
 
 void filter_lp_pt3_coeff(filter_lp_pt3 *filter, float hz) {
   const float cutoff = 1 / sqrtf(powf(2, 1.0f / 3.0f) - 1);
-  const float rc = 1 / (2 * cutoff * M_PI * hz);
+  const float rc = 1 / (2 * cutoff * M_PI_F * hz);
 
   filter->alpha = state.looptime / (rc + state.looptime);
 }
@@ -111,14 +109,14 @@ void filter_lp2_iir_init(filter_lp2_iir *filter, filter_state_t *state, uint8_t 
 
 void filter_lp2_iir_coeff(filter_lp2_iir *filter, float hz) {
   const float fr = (1 / state.looptime) / hz;
-  const float ohm = tanf(M_PI / fr);
-  const float c = 1.0f + 2.0f * cosf(M_PI / 4.0f) * ohm + ohm * ohm;
+  const float ohm = tanf(M_PI_F / fr);
+  const float c = 1.0f + 2.0f * cosf(M_PI_F / 4.0f) * ohm + ohm * ohm;
 
   filter->b0 = ohm * ohm / c;
   filter->b1 = 2.0f * filter->b0;
   filter->b2 = filter->b0;
   filter->a1 = 2.0f * (ohm * ohm - 1.0f) / c;
-  filter->a2 = (1.0f - 2.0f * cosf(M_PI / 4.0f) * ohm + ohm * ohm) / c;
+  filter->a2 = (1.0f - 2.0f * cosf(M_PI_F / 4.0f) * ohm + ohm * ohm) / c;
 }
 
 float filter_lp2_iir_step(filter_lp2_iir *filter, filter_state_t *state, float sample) {

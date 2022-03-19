@@ -22,9 +22,7 @@ typedef struct {
 } filter_lp_pt1;
 
 typedef struct {
-  float two_one_minus_alpha;
-  float one_minus_alpha_sqr;
-  float alpha_sqr;
+  float alpha;
 } filter_lp_pt2;
 
 typedef struct {
