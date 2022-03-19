@@ -70,10 +70,6 @@ void filter_lp_pt3_init(filter_lp_pt3 *filter, filter_state_t *state, uint8_t co
 void filter_lp_pt3_coeff(filter_lp_pt3 *filter, float hz);
 float filter_lp_pt3_step(filter_lp_pt3 *filter, filter_state_t *state, float in);
 
-void filter_lp2_iir_init(filter_lp2_iir *filter, filter_state_t *state, uint8_t count, float hz);
-void filter_lp2_iir_coeff(filter_lp2_iir *filter, float hz);
-float filter_lp2_iir_step(filter_lp2_iir *filter, filter_state_t *state, float sample);
-
 void filter_lp_sp_init(filter_lp_sp *filter, uint8_t count);
 float filter_lp_sp_step(filter_lp_sp *filter, float x);
 
