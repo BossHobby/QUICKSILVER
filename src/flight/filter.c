@@ -1,6 +1,7 @@
 #include "flight/filter.h"
 
 #include <math.h>
+#include <string.h>
 
 #include "flight/control.h"
 #include "project.h"
@@ -36,11 +37,7 @@ void lpf(float *out, float in, float coeff) {
 }
 
 static void filter_init_state(filter_state_t *state, uint8_t count) {
-  for (uint8_t i = 0; i < count; i++) {
-    state[i].delay_element[0] = 0;
-    state[i].delay_element[1] = 0;
-    state[i].delay_element[2] = 0;
-  }
+  memset(state, 0, count * sizeof(filter_state_t));
 }
 
 void filter_lp_pt1_init(filter_lp_pt1 *filter, filter_state_t *state, uint8_t count, float hz) {
@@ -113,6 +110,46 @@ float filter_lp_pt3_step(filter_lp_pt3 *filter, filter_state_t *state, float in)
   state->delay_element[2] = state->delay_element[2] + filter->alpha * (state->delay_element[1] - state->delay_element[2]);
   state->delay_element[0] = state->delay_element[0] + filter->alpha * (state->delay_element[2] - state->delay_element[0]);
   return state->delay_element[0];
+}
+
+void filter_biquad_notch_init(filter_biquad_notch_t *filter, filter_biquad_state_t *state, uint8_t count, float hz) {
+  filter_biquad_notch_coeff(filter, hz);
+  memset(state, 0, count * sizeof(filter_biquad_state_t));
+}
+
+// get notch filter Q given center frequency (f0) and lower cutoff frequency (f1)
+// Q = f0 / (f2 - f1) ; f2 = f0^2 / f1
+float filter_biquad_notch_get_q(float center, float lower) {
+  return center * lower / (center * center - lower * lower);
+}
+
+void filter_biquad_notch_coeff(filter_biquad_notch_t *filter, float hz) {
+  // from https://webaudio.github.io/Audio-EQ-Cookbook/audio-eq-cookbook.html
+  const float Q = filter_biquad_notch_get_q(hz, hz - 10);
+
+  const float omega = 2.0f * M_PI_F * hz * state.looptime;
+  const float cos_omega = cosf(omega);
+  const float alpha = sinf(omega) / (2.0f * Q);
+
+  const float a0 = 1 + alpha;
+
+  filter->b0 = 1 / a0;
+  filter->b1 = (-2 * cos_omega) / a0;
+  filter->b2 = 1 / a0;
+  filter->a1 = filter->b1;
+  filter->a2 = (1 - alpha) / a0;
+}
+
+float filter_biquad_notch_step(filter_biquad_notch_t *filter, filter_biquad_state_t *state, float in) {
+  const float result = filter->b0 * in + filter->b1 * state->x1 + filter->b2 * state->x2 - filter->a1 * state->y1 - filter->a2 * state->y2;
+
+  state->x2 = state->x1;
+  state->x1 = in;
+
+  state->y2 = state->y1;
+  state->y1 = result;
+
+  return result;
 }
 
 // 16Hz hpf filter for throttle compensation

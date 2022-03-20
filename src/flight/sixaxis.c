@@ -26,8 +26,13 @@
 // this is the value of both cos 45 and sin 45 = 1/sqrt(2)
 #define INVSQRT2 0.707106781f
 
+#define NOTCH_FILTER_CENTER 120
+
 static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
+
+static filter_biquad_notch_t notch_filter;
+static filter_biquad_state_t notch_filter_state[3];
 
 extern profile_t profile;
 extern target_info_t target_info;
@@ -42,6 +47,7 @@ bool sixaxis_init() {
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
     filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq);
   }
+  filter_biquad_notch_init(&notch_filter, notch_filter_state, 3, NOTCH_FILTER_CENTER);
 
   return id != GYRO_TYPE_INVALID;
 }
@@ -136,12 +142,14 @@ void sixaxis_read() {
 
   filter_coeff(profile.filter.gyro[0].type, &filter[0], profile.filter.gyro[0].cutoff_freq);
   filter_coeff(profile.filter.gyro[1].type, &filter[1], profile.filter.gyro[1].cutoff_freq);
+  filter_biquad_notch_coeff(&notch_filter, NOTCH_FILTER_CENTER);
 
   for (int i = 0; i < 3; i++) {
     state.gyro.axis[i] = state.gyro_raw.axis[i];
 
     state.gyro.axis[i] = filter_step(profile.filter.gyro[0].type, &filter[0], &filter_state[0][i], state.gyro.axis[i]);
     state.gyro.axis[i] = filter_step(profile.filter.gyro[1].type, &filter[1], &filter_state[1][i], state.gyro.axis[i]);
+    state.gyro.axis[i] = filter_biquad_notch_step(&notch_filter, &notch_filter_state[i], state.gyro.axis[i]);
   }
 }
 

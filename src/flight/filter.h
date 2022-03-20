@@ -18,6 +18,13 @@ typedef struct {
 } filter_state_t;
 
 typedef struct {
+  float x1;
+  float x2;
+  float y1;
+  float y2;
+} filter_biquad_state_t;
+
+typedef struct {
   float hz;
   uint32_t sample_period_us;
 
@@ -37,6 +44,14 @@ typedef struct {
 
   float alpha;
 } filter_lp_pt3;
+
+typedef struct {
+  float b0;
+  float b1;
+  float b2;
+  float a1;
+  float a2;
+} filter_biquad_notch_t;
 
 typedef union {
   filter_lp_pt1 lp_pt1;
@@ -70,6 +85,10 @@ float filter_lp_pt2_step(filter_lp_pt2 *filter, filter_state_t *state, float in)
 void filter_lp_pt3_init(filter_lp_pt3 *filter, filter_state_t *state, uint8_t count, float hz);
 void filter_lp_pt3_coeff(filter_lp_pt3 *filter, float hz);
 float filter_lp_pt3_step(filter_lp_pt3 *filter, filter_state_t *state, float in);
+
+void filter_biquad_notch_init(filter_biquad_notch_t *filter, filter_biquad_state_t *state, uint8_t count, float hz);
+void filter_biquad_notch_coeff(filter_biquad_notch_t *filter, float hz);
+float filter_biquad_notch_step(filter_biquad_notch_t *filter, filter_biquad_state_t *state, float in);
 
 void filter_lp_sp_init(filter_lp_sp *filter, uint8_t count);
 float filter_lp_sp_step(filter_lp_sp *filter, float x);
