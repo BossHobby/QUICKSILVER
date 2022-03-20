@@ -12,9 +12,11 @@
 #include "flight/control.h"
 #include "flight/filter.h"
 #include "flight/sixaxis.h"
+#include "io/blackbox.h"
 #include "io/led.h"
 #include "profile.h"
 #include "project.h"
+#include "sdft.h"
 #include "util/util.h"
 
 #define CAL_TIME 2e6
@@ -31,11 +33,13 @@
 static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
 
-static filter_biquad_notch_t notch_filter;
-static filter_biquad_state_t notch_filter_state[3];
+static filter_biquad_notch_t notch_filter[3][2];
+static filter_biquad_state_t notch_filter_state[3][2];
 
 extern profile_t profile;
 extern target_info_t target_info;
+
+extern float sdft_notch_hz[3][2];
 
 float gyrocal[3];
 
@@ -47,7 +51,13 @@ bool sixaxis_init() {
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
     filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq);
   }
-  filter_biquad_notch_init(&notch_filter, notch_filter_state, 3, NOTCH_FILTER_CENTER);
+
+  sdft_init();
+
+  for (uint8_t i = 0; i < 3; i++) {
+    filter_biquad_notch_init(&notch_filter[i][0], &notch_filter_state[i][0], 1, NOTCH_FILTER_CENTER);
+    filter_biquad_notch_init(&notch_filter[i][1], &notch_filter_state[i][1], 1, NOTCH_FILTER_CENTER);
+  }
 
   return id != GYRO_TYPE_INVALID;
 }
@@ -142,14 +152,21 @@ void sixaxis_read() {
 
   filter_coeff(profile.filter.gyro[0].type, &filter[0], profile.filter.gyro[0].cutoff_freq);
   filter_coeff(profile.filter.gyro[1].type, &filter[1], profile.filter.gyro[1].cutoff_freq);
-  filter_biquad_notch_coeff(&notch_filter, NOTCH_FILTER_CENTER);
+
+  sdft_step();
 
   for (int i = 0; i < 3; i++) {
     state.gyro.axis[i] = state.gyro_raw.axis[i];
 
     state.gyro.axis[i] = filter_step(profile.filter.gyro[0].type, &filter[0], &filter_state[0][i], state.gyro.axis[i]);
     state.gyro.axis[i] = filter_step(profile.filter.gyro[1].type, &filter[1], &filter_state[1][i], state.gyro.axis[i]);
-    state.gyro.axis[i] = filter_biquad_notch_step(&notch_filter, &notch_filter_state[i], state.gyro.axis[i]);
+
+    filter_biquad_notch_coeff(&notch_filter[i][0], sdft_notch_hz[i][0]);
+    blackbox_set_debug(i, sdft_notch_hz[i][0]);
+    state.gyro.axis[i] = filter_biquad_notch_step(&notch_filter[i][0], &notch_filter_state[i][0], state.gyro.axis[i]);
+
+    filter_biquad_notch_coeff(&notch_filter[i][1], sdft_notch_hz[i][1]);
+    state.gyro.axis[i] = filter_biquad_notch_step(&notch_filter[i][1], &notch_filter_state[i][1], state.gyro.axis[i]);
   }
 }
 
