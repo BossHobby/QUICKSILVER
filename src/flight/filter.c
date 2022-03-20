@@ -118,12 +118,6 @@ void filter_biquad_notch_init(filter_biquad_notch_t *filter, filter_biquad_state
   memset(state, 0, count * sizeof(filter_biquad_state_t));
 }
 
-// get notch filter Q given center frequency (f0) and lower cutoff frequency (f1)
-// Q = f0 / (f2 - f1) ; f2 = f0^2 / f1
-float filter_biquad_notch_get_q(float center, float lower) {
-  return center * lower / (center * center - lower * lower);
-}
-
 void filter_biquad_notch_coeff(filter_biquad_notch_t *filter, float hz) {
   if (filter->hz == hz || hz < 0.1f) {
     filter->hz = 0;
@@ -134,8 +128,8 @@ void filter_biquad_notch_coeff(filter_biquad_notch_t *filter, float hz) {
   const float Q = constrainf(hz / 20.0f, 0.0f, 6.0f);
 
   const float omega = 2.0f * M_PI_F * hz * state.looptime;
-  const float cos_omega = cosf(omega);
-  const float alpha = sinf(omega) / (2.0f * Q);
+  const float cos_omega = fastcos(omega);
+  const float alpha = fastsin(omega) / (2.0f * Q);
 
   const float a0 = 1 + alpha;
 
