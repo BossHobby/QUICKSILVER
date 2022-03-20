@@ -32,27 +32,35 @@ uint32_t min_uint32(uint32_t a, uint32_t b) {
   return b;
 }
 
+#define sinPolyCoef3 -1.666665710e-1f // Double: -1.666665709650470145824129400050267289858e-1
+#define sinPolyCoef5 8.333017292e-3f  // Double:  8.333017291562218127986291618761571373087e-3
+#define sinPolyCoef7 -1.980661520e-4f // Double: -1.980661520135080504411629636078917643846e-4
+#define sinPolyCoef9 2.600054768e-6f  // Double:  2.600054767890361277123254766503271638682e-6
+
 float fastsin(float x) {
-  // always wrap input angle to -PI..PI
-  while (x < -3.14159265f)
-    x += 6.28318531f;
+  const int32_t xint = x;
 
-  while (x > 3.14159265f)
-    x -= 6.28318531f;
-  float sin1;
+  if (xint < -32 || xint > 32)
+    return 0.0f; // Stop here on error input (5 * 360 Deg)
 
-  // compute sine
-  if (x < 0)
-    sin1 = (1.27323954f + .405284735f * x) * x;
-  else
-    sin1 = (1.27323954f - .405284735f * x) * x;
+  while (x > M_PI_F)
+    x -= (2.0f * M_PI_F); // always wrap input angle to -PI..PI
 
-  return sin1;
+  while (x < -M_PI_F)
+    x += (2.0f * M_PI_F);
+
+  if (x > (0.5f * M_PI_F))
+    x = (0.5f * M_PI_F) - (x - (0.5f * M_PI_F)); // We just pick -90..+90 Degree
+
+  else if (x < -(0.5f * M_PI_F))
+    x = -(0.5f * M_PI_F) - ((0.5f * M_PI_F) + x);
+
+  const float x2 = x * x;
+  return x + x * x2 * (sinPolyCoef3 + x2 * (sinPolyCoef5 + x2 * (sinPolyCoef7 + x2 * sinPolyCoef9)));
 }
 
 float fastcos(float x) {
-  x += 1.57079632f;
-  return fastsin(x);
+  return fastsin(x + (0.5f * M_PI_F));
 }
 
 int ipow(int base, int exp) {

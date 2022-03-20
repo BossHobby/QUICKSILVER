@@ -3,10 +3,8 @@
 #include <math.h>
 
 #include "flight/control.h"
-#include "math.h"
 #include "project.h"
-
-#define M_PI_F 3.14159265358979323846f
+#include "util/util.h"
 
 // equation is 1 / sqrtf(powf(2, 1.0f / ORDER) - 1);
 #define ORDER1_CORRECTION 1
