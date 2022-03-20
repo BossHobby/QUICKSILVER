@@ -14,7 +14,9 @@
 #include "driver/time.h"
 #include "flight/control.h"
 #include "flight/filter.h"
+#include "flight/sdft.h"
 #include "flight/sixaxis.h"
+#include "io/blackbox.h"
 #include "io/led.h"
 #include "util/util.h"
 
@@ -33,10 +35,14 @@
 
 #ifdef USE_GYRO
 
+static float gyrocal[3];
+
 static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
 
-float gyrocal[3];
+static sdft_t gyro_sdft[SDFT_AXES];
+static filter_biquad_notch_t notch_filter[SDFT_AXES][SDFT_PEAKS];
+static filter_biquad_state_t notch_filter_state[SDFT_AXES][SDFT_PEAKS];
 
 bool sixaxis_init() {
   const gyro_types_t id = gyro_spi_init();
@@ -45,6 +51,13 @@ bool sixaxis_init() {
 
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
     filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq);
+  }
+
+  for (uint8_t i = 0; i < SDFT_AXES; i++) {
+    sdft_init(&gyro_sdft[i]);
+    for (uint8_t j = 0; j < SDFT_PEAKS; j++) {
+      filter_biquad_notch_init(&notch_filter[i][j], &notch_filter_state[i][j], 1, 0);
+    }
   }
 
   return id != GYRO_TYPE_INVALID;
@@ -129,10 +142,28 @@ void sixaxis_read() {
   state.gyro.pitch = state.gyro_raw.pitch = -state.gyro_raw.pitch * GYRO_RANGE * DEGTORAD;
   state.gyro.yaw = state.gyro_raw.yaw = -state.gyro_raw.yaw * GYRO_RANGE * DEGTORAD;
 
-#pragma GCC unroll 3
   for (uint32_t i = 0; i < 3; i++) {
+    static uint8_t axis_needs_update = 0;
+    if (sdft_push(&gyro_sdft[i], state.gyro.axis[i]) && axis_needs_update == 0) {
+      axis_needs_update = 3;
+    }
+
+    if ((axis_needs_update - 1) == i && sdft_update(&gyro_sdft[i])) {
+      for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
+        filter_biquad_notch_coeff(&notch_filter[i][p], gyro_sdft[i].notch_hz[p]);
+      }
+      axis_needs_update--;
+    }
+
     state.gyro.axis[i] = filter_step(profile.filter.gyro[0].type, &filter[0], &filter_state[0][i], state.gyro.axis[i]);
     state.gyro.axis[i] = filter_step(profile.filter.gyro[1].type, &filter[1], &filter_state[1][i], state.gyro.axis[i]);
+
+    for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
+      if (p == 1) {
+        blackbox_set_debug(i, gyro_sdft[i].notch_hz[p]);
+      }
+      state.gyro.axis[i] = filter_biquad_notch_step(&notch_filter[i][p], &notch_filter_state[i][p], state.gyro.axis[i]);
+    }
   }
 
   state.gyro_delta_angle.roll = state.gyro.roll * state.looptime;
@@ -246,7 +277,9 @@ void sixaxis_acc_cal() {
 
 #else
 
-bool sixaxis_init() { return false; }
+bool sixaxis_init() {
+  return false;
+}
 void sixaxis_read() {}
 
 void sixaxis_gyro_cal() {}
