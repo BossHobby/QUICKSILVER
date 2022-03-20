@@ -46,6 +46,8 @@ typedef struct {
 } filter_lp_pt3;
 
 typedef struct {
+  float hz;
+
   float b0;
   float b1;
   float b2;

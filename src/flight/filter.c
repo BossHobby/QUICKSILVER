@@ -113,6 +113,7 @@ float filter_lp_pt3_step(filter_lp_pt3 *filter, filter_state_t *state, float in)
 }
 
 void filter_biquad_notch_init(filter_biquad_notch_t *filter, filter_biquad_state_t *state, uint8_t count, float hz) {
+  memset(filter, 0, sizeof(filter_biquad_notch_t));
   filter_biquad_notch_coeff(filter, hz);
   memset(state, 0, count * sizeof(filter_biquad_state_t));
 }
@@ -124,8 +125,13 @@ float filter_biquad_notch_get_q(float center, float lower) {
 }
 
 void filter_biquad_notch_coeff(filter_biquad_notch_t *filter, float hz) {
+  if (filter->hz == hz || hz < 0.1f) {
+    filter->hz = 0;
+    return;
+  }
+
   // from https://webaudio.github.io/Audio-EQ-Cookbook/audio-eq-cookbook.html
-  const float Q = filter_biquad_notch_get_q(hz, hz - 10);
+  const float Q = constrainf(hz / 20.0f, 0.0f, 6.0f);
 
   const float omega = 2.0f * M_PI_F * hz * state.looptime;
   const float cos_omega = cosf(omega);
@@ -138,9 +144,15 @@ void filter_biquad_notch_coeff(filter_biquad_notch_t *filter, float hz) {
   filter->b2 = 1 / a0;
   filter->a1 = filter->b1;
   filter->a2 = (1 - alpha) / a0;
+
+  filter->hz = hz;
 }
 
 float filter_biquad_notch_step(filter_biquad_notch_t *filter, filter_biquad_state_t *state, float in) {
+  if (filter->hz < 0.1f) {
+    return in;
+  }
+
   const float result = filter->b0 * in + filter->b1 * state->x1 + filter->b2 * state->x2 - filter->a1 * state->y1 - filter->a2 * state->y2;
 
   state->x2 = state->x1;
