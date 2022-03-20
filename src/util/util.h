@@ -19,6 +19,13 @@
 #define LOG2_16BIT(v) (8 * ((v) > 255) + LOG2_8BIT((v) >> 8 * ((v) > 255)))
 #define LOG2_32BIT(v) (16 * ((v) > 65535L) + LOG2_16BIT((v)*1L >> 16 * ((v) > 65535L)))
 
+#define SWAP(x, y)      \
+  {                     \
+    typeof(x) temp = x; \
+    x = y;              \
+    y = temp;           \
+  }
+
 #define constrain(val, min, max) ((val) < (min) ? (min) : ((val) > (max) ? (max) : (val)))
 #define min(a, b) \
   ({ __typeof__ (a) _a = (a); \
