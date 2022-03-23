@@ -22,6 +22,7 @@ typedef enum {
   SDFT_WAIT_FOR_SAMPLES,
   SDFT_UPDATE_MAGNITUE,
   SDFT_DETECT_PEAKS,
+  SDFT_CALC_FREQ,
   SDFT_UPDATE_FILTERS,
 } sdft_state_t;
 
@@ -37,7 +38,12 @@ typedef struct {
   float samples[SDFT_SAMPLE_SIZE];
   complex_float data[SDFT_BIN_COUNT];
 
+  float noise_floor;
   float magnitude[SDFT_BIN_COUNT];
+
+  float peak_values[SDFT_PEAKS];
+  uint32_t peak_indicies[SDFT_PEAKS];
+
   float notch_hz[SDFT_PEAKS];
 } sdft_t;
 
