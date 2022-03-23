@@ -131,13 +131,13 @@ void filter_biquad_notch_coeff(filter_biquad_notch_t *filter, float hz) {
   const float cos_omega = fastcos(omega);
   const float alpha = fastsin(omega) / (2.0f * Q);
 
-  const float a0 = 1 + alpha;
+  const float a0_rcpt = 1.0f / (1.0f + alpha);
 
-  filter->b0 = 1 / a0;
-  filter->b1 = (-2 * cos_omega) / a0;
-  filter->b2 = 1 / a0;
+  filter->b0 = 1 * a0_rcpt;
+  filter->b1 = (-2 * cos_omega) * a0_rcpt;
+  filter->b2 = 1 * a0_rcpt;
   filter->a1 = filter->b1;
-  filter->a2 = (1 - alpha) / a0;
+  filter->a2 = (1 - alpha) * a0_rcpt;
 
   filter->hz = hz;
 }
