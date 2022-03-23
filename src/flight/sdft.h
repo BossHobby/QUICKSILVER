@@ -19,7 +19,6 @@
 typedef float complex complex_float;
 
 typedef enum {
-  SDFT_WAIT_FOR_SAMPLES,
   SDFT_UPDATE_MAGNITUE,
   SDFT_DETECT_PEAKS,
   SDFT_CALC_FREQ,
@@ -48,4 +47,5 @@ typedef struct {
 } sdft_t;
 
 void sdft_init(sdft_t *sdft);
-bool sdft_update(sdft_t *sdft, float val);
+bool sdft_push(sdft_t *sdft, float val);
+bool sdft_update(sdft_t *sdft);

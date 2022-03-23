@@ -33,7 +33,7 @@ void sdft_init(sdft_t *sdft) {
     coeff[i] = SDFT_DAMPING_FACTOR * (fastcos(phi) + _Complex_I * fastsin(phi));
   }
 
-  sdft->state = SDFT_WAIT_FOR_SAMPLES;
+  sdft->state = SDFT_UPDATE_MAGNITUE;
   sdft->idx = 0;
   sdft->sample_avg = 0;
   sdft->sample_accumulator = 0;
@@ -84,17 +84,10 @@ bool sdft_push(sdft_t *sdft, float val) {
   return batch_finished;
 }
 
-bool sdft_update(sdft_t *sdft, float val) {
+bool sdft_update(sdft_t *sdft) {
   bool filters_updated = false;
 
-  if (sdft_push(sdft, val) && sdft->state == SDFT_WAIT_FOR_SAMPLES) {
-    sdft->state = SDFT_UPDATE_MAGNITUE;
-  }
-
   switch (sdft->state) {
-  case SDFT_WAIT_FOR_SAMPLES:
-    break;
-
   case SDFT_UPDATE_MAGNITUE:
     sdft->noise_floor = 0;
 
@@ -205,7 +198,7 @@ bool sdft_update(sdft_t *sdft, float val) {
   }
 
   case SDFT_UPDATE_FILTERS:
-    sdft->state = SDFT_WAIT_FOR_SAMPLES;
+    sdft->state = SDFT_UPDATE_MAGNITUE;
     filters_updated = true;
     break;
   }
