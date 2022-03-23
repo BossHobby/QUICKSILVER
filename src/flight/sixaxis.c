@@ -33,7 +33,7 @@
 static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
 
-extern float sdft_notch_hz[SDFT_AXES][SDFT_PEAKS];
+static sdft_t gyro_sdft[3];
 static filter_biquad_notch_t notch_filter[SDFT_AXES][SDFT_PEAKS];
 static filter_biquad_state_t notch_filter_state[SDFT_AXES][SDFT_PEAKS];
 
@@ -51,9 +51,8 @@ bool sixaxis_init() {
     filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq);
   }
 
-  sdft_init();
-
   for (uint8_t i = 0; i < 3; i++) {
+    sdft_init(&gyro_sdft[i]);
     filter_biquad_notch_init(&notch_filter[i][0], &notch_filter_state[i][0], 1, NOTCH_FILTER_CENTER);
     filter_biquad_notch_init(&notch_filter[i][1], &notch_filter_state[i][1], 1, NOTCH_FILTER_CENTER);
   }
@@ -152,23 +151,22 @@ void sixaxis_read() {
   filter_coeff(profile.filter.gyro[0].type, &filter[0], profile.filter.gyro[0].cutoff_freq);
   filter_coeff(profile.filter.gyro[1].type, &filter[1], profile.filter.gyro[1].cutoff_freq);
 
-  for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
-    blackbox_set_debug(p, sdft_notch_hz[0][p]);
-  }
-
   for (int i = 0; i < 3; i++) {
     state.gyro.axis[i] = state.gyro_raw.axis[i];
 
+    if (sdft_update(&gyro_sdft[i], state.gyro.axis[i])) {
+      for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
+        filter_biquad_notch_coeff(&notch_filter[i][p], gyro_sdft[i].notch_hz[p]);
+      }
+    }
+
     for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
-      filter_biquad_notch_coeff(&notch_filter[i][p], sdft_notch_hz[i][p]);
       state.gyro.axis[i] = filter_biquad_notch_step(&notch_filter[i][p], &notch_filter_state[i][p], state.gyro.axis[i]);
     }
 
     state.gyro.axis[i] = filter_step(profile.filter.gyro[0].type, &filter[0], &filter_state[0][i], state.gyro.axis[i]);
     state.gyro.axis[i] = filter_step(profile.filter.gyro[1].type, &filter[1], &filter_state[1][i], state.gyro.axis[i]);
   }
-
-  sdft_step();
 }
 
 void sixaxis_gyro_cal() {
