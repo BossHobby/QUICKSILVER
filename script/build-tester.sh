@@ -46,6 +46,8 @@ function setConfig() {
   done
 }
 
+jq 'empty' ./script/targets.json
+
 rm -rf $OUTPUT_FOLDER
 mkdir $OUTPUT_FOLDER
 
