@@ -127,7 +127,7 @@ void filter_biquad_notch_coeff(filter_biquad_notch_t *filter, float hz) {
   // from https://webaudio.github.io/Audio-EQ-Cookbook/audio-eq-cookbook.html
   const float Q = constrainf(hz / 20.0f, 0.0f, 6.0f);
 
-  const float omega = 2.0f * M_PI_F * hz * state.looptime;
+  const float omega = 2.0f * M_PI_F * hz * state.looptime_autodetect * 1e-6;
   const float cos_omega = fastcos(omega);
   const float alpha = fastsin(omega) / (2.0f * Q);
 

@@ -9,12 +9,19 @@
 #define SDFT_AXES 3
 #define SDFT_PEAKS 3
 
-#define SDFT_MIN_HZ 80
-#define SDFT_MAX_HZ 500 // limit: 500 Hz if SAMPLE_PERIOD is 1 ms.
+#define SDFT_FILTER_HZ 4
 
-#define SDFT_SAMPLE_PERIOD 1000                        // us. Sampling every 1 ms is enough for MAX_HZ up to 500.
-#define SDFT_SAMPLE_SIZE (100000 / SDFT_SAMPLE_PERIOD) // 0.1 seconds time window gives 10 Hz resolution.
+#define SDFT_MIN_HZ 80
+#define SDFT_MAX_HZ 500
+
+#define SDFT_SAMPLE_SIZE 100
 #define SDFT_BIN_COUNT (SDFT_SAMPLE_SIZE / 2)
+
+#define SDFT_DAMPING_FACTOR 0.9999f
+#define SDFT_SAMPLE_HZ (1e6f / LOOPTIME)
+
+#define SDFT_SUBSAMPLES (SDFT_SAMPLE_HZ / (2 * SDFT_MAX_HZ))
+#define SDFT_HZ_RESOLUTION ((SDFT_SAMPLE_HZ / SDFT_SUBSAMPLES) / SDFT_SAMPLE_SIZE)
 
 typedef float complex complex_float;
 

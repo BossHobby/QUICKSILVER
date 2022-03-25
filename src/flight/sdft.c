@@ -6,10 +6,7 @@
 #include "filter.h"
 #include "util/util.h"
 
-#define SDFT_FILTER_HZ 4
-
-#define SDFT_DAMPING_FACTOR 0.999f
-#define SDFT_SUBSAMPLES (SDFT_SAMPLE_PERIOD / LOOPTIME) // should be looptime_autodetect
+#define LOOPTIME_S (state.looptime_autodetect * 1e-6)
 
 #define SWAP(x, y)      \
   {                     \
@@ -21,8 +18,8 @@
 static float r_to_N;
 static complex_float coeff[SDFT_SAMPLE_SIZE];
 
-static const uint32_t bin_min_index = (float)SDFT_MIN_HZ * (float)SDFT_SAMPLE_SIZE * (SDFT_SAMPLE_PERIOD * 1e-6f) + 0.5f;
-static const uint32_t bin_max_index = (float)SDFT_MAX_HZ * (float)SDFT_SAMPLE_SIZE * (SDFT_SAMPLE_PERIOD * 1e-6f) + 0.5f;
+static const uint32_t bin_min_index = (float)SDFT_MIN_HZ / SDFT_HZ_RESOLUTION + 0.5f;
+static const uint32_t bin_max_index = (float)SDFT_MAX_HZ / SDFT_HZ_RESOLUTION + 0.5f;
 static const uint32_t bin_batches = (bin_max_index - bin_min_index) / SDFT_SUBSAMPLES + 1;
 
 void sdft_init(sdft_t *sdft) {
@@ -63,7 +60,7 @@ bool sdft_push(sdft_t *sdft, float val) {
 
   const float delta = sdft->sample_avg - r_to_N * sdft->samples[sdft->idx];
 
-  if (sdft->sample_count == SDFT_SUBSAMPLES) {
+  if (sdft->sample_count >= (uint32_t)SDFT_SUBSAMPLES) {
     sdft->sample_avg = sdft->sample_accumulator / (float)sdft->sample_count;
     sdft->sample_accumulator = 0;
     sdft->sample_count = 0;
@@ -187,10 +184,12 @@ bool sdft_update(sdft_t *sdft) {
         meanBin += (y0 - y2) / denom;
       }
 
-      const float f_hz = meanBin / (SDFT_SAMPLE_PERIOD * 1e-6f) / (float)SDFT_SAMPLE_SIZE;
+      const float f_hz = meanBin * SDFT_HZ_RESOLUTION;
 
       const float filter_multi = constrainf(sdft->peak_values[peak] / sdft->noise_floor, 1.0f, 10.0f);
-      lpf(&sdft->notch_hz[peak], f_hz, FILTERCALC(SDFT_SAMPLE_PERIOD, 1e6f / (filter_multi * SDFT_FILTER_HZ)));
+      const float gain = LOOPTIME_S / (1 / (2.0f * M_PI_F * (filter_multi * SDFT_FILTER_HZ)) + LOOPTIME_S);
+
+      sdft->notch_hz[peak] += gain * (f_hz - sdft->notch_hz[peak]);
     }
 
     sdft->state = SDFT_UPDATE_FILTERS;
