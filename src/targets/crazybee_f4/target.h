@@ -23,14 +23,14 @@
 //#define FPV_PORT GPIOA
 
 // GYRO
-#define GYRO_TYPE MPU6XXX
+#define GYRO_TYPE ICM20602
 #define GYRO_SPI_PORT SPI_PORT1
 #define GYRO_NSS PIN_A4
 #define GYRO_INT PIN_A1
 #define GYRO_ID_1 0x68
 #define GYRO_ID_2 0x73
 #define GYRO_ID_3 0x78
-#define GYRO_ID_4 0x71
+#define GYRO_ID_4 0x98
 
 // RADIO
 #ifdef RX_FRSKY
