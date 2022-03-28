@@ -26,20 +26,6 @@
 // this is the value of both cos 45 and sin 45 = 1/sqrt(2)
 #define INVSQRT2 0.707106781f
 
-// temporary fix for compatibility between versions
-#ifndef GYRO_ID_1
-#define GYRO_ID_1 0x68
-#endif
-#ifndef GYRO_ID_2
-#define GYRO_ID_2 0x98
-#endif
-#ifndef GYRO_ID_3
-#define GYRO_ID_3 0x7D
-#endif
-#ifndef GYRO_ID_4
-#define GYRO_ID_4 0x72
-#endif
-
 static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
 
@@ -48,8 +34,8 @@ extern target_info_t target_info;
 
 float gyrocal[3];
 
-uint8_t sixaxis_init() {
-  const uint8_t id = spi_gyro_init();
+bool sixaxis_init() {
+  const gyro_types_t id = gyro_spi_init();
 
   target_info.gyro_id = id;
 
@@ -57,15 +43,11 @@ uint8_t sixaxis_init() {
     filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq);
   }
 
-#ifndef DISABLE_GYRO_CHECK
-  return (GYRO_ID_1 == id || GYRO_ID_2 == id || GYRO_ID_3 == id || GYRO_ID_4 == id);
-#else
-  return 1;
-#endif
+  return id != GYRO_TYPE_INVALID;
 }
 
 void sixaxis_read() {
-  const gyro_data_t data = spi_gyro_read();
+  const gyro_data_t data = gyro_spi_read();
 
   state.accel_raw = data.accel;
   state.gyro_temp = data.temp;
@@ -183,7 +165,7 @@ void sixaxis_gyro_cal() {
     if (looptime == 0)
       looptime = 1;
 
-    const gyro_data_t data = spi_gyro_read();
+    const gyro_data_t data = gyro_spi_read();
 
     static int brightness = 0;
     led_pwm(brightness);

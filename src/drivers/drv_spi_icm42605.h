@@ -187,7 +187,10 @@
 #define ICM42605_INT_TPULSE_DURATION_100 (0 << ICM42605_INT_TPULSE_DURATION_BIT)
 #define ICM42605_INT_TPULSE_DURATION_8 (1 << ICM42605_INT_TPULSE_DURATION_BIT)
 
-uint8_t icm42605_configure();
+uint8_t icm42605_detect();
+void icm42605_configure();
+
 void icm42605_write(uint8_t reg, uint8_t data);
+
 uint8_t icm42605_read(uint8_t reg);
 void icm42605_read_data(uint8_t reg, uint8_t *data, uint32_t size);
