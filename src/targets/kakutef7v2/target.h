@@ -26,15 +26,10 @@
 #define BUZZER_INVERT
 
 // GYRO
-#define GYRO_TYPE MPU6XXX
 #define GYRO_SPI_PORT SPI_PORT4
 #define GYRO_NSS PIN_E4
 #define GYRO_INT PIN_E1
-#define SENSOR_ROTATE_180
-#define GYRO_ID_1 0x68
-#define GYRO_ID_2 0x73
-#define GYRO_ID_3 0x78
-#define GYRO_ID_4 0x71
+#define GYRO_ORIENTATION GYRO_ROTATE_180
 
 // RADIO
 #ifdef SERIAL_RX
