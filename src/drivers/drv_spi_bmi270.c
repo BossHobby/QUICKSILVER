@@ -6,6 +6,8 @@
 #include "drv_time.h"
 #include "project.h"
 
+#define BMI270_ID 0x24
+
 #define PORT spi_port_defs[GYRO_SPI_PORT]
 
 const uint8_t bmi270_maximum_fifo_config_file[] = {
@@ -101,7 +103,20 @@ static void bmi270_init() {
   spi_dma_init(GYRO_SPI_PORT);
 }
 
-uint8_t bmi270_configure() {
+uint8_t bmi270_detect() {
+  bmi270_init();
+
+  const uint8_t id = bmi270_read(BMI270_REG_CHIP_ID);
+  switch (id) {
+  case BMI270_ID:
+    return GYRO_TYPE_BMI270;
+
+  default:
+    return GYRO_TYPE_INVALID;
+  }
+}
+
+void bmi270_configure() {
   bmi270_init();
 
   bmi270_write(BMI270_REG_CMD, BMI270_CMD_SOFTRESET);
@@ -148,8 +163,6 @@ uint8_t bmi270_configure() {
 
   bmi270_write(BMI270_REG_PWR_CTRL, BMI270_PWR_CTRL);
   time_delay_ms(1);
-
-  return bmi270_read(BMI270_REG_CHIP_ID);
 }
 
 uint8_t bmi270_read(uint8_t reg) {
