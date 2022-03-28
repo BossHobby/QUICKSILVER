@@ -313,9 +313,6 @@
 // throttle direct to motors for thrust measure
 //#define MOTORS_TO_THROTTLE
 
-// disable the check for known gyro that causes the 4 times flash
-//#define DISABLE_GYRO_CHECK
-
 // disable all pwm pins / function
 //#define DISABLE_PWM_PINS
 
