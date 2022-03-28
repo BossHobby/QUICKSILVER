@@ -6,6 +6,9 @@
 #include "drv_time.h"
 #include "project.h"
 
+#define ICM42605_ID (0x42)
+#define ICM42688P_ID (0x47)
+
 #define PORT spi_port_defs[GYRO_SPI_PORT]
 
 static void icm42605_reinit_slow() {
@@ -78,7 +81,21 @@ static void icm42605_init() {
   spi_dma_init(GYRO_SPI_PORT);
 }
 
-uint8_t icm42605_configure() {
+uint8_t icm42605_detect() {
+  icm42605_init();
+
+  const uint8_t id = icm42605_read(ICM42605_WHO_AM_I);
+  switch (id) {
+  case ICM42605_ID:
+    return GYRO_TYPE_ICM42605;
+  // case ICM42688P_ID:
+  //   return GYRO_TYPE_MPU6500;
+  default:
+    return GYRO_TYPE_INVALID;
+  }
+}
+
+void icm42605_configure() {
   icm42605_init();
 
   icm42605_write(ICM42605_PWR_MGMT0, 0x00); // reset
@@ -101,8 +118,6 @@ uint8_t icm42605_configure() {
 
   icm42605_write(ICM42605_INT_CONFIG0, ICM42605_UI_DRDY_INT_CLEAR_ON_SBR);
   time_delay_ms(100);
-
-  return icm42605_read(ICM42605_WHO_AM_I);
 }
 
 uint8_t icm42605_read(uint8_t reg) {

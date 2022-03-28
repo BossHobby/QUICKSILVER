@@ -74,8 +74,11 @@
 #define BMI270_FIFO_WTM_0 0x06             // set the FIFO watermark level to 1 gyro sample (6 bytes)
 #define BMI270_FIFO_WTM_1 0x00             // FIFO watermark MSB
 
-uint8_t bmi270_configure();
+uint8_t bmi270_detect();
+void bmi270_configure();
+
 void bmi270_write(uint8_t reg, uint8_t data);
 void bmi270_write_data(uint8_t reg, uint8_t *data, uint32_t size);
+
 uint8_t bmi270_read(uint8_t reg);
 void bmi270_read_data(uint8_t reg, uint8_t *data, uint32_t size);

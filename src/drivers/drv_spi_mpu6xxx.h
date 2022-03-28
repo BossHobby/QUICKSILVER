@@ -125,7 +125,10 @@
 #define MPU_RA_FIFO_R_W 0x74
 #define MPU_RA_WHO_AM_I 0x75
 
-uint8_t mpu6xxx_configure();
+uint8_t mpu6xxx_detect();
+void mpu6xxx_configure();
+
 void mpu6xxx_write(uint8_t reg, uint8_t data);
+
 uint8_t mpu6xxx_read(uint8_t reg);
 void mpu6xxx_read_data(uint8_t reg, uint8_t *data, uint32_t size);

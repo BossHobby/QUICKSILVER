@@ -8,6 +8,15 @@
 #include "drv_time.h"
 #include "project.h"
 
+#define MPU6000_ID (0x68)
+#define MPU6500_ID (0x70)
+
+#define ICM20601_ID (0xAC)
+#define ICM20602_ID (0x12)
+#define ICM20608_ID (0xAF)
+#define ICM20649_ID (0xE1)
+#define ICM20689_ID (0x98)
+
 #define SPI_SPEED_INIT MHZ_TO_HZ(0.5)
 
 #define PORT spi_port_defs[GYRO_SPI_PORT]
@@ -48,18 +57,24 @@ static void mpu6xxx_reinit_fast() {
   spi_init.ClockPhase = LL_SPI_PHASE_2EDGE;
   spi_init.NSS = LL_SPI_NSS_SOFT;
 
-  switch (GYRO_TYPE) {
-  case ICM20601:
-  case ICM20608:
-    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(5.25));
+  switch (gyro_type) {
+  default:
+  case GYRO_TYPE_ICM20649:
+    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(7));
     break;
 
-  case ICM20602:
+  case GYRO_TYPE_ICM20601:
+  case GYRO_TYPE_ICM20608:
+  case GYRO_TYPE_ICM20689:
+    spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(8));
+    break;
+
+  case GYRO_TYPE_ICM20602:
     spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(10.5));
     break;
 
-  case MPU6XXX:
-  default:
+  case GYRO_TYPE_MPU6000:
+  case GYRO_TYPE_MPU6500:
     spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(21));
     break;
   }
@@ -98,7 +113,31 @@ static void mpu6xxx_init() {
   spi_dma_init(GYRO_SPI_PORT);
 }
 
-uint8_t mpu6xxx_configure() {
+uint8_t mpu6xxx_detect() {
+  mpu6xxx_init();
+
+  const uint8_t id = mpu6xxx_read(MPU_RA_WHO_AM_I);
+  switch (id) {
+  case MPU6000_ID:
+    return GYRO_TYPE_MPU6000;
+  case MPU6500_ID:
+    return GYRO_TYPE_MPU6500;
+  case ICM20601_ID:
+    return GYRO_TYPE_ICM20601;
+  case ICM20602_ID:
+    return GYRO_TYPE_ICM20602;
+  case ICM20608_ID:
+    return GYRO_TYPE_ICM20608;
+  case ICM20649_ID:
+    return GYRO_TYPE_ICM20649;
+  case ICM20689_ID:
+    return GYRO_TYPE_ICM20689;
+  default:
+    return GYRO_TYPE_INVALID;
+  }
+}
+
+void mpu6xxx_configure() {
   mpu6xxx_init();
 
   mpu6xxx_write(MPU_RA_PWR_MGMT_1, MPU_BIT_H_RESET); // reg 107 soft reset  MPU_BIT_H_RESET
@@ -121,8 +160,6 @@ uint8_t mpu6xxx_configure() {
   time_delay_us(1500);
   mpu6xxx_write(MPU_RA_INT_ENABLE, MPU_BIT_INT_STATUS_DATA); // reg 56 data ready enable interrupt to 1
   time_delay_us(1500);
-
-  return mpu6xxx_read(MPU_RA_WHO_AM_I);
 }
 
 // blocking dma read of a single register
