@@ -7,6 +7,8 @@
 #include "project.h"
 #include "util/util.h"
 
+#define NOTCH_Q 3.0f
+
 // equation is 1 / sqrtf(powf(2, 1.0f / ORDER) - 1);
 #define ORDER1_CORRECTION 1
 #define ORDER2_CORRECTION 1.55377397403f
@@ -125,11 +127,9 @@ void filter_biquad_notch_coeff(filter_biquad_notch_t *filter, float hz) {
   }
 
   // from https://webaudio.github.io/Audio-EQ-Cookbook/audio-eq-cookbook.html
-  const float Q = constrainf(hz / 20.0f, 0.0f, 6.0f);
-
   const float omega = 2.0f * M_PI_F * hz * state.looptime_autodetect * 1e-6;
   const float cos_omega = fastcos(omega);
-  const float alpha = fastsin(omega) / (2.0f * Q);
+  const float alpha = fastsin(omega) / (2.0f * NOTCH_Q);
 
   const float a0_rcpt = 1.0f / (1.0f + alpha);
 
