@@ -28,6 +28,16 @@ BUILD_FOLDER="$SOURCE_FOLDER/.pio/build"
 CONFIG_FILE="$SOURCE_FOLDER/src/main/config/config.h"
 TARGETS_FILE="$SCRIPT_FOLDER/targets.json"
 
+BRANCH=$DRONE_BRANCH
+if [ -z "$BRANCH" ]; then
+  BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+fi
+
+BUILD_PREFIX="quicksilver"
+if [ ! -z "$BRANCH" ] && [ "$BRANCH" != "master" ] && [ "$BRANCH" != "develop" ]; then
+  BUILD_PREFIX="$BUILD_PREFIX.$BRANCH"
+fi
+
 function resetConfig() {
   for DEFINE in "${DEFINES[@]}"; do
     sed -i "s/^#define \($DEFINE.*\)$/\/\/#define \1/" $CONFIG_FILE
@@ -85,7 +95,7 @@ for target in $(jq -r '.[] | @base64' $TARGETS_FILE); do
       echo ${config} | base64 --decode | jq -r "${1}"
     }
     CONFIG_NAME="$(config_get '.name')"
-    BUILD_NAME="quicksilver.$TARGET_NAME.$CONFIG_NAME"
+    BUILD_NAME="$BUILD_PREFIX.$TARGET_NAME.$CONFIG_NAME"
 
     resetConfig
     setConfig "$(config_get '.defines | to_entries[] | @base64')"
