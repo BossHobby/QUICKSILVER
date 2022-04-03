@@ -76,7 +76,7 @@ cat <<-EOF > $OUTPUT_FOLDER/index.html
 <body>
   <main>
     <div class="px-4 py-5 my-3 text-center">
-      <h1 class="display-5 mb-4 fw-bold">Quicksilver Develop</h1>
+      <h1 class="display-5 mb-4 fw-bold">Quicksilver $BRANCH</h1>
       <div class="col-lg-6 mx-auto">
         <p class="lead mb-4">
           Commit <a href="https://github.com/BossHobby/QUICKSILVER/commit/$DRONE_COMMIT">$DRONE_COMMIT</a>
