@@ -63,7 +63,7 @@ bool sdft_push(sdft_t *sdft, float val) {
   const uint32_t bin_min = bin_batches * sdft->sample_count;
   const uint32_t bin_max = min_uint32(bin_min + bin_batches, SDFT_BIN_COUNT);
 
-  const float delta = sdft->sample_avg - r_to_N * sdft->samples[sdft->idx];
+  const float last_sample = r_to_N * sdft->samples[sdft->idx];
 
   if (sdft->sample_count >= (uint32_t)SDFT_SUBSAMPLES) {
     sdft->sample_avg = sdft->sample_accumulator / (float)sdft->sample_count;
@@ -78,6 +78,8 @@ bool sdft_push(sdft_t *sdft, float val) {
     sdft->sample_accumulator += val;
     sdft->sample_count++;
   }
+
+  const float delta = sdft->sample_avg - last_sample;
 
   for (uint32_t i = bin_min; i < bin_max; i++) {
     sdft->data[i] = twiddle[i] * (SDFT_DAMPING_FACTOR * sdft->data[i] + delta);
