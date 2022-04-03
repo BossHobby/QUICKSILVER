@@ -28,10 +28,11 @@ steps:
       source:
         - output/index.html
         - output/quicksilver*.hex
-      target: /mnt/hanfer/public/quicksilver
+      target: /mnt/hanfer/public/quicksilver/${DRONE_BRANCH}
       strip_components: 1
     when:
       branch:
         - develop
+        - feature-*
       event:
         - push
