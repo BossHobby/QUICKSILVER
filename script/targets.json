@@ -505,6 +505,13 @@
     "name": "flywoof411rx",
     "configurations": [
       {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      },
+      {
         "name": "brushless.frsky",
         "defines": {
           "BRUSHLESS_TARGET": "",
