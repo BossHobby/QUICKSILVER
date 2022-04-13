@@ -18,24 +18,25 @@ typedef struct {
 } filter_state_t;
 
 typedef struct {
+  float hz;
+  uint32_t sample_period_us;
+
   float alpha;
 } filter_lp_pt1;
 
 typedef struct {
+  float hz;
+  uint32_t sample_period_us;
+
   float alpha;
 } filter_lp_pt2;
 
 typedef struct {
+  float hz;
+  uint32_t sample_period_us;
+
   float alpha;
 } filter_lp_pt3;
-
-typedef struct {
-  float a1;
-  float a2;
-  float b0;
-  float b1;
-  float b2;
-} filter_lp2_iir;
 
 typedef union {
   filter_lp_pt1 lp_pt1;
