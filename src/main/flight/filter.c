@@ -51,9 +51,16 @@ void filter_lp_pt1_init(filter_lp_pt1 *filter, filter_state_t *state, uint8_t co
 }
 
 void filter_lp_pt1_coeff(filter_lp_pt1 *filter, float hz) {
-  const float rc = 1 / (2 * ORDER1_CORRECTION * M_PI_F * hz);
+  if (filter->hz == hz && filter->sample_period_us == state.looptime_autodetect) {
+    return;
+  }
+  filter->hz = hz;
+  filter->sample_period_us = state.looptime_autodetect;
 
-  filter->alpha = state.looptime / (rc + state.looptime);
+  const float rc = 1 / (2 * ORDER1_CORRECTION * M_PI_F * hz);
+  const float sample_period = state.looptime_autodetect * 1e-6f;
+
+  filter->alpha = sample_period / (rc + sample_period);
 }
 
 float filter_lp_pt1_step(filter_lp_pt1 *filter, filter_state_t *state, float in) {
@@ -67,9 +74,16 @@ void filter_lp_pt2_init(filter_lp_pt2 *filter, filter_state_t *state, uint8_t co
 }
 
 void filter_lp_pt2_coeff(filter_lp_pt2 *filter, float hz) {
-  const float rc = 1 / (2 * ORDER2_CORRECTION * M_PI_F * hz);
+  if (filter->hz == hz && filter->sample_period_us == state.looptime_autodetect) {
+    return;
+  }
+  filter->hz = hz;
+  filter->sample_period_us = state.looptime_autodetect;
 
-  filter->alpha = state.looptime / (rc + state.looptime);
+  const float rc = 1 / (2 * ORDER2_CORRECTION * M_PI_F * hz);
+  const float sample_period = state.looptime_autodetect * 1e-6f;
+
+  filter->alpha = sample_period / (rc + sample_period);
 }
 
 float filter_lp_pt2_step(filter_lp_pt2 *filter, filter_state_t *state, float in) {
@@ -84,9 +98,16 @@ void filter_lp_pt3_init(filter_lp_pt3 *filter, filter_state_t *state, uint8_t co
 }
 
 void filter_lp_pt3_coeff(filter_lp_pt3 *filter, float hz) {
-  const float rc = 1 / (2 * ORDER3_CORRECTION * M_PI_F * hz);
+  if (filter->hz == hz && filter->sample_period_us == state.looptime_autodetect) {
+    return;
+  }
+  filter->hz = hz;
+  filter->sample_period_us = state.looptime_autodetect;
 
-  filter->alpha = state.looptime / (rc + state.looptime);
+  const float rc = 1 / (2 * ORDER3_CORRECTION * M_PI_F * hz);
+  const float sample_period = state.looptime_autodetect * 1e-6f;
+
+  filter->alpha = sample_period / (rc + sample_period);
 }
 
 float filter_lp_pt3_step(filter_lp_pt3 *filter, filter_state_t *state, float in) {
