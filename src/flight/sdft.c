@@ -65,6 +65,9 @@ bool sdft_push(sdft_t *sdft, float val) {
 
   const float last_sample = r_to_N * sdft->samples[sdft->idx];
 
+  sdft->sample_accumulator += val;
+  sdft->sample_count++;
+
   if (sdft->sample_count >= (uint32_t)SDFT_SUBSAMPLES) {
     sdft->sample_avg = sdft->sample_accumulator / (float)sdft->sample_count;
     sdft->sample_accumulator = 0;
@@ -74,9 +77,6 @@ bool sdft_push(sdft_t *sdft, float val) {
     sdft->idx = (sdft->idx + 1) % SDFT_SAMPLE_SIZE;
 
     batch_finished = true;
-  } else {
-    sdft->sample_accumulator += val;
-    sdft->sample_count++;
   }
 
   const float delta = sdft->sample_avg - last_sample;
