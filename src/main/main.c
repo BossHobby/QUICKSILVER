@@ -50,7 +50,7 @@ float looptime_buffer[255];
 
 int random_seed = 0;
 
-void memory_section_init() {
+__attribute__((__used__)) void memory_section_init() {
 #ifdef USE_FAST_RAM
   extern uint8_t _fast_ram_start;
   extern uint8_t _fast_ram_end;
@@ -59,7 +59,7 @@ void memory_section_init() {
 #endif
 }
 
-int main() {
+__attribute__((__used__)) int main() {
   system_check_for_bootloader();
 
   // init some initial values
