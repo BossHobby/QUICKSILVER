@@ -30,15 +30,6 @@
 #define ACC_MIN 0.7f
 #define ACC_MAX 1.3f
 
-#define _sinf(val) sinf(val)
-#define _cosf(val) cosf(val)
-
-void vectorcopy(float *vector1, float *vector2) {
-  for (int axis = 0; axis < 3; axis++) {
-    vector1[axis] = vector2[axis];
-  }
-}
-
 #ifdef QUICKSILVER_IMU
 static filter_lp_pt1 filter;
 static filter_state_t filter_pass1[3];
