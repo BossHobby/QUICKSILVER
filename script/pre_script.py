@@ -6,6 +6,7 @@ linker_flags = []
 
 common_flags = [
   "-Wdouble-promotion",
+  "-Wunsafe-loop-optimizations",
   "-fsingle-precision-constant",
   "-fno-exceptions",
   "-fno-strict-aliasing",
@@ -15,14 +16,16 @@ common_flags = [
 	"-fno-unwind-tables",
   "-fno-asynchronous-unwind-tables",
 	"-fno-math-errno",
-  "-fmerge-all-constants"
+  "-fmerge-all-constants",
+  "-funsafe-loop-optimizations",
+  "-flto"
 ]
 
 if env.GetBuildType() == "release":
-  common_flags.append("-s")
-  common_flags.append("-O3")
+  common_flags.insert(0, "-O3")
+  common_flags.insert(0, "-s")
 else:
-  common_flags.append("-O1")
+  common_flags.insert(0, "-O1")
 
 env.Append(
   BUILD_FLAGS=["-std=gnu11"],

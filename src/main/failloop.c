@@ -84,3 +84,7 @@ void BusFault_Handler() {
 void UsageFault_Handler() {
   handle_fault();
 }
+
+void Default_Handler() {
+  handle_fault();
+}
