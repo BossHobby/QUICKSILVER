@@ -276,12 +276,7 @@ void rx_serial_send_crsf_telemetry() {
 
   crsf_tlm_frame_start(telemetry_packet);
   const uint32_t payload_size = crsf_tlm_frame_battery_sensor(telemetry_packet);
-  crsf_tlm_frame_finish(telemetry_packet, payload_size);
-
-  // QS Telemetry send function assumes 10 bytes of telemetry + the offset for escaped bytes
-  // Since we are not escaping anything, and since we know there are 12 bytes (packets) in
-  // CRSF telemetry for the battery sensor, Offset is 12-10=2
-  telemetry_offset = 2;
+  telemetry_offset = crsf_tlm_frame_finish(telemetry_packet, payload_size);
 
   // Shove the packet out the UART.
   while (LL_USART_IsActiveFlag_TXE(USART.channel) == RESET)

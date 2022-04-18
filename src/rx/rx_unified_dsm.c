@@ -38,10 +38,6 @@ extern profile_t profile;
 extern int current_pid_axis;
 extern int current_pid_term;
 
-extern uint8_t telemetry_offset;
-extern uint8_t telemetry_packet[14];
-extern uint8_t ready_for_next_telemetry;
-
 #define USART usart_port_defs[serial_rx_port]
 #define SPECTRUM_BIND_PIN usart_port_defs[profile.serial.rx].rx_pin
 
