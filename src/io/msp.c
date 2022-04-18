@@ -7,30 +7,6 @@
 #include "flight/control.h"
 #include "util/util.h"
 
-static uint32_t msp_available(msp_t *msp) {
-  if (msp->write_offset >= msp->read_offset) {
-    return msp->write_offset - msp->read_offset;
-  }
-  return msp->buffer_size + msp->write_offset - msp->read_offset;
-}
-
-static bool msp_get(msp_t *msp, uint32_t offset, uint8_t *data) {
-  if (offset >= msp_available(msp)) {
-    return false;
-  }
-  *data = msp->buffer[msp->read_offset + offset];
-  return true;
-}
-
-static bool msp_expect(msp_t *msp, uint32_t offset, uint8_t val) {
-  uint8_t data = 0;
-  if (!msp_get(msp, offset, &data)) {
-    return false;
-  }
-
-  return data == val;
-}
-
 static void msp_send_reply(msp_t *msp, uint8_t code, uint8_t *data, uint8_t len) {
   if (msp->send) {
     msp->send('>', code, data, len);
@@ -41,16 +17,6 @@ static void msp_send_error(msp_t *msp, uint8_t code) {
   if (msp->send) {
     msp->send('!', code, NULL, 0);
   }
-}
-
-void msp_push_byte(msp_t *msp, uint8_t val) {
-  msp->buffer[msp->write_offset] = val;
-  msp->write_offset++;
-}
-
-void msp_push(msp_t *msp, uint8_t *data, uint32_t size) {
-  memcpy(msp->buffer, data, size);
-  msp->write_offset += size;
 }
 
 static void msp_process_serial_cmd(msp_t *msp, uint8_t cmd, uint8_t *payload, uint8_t size) {
@@ -185,42 +151,36 @@ static void msp_process_serial_cmd(msp_t *msp, uint8_t cmd, uint8_t *payload, ui
   }
 }
 
-msp_status_t msp_process_serial(msp_t *msp) {
-  if (msp_available(msp) < MSP_HEADER_LEN) {
+msp_status_t msp_process_serial(msp_t *msp, uint8_t *data, uint32_t len) {
+  if (len < MSP_HEADER_LEN) {
     return MSP_EOF;
   }
 
-  if (!msp_expect(msp, 0, '$') || !msp_expect(msp, 1, 'M') || !msp_expect(msp, 2, '<')) {
-    msp->read_offset++;
+  if (data[0] != '$' || data[1] != 'M' || data[2] != '<') {
     return MSP_ERROR;
   }
 
-  uint8_t size = 0;
-  uint8_t cmd = 0;
-  if (!msp_get(msp, 3, &size) || !msp_get(msp, 4, &cmd)) {
-    return MSP_ERROR;
-  }
+  const uint8_t size = data[3];
+  const uint8_t cmd = data[4];
 
-  if (msp_available(msp) < (MSP_HEADER_LEN + size + 1)) {
+  if (len < (MSP_HEADER_LEN + size + 1)) {
     return MSP_EOF;
   }
 
   uint8_t chksum = size ^ cmd;
   for (uint8_t i = 0; i < size; i++) {
-    chksum ^= msp->buffer[MSP_HEADER_LEN + i];
+    chksum ^= data[MSP_HEADER_LEN + i];
   }
 
-  if (!msp_expect(msp, MSP_HEADER_LEN + size, chksum)) {
-    msp->read_offset += (MSP_HEADER_LEN + size + 1);
+  if (data[MSP_HEADER_LEN + size] != chksum) {
     return MSP_ERROR;
   }
 
-  msp_process_serial_cmd(msp, cmd, msp->buffer + MSP_HEADER_LEN, size);
-  msp->read_offset += (MSP_HEADER_LEN + size + 1);
+  msp_process_serial_cmd(msp, cmd, data + MSP_HEADER_LEN, size);
   return MSP_SUCCESS;
 }
 
-msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint8_t len) {
+msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint32_t len) {
   if (len < 1) {
     return MSP_EOF;
   }
@@ -247,6 +207,7 @@ msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint8_t len) {
     last_size = data[offset++];
     last_cmd = data[offset++];
     packet_started = true;
+    msp->buffer_offset = 0;
   } else { // second chunk
     if (!packet_started) {
       return MSP_ERROR;
@@ -259,14 +220,13 @@ msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint8_t len) {
 
   last_seq = sequence;
 
-  while (msp_available(msp) < last_size) {
-    if (offset == len) {
-      return MSP_EOF;
-    }
-    msp_push_byte(msp, data[offset++]);
+  memcpy(msp->buffer + msp->buffer_offset, data + offset, len - offset);
+  msp->buffer_offset += len - offset;
+
+  if (msp->buffer_offset < last_size) {
+    return MSP_EOF;
   }
 
   msp_process_serial_cmd(msp, last_cmd, msp->buffer, last_size);
-  msp->read_offset += last_size;
   return MSP_SUCCESS;
 }
