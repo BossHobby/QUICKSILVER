@@ -4,10 +4,10 @@
 
 #include "drv_fmc.h"
 #include "drv_serial.h"
+#include "io/vtx.h"
 #include "profile.h"
 #include "project.h"
 #include "util/cbor_helper.h"
-#include "vtx.h"
 
 #define FMC_HEADER 0x12AA0001
 

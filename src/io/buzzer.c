@@ -1,5 +1,5 @@
 
-#include "buzzer.h"
+#include "io/buzzer.h"
 
 #include "drv_gpio.h"
 #include "drv_time.h"

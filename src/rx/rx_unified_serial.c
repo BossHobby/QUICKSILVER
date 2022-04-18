@@ -8,7 +8,7 @@
 #include "drv_time.h"
 #include "flash.h"
 #include "flight/control.h"
-#include "led.h"
+#include "io/led.h"
 #include "profile.h"
 #include "project.h"
 #include "usb_configurator.h"

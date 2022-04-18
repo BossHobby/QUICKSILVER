@@ -8,7 +8,7 @@
 #include "drv_serial_4way_avr_bl.h"
 #include "drv_serial_soft.h"
 #include "drv_usb.h"
-#include "led.h"
+#include "io/led.h"
 #include "usb_configurator.h"
 #include "util/cbor_helper.h"
 

@@ -7,6 +7,7 @@
 #include "flight/control.h"
 #include "flight/filter.h"
 #include "float.h"
+#include "io/vtx.h"
 #include "osd_menu.h"
 #include "profile.h"
 #include "project.h"
@@ -14,7 +15,6 @@
 #include "stdio.h"
 #include "string.h"
 #include "util/util.h"
-#include "vtx.h"
 
 #ifdef ENABLE_OSD
 

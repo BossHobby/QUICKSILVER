@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "blackbox.h"
-#include "buzzer.h"
 #include "debug.h"
 #include "drv_adc.h"
 #include "drv_fmc.h"
@@ -20,21 +18,23 @@
 #include "flash.h"
 #include "flight/control.h"
 #include "flight/filter.h"
+#include "flight/gestures.h"
 #include "flight/imu.h"
 #include "flight/pid.h"
 #include "flight/sixaxis.h"
-#include "gestures.h"
-#include "led.h"
+#include "io/blackbox.h"
+#include "io/buzzer.h"
+#include "io/led.h"
+#include "io/rgb_led.h"
+#include "io/vbat.h"
+#include "io/vtx.h"
 #include "osd_render.h"
 #include "profile.h"
 #include "project.h"
 #include "reset.h"
-#include "rgb_led.h"
 #include "rx.h"
 #include "usb_configurator.h"
 #include "util/util.h"
-#include "vbat.h"
-#include "vtx.h"
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 #include "drv_serial_4way.h"

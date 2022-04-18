@@ -4,7 +4,7 @@
 #include "drv_time.h"
 #include "drv_usb.h"
 #include "flight/control.h"
-#include "led.h"
+#include "io/led.h"
 #include "usb_configurator.h"
 
 const char *failloop_string(failloop_t val) {
