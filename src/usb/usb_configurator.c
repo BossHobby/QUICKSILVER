@@ -1,27 +1,20 @@
 #include "usb_configurator.h"
 
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+
 #include "debug.h"
 #include "drv_usb.h"
 #include "flight/control.h"
 #include "io/msp.h"
+#include "io/quic.h"
 #include "profile.h"
 #include "project.h"
 #include "reset.h"
 #include "util/util.h"
 
-extern profile_t profile;
-uint8_t encode_buffer[USB_BUFFER_SIZE];
-uint8_t decode_buffer[USB_BUFFER_SIZE];
-
-void usb_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint8_t len);
-
-static msp_t msp = {
-    .buffer = decode_buffer,
-    .buffer_size = USB_BUFFER_SIZE,
-    .read_offset = 0,
-    .write_offset = 0,
-    .send = usb_msp_send,
-};
+static uint8_t decode_buffer[USB_BUFFER_SIZE];
 
 void usb_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint8_t len) {
   const uint8_t size = len + MSP_HEADER_LEN + 1;
@@ -47,6 +40,35 @@ void usb_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint8_t len) {
   usb_serial_write(frame, size);
 }
 
+static msp_t msp = {
+    .buffer = decode_buffer,
+    .buffer_size = USB_BUFFER_SIZE,
+    .buffer_offset = 0,
+    .send = usb_msp_send,
+};
+
+void usb_quic_send(uint8_t *data, uint32_t len) {
+  usb_serial_write(data, len);
+}
+
+static quic_t quic = {
+    .send = usb_quic_send,
+};
+
+void usb_quic_logf(const char *fmt, ...) {
+  const uint32_t size = strlen(fmt) + 128;
+  char str[size];
+
+  memset(str, 0, size);
+
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf(str, size, fmt, args);
+  va_end(args);
+
+  quic_send_str(&quic, QUIC_CMD_LOG, QUIC_FLAG_NONE, str);
+}
+
 // double promition in the following is intended
 #pragma GCC diagnostic ignored "-Wdouble-promotion"
 // This function will be where all usb send/receive coms live
@@ -65,21 +87,34 @@ void usb_configurator() {
     system_reset();
     break;
   case USB_MAGIC_MSP: {
-    msp_push_byte(&msp, magic);
+    uint32_t decode_buffer_size = 0;
+    decode_buffer[decode_buffer_size++] = magic;
+    decode_buffer[decode_buffer_size++] = usb_serial_read_byte();
 
     while (true) {
-      msp_status_t status = msp_process_serial(&msp);
+      msp_status_t status = msp_process_serial(&msp, decode_buffer, decode_buffer_size);
       if (status == MSP_EOF) {
-        msp_push_byte(&msp, usb_serial_read_byte());
+        decode_buffer[decode_buffer_size++] = usb_serial_read_byte();
       } else {
         break;
       }
     }
     break;
   }
-  case USB_MAGIC_QUIC:
-    usb_process_quic();
+  case USB_MAGIC_QUIC: {
+    uint32_t decode_buffer_size = 0;
+    decode_buffer[decode_buffer_size++] = magic;
+    decode_buffer[decode_buffer_size++] = usb_serial_read_byte();
+
+    while (true) {
+      if (!quic_process(&quic, decode_buffer, decode_buffer_size)) {
+        decode_buffer[decode_buffer_size++] = usb_serial_read_byte();
+      } else {
+        break;
+      }
+    }
     break;
+  }
   }
 
   // this will block and handle all usb traffic while active

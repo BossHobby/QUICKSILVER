@@ -1,48 +1,40 @@
-#include "usb_configurator.h"
+#include "quic.h"
 
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "debug.h"
 #include "drv_serial.h"
 #include "drv_serial_4way.h"
-#include "drv_serial_soft.h"
 #include "drv_spi_max7456.h"
-#include "drv_time.h"
 #include "drv_usb.h"
 #include "flash.h"
 #include "flight/control.h"
 #include "flight/sixaxis.h"
-#include "io/blackbox.h"
 #include "io/data_flash.h"
-#include "io/led.h"
 #include "io/vtx.h"
-#include "osd_render.h"
+#include "osd/osd_render.h"
 #include "profile.h"
-#include "project.h"
 #include "util/cbor_helper.h"
-#include "util/util.h"
 
-#define QUIC_HEADER_LEN 4
+#define ENCODE_BUFFER_SIZE 2048
 
-#define quic_errorf(cmd, args...) send_quic_strf(cmd, QUIC_FLAG_ERROR, args)
+#define quic_errorf(cmd, args...) quic_send_strf(quic, cmd, QUIC_FLAG_ERROR, args)
 
-extern profile_t profile;
-extern profile_t default_profile;
-
-extern pid_rate_preset_t pid_rate_presets[];
-extern uint32_t pid_rate_presets_count;
+static uint8_t encode_buffer[ENCODE_BUFFER_SIZE];
 
 extern vtx_settings_t vtx_settings;
 
 extern uint8_t blackbox_override;
 extern uint32_t blackbox_rate;
 
-extern uint8_t encode_buffer[USB_BUFFER_SIZE];
-extern uint8_t decode_buffer[USB_BUFFER_SIZE];
+#define check_cbor_error(cmd)               \
+  if (res < CBOR_OK) {                      \
+    quic_errorf(cmd, "CBOR ERROR %d", res); \
+    return;                                 \
+  }
 
-cbor_result_t cbor_encode_motor_test_t(cbor_value_t *enc, const motor_test_t *b) {
+static cbor_result_t cbor_encode_motor_test_t(cbor_value_t *enc, const motor_test_t *b) {
   CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_map_indefinite(enc));
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "active"));
@@ -56,23 +48,27 @@ cbor_result_t cbor_encode_motor_test_t(cbor_value_t *enc, const motor_test_t *b)
   return res;
 }
 
-void send_quic_header(quic_command cmd, quic_flag flag, int16_t len) {
+static void quic_send_header(quic_t *quic, quic_command cmd, quic_flag flag, uint32_t len) {
   static uint8_t frame[QUIC_HEADER_LEN];
 
-  frame[0] = USB_MAGIC_QUIC;
+  frame[0] = QUIC_MAGIC;
   frame[1] = (cmd & (0xff >> 3)) | (flag & (0xff >> 5)) << 5;
   frame[2] = (len >> 8) & 0xFF;
   frame[3] = len & 0xFF;
 
-  usb_serial_write(frame, QUIC_HEADER_LEN);
+  if (quic->send) {
+    quic->send(frame, QUIC_HEADER_LEN);
+  }
 }
 
-void send_quic(quic_command cmd, quic_flag flag, uint8_t *data, uint16_t len) {
-  send_quic_header(cmd, flag, len);
-  usb_serial_write(data, len);
+static void quic_send(quic_t *quic, quic_command cmd, quic_flag flag, uint8_t *data, uint32_t len) {
+  quic_send_header(quic, cmd, flag, len);
+  if (quic->send) {
+    quic->send(data, len);
+  }
 }
 
-cbor_result_t send_quic_str(quic_command cmd, quic_flag flag, const char *str) {
+cbor_result_t quic_send_str(quic_t *quic, quic_command cmd, quic_flag flag, const char *str) {
   const uint32_t size = strlen(str) + 128;
   uint8_t buffer[size];
 
@@ -83,11 +79,11 @@ cbor_result_t send_quic_str(quic_command cmd, quic_flag flag, const char *str) {
   if (res < CBOR_OK) {
     return res;
   }
-  send_quic(cmd, flag, buffer, cbor_encoder_len(&enc));
+  quic_send(quic, cmd, flag, buffer, cbor_encoder_len(&enc));
   return res;
 }
 
-cbor_result_t send_quic_strf(quic_command cmd, quic_flag flag, const char *fmt, ...) {
+static cbor_result_t quic_send_strf(quic_t *quic, quic_command cmd, quic_flag flag, const char *fmt, ...) {
   const uint32_t size = strlen(fmt) + 128;
   char str[size];
 
@@ -97,26 +93,17 @@ cbor_result_t send_quic_strf(quic_command cmd, quic_flag flag, const char *fmt, 
   va_start(args, fmt);
   vsnprintf(str, size, fmt, args);
   va_end(args);
-  return send_quic_str(cmd, flag, str);
+  return quic_send_str(quic, cmd, flag, str);
 }
 
-#define check_cbor_error(cmd)               \
-  if (res < CBOR_OK) {                      \
-    quic_errorf(cmd, "CBOR ERROR %d", res); \
-    return;                                 \
-  }
-
-void get_quic(uint8_t *data, uint32_t len) {
+static void get_quic(quic_t *quic, cbor_value_t *dec) {
   cbor_result_t res = CBOR_OK;
 
-  cbor_value_t dec;
-  cbor_decoder_init(&dec, data, len);
-
   cbor_value_t enc;
-  cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+  cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
 
   quic_values value = QUIC_CMD_INVALID;
-  res = cbor_decode_uint8(&dec, &value);
+  res = cbor_decode_uint8(dec, &value);
   check_cbor_error(QUIC_CMD_GET);
 
   res = cbor_encode_uint8(&enc, &value);
@@ -127,27 +114,27 @@ void get_quic(uint8_t *data, uint32_t len) {
     res = cbor_encode_profile_t(&enc, &profile);
     check_cbor_error(QUIC_CMD_GET);
 
-    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
   case QUIC_VAL_DEFAULT_PROFILE: {
     res = cbor_encode_profile_t(&enc, &default_profile);
     check_cbor_error(QUIC_CMD_GET);
 
-    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
   case QUIC_VAL_INFO:
     res = cbor_encode_target_info_t(&enc, &target_info);
     check_cbor_error(QUIC_CMD_GET);
 
-    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   case QUIC_VAL_STATE:
     res = cbor_encode_control_state_t(&enc, &state);
     check_cbor_error(QUIC_CMD_GET);
 
-    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   case QUIC_VAL_PID_RATE_PRESETS:
     res = cbor_encode_array(&enc, pid_rate_presets_count);
@@ -157,37 +144,37 @@ void get_quic(uint8_t *data, uint32_t len) {
       check_cbor_error(QUIC_CMD_GET);
     }
 
-    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   case QUIC_VAL_VTX_SETTINGS:
     res = cbor_encode_vtx_settings_t(&enc, &vtx_settings);
     check_cbor_error(QUIC_CMD_GET);
 
-    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
 #ifdef ENABLE_OSD
   case QUIC_VAL_OSD_FONT: {
-    send_quic(QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
 
     uint8_t font[54];
 
     for (uint16_t i = 0; i < 256; i++) {
       osd_read_character(i, font, 54);
 
-      cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+      cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
       res = cbor_encode_bstr(&enc, font, 54);
       check_cbor_error(QUIC_CMD_GET);
 
-      send_quic(QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
+      quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
     }
 
-    send_quic_header(QUIC_CMD_GET, QUIC_FLAG_STREAMING, 0);
+    quic_send_header(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, 0);
     break;
   }
 #endif
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
   case QUIC_VAL_BLHEL_SETTINGS: {
-    send_quic(QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
 
     const uint8_t count = serial_4way_init();
     time_delay_ms(500);
@@ -199,16 +186,16 @@ void get_quic(uint8_t *data, uint32_t len) {
         continue;
       }
 
-      cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+      cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
       res = cbor_encode_blheli_settings_t(&enc, &settings);
       check_cbor_error(QUIC_CMD_GET);
 
-      send_quic(QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
+      quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
     }
 
     serial_4way_release();
 
-    send_quic_header(QUIC_CMD_GET, QUIC_FLAG_STREAMING, 0);
+    quic_send_header(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, 0);
     break;
   }
 #endif
@@ -216,14 +203,14 @@ void get_quic(uint8_t *data, uint32_t len) {
     res = cbor_encode_rx_bind_storage_t(&enc, &bind_storage);
     check_cbor_error(QUIC_CMD_GET);
 
-    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
 #ifdef DEBUG
   case QUIC_VAL_PERF_COUNTERS: {
     res = cbor_encode_perf_counters(&enc);
     check_cbor_error(QUIC_CMD_GET);
-    send_quic(QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
 #endif
@@ -233,17 +220,14 @@ void get_quic(uint8_t *data, uint32_t len) {
   }
 }
 
-void set_quic(uint8_t *data, uint32_t len) {
+static void set_quic(quic_t *quic, cbor_value_t *dec) {
   cbor_result_t res = CBOR_OK;
 
-  cbor_value_t dec;
-  cbor_decoder_init(&dec, data, len);
-
   cbor_value_t enc;
-  cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+  cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
 
   quic_values value;
-  res = cbor_decode_uint8(&dec, &value);
+  res = cbor_decode_uint8(dec, &value);
   check_cbor_error(QUIC_CMD_SET);
 
   res = cbor_encode_uint8(&enc, &value);
@@ -251,7 +235,7 @@ void set_quic(uint8_t *data, uint32_t len) {
 
   switch (value) {
   case QUIC_VAL_PROFILE: {
-    res = cbor_decode_profile_t(&dec, &profile);
+    res = cbor_decode_profile_t(dec, &profile);
     check_cbor_error(QUIC_CMD_SET);
 
     flash_save();
@@ -264,13 +248,13 @@ void set_quic(uint8_t *data, uint32_t len) {
     res = cbor_encode_profile_t(&enc, &profile);
     check_cbor_error(QUIC_CMD_SET);
 
-    send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
   case QUIC_VAL_VTX_SETTINGS: {
     vtx_settings_t settings;
 
-    res = cbor_decode_vtx_settings_t(&dec, &settings);
+    res = cbor_decode_vtx_settings_t(dec, &settings);
     check_cbor_error(QUIC_CMD_SET);
 
     vtx_set(&settings);
@@ -279,7 +263,7 @@ void set_quic(uint8_t *data, uint32_t len) {
     res = cbor_encode_vtx_settings_t(&enc, &vtx_settings);
     check_cbor_error(QUIC_CMD_SET);
 
-    send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
 #ifdef ENABLE_OSD
@@ -289,7 +273,7 @@ void set_quic(uint8_t *data, uint32_t len) {
     for (uint16_t i = 0; i < 256; i++) {
       const uint8_t *ptr = NULL;
 
-      res = cbor_decode_bstr(&dec, &ptr, &len);
+      res = cbor_decode_bstr(dec, &ptr, &len);
       check_cbor_error(QUIC_CMD_SET);
 
       osd_write_character(i, ptr, 54);
@@ -298,7 +282,7 @@ void set_quic(uint8_t *data, uint32_t len) {
     res = cbor_encode_str(&enc, "OK");
     check_cbor_error(QUIC_CMD_SET);
 
-    send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
 #endif
@@ -310,7 +294,7 @@ void set_quic(uint8_t *data, uint32_t len) {
     for (uint8_t i = 0; i < count; i++) {
       blheli_settings_t settings;
 
-      res = cbor_decode_blheli_settings_t(&dec, &settings);
+      res = cbor_decode_blheli_settings_t(dec, &settings);
       check_cbor_error(QUIC_CMD_SET);
 
       serial_esc4way_ack_t ack = serial_4way_write_settings(&settings, i);
@@ -324,12 +308,12 @@ void set_quic(uint8_t *data, uint32_t len) {
     res = cbor_encode_str(&enc, "OK");
     check_cbor_error(QUIC_CMD_SET);
 
-    send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
 #endif
   case QUIC_VAL_BIND_INFO: {
-    res = cbor_decode_rx_bind_storage_t(&dec, &bind_storage);
+    res = cbor_decode_rx_bind_storage_t(dec, &bind_storage);
     check_cbor_error(QUIC_CMD_SET);
 
     flash_save();
@@ -337,7 +321,7 @@ void set_quic(uint8_t *data, uint32_t len) {
     res = cbor_encode_rx_bind_storage_t(&enc, &bind_storage);
     check_cbor_error(QUIC_CMD_SET);
 
-    send_quic(QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
   default:
@@ -347,17 +331,14 @@ void set_quic(uint8_t *data, uint32_t len) {
 }
 
 #ifdef ENABLE_BLACKBOX
-void process_blackbox(uint8_t *data, uint32_t len) {
+static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
   cbor_result_t res = CBOR_OK;
 
-  cbor_value_t dec;
-  cbor_decoder_init(&dec, data, len);
-
   cbor_value_t enc;
-  cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+  cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
 
   quic_blackbox_command cmd;
-  res = cbor_decode_uint8(&dec, &cmd);
+  res = cbor_decode_uint8(dec, &cmd);
   check_cbor_error(QUIC_CMD_BLACKBOX);
 
   extern data_flash_header_t data_flash_header;
@@ -366,7 +347,7 @@ void process_blackbox(uint8_t *data, uint32_t len) {
   switch (cmd) {
   case QUIC_BLACKBOX_RESET:
     data_flash_reset();
-    send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, NULL, 0);
+    quic_send(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, NULL, 0);
     break;
   case QUIC_BLACKBOX_LIST:
     res = cbor_encode_map_indefinite(&enc);
@@ -396,17 +377,17 @@ void process_blackbox(uint8_t *data, uint32_t len) {
     res = cbor_encode_end_indefinite(&enc);
     check_cbor_error(QUIC_CMD_BLACKBOX);
 
-    send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   case QUIC_BLACKBOX_GET: {
     extern data_flash_header_t data_flash_header;
 
     uint8_t file_index;
-    res = cbor_decode_uint8(&dec, &file_index);
+    res = cbor_decode_uint8(dec, &file_index);
     check_cbor_error(QUIC_CMD_BLACKBOX);
 
-    send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
-    cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+    quic_send(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
+    cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
 
     if (data_flash_header.file_num > file_index) {
       blackbox_t blackbox[8];
@@ -420,8 +401,8 @@ void process_blackbox(uint8_t *data, uint32_t len) {
           const uint32_t len = cbor_encoder_len(&enc);
           res = cbor_encode_blackbox_t(&enc, &blackbox[j]);
           if (res == CBOR_ERR_EOF) {
-            send_quic(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, len);
-            cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+            quic_send(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, len);
+            cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
 
             res = cbor_encode_blackbox_t(&enc, &blackbox[j]);
           }
@@ -430,7 +411,7 @@ void process_blackbox(uint8_t *data, uint32_t len) {
       }
     }
 
-    send_quic_header(QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, 0);
+    quic_send_header(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, 0);
 
     break;
   }
@@ -441,17 +422,14 @@ void process_blackbox(uint8_t *data, uint32_t len) {
 }
 #endif
 
-void process_motor_test(uint8_t *data, uint32_t len) {
+static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
   cbor_result_t res = CBOR_OK;
 
-  cbor_value_t dec;
-  cbor_decoder_init(&dec, data, len);
-
   cbor_value_t enc;
-  cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+  cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
 
   quic_motor_command cmd;
-  res = cbor_decode_uint8(&dec, &cmd);
+  res = cbor_decode_uint8(dec, &cmd);
   check_cbor_error(QUIC_CMD_MOTOR);
 
   switch (cmd) {
@@ -459,7 +437,7 @@ void process_motor_test(uint8_t *data, uint32_t len) {
     res = cbor_encode_motor_test_t(&enc, &motor_test);
     check_cbor_error(QUIC_CMD_MOTOR);
 
-    send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
 
   case QUIC_MOTOR_TEST_ENABLE:
@@ -468,7 +446,7 @@ void process_motor_test(uint8_t *data, uint32_t len) {
     res = cbor_encode_uint8(&enc, &motor_test.active);
     check_cbor_error(QUIC_CMD_MOTOR);
 
-    send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
 
   case QUIC_MOTOR_TEST_DISABLE:
@@ -477,17 +455,17 @@ void process_motor_test(uint8_t *data, uint32_t len) {
     res = cbor_encode_uint8(&enc, &motor_test.active);
     check_cbor_error(QUIC_CMD_MOTOR);
 
-    send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
 
   case QUIC_MOTOR_TEST_SET_VALUE:
-    res = cbor_decode_float_array(&dec, motor_test.value, 4);
+    res = cbor_decode_float_array(dec, motor_test.value, 4);
     check_cbor_error(QUIC_CMD_MOTOR);
 
     res = cbor_encode_float_array(&enc, motor_test.value, 4);
     check_cbor_error(QUIC_CMD_MOTOR);
 
-    send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
   case QUIC_MOTOR_ESC4WAY_IF: {
@@ -496,7 +474,7 @@ void process_motor_test(uint8_t *data, uint32_t len) {
     res = cbor_encode_uint8(&enc, &count);
     check_cbor_error(QUIC_CMD_MOTOR);
 
-    send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_EXIT, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_MOTOR, QUIC_FLAG_EXIT, encode_buffer, cbor_encoder_len(&enc));
 
     serial_4way_process();
     break;
@@ -508,33 +486,30 @@ void process_motor_test(uint8_t *data, uint32_t len) {
   }
 }
 
-void process_serial(uint8_t *data, uint32_t len) {
+static void process_serial(quic_t *quic, cbor_value_t *dec) {
   cbor_result_t res = CBOR_OK;
 
-  cbor_value_t dec;
-  cbor_decoder_init(&dec, data, len);
-
   cbor_value_t enc;
-  cbor_encoder_init(&enc, encode_buffer, USB_BUFFER_SIZE);
+  cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
 
   quic_motor_command cmd;
-  res = cbor_decode_uint8(&dec, &cmd);
+  res = cbor_decode_uint8(dec, &cmd);
   check_cbor_error(QUIC_CMD_SERIAL);
 
   switch (cmd) {
   case QUIC_SERIAL_ENABLE: {
     usart_ports_t port = USART_PORT_INVALID;
-    res = cbor_decode_uint8(&dec, &port);
+    res = cbor_decode_uint8(dec, &port);
     check_cbor_error(QUIC_CMD_SERIAL);
 
     uint32_t baudrate = 0;
-    res = cbor_decode_uint32(&dec, &baudrate);
+    res = cbor_decode_uint32(dec, &baudrate);
     check_cbor_error(QUIC_CMD_SERIAL);
 
     res = cbor_encode_uint8(&enc, &port);
     check_cbor_error(QUIC_CMD_SERIAL);
 
-    send_quic(QUIC_CMD_SERIAL, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    quic_send(quic, QUIC_CMD_SERIAL, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
 
     serial_enable_rcc(port);
     serial_init(port, baudrate, false);
@@ -560,66 +535,65 @@ void process_serial(uint8_t *data, uint32_t len) {
   }
 }
 
-void usb_process_quic() {
-  const uint8_t cmd = usb_serial_read_byte();
+bool quic_process(quic_t *quic, uint8_t *data, uint32_t size) {
+  if (size < 4) {
+    return false;
+  }
+
+  if (data[0] != QUIC_MAGIC) {
+    quic_errorf(QUIC_CMD_INVALID, "INVALID MAGIC %d", data[0]);
+    return true;
+  }
+
+  const uint8_t cmd = data[1];
   if (cmd == QUIC_CMD_INVALID) {
     quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);
-    return;
+    return true;
   }
 
-  const uint16_t size = (uint16_t)usb_serial_read_byte() << 8 | usb_serial_read_byte();
-  uint8_t buffer[size];
-
-  if (size != 0) {
-    uint32_t len = usb_serial_read(buffer, size);
-    for (uint32_t timeout = 0x2000; len < size && timeout > 0;) {
-      uint32_t n = usb_serial_read(buffer + len, size - len);
-      if (n == 0) {
-        timeout--;
-        __WFI();
-      } else {
-        len += n;
-      }
-    }
-    if (len != size) {
-      quic_errorf(cmd, "INVALID SIZE %d vs %d", len, size);
-      return;
-    }
+  const uint16_t payload_size = (uint16_t)data[2] << 8 | data[3];
+  if (size < (payload_size + QUIC_HEADER_LEN)) {
+    return false;
   }
+
+  cbor_value_t dec;
+  cbor_decoder_init(&dec, data + QUIC_HEADER_LEN, payload_size);
 
   switch (cmd) {
   case QUIC_CMD_GET:
-    get_quic(buffer, size);
+    get_quic(quic, &dec);
     break;
   case QUIC_CMD_SET:
-    set_quic(buffer, size);
+    set_quic(quic, &dec);
     break;
   case QUIC_CMD_CAL_IMU:
-    sixaxis_gyro_cal(); // for flashing lights
+    sixaxis_gyro_cal();
     sixaxis_acc_cal();
 
     flash_save();
     flash_load();
 
-    send_quic(QUIC_CMD_CAL_IMU, QUIC_FLAG_NONE, NULL, 0);
+    quic_send(quic, QUIC_CMD_CAL_IMU, QUIC_FLAG_NONE, NULL, 0);
     break;
 #ifdef ENABLE_BLACKBOX
   case QUIC_CMD_BLACKBOX:
-    process_blackbox(buffer, size);
+    process_blackbox(quic, &dec);
     break;
 #endif
   case QUIC_CMD_MOTOR:
-    process_motor_test(buffer, size);
+    process_motor_test(quic, &dec);
     break;
   case QUIC_CMD_CAL_STICKS:
     request_stick_calibration_wizard();
-    send_quic(QUIC_CMD_CAL_STICKS, QUIC_FLAG_NONE, NULL, 0);
+    quic_send(quic, QUIC_CMD_CAL_STICKS, QUIC_FLAG_NONE, NULL, 0);
     break;
   case QUIC_CMD_SERIAL:
-    process_serial(buffer, size);
+    process_serial(quic, &dec);
     break;
   default:
     quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);
     break;
   }
+
+  return true;
 }
