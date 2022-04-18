@@ -17,11 +17,11 @@ common_flags = [
   "-fno-asynchronous-unwind-tables",
 	"-fno-math-errno",
   "-fmerge-all-constants",
-  "-funsafe-loop-optimizations",
-  "-flto"
+  "-funsafe-loop-optimizations"
 ]
 
 if env.GetBuildType() == "release":
+  common_flags.insert(0, "-flto")
   common_flags.insert(0, "-O3")
   common_flags.insert(0, "-s")
 else:
