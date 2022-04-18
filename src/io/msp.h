@@ -47,15 +47,10 @@ typedef struct {
   uint8_t *buffer;
 
   uint32_t buffer_size;
-
-  uint32_t write_offset;
-  uint32_t read_offset;
+  uint32_t buffer_offset;
 
   msp_send_fn_t send;
 } msp_t;
 
-void msp_push_byte(msp_t *msp, uint8_t val);
-void msp_push(msp_t *msp, uint8_t *data, uint32_t size);
-
-msp_status_t msp_process_serial(msp_t *msp);
-msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint8_t len);
+msp_status_t msp_process_serial(msp_t *msp, uint8_t *data, uint32_t len);
+msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint32_t len);

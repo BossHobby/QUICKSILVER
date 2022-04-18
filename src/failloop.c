@@ -42,7 +42,7 @@ void failloop(failloop_t val) {
     }
 
     if ((time_millis() - blink_start) >= 1000) {
-      send_quic_strf(QUIC_CMD_LOG, QUIC_FLAG_NONE, "failloop %s (%d)", failloop_string(val), val);
+      usb_quic_logf("failloop %s (%d)", failloop_string(val), val);
     }
 
     if (blink_counter < val) {

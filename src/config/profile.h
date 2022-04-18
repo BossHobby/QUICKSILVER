@@ -336,7 +336,12 @@ typedef struct {
   MEMBER(gyro_id, uint8)
 
 extern profile_t profile;
+extern const profile_t default_profile;
+
 extern target_info_t target_info;
+
+extern const pid_rate_preset_t pid_rate_presets[];
+extern const uint32_t pid_rate_presets_count;
 
 void profile_set_defaults();
 pid_rate_t *profile_current_pid_rates();

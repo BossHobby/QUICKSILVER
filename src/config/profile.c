@@ -3,9 +3,9 @@
 #include <string.h>
 
 #include "drv_usb.h"
+#include "io/quic.h"
 #include "osd_render.h"
 #include "rx.h"
-#include "usb_configurator.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
