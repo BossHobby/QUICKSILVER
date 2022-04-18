@@ -34,7 +34,7 @@ extern uint8_t failsafe_siglost;
 uint8_t failsafe_noframes = 0;
 
 uint8_t telemetry_offset = 0;
-uint8_t telemetry_packet[14];
+uint8_t telemetry_packet[64];
 uint8_t ready_for_next_telemetry = 1;
 
 static rx_serial_protocol_t protocol_to_check = 1;

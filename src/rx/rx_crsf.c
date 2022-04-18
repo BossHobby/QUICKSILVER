@@ -1,5 +1,7 @@
 #include "rx_crsf.h"
 
+#include <string.h>
+
 #include "flight/control.h"
 #include "profile.h"
 
@@ -92,4 +94,13 @@ uint32_t crsf_tlm_frame_battery_sensor(uint8_t *buf) {
   buf[9] = mah_drawn;
   buf[10] = battery_remaining_percentage;
   return CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE;
+}
+
+uint32_t crsf_tlm_frame_msp_resp(uint8_t *buf, uint8_t origin, uint8_t *payload, uint8_t size) {
+  buf[1] = size + CRSF_FRAME_LENGTH_EXT_TYPE_CRC;
+  buf[2] = CRSF_FRAMETYPE_MSP_RESP;
+  buf[3] = origin;
+  buf[4] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+  memcpy(buf + 5, payload, size);
+  return size + 2;
 }
