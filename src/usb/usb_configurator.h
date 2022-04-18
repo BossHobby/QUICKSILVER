@@ -3,7 +3,7 @@
 #include <cbor.h>
 #include <stdint.h>
 
-#include "blackbox.h"
+#include "io/blackbox.h"
 
 #define QUIC_PROTOCOL_VERSION MAKE_SEMVER(0, 1, 0)
 

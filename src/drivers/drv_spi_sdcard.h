@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "data_flash.h"
+#include "io/data_flash.h"
 
 #define SDCARD_PAGE_SIZE 512
 

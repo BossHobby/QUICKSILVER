@@ -2,8 +2,8 @@
 
 #include <string.h>
 
-#include "drv_msp.h"
 #include "drv_serial.h"
+#include "io/msp.h"
 #include "profile.h"
 #include "util/circular_buffer.h"
 

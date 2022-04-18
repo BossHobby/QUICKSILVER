@@ -8,19 +8,19 @@
 #include "drv_motor.h"
 #include "drv_time.h"
 #include "flight/filter.h"
+#include "flight/gestures.h"
 #include "flight/imu.h"
 #include "flight/input.h"
 #include "flight/pid.h"
 #include "flight/sixaxis.h"
 #include "flip_sequencer.h"
-#include "gestures.h"
-#include "led.h"
+#include "io/led.h"
+#include "io/vbat.h"
 #include "motor.h"
 #include "profile.h"
 #include "usb_configurator.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
-#include "vbat.h"
 
 #ifndef THROTTLE_SAFETY
 #define THROTTLE_SAFETY .15f

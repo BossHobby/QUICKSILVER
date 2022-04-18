@@ -12,7 +12,7 @@
 #include "flight/control.h"
 #include "flight/filter.h"
 #include "flight/sixaxis.h"
-#include "led.h"
+#include "io/led.h"
 #include "profile.h"
 #include "project.h"
 #include "util/util.h"

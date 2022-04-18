@@ -1,4 +1,4 @@
-#include "gestures.h"
+#include "flight/gestures.h"
 
 #include "flash.h"
 #include "flight/control.h"
