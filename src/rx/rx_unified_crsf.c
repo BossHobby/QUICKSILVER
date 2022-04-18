@@ -9,10 +9,14 @@
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "flight/control.h"
+#include "io/msp.h"
 #include "profile.h"
 #include "project.h"
 #include "rx_crsf.h"
 #include "usb_configurator.h"
+#include "util/util.h"
+
+#define MSP_BUFFER_SIZE 128
 
 typedef enum {
   RATE_LORA_4HZ = 0,
@@ -44,7 +48,7 @@ extern int current_pid_axis;
 extern int current_pid_term;
 
 extern uint8_t telemetry_offset;
-extern uint8_t telemetry_packet[14];
+extern uint8_t telemetry_packet[64];
 extern uint8_t ready_for_next_telemetry;
 
 static uint8_t crsf_rf_mode = 0;
@@ -60,6 +64,25 @@ static uint16_t crsf_rf_mode_fps[] = {
     500,  // RATE_FLRC_500HZ
     1000, // RATE_FLRC_1000HZ
 };
+
+void rx_serial_crsf_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint8_t len);
+
+static uint8_t msp_rx_buffer[MSP_BUFFER_SIZE];
+static msp_t msp = {
+    .buffer = msp_rx_buffer,
+    .buffer_size = MSP_BUFFER_SIZE,
+    .read_offset = 0,
+    .write_offset = 0,
+    .send = rx_serial_crsf_msp_send,
+};
+
+static uint8_t msp_tx_buffer[MSP_BUFFER_SIZE];
+static uint16_t msp_tx_len = 0;
+static uint8_t msp_last_cmd = 0;
+static uint8_t msp_last_size = 0;
+static uint8_t msp_origin = 0;
+static bool msp_new_data = false;
+static bool msp_is_error = false;
 
 #define USART usart_port_defs[serial_rx_port]
 
@@ -180,6 +203,12 @@ static bool rx_serial_crsf_process_frame() {
     break;
   }
 
+  case CRSF_FRAMETYPE_MSP_REQ: {
+    msp_origin = rx_data[4];
+    msp_process_telemetry(&msp, rx_data + 5, rx_data[1] - 3);
+    break;
+  }
+
   default:
     quic_debugf("CRSF: unhandled packet type 0x%x", rx_data[2]);
     break;
@@ -264,19 +293,72 @@ bool rx_serial_process_crsf() {
   return channels_received;
 }
 
+void rx_serial_crsf_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint8_t len) {
+  msp_last_cmd = code;
+  msp_last_size = len;
+
+  if (len > 0 && data) {
+    memcpy(msp_tx_buffer, data, len);
+  }
+  msp_tx_len = len;
+
+  msp_is_error = direction == '!';
+  msp_new_data = true;
+}
+
 void rx_serial_send_crsf_telemetry() {
   // Send telemetry back once every 5 packets. This gives the RX time to send ITS telemetry back
-  if (telemetry_counter < telemetry_interval() || frame_status != FRAME_TX) {
+  if (frame_status != FRAME_TX) {
+    frame_status = FRAME_DONE;
+    return;
+  }
+
+  if (telemetry_counter < telemetry_interval() && !msp_new_data) {
     frame_status = FRAME_DONE;
     return;
   }
 
   telemetry_counter = 0;
-  frame_status = FRAME_DONE;
 
   crsf_tlm_frame_start(telemetry_packet);
-  const uint32_t payload_size = crsf_tlm_frame_battery_sensor(telemetry_packet);
-  telemetry_offset = crsf_tlm_frame_finish(telemetry_packet, payload_size);
+
+  uint32_t payload_size = 0;
+  if (msp_new_data) {
+    msp_new_data = false;
+
+    static uint8_t msp_seq = 0;
+    static uint16_t msp_tx_sent = 0;
+
+    uint8_t payload[CRSF_MSP_PAYLOAD_SIZE_MAX];
+
+    const uint8_t header_size = msp_tx_sent == 0 ? 3 : 1;
+    if (msp_tx_sent == 0) { // first chunk
+      payload[0] = MSP_STATUS_START_MASK | (msp_seq++ & MSP_STATUS_SEQUENCE_MASK) | (1 << MSP_STATUS_VERSION_SHIFT);
+      if (msp_is_error) {
+        payload[0] |= MSP_STATUS_ERROR_MASK;
+      }
+      payload[1] = msp_last_size;
+      payload[2] = msp_last_cmd;
+    } else {
+      payload[0] = (msp_seq++ & MSP_STATUS_SEQUENCE_MASK) | (1 << MSP_STATUS_VERSION_SHIFT);
+    }
+
+    const uint8_t msp_size = min(CRSF_MSP_PAYLOAD_SIZE_MAX - header_size, msp_tx_len - msp_tx_sent);
+    memcpy(payload + header_size, msp_tx_buffer + msp_tx_sent, msp_size);
+    msp_tx_sent += msp_size;
+
+    if (msp_tx_sent >= msp_tx_len) {
+      msp_tx_len = 0;
+      msp_tx_sent = 0;
+      frame_status = FRAME_DONE;
+    }
+
+    payload_size = crsf_tlm_frame_msp_resp(telemetry_packet, msp_origin, payload, msp_size + header_size);
+  } else {
+    payload_size = crsf_tlm_frame_battery_sensor(telemetry_packet);
+    frame_status = FRAME_DONE;
+  }
+  telemetry_offset = crsf_tlm_frame_finish(telemetry_packet, payload_size) + 1;
 
   // Shove the packet out the UART.
   while (LL_USART_IsActiveFlag_TXE(USART.channel) == RESET)

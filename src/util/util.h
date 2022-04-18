@@ -9,6 +9,14 @@
 #define M_PI_F 3.14159265358979323846f
 
 #define constrain(val, min, max) ((val) < (min) ? (min) : ((val) > (max) ? (max) : (val)))
+#define min(a, b) \
+  ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
+#define max(a, b) \
+  ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
 
 float mapf(float x, float in_min, float in_max, float out_min, float out_max);
 void limitf(float *input, const float limit);

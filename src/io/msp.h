@@ -22,7 +22,16 @@
 #define MSP_SET_MOTOR 214   // in message          PropBalance function
 #define MSP_SET_4WAY_IF 245 // in message          Sets 4way interface
 
+#define MSP_RESERVE_1 251 // reserved for system usage
+
 #define MSP_HEADER_LEN 5
+#define MSP_TLM_HEADER_LEN 3
+
+#define MSP_STATUS_SEQUENCE_MASK 0x0f // 0b00001111,   // sequence number mask
+#define MSP_STATUS_START_MASK 0x10    // 0b00010000,   // bit of starting frame (if 1, the frame is a first/single chunk of msp-frame)
+#define MSP_STATUS_VERSION_MASK 0x60  // 0b01100000,   // MSP version mask
+#define MSP_STATUS_ERROR_MASK 0x80    // 0b10000000,   // Error bit (1 if error)
+#define MSP_STATUS_VERSION_SHIFT 5    // MSP version shift
 
 #define MSP_BUILD_DATE_TIME __DATE__ __TIME__
 
@@ -49,3 +58,4 @@ void msp_push_byte(msp_t *msp, uint8_t val);
 void msp_push(msp_t *msp, uint8_t *data, uint32_t size);
 
 msp_status_t msp_process_serial(msp_t *msp);
+msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint8_t len);
