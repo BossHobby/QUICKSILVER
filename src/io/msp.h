@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 #define MSP_API_VERSION 1 // out message
 #define MSP_FC_VARIANT 2  // out message
 #define MSP_FC_VERSION 3  // out message
@@ -23,3 +25,27 @@
 #define MSP_HEADER_LEN 5
 
 #define MSP_BUILD_DATE_TIME __DATE__ __TIME__
+
+typedef enum {
+  MSP_ERROR,
+  MSP_EOF,
+  MSP_SUCCESS,
+} msp_status_t;
+
+typedef void (*msp_send_fn_t)(uint8_t direction, uint8_t code, uint8_t *data, uint8_t len);
+
+typedef struct {
+  uint8_t *buffer;
+
+  uint32_t buffer_size;
+
+  uint32_t write_offset;
+  uint32_t read_offset;
+
+  msp_send_fn_t send;
+} msp_t;
+
+void msp_push_byte(msp_t *msp, uint8_t val);
+void msp_push(msp_t *msp, uint8_t *data, uint32_t size);
+
+msp_status_t msp_process_serial(msp_t *msp);
