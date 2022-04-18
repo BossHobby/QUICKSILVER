@@ -219,3 +219,54 @@ msp_status_t msp_process_serial(msp_t *msp) {
   msp->read_offset += (MSP_HEADER_LEN + size + 1);
   return MSP_SUCCESS;
 }
+
+msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint8_t len) {
+  if (len < 1) {
+    return MSP_EOF;
+  }
+
+  uint8_t offset = 0;
+
+  const uint8_t status = data[offset++];
+  const uint8_t version = (status & MSP_STATUS_VERSION_MASK) >> MSP_STATUS_VERSION_SHIFT;
+  const uint8_t sequence = status & MSP_STATUS_SEQUENCE_MASK;
+  if (version != 1) {
+    return MSP_ERROR;
+  }
+
+  static bool packet_started = false;
+
+  static uint16_t last_size = 0;
+  static uint8_t last_cmd = 0;
+  static uint8_t last_seq = 0;
+
+  if (status & MSP_STATUS_START_MASK) { // first chunk
+    if (len < MSP_TLM_HEADER_LEN) {
+      return MSP_EOF;
+    }
+    last_size = data[offset++];
+    last_cmd = data[offset++];
+    packet_started = true;
+  } else { // second chunk
+    if (!packet_started) {
+      return MSP_ERROR;
+    }
+    if (((last_seq + 1) & MSP_STATUS_SEQUENCE_MASK) != sequence) {
+      packet_started = false;
+      return MSP_ERROR;
+    }
+  }
+
+  last_seq = sequence;
+
+  while (msp_available(msp) < last_size) {
+    if (offset == len) {
+      return MSP_EOF;
+    }
+    msp_push_byte(msp, data[offset++]);
+  }
+
+  msp_process_serial_cmd(msp, last_cmd, msp->buffer, last_size);
+  msp->read_offset += last_size;
+  return MSP_SUCCESS;
+}

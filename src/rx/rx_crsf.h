@@ -31,6 +31,7 @@
 
 #define CRSF_FRAME_SIZE_MAX 64
 #define CRSF_PAYLOAD_SIZE_MAX 60
+#define CRSF_MSP_PAYLOAD_SIZE_MAX (CRSF_PAYLOAD_SIZE_MAX - CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
 #define CRSF_SYNC_BYTE 0xC8
 
 #define CRSF_DEVICEINFO_VERSION 0x01
@@ -134,3 +135,4 @@ void crsf_tlm_frame_start(uint8_t *buf);
 uint32_t crsf_tlm_frame_battery_sensor(uint8_t *buf);
 uint32_t crsf_tlm_frame_device_info(uint8_t *buf);
 uint32_t crsf_tlm_frame_finish(uint8_t *buf, uint32_t payload_size);
+uint32_t crsf_tlm_frame_msp_resp(uint8_t *buf, uint8_t origin, uint8_t *payload, uint8_t size);
