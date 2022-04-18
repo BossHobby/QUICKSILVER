@@ -25,7 +25,7 @@ SCRIPT_FOLDER="$(dirname "$0")"
 SOURCE_FOLDER="$SCRIPT_FOLDER/.."
 BUILD_FOLDER="$SOURCE_FOLDER/.pio/build"
 
-CONFIG_FILE="$SOURCE_FOLDER/src/main/config/config.h"
+CONFIG_FILE="$SOURCE_FOLDER/src/config/config.h"
 TARGETS_FILE="$SCRIPT_FOLDER/targets.json"
 
 BRANCH=$DRONE_BRANCH
