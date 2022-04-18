@@ -391,6 +391,9 @@ void rx_serial_send_fport_telemetry() {
     teleCRC = teleCRC << 8;
     teleCRC = teleCRC >> 8;
     telemetry_packet[9 + telemetry_offset] = teleCRC; // 0x34;
+
+    telemetry_offset += 10;
+
     // Shove the packet out the UART. This *should* support escaped characters, but it doesn't work.
     while (LL_USART_IsActiveFlag_TXE(USART.channel) == RESET) // just in case - but this should do nothing if ready_for_next_telemetry flag is properly cleared by irq
       ;

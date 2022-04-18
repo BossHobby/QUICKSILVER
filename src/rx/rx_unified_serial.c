@@ -55,7 +55,7 @@ void TX_USART_ISR() {
       bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED ||
       bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_CRSF) {
     // upload total telemetry bytes to send so telemetry transmit triggers action appropriate to protocol
-    bytes_to_send = 10 + telemetry_offset;
+    bytes_to_send = telemetry_offset;
   }
 
   if (increment_transmit_buffer < bytes_to_send) {            // check the index to see if we have drained the buffer yet

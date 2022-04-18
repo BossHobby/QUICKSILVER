@@ -29,10 +29,6 @@ extern profile_t profile;
 extern int current_pid_axis;
 extern int current_pid_term;
 
-extern uint8_t telemetry_offset;
-extern uint8_t telemetry_packet[14];
-extern uint8_t ready_for_next_telemetry;
-
 #define USART usart_port_defs[serial_rx_port]
 
 uint16_t redpine_crc16(uint8_t *data, uint16_t len) {
