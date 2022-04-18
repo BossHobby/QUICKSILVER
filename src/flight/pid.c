@@ -6,7 +6,7 @@
 
 #include "flight/control.h"
 #include "flight/filter.h"
-#include "led.h"
+#include "io/led.h"
 #include "profile.h"
 #include "project.h"
 #include "rx.h"

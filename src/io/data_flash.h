@@ -2,7 +2,7 @@
 
 #include <cbor.h>
 
-#include "blackbox.h"
+#include "io/blackbox.h"
 
 #define DATA_FLASH_HEADER_MAGIC 0xdeadbeef
 

@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "blackbox.h"
-#include "data_flash.h"
 #include "debug.h"
 #include "drv_serial.h"
 #include "drv_serial_4way.h"
@@ -16,13 +14,15 @@
 #include "flash.h"
 #include "flight/control.h"
 #include "flight/sixaxis.h"
-#include "led.h"
+#include "io/blackbox.h"
+#include "io/data_flash.h"
+#include "io/led.h"
+#include "io/vtx.h"
 #include "osd_render.h"
 #include "profile.h"
 #include "project.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
-#include "vtx.h"
 
 #define QUIC_HEADER_LEN 4
 
