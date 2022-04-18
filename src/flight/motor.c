@@ -65,7 +65,6 @@ float tempx[4];
 #endif
 
 extern profile_t profile;
-extern usb_motor_test_t usb_motor_test;
 
 static float motord(float in, int x) {
   float factor = profile.motor.torque_boost;
@@ -201,7 +200,7 @@ static void motor_mixer_scale_calc(float mix[4]) {
 
 void motor_mixer_calc(float mix[4]) {
   if (flags.usb_active) { // necessary to check if usb is active first or the else statement hijacks the state of global flag from turtle & motortest
-    if (usb_motor_test.active) {
+    if (motor_test.active) {
       flags.motortest_override = 1;
     } else {
       flags.motortest_override = 0;
@@ -213,12 +212,12 @@ void motor_mixer_calc(float mix[4]) {
 
   if (rx_aux_on(AUX_MOTOR_TEST) || flags.motortest_override || flags.controls_override) {
     // TODO: investigate how skipping all that code below affects looptime
-    if (usb_motor_test.active) {
+    if (motor_test.active) {
       // set mix according to values we got via usb
-      mix[MOTOR_FR] = usb_motor_test.value[MOTOR_FR];
-      mix[MOTOR_FL] = usb_motor_test.value[MOTOR_FL];
-      mix[MOTOR_BR] = usb_motor_test.value[MOTOR_BR];
-      mix[MOTOR_BL] = usb_motor_test.value[MOTOR_BL];
+      mix[MOTOR_FR] = motor_test.value[MOTOR_FR];
+      mix[MOTOR_FL] = motor_test.value[MOTOR_FL];
+      mix[MOTOR_BR] = motor_test.value[MOTOR_BR];
+      mix[MOTOR_BL] = motor_test.value[MOTOR_BL];
     } else {
       // motor test mode, we set mix according to sticks
       if (state.rx_filtered.roll < -0.5f || state.rx_filtered.pitch < -0.5f) {
