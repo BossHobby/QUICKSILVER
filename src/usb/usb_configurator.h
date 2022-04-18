@@ -67,11 +67,6 @@ typedef enum {
   QUIC_VAL_PERF_COUNTERS,
 } quic_values;
 
-typedef struct {
-  uint8_t active;
-  float value[4];
-} usb_motor_test_t;
-
 void usb_process_msp();
 void usb_process_quic();
 

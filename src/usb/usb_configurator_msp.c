@@ -9,8 +9,6 @@
 #include "project.h"
 #include "util/util.h"
 
-extern usb_motor_test_t usb_motor_test;
-
 void send_msp(uint8_t direction, uint8_t code, uint8_t *data, uint8_t len) {
   const uint8_t size = len + MSP_HEADER_LEN + 1;
 
@@ -171,10 +169,10 @@ void usb_process_msp() {
     // we always have 4 motors, but blheli expects 8
     // these are pwm values
     uint16_t data[8] = {
-        (uint16_t)mapf(usb_motor_test.value[0], 0.0f, 1.0f, 1000.f, 2000.f),
-        (uint16_t)mapf(usb_motor_test.value[1], 0.0f, 1.0f, 1000.f, 2000.f),
-        (uint16_t)mapf(usb_motor_test.value[2], 0.0f, 1.0f, 1000.f, 2000.f),
-        (uint16_t)mapf(usb_motor_test.value[3], 0.0f, 1.0f, 1000.f, 2000.f),
+        (uint16_t)mapf(motor_test.value[0], 0.0f, 1.0f, 1000.f, 2000.f),
+        (uint16_t)mapf(motor_test.value[1], 0.0f, 1.0f, 1000.f, 2000.f),
+        (uint16_t)mapf(motor_test.value[2], 0.0f, 1.0f, 1000.f, 2000.f),
+        (uint16_t)mapf(motor_test.value[3], 0.0f, 1.0f, 1000.f, 2000.f),
         0,
         0,
         0,
@@ -186,9 +184,9 @@ void usb_process_msp() {
   case MSP_SET_MOTOR: {
     uint16_t *values = (uint16_t *)(decode_buffer);
     for (uint8_t i = 0; i < 4; i++) {
-      usb_motor_test.value[i] = mapf(values[i], 1000.f, 2000.f, 0.0f, 1.0f);
+      motor_test.value[i] = mapf(values[i], 1000.f, 2000.f, 0.0f, 1.0f);
     }
-    usb_motor_test.active = 1;
+    motor_test.active = 1;
 
     send_msp_reply(code, NULL, 0);
     break;
@@ -198,7 +196,7 @@ void usb_process_msp() {
     uint8_t data[1] = {4};
     send_msp_reply(code, data, 1);
 
-    usb_motor_test.active = 0;
+    motor_test.active = 0;
 
     serial_4way_init();
     serial_4way_process();

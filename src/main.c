@@ -294,8 +294,7 @@ __attribute__((__used__)) int main() {
       usb_configurator();
     } else {
       flags.usb_active = 0;
-      extern usb_motor_test_t usb_motor_test;
-      usb_motor_test.active = 0;
+      motor_test.active = 0;
     }
 
     while ((time_micros() - time) < state.looptime_autodetect)

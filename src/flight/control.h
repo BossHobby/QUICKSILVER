@@ -2,8 +2,8 @@
 
 #include <stdint.h>
 
-#include "project.h"
 #include "failloop.h"
+#include "project.h"
 #include "rx.h"
 
 #include "util/vector.h"
@@ -135,7 +135,13 @@ typedef struct {
   MEMBER(errorvect, vec3_t)                 \
   MEMBER(pidoutput, vec3_t)
 
+typedef struct {
+  uint8_t active;
+  float value[4];
+} motor_test_t;
+
 extern control_state_t state;
+extern motor_test_t motor_test;
 
 cbor_result_t cbor_encode_control_state_t(cbor_value_t *enc, const control_state_t *s);
 

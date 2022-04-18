@@ -78,6 +78,11 @@ FAST_RAM control_state_t state = {
     },
 };
 
+motor_test_t motor_test = {
+    .active = 0,
+    .value = {0, 0, 0, 0},
+};
+
 static uint8_t idle_state;
 static uint8_t arming_release;
 static uint32_t onground_long = 1;
@@ -85,7 +90,6 @@ static uint32_t onground_long = 1;
 extern int ledcommand;
 
 extern profile_t profile;
-extern usb_motor_test_t usb_motor_test;
 
 #define MEMBER CBOR_ENCODE_MEMBER
 #define STR_MEMBER CBOR_ENCODE_STR_MEMBER
@@ -361,7 +365,7 @@ void control() {
     }
   }
 
-  if (usb_motor_test.active) {
+  if (motor_test.active) {
     flags.arm_state = 1;
     flags.on_ground = 0;
 
