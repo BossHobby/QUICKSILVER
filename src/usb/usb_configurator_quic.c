@@ -28,11 +28,6 @@
 
 #define quic_errorf(cmd, args...) send_quic_strf(cmd, QUIC_FLAG_ERROR, args)
 
-usb_motor_test_t usb_motor_test = {
-    .active = 0,
-    .value = {0, 0, 0, 0},
-};
-
 extern profile_t profile;
 extern profile_t default_profile;
 
@@ -47,7 +42,7 @@ extern uint32_t blackbox_rate;
 extern uint8_t encode_buffer[USB_BUFFER_SIZE];
 extern uint8_t decode_buffer[USB_BUFFER_SIZE];
 
-cbor_result_t cbor_encode_usb_motor_test_t(cbor_value_t *enc, const usb_motor_test_t *b) {
+cbor_result_t cbor_encode_motor_test_t(cbor_value_t *enc, const motor_test_t *b) {
   CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_map_indefinite(enc));
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "active"));
@@ -461,35 +456,35 @@ void process_motor_test(uint8_t *data, uint32_t len) {
 
   switch (cmd) {
   case QUIC_MOTOR_TEST_STATUS:
-    res = cbor_encode_usb_motor_test_t(&enc, &usb_motor_test);
+    res = cbor_encode_motor_test_t(&enc, &motor_test);
     check_cbor_error(QUIC_CMD_MOTOR);
 
     send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
 
   case QUIC_MOTOR_TEST_ENABLE:
-    usb_motor_test.active = 1;
+    motor_test.active = 1;
 
-    res = cbor_encode_uint8(&enc, &usb_motor_test.active);
+    res = cbor_encode_uint8(&enc, &motor_test.active);
     check_cbor_error(QUIC_CMD_MOTOR);
 
     send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
 
   case QUIC_MOTOR_TEST_DISABLE:
-    usb_motor_test.active = 0;
+    motor_test.active = 0;
 
-    res = cbor_encode_uint8(&enc, &usb_motor_test.active);
+    res = cbor_encode_uint8(&enc, &motor_test.active);
     check_cbor_error(QUIC_CMD_MOTOR);
 
     send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
 
   case QUIC_MOTOR_TEST_SET_VALUE:
-    res = cbor_decode_float_array(&dec, usb_motor_test.value, 4);
+    res = cbor_decode_float_array(&dec, motor_test.value, 4);
     check_cbor_error(QUIC_CMD_MOTOR);
 
-    res = cbor_encode_float_array(&enc, usb_motor_test.value, 4);
+    res = cbor_encode_float_array(&enc, motor_test.value, 4);
     check_cbor_error(QUIC_CMD_MOTOR);
 
     send_quic(QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
