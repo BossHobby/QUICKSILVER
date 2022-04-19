@@ -41,7 +41,7 @@ typedef enum {
   MSP_SUCCESS,
 } msp_status_t;
 
-typedef void (*msp_send_fn_t)(uint8_t direction, uint8_t code, uint8_t *data, uint8_t len);
+typedef void (*msp_send_fn_t)(uint8_t direction, uint8_t code, uint8_t *data, uint32_t len);
 
 typedef struct {
   uint8_t *buffer;
