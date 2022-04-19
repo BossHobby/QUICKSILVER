@@ -61,9 +61,10 @@ typedef enum {
   QUIC_VAL_PERF_COUNTERS,
 } quic_values;
 
-typedef void (*quic_send_fn_t)(uint8_t *data, uint32_t len);
+typedef void (*quic_send_fn_t)(uint8_t *data, uint32_t len, void *priv);
 
 typedef struct {
+  void *priv_data;
   quic_send_fn_t send;
 } quic_t;
 
