@@ -122,7 +122,7 @@ bool rx_serial_process_redpine() {
     rx_lqi_update_direct(0); // aux channels are binary and cannot carry rssi
   }
 
-  frame_status = FRAME_TX; // We're done with this frame now.
+  frame_status = FRAME_DONE; // We're done with this frame now.
 
   if (bind_safety > 131) {        // requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
     flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high

@@ -18,7 +18,6 @@ typedef enum {
   FRAME_IDLE,
   FRAME_RX,
   FRAME_RX_DONE,
-  FRAME_TX,
   FRAME_DONE
 } frame_status_t;
 
@@ -43,6 +42,8 @@ bool rx_serial_process_ibus();
 bool rx_serial_process_fport();
 bool rx_serial_process_crsf();
 bool rx_serial_process_redpine();
+
+void rx_serial_send_telemetry(uint32_t size);
 
 void rx_serial_send_fport_telemetry();
 void rx_serial_send_crsf_telemetry();
