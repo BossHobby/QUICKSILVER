@@ -16,7 +16,7 @@
 
 static uint8_t decode_buffer[USB_BUFFER_SIZE];
 
-void usb_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint8_t len) {
+void usb_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint32_t len) {
   const uint8_t size = len + MSP_HEADER_LEN + 1;
 
   static uint8_t frame[64];
@@ -47,7 +47,7 @@ static msp_t msp = {
     .send = usb_msp_send,
 };
 
-void usb_quic_send(uint8_t *data, uint32_t len) {
+void usb_quic_send(uint8_t *data, uint32_t len, void *priv) {
   usb_serial_write(data, len);
 }
 

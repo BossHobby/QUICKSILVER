@@ -5,9 +5,10 @@
 
 #include "drv_serial_4way.h"
 #include "flight/control.h"
+#include "quic.h"
 #include "util/util.h"
 
-static void msp_send_reply(msp_t *msp, uint8_t code, uint8_t *data, uint8_t len) {
+static void msp_send_reply(msp_t *msp, uint8_t code, uint8_t *data, uint32_t len) {
   if (msp->send) {
     msp->send('>', code, data, len);
   }
@@ -17,6 +18,11 @@ static void msp_send_error(msp_t *msp, uint8_t code) {
   if (msp->send) {
     msp->send('!', code, NULL, 0);
   }
+}
+
+static void msp_quic_send(uint8_t *data, uint32_t len, void *priv) {
+  msp_t *msp = (msp_t *)priv;
+  msp_send_reply(msp, MSP_RESERVE_1, data, len);
 }
 
 static void msp_process_serial_cmd(msp_t *msp, uint8_t cmd, uint8_t *payload, uint8_t size) {
@@ -145,6 +151,16 @@ static void msp_process_serial_cmd(msp_t *msp, uint8_t cmd, uint8_t *payload, ui
     break;
   }
 #endif
+
+  case MSP_RESERVE_1: {
+    quic_t quic = {
+        .priv_data = msp,
+        .send = msp_quic_send,
+    };
+    quic_process(&quic, payload, size);
+    break;
+  }
+
   default:
     msp_send_error(msp, cmd);
     break;
