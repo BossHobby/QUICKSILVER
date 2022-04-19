@@ -278,15 +278,9 @@ usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {{}, USART_PORTS};
 
 void handle_usart_isr(usart_ports_t port) {
 #ifdef SERIAL_RX
-  extern void RX_USART_ISR();
-  extern void TX_USART_ISR();
+  extern void rx_serial_isr();
   if (serial_rx_port == port) {
-    if (LL_USART_IsEnabledIT_TC(USART.channel) && LL_USART_IsActiveFlag_TC(USART.channel)) {
-      LL_USART_ClearFlag_TC(USART.channel);
-      TX_USART_ISR();
-    } else {
-      RX_USART_ISR();
-    }
+    rx_serial_isr();
     return;
   }
 #endif

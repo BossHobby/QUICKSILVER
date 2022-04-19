@@ -47,9 +47,7 @@ extern profile_t profile;
 extern int current_pid_axis;
 extern int current_pid_term;
 
-extern uint8_t telemetry_offset;
 extern uint8_t telemetry_packet[64];
-extern uint8_t ready_for_next_telemetry;
 
 static uint8_t crsf_rf_mode = 0;
 static uint16_t crsf_rf_mode_fps[] = {
@@ -65,7 +63,7 @@ static uint16_t crsf_rf_mode_fps[] = {
     1000, // RATE_FLRC_1000HZ
 };
 
-void rx_serial_crsf_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint8_t len);
+void rx_serial_crsf_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint32_t len);
 
 static uint8_t msp_rx_buffer[MSP_BUFFER_SIZE];
 static msp_t msp = {
@@ -76,7 +74,7 @@ static msp_t msp = {
 };
 
 static uint8_t msp_tx_buffer[MSP_BUFFER_SIZE];
-static uint16_t msp_tx_len = 0;
+static uint32_t msp_tx_len = 0;
 static uint8_t msp_last_cmd = 0;
 static uint8_t msp_last_size = 0;
 static uint8_t msp_origin = 0;
@@ -235,7 +233,7 @@ bool rx_serial_process_crsf() {
   if (rx_frame_position < rx_buffer_offset || rx_buffer[rx_buffer_offset] != 0xC8) {
     // we should have at least one byte by now.
     // fail if its not a magic
-    frame_status = FRAME_TX;
+    frame_status = FRAME_DONE;
     rx_buffer_offset = 0;
     return channels_received;
   }
@@ -251,7 +249,7 @@ bool rx_serial_process_crsf() {
 
   if (rx_data[0] != 0xC8 || rx_data[1] > 64) {
     quic_debugf("CRSF: invalid header");
-    frame_status = FRAME_TX;
+    frame_status = FRAME_DONE;
     rx_buffer_offset = 0;
     return channels_received;
   }
@@ -273,7 +271,7 @@ bool rx_serial_process_crsf() {
   if (crc_ours != crc_theirs) {
     // invalid crc, bail
     quic_debugf("CRSF: invalid crc, bail");
-    frame_status = FRAME_TX;
+    frame_status = FRAME_DONE;
     rx_buffer_offset = 0;
     return channels_received;
   }
@@ -284,7 +282,7 @@ bool rx_serial_process_crsf() {
 
   if ((rx_frame_position - rx_buffer_offset) <= 0) {
     // We're done with this frame now.
-    frame_status = FRAME_TX;
+    frame_status = FRAME_DONE;
     rx_buffer_offset = 0;
     telemetry_counter++; // Telemetry will send data out when this reaches 5
   }
@@ -292,7 +290,7 @@ bool rx_serial_process_crsf() {
   return channels_received;
 }
 
-void rx_serial_crsf_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint8_t len) {
+void rx_serial_crsf_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint32_t len) {
   msp_last_cmd = code;
   msp_last_size = len;
 
@@ -306,14 +304,7 @@ void rx_serial_crsf_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uin
 }
 
 void rx_serial_send_crsf_telemetry() {
-  // Send telemetry back once every 5 packets. This gives the RX time to send ITS telemetry back
-  if (frame_status != FRAME_TX) {
-    frame_status = FRAME_DONE;
-    return;
-  }
-
   if (telemetry_counter < telemetry_interval() && !msp_new_data) {
-    frame_status = FRAME_DONE;
     return;
   }
 
@@ -323,23 +314,30 @@ void rx_serial_send_crsf_telemetry() {
 
   uint32_t payload_size = 0;
   if (msp_new_data) {
-    msp_new_data = false;
-
     static uint8_t msp_seq = 0;
     static uint16_t msp_tx_sent = 0;
 
     uint8_t payload[CRSF_MSP_PAYLOAD_SIZE_MAX];
 
-    const uint8_t header_size = msp_tx_sent == 0 ? 3 : 1;
+    uint8_t header_size = 0;
     if (msp_tx_sent == 0) { // first chunk
-      payload[0] = MSP_STATUS_START_MASK | (msp_seq++ & MSP_STATUS_SEQUENCE_MASK) | (1 << MSP_STATUS_VERSION_SHIFT);
+      payload[header_size++] = MSP_STATUS_START_MASK | (msp_seq++ & MSP_STATUS_SEQUENCE_MASK) | (1 << MSP_STATUS_VERSION_SHIFT);
       if (msp_is_error) {
         payload[0] |= MSP_STATUS_ERROR_MASK;
       }
-      payload[1] = msp_last_size;
-      payload[2] = msp_last_cmd;
+
+      if (msp_last_size > 0xFF) {
+        payload[header_size++] = 0xFF;
+        payload[header_size++] = msp_last_cmd;
+        payload[header_size++] = (msp_last_size >> 0) & 0xFF;
+        payload[header_size++] = (msp_last_size >> 8) & 0xFF;
+      } else {
+        payload[header_size++] = msp_last_size;
+        payload[header_size++] = msp_last_cmd;
+      }
+
     } else {
-      payload[0] = (msp_seq++ & MSP_STATUS_SEQUENCE_MASK) | (1 << MSP_STATUS_VERSION_SHIFT);
+      payload[header_size++] = (msp_seq++ & MSP_STATUS_SEQUENCE_MASK) | (1 << MSP_STATUS_VERSION_SHIFT);
     }
 
     const uint8_t msp_size = min(CRSF_MSP_PAYLOAD_SIZE_MAX - header_size, msp_tx_len - msp_tx_sent);
@@ -350,6 +348,7 @@ void rx_serial_send_crsf_telemetry() {
       msp_tx_len = 0;
       msp_tx_sent = 0;
       frame_status = FRAME_DONE;
+      msp_new_data = false;
     }
 
     payload_size = crsf_tlm_frame_msp_resp(telemetry_packet, msp_origin, payload, msp_size + header_size);
@@ -357,17 +356,9 @@ void rx_serial_send_crsf_telemetry() {
     payload_size = crsf_tlm_frame_battery_sensor(telemetry_packet);
     frame_status = FRAME_DONE;
   }
-  telemetry_offset = crsf_tlm_frame_finish(telemetry_packet, payload_size) + 1;
 
-  // Shove the packet out the UART.
-  while (LL_USART_IsActiveFlag_TXE(USART.channel) == RESET)
-    ;
-  LL_USART_TransmitData8(USART.channel, telemetry_packet[0]);
-  ready_for_next_telemetry = 0;
-
-  // turn on the transmit transfer complete interrupt so that the rest of the telemetry packet gets sent
-  // That's it, telemetry has sent the first byte - the rest will be sent by the telemetry tx irq
-  LL_USART_EnableIT_TC(USART.channel);
+  const uint32_t telemetry_size = crsf_tlm_frame_finish(telemetry_packet, payload_size) + 1;
+  rx_serial_send_telemetry(telemetry_size);
 }
 
 #endif

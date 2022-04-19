@@ -123,7 +123,7 @@ bool rx_serial_process_dsm() {
       rx_lqi_update_direct(0); // no internal rssi data
     }
 
-    frame_status = FRAME_TX; // We're done with this frame now.
+    frame_status = FRAME_DONE; // We're done with this frame now.
 
     if ((bind_safety > 120) && (rx_buffer[1] == dsm_protocol)) { // requires 120 good frames to come in and one last sanity check the protocol still matches before rx_ready safety can be toggled to 1.  About a second of good data
       flags.rx_ready = 1;                                        // because aux channels initialize low and clear the binding while armed flag before aux updates high

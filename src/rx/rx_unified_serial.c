@@ -33,9 +33,11 @@ uint8_t failsafe_sbus_failsafe = 0;
 extern uint8_t failsafe_siglost;
 uint8_t failsafe_noframes = 0;
 
-uint8_t telemetry_offset = 0;
 uint8_t telemetry_packet[64];
-uint8_t ready_for_next_telemetry = 1;
+
+static bool telemetry_done = true;
+static uint32_t telemetry_size = 0;
+static uint32_t telemetry_offset = 0;
 
 static rx_serial_protocol_t protocol_to_check = 1;
 static uint16_t protocol_detect_timer = 0;
@@ -45,32 +47,7 @@ extern uint32_t last_frame_time_us;
 
 #define USART usart_port_defs[serial_rx_port]
 
-void TX_USART_ISR() {
-  // buffer position 0 has already been called by the telemetry process so we start at 1
-  static uint8_t increment_transmit_buffer = 1;
-
-  // reset this to 0 so that a protocol switch will not create a tx isr that does stuff without need
-  uint8_t bytes_to_send = 0;
-  if (bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_FPORT ||
-      bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_FPORT_INVERTED ||
-      bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_CRSF) {
-    // upload total telemetry bytes to send so telemetry transmit triggers action appropriate to protocol
-    bytes_to_send = telemetry_offset;
-  }
-
-  if (increment_transmit_buffer < bytes_to_send) {            // check the index to see if we have drained the buffer yet
-    while (LL_USART_IsActiveFlag_TXE(USART.channel) == RESET) // just in case - but this should do nothing since irq was called based on TXE
-      ;
-    LL_USART_TransmitData8(USART.channel, telemetry_packet[increment_transmit_buffer]); // send a byte out of the buffer indexed by the counter
-    increment_transmit_buffer++;                                                        // increment the counter
-  } else {                                                                              // this interrupt ran because the last byte was sent
-    increment_transmit_buffer = 1;                                                      // reset the counter to the right index for the next telemetry irq event
-    ready_for_next_telemetry = 1;                                                       // set the flag to allow the telemetry process to run again
-    LL_USART_DisableIT_TC(USART.channel);
-  }
-}
-
-void RX_USART_ISR() {
+void rx_serial_isr() {
   volatile uint32_t ticks = DWT->CYCCNT;
   static volatile uint32_t last_ticks = 0;
 
@@ -87,13 +64,25 @@ void RX_USART_ISR() {
     frame_status = FRAME_IDLE;
   }
 
-  if (LL_USART_IsActiveFlag_ORE(USART.channel)) {
-    // overflow means something was lost
-    LL_USART_ClearFlag_ORE(USART.channel);
-    rx_frame_position = 0;
+  if (LL_USART_IsEnabledIT_TC(USART.channel) && LL_USART_IsActiveFlag_TC(USART.channel)) {
+    LL_USART_ClearFlag_TC(USART.channel);
+    if (telemetry_offset == telemetry_size && !telemetry_done) {
+      telemetry_done = true;
+      LL_USART_DisableIT_TC(USART.channel);
+    }
   }
 
-  if (LL_USART_IsActiveFlag_RXNE(USART.channel)) {
+  if (LL_USART_IsEnabledIT_TXE(USART.channel) && LL_USART_IsActiveFlag_TXE(USART.channel)) {
+    if (telemetry_offset < telemetry_size) {
+      LL_USART_TransmitData8(USART.channel, telemetry_packet[telemetry_offset]);
+      telemetry_offset++;
+    }
+    if (telemetry_offset == telemetry_size) {
+      LL_USART_DisableIT_TXE(USART.channel);
+    }
+  }
+
+  if (LL_USART_IsEnabledIT_RXNE(USART.channel) && LL_USART_IsActiveFlag_RXNE(USART.channel)) {
     rx_buffer[rx_frame_position++] = LL_USART_ReceiveData8(USART.channel);
     // LL_USART_ClearFlag_RXNE(USART.channel);
 
@@ -103,6 +92,24 @@ void RX_USART_ISR() {
 
     rx_frame_position %= (RX_BUFF_SIZE);
   }
+
+  if (LL_USART_IsActiveFlag_ORE(USART.channel)) {
+    // overflow means something was lost
+    LL_USART_ClearFlag_ORE(USART.channel);
+    rx_frame_position = 0;
+  }
+}
+
+void rx_serial_send_telemetry(uint32_t size) {
+  telemetry_size = size;
+  telemetry_offset = 0;
+
+  telemetry_done = false;
+
+  LL_USART_ClearFlag_TC(USART.channel);
+
+  LL_USART_EnableIT_TXE(USART.channel);
+  LL_USART_EnableIT_TC(USART.channel);
 }
 
 void rx_serial_update_frame_length(rx_serial_protocol_t proto) {
@@ -223,8 +230,9 @@ bool rx_check() {
   }
 
   // add the 3 failsafes together
-  if (flags.rx_ready)
+  if (flags.rx_ready) {
     flags.failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
+  }
 
   if (frame_status == FRAME_INVALID) {
     // RX/USART not set up.
@@ -256,39 +264,23 @@ bool rx_check() {
     default:
       break;
     }
-  } else if (frame_status == FRAME_TX) {
-    switch (bind_storage.unified.protocol) {
-    case RX_SERIAL_PROTOCOL_DSM:
-      // Run DSM Telemetry
-      frame_status = FRAME_DONE;
-      break;
-    case RX_SERIAL_PROTOCOL_SBUS:
-    case RX_SERIAL_PROTOCOL_SBUS_INVERTED:
-      // Run smartport telemetry?
-      frame_status = FRAME_DONE;
-      break;
-    case RX_SERIAL_PROTOCOL_IBUS:
-      // IBUS Telemetry function call goes here
-      frame_status = FRAME_DONE;
-      break;
-    case RX_SERIAL_PROTOCOL_FPORT:
-    case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
-      if (ready_for_next_telemetry)
-        rx_serial_send_fport_telemetry();
-      else
-        frame_status = FRAME_DONE;
-      break;
-    case RX_SERIAL_PROTOCOL_CRSF:
-      if (ready_for_next_telemetry)
-        rx_serial_send_crsf_telemetry();
-      else
-        frame_status = FRAME_DONE;
-      break;
+  }
 
-    default:
-      frame_status = FRAME_DONE;
-      break;
+  switch (bind_storage.unified.protocol) {
+  case RX_SERIAL_PROTOCOL_FPORT:
+  case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
+    if (telemetry_done) {
+      rx_serial_send_fport_telemetry();
     }
+    break;
+  case RX_SERIAL_PROTOCOL_CRSF:
+    if (telemetry_done) {
+      rx_serial_send_crsf_telemetry();
+    }
+    break;
+
+  default:
+    break;
   }
 
   rx_lqi_update();
@@ -360,7 +352,7 @@ void rx_serial_find_protocol() {
       }
       break;
     default:
-      frame_status = FRAME_TX; // Whatever we got, it didn't make sense. Mark the frame as Checked and start over.
+      frame_status = FRAME_DONE; // Whatever we got, it didn't make sense. Mark the frame as Checked and start over.
       break;
     }
   }

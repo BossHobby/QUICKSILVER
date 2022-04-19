@@ -29,9 +29,7 @@ extern profile_t profile;
 extern int current_pid_axis;
 extern int current_pid_term;
 
-extern uint8_t telemetry_offset;
 extern uint8_t telemetry_packet[64];
-extern uint8_t ready_for_next_telemetry;
 
 #define USART usart_port_defs[serial_rx_port]
 
@@ -115,7 +113,7 @@ bool rx_serial_process_sbus() {
     rx_lqi_update_direct(0); // no internal rssi data
   }
 
-  frame_status = FRAME_TX; // We're done with this frame now.
+  frame_status = FRAME_DONE; // We're done with this frame now.
 
   if (bind_safety > 131) {        // requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
     flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
@@ -257,8 +255,8 @@ bool rx_serial_process_fport() {
         rx_lqi_update_direct(0); // no internal rssi data
       }
 
-      frame_status = FRAME_TX; // We're done with this frame now.
-      telemetry_counter++;     // Let the telemetry section know it's time to send.
+      frame_status = FRAME_DONE; // We're done with this frame now.
+      telemetry_counter++;       // Let the telemetry section know it's time to send.
 
       if (bind_safety > 131) {        // requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
         flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
@@ -284,7 +282,7 @@ vec3_t *get_pid_value(uint8_t term) {
 }
 
 void rx_serial_send_fport_telemetry() {
-  if (telemetry_counter > 1 && rx_frame_position >= 41 && frame_status == FRAME_TX) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
+  if (telemetry_counter > 1 && rx_frame_position >= 41) { // Send telemetry back every other packet. This gives the RX time to send ITS telemetry back
     static uint8_t skip_a_loop;
     skip_a_loop++;
     if (skip_a_loop < 3) {
@@ -364,7 +362,7 @@ void rx_serial_send_fport_telemetry() {
     }
 
     // This *should* properly escape 0x7D and 0x7E characters. It doesn't.
-    telemetry_offset = 0;
+    uint32_t telemetry_size = 0;
     for (uint8_t i = 8; i > 4; i--) {
       if (telemetry_packet[i] == 0x7D || telemetry_packet[i] == 0x7E) {
         for (uint8_t x = 8; x >= i; x--) {
@@ -376,31 +374,24 @@ void rx_serial_send_fport_telemetry() {
         } else {
           telemetry_packet[i + 1] = 0x5E;
         }
-        telemetry_offset++;
+        telemetry_size++;
       }
     }
-    telemetry_packet[0] += telemetry_offset;
+    telemetry_packet[0] += telemetry_size;
 
     uint16_t teleCRC = 0;
     // Calculate CRC for packet. This function does not support escaped characters.
-    for (int x = 0; x < 9 + telemetry_offset; x++) {
+    for (int x = 0; x < 9 + telemetry_size; x++) {
       teleCRC = teleCRC + telemetry_packet[x];
     }
     teleCRC = teleCRC + (teleCRC >> 8);
     teleCRC = 0xff - teleCRC;
     teleCRC = teleCRC << 8;
     teleCRC = teleCRC >> 8;
-    telemetry_packet[9 + telemetry_offset] = teleCRC; // 0x34;
+    telemetry_packet[9 + telemetry_size] = teleCRC; // 0x34;
 
-    telemetry_offset += 10;
+    rx_serial_send_telemetry(telemetry_size + 10);
 
-    // Shove the packet out the UART. This *should* support escaped characters, but it doesn't work.
-    while (LL_USART_IsActiveFlag_TXE(USART.channel) == RESET) // just in case - but this should do nothing if ready_for_next_telemetry flag is properly cleared by irq
-      ;
-    LL_USART_TransmitData8(USART.channel, telemetry_packet[0]);
-    ready_for_next_telemetry = 0;
-    LL_USART_EnableIT_TC(USART.channel); // turn on the transmit transfer complete interrupt so that the rest of the telemetry packet gets sent
-    // That's it, telemetry has sent the first byte - the rest will be sent by the telemetry tx irq
     telemetry_position++;
     if (fport_debug_telemetry) {
       if (telemetry_position >= sizeof(telemetry_ids) / 2) // 2 byte ints, so this should give the number of entries. It just incremented, which takes care of the count with 0 or 1
