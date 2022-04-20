@@ -529,9 +529,14 @@
   },
   {
     "name": "geprcf405",
-    "defines": {
-      "BRUSHLESS_TARGET": "",
-      "RX_UNIFIED_SERIAL": ""
-    }
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines":{
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        } 
+      }
+    ]
   }
 ]
