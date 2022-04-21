@@ -222,6 +222,12 @@ msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint32_t len) {
     }
     last_size = data[offset++];
     last_cmd = data[offset++];
+
+    if (last_size == 0xFF) {
+      last_size = (data[offset + 1] << 8) | data[offset];
+      offset += 2;
+    }
+
     packet_started = true;
     msp->buffer_offset = 0;
   } else { // second chunk
