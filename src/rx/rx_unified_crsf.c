@@ -76,7 +76,6 @@ static msp_t msp = {
 static uint8_t msp_tx_buffer[MSP_BUFFER_SIZE];
 static uint32_t msp_tx_len = 0;
 static uint8_t msp_last_cmd = 0;
-static uint8_t msp_last_size = 0;
 static uint8_t msp_origin = 0;
 static bool msp_new_data = false;
 static bool msp_is_error = false;
@@ -202,7 +201,7 @@ static bool rx_serial_crsf_process_frame() {
 
   case CRSF_FRAMETYPE_MSP_REQ: {
     msp_origin = rx_data[4];
-    msp_process_telemetry(&msp, rx_data + 5, rx_data[1] - 3);
+    msp_process_telemetry(&msp, rx_data + 5, rx_data[1] - 4);
     break;
   }
 
@@ -292,7 +291,6 @@ bool rx_serial_process_crsf() {
 
 void rx_serial_crsf_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint32_t len) {
   msp_last_cmd = code;
-  msp_last_size = len;
 
   if (len > 0 && data) {
     memcpy(msp_tx_buffer, data, len);
@@ -326,13 +324,13 @@ void rx_serial_send_crsf_telemetry() {
         payload[0] |= MSP_STATUS_ERROR_MASK;
       }
 
-      if (msp_last_size > 0xFF) {
+      if (msp_tx_len > 0xFF) {
         payload[header_size++] = 0xFF;
         payload[header_size++] = msp_last_cmd;
-        payload[header_size++] = (msp_last_size >> 0) & 0xFF;
-        payload[header_size++] = (msp_last_size >> 8) & 0xFF;
+        payload[header_size++] = (msp_tx_len >> 0) & 0xFF;
+        payload[header_size++] = (msp_tx_len >> 8) & 0xFF;
       } else {
-        payload[header_size++] = msp_last_size;
+        payload[header_size++] = msp_tx_len;
         payload[header_size++] = msp_last_cmd;
       }
 
