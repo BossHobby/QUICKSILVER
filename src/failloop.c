@@ -5,7 +5,7 @@
 #include "drv_usb.h"
 #include "flight/control.h"
 #include "io/led.h"
-#include "usb_configurator.h"
+#include "io/usb_configurator.h"
 
 const char *failloop_string(failloop_t val) {
   switch (val) {

@@ -15,10 +15,10 @@
 #include "flight/sixaxis.h"
 #include "flip_sequencer.h"
 #include "io/led.h"
+#include "io/usb_configurator.h"
 #include "io/vbat.h"
 #include "motor.h"
 #include "profile.h"
-#include "usb_configurator.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
 

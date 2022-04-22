@@ -3,7 +3,7 @@
 #include "drv_serial.h"
 #include "drv_serial_soft.h"
 #include "drv_time.h"
-#include "usb_configurator.h"
+#include "io/usb_configurator.h"
 #include "util/circular_buffer.h"
 
 #if defined(ENABLE_SMART_AUDIO) || defined(ENABLE_TRAMP)

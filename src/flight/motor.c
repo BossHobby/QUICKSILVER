@@ -2,9 +2,9 @@
 
 #include "drv_motor.h"
 #include "flight/control.h"
+#include "io/usb_configurator.h"
 #include "profile.h"
 #include "project.h"
-#include "usb_configurator.h"
 #include "util/util.h"
 
 #ifdef MOTORS_TO_THROTTLE

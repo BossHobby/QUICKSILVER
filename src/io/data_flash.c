@@ -5,7 +5,7 @@
 #include "drv_spi_m25p16.h"
 #include "drv_spi_sdcard.h"
 #include "drv_time.h"
-#include "usb_configurator.h"
+#include "io/usb_configurator.h"
 #include "util/util.h"
 
 #ifdef ENABLE_BLACKBOX

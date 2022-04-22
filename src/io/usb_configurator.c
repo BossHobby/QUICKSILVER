@@ -1,4 +1,4 @@
-#include "usb_configurator.h"
+#include "io/usb_configurator.h"
 
 #include <stdarg.h>
 #include <stdio.h>

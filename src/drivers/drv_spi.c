@@ -2,8 +2,8 @@
 
 #include <string.h>
 
+#include "io/usb_configurator.h"
 #include "project.h"
-#include "usb_configurator.h"
 
 #include "drv_dma.h"
 #include "drv_interrupt.h"
