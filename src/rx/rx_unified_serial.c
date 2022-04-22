@@ -9,9 +9,9 @@
 #include "flash.h"
 #include "flight/control.h"
 #include "io/led.h"
+#include "io/usb_configurator.h"
 #include "profile.h"
 #include "project.h"
-#include "usb_configurator.h"
 #include "util/util.h"
 
 #ifdef RX_UNIFIED_SERIAL

@@ -4,8 +4,8 @@
 #include "drv_time.h"
 #include "flash.h"
 #include "flight/control.h"
+#include "io/usb_configurator.h"
 #include "profile.h"
-#include "usb_configurator.h"
 #include "util/circular_buffer.h"
 #include "util/util.h"
 #include <string.h>

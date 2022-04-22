@@ -4,8 +4,8 @@
 #include "drv_time.h"
 #include "flash.h"
 #include "flight/control.h"
+#include "io/usb_configurator.h"
 #include "profile.h"
-#include "usb_configurator.h"
 #include "util/util.h"
 
 #if defined(RX_FRSKY_D8) && defined(USE_CC2500)
