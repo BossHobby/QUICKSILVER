@@ -10,10 +10,10 @@
 #include "drv_time.h"
 #include "flight/control.h"
 #include "io/msp.h"
+#include "io/usb_configurator.h"
 #include "profile.h"
 #include "project.h"
 #include "rx_crsf.h"
-#include "usb_configurator.h"
 #include "util/util.h"
 
 #define MSP_BUFFER_SIZE 128

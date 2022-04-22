@@ -8,9 +8,9 @@
 #include "drv_time.h"
 #include "flash.h"
 #include "flight/control.h"
+#include "io/usb_configurator.h"
 #include "project.h"
 #include "rx_crsf.h"
-#include "usb_configurator.h"
 
 #if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
 

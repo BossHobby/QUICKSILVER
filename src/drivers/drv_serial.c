@@ -2,9 +2,9 @@
 
 #include "drv_interrupt.h"
 #include "drv_time.h"
+#include "io/usb_configurator.h"
 #include "profile.h"
 #include "project.h"
-#include "usb_configurator.h"
 
 usart_ports_t serial_rx_port = USART_PORT_INVALID;
 usart_ports_t serial_smart_audio_port = USART_PORT_INVALID;

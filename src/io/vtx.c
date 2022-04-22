@@ -8,9 +8,9 @@
 #include "drv_serial_vtx_tramp.h"
 #include "drv_time.h"
 #include "flight/control.h"
+#include "io/usb_configurator.h"
 #include "project.h"
 #include "rx.h"
-#include "usb_configurator.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
 

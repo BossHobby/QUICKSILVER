@@ -26,6 +26,7 @@
 #include "io/buzzer.h"
 #include "io/led.h"
 #include "io/rgb_led.h"
+#include "io/usb_configurator.h"
 #include "io/vbat.h"
 #include "io/vtx.h"
 #include "osd_render.h"
@@ -33,7 +34,6 @@
 #include "project.h"
 #include "reset.h"
 #include "rx.h"
-#include "usb_configurator.h"
 #include "util/util.h"
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE

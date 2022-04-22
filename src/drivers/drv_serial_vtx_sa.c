@@ -5,8 +5,8 @@
 #include "drv_serial.h"
 #include "drv_serial_vtx.h"
 #include "drv_time.h"
+#include "io/usb_configurator.h"
 #include "profile.h"
-#include "usb_configurator.h"
 #include "util/circular_buffer.h"
 #include "util/util.h"
 

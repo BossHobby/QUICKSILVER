@@ -9,7 +9,7 @@
 #include "drv_serial_soft.h"
 #include "drv_usb.h"
 #include "io/led.h"
-#include "usb_configurator.h"
+#include "io/usb_configurator.h"
 #include "util/cbor_helper.h"
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
