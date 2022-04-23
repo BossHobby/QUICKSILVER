@@ -150,7 +150,11 @@ __attribute__((__used__)) int main() {
 
   // init some hardware things
   gpio_init();
-  ledon(255); // Turn on LED during boot so that if a delay is used as part of using programming pins for other functions, the FC does not appear inactive while programming times out
+
+  // Turn on LED during boot so that if a delay is used as part of using programming pins for other functions,
+  // the FC does not appear inactive while programming times out
+  led_init();
+  led_on(LEDALL);
 
   debug_pin_init();
   buzzer_init();

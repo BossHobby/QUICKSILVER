@@ -14,10 +14,10 @@
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 
-#define RX_LED_OFF ledoff(1)
-#define RX_LED_ON ledon(1)
-#define TX_LED_OFF ledoff(2)
-#define TX_LED_ON ledon(2)
+#define RX_LED_OFF led_off(1)
+#define RX_LED_ON led_on(1)
+#define TX_LED_OFF led_off(2)
+#define TX_LED_ON led_on(2)
 
 #define ATMEL_DEVICE_MATCH(device_id) ((device_id == 0x9307) || (device_id == 0x930A) || \
                                        (device_id == 0x930F) || (device_id == 0x940B))

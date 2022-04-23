@@ -37,41 +37,14 @@ void gpio_init() {
   SET_BIT(RCC->AHB4ENR, ports);
 #endif
 
-  LL_GPIO_InitTypeDef init;
-  init.Mode = LL_GPIO_MODE_OUTPUT;
-  init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  init.Pull = LL_GPIO_PULL_NO;
-  init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-
-#ifdef ENABLE_VREG_PIN
-  gpio_pin_init(&init, VREG_PIN_1);
-  gpio_pin_set(VREG_PIN_1);
-#endif
-
-#if (LED_NUMBER > 0)
-  gpio_pin_init(&init, LED1PIN);
-#endif
-#if (LED_NUMBER > 1)
-  gpio_pin_init(&init, LED2PIN);
-#endif
-#if (LED_NUMBER > 2)
-  gpio_pin_init(&init, LED3PIN);
-#endif
-#if (LED_NUMBER > 3)
-  gpio_pin_init(&init, LED4PIN);
-#endif
-
-#if (AUX_LED_NUMBER > 0)
-  gpio_pin_init(&init, AUX_LED1PIN);
-#endif
-#if (AUX_LED_NUMBER > 1)
-  gpio_pin_init(&init, AUX_LED2PIN);
-#endif
-
 #if defined(FPV_PIN)
-  if (FPV_PIN == PIN_A13 || FPV_PIN == PIN_A14) {
-    // skip repurpose of swd pin @boot
-  } else {
+  // skip repurpose of swd pin @boot
+  if (FPV_PIN != PIN_A13 && FPV_PIN != PIN_A14) {
+    LL_GPIO_InitTypeDef init;
+    init.Mode = LL_GPIO_MODE_OUTPUT;
+    init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+    init.Pull = LL_GPIO_PULL_NO;
+    init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
     gpio_pin_init(&init, FPV_PIN);
     gpio_pin_reset(FPV_PIN);
     fpv_init_done = 1;

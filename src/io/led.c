@@ -13,7 +13,28 @@ int ledcommand = 0;
 int ledblink = 0;
 uint32_t ledcommandtime = 0;
 
-void ledon(uint8_t val) {
+void led_init() {
+  LL_GPIO_InitTypeDef init;
+  init.Mode = LL_GPIO_MODE_OUTPUT;
+  init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  init.Pull = LL_GPIO_PULL_NO;
+  init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+
+#if (LED_NUMBER > 0)
+  gpio_pin_init(&init, LED1PIN);
+#endif
+#if (LED_NUMBER > 1)
+  gpio_pin_init(&init, LED2PIN);
+#endif
+#if (LED_NUMBER > 2)
+  gpio_pin_init(&init, LED3PIN);
+#endif
+#if (LED_NUMBER > 3)
+  gpio_pin_init(&init, LED4PIN);
+#endif
+}
+
+void led_on(uint8_t val) {
 #if (LED_NUMBER > 0)
 #ifdef LED1_INVERT
   if (val & 1)
@@ -52,7 +73,7 @@ void ledon(uint8_t val) {
 #endif
 }
 
-void ledoff(uint8_t val) {
+void led_off(uint8_t val) {
 #if (LED_NUMBER > 0)
 #ifdef LED1_INVERT
   if (val & 1)
@@ -91,12 +112,12 @@ void ledoff(uint8_t val) {
 #endif
 }
 
-void ledflash(uint32_t period, int duty) {
+void led_flash(uint32_t period, int duty) {
 #if (LED_NUMBER > 0)
   if (time_micros() % period > (period * duty) >> 4) {
-    ledon(LEDALL);
+    led_on(LEDALL);
   } else {
-    ledoff(LEDALL);
+    led_off(LEDALL);
   }
 #endif
 }
@@ -118,10 +139,10 @@ uint8_t led_pwm(uint8_t pwmval) {
   ds_integrator += (desiredbrightness - lastledbrightness) * ledtime * (1.0f / LOOPTIME);
 
   if (ds_integrator > 0.49f) {
-    ledon(255);
+    led_on(LEDALL);
     lastledbrightness = 1.0f;
   } else {
-    ledoff(255);
+    led_off(LEDALL);
     lastledbrightness = 0;
   }
   return 0;
@@ -134,17 +155,17 @@ void led_update() {
 
   // led flash logic
   if (flags.lowbatt) {
-    ledflash(500000, 8);
+    led_flash(500000, 8);
     return;
   }
 
   if (flags.rx_mode == RXMODE_BIND) { // bind mode
-    ledflash(100000, 12);
+    led_flash(100000, 12);
     return;
   }
 
   if (flags.failsafe) {
-    ledflash(500000, 15);
+    led_flash(500000, 15);
     return;
   }
 
@@ -155,7 +176,7 @@ void led_update() {
       ledcommand = 0;
       ledcommandtime = 0;
     }
-    ledflash(100000, 8);
+    led_flash(100000, 8);
     return;
   }
 
@@ -163,19 +184,19 @@ void led_update() {
     uint32_t time = time_micros();
     if (!ledcommandtime) {
       ledcommandtime = time;
-      ledoff(255);
+      led_off(LEDALL);
     }
     if (time - ledcommandtime > 500000) {
       ledblink--;
       ledcommandtime = 0;
     }
     if (time - ledcommandtime > 300000) {
-      ledon(255);
+      led_on(LEDALL);
     }
   } else { // led is normally on
     if (LED_BRIGHTNESS != 15)
       led_pwm(LED_BRIGHTNESS);
     else
-      ledon(255);
+      led_on(LEDALL);
   }
 }

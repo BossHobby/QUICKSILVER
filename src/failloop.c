@@ -48,9 +48,9 @@ void failloop(failloop_t val) {
 
     if (blink_counter < val) {
       if ((time_millis() - blink_start) < 500) {
-        ledon(LEDALL);
+        led_on(LEDALL);
       } else if ((time_millis() - blink_start) < 1000) {
-        ledoff(LEDALL);
+        led_off(LEDALL);
       } else if ((time_millis() - blink_start) >= 1000) {
         blink_counter++;
         blink_start = time_millis();
