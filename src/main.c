@@ -81,9 +81,6 @@ __attribute__((__used__)) int main() {
   filter_global_init();
   pid_init();
 
-  // read pid identifier for values in file pid.c
-  flash_hard_coded_pid_identifier();
-
   // load flash saved variables
   flash_load();
   time_delay_us(1000);

@@ -22,7 +22,7 @@ static float initial_pid_identifier = -10;
 flash_storage_t flash_storage;
 rx_bind_storage_t bind_storage;
 
-float flash_get_hard_coded_pid_identifier() {
+static float flash_get_hard_coded_pid_identifier() {
   float result = 0;
 
   for (int i = 0; i < 3; i++) {
@@ -31,10 +31,6 @@ float flash_get_hard_coded_pid_identifier() {
     result += profile.pid.pid_rates[0].kd.axis[i] * (i + 1) * (3) * 0.932f;
   }
   return result;
-}
-
-void flash_hard_coded_pid_identifier() {
-  initial_pid_identifier = flash_get_hard_coded_pid_identifier();
 }
 
 CBOR_START_STRUCT_ENCODER(rx_bind_storage_t)
@@ -111,6 +107,8 @@ void flash_save() {
 }
 
 void flash_load() {
+  initial_pid_identifier = flash_get_hard_coded_pid_identifier();
+
   // check if saved data is present
   if (fmc_read(0) != FMC_HEADER || fmc_read(FMC_END_OFFSET) != FMC_HEADER) {
     // Flash was empty, load defaults?
