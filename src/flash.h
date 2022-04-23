@@ -49,5 +49,3 @@ cbor_result_t cbor_decode_rx_bind_storage_t(cbor_value_t *enc, rx_bind_storage_t
 
 void flash_save();
 void flash_load();
-
-void flash_hard_coded_pid_identifier();
