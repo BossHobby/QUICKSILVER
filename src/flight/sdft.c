@@ -181,12 +181,12 @@ bool sdft_update(sdft_t *sdft) {
       }
 
       const float y0 = sdft->magnitude[sdft->peak_indicies[peak] - 1];
-      const float y1 = sdft->magnitude[sdft->peak_indicies[peak]];
-      const float y2 = sdft->magnitude[sdft->peak_indicies[peak] + 1];
+      const float y1 = 1.75f * sdft->magnitude[sdft->peak_indicies[peak]];
+      const float y2 = 1.25f * sdft->magnitude[sdft->peak_indicies[peak] + 1];
 
       // Estimate true peak position aka. meanBin (fit parabola y(x) over y0, y1 and y2, solve dy/dx=0 for x)
       float meanBin = sdft->peak_indicies[peak];
-      const float denom = 2.0f * (y0 - 2 * y1 + y2);
+      const float denom = 2.0f * (y0 - y1 + y2);
       if (denom != 0.0f) {
         meanBin += (y0 - y2) / denom;
       }
