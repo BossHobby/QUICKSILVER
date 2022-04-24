@@ -11,6 +11,7 @@
 
 #ifdef ENABLE_OSD
 
+#define DMA_BUFFER_SIZE 128
 #define MAX7456_BAUD_RATE spi_find_divder(MHZ_TO_HZ(10.5))
 
 // osd video system (PAL/NTSC) at startup if no video input is present
@@ -21,16 +22,16 @@ static osd_system_t last_osd_system = OSD_SYS_NONE;
 // detected osd video system starts at 99 and gets updated here by osd_checksystem()
 static uint8_t lastvm0 = 0x55;
 
-static uint8_t dma_buffer[64];
+static uint8_t dma_buffer[DMA_BUFFER_SIZE];
 static uint16_t dma_offset = 0;
 
-static volatile uint8_t buffer[128];
+static volatile uint8_t buffer[DMA_BUFFER_SIZE * 2];
 static volatile spi_bus_device_t bus = {
     .port = MAX7456_SPI_PORT,
     .nss = MAX7456_NSS,
 
     .buffer = buffer,
-    .buffer_size = 128,
+    .buffer_size = DMA_BUFFER_SIZE * 2,
 
     .auto_continue = true,
 };
