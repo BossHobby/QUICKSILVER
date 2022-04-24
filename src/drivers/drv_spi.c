@@ -468,9 +468,15 @@ void spi_bus_device_reconfigure(volatile spi_bus_device_t *bus, spi_mode_t mode,
 }
 
 spi_txn_t *spi_txn_init(volatile spi_bus_device_t *bus, spi_txn_done_fn_t done_fn) {
-  bus->txn_head = (bus->txn_head + 1) % SPI_TXN_MAX;
+  const uint8_t head = (bus->txn_head + 1) % SPI_TXN_MAX;
 
-  volatile spi_txn_t *txn = &bus->txns[bus->txn_head];
+  volatile spi_txn_t *txn = &bus->txns[head];
+  if (txn->status == TXN_IN_PROGRESS) {
+    // next txn is still in progress, wait for it to complete
+    spi_txn_wait(bus);
+  }
+  bus->txn_head = head;
+
   txn->bus = bus;
   txn->status = TXN_WAITING;
   txn->segment_count = 0;
