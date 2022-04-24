@@ -176,6 +176,8 @@ void osd_txn_write_int(int32_t val, uint8_t width) {
   uint8_t actual_width = 0;
   uint8_t buf[width];
 
+  val = -val;
+
   for (uint8_t i = 0; i < width; i++) {
     if (val != 0) {
       buf[width - i - 1] = '0' + (val % 10);
@@ -187,7 +189,7 @@ void osd_txn_write_int(int32_t val, uint8_t width) {
   }
 
   if (actual_width < width - 1) {
-    buf[width - actual_width] = '-';
+    buf[actual_width + 1] = '-';
   }
 
   osd_txn_write_data(buf, width);
@@ -199,7 +201,7 @@ void osd_txn_write_float(float val, uint8_t width, uint8_t precision) {
   uint8_t actual_width = 0;
   uint8_t buf[width];
 
-  uint32_t value = val * (is_negative ? -1.01f : 1.0f) * ipow(10, precision);
+  uint32_t value = val * (is_negative ? -1.0f : 1.0f) * ipow(10, precision);
   for (uint8_t i = 0; i < precision; i++) {
     buf[width - i - 1] = '0' + (value % 10);
     value /= 10;
