@@ -494,7 +494,14 @@ spi_txn_t *spi_txn_init(volatile spi_bus_device_t *bus, spi_txn_done_fn_t done_f
 }
 
 void spi_txn_add_seg_delay(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size) {
-  if (size == 0) {
+  if (size == 0 || txn->status == TXN_ERROR) {
+    return;
+  }
+
+  const int32_t available = txn->bus->buffer_size - txn->offset - txn->size;
+  if (size >= available) {
+    txn->status = TXN_ERROR;
+    txn->size = 0;
     return;
   }
 
@@ -508,7 +515,14 @@ void spi_txn_add_seg_delay(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_d
 }
 
 void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size) {
-  if (size == 0) {
+  if (size == 0 || txn->status == TXN_ERROR) {
+    return;
+  }
+
+  const int32_t available = txn->bus->buffer_size - txn->offset - txn->size;
+  if (size >= available) {
+    txn->status = TXN_ERROR;
+    txn->size = 0;
     return;
   }
 
@@ -531,7 +545,9 @@ void spi_txn_add_seg_const(spi_txn_t *txn, const uint8_t tx_data) {
 }
 
 void spi_txn_submit(spi_txn_t *txn) {
-  txn->status = TXN_READY;
+  if (txn->status != TXN_ERROR) {
+    txn->status = TXN_READY;
+  }
 }
 
 void spi_txn_continue(volatile spi_bus_device_t *bus) {
@@ -552,7 +568,15 @@ void spi_txn_continue(volatile spi_bus_device_t *bus) {
   const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
 
   volatile spi_txn_t *txn = &bus->txns[tail];
+  if (txn->status == TXN_ERROR) {
+    bus->txn_tail = tail;
+  }
   if (txn->status != TXN_READY) {
+    return;
+  }
+  if (txn->size == 0) {
+    bus->txn_tail = tail;
+    txn->status = TXN_DONE;
     return;
   }
 

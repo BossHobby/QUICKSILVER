@@ -58,6 +58,7 @@ typedef enum {
   TXN_READY,
   TXN_IN_PROGRESS,
   TXN_DONE,
+  TXN_ERROR,
 } spi_txn_status_t;
 
 typedef void (*spi_txn_done_fn_t)();
