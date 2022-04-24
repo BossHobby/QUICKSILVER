@@ -628,7 +628,7 @@ static void osd_display_regular() {
   case OSD_GYRO_TEMP: {
     osd_transaction_t *txn = osd_txn_init();
     osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
-    osd_txn_write_uint(state.gyro_temp, 4);
+    osd_txn_write_int(state.gyro_temp, 4);
     osd_txn_write_char(ICON_CELSIUS);
     osd_txn_submit(txn);
     osd_state.element++;
