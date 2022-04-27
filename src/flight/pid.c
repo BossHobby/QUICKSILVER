@@ -15,15 +15,8 @@
 // multiplier for pids at 3V - for PID_VOLTAGE_COMPENSATION - default 1.33f from H101 code
 #define PID_VC_FACTOR 1.33f
 
-// i-term relax factor
-#ifndef RELAX_FACTOR
-#define RELAX_FACTOR 10 //  5.7 degrees/s
-#endif
-
-// i-term relax filter frequency
-#ifndef RELAX_FREQUENCY_HZ
-#define RELAX_FREQUENCY_HZ 20
-#endif
+#define RELAX_FACTOR (RELAX_FACTOR_DEG * DEGTORAD)
+#define RELAX_FACTOR_YAW (RELAX_FACTOR_YAW_DEG * DEGTORAD)
 
 //************************************Setpoint Weight****************************************
 #ifdef BRUSHLESS_TARGET
@@ -63,8 +56,13 @@ int number_of_increments[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 int current_pid_axis = 0;
 int current_pid_term = 0;
 
-static float lasterror[PID_SIZE];
-static float lasterror2[PID_SIZE];
+static float lasterror[PID_SIZE] = {0, 0, 0};
+static float lasterror2[PID_SIZE] = {0, 0, 0};
+
+static float lastrate[PID_SIZE] = {0, 0, 0};
+static float lastsetpoint[PID_SIZE] = {0, 0, 0};
+static float setpoint_derivative[PID_SIZE] = {0, 0, 0};
+
 static float current_kp[PID_SIZE] = {0, 0, 0};
 static float current_ki[PID_SIZE] = {0, 0, 0};
 static float current_kd[PID_SIZE] = {0, 0, 0};
@@ -138,53 +136,49 @@ void pid_precalc() {
   }
 }
 
+// (iwindup = 0  windup is not allowed)   (iwindup = 1 windup is allowed)
+static float pid_compute_iterm_windup(uint8_t x) {
+  if ((state.pidoutput.axis[x] >= outlimit[x]) && (state.error.axis[x] > 0)) {
+    return 0.0f;
+  }
+  if ((state.pidoutput.axis[x] <= -outlimit[x]) && (state.error.axis[x] < 0)) {
+    return 0.0f;
+  }
+
+#ifdef ITERM_RELAX //  Roll - Pitch  Setpoint based I term relax method
+  static float avg_setpoint[3] = {0, 0, 0};
+  if (x < 2) {
+    lpf(&avg_setpoint[x], state.setpoint.axis[x], FILTERCALC(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ)); // 11 Hz filter
+    const float hpfSetpoint = state.setpoint.axis[x] - avg_setpoint[x];
+    return max(1.0f - hpfSetpoint / RELAX_FACTOR, 0.0f);
+  }
+#ifdef ITERM_RELAX_YAW
+  else {                                                                                                             // axis is yaw
+    lpf(&avg_setpoint[x], state.setpoint.axis[x], FILTERCALC(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ_YAW)); // 25 Hz filter
+    const float hpfSetpoint = state.setpoint.axis[x] - avg_setpoint[x];
+    return max(1.0f - hpfSetpoint / RELAX_FACTOR_YAW, 0.0f);
+  }
+#endif
+#endif
+
+  return 1.0f;
+}
+
+static float pid_filter_dterm(uint8_t x, float dterm) {
+  dterm = filter_step(profile.filter.dterm[0].type, &filter[0], &filter_state[0][x], dterm);
+  dterm = filter_step(profile.filter.dterm[1].type, &filter[1], &filter_state[1][x], dterm);
+
+  if (profile.filter.dterm_dynamic_enable) {
+    dterm = filter_lp_pt1_step(&dynamic_filter, &dynamic_filter_state[x], dterm);
+  }
+
+  return dterm;
+}
+
 // pid calculation for acro ( rate ) mode
 // input: error[x] = setpoint - gyro
 // output: state.pidoutput.axis[x] = change required from motors
 static void pid(uint8_t x) {
-
-  // in level mode or horizon but not racemode and while on the ground...
-  if ((rx_aux_on(AUX_LEVELMODE)) && (!rx_aux_on(AUX_RACEMODE)) && ((flags.on_ground) || (flags.in_air == 0))) {
-    // wind down the integral error
-    ierror[x] *= 0.98f;
-  } else if (flags.on_ground) {
-    // in acro mode - only wind down integral when idle up is off and throttle is 0
-    ierror[x] *= 0.98f;
-  }
-
-  float iwindup = 1.0f; // (iwindup = 0  windup is not allowed)   (iwindup = 1 windup is allowed)
-  if ((state.pidoutput.axis[x] >= outlimit[x]) && (state.error.axis[x] > 0)) {
-    iwindup = 0.0f;
-  }
-
-  if ((state.pidoutput.axis[x] <= -outlimit[x]) && (state.error.axis[x] < 0)) {
-    iwindup = 0.0f;
-  }
-
-#ifdef I_TERM_RELAX //  Roll - Pitch  Setpoint based I term relax method
-  static float avgSetpoint[3];
-  if (iwindup != 0.0f) {
-    if (x < 2) {
-      lpf(&avgSetpoint[x], state.setpoint.axis[x], FILTERCALC(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ)); // 11 Hz filter
-      const float hpfSetpoint = state.setpoint.axis[x] - avgSetpoint[x];
-      iwindup = max(1.0f - hpfSetpoint / RELAX_FACTOR, 0.0f);
-    }
-#ifdef ITERM_RELAX_YAW
-    else {                                                                                                            // axis is yaw
-      lpf(&avgSetpoint[x], state.setpoint.axis[x], FILTERCALC(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ_YAW)); // 25 Hz filter
-      const float hpfSetpoint = state.setpoint.axis[x] - avgSetpoint[x];
-      iwindup = max(1.0f - hpfSetpoint / RELAX_FACTOR_YAW, 0.0f);
-    }
-#endif
-  }
-#endif
-
-  // SIMPSON_RULE_INTEGRAL
-  // assuming similar time intervals
-  ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + state.error.axis[x]) * current_ki[x] * iwindup * state.looptime;
-  lasterror2[x] = lasterror[x];
-  lasterror[x] = state.error.axis[x];
-  limitf(&ierror[x], integrallimit[x]);
 
 #ifdef ENABLE_SETPOINT_WEIGHTING
   // P term
@@ -197,61 +191,59 @@ static void pid(uint8_t x) {
 #endif
 
   // Pid Voltage Comp applied to P term only
-  if (profile.voltage.pid_voltage_compensation)
+  if (profile.voltage.pid_voltage_compensation) {
     state.pid_p_term.axis[x] *= v_compensation;
+  }
 
   // I term
+  // in level mode or horizon but not racemode and while on the ground...
+  if ((rx_aux_on(AUX_LEVELMODE)) && (!rx_aux_on(AUX_RACEMODE)) && ((flags.on_ground) || (flags.in_air == 0))) {
+    // wind down the integral error
+    ierror[x] *= 0.98f;
+  } else if (flags.on_ground) {
+    // in acro mode - only wind down integral when idle up is off and throttle is 0
+    ierror[x] *= 0.98f;
+  }
+
+  // SIMPSON_RULE_INTEGRAL
+  // assuming similar time intervals
+  const float iterm_windup = pid_compute_iterm_windup(x);
+  ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + state.error.axis[x]) * current_ki[x] * iterm_windup * state.looptime;
+  lasterror2[x] = lasterror[x];
+  lasterror[x] = state.error.axis[x];
+  limitf(&ierror[x], integrallimit[x]);
+
   state.pid_i_term.axis[x] = ierror[x];
 
   // D term
-  // skip yaw D term if not set
-  if (current_kd[x] > 0) {
-    float transitionSetpointWeight[3];
-    float stickAccelerator[3];
-    float stickTransition[3];
-    if (rx_aux_on(AUX_STICK_BOOST_PROFILE)) {
-      stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_ON].accelerator.axis[x];
-      stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_ON].transition.axis[x];
-    } else {
-      stickAccelerator[x] = profile.pid.stick_rates[STICK_PROFILE_OFF].accelerator.axis[x];
-      stickTransition[x] = profile.pid.stick_rates[STICK_PROFILE_OFF].transition.axis[x];
-    }
-    if (stickAccelerator[x] < 1) {
-      transitionSetpointWeight[x] = (fabsf(state.rx_filtered.axis[x]) * stickTransition[x]) + (1 - stickTransition[x]);
-    } else {
-      transitionSetpointWeight[x] = (fabsf(state.rx_filtered.axis[x]) * (stickTransition[x] / stickAccelerator[x])) + (1 - stickTransition[x]);
-    }
+  const uint8_t stck_boost_profile = rx_aux_on(AUX_STICK_BOOST_PROFILE) ? STICK_PROFILE_ON : STICK_PROFILE_OFF;
 
-    static float lastrate[3];
-    static float lastsetpoint[3];
-    static float setpoint_derivative[3];
+  const float stick_accelerator = profile.pid.stick_rates[stck_boost_profile].accelerator.axis[x];
+  const float stick_transition = profile.pid.stick_rates[stck_boost_profile].transition.axis[x];
+
+  float transition_setpoint_weight = 0;
+  if (stick_accelerator < 1) {
+    transition_setpoint_weight = (fabsf(state.rx_filtered.axis[x]) * stick_transition) + (1 - stick_transition);
+  } else {
+    transition_setpoint_weight = (fabsf(state.rx_filtered.axis[x]) * (stick_transition / stick_accelerator)) + (1 - stick_transition);
+  }
 
 #ifdef RX_SMOOTHING
-    setpoint_derivative[x] = filter_lp_pt1_step(&rx_filter, &rx_filter_state[x], (state.setpoint.axis[x] - lastsetpoint[x]) * current_kd[x] * timefactor);
+  setpoint_derivative[x] = filter_lp_pt1_step(&rx_filter, &rx_filter_state[x], (state.setpoint.axis[x] - lastsetpoint[x]) * current_kd[x] * timefactor);
 #else
-    setpoint_derivative[x] = (state.setpoint.axis[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
+  setpoint_derivative[x] = (state.setpoint.axis[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
 #endif
 
-    float gyro_derivative = (state.gyro.axis[x] - lastrate[x]) * current_kd[x] * timefactor;
-    if (profile.pid.throttle_dterm_attenuation.tda_active)
-      gyro_derivative *= tda_compensation;
-
-    const float dterm = (setpoint_derivative[x] * stickAccelerator[x] * transitionSetpointWeight[x]) - (gyro_derivative);
-    lastsetpoint[x] = state.setpoint.axis[x];
-    lastrate[x] = state.gyro.axis[x];
-
-    // D term filtering
-    float dlpf = dterm;
-
-    dlpf = filter_step(profile.filter.dterm[0].type, &filter[0], &filter_state[0][x], dlpf);
-    dlpf = filter_step(profile.filter.dterm[1].type, &filter[1], &filter_state[1][x], dlpf);
-
-    if (profile.filter.dterm_dynamic_enable) {
-      dlpf = filter_lp_pt1_step(&dynamic_filter, &dynamic_filter_state[x], dlpf);
-    }
-
-    state.pid_d_term.axis[x] = dlpf;
+  float gyro_derivative = (state.gyro.axis[x] - lastrate[x]) * current_kd[x] * timefactor;
+  if (profile.pid.throttle_dterm_attenuation.tda_active) {
+    gyro_derivative *= tda_compensation;
   }
+
+  const float dterm = (setpoint_derivative[x] * stick_accelerator * transition_setpoint_weight) - (gyro_derivative);
+  lastsetpoint[x] = state.setpoint.axis[x];
+  lastrate[x] = state.gyro.axis[x];
+
+  state.pid_d_term.axis[x] = pid_filter_dterm(x, dterm);
 
   state.pidoutput.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x];
   limitf(&state.pidoutput.axis[x], outlimit[x]);

@@ -266,12 +266,12 @@
 //	#define CLIPPING_LIMIT  1.0f
 
 //**************I-term relax.  Removes roll and pitch bounce back after flips
-#define I_TERM_RELAX
-#define RELAX_FACTOR 35 * 0.01745329251 // convert to rad
+#define ITERM_RELAX
+#define RELAX_FACTOR_DEG 35
 #define RELAX_FREQUENCY_HZ 11 // from my experience the frequency is better to tune than the factor
 
-#define I_TERM_RELAX_YAW // adds iterm relax to yaw with its own values as it responds much different
-#define RELAX_FACTOR_YAW 35 * 0.01745329251 // convert to rad
+#define ITERM_RELAX_YAW // adds iterm relax to yaw with its own values as it responds much different
+#define RELAX_FACTOR_YAW_DEG 35
 #define RELAX_FREQUENCY_HZ_YAW 25
 
 //**********************************************************************************************************************
