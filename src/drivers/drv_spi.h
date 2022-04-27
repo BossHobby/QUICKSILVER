@@ -87,7 +87,9 @@ typedef struct spi_bus_device {
   bool auto_continue;
   bool (*poll_fn)();
 
+  // only modified by the main loop
   uint8_t txn_head;
+  // only modified by the intterupt or protected code
   uint8_t txn_tail;
   spi_txn_t txns[SPI_TXN_MAX];
 } spi_bus_device_t;

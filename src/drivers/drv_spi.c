@@ -475,21 +475,21 @@ spi_txn_t *spi_txn_init(volatile spi_bus_device_t *bus, spi_txn_done_fn_t done_f
     // next txn is still in progress, wait for it to complete
     spi_txn_wait(bus);
   }
-  bus->txn_head = head;
 
-  txn->bus = bus;
-  txn->status = TXN_WAITING;
-  txn->segment_count = 0;
-
-  const uint32_t last = bus->txn_head == 0 ? (SPI_TXN_MAX - 1) : bus->txn_head - 1;
+  const uint32_t last = head == 0 ? (SPI_TXN_MAX - 1) : head - 1;
   if (last != bus->txn_tail) {
     txn->offset = bus->txns[last].offset + bus->txns[last].size;
   } else {
     txn->offset = 0;
   }
 
+  txn->bus = bus;
+  txn->status = TXN_WAITING;
+  txn->segment_count = 0;
+
   txn->size = 0;
   txn->done_fn = done_fn;
+
   return (spi_txn_t *)txn;
 }
 
@@ -545,16 +545,21 @@ void spi_txn_add_seg_const(spi_txn_t *txn, const uint8_t tx_data) {
 }
 
 void spi_txn_submit(spi_txn_t *txn) {
-  if (txn->status != TXN_ERROR) {
+  if (txn->status == TXN_ERROR || txn->size == 0) {
+    txn->status = TXN_DONE;
+  } else {
     txn->status = TXN_READY;
+    txn->bus->txn_head = (txn->bus->txn_head + 1) % SPI_TXN_MAX;
   }
 }
 
 void spi_txn_continue(volatile spi_bus_device_t *bus) {
-  if (bus->txn_head == bus->txn_tail) {
+  // ensures this function can only run once the dma transaction is done
+  if (!spi_dma_is_ready(bus->port)) {
     return;
   }
-  if (!spi_dma_is_ready(bus->port)) {
+
+  if (bus->txn_head == bus->txn_tail) {
     return;
   }
   if (spi_port_config[bus->port].active_device != NULL &&
@@ -568,18 +573,9 @@ void spi_txn_continue(volatile spi_bus_device_t *bus) {
   const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
 
   volatile spi_txn_t *txn = &bus->txns[tail];
-  if (txn->status == TXN_ERROR) {
-    bus->txn_tail = tail;
-  }
   if (txn->status != TXN_READY) {
     return;
   }
-  if (txn->size == 0) {
-    bus->txn_tail = tail;
-    txn->status = TXN_DONE;
-    return;
-  }
-
   spi_port_config[bus->port].active_device = bus;
   txn->status = TXN_IN_PROGRESS;
 
