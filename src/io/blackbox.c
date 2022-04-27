@@ -76,7 +76,7 @@ uint8_t blackbox_update() {
     blackbox_enabled = 0;
     return 0;
   } else if ((rx_aux_on(AUX_ARMING) && rx_aux_on(AUX_BLACKBOX)) && blackbox_enabled == 0) {
-    data_flash_restart(blackbox_rate);
+    data_flash_restart(blackbox_rate, state.looptime_autodetect);
     blackbox_enabled = 1;
     return 0;
   }
