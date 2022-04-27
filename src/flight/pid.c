@@ -61,7 +61,6 @@ static float lasterror2[PID_SIZE] = {0, 0, 0};
 
 static float lastrate[PID_SIZE] = {0, 0, 0};
 static float lastsetpoint[PID_SIZE] = {0, 0, 0};
-static float setpoint_derivative[PID_SIZE] = {0, 0, 0};
 
 static float current_kp[PID_SIZE] = {0, 0, 0};
 static float current_ki[PID_SIZE] = {0, 0, 0};
@@ -119,6 +118,8 @@ void pid_precalc() {
   if (profile.pid.throttle_dterm_attenuation.tda_active) {
     tda_compensation = mapf(state.throttle, profile.pid.throttle_dterm_attenuation.tda_breakpoint, 1.0f, 1.0f, profile.pid.throttle_dterm_attenuation.tda_percent);
     tda_compensation = constrainf(tda_compensation, profile.pid.throttle_dterm_attenuation.tda_percent, 1.0f);
+  } else {
+    tda_compensation = 1.0f;
   }
 
   if (profile.filter.dterm_dynamic_enable) {
@@ -229,17 +230,13 @@ static void pid(uint8_t x) {
   }
 
 #ifdef RX_SMOOTHING
-  setpoint_derivative[x] = filter_lp_pt1_step(&rx_filter, &rx_filter_state[x], (state.setpoint.axis[x] - lastsetpoint[x]) * current_kd[x] * timefactor);
+  const float setpoint_derivative = filter_lp_pt1_step(&rx_filter, &rx_filter_state[x], (state.setpoint.axis[x] - lastsetpoint[x]) * current_kd[x] * timefactor);
 #else
-  setpoint_derivative[x] = (state.setpoint.axis[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
+  const float setpoint_derivative = (state.setpoint.axis[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
 #endif
 
-  float gyro_derivative = (state.gyro.axis[x] - lastrate[x]) * current_kd[x] * timefactor;
-  if (profile.pid.throttle_dterm_attenuation.tda_active) {
-    gyro_derivative *= tda_compensation;
-  }
-
-  const float dterm = (setpoint_derivative[x] * stick_accelerator * transition_setpoint_weight) - (gyro_derivative);
+  const float gyro_derivative = (state.gyro.axis[x] - lastrate[x]) * current_kd[x] * timefactor * tda_compensation;
+  const float dterm = (setpoint_derivative * stick_accelerator * transition_setpoint_weight) - (gyro_derivative);
   lastsetpoint[x] = state.setpoint.axis[x];
   lastrate[x] = state.gyro.axis[x];
 
