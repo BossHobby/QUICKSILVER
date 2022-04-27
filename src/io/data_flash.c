@@ -274,7 +274,7 @@ void data_flash_reset() {
   state = STATE_ERASE_HEADER;
 }
 
-void data_flash_restart(uint32_t blackbox_rate) {
+void data_flash_restart(uint32_t blackbox_rate, uint32_t looptime) {
   uint32_t offset = 0;
 
   for (uint16_t i = 0; i < data_flash_header.file_num; i++) {
@@ -291,6 +291,7 @@ void data_flash_restart(uint32_t blackbox_rate) {
     return;
   }
 
+  data_flash_header.files[data_flash_header.file_num].looptime = looptime;
   data_flash_header.files[data_flash_header.file_num].blackbox_rate = blackbox_rate;
   data_flash_header.files[data_flash_header.file_num].entries = 0;
   data_flash_header.files[data_flash_header.file_num].start_sector = offset;
