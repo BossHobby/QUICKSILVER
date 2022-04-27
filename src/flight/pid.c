@@ -25,9 +25,6 @@
 #define RELAX_FREQUENCY_HZ 20
 #endif
 
-// TODO: re-implement?
-//#define ANTI_WINDUP_DISABLE
-
 //************************************Setpoint Weight****************************************
 #ifdef BRUSHLESS_TARGET
 
@@ -155,12 +152,12 @@ static void pid(uint8_t x) {
     ierror[x] *= 0.98f;
   }
 
-  float iwindup = 0.0f; // (iwindup = 0  windup is not allowed)   (iwindup = 1 windup is allowed)
+  float iwindup = 1.0f; // (iwindup = 0  windup is not allowed)   (iwindup = 1 windup is allowed)
   if ((state.pidoutput.axis[x] >= outlimit[x]) && (state.error.axis[x] > 0)) {
     iwindup = 0.0f;
   }
 
-  if ((state.pidoutput.axis[x] == -outlimit[x]) && (state.error.axis[x] < 0)) {
+  if ((state.pidoutput.axis[x] <= -outlimit[x]) && (state.error.axis[x] < 0)) {
     iwindup = 0.0f;
   }
 
@@ -170,19 +167,13 @@ static void pid(uint8_t x) {
     if (x < 2) {
       lpf(&avgSetpoint[x], state.setpoint.axis[x], FILTERCALC(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ)); // 11 Hz filter
       const float hpfSetpoint = state.setpoint.axis[x] - avgSetpoint[x];
-      iwindup = 1.0f - hpfSetpoint / RELAX_FACTOR;
-      if (iwindup < 0.0f) {
-        iwindup = 0.0;
-      }
+      iwindup = max(1.0f - hpfSetpoint / RELAX_FACTOR, 0.0f);
     }
 #ifdef ITERM_RELAX_YAW
-    else { // axis is yaw
+    else {                                                                                                            // axis is yaw
       lpf(&avgSetpoint[x], state.setpoint.axis[x], FILTERCALC(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ_YAW)); // 25 Hz filter
       const float hpfSetpoint = state.setpoint.axis[x] - avgSetpoint[x];
-      iwindup = 1.0f - hpfSetpoint / RELAX_FACTOR_YAW;
-      if (iwindup < 0.0f) {
-        iwindup = 0.0;
-      }
+      iwindup = max(1.0f - hpfSetpoint / RELAX_FACTOR_YAW, 0.0f);
     }
 #endif
   }
