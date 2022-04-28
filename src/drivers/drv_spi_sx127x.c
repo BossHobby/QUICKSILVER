@@ -40,10 +40,7 @@ void sx127x_init() {
   LL_SPI_Init(PORT.channel, &SPI_InitStructure);
   LL_SPI_Enable(PORT.channel);
 
-  // Dummy read to clear receive buffer
-  while (LL_SPI_IsActiveFlag_TXE(PORT.channel) == RESET)
-    ;
-  LL_SPI_ReceiveData8(PORT.channel);
+  spi_init_dev(SX12XX_SPI_PORT);
 }
 
 void sx127x_handle_exti() {

@@ -317,7 +317,14 @@ uint8_t spi_transfer_byte_timeout(spi_ports_t port, uint8_t data, uint32_t timeo
 volatile uint8_t dma_transfer_done[32] = {[0 ... 31] = 1};
 #define DMA_TRANSFER_DONE dma_transfer_done[(PORT.dma.dma_port - 1) * 8 + PORT.dma.rx_stream_index]
 
-void spi_dma_init(spi_ports_t port) {
+void spi_init_dev(spi_ports_t port) {
+#ifndef STM32H7
+  // Dummy read to clear receive buffer
+  while (LL_SPI_IsActiveFlag_TXE(spi_port_defs[bus->port].channel) == RESET)
+    ;
+  LL_SPI_ReceiveData8(spi_port_defs[bus->port].channel);
+#endif
+
   // Enable DMA clock
   spi_dma_enable_rcc(port);
 
@@ -493,14 +500,7 @@ void spi_bus_device_init(volatile spi_bus_device_t *bus) {
 
   LL_SPI_Enable(spi_port_defs[bus->port].channel);
 
-#ifndef STM32H7
-  // Dummy read to clear receive buffer
-  while (LL_SPI_IsActiveFlag_TXE(spi_port_defs[bus->port].channel) == RESET)
-    ;
-  LL_SPI_ReceiveData8(spi_port_defs[bus->port].channel);
-#endif
-
-  spi_dma_init(bus->port);
+  spi_init_dev(bus->port);
 }
 
 void spi_bus_device_reconfigure(volatile spi_bus_device_t *bus, spi_mode_t mode, uint32_t divider) {

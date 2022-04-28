@@ -102,15 +102,8 @@ static void mpu6xxx_init() {
 #endif
 
   spi_enable_rcc(GYRO_SPI_PORT);
-
   mpu6xxx_reinit_slow();
-
-  // Dummy read to clear receive buffer
-  while (LL_SPI_IsActiveFlag_TXE(PORT.channel) == RESET)
-    ;
-  LL_SPI_ReceiveData8(PORT.channel);
-
-  spi_dma_init(GYRO_SPI_PORT);
+  spi_init_dev(GYRO_SPI_PORT);
 }
 
 uint8_t mpu6xxx_detect() {
