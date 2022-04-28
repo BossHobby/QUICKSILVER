@@ -30,7 +30,7 @@
 #include "project.h"
 #include "util/util.h"
 
-#if (defined(STM32F4) || defined(STM32F7)) && defined(USE_DSHOT_DMA_DRIVER)
+#if (defined(STM32F4) || defined(STM32F7) || defined(STM32H7)) && defined(USE_DSHOT_DMA_DRIVER)
 
 // Tim_1 is running at 84mhz with APB2 clock currently configured at 42MHZ
 // clock cycles per bit for a bit timing period of 1.67us
@@ -203,7 +203,11 @@ void motor_init() {
 
   /* DMA2 Stream6_Channel0 configuration ----------------------------------------------*/
   LL_DMA_DeInit(DMA2, LL_DMA_STREAM_6);
+#ifdef STM32H7
+  DMA_InitStructure.PeriphRequest = LL_DMAMUX1_REQ_TIM1_UP;
+#else
   DMA_InitStructure.Channel = LL_DMA_CHANNEL_0;
+#endif
   DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&gpio_ports[0].gpio->BSRRL;
   DMA_InitStructure.MemoryOrM2MDstAddress = (uint32_t)port_dma_buffer[0];
   DMA_InitStructure.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
