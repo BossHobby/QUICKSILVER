@@ -71,45 +71,39 @@ void sdcard_init() {
   spi_enable_rcc(SDCARD_SPI_PORT);
 
   LL_SPI_DeInit(SPI_PORT.channel);
-  LL_SPI_InitTypeDef SPI_InitStructure;
-  SPI_InitStructure.TransferDirection = LL_SPI_FULL_DUPLEX;
-  SPI_InitStructure.Mode = LL_SPI_MODE_MASTER;
-  SPI_InitStructure.DataWidth = LL_SPI_DATAWIDTH_8BIT;
-  SPI_InitStructure.ClockPolarity = LL_SPI_POLARITY_LOW;
-  SPI_InitStructure.ClockPhase = LL_SPI_PHASE_1EDGE;
-  SPI_InitStructure.NSS = LL_SPI_NSS_SOFT;
-  SPI_InitStructure.BaudRate = spi_find_divder(MHZ_TO_HZ(0.5));
-  SPI_InitStructure.BitOrder = LL_SPI_MSB_FIRST;
-  SPI_InitStructure.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
-  SPI_InitStructure.CRCPoly = 7;
-  LL_SPI_Init(SPI_PORT.channel, &SPI_InitStructure);
+  LL_SPI_InitTypeDef init;
+  init.TransferDirection = LL_SPI_FULL_DUPLEX;
+  init.Mode = LL_SPI_MODE_MASTER;
+  init.DataWidth = LL_SPI_DATAWIDTH_8BIT;
+  init.ClockPolarity = LL_SPI_POLARITY_LOW;
+  init.ClockPhase = LL_SPI_PHASE_1EDGE;
+  init.NSS = LL_SPI_NSS_SOFT;
+  init.BaudRate = spi_find_divder(MHZ_TO_HZ(0.5));
+  init.BitOrder = LL_SPI_MSB_FIRST;
+  init.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
+  init.CRCPoly = 7;
+  LL_SPI_Init(SPI_PORT.channel, &init);
   LL_SPI_Enable(SPI_PORT.channel);
 
-  // Dummy read to clear receive buffer
-  while (LL_SPI_IsActiveFlag_TXE(SPI_PORT.channel) == RESET)
-    ;
-
-  LL_SPI_ReceiveData8(SPI_PORT.channel);
-
-  spi_dma_init(SDCARD_SPI_PORT);
+  spi_init_dev(SDCARD_SPI_PORT);
 }
 
 static void sdcard_reinit_fast() {
   LL_SPI_Disable(SPI_PORT.channel);
 
   LL_SPI_DeInit(SPI_PORT.channel);
-  LL_SPI_InitTypeDef SPI_InitStructure;
-  SPI_InitStructure.TransferDirection = LL_SPI_FULL_DUPLEX;
-  SPI_InitStructure.Mode = LL_SPI_MODE_MASTER;
-  SPI_InitStructure.DataWidth = LL_SPI_DATAWIDTH_8BIT;
-  SPI_InitStructure.ClockPolarity = LL_SPI_POLARITY_LOW;
-  SPI_InitStructure.ClockPhase = LL_SPI_PHASE_1EDGE;
-  SPI_InitStructure.NSS = LL_SPI_NSS_SOFT;
-  SPI_InitStructure.BaudRate = spi_find_divder(MHZ_TO_HZ(10.5));
-  SPI_InitStructure.BitOrder = LL_SPI_MSB_FIRST;
-  SPI_InitStructure.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
-  SPI_InitStructure.CRCPoly = 7;
-  LL_SPI_Init(SPI_PORT.channel, &SPI_InitStructure);
+  LL_SPI_InitTypeDef init;
+  init.TransferDirection = LL_SPI_FULL_DUPLEX;
+  init.Mode = LL_SPI_MODE_MASTER;
+  init.DataWidth = LL_SPI_DATAWIDTH_8BIT;
+  init.ClockPolarity = LL_SPI_POLARITY_LOW;
+  init.ClockPhase = LL_SPI_PHASE_1EDGE;
+  init.NSS = LL_SPI_NSS_SOFT;
+  init.BaudRate = spi_find_divder(MHZ_TO_HZ(10.5));
+  init.BitOrder = LL_SPI_MSB_FIRST;
+  init.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
+  init.CRCPoly = 7;
+  LL_SPI_Init(SPI_PORT.channel, &init);
   LL_SPI_Enable(SPI_PORT.channel);
 }
 
@@ -194,7 +188,7 @@ void sdcard_read_data(uint8_t *buf, const uint32_t size) {
     return;
   }
 
-  //spi_dma_transfer_bytes(SDCARD_SPI_PORT, buf, size);
+  // spi_dma_transfer_bytes(SDCARD_SPI_PORT, buf, size);
   for (uint32_t i = 0; i < size; i++) {
     buf[i] = spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
   }

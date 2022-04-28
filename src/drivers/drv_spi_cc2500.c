@@ -64,12 +64,7 @@ static void cc2500_hardware_init() {
   LL_SPI_Init(PORT.channel, &SPI_InitStructure);
   LL_SPI_Enable(PORT.channel);
 
-  // Dummy read to clear receive buffer
-  while (LL_SPI_IsActiveFlag_TXE(PORT.channel) == RESET)
-    ;
-  LL_SPI_ReceiveData8(PORT.channel);
-
-  spi_dma_init(CC2500_SPI_PORT);
+  spi_init_dev(CC2500_SPI_PORT);
 }
 
 void cc2500_strobe(uint8_t address) {
