@@ -64,7 +64,7 @@ void failloop(failloop_t val) {
 }
 
 void handle_fault() {
-#if defined(STM32F4) && defined(RESET_ON_FAULT)
+#if defined(RESET_ON_FAULT)
   extern void systemResetToBootloader();
   systemResetToBootloader();
 #endif
