@@ -1,0 +1,34 @@
+{
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m7",
+    "extra_flags": "-DSTM32H743xx -DSTM32H743 -DSTM32H7 -DHSE_VALUE=8000000U",
+    "f_cpu": "480000000L",
+    "mcu": "stm32h743vi",
+    "product_line": "STM32H743xx",
+    "variant": "Generic_H743"
+  },
+  "debug": {
+    "jlink_device": "stm32h743vi",
+    "openocd_target": "stm32h7x",
+    "svd_path": "STM32H743.svd"
+  },
+  "frameworks": [
+    "stm32cube"
+  ],
+  "name": "stm32h743vi",
+  "upload": {
+    "maximum_ram_size": 524288,
+    "maximum_size": 2097152,
+    "protocol": "serial",
+    "protocols": [
+      "blackmagic",
+      "dfu",
+      "jlink",
+      "serial",
+      "stlink"
+    ]
+  },
+  "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32h743vi.html",
+  "vendor": "Generic"
+}
