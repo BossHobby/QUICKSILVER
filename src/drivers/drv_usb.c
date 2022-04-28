@@ -313,8 +313,8 @@ void usb_init() {
   gpio_init.Pull = LL_GPIO_PULL_NO;
 
 #ifdef STM32H7
-  gpio_pin_init_af(&gpio_init, PIN_A11, GPIO_AF10_OTG2_FS);
-  gpio_pin_init_af(&gpio_init, PIN_A12, GPIO_AF10_OTG2_FS);
+  gpio_pin_init_af(&gpio_init, PIN_A11, GPIO_AF10_OTG1_FS);
+  gpio_pin_init_af(&gpio_init, PIN_A12, GPIO_AF10_OTG1_FS);
 #else
   gpio_pin_init_af(&gpio_init, PIN_A11, GPIO_AF10_OTG_FS);
   gpio_pin_init_af(&gpio_init, PIN_A12, GPIO_AF10_OTG_FS);
@@ -337,6 +337,11 @@ void usb_init() {
 
   usbd_enable(&udev, true);
   usbd_connect(&udev, true);
+
+#ifdef STM32H7
+  HAL_PWREx_EnableUSBVoltageDetector();
+  time_delay_ms(100);
+#endif
 }
 
 uint8_t usb_detect() {
