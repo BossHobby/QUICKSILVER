@@ -2,7 +2,7 @@
 
 #include "project.h"
 
-#if defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F7) || defined(STM32H7)
 // See "RM CoreSight Architecture Specification"
 // B2.3.10  "LSR and LAR, Software Lock Status Register and Software Lock Access Register"
 // "E1.2.11  LAR, Lock Access Register"
@@ -16,7 +16,7 @@ static volatile uint32_t systick_pending = 0;
 static void debug_time_init() {
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
   CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-#if defined(STM32F7)
+#if defined(STM32F7) || defined(STM32H7)
   DWT->LAR = DWT_LAR_UNLOCK_VALUE;
 #endif
   DWT->CYCCNT = 0;

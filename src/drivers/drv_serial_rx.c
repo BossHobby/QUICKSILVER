@@ -78,7 +78,7 @@ static void handle_usart_invert(bool invert) {
     break;
   }
 #endif
-#if defined(STM32F7)
+#if defined(STM32F7) || defined(STM32H7)
   if (invert) {
     LL_USART_SetRXPinLevel(USART.channel, LL_USART_RXPIN_LEVEL_INVERTED);
     LL_USART_SetTXPinLevel(USART.channel, LL_USART_TXPIN_LEVEL_INVERTED);
@@ -89,7 +89,7 @@ static void handle_usart_invert(bool invert) {
 #endif
 }
 
-//FUNCTION TO INITIALIZE USART FOR A SERIAL RX CALLED FROM RECEIVER PROTOCOL
+// FUNCTION TO INITIALIZE USART FOR A SERIAL RX CALLED FROM RECEIVER PROTOCOL
 
 #ifdef SERIAL_RX
 void serial_rx_init(rx_serial_protocol_t proto) {
@@ -215,7 +215,7 @@ void serial_rx_init(rx_serial_protocol_t proto) {
   LL_USART_Init(USART.channel, &usart_init);
 
 #if defined(INVERT_UART)
-  //inversion is hard defined, always invert
+  // inversion is hard defined, always invert
   handle_usart_invert(true);
 #else
   // invert according to protocol
@@ -223,7 +223,7 @@ void serial_rx_init(rx_serial_protocol_t proto) {
 #endif
 
   if (proto == RX_SERIAL_PROTOCOL_FPORT) {
-    //RX_SERIAL_PROTOCOL_FPORT_INVERTED requires half duplex off
+    // RX_SERIAL_PROTOCOL_FPORT_INVERTED requires half duplex off
     LL_USART_EnableHalfDuplex(USART.channel);
   } else {
     LL_USART_DisableHalfDuplex(USART.channel);
