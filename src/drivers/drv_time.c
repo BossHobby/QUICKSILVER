@@ -42,6 +42,11 @@ void SysTick_Handler() {
   systick_val = SysTick->VAL;
   systick_pending = 0;
   (void)(SysTick->CTRL);
+
+#ifdef USE_HAL_DRIVER
+  // used by the HAL for some timekeeping and timeouts, should always be 1ms
+  HAL_IncTick();
+#endif
 }
 
 uint32_t time_micros_isr() {
