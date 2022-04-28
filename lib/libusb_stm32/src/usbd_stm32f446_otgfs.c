@@ -58,7 +58,11 @@ inline static void Flush_TX(uint8_t ep) {
 }
 
 static uint32_t getinfo(void) {
+#if defined(STM32H743xx)
+    if (!(RCC->AHB1ENR & RCC_AHB1ENR_USB2OTGFSEN)) return STATUS_VAL(0);
+#else
     if (!(RCC->AHB2ENR & RCC_AHB2ENR_OTGFSEN)) return STATUS_VAL(0);
+#endif
     if (!(OTGD->DCTL & USB_OTG_DCTL_SDIS)) return STATUS_VAL(USBD_HW_ENABLED | USBD_HW_SPEED_FS);
     return STATUS_VAL(USBD_HW_ENABLED);
 }
@@ -102,7 +106,11 @@ static bool ep_isstalled(uint8_t ep) {
 static void enable(bool enable) {
     if (enable) {
         /* enabling USB_OTG in RCC */
+#if defined(STM32H743xx)
+        _BST(RCC->AHB1ENR, RCC_AHB1ENR_USB2OTGFSEN);
+#else
         _BST(RCC->AHB2ENR, RCC_AHB2ENR_OTGFSEN);
+#endif
         _WBS(OTG->GRSTCTL, USB_OTG_GRSTCTL_AHBIDL);
         /* configure OTG as device */
         OTG->GUSBCFG = USB_OTG_GUSBCFG_FDMOD | USB_OTG_GUSBCFG_PHYSEL |
@@ -139,11 +147,19 @@ static void enable(bool enable) {
         /* setting up EP0 TX FIFO SZ as 64 byte */
         OTG->DIEPTXF0_HNPTXFSIZ = RX_FIFO_SZ | (0x10 << 16);
     } else {
+#if defined(STM32H743xx)
+        if (RCC->AHB1ENR & RCC_AHB1ENR_USB2OTGFSEN) {
+            _BST(RCC->AHB1RSTR, RCC_AHB1RSTR_USB2OTGFSRST);
+            _BCL(RCC->AHB1RSTR, RCC_AHB1RSTR_USB2OTGFSRST);
+            _BCL(RCC->AHB1ENR, RCC_AHB1ENR_USB2OTGFSEN);
+        }
+#else
         if (RCC->AHB2ENR & RCC_AHB2ENR_OTGFSEN) {
             _BST(RCC->AHB2RSTR, RCC_AHB2RSTR_OTGFSRST);
             _BCL(RCC->AHB2RSTR, RCC_AHB2RSTR_OTGFSRST);
             _BCL(RCC->AHB2ENR, RCC_AHB2ENR_OTGFSEN);
         }
+#endif
     }
 }
 

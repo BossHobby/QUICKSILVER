@@ -110,7 +110,7 @@
     #endif
     #define usbd_hw usbd_otgfs
 
-#elif defined(STM32F446xx) || defined(STM32F722xx) || defined (STM32F745xx) || defined (STM32F765xx)
+#elif defined(STM32F446xx) || defined(STM32F722xx) || defined (STM32F745xx) || defined (STM32F765xx) || defined (STM32H743xx)
     #define USBD_STM32F446FS
     #define USBD_STM32F446HS
 
