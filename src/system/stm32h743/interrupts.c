@@ -149,5 +149,6 @@ __attribute__((weak, alias("Default_Handler_Proxy"))) void LPTIM4_IRQHandler();
 __attribute__((weak, alias("Default_Handler_Proxy"))) void LPTIM5_IRQHandler();
 __attribute__((weak, alias("Default_Handler_Proxy"))) void LPUART1_IRQHandler();
 __attribute__((weak, alias("Default_Handler_Proxy"))) void CRS_IRQHandler();
+__attribute__((weak, alias("Default_Handler_Proxy"))) void ECC_IRQHandler();
 __attribute__((weak, alias("Default_Handler_Proxy"))) void SAI4_IRQHandler();
 __attribute__((weak, alias("Default_Handler_Proxy"))) void WAKEUP_PIN_IRQHandler();
