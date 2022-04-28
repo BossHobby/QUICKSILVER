@@ -16,12 +16,14 @@
 #define GPIO_AF_SPI6 GPIO_AF5_SPI6
 
 #ifdef STM32H7
+#define LL_DMAMUX_CHANNEL_NA -1
+
 #define SPI_DMA(spi_prt, dma_prt, chan, rx, tx)     \
   {                                                 \
     .dma = DMA##dma_prt,                            \
     .dma_port = dma_prt,                            \
     .channel = LL_DMAMUX_CHANNEL_##chan,            \
-    .channel_index = chan,                          \
+    .channel_index = -1,                            \
                                                     \
     .rx_request = LL_DMAMUX1_REQ_SPI##spi_prt##_RX, \
     .rx_stream_index = LL_DMA_STREAM_##rx,          \
@@ -165,7 +167,7 @@ void spi_enable_rcc(spi_ports_t port) {
   case 3:
     LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_SPI3);
     break;
-#if defined(STM32F7)
+#if defined(STM32F7) || defined(STM32H7)
   case 4:
     LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI4);
     break;
@@ -320,9 +322,12 @@ volatile uint8_t dma_transfer_done[32] = {[0 ... 31] = 1};
 void spi_init_dev(spi_ports_t port) {
 #ifndef STM32H7
   // Dummy read to clear receive buffer
-  while (LL_SPI_IsActiveFlag_TXE(spi_port_defs[bus->port].channel) == RESET)
+  while (LL_SPI_IsActiveFlag_TXE(PORT.channel) == RESET)
     ;
-  LL_SPI_ReceiveData8(spi_port_defs[bus->port].channel);
+  LL_SPI_ReceiveData8(PORT.channel);
+#else
+  LL_SPI_EnableGPIOControl(PORT.channel);
+  LL_SPI_SetFIFOThreshold(PORT.channel, LL_SPI_FIFO_TH_01DATA);
 #endif
 
   // Enable DMA clock
@@ -440,6 +445,11 @@ void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) 
 
   // now we can enable the peripheral
   // LL_SPI_Enable(PORT.channel);
+
+#ifdef STM32H7
+  LL_SPI_SetTransferSize(PORT.channel, length);
+  LL_SPI_StartMasterTransfer(PORT.channel);
+#endif
 }
 
 // blocking dma transmit bytes
@@ -458,6 +468,11 @@ void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length) 
 
   LL_DMA_EnableStream(PORT.dma.dma, PORT.dma.rx_stream_index);
   LL_DMA_EnableStream(PORT.dma.dma, PORT.dma.tx_stream_index);
+
+#ifdef STM32H7
+  LL_SPI_SetTransferSize(PORT.channel, length);
+  LL_SPI_StartMasterTransfer(PORT.channel);
+#endif
 
   while (dma_is_flag_active_tc(PORT.dma.dma, PORT.dma.tx_stream_index) == RESET)
     ;
