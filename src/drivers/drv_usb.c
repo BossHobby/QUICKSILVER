@@ -311,8 +311,14 @@ void usb_init() {
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   gpio_init.Pull = LL_GPIO_PULL_NO;
+
+#ifdef STM32H7
+  gpio_pin_init_af(&gpio_init, PIN_A11, GPIO_AF10_OTG2_FS);
+  gpio_pin_init_af(&gpio_init, PIN_A12, GPIO_AF10_OTG2_FS);
+#else
   gpio_pin_init_af(&gpio_init, PIN_A11, GPIO_AF10_OTG_FS);
   gpio_pin_init_af(&gpio_init, PIN_A12, GPIO_AF10_OTG_FS);
+#endif
 
 #ifdef USB_DETECT_PIN
   gpio_init.Mode = LL_GPIO_MODE_INPUT;

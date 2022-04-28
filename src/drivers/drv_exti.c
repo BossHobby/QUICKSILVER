@@ -166,7 +166,7 @@ void EXTI15_10_IRQHandler() {
   handle_exit_isr();
 }
 
-#if defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F4) || defined(STM32F7) || defined(STM32H7)
 
 #define EXTI5_IRQn EXTI9_5_IRQn
 #define EXTI6_IRQn EXTI9_5_IRQn

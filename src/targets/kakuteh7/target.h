@@ -16,7 +16,7 @@
   USART3_PD9PD8     \
   USART4_PD0PD1     \
   USART6_PC7PC6     \
-  USART7_PE7
+  USART7_PE7PE8
 
 // LEDS
 #define LED_NUMBER 1
@@ -33,7 +33,7 @@
 
 // RADIO
 #ifdef SERIAL_RX
-#define RX_USART USART_PORT2
+// #define RX_USART USART_PORT2
 #endif
 
 // OSD
@@ -42,6 +42,8 @@
 #define MAX7456_NSS PIN_B12
 
 // VOLTAGE DIVIDER
+#define DISABLE_ADC
+
 #define VBAT_PIN PIN_C0
 #define VBAT_DIVIDER_R1 10000
 #define VBAT_DIVIDER_R2 1000

@@ -15,12 +15,18 @@
 #define BOOTLOADER_OFFSET 0x1FF00000
 #endif
 
+#ifdef STM32H7
+#define BOOTLOADER_OFFSET 0x1FF09800
+#endif
+
 void system_reset() {
   NVIC_SystemReset();
 }
 
 static void backup_register_write(uint32_t val) {
+#ifndef STM32H7
   __HAL_RCC_PWR_CLK_ENABLE();
+#endif
 
   LL_PWR_EnableBkUpAccess();
   LL_RTC_BAK_SetRegister(RTC, BKP_INDEX, val);

@@ -48,6 +48,18 @@
 
 #endif
 
+#ifdef STM32H7
+
+#define SYS_CLOCK_FREQ_HZ 216000000
+#define PWM_CLOCK_FREQ_HZ 216000000
+#define SPI_CLOCK_FREQ_HZ (SYS_CLOCK_FREQ_HZ / 4)
+
+#define LOOPTIME LOOPTIME_8K
+
+#define WITHIN_DTCM_RAM(p) (((uint32_t)p & 0xffff0000) == 0x20000000)
+
+#endif
+
 #ifdef USE_FAST_RAM
 #define FAST_RAM __attribute__((section(".fast_ram"), aligned(4)))
 #else

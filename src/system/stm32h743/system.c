@@ -703,16 +703,6 @@ void CRS_IRQHandler(void) {
 #endif
 
 void SystemInit(void) {
-  memProtReset();
-
-  initialiseMemorySections();
-
-#if !defined(USE_EXST)
-  // only stand-alone and bootloader firmware needs to do this.
-  // if it's done in the EXST firmware as well as the BOOTLOADER firmware you get a reset loop.
-  systemProcessResetReason();
-#endif
-
   // FPU settings
 #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
   SCB->CPACR |= ((3UL << 10 * 2) | (3UL << 11 * 2)); // Set CP10 and CP11 Full Access

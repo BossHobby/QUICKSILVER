@@ -13,10 +13,12 @@ typedef struct {
   uint32_t channel;
   uint8_t channel_index;
 
+  uint32_t rx_request;
   uint8_t rx_stream_index;
   DMA_Stream_TypeDef *rx_stream;
   IRQn_Type rx_it;
 
+  uint32_t tx_request;
   uint8_t tx_stream_index;
   DMA_Stream_TypeDef *tx_stream;
   IRQn_Type tx_it;
