@@ -83,7 +83,7 @@ GPIO_PIN(E, 13)
 GPIO_PIN(E, 14)
 GPIO_PIN(E, 15)
 
-#if defined(STM32F405) || defined(STM32F765)
+#if defined(STM32F405) || defined(STM32F765) || defined(STM32H743)
 
 GPIO_PIN(F, 0)
 GPIO_PIN(F, 1)

@@ -15,6 +15,25 @@
 #define GPIO_AF_SPI5 GPIO_AF5_SPI5
 #define GPIO_AF_SPI6 GPIO_AF5_SPI6
 
+#ifdef STM32H7
+#define SPI_DMA(spi_prt, dma_prt, chan, rx, tx)     \
+  {                                                 \
+    .dma = DMA##dma_prt,                            \
+    .dma_port = dma_prt,                            \
+    .channel = LL_DMAMUX_CHANNEL_##chan,            \
+    .channel_index = chan,                          \
+                                                    \
+    .rx_request = LL_DMAMUX1_REQ_SPI##spi_prt##_RX, \
+    .rx_stream_index = LL_DMA_STREAM_##rx,          \
+    .rx_stream = DMA##dma_prt##_Stream##rx,         \
+    .rx_it = DMA##dma_prt##_Stream##rx##_IRQn,      \
+                                                    \
+    .tx_request = LL_DMAMUX1_REQ_SPI##spi_prt##_TX, \
+    .tx_stream_index = LL_DMA_STREAM_##tx,          \
+    .tx_stream = DMA##dma_prt##_Stream##tx,         \
+    .tx_it = DMA##dma_prt##_Stream##tx##_IRQn,      \
+  }
+#else
 #define SPI_DMA(spi_prt, dma_prt, chan, rx, tx) \
   {                                             \
     .dma = DMA##dma_prt,                        \
@@ -30,6 +49,7 @@
     .tx_stream = DMA##dma_prt##_Stream##tx,     \
     .tx_it = DMA##dma_prt##_Stream##tx##_IRQn,  \
   }
+#endif
 #define SPI_PORT(chan, sck_pin, miso_pin, mosi_pin) \
   {                                                 \
       .channel_index = chan,                        \
@@ -240,6 +260,30 @@ uint8_t spi_transfer_byte(spi_ports_t port, uint8_t data) {
 }
 
 uint8_t spi_transfer_byte_timeout(spi_ports_t port, uint8_t data, uint32_t timeout_max) {
+#if defined(STM32H7)
+  LL_SPI_SetTransferSize(PORT.channel, 1);
+  LL_SPI_StartMasterTransfer(PORT.channel);
+
+  for (uint16_t timeout = timeout_max; LL_SPI_IsActiveFlag_TXP(PORT.channel) == RESET; timeout--) {
+    if (timeout == 0) {
+      // liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
+      liberror++;
+      return 0;
+    }
+  }
+
+  LL_SPI_TransmitData8(PORT.channel, data);
+
+  for (uint16_t timeout = timeout_max; LL_SPI_IsActiveFlag_RXP(PORT.channel) == RESET; timeout--) {
+    if (timeout == 0) {
+      // liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
+      liberror++;
+      return 0;
+    }
+  }
+
+  return LL_SPI_ReceiveData8(PORT.channel);
+#else
   for (uint16_t timeout = timeout_max; LL_SPI_IsActiveFlag_TXE(PORT.channel) == RESET; timeout--) {
     if (timeout == 0) {
       // liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
@@ -267,6 +311,7 @@ uint8_t spi_transfer_byte_timeout(spi_ports_t port, uint8_t data, uint32_t timeo
   }
 
   return LL_SPI_ReceiveData8(PORT.channel);
+#endif
 }
 
 volatile uint8_t dma_transfer_done[32] = {[0 ... 31] = 1};
@@ -288,8 +333,13 @@ static void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uin
   dma_prepare_rx_memory(base_address_in, buffer_size);
 
   LL_DMA_InitTypeDef DMA_InitStructure;
+#ifdef STM32H7
+  DMA_InitStructure.PeriphRequest = PORT.dma.rx_request;
+  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&PORT.channel->RXDR;
+#else
   DMA_InitStructure.Channel = PORT.dma.channel;
   DMA_InitStructure.PeriphOrM2MSrcAddress = LL_SPI_DMA_GetRegAddr(PORT.channel);
+#endif
   DMA_InitStructure.MemoryOrM2MDstAddress = (uint32_t)base_address_in;
   DMA_InitStructure.Direction = LL_DMA_DIRECTION_PERIPH_TO_MEMORY;
   DMA_InitStructure.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
@@ -312,8 +362,13 @@ static void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, u
   dma_prepare_tx_memory(base_address_out, buffer_size);
 
   LL_DMA_InitTypeDef DMA_InitStructure;
+#ifdef STM32H7
+  DMA_InitStructure.PeriphRequest = PORT.dma.tx_request;
+  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&PORT.channel->TXDR;
+#else
   DMA_InitStructure.Channel = PORT.dma.channel;
-  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)(&(PORT.channel->DR));
+  DMA_InitStructure.PeriphOrM2MSrcAddress = LL_SPI_DMA_GetRegAddr(PORT.channel);
+#endif
   DMA_InitStructure.MemoryOrM2MDstAddress = (uint32_t)base_address_out;
   DMA_InitStructure.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
   DMA_InitStructure.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
@@ -438,10 +493,12 @@ void spi_bus_device_init(volatile spi_bus_device_t *bus) {
 
   LL_SPI_Enable(spi_port_defs[bus->port].channel);
 
+#ifndef STM32H7
   // Dummy read to clear receive buffer
   while (LL_SPI_IsActiveFlag_TXE(spi_port_defs[bus->port].channel) == RESET)
     ;
   LL_SPI_ReceiveData8(spi_port_defs[bus->port].channel);
+#endif
 
   spi_dma_init(bus->port);
 }

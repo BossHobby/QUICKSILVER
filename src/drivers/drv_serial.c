@@ -175,7 +175,7 @@ void serial_init(usart_ports_t port, uint32_t buadrate, bool half_duplex) {
   usart_init.OverSampling = LL_USART_OVERSAMPLING_16;
   LL_USART_Init(USART.channel, &usart_init);
 
-#if !defined(STM32F7)
+#if !defined(STM32F7) && !defined(STM32H7)
   LL_USART_ClearFlag_RXNE(USART.channel);
 #endif
   LL_USART_ClearFlag_TC(USART.channel);
@@ -245,7 +245,7 @@ bool serial_is_soft(usart_ports_t port) {
 #define USART5 UART5
 #endif
 
-#ifdef STM32F7
+#if defined(STM32F7) || defined(STM32H7)
 #define USART4 UART4
 #define USART5 UART5
 #define USART7 UART7
@@ -257,8 +257,15 @@ bool serial_is_soft(usart_ports_t port) {
 #define GPIO_AF_USART3 GPIO_AF7_USART3
 #define GPIO_AF_USART4 GPIO_AF8_UART4
 #define GPIO_AF_USART5 GPIO_AF8_UART5
+
+#ifdef STM32H7
+#define GPIO_AF_USART6 GPIO_AF7_USART6
+#define GPIO_AF_USART7 GPIO_AF7_UART7
+#else
 #define GPIO_AF_USART6 GPIO_AF8_USART6
 #define GPIO_AF_USART7 GPIO_AF8_UART7
+#endif
+
 #define GPIO_AF_USART8 GPIO_AF8_UART8
 
 #define USART_PORT(chan, rx, tx)      \

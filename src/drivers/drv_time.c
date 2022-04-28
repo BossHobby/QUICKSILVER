@@ -26,7 +26,9 @@ static void debug_time_init() {
 void time_init() {
   SystemCoreClockUpdate();
 
+#ifndef STM32H7
   __HAL_RCC_PWR_CLK_ENABLE();
+#endif
   __HAL_RCC_SYSCFG_CLK_ENABLE();
 
   // interrupt only every 1ms

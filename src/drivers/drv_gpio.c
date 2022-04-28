@@ -28,6 +28,15 @@ void gpio_init() {
   SET_BIT(RCC->AHB1ENR, ports);
 #endif
 
+#ifdef STM32H7
+  uint32_t ports = RCC_AHB4ENR_GPIOAEN | RCC_AHB4ENR_GPIOBEN | RCC_AHB4ENR_GPIOCEN |
+                   RCC_AHB4ENR_GPIODEN | RCC_AHB4ENR_GPIOEEN | RCC_AHB4ENR_GPIOFEN |
+                   RCC_AHB4ENR_GPIOGEN | RCC_AHB4ENR_GPIOHEN | RCC_AHB4ENR_GPIOIEN |
+                   RCC_AHB4ENR_GPIOJEN | RCC_AHB4ENR_GPIOKEN;
+
+  SET_BIT(RCC->AHB4ENR, ports);
+#endif
+
   LL_GPIO_InitTypeDef init;
   init.Mode = LL_GPIO_MODE_OUTPUT;
   init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
@@ -61,7 +70,7 @@ void gpio_init() {
 
 #if defined(FPV_PIN)
   if (FPV_PIN == PIN_A13 || FPV_PIN == PIN_A14) {
-    //skip repurpose of swd pin @boot
+    // skip repurpose of swd pin @boot
   } else {
     gpio_pin_init(&init, FPV_PIN);
     gpio_pin_reset(FPV_PIN);
