@@ -14,29 +14,12 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT 2017 STMicroelectronics</center></h2>
+  * Copyright (c) 2017 STMicroelectronics.
+  * All rights reserved.
   *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
   *
   ******************************************************************************
   */
@@ -77,8 +60,6 @@ defined in linker script */
 Reset_Handler:  
   ldr   sp, =_estack      /* set stack pointer */
 
-  bl persistentObjectInit
-
 /* Copy the data segment initializers from flash to SRAM */  
   movs  r1, #0
   b  LoopCopyDataInit
@@ -107,66 +88,15 @@ LoopFillZerobss:
   cmp  r2, r3
   bcc  FillZerobss
 
-/*-----*/
-  ldr  r2, =_ssram2
-  b  LoopFillZerosram2
-/* Zero fill the sram2 segment. */
-FillZerosram2:
-  movs  r3, #0
-  str  r3, [r2], #4
-
-LoopFillZerosram2:
-  ldr  r3, = _esram2
-  cmp  r2, r3
-  bcc  FillZerosram2
-
-  ldr  r2, =_sfastram_bss
-  b  LoopFillZerofastram_bss
-/* Zero fill the fastram_bss segment. */
-FillZerofastram_bss:
-  movs  r3, #0
-  str  r3, [r2], #4
-
-LoopFillZerofastram_bss:
-  ldr  r3, = _efastram_bss
-  cmp  r2, r3
-  bcc  FillZerofastram_bss
-/*-----*/
-
-/* Mark the heap and stack */
-  ldr r2, =_heap_stack_begin
-  b   LoopMarkHeapStack
-
-MarkHeapStack:
-  movs    r3, 0xa5a5a5a5
-  str r3, [r2], #4
-
-LoopMarkHeapStack:
-  ldr r3, = _heap_stack_end
-  cmp r2, r3
-  bcc MarkHeapStack
-
-/* Call the clock system intitialization function.*/
+/* Call the clock system initialization function.*/
   bl  SystemInit   
 /* Call static constructors */
-/*  bl __libc_init_array */
+  bl __libc_init_array
 /* Call the application's entry point.*/
   bl  main
   bx  lr    
 .size  Reset_Handler, .-Reset_Handler
 
-/**
- * @brief  This is the code that gets called when the processor receives an 
- *         unexpected interrupt.  This simply enters an infinite loop, preserving
- *         the system state for examination by a debugger.
- * @param  None     
- * @retval None       
-*/
-    .section  .text.Default_Handler,"ax",%progbits
-Default_Handler:
-Infinite_Loop:
-  b  Infinite_Loop
-  .size  Default_Handler, .-Default_Handler
 /******************************************************************************
 *
 * The minimal vector table for a Cortex M. Note that the proper constructs
@@ -344,11 +274,10 @@ g_pfnVectors:
   .word     LPUART1_IRQHandler                /* LP UART1 interrupt         */     
   .word     0                                 /* Reserved                   */     
   .word     CRS_IRQHandler                    /* Clock Recovery Global Interrupt */ 
-  .word     0                                 /* Reserved                   */     
+  .word     ECC_IRQHandler                    /* ECC diagnostic Global Interrupt */ 
   .word     SAI4_IRQHandler                   /* SAI4 global interrupt      */      
   .word     0                                 /* Reserved                   */      
   .word     0                                 /* Reserved                   */      
   .word     WAKEUP_PIN_IRQHandler             /* Interrupt for all 6 wake-up pins */
    
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/        
  
