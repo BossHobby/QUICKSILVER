@@ -204,7 +204,9 @@ void motor_init() {
   /* DMA2 Stream6_Channel0 configuration ----------------------------------------------*/
   LL_DMA_DeInit(DMA2, LL_DMA_STREAM_6);
 #ifdef STM32H7
-  DMA_InitStructure.PeriphRequest = LL_DMAMUX1_REQ_TIM1_UP;
+  // TODO: fix me, other channels right now do nothing,
+  // switch to solution where a single channel runs at BIT_TIME/3
+  DMA_InitStructure.PeriphRequest = LL_DMAMUX1_REQ_TIM1_CH1;
 #else
   DMA_InitStructure.Channel = LL_DMA_CHANNEL_0;
 #endif
