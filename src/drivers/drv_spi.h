@@ -93,30 +93,22 @@ typedef struct spi_bus_device {
   uint8_t txn_head;
   // only modified by the intterupt or protected code
   uint8_t txn_tail;
+
   spi_txn_t txns[SPI_TXN_MAX];
+
+  spi_mode_t mode;
+  uint32_t divider;
 } spi_bus_device_t;
 
 extern const spi_port_def_t spi_port_defs[SPI_PORTS_MAX];
 
-void spi_enable_rcc(spi_ports_t port);
-void spi_init_pins(spi_ports_t port, gpio_pins_t nss);
-void spi_init_dev(spi_ports_t port);
-
 uint32_t spi_find_divder(uint32_t clk_hz);
-
-void spi_csn_enable(gpio_pins_t nss);
-void spi_csn_disable(gpio_pins_t nss);
-
-uint8_t spi_transfer_byte(spi_ports_t port, uint8_t data);
-uint8_t spi_transfer_byte_timeout(spi_ports_t port, uint8_t data, uint32_t timeout);
 
 uint8_t spi_dma_is_ready(spi_ports_t port);
 bool spi_dma_wait_for_ready(spi_ports_t port);
-void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length);
-void spi_dma_transfer_bytes(spi_ports_t port, uint8_t *buffer, uint32_t length);
 
 void spi_bus_device_init(volatile spi_bus_device_t *bus);
-void spi_bus_device_reconfigure(volatile spi_bus_device_t *bus, spi_mode_t mode, uint32_t baud_rate);
+void spi_bus_device_reconfigure(volatile spi_bus_device_t *bus, spi_mode_t mode, uint32_t divider);
 
 spi_txn_t *spi_txn_init(volatile spi_bus_device_t *bus, spi_txn_done_fn_t done_fn);
 void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size);

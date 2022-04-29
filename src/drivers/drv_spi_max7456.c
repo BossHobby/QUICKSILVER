@@ -25,7 +25,7 @@ static uint8_t lastvm0 = 0x55;
 static uint8_t dma_buffer[DMA_BUFFER_SIZE];
 static uint16_t dma_offset = 0;
 
-static volatile uint8_t buffer[DMA_BUFFER_SIZE * 2];
+static volatile DMA_RAM uint8_t buffer[DMA_BUFFER_SIZE * 2];
 static volatile spi_bus_device_t bus = {
     .port = MAX7456_SPI_PORT,
     .nss = MAX7456_NSS,
@@ -53,7 +53,7 @@ static uint8_t max7456_map_attr(uint8_t attr) {
 
 // blocking dma read of a single register
 static uint8_t max7456_dma_spi_read(uint8_t reg) {
-  spi_bus_device_reconfigure(&bus, true, MAX7456_BAUD_RATE);
+  spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
 
   uint8_t buffer[2] = {reg, 0xFF};
 
@@ -68,7 +68,7 @@ static uint8_t max7456_dma_spi_read(uint8_t reg) {
 
 // blocking dma write of a single register
 static void max7456_dma_spi_write(uint8_t reg, uint8_t data) {
-  spi_bus_device_reconfigure(&bus, true, MAX7456_BAUD_RATE);
+  spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
 
   spi_txn_t *txn = spi_txn_init(&bus, NULL);
   spi_txn_add_seg_const(txn, reg);
@@ -110,14 +110,14 @@ static void max7456_init_display() {
 // establish initial boot-up state
 void max7456_init() {
   spi_bus_device_init(&bus);
-  spi_bus_device_reconfigure(&bus, true, MAX7456_BAUD_RATE);
+  spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
 
   max7456_init_display();
 }
 
 // non blocking bulk dma transmit for interrupt callback configuration
 static void max7456_dma_it_transfer_bytes(const uint8_t *buffer, const uint8_t size) {
-  spi_bus_device_reconfigure(&bus, true, MAX7456_BAUD_RATE);
+  spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
 
   spi_txn_t *txn = spi_txn_init(&bus, NULL);
   spi_txn_add_seg(txn, NULL, buffer, size);

@@ -8,7 +8,10 @@
 
 #define BMI270_ID 0x24
 
-#define PORT spi_port_defs[GYRO_SPI_PORT]
+#define SPI_SPEED_SLOW spi_find_divder(MHZ_TO_HZ(0.5))
+#define SPI_SPEED_FAST spi_find_divder(MHZ_TO_HZ(24))
+
+extern volatile DMA_RAM spi_bus_device_t gyro_bus;
 
 const uint8_t bmi270_maximum_fifo_config_file[] = {
     0xc8, 0x2e, 0x00, 0x2e, 0x80, 0x2e, 0x1a, 0x00, 0xc8, 0x2e, 0x00, 0x2e, 0xc8, 0x2e, 0x00, 0x2e, 0xc8, 0x2e, 0x00,
@@ -30,70 +33,12 @@ const uint8_t bmi270_maximum_fifo_config_file[] = {
     0x00, 0x40, 0x40, 0x42, 0x7e, 0x82, 0xe1, 0x7f, 0xf2, 0x7f, 0x98, 0x2e, 0x6a, 0xd6, 0x21, 0x30, 0x23, 0x2e, 0x61,
     0xf5, 0xeb, 0x2c, 0xe1, 0x6f};
 
-static void bmi270_reinit_slow() {
-  spi_dma_wait_for_ready(GYRO_SPI_PORT);
-  LL_SPI_Disable(PORT.channel);
-
-  LL_SPI_DeInit(PORT.channel);
-  LL_SPI_InitTypeDef spi_init;
-  spi_init.TransferDirection = LL_SPI_FULL_DUPLEX;
-  spi_init.Mode = LL_SPI_MODE_MASTER;
-  spi_init.DataWidth = LL_SPI_DATAWIDTH_8BIT;
-  spi_init.ClockPolarity = LL_SPI_POLARITY_HIGH;
-  spi_init.ClockPhase = LL_SPI_PHASE_2EDGE;
-  spi_init.NSS = LL_SPI_NSS_SOFT;
-  spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(0.5));
-  spi_init.BitOrder = LL_SPI_MSB_FIRST;
-  spi_init.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
-  spi_init.CRCPoly = 7;
-  LL_SPI_Init(PORT.channel, &spi_init);
-
-  LL_SPI_Enable(PORT.channel);
-}
-
-static void bmi270_reinit_fast(void) {
-  spi_dma_wait_for_ready(GYRO_SPI_PORT);
-  LL_SPI_Disable(PORT.channel);
-
-  LL_SPI_DeInit(PORT.channel);
-  LL_SPI_InitTypeDef spi_init;
-  spi_init.TransferDirection = LL_SPI_FULL_DUPLEX;
-  spi_init.Mode = LL_SPI_MODE_MASTER;
-  spi_init.DataWidth = LL_SPI_DATAWIDTH_8BIT;
-  spi_init.ClockPolarity = LL_SPI_POLARITY_HIGH;
-  spi_init.ClockPhase = LL_SPI_PHASE_2EDGE;
-  spi_init.NSS = LL_SPI_NSS_SOFT;
-  spi_init.BaudRate = spi_find_divder(MHZ_TO_HZ(21));
-  spi_init.BitOrder = LL_SPI_MSB_FIRST;
-  spi_init.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
-  spi_init.CRCPoly = 7;
-  LL_SPI_Init(PORT.channel, &spi_init);
-
-  LL_SPI_Enable(PORT.channel);
-}
-
 static void bmi270_init() {
-
   // put the device in spi mode by toggeling CS
   gpio_pin_reset(GYRO_NSS);
   time_delay_ms(1);
   gpio_pin_set(GYRO_NSS);
   time_delay_ms(10);
-
-  spi_init_pins(GYRO_SPI_PORT, GYRO_NSS);
-
-#ifdef GYRO_INT
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_INPUT;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_UP;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  gpio_pin_init(&gpio_init, GYRO_INT);
-#endif
-
-  spi_enable_rcc(GYRO_SPI_PORT);
-  bmi270_reinit_slow();
-  spi_init_dev(GYRO_SPI_PORT);
 }
 
 uint8_t bmi270_detect() {
@@ -159,57 +104,48 @@ void bmi270_configure() {
 }
 
 uint8_t bmi270_read(uint8_t reg) {
-  bmi270_reinit_slow();
+  spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_SLOW);
 
   uint8_t buffer[3] = {reg | 0x80, 0x0, 0x0};
 
-  spi_csn_enable(GYRO_NSS);
-  spi_dma_transfer_bytes(GYRO_SPI_PORT, buffer, 3);
-  spi_csn_disable(GYRO_NSS);
+  spi_txn_t *txn = spi_txn_init(&gyro_bus, NULL);
+  spi_txn_add_seg(txn, buffer, buffer, 3);
+  spi_txn_submit(txn);
+
+  spi_txn_wait(&gyro_bus);
 
   return buffer[2];
 }
 
 void bmi270_write(uint8_t reg, uint8_t data) {
-  bmi270_reinit_slow();
+  spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_SLOW);
 
-  uint8_t buffer[2] = {reg, data};
+  spi_txn_t *txn = spi_txn_init(&gyro_bus, NULL);
+  spi_txn_add_seg_const(txn, reg);
+  spi_txn_add_seg_const(txn, data);
+  spi_txn_submit(txn);
 
-  spi_csn_enable(GYRO_NSS);
-  spi_dma_transfer_bytes(GYRO_SPI_PORT, buffer, 2);
-  spi_csn_disable(GYRO_NSS);
+  spi_txn_wait(&gyro_bus);
 }
 
 void bmi270_write_data(uint8_t reg, uint8_t *data, uint32_t size) {
-  bmi270_reinit_slow();
+  spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_SLOW);
 
-  uint8_t buffer[size + 1];
+  spi_txn_t *txn = spi_txn_init(&gyro_bus, NULL);
+  spi_txn_add_seg_const(txn, reg);
+  spi_txn_add_seg(txn, data, data, size);
+  spi_txn_submit(txn);
 
-  buffer[0] = reg;
-  for (uint32_t i = 0; i < size; i++) {
-    buffer[i + 1] = data[i];
-  }
-
-  spi_csn_enable(GYRO_NSS);
-  spi_dma_transfer_bytes(GYRO_SPI_PORT, buffer, size + 1);
-  spi_csn_disable(GYRO_NSS);
+  spi_txn_wait(&gyro_bus);
 }
 
 void bmi270_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
-  bmi270_reinit_fast();
+  spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_FAST);
 
-  uint8_t buffer[size + 2];
+  spi_txn_t *txn = spi_txn_init(&gyro_bus, NULL);
+  spi_txn_add_seg_const(txn, reg | 0x80);
+  spi_txn_add_seg(txn, data, NULL, size);
+  spi_txn_submit(txn);
 
-  buffer[0] = reg | 0x80;
-  for (uint32_t i = 0; i < (size + 1); i++) {
-    buffer[i + 1] = 0x0;
-  }
-
-  spi_csn_enable(GYRO_NSS);
-  spi_dma_transfer_bytes(GYRO_SPI_PORT, buffer, size + 2);
-  spi_csn_disable(GYRO_NSS);
-
-  for (int i = 2; i < size + 2; i++) {
-    data[i - 2] = buffer[i];
-  }
+  spi_txn_wait(&gyro_bus);
 }

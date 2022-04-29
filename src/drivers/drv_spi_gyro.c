@@ -1,5 +1,6 @@
 #include "drv_spi_gyro.h"
 
+#include "drv_spi.h"
 #include "drv_time.h"
 #include "project.h"
 
@@ -8,6 +9,15 @@
 #include "drv_spi_mpu6xxx.h"
 
 gyro_types_t gyro_type = GYRO_TYPE_INVALID;
+
+static volatile DMA_RAM uint8_t buffer[32];
+volatile DMA_RAM spi_bus_device_t gyro_bus = {
+    .port = GYRO_SPI_PORT,
+    .nss = GYRO_NSS,
+
+    .buffer = buffer,
+    .buffer_size = 32,
+};
 
 static gyro_types_t gyro_spi_detect() {
   gyro_types_t type = GYRO_TYPE_INVALID;
@@ -51,6 +61,18 @@ static gyro_types_t gyro_spi_detect() {
 }
 
 uint8_t gyro_spi_init() {
+#ifdef GYRO_INT
+  // Interrupt GPIO
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_INPUT;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  gpio_init.Pull = LL_GPIO_PULL_UP;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  gpio_pin_init(&gpio_init, GYRO_INT);
+#endif
+
+  spi_bus_device_init(&gyro_bus);
+
   gyro_type = gyro_spi_detect();
 
   switch (gyro_type) {
