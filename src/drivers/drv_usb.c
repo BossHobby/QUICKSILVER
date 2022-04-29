@@ -15,10 +15,10 @@
 #include <usb_cdc.h>
 
 #define CDC_EP0_SIZE 0x08
-#define CDC_RXD_EP 0x01
+#define CDC_RXD_EP 0x02
 #define CDC_TXD_EP 0x83
 #define CDC_DATA_SZ 0x40
-#define CDC_NTF_EP 0x82
+#define CDC_NTF_EP 0x81
 #define CDC_NTF_SZ 0x08
 
 #define BUFFER_SIZE 4096
@@ -266,7 +266,11 @@ static void cdc_txonly(usbd_device *dev, uint8_t event, uint8_t ep) {
   const uint32_t len = circular_buffer_read_multi(&tx_buffer, buf, CDC_DATA_SZ);
   tx_buffer_in_use = false;
 
-  usbd_ep_write(dev, ep, buf, len);
+  if (len) {
+    usbd_ep_write(dev, ep, buf, len);
+  } else {
+    usbd_ep_write(dev, ep, 0, 0);
+  }
 }
 
 static usbd_respond cdc_setconf(usbd_device *dev, uint8_t cfg) {
@@ -339,8 +343,12 @@ void usb_init() {
   usbd_connect(&udev, true);
 
 #ifdef STM32H7
-  HAL_PWREx_EnableUSBVoltageDetector();
-  time_delay_ms(100);
+  LL_PWR_EnableUSBVoltageDetector();
+  LL_PWR_DisableUSBReg();
+
+  while (!LL_PWR_IsActiveFlag_USB()) {
+    time_delay_ms(100);
+  }
 #endif
 }
 
