@@ -57,6 +57,12 @@ __attribute__((__used__)) void memory_section_init() {
   extern uint8_t _fast_ram_data;
   memcpy(&_fast_ram_start, &_fast_ram_data, (size_t)(&_fast_ram_end - &_fast_ram_start));
 #endif
+#ifdef USE_DMA_RAM
+  extern uint8_t _dma_ram_start;
+  extern uint8_t _dma_ram_end;
+  extern uint8_t _dma_ram_data;
+  memcpy(&_dma_ram_start, &_dma_ram_data, (size_t)(&_dma_ram_end - &_dma_ram_start));
+#endif
 }
 
 __attribute__((__used__)) int main() {
