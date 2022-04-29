@@ -24,6 +24,7 @@ MEMORY
   FLASH_CODE   (rx)  : ORIGIN = 0x08040000, LENGTH = 1792K
   FAST_RAM (rwx)     : ORIGIN = 0x20000000, LENGTH = 128K
   RAM    (xrw)       : ORIGIN = 0x24000000, LENGTH = 512K
+  DMA_RAM (rwx)      : ORIGIN = 0x30000000, LENGTH = 256K
 }
 
 /* Sections */
@@ -130,6 +131,30 @@ SECTIONS
     _edata = .;        /* define a global symbol at data end */
 
   } >RAM AT> FLASH
+
+  _fast_ram_data = LOADADDR(.fast_ram);
+  .fast_ram :
+  {
+    . = ALIGN(4);
+    _fast_ram_start = .;       /* create a global symbol at fast_ram start */
+    *(.fast_ram)
+    *(.fast_ram*)
+    
+    . = ALIGN(4);
+    _fast_ram_end = .;       /* create a global symbol at fast_ram end */
+  } >FAST_RAM AT> FLASH
+
+  _dma_ram_data = LOADADDR(.dma_ram);
+  .dma_ram :
+  {
+    . = ALIGN(4);
+    _dma_ram_start = .;       /* create a global symbol at dma_ram start */
+    *(.dma_ram)
+    *(.dma_ram*)
+    
+    . = ALIGN(4);
+    _dma_ram_end = .;       /* create a global symbol at dma_ram end */
+  } >DMA_RAM AT> FLASH
 
   /* Uninitialized data section into "RAM" Ram type memory */
   . = ALIGN(4);
