@@ -52,7 +52,7 @@
 
 #define SYS_CLOCK_FREQ_HZ 480000000
 #define PWM_CLOCK_FREQ_HZ 480000000
-#define SPI_CLOCK_FREQ_HZ (SYS_CLOCK_FREQ_HZ / 4)
+#define SPI_CLOCK_FREQ_HZ 100000000
 
 #define LOOPTIME LOOPTIME_8K
 
@@ -64,6 +64,12 @@
 #define FAST_RAM __attribute__((section(".fast_ram"), aligned(4)))
 #else
 #define FAST_RAM
+#endif
+
+#ifdef USE_DMA_RAM
+#define DMA_RAM __attribute__((section(".dma_ram"), aligned(32)))
+#else
+#define DMA_RAM
 #endif
 
 #define ENABLE_SMART_AUDIO
