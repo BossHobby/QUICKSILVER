@@ -16,7 +16,11 @@ static volatile uint32_t systick_pending = 0;
 static void debug_time_init() {
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
   CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-#if defined(STM32F7) || defined(STM32H7)
+#if defined(STM32F7)
+  DWT->LAR = DWT_LAR_UNLOCK_VALUE;
+#endif
+#if defined(STM32H7)
+  ITM->LAR = DWT_LAR_UNLOCK_VALUE;
   DWT->LAR = DWT_LAR_UNLOCK_VALUE;
 #endif
   DWT->CYCCNT = 0;
