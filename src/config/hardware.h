@@ -52,11 +52,12 @@
 
 #define SYS_CLOCK_FREQ_HZ 480000000
 #define PWM_CLOCK_FREQ_HZ 480000000
-#define SPI_CLOCK_FREQ_HZ 100000000
+#define SPI_CLOCK_FREQ_HZ (SYS_CLOCK_FREQ_HZ / 4)
 
 #define LOOPTIME LOOPTIME_8K
 
 #define WITHIN_DTCM_RAM(p) (((uint32_t)p & 0xfffe0000) == 0x20000000)
+#define WITHIN_DMA_RAM(p) (((uint32_t)p & 0xfffe0000) == 0x30000000)
 
 #endif
 
