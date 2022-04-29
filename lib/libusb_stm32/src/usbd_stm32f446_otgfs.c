@@ -107,6 +107,8 @@ static void enable(bool enable) {
     if (enable) {
         /* enabling USB_OTG in RCC */
 #if defined(STM32H743xx)
+        _BCL(RCC->AHB1ENR, RCC_AHB1ENR_USB2OTGFSULPIEN);
+        _BCL(RCC->AHB1LPENR, RCC_AHB1ENR_USB2OTGFSULPIEN);
         _BST(RCC->AHB1ENR, RCC_AHB1ENR_USB2OTGFSEN);
 #else
         _BST(RCC->AHB2ENR, RCC_AHB2ENR_OTGFSEN);
@@ -325,7 +327,7 @@ static void ep_deconfig(uint8_t ep) {
 }
 
 static int32_t ep_read(uint8_t ep, void* buf, uint16_t blen) {
-    uint32_t len, tmp;
+    uint32_t len, tmp = 0;
     ep &= 0x7F;
     volatile uint32_t *fifo = EPFIFO(0);
     USB_OTG_OUTEndpointTypeDef* epo = EPOUT(ep);
