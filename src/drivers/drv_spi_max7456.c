@@ -168,7 +168,9 @@ static osd_system_t max7456_current_system() {
 }
 
 uint8_t max7456_clear_async() {
-  spi_txn_wait(&bus);
+  if (!spi_txn_ready(&bus)) {
+    return 0;
+  }
 
   static uint8_t clr_col = 0;
   static uint8_t clr_row = 0;
