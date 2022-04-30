@@ -1,5 +1,7 @@
 #include "drv_fmc.h"
 
+#include <string.h>
+
 #include "failloop.h"
 #include "project.h"
 
@@ -17,6 +19,8 @@
 #define PROGRAM_TYPE FLASH_TYPEPROGRAM_WORD
 #endif
 
+#define FLASH_PTR(offset) (_config_flash + FLASH_ALIGN(offset))
+
 uint8_t __attribute__((section(".config_flash"))) _config_flash[16384];
 
 void fmc_lock() {
@@ -31,30 +35,56 @@ uint8_t fmc_erase() {
   // clear error status
   __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS);
 #ifdef STM32H7
-  FLASH_Erase_Sector(FLASH_SECTOR_3, FLASH_BANK_BOTH, FLASH_VOLTAGE_RANGE_3);
+  FLASH_Erase_Sector(FLASH_SECTOR_1, FLASH_BANK_BOTH, FLASH_VOLTAGE_RANGE_3);
 #else
   FLASH_Erase_Sector(FLASH_SECTOR_3, FLASH_VOLTAGE_RANGE_3);
 #endif
   return 0;
 }
 
-uint32_t fmc_read(uint32_t addr) {
-  return *((uint32_t *)(_config_flash + addr * 4));
+flash_word_t fmc_read(uint32_t addr) {
+  return *((flash_word_t *)(_config_flash + addr));
 }
 
-float fmc_read_float(uint32_t address) {
-  uint32_t result = fmc_read(address);
-  return *((float *)&result);
+void fmc_read_buf(uint32_t offset, uint8_t *data, uint32_t size) {
+  flash_word_t *ptr = (flash_word_t *)data;
+
+  for (uint32_t i = 0; i < (size / sizeof(flash_word_t)); i++) {
+    ptr[i] = fmc_read(offset + i * sizeof(flash_word_t));
+  }
 }
 
-void fmc_write(uint32_t addr, uint32_t value) {
-  HAL_StatusTypeDef result = HAL_FLASH_Program(PROGRAM_TYPE, (uint32_t)(_config_flash) + (addr * 4), value);
+void fmc_write(uint32_t offset, flash_word_t value) {
+#ifdef STM32H7
+  uint8_t data[FLASH_WORD_SIZE];
+  memcpy(data, &value, sizeof(flash_word_t));
+
+  HAL_StatusTypeDef result = HAL_FLASH_Program(PROGRAM_TYPE, (uint32_t)FLASH_PTR(offset), (uint64_t)(uint32_t)(data));
+#else
+  HAL_StatusTypeDef result = HAL_FLASH_Program(PROGRAM_TYPE, (uint32_t)FLASH_PTR(offset), value);
+#endif
+
   if (result != HAL_OK) {
     fmc_lock();
     failloop(FAILLOOP_FAULT);
   }
 }
 
-void fmc_write_float(uint32_t addr, float value) {
-  fmc_write(addr, *((uint32_t *)&value));
+void fmc_write_buf(uint32_t offset, uint8_t *data, uint32_t size) {
+  for (uint32_t i = 0; i < (size / FLASH_WORD_SIZE); i++) {
+    const uint32_t addr = (uint32_t)FLASH_PTR(offset + i * FLASH_WORD_SIZE);
+
+#ifdef STM32H7
+    const uint32_t ptr = (uint32_t)(data + i * FLASH_WORD_SIZE);
+    HAL_StatusTypeDef result = HAL_FLASH_Program(PROGRAM_TYPE, addr, ptr);
+#else
+    flash_word_t *ptr = (flash_word_t *)data;
+    HAL_StatusTypeDef result = HAL_FLASH_Program(PROGRAM_TYPE, addr, ptr[i]);
+#endif
+
+    if (result != HAL_OK) {
+      fmc_lock();
+      failloop(FAILLOOP_FAULT);
+    }
+  }
 }
