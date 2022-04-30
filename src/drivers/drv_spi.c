@@ -189,12 +189,12 @@ static void spi_dma_enable_rcc(spi_ports_t port) {
   }
 }
 
-static void spi_csn_enable(gpio_pins_t nss) {
-  gpio_pin_reset(nss);
+void spi_csn_enable(spi_bus_device_t *bus) {
+  gpio_pin_reset(bus->nss);
 }
 
-static void spi_csn_disable(gpio_pins_t nss) {
-  gpio_pin_set(nss);
+void spi_csn_disable(spi_bus_device_t *bus) {
+  gpio_pin_set(bus->nss);
 }
 
 static uint32_t spi_divider_to_ll(uint32_t divider) {
@@ -519,7 +519,6 @@ void spi_txn_add_seg_delay(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_d
 
   txn->size += size;
 
-  txn->segments[txn->segment_count].live = true;
   txn->segments[txn->segment_count].rx_data = rx_data;
   txn->segments[txn->segment_count].tx_data = tx_data;
   txn->segments[txn->segment_count].size = size;
@@ -545,11 +544,23 @@ void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, u
   }
   txn->size += size;
 
-  txn->segments[txn->segment_count].live = false;
-  txn->segments[txn->segment_count].rx_data = rx_data;
-  txn->segments[txn->segment_count].tx_data = tx_data;
-  txn->segments[txn->segment_count].size = size;
-  txn->segment_count++;
+  spi_txn_segment_t *last_seg = txn->segment_count > 0 ? &txn->segments[txn->segment_count - 1] : NULL;
+  if (rx_data == NULL && last_seg != NULL && last_seg->rx_data == NULL && last_seg->tx_data == NULL) {
+    // merge segments
+    last_seg->size += size;
+  } else {
+    // create new segment
+    if (txn->segment_count + 1 > SPI_TXN_SEG_MAX) {
+      txn->status = TXN_ERROR;
+      txn->size = 0;
+      return;
+    }
+
+    txn->segments[txn->segment_count].rx_data = rx_data;
+    txn->segments[txn->segment_count].tx_data = NULL;
+    txn->segments[txn->segment_count].size = size;
+    txn->segment_count++;
+  }
 }
 
 void spi_txn_add_seg_const(spi_txn_t *txn, const uint8_t tx_data) {
@@ -627,7 +638,7 @@ static void spi_txn_continue_mode(spi_bus_device_t *bus, spi_txn_t *txn, bool us
   uint32_t txn_size = 0;
   for (uint32_t i = 0; i < txn->segment_count; ++i) {
     spi_txn_segment_t *seg = &txn->segments[i];
-    if (seg->live && seg->tx_data) {
+    if (seg->tx_data) {
       memcpy((uint8_t *)txn->bus->buffer + txn->offset + txn_size, seg->tx_data, seg->size);
     }
     txn_size += seg->size;
@@ -636,12 +647,12 @@ static void spi_txn_continue_mode(spi_bus_device_t *bus, spi_txn_t *txn, bool us
   spi_reconfigure(bus);
 
   if (use_dma) {
-    spi_csn_enable(bus->nss);
+    spi_csn_enable(bus);
     spi_dma_transfer_begin(bus->port, (uint8_t *)bus->buffer + txn->offset, txn->size);
   } else {
-    spi_csn_enable(bus->nss);
+    spi_csn_enable(bus);
     spi_transfer(bus->port, (uint8_t *)bus->buffer + txn->offset, txn->size);
-    spi_csn_disable(bus->nss);
+    spi_csn_disable(bus);
 
     spi_txn_t *txn = spi_txn_finish(bus);
 
@@ -691,9 +702,14 @@ void spi_txn_wait(spi_bus_device_t *bus) {
   }
 }
 
+void spi_txn_submit_wait(spi_bus_device_t *bus, spi_txn_t *txn) {
+  spi_txn_submit(txn);
+  spi_txn_wait(bus);
+}
+
 static void spi_txn_dma_rx_isr(spi_ports_t port) {
   spi_bus_device_t *bus = spi_port_config[port].active_device;
-  spi_csn_disable(bus->nss);
+  spi_csn_disable(bus);
 
   spi_txn_t *txn = spi_txn_finish(bus);
   DMA_TRANSFER_DONE = 1;
@@ -731,15 +747,6 @@ static void handle_dma_rx_isr(spi_ports_t port) {
 
   if (spi_port_config[port].active_device) {
     spi_txn_dma_rx_isr(port);
-  } else {
-#if defined(USE_SDCARD) && defined(SDCARD_SPI_PORT)
-    if (port == SDCARD_SPI_PORT) {
-      extern void sdcard_dma_rx_isr();
-      sdcard_dma_rx_isr();
-    }
-#endif
-
-    DMA_TRANSFER_DONE = 1;
   }
 }
 
