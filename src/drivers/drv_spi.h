@@ -41,7 +41,6 @@ typedef struct {
 #define SPI_TXN_SEG_MAX 8
 
 typedef struct {
-  bool live;
   const uint8_t *tx_data;
   uint8_t *rx_data;
   uint32_t size;
@@ -110,6 +109,9 @@ bool spi_dma_wait_for_ready(spi_ports_t port);
 void spi_bus_device_init(spi_bus_device_t *bus);
 void spi_bus_device_reconfigure(spi_bus_device_t *bus, spi_mode_t mode, uint32_t divider);
 
+void spi_csn_enable(spi_bus_device_t *bus);
+void spi_csn_disable(spi_bus_device_t *bus);
+
 spi_txn_t *spi_txn_init(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn);
 void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size);
 void spi_txn_add_seg_delay(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size);
@@ -119,3 +121,4 @@ void spi_txn_submit(spi_txn_t *txn);
 void spi_txn_continue(spi_bus_device_t *bus);
 bool spi_txn_ready(spi_bus_device_t *bus);
 void spi_txn_wait(spi_bus_device_t *bus);
+void spi_txn_submit_wait(spi_bus_device_t *bus, spi_txn_t *txn);
