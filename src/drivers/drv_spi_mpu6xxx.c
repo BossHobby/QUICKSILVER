@@ -19,7 +19,7 @@
 
 #define SPI_SPEED_INIT MHZ_TO_HZ(0.5)
 
-extern volatile DMA_RAM spi_bus_device_t gyro_bus;
+extern DMA_RAM spi_bus_device_t gyro_bus;
 
 static uint32_t mpu6xxx_slow_divider() {
   return spi_find_divder(SPI_SPEED_INIT);

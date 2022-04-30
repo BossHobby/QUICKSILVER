@@ -12,7 +12,7 @@
 #define SPI_SPEED_SLOW spi_find_divder(MHZ_TO_HZ(0.5))
 #define SPI_SPEED_FAST spi_find_divder(MHZ_TO_HZ(24))
 
-extern volatile DMA_RAM spi_bus_device_t gyro_bus;
+extern DMA_RAM spi_bus_device_t gyro_bus;
 
 uint8_t icm42605_detect() {
   const uint8_t id = icm42605_read(ICM42605_WHO_AM_I);

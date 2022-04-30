@@ -11,7 +11,7 @@
 #define SPI_SPEED_SLOW spi_find_divder(MHZ_TO_HZ(0.5))
 #define SPI_SPEED_FAST spi_find_divder(MHZ_TO_HZ(24))
 
-extern volatile DMA_RAM spi_bus_device_t gyro_bus;
+extern DMA_RAM spi_bus_device_t gyro_bus;
 
 const uint8_t bmi270_maximum_fifo_config_file[] = {
     0xc8, 0x2e, 0x00, 0x2e, 0x80, 0x2e, 0x1a, 0x00, 0xc8, 0x2e, 0x00, 0x2e, 0xc8, 0x2e, 0x00, 0x2e, 0xc8, 0x2e, 0x00,
