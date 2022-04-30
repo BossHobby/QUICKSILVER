@@ -38,7 +38,7 @@ void system_reset_to_bootloader() {
   system_reset();
 }
 
-void system_check_for_bootloader() {
+__attribute__((__used__)) void system_check_for_bootloader() {
   const uint32_t magic = LL_RTC_BAK_GetRegister(RTC, BKP_INDEX);
   if (magic != BOOTLOADER_MAGIC) {
     return;

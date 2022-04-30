@@ -88,6 +88,7 @@ LoopFillZerobss:
   cmp  r2, r3
   bcc  FillZerobss
 
+  bl system_check_for_bootloader
 /* Call the clock system initialization function.*/
   bl  SystemInit   
 /* Call static constructors */
