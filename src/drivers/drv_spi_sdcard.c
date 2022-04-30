@@ -8,9 +8,6 @@
 
 #if defined(USE_SDCARD)
 
-#define SPI_PORT spi_port_defs[SDCARD_SPI_PORT]
-#define NSS_PIN gpio_pin_defs[SDCARD_NSS_PIN]
-
 typedef enum {
   SDCARD_POWER_UP,
   SDCARD_RESET,
@@ -46,73 +43,47 @@ typedef struct {
   uint32_t sector;
   uint32_t count;
   uint32_t count_done;
-
 } sdcard_operation_t;
-
-static volatile sdcard_state_t state = SDCARD_POWER_UP;
-static sdcard_operation_t operation;
-
-// one block plus 1 command byte, 2 crc bytes and 1 response byte
-
-#define TOKEN_SIZE 1
-#define CRC_SIZE 2
-#define RESPONSE_SIZE 1
-
-static uint8_t dma_block_buffer[SDCARD_PAGE_SIZE + TOKEN_SIZE + CRC_SIZE + RESPONSE_SIZE];
 
 // how many cycles to delay for write confirm
 #define IDLE_BYTES 16
 
+#define SPI_SPEED_SLOW spi_find_divder(MHZ_TO_HZ(0.5))
+#define SPI_SPEED_FAST spi_find_divder(MHZ_TO_HZ(10.5))
+
 sdcard_info_t sdcard_info;
 
+static volatile sdcard_state_t state = SDCARD_POWER_UP;
+static sdcard_operation_t operation;
+
+static DMA_RAM uint8_t dma_buffer[1024];
+static spi_bus_device_t bus = {
+    .port = SDCARD_SPI_PORT,
+    .nss = SDCARD_NSS_PIN,
+
+    .buffer = dma_buffer,
+    .buffer_size = 1024,
+
+    .auto_continue = false,
+};
+
 void sdcard_init() {
-  spi_init_pins(SDCARD_SPI_PORT, SDCARD_NSS_PIN);
-
-  spi_enable_rcc(SDCARD_SPI_PORT);
-
-  LL_SPI_DeInit(SPI_PORT.channel);
-  LL_SPI_InitTypeDef init;
-  init.TransferDirection = LL_SPI_FULL_DUPLEX;
-  init.Mode = LL_SPI_MODE_MASTER;
-  init.DataWidth = LL_SPI_DATAWIDTH_8BIT;
-  init.ClockPolarity = LL_SPI_POLARITY_LOW;
-  init.ClockPhase = LL_SPI_PHASE_1EDGE;
-  init.NSS = LL_SPI_NSS_SOFT;
-  init.BaudRate = spi_find_divder(MHZ_TO_HZ(0.5));
-  init.BitOrder = LL_SPI_MSB_FIRST;
-  init.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
-  init.CRCPoly = 7;
-  LL_SPI_Init(SPI_PORT.channel, &init);
-  LL_SPI_Enable(SPI_PORT.channel);
-
-  spi_init_dev(SDCARD_SPI_PORT);
-}
-
-static void sdcard_reinit_fast() {
-  LL_SPI_Disable(SPI_PORT.channel);
-
-  LL_SPI_DeInit(SPI_PORT.channel);
-  LL_SPI_InitTypeDef init;
-  init.TransferDirection = LL_SPI_FULL_DUPLEX;
-  init.Mode = LL_SPI_MODE_MASTER;
-  init.DataWidth = LL_SPI_DATAWIDTH_8BIT;
-  init.ClockPolarity = LL_SPI_POLARITY_LOW;
-  init.ClockPhase = LL_SPI_PHASE_1EDGE;
-  init.NSS = LL_SPI_NSS_SOFT;
-  init.BaudRate = spi_find_divder(MHZ_TO_HZ(10.5));
-  init.BitOrder = LL_SPI_MSB_FIRST;
-  init.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
-  init.CRCPoly = 7;
-  LL_SPI_Init(SPI_PORT.channel, &init);
-  LL_SPI_Enable(SPI_PORT.channel);
+  spi_bus_device_init(&bus);
+  spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, SPI_SPEED_SLOW);
 }
 
 static uint8_t sdcard_wait_non_idle() {
+  uint8_t ret = 0;
+
   for (uint16_t timeout = 8;; timeout--) {
     if (timeout == 0) {
       return 0xFF;
     }
-    const uint8_t ret = spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
+
+    spi_txn_t *txn = spi_txn_init(&bus, NULL);
+    spi_txn_add_seg(txn, &ret, NULL, 1);
+    spi_txn_submit_wait(&bus, txn);
+
     if (ret != 0xFF) {
       return ret;
     }
@@ -121,11 +92,17 @@ static uint8_t sdcard_wait_non_idle() {
 }
 
 static uint8_t sdcard_wait_for_idle() {
+  uint8_t ret = 0;
+
   for (uint16_t timeout = 8;; timeout--) {
     if (timeout == 0) {
       return 0;
     }
-    const uint8_t ret = spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
+
+    spi_txn_t *txn = spi_txn_init(&bus, NULL);
+    spi_txn_add_seg(txn, &ret, NULL, 1);
+    spi_txn_submit_wait(&bus, txn);
+
     if (ret == 0xFF) {
       return 1;
     }
@@ -133,38 +110,33 @@ static uint8_t sdcard_wait_for_idle() {
   return 0;
 }
 
-static void sdcard_select() {
-  spi_csn_enable(SDCARD_NSS_PIN);
-}
-
-static void sdcard_deselect() {
-  time_delay_us(10);
-  spi_csn_disable(SDCARD_NSS_PIN);
-}
-
 static uint8_t sdcard_command(const uint8_t cmd, const uint32_t args) {
   if (cmd != SDCARD_GO_IDLE && !sdcard_wait_for_idle()) {
     return 0xFF;
   }
 
-  spi_transfer_byte(SDCARD_SPI_PORT, 0x40 | cmd);
-  spi_transfer_byte(SDCARD_SPI_PORT, args >> 24);
-  spi_transfer_byte(SDCARD_SPI_PORT, args >> 16);
-  spi_transfer_byte(SDCARD_SPI_PORT, args >> 8);
-  spi_transfer_byte(SDCARD_SPI_PORT, args >> 0);
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+
+  spi_txn_add_seg_const(txn, 0x40 | cmd);
+  spi_txn_add_seg_const(txn, args >> 24);
+  spi_txn_add_seg_const(txn, args >> 16);
+  spi_txn_add_seg_const(txn, args >> 8);
+  spi_txn_add_seg_const(txn, args >> 0);
 
   // we have to send CRC while we are still in SD Bus mode
   switch (cmd) {
   case SDCARD_GO_IDLE:
-    spi_transfer_byte(SDCARD_SPI_PORT, 0x95);
+    spi_txn_add_seg_const(txn, 0x95);
     break;
   case SDCARD_IF_COND:
-    spi_transfer_byte(SDCARD_SPI_PORT, 0x87);
+    spi_txn_add_seg_const(txn, 0x87);
     break;
   default:
-    spi_transfer_byte(SDCARD_SPI_PORT, 1);
+    spi_txn_add_seg_const(txn, 1);
     break;
   }
+
+  spi_txn_submit_wait(&bus, txn);
 
   return sdcard_wait_non_idle();
 }
@@ -175,10 +147,13 @@ static uint8_t sdcard_app_command(const uint8_t cmd, const uint32_t args) {
 }
 
 uint32_t sdcard_read_response() {
-  return (spi_transfer_byte(SDCARD_SPI_PORT, 0xff) << 24) |
-         (spi_transfer_byte(SDCARD_SPI_PORT, 0xff) << 16) |
-         (spi_transfer_byte(SDCARD_SPI_PORT, 0xff) << 8) |
-         (spi_transfer_byte(SDCARD_SPI_PORT, 0xff) << 0);
+  uint8_t buf[4];
+
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg(txn, buf, NULL, 4);
+  spi_txn_submit_wait(&bus, txn);
+
+  return (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | (buf[3] << 0);
 }
 
 void sdcard_read_data(uint8_t *buf, const uint32_t size) {
@@ -188,28 +163,33 @@ void sdcard_read_data(uint8_t *buf, const uint32_t size) {
     return;
   }
 
-  // spi_dma_transfer_bytes(SDCARD_SPI_PORT, buf, size);
-  for (uint32_t i = 0; i < size; i++) {
-    buf[i] = spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
-  }
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+
+  spi_txn_add_seg(txn, buf, NULL, size);
 
   // two bytes CRC
-  spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
-  spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
+  spi_txn_add_seg_const(txn, 0xff);
+  spi_txn_add_seg_const(txn, 0xff);
+
+  spi_txn_submit_wait(&bus, txn);
 }
 
 void sdcard_write_data(const uint8_t token, const uint8_t *buf, const uint32_t size) {
-  // start block
-  spi_transfer_byte(SDCARD_SPI_PORT, token);
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
 
-  spi_dma_transfer_bytes(SDCARD_SPI_PORT, (uint8_t *)buf, size);
+  // start block
+  spi_txn_add_seg_const(txn, token);
+
+  spi_txn_add_seg(txn, NULL, (uint8_t *)buf, size);
 
   // two bytes CRC
-  spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
-  spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
+  spi_txn_add_seg_const(txn, 0xff);
+  spi_txn_add_seg_const(txn, 0xff);
 
   // write response
-  spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
+  spi_txn_add_seg_const(txn, 0xff);
+
+  spi_txn_submit_wait(&bus, txn);
 }
 
 static void sdcard_parse_csd(sdcard_csd_t *csd, uint8_t *c) {
@@ -279,21 +259,25 @@ uint8_t sdcard_update() {
   }
 
   switch (state) {
-  case SDCARD_POWER_UP:
-    spi_csn_disable(SDCARD_NSS_PIN);
+  case SDCARD_POWER_UP: {
+    spi_txn_t *txn = spi_txn_init(&bus, NULL);
     for (uint32_t i = 0; i < 20; i++) {
-      spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
+      spi_txn_add_seg_const(txn, 0xff);
     }
+    spi_txn_submit_wait(&bus, txn);
+
     state = SDCARD_RESET;
     delay_loops = 100;
     break;
+  }
 
   case SDCARD_RESET: {
     static uint32_t tries = 0;
-    sdcard_select();
+
     uint8_t ret = sdcard_command(SDCARD_GO_IDLE, 0);
     if (ret == 0x01) {
       state = SDCARD_DETECT_INTERFACE;
+      tries = 0;
     } else {
       tries++;
     }
@@ -302,11 +286,10 @@ uint8_t sdcard_update() {
       delay_loops = 100;
       state = SDCARD_POWER_UP;
     }
-    sdcard_deselect();
+
     break;
   }
   case SDCARD_DETECT_INTERFACE: {
-    sdcard_select();
     uint8_t ret = sdcard_command(SDCARD_IF_COND, 0x1AA);
     if (ret == SDCARD_R1_IDLE) {
       uint32_t voltage_check = sdcard_read_response();
@@ -325,52 +308,41 @@ uint8_t sdcard_update() {
       // ???
       state = SDCARD_DETECT_FAILED;
     }
-    sdcard_deselect();
+
     break;
   }
   case SDCARD_DETECT_INIT: {
-    sdcard_select();
     uint8_t ret = sdcard_app_command(SDCARD_ACMD_OD_COND, sdcard_info.version == 2 ? (1 << 30) : 0);
     if (ret == 0x0) {
       state = SDCARD_DETECT_READ_INFO;
     }
-    sdcard_deselect();
     break;
   }
 
   case SDCARD_DETECT_READ_INFO: {
-    sdcard_select();
     uint8_t ret = sdcard_command(SDCARD_OCR, 0);
     if (ret != 0x0) {
-      sdcard_deselect();
       state = SDCARD_DETECT_FAILED;
       break;
     }
     sdcard_info.ocr = sdcard_read_response();
     sdcard_info.high_capacity = (sdcard_info.ocr & (1 << 30)) != 0;
-    sdcard_deselect();
 
-    sdcard_select();
     ret = sdcard_command(SDCARD_CID, 0);
     if (ret != 0x0) {
-      sdcard_deselect();
       state = SDCARD_DETECT_FAILED;
       break;
     }
     sdcard_read_data((uint8_t *)&sdcard_info.cid, 16);
-    sdcard_deselect();
 
-    sdcard_select();
     ret = sdcard_command(SDCARD_CSD, 0);
     if (ret != 0x0) {
-      sdcard_deselect();
       state = SDCARD_DETECT_FAILED;
       break;
     }
     uint8_t csd_buffer[sizeof(sdcard_cid_t)];
     sdcard_read_data(csd_buffer, sizeof(sdcard_cid_t));
     sdcard_parse_csd(&sdcard_info.csd, csd_buffer);
-    sdcard_deselect();
 
     state = SDCARD_DETECT_FINISH;
     break;
@@ -378,16 +350,14 @@ uint8_t sdcard_update() {
 
   case SDCARD_DETECT_FINISH: {
     if (!sdcard_info.high_capacity) {
-      sdcard_select();
       uint8_t ret = sdcard_command(SDACARD_SET_BLOCK_LEN, SDCARD_PAGE_SIZE);
       if (ret != 0x0) {
         state = SDCARD_DETECT_FAILED;
         break;
       }
-      sdcard_deselect();
     }
 
-    sdcard_reinit_fast();
+    spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, SPI_SPEED_FAST);
     state = SDCARD_READY;
     break;
   }
@@ -397,28 +367,41 @@ uint8_t sdcard_update() {
     if (token == 0xFE) {
       state = SDCARD_READ_MULTIPLE_CONTINUE;
 
-      memset(dma_block_buffer, 0xFF, SDCARD_PAGE_SIZE + CRC_SIZE);
-      spi_dma_transfer_begin(SDCARD_SPI_PORT, (uint8_t *)&dma_block_buffer, SDCARD_PAGE_SIZE + CRC_SIZE);
+      spi_txn_t *txn = spi_txn_init(&bus, NULL);
+      spi_txn_add_seg(txn, operation.buf + operation.count_done * SDCARD_PAGE_SIZE, NULL, SDCARD_PAGE_SIZE);
+
+      // CRC bytes
+      spi_txn_add_seg_const(txn, 0xff);
+      spi_txn_add_seg_const(txn, 0xff);
+
+      spi_txn_submit(txn);
+      spi_txn_continue(&bus);
     }
     break;
   }
 
   case SDCARD_READ_MULTIPLE_CONTINUE: {
-    if (!spi_dma_is_ready(SDCARD_SPI_PORT)) {
+    if (!spi_txn_ready(&bus)) {
       break;
     }
 
-    memcpy(operation.buf + operation.count_done * SDCARD_PAGE_SIZE, dma_block_buffer, SDCARD_PAGE_SIZE);
     operation.count_done++;
 
-    if (operation.count_done == operation.count) {
-      state = SDCARD_READ_MULTIPLE_FINISH;
-    } else {
+    if (operation.count_done != operation.count) {
       uint8_t token = sdcard_wait_non_idle();
       if (token == 0xFE) {
-        memset(dma_block_buffer, 0xFF, SDCARD_PAGE_SIZE + CRC_SIZE);
-        spi_dma_transfer_begin(SDCARD_SPI_PORT, (uint8_t *)&dma_block_buffer, SDCARD_PAGE_SIZE + CRC_SIZE);
+        spi_txn_t *txn = spi_txn_init(&bus, NULL);
+        spi_txn_add_seg(txn, operation.buf + operation.count_done * SDCARD_PAGE_SIZE, NULL, SDCARD_PAGE_SIZE);
+
+        // CRC bytes
+        spi_txn_add_seg_const(txn, 0xff);
+        spi_txn_add_seg_const(txn, 0xff);
+
+        spi_txn_submit(txn);
+        spi_txn_continue(&bus);
       }
+    } else {
+      state = SDCARD_READ_MULTIPLE_FINISH;
     }
 
     break;
@@ -426,7 +409,6 @@ uint8_t sdcard_update() {
 
   case SDCARD_READ_MULTIPLE_FINISH: {
     sdcard_command(SDCARD_STOP_TRANSMISSION, 0);
-    sdcard_deselect();
 
     state = SDCARD_READ_MULTIPLE_DONE;
     break;
@@ -438,30 +420,33 @@ uint8_t sdcard_update() {
   }
 
   case SDCARD_WRITE_MULTIPLE_CONTINUE: {
-    if (!spi_dma_is_ready(SDCARD_SPI_PORT)) {
+    if (!spi_txn_ready(&bus)) {
       break;
     }
     if (operation.count == operation.count_done) {
       break;
     }
 
-    dma_block_buffer[0] = 0xFC;
-    memcpy(dma_block_buffer + TOKEN_SIZE, operation.buf, SDCARD_PAGE_SIZE);
+    spi_txn_t *txn = spi_txn_init(&bus, NULL);
+    spi_txn_add_seg_const(txn, 0xFC);
+    spi_txn_add_seg(txn, NULL, operation.buf, SDCARD_PAGE_SIZE);
 
     // two bytes CRC
-    dma_block_buffer[SDCARD_PAGE_SIZE + TOKEN_SIZE + 0] = 0xFF;
-    dma_block_buffer[SDCARD_PAGE_SIZE + TOKEN_SIZE + 1] = 0xFF;
+    spi_txn_add_seg_const(txn, 0xff);
+    spi_txn_add_seg_const(txn, 0xff);
 
     // write response
-    dma_block_buffer[SDCARD_PAGE_SIZE + TOKEN_SIZE + 2] = 0xFF;
+    spi_txn_add_seg_const(txn, 0xff);
+
+    spi_txn_submit(txn);
+    spi_txn_continue(&bus);
 
     state = SDCARD_WRITE_MULTIPLE_VERIFY;
-    spi_dma_transfer_begin(SDCARD_SPI_PORT, (uint8_t *)&dma_block_buffer, SDCARD_PAGE_SIZE + TOKEN_SIZE + CRC_SIZE + RESPONSE_SIZE);
     break;
   }
 
   case SDCARD_WRITE_MULTIPLE_VERIFY: {
-    if (!spi_dma_is_ready(SDCARD_SPI_PORT)) {
+    if (!spi_txn_ready(&bus)) {
       break;
     }
     if (!sdcard_wait_for_idle()) {
@@ -479,28 +464,38 @@ uint8_t sdcard_update() {
   }
 
   case SDCARD_WRITE_MULTIPLE_FINISH: {
-    spi_transfer_byte(SDCARD_SPI_PORT, 0xff);
-    spi_transfer_byte(SDCARD_SPI_PORT, 0xfd);
+    spi_txn_t *txn = spi_txn_init(&bus, NULL);
 
-    memset(dma_block_buffer, 0x0, IDLE_BYTES);
+    spi_txn_add_seg_const(txn, 0xff);
+    spi_txn_add_seg_const(txn, 0xfd);
+
+    spi_txn_submit(txn);
+    spi_txn_continue(&bus);
 
     state = SDCARD_WRITE_MULTIPLE_FINISH_WAIT;
     break;
   }
 
   case SDCARD_WRITE_MULTIPLE_FINISH_WAIT: {
-    if (!spi_dma_is_ready(SDCARD_SPI_PORT)) {
+    if (!spi_txn_ready(&bus)) {
       break;
     }
 
-    if (dma_block_buffer[IDLE_BYTES - 1] == 0xFF) {
-      sdcard_deselect();
+    static uint8_t response = 0x0;
+    if (response == 0xFF) {
       state = SDCARD_WRITE_MULTIPLE_DONE;
       break;
     }
 
-    memset(dma_block_buffer, 0xFF, IDLE_BYTES);
-    spi_dma_transfer_begin(SDCARD_SPI_PORT, (uint8_t *)&dma_block_buffer, IDLE_BYTES);
+    spi_txn_t *txn = spi_txn_init(&bus, NULL);
+
+    for (uint32_t i = 0; i < IDLE_BYTES; i++) {
+      spi_txn_add_seg_const(txn, 0xff);
+    }
+    spi_txn_add_seg(txn, &response, NULL, 1);
+
+    spi_txn_submit(txn);
+    spi_txn_continue(&bus);
     break;
   }
 
@@ -525,13 +520,10 @@ uint8_t sdcard_read_pages(uint8_t *buf, uint32_t sector, uint32_t count) {
     return 0;
   }
 
-  sdcard_select();
-
   const uint32_t addr = sdcard_info.high_capacity ? sector : sector * SDCARD_PAGE_SIZE;
 
   uint8_t ret = sdcard_command(SDCARD_READ_MULTIPLE_BLOCK, addr);
   if (ret != 0x0) {
-    sdcard_deselect();
     return 0;
   }
 
@@ -574,16 +566,12 @@ uint8_t sdcard_write_pages_start(uint32_t sector, uint32_t count) {
     return 0;
   }
 
-  sdcard_select();
-
   if (sdcard_app_command(SDCARD_ACMD_SET_WR_BLK_ERASE_COUNT, count * 2) != 0x0) {
-    sdcard_deselect();
     return 0;
   }
 
   const uint32_t addr = sdcard_info.high_capacity ? sector : sector * SDCARD_PAGE_SIZE;
   if (sdcard_command(SDCARD_WRITE_MULTIPLE_BLOCK, addr) != 0x0) {
-    sdcard_deselect();
     return 0;
   }
 
@@ -651,10 +639,6 @@ uint8_t sdcard_write_page(uint8_t *buf, uint32_t sector) {
     }
   }
   return 0;
-}
-
-void sdcard_dma_rx_isr() {
-  // spi_csn_disable(SDCARD_NSS_PIN);
 }
 
 #endif
