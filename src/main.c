@@ -66,8 +66,6 @@ __attribute__((__used__)) void memory_section_init() {
 }
 
 __attribute__((__used__)) int main() {
-  system_check_for_bootloader();
-
   // init some initial values
   // attempt 8k looptime for f405 or 4k looptime for f411
   state.looptime = LOOPTIME * 1e-6;
