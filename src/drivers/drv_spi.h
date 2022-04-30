@@ -66,7 +66,7 @@ typedef enum {
 typedef void (*spi_txn_done_fn_t)();
 
 typedef struct {
-  volatile struct spi_bus_device *bus;
+  struct spi_bus_device *bus;
 
   spi_txn_status_t status;
 
@@ -83,16 +83,16 @@ typedef struct spi_bus_device {
   spi_ports_t port;
   gpio_pins_t nss;
 
-  volatile uint8_t *buffer;
+  uint8_t *buffer;
   uint32_t buffer_size;
 
   bool auto_continue;
   bool (*poll_fn)();
 
   // only modified by the main loop
-  uint8_t txn_head;
+  volatile uint8_t txn_head;
   // only modified by the intterupt or protected code
-  uint8_t txn_tail;
+  volatile uint8_t txn_tail;
 
   spi_txn_t txns[SPI_TXN_MAX];
 
@@ -107,15 +107,15 @@ uint32_t spi_find_divder(uint32_t clk_hz);
 uint8_t spi_dma_is_ready(spi_ports_t port);
 bool spi_dma_wait_for_ready(spi_ports_t port);
 
-void spi_bus_device_init(volatile spi_bus_device_t *bus);
-void spi_bus_device_reconfigure(volatile spi_bus_device_t *bus, spi_mode_t mode, uint32_t divider);
+void spi_bus_device_init(spi_bus_device_t *bus);
+void spi_bus_device_reconfigure(spi_bus_device_t *bus, spi_mode_t mode, uint32_t divider);
 
-spi_txn_t *spi_txn_init(volatile spi_bus_device_t *bus, spi_txn_done_fn_t done_fn);
+spi_txn_t *spi_txn_init(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn);
 void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size);
 void spi_txn_add_seg_delay(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size);
 void spi_txn_add_seg_const(spi_txn_t *txn, const uint8_t tx_data);
 void spi_txn_submit(spi_txn_t *txn);
 
-void spi_txn_continue(volatile spi_bus_device_t *bus);
-bool spi_txn_ready(volatile spi_bus_device_t *bus);
-void spi_txn_wait(volatile spi_bus_device_t *bus);
+void spi_txn_continue(spi_bus_device_t *bus);
+bool spi_txn_ready(spi_bus_device_t *bus);
+void spi_txn_wait(spi_bus_device_t *bus);

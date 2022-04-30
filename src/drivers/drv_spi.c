@@ -70,7 +70,7 @@ const spi_port_def_t spi_port_defs[SPI_PORTS_MAX] = {{}, SPI_PORTS};
 #undef SPI_DMA
 
 typedef struct {
-  volatile spi_bus_device_t *active_device;
+  spi_bus_device_t *active_device;
   spi_mode_t mode;
   uint32_t divider;
 } spi_port_config_t;
@@ -82,7 +82,7 @@ typedef struct {
       .divider = 0,                                 \
   },
 
-static volatile spi_port_config_t spi_port_config[SPI_PORTS_MAX] = {{}, SPI_PORTS};
+static spi_port_config_t spi_port_config[SPI_PORTS_MAX] = {{}, SPI_PORTS};
 
 #undef SPI_PORT
 
@@ -342,7 +342,7 @@ bool spi_dma_wait_for_ready(spi_ports_t port) {
   return true;
 }
 
-static void spi_reconfigure(volatile spi_bus_device_t *bus) {
+static void spi_reconfigure(spi_bus_device_t *bus) {
   if (spi_port_config[bus->port].mode == bus->mode && spi_port_config[bus->port].divider == bus->divider) {
     return;
   }
@@ -435,7 +435,7 @@ static uint8_t spi_transfer(spi_ports_t port, uint8_t *data, uint32_t size) {
 #endif
 }
 
-void spi_bus_device_init(volatile spi_bus_device_t *bus) {
+void spi_bus_device_init(spi_bus_device_t *bus) {
   bus->txn_head = 0;
   bus->txn_tail = 0;
 
@@ -474,15 +474,15 @@ void spi_bus_device_init(volatile spi_bus_device_t *bus) {
   dma_transfer_done[bus->port] = 1;
 }
 
-void spi_bus_device_reconfigure(volatile spi_bus_device_t *bus, spi_mode_t mode, uint32_t divider) {
+void spi_bus_device_reconfigure(spi_bus_device_t *bus, spi_mode_t mode, uint32_t divider) {
   bus->mode = mode;
   bus->divider = divider;
 }
 
-spi_txn_t *spi_txn_init(volatile spi_bus_device_t *bus, spi_txn_done_fn_t done_fn) {
+spi_txn_t *spi_txn_init(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn) {
   const uint8_t head = (bus->txn_head + 1) % SPI_TXN_MAX;
 
-  volatile spi_txn_t *txn = &bus->txns[head];
+  spi_txn_t *txn = &bus->txns[head];
   if (txn->status == TXN_IN_PROGRESS) {
     // next txn is still in progress, wait for it to complete
     spi_txn_wait(bus);
@@ -565,13 +565,13 @@ void spi_txn_submit(spi_txn_t *txn) {
   }
 }
 
-static volatile spi_txn_t *spi_txn_finish(volatile spi_bus_device_t *bus) {
+static spi_txn_t *spi_txn_finish(spi_bus_device_t *bus) {
   const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
-  volatile spi_txn_t *txn = &bus->txns[tail];
+  spi_txn_t *txn = &bus->txns[tail];
 
   uint32_t txn_size = 0;
   for (uint32_t i = 0; i < txn->segment_count; ++i) {
-    volatile spi_txn_segment_t *seg = &txn->segments[i];
+    spi_txn_segment_t *seg = &txn->segments[i];
     if (seg->rx_data) {
       memcpy(seg->rx_data, (uint8_t *)txn->bus->buffer + txn->offset + txn_size, seg->size);
     }
@@ -585,7 +585,7 @@ static volatile spi_txn_t *spi_txn_finish(volatile spi_bus_device_t *bus) {
   return txn;
 }
 
-static bool spi_txn_is_ready(volatile spi_bus_device_t *bus) {
+static bool spi_txn_is_ready(spi_bus_device_t *bus) {
   // ensures this function can only run once the dma transaction is done
   if (!spi_dma_is_ready(bus->port)) {
     return false;
@@ -605,7 +605,7 @@ static bool spi_txn_is_ready(volatile spi_bus_device_t *bus) {
   return true;
 }
 
-static bool spi_txn_should_use_dma(volatile spi_bus_device_t *bus, volatile spi_txn_t *txn) {
+static bool spi_txn_should_use_dma(spi_bus_device_t *bus, spi_txn_t *txn) {
 #ifdef STM32H7
   uint8_t *addr = (uint8_t *)bus->buffer + txn->offset;
   if (WITHIN_DTCM_RAM(addr)) {
@@ -620,13 +620,13 @@ static bool spi_txn_should_use_dma(volatile spi_bus_device_t *bus, volatile spi_
   return true;
 }
 
-static void spi_txn_continue_mode(volatile spi_bus_device_t *bus, volatile spi_txn_t *txn, bool use_dma) {
+static void spi_txn_continue_mode(spi_bus_device_t *bus, spi_txn_t *txn, bool use_dma) {
   spi_port_config[bus->port].active_device = bus;
   txn->status = TXN_IN_PROGRESS;
 
   uint32_t txn_size = 0;
   for (uint32_t i = 0; i < txn->segment_count; ++i) {
-    volatile spi_txn_segment_t *seg = &txn->segments[i];
+    spi_txn_segment_t *seg = &txn->segments[i];
     if (seg->live && seg->tx_data) {
       memcpy((uint8_t *)txn->bus->buffer + txn->offset + txn_size, seg->tx_data, seg->size);
     }
@@ -643,7 +643,7 @@ static void spi_txn_continue_mode(volatile spi_bus_device_t *bus, volatile spi_t
     spi_transfer(bus->port, (uint8_t *)bus->buffer + txn->offset, txn->size);
     spi_csn_disable(bus->nss);
 
-    volatile spi_txn_t *txn = spi_txn_finish(bus);
+    spi_txn_t *txn = spi_txn_finish(bus);
 
     if (txn->done_fn) {
       txn->done_fn();
@@ -655,17 +655,17 @@ static void spi_txn_continue_mode(volatile spi_bus_device_t *bus, volatile spi_t
   }
 }
 
-bool spi_txn_ready(volatile spi_bus_device_t *bus) {
+bool spi_txn_ready(spi_bus_device_t *bus) {
   return bus->txn_head == bus->txn_tail;
 }
 
-void spi_txn_continue(volatile spi_bus_device_t *bus) {
+void spi_txn_continue(spi_bus_device_t *bus) {
   if (!spi_txn_is_ready(bus)) {
     return;
   }
 
   const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
-  volatile spi_txn_t *txn = &bus->txns[tail];
+  spi_txn_t *txn = &bus->txns[tail];
   if (txn->status != TXN_READY) {
     return;
   }
@@ -673,13 +673,13 @@ void spi_txn_continue(volatile spi_bus_device_t *bus) {
   spi_txn_continue_mode(bus, txn, spi_txn_should_use_dma(bus, txn));
 }
 
-void spi_txn_wait(volatile spi_bus_device_t *bus) {
+void spi_txn_wait(spi_bus_device_t *bus) {
   if (!spi_txn_is_ready(bus)) {
     return;
   }
 
   const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
-  volatile spi_txn_t *txn = &bus->txns[tail];
+  spi_txn_t *txn = &bus->txns[tail];
   if (txn->status != TXN_READY) {
     return;
   }
@@ -692,10 +692,10 @@ void spi_txn_wait(volatile spi_bus_device_t *bus) {
 }
 
 static void spi_txn_dma_rx_isr(spi_ports_t port) {
-  volatile spi_bus_device_t *bus = spi_port_config[port].active_device;
+  spi_bus_device_t *bus = spi_port_config[port].active_device;
   spi_csn_disable(bus->nss);
 
-  volatile spi_txn_t *txn = spi_txn_finish(bus);
+  spi_txn_t *txn = spi_txn_finish(bus);
   DMA_TRANSFER_DONE = 1;
 
   if (txn->done_fn) {

@@ -25,8 +25,8 @@ static uint8_t lastvm0 = 0x55;
 static uint8_t dma_buffer[DMA_BUFFER_SIZE];
 static uint16_t dma_offset = 0;
 
-static volatile DMA_RAM uint8_t buffer[DMA_BUFFER_SIZE * 2];
-static volatile spi_bus_device_t bus = {
+static DMA_RAM uint8_t buffer[DMA_BUFFER_SIZE * 2];
+static spi_bus_device_t bus = {
     .port = MAX7456_SPI_PORT,
     .nss = MAX7456_NSS,
 
