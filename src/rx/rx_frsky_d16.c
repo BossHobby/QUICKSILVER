@@ -181,7 +181,7 @@ uint8_t frsky_d16_is_valid_packet(uint8_t *packet) {
 
 #define SMART_PORT_DATA_SIZE 128
 static uint8_t smart_port_data[SMART_PORT_DATA_SIZE];
-static volatile circular_buffer_t smart_port_buffer = {
+static circular_buffer_t smart_port_buffer = {
     .buffer = smart_port_data,
     .head = 0,
     .tail = 0,
