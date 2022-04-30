@@ -42,7 +42,7 @@ extern uint32_t vtx_last_request;
 
 extern volatile uint8_t vtx_transfer_done;
 
-extern volatile circular_buffer_t vtx_rx_buffer;
+extern circular_buffer_t vtx_rx_buffer;
 
 extern uint8_t vtx_frame[VTX_BUFFER_SIZE];
 extern volatile uint8_t vtx_frame_length;

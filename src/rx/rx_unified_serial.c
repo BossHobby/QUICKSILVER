@@ -26,7 +26,7 @@ uint8_t rx_buffer[RX_BUFF_SIZE];
 uint8_t rx_data[RX_BUFF_SIZE]; // A place to put the RX frame so nothing can get overwritten during processing.
 
 static uint8_t _rx_data[RX_BUFF_SIZE];
-volatile circular_buffer_t rx_ring = {
+circular_buffer_t rx_ring = {
     .buffer = _rx_data,
     .head = 0,
     .tail = 0,

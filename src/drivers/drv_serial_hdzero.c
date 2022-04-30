@@ -46,7 +46,7 @@ static volatile uint32_t last_heartbeat = 0;
 static bool is_detected = false;
 
 static uint8_t msp_tx_data[BUFFER_SIZE];
-static volatile circular_buffer_t msp_tx_buffer = {
+static circular_buffer_t msp_tx_buffer = {
     .buffer = msp_tx_data,
     .head = 0,
     .tail = 0,
@@ -55,7 +55,7 @@ static volatile circular_buffer_t msp_tx_buffer = {
 static volatile bool msp_tx_buffer_in_use = false;
 
 static uint8_t msp_rx_data[BUFFER_SIZE];
-static volatile circular_buffer_t msp_rx_buffer = {
+static circular_buffer_t msp_rx_buffer = {
     .buffer = msp_rx_data,
     .head = 0,
     .tail = 0,

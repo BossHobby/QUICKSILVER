@@ -55,7 +55,7 @@ extern int current_pid_term;
 
 extern uint8_t telemetry_packet[64];
 
-extern volatile circular_buffer_t rx_ring;
+extern circular_buffer_t rx_ring;
 
 static crsft_parser_state_t parser_state = CRSF_CHECK_MAGIC;
 
