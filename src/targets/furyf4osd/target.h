@@ -23,7 +23,7 @@
 #define LED2_INVERT
 
 #define BUZZER_PIN PIN_A8
-#define BUZZER_INVERT
+//#define BUZZER_INVERT
 
 // GYRO
 #define GYRO_SPI_PORT SPI_PORT1
