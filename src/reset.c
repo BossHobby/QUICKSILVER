@@ -4,8 +4,10 @@
 
 #include "project.h"
 
-#define BOOTLOADER_MAGIC 0xDEADBEEF
 #define BKP_INDEX LL_RTC_BKP_DR4
+
+#define FIRMWARE_MAGIC 0xCAFEBABE
+#define BOOTLOADER_MAGIC 0xDEADBEEF
 
 #ifdef STM32F4
 #define BOOTLOADER_OFFSET 0x1FFF0000
@@ -40,16 +42,23 @@ void system_reset_to_bootloader() {
 
 __attribute__((__used__)) void system_check_for_bootloader() {
   const uint32_t magic = LL_RTC_BAK_GetRegister(RTC, BKP_INDEX);
-  if (magic != BOOTLOADER_MAGIC) {
-    return;
+
+  switch (magic) {
+  case BOOTLOADER_MAGIC: {
+    backup_register_write(0);
+
+    void (*DfuBootJump)(void) = (void (*)(void))(*((uint32_t *)(BOOTLOADER_OFFSET + 4)));
+    __set_MSP(*((uint32_t *)BOOTLOADER_OFFSET));
+    DfuBootJump();
+    break;
   }
 
-  backup_register_write(0);
+  case FIRMWARE_MAGIC:
+    break;
 
-  void (*DfuBootJump)(void) = (void (*)(void))(*((uint32_t *)(BOOTLOADER_OFFSET + 4)));
-  __set_MSP(*((uint32_t *)BOOTLOADER_OFFSET));
-  DfuBootJump();
-
-  while (1)
-    ;
+  default:
+    backup_register_write(FIRMWARE_MAGIC);
+    system_reset();
+    break;
+  }
 }
