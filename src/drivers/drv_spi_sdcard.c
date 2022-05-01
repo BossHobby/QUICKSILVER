@@ -110,6 +110,31 @@ static uint8_t sdcard_wait_for_idle() {
   return 0;
 }
 
+static bool sdcard_wait_for_idle_async() {
+  if (!spi_txn_ready(&bus)) {
+    return false;
+  }
+
+  static uint8_t ret = 0;
+  static bool in_progress = false;
+  if (in_progress) {
+    in_progress = false;
+    return ret == 0xFF;
+  }
+
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  for (uint8_t i = 0; i < 7; i++) {
+    spi_txn_add_seg_const(txn, 0xFF);
+  }
+  spi_txn_add_seg(txn, &ret, NULL, 1);
+  spi_txn_submit(txn);
+
+  spi_txn_continue(&bus);
+  in_progress = true;
+
+  return false;
+}
+
 static uint8_t sdcard_command(const uint8_t cmd, const uint32_t args) {
   if (cmd != SDCARD_GO_IDLE && !sdcard_wait_for_idle()) {
     return 0xFF;
@@ -446,10 +471,7 @@ uint8_t sdcard_update() {
   }
 
   case SDCARD_WRITE_MULTIPLE_VERIFY: {
-    if (!spi_txn_ready(&bus)) {
-      break;
-    }
-    if (!sdcard_wait_for_idle()) {
+    if (!sdcard_wait_for_idle_async()) {
       break;
     }
 
@@ -465,10 +487,7 @@ uint8_t sdcard_update() {
 
   case SDCARD_WRITE_MULTIPLE_FINISH: {
     spi_txn_t *txn = spi_txn_init(&bus, NULL);
-
-    spi_txn_add_seg_const(txn, 0xff);
     spi_txn_add_seg_const(txn, 0xfd);
-
     spi_txn_submit(txn);
     spi_txn_continue(&bus);
 
@@ -477,25 +496,11 @@ uint8_t sdcard_update() {
   }
 
   case SDCARD_WRITE_MULTIPLE_FINISH_WAIT: {
-    if (!spi_txn_ready(&bus)) {
+    if (!sdcard_wait_for_idle_async()) {
       break;
     }
 
-    static uint8_t response = 0x0;
-    if (response == 0xFF) {
-      state = SDCARD_WRITE_MULTIPLE_DONE;
-      break;
-    }
-
-    spi_txn_t *txn = spi_txn_init(&bus, NULL);
-
-    for (uint32_t i = 0; i < IDLE_BYTES; i++) {
-      spi_txn_add_seg_const(txn, 0xff);
-    }
-    spi_txn_add_seg(txn, &response, NULL, 1);
-
-    spi_txn_submit(txn);
-    spi_txn_continue(&bus);
+    state = SDCARD_WRITE_MULTIPLE_DONE;
     break;
   }
 
