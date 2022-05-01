@@ -13,8 +13,6 @@
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
 extern uint8_t rx_data[RX_BUFF_SIZE];
 
-extern volatile uint8_t rx_frame_position;
-extern volatile uint8_t expected_frame_length;
 extern volatile frame_status_t frame_status;
 
 extern uint16_t bind_safety;

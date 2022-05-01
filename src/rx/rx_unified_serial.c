@@ -12,15 +12,26 @@
 #include "io/usb_configurator.h"
 #include "profile.h"
 #include "project.h"
+#include "util/circular_buffer.h"
 #include "util/util.h"
 
 #ifdef RX_UNIFIED_SERIAL
+
+#define USART usart_port_defs[serial_rx_port]
 
 // This is the microsecond threshold for triggering a new frame to re-index to position 0 in the ISR
 #define RX_FRAME_INTERVAL_TRIGGER_TICKS (250 * (SYS_CLOCK_FREQ_HZ / 1000000L))
 
 uint8_t rx_buffer[RX_BUFF_SIZE];
-uint8_t rx_data[RX_BUFF_SIZE]; // A place to put the RX frame so nothing can get overwritten during processing.  //reduce size?
+uint8_t rx_data[RX_BUFF_SIZE]; // A place to put the RX frame so nothing can get overwritten during processing.
+
+static uint8_t _rx_data[RX_BUFF_SIZE];
+volatile circular_buffer_t rx_ring = {
+    .buffer = _rx_data,
+    .head = 0,
+    .tail = 0,
+    .size = RX_BUFF_SIZE,
+};
 
 volatile uint8_t rx_frame_position = 0;
 volatile uint8_t expected_frame_length = 10;
@@ -45,8 +56,6 @@ static uint16_t protocol_detect_timer = 0;
 extern profile_t profile;
 extern uint32_t last_frame_time_us;
 
-#define USART usart_port_defs[serial_rx_port]
-
 void rx_serial_isr() {
   volatile uint32_t ticks = DWT->CYCCNT;
   static volatile uint32_t last_ticks = 0;
@@ -64,6 +73,24 @@ void rx_serial_isr() {
     frame_status = FRAME_IDLE;
   }
 
+  if (LL_USART_IsActiveFlag_ORE(USART.channel)) {
+    // overflow means something was lost
+    LL_USART_ClearFlag_ORE(USART.channel);
+    rx_frame_position = 0;
+  }
+
+  if (LL_USART_IsEnabledIT_RXNE(USART.channel) && LL_USART_IsActiveFlag_RXNE(USART.channel)) {
+    const uint8_t data = LL_USART_ReceiveData8(USART.channel);
+    rx_buffer[rx_frame_position] = data;
+    rx_frame_position = (rx_frame_position + 1) % RX_BUFF_SIZE;
+
+    circular_buffer_write(&rx_ring, data);
+
+    if (rx_frame_position >= expected_frame_length && frame_status == FRAME_IDLE) {
+      frame_status = FRAME_RX;
+    }
+  }
+
   if (LL_USART_IsEnabledIT_TC(USART.channel) && LL_USART_IsActiveFlag_TC(USART.channel)) {
     LL_USART_ClearFlag_TC(USART.channel);
     if (telemetry_offset == telemetry_size && !telemetry_done) {
@@ -79,21 +106,6 @@ void rx_serial_isr() {
     }
     if (telemetry_offset == telemetry_size) {
       LL_USART_DisableIT_TXE(USART.channel);
-    }
-  }
-
-  if (LL_USART_IsActiveFlag_ORE(USART.channel)) {
-    // overflow means something was lost
-    LL_USART_ClearFlag_ORE(USART.channel);
-    rx_frame_position = 0;
-  }
-
-  if (LL_USART_IsEnabledIT_RXNE(USART.channel) && LL_USART_IsActiveFlag_RXNE(USART.channel)) {
-    rx_buffer[rx_frame_position] = LL_USART_ReceiveData8(USART.channel);
-    rx_frame_position = (rx_frame_position + 1) % RX_BUFF_SIZE;
-
-    if (rx_frame_position >= expected_frame_length && frame_status == FRAME_IDLE) {
-      frame_status = FRAME_RX;
     }
   }
 }
