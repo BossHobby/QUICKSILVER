@@ -82,21 +82,19 @@ void rx_serial_isr() {
     }
   }
 
-  if (LL_USART_IsEnabledIT_RXNE(USART.channel) && LL_USART_IsActiveFlag_RXNE(USART.channel)) {
-    rx_buffer[rx_frame_position++] = LL_USART_ReceiveData8(USART.channel);
-    // LL_USART_ClearFlag_RXNE(USART.channel);
-
-    if (rx_frame_position >= expected_frame_length && frame_status == FRAME_IDLE) {
-      frame_status = FRAME_RX;
-    }
-
-    rx_frame_position %= (RX_BUFF_SIZE);
-  }
-
   if (LL_USART_IsActiveFlag_ORE(USART.channel)) {
     // overflow means something was lost
     LL_USART_ClearFlag_ORE(USART.channel);
     rx_frame_position = 0;
+  }
+
+  if (LL_USART_IsEnabledIT_RXNE(USART.channel) && LL_USART_IsActiveFlag_RXNE(USART.channel)) {
+    rx_buffer[rx_frame_position] = LL_USART_ReceiveData8(USART.channel);
+    rx_frame_position = (rx_frame_position + 1) % RX_BUFF_SIZE;
+
+    if (rx_frame_position >= expected_frame_length && frame_status == FRAME_IDLE) {
+      frame_status = FRAME_RX;
+    }
   }
 }
 
@@ -266,21 +264,23 @@ bool rx_check() {
     }
   }
 
-  switch (bind_storage.unified.protocol) {
-  case RX_SERIAL_PROTOCOL_FPORT:
-  case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
-    if (telemetry_done) {
-      rx_serial_send_fport_telemetry();
-    }
-    break;
-  case RX_SERIAL_PROTOCOL_CRSF:
-    if (telemetry_done) {
-      rx_serial_send_crsf_telemetry();
-    }
-    break;
+  if (!channels_received) {
+    switch (bind_storage.unified.protocol) {
+    case RX_SERIAL_PROTOCOL_FPORT:
+    case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
+      if (telemetry_done) {
+        rx_serial_send_fport_telemetry();
+      }
+      break;
+    case RX_SERIAL_PROTOCOL_CRSF:
+      if (telemetry_done) {
+        rx_serial_send_crsf_telemetry();
+      }
+      break;
 
-  default:
-    break;
+    default:
+      break;
+    }
   }
 
   rx_lqi_update();
