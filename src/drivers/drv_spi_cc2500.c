@@ -8,83 +8,94 @@
 
 #define PORT spi_port_defs[CC2500_SPI_PORT]
 
+#define SPI_SPEED spi_find_divder(MHZ_TO_HZ(10.5))
+
+static DMA_RAM uint8_t dma_buffer[128];
+static spi_bus_device_t bus = {
+    .port = CC2500_SPI_PORT,
+    .nss = CC2500_NSS_PIN,
+
+    .buffer = dma_buffer,
+    .buffer_size = 128,
+
+    .auto_continue = false,
+};
+
 uint8_t cc2500_read_gdo0() {
+#ifdef CC2500_GDO0_PIN
   return gpio_pin_read(CC2500_GDO0_PIN);
+#else
+  return cc2500_get_status() & 0xF;
+#endif
 }
 
 static void cc2500_hardware_init() {
-  spi_init_pins(CC2500_SPI_PORT, CC2500_NSS);
-
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
-
 #if defined(USE_CC2500_PA_LNA)
-  // turn antenna on
+  {
+    LL_GPIO_InitTypeDef gpio_init;
+    gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
+    gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+    gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+    gpio_init.Pull = LL_GPIO_PULL_NO;
 
+    // turn antenna on
 #if defined(CC2500_LNA_EN_PIN)
-  gpio_pin_init(&gpio_init, CC2500_LNA_EN_PIN);
-  gpio_pin_set(CC2500_LNA_EN_PIN);
+    gpio_pin_init(&gpio_init, CC2500_LNA_EN_PIN);
+    gpio_pin_set(CC2500_LNA_EN_PIN);
 #endif
 
-  // turn tx off
-  gpio_pin_init(&gpio_init, CC2500_TX_EN_PIN);
-  gpio_pin_reset(CC2500_TX_EN_PIN);
+    // turn tx off
+    gpio_pin_init(&gpio_init, CC2500_TX_EN_PIN);
+    gpio_pin_reset(CC2500_TX_EN_PIN);
+
 #if defined(USE_CC2500_DIVERSITY)
-  // choose b?
-  gpio_pin_init(&gpio_init, CC2500_ANT_SEL_PIN);
-  gpio_pin_set(CC2500_ANT_SEL_PIN);
+    // choose b?
+    gpio_pin_init(&gpio_init, CC2500_ANT_SEL_PIN);
+    gpio_pin_set(CC2500_ANT_SEL_PIN);
 #endif
-
+  }
 #endif // USE_CC2500_PA_LNA
 
-  // GDO0
-  gpio_init.Mode = LL_GPIO_MODE_INPUT;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-  gpio_init.Pull = LL_GPIO_PULL_DOWN;
-  gpio_pin_init(&gpio_init, CC2500_GDO0_PIN);
+#ifdef CC2500_GDO0_PIN
+  {
+    // GDO0
+    LL_GPIO_InitTypeDef gpio_init;
+    gpio_init.Mode = LL_GPIO_MODE_INPUT;
+    gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+    gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
+    gpio_init.Pull = LL_GPIO_PULL_DOWN;
+    gpio_pin_init(&gpio_init, CC2500_GDO0_PIN);
+  }
+#endif
 
-  spi_enable_rcc(CC2500_SPI_PORT);
-
-  LL_SPI_DeInit(PORT.channel);
-  LL_SPI_InitTypeDef SPI_InitStructure;
-  SPI_InitStructure.TransferDirection = LL_SPI_FULL_DUPLEX;
-  SPI_InitStructure.Mode = LL_SPI_MODE_MASTER;
-  SPI_InitStructure.DataWidth = LL_SPI_DATAWIDTH_8BIT;
-  SPI_InitStructure.ClockPolarity = LL_SPI_POLARITY_LOW;
-  SPI_InitStructure.ClockPhase = LL_SPI_PHASE_1EDGE;
-  SPI_InitStructure.NSS = LL_SPI_NSS_SOFT;
-  SPI_InitStructure.BaudRate = spi_find_divder(MHZ_TO_HZ(10.5));
-  SPI_InitStructure.BitOrder = LL_SPI_MSB_FIRST;
-  SPI_InitStructure.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
-  SPI_InitStructure.CRCPoly = 7;
-  LL_SPI_Init(PORT.channel, &SPI_InitStructure);
-  LL_SPI_Enable(PORT.channel);
-
-  spi_init_dev(CC2500_SPI_PORT);
+  spi_bus_device_init(&bus);
+  spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, SPI_SPEED);
 }
 
 void cc2500_strobe(uint8_t address) {
-  spi_csn_enable(CC2500_NSS);
-  spi_transfer_byte(CC2500_SPI_PORT, address);
-  spi_csn_disable(CC2500_NSS);
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg_const(txn, address);
+  spi_txn_submit_wait(&bus, txn);
 }
 
 uint8_t cc2500_get_status() {
-  spi_csn_enable(CC2500_NSS);
-  const uint8_t status = spi_transfer_byte(CC2500_SPI_PORT, 0xFF);
-  spi_csn_disable(CC2500_NSS);
+  uint8_t status = 0;
+
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg(txn, &status, NULL, 1);
+  spi_txn_submit_wait(&bus, txn);
+
   return status;
 }
 
 uint8_t cc2500_write_reg(uint8_t reg, uint8_t data) {
-  spi_csn_enable(CC2500_NSS);
-  spi_transfer_byte(CC2500_SPI_PORT, reg | CC2500_WRITE_SINGLE);
-  const uint8_t ret = spi_transfer_byte(CC2500_SPI_PORT, data);
-  spi_csn_disable(CC2500_NSS);
+  uint8_t ret = 0;
+
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg_const(txn, reg | CC2500_WRITE_SINGLE);
+  spi_txn_add_seg(txn, &ret, &data, 1);
+  spi_txn_submit_wait(&bus, txn);
+
   return ret;
 }
 
@@ -92,54 +103,26 @@ uint8_t cc2500_read_reg(uint8_t reg) {
   return cc2500_write_reg(reg | CC2500_READ_SINGLE, 0xFF);
 }
 
-static uint8_t cc2500_read_multi(uint8_t reg, uint8_t data, uint8_t *result, uint8_t len) {
-  spi_csn_enable(CC2500_NSS);
+static uint8_t cc2500_read_multi(uint8_t reg, uint8_t *result, uint8_t len) {
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg(txn, &reg, &reg, 1);
+  spi_txn_add_seg(txn, result, NULL, len);
+  spi_txn_submit_wait(&bus, txn);
 
-  uint8_t buffer[len + 1];
-  buffer[0] = reg;
-  for (uint8_t i = 0; i < len; i++) {
-    buffer[i + 1] = data;
-  }
-
-  spi_dma_transfer_bytes(CC2500_SPI_PORT, buffer, len + 1);
-  for (uint8_t i = 0; i < len; i++) {
-    result[i] = buffer[i + 1];
-  }
-
-  spi_csn_disable(CC2500_NSS);
-  return buffer[0];
+  return reg;
 }
 
-/*
 static uint8_t cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
-  spi_csn_enable(CC2500_NSS);
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg(txn, &reg, &reg, 1);
+  spi_txn_add_seg(txn, NULL, data, len);
+  spi_txn_submit_wait(&bus, txn);
 
-  uint8_t buffer[len + 1];
-  buffer[0] = reg;
-  for (uint8_t i = 0; i < len; i++) {
-    buffer[i + 1] = data[i];
-  }
-
-  spi_dma_transfer_bytes(CC2500_SPI_PORT, buffer, len + 1);
-  spi_csn_disable(CC2500_NSS);
-  return buffer[0];
-}
-*/
-
-static uint8_t cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
-  spi_csn_enable(CC2500_NSS);
-
-  const uint8_t ret = spi_transfer_byte(CC2500_SPI_PORT, reg);
-  for (uint8_t i = 0; i < len; i++) {
-    spi_transfer_byte(CC2500_SPI_PORT, data[i]);
-  }
-
-  spi_csn_disable(CC2500_NSS);
-  return ret;
+  return reg;
 }
 
 uint8_t cc2500_read_fifo(uint8_t *result, uint8_t len) {
-  return cc2500_read_multi(CC2500_FIFO | CC2500_READ_BURST, 0xFF, result, len);
+  return cc2500_read_multi(CC2500_FIFO | CC2500_READ_BURST, result, len);
 }
 
 uint8_t cc2500_write_fifo(uint8_t *data, uint8_t len) {
@@ -156,7 +139,7 @@ uint8_t cc2500_write_fifo(uint8_t *data, uint8_t len) {
 
 void cc2500_reset() {
   cc2500_strobe(CC2500_SRES);
-  time_delay_us(1000); // 1000us
+  time_delay_us(1000);
   cc2500_strobe(CC2500_SIDLE);
 }
 
