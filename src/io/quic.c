@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "debug.h"
 #include "drv_serial.h"
 #include "drv_serial_4way.h"
 #include "drv_spi_max7456.h"
