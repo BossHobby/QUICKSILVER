@@ -50,7 +50,7 @@ typedef struct {
 #define IDLE_BYTES 16
 
 #define SPI_SPEED_SLOW spi_find_divder(MHZ_TO_HZ(0.5))
-#define SPI_SPEED_FAST spi_find_divder(MHZ_TO_HZ(10.5))
+#define SPI_SPEED_FAST spi_find_divder(MHZ_TO_HZ(25))
 
 sdcard_info_t sdcard_info;
 
