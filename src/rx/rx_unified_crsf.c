@@ -14,6 +14,7 @@
 #include "profile.h"
 #include "project.h"
 #include "rx_crsf.h"
+#include "util/circular_buffer.h"
 #include "util/util.h"
 
 #define MSP_BUFFER_SIZE 128
@@ -31,13 +32,18 @@ typedef enum {
   RATE_FLRC_1000HZ,
 } crsf_air_rates_t;
 
+typedef enum {
+  CRSF_CHECK_MAGIC,
+  CRSF_FRAME_LENGTH,
+  CRSF_PAYLOAD,
+  CRSF_CHECK_CRC,
+} crsft_parser_state_t;
+
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
 extern uint8_t rx_data[RX_BUFF_SIZE];
 
 static uint8_t telemetry_counter = 0;
 
-extern volatile uint8_t rx_frame_position;
-extern volatile uint8_t expected_frame_length;
 extern volatile frame_status_t frame_status;
 
 extern uint16_t bind_safety;
@@ -48,6 +54,10 @@ extern int current_pid_axis;
 extern int current_pid_term;
 
 extern uint8_t telemetry_packet[64];
+
+extern volatile circular_buffer_t rx_ring;
+
+static crsft_parser_state_t parser_state = CRSF_CHECK_MAGIC;
 
 static uint8_t crsf_rf_mode = 0;
 static uint16_t crsf_rf_mode_fps[] = {
@@ -138,12 +148,12 @@ static uint16_t telemetry_interval() {
   return 5;
 }
 
-static bool rx_serial_crsf_process_frame() {
+static bool rx_serial_crsf_process_frame(uint8_t frame_length) {
   bool channels_received = false;
 
-  switch (rx_data[2]) {
+  switch (rx_data[0]) {
   case CRSF_FRAMETYPE_RC_CHANNELS_PACKED: {
-    const crsf_channels_t *chan = (crsf_channels_t *)&rx_data[3];
+    const crsf_channels_t *chan = (crsf_channels_t *)&rx_data[1];
     channels[0] = chan->chan0;
     channels[1] = chan->chan1;
     channels[2] = chan->chan2;
@@ -189,7 +199,7 @@ static bool rx_serial_crsf_process_frame() {
   }
 
   case CRSF_FRAMETYPE_LINK_STATISTICS: {
-    const crsf_stats_t *stats = (crsf_stats_t *)&rx_data[3];
+    const crsf_stats_t *stats = (crsf_stats_t *)&rx_data[1];
 
     crsf_rf_mode = stats->rf_mode;
 
@@ -200,13 +210,13 @@ static bool rx_serial_crsf_process_frame() {
   }
 
   case CRSF_FRAMETYPE_MSP_REQ: {
-    msp_origin = rx_data[4];
-    msp_process_telemetry(&msp, rx_data + 5, rx_data[1] - 4);
+    msp_origin = rx_data[2];
+    msp_process_telemetry(&msp, rx_data + 3, frame_length - 4);
     break;
   }
 
   default:
-    quic_debugf("CRSF: unhandled packet type 0x%x", rx_data[2]);
+    quic_debugf("CRSF: unhandled packet type 0x%x", rx_data[0]);
     break;
   }
 
@@ -227,63 +237,56 @@ static bool rx_serial_crsf_process_frame() {
 bool rx_serial_process_crsf() {
   bool channels_received = false;
 
-  static int32_t rx_buffer_offset = 0;
+  static uint8_t frame_length = 0;
 
-  if (rx_frame_position < rx_buffer_offset || rx_buffer[rx_buffer_offset] != 0xC8) {
-    // we should have at least one byte by now.
-    // fail if its not a magic
-    frame_status = FRAME_DONE;
-    rx_buffer_offset = 0;
-    return channels_received;
+crsf_do_more:
+  switch (parser_state) {
+  case CRSF_CHECK_MAGIC: {
+    uint8_t magic = 0;
+    if (!circular_buffer_read(&rx_ring, &magic)) {
+      break;
+    }
+    if (magic != 0xC8) {
+      goto crsf_do_more;
+    }
+    parser_state = CRSF_FRAME_LENGTH;
+    break;
   }
 
-  if ((rx_frame_position - rx_buffer_offset) < 3) {
-    // not enough data
-    frame_status = FRAME_IDLE;
-    return channels_received;
+  case CRSF_FRAME_LENGTH: {
+    if (!circular_buffer_read(&rx_ring, &frame_length)) {
+      break;
+    }
+    if (frame_length <= 64) {
+      parser_state = CRSF_PAYLOAD;
+      goto crsf_do_more;
+    }
+    parser_state = CRSF_CHECK_MAGIC;
+    break;
   }
-
-  // copy the header
-  memcpy(rx_data, rx_buffer + rx_buffer_offset, 3);
-
-  if (rx_data[0] != 0xC8 || rx_data[1] > 64) {
-    quic_debugf("CRSF: invalid header");
-    frame_status = FRAME_DONE;
-    rx_buffer_offset = 0;
-    return channels_received;
+  case CRSF_PAYLOAD: {
+    if (circular_buffer_available(&rx_ring) < frame_length) {
+      break;
+    }
+    if (circular_buffer_read_multi(&rx_ring, rx_data, frame_length)) {
+      parser_state = CRSF_CHECK_CRC;
+      goto crsf_do_more;
+    }
+    break;
   }
+  case CRSF_CHECK_CRC: {
+    const uint8_t crc_ours = crsf_crc8(rx_data, frame_length - 1);
+    const uint8_t crc_theirs = rx_data[frame_length - 1];
+    if (crc_ours == crc_theirs) {
+      channels_received = rx_serial_crsf_process_frame(frame_length);
+      telemetry_counter++;
+    }
 
-  // get real frame length
-  const uint32_t frame_length = rx_data[1] + 2;
+    parser_state = CRSF_CHECK_MAGIC;
+    goto crsf_do_more;
 
-  if ((rx_frame_position - rx_buffer_offset) < frame_length) {
-    // not enough data
-    frame_status = FRAME_IDLE;
-    return channels_received;
+    break;
   }
-
-  // copy rest of the data
-  memcpy(rx_data, rx_buffer + rx_buffer_offset, frame_length);
-
-  const uint8_t crc_ours = crsf_crc8(&rx_data[2], frame_length - 3);
-  const uint8_t crc_theirs = rx_data[frame_length - 1];
-  if (crc_ours != crc_theirs) {
-    // invalid crc, bail
-    quic_debugf("CRSF: invalid crc, bail");
-    frame_status = FRAME_DONE;
-    rx_buffer_offset = 0;
-    return channels_received;
-  }
-
-  // we got a valid frame, update offset to potentially read another frame
-  rx_buffer_offset += frame_length;
-  channels_received = rx_serial_crsf_process_frame();
-
-  if ((rx_frame_position - rx_buffer_offset) <= 0) {
-    // We're done with this frame now.
-    frame_status = FRAME_DONE;
-    rx_buffer_offset = 0;
-    telemetry_counter++; // Telemetry will send data out when this reaches 5
   }
 
   return channels_received;
