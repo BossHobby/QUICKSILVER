@@ -27,6 +27,7 @@ typedef enum {
   SDCARD_READ_MULTIPLE_DONE,
 
   SDCARD_WRITE_MULTIPLE_START,
+  SDCARD_WRITE_MULTIPLE_READY,
   SDCARD_WRITE_MULTIPLE_CONTINUE,
   SDCARD_WRITE_MULTIPLE_VERIFY,
   SDCARD_WRITE_MULTIPLE_SECTOR_SUCCESS,
@@ -440,6 +441,20 @@ uint8_t sdcard_update() {
   }
 
   case SDCARD_WRITE_MULTIPLE_START: {
+    if (!sdcard_wait_for_idle_async()) {
+      break;
+    }
+
+    const uint32_t addr = sdcard_info.high_capacity ? operation.sector : operation.sector * SDCARD_PAGE_SIZE;
+    if (sdcard_command(SDCARD_WRITE_MULTIPLE_BLOCK, addr) != 0x0) {
+      break;
+    }
+
+    state = SDCARD_WRITE_MULTIPLE_READY;
+    break;
+  }
+
+  case SDCARD_WRITE_MULTIPLE_READY: {
     // wait
     break;
   }
@@ -565,18 +580,17 @@ void sdcard_get_bounds(data_flash_bounds_t *bounds) {
 
 uint8_t sdcard_write_pages_start(uint32_t sector, uint32_t count) {
   if (state != SDCARD_READY) {
-    if (state == SDCARD_WRITE_MULTIPLE_START) {
+    if (state == SDCARD_WRITE_MULTIPLE_READY) {
       return 1;
     }
     return 0;
   }
 
-  if (sdcard_app_command(SDCARD_ACMD_SET_WR_BLK_ERASE_COUNT, count * 2) != 0x0) {
+  if (!sdcard_wait_for_idle_async()) {
     return 0;
   }
 
-  const uint32_t addr = sdcard_info.high_capacity ? sector : sector * SDCARD_PAGE_SIZE;
-  if (sdcard_command(SDCARD_WRITE_MULTIPLE_BLOCK, addr) != 0x0) {
+  if (sdcard_app_command(SDCARD_ACMD_SET_WR_BLK_ERASE_COUNT, count * 2) != 0x0) {
     return 0;
   }
 
@@ -591,7 +605,7 @@ uint8_t sdcard_write_pages_start(uint32_t sector, uint32_t count) {
 }
 
 uint8_t sdcard_write_pages_continue(uint8_t *buf) {
-  if (state == SDCARD_WRITE_MULTIPLE_START) {
+  if (state == SDCARD_WRITE_MULTIPLE_READY) {
     operation.buf = buf;
     operation.count++;
 
@@ -600,7 +614,7 @@ uint8_t sdcard_write_pages_continue(uint8_t *buf) {
   }
 
   if (state == SDCARD_WRITE_MULTIPLE_SECTOR_SUCCESS) {
-    state = SDCARD_WRITE_MULTIPLE_START;
+    state = SDCARD_WRITE_MULTIPLE_READY;
     return 1;
   }
 
@@ -609,10 +623,10 @@ uint8_t sdcard_write_pages_continue(uint8_t *buf) {
 
 uint8_t sdcard_write_pages_finish() {
   if (state == SDCARD_WRITE_MULTIPLE_SECTOR_SUCCESS) {
-    state = SDCARD_WRITE_MULTIPLE_START;
+    state = SDCARD_WRITE_MULTIPLE_READY;
     return 0;
   }
-  if (state == SDCARD_WRITE_MULTIPLE_START) {
+  if (state == SDCARD_WRITE_MULTIPLE_READY) {
     state = SDCARD_WRITE_MULTIPLE_FINISH;
     return 0;
   }
@@ -636,7 +650,7 @@ uint8_t sdcard_write_page(uint8_t *buf, uint32_t sector) {
       return 1;
     }
   }
-  if (state == SDCARD_WRITE_MULTIPLE_START) {
+  if (state == SDCARD_WRITE_MULTIPLE_READY) {
     if (operation.count_done == 0) {
       sdcard_write_pages_continue(buf);
     } else {
