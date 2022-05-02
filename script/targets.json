@@ -550,5 +550,18 @@
         }
       }
     ]
+  },
+  {
+    "name": "aikon_f7",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      }
+    ]
+    }
   }
 ]
