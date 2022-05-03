@@ -33,7 +33,7 @@
 
 // RADIO
 #ifdef SERIAL_RX
-// #define RX_USART USART_PORT2
+#define RX_USART USART_PORT2
 #endif
 
 // OSD
