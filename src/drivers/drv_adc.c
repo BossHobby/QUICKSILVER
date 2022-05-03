@@ -15,6 +15,13 @@
 #define ADC_REF_VOLTAGE 3300
 #endif
 
+#ifdef STM32H7
+#define ADC ADC12_COMMON
+#define ADC_SAMPLINGTIME LL_ADC_SAMPLINGTIME_387CYCLES_5
+#else
+#define ADC_SAMPLINGTIME LL_ADC_SAMPLINGTIME_480CYCLES
+#endif
+
 // 12 bit ADC has 4096 steps
 #define ADC_SCALEFACTOR ((float)(ADC_REF_VOLTAGE) / 4096.f)
 #define VBAT_SCALE ((float)(VBAT_DIVIDER_R1 + VBAT_DIVIDER_R2) / (float)(VBAT_DIVIDER_R2) * (1.f / 1000000.f))
@@ -56,6 +63,8 @@ static uint16_t adc_calibration_value() {
   return *((uint16_t *)0x1FF0F44A);
 #elif defined(STM32F722)
   return *((uint16_t *)0x1FF07A2A);
+#elif defined(STM32H7)
+  return *VREFINT_CAL_ADDR;
 #endif
 }
 
@@ -86,8 +95,11 @@ void adc_init() {
   // example case: pc2 additional function ADC123_IN12
   // adc1,2,3 connected to APB2 bus
 
-  // enable APB2 clock for adc1
+#ifdef STM32H7
+  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_ADC12);
+#else
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_ADC1);
+#endif
 
 #ifdef VBAT_PIN
   adc_init_pin(ADC_CHAN_VBAT, VBAT_PIN);
@@ -106,22 +118,36 @@ void adc_init() {
   adc_reg_init.SequencerLength = LL_ADC_REG_SEQ_SCAN_DISABLE;
   adc_reg_init.SequencerDiscont = LL_ADC_REG_SEQ_DISCONT_DISABLE;
   adc_reg_init.ContinuousMode = LL_ADC_REG_CONV_SINGLE;
+#ifdef STM32H7
+  adc_reg_init.DataTransferMode = LL_ADC_REG_DR_TRANSFER;
+  adc_reg_init.Overrun = LL_ADC_REG_OVR_DATA_PRESERVED;
+#else
   adc_reg_init.DMATransfer = LL_ADC_REG_DMA_TRANSFER_NONE;
+#endif
   LL_ADC_REG_Init(ADC1, &adc_reg_init);
 
   LL_ADC_InitTypeDef adc_init;
   adc_init.Resolution = LL_ADC_RESOLUTION_12B;
+#ifdef STM32H7
+  adc_init.LeftBitShift = LL_ADC_LEFT_BIT_SHIFT_NONE;
+  adc_init.LowPowerMode = LL_ADC_LP_MODE_NONE;
+#else
   adc_init.DataAlignment = LL_ADC_DATA_ALIGN_RIGHT;
   adc_init.SequencersScanMode = LL_ADC_SEQ_SCAN_DISABLE;
+#endif
   LL_ADC_Init(ADC1, &adc_init);
 
   LL_ADC_SetCommonPathInternalCh(ADC, LL_ADC_PATH_INTERNAL_VREFINT);
   LL_ADC_Enable(ADC1);
 
   LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_VREFINT);
-  LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_VREFINT, LL_ADC_SAMPLINGTIME_480CYCLES);
+  LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_VREFINT, ADC_SAMPLINGTIME);
 
+#ifdef STM32H7
+  LL_ADC_REG_StartConversion(ADC1);
+#else
   LL_ADC_REG_StartConversionSWStart(ADC1);
+#endif
 
   // reference is measured a 3.3v, toy boards are powered by 2.8, so a 1.17 multiplier
   // different vccs will translate to a different adc scale factor,
@@ -130,8 +156,12 @@ void adc_init() {
 }
 
 static uint16_t adc_read_raw(adc_chan_t chan) {
-  // will skip if adc is still busy or update the adc_array and request the next conversion
+// will skip if adc is still busy or update the adc_array and request the next conversion
+#ifdef STM32H7
+  uint8_t ready_to_convert = LL_ADC_IsActiveFlag_EOC(ADC1);
+#else
   uint8_t ready_to_convert = LL_ADC_IsActiveFlag_EOCS(ADC1);
+#endif
   if (ready_to_convert) {
     static adc_chan_t last_adc_channel = ADC_CHAN_VREF;
 
@@ -149,18 +179,22 @@ static uint16_t adc_read_raw(adc_chan_t chan) {
     // Select the new channel to read
     switch (last_adc_channel) {
     case ADC_CHAN_VREF:
-      LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_VREFINT, LL_ADC_SAMPLINGTIME_480CYCLES);
+      LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_VREFINT, ADC_SAMPLINGTIME);
       LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_VREFINT);
       break;
 
     default: {
-      LL_ADC_SetChannelSamplingTime(ADC1, adc_pins[last_adc_channel].channel, LL_ADC_SAMPLINGTIME_480CYCLES);
+      LL_ADC_SetChannelSamplingTime(ADC1, adc_pins[last_adc_channel].channel, ADC_SAMPLINGTIME);
       LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, adc_pins[last_adc_channel].channel);
       break;
     }
     }
 
+#ifdef STM32H7
+    LL_ADC_REG_StartConversion(ADC1);
+#else
     LL_ADC_REG_StartConversionSWStart(ADC1);
+#endif
   }
   return adc_array[chan];
 }
