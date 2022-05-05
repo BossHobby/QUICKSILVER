@@ -15,6 +15,7 @@ typedef enum {
   GYRO_TYPE_ICM20689,
 
   GYRO_TYPE_ICM42605,
+  GYRO_TYPE_ICM42688P,
 
   GYRO_TYPE_BMI270,
 } gyro_types_t;
