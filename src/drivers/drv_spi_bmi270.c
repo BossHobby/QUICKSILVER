@@ -133,7 +133,7 @@ void bmi270_write_data(uint8_t reg, uint8_t *data, uint32_t size) {
 
   spi_txn_t *txn = spi_txn_init(&gyro_bus, NULL);
   spi_txn_add_seg_const(txn, reg);
-  spi_txn_add_seg(txn, data, data, size);
+  spi_txn_add_seg(txn, NULL, data, size);
   spi_txn_submit(txn);
 
   spi_txn_wait(&gyro_bus);
