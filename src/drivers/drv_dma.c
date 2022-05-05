@@ -1,6 +1,26 @@
 #include "drv_dma.h"
 
+#include <stdbool.h>
+
 #include "project.h"
+
+// DMA1 Stream0 SPI3_RX
+// DMA1 Stream1
+// DMA1 Stream2
+// DMA1 Stream3 SPI2_RX
+// DMA1 Stream4 SPI2_TX
+// DMA1 Stream5
+// DMA1 Stream6
+// DMA1 Stream7 SPI3_TX
+
+// DMA2 Stream0 SPI4_RX
+// DMA2 Stream1 SPI4_TX
+// DMA2 Stream2 SPI1_RX
+// DMA2 Stream3 TIM1_CH1
+// DMA2 Stream4 TIM1_CH4
+// DMA2 Stream5 SPI1_TX
+// DMA2 Stream6 TIM1_CH3
+// DMA2 Stream7
 
 #if defined(STM32F7) || defined(STM32H7)
 #define CACHE_LINE_SIZE 32
