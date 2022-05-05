@@ -19,8 +19,8 @@ uint8_t icm42605_detect() {
   switch (id) {
   case ICM42605_ID:
     return GYRO_TYPE_ICM42605;
-  // case ICM42688P_ID:
-  //   return GYRO_TYPE_MPU6500;
+  case ICM42688P_ID:
+    return GYRO_TYPE_ICM42688P;
   default:
     return GYRO_TYPE_INVALID;
   }

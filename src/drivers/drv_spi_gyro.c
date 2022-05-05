@@ -40,6 +40,7 @@ static gyro_types_t gyro_spi_detect() {
     // FALLTHROUGH
 
   case GYRO_TYPE_ICM42605:
+  case GYRO_TYPE_ICM42688P:
     type = icm42605_detect();
     if (type != GYRO_TYPE_INVALID) {
       break;
@@ -87,6 +88,7 @@ uint8_t gyro_spi_init() {
     break;
 
   case GYRO_TYPE_ICM42605:
+  case GYRO_TYPE_ICM42688P:
     icm42605_configure();
     break;
 
@@ -127,7 +129,8 @@ gyro_data_t gyro_spi_read() {
     break;
   }
 
-  case GYRO_TYPE_ICM42605: {
+  case GYRO_TYPE_ICM42605:
+  case GYRO_TYPE_ICM42688P: {
     uint8_t buf[14];
     icm42605_read_data(ICM42605_TEMP_DATA1, buf, 14);
 
