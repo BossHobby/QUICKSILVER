@@ -35,7 +35,7 @@
 #define SPI4_PE2PE5PE6 SPI_PORT(4, PIN_E2, PIN_E5, PIN_E6)
 
 //                      spi_port, dma_port, channel, rx_stream, tx_stream
-#define SPI_DMA1 SPI_DMA(1, 2, 3, 2, 3)
+#define SPI_DMA1 SPI_DMA(1, 2, 3, 2, 5)
 #define SPI_DMA2 SPI_DMA(2, 1, 0, 3, 4)
 #define SPI_DMA3 SPI_DMA(3, 1, 0, 0, 7)
 #define SPI_DMA4 SPI_DMA(4, 2, 4, 0, 1)
