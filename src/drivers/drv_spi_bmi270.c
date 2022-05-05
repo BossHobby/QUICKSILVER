@@ -9,7 +9,7 @@
 #define BMI270_ID 0x24
 
 #define SPI_SPEED_SLOW spi_find_divder(MHZ_TO_HZ(0.5))
-#define SPI_SPEED_FAST spi_find_divder(MHZ_TO_HZ(24))
+#define SPI_SPEED_FAST spi_find_divder(MHZ_TO_HZ(10.5))
 
 extern DMA_RAM spi_bus_device_t gyro_bus;
 
@@ -144,6 +144,7 @@ void bmi270_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
 
   spi_txn_t *txn = spi_txn_init(&gyro_bus, NULL);
   spi_txn_add_seg_const(txn, reg | 0x80);
+  spi_txn_add_seg_const(txn, 0xFF);
   spi_txn_add_seg(txn, data, NULL, size);
   spi_txn_submit(txn);
 
