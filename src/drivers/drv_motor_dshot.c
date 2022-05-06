@@ -12,7 +12,7 @@
 #include "project.h"
 #include "util/util.h"
 
-#if (defined(STM32F4) || defined(STM32F7) || defined(STM32H7)) && defined(USE_DSHOT_DMA_DRIVER)
+#if defined(USE_DSHOT_DMA_DRIVER)
 
 #define DSHOT_TIME profile.motor.dshot_time
 #define DSHOT_SYMBOL_TIME (PWM_CLOCK_FREQ_HZ / (3 * DSHOT_TIME * 1000 - 1))
