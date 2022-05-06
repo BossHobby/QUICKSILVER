@@ -91,73 +91,6 @@ volatile uint8_t dma_transfer_done[16] = {[0 ... 15] = 1};
 
 #define PORT spi_port_defs[port]
 
-static uint32_t dma_is_flag_active_tc(DMA_TypeDef *dma, uint32_t stream) {
-  switch (stream) {
-  case LL_DMA_STREAM_0:
-    return LL_DMA_IsActiveFlag_TC0(dma);
-  case LL_DMA_STREAM_1:
-    return LL_DMA_IsActiveFlag_TC1(dma);
-  case LL_DMA_STREAM_2:
-    return LL_DMA_IsActiveFlag_TC2(dma);
-  case LL_DMA_STREAM_3:
-    return LL_DMA_IsActiveFlag_TC3(dma);
-  case LL_DMA_STREAM_4:
-    return LL_DMA_IsActiveFlag_TC4(dma);
-  case LL_DMA_STREAM_5:
-    return LL_DMA_IsActiveFlag_TC5(dma);
-  case LL_DMA_STREAM_6:
-    return LL_DMA_IsActiveFlag_TC6(dma);
-  case LL_DMA_STREAM_7:
-    return LL_DMA_IsActiveFlag_TC7(dma);
-  }
-  return 0;
-}
-
-static void dma_clear_flag_tc(DMA_TypeDef *dma, uint32_t stream) {
-  switch (stream) {
-  case LL_DMA_STREAM_0:
-    LL_DMA_ClearFlag_TC0(dma);
-    LL_DMA_ClearFlag_HT0(dma);
-    LL_DMA_ClearFlag_FE0(dma);
-    break;
-  case LL_DMA_STREAM_1:
-    LL_DMA_ClearFlag_TC1(dma);
-    LL_DMA_ClearFlag_HT1(dma);
-    LL_DMA_ClearFlag_FE1(dma);
-    break;
-  case LL_DMA_STREAM_2:
-    LL_DMA_ClearFlag_TC2(dma);
-    LL_DMA_ClearFlag_HT2(dma);
-    LL_DMA_ClearFlag_FE2(dma);
-    break;
-  case LL_DMA_STREAM_3:
-    LL_DMA_ClearFlag_TC3(dma);
-    LL_DMA_ClearFlag_HT3(dma);
-    LL_DMA_ClearFlag_FE3(dma);
-    break;
-  case LL_DMA_STREAM_4:
-    LL_DMA_ClearFlag_TC4(dma);
-    LL_DMA_ClearFlag_HT4(dma);
-    LL_DMA_ClearFlag_FE4(dma);
-    break;
-  case LL_DMA_STREAM_5:
-    LL_DMA_ClearFlag_TC5(dma);
-    LL_DMA_ClearFlag_HT5(dma);
-    LL_DMA_ClearFlag_FE5(dma);
-    break;
-  case LL_DMA_STREAM_6:
-    LL_DMA_ClearFlag_TC6(dma);
-    LL_DMA_ClearFlag_HT6(dma);
-    LL_DMA_ClearFlag_FE6(dma);
-    break;
-  case LL_DMA_STREAM_7:
-    LL_DMA_ClearFlag_TC7(dma);
-    LL_DMA_ClearFlag_HT7(dma);
-    LL_DMA_ClearFlag_FE7(dma);
-    break;
-  }
-}
-
 void spi_enable_rcc(spi_ports_t port) {
   switch (PORT.channel_index) {
   case 1:
@@ -733,13 +666,20 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   }
 }
 
-#define SPI_PORT(channel, sck_pin, miso_pin, mosi_pin) SPI_DMA##channel
-#define SPI_DMA(spi_prt, dma_prt, chan, rx, tx)   \
-  void DMA##dma_prt##_Stream##rx##_IRQHandler() { \
-    handle_dma_rx_isr(SPI_PORT##spi_prt);         \
-  }
+#define SPI_PORT(channel, sck_pin, miso_pin, mosi_pin) \
+  case DMA_DEVICE_SPI##channel##_RX:                   \
+    handle_dma_rx_isr(SPI_PORT##channel);              \
+    break;                                             \
+  case DMA_DEVICE_SPI##channel##_TX:                   \
+    break;
 
-SPI_PORTS
+void spi_dma_isr(dma_device_t dev) {
+  switch (dev) {
+    SPI_PORTS
+
+  default:
+    break;
+  }
+}
 
 #undef SPI_DMA
-#undef SPI_PORT
