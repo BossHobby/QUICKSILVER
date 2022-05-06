@@ -16,43 +16,6 @@
 #define GPIO_AF_SPI5 GPIO_AF5_SPI5
 #define GPIO_AF_SPI6 GPIO_AF5_SPI6
 
-#ifdef STM32H7
-#define LL_DMAMUX_CHANNEL_NA -1
-
-#define SPI_DMA(spi_prt, dma_prt, chan, rx, tx)     \
-  {                                                 \
-    .dma = DMA##dma_prt,                            \
-    .dma_port = dma_prt,                            \
-    .channel = LL_DMAMUX_CHANNEL_##chan,            \
-    .channel_index = -1,                            \
-                                                    \
-    .rx_request = LL_DMAMUX1_REQ_SPI##spi_prt##_RX, \
-    .rx_stream_index = LL_DMA_STREAM_##rx,          \
-    .rx_stream = DMA##dma_prt##_Stream##rx,         \
-    .rx_it = DMA##dma_prt##_Stream##rx##_IRQn,      \
-                                                    \
-    .tx_request = LL_DMAMUX1_REQ_SPI##spi_prt##_TX, \
-    .tx_stream_index = LL_DMA_STREAM_##tx,          \
-    .tx_stream = DMA##dma_prt##_Stream##tx,         \
-    .tx_it = DMA##dma_prt##_Stream##tx##_IRQn,      \
-  }
-#else
-#define SPI_DMA(spi_prt, dma_prt, chan, rx, tx) \
-  {                                             \
-    .dma = DMA##dma_prt,                        \
-    .dma_port = dma_prt,                        \
-    .channel = LL_DMA_CHANNEL_##chan,           \
-    .channel_index = chan,                      \
-                                                \
-    .rx_stream_index = LL_DMA_STREAM_##rx,      \
-    .rx_stream = DMA##dma_prt##_Stream##rx,     \
-    .rx_it = DMA##dma_prt##_Stream##rx##_IRQn,  \
-                                                \
-    .tx_stream_index = LL_DMA_STREAM_##tx,      \
-    .tx_stream = DMA##dma_prt##_Stream##tx,     \
-    .tx_it = DMA##dma_prt##_Stream##tx##_IRQn,  \
-  }
-#endif
 #define SPI_PORT(chan, sck_pin, miso_pin, mosi_pin) \
   {                                                 \
       .channel_index = chan,                        \
@@ -61,13 +24,13 @@
       .sck = sck_pin,                               \
       .miso = miso_pin,                             \
       .mosi = mosi_pin,                             \
-      .dma = SPI_DMA##chan,                         \
+      .dma_rx = DMA_DEVICE_SPI##chan##_RX,          \
+      .dma_tx = DMA_DEVICE_SPI##chan##_TX,          \
   },
 
 const spi_port_def_t spi_port_defs[SPI_PORTS_MAX] = {{}, SPI_PORTS};
 
 #undef SPI_PORT
-#undef SPI_DMA
 
 typedef struct {
   spi_bus_device_t *active_device;
@@ -107,17 +70,6 @@ void spi_enable_rcc(spi_ports_t port) {
     LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI4);
     break;
 #endif
-  }
-}
-
-static void spi_dma_enable_rcc(spi_ports_t port) {
-  switch (PORT.dma.dma_port) {
-  case 1:
-    LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
-    break;
-  case 2:
-    LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA2);
-    break;
   }
 }
 
@@ -193,17 +145,18 @@ static void spi_init_pins(spi_ports_t port, gpio_pins_t nss) {
 }
 
 static void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uint32_t buffer_size) {
-  // RX Stream
-  LL_DMA_DeInit(PORT.dma.dma, PORT.dma.rx_stream_index);
+  const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_rx];
+
+  LL_DMA_DeInit(dma->port, dma->stream_index);
 
   dma_prepare_rx_memory(base_address_in, buffer_size);
 
   LL_DMA_InitTypeDef DMA_InitStructure;
 #ifdef STM32H7
-  DMA_InitStructure.PeriphRequest = PORT.dma.rx_request;
+  DMA_InitStructure.PeriphRequest = dma->request;
   DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&PORT.channel->RXDR;
 #else
-  DMA_InitStructure.Channel = PORT.dma.channel;
+  DMA_InitStructure.Channel = dma->channel;
   DMA_InitStructure.PeriphOrM2MSrcAddress = LL_SPI_DMA_GetRegAddr(PORT.channel);
 #endif
   DMA_InitStructure.MemoryOrM2MDstAddress = (uint32_t)base_address_in;
@@ -218,21 +171,22 @@ static void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uin
   DMA_InitStructure.FIFOMode = LL_DMA_FIFOMODE_DISABLE;
   DMA_InitStructure.MemBurst = LL_DMA_MBURST_SINGLE;
   DMA_InitStructure.PeriphBurst = LL_DMA_PBURST_SINGLE;
-  LL_DMA_Init(PORT.dma.dma, PORT.dma.rx_stream_index, &DMA_InitStructure);
+  LL_DMA_Init(dma->port, dma->stream_index, &DMA_InitStructure);
 }
 
 static void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, uint32_t buffer_size) {
-  // TX Stream
-  LL_DMA_DeInit(PORT.dma.dma, PORT.dma.tx_stream_index);
+  const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_tx];
+
+  LL_DMA_DeInit(dma->port, dma->stream_index);
 
   dma_prepare_tx_memory(base_address_out, buffer_size);
 
   LL_DMA_InitTypeDef DMA_InitStructure;
 #ifdef STM32H7
-  DMA_InitStructure.PeriphRequest = PORT.dma.tx_request;
+  DMA_InitStructure.PeriphRequest = dma->request;
   DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&PORT.channel->TXDR;
 #else
-  DMA_InitStructure.Channel = PORT.dma.channel;
+  DMA_InitStructure.Channel = dma->channel;
   DMA_InitStructure.PeriphOrM2MSrcAddress = LL_SPI_DMA_GetRegAddr(PORT.channel);
 #endif
   DMA_InitStructure.MemoryOrM2MDstAddress = (uint32_t)base_address_out;
@@ -247,7 +201,7 @@ static void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, u
   DMA_InitStructure.FIFOMode = LL_DMA_FIFOMODE_DISABLE;
   DMA_InitStructure.MemBurst = LL_DMA_MBURST_SINGLE;
   DMA_InitStructure.PeriphBurst = LL_DMA_PBURST_SINGLE;
-  LL_DMA_Init(PORT.dma.dma, PORT.dma.tx_stream_index, &DMA_InitStructure);
+  LL_DMA_Init(dma->port, dma->stream_index, &DMA_InitStructure);
 }
 
 uint8_t spi_dma_is_ready(spi_ports_t port) {
@@ -294,16 +248,19 @@ static void spi_reconfigure(spi_bus_device_t *bus) {
 static void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) {
   dma_transfer_done[port] = 0;
 
-  dma_clear_flag_tc(PORT.dma.dma, PORT.dma.rx_stream_index);
-  dma_clear_flag_tc(PORT.dma.dma, PORT.dma.tx_stream_index);
+  const dma_stream_def_t *dma_tx = &dma_stream_defs[PORT.dma_tx];
+  const dma_stream_def_t *dma_rx = &dma_stream_defs[PORT.dma_rx];
+
+  dma_clear_flag_tc(dma_rx->port, dma_rx->stream_index);
+  dma_clear_flag_tc(dma_tx->port, dma_tx->stream_index);
 
   spi_dma_receive_init(port, buffer, length);
   spi_dma_transmit_init(port, buffer, length);
 
-  LL_DMA_EnableIT_TC(PORT.dma.dma, PORT.dma.rx_stream_index);
+  LL_DMA_EnableIT_TC(dma_rx->port, dma_rx->stream_index);
 
-  LL_DMA_EnableStream(PORT.dma.dma, PORT.dma.rx_stream_index);
-  LL_DMA_EnableStream(PORT.dma.dma, PORT.dma.tx_stream_index);
+  LL_DMA_EnableStream(dma_rx->port, dma_rx->stream_index);
+  LL_DMA_EnableStream(dma_tx->port, dma_tx->stream_index);
 
   LL_SPI_EnableDMAReq_TX(PORT.channel);
   LL_SPI_EnableDMAReq_RX(PORT.channel);
@@ -367,9 +324,12 @@ void spi_bus_device_init(spi_bus_device_t *bus) {
 
   spi_init_pins(bus->port, bus->nss);
   spi_enable_rcc(bus->port);
-  spi_dma_enable_rcc(bus->port);
 
-  LL_SPI_DeInit(spi_port_defs[bus->port].channel);
+  const spi_port_def_t *port = &spi_port_defs[bus->port];
+  dma_enable_rcc(port->dma_rx);
+  dma_enable_rcc(port->dma_tx);
+
+  LL_SPI_DeInit(port->channel);
 
   LL_SPI_InitTypeDef default_init;
   default_init.TransferDirection = LL_SPI_FULL_DUPLEX;
@@ -384,15 +344,16 @@ void spi_bus_device_init(spi_bus_device_t *bus) {
   default_init.CRCPoly = 7;
 
 #if defined(STM32H7)
-  LL_SPI_EnableGPIOControl(spi_port_defs[bus->port].channel);
-  LL_SPI_SetFIFOThreshold(spi_port_defs[bus->port].channel, LL_SPI_FIFO_TH_01DATA);
+  LL_SPI_EnableGPIOControl(port->channel);
+  LL_SPI_SetFIFOThreshold(port->channel, LL_SPI_FIFO_TH_01DATA);
 #endif
-  LL_SPI_Init(spi_port_defs[bus->port].channel, &default_init);
+  LL_SPI_Init(port->channel, &default_init);
 
   spi_port_config[bus->port].mode = SPI_MODE_LEADING_EDGE;
   spi_port_config[bus->port].divider = LL_SPI_BAUDRATEPRESCALER_DIV256;
 
-  interrupt_enable(spi_port_defs[bus->port].dma.rx_it, DMA_PRIORITY);
+  const dma_stream_def_t *dma_rx = &dma_stream_defs[port->dma_rx];
+  interrupt_enable(dma_rx->irq, DMA_PRIORITY);
   dma_transfer_done[bus->port] = 1;
 }
 
@@ -624,20 +585,23 @@ void spi_txn_submit_wait(spi_bus_device_t *bus, spi_txn_t *txn) {
 }
 
 static void handle_dma_rx_isr(spi_ports_t port) {
-  if (!dma_is_flag_active_tc(PORT.dma.dma, PORT.dma.rx_stream_index)) {
+  const dma_stream_def_t *dma_rx = &dma_stream_defs[PORT.dma_rx];
+  const dma_stream_def_t *dma_tx = &dma_stream_defs[PORT.dma_tx];
+
+  if (!dma_is_flag_active_tc(dma_rx->port, dma_rx->stream_index)) {
     return;
   }
 
-  dma_clear_flag_tc(PORT.dma.dma, PORT.dma.rx_stream_index);
-  dma_clear_flag_tc(PORT.dma.dma, PORT.dma.tx_stream_index);
+  dma_clear_flag_tc(dma_rx->port, dma_rx->stream_index);
+  dma_clear_flag_tc(dma_tx->port, dma_tx->stream_index);
 
-  LL_DMA_DisableIT_TC(PORT.dma.dma, PORT.dma.rx_stream_index);
+  LL_DMA_DisableIT_TC(dma_rx->port, dma_rx->stream_index);
 
   LL_SPI_DisableDMAReq_TX(PORT.channel);
   LL_SPI_DisableDMAReq_RX(PORT.channel);
 
-  LL_DMA_DisableStream(PORT.dma.dma, PORT.dma.rx_stream_index);
-  LL_DMA_DisableStream(PORT.dma.dma, PORT.dma.tx_stream_index);
+  LL_DMA_DisableStream(dma_rx->port, dma_rx->stream_index);
+  LL_DMA_DisableStream(dma_tx->port, dma_tx->stream_index);
 
 #if defined(STM32H7)
   // now we can disable the peripheral

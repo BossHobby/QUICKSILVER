@@ -42,5 +42,7 @@ extern const dma_stream_def_t dma_stream_defs[DMA_DEVICE_MAX];
 void dma_prepare_tx_memory(uint8_t *addr, uint32_t size);
 void dma_prepare_rx_memory(uint8_t *addr, uint32_t size);
 
+void dma_enable_rcc(dma_device_t dev);
+
 uint32_t dma_is_flag_active_tc(DMA_TypeDef *dma, uint32_t stream);
 void dma_clear_flag_tc(DMA_TypeDef *dma, uint32_t stream);

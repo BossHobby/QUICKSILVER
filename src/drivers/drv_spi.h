@@ -3,26 +3,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "drv_dma.h"
 #include "drv_gpio.h"
 #include "project.h"
 #include "spi_ports.h"
-
-typedef struct {
-  DMA_TypeDef *dma;
-  uint32_t dma_port;
-  uint32_t channel;
-  uint8_t channel_index;
-
-  uint32_t rx_request;
-  uint8_t rx_stream_index;
-  DMA_Stream_TypeDef *rx_stream;
-  IRQn_Type rx_it;
-
-  uint32_t tx_request;
-  uint8_t tx_stream_index;
-  DMA_Stream_TypeDef *tx_stream;
-  IRQn_Type tx_it;
-} spi_dma_def_t;
 
 typedef struct {
   uint8_t channel_index;
@@ -34,7 +18,8 @@ typedef struct {
   gpio_pins_t miso;
   gpio_pins_t mosi;
 
-  spi_dma_def_t dma;
+  dma_device_t dma_rx;
+  dma_device_t dma_tx;
 } spi_port_def_t;
 
 #define SPI_TXN_MAX 16
