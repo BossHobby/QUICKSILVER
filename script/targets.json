@@ -586,5 +586,41 @@
         }
       }
     ]
+  },
+  {
+    "name": "kakuteh7",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      }
+    ]
+  },
+  {
+    "name": "matekh743",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      }
+    ]
+  },
+  {
+    "name": "iflight_h743_aio_v2",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      }
+    ]
   }
 ]
