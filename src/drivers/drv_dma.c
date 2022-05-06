@@ -92,6 +92,18 @@ void dma_prepare_rx_memory(uint8_t *addr, uint32_t size) {
 #endif
 }
 
+void dma_enable_rcc(dma_device_t dev) {
+  const dma_stream_def_t *dma = &dma_stream_defs[dev];
+  switch (dma->port_index) {
+  case 1:
+    LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
+    break;
+  case 2:
+    LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA2);
+    break;
+  }
+}
+
 uint32_t dma_is_flag_active_tc(DMA_TypeDef *dma, uint32_t stream) {
   switch (stream) {
   case LL_DMA_STREAM_0:
