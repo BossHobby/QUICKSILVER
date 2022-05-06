@@ -129,7 +129,7 @@ uint32_t gpio_pin_read(gpio_pins_t pin) {
 
 #define GPIO_PIN(port_num, num) MAKE_PIN_DEF(port_num, num),
 
-const volatile gpio_pin_def_t gpio_pin_defs[PINS_MAX] = {
+const gpio_pin_def_t gpio_pin_defs[PINS_MAX] = {
     {},
 #include "gpio_pins.in"
 };
