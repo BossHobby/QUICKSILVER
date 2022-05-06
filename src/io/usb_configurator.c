@@ -14,8 +14,6 @@
 #include "reset.h"
 #include "util/util.h"
 
-static uint8_t decode_buffer[USB_BUFFER_SIZE];
-
 void usb_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint32_t len) {
   const uint8_t size = len + MSP_HEADER_LEN + 1;
 
@@ -39,13 +37,6 @@ void usb_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint32_t len) 
 
   usb_serial_write(frame, size);
 }
-
-static msp_t msp = {
-    .buffer = decode_buffer,
-    .buffer_size = USB_BUFFER_SIZE,
-    .buffer_offset = 0,
-    .send = usb_msp_send,
-};
 
 void usb_quic_send(uint8_t *data, uint32_t len, void *priv) {
   usb_serial_write(data, len);
@@ -73,28 +64,35 @@ void usb_quic_logf(const char *fmt, ...) {
 #pragma GCC diagnostic ignored "-Wdouble-promotion"
 // This function will be where all usb send/receive coms live
 void usb_configurator() {
-  uint8_t magic = 0;
-  if (usb_serial_read(&magic, 1) != 1) {
+  uint32_t buffer_size = 1;
+  uint8_t buffer[USB_BUFFER_SIZE];
+
+  if (usb_serial_read(buffer, 1) != 1) {
     return;
   }
 
-  switch (magic) {
+  switch (buffer[0]) {
   case USB_MAGIC_REBOOT:
     //  The following bits will reboot to DFU upon receiving 'R' (which is sent by BF configurator)
     system_reset_to_bootloader();
     break;
+
   case USB_MAGIC_SOFT_REBOOT:
     system_reset();
     break;
+
   case USB_MAGIC_MSP: {
-    uint32_t decode_buffer_size = 0;
-    decode_buffer[decode_buffer_size++] = magic;
-    decode_buffer[decode_buffer_size++] = usb_serial_read_byte();
+    msp_t msp = {
+        .buffer = buffer,
+        .buffer_size = USB_BUFFER_SIZE,
+        .buffer_offset = 0,
+        .send = usb_msp_send,
+    };
 
     while (true) {
-      msp_status_t status = msp_process_serial(&msp, decode_buffer, decode_buffer_size);
+      msp_status_t status = msp_process_serial(&msp, buffer, buffer_size);
       if (status == MSP_EOF) {
-        decode_buffer[decode_buffer_size++] = usb_serial_read_byte();
+        buffer[buffer_size++] = usb_serial_read_byte();
       } else {
         break;
       }
@@ -102,13 +100,9 @@ void usb_configurator() {
     break;
   }
   case USB_MAGIC_QUIC: {
-    uint32_t decode_buffer_size = 0;
-    decode_buffer[decode_buffer_size++] = magic;
-    decode_buffer[decode_buffer_size++] = usb_serial_read_byte();
-
     while (true) {
-      if (!quic_process(&quic, decode_buffer, decode_buffer_size)) {
-        decode_buffer[decode_buffer_size++] = usb_serial_read_byte();
+      if (!quic_process(&quic, buffer, buffer_size)) {
+        buffer[buffer_size++] = usb_serial_read_byte();
       } else {
         break;
       }
