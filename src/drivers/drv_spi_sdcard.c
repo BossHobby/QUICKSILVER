@@ -113,7 +113,7 @@ static uint8_t sdcard_wait_non_idle() {
   return 0xFF;
 }
 
-static uint8_t sdcard_wait_for_idle() {
+static bool sdcard_wait_for_idle() {
   uint8_t ret = 0;
 
   for (uint16_t timeout = 8;; timeout--) {
@@ -126,34 +126,9 @@ static uint8_t sdcard_wait_for_idle() {
     spi_txn_submit_wait(&bus, txn);
 
     if (ret == 0xFF) {
-      return 1;
+      return true;
     }
   }
-  return 0;
-}
-
-static bool sdcard_wait_for_idle_async() {
-  if (!spi_txn_ready(&bus)) {
-    return false;
-  }
-
-  static uint8_t ret = 0;
-  static bool in_progress = false;
-  if (in_progress) {
-    in_progress = false;
-    return ret == 0xFF;
-  }
-
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  for (uint8_t i = 0; i < 7; i++) {
-    spi_txn_add_seg_const(txn, 0xFF);
-  }
-  spi_txn_add_seg(txn, &ret, NULL, 1);
-  spi_txn_submit(txn);
-
-  spi_txn_continue(&bus);
-  in_progress = true;
-
   return false;
 }
 
@@ -469,7 +444,7 @@ sdcard_status_t sdcard_update() {
   }
 
   case SDCARD_WRITE_MULTIPLE_START: {
-    if (!sdcard_wait_for_idle_async()) {
+    if (!sdcard_wait_for_idle()) {
       break;
     }
 
@@ -509,7 +484,7 @@ sdcard_status_t sdcard_update() {
   }
 
   case SDCARD_WRITE_MULTIPLE_VERIFY: {
-    if (!sdcard_wait_for_idle_async()) {
+    if (!sdcard_wait_for_idle()) {
       break;
     }
 
@@ -529,7 +504,7 @@ sdcard_status_t sdcard_update() {
   }
 
   case SDCARD_WRITE_MULTIPLE_FINISH_WAIT: {
-    if (!sdcard_wait_for_idle_async()) {
+    if (!sdcard_wait_for_idle()) {
       break;
     }
 
@@ -606,7 +581,7 @@ uint8_t sdcard_write_pages_start(uint32_t sector, uint32_t count) {
     return 0;
   }
 
-  if (!sdcard_wait_for_idle_async()) {
+  if (!sdcard_wait_for_idle()) {
     return 0;
   }
 

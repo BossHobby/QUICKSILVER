@@ -378,7 +378,7 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
     check_cbor_error(QUIC_CMD_BLACKBOX);
 
     for (uint8_t i = 0; i < data_flash_header.file_num; i++) {
-      res = cbor_encode_uint32(&enc, &data_flash_header.files[i].entries);
+      res = cbor_encode_uint32(&enc, &data_flash_header.files[i].size);
       check_cbor_error(QUIC_CMD_BLACKBOX);
     }
 
@@ -395,27 +395,18 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
     check_cbor_error(QUIC_CMD_BLACKBOX);
 
     quic_send(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
-    cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
 
     if (data_flash_header.file_num > file_index) {
-      blackbox_t blackbox[8];
       const data_flash_file_t *file = &data_flash_header.files[file_index];
-      for (uint32_t i = 0; i < file->entries; i += 8) {
-        res = data_flash_read_backbox(file_index, i, blackbox, 8);
-        if (res < CBOR_OK) {
-          continue;
-        }
-        for (uint32_t j = 0; j < 8; j++) {
-          const uint32_t len = cbor_encoder_len(&enc);
-          res = cbor_encode_blackbox_t(&enc, &blackbox[j]);
-          if (res == CBOR_ERR_EOF) {
-            quic_send(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, len);
-            cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
 
-            res = cbor_encode_blackbox_t(&enc, &blackbox[j]);
-          }
-          check_cbor_error(QUIC_CMD_BLACKBOX);
-        }
+      uint32_t offset = 0;
+      while (offset < file->size) {
+        const uint32_t size = min(file->size - offset, ENCODE_BUFFER_SIZE);
+
+        data_flash_read_backbox(file_index, offset, encode_buffer, size);
+        quic_send(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, size);
+
+        offset += size;
       }
     }
 

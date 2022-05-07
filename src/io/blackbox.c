@@ -64,7 +64,7 @@ uint8_t blackbox_update() {
 
   data_flash_result_t flash_result = data_flash_update();
 
-  if (flash_result == DATA_FLASH_DETECT) {
+  if (flash_result == DATA_FLASH_DETECT || flash_result == DATA_FLASH_STARTING) {
     // flash is still detecting, dont do anything
     return 0;
   }

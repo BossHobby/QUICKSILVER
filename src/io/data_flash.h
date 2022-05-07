@@ -17,8 +17,8 @@ typedef struct {
 typedef struct {
   uint32_t looptime;
   uint32_t blackbox_rate;
-  uint32_t start_sector;
-  uint32_t entries;
+  uint32_t start_page;
+  uint32_t size;
 } data_flash_file_t;
 
 typedef struct {
@@ -33,6 +33,7 @@ typedef enum {
   DATA_FLASH_IDLE,
   DATA_FLASH_WAIT,
   DATA_FLASH_DETECT,
+  DATA_FLASH_STARTING,
   DATA_FLASH_WRITE,
 } data_flash_result_t;
 
@@ -43,5 +44,5 @@ void data_flash_reset();
 void data_flash_restart(uint32_t blackbox_rate, uint32_t looptime);
 void data_flash_finish();
 
-cbor_result_t data_flash_read_backbox(const uint32_t file, const uint32_t addr, blackbox_t *b, const uint8_t count);
+void data_flash_read_backbox(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size);
 cbor_result_t data_flash_write_backbox(const blackbox_t *b);
