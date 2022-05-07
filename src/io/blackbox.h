@@ -3,7 +3,6 @@
 #include "profile.h"
 
 #define BLACKBOX_SCALE 1000
-#define BLACKBOX_MAX_SIZE 128
 
 typedef struct {
   uint32_t loop;
