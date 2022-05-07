@@ -1,3 +1,4 @@
 #pragma once
 
-void buzzer();
+void buzzer_init();
+void buzzer_update();
