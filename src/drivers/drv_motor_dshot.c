@@ -91,7 +91,7 @@ static void dshot_init_motor_pin(uint32_t index) {
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
   gpio_init.Pin = motor_pins[index].pin;
   LL_GPIO_Init(motor_pins[index].port, &gpio_init);
   LL_GPIO_ResetOutputPin(motor_pins[index].port, motor_pins[index].pin);
@@ -146,7 +146,7 @@ static void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   DMA_InitStructure.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_WORD;
   DMA_InitStructure.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_WORD;
   DMA_InitStructure.Mode = LL_DMA_MODE_NORMAL;
-  DMA_InitStructure.Priority = LL_DMA_PRIORITY_HIGH;
+  DMA_InitStructure.Priority = LL_DMA_PRIORITY_VERYHIGH;
   DMA_InitStructure.FIFOMode = LL_DMA_FIFOMODE_DISABLE;
   DMA_InitStructure.MemBurst = LL_DMA_MBURST_SINGLE;
   DMA_InitStructure.PeriphBurst = LL_DMA_PBURST_SINGLE;
