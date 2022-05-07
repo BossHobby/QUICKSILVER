@@ -27,7 +27,7 @@
 #define DSHOT_CMD_ROTATE_REVERSE 21
 
 #define DSHOT_MAX_PORT_COUNT 3
-#define DSHOT_DMA_BUFFER_SIZE 48
+#define DSHOT_DMA_BUFFER_SIZE (3 * (16 + 2))
 
 typedef struct {
   motor_pin_ident_t id;
@@ -122,7 +122,7 @@ static void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   tim_oc_init.OCIdleState = LL_TIM_OCIDLESTATE_HIGH;
   tim_oc_init.OCState = LL_TIM_OCSTATE_ENABLE;
   tim_oc_init.OCPolarity = LL_TIM_OCPOLARITY_LOW;
-  tim_oc_init.CompareValue = 0;
+  tim_oc_init.CompareValue = 10;
   LL_TIM_OC_Init(TIM1, port->timer_channel, &tim_oc_init);
   LL_TIM_OC_EnablePreload(TIM1, port->timer_channel);
 
@@ -137,7 +137,7 @@ static void dshot_init_gpio_port(dshot_gpio_port_t *port) {
 #else
   DMA_InitStructure.Channel = dma->channel;
 #endif
-  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&gpio_ports[0].gpio->BSRR;
+  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&port->gpio->BSRR;
   DMA_InitStructure.MemoryOrM2MDstAddress = (uint32_t)port_dma_buffer[0];
   DMA_InitStructure.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
   DMA_InitStructure.NbData = DSHOT_DMA_BUFFER_SIZE;
@@ -213,8 +213,8 @@ void motor_init() {
   for (uint32_t j = 0; j < gpio_port_count; j++) {
     dshot_init_gpio_port(&gpio_ports[j]);
 
-    for (uint32_t i = 0; i < DSHOT_DMA_BUFFER_SIZE; i = i + 3) {
-      port_dma_buffer[j][i + 0] = gpio_ports[j].port_high;
+    for (uint32_t i = 0; i < DSHOT_DMA_BUFFER_SIZE; i += 3) {
+      port_dma_buffer[j][i + 0] = gpio_ports[j].port_low;
       port_dma_buffer[j][i + 1] = gpio_ports[j].port_low;
       port_dma_buffer[j][i + 2] = gpio_ports[j].port_low;
     }
@@ -232,8 +232,6 @@ static void dshot_dma_setup_port(uint32_t index) {
   const dma_stream_def_t *dma = &dma_stream_defs[port->dma_device];
 
   dma_clear_flag_tc(dma->port, dma->stream_index);
-
-  dma_prepare_tx_memory((uint8_t *)port_dma_buffer[index], DSHOT_DMA_BUFFER_SIZE);
 
   dma->stream->PAR = (uint32_t)&port->gpio->BSRR;
   dma->stream->M0AR = (uint32_t)&port_dma_buffer[index][0];
@@ -266,7 +264,7 @@ static void make_packet(uint8_t number, uint16_t value, bool telemetry) {
 static void dshot_dma_start() {
   motor_wait_for_ready();
 
-  memset((uint8_t *)port_dma_buffer, 0, DSHOT_MAX_PORT_COUNT * DSHOT_DMA_BUFFER_SIZE * sizeof(uint32_t));
+  memset((uint8_t *)port_dma_buffer, 0, sizeof(port_dma_buffer));
 
   for (uint8_t motor = 0; motor < MOTOR_PIN_MAX; motor++) {
     const uint32_t motor_high = (motor_pins[motor].pin);
@@ -274,23 +272,33 @@ static void dshot_dma_start() {
 
     const uint32_t port = motor_pins[motor].dshot_port;
 
+    port_dma_buffer[port][0] |= motor_low;
+    port_dma_buffer[port][1] |= motor_low;
+    port_dma_buffer[port][2] |= motor_low;
+
     for (uint8_t i = 0; i < 16; i++) {
       const bool bit = dshot_packet[motor] & 0x8000;
 
       // start bit
-      port_dma_buffer[port][i * 3 + 0] |= motor_high;
+      port_dma_buffer[port][(i + 1) * 3 + 0] |= motor_high;
 
       // for 1 hold the line high for two timeunits
-      port_dma_buffer[port][i * 3 + 1] |= bit ? motor_high : motor_low;
+      port_dma_buffer[port][(i + 1) * 3 + 1] |= bit ? motor_high : motor_low;
 
       // return line to low
-      port_dma_buffer[port][i * 3 + 2] |= motor_low;
+      port_dma_buffer[port][(i + 1) * 3 + 2] |= motor_low;
 
       dshot_packet[motor] <<= 1;
     }
+
+    port_dma_buffer[port][16 * 3 + 0] |= motor_low;
+    port_dma_buffer[port][16 * 3 + 1] |= motor_low;
+    port_dma_buffer[port][16 * 3 + 2] |= motor_low;
   }
 
   dshot_dma_phase = gpio_port_count;
+
+  dma_prepare_tx_memory((void *)port_dma_buffer, sizeof(port_dma_buffer));
 
   for (uint32_t j = 0; j < gpio_port_count; j++) {
     dshot_dma_setup_port(j);
