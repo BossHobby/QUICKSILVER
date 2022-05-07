@@ -72,7 +72,7 @@ const dma_stream_def_t dma_stream_defs[DMA_DEVICE_MAX] = {DMA_STREAMS};
 #define CACHE_LINE_MASK (CACHE_LINE_SIZE - 1)
 #endif
 
-void dma_prepare_tx_memory(uint8_t *addr, uint32_t size) {
+void dma_prepare_tx_memory(void *addr, uint32_t size) {
 #if defined(STM32F7) || defined(STM32H7)
   if (!WITHIN_DTCM_RAM(addr)) {
     SCB_CleanDCache_by_Addr(
@@ -82,7 +82,7 @@ void dma_prepare_tx_memory(uint8_t *addr, uint32_t size) {
 #endif
 }
 
-void dma_prepare_rx_memory(uint8_t *addr, uint32_t size) {
+void dma_prepare_rx_memory(void *addr, uint32_t size) {
 #if defined(STM32F7) || defined(STM32H7)
   if (!WITHIN_DTCM_RAM(addr)) {
     SCB_CleanInvalidateDCache_by_Addr(
