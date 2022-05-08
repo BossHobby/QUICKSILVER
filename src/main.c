@@ -41,12 +41,9 @@
 #include "drv_serial_soft.h"
 #endif
 
-extern profile_t profile;
-
 uint32_t lastlooptime;
 uint8_t looptime_warning;
 uint8_t blown_loop_counter;
-float looptime_buffer[255];
 
 int random_seed = 0;
 
@@ -63,6 +60,49 @@ __attribute__((__used__)) void memory_section_init() {
   extern uint8_t _dma_ram_data;
   memcpy(&_dma_ram_start, &_dma_ram_data, (size_t)(&_dma_ram_end - &_dma_ram_start));
 #endif
+}
+
+void looptime_update() {
+  // looptime_autodetect sequence
+  static uint8_t loop_delay = 0;
+  if (loop_delay < 200) {
+    loop_delay++;
+  }
+
+  static float loop_avg = 0;
+  static uint8_t loop_counter = 0;
+
+  if (loop_delay >= 200 && loop_counter < 200) {
+    loop_avg += state.looptime_us;
+    loop_counter++;
+  }
+
+  if (loop_counter == 200) {
+    loop_avg /= 200;
+
+    if (loop_avg < 130.f) {
+      state.looptime_autodetect = LOOPTIME_8K;
+    } else if (loop_avg < 255.f) {
+      state.looptime_autodetect = LOOPTIME_4K;
+    } else {
+      state.looptime_autodetect = LOOPTIME_2K;
+    }
+
+    loop_counter++;
+  }
+
+  if (loop_counter == 201) {
+    if (state.cpu_load > state.looptime_autodetect + 5) {
+      blown_loop_counter++;
+    }
+
+    if (blown_loop_counter > 100) {
+      blown_loop_counter = 0;
+      loop_counter = 0;
+      loop_avg = 0;
+      looptime_warning++;
+    }
+  }
 }
 
 __attribute__((__used__)) int main() {
@@ -162,42 +202,29 @@ __attribute__((__used__)) int main() {
   //
 
   while (1) {
-    uint32_t time = time_micros();
-    state.looptime = ((uint32_t)(time - lastlooptime));
-    lastlooptime = time;
-
     perf_counter_start(PERF_COUNTER_TOTAL);
 
-    if (state.looptime <= 0)
-      state.looptime = 1;
-    state.looptime = state.looptime * 1e-6f;
-    if (state.looptime > 0.02f) { // max loop 20ms
-      failloop(FAILLOOP_LOOPTIME);
-      // endless loop
+    uint32_t time = time_micros();
+    state.looptime_us = ((uint32_t)(time - lastlooptime));
+    lastlooptime = time;
+
+    if (state.looptime_us <= 0) {
+      state.looptime_us = 1;
     }
 
-    // looptime_autodetect sequence
-    static uint8_t loop_ctr = 0;
-    if (loop_ctr < 255) {
-      looptime_buffer[loop_ctr] = state.looptime;
-      loop_ctr++;
-      if (loop_ctr == 255) {
-        float sum = 0;
-        for (uint8_t i = 2; i < 255; i++)
-          sum += looptime_buffer[i];
-        float average_looptime = sum / 253.0f;
-        if (average_looptime < .000130f)
-          state.looptime_autodetect = LOOPTIME_8K;
-        else if (average_looptime < .000255f)
-          state.looptime_autodetect = LOOPTIME_4K;
-        else
-          state.looptime_autodetect = LOOPTIME_2K;
-      }
+    // max loop 20ms
+    if (state.looptime_us > 20000) {
+      failloop(FAILLOOP_LOOPTIME);
     }
+
+    looptime_update();
+
+    state.looptime = state.looptime_us * 1e-6f;
 
     state.uptime += state.looptime;
-    if (flags.arm_state)
+    if (flags.arm_state) {
       state.armtime += state.looptime;
+    }
 
 #ifdef DEBUG
     debug.totaltime += state.looptime;
@@ -206,7 +233,6 @@ __attribute__((__used__)) int main() {
 
     if (liberror > 20) {
       failloop(FAILLOOP_SPI_MAIN);
-      // endless loop
     }
 
     // read gyro and accelerometer data
@@ -273,15 +299,6 @@ __attribute__((__used__)) int main() {
 #endif
 
     state.cpu_load = (time_micros() - lastlooptime);
-    // one last check to make sure we catch any looptime problems and rerun autodetect live
-    if (loop_ctr == 255 && state.cpu_load > state.looptime_autodetect + 5) {
-      blown_loop_counter++;
-      if (blown_loop_counter > 100) {
-        blown_loop_counter = 0;
-        loop_ctr = 0;
-        looptime_warning++;
-      }
-    }
 
     debug_update();
 
