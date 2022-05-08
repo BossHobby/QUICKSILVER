@@ -535,7 +535,7 @@
         "defines": {
           "BRUSHLESS_TARGET": "",
           "RX_UNIFIED_SERIAL": ""
-        } 
+        }
       }
     ]
   },
@@ -553,6 +553,18 @@
   },
   {
     "name": "aikon_f7",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      }
+    ]
+  },
+  {
+    "name": "hifionrc_f722",
     "configurations": [
       {
         "name": "brushless.serial",
