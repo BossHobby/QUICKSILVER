@@ -41,10 +41,11 @@ typedef struct {
   failloop_t failloop;
 
   uint16_t looptime_autodetect;
-  float looptime; // looptime in seconds
-  float uptime;   // running sum of looptimes
-  float armtime;  // running sum of looptimes (while armed)
-  float cpu_load; // micros we have had left last loop
+  float looptime;       // looptime in seconds
+  uint32_t looptime_us; // looptime in us
+  float uptime;         // running sum of looptimes
+  float armtime;        // running sum of looptimes (while armed)
+  float cpu_load;       // micros we have had left last loop
 
   uint32_t failsafe_time_ms; // time the last failsafe occured in ms
 
@@ -102,6 +103,7 @@ typedef struct {
   MEMBER(failloop, uint8)                   \
   MEMBER(looptime_autodetect, uint16)       \
   MEMBER(looptime, float)                   \
+  MEMBER(looptime_us, uint32)               \
   MEMBER(uptime, float)                     \
   MEMBER(armtime, float)                    \
   MEMBER(cpu_load, float)                   \
