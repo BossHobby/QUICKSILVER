@@ -584,6 +584,11 @@ void spi_txn_submit_wait(spi_bus_device_t *bus, spi_txn_t *txn) {
   spi_txn_wait(bus);
 }
 
+void spi_txn_submit_continue(spi_bus_device_t *bus, spi_txn_t *txn) {
+  spi_txn_submit(txn);
+  spi_txn_continue(bus);
+}
+
 static void handle_dma_rx_isr(spi_ports_t port) {
   const dma_stream_def_t *dma_rx = &dma_stream_defs[PORT.dma_rx];
   const dma_stream_def_t *dma_tx = &dma_stream_defs[PORT.dma_tx];

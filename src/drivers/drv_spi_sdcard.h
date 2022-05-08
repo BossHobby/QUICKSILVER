@@ -123,9 +123,15 @@ typedef struct {
 
 } sdcard_info_t;
 
+typedef enum {
+  SDCARD_WAIT,
+  SDCARD_ERROR,
+  SDCARD_IDLE,
+} sdcard_status_t;
+
 void sdcard_init();
 
-uint8_t sdcard_update();
+sdcard_status_t sdcard_update();
 
 void sdcard_get_bounds(data_flash_bounds_t *bounds);
 

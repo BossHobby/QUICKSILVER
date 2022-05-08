@@ -69,8 +69,29 @@ static spi_bus_device_t bus = {
 };
 
 void sdcard_init() {
+#ifdef SDCARD_DETECT_PIN
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_INPUT;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  gpio_init.Pull = LL_GPIO_PULL_NO;
+  gpio_pin_init(&gpio_init, SDCARD_DETECT_PIN);
+#endif
+
   spi_bus_device_init(&bus);
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, SPI_SPEED_SLOW);
+}
+
+static bool sdcard_read_detect() {
+#ifdef SDCARD_DETECT_PIN
+#ifdef SDCARD_DETECT_INVERT
+  return !gpio_pin_read(SDCARD_DETECT_PIN);
+#else
+  return gpio_pin_read(SDCARD_DETECT_PIN);
+#endif
+#else
+  return true;
+#endif
 }
 
 static uint8_t sdcard_wait_non_idle() {
@@ -137,7 +158,7 @@ static bool sdcard_wait_for_idle_async() {
 }
 
 static uint8_t sdcard_command(const uint8_t cmd, const uint32_t args) {
-  if (cmd != SDCARD_GO_IDLE && !sdcard_wait_for_idle()) {
+  if (cmd != SDCARD_GO_IDLE && cmd != SDCARD_STOP_TRANSMISSION && !sdcard_wait_for_idle()) {
     return 0xFF;
   }
 
@@ -160,6 +181,10 @@ static uint8_t sdcard_command(const uint8_t cmd, const uint32_t args) {
   default:
     spi_txn_add_seg_const(txn, 1);
     break;
+  }
+
+  if (cmd == SDCARD_STOP_TRANSMISSION) {
+    spi_txn_add_seg_const(txn, 0xFF);
   }
 
   spi_txn_submit_wait(&bus, txn);
@@ -277,23 +302,38 @@ static void sdcard_parse_csd(sdcard_csd_t *csd, uint8_t *c) {
   }
 }
 
-uint8_t sdcard_update() {
-  static uint32_t delay_loops = 1000;
+sdcard_status_t sdcard_update() {
+  if (!sdcard_read_detect()) {
+    return SDCARD_WAIT;
+  }
+
+  static uint32_t delay_loops = 0;
   if (delay_loops > 0) {
     delay_loops--;
-    return 0;
+    return SDCARD_WAIT;
+  }
+
+  if (!spi_txn_ready(&bus)) {
+    return SDCARD_WAIT;
   }
 
   switch (state) {
   case SDCARD_POWER_UP: {
+    static uint32_t tries = 0;
+    if (tries == 3) {
+      state = SDCARD_DETECT_FAILED;
+      break;
+    }
+
     spi_txn_t *txn = spi_txn_init(&bus, NULL);
     for (uint32_t i = 0; i < 20; i++) {
       spi_txn_add_seg_const(txn, 0xff);
     }
-    spi_txn_submit_wait(&bus, txn);
+    spi_txn_submit_continue(&bus, txn);
 
     state = SDCARD_RESET;
     delay_loops = 100;
+    tries++;
     break;
   }
 
@@ -312,7 +352,6 @@ uint8_t sdcard_update() {
       delay_loops = 100;
       state = SDCARD_POWER_UP;
     }
-
     break;
   }
   case SDCARD_DETECT_INTERFACE: {
@@ -414,18 +453,7 @@ uint8_t sdcard_update() {
     operation.count_done++;
 
     if (operation.count_done != operation.count) {
-      uint8_t token = sdcard_wait_non_idle();
-      if (token == 0xFE) {
-        spi_txn_t *txn = spi_txn_init(&bus, NULL);
-        spi_txn_add_seg(txn, operation.buf + operation.count_done * SDCARD_PAGE_SIZE, NULL, SDCARD_PAGE_SIZE);
-
-        // CRC bytes
-        spi_txn_add_seg_const(txn, 0xff);
-        spi_txn_add_seg_const(txn, 0xff);
-
-        spi_txn_submit(txn);
-        spi_txn_continue(&bus);
-      }
+      state = SDCARD_READ_MULTIPLE_START;
     } else {
       state = SDCARD_READ_MULTIPLE_FINISH;
     }
@@ -434,9 +462,9 @@ uint8_t sdcard_update() {
   }
 
   case SDCARD_READ_MULTIPLE_FINISH: {
-    sdcard_command(SDCARD_STOP_TRANSMISSION, 0);
-
-    state = SDCARD_READ_MULTIPLE_DONE;
+    if (sdcard_command(SDCARD_STOP_TRANSMISSION, 0) == 0x0) {
+      state = SDCARD_READ_MULTIPLE_DONE;
+    }
     break;
   }
 
@@ -451,11 +479,6 @@ uint8_t sdcard_update() {
     }
 
     state = SDCARD_WRITE_MULTIPLE_READY;
-    break;
-  }
-
-  case SDCARD_WRITE_MULTIPLE_READY: {
-    // wait
     break;
   }
 
@@ -495,11 +518,6 @@ uint8_t sdcard_update() {
     break;
   }
 
-  case SDCARD_WRITE_MULTIPLE_SECTOR_SUCCESS: {
-    // wait
-    break;
-  }
-
   case SDCARD_WRITE_MULTIPLE_FINISH: {
     spi_txn_t *txn = spi_txn_init(&bus, NULL);
     spi_txn_add_seg_const(txn, 0xfd);
@@ -520,15 +538,17 @@ uint8_t sdcard_update() {
   }
 
   case SDCARD_READY:
-    return 1;
-
+  case SDCARD_WRITE_MULTIPLE_READY:
+  case SDCARD_WRITE_MULTIPLE_SECTOR_SUCCESS:
   case SDCARD_WRITE_MULTIPLE_DONE:
   case SDCARD_READ_MULTIPLE_DONE:
+    return SDCARD_IDLE;
+
   case SDCARD_DETECT_FAILED:
-    return 0;
+    return SDCARD_ERROR;
   }
 
-  return 0;
+  return SDCARD_WAIT;
 }
 
 uint8_t sdcard_read_pages(uint8_t *buf, uint32_t sector, uint32_t count) {
