@@ -29,6 +29,7 @@ typedef struct {
 
 typedef enum {
   DATA_FLASH_IDLE,
+  DATA_FLASH_WAIT,
   DATA_FLASH_DETECT,
   DATA_FLASH_WRITE,
 } data_flash_result_t;

@@ -57,15 +57,21 @@ data_flash_result_t data_flash_update() {
   const uint32_t to_write = write_offset >= written_offset ? (write_offset - written_offset) : (BLACKBOX_BUFFER_COUNT + write_offset - written_offset);
 
 #ifdef USE_SDCARD
-  uint8_t sdcard_ready = sdcard_update();
+  sdcard_status_t sdcard_status = sdcard_update();
+  if (sdcard_status != SDCARD_IDLE) {
+    if (state == STATE_DETECT) {
+      return DATA_FLASH_DETECT;
+    } else {
+      return DATA_FLASH_WAIT;
+    }
+  }
 
   switch (state) {
-  case STATE_DETECT:
-    if (sdcard_ready) {
-      state = STATE_READ_HEADER;
-      sdcard_get_bounds(&bounds);
-    }
+  case STATE_DETECT: {
+    state = STATE_READ_HEADER;
+    sdcard_get_bounds(&bounds);
     return DATA_FLASH_DETECT;
+  }
 
   case STATE_READ_HEADER: {
     if (sdcard_read_pages(write_buffer, 0, 1)) {

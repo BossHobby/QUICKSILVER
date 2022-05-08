@@ -107,3 +107,4 @@ void spi_txn_continue(spi_bus_device_t *bus);
 bool spi_txn_ready(spi_bus_device_t *bus);
 void spi_txn_wait(spi_bus_device_t *bus);
 void spi_txn_submit_wait(spi_bus_device_t *bus, spi_txn_t *txn);
+void spi_txn_submit_continue(spi_bus_device_t *bus, spi_txn_t *txn);
