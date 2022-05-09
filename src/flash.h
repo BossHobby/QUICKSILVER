@@ -10,7 +10,6 @@
 #define FLASH_STORAGE_SIZE FLASH_ALIGN(32)
 
 typedef struct {
-  float pid_identifier;
   float accelcal[3];
 
   uint8_t flash_feature_1; // SETUP WIZARD
