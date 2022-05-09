@@ -58,6 +58,27 @@ __attribute__((__used__)) void memory_section_init() {
   extern uint8_t _dma_ram_start;
   extern uint8_t _dma_ram_end;
   extern uint8_t _dma_ram_data;
+
+#ifdef STM32H7
+  HAL_MPU_Disable();
+
+  MPU_Region_InitTypeDef mpu_init;
+  mpu_init.Enable = MPU_REGION_ENABLE;
+  mpu_init.BaseAddress = (uint32_t)&_dma_ram_start;
+  mpu_init.Size = MPU_REGION_SIZE_256KB;
+  mpu_init.AccessPermission = MPU_REGION_FULL_ACCESS;
+  mpu_init.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+  mpu_init.IsCacheable = MPU_ACCESS_CACHEABLE;
+  mpu_init.IsShareable = MPU_ACCESS_SHAREABLE;
+  mpu_init.Number = MPU_REGION_NUMBER0;
+  mpu_init.TypeExtField = MPU_TEX_LEVEL1;
+  mpu_init.SubRegionDisable = 0x00;
+  mpu_init.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
+  HAL_MPU_ConfigRegion(&mpu_init);
+
+  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
+#endif
+
   memcpy(&_dma_ram_start, &_dma_ram_data, (size_t)(&_dma_ram_end - &_dma_ram_start));
 #endif
 }
