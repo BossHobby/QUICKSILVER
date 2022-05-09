@@ -19,7 +19,7 @@
 
 #define SPI_SPEED_INIT MHZ_TO_HZ(0.5)
 
-extern DMA_RAM spi_bus_device_t gyro_bus;
+extern spi_bus_device_t gyro_bus;
 
 static uint32_t mpu6xxx_fast_divider() {
   switch (gyro_type) {

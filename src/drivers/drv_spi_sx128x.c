@@ -14,7 +14,7 @@
 
 static bool sx128x_poll_for_not_busy();
 
-static uint8_t dma_buffer[1024];
+static DMA_RAM uint8_t dma_buffer[1024];
 static spi_bus_device_t bus = {
     .port = SX12XX_SPI_PORT,
     .nss = SX12XX_NSS_PIN,
