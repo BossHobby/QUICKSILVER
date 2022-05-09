@@ -51,7 +51,7 @@ typedef struct {
 
   float lipo_cell_count;
 
-  float vref_filtered;             // voltage reference for vcc compensation
+  float vbat;                      // battery in volts
   float vbat_filtered;             // filtered battery in volts
   float vbat_filtered_decay;       // filtered battery with time decay
   float vbat_cell_avg;             // filtered battery divided by cell count
@@ -108,7 +108,7 @@ typedef struct {
   MEMBER(armtime, float)                    \
   MEMBER(cpu_load, float)                   \
   MEMBER(lipo_cell_count, float)            \
-  MEMBER(vref_filtered, float)              \
+  MEMBER(vbat, float)                       \
   MEMBER(vbat_filtered, float)              \
   MEMBER(vbat_filtered_decay, float)        \
   MEMBER(vbat_cell_avg, float)              \

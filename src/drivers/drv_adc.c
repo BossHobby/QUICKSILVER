@@ -30,10 +30,6 @@ typedef struct {
   uint32_t channel;
 } adc_channel_t;
 
-#ifndef ADC_REF_VOLTAGE
-#define ADC_REF_VOLTAGE 3300
-#endif
-
 #ifdef STM32H7
 #define ADC_SAMPLINGTIME LL_ADC_SAMPLINGTIME_387CYCLES_5
 #define READY_TO_CONVERT(dev) LL_ADC_IsActiveFlag_EOC(dev)
@@ -42,9 +38,7 @@ typedef struct {
 #define READY_TO_CONVERT(dev) LL_ADC_IsActiveFlag_EOCS(dev)
 #endif
 
-// 12 bit ADC has 4096 steps
-#define ADC_SCALEFACTOR ((float)(ADC_REF_VOLTAGE) / 4096.f)
-#define VBAT_SCALE ((float)(VBAT_DIVIDER_R1 + VBAT_DIVIDER_R2) / (float)(VBAT_DIVIDER_R2) * (1.f / 1000000.f))
+#define VBAT_SCALE ((float)(VBAT_DIVIDER_R1 + VBAT_DIVIDER_R2) / (float)(VBAT_DIVIDER_R2) * (1.f / 1000.f))
 
 #ifdef STM32H7
 static const adc_dev_t adc_dev[ADC_DEVICE_MAX] = {
@@ -102,7 +96,6 @@ static const adc_channel_t adc_channel_map[] = {
 
 #define ADC_CHANNEL_MAP_SIZE (sizeof(adc_channel_map) / sizeof(adc_channel_t))
 
-static float vref_cal = 0;
 static uint16_t adc_array[ADC_CHAN_MAX];
 static adc_channel_t adc_pins[ADC_CHAN_MAX];
 
@@ -239,11 +232,6 @@ void adc_init() {
   }
 
   adc_start_conversion(ADC_CHAN_VREF);
-
-  // reference is measured a 3.3v, toy boards are powered by 2.8, so a 1.17 multiplier
-  // different vccs will translate to a different adc scale factor,
-  // so actual vcc is not important as long as the voltage is correct in the end
-  vref_cal = 1.0f / ((3.3f / (float)ADC_REF_VOLTAGE) * (float)(adc_calibration_value()));
 }
 
 static uint16_t adc_read_raw(adc_chan_t index) {
@@ -266,20 +254,22 @@ static uint16_t adc_read_raw(adc_chan_t index) {
   return adc_array[index];
 }
 
+static float adc_convert_to_mv(float value) {
+  const float vref = (uint32_t)(adc_calibration_value() * VREFINT_CAL_VREF) / adc_read_raw(ADC_CHAN_VREF);
+  return value * (vref / 4096.0f);
+}
+
 float adc_read(adc_chan_t chan) {
   switch (chan) {
-  case ADC_CHAN_VREF:
-    return (float)adc_read_raw(chan) * vref_cal;
-
   case ADC_CHAN_VBAT:
-    return (float)adc_read_raw(chan) * ADC_SCALEFACTOR * VBAT_SCALE * (profile.voltage.actual_battery_voltage / profile.voltage.reported_telemetry_voltage);
+    return adc_convert_to_mv(adc_read_raw(chan)) * VBAT_SCALE * (profile.voltage.actual_battery_voltage / profile.voltage.reported_telemetry_voltage);
 
 #ifdef IBAT_PIN
   case ADC_CHAN_IBAT:
     if (profile.voltage.ibat_scale == 0) {
       return 0;
     }
-    return (float)adc_read_raw(chan) * ADC_SCALEFACTOR * (10000.0f / profile.voltage.ibat_scale);
+    return adc_convert_to_mv(adc_read_raw(chan)) * (10000.0f / profile.voltage.ibat_scale);
 #endif
 
   default:
