@@ -91,8 +91,19 @@ static void serial_smart_audio_reconfigure() {
   LL_USART_EnableIT_RXNE(USART.channel);
   LL_USART_EnableIT_TC(USART.channel);
 
+#ifdef STM32H7
+  LL_USART_SetTXFIFOThreshold(USART1, LL_USART_FIFOTHRESHOLD_1_8);
+  LL_USART_SetRXFIFOThreshold(USART1, LL_USART_FIFOTHRESHOLD_1_8);
+  LL_USART_DisableFIFO(USART1);
+#endif
+
   LL_USART_ConfigHalfDuplexMode(USART.channel);
   LL_USART_Enable(USART.channel);
+
+#ifdef STM32H7
+  while ((!(LL_USART_IsActiveFlag_TEACK(USART1))) || (!(LL_USART_IsActiveFlag_REACK(USART1))))
+    ;
+#endif
 
   serial_enable_isr(serial_smart_audio_port);
 }
