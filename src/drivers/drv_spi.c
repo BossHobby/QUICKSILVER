@@ -371,9 +371,8 @@ spi_txn_t *spi_txn_init(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn) {
     spi_txn_wait(bus);
   }
 
-  const uint32_t last = head == 0 ? (SPI_TXN_MAX - 1) : head - 1;
-  if (last != bus->txn_tail) {
-    txn->offset = bus->txns[last].offset + bus->txns[last].size;
+  if (bus->txn_head != bus->txn_tail) {
+    txn->offset = bus->txns[bus->txn_head].offset + bus->txns[bus->txn_head].size;
   } else {
     txn->offset = 0;
   }
@@ -508,14 +507,9 @@ static spi_txn_t *spi_txn_peek(spi_bus_device_t *bus) {
 static bool spi_txn_should_use_dma(spi_bus_device_t *bus, spi_txn_t *txn) {
 #ifdef STM32H7
   uint8_t *addr = (uint8_t *)bus->buffer + txn->offset;
-  if (WITHIN_DTCM_RAM(addr)) {
+  if (WITHIN_DTCM_RAM(addr) || !WITHIN_DMA_RAM(addr)) {
     return false;
   }
-
-  if ((((uint32_t)addr & 0x1f) || (txn->size & 0x1f)) && !WITHIN_DMA_RAM(addr)) {
-    return false;
-  }
-
 #endif
   return true;
 }
@@ -631,7 +625,10 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   }
 
   if (bus->auto_continue) {
-    spi_txn_continue(bus);
+    spi_txn_t *txn = spi_txn_peek(bus);
+    if (txn != NULL && spi_txn_should_use_dma(bus, txn)) {
+      spi_txn_continue_mode(bus, txn, true);
+    }
   }
 }
 
