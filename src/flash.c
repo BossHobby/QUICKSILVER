@@ -17,21 +17,8 @@ extern profile_t profile;
 
 extern vtx_settings_t vtx_settings;
 
-static float initial_pid_identifier = -10;
-
 flash_storage_t flash_storage;
 rx_bind_storage_t bind_storage;
-
-static float flash_get_hard_coded_pid_identifier() {
-  float result = 0;
-
-  for (int i = 0; i < 3; i++) {
-    result += profile.pid.pid_rates[0].kp.axis[i] * (i + 1) * (1) * 0.932f;
-    result += profile.pid.pid_rates[0].ki.axis[i] * (i + 1) * (2) * 0.932f;
-    result += profile.pid.pid_rates[0].kd.axis[i] * (i + 1) * (3) * 0.932f;
-  }
-  return result;
-}
 
 CBOR_START_STRUCT_ENCODER(rx_bind_storage_t)
 CBOR_ENCODE_MEMBER(bind_saved, uint8)
@@ -51,7 +38,6 @@ void flash_save() {
 
   {
     uint8_t buffer[FLASH_STORAGE_SIZE];
-    flash_storage.pid_identifier = initial_pid_identifier;
 
     memcpy(buffer, (uint8_t *)&flash_storage, sizeof(flash_storage_t));
 
@@ -107,8 +93,6 @@ void flash_save() {
 }
 
 void flash_load() {
-  initial_pid_identifier = flash_get_hard_coded_pid_identifier();
-
   // check if saved data is present
   if (fmc_read(0) != FMC_HEADER || fmc_read(FMC_END_OFFSET) != FMC_HEADER) {
     // Flash was empty, load defaults?
@@ -146,11 +130,6 @@ void flash_load() {
     if (res < CBOR_OK) {
       fmc_lock();
       failloop(FAILLOOP_FAULT);
-    }
-
-    // values in profile.c (was pid.c) changed, overwrite with defaults form profile.c
-    if (flash_storage.pid_identifier != initial_pid_identifier) {
-      profile.pid = default_profile.pid;
     }
   }
 
