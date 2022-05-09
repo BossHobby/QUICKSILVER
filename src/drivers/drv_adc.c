@@ -147,8 +147,8 @@ static void adc_init_dev(adc_devs_t index) {
 
   if (!__LL_ADC_IS_ENABLED_ALL_COMMON_INSTANCE(dev->common)) {
     LL_ADC_CommonInitTypeDef adc_common_init;
+    LL_ADC_CommonStructInit(&adc_common_init);
     adc_common_init.CommonClock = LL_ADC_CLOCK_SYNC_PCLK_DIV4;
-    adc_common_init.Multimode = LL_ADC_MULTI_INDEPENDENT;
     LL_ADC_CommonInit(dev->common, &adc_common_init);
   }
 
