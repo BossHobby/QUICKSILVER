@@ -54,9 +54,6 @@ static void serial_tramp_reconfigure() {
 
   serial_disable_isr(serial_smart_audio_port);
 
-  LL_USART_Disable(USART.channel);
-  LL_USART_DeInit(USART.channel);
-
   LL_GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
@@ -73,28 +70,10 @@ static void serial_tramp_reconfigure() {
   usart_init.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
   usart_init.TransferDirection = LL_USART_DIRECTION_TX_RX;
   usart_init.OverSampling = LL_USART_OVERSAMPLING_16;
-  LL_USART_Init(USART.channel, &usart_init);
+  serial_port_init(serial_smart_audio_port, &usart_init, true);
 
-  // LL_USART_ClearFlag_RXNE(USART.channel);
-  LL_USART_ClearFlag_TC(USART.channel);
-
-  LL_USART_DisableIT_TXE(USART.channel);
   LL_USART_EnableIT_RXNE(USART.channel);
   LL_USART_EnableIT_TC(USART.channel);
-
-#ifdef STM32H7
-  LL_USART_SetTXFIFOThreshold(USART1, LL_USART_FIFOTHRESHOLD_1_8);
-  LL_USART_SetRXFIFOThreshold(USART1, LL_USART_FIFOTHRESHOLD_1_8);
-  LL_USART_DisableFIFO(USART1);
-#endif
-
-  LL_USART_ConfigHalfDuplexMode(USART.channel);
-  LL_USART_Enable(USART.channel);
-
-#ifdef STM32H7
-  while ((!(LL_USART_IsActiveFlag_TEACK(USART1))) || (!(LL_USART_IsActiveFlag_REACK(USART1))))
-    ;
-#endif
 
   serial_enable_isr(serial_smart_audio_port);
 }
