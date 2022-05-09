@@ -43,7 +43,8 @@ extern usart_ports_t serial_hdzero_port;
 void serial_rx_init(rx_serial_protocol_t rx_serial_protocol);
 
 void serial_enable_rcc(usart_ports_t port);
-void serial_init(usart_ports_t port, uint32_t buadrate, bool half_duplex);
+void serial_port_init(usart_ports_t port, LL_USART_InitTypeDef *usart_init, bool half_duplex);
+void serial_init(usart_ports_t port, uint32_t baudrate, bool half_duplex);
 void serial_enable_isr(usart_ports_t port);
 void serial_disable_isr(usart_ports_t port);
 

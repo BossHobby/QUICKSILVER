@@ -7,7 +7,7 @@
 
 // FUNCTION TO COMMAND EXTERNAL USART INVERTER HIGH OR LOW
 // Will init gpio pins for uart inverters once on every boot and invert according to parameter
-static void handle_usart_invert(bool invert) {
+void handle_usart_invert(bool invert) {
 #if defined(STM32F4) && (defined(USART1_INVERTER_PIN) || defined(USART2_INVERTER_PIN) || defined(USART3_INVERTER_PIN) || defined(USART4_INVERTER_PIN) || defined(USART5_INVERTER_PIN) || defined(USART6_INVERTER_PIN))
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
@@ -159,9 +159,6 @@ void serial_rx_init(rx_serial_protocol_t proto) {
 
   serial_enable_rcc(serial_rx_port);
 
-  LL_USART_Disable(USART.channel);
-  LL_USART_DeInit(USART.channel);
-
   LL_USART_InitTypeDef usart_init;
   LL_USART_StructInit(&usart_init);
 
@@ -212,7 +209,13 @@ void serial_rx_init(rx_serial_protocol_t proto) {
   default:
     break;
   }
-  LL_USART_Init(USART.channel, &usart_init);
+
+  if (proto == RX_SERIAL_PROTOCOL_FPORT) {
+    // RX_SERIAL_PROTOCOL_FPORT_INVERTED requires half duplex off
+    serial_port_init(serial_rx_port, &usart_init, true);
+  } else {
+    serial_port_init(serial_rx_port, &usart_init, false);
+  }
 
 #if defined(INVERT_UART)
   // inversion is hard defined, always invert
@@ -222,17 +225,8 @@ void serial_rx_init(rx_serial_protocol_t proto) {
   handle_usart_invert(proto == RX_SERIAL_PROTOCOL_SBUS_INVERTED || proto == RX_SERIAL_PROTOCOL_FPORT_INVERTED || proto == RX_SERIAL_PROTOCOL_REDPINE_INVERTED);
 #endif
 
-  if (proto == RX_SERIAL_PROTOCOL_FPORT) {
-    // RX_SERIAL_PROTOCOL_FPORT_INVERTED requires half duplex off
-    LL_USART_EnableHalfDuplex(USART.channel);
-  } else {
-    LL_USART_DisableHalfDuplex(USART.channel);
-  }
-
-  LL_USART_ConfigAsyncMode(USART.channel);
-  LL_USART_Enable(USART.channel);
+  LL_USART_EnableIT_RXNE(USART.channel);
 
   serial_enable_isr(serial_rx_port);
-  LL_USART_EnableIT_RXNE(USART.channel);
 }
 #endif

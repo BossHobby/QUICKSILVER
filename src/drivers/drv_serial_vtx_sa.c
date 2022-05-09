@@ -65,8 +65,6 @@ static void serial_smart_audio_reconfigure() {
 
   serial_disable_isr(serial_smart_audio_port);
 
-  LL_USART_DeInit(USART.channel);
-
   LL_GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
@@ -74,36 +72,19 @@ static void serial_smart_audio_reconfigure() {
   GPIO_InitStructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   gpio_pin_init_af(&GPIO_InitStructure, USART.tx_pin, USART.gpio_af);
 
-  LL_USART_InitTypeDef USART_InitStructure;
-  USART_InitStructure.BaudRate = baud_rate;
-  USART_InitStructure.DataWidth = LL_USART_DATAWIDTH_8B;
-  USART_InitStructure.StopBits = LL_USART_STOPBITS_2;
-  USART_InitStructure.Parity = LL_USART_PARITY_NONE;
-  USART_InitStructure.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
-  USART_InitStructure.TransferDirection = LL_USART_DIRECTION_TX_RX;
-  USART_InitStructure.OverSampling = LL_USART_OVERSAMPLING_16;
-  LL_USART_Init(USART.channel, &USART_InitStructure);
+  LL_USART_InitTypeDef usart_init;
+  LL_USART_StructInit(&usart_init);
+  usart_init.BaudRate = baud_rate;
+  usart_init.DataWidth = LL_USART_DATAWIDTH_8B;
+  usart_init.StopBits = LL_USART_STOPBITS_2;
+  usart_init.Parity = LL_USART_PARITY_NONE;
+  usart_init.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
+  usart_init.TransferDirection = LL_USART_DIRECTION_TX_RX;
+  usart_init.OverSampling = LL_USART_OVERSAMPLING_16;
+  serial_port_init(serial_smart_audio_port, &usart_init, true);
 
-  // LL_USART_ClearFlag_RXNE(USART.channel);
-  LL_USART_ClearFlag_TC(USART.channel);
-
-  LL_USART_DisableIT_TXE(USART.channel);
   LL_USART_EnableIT_RXNE(USART.channel);
   LL_USART_EnableIT_TC(USART.channel);
-
-#ifdef STM32H7
-  LL_USART_SetTXFIFOThreshold(USART1, LL_USART_FIFOTHRESHOLD_1_8);
-  LL_USART_SetRXFIFOThreshold(USART1, LL_USART_FIFOTHRESHOLD_1_8);
-  LL_USART_DisableFIFO(USART1);
-#endif
-
-  LL_USART_ConfigHalfDuplexMode(USART.channel);
-  LL_USART_Enable(USART.channel);
-
-#ifdef STM32H7
-  while ((!(LL_USART_IsActiveFlag_TEACK(USART1))) || (!(LL_USART_IsActiveFlag_REACK(USART1))))
-    ;
-#endif
 
   serial_enable_isr(serial_smart_audio_port);
 }

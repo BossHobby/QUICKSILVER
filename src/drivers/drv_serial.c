@@ -148,8 +148,46 @@ void serial_disable_isr(usart_ports_t port) {
   }
 }
 
-void serial_init(usart_ports_t port, uint32_t buadrate, bool half_duplex) {
+void serial_port_init(usart_ports_t port, LL_USART_InitTypeDef *usart_init, bool half_duplex) {
   LL_USART_Disable(USART.channel);
+  LL_USART_DeInit(USART.channel);
+
+  LL_USART_Init(USART.channel, usart_init);
+
+#if !defined(STM32F7) && !defined(STM32H7)
+  LL_USART_ClearFlag_RXNE(USART.channel);
+#endif
+  LL_USART_ClearFlag_TC(USART.channel);
+
+  LL_USART_DisableIT_TXE(USART.channel);
+  LL_USART_DisableIT_RXNE(USART.channel);
+  LL_USART_DisableIT_TC(USART.channel);
+
+#ifdef STM32H7
+  LL_USART_SetTXFIFOThreshold(USART.channel, LL_USART_FIFOTHRESHOLD_1_8);
+  LL_USART_SetRXFIFOThreshold(USART.channel, LL_USART_FIFOTHRESHOLD_1_8);
+  LL_USART_DisableFIFO(USART.channel);
+#endif
+
+  if (half_duplex) {
+    LL_USART_ConfigHalfDuplexMode(USART.channel);
+  }
+
+  LL_USART_Enable(USART.channel);
+
+#ifdef STM32H7
+  if (usart_init->TransferDirection & LL_USART_DIRECTION_RX) {
+    while (!(LL_USART_IsActiveFlag_REACK(USART.channel)))
+      ;
+  }
+  if (usart_init->TransferDirection & LL_USART_DIRECTION_TX) {
+    while (!(LL_USART_IsActiveFlag_TEACK(USART.channel)))
+      ;
+  }
+#endif
+}
+
+void serial_init(usart_ports_t port, uint32_t baudrate, bool half_duplex) {
 
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
@@ -166,28 +204,15 @@ void serial_init(usart_ports_t port, uint32_t buadrate, bool half_duplex) {
   }
 
   LL_USART_InitTypeDef usart_init;
-  usart_init.BaudRate = buadrate;
+  usart_init.BaudRate = baudrate;
   usart_init.DataWidth = LL_USART_DATAWIDTH_8B;
   usart_init.StopBits = LL_USART_STOPBITS_1;
   usart_init.Parity = LL_USART_PARITY_NONE;
   usart_init.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
-  usart_init.TransferDirection = LL_USART_DIRECTION_TX | LL_USART_DIRECTION_RX;
+  usart_init.TransferDirection = LL_USART_DIRECTION_TX_RX;
   usart_init.OverSampling = LL_USART_OVERSAMPLING_16;
-  LL_USART_Init(USART.channel, &usart_init);
 
-#if !defined(STM32F7) && !defined(STM32H7)
-  LL_USART_ClearFlag_RXNE(USART.channel);
-#endif
-  LL_USART_ClearFlag_TC(USART.channel);
-
-  LL_USART_DisableIT_TXE(USART.channel);
-  LL_USART_DisableIT_RXNE(USART.channel);
-  LL_USART_DisableIT_TC(USART.channel);
-
-  if (half_duplex) {
-    LL_USART_EnableHalfDuplex(USART.channel);
-  }
-  LL_USART_Enable(USART.channel);
+  serial_port_init(port, &usart_init, half_duplex);
 }
 
 bool serial_read_bytes(usart_ports_t port, uint8_t *data, const uint32_t size) {
