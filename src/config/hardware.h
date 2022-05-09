@@ -45,6 +45,7 @@
 #define LOOPTIME LOOPTIME_8K
 
 #define WITHIN_DTCM_RAM(p) (((uint32_t)p & 0xffff0000) == 0x20000000)
+#define WITHIN_DMA_RAM(p) (false)
 
 #endif
 
