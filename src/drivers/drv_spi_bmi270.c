@@ -8,8 +8,8 @@
 
 #define BMI270_ID 0x24
 
-#define SPI_SPEED_SLOW spi_find_divder(MHZ_TO_HZ(0.5))
-#define SPI_SPEED_FAST spi_find_divder(MHZ_TO_HZ(10.5))
+#define SPI_SPEED_SLOW MHZ_TO_HZ(0.5)
+#define SPI_SPEED_FAST MHZ_TO_HZ(10.5)
 
 extern DMA_RAM spi_bus_device_t gyro_bus;
 

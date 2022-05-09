@@ -21,30 +21,26 @@
 
 extern DMA_RAM spi_bus_device_t gyro_bus;
 
-static uint32_t mpu6xxx_slow_divider() {
-  return spi_find_divder(SPI_SPEED_INIT);
-}
-
 static uint32_t mpu6xxx_fast_divider() {
   switch (gyro_type) {
   default:
   case GYRO_TYPE_ICM20649:
-    return spi_find_divder(MHZ_TO_HZ(7));
+    return MHZ_TO_HZ(7);
 
   case GYRO_TYPE_ICM20601:
   case GYRO_TYPE_ICM20608:
   case GYRO_TYPE_ICM20689:
-    return spi_find_divder(MHZ_TO_HZ(8));
+    return MHZ_TO_HZ(8);
 
   case GYRO_TYPE_ICM20602:
-    return spi_find_divder(MHZ_TO_HZ(10.5));
+    return MHZ_TO_HZ(10.5);
 
   case GYRO_TYPE_MPU6000:
   case GYRO_TYPE_MPU6500:
-    return spi_find_divder(MHZ_TO_HZ(21));
+    return MHZ_TO_HZ(21);
   }
 
-  return spi_find_divder(SPI_SPEED_INIT);
+  return SPI_SPEED_INIT;
 }
 
 uint8_t mpu6xxx_detect() {
@@ -94,7 +90,7 @@ void mpu6xxx_configure() {
 
 // blocking dma read of a single register
 uint8_t mpu6xxx_read(uint8_t reg) {
-  spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, mpu6xxx_slow_divider());
+  spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_INIT);
 
   uint8_t buffer[2] = {reg | 0x80, 0x00};
 
@@ -109,7 +105,7 @@ uint8_t mpu6xxx_read(uint8_t reg) {
 
 // blocking dma write of a single register
 void mpu6xxx_write(uint8_t reg, uint8_t data) {
-  spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, mpu6xxx_slow_divider());
+  spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_INIT);
 
   spi_txn_t *txn = spi_txn_init(&gyro_bus, NULL);
   spi_txn_add_seg_const(txn, reg);
