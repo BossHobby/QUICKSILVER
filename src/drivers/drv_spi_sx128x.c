@@ -55,7 +55,7 @@ void sx128x_init() {
   exti_enable(SX12XX_DIO0_PIN, LL_EXTI_TRIGGER_RISING);
 
   spi_bus_device_init(&bus);
-  spi_bus_device_reconfigure(&bus, true, spi_find_divder(MHZ_TO_HZ(10.5)));
+  spi_bus_device_reconfigure(&bus, true, MHZ_TO_HZ(10.5));
 }
 
 void sx128x_reset() {

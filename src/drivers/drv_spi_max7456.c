@@ -12,7 +12,7 @@
 #ifdef ENABLE_OSD
 
 #define DMA_BUFFER_SIZE 128
-#define MAX7456_BAUD_RATE spi_find_divder(MHZ_TO_HZ(10.5))
+#define MAX7456_BAUD_RATE MHZ_TO_HZ(10.5)
 
 // osd video system (PAL/NTSC) at startup if no video input is present
 // after input is present the last detected system will be used.

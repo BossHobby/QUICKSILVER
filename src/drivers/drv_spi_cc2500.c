@@ -8,7 +8,7 @@
 
 #define PORT spi_port_defs[CC2500_SPI_PORT]
 
-#define SPI_SPEED spi_find_divder(MHZ_TO_HZ(10.5))
+#define SPI_SPEED MHZ_TO_HZ(10.5)
 
 static DMA_RAM uint8_t dma_buffer[128];
 static spi_bus_device_t bus = {

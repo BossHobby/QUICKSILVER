@@ -35,14 +35,14 @@ const spi_port_def_t spi_port_defs[SPI_PORTS_MAX] = {{}, SPI_PORTS};
 typedef struct {
   spi_bus_device_t *active_device;
   spi_mode_t mode;
-  uint32_t divider;
+  uint32_t hz;
 } spi_port_config_t;
 
 #define SPI_PORT(chan, sck_pin, miso_pin, mosi_pin) \
   {                                                 \
       .active_device = NULL,                        \
       .mode = SPI_MODE_INVALID,                     \
-      .divider = 0,                                 \
+      .hz = 0,                                      \
   },
 
 static spi_port_config_t spi_port_config[SPI_PORTS_MAX] = {{}, SPI_PORTS};
@@ -103,7 +103,7 @@ static uint32_t spi_divider_to_ll(uint32_t divider) {
   }
 }
 
-uint32_t spi_find_divder(uint32_t clk_hz) {
+static uint32_t spi_find_divder(uint32_t clk_hz) {
   uint32_t divider = 2;
   uint32_t clock = SPI_CLOCK_FREQ_HZ / divider;
 
@@ -229,13 +229,13 @@ bool spi_dma_wait_for_ready(spi_ports_t port) {
 }
 
 static void spi_reconfigure(spi_bus_device_t *bus) {
-  if (spi_port_config[bus->port].mode == bus->mode && spi_port_config[bus->port].divider == bus->divider) {
+  if (spi_port_config[bus->port].mode == bus->mode && spi_port_config[bus->port].hz == bus->hz) {
     return;
   }
   spi_port_config[bus->port].mode = bus->mode;
-  spi_port_config[bus->port].divider = bus->divider;
+  spi_port_config[bus->port].hz = bus->hz;
 
-  LL_SPI_SetBaudRatePrescaler(spi_port_defs[bus->port].channel, bus->divider);
+  LL_SPI_SetBaudRatePrescaler(spi_port_defs[bus->port].channel, spi_find_divder(bus->hz));
   if (bus->mode == SPI_MODE_LEADING_EDGE) {
     LL_SPI_SetClockPhase(spi_port_defs[bus->port].channel, LL_SPI_PHASE_1EDGE);
     LL_SPI_SetClockPolarity(spi_port_defs[bus->port].channel, LL_SPI_POLARITY_LOW);
@@ -350,16 +350,16 @@ void spi_bus_device_init(spi_bus_device_t *bus) {
   LL_SPI_Init(port->channel, &default_init);
 
   spi_port_config[bus->port].mode = SPI_MODE_LEADING_EDGE;
-  spi_port_config[bus->port].divider = LL_SPI_BAUDRATEPRESCALER_DIV256;
+  spi_port_config[bus->port].hz = 0;
 
   const dma_stream_def_t *dma_rx = &dma_stream_defs[port->dma_rx];
   interrupt_enable(dma_rx->irq, DMA_PRIORITY);
   dma_transfer_done[bus->port] = 1;
 }
 
-void spi_bus_device_reconfigure(spi_bus_device_t *bus, spi_mode_t mode, uint32_t divider) {
+void spi_bus_device_reconfigure(spi_bus_device_t *bus, spi_mode_t mode, uint32_t hz) {
   bus->mode = mode;
-  bus->divider = divider;
+  bus->hz = hz;
 }
 
 spi_txn_t *spi_txn_init(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn) {
