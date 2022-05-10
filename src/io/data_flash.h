@@ -24,8 +24,10 @@ typedef struct {
 typedef struct {
   uint32_t magic;
   uint16_t file_num;
-  data_flash_file_t files[16];
+  data_flash_file_t files[8];
 } data_flash_header_t;
+
+// sizeof(data_flash_header_t) cannot excide PAGE_SIZE eg 256byte
 
 typedef enum {
   DATA_FLASH_IDLE,
