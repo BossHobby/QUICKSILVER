@@ -290,10 +290,7 @@ __attribute__((__used__)) int main() {
 #endif
 #endif
 
-#ifdef BUZZER_ENABLE
     buzzer_update();
-#endif
-
     vtx_update();
 
     perf_counter_end(PERF_COUNTER_MISC);

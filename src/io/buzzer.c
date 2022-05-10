@@ -81,4 +81,9 @@ void buzzer_update() {
   }
 }
 
+#else
+
+void buzzer_init() {}
+void buzzer_update() {}
+
 #endif
