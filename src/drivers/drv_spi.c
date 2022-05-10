@@ -229,19 +229,22 @@ bool spi_dma_wait_for_ready(spi_ports_t port) {
 }
 
 static void spi_reconfigure(spi_bus_device_t *bus) {
-  if (spi_port_config[bus->port].mode == bus->mode && spi_port_config[bus->port].hz == bus->hz) {
+  const spi_port_def_t *port = &spi_port_defs[bus->port];
+
+  spi_port_config_t *config = &spi_port_config[bus->port];
+  if (config->mode == bus->mode && config->hz == bus->hz) {
     return;
   }
-  spi_port_config[bus->port].mode = bus->mode;
-  spi_port_config[bus->port].hz = bus->hz;
+  config->mode = bus->mode;
+  config->hz = bus->hz;
 
-  LL_SPI_SetBaudRatePrescaler(spi_port_defs[bus->port].channel, spi_find_divder(bus->hz));
+  LL_SPI_SetBaudRatePrescaler(port->channel, spi_find_divder(bus->hz));
   if (bus->mode == SPI_MODE_LEADING_EDGE) {
-    LL_SPI_SetClockPhase(spi_port_defs[bus->port].channel, LL_SPI_PHASE_1EDGE);
-    LL_SPI_SetClockPolarity(spi_port_defs[bus->port].channel, LL_SPI_POLARITY_LOW);
+    LL_SPI_SetClockPhase(port->channel, LL_SPI_PHASE_1EDGE);
+    LL_SPI_SetClockPolarity(port->channel, LL_SPI_POLARITY_LOW);
   } else if (bus->mode == SPI_MODE_TRAILING_EDGE) {
-    LL_SPI_SetClockPhase(spi_port_defs[bus->port].channel, LL_SPI_PHASE_2EDGE);
-    LL_SPI_SetClockPolarity(spi_port_defs[bus->port].channel, LL_SPI_POLARITY_HIGH);
+    LL_SPI_SetClockPhase(port->channel, LL_SPI_PHASE_2EDGE);
+    LL_SPI_SetClockPolarity(port->channel, LL_SPI_POLARITY_HIGH);
   }
 }
 
