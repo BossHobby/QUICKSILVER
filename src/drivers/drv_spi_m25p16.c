@@ -45,8 +45,6 @@ uint8_t m25p16_is_ready() {
     return 0;
   }
 
-  spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, M25P16_BAUD_RATE);
-
   uint8_t buffer[2] = {M25P16_READ_STATUS_REGISTER, 0xFF};
 
   spi_txn_t *txn = spi_txn_init(&bus, NULL);
@@ -115,12 +113,6 @@ uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, 
 }
 
 uint8_t m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t size) {
-  if (!spi_txn_ready(&bus) || !spi_dma_is_ready(M25P16_SPI_PORT)) {
-    return 0;
-  }
-
-  spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, M25P16_BAUD_RATE);
-
   {
     spi_txn_t *txn = spi_txn_init(&bus, NULL);
     spi_txn_add_seg_const(txn, M25P16_WRITE_ENABLE);
