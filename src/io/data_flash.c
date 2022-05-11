@@ -6,6 +6,7 @@
 #include "drv_spi_sdcard.h"
 #include "drv_time.h"
 #include "io/usb_configurator.h"
+#include "util/cbor_helper.h"
 #include "util/util.h"
 
 #ifdef ENABLE_BLACKBOX
@@ -45,11 +46,45 @@ static int32_t write_offset = 0;
 static int32_t written_offset = 0;
 static uint8_t should_flush = 0;
 
+#define MEMBER CBOR_ENCODE_MEMBER
+#define STR_MEMBER CBOR_ENCODE_STR_MEMBER
+#define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
+#define STR_ARRAY_MEMBER CBOR_ENCODE_STR_ARRAY_MEMBER
+
+CBOR_START_STRUCT_ENCODER(data_flash_file_t)
+DATA_FLASH_FILE_MEMBERS
+CBOR_END_STRUCT_ENCODER()
+
+CBOR_START_STRUCT_ENCODER(data_flash_header_t)
+DATA_FLASH_HEADER_MEMBERS
+CBOR_END_STRUCT_ENCODER()
+
+#undef MEMBER
+#undef STR_MEMBER
+#undef ARRAY_MEMBER
+#undef STR_ARRAY_MEMBER
+
+#define MEMBER CBOR_DECODE_MEMBER
+#define STR_MEMBER CBOR_DECODE_STR_MEMBER
+#define ARRAY_MEMBER CBOR_DECODE_ARRAY_MEMBER
+#define STR_ARRAY_MEMBER CBOR_DECODE_STR_ARRAY_MEMBER
+
+CBOR_START_STRUCT_DECODER(data_flash_file_t)
+DATA_FLASH_FILE_MEMBERS
+CBOR_END_STRUCT_DECODER()
+
+CBOR_START_STRUCT_DECODER(data_flash_header_t)
+DATA_FLASH_HEADER_MEMBERS
+CBOR_END_STRUCT_DECODER()
+
+#undef MEMBER
+#undef STR_MEMBER
+#undef ARRAY_MEMBER
+#undef STR_ARRAY_MEMBER
+
 static data_flash_file_t *current_file() {
   return &data_flash_header.files[data_flash_header.file_num - 1];
 }
-
-static volatile uint32_t update_delta = 0;
 
 data_flash_result_t data_flash_update() {
   static uint32_t offset = 0;

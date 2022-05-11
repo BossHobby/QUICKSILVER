@@ -16,18 +16,28 @@ typedef struct {
 
 typedef struct {
   uint32_t looptime;
-  uint32_t blackbox_rate;
+  uint8_t blackbox_rate;
   uint32_t start_page;
   uint32_t size;
 } data_flash_file_t;
 
+#define DATA_FLASH_FILE_MEMBERS \
+  MEMBER(looptime, uint32)      \
+  MEMBER(blackbox_rate, uint8)  \
+  MEMBER(start_page, uint32)    \
+  MEMBER(size, uint32)
+
+// sizeof(data_flash_header_t) cannot exceed PAGE_SIZE eg 256byte
 typedef struct {
   uint32_t magic;
-  uint16_t file_num;
+  uint8_t file_num;
   data_flash_file_t files[8];
 } data_flash_header_t;
 
-// sizeof(data_flash_header_t) cannot excide PAGE_SIZE eg 256byte
+#define DATA_FLASH_HEADER_MEMBERS \
+  MEMBER(magic, uint32)           \
+  MEMBER(file_num, uint8)         \
+  ARRAY_MEMBER(files, 8, data_flash_file_t)
 
 typedef enum {
   DATA_FLASH_IDLE,
@@ -36,6 +46,9 @@ typedef enum {
   DATA_FLASH_STARTING,
   DATA_FLASH_WRITE,
 } data_flash_result_t;
+
+cbor_result_t cbor_encode_data_flash_file_t(cbor_value_t *enc, const data_flash_file_t *f);
+cbor_result_t cbor_encode_data_flash_header_t(cbor_value_t *enc, const data_flash_header_t *h);
 
 void data_flash_init();
 data_flash_result_t data_flash_update();

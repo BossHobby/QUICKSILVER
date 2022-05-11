@@ -369,7 +369,7 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
 
     res = cbor_encode_str(&enc, "file_num");
     check_cbor_error(QUIC_CMD_BLACKBOX);
-    res = cbor_encode_uint16(&enc, &data_flash_header.file_num);
+    res = cbor_encode_uint8(&enc, &data_flash_header.file_num);
     check_cbor_error(QUIC_CMD_BLACKBOX);
 
     res = cbor_encode_str(&enc, "files");
@@ -378,7 +378,7 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
     check_cbor_error(QUIC_CMD_BLACKBOX);
 
     for (uint8_t i = 0; i < data_flash_header.file_num; i++) {
-      res = cbor_encode_uint32(&enc, &data_flash_header.files[i].size);
+      res = cbor_encode_data_flash_file_t(&enc, &data_flash_header.files[i]);
       check_cbor_error(QUIC_CMD_BLACKBOX);
     }
 
