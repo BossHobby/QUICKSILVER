@@ -1,8 +1,8 @@
 #include "drv_interrupt.h"
 
-void interrupt_enable(IRQn_Type irq, uint32_t preempt_priority, uint32_t sub_priority) {
+void interrupt_enable(IRQn_Type irq, uint32_t prio) {
   NVIC_SetPriorityGrouping(2);
-  NVIC_SetPriority(irq, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), preempt_priority, sub_priority));
+  NVIC_SetPriority(irq, prio);
   NVIC_EnableIRQ(irq);
 }
 
