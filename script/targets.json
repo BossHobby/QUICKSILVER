@@ -574,5 +574,17 @@
         }
       }
     ]
+  },
+  {
+    "name": "foxeerf745_aio",
+    "configurations": [
+      {
+        "name": "brushless.serial",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_UNIFIED_SERIAL": ""
+        }
+      }
+    ]
   }
 ]
