@@ -316,12 +316,12 @@ static uint8_t spi_transfer(spi_ports_t port, uint8_t *data, uint32_t size) {
   LL_SPI_Enable(PORT.channel);
 
   for (uint32_t i = 0; i < size; i++) {
-    while (!LL_SPI_IsActiveFlag_TXE(PORT.channel))
+    while (LL_SPI_IsActiveFlag_BSY(PORT.channel) || !LL_SPI_IsActiveFlag_TXE(PORT.channel))
       ;
 
     LL_SPI_TransmitData8(PORT.channel, data[i]);
 
-    while (!LL_SPI_IsActiveFlag_RXNE(PORT.channel))
+    while (LL_SPI_IsActiveFlag_BSY(PORT.channel) || !LL_SPI_IsActiveFlag_RXNE(PORT.channel))
       ;
 
     data[i] = LL_SPI_ReceiveData8(PORT.channel);
