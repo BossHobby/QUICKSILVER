@@ -144,12 +144,10 @@ static void spi_init_pins(spi_ports_t port, gpio_pins_t nss) {
   gpio_pin_set(nss);
 }
 
-static void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uint32_t buffer_size) {
+static void spi_dma_init_rx(spi_ports_t port) {
   const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_rx];
 
   LL_DMA_DeInit(dma->port, dma->stream_index);
-
-  dma_prepare_rx_memory(base_address_in, buffer_size);
 
   LL_DMA_InitTypeDef DMA_InitStructure;
 #ifdef STM32H7
@@ -159,11 +157,11 @@ static void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uin
   DMA_InitStructure.Channel = dma->channel;
   DMA_InitStructure.PeriphOrM2MSrcAddress = LL_SPI_DMA_GetRegAddr(PORT.channel);
 #endif
-  DMA_InitStructure.MemoryOrM2MDstAddress = (uint32_t)base_address_in;
+  DMA_InitStructure.MemoryOrM2MDstAddress = 0;
   DMA_InitStructure.Direction = LL_DMA_DIRECTION_PERIPH_TO_MEMORY;
   DMA_InitStructure.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
   DMA_InitStructure.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
-  DMA_InitStructure.NbData = (uint16_t)buffer_size;
+  DMA_InitStructure.NbData = 0;
   DMA_InitStructure.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_BYTE;
   DMA_InitStructure.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_BYTE;
   DMA_InitStructure.Mode = LL_DMA_MODE_NORMAL;
@@ -174,12 +172,24 @@ static void spi_dma_receive_init(spi_ports_t port, uint8_t *base_address_in, uin
   LL_DMA_Init(dma->port, dma->stream_index, &DMA_InitStructure);
 }
 
-static void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, uint32_t buffer_size) {
+static void spi_dma_reset_rx(spi_ports_t port, uint8_t *rx_data, uint32_t rx_size) {
+  const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_rx];
+
+  dma_prepare_rx_memory(rx_data, rx_size);
+
+#ifdef STM32H7
+  LL_DMA_SetPeriphAddress(dma->port, dma->stream_index, (uint32_t)&PORT.channel->RXDR);
+#else
+  LL_DMA_SetPeriphAddress(dma->port, dma->stream_index, LL_SPI_DMA_GetRegAddr(PORT.channel));
+#endif
+  LL_DMA_SetMemoryAddress(dma->port, dma->stream_index, (uint32_t)rx_data);
+  LL_DMA_SetDataLength(dma->port, dma->stream_index, rx_size);
+}
+
+static void spi_dma_init_tx(spi_ports_t port) {
   const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_tx];
 
   LL_DMA_DeInit(dma->port, dma->stream_index);
-
-  dma_prepare_tx_memory(base_address_out, buffer_size);
 
   LL_DMA_InitTypeDef DMA_InitStructure;
 #ifdef STM32H7
@@ -189,11 +199,11 @@ static void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, u
   DMA_InitStructure.Channel = dma->channel;
   DMA_InitStructure.PeriphOrM2MSrcAddress = LL_SPI_DMA_GetRegAddr(PORT.channel);
 #endif
-  DMA_InitStructure.MemoryOrM2MDstAddress = (uint32_t)base_address_out;
+  DMA_InitStructure.MemoryOrM2MDstAddress = 0;
   DMA_InitStructure.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
   DMA_InitStructure.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
   DMA_InitStructure.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
-  DMA_InitStructure.NbData = (uint16_t)buffer_size;
+  DMA_InitStructure.NbData = 0;
   DMA_InitStructure.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_BYTE;
   DMA_InitStructure.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_BYTE;
   DMA_InitStructure.Mode = LL_DMA_MODE_NORMAL;
@@ -202,6 +212,20 @@ static void spi_dma_transmit_init(spi_ports_t port, uint8_t *base_address_out, u
   DMA_InitStructure.MemBurst = LL_DMA_MBURST_SINGLE;
   DMA_InitStructure.PeriphBurst = LL_DMA_PBURST_SINGLE;
   LL_DMA_Init(dma->port, dma->stream_index, &DMA_InitStructure);
+}
+
+static void spi_dma_reset_tx(spi_ports_t port, uint8_t *tx_data, uint32_t tx_size) {
+  const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_tx];
+
+  dma_prepare_tx_memory(tx_data, tx_size);
+
+#ifdef STM32H7
+  LL_DMA_SetPeriphAddress(dma->port, dma->stream_index, (uint32_t)&PORT.channel->TXDR);
+#else
+  LL_DMA_SetPeriphAddress(dma->port, dma->stream_index, LL_SPI_DMA_GetRegAddr(PORT.channel));
+#endif
+  LL_DMA_SetMemoryAddress(dma->port, dma->stream_index, (uint32_t)tx_data);
+  LL_DMA_SetDataLength(dma->port, dma->stream_index, tx_size);
 }
 
 uint8_t spi_dma_is_ready(spi_ports_t port) {
@@ -269,8 +293,8 @@ static void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t l
   dma_clear_flag_tc(dma_rx->port, dma_rx->stream_index);
   dma_clear_flag_tc(dma_tx->port, dma_tx->stream_index);
 
-  spi_dma_receive_init(port, buffer, length);
-  spi_dma_transmit_init(port, buffer, length);
+  spi_dma_reset_rx(port, buffer, length);
+  spi_dma_reset_tx(port, buffer, length);
 
   LL_DMA_EnableIT_TC(dma_rx->port, dma_rx->stream_index);
 
@@ -366,6 +390,9 @@ void spi_bus_device_init(spi_bus_device_t *bus) {
 
   spi_port_config[bus->port].mode = SPI_MODE_TRAILING_EDGE;
   spi_port_config[bus->port].hz = 0;
+
+  spi_dma_init_rx(bus->port);
+  spi_dma_init_tx(bus->port);
 
   const dma_stream_def_t *dma_rx = &dma_stream_defs[port->dma_rx];
   interrupt_enable(dma_rx->irq, DMA_PRIORITY);
