@@ -237,8 +237,6 @@ static void dshot_dma_setup_port(uint32_t index) {
   dma->stream->M0AR = (uint32_t)&port_dma_buffer[index][0];
   dma->stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
 
-  port->gpio->BSRR = port->port_low;
-
   LL_DMA_EnableStream(dma->port, dma->stream_index);
   dshot_enable_dma_request(port->timer_channel);
 }
@@ -264,42 +262,42 @@ static void make_packet(uint8_t number, uint16_t value, bool telemetry) {
 static void dshot_dma_start() {
   motor_wait_for_ready();
 
-  memset((uint8_t *)port_dma_buffer, 0, sizeof(port_dma_buffer));
+  for (uint32_t j = 0; j < gpio_port_count; j++) {
+    // set all ports to low before and after the packet
+    port_dma_buffer[j][0] = gpio_ports[j].port_low;
+    port_dma_buffer[j][1] = gpio_ports[j].port_low;
+    port_dma_buffer[j][2] = gpio_ports[j].port_low;
 
-  for (uint8_t motor = 0; motor < MOTOR_PIN_MAX; motor++) {
-    const uint32_t motor_high = (motor_pins[motor].pin);
-    const uint32_t motor_low = (motor_pins[motor].pin << 16);
+    port_dma_buffer[j][16 * 3 + 0] = gpio_ports[j].port_low;
+    port_dma_buffer[j][16 * 3 + 1] = gpio_ports[j].port_low;
+    port_dma_buffer[j][16 * 3 + 2] = gpio_ports[j].port_low;
+  }
 
-    const uint32_t port = motor_pins[motor].dshot_port;
+  for (uint8_t i = 0; i < 16; i++) {
+    for (uint32_t j = 0; j < gpio_port_count; j++) {
+      port_dma_buffer[j][(i + 1) * 3 + 0] = gpio_ports[j].port_high; // start bit
+      port_dma_buffer[j][(i + 1) * 3 + 1] = 0;                       // actual bit, set below
+      port_dma_buffer[j][(i + 1) * 3 + 2] = gpio_ports[j].port_low;  // return line to low
+    }
 
-    port_dma_buffer[port][0] |= motor_low;
-    port_dma_buffer[port][1] |= motor_low;
-    port_dma_buffer[port][2] |= motor_low;
+    for (uint8_t motor = 0; motor < MOTOR_PIN_MAX; motor++) {
+      const uint32_t port = motor_pins[motor].dshot_port;
+      const uint32_t motor_high = (motor_pins[motor].pin);
+      const uint32_t motor_low = (motor_pins[motor].pin << 16);
 
-    for (uint8_t i = 0; i < 16; i++) {
       const bool bit = dshot_packet[motor] & 0x8000;
 
-      // start bit
-      port_dma_buffer[port][(i + 1) * 3 + 0] |= motor_high;
-
       // for 1 hold the line high for two timeunits
+      // first timeunit is already applied
       port_dma_buffer[port][(i + 1) * 3 + 1] |= bit ? motor_high : motor_low;
-
-      // return line to low
-      port_dma_buffer[port][(i + 1) * 3 + 2] |= motor_low;
 
       dshot_packet[motor] <<= 1;
     }
-
-    port_dma_buffer[port][16 * 3 + 0] |= motor_low;
-    port_dma_buffer[port][16 * 3 + 1] |= motor_low;
-    port_dma_buffer[port][16 * 3 + 2] |= motor_low;
   }
-
-  dshot_dma_phase = gpio_port_count;
 
   dma_prepare_tx_memory((void *)port_dma_buffer, sizeof(port_dma_buffer));
 
+  dshot_dma_phase = gpio_port_count;
   for (uint32_t j = 0; j < gpio_port_count; j++) {
     dshot_dma_setup_port(j);
   }
