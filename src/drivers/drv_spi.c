@@ -447,7 +447,7 @@ void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, u
     last_seg->size += size;
   } else {
     // create new segment
-    if (txn->segment_count + 1 > SPI_TXN_SEG_MAX) {
+    if (txn->segment_count >= SPI_TXN_SEG_MAX) {
       txn->status = TXN_ERROR;
       txn->size = 0;
       return;
@@ -462,6 +462,10 @@ void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, u
 
 void spi_txn_add_seg_const(spi_txn_t *txn, const uint8_t tx_data) {
   spi_txn_add_seg(txn, NULL, &tx_data, 1);
+}
+
+bool spi_txn_ready(spi_bus_device_t *bus) {
+  return bus->txn_head == bus->txn_tail;
 }
 
 void spi_txn_submit(spi_txn_t *txn) {
@@ -493,32 +497,6 @@ static spi_txn_t *spi_txn_finish(spi_bus_device_t *bus) {
   return txn;
 }
 
-static spi_txn_t *spi_txn_peek(spi_bus_device_t *bus) {
-  // ensures this function can only run once the dma transaction is done
-  if (!spi_dma_is_ready(bus->port)) {
-    return NULL;
-  }
-
-  if (bus->txn_head == bus->txn_tail) {
-    return NULL;
-  }
-  if (spi_port_config[bus->port].active_device != NULL &&
-      spi_port_config[bus->port].active_device != bus) {
-    return NULL;
-  }
-  if (bus->poll_fn && !bus->poll_fn()) {
-    return NULL;
-  }
-
-  const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
-  spi_txn_t *txn = &bus->txns[tail];
-  if (txn->status != TXN_READY) {
-    return NULL;
-  }
-
-  return txn;
-}
-
 static bool spi_txn_should_use_dma(spi_bus_device_t *bus, spi_txn_t *txn) {
 #ifdef STM32H7
   uint8_t *addr = (uint8_t *)bus->buffer + txn->offset;
@@ -529,7 +507,29 @@ static bool spi_txn_should_use_dma(spi_bus_device_t *bus, spi_txn_t *txn) {
   return true;
 }
 
-static void spi_txn_continue_mode(spi_bus_device_t *bus, spi_txn_t *txn, bool use_dma) {
+void spi_txn_continue(spi_bus_device_t *bus) {
+  // ensures this function can only run once the dma transaction is done
+  if (!spi_dma_is_ready(bus->port)) {
+    return;
+  }
+
+  if (bus->txn_head == bus->txn_tail) {
+    return;
+  }
+  if (spi_port_config[bus->port].active_device != NULL &&
+      spi_port_config[bus->port].active_device != bus) {
+    return;
+  }
+  if (bus->poll_fn && !bus->poll_fn()) {
+    return;
+  }
+
+  const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
+  spi_txn_t *txn = &bus->txns[tail];
+  if (txn->status != TXN_READY) {
+    return;
+  }
+
   spi_port_config[bus->port].active_device = bus;
   txn->status = TXN_IN_PROGRESS;
 
@@ -544,7 +544,7 @@ static void spi_txn_continue_mode(spi_bus_device_t *bus, spi_txn_t *txn, bool us
 
   spi_reconfigure(bus);
 
-  if (use_dma) {
+  if (spi_txn_should_use_dma(bus, txn)) {
     spi_csn_enable(bus);
     spi_dma_transfer_begin(bus->port, (uint8_t *)bus->buffer + txn->offset, txn->size);
   } else {
@@ -564,27 +564,9 @@ static void spi_txn_continue_mode(spi_bus_device_t *bus, spi_txn_t *txn, bool us
   }
 }
 
-bool spi_txn_ready(spi_bus_device_t *bus) {
-  return bus->txn_head == bus->txn_tail;
-}
-
-void spi_txn_continue(spi_bus_device_t *bus) {
-  spi_txn_t *txn = spi_txn_peek(bus);
-  if (txn == NULL) {
-    return;
-  }
-
-  spi_txn_continue_mode(bus, txn, spi_txn_should_use_dma(bus, txn));
-}
-
 void spi_txn_wait(spi_bus_device_t *bus) {
   while (!spi_txn_ready(bus)) {
-    spi_txn_t *txn = spi_txn_peek(bus);
-    if (txn != NULL) {
-      spi_txn_continue_mode(bus, txn, false);
-    } else {
-      __WFI();
-    }
+    spi_txn_continue(bus);
   }
 }
 
@@ -640,10 +622,7 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   }
 
   if (bus->auto_continue) {
-    spi_txn_t *txn = spi_txn_peek(bus);
-    if (txn != NULL && spi_txn_should_use_dma(bus, txn)) {
-      spi_txn_continue_mode(bus, txn, true);
-    }
+    spi_txn_continue(bus);
   }
 }
 
