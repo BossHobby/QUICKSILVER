@@ -247,11 +247,6 @@ __attribute__((__used__)) int main() {
       state.armtime += state.looptime;
     }
 
-#ifdef DEBUG
-    debug.totaltime += state.looptime;
-    lpf(&debug.timefilt, state.looptime, 0.998);
-#endif
-
     if (liberror > 20) {
       failloop(FAILLOOP_SPI_MAIN);
     }
@@ -317,8 +312,6 @@ __attribute__((__used__)) int main() {
 #endif
 
     state.cpu_load = (time_micros() - lastlooptime);
-
-    debug_update();
 
     perf_counter_end(PERF_COUNTER_TOTAL);
     perf_counter_update();
