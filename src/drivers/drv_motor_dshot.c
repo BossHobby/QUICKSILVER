@@ -5,6 +5,7 @@
 
 #include "drv_dma.h"
 #include "drv_gpio.h"
+#include "drv_interrupt.h"
 #include "drv_spi.h"
 #include "drv_time.h"
 #include "flight/control.h"
@@ -152,7 +153,7 @@ static void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   DMA_InitStructure.PeriphBurst = LL_DMA_PBURST_SINGLE;
   LL_DMA_Init(dma->port, dma->stream_index, &DMA_InitStructure);
 
-  NVIC_EnableIRQ(dma->irq);
+  interrupt_enable(dma->irq, DMA_PRIORITY);
 
   LL_DMA_EnableIT_TC(dma->port, dma->stream_index);
 }
