@@ -197,8 +197,14 @@ void rx_protocol_init() {
 
   cc2500_init();
 
+#ifdef CC2500_GDO0_PIN
   // enable gdo0 on read
   cc2500_write_reg(CC2500_IOCFG0, 0x01);
+#else
+  // use gdo0 to turn lna on
+  cc2500_write_reg(CC2500_IOCFG0, 0x2F);
+  cc2500_write_reg(CC2500_IOCFG2, 0x2F | 0x40);
+#endif
 
   cc2500_write_reg(CC2500_PKTLEN, REDPINE_PACKET_SIZE); // max packet lenght of 25
   cc2500_write_reg(CC2500_PKTCTRL1, 0x0C);              // only append status
