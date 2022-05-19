@@ -18,7 +18,7 @@ static spi_bus_device_t bus = {
     .buffer = dma_buffer,
     .buffer_size = 128,
 
-    .auto_continue = false,
+    .auto_continue = true,
 };
 
 uint8_t cc2500_read_gdo0() {
@@ -75,7 +75,7 @@ static void cc2500_hardware_init() {
 void cc2500_strobe(uint8_t address) {
   spi_txn_t *txn = spi_txn_init(&bus, NULL);
   spi_txn_add_seg_const(txn, address);
-  spi_txn_submit_wait(&bus, txn);
+  spi_txn_submit_continue(&bus, txn);
 }
 
 uint8_t cc2500_get_status() {
@@ -88,19 +88,22 @@ uint8_t cc2500_get_status() {
   return status;
 }
 
-uint8_t cc2500_write_reg(uint8_t reg, uint8_t data) {
-  uint8_t ret = 0;
-
+void cc2500_write_reg(uint8_t reg, uint8_t data) {
   spi_txn_t *txn = spi_txn_init(&bus, NULL);
   spi_txn_add_seg_const(txn, reg | CC2500_WRITE_SINGLE);
-  spi_txn_add_seg(txn, &ret, &data, 1);
-  spi_txn_submit_wait(&bus, txn);
-
-  return ret;
+  spi_txn_add_seg_const(txn, data);
+  spi_txn_submit_continue(&bus, txn);
 }
 
 uint8_t cc2500_read_reg(uint8_t reg) {
-  return cc2500_write_reg(reg | CC2500_READ_SINGLE, 0xFF);
+  uint8_t ret = 0;
+
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  spi_txn_add_seg_const(txn, reg | CC2500_READ_SINGLE);
+  spi_txn_add_seg(txn, &ret, NULL, 1);
+  spi_txn_submit_wait(&bus, txn);
+
+  return ret;
 }
 
 static uint8_t cc2500_read_multi(uint8_t reg, uint8_t *result, uint8_t len) {
@@ -112,29 +115,21 @@ static uint8_t cc2500_read_multi(uint8_t reg, uint8_t *result, uint8_t len) {
   return reg;
 }
 
-static uint8_t cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
+static void cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
   spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg(txn, &reg, &reg, 1);
+  spi_txn_add_seg_const(txn, reg);
   spi_txn_add_seg(txn, NULL, data, len);
-  spi_txn_submit_wait(&bus, txn);
-
-  return reg;
+  spi_txn_submit_continue(&bus, txn);
 }
 
 uint8_t cc2500_read_fifo(uint8_t *result, uint8_t len) {
   return cc2500_read_multi(CC2500_FIFO | CC2500_READ_BURST, result, len);
 }
 
-uint8_t cc2500_write_fifo(uint8_t *data, uint8_t len) {
-  // flush tx fifo
+void cc2500_write_fifo(uint8_t *data, uint8_t len) {
   cc2500_strobe(CC2500_SFTX);
-
-  const uint8_t ret = cc2500_write_multi(CC2500_FIFO | CC2500_WRITE_BURST, data, len);
-
-  // and send!
+  cc2500_write_multi(CC2500_FIFO | CC2500_WRITE_BURST, data, len);
   cc2500_strobe(CC2500_STX);
-
-  return ret;
 }
 
 void cc2500_reset() {
