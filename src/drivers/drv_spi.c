@@ -461,10 +461,8 @@ void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, u
     return;
   }
 
-  if (tx_data) {
-    memcpy((uint8_t *)txn->bus->buffer + txn->offset + txn->size, tx_data, size);
-  } else {
-    memset((uint8_t *)txn->bus->buffer + txn->offset + txn->size, 0xFF, size);
+  for (uint32_t i = 0; i < size; i++) {
+    txn->bus->buffer[txn->offset + txn->size + i] = tx_data ? tx_data[i] : 0xFF;
   }
   txn->size += size;
 
@@ -480,9 +478,10 @@ void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, u
       return;
     }
 
-    txn->segments[txn->segment_count].rx_data = rx_data;
-    txn->segments[txn->segment_count].tx_data = NULL;
-    txn->segments[txn->segment_count].size = size;
+    spi_txn_segment_t *seg = &txn->segments[txn->segment_count];
+    seg->rx_data = rx_data;
+    seg->tx_data = NULL;
+    seg->size = size;
     txn->segment_count++;
   }
 }
