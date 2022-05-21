@@ -16,7 +16,7 @@ void usb_process_quic();
 void usb_quic_logf(const char *fmt, ...);
 
 #if defined(DEBUG) && defined(DEBUG_LOGGING)
-#define quic_debugf(args...) usb_quic_logf(QUIC_CMD_LOG, QUIC_FLAG_NONE, args)
+#define quic_debugf(args...) usb_quic_logf(args)
 #else
 #define quic_debugf(args...) __NOP()
 #endif
