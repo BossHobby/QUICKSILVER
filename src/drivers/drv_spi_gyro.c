@@ -158,6 +158,8 @@ gyro_data_t gyro_spi_read() {
     data.gyro.axis[1] = (int16_t)((buf[7] << 8) | buf[6]);
     data.gyro.axis[0] = (int16_t)((buf[9] << 8) | buf[8]);
     data.gyro.axis[2] = (int16_t)((buf[11] << 8) | buf[10]);
+
+    data.temp = 0;
     break;
   }
 
