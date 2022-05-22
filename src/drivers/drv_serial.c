@@ -148,11 +148,95 @@ void serial_disable_isr(usart_ports_t port) {
   }
 }
 
-void serial_port_init(usart_ports_t port, LL_USART_InitTypeDef *usart_init, bool half_duplex) {
+void handle_usart_invert(usart_ports_t port, bool invert) {
+#if defined(STM32F4) && (defined(USART1_INVERTER_PIN) || defined(USART2_INVERTER_PIN) || defined(USART3_INVERTER_PIN) || defined(USART4_INVERTER_PIN) || defined(USART5_INVERTER_PIN) || defined(USART6_INVERTER_PIN))
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  gpio_init.Pull = LL_GPIO_PULL_NO;
+
+  // Inverter control line, set high
+  switch (usart_port_defs[profile.serial.rx].channel_index) {
+  case 1:
+#if defined(USART1_INVERTER_PIN)
+    gpio_pin_init(&gpio_init, USART1_INVERTER_PIN);
+    if (invert) {
+      gpio_pin_set(USART1_INVERTER_PIN);
+    } else {
+      gpio_pin_reset(USART1_INVERTER_PIN);
+    }
+#endif
+    break;
+  case 2:
+#if defined(USART2_INVERTER_PIN)
+    gpio_pin_init(&gpio_init, USART2_INVERTER_PIN);
+    if (invert) {
+      gpio_pin_set(USART2_INVERTER_PIN);
+    } else {
+      gpio_pin_reset(USART2_INVERTER_PIN);
+    }
+#endif
+    break;
+  case 3:
+#if defined(USART3_INVERTER_PIN)
+    gpio_pin_init(&gpio_init, USART3_INVERTER_PIN);
+    if (invert) {
+      gpio_pin_set(USART3_INVERTER_PIN);
+    } else {
+      gpio_pin_reset(USART3_INVERTER_PIN);
+    }
+#endif
+    break;
+  case 4:
+#if defined(USART4_INVERTER_PIN)
+    gpio_pin_init(&gpio_init, USART4_INVERTER_PIN);
+    if (invert) {
+      gpio_pin_set(USART4_INVERTER_PIN);
+    } else {
+      gpio_pin_reset(USART4_INVERTER_PIN);
+    }
+#endif
+    break;
+  case 5:
+#if defined(USART5_INVERTER_PIN)
+    gpio_pin_init(&gpio_init, USART5_INVERTER_PIN);
+    if (invert) {
+      gpio_pin_set(USART5_INVERTER_PIN);
+    } else {
+      gpio_pin_reset(USART5_INVERTER_PIN);
+    }
+#endif
+    break;
+  case 6:
+#if defined(USART6_INVERTER_PIN)
+    gpio_pin_init(&gpio_init, USART6_INVERTER_PIN);
+    if (invert) {
+      gpio_pin_set(USART6_INVERTER_PIN);
+    } else {
+      gpio_pin_reset(USART6_INVERTER_PIN);
+    }
+#endif
+    break;
+  }
+#endif
+#if defined(STM32F7) || defined(STM32H7)
+  if (invert) {
+    LL_USART_SetRXPinLevel(USART.channel, LL_USART_RXPIN_LEVEL_INVERTED);
+    LL_USART_SetTXPinLevel(USART.channel, LL_USART_TXPIN_LEVEL_INVERTED);
+  } else {
+    LL_USART_SetRXPinLevel(USART.channel, LL_USART_RXPIN_LEVEL_STANDARD);
+    LL_USART_SetTXPinLevel(USART.channel, LL_USART_TXPIN_LEVEL_STANDARD);
+  }
+#endif
+}
+
+void serial_port_init(usart_ports_t port, LL_USART_InitTypeDef *usart_init, bool half_duplex, bool invert) {
   LL_USART_Disable(USART.channel);
   LL_USART_DeInit(USART.channel);
 
   LL_USART_Init(USART.channel, usart_init);
+
+  handle_usart_invert(port, invert);
 
 #if !defined(STM32F7) && !defined(STM32H7)
   LL_USART_ClearFlag_RXNE(USART.channel);
@@ -171,6 +255,8 @@ void serial_port_init(usart_ports_t port, LL_USART_InitTypeDef *usart_init, bool
 
   if (half_duplex) {
     LL_USART_ConfigHalfDuplexMode(USART.channel);
+  } else {
+    LL_USART_DisableHalfDuplex(USART.channel);
   }
 
   LL_USART_Enable(USART.channel);
@@ -212,7 +298,7 @@ void serial_init(usart_ports_t port, uint32_t baudrate, bool half_duplex) {
   usart_init.TransferDirection = LL_USART_DIRECTION_TX_RX;
   usart_init.OverSampling = LL_USART_OVERSAMPLING_16;
 
-  serial_port_init(port, &usart_init, half_duplex);
+  serial_port_init(port, &usart_init, half_duplex, false);
 }
 
 bool serial_read_bytes(usart_ports_t port, uint8_t *data, const uint32_t size) {

@@ -81,7 +81,7 @@ static void serial_smart_audio_reconfigure() {
   usart_init.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
   usart_init.TransferDirection = LL_USART_DIRECTION_TX_RX;
   usart_init.OverSampling = LL_USART_OVERSAMPLING_16;
-  serial_port_init(serial_smart_audio_port, &usart_init, true);
+  serial_port_init(serial_smart_audio_port, &usart_init, true, false);
 
   LL_USART_EnableIT_RXNE(USART.channel);
   LL_USART_EnableIT_TC(USART.channel);
