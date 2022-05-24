@@ -10,6 +10,8 @@ usart_ports_t serial_rx_port = USART_PORT_INVALID;
 usart_ports_t serial_smart_audio_port = USART_PORT_INVALID;
 usart_ports_t serial_hdzero_port = USART_PORT_INVALID;
 
+serial_port_t *serial_ports[USART_PORTS_MAX];
+
 #define USART usart_port_defs[port]
 
 // FUNCTION TO SET APB CLOCK TO USART BASED ON GIVEN UART
@@ -231,6 +233,8 @@ void handle_usart_invert(usart_ports_t port, bool invert) {
 }
 
 void serial_port_init(usart_ports_t port, LL_USART_InitTypeDef *usart_init, bool half_duplex, bool invert) {
+  serial_ports[port] = NULL;
+
   LL_USART_Disable(USART.channel);
   LL_USART_DeInit(USART.channel);
 
@@ -255,8 +259,6 @@ void serial_port_init(usart_ports_t port, LL_USART_InitTypeDef *usart_init, bool
 
   if (half_duplex) {
     LL_USART_ConfigHalfDuplexMode(USART.channel);
-  } else {
-    LL_USART_DisableHalfDuplex(USART.channel);
   }
 
   LL_USART_Enable(USART.channel);
@@ -273,8 +275,7 @@ void serial_port_init(usart_ports_t port, LL_USART_InitTypeDef *usart_init, bool
 #endif
 }
 
-void serial_init(usart_ports_t port, uint32_t baudrate, bool half_duplex) {
-
+void serial_init(serial_port_t *serial, usart_ports_t port, uint32_t baudrate, uint8_t stop_bits, bool half_duplex) {
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
@@ -292,54 +293,38 @@ void serial_init(usart_ports_t port, uint32_t baudrate, bool half_duplex) {
   LL_USART_InitTypeDef usart_init;
   usart_init.BaudRate = baudrate;
   usart_init.DataWidth = LL_USART_DATAWIDTH_8B;
-  usart_init.StopBits = LL_USART_STOPBITS_1;
+  usart_init.StopBits = stop_bits == 2 ? LL_USART_STOPBITS_2 : LL_USART_STOPBITS_1;
   usart_init.Parity = LL_USART_PARITY_NONE;
   usart_init.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
   usart_init.TransferDirection = LL_USART_DIRECTION_TX_RX;
   usart_init.OverSampling = LL_USART_OVERSAMPLING_16;
 
   serial_port_init(port, &usart_init, half_duplex, false);
+
+  if (serial) {
+    serial_ports[port] = serial;
+    serial->port = port;
+
+    serial_enable_isr(port);
+
+    LL_USART_EnableIT_TC(USART.channel);
+    LL_USART_EnableIT_RXNE(USART.channel);
+  }
 }
 
-bool serial_read_bytes(usart_ports_t port, uint8_t *data, const uint32_t size) {
-  for (uint32_t i = 0; i < size; i++) {
-    uint32_t start = time_micros();
-    while (!LL_USART_IsActiveFlag_RXNE(USART.channel)) {
-      if ((time_micros() - start) > 1000) {
-        return false;
-      }
-      __NOP();
-    }
-
-    data[i] = LL_USART_ReceiveData8(USART.channel);
-  }
-  return true;
+uint32_t serial_read_bytes(serial_port_t *serial, uint8_t *data, const uint32_t size) {
+  return circular_buffer_read_multi(serial->rx_buffer, data, size);
 }
 
-bool serial_write_bytes(usart_ports_t port, const uint8_t *data, const uint32_t size) {
-  for (uint32_t i = 0; i < size; i++) {
-    uint32_t start = time_micros();
-    while (!LL_USART_IsActiveFlag_TXE(USART.channel)) {
-      if ((time_micros() - start) > 1000) {
-        return false;
-      }
-      __NOP();
-    }
-
-    if (i == (size - 1)) {
-      LL_USART_ClearFlag_TC(USART.channel);
-    }
-
-    LL_USART_TransmitData8(USART.channel, data[i]);
+bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32_t size) {
+  if (size == 0) {
+    return true;
   }
 
-  uint32_t start = time_micros();
-  while (!LL_USART_IsActiveFlag_TC(USART.channel)) {
-    if ((time_micros() - start) > 1000) {
-      return false;
-    }
-    __NOP();
-  }
+  const usart_port_def_t *port = &usart_port_defs[serial->port];
+
+  circular_buffer_write_multi(serial->tx_buffer, data, size);
+  LL_USART_EnableIT_TXE(port->channel);
 
   return true;
 }
@@ -394,7 +379,38 @@ usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {{}, USART_PORTS};
 #undef USART_PORT
 #undef SOFT_SERIAL_PORT
 
+void handle_serial_isr(serial_port_t *serial) {
+  const usart_port_def_t *port = &usart_port_defs[serial->port];
+
+  if (LL_USART_IsEnabledIT_TC(port->channel) && LL_USART_IsActiveFlag_TC(port->channel)) {
+    LL_USART_ClearFlag_TC(port->channel);
+  }
+
+  if (LL_USART_IsEnabledIT_TXE(port->channel) && LL_USART_IsActiveFlag_TXE(port->channel)) {
+    uint8_t data = 0;
+    if (circular_buffer_read(serial->tx_buffer, &data)) {
+      LL_USART_TransmitData8(port->channel, data);
+    } else {
+      LL_USART_DisableIT_TXE(port->channel);
+    }
+  }
+
+  if (LL_USART_IsEnabledIT_RXNE(port->channel) && LL_USART_IsActiveFlag_RXNE(port->channel)) {
+    const uint8_t data = LL_USART_ReceiveData8(port->channel);
+    circular_buffer_write(serial->rx_buffer, data);
+  }
+
+  if (LL_USART_IsActiveFlag_ORE(port->channel)) {
+    LL_USART_ClearFlag_ORE(port->channel);
+  }
+}
+
 void handle_usart_isr(usart_ports_t port) {
+  if (serial_ports[port]) {
+    handle_serial_isr(serial_ports[port]);
+    return;
+  }
+
 #ifdef SERIAL_RX
   extern void rx_serial_isr();
   if (serial_rx_port == port) {

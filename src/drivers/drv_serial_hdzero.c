@@ -154,7 +154,7 @@ void hdzero_init() {
   serial_hdzero_port = profile.serial.hdzero;
 
   serial_enable_rcc(serial_hdzero_port);
-  serial_init(serial_hdzero_port, 115200, false);
+  serial_init(NULL, serial_hdzero_port, 115200, 1, false);
   serial_enable_isr(serial_hdzero_port);
 
   LL_USART_EnableIT_RXNE(USART.channel);

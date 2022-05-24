@@ -505,23 +505,50 @@ static void process_serial(quic_t *quic, cbor_value_t *dec) {
     res = cbor_decode_uint32(dec, &baudrate);
     check_cbor_error(QUIC_CMD_SERIAL);
 
+    uint8_t half_duplex = 0;
+    res = cbor_decode_uint8(dec, &half_duplex);
+
+    uint8_t stop_bits = 1;
+    res = cbor_decode_uint8(dec, &stop_bits);
+
     res = cbor_encode_uint8(&enc, &port);
     check_cbor_error(QUIC_CMD_SERIAL);
 
     quic_send(quic, QUIC_CMD_SERIAL, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
 
+    uint8_t tx_data[512];
+    circular_buffer_t tx_buffer = {
+        .buffer = tx_data,
+        .head = 0,
+        .tail = 0,
+        .size = 512,
+    };
+
+    uint8_t rx_data[512];
+    circular_buffer_t rx_buffer = {
+        .buffer = rx_data,
+        .head = 0,
+        .tail = 0,
+        .size = 512,
+    };
+
+    serial_port_t serial = {
+        .rx_buffer = &rx_buffer,
+        .tx_buffer = &tx_buffer,
+    };
+
     serial_enable_rcc(port);
-    serial_init(port, baudrate, false);
+    serial_init(&serial, port, baudrate, stop_bits, half_duplex);
 
+    uint8_t data[512];
     while (1) {
-      uint8_t data = 0;
-
-      while (usb_serial_read(&data, 1)) {
-        serial_write_bytes(port, &data, 1);
+      {
+        const uint32_t size = usb_serial_read(data, 512);
+        serial_write_bytes(&serial, data, size);
       }
-
-      while (serial_read_bytes(port, &data, 1)) {
-        usb_serial_write(&data, 1);
+      {
+        const uint32_t size = serial_read_bytes(&serial, data, 512);
+        usb_serial_write(data, size);
       }
     }
 
