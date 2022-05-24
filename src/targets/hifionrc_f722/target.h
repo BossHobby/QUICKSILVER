@@ -26,9 +26,10 @@
 #define BUZZER_PIN PIN_C15
 
 // GYRO
+// use gyro 2 (dual gyro board)
 #define GYRO_SPI_PORT SPI_PORT1
-#define GYRO_NSS PIN_B2
-#define GYRO_INT PIN_C4
+#define GYRO_NSS PIN_A4
+#define GYRO_INT PIN_C3
 #define GYRO_ORIENTATION GYRO_ROTATE_90_CCW
 
 // RADIO
@@ -41,9 +42,11 @@
 #define MAX7456_SPI_PORT SPI_PORT2
 #define MAX7456_NSS PIN_B12
 
+/* not present on the AIO
 #define USE_M25P16
 #define M25P16_SPI_PORT SPI_PORT3
 #define M25P16_NSS_PIN PIN_C13
+*/
 
 // VOLTAGE DIVIDER
 #define VBAT_PIN PIN_C2
