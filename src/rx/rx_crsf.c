@@ -4,28 +4,14 @@
 
 #include "flight/control.h"
 #include "profile.h"
-
-uint8_t crsf_crc8(uint8_t *data, uint16_t len) {
-  uint8_t crc = 0;
-  for (uint16_t i = 0; i < len; i++) {
-    crc = crc ^ data[i];
-    for (uint8_t j = 0; j < 8; j++) {
-      if (crc & 0x80) {
-        crc = (crc << 1) ^ 0xD5;
-      } else {
-        crc = crc << 1;
-      }
-    }
-  }
-  return crc;
-}
+#include "util/crc.h"
 
 void crsf_tlm_frame_start(uint8_t *buf) {
   buf[0] = CRSF_SYNC_BYTE;
 }
 
 uint32_t crsf_tlm_frame_finish(uint8_t *buf, uint32_t payload_size) {
-  buf[payload_size + CRSF_FRAME_LENGTH_TYPE_CRC + 1] = crsf_crc8(buf + 2, payload_size + 1);
+  buf[payload_size + CRSF_FRAME_LENGTH_TYPE_CRC + 1] = crc8_dvb_s2_data(0, buf + 2, payload_size + 1);
   return payload_size + CRSF_FRAME_LENGTH_TYPE_CRC + 1;
 }
 

@@ -15,6 +15,7 @@
 #include "project.h"
 #include "rx_crsf.h"
 #include "util/circular_buffer.h"
+#include "util/crc.h"
 #include "util/util.h"
 
 #define MSP_BUFFER_SIZE 128
@@ -275,7 +276,7 @@ crsf_do_more:
     break;
   }
   case CRSF_CHECK_CRC: {
-    const uint8_t crc_ours = crsf_crc8(rx_data, frame_length - 1);
+    const uint8_t crc_ours = crc8_dvb_s2_data(0, rx_data, frame_length - 1);
     const uint8_t crc_theirs = rx_data[frame_length - 1];
     if (crc_ours == crc_theirs) {
       channels_received = rx_serial_crsf_process_frame(frame_length);

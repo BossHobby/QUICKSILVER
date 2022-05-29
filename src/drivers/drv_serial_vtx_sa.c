@@ -8,6 +8,7 @@
 #include "io/usb_configurator.h"
 #include "profile.h"
 #include "util/circular_buffer.h"
+#include "util/crc.h"
 #include "util/util.h"
 
 #ifdef ENABLE_SMART_AUDIO
@@ -123,34 +124,11 @@ static void smart_audio_auto_baud() {
   packets_recv = 0;
 }
 
-#define POLYGEN 0xd5
-static uint8_t crc8(uint8_t crc, const uint8_t input) {
-  crc ^= input; /* XOR-in the next input byte */
-
-  for (int i = 0; i < 8; i++) {
-    if ((crc & 0x80) != 0) {
-      crc = (uint8_t)((crc << 1) ^ POLYGEN);
-    } else {
-      crc <<= 1;
-    }
-  }
-
-  return crc;
-}
-
-static uint8_t crc8_data(const uint8_t *data, const int8_t len) {
-  uint8_t crc = 0; /* start with 0 so first byte can be 'xored' in */
-  for (int i = 0; i < len; i++) {
-    crc = crc8(crc, data[i]);
-  }
-  return crc;
-}
-
 static uint8_t serial_smart_audio_read_byte_crc(uint8_t *crc, uint8_t *data) {
   if (serial_vtx_read_byte(data) == 0) {
     return 0;
   }
-  *crc = crc8(*crc, *data);
+  *crc = crc8_dvb_s2_calc(*crc, *data);
   return 1;
 }
 
@@ -363,7 +341,7 @@ void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const 
   for (uint8_t i = 0; i < size; i++) {
     vtx_frame[i + SA_HEADER_SIZE] = payload[i];
   }
-  vtx_frame[size + SA_HEADER_SIZE] = crc8_data(vtx_frame + 1, vtx_frame_length - 3);
+  vtx_frame[size + SA_HEADER_SIZE] = crc8_dvb_s2_data(0, vtx_frame + 1, vtx_frame_length - 3);
   vtx_frame[size + 1 + SA_HEADER_SIZE] = 0x00;
 
   smart_audio_auto_baud();
