@@ -19,10 +19,12 @@
 
 #define MSP_MOTOR_CONFIG 131 // out message         Motor configuration (min/max throttle, etc)
 
-#define MSP_SET_MOTOR 214   // in message          PropBalance function
-#define MSP_SET_4WAY_IF 245 // in message          Sets 4way interface
+#define MSP_SET_MOTOR 214       // in message          PropBalance function
+#define MSP_SET_PASSTHROUGH 245 // in message          serial passthrough
 
 #define MSP_RESERVE_1 251 // reserved for system usage
+
+#define MSP2_COMMON_SERIAL_CONFIG 0x1009
 
 #define MSP_HEADER_LEN 5
 #define MSP_TLM_HEADER_LEN 3
@@ -47,6 +49,20 @@ typedef enum {
   MSP_EOF,
   MSP_SUCCESS,
 } msp_status_t;
+
+typedef enum {
+  MSP_SERIAL_FUNCTION_RX = (1 << 0),
+  MSP_SERIAL_FUNCTION_SA = (1 << 1),
+  MSP_SERIAL_FUNCTION_TRAMP = (1 << 2),
+  MSP_SERIAL_FUNCTION_HDZERO = (1 << 3),
+} msp_serial_function_t;
+
+typedef enum {
+  MSP_PASSTHROUGH_SERIAL_ID = 0xFD,
+  MSP_PASSTHROUGH_SERIAL_FUNCTION_ID = 0xFE,
+
+  MSP_PASSTHROUGH_ESC_4WAY = 0xFF,
+} msp_passthrough_mode_t;
 
 typedef void (*msp_send_fn_t)(msp_magic_t magic, uint8_t direction, uint16_t code, uint8_t *data, uint16_t len);
 

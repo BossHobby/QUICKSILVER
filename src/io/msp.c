@@ -3,21 +3,24 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "drv_serial.h"
 #include "drv_serial_4way.h"
 #include "flight/control.h"
+#include "io/usb_configurator.h"
 #include "quic.h"
 #include "util/crc.h"
 #include "util/util.h"
+#include "vtx.h"
 
-static void msp_send_reply(msp_t *msp, msp_magic_t magic, uint8_t code, uint8_t *data, uint32_t len) {
+static void msp_send_reply(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *data, uint32_t len) {
   if (msp->send) {
-    msp->send(magic, '>', code, data, len);
+    msp->send(magic, '>', cmd, data, len);
   }
 }
 
-static void msp_send_error(msp_t *msp, msp_magic_t magic, uint8_t code) {
+static void msp_send_error(msp_t *msp, msp_magic_t magic, uint16_t cmd) {
   if (msp->send) {
-    msp->send(magic, '!', code, NULL, 0);
+    msp->send(magic, '!', cmd, NULL, 0);
   }
 }
 
@@ -139,19 +142,48 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     msp_send_reply(msp, magic, cmd, NULL, 0);
     break;
   }
+  case MSP_SET_PASSTHROUGH: {
+    msp_passthrough_mode_t mode = MSP_PASSTHROUGH_ESC_4WAY;
+    uint8_t arg = 0;
+
+    if (size != 0) {
+      mode = payload[0];
+      arg = payload[1];
+    }
+
+    switch (mode) {
+    case MSP_PASSTHROUGH_SERIAL_ID: {
+      uint8_t data[1] = {1};
+      msp_send_reply(msp, magic, cmd, data, 1);
+
+      if (arg == serial_smart_audio_port) {
+        if (vtx_settings.protocol == VTX_PROTOCOL_TRAMP) {
+          usb_serial_passthrough(arg, 9600, 1, true);
+        } else {
+          usb_serial_passthrough(arg, 4800, 2, true);
+        }
+      }
+
+      break;
+    }
+
+    default:
+    case MSP_PASSTHROUGH_ESC_4WAY: {
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
-  case MSP_SET_4WAY_IF: {
-    uint8_t data[1] = {4};
-    msp_send_reply(msp, magic, cmd, data, 1);
+      uint8_t data[1] = {4};
+      msp_send_reply(msp, magic, cmd, data, 1);
 
-    motor_test.active = 0;
+      motor_test.active = 0;
 
-    serial_4way_init();
-    serial_4way_process();
+      serial_4way_init();
+      serial_4way_process();
+#endif
+      break;
+    }
+    }
 
     break;
   }
-#endif
 
   case MSP_RESERVE_1: {
     quic_t quic = {
@@ -159,6 +191,41 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
         .send = msp_quic_send,
     };
     quic_process(&quic, payload, size);
+    break;
+  }
+
+  case MSP2_COMMON_SERIAL_CONFIG: {
+    const uint8_t uart_count = USART_PORTS_MAX - 1;
+    uint8_t data[1 + uart_count * 5];
+
+    data[0] = uart_count;
+
+    for (uint32_t i = 0; i < uart_count; i++) {
+      const usart_ports_t port = i + 1;
+      data[1 + i * 5] = port;
+
+      uint32_t function = 0;
+      if (port == serial_rx_port) {
+        function = MSP_SERIAL_FUNCTION_RX;
+      }
+      if (port == serial_smart_audio_port) {
+        if (vtx_settings.protocol == VTX_PROTOCOL_TRAMP) {
+          function = MSP_SERIAL_FUNCTION_TRAMP;
+        } else {
+          function = MSP_SERIAL_FUNCTION_SA;
+        }
+      }
+      if (port == serial_hdzero_port) {
+        function = MSP_SERIAL_FUNCTION_HDZERO;
+      }
+
+      data[1 + i * 5 + 1] = (function >> 0) & 0xFF;
+      data[1 + i * 5 + 2] = (function >> 8) & 0xFF;
+      data[1 + i * 5 + 3] = (function >> 16) & 0xFF;
+      data[1 + i * 5 + 4] = (function >> 24) & 0xFF;
+    }
+
+    msp_send_reply(msp, magic, cmd, data, 1 + uart_count * 5);
     break;
   }
 
@@ -216,7 +283,7 @@ msp_status_t msp_process_serial(msp_t *msp, uint8_t *data, uint32_t len) {
       return MSP_ERROR;
     }
 
-    msp_process_serial_cmd(msp, MSP2_MAGIC, cmd, data + MSP_HEADER_LEN, size);
+    msp_process_serial_cmd(msp, MSP2_MAGIC, cmd, data + MSP2_HEADER_LEN, size);
     return MSP_SUCCESS;
   }
 

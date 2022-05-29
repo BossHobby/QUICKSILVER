@@ -9,6 +9,7 @@
 #include "drv_time.h"
 #include "flight/control.h"
 #include "io/usb_configurator.h"
+#include "profile.h"
 #include "project.h"
 #include "rx.h"
 #include "util/cbor_helper.h"
