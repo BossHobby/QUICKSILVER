@@ -31,7 +31,7 @@ static void msp_process_serial_cmd(msp_t *msp, uint8_t cmd, uint8_t *payload, ui
     uint8_t data[3] = {
         0,  // MSP_PROTOCOL_VERSION
         1,  // API_VERSION_MAJOR
-        41, // API_VERSION_MINOR
+        42, // API_VERSION_MINOR
     };
     msp_send_reply(msp, cmd, data, 3);
     break;
