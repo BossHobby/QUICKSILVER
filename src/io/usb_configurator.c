@@ -12,30 +12,48 @@
 #include "profile.h"
 #include "project.h"
 #include "reset.h"
+#include "util/crc.h"
 #include "util/util.h"
 
-void usb_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint32_t len) {
-  const uint8_t size = len + MSP_HEADER_LEN + 1;
+void usb_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, uint8_t *data, uint16_t len) {
 
-  static uint8_t frame[64];
+  if (magic == MSP2_MAGIC) {
+    const uint8_t size = len + MSP2_HEADER_LEN + 1;
 
-  frame[0] = '$';
-  frame[1] = 'M';
-  frame[2] = '>';
-  frame[3] = len;
-  frame[4] = code;
+    uint8_t frame[size];
+    frame[0] = '$';
+    frame[1] = MSP2_MAGIC;
+    frame[2] = '>';
+    frame[3] = 0; // flag
+    frame[4] = (cmd >> 0) & 0xFF;
+    frame[5] = (cmd >> 8) & 0xFF;
+    frame[6] = (len >> 0) & 0xFF;
+    frame[7] = (len >> 8) & 0xFF;
 
-  for (uint8_t i = 0; i < len; i++) {
-    frame[i + MSP_HEADER_LEN] = data[i];
+    memcpy(frame + MSP2_HEADER_LEN, data, len);
+    frame[len + MSP2_HEADER_LEN] = crc8_dvb_s2_data(0, frame + 3, len + 5);
+
+    usb_serial_write(frame, size);
+  } else {
+    const uint8_t size = len + MSP_HEADER_LEN + 1;
+
+    uint8_t frame[size];
+    frame[0] = '$';
+    frame[1] = MSP1_MAGIC;
+    frame[2] = '>';
+    frame[3] = len;
+    frame[4] = cmd;
+
+    memcpy(frame + MSP_HEADER_LEN, data, len);
+
+    uint8_t chksum = len;
+    for (uint8_t i = 4; i < (size - 1); i++) {
+      chksum ^= frame[i];
+    }
+    frame[len + MSP_HEADER_LEN] = chksum;
+
+    usb_serial_write(frame, size);
   }
-
-  uint8_t chksum = len;
-  for (uint8_t i = 4; i < (size - 1); i++) {
-    chksum ^= frame[i];
-  }
-  frame[len + MSP_HEADER_LEN] = chksum;
-
-  usb_serial_write(frame, size);
 }
 
 void usb_quic_send(uint8_t *data, uint32_t len, void *priv) {

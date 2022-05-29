@@ -6,26 +6,27 @@
 #include "drv_serial_4way.h"
 #include "flight/control.h"
 #include "quic.h"
+#include "util/crc.h"
 #include "util/util.h"
 
-static void msp_send_reply(msp_t *msp, uint8_t code, uint8_t *data, uint32_t len) {
+static void msp_send_reply(msp_t *msp, msp_magic_t magic, uint8_t code, uint8_t *data, uint32_t len) {
   if (msp->send) {
-    msp->send('>', code, data, len);
+    msp->send(magic, '>', code, data, len);
   }
 }
 
-static void msp_send_error(msp_t *msp, uint8_t code) {
+static void msp_send_error(msp_t *msp, msp_magic_t magic, uint8_t code) {
   if (msp->send) {
-    msp->send('!', code, NULL, 0);
+    msp->send(magic, '!', code, NULL, 0);
   }
 }
 
 static void msp_quic_send(uint8_t *data, uint32_t len, void *priv) {
   msp_t *msp = (msp_t *)priv;
-  msp_send_reply(msp, MSP_RESERVE_1, data, len);
+  msp_send_reply(msp, MSP1_MAGIC, MSP_RESERVE_1, data, len);
 }
 
-static void msp_process_serial_cmd(msp_t *msp, uint8_t cmd, uint8_t *payload, uint8_t size) {
+static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *payload, uint16_t size) {
   switch (cmd) {
   case MSP_API_VERSION: {
     uint8_t data[3] = {
@@ -33,12 +34,12 @@ static void msp_process_serial_cmd(msp_t *msp, uint8_t cmd, uint8_t *payload, ui
         1,  // API_VERSION_MAJOR
         42, // API_VERSION_MINOR
     };
-    msp_send_reply(msp, cmd, data, 3);
+    msp_send_reply(msp, magic, cmd, data, 3);
     break;
   }
   case MSP_FC_VARIANT: {
     uint8_t data[4] = {'Q', 'U', 'I', 'C'};
-    msp_send_reply(msp, cmd, data, 4);
+    msp_send_reply(msp, magic, cmd, data, 4);
     break;
   }
   case MSP_FC_VERSION: {
@@ -47,17 +48,17 @@ static void msp_process_serial_cmd(msp_t *msp, uint8_t cmd, uint8_t *payload, ui
         1, // FC_VERSION_MINOR
         0, // FC_VERSION_PATCH_LEVEL
     };
-    msp_send_reply(msp, cmd, data, 3);
+    msp_send_reply(msp, magic, cmd, data, 3);
     break;
   }
   case MSP_BUILD_INFO: {
     uint8_t data[19] = MSP_BUILD_DATE_TIME;
-    msp_send_reply(msp, cmd, data, 19);
+    msp_send_reply(msp, magic, cmd, data, 19);
     break;
   }
   case MSP_BOARD_INFO: {
     uint8_t data[6] = {'Q', 'U', 'I', 'C', 0, 0};
-    msp_send_reply(msp, cmd, data, 6);
+    msp_send_reply(msp, magic, cmd, data, 6);
     break;
   }
   case MSP_UID: {
@@ -77,7 +78,7 @@ static void msp_process_serial_cmd(msp_t *msp, uint8_t cmd, uint8_t *payload, ui
         0xe,
         0xf,
     };
-    msp_send_reply(msp, cmd, data, 12);
+    msp_send_reply(msp, magic, cmd, data, 12);
     break;
   }
   case MSP_BATTERY_STATE: {
@@ -90,7 +91,7 @@ static void msp_process_serial_cmd(msp_t *msp, uint8_t cmd, uint8_t *payload, ui
         (current >> 8) & 0xFF, current & 0xFF,                  // battery current draw in A
         0x0                                                     // battery status
     };
-    msp_send_reply(msp, cmd, data, 9);
+    msp_send_reply(msp, magic, cmd, data, 9);
     break;
   }
   case MSP_FEATURE_CONFIG: {
@@ -100,7 +101,7 @@ static void msp_process_serial_cmd(msp_t *msp, uint8_t cmd, uint8_t *payload, ui
         0x0,
         0x0,
     };
-    msp_send_reply(msp, cmd, data, 4);
+    msp_send_reply(msp, magic, cmd, data, 4);
     break;
   }
   case MSP_MOTOR_CONFIG: {
@@ -109,7 +110,7 @@ static void msp_process_serial_cmd(msp_t *msp, uint8_t cmd, uint8_t *payload, ui
         2000, // max throttle
         1000, // min command
     };
-    msp_send_reply(msp, cmd, (uint8_t *)data, 3 * sizeof(uint16_t));
+    msp_send_reply(msp, magic, cmd, (uint8_t *)data, 3 * sizeof(uint16_t));
     break;
   }
   case MSP_MOTOR: {
@@ -125,7 +126,7 @@ static void msp_process_serial_cmd(msp_t *msp, uint8_t cmd, uint8_t *payload, ui
         0,
         0,
     };
-    msp_send_reply(msp, cmd, (uint8_t *)data, 8 * sizeof(uint16_t));
+    msp_send_reply(msp, magic, cmd, (uint8_t *)data, 8 * sizeof(uint16_t));
     break;
   }
   case MSP_SET_MOTOR: {
@@ -135,13 +136,13 @@ static void msp_process_serial_cmd(msp_t *msp, uint8_t cmd, uint8_t *payload, ui
     }
     motor_test.active = 1;
 
-    msp_send_reply(msp, cmd, NULL, 0);
+    msp_send_reply(msp, magic, cmd, NULL, 0);
     break;
   }
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
   case MSP_SET_4WAY_IF: {
     uint8_t data[1] = {4};
-    msp_send_reply(msp, cmd, data, 1);
+    msp_send_reply(msp, magic, cmd, data, 1);
 
     motor_test.active = 0;
 
@@ -162,7 +163,7 @@ static void msp_process_serial_cmd(msp_t *msp, uint8_t cmd, uint8_t *payload, ui
   }
 
   default:
-    msp_send_error(msp, cmd);
+    msp_send_error(msp, magic, cmd);
     break;
   }
 }
@@ -172,28 +173,54 @@ msp_status_t msp_process_serial(msp_t *msp, uint8_t *data, uint32_t len) {
     return MSP_EOF;
   }
 
-  if (data[0] != '$' || data[1] != 'M' || data[2] != '<') {
+  if (data[0] != '$' || data[2] != '<') {
     return MSP_ERROR;
   }
 
-  const uint8_t size = data[3];
-  const uint8_t cmd = data[4];
+  if (data[1] == 'M') {
+    const uint8_t size = data[3];
+    const uint8_t cmd = data[4];
 
-  if (len < (MSP_HEADER_LEN + size + 1)) {
-    return MSP_EOF;
+    if (len < (MSP_HEADER_LEN + size + 1)) {
+      return MSP_EOF;
+    }
+
+    uint8_t chksum = size ^ cmd;
+    for (uint8_t i = 0; i < size; i++) {
+      chksum ^= data[MSP_HEADER_LEN + i];
+    }
+
+    if (data[MSP_HEADER_LEN + size] != chksum) {
+      return MSP_ERROR;
+    }
+
+    msp_process_serial_cmd(msp, MSP1_MAGIC, cmd, data + MSP_HEADER_LEN, size);
+    return MSP_SUCCESS;
   }
 
-  uint8_t chksum = size ^ cmd;
-  for (uint8_t i = 0; i < size; i++) {
-    chksum ^= data[MSP_HEADER_LEN + i];
+  if (data[1] == 'X') {
+    if (len < MSP2_HEADER_LEN) {
+      return MSP_EOF;
+    }
+
+    //  data[3] flag
+    const uint16_t cmd = (data[5] << 8) | data[4];
+    const uint16_t size = (data[7] << 8) | data[6];
+
+    if (len < (MSP2_HEADER_LEN + size + 1)) {
+      return MSP_EOF;
+    }
+
+    const uint8_t chksum = crc8_dvb_s2_data(0, data + 3, size + 5);
+    if (data[MSP2_HEADER_LEN + size] != chksum) {
+      return MSP_ERROR;
+    }
+
+    msp_process_serial_cmd(msp, MSP2_MAGIC, cmd, data + MSP_HEADER_LEN, size);
+    return MSP_SUCCESS;
   }
 
-  if (data[MSP_HEADER_LEN + size] != chksum) {
-    return MSP_ERROR;
-  }
-
-  msp_process_serial_cmd(msp, cmd, data + MSP_HEADER_LEN, size);
-  return MSP_SUCCESS;
+  return MSP_ERROR;
 }
 
 msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint32_t len) {
@@ -249,6 +276,6 @@ msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint32_t len) {
     return MSP_EOF;
   }
 
-  msp_process_serial_cmd(msp, last_cmd, msp->buffer, last_size);
+  msp_process_serial_cmd(msp, MSP1_MAGIC, last_cmd, msp->buffer, last_size);
   return MSP_SUCCESS;
 }
