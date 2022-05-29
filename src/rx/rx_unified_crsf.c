@@ -74,7 +74,7 @@ static uint16_t crsf_rf_mode_fps[] = {
     1000, // RATE_FLRC_1000HZ
 };
 
-void rx_serial_crsf_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint32_t len);
+void rx_serial_crsf_msp_send(msp_magic_t magic, uint8_t direction, uint16_t code, uint8_t *data, uint16_t len);
 
 static uint8_t msp_rx_buffer[MSP_BUFFER_SIZE];
 static msp_t msp = {
@@ -293,7 +293,7 @@ crsf_do_more:
   return channels_received;
 }
 
-void rx_serial_crsf_msp_send(uint8_t direction, uint8_t code, uint8_t *data, uint32_t len) {
+void rx_serial_crsf_msp_send(msp_magic_t magic, uint8_t direction, uint16_t code, uint8_t *data, uint16_t len) {
   msp_last_cmd = code;
 
   if (len > 0 && data) {

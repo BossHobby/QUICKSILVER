@@ -27,6 +27,8 @@
 #define MSP_HEADER_LEN 5
 #define MSP_TLM_HEADER_LEN 3
 
+#define MSP2_HEADER_LEN 8
+
 #define MSP_STATUS_SEQUENCE_MASK 0x0f // 0b00001111,   // sequence number mask
 #define MSP_STATUS_START_MASK 0x10    // 0b00010000,   // bit of starting frame (if 1, the frame is a first/single chunk of msp-frame)
 #define MSP_STATUS_VERSION_MASK 0x60  // 0b01100000,   // MSP version mask
@@ -36,12 +38,17 @@
 #define MSP_BUILD_DATE_TIME __DATE__ __TIME__
 
 typedef enum {
+  MSP1_MAGIC = 'M',
+  MSP2_MAGIC = 'X',
+} msp_magic_t;
+
+typedef enum {
   MSP_ERROR,
   MSP_EOF,
   MSP_SUCCESS,
 } msp_status_t;
 
-typedef void (*msp_send_fn_t)(uint8_t direction, uint8_t code, uint8_t *data, uint32_t len);
+typedef void (*msp_send_fn_t)(msp_magic_t magic, uint8_t direction, uint16_t code, uint8_t *data, uint16_t len);
 
 typedef struct {
   uint8_t *buffer;
