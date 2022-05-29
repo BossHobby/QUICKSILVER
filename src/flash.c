@@ -15,8 +15,6 @@
 extern const profile_t default_profile;
 extern profile_t profile;
 
-extern vtx_settings_t vtx_settings;
-
 flash_storage_t flash_storage;
 rx_bind_storage_t bind_storage;
 

@@ -52,7 +52,6 @@ typedef struct {
 #define HD_COLS 50
 
 extern profile_t profile;
-extern vtx_settings_t vtx_settings;
 
 static vtx_settings_t vtx_settings_copy;
 static uint8_t vtx_buffer_populated = 0;

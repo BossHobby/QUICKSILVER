@@ -63,6 +63,8 @@ typedef struct {
   vtx_power_level_t power_level;
 } vtx_settings_t;
 
+extern vtx_settings_t vtx_settings;
+
 void vtx_init();
 void vtx_update();
 
