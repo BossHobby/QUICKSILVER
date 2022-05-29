@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "debug.h"
+#include "drv_serial.h"
 #include "drv_usb.h"
 #include "flight/control.h"
 #include "io/msp.h"
@@ -12,6 +13,7 @@
 #include "profile.h"
 #include "project.h"
 #include "reset.h"
+#include "util/circular_buffer.h"
 #include "util/crc.h"
 #include "util/util.h"
 
@@ -76,6 +78,44 @@ void usb_quic_logf(const char *fmt, ...) {
   va_end(args);
 
   quic_send_str(&quic, QUIC_CMD_LOG, QUIC_FLAG_NONE, str);
+}
+
+void usb_serial_passthrough(usart_ports_t port, uint32_t baudrate, uint8_t stop_bits, bool half_duplex) {
+  uint8_t tx_data[512];
+  circular_buffer_t tx_buffer = {
+      .buffer = tx_data,
+      .head = 0,
+      .tail = 0,
+      .size = 512,
+  };
+
+  uint8_t rx_data[512];
+  circular_buffer_t rx_buffer = {
+      .buffer = rx_data,
+      .head = 0,
+      .tail = 0,
+      .size = 512,
+  };
+
+  serial_port_t serial = {
+      .rx_buffer = &rx_buffer,
+      .tx_buffer = &tx_buffer,
+  };
+
+  serial_enable_rcc(port);
+  serial_init(&serial, port, baudrate, stop_bits, half_duplex);
+
+  uint8_t data[512];
+  while (1) {
+    {
+      const uint32_t size = usb_serial_read(data, 512);
+      serial_write_bytes(&serial, data, size);
+    }
+    {
+      const uint32_t size = serial_read_bytes(&serial, data, 512);
+      usb_serial_write(data, size);
+    }
+  }
 }
 
 // double promition in the following is intended

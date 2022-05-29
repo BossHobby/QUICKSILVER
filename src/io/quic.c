@@ -13,6 +13,7 @@
 #include "flight/control.h"
 #include "flight/sixaxis.h"
 #include "io/data_flash.h"
+#include "io/usb_configurator.h"
 #include "io/vtx.h"
 #include "osd/osd_render.h"
 #include "profile.h"
@@ -514,42 +515,7 @@ static void process_serial(quic_t *quic, cbor_value_t *dec) {
 
     quic_send(quic, QUIC_CMD_SERIAL, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
 
-    uint8_t tx_data[512];
-    circular_buffer_t tx_buffer = {
-        .buffer = tx_data,
-        .head = 0,
-        .tail = 0,
-        .size = 512,
-    };
-
-    uint8_t rx_data[512];
-    circular_buffer_t rx_buffer = {
-        .buffer = rx_data,
-        .head = 0,
-        .tail = 0,
-        .size = 512,
-    };
-
-    serial_port_t serial = {
-        .rx_buffer = &rx_buffer,
-        .tx_buffer = &tx_buffer,
-    };
-
-    serial_enable_rcc(port);
-    serial_init(&serial, port, baudrate, stop_bits, half_duplex);
-
-    uint8_t data[512];
-    while (1) {
-      {
-        const uint32_t size = usb_serial_read(data, 512);
-        serial_write_bytes(&serial, data, size);
-      }
-      {
-        const uint32_t size = serial_read_bytes(&serial, data, 512);
-        usb_serial_write(data, size);
-      }
-    }
-
+    usb_serial_passthrough(port, baudrate, stop_bits, half_duplex);
     break;
   }
 
