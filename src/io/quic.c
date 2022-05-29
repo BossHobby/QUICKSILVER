@@ -24,8 +24,6 @@
 
 static uint8_t encode_buffer[ENCODE_BUFFER_SIZE];
 
-extern vtx_settings_t vtx_settings;
-
 extern uint8_t blackbox_override;
 extern uint32_t blackbox_rate;
 
