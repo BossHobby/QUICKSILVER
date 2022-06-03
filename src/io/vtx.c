@@ -141,6 +141,8 @@ static void smart_audio_set_frequency(vtx_band_t band, vtx_channel_t channel) {
   } else
 #endif
   {
+    smart_audio_settings.mode &= ~SA_MODE_FREQUENCY;
+
     const uint8_t index = band * VTX_CHANNEL_MAX + channel;
     const uint8_t payload[1] = {index};
     serial_smart_audio_send_payload(SA_CMD_SET_CHANNEL, payload, 1);

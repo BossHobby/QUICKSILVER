@@ -285,7 +285,7 @@ vtx_update_result_t serial_smart_audio_update() {
     if (payload_offset == 4) {
       length = data;
     }
-    if (payload_offset >= SA_HEADER_SIZE && (payload_offset - SA_HEADER_SIZE) < length) {
+    if (payload_offset >= SA_HEADER_SIZE && (payload_offset - SA_HEADER_SIZE + 1) < length) {
       payload[payload_offset - SA_HEADER_SIZE] = data;
     }
 
@@ -293,7 +293,7 @@ vtx_update_result_t serial_smart_audio_update() {
     payload_offset++;
 
     // payload done, lets check crc
-    if (payload_offset >= SA_HEADER_SIZE && (payload_offset - SA_HEADER_SIZE) == length) {
+    if (payload_offset >= SA_HEADER_SIZE && (payload_offset - SA_HEADER_SIZE + 1) == length) {
       parser_state = PARSER_READ_CRC;
     }
 
