@@ -53,6 +53,13 @@
         }
       },
       {
+        "name": "brushless.accst",
+        "defines": {
+          "BRUSHLESS_TARGET": "",
+          "RX_FRSKY_D16_FCC": ""
+        }
+      },
+      {
         "name": "brushless.redpine",
         "defines": {
           "BRUSHLESS_TARGET": "",
