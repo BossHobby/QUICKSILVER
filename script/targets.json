@@ -39,21 +39,21 @@
     "name": "matekf411rx",
     "configurations": [
       {
-        "name": "brushed.frsky",
+        "name": "brushed.frsky_d8",
         "defines": {
           "BRUSHED_TARGET": "",
           "RX_FRSKY_D8": ""
         }
       },
       {
-        "name": "brushless.frsky",
+        "name": "brushless.frsky_d8",
         "defines": {
           "BRUSHLESS_TARGET": "",
           "RX_FRSKY_D8": ""
         }
       },
       {
-        "name": "brushless.accst",
+        "name": "brushless.frsky_d16_fcc",
         "defines": {
           "BRUSHLESS_TARGET": "",
           "RX_FRSKY_D16_FCC": ""
