@@ -25,13 +25,6 @@ float constrainf(const float in, const float min, const float max) {
   return in;
 }
 
-uint32_t min_uint32(uint32_t a, uint32_t b) {
-  if (a < b) {
-    return a;
-  }
-  return b;
-}
-
 #define sinPolyCoef3 -1.666665710e-1f // Double: -1.666665709650470145824129400050267289858e-1
 #define sinPolyCoef5 8.333017292e-3f  // Double:  8.333017291562218127986291618761571373087e-3
 #define sinPolyCoef7 -1.980661520e-4f // Double: -1.980661520135080504411629636078917643846e-4
@@ -75,10 +68,6 @@ int ipow(int base, int exp) {
   }
 
   return result;
-}
-
-int round_num(float num) {
-  return num < 0 ? num - 0.5 : num + 0.5;
 }
 
 uint32_t seed = 7;

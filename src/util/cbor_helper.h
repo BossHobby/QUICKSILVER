@@ -91,24 +91,24 @@ cbor_result_t cbor_handle_error(cbor_result_t err);
     continue;                                                            \
   }
 
-#define CBOR_DECODE_ARRAY_MEMBER(member, size, type)                                       \
-  if (buf_equal_string(name, name_len, #member)) {                                         \
-    cbor_container_t array;                                                                \
-    CBOR_CHECK_ERROR(res = cbor_decode_array(dec, &array));                                \
-    for (uint32_t i = 0; i < min_uint32(size, cbor_decode_array_size(dec, &array)); i++) { \
-      CBOR_CHECK_ERROR(res = cbor_decode_##type(dec, &o->member[i]));                      \
-    }                                                                                      \
-    continue;                                                                              \
+#define CBOR_DECODE_ARRAY_MEMBER(member, size, type)                                \
+  if (buf_equal_string(name, name_len, #member)) {                                  \
+    cbor_container_t array;                                                         \
+    CBOR_CHECK_ERROR(res = cbor_decode_array(dec, &array));                         \
+    for (uint32_t i = 0; i < min(size, cbor_decode_array_size(dec, &array)); i++) { \
+      CBOR_CHECK_ERROR(res = cbor_decode_##type(dec, &o->member[i]));               \
+    }                                                                               \
+    continue;                                                                       \
   }
 
-#define CBOR_DECODE_STR_ARRAY_MEMBER(member, size)                                         \
-  if (buf_equal_string(name, name_len, #member)) {                                         \
-    cbor_container_t array;                                                                \
-    CBOR_CHECK_ERROR(res = cbor_decode_array(dec, &array));                                \
-    for (uint32_t i = 0; i < min_uint32(size, cbor_decode_array_size(dec, &array)); i++) { \
-      CBOR_CHECK_ERROR(res = cbor_decode_str(dec, &o->member[i]));                         \
-    }                                                                                      \
-    continue;                                                                              \
+#define CBOR_DECODE_STR_ARRAY_MEMBER(member, size)                                  \
+  if (buf_equal_string(name, name_len, #member)) {                                  \
+    cbor_container_t array;                                                         \
+    CBOR_CHECK_ERROR(res = cbor_decode_array(dec, &array));                         \
+    for (uint32_t i = 0; i < min(size, cbor_decode_array_size(dec, &array)); i++) { \
+      CBOR_CHECK_ERROR(res = cbor_decode_str(dec, &o->member[i]));                  \
+    }                                                                               \
+    continue;                                                                       \
   }
 
 cbor_result_t cbor_encode_float_array(cbor_value_t *enc, const float *array, uint32_t size);

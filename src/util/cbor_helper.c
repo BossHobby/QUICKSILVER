@@ -53,7 +53,7 @@ cbor_result_t cbor_decode_tstr_copy(cbor_value_t *dec, uint8_t *buf, uint32_t si
   const uint8_t *ptr;
   uint32_t actual_size;
   CBOR_CHECK_ERROR(cbor_result_t res = cbor_decode_tstr(dec, &ptr, &actual_size));
-  memcpy(buf, ptr, min_uint32(actual_size, size));
+  memcpy(buf, ptr, min(actual_size, size));
   return res;
 }
 
@@ -61,6 +61,6 @@ cbor_result_t cbor_decode_bstr_copy(cbor_value_t *dec, uint8_t *buf, uint32_t si
   const uint8_t *ptr;
   uint32_t actual_size;
   CBOR_CHECK_ERROR(cbor_result_t res = cbor_decode_bstr(dec, &ptr, &actual_size));
-  memcpy(buf, ptr, min_uint32(actual_size, size));
+  memcpy(buf, ptr, min(actual_size, size));
   return res;
 }
