@@ -627,7 +627,7 @@
     "name": "iflight_h743_aio_v1",
     "configurations": [
       {
-        "name": "brushed.serial",
+        "name": "brushless.serial",
         "defines": {
           "BRUSHLESS_TARGET": "",
           "RX_UNIFIED_SERIAL": ""
