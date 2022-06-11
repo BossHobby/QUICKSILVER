@@ -62,6 +62,38 @@ static circular_buffer_t msp_rx_buffer = {
     .size = BUFFER_SIZE,
 };
 
+static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, uint8_t *data, uint16_t len) {
+  circular_buffer_write(&msp_tx_buffer, '$');
+  circular_buffer_write(&msp_tx_buffer, 'M');
+  circular_buffer_write(&msp_tx_buffer, '>');
+  circular_buffer_write(&msp_tx_buffer, len);
+  circular_buffer_write(&msp_tx_buffer, cmd);
+
+  if (cmd == MSP_FC_VARIANT) {
+    static uint8_t variant[6] = {'A', 'R', 'D', 'U', 0, 0};
+    data = variant;
+    len = 6;
+  }
+
+  circular_buffer_write_multi(&msp_tx_buffer, data, len);
+
+  uint8_t chksum = len ^ cmd;
+  for (uint8_t i = 0; i < len; i++) {
+    chksum ^= data[i];
+  }
+
+  circular_buffer_write(&msp_tx_buffer, chksum);
+  LL_USART_EnableIT_TXE(USART.channel);
+}
+
+static uint8_t msp_buffer[128];
+static msp_t msp = {
+    .buffer = msp_buffer,
+    .buffer_size = 128,
+    .buffer_offset = 0,
+    .send = hdzero_msp_send,
+};
+
 static uint8_t hdzero_map_attr(uint8_t attr) {
   uint8_t val = 0;
   /*
@@ -77,13 +109,6 @@ static uint8_t hdzero_map_attr(uint8_t attr) {
 }
 
 static bool hdzero_push_msp(const uint8_t code, const uint8_t *data, const uint8_t size) {
-  LL_USART_DisableIT_TXE(USART.channel);
-
-  if (circular_buffer_free(&msp_tx_buffer) <= (size + 6)) {
-    LL_USART_EnableIT_TXE(USART.channel);
-    return false;
-  }
-
   circular_buffer_write(&msp_tx_buffer, '$');
   circular_buffer_write(&msp_tx_buffer, 'M');
   circular_buffer_write(&msp_tx_buffer, '>');
@@ -99,18 +124,10 @@ static bool hdzero_push_msp(const uint8_t code, const uint8_t *data, const uint8
   circular_buffer_write(&msp_tx_buffer, chksum);
 
   LL_USART_EnableIT_TXE(USART.channel);
-
   return true;
 }
 
 static bool hdzero_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data, const uint8_t size) {
-  LL_USART_DisableIT_TXE(USART.channel);
-
-  if (circular_buffer_free(&msp_tx_buffer) <= (size + 7)) {
-    LL_USART_EnableIT_TXE(USART.channel);
-    return false;
-  }
-
   circular_buffer_write(&msp_tx_buffer, '$');
   circular_buffer_write(&msp_tx_buffer, 'M');
   circular_buffer_write(&msp_tx_buffer, '>');
@@ -127,7 +144,6 @@ static bool hdzero_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data,
   circular_buffer_write(&msp_tx_buffer, chksum);
 
   LL_USART_EnableIT_TXE(USART.channel);
-
   return true;
 }
 
@@ -143,10 +159,7 @@ static bool hdzero_push_write_string(uint8_t attr, uint8_t x, uint8_t y, uint8_t
 }
 
 static bool hdzero_can_fit_string(uint8_t size) {
-  LL_USART_DisableIT_TXE(USART.channel);
   const uint32_t free = circular_buffer_free(&msp_tx_buffer);
-  LL_USART_EnableIT_TXE(USART.channel);
-
   return free > (size + 10);
 }
 
@@ -258,6 +271,16 @@ bool hdzero_is_ready() {
     wants_heatbeat = false;
     return false;
   }
+
+  while (true) {
+    uint8_t data = 0;
+    if (!circular_buffer_read(&msp_rx_buffer, &data)) {
+      break;
+    }
+
+    msp_process_serial(&msp, data);
+  }
+
   return true;
 }
 
