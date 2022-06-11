@@ -81,6 +81,10 @@ void gestures() {
       ledcommand = 1;
       state.aux[AUX_CHANNEL_GESTURE] = 0;
     }
+    if (command == GESTURE_LRL) {
+      while (osd_pop_screen() != OSD_SCREEN_CLEAR)
+        ;
+    }
 
 #ifdef ENABLE_OSD
     if (command == GESTURE_OSD_UP) {

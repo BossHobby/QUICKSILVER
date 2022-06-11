@@ -92,6 +92,8 @@ const uint8_t command14[OSD_GSIZE] = {GESTURE_CENTER_IDLE, GESTURE_RIGHT, GESTUR
 const uint8_t command15[OSD_GSIZE] = {GESTURE_CENTER_IDLE, GESTURE_LEFT, GESTURE_CENTER};
 #endif
 
+const uint8_t command16[GSIZE] = {GESTURE_CENTER_IDLE, GESTURE_LEFT, GESTURE_CENTER, GESTURE_RIGHT, GESTURE_CENTER, GESTURE_LEFT, GESTURE_CENTER};
+
 int gesture_start;
 int lastgesture;
 int setgesture;
@@ -232,6 +234,14 @@ int gesture_sequence(int currentgesture) {
       }
 
     } else {
+      if (check_command(&gbuffer[0], &command16[0])) {
+        // command 16
+
+        // change buffer so it does not trigger again
+        gbuffer[1] = GESTURE_OTHER;
+        return GESTURE_LRL;
+      }
+
       if (check_command(&gbuffer[0], &command1[0])) {
         // command 1
 
