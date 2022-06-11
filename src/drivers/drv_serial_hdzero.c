@@ -35,80 +35,36 @@ typedef struct {
 
 #define DISPLAY_SIZE (COLS * ROWS)
 
-#define BUFFER_SIZE 256
-
 #define USART usart_port_defs[serial_hdzero_port]
 
 static displayport_char_t display[COLS * ROWS];
+static bool display_row_dirty[ROWS];
 static bool display_dirty = false;
 
 static volatile uint32_t last_heartbeat = 0;
 static bool is_detected = false;
 
-static uint8_t msp_tx_data[BUFFER_SIZE];
+static uint8_t msp_tx_data[512];
 static circular_buffer_t msp_tx_buffer = {
     .buffer = msp_tx_data,
     .head = 0,
     .tail = 0,
-    .size = BUFFER_SIZE,
+    .size = 512,
 };
-static volatile bool msp_tx_buffer_in_use = false;
 
-static uint8_t msp_rx_data[BUFFER_SIZE];
+static uint8_t msp_rx_data[256];
 static circular_buffer_t msp_rx_buffer = {
     .buffer = msp_rx_data,
     .head = 0,
     .tail = 0,
-    .size = BUFFER_SIZE,
+    .size = 256,
 };
-
-static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, uint8_t *data, uint16_t len) {
-  circular_buffer_write(&msp_tx_buffer, '$');
-  circular_buffer_write(&msp_tx_buffer, 'M');
-  circular_buffer_write(&msp_tx_buffer, '>');
-  circular_buffer_write(&msp_tx_buffer, len);
-  circular_buffer_write(&msp_tx_buffer, cmd);
-
-  if (cmd == MSP_FC_VARIANT) {
-    static uint8_t variant[6] = {'A', 'R', 'D', 'U', 0, 0};
-    data = variant;
-    len = 6;
-  }
-
-  circular_buffer_write_multi(&msp_tx_buffer, data, len);
-
-  uint8_t chksum = len ^ cmd;
-  for (uint8_t i = 0; i < len; i++) {
-    chksum ^= data[i];
-  }
-
-  circular_buffer_write(&msp_tx_buffer, chksum);
-  LL_USART_EnableIT_TXE(USART.channel);
-}
-
-static uint8_t msp_buffer[128];
-static msp_t msp = {
-    .buffer = msp_buffer,
-    .buffer_size = 128,
-    .buffer_offset = 0,
-    .send = hdzero_msp_send,
-};
-
-static uint8_t hdzero_map_attr(uint8_t attr) {
-  uint8_t val = 0;
-  /*
-  if (attr & OSD_ATTR_INVERT) {
-    val |= ATTR_WARNING;
-  }
-
-  if (attr & OSD_ATTR_BLINK) {
-    val |= ATTR_BLINK;
-  }
-  */
-  return val;
-}
 
 static bool hdzero_push_msp(const uint8_t code, const uint8_t *data, const uint8_t size) {
+  if (circular_buffer_free(&msp_tx_buffer) < (MSP_HEADER_LEN + size + 1)) {
+    return false;
+  }
+
   circular_buffer_write(&msp_tx_buffer, '$');
   circular_buffer_write(&msp_tx_buffer, 'M');
   circular_buffer_write(&msp_tx_buffer, '>');
@@ -127,7 +83,29 @@ static bool hdzero_push_msp(const uint8_t code, const uint8_t *data, const uint8
   return true;
 }
 
+static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, uint8_t *data, uint16_t len) {
+  if (cmd == MSP_FC_VARIANT) {
+    static uint8_t variant[6] = {'A', 'R', 'D', 'U', 0, 0};
+    data = variant;
+    len = 6;
+  }
+
+  hdzero_push_msp(cmd, data, len);
+}
+
+static uint8_t msp_buffer[128];
+static msp_t msp = {
+    .buffer = msp_buffer,
+    .buffer_size = 128,
+    .buffer_offset = 0,
+    .send = hdzero_msp_send,
+};
+
 static bool hdzero_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data, const uint8_t size) {
+  if (circular_buffer_free(&msp_tx_buffer) < (MSP_HEADER_LEN + size + 2)) {
+    return false;
+  }
+
   circular_buffer_write(&msp_tx_buffer, '$');
   circular_buffer_write(&msp_tx_buffer, 'M');
   circular_buffer_write(&msp_tx_buffer, '>');
@@ -163,6 +141,20 @@ static bool hdzero_can_fit_string(uint8_t size) {
   return free > (size + 10);
 }
 
+static uint8_t hdzero_map_attr(uint8_t attr) {
+  uint8_t val = 0;
+  /*
+  if (attr & OSD_ATTR_INVERT) {
+    val |= ATTR_WARNING;
+  }
+
+  if (attr & OSD_ATTR_BLINK) {
+    val |= ATTR_BLINK;
+  }
+  */
+  return val;
+}
+
 void hdzero_init() {
   serial_hdzero_port = profile.serial.hdzero;
 
@@ -182,10 +174,14 @@ void hdzero_intro() {
   }
 
   hdzero_push_write_string(OSD_ATTR_TEXT, COLS / 2 - 6, ROWS / 2 - 1, (uint8_t *)"QUICKSILVER", 12);
+  hdzero_push_subcmd(SUBCMD_DRAW_SCREEN, NULL, 0);
 }
 
 uint8_t hdzero_clear_async() {
   memset(display, 0, DISPLAY_SIZE * sizeof(displayport_char_t));
+  memset(display_row_dirty, 0, ROWS * sizeof(bool));
+  display_dirty = false;
+
   hdzero_push_subcmd(SUBCMD_CLEAR_SCREEN, NULL, 0);
   return 1;
 }
@@ -193,19 +189,29 @@ uint8_t hdzero_clear_async() {
 static bool hdzero_update_display() {
   static uint8_t row = 0;
 
-  if (row < ROWS) {
+  while (row < ROWS) {
+    if (!display_row_dirty[row]) {
+      row++;
+      continue;
+    }
+
     uint8_t string[COLS];
     uint8_t attr = 0;
     uint8_t start = COLS;
     uint8_t size = 0;
 
+    volatile bool row_done = true;
     for (uint8_t col = 0; col < COLS; col++) {
       displayport_char_t *entry = &display[row * COLS + col];
 
-      if (size && (!entry->dirty || entry->attr != attr)) {
+      if (size && (!entry->dirty || entry->attr != attr || col == (COLS - 1) || row_done == false)) {
         hdzero_push_write_string(attr, start, row, string, size);
         size = 0;
         start = COLS;
+
+        if (!row_done) {
+          break;
+        }
       }
 
       if (!entry->dirty) {
@@ -218,7 +224,8 @@ static bool hdzero_update_display() {
       }
 
       if (!hdzero_can_fit_string(size + 1)) {
-        break;
+        row_done = false;
+        continue;
       }
 
       string[size] = entry->val;
@@ -226,11 +233,10 @@ static bool hdzero_update_display() {
       size++;
     }
 
-    if (size) {
-      hdzero_push_write_string(attr, start, row, string, size);
+    if (row_done) {
+      display_row_dirty[row] = false;
+      row++;
     }
-
-    row++;
     return false;
   }
 
@@ -246,18 +252,13 @@ static bool hdzero_update_display() {
 }
 
 bool hdzero_is_ready() {
-  if ((time_millis() - last_heartbeat) > 500) {
-    return false;
-  }
-
-  if (display_dirty) {
-    if (hdzero_update_display()) {
-      display_dirty = false;
-    }
-    return false;
-  }
-
   static bool wants_heatbeat = true;
+
+  if ((time_millis() - last_heartbeat) > 500) {
+    wants_heatbeat = true;
+    return false;
+  }
+
   if (wants_heatbeat) {
     uint8_t variant[6] = {'A', 'R', 'D', 'U', 0, 0};
     hdzero_push_msp(MSP_FC_VARIANT, variant, 6);
@@ -265,10 +266,15 @@ bool hdzero_is_ready() {
     uint8_t options[2] = {0, 1};
     hdzero_push_subcmd(SUBCMD_SET_OPTIONS, options, 2);
 
-    memset(display, 0, DISPLAY_SIZE * sizeof(displayport_char_t));
-    hdzero_push_subcmd(SUBCMD_CLEAR_SCREEN, NULL, 0);
-
+    hdzero_clear_async();
     wants_heatbeat = false;
+    return false;
+  }
+
+  if (display_dirty) {
+    if (hdzero_update_display()) {
+      display_dirty = false;
+    }
     return false;
   }
 
@@ -311,6 +317,7 @@ void hdzero_txn_write_char(osd_transaction_t *txn, const char val) {
   display[offset].attr = attr;
   display[offset].val = val;
 
+  display_row_dirty[seg->y] = true;
   display_dirty = true;
 }
 
@@ -328,6 +335,7 @@ void hdzero_txn_write_data(osd_transaction_t *txn, const uint8_t *buffer, uint8_
     display[offset + i].attr = attr;
     display[offset + i].val = buffer[i];
 
+    display_row_dirty[seg->y] = true;
     display_dirty = true;
   }
 }
