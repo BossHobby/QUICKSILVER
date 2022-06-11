@@ -812,6 +812,18 @@ void osd_display() {
     osd_display_reset();
     return;
   }
+
+  static bool did_just_arm = false;
+  if (rx_aux_on(AUX_ARMING)) {
+    if (!did_just_arm) {
+      while (osd_pop_screen() != OSD_SCREEN_CLEAR)
+        ;
+      did_just_arm = true;
+    }
+  } else {
+    did_just_arm = false;
+  }
+
   switch (osd_state.screen) {
   case OSD_SCREEN_CLEAR:
     if (osd_clear_async())
