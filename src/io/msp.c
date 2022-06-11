@@ -29,6 +29,18 @@ static void msp_quic_send(uint8_t *data, uint32_t len, void *priv) {
   msp_send_reply(msp, MSP1_MAGIC, MSP_RESERVE_1, data, len);
 }
 
+static void msp_write_uint16(uint8_t *data, uint16_t val) {
+  data[0] = val >> 0;
+  data[1] = val >> 8;
+}
+
+static void msp_write_uint32(uint8_t *data, uint32_t val) {
+  data[0] = val >> 0;
+  data[1] = val >> 8;
+  data[2] = val >> 16;
+  data[3] = val >> 24;
+}
+
 static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *payload, uint16_t size) {
   switch (cmd) {
   case MSP_API_VERSION: {
@@ -135,6 +147,18 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   case MSP_STATUS: {
     uint8_t data[22];
     memset(data, 0, 22);
+
+    msp_write_uint16(data, state.cpu_load);
+    msp_write_uint16(data + 2, 0); // i2c errors
+    msp_write_uint16(data + 4, 0); // sensors
+
+    // flight mode, only arm for now
+    uint32_t flight_mode = 0;
+    if (rx_aux_on(AUX_ARMING)) {
+      flight_mode |= 0x1;
+    }
+    msp_write_uint32(data + 6, flight_mode);
+
     msp_send_reply(msp, magic, cmd, data, 22);
     break;
   }
@@ -264,13 +288,13 @@ msp_status_t msp_process_serial(msp_t *msp, uint8_t data) {
   msp->buffer[msp->buffer_offset] = data;
   msp->buffer_offset++;
 
-  if (msp->buffer_offset < 3) {
-    return MSP_EOF;
-  }
-
-  if (msp->buffer[0] != '$' || msp->buffer[2] != '<') {
+  if (msp->buffer[0] != '$') {
     msp->buffer_offset = 0;
     return MSP_ERROR;
+  }
+
+  if (msp->buffer_offset < 3) {
+    return MSP_EOF;
   }
 
   switch (msp->buffer[1]) {
