@@ -132,6 +132,31 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     msp_send_reply(msp, magic, cmd, (uint8_t *)data, 8 * sizeof(uint16_t));
     break;
   }
+  case MSP_STATUS: {
+    uint8_t data[22];
+    memset(data, 0, 22);
+    msp_send_reply(msp, magic, cmd, data, 22);
+    break;
+  }
+  case MSP_RC: {
+    uint16_t data[16];
+
+    data[0] = mapf(state.rx_filtered.roll, -1.0f, 1.0f, 1000.f, 2000.f);
+    data[1] = mapf(state.rx_filtered.pitch, -1.0f, 1.0f, 1000.f, 2000.f);
+    data[2] = mapf(state.rx_filtered.yaw, -1.0f, 1.0f, 1000.f, 2000.f);
+    data[3] = mapf(state.rx_filtered.throttle, 0.0f, 1.0f, 1000.f, 2000.f);
+
+    for (uint32_t i = 0; i < AUX_CHANNEL_OFF; i++) {
+      if (state.aux[i]) {
+        data[i + 4] = 2000;
+      } else {
+        data[i + 4] = 1000;
+      }
+    }
+
+    msp_send_reply(msp, magic, cmd, (uint8_t *)data, 32);
+    break;
+  }
   case MSP_SET_MOTOR: {
     uint16_t *values = (uint16_t *)(payload);
     for (uint8_t i = 0; i < 4; i++) {
@@ -235,59 +260,75 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   }
 }
 
-msp_status_t msp_process_serial(msp_t *msp, uint8_t *data, uint32_t len) {
-  if (len < MSP_HEADER_LEN) {
+msp_status_t msp_process_serial(msp_t *msp, uint8_t data) {
+  msp->buffer[msp->buffer_offset] = data;
+  msp->buffer_offset++;
+
+  if (msp->buffer_offset < 3) {
     return MSP_EOF;
   }
 
-  if (data[0] != '$' || data[2] != '<') {
+  if (msp->buffer[0] != '$' || msp->buffer[2] != '<') {
+    msp->buffer_offset = 0;
     return MSP_ERROR;
   }
 
-  if (data[1] == 'M') {
-    const uint8_t size = data[3];
-    const uint8_t cmd = data[4];
+  switch (msp->buffer[1]) {
+  case 'M': {
+    if (msp->buffer_offset < MSP_HEADER_LEN) {
+      return MSP_EOF;
+    }
 
-    if (len < (MSP_HEADER_LEN + size + 1)) {
+    const uint8_t size = msp->buffer[3];
+    const uint8_t cmd = msp->buffer[4];
+
+    if (msp->buffer_offset < (MSP_HEADER_LEN + size + 1)) {
       return MSP_EOF;
     }
 
     uint8_t chksum = size ^ cmd;
     for (uint8_t i = 0; i < size; i++) {
-      chksum ^= data[MSP_HEADER_LEN + i];
+      chksum ^= msp->buffer[MSP_HEADER_LEN + i];
     }
 
-    if (data[MSP_HEADER_LEN + size] != chksum) {
+    if (msp->buffer[MSP_HEADER_LEN + size] != chksum) {
+      msp->buffer_offset = 0;
       return MSP_ERROR;
     }
 
-    msp_process_serial_cmd(msp, MSP1_MAGIC, cmd, data + MSP_HEADER_LEN, size);
+    msp_process_serial_cmd(msp, MSP1_MAGIC, cmd, msp->buffer + MSP_HEADER_LEN, size);
+    msp->buffer_offset = 0;
     return MSP_SUCCESS;
   }
 
-  if (data[1] == 'X') {
-    if (len < MSP2_HEADER_LEN) {
+  case 'X': {
+    if (msp->buffer_offset < MSP2_HEADER_LEN) {
       return MSP_EOF;
     }
 
-    //  data[3] flag
-    const uint16_t cmd = (data[5] << 8) | data[4];
-    const uint16_t size = (data[7] << 8) | data[6];
+    //  msp->buffer[3] flag
+    const uint16_t cmd = (msp->buffer[5] << 8) | msp->buffer[4];
+    const uint16_t size = (msp->buffer[7] << 8) | msp->buffer[6];
 
-    if (len < (MSP2_HEADER_LEN + size + 1)) {
+    if (msp->buffer_offset < (MSP2_HEADER_LEN + size + 1)) {
       return MSP_EOF;
     }
 
-    const uint8_t chksum = crc8_dvb_s2_data(0, data + 3, size + 5);
-    if (data[MSP2_HEADER_LEN + size] != chksum) {
+    const uint8_t chksum = crc8_dvb_s2_data(0, msp->buffer + 3, size + 5);
+    if (msp->buffer[MSP2_HEADER_LEN + size] != chksum) {
+      msp->buffer_offset = 0;
       return MSP_ERROR;
     }
 
-    msp_process_serial_cmd(msp, MSP2_MAGIC, cmd, data + MSP2_HEADER_LEN, size);
+    msp_process_serial_cmd(msp, MSP2_MAGIC, cmd, msp->buffer + MSP2_HEADER_LEN, size);
+    msp->buffer_offset = 0;
     return MSP_SUCCESS;
   }
 
-  return MSP_ERROR;
+  default:
+    msp->buffer_offset = 0;
+    return MSP_ERROR;
+  }
 }
 
 msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint32_t len) {

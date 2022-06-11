@@ -143,15 +143,13 @@ void usb_configurator() {
     msp_t msp = {
         .buffer = buffer,
         .buffer_size = USB_BUFFER_SIZE,
-        .buffer_offset = 0,
+        .buffer_offset = 1,
         .send = usb_msp_send,
     };
 
     while (true) {
-      msp_status_t status = msp_process_serial(&msp, buffer, buffer_size);
-      if (status == MSP_EOF) {
-        buffer[buffer_size++] = usb_serial_read_byte();
-      } else {
+      msp_status_t status = msp_process_serial(&msp, usb_serial_read_byte());
+      if (status != MSP_EOF) {
         break;
       }
     }

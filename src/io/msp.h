@@ -17,6 +17,8 @@
 
 #define MSP_DISPLAYPORT 182
 
+#define MSP_STATUS 101       // out message         cycletime & errors_count & sensor present & box activation & current setting number
+#define MSP_RC 105           // out message         rc channels and more
 #define MSP_MOTOR_CONFIG 131 // out message         Motor configuration (min/max throttle, etc)
 
 #define MSP_SET_MOTOR 214       // in message          PropBalance function
@@ -75,5 +77,5 @@ typedef struct {
   msp_send_fn_t send;
 } msp_t;
 
-msp_status_t msp_process_serial(msp_t *msp, uint8_t *data, uint32_t len);
+msp_status_t msp_process_serial(msp_t *msp, uint8_t data);
 msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint32_t len);
