@@ -319,8 +319,5 @@
 // throttle direct to motors for thrust measure
 //#define MOTORS_TO_THROTTLE
 
-// disable turtle / crashflip recovery
-//#define DISABLE_FLIP_SEQUENCER
-
 // change mixer to a plus configuration
 //#define MOTOR_PLUS_CONFIGURATION

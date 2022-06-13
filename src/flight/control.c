@@ -13,12 +13,12 @@
 #include "flight/input.h"
 #include "flight/pid.h"
 #include "flight/sixaxis.h"
-#include "flip_sequencer.h"
 #include "io/led.h"
 #include "io/usb_configurator.h"
 #include "io/vbat.h"
 #include "motor.h"
 #include "profile.h"
+#include "turtle_mode.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
@@ -108,22 +108,19 @@ CBOR_END_STRUCT_ENCODER()
 void control() {
   pid_precalc();
 
-#ifndef DISABLE_FLIP_SEQUENCER
   if (rx_aux_on(AUX_TURTLE) && !rx_aux_on(AUX_MOTOR_TEST)) { // turtle active when aux high
-    start_flip();
+    turtle_mode_start();
   } else {
-    extern int readytoflip;
-    readytoflip = 0; // reset the flip sequencer state variable with aux low
+    turtle_mode_cancel();
   }
 
-  flip_sequencer();
+  turtle_mode_update();
 
   if (flags.controls_override) {
     for (int i = 0; i < 3; i++) {
       state.rx_filtered.axis[i] = state.rx_override.axis[i];
     }
   }
-#endif
 
   // flight control
   vec3_t rates;
