@@ -1491,10 +1491,6 @@ void osd_display() {
     }
     break;
   }
-
-  if (osd_state.screen != OSD_SCREEN_REGULAR && rx_aux_on(AUX_ARMING)) {
-    flags.arm_safety = 1;
-  }
 }
 
 #endif
