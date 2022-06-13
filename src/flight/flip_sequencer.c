@@ -7,11 +7,6 @@
 #include "flight/control.h"
 #include "profile.h"
 
-#ifdef BRUSHLESS_TARGET
-// TODO: enable for brushed too
-#define STANDARD_TURTLE
-#endif
-
 #define TURTLE_TIMEOUT 1e6 // 1 second timeout for auto turtle
 
 // don't change below
@@ -35,29 +30,30 @@ int flipdir = 0;
 
 extern profile_t profile;
 
-#ifdef STANDARD_TURTLE
-extern uint8_t pwmdir;
-#endif
+// TODO: enable for brushed too
+#ifdef BRUSHLESS_TARGET
 
 void start_flip() {
-#ifdef STANDARD_TURTLE
   if (!readytoflip && flags.on_ground) { // if not currently queued up for a turtle sequence and disarmed
     readytoflip = 1;                     // queue up for a turtle event
     flipstage = STAGE_FLIP_NONE;
   }
-#endif
 }
 
 void flip_sequencer() {
-#ifdef STANDARD_TURTLE
   if (flipstage > 0 && flags.arm_state == 1)
     flags.turtle = 1;
   else
     flags.turtle = 0;
+
   if (!readytoflip) { // turtle can't be initiated without the all clear flag - hold control variables at 0 state
     if (flipstage != STAGE_FLIP_NONE) {
-      pwmdir = FORWARD;     // forward pwmdir only once as its last state may be unknown from previously interrupted turtle event
       flags.arm_safety = 1; // just in case absolutely require that the quad be disarmed when turning off turtle mode with a started sequencer
+
+      // force motors to forward, in case turtle was interrupted
+      if (!motor_set_direction(MOTOR_FORWARD)) {
+        return;
+      }
     }
     flipstage = STAGE_FLIP_NONE;
     flags.controls_override = 0;
@@ -93,7 +89,12 @@ void flip_sequencer() {
     state.rx_override.axis[1] = 0;
     state.rx_override.axis[2] = 0;
     state.rx_override.axis[3] = 0;
-    pwmdir = REVERSE;
+
+    if (!motor_set_direction(MOTOR_REVERSE)) {
+      // wait for the motor to sucessfully change
+      break;
+    }
+
     flipindex = 0;
     flipdir = 0;
     if (fabsf(state.rx.axis[0]) > 0.5f || fabsf(state.rx.axis[1]) > 0.5f) {
@@ -126,13 +127,24 @@ void flip_sequencer() {
     break;
 
   case STAGE_FLIP_EXIT:
-    readytoflip = 0;
-    flipstage = STAGE_FLIP_NONE;
     flags.controls_override = 0;
     flags.motortest_override = 0;
-    pwmdir = FORWARD;
     flags.arm_safety = 1;
+
+    if (!motor_set_direction(MOTOR_FORWARD)) {
+      // wait for the motor to sucessfully change
+      break;
+    }
+
+    readytoflip = 0;
+    flipstage = STAGE_FLIP_NONE;
     break;
   }
-#endif
 }
+#else
+void start_flip() {
+}
+
+void flip_sequencer() {
+}
+#endif

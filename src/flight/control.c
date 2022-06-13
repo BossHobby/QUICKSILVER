@@ -460,5 +460,7 @@ void control() {
     }
   }
   // end motors on
+
+  motor_update();
 }
 // end of control function

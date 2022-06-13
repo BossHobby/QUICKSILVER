@@ -309,16 +309,15 @@
 //#define DEBUG
 //#define DEBUG_LOGGING
 //#define RESET_ON_FAULT
-//#define ALLOW_USB_ARMING		//allow transmitter aux to arm motors while connected to usb gui
+
+// allow transmitter aux to arm motors while connected to usb gui
+//#define ALLOW_USB_ARMING
 
 // disable motors for testing
 //#define NOMOTORS
 
 // throttle direct to motors for thrust measure
 //#define MOTORS_TO_THROTTLE
-
-// disable all pwm pins / function
-//#define DISABLE_PWM_PINS
 
 // disable turtle / crashflip recovery
 //#define DISABLE_FLIP_SEQUENCER

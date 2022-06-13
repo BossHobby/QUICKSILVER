@@ -30,6 +30,8 @@
 #define DSHOT_MAX_PORT_COUNT 3
 #define DSHOT_DMA_BUFFER_SIZE (3 * (16 + 2))
 
+#define DSHOT_DIR_CHANGE_IDLE_TIME 1000
+
 typedef struct {
   motor_pin_ident_t id;
 
@@ -49,9 +51,9 @@ typedef struct {
   dma_device_t dma_device;
 } dshot_gpio_port_t;
 
-uint8_t pwmdir = 0;
+static motor_direction_t motor_dir = MOTOR_FORWARD;
+static motor_direction_t last_motor_dir = MOTOR_FORWARD;
 
-static uint8_t last_pwmdir = 0;
 static uint32_t pwm_failsafe_time = 1;
 
 volatile uint32_t dshot_dma_phase = 0; // 0: idle, 1 - (gpio_port_count + 1): handle port n
@@ -225,7 +227,7 @@ void motor_init() {
 
   // set failsafetime so signal is off at start
   pwm_failsafe_time = time_micros() - 100000;
-  pwmdir = FORWARD;
+  motor_dir = MOTOR_FORWARD;
 }
 
 static void dshot_dma_setup_port(uint32_t index) {
@@ -257,6 +259,12 @@ static void make_packet(uint8_t number, uint16_t value, bool telemetry) {
   csum &= 0xf;
   // append checksum
   dshot_packet[number] = (packet << 4) | csum;
+}
+
+static void make_packet_all(uint16_t value, bool telemetry) {
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    make_packet(profile.motor.motor_pins[i], value, telemetry);
+  }
 }
 
 // make dshot dma packet, then fire
@@ -313,66 +321,70 @@ void motor_wait_for_ready() {
     __WFI();
 }
 
-void motor_set(uint8_t number, float pwm) {
-  if (number > 3)
-    return;
+void motor_write(float *values) {
+  if (motor_dir == last_motor_dir) {
+    for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+      const float pwm = constrainf(values[i], 0.0f, 0.999f);
 
-  if (pwm < 0.0f) {
-    pwm = 0.0;
-  }
-  if (pwm > 0.999f) {
-    pwm = 0.999;
-  }
-
-  // maps 0.0 .. 0.999 to 48 + IDLE_OFFSET * 2 .. 2047
-  uint16_t value = 48 + (profile.motor.digital_idle * 20) + (uint16_t)(pwm * (2001 - (profile.motor.digital_idle * 20)));
-
-  if (flags.on_ground || !flags.arm_state || (flags.motortest_override && pwm < 0.002f) || ((rx_aux_on(AUX_MOTOR_TEST)) && pwm < 0.002f)) { // turn off the slow motors during turtle or motortest
-    value = 0;                                                                                                                              // stop the motors
-  }
-
-  if (flags.failsafe && !flags.motortest_override) {
-    if (!pwm_failsafe_time) {
-      pwm_failsafe_time = time_micros();
-    } else {
-      // 1s after failsafe we turn off the signal for safety
-      // this means the escs won't rearm correctly after 2 secs of signal lost
-      // usually the quad should be gone by then
-      if (time_micros() - pwm_failsafe_time > 4000000) {
-        value = 0;
-        //  return;    -   esc reboots are annoying
+      // maps 0.0 .. 0.999 to 48 + IDLE_OFFSET * 2 .. 2047
+      uint16_t value = 48 + (profile.motor.digital_idle * 20) + (uint16_t)(pwm * (2001 - (profile.motor.digital_idle * 20)));
+      if (flags.on_ground || !flags.arm_state || (flags.motortest_override && pwm < 0.002f) || ((rx_aux_on(AUX_MOTOR_TEST)) && pwm < 0.002f)) { // turn off the slow motors during turtle or motortest
+        value = 0;                                                                                                                              // stop the motors
       }
+
+      if (flags.failsafe && !flags.motortest_override) {
+        if (!pwm_failsafe_time) {
+          pwm_failsafe_time = time_micros();
+        } else if (time_micros() - pwm_failsafe_time > 4000000) {
+          // 1s after failsafe we turn off the signal for safety
+          // this means the escs won't rearm correctly after 2 secs of signal lost
+          // usually the quad should be gone by then
+          value = 0;
+        }
+      } else {
+        pwm_failsafe_time = 0;
+      }
+
+      make_packet(profile.motor.motor_pins[i], value, false);
     }
   } else {
-    pwm_failsafe_time = 0;
-  }
+    static uint32_t dir_change_time = 0;
+    if (!dir_change_time) {
+      dir_change_time = time_millis();
+    }
 
-  if (pwmdir == last_pwmdir) { // make a regular packet
-    make_packet(profile.motor.motor_pins[number], value, false);
-  } else { // make a series of dshot command packets
-    static uint16_t counter = 0;
-    if (counter <= 10000) {
+    static uint8_t counter = 0;
+    if (time_millis() - dir_change_time < DSHOT_DIR_CHANGE_IDLE_TIME) {
+      // give the motors enough time to come a full stop
+      make_packet_all(0, false);
+    } else if (counter <= 12) {
+      const uint16_t value = motor_dir == MOTOR_REVERSE ? DSHOT_CMD_ROTATE_REVERSE : DSHOT_CMD_ROTATE_NORMAL;
+      make_packet_all(value, true);
       counter++;
-      if (pwmdir == REVERSE)
-        value = DSHOT_CMD_ROTATE_REVERSE;
-      if (pwmdir == FORWARD)
-        value = DSHOT_CMD_ROTATE_NORMAL;
-      if (counter <= 8000) // override to disarmed for a few cycles just in case blheli wants that
-        make_packet(profile.motor.motor_pins[number], 0, false);
-      if (counter > 8000 && counter <= 8060) // send the command 6 times plus a few extra times for good measure
-        make_packet(profile.motor.motor_pins[number], value, true);
-      if (counter > 8600) // override to disarmed for a few cycles just in case blheli wants that
-        make_packet(profile.motor.motor_pins[number], 0, false);
-    }
-    if (counter == 10001) {
+    } else {
+      make_packet_all(0, false);
+
       counter = 0;
-      last_pwmdir = pwmdir;
+      dir_change_time = 0;
+      last_motor_dir = motor_dir;
     }
   }
 
-  if (number == 3) {
-    dshot_dma_start();
+  dshot_dma_start();
+}
+
+bool motor_set_direction(motor_direction_t dir) {
+  if (last_motor_dir != motor_dir) {
+    // the last direction change is not done yet
+    return false;
   }
+  if (motor_dir != dir) {
+    // update the motor direction
+    motor_dir = dir;
+    return false;
+  }
+  // success
+  return true;
 }
 
 void motor_beep() {

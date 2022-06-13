@@ -53,10 +53,7 @@ int beepon = 0;
 #define MOTOR_BEEPS_PWM_ON 0.2
 #define MOTOR_BEEPS_PWM_OFF 0.0
 
-#ifndef DISABLE_PWM_PINS
-
 void motor_init() {
-
 // timer clock enable
 #define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) \
   timer_init(timer, PWM_DIVIDER, PWMTOP);
@@ -96,6 +93,9 @@ void motor_init() {
 #undef MOTOR_PIN
 }
 
+void motor_wait_for_ready() {
+}
+
 void motor_beep() {
   uint32_t time = time_millis();
   if (!beepon && (time % 2000 < 125)) {
@@ -111,40 +111,31 @@ void motor_beep() {
   }
 }
 
-void motor_set(uint8_t number, float pwmf) {
-  int pwm = pwmf * PWMTOP;
-
-  if (pwm < 0)
-    pwm = 0;
-  if (pwm > PWMTOP)
-    pwm = PWMTOP;
+void motor_write(float *values) {
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    int pwm = values[i] * PWMTOP;
+    if (pwm < 0)
+      pwm = 0;
+    if (pwm > PWMTOP)
+      pwm = PWMTOP;
 
 #define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) \
   case MOTOR_PIN_IDENT(port, pin):                         \
     timer->CCR##timer_channel = (uint16_t)pwm;             \
     break;
 
-  switch (profile.motor.motor_pins[number]) {
-    MOTOR_PINS
-  default:
-    // handle error;
-    break;
-  };
-
+    switch (profile.motor.motor_pins[i]) {
+      MOTOR_PINS
+    default:
+      // handle error;
+      break;
+    };
 #undef MOTOR_PIN
+  }
 }
 
-#else
-// pwm pins disabled
-void motor_init() {
-}
-
-void motor_set(uint8_t number, float pwm) {
+bool motor_set_direction(motor_direction_t dir) {
+  return true;
 }
 
 #endif
-
-void motor_wait_for_ready() {
-}
-
-#endif // end USE_PWM_DRIVER
