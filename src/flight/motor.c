@@ -11,11 +11,6 @@
 #warning "MOTORS TEST MODE"
 #endif
 
-#ifdef NOMOTORS
-#warning "NO MOTORS"
-float tempx[4];
-#endif
-
 #ifdef BRUSHED_TARGET
 #define BRUSHED_MIX_SCALING
 #endif
@@ -292,17 +287,12 @@ void motor_output_calc(float mix[4]) {
       mix[i] = constrainf(mix[i], 0, 1);
       mix[i] = motor_min_value + mix[i] * (1.0f - motor_min_value);
     }
-#else
-    // brushless: do nothing - idle set by DSHOT
 #endif
+    // brushless: do nothing - idle set by DSHOT
 
 #ifndef NOMOTORS
     // normal mode
     motor_set(i, mix[i]);
-#else
-    // no motors mode
-    // to maintain timing or it will be optimized away
-    tempx[i] = motormap(mix[i]);
 #endif
 
     // clip mixer outputs (if not already done) before applying calculating throttle sum
