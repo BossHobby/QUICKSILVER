@@ -764,7 +764,7 @@ bool rx_check() {
   }
 
   if (irq == IRQ_RX_DONE) {
-    elrs_process_packet(time_micros());
+    channels_received = elrs_process_packet(time_micros());
   } else if (irq == IRQ_TX_DONE) {
     elrs_enter_rx(packet);
   }
