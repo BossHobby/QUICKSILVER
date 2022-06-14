@@ -108,6 +108,7 @@ void rx_init();
 void rx_update();
 
 float rx_smoothing_hz(rx_protocol_t proto);
+void rx_map_channels(const float channels[4]);
 
 void rx_apply_stick_calibration_scale();
 void request_stick_calibration_wizard();

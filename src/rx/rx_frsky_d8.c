@@ -70,15 +70,13 @@ static void frsky_d8_set_rc_data() {
   flags.failsafe = 0;
 
   // AETR channel order
-  state.rx.axis[0] = (channels[0] - 1500) - 750;
-  state.rx.axis[1] = (channels[1] - 1500) - 750;
-  state.rx.axis[2] = (channels[3] - 1500) - 750;
-  state.rx.axis[3] = (channels[2] - 1500);
-
-  for (int i = 0; i < 3; i++) {
-    state.rx.axis[i] *= 1.f / 750.f;
-  }
-  state.rx.axis[3] *= 1.f / 1500.f;
+  const float rc_channels[4] = {
+      (channels[0] - 2250.0f) * (1.f / 750.f),
+      (channels[1] - 2250.0f) * (1.f / 750.f),
+      (channels[2] - 2250.0f) * (1.f / 750.f),
+      (channels[3] - 2250.0f) * (1.f / 750.f),
+  };
+  rx_map_channels(rc_channels);
 
   // Here we have the AUX channels Silverware supports
   state.aux[AUX_CHANNEL_0] = (channels[4] > 2000) ? 1 : 0;

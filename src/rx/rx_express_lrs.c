@@ -592,17 +592,15 @@ static bool elrs_process_packet(uint32_t packet_time) {
       break;
     }
 
-    const uint16_t channels[4] = {
-        (packet[1] << 3) | ((packet[5] & 0b11000000) >> 5),
-        (packet[2] << 3) | ((packet[5] & 0b00110000) >> 3),
-        (packet[3] << 3) | ((packet[5] & 0b00001100) >> 1),
-        (packet[4] << 3) | ((packet[5] & 0b00000011) << 1),
+    // AETR channel order
+    const float channels[4] = {
+        (((packet[1] << 3) | ((packet[5] & 0b11000000) >> 5)) - 990.5f) * 0.00125707103f,
+        (((packet[2] << 3) | ((packet[5] & 0b00110000) >> 3)) - 990.5f) * 0.00125707103f,
+        (((packet[3] << 3) | ((packet[5] & 0b00001100) >> 1)) - 990.5f) * 0.00125707103f,
+        (((packet[4] << 3) | ((packet[5] & 0b00000011) << 1)) - 990.5f) * 0.00125707103f,
     };
 
-    state.rx.axis[0] = (channels[0] - 990.5f) * 0.00125707103f;
-    state.rx.axis[1] = (channels[1] - 990.5f) * 0.00125707103f;
-    state.rx.axis[2] = (channels[3] - 990.5f) * 0.00125707103f;
-    state.rx.axis[3] = (channels[2] - 191.0f) * 0.00062853551f;
+    rx_map_channels(channels);
 
     channels_received = true;
 

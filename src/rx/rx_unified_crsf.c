@@ -173,10 +173,14 @@ static bool rx_serial_crsf_process_frame(uint8_t frame_length) {
     channels[15] = chan->chan15;
 
     // AETR channel order
-    state.rx.axis[0] = (channels[0] - 990.5f) * 0.00125707103f;
-    state.rx.axis[1] = (channels[1] - 990.5f) * 0.00125707103f;
-    state.rx.axis[2] = (channels[3] - 990.5f) * 0.00125707103f;
-    state.rx.axis[3] = (channels[2] - 191.0f) * 0.00062853551f;
+    const float rc_channels[4] = {
+        (channels[0] - 990.5f) * 0.00125707103f,
+        (channels[1] - 990.5f) * 0.00125707103f,
+        (channels[2] - 990.5f) * 0.00125707103f,
+        (channels[3] - 990.5f) * 0.00125707103f,
+    };
+
+    rx_map_channels(rc_channels);
 
     state.aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0; // 1100 cutoff intentionally selected to force aux channels low if
     state.aux[AUX_CHANNEL_1] = (channels[5] > 1100) ? 1 : 0; // being controlled by a transmitter using a 3 pos switch in center state

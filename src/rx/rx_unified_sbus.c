@@ -75,20 +75,14 @@ bool rx_serial_process_sbus() {
     flags.rx_mode = RXMODE_BIND; // this is rapid flash during bind safety
 
   // AETR channel order
-  channels[0] -= 993;
-  channels[1] -= 993;
-  channels[3] -= 993;
+  const float rc_channels[4] = {
+      (channels[0] - 993.f) * 0.00122026f,
+      (channels[1] - 993.f) * 0.00122026f,
+      (channels[2] - 993.f) * 0.00122026f,
+      (channels[3] - 993.f) * 0.00122026f,
+  };
 
-  state.rx.axis[0] = channels[0];
-  state.rx.axis[1] = channels[1];
-  state.rx.axis[2] = channels[3];
-
-  for (int i = 0; i < 3; i++) {
-    state.rx.axis[i] *= 0.00122026f;
-  }
-
-  channels[2] -= 173;
-  state.rx.axis[3] = 0.000610128f * channels[2];
+  rx_map_channels(rc_channels);
 
   // Here we have the AUX channels Silverware supports
   state.aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
@@ -208,19 +202,14 @@ bool rx_serial_process_fport() {
         flags.rx_mode = RXMODE_BIND; // this is rapid flash during bind safety
 
       // AETR channel order
-      channels[0] -= 993;
-      channels[1] -= 993;
-      channels[3] -= 993;
+      const float rc_channels[4] = {
+          (channels[0] - 993.f) * 0.00122026f,
+          (channels[1] - 993.f) * 0.00122026f,
+          (channels[2] - 993.f) * 0.00122026f,
+          (channels[3] - 993.f) * 0.00122026f,
+      };
 
-      state.rx.axis[0] = channels[0];
-      state.rx.axis[1] = channels[1];
-      state.rx.axis[2] = channels[3];
-      for (int i = 0; i < 3; i++) {
-        state.rx.axis[i] *= 0.00122026f;
-      }
-
-      channels[2] -= 173;
-      state.rx.axis[3] = 0.000610128f * channels[2];
+      rx_map_channels(rc_channels);
 
       // Here we have the AUX channels Silverware supports
       state.aux[AUX_CHANNEL_0] = (channels[4] > 993) ? 1 : 0;

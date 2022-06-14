@@ -54,15 +54,13 @@ static void redpine_set_rc_data() {
   };
 
   // AETR channel order
-  state.rx.axis[0] = channels[0] - 1020;
-  state.rx.axis[1] = channels[1] - 1020;
-  state.rx.axis[2] = channels[3] - 1020;
-  state.rx.axis[3] = channels[2] - 210;
-
-  for (int i = 0; i < 3; i++) {
-    state.rx.axis[i] *= 1.f / 820.f;
-  }
-  state.rx.axis[3] *= 1.f / 1640.f;
+  const float rc_channels[4] = {
+      (channels[0] - 1020.0f) * (1.0f / 820.f),
+      (channels[1] - 1020.0f) * (1.0f / 820.f),
+      (channels[2] - 1020.0f) * (1.0f / 820.f),
+      (channels[3] - 1020.0f) * (1.0f / 820.f),
+  };
+  rx_map_channels(rc_channels);
 
   // Here we have the AUX channels Silverware supports
   state.aux[AUX_CHANNEL_0] = (packet[REDPINE_CHANNEL_START + 1] & 0x08) ? 1 : 0;

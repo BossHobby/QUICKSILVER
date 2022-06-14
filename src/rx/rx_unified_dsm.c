@@ -95,11 +95,16 @@ bool rx_serial_process_dsm() {
     bind_safety++;
     if (bind_safety < 120)
       flags.rx_mode = RXMODE_BIND; // this is rapid flash during bind safety
-    // TAER channel order
-    state.rx.axis[0] = (channels[1] - dsm_offset) * dsm_scalefactor;
-    state.rx.axis[1] = (channels[2] - dsm_offset) * dsm_scalefactor;
-    state.rx.axis[2] = (channels[3] - dsm_offset) * dsm_scalefactor;
-    state.rx.axis[3] = ((channels[0] - dsm_offset) * dsm_scalefactor * 0.5f) + 0.5f;
+
+    // AETR channel order
+    const float rc_channels[4] = {
+        (channels[0] - dsm_offset) * dsm_scalefactor,
+        (channels[1] - dsm_offset) * dsm_scalefactor,
+        (channels[2] - dsm_offset) * dsm_scalefactor,
+        (channels[3] - dsm_offset) * dsm_scalefactor,
+    };
+
+    rx_map_channels(rc_channels);
 
     state.aux[AUX_CHANNEL_0] = (((channels[4] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0; // cutoff intentionally selected to force aux channels low if
     state.aux[AUX_CHANNEL_1] = (((channels[5] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0; // being controlled by a transmitter using a 3 pos switch in center state

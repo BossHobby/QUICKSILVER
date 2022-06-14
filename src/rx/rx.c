@@ -186,6 +186,14 @@ void rx_init() {
   rx_protocol_init();
 }
 
+void rx_map_channels(const float channels[4]) {
+  // AETR channel order
+  state.rx.roll = channels[0];
+  state.rx.pitch = channels[1];
+  state.rx.throttle = (channels[2] + 1.0f) * 0.5f;
+  state.rx.yaw = channels[3];
+}
+
 void rx_update() {
   if (rx_check()) {
     rx_apply_stick_calibration_scale();
