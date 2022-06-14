@@ -21,7 +21,7 @@ static uint8_t cal_data[255][3];
 
 static uint32_t time_tuned_ms;
 
-uint16_t frsky_extract_rssi(uint8_t rssi_raw) {
+uint8_t frsky_extract_rssi(uint8_t rssi_raw) {
   if (rssi_raw >= 128) {
     // adapted to fit better to the original values... FIXME: find real formula
     // return (rssi_raw * 18)/32 - 82;

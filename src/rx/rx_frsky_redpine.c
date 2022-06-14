@@ -27,7 +27,7 @@ extern uint8_t protocol_state;
 
 static uint8_t redpine_fast = 1;
 
-uint16_t frsky_extract_rssi(uint8_t rssi_raw);
+uint8_t frsky_extract_rssi(uint8_t rssi_raw);
 void frsky_handle_bind();
 
 void handle_overflows();
