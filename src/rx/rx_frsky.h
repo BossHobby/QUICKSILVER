@@ -14,8 +14,6 @@ typedef struct {
   uint8_t _pad;
 } rx_frsky_bind_data_t;
 
-#ifdef RX_FRSKY
-
 typedef enum {
   FRSKY_STATE_DETECT = 0,
   FRSKY_STATE_INIT,
@@ -30,8 +28,6 @@ typedef enum {
   FRSKY_STATE_TELEMETRY,
   FRSKY_STATE_RESUME,
 } frsky_state_t;
-
-#if defined(RX_FRSKY_D16_FCC) || defined(RX_FRSKY_D16_LBT)
 
 enum {
   FSSP_START_STOP = 0x7E,
@@ -56,6 +52,3 @@ typedef struct {
 } __attribute__((packed)) smart_port_payload_t;
 
 void frsky_d16_write_telemetry(smart_port_payload_t *payload);
-#endif
-
-#endif

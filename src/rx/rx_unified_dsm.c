@@ -1,7 +1,5 @@
 #include "rx_unified_serial.h"
 
-#ifdef RX_UNIFIED_SERIAL
-
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -194,5 +192,3 @@ float rx_serial_dsm_expected_fps() {
   }
   return 91;
 }
-
-#endif

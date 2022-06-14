@@ -37,12 +37,10 @@
 #define RX_USART USART_PORT2
 #endif
 
-#ifdef RX_FRSKY
 #define USE_CC2500
 #define CC2500_SPI_PORT SPI_PORT1
 #define CC2500_NSS_PIN PIN_B7
 #define CC2500_GDO0_PIN PIN_B6
-#endif
 
 // OSD
 //#define ENABLE_OSD

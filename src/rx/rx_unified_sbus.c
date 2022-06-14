@@ -1,7 +1,5 @@
 #include "rx_unified_serial.h"
 
-#ifdef RX_UNIFIED_SERIAL
-
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -393,5 +391,3 @@ void rx_serial_send_fport_telemetry() {
     }
   }
 }
-
-#endif

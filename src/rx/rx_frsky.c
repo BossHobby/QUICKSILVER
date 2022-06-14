@@ -95,10 +95,10 @@ uint8_t next_channel(uint8_t skip) {
 
   set_channel(bind_storage.frsky.hop_data[channr]);
 
-#ifdef RX_FRSKY_D8
-  // FRSKY D only
-  cc2500_strobe(CC2500_SFRX);
-#endif
+  if (profile.receiver.protocol == RX_PROTOCOL_FRSKY_D8) {
+    // FRSKY D only
+    cc2500_strobe(CC2500_SFRX);
+  }
 
   return channr;
 }

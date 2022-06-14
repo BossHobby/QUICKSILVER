@@ -15,8 +15,6 @@
 #include "util/circular_buffer.h"
 #include "util/util.h"
 
-#ifdef RX_UNIFIED_SERIAL
-
 #define USART usart_port_defs[serial_rx_port]
 
 // This is the microsecond threshold for triggering a new frame to re-index to position 0 in the ISR
@@ -179,7 +177,7 @@ float rx_serial_expected_fps() {
   return 0;
 }
 
-void rx_protocol_init() {
+void rx_serial_init() {
   if (profile.serial.rx == USART_PORT_INVALID) {
     return;
   }
@@ -218,7 +216,7 @@ void rx_protocol_init() {
   }
 }
 
-bool rx_check() {
+bool rx_serial_check() {
   if (serial_rx_port != USART_PORT_INVALID && serial_rx_port != profile.serial.rx) {
     return false;
   }
@@ -247,7 +245,7 @@ bool rx_check() {
   if (frame_status == FRAME_INVALID) {
     // RX/USART not set up.
     // Set it up. This includes autodetecting protocol if necesary
-    rx_protocol_init();
+    rx_serial_init();
   } else if (frame_status == FRAME_RX) {
     // USART ISR says there's enough frame to look at. Look at it.
     switch (bind_storage.unified.protocol) {
@@ -377,5 +375,3 @@ void rx_serial_find_protocol() {
     protocol_detect_timer = 0;        // Reset timer, triggering a shift to detecting the next protocol
   }
 }
-
-#endif

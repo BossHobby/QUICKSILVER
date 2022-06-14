@@ -8,7 +8,7 @@
 #include "profile.h"
 #include "util/util.h"
 
-#if defined(RX_FRSKY_D8) && defined(USE_CC2500)
+#if defined(RX_FRSKY) && defined(USE_CC2500)
 
 // Source https://www.rcgroups.com/forums/showpost.php?p=21864861
 
@@ -320,7 +320,7 @@ static uint8_t frsky_d8_handle_packet() {
   return ret;
 }
 
-void rx_protocol_init() {
+void rx_frsky_d8_init() {
   if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
     return;
 
@@ -380,7 +380,7 @@ void rx_protocol_init() {
   calibrate_channels();
 }
 
-bool rx_check() {
+bool rx_frsky_d8_check() {
   bool channels_received = false;
 
   if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)

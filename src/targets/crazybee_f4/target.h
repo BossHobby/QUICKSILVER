@@ -28,6 +28,8 @@
 #define GYRO_INT PIN_A1
 
 // RADIO
+
+// TODO: resolve both protocols somehow
 #ifdef RX_FRSKY
 #define USE_CC2500
 #define CC2500_SPI_PORT SPI_PORT3

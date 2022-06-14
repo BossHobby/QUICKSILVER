@@ -6,31 +6,6 @@
 #include "project.h"
 #include "rx_stick_wizard.h"
 
-#ifdef RX_UNIFIED_SERIAL
-#define RX_PROTOCOL RX_PROTOCOL_UNIFIED_SERIAL
-#endif
-#ifdef RX_NRF24_BAYANG_TELEMETRY
-#define RX_PROTOCOL RX_PROTOCOL_NRF24_BAYANG_TELEMETRY
-#endif
-#ifdef RX_BAYANG_PROTOCOL_BLE_BEACON
-#define RX_PROTOCOL RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON
-#endif
-#ifdef RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
-#define RX_PROTOCOL RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
-#endif
-#ifdef RX_FRSKY_D8
-#define RX_PROTOCOL RX_PROTOCOL_FRSKY_D8
-#endif
-#if defined(RX_FRSKY_D16_LBT) || defined(RX_FRSKY_D16_FCC)
-#define RX_PROTOCOL RX_PROTOCOL_FRSKY_D16
-#endif
-#ifdef RX_REDPINE
-#define RX_PROTOCOL RX_PROTOCOL_REDPINE
-#endif
-#ifdef RX_EXPRESS_LRS
-#define RX_PROTOCOL RX_PROTOCOL_EXPRESS_LRS
-#endif
-
 typedef enum {
   RX_PROTOCOL_INVALID,
   RX_PROTOCOL_UNIFIED_SERIAL,
@@ -43,7 +18,8 @@ typedef enum {
   RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON,
   RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND,
   RX_PROTOCOL_FRSKY_D8,
-  RX_PROTOCOL_FRSKY_D16,
+  RX_PROTOCOL_FRSKY_D16_FCC,
+  RX_PROTOCOL_FRSKY_D16_LBT,
   RX_PROTOCOL_REDPINE,
   RX_PROTOCOL_EXPRESS_LRS,
   RX_PROTOCOL_MAX,
@@ -103,7 +79,7 @@ uint8_t rx_aux_on(aux_function_t function);
 void rx_init();
 void rx_update();
 
-float rx_smoothing_hz(rx_protocol_t proto);
+float rx_smoothing_hz();
 void rx_map_channels(const float channels[4]);
 
 void rx_lqi_lost_packet();
@@ -113,6 +89,4 @@ void rx_lqi_update();
 void rx_lqi_update_from_fps(float expected_fps);
 void rx_lqi_update_direct(float rssi);
 
-#if defined(RX_DSMX) || defined(RX_DSM2) || defined(RX_UNIFIED_SERIAL)
 void rx_spektrum_bind();
-#endif

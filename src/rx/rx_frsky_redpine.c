@@ -8,7 +8,7 @@
 #include "profile.h"
 #include "util/util.h"
 
-#if defined(RX_REDPINE) && defined(USE_CC2500)
+#if defined(RX_FRSKY) && defined(USE_CC2500)
 
 #define LQI_FPS 500
 
@@ -179,7 +179,7 @@ static uint8_t redpine_handle_packet() {
       protocol_time = time_micros();
       flags.failsafe = 1;
       protocol_state = FRSKY_STATE_INIT;
-      rx_protocol_init();
+      rx_redpine_init();
       reset_looptime();
     }
     break;
@@ -189,7 +189,7 @@ static uint8_t redpine_handle_packet() {
   return ret;
 }
 
-void rx_protocol_init() {
+void rx_redpine_init() {
   if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
     return;
 
@@ -290,7 +290,7 @@ void rx_protocol_init() {
   calibrate_channels();
 }
 
-bool rx_check() {
+bool rx_redpine_check() {
   bool channels_received = false;
 
   if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk) {

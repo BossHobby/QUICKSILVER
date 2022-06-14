@@ -219,6 +219,7 @@ typedef struct {
   MEMBER(max, float)
 
 typedef struct {
+  rx_protocol_t protocol;
   aux_channel_t aux[AUX_FUNCTION_MAX];
   rx_channel_mapping_t channel_mapping;
   rx_lqi_source_t lqi_source;
@@ -226,6 +227,7 @@ typedef struct {
 } profile_receiver_t;
 
 #define RECEIVER_MEMBERS                     \
+  MEMBER(protocol, uint8)                    \
   ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, uint8) \
   MEMBER(lqi_source, uint8)                  \
   MEMBER(channel_mapping, uint8)             \
@@ -318,7 +320,7 @@ typedef struct {
   const char *git_version;
 
   uint32_t features;
-  uint32_t rx_protocol;
+  rx_protocol_t rx_protocols[RX_PROTOCOL_MAX];
   uint32_t quic_protocol_version;
 
   const char *motor_pins[MOTOR_PIN_MAX];
@@ -331,7 +333,7 @@ typedef struct {
   STR_MEMBER(target_name)                              \
   STR_MEMBER(git_version)                              \
   MEMBER(features, uint32)                             \
-  MEMBER(rx_protocol, uint32)                          \
+  ARRAY_MEMBER(rx_protocols, RX_PROTOCOL_MAX, uint8)   \
   MEMBER(quic_protocol_version, uint32)                \
   STR_ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX)          \
   STR_ARRAY_MEMBER(usart_ports, SOFT_SERIAL_PORTS_MAX) \

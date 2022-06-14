@@ -11,9 +11,6 @@
 #include "project.h"
 #include "util/util.h"
 
-extern void rx_protocol_init();
-extern bool rx_check();
-
 extern profile_t profile;
 
 uint8_t failsafe_siglost = 0;
@@ -46,7 +43,6 @@ static const uint16_t RX_SMOOTHING_HZ[RX_PROTOCOL_MAX] = {
     0,   // RX_PROTOCOL_EXPRESS_LRS
 };
 
-#ifdef RX_UNIFIED_SERIAL
 static const uint16_t SERIAL_PROTO_MAP[] = {
     RX_PROTOCOL_INVALID, // RX_SERIAL_PROTOCOL_INVALID
     RX_PROTOCOL_DSM,     // RX_SERIAL_PROTOCOL_DSM
@@ -61,7 +57,7 @@ static const uint16_t SERIAL_PROTO_MAP[] = {
     RX_PROTOCOL_REDPINE, // RX_SERIAL_PROTOCOL_REDPINE_INVERTED
 };
 
-uint16_t rx_smoothing_cutoff() {
+uint16_t rx_serial_smoothing_cutoff() {
   const uint16_t serial_proto = SERIAL_PROTO_MAP[bind_storage.unified.protocol];
   if (serial_proto == RX_PROTOCOL_CRSF) {
     return rx_serial_crsf_smoothing_cutoff();
@@ -71,21 +67,15 @@ uint16_t rx_smoothing_cutoff() {
   }
   return RX_SMOOTHING_HZ[serial_proto];
 }
-#else
-__weak uint16_t rx_smoothing_cutoff() {
-  // default implementation, will be overwritten by non __weak functions
-  return 0;
-}
-#endif
 
 uint8_t rx_aux_on(aux_function_t function) {
   return state.aux[profile.receiver.aux[function]];
 }
 
-float rx_smoothing_hz(rx_protocol_t proto) {
-  uint16_t cutoff = RX_SMOOTHING_HZ[proto];
-  if (cutoff == 0) {
-    cutoff = rx_smoothing_cutoff();
+float rx_smoothing_hz() {
+  uint16_t cutoff = RX_SMOOTHING_HZ[profile.receiver.protocol];
+  if (cutoff == 0 && profile.receiver.protocol == RX_PROTOCOL_UNIFIED_SERIAL) {
+    cutoff = rx_serial_smoothing_cutoff();
   }
   return cutoff;
 }
@@ -141,7 +131,7 @@ void rx_lqi_update_direct(float rssi) {
 }
 
 static void rx_apply_smoothing() {
-  filter_lp_pt1_coeff(&rx_filter, rx_smoothing_hz(RX_PROTOCOL));
+  filter_lp_pt1_coeff(&rx_filter, rx_smoothing_hz());
 
   for (int i = 0; i < 4; ++i) {
     if (i == 3) {
@@ -181,9 +171,52 @@ static float rx_apply_deadband(float val) {
 }
 
 void rx_init() {
-  filter_lp_pt1_init(&rx_filter, rx_filter_state, 4, rx_smoothing_hz(RX_PROTOCOL));
+  filter_lp_pt1_init(&rx_filter, rx_filter_state, 4, rx_smoothing_hz());
 
-  rx_protocol_init();
+  switch (profile.receiver.protocol) {
+  case RX_PROTOCOL_INVALID:
+  case RX_PROTOCOL_MAX:
+    break;
+
+  case RX_PROTOCOL_UNIFIED_SERIAL:
+  case RX_PROTOCOL_SBUS:
+  case RX_PROTOCOL_CRSF:
+  case RX_PROTOCOL_IBUS:
+  case RX_PROTOCOL_FPORT:
+  case RX_PROTOCOL_DSM:
+    rx_serial_init();
+    break;
+
+  case RX_PROTOCOL_NRF24_BAYANG_TELEMETRY:
+  case RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON:
+  case RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND:
+    break;
+
+  case RX_PROTOCOL_FRSKY_D8:
+#ifdef RX_FRSKY
+    rx_frsky_d8_init();
+#endif
+    break;
+
+  case RX_PROTOCOL_FRSKY_D16_FCC:
+  case RX_PROTOCOL_FRSKY_D16_LBT:
+#ifdef RX_FRSKY
+    rx_frsky_d16_init();
+#endif
+    break;
+
+  case RX_PROTOCOL_REDPINE:
+#ifdef RX_FRSKY
+    rx_redpine_init();
+#endif
+    break;
+
+  case RX_PROTOCOL_EXPRESS_LRS:
+#ifdef RX_EXPRESS_LRS
+    rx_expresslrs_init();
+#endif
+    break;
+  }
 }
 
 void rx_map_channels(const float channels[4]) {
@@ -202,6 +235,58 @@ void rx_map_channels(const float channels[4]) {
     state.rx.yaw = channels[3];
     break;
   }
+}
+
+bool rx_check() {
+  switch (profile.receiver.protocol) {
+  case RX_PROTOCOL_INVALID:
+  case RX_PROTOCOL_MAX:
+    return false;
+
+  case RX_PROTOCOL_UNIFIED_SERIAL:
+  case RX_PROTOCOL_SBUS:
+  case RX_PROTOCOL_CRSF:
+  case RX_PROTOCOL_IBUS:
+  case RX_PROTOCOL_FPORT:
+  case RX_PROTOCOL_DSM:
+    return rx_serial_check();
+
+  case RX_PROTOCOL_NRF24_BAYANG_TELEMETRY:
+  case RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON:
+  case RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND:
+    return false;
+
+  case RX_PROTOCOL_FRSKY_D8:
+#ifdef RX_FRSKY
+    return rx_frsky_d8_check();
+#else
+    return false;
+#endif
+
+  case RX_PROTOCOL_FRSKY_D16_FCC:
+  case RX_PROTOCOL_FRSKY_D16_LBT:
+#ifdef RX_FRSKY
+    return rx_frsky_d16_check();
+#else
+    return false;
+#endif
+
+  case RX_PROTOCOL_REDPINE:
+#ifdef RX_FRSKY
+    return rx_redpine_check();
+#else
+    return false;
+#endif
+
+  case RX_PROTOCOL_EXPRESS_LRS:
+#ifdef RX_EXPRESS_LRS
+    return rx_expresslrs_check();
+#else
+    return false;
+#endif
+  }
+
+  return false;
 }
 
 void rx_update() {

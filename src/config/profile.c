@@ -406,6 +406,14 @@ const profile_t default_profile = {
 #endif
     },
     .receiver = {
+#if defined(RX_EXPRESS_LRS)
+        .protocol = RX_PROTOCOL_EXPRESS_LRS,
+#elif defined(RX_FRSKY)
+        .protocol = RX_PROTOCOL_REDPINE,
+#else
+        .protocol = RX_PROTOCOL_UNIFIED_SERIAL,
+#endif
+
         .aux = {
             ARMING,              // AUX_ARMING
             IDLE_UP,             // AUX_IDLE_UP
@@ -497,7 +505,20 @@ target_info_t target_info = {
                 | FEATURE_DEBUG
 #endif
     ,
-    .rx_protocol = RX_PROTOCOL,
+    .rx_protocols = {
+        RX_PROTOCOL_UNIFIED_SERIAL,
+
+#if defined(RX_FRSKY)
+        RX_PROTOCOL_FRSKY_D8,
+        RX_PROTOCOL_FRSKY_D16_FCC,
+        RX_PROTOCOL_FRSKY_D16_LBT,
+        RX_PROTOCOL_REDPINE,
+#endif
+
+#if defined(RX_EXPRESS_LRS)
+        RX_PROTOCOL_EXPRESS_LRS,
+#endif
+    },
     .quic_protocol_version = QUIC_PROTOCOL_VERSION,
 
 #define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) "P" #port #pin,

@@ -26,8 +26,8 @@ typedef enum {
 
 #define MAKE_SEMVER(major, minor, patch) ((major << 16) | (minor << 8) | patch)
 
-//Throttle must drop below this value if arming feature is enabled for arming to take place.  MIX_INCREASE_THROTTLE_3 if enabled
-//will also not activate on the ground untill this threshold is passed during takeoff for safety and better staging behavior.
+// Throttle must drop below this value if arming feature is enabled for arming to take place.  MIX_INCREASE_THROTTLE_3 if enabled
+// will also not activate on the ground untill this threshold is passed during takeoff for safety and better staging behavior.
 #define THROTTLE_SAFETY .10f
 
 #if defined(BUZZER_ENABLE) && !defined(BUZZER_PIN)
@@ -42,23 +42,4 @@ typedef enum {
 #endif
 
 #define OSD_NUMBER_ELEMENTS 32
-#define SWITCHABLE_FEATURE_1 //CONFIGURATION WIZARD
-
-#ifdef RX_SBUS
-#define RX_UNIFIED_SERIAL
-#endif
-#ifdef RX_CRSF
-#define RX_UNIFIED_SERIAL
-#endif
-#ifdef RX_IBUS
-#define RX_UNIFIED_SERIAL
-#endif
-#ifdef RX_FPORT
-#define RX_UNIFIED_SERIAL
-#endif
-#ifdef RX_DSMX
-#define RX_UNIFIED_SERIAL
-#endif
-#ifdef RX_DSM2
-#define RX_UNIFIED_SERIAL
-#endif
+#define SWITCHABLE_FEATURE_1 // CONFIGURATION WIZARD

@@ -83,7 +83,7 @@ static filter_lp_pt1 rx_filter;
 static filter_state_t rx_filter_state[3];
 
 void pid_init() {
-  filter_lp_pt1_init(&rx_filter, rx_filter_state, 3, rx_smoothing_hz(RX_PROTOCOL));
+  filter_lp_pt1_init(&rx_filter, rx_filter_state, 3, rx_smoothing_hz());
 
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
     filter_init(profile.filter.dterm[i].type, &filter[i], filter_state[i], 3, profile.filter.dterm[i].cutoff_freq);
@@ -101,7 +101,7 @@ void pid_init() {
 void pid_precalc() {
   timefactor = 0.0032f / state.looptime;
 
-  filter_lp_pt1_coeff(&rx_filter, rx_smoothing_hz(RX_PROTOCOL));
+  filter_lp_pt1_coeff(&rx_filter, rx_smoothing_hz());
   filter_coeff(profile.filter.dterm[0].type, &filter[0], profile.filter.dterm[0].cutoff_freq);
   filter_coeff(profile.filter.dterm[1].type, &filter[1], profile.filter.dterm[1].cutoff_freq);
 

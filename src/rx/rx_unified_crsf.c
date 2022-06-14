@@ -1,7 +1,5 @@
 #include "rx_unified_serial.h"
 
-#ifdef RX_UNIFIED_SERIAL
-
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -366,5 +364,3 @@ void rx_serial_send_crsf_telemetry() {
   const uint32_t telemetry_size = crsf_tlm_frame_finish(telemetry_packet, payload_size) + 1;
   rx_serial_send_telemetry(telemetry_size);
 }
-
-#endif

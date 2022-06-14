@@ -681,7 +681,7 @@ void elrs_handle_tock() {
   }
 }
 
-void rx_protocol_init() {
+void rx_expresslrs_init() {
   if (!elrs_radio_init()) {
     radio_is_init = false;
     return;
@@ -734,7 +734,7 @@ uint16_t rx_smoothing_cutoff() {
   return 1;
 }
 
-bool rx_check() {
+bool rx_expresslrs_check() {
   bool channels_received = false;
 
   if (!radio_is_init) {

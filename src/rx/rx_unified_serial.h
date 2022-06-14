@@ -12,7 +12,6 @@ typedef struct {
   rx_serial_protocol_t protocol;
 } rx_unified_bind_data_t;
 
-#ifdef RX_UNIFIED_SERIAL
 typedef enum {
   FRAME_INVALID,
   FRAME_IDLE,
@@ -36,6 +35,9 @@ float rx_serial_dsm_expected_fps();
 uint16_t rx_serial_crsf_smoothing_cutoff();
 uint16_t rx_serial_dsm_smoothing_cutoff();
 
+void rx_serial_init();
+bool rx_serial_check();
+
 bool rx_serial_process_dsm();
 bool rx_serial_process_sbus();
 bool rx_serial_process_ibus();
@@ -47,5 +49,3 @@ void rx_serial_send_telemetry(uint32_t size);
 
 void rx_serial_send_fport_telemetry();
 void rx_serial_send_crsf_telemetry();
-
-#endif

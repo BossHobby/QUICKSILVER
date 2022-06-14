@@ -80,6 +80,16 @@
 #define ENABLE_BLACKBOX
 #endif
 
+#define SERIAL_RX
+
+#if defined(USE_CC2500)
+#define RX_FRSKY
+#endif
+
+#if defined(USE_SX127X) || defined(USE_SX128X)
+#define RX_EXPRESS_LRS
+#endif
+
 //*************************************Features that still need to be moved into targets and checked for compatability************************************************
 // RGB led type ws2812 - ws2813
 // numbers over 8 could decrease performance

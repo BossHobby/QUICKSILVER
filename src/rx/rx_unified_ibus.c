@@ -1,7 +1,5 @@
 #include "rx_unified_serial.h"
 
-#ifdef RX_UNIFIED_SERIAL
-
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -118,5 +116,3 @@ bool rx_serial_process_ibus() {
 
   return channels_received;
 }
-
-#endif

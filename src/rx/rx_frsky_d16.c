@@ -10,7 +10,7 @@
 #include "util/util.h"
 #include <string.h>
 
-#if defined(USE_CC2500) && (defined(RX_FRSKY_D16_FCC) || defined(RX_FRSKY_D16_LBT))
+#if defined(USE_CC2500) && defined(RX_FRSKY)
 
 // Source https://www.rcgroups.com/forums/showpost.php?p=21864861
 
@@ -22,14 +22,14 @@
 
 #define FRSKY_D16_PACKET_DELAY 5300
 
-#ifdef RX_FRSKY_D16_FCC
-#define FRSKY_D16_PACKET_LENGTH 32
-#define FRSKY_D16_TELEMETRY_DELAY 400
-#endif
-#ifdef RX_FRSKY_D16_LBT
-#define FRSKY_D16_PACKET_LENGTH 35
-#define FRSKY_D16_TELEMETRY_DELAY 1400
-#endif
+#define FRSKY_D16_FCC_PACKET_LENGTH 32
+#define FRSKY_D16_FCC_TELEMETRY_DELAY 400
+
+#define FRSKY_D16_LBT_PACKET_LENGTH 35
+#define FRSKY_D16_LBT_TELEMETRY_DELAY 1400
+
+#define FRSKY_D16_PACKET_LENGTH (profile.receiver.protocol == RX_PROTOCOL_FRSKY_D16_FCC ? FRSKY_D16_FCC_PACKET_LENGTH : FRSKY_D16_LBT_PACKET_LENGTH)
+#define FRSKY_D16_TELEMETRY_DELAY (profile.receiver.protocol == RX_PROTOCOL_FRSKY_D16_FCC ? FRSKY_D16_FCC_TELEMETRY_DELAY : FRSKY_D16_LBT_TELEMETRY_DELAY)
 
 const uint16_t crc_table[] = {
     0x0000, 0x1189, 0x2312, 0x329b, 0x4624, 0x57ad, 0x6536, 0x74bf,
@@ -435,7 +435,7 @@ static uint8_t frsky_d16_handle_packet() {
   return ret;
 }
 
-void rx_protocol_init() {
+void rx_frsky_d16_init() {
   if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
     return;
 
@@ -458,28 +458,27 @@ void rx_protocol_init() {
   cc2500_write_reg(CC2500_MDMCFG1, 0x23);
   cc2500_write_reg(CC2500_MDMCFG0, 0x7A);
 
-#ifdef RX_FRSKY_D16_FCC
-  cc2500_write_reg(CC2500_FREQ1, 0x76);
-  cc2500_write_reg(CC2500_FREQ0, 0x27);
-  cc2500_write_reg(CC2500_PKTLEN, 0x1E);
-  cc2500_write_reg(CC2500_PKTCTRL0, 0x01);
-  cc2500_write_reg(CC2500_FSCTRL1, 0x0A);
-  cc2500_write_reg(CC2500_MDMCFG4, 0x7B);
-  cc2500_write_reg(CC2500_MDMCFG3, 0x61);
-  cc2500_write_reg(CC2500_MDMCFG2, 0x13);
-  cc2500_write_reg(CC2500_DEVIATN, 0x51);
-#endif
-#ifdef RX_FRSKY_D16_LBT
-  cc2500_write_reg(CC2500_FREQ1, 0x80);
-  cc2500_write_reg(CC2500_FREQ0, 0x00);
-  cc2500_write_reg(CC2500_PKTLEN, 0x23);
-  cc2500_write_reg(CC2500_PKTCTRL0, 0x01);
-  cc2500_write_reg(CC2500_FSCTRL1, 0x08);
-  cc2500_write_reg(CC2500_MDMCFG4, 0x7B);
-  cc2500_write_reg(CC2500_MDMCFG3, 0xF8);
-  cc2500_write_reg(CC2500_MDMCFG2, 0x03);
-  cc2500_write_reg(CC2500_DEVIATN, 0x53);
-#endif
+  if (profile.receiver.protocol == RX_PROTOCOL_FRSKY_D16_FCC) {
+    cc2500_write_reg(CC2500_FREQ1, 0x76);
+    cc2500_write_reg(CC2500_FREQ0, 0x27);
+    cc2500_write_reg(CC2500_PKTLEN, 0x1E);
+    cc2500_write_reg(CC2500_PKTCTRL0, 0x01);
+    cc2500_write_reg(CC2500_FSCTRL1, 0x0A);
+    cc2500_write_reg(CC2500_MDMCFG4, 0x7B);
+    cc2500_write_reg(CC2500_MDMCFG3, 0x61);
+    cc2500_write_reg(CC2500_MDMCFG2, 0x13);
+    cc2500_write_reg(CC2500_DEVIATN, 0x51);
+  } else {
+    cc2500_write_reg(CC2500_FREQ1, 0x80);
+    cc2500_write_reg(CC2500_FREQ0, 0x00);
+    cc2500_write_reg(CC2500_PKTLEN, 0x23);
+    cc2500_write_reg(CC2500_PKTCTRL0, 0x01);
+    cc2500_write_reg(CC2500_FSCTRL1, 0x08);
+    cc2500_write_reg(CC2500_MDMCFG4, 0x7B);
+    cc2500_write_reg(CC2500_MDMCFG3, 0xF8);
+    cc2500_write_reg(CC2500_MDMCFG2, 0x03);
+    cc2500_write_reg(CC2500_DEVIATN, 0x53);
+  }
 
   cc2500_write_reg(CC2500_FOCCFG, 0x16);
   cc2500_write_reg(CC2500_BSCFG, 0x6C);
@@ -509,7 +508,7 @@ void rx_protocol_init() {
   calibrate_channels();
 }
 
-bool rx_check() {
+bool rx_frsky_d16_check() {
   bool channels_received = false;
 
   if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk) {
