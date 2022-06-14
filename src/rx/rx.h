@@ -55,6 +55,11 @@ typedef enum {
 } rx_lqi_source_t;
 
 typedef enum {
+  RX_MAPPING_AETR,
+  RX_MAPPING_TAER,
+} rx_channel_mapping_t;
+
+typedef enum {
   AUX_CHANNEL_0,
   AUX_CHANNEL_1,
   AUX_CHANNEL_2,

@@ -187,11 +187,21 @@ void rx_init() {
 }
 
 void rx_map_channels(const float channels[4]) {
-  // AETR channel order
-  state.rx.roll = channels[0];
-  state.rx.pitch = channels[1];
-  state.rx.throttle = (channels[2] + 1.0f) * 0.5f;
-  state.rx.yaw = channels[3];
+  switch (profile.receiver.channel_mapping) {
+  case RX_MAPPING_AETR:
+    state.rx.roll = channels[0];
+    state.rx.pitch = channels[1];
+    state.rx.throttle = (channels[2] + 1.0f) * 0.5f;
+    state.rx.yaw = channels[3];
+    break;
+
+  case RX_MAPPING_TAER:
+    state.rx.throttle = (channels[0] + 1.0f) * 0.5f;
+    state.rx.roll = channels[1];
+    state.rx.pitch = channels[2];
+    state.rx.yaw = channels[3];
+    break;
+  }
 }
 
 void rx_update() {

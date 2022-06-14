@@ -220,6 +220,7 @@ typedef struct {
 
 typedef struct {
   aux_channel_t aux[AUX_FUNCTION_MAX];
+  rx_channel_mapping_t channel_mapping;
   rx_lqi_source_t lqi_source;
   profile_stick_calibration_limits_t stick_calibration_limits[4];
 } profile_receiver_t;
@@ -227,6 +228,7 @@ typedef struct {
 #define RECEIVER_MEMBERS                     \
   ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, uint8) \
   MEMBER(lqi_source, uint8)                  \
+  MEMBER(channel_mapping, uint8)             \
   ARRAY_MEMBER(stick_calibration_limits, 4, profile_stick_calibration_limits_t)
 
 typedef struct {
