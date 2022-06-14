@@ -8,7 +8,7 @@
 #define QUIC_MAGIC '#'
 #define QUIC_HEADER_LEN 4
 
-#define QUIC_PROTOCOL_VERSION MAKE_SEMVER(0, 1, 0)
+#define QUIC_PROTOCOL_VERSION MAKE_SEMVER(0, 1, 1)
 
 typedef enum {
   QUIC_CMD_INVALID,
