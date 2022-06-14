@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "project.h"
+#include "rx_stick_wizard.h"
 
 #ifdef RX_UNIFIED_SERIAL
 #define RX_PROTOCOL RX_PROTOCOL_UNIFIED_SERIAL
@@ -99,24 +100,11 @@ typedef enum {
 
 uint8_t rx_aux_on(aux_function_t function);
 
-typedef enum {
-  INACTIVE,
-  CAPTURE_STICKS,
-  WAIT_FOR_CONFIRM,
-  CALIBRATION_CONFIRMED,
-  TIMEOUT,
-  CALIBRATION_SUCCESS,
-  CALIBRATION_FAILED
-} stick_calibration_wizard_t;
-
 void rx_init();
 void rx_update();
 
 float rx_smoothing_hz(rx_protocol_t proto);
 void rx_map_channels(const float channels[4]);
-
-void rx_apply_stick_calibration_scale();
-void request_stick_calibration_wizard();
 
 void rx_lqi_lost_packet();
 void rx_lqi_got_packet();
