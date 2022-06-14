@@ -574,7 +574,7 @@ bool quic_process(quic_t *quic, uint8_t *data, uint32_t size) {
     process_motor_test(quic, &dec);
     break;
   case QUIC_CMD_CAL_STICKS:
-    request_stick_calibration_wizard();
+    stick_wizard_start(true);
     quic_send(quic, QUIC_CMD_CAL_STICKS, QUIC_FLAG_NONE, NULL, 0);
     break;
   case QUIC_CMD_SERIAL:

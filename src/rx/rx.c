@@ -206,7 +206,7 @@ void rx_map_channels(const float channels[4]) {
 
 void rx_update() {
   if (rx_check()) {
-    rx_apply_stick_calibration_scale();
+    rx_apply_stick_scale();
 
     state.rx.roll = rx_apply_deadband(state.rx.roll);
     state.rx.pitch = rx_apply_deadband(state.rx.pitch);

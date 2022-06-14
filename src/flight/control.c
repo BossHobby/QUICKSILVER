@@ -66,7 +66,7 @@ FAST_RAM control_state_t state = {
     .ibat = 0.0,
     .ibat_filtered = 0.0,
 
-    .stick_calibration_wizard = INACTIVE,
+    .stick_calibration_wizard = STICK_WIZARD_INACTIVE,
 
     .rx_rssi = 0,
     .rx_status = 0,

@@ -1439,7 +1439,7 @@ void osd_display() {
     osd_menu_label(9, 7, "RIGHT TO BEGIN");
 
     if (osd_menu_finish() && osd_state.selection) {
-      request_stick_calibration_wizard();
+      stick_wizard_start(false);
       osd_push_screen(OSD_SCREEN_STICK_WIZARD_CALIBRATION);
       osd_state.selection = 0;
     }
@@ -1452,7 +1452,7 @@ void osd_display() {
     osd_menu_label(9, 5, "MOVE STICKS");
     osd_menu_label(9, 7, "TO EXTENTS");
 
-    if (osd_menu_finish() && state.stick_calibration_wizard == WAIT_FOR_CONFIRM) {
+    if (osd_menu_finish() && state.stick_calibration_wizard == STICK_WIZARD_WAIT_FOR_CONFIRM) {
       osd_push_screen(OSD_SCREEN_STICK_CONFIRM);
     }
     break;
@@ -1464,7 +1464,7 @@ void osd_display() {
     osd_menu_label(6, 5, "MOVE STICKS AGAIN");
     osd_menu_label(9, 7, "TO EXTENTS");
 
-    if (osd_menu_finish() && ((state.stick_calibration_wizard == CALIBRATION_SUCCESS) || (state.stick_calibration_wizard == TIMEOUT))) {
+    if (osd_menu_finish() && ((state.stick_calibration_wizard == STICK_WIZARD_SUCCESS) || (state.stick_calibration_wizard == STICK_WIZARD_FAILED))) {
       osd_push_screen(OSD_SCREEN_STICK_RESULT);
     }
     break;
@@ -1473,12 +1473,12 @@ void osd_display() {
     osd_menu_start();
     osd_menu_header("STICK CALIBRATION");
 
-    if (state.stick_calibration_wizard == CALIBRATION_SUCCESS) {
+    if (state.stick_calibration_wizard == STICK_WIZARD_SUCCESS) {
       osd_menu_label(10, 4, "CALIBRATION");
       osd_menu_label(12, 6, "SUCCESS");
       osd_menu_label(7, 8, "PUSH LEFT TO EXIT");
     }
-    if (state.stick_calibration_wizard == TIMEOUT) {
+    if (state.stick_calibration_wizard == STICK_WIZARD_FAILED) {
       osd_menu_label(10, 4, "CALIBRATION");
       osd_menu_label(12, 6, "FAILED");
       osd_menu_label(7, 8, "PUSH LEFT TO EXIT");
