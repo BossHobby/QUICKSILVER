@@ -159,20 +159,24 @@ static void osd_update_screen(osd_screens_t screen) {
   osd_state.screen_phase = 0;
 }
 
-osd_screens_t osd_push_screen(osd_screens_t screen) {
+osd_screens_t osd_push_screen_replace(osd_screens_t screen) {
   osd_state.selection = 0;
   osd_state.selection_max = 1;
 
+  osd_update_screen(screen);
+  osd_state.cursor = 1;
+
+  return screen;
+}
+
+osd_screens_t osd_push_screen(osd_screens_t screen) {
   osd_state.cursor_history[osd_state.cursor_history_size] = osd_state.cursor;
   osd_state.cursor_history_size++;
 
   osd_state.screen_history[osd_state.screen_history_size] = osd_state.screen;
-  osd_update_screen(screen);
   osd_state.screen_history_size++;
 
-  osd_state.cursor = 1;
-
-  return screen;
+  return osd_push_screen_replace(screen);
 }
 
 osd_screens_t osd_pop_screen() {
@@ -1440,7 +1444,7 @@ void osd_display() {
 
     if (osd_menu_finish() && osd_state.selection) {
       stick_wizard_start(false);
-      osd_push_screen(OSD_SCREEN_STICK_WIZARD_CALIBRATION);
+      osd_push_screen_replace(OSD_SCREEN_STICK_WIZARD_CALIBRATION);
       osd_state.selection = 0;
     }
     break;
@@ -1453,7 +1457,7 @@ void osd_display() {
     osd_menu_label(9, 7, "TO EXTENTS");
 
     if (osd_menu_finish() && state.stick_calibration_wizard == STICK_WIZARD_WAIT_FOR_CONFIRM) {
-      osd_push_screen(OSD_SCREEN_STICK_CONFIRM);
+      osd_push_screen_replace(OSD_SCREEN_STICK_CONFIRM);
     }
     break;
 
@@ -1465,7 +1469,7 @@ void osd_display() {
     osd_menu_label(9, 7, "TO EXTENTS");
 
     if (osd_menu_finish() && ((state.stick_calibration_wizard == STICK_WIZARD_SUCCESS) || (state.stick_calibration_wizard == STICK_WIZARD_FAILED))) {
-      osd_push_screen(OSD_SCREEN_STICK_RESULT);
+      osd_push_screen_replace(OSD_SCREEN_STICK_RESULT);
     }
     break;
 
