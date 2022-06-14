@@ -102,6 +102,7 @@ void spi_txn_add_seg_const(spi_txn_t *txn, const uint8_t tx_data);
 void spi_txn_submit(spi_txn_t *txn);
 
 void spi_txn_continue(spi_bus_device_t *bus);
+void spi_txn_continue_ex(spi_bus_device_t *bus, bool force_sync);
 bool spi_txn_ready(spi_bus_device_t *bus);
 void spi_txn_wait(spi_bus_device_t *bus);
 void spi_txn_submit_wait(spi_bus_device_t *bus, spi_txn_t *txn);

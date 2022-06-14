@@ -533,7 +533,7 @@ static bool spi_txn_should_use_dma(spi_bus_device_t *bus, spi_txn_t *txn) {
   return true;
 }
 
-void spi_txn_continue(spi_bus_device_t *bus) {
+void spi_txn_continue_ex(spi_bus_device_t *bus, bool force_sync) {
   // ensures this function can only run once the dma transaction is done
   if (!spi_dma_is_ready(bus->port)) {
     return;
@@ -570,7 +570,7 @@ void spi_txn_continue(spi_bus_device_t *bus) {
 
   spi_reconfigure(bus);
 
-  if (spi_txn_should_use_dma(bus, txn)) {
+  if (spi_txn_should_use_dma(bus, txn) && !force_sync) {
     spi_csn_enable(bus);
     spi_dma_transfer_begin(bus->port, (uint8_t *)bus->buffer + txn->offset, txn->size);
   } else {
@@ -588,6 +588,10 @@ void spi_txn_continue(spi_bus_device_t *bus) {
       spi_txn_continue(bus);
     }
   }
+}
+
+void spi_txn_continue(spi_bus_device_t *bus) {
+  spi_txn_continue_ex(bus, false);
 }
 
 void spi_txn_wait(spi_bus_device_t *bus) {

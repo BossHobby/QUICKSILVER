@@ -119,7 +119,10 @@ static void cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
   spi_txn_t *txn = spi_txn_init(&bus, NULL);
   spi_txn_add_seg_const(txn, reg);
   spi_txn_add_seg(txn, NULL, data, len);
-  spi_txn_submit_continue(&bus, txn);
+  spi_txn_submit(txn);
+
+  // needs to sync ???
+  spi_txn_continue_ex(&bus, true);
 }
 
 uint8_t cc2500_read_fifo(uint8_t *result, uint8_t len) {
