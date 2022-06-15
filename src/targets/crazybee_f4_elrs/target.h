@@ -28,16 +28,6 @@
 #define GYRO_INT PIN_A1
 
 // RADIO
-
-// TODO: resolve both protocols somehow
-#ifdef RX_FRSKY
-#define USE_CC2500
-#define CC2500_SPI_PORT SPI_PORT3
-#define CC2500_NSS_PIN PIN_A15
-#define CC2500_GDO0_PIN PIN_C14
-#endif
-
-#ifdef RX_EXPRESS_LRS
 #define USE_SX128X
 #define USE_SX128X_BUSY_EXTI
 #define SX12XX_SPI_PORT SPI_PORT3
@@ -45,9 +35,6 @@
 #define SX12XX_DIO0_PIN PIN_C14
 #define SX12XX_BUSY_PIN PIN_A13
 #define SX12XX_RESET_PIN PIN_A8
-
-#define SOFTSPI_NONE
-#endif
 
 #ifdef SERIAL_RX
 #define RX_USART USART_PORT2
