@@ -240,18 +240,6 @@ uint8_t spi_dma_is_ready(spi_ports_t port) {
   return dma_transfer_done[port];
 }
 
-bool spi_dma_wait_for_ready(spi_ports_t port) {
-  for (uint16_t timeout = 0x400; spi_dma_is_ready(port) == 0; timeout--) {
-    if (timeout == 0) {
-      // liberror will trigger failloop 7 during boot, or 20 liberrors will trigger failloop 8 in flight
-      liberror++;
-      return false;
-    }
-    __WFI();
-  }
-  return true;
-}
-
 static void spi_reconfigure(spi_bus_device_t *bus) {
   const spi_port_def_t *port = &spi_port_defs[bus->port];
 
