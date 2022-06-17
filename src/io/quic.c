@@ -23,7 +23,8 @@
 
 #define quic_errorf(cmd, args...) quic_send_strf(quic, cmd, QUIC_FLAG_ERROR, args)
 
-static uint8_t encode_buffer[ENCODE_BUFFER_SIZE];
+static uint8_t frame_encode_buffer[ENCODE_BUFFER_SIZE + QUIC_HEADER_LEN];
+static uint8_t *encode_buffer = frame_encode_buffer + QUIC_HEADER_LEN;
 
 extern uint8_t blackbox_override;
 extern uint32_t blackbox_rate;
@@ -49,29 +50,28 @@ static cbor_result_t cbor_encode_motor_test_t(cbor_value_t *enc, const motor_tes
 }
 
 static void quic_send_header(quic_t *quic, quic_command cmd, quic_flag flag, uint32_t len) {
-  uint8_t frame[QUIC_HEADER_LEN];
-
-  frame[0] = QUIC_MAGIC;
-  frame[1] = (cmd & (0xff >> 3)) | (flag & (0xff >> 5)) << 5;
-  frame[2] = (len >> 8) & 0xFF;
-  frame[3] = len & 0xFF;
+  frame_encode_buffer[0] = QUIC_MAGIC;
+  frame_encode_buffer[1] = (cmd & (0xff >> 3)) | (flag & (0xff >> 5)) << 5;
+  frame_encode_buffer[2] = (len >> 8) & 0xFF;
+  frame_encode_buffer[3] = len & 0xFF;
 
   if (quic->send) {
-    quic->send(frame, QUIC_HEADER_LEN, quic->priv_data);
+    quic->send(frame_encode_buffer, QUIC_HEADER_LEN, quic->priv_data);
   }
 }
 
 static void quic_send(quic_t *quic, quic_command cmd, quic_flag flag, uint8_t *data, uint32_t len) {
-  uint8_t frame[QUIC_HEADER_LEN + len];
+  frame_encode_buffer[0] = QUIC_MAGIC;
+  frame_encode_buffer[1] = (cmd & (0xff >> 3)) | (flag & (0xff >> 5)) << 5;
+  frame_encode_buffer[2] = (len >> 8) & 0xFF;
+  frame_encode_buffer[3] = len & 0xFF;
 
-  frame[0] = QUIC_MAGIC;
-  frame[1] = (cmd & (0xff >> 3)) | (flag & (0xff >> 5)) << 5;
-  frame[2] = (len >> 8) & 0xFF;
-  frame[3] = len & 0xFF;
-  memcpy(frame + QUIC_HEADER_LEN, data, len);
+  if ((frame_encode_buffer + QUIC_HEADER_LEN) != data) {
+    memcpy(frame_encode_buffer + QUIC_HEADER_LEN, data, len);
+  }
 
   if (quic->send) {
-    quic->send(frame, QUIC_HEADER_LEN + len, quic->priv_data);
+    quic->send(frame_encode_buffer, QUIC_HEADER_LEN + len, quic->priv_data);
   }
 }
 
