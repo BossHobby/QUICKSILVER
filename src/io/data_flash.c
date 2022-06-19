@@ -21,7 +21,7 @@
 #define PAGE_SIZE SDCARD_PAGE_SIZE
 #endif
 
-#define BUFFER_SIZE (16 * PAGE_SIZE)
+#define BUFFER_SIZE 8192
 
 typedef enum {
   STATE_DETECT,
@@ -268,7 +268,7 @@ data_flash_result_t data_flash_update() {
       write_size = to_write;
     }
 
-    if (!m25p16_page_program(offset, write_buffer + written_offset, write_size)) {
+    if (!m25p16_page_program(offset, write_buffer + written_offset, PAGE_SIZE)) {
       break;
     }
     written_offset = (written_offset + write_size) % BUFFER_SIZE;
@@ -302,6 +302,10 @@ data_flash_result_t data_flash_update() {
     }
     return DATA_FLASH_STARTING;
   }
+  }
+
+  if (should_flush == 1) {
+    return DATA_FLASH_STARTING;
   }
 #endif
 
