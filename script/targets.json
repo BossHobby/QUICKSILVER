@@ -108,6 +108,20 @@
     "name": "crazybee_f4",
     "configurations": [
       {
+        "name": "brushed.frsky",
+        "defines": {
+          "BRUSHED_TARGET": "",
+          "RX_FRSKY_D8": ""
+        }
+      },
+      {
+        "name": "brushed.redpine",
+        "defines": {
+          "BRUSHED_TARGET": "",
+          "RX_REDPINE": ""
+        }
+      },
+      {
         "name": "brushless.frsky",
         "defines": {
           "BRUSHLESS_TARGET": "",
