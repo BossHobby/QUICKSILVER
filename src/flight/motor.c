@@ -79,53 +79,47 @@ static float motord(float in, int x) {
 static void motor_mixer_scale_calc(float mix[4]) {
 
 #ifdef BRUSHLESS_MIX_SCALING
-  uint8_t mix_scaling = 0;
-
   // only enable once really in the air
-  if (flags.on_ground) {
-    mix_scaling = 0;
-  } else {
-    mix_scaling = flags.in_air;
+  if (flags.on_ground || !flags.in_air) {
+    return;
   }
 
-  if (mix_scaling) {
-    float mix_min = 1000.0f;
-    float mix_max = -1000.0f;
+  float mix_min = 1000.0f;
+  float mix_max = -1000.0f;
 
-    for (int i = 0; i < 4; i++) {
-      if (mix[i] < mix_min)
-        mix_min = mix[i];
-      if (mix[i] > mix_max)
-        mix_max = mix[i];
+  for (int i = 0; i < 4; i++) {
+    if (mix[i] < mix_min)
+      mix_min = mix[i];
+    if (mix[i] > mix_max)
+      mix_max = mix[i];
 
-      if (mix_min < (-AIRMODE_STRENGTH))
-        mix_min = (-AIRMODE_STRENGTH);
-      if (mix_max > (1 + CLIPPING_LIMIT))
-        mix_max = (1 + CLIPPING_LIMIT);
-    }
+    if (mix_min < (-AIRMODE_STRENGTH))
+      mix_min = (-AIRMODE_STRENGTH);
+    if (mix_max > (1 + CLIPPING_LIMIT))
+      mix_max = (1 + CLIPPING_LIMIT);
+  }
 
-    float mix_range = mix_max - mix_min;
-    float reduce_amount = 0.0f;
+  float reduce_amount = 0.0f;
 
-    if (mix_range > 1.0f) {
-      float scale = 1.0f / mix_range;
+  const float mix_range = mix_max - mix_min;
+  if (mix_range > 1.0f) {
+    const float scale = 1.0f / mix_range;
 
-      for (int i = 0; i < 4; i++)
-        mix[i] *= scale;
+    for (int i = 0; i < 4; i++)
+      mix[i] *= scale;
 
-      mix_min *= scale;
+    mix_min *= scale;
+    reduce_amount = mix_min;
+  } else {
+    if (mix_max > 1.0f)
+      reduce_amount = mix_max - 1.0f;
+    else if (mix_min < 0.0f)
       reduce_amount = mix_min;
-    } else {
-      if (mix_max > 1.0f)
-        reduce_amount = mix_max - 1.0f;
-      else if (mix_min < 0.0f)
-        reduce_amount = mix_min;
-    }
+  }
 
-    if (reduce_amount != 0.0f) {
-      for (int i = 0; i < 4; i++)
-        mix[i] -= reduce_amount;
-    }
+  if (reduce_amount > 0.0f) {
+    for (int i = 0; i < 4; i++)
+      mix[i] -= reduce_amount;
   }
 #endif
 
