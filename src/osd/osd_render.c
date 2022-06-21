@@ -1371,8 +1371,8 @@ void osd_display() {
     osd_menu_header("TURTLE MODE");
 
     osd_menu_select(4, 5, "TURTLE THROTTLE %");
-    if (osd_menu_select_float(22, 5, profile.motor.throttle_boost, 4, 1)) {
-      profile.motor.throttle_boost = osd_menu_adjust_float(profile.motor.throttle_boost, 1, 0, 100);
+    if (osd_menu_select_float(22, 5, profile.motor.turtle_throttle_percent, 4, 1)) {
+      profile.motor.turtle_throttle_percent = osd_menu_adjust_float(profile.motor.turtle_throttle_percent, 1, 0, 100);
     }
 
     osd_menu_select_save_and_exit(4, 14);
