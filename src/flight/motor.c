@@ -280,23 +280,20 @@ void motor_output_calc(float mix[4]) {
   // Begin for-loop to send motor commands
   for (int i = 0; i <= 3; i++) {
 
-#if defined(BRUSHED_TARGET)
-    if (profile.motor.digital_idle && !(rx_aux_on(AUX_MOTOR_TEST) || flags.motortest_override)) {
-      float motor_min_value = (float)profile.motor.digital_idle * 0.01f;
-      // Clip all mixer values into 0 to 1 range before remapping
-      mix[i] = constrainf(mix[i], 0, 1);
-      mix[i] = motor_min_value + mix[i] * (1.0f - motor_min_value);
+    mix[i] = constrainf(mix[i], 0, 1);
+
+    // only apply digital idle if we are armed and not in motor test
+    float motor_min_value = 0;
+    if (!flags.on_ground && flags.arm_state && !rx_aux_on(AUX_MOTOR_TEST) && !flags.motortest_override) {
+      motor_min_value = (float)profile.motor.digital_idle * 0.01f;
     }
-#endif
-    // brushless: do nothing - idle set by DSHOT
+
+    mix[i] = mapf(mix[i], 0.0f, 1.0f, motor_min_value, profile.motor.motor_limit);
 
 #ifndef NOMOTORS
     // normal mode
     motor_set(i, mix[i]);
 #endif
-
-    // clip mixer outputs (if not already done) before applying calculating throttle sum
-    mix[i] = constrainf(mix[i], 0, 1);
     state.thrsum += mix[i];
   }
 

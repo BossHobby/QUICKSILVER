@@ -112,6 +112,7 @@ const profile_t default_profile = {
 #else
         .invert_yaw = 0,
 #endif
+        .motor_limit = MOTOR_LIMIT,
         .digital_idle = DIGITAL_IDLE,
         .dshot_time = DSHOT_TIME_600,
 

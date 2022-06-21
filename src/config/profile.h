@@ -168,6 +168,7 @@ typedef enum {
 
 typedef struct {
   float digital_idle;
+  float motor_limit;
   dshot_time_t dshot_time;
   uint8_t invert_yaw;
   uint8_t gyro_orientation;
@@ -179,6 +180,7 @@ typedef struct {
 
 #define MOTOR_MEMBERS                \
   MEMBER(digital_idle, float)        \
+  MEMBER(motor_limit, float)         \
   MEMBER(dshot_time, uint16)         \
   MEMBER(invert_yaw, uint8)          \
   MEMBER(gyro_orientation, uint8)    \

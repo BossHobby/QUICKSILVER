@@ -324,12 +324,14 @@ void motor_wait_for_ready() {
 void motor_write(float *values) {
   if (motor_dir == last_motor_dir) {
     for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-      const float pwm = constrainf(values[i], 0.0f, 0.999f);
+      const float pwm = constrainf(values[i], 0.0f, 1.0f);
 
-      // maps 0.0 .. 0.999 to 48 + IDLE_OFFSET * 2 .. 2047
-      uint16_t value = 48 + (profile.motor.digital_idle * 20) + (uint16_t)(pwm * (2001 - (profile.motor.digital_idle * 20)));
-      if (flags.on_ground || !flags.arm_state || (flags.motortest_override && pwm < 0.002f) || ((rx_aux_on(AUX_MOTOR_TEST)) && pwm < 0.002f)) { // turn off the slow motors during turtle or motortest
-        value = 0;                                                                                                                              // stop the motors
+      uint16_t value = 0;
+      if (pwm < 0.002f) {
+        // turn off motors if there is no throttle, idle is applied in the motor mixer
+        value = 0;
+      } else {
+        value = mapf(pwm, 0.0f, 1.0f, 48, 2047);
       }
 
       if (flags.failsafe && !flags.motortest_override) {
