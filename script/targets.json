@@ -532,5 +532,16 @@
         }
       }
     ]
+  },
+  {
+    "name": "crazybee_f4",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
   }
 ]
