@@ -28,8 +28,9 @@
 #define GYRO_INT PIN_A1
 
 // RADIO
-#define SERIAL_RX
+#ifdef SERIAL_RX
 #define RX_USART USART_PORT2
+#endif
 
 // OSD
 #define ENABLE_OSD
