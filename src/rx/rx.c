@@ -33,12 +33,13 @@ static const uint16_t RX_SMOOTHING_HZ[RX_PROTOCOL_MAX] = {
     67,  // RX_PROTOCOL_CRSF,
     50,  // RX_PROTOCOL_IBUS, check these
     50,  // RX_PROTOCOL_FPORT, check these
-    40,  // RX_PROTOCOL_DSM,
+    0,   // RX_PROTOCOL_DSM,
     90,  // RX_PROTOCOL_NRF24_BAYANG_TELEMETRY,
     90,  // RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON,
     90,  // RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND,
     50,  // RX_PROTOCOL_FRSKY_D8,
-    50,  // RX_PROTOCOL_FRSKY_D16,
+    50,  // RX_PROTOCOL_FRSKY_D16_FCC,
+    50,  // RX_PROTOCOL_FRSKY_D16_LBT,
     225, // RX_PROTOCOL_FRSKY_REDPINE,
     0,   // RX_PROTOCOL_EXPRESS_LRS
 };
@@ -68,16 +69,23 @@ uint16_t rx_serial_smoothing_cutoff() {
   return RX_SMOOTHING_HZ[serial_proto];
 }
 
-uint8_t rx_aux_on(aux_function_t function) {
-  return state.aux[profile.receiver.aux[function]];
+float rx_smoothing_hz() {
+  switch (profile.receiver.protocol) {
+  case RX_PROTOCOL_UNIFIED_SERIAL:
+    return rx_serial_smoothing_cutoff();
+
+#ifdef RX_EXPRESS_LRS
+  case RX_PROTOCOL_EXPRESS_LRS:
+    return rx_expresslrs_smoothing_cutoff();
+#endif
+
+  default:
+    return RX_SMOOTHING_HZ[profile.receiver.protocol];
+  }
 }
 
-float rx_smoothing_hz() {
-  uint16_t cutoff = RX_SMOOTHING_HZ[profile.receiver.protocol];
-  if (cutoff == 0 && profile.receiver.protocol == RX_PROTOCOL_UNIFIED_SERIAL) {
-    cutoff = rx_serial_smoothing_cutoff();
-  }
-  return cutoff;
+uint8_t rx_aux_on(aux_function_t function) {
+  return state.aux[profile.receiver.aux[function]];
 }
 
 void rx_lqi_lost_packet() {

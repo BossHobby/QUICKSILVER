@@ -711,7 +711,7 @@ void rx_expresslrs_init() {
   radio_is_init = true;
 }
 
-uint16_t rx_smoothing_cutoff() {
+uint16_t rx_expresslrs_smoothing_cutoff() {
   switch (current_air_rate_config()->rate) {
   case RATE_500HZ:
     return 225;

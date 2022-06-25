@@ -17,3 +17,5 @@ bool rx_redpine_check();
 bool rx_frsky_d8_check();
 bool rx_frsky_d16_check();
 bool rx_expresslrs_check();
+
+uint16_t rx_expresslrs_smoothing_cutoff();
