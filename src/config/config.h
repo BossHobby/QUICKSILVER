@@ -313,8 +313,5 @@
 // disable motors for testing
 //#define NOMOTORS
 
-// throttle direct to motors for thrust measure
-//#define MOTORS_TO_THROTTLE
-
 // change mixer to a plus configuration
 //#define MOTOR_PLUS_CONFIGURATION

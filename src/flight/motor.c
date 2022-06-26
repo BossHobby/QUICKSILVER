@@ -7,10 +7,6 @@
 #include "project.h"
 #include "util/util.h"
 
-#ifdef MOTORS_TO_THROTTLE
-#warning "MOTORS TEST MODE"
-#endif
-
 #ifdef BRUSHED_TARGET
 #define BRUSHED_MIX_SCALING
 #endif
@@ -193,9 +189,6 @@ void motor_mixer_calc(float mix[4]) {
       flags.motortest_override = 0;
     }
   }
-#if defined(MOTORS_TO_THROTTLE)
-  flags.motortest_override = 1;
-#endif
 
   if (rx_aux_on(AUX_MOTOR_TEST) || flags.motortest_override || flags.controls_override) {
     // TODO: investigate how skipping all that code below affects looptime
