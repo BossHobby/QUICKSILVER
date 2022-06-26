@@ -271,6 +271,16 @@
 #define RELAX_FACTOR_YAW_DEG 35
 #define RELAX_FREQUENCY_HZ_YAW 25
 
+// *************************************************************************
+// horizon modes tuning variables
+// *************************************************************************
+// 1.0 is pure angle based transition, 0.0 is pure stick defelction based transition, values inbetween are a mix of both.  Adjust from 0 to 1
+#define HORIZON_SLIDER 0.3f
+// leveling transitions into acro below this angle - above this angle is all acro.  DO NOT SET ABOVE 85 DEGREES!
+#define HORIZON_ANGLE_TRANSITION 55.0f
+// leveling transitions into acro below this stick position - beyond this stick position is all acro. Adjust from 0 to 1
+#define HORIZON_STICK_TRANSITION 0.95f
+
 //**********************************************************************************************************************
 //***********************************************ADDITIONAL FEATURES****************************************************
 

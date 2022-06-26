@@ -30,8 +30,6 @@
 #define IDLE_THR .001f // just enough to override motor stop at 0 throttle
 #endif
 
-#define ON_GROUND_LONG_TIMEOUT 1e6
-
 FAST_RAM control_flags_t flags = {
     .arm_state = 0,
     .arm_safety = 1,
@@ -47,7 +45,6 @@ FAST_RAM control_flags_t flags = {
     .rx_ready = 0,
 
     .controls_override = 0,
-    .acro_override = 0,
     .motortest_override = 0,
 
     .usb_active = 0,
@@ -85,7 +82,6 @@ motor_test_t motor_test = {
 
 static uint8_t idle_state;
 static uint8_t arming_release;
-static uint32_t onground_long = 1;
 
 extern int ledcommand;
 
@@ -105,50 +101,43 @@ CBOR_END_STRUCT_ENCODER()
 #undef ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER
 
-void control() {
-  pid_precalc();
+// throttle angle compensation
+static void auto_throttle() {
+#ifdef AUTO_THROTTLE
+  // float autothrottle = fastcos(state.attitude.axis[0] * DEGTORAD) * fastcos(state.attitude.axis[1] * DEGTORAD);
+  float autothrottle = state.GEstG.axis[2];
+  float old_throttle = state.throttle;
+  if (autothrottle <= 0.5f)
+    autothrottle = 0.5f;
+  state.throttle = state.throttle / autothrottle;
+  // limit to 90%
+  if (old_throttle < 0.9f)
+    if (state.throttle > 0.9f)
+      state.throttle = 0.9f;
 
-  if (rx_aux_on(AUX_TURTLE) && !rx_aux_on(AUX_MOTOR_TEST)) { // turtle active when aux high
-    turtle_mode_start();
-  } else {
-    turtle_mode_cancel();
-  }
+  if (state.throttle > 1.0f)
+    state.throttle = 1.0f;
+#endif
+}
 
-  turtle_mode_update();
-
-  if (flags.controls_override) {
-    for (int i = 0; i < 3; i++) {
-      state.rx_filtered.axis[i] = state.rx_override.axis[i];
-    }
-  }
-
+static void control_flight_mode() {
   // flight control
   vec3_t rates;
 
   input_rates_calc(&rates);
 
-  if (rx_aux_on(AUX_LEVELMODE) && !flags.acro_override) {
-    float yawerror[3] = {0}; // yaw rotation vector
+  if (rx_aux_on(AUX_LEVELMODE)) {
 
     // calculate roll / pitch error
     input_stick_vector(state.rx_filtered.axis, 0);
 
     // apply yaw from the top of the quad
-    yawerror[0] = state.GEstG.axis[1] * rates.axis[2];
-    yawerror[1] = -state.GEstG.axis[0] * rates.axis[2];
-    yawerror[2] = state.GEstG.axis[2] * rates.axis[2];
-
-    // *************************************************************************
-    // horizon modes tuning variables
-    // *************************************************************************
-    // 1.0 is pure angle based transition, 0.0 is pure stick defelction based transition, values inbetween are a mix of both.  Adjust from 0 to 1
-    float HORIZON_SLIDER = 0.3f;
-    // leveling transitions into acro below this angle - above this angle is all acro.  DO NOT SET ABOVE 85 DEGREES!
-    float HORIZON_ANGLE_TRANSITION = 55.0f;
-    // leveling transitions into acro below this stick position - beyond this stick position is all acro. Adjust from 0 to 1
-    float HORIZON_STICK_TRANSITION = 0.95f;
-    // *************************************************************************
-    // *************************************************************************
+    // yaw rotation vector
+    const float yawerror[3] = {
+        state.GEstG.axis[1] * rates.axis[2],
+        -state.GEstG.axis[0] * rates.axis[2],
+        state.GEstG.axis[2] * rates.axis[2],
+    };
 
     if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON)) { // racemode with angle behavior on roll ais
       if (state.GEstG.axis[2] < 0) {                          // acro on roll and pitch when inverted
@@ -277,7 +266,43 @@ void control() {
       state.error.axis[i] = state.setpoint.axis[i] - state.gyro.axis[i];
     }
   }
+}
 
+void control() {
+  pid_precalc();
+
+  if (rx_aux_on(AUX_TURTLE) && !rx_aux_on(AUX_MOTOR_TEST)) { // turtle active when aux high
+    turtle_mode_start();
+  } else {
+    turtle_mode_cancel();
+  }
+
+  turtle_mode_update();
+
+  bool motortest_usb = false;
+  if (flags.usb_active && motor_test.active) {
+    // enable motortest for usb
+    flags.arm_state = 1;
+    flags.on_ground = 0;
+    flags.motortest_override = 1;
+    // motor test overwrites turtle
+    flags.controls_override = 0;
+    motortest_usb = true;
+  } else if (flags.arm_state && rx_aux_on(AUX_MOTOR_TEST)) {
+    // enable motortest for switch
+    flags.motortest_override = 1;
+    // motor test overwrites turtle
+    flags.controls_override = 0;
+  } else if (!flags.turtle) {
+    // disable motortest unless turtle is active
+    flags.motortest_override = 0;
+  }
+
+  if (flags.controls_override) {
+    state.rx_filtered = state.rx_override;
+  }
+
+  control_flight_mode();
   pid_calc();
 
   if (flags.failsafe) {
@@ -379,85 +404,49 @@ void control() {
     }
   }
 
-  if (motor_test.active) {
-    flags.arm_state = 1;
-    flags.on_ground = 0;
-
-    motor_mixer_calc(state.motor_mix.axis);
+  if (flags.motortest_override) {
+    motor_test_calc(motortest_usb, state.motor_mix.axis);
     motor_output_calc(state.motor_mix.axis);
-  } else if ((flags.arm_state == 0) || flags.failsafe || (state.throttle < 0.001f)) {
+  } else if (!flags.arm_state || flags.failsafe || (state.throttle < 0.001f)) {
     // CONDITION: disarmed OR failsafe OR throttle off
-
-    if (onground_long && (time_micros() - onground_long > ON_GROUND_LONG_TIMEOUT)) {
-      onground_long = 0;
-    }
-
-    // turn motors off
-    motor_set_all(0);
-
-#ifdef MOTOR_BEEPS
-    if ((flags.usb_active == 0 && flags.rx_ready && flags.failsafe && (time_millis() - state.failsafe_time_ms) > MOTOR_BEEPS_TIMEOUT) ||
-        rx_aux_on(AUX_BUZZER_ENABLE)) {
-      motor_beep();
-    }
-#endif
-
-    state.throttle = 0; // zero out throttle so it does not come back on as idle up value if enabled
     flags.on_ground = 1;
+
+    // zero throttle to reflect motors being off
+    state.throttle = 0;
     state.thrsum = 0;
 
-  } else { // motors on - normal flight
-
+    motor_set_all(MOTOR_OFF);
+  } else {
+    // motors on - normal flight
     flags.on_ground = 0;
-    onground_long = time_micros();
 
-    if (profile.motor.throttle_boost > 0.0f) {
-      state.throttle += (float)(profile.motor.throttle_boost) * throttlehpf(state.throttle);
-      if (state.throttle < 0)
-        state.throttle = 0;
-      if (state.throttle > 1.0f)
-        state.throttle = 1.0f;
-    }
+    if (!flags.controls_override) {
+      // only modify throttle for stick input.
+      // leave override values raw
 
-    if (flags.controls_override) { // change throttle in flip mode
-      state.throttle = state.rx_override.throttle;
-    }
+      if (profile.motor.throttle_boost > 0.0f) {
+        state.throttle += (float)(profile.motor.throttle_boost) * throttlehpf(state.throttle);
+        state.throttle = constrainf(state.throttle, 0.0f, 1.0f);
+      }
 
-    // throttle angle compensation
-#ifdef AUTO_THROTTLE
-    if (rx_aux_on(AUX_LEVELMODE)) {
-      // float autothrottle = fastcos(state.attitude.axis[0] * DEGTORAD) * fastcos(state.attitude.axis[1] * DEGTORAD);
-      float autothrottle = state.GEstG.axis[2];
-      float old_throttle = state.throttle;
-      if (autothrottle <= 0.5f)
-        autothrottle = 0.5f;
-      state.throttle = state.throttle / autothrottle;
-      // limit to 90%
-      if (old_throttle < 0.9f)
-        if (state.throttle > 0.9f)
-          state.throttle = 0.9f;
+      if (rx_aux_on(AUX_LEVELMODE)) {
+        auto_throttle();
+      }
 
-      if (state.throttle > 1.0f)
-        state.throttle = 1.0f;
-    }
-#endif
-
-    vbat_lvc_throttle();
-
-    if (profile.motor.invert_yaw) {
-      state.pidoutput.yaw = -state.pidoutput.yaw;
+      vbat_lvc_throttle();
     }
 
     motor_mixer_calc(state.motor_mix.axis);
     motor_output_calc(state.motor_mix.axis);
-
-    // we invert again cause it's used by the pid internally (for limit)
-    if (profile.motor.invert_yaw) {
-      state.pidoutput.yaw = -state.pidoutput.yaw;
-    }
   }
-  // end motors on
 
   motor_update();
+
+#ifdef MOTOR_BEEPS
+  if ((flags.usb_active == 0 && flags.rx_ready && flags.failsafe && (time_millis() - state.failsafe_time_ms) > MOTOR_BEEPS_TIMEOUT) ||
+      (flags.on_ground && rx_aux_on(AUX_BUZZER_ENABLE))) {
+    motor_beep();
+  }
+#endif
 }
 // end of control function
