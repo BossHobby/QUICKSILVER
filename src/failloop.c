@@ -33,7 +33,7 @@ void failloop(failloop_t val) {
   uint32_t blink_start = time_millis();
 
   while (1) {
-    motor_set_all(0);
+    motor_set_all(MOTOR_OFF);
 
     state.failloop = val;
 
