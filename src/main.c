@@ -160,7 +160,7 @@ __attribute__((__used__)) int main() {
 
   // init the firmware things
   motor_init();
-  motor_set_all(0);
+  motor_set_all(MOTOR_OFF);
 
   if (!sixaxis_init()) {
     // gyro not found

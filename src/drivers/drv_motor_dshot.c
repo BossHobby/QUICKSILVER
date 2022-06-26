@@ -324,14 +324,13 @@ void motor_wait_for_ready() {
 void motor_write(float *values) {
   if (motor_dir == last_motor_dir) {
     for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-      const float pwm = constrainf(values[i], 0.0f, 1.0f);
-
       uint16_t value = 0;
-      if (pwm < 0.002f) {
-        // turn off motors if there is no throttle, idle is applied in the motor mixer
-        value = 0;
-      } else {
+
+      if (values[i] >= 0.0f) {
+        const float pwm = constrainf(values[i], 0.0f, 1.0f);
         value = mapf(pwm, 0.0f, 1.0f, 48, 2047);
+      } else {
+        value = 0;
       }
 
       if (flags.failsafe && !flags.motortest_override) {

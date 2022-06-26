@@ -113,7 +113,7 @@ void motor_beep() {
 
 void motor_write(float *values) {
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    int pwm = values[i] * PWMTOP;
+    int32_t pwm = values[i] * PWMTOP;
     if (pwm < 0)
       pwm = 0;
     if (pwm > PWMTOP)

@@ -106,7 +106,7 @@ static uint8_t connect_esc(gpio_pins_t pin, uint8_t *data) {
 }
 
 uint8_t serial_4way_init() {
-  motor_set_all(0);
+  motor_set_all(MOTOR_OFF);
   motor_wait_for_ready();
 
   time_delay_ms(250);
@@ -126,7 +126,7 @@ void serial_4way_release() {
   time_delay_ms(10);
 
   motor_init();
-  motor_set_all(0);
+  motor_set_all(MOTOR_OFF);
 }
 
 serial_esc4way_ack_t serial_4way_send(uint8_t cmd, uint16_t addr, const uint8_t *input, const uint8_t input_size, uint8_t *output, uint8_t *output_size) {

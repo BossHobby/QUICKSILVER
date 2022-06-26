@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define MOTOR_OFF -1.0f
+
 typedef enum {
   MOTOR_FORWARD,
   MOTOR_REVERSE
