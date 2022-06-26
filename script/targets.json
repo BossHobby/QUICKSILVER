@@ -543,5 +543,16 @@
         }
       }
     ]
+  },
+  {
+    "name": "iflight_blitz_f411_elrs",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
   }
 ]
