@@ -181,80 +181,79 @@ static void motor_mixer_scale_calc(float mix[4]) {
 #endif
 }
 
-void motor_mixer_calc(float mix[4]) {
-  if (flags.usb_active) { // necessary to check if usb is active first or the else statement hijacks the state of global flag from turtle & motortest
-    if (motor_test.active) {
-      flags.motortest_override = 1;
+void motor_test_calc(bool motortest_usb, float mix[4]) {
+  if (motortest_usb) {
+    // set mix according to values we got via usb
+    mix[MOTOR_FR] = motor_test.value[MOTOR_FR];
+    mix[MOTOR_FL] = motor_test.value[MOTOR_FL];
+    mix[MOTOR_BR] = motor_test.value[MOTOR_BR];
+    mix[MOTOR_BL] = motor_test.value[MOTOR_BL];
+  } else {
+    // set mix according to sticks
+    if (state.rx_filtered.roll < -0.5f || state.rx_filtered.pitch < -0.5f) {
+      mix[MOTOR_FR] = 0;
     } else {
-      flags.motortest_override = 0;
+      mix[MOTOR_FR] = state.throttle;
+    }
+
+    if (state.rx_filtered.roll > 0.5f || state.rx_filtered.pitch < -0.5f) {
+      mix[MOTOR_FL] = 0;
+    } else {
+      mix[MOTOR_FL] = state.throttle;
+    }
+
+    if (state.rx_filtered.roll < -0.5f || state.rx_filtered.pitch > 0.5f) {
+      mix[MOTOR_BR] = 0;
+    } else {
+      mix[MOTOR_BR] = state.throttle;
+    }
+
+    if (state.rx_filtered.roll > 0.5f || state.rx_filtered.pitch > 0.5f) {
+      mix[MOTOR_BL] = 0;
+    } else {
+      mix[MOTOR_BL] = state.throttle;
     }
   }
+}
 
-  if (rx_aux_on(AUX_MOTOR_TEST) || flags.motortest_override || flags.controls_override) {
-    // TODO: investigate how skipping all that code below affects looptime
-    if (motor_test.active) {
-      // set mix according to values we got via usb
-      mix[MOTOR_FR] = motor_test.value[MOTOR_FR];
-      mix[MOTOR_FL] = motor_test.value[MOTOR_FL];
-      mix[MOTOR_BR] = motor_test.value[MOTOR_BR];
-      mix[MOTOR_BL] = motor_test.value[MOTOR_BL];
-    } else {
-      // motor test mode, we set mix according to sticks
-      if (state.rx_filtered.roll < -0.5f || state.rx_filtered.pitch < -0.5f) {
-        mix[MOTOR_FR] = 0;
-      } else {
-        mix[MOTOR_FR] = state.throttle;
-      }
+void motor_mixer_calc(float mix[4]) {
+  if (profile.motor.invert_yaw) {
+    state.pidoutput.yaw = -state.pidoutput.yaw;
+  }
 
-      if (state.rx_filtered.roll > 0.5f || state.rx_filtered.pitch < -0.5f) {
-        mix[MOTOR_FL] = 0;
-      } else {
-        mix[MOTOR_FL] = state.throttle;
-      }
-
-      if (state.rx_filtered.roll < -0.5f || state.rx_filtered.pitch > 0.5f) {
-        mix[MOTOR_BR] = 0;
-      } else {
-        mix[MOTOR_BR] = state.throttle;
-      }
-
-      if (state.rx_filtered.roll > 0.5f || state.rx_filtered.pitch > 0.5f) {
-        mix[MOTOR_BL] = 0;
-      } else {
-        mix[MOTOR_BL] = state.throttle;
-      }
-    }
-
-  } else {
 #ifndef MOTOR_PLUS_CONFIGURATION
-    // normal mode, we set mix according to pidoutput
-    mix[MOTOR_FR] = state.throttle - state.pidoutput.axis[ROLL] - state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // FR
-    mix[MOTOR_FL] = state.throttle + state.pidoutput.axis[ROLL] - state.pidoutput.axis[PITCH] - state.pidoutput.axis[YAW]; // FL
-    mix[MOTOR_BR] = state.throttle - state.pidoutput.axis[ROLL] + state.pidoutput.axis[PITCH] - state.pidoutput.axis[YAW]; // BR
-    mix[MOTOR_BL] = state.throttle + state.pidoutput.axis[ROLL] + state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // BL
+  // normal mode, we set mix according to pidoutput
+  mix[MOTOR_FR] = state.throttle - state.pidoutput.axis[ROLL] - state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // FR
+  mix[MOTOR_FL] = state.throttle + state.pidoutput.axis[ROLL] - state.pidoutput.axis[PITCH] - state.pidoutput.axis[YAW]; // FL
+  mix[MOTOR_BR] = state.throttle - state.pidoutput.axis[ROLL] + state.pidoutput.axis[PITCH] - state.pidoutput.axis[YAW]; // BR
+  mix[MOTOR_BL] = state.throttle + state.pidoutput.axis[ROLL] + state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // BL
 #else
-    // plus mode, we set mix according to pidoutput
-    mix[MOTOR_FR] = state.throttle - state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // FRONT
-    mix[MOTOR_FL] = state.throttle + state.pidoutput.axis[ROLL] - state.pidoutput.axis[YAW];  // LEFT
-    mix[MOTOR_BR] = state.throttle - state.pidoutput.axis[ROLL] - state.pidoutput.axis[YAW];  // RIGHT
-    mix[MOTOR_BL] = state.throttle + state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // BACK
+  // plus mode, we set mix according to pidoutput
+  mix[MOTOR_FR] = state.throttle - state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // FRONT
+  mix[MOTOR_FL] = state.throttle + state.pidoutput.axis[ROLL] - state.pidoutput.axis[YAW];  // LEFT
+  mix[MOTOR_BR] = state.throttle - state.pidoutput.axis[ROLL] - state.pidoutput.axis[YAW];  // RIGHT
+  mix[MOTOR_BL] = state.throttle + state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // BACK
 #endif
 
-    for (int i = 0; i <= 3; i++) {
+  for (int i = 0; i <= 3; i++) {
 #ifdef MOTOR_FILTER2_ALPHA
-      mix[i] = motorlpf(mix[i], i);
+    mix[i] = motorlpf(mix[i], i);
 #endif
 
 #ifdef MOTOR_KAL
-      mix[i] = motor_kalman(mix[i], i);
+    mix[i] = motor_kalman(mix[i], i);
 #endif
 
-      if (profile.motor.torque_boost > 0.0f) {
-        mix[i] = motord(mix[i], i);
-      }
+    if (profile.motor.torque_boost > 0.0f) {
+      mix[i] = motord(mix[i], i);
     }
+  }
 
-    motor_mixer_scale_calc(mix);
+  motor_mixer_scale_calc(mix);
+
+  // we invert again cause it's used by the pid internally (for limit)
+  if (profile.motor.invert_yaw) {
+    state.pidoutput.yaw = -state.pidoutput.yaw;
   }
 }
 
@@ -269,7 +268,7 @@ void motor_output_calc(float mix[4]) {
 
     // only apply digital idle if we are armed and not in motor test
     float motor_min_value = 0;
-    if (!flags.on_ground && flags.arm_state && !rx_aux_on(AUX_MOTOR_TEST) && !flags.motortest_override) {
+    if (!flags.on_ground && flags.arm_state && !flags.motortest_override) {
       motor_min_value = (float)profile.motor.digital_idle * 0.01f;
     }
 
