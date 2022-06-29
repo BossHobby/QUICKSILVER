@@ -7,15 +7,31 @@
 #include "profile.h"
 #include "util/util.h"
 
+#define MAX_ROWS HDZERO_ROWS
+#define MAX_COLS HDZERO_COLS
+
+#define MAX_DISPLAY_SIZE (HDZERO_COLS * HDZERO_ROWS)
+
 static osd_transaction_t osd_txn;
 static osd_device_t osd_device = OSD_DEVICE_NONE;
+
+static osd_char_t display[MAX_DISPLAY_SIZE];
+static bool display_row_dirty[HDZERO_ROWS];
+static bool display_dirty = false;
+
+static uint8_t cols = HDZERO_COLS;
+static uint8_t rows = HDZERO_ROWS;
 
 void osd_device_init() {
   if (profile.serial.hdzero != USART_PORT_INVALID) {
     osd_device = OSD_DEVICE_HDZERO;
+    cols = HDZERO_COLS;
+    rows = HDZERO_ROWS;
     hdzero_init();
   } else {
     osd_device = OSD_DEVICE_MAX7456;
+    cols = MAX7456_COLS;
+    rows = MAX7456_ROWS;
     max7456_init();
   }
 }
@@ -41,41 +57,45 @@ void osd_clear() {
 }
 
 uint8_t osd_clear_async() {
+  uint8_t is_done = 0;
+
   switch (osd_device) {
   case OSD_DEVICE_MAX7456:
-    return max7456_clear_async();
+    is_done = max7456_clear_async();
+    break;
 
   case OSD_DEVICE_HDZERO:
-    return hdzero_clear_async();
+    is_done = hdzero_clear_async();
+    break;
 
   default:
-    return 0;
+    is_done = 1;
+    break;
   }
+
+  if (is_done) {
+    memset(display, 0, MAX_DISPLAY_SIZE * sizeof(osd_char_t));
+    memset(display_row_dirty, 0, MAX_ROWS * sizeof(bool));
+    display_dirty = false;
+  }
+
+  return is_done;
 }
 
 osd_system_t osd_check_system() {
   switch (osd_device) {
   case OSD_DEVICE_MAX7456:
+    cols = MAX7456_COLS;
+    rows = MAX7456_ROWS;
     return max7456_check_system();
 
   case OSD_DEVICE_HDZERO:
+    cols = HDZERO_COLS;
+    rows = HDZERO_ROWS;
     return hdzero_check_system();
 
   default:
     return 0;
-  }
-}
-
-bool osd_is_ready() {
-  switch (osd_device) {
-  case OSD_DEVICE_MAX7456:
-    return max7456_is_ready();
-
-  case OSD_DEVICE_HDZERO:
-    return hdzero_is_ready();
-
-  default:
-    return false;
   }
 }
 
@@ -93,63 +113,180 @@ void osd_txn_start(uint8_t attr, uint8_t x, uint8_t y) {
   seg->size = 0;
 
   osd_txn.segment_count++;
-
-  switch (osd_device) {
-  case OSD_DEVICE_MAX7456:
-    max7456_txn_start(&osd_txn, attr, x, y);
-    break;
-
-  case OSD_DEVICE_HDZERO:
-    hdzero_txn_start(&osd_txn, attr, x, y);
-    break;
-
-  default:
-    break;
-  }
 }
 
 void osd_txn_write_data(const uint8_t *buffer, uint8_t size) {
   osd_segment_t *seg = &osd_txn.segments[osd_txn.segment_count - 1];
   seg->size += size;
 
-  switch (osd_device) {
-  case OSD_DEVICE_MAX7456:
-    max7456_txn_write_data(&osd_txn, buffer, size);
-    break;
+  const uint16_t offset = seg->y * cols + seg->x + seg->offset;
+  for (uint8_t i = 0; i < size; i++) {
+    if (display[offset + i].val == buffer[i] && display[offset + i].attr == seg->attr) {
+      continue;
+    }
 
-  case OSD_DEVICE_HDZERO:
-    hdzero_txn_write_data(&osd_txn, buffer, size);
-    break;
+    display[offset + i].dirty = 1;
+    display[offset + i].attr = seg->attr;
+    display[offset + i].val = buffer[i];
 
-  default:
-    break;
+    display_row_dirty[seg->y] = true;
+    display_dirty = true;
   }
 
   seg->offset += size;
-}
-
-void osd_txn_write_str(const char *buffer) {
-  osd_txn_write_data((const uint8_t *)buffer, strlen(buffer));
 }
 
 void osd_txn_write_char(const char val) {
   osd_segment_t *seg = &osd_txn.segments[osd_txn.segment_count - 1];
   seg->size += 1;
 
-  switch (osd_device) {
-  case OSD_DEVICE_MAX7456:
-    max7456_txn_write_char(&osd_txn, val);
-    break;
-
-  case OSD_DEVICE_HDZERO:
-    hdzero_txn_write_char(&osd_txn, val);
-    break;
-
-  default:
-    break;
+  const uint16_t offset = seg->y * cols + seg->x + seg->offset;
+  if (display[offset].val == val && display[offset].attr == seg->attr) {
+    return;
   }
 
+  display[offset].dirty = 1;
+  display[offset].attr = seg->attr;
+  display[offset].val = val;
+
+  display_row_dirty[seg->y] = true;
+  display_dirty = true;
+
   seg->offset += 1;
+}
+
+void osd_txn_submit(osd_transaction_t *txn) {
+}
+
+static bool osd_can_fit(uint8_t size) {
+  switch (osd_device) {
+  case OSD_DEVICE_MAX7456:
+    return max7456_can_fit(size);
+
+  case OSD_DEVICE_HDZERO:
+    return hdzero_can_fit(size);
+
+  default:
+    return false;
+  }
+}
+
+static bool osd_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size) {
+  switch (osd_device) {
+  case OSD_DEVICE_MAX7456:
+    return max7456_push_string(attr, x, y, data, size);
+
+  case OSD_DEVICE_HDZERO:
+    return hdzero_push_string(attr, x, y, data, size);
+
+  default:
+    return false;
+  }
+}
+
+static bool osd_flush() {
+  switch (osd_device) {
+  case OSD_DEVICE_MAX7456:
+    return max7456_flush();
+
+  case OSD_DEVICE_HDZERO:
+    return hdzero_flush();
+
+  default:
+    return false;
+  }
+}
+
+static bool osd_update_display() {
+  static uint8_t row = 0;
+
+  while (row < rows) {
+    if (!display_row_dirty[row]) {
+      row++;
+      continue;
+    }
+
+    uint8_t string[cols];
+    uint8_t attr = 0;
+    uint8_t start = cols;
+    uint8_t size = 0;
+
+    volatile bool row_done = true;
+    for (uint8_t col = 0; col < cols; col++) {
+      osd_char_t *entry = &display[row * cols + col];
+
+      if (size && (!entry->dirty || entry->attr != attr || col == (cols - 1) || row_done == false)) {
+        osd_push_string(attr, start, row, string, size);
+        size = 0;
+        start = cols;
+
+        if (!row_done) {
+          break;
+        }
+      }
+
+      if (!entry->dirty) {
+        continue;
+      }
+
+      if (col < start) {
+        start = col;
+        attr = entry->attr;
+      }
+
+      if (!osd_can_fit(size + 1)) {
+        row_done = false;
+        continue;
+      }
+
+      string[size] = entry->val;
+      entry->dirty = 0;
+      size++;
+    }
+
+    if (row_done) {
+      display_row_dirty[row] = false;
+      row++;
+    }
+    return false;
+  }
+
+  if (row == rows) {
+    if (osd_flush()) {
+      row++;
+    }
+    return false;
+  }
+
+  row = 0;
+  return true;
+}
+
+bool osd_is_ready() {
+  switch (osd_device) {
+  case OSD_DEVICE_MAX7456:
+    return max7456_is_ready();
+
+  case OSD_DEVICE_HDZERO:
+    return hdzero_is_ready();
+
+  default:
+    return false;
+  }
+}
+
+bool osd_update() {
+  if (display_dirty) {
+    if (osd_update_display()) {
+      display_dirty = false;
+    }
+    return false;
+  }
+  return true;
+}
+
+void osd_txn_write_str(const char *buffer) {
+  osd_txn_write_data((const uint8_t *)buffer, strlen(buffer));
 }
 
 void osd_txn_write_uint(uint32_t val, uint8_t width) {
@@ -228,19 +365,4 @@ void osd_txn_write_float(float val, uint8_t width, uint8_t precision) {
   }
 
   osd_txn_write_data(buf, width);
-}
-
-void osd_txn_submit(osd_transaction_t *txn) {
-  switch (osd_device) {
-  case OSD_DEVICE_MAX7456:
-    max7456_txn_submit(txn);
-    break;
-
-  case OSD_DEVICE_HDZERO:
-    hdzero_txn_submit(txn);
-    break;
-
-  default:
-    break;
-  }
 }

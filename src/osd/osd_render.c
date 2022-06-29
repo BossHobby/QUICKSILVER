@@ -817,6 +817,10 @@ void osd_display() {
     return;
   }
 
+  if (!osd_update()) {
+    return;
+  }
+
   static bool did_just_arm = false;
   if (flags.arm_switch) {
     if (!did_just_arm) {

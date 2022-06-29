@@ -21,6 +21,12 @@ typedef struct {
   uint8_t segment_count;
 } osd_transaction_t;
 
+typedef struct {
+  uint8_t dirty : 1;
+  uint8_t attr : 3;
+  uint8_t val : 8;
+} osd_char_t;
+
 typedef enum {
   OSD_SYS_NONE,
   OSD_SYS_PAL,
@@ -44,6 +50,7 @@ void osd_device_init();
 void osd_intro();
 
 bool osd_is_ready();
+bool osd_update();
 
 void osd_clear();
 uint8_t osd_clear_async();
