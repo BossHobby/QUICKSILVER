@@ -195,10 +195,8 @@ void osd_menu_header(const char *text) {
   const uint8_t len = strlen(text);
   const uint8_t x = (SCREEN_COLS - len - 1) / 2;
 
-  osd_transaction_t *txn = osd_txn_init();
-  osd_txn_start(OSD_ATTR_INVERT, x, 1);
-  osd_txn_write_data((const uint8_t *)text, len);
-  osd_txn_submit(txn);
+  osd_start(OSD_ATTR_INVERT, x, 1);
+  osd_write_data((const uint8_t *)text, len);
 
   menu_state.rendered_elements++;
 }
@@ -208,10 +206,8 @@ void osd_menu_highlight(uint8_t x, uint8_t y, const char *text) {
     return;
   }
 
-  osd_transaction_t *txn = osd_txn_init();
-  osd_txn_start(OSD_ATTR_INVERT, x, y);
-  osd_txn_write_str(text);
-  osd_txn_submit(txn);
+  osd_start(OSD_ATTR_INVERT, x, y);
+  osd_write_str(text);
 
   menu_state.rendered_elements++;
 }
@@ -221,10 +217,8 @@ void osd_menu_label(uint8_t x, uint8_t y, const char *text) {
     return;
   }
 
-  osd_transaction_t *txn = osd_txn_init();
-  osd_txn_start(OSD_ATTR_TEXT, x, y);
-  osd_txn_write_str(text);
-  osd_txn_submit(txn);
+  osd_start(OSD_ATTR_TEXT, x, y);
+  osd_write_str(text);
 
   menu_state.rendered_elements++;
 }
@@ -234,27 +228,24 @@ bool osd_menu_button(uint8_t x, uint8_t y, const char *text) {
     return osd_state.cursor == menu_state.active_elements && osd_state.selection == 1;
   }
 
-  osd_transaction_t *txn = osd_txn_init();
-
   const bool is_selected = is_element_selected();
   if (osd_system == OSD_SYS_HD) {
     if (is_selected) {
-      osd_txn_start(OSD_ATTR_INVERT, x - 1, y);
-      osd_txn_write_char('>');
+      osd_start(OSD_ATTR_INVERT, x - 1, y);
+      osd_write_char('>');
     } else {
-      osd_txn_start(OSD_ATTR_TEXT, x - 1, y);
-      osd_txn_write_char(' ');
+      osd_start(OSD_ATTR_TEXT, x - 1, y);
+      osd_write_char(' ');
     }
   } else {
     if (is_selected) {
-      osd_txn_start(OSD_ATTR_INVERT, x, y);
+      osd_start(OSD_ATTR_INVERT, x, y);
     } else {
-      osd_txn_start(OSD_ATTR_TEXT, x, y);
+      osd_start(OSD_ATTR_TEXT, x, y);
     }
   }
 
-  osd_txn_write_str(text);
-  osd_txn_submit(txn);
+  osd_write_str(text);
 
   menu_state.rendered_elements++;
 
@@ -266,27 +257,24 @@ void osd_menu_select(uint8_t x, uint8_t y, const char *text) {
     return;
   }
 
-  osd_transaction_t *txn = osd_txn_init();
-
   const bool is_selected = is_element_selected();
   if (osd_system == OSD_SYS_HD) {
     if (is_selected) {
-      osd_txn_start(OSD_ATTR_INVERT, x - 1, y);
-      osd_txn_write_char('>');
+      osd_start(OSD_ATTR_INVERT, x - 1, y);
+      osd_write_char('>');
     } else {
-      osd_txn_start(OSD_ATTR_TEXT, x - 1, y);
-      osd_txn_write_char(' ');
+      osd_start(OSD_ATTR_TEXT, x - 1, y);
+      osd_write_char(' ');
     }
   } else {
     if (is_selected) {
-      osd_txn_start(OSD_ATTR_INVERT, x, y);
+      osd_start(OSD_ATTR_INVERT, x, y);
     } else {
-      osd_txn_start(OSD_ATTR_TEXT, x, y);
+      osd_start(OSD_ATTR_TEXT, x, y);
     }
   }
 
-  osd_txn_write_str(text);
-  osd_txn_submit(txn);
+  osd_write_str(text);
 
   menu_state.rendered_elements++;
 }
@@ -296,27 +284,24 @@ bool osd_menu_select_enum(uint8_t x, uint8_t y, const uint8_t val, const char **
     return is_element_selected() && has_adjust();
   }
 
-  osd_transaction_t *txn = osd_txn_init();
-
   const bool is_selected = is_element_selected();
   if (osd_system == OSD_SYS_HD) {
     if (is_selected) {
-      osd_txn_start(OSD_ATTR_INVERT, x - 1, y);
-      osd_txn_write_char('>');
+      osd_start(OSD_ATTR_INVERT, x - 1, y);
+      osd_write_char('>');
     } else {
-      osd_txn_start(OSD_ATTR_TEXT, x - 1, y);
-      osd_txn_write_char(' ');
+      osd_start(OSD_ATTR_TEXT, x - 1, y);
+      osd_write_char(' ');
     }
   } else {
     if (is_selected) {
-      osd_txn_start(OSD_ATTR_INVERT, x, y);
+      osd_start(OSD_ATTR_INVERT, x, y);
     } else {
-      osd_txn_start(OSD_ATTR_TEXT, x, y);
+      osd_start(OSD_ATTR_TEXT, x, y);
     }
   }
 
-  osd_txn_write_str(labels[val]);
-  osd_txn_submit(txn);
+  osd_write_str(labels[val]);
 
   return is_selected && has_adjust();
 }
@@ -326,28 +311,24 @@ bool osd_menu_select_int(uint8_t x, uint8_t y, const int32_t val, uint8_t width)
     return is_element_selected() && has_adjust();
   }
 
-  osd_transaction_t *txn = osd_txn_init();
-
   const bool is_selected = is_element_selected();
   if (osd_system == OSD_SYS_HD) {
     if (is_selected) {
-      osd_txn_start(OSD_ATTR_INVERT, x, y);
-      osd_txn_write_char('>');
+      osd_start(OSD_ATTR_INVERT, x, y);
+      osd_write_char('>');
     } else {
-      osd_txn_start(OSD_ATTR_TEXT, x, y);
-      osd_txn_write_char(' ');
+      osd_start(OSD_ATTR_TEXT, x, y);
+      osd_write_char(' ');
     }
-    osd_txn_write_int(val, width - 1);
+    osd_write_int(val, width - 1);
   } else {
     if (is_selected) {
-      osd_txn_start(OSD_ATTR_INVERT, x, y);
+      osd_start(OSD_ATTR_INVERT, x, y);
     } else {
-      osd_txn_start(OSD_ATTR_TEXT, x, y);
+      osd_start(OSD_ATTR_TEXT, x, y);
     }
-    osd_txn_write_int(val, width);
+    osd_write_int(val, width);
   }
-
-  osd_txn_submit(txn);
 
   return is_selected && has_adjust();
 }
@@ -360,8 +341,6 @@ bool osd_menu_select_str(uint8_t x, uint8_t y, const char *str) {
     return osd_state.cursor == menu_state.active_elements && osd_state.selection >= 1 && has_adjust();
   }
 
-  osd_transaction_t *txn = osd_txn_init();
-
   const bool is_elemet_selected = osd_state.cursor == menu_state.active_elements && osd_state.selection >= 1;
 
   if (is_elemet_selected) {
@@ -369,23 +348,21 @@ bool osd_menu_select_str(uint8_t x, uint8_t y, const char *str) {
     const uint8_t offset = osd_state.selection - 1;
 
     if (offset > 0) {
-      osd_txn_start(OSD_ATTR_TEXT, x, y);
-      osd_txn_write_data((const uint8_t *)str, offset);
+      osd_start(OSD_ATTR_TEXT, x, y);
+      osd_write_data((const uint8_t *)str, offset);
     }
 
-    osd_txn_start(OSD_ATTR_INVERT, x + offset, y);
-    osd_txn_write_char(str[offset]);
+    osd_start(OSD_ATTR_INVERT, x + offset, y);
+    osd_write_char(str[offset]);
 
     if ((len - offset) > 0) {
-      osd_txn_start(OSD_ATTR_TEXT, x + offset + 1, y);
-      osd_txn_write_data((const uint8_t *)str + offset + 1, (len - offset - 1));
+      osd_start(OSD_ATTR_TEXT, x + offset + 1, y);
+      osd_write_data((const uint8_t *)str + offset + 1, (len - offset - 1));
     }
   } else {
-    osd_txn_start(OSD_ATTR_TEXT, x, y);
-    osd_txn_write_str(str);
+    osd_start(OSD_ATTR_TEXT, x, y);
+    osd_write_str(str);
   }
-
-  osd_txn_submit(txn);
 
   return osd_state.cursor == menu_state.active_elements && osd_state.selection >= 1 && has_adjust();
 }
@@ -395,28 +372,24 @@ bool osd_menu_select_float(uint8_t x, uint8_t y, const float val, uint8_t width,
     return is_element_selected() && has_adjust();
   }
 
-  osd_transaction_t *txn = osd_txn_init();
-
   const bool is_selected = is_element_selected();
   if (osd_system == OSD_SYS_HD) {
     if (is_selected) {
-      osd_txn_start(OSD_ATTR_INVERT, x, y);
-      osd_txn_write_char('>');
+      osd_start(OSD_ATTR_INVERT, x, y);
+      osd_write_char('>');
     } else {
-      osd_txn_start(OSD_ATTR_TEXT, x, y);
-      osd_txn_write_char(' ');
+      osd_start(OSD_ATTR_TEXT, x, y);
+      osd_write_char(' ');
     }
-    osd_txn_write_float(val, width - 1, precision);
+    osd_write_float(val, width - 1, precision);
   } else {
     if (is_selected) {
-      osd_txn_start(OSD_ATTR_INVERT, x, y);
+      osd_start(OSD_ATTR_INVERT, x, y);
     } else {
-      osd_txn_start(OSD_ATTR_TEXT, x, y);
+      osd_start(OSD_ATTR_TEXT, x, y);
     }
-    osd_txn_write_float(val, width, precision);
+    osd_write_float(val, width, precision);
   }
-
-  osd_txn_submit(txn);
 
   return is_selected && has_adjust();
 }

@@ -12,7 +12,7 @@
 
 #define MAX_DISPLAY_SIZE (HDZERO_COLS * HDZERO_ROWS)
 
-static osd_transaction_t osd_txn;
+static osd_segment_t osd_seg;
 static osd_device_t osd_device = OSD_DEVICE_NONE;
 
 static osd_char_t display[MAX_DISPLAY_SIZE];
@@ -99,63 +99,50 @@ osd_system_t osd_check_system() {
   }
 }
 
-osd_transaction_t *osd_txn_init() {
-  osd_txn.segment_count = 0;
-  return &osd_txn;
+void osd_start(uint8_t attr, uint8_t x, uint8_t y) {
+  osd_seg.attr = attr;
+  osd_seg.x = x;
+  osd_seg.y = y;
+  osd_seg.offset = 0;
+  osd_seg.size = 0;
 }
 
-void osd_txn_start(uint8_t attr, uint8_t x, uint8_t y) {
-  osd_segment_t *seg = &osd_txn.segments[osd_txn.segment_count];
-  seg->attr = attr;
-  seg->x = x;
-  seg->y = y;
-  seg->offset = 0;
-  seg->size = 0;
+void osd_write_data(const uint8_t *buffer, uint8_t size) {
+  osd_seg.size += size;
 
-  osd_txn.segment_count++;
-}
-
-void osd_txn_write_data(const uint8_t *buffer, uint8_t size) {
-  osd_segment_t *seg = &osd_txn.segments[osd_txn.segment_count - 1];
-  seg->size += size;
-
-  const uint16_t offset = seg->y * cols + seg->x + seg->offset;
+  const uint16_t offset = osd_seg.y * cols + osd_seg.x + osd_seg.offset;
   for (uint8_t i = 0; i < size; i++) {
-    if (display[offset + i].val == buffer[i] && display[offset + i].attr == seg->attr) {
+    if (display[offset + i].val == buffer[i] && display[offset + i].attr == osd_seg.attr) {
       continue;
     }
 
     display[offset + i].dirty = 1;
-    display[offset + i].attr = seg->attr;
+    display[offset + i].attr = osd_seg.attr;
     display[offset + i].val = buffer[i];
 
-    display_row_dirty[seg->y] = true;
+    display_row_dirty[osd_seg.y] = true;
     display_dirty = true;
   }
 
-  seg->offset += size;
+  osd_seg.offset += size;
 }
 
-void osd_txn_write_char(const char val) {
-  osd_segment_t *seg = &osd_txn.segments[osd_txn.segment_count - 1];
-  seg->size += 1;
+void osd_write_char(const char val) {
+  osd_seg.size += 1;
 
-  const uint16_t offset = seg->y * cols + seg->x + seg->offset;
-  if (display[offset].val == val && display[offset].attr == seg->attr) {
+  const uint16_t offset = osd_seg.y * cols + osd_seg.x + osd_seg.offset;
+  if (display[offset].val == val && display[offset].attr == osd_seg.attr) {
     return;
   }
 
   display[offset].dirty = 1;
-  display[offset].attr = seg->attr;
+  display[offset].attr = osd_seg.attr;
   display[offset].val = val;
 
-  display_row_dirty[seg->y] = true;
+  display_row_dirty[osd_seg.y] = true;
   display_dirty = true;
 
-  seg->offset += 1;
-}
-
-void osd_txn_submit(osd_transaction_t *txn) {
+  osd_seg.offset += 1;
 }
 
 static bool osd_can_fit(uint8_t size) {
@@ -285,11 +272,11 @@ bool osd_update() {
   return true;
 }
 
-void osd_txn_write_str(const char *buffer) {
-  osd_txn_write_data((const uint8_t *)buffer, strlen(buffer));
+void osd_write_str(const char *buffer) {
+  osd_write_data((const uint8_t *)buffer, strlen(buffer));
 }
 
-void osd_txn_write_uint(uint32_t val, uint8_t width) {
+void osd_write_uint(uint32_t val, uint8_t width) {
   uint8_t buf[width];
 
   for (uint8_t i = 0; i < width; i++) {
@@ -301,12 +288,12 @@ void osd_txn_write_uint(uint32_t val, uint8_t width) {
     }
   }
 
-  osd_txn_write_data(buf, width);
+  osd_write_data(buf, width);
 }
 
-void osd_txn_write_int(int32_t val, uint8_t width) {
+void osd_write_int(int32_t val, uint8_t width) {
   if (val >= 0) {
-    osd_txn_write_uint(val, width);
+    osd_write_uint(val, width);
     return;
   }
 
@@ -329,10 +316,10 @@ void osd_txn_write_int(int32_t val, uint8_t width) {
     buf[actual_width + 1] = '-';
   }
 
-  osd_txn_write_data(buf, width);
+  osd_write_data(buf, width);
 }
 
-void osd_txn_write_float(float val, uint8_t width, uint8_t precision) {
+void osd_write_float(float val, uint8_t width, uint8_t precision) {
   const bool is_negative = val < 0;
 
   uint8_t actual_width = 0;
@@ -364,5 +351,5 @@ void osd_txn_write_float(float val, uint8_t width, uint8_t precision) {
     buf[width - actual_width] = '-';
   }
 
-  osd_txn_write_data(buf, width);
+  osd_write_data(buf, width);
 }

@@ -303,10 +303,8 @@ static void print_osd_flightmode(osd_element_t *el) {
     flightmode = 0;
   }
 
-  osd_transaction_t *txn = osd_txn_init();
-  osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
-  osd_txn_write_data(flightmode_labels[flightmode], 21);
-  osd_txn_submit(txn);
+  osd_start(osd_attr(el), el->pos_x, el->pos_y);
+  osd_write_data(flightmode_labels[flightmode], 21);
 }
 
 static void print_osd_rssi(osd_element_t *el) {
@@ -316,11 +314,9 @@ static void print_osd_rssi(osd_element_t *el) {
 
   lpf(&rx_rssi_filt, state.rx_rssi, FILTERCALC(state.looptime * 1e6f * 133.0f, 2e6f)); // 2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
 
-  osd_transaction_t *txn = osd_txn_init();
-  osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
-  osd_txn_write_uint(rx_rssi_filt - 0.5f, 4);
-  osd_txn_write_char(ICON_RSSI);
-  osd_txn_submit(txn);
+  osd_start(osd_attr(el), el->pos_x, el->pos_y);
+  osd_write_uint(rx_rssi_filt - 0.5f, 4);
+  osd_write_char(ICON_RSSI);
 }
 
 static void print_osd_armtime(osd_element_t *el) {
@@ -332,62 +328,56 @@ static void print_osd_armtime(osd_element_t *el) {
     time_s -= 3600;
   }
 
-  osd_transaction_t *txn = osd_txn_init();
-  osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
+  osd_start(osd_attr(el), el->pos_x, el->pos_y);
 
   const uint32_t minutes = time_s / 60;
-  osd_txn_write_uint(minutes / 10, 1);
-  osd_txn_write_uint(minutes % 10, 1);
+  osd_write_uint(minutes / 10, 1);
+  osd_write_uint(minutes % 10, 1);
 
-  osd_txn_write_char(':');
+  osd_write_char(':');
 
   const uint32_t seconds = time_s % 60;
-  osd_txn_write_uint(seconds / 10, 1);
-  osd_txn_write_uint(seconds % 10, 1);
-
-  osd_txn_submit(txn);
+  osd_write_uint(seconds / 10, 1);
+  osd_write_uint(seconds % 10, 1);
 }
 
 // print the current vtx settings as Band:Channel:Power
 static void print_osd_vtx(osd_element_t *el) {
-  osd_transaction_t *txn = osd_txn_init();
-  osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
+  osd_start(osd_attr(el), el->pos_x, el->pos_y);
 
   switch (vtx_settings.band) {
   case VTX_BAND_A:
-    osd_txn_write_char('A');
+    osd_write_char('A');
     break;
   case VTX_BAND_B:
-    osd_txn_write_char('B');
+    osd_write_char('B');
     break;
   case VTX_BAND_E:
-    osd_txn_write_char('E');
+    osd_write_char('E');
     break;
   case VTX_BAND_F:
-    osd_txn_write_char('F');
+    osd_write_char('F');
     break;
   case VTX_BAND_R:
-    osd_txn_write_char('R');
+    osd_write_char('R');
     break;
   default:
-    osd_txn_write_char('M');
+    osd_write_char('M');
     break;
   }
 
-  osd_txn_write_char(':');
-  osd_txn_write_char(vtx_settings.channel + 49);
-  osd_txn_write_char(':');
+  osd_write_char(':');
+  osd_write_char(vtx_settings.channel + 49);
+  osd_write_char(':');
 
   if (vtx_settings.pit_mode == 1) {
-    osd_txn_write_char(21); // "pit", probably from Pitch, but we will use it here
+    osd_write_char(21); // "pit", probably from Pitch, but we will use it here
   } else {
     if (vtx_settings.power_level == 4)
-      osd_txn_write_char(36); // "max"
+      osd_write_char(36); // "max"
     else
-      osd_txn_write_char(vtx_settings.power_level + 49);
+      osd_write_char(vtx_settings.power_level + 49);
   }
-
-  osd_txn_submit(txn);
 }
 
 // 3 stage return - 0 = stick and hold, 1 = move on but come back to clear, 2 = status print done
@@ -416,10 +406,8 @@ static uint8_t print_status(osd_element_t *el, uint8_t persistence, uint8_t labe
 
   if (delay_counter == 25) {
     // First run, print the label
-    osd_transaction_t *txn = osd_txn_init();
-    osd_txn_start(osd_attr(el) | OSD_ATTR_BLINK, el->pos_x, el->pos_y);
-    osd_txn_write_data(system_status_labels[label], 21);
-    osd_txn_submit(txn);
+    osd_start(osd_attr(el) | OSD_ATTR_BLINK, el->pos_x, el->pos_y);
+    osd_write_data(system_status_labels[label], 21);
 
     delay_counter--;
 
@@ -434,10 +422,8 @@ static uint8_t print_status(osd_element_t *el, uint8_t persistence, uint8_t labe
   // label printed and its temporary
   if (!delay_counter) {
     // timer is elapsed, print clear label
-    osd_transaction_t *txn = osd_txn_init();
-    osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
-    osd_txn_write_data(system_status_labels[0], 21);
-    osd_txn_submit(txn);
+    osd_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_write_data(system_status_labels[0], 21);
 
     delay_counter = 25;
 
@@ -585,55 +571,49 @@ static void osd_display_regular() {
 
   switch (osd_state.element) {
   case OSD_CALLSIGN: {
-    osd_transaction_t *txn = osd_txn_init();
-    osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
-    osd_txn_write_str((const char *)profile.osd.callsign);
-    osd_txn_submit(txn);
+    osd_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_write_str((const char *)profile.osd.callsign);
+
     osd_state.element++;
     break;
   }
 
   case OSD_CELL_COUNT: {
-    osd_transaction_t *txn = osd_txn_init();
     if (!flags.lowbatt) {
-      osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
+      osd_start(osd_attr(el), el->pos_x, el->pos_y);
     } else {
-      osd_txn_start(OSD_ATTR_BLINK | OSD_ATTR_INVERT, el->pos_x, el->pos_y);
+      osd_start(OSD_ATTR_BLINK | OSD_ATTR_INVERT, el->pos_x, el->pos_y);
     }
-    osd_txn_write_uint(state.lipo_cell_count, 1);
-    osd_txn_write_char('S');
-    osd_txn_submit(txn);
+    osd_write_uint(state.lipo_cell_count, 1);
+    osd_write_char('S');
+
     osd_state.element++;
     break;
   }
 
   case OSD_FUELGAUGE_VOLTS: {
-    osd_transaction_t *txn = osd_txn_init();
-    osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
-    osd_txn_write_float(state.vbat_compensated_cell_avg, 4, 1);
-    osd_txn_write_char('V');
-    osd_txn_submit(txn);
+    osd_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_write_float(state.vbat_compensated_cell_avg, 4, 1);
+    osd_write_char('V');
+
     osd_state.element++;
     break;
   }
 
   case OSD_FILTERED_VOLTS: {
-    osd_transaction_t *txn = osd_txn_init();
-    osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
-    osd_txn_write_float(state.vbat_cell_avg, 4, 1);
-    osd_txn_write_char('V');
+    osd_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_write_float(state.vbat_cell_avg, 4, 1);
+    osd_write_char('V');
 
-    osd_txn_submit(txn);
     osd_state.element++;
     break;
   }
 
   case OSD_GYRO_TEMP: {
-    osd_transaction_t *txn = osd_txn_init();
-    osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
-    osd_txn_write_int(state.gyro_temp, 4);
-    osd_txn_write_char(ICON_CELSIUS);
-    osd_txn_submit(txn);
+    osd_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_write_int(state.gyro_temp, 4);
+    osd_write_char(ICON_CELSIUS);
+
     osd_state.element++;
     break;
   }
@@ -663,11 +643,10 @@ static void osd_display_regular() {
   }
 
   case OSD_THROTTLE: {
-    osd_transaction_t *txn = osd_txn_init();
-    osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
-    osd_txn_write_uint(state.throttle * 100.0f, 4);
-    osd_txn_write_char(ICON_THROTTLE);
-    osd_txn_submit(txn);
+    osd_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_write_uint(state.throttle * 100.0f, 4);
+    osd_write_char(ICON_THROTTLE);
+
     osd_state.element++;
     break;
   }
@@ -679,11 +658,10 @@ static void osd_display_regular() {
   }
 
   case OSD_CURRENT_DRAW: {
-    osd_transaction_t *txn = osd_txn_init();
-    osd_txn_start(osd_attr(el), el->pos_x, el->pos_y);
-    osd_txn_write_float(state.ibat_filtered / 1000.0f, 4, 2);
-    osd_txn_write_char(ICON_AMP);
-    osd_txn_submit(txn);
+    osd_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_write_float(state.ibat_filtered / 1000.0f, 4, 2);
+    osd_write_char(ICON_AMP);
+
     osd_state.element++;
     break;
   }

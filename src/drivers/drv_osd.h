@@ -17,11 +17,6 @@ typedef struct {
 } osd_segment_t;
 
 typedef struct {
-  osd_segment_t segments[OSD_TXN_MAX];
-  uint8_t segment_count;
-} osd_transaction_t;
-
-typedef struct {
   uint8_t dirty : 1;
   uint8_t attr : 3;
   uint8_t val : 8;
@@ -57,15 +52,11 @@ uint8_t osd_clear_async();
 
 osd_system_t osd_check_system();
 
-osd_transaction_t *osd_txn_init();
+void osd_start(uint8_t attr, uint8_t x, uint8_t y);
 
-void osd_txn_start(uint8_t attr, uint8_t x, uint8_t y);
-
-void osd_txn_write_data(const uint8_t *buffer, uint8_t size);
-void osd_txn_write_str(const char *buffer);
-void osd_txn_write_char(const char val);
-void osd_txn_write_uint(uint32_t val, uint8_t width);
-void osd_txn_write_int(int32_t val, uint8_t width);
-void osd_txn_write_float(float val, uint8_t width, uint8_t precision);
-
-void osd_txn_submit(osd_transaction_t *txn);
+void osd_write_data(const uint8_t *buffer, uint8_t size);
+void osd_write_str(const char *buffer);
+void osd_write_char(const char val);
+void osd_write_uint(uint32_t val, uint8_t width);
+void osd_write_int(int32_t val, uint8_t width);
+void osd_write_float(float val, uint8_t width, uint8_t precision);
