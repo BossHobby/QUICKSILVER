@@ -272,7 +272,7 @@ void motor_output_calc(float mix[4]) {
       motor_min_value = (float)profile.motor.digital_idle * 0.01f;
     }
 
-    mix[i] = mapf(mix[i], 0.0f, 1.0f, motor_min_value, profile.motor.motor_limit);
+    mix[i] = mapf(mix[i], 0.0f, 1.0f, motor_min_value, profile.motor.motor_limit * 0.01f);
 
 #ifndef NOMOTORS
     // normal mode

@@ -222,7 +222,7 @@
 #define DIGITAL_IDLE 4.5
 
 // *************limits the maxium power applied to the motors
-#define MOTOR_LIMIT 1.0
+#define MOTOR_LIMIT 100.0
 
 // *************invert yaw pid for "PROPS OUT" configuration - This feature is switchable to "PROPS IN" when active with stick gesture DOWN-UP-DOWN, Save selection with DOWN-DOWN-DOWN
 #define INVERT_YAW_PID
