@@ -236,10 +236,8 @@ osd_system_t max7456_check_system() {
     } else if (warning_sent == 1) {
       spi_txn_wait(&bus);
 
-      osd_transaction_t *txn = osd_txn_init();
-      osd_txn_start(OSD_ATTR_BLINK, SYSTEMXPOS, SYSTEMYPOS);
-      osd_txn_write_str("NO CAMERA SIGNAL");
-      osd_txn_submit(txn);
+      osd_start(OSD_ATTR_BLINK, SYSTEMXPOS, SYSTEMYPOS);
+      osd_write_str("NO CAMERA SIGNAL");
 
       spi_txn_wait(&bus);
     } else if (warning_sent > 1) {
