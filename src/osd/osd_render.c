@@ -1106,10 +1106,9 @@ void osd_display() {
     osd_menu_select_screen(7, 3, "STICK BOOST", OSD_SCREEN_STICK_BOOST);
     osd_menu_select_screen(7, 4, "MOTOR BOOST", OSD_SCREEN_MOTOR_BOOST);
     osd_menu_select_screen(7, 5, "PID MODIFIERS", OSD_SCREEN_PID_MODIFIER);
-    osd_menu_select_screen(7, 6, "DIGITAL IDLE", OSD_SCREEN_DIGITAL_IDLE);
+    osd_menu_select_screen(7, 6, "MOTOR SETTINGS", OSD_SCREEN_MOTOR_SETTINGS);
     osd_menu_select_screen(7, 7, "LOW BATTERY", OSD_SCREEN_LOWBAT);
     osd_menu_select_screen(7, 8, "LEVEL MODE", OSD_SCREEN_LEVEL_MODE);
-    osd_menu_select_screen(7, 9, "TURTLE THROTTLE", OSD_SCREEN_TURTLE_THROTTLE);
 
     osd_menu_finish();
     break;
@@ -1287,13 +1286,23 @@ void osd_display() {
     osd_menu_finish();
     break;
 
-  case OSD_SCREEN_DIGITAL_IDLE:
+  case OSD_SCREEN_MOTOR_SETTINGS:
     osd_menu_start();
-    osd_menu_header("DIGITAL IDLE");
+    osd_menu_header("MOTOR SETTINGS");
 
-    osd_menu_select(4, 5, "MOTOR IDLE %");
-    if (osd_menu_select_float(17, 5, profile.motor.digital_idle, 4, 1)) {
+    osd_menu_select(4, 5, "DIGITAL IDLE %");
+    if (osd_menu_select_float(22, 5, profile.motor.digital_idle, 4, 1)) {
       profile.motor.digital_idle = osd_menu_adjust_float(profile.motor.digital_idle, 0.1, 0, 25.0);
+    }
+
+    osd_menu_select(4, 6, "TURTLE THROTTLE %");
+    if (osd_menu_select_float(22, 6, profile.motor.turtle_throttle_percent, 4, 0)) {
+      profile.motor.turtle_throttle_percent = osd_menu_adjust_float(profile.motor.turtle_throttle_percent, 1, 0, 100);
+    }
+
+    osd_menu_select(4, 7, "MOTOR LIMIT %");
+    if (osd_menu_select_float(22, 7, profile.motor.motor_limit, 4, 0)) {
+      profile.motor.motor_limit = osd_menu_adjust_float(profile.motor.motor_limit, 1, 0, 100);
     }
 
     osd_menu_select_save_and_exit(4, 14);
@@ -1360,19 +1369,6 @@ void osd_display() {
     osd_menu_select(2, 5, "MOTOR THROTTLE BOOST");
     if (osd_menu_select_float(22, 5, profile.motor.throttle_boost, 4, 1)) {
       profile.motor.throttle_boost = osd_menu_adjust_float(profile.motor.throttle_boost, 0.5, 0, 10.0);
-    }
-
-    osd_menu_select_save_and_exit(4, 14);
-    osd_menu_finish();
-    break;
-
-  case OSD_SCREEN_TURTLE_THROTTLE:
-    osd_menu_start();
-    osd_menu_header("TURTLE MODE");
-
-    osd_menu_select(4, 5, "TURTLE THROTTLE %");
-    if (osd_menu_select_float(22, 5, profile.motor.turtle_throttle_percent, 4, 1)) {
-      profile.motor.turtle_throttle_percent = osd_menu_adjust_float(profile.motor.turtle_throttle_percent, 1, 0, 100);
     }
 
     osd_menu_select_save_and_exit(4, 14);
