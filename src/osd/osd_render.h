@@ -94,13 +94,19 @@ typedef struct {
 
 #define ENCODE_OSD_ELEMENT(active, attr, x, y) ((y << 10) | (x << 2) | (attr << 1) | active)
 
+typedef enum {
+  OSD_PHASE_CLEAR,
+  OSD_PHASE_RENDER,
+  OSD_PHASE_IDLE,
+} osd_screen_phase_t;
+
 typedef struct {
   osd_elements_t element;
 
   osd_screens_t screen;
   osd_screens_t screen_history[OSD_HISTORY_SIZE];
   uint8_t screen_history_size;
-  uint8_t screen_phase;
+  osd_screen_phase_t screen_phase;
 
   uint8_t cursor;
   uint8_t cursor_history[OSD_HISTORY_SIZE];
