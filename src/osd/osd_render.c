@@ -144,7 +144,7 @@ void osd_display_reset() {
   osd_state.element = OSD_CALLSIGN;
 
   osd_state.screen = OSD_SCREEN_REGULAR;
-  osd_state.screen_phase = 0;
+  osd_state.screen_phase = OSD_PHASE_CLEAR;
   osd_state.screen_history_size = 0;
 
   osd_state.cursor = 1;
@@ -156,7 +156,7 @@ void osd_display_reset() {
 
 static void osd_update_screen(osd_screens_t screen) {
   osd_state.screen = screen;
-  osd_state.screen_phase = 0;
+  osd_state.screen_phase = OSD_PHASE_CLEAR;
 }
 
 osd_screens_t osd_push_screen_replace(osd_screens_t screen) {
@@ -210,7 +210,7 @@ void osd_handle_input(osd_input_t input) {
       } else {
         osd_state.cursor--;
       }
-      osd_state.screen_phase = 1;
+      osd_state.screen_phase = OSD_PHASE_RENDER;
     }
     break;
 
@@ -223,14 +223,14 @@ void osd_handle_input(osd_input_t input) {
       } else {
         osd_state.cursor++;
       }
-      osd_state.screen_phase = 1;
+      osd_state.screen_phase = OSD_PHASE_RENDER;
     }
     break;
 
   case OSD_INPUT_LEFT:
     if (osd_state.selection) {
       osd_state.selection--;
-      osd_state.screen_phase = 1;
+      osd_state.screen_phase = OSD_PHASE_RENDER;
     } else {
       osd_pop_screen();
     }
@@ -241,7 +241,7 @@ void osd_handle_input(osd_input_t input) {
     if (osd_state.selection > osd_state.selection_max) {
       osd_state.selection = osd_state.selection_max;
     }
-    osd_state.screen_phase = 1;
+    osd_state.screen_phase = OSD_PHASE_RENDER;
     break;
   }
 }
@@ -715,7 +715,7 @@ void osd_display_rate_menu() {
     }
 
     profile_current_rates()->mode = new_mode;
-    osd_state.screen_phase = 0;
+    osd_state.screen_phase = OSD_PHASE_CLEAR;
   }
 
   osd_menu_label(14, 5, "ROLL");

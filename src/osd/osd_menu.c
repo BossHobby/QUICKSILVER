@@ -8,10 +8,7 @@
 #define SCREEN_COLS 32
 
 typedef struct {
-  bool had_change;
-
   uint8_t onscreen_elements;
-  uint8_t rendered_elements;
   uint8_t active_elements;
   uint8_t grid_elements;
 } osd_menu_state_t;
@@ -21,82 +18,82 @@ static osd_menu_state_t menu_state;
 extern osd_system_t osd_system;
 
 void osd_menu_start() {
-  if (osd_state.screen_phase == 0) {
-    if (osd_clear_async()) {
-      osd_state.screen_phase++;
+  switch (osd_state.screen_phase) {
+  case OSD_PHASE_CLEAR:
+    if (!osd_clear_async()) {
+      break;
     }
-  }
-  if (osd_state.screen_phase == 1) {
-    // re-render elements
-    menu_state.rendered_elements = 0;
-    menu_state.had_change = false;
-    osd_state.selection_max = 1;
-  }
+    osd_state.screen_phase = OSD_PHASE_RENDER;
+    // Fallthrough
 
-  menu_state.onscreen_elements = 0;
-  menu_state.active_elements = 0;
-  menu_state.grid_elements = 0;
+  case OSD_PHASE_RENDER:
+  case OSD_PHASE_IDLE:
+    menu_state.onscreen_elements = 0;
+    menu_state.active_elements = 0;
+    menu_state.grid_elements = 0;
+    osd_state.selection_max = 1;
+    break;
+  }
 }
 
 static void osd_menu_had_change() {
-  menu_state.had_change = true;
-
   osd_state.selection_increase = 0;
   osd_state.selection_decrease = 0;
-  osd_state.screen_phase = 1;
+
+  osd_state.screen_phase = OSD_PHASE_RENDER;
 }
 
 bool osd_menu_finish() {
-  if (osd_state.screen_phase == 0 || menu_state.had_change) {
+  if (osd_state.screen_phase == OSD_PHASE_CLEAR) {
     return false;
   }
-  if (osd_state.screen_phase < menu_state.onscreen_elements) {
-    osd_state.screen_phase++;
-    return false;
+  if (osd_state.screen_phase == OSD_PHASE_IDLE) {
+    return true;
   }
+
+  osd_state.screen_phase++;
 
   osd_state.cursor_min = 0;
   osd_state.cursor_max = menu_state.active_elements - 1;
 
   menu_state.grid_elements = 0;
 
-  return osd_state.screen_phase >= menu_state.onscreen_elements;
+  return false;
 }
 
 static bool should_render_element() {
   menu_state.grid_elements = 0;
   menu_state.onscreen_elements++;
 
-  if (menu_state.onscreen_elements != (menu_state.rendered_elements + 1)) {
-    // our current element does not yet have its rendering turn
+  switch (osd_state.screen_phase) {
+  case OSD_PHASE_RENDER:
+    return true;
+
+  default:
+  case OSD_PHASE_IDLE:
+  case OSD_PHASE_CLEAR:
     return false;
   }
-
-  if (osd_state.screen_phase != (menu_state.rendered_elements + 1)) {
-    // not the correct screen phase
-    return false;
-  }
-
-  return true;
 }
 
 static bool should_render_active_element() {
+  menu_state.grid_elements = 0;
+  menu_state.onscreen_elements++;
   menu_state.active_elements++;
-  return should_render_element();
+
+  switch (osd_state.screen_phase) {
+  case OSD_PHASE_RENDER:
+    return true;
+
+  default:
+  case OSD_PHASE_IDLE:
+  case OSD_PHASE_CLEAR:
+    return false;
+  }
 }
 
 static bool should_render_grid_element() {
   menu_state.grid_elements++;
-
-  if (menu_state.onscreen_elements != menu_state.rendered_elements) {
-    // our current element does not yet have its rendering turn
-    return false;
-  }
-
-  if (osd_state.screen_phase != menu_state.rendered_elements) {
-    // not the correct screen phase
-    return false;
-  }
 
   if (osd_state.cursor == menu_state.active_elements) {
     osd_state.selection_max = menu_state.grid_elements;
@@ -197,8 +194,6 @@ void osd_menu_header(const char *text) {
 
   osd_start(OSD_ATTR_INVERT, x, 1);
   osd_write_data((const uint8_t *)text, len);
-
-  menu_state.rendered_elements++;
 }
 
 void osd_menu_highlight(uint8_t x, uint8_t y, const char *text) {
@@ -208,8 +203,6 @@ void osd_menu_highlight(uint8_t x, uint8_t y, const char *text) {
 
   osd_start(OSD_ATTR_INVERT, x, y);
   osd_write_str(text);
-
-  menu_state.rendered_elements++;
 }
 
 void osd_menu_label(uint8_t x, uint8_t y, const char *text) {
@@ -219,8 +212,6 @@ void osd_menu_label(uint8_t x, uint8_t y, const char *text) {
 
   osd_start(OSD_ATTR_TEXT, x, y);
   osd_write_str(text);
-
-  menu_state.rendered_elements++;
 }
 
 bool osd_menu_button(uint8_t x, uint8_t y, const char *text) {
@@ -247,9 +238,7 @@ bool osd_menu_button(uint8_t x, uint8_t y, const char *text) {
 
   osd_write_str(text);
 
-  menu_state.rendered_elements++;
-
-  return is_selected && osd_state.selection == 1;
+  return osd_state.cursor == menu_state.active_elements && osd_state.selection == 1;
 }
 
 void osd_menu_select(uint8_t x, uint8_t y, const char *text) {
@@ -275,8 +264,6 @@ void osd_menu_select(uint8_t x, uint8_t y, const char *text) {
   }
 
   osd_write_str(text);
-
-  menu_state.rendered_elements++;
 }
 
 bool osd_menu_select_enum(uint8_t x, uint8_t y, const uint8_t val, const char **labels) {
