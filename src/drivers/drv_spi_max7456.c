@@ -171,22 +171,17 @@ uint8_t max7456_clear_async() {
     return 0;
   }
 
-  static uint8_t clr_col = 0;
-  static uint8_t clr_row = 0;
+  static uint8_t row = 0;
 
-  static const uint8_t buffer[] = "               ";
-  max7456_push_string(OSD_ATTR_TEXT, clr_col, clr_row, buffer, 15);
+  static const uint8_t buffer[] = "                                ";
+  max7456_push_string(OSD_ATTR_TEXT, 0, row, buffer, 32);
 
-  clr_row++;
-  if (clr_row > MAX7456_ROWS) {
-    clr_row = 0;
-    clr_col += 15;
-    if (clr_col > 15) {
-      clr_col = 0;
-      return 1;
-    }
+  row++;
+
+  if (row > MAX7456_ROWS) {
+    row = 0;
+    return 1;
   }
-
   return 0;
 }
 
