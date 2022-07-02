@@ -71,11 +71,11 @@ void turtle_mode_update() {
   switch (turtle_state) {
   case TURTLE_STAGE_IDLE: {
     static uint8_t last_armed_state_turtle = 0;
-    if (rx_aux_on(AUX_ARMING) != last_armed_state_turtle) {
-      last_armed_state_turtle = rx_aux_on(AUX_ARMING);
+    if (flags.arm_switch != last_armed_state_turtle) {
+      last_armed_state_turtle = flags.arm_switch;
 
       // quad was just armed and upside down, begin the turtle sequence
-      if (rx_aux_on(AUX_ARMING) && (state.GEstG.yaw < 0)) {
+      if (flags.arm_switch && (state.GEstG.yaw < 0)) {
         turtle_state = TURTLE_STAGE_START;
       }
     }
