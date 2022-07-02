@@ -154,7 +154,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
     // flight mode, only arm for now
     uint32_t flight_mode = 0;
-    if (rx_aux_on(AUX_ARMING)) {
+    if (flags.arm_switch) {
       flight_mode |= 0x1;
     }
     msp_write_uint32(data + 6, flight_mode);

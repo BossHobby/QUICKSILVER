@@ -318,7 +318,7 @@ __attribute__((__used__)) int main() {
     if (usb_detect()) {
       flags.usb_active = 1;
 #ifndef ALLOW_USB_ARMING
-      if (rx_aux_on(AUX_ARMING))
+      if (flags.arm_switch)
         flags.arm_safety = 1; // final safety check to disallow arming during USB operation
 #endif
       usb_configurator();

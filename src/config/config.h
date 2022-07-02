@@ -112,6 +112,7 @@
 
 // *******************************SWITCH SELECTION*****************************
 #define ARMING AUX_CHANNEL_0
+#define PREARM AUX_CHANNEL_ON
 #define IDLE_UP AUX_CHANNEL_0
 #define LEVELMODE AUX_CHANNEL_OFF
 #define RACEMODE AUX_CHANNEL_OFF

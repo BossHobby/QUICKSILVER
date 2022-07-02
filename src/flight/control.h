@@ -13,7 +13,8 @@
 
 // THE UN OF STRUCTS
 typedef struct {
-  uint8_t arm_state : 1;
+  uint8_t arm_switch : 1; // arming switch (AUX_ARMING + AUX_PREARM) has been tripped
+  uint8_t arm_state : 1;  // armed after all saftey checks have passed
   uint8_t arm_safety : 1;
   uint8_t throttle_safety : 1; // throttle is above safety limit
 

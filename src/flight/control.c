@@ -314,8 +314,28 @@ void control() {
     state.failsafe_time_ms = 0;
   }
 
-  // CONDITION: switch is ARMED
+  static bool checked_prearm = false;
   if (rx_aux_on(AUX_ARMING)) {
+    // CONDITION: AUX_ARMING is high
+    if (!checked_prearm && rx_aux_on(AUX_PREARM)) {
+      // CONDITION: AUX_PREARM is high AND we have not checked prearm this arm cycle
+      flags.arm_switch = 1;
+    } else if (!flags.arm_switch) {
+      // throw up arming safety if we didnt manage to arm
+      flags.arm_safety = 1;
+    }
+    checked_prearm = true;
+  } else {
+    flags.arm_switch = 0;
+    checked_prearm = false;
+
+    if (flags.rx_ready == 1) {
+      // rx is bound and has been disarmed so clear binding while armed flag
+      flags.arm_safety = 0;
+    }
+  }
+
+  if (flags.arm_switch) {
     // CONDITION: throttle is above safety limit and ARMING RELEASE FLAG IS NOT CLEARED
     if ((state.rx_filtered.throttle > THROTTLE_SAFETY) && (arming_release == 0)) {
       flags.throttle_safety = 1;
@@ -346,12 +366,9 @@ void control() {
 
     // disarm the quad by setting armed state variable to zero
     flags.arm_state = 0;
+
     // clear the throttle safety flag
     flags.throttle_safety = 0;
-    if (flags.rx_ready == 1) {
-      // rx is bound and has been disarmed so clear binding while armed flag
-      flags.arm_safety = 0;
-    }
   }
 
   if (!rx_aux_on(AUX_IDLE_UP)) {
