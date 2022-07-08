@@ -554,5 +554,16 @@
         }
       }
     ]
+  },
+  {
+    "name": "betafpv_f405",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
   }
 ]
