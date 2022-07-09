@@ -50,6 +50,8 @@ bool osd_update();
 void osd_clear();
 uint8_t osd_clear_async();
 
+void osd_display_refresh();
+
 osd_system_t osd_check_system();
 
 void osd_start(uint8_t attr, uint8_t x, uint8_t y);

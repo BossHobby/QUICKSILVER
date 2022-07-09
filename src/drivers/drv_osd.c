@@ -82,6 +82,27 @@ uint8_t osd_clear_async() {
   return is_done;
 }
 
+static void osd_display_set(uint16_t offset, uint8_t attr, uint8_t val) {
+  if (display[offset].val == val && display[offset].attr == attr) {
+    return;
+  }
+
+  display[offset].dirty = 1;
+  display[offset].attr = attr;
+  display[offset].val = val;
+
+  display_row_dirty[offset / cols] = true;
+  display_dirty = true;
+}
+
+void osd_display_refresh() {
+  for (uint8_t row = 0; row < rows; row++) {
+    for (uint8_t col = 0; col < cols; col++) {
+      osd_display_set(row * cols + col, 0, ' ');
+    }
+  }
+}
+
 osd_system_t osd_check_system() {
   switch (osd_device) {
   case OSD_DEVICE_MAX7456:
@@ -112,16 +133,7 @@ void osd_write_data(const uint8_t *buffer, uint8_t size) {
 
   const uint16_t offset = osd_seg.y * cols + osd_seg.x + osd_seg.offset;
   for (uint8_t i = 0; i < size; i++) {
-    if (display[offset + i].val == buffer[i] && display[offset + i].attr == osd_seg.attr) {
-      continue;
-    }
-
-    display[offset + i].dirty = 1;
-    display[offset + i].attr = osd_seg.attr;
-    display[offset + i].val = buffer[i];
-
-    display_row_dirty[osd_seg.y] = true;
-    display_dirty = true;
+    osd_display_set(offset + i, osd_seg.attr, buffer[i]);
   }
 
   osd_seg.offset += size;
@@ -131,16 +143,7 @@ void osd_write_char(const char val) {
   osd_seg.size += 1;
 
   const uint16_t offset = osd_seg.y * cols + osd_seg.x + osd_seg.offset;
-  if (display[offset].val == val && display[offset].attr == osd_seg.attr) {
-    return;
-  }
-
-  display[offset].dirty = 1;
-  display[offset].attr = osd_seg.attr;
-  display[offset].val = val;
-
-  display_row_dirty[osd_seg.y] = true;
-  display_dirty = true;
+  osd_display_set(offset, osd_seg.attr, val);
 
   osd_seg.offset += 1;
 }

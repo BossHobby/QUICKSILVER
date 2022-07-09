@@ -4,6 +4,7 @@
 
 #include "drv_osd.h"
 #include "osd_render.h"
+#include "util/util.h"
 
 #define SCREEN_COLS 32
 
@@ -11,6 +12,11 @@ typedef struct {
   uint8_t onscreen_elements;
   uint8_t active_elements;
   uint8_t grid_elements;
+
+  uint8_t scroll_max;
+  uint8_t scroll_start;
+  uint8_t scroll_elements;
+  uint8_t scroll_offset;
 } osd_menu_state_t;
 
 static osd_menu_state_t menu_state;
@@ -18,20 +24,25 @@ static osd_menu_state_t menu_state;
 extern osd_system_t osd_system;
 
 void osd_menu_start() {
+  menu_state.onscreen_elements = 0;
+  menu_state.active_elements = 0;
+  menu_state.grid_elements = 0;
+  osd_state.selection_max = 1;
+
   switch (osd_state.screen_phase) {
   case OSD_PHASE_CLEAR:
     if (!osd_clear_async()) {
       break;
     }
     osd_state.screen_phase = OSD_PHASE_RENDER;
-    // Fallthrough
+    break;
 
-  case OSD_PHASE_RENDER:
-  case OSD_PHASE_IDLE:
-    menu_state.onscreen_elements = 0;
-    menu_state.active_elements = 0;
-    menu_state.grid_elements = 0;
-    osd_state.selection_max = 1;
+  case OSD_PHASE_REFRESH:
+    osd_display_refresh();
+    osd_state.screen_phase = OSD_PHASE_RENDER;
+    break;
+
+  default:
     break;
   }
 }
@@ -40,7 +51,7 @@ static void osd_menu_had_change() {
   osd_state.selection_increase = 0;
   osd_state.selection_decrease = 0;
 
-  osd_state.screen_phase = OSD_PHASE_RENDER;
+  osd_state.screen_phase = OSD_PHASE_REFRESH;
 }
 
 bool osd_menu_finish() {
@@ -76,18 +87,28 @@ static bool should_render_element() {
   }
 }
 
-static bool should_render_active_element() {
+static bool should_render_active_element(int8_t y) {
   menu_state.grid_elements = 0;
   menu_state.onscreen_elements++;
   menu_state.active_elements++;
+
+  if (y == OSD_AUTO) {
+    menu_state.scroll_elements++;
+
+    const uint8_t scroll_cursor = osd_state.cursor - (menu_state.active_elements - menu_state.scroll_elements);
+    const uint8_t scroll_page = ((scroll_cursor - 1) / menu_state.scroll_max) * menu_state.scroll_max;
+    if (menu_state.scroll_elements <= scroll_page || menu_state.scroll_elements > (scroll_page + menu_state.scroll_max)) {
+      return false;
+    }
+
+    menu_state.scroll_offset++;
+  }
 
   switch (osd_state.screen_phase) {
   case OSD_PHASE_RENDER:
     return true;
 
   default:
-  case OSD_PHASE_IDLE:
-  case OSD_PHASE_CLEAR:
     return false;
   }
 }
@@ -108,6 +129,43 @@ static bool is_element_selected() {
 
 static bool has_adjust() {
   return osd_state.selection_increase || osd_state.selection_decrease;
+}
+
+static uint8_t get_y_value(int8_t y) {
+  switch (y) {
+  case OSD_AUTO:
+    return menu_state.scroll_offset;
+
+  case OSD_END:
+    return 14;
+
+  default:
+    return y;
+  }
+}
+
+void osd_menu_scroll_start(uint8_t x, uint8_t y, uint8_t max) {
+  if (should_render_element()) {
+    osd_start(OSD_ATTR_TEXT, x - 1, y);
+    osd_write_char(0x75); // UP ARROW
+  }
+
+  menu_state.scroll_max = max;
+  menu_state.scroll_start = y;
+  menu_state.scroll_elements = 0;
+  menu_state.scroll_offset = y;
+}
+
+void osd_menu_scroll_finish(uint8_t x) {
+  if (should_render_element()) {
+    osd_start(OSD_ATTR_TEXT, x - 1, menu_state.scroll_start + menu_state.scroll_max + 1);
+    osd_write_char(0x76); // DOWN ARROW
+  }
+
+  menu_state.scroll_max = 0;
+  menu_state.scroll_start = 0;
+  menu_state.scroll_elements = 0;
+  menu_state.scroll_offset = 0;
 }
 
 int32_t osd_menu_adjust_int(int32_t val, const int32_t delta, const int32_t min, const int32_t max) {
@@ -196,7 +254,7 @@ void osd_menu_header(const char *text) {
   osd_write_data((const uint8_t *)text, len);
 }
 
-void osd_menu_highlight(uint8_t x, uint8_t y, const char *text) {
+void osd_menu_highlight(int8_t x, int8_t y, const char *text) {
   if (!should_render_element()) {
     return;
   }
@@ -205,7 +263,7 @@ void osd_menu_highlight(uint8_t x, uint8_t y, const char *text) {
   osd_write_str(text);
 }
 
-void osd_menu_label(uint8_t x, uint8_t y, const char *text) {
+void osd_menu_label(int8_t x, int8_t y, const char *text) {
   if (!should_render_element()) {
     return;
   }
@@ -214,10 +272,12 @@ void osd_menu_label(uint8_t x, uint8_t y, const char *text) {
   osd_write_str(text);
 }
 
-bool osd_menu_button(uint8_t x, uint8_t y, const char *text) {
-  if (!should_render_active_element()) {
+bool osd_menu_button(int8_t x, int8_t y, const char *text) {
+  if (!should_render_active_element(y)) {
     return osd_state.cursor == menu_state.active_elements && osd_state.selection == 1;
   }
+
+  y = get_y_value(y);
 
   const bool is_selected = is_element_selected();
   if (osd_system == OSD_SYS_HD) {
@@ -241,8 +301,8 @@ bool osd_menu_button(uint8_t x, uint8_t y, const char *text) {
   return osd_state.cursor == menu_state.active_elements && osd_state.selection == 1;
 }
 
-void osd_menu_select(uint8_t x, uint8_t y, const char *text) {
-  if (!should_render_active_element()) {
+void osd_menu_select(int8_t x, int8_t y, const char *text) {
+  if (!should_render_active_element(y)) {
     return;
   }
 
@@ -266,7 +326,7 @@ void osd_menu_select(uint8_t x, uint8_t y, const char *text) {
   osd_write_str(text);
 }
 
-bool osd_menu_select_enum(uint8_t x, uint8_t y, const uint8_t val, const char **labels) {
+bool osd_menu_select_enum(int8_t x, int8_t y, const uint8_t val, const char **labels) {
   if (!should_render_grid_element()) {
     return is_element_selected() && has_adjust();
   }
@@ -293,7 +353,7 @@ bool osd_menu_select_enum(uint8_t x, uint8_t y, const uint8_t val, const char **
   return is_selected && has_adjust();
 }
 
-bool osd_menu_select_int(uint8_t x, uint8_t y, const int32_t val, uint8_t width) {
+bool osd_menu_select_int(int8_t x, int8_t y, const int32_t val, uint8_t width) {
   if (!should_render_grid_element()) {
     return is_element_selected() && has_adjust();
   }
@@ -320,7 +380,7 @@ bool osd_menu_select_int(uint8_t x, uint8_t y, const int32_t val, uint8_t width)
   return is_selected && has_adjust();
 }
 
-bool osd_menu_select_str(uint8_t x, uint8_t y, const char *str) {
+bool osd_menu_select_str(int8_t x, int8_t y, const char *str) {
   // limit selection to 20
   menu_state.grid_elements = 19;
 
@@ -354,7 +414,7 @@ bool osd_menu_select_str(uint8_t x, uint8_t y, const char *str) {
   return osd_state.cursor == menu_state.active_elements && osd_state.selection >= 1 && has_adjust();
 }
 
-bool osd_menu_select_float(uint8_t x, uint8_t y, const float val, uint8_t width, uint8_t precision) {
+bool osd_menu_select_float(int8_t x, int8_t y, const float val, uint8_t width, uint8_t precision) {
   if (!should_render_grid_element()) {
     return is_element_selected() && has_adjust();
   }
@@ -381,7 +441,7 @@ bool osd_menu_select_float(uint8_t x, uint8_t y, const float val, uint8_t width,
   return is_selected && has_adjust();
 }
 
-bool osd_menu_select_vec3(uint8_t x, uint8_t y, const vec3_t val, uint8_t width, uint8_t precision) {
+bool osd_menu_select_vec3(int8_t x, int8_t y, const vec3_t val, uint8_t width, uint8_t precision) {
   if (osd_menu_select_float(x, y, val.roll, width, precision)) {
     return true;
   }
@@ -394,19 +454,19 @@ bool osd_menu_select_vec3(uint8_t x, uint8_t y, const vec3_t val, uint8_t width,
   return false;
 }
 
-void osd_menu_select_save_and_exit(uint8_t x, uint8_t y) {
-  if (osd_menu_button(x, y, "SAVE AND EXIT")) {
+void osd_menu_select_save_and_exit(int8_t x) {
+  if (osd_menu_button(x, OSD_END, "SAVE AND EXIT")) {
     osd_save_exit();
   }
 }
 
-void osd_menu_select_screen(uint8_t x, uint8_t y, const char *text, osd_screens_t screen) {
+void osd_menu_select_screen(int8_t x, int8_t y, const char *text, osd_screens_t screen) {
   if (osd_menu_button(x, y, text)) {
     osd_push_screen(screen);
   }
 }
 
-void osd_menu_select_enum_adjust(uint8_t x, uint8_t y, const char *text, uint8_t select_x, uint8_t *val, const char **labels, const int32_t min, const int32_t max) {
+void osd_menu_select_enum_adjust(int8_t x, int8_t y, const char *text, uint8_t select_x, uint8_t *val, const char **labels, const int32_t min, const int32_t max) {
   osd_menu_select(x, y, text);
   if (osd_menu_select_enum(select_x, y, *val, labels)) {
     *val = osd_menu_adjust_int(*val, 1, min, max);

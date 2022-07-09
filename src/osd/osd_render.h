@@ -96,6 +96,7 @@ typedef struct {
 
 typedef enum {
   OSD_PHASE_CLEAR,
+  OSD_PHASE_REFRESH,
   OSD_PHASE_RENDER,
   OSD_PHASE_IDLE,
 } osd_screen_phase_t;
