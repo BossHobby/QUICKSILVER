@@ -44,6 +44,7 @@ typedef struct {
 #define ICON_CELSIUS 0xe
 #define ICON_THROTTLE 0x4
 #define ICON_AMP 0x9a
+#define ICON_DOWN 0x76
 
 #define HOLD 0
 #define TEMP 1
@@ -210,7 +211,7 @@ void osd_handle_input(osd_input_t input) {
       } else {
         osd_state.cursor--;
       }
-      osd_state.screen_phase = OSD_PHASE_RENDER;
+      osd_state.screen_phase = OSD_PHASE_REFRESH;
     }
     break;
 
@@ -223,14 +224,14 @@ void osd_handle_input(osd_input_t input) {
       } else {
         osd_state.cursor++;
       }
-      osd_state.screen_phase = OSD_PHASE_RENDER;
+      osd_state.screen_phase = OSD_PHASE_REFRESH;
     }
     break;
 
   case OSD_INPUT_LEFT:
     if (osd_state.selection) {
       osd_state.selection--;
-      osd_state.screen_phase = OSD_PHASE_RENDER;
+      osd_state.screen_phase = OSD_PHASE_REFRESH;
     } else {
       osd_pop_screen();
     }
@@ -241,7 +242,7 @@ void osd_handle_input(osd_input_t input) {
     if (osd_state.selection > osd_state.selection_max) {
       osd_state.selection = osd_state.selection_max;
     }
-    osd_state.screen_phase = OSD_PHASE_RENDER;
+    osd_state.screen_phase = OSD_PHASE_REFRESH;
     break;
   }
 }
@@ -777,7 +778,7 @@ void osd_display_rate_menu() {
   }
   }
 
-  osd_menu_select_save_and_exit(2, 14);
+  osd_menu_select_save_and_exit(2);
   osd_menu_finish();
 }
 
@@ -824,16 +825,23 @@ void osd_display() {
     osd_menu_start();
     osd_menu_header("MENU");
 
-    osd_menu_select_screen(7, 3, "VTX", OSD_SCREEN_VTX);
-    osd_menu_select_screen(7, 4, "PIDS", OSD_SCREEN_PID_PROFILE);
-    osd_menu_select_screen(7, 5, "FILTERS", OSD_SCREEN_FILTERS);
-    osd_menu_select_screen(7, 6, "RATES", OSD_SCREEN_RATE_PROFILES);
-    osd_menu_select_screen(7, 7, "FLIGHT MODES", OSD_SCREEN_FLIGHT_MODES);
-    osd_menu_select_screen(7, 8, "OSD ELEMENTS", OSD_SCREEN_ELEMENTS);
-    osd_menu_select_screen(7, 9, "SPECIAL FEATURES", OSD_SCREEN_SPECIAL_FEATURES);
-    osd_menu_select_screen(7, 10, "RC LINK", OSD_SCREEN_RC_LINK);
+    osd_menu_scroll_start(7, 2, 7);
+    {
+      // PAGE 1
+      osd_menu_select_screen(7, OSD_AUTO, "VTX", OSD_SCREEN_VTX);
+      osd_menu_select_screen(7, OSD_AUTO, "PIDS", OSD_SCREEN_PID_PROFILE);
+      osd_menu_select_screen(7, OSD_AUTO, "FILTERS", OSD_SCREEN_FILTERS);
+      osd_menu_select_screen(7, OSD_AUTO, "RATES", OSD_SCREEN_RATE_PROFILES);
+      osd_menu_select_screen(7, OSD_AUTO, "FLIGHT MODES", OSD_SCREEN_FLIGHT_MODES);
+      osd_menu_select_screen(7, OSD_AUTO, "OSD ELEMENTS", OSD_SCREEN_ELEMENTS);
+      osd_menu_select_screen(7, OSD_AUTO, "SPECIAL FEATURES", OSD_SCREEN_SPECIAL_FEATURES);
 
-    osd_menu_select_save_and_exit(7, 11);
+      // PAGE 2
+      osd_menu_select_screen(7, OSD_AUTO, "RC LINK", OSD_SCREEN_RC_LINK);
+    }
+    osd_menu_scroll_finish(7);
+
+    osd_menu_select_save_and_exit(7);
     osd_menu_finish();
     break;
   }
@@ -889,7 +897,7 @@ void osd_display() {
       rates->kd = osd_menu_adjust_vec3(rates->kd, 1, 0.0, 120.0);
     }
 
-    osd_menu_select_save_and_exit(7, 11);
+    osd_menu_select_save_and_exit(7);
     osd_menu_finish();
     break;
 
@@ -962,7 +970,7 @@ void osd_display() {
       profile.filter.gyro[1].cutoff_freq = osd_menu_adjust_float(profile.filter.gyro[1].cutoff_freq, 10, 50, 500);
     }
 
-    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
   }
@@ -1015,7 +1023,7 @@ void osd_display() {
       profile.filter.dterm_dynamic_max = osd_menu_adjust_float(profile.filter.dterm_dynamic_max, 10, 50, 500);
     }
 
-    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
 
@@ -1035,7 +1043,7 @@ void osd_display() {
     osd_menu_select_enum_adjust(4, 11, "MOTOR TEST", 17, &profile.receiver.aux[AUX_MOTOR_TEST], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
     osd_menu_select_enum_adjust(4, 12, "FPV SWITCH", 17, &profile.receiver.aux[AUX_FPV_SWITCH], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
 
-    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
   }
@@ -1065,7 +1073,7 @@ void osd_display() {
         vtx_settings_copy.pit_mode = osd_menu_adjust_int(vtx_settings_copy.pit_mode, 1, VTX_PIT_MODE_OFF, VTX_PIT_MODE_ON);
       }
 
-      osd_menu_select_save_and_exit(4, 14);
+      osd_menu_select_save_and_exit(4);
       osd_menu_finish();
     } else {
       osd_menu_start();
@@ -1137,7 +1145,7 @@ void osd_display() {
       rates->transition = osd_menu_adjust_vec3(rates->transition, 0.01, -1.0, -1.0);
     }
 
-    osd_menu_select_save_and_exit(7, 11);
+    osd_menu_select_save_and_exit(7);
     osd_menu_finish();
     break;
   }
@@ -1172,7 +1180,7 @@ void osd_display() {
       }
     }
 
-    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
   }
@@ -1196,7 +1204,7 @@ void osd_display() {
       }
     }
 
-    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
 
@@ -1218,7 +1226,7 @@ void osd_display() {
       }
     }
 
-    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
 
@@ -1232,7 +1240,7 @@ void osd_display() {
     }
     osd_menu_label(8, 6, "-------------------");
 
-    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
 
@@ -1245,7 +1253,7 @@ void osd_display() {
       profile.voltage.vbattlow = osd_menu_adjust_float(profile.voltage.vbattlow, 0.1, 0, 4.2);
     }
 
-    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
 
@@ -1288,7 +1296,7 @@ void osd_display() {
       profile.motor.motor_limit = osd_menu_adjust_float(profile.motor.motor_limit, 1, 0, 100);
     }
 
-    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
 
@@ -1301,7 +1309,7 @@ void osd_display() {
       profile.rate.level_max_angle = osd_menu_adjust_float(profile.rate.level_max_angle, 1, 0, 85.0);
     }
 
-    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
 
@@ -1328,7 +1336,7 @@ void osd_display() {
       profile.pid.big_angle.kd = osd_menu_adjust_float(profile.pid.big_angle.kd, 0.5, 0, 10.0);
     }
 
-    osd_menu_select_save_and_exit(1, 14);
+    osd_menu_select_save_and_exit(1);
     osd_menu_finish();
     break;
 
@@ -1341,7 +1349,7 @@ void osd_display() {
       profile.motor.torque_boost = osd_menu_adjust_float(profile.motor.torque_boost, 0.1, 0, 3.0);
     }
 
-    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
 
@@ -1354,7 +1362,7 @@ void osd_display() {
       profile.motor.throttle_boost = osd_menu_adjust_float(profile.motor.throttle_boost, 0.5, 0, 10.0);
     }
 
-    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
 
@@ -1380,7 +1388,7 @@ void osd_display() {
       profile.pid.throttle_dterm_attenuation.tda_percent = osd_menu_adjust_float(profile.pid.throttle_dterm_attenuation.tda_percent, 0.05, 0, 1);
     }
 
-    osd_menu_select_save_and_exit(2, 14);
+    osd_menu_select_save_and_exit(2);
     osd_menu_finish();
     break;
 
@@ -1409,7 +1417,7 @@ void osd_display() {
       osd_menu_select_enum_adjust(4, 5, "SELECT AUX", 16, &profile.receiver.aux[AUX_RSSI], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
     }
 
-    osd_menu_select_save_and_exit(4, 14);
+    osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
   }
