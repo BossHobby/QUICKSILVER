@@ -323,8 +323,12 @@ bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32
 
   const usart_port_def_t *port = &usart_port_defs[serial->port];
 
-  circular_buffer_write_multi(serial->tx_buffer, data, size);
-  LL_USART_EnableIT_TXE(port->channel);
+  uint32_t written = 0;
+  while (written < size) {
+    written += circular_buffer_write_multi(serial->tx_buffer, data + written, size - written);
+    LL_USART_EnableIT_TXE(port->channel);
+    __WFI();
+  }
 
   return true;
 }
