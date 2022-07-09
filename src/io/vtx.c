@@ -32,6 +32,9 @@ typedef enum {
 vtx_settings_t vtx_settings;
 uint8_t vtx_connect_tries = 0;
 
+static uint32_t vtx_delay_start = 0;
+static uint32_t vtx_delay_ms = 1000;
+
 const uint16_t frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX] = {
     {5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725}, // VTX_BAND_A
     {5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866}, // VTX_BAND_B
@@ -298,17 +301,16 @@ static vtx_detect_status_t vtx_update_protocol(vtx_protocol_t proto, vtx_setting
 
 void vtx_init() {
   vtx_settings.detected = VTX_PROTOCOL_INVALID;
+  vtx_delay_start = time_millis();
 }
 
 void vtx_update() {
-  static volatile uint32_t delay_loops = 5000;
-
 #if defined(FPV_PIN)
   if (rx_aux_on(AUX_FPV_SWITCH)) {
     // fpv switch on
     if (!fpv_init && flags.rx_mode == RXMODE_NORMAL && flags.on_ground == 1) {
       fpv_init = gpio_init_fpv(flags.rx_mode);
-      delay_loops = 1000;
+      vtx_delay_ms = 1000;
       vtx_connect_tries = 0;
     }
     if (fpv_init) {
@@ -326,11 +328,6 @@ void vtx_update() {
   }
 #endif
 
-  if (delay_loops > 0) {
-    delay_loops--;
-    return;
-  }
-
   if (flags.in_air) {
     // never try to do vtx stuff in-air
     return;
@@ -340,6 +337,13 @@ void vtx_update() {
     // no serial assigned to vtx or still in use by rx
     return;
   }
+
+  if ((time_millis() - vtx_delay_start) < vtx_delay_ms) {
+    return;
+  }
+
+  vtx_delay_ms = 0;
+  vtx_delay_start = time_millis();
 
   static vtx_settings_t actual;
 
@@ -376,6 +380,7 @@ void vtx_update() {
     } else if (status == VTX_DETECT_ERROR) {
       vtx_connect_tries = 0;
       protocol_is_init = 0;
+      vtx_delay_ms = 500;
 
       if (vtx_settings.protocol == VTX_PROTOCOL_INVALID) {
         // only switch protocol if we are not fixed to one
@@ -420,6 +425,7 @@ void vtx_update() {
     }
 
     frequency_tries++;
+    vtx_delay_ms = 10;
     return;
   } else {
     frequency_tries = 0;
@@ -448,6 +454,7 @@ void vtx_update() {
     }
 
     power_level_tries++;
+    vtx_delay_ms = 10;
     return;
   } else {
     power_level_tries = 0;
@@ -487,6 +494,7 @@ void vtx_update() {
     }
 
     pit_mode_tries++;
+    vtx_delay_ms = 10;
   } else {
     pit_mode_tries = 0;
   }
