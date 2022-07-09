@@ -32,6 +32,8 @@ typedef enum {
 vtx_settings_t vtx_settings;
 uint8_t vtx_connect_tries = 0;
 
+static vtx_settings_t vtx_actual;
+
 static uint32_t vtx_delay_start = 0;
 static uint32_t vtx_delay_ms = 1000;
 
@@ -108,8 +110,11 @@ vtx_detect_status_t vtx_smart_audio_update(vtx_settings_t *actual) {
     if (smart_audio_settings.version != 0 && smart_audio_detected == 0) {
       quic_debugf("smart audio version: %d", smart_audio_settings.version);
       smart_audio_detected = 1;
-      if (vtx_settings.magic != VTX_SETTINGS_MAGIC)
-        vtx_settings = *actual;
+
+      if (vtx_settings.magic != VTX_SETTINGS_MAGIC) {
+        vtx_set(actual);
+      }
+
       vtx_settings.detected = VTX_PROTOCOL_SMART_AUDIO;
       vtx_connect_tries = 0;
     }
@@ -249,8 +254,11 @@ vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual) {
 
     if (tramp_settings.freq_min != 0 && tramp_settings.frequency != 0 && tramp_detected == 0) {
       tramp_detected = 1;
-      if (vtx_settings.magic != VTX_SETTINGS_MAGIC)
-        vtx_settings = *actual;
+
+      if (vtx_settings.magic != VTX_SETTINGS_MAGIC) {
+        vtx_set(actual);
+      }
+
       vtx_settings.detected = VTX_PROTOCOL_TRAMP;
       vtx_connect_tries = 0;
     }
@@ -302,6 +310,12 @@ static vtx_detect_status_t vtx_update_protocol(vtx_protocol_t proto, vtx_setting
 void vtx_init() {
   vtx_settings.detected = VTX_PROTOCOL_INVALID;
   vtx_delay_start = time_millis();
+
+  vtx_actual.band = VTX_BAND_MAX;
+  vtx_actual.channel = VTX_CHANNEL_MAX;
+
+  vtx_actual.pit_mode = VTX_PIT_MODE_MAX;
+  vtx_actual.power_level = VTX_POWER_LEVEL_MAX;
 }
 
 void vtx_update() {
@@ -345,8 +359,6 @@ void vtx_update() {
   vtx_delay_ms = 0;
   vtx_delay_start = time_millis();
 
-  static vtx_settings_t actual;
-
   if (!vtx_settings.detected) {
     static vtx_protocol_t protocol_to_check = VTX_PROTOCOL_TRAMP;
     static uint8_t protocol_is_init = 0;
@@ -372,7 +384,7 @@ void vtx_update() {
       return;
     }
 
-    const vtx_detect_status_t status = vtx_update_protocol(protocol_to_check, &actual);
+    const vtx_detect_status_t status = vtx_update_protocol(protocol_to_check, &vtx_actual);
 
     if (status == VTX_DETECT_SUCCESS) {
       // detect success, save detected proto
@@ -394,7 +406,7 @@ void vtx_update() {
     return;
   }
 
-  const vtx_detect_status_t status = vtx_update_protocol(vtx_settings.detected, &actual);
+  const vtx_detect_status_t status = vtx_update_protocol(vtx_settings.detected, &vtx_actual);
 
   if (status < VTX_DETECT_SUCCESS) {
     // we are in wait or error state, do nothing
@@ -402,11 +414,11 @@ void vtx_update() {
   }
 
   static uint8_t frequency_tries = 0;
-  if (frequency_table[actual.band][actual.channel] != frequency_table[vtx_settings.band][vtx_settings.channel]) {
+  if (frequency_table[vtx_actual.band][vtx_actual.channel] != frequency_table[vtx_settings.band][vtx_settings.channel]) {
     if (frequency_tries >= VTX_APPLY_TRIES) {
       // give up
-      vtx_settings.band = actual.band;
-      vtx_settings.channel = actual.channel;
+      vtx_settings.band = vtx_actual.band;
+      vtx_settings.channel = vtx_actual.channel;
       frequency_tries = 0;
       return;
     }
@@ -432,10 +444,10 @@ void vtx_update() {
   }
 
   static uint8_t power_level_tries = 0;
-  if (actual.power_level != vtx_settings.power_level) {
+  if (vtx_actual.power_level != vtx_settings.power_level) {
     if (power_level_tries >= VTX_APPLY_TRIES) {
       // give up
-      vtx_settings.power_level = actual.power_level;
+      vtx_settings.power_level = vtx_actual.power_level;
       power_level_tries = 0;
       return;
     }
@@ -472,10 +484,10 @@ void vtx_update() {
   }
 
   static uint8_t pit_mode_tries = 0;
-  if (actual.pit_mode != vtx_settings.pit_mode) {
+  if (vtx_actual.pit_mode != vtx_settings.pit_mode) {
     if (pit_mode_tries >= VTX_APPLY_TRIES) {
       // give up
-      vtx_settings.pit_mode = actual.pit_mode;
+      vtx_settings.pit_mode = vtx_actual.pit_mode;
       pit_mode_tries = 0;
       return;
     }
@@ -517,10 +529,10 @@ void vtx_set(vtx_settings_t *vtx) {
   if (vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT)
     vtx_settings.pit_mode = vtx->pit_mode;
 
-  vtx_settings.power_level = vtx->power_level;
+  vtx_settings.power_level = vtx->power_level < VTX_POWER_LEVEL_MAX ? vtx->power_level : 0;
 
-  vtx_settings.band = vtx->band;
-  vtx_settings.channel = vtx->channel;
+  vtx_settings.band = vtx->band < VTX_BAND_MAX ? vtx->band : 0;
+  vtx_settings.channel = vtx->channel < VTX_CHANNEL_MAX ? vtx->channel : 0;
 }
 
 cbor_result_t cbor_encode_vtx_settings_t(cbor_value_t *enc, const vtx_settings_t *vtx) {
