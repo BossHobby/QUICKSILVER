@@ -79,6 +79,7 @@ osd_state_t osd_state = {
 
 static const char *osd_element_labels[] = {
     "CALLSIGN",
+    "CELL COUNT",
     "FUELGAUGE VOLTS",
     "FILTERED VOLTS",
     "GYRO TEMP",
@@ -88,6 +89,7 @@ static const char *osd_element_labels[] = {
     "SYSTEM STATUS",
     "THROTTLE",
     "VTX",
+    "CURRENT DRAW",
 };
 
 static const char *aux_channel_labels[] = {
@@ -833,11 +835,14 @@ void osd_display() {
       osd_menu_select_screen(7, OSD_AUTO, "FILTERS", OSD_SCREEN_FILTERS);
       osd_menu_select_screen(7, OSD_AUTO, "RATES", OSD_SCREEN_RATE_PROFILES);
       osd_menu_select_screen(7, OSD_AUTO, "FLIGHT MODES", OSD_SCREEN_FLIGHT_MODES);
+      osd_menu_select_screen(7, OSD_AUTO, "RC LINK", OSD_SCREEN_RC_LINK);
       osd_menu_select_screen(7, OSD_AUTO, "OSD ELEMENTS", OSD_SCREEN_ELEMENTS);
-      osd_menu_select_screen(7, OSD_AUTO, "SPECIAL FEATURES", OSD_SCREEN_SPECIAL_FEATURES);
 
       // PAGE 2
-      osd_menu_select_screen(7, OSD_AUTO, "RC LINK", OSD_SCREEN_RC_LINK);
+      osd_menu_select_screen(7, OSD_AUTO, "PID MODIFIERS", OSD_SCREEN_PID_MODIFIER);
+      osd_menu_select_screen(7, OSD_AUTO, "LEVEL MODE", OSD_SCREEN_LEVEL_MODE);
+      osd_menu_select_screen(7, OSD_AUTO, "MOTOR SETTINGS", OSD_SCREEN_MOTOR_SETTINGS);
+      osd_menu_select_screen(7, OSD_AUTO, "SPECIAL FEATURES", OSD_SCREEN_SPECIAL_FEATURES);
     }
     osd_menu_scroll_finish(7);
 
@@ -1031,17 +1036,26 @@ void osd_display() {
     osd_menu_start();
     osd_menu_header("FLIGHT MODES");
 
-    osd_menu_select_enum_adjust(4, 2, "ARMING", 17, &profile.receiver.aux[AUX_ARMING], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
-    osd_menu_select_enum_adjust(4, 3, "PREARM", 17, &profile.receiver.aux[AUX_PREARM], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    osd_menu_select_enum_adjust(4, 4, "IDLE UP", 17, &profile.receiver.aux[AUX_IDLE_UP], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    osd_menu_select_enum_adjust(4, 5, "LEVELMODE", 17, &profile.receiver.aux[AUX_LEVELMODE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    osd_menu_select_enum_adjust(4, 6, "RACEMODE", 17, &profile.receiver.aux[AUX_RACEMODE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    osd_menu_select_enum_adjust(4, 7, "HORIZON", 17, &profile.receiver.aux[AUX_HORIZON], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    osd_menu_select_enum_adjust(4, 8, "STICK BOOST", 17, &profile.receiver.aux[AUX_STICK_BOOST_PROFILE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    osd_menu_select_enum_adjust(4, 9, "BUZZER", 17, &profile.receiver.aux[AUX_BUZZER_ENABLE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    osd_menu_select_enum_adjust(4, 10, "TURTLE", 17, &profile.receiver.aux[AUX_TURTLE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    osd_menu_select_enum_adjust(4, 11, "MOTOR TEST", 17, &profile.receiver.aux[AUX_MOTOR_TEST], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-    osd_menu_select_enum_adjust(4, 12, "FPV SWITCH", 17, &profile.receiver.aux[AUX_FPV_SWITCH], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    osd_menu_scroll_start(4, 2, 7);
+    {
+      // PAGE 1
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "ARMING", 17, &profile.receiver.aux[AUX_ARMING], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "PREARM", 17, &profile.receiver.aux[AUX_PREARM], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "IDLE UP", 17, &profile.receiver.aux[AUX_IDLE_UP], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "LEVELMODE", 17, &profile.receiver.aux[AUX_LEVELMODE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "RACEMODE", 17, &profile.receiver.aux[AUX_RACEMODE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "HORIZON", 17, &profile.receiver.aux[AUX_HORIZON], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "STICK BOOST", 17, &profile.receiver.aux[AUX_STICK_BOOST_PROFILE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+
+      // PAGE 2
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "RATE", 17, &profile.receiver.aux[AUX_RATE_PROFILE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "BUZZER", 17, &profile.receiver.aux[AUX_BUZZER_ENABLE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "TURTLE", 17, &profile.receiver.aux[AUX_TURTLE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "MOTOR TEST", 17, &profile.receiver.aux[AUX_MOTOR_TEST], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "FPV SWITCH", 17, &profile.receiver.aux[AUX_FPV_SWITCH], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "BLACKBOX", 17, &profile.receiver.aux[AUX_BLACKBOX], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+    }
+    osd_menu_scroll_finish(4);
 
     osd_menu_select_save_and_exit(4);
     osd_menu_finish();
@@ -1096,10 +1110,7 @@ void osd_display() {
 
     osd_menu_select_screen(7, 3, "STICK BOOST", OSD_SCREEN_STICK_BOOST);
     osd_menu_select_screen(7, 4, "MOTOR BOOST", OSD_SCREEN_MOTOR_BOOST);
-    osd_menu_select_screen(7, 5, "PID MODIFIERS", OSD_SCREEN_PID_MODIFIER);
-    osd_menu_select_screen(7, 6, "MOTOR SETTINGS", OSD_SCREEN_MOTOR_SETTINGS);
-    osd_menu_select_screen(7, 7, "LOW BATTERY", OSD_SCREEN_LOWBAT);
-    osd_menu_select_screen(7, 8, "LEVEL MODE", OSD_SCREEN_LEVEL_MODE);
+    osd_menu_select_screen(7, 5, "LOW BATTERY", OSD_SCREEN_LOWBAT);
 
     osd_menu_finish();
     break;
@@ -1171,14 +1182,16 @@ void osd_display() {
         "ACTIVE  ",
     };
 
-    for (uint8_t i = 0; i < OSD_VTX_CHANNEL; i++) {
+    osd_menu_scroll_start(4, 2, 7);
+    for (uint8_t i = 0; i < OSD_ELEMENT_MAX; i++) {
       osd_element_t *el = (osd_element_t *)(osd_elements() + i);
 
-      osd_menu_select(4, 2 + i, osd_element_labels[i]);
-      if (osd_menu_select_enum(20, 2 + i, el->active, active_labels)) {
+      osd_menu_select(4, OSD_AUTO, osd_element_labels[i]);
+      if (osd_menu_select_enum(20, OSD_AUTO, el->active, active_labels)) {
         el->active = osd_menu_adjust_int(el->active, 1, 0, 1);
       }
     }
+    osd_menu_scroll_finish(4);
 
     osd_menu_select_save_and_exit(4);
     osd_menu_finish();
@@ -1192,17 +1205,19 @@ void osd_display() {
     osd_menu_label(18, 1, "ADJ X");
     osd_menu_label(24, 1, "ADJ Y");
 
-    for (uint8_t i = 0; i < OSD_VTX_CHANNEL; i++) {
+    osd_menu_scroll_start(3, 2, 7);
+    for (uint8_t i = 0; i < OSD_ELEMENT_MAX; i++) {
       osd_element_t *el = (osd_element_t *)(osd_elements() + i);
 
-      osd_menu_select(3, 2 + i, osd_element_labels[i]);
-      if (osd_menu_select_int(20, 2 + i, el->pos_x, 3)) {
+      osd_menu_select(3, OSD_AUTO, osd_element_labels[i]);
+      if (osd_menu_select_int(20, OSD_AUTO, el->pos_x, 3)) {
         el->pos_x = osd_menu_adjust_int(el->pos_x, 1, 0, osd_system == OSD_SYS_HD ? HD_COLS : 30);
       }
-      if (osd_menu_select_int(26, 2 + i, el->pos_y, 3)) {
+      if (osd_menu_select_int(26, OSD_AUTO, el->pos_y, 3)) {
         el->pos_y = osd_menu_adjust_int(el->pos_y, 1, 0, osd_system == OSD_SYS_HD ? HD_ROWS : 15);
       }
     }
+    osd_menu_scroll_finish(3);
 
     osd_menu_select_save_and_exit(4);
     osd_menu_finish();
@@ -1217,14 +1232,16 @@ void osd_display() {
         "INVERT",
     };
 
-    for (uint8_t i = 0; i < OSD_VTX_CHANNEL; i++) {
+    osd_menu_scroll_start(4, 2, 7);
+    for (uint8_t i = 0; i < OSD_ELEMENT_MAX; i++) {
       osd_element_t *el = (osd_element_t *)(osd_elements() + i);
 
-      osd_menu_select(4, 2 + i, osd_element_labels[i]);
-      if (osd_menu_select_enum(20, 2 + i, el->attribute, attr_labels)) {
+      osd_menu_select(4, OSD_AUTO, osd_element_labels[i]);
+      if (osd_menu_select_enum(20, OSD_AUTO, el->attribute, attr_labels)) {
         el->attribute = osd_menu_adjust_int(el->attribute, 1, 0, 1);
       }
     }
+    osd_menu_scroll_finish(4);
 
     osd_menu_select_save_and_exit(4);
     osd_menu_finish();
