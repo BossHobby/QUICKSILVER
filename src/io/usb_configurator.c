@@ -107,12 +107,18 @@ void usb_serial_passthrough(usart_ports_t port, uint32_t baudrate, uint8_t stop_
 
   uint8_t data[512];
   while (1) {
-    {
+    while (1) {
       const uint32_t size = usb_serial_read(data, 512);
+      if (size == 0) {
+        break;
+      }
       serial_write_bytes(&serial, data, size);
     }
-    {
+    while (1) {
       const uint32_t size = serial_read_bytes(&serial, data, 512);
+      if (size == 0) {
+        break;
+      }
       usb_serial_write(data, size);
     }
   }
