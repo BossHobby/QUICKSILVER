@@ -18,6 +18,8 @@
 #define SMART_AUDIO_BUFFER_SIZE 128
 
 #define SA_HEADER_SIZE 5
+#define SA_MAGIC_1 0xaa
+#define SA_MAGIC_2 0x55
 
 #define USART usart_port_defs[serial_smart_audio_port]
 
@@ -25,8 +27,11 @@ typedef enum {
   PARSER_IDLE,
   PARSER_ERROR,
   PARSER_INIT,
-  PARSER_READ_MAGIC,
+  PARSER_READ_MAGIC_1,
+  PARSER_READ_MAGIC_2,
+  PARSER_READ_CMD,
   PARSER_READ_PAYLOAD,
+  PARSER_READ_LENGTH,
   PARSER_READ_CRC,
 } smart_audio_parser_state_t;
 
@@ -210,11 +215,6 @@ vtx_update_result_t serial_smart_audio_update() {
     return VTX_ERROR;
   }
 
-  static const uint8_t magic_bytes[2] = {
-      0xaa,
-      0x55,
-  };
-
   static uint8_t payload_offset = 0;
 
   static uint8_t crc = 0;
@@ -239,7 +239,7 @@ vtx_update_result_t serial_smart_audio_update() {
       crc = 0;
       cmd = 0;
       length = 0;
-      parser_state = PARSER_READ_MAGIC;
+      parser_state = PARSER_READ_MAGIC_1;
 
       serial_vtx_send_data(vtx_frame, vtx_frame_length);
       packets_sent++;
@@ -247,29 +247,50 @@ vtx_update_result_t serial_smart_audio_update() {
 
     return VTX_WAIT;
   }
-  case PARSER_READ_MAGIC: {
+  case PARSER_READ_MAGIC_1: {
     uint8_t data = 0;
     if (serial_vtx_read_byte(&data) == 0) {
       return VTX_WAIT;
     }
 
-    quic_debugf("SMART_AUDIO: magic 0x%x (%d)", data, payload_offset);
-
-    // ignore the first magic byte, because of the framing issues it will be garbage half ot the time
-    if (data != magic_bytes[payload_offset] && payload_offset != 0) {
-      quic_debugf("SMART_AUDIO: invalid magic (%d:0x%x)", payload_offset, data);
-      parser_state = ERROR;
-      return VTX_ERROR;
-    }
-    if (data == magic_bytes[payload_offset]) {
-      // only increment if we actually matched
-      payload_offset++;
+    if (data == 0x0) {
+      // skip leading zero
+      return VTX_WAIT;
     }
 
-    if (payload_offset == 2) {
-      // account for first (skipped) byte;
-      payload_offset++;
-      parser_state = PARSER_READ_PAYLOAD;
+    if (data != SA_MAGIC_1) {
+      quic_debugf("SMART_AUDIO: invalid magic 1 0x%x", data);
+      parser_state = PARSER_ERROR;
+    } else {
+      quic_debugf("SMART_AUDIO: got magic 1 0x%x", data);
+      parser_state = PARSER_READ_MAGIC_2;
+    }
+    return VTX_WAIT;
+  }
+  case PARSER_READ_MAGIC_2: {
+    uint8_t data = 0;
+    if (serial_vtx_read_byte(&data) == 0) {
+      return VTX_WAIT;
+    }
+
+    if (data != SA_MAGIC_2) {
+      quic_debugf("SMART_AUDIO: invalid magic 2 0x%x", data);
+      parser_state = PARSER_ERROR;
+    } else {
+      quic_debugf("SMART_AUDIO: got magic 2 0x%x", data);
+      parser_state = PARSER_READ_CMD;
+    }
+    return VTX_WAIT;
+  }
+  case PARSER_READ_CMD: {
+    if (serial_smart_audio_read_byte_crc(&crc, &cmd) == 1) {
+      parser_state = PARSER_READ_LENGTH;
+    }
+    return VTX_WAIT;
+  }
+  case PARSER_READ_LENGTH: {
+    if (serial_smart_audio_read_byte_crc(&crc, &length) == 1) {
+      parser_state = length ? PARSER_READ_PAYLOAD : PARSER_READ_CRC;
     }
     return VTX_WAIT;
   }
@@ -279,24 +300,13 @@ vtx_update_result_t serial_smart_audio_update() {
       return VTX_WAIT;
     }
 
-    if (payload_offset == 3) {
-      cmd = data;
-    }
-    if (payload_offset == 4) {
-      length = data;
-    }
-    if (payload_offset >= SA_HEADER_SIZE && (payload_offset - SA_HEADER_SIZE + 1) < length) {
-      payload[payload_offset - SA_HEADER_SIZE] = data;
-    }
-
     quic_debugf("SMART_AUDIO: payload 0x%x (%d)", data, payload_offset);
+    payload[payload_offset] = data;
     payload_offset++;
 
-    // payload done, lets check crc
-    if (payload_offset >= SA_HEADER_SIZE && (payload_offset - SA_HEADER_SIZE + 1) == length) {
+    if (payload_offset >= length) {
       parser_state = PARSER_READ_CRC;
     }
-
     return VTX_WAIT;
   }
   case PARSER_READ_CRC: {
@@ -307,7 +317,7 @@ vtx_update_result_t serial_smart_audio_update() {
 
     if (data != crc) {
       quic_debugf("SMART_AUDIO: invalid crc 0x%x vs 0x%x", crc, data);
-      parser_state = ERROR;
+      parser_state = PARSER_ERROR;
       return VTX_ERROR;
     }
 
@@ -317,7 +327,7 @@ vtx_update_result_t serial_smart_audio_update() {
       return VTX_SUCCESS;
     }
 
-    parser_state = ERROR;
+    parser_state = PARSER_ERROR;
     return VTX_ERROR;
   }
   }
