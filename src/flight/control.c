@@ -80,7 +80,6 @@ motor_test_t motor_test = {
     .value = {0, 0, 0, 0},
 };
 
-static uint8_t idle_state;
 static uint8_t arming_release;
 
 extern int ledcommand;
@@ -371,12 +370,6 @@ void control() {
     flags.throttle_safety = 0;
   }
 
-  if (!rx_aux_on(AUX_IDLE_UP)) {
-    idle_state = 0;
-  } else {
-    idle_state = 1;
-  }
-
   // CONDITION: armed state variable is 0 so quad is DISARMED
   if (flags.arm_state == 0) {
     // override throttle to 0
@@ -391,7 +384,7 @@ void control() {
   } else {
     // CONDITION: armed state variable is 1 so quad is ARMED
 
-    if (idle_state == 0) {
+    if (!rx_aux_on(AUX_IDLE_UP)) {
       // CONDITION: idle up is turned OFF
 
       if (state.rx_filtered.throttle < 0.05f) {
