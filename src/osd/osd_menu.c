@@ -75,16 +75,7 @@ bool osd_menu_finish() {
 static bool should_render_element() {
   menu_state.grid_elements = 0;
   menu_state.onscreen_elements++;
-
-  switch (osd_state.screen_phase) {
-  case OSD_PHASE_RENDER:
-    return true;
-
-  default:
-  case OSD_PHASE_IDLE:
-  case OSD_PHASE_CLEAR:
-    return false;
-  }
+  return osd_state.screen_phase == OSD_PHASE_RENDER;
 }
 
 static bool should_render_active_element(int8_t y) {
@@ -104,23 +95,25 @@ static bool should_render_active_element(int8_t y) {
     menu_state.scroll_offset++;
   }
 
-  switch (osd_state.screen_phase) {
-  case OSD_PHASE_RENDER:
-    return true;
-
-  default:
-    return false;
-  }
+  return osd_state.screen_phase == OSD_PHASE_RENDER;
 }
 
-static bool should_render_grid_element() {
+static bool should_render_grid_element(int8_t y) {
   menu_state.grid_elements++;
+
+  if (y == OSD_AUTO) {
+    const uint8_t scroll_cursor = osd_state.cursor - (menu_state.active_elements - menu_state.scroll_elements);
+    const uint8_t scroll_page = ((scroll_cursor - 1) / menu_state.scroll_max) * menu_state.scroll_max;
+    if (menu_state.scroll_elements <= scroll_page || menu_state.scroll_elements > (scroll_page + menu_state.scroll_max)) {
+      return false;
+    }
+  }
 
   if (osd_state.cursor == menu_state.active_elements) {
     osd_state.selection_max = menu_state.grid_elements;
   }
 
-  return true;
+  return osd_state.screen_phase == OSD_PHASE_RENDER;
 }
 
 static bool is_element_selected() {
@@ -145,19 +138,24 @@ static uint8_t get_y_value(int8_t y) {
 }
 
 void osd_menu_scroll_start(uint8_t x, uint8_t y, uint8_t max) {
-  if (should_render_element()) {
-    osd_start(OSD_ATTR_TEXT, x - 1, y);
-    osd_write_char(0x75); // UP ARROW
-  }
-
   menu_state.scroll_max = max;
   menu_state.scroll_start = y;
   menu_state.scroll_elements = 0;
   menu_state.scroll_offset = y;
+
+  const uint8_t scroll_cursor = osd_state.cursor - (menu_state.active_elements - menu_state.scroll_elements);
+  const uint8_t scroll_page = ((scroll_cursor - 1) / menu_state.scroll_max);
+  if (scroll_page > 0 && should_render_element()) {
+    osd_start(OSD_ATTR_TEXT, x - 1, y);
+    osd_write_char(0x75); // UP ARROW
+  }
 }
 
 void osd_menu_scroll_finish(uint8_t x) {
-  if (should_render_element()) {
+  const uint8_t scroll_cursor = osd_state.cursor - (menu_state.active_elements - menu_state.scroll_elements);
+  const uint8_t scroll_page = ((scroll_cursor - 1) / menu_state.scroll_max);
+  const uint8_t scroll_page_max = ((menu_state.scroll_elements - 1) / menu_state.scroll_max);
+  if (scroll_page != scroll_page_max && should_render_element()) {
     osd_start(OSD_ATTR_TEXT, x - 1, menu_state.scroll_start + menu_state.scroll_max + 1);
     osd_write_char(0x76); // DOWN ARROW
   }
@@ -306,6 +304,8 @@ void osd_menu_select(int8_t x, int8_t y, const char *text) {
     return;
   }
 
+  y = get_y_value(y);
+
   const bool is_selected = is_element_selected();
   if (osd_system == OSD_SYS_HD) {
     if (is_selected) {
@@ -327,9 +327,11 @@ void osd_menu_select(int8_t x, int8_t y, const char *text) {
 }
 
 bool osd_menu_select_enum(int8_t x, int8_t y, const uint8_t val, const char **labels) {
-  if (!should_render_grid_element()) {
+  if (!should_render_grid_element(y)) {
     return is_element_selected() && has_adjust();
   }
+
+  y = get_y_value(y);
 
   const bool is_selected = is_element_selected();
   if (osd_system == OSD_SYS_HD) {
@@ -354,9 +356,11 @@ bool osd_menu_select_enum(int8_t x, int8_t y, const uint8_t val, const char **la
 }
 
 bool osd_menu_select_int(int8_t x, int8_t y, const int32_t val, uint8_t width) {
-  if (!should_render_grid_element()) {
+  if (!should_render_grid_element(y)) {
     return is_element_selected() && has_adjust();
   }
+
+  y = get_y_value(y);
 
   const bool is_selected = is_element_selected();
   if (osd_system == OSD_SYS_HD) {
@@ -384,9 +388,11 @@ bool osd_menu_select_str(int8_t x, int8_t y, const char *str) {
   // limit selection to 20
   menu_state.grid_elements = 19;
 
-  if (!should_render_grid_element()) {
+  if (!should_render_grid_element(y)) {
     return osd_state.cursor == menu_state.active_elements && osd_state.selection >= 1 && has_adjust();
   }
+
+  y = get_y_value(y);
 
   const bool is_elemet_selected = osd_state.cursor == menu_state.active_elements && osd_state.selection >= 1;
 
@@ -415,9 +421,11 @@ bool osd_menu_select_str(int8_t x, int8_t y, const char *str) {
 }
 
 bool osd_menu_select_float(int8_t x, int8_t y, const float val, uint8_t width, uint8_t precision) {
-  if (!should_render_grid_element()) {
+  if (!should_render_grid_element(y)) {
     return is_element_selected() && has_adjust();
   }
+
+  y = get_y_value(y);
 
   const bool is_selected = is_element_selected();
   if (osd_system == OSD_SYS_HD) {
