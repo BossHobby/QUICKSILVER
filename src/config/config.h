@@ -72,6 +72,12 @@
 // *************.01f = 1% of stick range - comment out to disable
 #define STICKS_DEADBAND .01f
 
+// ************* throttle value at 0.5 of the stick range
+#define THROTTLE_MID 0.5f
+
+// ************* expo for throttle with the zero crossing at THROTTLE_MID
+#define THROTTLE_EXPO 0.0f
+
 #define RX_SMOOTHING
 
 //**********************************************************************************************************************
