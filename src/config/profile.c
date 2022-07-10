@@ -326,6 +326,8 @@ const profile_t default_profile = {
 
         .level_max_angle = LEVEL_MAX_ANGLE,
         .sticks_deadband = STICKS_DEADBAND,
+        .throttle_mid = THROTTLE_MID,
+        .throttle_expo = THROTTLE_EXPO,
     },
 
     //************************************PIDS****************************************

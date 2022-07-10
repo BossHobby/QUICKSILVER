@@ -54,13 +54,17 @@ typedef struct {
   rate_t rates[STICK_RATE_PROFILE_MAX];
   float level_max_angle;
   float sticks_deadband;
+  float throttle_mid;
+  float throttle_expo;
 } profile_rate_t;
 
 #define PROFILE_RATE_MEMBERS                          \
   MEMBER(profile, uint8)                              \
   ARRAY_MEMBER(rates, STICK_RATE_PROFILE_MAX, rate_t) \
   MEMBER(level_max_angle, float)                      \
-  MEMBER(sticks_deadband, float)
+  MEMBER(sticks_deadband, float)                      \
+  MEMBER(throttle_mid, float)                         \
+  MEMBER(throttle_expo, float)
 
 typedef struct {
   vec3_t kp;

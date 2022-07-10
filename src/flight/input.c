@@ -197,3 +197,10 @@ void input_rates_calc(vec3_t *rates) {
     break;
   }
 }
+
+float input_throttle_calc(float throttle) {
+  const float n = (throttle * 2.f - 1.f);
+  const float expo = profile.rate.throttle_expo;
+  const float mid = profile.rate.throttle_mid;
+  return constrainf((n * n * n * expo + n * (1.f - expo) + 1.f) * mid, 0.0f, 1.0f);
+}
