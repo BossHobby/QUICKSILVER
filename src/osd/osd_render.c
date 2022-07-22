@@ -842,6 +842,7 @@ void osd_display() {
       osd_menu_select_screen(7, OSD_AUTO, "PID MODIFIERS", OSD_SCREEN_PID_MODIFIER);
       osd_menu_select_screen(7, OSD_AUTO, "LEVEL MODE", OSD_SCREEN_LEVEL_MODE);
       osd_menu_select_screen(7, OSD_AUTO, "MOTOR SETTINGS", OSD_SCREEN_MOTOR_SETTINGS);
+      osd_menu_select_screen(7, OSD_AUTO, "THROTTLE SETTINGS", OSD_SCREEN_THROTTLE_SETTINGS);
       osd_menu_select_screen(7, OSD_AUTO, "SPECIAL FEATURES", OSD_SCREEN_SPECIAL_FEATURES);
     }
     osd_menu_scroll_finish(7);
@@ -1311,6 +1312,24 @@ void osd_display() {
     osd_menu_select(4, 7, "MOTOR LIMIT %");
     if (osd_menu_select_float(22, 7, profile.motor.motor_limit, 4, 0)) {
       profile.motor.motor_limit = osd_menu_adjust_float(profile.motor.motor_limit, 1, 0, 100);
+    }
+
+    osd_menu_select_save_and_exit(4);
+    osd_menu_finish();
+    break;
+
+  case OSD_SCREEN_THROTTLE_SETTINGS:
+    osd_menu_start();
+    osd_menu_header("THROTTLE SETTINGS");
+
+    osd_menu_select(4, 5, "THROTTLE MID");
+    if (osd_menu_select_float(22, 5, profile.rate.throttle_mid, 4, 2)) {
+      profile.rate.throttle_mid = osd_menu_adjust_float(profile.rate.throttle_mid, 0.01, 0, 1);
+    }
+
+    osd_menu_select(4, 6, "THROTTLE EXPO");
+    if (osd_menu_select_float(22, 6, profile.rate.throttle_expo, 4, 2)) {
+      profile.rate.throttle_expo = osd_menu_adjust_float(profile.rate.throttle_expo, 0.01, 0, 1);
     }
 
     osd_menu_select_save_and_exit(4);
