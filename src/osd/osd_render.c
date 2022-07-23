@@ -647,7 +647,7 @@ static void osd_display_regular() {
 
   case OSD_THROTTLE: {
     osd_start(osd_attr(el), el->pos_x, el->pos_y);
-    osd_write_uint(state.throttle * 100.0f, 4);
+    osd_write_uint(state.rx_filtered.throttle * 100.0f, 4);
     osd_write_char(ICON_THROTTLE);
 
     osd_state.element++;
