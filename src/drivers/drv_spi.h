@@ -51,12 +51,14 @@ typedef void (*spi_txn_done_fn_t)();
 typedef struct {
   struct spi_bus_device *bus;
 
-  spi_txn_status_t status;
+  volatile spi_txn_status_t status;
 
   spi_txn_segment_t segments[SPI_TXN_SEG_MAX];
   uint8_t segment_count;
 
-  uint32_t offset;
+  uint8_t *buffer;
+  uint32_t buffer_size;
+
   uint32_t size;
 
   spi_txn_done_fn_t done_fn;
@@ -65,9 +67,6 @@ typedef struct {
 typedef struct spi_bus_device {
   spi_ports_t port;
   gpio_pins_t nss;
-
-  uint8_t *buffer;
-  uint32_t buffer_size;
 
   bool auto_continue;
   bool (*poll_fn)();
