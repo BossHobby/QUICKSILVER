@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "failloop.h"
 #include "io/usb_configurator.h"
 #include "project.h"
 
@@ -392,23 +393,36 @@ void spi_bus_device_reconfigure(spi_bus_device_t *bus, spi_mode_t mode, uint32_t
   bus->hz = hz;
 }
 
-spi_txn_t *spi_txn_init(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn) {
-  const uint8_t head = (bus->txn_head + 1) % SPI_TXN_MAX;
+static spi_txn_t *spi_txn_pop(spi_bus_device_t *bus) {
+  ATOMIC_BLOCK(MAX_PRIORITY) {
+    for (uint32_t i = 0; i < SPI_TXN_MAX; i++) {
+      if (bus->txn_pool[i].status == TXN_IDLE) {
+        spi_txn_t *txn = &bus->txn_pool[i];
+        txn->status = TXN_WAITING;
+        return txn;
+      }
+    }
+  }
+  return NULL;
+}
 
-  spi_txn_t *txn = &bus->txns[head];
-  if (txn->status == TXN_IN_PROGRESS) {
+spi_txn_t *spi_txn_init(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn) {
+  spi_txn_t *txn = spi_txn_pop(bus);
+  if (txn == NULL) {
     // next txn is still in progress, wait for it to complete
     spi_txn_wait(bus);
+    return spi_txn_init(bus, done_fn);
   }
 
-  if (bus->txn_head != bus->txn_tail) {
-    txn->offset = bus->txns[bus->txn_head].offset + bus->txns[bus->txn_head].size;
-  } else {
-    txn->offset = 0;
+  ATOMIC_BLOCK(MAX_PRIORITY) {
+    if (bus->txn_head != bus->txn_tail) {
+      txn->offset = bus->txns[bus->txn_head]->offset + bus->txns[bus->txn_head]->size;
+    } else {
+      txn->offset = 0;
+    }
   }
 
   txn->bus = bus;
-  txn->status = TXN_WAITING;
   txn->segment_count = 0;
 
   txn->size = 0;
@@ -418,15 +432,13 @@ spi_txn_t *spi_txn_init(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn) {
 }
 
 void spi_txn_add_seg_delay(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size) {
-  if (size == 0 || txn->status == TXN_ERROR) {
+  if (size == 0) {
     return;
   }
 
   const int32_t available = txn->bus->buffer_size - txn->offset - txn->size;
   if (size >= available) {
-    txn->status = TXN_ERROR;
-    txn->size = 0;
-    return;
+    failloop(FAILLOOP_SPI_MAIN);
   }
 
   txn->size += size;
@@ -438,15 +450,13 @@ void spi_txn_add_seg_delay(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_d
 }
 
 void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size) {
-  if (size == 0 || txn->status == TXN_ERROR) {
+  if (size == 0) {
     return;
   }
 
   const int32_t available = txn->bus->buffer_size - txn->offset - txn->size;
   if (size > available) {
-    txn->status = TXN_ERROR;
-    txn->size = 0;
-    return;
+    failloop(FAILLOOP_SPI_MAIN);
   }
 
   for (uint32_t i = 0; i < size; i++) {
@@ -461,9 +471,7 @@ void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, u
   } else {
     // create new segment
     if (txn->segment_count >= SPI_TXN_SEG_MAX) {
-      txn->status = TXN_ERROR;
-      txn->size = 0;
-      return;
+      failloop(FAILLOOP_SPI_MAIN);
     }
 
     spi_txn_segment_t *seg = &txn->segments[txn->segment_count];
@@ -483,17 +491,25 @@ bool spi_txn_ready(spi_bus_device_t *bus) {
 }
 
 void spi_txn_submit(spi_txn_t *txn) {
-  if (txn->status == TXN_ERROR || txn->size == 0) {
-    txn->status = TXN_DONE;
-  } else {
+  ATOMIC_BLOCK(MAX_PRIORITY) {
+    const uint8_t head = (txn->bus->txn_head + 1) % SPI_TXN_MAX;
     txn->status = TXN_READY;
+    txn->bus->txns[head] = txn;
+    txn->bus->txn_head = head;
   }
-  txn->bus->txn_head = (txn->bus->txn_head + 1) % SPI_TXN_MAX;
 }
 
 static spi_txn_t *spi_txn_finish(spi_bus_device_t *bus) {
-  const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
-  spi_txn_t *txn = &bus->txns[tail];
+  spi_txn_t *txn = NULL;
+
+  ATOMIC_BLOCK(MAX_PRIORITY) {
+    const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
+    txn = bus->txns[tail];
+    bus->txns[tail] = NULL;
+    bus->txn_tail = tail;
+
+    spi_port_config[bus->port].active_device = NULL;
+  }
 
   uint32_t txn_size = 0;
   for (uint32_t i = 0; i < txn->segment_count; ++i) {
@@ -504,9 +520,7 @@ static spi_txn_t *spi_txn_finish(spi_bus_device_t *bus) {
     txn_size += seg->size;
   }
 
-  spi_port_config[bus->port].active_device = NULL;
-  txn->status = TXN_DONE;
-  bus->txn_tail = tail;
+  txn->status = TXN_IDLE;
 
   return txn;
 }
@@ -539,10 +553,7 @@ void spi_txn_continue_ex(spi_bus_device_t *bus, bool force_sync) {
   }
 
   const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
-  spi_txn_t *txn = &bus->txns[tail];
-  if (txn->status != TXN_READY) {
-    return;
-  }
+  spi_txn_t *txn = bus->txns[tail];
 
   spi_port_config[bus->port].active_device = bus;
   txn->status = TXN_IN_PROGRESS;

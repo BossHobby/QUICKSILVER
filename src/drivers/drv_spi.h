@@ -40,11 +40,10 @@ typedef enum {
 } spi_mode_t;
 
 typedef enum {
+  TXN_IDLE,
   TXN_WAITING,
   TXN_READY,
   TXN_IN_PROGRESS,
-  TXN_DONE,
-  TXN_ERROR,
 } spi_txn_status_t;
 
 typedef void (*spi_txn_done_fn_t)();
@@ -78,7 +77,8 @@ typedef struct spi_bus_device {
   // only modified by the intterupt or protected code
   volatile uint8_t txn_tail;
 
-  spi_txn_t txns[SPI_TXN_MAX];
+  spi_txn_t txn_pool[SPI_TXN_MAX];
+  spi_txn_t *txns[SPI_TXN_MAX];
 
   spi_mode_t mode;
   uint32_t hz;
