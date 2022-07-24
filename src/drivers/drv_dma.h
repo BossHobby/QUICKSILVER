@@ -4,6 +4,8 @@
 
 #include "project.h"
 
+#define DMA_ALLOC_BUFFER_SIZE 4096
+
 typedef enum {
   DMA_DEVICE_SPI1_RX,
   DMA_DEVICE_SPI1_TX,
@@ -38,6 +40,10 @@ typedef struct {
 } dma_stream_def_t;
 
 extern const dma_stream_def_t dma_stream_defs[DMA_DEVICE_MAX];
+
+void *dma_alloc(uint32_t min_size);
+void *dma_realloc(void *ptr, uint32_t min_size);
+void dma_free(void *ptr);
 
 void dma_prepare_tx_memory(void *addr, uint32_t size);
 void dma_prepare_rx_memory(void *addr, uint32_t size);
