@@ -24,13 +24,9 @@
 #define JEDEC_ID_CYPRESS_S25FL128L 0x016018
 #define JEDEC_ID_BERGMICRO_W25Q32 0xE04016
 
-static DMA_RAM uint8_t buffer[512];
 static spi_bus_device_t bus = {
     .port = M25P16_SPI_PORT,
     .nss = M25P16_NSS_PIN,
-
-    .buffer = buffer,
-    .buffer_size = 512,
 
     .auto_continue = true,
 };

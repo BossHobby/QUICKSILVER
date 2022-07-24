@@ -24,13 +24,9 @@ static uint8_t lastvm0 = 0x55;
 
 static uint8_t dma_buffer[DMA_BUFFER_SIZE];
 
-static DMA_RAM uint8_t buffer[DMA_BUFFER_SIZE * 2];
 static spi_bus_device_t bus = {
     .port = MAX7456_SPI_PORT,
     .nss = MAX7456_NSS,
-
-    .buffer = buffer,
-    .buffer_size = DMA_BUFFER_SIZE * 2,
 
     .auto_continue = true,
 };
@@ -58,9 +54,7 @@ static uint8_t max7456_dma_spi_read(uint8_t reg) {
 
   spi_txn_t *txn = spi_txn_init(&bus, NULL);
   spi_txn_add_seg(txn, buffer, buffer, 2);
-  spi_txn_submit(txn);
-
-  spi_txn_wait(&bus);
+  spi_txn_submit_wait(&bus, txn);
 
   return buffer[1];
 }
@@ -72,9 +66,7 @@ static void max7456_dma_spi_write(uint8_t reg, uint8_t data) {
   spi_txn_t *txn = spi_txn_init(&bus, NULL);
   spi_txn_add_seg_const(txn, reg);
   spi_txn_add_seg_const(txn, data);
-  spi_txn_submit(txn);
-
-  spi_txn_wait(&bus);
+  spi_txn_submit_continue(&bus, txn);
 }
 
 static void max7456_init_display() {

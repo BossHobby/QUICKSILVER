@@ -8,13 +8,9 @@
 
 #define SPI_SPEED MHZ_TO_HZ(10.5)
 
-static DMA_RAM uint8_t dma_buffer[128];
 static spi_bus_device_t bus = {
     .port = CC2500_SPI_PORT,
     .nss = CC2500_NSS_PIN,
-
-    .buffer = dma_buffer,
-    .buffer_size = 128,
 
     .auto_continue = true,
 };

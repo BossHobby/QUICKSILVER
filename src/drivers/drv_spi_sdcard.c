@@ -57,13 +57,9 @@ sdcard_info_t sdcard_info;
 static volatile sdcard_state_t state = SDCARD_POWER_UP;
 static sdcard_operation_t operation;
 
-static DMA_RAM uint8_t dma_buffer[1024];
 static spi_bus_device_t bus = {
     .port = SDCARD_SPI_PORT,
     .nss = SDCARD_NSS_PIN,
-
-    .buffer = dma_buffer,
-    .buffer_size = 1024,
 
     .auto_continue = false,
 };
