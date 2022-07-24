@@ -10,13 +10,9 @@
 
 gyro_types_t gyro_type = GYRO_TYPE_INVALID;
 
-static DMA_RAM uint8_t buffer[512];
 spi_bus_device_t gyro_bus = {
     .port = GYRO_SPI_PORT,
     .nss = GYRO_NSS,
-
-    .buffer = buffer,
-    .buffer_size = 512,
 };
 
 static gyro_types_t gyro_spi_detect() {
