@@ -6,6 +6,7 @@
 #include "flight/control.h"
 #include "io/led.h"
 #include "io/usb_configurator.h"
+#include "reset.h"
 
 const char *failloop_string(failloop_t val) {
   switch (val) {
@@ -65,8 +66,7 @@ void failloop(failloop_t val) {
 
 void handle_fault() {
 #if defined(RESET_ON_FAULT)
-  extern void systemResetToBootloader();
-  systemResetToBootloader();
+  system_reset_to_bootloader();
 #endif
 
   failloop(FAILLOOP_FAULT);
