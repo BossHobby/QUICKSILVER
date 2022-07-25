@@ -269,7 +269,8 @@ void motor_output_calc(float mix[4]) {
     // only apply digital idle if we are armed and not in motor test
     float motor_min_value = 0;
     if (!flags.on_ground && flags.arm_state && !flags.motortest_override) {
-      motor_min_value = (float)profile.motor.digital_idle * 0.01f;
+      // 0.0001 for legacy purposes, motor drivers downstream to round up
+      motor_min_value = 0.0001f + (float)profile.motor.digital_idle * 0.01f;
     }
 
     mix[i] = mapf(mix[i], 0.0f, 1.0f, motor_min_value, profile.motor.motor_limit * 0.01f);
