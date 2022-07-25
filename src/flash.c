@@ -94,6 +94,15 @@ void flash_load() {
   // check if saved data is present
   if (fmc_read(0) != FMC_HEADER || fmc_read(FMC_END_OFFSET) != FMC_HEADER) {
     // Flash was empty, load defaults?
+
+#ifdef EXPRESS_LRS_UID
+    const uint8_t uid[6] = {EXPRESS_LRS_UID};
+    bind_storage.bind_saved = 1;
+
+    bind_storage.elrs.is_set = 0x1;
+    bind_storage.elrs.magic = 0x37;
+    memcpy(bind_storage.elrs.uid, uid, 6);
+#endif
     return;
   }
 

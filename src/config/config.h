@@ -116,6 +116,9 @@
 //#define USE_SOFT_SPI_3WIRE
 //#define USE_SOFT_SPI_4WIRE
 
+// *************ELRS Specific Settings
+// #define EXPRESS_LRS_UID 0, 0, 0, 0, 0, 0
+
 // *******************************SWITCH SELECTION*****************************
 #define ARMING AUX_CHANNEL_0
 #define PREARM AUX_CHANNEL_ON
