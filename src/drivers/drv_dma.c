@@ -225,45 +225,75 @@ uint32_t dma_is_flag_active_tc(DMA_TypeDef *dma, uint32_t stream) {
   return 0;
 }
 
+uint32_t dma_is_flag_active_te(DMA_TypeDef *dma, uint32_t stream) {
+  switch (stream) {
+  case LL_DMA_STREAM_0:
+    return LL_DMA_IsActiveFlag_TE0(dma);
+  case LL_DMA_STREAM_1:
+    return LL_DMA_IsActiveFlag_TE1(dma);
+  case LL_DMA_STREAM_2:
+    return LL_DMA_IsActiveFlag_TE2(dma);
+  case LL_DMA_STREAM_3:
+    return LL_DMA_IsActiveFlag_TE3(dma);
+  case LL_DMA_STREAM_4:
+    return LL_DMA_IsActiveFlag_TE4(dma);
+  case LL_DMA_STREAM_5:
+    return LL_DMA_IsActiveFlag_TE5(dma);
+  case LL_DMA_STREAM_6:
+    return LL_DMA_IsActiveFlag_TE6(dma);
+  case LL_DMA_STREAM_7:
+    return LL_DMA_IsActiveFlag_TE7(dma);
+  }
+  return 0;
+}
+
 void dma_clear_flag_tc(DMA_TypeDef *dma, uint32_t stream) {
   switch (stream) {
   case LL_DMA_STREAM_0:
     LL_DMA_ClearFlag_TC0(dma);
+    LL_DMA_ClearFlag_TE0(dma);
     LL_DMA_ClearFlag_HT0(dma);
     LL_DMA_ClearFlag_FE0(dma);
     break;
   case LL_DMA_STREAM_1:
     LL_DMA_ClearFlag_TC1(dma);
+    LL_DMA_ClearFlag_TE1(dma);
     LL_DMA_ClearFlag_HT1(dma);
     LL_DMA_ClearFlag_FE1(dma);
     break;
   case LL_DMA_STREAM_2:
     LL_DMA_ClearFlag_TC2(dma);
+    LL_DMA_ClearFlag_TE2(dma);
     LL_DMA_ClearFlag_HT2(dma);
     LL_DMA_ClearFlag_FE2(dma);
     break;
   case LL_DMA_STREAM_3:
     LL_DMA_ClearFlag_TC3(dma);
+    LL_DMA_ClearFlag_TE3(dma);
     LL_DMA_ClearFlag_HT3(dma);
     LL_DMA_ClearFlag_FE3(dma);
     break;
   case LL_DMA_STREAM_4:
     LL_DMA_ClearFlag_TC4(dma);
+    LL_DMA_ClearFlag_TE4(dma);
     LL_DMA_ClearFlag_HT4(dma);
     LL_DMA_ClearFlag_FE4(dma);
     break;
   case LL_DMA_STREAM_5:
     LL_DMA_ClearFlag_TC5(dma);
+    LL_DMA_ClearFlag_TE5(dma);
     LL_DMA_ClearFlag_HT5(dma);
     LL_DMA_ClearFlag_FE5(dma);
     break;
   case LL_DMA_STREAM_6:
     LL_DMA_ClearFlag_TC6(dma);
+    LL_DMA_ClearFlag_TE6(dma);
     LL_DMA_ClearFlag_HT6(dma);
     LL_DMA_ClearFlag_FE6(dma);
     break;
   case LL_DMA_STREAM_7:
     LL_DMA_ClearFlag_TC7(dma);
+    LL_DMA_ClearFlag_TE7(dma);
     LL_DMA_ClearFlag_HT7(dma);
     LL_DMA_ClearFlag_FE7(dma);
     break;
