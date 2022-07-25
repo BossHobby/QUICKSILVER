@@ -17,6 +17,7 @@
   EXTI_LINE(8)     \
   EXTI_LINE(9)     \
   EXTI_LINE(10)    \
+  EXTI_LINE(11)    \
   EXTI_LINE(12)    \
   EXTI_LINE(13)    \
   EXTI_LINE(14)    \
@@ -184,11 +185,12 @@ void EXTI15_10_IRQHandler() {
 
 #define EXTI_LINE(num)                              \
   {                                                 \
+      .index = num,                                 \
       .exti_line = LL_EXTI_LINE_##num,              \
       .syscfg_exti_line = LL_SYSCFG_EXTI_LINE##num, \
       .exti_irqn = EXTI##num##_IRQn,                \
   },
 
-const exti_line_def_t exti_line_defs[16] = {{}, EXTI_LINES};
+const exti_line_def_t exti_line_defs[16] = {EXTI_LINES};
 
 #undef EXTI_LINE
