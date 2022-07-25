@@ -51,4 +51,6 @@ void dma_prepare_rx_memory(void *addr, uint32_t size);
 void dma_enable_rcc(dma_device_t dev);
 
 uint32_t dma_is_flag_active_tc(DMA_TypeDef *dma, uint32_t stream);
+uint32_t dma_is_flag_active_te(DMA_TypeDef *dma, uint32_t stream);
+
 void dma_clear_flag_tc(DMA_TypeDef *dma, uint32_t stream);
