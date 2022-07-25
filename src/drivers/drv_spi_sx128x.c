@@ -36,8 +36,11 @@ void sx128x_init() {
   gpio_init.Pull = LL_GPIO_PULL_NO;
   gpio_pin_init(&gpio_init, SX12XX_RESET_PIN);
 
+  spi_bus_device_init(&bus);
+  spi_bus_device_reconfigure(&bus, true, MHZ_TO_HZ(10));
+
   gpio_init.Mode = LL_GPIO_MODE_INPUT;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
   gpio_pin_init(&gpio_init, SX12XX_BUSY_PIN);
@@ -47,9 +50,6 @@ void sx128x_init() {
 
   gpio_pin_init(&gpio_init, SX12XX_DIO0_PIN);
   exti_enable(SX12XX_DIO0_PIN, LL_EXTI_TRIGGER_RISING);
-
-  spi_bus_device_init(&bus);
-  spi_bus_device_reconfigure(&bus, true, MHZ_TO_HZ(10));
 }
 
 void sx128x_reset() {
@@ -115,15 +115,17 @@ static void sx128x_handle_irq_status() {
 }
 
 void sx128x_wait() {
-  const uint32_t start = time_micros();
+  uint32_t start = time_micros();
   while (!spi_txn_ready(&bus)) {
     if ((time_micros() - start) > busy_timeout) {
 #ifdef USE_SX128X_BUSY_EXTI
       bus.poll_fn = NULL;
       spi_txn_continue(&bus);
       bus.poll_fn = sx128x_poll_for_not_busy;
+
+      start = time_micros();
 #endif
-      return;
+      continue;
     }
     spi_txn_continue(&bus);
     __WFI();
