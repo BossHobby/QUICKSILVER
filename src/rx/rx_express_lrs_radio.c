@@ -188,6 +188,8 @@ void elrs_set_frequency(int32_t freq) {
 
 void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq) {
   sx128x_set_busy_timeout(1000);
+  sx128x_wait();
+
   sx128x_set_mode(SX1280_MODE_SLEEP);
 
   sx128x_set_mode(SX1280_MODE_STDBY_RC);
@@ -202,15 +204,18 @@ void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq) {
   sx128x_set_packet_params(12, SX1280_LORA_PACKET_IMPLICIT, air_rate_config[index].payload_len, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL);
   sx128x_set_frequency(12098953);
   sx128x_wait();
+
   sx128x_set_fifo_addr(0x00, 0x00);
   sx128x_set_dio_irq_params(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
   sx128x_set_output_power(13);
+  sx128x_wait();
 
   sx128x_set_mode(SX1280_MODE_STDBY_XOSC);
   sx128x_clear_irq_status(SX1280_IRQ_RADIO_ALL);
   sx128x_config_lora_mod_params(air_rate_config[index].bw, air_rate_config[index].sf, air_rate_config[index].cr);
   sx128x_set_packet_params(air_rate_config[index].preamble_len, SX1280_LORA_PACKET_IMPLICIT, air_rate_config[index].payload_len, SX1280_LORA_CRC_OFF, (sx128x_lora_iq_modes_t)((uint8_t)!invert_iq << 6));
   sx128x_set_frequency(freq);
+  sx128x_wait();
 
   sx128x_set_busy_timeout(100);
 
