@@ -286,6 +286,7 @@ static void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t l
   spi_dma_reset_tx(port, buffer, length);
 
   LL_DMA_EnableIT_TC(dma_rx->port, dma_rx->stream_index);
+  LL_DMA_EnableIT_TE(dma_rx->port, dma_rx->stream_index);
 
   LL_DMA_EnableStream(dma_rx->port, dma_rx->stream_index);
   LL_DMA_EnableStream(dma_tx->port, dma_tx->stream_index);
@@ -620,6 +621,7 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   dma_clear_flag_tc(dma_tx->port, dma_tx->stream_index);
 
   LL_DMA_DisableIT_TC(dma_rx->port, dma_rx->stream_index);
+  LL_DMA_DisableIT_TE(dma_rx->port, dma_rx->stream_index);
 
   LL_SPI_DisableDMAReq_TX(PORT.channel);
   LL_SPI_DisableDMAReq_RX(PORT.channel);
