@@ -22,7 +22,7 @@ typedef struct {
   dma_device_t dma_tx;
 } spi_port_def_t;
 
-#define SPI_TXN_MAX 16
+#define SPI_TXN_MAX 32
 #define SPI_TXN_SEG_MAX 8
 
 typedef struct {
