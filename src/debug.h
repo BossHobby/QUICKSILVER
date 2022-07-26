@@ -32,3 +32,9 @@ void perf_counter_init();
 void perf_counter_update();
 
 cbor_result_t cbor_encode_perf_counters(cbor_value_t *enc);
+
+void debug_pin_init();
+
+void debug_pin_enable(uint8_t index);
+void debug_pin_disable(uint8_t index);
+void debug_pin_toggle(uint8_t index);

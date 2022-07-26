@@ -148,6 +148,7 @@ __attribute__((__used__)) int main() {
 
   // init some hardware things
   gpio_init();
+  debug_pin_init();
   buzzer_init();
 
   usb_init();
