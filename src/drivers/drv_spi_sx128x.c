@@ -25,6 +25,7 @@ volatile uint16_t irq_status = 0;
 
 static uint32_t busy_timeout = 1000;
 
+extern volatile uint32_t packet_time;
 extern volatile uint8_t packet[8];
 extern volatile uint8_t packet_status[2];
 
@@ -101,6 +102,7 @@ void clear_irq_status_txn(spi_txn_t *txn, const uint16_t irq_mask) {
 }
 
 static void sx128x_set_dio0_active() {
+  packet_time = time_micros();
   dio0_active = 1;
 }
 
