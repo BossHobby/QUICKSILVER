@@ -41,7 +41,7 @@
 #define MODELMATCH_MASK 0x3f
 
 // Desired buffer time between Packet ISR and Tock ISR
-#define PACKET_TO_TOCK_SLACK 200
+#define PACKET_TO_TOCK_SLACK 250
 #define CONSIDER_CONN_GOOD_MILLIS 1000
 #define RF_MODE_CYCLE_MULTIPLIER_SLOW 10
 
@@ -75,6 +75,7 @@ extern expresslrs_rf_pref_params_t *current_rf_pref_params();
 extern uint8_t tlm_ratio_enum_to_value(expresslrs_tlm_ratio_t val);
 extern uint16_t rate_enum_to_hz(expresslrs_rf_rates_t val);
 
+volatile uint32_t packet_time = 0;
 volatile uint8_t packet[ELRS_BUFFER_SIZE];
 elrs_timer_state_t elrs_timer_state = TIMER_DISCONNECTED;
 volatile uint8_t nonce_rx = 0;
@@ -764,7 +765,7 @@ bool rx_expresslrs_check() {
   }
 
   if (irq == IRQ_RX_DONE) {
-    channels_received = elrs_process_packet(time_micros());
+    channels_received = elrs_process_packet(packet_time);
   } else if (irq == IRQ_TX_DONE) {
     elrs_enter_rx(packet);
   }
