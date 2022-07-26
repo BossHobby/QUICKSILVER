@@ -6,8 +6,6 @@
 
 #if defined(USE_CC2500)
 
-#define PORT spi_port_defs[CC2500_SPI_PORT]
-
 #define SPI_SPEED MHZ_TO_HZ(10.5)
 
 static DMA_RAM uint8_t dma_buffer[128];

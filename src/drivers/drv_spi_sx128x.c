@@ -10,8 +10,6 @@
 
 #if defined(USE_SX128X)
 
-#define PORT spi_port_defs[SX12XX_SPI_PORT]
-
 static bool sx128x_poll_for_not_busy();
 
 static DMA_RAM uint8_t dma_buffer[1024];
