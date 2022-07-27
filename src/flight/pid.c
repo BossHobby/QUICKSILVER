@@ -150,13 +150,13 @@ static float pid_compute_iterm_windup(uint8_t x) {
   static float avg_setpoint[3] = {0, 0, 0};
   if (x < 2) {
     lpf(&avg_setpoint[x], state.setpoint.axis[x], FILTERCALC(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ)); // 11 Hz filter
-    const float hpfSetpoint = state.setpoint.axis[x] - avg_setpoint[x];
+    const float hpfSetpoint = fabsf(state.setpoint.axis[x] - avg_setpoint[x]);
     return max(1.0f - hpfSetpoint / RELAX_FACTOR, 0.0f);
   }
 #ifdef ITERM_RELAX_YAW
   else {                                                                                                             // axis is yaw
     lpf(&avg_setpoint[x], state.setpoint.axis[x], FILTERCALC(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ_YAW)); // 25 Hz filter
-    const float hpfSetpoint = state.setpoint.axis[x] - avg_setpoint[x];
+    const float hpfSetpoint = fabsf(state.setpoint.axis[x] - avg_setpoint[x]);
     return max(1.0f - hpfSetpoint / RELAX_FACTOR_YAW, 0.0f);
   }
 #endif
