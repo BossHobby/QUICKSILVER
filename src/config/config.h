@@ -274,11 +274,11 @@
 
 //**************I-term relax.  Removes roll and pitch bounce back after flips
 #define ITERM_RELAX
-#define RELAX_FACTOR_DEG 35
-#define RELAX_FREQUENCY_HZ 11 // from my experience the frequency is better to tune than the factor
+#define RELAX_FACTOR_DEG 5.7
+#define RELAX_FREQUENCY_HZ 20 // from my experience the frequency is better to tune than the factor
 
 #define ITERM_RELAX_YAW // adds iterm relax to yaw with its own values as it responds much different
-#define RELAX_FACTOR_YAW_DEG 35
+#define RELAX_FACTOR_YAW_DEG 5.7
 #define RELAX_FREQUENCY_HZ_YAW 25
 
 // *************************************************************************
