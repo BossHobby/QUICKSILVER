@@ -55,7 +55,7 @@ const expresslrs_rf_pref_params_t *current_rf_pref_params() {
   return &rf_pref_params[current_rate];
 }
 
-extern int32_t fhss_update_freq_correction(uint8_t value);
+extern int32_t fhss_update_freq_correction(bool value);
 
 #ifdef USE_SX127X
 
@@ -252,7 +252,7 @@ void elrs_last_packet_stats(int8_t *rssi, int8_t *snr) {
 }
 
 void elrs_freq_correct() {
-  // do nothing for 2400ghz
+  // TODO: fhss_update_freq_correction(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB)
 }
 
 #endif
