@@ -147,6 +147,66 @@ typedef enum {
   SX1280_LORA_IQ_INVERTED = 0x00,
 } sx128x_lora_iq_modes_t;
 
+typedef enum {
+  SX1280_FLRC_BR_1_300_BW_1_2 = 0x45,
+  SX1280_FLRC_BR_1_000_BW_1_2 = 0x69,
+  SX1280_FLRC_BR_0_650_BW_0_6 = 0x86,
+  SX1280_FLRC_BR_0_520_BW_0_6 = 0xAA,
+  SX1280_FLRC_BR_0_325_BW_0_3 = 0xC7,
+  SX1280_FLRC_BR_0_260_BW_0_3 = 0xEB,
+} sx128x_radio_flrc_bandwidths_t;
+
+typedef enum {
+  SX1280_FLRC_CR_1_2 = 0x00,
+  SX1280_FLRC_CR_3_4 = 0x02,
+  SX1280_FLRC_CR_1_0 = 0x04,
+} sx128x_radio_flrc_coding_rates_t;
+
+typedef enum {
+  SX1280_FLRC_BT_DIS = 0x00,
+  SX1280_FLRC_BT_1 = 0x10,
+  SX1280_FLRC_BT_0_5 = 0x20,
+} sx128x_radio_flrc_gaussian_filter_t;
+
+typedef enum {
+  SX1280_FLRC_SYNC_NOSYNC = 0x00,
+  SX1280_FLRC_SYNC_WORD_LEN_P32S = 0x04,
+} sx128x_radio_flrc_sync_word_len_t;
+
+typedef enum {
+  SX1280_FLRC_RX_DISABLE_SYNC_WORD = 0x00,
+  SX1280_FLRC_RX_MATCH_SYNC_WORD_1 = 0x10,
+  SX1280_FLRC_RX_MATCH_SYNC_WORD_2 = 0x20,
+  SX1280_FLRC_RX_MATCH_SYNC_WORD_1_2 = 0x30,
+  SX1280_FLRC_RX_MATCH_SYNC_WORD_3 = 0x40,
+  SX1280_FLRC_RX_MATCH_SYNC_WORD_1_3 = 0x50,
+  SX1280_FLRC_RX_MATCH_SYNC_WORD_2_3 = 0x60,
+  SX1280_FLRC_RX_MATCH_SYNC_WORD_1_2_3 = 0x70,
+} sx128x_radio_flrc_sync_word_combination_t;
+
+typedef enum {
+  SX1280_FLRC_PACKET_FIXED_LENGTH = 0x00,
+  SX1280_FLRC_PACKET_VARIABLE_LENGTH = 0x20,
+} sx128x_radio_flrc_packet_type_t;
+
+typedef enum {
+  SX1280_FLRC_CRC_OFF = 0x00,
+  SX1280_FLRC_CRC_2_BYTE = 0x10,
+  SX1280_FLRC_CRC_3_BYTE = 0x20,
+  SX1280_FLRC_CRC_4_BYTE = 0x30,
+} SX1280_RadioFlrcCrc_t;
+
+typedef enum {
+  // Error Packet Status
+  SX1280_FLRC_PKT_ERROR_BUSY = 1 << 0,
+  SX1280_FLRC_PKT_ERROR_PKT_RCVD = 1 << 1,
+  SX1280_FLRC_PKT_ERROR_HDR_RCVD = 1 << 2,
+  SX1280_FLRC_PKT_ERROR_ABORT = 1 << 3,
+  SX1280_FLRC_PKT_ERROR_CRC = 1 << 4,
+  SX1280_FLRC_PKT_ERROR_LENGTH = 1 << 5,
+  SX1280_FLRC_PKT_ERROR_SYNC = 1 << 6,
+} sx128x_radio_flrc_crc_t;
+
 void sx128x_init();
 void sx128x_reset();
 void sx128x_wait();

@@ -8,15 +8,17 @@
 #include "drv_spi_sx128x.h"
 
 #define ELRS_BUFFER_SIZE 8
-#define ELRS_RATE_MAX 4
 #define ELRS_RATE_DEFAULT 0
 
 #ifdef USE_SX127X
+#define ELRS_RATE_MAX 5
 #define ERLS_RATE_BIND 2
 #endif
 
 #ifdef USE_SX128X
-#define ERLS_RATE_BIND 3
+#define ELRS_RATE_MAX 10
+#define ERLS_RATE_BIND 9
+#define RADIO_SNR_SCALE 4 // Units for LastPacketSNRRaw
 #endif
 
 #define ELRS_TELEMETRY_SHIFT 2
@@ -27,6 +29,16 @@
 #define ELRS_MSP_BYTES_PER_CALL 5
 #define ELRS_MSP_BUFFER_SIZE 65
 #define ELRS_MSP_MAX_PACKAGES ((ELRS_MSP_BUFFER_SIZE / ELRS_MSP_BYTES_PER_CALL) + 1)
+
+#define DYNPOWER_SNR_THRESH_NONE -127
+
+#define OTA4_PACKET_SIZE 8U
+#define OTA4_CRC_CALC_LEN offsetof(OTA_Packet4_s, crcLow)
+#define OTA8_PACKET_SIZE 13U
+#define OTA8_CRC_CALC_LEN offsetof(OTA_Packet8_s, crc)
+
+#define SNR_SCALE(snr) ((int8_t)((float)snr * RADIO_SNR_SCALE))
+#define SNR_DESCALE(snrScaled) (snrScaled / RADIO_SNR_SCALE)
 
 typedef enum {
   DISCONNECTED,
@@ -58,15 +70,27 @@ typedef enum {
 } expresslrs_tlm_ratio_t;
 
 typedef enum {
-  RATE_500HZ = 0,
-  RATE_250HZ = 1,
-  RATE_200HZ = 2,
-  RATE_150HZ = 3,
-  RATE_100HZ = 4,
-  RATE_50HZ = 5,
-  RATE_25HZ = 6,
-  RATE_4HZ = 7
+  RATE_LORA_4HZ = 0,
+  RATE_LORA_25HZ,
+  RATE_LORA_50HZ,
+  RATE_LORA_100HZ,
+  RATE_LORA_100HZ_8CH,
+  RATE_LORA_150HZ,
+  RATE_LORA_200HZ,
+  RATE_LORA_250HZ,
+  RATE_LORA_333HZ_8CH,
+  RATE_LORA_500HZ,
+  RATE_DVDA_250HZ,
+  RATE_DVDA_500HZ,
+  RATE_FLRC_500HZ,
+  RATE_FLRC_1000HZ,
 } expresslrs_rf_rates_t;
+
+typedef enum {
+  RADIO_TYPE_SX127x_LORA,
+  RADIO_TYPE_SX128x_LORA,
+  RADIO_TYPE_SX128x_FLRC,
+} expresslrs_radio_type_t;
 
 typedef enum {
   SWITCH_1BIT,
@@ -108,45 +132,34 @@ typedef struct {
 
 } elrs_phase_lock_state_t;
 
-#ifdef USE_SX127X
 typedef struct {
-  int8_t index;
-  expresslrs_rf_rates_t rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
-  sx127x_bandwidth_t bw;
-  sx127x_spreading_factor_t sf;
-  sx127x_coding_rate_t cr;
-  uint32_t interval;                   // interval in us seconds that corresponds to that frequnecy
-  expresslrs_tlm_ratio_t tlm_interval; // every X packets is a response TLM packet, should be a power of 2
-  uint8_t fhss_hop_interval;           // every X packets we hope to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
-  uint8_t preamble_len;
-  uint8_t payload_len; // Number of OTA bytes to be sent.
-} expresslrs_mod_settings_t;
-#endif
-
-#ifdef USE_SX128X
-typedef struct {
-  int8_t index;
-  expresslrs_rf_rates_t rate; // Max value of 16 since only 4 bits have been assigned in the sync package.
-  sx128x_lora_bandwidths_t bw;
-  sx128x_lora_spreading_factors_t sf;
-  sx128x_lora_coding_rates_t cr;
-  uint32_t interval;                   // interval in us seconds that corresponds to that frequency
+  uint8_t index;
+  expresslrs_radio_type_t radio_type;
+  expresslrs_rf_rates_t rate;
+  uint8_t bw;
+  uint8_t sf;
+  uint8_t cr;
   expresslrs_tlm_ratio_t tlm_interval; // every X packets is a response TLM packet, should be a power of 2
   uint8_t fhss_hop_interval;           // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
+  uint32_t interval;                   // interval in us seconds that corresponds to that frequency
   uint8_t preamble_len;
-  uint8_t payload_len; // Number of OTA bytes to be sent.
+  uint8_t payload_len;  // Number of OTA bytes to be sent.
+  uint8_t num_of_sends; // Number of packets to send.
 } expresslrs_mod_settings_t;
-#endif
 
 typedef struct {
-  int8_t index;
-  expresslrs_rf_rates_t rate;              // Max value of 16 since only 4 bits have been assigned in the sync package.
-  int32_t rx_sensitivity;                  // expected RF sensitivity based on
-  uint32_t toa;                            // time on air in microseconds
-  uint32_t disconnect_timeout_ms;          // Time without a packet before receiver goes to disconnected (ms)
-  uint32_t rx_lock_timeout_ms;             // Max time to go from tentative -> connected state on receiver (ms)
-  uint32_t sync_pkt_interval_disconnected; // how often to send the SYNC_PACKET packet (ms) when there is no response from RX
-  uint32_t sync_pkt_interval_connected;    // how often to send the SYNC_PACKET packet (ms) when there we have a connection
+  uint8_t index;
+  expresslrs_rf_rates_t rate;
+  int16_t rx_sensitivity;                  // expected min RF sensitivity
+  uint16_t toa;                            // time on air in microseconds
+  uint16_t disconnect_timeout_ms;          // Time without a packet before receiver goes to disconnected (ms)
+  uint16_t rx_lock_timeout_ms;             // Max time to go from tentative -> connected state on receiver (ms)
+  uint16_t sync_pkt_interval_disconnected; // how often to send the PACKET_TYPE_SYNC (ms) when there is no response from RX
+  uint16_t sync_pkt_interval_connected;    // how often to send the PACKET_TYPE_SYNC (ms) when there we have a connection
+  int8_t dynpower_snr_thresh_up;           // Request a raise in power if the reported (average) SNR is at or below this
+                                           // or DYNPOWER_UPTHRESH_SNR_NONE to use RSSI
+  int8_t dynpower_snr_thresh_dn;           // Like DynpowerSnrUpThreshold except to lower power
+
 } expresslrs_rf_pref_params_t;
 
 bool elrs_radio_init();
