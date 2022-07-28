@@ -140,21 +140,33 @@ uint8_t tlm_ratio_enum_to_value(expresslrs_tlm_ratio_t val) {
 
 uint16_t rate_enum_to_hz(expresslrs_rf_rates_t val) {
   switch (val) {
-  case RATE_500HZ:
+  case RATE_FLRC_1000HZ:
+    return 1000;
+  case RATE_FLRC_500HZ:
     return 500;
-  case RATE_250HZ:
+  case RATE_DVDA_500HZ:
+    return 500;
+  case RATE_DVDA_250HZ:
     return 250;
-  case RATE_200HZ:
+  case RATE_LORA_500HZ:
+    return 500;
+  case RATE_LORA_333HZ_8CH:
+    return 333;
+  case RATE_LORA_250HZ:
+    return 250;
+  case RATE_LORA_200HZ:
     return 200;
-  case RATE_150HZ:
+  case RATE_LORA_150HZ:
     return 150;
-  case RATE_100HZ:
+  case RATE_LORA_100HZ:
     return 100;
-  case RATE_50HZ:
+  case RATE_LORA_100HZ_8CH:
+    return 100;
+  case RATE_LORA_50HZ:
     return 50;
-  case RATE_25HZ:
+  case RATE_LORA_25HZ:
     return 25;
-  case RATE_4HZ:
+  case RATE_LORA_4HZ:
     return 4;
   default:
     return 1;
