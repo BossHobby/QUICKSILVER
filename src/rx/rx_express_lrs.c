@@ -55,11 +55,10 @@
 
 extern volatile elrs_phase_lock_state_t pl_state;
 
-extern int32_t fhss_update_freq_correction(uint8_t value);
+extern void fhss_update_freq_correction(bool value);
 extern void fhss_randomize(int32_t seed);
 extern uint8_t fhss_get_index();
 extern void fhss_set_index(const uint8_t value);
-extern uint32_t fhss_get_freq(const uint8_t index);
 extern uint32_t fhss_get_sync_freq();
 extern uint32_t fhss_next_freq();
 extern void fhss_reset();
