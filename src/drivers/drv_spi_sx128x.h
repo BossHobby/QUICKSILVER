@@ -2,6 +2,12 @@
 
 #include <stdint.h>
 
+#define SX1280_REG_FREQ_ERR_CORRECTION 0x93C
+#define SX1280_REG_FLRC_CRC_SEED 0x9C8
+#define SX1280_REG_FLRC_SYNC_WORD 0x9CF
+#define SX1280_REG_FLRC_SYNC_ADDR_CTRL 0x9CD
+#define SX1280_REG_FLRC_SYNC_ADDR_CTRL_ZERO_MASK 0b11110000
+
 enum sx128x_registers {
   SX128x_LR_FIRMWARE_VERSION_MSB = 0x0153,
 };
@@ -231,8 +237,12 @@ void sx128x_read_command_burst(const sx128x_commands_t cmd, uint8_t *data, const
 void sx128x_read_rx_buffer(volatile uint8_t *data, const uint8_t size);
 void sx128x_write_tx_buffer(const uint8_t offset, const volatile uint8_t *data, const uint8_t size);
 
-void sx128x_config_lora_mod_params(const sx128x_lora_bandwidths_t bw, const sx128x_lora_spreading_factors_t sf, const sx128x_lora_coding_rates_t cr);
-void sx128x_set_packet_params(const uint8_t preamble_length, const sx128x_lora_packet_lengths_modes_t header_type, const uint8_t payload_length, const sx128x_lora_crc_modes_t crc, const sx128x_lora_iq_modes_t invert_iq);
+void sx128x_set_lora_mod_params(const sx128x_lora_bandwidths_t bw, const sx128x_lora_spreading_factors_t sf, const sx128x_lora_coding_rates_t cr);
+void sx128x_set_flrc_mod_params(const uint8_t bw, const uint8_t cr, const uint8_t bt);
+
+void sx128x_set_lora_packet_params(const uint8_t preamble_length, const sx128x_lora_packet_lengths_modes_t header_type, const uint8_t payload_length, const sx128x_lora_crc_modes_t crc, const sx128x_lora_iq_modes_t invert_iq);
+void sx128x_set_flrc_packet_params(const uint8_t header_type, const uint8_t preamble_length, const uint8_t payload_length, uint32_t sync_word, uint16_t crc_seed, uint8_t cr);
+
 void sx128x_set_frequency(const uint32_t freq);
 void sx128x_set_fifo_addr(const uint8_t tx_base_addr, const uint8_t rx_base_addr);
 void sx128x_set_dio_irq_params(const uint16_t irq_mask, const uint16_t dio1_mask, const uint16_t dio2_mask, const uint16_t dio3_mask);

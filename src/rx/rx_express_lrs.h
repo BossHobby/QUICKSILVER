@@ -7,6 +7,8 @@
 #include "drv_spi_sx127x.h"
 #include "drv_spi_sx128x.h"
 
+#define ELRS_OTA_VERSION_ID 3
+
 #define ELRS_BUFFER_SIZE 8
 #define ELRS_RATE_DEFAULT 0
 
@@ -165,7 +167,7 @@ typedef struct {
 bool elrs_radio_init();
 
 void elrs_set_frequency(int32_t freq);
-void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq);
+void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq, uint32_t flrc_sync_word, uint16_t flrc_crc_seed);
 
 void elrs_enter_rx(volatile uint8_t *packet);
 void elrs_enter_tx(volatile uint8_t *packet);

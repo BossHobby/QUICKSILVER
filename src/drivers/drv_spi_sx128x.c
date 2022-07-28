@@ -314,7 +314,7 @@ void sx128x_set_mode(const sx128x_modes_t mode) {
   sx128x_wait();
 }
 
-void sx128x_config_lora_mod_params(const sx128x_lora_bandwidths_t bw, const sx128x_lora_spreading_factors_t sf, const sx128x_lora_coding_rates_t cr) {
+void sx128x_set_lora_mod_params(const sx128x_lora_bandwidths_t bw, const sx128x_lora_spreading_factors_t sf, const sx128x_lora_coding_rates_t cr) {
   // Care must therefore be taken to ensure that modulation parameters are set using the command
   // SetModulationParam() only after defining the packet type SetPacketType() to be used
 
@@ -341,7 +341,58 @@ void sx128x_config_lora_mod_params(const sx128x_lora_bandwidths_t bw, const sx12
   sx128x_wait();
 }
 
-void sx128x_set_packet_params(const uint8_t preamble_length, const sx128x_lora_packet_lengths_modes_t header_type, const uint8_t payload_length, const sx128x_lora_crc_modes_t crc, const sx128x_lora_iq_modes_t invert_iq) {
+void sx128x_set_flrc_mod_params(const uint8_t bw, const uint8_t cr, const uint8_t bt) {
+  const uint8_t rfparams[3] = {bw, cr, bt};
+  sx128x_write_command_burst(SX1280_RADIO_SET_MODULATIONPARAMS, rfparams, 3);
+  sx128x_wait();
+}
+
+void sx128x_set_flrc_packet_params(const uint8_t header_type, const uint8_t preamble_length, const uint8_t payload_length, uint32_t sync_word, uint16_t crc_seed, uint8_t cr) {
+  uint8_t buf[7] = {
+      preamble_length,
+      SX1280_FLRC_SYNC_WORD_LEN_P32S,
+      SX1280_FLRC_RX_MATCH_SYNC_WORD_1,
+      header_type,
+      payload_length,
+      SX1280_FLRC_CRC_3_BYTE,
+      0x08,
+  };
+  sx128x_write_command_burst(SX1280_RADIO_SET_PACKETPARAMS, buf, 7);
+  sx128x_wait();
+
+  // CRC seed (use dedicated cipher)
+  buf[0] = (uint8_t)(crc_seed >> 8);
+  buf[1] = (uint8_t)crc_seed;
+  sx128x_write_register_burst(SX1280_REG_FLRC_CRC_SEED, buf, 2);
+  sx128x_wait();
+
+  // Set sync_word1
+  buf[0] = (uint8_t)(sync_word >> 24);
+  buf[1] = (uint8_t)(sync_word >> 16);
+  buf[2] = (uint8_t)(sync_word >> 8);
+  buf[3] = (uint8_t)sync_word;
+
+  // DS_SX1280-1_V3.2.pdf - 16.4 FLRC Modem: Increased PER in FLRC Packets with Synch Word
+  if (((cr == SX1280_FLRC_CR_1_2) || (cr == SX1280_FLRC_CR_3_4)) &&
+      ((buf[0] == 0x8C && buf[1] == 0x38) || (buf[0] == 0x63 && buf[1] == 0x0E))) {
+    uint8_t temp = buf[0];
+    buf[0] = buf[1];
+    buf[1] = temp;
+    // For SX1280_FLRC_CR_3_4 the datasheet also says
+    // "In addition to this the two LSB values XX XX must not be in the range 0x0000 to 0x3EFF"
+    if (cr == SX1280_FLRC_CR_3_4 && buf[3] <= 0x3e)
+      buf[3] |= 0x80; // 0x80 or 0x40 would work
+  }
+  sx128x_write_register_burst(SX1280_REG_FLRC_SYNC_WORD, buf, 4);
+  sx128x_wait();
+
+  // Set Synch Address Control to zero bit errors permissible
+  uint8_t sync_addr_ctrl = sx128x_read_register(SX1280_REG_FLRC_SYNC_ADDR_CTRL);
+  sync_addr_ctrl &= SX1280_REG_FLRC_SYNC_ADDR_CTRL_ZERO_MASK;
+  sx128x_write_register(SX1280_REG_FLRC_SYNC_ADDR_CTRL, sync_addr_ctrl);
+}
+
+void sx128x_set_lora_packet_params(const uint8_t preamble_length, const sx128x_lora_packet_lengths_modes_t header_type, const uint8_t payload_length, const sx128x_lora_crc_modes_t crc, const sx128x_lora_iq_modes_t invert_iq) {
   const uint8_t buf[7] = {
       preamble_length,
       header_type,

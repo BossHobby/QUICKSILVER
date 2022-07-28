@@ -19,23 +19,33 @@ typedef struct {
 
 static elrs_lq_t lq;
 
-static uint16_t crc14tab[CRC_LENGTH];
+static uint16_t crc_tab[CRC_LENGTH];
+static uint8_t crc_bits;
+static uint16_t crc_poly;
+static uint16_t crc_bitmask;
 
-void crc14_init() {
+void elrs_crc_init(uint8_t bits, uint16_t poly) {
+  crc_poly = poly;
+  crc_bits = bits;
+  crc_bitmask = (1 << crc_bits) - 1;
+
+  uint16_t crc = 0;
+  const uint16_t highbit = 1 << (crc_bits - 1);
+
   for (uint16_t i = 0; i < CRC_LENGTH; i++) {
-    uint16_t crc = i << (14 - 8);
+    crc = i << (bits - 8);
     for (uint8_t j = 0; j < 8; j++) {
-      crc = (crc << 1) ^ ((crc & 0x2000) ? ELRS_CRC14_POLY : 0);
+      crc = (crc << 1) ^ ((crc & highbit) ? poly : 0);
     }
-    crc14tab[i] = crc;
+    crc_tab[i] = crc;
   }
 }
 
-uint16_t crc14_calc(const volatile uint8_t *data, uint8_t len, uint16_t crc) {
+uint16_t elrs_crc_calc(const volatile uint8_t *data, uint8_t len, uint16_t crc) {
   while (len--) {
-    crc = (crc << 8) ^ crc14tab[((crc >> 6) ^ (uint16_t)*data++) & 0x00FF];
+    crc = (crc << 8) ^ crc_tab[((crc >> (crc_bits - 8)) ^ (uint16_t)*data++) & 0x00FF];
   }
-  return crc & 0x3FFF;
+  return crc & crc_bitmask;
 }
 
 void elrs_lpf_init(elrs_lpf_t *lpf, int32_t beta) {

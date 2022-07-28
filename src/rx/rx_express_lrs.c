@@ -65,8 +65,8 @@ extern void fhss_reset();
 extern uint8_t fhss_min_lq_for_chaos();
 extern uint32_t fhss_rf_mode_cycle_interval();
 
-extern void crc14_init();
-extern uint16_t crc14_calc(const volatile uint8_t *data, uint8_t len, uint16_t crc);
+extern void elrs_crc_init();
+extern uint16_t elrs_crc_calc(const volatile uint8_t *data, uint8_t len, uint16_t crc);
 
 extern expresslrs_mod_settings_t *current_air_rate_config();
 extern expresslrs_rf_pref_params_t *current_rf_pref_params();
@@ -113,6 +113,12 @@ static uint8_t tlm_burst_max = 1;
 static bool tlm_burst_valid = false;
 static uint8_t tlm_buffer[CRSF_FRAME_SIZE_MAX];
 static bool tlm_device_info_pending = false;
+
+static uint32_t elrs_get_uid_mac_seed() {
+  return ((uint32_t)UID[2] << 24) + ((uint32_t)UID[3] << 16) +
+             ((uint32_t)UID[4] << 8) + UID[5] ^
+         ELRS_OTA_VERSION_ID;
+}
 
 static uint8_t elrs_get_model_id() {
   // invert value so default (0x0) equals no model match
@@ -184,7 +190,7 @@ static bool elrs_tlm() {
     packet[6] = length >= 4 ? *(data + 4) : 0;
   }
 
-  const uint16_t crc = crc14_calc(packet, 7, crc_initializer);
+  const uint16_t crc = elrs_crc_calc(packet, 7, crc_initializer);
   packet[0] |= (crc >> 6) & 0xFC;
   packet[7] = crc & 0xFF;
 
@@ -253,7 +259,7 @@ static bool elrs_vaild_packet() {
     packet[0] = type | (fhss_result << 2);
   }
 
-  const uint16_t our_crc = crc14_calc(packet, 7, crc_initializer);
+  const uint16_t our_crc = elrs_crc_calc(packet, 7, crc_initializer);
 
   return their_crc == our_crc;
 }
@@ -274,7 +280,7 @@ static void elrs_connection_lost() {
   fhss_reset();
   elrs_phase_reset();
 
-  elrs_set_rate(next_rate, fhss_get_sync_freq(), UID[5] & 0x01);
+  elrs_set_rate(next_rate, fhss_get_sync_freq(), UID[5] & 0x01, elrs_get_uid_mac_seed(), crc_initializer);
   elrs_enter_rx(packet);
 }
 
@@ -328,7 +334,7 @@ static void elrs_cycle_rf_mode(uint32_t now) {
   fhss_reset();
   elrs_phase_reset();
 
-  elrs_set_rate(next_rate, fhss_get_sync_freq(), UID[5] & 0x01);
+  elrs_set_rate(next_rate, fhss_get_sync_freq(), UID[5] & 0x01, elrs_get_uid_mac_seed(), crc_initializer);
   elrs_enter_rx(packet);
 
   rf_mode_cycle_multiplier = 1;
@@ -354,7 +360,7 @@ static void elrs_enter_binding_mode() {
 
   next_rate = ERLS_RATE_BIND;
 
-  elrs_set_rate(next_rate, fhss_get_sync_freq(), UID[5] & 0x01);
+  elrs_set_rate(next_rate, fhss_get_sync_freq(), UID[5] & 0x01, elrs_get_uid_mac_seed(), crc_initializer);
   elrs_enter_rx(packet);
 }
 
@@ -366,7 +372,7 @@ static void elrs_setup_bind(const volatile uint8_t *packet) {
   bind_storage.elrs.is_set = 0x1;
   bind_storage.elrs.magic = 0x37;
 
-  crc_initializer = (UID[4] << 8) | UID[5];
+  crc_initializer = ((UID[4] << 8) | UID[5]) ^ ELRS_OTA_VERSION_ID;
 
   const int32_t seed = ((int32_t)UID[2] << 24) + ((int32_t)UID[3] << 16) + ((int32_t)UID[4] << 8) + UID[5];
   fhss_randomize(seed);
@@ -687,9 +693,8 @@ void rx_expresslrs_init() {
     return;
   }
 
-  const int32_t seed = ((int32_t)UID[2] << 24) + ((int32_t)UID[3] << 16) + ((int32_t)UID[4] << 8) + UID[5];
-  fhss_randomize(seed);
-  crc14_init();
+  fhss_randomize(elrs_get_uid_mac_seed());
+  // TODO: elrs_crc_init();
 
   elrs_phase_init();
   elrs_lq_reset();
@@ -697,14 +702,14 @@ void rx_expresslrs_init() {
   elrs_tlm_sender_reset();
   elrs_setup_msp(ELRS_MSP_BUFFER_SIZE, msp_buffer, ELRS_MSP_BYTES_PER_CALL);
 
-  crc_initializer = (UID[4] << 8) | UID[5];
+  crc_initializer = ((UID[4] << 8) | UID[5]) ^ ELRS_OTA_VERSION_ID;
   rf_mode_cycle_multiplier = 1;
   last_rf_mode_cycle_millis = time_millis();
 
   // only hybrid switches for now
   bind_storage.elrs.switch_mode = 1;
 
-  elrs_set_rate(next_rate, fhss_get_sync_freq(), (UID[5] & 0x01));
+  elrs_set_rate(next_rate, fhss_get_sync_freq(), (UID[5] & 0x01), elrs_get_uid_mac_seed(), crc_initializer);
   elrs_timer_init(current_air_rate_config()->interval);
   elrs_enter_rx(packet);
 

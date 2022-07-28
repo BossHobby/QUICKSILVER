@@ -200,35 +200,37 @@ void elrs_set_frequency(int32_t freq) {
   sx128x_set_frequency(freq);
 }
 
-void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq) {
+void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq, uint32_t flrc_sync_word, uint16_t flrc_crc_seed) {
   sx128x_set_busy_timeout(1000);
   sx128x_wait();
 
-  sx128x_set_mode(SX1280_MODE_SLEEP);
-
   sx128x_set_mode(SX1280_MODE_STDBY_RC);
-  sx128x_write_command(SX1280_RADIO_SET_PACKETTYPE, SX1280_PACKET_TYPE_LORA);
-  sx128x_wait();
 
-  sx128x_config_lora_mod_params(SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_4_7);
-  sx128x_write_command(SX1280_RADIO_SET_AUTOFS, 0x01);
-  sx128x_wait();
-
-  sx128x_write_register(0x0891, (sx128x_read_register(0x0891) | 0xC0));
-  sx128x_set_packet_params(12, SX1280_LORA_PACKET_IMPLICIT, air_rate_config[index].payload_len, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL);
-  sx128x_set_frequency(12098953);
-  sx128x_wait();
+  if (air_rate_config[index].radio_type == RADIO_TYPE_SX128x_FLRC) {
+    sx128x_write_command(SX1280_RADIO_SET_PACKETTYPE, SX1280_PACKET_TYPE_FLRC);
+    sx128x_set_flrc_mod_params(air_rate_config[index].bw, air_rate_config[index].cr, air_rate_config[index].sf);
+    sx128x_set_flrc_packet_params(SX1280_FLRC_PACKET_FIXED_LENGTH, air_rate_config[index].preamble_len, air_rate_config[index].payload_len, flrc_sync_word, flrc_crc_seed, air_rate_config[index].cr);
+    sx128x_wait();
+  } else {
+    sx128x_write_command(SX1280_RADIO_SET_PACKETTYPE, SX1280_PACKET_TYPE_LORA);
+    sx128x_set_lora_mod_params(air_rate_config[index].bw, air_rate_config[index].sf, air_rate_config[index].cr);
+    sx128x_set_lora_packet_params(air_rate_config[index].preamble_len, SX1280_LORA_PACKET_IMPLICIT, air_rate_config[index].payload_len, SX1280_LORA_CRC_OFF, (sx128x_lora_iq_modes_t)((uint8_t)!invert_iq << 6));
+    sx128x_wait();
+  }
 
   sx128x_set_fifo_addr(0x00, 0x00);
-  sx128x_set_dio_irq_params(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE, SX1280_IRQ_RADIO_NONE, SX1280_IRQ_RADIO_NONE);
-  sx128x_set_output_power(13);
+  sx128x_set_dio_irq_params(
+      SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE | SX1280_IRQ_SYNCWORD_VALID | SX1280_IRQ_SYNCWORD_ERROR | SX1280_IRQ_CRC_ERROR,
+      SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE,
+      SX1280_IRQ_RADIO_NONE,
+      SX1280_IRQ_RADIO_NONE);
   sx128x_wait();
 
-  sx128x_set_mode(SX1280_MODE_STDBY_XOSC);
-  sx128x_clear_irq_status(SX1280_IRQ_RADIO_ALL);
-  sx128x_config_lora_mod_params(air_rate_config[index].bw, air_rate_config[index].sf, air_rate_config[index].cr);
-  sx128x_set_packet_params(air_rate_config[index].preamble_len, SX1280_LORA_PACKET_IMPLICIT, air_rate_config[index].payload_len, SX1280_LORA_CRC_OFF, (sx128x_lora_iq_modes_t)((uint8_t)!invert_iq << 6));
+  sx128x_set_output_power(13);
   sx128x_set_frequency(freq);
+  sx128x_wait();
+
+  sx128x_clear_irq_status(SX1280_IRQ_RADIO_ALL);
   sx128x_wait();
 
   sx128x_set_busy_timeout(100);
