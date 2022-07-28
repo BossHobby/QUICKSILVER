@@ -138,11 +138,11 @@ void pid_precalc() {
 }
 
 // (iwindup = 0  windup is not allowed)   (iwindup = 1 windup is allowed)
-static float pid_compute_iterm_windup(uint8_t x) {
-  if ((state.pidoutput.axis[x] >= outlimit[x]) && (state.error.axis[x] > 0)) {
+static float pid_compute_iterm_windup(uint8_t x, float pid_output) {
+  if ((pid_output >= outlimit[x]) && (state.error.axis[x] > 0)) {
     return 0.0f;
   }
-  if ((state.pidoutput.axis[x] <= -outlimit[x]) && (state.error.axis[x] < 0)) {
+  if ((pid_output <= -outlimit[x]) && (state.error.axis[x] < 0)) {
     return 0.0f;
   }
 
@@ -206,9 +206,11 @@ static void pid(uint8_t x) {
     ierror[x] *= 0.98f;
   }
 
+  static vec3_t pid_output = {.roll = 0, .pitch = 0, .yaw = 0};
+
   // SIMPSON_RULE_INTEGRAL
   // assuming similar time intervals
-  const float iterm_windup = pid_compute_iterm_windup(x);
+  const float iterm_windup = pid_compute_iterm_windup(x, pid_output.axis[x]);
   ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + state.error.axis[x]) * current_ki[x] * iterm_windup * state.looptime;
   lasterror2[x] = lasterror[x];
   lasterror[x] = state.error.axis[x];
@@ -242,7 +244,7 @@ static void pid(uint8_t x) {
 
   state.pid_d_term.axis[x] = pid_filter_dterm(x, dterm);
 
-  state.pidoutput.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x];
+  state.pidoutput.axis[x] = pid_output.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x];
   limitf(&state.pidoutput.axis[x], outlimit[x]);
 }
 
