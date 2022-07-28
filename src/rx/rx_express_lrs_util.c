@@ -2,8 +2,7 @@
 
 #if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
 
-#define ELRS_CRC_POLY 0x07     // 0x83
-#define ELRS_CRC14_POLY 0x2E57 // 0x372B
+#define ELRS_CRC_POLY 0x07 // 0x83
 
 #define ELRS_LQ_SIZE ((100 + 31) / 32)
 
@@ -25,6 +24,10 @@ static uint16_t crc_poly;
 static uint16_t crc_bitmask;
 
 void elrs_crc_init(uint8_t bits, uint16_t poly) {
+  if (crc_poly == poly && crc_bits == bits) {
+    return;
+  }
+
   crc_poly = poly;
   crc_bits = bits;
   crc_bitmask = (1 << crc_bits) - 1;

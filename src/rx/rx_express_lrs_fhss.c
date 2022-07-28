@@ -115,7 +115,7 @@ uint8_t fhss_get_index() {
 }
 
 static uint32_t fhss_get_freq(const uint8_t index) {
-  return config->freq_start + (freq_spread * fhss_sequence[index] / FREQ_SPREAD_SCALE) - freq_correction;
+  return config->freq_start + (freq_spread * index / FREQ_SPREAD_SCALE) - freq_correction;
 }
 
 uint32_t fhss_get_sync_freq() {
@@ -124,7 +124,7 @@ uint32_t fhss_get_sync_freq() {
 
 uint32_t fhss_next_freq() {
   fhss_index = (fhss_index + 1) % fhss_sequence_count;
-  return fhss_get_freq(fhss_index);
+  return fhss_get_freq(fhss_sequence[fhss_index]);
 }
 
 int32_t fhss_update_freq_correction(bool value) {

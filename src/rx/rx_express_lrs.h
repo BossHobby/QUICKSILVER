@@ -9,7 +9,7 @@
 
 #define ELRS_OTA_VERSION_ID 3
 
-#define ELRS_BUFFER_SIZE 8
+#define ELRS_BUFFER_SIZE 16
 #define ELRS_RATE_DEFAULT 0
 
 #ifdef USE_SX127X
@@ -35,9 +35,9 @@
 #define DYNPOWER_SNR_THRESH_NONE -127
 
 #define OTA4_PACKET_SIZE 8U
-#define OTA4_CRC_CALC_LEN offsetof(OTA_Packet4_s, crcLow)
+#define OTA4_CRC_CALC_LEN 7U
 #define OTA8_PACKET_SIZE 13U
-#define OTA8_CRC_CALC_LEN offsetof(OTA_Packet8_s, crc)
+#define OTA8_CRC_CALC_LEN 11U
 
 #define SNR_SCALE(snr) ((int8_t)((float)snr * RADIO_SNR_SCALE))
 #define SNR_DESCALE(snrScaled) (snrScaled / RADIO_SNR_SCALE)
@@ -95,9 +95,9 @@ typedef enum {
 } expresslrs_radio_type_t;
 
 typedef enum {
-  SWITCH_1BIT,
-  SWITCH_HYBRID,
-  SWITCH_HYBRID_WIDE,
+  SWITCH_WIDE_OR_8CH,
+  SWITCH_HYBRID_OR_16CH,
+  SWITCH_12CH,
 } elrs_switch_mode_t;
 
 typedef struct {

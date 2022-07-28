@@ -24,9 +24,10 @@ volatile uint8_t dio0_active = 0;
 volatile uint16_t irq_status = 0;
 
 static uint32_t busy_timeout = 1000;
+static uint8_t payload_len = 8;
 
 extern volatile uint32_t packet_time;
-extern volatile uint8_t packet[8];
+extern volatile uint8_t packet[16];
 extern volatile uint8_t packet_status[2];
 
 void sx128x_init() {
@@ -109,7 +110,7 @@ static void sx128x_set_dio0_active() {
 static void sx128x_handle_irq_status() {
   const uint16_t irq = ((irq_status & 0xFF) << 8 | ((irq_status >> 8) & 0xFF));
   if ((irq & SX1280_IRQ_RX_DONE)) {
-    sx128x_read_rx_buffer(packet, 8);
+    sx128x_read_rx_buffer(packet, payload_len);
     sx128x_read_command_burst(SX1280_RADIO_GET_PACKETSTATUS, (uint8_t *)packet_status, 2);
   } else if ((irq & SX1280_IRQ_TX_DONE)) {
     sx128x_set_mode_async(SX1280_MODE_RX);
@@ -348,6 +349,8 @@ void sx128x_set_flrc_mod_params(const uint8_t bw, const uint8_t cr, const uint8_
 }
 
 void sx128x_set_flrc_packet_params(const uint8_t header_type, const uint8_t preamble_length, const uint8_t payload_length, uint32_t sync_word, uint16_t crc_seed, uint8_t cr) {
+  payload_len = payload_length;
+
   uint8_t buf[7] = {
       preamble_length,
       SX1280_FLRC_SYNC_WORD_LEN_P32S,
@@ -393,6 +396,8 @@ void sx128x_set_flrc_packet_params(const uint8_t header_type, const uint8_t prea
 }
 
 void sx128x_set_lora_packet_params(const uint8_t preamble_length, const sx128x_lora_packet_lengths_modes_t header_type, const uint8_t payload_length, const sx128x_lora_crc_modes_t crc, const sx128x_lora_iq_modes_t invert_iq) {
+  payload_len = payload_length;
+
   const uint8_t buf[7] = {
       preamble_length,
       header_type,
