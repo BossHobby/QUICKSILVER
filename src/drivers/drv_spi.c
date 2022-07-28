@@ -208,7 +208,7 @@ static void spi_dma_init_tx(spi_ports_t port) {
   DMA_InitStructure.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_BYTE;
   DMA_InitStructure.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_BYTE;
   DMA_InitStructure.Mode = LL_DMA_MODE_NORMAL;
-  DMA_InitStructure.Priority = LL_DMA_PRIORITY_HIGH;
+  DMA_InitStructure.Priority = LL_DMA_PRIORITY_VERYHIGH;
   DMA_InitStructure.FIFOMode = LL_DMA_FIFOMODE_DISABLE;
   DMA_InitStructure.MemBurst = LL_DMA_MBURST_SINGLE;
   DMA_InitStructure.PeriphBurst = LL_DMA_PBURST_SINGLE;
@@ -637,6 +637,10 @@ static void handle_dma_rx_isr(spi_ports_t port) {
 #if defined(STM32H7)
   // now we can disable the peripheral
   LL_SPI_ClearFlag_TXTF(PORT.channel);
+#else
+  // dummy read
+  while (LL_SPI_IsActiveFlag_RXNE(PORT.channel))
+    LL_SPI_ReceiveData8(PORT.channel);
 #endif
 
   LL_SPI_Disable(PORT.channel);
