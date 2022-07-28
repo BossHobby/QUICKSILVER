@@ -400,6 +400,29 @@ static void elrs_setup_bind(const volatile uint8_t *packet) {
   elrs_connection_lost();
 }
 
+static void elrs_unpack_channels(uint32_t channels[4], uint8_t *data) {
+  const uint32_t num_of_channels = 4;
+  const uint32_t src_bits = 10;
+  const uint32_t dst_bits = 11;
+  const uint32_t input_channel_mask = (1 << src_bits) - 1;
+  const uint32_t precision_shift = dst_bits - src_bits;
+
+  uint8_t bits_merged = 0;
+  uint32_t read_value = 0;
+  uint32_t read_byte_index = 0;
+  for (uint8_t n = 0; n < num_of_channels; n++) {
+    while (bits_merged < src_bits) {
+      uint8_t read_byte = data[read_byte_index++];
+      read_value |= ((uint32_t)read_byte) << bits_merged;
+      bits_merged += 8;
+    }
+
+    channels[n] = (read_value & input_channel_mask) << precision_shift;
+    read_value >>= src_bits;
+    bits_merged -= src_bits;
+  }
+}
+
 static uint8_t elrs_unpack_3b_switch(uint16_t val) {
   switch (val) {
   case 6:
@@ -417,8 +440,8 @@ static uint8_t elrs_unpack_n_switch(uint16_t val, uint16_t max) {
   return val > (max / 2);
 }
 
-static void elrs_sample_aux0(uint8_t aux0_value) {
-  static uint8_t last_aux0_value = 0;
+static void elrs_sample_aux0(bool aux0_value) {
+  static bool last_aux0_value = false;
   state.aux[AUX_CHANNEL_0] = (!last_aux0_value && !aux0_value) ? 0 : 1;
   last_aux0_value = aux0_value;
 }
@@ -426,7 +449,7 @@ static void elrs_sample_aux0(uint8_t aux0_value) {
 static bool elrs_unpack_hybrid_switches(const volatile uint8_t *packet) {
   const uint8_t switch_byte = packet[6];
 
-  elrs_sample_aux0((switch_byte & 0b01000000) >> 6);
+  elrs_sample_aux0((switch_byte & 0b10000000));
 
   const uint8_t index = (switch_byte & 0b111000) >> 3;
   const uint16_t value = elrs_unpack_3b_switch(switch_byte & 0b111);
@@ -480,7 +503,7 @@ static bool elrs_unpack_hybrid_switches_wide(const volatile uint8_t *packet) {
 
   const uint8_t switch_byte = packet[6];
 
-  elrs_sample_aux0((switch_byte & 0b10000000) >> 7);
+  elrs_sample_aux0((switch_byte & 0b10000000));
 
   const uint8_t index = elrs_hybrid_wide_nonce_to_switch_index(ota_nonce);
   const uint8_t tlm_denom = tlm_ratio_enum_to_value(current_air_rate_config()->tlm_interval);
@@ -615,12 +638,15 @@ static bool elrs_process_packet(uint32_t packet_time) {
       break;
     }
 
+    uint32_t crsf_channels[4];
+    elrs_unpack_channels(crsf_channels, (uint8_t *)packet + 1);
+
     // AETR channel order
     const float channels[4] = {
-        (((packet[1] << 3) | ((packet[5] & 0b11000000) >> 5)) - 990.5f) * 0.00125707103f,
-        (((packet[2] << 3) | ((packet[5] & 0b00110000) >> 3)) - 990.5f) * 0.00125707103f,
-        (((packet[3] << 3) | ((packet[5] & 0b00001100) >> 1)) - 990.5f) * 0.00125707103f,
-        (((packet[4] << 3) | ((packet[5] & 0b00000011) << 1)) - 990.5f) * 0.00125707103f,
+        ((float)crsf_channels[0] - 1024.f) * (1.0f / 1024.f),
+        ((float)crsf_channels[1] - 1024.f) * (1.0f / 1024.f),
+        ((float)crsf_channels[2] - 1024.f) * (1.0f / 1024.f),
+        ((float)crsf_channels[3] - 1024.f) * (1.0f / 1024.f),
     };
 
     rx_map_channels(channels);
@@ -638,6 +664,7 @@ static bool elrs_process_packet(uint32_t packet_time) {
     case SWITCH_HYBRID_OR_16CH:
       tlm_confirm = elrs_unpack_hybrid_switches_wide(packet);
       break;
+
     case SWITCH_12CH:
       // TODO
       break;
