@@ -24,7 +24,7 @@ volatile elrs_phase_lock_state_t pl_state;
 volatile int32_t timer_freq_offset = 0;
 
 extern elrs_timer_state_t elrs_timer_state;
-extern volatile uint8_t nonce_rx;
+extern volatile uint8_t ota_nonce;
 
 extern void elrs_handle_tick();
 extern void elrs_handle_tock();
@@ -110,7 +110,7 @@ void elrs_phase_update(elrs_state_t state) {
 
   if (elrs_timer_state == TIMER_LOCKED && elrs_lq_current_is_set()) {
     // limit rate of freq offset adjustment slightly
-    if (nonce_rx % 8 == 0) {
+    if (ota_nonce % 8 == 0) {
       if (pl_state.offset > 0) {
         timer_freq_offset++;
       } else if (pl_state.offset < 0) {

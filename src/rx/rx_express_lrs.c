@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "debug.h"
 #include "drv_gpio.h"
 #include "drv_time.h"
 #include "flash.h"
@@ -13,6 +14,9 @@
 #include "rx_crsf.h"
 
 #if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
+
+#define ELRS_CRC14_POLY 0x2E57 // 0x372B
+#define ELRS_CRC16_POLY 0x3D65 // 0x9eb2
 
 #define MSP_SET_RX_CONFIG 45
 #define MSP_VTX_CONFIG 88     // out message         Get vtx settings - betaflight
@@ -65,7 +69,7 @@ extern void fhss_reset();
 extern uint8_t fhss_min_lq_for_chaos();
 extern uint32_t fhss_rf_mode_cycle_interval();
 
-extern void elrs_crc_init();
+extern void elrs_crc_init(uint8_t bits, uint16_t poly);
 extern uint16_t elrs_crc_calc(const volatile uint8_t *data, uint8_t len, uint16_t crc);
 
 extern expresslrs_mod_settings_t *current_air_rate_config();
@@ -77,7 +81,7 @@ extern uint16_t rate_enum_to_hz(expresslrs_rf_rates_t val);
 volatile uint32_t packet_time = 0;
 volatile uint8_t packet[ELRS_BUFFER_SIZE];
 elrs_timer_state_t elrs_timer_state = TIMER_DISCONNECTED;
-volatile uint8_t nonce_rx = 0;
+volatile uint8_t ota_nonce = 0;
 
 static volatile elrs_state_t elrs_state = DISCONNECTED;
 
@@ -85,6 +89,7 @@ static volatile bool already_hop = false;
 static volatile bool already_tlm = false;
 
 static bool radio_is_init = false;
+static bool is_full_res = false;
 static bool in_binding_mode = false;
 static bool has_model_match = false;
 
@@ -116,8 +121,19 @@ static bool tlm_device_info_pending = false;
 
 static uint32_t elrs_get_uid_mac_seed() {
   return ((uint32_t)UID[2] << 24) + ((uint32_t)UID[3] << 16) +
-             ((uint32_t)UID[4] << 8) + UID[5] ^
-         ELRS_OTA_VERSION_ID;
+         ((uint32_t)UID[4] << 8) + (UID[5] ^ ELRS_OTA_VERSION_ID);
+}
+
+static void elrs_set_switch_mode(const elrs_switch_mode_t mode, uint8_t packet_size) {
+  is_full_res = packet_size == OTA8_PACKET_SIZE;
+
+  if (is_full_res) {
+    elrs_crc_init(16, ELRS_CRC16_POLY);
+  } else {
+    elrs_crc_init(14, ELRS_CRC14_POLY);
+  }
+
+  bind_storage.elrs.switch_mode = mode;
 }
 
 static uint8_t elrs_get_model_id() {
@@ -126,11 +142,11 @@ static uint8_t elrs_get_model_id() {
 }
 
 static bool elrs_hop() {
-  if (already_hop || in_binding_mode) {
+  if (already_hop || in_binding_mode || elrs_state == DISCONNECTED) {
     return false;
   }
 
-  const uint8_t modresult = (nonce_rx + 1) % current_air_rate_config()->fhss_hop_interval;
+  const uint8_t modresult = (ota_nonce + 1) % current_air_rate_config()->fhss_hop_interval;
   if (modresult != 0) {
     return false;
   }
@@ -138,7 +154,7 @@ static bool elrs_hop() {
   elrs_set_frequency(fhss_next_freq());
   already_hop = true;
 
-  const uint8_t tlm_mod = (nonce_rx + 1) % tlm_ratio_enum_to_value(current_air_rate_config()->tlm_interval);
+  const uint8_t tlm_mod = (ota_nonce + 1) % tlm_ratio_enum_to_value(current_air_rate_config()->tlm_interval);
   if (current_air_rate_config()->tlm_interval == TLM_RATIO_NO_TLM || tlm_mod != 0) {
     elrs_enter_rx(packet);
   }
@@ -150,7 +166,7 @@ static bool elrs_tlm() {
     return false;
   }
 
-  const uint8_t tlm_mod = (nonce_rx + 1) % tlm_ratio_enum_to_value(current_air_rate_config()->tlm_interval);
+  const uint8_t tlm_mod = (ota_nonce + 1) % tlm_ratio_enum_to_value(current_air_rate_config()->tlm_interval);
   if (current_air_rate_config()->tlm_interval == TLM_RATIO_NO_TLM || tlm_mod != 0) {
     return false;
   }
@@ -252,14 +268,14 @@ static bool elrs_vaild_packet() {
 
   // For smHybrid the CRC only has the packet type in byte 0
   // For smHybridWide the FHSS slot is added to the CRC in byte 0 on RC_DATA_PACKETs
-  if (type != RC_DATA_PACKET || bind_storage.elrs.switch_mode != SWITCH_HYBRID_WIDE) {
-    packet[0] = type;
-  } else {
-    uint8_t fhss_result = nonce_rx % current_air_rate_config()->fhss_hop_interval;
+  if (type == RC_DATA_PACKET && bind_storage.elrs.switch_mode == SWITCH_WIDE_OR_8CH) {
+    uint8_t fhss_result = (ota_nonce % current_air_rate_config()->fhss_hop_interval);
     packet[0] = type | (fhss_result << 2);
+  } else {
+    packet[0] = type;
   }
 
-  const uint16_t our_crc = elrs_crc_calc(packet, 7, crc_initializer);
+  const uint16_t our_crc = elrs_crc_calc(packet, OTA4_CRC_CALC_LEN, crc_initializer);
 
   return their_crc == our_crc;
 }
@@ -466,7 +482,7 @@ static bool elrs_unpack_hybrid_switches_wide(const volatile uint8_t *packet) {
 
   elrs_sample_aux0((switch_byte & 0b10000000) >> 7);
 
-  const uint8_t index = elrs_hybrid_wide_nonce_to_switch_index(nonce_rx);
+  const uint8_t index = elrs_hybrid_wide_nonce_to_switch_index(ota_nonce);
   const uint8_t tlm_denom = tlm_ratio_enum_to_value(current_air_rate_config()->tlm_interval);
 
   bool tlm_in_every_packet = (tlm_denom < 8);
@@ -567,8 +583,9 @@ static bool elrs_process_packet(uint32_t packet_time) {
 
     sync_packet_millis = time_millis();
 
-    next_rate = ((packet[3] & 0b11000000) >> 6);
-    bind_storage.elrs.switch_mode = ((packet[3] & 0b00000110) >> 1);
+    // TODO: elrs_set_switch_mode
+    // in update & only when disconnected
+    next_rate = ((packet[3] & 0b11110000) >> 4);
 
     const uint8_t telemetry_rate_index = ((packet[3] & 0b00111000) >> 3);
     if (current_air_rate_config()->tlm_interval != telemetry_rate_index) {
@@ -579,12 +596,12 @@ static bool elrs_process_packet(uint32_t packet_time) {
     const bool model_match = packet[6] == (UID[5] ^ model_xor);
 
     if (elrs_state == DISCONNECTED ||
-        (nonce_rx != packet[2]) ||
+        (ota_nonce != packet[2]) ||
         (fhss_get_index() != packet[1]) ||
         (has_model_match != model_match)) {
 
       fhss_set_index(packet[1]);
-      nonce_rx = packet[2];
+      ota_nonce = packet[2];
 
       elrs_connection_tentative(time_millis());
 
@@ -611,15 +628,18 @@ static bool elrs_process_packet(uint32_t packet_time) {
     channels_received = true;
 
     bool tlm_confirm = false;
+
     switch (bind_storage.elrs.switch_mode) {
     default:
-    case SWITCH_1BIT:
-    case SWITCH_HYBRID:
+    case SWITCH_WIDE_OR_8CH:
       tlm_confirm = elrs_unpack_hybrid_switches(packet);
       break;
 
-    case SWITCH_HYBRID_WIDE:
+    case SWITCH_HYBRID_OR_16CH:
       tlm_confirm = elrs_unpack_hybrid_switches_wide(packet);
+      break;
+    case SWITCH_12CH:
+      // TODO
       break;
     }
 
@@ -663,7 +683,8 @@ static bool elrs_process_packet(uint32_t packet_time) {
 // this is 180 out of phase with the other callback, occurs mid-packet reception
 void elrs_handle_tick() {
   elrs_phase_update(elrs_state);
-  nonce_rx++;
+  ota_nonce++;
+  debug_pin_toggle(0);
 
   uplink_lq = elrs_lq_get();
 
@@ -694,8 +715,6 @@ void rx_expresslrs_init() {
   }
 
   fhss_randomize(elrs_get_uid_mac_seed());
-  // TODO: elrs_crc_init();
-
   elrs_phase_init();
   elrs_lq_reset();
   elrs_lpf_init(&rssi_lpf, 5);
@@ -706,10 +725,8 @@ void rx_expresslrs_init() {
   rf_mode_cycle_multiplier = 1;
   last_rf_mode_cycle_millis = time_millis();
 
-  // only hybrid switches for now
-  bind_storage.elrs.switch_mode = 1;
-
   elrs_set_rate(next_rate, fhss_get_sync_freq(), (UID[5] & 0x01), elrs_get_uid_mac_seed(), crc_initializer);
+  elrs_set_switch_mode(SWITCH_WIDE_OR_8CH, current_air_rate_config()->payload_len);
   elrs_timer_init(current_air_rate_config()->interval);
   elrs_enter_rx(packet);
 
