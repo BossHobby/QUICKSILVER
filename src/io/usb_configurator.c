@@ -131,7 +131,7 @@ void usb_serial_passthrough(usart_ports_t port, uint32_t baudrate, uint8_t stop_
 // This function will be where all usb send/receive coms live
 void usb_configurator() {
   uint32_t buffer_size = 1;
-  uint8_t buffer[USB_BUFFER_SIZE];
+  static uint8_t buffer[USB_BUFFER_SIZE];
 
   if (usb_serial_read(buffer, 1) != 1) {
     return;
