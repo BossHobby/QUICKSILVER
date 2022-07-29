@@ -118,6 +118,7 @@ static uint8_t tlm_burst_max = 1;
 static bool tlm_burst_valid = false;
 static uint8_t tlm_buffer[CRSF_FRAME_SIZE_MAX];
 static bool tlm_device_info_pending = false;
+static uint8_t tlm_denom = 1;
 
 static uint32_t elrs_get_uid_mac_seed() {
   return ((uint32_t)UID[2] << 24) + ((uint32_t)UID[3] << 16) +
@@ -154,20 +155,20 @@ static bool elrs_hop() {
   elrs_set_frequency(fhss_next_freq());
   already_hop = true;
 
-  const uint8_t tlm_mod = (ota_nonce + 1) % tlm_ratio_enum_to_value(current_air_rate_config()->tlm_interval);
-  if (current_air_rate_config()->tlm_interval == TLM_RATIO_NO_TLM || tlm_mod != 0) {
+  const uint8_t tlm_mod = (ota_nonce + 1) % tlm_denom;
+  if (tlm_mod != 0 || tlm_denom == 1) {
     elrs_enter_rx(packet);
   }
   return true;
 }
 
 static bool elrs_tlm() {
-  if (already_tlm) {
+  if (already_tlm || elrs_state == DISCONNECTED) {
     return false;
   }
 
-  const uint8_t tlm_mod = (ota_nonce + 1) % tlm_ratio_enum_to_value(current_air_rate_config()->tlm_interval);
-  if (current_air_rate_config()->tlm_interval == TLM_RATIO_NO_TLM || tlm_mod != 0) {
+  const uint8_t tlm_mod = (ota_nonce + 1) % tlm_denom;
+  if (tlm_mod != 0 || tlm_denom == 1) {
     return false;
   }
 
@@ -178,11 +179,11 @@ static bool elrs_tlm() {
 
   if (next_tlm_type == TELEMETRY_TYPE_LINK || !elrs_tlm_sender_active()) {
     packet[1] = TELEMETRY_TYPE_LINK;
-    packet[2] = -rssi;                          // rssi
-    packet[3] = (has_model_match << 7);         // no diversity
-    packet[4] = -raw_snr;                       // snr
-    packet[5] = uplink_lq;                      // uplink_lq
-    packet[6] = elrs_get_msp_confirm() ? 1 : 0; // msq confirm
+    packet[2] = -rssi;                                               // rssi
+    packet[3] = (has_model_match << 7);                              // no diversity
+    packet[4] = uplink_lq | ((elrs_get_msp_confirm() ? 1 : 0) << 7); // uplink_lq &&  msq confirm
+    packet[5] = raw_snr;
+    packet[6] = 0;
 
     next_tlm_type = TELEMETRY_TYPE_DATA;
     tlm_burst_count = 1;
@@ -222,8 +223,7 @@ static void elrs_update_telemetry_burst() {
   tlm_burst_valid = true;
 
   uint32_t hz = rate_enum_to_hz(current_rf_pref_params()->rate);
-  uint32_t ratiodiv = tlm_ratio_enum_to_value(current_air_rate_config()->tlm_interval);
-  tlm_burst_max = TELEM_MIN_LINK_INTERVAL * hz / ratiodiv / 1000U;
+  tlm_burst_max = TELEM_MIN_LINK_INTERVAL * hz / tlm_denom / 1000U;
 
   // Reserve one slot for LINK telemetry
   if (tlm_burst_max > 1) {
@@ -233,7 +233,7 @@ static void elrs_update_telemetry_burst() {
   }
 
   // Notify the sender to adjust its expected throughput
-  elrs_tlm_update_rate(hz, ratiodiv, tlm_burst_max);
+  elrs_tlm_update_rate(hz, tlm_denom, tlm_burst_max);
 }
 
 static void elrs_update_telemetry() {
@@ -506,7 +506,6 @@ static bool elrs_unpack_hybrid_switches_wide(const volatile uint8_t *packet) {
   elrs_sample_aux0((switch_byte & 0b10000000));
 
   const uint8_t index = elrs_hybrid_wide_nonce_to_switch_index(ota_nonce);
-  const uint8_t tlm_denom = tlm_ratio_enum_to_value(current_air_rate_config()->tlm_interval);
 
   bool tlm_in_every_packet = (tlm_denom < 8);
   if (tlm_in_every_packet || index == 7) {
@@ -610,9 +609,11 @@ static bool elrs_process_packet(uint32_t packet_time) {
     // in update & only when disconnected
     next_rate = ((packet[3] & 0b11110000) >> 4);
 
-    const uint8_t telemetry_rate_index = ((packet[3] & 0b00111000) >> 3);
-    if (current_air_rate_config()->tlm_interval != telemetry_rate_index) {
-      current_air_rate_config()->tlm_interval = telemetry_rate_index;
+    const uint8_t telemetry_rate_index = TLM_RATIO_NO_TLM + ((packet[3] & 0b00001110) >> 1);
+    const uint8_t new_tlm_denom = tlm_ratio_enum_to_value(telemetry_rate_index);
+    if (new_tlm_denom != tlm_denom) {
+      tlm_denom = new_tlm_denom;
+      tlm_burst_valid = false;
     }
 
     const uint8_t model_xor = (~elrs_get_model_id()) & MODELMATCH_MASK;
