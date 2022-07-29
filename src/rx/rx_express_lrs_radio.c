@@ -15,7 +15,7 @@ static uint32_t current_rate = 0;
 
 #ifdef USE_SX127X
 
-static expresslrs_mod_settings_t air_rate_config[ELRS_RATE_MAX] = {
+static const expresslrs_mod_settings_t air_rate_config[ELRS_RATE_MAX] = {
     {0, RADIO_TYPE_SX127x_LORA, RATE_LORA_200HZ, SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7, TLM_RATIO_1_64, 4, 5000, 8, OTA4_PACKET_SIZE, 1},
     {1, RADIO_TYPE_SX127x_LORA, RATE_LORA_100HZ_8CH, SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_8, TLM_RATIO_1_32, 4, 10000, 8, OTA8_PACKET_SIZE, 1},
     {2, RADIO_TYPE_SX127x_LORA, RATE_LORA_100HZ, SX127x_BW_500_00_KHZ, SX127x_SF_7, SX127x_CR_4_7, TLM_RATIO_1_32, 4, 10000, 8, OTA4_PACKET_SIZE, 1},
@@ -23,7 +23,7 @@ static expresslrs_mod_settings_t air_rate_config[ELRS_RATE_MAX] = {
     {4, RADIO_TYPE_SX127x_LORA, RATE_LORA_25HZ, SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_7, TLM_RATIO_1_8, 2, 40000, 10, OTA4_PACKET_SIZE, 1},
 };
 
-static expresslrs_rf_pref_params_t rf_pref_params[ELRS_RATE_MAX] = {
+static const expresslrs_rf_pref_params_t rf_pref_params[ELRS_RATE_MAX] = {
     {0, RATE_LORA_200HZ, -112, 4380, 3000, 2500, 600, 5000, SNR_SCALE(1), SNR_SCALE(3.0)},
     {1, RATE_LORA_100HZ_8CH, -112, 6690, 3500, 2500, 600, 5000, SNR_SCALE(1), SNR_SCALE(3.0)},
     {2, RATE_LORA_100HZ, -117, 8770, 3500, 2500, 600, 5000, SNR_SCALE(1), SNR_SCALE(2.5)},
@@ -34,7 +34,7 @@ static expresslrs_rf_pref_params_t rf_pref_params[ELRS_RATE_MAX] = {
 #endif
 
 #ifdef USE_SX128X
-static expresslrs_mod_settings_t air_rate_config[ELRS_RATE_MAX] = {
+static const expresslrs_mod_settings_t air_rate_config[ELRS_RATE_MAX] = {
     {0, RADIO_TYPE_SX128x_FLRC, RATE_FLRC_1000HZ, SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2, TLM_RATIO_1_128, 2, 1000, 32, OTA4_PACKET_SIZE, 1},
     {1, RADIO_TYPE_SX128x_FLRC, RATE_FLRC_500HZ, SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2, TLM_RATIO_1_128, 2, 2000, 32, OTA4_PACKET_SIZE, 1},
     {2, RADIO_TYPE_SX128x_FLRC, RATE_DVDA_500HZ, SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2, TLM_RATIO_1_128, 2, 1000, 32, OTA4_PACKET_SIZE, 2},
@@ -47,7 +47,7 @@ static expresslrs_mod_settings_t air_rate_config[ELRS_RATE_MAX] = {
     {9, RADIO_TYPE_SX128x_LORA, RATE_LORA_50HZ, SX1280_LORA_BW_0800, SX1280_LORA_SF8, SX1280_LORA_CR_LI_4_7, TLM_RATIO_1_16, 2, 20000, 12, OTA4_PACKET_SIZE, 1},
 };
 
-static expresslrs_rf_pref_params_t rf_pref_params[ELRS_RATE_MAX] = {
+static const expresslrs_rf_pref_params_t rf_pref_params[ELRS_RATE_MAX] = {
     {0, RATE_FLRC_1000HZ, -104, 389, 2500, 2500, 3, 5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
     {1, RATE_FLRC_500HZ, -104, 389, 2500, 2500, 3, 5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
     {2, RATE_DVDA_500HZ, -104, 389, 2500, 2500, 3, 5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
@@ -61,11 +61,11 @@ static expresslrs_rf_pref_params_t rf_pref_params[ELRS_RATE_MAX] = {
 };
 #endif
 
-const expresslrs_mod_settings_t *current_air_rate_config() {
+const expresslrs_mod_settings_t const *current_air_rate_config() {
   return &air_rate_config[current_rate];
 }
 
-const expresslrs_rf_pref_params_t *current_rf_pref_params() {
+const expresslrs_rf_pref_params_t const *current_rf_pref_params() {
   return &rf_pref_params[current_rate];
 }
 
