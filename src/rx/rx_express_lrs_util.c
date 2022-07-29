@@ -19,9 +19,9 @@ typedef struct {
 static elrs_lq_t lq;
 
 static uint16_t crc_tab[CRC_LENGTH];
-static uint8_t crc_bits;
-static uint16_t crc_poly;
-static uint16_t crc_bitmask;
+static uint8_t crc_bits = 0;
+static uint16_t crc_poly = 0;
+static uint16_t crc_bitmask = 0;
 
 void elrs_crc_init(uint8_t bits, uint16_t poly) {
   if (crc_poly == poly && crc_bits == bits) {
