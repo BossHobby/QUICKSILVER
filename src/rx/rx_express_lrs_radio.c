@@ -61,11 +61,11 @@ static const expresslrs_rf_pref_params_t rf_pref_params[ELRS_RATE_MAX] = {
 };
 #endif
 
-const expresslrs_mod_settings_t const *current_air_rate_config() {
+const expresslrs_mod_settings_t *current_air_rate_config() {
   return &air_rate_config[current_rate];
 }
 
-const expresslrs_rf_pref_params_t const *current_rf_pref_params() {
+const expresslrs_rf_pref_params_t *current_rf_pref_params() {
   return &rf_pref_params[current_rate];
 }
 
@@ -178,11 +178,7 @@ void elrs_freq_correct() {
 
 volatile uint8_t packet_status[2] = {0, 0};
 
-bool elrs_radio_init() {
-  sx128x_init();
-
-  sx128x_reset();
-
+static bool elrs_radio_detect() {
   for (size_t i = 0; i < 10; i++) {
     uint8_t buf[2];
     sx128x_read_register_burst(SX128x_LR_FIRMWARE_VERSION_MSB, buf, 2);
@@ -194,6 +190,23 @@ bool elrs_radio_init() {
     }
   }
   return false;
+}
+
+bool elrs_radio_init() {
+  sx128x_init();
+
+  sx128x_reset();
+
+  if (!elrs_radio_detect()) {
+    return false;
+  }
+
+  sx128x_set_mode(SX1280_MODE_STDBY_RC);
+  sx128x_write_register(0x0891, (sx128x_read_register(0x0891) | 0xC0));
+  sx128x_write_command(SX1280_RADIO_SET_AUTOFS, 0x01);
+  sx128x_wait();
+
+  return true;
 }
 
 void elrs_set_frequency(int32_t freq) {
@@ -218,7 +231,6 @@ void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq, uint32_t flrc_sy
     sx128x_wait();
   }
 
-  sx128x_set_fifo_addr(0x00, 0x00);
   sx128x_set_dio_irq_params(
       SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE | SX1280_IRQ_SYNCWORD_VALID | SX1280_IRQ_SYNCWORD_ERROR | SX1280_IRQ_CRC_ERROR,
       SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE,

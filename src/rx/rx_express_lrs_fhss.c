@@ -82,7 +82,7 @@ void fhss_randomize(int32_t seed) {
   fhss_sequence_count = (256 / config->freq_count) * config->freq_count;
 
   // initialize the sequence array
-  for (uint8_t i = 0; i < fhss_sequence_count; i++) {
+  for (uint16_t i = 0; i < fhss_sequence_count; i++) {
     if (i % config->freq_count == 0) {
       fhss_sequence[i] = fhss_sync_index;
     } else if (i % config->freq_count == fhss_sync_index) {
@@ -92,7 +92,7 @@ void fhss_randomize(int32_t seed) {
     }
   }
 
-  for (uint8_t i = 0; i < fhss_sequence_count; i++) {
+  for (uint16_t i = 0; i < fhss_sequence_count; i++) {
     // if it's not the sync channel
     if (i % config->freq_count != 0) {
       const uint8_t offset = (i / config->freq_count) * config->freq_count; // offset to start of current block
