@@ -99,6 +99,7 @@ static uint32_t last_valid_packet_millis = 0;
 static uint32_t last_rf_mode_cycle_millis = 0;
 
 static uint32_t next_rate = ELRS_RATE_DEFAULT;
+static uint32_t next_switch_mode_pending = 0;
 static uint32_t rf_mode_cycle_multiplier = 1;
 
 static int8_t raw_rssi = 0;
@@ -446,7 +447,7 @@ static void elrs_sample_aux0(bool aux0_value) {
   last_aux0_value = aux0_value;
 }
 
-static bool elrs_unpack_hybrid_switches(const volatile uint8_t *packet) {
+static bool elrs_unpack_switches_hybrid(const volatile uint8_t *packet) {
   const uint8_t switch_byte = packet[6];
 
   elrs_sample_aux0((switch_byte & 0b10000000));
@@ -498,7 +499,7 @@ static uint8_t elrs_hybrid_wide_nonce_to_switch_index(uint8_t nonce) {
   return ((nonce & 0b111) + ((nonce >> 3) & 0b1)) % 8;
 }
 
-static bool elrs_unpack_hybrid_switches_wide(const volatile uint8_t *packet) {
+static bool elrs_unpack_switches_wide(const volatile uint8_t *packet) {
   static bool telemetry_status = false;
 
   const uint8_t switch_byte = packet[6];
@@ -570,6 +571,7 @@ static bool elrs_process_packet(uint32_t packet_time) {
   if (!elrs_vaild_packet()) {
     return false;
   }
+  debug_pin_toggle(1);
 
   bool channels_received = false;
 
@@ -605,9 +607,14 @@ static bool elrs_process_packet(uint32_t packet_time) {
 
     sync_packet_millis = time_millis();
 
-    // TODO: elrs_set_switch_mode
-    // in update & only when disconnected
     next_rate = ((packet[3] & 0b11110000) >> 4);
+
+    // Switch mode can only change when disconnected, and happens on the main thread
+    if (elrs_state == DISCONNECTED) {
+      // Add one to the mode because next_switch_mode_pending==0 means no switch pending
+      // and that's also a valid switch mode. The 1 is removed when this is handled
+      next_switch_mode_pending = (packet[3] & 0b1) + 1;
+    }
 
     const uint8_t telemetry_rate_index = TLM_RATIO_NO_TLM + ((packet[3] & 0b00001110) >> 1);
     const uint8_t new_tlm_denom = tlm_ratio_enum_to_value(telemetry_rate_index);
@@ -634,7 +641,7 @@ static bool elrs_process_packet(uint32_t packet_time) {
     break;
   }
   case RC_DATA_PACKET: {
-    if (!has_model_match) {
+    if (!has_model_match || next_switch_mode_pending) {
       // dont update channels if we dont have a match
       break;
     }
@@ -659,11 +666,11 @@ static bool elrs_process_packet(uint32_t packet_time) {
     switch (bind_storage.elrs.switch_mode) {
     default:
     case SWITCH_WIDE_OR_8CH:
-      tlm_confirm = elrs_unpack_hybrid_switches(packet);
+      tlm_confirm = elrs_unpack_switches_wide(packet);
       break;
 
     case SWITCH_HYBRID_OR_16CH:
-      tlm_confirm = elrs_unpack_hybrid_switches_wide(packet);
+      tlm_confirm = elrs_unpack_switches_hybrid(packet);
       break;
 
     case SWITCH_12CH:
@@ -865,6 +872,11 @@ bool rx_expresslrs_check() {
   }
 
   elrs_update_telemetry();
+
+  if (next_switch_mode_pending) {
+    elrs_set_switch_mode(next_switch_mode_pending - 1, current_air_rate_config()->payload_len);
+    next_switch_mode_pending = 0;
+  }
 
   rx_lqi_update();
 
