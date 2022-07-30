@@ -298,10 +298,9 @@ static usbd_respond cdc_setconf(usbd_device *dev, uint8_t cfg) {
     usbd_ep_deconfig(dev, CDC_RXD_EP);
     usbd_reg_endpoint(dev, CDC_RXD_EP, 0);
     usbd_reg_endpoint(dev, CDC_TXD_EP, 0);
-
     usb_device_configured = false;
-
     return usbd_ack;
+
   case 1:
     /* configuring device */
     usbd_ep_config(dev, CDC_RXD_EP, USB_EPTYPE_BULK, CDC_DATA_SZ);
@@ -309,9 +308,7 @@ static usbd_respond cdc_setconf(usbd_device *dev, uint8_t cfg) {
     usbd_ep_config(dev, CDC_NTF_EP, USB_EPTYPE_INTERRUPT, CDC_NTF_SZ);
     usbd_reg_endpoint(dev, CDC_RXD_EP, cdc_rxonly);
     usbd_reg_endpoint(dev, CDC_TXD_EP, cdc_txonly);
-
     usb_device_configured = true;
-
     return usbd_ack;
 
   default:

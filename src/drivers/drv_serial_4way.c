@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "debug.h"
 #include "drv_gpio.h"
 #include "drv_motor.h"
 #include "drv_serial_4way.h"
@@ -9,7 +10,6 @@
 #include "drv_serial_soft.h"
 #include "drv_usb.h"
 #include "io/led.h"
-#include "io/usb_configurator.h"
 #include "util/cbor_helper.h"
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE

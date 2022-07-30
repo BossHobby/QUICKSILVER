@@ -3,10 +3,10 @@
 
 #include <string.h>
 
+#include "debug.h"
 #include "drv_serial.h"
 #include "drv_serial_hdzero.h"
 #include "io/msp.h"
-#include "io/usb_configurator.h"
 #include "profile.h"
 #include "util/crc.h"
 

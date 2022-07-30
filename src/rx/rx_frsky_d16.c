@@ -1,14 +1,15 @@
 #include "rx_frsky.h"
 
+#include <string.h>
+
+#include "debug.h"
 #include "drv_spi_cc2500.h"
 #include "drv_time.h"
 #include "flash.h"
 #include "flight/control.h"
-#include "io/usb_configurator.h"
 #include "profile.h"
 #include "util/circular_buffer.h"
 #include "util/util.h"
-#include <string.h>
 
 #if defined(USE_CC2500) && defined(RX_FRSKY)
 

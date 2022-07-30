@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 
+#include "debug.h"
 #include "drv_gpio.h"
 #include "drv_serial.h"
 #include "drv_serial_vtx_msp.h"
@@ -9,7 +10,6 @@
 #include "drv_serial_vtx_tramp.h"
 #include "drv_time.h"
 #include "flight/control.h"
-#include "io/usb_configurator.h"
 #include "profile.h"
 #include "project.h"
 #include "rx.h"

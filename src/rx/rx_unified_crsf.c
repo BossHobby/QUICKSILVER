@@ -4,11 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "debug.h"
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "flight/control.h"
 #include "io/msp.h"
-#include "io/usb_configurator.h"
 #include "profile.h"
 #include "project.h"
 #include "rx_crsf.h"

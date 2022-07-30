@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 
+#include "debug.h"
 #include "drv_serial.h"
 #include "drv_serial_vtx.h"
 #include "drv_time.h"
