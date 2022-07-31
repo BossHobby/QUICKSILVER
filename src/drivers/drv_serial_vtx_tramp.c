@@ -9,8 +9,6 @@
 #include "profile.h"
 #include "util/circular_buffer.h"
 
-#ifdef ENABLE_TRAMP
-
 #define USART usart_port_defs[serial_smart_audio_port]
 
 typedef enum {
@@ -244,5 +242,3 @@ void serial_tramp_send_payload(uint8_t cmd, const uint16_t payload) {
   parser_state = PARSER_INIT;
   vtx_last_valid_read = time_millis();
 }
-
-#endif
