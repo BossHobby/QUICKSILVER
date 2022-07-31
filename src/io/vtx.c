@@ -4,6 +4,7 @@
 
 #include "drv_gpio.h"
 #include "drv_serial.h"
+#include "drv_serial_vtx_msp.h"
 #include "drv_serial_vtx_sa.h"
 #include "drv_serial_vtx_tramp.h"
 #include "drv_time.h"
@@ -43,12 +44,20 @@ void tramp_set_frequency(vtx_band_t band, vtx_channel_t channel);
 void tramp_set_power_level(vtx_power_level_t power);
 void tramp_set_pit_mode(vtx_pit_mode_t pit_mode);
 
+extern uint8_t msp_vtx_detected;
+
+vtx_detect_status_t vtx_msp_update(vtx_settings_t *actual);
+void msp_vtx_set_frequency(vtx_band_t band, vtx_channel_t channel);
+void msp_vtx_set_power_level(vtx_power_level_t power);
+void msp_vtx_set_pit_mode(vtx_pit_mode_t pit_mode);
+
 const uint16_t frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX] = {
     {5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725}, // VTX_BAND_A
     {5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866}, // VTX_BAND_B
     {5705, 5685, 5665, 5645, 5885, 5905, 5925, 5945}, // VTX_BAND_E
     {5740, 5760, 5780, 5800, 5820, 5840, 5860, 5880}, // VTX_BAND_F
     {5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917}, // VTX_BAND_R
+    {5333, 5373, 5413, 5453, 5493, 5533, 5573, 5613}, // VTX_BAND_L
 };
 
 uint16_t vtx_frequency_from_channel(vtx_band_t band, vtx_channel_t channel) {
@@ -74,7 +83,11 @@ static vtx_detect_status_t vtx_update_protocol(vtx_protocol_t proto, vtx_setting
   case VTX_PROTOCOL_SMART_AUDIO:
     return vtx_smart_audio_update(actual);
 
-  default:
+  case VTX_PROTOCOL_MSP_VTX:
+    return vtx_msp_update(actual);
+
+  case VTX_PROTOCOL_INVALID:
+  case VTX_PROTOCOL_MAX:
     return VTX_DETECT_ERROR;
   }
 
@@ -134,7 +147,7 @@ void vtx_update() {
   vtx_delay_start = time_millis();
 
   if (!vtx_settings.detected) {
-    static vtx_protocol_t protocol_to_check = VTX_PROTOCOL_TRAMP;
+    static vtx_protocol_t protocol_to_check = VTX_PROTOCOL_MSP_VTX;
     static uint8_t protocol_is_init = 0;
 
     if (vtx_settings.protocol != VTX_PROTOCOL_INVALID) {
@@ -151,7 +164,12 @@ void vtx_update() {
         serial_smart_audio_init();
         break;
 
-      default:
+      case VTX_PROTOCOL_MSP_VTX:
+        serial_msp_vtx_init();
+        break;
+
+      case VTX_PROTOCOL_INVALID:
+      case VTX_PROTOCOL_MAX:
         break;
       }
       protocol_is_init = 1;
@@ -206,7 +224,12 @@ void vtx_update() {
       smart_audio_set_frequency(vtx_settings.band, vtx_settings.channel);
       break;
 
-    default:
+    case VTX_PROTOCOL_MSP_VTX:
+      msp_vtx_set_frequency(vtx_settings.band, vtx_settings.channel);
+      break;
+
+    case VTX_PROTOCOL_INVALID:
+    case VTX_PROTOCOL_MAX:
       break;
     }
 
@@ -235,7 +258,12 @@ void vtx_update() {
       smart_audio_set_power_level(vtx_settings.power_level);
       break;
 
-    default:
+    case VTX_PROTOCOL_MSP_VTX:
+      msp_vtx_set_power_level(vtx_settings.power_level);
+      break;
+
+    case VTX_PROTOCOL_INVALID:
+    case VTX_PROTOCOL_MAX:
       break;
     }
 
@@ -275,7 +303,12 @@ void vtx_update() {
       smart_audio_set_pit_mode(vtx_settings.pit_mode);
       break;
 
-    default:
+    case VTX_PROTOCOL_MSP_VTX:
+      msp_vtx_set_pit_mode(vtx_settings.pit_mode);
+      break;
+
+    case VTX_PROTOCOL_INVALID:
+    case VTX_PROTOCOL_MAX:
       break;
     }
 
@@ -287,18 +320,19 @@ void vtx_update() {
 }
 
 void vtx_set(vtx_settings_t *vtx) {
-  if (vtx_settings.protocol != vtx->protocol) {
+  if (vtx->protocol != VTX_PROTOCOL_INVALID && vtx_settings.protocol != vtx->protocol) {
     // if the selected protocol was changed, restart detection
     vtx_settings.detected = VTX_PROTOCOL_INVALID;
+    vtx_settings.protocol = vtx->protocol;
 
     smart_audio_settings.version = 0;
     smart_audio_detected = 0;
     tramp_settings.freq_min = 0;
     tramp_detected = 0;
+    msp_vtx_detected = 0;
   }
 
   vtx_settings.magic = VTX_SETTINGS_MAGIC;
-  vtx_settings.protocol = vtx->protocol;
 
   if (vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT)
     vtx_settings.pit_mode = vtx->pit_mode;

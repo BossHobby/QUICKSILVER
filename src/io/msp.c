@@ -5,14 +5,23 @@
 
 #include "drv_serial.h"
 #include "drv_serial_4way.h"
+#include "flash.h"
 #include "flight/control.h"
 #include "io/usb_configurator.h"
 #include "quic.h"
+#include "reset.h"
 #include "util/crc.h"
 #include "util/util.h"
 #include "vtx.h"
 
-static void msp_send_reply(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *data, uint32_t len) {
+extern uint8_t msp_vtx_detected;
+extern vtx_settings_t msp_vtx_settings;
+extern const uint16_t frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX];
+extern char msp_vtx_band_letters[VTX_BAND_MAX];
+extern char msp_vtx_band_labels[VTX_BAND_MAX][8];
+extern void msp_vtx_send_config_reply(msp_t *msp, msp_magic_t magic);
+
+void msp_send_reply(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *data, uint32_t len) {
   if (msp->send) {
     msp->send(magic, '>', cmd, data, len);
   }
@@ -275,6 +284,168 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     }
 
     msp_send_reply(msp, magic, cmd, data, 1 + uart_count * 5);
+    break;
+  }
+
+  case MSP_VTX_CONFIG: {
+    msp_vtx_send_config_reply(msp, magic);
+    break;
+  }
+
+  case MSP_SET_VTX_CONFIG: {
+    uint16_t remaining = size;
+
+    uint16_t freq = (payload[1] << 8) | payload[0];
+    remaining -= 2;
+    if (freq < VTX_BAND_MAX * VTX_CHANNEL_MAX) {
+      msp_vtx_settings.band = freq / VTX_CHANNEL_MAX;
+      msp_vtx_settings.channel = freq % VTX_CHANNEL_MAX;
+    } else {
+      int8_t channel_index = vtx_find_frequency_index(freq);
+      msp_vtx_settings.band = channel_index / VTX_CHANNEL_MAX;
+      msp_vtx_settings.channel = channel_index % VTX_CHANNEL_MAX;
+    }
+
+    if (remaining >= 2) {
+      msp_vtx_settings.power_level = payload[2] - 1;
+      msp_vtx_settings.pit_mode = payload[3];
+      remaining -= 2;
+    }
+
+    if (remaining) {
+      // payload[4] lowpower disarm, unused
+      remaining -= 1;
+    }
+
+    if (remaining >= 2) {
+      // payload[5], payload[6] pit mode freq, unused
+      remaining -= 2;
+    }
+
+    if (remaining >= 4) {
+      msp_vtx_settings.band = payload[7] - 1;
+      msp_vtx_settings.channel = payload[8] - 1;
+      //  payload[9], payload[10]  freq, unused
+      remaining -= 4;
+    }
+
+    if (remaining >= 4) {
+      // payload[11], band count, unused
+      // payload[12], channel count, unused
+      msp_vtx_settings.power_table.levels = payload[13];
+
+      if (payload[14]) {
+        // clear tables
+        for (uint32_t i = 0; i < VTX_POWER_LEVEL_MAX; i++) {
+          msp_vtx_settings.power_table.values[i] = 0;
+          memset(msp_vtx_settings.power_table.labels[i], 0, 3);
+        }
+      }
+
+      remaining -= 4;
+    }
+
+    msp_send_reply(msp, magic, cmd, NULL, 0);
+    break;
+  }
+
+  case MSP_VTXTABLE_BAND: {
+    const uint8_t band = payload[0];
+    if (band <= 0 || band > VTX_BAND_MAX) {
+      msp_send_error(msp, magic, cmd);
+      break;
+    }
+
+    uint8_t offset = 0;
+    uint8_t buf[4 + 8 + VTX_CHANNEL_MAX * sizeof(uint16_t)];
+
+    buf[offset++] = band;
+    buf[offset++] = 8;
+
+    for (uint32_t i = 0; i < 8; i++) {
+      buf[offset++] = msp_vtx_band_labels[band - 1][i];
+    }
+
+    buf[offset++] = msp_vtx_band_letters[band - 1];
+    buf[offset++] = 0; // is factory
+
+    buf[offset++] = VTX_CHANNEL_MAX;
+    for (uint32_t i = 0; i < VTX_CHANNEL_MAX; i++) {
+      buf[offset++] = frequency_table[band - 1][i] & 0xFF;
+      buf[offset++] = frequency_table[band - 1][i] >> 8;
+    }
+
+    msp_send_reply(msp, magic, cmd, buf, offset);
+    break;
+  }
+
+  case MSP_SET_VTXTABLE_BAND: {
+    uint8_t offset = 0;
+    const uint8_t band = payload[offset++];
+    if (band <= 0 || band > VTX_BAND_MAX) {
+      msp_send_error(msp, magic, cmd);
+      break;
+    }
+
+    const uint8_t label_len = payload[offset++];
+    for (uint8_t i = 0; i < 8; i++) {
+      msp_vtx_band_labels[band - 1][i] = i >= label_len ? 0 : payload[offset++];
+    }
+
+    msp_vtx_band_letters[band - 1] = payload[offset++];
+
+    // ignore the rest
+    msp_send_reply(msp, magic, cmd, NULL, 0);
+    break;
+  }
+
+  case MSP_VTXTABLE_POWERLEVEL: {
+    const uint8_t level = payload[0];
+    if (level <= 0 || level > VTX_POWER_LEVEL_MAX) {
+      msp_send_error(msp, magic, cmd);
+      break;
+    }
+
+    const uint16_t power = vtx_settings.power_table.values[level - 1];
+
+    uint8_t buf[7];
+    buf[0] = level;
+    buf[1] = power & 0xFF;
+    buf[2] = power >> 8;
+    buf[3] = 3;
+    memcpy(buf + 4, vtx_settings.power_table.labels[level - 1], 3);
+
+    msp_send_reply(msp, magic, cmd, buf, 7);
+    break;
+  }
+
+  case MSP_SET_VTXTABLE_POWERLEVEL: {
+    const uint8_t level = payload[0];
+    if (level <= 0 || level > VTX_POWER_LEVEL_MAX) {
+      msp_send_error(msp, magic, cmd);
+      break;
+    }
+
+    vtx_settings.power_table.levels = max(level, vtx_settings.power_table.levels);
+    vtx_settings.power_table.values[level - 1] = payload[2] << 8 | payload[1];
+
+    const uint8_t label_len = payload[3];
+    for (uint8_t i = 0; i < 3; i++) {
+      vtx_settings.power_table.labels[level - 1][i] = i >= label_len ? 0 : payload[4 + i];
+    }
+    msp_send_reply(msp, magic, cmd, NULL, 0);
+    break;
+  }
+
+  case MSP_EEPROM_WRITE: {
+    msp_vtx_detected = 1;
+    flash_save();
+    msp_send_reply(msp, magic, cmd, NULL, 0);
+    break;
+  }
+
+  case MSP_REBOOT: {
+    system_reset();
     break;
   }
 
