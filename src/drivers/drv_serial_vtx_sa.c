@@ -11,8 +11,6 @@
 #include "util/crc.h"
 #include "util/util.h"
 
-#ifdef ENABLE_SMART_AUDIO
-
 #define SMART_AUDIO_BAUDRATE_MIN 4650
 #define SMART_AUDIO_BAUDRATE_MAX 5050
 #define SMART_AUDIO_BUFFER_SIZE 128
@@ -368,5 +366,3 @@ uint8_t smart_audio_dac_power_level_index(uint8_t dac) {
   }
   return 0;
 }
-
-#endif
