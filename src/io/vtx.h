@@ -18,6 +18,7 @@ typedef enum {
   VTX_BAND_E,
   VTX_BAND_F,
   VTX_BAND_R,
+  VTX_BAND_L,
 
   VTX_BAND_MAX
 } vtx_band_t;
@@ -40,6 +41,7 @@ typedef enum {
   VTX_POWER_LEVEL_2,
   VTX_POWER_LEVEL_3,
   VTX_POWER_LEVEL_4,
+  VTX_POWER_LEVEL_5,
 
   VTX_POWER_LEVEL_MAX,
 } vtx_power_level_t;
@@ -56,9 +58,16 @@ typedef enum {
   VTX_PROTOCOL_INVALID,
   VTX_PROTOCOL_TRAMP,
   VTX_PROTOCOL_SMART_AUDIO,
+  VTX_PROTOCOL_MSP_VTX,
 
   VTX_PROTOCOL_MAX,
 } vtx_protocol_t;
+
+typedef struct {
+  uint8_t levels;
+  char labels[VTX_POWER_LEVEL_MAX][3];
+  uint16_t values[VTX_POWER_LEVEL_MAX];
+} vtx_power_table_t;
 
 typedef struct {
   uint16_t magic;
@@ -70,7 +79,9 @@ typedef struct {
   vtx_channel_t channel;
 
   vtx_pit_mode_t pit_mode;
+
   vtx_power_level_t power_level;
+  vtx_power_table_t power_table;
 } vtx_settings_t;
 
 extern vtx_settings_t vtx_settings;

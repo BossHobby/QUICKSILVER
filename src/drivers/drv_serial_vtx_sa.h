@@ -28,7 +28,7 @@ typedef struct {
   uint8_t power;
   uint8_t mode;
   uint16_t frequency;
-  uint8_t dac_power_levels[4];
+  uint8_t dac_power_levels[5];
 } smart_audio_settings_t;
 
 void serial_smart_audio_init();
