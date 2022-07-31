@@ -10,6 +10,18 @@
 
 #define MSP_FEATURE_CONFIG 36
 
+#define MSP_VTX_CONFIG 88     // out message         Get vtx settings - betaflight
+#define MSP_SET_VTX_CONFIG 89 // in message          Set vtx settings - betaflight
+
+#define MSP_VTXTABLE_BAND 137     // out message         vtxTable band/channel data
+#define MSP_SET_VTXTABLE_BAND 227 // in message          set vtxTable band/channel data (one band at a time)
+
+#define MSP_VTXTABLE_POWERLEVEL 138     // out message         vtxTable powerLevel data
+#define MSP_SET_VTXTABLE_POWERLEVEL 228 // in message          set vtxTable powerLevel data (one powerLevel at a time)
+
+#define MSP_EEPROM_WRITE 250 // in message          no param
+#define MSP_REBOOT 68        // in message reboot settings
+
 #define MSP_BATTERY_STATE 130 // out message         Connected/Disconnected, Voltage, Current Used
 
 #define MSP_UID 160   // out message         Unique device ID

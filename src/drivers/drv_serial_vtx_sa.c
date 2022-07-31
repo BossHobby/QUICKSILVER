@@ -6,6 +6,7 @@
 #include "drv_serial_vtx.h"
 #include "drv_time.h"
 #include "io/usb_configurator.h"
+#include "io/vtx.h"
 #include "profile.h"
 #include "util/circular_buffer.h"
 #include "util/crc.h"
@@ -52,10 +53,11 @@ extern uint8_t vtx_frame[VTX_BUFFER_SIZE];
 extern volatile uint8_t vtx_frame_length;
 extern volatile uint8_t vtx_frame_offset;
 
-const uint8_t default_dac_power_levels[4] = {
+const uint8_t default_dac_power_levels[VTX_POWER_LEVEL_MAX] = {
     7,
     16,
     25,
+    40,
     40,
 };
 
@@ -149,11 +151,13 @@ static uint8_t serial_smart_audio_parse_packet(uint8_t cmd, uint8_t *payload, ui
     if (cmd == SA_CMD_GET_SETTINGS_V21) {
       smart_audio_settings.power = payload[5];
 
-      for (uint8_t i = 0; i < 4; i++) {
+      const uint8_t count = max(payload[6], VTX_POWER_LEVEL_MAX);
+
+      for (uint8_t i = 0; i < count; i++) {
         smart_audio_settings.dac_power_levels[i] = payload[7 + i];
       }
     } else {
-      for (uint8_t i = 0; i < 4; i++) {
+      for (uint8_t i = 0; i < VTX_POWER_LEVEL_MAX; i++) {
         smart_audio_settings.dac_power_levels[i] = default_dac_power_levels[i];
       }
     }
