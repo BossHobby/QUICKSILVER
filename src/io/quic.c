@@ -159,7 +159,7 @@ static void get_quic(quic_t *quic, cbor_value_t *dec) {
 
     quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
-#ifdef ENABLE_OSD
+#ifdef USE_MAX7456
   case QUIC_VAL_OSD_FONT: {
     quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
 
@@ -247,10 +247,8 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
 
     flash_save();
 
-#ifdef ENABLE_OSD
     osd_clear();
     osd_display_reset();
-#endif
 
     res = cbor_encode_profile_t(&enc, &profile);
     check_cbor_error(QUIC_CMD_SET);
@@ -273,7 +271,7 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
     quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
-#ifdef ENABLE_OSD
+#ifdef USE_MAX7456
   case QUIC_VAL_OSD_FONT: {
     uint32_t len = 54;
 

@@ -56,9 +56,7 @@ void gestures() {
     }
 
     if (command == GESTURE_RRR) {
-#ifdef ENABLE_OSD
       ledblink = 2 - osd_push_screen(OSD_SCREEN_MAIN_MENU);
-#endif
     }
 
     if (command == GESTURE_LLL) {
@@ -82,7 +80,6 @@ void gestures() {
       state.aux[AUX_CHANNEL_GESTURE] = 0;
     }
 
-#ifdef ENABLE_OSD
     if (command == GESTURE_LRL) {
       while (osd_pop_screen() != OSD_SCREEN_CLEAR)
         ;
@@ -103,7 +100,6 @@ void gestures() {
     if (command == GESTURE_OSD_LEFT) {
       osd_handle_input(OSD_INPUT_LEFT);
     }
-#endif
 
 #ifdef PID_GESTURE_TUNING
     if (command >= GESTURE_UDR)

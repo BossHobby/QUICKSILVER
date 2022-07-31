@@ -16,8 +16,6 @@
 #include "string.h"
 #include "util/util.h"
 
-#ifdef ENABLE_OSD
-
 typedef enum {
   CLEAR,
   DISARM,
@@ -1520,5 +1518,3 @@ void osd_display() {
     break;
   }
 }
-
-#endif

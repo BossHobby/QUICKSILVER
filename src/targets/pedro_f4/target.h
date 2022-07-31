@@ -43,7 +43,7 @@
 
 /*
 // OSD
-#define ENABLE_OSD
+#define USE_MAX7456
 #define MAX7456_SPI_PORT SPI_PORT3
 #define MAX7456_NSS PIN_A15
 

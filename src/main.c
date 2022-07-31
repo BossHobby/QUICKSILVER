@@ -168,10 +168,8 @@ __attribute__((__used__)) int main() {
     failloop(FAILLOOP_GYRO);
   }
 
-#ifdef ENABLE_OSD
   time_delay_us(300000);
   osd_init();
-#endif
 
   adc_init();
 
@@ -203,9 +201,7 @@ __attribute__((__used__)) int main() {
 
   imu_init();
 
-#ifdef ENABLE_OSD
   osd_clear();
-#endif
 
   extern int liberror;
   if (liberror) {
@@ -303,13 +299,11 @@ __attribute__((__used__)) int main() {
     perf_counter_end(PERF_COUNTER_BLACKBOX);
 #endif
 
-#ifdef ENABLE_OSD
     if (!blackbox_active) {
       perf_counter_start(PERF_COUNTER_OSD);
       osd_display();
       perf_counter_end(PERF_COUNTER_OSD);
     }
-#endif
 
     state.cpu_load = (time_micros() - lastlooptime);
 

@@ -9,7 +9,7 @@
 #include "string.h"
 #include "util/util.h"
 
-#ifdef ENABLE_OSD
+#ifdef USE_MAX7456
 
 #define DMA_BUFFER_SIZE 128
 #define MAX7456_BAUD_RATE MHZ_TO_HZ(10.5)

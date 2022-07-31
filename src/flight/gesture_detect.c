@@ -78,7 +78,6 @@ const uint8_t command11[GSIZE] = {GESTURE_CENTER_IDLE, GESTURE_DOWN, GESTURE_CEN
 
 //  OSD GESRURES
 
-#ifdef ENABLE_OSD
 // OSD-UP
 const uint8_t command12[OSD_GSIZE] = {GESTURE_CENTER_IDLE, GESTURE_UP, GESTURE_CENTER};
 
@@ -90,7 +89,6 @@ const uint8_t command14[OSD_GSIZE] = {GESTURE_CENTER_IDLE, GESTURE_RIGHT, GESTUR
 
 // OSD-LEFT
 const uint8_t command15[OSD_GSIZE] = {GESTURE_CENTER_IDLE, GESTURE_LEFT, GESTURE_CENTER};
-#endif
 
 const uint8_t command16[GSIZE] = {GESTURE_CENTER_IDLE, GESTURE_LEFT, GESTURE_CENTER, GESTURE_RIGHT, GESTURE_CENTER, GESTURE_LEFT, GESTURE_CENTER};
 
@@ -123,14 +121,12 @@ int gestures2() {
 
     if (time - gesturetime > GESTURETIME_MIN) {
       int gesturetime_idle;
-#ifdef ENABLE_OSD
+
       if (osd_state.screen != OSD_SCREEN_REGULAR)
         gesturetime_idle = GESTURETIME_IDLE_OSD;
       else
         gesturetime_idle = GESTURETIME_IDLE;
-#else
-      gesturetime_idle = GESTURETIME_IDLE;
-#endif
+
       if ((gesture_start == GESTURE_CENTER) && (time - gesturetime > gesturetime_idle)) {
         setgesture = GESTURE_CENTER_IDLE;
       } else if (time - gesturetime > GESTURETIME_MAX) {
@@ -157,7 +153,6 @@ int gestures2() {
 uint8_t gbuffer[GSIZE];
 
 uint8_t check_command(uint8_t buffer1[], const uint8_t command[]) {
-#ifdef ENABLE_OSD
   if (osd_state.screen != OSD_SCREEN_REGULAR) {
     for (int i = 0; i < OSD_GSIZE; i++) {
       if (buffer1[i] != command[OSD_GSIZE - i - 1])
@@ -169,19 +164,12 @@ uint8_t check_command(uint8_t buffer1[], const uint8_t command[]) {
         return 0;
     }
   }
-#else
-  for (int i = 0; i < GSIZE; i++) {
-    if (buffer1[i] != command[GSIZE - i - 1])
-      return 0;
-  }
-#endif
   return 1;
 }
 
 int gesture_sequence(int currentgesture) {
 
   if (currentgesture != gbuffer[0]) { // add to queue
-#ifdef ENABLE_OSD
     if (osd_state.screen != OSD_SCREEN_REGULAR) {
       for (int i = OSD_GSIZE - 1; i >= 1; i--) {
         gbuffer[i] = gbuffer[i - 1];
@@ -191,15 +179,9 @@ int gesture_sequence(int currentgesture) {
         gbuffer[i] = gbuffer[i - 1];
       }
     }
-#else
-    for (int i = GSIZE - 1; i >= 1; i--) {
-      gbuffer[i] = gbuffer[i - 1];
-    }
-#endif
     gbuffer[0] = currentgesture;
 
-// check commands
-#ifdef ENABLE_OSD
+    // check commands
     if (osd_state.screen != OSD_SCREEN_REGULAR) {
       if (check_command(&gbuffer[0], &command12[0])) {
         // command 12
@@ -330,95 +312,6 @@ int gesture_sequence(int currentgesture) {
       }
 #endif
     }
-#else
-    if (check_command(&gbuffer[0], &command1[0])) {
-      // command 1
-
-      // change buffer so it does not trigger again
-      gbuffer[1] = GESTURE_OTHER;
-      return GESTURE_LLD;
-    }
-
-    if (check_command(&gbuffer[0], &command2[0])) {
-      // command 2
-
-      // change buffer so it does not trigger again
-      gbuffer[1] = GESTURE_OTHER;
-      return GESTURE_RRD;
-    }
-
-    if (check_command(&gbuffer[0], &command3[0])) {
-      // command 3
-
-      // change buffer so it does not trigger again
-      gbuffer[1] = GESTURE_OTHER;
-      return GESTURE_DDD;
-    }
-    if (check_command(&gbuffer[0], &command8[0])) {
-      // command 8
-
-      // change buffer so it does not trigger again
-      gbuffer[1] = GESTURE_OTHER;
-      return GESTURE_UUU;
-    }
-
-    if (check_command(&gbuffer[0], &command9[0])) {
-      // command 9
-
-      // change buffer so it does not trigger again
-      gbuffer[1] = GESTURE_OTHER;
-      return GESTURE_RRR;
-    }
-
-    if (check_command(&gbuffer[0], &command10[0])) {
-      // command 10
-
-      // change buffer so it does not trigger again
-      gbuffer[1] = GESTURE_OTHER;
-      return GESTURE_LLL;
-    }
-
-    if (check_command(&gbuffer[0], &command11[0])) {
-      // command 11
-
-      // change buffer so it does not trigger again
-      gbuffer[1] = GESTURE_OTHER;
-      return GESTURE_DUD;
-    }
-
-#ifdef PID_GESTURE_TUNING
-    if (check_command(&gbuffer[0], &command4[0])) {
-      // command 4
-
-      // change buffer so it does not trigger again
-      gbuffer[1] = GESTURE_OTHER;
-      return GESTURE_UDU;
-    }
-
-    if (check_command(&gbuffer[0], &command5[0])) {
-      // command 5
-
-      // change buffer so it does not trigger again
-      gbuffer[1] = GESTURE_OTHER;
-      return GESTURE_UDD;
-    }
-
-    if (check_command(&gbuffer[0], &command6[0])) {
-      // command 6
-
-      // change buffer so it does not trigger again
-      gbuffer[1] = GESTURE_OTHER;
-      return GESTURE_UDR;
-    }
-    if (check_command(&gbuffer[0], &command7[0])) {
-      // command 7
-
-      // change buffer so it does not trigger again
-      gbuffer[1] = GESTURE_OTHER;
-      return GESTURE_UDL;
-    }
-#endif
-#endif
   }
 
   return GESTURE_NONE;

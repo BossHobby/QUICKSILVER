@@ -499,9 +499,7 @@ target_info_t target_info = {
 #ifdef BRUSHLESS_TARGET
                 | FEATURE_BRUSHLESS
 #endif
-#ifdef ENABLE_OSD
                 | FEATURE_OSD
-#endif
 #ifdef ENABLE_BLACKBOX
                 | FEATURE_BLACKBOX
 #endif
