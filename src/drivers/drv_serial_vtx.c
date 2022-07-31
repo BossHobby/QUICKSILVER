@@ -6,8 +6,6 @@
 #include "io/usb_configurator.h"
 #include "util/circular_buffer.h"
 
-#if defined(ENABLE_SMART_AUDIO) || defined(ENABLE_TRAMP)
-
 #define USART usart_port_defs[serial_smart_audio_port]
 
 uint8_t vtx_rx_data[VTX_BUFFER_SIZE];
@@ -124,5 +122,3 @@ void soft_serial_rx_isr() {
   const uint8_t data = soft_serial_read_byte(serial_smart_audio_port);
   circular_buffer_write(&vtx_rx_buffer, data);
 }
-
-#endif

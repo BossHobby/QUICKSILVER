@@ -62,9 +62,6 @@
 #define DMA_RAM
 #endif
 
-#define ENABLE_SMART_AUDIO
-#define ENABLE_TRAMP
-
 #ifdef BRUSHLESS_TARGET
 // dshot pin initialization & usb interface to esc
 #define USE_DSHOT_DMA_DRIVER

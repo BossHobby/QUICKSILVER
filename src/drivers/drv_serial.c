@@ -422,13 +422,13 @@ void handle_usart_isr(usart_ports_t port) {
     return;
   }
 #endif
-#if defined(ENABLE_SMART_AUDIO) || defined(ENABLE_TRAMP)
+
   extern void vtx_uart_isr();
   if (serial_smart_audio_port == port) {
     vtx_uart_isr();
     return;
   }
-#endif
+
   extern void hdzero_uart_isr();
   if (serial_hdzero_port == port) {
     hdzero_uart_isr();
