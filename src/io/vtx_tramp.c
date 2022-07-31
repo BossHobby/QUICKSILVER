@@ -11,10 +11,11 @@ extern const uint16_t frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX];
 uint8_t tramp_detected = 0;
 extern tramp_settings_t tramp_settings;
 
-const uint16_t tramp_power_level[4] = {
+const uint16_t tramp_power_level[VTX_POWER_LEVEL_MAX] = {
     25,
     100,
     200,
+    300,
     400,
 };
 
