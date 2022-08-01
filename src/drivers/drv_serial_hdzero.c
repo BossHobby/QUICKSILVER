@@ -6,6 +6,7 @@
 #include "io/msp.h"
 #include "profile.h"
 #include "util/circular_buffer.h"
+#include "util/crc.h"
 
 typedef enum {
   SUBCMD_HEARTBEAT = 0,
@@ -45,46 +46,74 @@ static circular_buffer_t msp_rx_buffer = {
     .size = 256,
 };
 
-static bool hdzero_push_msp(const uint8_t code, const uint8_t *data, const uint8_t size) {
-  if (circular_buffer_free(&msp_tx_buffer) < (MSP_HEADER_LEN + size + 1)) {
-    return false;
-  }
+static const uint8_t variant[6] = {'B', 'T', 'F', 'L', 0, 0};
 
-  circular_buffer_write(&msp_tx_buffer, '$');
-  circular_buffer_write(&msp_tx_buffer, 'M');
-  circular_buffer_write(&msp_tx_buffer, '>');
-  circular_buffer_write(&msp_tx_buffer, size);
-  circular_buffer_write(&msp_tx_buffer, code);
-
-  circular_buffer_write_multi(&msp_tx_buffer, data, size);
-
-  uint8_t chksum = size ^ code;
-  for (uint8_t i = 0; i < size; i++) {
-    chksum ^= data[i];
-  }
-  circular_buffer_write(&msp_tx_buffer, chksum);
-
-  LL_USART_EnableIT_TXE(USART.channel);
-  return true;
-}
-
-static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, uint8_t *data, uint16_t len) {
+static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
   if (cmd == MSP_FC_VARIANT) {
-    static uint8_t variant[6] = {'A', 'R', 'D', 'U', 0, 0};
     data = variant;
     len = 6;
   }
 
-  hdzero_push_msp(cmd, data, len);
+  if (magic == MSP2_MAGIC) {
+    if (circular_buffer_free(&msp_tx_buffer) < (len + MSP2_HEADER_LEN + 1)) {
+      return;
+    }
+
+    circular_buffer_write(&msp_tx_buffer, '$');
+    circular_buffer_write(&msp_tx_buffer, MSP2_MAGIC);
+    circular_buffer_write(&msp_tx_buffer, '>');
+
+    uint8_t crc = 0;
+
+    circular_buffer_write(&msp_tx_buffer, 0); // flag
+    crc = crc8_dvb_s2_calc(crc, 0);
+
+    circular_buffer_write(&msp_tx_buffer, (cmd >> 0) & 0xFF);
+    crc = crc8_dvb_s2_calc(crc, (cmd >> 0) & 0xFF);
+    circular_buffer_write(&msp_tx_buffer, (cmd >> 8) & 0xFF);
+    crc = crc8_dvb_s2_calc(crc, (cmd >> 8) & 0xFF);
+    circular_buffer_write(&msp_tx_buffer, (len >> 0) & 0xFF);
+    crc = crc8_dvb_s2_calc(crc, (len >> 0) & 0xFF);
+    circular_buffer_write(&msp_tx_buffer, (len >> 8) & 0xFF);
+    crc = crc8_dvb_s2_calc(crc, (len >> 8) & 0xFF);
+
+    circular_buffer_write_multi(&msp_tx_buffer, data, len);
+
+    circular_buffer_write(&msp_tx_buffer, crc8_dvb_s2_data(crc, data, len));
+  } else {
+    if (circular_buffer_free(&msp_tx_buffer) < (len + MSP_HEADER_LEN + 1)) {
+      return;
+    }
+
+    circular_buffer_write(&msp_tx_buffer, '$');
+    circular_buffer_write(&msp_tx_buffer, MSP1_MAGIC);
+    circular_buffer_write(&msp_tx_buffer, '>');
+    circular_buffer_write(&msp_tx_buffer, len);
+    circular_buffer_write(&msp_tx_buffer, cmd);
+
+    circular_buffer_write_multi(&msp_tx_buffer, data, len);
+
+    uint8_t chksum = len ^ cmd;
+    for (uint8_t i = 0; i < len; i++) {
+      chksum ^= data[i];
+    }
+    circular_buffer_write(&msp_tx_buffer, chksum);
+  }
+
+  LL_USART_EnableIT_TXE(USART.channel);
 }
 
 static uint8_t msp_buffer[128];
-static msp_t msp = {
+msp_t hdzero_msp = {
     .buffer = msp_buffer,
     .buffer_size = 128,
     .buffer_offset = 0,
     .send = hdzero_msp_send,
 };
+
+static void hdzero_push_msp(const uint8_t code, const uint8_t *data, const uint8_t size) {
+  hdzero_msp_send(MSP1_MAGIC, '>', code, data, size);
+}
 
 static bool hdzero_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data, const uint8_t size) {
   if (circular_buffer_free(&msp_tx_buffer) < (MSP_HEADER_LEN + size + 2)) {
@@ -160,7 +189,6 @@ bool hdzero_is_ready() {
   }
 
   if (wants_heatbeat) {
-    uint8_t variant[6] = {'A', 'R', 'D', 'U', 0, 0};
     hdzero_push_msp(MSP_FC_VARIANT, variant, 6);
 
     uint8_t options[2] = {0, 1};
@@ -177,7 +205,7 @@ bool hdzero_is_ready() {
       break;
     }
 
-    msp_process_serial(&msp, data);
+    msp_process_serial(&hdzero_msp, data);
   }
 
   return true;
