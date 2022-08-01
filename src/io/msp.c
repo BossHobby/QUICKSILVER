@@ -14,6 +14,15 @@
 #include "util/util.h"
 #include "vtx.h"
 
+enum {
+  MSP_REBOOT_FIRMWARE = 0,
+  MSP_REBOOT_BOOTLOADER_ROM,
+  MSP_REBOOT_MSC,
+  MSP_REBOOT_MSC_UTC,
+  MSP_REBOOT_BOOTLOADER_FLASH,
+  MSP_REBOOT_COUNT,
+};
+
 extern uint8_t msp_vtx_detected;
 extern vtx_settings_t msp_vtx_settings;
 extern const uint16_t frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX];
@@ -439,13 +448,30 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
   case MSP_EEPROM_WRITE: {
     msp_vtx_detected = 1;
-    flash_save();
+    if (!flags.arm_switch) {
+      flash_save();
+    }
     msp_send_reply(msp, magic, cmd, NULL, 0);
     break;
   }
 
   case MSP_REBOOT: {
-    system_reset();
+    if (flags.arm_switch) {
+      break;
+    }
+
+    switch (payload[0]) {
+    case MSP_REBOOT_FIRMWARE:
+      system_reset();
+      break;
+
+    case MSP_REBOOT_BOOTLOADER_ROM:
+      system_reset_to_bootloader();
+      break;
+
+    default:
+      break;
+    }
     break;
   }
 
