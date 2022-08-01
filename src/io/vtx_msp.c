@@ -72,13 +72,11 @@ vtx_detect_status_t vtx_msp_update(vtx_settings_t *actual) {
   if (!settings_init) {
     msp_vtx_settings = vtx_settings;
     settings_init = true;
-
-    // send a dummy request
-    // msp_vtx_send_config_reply(msp_vtx, MSP2_MAGIC);
     return VTX_DETECT_WAIT;
   }
 
   if (vtx_connect_tries > MSP_VTX_DETECT_TRIES) {
+    settings_init = false;
     return VTX_DETECT_ERROR;
   }
 
@@ -90,8 +88,13 @@ vtx_detect_status_t vtx_msp_update(vtx_settings_t *actual) {
     return VTX_DETECT_WAIT;
 
   case VTX_SUCCESS:
+  case VTX_IDLE:
     if (msp_vtx_detected) {
       *actual = msp_vtx_settings;
+
+      if (vtx_settings.detected == VTX_PROTOCOL_MSP_VTX) {
+        return VTX_DETECT_UPDATE;
+      }
 
       if (vtx_settings.magic != VTX_SETTINGS_MAGIC) {
         vtx_set(actual);
@@ -100,13 +103,6 @@ vtx_detect_status_t vtx_msp_update(vtx_settings_t *actual) {
       vtx_settings.detected = VTX_PROTOCOL_MSP_VTX;
       vtx_connect_tries = 0;
       return VTX_DETECT_SUCCESS;
-    }
-    return VTX_DETECT_WAIT;
-
-  case VTX_IDLE:
-    if (msp_vtx_detected) {
-      *actual = msp_vtx_settings;
-      return VTX_DETECT_UPDATE;
     }
     return VTX_DETECT_WAIT;
   }

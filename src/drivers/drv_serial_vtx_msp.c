@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "drv_serial.h"
+#include "drv_serial_hdzero.h"
 #include "io/msp.h"
 #include "io/usb_configurator.h"
 #include "profile.h"
@@ -60,6 +61,7 @@ static void serial_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, 
   request_ready = true;
 }
 
+extern msp_t hdzero_msp;
 static uint8_t msp_rx_buffer[128];
 static msp_t msp = {
     .buffer = msp_rx_buffer,
@@ -69,6 +71,12 @@ static msp_t msp = {
 };
 
 void serial_msp_vtx_init() {
+  if (serial_hdzero_port != USART_PORT_INVALID) {
+    // reuse existing msp for hdz
+    msp_vtx = &hdzero_msp;
+    return;
+  }
+
   serial_smart_audio_port = profile.serial.smart_audio;
 
   serial_enable_rcc(serial_smart_audio_port);
@@ -103,6 +111,13 @@ void serial_msp_vtx_init() {
 }
 
 vtx_update_result_t serial_msp_vtx_update() {
+  if (serial_hdzero_port != USART_PORT_INVALID) {
+    if (!hdzero_is_ready()) {
+      return VTX_WAIT;
+    }
+    return VTX_IDLE;
+  }
+
   if (vtx_transfer_done == 0) {
     return VTX_WAIT;
   }
