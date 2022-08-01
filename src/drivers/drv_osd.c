@@ -74,7 +74,12 @@ uint8_t osd_clear_async() {
   }
 
   if (is_done) {
-    memset(display, 0, MAX_DISPLAY_SIZE * sizeof(osd_char_t));
+    for (uint32_t i = 0; i < MAX_DISPLAY_SIZE; i++) {
+      display[i].dirty = 0;
+      display[i].attr = 0;
+      display[i].val = ' ';
+    }
+
     memset(display_row_dirty, 0, MAX_ROWS * sizeof(bool));
     display_dirty = false;
   }
@@ -83,13 +88,14 @@ uint8_t osd_clear_async() {
 }
 
 static void osd_display_set(uint16_t offset, uint8_t attr, uint8_t val) {
-  if (display[offset].val == val && display[offset].attr == attr) {
+  osd_char_t *c = &display[offset];
+  if (c->val == val && c->attr == attr) {
     return;
   }
 
-  display[offset].dirty = 1;
-  display[offset].attr = attr;
-  display[offset].val = val;
+  c->dirty = 1;
+  c->attr = attr;
+  c->val = val;
 
   display_row_dirty[offset / cols] = true;
   display_dirty = true;
