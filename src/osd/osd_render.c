@@ -808,6 +808,7 @@ void osd_display() {
       while (osd_pop_screen() != OSD_SCREEN_CLEAR)
         ;
       did_just_arm = true;
+      return;
     }
   } else {
     did_just_arm = false;

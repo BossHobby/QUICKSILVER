@@ -57,34 +57,43 @@ void osd_clear() {
 }
 
 uint8_t osd_clear_async() {
-  uint8_t is_done = 0;
+  static uint8_t row = 0;
 
-  switch (osd_device) {
-  case OSD_DEVICE_MAX7456:
-    is_done = max7456_clear_async();
-    break;
-
-  case OSD_DEVICE_HDZERO:
-    is_done = hdzero_clear_async();
-    break;
-
-  default:
-    is_done = 1;
-    break;
-  }
-
-  if (is_done) {
-    for (uint32_t i = 0; i < MAX_DISPLAY_SIZE; i++) {
-      display[i].dirty = 0;
-      display[i].attr = 0;
-      display[i].val = ' ';
+  if (row < MAX_ROWS) {
+    for (uint32_t i = 0; i < MAX_COLS; i++) {
+      display[row * MAX_COLS + i].dirty = 0;
+      display[row * MAX_COLS + i].attr = 0;
+      display[row * MAX_COLS + i].val = ' ';
     }
+    row++;
+    return 0;
+  }
+  if (row == MAX_ROWS) {
+    switch (osd_device) {
+    case OSD_DEVICE_MAX7456:
+      if (max7456_clear_async()) {
+        return 0;
+      }
+      break;
 
-    memset(display_row_dirty, 0, MAX_ROWS * sizeof(bool));
-    display_dirty = false;
+    case OSD_DEVICE_HDZERO:
+      if (!hdzero_clear_async()) {
+        return 0;
+      }
+      break;
+
+    default:
+      break;
+    }
+    row++;
+    return 0;
   }
 
-  return is_done;
+  memset(display_row_dirty, 0, MAX_ROWS * sizeof(bool));
+  display_dirty = false;
+  row = 0;
+
+  return 1;
 }
 
 static void osd_display_set(uint16_t offset, uint8_t attr, uint8_t val) {
