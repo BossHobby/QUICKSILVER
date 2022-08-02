@@ -20,6 +20,22 @@
 #define BUZZER_PIN PIN_A14
 // #define BUZZER_INVERT
 
+//--------------------------------------------------------------
+// RGB LEDs
+//--------------------------------------------------------------
+#define  RGB_PIN           PIN_B1
+//--------------------------------------------------------------
+// DMA => TIM3-CC4 => DMA1, Channel5, Stream2 (See drv_dma.c)
+//--------------------------------------------------------------
+#define  RGB_LED_DMA       DMA_DEVICE_TIM3_CH4
+//--------------------------------------------------------------
+// Timer for the data signal => TIM3
+//--------------------------------------------------------------
+#define  RGB_TIMER         TIM3
+#define  RGB_TIMER_CHANNEL 4
+#define  RGB_TIM_AF        GPIO_AF2_TIM3
+
+
 // GYRO
 #define GYRO_SPI_PORT SPI_PORT1
 #define GYRO_NSS PIN_A4

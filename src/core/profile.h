@@ -292,6 +292,96 @@ typedef struct {
   END_STRUCT()
 
 typedef struct {
+  uint32_t led_mask1;
+  uint32_t led_mask2;
+  uint16_t colors[3];
+} rgb_map_t;
+
+#define RGB_MAP_MEMBERS           \
+  START_STRUCT(rgb_map_t)         \
+  MEMBER(led_mask1, uint32)       \
+  MEMBER(led_mask2, uint32)       \
+  ARRAY_MEMBER(colors, 3, uint16) \
+  END_STRUCT()
+
+typedef struct {
+  rgb_map_t led_map[50];
+  uint8_t num_steps;
+  uint32_t duration;
+  uint8_t pattern_reverse;
+} rgb_sequence_t;
+
+#define RGB_SEQ_MEMBERS                \
+  START_STRUCT(rgb_sequence_t)         \
+  ARRAY_MEMBER(led_map, 50, rgb_map_t) \
+  MEMBER(num_steps, uint8)             \
+  MEMBER(duration, uint32)             \
+  MEMBER(pattern_reverse, uint8)       \
+  END_STRUCT()
+
+typedef struct {
+  uint32_t colors[6];
+  uint8_t num_colors;
+  uint8_t fade_steps;
+  uint8_t width;
+  uint8_t reverse;
+} rgb_rainbow_t;
+
+#define RGB_RAINBOW_MEMBERS       \
+  START_STRUCT(rgb_rainbow_t)     \
+  ARRAY_MEMBER(colors, 6, uint32) \
+  MEMBER(num_colors, uint8)       \
+  MEMBER(fade_steps, uint8)       \
+  MEMBER(width, uint8)            \
+  MEMBER(reverse, uint8)          \
+  END_STRUCT()
+
+typedef struct {
+  uint32_t color1;
+  uint32_t color2;
+  uint8_t modifier_channel;
+} rgb_solid_t;
+
+#define RGB_SOLID_MEMBERS         \
+  START_STRUCT(rgb_solid_t)       \
+  MEMBER(color1, uint32)          \
+  MEMBER(color2, uint32)          \
+  MEMBER(modifier_channel, uint8) \
+  END_STRUCT()
+
+typedef enum {
+  RGB_PATTERN_SOLID,
+  RGB_PATTERN_RAINBOW,
+  RGB_PATTERN_SEQUENCE,
+  RGB_PATTERN_MAX,
+} rgb_pattern_t;
+
+typedef struct {
+  uint8_t led_count;
+  uint32_t low_bat1;
+  uint32_t low_bat2;
+  uint32_t failsafe1;
+  uint32_t failsafe2;
+  rgb_pattern_t active_pattern;
+  rgb_solid_t solid_color;
+  rgb_rainbow_t wave_sequence;
+  rgb_sequence_t led_sequence;
+} profile_rgb_t;
+
+#define RGB_MEMBERS                    \
+  START_STRUCT(profile_rgb_t)          \
+  MEMBER(led_count, uint8)             \
+  MEMBER(low_bat1, uint32)             \
+  MEMBER(low_bat2, uint32)             \
+  MEMBER(failsafe1, uint32)            \
+  MEMBER(failsafe2, uint32)            \
+  MEMBER(active_pattern, uint8)        \
+  MEMBER(solid_color, rgb_solid_t)     \
+  MEMBER(wave_sequence, rgb_rainbow_t) \
+  MEMBER(led_sequence, rgb_sequence_t) \
+  END_STRUCT()
+
+typedef struct {
   filter_type_t type;
   float cutoff_freq;
 } profile_filter_parameter_t;
@@ -357,6 +447,7 @@ typedef struct {
   profile_serial_t serial;
   profile_filter_t filter;
   profile_osd_t osd;
+  profile_rgb_t rgb;
   profile_rate_t rate;
   profile_receiver_t receiver;
   profile_pid_t pid;
@@ -371,6 +462,7 @@ typedef struct {
   MEMBER(serial, profile_serial_t)     \
   MEMBER(filter, profile_filter_t)     \
   MEMBER(osd, profile_osd_t)           \
+  MEMBER(rgb, profile_rgb_t)           \
   MEMBER(rate, profile_rate_t)         \
   MEMBER(receiver, profile_receiver_t) \
   MEMBER(pid, profile_pid_t)           \

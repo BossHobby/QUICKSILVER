@@ -182,12 +182,12 @@ __attribute__((__used__)) int main() {
     // handle led commands
     led_update();
 
-#if (RGB_LED_NUMBER > 0)
-    // RGB led control
-    rgb_led_lvc();
 #ifdef RGB_LED_DMA
-    rgb_dma_start();
-#endif
+    if (RGB_LED_NUMBER > 0) {
+      // RGB led control
+      rgb_led_lvc();
+      rgb_dma_start();
+    }
 #endif
 
     buzzer_update();

@@ -73,6 +73,7 @@ typedef enum {
   AUX_FPV_SWITCH,
   AUX_BLACKBOX,
   AUX_PREARM,
+  AUX_LEDS,
 
   AUX_FUNCTION_MAX
 } aux_function_t;
