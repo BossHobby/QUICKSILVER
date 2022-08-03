@@ -36,16 +36,9 @@
 #include "rx.h"
 #include "util/util.h"
 
-#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
-#include "drv_serial_4way.h"
-#include "drv_serial_soft.h"
-#endif
-
 uint32_t lastlooptime;
 uint8_t looptime_warning;
 uint8_t blown_loop_counter;
-
-int random_seed = 0;
 
 __attribute__((__used__)) void memory_section_init() {
 #ifdef USE_FAST_RAM
@@ -204,12 +197,6 @@ __attribute__((__used__)) int main() {
   perf_counter_init();
 
   lastlooptime = time_micros();
-
-  //
-  //
-  //    MAIN LOOP
-  //
-  //
 
   while (1) {
     perf_counter_start(PERF_COUNTER_TOTAL);

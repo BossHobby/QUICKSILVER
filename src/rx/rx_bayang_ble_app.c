@@ -22,6 +22,8 @@
 #include "project.h"
 #include "util/util.h"
 
+#ifdef RX_BAYANG_BLE_APP
+
 #define RX_MODE_BIND RXMODE_BIND
 #define RX_MODE_NORMAL RXMODE_NORMAL
 
@@ -129,8 +131,6 @@
 int current_PID_for_display = 0;
 int PID_index_delay = 0;
 
-#ifdef RX_BAYANG_BLE_APP
-
 char lasttrim[4];
 
 char rfchannel[4];
@@ -141,7 +141,7 @@ uint16_t bind_safety = 0;
 uint32_t total_time_in_air = 0;
 uint32_t time_throttle_on = 0;
 int bound_for_BLE_packet;
-extern int random_seed;
+int random_seed;
 
 void bleinit();
 
