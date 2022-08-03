@@ -565,5 +565,16 @@
         }
       }
     ]
+  },
+  {
+    "name": "zeez_f7_v1",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
   }
 ]
