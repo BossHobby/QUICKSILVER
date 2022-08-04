@@ -4,7 +4,7 @@
     "cpu": "cortex-m7",
     "extra_flags": "-DSTM32H743xx -DSTM32H743 -DSTM32H7 -DUSE_FAST_RAM -DUSE_DMA_RAM -DHSE_VALUE=8000000U",
     "f_cpu": "480000000L",
-    "mcu": "stm32h743vi",
+    "mcu": "stm32h743",
     "product_line": "STM32H743xx",
     "variant": "Generic_H743"
   },
