@@ -33,13 +33,13 @@ if [ ! -z "$BRANCH" ] && [ "$BRANCH" != "master" ] && [ "$BRANCH" != "develop" ]
   BUILD_PREFIX="$BUILD_PREFIX.$BRANCH"
 fi
 
-function resetConfig() {
+function reset_config() {
   for DEFINE in "${DEFINES[@]}"; do
     sed -i "s/^#define \($DEFINE.*\)$/\/\/#define \1/" $CONFIG_FILE
   done
 }
 
-function setConfig() {
+function set_config() {
   for variable in ${1}; do 
     var_get() {
       echo ${variable} | base64 --decode | jq -r "${1}"
@@ -51,12 +51,36 @@ function setConfig() {
   done
 }
 
-jq 'empty' ./script/targets.json
+function build_target() {
+  TARGET="$1"
+  target_get() {
+    echo $TARGET | base64 --decode | jq -r "${1}"
+  }
 
-rm -rf $OUTPUT_FOLDER
-mkdir $OUTPUT_FOLDER
+  TARGET_NAME="$(target_get '.name')"
+  for config in $(target_get '.configurations[] | @base64'); do
+    config_get() {
+      echo ${config} | base64 --decode | jq -r "${1}"
+    }
+    CONFIG_NAME="$(config_get '.name')"
+    BUILD_NAME="$BUILD_PREFIX.$TARGET_NAME.$CONFIG_NAME"
 
-cat <<-EOF > $OUTPUT_FOLDER/index.html
+    reset_config
+    set_config "$(config_get '.defines | to_entries[] | @base64')"
+
+    if pio run -e $TARGET_NAME; then 
+      cp "$BUILD_FOLDER/$TARGET_NAME/firmware.hex" "$OUTPUT_FOLDER/$BUILD_NAME.hex"
+      echo -e "\e[32mSuccessfully\e[39m built target $BUILD_NAME"
+      echo "<a class=\"list-group-item list-group-item-action\" href=\"$BUILD_NAME.hex\" download target=\"_blank\">$BUILD_NAME</a>" >> $OUTPUT_FOLDER/index.html
+    else
+      echo -e "\e[31mError\e[39m building target $BUILD_NAME"
+      exit 1
+    fi
+  done
+}
+
+function build_all_targets() {
+  cat <<-EOF > $OUTPUT_FOLDER/index.html
 <!doctype html>
 <html lang="en">
 
@@ -79,34 +103,11 @@ cat <<-EOF > $OUTPUT_FOLDER/index.html
         <div class="list-group">
 EOF
 
-for target in $(jq -r '.[] | @base64' $TARGETS_FILE); do
-  target_get() {
-    echo ${target} | base64 --decode | jq -r "${1}"
-  }
-
-  TARGET_NAME="$(target_get '.name')"
-  for config in $(target_get '.configurations[] | @base64'); do
-    config_get() {
-      echo ${config} | base64 --decode | jq -r "${1}"
-    }
-    CONFIG_NAME="$(config_get '.name')"
-    BUILD_NAME="$BUILD_PREFIX.$TARGET_NAME.$CONFIG_NAME"
-
-    resetConfig
-    setConfig "$(config_get '.defines | to_entries[] | @base64')"
-
-    if pio run -e $TARGET_NAME; then 
-      cp "$BUILD_FOLDER/$TARGET_NAME/firmware.hex" "$OUTPUT_FOLDER/$BUILD_NAME.hex"
-      echo -e "\e[32mSuccessfully\e[39m built target $BUILD_NAME"
-      echo "<a class=\"list-group-item list-group-item-action\" href=\"$BUILD_NAME.hex\" download target=\"_blank\">$BUILD_NAME</a>" >> $OUTPUT_FOLDER/index.html
-    else
-      echo -e "\e[31mError\e[39m building target $BUILD_NAME"
-      exit 1
-    fi
+  for target in $(jq -r '.[] | @base64' $TARGETS_FILE); do
+    build_target $target
   done
-done
 
-cat <<-EOF >> $OUTPUT_FOLDER/index.html
+  cat <<-EOF >> $OUTPUT_FOLDER/index.html
         </div>
       </div>
     </div>
@@ -115,3 +116,16 @@ cat <<-EOF >> $OUTPUT_FOLDER/index.html
 
 </html>
 EOF
+}
+
+jq 'empty' ./script/targets.json
+
+rm -rf $OUTPUT_FOLDER
+mkdir $OUTPUT_FOLDER
+
+if [[ $# -ne 1 ]]; then
+  build_all_targets
+else 
+  TARGET=$(jq -r ".[] | select(.name==\""$1"\") | @base64" $TARGETS_FILE)
+  build_target $TARGET
+fi
