@@ -102,6 +102,8 @@ void usb_serial_passthrough(usart_ports_t port, uint32_t baudrate, uint8_t stop_
       .tx_buffer = &tx_buffer,
   };
 
+  serial_disable_isr(port);
+
   serial_enable_rcc(port);
   serial_init(&serial, port, baudrate, stop_bits, half_duplex);
 
