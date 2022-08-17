@@ -383,6 +383,8 @@ static uint8_t frsky_d16_handle_packet() {
     if ((cc2500_get_status() & (0x70)) != 0) {
       const uint8_t rssi = frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]);
 
+      rx_lqi_got_packet();
+
       cc2500_strobe(CC2500_SIDLE);
       if (rssi > 110) {
         cc2500_set_power(5);

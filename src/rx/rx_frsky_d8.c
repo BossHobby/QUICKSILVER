@@ -300,6 +300,8 @@ static uint8_t frsky_d8_handle_packet() {
     if ((time_micros() - last_packet_received_time) >= 1500) {
       const uint8_t rssi = frsky_extract_rssi(packet[18]);
 
+      rx_lqi_got_packet();
+
       cc2500_strobe(CC2500_SIDLE);
       if (rssi > 110) {
         cc2500_set_power(5);
