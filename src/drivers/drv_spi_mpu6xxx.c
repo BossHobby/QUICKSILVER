@@ -44,6 +44,8 @@ static uint32_t mpu6xxx_fast_divider() {
 }
 
 uint8_t mpu6xxx_detect() {
+  time_delay_ms(100);
+
   const uint8_t id = mpu6xxx_read(MPU_RA_WHO_AM_I);
   switch (id) {
   case MPU6000_ID:
@@ -98,6 +100,7 @@ uint8_t mpu6xxx_read(uint8_t reg) {
   spi_txn_add_seg(txn, buffer, buffer, 2);
   spi_txn_submit(txn);
 
+  spi_txn_continue_ex(&gyro_bus, true);
   spi_txn_wait(&gyro_bus);
 
   return buffer[1];
