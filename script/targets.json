@@ -576,5 +576,16 @@
         }
       }
     ]
+  },
+  {
+    "name": "tunercf405",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
   }
 ]
