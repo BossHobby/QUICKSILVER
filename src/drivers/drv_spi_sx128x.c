@@ -111,8 +111,8 @@ static void sx128x_handle_irq_status() {
   if ((irq & SX1280_IRQ_RX_DONE)) {
     sx128x_read_rx_buffer(packet, 8);
     sx128x_read_command_burst(SX1280_RADIO_GET_PACKETSTATUS, (uint8_t *)packet_status, 2);
-  } else {
-    dio0_active = 1;
+  } else if ((irq & SX1280_IRQ_TX_DONE)) {
+    sx128x_set_mode_async(SX1280_MODE_RX);
   }
 }
 
