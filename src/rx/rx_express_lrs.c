@@ -766,9 +766,8 @@ bool rx_expresslrs_check() {
 
   if (irq == IRQ_RX_DONE) {
     channels_received = elrs_process_packet(packet_time);
-  } else if (irq == IRQ_TX_DONE) {
-    elrs_enter_rx(packet);
   }
+  // TX handled in irq
 
   const uint32_t time_ms = time_millis();
 
