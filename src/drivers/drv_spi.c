@@ -501,7 +501,7 @@ void spi_txn_submit(spi_txn_t *txn) {
   }
 }
 
-static spi_txn_t *spi_txn_finish(spi_bus_device_t *bus) {
+static void spi_txn_finish(spi_bus_device_t *bus) {
   const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
   spi_txn_t *txn = bus->txns[tail];
 
@@ -514,6 +514,10 @@ static spi_txn_t *spi_txn_finish(spi_bus_device_t *bus) {
     txn_size += seg->size;
   }
 
+  if (txn->done_fn) {
+    txn->done_fn();
+  }
+
   dma_free(txn->buffer);
   txn->buffer = NULL;
   txn->status = TXN_IDLE;
@@ -522,8 +526,6 @@ static spi_txn_t *spi_txn_finish(spi_bus_device_t *bus) {
   bus->txn_tail = tail;
 
   spi_port_config[bus->port].active_device = NULL;
-
-  return txn;
 }
 
 static bool spi_txn_should_use_dma(spi_txn_t *txn) {
@@ -577,11 +579,7 @@ void spi_txn_continue_ex(spi_bus_device_t *bus, bool force_sync) {
     spi_transfer(bus->port, txn->buffer, txn->size);
     spi_csn_disable(bus);
 
-    spi_txn_t *txn = spi_txn_finish(bus);
-
-    if (txn->done_fn) {
-      txn->done_fn();
-    }
+    spi_txn_finish(bus);
 
     if (bus->auto_continue) {
       spi_txn_continue(bus);
@@ -653,12 +651,8 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   spi_bus_device_t *bus = spi_port_config[port].active_device;
   spi_csn_disable(bus);
 
-  spi_txn_t *txn = spi_txn_finish(bus);
+  spi_txn_finish(bus);
   dma_transfer_done[port] = 1;
-
-  if (txn->done_fn) {
-    txn->done_fn();
-  }
 
   if (bus->auto_continue) {
     spi_txn_continue(bus);
