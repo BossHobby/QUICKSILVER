@@ -553,35 +553,37 @@ void spi_txn_continue_ex(spi_bus_device_t *bus, bool force_sync) {
     return;
   }
 
-  const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
-  spi_txn_t *txn = bus->txns[tail];
+  ATOMIC_BLOCK_ALL {
+    const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
+    spi_txn_t *txn = bus->txns[tail];
 
-  spi_port_config[bus->port].active_device = bus;
-  txn->status = TXN_IN_PROGRESS;
+    spi_port_config[bus->port].active_device = bus;
+    txn->status = TXN_IN_PROGRESS;
 
-  uint32_t txn_size = 0;
-  for (uint32_t i = 0; i < txn->segment_count; ++i) {
-    spi_txn_segment_t *seg = &txn->segments[i];
-    if (seg->tx_data) {
-      memcpy((uint8_t *)txn->buffer + txn_size, seg->tx_data, seg->size);
+    uint32_t txn_size = 0;
+    for (uint32_t i = 0; i < txn->segment_count; ++i) {
+      spi_txn_segment_t *seg = &txn->segments[i];
+      if (seg->tx_data) {
+        memcpy((uint8_t *)txn->buffer + txn_size, seg->tx_data, seg->size);
+      }
+      txn_size += seg->size;
     }
-    txn_size += seg->size;
-  }
 
-  spi_reconfigure(bus);
+    spi_reconfigure(bus);
 
-  if (spi_txn_should_use_dma(txn) && !force_sync) {
-    spi_csn_enable(bus);
-    spi_dma_transfer_begin(bus->port, txn->buffer, txn->size);
-  } else {
-    spi_csn_enable(bus);
-    spi_transfer(bus->port, txn->buffer, txn->size);
-    spi_csn_disable(bus);
+    if (spi_txn_should_use_dma(txn) && !force_sync) {
+      spi_csn_enable(bus);
+      spi_dma_transfer_begin(bus->port, txn->buffer, txn->size);
+    } else {
+      spi_csn_enable(bus);
+      spi_transfer(bus->port, txn->buffer, txn->size);
+      spi_csn_disable(bus);
 
-    spi_txn_finish(bus);
+      spi_txn_finish(bus);
 
-    if (bus->auto_continue) {
-      spi_txn_continue(bus);
+      if (bus->auto_continue) {
+        spi_txn_continue(bus);
+      }
     }
   }
 }

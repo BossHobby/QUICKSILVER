@@ -3,10 +3,10 @@
 #include "project.h"
 
 #define MAX_PRIORITY 0x1
-#define UART_PRIORITY 0x2
-#define TIMER_PRIORITY 0x3
-#define DMA_PRIORITY 0x4
-#define EXTI_PRIORITY 0x5
+#define DMA_PRIORITY 0x2
+#define EXTI_PRIORITY 0x3
+#define UART_PRIORITY 0x4
+#define TIMER_PRIORITY 0x5
 #define USB_PRIORITY 0x6
 
 static inline void __basepri_restore(uint8_t *val) {
