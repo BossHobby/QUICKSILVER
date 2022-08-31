@@ -612,6 +612,10 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   const dma_stream_def_t *dma_rx = &dma_stream_defs[PORT.dma_rx];
   const dma_stream_def_t *dma_tx = &dma_stream_defs[PORT.dma_tx];
 
+  if (dma_is_flag_active_te(dma_tx->port, dma_tx->stream_index) || dma_is_flag_active_te(dma_rx->port, dma_rx->stream_index)) {
+    __BKPT();
+  }
+
   if (!dma_is_flag_active_tc(dma_rx->port, dma_rx->stream_index)) {
     return;
   }
