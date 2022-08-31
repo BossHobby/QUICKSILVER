@@ -202,12 +202,6 @@ __attribute__((__used__)) int main() {
   imu_init();
 
   osd_clear();
-
-  extern int liberror;
-  if (liberror) {
-    failloop(FAILLOOP_SPI);
-  }
-
   perf_counter_init();
 
   lastlooptime = time_micros();
@@ -241,10 +235,6 @@ __attribute__((__used__)) int main() {
     state.uptime += state.looptime;
     if (flags.arm_state) {
       state.armtime += state.looptime;
-    }
-
-    if (liberror > 20) {
-      failloop(FAILLOOP_SPI_MAIN);
     }
 
     // read gyro and accelerometer data
