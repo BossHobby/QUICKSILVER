@@ -46,7 +46,7 @@ typedef struct {
       .hz = 0,                                      \
   },
 
-static spi_port_config_t spi_port_config[SPI_PORTS_MAX] = {{}, SPI_PORTS};
+static volatile spi_port_config_t spi_port_config[SPI_PORTS_MAX] = {{}, SPI_PORTS};
 
 #undef SPI_PORT
 
@@ -243,7 +243,7 @@ uint8_t spi_dma_is_ready(spi_ports_t port) {
 static void spi_reconfigure(spi_bus_device_t *bus) {
   const spi_port_def_t *port = &spi_port_defs[bus->port];
 
-  spi_port_config_t *config = &spi_port_config[bus->port];
+  volatile spi_port_config_t *config = &spi_port_config[bus->port];
   if (config->hz != bus->hz) {
     config->hz = bus->hz;
     LL_SPI_SetBaudRatePrescaler(port->channel, spi_find_divder(bus->hz));
