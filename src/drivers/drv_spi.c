@@ -409,7 +409,7 @@ static spi_txn_t *spi_txn_pop(spi_bus_device_t *bus) {
 spi_txn_t *spi_txn_init(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn) {
   spi_txn_t *txn = spi_txn_pop(bus);
   if (txn == NULL) {
-    failloop(FAILLOOP_SPI_MAIN);
+    failloop(FAILLOOP_SPI);
   }
 
   txn->buffer = dma_alloc(16);
@@ -472,7 +472,7 @@ void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, u
   } else {
     // create new segment
     if (txn->segment_count >= SPI_TXN_SEG_MAX) {
-      failloop(FAILLOOP_SPI_MAIN);
+      failloop(FAILLOOP_SPI);
     }
 
     spi_txn_segment_t *seg = &txn->segments[txn->segment_count];
@@ -613,7 +613,7 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   const dma_stream_def_t *dma_tx = &dma_stream_defs[PORT.dma_tx];
 
   if (dma_is_flag_active_te(dma_tx->port, dma_tx->stream_index) || dma_is_flag_active_te(dma_rx->port, dma_rx->stream_index)) {
-    __BKPT();
+    failloop(FAILLOOP_SPI);
   }
 
   if (!dma_is_flag_active_tc(dma_rx->port, dma_rx->stream_index)) {
