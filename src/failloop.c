@@ -20,10 +20,10 @@ const char *failloop_string(failloop_t val) {
     return "clock, intterrupts, systick";
   case FAILLOOP_LOOPTIME:
     return "loop time issue";
+  case FAILLOOP_DMA:
+    return "dma error";
   case FAILLOOP_SPI:
     return "spi error";
-  case FAILLOOP_SPI_MAIN:
-    return "spi error main loop";
   default:
     return "unknown error";
   }

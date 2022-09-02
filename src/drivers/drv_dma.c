@@ -134,7 +134,7 @@ void dma_free(void *ptr) {
   ATOMIC_BLOCK_ALL {
     dma_allocation_t *alloc = (dma_allocation_t *)(ptr - sizeof(dma_allocation_t));
     if (alloc->magic != 0xBEEF) {
-      __BKPT();
+      failloop(FAILLOOP_DMA);
     }
 
     alloc->free = 1;
