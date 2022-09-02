@@ -160,19 +160,24 @@ void dma_free(void *ptr) {
 }
 
 void *dma_realloc(void *ptr, uint32_t min_size) {
-  dma_allocation_t *alloc = (dma_allocation_t *)(ptr - sizeof(dma_allocation_t));
-  if (alloc->size >= min_size) {
-    return ptr;
+  ATOMIC_BLOCK_ALL {
+    dma_allocation_t *alloc = (dma_allocation_t *)(ptr - sizeof(dma_allocation_t));
+    if (alloc->size >= min_size) {
+      return ptr;
+    }
+
+    uint32_t old_size = alloc->size;
+    dma_free(ptr);
+
+    void *new_ptr = dma_alloc(min_size);
+    if (new_ptr && new_ptr != ptr) {
+      memcpy(new_ptr, ptr, old_size);
+    }
+    return new_ptr;
   }
 
-  uint32_t old_size = alloc->size;
-  dma_free(ptr);
-
-  void *new_ptr = dma_alloc(min_size);
-  if (new_ptr && new_ptr != ptr) {
-    memcpy(new_ptr, ptr, old_size);
-  }
-  return new_ptr;
+  failloop(FAILLOOP_FAULT);
+  return NULL;
 }
 
 void dma_prepare_tx_memory(void *addr, uint32_t size) {
