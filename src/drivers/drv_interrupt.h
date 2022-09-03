@@ -25,19 +25,15 @@ static inline uint8_t __basepri_set_max(uint8_t prio) {
 #define ATOMIC_BLOCK(prio) \
   for (uint8_t __basepri_save __attribute__((__cleanup__(__basepri_restore), __unused__)) = __get_BASEPRI(), __todo = __basepri_set_max(prio); __todo; __todo = 0)
 
-static inline int __int_disable_irq() {
-  int primask;
-  asm volatile("mrs %0, PRIMASK\n"
-               : "=r"(primask));
-  asm volatile("cpsid i\n");
+__attribute__((always_inline)) static inline int __int_disable_irq() {
+  volatile int primask = __get_PRIMASK();
+  __disable_irq();
   return primask & 1;
 }
 
-static inline void __int_restore_irq(int *primask) {
-  if (!(*primask)) {
-    asm volatile("" ::
-                     : "memory");
-    asm volatile("cpsie i\n");
+__attribute__((always_inline)) static inline void __int_restore_irq(int *primask) {
+  if ((*primask) == 0) {
+    __enable_irq();
   }
 }
 
