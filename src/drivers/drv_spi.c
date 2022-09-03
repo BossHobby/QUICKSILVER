@@ -537,23 +537,22 @@ static bool spi_txn_should_use_dma(spi_txn_t *txn) {
 }
 
 void spi_txn_continue_ex(spi_bus_device_t *bus, bool force_sync) {
-  // ensures this function can only run once the dma transaction is done
-  if (!spi_dma_is_ready(bus->port)) {
-    return;
-  }
-
-  if (bus->txn_head == bus->txn_tail) {
-    return;
-  }
-  if (spi_port_config[bus->port].active_device != NULL &&
-      spi_port_config[bus->port].active_device != bus) {
-    return;
-  }
-  if (bus->poll_fn && !bus->poll_fn()) {
-    return;
-  }
-
   ATOMIC_BLOCK_ALL {
+    if (!spi_dma_is_ready(bus->port)) {
+      return;
+    }
+
+    if (bus->txn_head == bus->txn_tail) {
+      return;
+    }
+    if (spi_port_config[bus->port].active_device != NULL &&
+        spi_port_config[bus->port].active_device != bus) {
+      return;
+    }
+    if (bus->poll_fn && !bus->poll_fn()) {
+      return;
+    }
+
     const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
     spi_txn_t *txn = bus->txns[tail];
 
