@@ -358,7 +358,7 @@ void motor_write(float *values) {
     if (time_millis() - dir_change_time < DSHOT_DIR_CHANGE_IDLE_TIME) {
       // give the motors enough time to come a full stop
       make_packet_all(0, false);
-    } else if (counter <= 12) {
+    } else if (counter <= 24) {
       const uint16_t value = motor_dir == MOTOR_REVERSE ? DSHOT_CMD_ROTATE_REVERSE : DSHOT_CMD_ROTATE_NORMAL;
       make_packet_all(value, true);
       counter++;
