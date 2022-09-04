@@ -17,7 +17,7 @@
 #include "util/crc.h"
 #include "util/util.h"
 
-void usb_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, uint8_t *data, uint16_t len) {
+void usb_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
 
   if (magic == MSP2_MAGIC) {
     const uint8_t size = len + MSP2_HEADER_LEN + 1;

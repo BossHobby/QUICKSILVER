@@ -25,7 +25,7 @@ extern volatile uint8_t vtx_frame_offset;
 
 static volatile bool request_ready = false;
 
-static void serial_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, uint8_t *data, uint16_t len) {
+static void serial_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
   if (magic == MSP2_MAGIC) {
     vtx_frame_length = len + MSP2_HEADER_LEN + 1;
 
