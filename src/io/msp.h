@@ -78,7 +78,7 @@ typedef enum {
   MSP_PASSTHROUGH_ESC_4WAY = 0xFF,
 } msp_passthrough_mode_t;
 
-typedef void (*msp_send_fn_t)(msp_magic_t magic, uint8_t direction, uint16_t code, uint8_t *data, uint16_t len);
+typedef void (*msp_send_fn_t)(msp_magic_t magic, uint8_t direction, uint16_t code, const uint8_t *data, uint16_t len);
 
 typedef struct {
   uint8_t *buffer;
