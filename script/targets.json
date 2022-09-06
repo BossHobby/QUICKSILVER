@@ -589,7 +589,7 @@
     ]
   },
   {
-    "name": "neutronrcf411rx",
+    "name": "neutronrcf411_elrs",
     "configurations": [
       {
         "name": "brushless",
