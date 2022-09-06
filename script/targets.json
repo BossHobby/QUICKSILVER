@@ -587,5 +587,16 @@
         }
       }
     ]
+  },
+  {
+    "name": "neutronrcf411rx",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
   }
 ]
