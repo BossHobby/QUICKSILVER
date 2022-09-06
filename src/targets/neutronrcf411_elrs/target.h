@@ -1,7 +1,7 @@
 #include "config.h"
 #include "config_helper.h"
 
-#define NeutronRCF411RX
+#define NeutronRCF411
 
 // PORTS
 #define SPI_PORTS   \
@@ -11,7 +11,7 @@
 
 #define USART_PORTS \
   USART1_PA10PA9    \
-  USART2_PA3PA2     \
+  USART2_PA3PA2
 
 // LEDS
 #define LED_NUMBER 2
