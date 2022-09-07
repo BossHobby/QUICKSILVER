@@ -362,9 +362,9 @@ void motor_write(float *values) {
       const uint16_t value = motor_dir == MOTOR_REVERSE ? DSHOT_CMD_ROTATE_REVERSE : DSHOT_CMD_ROTATE_NORMAL;
       make_packet_all(value, true);
       counter++;
-    } else {
-      make_packet_all(0, false);
+    }
 
+    if (counter == 24) {
       counter = 0;
       dir_change_time = 0;
       last_motor_dir = motor_dir;
