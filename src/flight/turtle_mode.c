@@ -26,9 +26,9 @@ static uint8_t turtle_axis = 0;
 static uint8_t turtle_dir = 0;
 
 void turtle_mode_start() {
-  if (!turtle_ready && flags.on_ground) {
+  if (!turtle_ready && flags.on_ground && turtle_state == TURTLE_STAGE_IDLE) {
+    // only enable turtle if we are onground and not recovering from a interrupted turtle
     turtle_ready = true;
-    turtle_state = TURTLE_STAGE_IDLE;
   }
 }
 
@@ -43,23 +43,17 @@ void turtle_mode_update() {
     flags.turtle = 0;
   }
 
-  // turtle can't be initiated without the all clear flag - hold control variables at 0 state
-  if (!turtle_ready) {
-    if (turtle_state != TURTLE_STAGE_IDLE) {
-      flags.arm_safety = 1; // just in case absolutely require that the quad be disarmed when turning off turtle mode with a started sequencer
-
-      // force motors to forward, in case turtle was interrupted
-      if (!motor_set_direction(MOTOR_FORWARD)) {
-        return;
-      }
+  // turtle was interrupted
+  if (!turtle_ready && turtle_state != TURTLE_STAGE_IDLE) {
+    // force motors to forward, in case turtle was interrupted
+    if (!motor_set_direction(MOTOR_FORWARD)) {
+      return;
     }
 
-    // turtle mode off or flying away from a successful turtle will return here
-    // a disarmed quad with turtle mode on will continue past
+    // reset state
     turtle_state = TURTLE_STAGE_IDLE;
     flags.controls_override = 0;
     flags.motortest_override = 0;
-
     return;
   }
 
