@@ -122,20 +122,19 @@ vtx_update_result_t serial_msp_vtx_update() {
     return VTX_WAIT;
   }
 
-  static bool in_progress = false;
-  if (in_progress && (time_millis() - vtx_last_valid_read) > 500) {
-    quic_debugf("MSP_VTX: timeout waiting for packet");
-    return VTX_ERROR;
-  }
-
   if (request_ready) {
     serial_vtx_send_data(vtx_frame, vtx_frame_length);
     request_ready = false;
     return VTX_WAIT;
   }
 
+  static bool in_progress = false;
+  static bool is_first_packet = true;
+
   uint8_t data = 0;
   while (serial_vtx_read_byte(&data)) {
+    quic_debugf("MSP_VTX: read 0x%x", data);
+
     in_progress = true;
 
     msp_status_t status = msp_process_serial(msp_vtx, data);
@@ -147,8 +146,14 @@ vtx_update_result_t serial_msp_vtx_update() {
       return VTX_ERROR;
     case MSP_SUCCESS:
       in_progress = false;
+      is_first_packet = false;
       return VTX_SUCCESS;
     }
+  }
+
+  if ((in_progress || is_first_packet) && (time_millis() - vtx_last_valid_read) > 500) {
+    quic_debugf("MSP_VTX: timeout waiting for packet");
+    return VTX_ERROR;
   }
 
   if (in_progress) {
