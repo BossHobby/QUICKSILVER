@@ -5,7 +5,7 @@
 #include "io/msp.h"
 #include "profile.h"
 
-#define MSP_VTX_DETECT_TRIES 25
+#define MSP_VTX_DETECT_TRIES 5
 
 typedef struct {
   uint8_t vtx_type;
