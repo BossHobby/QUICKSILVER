@@ -37,33 +37,29 @@ void turtle_mode_cancel() {
 }
 
 void turtle_mode_update() {
-  if (turtle_state > TURTLE_STAGE_IDLE && flags.arm_state == 1) {
+  if (turtle_state != TURTLE_STAGE_IDLE) {
+    // turtle is active
     flags.turtle = 1;
-  } else {
-    flags.turtle = 0;
-  }
 
-  // turtle was interrupted
-  if (!turtle_ready && turtle_state != TURTLE_STAGE_IDLE) {
-    // force motors to forward, in case turtle was interrupted
-    if (!motor_set_direction(MOTOR_FORWARD)) {
+    if (
+        !turtle_ready ||          // turtle was canceled
+        state.GEstG.yaw > 0.5f || // quad was flipped
+        !flags.arm_state          // quad was disarmed
+    ) {
+      // quad was flipped
+      turtle_state = TURTLE_STAGE_EXIT;
+    }
+  } else {
+    // turtle is in-active
+    if (flags.arm_state && !motor_set_direction(MOTOR_FORWARD)) {
       return;
     }
-
-    // reset state
-    turtle_state = TURTLE_STAGE_IDLE;
-    flags.controls_override = 0;
-    flags.motortest_override = 0;
-    return;
-  }
-
-  if (state.GEstG.yaw > 0.5f && turtle_state) {
-    // exit the sequence if you failed to turtle, picked up the quad, and flipped it over your damn self
-    turtle_state = TURTLE_STAGE_EXIT;
+    flags.turtle = 0;
   }
 
   switch (turtle_state) {
   case TURTLE_STAGE_IDLE: {
+    // quad was just armed and upside down, begin the turtle sequence
     static uint8_t last_armed_state_turtle = 0;
     if (flags.arm_switch != last_armed_state_turtle) {
       last_armed_state_turtle = flags.arm_switch;
@@ -123,22 +119,12 @@ void turtle_mode_update() {
     if (time_millis() - turtle_time > TURTLE_TIMEOUT) {
       turtle_state = TURTLE_STAGE_START;
     }
-
-    if (state.GEstG.yaw > 0.50f) {
-      turtle_state = TURTLE_STAGE_EXIT;
-    }
     break;
 
   case TURTLE_STAGE_EXIT:
     flags.controls_override = 0;
     flags.motortest_override = 0;
     flags.arm_safety = 1;
-
-    if (!motor_set_direction(MOTOR_FORWARD)) {
-      // wait for the motor to sucessfully change
-      break;
-    }
-
     turtle_state = TURTLE_STAGE_IDLE;
     turtle_ready = false;
     break;
