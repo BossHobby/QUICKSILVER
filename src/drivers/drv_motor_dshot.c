@@ -30,7 +30,14 @@
 #define DSHOT_MAX_PORT_COUNT 3
 #define DSHOT_DMA_BUFFER_SIZE (3 * (16 + 2))
 
-#define DSHOT_DIR_CHANGE_IDLE_TIME 1000
+#define DSHOT_DIR_CHANGE_IDLE_TIME_US 250000
+#define DSHOT_DIR_CHANGE_CMD_TIME_US 1000
+
+typedef enum {
+  DIR_CHANGE_START,
+  DIR_CHANGE_CMD,
+  DIR_CHANGE_STOP,
+} dir_change_state_t;
 
 typedef struct {
   motor_pin_ident_t id;
@@ -55,6 +62,7 @@ static motor_direction_t motor_dir = MOTOR_FORWARD;
 static motor_direction_t last_motor_dir = MOTOR_FORWARD;
 
 static uint32_t pwm_failsafe_time = 1;
+static uint32_t dir_change_time = 0;
 
 volatile uint32_t dshot_dma_phase = 0; // 0: idle, 1 - (gpio_port_count + 1): handle port n
 
@@ -348,30 +356,47 @@ void motor_write(float *values) {
 
       make_packet(profile.motor.motor_pins[i], value, false);
     }
+
+    dshot_dma_start();
   } else {
-    static uint32_t dir_change_time = 0;
-    if (!dir_change_time) {
-      dir_change_time = time_millis();
-    }
-
     static uint8_t counter = 0;
-    if (time_millis() - dir_change_time < DSHOT_DIR_CHANGE_IDLE_TIME) {
-      // give the motors enough time to come a full stop
-      make_packet_all(0, false);
-    } else if (counter <= 24) {
+    static dir_change_state_t state = DIR_CHANGE_START;
+
+    switch (state) {
+    case DIR_CHANGE_START:
+      if ((time_micros() - dir_change_time) < DSHOT_DIR_CHANGE_IDLE_TIME_US) {
+        make_packet_all(0, false);
+        dshot_dma_start();
+        break;
+      }
+      state = DIR_CHANGE_CMD;
+      dir_change_time = time_micros();
+      break;
+
+    case DIR_CHANGE_CMD: {
+      if ((time_micros() - dir_change_time) < DSHOT_DIR_CHANGE_CMD_TIME_US) {
+        break;
+      }
+
       const uint16_t value = motor_dir == MOTOR_REVERSE ? DSHOT_CMD_ROTATE_REVERSE : DSHOT_CMD_ROTATE_NORMAL;
-      make_packet_all(value, true);
-      counter++;
+      if (counter < 24) {
+        make_packet_all(value, true);
+        dshot_dma_start();
+        counter++;
+      } else {
+        state = DIR_CHANGE_STOP;
+        counter = 0;
+      }
+      dir_change_time = time_micros();
+      break;
     }
 
-    if (counter == 24) {
-      counter = 0;
-      dir_change_time = 0;
+    case DIR_CHANGE_STOP:
       last_motor_dir = motor_dir;
+      state = DIR_CHANGE_START;
+      break;
     }
   }
-
-  dshot_dma_start();
 }
 
 bool motor_set_direction(motor_direction_t dir) {
@@ -382,6 +407,7 @@ bool motor_set_direction(motor_direction_t dir) {
   if (motor_dir != dir) {
     // update the motor direction
     motor_dir = dir;
+    dir_change_time = time_micros();
     return false;
   }
   // success
