@@ -403,8 +403,13 @@ void control() {
     } else {
       // CONDITION: idle up is turned ON
 
-      // throttle range is mapped from idle throttle value to 100%
-      state.throttle = (float)IDLE_THR + input_throttle_calc(state.rx_filtered.throttle) * (1.0f - (float)IDLE_THR);
+      if (flags.controls_override) {
+        // override is active, set throttle to input
+        state.throttle = state.rx_filtered.throttle;
+      } else {
+        // throttle range is mapped from idle throttle value to 100%
+        state.throttle = (float)IDLE_THR + input_throttle_calc(state.rx_filtered.throttle) * (1.0f - (float)IDLE_THR);
+      }
 
       if ((state.rx_filtered.throttle > THROTTLE_SAFETY) && (flags.in_air == 0)) {
         // change the state of in air flag when first crossing the throttle
