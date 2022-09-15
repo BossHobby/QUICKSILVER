@@ -129,7 +129,6 @@ __attribute__((__used__)) int main() {
 
   rx_init();
   vtx_init();
-  rgb_init();
 
   osd_init();
 
@@ -137,6 +136,7 @@ __attribute__((__used__)) int main() {
   time_delay_ms(100);
 
   sixaxis_gyro_cal();
+  rgb_led_init();
 
 #ifdef ENABLE_BLACKBOX
   blackbox_init();
@@ -179,16 +179,8 @@ __attribute__((__used__)) int main() {
       gestures();
     }
 
-    // handle led commands
     led_update();
-
-#ifdef RGB_LED_DMA
-    if (RGB_LED_NUMBER > 0) {
-      // RGB led control
-      rgb_led_lvc();
-      rgb_dma_start();
-    }
-#endif
+    rgb_led_update();
 
     buzzer_update();
     vtx_update();

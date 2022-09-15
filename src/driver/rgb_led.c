@@ -11,29 +11,49 @@
 #include "project.h"
 #include "util/util.h"
 
-#ifdef RGB_PIN
-void rgb_send(int data);
-
-#ifdef RGB_LED_DMA
+#if defined(RGB_PIN) && defined(RGB_LED_DMA)
 
 #define RGB_BIT_TIME ((PWM_CLOCK_FREQ_HZ / 800000) - 1)
 #define RGB_T0H_TIME (RGB_BIT_TIME / 3)
 #define RGB_T1H_TIME ((RGB_BIT_TIME / 3) * 2)
+
 #define RGB_BITS_LED 24
-#define RGB_DELAY_BUF 42
-#define RGB_BUFFER_SIZE (RGB_BITS_LED * RGB_LED_MAX + RGB_DELAY_BUF)
-extern int rgb_led_value[];
 
-volatile int rgb_dma_phase = 0; // 3:rgb data ready
-                                // 2:rgb dma buffer ready
-                                // 1:rgb dma busy
-                                // 0:idle
+#define RGB_BUFFER_SIZE (RGB_BITS_LED * RGB_LED_MAX + 2)
 
-volatile uint32_t rgb_timer_buffer[RGB_BUFFER_SIZE] = {0}; // DMA buffer: Array of PWM duty cycle timings
+static volatile bool rgb_dma_busy = false;
+static volatile uint32_t rgb_timer_buffer[RGB_BUFFER_SIZE];
+static uint32_t rgb_timer_buffer_count = 0;
 
-const dma_stream_def_t *rgb_dma = &dma_stream_defs[RGB_LED_DMA];
+static const dma_stream_def_t *rgb_dma = &dma_stream_defs[RGB_LED_DMA];
 
-void rgb_init_io() {
+static void rgb_enable_dma_request() {
+#if RGB_TIMER_CHANNEL == 1
+  LL_TIM_EnableDMAReq_CC1(RGB_TIMER);
+#elif RGB_TIMER_CHANNEL == 2
+  LL_TIM_EnableDMAReq_CC2(RGB_TIMER);
+#elif RGB_TIMER_CHANNEL == 3
+  LL_TIM_EnableDMAReq_CC3(RGB_TIMER);
+#elif RGB_TIMER_CHANNEL == 4
+  LL_TIM_EnableDMAReq_CC4(RGB_TIMER);
+#endif
+  LL_TIM_EnableCounter(RGB_TIMER);
+}
+
+static void rgb_disable_dma_request() {
+  LL_TIM_DisableCounter(RGB_TIMER);
+#if RGB_TIMER_CHANNEL == 1
+  LL_TIM_DisableDMAReq_CC1(RGB_TIMER);
+#elif RGB_TIMER_CHANNEL == 2
+  LL_TIM_DisableDMAReq_CC2(RGB_TIMER);
+#elif RGB_TIMER_CHANNEL == 3
+  LL_TIM_DisableDMAReq_CC3(RGB_TIMER);
+#elif RGB_TIMER_CHANNEL == 4
+  LL_TIM_DisableDMAReq_CC4(RGB_TIMER);
+#endif
+}
+
+static void rgb_init_io() {
   LL_GPIO_InitTypeDef GPIO_InitStructure;
 
   // Config pin for digital output
@@ -49,7 +69,7 @@ void rgb_init_io() {
   gpio_pin_reset(RGB_PIN);
 }
 
-void rgb_init_tim() {
+static void rgb_init_tim() {
   LL_TIM_OC_InitTypeDef TIM_OCInitStructure;
 
   // Clock Enable (DMA)
@@ -78,7 +98,7 @@ void rgb_init_tim() {
   LL_TIM_EnableARRPreload(RGB_TIMER);
 }
 
-void rgb_init_dma() {
+static void rgb_init_dma() {
   LL_DMA_InitTypeDef DMA_InitStructure;
   LL_DMA_StructInit(&DMA_InitStructure);
 
@@ -99,7 +119,6 @@ void rgb_init_dma() {
   DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&RGB_TIMER->CCR4;
 #endif
   DMA_InitStructure.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
-  ;
   DMA_InitStructure.NbData = RGB_BUFFER_SIZE;
   DMA_InitStructure.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
   DMA_InitStructure.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
@@ -113,90 +132,68 @@ void rgb_init_dma() {
   DMA_InitStructure.MemBurst = LL_DMA_MBURST_SINGLE;
   DMA_InitStructure.PeriphBurst = LL_DMA_PBURST_SINGLE;
   LL_DMA_Init(rgb_dma->port, rgb_dma->stream_index, &DMA_InitStructure);
-}
 
-void rgb_init_nvic() {
   interrupt_enable(rgb_dma->irq, DMA_PRIORITY);
 }
 
-static void rgb_enable_dma_request() {
-#if RGB_TIMER_CHANNEL == 1
-  LL_TIM_EnableDMAReq_CC1(RGB_TIMER);
-#elif RGB_TIMER_CHANNEL == 2
-  LL_TIM_EnableDMAReq_CC2(RGB_TIMER);
-#elif RGB_TIMER_CHANNEL == 3
-  LL_TIM_EnableDMAReq_CC3(RGB_TIMER);
-#elif RGB_TIMER_CHANNEL == 4
-  LL_TIM_EnableDMAReq_CC4(RGB_TIMER);
-#endif
-  LL_TIM_EnableCounter(RGB_TIMER);
+bool rgb_led_busy() {
+  return rgb_dma_busy;
 }
 
-static void rgb_disable_dma_request() {
-  LL_TIM_DisableCounter(RGB_TIMER);
-#if RGB_TIMER_CHANNEL == 1
-  LL_TIM_DisableDMAReq_CC1(RGB_TIMER);
-#elif RGB_TIMER_CHANNEL == 2
-  LL_TIM_DisableDMAReq_CC2(RGB_TIMER);
-#elif RGB_TIMER_CHANNEL == 3
-  LL_TIM_DisableDMAReq_CC3(RGB_TIMER);
-#elif RGB_TIMER_CHANNEL == 4
-  LL_TIM_DisableDMAReq_CC4(RGB_TIMER);
-#endif
-}
-
-void rgb_dma_buffer_making() {
-  // generate rgb dma packet of pulse width timings for all LEDs
-  for (uint32_t n = 0; n < RGB_LED_NUMBER; n++) {
-    // rgb_led_value contains a (32bit) int that contains the RGB values in G R B format already
-    // Test each bit and assign the T1H or T0H depending on whether it is 1 or 0.
-    for (size_t i = 0; i < RGB_BITS_LED; i++) {
-      rgb_timer_buffer[(n * RGB_BITS_LED) + i] = (rgb_led_value[n] & (1 << ((RGB_BITS_LED - 1) - i))) ? RGB_T1H_TIME : RGB_T0H_TIME;
-    }
-  }
-  for (uint32_t n = (RGB_LED_NUMBER * RGB_BITS_LED); n < RGB_BUFFER_SIZE; n++) {
-    rgb_timer_buffer[n] = 0;
-  }
-}
-
-void rgb_dma_trigger() {
-  rgb_init_dma();
-  LL_DMA_EnableIT_TC(rgb_dma->port, rgb_dma->stream_index);
-  LL_DMA_EnableStream(rgb_dma->port, rgb_dma->stream_index);
-  rgb_enable_dma_request();
-}
-
-void rgb_init() {
-
+void rgb_led_init() {
   rgb_init_io();
   rgb_init_tim();
-  rgb_init_nvic();
   rgb_init_dma();
-
-  for (int i = 0; i < RGB_LED_NUMBER; i++) {
-    rgb_led_value[i] = 0;
-  }
-  if (!rgb_dma_phase)
-    rgb_dma_phase = 3;
 }
 
-void rgb_send(int data) {
-  if (!rgb_dma_phase)
-    rgb_dma_phase = 3;
-}
-
-void rgb_dma_start() {
-  if (rgb_dma_phase <= 1)
-    return;
-
-  if (rgb_dma_phase == 3) {
-    rgb_dma_buffer_making();
-    rgb_dma_phase = 2;
+void rgb_led_set_value(uint32_t *values, uint32_t count) {
+  if (rgb_dma_busy) {
     return;
   }
 
-  rgb_dma_phase = 1;
-  rgb_dma_trigger();
+  uint32_t offset = 0;
+
+  // generate rgb dma packet of pulse width timings for all LEDs
+  rgb_timer_buffer[offset++] = 0;
+  for (uint32_t i = 0; i < count; i++) {
+    const uint32_t value = values[i];
+
+    // rgb_led_value contains a (32bit) int that contains the RGB values in G R B format already
+    // Test each bit and assign the T1H or T0H depending on whether it is 1 or 0.
+    for (int32_t j = RGB_BITS_LED - 1; j >= 0; j--) {
+      rgb_timer_buffer[offset++] = ((value >> j) & 0x1) ? RGB_T1H_TIME : RGB_T0H_TIME;
+    }
+  }
+  rgb_timer_buffer[offset++] = 0;
+
+  rgb_timer_buffer_count = offset;
+}
+
+void rgb_led_send() {
+  if (rgb_dma_busy) {
+    return;
+  }
+  rgb_dma_busy = true;
+
+  dma_prepare_tx_memory((void *)rgb_timer_buffer, sizeof(rgb_timer_buffer));
+
+#if RGB_TIMER_CHANNEL == 1
+  LL_DMA_SetPeriphAddress(rgb_dma->port, rgb_dma->stream_index, (uint32_t)&RGB_TIMER->CCR1);
+#elif RGB_TIMER_CHANNEL == 2
+  LL_DMA_SetPeriphAddress(rgb_dma->port, rgb_dma->stream_index, (uint32_t)&RGB_TIMER->CCR2);
+#elif RGB_TIMER_CHANNEL == 3
+  LL_DMA_SetPeriphAddress(rgb_dma->port, rgb_dma->stream_index, (uint32_t)&RGB_TIMER->CCR3);
+#elif RGB_TIMER_CHANNEL == 4
+  LL_DMA_SetPeriphAddress(rgb_dma->port, rgb_dma->stream_index, (uint32_t)&RGB_TIMER->CCR4);
+#endif
+
+  LL_DMA_SetMemoryAddress(rgb_dma->port, rgb_dma->stream_index, (uint32_t)rgb_timer_buffer);
+  LL_DMA_SetDataLength(rgb_dma->port, rgb_dma->stream_index, rgb_timer_buffer_count);
+
+  LL_DMA_EnableIT_TC(rgb_dma->port, rgb_dma->stream_index);
+  LL_DMA_EnableStream(rgb_dma->port, rgb_dma->stream_index);
+
+  rgb_enable_dma_request();
 }
 
 void rgb_dma_isr() {
@@ -204,21 +201,14 @@ void rgb_dma_isr() {
   rgb_disable_dma_request();
   LL_DMA_DisableStream(rgb_dma->port, rgb_dma->stream_index);
 
-  // Set phase to idle
-  rgb_dma_phase = 0;
-
-  // Set phase to idle
-  rgb_dma_phase = 0;
+  rgb_dma_busy = false;
 }
-
-#endif
 
 #else
-// rgb led not found
-// some dummy headers just in case
-void rgb_init() {
-}
-
-void rgb_send(int data) {
+void rgb_led_init() {}
+void rgb_led_set_value(uint32_t *values, uint32_t count) {}
+void rgb_led_send() {}
+bool rgb_led_busy() {
+  return false;
 }
 #endif
