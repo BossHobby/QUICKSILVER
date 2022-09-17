@@ -98,6 +98,7 @@ enum cc2500_modifiers {
 void cc2500_init();
 void cc2500_reset();
 void cc2500_strobe(uint8_t address);
+void cc2500_strobe_sync(uint8_t address);
 uint8_t cc2500_get_status();
 uint8_t cc2500_read_reg(uint8_t reg);
 void cc2500_write_reg(uint8_t reg, uint8_t data);

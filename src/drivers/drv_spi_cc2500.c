@@ -76,6 +76,11 @@ void cc2500_strobe(uint8_t address) {
   spi_txn_submit_continue(&bus, txn);
 }
 
+void cc2500_strobe_sync(uint8_t address) {
+  cc2500_strobe(address);
+  spi_txn_wait(&bus);
+}
+
 uint8_t cc2500_get_status() {
   uint8_t status = 0;
 
@@ -134,9 +139,9 @@ void cc2500_write_fifo(uint8_t *data, uint8_t len) {
 }
 
 void cc2500_reset() {
-  cc2500_strobe(CC2500_SRES);
+  cc2500_strobe_sync(CC2500_SRES);
   time_delay_us(1000);
-  cc2500_strobe(CC2500_SIDLE);
+  cc2500_strobe_sync(CC2500_SIDLE);
 }
 
 void cc2500_init() {

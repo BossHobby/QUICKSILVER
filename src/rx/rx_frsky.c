@@ -195,10 +195,10 @@ static uint8_t tune_rx() {
 
 static void init_get_bind() {
   set_channel(0);
-  cc2500_strobe(CC2500_SFRX);
+  cc2500_strobe_sync(CC2500_SFRX);
   time_delay_us(20); // waiting flush FIFO
 
-  cc2500_strobe(CC2500_SRX);
+  cc2500_strobe_sync(CC2500_SRX);
   list_length = 0;
   bind_storage.frsky.idx = 0x05;
 }
