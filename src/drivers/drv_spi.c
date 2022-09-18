@@ -175,6 +175,9 @@ static void spi_dma_init_rx(spi_ports_t port) {
 static void spi_dma_reset_rx(spi_ports_t port, uint8_t *rx_data, uint32_t rx_size) {
   const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_rx];
 
+  while (LL_DMA_IsEnabledStream(dma->port, dma->stream_index))
+    ;
+
   dma_prepare_rx_memory(rx_data, rx_size);
 
 #ifdef STM32H7
@@ -216,6 +219,9 @@ static void spi_dma_init_tx(spi_ports_t port) {
 
 static void spi_dma_reset_tx(spi_ports_t port, uint8_t *tx_data, uint32_t tx_size) {
   const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_tx];
+
+  while (LL_DMA_IsEnabledStream(dma->port, dma->stream_index))
+    ;
 
   dma_prepare_tx_memory(tx_data, tx_size);
 
@@ -274,6 +280,12 @@ static void spi_reconfigure(spi_bus_device_t *bus) {
 
 static void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) {
   dma_transfer_done[port] = 0;
+
+#if !defined(STM32H7)
+  // dummy read
+  while (LL_SPI_IsActiveFlag_RXNE(PORT.channel))
+    LL_SPI_ReceiveData8(PORT.channel);
+#endif
 
   const dma_stream_def_t *dma_tx = &dma_stream_defs[PORT.dma_tx];
   const dma_stream_def_t *dma_rx = &dma_stream_defs[PORT.dma_rx];
@@ -629,20 +641,11 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   LL_SPI_DisableDMAReq_RX(PORT.channel);
 
   LL_DMA_DisableStream(dma_rx->port, dma_rx->stream_index);
-  while (LL_DMA_IsEnabledStream(dma_rx->port, dma_rx->stream_index))
-    ;
-
   LL_DMA_DisableStream(dma_tx->port, dma_tx->stream_index);
-  while (LL_DMA_IsEnabledStream(dma_tx->port, dma_tx->stream_index))
-    ;
 
 #if defined(STM32H7)
   // now we can disable the peripheral
   LL_SPI_ClearFlag_TXTF(PORT.channel);
-#else
-  // dummy read
-  while (LL_SPI_IsActiveFlag_RXNE(PORT.channel))
-    LL_SPI_ReceiveData8(PORT.channel);
 #endif
 
   LL_SPI_Disable(PORT.channel);
