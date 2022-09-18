@@ -246,10 +246,9 @@ uint8_t spi_dma_is_ready(spi_ports_t port) {
   return dma_transfer_done[port];
 }
 
-static void spi_reconfigure(spi_bus_device_t *bus) {
+static void spi_reconfigure(spi_bus_device_t *bus, volatile spi_port_config_t *config) {
   const spi_port_def_t *port = &spi_port_defs[bus->port];
 
-  volatile spi_port_config_t *config = &spi_port_config[bus->port];
   if (config->hz != bus->hz) {
     config->hz = bus->hz;
     LL_SPI_SetBaudRatePrescaler(port->channel, spi_find_divder(bus->hz));
@@ -430,6 +429,7 @@ spi_txn_t *spi_txn_init(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn) {
   txn->bus = bus;
   txn->segment_count = 0;
 
+  txn->flags = 0;
   txn->size = 0;
   txn->done_fn = done_fn;
 
@@ -458,6 +458,7 @@ void spi_txn_add_seg_delay(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_d
   spi_txn_ensure_buffer_space(txn, size);
 
   txn->size += size;
+  txn->flags |= TXN_DELAYED_TX;
 
   txn->segments[txn->segment_count].rx_data = rx_data;
   txn->segments[txn->segment_count].tx_data = tx_data;
@@ -485,6 +486,10 @@ void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, u
     // create new segment
     if (txn->segment_count >= SPI_TXN_SEG_MAX) {
       failloop(FAILLOOP_SPI);
+    }
+
+    if (rx_data) {
+      txn->flags |= TXN_DELAYED_RX;
     }
 
     spi_txn_segment_t *seg = &txn->segments[txn->segment_count];
@@ -516,13 +521,15 @@ static void spi_txn_finish(spi_bus_device_t *bus) {
   const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
   spi_txn_t *txn = bus->txns[tail];
 
-  uint32_t txn_size = 0;
-  for (uint32_t i = 0; i < txn->segment_count; ++i) {
-    spi_txn_segment_t *seg = &txn->segments[i];
-    if (seg->rx_data) {
-      memcpy(seg->rx_data, (uint8_t *)txn->buffer + txn_size, seg->size);
+  if (txn->flags & TXN_DELAYED_RX) {
+    uint32_t txn_size = 0;
+    for (uint32_t i = 0; i < txn->segment_count; ++i) {
+      spi_txn_segment_t *seg = &txn->segments[i];
+      if (seg->rx_data) {
+        memcpy(seg->rx_data, (uint8_t *)txn->buffer + txn_size, seg->size);
+      }
+      txn_size += seg->size;
     }
-    txn_size += seg->size;
   }
 
   if (txn->done_fn) {
@@ -539,7 +546,7 @@ static void spi_txn_finish(spi_bus_device_t *bus) {
   spi_port_config[bus->port].active_device = NULL;
 }
 
-static bool spi_txn_should_use_dma(spi_txn_t *txn) {
+static bool spi_txn_should_use_dma(spi_bus_device_t *bus, spi_txn_t *txn) {
 #ifdef STM32H7
   if (WITHIN_DTCM_RAM(txn->buffer) || !WITHIN_DMA_RAM(txn->buffer)) {
     return false;
@@ -557,10 +564,12 @@ void spi_txn_continue_ex(spi_bus_device_t *bus, bool force_sync) {
     if (bus->txn_head == bus->txn_tail) {
       return;
     }
-    if (spi_port_config[bus->port].active_device != NULL &&
-        spi_port_config[bus->port].active_device != bus) {
+
+    volatile spi_port_config_t *config = &spi_port_config[bus->port];
+    if (config->active_device != NULL && config->active_device != bus) {
       return;
     }
+
     if (bus->poll_fn && !bus->poll_fn()) {
       return;
     }
@@ -568,21 +577,23 @@ void spi_txn_continue_ex(spi_bus_device_t *bus, bool force_sync) {
     const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
     spi_txn_t *txn = bus->txns[tail];
 
-    spi_port_config[bus->port].active_device = bus;
+    config->active_device = bus;
     txn->status = TXN_IN_PROGRESS;
 
-    uint32_t txn_size = 0;
-    for (uint32_t i = 0; i < txn->segment_count; ++i) {
-      spi_txn_segment_t *seg = &txn->segments[i];
-      if (seg->tx_data) {
-        memcpy((uint8_t *)txn->buffer + txn_size, seg->tx_data, seg->size);
+    if (txn->flags & TXN_DELAYED_TX) {
+      uint32_t txn_size = 0;
+      for (uint32_t i = 0; i < txn->segment_count; ++i) {
+        spi_txn_segment_t *seg = &txn->segments[i];
+        if (seg->tx_data) {
+          memcpy((uint8_t *)txn->buffer + txn_size, seg->tx_data, seg->size);
+        }
+        txn_size += seg->size;
       }
-      txn_size += seg->size;
     }
 
-    spi_reconfigure(bus);
+    spi_reconfigure(bus, config);
 
-    if (spi_txn_should_use_dma(txn) && !force_sync) {
+    if (spi_txn_should_use_dma(bus, txn) && !force_sync) {
       spi_csn_enable(bus);
       spi_dma_transfer_begin(bus->port, txn->buffer, txn->size);
     } else {

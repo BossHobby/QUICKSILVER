@@ -46,6 +46,11 @@ typedef enum {
   TXN_IN_PROGRESS,
 } spi_txn_status_t;
 
+typedef enum {
+  TXN_DELAYED_TX = (1 << 0),
+  TXN_DELAYED_RX = (1 << 1),
+} spi_txn_flags_t;
+
 typedef void (*spi_txn_done_fn_t)();
 
 typedef struct {
@@ -53,6 +58,7 @@ typedef struct {
 
   volatile spi_txn_status_t status;
 
+  uint8_t flags;
   spi_txn_segment_t segments[SPI_TXN_SEG_MAX];
   uint8_t segment_count;
 
