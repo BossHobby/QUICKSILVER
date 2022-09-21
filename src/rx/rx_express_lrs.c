@@ -571,7 +571,6 @@ static bool elrs_process_packet(uint32_t packet_time) {
   if (!elrs_vaild_packet()) {
     return false;
   }
-  debug_pin_toggle(1);
 
   bool channels_received = false;
 
@@ -719,7 +718,6 @@ static bool elrs_process_packet(uint32_t packet_time) {
 void elrs_handle_tick() {
   elrs_phase_update(elrs_state);
   ota_nonce++;
-  debug_pin_toggle(0);
 
   uplink_lq = elrs_lq_get();
 
