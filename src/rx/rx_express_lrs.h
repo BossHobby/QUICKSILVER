@@ -99,7 +99,6 @@ typedef enum {
 typedef enum {
   SWITCH_WIDE_OR_8CH,
   SWITCH_HYBRID_OR_16CH,
-  SWITCH_12CH,
 } elrs_switch_mode_t;
 
 typedef struct {
@@ -172,7 +171,7 @@ void elrs_set_frequency(int32_t freq);
 void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq, uint32_t flrc_sync_word, uint16_t flrc_crc_seed);
 
 void elrs_enter_rx(volatile uint8_t *packet);
-void elrs_enter_tx(volatile uint8_t *packet);
+void elrs_enter_tx(volatile uint8_t *packet, const uint8_t packet_len);
 
 elrs_irq_status_t elrs_get_irq_status();
 void elrs_read_packet(volatile uint8_t *packet);
