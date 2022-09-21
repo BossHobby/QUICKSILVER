@@ -270,7 +270,7 @@ static bool elrs_vaild_packet() {
   // For smHybrid the CRC only has the packet type in byte 0
   // For smHybridWide the FHSS slot is added to the CRC in byte 0 on RC_DATA_PACKETs
   if (type == RC_DATA_PACKET && bind_storage.elrs.switch_mode == SWITCH_WIDE_OR_8CH) {
-    uint8_t fhss_result = (ota_nonce % current_air_rate_config()->fhss_hop_interval);
+    const uint8_t fhss_result = (ota_nonce % current_air_rate_config()->fhss_hop_interval) + 1;
     packet[0] = type | (fhss_result << 2);
   } else {
     packet[0] = type;
