@@ -529,29 +529,7 @@ static bool elrs_unpack_switches_wide(const volatile uint8_t *packet) {
   }
 
   switch_value = elrs_unpack_n_switch(switch_value, bins);
-  switch (index) {
-  case 0:
-    state.aux[AUX_CHANNEL_5] = switch_value;
-    break;
-  case 1:
-    state.aux[AUX_CHANNEL_6] = switch_value;
-    break;
-  case 2:
-    state.aux[AUX_CHANNEL_7] = switch_value;
-    break;
-  case 3:
-    state.aux[AUX_CHANNEL_8] = switch_value;
-    break;
-  case 4:
-    state.aux[AUX_CHANNEL_9] = switch_value;
-    break;
-  case 5:
-    state.aux[AUX_CHANNEL_10] = switch_value;
-    break;
-  case 6:
-    state.aux[AUX_CHANNEL_11] = switch_value;
-    break;
-  }
+  state.aux[AUX_CHANNEL_1 + index] = switch_value;
 
   return telemetry_status;
 }
