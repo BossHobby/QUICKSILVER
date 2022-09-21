@@ -255,8 +255,8 @@ void elrs_enter_rx(volatile uint8_t *packet) {
   sx128x_set_mode_async(SX1280_MODE_RX);
 }
 
-void elrs_enter_tx(volatile uint8_t *packet) {
-  sx128x_write_tx_buffer(0x0, packet, ELRS_BUFFER_SIZE);
+void elrs_enter_tx(volatile uint8_t *packet, const uint8_t packet_len) {
+  sx128x_write_tx_buffer(0x0, packet, packet_len);
   sx128x_set_mode_async(SX1280_MODE_TX);
 }
 

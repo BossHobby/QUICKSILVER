@@ -212,7 +212,7 @@ static bool elrs_tlm() {
   packet[0] |= (crc >> 6) & 0xFC;
   packet[7] = crc & 0xFF;
 
-  elrs_enter_tx(packet);
+  elrs_enter_tx(packet, current_air_rate_config()->payload_len);
 
   return true;
 }
@@ -670,10 +670,6 @@ static bool elrs_process_packet(uint32_t packet_time) {
 
     case SWITCH_HYBRID_OR_16CH:
       tlm_confirm = elrs_unpack_switches_hybrid(packet);
-      break;
-
-    case SWITCH_12CH:
-      // TODO
       break;
     }
 
