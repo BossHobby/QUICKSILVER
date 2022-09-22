@@ -7,7 +7,8 @@ steps:
   - name: build
     image: hanfer/docker-platformio
     commands:
-      - bash script/build-tester.sh
+      - bash script/build-tester.sh build
+      - bash script/build-tester.sh html
   - name: publish-github
     image: plugins/github-release
     settings:
