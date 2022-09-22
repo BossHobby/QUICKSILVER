@@ -598,5 +598,16 @@
         }
       }
     ]
+  },
+  {
+    "name": "flywoof405s_aio",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
   }
 ]
