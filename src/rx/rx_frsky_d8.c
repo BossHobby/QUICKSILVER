@@ -335,7 +335,7 @@ void rx_frsky_d8_init() {
   cc2500_write_reg(CC2500_MCSM1, 0x0C);
 
   // frsky d
-  cc2500_write_reg(CC2500_PKTLEN, 17);     // max packet lenght of 25
+  cc2500_write_reg(CC2500_PKTLEN, 0x19);   // max packet lenght of 25
   cc2500_write_reg(CC2500_PKTCTRL0, 0x05); // variable pkt lenth, enable crc
   cc2500_write_reg(CC2500_PKTCTRL1, 0x04); // only append status
   cc2500_write_reg(CC2500_PATABLE, 0xFF);  // full power
