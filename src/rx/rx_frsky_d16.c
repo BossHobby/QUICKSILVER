@@ -508,6 +508,8 @@ void rx_frsky_d16_init() {
   cc2500_write_reg(CC2500_ADDR, 0x00);
 
   calibrate_channels();
+
+  list_length = 47;
 }
 
 bool rx_frsky_d16_check() {

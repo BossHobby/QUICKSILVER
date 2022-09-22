@@ -31,6 +31,7 @@ typedef struct {
 
 extern uint8_t packet[128];
 extern uint8_t protocol_state;
+extern uint8_t list_length;
 
 uint8_t frsky_extract_rssi(uint8_t rssi_raw);
 uint8_t frsky_detect();
@@ -380,6 +381,8 @@ void rx_frsky_d8_init() {
   cc2500_write_reg(CC2500_ADDR, 0x00);
 
   calibrate_channels();
+
+  list_length = 47;
 }
 
 bool rx_frsky_d8_check() {

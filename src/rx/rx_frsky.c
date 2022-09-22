@@ -11,11 +11,9 @@
 
 #if defined(RX_FRSKY) && defined(USE_CC2500)
 
-#define FRSKY_HOPTABLE_SIZE 47
-
 uint8_t packet[128];
 uint8_t protocol_state = FRSKY_STATE_DETECT;
-uint8_t list_length = FRSKY_HOPTABLE_SIZE;
+uint8_t list_length = 0;
 
 static uint8_t cal_data[255][3];
 
@@ -199,11 +197,10 @@ static void init_get_bind() {
   time_delay_us(20); // waiting flush FIFO
 
   cc2500_strobe_sync(CC2500_SRX);
-  list_length = 0;
-  bind_storage.frsky.idx = 0x05;
+  bind_storage.frsky.idx = 0;
 }
 
-static uint8_t get_bind1() {
+static uint8_t get_bind() {
   // len|bind |tx
   // id|03|01|idx|h0|h1|h2|h3|h4|00|00|00|00|00|00|00|00|00|00|00|00|00|00|00|CHK1|CHK2|RSSI|LQI/CRC|
   // Start by getting bind packet 0 and the txid
@@ -216,56 +213,24 @@ static uint8_t get_bind1() {
     return 0;
   }
 
-  if (packet[len - 1] & 0x80) {
-    if (packet[2] == 0x01) {
-      if (packet[5] == 0x00) {
-
-        bind_storage.frsky.tx_id[0] = packet[3];
-        bind_storage.frsky.tx_id[1] = packet[4];
-        for (uint8_t n = 0; n < 5; n++) {
-          bind_storage.frsky.hop_data[packet[5] + n] = packet[6 + n];
-        }
-        bind_storage.frsky.rx_num = packet[12];
-        return 1;
-      }
+  if (packet[len - 1] & 0x80 && packet[2] == 0x01) {
+    quic_debugf("FRSKY: bind packet idx %d vs %d", packet[5], bind_storage.frsky.idx);
+    if (packet[5] == 0x00) {
+      bind_storage.frsky.tx_id[0] = packet[3];
+      bind_storage.frsky.tx_id[1] = packet[4];
+      bind_storage.frsky.rx_num = packet[12];
+      quic_debugf("FRSKY: bind packet tx_id %d,%d rx_num %d", bind_storage.frsky.tx_id[0], bind_storage.frsky.tx_id[1], bind_storage.frsky.rx_num);
     }
-  }
 
-  return 0;
-}
-
-static uint8_t get_bind2(uint8_t *packet) {
-  if (bind_storage.frsky.idx > 120) {
-    return 1;
-  }
-
-  uint8_t len = read_packet();
-  if (len == 0) {
-    return 0;
-  }
-  if (len > 35) {
-    cc2500_strobe(CC2500_SFRX);
-    return 0;
-  }
-
-  if (packet[len - 1] & 0x80) {
-    if (packet[2] == 0x01) {
-      if ((packet[3] == bind_storage.frsky.tx_id[0]) && (packet[4] == bind_storage.frsky.tx_id[1])) {
-        if (packet[5] == bind_storage.frsky.idx) {
-          for (uint8_t n = 0; n < 5; n++) {
-            if (packet[6 + n] == packet[len - 3] || (packet[6 + n] == 0)) {
-              if (bind_storage.frsky.idx >= 0x2D) {
-                list_length = packet[5] + n;
-                return 1;
-              }
-            }
-            bind_storage.frsky.hop_data[packet[5] + n] = packet[6 + n];
-          }
-
-          bind_storage.frsky.idx = bind_storage.frsky.idx + 5;
-          return 0;
-        }
+    if (packet[5] == bind_storage.frsky.idx) {
+      for (uint8_t n = 0; n < 5; n++) {
+        bind_storage.frsky.hop_data[packet[5] + n] = packet[6 + n];
       }
+      bind_storage.frsky.idx += 5;
+    }
+
+    if (bind_storage.frsky.idx >= 50) {
+      return 1;
     }
   }
 
@@ -343,19 +308,13 @@ void frsky_handle_bind() {
       quic_debugf("FRSKY: tuned offset %d", bind_storage.frsky.offset);
       set_address(1);
       init_get_bind();
-      protocol_state = FRSKY_STATE_BIND_BINDING1;
+      protocol_state = FRSKY_STATE_BIND_BINDING;
     }
     break;
   }
-  case FRSKY_STATE_BIND_BINDING1:
+  case FRSKY_STATE_BIND_BINDING:
     handle_overflows();
-    if (get_bind1(packet)) {
-      protocol_state = FRSKY_STATE_BIND_BINDING2;
-    }
-    break;
-  case FRSKY_STATE_BIND_BINDING2:
-    handle_overflows();
-    if (get_bind2(packet)) {
+    if (get_bind(packet)) {
       protocol_state = FRSKY_STATE_BIND_COMPLETE;
     }
     break;

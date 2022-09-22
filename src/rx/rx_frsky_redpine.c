@@ -93,7 +93,6 @@ static uint8_t redpine_handle_packet() {
   uint8_t ret = 0;
   switch (protocol_state) {
   case FRSKY_STATE_STARTING:
-    list_length = 49;
     cc2500_enter_rxmode();
     set_address(0);
     next_channel(1);
@@ -288,6 +287,8 @@ void rx_redpine_init() {
   cc2500_write_reg(CC2500_ADDR, 0x00);
 
   calibrate_channels();
+
+  list_length = 49;
 }
 
 bool rx_redpine_check() {
