@@ -609,5 +609,16 @@
         }
       }
     ]
+  },
+  {
+    "name": "speedybeef7mini_v2",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
   }
 ]
