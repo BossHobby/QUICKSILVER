@@ -23,11 +23,15 @@ BUILD_FOLDER="$SOURCE_FOLDER/.pio/build"
 CONFIG_FILE="$SOURCE_FOLDER/src/config/config.h"
 TARGETS_FILE="$SCRIPT_FOLDER/targets.json"
 
-BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+if [ "$GITHUB_REF_TYPE" == "tag" ]; then
+  BRANCH=""
+else
+  BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+fi
 
 COMMIT=$GITHUB_SHA
 if [ -z "$COMMIT" ]; then
-  COMMIT="$(git rev-parse HEAD  )"
+  COMMIT="$(git rev-parse HEAD)"
 fi
 
 BUILD_PREFIX="quicksilver"
