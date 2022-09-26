@@ -23,10 +23,7 @@ BUILD_FOLDER="$SOURCE_FOLDER/.pio/build"
 CONFIG_FILE="$SOURCE_FOLDER/src/config/config.h"
 TARGETS_FILE="$SCRIPT_FOLDER/targets.json"
 
-BRANCH=${GITHUB_REF#refs/heads/}
-if [ -z "$BRANCH" ]; then
-  BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-fi
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 
 COMMIT=$GITHUB_SHA
 if [ -z "$COMMIT" ]; then
