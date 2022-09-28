@@ -402,7 +402,7 @@ void data_flash_read_backbox(const uint32_t file_index, const uint32_t offset, u
 }
 
 cbor_result_t data_flash_write_backbox(const blackbox_t *b) {
-  uint8_t buffer[PAGE_SIZE];
+  static uint8_t buffer[PAGE_SIZE];
 
   cbor_value_t enc;
   cbor_encoder_init(&enc, buffer, PAGE_SIZE);
