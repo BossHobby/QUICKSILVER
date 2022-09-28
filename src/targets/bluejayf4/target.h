@@ -32,10 +32,6 @@
 // RADIO
 #define USART6_INVERTER_PIN PIN_B15
 
-#ifdef SERIAL_RX
-#define RX_USART USART_PORT1
-#endif
-
 // OSD
 // not supported by fc
 

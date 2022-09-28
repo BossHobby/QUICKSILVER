@@ -36,10 +36,6 @@
 #define SX12XX_BUSY_PIN PIN_A13
 #define SX12XX_RESET_PIN PIN_A8
 
-#ifdef SERIAL_RX
-#define RX_USART USART_PORT2
-#endif
-
 // OSD
 #define USE_MAX7456
 #define MAX7456_SPI_PORT SPI_PORT2
