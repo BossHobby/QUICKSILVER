@@ -33,10 +33,6 @@
 // RADIO
 #define USART2_INVERTER_PIN PIN_C14
 
-#ifdef SERIAL_RX
-#define RX_USART USART_PORT2
-#endif
-
 // OSD
 #define USE_MAX7456
 #define MAX7456_SPI_PORT SPI_PORT2
