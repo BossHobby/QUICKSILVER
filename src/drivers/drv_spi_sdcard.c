@@ -291,7 +291,7 @@ sdcard_status_t sdcard_update() {
   switch (state) {
   case SDCARD_POWER_UP: {
     static uint32_t tries = 0;
-    if (tries == 3) {
+    if (tries == 10) {
       state = SDCARD_DETECT_FAILED;
       break;
     }
@@ -318,7 +318,7 @@ sdcard_status_t sdcard_update() {
     } else {
       tries++;
     }
-    if (tries == 10) {
+    if (tries == 100) {
       tries = 0;
       delay_loops = 100;
       state = SDCARD_POWER_UP;
