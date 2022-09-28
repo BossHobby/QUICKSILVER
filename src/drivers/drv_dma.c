@@ -83,9 +83,9 @@ typedef struct _dma_allocation {
 
   struct _dma_allocation *prev;
   struct _dma_allocation *next;
-} dma_allocation_t;
+} __attribute__((aligned(32))) dma_allocation_t;
 
-#define DMA_ALIGN_SIZE 4
+#define DMA_ALIGN_SIZE 32
 #define DMA_ALIGN(offset) ((offset + (DMA_ALIGN_SIZE - 1)) & -DMA_ALIGN_SIZE)
 
 static DMA_RAM uint8_t buffer[DMA_ALLOC_BUFFER_SIZE];
