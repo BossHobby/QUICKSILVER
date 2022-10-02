@@ -40,6 +40,12 @@
         "defines": {
           "BRUSHLESS_TARGET": ""
         }
+      },
+      {
+        "name": "brushed",
+        "defines": {
+          "BRUSHED_TARGET": ""
+        }
       }
     ]
   },
