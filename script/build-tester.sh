@@ -120,9 +120,9 @@ EOF
       }
       CONFIG_NAME="$(config_get '.name')"
       BUILD_NAME="$BUILD_PREFIX.$TARGET_NAME.$CONFIG_NAME"
-    done
 
-    echo "<a class=\"list-group-item list-group-item-action\" href=\"$BUILD_NAME.hex\" download target=\"_blank\">$BUILD_NAME</a>" >> $OUTPUT_FOLDER/index.html
+      echo "<a class=\"list-group-item list-group-item-action\" href=\"$TARGET_NAME/$BUILD_NAME.hex\" download target=\"_blank\">$BUILD_NAME</a>" >> $OUTPUT_FOLDER/index.html
+    done
   done
 
   cat <<-EOF >> $OUTPUT_FOLDER/index.html
