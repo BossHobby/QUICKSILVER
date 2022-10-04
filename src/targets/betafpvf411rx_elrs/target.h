@@ -1,7 +1,7 @@
 #include "config.h"
 #include "config_helper.h"
 
-#define BetaFPVF411RX
+#define betafpvf411rx_elrs
 
 // PORTS
 #define SPI_PORTS   \
