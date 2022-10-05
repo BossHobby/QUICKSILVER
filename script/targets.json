@@ -254,6 +254,17 @@
     ]
   },
   {
+    "name": "betafpvf411rx_frsky",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
+  },
+  {
     "name": "betafpvf411",
     "configurations": [
       {
