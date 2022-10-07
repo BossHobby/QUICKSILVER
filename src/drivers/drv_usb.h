@@ -4,7 +4,6 @@
 
 #include "project.h"
 
-extern void usb_configurator();
 void usb_init();
 uint8_t usb_detect();
 uint32_t usb_serial_read(uint8_t *data, uint32_t len);
