@@ -17,6 +17,7 @@ void usb_serial_passthrough(usart_ports_t port, uint32_t baudrate, uint8_t stop_
 void usb_process_msp();
 void usb_process_quic();
 void usb_quic_logf(const char *fmt, ...);
+void usb_configurator();
 
 #if defined(DEBUG) && defined(DEBUG_LOGGING)
 #define quic_debugf(args...) usb_quic_logf(args)
