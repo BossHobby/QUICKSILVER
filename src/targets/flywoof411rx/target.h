@@ -1,6 +1,5 @@
 
 #include "config.h"
-#include "config_helper.h"
 
 #define FLYWOOF411_5IN1_AIO
 
