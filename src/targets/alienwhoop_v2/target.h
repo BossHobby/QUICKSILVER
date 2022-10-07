@@ -1,5 +1,4 @@
 #include "config.h"
-#include "config_helper.h"
 
 #define Alienwhoop_V2
 

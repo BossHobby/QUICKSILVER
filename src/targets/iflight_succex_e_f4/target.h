@@ -1,6 +1,5 @@
 
 #include "config.h"
-#include "config_helper.h"
 
 #define IFLIGHT_SUCCEX_E_F4
 

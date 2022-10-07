@@ -1,6 +1,5 @@
 
 #include "config.h"
-#include "config_helper.h"
 
 #define betafpvf411rx_frsky
 

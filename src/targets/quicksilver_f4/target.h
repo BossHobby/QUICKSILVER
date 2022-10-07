@@ -1,5 +1,4 @@
 #include "config.h"
-#include "config_helper.h"
 
 #define Quicksilver_F4
 

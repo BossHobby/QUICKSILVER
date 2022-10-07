@@ -1,7 +1,6 @@
 #pragma once
 
 #include "config.h"
-#include "config_helper.h"
 #include "hardware.h"
 
 // defines for things that do not normally need changing

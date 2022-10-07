@@ -1,5 +1,4 @@
 #include "config.h"
-#include "config_helper.h"
 
 #define NeutronRCF411
 
@@ -34,8 +33,6 @@
 #define SX12XX_DIO0_PIN PIN_C13
 #define SX12XX_BUSY_PIN PIN_A13
 #define SX12XX_RESET_PIN PIN_B9
-
-
 
 // OSD
 #define USE_MAX7456
