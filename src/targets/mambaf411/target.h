@@ -1,7 +1,4 @@
-
 #include "config.h"
-
-#define MAMBAF411
 
 // PORTS
 #define SPI_PORTS \

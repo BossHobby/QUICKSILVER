@@ -1,7 +1,4 @@
-
 #include "config.h"
-
-#define TUNERCF405
 
 // PORTS
 #define SPI_PORTS   \

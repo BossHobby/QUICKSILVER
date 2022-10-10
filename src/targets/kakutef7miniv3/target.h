@@ -1,7 +1,4 @@
-
 #include "config.h"
-
-#define KAKUTEF7MINIV3
 
 // PORTS
 #define SPI_PORTS   \

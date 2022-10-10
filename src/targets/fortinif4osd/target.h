@@ -1,7 +1,5 @@
 #include "config.h"
 
-#define FortiniF4osd
-
 //***************REV 2 ONLY***************
 
 // PORTS

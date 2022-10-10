@@ -1,7 +1,4 @@
-
 #include "config.h"
-
-#define SPEEDYBEEF7MINIV2
 
 // PORTS
 #define SPI_PORTS   \

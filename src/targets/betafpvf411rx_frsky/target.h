@@ -1,8 +1,6 @@
 
 #include "config.h"
 
-#define betafpvf411rx_frsky
-
 // PORTS
 #define SPI_PORTS   \
   SPI1_PA5PA6PA7    \

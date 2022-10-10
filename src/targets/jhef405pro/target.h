@@ -1,7 +1,4 @@
-
 #include "config.h"
-
-#define JHEF405PRO
 
 // PORTS
 #define SPI_PORTS \
