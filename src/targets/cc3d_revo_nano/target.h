@@ -1,7 +1,5 @@
 #include "config.h"
 
-#define CC3D_Revo_Nano
-
 // PORTS
 #define SPI_PORTS   \
   SPI1_PA5PA6PA7    \

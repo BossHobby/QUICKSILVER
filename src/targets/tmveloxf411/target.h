@@ -1,7 +1,4 @@
-
 #include "config.h"
-
-#define TMVELOXF411
 
 // PORTS
 #define SPI_PORTS   \

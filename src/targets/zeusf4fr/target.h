@@ -1,7 +1,4 @@
-
 #include "config.h"
-
-#define ZEUSF4FR
 
 // PORTS
 #define SPI_PORTS   \

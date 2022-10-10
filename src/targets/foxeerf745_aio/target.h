@@ -1,8 +1,6 @@
 
 #include "config.h"
 
-#define FOXEERF745_AIO
-
 // PORTS
 #define SPI_PORTS   \
   SPI1_PA5PA6PA7    \

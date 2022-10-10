@@ -1,7 +1,4 @@
-
 #include "config.h"
-
-#define ZEUSF722_AIO
 
 // PORTS
 #define SPI_PORTS   \

@@ -1,7 +1,5 @@
 #include "config.h"
 
-#define NeutronRCF411
-
 // PORTS
 #define SPI_PORTS   \
   SPI1_PA5PA6PA7    \

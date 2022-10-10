@@ -1,8 +1,6 @@
 
 #include "config.h"
 
-#define FLYWOOF405S_AIO
-
 // PORTS
 #define SPI_PORTS \
   SPI1_PA5PA6PA7  \

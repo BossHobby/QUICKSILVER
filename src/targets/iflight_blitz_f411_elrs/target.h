@@ -1,8 +1,4 @@
-
 #include "config.h"
-
-
-#define IFLIGHTF411RX1280
 
 // PORTS
 #define SPI_PORTS   \

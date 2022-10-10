@@ -1,7 +1,4 @@
-
 #include "config.h"
-
-#define MATEKH743
 
 // PORTS
 #define SPI_PORTS   \

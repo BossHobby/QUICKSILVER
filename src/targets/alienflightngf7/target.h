@@ -1,8 +1,6 @@
 
 #include "config.h"
 
-#define ALIENFLIGHTNGF7
-
 // PORTS
 #define SPI_PORTS \
   SPI1_PA5PA6PA7  \

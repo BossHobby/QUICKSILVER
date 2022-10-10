@@ -1,7 +1,4 @@
-
 #include "config.h"
-
-#define IFLIGHT_SUCCEX_E_F4
 
 // PORTS
 #define SPI_PORTS   \

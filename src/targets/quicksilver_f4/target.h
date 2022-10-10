@@ -1,7 +1,5 @@
 #include "config.h"
 
-#define Quicksilver_F4
-
 // PORTS			//pa15 nss on spi3
 #define SPI_PORTS   \
   SPI1_PA5PA6PA7    \

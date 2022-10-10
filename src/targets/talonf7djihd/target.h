@@ -1,7 +1,4 @@
-
 #include "config.h"
-
-#define TALONF7DJIHD
 
 // PORTS
 #define SPI_PORTS   \

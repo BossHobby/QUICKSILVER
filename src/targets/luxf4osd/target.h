@@ -1,9 +1,5 @@
 #include "config.h"
 
-//******************UNCONFIRMED TARGET******************
-
-#define LuxF4osd
-
 // PORTS
 #define SPI_PORTS   \
   SPI1_PA5PA6PA7    \
