@@ -65,7 +65,7 @@ void turtle_mode_update() {
       last_armed_state_turtle = flags.arm_switch;
 
       // quad was just armed and upside down, begin the turtle sequence
-      if (flags.arm_switch && (state.GEstG.yaw < 0)) {
+      if (turtle_ready && flags.arm_switch && (state.GEstG.yaw < 0)) {
         turtle_state = TURTLE_STAGE_START;
       }
     }
