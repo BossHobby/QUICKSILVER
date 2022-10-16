@@ -112,6 +112,15 @@ void exti_enable(gpio_pins_t pin, uint32_t trigger) {
   interrupt_enable(LINE.exti_irqn, EXTI_PRIORITY);
 }
 
+void exti_interrupt_enable(gpio_pins_t pin) {
+  interrupt_enable(LINE.exti_irqn, EXTI_PRIORITY);
+}
+
+void exti_interrupt_disable(gpio_pins_t pin) {
+  interrupt_disable(LINE.exti_irqn);
+}
+
+
 bool exti_line_active(gpio_pins_t pin) {
   if (LL_EXTI_IsActiveFlag_0_31(LINE.exti_line) != RESET) {
     LL_EXTI_ClearFlag_0_31(LINE.exti_line);
@@ -141,6 +150,13 @@ static void handle_exit_isr() {
   if (exti_line_active(SX12XX_BUSY_PIN)) {
     extern void sx128x_handle_busy_exti(bool);
     sx128x_handle_busy_exti(gpio_pin_read(SX12XX_BUSY_PIN));
+  }
+#endif
+
+#if defined(USE_A7105) && defined(A7105_GIO1_PIN)
+  if (exti_line_active(A7105_GIO1_PIN)) {
+    extern void a7105_handle_busy_exti(bool);
+    a7105_handle_busy_exti(gpio_pin_read(A7105_GIO1_PIN));
   }
 #endif
 }
