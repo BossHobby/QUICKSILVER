@@ -5,6 +5,7 @@
 #include "rx_express_lrs.h"
 #include "rx_frsky.h"
 #include "rx_unified_serial.h"
+#include "rx_flysky.h"
 
 #define FLASH_STORAGE_OFFSET FLASH_ALIGN(4)
 #define FLASH_STORAGE_SIZE FLASH_ALIGN(32)
@@ -30,6 +31,16 @@ typedef struct {
     rx_bayang_bind_data_t bayang;
     rx_unified_bind_data_t unified;
     rx_elrs_bind_data_t elrs;
+
+// TODO: For some reason adding this to the union actually changes the union size!
+// I get this compile error
+//src\flash.c: In function 'flash_load.part.0':
+//src\flash.c:120:5: warning: 'memcpy' reading 68 bytes from a region of size 64 [-Wstringop-overflow=]
+//  120 |     memcpy((uint8_t *)&bind_storage, buffer, sizeof(rx_bind_storage_t));
+//#define FLYSKY_BIND_DATA
+#if defined(FLYSKY_BIND_DATA)
+    rx_flysky_bind_data_t flysky;
+#endif    
     uint8_t raw[BIND_RAW_STORAGE_SIZE];
   };
 } rx_bind_storage_t;

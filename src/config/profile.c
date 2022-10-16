@@ -413,6 +413,8 @@ const profile_t default_profile = {
         .protocol = RX_PROTOCOL_EXPRESS_LRS,
 #elif defined(RX_FRSKY)
         .protocol = RX_PROTOCOL_REDPINE,
+#elif defined(RX_FLYSKY)
+        .protocol = RX_PROTOCOL_FLYSKY_AFHDS2A,
 #else
         .protocol = RX_PROTOCOL_UNIFIED_SERIAL,
 #endif
@@ -519,6 +521,11 @@ target_info_t target_info = {
 
 #if defined(RX_EXPRESS_LRS)
         RX_PROTOCOL_EXPRESS_LRS,
+#endif
+
+#if defined(RX_FLYSKY)
+        RX_PROTOCOL_FLYSKY_AFHDS,
+        RX_PROTOCOL_FLYSKY_AFHDS2A,
 #endif
     },
     .quic_protocol_version = QUIC_PROTOCOL_VERSION,
