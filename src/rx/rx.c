@@ -42,6 +42,8 @@ static const uint16_t RX_SMOOTHING_HZ[RX_PROTOCOL_MAX] = {
     50,  // RX_PROTOCOL_FRSKY_D16_LBT,
     225, // RX_PROTOCOL_FRSKY_REDPINE,
     0,   // RX_PROTOCOL_EXPRESS_LRS
+    225, // RX_PROTOCOL_FLYSKY_AFHDS    225 = (666pps * 0.75)/2 * 0.9   Note: mul by 0.75 for expected packet loss
+    88   // RX_PROTOCOL_FLYSKY_AFHDS2A  88 = (260pps * 0.75)/2 * 0.9
 };
 
 static const uint16_t SERIAL_PROTO_MAP[] = {
@@ -231,6 +233,17 @@ void rx_init() {
     rx_expresslrs_init();
 #endif
     break;
+
+  case RX_PROTOCOL_FLYSKY_AFHDS:
+#ifdef RX_FLYSKY
+    rx_flysky_afhds_init();
+#endif  
+    break;
+  case RX_PROTOCOL_FLYSKY_AFHDS2A:
+#ifdef RX_FLYSKY
+    rx_flysky_afhds2a_init();
+#endif  
+    break;
   }
 }
 
@@ -299,6 +312,19 @@ bool rx_check() {
 #else
     return false;
 #endif
+
+  case RX_PROTOCOL_FLYSKY_AFHDS:
+#ifdef RX_FLYSKY
+    return rx_flysky_afhds_check();
+#else    
+    return false;
+#endif  
+  case RX_PROTOCOL_FLYSKY_AFHDS2A:
+#ifdef RX_FLYSKY
+    return rx_flysky_afhds2a_check();
+#else    
+    return false;
+#endif  
   }
 
   return false;
