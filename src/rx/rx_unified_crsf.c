@@ -23,10 +23,14 @@ typedef enum {
   RATE_LORA_25HZ,
   RATE_LORA_50HZ,
   RATE_LORA_100HZ,
+  RATE_LORA_100HZ_8CH,
   RATE_LORA_150HZ,
   RATE_LORA_200HZ,
   RATE_LORA_250HZ,
+  RATE_LORA_333HZ_8CH,
   RATE_LORA_500HZ,
+  RATE_DVDA_250HZ,
+  RATE_DVDA_500HZ,
   RATE_FLRC_500HZ,
   RATE_FLRC_1000HZ,
 } crsf_air_rates_t;
@@ -104,15 +108,20 @@ uint16_t rx_serial_crsf_smoothing_cutoff() {
   case RATE_LORA_50HZ:
     return 22;
   case RATE_LORA_100HZ:
+  case RATE_LORA_100HZ_8CH:
     return 45;
   case RATE_LORA_150HZ:
     return 67;
   case RATE_LORA_200HZ:
     return 90;
   case RATE_LORA_250HZ:
+  case RATE_DVDA_250HZ:
     return 112;
+  case RATE_LORA_333HZ_8CH:
+    return 150;
   case RATE_LORA_500HZ:
   case RATE_FLRC_500HZ:
+  case RATE_DVDA_500HZ:
     return 225;
   case RATE_FLRC_1000HZ:
     return 450;
@@ -130,15 +139,19 @@ static uint16_t telemetry_interval() {
   case RATE_LORA_50HZ:
     return 3;
   case RATE_LORA_100HZ:
+  case RATE_LORA_100HZ_8CH:
     return 6;
   case RATE_LORA_150HZ:
     return 9;
   case RATE_LORA_200HZ:
     return 12;
   case RATE_LORA_250HZ:
+  case RATE_DVDA_250HZ:
+  case RATE_LORA_333HZ_8CH:
     return 16;
   case RATE_LORA_500HZ:
   case RATE_FLRC_500HZ:
+  case RATE_DVDA_500HZ:
     return 32;
   case RATE_FLRC_1000HZ:
     return 64;
