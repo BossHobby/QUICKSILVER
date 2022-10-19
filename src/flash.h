@@ -20,10 +20,11 @@ extern flash_storage_t flash_storage;
 
 #define BIND_STORAGE_OFFSET (FLASH_STORAGE_OFFSET + FLASH_STORAGE_SIZE)
 #define BIND_STORAGE_SIZE FLASH_ALIGN(64)
-#define BIND_RAW_STORAGE_SIZE 63
+#define BIND_RAW_STORAGE_SIZE 60
 
 typedef struct {
   uint8_t bind_saved;
+  uint8_t _padding[3];
   union {
     rx_frsky_bind_data_t frsky;
     rx_bayang_bind_data_t bayang;
