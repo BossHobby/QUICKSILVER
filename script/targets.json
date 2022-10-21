@@ -648,5 +648,16 @@
         }
       }
     ]
+  },
+  {
+    "name": "tbs_podraceraio",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
   }
 ]
