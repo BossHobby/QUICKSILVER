@@ -66,7 +66,7 @@ static void max7456_dma_spi_write(uint8_t reg, uint8_t data) {
   spi_txn_t *txn = spi_txn_init(&bus, NULL);
   spi_txn_add_seg_const(txn, reg);
   spi_txn_add_seg_const(txn, data);
-  spi_txn_submit_continue(&bus, txn);
+  spi_txn_submit_wait(&bus, txn);
 }
 
 static void max7456_init_display() {
