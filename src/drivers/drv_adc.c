@@ -106,7 +106,7 @@ static float temp_cal_a = 0;
 static float temp_cal_b = 0;
 
 static void adc_init_pin(adc_chan_t chan, gpio_pins_t pin) {
-  adc_array[chan] = 0;
+  adc_array[chan] = 1;
   adc_pins[chan].pin = PIN_NONE;
   adc_pins[chan].dev = ADC_DEVICE_MAX;
 
