@@ -17,7 +17,8 @@ extern profile_t profile;
 void vbat_init() {
   int count = 0;
   while (count < 5000) {
-    lpf(&state.vbat_filtered, adc_read(ADC_CHAN_VBAT), 0.9968f);
+    state.vbat = adc_read(ADC_CHAN_VBAT);
+    lpf(&state.vbat_filtered, state.vbat, 0.9968f);
     count++;
   }
 
