@@ -38,6 +38,7 @@ typedef struct {
 #define READY_TO_CONVERT(dev) LL_ADC_IsActiveFlag_EOCS(dev)
 #endif
 
+#define VREFINT_CAL (*(VREFINT_CAL_ADDR))
 #define VBAT_SCALE ((float)(VBAT_DIVIDER_R1 + VBAT_DIVIDER_R2) / (float)(VBAT_DIVIDER_R2) * (1.f / 1000.f))
 
 #ifdef STM32H7
@@ -49,6 +50,7 @@ static const adc_dev_t adc_dev[ADC_DEVICE_MAX] = {
 
 static const adc_channel_t adc_channel_map[] = {
     {.pin = PIN_NONE, .dev = ADC_DEVICE_3, .channel = LL_ADC_CHANNEL_VREFINT},
+    {.pin = PIN_NONE, .dev = ADC_DEVICE_3, .channel = LL_ADC_CHANNEL_TEMPSENSOR},
 
     {.pin = PIN_C0, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_10},
     {.pin = PIN_C1, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_11},
@@ -74,6 +76,7 @@ static const adc_dev_t adc_dev[ADC_DEVICE_MAX] = {
 
 static const adc_channel_t adc_channel_map[] = {
     {.pin = PIN_NONE, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_VREFINT},
+    {.pin = PIN_NONE, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_TEMPSENSOR},
 
     {.pin = PIN_C0, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_10},
     {.pin = PIN_C1, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_11},
@@ -99,17 +102,8 @@ static const adc_channel_t adc_channel_map[] = {
 static uint16_t adc_array[ADC_CHAN_MAX];
 static adc_channel_t adc_pins[ADC_CHAN_MAX];
 
-static uint16_t adc_calibration_value() {
-#if defined(STM32F4)
-  return *((uint16_t *)0x1FFF7A2A);
-#elif defined(STM32F745) || defined(STM32F765)
-  return *((uint16_t *)0x1FF0F44A);
-#elif defined(STM32F722)
-  return *((uint16_t *)0x1FF07A2A);
-#elif defined(STM32H7)
-  return (*VREFINT_CAL_ADDR) >> 4;
-#endif
-}
+static float temp_cal_a = 0;
+static float temp_cal_b = 0;
 
 static void adc_init_pin(adc_chan_t chan, gpio_pins_t pin) {
   adc_array[chan] = 0;
@@ -117,12 +111,22 @@ static void adc_init_pin(adc_chan_t chan, gpio_pins_t pin) {
   adc_pins[chan].dev = ADC_DEVICE_MAX;
 
   for (uint32_t i = 0; i < ADC_CHANNEL_MAP_SIZE; i++) {
-    if (adc_channel_map[i].pin == pin) {
-      adc_pins[chan].pin = pin;
-      adc_pins[chan].dev = adc_channel_map[i].dev;
-      adc_pins[chan].channel = adc_channel_map[i].channel;
-      break;
+    const adc_channel_t *adc_chan = &adc_channel_map[i];
+
+    if (adc_chan->pin != pin) {
+      continue;
     }
+    if (chan == ADC_CHAN_VREF && adc_chan->channel != LL_ADC_CHANNEL_VREFINT) {
+      continue;
+    }
+    if (chan == ADC_CHAN_TEMP && adc_chan->channel != LL_ADC_CHANNEL_TEMPSENSOR) {
+      continue;
+    }
+
+    adc_pins[chan].pin = pin;
+    adc_pins[chan].dev = adc_chan->dev;
+    adc_pins[chan].channel = adc_chan->channel;
+    break;
   }
 
   if (adc_pins[chan].pin == PIN_NONE) {
@@ -173,6 +177,10 @@ static void adc_init_dev(adc_devs_t index) {
     LL_ADC_SetCommonPathInternalCh(dev->common, LL_ADC_PATH_INTERNAL_VREFINT);
   }
 
+  if (adc_pins[ADC_CHAN_TEMP].dev == index) {
+    LL_ADC_SetCommonPathInternalCh(dev->common, LL_ADC_PATH_INTERNAL_TEMPSENSOR);
+  }
+
 #ifdef STM32H7
   LL_ADC_DisableDeepPowerDown(dev->adc);
   LL_ADC_EnableInternalRegulator(dev->adc);
@@ -219,7 +227,11 @@ void adc_init() {
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_ADC1);
 #endif
 
+  temp_cal_a = (float)(TEMPSENSOR_CAL2_TEMP - TEMPSENSOR_CAL1_TEMP) / (float)(*TEMPSENSOR_CAL2_ADDR - *TEMPSENSOR_CAL1_ADDR);
+  temp_cal_b = (float)TEMPSENSOR_CAL1_TEMP - temp_cal_a * *TEMPSENSOR_CAL1_ADDR;
+
   adc_init_pin(ADC_CHAN_VREF, PIN_NONE);
+  adc_init_pin(ADC_CHAN_TEMP, PIN_NONE);
 #ifdef VBAT_PIN
   adc_init_pin(ADC_CHAN_VBAT, VBAT_PIN);
 #endif
@@ -255,12 +267,17 @@ static uint16_t adc_read_raw(adc_chan_t index) {
 }
 
 static float adc_convert_to_mv(float value) {
-  const float vref = (uint32_t)(adc_calibration_value() * VREFINT_CAL_VREF) / adc_read_raw(ADC_CHAN_VREF);
+  const float vref = (float)(VREFINT_CAL * VREFINT_CAL_VREF) / (float)adc_read_raw(ADC_CHAN_VREF);
   return value * (vref / 4096.0f);
 }
 
 float adc_read(adc_chan_t chan) {
   switch (chan) {
+  case ADC_CHAN_TEMP: {
+    const float val = adc_read_raw(chan);
+    return temp_cal_a * val + temp_cal_b;
+  }
+
   case ADC_CHAN_VBAT:
     return adc_convert_to_mv(adc_read_raw(chan)) * VBAT_SCALE * (profile.voltage.actual_battery_voltage / profile.voltage.reported_telemetry_voltage);
 
@@ -273,7 +290,7 @@ float adc_read(adc_chan_t chan) {
 #endif
 
   default:
-    return 0;
+    return adc_read_raw(chan);
   }
 }
 

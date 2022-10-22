@@ -51,6 +51,8 @@ typedef struct {
 
   float lipo_cell_count;
 
+  float cpu_temp;
+
   float vbat;                      // battery in volts
   float vbat_filtered;             // filtered battery in volts
   float vbat_filtered_decay;       // filtered battery with time decay
@@ -108,6 +110,7 @@ typedef struct {
   MEMBER(armtime, float)                    \
   MEMBER(cpu_load, float)                   \
   MEMBER(lipo_cell_count, float)            \
+  MEMBER(cpu_temp, float)                   \
   MEMBER(vbat, float)                       \
   MEMBER(vbat_filtered, float)              \
   MEMBER(vbat_filtered_decay, float)        \
