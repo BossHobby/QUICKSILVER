@@ -169,31 +169,18 @@ __attribute__((__used__)) int main() {
   }
 
   time_delay_us(300000);
-  osd_init();
 
   adc_init();
 
-  // set always on channel to on
-  state.aux[AUX_CHANNEL_ON] = 1;
-  state.aux[AUX_CHANNEL_OFF] = 0;
-#ifdef GESTURE_AUX_START_ON
-  state.aux[AUX_CHANNEL_GESTURE] = 1;
-#endif
-
   vtx_init();
   rx_init();
+  rgb_init();
 
-  time_delay_us(1000);
   vbat_init();
-
-#ifdef RX_BAYANG_BLE_APP
-  // for randomising MAC adddress of ble app - this will make the int = raw float value
-  random_seed = *(int *)&state.vbat_filtered;
-  random_seed = random_seed & 0xff;
-#endif
+  osd_init();
+  time_delay_us(1000);
 
   sixaxis_gyro_cal();
-  rgb_init();
 
 #ifdef ENABLE_BLACKBOX
   blackbox_init();

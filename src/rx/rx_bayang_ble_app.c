@@ -157,11 +157,11 @@ void writeregs(uint8_t data[], uint8_t size) {
 char quad_name[6] = {'N', 'O', 'N', 'A', 'M', 'E'};
 
 void rx_protocol_init() {
-
-  // always on (AUX_CHANNEL_ON) channel set 1
-  state.aux[AUX_CHANNEL_MAX - 2] = 1;
-  // always off (AUX_CHANNEL_OFF) channel set 0
-  state.aux[AUX_CHANNEL_MAX - 1] = 0;
+#ifdef RX_BAYANG_BLE_APP
+  // for randomising MAC adddress of ble app - this will make the int = raw float value
+  random_seed = *(int *)&state.vbat_filtered;
+  random_seed = random_seed & 0xff;
+#endif
 
 #ifdef AUX4_START_ON
   state.aux[CH_AUX4] = 1;
