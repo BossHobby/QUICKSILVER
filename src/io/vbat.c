@@ -38,6 +38,8 @@ void vbat_init() {
 }
 
 void vbat_calc() {
+  state.cpu_temp = adc_read(ADC_CHAN_TEMP);
+
   // read acd and scale based on processor voltage
   state.ibat = adc_read(ADC_CHAN_IBAT);
   lpf(&state.ibat_filtered, state.ibat, FILTERCALC(1000, 5000e3));
