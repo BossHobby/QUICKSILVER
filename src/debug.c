@@ -92,11 +92,13 @@ cbor_result_t cbor_encode_perf_counters(cbor_value_t *enc) {
 }
 
 void debug_pin_init() {
+#if defined(DEBUG_PIN0) || defined(DEBUG_PIN1)
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
+#endif
 
 #ifdef DEBUG_PIN0
   gpio_pin_init(&gpio_init, DEBUG_PIN0);
