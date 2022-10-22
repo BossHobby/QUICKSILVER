@@ -72,25 +72,4 @@ void flysky_fast_blink_rx_led() {
   blink_rx_led(250);
 }
 
-//------------------------------------------------------------------------------
-// TODO: @hanfer is there something equivalent already in Quicksilver?
-uint32_t get_chip_id() {
-#if defined(STM32F4)
-// Chip Unique ID on F405 and F411
-// pg 1712 RM0090
-#define U_ID_0 (*(uint32_t *)0x1fff7a10)
-#define U_ID_1 (*(uint32_t *)0x1fff7a14)
-#define U_ID_2 (*(uint32_t *)0x1fff7a18)
-#elif defined(STM32F3)
-// pg 1121 RM0316
-#define U_ID_0 (*(uint32_t *)0x1ffff7ac)
-#define U_ID_1 (*(uint32_t *)0x1ffff7b0)
-#define U_ID_2 (*(uint32_t *)0x1ffff7b4)
-#else
-#error  "This needs to be implemented for this processor"
-#endif
-  return U_ID_0 ^ U_ID_1 ^ U_ID_2;
-}
-
-
 #endif

@@ -32,3 +32,5 @@ int8_t buf_equal(const uint8_t *str1, size_t len1, const uint8_t *str2, size_t l
 int8_t buf_equal_string(const uint8_t *str1, size_t len1, const char *str2);
 
 void reset_looptime();
+
+uint32_t get_chip_uid();
