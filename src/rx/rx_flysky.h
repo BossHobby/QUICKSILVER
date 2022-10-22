@@ -61,4 +61,3 @@ uint8_t flysky_afhds2a_process_packet(const uint32_t timestamp);
 bool flysky_check_bind_button(bool init);
 void flysky_update_rx_led(bool failsafe);
 void flysky_fast_blink_rx_led();
-uint32_t get_chip_id();

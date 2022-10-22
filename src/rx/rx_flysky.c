@@ -5,6 +5,7 @@
 #include "drv_time.h"
 #include "flash.h"
 #include "flight/control.h" // for state
+#include "util/util.h"
 #include <string.h>
 
 //------------------------------------------------------------------------------
@@ -302,7 +303,7 @@ void rx_flysky_afhds2a_init() {
   flysky.pkt_period = 3850;
   flysky.timeout_period = ((uint32_t)(flysky.pkt_period * 1.27) + 0.5f);
   flysky.tlm_period = flysky.pkt_period * 15;
-  flysky.rx_id = get_chip_id();
+  flysky.rx_id = get_chip_uid();
 
   static const uint8_t afhds2a_reg_table[] = {
     0xff, 0x62, 0x00, 0x25, 0x00, 0xff, 0xff, 0x00,
