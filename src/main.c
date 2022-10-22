@@ -144,41 +144,49 @@ __attribute__((__used__)) int main() {
 
   // load flash saved variables
   flash_load();
-  time_delay_us(1000);
+
+  // wait for flash to stabilze
+  time_delay_us(100);
 
   // init some hardware things
   gpio_init();
+  ledon(255); // Turn on LED during boot so that if a delay is used as part of using programming pins for other functions, the FC does not appear inactive while programming times out
+
   debug_pin_init();
   buzzer_init();
 
   usb_init();
-  ledon(255); // Turn on LED during boot so that if a delay is used as part of using programming pins for other functions, the FC does not appear inactive while programming times out
   spi_init();
 
   rx_spektrum_bind();
 
-  time_delay_us(100000);
-
-  // init the firmware things
+  // init motors and send values so escs init
   motor_init();
   motor_set_all(MOTOR_OFF);
+  motor_update();
+
+  // wait for devices to wake up
+  time_delay_ms(300);
 
   if (!sixaxis_init()) {
     // gyro not found
     failloop(FAILLOOP_GYRO);
   }
 
-  time_delay_us(300000);
+  // give adc time to settle
+  time_delay_ms(100);
 
   adc_init();
+  vbat_init();
 
   vtx_init();
   rx_init();
   rgb_init();
 
-  vbat_init();
   osd_init();
-  time_delay_us(1000);
+
+  // give the gyro some time to settle
+  time_delay_ms(100);
 
   sixaxis_gyro_cal();
 
