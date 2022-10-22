@@ -1,7 +1,5 @@
 #include "config.h"
 
-#define MatekF411RX_FS
-
 // PORTS
 #define SPI_PORTS   \
   SPI1_PA5PA6PA7    \
@@ -41,10 +39,6 @@
 #define A7105_GIO1_PIN PIN_A14    // EXTI15_10_IRQHandler
 #define RX_LED_PIN PIN_B9
 #define RX_BIND_PIN PIN_B2
-
-#ifdef SERIAL_RX
-#define RX_USART USART_PORT1
-#endif
 
 // OSD
 #define USE_MAX7456

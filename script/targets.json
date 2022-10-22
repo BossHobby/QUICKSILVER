@@ -33,7 +33,18 @@
     ]
   },
   {
-    "name": "matekf411rx",
+    "name": "matekf411rx_flysky",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
+  },
+  {
+    "name": "matekf411rx_frsky",
     "configurations": [
       {
         "name": "brushless",
