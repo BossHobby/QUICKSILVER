@@ -161,3 +161,7 @@ void reset_looptime() {
   extern uint32_t lastlooptime;
   lastlooptime = time_micros();
 }
+
+uint32_t get_chip_uid() {
+  return ((uint32_t *)UID_BASE)[0] ^ ((uint32_t *)UID_BASE)[1] ^ ((uint32_t *)UID_BASE)[1];
+}
