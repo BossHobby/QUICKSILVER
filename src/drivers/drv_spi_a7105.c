@@ -63,8 +63,7 @@ static void a7105_read_multi(uint8_t reg, uint8_t *result, uint8_t len) {
   spi_txn_submit_wait(&bus, txn);
 }
 
-void a7105_strobe(a7105_strobe_t address)
-{
+void a7105_strobe(a7105_strobe_t address) {
   // If setting RX or TX mode then we'll want to be interrupted
   // after it has completed
   if ((A7105_RX == address) || (A7105_TX == address)) {
@@ -78,36 +77,33 @@ void a7105_strobe(a7105_strobe_t address)
   spi_txn_submit_continue(&bus, txn);
 }
 
-void a7105_read_fifo(uint8_t *data, uint8_t num)
-{
+void a7105_read_fifo(uint8_t *data, uint8_t num) {
   if (data) {
-      // pg 65 "16. FIFO (First In First Out)"
-      // The fifo is 64 bytes in size, so ensure we don't exceed that limit
-      if(num > 64) {
-          num = 64;
-      }
+    // pg 65 "16. FIFO (First In First Out)"
+    // The fifo is 64 bytes in size, so ensure we don't exceed that limit
+    if (num > 64) {
+      num = 64;
+    }
 
-      // Reset read pointer and read the requested number of bytes
-      a7105_strobe(A7105_RST_RDPTR);
-      a7105_read_multi((uint8_t)A7105_05_FIFO_DATA | 0x40, data, num);
+    // Reset read pointer and read the requested number of bytes
+    a7105_strobe(A7105_RST_RDPTR);
+    a7105_read_multi((uint8_t)A7105_05_FIFO_DATA | 0x40, data, num);
   }
 }
 
-void a7105_write_fifo(const uint8_t *data, uint8_t num)
-{
+void a7105_write_fifo(const uint8_t *data, uint8_t num) {
   if (data) {
-      // pg 65 "16. FIFO (First In First Out)"
-      // The fifo is 64 bytes in size, so ensure we don't exceed that limit
-      if(num > 64) {
-          num = 64;
-      }
+    // pg 65 "16. FIFO (First In First Out)"
+    // The fifo is 64 bytes in size, so ensure we don't exceed that limit
+    if (num > 64) {
+      num = 64;
+    }
 
-      // Reset write pointer and write the requested number of bytes
-      a7105_strobe(A7105_RST_WRPTR);
-      a7105_write_multi((uint8_t)A7105_05_FIFO_DATA, data, num);
+    // Reset write pointer and write the requested number of bytes
+    a7105_strobe(A7105_RST_WRPTR);
+    a7105_write_multi((uint8_t)A7105_05_FIFO_DATA, data, num);
   }
 }
-
 
 //------------------------------------------------------------------------------
 // Initializes the target hardware for using the A7105 transceiver
@@ -150,8 +146,7 @@ static void a7105_hardware_init() {
 }
 
 //------------------------------------------------------------------------------
-void a7105_init(const uint8_t *regs, uint8_t size)
-{
+void a7105_init(const uint8_t *regs, uint8_t size) {
   a7105_hardware_init();
   exti_interrupt_disable(A7105_GIO1_PIN);
 
