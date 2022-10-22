@@ -11,6 +11,17 @@
 
 perf_counter_t perf_counters[PERF_COUNTER_MAX];
 
+static const char *perf_counter_names[PERF_COUNTER_MAX] = {
+    "PERF_COUNTER_TOTAL",
+    "PERF_COUNTER_GYRO",
+    "PERF_COUNTER_CONTROL",
+    "PERF_COUNTER_RX",
+    "PERF_COUNTER_OSD",
+    "PERF_COUNTER_MISC",
+    "PERF_COUNTER_BLACKBOX",
+    "PERF_COUNTER_DEBUG",
+};
+
 static uint32_t perf_counter_start_time[PERF_COUNTER_MAX];
 static uint32_t loop_counter = 0;
 
@@ -59,6 +70,9 @@ cbor_result_t cbor_encode_perf_counters(cbor_value_t *enc) {
 
   for (uint32_t i = 0; i < PERF_COUNTER_MAX; i++) {
     CBOR_CHECK_ERROR(res = cbor_encode_map_indefinite(enc));
+
+    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "name"));
+    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, perf_counter_names[i]));
 
     CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "min"));
     ENCODE_CYCLES(perf_counters[i].min)
