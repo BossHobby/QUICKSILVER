@@ -110,7 +110,7 @@
     #endif
     #define usbd_hw usbd_otgfs
 
-#elif defined(STM32F446xx) || defined(STM32F722xx) || defined (STM32F745xx) || defined (STM32F765xx) || defined (STM32H743xx)
+#elif defined(STM32F446xx) || defined(STM32F722xx) || defined (STM32F745xx)
     #define USBD_STM32F446FS
     #define USBD_STM32F446HS
 
@@ -158,6 +158,14 @@
     extern const struct usbd_driver usbd_devfs;
     #define usbd_hw usbd_devfs
     #endif
+
+#elif defined(STM32H743xx)
+    #define USBD_STM32H743FS
+
+    #if !defined(__ASSEMBLER__)
+    extern const struct usbd_driver usbd_otgfs;
+    #define usbd_hw usbd_otgfs
+    #endif  //__ASSEMBLER__
 
 #else
     #error Unsupported STM32 family

@@ -15,7 +15,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "stm32.h"
+#include "stm32_compat.h"
 #include "usb.h"
 
 #if defined(USBD_STM32WB55)
@@ -94,7 +94,7 @@ static uint16_t get_next_pma(uint16_t sz) {
         if ((tbl->rx.addr) && (tbl->rx.addr < _result)) _result = tbl->rx.addr;
         if ((tbl->tx.addr) && (tbl->tx.addr < _result)) _result = tbl->tx.addr;
     }
-    return (_result < (0x020 + sz)) ? 0 : (_result - sz);
+    return (_result < (unsigned)(0x020 + sz)) ? 0 : (_result - sz);
 }
 
 static uint32_t getinfo(void) {
@@ -335,7 +335,7 @@ static int32_t ep_read(uint8_t ep, void *buf, uint16_t blen) {
     }
 }
 
-static void pma_write(uint8_t *buf, uint16_t blen, pma_rec *tx) {
+static void pma_write(const uint8_t *buf, uint16_t blen, pma_rec *tx) {
     uint16_t *pma = (void*)(USB1_PMAADDR + tx->addr);
     tx->cnt = blen;
     while (blen > 1) {
@@ -346,7 +346,7 @@ static void pma_write(uint8_t *buf, uint16_t blen, pma_rec *tx) {
     if (blen) *pma = *buf;
 }
 
-static int32_t ep_write(uint8_t ep, void *buf, uint16_t blen) {
+static int32_t ep_write(uint8_t ep, const void *buf, uint16_t blen) {
     pma_table *tbl = EPT(ep);
     volatile uint16_t *reg = EPR(ep);
     switch (*reg & (USB_EPTX_STAT | USB_EP_T_FIELD | USB_EP_KIND)) {
@@ -417,8 +417,8 @@ static void evt_poll(usbd_device *dev, usbd_evt_callback callback) {
         USB->ISTR &= ~USB_ISTR_WKUP;
     } else if (_istr & USB_ISTR_SUSP) {
         _ev = usbd_evt_susp;
-        USB->CNTR |= USB_CNTR_FSUSP;
         USB->ISTR &= ~USB_ISTR_SUSP;
+        USB->CNTR |= USB_CNTR_FSUSP;
     } else if (_istr & USB_ISTR_ERR) {
         USB->ISTR &= ~USB_ISTR_ERR;
         _ev = usbd_evt_error;
