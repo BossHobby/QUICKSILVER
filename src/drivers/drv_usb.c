@@ -162,7 +162,7 @@ static const struct usb_string_descriptor *const dtable[] = {
 };
 
 static struct usb_cdc_line_coding cdc_line = {
-    .dwDTERate = 115200,
+    .dwDTERate = 921600,
     .bCharFormat = USB_CDC_1_STOP_BITS,
     .bParityType = USB_CDC_NO_PARITY,
     .bDataBits = 8,
@@ -246,7 +246,7 @@ static void cdc_rxonly(usbd_device *dev, uint8_t event, uint8_t ep) {
     return;
   }
 
-  uint8_t buf[CDC_DATA_SZ];
+  static uint8_t buf[CDC_DATA_SZ];
   const int32_t len = usbd_ep_read(dev, ep, buf, CDC_DATA_SZ);
   if (len == 0) {
     return;
@@ -260,7 +260,7 @@ static void cdc_txonly(usbd_device *dev, uint8_t event, uint8_t ep) {
     return;
   }
 
-  uint8_t buf[CDC_DATA_SZ];
+  static uint8_t buf[CDC_DATA_SZ];
 
   tx_buffer_in_use = true;
   const uint32_t len = circular_buffer_read_multi(&tx_buffer, buf, CDC_DATA_SZ);
@@ -288,8 +288,8 @@ static usbd_respond cdc_setconf(usbd_device *dev, uint8_t cfg) {
     return usbd_ack;
   case 1:
     /* configuring device */
-    usbd_ep_config(dev, CDC_RXD_EP, USB_EPTYPE_BULK | USB_EPTYPE_DBLBUF, CDC_DATA_SZ);
-    usbd_ep_config(dev, CDC_TXD_EP, USB_EPTYPE_BULK | USB_EPTYPE_DBLBUF, CDC_DATA_SZ);
+    usbd_ep_config(dev, CDC_RXD_EP, USB_EPTYPE_BULK, CDC_DATA_SZ);
+    usbd_ep_config(dev, CDC_TXD_EP, USB_EPTYPE_BULK, CDC_DATA_SZ);
     usbd_ep_config(dev, CDC_NTF_EP, USB_EPTYPE_INTERRUPT, CDC_NTF_SZ);
     usbd_reg_endpoint(dev, CDC_RXD_EP, cdc_rxonly);
     usbd_reg_endpoint(dev, CDC_TXD_EP, cdc_txonly);
@@ -385,14 +385,16 @@ void usb_serial_write(uint8_t *data, uint32_t len) {
     return;
   }
 
-  while (tx_buffer_in_use)
-    __WFI();
-
   uint32_t written = 0;
   while (written < len) {
+    while (tx_buffer_in_use)
+      __NOP();
+
     tx_buffer_in_use = true;
     written += circular_buffer_write_multi(&tx_buffer, data + written, len - written);
     tx_buffer_in_use = false;
+
+    time_delay_us(100);
   }
 }
 
