@@ -11,9 +11,10 @@
   USART2_PA3PA2
 
 // LEDS
-#define LED_NUMBER 1
+#define LED_NUMBER 2
 #define LED1PIN PIN_C13
 #define LED1_INVERT
+#define LED2PIN PIN_B9  // RX LED
 
 #define BUZZER_PIN PIN_C15
 #define BUZZER_INVERT
@@ -32,13 +33,11 @@
 // PA15 is used for SPI CSN(NSS)
 // PA14 is used as external interrupt with rising edge trigger connected to A7105
 // PB9 is used as output (push/pull, no pullup/pulldown) for RX LED
-// PB2 is used as input (no pullup/pulldown) for RX bind pushbutton
+// PB2 is used as input (pullup) for RX bind pushbutton. Not used with Quicksilver
 #define USE_A7105
 #define A7105_SPI_PORT SPI_PORT3
 #define A7105_NSS_PIN PIN_A15
 #define A7105_GIO1_PIN PIN_A14    // EXTI15_10_IRQHandler
-#define RX_LED_PIN PIN_B9
-#define RX_BIND_PIN PIN_B2
 
 // OSD
 #define USE_MAX7456

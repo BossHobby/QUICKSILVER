@@ -16,10 +16,6 @@ typedef struct {
   float expected_fps;
 
   uint8_t bound                   : 1;
-  uint8_t bind_requested          : 1;
-  uint8_t bind_pin_current_state  : 1;
-  uint8_t bind_pin_debounce_state : 1;
-  uint32_t bind_pin_time;
 
   uint32_t last_bind_time;
   uint32_t last_rx_time;
@@ -57,7 +53,3 @@ void flysky_processed_pkt(uint32_t timestamp);
 
 uint8_t flysky_afhds_process_packet(const uint32_t timestamp);
 uint8_t flysky_afhds2a_process_packet(const uint32_t timestamp);
-
-bool flysky_check_bind_button(bool init);
-void flysky_update_rx_led(bool failsafe);
-void flysky_fast_blink_rx_led();
