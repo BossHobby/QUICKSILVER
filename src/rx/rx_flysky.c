@@ -143,9 +143,6 @@ static uint8_t flysky_check_packet() {
       }
     }
   } else {
-    // Not bound, so do fast blink of RX led
-    flysky_fast_blink_rx_led();
-
     // If 1/4 of a second has passed since receiving bind packet
     if (((time_micros() - flysky.last_bind_time) > 250000) && flysky.rx_channel_map[0] != 0 && flysky.tx_id != 0) {
       result = 1;
@@ -165,23 +162,6 @@ static uint8_t flysky_check_packet() {
 static bool rx_flysky_check(void) {
   const uint32_t now = time_micros();
   bool channels_received = false;
-
-  // If not yet in normal rx mode check if bind pin was depressed
-  if ((flags.rx_mode != RXMODE_NORMAL) && flysky_check_bind_button(false)) {
-    flysky.bind_requested = true;
-  }
-
-  // If bind requested due to above button check or simply due to startup
-  if (flysky.bind_requested) {
-    flysky.bind_requested = false;
-    flysky.bound = false;
-    flysky.tx_id = 0;
-    memset(flysky.rx_channel_map, 0, sizeof(flysky.rx_channel_map));
-    const uint8_t bind_channel = (flysky.protocol == RX_PROTOCOL_FLYSKY_AFHDS2A) 
-      ? AFHDS2A_BIND_CHANNEL 
-      : AFHDS_BIND_CHANNEL;
-    a7105_write_reg(A7105_0F_CHANNEL, bind_channel);
-  }
 
   // Check if we have new packet data
   const uint8_t status = flysky_check_packet();
@@ -231,11 +211,6 @@ static bool rx_flysky_check(void) {
     }
   }
 
-  if (flysky.bound) {
-    // Set RX led to slow blink if failsafe, otherwise constant off (or constant on)
-    flysky_update_rx_led(flags.failsafe);
-  }
-
   rx_lqi_update();
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
     rx_lqi_update_from_fps(flysky.expected_fps);
@@ -247,22 +222,16 @@ static bool rx_flysky_check(void) {
 //------------------------------------------------------------------------------
 static void rx_flysky_init_common(uint8_t start_channel) {
   state.rx_status = RX_SPI_STATUS_BINDING;
-
   flysky.channel_index = 0;
 
-  // Initialize system used for checking bind button presses
-  flysky_check_bind_button(true);
-
-  // If we have previously saved bind data
+  // Do we have previously saved bind data?
   const rx_flysky_bind_data_t *bind_data = flysky_get_bind_data();
   flysky.tx_id = bind_data->tx_id;
   if (flysky.tx_id == 0) {
     flysky.bound = false;
-    flysky.bind_requested = true;
+    memset(flysky.rx_channel_map, 0, sizeof(flysky.rx_channel_map));
   } else {
     flysky.bound = true;
-    flysky.bind_requested = false;
-
     memcpy(flysky.rx_channel_map, bind_data->rx_channel_map, sizeof(flysky.rx_channel_map));
     start_channel = flysky_get_next_channel(0);
   }
