@@ -390,16 +390,15 @@ _ep_isstalled:
     lsls    r2, r0, #28
     lsrs    r2, #26
     ldr     r1, [r1, r2]
-    lsls    r1, #17
+    lsls    r1, #18
     cmp     r0, #0x80
-    bhs     .L_eis_check
+    blo     .L_eis_check
     lsls    r1, #8
 .L_eis_check:
-    lsrs    r1, r1, #28
-    subs    r1, #0x01
-    subs    r0, r1, #0x01
-    sbcs    r1, r1
-    rsbs    r0, r1, #0
+    lsrs    r0, r1, #30
+    subs    r0, #0x01
+    subs    r1, r0, #0x01
+    sbcs    r0, r0
     bx      lr
     .size  _ep_isstalled, . - _ep_isstalled
 
@@ -459,7 +458,7 @@ _ep_read:
     strh    r5, [r4, #RXCOUNT]
     eors    r0, r5          // r0 &= 0x3FF (RX count)
     ldrh    r5, [r4, #RXADDR]
-    adds    r5, r4, r5, LSL (EPT_SHIFT - 3)
+    adds    r5, r6, r5, LSL (EPT_SHIFT - 3)
     cmp     r2, r0
     blo     .L_epr_read
     mov     r2, r0          // if buffer is larger
@@ -494,7 +493,7 @@ _ep_read:
 
     .thumb_func
     .type   _ep_write, %function
-/* int32_t ep_write(uint8_t ep, void *buf, uint16_t blen)
+/* int32_t ep_write(uint8_t ep, const void *buf, uint16_t blen)
  * R0 -> endpoint
  * R1 -> *buffer
  * R2 -> data length

@@ -16,7 +16,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include "stm32.h"
+#include "stm32_compat.h"
 #include "usb.h"
 #include "usb_cdc.h"
 #include "usb_hid.h"
@@ -488,7 +488,8 @@ static void cdc_init_usbd(void) {
     #define __WFI __NOP
 #elif defined(STM32L476xx) || defined(STM32F429xx) || \
       defined(STM32F105xC) || defined(STM32F107xC) || \
-      defined(STM32F446xx) || defined(STM32F411xE)
+      defined(STM32F446xx) || defined(STM32F411xE) || \
+      defined(STM32H743xx)
     #define USB_HANDLER     OTG_FS_IRQHandler
     #define USB_NVIC_IRQ    OTG_FS_IRQn
 #elif defined(STM32F103x6)

@@ -40,7 +40,6 @@ vpath %.c $(SRCPATH)
 vpath %.S $(SRCPATH)
 vpath %.s $(SRCPATH)
 
-
 help all:
 	@echo 'Usage: make target [program]'
 	@echo 'Available targets are:'
@@ -109,6 +108,7 @@ $(DOUT).elf : $(OBJDIR) $(DOBJ) $(OBJECTS)
 	@$(LD) $(CFLAGS2) $(LDFLAGS) -Wl,--script='$(LDSCRIPT)' -Wl,-Map=$(DOUT).map $(DOBJ) $(OBJECTS) -o $@
 
 clean: $(OBJDIR)
+	$(MAKE) --version
 	@$(RM) $(DOUT).*
 	@$(RM) $(call fixpath, $(OBJDIR)/*.*)
 
@@ -285,6 +285,12 @@ stm32wb55xg: clean
 						LDSCRIPT='demo/stm32wb55xg.ld' \
 						DEFINES='STM32WB STM32WB55xx USBD_SOF_DISABLED' \
 						CFLAGS='-mcpu=cortex-m4'
+
+stm32h743xx: clean
+	@$(MAKE) demo STARTUP='$(CMSISDEV)/ST/STM32H7xx/Source/Templates/gcc/startup_stm32h743xx.s' \
+						LDSCRIPT='demo/stm32h743xx.ld' \
+						DEFINES='STM32H7 STM32H743xx USBD_VBUS_DETECT USBD_SOF_DISABLED' \
+						CFLAGS='-mcpu=cortex-m7'
 
 stm32f411xe stm32f411e-disco: clean
 	@$(MAKE) demo STARTUP='$(CMSISDEV)/ST/STM32F4xx/Source/Templates/gcc/startup_stm32f411xe.s' \
