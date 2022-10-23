@@ -34,16 +34,8 @@ void flysky_processed_pkt(uint32_t timestamp) {
 
 //------------------------------------------------------------------------------
 // Returns bind data that was previously stored into flash memory
-// Note: We use this accessor rather than direct access becasue there is still
-// an issue with the union used for this, adding our flysky structure changes
-// the size for some reason rather than being overlaid (sharing same space)
-// as other members of the union
 rx_flysky_bind_data_t *flysky_get_bind_data() {
-#if defined(FLYSKY_BIND_DATA)
   return &bind_storage.flysky;
-#else
-  return (rx_flysky_bind_data_t *)&bind_storage.raw;
-#endif
 }
 
 //------------------------------------------------------------------------------
