@@ -1,5 +1,4 @@
-#include "drv_spi.h"
-
+#include "drv_spi_soft.h"
 #include "drv_time.h"
 #include "project.h"
 

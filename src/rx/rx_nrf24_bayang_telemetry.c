@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-#include "drv_spi.h"
+#include "drv_spi_soft.h"
 #include "drv_spi_xn297.h"
 #include "drv_time.h"
 #include "failloop.h"
@@ -142,7 +142,7 @@ char lasttrim[4];
 char rfchannel[4];
 int rxaddress[5];
 int rf_chan = 0;
-int bind_safety = 0;
+uint16_t bind_safety = 0;
 int rxdata[17 + 2 * crc_en];
 
 void rx_protocol_init() {
@@ -365,7 +365,7 @@ int packet_period = PACKET_PERIOD;
 uint8_t rxaddr[5];
 int packets = 0;
 
-bool rx_check() {
+bool rx_bayang_check() {
   bool channels_received = false;
 
   int packetreceived = checkpacket();
@@ -377,7 +377,7 @@ bool rx_check() {
       if (nrf24_read_xn297_payload(rxdata, 15 + 2 * crc_en))
         ;
       else
-        return;
+        return channels_received;
 
       if (rxdata[0] == 0xa4 || rxdata[0] == 0xa3) { // bind packet
         if (rxdata[0] == 0xa3) {

@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-#include "drv_spi.h"
+#include "drv_spi_soft.h"
 #include "drv_spi_xn297.h"
 #include "drv_time.h"
 #include "failloop.h"
@@ -35,7 +35,7 @@ char lasttrim[4];
 int rx_bind_load = 0;
 
 int rf_chan = 0;
-int bind_safety = 0;
+uint16_t bind_safety = 0;
 
 uint32_t autobindtime = 0;
 int autobind_inhibit = 0;
@@ -361,7 +361,7 @@ uint32_t skipchannel = 0;
 int lastrxchan;
 int timingfail = 0;
 
-bool rx_check() {
+bool rx_bayang_check() {
   bool channels_received = false;
 
   int packetreceived = checkpacket();
