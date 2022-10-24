@@ -201,12 +201,17 @@ void rx_init() {
   case RX_PROTOCOL_IBUS:
   case RX_PROTOCOL_FPORT:
   case RX_PROTOCOL_DSM:
+#ifdef SERIAL_RX
     rx_serial_init();
+#endif    
     break;
 
   case RX_PROTOCOL_NRF24_BAYANG_TELEMETRY:
   case RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON:
   case RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND:
+#if defined(RX_NRF24_BAYANG_TELEMETRY) || defined(RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON) || defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND)
+    rx_protocol_init();
+#endif    
     break;
 
   case RX_PROTOCOL_FRSKY_D8:
@@ -277,12 +282,20 @@ bool rx_check() {
   case RX_PROTOCOL_IBUS:
   case RX_PROTOCOL_FPORT:
   case RX_PROTOCOL_DSM:
+#ifdef SERIAL_RX
     return rx_serial_check();
+#else
+    return false;    
+#endif    
 
   case RX_PROTOCOL_NRF24_BAYANG_TELEMETRY:
   case RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON:
   case RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND:
-    return false;
+#if defined(RX_NRF24_BAYANG_TELEMETRY) || defined(RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON) || defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND)
+    return rx_bayang_check();
+#else
+    return false;    
+#endif
 
   case RX_PROTOCOL_FRSKY_D8:
 #ifdef RX_FRSKY
