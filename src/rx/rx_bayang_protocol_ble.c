@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-#include "drv_spi.h"
+#include "drv_spi_soft.h"
 #include "drv_spi_xn297.h"
 #include "drv_time.h"
 #include "failloop.h"
@@ -22,7 +22,7 @@
 char rfchannel[4];
 int rxaddress[5];
 int rf_chan = 0;
-int bind_safety = 0;
+uint16_t bind_safety = 0;
 
 void bleinit();
 
@@ -185,7 +185,7 @@ const uint8_t xn297_scramble_rev[] = {
 
 // whitening sequence for adv channel 37 (rf chan 2402)
 // for speed
-const uint8 ble_whiten_37[] = {
+const uint8_t ble_whiten_37[] = {
     0x8D, 0xd2, 0x57, 0xa1, 0x3d, 0xa7, 0x66, 0xb0,
     0x75, 0x31, 0x11, 0x48, 0x96, 0x77, 0xf8, 0xe3,
     0x46, 0xe9, 0xab, 0xd0, 0x9e, 0x53, 0x33, 0xd8,
@@ -571,7 +571,7 @@ int timingfail = 0;
 // how many times to hop ahead if no reception
 #define HOPPING_NUMBER 4
 
-bool rx_check() {
+bool rx_bayang_check() {
   bool channels_received = false;
 
   int packetreceived = checkpacket();

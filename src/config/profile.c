@@ -415,6 +415,12 @@ const profile_t default_profile = {
         .protocol = RX_PROTOCOL_REDPINE,
 #elif defined(RX_FLYSKY)
         .protocol = RX_PROTOCOL_FLYSKY_AFHDS2A,
+#elif defined(RX_NRF24_BAYANG_TELEMETRY)        
+        .protocol = RX_PROTOCOL_NRF24_BAYANG_TELEMETRY,
+#elif defined(RX_BAYANG_PROTOCOL_BLE_BEACON)        
+        .protocol = RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON,
+#elif defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND)        
+        .protocol = RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND,
 #else
         .protocol = RX_PROTOCOL_UNIFIED_SERIAL,
 #endif
@@ -511,6 +517,16 @@ target_info_t target_info = {
     ,
     .rx_protocols = {
         RX_PROTOCOL_UNIFIED_SERIAL,
+
+#if defined(RX_NRF24_BAYANG_TELEMETRY)        
+        RX_PROTOCOL_NRF24_BAYANG_TELEMETRY,
+#endif
+#if defined(RX_BAYANG_PROTOCOL_BLE_BEACON)        
+        RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON,
+#endif        
+#if defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND)        
+        RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND,
+#endif
 
 #if defined(RX_FRSKY)
         RX_PROTOCOL_FRSKY_D8,
