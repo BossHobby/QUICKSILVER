@@ -291,7 +291,7 @@ crsf_do_more:
     if (!circular_buffer_read(&rx_ring, &frame_length)) {
       break;
     }
-    if (frame_length <= 64) {
+    if (frame_length > 0 && frame_length <= 64) {
       parser_state = CRSF_PAYLOAD;
       goto crsf_do_more;
     }
