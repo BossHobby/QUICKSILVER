@@ -482,6 +482,11 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 }
 
 msp_status_t msp_process_serial(msp_t *msp, uint8_t data) {
+  if (msp->buffer_offset >= msp->buffer_size) {
+    msp->buffer_offset = 0;
+    return MSP_ERROR;
+  }
+
   msp->buffer[msp->buffer_offset] = data;
   msp->buffer_offset++;
 
