@@ -178,6 +178,8 @@ static uint16_t telemetry_interval() {
   return 5;
 }
 
+static bool tlm_device_info_pending = false;
+
 static bool rx_serial_crsf_process_frame(uint8_t frame_length) {
   bool channels_received = false;
 
@@ -243,9 +245,15 @@ static bool rx_serial_crsf_process_frame(uint8_t frame_length) {
     break;
   }
 
+  case CRSF_FRAMETYPE_MSP_WRITE:
   case CRSF_FRAMETYPE_MSP_REQ: {
     msp_origin = rx_data[2];
     msp_process_telemetry(&msp, rx_data + 3, frame_length - 4);
+    break;
+  }
+
+  case CRSF_FRAMETYPE_DEVICE_PING: {
+    tlm_device_info_pending = true;
     break;
   }
 
@@ -272,15 +280,15 @@ bool rx_serial_process_crsf() {
   bool channels_received = false;
 
   static uint8_t frame_length = 0;
+  static uint8_t magic = 0;
 
 crsf_do_more:
   switch (parser_state) {
   case CRSF_CHECK_MAGIC: {
-    uint8_t magic = 0;
     if (!circular_buffer_read(&rx_ring, &magic)) {
       break;
     }
-    if (magic != 0xC8) {
+    if (magic != CRSF_ADDRESS_FLIGHT_CONTROLLER) {
       goto crsf_do_more;
     }
     parser_state = CRSF_FRAME_LENGTH;
@@ -388,7 +396,12 @@ void rx_serial_send_crsf_telemetry() {
 
     payload_size = crsf_tlm_frame_msp_resp(telemetry_packet, msp_origin, payload, msp_size + header_size);
   } else {
-    payload_size = crsf_tlm_frame_battery_sensor(telemetry_packet);
+    if (tlm_device_info_pending) {
+      payload_size = crsf_tlm_frame_device_info(telemetry_packet);
+      tlm_device_info_pending = false;
+    } else {
+      payload_size = crsf_tlm_frame_battery_sensor(telemetry_packet);
+    }
     frame_status = FRAME_DONE;
   }
 
