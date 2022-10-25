@@ -302,22 +302,24 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   }
 
   case MSP_SET_VTX_CONFIG: {
+    vtx_settings_t *settings = msp->is_vtx ? &msp_vtx_settings : &vtx_settings;
+
     uint16_t remaining = size;
 
     uint16_t freq = (payload[1] << 8) | payload[0];
     remaining -= 2;
     if (freq < VTX_BAND_MAX * VTX_CHANNEL_MAX) {
-      msp_vtx_settings.band = freq / VTX_CHANNEL_MAX;
-      msp_vtx_settings.channel = freq % VTX_CHANNEL_MAX;
+      settings->band = freq / VTX_CHANNEL_MAX;
+      settings->channel = freq % VTX_CHANNEL_MAX;
     } else {
       int8_t channel_index = vtx_find_frequency_index(freq);
-      msp_vtx_settings.band = channel_index / VTX_CHANNEL_MAX;
-      msp_vtx_settings.channel = channel_index % VTX_CHANNEL_MAX;
+      settings->band = channel_index / VTX_CHANNEL_MAX;
+      settings->channel = channel_index % VTX_CHANNEL_MAX;
     }
 
     if (remaining >= 2) {
-      msp_vtx_settings.power_level = payload[2] - 1;
-      msp_vtx_settings.pit_mode = payload[3];
+      settings->power_level = payload[2] - 1;
+      settings->pit_mode = payload[3];
       remaining -= 2;
     }
 
@@ -332,8 +334,8 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     }
 
     if (remaining >= 4) {
-      msp_vtx_settings.band = payload[7] - 1;
-      msp_vtx_settings.channel = payload[8] - 1;
+      settings->band = payload[7] - 1;
+      settings->channel = payload[8] - 1;
       //  payload[9], payload[10]  freq, unused
       remaining -= 4;
     }
@@ -341,13 +343,13 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     if (remaining >= 4) {
       // payload[11], band count, unused
       // payload[12], channel count, unused
-      msp_vtx_settings.power_table.levels = payload[13];
+      settings->power_table.levels = payload[13];
 
       if (payload[14]) {
         // clear tables
         for (uint32_t i = 0; i < VTX_POWER_LEVEL_MAX; i++) {
-          msp_vtx_settings.power_table.values[i] = 0;
-          memset(msp_vtx_settings.power_table.labels[i], 0, 3);
+          settings->power_table.values[i] = 0;
+          memset(settings->power_table.labels[i], 0, 3);
         }
       }
 

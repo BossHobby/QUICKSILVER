@@ -153,6 +153,7 @@ void usb_configurator() {
         .buffer_size = USB_BUFFER_SIZE,
         .buffer_offset = 1,
         .send = usb_msp_send,
+        .is_vtx = false,
     };
 
     while (true) {

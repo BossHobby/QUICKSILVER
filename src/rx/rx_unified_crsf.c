@@ -72,6 +72,7 @@ static msp_t msp = {
     .buffer_size = MSP_BUFFER_SIZE,
     .buffer_offset = 0,
     .send = rx_serial_crsf_msp_send,
+    .is_vtx = false,
 };
 
 static uint8_t msp_tx_buffer[MSP_BUFFER_SIZE];
