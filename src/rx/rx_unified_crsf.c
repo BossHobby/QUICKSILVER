@@ -63,18 +63,6 @@ extern circular_buffer_t rx_ring;
 static crsft_parser_state_t parser_state = CRSF_CHECK_MAGIC;
 
 static uint8_t crsf_rf_mode = 0;
-static uint16_t crsf_rf_mode_fps[] = {
-    4,    // RATE_LORA_4HZ
-    25,   // RATE_LORA_25HZ
-    50,   // RATE_LORA_50HZ
-    100,  // RATE_LORA_100HZ
-    150,  // RATE_LORA_150HZ
-    200,  // RATE_LORA_200HZ
-    250,  // RATE_LORA_250HZ
-    500,  // RATE_LORA_500HZ
-    500,  // RATE_FLRC_500HZ
-    1000, // RATE_FLRC_1000HZ
-};
 
 void rx_serial_crsf_msp_send(msp_magic_t magic, uint8_t direction, uint16_t code, const uint8_t *data, uint16_t len);
 
@@ -96,7 +84,37 @@ static bool msp_is_error = false;
 #define USART usart_port_defs[serial_rx_port]
 
 float rx_serial_crsf_expected_fps() {
-  return crsf_rf_mode_fps[crsf_rf_mode];
+  switch (crsf_rf_mode) {
+  case RATE_FLRC_1000HZ:
+    return 1000;
+  case RATE_FLRC_500HZ:
+    return 500;
+  case RATE_DVDA_500HZ:
+    return 500;
+  case RATE_DVDA_250HZ:
+    return 250;
+  case RATE_LORA_500HZ:
+    return 500;
+  case RATE_LORA_333HZ_8CH:
+    return 333;
+  case RATE_LORA_250HZ:
+    return 250;
+  case RATE_LORA_200HZ:
+    return 200;
+  case RATE_LORA_150HZ:
+    return 150;
+  case RATE_LORA_100HZ:
+    return 100;
+  case RATE_LORA_100HZ_8CH:
+    return 100;
+  case RATE_LORA_50HZ:
+    return 50;
+  case RATE_LORA_25HZ:
+    return 25;
+  case RATE_LORA_4HZ:
+    return 4;
+  }
+  return 1;
 }
 
 uint16_t rx_serial_crsf_smoothing_cutoff() {
