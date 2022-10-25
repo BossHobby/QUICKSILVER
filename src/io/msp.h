@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #define MSP_API_VERSION 1 // out message
@@ -87,6 +88,8 @@ typedef struct {
   uint32_t buffer_offset;
 
   msp_send_fn_t send;
+
+  bool is_vtx;
 } msp_t;
 
 msp_status_t msp_process_serial(msp_t *msp, uint8_t data);

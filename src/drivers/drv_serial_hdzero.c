@@ -109,6 +109,7 @@ msp_t hdzero_msp = {
     .buffer_size = 128,
     .buffer_offset = 0,
     .send = hdzero_msp_send,
+    .is_vtx = true,
 };
 
 static void hdzero_push_msp(const uint8_t code, const uint8_t *data, const uint8_t size) {
