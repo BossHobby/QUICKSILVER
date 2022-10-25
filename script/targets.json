@@ -670,5 +670,16 @@
         }
       }
     ]
+  },
+  {
+    "name": "jhef411",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
   }
 ]
