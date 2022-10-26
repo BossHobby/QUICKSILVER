@@ -9,9 +9,11 @@
 #include "drv_time.h"
 #include "flash.h"
 #include "flight/control.h"
+#include "io/msp.h"
 #include "io/usb_configurator.h"
 #include "project.h"
 #include "rx_crsf.h"
+#include "util/util.h"
 
 #if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
 
@@ -19,9 +21,7 @@
 #define ELRS_CRC16_POLY 0x3D65 // 0x9eb2
 
 #define MSP_SET_RX_CONFIG 45
-#define MSP_VTX_CONFIG 88     // out message         Get vtx settings - betaflight
-#define MSP_SET_VTX_CONFIG 89 // in message          Set vtx settings - betaflight
-#define MSP_EEPROM_WRITE 250  // in message          no param
+#define MSP_BUFFER_SIZE 128
 
 // ELRS specific opcodes
 #define MSP_ELRS_RF_MODE 0x06
@@ -120,6 +120,13 @@ static bool tlm_burst_valid = false;
 static uint8_t tlm_buffer[CRSF_FRAME_SIZE_MAX];
 static bool tlm_device_info_pending = false;
 static uint8_t tlm_denom = 1;
+
+static uint8_t msp_tx_buffer[MSP_BUFFER_SIZE];
+static uint32_t msp_tx_len = 0;
+static uint8_t msp_last_cmd = 0;
+static uint8_t msp_origin = 0;
+static bool msp_new_data = false;
+static bool msp_is_error = false;
 
 static uint32_t elrs_get_uid_mac_seed() {
   return ((uint32_t)UID[2] << 24) + ((uint32_t)UID[3] << 16) +
@@ -243,19 +250,58 @@ static void elrs_update_telemetry() {
   }
 
   if (!elrs_tlm_sender_active()) {
-    if (tlm_device_info_pending) {
-      crsf_tlm_frame_start(tlm_buffer);
-      const uint32_t payload_size = crsf_tlm_frame_device_info(tlm_buffer);
-      const uint32_t full_size = crsf_tlm_frame_finish(tlm_buffer, payload_size);
-      elrs_tlm_sender_set_data(ELRS_TELEMETRY_BYTES_PER_CALL, tlm_buffer, full_size);
+    crsf_tlm_frame_start(tlm_buffer);
 
-      tlm_device_info_pending = false;
+    uint32_t payload_size = 0;
+    if (msp_new_data) {
+      static uint8_t msp_seq = 0;
+      static uint16_t msp_tx_sent = 0;
+
+      uint8_t payload[CRSF_MSP_PAYLOAD_SIZE_MAX];
+
+      uint8_t header_size = 0;
+      if (msp_tx_sent == 0) { // first chunk
+        payload[header_size++] = MSP_STATUS_START_MASK | (msp_seq++ & MSP_STATUS_SEQUENCE_MASK) | (1 << MSP_STATUS_VERSION_SHIFT);
+        if (msp_is_error) {
+          payload[0] |= MSP_STATUS_ERROR_MASK;
+        }
+
+        if (msp_tx_len > 0xFF) {
+          payload[header_size++] = 0xFF;
+          payload[header_size++] = msp_last_cmd;
+          payload[header_size++] = (msp_tx_len >> 0) & 0xFF;
+          payload[header_size++] = (msp_tx_len >> 8) & 0xFF;
+        } else {
+          payload[header_size++] = msp_tx_len;
+          payload[header_size++] = msp_last_cmd;
+        }
+
+      } else {
+        payload[header_size++] = (msp_seq++ & MSP_STATUS_SEQUENCE_MASK) | (1 << MSP_STATUS_VERSION_SHIFT);
+      }
+
+      const uint8_t msp_size = min(CRSF_MSP_PAYLOAD_SIZE_MAX - header_size, msp_tx_len - msp_tx_sent);
+      memcpy(payload + header_size, msp_tx_buffer + msp_tx_sent, msp_size);
+      msp_tx_sent += msp_size;
+
+      if (msp_tx_sent >= msp_tx_len) {
+        msp_tx_len = 0;
+        msp_tx_sent = 0;
+        msp_new_data = false;
+      }
+
+      payload_size = crsf_tlm_frame_msp_resp(tlm_buffer, msp_origin, payload, msp_size + header_size);
     } else {
-      crsf_tlm_frame_start(tlm_buffer);
-      const uint32_t payload_size = crsf_tlm_frame_battery_sensor(tlm_buffer);
-      const uint32_t full_size = crsf_tlm_frame_finish(tlm_buffer, payload_size);
-      elrs_tlm_sender_set_data(ELRS_TELEMETRY_BYTES_PER_CALL, tlm_buffer, full_size);
+      if (tlm_device_info_pending) {
+        payload_size = crsf_tlm_frame_device_info(tlm_buffer);
+        tlm_device_info_pending = false;
+      } else {
+        payload_size = crsf_tlm_frame_battery_sensor(tlm_buffer);
+      }
     }
+
+    const uint32_t full_size = crsf_tlm_frame_finish(tlm_buffer, payload_size);
+    elrs_tlm_sender_set_data(ELRS_TELEMETRY_BYTES_PER_CALL, tlm_buffer, full_size);
   }
 
   elrs_update_telemetry_burst();
@@ -534,13 +580,42 @@ static bool elrs_unpack_switches_wide(const volatile uint8_t *packet) {
   return telemetry_status;
 }
 
-static void elrs_msp_process(uint8_t *buf) {
+static void elrs_msp_send(msp_magic_t magic, uint8_t direction, uint16_t code, const uint8_t *data, uint16_t len) {
+  msp_last_cmd = code;
+
+  if (len > 0 && data) {
+    memcpy(msp_tx_buffer, data, len);
+  }
+  msp_tx_len = len;
+
+  msp_is_error = direction == '!';
+  msp_new_data = true;
+}
+
+static void elrs_msp_process(uint8_t *buf, uint32_t len) {
+  static uint8_t msp_rx_buffer[MSP_BUFFER_SIZE];
+  static msp_t msp = {
+      .buffer = msp_rx_buffer,
+      .buffer_size = MSP_BUFFER_SIZE,
+      .buffer_offset = 0,
+      .send = elrs_msp_send,
+      .is_vtx = false,
+  };
+
+  if (buf[7] == MSP_SET_RX_CONFIG && buf[8] == MSP_ELRS_MODEL_ID) {
+    bind_storage.elrs.model_id = buf[9] ^ 0xFF;
+    return;
+  }
+
   switch (buf[2]) {
   case CRSF_FRAMETYPE_DEVICE_PING:
     tlm_device_info_pending = true;
     break;
 
-  default:
+  case CRSF_FRAMETYPE_MSP_WRITE:
+  case CRSF_FRAMETYPE_MSP_REQ:
+    msp_origin = buf[4];
+    msp_process_telemetry(&msp, buf + 5, len - 3);
     break;
   }
 }
@@ -670,12 +745,9 @@ static bool elrs_process_packet(uint32_t packet_time) {
       next_tlm_type = TELEMETRY_TYPE_LINK;
     }
 
-    if (elrs_msp_finished_data()) {
-      if (msp_buffer[7] == MSP_SET_RX_CONFIG && msp_buffer[8] == MSP_ELRS_MODEL_ID) {
-        bind_storage.elrs.model_id = msp_buffer[9] ^ 0xFF;
-      } else {
-        elrs_msp_process(msp_buffer);
-      }
+    uint32_t msp_buffer_len = 0;
+    if (elrs_msp_finished_data(&msp_buffer_len)) {
+      elrs_msp_process(msp_buffer, msp_buffer_len);
       elrs_msp_restart();
     }
 

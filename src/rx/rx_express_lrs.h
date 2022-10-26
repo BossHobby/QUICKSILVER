@@ -202,7 +202,7 @@ void elrs_lq_reset();
 bool elrs_get_msp_confirm();
 void elrs_setup_msp(const uint8_t max_length, uint8_t *buffer, const uint8_t bytes_per_call);
 void elrs_receive_msp(const uint8_t package_index, const volatile uint8_t *data);
-bool elrs_msp_finished_data();
+bool elrs_msp_finished_data(uint32_t *size);
 void elrs_msp_restart();
 
 void elrs_tlm_sender_reset();
