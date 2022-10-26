@@ -37,8 +37,12 @@ bool elrs_get_msp_confirm() {
   return msp_confirm;
 }
 
-bool elrs_msp_finished_data() {
-  return finished_data;
+bool elrs_msp_finished_data(uint32_t *size) {
+  if (finished_data) {
+    *size = current_offset;
+    return true;
+  }
+  return false;
 }
 
 void elrs_msp_restart() {
