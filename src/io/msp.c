@@ -318,7 +318,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     }
 
     if (remaining >= 2) {
-      settings->power_level = payload[2] - 1;
+      settings->power_level = max(payload[2], 1) - 1;
       settings->pit_mode = payload[3];
       remaining -= 2;
     }
