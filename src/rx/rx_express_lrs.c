@@ -740,14 +740,13 @@ static bool elrs_process_packet(uint32_t packet_time) {
     }
 
     const bool confirm = elrs_get_msp_confirm();
-    elrs_receive_msp(packet[1], packet + 2);
+    elrs_receive_msp(packet[1], packet + 2, 5);
     if (confirm != elrs_get_msp_confirm()) {
       next_tlm_type = TELEMETRY_TYPE_LINK;
     }
 
-    uint32_t msp_buffer_len = 0;
-    if (elrs_msp_finished_data(&msp_buffer_len)) {
-      elrs_msp_process(msp_buffer, msp_buffer_len);
+    if (elrs_msp_finished_data()) {
+      elrs_msp_process(msp_buffer, msp_buffer[1]);
       elrs_msp_restart();
     }
 
@@ -798,7 +797,7 @@ void rx_expresslrs_init() {
   elrs_lq_reset();
   elrs_lpf_init(&rssi_lpf, 5);
   elrs_tlm_sender_reset();
-  elrs_setup_msp(ELRS_MSP_BUFFER_SIZE, msp_buffer, ELRS_MSP_BYTES_PER_CALL);
+  elrs_setup_msp(ELRS_MSP_BUFFER_SIZE, msp_buffer);
 
   crc_initializer = ((UID[4] << 8) | UID[5]) ^ ELRS_OTA_VERSION_ID;
   rf_mode_cycle_multiplier = 1;
