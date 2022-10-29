@@ -393,8 +393,6 @@ void usb_serial_write(uint8_t *data, uint32_t len) {
     tx_buffer_in_use = true;
     written += circular_buffer_write_multi(&tx_buffer, data + written, len - written);
     tx_buffer_in_use = false;
-
-    time_delay_us(100);
   }
 }
 
