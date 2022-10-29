@@ -233,6 +233,10 @@ void handle_usart_invert(usart_ports_t port, bool invert) {
 }
 
 void serial_port_init(usart_ports_t port, LL_USART_InitTypeDef *usart_init, bool half_duplex, bool invert) {
+  if (port == USART_PORT_INVALID) {
+    return;
+  }
+
   serial_ports[port] = NULL;
 
   LL_USART_Disable(USART.channel);
@@ -276,6 +280,10 @@ void serial_port_init(usart_ports_t port, LL_USART_InitTypeDef *usart_init, bool
 }
 
 void serial_init(serial_port_t *serial, usart_ports_t port, uint32_t baudrate, uint8_t stop_bits, bool half_duplex) {
+  if (port == USART_PORT_INVALID) {
+    return;
+  }
+
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;

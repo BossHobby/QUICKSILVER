@@ -25,6 +25,10 @@ void serial_rx_init(rx_serial_protocol_t proto) {
 
   serial_rx_port = profile.serial.rx;
 
+  if (serial_rx_port == USART_PORT_INVALID) {
+    return;
+  }
+
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
