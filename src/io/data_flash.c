@@ -396,7 +396,7 @@ void data_flash_read_backbox(const uint32_t file_index, const uint32_t offset, u
     if (sdcard_read_pages(buffer, sector_offset, sectors)) {
       break;
     }
-    __WFI();
+    __NOP();
   }
 #endif
 }
