@@ -219,6 +219,10 @@ void rx_serial_init() {
 }
 
 bool rx_serial_check() {
+  if (profile.serial.rx == USART_PORT_INVALID) {
+    return false;
+  }
+
   if (serial_rx_port != USART_PORT_INVALID && serial_rx_port != profile.serial.rx) {
     return false;
   }
@@ -378,4 +382,4 @@ void rx_serial_find_protocol() {
   }
 }
 
-#endif  // #ifdef SERIAL_RX
+#endif // #ifdef SERIAL_RX
