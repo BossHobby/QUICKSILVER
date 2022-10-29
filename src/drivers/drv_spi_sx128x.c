@@ -131,7 +131,7 @@ void sx128x_wait() {
       continue;
     }
     spi_txn_continue(&bus);
-    __WFI();
+    __NOP();
   }
 }
 

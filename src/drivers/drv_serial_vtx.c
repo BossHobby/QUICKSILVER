@@ -35,7 +35,7 @@ bool serial_vtx_wait_for_ready() {
     if ((time_millis() - start) > 100) {
       return false;
     }
-    __WFI();
+    __NOP();
   }
   return true;
 }

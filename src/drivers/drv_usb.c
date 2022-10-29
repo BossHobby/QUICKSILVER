@@ -375,7 +375,7 @@ uint8_t usb_serial_read_byte() {
   uint8_t byte = 0;
   for (uint32_t timeout = 1000; usb_serial_read(&byte, 1) != 1 && timeout; --timeout) {
     time_delay_us(10);
-    __WFI();
+    __NOP();
   }
   return byte;
 }

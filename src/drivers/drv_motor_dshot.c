@@ -326,7 +326,7 @@ void motor_wait_for_ready() {
 #else
   while (dshot_dma_phase != 0)
 #endif
-    __WFI();
+    __NOP();
 }
 
 void motor_write(float *values) {
