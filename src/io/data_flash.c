@@ -7,6 +7,7 @@
 #include "drv_time.h"
 #include "io/usb_configurator.h"
 #include "util/cbor_helper.h"
+#include "util/circular_buffer.h"
 #include "util/util.h"
 
 #ifdef ENABLE_BLACKBOX
@@ -28,6 +29,7 @@ typedef enum {
   STATE_IDLE,
 
   STATE_START_WRITE,
+  STATE_FILL_WRITE_BUFFER,
   STATE_CONTINUE_WRITE,
   STATE_FINISH_WRITE,
 
@@ -40,10 +42,15 @@ typedef enum {
 data_flash_bounds_t bounds;
 data_flash_header_t data_flash_header;
 
+static uint8_t encode_buffer_data[BUFFER_SIZE];
+static circular_buffer_t encode_buffer = {
+    .buffer = encode_buffer_data,
+    .head = 0,
+    .tail = 0,
+    .size = BUFFER_SIZE,
+};
+static uint8_t write_buffer[PAGE_SIZE];
 static data_flash_state_t state = STATE_DETECT;
-static uint8_t write_buffer[BUFFER_SIZE];
-static int32_t write_offset = 0;
-static int32_t written_offset = 0;
 static uint8_t should_flush = 0;
 
 #define MEMBER CBOR_ENCODE_MEMBER
@@ -88,8 +95,9 @@ static data_flash_file_t *current_file() {
 
 data_flash_result_t data_flash_update() {
   static uint32_t offset = 0;
+  static uint32_t write_size = PAGE_SIZE;
 
-  const uint32_t to_write = write_offset >= written_offset ? (write_offset - written_offset) : (BUFFER_SIZE + write_offset - written_offset);
+  const uint32_t to_write = circular_buffer_available(&encode_buffer);
 
 #ifdef USE_SDCARD
   sdcard_status_t sdcard_status = sdcard_update();
@@ -101,6 +109,7 @@ data_flash_result_t data_flash_update() {
     }
   }
 
+sdcard_do_more:
   switch (state) {
   case STATE_DETECT: {
     state = STATE_READ_HEADER;
@@ -121,6 +130,7 @@ data_flash_result_t data_flash_update() {
       }
 
       state = STATE_IDLE;
+      goto sdcard_do_more;
     }
     break;
   }
@@ -128,51 +138,57 @@ data_flash_result_t data_flash_update() {
   case STATE_IDLE:
     if (to_write >= PAGE_SIZE) {
       state = STATE_START_WRITE;
-      break;
+      goto sdcard_do_more;
     }
     if (should_flush == 1 && to_write > 0) {
       state = STATE_START_WRITE;
-      break;
+      goto sdcard_do_more;
     }
     if (should_flush == 1) {
       state = STATE_ERASE_HEADER;
       should_flush = 0;
-      break;
+      goto sdcard_do_more;
     }
     break;
 
   case STATE_START_WRITE: {
     offset = FILES_SECTOR_OFFSET + current_file()->start_page + (current_file()->size / PAGE_SIZE);
     if (sdcard_write_pages_start(offset, FLUSH_INTERVAL)) {
-      state = STATE_CONTINUE_WRITE;
+      state = STATE_FILL_WRITE_BUFFER;
     }
     break;
   }
 
-  case STATE_CONTINUE_WRITE: {
-    uint32_t write_size = PAGE_SIZE;
+  case STATE_FILL_WRITE_BUFFER: {
+    write_size = PAGE_SIZE;
     if (to_write < PAGE_SIZE) {
       if (should_flush == 0) {
         break;
       }
       if (to_write == 0) {
         state = STATE_FINISH_WRITE;
-        break;
+        goto sdcard_do_more;
       }
 
       write_size = to_write;
     }
 
-    static uint32_t counter = 0;
+    circular_buffer_read_multi(&encode_buffer, write_buffer, write_size);
+    state = STATE_CONTINUE_WRITE;
+    break;
+  }
 
-    if (sdcard_write_pages_continue(write_buffer + written_offset)) {
-      written_offset = (written_offset + write_size) % BUFFER_SIZE;
+  case STATE_CONTINUE_WRITE: {
+    static uint32_t counter = 0;
+    if (sdcard_write_pages_continue(write_buffer)) {
       current_file()->size += write_size;
 
       counter++;
       if (counter == FLUSH_INTERVAL) {
         counter = 0;
         state = STATE_FINISH_WRITE;
+      } else {
+        state = STATE_FILL_WRITE_BUFFER;
       }
     }
     break;
@@ -181,6 +197,7 @@ data_flash_result_t data_flash_update() {
   case STATE_FINISH_WRITE: {
     if (sdcard_write_pages_finish()) {
       state = STATE_IDLE;
+      goto sdcard_do_more;
     }
     break;
   }
@@ -250,12 +267,12 @@ data_flash_result_t data_flash_update() {
       state = STATE_IDLE;
       break;
     }
-    state = STATE_CONTINUE_WRITE;
+    state = STATE_FILL_WRITE_BUFFER;
     break;
   }
 
-  case STATE_CONTINUE_WRITE: {
-    uint32_t write_size = PAGE_SIZE;
+  case STATE_FILL_WRITE_BUFFER: {
+    write_size = PAGE_SIZE;
     if (to_write < PAGE_SIZE) {
       if (should_flush == 0) {
         break;
@@ -268,14 +285,17 @@ data_flash_result_t data_flash_update() {
       write_size = to_write;
     }
 
-    if (!m25p16_page_program(offset, write_buffer + written_offset, PAGE_SIZE)) {
+    circular_buffer_read_multi(&encode_buffer, write_buffer, write_size);
+    state = STATE_CONTINUE_WRITE;
+    break;
+  }
+
+  case STATE_CONTINUE_WRITE: {
+    if (!m25p16_page_program(offset, write_buffer, PAGE_SIZE)) {
       break;
     }
-    written_offset = (written_offset + write_size) % BUFFER_SIZE;
     current_file()->size += write_size;
-
     state = STATE_FINISH_WRITE;
-
     return DATA_FLASH_WRITE;
   }
 
@@ -365,8 +385,7 @@ void data_flash_restart(uint32_t blackbox_rate, uint32_t looptime) {
 
   state = STATE_ERASE_HEADER;
 
-  write_offset = 0;
-  written_offset = 0;
+  circular_buffer_clear(&encode_buffer);
 }
 
 void data_flash_finish() {
@@ -413,11 +432,11 @@ cbor_result_t data_flash_write_backbox(const blackbox_t *b) {
   }
 
   const uint32_t len = cbor_encoder_len(&enc);
-  for (uint32_t i = 0; i < len; i++) {
-    write_buffer[write_offset] = buffer[i];
-    write_offset = (write_offset + 1) % BUFFER_SIZE;
+  if (len >= circular_buffer_free(&encode_buffer)) {
+    return res;
   }
 
+  circular_buffer_write_multi(&encode_buffer, buffer, len);
   return res;
 }
 
