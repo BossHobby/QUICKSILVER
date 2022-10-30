@@ -125,8 +125,9 @@ vtx_update_result_t serial_msp_vtx_update() {
   }
 
   if (request_ready) {
-    serial_vtx_send_data(vtx_frame, vtx_frame_length);
-    request_ready = false;
+    if (serial_vtx_send_data(vtx_frame, vtx_frame_length)) {
+      request_ready = false;
+    }
     return VTX_WAIT;
   }
 

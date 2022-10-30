@@ -143,12 +143,14 @@ vtx_update_result_t serial_tramp_update() {
       return VTX_WAIT;
     }
 
-    for (uint32_t i = 0; i < vtx_frame_length; i++) {
-      quic_debugf("TRAMP: sending  0x%x (%d)", vtx_frame[i], i);
+    payload_offset = 0;
+    if (!serial_vtx_send_data(vtx_frame, vtx_frame_length)) {
+      return VTX_WAIT;
     }
 
-    payload_offset = 0;
-    serial_vtx_send_data(vtx_frame, vtx_frame_length);
+    for (uint32_t i = 0; i < vtx_frame_length; i++) {
+      quic_debugf("TRAMP: sent  0x%x (%d)", vtx_frame[i], i);
+    }
 
     if (tramp_is_query(vtx_frame[1])) {
       parser_state = PARSER_READ_MAGIC;
