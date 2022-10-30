@@ -40,9 +40,9 @@ bool serial_vtx_wait_for_ready() {
   return true;
 }
 
-void serial_vtx_send_data(uint8_t *data, uint32_t size) {
-  if (!serial_vtx_wait_for_ready()) {
-    return;
+bool serial_vtx_send_data(uint8_t *data, uint32_t size) {
+  if (!serial_vtx_is_ready()) {
+    return false;
   }
 
   vtx_transfer_done = 0;
@@ -66,6 +66,8 @@ void serial_vtx_send_data(uint8_t *data, uint32_t size) {
 
   vtx_last_request = time_millis();
   vtx_last_valid_read = time_millis();
+
+  return true;
 }
 
 uint8_t serial_vtx_read_byte(uint8_t *data) {

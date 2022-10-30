@@ -233,17 +233,21 @@ vtx_update_result_t serial_smart_audio_update() {
 
   case PARSER_INIT: {
     if ((time_millis() - vtx_last_request) > 200) {
-      for (uint32_t i = 0; i < vtx_frame_length; i++) {
-        quic_debugf("SMART_AUDIO: sending  0x%x (%d)", vtx_frame[i], i);
-      }
 
       payload_offset = 0;
       crc = 0;
       cmd = 0;
       length = 0;
-      parser_state = PARSER_READ_MAGIC_1;
 
-      serial_vtx_send_data(vtx_frame, vtx_frame_length);
+      if (!serial_vtx_send_data(vtx_frame, vtx_frame_length)) {
+        return VTX_WAIT;
+      }
+
+      for (uint32_t i = 0; i < vtx_frame_length; i++) {
+        quic_debugf("SMART_AUDIO: sending  0x%x (%d)", vtx_frame[i], i);
+      }
+
+      parser_state = PARSER_READ_MAGIC_1;
       packets_sent++;
     }
 
