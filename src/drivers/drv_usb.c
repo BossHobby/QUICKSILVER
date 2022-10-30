@@ -173,8 +173,6 @@ static uint32_t ubuf[0x20];
 
 static volatile bool usb_device_configured = false;
 
-static volatile bool tx_buffer_in_use = false;
-
 static uint8_t tx_buffer_data[BUFFER_SIZE];
 static circular_buffer_t tx_buffer = {
     .buffer = tx_buffer_data,
@@ -254,23 +252,41 @@ static void cdc_rxonly(usbd_device *dev, uint8_t event, uint8_t ep) {
   circular_buffer_write_multi(&rx_buffer, buf, len);
 }
 
+static volatile bool tx_stalled = true;
+
 static void cdc_txonly(usbd_device *dev, uint8_t event, uint8_t ep) {
-  if (tx_buffer_in_use) {
-    usbd_ep_write(dev, ep, 0, 0);
-    return;
-  }
+  static volatile bool did_zlp = false;
 
   static uint8_t buf[CDC_DATA_SZ];
-
-  tx_buffer_in_use = true;
   const uint32_t len = circular_buffer_read_multi(&tx_buffer, buf, CDC_DATA_SZ);
-  tx_buffer_in_use = false;
 
   if (len) {
     usbd_ep_write(dev, ep, buf, len);
+    tx_stalled = false;
+
+    // transfers smaller than max size count as zlp
+    if (len == CDC_DATA_SZ) {
+      did_zlp = false;
+    } else {
+      did_zlp = true;
+    }
   } else {
-    usbd_ep_write(dev, ep, 0, 0);
+    if (!did_zlp) {
+      // no zlp sent, flush now
+      usbd_ep_write(dev, ep, 0, 0);
+      tx_stalled = false;
+    } else {
+      tx_stalled = true;
+    }
   }
+}
+
+static void cdc_kickoff_tx() {
+  if (!tx_stalled) {
+    return;
+  }
+
+  cdc_txonly(&udev, 0, CDC_TXD_EP);
 }
 
 static usbd_respond cdc_setconf(usbd_device *dev, uint8_t cfg) {
@@ -293,7 +309,6 @@ static usbd_respond cdc_setconf(usbd_device *dev, uint8_t cfg) {
     usbd_ep_config(dev, CDC_NTF_EP, USB_EPTYPE_INTERRUPT, CDC_NTF_SZ);
     usbd_reg_endpoint(dev, CDC_RXD_EP, cdc_rxonly);
     usbd_reg_endpoint(dev, CDC_TXD_EP, cdc_txonly);
-    usbd_ep_write(dev, CDC_TXD_EP, 0, 0);
 
     usb_device_configured = true;
 
@@ -387,12 +402,8 @@ void usb_serial_write(uint8_t *data, uint32_t len) {
 
   uint32_t written = 0;
   while (written < len) {
-    while (tx_buffer_in_use)
-      __NOP();
-
-    tx_buffer_in_use = true;
     written += circular_buffer_write_multi(&tx_buffer, data + written, len - written);
-    tx_buffer_in_use = false;
+    cdc_kickoff_tx();
   }
 }
 
