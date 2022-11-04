@@ -46,14 +46,7 @@ static ring_buffer_t msp_rx_buffer = {
     .size = 256,
 };
 
-static const uint8_t variant[6] = {'B', 'T', 'F', 'L', 0, 0};
-
 static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
-  if (cmd == MSP_FC_VARIANT) {
-    data = variant;
-    len = 6;
-  }
-
   if (magic == MSP2_MAGIC) {
     if (ring_buffer_free(&msp_tx_buffer) < (len + MSP2_HEADER_LEN + 1)) {
       return;
@@ -112,10 +105,6 @@ msp_t hdzero_msp = {
     .device = MSP_DEVICE_VTX,
 };
 
-static void hdzero_push_msp(const uint8_t code, const uint8_t *data, const uint8_t size) {
-  hdzero_msp_send(MSP1_MAGIC, '>', code, data, size);
-}
-
 static bool hdzero_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data, const uint8_t size) {
   if (ring_buffer_free(&msp_tx_buffer) < (MSP_HEADER_LEN + size + 2)) {
     return false;
@@ -142,11 +131,11 @@ static bool hdzero_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data,
 
 static uint8_t hdzero_map_attr(uint8_t attr) {
   uint8_t val = 0;
-  /*
   if (attr & OSD_ATTR_INVERT) {
-    val |= ATTR_WARNING;
+    val |= 0x1;
   }
 
+  /*
   if (attr & OSD_ATTR_BLINK) {
     val |= ATTR_BLINK;
   }
@@ -172,31 +161,38 @@ void hdzero_intro() {
     }
   }
 
-  hdzero_push_string(OSD_ATTR_TEXT, HDZERO_COLS / 2 - 6, HDZERO_ROWS / 2 - 1, (uint8_t *)"QUICKSILVER", 12);
+  uint8_t buffer[24];
+  for (uint8_t row = 0; row < 4; row++) {
+    uint8_t start = 160 + row * 24;
+    for (uint8_t i = 0; i < 24; i++) {
+      buffer[i] = start + i;
+    }
+
+    hdzero_push_string(OSD_ATTR_TEXT, (HDZERO_COLS / 2) - 12, (HDZERO_ROWS / 2) - 2 + row, buffer, 24);
+  }
+
   hdzero_push_subcmd(SUBCMD_DRAW_SCREEN, NULL, 0);
 }
 
 uint8_t hdzero_clear_async() {
-  hdzero_push_subcmd(SUBCMD_CLEAR_SCREEN, NULL, 0);
-  return 1;
+  return hdzero_push_subcmd(SUBCMD_CLEAR_SCREEN, NULL, 0);
 }
 
 bool hdzero_is_ready() {
   static bool wants_heatbeat = true;
 
-  if ((time_millis() - last_heartbeat) > 500) {
-    wants_heatbeat = true;
-    return false;
-  }
-
   if (wants_heatbeat) {
-    hdzero_push_msp(MSP_FC_VARIANT, variant, 6);
-
     uint8_t options[2] = {0, 1};
     hdzero_push_subcmd(SUBCMD_SET_OPTIONS, options, 2);
 
     hdzero_clear_async();
     wants_heatbeat = false;
+    last_heartbeat = time_millis();
+    return false;
+  }
+
+  if ((time_millis() - last_heartbeat) > 500) {
+    wants_heatbeat = true;
     return false;
   }
 
