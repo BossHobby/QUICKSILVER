@@ -681,5 +681,16 @@
         }
       }
     ]
+  },
+  {
+    "name": "hobbywing_xrotorf7conv",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
   }
 ]
