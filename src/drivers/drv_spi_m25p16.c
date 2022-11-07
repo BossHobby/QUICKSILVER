@@ -109,6 +109,10 @@ uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, 
 }
 
 uint8_t m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t size) {
+  if (!m25p16_is_ready()) {
+    return 0;
+  }
+
   {
     spi_txn_t *txn = spi_txn_init(&bus, NULL);
     spi_txn_add_seg_const(txn, M25P16_WRITE_ENABLE);
@@ -139,7 +143,7 @@ uint8_t m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data,
   spi_txn_add_seg(txn, NULL, data, len);
   spi_txn_submit(txn);
 
-  spi_txn_wait(&bus);
+  spi_txn_continue(&bus);
 
   return ret;
 }
