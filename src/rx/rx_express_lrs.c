@@ -49,7 +49,7 @@
 #define CONSIDER_CONN_GOOD_MILLIS 1000
 #define RF_MODE_CYCLE_MULTIPLIER_SLOW 10
 
-#define LOCKUP_TIMEOUT_MS 10000
+#define LOCKUP_TIMEOUT_US 10000
 #define SYNC_TIMEOUT_MS 30000
 
 // Maximum ms between LINK_STATISTICS packets for determining burst max
@@ -849,15 +849,13 @@ bool rx_expresslrs_check() {
     return channels_received;
   }
 
-  const uint32_t time = time_micros();
-
   static uint32_t last_time = 0;
-  if ((elrs_state == CONNECTED) && (time - last_time) > LOCKUP_TIMEOUT_MS) {
+  if ((elrs_state == CONNECTED) && (time_micros() - last_time) > LOCKUP_TIMEOUT_US) {
     // we lost 10000us since last visit (flash save, etc)
     // link has become unsustainable
     elrs_connection_lost();
   }
-  last_time = time;
+  last_time = time_micros();
 
   const elrs_irq_status_t irq = elrs_get_irq_status();
 
