@@ -79,6 +79,13 @@ typedef enum {
   MSP_PASSTHROUGH_ESC_4WAY = 0xFF,
 } msp_passthrough_mode_t;
 
+typedef enum {
+  MSP_DEVICE_FC,
+  MSP_DEVICE_VTX,
+  MSP_DEVICE_RX,
+  MSP_DEVICE_SPI_RX,
+} msp_device_t;
+
 typedef void (*msp_send_fn_t)(msp_magic_t magic, uint8_t direction, uint16_t code, const uint8_t *data, uint16_t len);
 
 typedef struct {
@@ -88,8 +95,7 @@ typedef struct {
   uint32_t buffer_offset;
 
   msp_send_fn_t send;
-
-  bool is_vtx;
+  msp_device_t device;
 } msp_t;
 
 msp_status_t msp_process_serial(msp_t *msp, uint8_t data);
