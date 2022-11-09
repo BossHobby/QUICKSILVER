@@ -599,7 +599,7 @@ static void elrs_msp_process(uint8_t *buf, uint32_t len) {
       .buffer_size = MSP_BUFFER_SIZE,
       .buffer_offset = 0,
       .send = elrs_msp_send,
-      .is_vtx = false,
+      .device = MSP_DEVICE_SPI_RX,
   };
 
   if (buf[7] == MSP_SET_RX_CONFIG && buf[8] == MSP_ELRS_MODEL_ID) {

@@ -302,7 +302,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   }
 
   case MSP_SET_VTX_CONFIG: {
-    vtx_settings_t *settings = msp->is_vtx ? &msp_vtx_settings : &vtx_settings;
+    vtx_settings_t *settings = msp->device == MSP_DEVICE_VTX ? &msp_vtx_settings : &vtx_settings;
 
     uint16_t remaining = size;
 
@@ -450,7 +450,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
   case MSP_EEPROM_WRITE: {
     msp_vtx_detected = 1;
-    if (!flags.arm_switch) {
+    if (!flags.arm_switch && msp->device != MSP_DEVICE_SPI_RX) {
       flash_save();
     }
     msp_send_reply(msp, magic, cmd, NULL, 0);

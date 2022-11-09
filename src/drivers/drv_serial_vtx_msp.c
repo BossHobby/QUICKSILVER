@@ -68,7 +68,7 @@ static msp_t msp = {
     .buffer_size = 128,
     .buffer_offset = 0,
     .send = serial_msp_send,
-    .is_vtx = true,
+    .device = MSP_DEVICE_VTX,
 };
 
 void serial_msp_vtx_init() {
