@@ -218,6 +218,7 @@ sdcard_do_more:
 #endif
 
 #ifdef USE_M25P16
+flash_do_more:
   switch (state) {
   case STATE_DETECT:
     if (!m25p16_is_ready()) {
@@ -248,16 +249,16 @@ sdcard_do_more:
   case STATE_IDLE:
     if (to_write >= PAGE_SIZE) {
       state = STATE_START_WRITE;
-      break;
+      goto flash_do_more;
     }
     if (should_flush == 1 && to_write > 0) {
       state = STATE_START_WRITE;
-      break;
+      goto flash_do_more;
     }
     if (should_flush == 1) {
       state = STATE_ERASE_HEADER;
       should_flush = 0;
-      break;
+      goto flash_do_more;
     }
     break;
 
@@ -268,7 +269,7 @@ sdcard_do_more:
       break;
     }
     state = STATE_FILL_WRITE_BUFFER;
-    break;
+    goto flash_do_more;
   }
 
   case STATE_FILL_WRITE_BUFFER: {
@@ -279,7 +280,7 @@ sdcard_do_more:
       }
       if (to_write == 0) {
         state = STATE_FINISH_WRITE;
-        break;
+        goto flash_do_more;
       }
 
       write_size = to_write;
@@ -301,7 +302,7 @@ sdcard_do_more:
 
   case STATE_FINISH_WRITE: {
     state = STATE_IDLE;
-    break;
+    goto flash_do_more;
   }
 
   case STATE_ERASE_HEADER: {
