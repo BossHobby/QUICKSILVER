@@ -251,13 +251,13 @@ flash_do_more:
       state = STATE_START_WRITE;
       goto flash_do_more;
     }
-    if (should_flush == 1 && to_write > 0) {
-      state = STATE_START_WRITE;
-      goto flash_do_more;
-    }
     if (should_flush == 1) {
-      state = STATE_ERASE_HEADER;
-      should_flush = 0;
+      if (to_write > 0 && offset < bounds.total_size) {
+        state = STATE_START_WRITE;
+      } else {
+        state = STATE_ERASE_HEADER;
+        should_flush = 0;
+      }
       goto flash_do_more;
     }
     break;
