@@ -247,10 +247,6 @@ flash_do_more:
     break;
 
   case STATE_IDLE:
-    if (to_write >= PAGE_SIZE) {
-      state = STATE_START_WRITE;
-      goto flash_do_more;
-    }
     if (should_flush == 1) {
       if (to_write > 0 && offset < bounds.total_size) {
         state = STATE_START_WRITE;
@@ -258,6 +254,10 @@ flash_do_more:
         state = STATE_ERASE_HEADER;
         should_flush = 0;
       }
+      goto flash_do_more;
+    }
+    if (to_write >= PAGE_SIZE) {
+      state = STATE_START_WRITE;
       goto flash_do_more;
     }
     break;
