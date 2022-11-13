@@ -500,6 +500,36 @@ void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, u
   }
 }
 
+uint8_t *spi_txn_add_seg_tx_raw(spi_txn_t *txn, uint32_t size) {
+  if (size == 0) {
+    return NULL;
+  }
+
+  spi_txn_ensure_buffer_space(txn, size);
+
+  uint8_t *ptr = txn->buffer + txn->size;
+  txn->size += size;
+
+  spi_txn_segment_t *last_seg = txn->segment_count > 0 ? &txn->segments[txn->segment_count - 1] : NULL;
+  if (last_seg != NULL && last_seg->rx_data == NULL && last_seg->tx_data == NULL) {
+    // merge segments
+    last_seg->size += size;
+  } else {
+    // create new segment
+    if (txn->segment_count >= SPI_TXN_SEG_MAX) {
+      failloop(FAILLOOP_SPI);
+    }
+
+    spi_txn_segment_t *seg = &txn->segments[txn->segment_count];
+    seg->rx_data = NULL;
+    seg->tx_data = NULL;
+    seg->size = size;
+    txn->segment_count++;
+  }
+
+  return ptr;
+}
+
 void spi_txn_add_seg_const(spi_txn_t *txn, const uint8_t tx_data) {
   spi_txn_add_seg(txn, NULL, &tx_data, 1);
 }

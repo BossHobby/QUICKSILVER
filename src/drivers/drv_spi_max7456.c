@@ -22,8 +22,6 @@ static osd_system_t last_osd_system = OSD_SYS_NONE;
 // detected osd video system starts at 99 and gets updated here by osd_checksystem()
 static uint8_t lastvm0 = 0x55;
 
-static uint8_t dma_buffer[DMA_BUFFER_SIZE];
-
 static spi_bus_device_t bus = {
     .port = MAX7456_SPI_PORT,
     .nss = MAX7456_NSS,
@@ -104,17 +102,6 @@ void max7456_init() {
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
 
   max7456_init_display();
-}
-
-// non blocking bulk dma transmit for interrupt callback configuration
-static void max7456_dma_it_transfer_bytes(const uint8_t *buffer, const uint8_t size) {
-  spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
-
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg(txn, NULL, buffer, size);
-  spi_txn_submit(txn);
-
-  spi_txn_continue(&bus);
 }
 
 // set the video output system PAL /NTSC
@@ -267,26 +254,33 @@ bool max7456_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data
     y = MAX7456_ROWS - 1;
   }
 
-  uint16_t dma_offset = 0;
-  const uint16_t pos = x + y * 30;
+  spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
 
-  dma_buffer[dma_offset++] = DMM;
-  dma_buffer[dma_offset++] = max7456_map_attr(attr);
-  dma_buffer[dma_offset++] = DMAH;
-  dma_buffer[dma_offset++] = (pos >> 8) & 0xFF;
-  dma_buffer[dma_offset++] = DMAL;
-  dma_buffer[dma_offset++] = pos & 0xFF;
+  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+
+  uint32_t offset = 0;
+  uint8_t *buf = spi_txn_add_seg_tx_raw(txn, 8 + size * 2);
+
+  buf[offset++] = DMM;
+  buf[offset++] = max7456_map_attr(attr);
+
+  const uint16_t pos = x + y * 30;
+  buf[offset++] = DMAH;
+  buf[offset++] = (pos >> 8) & 0xFF;
+  buf[offset++] = DMAL;
+  buf[offset++] = pos & 0xFF;
 
   for (uint8_t i = 0; i < size; i++) {
-    dma_buffer[dma_offset++] = DMDI;
-    dma_buffer[dma_offset++] = data[i];
+    buf[offset++] = DMDI;
+    buf[offset++] = data[i];
   }
 
   // off autoincrement mode
-  dma_buffer[dma_offset++] = DMDI;
-  dma_buffer[dma_offset++] = 0xFF;
+  buf[offset++] = DMDI;
+  buf[offset++] = 0xFF;
 
-  max7456_dma_it_transfer_bytes(dma_buffer, dma_offset);
+  spi_txn_submit(txn);
+  spi_txn_continue(&bus);
 
   return true;
 }

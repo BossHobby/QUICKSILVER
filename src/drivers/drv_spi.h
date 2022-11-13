@@ -101,6 +101,7 @@ void spi_csn_disable(spi_bus_device_t *bus);
 
 spi_txn_t *spi_txn_init(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn);
 void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size);
+uint8_t *spi_txn_add_seg_tx_raw(spi_txn_t *txn, uint32_t size);
 void spi_txn_add_seg_delay(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size);
 void spi_txn_add_seg_const(spi_txn_t *txn, const uint8_t tx_data);
 void spi_txn_submit(spi_txn_t *txn);
