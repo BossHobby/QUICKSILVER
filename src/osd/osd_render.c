@@ -362,6 +362,9 @@ static void print_osd_vtx(osd_element_t *el) {
   case VTX_BAND_R:
     osd_write_char('R');
     break;
+  case VTX_BAND_L:
+    osd_write_char('L');
+    break;
   default:
     osd_write_char('M');
     break;
@@ -1072,14 +1075,14 @@ void osd_display() {
       osd_menu_start();
       osd_menu_header("VTX CONTROLS");
 
-      const char *band_labels[] = {"A", "B", "E", "F", "R"};
-      osd_menu_select_enum_adjust(4, 4, "BAND", 20, &vtx_settings_copy.band, band_labels, VTX_BAND_A, VTX_BAND_R);
+      const char *band_labels[] = {"A", "B", "E", "F", "R", "L"};
+      osd_menu_select_enum_adjust(4, 4, "BAND", 20, &vtx_settings_copy.band, band_labels, VTX_BAND_A, VTX_BAND_MAX - 1);
 
       const char *channel_labels[] = {"1", "2", "3", "4", "5", "6", "7", "8"};
       osd_menu_select_enum_adjust(4, 5, "CHANNEL", 20, &vtx_settings_copy.channel, channel_labels, VTX_CHANNEL_1, VTX_CHANNEL_8);
 
-      const char *power_level_labels[] = {"1", "2", "3", "4"};
-      osd_menu_select_enum_adjust(4, 6, "POWER LEVEL", 20, &vtx_settings_copy.power_level, power_level_labels, VTX_POWER_LEVEL_1, VTX_POWER_LEVEL_4);
+      const char *power_level_labels[] = {"1", "2", "3", "4", "5"};
+      osd_menu_select_enum_adjust(4, 6, "POWER LEVEL", 20, &vtx_settings_copy.power_level, power_level_labels, VTX_POWER_LEVEL_1, VTX_POWER_LEVEL_MAX - 1);
 
       const char *pit_mode_labels[] = {"OFF", "ON ", "N/A"};
       osd_menu_select(4, 7, "PITMODE");

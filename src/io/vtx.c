@@ -341,7 +341,7 @@ void vtx_set(vtx_settings_t *vtx) {
   if (vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT)
     vtx_settings.pit_mode = vtx->pit_mode;
 
-  vtx_settings.power_level = vtx->power_level < VTX_POWER_LEVEL_MAX ? vtx->power_level : 0;
+  vtx_settings.power_level = vtx->power_level < VTX_POWER_LEVEL_MAX ? vtx->power_level : (VTX_POWER_LEVEL_MAX - 1);
 
   vtx_settings.band = vtx->band < VTX_BAND_MAX ? vtx->band : 0;
   vtx_settings.channel = vtx->channel < VTX_CHANNEL_MAX ? vtx->channel : 0;
