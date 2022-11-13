@@ -296,7 +296,11 @@ bool max7456_flush() {
 }
 
 bool max7456_is_ready() {
-  return spi_txn_ready(&bus);
+  if (!spi_txn_ready(&bus)) {
+    spi_txn_continue(&bus);
+    return false;
+  }
+  return true;
 }
 
 void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size) {
