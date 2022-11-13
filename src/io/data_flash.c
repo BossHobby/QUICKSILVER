@@ -347,6 +347,13 @@ void data_flash_init() {
   state = STATE_DETECT;
 }
 
+uint32_t data_flash_usage() {
+  if (data_flash_header.file_num == 0) {
+    return 0;
+  }
+  return FILES_SECTOR_OFFSET + current_file()->start_page * PAGE_SIZE + current_file()->size;
+}
+
 void data_flash_reset() {
 #ifdef USE_M25P16
   m25p16_command(M25P16_WRITE_ENABLE);
@@ -359,6 +366,8 @@ void data_flash_reset() {
   data_flash_header.file_num = 0;
 
   state = STATE_ERASE_HEADER;
+
+  reset_looptime();
 }
 
 void data_flash_restart(uint32_t blackbox_rate, uint32_t looptime) {

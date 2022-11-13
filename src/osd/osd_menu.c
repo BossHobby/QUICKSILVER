@@ -261,12 +261,20 @@ void osd_menu_highlight(int8_t x, int8_t y, const char *text) {
   osd_write_str(text);
 }
 
-void osd_menu_label(int8_t x, int8_t y, const char *text) {
+bool osd_menu_label_start(int8_t x, int8_t y) {
   if (!should_render_element()) {
-    return;
+    return false;
   }
 
   osd_start(OSD_ATTR_TEXT, x, y);
+  return true;
+}
+
+void osd_menu_label(int8_t x, int8_t y, const char *text) {
+  if (!osd_menu_label_start(x, y)) {
+    return;
+  }
+
   osd_write_str(text);
 }
 
@@ -465,6 +473,12 @@ bool osd_menu_select_vec3(int8_t x, int8_t y, const vec3_t val, uint8_t width, u
 void osd_menu_select_save_and_exit(int8_t x) {
   if (osd_menu_button(x, OSD_END, "SAVE AND EXIT")) {
     osd_save_exit();
+  }
+}
+
+void osd_menu_select_exit(int8_t x) {
+  if (osd_menu_button(x, OSD_END, "EXIT")) {
+    osd_exit();
   }
 }
 
