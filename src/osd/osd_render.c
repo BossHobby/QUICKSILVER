@@ -7,6 +7,7 @@
 #include "flight/control.h"
 #include "flight/filter.h"
 #include "float.h"
+#include "io/data_flash.h"
 #include "io/vtx.h"
 #include "osd_menu.h"
 #include "profile.h"
@@ -247,11 +248,15 @@ void osd_handle_input(osd_input_t input) {
   }
 }
 
-void osd_save_exit() {
+void osd_exit() {
   osd_state.selection = 0;
   osd_state.cursor = 1;
   osd_state.cursor_history_size = 0;
   osd_state.screen = OSD_SCREEN_CLEAR;
+}
+
+void osd_save_exit() {
+  osd_exit();
 
   // check if vtx settings need to be updated
   if (vtx_buffer_populated) {
@@ -846,6 +851,9 @@ void osd_display() {
       osd_menu_select_screen(7, OSD_AUTO, "MOTOR SETTINGS", OSD_SCREEN_MOTOR_SETTINGS);
       osd_menu_select_screen(7, OSD_AUTO, "THROTTLE SETTINGS", OSD_SCREEN_THROTTLE_SETTINGS);
       osd_menu_select_screen(7, OSD_AUTO, "SPECIAL FEATURES", OSD_SCREEN_SPECIAL_FEATURES);
+#ifdef ENABLE_BLACKBOX
+      osd_menu_select_screen(7, OSD_AUTO, "BLACKBOX", OSD_SCREEN_BLACKBOX);
+#endif
     }
     osd_menu_scroll_finish(7);
 
@@ -1457,6 +1465,60 @@ void osd_display() {
 
     osd_menu_select_save_and_exit(4);
     osd_menu_finish();
+    break;
+  }
+
+  case OSD_SCREEN_BLACKBOX: {
+#ifdef ENABLE_BLACKBOX
+
+    static uint8_t reset_state = 0;
+
+    switch (reset_state) {
+    default:
+    case 0:
+      osd_menu_start();
+      osd_menu_header("BLACKBOX");
+
+      if (osd_menu_label_start(4, 3)) {
+        osd_write_int(data_flash_header.file_num, 3);
+        osd_write_str(" FILES");
+      }
+
+      if (osd_menu_label_start(4, 4)) {
+        const uint32_t usage = (float)(data_flash_usage()) / (float)(bounds.total_size) * 100;
+
+        osd_write_int(usage, 3);
+        osd_write_str("% USAGE");
+      }
+
+      if (osd_menu_button(4, 13, "RESET")) {
+        osd_push_screen_replace(OSD_SCREEN_BLACKBOX);
+        reset_state = 1;
+      }
+      osd_menu_select_exit(4);
+      osd_menu_finish();
+      break;
+
+    case 1:
+      osd_menu_start();
+      osd_menu_header("BLACKBOX");
+
+      osd_menu_label(9, 5, "RESETTING");
+      osd_menu_label(9, 7, "PLEASE WAIT");
+
+      if (osd_menu_finish()) {
+        osd_push_screen_replace(OSD_SCREEN_BLACKBOX);
+        reset_state = 2;
+      }
+      break;
+
+    case 2:
+      data_flash_reset();
+      osd_push_screen_replace(OSD_SCREEN_BLACKBOX);
+      reset_state = 0;
+      break;
+    }
+#endif
     break;
   }
 

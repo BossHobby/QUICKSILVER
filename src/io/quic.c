@@ -346,9 +346,6 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
   res = cbor_decode_uint8(dec, &cmd);
   check_cbor_error(QUIC_CMD_BLACKBOX);
 
-  extern data_flash_header_t data_flash_header;
-  extern data_flash_bounds_t bounds;
-
   switch (cmd) {
   case QUIC_BLACKBOX_RESET:
     data_flash_reset();

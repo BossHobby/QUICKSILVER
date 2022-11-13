@@ -47,11 +47,15 @@ typedef enum {
   DATA_FLASH_WRITE,
 } data_flash_result_t;
 
+extern data_flash_header_t data_flash_header;
+extern data_flash_bounds_t bounds;
+
 cbor_result_t cbor_encode_data_flash_file_t(cbor_value_t *enc, const data_flash_file_t *f);
 cbor_result_t cbor_encode_data_flash_header_t(cbor_value_t *enc, const data_flash_header_t *h);
 
 void data_flash_init();
 data_flash_result_t data_flash_update();
+uint32_t data_flash_usage();
 
 void data_flash_reset();
 void data_flash_restart(uint32_t blackbox_rate, uint32_t looptime);

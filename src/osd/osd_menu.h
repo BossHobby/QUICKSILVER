@@ -17,6 +17,7 @@ void osd_menu_start();
 
 void osd_menu_header(const char *text);
 void osd_menu_label(int8_t x, int8_t y, const char *text);
+bool osd_menu_label_start(int8_t x, int8_t y);
 void osd_menu_highlight(int8_t x, int8_t y, const char *text);
 bool osd_menu_button(int8_t x, int8_t y, const char *text);
 
@@ -30,6 +31,7 @@ void osd_menu_scroll_finish(uint8_t x);
 
 void osd_menu_select(int8_t x, int8_t y, const char *text);
 void osd_menu_select_save_and_exit(int8_t x);
+void osd_menu_select_exit(int8_t x);
 void osd_menu_select_screen(int8_t x, int8_t y, const char *text, osd_screens_t screen);
 bool osd_menu_select_enum(int8_t x, int8_t y, const uint8_t val, const char **labels);
 bool osd_menu_select_int(int8_t x, int8_t y, const int32_t val, uint8_t width);

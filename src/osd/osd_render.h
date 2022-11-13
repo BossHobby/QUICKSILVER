@@ -38,6 +38,7 @@ typedef enum {
   OSD_SCREEN_PID_MODIFIER,
   OSD_SCREEN_RC_LINK,
   OSD_SCREEN_RSSI,
+  OSD_SCREEN_BLACKBOX,
   OSD_SCREEN_STICK_WIZARD,
   OSD_SCREEN_STICK_WIZARD_CALIBRATION,
   OSD_SCREEN_STICK_CONFIRM,
@@ -137,4 +138,5 @@ osd_screens_t osd_pop_screen();
 
 void osd_handle_input(osd_input_t input);
 
+void osd_exit();
 void osd_save_exit();
