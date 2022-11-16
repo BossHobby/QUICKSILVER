@@ -105,6 +105,8 @@ void cc2500_write_reg(uint8_t reg, uint8_t data);
 uint8_t cc2500_read_fifo(uint8_t *result, uint8_t len);
 void cc2500_write_fifo(uint8_t *data, uint8_t len);
 uint8_t cc2500_read_gdo0();
+void cc2500_set_channel(uint8_t channel, uint8_t *cal_data);
+uint8_t cc2500_packet_size();
 
 void cc2500_enter_rxmode();
 void cc2500_enter_txmode();

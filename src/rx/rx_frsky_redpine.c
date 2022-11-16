@@ -35,7 +35,6 @@ void handle_overflows();
 void calibrate_channels();
 void set_address(uint8_t is_bind);
 uint8_t next_channel(uint8_t skip);
-uint8_t packet_size();
 
 static void redpine_set_rc_data() {
   if (packet[REDPINE_CHANNEL_START] == 1 && packet[REDPINE_CHANNEL_START + 1] == 0) {
@@ -110,7 +109,9 @@ static uint8_t redpine_handle_packet() {
 
     // fallthrough
   case FRSKY_STATE_DATA: {
-    uint8_t len = packet_size();
+    handle_overflows();
+
+    uint8_t len = cc2500_packet_size();
     if (len == REDPINE_PACKET_SIZE_W_ADDONS) {
       cc2500_read_fifo(packet, len);
 
@@ -148,8 +149,6 @@ static uint8_t redpine_handle_packet() {
       quic_debugf("REDPINE: invalid size %d", len);
       cc2500_strobe(CC2500_SFRX);
     }
-
-    handle_overflows();
 
     if ((time_micros() - total_time) > 50 * max_sync_delay) {
       // out of sync with packets - do a complete resysnc

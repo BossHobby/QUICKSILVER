@@ -42,7 +42,6 @@ void handle_overflows();
 void calibrate_channels();
 void set_address(uint8_t is_bind);
 uint8_t next_channel(uint8_t skip);
-uint8_t packet_size();
 
 static void frsky_d8_set_rc_data() {
   uint16_t channels[FRSKY_D8_CHANNEL_COUNT];
@@ -201,7 +200,7 @@ static uint8_t frsky_d8_handle_packet() {
     last_packet_received_time = current_packet_received_time;
     // fallthrough
   case FRSKY_STATE_DATA: {
-    uint8_t len = packet_size();
+    uint8_t len = cc2500_packet_size();
     if (len >= 20) {
       cc2500_read_fifo(packet, 20);
       frsky_d8_frame *frame = (frsky_d8_frame *)packet;
