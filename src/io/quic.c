@@ -322,6 +322,7 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
     check_cbor_error(QUIC_CMD_SET);
 
     flash_save();
+    rx_init();
 
     res = cbor_encode_rx_bind_storage_t(&enc, &bind_storage);
     check_cbor_error(QUIC_CMD_SET);

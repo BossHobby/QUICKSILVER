@@ -29,6 +29,7 @@ static uint8_t redpine_fast = 1;
 
 uint8_t frsky_extract_rssi(uint8_t rssi_raw);
 void frsky_handle_bind();
+void frsky_init();
 
 void handle_overflows();
 void calibrate_channels();
@@ -192,6 +193,7 @@ void rx_redpine_init() {
   if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
     return;
 
+  frsky_init();
   cc2500_init();
 
 #ifdef CC2500_GDO0_PIN
