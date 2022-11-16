@@ -36,6 +36,7 @@ extern uint8_t list_length;
 uint8_t frsky_extract_rssi(uint8_t rssi_raw);
 uint8_t frsky_detect();
 void frsky_handle_bind();
+void frsky_init();
 
 void handle_overflows();
 void calibrate_channels();
@@ -327,6 +328,7 @@ void rx_frsky_d8_init() {
   if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
     return;
 
+  frsky_init();
   cc2500_init();
 
   // enable gdo0 on read

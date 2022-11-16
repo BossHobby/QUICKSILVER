@@ -255,6 +255,10 @@ void calibrate_channels() {
   cc2500_strobe(CC2500_SIDLE);
 }
 
+void frsky_init() {
+  protocol_state = FRSKY_STATE_INIT;
+}
+
 void frsky_handle_bind() {
   switch (protocol_state) {
   case FRSKY_STATE_DETECT:
