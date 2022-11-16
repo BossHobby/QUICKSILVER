@@ -74,13 +74,7 @@ void set_address(uint8_t is_bind) {
 }
 
 static void set_channel(uint8_t channel) {
-  cc2500_strobe(CC2500_SIDLE);
-
-  cc2500_write_reg(CC2500_FSCAL3, cal_data[channel][0]);
-  cc2500_write_reg(CC2500_FSCAL2, cal_data[channel][1]);
-  cc2500_write_reg(CC2500_FSCAL1, cal_data[channel][2]);
-
-  cc2500_write_reg(CC2500_CHANNR, channel);
+  cc2500_set_channel(channel, cal_data[channel]);
 }
 
 uint8_t next_channel(uint8_t skip) {
@@ -101,31 +95,8 @@ uint8_t next_channel(uint8_t skip) {
   return channr;
 }
 
-uint8_t packet_size() {
-  if (cc2500_read_gdo0() == 0) {
-    return 0;
-  }
-
-  // there is a bug in the cc2500
-  // see p3 http:// www.ti.com/lit/er/swrz002e/swrz002e.pdf
-  // workaround: read len register very quickly twice:
-
-  // try this 10 times befor giving up:
-  for (uint8_t i = 0; i < 10; i++) {
-    uint8_t len1 = cc2500_read_reg(CC2500_RXBYTES | CC2500_READ_BURST) & 0x7F;
-    uint8_t len2 = cc2500_read_reg(CC2500_RXBYTES | CC2500_READ_BURST) & 0x7F;
-
-    // valid len found?
-    if (len1 == len2) {
-      return len1;
-    }
-  }
-
-  return 0;
-}
-
 static uint8_t read_packet() {
-  uint8_t len = packet_size();
+  uint8_t len = cc2500_packet_size();
   if (len == 0) {
     return 0;
   }

@@ -124,6 +124,59 @@ static void cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
   spi_txn_continue_ex(&bus, true);
 }
 
+void cc2500_set_channel(uint8_t channel, uint8_t *cal_data) {
+  {
+    spi_txn_t *txn = spi_txn_init(&bus, NULL);
+    spi_txn_add_seg_const(txn, CC2500_SIDLE);
+    spi_txn_submit(txn);
+  }
+  {
+    spi_txn_t *txn = spi_txn_init(&bus, NULL);
+    spi_txn_add_seg_const(txn, CC2500_FSCAL3 | CC2500_WRITE_BURST);
+    spi_txn_add_seg(txn, NULL, cal_data, 3);
+    spi_txn_submit(txn);
+  }
+  {
+    spi_txn_t *txn = spi_txn_init(&bus, NULL);
+    spi_txn_add_seg_const(txn, CC2500_CHANNR | CC2500_WRITE_SINGLE);
+    spi_txn_add_seg_const(txn, channel);
+    spi_txn_submit(txn);
+  }
+  spi_txn_continue(&bus);
+}
+
+uint8_t cc2500_packet_size() {
+  if (cc2500_read_gdo0() == 0) {
+    return 0;
+  }
+
+  // there is a bug in the cc2500
+  // see p3 http:// www.ti.com/lit/er/swrz002e/swrz002e.pdf
+  // workaround: read len register very quickly twice:
+
+  // try this 10 times befor giving up:
+  for (uint8_t i = 0; i < 10; i++) {
+    uint8_t len1 = 0;
+    uint8_t len2 = 0;
+
+    {
+      spi_txn_t *txn = spi_txn_init(&bus, NULL);
+      spi_txn_add_seg_const(txn, CC2500_RXBYTES | CC2500_READ_SINGLE);
+      spi_txn_add_seg(txn, &len1, NULL, 1);
+      spi_txn_add_seg_const(txn, CC2500_RXBYTES | CC2500_READ_SINGLE);
+      spi_txn_add_seg(txn, &len2, NULL, 1);
+      spi_txn_submit_wait(&bus, txn);
+    }
+
+    // valid len found?
+    if (len1 == len2) {
+      return len1;
+    }
+  }
+
+  return 0;
+}
+
 uint8_t cc2500_read_fifo(uint8_t *result, uint8_t len) {
   return cc2500_read_multi(CC2500_FIFO | CC2500_READ_BURST, result, len);
 }
