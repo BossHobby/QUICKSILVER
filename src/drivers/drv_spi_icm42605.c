@@ -56,9 +56,7 @@ uint8_t icm42605_read(uint8_t reg) {
 
   spi_txn_t *txn = spi_txn_init(&gyro_bus, NULL);
   spi_txn_add_seg(txn, buffer, buffer, 2);
-  spi_txn_submit(txn);
-
-  spi_txn_wait(&gyro_bus);
+  spi_txn_submit_wait(&gyro_bus, txn);
 
   return buffer[1];
 }
@@ -69,9 +67,7 @@ void icm42605_write(uint8_t reg, uint8_t data) {
   spi_txn_t *txn = spi_txn_init(&gyro_bus, NULL);
   spi_txn_add_seg_const(txn, reg);
   spi_txn_add_seg_const(txn, data);
-  spi_txn_submit(txn);
-
-  spi_txn_wait(&gyro_bus);
+  spi_txn_submit_wait(&gyro_bus, txn);
 }
 
 void icm42605_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
@@ -80,7 +76,5 @@ void icm42605_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
   spi_txn_t *txn = spi_txn_init(&gyro_bus, NULL);
   spi_txn_add_seg_const(txn, reg | 0x80);
   spi_txn_add_seg(txn, data, NULL, size);
-  spi_txn_submit(txn);
-
-  spi_txn_wait(&gyro_bus);
+  spi_txn_submit_wait(&gyro_bus, txn);
 }

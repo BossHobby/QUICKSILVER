@@ -110,9 +110,7 @@ uint8_t bmi270_read(uint8_t reg) {
 
   spi_txn_t *txn = spi_txn_init(&gyro_bus, NULL);
   spi_txn_add_seg(txn, buffer, buffer, 3);
-  spi_txn_submit(txn);
-
-  spi_txn_wait(&gyro_bus);
+  spi_txn_submit_wait(&gyro_bus, txn);
 
   return buffer[2];
 }
@@ -123,9 +121,7 @@ void bmi270_write(uint8_t reg, uint8_t data) {
   spi_txn_t *txn = spi_txn_init(&gyro_bus, NULL);
   spi_txn_add_seg_const(txn, reg);
   spi_txn_add_seg_const(txn, data);
-  spi_txn_submit(txn);
-
-  spi_txn_wait(&gyro_bus);
+  spi_txn_submit_wait(&gyro_bus, txn);
 }
 
 void bmi270_write_data(uint8_t reg, uint8_t *data, uint32_t size) {
@@ -134,9 +130,7 @@ void bmi270_write_data(uint8_t reg, uint8_t *data, uint32_t size) {
   spi_txn_t *txn = spi_txn_init(&gyro_bus, NULL);
   spi_txn_add_seg_const(txn, reg);
   spi_txn_add_seg(txn, NULL, data, size);
-  spi_txn_submit(txn);
-
-  spi_txn_wait(&gyro_bus);
+  spi_txn_submit_wait(&gyro_bus, txn);
 }
 
 void bmi270_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
@@ -146,7 +140,5 @@ void bmi270_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
   spi_txn_add_seg_const(txn, reg | 0x80);
   spi_txn_add_seg_const(txn, 0xFF);
   spi_txn_add_seg(txn, data, NULL, size);
-  spi_txn_submit(txn);
-
-  spi_txn_wait(&gyro_bus);
+  spi_txn_submit_wait(&gyro_bus, txn);
 }

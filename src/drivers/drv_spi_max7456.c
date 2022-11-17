@@ -279,8 +279,7 @@ bool max7456_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data
   buf[offset++] = DMDI;
   buf[offset++] = 0xFF;
 
-  spi_txn_submit(txn);
-  spi_txn_continue(&bus);
+  spi_txn_submit_continue(&bus, txn);
 
   return true;
 }

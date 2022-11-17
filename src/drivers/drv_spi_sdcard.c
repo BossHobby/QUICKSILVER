@@ -410,8 +410,7 @@ sdcard_status_t sdcard_update() {
       spi_txn_add_seg_const(txn, 0xff);
       spi_txn_add_seg_const(txn, 0xff);
 
-      spi_txn_submit(txn);
-      spi_txn_continue(&bus);
+      spi_txn_submit_continue(&bus, txn);
     }
     break;
   }
@@ -472,8 +471,7 @@ sdcard_status_t sdcard_update() {
     // write response
     spi_txn_add_seg_const(txn, 0xff);
 
-    spi_txn_submit(txn);
-    spi_txn_continue(&bus);
+    spi_txn_submit_continue(&bus, txn);
 
     state = SDCARD_WRITE_MULTIPLE_VERIFY;
     break;
@@ -492,8 +490,7 @@ sdcard_status_t sdcard_update() {
   case SDCARD_WRITE_MULTIPLE_FINISH: {
     spi_txn_t *txn = spi_txn_init(&bus, NULL);
     spi_txn_add_seg_const(txn, 0xfd);
-    spi_txn_submit(txn);
-    spi_txn_continue(&bus);
+    spi_txn_submit_continue(&bus, txn);
 
     state = SDCARD_WRITE_MULTIPLE_FINISH_WAIT;
     break;

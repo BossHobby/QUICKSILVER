@@ -45,9 +45,7 @@ uint8_t m25p16_is_ready() {
 
   spi_txn_t *txn = spi_txn_init(&bus, NULL);
   spi_txn_add_seg(txn, buffer, buffer, 2);
-  spi_txn_submit(txn);
-
-  spi_txn_wait(&bus);
+  spi_txn_submit_wait(&bus, txn);
 
   return (buffer[1] & 0x01) == 0;
 }
@@ -64,9 +62,7 @@ uint8_t m25p16_command(const uint8_t cmd) {
 
   spi_txn_t *txn = spi_txn_init(&bus, NULL);
   spi_txn_add_seg(txn, &ret, &cmd, 1);
-  spi_txn_submit(txn);
-
-  spi_txn_wait(&bus);
+  spi_txn_submit_wait(&bus, txn);
 
   return ret;
 }
@@ -79,9 +75,7 @@ uint8_t m25p16_read_command(const uint8_t cmd, uint8_t *data, const uint32_t len
   spi_txn_t *txn = spi_txn_init(&bus, NULL);
   spi_txn_add_seg(txn, &ret, &cmd, 1);
   spi_txn_add_seg(txn, data, NULL, len);
-  spi_txn_submit(txn);
-
-  spi_txn_wait(&bus);
+  spi_txn_submit_wait(&bus, txn);
 
   return ret;
 }
@@ -101,9 +95,7 @@ uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, 
   spi_txn_add_seg(txn, &ret, &cmd, 1);
   m25p16_set_addr(txn, addr);
   spi_txn_add_seg(txn, data, NULL, len);
-  spi_txn_submit(txn);
-
-  spi_txn_wait(&bus);
+  spi_txn_submit_wait(&bus, txn);
 
   return ret;
 }
@@ -141,9 +133,7 @@ uint8_t m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data,
   spi_txn_add_seg(txn, &ret, &cmd, 1);
   m25p16_set_addr(txn, addr);
   spi_txn_add_seg(txn, NULL, data, len);
-  spi_txn_submit(txn);
-
-  spi_txn_continue(&bus);
+  spi_txn_submit_continue(&bus, txn);
 
   return ret;
 }
