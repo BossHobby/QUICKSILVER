@@ -25,11 +25,32 @@ typedef struct {
 #define SPI_TXN_MAX 32
 #define SPI_TXN_SEG_MAX 8
 
+typedef enum {
+  TXN_CONST,
+  TXN_BUFFER,
+  TXN_DELAY,
+} spi_txn_segment_type_t;
+
 typedef struct {
-  const uint8_t *tx_data;
-  uint8_t *rx_data;
+  spi_txn_segment_type_t type;
+  union {
+    struct {
+      uint8_t byte;
+    };
+    struct {
+      const uint8_t *tx_data;
+      uint8_t *rx_data;
+    };
+  };
   uint32_t size;
 } spi_txn_segment_t;
+
+#define spi_make_seg_const(_byte) \
+  (spi_txn_segment_t) { .type = TXN_CONST, .byte = (_byte), .size = 1 }
+#define spi_make_seg_buffer(_rx_data, _tx_data, _size) \
+  (spi_txn_segment_t) { .type = TXN_BUFFER, .rx_data = (_rx_data), .tx_data = (_tx_data), .size = (_size) }
+#define spi_make_seg_delay(_rx_data, _tx_data, _size) \
+  (spi_txn_segment_t) { .type = TXN_DELAY, .rx_data = (_rx_data), .tx_data = (_tx_data), .size = (_size) }
 
 struct spi_bus_device;
 
@@ -96,19 +117,22 @@ uint8_t spi_dma_is_ready(spi_ports_t port);
 void spi_bus_device_init(spi_bus_device_t *bus);
 void spi_bus_device_reconfigure(spi_bus_device_t *bus, spi_mode_t mode, uint32_t hz);
 
-void spi_csn_enable(spi_bus_device_t *bus);
-void spi_csn_disable(spi_bus_device_t *bus);
-
 spi_txn_t *spi_txn_init(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn);
 void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size);
-uint8_t *spi_txn_add_seg_tx_raw(spi_txn_t *txn, uint32_t size);
 void spi_txn_add_seg_delay(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, uint32_t size);
 void spi_txn_add_seg_const(spi_txn_t *txn, const uint8_t tx_data);
 void spi_txn_submit(spi_txn_t *txn);
 
 void spi_txn_continue(spi_bus_device_t *bus);
-void spi_txn_continue_ex(spi_bus_device_t *bus, bool force_sync);
 bool spi_txn_ready(spi_bus_device_t *bus);
 void spi_txn_wait(spi_bus_device_t *bus);
 void spi_txn_submit_wait(spi_bus_device_t *bus, spi_txn_t *txn);
 void spi_txn_submit_continue(spi_bus_device_t *bus, spi_txn_t *txn);
+
+void _spi_seg_submit(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const spi_txn_segment_t *segs, const uint32_t count);
+void _spi_seg_submit_wait(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count);
+void _spi_seg_submit_continue(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const spi_txn_segment_t *segs, const uint32_t count);
+
+#define spi_seg_submit(bus, done_fn, segs) _spi_seg_submit(bus, done_fn, segs, sizeof(segs) / sizeof(spi_txn_segment_t))
+#define spi_seg_submit_wait(bus, segs) _spi_seg_submit_wait(bus, segs, sizeof(segs) / sizeof(spi_txn_segment_t))
+#define spi_seg_submit_continue(bus, done_fn, segs) _spi_seg_submit_continue(bus, done_fn, segs, sizeof(segs) / sizeof(spi_txn_segment_t))

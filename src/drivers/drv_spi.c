@@ -54,7 +54,7 @@ volatile uint8_t dma_transfer_done[16] = {[0 ... 15] = 1};
 
 #define PORT spi_port_defs[port]
 
-void spi_enable_rcc(spi_ports_t port) {
+static void spi_enable_rcc(spi_ports_t port) {
   switch (PORT.channel_index) {
   case 1:
     LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI1);
@@ -73,11 +73,11 @@ void spi_enable_rcc(spi_ports_t port) {
   }
 }
 
-void spi_csn_enable(spi_bus_device_t *bus) {
+static void spi_csn_enable(spi_bus_device_t *bus) {
   gpio_pin_reset(bus->nss);
 }
 
-void spi_csn_disable(spi_bus_device_t *bus) {
+static void spi_csn_disable(spi_bus_device_t *bus) {
   gpio_pin_set(bus->nss);
 }
 
@@ -246,7 +246,8 @@ uint8_t spi_dma_is_ready(spi_ports_t port) {
   return dma_transfer_done[port];
 }
 
-static void spi_reconfigure(spi_bus_device_t *bus, volatile spi_port_config_t *config) {
+static void spi_reconfigure(spi_bus_device_t *bus) {
+  volatile spi_port_config_t *config = &spi_port_config[bus->port];
   const spi_port_def_t *port = &spi_port_defs[bus->port];
 
   if (config->hz != bus->hz) {
@@ -311,50 +312,6 @@ static void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t l
 #ifdef STM32H7
   LL_SPI_StartMasterTransfer(PORT.channel);
 #endif
-}
-
-static uint8_t spi_transfer(spi_ports_t port, uint8_t *data, uint32_t size) {
-#if defined(STM32H7)
-  LL_SPI_SetTransferSize(PORT.channel, size);
-  LL_SPI_Enable(PORT.channel);
-  LL_SPI_StartMasterTransfer(PORT.channel);
-
-  for (uint32_t i = 0; i < size; i++) {
-    while (!LL_SPI_IsActiveFlag_TXP(PORT.channel))
-      ;
-
-    LL_SPI_TransmitData8(PORT.channel, data[i]);
-
-    while (!LL_SPI_IsActiveFlag_RXP(PORT.channel))
-      ;
-
-    data[i] = LL_SPI_ReceiveData8(PORT.channel);
-  }
-
-  while (!LL_SPI_IsActiveFlag_EOT(PORT.channel))
-    ;
-
-  LL_SPI_ClearFlag_TXTF(PORT.channel);
-  LL_SPI_Disable(PORT.channel);
-#else
-  LL_SPI_Enable(PORT.channel);
-
-  for (uint32_t i = 0; i < size; i++) {
-    while (LL_SPI_IsActiveFlag_BSY(PORT.channel) || !LL_SPI_IsActiveFlag_TXE(PORT.channel))
-      ;
-
-    LL_SPI_TransmitData8(PORT.channel, data[i]);
-
-    while (LL_SPI_IsActiveFlag_BSY(PORT.channel) || !LL_SPI_IsActiveFlag_RXNE(PORT.channel))
-      ;
-
-    data[i] = LL_SPI_ReceiveData8(PORT.channel);
-  }
-
-  LL_SPI_Disable(PORT.channel);
-#endif
-
-  return 1;
 }
 
 void spi_bus_device_init(spi_bus_device_t *bus) {
@@ -500,36 +457,6 @@ void spi_txn_add_seg(spi_txn_t *txn, uint8_t *rx_data, const uint8_t *tx_data, u
   }
 }
 
-uint8_t *spi_txn_add_seg_tx_raw(spi_txn_t *txn, uint32_t size) {
-  if (size == 0) {
-    return NULL;
-  }
-
-  spi_txn_ensure_buffer_space(txn, size);
-
-  uint8_t *ptr = txn->buffer + txn->size;
-  txn->size += size;
-
-  spi_txn_segment_t *last_seg = txn->segment_count > 0 ? &txn->segments[txn->segment_count - 1] : NULL;
-  if (last_seg != NULL && last_seg->rx_data == NULL && last_seg->tx_data == NULL) {
-    // merge segments
-    last_seg->size += size;
-  } else {
-    // create new segment
-    if (txn->segment_count >= SPI_TXN_SEG_MAX) {
-      failloop(FAILLOOP_SPI);
-    }
-
-    spi_txn_segment_t *seg = &txn->segments[txn->segment_count];
-    seg->rx_data = NULL;
-    seg->tx_data = NULL;
-    seg->size = size;
-    txn->segment_count++;
-  }
-
-  return ptr;
-}
-
 void spi_txn_add_seg_const(spi_txn_t *txn, const uint8_t tx_data) {
   spi_txn_add_seg(txn, NULL, &tx_data, 1);
 }
@@ -576,16 +503,7 @@ static void spi_txn_finish(spi_bus_device_t *bus) {
   spi_port_config[bus->port].active_device = NULL;
 }
 
-static bool spi_txn_should_use_dma(spi_bus_device_t *bus, spi_txn_t *txn) {
-#ifdef STM32H7
-  if (WITHIN_DTCM_RAM(txn->buffer) || !WITHIN_DMA_RAM(txn->buffer)) {
-    return false;
-  }
-#endif
-  return true;
-}
-
-void spi_txn_continue_ex(spi_bus_device_t *bus, bool force_sync) {
+void spi_txn_continue(spi_bus_device_t *bus) {
   ATOMIC_BLOCK_ALL {
     if (!spi_dma_is_ready(bus->port)) {
       return;
@@ -621,27 +539,169 @@ void spi_txn_continue_ex(spi_bus_device_t *bus, bool force_sync) {
       }
     }
 
-    spi_reconfigure(bus, config);
+    spi_reconfigure(bus);
 
-    if (spi_txn_should_use_dma(bus, txn) && !force_sync) {
-      spi_csn_enable(bus);
-      spi_dma_transfer_begin(bus->port, txn->buffer, txn->size);
-    } else {
-      spi_csn_enable(bus);
-      spi_transfer(bus->port, txn->buffer, txn->size);
-      spi_csn_disable(bus);
-
-      spi_txn_finish(bus);
-
-      if (bus->auto_continue) {
-        spi_txn_continue(bus);
-      }
-    }
+    spi_csn_enable(bus);
+    spi_dma_transfer_begin(bus->port, txn->buffer, txn->size);
   }
 }
 
-void spi_txn_continue(spi_bus_device_t *bus) {
-  spi_txn_continue_ex(bus, false);
+void _spi_seg_submit(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const spi_txn_segment_t *segs, const uint32_t count) {
+  spi_txn_t *txn = spi_txn_pop(bus);
+  if (txn == NULL) {
+    failloop(FAILLOOP_SPI);
+  }
+
+  txn->bus = bus;
+  txn->segment_count = 0;
+
+  txn->flags = 0;
+  txn->size = 0;
+  txn->done_fn = done_fn;
+
+  txn->buffer_size = 0;
+  for (uint32_t i = 0; i < count; i++) {
+    txn->buffer_size += segs[i].size;
+  }
+  txn->buffer = dma_alloc(txn->buffer_size);
+
+  spi_txn_segment_t *last_seg = NULL;
+  for (uint32_t i = 0; i < count; i++) {
+    const spi_txn_segment_t *seg = &segs[i];
+
+    const uint8_t *tx_data = NULL;
+    uint8_t *rx_data = NULL;
+
+    switch (seg->type) {
+    case TXN_CONST:
+      txn->buffer[txn->size] = seg->byte;
+      break;
+
+    case TXN_BUFFER:
+      if (seg->tx_data) {
+        memcpy(txn->buffer + txn->size, seg->tx_data, seg->size);
+      } else {
+        memset(txn->buffer + txn->size, 0xFF, seg->size);
+      }
+      rx_data = seg->rx_data;
+      break;
+
+    case TXN_DELAY:
+      tx_data = seg->tx_data;
+      rx_data = seg->rx_data;
+      txn->flags |= TXN_DELAYED_TX;
+      break;
+    }
+
+    txn->size += seg->size;
+
+    if (last_seg != NULL && last_seg->rx_data == rx_data && last_seg->tx_data == tx_data) {
+      // merge segments
+      last_seg->size += seg->size;
+      continue;
+    }
+
+    if (txn->segment_count >= SPI_TXN_SEG_MAX) {
+      failloop(FAILLOOP_SPI);
+    }
+
+    if (rx_data) {
+      txn->flags |= TXN_DELAYED_RX;
+    }
+
+    last_seg = &txn->segments[txn->segment_count];
+    last_seg->rx_data = rx_data;
+    last_seg->tx_data = tx_data;
+    last_seg->size = seg->size;
+    txn->segment_count++;
+  }
+
+  ATOMIC_BLOCK_ALL {
+    const uint8_t head = (txn->bus->txn_head + 1) % SPI_TXN_MAX;
+    txn->status = TXN_READY;
+    txn->bus->txns[head] = txn;
+    txn->bus->txn_head = head;
+  }
+}
+
+void _spi_seg_submit_continue(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const spi_txn_segment_t *segs, const uint32_t count) {
+  _spi_seg_submit(bus, done_fn, segs, count);
+  spi_txn_continue(bus);
+}
+
+void _spi_seg_submit_wait(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count) {
+  spi_txn_wait(bus);
+
+  const spi_ports_t port = bus->port;
+
+  spi_port_config[port].active_device = bus;
+  dma_transfer_done[port] = 0;
+
+  spi_reconfigure(bus);
+
+  spi_csn_enable(bus);
+#if defined(STM32H7)
+  uint32_t transfer_size = 0;
+  for (uint32_t i = 0; i < count; i++) {
+    transfer_size += segs[i].size;
+  }
+  LL_SPI_SetTransferSize(PORT.channel, transfer_size);
+  LL_SPI_Enable(PORT.channel);
+  LL_SPI_StartMasterTransfer(PORT.channel);
+#else
+  LL_SPI_Enable(PORT.channel);
+#endif
+
+  for (uint32_t i = 0; i < count; i++) {
+    const spi_txn_segment_t *seg = &segs[i];
+    const uint32_t size = seg->size;
+
+    const uint8_t *tx_data = NULL;
+    uint8_t *rx_data = NULL;
+
+    if (seg->type == TXN_CONST) {
+      tx_data = &seg->byte;
+    } else {
+      tx_data = seg->tx_data;
+      rx_data = seg->rx_data;
+    }
+
+    for (uint32_t j = 0; j < size; j++) {
+#if defined(STM32H7)
+      while (!LL_SPI_IsActiveFlag_TXP(PORT.channel))
+        ;
+#else
+      while (!LL_SPI_IsActiveFlag_TXE(PORT.channel))
+        ;
+#endif
+      LL_SPI_TransmitData8(PORT.channel, tx_data ? tx_data[j] : 0xFF);
+#if defined(STM32H7)
+      while (!LL_SPI_IsActiveFlag_RXP(PORT.channel))
+        ;
+#else
+      while (!LL_SPI_IsActiveFlag_RXNE(PORT.channel))
+        ;
+#endif
+      const uint8_t ret = LL_SPI_ReceiveData8(PORT.channel);
+      if (rx_data != NULL) {
+        rx_data[j] = ret;
+      }
+    }
+  }
+
+#if defined(STM32H7)
+  while (!LL_SPI_IsActiveFlag_EOT(PORT.channel))
+    ;
+
+  LL_SPI_ClearFlag_TXTF(PORT.channel);
+  LL_SPI_Disable(PORT.channel);
+#else
+  LL_SPI_Disable(PORT.channel);
+#endif
+  spi_csn_disable(bus);
+
+  dma_transfer_done[port] = 1;
+  spi_port_config[port].active_device = NULL;
 }
 
 void spi_txn_wait(spi_bus_device_t *bus) {
