@@ -163,7 +163,7 @@ static uint8_t sdcard_command(const uint8_t cmd, const uint32_t args) {
     segs[count++] = spi_make_seg_const(0xFF);
   }
 
-  _spi_seg_submit_wait(&bus, segs, count);
+  spi_seg_submit_wait_ex(&bus, segs, count);
 
   return sdcard_wait_non_idle();
 }
