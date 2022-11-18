@@ -93,14 +93,16 @@ static bool sdcard_read_detect() {
 static uint8_t sdcard_wait_non_idle() {
   uint8_t ret = 0;
 
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_buffer(&ret, NULL, 1),
+  };
+
   for (uint16_t timeout = 8;; timeout--) {
     if (timeout == 0) {
       return 0xFF;
     }
 
-    spi_txn_t *txn = spi_txn_init(&bus, NULL);
-    spi_txn_add_seg(txn, &ret, NULL, 1);
-    spi_txn_submit_wait(&bus, txn);
+    spi_seg_submit_wait(&bus, segs);
 
     if (ret != 0xFF) {
       return ret;
@@ -112,14 +114,16 @@ static uint8_t sdcard_wait_non_idle() {
 static bool sdcard_wait_for_idle() {
   uint8_t ret = 0;
 
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_buffer(&ret, NULL, 1),
+  };
+
   for (uint16_t timeout = 8;; timeout--) {
     if (timeout == 0) {
       return 0;
     }
 
-    spi_txn_t *txn = spi_txn_init(&bus, NULL);
-    spi_txn_add_seg(txn, &ret, NULL, 1);
-    spi_txn_submit_wait(&bus, txn);
+    spi_seg_submit_wait(&bus, segs);
 
     if (ret == 0xFF) {
       return true;
@@ -133,32 +137,33 @@ static uint8_t sdcard_command(const uint8_t cmd, const uint32_t args) {
     return 0xFF;
   }
 
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  uint32_t count = 0;
+  spi_txn_segment_t segs[7] = {};
 
-  spi_txn_add_seg_const(txn, 0x40 | cmd);
-  spi_txn_add_seg_const(txn, args >> 24);
-  spi_txn_add_seg_const(txn, args >> 16);
-  spi_txn_add_seg_const(txn, args >> 8);
-  spi_txn_add_seg_const(txn, args >> 0);
+  segs[count++] = spi_make_seg_const(0x40 | cmd);
+  segs[count++] = spi_make_seg_const(args >> 24);
+  segs[count++] = spi_make_seg_const(args >> 16);
+  segs[count++] = spi_make_seg_const(args >> 8);
+  segs[count++] = spi_make_seg_const(args >> 0);
 
   // we have to send CRC while we are still in SD Bus mode
   switch (cmd) {
   case SDCARD_GO_IDLE:
-    spi_txn_add_seg_const(txn, 0x95);
+    segs[count++] = spi_make_seg_const(0x95);
     break;
   case SDCARD_IF_COND:
-    spi_txn_add_seg_const(txn, 0x87);
+    segs[count++] = spi_make_seg_const(0x87);
     break;
   default:
-    spi_txn_add_seg_const(txn, 1);
+    segs[count++] = spi_make_seg_const(1);
     break;
   }
 
   if (cmd == SDCARD_STOP_TRANSMISSION) {
-    spi_txn_add_seg_const(txn, 0xFF);
+    segs[count++] = spi_make_seg_const(0xFF);
   }
 
-  spi_txn_submit_wait(&bus, txn);
+  _spi_seg_submit_wait(&bus, segs, count);
 
   return sdcard_wait_non_idle();
 }
@@ -171,9 +176,10 @@ static uint8_t sdcard_app_command(const uint8_t cmd, const uint32_t args) {
 uint32_t sdcard_read_response() {
   uint8_t buf[4];
 
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg(txn, buf, NULL, 4);
-  spi_txn_submit_wait(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_buffer(buf, NULL, 4),
+  };
+  spi_seg_submit_wait(&bus, segs);
 
   return (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | (buf[3] << 0);
 }
@@ -185,33 +191,30 @@ void sdcard_read_data(uint8_t *buf, const uint32_t size) {
     return;
   }
 
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-
-  spi_txn_add_seg(txn, buf, NULL, size);
-
-  // two bytes CRC
-  spi_txn_add_seg_const(txn, 0xff);
-  spi_txn_add_seg_const(txn, 0xff);
-
-  spi_txn_submit_wait(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_buffer(buf, NULL, size),
+      // two bytes CRC
+      spi_make_seg_const(0xFF),
+      spi_make_seg_const(0xFF),
+  };
+  spi_seg_submit_wait(&bus, segs);
 }
 
 void sdcard_write_data(const uint8_t token, const uint8_t *buf, const uint32_t size) {
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
+  const spi_txn_segment_t segs[] = {
+      // start block
+      spi_make_seg_const(token),
 
-  // start block
-  spi_txn_add_seg_const(txn, token);
+      spi_make_seg_buffer(NULL, (uint8_t *)buf, size),
 
-  spi_txn_add_seg(txn, NULL, (uint8_t *)buf, size);
+      // two bytes CRC
+      spi_make_seg_const(0xFF),
+      spi_make_seg_const(0xFF),
 
-  // two bytes CRC
-  spi_txn_add_seg_const(txn, 0xff);
-  spi_txn_add_seg_const(txn, 0xff);
-
-  // write response
-  spi_txn_add_seg_const(txn, 0xff);
-
-  spi_txn_submit_wait(&bus, txn);
+      // write response
+      spi_make_seg_const(0xFF),
+  };
+  spi_seg_submit_wait(&bus, segs);
 }
 
 static void sdcard_parse_csd(sdcard_csd_t *csd, uint8_t *c) {
@@ -296,11 +299,11 @@ sdcard_status_t sdcard_update() {
       break;
     }
 
-    spi_txn_t *txn = spi_txn_init(&bus, NULL);
+    spi_txn_segment_t segs[20] = {};
     for (uint32_t i = 0; i < 20; i++) {
-      spi_txn_add_seg_const(txn, 0xff);
+      segs[i] = spi_make_seg_const(0xff);
     }
-    spi_txn_submit_continue(&bus, txn);
+    spi_seg_submit_continue(&bus, NULL, segs);
 
     state = SDCARD_RESET;
     delay_loops = 100;
@@ -403,14 +406,14 @@ sdcard_status_t sdcard_update() {
     if (token == 0xFE) {
       state = SDCARD_READ_MULTIPLE_CONTINUE;
 
-      spi_txn_t *txn = spi_txn_init(&bus, NULL);
-      spi_txn_add_seg(txn, operation.buf + operation.count_done * SDCARD_PAGE_SIZE, NULL, SDCARD_PAGE_SIZE);
+      const spi_txn_segment_t segs[] = {
+          spi_make_seg_buffer(operation.buf + operation.count_done * SDCARD_PAGE_SIZE, NULL, SDCARD_PAGE_SIZE),
 
-      // CRC bytes
-      spi_txn_add_seg_const(txn, 0xff);
-      spi_txn_add_seg_const(txn, 0xff);
-
-      spi_txn_submit_continue(&bus, txn);
+          // two bytes CRC
+          spi_make_seg_const(0xFF),
+          spi_make_seg_const(0xFF),
+      };
+      spi_seg_submit_continue(&bus, NULL, segs);
     }
     break;
   }
@@ -460,18 +463,20 @@ sdcard_status_t sdcard_update() {
       break;
     }
 
-    spi_txn_t *txn = spi_txn_init(&bus, NULL);
-    spi_txn_add_seg_const(txn, 0xFC);
-    spi_txn_add_seg(txn, NULL, operation.buf, SDCARD_PAGE_SIZE);
+    const spi_txn_segment_t segs[] = {
+        // token
+        spi_make_seg_const(0xFC),
 
-    // two bytes CRC
-    spi_txn_add_seg_const(txn, 0xff);
-    spi_txn_add_seg_const(txn, 0xff);
+        spi_make_seg_buffer(NULL, operation.buf, SDCARD_PAGE_SIZE),
 
-    // write response
-    spi_txn_add_seg_const(txn, 0xff);
+        // two bytes CRC
+        spi_make_seg_const(0xFF),
+        spi_make_seg_const(0xFF),
 
-    spi_txn_submit_continue(&bus, txn);
+        // write response
+        spi_make_seg_const(0xFF),
+    };
+    spi_seg_submit_continue(&bus, NULL, segs);
 
     state = SDCARD_WRITE_MULTIPLE_VERIFY;
     break;
@@ -488,9 +493,10 @@ sdcard_status_t sdcard_update() {
   }
 
   case SDCARD_WRITE_MULTIPLE_FINISH: {
-    spi_txn_t *txn = spi_txn_init(&bus, NULL);
-    spi_txn_add_seg_const(txn, 0xfd);
-    spi_txn_submit_continue(&bus, txn);
+    const spi_txn_segment_t segs[] = {
+        spi_make_seg_const(0xFD),
+    };
+    spi_seg_submit_continue(&bus, NULL, segs);
 
     state = SDCARD_WRITE_MULTIPLE_FINISH_WAIT;
     break;

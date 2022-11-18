@@ -1,7 +1,7 @@
 #include "drv_spi_a7105.h"
+#include "drv_exti.h"
 #include "drv_spi.h"
 #include "drv_time.h"
-#include "drv_exti.h"
 #include "project.h"
 
 #if defined(USE_A7105)
@@ -29,52 +29,54 @@ void a7105_handle_busy_exti(bool pin_state) {
 
 //------------------------------------------------------------------------------
 void a7105_write_reg(a7105_reg_t reg, uint8_t data) {
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg_const(txn, reg);
-  spi_txn_add_seg_const(txn, data);
-  spi_txn_submit_continue(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(reg),
+      spi_make_seg_const(data),
+  };
+  spi_seg_submit_continue(&bus, NULL, segs);
 }
 
 static void a7105_write_multi(uint8_t reg, const uint8_t *data, uint8_t len) {
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg_const(txn, reg);
-  spi_txn_add_seg(txn, NULL, data, len);
-  spi_txn_submit(txn);
-
-  // needs to sync ???
-  spi_txn_continue_ex(&bus, true);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(reg),
+      spi_make_seg_buffer(NULL, data, len),
+  };
+  spi_seg_submit_wait(&bus, segs);
 }
 
 uint8_t a7105_read_reg(a7105_reg_t reg) {
   uint8_t ret = 0;
 
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg_const(txn, reg | 0x40);
-  spi_txn_add_seg(txn, &ret, NULL, 1);
-  spi_txn_submit_wait(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(reg | 0x40),
+      spi_make_seg_buffer(&ret, NULL, 1),
+  };
+  spi_seg_submit_wait(&bus, segs);
 
   return ret;
 }
 
 static void a7105_read_multi(uint8_t reg, uint8_t *result, uint8_t len) {
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg(txn, &reg, &reg, 1);
-  spi_txn_add_seg(txn, result, NULL, len);
-  spi_txn_submit_wait(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(reg),
+      spi_make_seg_buffer(result, NULL, len),
+  };
+  spi_seg_submit_wait(&bus, segs);
 }
 
 void a7105_strobe(a7105_strobe_t address) {
   // If setting RX or TX mode then we'll want to be interrupted
   // after it has completed
   if ((A7105_RX == address) || (A7105_TX == address)) {
-      exti_interrupt_enable(A7105_GIO1_PIN);
+    exti_interrupt_enable(A7105_GIO1_PIN);
   } else {
-      exti_interrupt_disable(A7105_GIO1_PIN);
+    exti_interrupt_disable(A7105_GIO1_PIN);
   }
 
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg_const(txn, address);
-  spi_txn_submit_continue(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(address),
+  };
+  spi_seg_submit_continue(&bus, NULL, segs);
 }
 
 void a7105_read_fifo(uint8_t *data, uint8_t num) {
@@ -148,10 +150,10 @@ void a7105_init(const uint8_t *regs, uint8_t size) {
 
   // Configure the A7105 transceiver by writing the specified register values
   for (unsigned i = 0; i < size; i++) {
-      // A value of 0xFF indicates we should skip the register
-      if (regs[i] != 0xFF) {
-          a7105_write_reg((a7105_reg_t)i, regs[i]);
-      }
+    // A value of 0xFF indicates we should skip the register
+    if (regs[i] != 0xFF) {
+      a7105_write_reg((a7105_reg_t)i, regs[i]);
+    }
   }
 
   a7105_strobe(A7105_STANDBY);
@@ -161,8 +163,7 @@ void a7105_init(const uint8_t *regs, uint8_t size) {
   a7105_write_reg(A7105_02_CALC, 0x01);
 
   unsigned timeout = 1000;
-  while ((a7105_read_reg(A7105_02_CALC) != 0) && timeout--) 
-  {
+  while ((a7105_read_reg(A7105_02_CALC) != 0) && timeout--) {
     // spin until calibration has completed (or timeout)
   }
 
@@ -173,7 +174,7 @@ void a7105_init(const uint8_t *regs, uint8_t size) {
   // MVCS=1 so that VCOC is used. VCOC is set to 011b (3), the recommended value
   a7105_write_reg(A7105_24_VCO_CURCAL, 0x13);
 
-  // 
+  //
   a7105_write_reg(A7105_25_VCO_SBCAL_I, 0x09);
   a7105_strobe(A7105_STANDBY);
 }
@@ -182,7 +183,7 @@ void a7105_init(const uint8_t *regs, uint8_t size) {
 // if EXTI occurred then this returns true and updates irq_time with the time
 // when it occurred, otherwise returns false
 // Note: external interrupt is configured to only occur after setting RX or TX mode
-bool a7105_rx_tx_irq_time(uint32_t* irq_time) {
+bool a7105_rx_tx_irq_time(uint32_t *irq_time) {
   if (irq_triggered) {
     irq_triggered = false;
     *irq_time = irq_timestamp;

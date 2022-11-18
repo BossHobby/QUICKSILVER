@@ -48,23 +48,26 @@ static uint8_t max7456_map_attr(uint8_t attr) {
 static uint8_t max7456_dma_spi_read(uint8_t reg) {
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
 
-  uint8_t buffer[2] = {reg, 0xFF};
+  uint8_t ret = 0;
 
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg(txn, buffer, buffer, 2);
-  spi_txn_submit_wait(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(reg),
+      spi_make_seg_buffer(&ret, NULL, 1),
+  };
+  spi_seg_submit_wait(&bus, segs);
 
-  return buffer[1];
+  return ret;
 }
 
 // blocking dma write of a single register
 static void max7456_dma_spi_write(uint8_t reg, uint8_t data) {
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
 
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg_const(txn, reg);
-  spi_txn_add_seg_const(txn, data);
-  spi_txn_submit_wait(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(reg),
+      spi_make_seg_const(data),
+  };
+  spi_seg_submit_wait(&bus, segs);
 }
 
 static void max7456_init_display() {
@@ -256,10 +259,8 @@ bool max7456_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data
 
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
 
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-
   uint32_t offset = 0;
-  uint8_t *buf = spi_txn_add_seg_tx_raw(txn, 8 + size * 2);
+  uint8_t buf[8 + size * 2];
 
   buf[offset++] = DMM;
   buf[offset++] = max7456_map_attr(attr);
@@ -279,7 +280,10 @@ bool max7456_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data
   buf[offset++] = DMDI;
   buf[offset++] = 0xFF;
 
-  spi_txn_submit_continue(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_buffer(NULL, buf, offset),
+  };
+  spi_seg_submit_continue(&bus, NULL, segs);
 
   return true;
 }

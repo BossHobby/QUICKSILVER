@@ -96,9 +96,10 @@ uint8_t mpu6xxx_read(uint8_t reg) {
 
   uint8_t buffer[2] = {reg | 0x80, 0x00};
 
-  spi_txn_t *txn = spi_txn_init(&gyro_bus, NULL);
-  spi_txn_add_seg(txn, buffer, buffer, 2);
-  spi_txn_submit_wait(&gyro_bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_buffer(buffer, buffer, 2),
+  };
+  spi_seg_submit_wait(&gyro_bus, segs);
 
   return buffer[1];
 }
@@ -107,17 +108,19 @@ uint8_t mpu6xxx_read(uint8_t reg) {
 void mpu6xxx_write(uint8_t reg, uint8_t data) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_INIT);
 
-  spi_txn_t *txn = spi_txn_init(&gyro_bus, NULL);
-  spi_txn_add_seg_const(txn, reg);
-  spi_txn_add_seg_const(txn, data);
-  spi_txn_submit_wait(&gyro_bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(reg),
+      spi_make_seg_const(data),
+  };
+  spi_seg_submit_wait(&gyro_bus, segs);
 }
 
 void mpu6xxx_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, mpu6xxx_fast_divider());
 
-  spi_txn_t *txn = spi_txn_init(&gyro_bus, NULL);
-  spi_txn_add_seg_const(txn, reg | 0x80);
-  spi_txn_add_seg(txn, data, NULL, size);
-  spi_txn_submit_wait(&gyro_bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(reg | 0x80),
+      spi_make_seg_buffer(data, NULL, size),
+  };
+  spi_seg_submit_wait(&gyro_bus, segs);
 }

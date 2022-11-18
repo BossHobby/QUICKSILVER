@@ -67,9 +67,10 @@ static void cc2500_hardware_init() {
 }
 
 void cc2500_strobe(uint8_t address) {
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg_const(txn, address);
-  spi_txn_submit_continue(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(address),
+  };
+  spi_seg_submit_continue(&bus, NULL, segs);
 }
 
 void cc2500_strobe_sync(uint8_t address) {
@@ -80,67 +81,72 @@ void cc2500_strobe_sync(uint8_t address) {
 uint8_t cc2500_get_status() {
   uint8_t status = 0;
 
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg(txn, &status, NULL, 1);
-  spi_txn_submit_wait(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_buffer(&status, NULL, 1),
+  };
+  spi_seg_submit_wait(&bus, segs);
 
   return status;
 }
 
 void cc2500_write_reg(uint8_t reg, uint8_t data) {
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg_const(txn, reg | CC2500_WRITE_SINGLE);
-  spi_txn_add_seg_const(txn, data);
-  spi_txn_submit_continue(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(reg | CC2500_WRITE_SINGLE),
+      spi_make_seg_const(data),
+  };
+  spi_seg_submit_continue(&bus, NULL, segs);
 }
 
 uint8_t cc2500_read_reg(uint8_t reg) {
   uint8_t ret = 0;
 
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg_const(txn, reg | CC2500_READ_SINGLE);
-  spi_txn_add_seg(txn, &ret, NULL, 1);
-  spi_txn_submit_wait(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(reg | CC2500_READ_SINGLE),
+      spi_make_seg_buffer(&ret, NULL, 1),
+  };
+  spi_seg_submit_wait(&bus, segs);
 
   return ret;
 }
 
 static uint8_t cc2500_read_multi(uint8_t reg, uint8_t *result, uint8_t len) {
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg(txn, &reg, &reg, 1);
-  spi_txn_add_seg(txn, result, NULL, len);
-  spi_txn_submit_wait(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_buffer(&reg, &reg, 1),
+      spi_make_seg_buffer(result, NULL, len),
+  };
+  spi_seg_submit_wait(&bus, segs);
 
   return reg;
 }
 
 static void cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg_const(txn, reg);
-  spi_txn_add_seg(txn, NULL, data, len);
-  spi_txn_submit(txn);
-
-  // needs to sync ???
-  spi_txn_continue_ex(&bus, true);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(reg),
+      spi_make_seg_buffer(NULL, data, len),
+  };
+  spi_seg_submit_wait(&bus, segs);
 }
 
 void cc2500_set_channel(uint8_t channel, uint8_t *cal_data) {
   {
-    spi_txn_t *txn = spi_txn_init(&bus, NULL);
-    spi_txn_add_seg_const(txn, CC2500_SIDLE);
-    spi_txn_submit(txn);
+    const spi_txn_segment_t segs[] = {
+        spi_make_seg_const(CC2500_SIDLE),
+    };
+    spi_seg_submit(&bus, NULL, segs);
   }
   {
-    spi_txn_t *txn = spi_txn_init(&bus, NULL);
-    spi_txn_add_seg_const(txn, CC2500_FSCAL3 | CC2500_WRITE_BURST);
-    spi_txn_add_seg(txn, NULL, cal_data, 3);
-    spi_txn_submit(txn);
+    const spi_txn_segment_t segs[] = {
+        spi_make_seg_const(CC2500_FSCAL3 | CC2500_WRITE_BURST),
+        spi_make_seg_buffer(NULL, cal_data, 3),
+    };
+    spi_seg_submit(&bus, NULL, segs);
   }
   {
-    spi_txn_t *txn = spi_txn_init(&bus, NULL);
-    spi_txn_add_seg_const(txn, CC2500_CHANNR | CC2500_WRITE_SINGLE);
-    spi_txn_add_seg_const(txn, channel);
-    spi_txn_submit(txn);
+    const spi_txn_segment_t segs[] = {
+        spi_make_seg_const(CC2500_CHANNR | CC2500_WRITE_SINGLE),
+        spi_make_seg_const(channel),
+    };
+    spi_seg_submit(&bus, NULL, segs);
   }
   spi_txn_continue(&bus);
 }
@@ -160,12 +166,13 @@ uint8_t cc2500_packet_size() {
     uint8_t len2 = 0;
 
     {
-      spi_txn_t *txn = spi_txn_init(&bus, NULL);
-      spi_txn_add_seg_const(txn, CC2500_RXBYTES | CC2500_READ_SINGLE);
-      spi_txn_add_seg(txn, &len1, NULL, 1);
-      spi_txn_add_seg_const(txn, CC2500_RXBYTES | CC2500_READ_SINGLE);
-      spi_txn_add_seg(txn, &len2, NULL, 1);
-      spi_txn_submit_wait(&bus, txn);
+      const spi_txn_segment_t segs[] = {
+          spi_make_seg_const(CC2500_RXBYTES | CC2500_READ_SINGLE),
+          spi_make_seg_buffer(&len1, NULL, 1),
+          spi_make_seg_const(CC2500_RXBYTES | CC2500_READ_SINGLE),
+          spi_make_seg_buffer(&len2, NULL, 1),
+      };
+      spi_seg_submit_wait(&bus, segs);
     }
 
     // valid len found?

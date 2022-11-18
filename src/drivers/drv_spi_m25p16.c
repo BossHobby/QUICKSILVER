@@ -43,9 +43,10 @@ uint8_t m25p16_is_ready() {
 
   uint8_t buffer[2] = {M25P16_READ_STATUS_REGISTER, 0xFF};
 
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg(txn, buffer, buffer, 2);
-  spi_txn_submit_wait(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_buffer(buffer, buffer, 2),
+  };
+  spi_seg_submit_wait(&bus, segs);
 
   return (buffer[1] & 0x01) == 0;
 }
@@ -60,9 +61,10 @@ uint8_t m25p16_command(const uint8_t cmd) {
 
   uint8_t ret = 0;
 
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg(txn, &ret, &cmd, 1);
-  spi_txn_submit_wait(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_buffer(&ret, &cmd, 1),
+  };
+  spi_seg_submit_wait(&bus, segs);
 
   return ret;
 }
@@ -72,30 +74,29 @@ uint8_t m25p16_read_command(const uint8_t cmd, uint8_t *data, const uint32_t len
 
   uint8_t ret = 0;
 
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg(txn, &ret, &cmd, 1);
-  spi_txn_add_seg(txn, data, NULL, len);
-  spi_txn_submit_wait(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_buffer(&ret, &cmd, 1),
+      spi_make_seg_buffer(data, NULL, len),
+  };
+  spi_seg_submit_wait(&bus, segs);
 
   return ret;
 }
 
-static void m25p16_set_addr(spi_txn_t *txn, const uint32_t addr) {
-  spi_txn_add_seg_const(txn, (addr >> 16) & 0xFF);
-  spi_txn_add_seg_const(txn, (addr >> 8) & 0xFF);
-  spi_txn_add_seg_const(txn, addr & 0xFF);
-}
+#define m25p16_set_addr(addr) \
+  spi_make_seg_const((addr >> 16) & 0xFF), spi_make_seg_const((addr >> 8) & 0xFF), spi_make_seg_const(addr & 0xFF)
 
 uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, const uint32_t len) {
   m25p16_wait_for_ready();
 
   uint8_t ret = 0;
 
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg(txn, &ret, &cmd, 1);
-  m25p16_set_addr(txn, addr);
-  spi_txn_add_seg(txn, data, NULL, len);
-  spi_txn_submit_wait(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_buffer(&ret, &cmd, 1),
+      m25p16_set_addr(addr),
+      spi_make_seg_buffer(data, NULL, len),
+  };
+  spi_seg_submit_wait(&bus, segs);
 
   return ret;
 }
@@ -106,17 +107,20 @@ uint8_t m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint3
   }
 
   {
-    spi_txn_t *txn = spi_txn_init(&bus, NULL);
-    spi_txn_add_seg_const(txn, M25P16_WRITE_ENABLE);
-    spi_txn_submit(txn);
+
+    const spi_txn_segment_t segs[] = {
+        spi_make_seg_const(M25P16_WRITE_ENABLE),
+    };
+    spi_seg_submit(&bus, NULL, segs);
   }
 
   {
-    spi_txn_t *txn = spi_txn_init(&bus, NULL);
-    spi_txn_add_seg_const(txn, M25P16_PAGE_PROGRAM);
-    m25p16_set_addr(txn, addr);
-    spi_txn_add_seg(txn, NULL, buf, size);
-    spi_txn_submit(txn);
+    const spi_txn_segment_t segs[] = {
+        spi_make_seg_const(M25P16_PAGE_PROGRAM),
+        m25p16_set_addr(addr),
+        spi_make_seg_buffer(NULL, buf, size),
+    };
+    spi_seg_submit(&bus, NULL, segs);
   }
 
   spi_txn_continue(&bus);
@@ -129,11 +133,12 @@ uint8_t m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data,
 
   uint8_t ret = 0;
 
-  spi_txn_t *txn = spi_txn_init(&bus, NULL);
-  spi_txn_add_seg(txn, &ret, &cmd, 1);
-  m25p16_set_addr(txn, addr);
-  spi_txn_add_seg(txn, NULL, data, len);
-  spi_txn_submit_continue(&bus, txn);
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_buffer(&ret, &cmd, 1),
+      m25p16_set_addr(addr),
+      spi_make_seg_buffer(NULL, data, len),
+  };
+  spi_seg_submit_continue(&bus, NULL, segs);
 
   return ret;
 }
