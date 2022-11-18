@@ -416,15 +416,6 @@ void sx128x_set_frequency(const uint32_t freq) {
   sx128x_write_command_burst(SX1280_RADIO_SET_RFFREQUENCY, buf, 3);
 }
 
-void sx128x_set_fifo_addr(const uint8_t tx_base_addr, const uint8_t rx_base_addr) {
-  const uint8_t buf[2] = {
-      tx_base_addr,
-      rx_base_addr,
-  };
-  sx128x_write_command_burst(SX1280_RADIO_SET_BUFFERBASEADDRESS, buf, 2);
-  sx128x_wait();
-}
-
 void sx128x_set_dio_irq_params(const uint16_t irq_mask, const uint16_t dio1_mask, const uint16_t dio2_mask, const uint16_t dio3_mask) {
   const uint8_t buf[8] = {
       (uint8_t)((irq_mask >> 8) & 0x00FF),

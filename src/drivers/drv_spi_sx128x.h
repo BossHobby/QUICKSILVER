@@ -243,7 +243,6 @@ void sx128x_set_lora_packet_params(const uint8_t preamble_length, const sx128x_l
 void sx128x_set_flrc_packet_params(const uint8_t header_type, const uint8_t preamble_length, const uint8_t payload_length, uint32_t sync_word, uint16_t crc_seed, uint8_t cr);
 
 void sx128x_set_frequency(const uint32_t freq);
-void sx128x_set_fifo_addr(const uint8_t tx_base_addr, const uint8_t rx_base_addr);
 void sx128x_set_dio_irq_params(const uint16_t irq_mask, const uint16_t dio1_mask, const uint16_t dio2_mask, const uint16_t dio3_mask);
 void sx128x_set_output_power(const int8_t power);
 
