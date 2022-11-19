@@ -46,11 +46,11 @@ typedef struct {
       .hz = 0,                                      \
   },
 
-static volatile spi_port_config_t spi_port_config[SPI_PORTS_MAX] = {{}, SPI_PORTS};
+FAST_RAM static volatile spi_port_config_t spi_port_config[SPI_PORTS_MAX] = {{}, SPI_PORTS};
 
 #undef SPI_PORT
 
-volatile uint8_t dma_transfer_done[16] = {[0 ... 15] = 1};
+FAST_RAM static volatile uint8_t dma_transfer_done[16] = {[0 ... 15] = 1};
 
 #define PORT spi_port_defs[port]
 
