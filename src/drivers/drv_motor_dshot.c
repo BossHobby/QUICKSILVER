@@ -35,6 +35,7 @@
 
 typedef enum {
   DIR_CHANGE_START,
+  DIR_CHANGE_DELAY,
   DIR_CHANGE_CMD,
   DIR_CHANGE_STOP,
 } dir_change_state_t;
@@ -363,7 +364,20 @@ void motor_write(float *values) {
     static dir_change_state_t state = DIR_CHANGE_START;
 
     switch (state) {
-    case DIR_CHANGE_START:
+    case DIR_CHANGE_START: {
+      if (counter < 100) {
+        make_packet_all(0, false);
+        dshot_dma_start();
+        counter++;
+      } else {
+        state = DIR_CHANGE_DELAY;
+        counter = 0;
+      }
+      dir_change_time = time_micros();
+      break;
+    }
+
+    case DIR_CHANGE_DELAY:
       if ((time_micros() - dir_change_time) < DSHOT_DIR_CHANGE_IDLE_TIME_US) {
         break;
       }
@@ -405,7 +419,6 @@ bool motor_set_direction(motor_direction_t dir) {
   if (motor_dir != dir) {
     // update the motor direction
     motor_dir = dir;
-    dir_change_time = time_micros();
     return false;
   }
   // success
