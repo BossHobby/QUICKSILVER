@@ -79,34 +79,37 @@ void serial_msp_vtx_init() {
   }
 
   serial_smart_audio_port = profile.serial.smart_audio;
-
   serial_enable_rcc(serial_smart_audio_port);
-
   serial_vtx_wait_for_ready();
-  serial_disable_isr(serial_smart_audio_port);
 
-  LL_GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-  GPIO_InitStructure.Pull = LL_GPIO_PULL_UP;
-  GPIO_InitStructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  gpio_pin_init_af(&GPIO_InitStructure, USART.tx_pin, USART.gpio_af);
+  if (serial_is_soft(serial_smart_audio_port)) {
+    soft_serial_init(serial_smart_audio_port, 9600, 1);
+  } else {
+    serial_disable_isr(serial_smart_audio_port);
 
-  LL_USART_InitTypeDef usart_init;
-  LL_USART_StructInit(&usart_init);
-  usart_init.BaudRate = 9600;
-  usart_init.DataWidth = LL_USART_DATAWIDTH_8B;
-  usart_init.StopBits = LL_USART_STOPBITS_1;
-  usart_init.Parity = LL_USART_PARITY_NONE;
-  usart_init.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
-  usart_init.TransferDirection = LL_USART_DIRECTION_TX_RX;
-  usart_init.OverSampling = LL_USART_OVERSAMPLING_16;
-  serial_port_init(serial_smart_audio_port, &usart_init, true, false);
+    LL_GPIO_InitTypeDef GPIO_InitStructure;
+    GPIO_InitStructure.Mode = LL_GPIO_MODE_ALTERNATE;
+    GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
+    GPIO_InitStructure.Pull = LL_GPIO_PULL_UP;
+    GPIO_InitStructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+    gpio_pin_init_af(&GPIO_InitStructure, USART.tx_pin, USART.gpio_af);
 
-  LL_USART_EnableIT_RXNE(USART.channel);
-  LL_USART_EnableIT_TC(USART.channel);
+    LL_USART_InitTypeDef usart_init;
+    LL_USART_StructInit(&usart_init);
+    usart_init.BaudRate = 9600;
+    usart_init.DataWidth = LL_USART_DATAWIDTH_8B;
+    usart_init.StopBits = LL_USART_STOPBITS_1;
+    usart_init.Parity = LL_USART_PARITY_NONE;
+    usart_init.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
+    usart_init.TransferDirection = LL_USART_DIRECTION_TX_RX;
+    usart_init.OverSampling = LL_USART_OVERSAMPLING_16;
+    serial_port_init(serial_smart_audio_port, &usart_init, true, false);
 
-  serial_enable_isr(serial_smart_audio_port);
+    LL_USART_EnableIT_RXNE(USART.channel);
+    LL_USART_EnableIT_TC(USART.channel);
+
+    serial_enable_isr(serial_smart_audio_port);
+  }
 
   msp_vtx = &msp;
   vtx_last_valid_read = time_millis();
