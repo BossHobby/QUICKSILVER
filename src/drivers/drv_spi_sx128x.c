@@ -12,7 +12,7 @@
 
 static bool sx128x_poll_for_not_busy();
 
-static spi_bus_device_t bus = {
+FAST_RAM static spi_bus_device_t bus = {
     .port = SX12XX_SPI_PORT,
     .nss = SX12XX_NSS_PIN,
 
@@ -97,7 +97,7 @@ static void sx128x_handle_irq_status() {
   if ((irq & SX1280_IRQ_RX_DONE)) {
     static uint8_t buffer_status[2] = {0, 0};
     {
-      const spi_txn_segment_t segs[] = {
+      static const spi_txn_segment_t segs[] = {
           read_command_txn(SX1280_RADIO_GET_RXBUFFERSTATUS, buffer_status, 2),
       };
       spi_seg_submit(&bus, NULL, segs);
@@ -112,7 +112,7 @@ static void sx128x_handle_irq_status() {
       spi_seg_submit(&bus, NULL, segs);
     }
     {
-      const spi_txn_segment_t segs[] = {
+      static const spi_txn_segment_t segs[] = {
           read_command_txn(SX1280_RADIO_GET_PACKETSTATUS, (uint8_t *)packet_status, 2),
       };
       spi_seg_submit(&bus, sx128x_set_dio0_active, segs);
@@ -144,23 +144,20 @@ void sx128x_handle_dio0_exti(bool level) {
   if (!level) {
     return;
   }
-
   {
-    const spi_txn_segment_t segs[] = {
+    static const spi_txn_segment_t segs[] = {
         read_command_txn(SX1280_RADIO_GET_IRQSTATUS, (uint8_t *)&irq_status, 2),
     };
     spi_seg_submit(&bus, NULL, segs);
   }
-
   {
-    const spi_txn_segment_t segs[] = {
+    static const spi_txn_segment_t segs[] = {
         spi_make_seg_const(SX1280_RADIO_CLR_IRQSTATUS),
         spi_make_seg_const((uint8_t)(((uint16_t)SX1280_IRQ_RADIO_ALL >> 8) & 0x00FF)),
         spi_make_seg_const((uint8_t)((uint16_t)SX1280_IRQ_RADIO_ALL & 0x00FF)),
     };
     spi_seg_submit(&bus, sx128x_handle_irq_status, segs);
   }
-
   spi_txn_continue(&bus);
 }
 
