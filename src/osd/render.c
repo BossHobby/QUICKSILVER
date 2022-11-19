@@ -71,6 +71,7 @@ static const char *osd_element_labels[] = {
     "CURRENT DRAW",
     "CROSSHAIR",
     "CURRENT DRAWN",
+    "DEBUG",
 };
 
 static const char *aux_channel_labels[] = {
@@ -290,6 +291,69 @@ static void print_osd_flightmode(osd_element_t *el) {
   osd_write_data(flightmode_labels[flightmode], 10);
 }
 
+static void print_state_member_uint8(uint8_t *data) {
+  osd_write_uint(*data, osd_auto_width(*data));
+}
+
+static void print_state_member_uint16(uint16_t *data) {
+  osd_write_uint(*data, osd_auto_width(*data));
+}
+
+static void print_state_member_uint32(uint32_t *data) {
+  osd_write_uint(*data, osd_auto_width(*data));
+}
+
+static void print_state_member_float(float *data) {
+  osd_write_float(*data, osd_auto_width(*data), 2);
+}
+
+static void print_state_member_vec3_t(vec3_t *data) {
+}
+
+static void print_state_member_vec4_t(vec4_t *data) {
+}
+
+static void print_state_member(char *name) {
+#define MEMBER(member, type)                  \
+  if (strcmp(name, #member) == 0) {           \
+    print_state_member_##type(&state.member); \
+    return;                                   \
+  }
+#define ARRAY_MEMBER(member, size, type) \
+  {}
+
+  STATE_MEMBERS
+
+#undef MEMBER
+#undef ARRAY_MEMBER
+}
+
+static void print_debug_element(osd_element_t *el, char *str) {
+  osd_start(osd_attr(el), el->pos_x, el->pos_y);
+
+  char element[32];
+  uint32_t element_len = 0;
+  bool started = false;
+  for (uint32_t i = 0; i < strlen(str); i++) {
+    if (str[i] == '{') {
+      element_len = 0;
+      started = true;
+      continue;
+    }
+    if (str[i] == '}') {
+      started = false;
+      element[element_len] = 0;
+      print_state_member(element);
+      continue;
+    }
+    if (started) {
+      element[element_len++] = str[i];
+    } else {
+      osd_write_char(str[i]);
+    }
+  }
+}
+
 static void print_osd_rssi(osd_element_t *el) {
   static float rx_rssi_filt;
   if (flags.failsafe)
@@ -499,7 +563,11 @@ static void osd_display_regular() {
     osd_start(osd_attr(el), el->pos_x, el->pos_y);
     osd_write_float(state.ibat_drawn, 4, 2);
     osd_write_char(ICON_MAH);
+    break;
+  }
 
+  case OSD_DEBUG: {
+    print_debug_element(el, "{cpu_load}S");
     osd_state.element++;
     break;
   }

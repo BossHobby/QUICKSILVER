@@ -454,6 +454,7 @@ const profile_t default_profile = {
             ENCODE_OSD_ELEMENT(1, 0, 1, 14),  // OSD_CURRENT_DRAW
             ENCODE_OSD_ELEMENT(0, 0, 14, 6),  // OSD_CROSSHAIR
             ENCODE_OSD_ELEMENT(1, 0, 1, 13),  // OSD_CURRENT_DRAWN
+            ENCODE_OSD_ELEMENT(1, 0, 1, 2),   // OSD_DEBUG
         },
         .elements_hd = {
             ENCODE_OSD_ELEMENT(1, 1, 19, 0),  // OSD_CALLSIGN
@@ -470,6 +471,7 @@ const profile_t default_profile = {
             ENCODE_OSD_ELEMENT(1, 0, 0, 17),  // OSD_CURRENT_DRAW
             ENCODE_OSD_ELEMENT(0, 0, 15, 8),  // OSD_CROSSHAIR
             ENCODE_OSD_ELEMENT(1, 0, 0, 16),  // OSD_CURRENT_DRAWN
+            ENCODE_OSD_ELEMENT(1, 0, 0, 2),   // OSD_DEBUG
         },
     },
     .blackbox = {

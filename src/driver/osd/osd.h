@@ -67,6 +67,7 @@ void osd_display_refresh();
 osd_system_t osd_check_system();
 
 void osd_start(uint8_t attr, uint8_t x, uint8_t y);
+uint32_t osd_auto_width(int32_t val);
 
 void osd_write_data(const uint8_t *buffer, uint8_t size);
 void osd_write_str(const char *buffer);

@@ -181,6 +181,15 @@ void osd_start(uint8_t attr, uint8_t x, uint8_t y) {
   osd_seg.offset = 0;
 }
 
+uint32_t osd_auto_width(int32_t val) {
+  uint32_t width = 0;
+  while (val) {
+    val /= 10;
+    width++;
+  }
+  return width;
+}
+
 void osd_write_char(const char val) {
   osd_display_set(osd_seg.x + osd_seg.offset, osd_seg.y, osd_seg.attr, val);
   osd_seg.offset += 1;
