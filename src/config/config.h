@@ -144,10 +144,6 @@
 //**********************************************************************************************************************
 //***********************************************VOLTAGE SETTINGS*******************************************************
 
-// ************* This disables all voltage related logic by returning 4.2V/cell at all times.
-// ************* (some targets without voltage dividers may have this already set in targets.h)
-//#define DISABLE_ADC
-
 // ************* Set your lipo cell count to override auto cell count detect logic
 //#define LIPO_CELL_COUNT 1
 

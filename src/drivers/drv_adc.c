@@ -8,8 +8,6 @@
 #include "project.h"
 #include "util/util.h"
 
-#ifndef DISABLE_ADC
-
 typedef enum {
   ADC_DEVICE_1,
 #ifdef STM32H7
@@ -266,7 +264,7 @@ static uint16_t adc_read_raw(adc_chan_t index) {
   return adc_array[index];
 }
 
-static float adc_convert_to_mv(float value) {
+float adc_convert_to_mv(float value) {
   const float vref = (float)(VREFINT_CAL * VREFINT_CAL_VREF) / (float)adc_read_raw(ADC_CHAN_VREF);
   return value * (vref / 4096.0f);
 }
@@ -279,38 +277,23 @@ float adc_read(adc_chan_t chan) {
   }
 
   case ADC_CHAN_VBAT:
+#ifdef VBAT_PIN
     return adc_convert_to_mv(adc_read_raw(chan)) * VBAT_SCALE * (profile.voltage.actual_battery_voltage / profile.voltage.reported_telemetry_voltage);
+#else
+    return 4.20f;
+#endif
 
-#ifdef IBAT_PIN
   case ADC_CHAN_IBAT:
+#ifdef IBAT_PIN
     if (profile.voltage.ibat_scale == 0) {
       return 0;
     }
     return adc_convert_to_mv(adc_read_raw(chan)) * (10000.0f / profile.voltage.ibat_scale);
+#else
+    return 0;
 #endif
 
   default:
     return adc_read_raw(chan);
   }
 }
-
-#else
-
-// lvc disabled
-void adc_init() {}
-
-// dummy function with lvc disabled
-float adc_read(adc_chan_t chan) {
-  switch (chan) {
-  case 0:
-    return 4.20f;
-
-  case 1:
-    return 1.0f;
-
-  default:
-    return 0;
-  }
-}
-
-#endif
