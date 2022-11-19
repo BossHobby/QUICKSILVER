@@ -193,8 +193,8 @@ static bool elrs_radio_detect() {
 }
 
 bool elrs_radio_init() {
+  sx128x_wait();
   sx128x_init();
-
   sx128x_reset();
 
   if (!elrs_radio_detect()) {

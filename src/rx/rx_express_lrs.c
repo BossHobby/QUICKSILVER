@@ -436,9 +436,7 @@ static void elrs_setup_bind(const volatile uint8_t *packet) {
   bind_storage.elrs.magic = 0x37;
 
   crc_initializer = ((UID[4] << 8) | UID[5]) ^ ELRS_OTA_VERSION_ID;
-
-  const int32_t seed = ((int32_t)UID[2] << 24) + ((int32_t)UID[3] << 16) + ((int32_t)UID[4] << 8) + UID[5];
-  fhss_randomize(seed);
+  fhss_randomize(elrs_get_uid_mac_seed());
 
   last_rf_mode_cycle_millis = 0;
   in_binding_mode = false;
@@ -787,7 +785,7 @@ void elrs_handle_tock() {
 }
 
 void rx_expresslrs_init() {
-  if (!elrs_radio_init()) {
+  if (!radio_is_init && !elrs_radio_init()) {
     radio_is_init = false;
     return;
   }
@@ -799,6 +797,7 @@ void rx_expresslrs_init() {
   elrs_tlm_sender_reset();
   elrs_setup_msp(ELRS_MSP_BUFFER_SIZE, msp_buffer);
 
+  next_rate = ELRS_RATE_DEFAULT;
   crc_initializer = ((UID[4] << 8) | UID[5]) ^ ELRS_OTA_VERSION_ID;
   rf_mode_cycle_multiplier = 1;
   last_rf_mode_cycle_millis = time_millis();
@@ -809,6 +808,7 @@ void rx_expresslrs_init() {
   elrs_enter_rx(packet);
 
   radio_is_init = true;
+  in_binding_mode = false;
 }
 
 uint16_t rx_expresslrs_smoothing_cutoff() {
