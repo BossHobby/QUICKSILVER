@@ -30,7 +30,7 @@
 #define DSHOT_MAX_PORT_COUNT 3
 #define DSHOT_DMA_BUFFER_SIZE (3 * (16 + 2))
 
-#define DSHOT_DIR_CHANGE_IDLE_TIME_US 500000
+#define DSHOT_DIR_CHANGE_IDLE_TIME_US 10000
 #define DSHOT_DIR_CHANGE_CMD_TIME_US 1000
 
 typedef enum {
@@ -365,8 +365,6 @@ void motor_write(float *values) {
     switch (state) {
     case DIR_CHANGE_START:
       if ((time_micros() - dir_change_time) < DSHOT_DIR_CHANGE_IDLE_TIME_US) {
-        make_packet_all(0, false);
-        dshot_dma_start();
         break;
       }
       state = DIR_CHANGE_CMD;
@@ -379,7 +377,7 @@ void motor_write(float *values) {
       }
 
       const uint16_t value = motor_dir == MOTOR_REVERSE ? DSHOT_CMD_ROTATE_REVERSE : DSHOT_CMD_ROTATE_NORMAL;
-      if (counter < 24) {
+      if (counter < 10) {
         make_packet_all(value, true);
         dshot_dma_start();
         counter++;
