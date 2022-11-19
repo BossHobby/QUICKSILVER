@@ -35,7 +35,7 @@ SOFTWARE.
 ENTRY(Reset_Handler)
 
 /* Highest address of the user mode stack */
-_estack = ORIGIN(RAM) + LENGTH(RAM);    /* end of 128K RAM */
+_estack = ORIGIN(FAST_RAM) + LENGTH(FAST_RAM);    /* end of 64K CCM-RAM */
 
 /* Generate a link error if heap and stack don't fit into RAM */
 _Min_Heap_Size = 0;      /* required amount of heap  */
@@ -55,7 +55,7 @@ MEMORY
   FLASH_CODE   (rx) : ORIGIN = 0x08010000, LENGTH = 960K
   RAM (rwx)         : ORIGIN = 0x20000000, LENGTH = 128K
   MEMORY_B1 (rx)    : ORIGIN = 0x60000000, LENGTH = 0K
-  FAST_RAM (rwx)    : ORIGIN = 0x10000000, LENGTH = 64K
+  FAST_RAM (rw)     : ORIGIN = 0x10000000, LENGTH = 64K
 }
 
 /* Define output sections */
@@ -183,7 +183,7 @@ SECTIONS
     . = . + _Min_Heap_Size;
     . = . + _Min_Stack_Size;
     . = ALIGN(4);
-  } >RAM
+  } >FAST_RAM
 
   /* MEMORY_bank1 section, code must be located here explicitly            */
   /* Example: extern int foo() __attribute__ ((section (".mb1text"))); */
