@@ -319,6 +319,10 @@ void control() {
     if (!checked_prearm && rx_aux_on(AUX_PREARM)) {
       // CONDITION: AUX_PREARM is high AND we have not checked prearm this arm cycle
       flags.arm_switch = 1;
+
+      if (!flags.turtle_ready) {
+        motor_set_direction(MOTOR_FORWARD);
+      }
     } else if (!flags.arm_switch) {
       // throw up arming safety if we didnt manage to arm
       flags.arm_safety = 1;

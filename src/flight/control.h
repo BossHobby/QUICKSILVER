@@ -30,6 +30,7 @@ typedef struct {
   uint8_t controls_override : 1;  // will activate rx_override below & will write directly to the motors (motor_test)
   uint8_t motortest_override : 1; // tuns off digital idle in the dshot driver & will write either sticks or usb_motortest values directly to motors
   uint8_t turtle : 1;
+  uint8_t turtle_ready : 1;
   uint8_t gestures_disabled : 1;
 
   uint8_t usb_active : 1;

@@ -16,7 +16,7 @@
 #if defined(USE_DSHOT_DMA_DRIVER)
 
 #define DSHOT_TIME profile.motor.dshot_time
-#define DSHOT_SYMBOL_TIME (PWM_CLOCK_FREQ_HZ / (3 * DSHOT_TIME * 1000 - 1))
+#define DSHOT_SYMBOL_TIME (PWM_CLOCK_FREQ_HZ / (3 * DSHOT_TIME * 1000) - 1)
 
 #define DSHOT_CMD_BEEP1 1
 #define DSHOT_CMD_BEEP2 2
@@ -59,8 +59,8 @@ typedef struct {
   dma_device_t dma_device;
 } dshot_gpio_port_t;
 
+static bool dir_change_done = true;
 static motor_direction_t motor_dir = MOTOR_FORWARD;
-static motor_direction_t last_motor_dir = MOTOR_FORWARD;
 
 static uint32_t pwm_failsafe_time = 1;
 static uint32_t dir_change_time = 0;
@@ -331,7 +331,7 @@ void motor_wait_for_ready() {
 }
 
 void motor_write(float *values) {
-  if (motor_dir == last_motor_dir) {
+  if (dir_change_done) {
     for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
       uint16_t value = 0;
 
@@ -404,25 +404,22 @@ void motor_write(float *values) {
     }
 
     case DIR_CHANGE_STOP:
-      last_motor_dir = motor_dir;
+      dir_change_done = true;
       state = DIR_CHANGE_START;
       break;
     }
   }
 }
 
-bool motor_set_direction(motor_direction_t dir) {
-  if (last_motor_dir != motor_dir) {
-    // the last direction change is not done yet
-    return false;
-  }
-  if (motor_dir != dir) {
-    // update the motor direction
+void motor_set_direction(motor_direction_t dir) {
+  if (dir_change_done) {
     motor_dir = dir;
-    return false;
+    dir_change_done = false;
   }
-  // success
-  return true;
+}
+
+bool motor_direction_change_done() {
+  return dir_change_done;
 }
 
 void motor_beep() {

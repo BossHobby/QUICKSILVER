@@ -20,7 +20,8 @@ void motor_init();
 void motor_wait_for_ready();
 void motor_beep();
 void motor_write(float *values);
-bool motor_set_direction(motor_direction_t dir);
+void motor_set_direction(motor_direction_t dir);
+bool motor_direction_change_done();
 
 // generic functions
 void motor_set(uint8_t number, float pwm);

@@ -20,20 +20,19 @@ typedef enum {
 } turtle_mode_stage_t;
 
 static turtle_mode_stage_t turtle_state = TURTLE_STAGE_IDLE;
-static bool turtle_ready = false;
 static uint32_t turtle_time = 0;
 static uint8_t turtle_axis = 0;
 static uint8_t turtle_dir = 0;
 
 void turtle_mode_start() {
-  if (!turtle_ready && flags.on_ground && turtle_state == TURTLE_STAGE_IDLE) {
+  if (!flags.turtle_ready && flags.on_ground && turtle_state == TURTLE_STAGE_IDLE && (state.GEstG.yaw < 0)) {
     // only enable turtle if we are onground and not recovering from a interrupted turtle
-    turtle_ready = true;
+    flags.turtle_ready = 1;
   }
 }
 
 void turtle_mode_cancel() {
-  turtle_ready = false;
+  flags.turtle_ready = 0;
 }
 
 void turtle_mode_update() {
@@ -42,7 +41,7 @@ void turtle_mode_update() {
     flags.turtle = 1;
 
     if (
-        !turtle_ready ||          // turtle was canceled
+        !flags.turtle_ready ||    // turtle was canceled
         state.GEstG.yaw > 0.5f || // quad was flipped
         !flags.arm_state          // quad was disarmed
     ) {
@@ -51,9 +50,6 @@ void turtle_mode_update() {
     }
   } else {
     // turtle is in-active
-    if (flags.arm_state && !motor_set_direction(MOTOR_FORWARD)) {
-      return;
-    }
     flags.turtle = 0;
   }
 
@@ -65,7 +61,8 @@ void turtle_mode_update() {
       last_armed_state_turtle = flags.arm_switch;
 
       // quad was just armed and upside down, begin the turtle sequence
-      if (turtle_ready && flags.arm_switch && (state.GEstG.yaw < 0)) {
+      if (flags.turtle_ready && flags.arm_switch && (state.GEstG.yaw < 0)) {
+        motor_set_direction(MOTOR_REVERSE);
         turtle_state = TURTLE_STAGE_START;
       }
     }
@@ -79,7 +76,7 @@ void turtle_mode_update() {
     state.rx_override.yaw = 0;
     state.rx_override.axis[3] = 0;
 
-    if (!motor_set_direction(MOTOR_REVERSE)) {
+    if (!motor_direction_change_done()) {
       // wait for the motor to sucessfully change
       break;
     }
@@ -122,11 +119,12 @@ void turtle_mode_update() {
     break;
 
   case TURTLE_STAGE_EXIT:
+    motor_set_direction(MOTOR_FORWARD);
     flags.controls_override = 0;
     flags.motortest_override = 0;
     flags.arm_safety = 1;
     turtle_state = TURTLE_STAGE_IDLE;
-    turtle_ready = false;
+    flags.turtle_ready = 0;
     break;
   }
 }

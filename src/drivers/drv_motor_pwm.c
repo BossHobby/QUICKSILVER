@@ -134,7 +134,10 @@ void motor_write(float *values) {
   }
 }
 
-bool motor_set_direction(motor_direction_t dir) {
+void motor_set_direction(motor_direction_t dir) {
+}
+
+bool motor_direction_change_done() {
   return true;
 }
 
