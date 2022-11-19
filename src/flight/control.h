@@ -46,11 +46,11 @@ typedef struct {
   uint32_t looptime_us; // looptime in us
   float uptime;         // running sum of looptimes
   float armtime;        // running sum of looptimes (while armed)
-  float cpu_load;       // micros we have had left last loop
+  uint32_t cpu_load;    // micros we have had left last loop
 
   uint32_t failsafe_time_ms; // time the last failsafe occured in ms
 
-  float lipo_cell_count;
+  uint8_t lipo_cell_count;
 
   float cpu_temp;
 
@@ -109,8 +109,8 @@ typedef struct {
   MEMBER(looptime_us, uint32)               \
   MEMBER(uptime, float)                     \
   MEMBER(armtime, float)                    \
-  MEMBER(cpu_load, float)                   \
-  MEMBER(lipo_cell_count, float)            \
+  MEMBER(cpu_load, uint32)                  \
+  MEMBER(lipo_cell_count, uint8)            \
   MEMBER(cpu_temp, float)                   \
   MEMBER(vbat, float)                       \
   MEMBER(vbat_filtered, float)              \

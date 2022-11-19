@@ -27,12 +27,12 @@ void vbat_init() {
     for (int i = 6; i > 0; i--) {
       float cells = i;
       if (state.vbat_filtered / cells > 3.7f) {
-        state.lipo_cell_count = (float)cells;
+        state.lipo_cell_count = cells;
         break;
       }
     }
   } else {
-    state.lipo_cell_count = (float)profile.voltage.lipo_cell_count;
+    state.lipo_cell_count = profile.voltage.lipo_cell_count;
   }
 
   state.vbat_filtered_decay *= (float)state.lipo_cell_count;
@@ -50,7 +50,7 @@ void vbat_calc() {
   lpf(&state.vbat_filtered, state.vbat, 0.9968f);
   lpf(&state.vbat_filtered_decay, state.vbat_filtered, FILTERCALC(1000, 18000e3));
 
-  state.vbat_cell_avg = state.vbat_filtered_decay / state.lipo_cell_count;
+  state.vbat_cell_avg = state.vbat_filtered_decay / (float)state.lipo_cell_count;
 
   // average of all motors
   // filter motorpwm so it has the same delay as the filtered voltage
@@ -114,7 +114,7 @@ void vbat_calc() {
     hyst = 0.0f;
 
   state.vbat_compensated = tempvolt + vdrop_factor * thrfilt;
-  state.vbat_compensated_cell_avg = state.vbat_compensated / state.lipo_cell_count;
+  state.vbat_compensated_cell_avg = state.vbat_compensated / (float)state.lipo_cell_count;
 
   if ((state.vbat_compensated_cell_avg < profile.voltage.vbattlow + hyst) || (state.vbat_cell_avg < VBATTLOW_ABS))
     flags.lowbatt = 1;
