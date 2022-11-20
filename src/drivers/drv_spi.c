@@ -605,13 +605,16 @@ static void spi_txn_finish(spi_bus_device_t *bus) {
   }
 
   dma_free(txn->buffer);
-  txn->buffer = NULL;
-  txn->status = TXN_IDLE;
 
-  bus->txns[tail] = NULL;
-  bus->txn_tail = tail;
+  ATOMIC_BLOCK_ALL {
+    txn->buffer = NULL;
+    txn->status = TXN_IDLE;
 
-  spi_port_config[bus->port].active_device = NULL;
+    bus->txns[tail] = NULL;
+    bus->txn_tail = tail;
+
+    spi_port_config[bus->port].active_device = NULL;
+  }
 }
 
 static void handle_dma_rx_isr(spi_ports_t port) {
