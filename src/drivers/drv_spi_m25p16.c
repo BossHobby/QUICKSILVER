@@ -107,7 +107,6 @@ uint8_t m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint3
   }
 
   {
-
     const spi_txn_segment_t segs[] = {
         spi_make_seg_const(M25P16_WRITE_ENABLE),
     };
