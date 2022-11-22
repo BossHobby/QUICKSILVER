@@ -378,29 +378,37 @@ bool spi_txn_ready(spi_bus_device_t *bus) {
   return bus->txn_head == bus->txn_tail;
 }
 
+static inline bool spi_txn_can_send(spi_bus_device_t *bus) {
+  if (!spi_dma_is_ready(bus->port)) {
+    return false;
+  }
+
+  volatile spi_port_config_t *config = &spi_port_config[bus->port];
+  if (config->active_device != NULL && config->active_device != bus) {
+    return false;
+  }
+
+  if (bus->poll_fn && !bus->poll_fn()) {
+    return false;
+  }
+
+  return true;
+}
+
 void spi_txn_continue(spi_bus_device_t *bus) {
   ATOMIC_BLOCK_ALL {
-    if (!spi_dma_is_ready(bus->port)) {
-      return;
-    }
-
     if (bus->txn_head == bus->txn_tail) {
       return;
     }
 
-    volatile spi_port_config_t *config = &spi_port_config[bus->port];
-    if (config->active_device != NULL && config->active_device != bus) {
-      return;
-    }
-
-    if (bus->poll_fn && !bus->poll_fn()) {
+    if (!spi_txn_can_send(bus)) {
       return;
     }
 
     const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
     spi_txn_t *txn = bus->txns[tail];
 
-    config->active_device = bus;
+    spi_port_config[bus->port].active_device = bus;
     txn->status = TXN_IN_PROGRESS;
 
     if (txn->flags & TXN_DELAYED_TX) {
@@ -506,6 +514,9 @@ void spi_seg_submit_continue_ex(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn
 
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count) {
   spi_txn_wait(bus);
+
+  while (!spi_txn_can_send(bus))
+    ;
 
   const spi_ports_t port = bus->port;
 
