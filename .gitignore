@@ -71,3 +71,6 @@ Temporary Items
 
 go.mod
 go.sum
+
+/.pio
+__pycache__
