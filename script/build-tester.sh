@@ -34,6 +34,8 @@ if [ -z "$COMMIT" ]; then
   COMMIT="$(git rev-parse HEAD)"
 fi
 
+export GITHUB_VERSION="$(git describe --exact-match --tags 2> /dev/null || git rev-parse --short HEAD)"
+
 BUILD_PREFIX="quicksilver"
 if [ ! -z "$BRANCH" ] && [ "$BRANCH" != "master" ] && [ "$BRANCH" != "develop" ]; then
   BUILD_PREFIX="$BUILD_PREFIX.$BRANCH"

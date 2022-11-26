@@ -39,6 +39,8 @@ if 'DRONE_TAG' in os.environ:
     git_version = os.environ.get('DRONE_TAG')
 elif 'DRONE_COMMIT' in os.environ:
     git_version = os.environ.get('DRONE_COMMIT')
+elif 'GITHUB_VERSION' in os.environ:
+    git_version = os.environ.get('GITHUB_VERSION')
 else:
     try:
         ret = subprocess.run(['git', 'rev-parse', 'HEAD'],
