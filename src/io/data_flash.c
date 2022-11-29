@@ -7,7 +7,7 @@
 #include "drv_time.h"
 #include "io/usb_configurator.h"
 #include "util/cbor_helper.h"
-#include "util/circular_buffer.h"
+#include "util/ring_buffer.h"
 #include "util/util.h"
 
 #ifdef ENABLE_BLACKBOX
@@ -43,7 +43,7 @@ data_flash_bounds_t bounds;
 data_flash_header_t data_flash_header;
 
 static uint8_t encode_buffer_data[BUFFER_SIZE];
-static circular_buffer_t encode_buffer = {
+static ring_buffer_t encode_buffer = {
     .buffer = encode_buffer_data,
     .head = 0,
     .tail = 0,
@@ -97,7 +97,7 @@ data_flash_result_t data_flash_update() {
   static uint32_t offset = 0;
   static uint32_t write_size = PAGE_SIZE;
 
-  const uint32_t to_write = circular_buffer_available(&encode_buffer);
+  const uint32_t to_write = ring_buffer_available(&encode_buffer);
 
 #ifdef USE_SDCARD
   sdcard_status_t sdcard_status = sdcard_update();
@@ -173,7 +173,7 @@ sdcard_do_more:
       write_size = to_write;
     }
 
-    circular_buffer_read_multi(&encode_buffer, write_buffer, write_size);
+    ring_buffer_read_multi(&encode_buffer, write_buffer, write_size);
     state = STATE_CONTINUE_WRITE;
     break;
   }
@@ -286,7 +286,7 @@ flash_do_more:
       write_size = to_write;
     }
 
-    circular_buffer_read_multi(&encode_buffer, write_buffer, write_size);
+    ring_buffer_read_multi(&encode_buffer, write_buffer, write_size);
     state = STATE_CONTINUE_WRITE;
     break;
   }
@@ -395,7 +395,7 @@ bool data_flash_restart(uint32_t blackbox_rate, uint32_t looptime) {
 
   state = STATE_ERASE_HEADER;
 
-  circular_buffer_clear(&encode_buffer);
+  ring_buffer_clear(&encode_buffer);
 
   return true;
 }
@@ -444,11 +444,11 @@ cbor_result_t data_flash_write_backbox(const blackbox_t *b) {
   }
 
   const uint32_t len = cbor_encoder_len(&enc);
-  if (len >= circular_buffer_free(&encode_buffer)) {
+  if (len >= ring_buffer_free(&encode_buffer)) {
     return res;
   }
 
-  circular_buffer_write_multi(&encode_buffer, buffer, len);
+  ring_buffer_write_multi(&encode_buffer, buffer, len);
   return res;
 }
 

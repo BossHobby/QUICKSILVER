@@ -321,7 +321,7 @@ void serial_init(serial_port_t *serial, usart_ports_t port, uint32_t baudrate, u
 }
 
 uint32_t serial_read_bytes(serial_port_t *serial, uint8_t *data, const uint32_t size) {
-  return circular_buffer_read_multi(serial->rx_buffer, data, size);
+  return ring_buffer_read_multi(serial->rx_buffer, data, size);
 }
 
 bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32_t size) {
@@ -333,7 +333,7 @@ bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32
 
   uint32_t written = 0;
   while (written < size) {
-    written += circular_buffer_write_multi(serial->tx_buffer, data + written, size - written);
+    written += ring_buffer_write_multi(serial->tx_buffer, data + written, size - written);
     LL_USART_EnableIT_TXE(port->channel);
     __NOP();
   }
@@ -400,7 +400,7 @@ void handle_serial_isr(serial_port_t *serial) {
 
   if (LL_USART_IsEnabledIT_TXE(port->channel) && LL_USART_IsActiveFlag_TXE(port->channel)) {
     uint8_t data = 0;
-    if (circular_buffer_read(serial->tx_buffer, &data)) {
+    if (ring_buffer_read(serial->tx_buffer, &data)) {
       LL_USART_TransmitData8(port->channel, data);
     } else {
       LL_USART_DisableIT_TXE(port->channel);
@@ -409,7 +409,7 @@ void handle_serial_isr(serial_port_t *serial) {
 
   if (LL_USART_IsEnabledIT_RXNE(port->channel) && LL_USART_IsActiveFlag_RXNE(port->channel)) {
     const uint8_t data = LL_USART_ReceiveData8(port->channel);
-    circular_buffer_write(serial->rx_buffer, data);
+    ring_buffer_write(serial->rx_buffer, data);
   }
 
   if (LL_USART_IsActiveFlag_ORE(port->channel)) {

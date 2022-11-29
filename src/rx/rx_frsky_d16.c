@@ -8,7 +8,7 @@
 #include "flash.h"
 #include "flight/control.h"
 #include "profile.h"
-#include "util/circular_buffer.h"
+#include "util/ring_buffer.h"
 #include "util/util.h"
 
 #if defined(USE_CC2500) && defined(RX_FRSKY)
@@ -185,7 +185,7 @@ uint8_t frsky_d16_is_valid_packet(uint8_t *packet) {
 
 #define SMART_PORT_DATA_SIZE 128
 static uint8_t smart_port_data[SMART_PORT_DATA_SIZE];
-static circular_buffer_t smart_port_buffer = {
+static ring_buffer_t smart_port_buffer = {
     .buffer = smart_port_data,
     .head = 0,
     .tail = 0,
@@ -193,21 +193,21 @@ static circular_buffer_t smart_port_buffer = {
 };
 
 void frsky_d16_write_telemetry(smart_port_payload_t *payload) {
-  if (circular_buffer_free(&smart_port_buffer) < (sizeof(smart_port_payload_t) + 2)) {
+  if (ring_buffer_free(&smart_port_buffer) < (sizeof(smart_port_payload_t) + 2)) {
     return;
   }
 
-  circular_buffer_write(&smart_port_buffer, FSSP_START_STOP);
-  circular_buffer_write(&smart_port_buffer, FSSP_SENSOR_ID1 & 0x1f);
+  ring_buffer_write(&smart_port_buffer, FSSP_START_STOP);
+  ring_buffer_write(&smart_port_buffer, FSSP_SENSOR_ID1 & 0x1f);
 
   const uint8_t *ptr = (uint8_t *)payload;
   for (uint32_t i = 0; i < sizeof(smart_port_payload_t); i++) {
     const uint8_t c = ptr[i];
     if (c == FSSP_DLE || c == FSSP_START_STOP) {
-      circular_buffer_write(&smart_port_buffer, FSSP_DLE);
-      circular_buffer_write(&smart_port_buffer, c ^ FSSP_DLE_XOR);
+      ring_buffer_write(&smart_port_buffer, FSSP_DLE);
+      ring_buffer_write(&smart_port_buffer, c ^ FSSP_DLE_XOR);
     } else {
-      circular_buffer_write(&smart_port_buffer, c);
+      ring_buffer_write(&smart_port_buffer, c);
     }
   }
 }
@@ -215,7 +215,7 @@ void frsky_d16_write_telemetry(smart_port_payload_t *payload) {
 static uint8_t frsky_d16_append_telemetry(uint8_t *buf) {
   uint8_t size = 0;
   for (; size < 5; size++) {
-    if (circular_buffer_read(&smart_port_buffer, &buf[size]) == 0) {
+    if (ring_buffer_read(&smart_port_buffer, &buf[size]) == 0) {
       break;
     }
   }

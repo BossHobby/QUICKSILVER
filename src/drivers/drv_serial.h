@@ -5,7 +5,7 @@
 #include "drv_gpio.h"
 #include "drv_serial_soft.h"
 #include "project.h"
-#include "util/circular_buffer.h"
+#include "util/ring_buffer.h"
 
 typedef enum {
   RX_SERIAL_PROTOCOL_INVALID,
@@ -28,8 +28,8 @@ typedef enum {
 typedef struct {
   usart_ports_t port;
 
-  circular_buffer_t *rx_buffer;
-  circular_buffer_t *tx_buffer;
+  ring_buffer_t *rx_buffer;
+  ring_buffer_t *tx_buffer;
 } serial_port_t;
 
 typedef struct {

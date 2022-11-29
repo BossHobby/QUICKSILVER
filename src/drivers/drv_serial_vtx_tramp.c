@@ -7,7 +7,7 @@
 #include "drv_serial_vtx.h"
 #include "drv_time.h"
 #include "profile.h"
-#include "util/circular_buffer.h"
+#include "util/ring_buffer.h"
 
 #define USART usart_port_defs[serial_smart_audio_port]
 

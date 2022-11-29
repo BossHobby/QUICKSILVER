@@ -5,8 +5,8 @@
 #include "drv_serial.h"
 #include "io/msp.h"
 #include "profile.h"
-#include "util/circular_buffer.h"
 #include "util/crc.h"
+#include "util/ring_buffer.h"
 
 typedef enum {
   SUBCMD_HEARTBEAT = 0,
@@ -31,7 +31,7 @@ static volatile uint32_t last_heartbeat = 0;
 static bool is_detected = false;
 
 static uint8_t msp_tx_data[512];
-static circular_buffer_t msp_tx_buffer = {
+static ring_buffer_t msp_tx_buffer = {
     .buffer = msp_tx_data,
     .head = 0,
     .tail = 0,
@@ -39,7 +39,7 @@ static circular_buffer_t msp_tx_buffer = {
 };
 
 static uint8_t msp_rx_data[256];
-static circular_buffer_t msp_rx_buffer = {
+static ring_buffer_t msp_rx_buffer = {
     .buffer = msp_rx_data,
     .head = 0,
     .tail = 0,
@@ -55,49 +55,49 @@ static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, 
   }
 
   if (magic == MSP2_MAGIC) {
-    if (circular_buffer_free(&msp_tx_buffer) < (len + MSP2_HEADER_LEN + 1)) {
+    if (ring_buffer_free(&msp_tx_buffer) < (len + MSP2_HEADER_LEN + 1)) {
       return;
     }
 
-    circular_buffer_write(&msp_tx_buffer, '$');
-    circular_buffer_write(&msp_tx_buffer, MSP2_MAGIC);
-    circular_buffer_write(&msp_tx_buffer, '>');
+    ring_buffer_write(&msp_tx_buffer, '$');
+    ring_buffer_write(&msp_tx_buffer, MSP2_MAGIC);
+    ring_buffer_write(&msp_tx_buffer, '>');
 
     uint8_t crc = 0;
 
-    circular_buffer_write(&msp_tx_buffer, 0); // flag
+    ring_buffer_write(&msp_tx_buffer, 0); // flag
     crc = crc8_dvb_s2_calc(crc, 0);
 
-    circular_buffer_write(&msp_tx_buffer, (cmd >> 0) & 0xFF);
+    ring_buffer_write(&msp_tx_buffer, (cmd >> 0) & 0xFF);
     crc = crc8_dvb_s2_calc(crc, (cmd >> 0) & 0xFF);
-    circular_buffer_write(&msp_tx_buffer, (cmd >> 8) & 0xFF);
+    ring_buffer_write(&msp_tx_buffer, (cmd >> 8) & 0xFF);
     crc = crc8_dvb_s2_calc(crc, (cmd >> 8) & 0xFF);
-    circular_buffer_write(&msp_tx_buffer, (len >> 0) & 0xFF);
+    ring_buffer_write(&msp_tx_buffer, (len >> 0) & 0xFF);
     crc = crc8_dvb_s2_calc(crc, (len >> 0) & 0xFF);
-    circular_buffer_write(&msp_tx_buffer, (len >> 8) & 0xFF);
+    ring_buffer_write(&msp_tx_buffer, (len >> 8) & 0xFF);
     crc = crc8_dvb_s2_calc(crc, (len >> 8) & 0xFF);
 
-    circular_buffer_write_multi(&msp_tx_buffer, data, len);
+    ring_buffer_write_multi(&msp_tx_buffer, data, len);
 
-    circular_buffer_write(&msp_tx_buffer, crc8_dvb_s2_data(crc, data, len));
+    ring_buffer_write(&msp_tx_buffer, crc8_dvb_s2_data(crc, data, len));
   } else {
-    if (circular_buffer_free(&msp_tx_buffer) < (len + MSP_HEADER_LEN + 1)) {
+    if (ring_buffer_free(&msp_tx_buffer) < (len + MSP_HEADER_LEN + 1)) {
       return;
     }
 
-    circular_buffer_write(&msp_tx_buffer, '$');
-    circular_buffer_write(&msp_tx_buffer, MSP1_MAGIC);
-    circular_buffer_write(&msp_tx_buffer, '>');
-    circular_buffer_write(&msp_tx_buffer, len);
-    circular_buffer_write(&msp_tx_buffer, cmd);
+    ring_buffer_write(&msp_tx_buffer, '$');
+    ring_buffer_write(&msp_tx_buffer, MSP1_MAGIC);
+    ring_buffer_write(&msp_tx_buffer, '>');
+    ring_buffer_write(&msp_tx_buffer, len);
+    ring_buffer_write(&msp_tx_buffer, cmd);
 
-    circular_buffer_write_multi(&msp_tx_buffer, data, len);
+    ring_buffer_write_multi(&msp_tx_buffer, data, len);
 
     uint8_t chksum = len ^ cmd;
     for (uint8_t i = 0; i < len; i++) {
       chksum ^= data[i];
     }
-    circular_buffer_write(&msp_tx_buffer, chksum);
+    ring_buffer_write(&msp_tx_buffer, chksum);
   }
 
   LL_USART_EnableIT_TXE(USART.channel);
@@ -117,24 +117,24 @@ static void hdzero_push_msp(const uint8_t code, const uint8_t *data, const uint8
 }
 
 static bool hdzero_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data, const uint8_t size) {
-  if (circular_buffer_free(&msp_tx_buffer) < (MSP_HEADER_LEN + size + 2)) {
+  if (ring_buffer_free(&msp_tx_buffer) < (MSP_HEADER_LEN + size + 2)) {
     return false;
   }
 
-  circular_buffer_write(&msp_tx_buffer, '$');
-  circular_buffer_write(&msp_tx_buffer, 'M');
-  circular_buffer_write(&msp_tx_buffer, '>');
-  circular_buffer_write(&msp_tx_buffer, size + 1);
-  circular_buffer_write(&msp_tx_buffer, MSP_DISPLAYPORT);
-  circular_buffer_write(&msp_tx_buffer, subcmd);
+  ring_buffer_write(&msp_tx_buffer, '$');
+  ring_buffer_write(&msp_tx_buffer, 'M');
+  ring_buffer_write(&msp_tx_buffer, '>');
+  ring_buffer_write(&msp_tx_buffer, size + 1);
+  ring_buffer_write(&msp_tx_buffer, MSP_DISPLAYPORT);
+  ring_buffer_write(&msp_tx_buffer, subcmd);
 
-  circular_buffer_write_multi(&msp_tx_buffer, data, size);
+  ring_buffer_write_multi(&msp_tx_buffer, data, size);
 
   uint8_t chksum = (size + 1) ^ MSP_DISPLAYPORT ^ subcmd;
   for (uint8_t i = 0; i < size; i++) {
     chksum ^= data[i];
   }
-  circular_buffer_write(&msp_tx_buffer, chksum);
+  ring_buffer_write(&msp_tx_buffer, chksum);
 
   LL_USART_EnableIT_TXE(USART.channel);
   return true;
@@ -202,7 +202,7 @@ bool hdzero_is_ready() {
 
   while (true) {
     uint8_t data = 0;
-    if (!circular_buffer_read(&msp_rx_buffer, &data)) {
+    if (!ring_buffer_read(&msp_rx_buffer, &data)) {
       break;
     }
 
@@ -235,7 +235,7 @@ bool hdzero_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data,
 }
 
 bool hdzero_can_fit(uint8_t size) {
-  const uint32_t free = circular_buffer_free(&msp_tx_buffer);
+  const uint32_t free = ring_buffer_free(&msp_tx_buffer);
   return free > (size + 10);
 }
 
@@ -250,7 +250,7 @@ void hdzero_uart_isr() {
 
   if (LL_USART_IsEnabledIT_TXE(USART.channel) && LL_USART_IsActiveFlag_TXE(USART.channel)) {
     uint8_t data = 0;
-    if (circular_buffer_read(&msp_tx_buffer, &data)) {
+    if (ring_buffer_read(&msp_tx_buffer, &data)) {
       LL_USART_TransmitData8(USART.channel, data);
     } else {
       LL_USART_DisableIT_TXE(USART.channel);
@@ -260,7 +260,7 @@ void hdzero_uart_isr() {
   if (LL_USART_IsEnabledIT_RXNE(USART.channel) && LL_USART_IsActiveFlag_RXNE(USART.channel)) {
     // clear the rx flag by reading, but discard the data
     const uint8_t data = LL_USART_ReceiveData8(USART.channel);
-    circular_buffer_write(&msp_rx_buffer, data);
+    ring_buffer_write(&msp_rx_buffer, data);
     last_heartbeat = time_millis();
   }
 

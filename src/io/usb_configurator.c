@@ -13,8 +13,8 @@
 #include "profile.h"
 #include "project.h"
 #include "reset.h"
-#include "util/circular_buffer.h"
 #include "util/crc.h"
+#include "util/ring_buffer.h"
 #include "util/util.h"
 
 void usb_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
@@ -82,7 +82,7 @@ void usb_quic_logf(const char *fmt, ...) {
 
 void usb_serial_passthrough(usart_ports_t port, uint32_t baudrate, uint8_t stop_bits, bool half_duplex) {
   uint8_t tx_data[512];
-  circular_buffer_t tx_buffer = {
+  ring_buffer_t tx_buffer = {
       .buffer = tx_data,
       .head = 0,
       .tail = 0,
@@ -90,7 +90,7 @@ void usb_serial_passthrough(usart_ports_t port, uint32_t baudrate, uint8_t stop_
   };
 
   uint8_t rx_data[512];
-  circular_buffer_t rx_buffer = {
+  ring_buffer_t rx_buffer = {
       .buffer = rx_data,
       .head = 0,
       .tail = 0,

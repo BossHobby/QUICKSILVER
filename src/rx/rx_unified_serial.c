@@ -12,7 +12,7 @@
 #include "io/led.h"
 #include "profile.h"
 #include "project.h"
-#include "util/circular_buffer.h"
+#include "util/ring_buffer.h"
 #include "util/util.h"
 
 #ifdef SERIAL_RX
@@ -26,7 +26,7 @@ uint8_t rx_buffer[RX_BUFF_SIZE];
 uint8_t rx_data[RX_BUFF_SIZE]; // A place to put the RX frame so nothing can get overwritten during processing.
 
 static uint8_t _rx_data[RX_BUFF_SIZE];
-circular_buffer_t rx_ring = {
+ring_buffer_t rx_ring = {
     .buffer = _rx_data,
     .head = 0,
     .tail = 0,
@@ -84,7 +84,7 @@ void rx_serial_isr() {
     rx_buffer[rx_frame_position] = data;
     rx_frame_position = (rx_frame_position + 1) % RX_BUFF_SIZE;
 
-    circular_buffer_write(&rx_ring, data);
+    ring_buffer_write(&rx_ring, data);
 
     if (rx_frame_position >= expected_frame_length && frame_status == FRAME_IDLE) {
       frame_status = FRAME_RX;

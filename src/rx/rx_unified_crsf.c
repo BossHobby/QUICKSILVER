@@ -12,8 +12,8 @@
 #include "profile.h"
 #include "project.h"
 #include "rx_crsf.h"
-#include "util/circular_buffer.h"
 #include "util/crc.h"
+#include "util/ring_buffer.h"
 #include "util/util.h"
 
 #define MSP_BUFFER_SIZE 128
@@ -58,7 +58,7 @@ extern int current_pid_term;
 
 extern uint8_t telemetry_packet[64];
 
-extern circular_buffer_t rx_ring;
+extern ring_buffer_t rx_ring;
 
 static crsft_parser_state_t parser_state = CRSF_CHECK_MAGIC;
 
@@ -286,7 +286,7 @@ bool rx_serial_process_crsf() {
 crsf_do_more:
   switch (parser_state) {
   case CRSF_CHECK_MAGIC: {
-    if (!circular_buffer_read(&rx_ring, &magic)) {
+    if (!ring_buffer_read(&rx_ring, &magic)) {
       break;
     }
     if (magic != CRSF_ADDRESS_FLIGHT_CONTROLLER) {
@@ -297,7 +297,7 @@ crsf_do_more:
   }
 
   case CRSF_FRAME_LENGTH: {
-    if (!circular_buffer_read(&rx_ring, &frame_length)) {
+    if (!ring_buffer_read(&rx_ring, &frame_length)) {
       break;
     }
     if (frame_length > 0 && frame_length <= 64) {
@@ -308,10 +308,10 @@ crsf_do_more:
     break;
   }
   case CRSF_PAYLOAD: {
-    if (circular_buffer_available(&rx_ring) < frame_length) {
+    if (ring_buffer_available(&rx_ring) < frame_length) {
       break;
     }
-    if (circular_buffer_read_multi(&rx_ring, rx_data, frame_length)) {
+    if (ring_buffer_read_multi(&rx_ring, rx_data, frame_length)) {
       parser_state = CRSF_CHECK_CRC;
       goto crsf_do_more;
     }

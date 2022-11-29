@@ -5,7 +5,7 @@
 #include "drv_time.h"
 #include "project.h"
 
-#include "util/circular_buffer.h"
+#include "util/ring_buffer.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -174,7 +174,7 @@ static uint32_t ubuf[0x20];
 static volatile bool usb_device_configured = false;
 
 static uint8_t tx_buffer_data[BUFFER_SIZE];
-static circular_buffer_t tx_buffer = {
+static ring_buffer_t tx_buffer = {
     .buffer = tx_buffer_data,
     .head = 0,
     .tail = 0,
@@ -182,7 +182,7 @@ static circular_buffer_t tx_buffer = {
 };
 
 static uint8_t rx_buffer_data[BUFFER_SIZE];
-static circular_buffer_t rx_buffer = {
+static ring_buffer_t rx_buffer = {
     .buffer = rx_buffer_data,
     .head = 0,
     .tail = 0,
@@ -240,7 +240,7 @@ static usbd_respond cdc_control(usbd_device *dev, usbd_ctlreq *req, usbd_rqc_cal
 }
 
 static void cdc_rxonly(usbd_device *dev, uint8_t event, uint8_t ep) {
-  if (circular_buffer_free(&rx_buffer) <= CDC_DATA_SZ) {
+  if (ring_buffer_free(&rx_buffer) <= CDC_DATA_SZ) {
     return;
   }
 
@@ -249,7 +249,7 @@ static void cdc_rxonly(usbd_device *dev, uint8_t event, uint8_t ep) {
   if (len == 0) {
     return;
   }
-  circular_buffer_write_multi(&rx_buffer, buf, len);
+  ring_buffer_write_multi(&rx_buffer, buf, len);
 }
 
 static volatile bool tx_stalled = true;
@@ -258,7 +258,7 @@ static void cdc_txonly(usbd_device *dev, uint8_t event, uint8_t ep) {
   static volatile bool did_zlp = false;
 
   static uint8_t buf[CDC_DATA_SZ];
-  const uint32_t len = circular_buffer_read_multi(&tx_buffer, buf, CDC_DATA_SZ);
+  const uint32_t len = ring_buffer_read_multi(&tx_buffer, buf, CDC_DATA_SZ);
 
   if (len) {
     usbd_ep_write(dev, ep, buf, len);
@@ -380,7 +380,7 @@ uint32_t usb_serial_read(uint8_t *data, uint32_t len) {
   if (data == NULL || len == 0) {
     return 0;
   }
-  return circular_buffer_read_multi(&rx_buffer, data, len);
+  return ring_buffer_read_multi(&rx_buffer, data, len);
 }
 
 uint8_t usb_serial_read_byte() {
@@ -399,7 +399,7 @@ void usb_serial_write(uint8_t *data, uint32_t len) {
 
   uint32_t written = 0;
   while (written < len) {
-    written += circular_buffer_write_multi(&tx_buffer, data + written, len - written);
+    written += ring_buffer_write_multi(&tx_buffer, data + written, len - written);
     cdc_kickoff_tx();
   }
 }

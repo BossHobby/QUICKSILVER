@@ -9,8 +9,8 @@
 #include "io/usb_configurator.h"
 #include "io/vtx.h"
 #include "profile.h"
-#include "util/circular_buffer.h"
 #include "util/crc.h"
+#include "util/ring_buffer.h"
 #include "util/util.h"
 
 #define SMART_AUDIO_BAUDRATE_MIN 4650
@@ -48,7 +48,7 @@ extern uint32_t vtx_last_request;
 
 extern volatile uint8_t vtx_transfer_done;
 
-extern circular_buffer_t vtx_rx_buffer;
+extern ring_buffer_t vtx_rx_buffer;
 
 extern uint8_t vtx_frame[VTX_BUFFER_SIZE];
 extern volatile uint8_t vtx_frame_length;
