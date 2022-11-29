@@ -58,7 +58,7 @@ data_flash_result_t data_flash_update();
 uint32_t data_flash_usage();
 
 void data_flash_reset();
-void data_flash_restart(uint32_t blackbox_rate, uint32_t looptime);
+bool data_flash_restart(uint32_t blackbox_rate, uint32_t looptime);
 void data_flash_finish();
 
 void data_flash_read_backbox(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size);

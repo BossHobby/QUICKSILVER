@@ -370,7 +370,7 @@ void data_flash_reset() {
   reset_looptime();
 }
 
-void data_flash_restart(uint32_t blackbox_rate, uint32_t looptime) {
+bool data_flash_restart(uint32_t blackbox_rate, uint32_t looptime) {
   uint32_t offset = 0;
 
   for (uint16_t i = 0; i < data_flash_header.file_num; i++) {
@@ -382,9 +382,9 @@ void data_flash_restart(uint32_t blackbox_rate, uint32_t looptime) {
     }
   }
 
-  if ((offset + 1) * PAGE_SIZE >= bounds.total_size) {
+  if ((FILES_SECTOR_OFFSET + (offset + 1) * PAGE_SIZE) >= bounds.total_size) {
     // flash is full
-    return;
+    return false;
   }
 
   data_flash_header.files[data_flash_header.file_num].looptime = looptime;
@@ -396,6 +396,8 @@ void data_flash_restart(uint32_t blackbox_rate, uint32_t looptime) {
   state = STATE_ERASE_HEADER;
 
   circular_buffer_clear(&encode_buffer);
+
+  return true;
 }
 
 void data_flash_finish() {
