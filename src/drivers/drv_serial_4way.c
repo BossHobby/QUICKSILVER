@@ -22,11 +22,9 @@
 #define ATMEL_DEVICE_MATCH(device_id) ((device_id == 0x9307) || (device_id == 0x930A) || \
                                        (device_id == 0x930F) || (device_id == 0x940B))
 
-#define SILABS_DEVICE_MATCH(device_id) ((device_id == 0xF310) || (device_id == 0xF330) || \
-                                        (device_id == 0xF410) || (device_id == 0xF390) || \
-                                        (device_id == 0xF850) || (device_id == 0xE8B1) || \
-                                        (device_id == 0xE8B2))
+#define SILABS_DEVICE_MATCH(device_id) ((device_id > 0xE800) && (device_id < 0xF900))
 
+// BLHeli_32 MCU ID hi > 0x00 and < 0x90 / lo always = 0x06
 #define ARM_DEVICE_MATCH(device_id) (((device_id >> 8) > 0x00 && (device_id >> 8) < 0x90) && (device_id & 0xFF) == 0x06)
 
 #define INTF_MODE_IDX 3 // index for DeviceInfostate
