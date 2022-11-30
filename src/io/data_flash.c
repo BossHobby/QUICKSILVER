@@ -371,6 +371,13 @@ void data_flash_reset() {
 }
 
 bool data_flash_restart(uint32_t blackbox_rate, uint32_t looptime) {
+  if (data_flash_header.file_num >= DATA_FLASH_MAX_FILES) {
+    return false;
+  }
+  if (state != STATE_IDLE) {
+    return false;
+  }
+
   uint32_t offset = 0;
 
   for (uint16_t i = 0; i < data_flash_header.file_num; i++) {
@@ -401,6 +408,11 @@ bool data_flash_restart(uint32_t blackbox_rate, uint32_t looptime) {
 }
 
 void data_flash_finish() {
+  if (current_file()->size == 0) {
+    // file was empty, lets remove it
+    data_flash_header.file_num--;
+  }
+
   should_flush = 1;
 }
 

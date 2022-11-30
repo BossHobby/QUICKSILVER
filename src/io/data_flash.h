@@ -27,17 +27,19 @@ typedef struct {
   MEMBER(start_page, uint32)    \
   MEMBER(size, uint32)
 
+#define DATA_FLASH_MAX_FILES 10
+
 // sizeof(data_flash_header_t) cannot exceed PAGE_SIZE eg 256byte
 typedef struct {
   uint32_t magic;
   uint8_t file_num;
-  data_flash_file_t files[8];
+  data_flash_file_t files[DATA_FLASH_MAX_FILES];
 } data_flash_header_t;
 
 #define DATA_FLASH_HEADER_MEMBERS \
   MEMBER(magic, uint32)           \
   MEMBER(file_num, uint8)         \
-  ARRAY_MEMBER(files, 8, data_flash_file_t)
+  ARRAY_MEMBER(files, DATA_FLASH_MAX_FILES, data_flash_file_t)
 
 typedef enum {
   DATA_FLASH_IDLE,
