@@ -37,6 +37,7 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b) {
 
   CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &b->cpu_load));
 
+  CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 4));
   CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &b->debug[0]));
   CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &b->debug[1]));
   CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &b->debug[2]));
