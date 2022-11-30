@@ -449,7 +449,9 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   }
 
   case MSP_EEPROM_WRITE: {
-    msp_vtx_detected = 1;
+    if (msp->device == MSP_DEVICE_VTX) {
+      msp_vtx_detected = 1;
+    }
     if (!flags.arm_switch && msp->device != MSP_DEVICE_SPI_RX) {
       flash_save();
     }
