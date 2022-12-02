@@ -303,6 +303,9 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
   case MSP_SET_VTX_CONFIG: {
     vtx_settings_t *settings = msp->device == MSP_DEVICE_VTX ? &msp_vtx_settings : &vtx_settings;
+    if (msp->device != MSP_DEVICE_VTX) {
+      settings->magic = VTX_SETTINGS_MAGIC;
+    }
 
     uint16_t remaining = size;
 
