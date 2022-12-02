@@ -199,15 +199,18 @@ uint8_t elrs_lq_get();
 bool elrs_lq_current_is_set();
 void elrs_lq_reset();
 
-bool elrs_get_msp_confirm();
-void elrs_setup_msp(const uint8_t max_length, uint8_t *buffer);
-void elrs_receive_msp(const uint8_t package_index, const volatile uint8_t *data, uint8_t data_len);
-bool elrs_msp_finished_data();
-void elrs_msp_restart();
+void elrs_tlm_receiver_reset();
+void elrs_tlm_receiver_set_max_package_index(uint8_t max_package_index);
+bool elrs_tlm_receiver_confirm();
+void elrs_tlm_receiver_set_data_to_receive(uint8_t *data_to_receive, uint8_t max_length);
+void elrs_tlm_receiver_receive_data(uint8_t const package_index, uint8_t const *const receive_data, uint8_t data_len);
+bool elrs_tlm_receiver_has_finished_data();
+void elrs_tlm_receiver_unlock();
 
 void elrs_tlm_sender_reset();
+void elrs_tlm_sender_set_max_package_index(uint8_t max_package_index);
 bool elrs_tlm_sender_active();
-void elrs_tlm_sender_set_data(const uint8_t bpc, uint8_t *data, const uint8_t length);
-void elrs_tlm_current_payload(uint8_t *package_index, uint8_t *count, uint8_t **data);
-void elrs_tlm_confirm_payload(const bool confirm_value);
-void elrs_tlm_update_rate(const uint16_t air_rate, const uint8_t tlm_ratio, const uint8_t tlm_burst);
+void elrs_tlm_sender_set_data(uint8_t *data_to_transmit, const uint8_t length_to_transmit);
+uint8_t elrs_tlm_sender_current_payload(uint8_t *outData, uint8_t maxLen);
+void elrs_tlm_sender_confirm_payload(bool telemetry_confirm_value);
+void elrs_tlm_sender_update_rate(const uint16_t air_rate, const uint8_t tlm_ratio, const uint8_t tlm_burst);

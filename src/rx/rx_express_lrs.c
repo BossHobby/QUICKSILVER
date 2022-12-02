@@ -182,14 +182,16 @@ static bool elrs_tlm() {
 
   rx_lqi_got_packet();
 
+  memset((uint8_t *)packet, 0, current_air_rate_config()->payload_len);
+
   packet[0] = TLM_PACKET;
   already_tlm = true;
 
   if (next_tlm_type == TELEMETRY_TYPE_LINK || !elrs_tlm_sender_active()) {
     packet[1] = TELEMETRY_TYPE_LINK;
-    packet[2] = -rssi;                                               // rssi
-    packet[3] = (has_model_match << 7);                              // no diversity
-    packet[4] = uplink_lq | ((elrs_get_msp_confirm() ? 1 : 0) << 7); // uplink_lq &&  msq confirm
+    packet[2] = -rssi;                                                    // rssi
+    packet[3] = (has_model_match << 7);                                   // no diversity
+    packet[4] = uplink_lq | ((elrs_tlm_receiver_confirm() ? 1 : 0) << 7); // uplink_lq &&  msq confirm
     packet[5] = raw_snr;
     packet[6] = 0;
 
@@ -202,17 +204,8 @@ static bool elrs_tlm() {
       next_tlm_type = TELEMETRY_TYPE_LINK;
     }
 
-    uint8_t *data = NULL;
-    uint8_t length = 0;
-    uint8_t package_index = 0;
-    elrs_tlm_current_payload(&package_index, &length, &data);
-
+    const uint8_t package_index = elrs_tlm_sender_current_payload((uint8_t *)packet + 2, 5);
     packet[1] = (package_index << ELRS_TELEMETRY_SHIFT) + TELEMETRY_TYPE_DATA;
-    packet[2] = length > 0 ? *data : 0;
-    packet[3] = length >= 1 ? *(data + 1) : 0;
-    packet[4] = length >= 2 ? *(data + 2) : 0;
-    packet[5] = length >= 3 ? *(data + 3) : 0;
-    packet[6] = length >= 4 ? *(data + 4) : 0;
   }
 
   const uint16_t crc = elrs_crc_calc(packet, 7, crc_initializer);
@@ -241,7 +234,7 @@ static void elrs_update_telemetry_burst() {
   }
 
   // Notify the sender to adjust its expected throughput
-  elrs_tlm_update_rate(hz, tlm_denom, tlm_burst_max);
+  elrs_tlm_sender_update_rate(hz, tlm_denom, tlm_burst_max);
 }
 
 static void elrs_update_telemetry() {
@@ -301,7 +294,7 @@ static void elrs_update_telemetry() {
     }
 
     const uint32_t full_size = crsf_tlm_frame_finish(tlm_buffer, payload_size);
-    elrs_tlm_sender_set_data(ELRS_TELEMETRY_BYTES_PER_CALL, tlm_buffer, full_size);
+    elrs_tlm_sender_set_data(tlm_buffer, full_size);
   }
 
   elrs_update_telemetry_burst();
@@ -529,7 +522,7 @@ static bool elrs_unpack_switches_hybrid(const volatile uint8_t *packet) {
   state.aux[AUX_CHANNEL_11] = 0;
 
   // TelemetryStatus bit
-  return switch_byte & (1 << 7);
+  return switch_byte & (1 << 6);
 }
 
 static uint8_t elrs_hybrid_wide_nonce_to_switch_index(uint8_t nonce) {
@@ -724,7 +717,7 @@ static bool elrs_process_packet(uint32_t packet_time) {
       break;
     }
 
-    elrs_tlm_confirm_payload(tlm_confirm);
+    elrs_tlm_sender_confirm_payload(tlm_confirm);
     break;
   }
   case MSP_DATA_PACKET: {
@@ -737,17 +730,16 @@ static bool elrs_process_packet(uint32_t packet_time) {
       break;
     }
 
-    const bool confirm = elrs_get_msp_confirm();
-    elrs_receive_msp(packet[1], packet + 2, 5);
-    if (confirm != elrs_get_msp_confirm()) {
+    const bool confirm = elrs_tlm_receiver_confirm();
+    elrs_tlm_receiver_receive_data(packet[1], (uint8_t *)packet + 2, 5);
+    if (confirm != elrs_tlm_receiver_confirm()) {
       next_tlm_type = TELEMETRY_TYPE_LINK;
     }
 
-    if (elrs_msp_finished_data()) {
+    if (elrs_tlm_receiver_has_finished_data()) {
       elrs_msp_process(msp_buffer, msp_buffer[1]);
-      elrs_msp_restart();
+      elrs_tlm_receiver_unlock();
     }
-
     break;
   }
   default:
@@ -794,8 +786,13 @@ void rx_expresslrs_init() {
   elrs_phase_init();
   elrs_lq_reset();
   elrs_lpf_init(&rssi_lpf, 5);
+
   elrs_tlm_sender_reset();
-  elrs_setup_msp(ELRS_MSP_BUFFER_SIZE, msp_buffer);
+  elrs_tlm_sender_set_max_package_index(ELRS_TELEMETRY_MAX_PACKAGES);
+
+  elrs_tlm_receiver_reset();
+  elrs_tlm_receiver_set_max_package_index(ELRS_MSP_MAX_PACKAGES);
+  elrs_tlm_receiver_set_data_to_receive(msp_buffer, ELRS_MSP_BUFFER_SIZE);
 
   next_rate = ELRS_RATE_DEFAULT;
   crc_initializer = ((UID[4] << 8) | UID[5]) ^ ELRS_OTA_VERSION_ID;

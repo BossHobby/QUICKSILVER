@@ -14,205 +14,232 @@ typedef enum {
   RESYNC_THEN_SEND, // perform a RESYNC then go to SENDING
 } elrs_tlm_sender_state_t;
 
-static bool msp_confirm = false;
+typedef struct {
+  elrs_tlm_sender_state_t state;
+  uint8_t *data;
+  uint8_t length;
+  uint8_t current_offset;
+  uint8_t bytes_last_payload;
+  uint8_t current_package;
+  bool wait_until_telemetry_confirm;
+  uint16_t wait_count;
+  uint16_t max_wait_count;
+  uint8_t max_package_index;
+} elrs_tlm_sender_t;
 
-static uint8_t msp_length = 0;
-static uint8_t *msp_buffer;
+typedef struct {
+  uint8_t *data;
+  bool finished_data;
+  uint8_t length;
+  uint8_t current_offset;
+  uint8_t current_package;
+  bool telemetry_confirm;
+  uint8_t max_package_index;
+} elrs_tlm_receiver_t;
 
-static uint8_t current_package = 1;
-static uint8_t current_offset = 0;
+static elrs_tlm_sender_t sender;
+static elrs_tlm_receiver_t receiver;
 
-static bool finished_data = false;
+void elrs_tlm_receiver_reset() {
+  receiver.data = NULL;
+  receiver.length = 0;
 
-static elrs_tlm_sender_state_t sender_state;
-
-static uint8_t *sender_data = NULL;
-static uint8_t sender_length = 0;
-static uint8_t sender_bytes_per_call = 1;
-static uint8_t sender_current_offset;
-static uint8_t sender_current_package;
-static bool sender_wait_until_telemetry_confirm;
-static uint16_t sender_wait_count;
-static uint16_t sender_max_wait_count;
-
-bool elrs_get_msp_confirm() {
-  return msp_confirm;
+  receiver.current_package = 1;
+  receiver.current_offset = 0;
+  receiver.telemetry_confirm = false;
 }
 
-bool elrs_msp_finished_data() {
-  return finished_data;
+void elrs_tlm_receiver_set_max_package_index(uint8_t max_package_index) {
+  if (receiver.max_package_index != max_package_index) {
+    receiver.max_package_index = max_package_index;
+    elrs_tlm_receiver_reset();
+  }
 }
 
-void elrs_msp_restart() {
-  if (!finished_data) {
+bool elrs_tlm_receiver_confirm() {
+  return receiver.telemetry_confirm;
+}
+
+void elrs_tlm_receiver_set_data_to_receive(uint8_t *data_to_receive, uint8_t max_length) {
+  receiver.length = max_length;
+  receiver.data = data_to_receive;
+  receiver.current_package = 1;
+  receiver.current_offset = 0;
+  receiver.finished_data = false;
+}
+
+void elrs_tlm_receiver_receive_data(uint8_t const package_index, uint8_t const *const receive_data, uint8_t data_len) {
+  // Resync
+  if (package_index == receiver.max_package_index) {
+    receiver.telemetry_confirm = !receiver.telemetry_confirm;
+    receiver.current_package = 1;
+    receiver.current_offset = 0;
+    receiver.finished_data = false;
     return;
   }
 
-  current_package = 1;
-  current_offset = 0;
-  msp_confirm = false;
-}
-
-void elrs_setup_msp(const uint8_t max_length, uint8_t *buffer) {
-  msp_length = max_length;
-  msp_buffer = buffer;
-
-  current_package = 1;
-  current_offset = 0;
-  finished_data = false;
-}
-
-void elrs_receive_msp(const uint8_t package_index, const volatile uint8_t *data, uint8_t data_len) {
-  if (package_index == ELRS_MSP_MAX_PACKAGES) {
-    msp_confirm = !msp_confirm;
-    current_package = 1;
-    current_offset = 0;
-    finished_data = false;
-    return;
-  }
-
-  if (finished_data) {
+  if (receiver.finished_data) {
     return;
   }
 
   bool accept_data = false;
-  if (package_index == 0 && current_package > 1) {
-    finished_data = true;
+  if (package_index == 0 && receiver.current_package > 1) {
+    // PackageIndex 0 (the final packet) can also contain data
     accept_data = true;
-  } else if (package_index == current_package) {
+    receiver.finished_data = true;
+  } else if (package_index == receiver.current_package) {
     accept_data = true;
-    current_package++;
+    receiver.current_package++;
   }
 
   if (accept_data) {
-    uint8_t len = min((uint8_t)(msp_length - current_offset), data_len);
-    memcpy(&msp_buffer[current_offset], (uint8_t *)data, len);
-    current_offset += len;
-    msp_confirm = !msp_confirm;
+    uint8_t len = min((uint8_t)(receiver.length - receiver.current_offset), data_len);
+    memcpy(&receiver.data[receiver.current_offset], receive_data, len);
+    receiver.current_offset += len;
+    receiver.telemetry_confirm = !receiver.telemetry_confirm;
+  }
+}
+
+bool elrs_tlm_receiver_has_finished_data() {
+  return receiver.finished_data;
+}
+
+void elrs_tlm_receiver_unlock() {
+  if (receiver.finished_data) {
+    receiver.current_package = 1;
+    receiver.current_offset = 0;
+    receiver.finished_data = false;
   }
 }
 
 void elrs_tlm_sender_reset() {
-  sender_data = NULL;
-  sender_bytes_per_call = 1;
-  sender_current_offset = 0;
-  sender_current_package = 0;
-  sender_length = 0;
-  sender_wait_until_telemetry_confirm = true;
-  sender_wait_count = 0;
+  sender.data = NULL;
+  sender.length = 0;
+
+  sender.bytes_last_payload = 0;
+  sender.current_offset = 0;
+  sender.current_package = 1;
+  sender.wait_until_telemetry_confirm = true;
+  sender.wait_count = 0;
 
   // 80 corresponds to UpdateTelemetryRate(ANY, 2, 1), which is what the TX uses in boost mode
-  sender_max_wait_count = 80;
+  sender.max_wait_count = 80;
+  sender.state = SENDER_IDLE;
+}
 
-  sender_state = SENDER_IDLE;
+void elrs_tlm_sender_set_max_package_index(uint8_t max_package_index) {
+  if (sender.max_package_index != max_package_index) {
+    sender.max_package_index = max_package_index;
+    elrs_tlm_sender_reset();
+  }
 }
 
 bool elrs_tlm_sender_active() {
-  return sender_state != SENDER_IDLE;
+  return sender.state != SENDER_IDLE;
 }
 
-void elrs_tlm_sender_set_data(const uint8_t bpc, uint8_t *data, const uint8_t length) {
-  if (length / bpc >= ELRS_TELEMETRY_MAX_PACKAGES) {
-    return;
-  }
-
-  sender_length = length;
-  sender_data = data;
-  sender_current_offset = 0;
-  sender_current_package = 1;
-  sender_wait_count = 0;
-  sender_bytes_per_call = bpc;
-  sender_state = (sender_state == SENDER_IDLE) ? SENDING : RESYNC_THEN_SEND;
+void elrs_tlm_sender_set_data(uint8_t *data_to_transmit, const uint8_t length_to_transmit) {
+  sender.length = length_to_transmit;
+  sender.data = data_to_transmit;
+  sender.current_offset = 0;
+  sender.current_package = 1;
+  sender.wait_count = 0;
+  sender.state = (sender.state == SENDER_IDLE) ? SENDING : RESYNC_THEN_SEND;
 }
 
-void elrs_tlm_current_payload(uint8_t *package_index, uint8_t *count, uint8_t **data) {
-  switch (sender_state) {
+uint8_t elrs_tlm_sender_current_payload(uint8_t *outData, uint8_t maxLen) {
+  uint8_t package_index;
+
+  sender.bytes_last_payload = 0;
+  switch (sender.state) {
   case RESYNC:
   case RESYNC_THEN_SEND:
-    *package_index = ELRS_TELEMETRY_MAX_PACKAGES;
-    *count = 0;
-    *data = 0;
+    package_index = sender.max_package_index;
     break;
-  case SENDING:
-    *data = sender_data + sender_current_offset;
-    *package_index = sender_current_package;
-    if (sender_bytes_per_call > 1) {
-      if (sender_current_offset + sender_bytes_per_call <= sender_length) {
-        *count = sender_bytes_per_call;
-      } else {
-        *count = sender_length - sender_current_offset;
-      }
-    } else {
-      *count = 1;
-    }
-    break;
+  case SENDING: {
+    sender.bytes_last_payload = min((uint8_t)(sender.length - sender.current_offset), maxLen);
+    // If this is the last data chunk, and there has been at least one other packet
+    // skip the blank packet needed for WAIT_UNTIL_NEXT_CONFIRM
+    if (sender.current_package > 1 && (sender.current_offset + sender.bytes_last_payload) >= sender.length)
+      package_index = 0;
+    else
+      package_index = sender.current_package;
+
+    memcpy(outData, &sender.data[sender.current_offset], sender.bytes_last_payload);
+  } break;
   default:
-    *count = 0;
-    *data = 0;
-    *package_index = 0;
+    package_index = 0;
   }
+
+  return package_index;
 }
 
-void elrs_tlm_confirm_payload(const bool confirm_value) {
-  elrs_tlm_sender_state_t next_sender_state = sender_state;
+void elrs_tlm_sender_confirm_payload(bool telemetry_confirm_value) {
+  elrs_tlm_sender_state_t next_sender_state = sender.state;
 
-  switch (sender_state) {
+  switch (sender.state) {
   case SENDING:
-    if (confirm_value != sender_wait_until_telemetry_confirm) {
-      sender_wait_count++;
-      if (sender_wait_count > sender_max_wait_count) {
-        sender_wait_until_telemetry_confirm = !confirm_value;
+    if (telemetry_confirm_value != sender.wait_until_telemetry_confirm) {
+      sender.wait_count++;
+      if (sender.wait_count > sender.max_wait_count) {
+        sender.wait_until_telemetry_confirm = !telemetry_confirm_value;
         next_sender_state = RESYNC;
       }
       break;
     }
 
-    sender_current_offset += sender_bytes_per_call;
-    sender_current_package++;
-    sender_wait_until_telemetry_confirm = !sender_wait_until_telemetry_confirm;
-    sender_wait_count = 0;
-
-    if (sender_current_offset >= sender_length) {
-      next_sender_state = WAIT_UNTIL_NEXT_CONFIRM;
+    sender.current_offset += sender.bytes_last_payload;
+    if (sender.current_offset >= sender.length) {
+      // A 0th packet is always requred so the reciver can
+      // differentiate a new send from a resend, if this is
+      // the first packet acked, send another, else IDLE
+      if (sender.current_package == 1)
+        next_sender_state = WAIT_UNTIL_NEXT_CONFIRM;
+      else
+        next_sender_state = SENDER_IDLE;
     }
 
+    sender.current_package++;
+    sender.wait_until_telemetry_confirm = !sender.wait_until_telemetry_confirm;
+    sender.wait_count = 0;
     break;
 
   case RESYNC:
   case RESYNC_THEN_SEND:
   case WAIT_UNTIL_NEXT_CONFIRM:
-    if (confirm_value == sender_wait_until_telemetry_confirm) {
-      next_sender_state = (sender_state == RESYNC_THEN_SEND) ? SENDING : SENDER_IDLE;
-      sender_wait_until_telemetry_confirm = !confirm_value;
-    } else if (sender_state == WAIT_UNTIL_NEXT_CONFIRM) { // switch to resync if tx does not confirm value fast enough
-      sender_wait_count++;
-      if (sender_wait_count > sender_max_wait_count) {
-        sender_wait_until_telemetry_confirm = !confirm_value;
+    if (telemetry_confirm_value == sender.wait_until_telemetry_confirm) {
+      next_sender_state = (sender.state == RESYNC_THEN_SEND) ? SENDING : SENDER_IDLE;
+      sender.wait_until_telemetry_confirm = !telemetry_confirm_value;
+    }
+    // switch to resync if tx does not confirm value fast enough
+    else if (sender.state == WAIT_UNTIL_NEXT_CONFIRM) {
+      sender.wait_count++;
+      if (sender.wait_count > sender.max_wait_count) {
+        sender.wait_until_telemetry_confirm = !telemetry_confirm_value;
         next_sender_state = RESYNC;
       }
     }
-
     break;
 
   case SENDER_IDLE:
     break;
   }
 
-  sender_state = next_sender_state;
+  sender.state = next_sender_state;
 }
 
 /*
  * Called when the telemetry ratio or air rate changes, calculate
- * the new threshold for how many times the telemetryConfirmValue
+ * the new threshold for how many times the telemetry_confirm_value
  * can be wrong in a row before giving up and going to RESYNC
  */
-void elrs_tlm_update_rate(const uint16_t air_rate, const uint8_t tlm_ratio, const uint8_t tlm_burst) {
+void elrs_tlm_sender_update_rate(const uint16_t air_rate, const uint8_t tlm_ratio, const uint8_t tlm_burst) {
   // consipicuously unused air_rate parameter, the wait count is strictly based on number
   // of packets, not time between the telemetry packets, or a wall clock timeout
   UNUSED(air_rate);
   // The expected number of packet periods between telemetry packets
-  uint32_t packsBetween = tlm_ratio * (1 + tlm_burst) / tlm_burst;
-  sender_max_wait_count = packsBetween * ELRS_TELEMETRY_MAX_MISSED_PACKETS;
+  uint32_t packs_between = tlm_ratio * (1 + tlm_burst) / tlm_burst;
+  sender.max_wait_count = packs_between * ELRS_TELEMETRY_MAX_MISSED_PACKETS;
 }
 
 #endif
