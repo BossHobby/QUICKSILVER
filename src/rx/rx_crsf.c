@@ -12,7 +12,7 @@ void crsf_tlm_frame_start(uint8_t *buf) {
 
 uint32_t crsf_tlm_frame_finish(uint8_t *buf, uint32_t payload_size) {
   buf[payload_size + CRSF_FRAME_LENGTH_TYPE_CRC + 1] = crc8_dvb_s2_data(0, buf + 2, payload_size + 1);
-  return payload_size + CRSF_FRAME_LENGTH_TYPE_CRC + 1;
+  return payload_size + CRSF_FRAME_LENGTH_TYPE_CRC + 2;
 }
 
 /*

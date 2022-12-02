@@ -406,6 +406,6 @@ void rx_serial_send_crsf_telemetry() {
     frame_status = FRAME_DONE;
   }
 
-  const uint32_t telemetry_size = crsf_tlm_frame_finish(telemetry_packet, payload_size) + 1;
+  const uint32_t telemetry_size = crsf_tlm_frame_finish(telemetry_packet, payload_size);
   rx_serial_send_telemetry(telemetry_size);
 }
