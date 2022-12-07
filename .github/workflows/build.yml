@@ -29,13 +29,13 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.target }}
+          key: ${{ runner.os }}-pip
 
       - name: cache platformio
         uses: actions/cache@v3
         with:
           path: ~/.platformio
-          key: ${{ runner.os }}-platformio-${{ matrix.target }}
+          key: ${{ runner.os }}-platformio
 
       - name: set up python
         uses: actions/setup-python@v4
