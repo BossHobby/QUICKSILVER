@@ -27,7 +27,7 @@ It's source and pre-compiled binaries can be found [here](https://github.com/Bos
 
 The Configurator offers easy flashing
 
-![1647870432](https://user-images.githubusercontent.com/15615439/159275524-0ab7f0f0-428a-47c5-bf25-a25ec72f3d7d.gif)
+![QS_flash](https://user-images.githubusercontent.com/15615439/207713374-8bcaaa8a-017c-4664-9b77-1e5a20d9af17.gif)
 
 ## Building
 
