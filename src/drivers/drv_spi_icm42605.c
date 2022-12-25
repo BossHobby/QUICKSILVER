@@ -12,6 +12,10 @@
 #define SPI_SPEED_SLOW MHZ_TO_HZ(0.5)
 #define SPI_SPEED_FAST MHZ_TO_HZ(24)
 
+#define AAF_DELT 6
+#define AAF_DELTSQR 36
+#define AAF_BITSHIFT 10
+
 extern spi_bus_device_t gyro_bus;
 
 uint8_t icm42605_detect() {
@@ -37,6 +41,16 @@ void icm42605_configure() {
   time_delay_ms(15);
 
   icm42605_write(ICM42605_ACCEL_CONFIG0, ICM42605_AFS_16G | ICM42605_AODR_8000Hz);
+  time_delay_ms(15);
+
+  icm42605_write(ICM42605_GYRO_CONFIG_STATIC3, AAF_DELT);
+  icm42605_write(ICM42605_GYRO_CONFIG_STATIC4, AAF_DELTSQR & 0xFF);
+  icm42605_write(ICM42605_GYRO_CONFIG_STATIC5, (AAF_DELTSQR >> 8) | (AAF_BITSHIFT << 4));
+  time_delay_ms(15);
+
+  icm42605_write(ICM42605_ACCEL_CONFIG_STATIC2, AAF_DELT << 1);
+  icm42605_write(ICM42605_ACCEL_CONFIG_STATIC3, AAF_DELTSQR & 0xFF);
+  icm42605_write(ICM42605_ACCEL_CONFIG_STATIC4, (AAF_DELTSQR >> 8) | (AAF_BITSHIFT << 4));
   time_delay_ms(15);
 
   icm42605_write(ICM42605_GYRO_ACCEL_CONFIG0, (14 << 4) | 14); // low latency
