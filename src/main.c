@@ -176,8 +176,8 @@ __attribute__((__used__)) int main() {
   adc_init();
   vbat_init();
 
-  vtx_init();
   rx_init();
+  vtx_init();
   rgb_init();
 
   osd_init();

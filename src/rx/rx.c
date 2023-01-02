@@ -181,6 +181,10 @@ static float rx_apply_deadband(float val) {
 }
 
 void rx_init() {
+  for (uint32_t i = 0; i < AUX_CHANNEL_OFF; i++) {
+    state.aux[i] = 0;
+  }
+
   // set always on channel to on
   state.aux[AUX_CHANNEL_ON] = 1;
   state.aux[AUX_CHANNEL_OFF] = 0;
@@ -203,7 +207,7 @@ void rx_init() {
   case RX_PROTOCOL_DSM:
 #ifdef SERIAL_RX
     rx_serial_init();
-#endif    
+#endif
     break;
 
   case RX_PROTOCOL_NRF24_BAYANG_TELEMETRY:
@@ -211,7 +215,7 @@ void rx_init() {
   case RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND:
 #if defined(RX_NRF24_BAYANG_TELEMETRY) || defined(RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON) || defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND)
     rx_protocol_init();
-#endif    
+#endif
     break;
 
   case RX_PROTOCOL_FRSKY_D8:
@@ -242,12 +246,12 @@ void rx_init() {
   case RX_PROTOCOL_FLYSKY_AFHDS:
 #ifdef RX_FLYSKY
     rx_flysky_afhds_init();
-#endif  
+#endif
     break;
   case RX_PROTOCOL_FLYSKY_AFHDS2A:
 #ifdef RX_FLYSKY
     rx_flysky_afhds2a_init();
-#endif  
+#endif
     break;
   }
 }
@@ -285,8 +289,8 @@ bool rx_check() {
 #ifdef SERIAL_RX
     return rx_serial_check();
 #else
-    return false;    
-#endif    
+    return false;
+#endif
 
   case RX_PROTOCOL_NRF24_BAYANG_TELEMETRY:
   case RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON:
@@ -294,7 +298,7 @@ bool rx_check() {
 #if defined(RX_NRF24_BAYANG_TELEMETRY) || defined(RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON) || defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND)
     return rx_bayang_check();
 #else
-    return false;    
+    return false;
 #endif
 
   case RX_PROTOCOL_FRSKY_D8:
@@ -329,15 +333,15 @@ bool rx_check() {
   case RX_PROTOCOL_FLYSKY_AFHDS:
 #ifdef RX_FLYSKY
     return rx_flysky_afhds_check();
-#else    
+#else
     return false;
-#endif  
+#endif
   case RX_PROTOCOL_FLYSKY_AFHDS2A:
 #ifdef RX_FLYSKY
     return rx_flysky_afhds2a_check();
-#else    
+#else
     return false;
-#endif  
+#endif
   }
 
   return false;
