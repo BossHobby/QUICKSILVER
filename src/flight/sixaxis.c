@@ -20,6 +20,9 @@
 #define CAL_TIME 2e6
 #define GLOW_TIME 62500
 
+#define GYRO_BIAS_LIMIT 800
+#define ACCEL_BIAS_LIMIT 800
+
 // gyro has +-2000 divided over 16bit.
 #define GYRO_RANGE (1.f / (65536.f / 4000.f))
 
@@ -182,7 +185,7 @@ void sixaxis_gyro_cal() {
       if (data.gyro.axis[i] < limit[i])
         limit[i] -= 0.1f;
 
-      limitf(&limit[i], 800);
+      limitf(&limit[i], GYRO_BIAS_LIMIT);
 
       if (fabsf(data.gyro.axis[i]) > 100 + fabsf(limit[i])) {
         timestart = time_micros();
@@ -211,11 +214,10 @@ void sixaxis_acc_cal() {
     for (int x = 0; x < 3; x++) {
       lpf(&flash_storage.accelcal[x], state.accel_raw.axis[x], 0.92);
     }
-    time_micros(); // if it takes too long time will overflow so we call it here
   }
   flash_storage.accelcal[2] -= 2048;
 
   for (int x = 0; x < 3; x++) {
-    limitf(&flash_storage.accelcal[x], 500);
+    limitf(&flash_storage.accelcal[x], ACCEL_BIAS_LIMIT);
   }
 }
