@@ -13,7 +13,6 @@ typedef struct {
   uint8_t y;
 
   uint8_t offset;
-  uint8_t size;
 } osd_segment_t;
 
 typedef struct {

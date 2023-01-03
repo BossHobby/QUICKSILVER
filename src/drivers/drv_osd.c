@@ -103,7 +103,12 @@ uint8_t osd_clear_async() {
   return 1;
 }
 
-static void osd_display_set(uint16_t offset, uint8_t attr, uint8_t val) {
+static void osd_display_set(uint8_t x, uint8_t y, uint8_t attr, uint8_t val) {
+  if (x >= cols || y >= rows) {
+    return;
+  }
+
+  const uint16_t offset = y * cols + x;
   osd_char_t *c = &display[offset];
   if (c->val == val && c->attr == attr) {
     return;
@@ -118,9 +123,9 @@ static void osd_display_set(uint16_t offset, uint8_t attr, uint8_t val) {
 }
 
 void osd_display_refresh() {
-  for (uint8_t row = 0; row < rows; row++) {
-    for (uint8_t col = 0; col < cols; col++) {
-      osd_display_set(row * cols + col, 0, ' ');
+  for (uint8_t y = 0; y < rows; y++) {
+    for (uint8_t x = 0; x < cols; x++) {
+      osd_display_set(x, y, 0, ' ');
     }
   }
 }
@@ -149,25 +154,18 @@ void osd_start(uint8_t attr, uint8_t x, uint8_t y) {
   osd_seg.x = x;
   osd_seg.y = y;
   osd_seg.offset = 0;
-  osd_seg.size = 0;
 }
 
 void osd_write_data(const uint8_t *buffer, uint8_t size) {
-  osd_seg.size += size;
-
-  const uint16_t offset = osd_seg.y * cols + osd_seg.x + osd_seg.offset;
   for (uint8_t i = 0; i < size; i++) {
-    osd_display_set(offset + i, osd_seg.attr, buffer[i]);
+    osd_display_set(osd_seg.x + osd_seg.offset + i, osd_seg.y, osd_seg.attr, buffer[i]);
   }
 
   osd_seg.offset += size;
 }
 
 void osd_write_char(const char val) {
-  osd_seg.size += 1;
-
-  const uint16_t offset = osd_seg.y * cols + osd_seg.x + osd_seg.offset;
-  osd_display_set(offset, osd_seg.attr, val);
+  osd_display_set(osd_seg.x + osd_seg.offset, osd_seg.y, osd_seg.attr, val);
 
   osd_seg.offset += 1;
 }
