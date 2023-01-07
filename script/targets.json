@@ -714,5 +714,16 @@
         }
       }
     ]
+  },
+  {
+    "name": "speedybeef405v3",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
   }
 ]
