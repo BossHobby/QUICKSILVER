@@ -79,7 +79,7 @@ jobs:
           strip_components: 1
           overwrite: true
           source: output/*/quicksilver*.hex,output/index.html
-          target: /mnt/hanfer/public/quicksilver/${{ github.ref_name }}
+          target: /mnt/public/quicksilver/${{ github.ref_name }}
 
       - name: release
         uses: softprops/action-gh-release@v1
