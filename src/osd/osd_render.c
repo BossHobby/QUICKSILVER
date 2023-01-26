@@ -391,7 +391,7 @@ static void print_osd_vtx(osd_element_t *el) {
 
 // 3 stage return - 0 = stick and hold, 1 = move on but come back to clear, 2 = status print done
 static uint8_t print_status(osd_element_t *el, uint8_t persistence, uint8_t label) {
-  const uint8_t system_status_labels[12][21] = {
+  const uint8_t default_system_status_labels[12][21] = {
       {"               "},
       {" **DISARMED**  "},
       {"  **ARMED**    "},
@@ -405,6 +405,23 @@ static uint8_t print_status(osd_element_t *el, uint8_t persistence, uint8_t labe
       {"  **TURTLE**   "},
       {" **LOOPTIME**  "},
   };
+  const uint8_t guac_system_status_labels[12][26] = {
+      {"                         "},
+      {"      **GAME OVER**      "},
+      {"   **HERE WE GO AGAIN**  "},
+      {"       STICK BOOST 1     "},
+      {"       STICK BOOST 2     "},
+      {"    **404 RX NOT FOUND** "},
+      {"      **DANGER ZONE**    "},
+      {"     **ARMING SAFETY**   "},
+      {"**CONSTRUCT MORE PYLONS**"},
+      {"      **MOTOR TEST**     "},
+      {"      \x76THIS SIDE UP\x76     "},
+      {"       **LOOPTIME**      "},
+  };
+
+  uint8_t **labels = profile.osd.guac_mode ? guac_system_status_labels : default_system_status_labels;
+  uint8_t label_length = profile.osd.guac_mode ? 26 : 21;
 
   static uint8_t last_label;
   static uint8_t delay_counter = 25;
@@ -416,7 +433,7 @@ static uint8_t print_status(osd_element_t *el, uint8_t persistence, uint8_t labe
   if (delay_counter == 25) {
     // First run, print the label
     osd_start(osd_attr(el) | OSD_ATTR_BLINK, el->pos_x, el->pos_y);
-    osd_write_data(system_status_labels[label], 21);
+    osd_write_data(labels[label], label_length);
 
     delay_counter--;
 
@@ -432,7 +449,7 @@ static uint8_t print_status(osd_element_t *el, uint8_t persistence, uint8_t labe
   if (!delay_counter) {
     // timer is elapsed, print clear label
     osd_start(osd_attr(el), el->pos_x, el->pos_y);
-    osd_write_data(system_status_labels[0], 21);
+    osd_write_data(labels[0], label_length);
 
     delay_counter = 25;
 
