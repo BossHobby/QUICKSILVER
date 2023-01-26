@@ -275,8 +275,24 @@ void elrs_read_packet(volatile uint8_t *packet) {
 }
 
 void elrs_last_packet_stats(int8_t *rssi, int8_t *snr) {
-  *rssi = -(int8_t)(packet_status[0] / 2);
-  *snr = (int8_t)packet_status[1] / 4;
+  if (current_air_rate_config()->radio_type == RADIO_TYPE_SX128x_FLRC) {
+    // No SNR in FLRC mode
+    *rssi = -(int8_t)(packet_status[0] / 2);
+    *snr = 0;
+    return;
+  }
+
+  // LoRa mode has both RSSI and SNR
+  int8_t new_rssi = -(int8_t)(packet_status[0] / 2);
+  int8_t new_snr = (int8_t)packet_status[1];
+
+  // https://www.mouser.com/datasheet/2/761/DS_SX1280-1_V2.2-1511144.pdf p84
+  // need to subtract SNR from RSSI when SNR <= 0;
+  int8_t neg_offset = (new_snr < 0) ? (new_snr / RADIO_SNR_SCALE) : 0;
+  new_rssi += neg_offset;
+
+  *rssi = new_rssi;
+  *snr = new_snr;
 }
 
 void elrs_freq_correct() {

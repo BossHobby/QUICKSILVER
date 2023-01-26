@@ -196,8 +196,13 @@ int32_t elrs_lpf_update(elrs_lpf_t *lpf, int32_t data);
 void elrs_lq_add();
 void elrs_lq_inc();
 uint8_t elrs_lq_get();
+uint8_t elrs_lq_get_raw();
 bool elrs_lq_current_is_set();
 void elrs_lq_reset();
+
+void elrs_snr_mean_reset();
+void elrs_snr_mean_add(const int8_t val);
+int8_t elrs_snr_mean_get(const int8_t def);
 
 void elrs_tlm_receiver_reset();
 void elrs_tlm_receiver_set_max_package_index(uint8_t max_package_index);

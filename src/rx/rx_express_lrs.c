@@ -192,7 +192,7 @@ static bool elrs_tlm() {
     packet[2] = -rssi;                                                    // rssi
     packet[3] = (has_model_match << 7);                                   // no diversity
     packet[4] = uplink_lq | ((elrs_tlm_receiver_confirm() ? 1 : 0) << 7); // uplink_lq &&  msq confirm
-    packet[5] = raw_snr;
+    packet[5] = elrs_snr_mean_get(-16);
     packet[6] = 0;
 
     next_tlm_type = TELEMETRY_TYPE_DATA;
@@ -350,6 +350,7 @@ static void elrs_connection_tentative(uint32_t now) {
 
   fhss_reset();
   elrs_phase_reset();
+  elrs_snr_mean_reset();
 
   if (!in_binding_mode && !elrs_timer_is_running()) {
     elrs_timer_resume(current_air_rate_config()->interval);
@@ -623,6 +624,7 @@ static bool elrs_process_packet(uint32_t packet_time) {
 
   elrs_last_packet_stats(&raw_rssi, &raw_snr);
   rssi = elrs_lpf_update(&rssi_lpf, raw_rssi);
+  elrs_snr_mean_add(raw_snr);
 
   rx_lqi_got_packet();
 
@@ -895,7 +897,7 @@ bool rx_expresslrs_check() {
     elrs_connection_lost(time_ms);
   }
 
-  if ((elrs_state == TENTATIVE) && (abs(pl_state.offset_dx) <= 10) && (pl_state.offset < 100) && (elrs_lq_get() > fhss_min_lq_for_chaos())) {
+  if ((elrs_state == TENTATIVE) && (abs(pl_state.offset_dx) <= 10) && (pl_state.offset < 100) && (elrs_lq_get_raw() > fhss_min_lq_for_chaos())) {
     elrs_connected(time_ms);
   }
 

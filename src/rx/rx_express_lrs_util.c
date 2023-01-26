@@ -4,19 +4,28 @@
 
 #define ELRS_CRC_POLY 0x07 // 0x83
 
-#define ELRS_LQ_SIZE ((100 + 31) / 32)
+#define ELRS_LQ_N 100
+#define ELRS_LQ_SIZE ((ELRS_LQ_N + 31) / 32)
 
 #define CRC_LENGTH 256
 
 typedef struct {
   uint8_t val;
   uint8_t byte;
+  uint8_t count;
 
   uint32_t mask;
   uint32_t buffer[ELRS_LQ_SIZE];
 } elrs_lq_t;
 
 static elrs_lq_t lq;
+
+typedef struct {
+  int32_t acc;
+  int32_t count;
+} elrs_snr_mean_t;
+
+static elrs_snr_mean_t snr_mean;
 
 static uint16_t crc_tab[CRC_LENGTH];
 static uint8_t crc_bits = 0;
@@ -91,7 +100,7 @@ void elrs_lq_inc() {
   }
 
   // At idx N / 32 and bit N % 32, wrap back to idx=0, bit=0
-  if ((lq.byte == 3) && (lq.mask & (1 << ELRS_LQ_SIZE))) {
+  if ((lq.byte == (ELRS_LQ_N / 32)) && (lq.mask & (1 << (ELRS_LQ_N % 32)))) {
     lq.byte = 0;
     lq.mask = (1 << 0);
   }
@@ -100,9 +109,17 @@ void elrs_lq_inc() {
     lq.buffer[lq.byte] &= ~lq.mask;
     lq.val -= 1;
   }
+
+  if (lq.count < ELRS_LQ_N) {
+    ++lq.count;
+  }
 }
 
 uint8_t elrs_lq_get() {
+  return (uint32_t)lq.val * 100U / lq.count;
+}
+
+uint8_t elrs_lq_get_raw() {
   return lq.val;
 }
 
@@ -113,11 +130,31 @@ bool elrs_lq_current_is_set() {
 void elrs_lq_reset() {
   lq.val = 0;
   lq.byte = 0;
+  lq.count = 1;
   lq.mask = (1 << 0);
 
   for (uint32_t i = 0; i < ELRS_LQ_SIZE; i++) {
     lq.buffer[i] = 0;
   }
+}
+
+void elrs_snr_mean_reset() {
+  snr_mean.acc = 0;
+  snr_mean.count = 0;
+}
+
+void elrs_snr_mean_add(const int8_t val) {
+  snr_mean.acc += val;
+  snr_mean.count++;
+}
+
+int8_t elrs_snr_mean_get(const int8_t def) {
+  if (snr_mean.count) {
+    int8_t ret = snr_mean.acc / snr_mean.count;
+    elrs_snr_mean_reset();
+    return ret;
+  }
+  return def;
 }
 
 uint8_t tlm_ratio_enum_to_value(expresslrs_tlm_ratio_t val) {
