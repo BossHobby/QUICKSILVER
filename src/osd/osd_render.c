@@ -287,7 +287,7 @@ void osd_save_exit() {
 }
 
 static void print_osd_flightmode(osd_element_t *el) {
-  const uint8_t flightmode_labels[5][21] = {
+  const uint8_t flightmode_labels[5][10] = {
       {"   ACRO   "},
       {"  LEVEL   "},
       {" RACEMODE "},
@@ -310,7 +310,7 @@ static void print_osd_flightmode(osd_element_t *el) {
   }
 
   osd_start(osd_attr(el), el->pos_x, el->pos_y);
-  osd_write_data(flightmode_labels[flightmode], 21);
+  osd_write_data(flightmode_labels[flightmode], 10);
 }
 
 static void print_osd_rssi(osd_element_t *el) {
