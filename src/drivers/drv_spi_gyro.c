@@ -144,18 +144,7 @@ gyro_data_t gyro_spi_read() {
   }
 
   case GYRO_TYPE_BMI270: {
-    uint8_t buf[12];
-    bmi270_read_data(BMI270_REG_ACC_DATA_X_LSB, buf, 12);
-
-    data.accel.axis[0] = -(int16_t)((buf[1] << 8) | buf[0]);
-    data.accel.axis[1] = -(int16_t)((buf[3] << 8) | buf[2]);
-    data.accel.axis[2] = (int16_t)((buf[5] << 8) | buf[4]);
-
-    data.gyro.axis[1] = (int16_t)((buf[7] << 8) | buf[6]);
-    data.gyro.axis[0] = (int16_t)((buf[9] << 8) | buf[8]);
-    data.gyro.axis[2] = (int16_t)((buf[11] << 8) | buf[10]);
-
-    data.temp = 0;
+    bmi270_read_gyro_data(&data);
     break;
   }
 
