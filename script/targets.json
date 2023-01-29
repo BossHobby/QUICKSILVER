@@ -725,5 +725,16 @@
         }
       }
     ]
-  }
+  },
+  {
+    "name": "iflight_f411_pro",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+     ] 
+   }
 ]
