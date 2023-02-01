@@ -736,5 +736,16 @@
         }
       }
      ] 
-   }
+   },
+   {
+    "name": "zeezwhoop",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
+  }
 ]
