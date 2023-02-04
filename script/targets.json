@@ -507,6 +507,17 @@
     ]
   },
   {
+    "name": "foxeerf722_v2",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
+  },
+  {
     "name": "kakuteh7",
     "configurations": [
       {
