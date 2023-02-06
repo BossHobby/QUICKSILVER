@@ -54,7 +54,7 @@ bool serial_vtx_send_data(uint8_t *data, uint32_t size) {
     // LL_USART_ClearFlag_RXNE(USART.channel);
     LL_USART_ClearFlag_TC(USART.channel);
 
-    ring_buffer_clear(&vtx_rx_buffer);
+    // ring_buffer_clear(&vtx_rx_buffer);
 
     LL_USART_EnableIT_RXNE(USART.channel);
     LL_USART_EnableIT_TXE(USART.channel);

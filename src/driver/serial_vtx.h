@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define VTX_BUFFER_SIZE 128
+#define VTX_BUFFER_SIZE 256
 
 typedef enum {
   VTX_ERROR,
