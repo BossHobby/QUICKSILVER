@@ -414,38 +414,42 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   }
 
   case MSP_VTXTABLE_POWERLEVEL: {
+    vtx_settings_t *settings = msp->device == MSP_DEVICE_VTX ? &msp_vtx_settings : &vtx_settings;
+
     const uint8_t level = payload[0];
     if (level <= 0 || level > VTX_POWER_LEVEL_MAX) {
       msp_send_error(msp, magic, cmd);
       break;
     }
 
-    const uint16_t power = vtx_settings.power_table.values[level - 1];
+    const uint16_t power = settings->power_table.values[level - 1];
 
     uint8_t buf[7];
     buf[0] = level;
     buf[1] = power & 0xFF;
     buf[2] = power >> 8;
     buf[3] = 3;
-    memcpy(buf + 4, vtx_settings.power_table.labels[level - 1], 3);
+    memcpy(buf + 4, settings->power_table.labels[level - 1], 3);
 
     msp_send_reply(msp, magic, cmd, buf, 7);
     break;
   }
 
   case MSP_SET_VTXTABLE_POWERLEVEL: {
+    vtx_settings_t *settings = msp->device == MSP_DEVICE_VTX ? &msp_vtx_settings : &vtx_settings;
+
     const uint8_t level = payload[0];
     if (level <= 0 || level > VTX_POWER_LEVEL_MAX) {
       msp_send_error(msp, magic, cmd);
       break;
     }
 
-    vtx_settings.power_table.levels = max(level, vtx_settings.power_table.levels);
-    vtx_settings.power_table.values[level - 1] = payload[2] << 8 | payload[1];
+    settings->power_table.levels = max(level, settings->power_table.levels);
+    settings->power_table.values[level - 1] = payload[2] << 8 | payload[1];
 
     const uint8_t label_len = payload[3];
     for (uint8_t i = 0; i < 3; i++) {
-      vtx_settings.power_table.labels[level - 1][i] = i >= label_len ? 0 : payload[4 + i];
+      settings->power_table.labels[level - 1][i] = i >= label_len ? 0 : payload[4 + i];
     }
     msp_send_reply(msp, magic, cmd, NULL, 0);
     break;

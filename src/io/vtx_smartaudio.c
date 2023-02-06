@@ -1,5 +1,7 @@
 #include "vtx.h"
 
+#include <string.h>
+
 #include "driver/serial.h"
 #include "driver/serial_vtx_sa.h"
 #include "util/util.h"
@@ -12,6 +14,14 @@ uint8_t smart_audio_detected = 0;
 extern smart_audio_settings_t smart_audio_settings;
 
 static bool smart_audio_needs_update = false;
+
+static const char smart_audio_power_level_labels[VTX_POWER_LEVEL_MAX][3] = {
+    "25 ",
+    "100",
+    "200",
+    "300",
+    "400",
+};
 
 vtx_detect_status_t vtx_smart_audio_update(vtx_settings_t *actual) {
   if (smart_audio_settings.version == 0 && vtx_connect_tries > SMART_AUDIO_DETECT_TRIES) {
@@ -40,10 +50,14 @@ vtx_detect_status_t vtx_smart_audio_update(vtx_settings_t *actual) {
       actual->channel = channel_index % VTX_CHANNEL_MAX;
     }
 
+    actual->power_table.levels = VTX_POWER_LEVEL_MAX;
+    memcpy(actual->power_table.values, smart_audio_settings.dac_power_levels, sizeof(smart_audio_settings.dac_power_levels));
+    memcpy(actual->power_table.labels, smart_audio_power_level_labels, sizeof(smart_audio_power_level_labels));
+
     if (smart_audio_settings.version == 2) {
       actual->power_level = min(smart_audio_settings.power, VTX_POWER_LEVEL_MAX - 1);
     } else {
-      actual->power_level = smart_audio_dac_power_level_index(smart_audio_settings.power);
+      actual->power_level = vtx_power_level_index(smart_audio_settings.power);
     }
 
     if (smart_audio_settings.version >= 3) {

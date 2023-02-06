@@ -1,5 +1,7 @@
 #include "vtx.h"
 
+#include <string.h>
+
 #include "driver/serial.h"
 #include "driver/serial_vtx_tramp.h"
 
@@ -11,7 +13,7 @@ extern const uint16_t frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX];
 uint8_t tramp_detected = 0;
 extern tramp_settings_t tramp_settings;
 
-const uint16_t tramp_power_level[VTX_POWER_LEVEL_MAX] = {
+static const uint16_t tramp_power_level_values[VTX_POWER_LEVEL_MAX] = {
     25,
     100,
     200,
@@ -19,14 +21,13 @@ const uint16_t tramp_power_level[VTX_POWER_LEVEL_MAX] = {
     400,
 };
 
-static vtx_power_level_t tramp_power_level_index(uint16_t power) {
-  for (uint8_t level = 0; level < VTX_POWER_LEVEL_MAX; level++) {
-    if (power >= tramp_power_level[level] && power <= tramp_power_level[level]) {
-      return level;
-    }
-  }
-  return VTX_POWER_LEVEL_1;
-}
+static const char tramp_power_level_labels[VTX_POWER_LEVEL_MAX][3] = {
+    "25 ",
+    "100",
+    "200",
+    "300",
+    "400",
+};
 
 vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual) {
   if (tramp_settings.freq_min == 0 && vtx_connect_tries > TRAMP_DETECT_TRIES) {
@@ -59,7 +60,11 @@ vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual) {
       actual->channel = channel_index % VTX_CHANNEL_MAX;
     }
 
-    actual->power_level = tramp_power_level_index(tramp_settings.power);
+    actual->power_table.levels = VTX_POWER_LEVEL_MAX;
+    memcpy(actual->power_table.values, tramp_power_level_values, sizeof(tramp_power_level_values));
+    memcpy(actual->power_table.labels, tramp_power_level_labels, sizeof(tramp_power_level_labels));
+
+    actual->power_level = vtx_power_level_index(tramp_settings.power);
     actual->pit_mode = tramp_settings.pit_mode;
 
     // not all vtxes seem to return a non-zero value. :(
@@ -98,7 +103,7 @@ void tramp_set_frequency(vtx_band_t band, vtx_channel_t channel) {
 }
 
 void tramp_set_power_level(vtx_power_level_t power) {
-  serial_tramp_send_payload('P', tramp_power_level[power]);
+  serial_tramp_send_payload('P', tramp_power_level_values[power]);
   tramp_settings.frequency = 0;
 }
 

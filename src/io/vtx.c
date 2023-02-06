@@ -1,6 +1,7 @@
 #include "io/vtx.h"
 
 #include <stddef.h>
+#include <string.h>
 
 #include "core/debug.h"
 #include "core/profile.h"
@@ -20,7 +21,25 @@
 static int fpv_init = 0;
 #endif
 
-vtx_settings_t vtx_settings;
+vtx_settings_t vtx_settings = {
+    .power_table = {
+        .levels = VTX_POWER_LEVEL_MAX,
+        .labels = {
+            "1  ",
+            "2  ",
+            "3  ",
+            "4  ",
+            "5  ",
+        },
+        .values = {
+            VTX_POWER_LEVEL_1,
+            VTX_POWER_LEVEL_2,
+            VTX_POWER_LEVEL_3,
+            VTX_POWER_LEVEL_4,
+            VTX_POWER_LEVEL_5,
+        },
+    },
+};
 uint8_t vtx_connect_tries = 0;
 
 static vtx_settings_t vtx_actual;
@@ -73,6 +92,15 @@ int8_t vtx_find_frequency_index(uint16_t frequency) {
     }
   }
   return -1;
+}
+
+vtx_power_level_t vtx_power_level_index(uint16_t power) {
+  for (uint8_t level = 0; level < VTX_POWER_LEVEL_MAX; level++) {
+    if (power >= vtx_settings.power_table.values[level] && power <= vtx_settings.power_table.values[level]) {
+      return level;
+    }
+  }
+  return VTX_POWER_LEVEL_1;
 }
 
 static vtx_detect_status_t vtx_update_protocol(vtx_protocol_t proto, vtx_settings_t *actual) {
@@ -342,9 +370,34 @@ void vtx_set(vtx_settings_t *vtx) {
     vtx_settings.pit_mode = vtx->pit_mode;
 
   vtx_settings.power_level = vtx->power_level < VTX_POWER_LEVEL_MAX ? vtx->power_level : (VTX_POWER_LEVEL_MAX - 1);
+  memcpy(&vtx_settings.power_table, &vtx->power_table, sizeof(vtx_power_table_t));
 
   vtx_settings.band = vtx->band < VTX_BAND_MAX ? vtx->band : 0;
   vtx_settings.channel = vtx->channel < VTX_CHANNEL_MAX ? vtx->channel : 0;
+}
+
+cbor_result_t cbor_encode_vtx_power_table_t(cbor_value_t *enc, const vtx_power_table_t *table) {
+  cbor_result_t res = CBOR_OK;
+
+  CBOR_CHECK_ERROR(res = cbor_encode_map_indefinite(enc));
+
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "levels"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &table->levels));
+
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "labels"));
+  CBOR_CHECK_ERROR(res = cbor_encode_array(enc, VTX_POWER_LEVEL_MAX));
+  for (uint8_t i = 0; i < VTX_POWER_LEVEL_MAX; i++) {
+    CBOR_CHECK_ERROR(res = cbor_encode_tstr(enc, (const uint8_t *)table->labels[i], 3));
+  }
+
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "values"));
+  CBOR_CHECK_ERROR(res = cbor_encode_array(enc, VTX_POWER_LEVEL_MAX));
+  for (uint8_t i = 0; i < VTX_POWER_LEVEL_MAX; i++) {
+    CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &table->values[i]));
+  }
+
+  CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
+  return res;
 }
 
 cbor_result_t cbor_encode_vtx_settings_t(cbor_value_t *enc, const vtx_settings_t *vtx) {
@@ -372,6 +425,9 @@ cbor_result_t cbor_encode_vtx_settings_t(cbor_value_t *enc, const vtx_settings_t
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "power_level"));
   CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &vtx->power_level));
+
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "power_table"));
+  CBOR_CHECK_ERROR(res = cbor_encode_vtx_power_table_t(enc, &vtx->power_table));
 
   CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
   return res;
