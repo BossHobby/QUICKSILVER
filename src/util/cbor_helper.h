@@ -51,6 +51,13 @@ cbor_result_t cbor_handle_error(cbor_result_t err);
     CBOR_CHECK_ERROR(res = cbor_encode_str(enc, o->member[i])); \
   }
 
+#define CBOR_ENCODE_TSTR_ARRAY_MEMBER(member, size, str_size)                               \
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, #member));                                    \
+  CBOR_CHECK_ERROR(res = cbor_encode_array(enc, size));                                     \
+  for (uint32_t i = 0; i < size; i++) {                                                     \
+    CBOR_CHECK_ERROR(res = cbor_encode_tstr(enc, (const uint8_t *)o->member[i], str_size)); \
+  }
+
 #define CBOR_START_STRUCT_DECODER(type)                              \
   cbor_result_t cbor_decode_##type(cbor_value_t *dec, type *o) {     \
     cbor_result_t res = CBOR_OK;                                     \
@@ -109,6 +116,16 @@ cbor_result_t cbor_handle_error(cbor_result_t err);
       CBOR_CHECK_ERROR(res = cbor_decode_str(dec, &o->member[i]));                  \
     }                                                                               \
     continue;                                                                       \
+  }
+
+#define CBOR_DECODE_TSTR_ARRAY_MEMBER(member, size, str_size)                                \
+  if (buf_equal_string(name, name_len, #member)) {                                           \
+    cbor_container_t array;                                                                  \
+    CBOR_CHECK_ERROR(res = cbor_decode_array(dec, &array));                                  \
+    for (uint32_t i = 0; i < min(size, cbor_decode_array_size(dec, &array)); i++) {          \
+      CBOR_CHECK_ERROR(res = cbor_decode_tstr_copy(dec, (uint8_t *)o->member[i], str_size)); \
+    }                                                                                        \
+    continue;                                                                                \
   }
 
 cbor_result_t cbor_encode_float_array(cbor_value_t *enc, const float *array, uint32_t size);

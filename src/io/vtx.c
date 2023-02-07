@@ -356,15 +356,16 @@ void vtx_set(vtx_settings_t *vtx) {
     // if the selected protocol was changed, restart detection
     vtx_settings.detected = VTX_PROTOCOL_INVALID;
     vtx_settings.protocol = vtx->protocol;
+    vtx_settings.magic = 0xFFFF;
 
     smart_audio_settings.version = 0;
     smart_audio_detected = 0;
     tramp_settings.freq_min = 0;
     tramp_detected = 0;
     msp_vtx_detected = 0;
+  } else {
+    vtx_settings.magic = VTX_SETTINGS_MAGIC;
   }
-
-  vtx_settings.magic = VTX_SETTINGS_MAGIC;
 
   if (vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT)
     vtx_settings.pit_mode = vtx->pit_mode;
@@ -376,105 +377,34 @@ void vtx_set(vtx_settings_t *vtx) {
   vtx_settings.channel = vtx->channel < VTX_CHANNEL_MAX ? vtx->channel : 0;
 }
 
-cbor_result_t cbor_encode_vtx_power_table_t(cbor_value_t *enc, const vtx_power_table_t *table) {
-  cbor_result_t res = CBOR_OK;
+#define MEMBER CBOR_ENCODE_MEMBER
+#define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
+#define TSTR_ARRAY_MEMBER CBOR_ENCODE_TSTR_ARRAY_MEMBER
 
-  CBOR_CHECK_ERROR(res = cbor_encode_map_indefinite(enc));
+CBOR_START_STRUCT_ENCODER(vtx_power_table_t)
+VTX_POWER_TABLE_MEMBERS
+CBOR_END_STRUCT_ENCODER()
 
-  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "levels"));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &table->levels));
+CBOR_START_STRUCT_ENCODER(vtx_settings_t)
+VTX_SETTINGS_MEMBERS
+CBOR_END_STRUCT_ENCODER()
 
-  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "labels"));
-  CBOR_CHECK_ERROR(res = cbor_encode_array(enc, VTX_POWER_LEVEL_MAX));
-  for (uint8_t i = 0; i < VTX_POWER_LEVEL_MAX; i++) {
-    CBOR_CHECK_ERROR(res = cbor_encode_tstr(enc, (const uint8_t *)table->labels[i], 3));
-  }
+#undef MEMBER
+#undef ARRAY_MEMBER
+#undef TSTR_ARRAY_MEMBER
 
-  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "values"));
-  CBOR_CHECK_ERROR(res = cbor_encode_array(enc, VTX_POWER_LEVEL_MAX));
-  for (uint8_t i = 0; i < VTX_POWER_LEVEL_MAX; i++) {
-    CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &table->values[i]));
-  }
+#define MEMBER CBOR_DECODE_MEMBER
+#define ARRAY_MEMBER CBOR_DECODE_ARRAY_MEMBER
+#define TSTR_ARRAY_MEMBER CBOR_DECODE_TSTR_ARRAY_MEMBER
 
-  CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
-  return res;
-}
+CBOR_START_STRUCT_DECODER(vtx_power_table_t)
+VTX_POWER_TABLE_MEMBERS
+CBOR_END_STRUCT_DECODER()
 
-cbor_result_t cbor_encode_vtx_settings_t(cbor_value_t *enc, const vtx_settings_t *vtx) {
-  cbor_result_t res = CBOR_OK;
+CBOR_START_STRUCT_DECODER(vtx_settings_t)
+VTX_SETTINGS_MEMBERS
+CBOR_END_STRUCT_DECODER()
 
-  CBOR_CHECK_ERROR(res = cbor_encode_map_indefinite(enc));
-
-  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "magic"));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &vtx->magic));
-
-  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "protocol"));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &vtx->protocol));
-
-  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "detected"));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &vtx->detected));
-
-  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "band"));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &vtx->band));
-
-  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "channel"));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &vtx->channel));
-
-  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "pit_mode"));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &vtx->pit_mode));
-
-  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "power_level"));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &vtx->power_level));
-
-  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "power_table"));
-  CBOR_CHECK_ERROR(res = cbor_encode_vtx_power_table_t(enc, &vtx->power_table));
-
-  CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
-  return res;
-}
-
-cbor_result_t cbor_decode_vtx_settings_t(cbor_value_t *dec, vtx_settings_t *vtx) {
-  cbor_result_t res = CBOR_OK;
-
-  cbor_container_t map;
-  CBOR_CHECK_ERROR(res = cbor_decode_map(dec, &map));
-
-  const uint8_t *name;
-  uint32_t name_len;
-  for (uint32_t i = 0; i < cbor_decode_map_size(dec, &map); i++) {
-    CBOR_CHECK_ERROR(res = cbor_decode_tstr(dec, &name, &name_len));
-
-    if (buf_equal_string(name, name_len, "magic")) {
-      CBOR_CHECK_ERROR(res = cbor_decode_uint16(dec, &vtx->magic));
-      continue;
-    }
-
-    if (buf_equal_string(name, name_len, "protocol")) {
-      CBOR_CHECK_ERROR(res = cbor_decode_uint8(dec, &vtx->protocol));
-      continue;
-    }
-
-    if (buf_equal_string(name, name_len, "band")) {
-      CBOR_CHECK_ERROR(res = cbor_decode_uint8(dec, &vtx->band));
-      continue;
-    }
-
-    if (buf_equal_string(name, name_len, "channel")) {
-      CBOR_CHECK_ERROR(res = cbor_decode_uint8(dec, &vtx->channel));
-      continue;
-    }
-
-    if (buf_equal_string(name, name_len, "pit_mode")) {
-      CBOR_CHECK_ERROR(res = cbor_decode_uint8(dec, &vtx->pit_mode));
-      continue;
-    }
-
-    if (buf_equal_string(name, name_len, "power_level")) {
-      CBOR_CHECK_ERROR(res = cbor_decode_uint8(dec, &vtx->power_level));
-      continue;
-    }
-
-    CBOR_CHECK_ERROR(res = cbor_decode_skip(dec));
-  }
-  return res;
-}
+#undef MEMBER
+#undef ARRAY_MEMBER
+#undef STR_ARRAY_MEMBER

@@ -69,6 +69,11 @@ typedef struct {
   uint16_t values[VTX_POWER_LEVEL_MAX];
 } vtx_power_table_t;
 
+#define VTX_POWER_TABLE_MEMBERS                     \
+  MEMBER(levels, uint8)                             \
+  TSTR_ARRAY_MEMBER(labels, VTX_POWER_LEVEL_MAX, 3) \
+  ARRAY_MEMBER(values, VTX_POWER_LEVEL_MAX, uint16)
+
 typedef struct {
   uint16_t magic;
 
@@ -83,6 +88,16 @@ typedef struct {
   vtx_power_level_t power_level;
   vtx_power_table_t power_table;
 } vtx_settings_t;
+
+#define VTX_SETTINGS_MEMBERS \
+  MEMBER(magic, uint16)      \
+  MEMBER(protocol, uint8)    \
+  MEMBER(detected, uint8)    \
+  MEMBER(band, uint8)        \
+  MEMBER(channel, uint8)     \
+  MEMBER(pit_mode, uint8)    \
+  MEMBER(power_level, uint8) \
+  MEMBER(power_table, vtx_power_table_t)
 
 extern vtx_settings_t vtx_settings;
 
