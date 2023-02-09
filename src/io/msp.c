@@ -297,6 +297,9 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   }
 
   case MSP_VTX_CONFIG: {
+    if (msp->device == MSP_DEVICE_VTX && vtx_settings.power_table.levels != 0) {
+      msp_vtx_detected = 1;
+    }
     msp_vtx_send_config_reply(msp, magic);
     break;
   }

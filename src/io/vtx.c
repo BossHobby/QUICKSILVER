@@ -23,21 +23,7 @@ static int fpv_init = 0;
 
 vtx_settings_t vtx_settings = {
     .power_table = {
-        .levels = VTX_POWER_LEVEL_MAX,
-        .labels = {
-            "1  ",
-            "2  ",
-            "3  ",
-            "4  ",
-            "5  ",
-        },
-        .values = {
-            VTX_POWER_LEVEL_1,
-            VTX_POWER_LEVEL_2,
-            VTX_POWER_LEVEL_3,
-            VTX_POWER_LEVEL_4,
-            VTX_POWER_LEVEL_5,
-        },
+        .levels = 0,
     },
 };
 uint8_t vtx_connect_tries = 0;
