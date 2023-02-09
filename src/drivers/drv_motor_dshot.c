@@ -423,27 +423,20 @@ bool motor_direction_change_done() {
 }
 
 void motor_beep() {
-  const uint32_t time = time_millis();
+  static uint32_t last_time = 0;
+  const uint32_t time = time_millis() - last_time;
 
-  uint8_t beep_command = 0;
-  if (time % 2000 <= 250) {
-    beep_command = DSHOT_CMD_BEEP1;
-  } else if (time % 2000 <= 500) {
-    beep_command = DSHOT_CMD_BEEP3;
-  } else if (time % 2000 <= 750) {
-    beep_command = DSHOT_CMD_BEEP2;
-  } else if (time % 2000 <= 1000) {
-    beep_command = DSHOT_CMD_BEEP4;
-  } else if (time % 2000 <= 1250) {
-    beep_command = DSHOT_CMD_BEEP5;
-  }
+  static uint8_t beep_command = DSHOT_CMD_BEEP1;
+  make_packet_all(beep_command, true);
+  dshot_dma_start();
 
-  if (beep_command != 0) {
-    make_packet(0, beep_command, true);
-    make_packet(1, beep_command, true);
-    make_packet(2, beep_command, true);
-    make_packet(3, beep_command, true);
-    dshot_dma_start();
+  if (time >= 500) {
+    beep_command++;
+    if (beep_command > DSHOT_CMD_BEEP5) {
+      beep_command = DSHOT_CMD_BEEP1;
+    }
+
+    last_time = time_millis();
   }
 }
 

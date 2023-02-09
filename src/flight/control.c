@@ -459,13 +459,14 @@ void control() {
     motor_output_calc(state.motor_mix.axis);
   }
 
-  motor_update();
-
 #ifdef MOTOR_BEEPS
   if ((flags.usb_active == 0 && flags.rx_ready && flags.failsafe && (time_millis() - state.failsafe_time_ms) > MOTOR_BEEPS_TIMEOUT) ||
       (flags.on_ground && rx_aux_on(AUX_BUZZER_ENABLE))) {
     motor_beep();
-  }
+  } else
 #endif
+  {
+    motor_update();
+  }
 }
 // end of control function
