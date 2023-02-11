@@ -119,6 +119,67 @@ void vtx_init() {
   vtx_actual.power_level = VTX_POWER_LEVEL_MAX;
 }
 
+static bool vtx_detect_protocol() {
+  static vtx_protocol_t protocol_to_check = VTX_PROTOCOL_MSP_VTX;
+  static uint8_t protocol_is_init = 0;
+
+  if (vtx_settings.detected) {
+    return true;
+  }
+
+  if (serial_hdzero_port != USART_PORT_INVALID) {
+    vtx_settings.protocol = VTX_PROTOCOL_MSP_VTX;
+  }
+
+  if (vtx_settings.protocol != VTX_PROTOCOL_INVALID) {
+    protocol_to_check = vtx_settings.protocol;
+  }
+
+  if (!protocol_is_init) {
+    switch (protocol_to_check) {
+    case VTX_PROTOCOL_TRAMP:
+      serial_tramp_init();
+      break;
+
+    case VTX_PROTOCOL_SMART_AUDIO:
+      serial_smart_audio_init();
+      break;
+
+    case VTX_PROTOCOL_MSP_VTX:
+      serial_msp_vtx_init();
+      break;
+
+    case VTX_PROTOCOL_INVALID:
+    case VTX_PROTOCOL_MAX:
+      break;
+    }
+    protocol_is_init = 1;
+    return;
+  }
+
+  const vtx_detect_status_t status = vtx_update_protocol(protocol_to_check, &vtx_actual);
+
+  if (status == VTX_DETECT_SUCCESS) {
+    // detect success, save detected proto
+    vtx_settings.protocol = protocol_to_check;
+  } else if (status == VTX_DETECT_ERROR) {
+    vtx_connect_tries = 0;
+    protocol_is_init = 0;
+    vtx_delay_ms = 500;
+
+    if (vtx_settings.protocol == VTX_PROTOCOL_INVALID) {
+      // only switch protocol if we are not fixed to one
+      protocol_to_check++;
+
+      if (protocol_to_check == VTX_PROTOCOL_MAX) {
+        protocol_to_check = VTX_PROTOCOL_INVALID;
+      }
+    }
+  }
+
+  return false;
+}
+
 void vtx_update() {
 #if defined(FPV_PIN)
   if (rx_aux_on(AUX_FPV_SWITCH)) {
@@ -160,67 +221,25 @@ void vtx_update() {
   vtx_delay_ms = 0;
   vtx_delay_start = time_millis();
 
-  if (!vtx_settings.detected) {
-    static vtx_protocol_t protocol_to_check = VTX_PROTOCOL_MSP_VTX;
-    static uint8_t protocol_is_init = 0;
-
-    if (serial_hdzero_port != USART_PORT_INVALID) {
-      vtx_settings.protocol = VTX_PROTOCOL_MSP_VTX;
-    }
-
-    if (vtx_settings.protocol != VTX_PROTOCOL_INVALID) {
-      protocol_to_check = vtx_settings.protocol;
-    }
-
-    if (!protocol_is_init) {
-      switch (protocol_to_check) {
-      case VTX_PROTOCOL_TRAMP:
-        serial_tramp_init();
-        break;
-
-      case VTX_PROTOCOL_SMART_AUDIO:
-        serial_smart_audio_init();
-        break;
-
-      case VTX_PROTOCOL_MSP_VTX:
-        serial_msp_vtx_init();
-        break;
-
-      case VTX_PROTOCOL_INVALID:
-      case VTX_PROTOCOL_MAX:
-        break;
-      }
-      protocol_is_init = 1;
-      return;
-    }
-
-    const vtx_detect_status_t status = vtx_update_protocol(protocol_to_check, &vtx_actual);
-
-    if (status == VTX_DETECT_SUCCESS) {
-      // detect success, save detected proto
-      vtx_settings.protocol = protocol_to_check;
-    } else if (status == VTX_DETECT_ERROR) {
-      vtx_connect_tries = 0;
-      protocol_is_init = 0;
-      vtx_delay_ms = 500;
-
-      if (vtx_settings.protocol == VTX_PROTOCOL_INVALID) {
-        // only switch protocol if we are not fixed to one
-        protocol_to_check++;
-
-        if (protocol_to_check == VTX_PROTOCOL_MAX) {
-          protocol_to_check = VTX_PROTOCOL_INVALID;
-        }
-      }
-    }
+  if (!vtx_detect_protocol()) {
     return;
   }
 
   const vtx_detect_status_t status = vtx_update_protocol(vtx_settings.detected, &vtx_actual);
-
   if (status < VTX_DETECT_SUCCESS) {
     // we are in wait or error state, do nothing
     return;
+  }
+
+  if (!flags.usb_active &&
+      profile.receiver.aux[AUX_FPV_SWITCH] <= AUX_CHANNEL_11 &&
+      vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT) {
+    // we got a aux switch set, switch pit_mode accordingly
+    if (rx_aux_on(AUX_FPV_SWITCH)) {
+      vtx_settings.pit_mode = 0;
+    } else {
+      vtx_settings.pit_mode = 1;
+    }
   }
 
   static uint8_t frequency_tries = 0;
@@ -290,17 +309,6 @@ void vtx_update() {
     return;
   } else {
     power_level_tries = 0;
-  }
-
-  if (!flags.usb_active &&
-      profile.receiver.aux[AUX_FPV_SWITCH] <= AUX_CHANNEL_11 &&
-      vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT) {
-    // we got a aux switch set, switch pit_mode accordingly
-    if (rx_aux_on(AUX_FPV_SWITCH)) {
-      vtx_settings.pit_mode = 0;
-    } else {
-      vtx_settings.pit_mode = 1;
-    }
   }
 
   static uint8_t pit_mode_tries = 0;
