@@ -57,7 +57,7 @@ vtx_detect_status_t vtx_smart_audio_update(vtx_settings_t *actual) {
     if (smart_audio_settings.version == 2) {
       actual->power_level = min(smart_audio_settings.power, VTX_POWER_LEVEL_MAX - 1);
     } else {
-      actual->power_level = vtx_power_level_index(smart_audio_settings.power);
+      actual->power_level = vtx_power_level_index(&actual->power_table, smart_audio_settings.power);
     }
 
     if (smart_audio_settings.version >= 3) {

@@ -64,7 +64,7 @@ vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual) {
     memcpy(actual->power_table.values, tramp_power_level_values, sizeof(tramp_power_level_values));
     memcpy(actual->power_table.labels, tramp_power_level_labels, sizeof(tramp_power_level_labels));
 
-    actual->power_level = vtx_power_level_index(tramp_settings.power);
+    actual->power_level = vtx_power_level_index(&actual->power_table, tramp_settings.power);
     actual->pit_mode = tramp_settings.pit_mode;
 
     // not all vtxes seem to return a non-zero value. :(

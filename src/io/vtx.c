@@ -80,9 +80,9 @@ int8_t vtx_find_frequency_index(uint16_t frequency) {
   return -1;
 }
 
-vtx_power_level_t vtx_power_level_index(uint16_t power) {
+vtx_power_level_t vtx_power_level_index(vtx_power_table_t *power_table, uint16_t power) {
   for (uint8_t level = 0; level < VTX_POWER_LEVEL_MAX; level++) {
-    if (power >= vtx_settings.power_table.values[level] && power <= vtx_settings.power_table.values[level]) {
+    if (power >= power_table->values[level] && power <= power_table->values[level]) {
       return level;
     }
   }
@@ -154,7 +154,7 @@ static bool vtx_detect_protocol() {
       break;
     }
     protocol_is_init = 1;
-    return;
+    return false;
   }
 
   const vtx_detect_status_t status = vtx_update_protocol(protocol_to_check, &vtx_actual);
@@ -176,6 +176,120 @@ static bool vtx_detect_protocol() {
       }
     }
   }
+
+  return false;
+}
+
+static bool vtx_update_frequency() {
+  static uint8_t frequency_tries = 0;
+  if (frequency_table[vtx_actual.band][vtx_actual.channel] == frequency_table[vtx_settings.band][vtx_settings.channel]) {
+    frequency_tries = 0;
+    return true;
+  }
+
+  if (frequency_tries >= VTX_APPLY_TRIES) {
+    // give up
+    vtx_settings.band = vtx_actual.band;
+    vtx_settings.channel = vtx_actual.channel;
+    frequency_tries = 0;
+    return true;
+  }
+
+  switch (vtx_settings.detected) {
+  case VTX_PROTOCOL_TRAMP:
+    tramp_set_frequency(vtx_settings.band, vtx_settings.channel);
+    break;
+
+  case VTX_PROTOCOL_SMART_AUDIO:
+    smart_audio_set_frequency(vtx_settings.band, vtx_settings.channel);
+    break;
+
+  case VTX_PROTOCOL_MSP_VTX:
+    msp_vtx_set_frequency(vtx_settings.band, vtx_settings.channel);
+    break;
+
+  case VTX_PROTOCOL_INVALID:
+  case VTX_PROTOCOL_MAX:
+    break;
+  }
+
+  frequency_tries++;
+  vtx_delay_ms = 10;
+  return false;
+}
+
+static bool vtx_update_powerlevel() {
+  static uint8_t power_level_tries = 0;
+  if (vtx_actual.power_level == vtx_settings.power_level) {
+    power_level_tries = 0;
+    return true;
+  }
+
+  if (power_level_tries >= VTX_APPLY_TRIES) {
+    // give up
+    vtx_settings.power_level = vtx_actual.power_level;
+    power_level_tries = 0;
+    return true;
+  }
+
+  switch (vtx_settings.detected) {
+  case VTX_PROTOCOL_TRAMP:
+    tramp_set_power_level(vtx_settings.power_level);
+    break;
+
+  case VTX_PROTOCOL_SMART_AUDIO:
+    smart_audio_set_power_level(vtx_settings.power_level);
+    break;
+
+  case VTX_PROTOCOL_MSP_VTX:
+    msp_vtx_set_power_level(vtx_settings.power_level);
+    break;
+
+  case VTX_PROTOCOL_INVALID:
+  case VTX_PROTOCOL_MAX:
+    break;
+  }
+
+  power_level_tries++;
+  vtx_delay_ms = 10;
+
+  return false;
+}
+
+static bool vtx_update_pitmode() {
+  static uint8_t pit_mode_tries = 0;
+  if (vtx_actual.pit_mode == vtx_settings.pit_mode) {
+    pit_mode_tries = 0;
+    return true;
+  }
+
+  if (pit_mode_tries >= VTX_APPLY_TRIES) {
+    // give up
+    vtx_settings.pit_mode = vtx_actual.pit_mode;
+    pit_mode_tries = 0;
+    return true;
+  }
+
+  switch (vtx_settings.detected) {
+  case VTX_PROTOCOL_TRAMP:
+    tramp_set_pit_mode(vtx_settings.pit_mode);
+    break;
+
+  case VTX_PROTOCOL_SMART_AUDIO:
+    smart_audio_set_pit_mode(vtx_settings.pit_mode);
+    break;
+
+  case VTX_PROTOCOL_MSP_VTX:
+    msp_vtx_set_pit_mode(vtx_settings.pit_mode);
+    break;
+
+  case VTX_PROTOCOL_INVALID:
+  case VTX_PROTOCOL_MAX:
+    break;
+  }
+
+  pit_mode_tries++;
+  vtx_delay_ms = 10;
 
   return false;
 }
@@ -242,106 +356,16 @@ void vtx_update() {
     }
   }
 
-  static uint8_t frequency_tries = 0;
-  if (frequency_table[vtx_actual.band][vtx_actual.channel] != frequency_table[vtx_settings.band][vtx_settings.channel]) {
-    if (frequency_tries >= VTX_APPLY_TRIES) {
-      // give up
-      vtx_settings.band = vtx_actual.band;
-      vtx_settings.channel = vtx_actual.channel;
-      frequency_tries = 0;
-      return;
-    }
-
-    switch (vtx_settings.detected) {
-    case VTX_PROTOCOL_TRAMP:
-      tramp_set_frequency(vtx_settings.band, vtx_settings.channel);
-      break;
-
-    case VTX_PROTOCOL_SMART_AUDIO:
-      smart_audio_set_frequency(vtx_settings.band, vtx_settings.channel);
-      break;
-
-    case VTX_PROTOCOL_MSP_VTX:
-      msp_vtx_set_frequency(vtx_settings.band, vtx_settings.channel);
-      break;
-
-    case VTX_PROTOCOL_INVALID:
-    case VTX_PROTOCOL_MAX:
-      break;
-    }
-
-    frequency_tries++;
-    vtx_delay_ms = 10;
+  if (!vtx_update_frequency()) {
     return;
-  } else {
-    frequency_tries = 0;
   }
 
-  static uint8_t power_level_tries = 0;
-  if (vtx_actual.power_level != vtx_settings.power_level) {
-    if (power_level_tries >= VTX_APPLY_TRIES) {
-      // give up
-      vtx_settings.power_level = vtx_actual.power_level;
-      power_level_tries = 0;
-      return;
-    }
-
-    switch (vtx_settings.detected) {
-    case VTX_PROTOCOL_TRAMP:
-      tramp_set_power_level(vtx_settings.power_level);
-      break;
-
-    case VTX_PROTOCOL_SMART_AUDIO:
-      smart_audio_set_power_level(vtx_settings.power_level);
-      break;
-
-    case VTX_PROTOCOL_MSP_VTX:
-      msp_vtx_set_power_level(vtx_settings.power_level);
-      break;
-
-    case VTX_PROTOCOL_INVALID:
-    case VTX_PROTOCOL_MAX:
-      break;
-    }
-
-    power_level_tries++;
-    vtx_delay_ms = 10;
+  if (!vtx_update_powerlevel()) {
     return;
-  } else {
-    power_level_tries = 0;
   }
 
-  static uint8_t pit_mode_tries = 0;
-  if (vtx_actual.pit_mode != vtx_settings.pit_mode) {
-    if (pit_mode_tries >= VTX_APPLY_TRIES) {
-      // give up
-      vtx_settings.pit_mode = vtx_actual.pit_mode;
-      pit_mode_tries = 0;
-      return;
-    }
-
-    switch (vtx_settings.detected) {
-    case VTX_PROTOCOL_TRAMP:
-      tramp_set_pit_mode(vtx_settings.pit_mode);
-      break;
-
-    case VTX_PROTOCOL_SMART_AUDIO:
-      smart_audio_set_pit_mode(vtx_settings.pit_mode);
-      break;
-
-    case VTX_PROTOCOL_MSP_VTX:
-      msp_vtx_set_pit_mode(vtx_settings.pit_mode);
-      break;
-
-    case VTX_PROTOCOL_INVALID:
-    case VTX_PROTOCOL_MAX:
-      break;
-    }
-
-    pit_mode_tries++;
-    vtx_delay_ms = 10;
-  } else {
-    pit_mode_tries = 0;
+  if (!vtx_update_pitmode()) {
+    return;
   }
 }
 
