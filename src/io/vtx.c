@@ -343,6 +343,7 @@ void vtx_set(vtx_settings_t *vtx) {
     vtx_settings.detected = VTX_PROTOCOL_INVALID;
     vtx_settings.protocol = vtx->protocol;
     vtx_settings.magic = 0xFFFF;
+    vtx_settings.power_table.levels = 0;
 
     smart_audio_settings.version = 0;
     smart_audio_detected = 0;
@@ -351,13 +352,13 @@ void vtx_set(vtx_settings_t *vtx) {
     msp_vtx_detected = 0;
   } else {
     vtx_settings.magic = VTX_SETTINGS_MAGIC;
+    memcpy(&vtx_settings.power_table, &vtx->power_table, sizeof(vtx_power_table_t));
   }
 
   if (vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT)
     vtx_settings.pit_mode = vtx->pit_mode;
 
   vtx_settings.power_level = vtx->power_level < VTX_POWER_LEVEL_MAX ? vtx->power_level : (VTX_POWER_LEVEL_MAX - 1);
-  memcpy(&vtx_settings.power_table, &vtx->power_table, sizeof(vtx_power_table_t));
 
   vtx_settings.band = vtx->band < VTX_BAND_MAX ? vtx->band : 0;
   vtx_settings.channel = vtx->channel < VTX_CHANNEL_MAX ? vtx->channel : 0;
