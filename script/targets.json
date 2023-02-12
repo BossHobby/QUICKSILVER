@@ -769,5 +769,16 @@
         }
       }
     ]
+  },
+  {
+    "name": "tmotorf411_elrs",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
   }
 ]
