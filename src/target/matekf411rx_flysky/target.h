@@ -14,13 +14,13 @@
 #define LED_NUMBER 2
 #define LED1PIN PIN_C13
 #define LED1_INVERT
-#define LED2PIN PIN_B9  // RX LED
+#define LED2PIN PIN_B9 // RX LED
 
 #define BUZZER_PIN PIN_C15
 #define BUZZER_INVERT
 
-//#define FPV_PIN LL_GPIO_PIN_13
-//#define FPV_PORT GPIOA
+// #define FPV_PIN LL_GPIO_PIN_13
+// #define FPV_PORT GPIOA
 
 // GYRO
 #define GYRO_SPI_PORT SPI_PORT1
@@ -37,7 +37,7 @@
 #define USE_A7105
 #define A7105_SPI_PORT SPI_PORT3
 #define A7105_NSS_PIN PIN_A15
-#define A7105_GIO1_PIN PIN_A14    // EXTI15_10_IRQHandler
+#define A7105_GIO1_PIN PIN_A14 // EXTI15_10_IRQHandler
 
 // OSD
 #define USE_MAX7456

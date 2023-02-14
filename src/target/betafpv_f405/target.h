@@ -31,13 +31,13 @@
 #define MAX7456_SPI_PORT SPI_PORT3
 #define MAX7456_NSS PIN_A15
 
-//#define USE_M25P16         //not used
-//#define M25P16_SPI_PORT SPI_PORT2
-//#define M25P16_NSS_PIN PIN_B12
+// #define USE_M25P16         //not used
+// #define M25P16_SPI_PORT SPI_PORT2
+// #define M25P16_NSS_PIN PIN_B12
 
-//#define USE_SDCARD         //not used
-//#define SDCARD_SPI_PORT SPI_PORT2
-//#define SDCARD_NSS_PIN PIN_B12
+// #define USE_SDCARD         //not used
+// #define SDCARD_SPI_PORT SPI_PORT2
+// #define SDCARD_NSS_PIN PIN_B12
 
 // VOLTAGE DIVIDER
 #define VBAT_PIN PIN_C2

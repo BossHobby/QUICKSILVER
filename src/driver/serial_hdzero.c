@@ -2,9 +2,9 @@
 
 #include <string.h>
 
+#include "core/profile.h"
 #include "driver/serial.h"
 #include "io/msp.h"
-#include "core/profile.h"
 #include "util/crc.h"
 #include "util/ring_buffer.h"
 

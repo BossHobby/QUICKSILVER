@@ -5,8 +5,8 @@
 //------------------------------------------------------------------------------
 // Bind data saved into flash memory, see rx_bind_storage_t in flash.h
 typedef struct {
-    uint8_t rx_channel_map[16];
-    uint32_t tx_id;
+  uint8_t rx_channel_map[16];
+  uint32_t tx_id;
 } rx_flysky_bind_data_t;
 
 //------------------------------------------------------------------------------
@@ -15,20 +15,20 @@ typedef struct {
   rx_protocol_t protocol;
   float expected_fps;
 
-  uint8_t bound                   : 1;
+  uint8_t bound : 1;
 
   uint32_t last_bind_time;
   uint32_t last_rx_time;
 
   uint32_t rx_id;
   uint32_t tx_id;
-  uint8_t rx_channel_map[16];   // table of indices to 16 different frequencies we will hop within
+  uint8_t rx_channel_map[16]; // table of indices to 16 different frequencies we will hop within
   uint8_t channel_index;
 
-  uint16_t channel_data[16];    // only 8 or 14 channels are actually used/available
+  uint16_t channel_data[16]; // only 8 or 14 channels are actually used/available
 
-  uint8_t send_telemetry          : 1;
-  uint8_t pending_tx              : 1;
+  uint8_t send_telemetry : 1;
+  uint8_t pending_tx : 1;
   uint32_t pending_tx_time;
   uint32_t last_telemetry_time;
 

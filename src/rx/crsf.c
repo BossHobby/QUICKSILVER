@@ -2,8 +2,8 @@
 
 #include <string.h>
 
-#include "flight/control.h"
 #include "core/profile.h"
+#include "flight/control.h"
 #include "util/crc.h"
 
 void crsf_tlm_frame_start(uint8_t *buf) {

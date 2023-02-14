@@ -19,7 +19,7 @@
 #define LED1_INVERT
 #define LED1PIN PIN_B5
 #define BUZZER_PIN PIN_B4
-//#define BUZZER_INVERT
+// #define BUZZER_INVERT
 #define FPV_PIN PIN_A13
 
 // GYRO

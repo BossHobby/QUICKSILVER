@@ -16,7 +16,7 @@
 #define LED1_INVERT
 #define LED2PIN PIN_C15
 #define BUZZER_PIN PIN_A14
-//#define BUZZER_INVERT
+// #define BUZZER_INVERT
 
 // GYRO
 #define GYRO_SPI_PORT SPI_PORT1

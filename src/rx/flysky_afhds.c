@@ -6,38 +6,36 @@
 
 //------------------------------------------------------------------------------
 enum {
-  AFHDS_NUM_CHANS           = 8
+  AFHDS_NUM_CHANS = 8
 };
 
 // AFHDS packet type identifiers
 enum {
-  PACKET_TYPE_CHANNEL_DATA  = 0x55,
-  PACKET_TYPE_BIND          = 0xAA
+  PACKET_TYPE_CHANNEL_DATA = 0x55,
+  PACKET_TYPE_BIND = 0xAA
 };
 
 //------------------------------------------------------------------------------
 // AFHDS packet structure
 typedef struct __attribute__((packed)) {
-  uint8_t type;     // PACKET_TYPE_CHANNEL_DATA or PACKET_TYPE_BIND
+  uint8_t type; // PACKET_TYPE_CHANNEL_DATA or PACKET_TYPE_BIND
   uint32_t tx_id;
-  uint16_t channel_data[AFHDS_NUM_CHANS];  // little-endian, same as the STM32 running this program, but not aligned
+  uint16_t channel_data[AFHDS_NUM_CHANS]; // little-endian, same as the STM32 running this program, but not aligned
 } afhds_pkt_t;
-
 
 //------------------------------------------------------------------------------
 static const uint8_t AFHDS_tx_channels[8][4] = {
-	{ 0x12, 0x34, 0x56, 0x78},
-	{ 0x18, 0x27, 0x36, 0x45},
-	{ 0x41, 0x82, 0x36, 0x57},
-	{ 0x84, 0x13, 0x65, 0x72},
-	{ 0x87, 0x64, 0x15, 0x32},
-	{ 0x76, 0x84, 0x13, 0x52},
-	{ 0x71, 0x62, 0x84, 0x35},
-	{ 0x71, 0x86, 0x43, 0x52}
-};
+    {0x12, 0x34, 0x56, 0x78},
+    {0x18, 0x27, 0x36, 0x45},
+    {0x41, 0x82, 0x36, 0x57},
+    {0x84, 0x13, 0x65, 0x72},
+    {0x87, 0x64, 0x15, 0x32},
+    {0x76, 0x84, 0x13, 0x52},
+    {0x71, 0x62, 0x84, 0x35},
+    {0x71, 0x86, 0x43, 0x52}};
 
 //------------------------------------------------------------------------------
-// Reconstruct the hop table that the TX will be using based on the TX 
+// Reconstruct the hop table that the TX will be using based on the TX
 // identifier it sent us
 static void build_hop_table(uint32_t tx_id, uint8_t channel_map[16]) {
 
@@ -49,14 +47,16 @@ static void build_hop_table(uint32_t tx_id, uint8_t channel_map[16]) {
     chan_offset = 9;
   }
 
-  for (uint8_t i = 0; i < 16; i++) 
-  {
-      uint8_t temp = AFHDS_tx_channels[chan_row >> 1][i >> 2];
-      if (i & 0x02)   temp &= 0x0F;
-      else            temp >>= 4;
-      temp *= 0x0A;
-      if (i & 0x01)   temp += 0x50;
-      channel_map[((chan_row & 1) ? 15 - i : i)] = temp - chan_offset;
+  for (uint8_t i = 0; i < 16; i++) {
+    uint8_t temp = AFHDS_tx_channels[chan_row >> 1][i >> 2];
+    if (i & 0x02)
+      temp &= 0x0F;
+    else
+      temp >>= 4;
+    temp *= 0x0A;
+    if (i & 0x01)
+      temp += 0x50;
+    channel_map[((chan_row & 1) ? 15 - i : i)] = temp - chan_offset;
   }
 }
 
@@ -67,11 +67,11 @@ static void build_hop_table(uint32_t tx_id, uint8_t channel_map[16]) {
 uint8_t flysky_afhds_process_packet(const uint32_t timestamp) {
   uint8_t result = 0;
 
-  // If bound then retrieve entire packet, otherwise we only need to retrieve just 
+  // If bound then retrieve entire packet, otherwise we only need to retrieve just
   // the beginning part of the packet ('type', 'tx_id' and not 'data').
   afhds_pkt_t pkt;
   const uint8_t num = flysky.bound ? sizeof(pkt) : offsetof(afhds_pkt_t, channel_data);
-  a7105_read_fifo((uint8_t*)&pkt, num);
+  a7105_read_fifo((uint8_t *)&pkt, num);
 
   int hop_step = -1;
 
@@ -97,8 +97,7 @@ uint8_t flysky_afhds_process_packet(const uint32_t timestamp) {
   }
 
   // If we handled the packet
-  if (-1 != hop_step)
-  {
+  if (-1 != hop_step) {
     flysky_processed_pkt(timestamp);
     a7105_write_reg(A7105_0F_CHANNEL, flysky_get_next_channel(hop_step));
   }
@@ -106,6 +105,5 @@ uint8_t flysky_afhds_process_packet(const uint32_t timestamp) {
   a7105_strobe(A7105_RX);
   return result;
 }
-
 
 #endif

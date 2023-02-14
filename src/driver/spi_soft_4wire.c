@@ -22,7 +22,7 @@ void spi_init() {
   GPIO_InitStructure.Pin = SPI_SS_PIN;
   LL_GPIO_Init(SPI_SS_PORT, &GPIO_InitStructure);
 
-  //miso should be input by default
+  // miso should be input by default
 
   spi_csoff();
 }

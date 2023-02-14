@@ -13,8 +13,8 @@
   USART6_PC7PC6
 
 // no bueno on CLRacingF4s
-//#define USB_DETECT_PIN LL_GPIO_PIN_5
-//#define USB_DETECT_PORT GPIOC
+// #define USB_DETECT_PIN LL_GPIO_PIN_5
+// #define USB_DETECT_PORT GPIOC
 
 // LEDS
 #define LED_NUMBER 1

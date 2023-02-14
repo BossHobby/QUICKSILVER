@@ -10,8 +10,8 @@
   USART1_PA10PA9    \
   USART2_PA3PA2
 
-//#define USB_DETECT_PIN LL_GPIO_PIN_15
-//#define USB_DETECT_PORT GPIOC
+// #define USB_DETECT_PIN LL_GPIO_PIN_15
+// #define USB_DETECT_PORT GPIOC
 
 // LEDS
 #define LED_NUMBER 2
@@ -22,8 +22,8 @@
 
 #define BUZZER_PIN PIN_B2
 
-//#define FPV_PIN LL_GPIO_PIN_13
-//#define FPV_PORT GPIOA
+// #define FPV_PIN LL_GPIO_PIN_13
+// #define FPV_PORT GPIOA
 
 // GYRO
 #define GYRO_SPI_PORT SPI_PORT1

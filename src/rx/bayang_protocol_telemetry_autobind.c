@@ -2,13 +2,13 @@
 
 #include <stdio.h>
 
+#include "core/failloop.h"
+#include "core/flash.h"
+#include "core/profile.h"
 #include "driver/spi_soft.h"
 #include "driver/spi_xn297.h"
 #include "driver/time.h"
-#include "core/failloop.h"
-#include "core/flash.h"
 #include "flight/control.h"
-#include "core/profile.h"
 #include "project.h"
 #include "util/util.h"
 
@@ -169,7 +169,7 @@ void rx_protocol_init() {
   }
 }
 
-//#define RXDEBUG
+// #define RXDEBUG
 
 #ifdef RXDEBUG
 uint32_t packettime;

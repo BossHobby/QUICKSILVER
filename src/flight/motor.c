@@ -1,9 +1,9 @@
 #include "motor.h"
 
+#include "core/profile.h"
 #include "driver/motor.h"
 #include "flight/control.h"
 #include "io/usb_configurator.h"
-#include "core/profile.h"
 #include "project.h"
 #include "util/util.h"
 

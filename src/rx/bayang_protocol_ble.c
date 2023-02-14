@@ -2,10 +2,10 @@
 
 #include <stdio.h>
 
+#include "core/failloop.h"
 #include "driver/spi_soft.h"
 #include "driver/spi_xn297.h"
 #include "driver/time.h"
-#include "core/failloop.h"
 #include "flight/control.h"
 #include "project.h"
 #include "util/util.h"
@@ -66,9 +66,9 @@ void rx_protocol_init() {
   static uint8_t regs_1e[4] = {0x3e, 0xf6, 0x37, 0x5d};
   writeregs(regs_1e, sizeof(regs_1e));
 
-  //#define XN_TO_RX 0b10001111
-  //#define XN_TO_TX 0b10000010
-  //#define XN_POWER 0b00000001|((TX_POWER&7)<<3)
+  // #define XN_TO_RX 0b10001111
+  // #define XN_TO_TX 0b10000010
+  // #define XN_POWER 0b00000001|((TX_POWER&7)<<3)
 
 #define XN_TO_RX 0b10001111
 #define XN_TO_TX 0b10000010
@@ -275,7 +275,7 @@ int packetpersecond;
 
 int skipstats[12];
 int afterskip[12];
-//#warning "RX debug enabled"
+// #warning "RX debug enabled"
 #endif
 
 // works with 4 and 5 addresses byte

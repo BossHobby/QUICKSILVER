@@ -3,13 +3,13 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "core/profile.h"
 #include "driver/dma.h"
 #include "driver/gpio.h"
 #include "driver/interrupt.h"
 #include "driver/spi.h"
 #include "driver/time.h"
 #include "flight/control.h"
-#include "core/profile.h"
 #include "project.h"
 #include "util/util.h"
 

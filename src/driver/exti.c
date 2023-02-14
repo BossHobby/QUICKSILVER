@@ -120,7 +120,6 @@ void exti_interrupt_disable(gpio_pins_t pin) {
   interrupt_disable(LINE.exti_irqn);
 }
 
-
 bool exti_line_active(gpio_pins_t pin) {
   if (LL_EXTI_IsActiveFlag_0_31(LINE.exti_line) != RESET) {
     LL_EXTI_ClearFlag_0_31(LINE.exti_line);

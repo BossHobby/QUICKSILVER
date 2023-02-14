@@ -3,13 +3,13 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "core/flash.h"
+#include "core/reset.h"
 #include "driver/serial.h"
 #include "driver/serial_4way.h"
-#include "core/flash.h"
 #include "flight/control.h"
 #include "io/usb_configurator.h"
 #include "quic.h"
-#include "core/reset.h"
 #include "util/crc.h"
 #include "util/util.h"
 #include "vtx.h"

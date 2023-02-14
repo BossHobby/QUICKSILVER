@@ -4,10 +4,10 @@
 #include <string.h>
 
 #include "core/debug.h"
+#include "core/profile.h"
 #include "driver/serial.h"
 #include "driver/serial_hdzero.h"
 #include "io/msp.h"
-#include "core/profile.h"
 #include "util/crc.h"
 
 #define USART usart_port_defs[serial_smart_audio_port]

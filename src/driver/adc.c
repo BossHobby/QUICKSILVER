@@ -1,10 +1,10 @@
 #include "driver/adc.h"
 
 #include "core/debug.h"
+#include "core/profile.h"
 #include "driver/gpio.h"
 #include "driver/time.h"
 #include "flight/filter.h"
-#include "core/profile.h"
 #include "project.h"
 #include "util/util.h"
 

@@ -1,16 +1,16 @@
 #include "rx/flysky.h"
 
 #if defined(RX_FLYSKY)
+#include "core/flash.h"
 #include "driver/spi_a7105.h"
 #include "driver/time.h"
-#include "core/flash.h"
 #include "flight/control.h" // for state
 #include "util/util.h"
 #include <string.h>
 
 //------------------------------------------------------------------------------
-#define AFHDS_BIND_CHANNEL      0x00
-#define AFHDS2A_BIND_CHANNEL    0x0D
+#define AFHDS_BIND_CHANNEL 0x00
+#define AFHDS2A_BIND_CHANNEL 0x0D
 
 //------------------------------------------------------------------------------
 rx_flsky_data_t flysky;
@@ -53,9 +53,9 @@ static float rescale_aetr(int v) {
 
 //------------------------------------------------------------------------------
 // Checks if RX or TX has completed. If TX complete then switch to RX mode
-// else if RX complete, process the packet. 
+// else if RX complete, process the packet.
 //
-// * If we're bound, and we processed a channel packet, this returns the number of 
+// * If we're bound, and we processed a channel packet, this returns the number of
 //   channels provided by the packet (8 for AFHDS, 14 for AFHDS2)
 // * If not already bound, and we transition to being bound, returns 1
 // * Otherwise this returns 0
@@ -68,7 +68,7 @@ static uint8_t flysky_check_packet() {
   if (a7105_rx_tx_irq_time(&timestamp)) {
     const uint8_t mode = a7105_read_reg(A7105_00_MODE);
 
-    // If transceiver was in TX mode and transceiver is disabled (finished) 
+    // If transceiver was in TX mode and transceiver is disabled (finished)
     // then hop to next channel (if bound) then swtich to RX mode
     if (((mode & A7105_MODE_TRSR) != 0) && ((mode & A7105_MODE_TRER) == 0)) {
       if (flysky.bound) {
@@ -78,8 +78,8 @@ static uint8_t flysky_check_packet() {
     } else if ((mode & (A7105_MODE_TRER | A7105_MODE_CRCF)) == 0) {
       // ..else if RX is complete and no CRC error
       result = (flysky.protocol == RX_PROTOCOL_FLYSKY_AFHDS2A)
-        ? flysky_afhds2a_process_packet(timestamp)
-        : flysky_afhds_process_packet(timestamp);
+                   ? flysky_afhds2a_process_packet(timestamp)
+                   : flysky_afhds_process_packet(timestamp);
     } else {
       a7105_strobe(A7105_RX);
     }
@@ -108,7 +108,7 @@ static uint8_t flysky_check_packet() {
 
       // If cycled through hop sequence more than twice without being able to
       // receive a packet then increase the timeout interval to 1.5 times normal
-      // packet interval so we hop at a slower pace than TX and hopefully we'll 
+      // packet interval so we hop at a slower pace than TX and hopefully we'll
       // both land on the same frequency and be able to synchronize
       if (flysky.num_timeouts >= 32) {
         flysky.timeout = flysky.pkt_period * 3 / 2;
@@ -126,7 +126,7 @@ static uint8_t flysky_check_packet() {
         flysky.send_telemetry = true;
       }
 
-      // Since we send telemetry, see if it is time to compute link quality 
+      // Since we send telemetry, see if it is time to compute link quality
       // indicator value (0..100) that we'll send back
       if ((now - flysky.last_tlm_lqi_time) >= (flysky.pkt_period * 100)) {
         flysky.last_tlm_lqi_time = now;
@@ -159,13 +159,11 @@ static bool rx_flysky_check(void) {
   const uint8_t status = flysky_check_packet();
   if (!status) {
     // nothing
-  }
-  else if (status == 1) {
+  } else if (status == 1) {
     // We've just bound
     state.rx_status = RX_SPI_STATUS_BOUND;
     flags.rx_mode = RXMODE_NORMAL;
-  }
-  else {
+  } else {
     // We've processed a packet containing channel data
     const int num_avail_channels = status;
     channels_received = true;
@@ -178,11 +176,10 @@ static bool rx_flysky_check(void) {
 
     // AETR channels
     const float rc_channels[4] = {
-      rescale_aetr(flysky.channel_data[0]),
-      rescale_aetr(flysky.channel_data[1]),
-      rescale_aetr(flysky.channel_data[2]),
-      rescale_aetr(flysky.channel_data[3])
-    };
+        rescale_aetr(flysky.channel_data[0]),
+        rescale_aetr(flysky.channel_data[1]),
+        rescale_aetr(flysky.channel_data[2]),
+        rescale_aetr(flysky.channel_data[3])};
     rx_map_channels(rc_channels);
 
     // AUX channels
@@ -245,14 +242,13 @@ void rx_flysky_afhds_init() {
   flysky.tlm_period = 0;
 
   static const uint8_t afhds_reg_table[] = {
-    0xff, 0x42, 0x00, 0x14, 0x00, 0xff, 0xff, 0x00,
-    0x00, 0x00, 0x00, 0x03, 0x19, 0x05, 0x00, 0x50,
-    0x9e, 0x4b, 0x00, 0x02, 0x16, 0x2b, 0x12, 0x00,
-    0x62, 0x80, 0x80, 0x00, 0x0a, 0x32, 0xc3, 0x0f,
-    0x13, 0xc3, 0x00, 0xff, 0x00, 0x00, 0x3b, 0x00,
-    0x17, 0x47, 0x80, 0x03, 0x01, 0x45, 0x18, 0x00,
-    0x01, 0x0f
-  };
+      0xff, 0x42, 0x00, 0x14, 0x00, 0xff, 0xff, 0x00,
+      0x00, 0x00, 0x00, 0x03, 0x19, 0x05, 0x00, 0x50,
+      0x9e, 0x4b, 0x00, 0x02, 0x16, 0x2b, 0x12, 0x00,
+      0x62, 0x80, 0x80, 0x00, 0x0a, 0x32, 0xc3, 0x0f,
+      0x13, 0xc3, 0x00, 0xff, 0x00, 0x00, 0x3b, 0x00,
+      0x17, 0x47, 0x80, 0x03, 0x01, 0x45, 0x18, 0x00,
+      0x01, 0x0f};
   a7105_init(afhds_reg_table, sizeof(afhds_reg_table));
   rx_flysky_init_common(AFHDS_BIND_CHANNEL);
 }
@@ -267,14 +263,13 @@ void rx_flysky_afhds2a_init() {
   flysky.rx_id = get_chip_uid();
 
   static const uint8_t afhds2a_reg_table[] = {
-    0xff, 0x62, 0x00, 0x25, 0x00, 0xff, 0xff, 0x00,
-    0x00, 0x00, 0x00, 0x03, 0x19, 0x05, 0x00, 0x50,
-    0x9e, 0x4b, 0x00, 0x02, 0x16, 0x2b, 0x12, 0x4f,
-    0x62, 0x80, 0xff, 0xff, 0x2a, 0x32, 0xc3, 0x1f,
-    0x1e, 0xff, 0x00, 0xff, 0x00, 0x00, 0x3b, 0x00,
-    0x17, 0x47, 0x80, 0x03, 0x01, 0x45, 0x18, 0x00,
-    0x01, 0x0f
-  };
+      0xff, 0x62, 0x00, 0x25, 0x00, 0xff, 0xff, 0x00,
+      0x00, 0x00, 0x00, 0x03, 0x19, 0x05, 0x00, 0x50,
+      0x9e, 0x4b, 0x00, 0x02, 0x16, 0x2b, 0x12, 0x4f,
+      0x62, 0x80, 0xff, 0xff, 0x2a, 0x32, 0xc3, 0x1f,
+      0x1e, 0xff, 0x00, 0xff, 0x00, 0x00, 0x3b, 0x00,
+      0x17, 0x47, 0x80, 0x03, 0x01, 0x45, 0x18, 0x00,
+      0x01, 0x0f};
   a7105_init(afhds2a_reg_table, sizeof(afhds2a_reg_table));
   rx_flysky_init_common(AFHDS2A_BIND_CHANNEL);
 }

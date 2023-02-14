@@ -5,9 +5,9 @@
 #include <string.h>
 
 #include "core/debug.h"
+#include "core/flash.h"
 #include "driver/gpio.h"
 #include "driver/time.h"
-#include "core/flash.h"
 #include "flight/control.h"
 #include "io/msp.h"
 #include "io/usb_configurator.h"

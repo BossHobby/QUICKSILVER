@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "angle_pid.h"
+#include "core/profile.h"
 #include "driver/fmc.h"
 #include "driver/motor.h"
 #include "driver/time.h"
@@ -17,7 +18,6 @@
 #include "io/usb_configurator.h"
 #include "io/vbat.h"
 #include "motor.h"
-#include "core/profile.h"
 #include "turtle_mode.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"

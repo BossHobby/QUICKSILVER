@@ -1,9 +1,9 @@
 #include "driver/serial.h"
 
+#include "core/profile.h"
 #include "driver/interrupt.h"
 #include "driver/time.h"
 #include "io/usb_configurator.h"
-#include "core/profile.h"
 #include "project.h"
 
 usart_ports_t serial_rx_port = USART_PORT_INVALID;

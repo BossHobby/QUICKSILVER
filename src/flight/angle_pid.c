@@ -1,9 +1,9 @@
 #include <stdbool.h>
 
+#include "core/profile.h"
 #include "flight/control.h"
 #include "flight/pid.h"
 #include "math.h"
-#include "core/profile.h"
 #include "util/util.h"
 
 extern profile_t profile;

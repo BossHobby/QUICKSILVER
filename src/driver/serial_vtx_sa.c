@@ -3,12 +3,12 @@
 #include <stddef.h>
 
 #include "core/debug.h"
+#include "core/profile.h"
 #include "driver/serial.h"
 #include "driver/serial_vtx.h"
 #include "driver/time.h"
 #include "io/usb_configurator.h"
 #include "io/vtx.h"
-#include "core/profile.h"
 #include "util/crc.h"
 #include "util/ring_buffer.h"
 #include "util/util.h"

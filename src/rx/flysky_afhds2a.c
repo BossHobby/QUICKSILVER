@@ -1,31 +1,30 @@
 #include "rx/flysky.h"
 
 #if defined(RX_FLYSKY)
-#include <string.h>
 #include "driver/spi_a7105.h"
 #include "driver/time.h"
 #include "flight/control.h" // for state.vbat_filtered
-
+#include <string.h>
 
 //------------------------------------------------------------------------------
 enum {
-  AFHDS2A_NUM_CHANS           = 14
+  AFHDS2A_NUM_CHANS = 14
 };
 
 enum {
-  AFHDS2A_SENSOR_RX_VOLTAGE   = 0x00,
-  AFHDS2A_SENSOR_RX_ERR_RATE  = 0xFE,   // This is actually RX LQI
-  AFHDS2A_SENSOR_RX_RSSI      = 0xFC    // Note: We do not (yet) send this
+  AFHDS2A_SENSOR_RX_VOLTAGE = 0x00,
+  AFHDS2A_SENSOR_RX_ERR_RATE = 0xFE, // This is actually RX LQI
+  AFHDS2A_SENSOR_RX_RSSI = 0xFC      // Note: We do not (yet) send this
 };
 
 enum {
-  AFHDS2A_PACKET_STICKS       = 0x58,
-  AFHDS2A_PACKET_FAILSAFE     = 0x56,
-  AFHDS2A_PACKET_SETTINGS     = 0xAA,
+  AFHDS2A_PACKET_STICKS = 0x58,
+  AFHDS2A_PACKET_FAILSAFE = 0x56,
+  AFHDS2A_PACKET_SETTINGS = 0xAA,
 
-  AFHDS2A_PACKET_BIND1        = 0xBB,
-  AFHDS2A_PACKET_BIND2        = 0xBC,
-  AFHDS2A_PACKET_TELEMETRY    = 0xAA,
+  AFHDS2A_PACKET_BIND1 = 0xBB,
+  AFHDS2A_PACKET_BIND2 = 0xBC,
+  AFHDS2A_PACKET_TELEMETRY = 0xAA,
 };
 
 //------------------------------------------------------------------------------
@@ -57,9 +56,8 @@ typedef struct __attribute__((packed)) {
   uint8_t type;
   uint32_t tx_id;
   uint32_t rx_id;
-  uint16_t channel_data[AFHDS2A_NUM_CHANS];  // little-endian, same as the STM32 running this program, but not aligned
+  uint16_t channel_data[AFHDS2A_NUM_CHANS]; // little-endian, same as the STM32 running this program, but not aligned
 } afhds2a_channel_pkt_t;
-
 
 //------------------------------------------------------------------------------
 // Prepares the provided telemetry packet and writes it into the a7105 fifo
@@ -73,7 +71,7 @@ static void prepare_and_write_telemetry(afhds2a_tlm_pkt_t *tlm_pkt) {
 
   tlm_pkt->type = AFHDS2A_PACKET_TELEMETRY;
 
-  // MPM transmitter code considers AFHDS2A_SENSOR_RX_VOLTAGE to be an 
+  // MPM transmitter code considers AFHDS2A_SENSOR_RX_VOLTAGE to be an
   // 8bit value (value_lo) so we will assume this means the voltage is scaled by 10
   // (4.30 volts is sent as 43). we will also ensure value_hi is set anyways
   // TODO: This still needs verification with a TX that can display the telemetry
@@ -92,8 +90,7 @@ static void prepare_and_write_telemetry(afhds2a_tlm_pkt_t *tlm_pkt) {
   // MPM transmitter code considers a sensor type value of 0xFF to be "end of data"
   // Not sure if OpenTX does the same or just ignores 0xFF types. So we will just
   // set the type value for the rest of the sensors to 0xFF
-  for (int i=2; i<7; i++)
-  {
+  for (int i = 2; i < 7; i++) {
     tlm_pkt->sensor_data[i].type = 0xFF;
   }
 
@@ -102,7 +99,7 @@ static void prepare_and_write_telemetry(afhds2a_tlm_pkt_t *tlm_pkt) {
   // us to update the beginning part of the fifo since that's the only part of the
   // packet that changes
   static uint8_t num_to_write = sizeof(afhds2a_tlm_pkt_t);
-  a7105_write_fifo((uint8_t*)tlm_pkt, num_to_write);
+  a7105_write_fifo((uint8_t *)tlm_pkt, num_to_write);
   num_to_write = offsetof(afhds2a_tlm_pkt_t, sensor_data) + sizeof(sensor_data_t) * 2;
 }
 
@@ -114,15 +111,15 @@ uint8_t flysky_afhds2a_process_packet(const uint32_t timestamp) {
   uint8_t result = 0;
 
   union {
-    afhds2a_bind_pkt_t      bind;
-    afhds2a_channel_pkt_t   channel;
-    afhds2a_tlm_pkt_t       telemetry;
+    afhds2a_bind_pkt_t bind;
+    afhds2a_channel_pkt_t channel;
+    afhds2a_tlm_pkt_t telemetry;
   } pkt;
 
   // If bound then read full packet otherwise only need to read as much of the bind
   // packet that we'll actually use
   const uint8_t num = flysky.bound ? sizeof(pkt.channel) : offsetof(afhds2a_bind_pkt_t, reserved2);
-  a7105_read_fifo((uint8_t*)&pkt, num);
+  a7105_read_fifo((uint8_t *)&pkt, num);
 
   // MPM transmitter code sends either AFHDS2A_PACKET_BIND1 or AFHDS2A_PACKET_BIND2 when binding,
   // Otherwise it sends AFHDS2A_PACKET_STICKS, AFHDS2A_PACKET_FAILSAFE or AFHDS2A_PACKET_SETTINGS
@@ -141,12 +138,11 @@ uint8_t flysky_afhds2a_process_packet(const uint32_t timestamp) {
       // fifo so we can send it back to the TX. Re-using it is important as the .state and .tx_id
       // members will be checked by the TX code to determine if it should accept the RX identifier
       pkt.bind.rx_id = flysky.rx_id;
-      a7105_write_fifo((uint8_t*)&pkt, sizeof(pkt.bind));
+      a7105_write_fifo((uint8_t *)&pkt, sizeof(pkt.bind));
       flysky.pending_tx_time = flysky.last_bind_time = timestamp;
       flysky.pending_tx = true;
     }
-  }
-  else if ((pkt_type == AFHDS2A_PACKET_STICKS) || (pkt_type == AFHDS2A_PACKET_FAILSAFE) || (pkt_type == AFHDS2A_PACKET_SETTINGS)) {
+  } else if ((pkt_type == AFHDS2A_PACKET_STICKS) || (pkt_type == AFHDS2A_PACKET_FAILSAFE) || (pkt_type == AFHDS2A_PACKET_SETTINGS)) {
     if ((pkt.channel.rx_id == flysky.rx_id && pkt.channel.tx_id == flysky.tx_id)) {
       flysky_processed_pkt(timestamp);
 
@@ -179,4 +175,3 @@ uint8_t flysky_afhds2a_process_packet(const uint32_t timestamp) {
 }
 
 #endif
-

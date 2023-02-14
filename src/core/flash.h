@@ -1,11 +1,11 @@
 #pragma once
 
-#include "rx/rx.h"
 #include "rx/bayang.h"
 #include "rx/express_lrs.h"
-#include "rx/frsky.h"
-#include "rx/unified_serial.h"
 #include "rx/flysky.h"
+#include "rx/frsky.h"
+#include "rx/rx.h"
+#include "rx/unified_serial.h"
 
 #define FLASH_STORAGE_OFFSET FLASH_ALIGN(4)
 #define FLASH_STORAGE_SIZE FLASH_ALIGN(32)

@@ -3,11 +3,11 @@
 #include <string.h>
 
 #include "core/debug.h"
+#include "core/flash.h"
+#include "core/profile.h"
 #include "driver/spi_cc2500.h"
 #include "driver/time.h"
-#include "core/flash.h"
 #include "flight/control.h"
-#include "core/profile.h"
 #include "util/ring_buffer.h"
 #include "util/util.h"
 

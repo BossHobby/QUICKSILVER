@@ -2,10 +2,10 @@
 
 #include <stdio.h>
 
+#include "core/failloop.h"
 #include "driver/spi_soft.h"
 #include "driver/spi_xn297.h"
 #include "driver/time.h"
-#include "core/failloop.h"
 #include "flight/control.h"
 #include "project.h"
 #include "util/util.h"
@@ -22,7 +22,7 @@
 // how many times to hop ahead if no reception
 #define HOPPING_NUMBER 4
 
-//#define RX_DATARATE_250K
+// #define RX_DATARATE_250K
 
 //
 #define XN_TO_TX 0b00000010
@@ -180,7 +180,7 @@ void rx_protocol_init() {
   xn_writereg(0, XN_TO_RX); // power up, crc disabled, rx mode
 }
 
-//#define RXDEBUG
+// #define RXDEBUG
 
 #ifdef RXDEBUG
 uint32_t packettime;

@@ -2,9 +2,9 @@
 
 #include <string.h>
 
+#include "core/profile.h"
 #include "driver/serial_hdzero.h"
 #include "driver/spi_max7456.h"
-#include "core/profile.h"
 #include "util/util.h"
 
 #define MAX_ROWS HDZERO_ROWS

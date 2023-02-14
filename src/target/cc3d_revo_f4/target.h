@@ -19,7 +19,7 @@
 #define LED1_INVERT
 #define LED2PIN PIN_B4
 #define LED1_INVERT
-//#define LED2_INVERT
+// #define LED2_INVERT
 #define BUZZER_PIN PIN_B6
 #define BUZZER_INVERT
 #define FPV_PIN PIN_A13

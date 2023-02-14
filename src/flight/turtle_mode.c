@@ -2,10 +2,10 @@
 
 #include <math.h>
 
+#include "core/profile.h"
 #include "driver/motor.h"
 #include "driver/time.h"
 #include "flight/control.h"
-#include "core/profile.h"
 
 // TODO: enable for brushed too
 #ifdef BRUSHLESS_TARGET

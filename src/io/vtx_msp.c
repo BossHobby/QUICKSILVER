@@ -1,9 +1,9 @@
 #include "vtx.h"
 
+#include "core/profile.h"
 #include "driver/serial.h"
 #include "driver/serial_vtx_msp.h"
 #include "io/msp.h"
-#include "core/profile.h"
 
 #define MSP_VTX_DETECT_TRIES 5
 

@@ -4,8 +4,8 @@
 #include <string.h>
 
 #include "core/debug.h"
-#include "driver/interrupt.h"
 #include "core/failloop.h"
+#include "driver/interrupt.h"
 #include "project.h"
 
 // DMA1 Stream0 SPI3_RX

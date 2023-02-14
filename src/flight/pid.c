@@ -4,10 +4,10 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include "core/profile.h"
 #include "flight/control.h"
 #include "flight/filter.h"
 #include "io/led.h"
-#include "core/profile.h"
 #include "project.h"
 #include "rx/rx.h"
 #include "util/util.h"

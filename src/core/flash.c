@@ -2,11 +2,11 @@
 
 #include <string.h>
 
+#include "core/failloop.h"
+#include "core/profile.h"
 #include "driver/fmc.h"
 #include "driver/serial.h"
-#include "core/failloop.h"
 #include "io/vtx.h"
-#include "core/profile.h"
 #include "project.h"
 #include "util/cbor_helper.h"
 

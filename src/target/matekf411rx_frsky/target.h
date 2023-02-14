@@ -18,8 +18,8 @@
 #define BUZZER_PIN PIN_C15
 #define BUZZER_INVERT
 
-//#define FPV_PIN LL_GPIO_PIN_13
-//#define FPV_PORT GPIOA
+// #define FPV_PIN LL_GPIO_PIN_13
+// #define FPV_PORT GPIOA
 
 // GYRO
 #define GYRO_SPI_PORT SPI_PORT1

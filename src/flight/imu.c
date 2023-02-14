@@ -14,14 +14,14 @@
 #include "util/vector.h"
 
 // IMU fusion algo, CHOOSE ONE
-//#define SILVERWARE_IMU
+// #define SILVERWARE_IMU
 #define QUICKSILVER_IMU
 
 // filter times in seconds
 // time to correct gyro readings using the accelerometer
 // 1-4 are generally good
 #define FASTFILTER 0.05 // on_ground filter
-//#define PREFILTER 0.2   //in_air prefilter (this can be commented out)
+// #define PREFILTER 0.2   //in_air prefilter (this can be commented out)
 #define FILTERTIME 2.0 // in_air fusion filter
 
 #define PT1_FILTER_HZ 10

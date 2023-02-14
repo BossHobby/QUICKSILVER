@@ -29,7 +29,7 @@ void spi_init() {
 
   LL_GPIO_Init(SPI_MOSI_PORT, &mosi_init_struct);
 
-  //mosi_out = 0; // already
+  // mosi_out = 0; // already
 
   spi_csoff();
 }

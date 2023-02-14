@@ -1,11 +1,11 @@
 #include <math.h>
 
+#include "core/profile.h"
 #include "driver/gpio.h"
 #include "driver/motor.h"
 #include "driver/time.h"
 #include "driver/timer.h"
 #include "flight/control.h"
-#include "core/profile.h"
 #include "project.h"
 
 #ifdef USE_PWM_DRIVER
@@ -32,7 +32,7 @@
 #define PWMTOP (((PWM_CLOCK_FREQ_HZ / 4) / PWMFREQ) - 1)
 #undef PWM_DIVIDER
 #define PWM_DIVIDER 4
-//#warning PWM DIVIDE BY 4 ON
+// #warning PWM DIVIDE BY 4 ON
 #endif
 
 #if (PWMTOP > 65535)

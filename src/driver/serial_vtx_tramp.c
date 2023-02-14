@@ -3,10 +3,10 @@
 #include <string.h>
 
 #include "core/debug.h"
+#include "core/profile.h"
 #include "driver/serial.h"
 #include "driver/serial_vtx.h"
 #include "driver/time.h"
-#include "core/profile.h"
 #include "util/ring_buffer.h"
 
 #define USART usart_port_defs[serial_smart_audio_port]
