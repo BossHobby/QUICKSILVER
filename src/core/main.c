@@ -31,7 +31,7 @@
 #include "io/usb_configurator.h"
 #include "io/vbat.h"
 #include "io/vtx.h"
-#include "osd_render.h"
+#include "osd/render.h"
 #include "project.h"
 #include "rx/rx.h"
 #include "util/util.h"

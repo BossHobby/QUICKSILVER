@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "osd_render.h"
+#include "osd/render.h"
 #include "util/vector.h"
 
 // immediate mode ui for qs

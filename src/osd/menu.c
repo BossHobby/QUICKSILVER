@@ -1,9 +1,9 @@
-#include "osd_menu.h"
+#include "osd/menu.h"
 
 #include <string.h>
 
 #include "driver/osd.h"
-#include "osd_render.h"
+#include "osd/render.h"
 #include "util/util.h"
 
 #define SCREEN_COLS 32

@@ -1,4 +1,4 @@
-#include "osd_render.h"
+#include "osd/render.h"
 
 #include "core/debug.h"
 #include "driver/osd.h"
@@ -9,7 +9,7 @@
 #include "float.h"
 #include "io/data_flash.h"
 #include "io/vtx.h"
-#include "osd_menu.h"
+#include "osd/menu.h"
 #include "core/profile.h"
 #include "project.h"
 #include "rx/rx.h"
