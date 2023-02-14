@@ -8,7 +8,7 @@
 #include "drv_time.h"
 #include "io/usb_configurator.h"
 #include "io/vtx.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "util/crc.h"
 #include "util/ring_buffer.h"
 #include "util/util.h"

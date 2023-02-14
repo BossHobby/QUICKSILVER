@@ -3,11 +3,11 @@
 #include <math.h>
 
 #include "core/flash.h"
+#include "core/profile.h"
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "flight/control.h"
 #include "flight/filter.h"
-#include "profile.h"
 #include "project.h"
 #include "util/util.h"
 

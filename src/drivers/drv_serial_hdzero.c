@@ -4,7 +4,7 @@
 
 #include "drv_serial.h"
 #include "io/msp.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "util/crc.h"
 #include "util/ring_buffer.h"
 

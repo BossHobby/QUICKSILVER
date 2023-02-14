@@ -16,7 +16,7 @@
 #include "io/usb_configurator.h"
 #include "io/vtx.h"
 #include "osd/osd_render.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "util/cbor_helper.h"
 
 #define ENCODE_BUFFER_SIZE 2048

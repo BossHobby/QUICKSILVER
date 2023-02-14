@@ -10,7 +10,7 @@
 #include "flight/control.h"
 #include "io/msp.h"
 #include "io/quic.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "project.h"
 #include "core/reset.h"
 #include "util/crc.h"

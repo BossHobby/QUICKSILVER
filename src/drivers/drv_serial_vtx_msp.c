@@ -7,7 +7,7 @@
 #include "drv_serial.h"
 #include "drv_serial_hdzero.h"
 #include "io/msp.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "util/crc.h"
 
 #define USART usart_port_defs[serial_smart_audio_port]

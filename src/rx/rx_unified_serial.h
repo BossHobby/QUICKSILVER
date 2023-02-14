@@ -1,7 +1,7 @@
 #pragma once
 
 #include "drv_serial.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "rx.h"
 
 #define RX_BUFF_SIZE 128

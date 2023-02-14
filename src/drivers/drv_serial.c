@@ -3,7 +3,7 @@
 #include "drv_interrupt.h"
 #include "drv_time.h"
 #include "io/usb_configurator.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "project.h"
 
 usart_ports_t serial_rx_port = USART_PORT_INVALID;

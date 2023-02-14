@@ -7,7 +7,7 @@
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "flight/control.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "util/util.h"
 
 #define REDPINE_CHANNEL_START 3

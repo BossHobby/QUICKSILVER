@@ -10,7 +10,7 @@
 #include "io/data_flash.h"
 #include "io/vtx.h"
 #include "osd_menu.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "project.h"
 #include "rx.h"
 #include "stdio.h"

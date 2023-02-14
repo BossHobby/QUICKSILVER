@@ -10,7 +10,7 @@
 #include "drv_serial_vtx_tramp.h"
 #include "drv_time.h"
 #include "flight/control.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "project.h"
 #include "rx.h"
 #include "util/cbor_helper.h"

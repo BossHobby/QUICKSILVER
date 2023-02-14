@@ -6,7 +6,7 @@
 #include "drv_serial.h"
 #include "core/failloop.h"
 #include "io/vtx.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "project.h"
 #include "util/cbor_helper.h"
 

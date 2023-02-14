@@ -1,7 +1,7 @@
 #include "drv_serial.h"
 
 #include "drv_time.h"
-#include "profile.h"
+#include "core/profile.h"
 
 #define USART usart_port_defs[serial_rx_port]
 

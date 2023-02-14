@@ -3,7 +3,7 @@
 #include "drv_serial.h"
 #include "drv_serial_vtx_msp.h"
 #include "io/msp.h"
-#include "profile.h"
+#include "core/profile.h"
 
 #define MSP_VTX_DETECT_TRIES 5
 

@@ -6,7 +6,7 @@
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "flight/control.h"
-#include "profile.h"
+#include "core/profile.h"
 
 extern uint8_t rx_buffer[RX_BUFF_SIZE];
 extern uint8_t rx_data[RX_BUFF_SIZE];

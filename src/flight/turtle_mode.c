@@ -5,7 +5,7 @@
 #include "drv_motor.h"
 #include "drv_time.h"
 #include "flight/control.h"
-#include "profile.h"
+#include "core/profile.h"
 
 // TODO: enable for brushed too
 #ifdef BRUSHLESS_TARGET

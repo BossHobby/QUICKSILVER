@@ -6,7 +6,7 @@
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "flight/control.h"
-#include "profile.h"
+#include "core/profile.h"
 
 static bool fport_debug_telemetry = false;
 static uint8_t telemetry_counter = 0;

@@ -3,7 +3,7 @@
 #include "drv_motor.h"
 #include "flight/control.h"
 #include "io/usb_configurator.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "project.h"
 #include "util/util.h"
 

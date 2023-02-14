@@ -13,7 +13,7 @@
 #include "flight/filter.h"
 #include "flight/sixaxis.h"
 #include "io/led.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "project.h"
 #include "util/util.h"
 

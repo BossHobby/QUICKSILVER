@@ -4,7 +4,7 @@
 #include "drv_gpio.h"
 #include "drv_time.h"
 #include "flight/filter.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "project.h"
 #include "util/util.h"
 

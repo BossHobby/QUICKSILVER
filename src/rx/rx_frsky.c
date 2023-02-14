@@ -5,7 +5,7 @@
 #include "drv_time.h"
 #include "core/flash.h"
 #include "flight/control.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "rx_spi.h"
 #include "util/util.h"
 

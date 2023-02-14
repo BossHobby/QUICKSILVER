@@ -17,7 +17,7 @@
 #include "io/usb_configurator.h"
 #include "io/vbat.h"
 #include "motor.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "turtle_mode.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"

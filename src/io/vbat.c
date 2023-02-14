@@ -3,7 +3,7 @@
 #include "drv_adc.h"
 #include "core/flash.h"
 #include "flight/control.h"
-#include "profile.h"
+#include "core/profile.h"
 
 // compensation factor for li-ion internal model
 // zero to bypass

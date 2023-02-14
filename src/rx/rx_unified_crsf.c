@@ -9,7 +9,7 @@
 #include "drv_time.h"
 #include "flight/control.h"
 #include "io/msp.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "project.h"
 #include "rx_crsf.h"
 #include "util/crc.h"

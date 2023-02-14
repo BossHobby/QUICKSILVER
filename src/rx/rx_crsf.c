@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "flight/control.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "util/crc.h"
 
 void crsf_tlm_frame_start(uint8_t *buf) {

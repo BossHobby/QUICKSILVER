@@ -4,7 +4,7 @@
 
 #include "drv_serial_hdzero.h"
 #include "drv_spi_max7456.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "util/util.h"
 
 #define MAX_ROWS HDZERO_ROWS

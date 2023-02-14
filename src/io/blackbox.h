@@ -1,6 +1,6 @@
 #pragma once
 
-#include "profile.h"
+#include "core/profile.h"
 
 #define BLACKBOX_SCALE 1000
 

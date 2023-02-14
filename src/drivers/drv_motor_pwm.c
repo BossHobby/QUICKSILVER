@@ -5,7 +5,7 @@
 #include "drv_time.h"
 #include "drv_timer.h"
 #include "flight/control.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "project.h"
 
 #ifdef USE_PWM_DRIVER

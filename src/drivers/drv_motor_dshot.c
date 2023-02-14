@@ -9,7 +9,7 @@
 #include "drv_spi.h"
 #include "drv_time.h"
 #include "flight/control.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "project.h"
 #include "util/util.h"
 

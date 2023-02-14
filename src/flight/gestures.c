@@ -5,7 +5,7 @@
 #include "flight/pid.h"
 #include "flight/sixaxis.h"
 #include "osd_render.h"
-#include "profile.h"
+#include "core/profile.h"
 #include "rx.h"
 #include "util/util.h"
 
