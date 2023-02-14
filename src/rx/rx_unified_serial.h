@@ -1,6 +1,6 @@
 #pragma once
 
-#include "drv_serial.h"
+#include "driver/serial.h"
 #include "core/profile.h"
 #include "rx.h"
 

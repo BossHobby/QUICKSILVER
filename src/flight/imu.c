@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "drv_time.h"
+#include "driver/time.h"
 #include "flight/control.h"
 #include "flight/filter.h"
 #include "flight/sixaxis.h"

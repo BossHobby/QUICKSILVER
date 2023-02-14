@@ -4,9 +4,9 @@
 #include <stdint.h>
 
 #include "angle_pid.h"
-#include "drv_fmc.h"
-#include "drv_motor.h"
-#include "drv_time.h"
+#include "driver/fmc.h"
+#include "driver/motor.h"
+#include "driver/time.h"
 #include "flight/filter.h"
 #include "flight/gestures.h"
 #include "flight/imu.h"

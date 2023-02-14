@@ -3,7 +3,7 @@
 #include <math.h>
 #include <stdint.h>
 
-#include "drv_time.h"
+#include "driver/time.h"
 #include "flight/control.h"
 #include "osd_render.h"
 #include "project.h"

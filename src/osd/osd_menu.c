@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "drv_osd.h"
+#include "driver/osd.h"
 #include "osd_render.h"
 #include "util/util.h"
 

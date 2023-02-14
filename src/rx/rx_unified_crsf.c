@@ -5,8 +5,8 @@
 #include <string.h>
 
 #include "core/debug.h"
-#include "drv_serial.h"
-#include "drv_time.h"
+#include "driver/serial.h"
+#include "driver/time.h"
 #include "flight/control.h"
 #include "io/msp.h"
 #include "core/profile.h"

@@ -1,6 +1,6 @@
 #include "io/vbat.h"
 
-#include "drv_adc.h"
+#include "driver/adc.h"
 #include "core/flash.h"
 #include "flight/control.h"
 #include "core/profile.h"

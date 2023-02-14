@@ -2,8 +2,8 @@
 
 #include <math.h>
 
-#include "drv_motor.h"
-#include "drv_time.h"
+#include "driver/motor.h"
+#include "driver/time.h"
 #include "flight/control.h"
 #include "core/profile.h"
 

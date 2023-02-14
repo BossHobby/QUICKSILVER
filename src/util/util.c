@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h>
 
-#include "drv_time.h"
+#include "driver/time.h"
 #include "project.h"
 
 float mapf(float x, float in_min, float in_max, float out_min, float out_max) {

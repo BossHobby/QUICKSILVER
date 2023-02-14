@@ -5,8 +5,8 @@
 #include <string.h>
 
 #include "core/debug.h"
-#include "drv_gpio.h"
-#include "drv_time.h"
+#include "driver/gpio.h"
+#include "driver/time.h"
 #include "core/flash.h"
 #include "flight/control.h"
 #include "io/msp.h"

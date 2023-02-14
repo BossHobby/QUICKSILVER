@@ -1,7 +1,7 @@
 #include "vtx.h"
 
-#include "drv_serial.h"
-#include "drv_serial_vtx_sa.h"
+#include "driver/serial.h"
+#include "driver/serial_vtx_sa.h"
 #include "util/util.h"
 
 #define SMART_AUDIO_DETECT_TRIES 30

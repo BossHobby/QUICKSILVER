@@ -1,7 +1,7 @@
 #include "io/led.h"
 
-#include "drv_gpio.h"
-#include "drv_time.h"
+#include "driver/gpio.h"
+#include "driver/time.h"
 #include "flight/control.h"
 #include "project.h"
 #include "util/util.h"

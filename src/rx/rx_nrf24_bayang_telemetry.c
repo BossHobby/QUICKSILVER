@@ -2,9 +2,9 @@
 
 #include <stdio.h>
 
-#include "drv_spi_soft.h"
-#include "drv_spi_xn297.h"
-#include "drv_time.h"
+#include "driver/spi_soft.h"
+#include "driver/spi_xn297.h"
+#include "driver/time.h"
 #include "core/failloop.h"
 #include "flight/control.h"
 #include "project.h"

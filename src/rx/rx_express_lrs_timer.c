@@ -2,9 +2,9 @@
 
 #include <stdbool.h>
 
-#include "drv_gpio.h"
-#include "drv_interrupt.h"
-#include "drv_timer.h"
+#include "driver/gpio.h"
+#include "driver/interrupt.h"
+#include "driver/timer.h"
 #include "project.h"
 #include "util/util.h"
 

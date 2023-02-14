@@ -3,8 +3,8 @@
 #include <string.h>
 
 #include "core/debug.h"
-#include "drv_spi_cc2500.h"
-#include "drv_time.h"
+#include "driver/spi_cc2500.h"
+#include "driver/time.h"
 #include "core/flash.h"
 #include "flight/control.h"
 #include "core/profile.h"

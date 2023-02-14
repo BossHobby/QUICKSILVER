@@ -2,8 +2,8 @@
 
 #include <string.h>
 
-#include "drv_fmc.h"
-#include "drv_serial.h"
+#include "driver/fmc.h"
+#include "driver/serial.h"
 #include "core/failloop.h"
 #include "io/vtx.h"
 #include "core/profile.h"

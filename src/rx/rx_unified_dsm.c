@@ -3,9 +3,9 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "drv_fmc.h"
-#include "drv_serial.h"
-#include "drv_time.h"
+#include "driver/fmc.h"
+#include "driver/serial.h"
+#include "driver/time.h"
 #include "core/flash.h"
 #include "flight/control.h"
 #include "core/profile.h"

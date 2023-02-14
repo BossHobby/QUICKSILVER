@@ -1,8 +1,8 @@
 #include "rx_flysky.h"
 
 #if defined(RX_FLYSKY)
-#include "drv_spi_a7105.h"
-#include "drv_time.h"
+#include "driver/spi_a7105.h"
+#include "driver/time.h"
 #include "core/flash.h"
 #include "flight/control.h" // for state
 #include "util/util.h"

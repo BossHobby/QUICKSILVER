@@ -4,8 +4,8 @@
 
 #include "rx_spi.h"
 
-#include "drv_spi_sx127x.h"
-#include "drv_spi_sx128x.h"
+#include "driver/spi_sx127x.h"
+#include "driver/spi_sx128x.h"
 
 #define ELRS_OTA_VERSION_ID 3
 

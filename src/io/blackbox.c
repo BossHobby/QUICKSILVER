@@ -1,6 +1,6 @@
 #include "io/blackbox.h"
 
-#include "drv_time.h"
+#include "driver/time.h"
 #include "flight/control.h"
 #include "io/data_flash.h"
 #include "io/usb_configurator.h"

@@ -1,7 +1,7 @@
 #include "vtx.h"
 
-#include "drv_serial.h"
-#include "drv_serial_vtx_msp.h"
+#include "driver/serial.h"
+#include "driver/serial_vtx_msp.h"
 #include "io/msp.h"
 #include "core/profile.h"
 

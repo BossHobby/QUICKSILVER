@@ -2,8 +2,8 @@
 
 #if defined(RX_FLYSKY)
 #include <string.h>
-#include "drv_spi_a7105.h"
-#include "drv_time.h"
+#include "driver/spi_a7105.h"
+#include "driver/time.h"
 #include "flight/control.h" // for state.vbat_filtered
 
 

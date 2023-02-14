@@ -1,6 +1,6 @@
 #include "ring_buffer.h"
 
-#include "drv_interrupt.h"
+#include "driver/interrupt.h"
 
 uint32_t ring_buffer_free(ring_buffer_t *c) {
   if (c->head >= c->tail) {

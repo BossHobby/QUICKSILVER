@@ -3,12 +3,12 @@
 #include <stddef.h>
 
 #include "core/debug.h"
-#include "drv_gpio.h"
-#include "drv_serial.h"
-#include "drv_serial_vtx_msp.h"
-#include "drv_serial_vtx_sa.h"
-#include "drv_serial_vtx_tramp.h"
-#include "drv_time.h"
+#include "driver/gpio.h"
+#include "driver/serial.h"
+#include "driver/serial_vtx_msp.h"
+#include "driver/serial_vtx_sa.h"
+#include "driver/serial_vtx_tramp.h"
+#include "driver/time.h"
 #include "flight/control.h"
 #include "core/profile.h"
 #include "project.h"

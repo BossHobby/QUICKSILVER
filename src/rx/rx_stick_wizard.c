@@ -1,6 +1,6 @@
 #include "rx_stick_wizard.h"
 
-#include "drv_time.h"
+#include "driver/time.h"
 #include "core/flash.h"
 #include "flight/control.h"
 #include "core/profile.h"

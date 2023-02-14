@@ -1,7 +1,7 @@
 #include "rx_flysky.h"
 
 #if defined(RX_FLYSKY)
-#include "drv_spi_a7105.h"
+#include "driver/spi_a7105.h"
 #include <string.h>
 
 //------------------------------------------------------------------------------

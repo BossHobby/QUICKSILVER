@@ -3,8 +3,8 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "drv_serial.h"
-#include "drv_serial_4way.h"
+#include "driver/serial.h"
+#include "driver/serial_4way.h"
 #include "core/flash.h"
 #include "flight/control.h"
 #include "io/usb_configurator.h"

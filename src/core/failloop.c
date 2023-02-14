@@ -1,8 +1,8 @@
 #include "core/failloop.h"
 
-#include "drv_motor.h"
-#include "drv_time.h"
-#include "drv_usb.h"
+#include "driver/motor.h"
+#include "driver/time.h"
+#include "driver/usb.h"
 #include "flight/control.h"
 #include "io/led.h"
 #include "io/usb_configurator.h"

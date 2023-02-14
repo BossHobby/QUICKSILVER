@@ -5,10 +5,10 @@
 #include <string.h>
 
 #include "core/debug.h"
-#include "drv_serial.h"
-#include "drv_serial_4way.h"
-#include "drv_spi_max7456.h"
-#include "drv_usb.h"
+#include "driver/serial.h"
+#include "driver/serial_4way.h"
+#include "driver/spi_max7456.h"
+#include "driver/usb.h"
 #include "core/flash.h"
 #include "flight/control.h"
 #include "flight/sixaxis.h"
