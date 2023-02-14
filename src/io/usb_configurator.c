@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "debug.h"
+#include "core/debug.h"
 #include "drv_serial.h"
 #include "drv_usb.h"
 #include "flight/control.h"
@@ -12,7 +12,7 @@
 #include "io/quic.h"
 #include "profile.h"
 #include "project.h"
-#include "reset.h"
+#include "core/reset.h"
 #include "util/crc.h"
 #include "util/ring_buffer.h"
 #include "util/util.h"

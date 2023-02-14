@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "debug.h"
+#include "core/debug.h"
 #include "drv_serial.h"
 #include "drv_time.h"
 #include "flight/control.h"

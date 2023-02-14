@@ -14,14 +14,15 @@
   USART5_PD2PC12
 
 #define USB_DETECT_PIN PIN_B12
+#define RX_USART USART_PORT5
 
 // LEDS
-#define LED_NUMBER 2
+#define LED_NUMBER 1
 #define LED1PIN PIN_B9
-#define LED2PIN PIN_A14
-#define LED2_INVERT
+// #define LED2PIN PIN_A14
+// #define LED2_INVERT
 #define BUZZER_PIN PIN_C13
-#define FPV_PIN PIN_A13
+// #define FPV_PIN PIN_A13
 
 // GYRO
 #define GYRO_SPI_PORT SPI_PORT1

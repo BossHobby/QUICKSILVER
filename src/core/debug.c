@@ -1,4 +1,4 @@
-#include "debug.h"
+#include "core/debug.h"
 
 #include "drv_gpio.h"
 #include "drv_time.h"

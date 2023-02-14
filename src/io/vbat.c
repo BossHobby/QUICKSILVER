@@ -1,7 +1,7 @@
 #include "io/vbat.h"
 
 #include "drv_adc.h"
-#include "flash.h"
+#include "core/flash.h"
 #include "flight/control.h"
 #include "profile.h"
 

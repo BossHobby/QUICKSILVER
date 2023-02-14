@@ -1,6 +1,6 @@
 #include "flight/gestures.h"
 
-#include "flash.h"
+#include "core/flash.h"
 #include "flight/control.h"
 #include "flight/pid.h"
 #include "flight/sixaxis.h"

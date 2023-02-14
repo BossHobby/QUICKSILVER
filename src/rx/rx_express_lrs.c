@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "debug.h"
+#include "core/debug.h"
 #include "drv_gpio.h"
 #include "drv_time.h"
-#include "flash.h"
+#include "core/flash.h"
 #include "flight/control.h"
 #include "io/msp.h"
 #include "io/usb_configurator.h"

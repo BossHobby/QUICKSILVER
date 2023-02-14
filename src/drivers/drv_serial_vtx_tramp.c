@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "debug.h"
+#include "core/debug.h"
 #include "drv_serial.h"
 #include "drv_serial_vtx.h"
 #include "drv_time.h"

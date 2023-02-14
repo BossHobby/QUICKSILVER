@@ -1,6 +1,6 @@
 #include "drv_adc.h"
 
-#include "debug.h"
+#include "core/debug.h"
 #include "drv_gpio.h"
 #include "drv_time.h"
 #include "flight/filter.h"

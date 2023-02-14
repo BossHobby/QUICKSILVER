@@ -1,4 +1,4 @@
-#include "failloop.h"
+#include "core/failloop.h"
 
 #include "drv_motor.h"
 #include "drv_time.h"
@@ -6,7 +6,7 @@
 #include "flight/control.h"
 #include "io/led.h"
 #include "io/usb_configurator.h"
-#include "reset.h"
+#include "core/reset.h"
 
 const char *failloop_string(failloop_t val) {
   switch (val) {

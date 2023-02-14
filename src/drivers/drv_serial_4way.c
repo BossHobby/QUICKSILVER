@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "debug.h"
+#include "core/debug.h"
 #include "drv_gpio.h"
 #include "drv_motor.h"
 #include "drv_serial_4way.h"

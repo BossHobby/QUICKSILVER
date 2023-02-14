@@ -1,9 +1,9 @@
 #include "osd_render.h"
 
-#include "debug.h"
+#include "core/debug.h"
 #include "drv_osd.h"
 #include "drv_time.h"
-#include "flash.h"
+#include "core/flash.h"
 #include "flight/control.h"
 #include "flight/filter.h"
 #include "float.h"

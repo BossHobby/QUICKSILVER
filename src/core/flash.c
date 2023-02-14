@@ -1,10 +1,10 @@
-#include "flash.h"
+#include "core/flash.h"
 
 #include <string.h>
 
 #include "drv_fmc.h"
 #include "drv_serial.h"
-#include "failloop.h"
+#include "core/failloop.h"
 #include "io/vtx.h"
 #include "profile.h"
 #include "project.h"

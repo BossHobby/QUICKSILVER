@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "debug.h"
+#include "core/debug.h"
 #include "drv_gpio.h"
 #include "drv_serial.h"
 #include "drv_serial_vtx_msp.h"

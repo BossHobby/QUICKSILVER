@@ -3,9 +3,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "debug.h"
+#include "core/debug.h"
 #include "drv_interrupt.h"
-#include "failloop.h"
+#include "core/failloop.h"
 #include "project.h"
 
 // DMA1 Stream0 SPI3_RX

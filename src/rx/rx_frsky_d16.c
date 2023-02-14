@@ -2,10 +2,10 @@
 
 #include <string.h>
 
-#include "debug.h"
+#include "core/debug.h"
 #include "drv_spi_cc2500.h"
 #include "drv_time.h"
-#include "flash.h"
+#include "core/flash.h"
 #include "flight/control.h"
 #include "profile.h"
 #include "util/ring_buffer.h"

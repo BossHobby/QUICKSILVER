@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "failloop.h"
+#include "core/failloop.h"
 #include "io/usb_configurator.h"
 #include "project.h"
 

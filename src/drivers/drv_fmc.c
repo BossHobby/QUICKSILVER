@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "failloop.h"
+#include "core/failloop.h"
 #include "project.h"
 
 #if defined(STM32F4)

@@ -5,11 +5,11 @@
 
 #include "drv_serial.h"
 #include "drv_serial_4way.h"
-#include "flash.h"
+#include "core/flash.h"
 #include "flight/control.h"
 #include "io/usb_configurator.h"
 #include "quic.h"
-#include "reset.h"
+#include "core/reset.h"
 #include "util/crc.h"
 #include "util/util.h"
 #include "vtx.h"

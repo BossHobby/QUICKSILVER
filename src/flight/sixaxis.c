@@ -4,11 +4,11 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "debug.h"
+#include "core/debug.h"
 #include "drv_serial.h"
 #include "drv_spi_gyro.h"
 #include "drv_time.h"
-#include "flash.h"
+#include "core/flash.h"
 #include "flight/control.h"
 #include "flight/filter.h"
 #include "flight/sixaxis.h"

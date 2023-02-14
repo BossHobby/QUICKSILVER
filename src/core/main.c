@@ -3,7 +3,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "debug.h"
+#include "core/debug.h"
+#include "core/failloop.h"
+#include "core/flash.h"
+#include "core/reset.h"
 #include "drv_adc.h"
 #include "drv_fmc.h"
 #include "drv_gpio.h"
@@ -14,8 +17,6 @@
 #include "drv_spi_soft.h"
 #include "drv_time.h"
 #include "drv_usb.h"
-#include "failloop.h"
-#include "flash.h"
 #include "flight/control.h"
 #include "flight/filter.h"
 #include "flight/gestures.h"
@@ -32,7 +33,6 @@
 #include "osd_render.h"
 #include "profile.h"
 #include "project.h"
-#include "reset.h"
 #include "rx.h"
 #include "util/util.h"
 
