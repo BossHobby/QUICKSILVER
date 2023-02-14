@@ -12,7 +12,7 @@
 #include "osd_menu.h"
 #include "core/profile.h"
 #include "project.h"
-#include "rx.h"
+#include "rx/rx.h"
 #include "stdio.h"
 #include "string.h"
 #include "util/util.h"

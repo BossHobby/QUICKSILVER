@@ -4,7 +4,7 @@
 
 #include "core/failloop.h"
 #include "project.h"
-#include "rx.h"
+#include "rx/rx.h"
 
 #include "util/vector.h"
 

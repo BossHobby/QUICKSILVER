@@ -6,7 +6,7 @@
 #include "flight/sixaxis.h"
 #include "osd_render.h"
 #include "core/profile.h"
-#include "rx.h"
+#include "rx/rx.h"
 #include "util/util.h"
 
 extern int ledcommand;

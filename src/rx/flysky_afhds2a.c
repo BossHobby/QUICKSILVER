@@ -1,4 +1,4 @@
-#include "rx_flysky.h"
+#include "rx/flysky.h"
 
 #if defined(RX_FLYSKY)
 #include <string.h>

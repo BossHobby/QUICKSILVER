@@ -2,7 +2,7 @@
 
 #include "driver/serial.h"
 #include "core/profile.h"
-#include "rx.h"
+#include "rx/rx.h"
 
 #define RX_BUFF_SIZE 128
 

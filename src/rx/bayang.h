@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rx.h"
+#include "rx/rx.h"
 
 // defines for bayang protocol radio
 

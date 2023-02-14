@@ -4,7 +4,7 @@
 
 #include "flight/filter.h"
 #include "project.h"
-#include "rx.h"
+#include "rx/rx.h"
 #include "util/vector.h"
 
 #define PROFILE_VERSION MAKE_SEMVER(0, 2, 1)

@@ -12,7 +12,7 @@
 #include "flight/control.h"
 #include "core/profile.h"
 #include "project.h"
-#include "rx.h"
+#include "rx/rx.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
 

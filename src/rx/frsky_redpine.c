@@ -1,4 +1,4 @@
-#include "rx_frsky.h"
+#include "rx/frsky.h"
 
 #include "core/debug.h"
 #include "driver/spi_cc2500.h"

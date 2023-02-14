@@ -9,7 +9,7 @@
 #include "io/led.h"
 #include "core/profile.h"
 #include "project.h"
-#include "rx.h"
+#include "rx/rx.h"
 #include "util/util.h"
 
 // multiplier for pids at 3V - for PID_VOLTAGE_COMPENSATION - default 1.33f from H101 code

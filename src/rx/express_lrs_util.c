@@ -1,4 +1,4 @@
-#include "rx_express_lrs.h"
+#include "rx/express_lrs.h"
 
 #if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
 

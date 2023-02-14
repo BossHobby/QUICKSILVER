@@ -9,7 +9,7 @@
 
 */
 
-#include "rx_bayang.h"
+#include "rx/bayang.h"
 
 #include <stdio.h>
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rx.h"
+#include "rx/rx.h"
 
 typedef enum {
   RX_SPI_STATUS_NONE = 0,

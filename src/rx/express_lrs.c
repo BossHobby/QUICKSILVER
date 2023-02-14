@@ -1,4 +1,4 @@
-#include "rx_express_lrs.h"
+#include "rx/express_lrs.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -12,7 +12,7 @@
 #include "io/msp.h"
 #include "io/usb_configurator.h"
 #include "project.h"
-#include "rx_crsf.h"
+#include "rx/crsf.h"
 #include "util/util.h"
 
 #if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))

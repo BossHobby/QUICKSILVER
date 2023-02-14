@@ -1,9 +1,9 @@
-#include "rx_stick_wizard.h"
+#include "rx/stick_wizard.h"
 
-#include "driver/time.h"
 #include "core/flash.h"
-#include "flight/control.h"
 #include "core/profile.h"
+#include "driver/time.h"
+#include "flight/control.h"
 #include "project.h"
 #include "util/util.h"
 

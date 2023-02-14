@@ -33,7 +33,7 @@
 #include "io/vtx.h"
 #include "osd_render.h"
 #include "project.h"
-#include "rx.h"
+#include "rx/rx.h"
 #include "util/util.h"
 
 uint32_t lastlooptime;

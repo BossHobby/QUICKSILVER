@@ -1,4 +1,4 @@
-#include "rx_unified_serial.h"
+#include "rx/unified_serial.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -11,7 +11,7 @@
 #include "io/msp.h"
 #include "core/profile.h"
 #include "project.h"
-#include "rx_crsf.h"
+#include "rx/crsf.h"
 #include "util/crc.h"
 #include "util/ring_buffer.h"
 #include "util/util.h"

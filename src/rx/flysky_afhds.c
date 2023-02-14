@@ -1,4 +1,4 @@
-#include "rx_flysky.h"
+#include "rx/flysky.h"
 
 #if defined(RX_FLYSKY)
 #include "driver/spi_a7105.h"

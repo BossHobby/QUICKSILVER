@@ -1,4 +1,4 @@
-#include "rx_frsky.h"
+#include "rx/frsky.h"
 
 #include "core/debug.h"
 #include "driver/spi_cc2500.h"
@@ -6,7 +6,7 @@
 #include "core/flash.h"
 #include "flight/control.h"
 #include "core/profile.h"
-#include "rx_spi.h"
+#include "rx/rx_spi.h"
 #include "util/util.h"
 
 #if defined(RX_FRSKY) && defined(USE_CC2500)

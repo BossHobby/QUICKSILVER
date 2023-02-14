@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rx.h"
+#include "rx/rx.h"
 
 //------------------------------------------------------------------------------
 // Bind data saved into flash memory, see rx_bind_storage_t in flash.h

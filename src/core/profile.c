@@ -5,7 +5,7 @@
 #include "driver/usb.h"
 #include "io/quic.h"
 #include "osd_render.h"
-#include "rx.h"
+#include "rx/rx.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
