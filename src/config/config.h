@@ -7,7 +7,7 @@
 
 // *************DEFINE FLIGHT CONTROLLER MOTOR OUTPUT - *****warning*****  GETTING THIS WRONG CAN SMOKE YOUR BOARD :)
 #define BRUSHLESS_TARGET
-//#define BRUSHED_TARGET
+// #define BRUSHED_TARGET
 
 //**********************************************************************************************************************
 //***********************************************NEW STUFF TO PLAY WITH*****************************************************
@@ -21,7 +21,7 @@
 
 // *************Select your preffered rate calculation format (define only one)
 #define SILVERWARE_RATES
-//#define BETAFLIGHT_RATES
+// #define BETAFLIGHT_RATES
 
 // ******************** SILVERWARE_RATES ********************
 // *************rate in deg/sec
@@ -85,36 +85,36 @@
 
 // *************Receiver protocol selection
 
-//#define RX_SBUS
-//#define RX_CRSF
-//#define RX_IBUS
-//#define RX_FPORT
-//#define RX_DSMX
-//#define RX_DSM2
-//#define RX_BAYANG_PROTOCOL_BLE_BEACON
-//#define RX_BAYANG_BLE_APP
-//#define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
-//#define RX_NRF24_BAYANG_TELEMETRY
+// #define RX_SBUS
+// #define RX_CRSF
+// #define RX_IBUS
+// #define RX_FPORT
+// #define RX_DSMX
+// #define RX_DSM2
+// #define RX_BAYANG_PROTOCOL_BLE_BEACON
+// #define RX_BAYANG_BLE_APP
+// #define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
+// #define RX_NRF24_BAYANG_TELEMETRY
 
 // *************Serial Receiver UART Selection (uncomment all for default from target or if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
-//#define RX_USART USART_PORT1
-//#define RX_USART USART_PORT2
-//#define RX_USART USART_PORT3
-//#define RX_USART USART_PORT4
-//#define RX_USART USART_PORT6
+// #define RX_USART USART_PORT1
+// #define RX_USART USART_PORT2
+// #define RX_USART USART_PORT3
+// #define RX_USART USART_PORT4
+// #define RX_USART USART_PORT6
 
 // *************Serial Receiver Inversion Selection  (Normally true for SBUS and FPORT)
-//#define INVERT_UART
+// #define INVERT_UART
 
 // *************Bayang Specific Settings
-//#define USE_DEVO
-//#define USE_MULTI
+// #define USE_DEVO
+// #define USE_MULTI
 
-//#define RADIO_XN297L
-//#define RADIO_XN297
+// #define RADIO_XN297L
+// #define RADIO_XN297
 
-//#define USE_SOFT_SPI_3WIRE
-//#define USE_SOFT_SPI_4WIRE
+// #define USE_SOFT_SPI_3WIRE
+// #define USE_SOFT_SPI_4WIRE
 
 // *************ELRS Specific Settings
 // #define EXPRESS_LRS_UID 0, 0, 0, 0, 0, 0
@@ -139,13 +139,13 @@
 #define FPV_SWITCH AUX_CHANNEL_ON
 
 // *************RRD/LLD stick gesture aux start up state.  Gesture aux is AUX_CHANNEL_GESTURE
-//#define GESTURE_AUX_START_ON
+// #define GESTURE_AUX_START_ON
 
 //**********************************************************************************************************************
 //***********************************************VOLTAGE SETTINGS*******************************************************
 
 // ************* Set your lipo cell count to override auto cell count detect logic
-//#define LIPO_CELL_COUNT 1
+// #define LIPO_CELL_COUNT 1
 
 // ************* Raises pids automatically as battery voltage drops in flight.  **CRITICAL** Ensure voltage is calibrated before use.
 #define PID_VOLTAGE_COMPENSATION
@@ -159,7 +159,7 @@
 // *************lower throttle when battery below threshold - forced landing low voltage cutoff
 // *************THIS FEATURE WILL BE OFF BY DEFAULT EVEN WHEN DEFINED - USE STICK GESTURE LEFT-LEFT-LEFT TO ACTIVATE THEN DOWN-DOWN-DOWN TO SAVE AS ON
 // *************Led light will blink once when LVC forced landing is turned on, blink twice when turned off, and will blink multiple times upon save command
-//#define LVC_LOWER_THROTTLE
+// #define LVC_LOWER_THROTTLE
 #define LVC_LOWER_THROTTLE_VOLTAGE 3.30
 #define LVC_LOWER_THROTTLE_VOLTAGE_RAW 2.70
 #define LVC_LOWER_THROTTLE_KP 3.0
@@ -182,10 +182,10 @@
 // Gyro Filters
 // GYRO FILTER PASS 1 - FILTER TYPE  - define only one or none to disable this pass
 #define GYRO_FILTER_PASS1_PT1
-//#define GYRO_FILTER_PASS1_PT2
-// GYRO FILTER PASS 2 - FILTER TYPE  - define only one or none to disable this pass
+// #define GYRO_FILTER_PASS1_PT2
+//  GYRO FILTER PASS 2 - FILTER TYPE  - define only one or none to disable this pass
 #define GYRO_FILTER_PASS2_PT1
-//#define GYRO_FILTER_PASS2_PT2
+// #define GYRO_FILTER_PASS2_PT2
 
 // GYRO FILTER PASS 1 CUTOFF FREQUENCY
 #define GYRO_FREQ_PASS1 90
@@ -209,10 +209,10 @@
 // Fixed D-Term Filters
 // D-Term FILTER PASS 1 - FILTER TYPE  - define only one or none to disable this pass
 #define DTERM_FILTER_PASS1_PT1
-//#define DTERM_FILTER_PASS1_PT2
-// D-Term FILTER PASS 2 - FILTER TYPE  - define only one or none to disable this pass
-//#define DTERM_FILTER_PASS2_PT1
-//#define DTERM_FILTER_PASS2_PT2
+// #define DTERM_FILTER_PASS1_PT2
+//  D-Term FILTER PASS 2 - FILTER TYPE  - define only one or none to disable this pass
+// #define DTERM_FILTER_PASS2_PT1
+// #define DTERM_FILTER_PASS2_PT2
 
 // D-Term FILTER PASS 1 CUTOFF FREQUENCY
 #define DTERM_FREQ_PASS1 260
@@ -234,7 +234,7 @@
 #define INVERT_YAW_PID
 
 // *************throttle boost - can intensify small throttle imbalances visible in FPV if factor is set too high on brushed or actually rob performance on brushless due to thrust imbalances
-//#define THROTTLE_BOOST 7.0
+// #define THROTTLE_BOOST 7.0
 
 // *************torque boost is a highly eperimental feature and can smoke brushless motors fast.  it is a lpf D term on motor outputs that will accelerate the response
 // *************of the motors when the command to the motors is changing by increasing or decreasing the voltage thats sent.  It differs
@@ -242,7 +242,7 @@
 // *************is very noise sensative so D term specifically has to be lowered and gyro/d filtering may need to be increased.
 // *************reccomendation right now is to leave boost at or below 2, drop your p gains a few points, then cut your D in half and
 // *************retune it back up to where it feels good.  I'm finding about 60 to 65% of my previous D value seems to work.
-//#define TORQUE_BOOST 1.0
+// #define TORQUE_BOOST 1.0
 
 // *************pwm frequency for motor control
 // *************a higher frequency makes the motors more linear
@@ -250,16 +250,16 @@
 #define PWMFREQ 32000
 
 // *************throttle angle compensation in level mode
-//#define AUTO_THROTTLE
+// #define AUTO_THROTTLE
 
 // *************BRUSHED TARGET MIXER SETTINGS
 // *************MIX_THROTTLE_REDUCTION_PERCENT reduces thrust imbalances by reducing throttle proportionally to the adjustable reduction percent to the limit set by MIX_THROTTLE_REDUCTION_MAX
 // *************MIX_THROTTLE_INCREASE_MAX increases the authority of the pid controller at lowest throttle values like airmode when combined with idle up
 // *************BRUSHLESS_MIX_SCALING define disables the default brushed mixer and applies the default brushless mixer
-//#define MIX_THROTTLE_REDUCTION_PERCENT 10
-//#define MIX_THROTTLE_INCREASE_MAX 0.2f
-//#define MIX_THROTTLE_REDUCTION_MAX 0.5f
-//#define BRUSHLESS_MIX_SCALING
+// #define MIX_THROTTLE_REDUCTION_PERCENT 10
+// #define MIX_THROTTLE_INCREASE_MAX 0.2f
+// #define MIX_THROTTLE_REDUCTION_MAX 0.5f
+// #define BRUSHLESS_MIX_SCALING
 
 // *************BRUSHLESS TARGET MIXER SETTINGS
 // *************AIRMODE_STRENGTH is the amount of authority AIRMODE is given over throttle
@@ -292,7 +292,7 @@
 
 // *************lost quad beeps using motors (30 sec timeout in ms) - pulses motors after timeout period to help find a lost model
 #define MOTOR_BEEPS
-//#define MOTOR_BEEPS_TIMEOUT 30e3
+// #define MOTOR_BEEPS_TIMEOUT 30e3
 
 // *************led brightness in-flight ( solid lights only)
 // *************0- 15 range
@@ -305,29 +305,29 @@
 // *************Feel free to change 1.0 value to your liking
 #define PID_TUNING_ADJUST_AMOUNT 1.0 // fixed inc/dec values for PID tuning
 
-//#############################################################################################################################
-//#############################################################################################################################
-// debug / other things
-// this should not be usually changed or still need work
-//#############################################################################################################################
-//#############################################################################################################################
+// #############################################################################################################################
+// #############################################################################################################################
+//  debug / other things
+//  this should not be usually changed or still need work
+// #############################################################################################################################
+// #############################################################################################################################
 
 // The airbot made ab7456 osd chip will not support blink commands
-//#define AIRBOT_OSD_PATCH
+// #define AIRBOT_OSD_PATCH
 
 // failsafe time in uS
 #define FAILSAFETIME 1000000 // one second
 
 // debug things ( debug struct and other)
-//#define DEBUG
-//#define DEBUG_LOGGING
-//#define RESET_ON_FAULT
+// #define DEBUG
+// #define DEBUG_LOGGING
+// #define RESET_ON_FAULT
 
 // allow transmitter aux to arm motors while connected to usb gui
-//#define ALLOW_USB_ARMING
+// #define ALLOW_USB_ARMING
 
 // disable motors for testing
-//#define NOMOTORS
+// #define NOMOTORS
 
 // change mixer to a plus configuration
-//#define MOTOR_PLUS_CONFIGURATION
+// #define MOTOR_PLUS_CONFIGURATION
