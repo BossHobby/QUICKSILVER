@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "core/looptime.h"
 #include "driver/spi_m25p16.h"
 #include "driver/spi_sdcard.h"
 #include "driver/time.h"
@@ -367,7 +368,7 @@ void data_flash_reset() {
 
   state = STATE_ERASE_HEADER;
 
-  reset_looptime();
+  looptime_reset();
 }
 
 bool data_flash_restart(uint32_t blackbox_rate, uint32_t looptime) {

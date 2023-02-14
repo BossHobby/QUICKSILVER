@@ -4,12 +4,6 @@
 #include "hardware.h"
 
 // defines for things that do not normally need changing
-typedef enum {
-  LOOPTIME_2K = 500,
-  LOOPTIME_4K = 250,
-  LOOPTIME_8K = 125,
-} looptime_autodetect_t;
-
 #define PID_SIZE 3
 #define ANGLE_PID_SIZE 2
 

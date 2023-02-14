@@ -1,11 +1,12 @@
 #include "rx/frsky.h"
 
 #include "core/debug.h"
+#include "core/flash.h"
+#include "core/looptime.h"
+#include "core/profile.h"
 #include "driver/spi_cc2500.h"
 #include "driver/time.h"
-#include "core/flash.h"
 #include "flight/control.h"
-#include "core/profile.h"
 #include "util/util.h"
 
 #if defined(RX_FRSKY) && defined(USE_CC2500)
@@ -179,7 +180,7 @@ static uint8_t redpine_handle_packet() {
       flags.failsafe = 1;
       protocol_state = FRSKY_STATE_INIT;
       rx_redpine_init();
-      reset_looptime();
+      looptime_reset();
     }
     break;
   }

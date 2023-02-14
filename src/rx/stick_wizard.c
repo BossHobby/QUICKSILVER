@@ -1,6 +1,7 @@
 #include "rx/stick_wizard.h"
 
 #include "core/flash.h"
+#include "core/looptime.h"
 #include "core/profile.h"
 #include "driver/time.h"
 #include "flight/control.h"
@@ -143,7 +144,7 @@ static void rx_stick_calibration_wizard() {
 
     flash_save();
     flash_load();
-    reset_looptime();
+    looptime_reset();
 
     flags.gestures_disabled = 0;
     state.stick_calibration_wizard = STICK_WIZARD_SUCCESS;

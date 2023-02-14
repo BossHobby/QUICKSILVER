@@ -5,14 +5,15 @@
 #include <string.h>
 
 #include "core/debug.h"
+#include "core/looptime.h"
+#include "core/profile.h"
+#include "core/reset.h"
 #include "driver/serial.h"
 #include "driver/usb.h"
 #include "flight/control.h"
 #include "io/msp.h"
 #include "io/quic.h"
-#include "core/profile.h"
 #include "project.h"
-#include "core/reset.h"
 #include "util/crc.h"
 #include "util/ring_buffer.h"
 #include "util/util.h"
@@ -177,6 +178,6 @@ void usb_configurator() {
   }
 
   // this will block and handle all usb traffic while active
-  reset_looptime();
+  looptime_reset();
 }
 #pragma GCC diagnostic pop

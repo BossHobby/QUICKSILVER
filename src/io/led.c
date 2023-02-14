@@ -136,7 +136,7 @@ uint8_t led_pwm(uint8_t pwmval) {
   float desiredbrightness = pwmval * (1.0f / 15.0f);
   limitf(&ds_integrator, 2);
 
-  ds_integrator += (desiredbrightness - lastledbrightness) * ledtime * (1.0f / LOOPTIME);
+  ds_integrator += (desiredbrightness - lastledbrightness) * ledtime * (1.0f / state.looptime_autodetect);
 
   if (ds_integrator > 0.49f) {
     led_on(LEDALL);

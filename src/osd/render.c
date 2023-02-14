@@ -1,20 +1,22 @@
 #include "osd/render.h"
 
+#include <float.h>
+#include <stdio.h>
+#include <string.h>
+
 #include "core/debug.h"
+#include "core/flash.h"
+#include "core/looptime.h"
+#include "core/profile.h"
 #include "driver/osd.h"
 #include "driver/time.h"
-#include "core/flash.h"
 #include "flight/control.h"
 #include "flight/filter.h"
-#include "float.h"
 #include "io/data_flash.h"
 #include "io/vtx.h"
 #include "osd/menu.h"
-#include "core/profile.h"
 #include "project.h"
 #include "rx/rx.h"
-#include "stdio.h"
-#include "string.h"
 #include "util/util.h"
 
 typedef enum {
@@ -280,7 +282,7 @@ void osd_save_exit() {
       number_of_increments[i][j] = 0;
 
   // reset loop time - maybe not necessary cause it gets reset in the next screen clear
-  reset_looptime();
+  looptime_reset();
 
   if (osd_state.reboot_fc_requested)
     NVIC_SystemReset();

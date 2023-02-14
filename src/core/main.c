@@ -6,6 +6,7 @@
 #include "core/debug.h"
 #include "core/failloop.h"
 #include "core/flash.h"
+#include "core/looptime.h"
 #include "core/profile.h"
 #include "core/reset.h"
 #include "driver/adc.h"
@@ -35,10 +36,6 @@
 #include "project.h"
 #include "rx/rx.h"
 #include "util/util.h"
-
-uint32_t lastlooptime;
-uint8_t looptime_warning;
-uint8_t blown_loop_counter;
 
 __attribute__((__used__)) void memory_section_init() {
 #ifdef USE_FAST_RAM
@@ -76,54 +73,8 @@ __attribute__((__used__)) void memory_section_init() {
 #endif
 }
 
-void looptime_update() {
-  // looptime_autodetect sequence
-  static uint8_t loop_delay = 0;
-  if (loop_delay < 200) {
-    loop_delay++;
-  }
-
-  static float loop_avg = 0;
-  static uint8_t loop_counter = 0;
-
-  if (loop_delay >= 200 && loop_counter < 200) {
-    loop_avg += state.looptime_us;
-    loop_counter++;
-  }
-
-  if (loop_counter == 200) {
-    loop_avg /= 200;
-
-    if (loop_avg < 130.f) {
-      state.looptime_autodetect = LOOPTIME_8K;
-    } else if (loop_avg < 255.f) {
-      state.looptime_autodetect = LOOPTIME_4K;
-    } else {
-      state.looptime_autodetect = LOOPTIME_2K;
-    }
-
-    loop_counter++;
-  }
-
-  if (loop_counter == 201) {
-    if (state.cpu_load > state.looptime_autodetect + 5) {
-      blown_loop_counter++;
-    }
-
-    if (blown_loop_counter > 100) {
-      blown_loop_counter = 0;
-      loop_counter = 0;
-      loop_avg = 0;
-      looptime_warning++;
-    }
-  }
-}
-
 __attribute__((__used__)) int main() {
-  // init some initial values
-  // attempt 8k looptime for f405 or 4k looptime for f411
-  state.looptime = LOOPTIME * 1e-6;
-  state.looptime_autodetect = LOOPTIME;
+  looptime_init();
 
   // init timer so we can use delays etc
   time_init();
@@ -196,32 +147,14 @@ __attribute__((__used__)) int main() {
   osd_clear();
   perf_counter_init();
 
-  lastlooptime = time_micros();
+  looptime_reset();
 
   while (1) {
     perf_counter_start(PERF_COUNTER_TOTAL);
 
-    uint32_t time = time_micros();
-    state.looptime_us = ((uint32_t)(time - lastlooptime));
-    lastlooptime = time;
-
-    if (state.looptime_us <= 0) {
-      state.looptime_us = 1;
-    }
-
-    // max loop 20ms
-    if (state.looptime_us > 20000) {
-      failloop(FAILLOOP_LOOPTIME);
-    }
-
-    looptime_update();
-
-    state.looptime = state.looptime_us * 1e-6f;
-
-    state.uptime += state.looptime;
-    if (flags.arm_state) {
-      state.armtime += state.looptime;
-    }
+    // updates looptime counters & runs auto detect
+    const uint32_t time = time_micros();
+    looptime_update(time);
 
     // read gyro and accelerometer data
     perf_counter_start(PERF_COUNTER_GYRO);
@@ -281,7 +214,7 @@ __attribute__((__used__)) int main() {
       perf_counter_end(PERF_COUNTER_OSD);
     }
 
-    state.cpu_load = (time_micros() - lastlooptime);
+    state.cpu_load = (time_micros() - time);
 
     perf_counter_end(PERF_COUNTER_TOTAL);
     perf_counter_update();
