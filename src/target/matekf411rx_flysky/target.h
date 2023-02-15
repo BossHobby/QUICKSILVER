@@ -17,7 +17,7 @@
 #define LED2PIN PIN_B9 // RX LED
 
 #define BUZZER_PIN PIN_C15
-#define BUZZER_INVERT
+//#define BUZZER_INVERT
 
 // #define FPV_PIN LL_GPIO_PIN_13
 // #define FPV_PORT GPIOA
