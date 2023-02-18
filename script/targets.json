@@ -386,6 +386,17 @@
     ]
   },
   {
+    "name": "mambaf405us_i2c",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
+  },
+  {
     "name": "tmotorf7",
     "configurations": [
       {
