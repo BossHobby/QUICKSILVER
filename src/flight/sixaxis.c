@@ -143,26 +143,30 @@ void sixaxis_read() {
   state.gyro.yaw = state.gyro_raw.yaw = -state.gyro_raw.yaw * GYRO_RANGE * DEGTORAD;
 
   for (uint32_t i = 0; i < 3; i++) {
-    static uint8_t axis_needs_update = 0;
-    if (sdft_push(&gyro_sdft[i], state.gyro.axis[i]) && axis_needs_update == 0) {
-      axis_needs_update = 3;
-    }
-
-    if ((axis_needs_update - 1) == i && sdft_update(&gyro_sdft[i])) {
-      for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
-        filter_biquad_notch_coeff(&notch_filter[i][p], gyro_sdft[i].notch_hz[p]);
+    if (profile.filter.gyro_dynamic_notch_enable) {
+      static uint8_t axis_needs_update = 0;
+      if (sdft_push(&gyro_sdft[i], state.gyro.axis[i]) && axis_needs_update == 0) {
+        axis_needs_update = 3;
       }
-      axis_needs_update--;
+
+      if ((axis_needs_update - 1) == i && sdft_update(&gyro_sdft[i])) {
+        for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
+          filter_biquad_notch_coeff(&notch_filter[i][p], gyro_sdft[i].notch_hz[p]);
+        }
+        axis_needs_update--;
+      }
     }
 
     state.gyro.axis[i] = filter_step(profile.filter.gyro[0].type, &filter[0], &filter_state[0][i], state.gyro.axis[i]);
     state.gyro.axis[i] = filter_step(profile.filter.gyro[1].type, &filter[1], &filter_state[1][i], state.gyro.axis[i]);
 
-    for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
-      if (p == 1) {
-        blackbox_set_debug(i, gyro_sdft[i].notch_hz[p]);
+    if (profile.filter.gyro_dynamic_notch_enable) {
+      for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
+        if (p == 1) {
+          blackbox_set_debug(i, gyro_sdft[i].notch_hz[p]);
+        }
+        state.gyro.axis[i] = filter_biquad_notch_step(&notch_filter[i][p], &notch_filter_state[i][p], state.gyro.axis[i]);
       }
-      state.gyro.axis[i] = filter_biquad_notch_step(&notch_filter[i][p], &notch_filter_state[i][p], state.gyro.axis[i]);
     }
   }
 
