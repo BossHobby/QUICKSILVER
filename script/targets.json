@@ -791,5 +791,16 @@
         }
       }
     ]
+  },
+  {
+    "name": "flywoof411_5in1_aio",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
   }
 ]
