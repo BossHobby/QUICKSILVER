@@ -14,6 +14,8 @@
 extern spi_bus_device_t gyro_bus;
 extern const uint8_t bmi270_config_file[8192];
 
+static int8_t gyro_cas = 0;
+
 static void bmi270_init() {
   // put the device in spi mode by toggeling CS
   gpio_pin_reset(GYRO_NSS);
@@ -59,6 +61,45 @@ void bmi270_configure() {
   bmi270_write(BMI270_REG_INIT_CTRL, 0x1);
   time_delay_ms(1);
 
+  bmi270_write(BMI270_REG_PWR_CONF, 0x0);
+  time_delay_ms(10);
+
+  bmi270_write(BMI270_REG_OFFSET_6, 0x80);
+  time_delay_ms(10);
+
+  bmi270_write(BMI270_REG_PWR_CTRL, 0x04);
+  time_delay_ms(10);
+
+  bmi270_write(BMI270_REG_GYR_CRT_CONF, 0x04);
+  time_delay_ms(10);
+
+  bmi270_write(BMI270_REG_FEAT_PAGE, 0x01);
+  time_delay_ms(10);
+
+  bmi270_write16(BMI270_REG_FEATURES_1_G_TRIG_1, 0x0100);
+  time_delay_ms(10);
+
+  bmi270_write(BMI270_REG_CMD, 0x02);
+  time_delay_ms(5000);
+
+  uint8_t bmiCheck = bmi270_read(BMI270_REG_GYR_CRT_CONF);
+  uint8_t bmiCount = 0;
+  time_delay_ms(1000);
+
+  while ((bmiCheck!=0x00) && (bmiCount++ < 5)) {
+    bmiCheck = bmi270_read(BMI270_REG_GYR_CRT_CONF);
+    time_delay_ms(1000);
+    if (bmiCheck == 0x00) {
+        break;
+    }
+  }
+
+  bmi270_write(BMI270_REG_FEAT_PAGE, 0x00);
+  time_delay_ms(1);
+
+  uint8_t bmiStatus = bmi270_read(BMI270_REG_FEATURES_0_GYR_GAIN_STATUS+1);
+  time_delay_ms(1);
+
   bmi270_write(BMI270_REG_ACC_CONF, (BMI270_ACC_CONF_HP << 7) | (BMI270_ACC_CONF_BWP << 4) | BMI270_ACC_CONF_ODR800);
   time_delay_ms(1);
 
@@ -97,6 +138,10 @@ void bmi270_configure() {
   // switch to feature page 0
   bmi270_write(BMI270_REG_FEAT_PAGE, 0);
   time_delay_ms(1);
+
+  gyro_cas = bmi270_read(BMI270_REG_FEATURES_0_GYR_CAS);
+
+  gyro_cas = bmi270_compute_gyro_cas(casFactor);
 }
 
 uint8_t bmi270_read(uint8_t reg) {
@@ -174,13 +219,6 @@ void bmi270_read_gyro_data(gyro_data_t *data) {
   };
   spi_seg_submit(&gyro_bus, NULL, gyro_segs);
 
-  const spi_txn_segment_t cas_segs[] = {
-      spi_make_seg_const(BMI270_REG_FEATURES_0_GYR_CAS | 0x80),
-      spi_make_seg_const(0xFF),
-      spi_make_seg_buffer(buf + 12, NULL, 2),
-  };
-  spi_seg_submit(&gyro_bus, NULL, cas_segs);
-
   spi_txn_wait(&gyro_bus);
 
   data->accel.axis[0] = -(int16_t)((buf[1] << 8) | buf[0]);
@@ -193,7 +231,6 @@ void bmi270_read_gyro_data(gyro_data_t *data) {
       (int16_t)((buf[11] << 8) | buf[10]),
   };
 
-  const int8_t gyro_cas = bmi270_compute_gyro_cas(buf[12]);
   const int32_t tempx = gyro_data[0] - (int16_t)(gyro_cas * (int16_t)(gyro_data[2]) / 512);
   if (tempx > 32767) {
     gyro_data[0] = 32767;
