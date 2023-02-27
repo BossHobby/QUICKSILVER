@@ -88,21 +88,21 @@ void bmi270_configure() {
   time_delay_ms(10);
 
   bmi270_write(BMI270_REG_CMD, 0x02);
-  time_delay_ms(5000);
 
-  for (uint8_t i = 0; i < 5; i++) {
-    const uint8_t crt_check = bmi270_read(BMI270_REG_GYR_CRT_CONF);
+  for (uint8_t i = 0; i < 10; i++) {
     time_delay_ms(1000);
+    const uint8_t crt_check = bmi270_read(BMI270_REG_GYR_CRT_CONF);
     if (crt_check == 0x00) {
       break;
     }
   }
+  time_delay_ms(10);
 
   bmi270_write(BMI270_REG_FEAT_PAGE, 0x00);
   time_delay_ms(1);
 
-  const uint8_t gain_status = bmi270_read(BMI270_REG_FEATURES_0_GYR_GAIN_STATUS + 1);
-  if (gain_status == 0x00) {
+  const uint16_t gain_status = bmi270_read16(BMI270_REG_FEATURES_0_GYR_GAIN_STATUS);
+  if (gain_status == 0x0000) {
     time_delay_ms(10);
   } else {
     time_delay_ms(1);
@@ -162,6 +162,19 @@ uint8_t bmi270_read(uint8_t reg) {
   spi_seg_submit_wait(&gyro_bus, segs);
 
   return buffer[2];
+}
+
+uint16_t bmi270_read16(uint8_t reg) {
+  spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_SLOW);
+
+  uint8_t buffer[4] = {reg | 0x80, 0x0, 0x0, 0x0};
+
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_buffer(buffer, buffer, 4),
+  };
+  spi_seg_submit_wait(&gyro_bus, segs);
+
+  return ((buffer[3] << 8) | buffer[2]);
 }
 
 void bmi270_write(uint8_t reg, uint8_t data) {
