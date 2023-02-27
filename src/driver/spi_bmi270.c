@@ -98,6 +98,7 @@ void bmi270_configure() {
   time_delay_ms(1);
 
   uint8_t bmiStatus = bmi270_read(BMI270_REG_FEATURES_0_GYR_GAIN_STATUS+1);
+  UNUSED(bmiStatus);
   time_delay_ms(1);
 
   bmi270_write(BMI270_REG_ACC_CONF, (BMI270_ACC_CONF_HP << 7) | (BMI270_ACC_CONF_BWP << 4) | BMI270_ACC_CONF_ODR800);
@@ -141,7 +142,7 @@ void bmi270_configure() {
 
   gyro_cas = bmi270_read(BMI270_REG_FEATURES_0_GYR_CAS);
 
-  gyro_cas = bmi270_compute_gyro_cas(casFactor);
+  gyro_cas = bmi270_compute_gyro_cas(gyro_cas);
 }
 
 uint8_t bmi270_read(uint8_t reg) {
