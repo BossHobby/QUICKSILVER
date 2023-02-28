@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "core/debug.h"
 #include "core/flash.h"
@@ -18,6 +19,7 @@
 #include "util/util.h"
 
 #define CAL_TIME 2e6
+#define WAIT_TIME 15e6
 #define GLOW_TIME 62500
 
 #define GYRO_BIAS_LIMIT 800
@@ -148,62 +150,80 @@ void sixaxis_read() {
   }
 }
 
+static void sixaxis_wait_for_still() {
+  const uint32_t start = time_micros();
+
+  // turn on led
+  uint8_t move_counter = 15;
+
+  gyro_data_t last_data;
+  memset(&last_data, 0, sizeof(gyro_data_t));
+
+  uint32_t now = start;
+  while (now - start < WAIT_TIME && move_counter > 0) {
+    const gyro_data_t data = gyro_spi_read();
+
+    bool did_move = false;
+    for (uint8_t i = 0; i < 3; i++) {
+      const float delta = fabsf(fabsf(last_data.gyro.axis[i] * GYRO_RANGE) - fabsf(data.gyro.axis[i] * GYRO_RANGE));
+      if (delta > 0.3f) {
+        did_move = true;
+        break;
+      }
+    }
+
+    if (did_move) {
+      move_counter = 15;
+    } else {
+      move_counter--;
+    }
+
+    led_pwm(move_counter, 1000);
+
+    while ((time_micros() - now) < 1000)
+      ;
+
+    now = time_micros();
+    last_data = data;
+  }
+}
+
 void sixaxis_gyro_cal() {
   float limit[3];
-  uint32_t time = time_micros();
-  uint32_t timestart = time;
-  uint32_t timemax = time;
-  uint32_t lastlooptime = time;
-
   for (int i = 0; i < 3; i++) {
     limit[i] = gyrocal[i];
   }
 
-  // 2 and 15 seconds
-  while (time - timestart < CAL_TIME && time - timemax < 15e6) {
+  sixaxis_wait_for_still();
 
-    uint32_t looptime;
-    looptime = time - lastlooptime;
-    lastlooptime = time;
-    if (looptime == 0)
-      looptime = 1;
+  uint8_t brightness = 0;
+  led_pwm(brightness, 1000);
 
+  uint32_t start = time_micros();
+  uint32_t now = start;
+  while (now - start < CAL_TIME) {
     const gyro_data_t data = gyro_spi_read();
 
-    static int brightness = 0;
     led_pwm(brightness, 1000);
-    if ((brightness & 1) ^ ((time - timestart) % GLOW_TIME > (GLOW_TIME >> 1))) {
+    if ((brightness & 1) ^ ((now - start) % GLOW_TIME > (GLOW_TIME >> 1))) {
       brightness++;
+      brightness &= 0xF;
     }
 
-    brightness &= 0xF;
-
-    for (int i = 0; i < 3; i++) {
-
+    for (uint8_t i = 0; i < 3; i++) {
       if (data.gyro.axis[i] > limit[i])
         limit[i] += 0.1f; // 100 gyro bias / second change
       if (data.gyro.axis[i] < limit[i])
         limit[i] -= 0.1f;
 
       limitf(&limit[i], GYRO_BIAS_LIMIT);
-
-      if (fabsf(data.gyro.axis[i]) > 100 + fabsf(limit[i])) {
-        timestart = time_micros();
-        brightness = 1;
-      } else {
-        lpf(&gyrocal[i], data.gyro.axis[i], lpfcalc((float)looptime, 0.5 * 1e6));
-      }
+      lpf(&gyrocal[i], data.gyro.axis[i], lpfcalc(1000, 0.5 * 1e6));
     }
 
-    while ((time_micros() - time) < 1000)
-      time_delay_us(10);
-    time = time_micros();
-  }
+    while ((time_micros() - now) < 1000)
+      ;
 
-  if (time - timestart < CAL_TIME) {
-    for (int i = 0; i < 3; i++) {
-      gyrocal[i] = 0;
-    }
+    now = time_micros();
   }
 }
 
