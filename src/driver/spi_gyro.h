@@ -30,3 +30,4 @@ extern gyro_types_t gyro_type;
 
 uint8_t gyro_spi_init();
 gyro_data_t gyro_spi_read();
+void gyro_spi_calibrate();

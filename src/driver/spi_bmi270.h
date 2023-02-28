@@ -89,6 +89,7 @@
 
 uint8_t bmi270_detect();
 void bmi270_configure();
+void bmi270_calibrate();
 
 void bmi270_write(uint8_t reg, uint8_t data, uint32_t delay);
 void bmi270_write16(uint8_t reg, uint16_t data, uint32_t delay);
