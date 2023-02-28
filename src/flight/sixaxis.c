@@ -195,6 +195,7 @@ void sixaxis_gyro_cal() {
   }
 
   sixaxis_wait_for_still();
+  gyro_spi_calibrate();
 
   uint8_t brightness = 0;
   led_pwm(brightness, 1000);

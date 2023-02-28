@@ -37,6 +37,28 @@ uint8_t bmi270_detect() {
   }
 }
 
+static void bmi270_init() {
+  bmi270_reset_to_spi();
+  bmi270_write(BMI270_REG_CMD, BMI270_CMD_SOFTRESET, 100);
+  bmi270_reset_to_spi();
+
+  bmi270_write(BMI270_REG_PWR_CONF, 0x0, 1);
+  bmi270_write(BMI270_REG_INIT_CTRL, 0x0, 1);
+  bmi270_write_data(BMI270_REG_INIT_DATA, (uint8_t *)bmi270_config_file, sizeof(bmi270_config_file), 10);
+  bmi270_write(BMI270_REG_INIT_CTRL, 0x1, 1);
+}
+
+static void bmi270_init_config() {
+  bmi270_write(BMI270_REG_ACC_CONF, (BMI270_ACC_CONF_HP << 7) | (BMI270_ACC_CONF_BWP << 4) | BMI270_ACC_CONF_ODR800, 1);
+  bmi270_write(BMI270_REG_ACC_RANGE, BMI270_ACC_RANGE_16G, 1);
+  bmi270_write(BMI270_REG_GYRO_CONF, (BMI270_GYRO_CONF_FILTER_PERF << 7) | (BMI270_GYRO_CONF_NOISE_PERF << 6) | (BMI270_GYRO_CONF_BWP << 4) | BMI270_GYRO_CONF_ODR3200, 1);
+  bmi270_write(BMI270_REG_GYRO_RANGE, BMI270_GYRO_RANGE_2000DPS, 1);
+  bmi270_write(BMI270_REG_INT_MAP_DATA, BMI270_INT_MAP_DATA_DRDY_INT1, 1);
+  bmi270_write(BMI270_REG_INT1_IO_CTRL, BMI270_INT1_IO_CTRL_PINMODE, 1);
+  bmi270_write(BMI270_REG_PWR_CONF, BMI270_PWR_CONF, 1);
+  bmi270_write(BMI270_REG_PWR_CTRL, BMI270_PWR_CTRL, 1);
+}
+
 static int8_t bmi270_compute_gyro_cas(uint8_t raw) {
   const uint8_t masked = raw & BMI270_GYRO_CAS_MASK;
   if ((masked & BMI270_GYRO_CAS_SIGN_BIT_MASK) == 0) {
@@ -86,27 +108,16 @@ static void bmi270_enable_crt() {
 }
 
 void bmi270_configure() {
-  bmi270_reset_to_spi();
+  bmi270_init();
+  // skip CRT for now
+  bmi270_init_config();
+  bmi270_enable_cas();
+}
 
-  bmi270_write(BMI270_REG_CMD, BMI270_CMD_SOFTRESET, 100);
-  bmi270_reset_to_spi();
-
-  bmi270_write(BMI270_REG_PWR_CONF, 0x0, 1);
-  bmi270_write(BMI270_REG_INIT_CTRL, 0x0, 1);
-  bmi270_write_data(BMI270_REG_INIT_DATA, (uint8_t *)bmi270_config_file, sizeof(bmi270_config_file), 10);
-  bmi270_write(BMI270_REG_INIT_CTRL, 0x1, 1);
-
+void bmi270_calibrate() {
+  bmi270_init();
   bmi270_enable_crt();
-
-  bmi270_write(BMI270_REG_ACC_CONF, (BMI270_ACC_CONF_HP << 7) | (BMI270_ACC_CONF_BWP << 4) | BMI270_ACC_CONF_ODR800, 1);
-  bmi270_write(BMI270_REG_ACC_RANGE, BMI270_ACC_RANGE_16G, 1);
-  bmi270_write(BMI270_REG_GYRO_CONF, (BMI270_GYRO_CONF_FILTER_PERF << 7) | (BMI270_GYRO_CONF_NOISE_PERF << 6) | (BMI270_GYRO_CONF_BWP << 4) | BMI270_GYRO_CONF_ODR3200, 1);
-  bmi270_write(BMI270_REG_GYRO_RANGE, BMI270_GYRO_RANGE_2000DPS, 1);
-  bmi270_write(BMI270_REG_INT_MAP_DATA, BMI270_INT_MAP_DATA_DRDY_INT1, 1);
-  bmi270_write(BMI270_REG_INT1_IO_CTRL, BMI270_INT1_IO_CTRL_PINMODE, 1);
-  bmi270_write(BMI270_REG_PWR_CONF, BMI270_PWR_CONF, 1);
-  bmi270_write(BMI270_REG_PWR_CTRL, BMI270_PWR_CTRL, 1);
-
+  bmi270_init_config();
   bmi270_enable_cas();
 }
 

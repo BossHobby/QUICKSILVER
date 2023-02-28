@@ -154,3 +154,15 @@ gyro_data_t gyro_spi_read() {
 
   return data;
 }
+
+void gyro_spi_calibrate() {
+  switch (gyro_type) {
+  case GYRO_TYPE_BMI270: {
+    bmi270_calibrate();
+    break;
+  }
+
+  default:
+    break;
+  }
+}
