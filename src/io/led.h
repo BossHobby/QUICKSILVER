@@ -11,4 +11,4 @@ void led_flash(uint32_t period, int duty);
 
 void led_update();
 
-uint8_t led_pwm(uint8_t pwmval);
+void led_pwm(uint8_t pwmval, float looptime);

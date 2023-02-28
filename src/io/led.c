@@ -123,29 +123,27 @@ void led_flash(uint32_t period, int duty) {
 }
 
 // delta- sigma first order modulator.
-uint8_t led_pwm(uint8_t pwmval) {
-  static float lastledbrightness = 0;
-  static uint32_t lastledtime = 0;
+void led_pwm(uint8_t pwmval, float looptime) {
+  static uint32_t last_time = 0;
+  const uint32_t time = time_micros();
+  const uint32_t ledtime = time - last_time;
+  last_time = time;
+
   static float ds_integrator = 0;
-
-  uint32_t time = time_micros();
-  uint32_t ledtime = time - lastledtime;
-
-  lastledtime = time;
-
-  float desiredbrightness = pwmval * (1.0f / 15.0f);
   limitf(&ds_integrator, 2);
 
-  ds_integrator += (desiredbrightness - lastledbrightness) * ledtime * (1.0f / state.looptime_autodetect);
+  static float last_brightness = 0;
+
+  const float desired_brightness = pwmval * (1.0f / 15.0f);
+  ds_integrator += (desired_brightness - last_brightness) * ledtime * (1.0f / looptime);
 
   if (ds_integrator > 0.49f) {
     led_on(LEDALL);
-    lastledbrightness = 1.0f;
+    last_brightness = 1.0f;
   } else {
     led_off(LEDALL);
-    lastledbrightness = 0;
+    last_brightness = 0;
   }
-  return 0;
 }
 
 void led_update() {
@@ -195,7 +193,7 @@ void led_update() {
     }
   } else { // led is normally on
     if (LED_BRIGHTNESS != 15)
-      led_pwm(LED_BRIGHTNESS);
+      led_pwm(LED_BRIGHTNESS, state.looptime_autodetect);
     else
       led_on(LEDALL);
   }

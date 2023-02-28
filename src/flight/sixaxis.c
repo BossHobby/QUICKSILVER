@@ -171,7 +171,7 @@ void sixaxis_gyro_cal() {
     const gyro_data_t data = gyro_spi_read();
 
     static int brightness = 0;
-    led_pwm(brightness);
+    led_pwm(brightness, 1000);
     if ((brightness & 1) ^ ((time - timestart) % GLOW_TIME > (GLOW_TIME >> 1))) {
       brightness++;
     }
