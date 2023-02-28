@@ -90,9 +90,9 @@
 uint8_t bmi270_detect();
 void bmi270_configure();
 
-void bmi270_write(uint8_t reg, uint8_t data);
-void bmi270_write16(uint8_t reg, uint16_t data);
-void bmi270_write_data(uint8_t reg, uint8_t *data, uint32_t size);
+void bmi270_write(uint8_t reg, uint8_t data, uint32_t delay);
+void bmi270_write16(uint8_t reg, uint16_t data, uint32_t delay);
+void bmi270_write_data(uint8_t reg, uint8_t *data, uint32_t size, uint32_t delay);
 
 uint8_t bmi270_read(uint8_t reg);
 uint16_t bmi270_read16(uint8_t reg);
