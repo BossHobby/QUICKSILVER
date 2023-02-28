@@ -16,7 +16,7 @@ extern const uint8_t bmi270_config_file[8192];
 
 static int8_t gyro_cas = 0;
 
-static void bmi270_init() {
+static void bmi270_reset_to_spi() {
   // put the device in spi mode by toggeling CS
   gpio_pin_reset(GYRO_NSS);
   time_delay_ms(1);
@@ -25,7 +25,7 @@ static void bmi270_init() {
 }
 
 uint8_t bmi270_detect() {
-  bmi270_init();
+  bmi270_reset_to_spi();
 
   const uint8_t id = bmi270_read(BMI270_REG_CHIP_ID);
   switch (id) {
@@ -45,49 +45,27 @@ static int8_t bmi270_compute_gyro_cas(uint8_t raw) {
   return (int8_t)(masked - 128);
 }
 
-void bmi270_configure() {
-  bmi270_init();
+static void bmi270_enable_cas() {
+  bmi270_write(BMI270_REG_FEAT_PAGE, 1, 1);
+  bmi270_write16(BMI270_REG_FEATURES_1_GEN_SET_1, BMI270_CONF_FEATURES_1_GEN_SET_1, 1);
 
-  bmi270_write(BMI270_REG_CMD, BMI270_CMD_SOFTRESET);
-  time_delay_ms(100);
+  const uint8_t offset = bmi270_read(BMI270_REG_OFFSET_6);
+  bmi270_write(BMI270_REG_OFFSET_6, offset | BMI270_GYRO_CONF_OFFSET_6, 1);
 
-  // put the device in spi mode by toggeling CS
-  gpio_pin_reset(GYRO_NSS);
-  time_delay_ms(1);
-  gpio_pin_set(GYRO_NSS);
-  time_delay_ms(10);
+  bmi270_write(BMI270_REG_FEAT_PAGE, 0, 1);
 
-  bmi270_write(BMI270_REG_PWR_CONF, 0x0);
-  time_delay_ms(1);
+  const uint8_t cas_factor = bmi270_read(BMI270_REG_FEATURES_0_GYR_CAS);
+  gyro_cas = bmi270_compute_gyro_cas(cas_factor);
+}
 
-  bmi270_write(BMI270_REG_INIT_CTRL, 0x0);
-  time_delay_ms(1);
-
-  bmi270_write_data(BMI270_REG_INIT_DATA, (uint8_t *)bmi270_config_file, sizeof(bmi270_config_file));
-  time_delay_ms(10);
-
-  bmi270_write(BMI270_REG_INIT_CTRL, 0x1);
-  time_delay_ms(1);
-
-  bmi270_write(BMI270_REG_PWR_CONF, 0x0);
-  time_delay_ms(10);
-
-  bmi270_write(BMI270_REG_OFFSET_6, 0x80);
-  time_delay_ms(10);
-
-  bmi270_write(BMI270_REG_PWR_CTRL, 0x04);
-  time_delay_ms(10);
-
-  bmi270_write(BMI270_REG_GYR_CRT_CONF, 0x04);
-  time_delay_ms(10);
-
-  bmi270_write(BMI270_REG_FEAT_PAGE, 0x01);
-  time_delay_ms(10);
-
-  bmi270_write16(BMI270_REG_FEATURES_1_G_TRIG_1, 0x0100);
-  time_delay_ms(10);
-
-  bmi270_write(BMI270_REG_CMD, 0x02);
+static void bmi270_enable_crt() {
+  bmi270_write(BMI270_REG_PWR_CONF, 0x0, 10);
+  bmi270_write(BMI270_REG_OFFSET_6, 0x80, 10);
+  bmi270_write(BMI270_REG_PWR_CTRL, 0x04, 10);
+  bmi270_write(BMI270_REG_GYR_CRT_CONF, 0x04, 10);
+  bmi270_write(BMI270_REG_FEAT_PAGE, 0x01, 10);
+  bmi270_write16(BMI270_REG_FEATURES_1_G_TRIG_1, 0x0100, 10);
+  bmi270_write(BMI270_REG_CMD, 0x02, 0);
 
   for (uint8_t i = 0; i < 10; i++) {
     time_delay_ms(1000);
@@ -98,57 +76,38 @@ void bmi270_configure() {
   }
   time_delay_ms(10);
 
-  bmi270_write(BMI270_REG_FEAT_PAGE, 0x00);
-  time_delay_ms(1);
-
+  bmi270_write(BMI270_REG_FEAT_PAGE, 0x00, 10);
   const uint16_t gain_status = bmi270_read16(BMI270_REG_FEATURES_0_GYR_GAIN_STATUS);
   if (gain_status == 0x0000) {
     time_delay_ms(10);
   } else {
     time_delay_ms(1);
   }
+}
 
-  bmi270_write(BMI270_REG_ACC_CONF, (BMI270_ACC_CONF_HP << 7) | (BMI270_ACC_CONF_BWP << 4) | BMI270_ACC_CONF_ODR800);
-  time_delay_ms(1);
+void bmi270_configure() {
+  bmi270_reset_to_spi();
 
-  bmi270_write(BMI270_REG_ACC_RANGE, BMI270_ACC_RANGE_16G);
-  time_delay_ms(1);
+  bmi270_write(BMI270_REG_CMD, BMI270_CMD_SOFTRESET, 100);
+  bmi270_reset_to_spi();
 
-  bmi270_write(BMI270_REG_GYRO_CONF, (BMI270_GYRO_CONF_FILTER_PERF << 7) | (BMI270_GYRO_CONF_NOISE_PERF << 6) | (BMI270_GYRO_CONF_BWP << 4) | BMI270_GYRO_CONF_ODR3200);
-  time_delay_ms(1);
+  bmi270_write(BMI270_REG_PWR_CONF, 0x0, 1);
+  bmi270_write(BMI270_REG_INIT_CTRL, 0x0, 1);
+  bmi270_write_data(BMI270_REG_INIT_DATA, (uint8_t *)bmi270_config_file, sizeof(bmi270_config_file), 10);
+  bmi270_write(BMI270_REG_INIT_CTRL, 0x1, 1);
 
-  bmi270_write(BMI270_REG_GYRO_RANGE, BMI270_GYRO_RANGE_2000DPS);
-  time_delay_ms(1);
+  bmi270_enable_crt();
 
-  bmi270_write(BMI270_REG_INT_MAP_DATA, BMI270_INT_MAP_DATA_DRDY_INT1);
-  time_delay_ms(1);
+  bmi270_write(BMI270_REG_ACC_CONF, (BMI270_ACC_CONF_HP << 7) | (BMI270_ACC_CONF_BWP << 4) | BMI270_ACC_CONF_ODR800, 1);
+  bmi270_write(BMI270_REG_ACC_RANGE, BMI270_ACC_RANGE_16G, 1);
+  bmi270_write(BMI270_REG_GYRO_CONF, (BMI270_GYRO_CONF_FILTER_PERF << 7) | (BMI270_GYRO_CONF_NOISE_PERF << 6) | (BMI270_GYRO_CONF_BWP << 4) | BMI270_GYRO_CONF_ODR3200, 1);
+  bmi270_write(BMI270_REG_GYRO_RANGE, BMI270_GYRO_RANGE_2000DPS, 1);
+  bmi270_write(BMI270_REG_INT_MAP_DATA, BMI270_INT_MAP_DATA_DRDY_INT1, 1);
+  bmi270_write(BMI270_REG_INT1_IO_CTRL, BMI270_INT1_IO_CTRL_PINMODE, 1);
+  bmi270_write(BMI270_REG_PWR_CONF, BMI270_PWR_CONF, 1);
+  bmi270_write(BMI270_REG_PWR_CTRL, BMI270_PWR_CTRL, 1);
 
-  bmi270_write(BMI270_REG_INT1_IO_CTRL, BMI270_INT1_IO_CTRL_PINMODE);
-  time_delay_ms(1);
-
-  bmi270_write(BMI270_REG_PWR_CONF, BMI270_PWR_CONF);
-  time_delay_ms(1);
-
-  bmi270_write(BMI270_REG_PWR_CTRL, BMI270_PWR_CTRL);
-  time_delay_ms(1);
-
-  // switch to feature page 1
-  bmi270_write(BMI270_REG_FEAT_PAGE, 1);
-  time_delay_ms(1);
-
-  bmi270_write16(BMI270_REG_FEATURES_1_GEN_SET_1, BMI270_CONF_FEATURES_1_GEN_SET_1);
-  time_delay_ms(1);
-
-  const uint8_t offset = bmi270_read(BMI270_REG_OFFSET_6);
-  bmi270_write(BMI270_REG_OFFSET_6, offset | BMI270_GYRO_CONF_OFFSET_6);
-  time_delay_ms(1);
-
-  // switch to feature page 0
-  bmi270_write(BMI270_REG_FEAT_PAGE, 0);
-  time_delay_ms(1);
-
-  const uint8_t cas_factor = bmi270_read(BMI270_REG_FEATURES_0_GYR_CAS);
-  gyro_cas = bmi270_compute_gyro_cas(cas_factor);
+  bmi270_enable_cas();
 }
 
 uint8_t bmi270_read(uint8_t reg) {
@@ -177,7 +136,7 @@ uint16_t bmi270_read16(uint8_t reg) {
   return ((buffer[3] << 8) | buffer[2]);
 }
 
-void bmi270_write(uint8_t reg, uint8_t data) {
+void bmi270_write(uint8_t reg, uint8_t data, uint32_t delay) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_SLOW);
 
   const spi_txn_segment_t segs[] = {
@@ -185,9 +144,11 @@ void bmi270_write(uint8_t reg, uint8_t data) {
       spi_make_seg_const(data),
   };
   spi_seg_submit_wait(&gyro_bus, segs);
+
+  time_delay_ms(delay);
 }
 
-void bmi270_write16(uint8_t reg, uint16_t data) {
+void bmi270_write16(uint8_t reg, uint16_t data, uint32_t delay) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_SLOW);
 
   const spi_txn_segment_t segs[] = {
@@ -196,9 +157,11 @@ void bmi270_write16(uint8_t reg, uint16_t data) {
       spi_make_seg_const(data >> 8),
   };
   spi_seg_submit_wait(&gyro_bus, segs);
+
+  time_delay_ms(delay);
 }
 
-void bmi270_write_data(uint8_t reg, uint8_t *data, uint32_t size) {
+void bmi270_write_data(uint8_t reg, uint8_t *data, uint32_t size, uint32_t delay) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_SLOW);
 
   const spi_txn_segment_t segs[] = {
@@ -206,6 +169,8 @@ void bmi270_write_data(uint8_t reg, uint8_t *data, uint32_t size) {
       spi_make_seg_buffer(NULL, data, size),
   };
   spi_seg_submit_wait(&gyro_bus, segs);
+
+  time_delay_ms(delay);
 }
 
 void bmi270_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
