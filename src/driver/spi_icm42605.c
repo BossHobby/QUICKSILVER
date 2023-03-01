@@ -43,10 +43,16 @@ void icm42605_configure() {
   icm42605_write(ICM42605_ACCEL_CONFIG0, ICM42605_AFS_16G | ICM42605_AODR_8000Hz);
   time_delay_ms(15);
 
+  icm42605_write(ICM42605_GYRO_CONFIG1, 0x1a); // 3rd order filter
+  time_delay_ms(1);
+
   icm42605_write(ICM42605_GYRO_CONFIG_STATIC3, AAF_DELT);
   icm42605_write(ICM42605_GYRO_CONFIG_STATIC4, AAF_DELTSQR & 0xFF);
   icm42605_write(ICM42605_GYRO_CONFIG_STATIC5, (AAF_DELTSQR >> 8) | (AAF_BITSHIFT << 4));
   time_delay_ms(15);
+
+  icm42605_write(ICM42605_GYRO_CONFIG1, 0x15); // 3rd order filter
+  time_delay_ms(1);
 
   icm42605_write(ICM42605_ACCEL_CONFIG_STATIC2, AAF_DELT << 1);
   icm42605_write(ICM42605_ACCEL_CONFIG_STATIC3, AAF_DELTSQR & 0xFF);
