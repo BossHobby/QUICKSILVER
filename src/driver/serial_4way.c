@@ -28,13 +28,8 @@
 #define ARM_DEVICE_MATCH(device_id) (((device_id >> 8) > 0x00 && (device_id >> 8) < 0x90) && (device_id & 0xFF) == 0x06)
 
 #define INTF_MODE_IDX 3 // index for DeviceInfostate
-
 #define ESC_COUNT 4
-
-#define BLHELI_SETTINGS_OFFSET 0x1A00
 #define BLHELI_SETTINGS_SIZE 0xFF
-
-#define SILABS_PAGE_SIZE 0x0200
 
 static serial_esc4way_device_t device;
 static gpio_pins_t esc_pins[ESC_COUNT] = {PIN_NONE};
@@ -58,6 +53,26 @@ bool device_is_connected() {
 
 static void device_set_disconnected() {
   memset(device.info, 0, SERIAL_4WAY_DEVICE_INFO_SIZE);
+}
+
+static uint32_t device_settings_offset() {
+  switch (device.signature) {
+  case 0xE8B5:
+    return 0x3000;
+
+  default:
+    return 0x1A00;
+  }
+}
+
+static uint32_t device_page_size() {
+  switch (device.signature) {
+  case 0xE8B5:
+    return 2048;
+
+  default:
+    return 512;
+  }
 }
 
 static uint8_t read_byte() {
@@ -235,6 +250,7 @@ serial_esc4way_ack_t serial_4way_send(uint8_t cmd, uint16_t addr, const uint8_t 
 
     if (connect_esc(ESC_PIN, device.info)) {
       device.info[INTF_MODE_IDX] = device.mode;
+      device.signature = (device.info[1] << 8) | (uint16_t)device.info[0];
     } else {
       ack_out = ESC4WAY_ACK_D_GENERAL_ERROR;
       device_set_disconnected();
@@ -424,8 +440,9 @@ serial_esc4way_ack_t serial_4way_read_settings(blheli_settings_t *settings, uint
 
   time_delay_us(500); // give the device some time to wake up
 
-  uint8_t size = BLHELI_SETTINGS_SIZE;
-  ack = serial_4way_send(ESC4WAY_DEVICE_READ, BLHELI_SETTINGS_OFFSET, &size, 1, output, &output_size);
+  const uint8_t size = BLHELI_SETTINGS_SIZE;
+  const uint32_t offset = device_settings_offset();
+  ack = serial_4way_send(ESC4WAY_DEVICE_READ, offset, &size, 1, output, &output_size);
   if (ack != ESC4WAY_ACK_OK) {
     quic_debugf("ERROR ESC4WAY_DEVICE_READ 0x%x", ack);
     return ack;
@@ -473,8 +490,9 @@ serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uin
 
   time_delay_us(500); // give the device some time to wake up
 
-  uint8_t size = BLHELI_SETTINGS_SIZE;
-  ack = serial_4way_send(ESC4WAY_DEVICE_READ, BLHELI_SETTINGS_OFFSET, &size, 1, output, &output_size);
+  const uint8_t size = BLHELI_SETTINGS_SIZE;
+  const uint32_t offset = device_settings_offset();
+  ack = serial_4way_send(ESC4WAY_DEVICE_READ, offset, &size, 1, output, &output_size);
   if (ack != ESC4WAY_ACK_OK) {
     quic_debugf("ERROR ESC4WAY_DEVICE_READ 0x%x", ack);
     return ack;
@@ -495,15 +513,15 @@ serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uin
     memcpy(settings_raw.NAME, settings->NAME, 16);
   }
 
-  size = BLHELI_SETTINGS_OFFSET / SILABS_PAGE_SIZE;
-  ack = serial_4way_send(ESC4WAY_DEVICE_PAGE_ERASE, 0, &size, 1, output, &output_size);
+  const uint8_t page = offset / device_page_size();
+  ack = serial_4way_send(ESC4WAY_DEVICE_PAGE_ERASE, 0, &page, 1, output, &output_size);
   if (ack != ESC4WAY_ACK_OK) {
     quic_debugf("ERROR ESC4WAY_DEVICE_PAGE_ERASE 0x%x", ack);
     return ack;
   }
   time_delay_us(200);
 
-  ack = serial_4way_send(ESC4WAY_DEVICE_WRITE, BLHELI_SETTINGS_OFFSET, (const uint8_t *)&settings_raw, BLHELI_SETTINGS_SIZE, output, &output_size);
+  ack = serial_4way_send(ESC4WAY_DEVICE_WRITE, offset, (const uint8_t *)&settings_raw, BLHELI_SETTINGS_SIZE, output, &output_size);
   if (ack != ESC4WAY_ACK_OK) {
     quic_debugf("ERROR ESC4WAY_DEVICE_WRITE 0x%x", ack);
     return ack;

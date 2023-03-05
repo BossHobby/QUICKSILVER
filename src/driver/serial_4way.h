@@ -134,6 +134,7 @@ typedef enum {
 typedef struct {
   uint8_t info[SERIAL_4WAY_DEVICE_INFO_SIZE];
   serial_esc4way_mode_t mode;
+  uint16_t signature;
   uint8_t selected_esc;
 } serial_esc4way_device_t;
 
