@@ -172,7 +172,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
     // flight mode, only arm for now
     uint32_t flight_mode = 0;
-    if (flags.arm_switch) {
+    if (flags.arm_state) {
       flight_mode |= 0x1;
     }
     msp_write_uint32(data + 6, flight_mode);
@@ -462,7 +462,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     if (msp->device == MSP_DEVICE_VTX) {
       msp_vtx_detected = 1;
     }
-    if (!flags.arm_switch && msp->device != MSP_DEVICE_SPI_RX) {
+    if (!flags.arm_state && msp->device != MSP_DEVICE_SPI_RX) {
       flash_save();
     }
     msp_send_reply(msp, magic, cmd, NULL, 0);
@@ -470,7 +470,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   }
 
   case MSP_REBOOT: {
-    if (flags.arm_switch) {
+    if (flags.arm_state) {
       break;
     }
 
