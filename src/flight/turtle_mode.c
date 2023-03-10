@@ -25,10 +25,14 @@ static uint8_t turtle_axis = 0;
 static uint8_t turtle_dir = 0;
 
 void turtle_mode_start() {
-  if (!flags.turtle_ready && flags.on_ground && turtle_state == TURTLE_STAGE_IDLE && (state.GEstG.yaw < 0)) {
-    // only enable turtle if we are onground and not recovering from a interrupted turtle
-    flags.turtle_ready = 1;
-  }
+  if (flags.on_ground && turtle_state == TURTLE_STAGE_IDLE) {
+    if (state.GEstG.yaw < 0) {
+      // only enable turtle if we are onground
+      flags.turtle_ready = 1;
+    } else {
+      flags.turtle_ready = 0;
+    }
+  } 
 }
 
 void turtle_mode_cancel() {
