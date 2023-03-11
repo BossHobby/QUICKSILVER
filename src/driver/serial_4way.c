@@ -75,6 +75,16 @@ static uint32_t device_page_size() {
   }
 }
 
+static uint32_t device_page_multiplier() {
+  switch (device.signature) {
+  case 0xE8B5:
+    return 4;
+
+  default:
+    return 1;
+  }
+}
+
 static uint8_t read_byte() {
   uint8_t byte = 0;
   while (usb_serial_read(&byte, 1) == 0)
@@ -513,7 +523,7 @@ serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uin
     memcpy(settings_raw.NAME, settings->NAME, 16);
   }
 
-  const uint8_t page = offset / device_page_size();
+  const uint8_t page = (offset / device_page_size()) * device_page_multiplier();
   ack = serial_4way_send(ESC4WAY_DEVICE_PAGE_ERASE, 0, &page, 1, output, &output_size);
   if (ack != ESC4WAY_ACK_OK) {
     quic_debugf("ERROR ESC4WAY_DEVICE_PAGE_ERASE 0x%x", ack);
