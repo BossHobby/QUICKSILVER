@@ -1,0 +1,50 @@
+name: tmotorf411_elrs
+mcu: stm32f411
+brushless: true
+leds:
+  - pin: PC13
+    invert: true
+spi_ports:
+  - index: 1
+    sck: PA5
+    miso: PA6
+    mosi: PA7
+  - index: 2
+    sck: PB13
+    miso: PB14
+    mosi: PB15
+  - index: 3
+    sck: PB3
+    miso: PB4
+    mosi: PB5
+serial_ports:
+  - index: 1
+    rx: PA10
+    tx: PA9
+  - index: 2
+    rx: PA3
+    tx: PA2
+gyro_orientation: 8
+gyro:
+  port: 1
+  nss: PA4
+osd:
+  port: 2
+  nss: PB12
+rx_spi:
+  port: 3
+  nss: PA15
+  exti: PC14
+  busy: PA13
+  busy_exti: false
+  reset: PA8
+vbat: PA1
+ibat: PA0
+buzzer:
+  pin: PB2
+  invert: false
+motor_pins:
+  - PB6
+  - PB7
+  - PB0
+  - PB1

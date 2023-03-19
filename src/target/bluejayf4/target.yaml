@@ -1,0 +1,43 @@
+name: bluejayf4
+mcu: stm32f405
+brushless: true
+leds:
+  - pin: PB5
+    invert: true
+  - pin: PB4
+    invert: false
+spi_ports:
+  - index: 1
+    sck: PA5
+    miso: PA6
+    mosi: PA7
+  - index: 3
+    sck: PC10
+    miso: PC11
+    mosi: PC12
+serial_ports:
+  - index: 1
+    rx: PA10
+    tx: PA9
+  - index: 3
+    rx: PB11
+    tx: PB10
+  - index: 6
+    rx: PC7
+    tx: PC6
+    inverter: PB15
+gyro_orientation: 4
+gyro:
+  port: 1
+  nss: PC4
+fpv: PA13
+vbat: PC3
+ibat: PC2
+buzzer:
+  pin: PC1
+  invert: true
+motor_pins:
+  - PA3
+  - PA2
+  - PA1
+  - PA0
