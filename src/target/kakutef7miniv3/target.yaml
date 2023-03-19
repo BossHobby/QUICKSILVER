@@ -1,0 +1,55 @@
+name: kakutef7miniv3
+mcu: stm32f722
+brushless: true
+leds:
+  - pin: PD2
+    invert: true
+spi_ports:
+  - index: 1
+    sck: PA5
+    miso: PA6
+    mosi: PA7
+  - index: 2
+    sck: PB13
+    miso: PB14
+    mosi: PB15
+  - index: 3
+    sck: PC10
+    miso: PC11
+    mosi: PC12
+serial_ports:
+  - index: 1
+    rx: PA10
+    tx: PA9
+  - index: 2
+    rx: PA3
+    tx: PA2
+  - index: 3
+    rx: PB11
+    tx: PB10
+  - index: 4
+    rx: PA1
+    tx: PA0
+  - index: 6
+    rx: PC7
+    tx: PC6
+gyro_orientation: 16
+gyro:
+  port: 1
+  nss: PB2
+osd:
+  port: 3
+  nss: PA15
+flash:
+  port: 2
+  nss: PB12
+vbat: PC0
+ibat: PC1
+buzzer:
+  pin: PC8
+  invert: false
+motor_pins:
+  - PB4
+  - PB5
+  - PB0
+  - PB1

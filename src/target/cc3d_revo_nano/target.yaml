@@ -1,0 +1,43 @@
+name: cc3d_revo_nano
+mcu: stm32f411
+brushless: true
+leds:
+  - pin: PC14
+    invert: true
+  - pin: PC13
+    invert: false
+spi_ports:
+  - index: 1
+    sck: PA5
+    miso: PA6
+    mosi: PA7
+  - index: 2
+    sck: PB13
+    miso: PB14
+    mosi: PB15
+  - index: 3
+    sck: PB3
+    miso: PB4
+    mosi: PB5
+serial_ports:
+  - index: 1
+    rx: PB7
+    tx: PB6
+  - index: 2
+    rx: PA3
+    tx: PA2
+    inverter: PC15
+gyro_orientation: 16
+gyro:
+  port: 2
+  nss: PB12
+fpv: PA13
+vbat: PA6
+buzzer:
+  pin: PC13
+  invert: true
+motor_pins:
+  - PB8
+  - PB9
+  - PB3
+  - PB10

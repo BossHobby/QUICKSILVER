@@ -1,0 +1,64 @@
+name: geprcf405
+mcu: stm32f405
+brushless: true
+leds:
+  - pin: PC14
+    invert: true
+  - pin: PC15
+    invert: true
+spi_ports:
+  - index: 1
+    sck: PA5
+    miso: PA6
+    mosi: PA7
+  - index: 2
+    sck: PB13
+    miso: PB14
+    mosi: PB15
+  - index: 3
+    sck: PB3
+    miso: PB4
+    mosi: PB5
+serial_ports:
+  - index: 1
+    rx: PB7
+    tx: PB6
+  - index: 2
+    rx: PA3
+    tx: PA2
+  - index: 3
+    rx: PC11
+    tx: PC10
+  - index: 4
+    rx: PA1
+    tx: PA0
+  - index: 5
+    rx: PD2
+    tx: PC12
+  - index: 6
+    rx: PC7
+    tx: PC6
+serial_soft_ports:
+  - index: 1
+    rx: PC5
+    tx: PB2
+gyro_orientation: 16
+gyro:
+  port: 3
+  nss: PA15
+osd:
+  port: 1
+  nss: PA4
+flash:
+  port: 2
+  nss: PB12
+vbat: PC1
+ibat: PC0
+buzzer:
+  pin: PC13
+  invert: false
+motor_pins:
+  - PA10
+  - PC8
+  - PA8
+  - PA9

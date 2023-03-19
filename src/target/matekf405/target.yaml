@@ -1,0 +1,53 @@
+name: matekf405
+mcu: stm32f405
+brushless: true
+leds:
+  - pin: PB9
+    invert: true
+spi_ports:
+  - index: 1
+    sck: PA5
+    miso: PA6
+    mosi: PA7
+  - index: 2
+    sck: PB13
+    miso: PB14
+    mosi: PB15
+  - index: 3
+    sck: PB3
+    miso: PB4
+    mosi: PB5
+serial_ports:
+  - index: 1
+    rx: PA10
+    tx: PA9
+  - index: 2
+    rx: PA3
+    tx: PA2
+  - index: 3
+    rx: PC11
+    tx: PC10
+  - index: 4
+    rx: PA1
+    tx: PA0
+  - index: 5
+    rx: PD2
+    tx: PC12
+gyro_orientation: 8
+gyro:
+  port: 1
+  nss: PC2
+osd:
+  port: 2
+  nss: PB10
+usb_detect: PB12
+vbat: PC5
+ibat: PC4
+buzzer:
+  pin: PC13
+  invert: false
+motor_pins:
+  - PC8
+  - PC9
+  - PC6
+  - PC7

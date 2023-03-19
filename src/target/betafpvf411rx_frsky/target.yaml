@@ -1,0 +1,51 @@
+name: betafpvf411rx_frsky
+mcu: stm32f411
+brushless: true
+leds:
+  - pin: PC14
+    invert: true
+spi_ports:
+  - index: 1
+    sck: PA5
+    miso: PA6
+    mosi: PA7
+  - index: 2
+    sck: PB13
+    miso: PB14
+    mosi: PB15
+  - index: 3
+    sck: PB3
+    miso: PB4
+    mosi: PB5
+serial_ports:
+  - index: 1
+    rx: PA10
+    tx: PA9
+  - index: 2
+    rx: PA3
+    tx: PA2
+serial_soft_ports:
+  - index: 1
+    rx: PA8
+    tx: PA8
+gyro_orientation: 8
+gyro:
+  port: 1
+  nss: PA4
+osd:
+  port: 2
+  nss: PB12
+rx_spi:
+  port: 3
+  nss: PA15
+  exti: PC13
+  ant_sel: PA14
+  lna_en: PA13
+  tx_en: PB9
+vbat: PA1
+ibat: PB0
+motor_pins:
+  - PB10
+  - PB7
+  - PB8
+  - PA0
