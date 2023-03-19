@@ -1,6 +1,6 @@
 <img src="https://github.com/BossHobby/QUICKSILVER/blob/master/misc/Logo_Clean.svg?raw=true" width="256">
 
-# QUICKSILVER ![example workflow](https://github.com/BossHobby/QUICKSILVER/actions/workflows/build.yml/badge.svg)
+# QUICKSILVER [![build](https://github.com/BossHobby/QUICKSILVER/actions/workflows/build.yml/badge.svg?branch=develop)](https://github.com/BossHobby/QUICKSILVER/actions/workflows/build.yml)
 
 Flight Controller Firmware
 
