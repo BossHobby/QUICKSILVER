@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 
-#include "project.h"
+#include "core/project.h"
 
 #define USB_BUFFER_SIZE (16 * 1024)
 

@@ -7,11 +7,11 @@
 #include "core/debug.h"
 #include "core/flash.h"
 #include "core/profile.h"
+#include "core/project.h"
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "flight/control.h"
 #include "io/led.h"
-#include "project.h"
 #include "util/ring_buffer.h"
 #include "util/util.h"
 

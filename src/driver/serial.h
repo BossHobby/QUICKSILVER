@@ -2,9 +2,9 @@
 
 #include <stdbool.h>
 
+#include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/serial_soft.h"
-#include "project.h"
 #include "util/ring_buffer.h"
 
 typedef enum {

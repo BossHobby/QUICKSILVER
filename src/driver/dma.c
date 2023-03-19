@@ -5,9 +5,9 @@
 
 #include "core/debug.h"
 #include "core/failloop.h"
+#include "core/project.h"
 #include "driver/interrupt.h"
 #include "driver/rcc.h"
-#include "project.h"
 #include "util/util.h"
 
 // DMA1 Stream0 SPI3_RX

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "project.h"
+#include "core/project.h"
 
 #define FRSKY_SYNC_DELAY_MAX 9000
 #define FRSKY_MAX_MISSING_FRAMES 150

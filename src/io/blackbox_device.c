@@ -3,9 +3,9 @@
 #include <string.h>
 
 #include "core/looptime.h"
+#include "core/project.h"
 #include "io/blackbox_device_flash.h"
 #include "io/blackbox_device_sdcard.h"
-#include "project.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
 

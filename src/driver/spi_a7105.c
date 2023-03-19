@@ -1,8 +1,10 @@
 #include "driver/spi_a7105.h"
+
+#include "core/project.h"
 #include "driver/exti.h"
 #include "driver/spi.h"
 #include "driver/time.h"
-#include "project.h"
+#include "util/util.h"
 
 #if defined(USE_A7105)
 

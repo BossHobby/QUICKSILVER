@@ -3,11 +3,11 @@
 #include <stdio.h>
 
 #include "core/failloop.h"
+#include "core/project.h"
 #include "driver/spi_soft.h"
 #include "driver/spi_xn297.h"
 #include "driver/time.h"
 #include "flight/control.h"
-#include "project.h"
 #include "util/util.h"
 
 // radio settings

@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "project.h"
+#include "core/project.h"
 
 void usb_init();
 uint8_t usb_detect();

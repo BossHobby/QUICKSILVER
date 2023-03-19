@@ -1,10 +1,10 @@
 
 #include "io/buzzer.h"
 
+#include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/time.h"
 #include "flight/control.h"
-#include "project.h"
 
 #ifdef BUZZER_ENABLE
 

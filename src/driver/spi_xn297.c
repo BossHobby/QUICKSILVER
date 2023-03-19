@@ -1,7 +1,7 @@
 #include "driver/spi_xn297.h"
 
+#include "core/project.h"
 #include "driver/spi_soft.h"
-#include "project.h"
 
 // all cases except 3 wires radio
 #if !defined(USE_SOFT_SPI_3WIRE)

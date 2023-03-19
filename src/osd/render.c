@@ -8,6 +8,7 @@
 #include "core/flash.h"
 #include "core/looptime.h"
 #include "core/profile.h"
+#include "core/project.h"
 #include "driver/osd.h"
 #include "driver/time.h"
 #include "flight/control.h"
@@ -15,7 +16,6 @@
 #include "io/blackbox_device.h"
 #include "io/vtx.h"
 #include "osd/menu.h"
-#include "project.h"
 #include "rx/rx.h"
 #include "util/util.h"
 

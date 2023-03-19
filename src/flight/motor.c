@@ -1,10 +1,10 @@
 #include "motor.h"
 
 #include "core/profile.h"
+#include "core/project.h"
 #include "driver/motor.h"
 #include "flight/control.h"
 #include "io/usb_configurator.h"
-#include "project.h"
 #include "util/util.h"
 
 #ifdef BRUSHED_TARGET
@@ -223,16 +223,16 @@ void motor_mixer_calc(float mix[4]) {
 
 #ifndef MOTOR_PLUS_CONFIGURATION
   // normal mode, we set mix according to pidoutput
-  mix[MOTOR_FR] = state.throttle - state.pidoutput.axis[ROLL] - state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // FR
-  mix[MOTOR_FL] = state.throttle + state.pidoutput.axis[ROLL] - state.pidoutput.axis[PITCH] - state.pidoutput.axis[YAW]; // FL
-  mix[MOTOR_BR] = state.throttle - state.pidoutput.axis[ROLL] + state.pidoutput.axis[PITCH] - state.pidoutput.axis[YAW]; // BR
-  mix[MOTOR_BL] = state.throttle + state.pidoutput.axis[ROLL] + state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // BL
+  mix[MOTOR_FR] = state.throttle - state.pidoutput.roll - state.pidoutput.pitch + state.pidoutput.yaw; // FR
+  mix[MOTOR_FL] = state.throttle + state.pidoutput.roll - state.pidoutput.pitch - state.pidoutput.yaw; // FL
+  mix[MOTOR_BR] = state.throttle - state.pidoutput.roll + state.pidoutput.pitch - state.pidoutput.yaw; // BR
+  mix[MOTOR_BL] = state.throttle + state.pidoutput.roll + state.pidoutput.pitch + state.pidoutput.yaw; // BL
 #else
   // plus mode, we set mix according to pidoutput
-  mix[MOTOR_FR] = state.throttle - state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // FRONT
-  mix[MOTOR_FL] = state.throttle + state.pidoutput.axis[ROLL] - state.pidoutput.axis[YAW];  // LEFT
-  mix[MOTOR_BR] = state.throttle - state.pidoutput.axis[ROLL] - state.pidoutput.axis[YAW];  // RIGHT
-  mix[MOTOR_BL] = state.throttle + state.pidoutput.axis[PITCH] + state.pidoutput.axis[YAW]; // BACK
+  mix[MOTOR_FR] = state.throttle - state.pidoutput.pitch + state.pidoutput.yaw; // FRONT
+  mix[MOTOR_FL] = state.throttle + state.pidoutput.roll - state.pidoutput.yaw;  // LEFT
+  mix[MOTOR_BR] = state.throttle - state.pidoutput.roll - state.pidoutput.yaw;  // RIGHT
+  mix[MOTOR_BL] = state.throttle + state.pidoutput.pitch + state.pidoutput.yaw; // BACK
 #endif
 
   for (int i = 0; i <= 3; i++) {

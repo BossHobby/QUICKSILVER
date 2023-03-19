@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "project.h"
+#include "core/project.h"
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 

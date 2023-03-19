@@ -6,12 +6,12 @@
 
 #include "core/debug.h"
 #include "core/flash.h"
+#include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/time.h"
 #include "flight/control.h"
 #include "io/msp.h"
 #include "io/usb_configurator.h"
-#include "project.h"
 #include "rx/crsf.h"
 #include "util/util.h"
 

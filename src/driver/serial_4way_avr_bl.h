@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "core/project.h"
 #include "driver/serial_4way.h"
-#include "project.h"
 
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
 

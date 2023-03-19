@@ -1,4 +1,4 @@
-#include "config.h"
+#include "config/config.h"
 
 // PORTS
 #define SPI_PORTS   \

@@ -2,8 +2,8 @@
 
 #include <string.h>
 
+#include "core/project.h"
 #include "driver/spi_sdcard.h"
-#include "project.h"
 
 #ifdef USE_SDCARD
 

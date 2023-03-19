@@ -3,12 +3,12 @@
 #include <string.h>
 
 #include "core/failloop.h"
+#include "core/project.h"
 #include "driver/dma.h"
 #include "driver/interrupt.h"
 #include "driver/rcc.h"
 #include "driver/time.h"
 #include "io/usb_configurator.h"
-#include "project.h"
 
 #define GPIO_AF_SPI1 GPIO_AF5_SPI1
 #define GPIO_AF_SPI2 GPIO_AF5_SPI2

@@ -2,8 +2,8 @@
 
 #include <math.h>
 
+#include "core/project.h"
 #include "flight/control.h"
-#include "project.h"
 #include "util/util.h"
 
 // equation is 1 / sqrtf(powf(2, 1.0f / ORDER) - 1);

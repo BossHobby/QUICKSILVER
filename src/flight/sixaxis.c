@@ -8,6 +8,7 @@
 #include "core/debug.h"
 #include "core/flash.h"
 #include "core/profile.h"
+#include "core/project.h"
 #include "driver/serial.h"
 #include "driver/spi_gyro.h"
 #include "driver/time.h"
@@ -15,7 +16,6 @@
 #include "flight/filter.h"
 #include "flight/sixaxis.h"
 #include "io/led.h"
-#include "project.h"
 #include "util/util.h"
 
 #define CAL_TIME 2e6

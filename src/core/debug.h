@@ -2,7 +2,7 @@
 
 #include <cbor.h>
 
-#include "project.h"
+#include "core/project.h"
 
 #include "io/usb_configurator.h"
 

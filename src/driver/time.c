@@ -1,6 +1,6 @@
 #include "driver/time.h"
 
-#include "project.h"
+#include "core/project.h"
 
 #if defined(STM32F7) || defined(STM32H7)
 // See "RM CoreSight Architecture Specification"

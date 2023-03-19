@@ -3,10 +3,12 @@
 #include <stdint.h>
 
 #include "core/failloop.h"
-#include "project.h"
+#include "core/project.h"
 #include "rx/rx.h"
 
 #include "util/vector.h"
+
+#define ANGLE_PID_SIZE 2
 
 #define RXMODE_BIND 0
 #define RXMODE_NORMAL 1
