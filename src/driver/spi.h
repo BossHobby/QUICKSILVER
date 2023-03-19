@@ -3,10 +3,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "core/project.h"
 #include "driver/dma.h"
 #include "driver/gpio.h"
-#include "project.h"
-#include "spi_ports.h"
 
 typedef enum {
   SPI_MODE_INVALID,

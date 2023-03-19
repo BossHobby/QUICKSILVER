@@ -3,9 +3,9 @@
 #include "core/flash.h"
 #include "core/looptime.h"
 #include "core/profile.h"
+#include "core/project.h"
 #include "driver/time.h"
 #include "flight/control.h"
-#include "project.h"
 #include "util/util.h"
 
 #define OSD_TIMEOUT_MILLIS 5000

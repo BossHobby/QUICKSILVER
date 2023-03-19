@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "project.h"
+#include "core/project.h"
 #include "rx/stick_wizard.h"
 
 typedef enum {

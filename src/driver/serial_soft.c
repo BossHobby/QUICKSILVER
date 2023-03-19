@@ -1,9 +1,9 @@
 #include "driver/serial_soft.h"
 
+#include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/interrupt.h"
 #include "driver/timer.h"
-#include "project.h"
 
 #define TIMER_INSTANCE TIM4
 #define TIMER_IRQN TIM4_IRQn

@@ -5,11 +5,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "core/project.h"
 #include "driver/time.h"
 #include "flight/control.h"
 #include "flight/filter.h"
 #include "flight/sixaxis.h"
-#include "project.h"
 #include "util/util.h"
 #include "util/vector.h"
 

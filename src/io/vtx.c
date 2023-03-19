@@ -5,6 +5,7 @@
 
 #include "core/debug.h"
 #include "core/profile.h"
+#include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/serial.h"
 #include "driver/serial_vtx_msp.h"
@@ -12,7 +13,6 @@
 #include "driver/serial_vtx_tramp.h"
 #include "driver/time.h"
 #include "flight/control.h"
-#include "project.h"
 #include "rx/rx.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"

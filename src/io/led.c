@@ -1,9 +1,9 @@
 #include "io/led.h"
 
+#include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/time.h"
 #include "flight/control.h"
-#include "project.h"
 #include "util/util.h"
 
 #define LEDALL 15

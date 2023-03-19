@@ -1,7 +1,7 @@
 #include "blackbox_device_flash.h"
 
+#include "core/project.h"
 #include "driver/spi_m25p16.h"
-#include "project.h"
 #include "util/util.h"
 
 #ifdef USE_M25P16

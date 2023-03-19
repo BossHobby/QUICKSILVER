@@ -4,6 +4,7 @@
 #include "core/profile.h"
 #include "driver/adc.h"
 #include "flight/control.h"
+#include "util/util.h"
 
 // compensation factor for li-ion internal model
 // zero to bypass

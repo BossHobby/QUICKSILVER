@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "core/failloop.h"
-#include "project.h"
+#include "core/project.h"
 
 #if defined(STM32F4)
 #define FLASH_FLAG_ALL_ERRORS (FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR)

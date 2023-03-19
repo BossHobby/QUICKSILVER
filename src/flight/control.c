@@ -22,9 +22,9 @@
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
-#ifndef THROTTLE_SAFETY
-#define THROTTLE_SAFETY .15f
-#endif
+// Throttle must drop below this value if arming feature is enabled for arming to take place.  MIX_INCREASE_THROTTLE_3 if enabled
+// will also not activate on the ground untill this threshold is passed during takeoff for safety and better staging behavior.
+#define THROTTLE_SAFETY .10f
 
 #ifndef IDLE_THR
 #define IDLE_THR .001f // just enough to override motor stop at 0 throttle

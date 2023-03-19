@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "project.h"
+#include "core/project.h"
 
 #define BKP_INDEX LL_RTC_BKP_DR4
 

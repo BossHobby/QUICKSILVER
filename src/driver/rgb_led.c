@@ -2,9 +2,9 @@
 
 #include "driver/rgb_led.h"
 
+#include "core/project.h"
 #include "driver/spi.h"
 #include "driver/time.h"
-#include "project.h"
 #include "util/util.h"
 
 #if (RGB_LED_NUMBER > 0)

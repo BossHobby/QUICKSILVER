@@ -2,11 +2,11 @@
 
 #include "core/debug.h"
 #include "core/profile.h"
+#include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/rcc.h"
 #include "driver/time.h"
 #include "flight/filter.h"
-#include "project.h"
 #include "util/util.h"
 
 typedef enum {

@@ -2,10 +2,10 @@
 
 #include <stdbool.h>
 
+#include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/interrupt.h"
 #include "driver/timer.h"
-#include "project.h"
 #include "util/util.h"
 
 #if defined(RX_EXPRESS_LRS) && defined(USE_SX128X)

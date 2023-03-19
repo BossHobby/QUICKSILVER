@@ -4,11 +4,11 @@
 
 #include "core/flash.h"
 #include "core/profile.h"
+#include "core/project.h"
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "flight/control.h"
 #include "flight/filter.h"
-#include "project.h"
 #include "util/util.h"
 
 extern profile_t profile;

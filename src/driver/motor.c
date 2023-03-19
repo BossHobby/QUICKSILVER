@@ -1,7 +1,6 @@
 #include "driver/motor.h"
 
-#include "motor_pins.h"
-#include "project.h"
+#include "core/project.h"
 
 static float motor_values[MOTOR_PIN_MAX];
 

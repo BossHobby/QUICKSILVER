@@ -1,4 +1,4 @@
-#include "config.h"
+#include "config/config.h"
 
 // PORTS			//pa15 nss on spi3
 #define SPI_PORTS   \

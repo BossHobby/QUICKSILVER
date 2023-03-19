@@ -1,6 +1,6 @@
 #pragma once
 
-#include "project.h"
+#include "core/project.h"
 
 #define MAX_PRIORITY 0x1
 #define DMA_PRIORITY 0x2

@@ -2,8 +2,8 @@
 
 #include <stdbool.h>
 
+#include "core/project.h"
 #include "driver/interrupt.h"
-#include "project.h"
 
 #define EXTI_LINES \
   EXTI_LINE(0)     \

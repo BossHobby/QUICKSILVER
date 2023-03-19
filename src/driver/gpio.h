@@ -1,7 +1,6 @@
 #pragma once
 
-#include "gpio_pins.h"
-#include "project.h"
+#include "core/project.h"
 
 typedef struct {
   GPIO_TypeDef *port;

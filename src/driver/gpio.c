@@ -1,7 +1,7 @@
 #include "driver/gpio.h"
 
+#include "core/project.h"
 #include "driver/rcc.h"
-#include "project.h"
 
 static volatile uint8_t fpv_init_done = 0;
 
@@ -105,7 +105,7 @@ uint32_t gpio_pin_read(gpio_pins_t pin) {
 
 const gpio_pin_def_t gpio_pin_defs[PINS_MAX] = {
     {},
-#include "gpio_pins.in"
+#include "config/gpio_pins.in"
 };
 
 #undef GPIO_PIN

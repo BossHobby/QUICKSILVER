@@ -2,10 +2,10 @@
 
 #include <stdio.h>
 
+#include "core/project.h"
 #include "driver/osd.h"
 #include "driver/spi.h"
 #include "driver/time.h"
-#include "project.h"
 #include "string.h"
 #include "util/util.h"
 

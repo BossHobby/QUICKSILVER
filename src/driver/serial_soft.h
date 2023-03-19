@@ -2,9 +2,9 @@
 
 #include <stdbool.h>
 
+#include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/time.h"
-#include "project.h"
 
 typedef struct {
   uint8_t index;

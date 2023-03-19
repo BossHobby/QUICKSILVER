@@ -1,8 +1,8 @@
 #include "driver/spi_gyro.h"
 
+#include "core/project.h"
 #include "driver/spi.h"
 #include "driver/time.h"
-#include "project.h"
 
 #include "driver/spi_bmi270.h"
 #include "driver/spi_icm42605.h"
