@@ -757,9 +757,9 @@
           "BRUSHLESS_TARGET": ""
         }
       }
-     ] 
-   },
-   {
+    ]
+  },
+  {
     "name": "zeezwhoop",
     "configurations": [
       {
@@ -794,6 +794,17 @@
   },
   {
     "name": "flywoof411_5in1_aio",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
+  },
+  {
+    "name": "cross_f4",
     "configurations": [
       {
         "name": "brushless",
