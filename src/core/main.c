@@ -8,6 +8,7 @@
 #include "core/flash.h"
 #include "core/looptime.h"
 #include "core/profile.h"
+#include "core/project.h"
 #include "core/reset.h"
 #include "driver/adc.h"
 #include "driver/fmc.h"
@@ -33,7 +34,6 @@
 #include "io/vbat.h"
 #include "io/vtx.h"
 #include "osd/render.h"
-#include "project.h"
 #include "rx/rx.h"
 #include "util/util.h"
 

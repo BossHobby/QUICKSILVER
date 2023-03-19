@@ -1,12 +1,12 @@
 #include <math.h>
 
 #include "core/profile.h"
+#include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/motor.h"
 #include "driver/time.h"
 #include "driver/timer.h"
 #include "flight/control.h"
-#include "project.h"
 
 #ifdef USE_PWM_DRIVER
 

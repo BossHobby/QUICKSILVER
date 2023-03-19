@@ -1,6 +1,6 @@
+#include "core/project.h"
 #include "driver/spi_soft.h"
 #include "driver/time.h"
-#include "project.h"
 
 #ifdef USE_SOFT_SPI_3WIRE
 

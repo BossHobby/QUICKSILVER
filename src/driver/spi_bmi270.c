@@ -1,10 +1,11 @@
 #include "driver/spi_bmi270.h"
 
+#include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/spi.h"
 #include "driver/spi_gyro.h"
 #include "driver/time.h"
-#include "project.h"
+#include "util/util.h"
 
 #define BMI270_ID 0x24
 

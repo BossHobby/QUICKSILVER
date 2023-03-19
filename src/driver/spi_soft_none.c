@@ -1,6 +1,6 @@
 #include "driver/spi.h"
 
-#include "project.h"
+#include "core/project.h"
 
 #if !defined(USE_SOFT_SPI_4WIRE) && !defined(USE_SOFT_SPI_3WIRE)
 // spi disabled (for pin setting)

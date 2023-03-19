@@ -1,4 +1,4 @@
-#include "config.h"
+#include "config/config.h"
 
 //***************REV 2 ONLY***************
 

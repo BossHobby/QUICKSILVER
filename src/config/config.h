@@ -292,7 +292,7 @@
 
 // *************lost quad beeps using motors (30 sec timeout in ms) - pulses motors after timeout period to help find a lost model
 #define MOTOR_BEEPS
-// #define MOTOR_BEEPS_TIMEOUT 30e3
+#define MOTOR_BEEPS_TIMEOUT 30e3
 
 // *************led brightness in-flight ( solid lights only)
 // *************0- 15 range
@@ -304,6 +304,9 @@
 #define COMBINE_PITCH_ROLL_PID_TUNING
 // *************Feel free to change 1.0 value to your liking
 #define PID_TUNING_ADJUST_AMOUNT 1.0 // fixed inc/dec values for PID tuning
+
+// x (micro)seconds after loss of tx or low bat before buzzer starts
+#define BUZZER_DELAY 30e6
 
 // #############################################################################################################################
 // #############################################################################################################################

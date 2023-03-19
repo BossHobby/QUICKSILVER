@@ -1,6 +1,6 @@
 #pragma once
 
-#include "project.h"
+#include "core/project.h"
 #include "util/util.h"
 
 typedef enum {

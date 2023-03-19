@@ -1,11 +1,11 @@
 #include "driver/serial.h"
 
 #include "core/profile.h"
+#include "core/project.h"
 #include "driver/interrupt.h"
 #include "driver/rcc.h"
 #include "driver/time.h"
 #include "io/usb_configurator.h"
-#include "project.h"
 
 usart_ports_t serial_rx_port = USART_PORT_INVALID;
 usart_ports_t serial_smart_audio_port = USART_PORT_INVALID;

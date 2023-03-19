@@ -6,11 +6,11 @@
 
 #include "core/debug.h"
 #include "core/profile.h"
+#include "core/project.h"
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "flight/control.h"
 #include "io/msp.h"
-#include "project.h"
 #include "rx/crsf.h"
 #include "util/crc.h"
 #include "util/ring_buffer.h"

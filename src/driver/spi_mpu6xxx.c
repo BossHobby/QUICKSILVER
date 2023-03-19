@@ -2,11 +2,12 @@
 
 #include <stdio.h>
 
+#include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/spi.h"
 #include "driver/spi_gyro.h"
 #include "driver/time.h"
-#include "project.h"
+#include "util/util.h"
 
 #define MPU6000_ID (0x68)
 #define MPU6500_ID (0x70)

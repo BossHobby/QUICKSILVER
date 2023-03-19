@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "project.h"
+#include "core/project.h"
 
 #define DMA_ALLOC_BUFFER_SIZE 4096
 

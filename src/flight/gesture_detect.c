@@ -3,10 +3,10 @@
 #include <math.h>
 #include <stdint.h>
 
+#include "core/project.h"
 #include "driver/time.h"
 #include "flight/control.h"
 #include "osd/render.h"
-#include "project.h"
 
 #define STICKMAX 0.7f
 #define STICKCENTER 0.2f

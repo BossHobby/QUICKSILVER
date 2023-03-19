@@ -2,8 +2,9 @@
 
 #include <string.h>
 
+#include "core/project.h"
 #include "driver/spi.h"
-#include "project.h"
+#include "util/util.h"
 
 #if defined(USE_M25P16)
 

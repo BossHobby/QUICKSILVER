@@ -4,10 +4,10 @@
 
 #include "core/failloop.h"
 #include "core/profile.h"
+#include "core/project.h"
 #include "driver/fmc.h"
 #include "driver/serial.h"
 #include "io/vtx.h"
-#include "project.h"
 #include "util/cbor_helper.h"
 
 extern const profile_t default_profile;

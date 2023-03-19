@@ -1,8 +1,8 @@
 #include "core/looptime.h"
 
+#include "core/project.h"
 #include "driver/time.h"
 #include "flight/control.h"
-#include "project.h"
 
 uint8_t looptime_warning = 0;
 

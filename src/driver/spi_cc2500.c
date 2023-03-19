@@ -1,8 +1,9 @@
 #include "driver/spi_cc2500.h"
 
+#include "core/project.h"
 #include "driver/spi.h"
 #include "driver/time.h"
-#include "project.h"
+#include "util/util.h"
 
 #if defined(USE_CC2500)
 

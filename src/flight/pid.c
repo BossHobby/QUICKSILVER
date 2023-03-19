@@ -5,12 +5,14 @@
 #include <stdlib.h>
 
 #include "core/profile.h"
+#include "core/project.h"
 #include "flight/control.h"
 #include "flight/filter.h"
 #include "io/led.h"
-#include "project.h"
 #include "rx/rx.h"
 #include "util/util.h"
+
+#define PID_SIZE 3
 
 // multiplier for pids at 3V - for PID_VOLTAGE_COMPENSATION - default 1.33f from H101 code
 #define PID_VC_FACTOR 1.33f
