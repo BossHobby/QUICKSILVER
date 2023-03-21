@@ -4,7 +4,7 @@
 
 #include <cbor.h>
 
-#include "gpio_pins.h"
+#include "config/gpio_pins.h"
 
 #define LED_MAX 4
 
@@ -18,6 +18,15 @@ typedef struct {
   MEMBER(invert, bool)
 
 typedef struct {
+  gpio_pins_t pin;
+  bool invert;
+} target_invert_pin_t;
+
+#define TARGET_BUZZER_MEMBERS \
+  MEMBER(pin, gpio_pins_t)    \
+  MEMBER(invert, bool)
+
+typedef struct {
   uint8_t name[32];
 
   target_led_t leds[LED_MAX];
@@ -26,15 +35,20 @@ typedef struct {
   gpio_pins_t fpv;
   gpio_pins_t vbat;
   gpio_pins_t ibat;
+
+  target_invert_pin_t sdcard_detect;
+  target_invert_pin_t buzzer;
 } target_t;
 
-#define TARGET_MEMBERS                      \
-  TSTR_MEMBER(name, 32)                     \
-  ARRAY_MEMBER(leds, LED_MAX, target_led_t) \
-  MEMBER(usb_detect, gpio_pins_t)           \
-  MEMBER(fpv, gpio_pins_t)                  \
-  MEMBER(vbat, gpio_pins_t)                 \
-  MEMBER(ibat, gpio_pins_t)
+#define TARGET_MEMBERS                       \
+  TSTR_MEMBER(name, 32)                      \
+  ARRAY_MEMBER(leds, LED_MAX, target_led_t)  \
+  MEMBER(usb_detect, gpio_pins_t)            \
+  MEMBER(fpv, gpio_pins_t)                   \
+  MEMBER(vbat, gpio_pins_t)                  \
+  MEMBER(ibat, gpio_pins_t)                  \
+  MEMBER(sdcard_detect, target_invert_pin_t) \
+  MEMBER(buzzer, target_invert_pin_t)
 
 extern target_t target;
 

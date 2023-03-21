@@ -27,10 +27,6 @@
 #define RX_EXPRESS_LRS
 #endif
 
-#if defined(BUZZER_ENABLE) && !defined(BUZZER_PIN)
-#undef BUZZER_ENABLE
-#endif
-
 //*************************************Features that still need to be moved into targets and checked for compatability************************************************
 // RGB led type ws2812 - ws2813
 // numbers over 8 could decrease performance
