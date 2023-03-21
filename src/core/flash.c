@@ -37,6 +37,26 @@ void flash_save() {
   fmc_erase();
 
   {
+    const uint32_t offset = TARGET_STORAGE_OFFSET;
+    const uint32_t size = TARGET_STORAGE_SIZE;
+
+    uint8_t buffer[size];
+    flash_write_magic(buffer, FMC_MAGIC | TARGET_STORAGE_OFFSET);
+
+    cbor_value_t enc;
+    cbor_encoder_init(&enc, buffer + FMC_MAGIC_SIZE, size - FMC_MAGIC_SIZE);
+
+    cbor_result_t res = cbor_encode_target_t(&enc, &target);
+    if (res < CBOR_OK) {
+      fmc_lock();
+      __enable_irq();
+      failloop(FAILLOOP_FAULT);
+    }
+
+    fmc_write_buf(offset, buffer, size);
+  }
+
+  {
     const uint32_t offset = FLASH_STORAGE_OFFSET;
     const uint32_t size = FLASH_STORAGE_SIZE;
 
@@ -108,6 +128,18 @@ void flash_save() {
 }
 
 void flash_load() {
+
+  if (fmc_read(TARGET_STORAGE_OFFSET) == (FMC_MAGIC | TARGET_STORAGE_OFFSET)) {
+    const uint32_t offset = TARGET_STORAGE_OFFSET + FMC_MAGIC_SIZE;
+    const uint32_t size = TARGET_STORAGE_SIZE - FMC_MAGIC_SIZE;
+
+    uint8_t buffer[size];
+    fmc_read_buf(offset, buffer, size);
+
+    cbor_value_t dec;
+    cbor_decoder_init(&dec, buffer, size);
+    cbor_decode_target_t(&dec, &target);
+  }
 
   if (fmc_read(FLASH_STORAGE_OFFSET) == (FMC_MAGIC | FLASH_STORAGE_OFFSET)) {
     const uint32_t offset = FLASH_STORAGE_OFFSET + FMC_MAGIC_SIZE;

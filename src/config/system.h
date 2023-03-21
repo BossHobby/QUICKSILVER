@@ -5,7 +5,7 @@
 #include "spi_ports.h"
 #include "usart_ports.h"
 
-#include "target.h"
+#include <target.h>
 
 #ifdef STM32F4
 #include <stm32f4xx.h>
