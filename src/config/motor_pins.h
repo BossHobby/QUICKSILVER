@@ -1,6 +1,6 @@
 #pragma once
 
-#include "target.h"
+#include <target.h>
 
 #ifdef STM32F4
 #define MOTOR_PIN_PA0 MOTOR_PIN(A, 0, GPIO_AF2_TIM5, TIM5, 1)
