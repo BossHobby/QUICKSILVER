@@ -66,29 +66,27 @@ static spi_bus_device_t bus = {
 };
 
 void sdcard_init() {
-#ifdef SDCARD_DETECT_PIN
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_INPUT;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_pin_init(&gpio_init, SDCARD_DETECT_PIN);
-#endif
+  if (target.sdcard_detect.pin != PIN_NONE) {
+    LL_GPIO_InitTypeDef gpio_init;
+    gpio_init.Mode = LL_GPIO_MODE_INPUT;
+    gpio_init.Speed = LL_GPIO_SPEED_FREQ_LOW;
+    gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+    gpio_init.Pull = LL_GPIO_PULL_NO;
+    gpio_pin_init(&gpio_init, target.sdcard_detect.pin);
+  }
 
   spi_bus_device_init(&bus);
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, SPI_SPEED_SLOW);
 }
 
 static bool sdcard_read_detect() {
-#ifdef SDCARD_DETECT_PIN
-#ifdef SDCARD_DETECT_INVERT
-  return !gpio_pin_read(SDCARD_DETECT_PIN);
-#else
-  return gpio_pin_read(SDCARD_DETECT_PIN);
-#endif
-#else
-  return true;
-#endif
+  if (target.sdcard_detect.pin == PIN_NONE) {
+    return true;
+  }
+  if (target.sdcard_detect.invert) {
+    return !gpio_pin_read(target.sdcard_detect.pin);
+  }
+  return gpio_pin_read(target.sdcard_detect.pin);
 }
 
 static uint8_t sdcard_wait_non_idle() {

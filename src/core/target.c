@@ -19,6 +19,10 @@ CBOR_START_STRUCT_ENCODER(target_led_t)
 TARGET_LED_MEMBERS
 CBOR_END_STRUCT_ENCODER()
 
+CBOR_START_STRUCT_ENCODER(target_invert_pin_t)
+TARGET_BUZZER_MEMBERS
+CBOR_END_STRUCT_ENCODER()
+
 CBOR_START_STRUCT_ENCODER(target_t)
 TARGET_MEMBERS
 CBOR_END_STRUCT_ENCODER()
@@ -37,6 +41,10 @@ CBOR_END_STRUCT_ENCODER()
 
 CBOR_START_STRUCT_DECODER(target_led_t)
 TARGET_LED_MEMBERS
+CBOR_END_STRUCT_DECODER()
+
+CBOR_START_STRUCT_DECODER(target_invert_pin_t)
+TARGET_BUZZER_MEMBERS
 CBOR_END_STRUCT_DECODER()
 
 CBOR_START_STRUCT_DECODER(target_t)
@@ -78,7 +86,7 @@ typedef enum {
   [GPIO_PORT##_port * GPIO_PIN_MAX + _num] = PIN_##_port##_num,
 
 static const gpio_pins_t gpio_pin_lookup[GPIO_PORT_MAX * GPIO_PIN_MAX] = {
-#include "hardware/gpio_pins.in"
+#include "gpio_pins.in"
 };
 
 #undef GPIO_PIN
@@ -89,7 +97,7 @@ static const gpio_pins_t gpio_pin_lookup[GPIO_PORT_MAX * GPIO_PIN_MAX] = {
   [PIN_##_port##_num] = GPIO_PORT##_port,
 
 static const gpio_ports_t gpio_port_lookup[PINS_MAX] = {
-#include "hardware/gpio_pins.in"
+#include "gpio_pins.in"
 };
 
 #undef GPIO_PIN
