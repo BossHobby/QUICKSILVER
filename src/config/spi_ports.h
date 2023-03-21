@@ -1,6 +1,6 @@
 #pragma once
 
-#include "target.h"
+#include <target.h>
 
 #ifdef STM32F4
 

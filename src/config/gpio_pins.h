@@ -1,6 +1,6 @@
 #pragma once
 
-#include "target.h"
+#include <target.h>
 
 #define PIN_IDENT(port, num) PIN_##port##num
 #define GPIO_PIN(port, num) PIN_IDENT(port, num),

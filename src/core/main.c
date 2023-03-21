@@ -74,23 +74,20 @@ __attribute__((__used__)) void memory_section_init() {
 }
 
 __attribute__((__used__)) int main() {
-  looptime_init();
-
   // init timer so we can use delays etc
   time_init();
+  looptime_init();
 
-  // load default profile
+  // load settings from flash
   profile_set_defaults();
-
-  // setup filters early
-  filter_global_init();
-  pid_init();
-
-  // load flash saved variables
   flash_load();
 
   // wait for flash to stabilze
   time_delay_us(100);
+
+  // setup filters early
+  filter_global_init();
+  pid_init();
 
   // init some hardware things
   gpio_init();
