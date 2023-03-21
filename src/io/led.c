@@ -6,8 +6,6 @@
 #include "flight/control.h"
 #include "util/util.h"
 
-#define LEDALL 15
-
 // for led flash on gestures
 int ledcommand = 0;
 int ledblink = 0;
@@ -20,106 +18,65 @@ void led_init() {
   init.Pull = LL_GPIO_PULL_NO;
   init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
 
-#if (LED_NUMBER > 0)
-  gpio_pin_init(&init, LED1PIN);
-#endif
-#if (LED_NUMBER > 1)
-  gpio_pin_init(&init, LED2PIN);
-#endif
-#if (LED_NUMBER > 2)
-  gpio_pin_init(&init, LED3PIN);
-#endif
-#if (LED_NUMBER > 3)
-  gpio_pin_init(&init, LED4PIN);
-#endif
+  for (uint8_t i = 0; i < LED_MAX; i++) {
+    const target_led_t led = target.leds[i];
+    if (led.pin == PIN_NONE) {
+      continue;
+    }
+
+    gpio_pin_init(&init, led.pin);
+    if (led.invert) {
+      gpio_pin_set(led.pin);
+    } else {
+      gpio_pin_reset(led.pin);
+    }
+  }
 }
 
 void led_on(uint8_t val) {
-#if (LED_NUMBER > 0)
-#ifdef LED1_INVERT
-  if (val & 1)
-    gpio_pin_reset(LED1PIN);
-#else
-  if (val & 1)
-    gpio_pin_set(LED1PIN);
-#endif
-#endif
-#if (LED_NUMBER > 1)
-#ifdef LED2_INVERT
-  if (val & 2)
-    gpio_pin_reset(LED2PIN);
-#else
-  if (val & 2)
-    gpio_pin_set(LED2PIN);
-#endif
-#endif
-#if (LED_NUMBER > 2)
-#ifdef LED3_INVERT
-  if (val & 4)
-    gpio_pin_reset(LED3PIN);
-#else
-  if (val & 4)
-    gpio_pin_set(LED3PIN);
-#endif
-#endif
-#if (LED_NUMBER > 3)
-#ifdef LED4_INVERT
-  if (val & 8)
-    gpio_pin_reset(LED4PIN);
-#else
-  if (val & 8)
-    gpio_pin_set(LED4PIN);
-#endif
-#endif
+  for (uint8_t i = 0; i < LED_MAX; i++) {
+    if ((val & (i + 1)) == 0) {
+      continue;
+    }
+
+    const target_led_t led = target.leds[i];
+    if (led.pin == PIN_NONE) {
+      continue;
+    }
+
+    if (led.invert) {
+      gpio_pin_reset(led.pin);
+    } else {
+      gpio_pin_set(led.pin);
+    }
+  }
 }
 
 void led_off(uint8_t val) {
-#if (LED_NUMBER > 0)
-#ifdef LED1_INVERT
-  if (val & 1)
-    gpio_pin_set(LED1PIN);
-#else
-  if (val & 1)
-    gpio_pin_reset(LED1PIN);
-#endif
-#endif
-#if (LED_NUMBER > 1)
-#ifdef LED2_INVERT
-  if (val & 2)
-    gpio_pin_set(LED2PIN);
-#else
-  if (val & 2)
-    gpio_pin_reset(LED2PIN);
-#endif
-#endif
-#if (LED_NUMBER > 2)
-#ifdef LED3_INVERT
-  if (val & 4)
-    gpio_pin_set(LED3PIN);
-#else
-  if (val & 4)
-    gpio_pin_reset(LED3PIN);
-#endif
-#endif
-#if (LED_NUMBER > 3)
-#ifdef LED1_INVERT
-  if (val & 8)
-    gpio_pin_set(LED4PIN);
-#else
-  if (val & 8)
-    gpio_pin_reset(LED4PIN);
-#endif
-#endif
+  for (uint8_t i = 0; i < LED_MAX; i++) {
+    if ((val & (i + 1)) == 0) {
+      continue;
+    }
+
+    const target_led_t led = target.leds[i];
+    if (led.pin == PIN_NONE) {
+      continue;
+    }
+
+    if (led.invert) {
+      gpio_pin_set(led.pin);
+    } else {
+      gpio_pin_reset(led.pin);
+    }
+  }
 }
 
 void led_flash(uint32_t period, int duty) {
-#if (LED_NUMBER > 0)
   if (time_micros() % period > (period * duty) >> 4) {
     led_on(LEDALL);
   } else {
     led_off(LEDALL);
   }
-#endif
 }
 
 // delta- sigma first order modulator.
@@ -147,10 +104,6 @@ void led_pwm(uint8_t pwmval, float looptime) {
 }
 
 void led_update() {
-  if (LED_NUMBER <= 0) {
-    return;
-  }
-
   // led flash logic
   if (flags.lowbatt) {
     led_flash(500000, 8);
