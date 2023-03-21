@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 typedef enum {
@@ -67,6 +68,7 @@ cbor_result_t cbor_decode_bstr(cbor_value_t *dec, const uint8_t **buf, uint32_t 
 cbor_result_t cbor_decode_tstr(cbor_value_t *dec, const uint8_t **buf, uint32_t *len);
 
 cbor_result_t cbor_decode_tag(cbor_value_t *dec, uint32_t *val);
+cbor_result_t cbor_decode_bool(cbor_value_t *dec, bool *val);
 
 void cbor_encoder_init(cbor_value_t *enc, uint8_t *data, uint32_t len);
 uint32_t cbor_encoder_len(cbor_value_t *enc);
@@ -93,3 +95,4 @@ cbor_result_t cbor_encode_tstr(cbor_value_t *enc, const uint8_t *buf, uint32_t l
 cbor_result_t cbor_encode_str(cbor_value_t *enc, const char *buf);
 
 cbor_result_t cbor_encode_tag(cbor_value_t *enc, const uint32_t *val);
+cbor_result_t cbor_encode_bool(cbor_value_t *enc, const bool *val);

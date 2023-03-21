@@ -1,8 +1,10 @@
 #pragma once
 
-#include "util/util.h"
+#include <stdbool.h>
 
 #include <cbor.h>
+
+#include "util/util.h"
 
 cbor_result_t cbor_handle_error(cbor_result_t err);
 
