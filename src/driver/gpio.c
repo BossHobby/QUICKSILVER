@@ -39,42 +39,30 @@ void gpio_init() {
 
   SET_BIT(RCC->AHB4ENR, ports);
 #endif
+}
 
-#if defined(FPV_PIN)
-  // skip repurpose of swd pin @boot
-  if (FPV_PIN != PIN_A13 && FPV_PIN != PIN_A14) {
+// init fpv pin separately because it may use SWDAT/SWCLK don't want to enable it right away
+bool gpio_init_fpv(uint8_t mode) {
+  if (target.fpv == PIN_NONE) {
+    return false;
+  }
+
+  // only repurpose the pin after rx/tx have bound if it is swd
+  // common settings to set ports
+  if (mode == 1 && fpv_init_done == 0) {
+    // set gpio pin as output no matter what
     LL_GPIO_InitTypeDef init;
     init.Mode = LL_GPIO_MODE_OUTPUT;
     init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
     init.Pull = LL_GPIO_PULL_NO;
     init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-    gpio_pin_init(&init, FPV_PIN);
-    gpio_pin_reset(FPV_PIN);
-    fpv_init_done = 1;
-  }
-#endif
-}
-
-// init fpv pin separately because it may use SWDAT/SWCLK don't want to enable it right away
-int gpio_init_fpv(uint8_t mode) {
-#if defined(FPV_PIN)
-  // only repurpose the pin after rx/tx have bound if it is swd
-  // common settings to set ports
-  LL_GPIO_InitTypeDef init;
-  init.Mode = LL_GPIO_MODE_OUTPUT;
-  init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  init.Pull = LL_GPIO_PULL_NO;
-  init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  if (mode == 1 && fpv_init_done == 0) {
-    // set gpio pin as output no matter what
-    gpio_pin_init(&init, FPV_PIN);
-    return 1;
+    gpio_pin_init(&init, target.fpv);
+    return true;
   }
   if (mode == 1 && fpv_init_done == 1) {
-    return 1;
+    return true;
   }
-#endif
-  return 0;
+  return false;
 }
 
 void gpio_pin_init(LL_GPIO_InitTypeDef *init, gpio_pins_t pin) {

@@ -21,11 +21,20 @@ typedef struct {
   uint8_t name[32];
 
   target_led_t leds[LED_MAX];
+
+  gpio_pins_t usb_detect;
+  gpio_pins_t fpv;
+  gpio_pins_t vbat;
+  gpio_pins_t ibat;
 } target_t;
 
-#define TARGET_MEMBERS  \
-  TSTR_MEMBER(name, 32) \
-  ARRAY_MEMBER(leds, LED_MAX, target_led_t)
+#define TARGET_MEMBERS                      \
+  TSTR_MEMBER(name, 32)                     \
+  ARRAY_MEMBER(leds, LED_MAX, target_led_t) \
+  MEMBER(usb_detect, gpio_pins_t)           \
+  MEMBER(fpv, gpio_pins_t)                  \
+  MEMBER(vbat, gpio_pins_t)                 \
+  MEMBER(ibat, gpio_pins_t)
 
 extern target_t target;
 
