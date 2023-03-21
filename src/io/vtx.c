@@ -17,10 +17,6 @@
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
-#if defined(FPV_PIN)
-static int fpv_init = 0;
-#endif
-
 vtx_settings_t vtx_settings = {
     .power_table = {
         .levels = 0,
@@ -295,28 +291,29 @@ static bool vtx_update_pitmode() {
 }
 
 void vtx_update() {
-#if defined(FPV_PIN)
-  if (rx_aux_on(AUX_FPV_SWITCH)) {
-    // fpv switch on
-    if (!fpv_init && flags.rx_mode == RXMODE_NORMAL && flags.on_ground == 1) {
-      fpv_init = gpio_init_fpv(flags.rx_mode);
-      vtx_delay_ms = 1000;
-      vtx_connect_tries = 0;
-    }
-    if (fpv_init) {
-      gpio_pin_set(FPV_PIN);
-    }
-  } else {
-    // fpv switch off
-    if (fpv_init && flags.on_ground == 1) {
-      if (flags.failsafe) {
-        // do nothing = hold last state
-      } else {
-        gpio_pin_reset(FPV_PIN);
+  if (target.fpv != PIN_NONE) {
+    static bool fpv_init = false;
+    if (rx_aux_on(AUX_FPV_SWITCH)) {
+      // fpv switch on
+      if (!fpv_init && flags.rx_mode == RXMODE_NORMAL && flags.on_ground == 1) {
+        fpv_init = gpio_init_fpv(flags.rx_mode);
+        vtx_delay_ms = 1000;
+        vtx_connect_tries = 0;
+      }
+      if (fpv_init) {
+        gpio_pin_set(target.fpv);
+      }
+    } else {
+      // fpv switch off
+      if (fpv_init && flags.on_ground == 1) {
+        if (flags.failsafe) {
+          // do nothing = hold last state
+        } else {
+          gpio_pin_reset(target.fpv);
+        }
       }
     }
   }
-#endif
 
   if (flags.in_air) {
     // never try to do vtx stuff in-air

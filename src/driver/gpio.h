@@ -19,4 +19,4 @@ void gpio_pin_reset(gpio_pins_t pin);
 void gpio_pin_toggle(gpio_pins_t pin);
 uint32_t gpio_pin_read(gpio_pins_t pin);
 
-int gpio_init_fpv(uint8_t mode);
+bool gpio_init_fpv(uint8_t mode);
