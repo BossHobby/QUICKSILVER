@@ -22,9 +22,14 @@ void serial_rx_init(rx_serial_protocol_t proto) {
   proto = RX_SERIAL_PROTOCOL_CRSF;
 #endif
 
+  const target_serial_port_t *dev = &target.serial_ports[profile.serial.rx];
+  if (!target_serial_port_valid(dev)) {
+    return;
+  }
+
   serial_rx_port = profile.serial.rx;
 
-  if (serial_rx_port == USART_PORT_INVALID) {
+  if (serial_rx_port == SERIAL_PORT_INVALID) {
     return;
   }
 
@@ -38,8 +43,7 @@ void serial_rx_init(rx_serial_protocol_t proto) {
   case RX_SERIAL_PROTOCOL_CRSF:
     gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
     gpio_init.Pull = LL_GPIO_PULL_UP;
-
-    gpio_pin_init_af(&gpio_init, USART.rx_pin, USART.gpio_af);
+    gpio_pin_init_tag(&gpio_init, dev->rx, SERIAL_TAG(serial_rx_port, RES_SERIAL_RX));
     break;
 
   case RX_SERIAL_PROTOCOL_SBUS:
@@ -50,8 +54,7 @@ void serial_rx_init(rx_serial_protocol_t proto) {
   case RX_SERIAL_PROTOCOL_REDPINE_INVERTED:
     gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
     gpio_init.Pull = LL_GPIO_PULL_NO;
-
-    gpio_pin_init_af(&gpio_init, USART.rx_pin, USART.gpio_af);
+    gpio_pin_init_tag(&gpio_init, dev->rx, SERIAL_TAG(serial_rx_port, RES_SERIAL_RX));
     break;
 
   default:
@@ -65,8 +68,7 @@ void serial_rx_init(rx_serial_protocol_t proto) {
   case RX_SERIAL_PROTOCOL_CRSF:
     gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
     gpio_init.Pull = LL_GPIO_PULL_NO;
-
-    gpio_pin_init_af(&gpio_init, USART.tx_pin, USART.gpio_af);
+    gpio_pin_init_tag(&gpio_init, dev->tx, SERIAL_TAG(serial_rx_port, RES_SERIAL_TX));
     break;
 
   default:

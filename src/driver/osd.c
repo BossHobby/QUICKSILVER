@@ -23,7 +23,7 @@ static uint8_t cols = HDZERO_COLS;
 static uint8_t rows = HDZERO_ROWS;
 
 void osd_device_init() {
-  if (profile.serial.hdzero != USART_PORT_INVALID) {
+  if (profile.serial.hdzero != SERIAL_PORT_INVALID) {
     osd_device = OSD_DEVICE_HDZERO;
     cols = HDZERO_COLS;
     rows = HDZERO_ROWS;

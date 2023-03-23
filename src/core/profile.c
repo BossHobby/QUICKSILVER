@@ -167,17 +167,17 @@ const profile_t default_profile = {
 #ifdef RX_USART
         .rx = RX_USART,
 #else
-        .rx = USART_PORT_INVALID,
+        .rx = SERIAL_PORT_INVALID,
 #endif
 #ifdef SMART_AUDIO_USART
         .smart_audio = SMART_AUDIO_USART,
 #else
-        .smart_audio = USART_PORT_INVALID,
+        .smart_audio = SERIAL_PORT_INVALID,
 #endif
 #ifdef HDZERO_USART
         .hdzero = HDZERO_USART,
 #else
-        .hdzero = USART_PORT_INVALID,
+        .hdzero = SERIAL_PORT_INVALID,
 #endif
     },
 
@@ -575,15 +575,6 @@ target_info_t target_info = {
 #endif
     },
     .quic_protocol_version = QUIC_PROTOCOL_VERSION,
-
-#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) "P" #port #pin,
-    .motor_pins = {MOTOR_PINS},
-#undef MOTOR_PIN
-
-#define USART_PORT(channel, rx_pin, tx_pin) "USART_" #channel,
-#define SOFT_SERIAL_PORT(index, rx_pin, tx_pin) "SOFT_SERIAL_" #index,
-    .usart_ports = {"NONE", USART_PORTS},
-#undef USART_PORT
 
     .gyro_id = 0x0,
 };

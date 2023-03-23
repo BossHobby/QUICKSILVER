@@ -178,7 +178,7 @@ float rx_serial_expected_fps() {
 }
 
 void rx_serial_init() {
-  if (profile.serial.rx == USART_PORT_INVALID) {
+  if (profile.serial.rx == SERIAL_PORT_INVALID) {
     return;
   }
 
@@ -217,11 +217,11 @@ void rx_serial_init() {
 }
 
 bool rx_serial_check() {
-  if (profile.serial.rx == USART_PORT_INVALID) {
+  if (profile.serial.rx == SERIAL_PORT_INVALID) {
     return false;
   }
 
-  if (serial_rx_port != USART_PORT_INVALID && serial_rx_port != profile.serial.rx) {
+  if (serial_rx_port != SERIAL_PORT_INVALID && serial_rx_port != profile.serial.rx) {
     return false;
   }
 
