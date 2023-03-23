@@ -268,9 +268,9 @@ typedef struct {
   END_STRUCT()
 
 typedef struct {
-  usart_ports_t rx;
-  usart_ports_t smart_audio;
-  usart_ports_t hdzero;
+  serial_ports_t rx;
+  serial_ports_t smart_audio;
+  serial_ports_t hdzero;
 } profile_serial_t;
 
 #define SERIAL_MEMBERS           \
@@ -397,22 +397,17 @@ typedef struct {
   rx_protocol_t rx_protocols[RX_PROTOCOL_MAX];
   uint32_t quic_protocol_version;
 
-  const char *motor_pins[MOTOR_PIN_MAX];
-  const char *usart_ports[SOFT_SERIAL_PORTS_MAX];
-
   uint8_t gyro_id;
 } target_info_t;
 
-#define TARGET_INFO_MEMBERS                            \
-  START_STRUCT(target_info_t)                          \
-  STR_MEMBER(target_name)                              \
-  STR_MEMBER(git_version)                              \
-  MEMBER(features, uint32)                             \
-  ARRAY_MEMBER(rx_protocols, RX_PROTOCOL_MAX, uint8)   \
-  MEMBER(quic_protocol_version, uint32)                \
-  STR_ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX)          \
-  STR_ARRAY_MEMBER(usart_ports, SOFT_SERIAL_PORTS_MAX) \
-  MEMBER(gyro_id, uint8)                               \
+#define TARGET_INFO_MEMBERS                          \
+  START_STRUCT(target_info_t)                        \
+  STR_MEMBER(target_name)                            \
+  STR_MEMBER(git_version)                            \
+  MEMBER(features, uint32)                           \
+  ARRAY_MEMBER(rx_protocols, RX_PROTOCOL_MAX, uint8) \
+  MEMBER(quic_protocol_version, uint32)              \
+  MEMBER(gyro_id, uint8)                             \
   END_STRUCT()
 
 extern profile_t profile;

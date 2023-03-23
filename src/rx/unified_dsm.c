@@ -36,7 +36,6 @@ extern int current_pid_axis;
 extern int current_pid_term;
 
 #define USART usart_port_defs[serial_rx_port]
-#define SPECTRUM_BIND_PIN usart_port_defs[profile.serial.rx].rx_pin
 
 bool rx_serial_process_dsm() {
   bool channels_received = false;
@@ -139,29 +138,31 @@ bool rx_serial_process_dsm() {
 
 // Send Spektrum bind pulses to a GPIO e.g. TX1
 void rx_spektrum_bind() {
-  if (profile.serial.rx == USART_PORT_INVALID) {
+  if (profile.serial.rx == SERIAL_PORT_INVALID) {
     return;
   }
 
   if (bind_storage.bind_saved == 0) {
-    LL_GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.Mode = LL_GPIO_MODE_OUTPUT;
-    GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-    GPIO_InitStructure.Pull = LL_GPIO_PULL_NO;
-    gpio_pin_init(&GPIO_InitStructure, SPECTRUM_BIND_PIN);
+    const gpio_pins_t spectrum_bind_pin = target.serial_ports[profile.serial.rx].rx;
+
+    LL_GPIO_InitTypeDef gpio_init;
+    gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
+    gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+    gpio_init.Pull = LL_GPIO_PULL_NO;
+    gpio_pin_init(&gpio_init, spectrum_bind_pin);
 
     // RX line, set high
-    gpio_pin_set(SPECTRUM_BIND_PIN);
+    gpio_pin_set(spectrum_bind_pin);
     // Bind window is around 20-140ms after powerup
     time_delay_us(60000);
 
     for (uint8_t i = 0; i < 9; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
       // RX line, drive low for 120us
-      gpio_pin_reset(SPECTRUM_BIND_PIN);
+      gpio_pin_reset(spectrum_bind_pin);
       time_delay_us(120);
 
       // RX line, drive high for 120us
-      gpio_pin_set(SPECTRUM_BIND_PIN);
+      gpio_pin_set(spectrum_bind_pin);
       time_delay_us(120);
     }
   }

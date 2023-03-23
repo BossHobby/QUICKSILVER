@@ -7,219 +7,105 @@
 #include "driver/time.h"
 #include "io/usb_configurator.h"
 
-usart_ports_t serial_rx_port = USART_PORT_INVALID;
-usart_ports_t serial_smart_audio_port = USART_PORT_INVALID;
-usart_ports_t serial_hdzero_port = USART_PORT_INVALID;
+const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX] = {
+    {},
+    {
+        .channel_index = 1,
+        .channel = USART1,
+        .irq = USART1_IRQn,
+        .rcc = RCC_APB2_GRP1(USART1),
+    },
+    {
+        .channel_index = 2,
+        .channel = USART2,
+        .irq = USART2_IRQn,
+        .rcc = RCC_APB1_GRP1(USART2),
+    },
+#if !defined(STM32F411)
+    {
+        .channel_index = 3,
+        .channel = USART3,
+        .irq = USART3_IRQn,
+        .rcc = RCC_APB1_GRP1(USART3),
+    },
+    {
+        .channel_index = 4,
+        .channel = UART4,
+        .irq = UART4_IRQn,
+        .rcc = RCC_APB1_GRP1(UART4),
+    },
+    {
+        .channel_index = 5,
+        .channel = UART5,
+        .irq = UART5_IRQn,
+        .rcc = RCC_APB1_GRP1(UART5),
+    },
+#endif
+    {
+        .channel_index = 6,
+        .channel = USART6,
+        .irq = USART6_IRQn,
+        .rcc = RCC_APB2_GRP1(USART6),
+    },
+#if defined(STM32F7) || defined(STM32H7)
+    {
+        .channel_index = 7,
+        .channel = UART7,
+        .irq = UART7_IRQn,
+        .rcc = RCC_APB1_GRP1(UART7),
+    },
+    {
+        .channel_index = 8,
+        .channel = UART8,
+        .irq = UART8_IRQn,
+        .rcc = RCC_APB1_GRP1(UART8),
+    },
+#endif
+};
 
-serial_port_t *serial_ports[USART_PORTS_MAX];
+serial_ports_t serial_rx_port = SERIAL_PORT_INVALID;
+serial_ports_t serial_smart_audio_port = SERIAL_PORT_INVALID;
+serial_ports_t serial_hdzero_port = SERIAL_PORT_INVALID;
+
+serial_port_t *serial_ports[SERIAL_PORT_MAX];
 
 #define USART usart_port_defs[port]
 
-// FUNCTION TO SET APB CLOCK TO USART BASED ON GIVEN UART
-void serial_enable_rcc(usart_ports_t port) {
-  switch (usart_port_defs[port].channel_index) {
-#ifdef USART1
-  case 1:
-    rcc_enable(RCC_APB2_GRP1(USART1));
-    break;
-#endif
-#ifdef USART2
-  case 2:
-    rcc_enable(RCC_APB1_GRP1(USART2));
-    break;
-#endif
-#ifdef USART3
-  case 3:
-    rcc_enable(RCC_APB1_GRP1(USART3));
-    break;
-#endif
-#ifdef UART4
-  case 4:
-    rcc_enable(RCC_APB1_GRP1(UART4));
-    break;
-#endif
-#ifdef UART5
-  case 5:
-    rcc_enable(RCC_APB1_GRP1(UART5));
-    break;
-#endif
-#ifdef USART6
-  case 6:
-    rcc_enable(RCC_APB2_GRP1(USART6));
-    break;
-#endif
-#ifdef UART7
-  case 7:
-    rcc_enable(RCC_APB1_GRP1(UART7));
-    break;
-#endif
-#ifdef UART8
-  case 8:
-    rcc_enable(RCC_APB1_GRP1(UART8));
-    break;
-#endif
-  }
+void serial_enable_rcc(serial_ports_t port) {
+  const rcc_reg_t reg = usart_port_defs[port].rcc;
+  rcc_enable(reg);
 }
 
-void serial_enable_isr(usart_ports_t port) {
-  switch (usart_port_defs[port].channel_index) {
-#ifdef USART1
-  case 1:
-    interrupt_enable(USART1_IRQn, UART_PRIORITY);
-    break;
-#endif
-#ifdef USART2
-  case 2:
-    interrupt_enable(USART2_IRQn, UART_PRIORITY);
-    break;
-#endif
-#ifdef USART3
-  case 3:
-    interrupt_enable(USART3_IRQn, UART_PRIORITY);
-    break;
-#endif
-#ifdef UART4
-  case 4:
-    interrupt_enable(UART4_IRQn, UART_PRIORITY);
-    break;
-#endif
-#ifdef UART5
-  case 5:
-    interrupt_enable(UART5_IRQn, UART_PRIORITY);
-    break;
-#endif
-#ifdef USART6
-  case 6:
-    interrupt_enable(USART6_IRQn, UART_PRIORITY);
-    break;
-#endif
-#ifdef UART7
-  case 7:
-    interrupt_enable(UART7_IRQn, UART_PRIORITY);
-    break;
-#endif
-#ifdef UART8
-  case 8:
-    interrupt_enable(UART8_IRQn, UART_PRIORITY);
-    break;
-#endif
-  }
+void serial_enable_isr(serial_ports_t port) {
+  const IRQn_Type irq = usart_port_defs[port].irq;
+  interrupt_enable(irq, UART_PRIORITY);
 }
 
-void serial_disable_isr(usart_ports_t port) {
-  switch (usart_port_defs[port].channel_index) {
-#ifdef USART1
-  case 1:
-    interrupt_disable(USART1_IRQn);
-    break;
-#endif
-#ifdef USART2
-  case 2:
-    interrupt_disable(USART2_IRQn);
-    break;
-#endif
-#ifdef USART3
-  case 3:
-    interrupt_disable(USART3_IRQn);
-    break;
-#endif
-#ifdef UART4
-  case 4:
-    interrupt_disable(UART4_IRQn);
-    break;
-#endif
-#ifdef UART5
-  case 5:
-    interrupt_disable(UART5_IRQn);
-    break;
-#endif
-#ifdef USART6
-  case 6:
-    interrupt_disable(USART6_IRQn);
-    break;
-#endif
-#ifdef UART7
-  case 7:
-    interrupt_disable(UART7_IRQn);
-    break;
-#endif
-#ifdef UART8
-  case 8:
-    interrupt_disable(UART8_IRQn);
-    break;
-#endif
-  }
+void serial_disable_isr(serial_ports_t port) {
+  const IRQn_Type irq = usart_port_defs[port].irq;
+  interrupt_disable(irq);
 }
 
-void handle_usart_invert(usart_ports_t port, bool invert) {
-#if defined(STM32F4) && (defined(USART1_INVERTER_PIN) || defined(USART2_INVERTER_PIN) || defined(USART3_INVERTER_PIN) || defined(USART4_INVERTER_PIN) || defined(USART5_INVERTER_PIN) || defined(USART6_INVERTER_PIN))
+void handle_usart_invert(serial_ports_t port, bool invert) {
+#if defined(STM32F4)
+  const target_serial_port_t *dev = &target.serial_ports[port];
+  if (!target_serial_port_valid(dev)) {
+    return;
+  }
+  if (dev->inverter == PIN_NONE) {
+    return;
+  }
+
+  // Inverter control line, set high
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
-
-  // Inverter control line, set high
-  switch (usart_port_defs[profile.serial.rx].channel_index) {
-  case 1:
-#if defined(USART1_INVERTER_PIN)
-    gpio_pin_init(&gpio_init, USART1_INVERTER_PIN);
-    if (invert) {
-      gpio_pin_set(USART1_INVERTER_PIN);
-    } else {
-      gpio_pin_reset(USART1_INVERTER_PIN);
-    }
-#endif
-    break;
-  case 2:
-#if defined(USART2_INVERTER_PIN)
-    gpio_pin_init(&gpio_init, USART2_INVERTER_PIN);
-    if (invert) {
-      gpio_pin_set(USART2_INVERTER_PIN);
-    } else {
-      gpio_pin_reset(USART2_INVERTER_PIN);
-    }
-#endif
-    break;
-  case 3:
-#if defined(USART3_INVERTER_PIN)
-    gpio_pin_init(&gpio_init, USART3_INVERTER_PIN);
-    if (invert) {
-      gpio_pin_set(USART3_INVERTER_PIN);
-    } else {
-      gpio_pin_reset(USART3_INVERTER_PIN);
-    }
-#endif
-    break;
-  case 4:
-#if defined(USART4_INVERTER_PIN)
-    gpio_pin_init(&gpio_init, USART4_INVERTER_PIN);
-    if (invert) {
-      gpio_pin_set(USART4_INVERTER_PIN);
-    } else {
-      gpio_pin_reset(USART4_INVERTER_PIN);
-    }
-#endif
-    break;
-  case 5:
-#if defined(USART5_INVERTER_PIN)
-    gpio_pin_init(&gpio_init, USART5_INVERTER_PIN);
-    if (invert) {
-      gpio_pin_set(USART5_INVERTER_PIN);
-    } else {
-      gpio_pin_reset(USART5_INVERTER_PIN);
-    }
-#endif
-    break;
-  case 6:
-#if defined(USART6_INVERTER_PIN)
-    gpio_pin_init(&gpio_init, USART6_INVERTER_PIN);
-    if (invert) {
-      gpio_pin_set(USART6_INVERTER_PIN);
-    } else {
-      gpio_pin_reset(USART6_INVERTER_PIN);
-    }
-#endif
-    break;
+  gpio_pin_init(&gpio_init, dev->inverter);
+  if (invert) {
+    gpio_pin_set(dev->inverter);
+  } else {
+    gpio_pin_reset(dev->inverter);
   }
 #endif
 #if defined(STM32F7) || defined(STM32H7)
@@ -233,8 +119,8 @@ void handle_usart_invert(usart_ports_t port, bool invert) {
 #endif
 }
 
-void serial_port_init(usart_ports_t port, LL_USART_InitTypeDef *usart_init, bool half_duplex, bool invert) {
-  if (port == USART_PORT_INVALID) {
+void serial_port_init(serial_ports_t port, LL_USART_InitTypeDef *usart_init, bool half_duplex, bool invert) {
+  if (port == SERIAL_PORT_INVALID) {
     return;
   }
 
@@ -280,8 +166,13 @@ void serial_port_init(usart_ports_t port, LL_USART_InitTypeDef *usart_init, bool
 #endif
 }
 
-void serial_init(serial_port_t *serial, usart_ports_t port, uint32_t baudrate, uint8_t stop_bits, bool half_duplex) {
-  if (port == USART_PORT_INVALID) {
+void serial_init(serial_port_t *serial, serial_ports_t port, uint32_t baudrate, uint8_t stop_bits, bool half_duplex) {
+  if (port == SERIAL_PORT_INVALID) {
+    return;
+  }
+
+  const target_serial_port_t *dev = &target.serial_ports[port];
+  if (!target_serial_port_valid(dev)) {
     return;
   }
 
@@ -291,12 +182,12 @@ void serial_init(serial_port_t *serial, usart_ports_t port, uint32_t baudrate, u
   if (half_duplex) {
     gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
     gpio_init.Pull = LL_GPIO_PULL_NO;
-    gpio_pin_init_af(&gpio_init, USART.tx_pin, USART.gpio_af);
+    gpio_pin_init_tag(&gpio_init, dev->tx, SERIAL_TAG(port, RES_SERIAL_TX));
   } else {
     gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
     gpio_init.Pull = LL_GPIO_PULL_UP;
-    gpio_pin_init_af(&gpio_init, USART.rx_pin, USART.gpio_af);
-    gpio_pin_init_af(&gpio_init, USART.tx_pin, USART.gpio_af);
+    gpio_pin_init_tag(&gpio_init, dev->rx, SERIAL_TAG(port, RES_SERIAL_RX));
+    gpio_pin_init_tag(&gpio_init, dev->tx, SERIAL_TAG(port, RES_SERIAL_TX));
   }
 
   LL_USART_InitTypeDef usart_init;
@@ -342,55 +233,12 @@ bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32
   return true;
 }
 
-bool serial_is_soft(usart_ports_t port) {
-  if (port < USART_PORTS_MAX) {
+bool serial_is_soft(serial_ports_t port) {
+  if (port < SERIAL_PORT_MAX) {
     return false;
   }
   return true;
 }
-
-#ifdef STM32F4
-#define USART4 UART4
-#define USART5 UART5
-#endif
-
-#if defined(STM32F7) || defined(STM32H7)
-#define USART4 UART4
-#define USART5 UART5
-#define USART7 UART7
-#define USART8 UART8
-#endif
-
-#define GPIO_AF_USART1 GPIO_AF7_USART1
-#define GPIO_AF_USART2 GPIO_AF7_USART2
-#define GPIO_AF_USART3 GPIO_AF7_USART3
-#define GPIO_AF_USART4 GPIO_AF8_UART4
-#define GPIO_AF_USART5 GPIO_AF8_UART5
-
-#ifdef STM32H7
-#define GPIO_AF_USART6 GPIO_AF7_USART6
-#define GPIO_AF_USART7 GPIO_AF7_UART7
-#else
-#define GPIO_AF_USART6 GPIO_AF8_USART6
-#define GPIO_AF_USART7 GPIO_AF8_UART7
-#endif
-
-#define GPIO_AF_USART8 GPIO_AF8_UART8
-
-#define USART_PORT(chan, rx, tx)      \
-  {                                   \
-      .channel_index = chan,          \
-      .channel = USART##chan,         \
-      .gpio_af = GPIO_AF_USART##chan, \
-      .rx_pin = rx,                   \
-      .tx_pin = tx,                   \
-  },
-#define SOFT_SERIAL_PORT(index, rx_pin, tx_pin)
-
-usart_port_def_t usart_port_defs[USART_PORTS_MAX] = {{}, USART_PORTS};
-
-#undef USART_PORT
-#undef SOFT_SERIAL_PORT
 
 void handle_serial_isr(serial_port_t *serial) {
   const usart_port_def_t *port = &usart_port_defs[serial->port];
@@ -418,7 +266,7 @@ void handle_serial_isr(serial_port_t *serial) {
   }
 }
 
-void handle_usart_isr(usart_ports_t port) {
+void handle_usart_isr(serial_ports_t port) {
   if (serial_ports[port]) {
     handle_serial_isr(serial_ports[port]);
     return;
@@ -445,16 +293,25 @@ void handle_usart_isr(usart_ports_t port) {
 
 // we need handlers for both U_S_ART and UART.
 // simply define both for every enabled port.
-#define USART_PORT(channel, rx_pin, tx_pin) \
+#define USART_IRQ_HANDLER(channel)          \
   void USART##channel##_IRQHandler() {      \
-    handle_usart_isr(USART_IDENT(channel)); \
+    handle_usart_isr(SERIAL_PORT##channel); \
   }                                         \
   void UART##channel##_IRQHandler() {       \
-    handle_usart_isr(USART_IDENT(channel)); \
+    handle_usart_isr(SERIAL_PORT##channel); \
   }
-#define SOFT_SERIAL_PORT(index, rx_pin, tx_pin)
 
-USART_PORTS
+USART_IRQ_HANDLER(1)
+USART_IRQ_HANDLER(2)
+#if !defined(STM32F411)
+USART_IRQ_HANDLER(3)
+USART_IRQ_HANDLER(4)
+USART_IRQ_HANDLER(5)
+#endif
+USART_IRQ_HANDLER(6)
+#if defined(STM32F7) || defined(STM32H7)
+USART_IRQ_HANDLER(7)
+USART_IRQ_HANDLER(8)
+#endif
 
-#undef USART_PORT
-#undef SOFT_SERIAL_PORT
+#undef USART_IRQ_HANDLER

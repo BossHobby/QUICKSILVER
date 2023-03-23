@@ -81,7 +81,7 @@ void usb_quic_logf(const char *fmt, ...) {
   quic_send_str(&quic, QUIC_CMD_LOG, QUIC_FLAG_NONE, str);
 }
 
-void usb_serial_passthrough(usart_ports_t port, uint32_t baudrate, uint8_t stop_bits, bool half_duplex) {
+void usb_serial_passthrough(serial_ports_t port, uint32_t baudrate, uint8_t stop_bits, bool half_duplex) {
   uint8_t tx_data[512];
   ring_buffer_t tx_buffer = {
       .buffer = tx_data,

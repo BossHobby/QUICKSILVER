@@ -70,14 +70,19 @@ static void serial_smart_audio_reconfigure() {
     return;
   }
 
+  const target_serial_port_t *dev = &target.serial_ports[serial_smart_audio_port];
+  if (!target_serial_port_valid(dev)) {
+    return;
+  }
+
   serial_disable_isr(serial_smart_audio_port);
 
-  LL_GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStructure.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  gpio_pin_init_af(&GPIO_InitStructure, USART.tx_pin, USART.gpio_af);
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  gpio_init.Pull = LL_GPIO_PULL_NO;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  gpio_pin_init_tag(&gpio_init, dev->tx, SERIAL_TAG(serial_smart_audio_port, RES_SERIAL_TX));
 
   LL_USART_InitTypeDef usart_init;
   LL_USART_StructInit(&usart_init);

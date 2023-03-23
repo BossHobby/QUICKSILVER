@@ -70,9 +70,19 @@ void gpio_pin_init(LL_GPIO_InitTypeDef *init, gpio_pins_t pin) {
   LL_GPIO_Init(gpio_pin_defs[pin].port, init);
 }
 
-void gpio_pin_init_af(LL_GPIO_InitTypeDef *init, gpio_pins_t pin, uint32_t af) {
+void gpio_pin_init_af(LL_GPIO_InitTypeDef *init, gpio_pins_t pin, uint8_t af) {
   init->Alternate = af;
   gpio_pin_init(init, pin);
+}
+
+void gpio_pin_init_tag(LL_GPIO_InitTypeDef *init, gpio_pins_t pin, resource_tag_t tag) {
+  for (uint32_t j = 0; j < GPIO_AF_MAX; j++) {
+    const gpio_af_t *func = &gpio_pin_afs[j];
+    if (func->pin != pin || func->tag != tag) {
+      continue;
+    }
+    return gpio_pin_init_af(init, pin, func->af);
+  }
 }
 
 void gpio_pin_set(gpio_pins_t pin) {
@@ -106,3 +116,20 @@ const gpio_pin_def_t gpio_pin_defs[PINS_MAX] = {
 
 #undef GPIO_PIN
 #undef GPIO_AF
+
+#define GPIO_AF(_pin, _af, _tag) \
+  {                              \
+      .pin = _pin,               \
+      .tag = _tag,               \
+      .af = _af,                 \
+  },
+#define GPIO_PIN(port_num, num)
+
+const gpio_af_t gpio_pin_afs[] = {
+#include "gpio_pins.in"
+};
+
+#undef GPIO_PIN
+#undef GPIO_AF
+
+const uint32_t GPIO_AF_MAX = (sizeof(gpio_pin_afs) / sizeof(gpio_af_t));

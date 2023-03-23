@@ -72,7 +72,7 @@ static msp_t msp = {
 };
 
 void serial_msp_vtx_init() {
-  if (serial_hdzero_port != USART_PORT_INVALID) {
+  if (serial_hdzero_port != SERIAL_PORT_INVALID) {
     // reuse existing msp for hdz
     msp_vtx = &hdzero_msp;
     return;
@@ -85,14 +85,19 @@ void serial_msp_vtx_init() {
   if (serial_is_soft(serial_smart_audio_port)) {
     soft_serial_init(serial_smart_audio_port, 9600, 1);
   } else {
+    const target_serial_port_t *dev = &target.serial_ports[serial_smart_audio_port];
+    if (!target_serial_port_valid(dev)) {
+      return;
+    }
+
     serial_disable_isr(serial_smart_audio_port);
 
-    LL_GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.Mode = LL_GPIO_MODE_ALTERNATE;
-    GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-    GPIO_InitStructure.Pull = LL_GPIO_PULL_UP;
-    GPIO_InitStructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-    gpio_pin_init_af(&GPIO_InitStructure, USART.tx_pin, USART.gpio_af);
+    LL_GPIO_InitTypeDef gpio_init;
+    gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
+    gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
+    gpio_init.Pull = LL_GPIO_PULL_UP;
+    gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+    gpio_pin_init_tag(&gpio_init, dev->tx, SERIAL_TAG(serial_smart_audio_port, RES_SERIAL_TX));
 
     LL_USART_InitTypeDef usart_init;
     LL_USART_StructInit(&usart_init);
@@ -116,7 +121,7 @@ void serial_msp_vtx_init() {
 }
 
 vtx_update_result_t serial_msp_vtx_update() {
-  if (serial_hdzero_port != USART_PORT_INVALID) {
+  if (serial_hdzero_port != SERIAL_PORT_INVALID) {
     if (!hdzero_is_ready()) {
       return VTX_WAIT;
     }
