@@ -262,27 +262,26 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   }
 
   case MSP2_COMMON_SERIAL_CONFIG: {
-    const uint8_t uart_count = USART_PORTS_MAX - 1;
+    const uint8_t uart_count = SERIAL_PORT_MAX - 1;
     uint8_t data[1 + uart_count * 5];
 
     data[0] = uart_count;
 
     for (uint32_t i = 0; i < uart_count; i++) {
-      const usart_ports_t port = i + 1;
-      data[1 + i * 5] = port;
+      data[1 + i * 5] = i;
 
       uint32_t function = 0;
-      if (port == serial_rx_port) {
+      if (i == serial_rx_port) {
         function = MSP_SERIAL_FUNCTION_RX;
       }
-      if (port == serial_smart_audio_port) {
+      if (i == serial_smart_audio_port) {
         if (vtx_settings.protocol == VTX_PROTOCOL_TRAMP) {
           function = MSP_SERIAL_FUNCTION_TRAMP;
         } else {
           function = MSP_SERIAL_FUNCTION_SA;
         }
       }
-      if (port == serial_hdzero_port) {
+      if (i == serial_hdzero_port) {
         function = MSP_SERIAL_FUNCTION_HDZERO;
       }
 

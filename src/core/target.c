@@ -23,6 +23,10 @@ CBOR_START_STRUCT_ENCODER(target_invert_pin_t)
 TARGET_BUZZER_MEMBERS
 CBOR_END_STRUCT_ENCODER()
 
+CBOR_START_STRUCT_ENCODER(target_serial_port_t)
+TARGET_SERIAL_MEMBERS
+CBOR_END_STRUCT_ENCODER()
+
 CBOR_START_STRUCT_ENCODER(target_t)
 TARGET_MEMBERS
 CBOR_END_STRUCT_ENCODER()
@@ -45,6 +49,10 @@ CBOR_END_STRUCT_DECODER()
 
 CBOR_START_STRUCT_DECODER(target_invert_pin_t)
 TARGET_BUZZER_MEMBERS
+CBOR_END_STRUCT_DECODER()
+
+CBOR_START_STRUCT_DECODER(target_serial_port_t)
+TARGET_SERIAL_MEMBERS
 CBOR_END_STRUCT_DECODER()
 
 CBOR_START_STRUCT_DECODER(target_t)
@@ -164,4 +172,8 @@ cbor_result_t cbor_decode_gpio_pins_t(cbor_value_t *dec, gpio_pins_t *t) {
   *t = gpio_pin_lookup[val];
 
   return res;
+}
+
+bool target_serial_port_valid(const target_serial_port_t *port) {
+  return port->index != 0 && (port->rx != PIN_NONE || port->tx != PIN_NONE);
 }

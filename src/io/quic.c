@@ -502,7 +502,7 @@ static void process_serial(quic_t *quic, cbor_value_t *dec) {
 
   switch (cmd) {
   case QUIC_SERIAL_ENABLE: {
-    usart_ports_t port = USART_PORT_INVALID;
+    serial_ports_t port = SERIAL_PORT_INVALID;
     res = cbor_decode_uint8(dec, &port);
     check_cbor_error(QUIC_CMD_SERIAL);
 
