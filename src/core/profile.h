@@ -292,6 +292,28 @@ typedef struct {
   uint32_t datetime;
 } profile_metadata_t;
 
+typedef struct {
+  uint32_t blackbox_fieldflags;
+  uint32_t rate_divisor;
+} profile_blackbox_t;
+
+#define BLACKBOX_MEMBERS              \
+  MEMBER(blackbox_fieldflags, uint32) \
+  MEMBER(rate_divisor, uint32)
+
+typedef struct {
+  uint32_t blackbox_fieldflags;
+  uint32_t rate_divisor;
+  const char* name;
+  const char* name_osd;
+} blackbox_preset_t;
+
+#define BLACKBOX_PRESET_MEMBERS       \
+  MEMBER(blackbox_fieldflags, uint32) \
+  MEMBER(rate_divisor, uint32)        \
+  STR_MEMBER(name)                    \
+  STR_MEMBER(name_osd)
+
 // Full Profile
 typedef struct {
   profile_metadata_t meta;
@@ -303,6 +325,7 @@ typedef struct {
   profile_receiver_t receiver;
   profile_pid_t pid;
   profile_voltage_t voltage;
+  profile_blackbox_t blackbox;
 } profile_t;
 
 #define PROFILE_MEMBERS                \
@@ -314,7 +337,8 @@ typedef struct {
   MEMBER(rate, profile_rate_t)         \
   MEMBER(receiver, profile_receiver_t) \
   MEMBER(pid, profile_pid_t)           \
-  MEMBER(voltage, profile_voltage_t)
+  MEMBER(voltage, profile_voltage_t)   \
+  MEMBER(blackbox, profile_blackbox_t)
 
 typedef enum {
   FEATURE_BRUSHLESS = (1 << 1),
@@ -354,6 +378,12 @@ extern target_info_t target_info;
 
 extern const pid_rate_preset_t pid_rate_presets[];
 extern const uint32_t pid_rate_presets_count;
+
+extern const blackbox_preset_t blackbox_presets[];
+extern const uint32_t blackbox_presets_count;
+
+void blackbox_preset_apply(const blackbox_preset_t* preset, profile_blackbox_t* profile);
+uint8_t blackbox_preset_equals(const blackbox_preset_t* preset, profile_blackbox_t* profile);
 
 void profile_set_defaults();
 pid_rate_t *profile_current_pid_rates();

@@ -28,7 +28,29 @@ typedef struct {
   int16_t debug[4];
 } blackbox_t;
 
-cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b);
+// Blackbox fields (should align with above structure)
+typedef enum {
+  BBOX_FIELD_LOOP,
+  BBOX_FIELD_TIME,
+  BBOX_FIELD_PID_P_TERM,
+  BBOX_FIELD_PID_I_TERM,
+  BBOX_FIELD_PID_D_TERM,
+  BBOX_FIELD_RX,
+  BBOX_FIELD_SETPOINT,
+  BBOX_FIELD_ACCEL_RAW,
+  BBOX_FIELD_ACCEL_FILTER,
+  BBOX_FIELD_GYRO_RAW,
+  BBOX_FIELD_GYRO_FILTER,
+  BBOX_FIELD_MOTOR,
+  BBOX_FIELD_CPU_LOAD,
+  BBOX_FIELD_DEBUG,
+
+  _BBOX_FIELD_MAX,
+} blackbox_field_t;
+
+
+
+cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b, const uint32_t blackbox_fieldflags);
 
 void blackbox_init();
 void blackbox_set_debug(uint8_t index, int16_t data);
