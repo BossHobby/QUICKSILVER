@@ -13,6 +13,35 @@
 // ignore -Wmissing-braces here, gcc bug with nested structs
 #pragma GCC diagnostic ignored "-Wmissing-braces"
 
+#define DEFAULT_BLACKBOX_PRESET 0
+const blackbox_preset_t blackbox_presets[] = {
+    {
+        .blackbox_fieldflags = ((1 << _BBOX_FIELD_MAX) - 1),    // Set all bits
+        .rate_divisor = 4,
+        .name = "All fields, Rate Divisor=4",
+        .name_osd = "ALL, RATE=4"
+    },
+    {
+        .blackbox_fieldflags =  (1 << BBOX_FIELD_GYRO_FILTER) | (1 << BBOX_FIELD_LOOP) | (1 << BBOX_FIELD_TIME),
+        .rate_divisor = 20,
+        .name = "Gyro Filtered, Rate Divisor=20",
+        .name_osd = "GYRO FILTERED, RATE=20"
+    },
+};
+const uint32_t blackbox_presets_count = sizeof(blackbox_presets) / sizeof(blackbox_preset_t);
+
+void blackbox_preset_apply(const blackbox_preset_t* preset, profile_blackbox_t* profile)
+{
+    profile->blackbox_fieldflags = preset->blackbox_fieldflags | (1 << BBOX_FIELD_LOOP) | (1 << BBOX_FIELD_TIME);
+    profile->rate_divisor = preset->rate_divisor;
+}
+
+uint8_t blackbox_preset_equals(const blackbox_preset_t* preset, profile_blackbox_t* profile)
+{
+    return preset->blackbox_fieldflags == profile->blackbox_fieldflags && preset->rate_divisor == profile->rate_divisor;
+}
+
+
 #define DEFAULT_PID_RATE_PRESET 0
 
 const pid_rate_preset_t pid_rate_presets[] = {
@@ -494,6 +523,9 @@ const profile_t default_profile = {
             ENCODE_OSD_ELEMENT(1, 0, 0, 17),  // OSD_CURRENT_DRAW
         },
     },
+    .blackbox = { 
+         // Initialized by profile_set_defaults(), so nothing to do here
+    }
 };
 
 #define _MACRO_STR(arg) #arg
@@ -569,6 +601,8 @@ void profile_set_defaults() {
   for (uint8_t i = 0; i < PID_PROFILE_MAX; i++) {
     profile.pid.pid_rates[i] = pid_rate_presets[DEFAULT_PID_RATE_PRESET].rate;
   }
+
+  blackbox_preset_apply(&blackbox_presets[DEFAULT_BLACKBOX_PRESET], &profile.blackbox);
 }
 
 pid_rate_t *profile_current_pid_rates() {
@@ -666,6 +700,14 @@ CBOR_END_STRUCT_ENCODER()
 
 CBOR_START_STRUCT_ENCODER(profile_receiver_t)
 RECEIVER_MEMBERS
+CBOR_END_STRUCT_ENCODER()
+
+CBOR_START_STRUCT_ENCODER(profile_blackbox_t)
+BLACKBOX_MEMBERS
+CBOR_END_STRUCT_ENCODER()
+
+CBOR_START_STRUCT_ENCODER(blackbox_preset_t)
+BLACKBOX_PRESET_MEMBERS
 CBOR_END_STRUCT_ENCODER()
 
 CBOR_START_STRUCT_ENCODER(profile_t)
@@ -784,6 +826,10 @@ CBOR_END_STRUCT_DECODER()
 
 CBOR_START_STRUCT_DECODER(profile_receiver_t)
 RECEIVER_MEMBERS
+CBOR_END_STRUCT_DECODER()
+
+CBOR_START_STRUCT_DECODER(profile_blackbox_t)
+BLACKBOX_MEMBERS
 CBOR_END_STRUCT_DECODER()
 
 CBOR_START_STRUCT_DECODER(profile_t)

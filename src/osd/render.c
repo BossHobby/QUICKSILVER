@@ -1514,12 +1514,14 @@ void osd_display() {
       osd_menu_start();
       osd_menu_header("BLACKBOX");
 
-      if (osd_menu_label_start(4, 3)) {
+      osd_menu_select_screen(4, 3, "PRESETS", OSD_SCREEN_BLACKBOX_PRESETS);
+
+      if (osd_menu_label_start(4, 5)) {
         osd_write_int(data_flash_header.file_num, 3);
         osd_write_str(" FILES");
       }
 
-      if (osd_menu_label_start(4, 4)) {
+      if (osd_menu_label_start(4, 6)) {
         const uint32_t usage = (float)(data_flash_usage()) / (float)(bounds.total_size) * 100;
 
         osd_write_int(usage, 3);
@@ -1553,6 +1555,52 @@ void osd_display() {
       reset_state = 0;
       break;
     }
+#endif
+    break;
+  }
+
+  case OSD_SCREEN_BLACKBOX_PRESETS: {
+#ifdef ENABLE_BLACKBOX
+    osd_menu_start();
+    osd_menu_header("BLACKBOX PRESETS");
+
+    // Display currently active preset wrapped in angle brackets
+    // as prefacing it with "ACTIVE: " takes too much space
+    const char* label = NULL;
+    for (int i=0; i<blackbox_presets_count; i++) {
+      const blackbox_preset_t *preset = &blackbox_presets[i];
+      if (blackbox_preset_equals(preset, &profile.blackbox)) {
+        label = preset->name_osd;
+        break;
+      }
+    }
+    if (osd_menu_label_start(3, 3)) {
+      osd_write_char('<');
+      if (label) {
+        osd_write_str(label);
+      }
+      else {
+        const uint32_t rate = profile.blackbox.rate_divisor;
+        osd_write_str("CUSTOM, RATE=");
+        osd_write_int(rate, (rate >= 10) ? 2 : 1);
+      }
+      osd_write_char('>');
+    }
+
+    // Display available presets
+    int y = 5;
+    for (int i=0; i<blackbox_presets_count; i++, y++) {
+      const blackbox_preset_t *preset = &blackbox_presets[i];
+      if (osd_menu_button(3, y, preset->name_osd)) {
+        blackbox_preset_apply(preset, &profile.blackbox);
+        if (osd_menu_finish()) {
+          osd_push_screen_replace(OSD_SCREEN_BLACKBOX_PRESETS);
+        }
+      }
+    }
+
+    osd_menu_select_save_and_exit(3);
+    osd_menu_finish();
 #endif
     break;
   }
