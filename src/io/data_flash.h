@@ -15,6 +15,7 @@ typedef struct {
 } data_flash_bounds_t;
 
 typedef struct {
+  uint32_t blackbox_fieldflags;
   uint32_t looptime;
   uint8_t blackbox_rate;
   uint32_t start_page;
@@ -22,6 +23,7 @@ typedef struct {
 } data_flash_file_t;
 
 #define DATA_FLASH_FILE_MEMBERS \
+  MEMBER(blackbox_fieldflags, uint32)      \
   MEMBER(looptime, uint32)      \
   MEMBER(blackbox_rate, uint8)  \
   MEMBER(start_page, uint32)    \
@@ -60,8 +62,8 @@ data_flash_result_t data_flash_update();
 uint32_t data_flash_usage();
 
 void data_flash_reset();
-bool data_flash_restart(uint32_t blackbox_rate, uint32_t looptime);
+bool data_flash_restart(uint32_t blackbox_fieldflags, uint32_t blackbox_rate, uint32_t looptime);
 void data_flash_finish();
 
 void data_flash_read_backbox(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size);
-cbor_result_t data_flash_write_backbox(const blackbox_t *b);
+cbor_result_t data_flash_write_backbox(const uint32_t blackbox_fieldflags, const blackbox_t *b);

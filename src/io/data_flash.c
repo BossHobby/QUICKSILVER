@@ -371,7 +371,7 @@ void data_flash_reset() {
   looptime_reset();
 }
 
-bool data_flash_restart(uint32_t blackbox_rate, uint32_t looptime) {
+bool data_flash_restart(uint32_t blackbox_fieldflags, uint32_t blackbox_rate, uint32_t looptime) {
   if (data_flash_header.file_num >= DATA_FLASH_MAX_FILES) {
     return false;
   }
@@ -395,6 +395,7 @@ bool data_flash_restart(uint32_t blackbox_rate, uint32_t looptime) {
     return false;
   }
 
+  data_flash_header.files[data_flash_header.file_num].blackbox_fieldflags = blackbox_fieldflags;
   data_flash_header.files[data_flash_header.file_num].looptime = looptime;
   data_flash_header.files[data_flash_header.file_num].blackbox_rate = blackbox_rate;
   data_flash_header.files[data_flash_header.file_num].size = 0;
@@ -445,13 +446,13 @@ void data_flash_read_backbox(const uint32_t file_index, const uint32_t offset, u
 #endif
 }
 
-cbor_result_t data_flash_write_backbox(const blackbox_t *b) {
+cbor_result_t data_flash_write_backbox(const uint32_t blackbox_fieldflags, const blackbox_t *b) {
   static uint8_t buffer[PAGE_SIZE];
 
   cbor_value_t enc;
   cbor_encoder_init(&enc, buffer, PAGE_SIZE);
 
-  cbor_result_t res = cbor_encode_blackbox_t(&enc, b);
+  cbor_result_t res = cbor_encode_blackbox_t(&enc, b, blackbox_fieldflags);
   if (res < CBOR_OK) {
     return res;
   }
