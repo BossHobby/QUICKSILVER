@@ -72,7 +72,7 @@ jobs:
 
       - name: upload hanfer
         uses: appleboy/scp-action@master
-        if: github.repository_owner == 'BossHobby'
+        if: github.repository_owner == 'BossHobby' && github.event_name != 'pull_request'
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
