@@ -45,7 +45,7 @@ typedef enum {
   BBOX_FIELD_CPU_LOAD,
   BBOX_FIELD_DEBUG,
 
-  _BBOX_FIELD_MAX,
+  BBOX_FIELD_MAX,
 } blackbox_field_t;
 
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b, const uint32_t blackbox_fieldflags);
