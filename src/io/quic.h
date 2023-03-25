@@ -59,6 +59,7 @@ typedef enum {
   QUIC_VAL_BLHEL_SETTINGS,
   QUIC_VAL_BIND_INFO,
   QUIC_VAL_PERF_COUNTERS,
+  QUIC_VAL_BLACKBOX_PRESETS,
 } quic_values;
 
 typedef void (*quic_send_fn_t)(uint8_t *data, uint32_t len, void *priv);

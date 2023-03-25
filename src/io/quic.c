@@ -221,6 +221,19 @@ static void get_quic(quic_t *quic, cbor_value_t *dec) {
     break;
   }
 #endif
+#ifdef ENABLE_BLACKBOX
+  case QUIC_VAL_BLACKBOX_PRESETS: {
+    res = cbor_encode_array(&enc, blackbox_presets_count);
+    check_cbor_error(QUIC_CMD_GET);
+    for (uint32_t i = 0; i < blackbox_presets_count; i++) {
+      res = cbor_encode_blackbox_preset_t(&enc, &blackbox_presets[i]);
+      check_cbor_error(QUIC_CMD_GET);
+    }
+
+    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  }
+#endif
   default:
     quic_errorf(QUIC_CMD_GET, "INVALID VALUE %d", value);
     break;
