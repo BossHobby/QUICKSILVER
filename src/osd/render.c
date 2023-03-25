@@ -1566,8 +1566,8 @@ void osd_display() {
 
     // Display currently active preset wrapped in angle brackets
     // as prefacing it with "ACTIVE: " takes too much space
-    const char* label = NULL;
-    for (int i=0; i<blackbox_presets_count; i++) {
+    const char *label = NULL;
+    for (int i = 0; i < blackbox_presets_count; i++) {
       const blackbox_preset_t *preset = &blackbox_presets[i];
       if (blackbox_preset_equals(preset, &profile.blackbox)) {
         label = preset->name_osd;
@@ -1578,8 +1578,7 @@ void osd_display() {
       osd_write_char('<');
       if (label) {
         osd_write_str(label);
-      }
-      else {
+      } else {
         const uint32_t rate = profile.blackbox.rate_divisor;
         osd_write_str("CUSTOM, RATE=");
         osd_write_int(rate, (rate >= 10) ? 2 : 1);
@@ -1589,7 +1588,7 @@ void osd_display() {
 
     // Display available presets
     int y = 5;
-    for (int i=0; i<blackbox_presets_count; i++, y++) {
+    for (int i = 0; i < blackbox_presets_count; i++, y++) {
       const blackbox_preset_t *preset = &blackbox_presets[i];
       if (osd_menu_button(3, y, preset->name_osd)) {
         blackbox_preset_apply(preset, &profile.blackbox);
