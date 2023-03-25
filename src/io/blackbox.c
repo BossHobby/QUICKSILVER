@@ -20,49 +20,49 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b, con
   CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->loop));
   CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->time));
 
-  if ((1 << BBOX_FIELD_PID_P_TERM) & blackbox_fieldflags) {
+  if (blackbox_fieldflags & (1 << BBOX_FIELD_PID_P_TERM)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->pid_p_term));
   }
-  if ((1 << BBOX_FIELD_PID_I_TERM) & blackbox_fieldflags) {
+  if (blackbox_fieldflags & (1 << BBOX_FIELD_PID_I_TERM)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->pid_i_term));
   }
-  if ((1 << BBOX_FIELD_PID_D_TERM) & blackbox_fieldflags) {
+  if (blackbox_fieldflags & (1 << BBOX_FIELD_PID_D_TERM)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->pid_d_term));
   }
 
-  if ((1 << BBOX_FIELD_RX) & blackbox_fieldflags) {
+  if (blackbox_fieldflags & (1 << BBOX_FIELD_RX)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec4_t(enc, &b->rx));
   }
 
-  if ((1 << BBOX_FIELD_SETPOINT) & blackbox_fieldflags) {
+  if (blackbox_fieldflags & (1 << BBOX_FIELD_SETPOINT)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec4_t(enc, &b->setpoint));
   }
 
-  if ((1 << BBOX_FIELD_ACCEL_RAW) & blackbox_fieldflags) {
+  if (blackbox_fieldflags & (1 << BBOX_FIELD_ACCEL_RAW)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->accel_raw));
   }
 
-  if ((1 << BBOX_FIELD_ACCEL_FILTER) & blackbox_fieldflags) {
+  if (blackbox_fieldflags & (1 << BBOX_FIELD_ACCEL_FILTER)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->accel_filter));
   }
 
-  if ((1 << BBOX_FIELD_GYRO_RAW) & blackbox_fieldflags) {
+  if (blackbox_fieldflags & (1 << BBOX_FIELD_GYRO_RAW)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->gyro_raw));
   }
 
-  if ((1 << BBOX_FIELD_GYRO_FILTER) & blackbox_fieldflags) {
+  if (blackbox_fieldflags & (1 << BBOX_FIELD_GYRO_FILTER)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->gyro_filter));
   }
 
-  if ((1 << BBOX_FIELD_MOTOR) & blackbox_fieldflags) {
+  if (blackbox_fieldflags & (1 << BBOX_FIELD_MOTOR)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec4_t(enc, &b->motor));
   }
 
-  if ((1 << BBOX_FIELD_CPU_LOAD) & blackbox_fieldflags) {
+  if (blackbox_fieldflags & (1 << BBOX_FIELD_CPU_LOAD)) {
     CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &b->cpu_load));
   }
 
-  if ((1 << BBOX_FIELD_DEBUG) & blackbox_fieldflags) {
+  if (blackbox_fieldflags & (1 << BBOX_FIELD_DEBUG)) {
     CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 4));
     CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &b->debug[0]));
     CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &b->debug[1]));
