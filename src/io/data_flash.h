@@ -22,11 +22,11 @@ typedef struct {
   uint32_t size;
 } data_flash_file_t;
 
-#define DATA_FLASH_FILE_MEMBERS \
-  MEMBER(blackbox_fieldflags, uint32)      \
-  MEMBER(looptime, uint32)      \
-  MEMBER(blackbox_rate, uint8)  \
-  MEMBER(start_page, uint32)    \
+#define DATA_FLASH_FILE_MEMBERS       \
+  MEMBER(blackbox_fieldflags, uint32) \
+  MEMBER(looptime, uint32)            \
+  MEMBER(blackbox_rate, uint8)        \
+  MEMBER(start_page, uint32)          \
   MEMBER(size, uint32)
 
 #define DATA_FLASH_MAX_FILES 10

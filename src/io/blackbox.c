@@ -29,7 +29,7 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b, con
   if ((1 << BBOX_FIELD_PID_D_TERM) & blackbox_fieldflags) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->pid_d_term));
   }
-  
+
   if ((1 << BBOX_FIELD_RX) & blackbox_fieldflags) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec4_t(enc, &b->rx));
   }
