@@ -15,14 +15,18 @@
 
 #define DEFAULT_BLACKBOX_PRESET 0
 const blackbox_preset_t blackbox_presets[] = {
-    {.blackbox_fieldflags = ((1 << BBOX_FIELD_MAX) - 1), // Set all bits
-     .rate_divisor = 4,
-     .name = "All fields, Rate Divisor=4",
-     .name_osd = "ALL, RATE=4"},
-    {.blackbox_fieldflags = (1 << BBOX_FIELD_GYRO_FILTER) | (1 << BBOX_FIELD_LOOP) | (1 << BBOX_FIELD_TIME),
-     .rate_divisor = 20,
-     .name = "Gyro Filtered, Rate Divisor=20",
-     .name_osd = "GYRO FILTERED, RATE=20"},
+    {
+        .blackbox_fieldflags = ((1 << BBOX_FIELD_MAX) - 1), // Set all bits
+        .rate_divisor = 4,
+        .name = "All fields, Rate Divisor=4",
+        .name_osd = "ALL, RATE=4",
+    },
+    {
+        .blackbox_fieldflags = (1 << BBOX_FIELD_GYRO_FILTER) | (1 << BBOX_FIELD_LOOP) | (1 << BBOX_FIELD_TIME),
+        .rate_divisor = 20,
+        .name = "Gyro Filtered, Rate Divisor=20",
+        .name_osd = "GYRO FILTERED, RATE=20",
+    },
 };
 const uint32_t blackbox_presets_count = sizeof(blackbox_presets) / sizeof(blackbox_preset_t);
 
@@ -518,7 +522,8 @@ const profile_t default_profile = {
     },
     .blackbox = {
         // Initialized by profile_set_defaults(), so nothing to do here
-    }};
+    },
+};
 
 #define _MACRO_STR(arg) #arg
 #define MACRO_STR(name) _MACRO_STR(name)
