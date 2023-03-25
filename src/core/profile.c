@@ -15,7 +15,7 @@
 
 #define DEFAULT_BLACKBOX_PRESET 0
 const blackbox_preset_t blackbox_presets[] = {
-    {.blackbox_fieldflags = ((1 << _BBOX_FIELD_MAX) - 1), // Set all bits
+    {.blackbox_fieldflags = ((1 << BBOX_FIELD_MAX) - 1), // Set all bits
      .rate_divisor = 4,
      .name = "All fields, Rate Divisor=4",
      .name_osd = "ALL, RATE=4"},
