@@ -551,7 +551,7 @@ uint8_t sdcard_read_pages(uint8_t *buf, uint32_t sector, uint32_t count) {
   return 0;
 }
 
-void sdcard_get_bounds(blackbox_device_bounds_t *bounds) {
+void sdcard_get_bounds(blackbox_device_bounds_t *blackbox_bounds) {
   uint64_t size = 0;
   if (sdcard_info.csd.CSD_STRUCTURE_VER == 0) {
     uint32_t block_len = (1 << sdcard_info.csd.v1.READ_BL_LEN);
@@ -563,13 +563,13 @@ void sdcard_get_bounds(blackbox_device_bounds_t *bounds) {
     size = (sdcard_info.csd.v2.C_SIZE + 1) * (((uint64_t)512) << 10);
   }
 
-  bounds->page_size = SDCARD_PAGE_SIZE;
-  bounds->pages_per_sector = 1;
+  blackbox_bounds->page_size = SDCARD_PAGE_SIZE;
+  blackbox_bounds->pages_per_sector = 1;
 
-  bounds->sectors = size / SDCARD_PAGE_SIZE;
+  blackbox_bounds->sectors = size / SDCARD_PAGE_SIZE;
 
-  bounds->sector_size = SDCARD_PAGE_SIZE;
-  bounds->total_size = size;
+  blackbox_bounds->sector_size = SDCARD_PAGE_SIZE;
+  blackbox_bounds->total_size = size;
 }
 
 uint8_t sdcard_write_pages_start(uint32_t sector, uint32_t count) {
