@@ -7,6 +7,9 @@
 
 #define BLACKBOX_HEADER_MAGIC 0xdeadbeef
 
+// max size for a given entry
+#define BLACKBOX_MAX_SIZE 255
+
 #define BLACKBOX_WRITE_BUFFER_SIZE 512
 #define BLACKBOX_ENCODE_BUFFER_SIZE 8192
 
@@ -17,6 +20,28 @@ typedef struct {
   uint32_t sector_size;
   uint64_t total_size;
 } blackbox_device_bounds_t;
+
+typedef enum {
+  BLACKBOX_DEVICE_IDLE,
+  BLACKBOX_DEVICE_WAIT,
+  BLACKBOX_DEVICE_DETECT,
+  BLACKBOX_DEVICE_STARTING,
+  BLACKBOX_DEVICE_WRITE,
+} blackbox_device_result_t;
+
+typedef struct {
+  void (*init)();
+  blackbox_device_result_t (*update)();
+  void (*reset)();
+  void (*write_header)();
+  void (*flush)();
+
+  uint32_t (*usage)();
+  bool (*ready)();
+
+  void (*read)(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size);
+  void (*write)(const uint8_t *buffer, const uint8_t size);
+} blackbox_device_vtable_t;
 
 typedef struct {
   uint32_t field_flags;
@@ -46,14 +71,6 @@ typedef struct {
   MEMBER(magic, uint32)                \
   MEMBER(file_num, uint8)              \
   ARRAY_MEMBER(files, BLACKBOX_DEVICE_MAX_FILES, blackbox_device_file_t)
-
-typedef enum {
-  BLACKBOX_DEVICE_IDLE,
-  BLACKBOX_DEVICE_WAIT,
-  BLACKBOX_DEVICE_DETECT,
-  BLACKBOX_DEVICE_STARTING,
-  BLACKBOX_DEVICE_WRITE,
-} blackbox_device_result_t;
 
 extern blackbox_device_header_t blackbox_device_header;
 extern blackbox_device_bounds_t blackbox_bounds;
