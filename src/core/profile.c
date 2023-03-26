@@ -16,13 +16,13 @@
 #define DEFAULT_BLACKBOX_PRESET 0
 const blackbox_preset_t blackbox_presets[] = {
     {
-        .blackbox_fieldflags = ((1 << BBOX_FIELD_MAX) - 1), // Set all bits
+        .field_flags = ((1 << BBOX_FIELD_MAX) - 1), // Set all bits
         .rate_divisor = 4,
         .name = "All fields, Rate Divisor=4",
         .name_osd = "ALL, RATE=4",
     },
     {
-        .blackbox_fieldflags = (1 << BBOX_FIELD_GYRO_FILTER) | (1 << BBOX_FIELD_LOOP) | (1 << BBOX_FIELD_TIME),
+        .field_flags = (1 << BBOX_FIELD_GYRO_FILTER) | (1 << BBOX_FIELD_LOOP) | (1 << BBOX_FIELD_TIME),
         .rate_divisor = 20,
         .name = "Gyro Filtered, Rate Divisor=20",
         .name_osd = "GYRO FILTERED, RATE=20",
@@ -31,12 +31,12 @@ const blackbox_preset_t blackbox_presets[] = {
 const uint32_t blackbox_presets_count = sizeof(blackbox_presets) / sizeof(blackbox_preset_t);
 
 void blackbox_preset_apply(const blackbox_preset_t *preset, profile_blackbox_t *profile) {
-  profile->blackbox_fieldflags = preset->blackbox_fieldflags | (1 << BBOX_FIELD_LOOP) | (1 << BBOX_FIELD_TIME);
+  profile->field_flags = preset->field_flags | (1 << BBOX_FIELD_LOOP) | (1 << BBOX_FIELD_TIME);
   profile->rate_divisor = preset->rate_divisor;
 }
 
 uint8_t blackbox_preset_equals(const blackbox_preset_t *preset, profile_blackbox_t *profile) {
-  return preset->blackbox_fieldflags == profile->blackbox_fieldflags && preset->rate_divisor == profile->rate_divisor;
+  return preset->field_flags == profile->field_flags && preset->rate_divisor == profile->rate_divisor;
 }
 
 #define DEFAULT_PID_RATE_PRESET 0

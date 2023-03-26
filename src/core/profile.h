@@ -293,25 +293,25 @@ typedef struct {
 } profile_metadata_t;
 
 typedef struct {
-  uint32_t blackbox_fieldflags;
+  uint32_t field_flags;
   uint32_t rate_divisor;
 } profile_blackbox_t;
 
-#define BLACKBOX_MEMBERS              \
-  MEMBER(blackbox_fieldflags, uint32) \
+#define BLACKBOX_MEMBERS      \
+  MEMBER(field_flags, uint32) \
   MEMBER(rate_divisor, uint32)
 
 typedef struct {
-  uint32_t blackbox_fieldflags;
+  uint32_t field_flags;
   uint32_t rate_divisor;
   const char *name;
   const char *name_osd;
 } blackbox_preset_t;
 
-#define BLACKBOX_PRESET_MEMBERS       \
-  MEMBER(blackbox_fieldflags, uint32) \
-  MEMBER(rate_divisor, uint32)        \
-  STR_MEMBER(name)                    \
+#define BLACKBOX_PRESET_MEMBERS \
+  MEMBER(field_flags, uint32)   \
+  MEMBER(rate_divisor, uint32)  \
+  STR_MEMBER(name)              \
   STR_MEMBER(name_osd)
 
 // Full Profile

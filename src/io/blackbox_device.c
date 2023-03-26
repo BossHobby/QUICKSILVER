@@ -125,7 +125,7 @@ void blackbox_device_reset() {
   looptime_reset();
 }
 
-bool blackbox_device_restart(uint32_t blackbox_fieldflags, uint32_t blackbox_rate, uint32_t looptime) {
+bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, uint32_t looptime) {
   if (blackbox_device_header.file_num >= BLACKBOX_DEVICE_MAX_FILES) {
     return false;
   }
@@ -139,7 +139,7 @@ bool blackbox_device_restart(uint32_t blackbox_fieldflags, uint32_t blackbox_rat
     return false;
   }
 
-  blackbox_device_header.files[blackbox_device_header.file_num].blackbox_fieldflags = blackbox_fieldflags;
+  blackbox_device_header.files[blackbox_device_header.file_num].field_flags = field_flags;
   blackbox_device_header.files[blackbox_device_header.file_num].looptime = looptime;
   blackbox_device_header.files[blackbox_device_header.file_num].blackbox_rate = blackbox_rate;
   blackbox_device_header.files[blackbox_device_header.file_num].size = 0;
@@ -176,13 +176,13 @@ void blackbox_device_read_backbox(const uint32_t file_index, const uint32_t offs
 #endif
 }
 
-cbor_result_t blackbox_device_write_backbox(const uint32_t blackbox_fieldflags, const blackbox_t *b) {
+cbor_result_t blackbox_device_write_backbox(const uint32_t field_flags, const blackbox_t *b) {
   uint8_t buffer[BLACKBOX_WRITE_BUFFER_SIZE];
 
   cbor_value_t enc;
   cbor_encoder_init(&enc, buffer, BLACKBOX_WRITE_BUFFER_SIZE);
 
-  cbor_result_t res = cbor_encode_blackbox_t(&enc, b, blackbox_fieldflags);
+  cbor_result_t res = cbor_encode_blackbox_t(&enc, b, field_flags);
   if (res < CBOR_OK) {
     return res;
   }

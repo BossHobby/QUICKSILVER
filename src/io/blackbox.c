@@ -13,56 +13,56 @@ static blackbox_t blackbox;
 
 static uint8_t blackbox_enabled = 0;
 
-cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b, const uint32_t blackbox_fieldflags) {
+cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b, const uint32_t field_flags) {
   CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_array_indefinite(enc));
 
-  // loop and time are always emitted regardless of what blackbox_fieldflags indicates
+  // loop and time are always emitted regardless of what field_flags indicates
   CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->loop));
   CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->time));
 
-  if (blackbox_fieldflags & (1 << BBOX_FIELD_PID_P_TERM)) {
+  if (field_flags & (1 << BBOX_FIELD_PID_P_TERM)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->pid_p_term));
   }
-  if (blackbox_fieldflags & (1 << BBOX_FIELD_PID_I_TERM)) {
+  if (field_flags & (1 << BBOX_FIELD_PID_I_TERM)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->pid_i_term));
   }
-  if (blackbox_fieldflags & (1 << BBOX_FIELD_PID_D_TERM)) {
+  if (field_flags & (1 << BBOX_FIELD_PID_D_TERM)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->pid_d_term));
   }
 
-  if (blackbox_fieldflags & (1 << BBOX_FIELD_RX)) {
+  if (field_flags & (1 << BBOX_FIELD_RX)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec4_t(enc, &b->rx));
   }
 
-  if (blackbox_fieldflags & (1 << BBOX_FIELD_SETPOINT)) {
+  if (field_flags & (1 << BBOX_FIELD_SETPOINT)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec4_t(enc, &b->setpoint));
   }
 
-  if (blackbox_fieldflags & (1 << BBOX_FIELD_ACCEL_RAW)) {
+  if (field_flags & (1 << BBOX_FIELD_ACCEL_RAW)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->accel_raw));
   }
 
-  if (blackbox_fieldflags & (1 << BBOX_FIELD_ACCEL_FILTER)) {
+  if (field_flags & (1 << BBOX_FIELD_ACCEL_FILTER)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->accel_filter));
   }
 
-  if (blackbox_fieldflags & (1 << BBOX_FIELD_GYRO_RAW)) {
+  if (field_flags & (1 << BBOX_FIELD_GYRO_RAW)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->gyro_raw));
   }
 
-  if (blackbox_fieldflags & (1 << BBOX_FIELD_GYRO_FILTER)) {
+  if (field_flags & (1 << BBOX_FIELD_GYRO_FILTER)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->gyro_filter));
   }
 
-  if (blackbox_fieldflags & (1 << BBOX_FIELD_MOTOR)) {
+  if (field_flags & (1 << BBOX_FIELD_MOTOR)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec4_t(enc, &b->motor));
   }
 
-  if (blackbox_fieldflags & (1 << BBOX_FIELD_CPU_LOAD)) {
+  if (field_flags & (1 << BBOX_FIELD_CPU_LOAD)) {
     CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &b->cpu_load));
   }
 
-  if (blackbox_fieldflags & (1 << BBOX_FIELD_DEBUG)) {
+  if (field_flags & (1 << BBOX_FIELD_DEBUG)) {
     CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 4));
     CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &b->debug[0]));
     CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &b->debug[1]));
@@ -100,7 +100,7 @@ uint8_t blackbox_update() {
     blackbox_enabled = 0;
     return 0;
   } else if ((flags.arm_state && flags.turtle_ready == 0 && rx_aux_on(AUX_BLACKBOX)) && blackbox_enabled == 0) {
-    if (blackbox_device_restart(profile.blackbox.blackbox_fieldflags, profile.blackbox.rate_divisor, state.looptime_autodetect)) {
+    if (blackbox_device_restart(profile.blackbox.field_flags, profile.blackbox.rate_divisor, state.looptime_autodetect)) {
       blackbox_enabled = 1;
       blackbox.loop = 0;
     }
@@ -140,7 +140,7 @@ uint8_t blackbox_update() {
 
   blackbox.cpu_load = state.cpu_load;
 
-  blackbox_device_write_backbox(profile.blackbox.blackbox_fieldflags, &blackbox);
+  blackbox_device_write_backbox(profile.blackbox.field_flags, &blackbox);
 
   // tell the rest of the code that flash is occuping the spi bus
   return flash_result == BLACKBOX_DEVICE_WRITE;
