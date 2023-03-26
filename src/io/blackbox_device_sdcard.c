@@ -43,11 +43,7 @@ blackbox_device_result_t blackbox_device_sdcard_update() {
 
   sdcard_status_t sdcard_status = sdcard_update();
   if (sdcard_status != SDCARD_IDLE) {
-    if (state == STATE_DETECT) {
-      return BLACKBOX_DEVICE_DETECT;
-    } else {
-      return BLACKBOX_DEVICE_WAIT;
-    }
+    return BLACKBOX_DEVICE_WAIT;
   }
 
 sdcard_do_more:
@@ -55,7 +51,7 @@ sdcard_do_more:
   case STATE_DETECT: {
     state = STATE_READ_HEADER;
     sdcard_get_bounds(&blackbox_bounds);
-    return BLACKBOX_DEVICE_DETECT;
+    return BLACKBOX_DEVICE_WAIT;
   }
 
   case STATE_READ_HEADER: {
@@ -97,7 +93,7 @@ sdcard_do_more:
     if (sdcard_write_pages_start(offset, FLUSH_INTERVAL)) {
       state = STATE_FILL_WRITE_BUFFER;
     }
-    break;
+    return BLACKBOX_DEVICE_WRITE;
   }
 
   case STATE_FILL_WRITE_BUFFER: {
@@ -132,33 +128,28 @@ sdcard_do_more:
         state = STATE_FILL_WRITE_BUFFER;
       }
     }
-    break;
+    return BLACKBOX_DEVICE_WRITE;
   }
 
   case STATE_FINISH_WRITE: {
     if (sdcard_write_pages_finish()) {
       state = STATE_IDLE;
-      goto sdcard_do_more;
     }
-    break;
+    return BLACKBOX_DEVICE_WRITE;
   }
 
   case STATE_ERASE_HEADER: {
     memcpy(blackbox_write_buffer, (uint8_t *)&blackbox_device_header, sizeof(blackbox_device_header_t));
     state = STATE_WRITE_HEADER;
-    return BLACKBOX_DEVICE_STARTING;
+    return BLACKBOX_DEVICE_WAIT;
   }
 
   case STATE_WRITE_HEADER: {
     if (sdcard_write_page(blackbox_write_buffer, 0)) {
       state = STATE_IDLE;
     }
-    return BLACKBOX_DEVICE_STARTING;
+    return BLACKBOX_DEVICE_WAIT;
   }
-  }
-
-  if (should_flush == 1) {
-    return BLACKBOX_DEVICE_STARTING;
   }
 
   return BLACKBOX_DEVICE_IDLE;
