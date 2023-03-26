@@ -24,8 +24,6 @@ typedef struct {
 typedef enum {
   BLACKBOX_DEVICE_IDLE,
   BLACKBOX_DEVICE_WAIT,
-  BLACKBOX_DEVICE_DETECT,
-  BLACKBOX_DEVICE_STARTING,
   BLACKBOX_DEVICE_WRITE,
 } blackbox_device_result_t;
 

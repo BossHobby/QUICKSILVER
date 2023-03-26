@@ -42,13 +42,11 @@ blackbox_device_result_t blackbox_device_flash_update() {
 flash_do_more:
   switch (state) {
   case STATE_DETECT:
-    if (!m25p16_is_ready()) {
-      return BLACKBOX_DEVICE_DETECT;
+    if (m25p16_is_ready()) {
+      m25p16_get_bounds(&blackbox_bounds);
+      state = STATE_READ_HEADER;
     }
-
-    m25p16_get_bounds(&blackbox_bounds);
-    state = STATE_READ_HEADER;
-    return BLACKBOX_DEVICE_DETECT;
+    return BLACKBOX_DEVICE_WAIT;
 
   case STATE_READ_HEADER:
     if (!m25p16_is_ready()) {
@@ -128,26 +126,22 @@ flash_do_more:
 
   case STATE_ERASE_HEADER: {
     if (!m25p16_is_ready()) {
-      return BLACKBOX_DEVICE_STARTING;
+      return BLACKBOX_DEVICE_WAIT;
     }
     m25p16_write_addr(M25P16_SECTOR_ERASE, 0x0, NULL, 0);
     state = STATE_WRITE_HEADER;
-    return BLACKBOX_DEVICE_STARTING;
+    return BLACKBOX_DEVICE_WAIT;
   }
 
   case STATE_WRITE_HEADER: {
     if (!m25p16_is_ready()) {
-      return BLACKBOX_DEVICE_STARTING;
+      return BLACKBOX_DEVICE_WAIT;
     }
     if (m25p16_page_program(0x0, (uint8_t *)&blackbox_device_header, sizeof(blackbox_device_header_t))) {
       state = STATE_IDLE;
     }
-    return BLACKBOX_DEVICE_STARTING;
+    return BLACKBOX_DEVICE_WAIT;
   }
-  }
-
-  if (should_flush == 1) {
-    return BLACKBOX_DEVICE_STARTING;
   }
 
   return BLACKBOX_DEVICE_IDLE;
