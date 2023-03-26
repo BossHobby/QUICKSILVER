@@ -142,7 +142,7 @@ uint8_t m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data,
   return ret;
 }
 
-void m25p16_get_bounds(data_flash_bounds_t *bounds) {
+void m25p16_get_bounds(blackbox_device_bounds_t *bounds) {
   uint8_t raw_id[3];
   m25p16_read_command(M25P16_READ_IDENTIFICATION, raw_id, 3);
 

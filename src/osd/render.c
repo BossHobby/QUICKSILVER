@@ -12,7 +12,7 @@
 #include "driver/time.h"
 #include "flight/control.h"
 #include "flight/filter.h"
-#include "io/data_flash.h"
+#include "io/blackbox_device.h"
 #include "io/vtx.h"
 #include "osd/menu.h"
 #include "project.h"
@@ -1517,12 +1517,12 @@ void osd_display() {
       osd_menu_select_screen(4, 3, "PRESETS", OSD_SCREEN_BLACKBOX_PRESETS);
 
       if (osd_menu_label_start(4, 5)) {
-        osd_write_int(data_flash_header.file_num, 3);
+        osd_write_int(blackbox_device_header.file_num, 3);
         osd_write_str(" FILES");
       }
 
       if (osd_menu_label_start(4, 6)) {
-        const uint32_t usage = (float)(data_flash_usage()) / (float)(bounds.total_size) * 100;
+        const uint32_t usage = (float)(blackbox_device_usage()) / (float)(bounds.total_size) * 100;
 
         osd_write_int(usage, 3);
         osd_write_str("% USAGE");
@@ -1550,7 +1550,7 @@ void osd_display() {
       break;
 
     case 2:
-      data_flash_reset();
+      blackbox_device_reset();
       osd_push_screen_replace(OSD_SCREEN_BLACKBOX);
       reset_state = 0;
       break;
