@@ -146,7 +146,7 @@ uint8_t blackbox_update() {
 
   blackbox.cpu_load = state.cpu_load;
 
-  blackbox_device_write_backbox(profile.blackbox.field_flags, &blackbox);
+  blackbox_device_write(profile.blackbox.field_flags, &blackbox);
 
   // tell the rest of the code that flash is occuping the spi bus
   return flash_result == BLACKBOX_DEVICE_WRITE;

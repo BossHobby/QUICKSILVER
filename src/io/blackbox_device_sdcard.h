@@ -13,4 +13,4 @@ void blackbox_device_sdcard_flush();
 uint32_t blackbox_device_sdcard_usage();
 bool blackbox_device_sdcard_ready();
 
-void blackbox_device_sdcard_read_backbox(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size);
+void blackbox_device_sdcard_read(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size);
