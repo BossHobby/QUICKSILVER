@@ -7,6 +7,7 @@
 #include "core/failloop.h"
 #include "driver/interrupt.h"
 #include "project.h"
+#include "util/util.h"
 
 // DMA1 Stream0 SPI3_RX
 // DMA1 Stream1
@@ -76,6 +77,9 @@ const dma_stream_def_t dma_stream_defs[DMA_DEVICE_MAX] = {DMA_STREAMS};
 #define CACHE_LINE_MASK (CACHE_LINE_SIZE - 1)
 #endif
 
+#define DMA_ALIGN_SIZE 32
+#define DMA_ALIGN(offset) MEMORY_ALIGN(offset, DMA_ALIGN_SIZE)
+
 typedef struct _dma_allocation {
   uint32_t size;
   uint16_t magic;
@@ -83,10 +87,7 @@ typedef struct _dma_allocation {
 
   struct _dma_allocation *prev;
   struct _dma_allocation *next;
-} __attribute__((aligned(32))) dma_allocation_t;
-
-#define DMA_ALIGN_SIZE 32
-#define DMA_ALIGN(offset) ((offset + (DMA_ALIGN_SIZE - 1)) & -DMA_ALIGN_SIZE)
+} __attribute__((aligned(DMA_ALIGN_SIZE))) dma_allocation_t;
 
 static DMA_RAM uint8_t buffer[DMA_ALLOC_BUFFER_SIZE];
 
