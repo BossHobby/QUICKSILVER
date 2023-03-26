@@ -94,7 +94,7 @@ static uint32_t blackbox_rate_div() {
 
 uint8_t blackbox_update() {
   blackbox_device_result_t flash_result = blackbox_device_update();
-  if (flash_result == BLACKBOX_DEVICE_DETECT || flash_result == BLACKBOX_DEVICE_STARTING) {
+  if (flash_result == BLACKBOX_DEVICE_WAIT) {
     // flash is still detecting, dont do anything
     return 0;
   }
