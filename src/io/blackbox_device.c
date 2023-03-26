@@ -1,4 +1,4 @@
-#include "io/data_flash.h"
+#include "io/blackbox_device.h"
 
 #include <string.h>
 
@@ -38,10 +38,10 @@ typedef enum {
 
   STATE_ERASE_HEADER,
   STATE_WRITE_HEADER,
-} data_flash_state_t;
+} blackbox_device_state_t;
 
-data_flash_bounds_t bounds;
-data_flash_header_t data_flash_header;
+blackbox_device_bounds_t bounds;
+blackbox_device_header_t blackbox_device_header;
 
 static uint8_t encode_buffer_data[BUFFER_SIZE];
 static ring_buffer_t encode_buffer = {
@@ -51,7 +51,7 @@ static ring_buffer_t encode_buffer = {
     .size = BUFFER_SIZE,
 };
 static uint8_t write_buffer[PAGE_SIZE];
-static data_flash_state_t state = STATE_DETECT;
+static blackbox_device_state_t state = STATE_DETECT;
 static uint8_t should_flush = 0;
 
 #define MEMBER CBOR_ENCODE_MEMBER
@@ -59,12 +59,12 @@ static uint8_t should_flush = 0;
 #define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
 #define STR_ARRAY_MEMBER CBOR_ENCODE_STR_ARRAY_MEMBER
 
-CBOR_START_STRUCT_ENCODER(data_flash_file_t)
-DATA_FLASH_FILE_MEMBERS
+CBOR_START_STRUCT_ENCODER(blackbox_device_file_t)
+BLACKBOX_DEVICE_FILE_MEMBERS
 CBOR_END_STRUCT_ENCODER()
 
-CBOR_START_STRUCT_ENCODER(data_flash_header_t)
-DATA_FLASH_HEADER_MEMBERS
+CBOR_START_STRUCT_ENCODER(blackbox_device_header_t)
+BLACKBOX_DEVICE_HEADER_MEMBERS
 CBOR_END_STRUCT_ENCODER()
 
 #undef MEMBER
@@ -77,12 +77,12 @@ CBOR_END_STRUCT_ENCODER()
 #define ARRAY_MEMBER CBOR_DECODE_ARRAY_MEMBER
 #define STR_ARRAY_MEMBER CBOR_DECODE_STR_ARRAY_MEMBER
 
-CBOR_START_STRUCT_DECODER(data_flash_file_t)
-DATA_FLASH_FILE_MEMBERS
+CBOR_START_STRUCT_DECODER(blackbox_device_file_t)
+BLACKBOX_DEVICE_FILE_MEMBERS
 CBOR_END_STRUCT_DECODER()
 
-CBOR_START_STRUCT_DECODER(data_flash_header_t)
-DATA_FLASH_HEADER_MEMBERS
+CBOR_START_STRUCT_DECODER(blackbox_device_header_t)
+BLACKBOX_DEVICE_HEADER_MEMBERS
 CBOR_END_STRUCT_DECODER()
 
 #undef MEMBER
@@ -90,11 +90,11 @@ CBOR_END_STRUCT_DECODER()
 #undef ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER
 
-static data_flash_file_t *current_file() {
-  return &data_flash_header.files[data_flash_header.file_num - 1];
+static blackbox_device_file_t *current_file() {
+  return &blackbox_device_header.files[blackbox_device_header.file_num - 1];
 }
 
-data_flash_result_t data_flash_update() {
+blackbox_device_result_t blackbox_device_update() {
   static uint32_t offset = 0;
   static uint32_t write_size = PAGE_SIZE;
 
@@ -104,9 +104,9 @@ data_flash_result_t data_flash_update() {
   sdcard_status_t sdcard_status = sdcard_update();
   if (sdcard_status != SDCARD_IDLE) {
     if (state == STATE_DETECT) {
-      return DATA_FLASH_DETECT;
+      return BLACKBOX_DEVICE_DETECT;
     } else {
-      return DATA_FLASH_WAIT;
+      return BLACKBOX_DEVICE_WAIT;
     }
   }
 
@@ -115,16 +115,16 @@ sdcard_do_more:
   case STATE_DETECT: {
     state = STATE_READ_HEADER;
     sdcard_get_bounds(&bounds);
-    return DATA_FLASH_DETECT;
+    return BLACKBOX_DEVICE_DETECT;
   }
 
   case STATE_READ_HEADER: {
     if (sdcard_read_pages(write_buffer, 0, 1)) {
-      memcpy((uint8_t *)&data_flash_header, write_buffer, sizeof(data_flash_header_t));
+      memcpy((uint8_t *)&blackbox_device_header, write_buffer, sizeof(blackbox_device_header_t));
 
-      if (data_flash_header.magic != DATA_FLASH_HEADER_MAGIC) {
-        data_flash_header.magic = DATA_FLASH_HEADER_MAGIC;
-        data_flash_header.file_num = 0;
+      if (blackbox_device_header.magic != BLACKBOX_DEVICE_HEADER_MAGIC) {
+        blackbox_device_header.magic = BLACKBOX_DEVICE_HEADER_MAGIC;
+        blackbox_device_header.file_num = 0;
 
         state = STATE_ERASE_HEADER;
         break;
@@ -204,16 +204,16 @@ sdcard_do_more:
   }
 
   case STATE_ERASE_HEADER: {
-    memcpy(write_buffer, (uint8_t *)&data_flash_header, sizeof(data_flash_header_t));
+    memcpy(write_buffer, (uint8_t *)&blackbox_device_header, sizeof(blackbox_device_header_t));
     state = STATE_WRITE_HEADER;
-    return DATA_FLASH_STARTING;
+    return BLACKBOX_DEVICE_STARTING;
   }
 
   case STATE_WRITE_HEADER: {
     if (sdcard_write_page(write_buffer, 0)) {
       state = STATE_IDLE;
     }
-    return DATA_FLASH_STARTING;
+    return BLACKBOX_DEVICE_STARTING;
   }
   }
 #endif
@@ -223,22 +223,22 @@ flash_do_more:
   switch (state) {
   case STATE_DETECT:
     if (!m25p16_is_ready()) {
-      return DATA_FLASH_DETECT;
+      return BLACKBOX_DEVICE_DETECT;
     }
 
     m25p16_get_bounds(&bounds);
     state = STATE_READ_HEADER;
-    return DATA_FLASH_DETECT;
+    return BLACKBOX_DEVICE_DETECT;
 
   case STATE_READ_HEADER:
     if (!m25p16_is_ready()) {
       break;
     }
 
-    m25p16_read_addr(M25P16_READ_DATA_BYTES, 0x0, (uint8_t *)&data_flash_header, sizeof(data_flash_header_t));
-    if (data_flash_header.magic != DATA_FLASH_HEADER_MAGIC) {
-      data_flash_header.magic = DATA_FLASH_HEADER_MAGIC;
-      data_flash_header.file_num = 0;
+    m25p16_read_addr(M25P16_READ_DATA_BYTES, 0x0, (uint8_t *)&blackbox_device_header, sizeof(blackbox_device_header_t));
+    if (blackbox_device_header.magic != BLACKBOX_DEVICE_HEADER_MAGIC) {
+      blackbox_device_header.magic = BLACKBOX_DEVICE_HEADER_MAGIC;
+      blackbox_device_header.file_num = 0;
 
       state = STATE_ERASE_HEADER;
       break;
@@ -298,7 +298,7 @@ flash_do_more:
     }
     current_file()->size += write_size;
     state = STATE_FINISH_WRITE;
-    return DATA_FLASH_WRITE;
+    return BLACKBOX_DEVICE_WRITE;
   }
 
   case STATE_FINISH_WRITE: {
@@ -308,33 +308,33 @@ flash_do_more:
 
   case STATE_ERASE_HEADER: {
     if (!m25p16_is_ready()) {
-      return DATA_FLASH_STARTING;
+      return BLACKBOX_DEVICE_STARTING;
     }
     m25p16_write_addr(M25P16_SECTOR_ERASE, 0x0, NULL, 0);
     state = STATE_WRITE_HEADER;
-    return DATA_FLASH_STARTING;
+    return BLACKBOX_DEVICE_STARTING;
   }
 
   case STATE_WRITE_HEADER: {
     if (!m25p16_is_ready()) {
-      return DATA_FLASH_STARTING;
+      return BLACKBOX_DEVICE_STARTING;
     }
-    if (m25p16_page_program(0x0, (uint8_t *)&data_flash_header, sizeof(data_flash_header_t))) {
+    if (m25p16_page_program(0x0, (uint8_t *)&blackbox_device_header, sizeof(blackbox_device_header_t))) {
       state = STATE_IDLE;
     }
-    return DATA_FLASH_STARTING;
+    return BLACKBOX_DEVICE_STARTING;
   }
   }
 
   if (should_flush == 1) {
-    return DATA_FLASH_STARTING;
+    return BLACKBOX_DEVICE_STARTING;
   }
 #endif
 
-  return DATA_FLASH_IDLE;
+  return BLACKBOX_DEVICE_IDLE;
 }
 
-void data_flash_init() {
+void blackbox_device_init() {
 #ifdef USE_M25P16
   m25p16_init();
 #endif
@@ -342,20 +342,20 @@ void data_flash_init() {
   sdcard_init();
 #endif
 
-  data_flash_header.magic = DATA_FLASH_HEADER_MAGIC;
-  data_flash_header.file_num = 0;
+  blackbox_device_header.magic = BLACKBOX_DEVICE_HEADER_MAGIC;
+  blackbox_device_header.file_num = 0;
 
   state = STATE_DETECT;
 }
 
-uint32_t data_flash_usage() {
-  if (data_flash_header.file_num == 0) {
+uint32_t blackbox_device_usage() {
+  if (blackbox_device_header.file_num == 0) {
     return 0;
   }
   return FILES_SECTOR_OFFSET + current_file()->start_page * PAGE_SIZE + current_file()->size;
 }
 
-void data_flash_reset() {
+void blackbox_device_reset() {
 #ifdef USE_M25P16
   m25p16_command(M25P16_WRITE_ENABLE);
   m25p16_command(M25P16_BULK_ERASE);
@@ -363,16 +363,16 @@ void data_flash_reset() {
   m25p16_wait_for_ready();
 #endif
 
-  data_flash_header.magic = DATA_FLASH_HEADER_MAGIC;
-  data_flash_header.file_num = 0;
+  blackbox_device_header.magic = BLACKBOX_DEVICE_HEADER_MAGIC;
+  blackbox_device_header.file_num = 0;
 
   state = STATE_ERASE_HEADER;
 
   looptime_reset();
 }
 
-bool data_flash_restart(uint32_t blackbox_fieldflags, uint32_t blackbox_rate, uint32_t looptime) {
-  if (data_flash_header.file_num >= DATA_FLASH_MAX_FILES) {
+bool blackbox_device_restart(uint32_t blackbox_fieldflags, uint32_t blackbox_rate, uint32_t looptime) {
+  if (blackbox_device_header.file_num >= BLACKBOX_DEVICE_MAX_FILES) {
     return false;
   }
   if (state != STATE_IDLE) {
@@ -381,8 +381,8 @@ bool data_flash_restart(uint32_t blackbox_fieldflags, uint32_t blackbox_rate, ui
 
   uint32_t offset = 0;
 
-  for (uint16_t i = 0; i < data_flash_header.file_num; i++) {
-    const uint32_t size = data_flash_header.files[i].size;
+  for (uint16_t i = 0; i < blackbox_device_header.file_num; i++) {
+    const uint32_t size = blackbox_device_header.files[i].size;
 
     offset += size / PAGE_SIZE;
     if (size % PAGE_SIZE > 0) {
@@ -395,12 +395,12 @@ bool data_flash_restart(uint32_t blackbox_fieldflags, uint32_t blackbox_rate, ui
     return false;
   }
 
-  data_flash_header.files[data_flash_header.file_num].blackbox_fieldflags = blackbox_fieldflags;
-  data_flash_header.files[data_flash_header.file_num].looptime = looptime;
-  data_flash_header.files[data_flash_header.file_num].blackbox_rate = blackbox_rate;
-  data_flash_header.files[data_flash_header.file_num].size = 0;
-  data_flash_header.files[data_flash_header.file_num].start_page = offset;
-  data_flash_header.file_num++;
+  blackbox_device_header.files[blackbox_device_header.file_num].blackbox_fieldflags = blackbox_fieldflags;
+  blackbox_device_header.files[blackbox_device_header.file_num].looptime = looptime;
+  blackbox_device_header.files[blackbox_device_header.file_num].blackbox_rate = blackbox_rate;
+  blackbox_device_header.files[blackbox_device_header.file_num].size = 0;
+  blackbox_device_header.files[blackbox_device_header.file_num].start_page = offset;
+  blackbox_device_header.file_num++;
 
   state = STATE_ERASE_HEADER;
 
@@ -409,17 +409,17 @@ bool data_flash_restart(uint32_t blackbox_fieldflags, uint32_t blackbox_rate, ui
   return true;
 }
 
-void data_flash_finish() {
+void blackbox_device_finish() {
   if (current_file()->size == 0) {
     // file was empty, lets remove it
-    data_flash_header.file_num--;
+    blackbox_device_header.file_num--;
   }
 
   should_flush = 1;
 }
 
-void data_flash_read_backbox(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size) {
-  const data_flash_file_t *file = &data_flash_header.files[file_index];
+void blackbox_device_read_backbox(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size) {
+  const blackbox_device_file_t *file = &blackbox_device_header.files[file_index];
 
 #ifdef USE_M25P16
   uint32_t read = 0;
@@ -446,7 +446,7 @@ void data_flash_read_backbox(const uint32_t file_index, const uint32_t offset, u
 #endif
 }
 
-cbor_result_t data_flash_write_backbox(const uint32_t blackbox_fieldflags, const blackbox_t *b) {
+cbor_result_t blackbox_device_write_backbox(const uint32_t blackbox_fieldflags, const blackbox_t *b) {
   static uint8_t buffer[PAGE_SIZE];
 
   cbor_value_t enc;

@@ -13,7 +13,7 @@
 #include "driver/usb.h"
 #include "flight/control.h"
 #include "flight/sixaxis.h"
-#include "io/data_flash.h"
+#include "io/blackbox_device.h"
 #include "io/usb_configurator.h"
 #include "io/vtx.h"
 #include "osd/render.h"
@@ -362,7 +362,7 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
 
   switch (cmd) {
   case QUIC_BLACKBOX_RESET:
-    data_flash_reset();
+    blackbox_device_reset();
     quic_send(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, NULL, 0);
     break;
   case QUIC_BLACKBOX_LIST:
@@ -377,16 +377,16 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
 
     res = cbor_encode_str(&enc, "file_num");
     check_cbor_error(QUIC_CMD_BLACKBOX);
-    res = cbor_encode_uint8(&enc, &data_flash_header.file_num);
+    res = cbor_encode_uint8(&enc, &blackbox_device_header.file_num);
     check_cbor_error(QUIC_CMD_BLACKBOX);
 
     res = cbor_encode_str(&enc, "files");
     check_cbor_error(QUIC_CMD_BLACKBOX);
-    res = cbor_encode_array(&enc, data_flash_header.file_num);
+    res = cbor_encode_array(&enc, blackbox_device_header.file_num);
     check_cbor_error(QUIC_CMD_BLACKBOX);
 
-    for (uint8_t i = 0; i < data_flash_header.file_num; i++) {
-      res = cbor_encode_data_flash_file_t(&enc, &data_flash_header.files[i]);
+    for (uint8_t i = 0; i < blackbox_device_header.file_num; i++) {
+      res = cbor_encode_blackbox_device_file_t(&enc, &blackbox_device_header.files[i]);
       check_cbor_error(QUIC_CMD_BLACKBOX);
     }
 
@@ -396,7 +396,7 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
     quic_send(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   case QUIC_BLACKBOX_GET: {
-    extern data_flash_header_t data_flash_header;
+    extern blackbox_device_header_t blackbox_device_header;
 
     uint8_t file_index;
     res = cbor_decode_uint8(dec, &file_index);
@@ -404,14 +404,14 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
 
     quic_send(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
 
-    if (data_flash_header.file_num > file_index) {
-      const data_flash_file_t *file = &data_flash_header.files[file_index];
+    if (blackbox_device_header.file_num > file_index) {
+      const blackbox_device_file_t *file = &blackbox_device_header.files[file_index];
 
       uint32_t offset = 0;
       while (offset < file->size) {
         const uint32_t size = min(file->size - offset, ENCODE_BUFFER_SIZE);
 
-        data_flash_read_backbox(file_index, offset, encode_buffer, size);
+        blackbox_device_read_backbox(file_index, offset, encode_buffer, size);
         quic_send(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, size);
 
         offset += size;

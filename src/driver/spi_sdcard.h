@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "io/data_flash.h"
+#include "io/blackbox_device.h"
 
 #define SDCARD_PAGE_SIZE 512
 
@@ -133,7 +133,7 @@ void sdcard_init();
 
 sdcard_status_t sdcard_update();
 
-void sdcard_get_bounds(data_flash_bounds_t *bounds);
+void sdcard_get_bounds(blackbox_device_bounds_t *bounds);
 
 uint8_t sdcard_read_pages(uint8_t *buf, uint32_t page, uint32_t count);
 uint8_t sdcard_write_page(uint8_t *buf, uint32_t page);
