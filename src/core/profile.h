@@ -294,24 +294,24 @@ typedef struct {
 
 typedef struct {
   uint32_t field_flags;
-  uint32_t rate_divisor;
+  uint32_t sample_rate_hz;
 } profile_blackbox_t;
 
 #define BLACKBOX_MEMBERS      \
   MEMBER(field_flags, uint32) \
-  MEMBER(rate_divisor, uint32)
+  MEMBER(sample_rate_hz, uint32)
 
 typedef struct {
   uint32_t field_flags;
-  uint32_t rate_divisor;
+  uint32_t sample_rate_hz;
   const char *name;
   const char *name_osd;
 } blackbox_preset_t;
 
-#define BLACKBOX_PRESET_MEMBERS \
-  MEMBER(field_flags, uint32)   \
-  MEMBER(rate_divisor, uint32)  \
-  STR_MEMBER(name)              \
+#define BLACKBOX_PRESET_MEMBERS  \
+  MEMBER(field_flags, uint32)    \
+  MEMBER(sample_rate_hz, uint32) \
+  STR_MEMBER(name)               \
   STR_MEMBER(name_osd)
 
 // Full Profile

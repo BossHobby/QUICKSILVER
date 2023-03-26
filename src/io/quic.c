@@ -26,9 +26,6 @@
 static uint8_t frame_encode_buffer[ENCODE_BUFFER_SIZE + QUIC_HEADER_LEN];
 static uint8_t *encode_buffer = frame_encode_buffer + QUIC_HEADER_LEN;
 
-extern uint8_t blackbox_override;
-extern uint32_t blackbox_rate;
-
 #define check_cbor_error(cmd)               \
   if (res < CBOR_OK) {                      \
     quic_errorf(cmd, "CBOR ERROR %d", res); \
