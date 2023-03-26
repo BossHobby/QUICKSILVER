@@ -55,6 +55,8 @@ FAST_RAM control_state_t state = {
 
     .aux = {0},
 
+    .loop_counter = 0,
+
     .vbat = 0.0,
     .vbat_filtered = 0.0,
     .vbat_filtered_decay = 4.2,
