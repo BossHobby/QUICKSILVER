@@ -8,6 +8,8 @@
 
 #define M_PI_F 3.14159265358979323846f
 
+#define MEMORY_ALIGN(offset, size) (((offset) + ((size)-1)) & -(size))
+
 #define constrain(val, min, max) ((val) < (min) ? (min) : ((val) > (max) ? (max) : (val)))
 #define min(a, b) \
   ({ __typeof__ (a) _a = (a); \

@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include "util/util.h"
+
 #if defined(STM32H7)
 #define FLASH_WORD_SIZE 32
 typedef uint64_t flash_word_t;
@@ -10,7 +12,7 @@ typedef uint64_t flash_word_t;
 typedef uint32_t flash_word_t;
 #endif
 
-#define FLASH_ALIGN(offset) ((offset + (FLASH_WORD_SIZE - 1)) & -FLASH_WORD_SIZE)
+#define FLASH_ALIGN(offset) MEMORY_ALIGN(offset, FLASH_WORD_SIZE)
 
 void fmc_lock();
 void fmc_unlock();
