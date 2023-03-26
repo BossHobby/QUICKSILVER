@@ -1579,9 +1579,9 @@ void osd_display() {
       if (label) {
         osd_write_str(label);
       } else {
-        const uint32_t rate = profile.blackbox.rate_divisor;
-        osd_write_str("CUSTOM, RATE=");
-        osd_write_int(rate, (rate >= 10) ? 2 : 1);
+        const uint32_t rate = profile.blackbox.sample_rate_hz;
+        osd_write_str("CUSTOM, HZ=");
+        osd_write_int(rate, 4);
       }
       osd_write_char('>');
     }

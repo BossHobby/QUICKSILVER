@@ -12,6 +12,7 @@
 static blackbox_t blackbox;
 
 static uint8_t blackbox_enabled = 0;
+static uint8_t blackbox_rate = 0;
 
 cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b, const uint32_t field_flags) {
   CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_array_indefinite(enc));
@@ -87,6 +88,10 @@ void blackbox_set_debug(uint8_t index, int16_t data) {
   blackbox.debug[index] = data;
 }
 
+static uint32_t blackbox_rate_div() {
+  return (1000000 / state.looptime_autodetect) / profile.blackbox.sample_rate_hz;
+}
+
 uint8_t blackbox_update() {
   blackbox_device_result_t flash_result = blackbox_device_update();
   if (flash_result == BLACKBOX_DEVICE_DETECT || flash_result == BLACKBOX_DEVICE_STARTING) {
@@ -100,7 +105,8 @@ uint8_t blackbox_update() {
     blackbox_enabled = 0;
     return 0;
   } else if ((flags.arm_state && flags.turtle_ready == 0 && rx_aux_on(AUX_BLACKBOX)) && blackbox_enabled == 0) {
-    if (blackbox_device_restart(profile.blackbox.field_flags, profile.blackbox.rate_divisor, state.looptime_autodetect)) {
+    if (blackbox_device_restart(profile.blackbox.field_flags, blackbox_rate_div(), state.looptime_autodetect)) {
+      blackbox_rate = blackbox_rate_div();
       blackbox_enabled = 1;
       blackbox.loop = 0;
     }
@@ -111,7 +117,7 @@ uint8_t blackbox_update() {
     return 0;
   }
 
-  if ((state.loop_counter % profile.blackbox.rate_divisor) != 0) {
+  if ((state.loop_counter % blackbox_rate) != 0) {
     // tell the rest of the code that flash is occuping the spi bus
     return flash_result == BLACKBOX_DEVICE_WRITE;
   }
