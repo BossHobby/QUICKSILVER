@@ -551,7 +551,7 @@ uint8_t sdcard_read_pages(uint8_t *buf, uint32_t sector, uint32_t count) {
   return 0;
 }
 
-void sdcard_get_bounds(data_flash_bounds_t *bounds) {
+void sdcard_get_bounds(blackbox_device_bounds_t *bounds) {
   uint64_t size = 0;
   if (sdcard_info.csd.CSD_STRUCTURE_VER == 0) {
     uint32_t block_len = (1 << sdcard_info.csd.v1.READ_BL_LEN);

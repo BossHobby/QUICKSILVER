@@ -2,7 +2,7 @@
 
 #include "driver/time.h"
 #include "flight/control.h"
-#include "io/data_flash.h"
+#include "io/blackbox_device.h"
 #include "io/usb_configurator.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
@@ -76,7 +76,7 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b, con
 }
 
 void blackbox_init() {
-  data_flash_init();
+  blackbox_device_init();
 }
 
 void blackbox_set_debug(uint8_t index, int16_t data) {
@@ -90,9 +90,9 @@ void blackbox_set_debug(uint8_t index, int16_t data) {
 uint8_t blackbox_update() {
   static uint32_t loop_counter = 0;
 
-  data_flash_result_t flash_result = data_flash_update();
+  blackbox_device_result_t flash_result = blackbox_device_update();
 
-  if (flash_result == DATA_FLASH_DETECT || flash_result == DATA_FLASH_STARTING) {
+  if (flash_result == BLACKBOX_DEVICE_DETECT || flash_result == BLACKBOX_DEVICE_STARTING) {
     // flash is still detecting, dont do anything
     return 0;
   }
@@ -100,11 +100,11 @@ uint8_t blackbox_update() {
   // flash is either idle or writing, do blackbox
 
   if ((!flags.arm_state || !rx_aux_on(AUX_BLACKBOX)) && blackbox_enabled == 1) {
-    data_flash_finish();
+    blackbox_device_finish();
     blackbox_enabled = 0;
     return 0;
   } else if ((flags.arm_state && flags.turtle_ready == 0 && rx_aux_on(AUX_BLACKBOX)) && blackbox_enabled == 0) {
-    if (data_flash_restart(profile.blackbox.blackbox_fieldflags, profile.blackbox.rate_divisor, state.looptime_autodetect)) {
+    if (blackbox_device_restart(profile.blackbox.blackbox_fieldflags, profile.blackbox.rate_divisor, state.looptime_autodetect)) {
       blackbox_enabled = 1;
     }
     return 0;
@@ -139,13 +139,13 @@ uint8_t blackbox_update() {
   blackbox.cpu_load = state.cpu_load;
 
   if (blackbox_enabled != 0 && (loop_counter % profile.blackbox.rate_divisor) == 0) {
-    data_flash_write_backbox(profile.blackbox.blackbox_fieldflags, &blackbox);
+    blackbox_device_write_backbox(profile.blackbox.blackbox_fieldflags, &blackbox);
   }
 
   loop_counter++;
 
   // tell the rest of the code that flash is occuping the spi bus
-  return flash_result == DATA_FLASH_WRITE;
+  return flash_result == BLACKBOX_DEVICE_WRITE;
 }
 #else
 void blackbox_set_debug(uint8_t index, int16_t data) {}
