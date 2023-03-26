@@ -12,17 +12,12 @@
   USART4_PA1PA0     \
   USART6_PC7PC6
 
-// no bueno on CLRacingF4s
-// #define USB_DETECT_PIN LL_GPIO_PIN_5
-// #define USB_DETECT_PORT GPIOC
-
 // LEDS
 #define LED_NUMBER 1
 #define LED1PIN PIN_B5
 #define LED1_INVERT
 #define BUZZER_PIN PIN_B4
 #define BUZZER_INVERT
-#define FPV_PIN PIN_A13
 
 // GYRO
 #define GYRO_SPI_PORT SPI_PORT1
