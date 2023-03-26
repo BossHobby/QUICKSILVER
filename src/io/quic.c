@@ -408,7 +408,7 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
       while (offset < file->size) {
         const uint32_t size = min(file->size - offset, ENCODE_BUFFER_SIZE);
 
-        blackbox_device_read_backbox(file_index, offset, encode_buffer, size);
+        blackbox_device_read(file_index, offset, encode_buffer, size);
         quic_send(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, size);
 
         offset += size;

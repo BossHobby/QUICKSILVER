@@ -181,7 +181,7 @@ bool blackbox_device_flash_ready() {
   return state == STATE_IDLE;
 }
 
-void blackbox_device_flash_read_backbox(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size) {
+void blackbox_device_flash_read(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size) {
   const blackbox_device_file_t *file = &blackbox_device_header.files[file_index];
 
   uint32_t read = 0;
