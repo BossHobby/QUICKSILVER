@@ -231,6 +231,8 @@ __attribute__((__used__)) int main() {
       motor_test.active = 0;
     }
 
+    state.loop_counter++;
+
     while ((time_micros() - time) < state.looptime_autodetect)
       __NOP();
 
