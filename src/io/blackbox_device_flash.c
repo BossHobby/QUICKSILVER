@@ -181,6 +181,14 @@ bool blackbox_device_flash_ready() {
   return state == STATE_IDLE;
 }
 
+void blackbox_device_flash_write(const uint8_t *buffer, const uint8_t size) {
+  if (size >= ring_buffer_free(&blackbox_encode_buffer)) {
+    return;
+  }
+
+  ring_buffer_write_multi(&blackbox_encode_buffer, buffer, size);
+}
+
 void blackbox_device_flash_read(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size) {
   const blackbox_device_file_t *file = &blackbox_device_header.files[file_index];
 
@@ -194,5 +202,19 @@ void blackbox_device_flash_read(const uint32_t file_index, const uint32_t offset
     read += read_size;
   }
 }
+
+blackbox_device_vtable_t blackbox_device_flash = {
+    .init = blackbox_device_flash_init,
+    .update = blackbox_device_flash_update,
+    .reset = blackbox_device_flash_reset,
+    .write_header = blackbox_device_flash_write_header,
+    .flush = blackbox_device_flash_flush,
+
+    .usage = blackbox_device_flash_usage,
+    .ready = blackbox_device_flash_ready,
+
+    .read = blackbox_device_flash_read,
+    .write = blackbox_device_flash_write,
+};
 
 #endif
