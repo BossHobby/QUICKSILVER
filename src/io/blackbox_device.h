@@ -3,8 +3,12 @@
 #include <cbor.h>
 
 #include "io/blackbox.h"
+#include "util/ring_buffer.h"
 
-#define BLACKBOX_DEVICE_HEADER_MAGIC 0xdeadbeef
+#define BLACKBOX_HEADER_MAGIC 0xdeadbeef
+
+#define BLACKBOX_WRITE_BUFFER_SIZE 512
+#define BLACKBOX_ENCODE_BUFFER_SIZE 8192
 
 typedef struct {
   uint32_t page_size;
@@ -18,7 +22,7 @@ typedef struct {
   uint32_t blackbox_fieldflags;
   uint32_t looptime;
   uint8_t blackbox_rate;
-  uint32_t start_page;
+  uint32_t start;
   uint32_t size;
 } blackbox_device_file_t;
 
@@ -26,7 +30,7 @@ typedef struct {
   MEMBER(blackbox_fieldflags, uint32) \
   MEMBER(looptime, uint32)            \
   MEMBER(blackbox_rate, uint8)        \
-  MEMBER(start_page, uint32)          \
+  MEMBER(start, uint32)               \
   MEMBER(size, uint32)
 
 #define BLACKBOX_DEVICE_MAX_FILES 10
@@ -52,7 +56,10 @@ typedef enum {
 } blackbox_device_result_t;
 
 extern blackbox_device_header_t blackbox_device_header;
-extern blackbox_device_bounds_t bounds;
+extern blackbox_device_bounds_t blackbox_bounds;
+
+extern ring_buffer_t blackbox_encode_buffer;
+extern uint8_t blackbox_write_buffer[BLACKBOX_WRITE_BUFFER_SIZE];
 
 cbor_result_t cbor_encode_blackbox_device_file_t(cbor_value_t *enc, const blackbox_device_file_t *f);
 cbor_result_t cbor_encode_blackbox_device_header_t(cbor_value_t *enc, const blackbox_device_header_t *h);
@@ -60,6 +67,8 @@ cbor_result_t cbor_encode_blackbox_device_header_t(cbor_value_t *enc, const blac
 void blackbox_device_init();
 blackbox_device_result_t blackbox_device_update();
 uint32_t blackbox_device_usage();
+
+blackbox_device_file_t *blackbox_current_file();
 
 void blackbox_device_reset();
 bool blackbox_device_restart(uint32_t blackbox_fieldflags, uint32_t blackbox_rate, uint32_t looptime);

@@ -142,7 +142,7 @@ uint8_t m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data,
   return ret;
 }
 
-void m25p16_get_bounds(blackbox_device_bounds_t *bounds) {
+void m25p16_get_bounds(blackbox_device_bounds_t *blackbox_bounds) {
   uint8_t raw_id[3];
   m25p16_read_command(M25P16_READ_IDENTIFICATION, raw_id, 3);
 
@@ -150,48 +150,48 @@ void m25p16_get_bounds(blackbox_device_bounds_t *bounds) {
   switch (chip_id) {
   case JEDEC_ID_WINBOND_W25Q16:
   case JEDEC_ID_MICRON_M25P16:
-    bounds->sectors = 32;
-    bounds->pages_per_sector = 256;
+    blackbox_bounds->sectors = 32;
+    blackbox_bounds->pages_per_sector = 256;
     break;
   case JEDEC_ID_BERGMICRO_W25Q32:
-    bounds->sectors = 1024;
-    bounds->pages_per_sector = 16;
+    blackbox_bounds->sectors = 1024;
+    blackbox_bounds->pages_per_sector = 16;
     break;
   case JEDEC_ID_WINBOND_W25Q32:
   case JEDEC_ID_MACRONIX_MX25L3206E:
-    bounds->sectors = 64;
-    bounds->pages_per_sector = 256;
+    blackbox_bounds->sectors = 64;
+    blackbox_bounds->pages_per_sector = 256;
     break;
   case JEDEC_ID_MICRON_N25Q064:
   case JEDEC_ID_WINBOND_W25Q64:
   case JEDEC_ID_MACRONIX_MX25L6406E:
-    bounds->sectors = 128;
-    bounds->pages_per_sector = 256;
+    blackbox_bounds->sectors = 128;
+    blackbox_bounds->pages_per_sector = 256;
     break;
   case JEDEC_ID_MICRON_N25Q128:
   case JEDEC_ID_WINBOND_W25Q128:
   case JEDEC_ID_WINBOND_W25Q128_DTR:
   case JEDEC_ID_CYPRESS_S25FL128L:
-    bounds->sectors = 256;
-    bounds->pages_per_sector = 256;
+    blackbox_bounds->sectors = 256;
+    blackbox_bounds->pages_per_sector = 256;
     break;
   case JEDEC_ID_WINBOND_W25Q256:
   case JEDEC_ID_MACRONIX_MX25L25635E:
-    bounds->sectors = 512;
-    bounds->pages_per_sector = 256;
+    blackbox_bounds->sectors = 512;
+    blackbox_bounds->pages_per_sector = 256;
     break;
   default:
     // Unsupported chip or not an SPI NOR flash
-    bounds->sectors = 0;
-    bounds->pages_per_sector = 0;
-    bounds->sector_size = 0;
-    bounds->total_size = 0;
+    blackbox_bounds->sectors = 0;
+    blackbox_bounds->pages_per_sector = 0;
+    blackbox_bounds->sector_size = 0;
+    blackbox_bounds->total_size = 0;
     return;
   }
 
-  bounds->page_size = M25P16_PAGE_SIZE;
-  bounds->sector_size = bounds->pages_per_sector * bounds->page_size;
-  bounds->total_size = bounds->sector_size * bounds->sectors;
+  blackbox_bounds->page_size = M25P16_PAGE_SIZE;
+  blackbox_bounds->sector_size = blackbox_bounds->pages_per_sector * blackbox_bounds->page_size;
+  blackbox_bounds->total_size = blackbox_bounds->sector_size * blackbox_bounds->sectors;
 }
 
 #endif

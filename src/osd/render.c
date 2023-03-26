@@ -1522,7 +1522,7 @@ void osd_display() {
       }
 
       if (osd_menu_label_start(4, 6)) {
-        const uint32_t usage = (float)(blackbox_device_usage()) / (float)(bounds.total_size) * 100;
+        const uint32_t usage = (float)(blackbox_device_usage()) / (float)(blackbox_bounds.total_size) * 100;
 
         osd_write_int(usage, 3);
         osd_write_str("% USAGE");

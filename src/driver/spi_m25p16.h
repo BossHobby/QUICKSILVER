@@ -27,7 +27,7 @@ enum m25p16_commands {
 void m25p16_init();
 void m25p16_wait_for_ready();
 uint8_t m25p16_is_ready();
-void m25p16_get_bounds(blackbox_device_bounds_t *bounds);
+void m25p16_get_bounds(blackbox_device_bounds_t *blackbox_bounds);
 
 uint8_t m25p16_command(const uint8_t cmd);
 uint8_t m25p16_read_command(const uint8_t cmd, uint8_t *data, const uint32_t len);
