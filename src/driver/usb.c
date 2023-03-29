@@ -239,10 +239,15 @@ static usbd_respond cdc_control(usbd_device *dev, usbd_ctlreq *req, usbd_rqc_cal
   return usbd_fail;
 }
 
+static volatile bool rx_stalled = false;
+
 static void cdc_rxonly(usbd_device *dev, uint8_t event, uint8_t ep) {
   if (ring_buffer_free(&rx_buffer) <= CDC_DATA_SZ) {
+    interrupt_disable(OTG_FS_IRQn);
+    rx_stalled = true;
     return;
   }
+  rx_stalled = false;
 
   static uint8_t buf[CDC_DATA_SZ];
   const int32_t len = usbd_ep_read(dev, ep, buf, CDC_DATA_SZ);
@@ -250,6 +255,15 @@ static void cdc_rxonly(usbd_device *dev, uint8_t event, uint8_t ep) {
     return;
   }
   ring_buffer_write_multi(&rx_buffer, buf, len);
+}
+
+static void cdc_kickoff_rx() {
+  if (!rx_stalled) {
+    return;
+  }
+
+  cdc_rxonly(&udev, 0, CDC_RXD_EP);
+  interrupt_enable(OTG_FS_IRQn, USB_PRIORITY);
 }
 
 static volatile bool tx_stalled = true;
@@ -380,7 +394,9 @@ uint32_t usb_serial_read(uint8_t *data, uint32_t len) {
   if (data == NULL || len == 0) {
     return 0;
   }
-  return ring_buffer_read_multi(&rx_buffer, data, len);
+  const uint32_t read = ring_buffer_read_multi(&rx_buffer, data, len);
+  cdc_kickoff_rx();
+  return read;
 }
 
 uint8_t usb_serial_read_byte() {
