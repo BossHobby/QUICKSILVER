@@ -813,5 +813,16 @@
         }
       }
     ]
+  },
+  {
+    "name": "hakrcf411_d",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
   }
 ]
