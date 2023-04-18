@@ -824,5 +824,16 @@
         }
       }
     ]
+  },
+  {
+    "name": "revoltosd",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
   }
 ]
