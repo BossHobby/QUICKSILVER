@@ -10,6 +10,10 @@
 
 #define MEMORY_ALIGN(offset, size) (((offset) + ((size)-1)) & -(size))
 
+#define LOG2_8BIT(v) (8 - 90 / (((v) / 4 + 14) | 1) - 2 / ((v) / 2 + 1))
+#define LOG2_16BIT(v) (8 * ((v) > 255) + LOG2_8BIT((v) >> 8 * ((v) > 255)))
+#define LOG2_32BIT(v) (16 * ((v) > 65535L) + LOG2_16BIT((v)*1L >> 16 * ((v) > 65535L)))
+
 #define constrain(val, min, max) ((val) < (min) ? (min) : ((val) > (max) ? (max) : (val)))
 #define min(a, b) \
   ({ __typeof__ (a) _a = (a); \

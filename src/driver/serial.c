@@ -2,6 +2,7 @@
 
 #include "core/profile.h"
 #include "driver/interrupt.h"
+#include "driver/rcc.h"
 #include "driver/time.h"
 #include "io/usb_configurator.h"
 #include "project.h"
@@ -19,42 +20,42 @@ void serial_enable_rcc(usart_ports_t port) {
   switch (usart_port_defs[port].channel_index) {
 #ifdef USART1
   case 1:
-    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_USART1);
+    rcc_enable(RCC_APB2_GRP1(USART1));
     break;
 #endif
 #ifdef USART2
   case 2:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_USART2);
+    rcc_enable(RCC_APB1_GRP1(USART2));
     break;
 #endif
 #ifdef USART3
   case 3:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_USART3);
+    rcc_enable(RCC_APB1_GRP1(USART3));
     break;
 #endif
 #ifdef UART4
   case 4:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_UART4);
+    rcc_enable(RCC_APB1_GRP1(UART4));
     break;
 #endif
 #ifdef UART5
   case 5:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_UART5);
+    rcc_enable(RCC_APB1_GRP1(UART5));
     break;
 #endif
 #ifdef USART6
   case 6:
-    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_USART6);
+    rcc_enable(RCC_APB2_GRP1(USART6));
     break;
 #endif
 #ifdef UART7
   case 7:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_UART7);
+    rcc_enable(RCC_APB1_GRP1(UART7));
     break;
 #endif
 #ifdef UART8
   case 8:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_UART8);
+    rcc_enable(RCC_APB1_GRP1(UART8));
     break;
 #endif
   }

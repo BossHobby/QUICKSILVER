@@ -3,6 +3,7 @@
 #include "core/debug.h"
 #include "core/profile.h"
 #include "driver/gpio.h"
+#include "driver/rcc.h"
 #include "driver/time.h"
 #include "flight/filter.h"
 #include "project.h"
@@ -219,10 +220,10 @@ static void adc_start_conversion(adc_chan_t index) {
 
 void adc_init() {
 #ifdef STM32H7
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_ADC12);
-  LL_AHB4_GRP1_EnableClock(LL_AHB4_GRP1_PERIPH_ADC3);
+  rcc_enable(RCC_AHB1_GRP1(ADC12));
+  rcc_enable(RCC_AHB4_GRP1(ADC3));
 #else
-  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_ADC1);
+  rcc_enable(RCC_APB2_GRP1(ADC1));
 #endif
 
   temp_cal_a = (float)(TEMPSENSOR_CAL2_TEMP - TEMPSENSOR_CAL1_TEMP) / (float)(*TEMPSENSOR_CAL2_ADDR - *TEMPSENSOR_CAL1_ADDR);

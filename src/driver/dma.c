@@ -6,6 +6,7 @@
 #include "core/debug.h"
 #include "core/failloop.h"
 #include "driver/interrupt.h"
+#include "driver/rcc.h"
 #include "project.h"
 #include "util/util.h"
 
@@ -201,10 +202,10 @@ void dma_enable_rcc(dma_device_t dev) {
   const dma_stream_def_t *dma = &dma_stream_defs[dev];
   switch (dma->port_index) {
   case 1:
-    LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
+    rcc_enable(RCC_AHB1_GRP1(DMA1));
     break;
   case 2:
-    LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA2);
+    rcc_enable(RCC_AHB1_GRP1(DMA2));
     break;
   }
 }
