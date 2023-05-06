@@ -7,6 +7,7 @@
 #include "driver/dma.h"
 #include "driver/gpio.h"
 #include "driver/interrupt.h"
+#include "driver/rcc.h"
 #include "driver/spi.h"
 #include "driver/time.h"
 #include "flight/control.h"
@@ -204,8 +205,8 @@ static void dshot_disable_dma_request(uint32_t timer_channel) {
 void motor_init() {
   gpio_port_count = 0;
 
-  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM1);
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA2);
+  rcc_enable(RCC_APB2_GRP1(TIM1));
+  rcc_enable(RCC_AHB1_GRP1(DMA2));
 
   // setup timer to 1/3 of the full bit time
 

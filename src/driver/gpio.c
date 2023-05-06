@@ -1,5 +1,6 @@
 #include "driver/gpio.h"
 
+#include "driver/rcc.h"
 #include "project.h"
 
 static volatile uint8_t fpv_init_done = 0;
@@ -13,7 +14,7 @@ void gpio_init() {
           RCC_AHB1ENR_GPIODEN | RCC_AHB1ENR_GPIOEEN | RCC_AHB1ENR_GPIOHEN);
 
   // for exit
-  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
+  rcc_enable(RCC_APB2_GRP1(SYSCFG));
 #endif
 
 #ifdef STM32F7
