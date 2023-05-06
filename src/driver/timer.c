@@ -1,70 +1,72 @@
 #include "driver/timer.h"
 
+#include "driver/rcc.h"
+
 static void timer_enable_rcc(TIM_TypeDef *tim) {
   switch ((uint32_t)tim) {
 #ifdef TIM1
   case (uint32_t)TIM1:
-    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM1);
+    rcc_enable(RCC_APB2_GRP1(TIM1));
     break;
 #endif
 #ifdef TIM2
   case (uint32_t)TIM2:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM2);
+    rcc_enable(RCC_APB1_GRP1(TIM2));
     break;
 #endif
 #ifdef TIM3
   case (uint32_t)TIM3:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM3);
+    rcc_enable(RCC_APB1_GRP1(TIM3));
     break;
 #endif
 #ifdef TIM4
   case (uint32_t)TIM4:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM4);
+    rcc_enable(RCC_APB1_GRP1(TIM4));
     break;
 #endif
 #ifdef TIM5
   case (uint32_t)TIM5:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM5);
+    rcc_enable(RCC_APB1_GRP1(TIM5));
     break;
 #endif
 #ifdef TIM6
   case (uint32_t)TIM6:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM6);
+    rcc_enable(RCC_APB1_GRP1(TIM6));
     break;
 #endif
 #ifdef TIM7
   case (uint32_t)TIM7:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM7);
+    rcc_enable(RCC_APB1_GRP1(TIM7));
     break;
 #endif
 #ifdef TIM8
   case (uint32_t)TIM8:
-    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM8);
+    rcc_enable(RCC_APB2_GRP1(TIM8));
     break;
 #endif
 #ifdef TIM9
   case (uint32_t)TIM9:
-    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM9);
+    rcc_enable(RCC_APB2_GRP1(TIM9));
     break;
 #endif
 #ifdef TIM11
   case (uint32_t)TIM11:
-    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM11);
+    rcc_enable(RCC_APB2_GRP1(TIM11));
     break;
 #endif
 #ifdef TIM12
   case (uint32_t)TIM12:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM12);
+    rcc_enable(RCC_APB1_GRP1(TIM12));
     break;
 #endif
 #ifdef TIM13
   case (uint32_t)TIM13:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM13);
+    rcc_enable(RCC_APB1_GRP1(TIM13));
     break;
 #endif
 #ifdef TIM14
   case (uint32_t)TIM14:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM14);
+    rcc_enable(RCC_APB1_GRP1(TIM14));
     break;
 #endif
   }

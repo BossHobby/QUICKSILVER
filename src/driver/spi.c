@@ -3,12 +3,12 @@
 #include <string.h>
 
 #include "core/failloop.h"
-#include "io/usb_configurator.h"
-#include "project.h"
-
 #include "driver/dma.h"
 #include "driver/interrupt.h"
+#include "driver/rcc.h"
 #include "driver/time.h"
+#include "io/usb_configurator.h"
+#include "project.h"
 
 #define GPIO_AF_SPI1 GPIO_AF5_SPI1
 #define GPIO_AF_SPI2 GPIO_AF5_SPI2
@@ -57,17 +57,17 @@ FAST_RAM static volatile uint8_t dma_transfer_done[16] = {[0 ... 15] = 1};
 static void spi_enable_rcc(spi_ports_t port) {
   switch (PORT.channel_index) {
   case 1:
-    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI1);
+    rcc_enable(RCC_APB2_GRP1(SPI1));
     break;
   case 2:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_SPI2);
+    rcc_enable(RCC_APB1_GRP1(SPI2));
     break;
   case 3:
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_SPI3);
+    rcc_enable(RCC_APB1_GRP1(SPI3));
     break;
 #if defined(STM32F7) || defined(STM32H7)
   case 4:
-    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI4);
+    rcc_enable(RCC_APB2_GRP1(SPI4));
     break;
 #endif
   }
