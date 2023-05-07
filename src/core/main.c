@@ -87,6 +87,7 @@ __attribute__((__used__)) int main() {
 
   // setup filters early
   filter_global_init();
+  timer_alloc_init();
   pid_init();
 
   // init some hardware things

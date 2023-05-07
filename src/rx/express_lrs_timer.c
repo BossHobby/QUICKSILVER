@@ -10,9 +10,10 @@
 
 #if defined(RX_EXPRESS_LRS) && defined(USE_SX128X)
 
+#define TIMER timer_defs[TIMER_TAG_TIM(timer_tag)]
 #define TIMER_HZ 1000000
-#define TIMER_INSTANCE TIM3
-#define TIMER_IRQN TIM3_IRQn
+
+static resource_tag_t timer_tag;
 
 static bool is_running = false;
 static volatile bool is_tick = false;
@@ -36,16 +37,17 @@ bool elrs_timer_is_running() {
 void elrs_timer_stop() {
   is_running = false;
 
-  LL_TIM_DisableIT_UPDATE(TIMER_INSTANCE);
-  LL_TIM_DisableCounter(TIMER_INSTANCE);
-  LL_TIM_SetCounter(TIMER_INSTANCE, 0);
+  LL_TIM_DisableIT_UPDATE(TIMER.instance);
+  LL_TIM_DisableCounter(TIMER.instance);
+  LL_TIM_SetCounter(TIMER.instance, 0);
 }
 
 void elrs_timer_init(uint32_t interval_us) {
   current_interval = interval_us;
-  timer_init(TIMER_INSTANCE, PWM_CLOCK_FREQ_HZ / TIMER_HZ, (current_interval >> 1) - 1);
 
-  interrupt_enable(TIMER_IRQN, TIMER_PRIORITY);
+  timer_tag = timer_alloc(TIMER_USE_ELRS);
+  timer_up_init(TIMER_TAG_TIM(timer_tag), PWM_CLOCK_FREQ_HZ / TIMER_HZ, (current_interval >> 1) - 1);
+  interrupt_enable(TIMER.irq, TIMER_PRIORITY);
 
   elrs_timer_stop();
 }
@@ -55,14 +57,14 @@ void elrs_timer_resume(uint32_t interval_us) {
   is_tick = false;
   is_running = true;
 
-  LL_TIM_SetAutoReload(TIMER_INSTANCE, (current_interval >> 1) - 1);
-  LL_TIM_SetCounter(TIMER_INSTANCE, 0);
+  LL_TIM_SetAutoReload(TIMER.instance, (current_interval >> 1) - 1);
+  LL_TIM_SetCounter(TIMER.instance, 0);
 
-  LL_TIM_ClearFlag_UPDATE(TIMER_INSTANCE);
-  LL_TIM_EnableIT_UPDATE(TIMER_INSTANCE);
+  LL_TIM_ClearFlag_UPDATE(TIMER.instance);
+  LL_TIM_EnableIT_UPDATE(TIMER.instance);
 
-  LL_TIM_EnableCounter(TIMER_INSTANCE);
-  LL_TIM_GenerateEvent_UPDATE(TIMER_INSTANCE);
+  LL_TIM_EnableCounter(TIMER.instance);
+  LL_TIM_GenerateEvent_UPDATE(TIMER.instance);
 }
 
 void elrs_timer_set_phase_shift(int32_t shift) {
@@ -144,25 +146,25 @@ void elrs_phase_reset() {
   elrs_lpf_init((elrs_lpf_t *)&pl_state.offset_dx_lpf, 4);
 }
 
-void TIM3_IRQHandler() {
-  if (LL_TIM_IsActiveFlag_UPDATE(TIMER_INSTANCE) == 1) {
-    LL_TIM_ClearFlag_UPDATE(TIMER_INSTANCE);
+void elrs_timer_irq_handler() {
+  if (LL_TIM_IsActiveFlag_UPDATE(TIMER.instance) == 1) {
+    LL_TIM_ClearFlag_UPDATE(TIMER.instance);
+
+    if (is_tick) {
+      const uint32_t adjusted_period = ((current_interval >> 1) + timer_freq_offset - 1);
+      LL_TIM_SetAutoReload(TIMER.instance, adjusted_period);
+
+      elrs_handle_tick();
+    } else {
+      const uint32_t adjusted_period = ((current_interval >> 1) + phase_shift + timer_freq_offset - 1);
+      LL_TIM_SetAutoReload(TIMER.instance, adjusted_period);
+      phase_shift = 0;
+
+      elrs_handle_tock();
+    }
+
+    is_tick = !is_tick;
   }
-
-  if (is_tick) {
-    const uint32_t adjusted_period = ((current_interval >> 1) + timer_freq_offset - 1);
-    LL_TIM_SetAutoReload(TIMER_INSTANCE, adjusted_period);
-
-    elrs_handle_tick();
-  } else {
-    const uint32_t adjusted_period = ((current_interval >> 1) + phase_shift + timer_freq_offset - 1);
-    LL_TIM_SetAutoReload(TIMER_INSTANCE, adjusted_period);
-    phase_shift = 0;
-
-    elrs_handle_tock();
-  }
-
-  is_tick = !is_tick;
 }
 
 #endif
