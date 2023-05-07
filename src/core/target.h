@@ -1,14 +1,12 @@
 #pragma once
 
-#include <stdbool.h>
-
 #include <cbor.h>
+#include <stdbool.h>
 
 #define LED_MAX 4
 
 #define GPIO_AF(pin, af, tag)
-#define PIN_IDENT(port, num) PIN_##port##num
-#define GPIO_PIN(port, num) PIN_IDENT(port, num),
+#define GPIO_PIN(port, num) PIN_##port##num,
 typedef enum {
   PIN_NONE,
 #include "gpio_pins.in"
@@ -16,6 +14,14 @@ typedef enum {
 } gpio_pins_t;
 #undef GPIO_PIN
 #undef GPIO_AF
+
+typedef enum {
+  MOTOR_PIN0,
+  MOTOR_PIN1,
+  MOTOR_PIN2,
+  MOTOR_PIN3,
+  MOTOR_PIN_MAX
+} motor_pin_t;
 
 typedef enum {
   SERIAL_PORT_INVALID,
@@ -90,6 +96,7 @@ typedef struct {
 
   target_invert_pin_t sdcard_detect;
   target_invert_pin_t buzzer;
+  gpio_pins_t motor_pins[MOTOR_PIN_MAX];
 } target_t;
 
 #define TARGET_MEMBERS                                                     \
@@ -103,7 +110,8 @@ typedef struct {
   MEMBER(vbat, gpio_pins_t)                                                \
   MEMBER(ibat, gpio_pins_t)                                                \
   MEMBER(sdcard_detect, target_invert_pin_t)                               \
-  MEMBER(buzzer, target_invert_pin_t)
+  MEMBER(buzzer, target_invert_pin_t)                                      \
+  ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX, gpio_pins_t)
 
 extern target_t target;
 

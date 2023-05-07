@@ -196,21 +196,21 @@ typedef struct {
   uint8_t gyro_orientation;
   float torque_boost;
   float throttle_boost;
-  motor_pin_ident_t motor_pins[4];
+  motor_pin_t motor_pins[MOTOR_PIN_MAX];
   float turtle_throttle_percent;
 } profile_motor_t;
 
-#define MOTOR_MEMBERS                    \
-  START_STRUCT(profile_motor_t)          \
-  MEMBER(digital_idle, float)            \
-  MEMBER(motor_limit, float)             \
-  MEMBER(dshot_time, uint16)             \
-  MEMBER(invert_yaw, uint8)              \
-  MEMBER(gyro_orientation, uint8)        \
-  MEMBER(torque_boost, float)            \
-  MEMBER(throttle_boost, float)          \
-  ARRAY_MEMBER(motor_pins, 4, uint8)     \
-  MEMBER(turtle_throttle_percent, float) \
+#define MOTOR_MEMBERS                            \
+  START_STRUCT(profile_motor_t)                  \
+  MEMBER(digital_idle, float)                    \
+  MEMBER(motor_limit, float)                     \
+  MEMBER(dshot_time, uint16)                     \
+  MEMBER(invert_yaw, uint8)                      \
+  MEMBER(gyro_orientation, uint8)                \
+  MEMBER(torque_boost, float)                    \
+  MEMBER(throttle_boost, float)                  \
+  ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX, uint8) \
+  MEMBER(turtle_throttle_percent, float)         \
   END_STRUCT()
 
 typedef enum {
