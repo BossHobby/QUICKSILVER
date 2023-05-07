@@ -5,8 +5,6 @@
 #include "driver/interrupt.h"
 #include "driver/timer.h"
 
-#define TIMER_INSTANCE TIM4
-#define TIMER_IRQN TIM4_IRQn
 #define BAUD_DIVIDER 4
 
 typedef enum {
@@ -29,22 +27,23 @@ static volatile soft_serial_t soft_serial_ports[SOFT_SERIAL_PORTS_MAX - USART_PO
 #undef SOFT_SERIAL_PORT
 
 #define DEV soft_serial_ports[port - USART_PORTS_MAX]
+#define TIMER timer_defs[TIMER_TAG_TIM(DEV.timer)]
 
 extern void soft_serial_rx_isr();
 extern void soft_serial_tx_isr();
 
-static void soft_serial_timer_start() {
-  LL_TIM_SetCounter(TIMER_INSTANCE, 0);
+static void soft_serial_timer_start(usart_ports_t port) {
+  LL_TIM_SetCounter(TIMER.instance, 0);
 
-  LL_TIM_ClearFlag_UPDATE(TIMER_INSTANCE);
-  LL_TIM_EnableIT_UPDATE(TIMER_INSTANCE);
+  LL_TIM_ClearFlag_UPDATE(TIMER.instance);
+  LL_TIM_EnableIT_UPDATE(TIMER.instance);
 
-  LL_TIM_EnableCounter(TIMER_INSTANCE);
+  LL_TIM_EnableCounter(TIMER.instance);
 }
 
-static void soft_serial_timer_stop() {
-  LL_TIM_DisableIT_UPDATE(TIMER_INSTANCE);
-  LL_TIM_DisableCounter(TIMER_INSTANCE);
+static void soft_serial_timer_stop(usart_ports_t port) {
+  LL_TIM_DisableIT_UPDATE(TIMER.instance);
+  LL_TIM_DisableCounter(TIMER.instance);
 }
 
 static int soft_serial_is_1wire(usart_ports_t port) {
@@ -104,7 +103,9 @@ static void soft_serial_set_output(usart_ports_t port) {
 }
 
 uint8_t soft_serial_init(usart_ports_t port, uint32_t baudrate, uint8_t stop_bits) {
-  soft_serial_timer_stop();
+  if (DEV.timer) {
+    soft_serial_timer_stop(port);
+  }
 
   DEV.baud = baudrate;
   DEV.stop_bits = stop_bits;
@@ -115,8 +116,11 @@ uint8_t soft_serial_init(usart_ports_t port, uint32_t baudrate, uint8_t stop_bit
   soft_serial_init_tx(port);
   soft_serial_init_rx(port);
 
-  timer_init(TIMER_INSTANCE, 1, PWM_CLOCK_FREQ_HZ / (baudrate * BAUD_DIVIDER));
-  interrupt_enable(TIMER_IRQN, TIMER_PRIORITY);
+  if (!DEV.timer) {
+    DEV.timer = timer_alloc(TIMER_USE_SOFT_SERIAL);
+  }
+  timer_up_init(TIMER_TAG_TIM(DEV.timer), 1, PWM_CLOCK_FREQ_HZ / (baudrate * BAUD_DIVIDER));
+  interrupt_enable(TIMER.irq, TIMER_PRIORITY);
 
   return 1;
 }
@@ -124,16 +128,16 @@ uint8_t soft_serial_init(usart_ports_t port, uint32_t baudrate, uint8_t stop_bit
 void soft_serial_enable_write(usart_ports_t port) {
   DEV.tx_state = START_BIT;
 
-  soft_serial_timer_stop();
+  soft_serial_timer_stop(port);
   soft_serial_set_output(port);
-  soft_serial_timer_start();
+  soft_serial_timer_start(port);
 }
 
 void soft_serial_enable_read(usart_ports_t port) {
   DEV.rx_state = START_BIT;
 
   soft_serial_set_input(port);
-  soft_serial_timer_start();
+  soft_serial_timer_start(port);
 }
 
 uint8_t soft_serial_read_byte(usart_ports_t port) {
@@ -184,7 +188,7 @@ void soft_serial_rx_update(usart_ports_t port) {
   if (timeout == 100000) {
     DEV.rx_state = START_BIT;
     timeout = 0;
-    soft_serial_timer_stop();
+    soft_serial_timer_stop(port);
     return;
   }
 
@@ -235,12 +239,13 @@ void soft_serial_rx_update(usart_ports_t port) {
   }
 }
 
-void TIM4_IRQHandler() {
-  if (LL_TIM_IsActiveFlag_UPDATE(TIMER_INSTANCE)) {
-    for (uint8_t port = USART_PORTS_MAX; port < SOFT_SERIAL_PORTS_MAX; port++) {
+void soft_serial_timer_irq_handler() {
+  for (uint8_t port = USART_PORTS_MAX; port < SOFT_SERIAL_PORTS_MAX; port++) {
+    if (LL_TIM_IsActiveFlag_UPDATE(TIMER.instance)) {
+      LL_TIM_ClearFlag_UPDATE(TIMER.instance);
+
       soft_serial_tx_update(port);
       soft_serial_rx_update(port);
     }
-    LL_TIM_ClearFlag_UPDATE(TIMER_INSTANCE);
   }
 }
