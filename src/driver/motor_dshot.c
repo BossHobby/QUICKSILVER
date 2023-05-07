@@ -14,8 +14,6 @@
 #include "flight/control.h"
 #include "util/util.h"
 
-#if defined(USE_DSHOT_DMA_DRIVER)
-
 #define DSHOT_TIME profile.motor.dshot_time
 #define DSHOT_SYMBOL_TIME (PWM_CLOCK_FREQ_HZ / (3 * DSHOT_TIME * 1000) - 1)
 
@@ -48,7 +46,7 @@ typedef struct {
   uint32_t pin;
 
   uint32_t dshot_port;
-} motor_pin_t;
+} dshot_pin_t;
 
 typedef struct {
   GPIO_TypeDef *gpio;
@@ -95,7 +93,7 @@ static volatile DMA_RAM uint32_t port_dma_buffer[DSHOT_MAX_PORT_COUNT][DSHOT_DMA
       .dshot_port = 0,                                       \
   },
 
-static motor_pin_t motor_pins[MOTOR_PIN_MAX] = {MOTOR_PINS};
+static dshot_pin_t motor_pins[MOTOR_PIN_MAX] = {MOTOR_PINS};
 
 #undef MOTOR_PIN
 
@@ -202,7 +200,7 @@ static void dshot_disable_dma_request(uint32_t timer_channel) {
   }
 }
 
-void motor_init() {
+void motor_dshot_init() {
   gpio_port_count = 0;
 
   rcc_enable(RCC_APB2_GRP1(TIM1));
@@ -322,7 +320,7 @@ static void dshot_dma_start() {
   }
 }
 
-void motor_wait_for_ready() {
+void motor_dshot_wait_for_ready() {
 #ifdef STM32F4
   while (dshot_dma_phase != 0 || spi_dma_is_ready(SPI_PORT1) == 0)
 #else
@@ -331,7 +329,7 @@ void motor_wait_for_ready() {
     __NOP();
 }
 
-void motor_write(float *values) {
+void motor_dshot_write(float *values) {
   if (dir_change_done) {
     for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
       uint16_t value = 0;
@@ -412,18 +410,18 @@ void motor_write(float *values) {
   }
 }
 
-void motor_set_direction(motor_direction_t dir) {
+void motor_dshot_set_direction(motor_direction_t dir) {
   if (dir_change_done) {
     motor_dir = dir;
     dir_change_done = false;
   }
 }
 
-bool motor_direction_change_done() {
+bool motor_dshot_direction_change_done() {
   return dir_change_done;
 }
 
-void motor_beep() {
+void motor_dshot_beep() {
   static uint32_t last_time = 0;
   const uint32_t time = time_millis() - last_time;
 
@@ -457,5 +455,3 @@ void dshot_dma_isr(dma_device_t dev) {
     break;
   }
 }
-
-#endif

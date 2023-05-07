@@ -6,8 +6,6 @@
 
 #include "core/project.h"
 
-#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
-
 #define SERIAL_4WAY_INTERFACE_NAME_STR "m4wFCIntf"
 
 #define SERIAL_4WAY_VER_MAIN 20
@@ -222,5 +220,3 @@ serial_esc4way_ack_t serial_4way_read_settings(blheli_settings_t *settings, uint
 serial_esc4way_ack_t serial_4way_write_settings(blheli_settings_t *settings, uint8_t esc);
 
 void serial_4way_process();
-
-#endif

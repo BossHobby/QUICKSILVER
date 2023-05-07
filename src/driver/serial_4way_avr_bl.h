@@ -7,8 +7,6 @@
 #include "core/project.h"
 #include "driver/serial_4way.h"
 
-#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
-
 // Bootloader result codes
 #define brSUCCESS 0x30
 #define brERRORVERIFY 0xC0
@@ -28,5 +26,3 @@ uint8_t avr_bl_page_erase(gpio_pins_t pin, uint16_t addr);
 uint8_t avr_bl_write_eeprom(gpio_pins_t pin, uint16_t addr, const uint8_t *data, uint8_t size);
 uint8_t avr_bl_write_flash(gpio_pins_t pin, uint16_t addr, const uint8_t *data, uint8_t size);
 uint8_t avr_bl_verify_flash(gpio_pins_t pin, uint16_t addr, const uint8_t *data, uint8_t size);
-
-#endif

@@ -20,30 +20,26 @@
 #define RELAX_FACTOR (RELAX_FACTOR_DEG * DEGTORAD)
 #define RELAX_FACTOR_YAW (RELAX_FACTOR_YAW_DEG * DEGTORAD)
 
-//************************************Setpoint Weight****************************************
-#ifdef BRUSHLESS_TARGET
+extern profile_t profile;
 
-/// output limit
-const float outlimit[PID_SIZE] = {1.0, 1.0, 1.0};
+float timefactor;
 
-// limit of integral term (abs)
-const float integrallimit[PID_SIZE] = {0.8, 0.8, 0.6};
-
-#else // BRUSHED TARGET
+int number_of_increments[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+int current_pid_axis = 0;
+int current_pid_term = 0;
 
 // "p term setpoint weighting" 0.0 - 1.0 where 1.0 = normal pid
-#define ENABLE_SETPOINT_WEIGHTING
-//            Roll   Pitch   Yaw
-// float b[3] = { 0.97 , 0.98 , 0.95};   //BRUSHED RACE
-float b[3] = {0.93, 0.93, 0.9}; // BRUSHED FREESTYLE
+static const float setpoint_weigth_brushed[3] = {0.93, 0.93, 0.9}; // BRUSHED FREESTYLE
+// float setpoint_weigth_brushed[3] = { 0.97 , 0.98 , 0.95};   //BRUSHED RACE
+static const float setpoint_weigth_brushless[3] = {1, 1, 1}; // ALL PID
 
 /// output limit
-const float outlimit[PID_SIZE] = {1.7, 1.7, 0.5};
+static const float out_limit_brushed[PID_SIZE] = {1.7, 1.7, 0.5};
+static const float out_limit_brushless[PID_SIZE] = {1.0, 1.0, 1.0};
 
 // limit of integral term (abs)
-const float integrallimit[PID_SIZE] = {1.7, 1.7, 0.5};
-
-#endif
+static const float integral_limit_brushed[PID_SIZE] = {1.7, 1.7, 0.5};
+static const float integral_limit_brushless[PID_SIZE] = {0.8, 0.8, 0.6};
 
 static const float pid_scales[PID_SIZE][PID_SIZE] = {
     // roll, pitch, yaw
@@ -51,12 +47,6 @@ static const float pid_scales[PID_SIZE][PID_SIZE] = {
     {50.0f, 50.0f, 50.0f},    // ki
     {120.0f, 120.0f, 120.0f}, // kd
 };
-
-extern profile_t profile;
-
-int number_of_increments[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
-int current_pid_axis = 0;
-int current_pid_term = 0;
 
 static float lasterror[PID_SIZE] = {0, 0, 0};
 static float lasterror2[PID_SIZE] = {0, 0, 0};
@@ -72,8 +62,6 @@ static float ierror[PID_SIZE] = {0, 0, 0};
 
 static float v_compensation = 1.00;
 static float tda_compensation = 1.00;
-
-float timefactor;
 
 static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
@@ -141,10 +129,11 @@ void pid_precalc() {
 
 // (iwindup = 0  windup is not allowed)   (iwindup = 1 windup is allowed)
 static float pid_compute_iterm_windup(uint8_t x, float pid_output) {
-  if ((pid_output >= outlimit[x]) && (state.error.axis[x] > 0)) {
+  const float *out_limit = target.brushless ? out_limit_brushless : out_limit_brushed;
+  if ((pid_output >= out_limit[x]) && (state.error.axis[x] > 0)) {
     return 0.0f;
   }
-  if ((pid_output <= -outlimit[x]) && (state.error.axis[x] < 0)) {
+  if ((pid_output <= -out_limit[x]) && (state.error.axis[x] < 0)) {
     return 0.0f;
   }
 
@@ -182,16 +171,10 @@ static float pid_filter_dterm(uint8_t x, float dterm) {
 // input: error[x] = setpoint - gyro
 // output: state.pidoutput.axis[x] = change required from motors
 static void pid(uint8_t x) {
-
-#ifdef ENABLE_SETPOINT_WEIGHTING
   // P term
-  state.pid_p_term.axis[x] = state.error.axis[x] * (b[x]) * current_kp[x];
-  // b
-  state.pid_p_term.axis[x] += -(1.0f - b[x]) * current_kp[x] * state.gyro.axis[x];
-#else
-  // P term with b disabled
-  state.pid_p_term.axis[x] = state.error.axis[x] * current_kp[x];
-#endif
+  const float *setpoint_weigth = target.brushless ? setpoint_weigth_brushless : setpoint_weigth_brushed;
+  state.pid_p_term.axis[x] = state.error.axis[x] * (setpoint_weigth[x]) * current_kp[x];
+  state.pid_p_term.axis[x] += -(1.0f - setpoint_weigth[x]) * current_kp[x] * state.gyro.axis[x];
 
   // Pid Voltage Comp applied to P term only
   if (profile.voltage.pid_voltage_compensation) {
@@ -212,11 +195,12 @@ static void pid(uint8_t x) {
 
   // SIMPSON_RULE_INTEGRAL
   // assuming similar time intervals
+  const float *integral_limit = target.brushless ? integral_limit_brushless : integral_limit_brushed;
   const float iterm_windup = pid_compute_iterm_windup(x, pid_output.axis[x]);
   ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + state.error.axis[x]) * current_ki[x] * iterm_windup * state.looptime;
   lasterror2[x] = lasterror[x];
   lasterror[x] = state.error.axis[x];
-  limitf(&ierror[x], integrallimit[x]);
+  limitf(&ierror[x], integral_limit[x]);
 
   state.pid_i_term.axis[x] = ierror[x];
 
@@ -247,7 +231,9 @@ static void pid(uint8_t x) {
   state.pid_d_term.axis[x] = pid_filter_dterm(x, dterm);
 
   state.pidoutput.axis[x] = pid_output.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x];
-  limitf(&state.pidoutput.axis[x], outlimit[x]);
+
+  const float *out_limit = target.brushless ? out_limit_brushless : out_limit_brushed;
+  limitf(&state.pidoutput.axis[x], out_limit[x]);
 }
 
 void pid_calc() {

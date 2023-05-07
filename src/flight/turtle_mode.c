@@ -7,9 +7,6 @@
 #include "driver/time.h"
 #include "flight/control.h"
 
-// TODO: enable for brushed too
-#ifdef BRUSHLESS_TARGET
-
 #define TURTLE_TIMEOUT 1000 // 1 second timeout for auto turtle
 
 typedef enum {
@@ -25,6 +22,10 @@ static uint8_t turtle_axis = 0;
 static uint8_t turtle_dir = 0;
 
 void turtle_mode_start() {
+  if (!target.brushless) {
+    return;
+  }
+
   if (flags.on_ground && turtle_state == TURTLE_STAGE_IDLE) {
     if (state.GEstG.yaw < 0) {
       // only enable turtle if we are onground
@@ -36,10 +37,18 @@ void turtle_mode_start() {
 }
 
 void turtle_mode_cancel() {
+  if (!target.brushless) {
+    return;
+  }
+
   flags.turtle_ready = 0;
 }
 
 void turtle_mode_update() {
+  if (!target.brushless) {
+    return;
+  }
+
   if (turtle_state != TURTLE_STAGE_IDLE) {
     // turtle is active
     flags.turtle = 1;
@@ -132,9 +141,3 @@ void turtle_mode_update() {
     break;
   }
 }
-#else
-void turtle_mode_start() {}
-void turtle_mode_cancel() {}
-
-void turtle_mode_update() {}
-#endif

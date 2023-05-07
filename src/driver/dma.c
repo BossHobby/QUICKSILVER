@@ -325,9 +325,7 @@ static void handle_dma_stream_isr(dma_device_t dev) {
   case DMA_DEVICE_TIM1_CH1:
   case DMA_DEVICE_TIM1_CH3:
   case DMA_DEVICE_TIM1_CH4:
-#if defined(USE_DSHOT_DMA_DRIVER)
     dshot_dma_isr(dev);
-#endif
     break;
   case DMA_DEVICE_MAX:
     break;
