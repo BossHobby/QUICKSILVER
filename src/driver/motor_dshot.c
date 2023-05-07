@@ -40,8 +40,6 @@ typedef enum {
 } dir_change_state_t;
 
 typedef struct {
-  motor_pin_ident_t id;
-
   GPIO_TypeDef *port;
   uint32_t pin;
 
@@ -82,40 +80,32 @@ static dshot_gpio_port_t gpio_ports[DSHOT_MAX_PORT_COUNT] = {
         .dma_device = DMA_DEVICE_TIM1_CH4,
     },
 };
-
 static volatile DMA_RAM uint32_t port_dma_buffer[DSHOT_MAX_PORT_COUNT][DSHOT_DMA_BUFFER_SIZE];
-
-#define MOTOR_PIN(_port, _pin, pin_af, timer, timer_channel) \
-  {                                                          \
-      .id = MOTOR_PIN_IDENT(_port, _pin),                    \
-      .port = GPIO##_port,                                   \
-      .pin = LL_GPIO_PIN_##_pin,                             \
-      .dshot_port = 0,                                       \
-  },
-
-static dshot_pin_t motor_pins[MOTOR_PIN_MAX] = {MOTOR_PINS};
-
-#undef MOTOR_PIN
+static dshot_pin_t dshot_pins[MOTOR_PIN_MAX];
 
 static void dshot_init_motor_pin(uint32_t index) {
+  dshot_pins[index].port = gpio_pin_defs[target.motor_pins[index]].port;
+  dshot_pins[index].pin = gpio_pin_defs[target.motor_pins[index]].pin;
+  dshot_pins[index].dshot_port = 0;
+
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-  gpio_init.Pin = motor_pins[index].pin;
-  LL_GPIO_Init(motor_pins[index].port, &gpio_init);
-  LL_GPIO_ResetOutputPin(motor_pins[index].port, motor_pins[index].pin);
+  gpio_init.Pin = dshot_pins[index].pin;
+  LL_GPIO_Init(dshot_pins[index].port, &gpio_init);
+  LL_GPIO_ResetOutputPin(dshot_pins[index].port, dshot_pins[index].pin);
 
   for (uint8_t i = 0; i < DSHOT_MAX_PORT_COUNT; i++) {
-    if (gpio_ports[i].gpio == motor_pins[index].port || i == gpio_port_count) {
+    if (gpio_ports[i].gpio == dshot_pins[index].port || i == gpio_port_count) {
       // we already got a matching port in our array
       // or we reached the first empty spot
-      gpio_ports[i].gpio = motor_pins[index].port;
-      gpio_ports[i].port_high |= motor_pins[index].pin;
-      gpio_ports[i].port_low |= (motor_pins[index].pin << 16);
+      gpio_ports[i].gpio = dshot_pins[index].port;
+      gpio_ports[i].port_high |= dshot_pins[index].pin;
+      gpio_ports[i].port_low |= (dshot_pins[index].pin << 16);
 
-      motor_pins[index].dshot_port = i;
+      dshot_pins[index].dshot_port = i;
 
       if (i + 1 > gpio_port_count) {
         gpio_port_count = i + 1;
@@ -298,9 +288,9 @@ static void dshot_dma_start() {
     }
 
     for (uint8_t motor = 0; motor < MOTOR_PIN_MAX; motor++) {
-      const uint32_t port = motor_pins[motor].dshot_port;
-      const uint32_t motor_high = (motor_pins[motor].pin);
-      const uint32_t motor_low = (motor_pins[motor].pin << 16);
+      const uint32_t port = dshot_pins[motor].dshot_port;
+      const uint32_t motor_high = (dshot_pins[motor].pin);
+      const uint32_t motor_low = (dshot_pins[motor].pin << 16);
 
       const bool bit = dshot_packet[motor] & 0x8000;
 

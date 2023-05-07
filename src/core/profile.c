@@ -157,9 +157,12 @@ const profile_t default_profile = {
 #else
         .gyro_orientation = GYRO_ROTATE_NONE,
 #endif
-#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel) MOTOR_PIN_IDENT(port, pin),
-        .motor_pins = {MOTOR_PINS},
-#undef MOTOR_PIN
+        .motor_pins = {
+            MOTOR_PIN0,
+            MOTOR_PIN1,
+            MOTOR_PIN2,
+            MOTOR_PIN3,
+        },
         .turtle_throttle_percent = 10.0f,
     },
 

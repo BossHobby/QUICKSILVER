@@ -1,6 +1,5 @@
 #pragma once
 
-#include "motor_pins.h"
 #include "spi_ports.h"
 
 #include <target.h>
