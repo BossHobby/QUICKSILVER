@@ -77,6 +77,8 @@ typedef struct {
 typedef struct {
   uint8_t name[32];
 
+  bool brushless;
+
   target_led_t leds[LED_MAX];
   target_serial_port_t serial_ports[SERIAL_PORT_MAX];
   target_serial_port_t serial_soft_ports[SERIAL_SOFT_COUNT];
@@ -92,6 +94,7 @@ typedef struct {
 
 #define TARGET_MEMBERS                                                     \
   TSTR_MEMBER(name, 32)                                                    \
+  MEMBER(brushless, bool)                                                  \
   ARRAY_MEMBER(leds, LED_MAX, target_led_t)                                \
   ARRAY_MEMBER(serial_ports, SERIAL_PORT_MAX, target_serial_port_t)        \
   ARRAY_MEMBER(serial_soft_ports, SERIAL_SOFT_COUNT, target_serial_port_t) \

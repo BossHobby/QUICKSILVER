@@ -7,17 +7,6 @@
 #include "io/usb_configurator.h"
 #include "util/util.h"
 
-#ifdef BRUSHED_TARGET
-#define BRUSHED_MIX_SCALING
-#endif
-
-#ifdef BRUSHLESS_TARGET
-#define BRUSHLESS_MIX_SCALING
-#endif
-
-#ifdef BRUSHLESS_MIX_SCALING
-#undef BRUSHED_MIX_SCALING
-
 #ifndef AIRMODE_STRENGTH
 #define AIRMODE_STRENGTH 1.0f //  Most amount of power that can be added for Airmode
 #endif
@@ -25,11 +14,6 @@
 #ifndef CLIPPING_LIMIT
 #define CLIPPING_LIMIT 1.0f //  Most amount of power that can be pulled before clipping
 #endif
-
-#endif
-
-#ifdef BRUSHED_MIX_SCALING
-#undef BRUSHLESS_MIX_SCALING
 
 // options for mix throttle lowering if enabled
 // 0 - 100 range ( 100 = full reduction / 0 = no reduction )
@@ -53,8 +37,6 @@
 #define MIX_THROTTLE_INCREASE_MAX 0.2f
 #endif
 
-#endif
-
 extern profile_t profile;
 
 static float motord(float in, int x) {
@@ -71,10 +53,7 @@ static float motord(float in, int x) {
   return in + out;
 }
 
-//********************************MIXER SCALING***********************************************************
-static void motor_mixer_scale_calc(float mix[4]) {
-
-#ifdef BRUSHLESS_MIX_SCALING
+static void motor_brushless_mixer_scale_calc(float mix[4]) {
   // only enable once really in the air
   if (flags.on_ground || !flags.in_air) {
     return;
@@ -115,9 +94,9 @@ static void motor_mixer_scale_calc(float mix[4]) {
 
   for (int i = 0; i < 4; i++)
     mix[i] -= reduce_amount;
-#endif
+}
 
-#ifdef BRUSHED_MIX_SCALING
+static void motor_brushed_mixer_scale_calc(float mix[4]) {
   // throttle reduction
   float overthrottle = 0;
   float underthrottle = 0.001f;
@@ -178,7 +157,13 @@ static void motor_mixer_scale_calc(float mix[4]) {
         mix[i] -= underthrottle;
     }
   }
-#endif
+}
+
+static void motor_mixer_scale_calc(float mix[4]) {
+  if (target.brushless) {
+    return motor_brushless_mixer_scale_calc(mix);
+  }
+  return motor_brushed_mixer_scale_calc(mix);
 }
 
 void motor_test_calc(bool motortest_usb, float mix[4]) {

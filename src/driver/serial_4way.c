@@ -12,8 +12,6 @@
 #include "io/led.h"
 #include "util/cbor_helper.h"
 
-#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
-
 #define RX_LED_OFF led_off(1)
 #define RX_LED_ON led_on(1)
 #define TX_LED_OFF led_off(2)
@@ -621,5 +619,3 @@ void serial_4way_process() {
     }
   };
 }
-
-#endif

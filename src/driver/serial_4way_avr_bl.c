@@ -4,8 +4,6 @@
 #include "driver/serial_4way.h"
 #include "driver/time.h"
 
-#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
-
 #define BOOT_MSG_LEN 4
 #define DevSignHi (BOOT_MSG_LEN)
 #define DevSignLo (BOOT_MSG_LEN + 1)
@@ -373,5 +371,3 @@ uint8_t avr_bl_verify_flash(gpio_pins_t pin, uint16_t addr, const uint8_t *data,
 
   return avr_bl_get_ack(pin, 40 / START_BIT_TIMEOUT_MS);
 }
-
-#endif
