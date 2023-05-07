@@ -10,6 +10,7 @@
 
 #define PWM_DIVIDER 1
 #define PWMTOP ((PWM_CLOCK_FREQ_HZ / PWMFREQ) - 1)
+
 #define MOTOR_BEEPS_PWM_ON 0.2
 #define MOTOR_BEEPS_PWM_OFF 0.0
 
@@ -44,29 +45,11 @@ extern profile_t profile;
 static resource_tag_t timer_tags[MOTOR_PIN_MAX];
 
 void motor_pwm_init() {
-  {
-    LL_GPIO_InitTypeDef gpio_init;
-    gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
-    gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-    gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-    gpio_init.Pull = LL_GPIO_PULL_NO;
-
-    uint32_t i = 0;
-// timer clock enable
-#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel)      \
-  {                                                             \
-    gpio_init.Pin = LL_GPIO_PIN_##pin;                          \
-    gpio_init.Alternate = pin_af;                               \
-    LL_GPIO_Init(GPIO##port, &gpio_init);                       \
-    const resource_tag_t tag = TIMER_TAG(timer, timer_channel); \
-    if (timer_alloc_tag(TIMER_USE_MOTOR_PWM, tag))              \
-      timer_tags[i++] = tag;                                    \
-  }
-
-    MOTOR_PINS
-
-#undef MOTOR_PIN
-  }
+  LL_GPIO_InitTypeDef gpio_init;
+  gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
+  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  gpio_init.Pull = LL_GPIO_PULL_NO;
 
   LL_TIM_OC_InitTypeDef tim_oc_init;
   tim_oc_init.OCMode = LL_TIM_OCMODE_PWM1;
@@ -76,6 +59,21 @@ void motor_pwm_init() {
   tim_oc_init.CompareValue = 0;
 
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    const gpio_pins_t pin = target.motor_pins[i];
+
+    for (uint32_t j = 0; j < GPIO_AF_MAX; j++) {
+      const gpio_af_t *func = &gpio_pin_afs[j];
+      if (func->pin != pin || RESOURCE_TAG_TYPE(func->tag) != RESOURCE_TIM) {
+        continue;
+      }
+
+      if (timer_alloc_tag(TIMER_USE_MOTOR_PWM, func->tag)) {
+        timer_tags[i] = func->tag;
+        gpio_pin_init_af(&gpio_init, pin, func->af);
+        break;
+      }
+    }
+
     const uint8_t tim = TIMER_TAG_TIM(timer_tags[i]);
     const uint8_t ch = TIMER_TAG_CH(timer_tags[i]);
     timer_up_init(tim, PWM_DIVIDER, PWMTOP);

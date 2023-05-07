@@ -132,13 +132,11 @@ uint8_t serial_4way_init() {
 
   time_delay_ms(250);
 
-#define MOTOR_PIN(port, pin, pin_af, timer, timer_channel)     \
-  esc_pins[MOTOR_PIN_IDENT(port, pin)] = PIN_IDENT(port, pin); \
-  avr_bl_init_pin(PIN_IDENT(port, pin));
-
-  MOTOR_PINS
-
-#undef MOTOR_PIN
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    const gpio_pins_t pin = target.motor_pins[i];
+    esc_pins[i] = pin;
+    avr_bl_init_pin(pin);
+  }
 
   return ESC_COUNT;
 }
