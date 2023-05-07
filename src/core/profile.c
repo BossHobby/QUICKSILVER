@@ -533,11 +533,7 @@ target_info_t target_info = {
     .target_name = MACRO_STR(TARGET),
     .git_version = MACRO_STR(GIT_VERSION),
 
-    .features = 0
-#ifdef BRUSHLESS_TARGET
-                | FEATURE_BRUSHLESS
-#endif
-                | FEATURE_OSD
+    .features = FEATURE_OSD
 #ifdef ENABLE_BLACKBOX
                 | FEATURE_BLACKBOX
 #endif

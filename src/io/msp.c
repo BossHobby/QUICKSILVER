@@ -236,7 +236,6 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
     default:
     case MSP_PASSTHROUGH_ESC_4WAY: {
-#ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
       uint8_t data[1] = {4};
       msp_send_reply(msp, magic, cmd, data, 1);
 
@@ -244,7 +243,6 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
       serial_4way_init();
       serial_4way_process();
-#endif
       break;
     }
     }

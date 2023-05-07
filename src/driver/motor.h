@@ -10,20 +10,21 @@ typedef enum {
   MOTOR_REVERSE
 } motor_direction_t;
 
-#define MOTOR_BL 0
-#define MOTOR_FL 1
-#define MOTOR_BR 2
-#define MOTOR_FR 3
+typedef enum {
+  MOTOR_BL,
+  MOTOR_FL,
+  MOTOR_BR,
+  MOTOR_FR,
+} motor_position_t;
 
 // driver functions
 void motor_init();
 void motor_wait_for_ready();
 void motor_beep();
-void motor_write(float *values);
 void motor_set_direction(motor_direction_t dir);
 bool motor_direction_change_done();
 
 // generic functions
-void motor_set(uint8_t number, float pwm);
+void motor_set(motor_position_t pos, float pwm);
 void motor_set_all(float pwm);
 void motor_update();

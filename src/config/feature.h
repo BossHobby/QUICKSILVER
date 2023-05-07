@@ -1,16 +1,5 @@
 #pragma once
 
-#ifdef BRUSHLESS_TARGET
-// dshot pin initialization & usb interface to esc
-#define USE_DSHOT_DMA_DRIVER
-#define USE_SERIAL_4WAY_BLHELI_INTERFACE
-#endif
-
-#ifdef BRUSHED_TARGET
-// pwm pin initialization
-#define USE_PWM_DRIVER
-#endif
-
 #if defined(USE_M25P16) || defined(USE_SDCARD)
 #define ENABLE_BLACKBOX
 #endif
