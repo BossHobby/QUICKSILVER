@@ -124,19 +124,19 @@ typedef struct {
   gpio_pins_t motor_pins[MOTOR_PIN_MAX];
 } target_t;
 
-#define TARGET_MEMBERS                                                     \
-  TSTR_MEMBER(name, 32)                                                    \
-  MEMBER(brushless, bool)                                                  \
-  ARRAY_MEMBER(leds, LED_MAX, target_led_t)                                \
-  ARRAY_MEMBER(serial_ports, SERIAL_PORT_MAX, target_serial_port_t)        \
-  ARRAY_MEMBER(serial_soft_ports, SERIAL_SOFT_COUNT, target_serial_port_t) \
-  ARRAY_MEMBER(spi_ports, SPI_PORT_MAX, target_spi_port_t)                 \
-  MEMBER(usb_detect, gpio_pins_t)                                          \
-  MEMBER(fpv, gpio_pins_t)                                                 \
-  MEMBER(vbat, gpio_pins_t)                                                \
-  MEMBER(ibat, gpio_pins_t)                                                \
-  MEMBER(sdcard_detect, target_invert_pin_t)                               \
-  MEMBER(buzzer, target_invert_pin_t)                                      \
+#define TARGET_MEMBERS                                                           \
+  TSTR_MEMBER(name, 32)                                                          \
+  MEMBER(brushless, bool)                                                        \
+  ARRAY_MEMBER(leds, LED_MAX, target_led_t)                                      \
+  INDEX_ARRAY_MEMBER(serial_ports, SERIAL_PORT_MAX, target_serial_port_t)        \
+  INDEX_ARRAY_MEMBER(serial_soft_ports, SERIAL_SOFT_COUNT, target_serial_port_t) \
+  INDEX_ARRAY_MEMBER(spi_ports, SPI_PORT_MAX, target_spi_port_t)                 \
+  MEMBER(usb_detect, gpio_pins_t)                                                \
+  MEMBER(fpv, gpio_pins_t)                                                       \
+  MEMBER(vbat, gpio_pins_t)                                                      \
+  MEMBER(ibat, gpio_pins_t)                                                      \
+  MEMBER(sdcard_detect, target_invert_pin_t)                                     \
+  MEMBER(buzzer, target_invert_pin_t)                                            \
   ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX, gpio_pins_t)
 
 extern target_t target;
