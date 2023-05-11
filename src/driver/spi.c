@@ -10,67 +10,54 @@
 #include "driver/time.h"
 #include "io/usb_configurator.h"
 
-#define GPIO_AF_SPI1 GPIO_AF5_SPI1
-#define GPIO_AF_SPI2 GPIO_AF5_SPI2
-#define GPIO_AF_SPI3 GPIO_AF6_SPI3
-#define GPIO_AF_SPI4 GPIO_AF5_SPI4
-#define GPIO_AF_SPI5 GPIO_AF5_SPI5
-#define GPIO_AF_SPI6 GPIO_AF5_SPI6
-
-#define SPI_PORT(chan, sck_pin, miso_pin, mosi_pin) \
-  {                                                 \
-      .channel_index = chan,                        \
-      .channel = SPI##chan,                         \
-      .gpio_af = GPIO_AF_SPI##chan,                 \
-      .sck = sck_pin,                               \
-      .miso = miso_pin,                             \
-      .mosi = mosi_pin,                             \
-      .dma_rx = DMA_DEVICE_SPI##chan##_RX,          \
-      .dma_tx = DMA_DEVICE_SPI##chan##_TX,          \
-  },
-
-const spi_port_def_t spi_port_defs[SPI_PORTS_MAX] = {{}, SPI_PORTS};
-
-#undef SPI_PORT
-
 typedef struct {
   spi_bus_device_t *active_device;
   spi_mode_t mode;
   uint32_t hz;
 } spi_port_config_t;
 
-#define SPI_PORT(chan, sck_pin, miso_pin, mosi_pin) \
-  {                                                 \
-      .active_device = NULL,                        \
-      .mode = SPI_MODE_INVALID,                     \
-      .hz = 0,                                      \
-  },
+const spi_port_def_t spi_port_defs[SPI_PORT_MAX] = {
+    {},
+    {
+        .channel_index = 1,
+        .channel = SPI1,
+        .rcc = RCC_APB2_GRP1(SPI1),
+        .dma_rx = DMA_DEVICE_SPI1_RX,
+        .dma_tx = DMA_DEVICE_SPI1_TX,
+    },
+    {
+        .channel_index = 2,
+        .channel = SPI2,
+        .rcc = RCC_APB1_GRP1(SPI2),
+        .dma_rx = DMA_DEVICE_SPI2_RX,
+        .dma_tx = DMA_DEVICE_SPI2_TX,
+    },
+    {
+        .channel_index = 3,
+        .channel = SPI3,
+        .rcc = RCC_APB1_GRP1(SPI3),
+        .dma_rx = DMA_DEVICE_SPI3_RX,
+        .dma_tx = DMA_DEVICE_SPI3_TX,
+    },
+#if defined(STM32F7) || defined(STM32H7)
+    {
+        .channel_index = 4,
+        .channel = SPI4,
+        .rcc = RCC_APB2_GRP1(SPI4),
+        .dma_rx = DMA_DEVICE_SPI4_RX,
+        .dma_tx = DMA_DEVICE_SPI4_TX,
+    },
+#endif
+};
 
-FAST_RAM static volatile spi_port_config_t spi_port_config[SPI_PORTS_MAX] = {{}, SPI_PORTS};
-
-#undef SPI_PORT
-
+FAST_RAM static volatile spi_port_config_t spi_port_config[SPI_PORT_MAX];
 FAST_RAM static volatile uint8_t dma_transfer_done[16] = {[0 ... 15] = 1};
 
 #define PORT spi_port_defs[port]
+#define DEV target.spi_ports[port]
 
 static void spi_enable_rcc(spi_ports_t port) {
-  switch (PORT.channel_index) {
-  case 1:
-    rcc_enable(RCC_APB2_GRP1(SPI1));
-    break;
-  case 2:
-    rcc_enable(RCC_APB1_GRP1(SPI2));
-    break;
-  case 3:
-    rcc_enable(RCC_APB1_GRP1(SPI3));
-    break;
-#if defined(STM32F7) || defined(STM32H7)
-  case 4:
-    rcc_enable(RCC_APB2_GRP1(SPI4));
-    break;
-#endif
-  }
+  rcc_enable(PORT.rcc);
 }
 
 static void spi_csn_enable(spi_bus_device_t *bus) {
@@ -122,19 +109,19 @@ static void spi_init_pins(spi_ports_t port, gpio_pins_t nss) {
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_UP;
-  gpio_pin_init_af(&gpio_init, PORT.sck, PORT.gpio_af);
+  gpio_pin_init_tag(&gpio_init, DEV.sck, SPI_TAG(port, RES_SPI_SCK));
 
   gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_pin_init_af(&gpio_init, PORT.miso, PORT.gpio_af);
+  gpio_pin_init_tag(&gpio_init, DEV.miso, SPI_TAG(port, RES_SPI_MISO));
 
   gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_pin_init_af(&gpio_init, PORT.mosi, PORT.gpio_af);
+  gpio_pin_init_tag(&gpio_init, DEV.mosi, SPI_TAG(port, RES_SPI_MOSI));
 
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
@@ -237,6 +224,7 @@ static void spi_dma_reset_tx(spi_ports_t port, uint8_t *tx_data, uint32_t tx_siz
 static void spi_reconfigure(spi_bus_device_t *bus) {
   volatile spi_port_config_t *config = &spi_port_config[bus->port];
   const spi_port_def_t *port = &spi_port_defs[bus->port];
+  const target_spi_port_t *dev = &target.spi_ports[bus->port];
 
   if (config->hz != bus->hz) {
     config->hz = bus->hz;
@@ -252,13 +240,13 @@ static void spi_reconfigure(spi_bus_device_t *bus) {
 
     if (bus->mode == SPI_MODE_LEADING_EDGE) {
       gpio_init.Pull = LL_GPIO_PULL_DOWN;
-      gpio_pin_init_af(&gpio_init, port->sck, port->gpio_af);
+      gpio_pin_init_tag(&gpio_init, dev->sck, SPI_TAG(bus->port, RES_SPI_SCK));
 
       LL_SPI_SetClockPhase(port->channel, LL_SPI_PHASE_1EDGE);
       LL_SPI_SetClockPolarity(port->channel, LL_SPI_POLARITY_LOW);
     } else if (bus->mode == SPI_MODE_TRAILING_EDGE) {
       gpio_init.Pull = LL_GPIO_PULL_UP;
-      gpio_pin_init_af(&gpio_init, port->sck, port->gpio_af);
+      gpio_pin_init_tag(&gpio_init, dev->sck, SPI_TAG(bus->port, RES_SPI_SCK));
 
       LL_SPI_SetClockPhase(port->channel, LL_SPI_PHASE_2EDGE);
       LL_SPI_SetClockPolarity(port->channel, LL_SPI_POLARITY_HIGH);
@@ -315,6 +303,10 @@ uint8_t spi_dma_is_ready(spi_ports_t port) {
 }
 
 void spi_bus_device_init(spi_bus_device_t *bus) {
+  if (!target_spi_port_valid(&target.spi_ports[bus->port])) {
+    return;
+  }
+
   bus->txn_head = 0;
   bus->txn_tail = 0;
 
@@ -675,20 +667,27 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   }
 }
 
-#define SPI_PORT(channel, sck_pin, miso_pin, mosi_pin) \
-  case DMA_DEVICE_SPI##channel##_RX:                   \
-    handle_dma_rx_isr(SPI_PORT##channel);              \
-    break;                                             \
-  case DMA_DEVICE_SPI##channel##_TX:                   \
-    break;
-
 void spi_dma_isr(dma_device_t dev) {
   switch (dev) {
-    SPI_PORTS
+  case DMA_DEVICE_SPI1_RX:
+    handle_dma_rx_isr(SPI_PORT1);
+    break;
+
+  case DMA_DEVICE_SPI2_RX:
+    handle_dma_rx_isr(SPI_PORT2);
+    break;
+
+  case DMA_DEVICE_SPI3_RX:
+    handle_dma_rx_isr(SPI_PORT3);
+    break;
+
+#if defined(STM32F7) || defined(STM32H7)
+  case DMA_DEVICE_SPI4_RX:
+    handle_dma_rx_isr(SPI_PORT4);
+    break;
+#endif
 
   default:
     break;
   }
 }
-
-#undef SPI_DMA

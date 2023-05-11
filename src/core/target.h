@@ -24,6 +24,17 @@ typedef enum {
 } motor_pin_t;
 
 typedef enum {
+  SPI_PORT_INVALID,
+  SPI_PORT1,
+  SPI_PORT2,
+  SPI_PORT3,
+  SPI_PORT4,
+  SPI_PORT5,
+  SPI_PORT6,
+  SPI_PORT_MAX,
+} spi_ports_t;
+
+typedef enum {
   SERIAL_PORT_INVALID,
   SERIAL_PORT1,
   SERIAL_PORT2,
@@ -81,6 +92,19 @@ typedef struct {
   MEMBER(inverter, gpio_pins_t)
 
 typedef struct {
+  uint8_t index;
+  gpio_pins_t miso;
+  gpio_pins_t mosi;
+  gpio_pins_t sck;
+} target_spi_port_t;
+
+#define TARGET_SPI_MEMBERS  \
+  MEMBER(index, uint8)      \
+  MEMBER(miso, gpio_pins_t) \
+  MEMBER(mosi, gpio_pins_t) \
+  MEMBER(sck, gpio_pins_t)
+
+typedef struct {
   uint8_t name[32];
 
   bool brushless;
@@ -88,6 +112,7 @@ typedef struct {
   target_led_t leds[LED_MAX];
   target_serial_port_t serial_ports[SERIAL_PORT_MAX];
   target_serial_port_t serial_soft_ports[SERIAL_SOFT_COUNT];
+  target_spi_port_t spi_ports[SPI_PORT_MAX];
 
   gpio_pins_t usb_detect;
   gpio_pins_t fpv;
@@ -105,6 +130,7 @@ typedef struct {
   ARRAY_MEMBER(leds, LED_MAX, target_led_t)                                \
   ARRAY_MEMBER(serial_ports, SERIAL_PORT_MAX, target_serial_port_t)        \
   ARRAY_MEMBER(serial_soft_ports, SERIAL_SOFT_COUNT, target_serial_port_t) \
+  ARRAY_MEMBER(spi_ports, SPI_PORT_MAX, target_spi_port_t)                 \
   MEMBER(usb_detect, gpio_pins_t)                                          \
   MEMBER(fpv, gpio_pins_t)                                                 \
   MEMBER(vbat, gpio_pins_t)                                                \
@@ -116,6 +142,7 @@ typedef struct {
 extern target_t target;
 
 bool target_serial_port_valid(const target_serial_port_t *port);
+bool target_spi_port_valid(const target_spi_port_t *port);
 
 cbor_result_t cbor_encode_gpio_pins_t(cbor_value_t *enc, const gpio_pins_t *t);
 cbor_result_t cbor_decode_gpio_pins_t(cbor_value_t *dec, gpio_pins_t *t);
