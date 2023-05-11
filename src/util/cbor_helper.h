@@ -46,6 +46,13 @@ cbor_result_t cbor_handle_error(cbor_result_t err);
     CBOR_CHECK_ERROR(res = cbor_encode_##type(enc, &o->member[i])); \
   }
 
+#define CBOR_ENCODE_INDEX_ARRAY_MEMBER(member, size, type)          \
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, #member));            \
+  CBOR_CHECK_ERROR(res = cbor_encode_array(enc, size - 1));         \
+  for (uint32_t i = 1; i < size; i++) {                             \
+    CBOR_CHECK_ERROR(res = cbor_encode_##type(enc, &o->member[i])); \
+  }
+
 #define CBOR_ENCODE_STR_ARRAY_MEMBER(member, size)              \
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, #member));        \
   CBOR_CHECK_ERROR(res = cbor_encode_array(enc, size));         \
@@ -106,6 +113,18 @@ cbor_result_t cbor_handle_error(cbor_result_t err);
     CBOR_CHECK_ERROR(res = cbor_decode_array(dec, &array));                         \
     for (uint32_t i = 0; i < min(size, cbor_decode_array_size(dec, &array)); i++) { \
       CBOR_CHECK_ERROR(res = cbor_decode_##type(dec, &o->member[i]));               \
+    }                                                                               \
+    continue;                                                                       \
+  }
+
+#define CBOR_DECODE_INDEX_ARRAY_MEMBER(member, size, type)                          \
+  if (buf_equal_string(name, name_len, #member)) {                                  \
+    cbor_container_t array;                                                         \
+    CBOR_CHECK_ERROR(res = cbor_decode_array(dec, &array));                         \
+    for (uint32_t i = 0; i < min(size, cbor_decode_array_size(dec, &array)); i++) { \
+      type tmp = {};                                                                \
+      CBOR_CHECK_ERROR(res = cbor_decode_##type(dec, &tmp));                        \
+      o->member[tmp.index] = tmp;                                                   \
     }                                                                               \
     continue;                                                                       \
   }
