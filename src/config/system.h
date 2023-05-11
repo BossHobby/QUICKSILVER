@@ -1,7 +1,5 @@
 #pragma once
 
-#include "spi_ports.h"
-
 #include <target.h>
 
 #ifdef STM32F4

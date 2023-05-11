@@ -6,6 +6,7 @@
 #include "core/project.h"
 #include "driver/dma.h"
 #include "driver/gpio.h"
+#include "driver/rcc.h"
 
 typedef enum {
   SPI_MODE_INVALID,
@@ -16,13 +17,7 @@ typedef enum {
 typedef struct {
   uint8_t channel_index;
   SPI_TypeDef *channel;
-
-  uint32_t gpio_af;
-
-  gpio_pins_t sck;
-  gpio_pins_t miso;
-  gpio_pins_t mosi;
-
+  rcc_reg_t rcc;
   dma_device_t dma_rx;
   dma_device_t dma_tx;
 } spi_port_def_t;
@@ -109,7 +104,7 @@ typedef struct spi_bus_device {
   uint32_t hz;
 } spi_bus_device_t;
 
-extern const spi_port_def_t spi_port_defs[SPI_PORTS_MAX];
+extern const spi_port_def_t spi_port_defs[SPI_PORT_MAX];
 
 uint8_t spi_dma_is_ready(spi_ports_t port);
 
