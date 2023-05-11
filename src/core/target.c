@@ -27,6 +27,10 @@ CBOR_START_STRUCT_ENCODER(target_serial_port_t)
 TARGET_SERIAL_MEMBERS
 CBOR_END_STRUCT_ENCODER()
 
+CBOR_START_STRUCT_ENCODER(target_spi_port_t)
+TARGET_SPI_MEMBERS
+CBOR_END_STRUCT_ENCODER()
+
 CBOR_START_STRUCT_ENCODER(target_t)
 TARGET_MEMBERS
 CBOR_END_STRUCT_ENCODER()
@@ -53,6 +57,10 @@ CBOR_END_STRUCT_DECODER()
 
 CBOR_START_STRUCT_DECODER(target_serial_port_t)
 TARGET_SERIAL_MEMBERS
+CBOR_END_STRUCT_DECODER()
+
+CBOR_START_STRUCT_DECODER(target_spi_port_t)
+TARGET_SPI_MEMBERS
 CBOR_END_STRUCT_DECODER()
 
 CBOR_START_STRUCT_DECODER(target_t)
@@ -176,4 +184,8 @@ cbor_result_t cbor_decode_gpio_pins_t(cbor_value_t *dec, gpio_pins_t *t) {
 
 bool target_serial_port_valid(const target_serial_port_t *port) {
   return port->index != 0 && (port->rx != PIN_NONE || port->tx != PIN_NONE);
+}
+
+bool target_spi_port_valid(const target_spi_port_t *port) {
+  return port->index != 0 && port->miso != PIN_NONE && port->mosi != PIN_NONE && port->sck != PIN_NONE;
 }
