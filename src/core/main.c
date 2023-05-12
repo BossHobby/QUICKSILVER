@@ -135,11 +135,7 @@ __attribute__((__used__)) int main() {
   time_delay_ms(100);
 
   sixaxis_gyro_cal();
-
-#ifdef ENABLE_BLACKBOX
   blackbox_init();
-#endif
-
   imu_init();
 
   osd_clear();
@@ -198,13 +194,9 @@ __attribute__((__used__)) int main() {
     rx_update();
     perf_counter_end(PERF_COUNTER_RX);
 
-    uint8_t blackbox_active = 0;
-
-#ifdef ENABLE_BLACKBOX
     perf_counter_start(PERF_COUNTER_BLACKBOX);
-    blackbox_active = blackbox_update();
+    const uint8_t blackbox_active = blackbox_update();
     perf_counter_end(PERF_COUNTER_BLACKBOX);
-#endif
 
     if (!blackbox_active) {
       perf_counter_start(PERF_COUNTER_OSD);

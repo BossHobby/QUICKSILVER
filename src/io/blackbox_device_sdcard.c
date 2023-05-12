@@ -5,8 +5,6 @@
 #include "core/project.h"
 #include "driver/spi_sdcard.h"
 
-#ifdef USE_SDCARD
-
 #define FLUSH_INTERVAL 8
 #define FILES_SECTOR_OFFSET 1
 #define PAGE_SIZE SDCARD_PAGE_SIZE
@@ -214,5 +212,3 @@ blackbox_device_vtable_t blackbox_device_sdcard = {
     .read = blackbox_device_sdcard_read,
     .write = blackbox_device_sdcard_write,
 };
-
-#endif

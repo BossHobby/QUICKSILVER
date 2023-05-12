@@ -7,8 +7,6 @@
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
-#ifdef ENABLE_BLACKBOX
-
 static blackbox_t blackbox;
 
 static uint8_t blackbox_enabled = 0;
@@ -151,6 +149,3 @@ uint8_t blackbox_update() {
   // tell the rest of the code that flash is occuping the spi bus
   return flash_result == BLACKBOX_DEVICE_WRITE;
 }
-#else
-void blackbox_set_debug(uint8_t index, int16_t data) {}
-#endif
