@@ -152,11 +152,7 @@ const profile_t default_profile = {
 #else
         .throttle_boost = 0.0,
 #endif
-#ifdef GYRO_ORIENTATION
-        .gyro_orientation = GYRO_ORIENTATION,
-#else
         .gyro_orientation = GYRO_ROTATE_NONE,
-#endif
         .motor_pins = {
             MOTOR_PIN0,
             MOTOR_PIN1,
@@ -588,6 +584,7 @@ void profile_set_defaults() {
   }
 
   blackbox_preset_apply(&blackbox_presets[DEFAULT_BLACKBOX_PRESET], &profile.blackbox);
+  profile.motor.gyro_orientation = target.gyro_orientation;
 }
 
 pid_rate_t *profile_current_pid_rates() {

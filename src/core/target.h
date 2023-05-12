@@ -124,6 +124,7 @@ typedef struct {
   target_spi_port_t spi_ports[SPI_PORT_MAX];
 
   target_spi_device_t gyro;
+  uint8_t gyro_orientation;
   target_spi_device_t osd;
   target_spi_device_t flash;
   target_spi_device_t sdcard;
@@ -146,6 +147,7 @@ typedef struct {
   INDEX_ARRAY_MEMBER(serial_soft_ports, SERIAL_SOFT_COUNT, target_serial_port_t) \
   INDEX_ARRAY_MEMBER(spi_ports, SPI_PORT_MAX, target_spi_port_t)                 \
   MEMBER(gyro, target_spi_device_t)                                              \
+  MEMBER(gyro_orientation, uint8)                                                \
   MEMBER(osd, target_spi_device_t)                                               \
   MEMBER(flash, target_spi_device_t)                                             \
   MEMBER(sdcard, target_spi_device_t)                                            \
