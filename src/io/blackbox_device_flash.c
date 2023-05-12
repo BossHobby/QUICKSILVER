@@ -4,8 +4,6 @@
 #include "driver/spi_m25p16.h"
 #include "util/util.h"
 
-#ifdef USE_M25P16
-
 #define FILES_SECTOR_OFFSET blackbox_bounds.sector_size
 #define PAGE_SIZE M25P16_PAGE_SIZE
 
@@ -210,5 +208,3 @@ blackbox_device_vtable_t blackbox_device_flash = {
     .read = blackbox_device_flash_read,
     .write = blackbox_device_flash_write,
 };
-
-#endif

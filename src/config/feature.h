@@ -1,9 +1,5 @@
 #pragma once
 
-#if defined(USE_M25P16) || defined(USE_SDCARD)
-#define ENABLE_BLACKBOX
-#endif
-
 #if defined(USE_CC2500)
 #define RX_FRSKY
 #endif

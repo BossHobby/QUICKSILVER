@@ -28,24 +28,19 @@ void osd_device_init() {
     cols = HDZERO_COLS;
     rows = HDZERO_ROWS;
     hdzero_init();
-  }
-#ifdef USE_MAX7456
-  else {
+  } else {
     osd_device = OSD_DEVICE_MAX7456;
     cols = MAX7456_COLS;
     rows = MAX7456_ROWS;
     max7456_init();
   }
-#endif
 }
 
 void osd_intro() {
   switch (osd_device) {
-#ifdef USE_MAX7456
   case OSD_DEVICE_MAX7456:
     max7456_intro();
     break;
-#endif
 
   case OSD_DEVICE_HDZERO:
     hdzero_intro();
@@ -75,13 +70,11 @@ uint8_t osd_clear_async() {
   }
   if (row == MAX_ROWS) {
     switch (osd_device) {
-#ifdef USE_MAX7456
     case OSD_DEVICE_MAX7456:
       if (!max7456_clear_async()) {
         return 0;
       }
       break;
-#endif
 
     case OSD_DEVICE_HDZERO:
       if (!hdzero_clear_async()) {
@@ -132,12 +125,10 @@ void osd_display_refresh() {
 
 osd_system_t osd_check_system() {
   switch (osd_device) {
-#ifdef USE_MAX7456
   case OSD_DEVICE_MAX7456:
     cols = MAX7456_COLS;
     rows = MAX7456_ROWS;
     return max7456_check_system();
-#endif
 
   case OSD_DEVICE_HDZERO:
     cols = HDZERO_COLS;
@@ -172,10 +163,8 @@ void osd_write_char(const char val) {
 
 static bool osd_can_fit(uint8_t size) {
   switch (osd_device) {
-#ifdef USE_MAX7456
   case OSD_DEVICE_MAX7456:
     return max7456_can_fit(size);
-#endif
 
   case OSD_DEVICE_HDZERO:
     return hdzero_can_fit(size);
@@ -187,10 +176,8 @@ static bool osd_can_fit(uint8_t size) {
 
 static bool osd_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size) {
   switch (osd_device) {
-#ifdef USE_MAX7456
   case OSD_DEVICE_MAX7456:
     return max7456_push_string(attr, x, y, data, size);
-#endif
 
   case OSD_DEVICE_HDZERO:
     return hdzero_push_string(attr, x, y, data, size);
@@ -202,10 +189,8 @@ static bool osd_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *d
 
 static bool osd_flush() {
   switch (osd_device) {
-#ifdef USE_MAX7456
   case OSD_DEVICE_MAX7456:
     return max7456_flush();
-#endif
 
   case OSD_DEVICE_HDZERO:
     return hdzero_flush();
@@ -282,10 +267,8 @@ static bool osd_update_display() {
 
 bool osd_is_ready() {
   switch (osd_device) {
-#ifdef USE_MAX7456
   case OSD_DEVICE_MAX7456:
     return max7456_is_ready();
-#endif
 
   case OSD_DEVICE_HDZERO:
     return hdzero_is_ready();

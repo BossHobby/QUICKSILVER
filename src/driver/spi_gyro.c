@@ -10,10 +10,7 @@
 
 gyro_types_t gyro_type = GYRO_TYPE_INVALID;
 
-spi_bus_device_t gyro_bus = {
-    .port = GYRO_SPI_PORT,
-    .nss = GYRO_NSS,
-};
+spi_bus_device_t gyro_bus = {};
 
 static gyro_types_t gyro_spi_detect() {
   gyro_types_t type = GYRO_TYPE_INVALID;
@@ -68,6 +65,12 @@ uint8_t gyro_spi_init() {
   gpio_pin_init(&gpio_init, GYRO_INT);
 #endif
 
+  if (!target_spi_device_valid(&target.gyro)) {
+    return GYRO_TYPE_INVALID;
+  }
+
+  gyro_bus.port = target.gyro.port;
+  gyro_bus.nss = target.gyro.nss;
   spi_bus_device_init(&gyro_bus);
 
   gyro_type = gyro_spi_detect();

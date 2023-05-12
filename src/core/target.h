@@ -105,6 +105,15 @@ typedef struct {
   MEMBER(sck, gpio_pins_t)
 
 typedef struct {
+  spi_ports_t port;
+  gpio_pins_t nss;
+} target_spi_device_t;
+
+#define TARGET_SPI_DEVICE_MEMBERS \
+  MEMBER(port, uint8)             \
+  MEMBER(nss, gpio_pins_t)
+
+typedef struct {
   uint8_t name[32];
 
   bool brushless;
@@ -113,6 +122,11 @@ typedef struct {
   target_serial_port_t serial_ports[SERIAL_PORT_MAX];
   target_serial_port_t serial_soft_ports[SERIAL_SOFT_COUNT];
   target_spi_port_t spi_ports[SPI_PORT_MAX];
+
+  target_spi_device_t gyro;
+  target_spi_device_t osd;
+  target_spi_device_t flash;
+  target_spi_device_t sdcard;
 
   gpio_pins_t usb_detect;
   gpio_pins_t fpv;
@@ -131,6 +145,10 @@ typedef struct {
   INDEX_ARRAY_MEMBER(serial_ports, SERIAL_PORT_MAX, target_serial_port_t)        \
   INDEX_ARRAY_MEMBER(serial_soft_ports, SERIAL_SOFT_COUNT, target_serial_port_t) \
   INDEX_ARRAY_MEMBER(spi_ports, SPI_PORT_MAX, target_spi_port_t)                 \
+  MEMBER(gyro, target_spi_device_t)                                              \
+  MEMBER(osd, target_spi_device_t)                                               \
+  MEMBER(flash, target_spi_device_t)                                             \
+  MEMBER(sdcard, target_spi_device_t)                                            \
   MEMBER(usb_detect, gpio_pins_t)                                                \
   MEMBER(fpv, gpio_pins_t)                                                       \
   MEMBER(vbat, gpio_pins_t)                                                      \
@@ -142,6 +160,7 @@ typedef struct {
 extern target_t target;
 
 bool target_serial_port_valid(const target_serial_port_t *port);
+bool target_spi_device_valid(const target_spi_device_t *dev);
 bool target_spi_port_valid(const target_spi_port_t *port);
 
 cbor_result_t cbor_encode_gpio_pins_t(cbor_value_t *enc, const gpio_pins_t *t);

@@ -6,8 +6,6 @@
 #include "driver/spi.h"
 #include "util/util.h"
 
-#if defined(USE_M25P16)
-
 #define M25P16_BAUD_RATE MHZ_TO_HZ(21)
 
 #define JEDEC_ID_MACRONIX_MX25L3206E 0xC22016
@@ -26,13 +24,16 @@
 #define JEDEC_ID_BERGMICRO_W25Q32 0xE04016
 
 static spi_bus_device_t bus = {
-    .port = M25P16_SPI_PORT,
-    .nss = M25P16_NSS_PIN,
-
     .auto_continue = true,
 };
 
 void m25p16_init() {
+  if (!target_spi_device_valid(&target.flash)) {
+    return;
+  }
+
+  bus.port = target.flash.port;
+  bus.nss = target.flash.nss;
   spi_bus_device_init(&bus);
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, M25P16_BAUD_RATE);
 }
@@ -194,5 +195,3 @@ void m25p16_get_bounds(blackbox_device_bounds_t *blackbox_bounds) {
   blackbox_bounds->sector_size = blackbox_bounds->pages_per_sector * blackbox_bounds->page_size;
   blackbox_bounds->total_size = blackbox_bounds->sector_size * blackbox_bounds->sectors;
 }
-
-#endif

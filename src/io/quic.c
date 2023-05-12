@@ -156,7 +156,6 @@ static void get_quic(quic_t *quic, cbor_value_t *dec) {
 
     quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
-#ifdef USE_MAX7456
   case QUIC_VAL_OSD_FONT: {
     quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
 
@@ -175,7 +174,6 @@ static void get_quic(quic_t *quic, cbor_value_t *dec) {
     quic_send_header(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, 0);
     break;
   }
-#endif
   case QUIC_VAL_BLHEL_SETTINGS: {
     quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
 
@@ -216,7 +214,6 @@ static void get_quic(quic_t *quic, cbor_value_t *dec) {
     break;
   }
 #endif
-#ifdef ENABLE_BLACKBOX
   case QUIC_VAL_BLACKBOX_PRESETS: {
     res = cbor_encode_array(&enc, blackbox_presets_count);
     check_cbor_error(QUIC_CMD_GET);
@@ -228,7 +225,6 @@ static void get_quic(quic_t *quic, cbor_value_t *dec) {
     quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
-#endif
   default:
     quic_errorf(QUIC_CMD_GET, "INVALID VALUE %d", value);
     break;
@@ -279,7 +275,6 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
     quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
-#ifdef USE_MAX7456
   case QUIC_VAL_OSD_FONT: {
     uint32_t len = 54;
 
@@ -298,7 +293,6 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
     quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
-#endif
   case QUIC_VAL_BLHEL_SETTINGS: {
     uint8_t count = serial_4way_init();
     time_delay_ms(500);
@@ -342,7 +336,6 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
   }
 }
 
-#ifdef ENABLE_BLACKBOX
 static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
   cbor_result_t res = CBOR_OK;
 
@@ -420,7 +413,6 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
     break;
   }
 }
-#endif
 
 static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
   cbor_result_t res = CBOR_OK;
@@ -565,11 +557,9 @@ bool quic_process(quic_t *quic, uint8_t *data, uint32_t size) {
 
     quic_send(quic, QUIC_CMD_CAL_IMU, QUIC_FLAG_NONE, NULL, 0);
     break;
-#ifdef ENABLE_BLACKBOX
   case QUIC_CMD_BLACKBOX:
     process_blackbox(quic, &dec);
     break;
-#endif
   case QUIC_CMD_MOTOR:
     process_motor_test(quic, &dec);
     break;
