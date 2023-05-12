@@ -9,8 +9,6 @@
 #include "string.h"
 #include "util/util.h"
 
-#ifdef USE_MAX7456
-
 #define DMA_BUFFER_SIZE 128
 #define MAX7456_BAUD_RATE MHZ_TO_HZ(10.5)
 
@@ -23,9 +21,6 @@ static osd_system_t last_osd_system = OSD_SYS_NONE;
 static uint8_t lastvm0 = 0x55;
 
 static spi_bus_device_t bus = {
-    .port = MAX7456_SPI_PORT,
-    .nss = MAX7456_NSS,
-
     .auto_continue = true,
 };
 
@@ -101,6 +96,12 @@ static void max7456_init_display() {
 
 // establish initial boot-up state
 void max7456_init() {
+  if (!target_spi_device_valid(&target.osd)) {
+    return;
+  }
+
+  bus.port = target.osd.port;
+  bus.nss = target.osd.nss;
   spi_bus_device_init(&bus);
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
 
@@ -349,5 +350,3 @@ void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size) {
   // enable osd
   max7456_init_display();
 }
-
-#endif

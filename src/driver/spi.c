@@ -54,7 +54,6 @@ FAST_RAM static volatile spi_port_config_t spi_port_config[SPI_PORT_MAX];
 FAST_RAM static volatile uint8_t dma_transfer_done[16] = {[0 ... 15] = 1};
 
 #define PORT spi_port_defs[port]
-#define DEV target.spi_ports[port]
 
 static void spi_enable_rcc(spi_ports_t port) {
   rcc_enable(PORT.rcc);
@@ -103,25 +102,27 @@ static uint32_t spi_find_divder(uint32_t clk_hz) {
 }
 
 static void spi_init_pins(spi_ports_t port, gpio_pins_t nss) {
+  const target_spi_port_t *dev = &target.spi_ports[port];
+
   LL_GPIO_InitTypeDef gpio_init;
 
   gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_UP;
-  gpio_pin_init_tag(&gpio_init, DEV.sck, SPI_TAG(port, RES_SPI_SCK));
+  gpio_pin_init_tag(&gpio_init, dev->sck, SPI_TAG(port, RES_SPI_SCK));
 
   gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_pin_init_tag(&gpio_init, DEV.miso, SPI_TAG(port, RES_SPI_MISO));
+  gpio_pin_init_tag(&gpio_init, dev->miso, SPI_TAG(port, RES_SPI_MISO));
 
   gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_pin_init_tag(&gpio_init, DEV.mosi, SPI_TAG(port, RES_SPI_MOSI));
+  gpio_pin_init_tag(&gpio_init, dev->mosi, SPI_TAG(port, RES_SPI_MOSI));
 
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;

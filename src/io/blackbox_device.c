@@ -9,8 +9,6 @@
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
-#ifdef ENABLE_BLACKBOX
-
 #define MEMBER CBOR_ENCODE_MEMBER
 #define STR_MEMBER CBOR_ENCODE_STR_MEMBER
 #define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
@@ -66,28 +64,40 @@ blackbox_device_file_t *blackbox_current_file() {
 }
 
 void blackbox_device_init() {
-#ifdef USE_M25P16
-  dev = &blackbox_device_flash;
-#endif
-#ifdef USE_SDCARD
-  dev = &blackbox_device_sdcard;
-#endif
+  if (target_spi_device_valid(&target.flash)) {
+    dev = &blackbox_device_flash;
+  }
+  if (target_spi_device_valid(&target.sdcard)) {
+    dev = &blackbox_device_sdcard;
+  }
 
   blackbox_device_header.magic = BLACKBOX_HEADER_MAGIC;
   blackbox_device_header.file_num = 0;
 
-  dev->init();
+  if (dev != NULL) {
+    dev->init();
+  }
 }
 
 blackbox_device_result_t blackbox_device_update() {
+  if (dev == NULL) {
+    return BLACKBOX_DEVICE_WAIT;
+  }
   return dev->update();
 }
 
 uint32_t blackbox_device_usage() {
+  if (dev == NULL) {
+    return 0;
+  }
   return dev->usage();
 }
 
 void blackbox_device_reset() {
+  if (dev == NULL) {
+    return;
+  }
+
   dev->reset();
 
   blackbox_device_header.magic = BLACKBOX_HEADER_MAGIC;
@@ -97,6 +107,10 @@ void blackbox_device_reset() {
 }
 
 bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, uint32_t looptime) {
+  if (dev == NULL) {
+    return false;
+  }
+
   if (blackbox_device_header.file_num >= BLACKBOX_DEVICE_MAX_FILES) {
     return false;
   }
@@ -125,6 +139,10 @@ bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, uint3
 }
 
 void blackbox_device_finish() {
+  if (dev == NULL) {
+    return;
+  }
+
   if (blackbox_current_file()->size == 0) {
     // file was empty, lets remove it
     blackbox_device_header.file_num--;
@@ -134,10 +152,16 @@ void blackbox_device_finish() {
 }
 
 void blackbox_device_read(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size) {
-  dev->read(file_index, offset, buffer, size);
+  if (dev != NULL) {
+    dev->read(file_index, offset, buffer, size);
+  }
 }
 
 cbor_result_t blackbox_device_write(const uint32_t field_flags, const blackbox_t *b) {
+  if (dev == NULL) {
+    return CBOR_OK;
+  }
+
   uint8_t buffer[BLACKBOX_MAX_SIZE];
 
   cbor_value_t enc;
@@ -152,5 +176,3 @@ cbor_result_t blackbox_device_write(const uint32_t field_flags, const blackbox_t
 
   return res;
 }
-
-#endif

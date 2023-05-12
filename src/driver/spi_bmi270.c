@@ -19,9 +19,9 @@ static int8_t gyro_cas = 0;
 
 static void bmi270_reset_to_spi() {
   // put the device in spi mode by toggeling CS
-  gpio_pin_reset(GYRO_NSS);
+  gpio_pin_reset(gyro_bus.nss);
   time_delay_ms(1);
-  gpio_pin_set(GYRO_NSS);
+  gpio_pin_set(gyro_bus.nss);
   time_delay_ms(10);
 }
 

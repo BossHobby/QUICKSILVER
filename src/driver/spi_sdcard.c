@@ -7,8 +7,6 @@
 #include "driver/time.h"
 #include "util/util.h"
 
-#if defined(USE_SDCARD)
-
 typedef enum {
   SDCARD_POWER_UP,
   SDCARD_RESET,
@@ -59,9 +57,6 @@ static volatile sdcard_state_t state = SDCARD_POWER_UP;
 static sdcard_operation_t operation;
 
 static spi_bus_device_t bus = {
-    .port = SDCARD_SPI_PORT,
-    .nss = SDCARD_NSS_PIN,
-
     .auto_continue = false,
 };
 
@@ -75,6 +70,12 @@ void sdcard_init() {
     gpio_pin_init(&gpio_init, target.sdcard_detect.pin);
   }
 
+  if (!target_spi_device_valid(&target.sdcard)) {
+    return;
+  }
+
+  bus.port = target.flash.port;
+  bus.nss = target.flash.nss;
   spi_bus_device_init(&bus);
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, SPI_SPEED_SLOW);
 }
@@ -652,5 +653,3 @@ uint8_t sdcard_write_page(uint8_t *buf, uint32_t sector) {
   }
   return 0;
 }
-
-#endif
