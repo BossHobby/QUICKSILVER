@@ -94,6 +94,17 @@
     ]
   },
   {
+    "name": "matekf405se",
+    "configurations": [
+      {
+        "name": "brushless",
+        "defines": {
+          "BRUSHLESS_TARGET": ""
+        }
+      }
+    ]
+  },
+  {
     "name": "crazybee_f4_frsky",
     "configurations": [
       {
