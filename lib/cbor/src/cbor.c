@@ -573,6 +573,13 @@ cbor_result_t cbor_encode_bstr(cbor_value_t *enc, const uint8_t *buf, uint32_t l
   return res;
 }
 cbor_result_t cbor_encode_tstr(cbor_value_t *enc, const uint8_t *buf, uint32_t len) {
+  for (uint32_t i = 0; i < len; i++) {
+    if (buf[i] == 0) {
+      len = i;
+      break;
+    }
+  }
+
   cbor_result_t res = _cbor_encode_raw(enc, CBOR_TYPE_TSTR, (uint8_t *)&len, _cbor_size_for_value(len));
   if (res < CBOR_OK) {
     return res;
