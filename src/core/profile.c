@@ -525,52 +525,6 @@ const profile_t default_profile = {
     },
 };
 
-#define _MACRO_STR(arg) #arg
-#define MACRO_STR(name) _MACRO_STR(name)
-
-target_info_t target_info = {
-    .target_name = MACRO_STR(TARGET),
-    .git_version = MACRO_STR(GIT_VERSION),
-
-    .features = FEATURE_OSD | FEATURE_BLACKBOX
-#ifdef DEBUG
-                | FEATURE_DEBUG
-#endif
-    ,
-    .rx_protocols = {
-        RX_PROTOCOL_UNIFIED_SERIAL,
-
-#if defined(RX_NRF24_BAYANG_TELEMETRY)
-        RX_PROTOCOL_NRF24_BAYANG_TELEMETRY,
-#endif
-#if defined(RX_BAYANG_PROTOCOL_BLE_BEACON)
-        RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON,
-#endif
-#if defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND)
-        RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND,
-#endif
-
-#if defined(RX_FRSKY)
-        RX_PROTOCOL_FRSKY_D8,
-        RX_PROTOCOL_FRSKY_D16_FCC,
-        RX_PROTOCOL_FRSKY_D16_LBT,
-        RX_PROTOCOL_REDPINE,
-#endif
-
-#if defined(RX_EXPRESS_LRS)
-        RX_PROTOCOL_EXPRESS_LRS,
-#endif
-
-#if defined(RX_FLYSKY)
-        RX_PROTOCOL_FLYSKY_AFHDS,
-        RX_PROTOCOL_FLYSKY_AFHDS2A,
-#endif
-    },
-    .quic_protocol_version = QUIC_PROTOCOL_VERSION,
-
-    .gyro_id = 0x0,
-};
-
 #pragma GCC diagnostic pop
 
 // the actual profile
@@ -641,7 +595,6 @@ RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
 BLACKBOX_PRESET_MEMBERS
 PROFILE_MEMBERS
-TARGET_INFO_MEMBERS
 
 #undef START_STRUCT
 #undef END_STRUCT

@@ -3,6 +3,8 @@
 #include <cbor.h>
 #include <stdbool.h>
 
+#include "rx/rx.h"
+
 #define LED_MAX 4
 
 #define GPIO_AF(pin, af, tag)
@@ -159,7 +161,37 @@ typedef struct {
   MEMBER(buzzer, target_invert_pin_t)                                            \
   ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX, gpio_pins_t)
 
+typedef enum {
+  FEATURE_BRUSHLESS = (1 << 1),
+  FEATURE_OSD = (1 << 2),
+  FEATURE_BLACKBOX = (1 << 3),
+  FEATURE_DEBUG = (1 << 4),
+} target_feature_t;
+
+typedef struct {
+  const char *mcu;
+  const char *git_version;
+  uint32_t quic_protocol_version;
+
+  uint32_t features;
+  rx_protocol_t rx_protocols[RX_PROTOCOL_MAX];
+
+  uint8_t gyro_id;
+} target_info_t;
+
+#define TARGET_INFO_MEMBERS                          \
+  STR_MEMBER(mcu)                                    \
+  STR_MEMBER(git_version)                            \
+  MEMBER(quic_protocol_version, uint32)              \
+  MEMBER(features, uint32)                           \
+  ARRAY_MEMBER(rx_protocols, RX_PROTOCOL_MAX, uint8) \
+  MEMBER(gyro_id, uint8)
+
 extern target_t target;
+extern target_info_t target_info;
+
+void target_set_feature(target_feature_t feat);
+void target_reset_feature(target_feature_t feat);
 
 bool target_serial_port_valid(const target_serial_port_t *port);
 bool target_spi_device_valid(const target_spi_device_t *dev);
@@ -170,3 +202,5 @@ cbor_result_t cbor_decode_gpio_pins_t(cbor_value_t *dec, gpio_pins_t *t);
 
 cbor_result_t cbor_encode_target_t(cbor_value_t *enc, const target_t *t);
 cbor_result_t cbor_decode_target_t(cbor_value_t *dec, target_t *t);
+
+cbor_result_t cbor_encode_target_info_t(cbor_value_t *enc, const target_info_t *i);

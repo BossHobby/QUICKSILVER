@@ -64,11 +64,14 @@ blackbox_device_file_t *blackbox_current_file() {
 }
 
 void blackbox_device_init() {
-  if (target_spi_device_valid(&target.flash)) {
-    dev = &blackbox_device_flash;
-  }
   if (target_spi_device_valid(&target.sdcard)) {
     dev = &blackbox_device_sdcard;
+    target_set_feature(FEATURE_BLACKBOX);
+  } else if (target_spi_device_valid(&target.flash)) {
+    dev = &blackbox_device_flash;
+    target_set_feature(FEATURE_BLACKBOX);
+  } else {
+    target_reset_feature(FEATURE_BLACKBOX);
   }
 
   blackbox_device_header.magic = BLACKBOX_HEADER_MAGIC;

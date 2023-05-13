@@ -96,10 +96,6 @@ static void max7456_init_display() {
 
 // establish initial boot-up state
 void max7456_init() {
-  if (!target_spi_device_valid(&target.osd)) {
-    return;
-  }
-
   bus.port = target.osd.port;
   bus.nss = target.osd.nss;
   spi_bus_device_init(&bus);
