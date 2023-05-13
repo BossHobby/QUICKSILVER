@@ -34,9 +34,6 @@
 static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
 
-extern profile_t profile;
-extern target_info_t target_info;
-
 float gyrocal[3];
 
 bool sixaxis_init() {
