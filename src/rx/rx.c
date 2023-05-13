@@ -205,9 +205,7 @@ void rx_init() {
   case RX_PROTOCOL_IBUS:
   case RX_PROTOCOL_FPORT:
   case RX_PROTOCOL_DSM:
-#ifdef SERIAL_RX
     rx_serial_init();
-#endif
     break;
 
   case RX_PROTOCOL_NRF24_BAYANG_TELEMETRY:
@@ -286,11 +284,7 @@ bool rx_check() {
   case RX_PROTOCOL_IBUS:
   case RX_PROTOCOL_FPORT:
   case RX_PROTOCOL_DSM:
-#ifdef SERIAL_RX
     return rx_serial_check();
-#else
-    return false;
-#endif
 
   case RX_PROTOCOL_NRF24_BAYANG_TELEMETRY:
   case RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON:

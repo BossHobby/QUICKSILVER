@@ -77,8 +77,6 @@
 #define ENABLE_BLACKBOX
 #endif
 
-#define SERIAL_RX
-
 #if defined(USE_CC2500)
 #define RX_FRSKY
 #endif

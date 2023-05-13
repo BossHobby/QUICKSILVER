@@ -424,13 +424,11 @@ void handle_usart_isr(usart_ports_t port) {
     return;
   }
 
-#ifdef SERIAL_RX
   extern void rx_serial_isr();
   if (serial_rx_port == port) {
     rx_serial_isr();
     return;
   }
-#endif
 
   extern void vtx_uart_isr();
   if (serial_smart_audio_port == port) {

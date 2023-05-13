@@ -15,8 +15,6 @@
 #include "util/ring_buffer.h"
 #include "util/util.h"
 
-#ifdef SERIAL_RX
-
 #define USART usart_port_defs[serial_rx_port]
 
 // This is the microsecond threshold for triggering a new frame to re-index to position 0 in the ISR
@@ -381,5 +379,3 @@ void rx_serial_find_protocol() {
     protocol_detect_timer = 0;        // Reset timer, triggering a shift to detecting the next protocol
   }
 }
-
-#endif // #ifdef SERIAL_RX

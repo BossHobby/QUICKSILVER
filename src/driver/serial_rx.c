@@ -5,7 +5,6 @@
 
 #define USART usart_port_defs[serial_rx_port]
 
-#ifdef SERIAL_RX
 void serial_rx_init(rx_serial_protocol_t proto) {
 #if defined(RX_DSM2) || defined(RX_DSMX)
   proto = RX_SERIAL_PROTOCOL_DSM;
@@ -145,4 +144,3 @@ void serial_rx_init(rx_serial_protocol_t proto) {
 
   serial_enable_isr(serial_rx_port);
 }
-#endif
