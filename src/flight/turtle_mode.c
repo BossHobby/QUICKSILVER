@@ -32,7 +32,7 @@ void turtle_mode_start() {
     } else {
       flags.turtle_ready = 0;
     }
-  } 
+  }
 }
 
 void turtle_mode_cancel() {
