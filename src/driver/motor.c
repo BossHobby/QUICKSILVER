@@ -17,8 +17,10 @@ extern void motor_dshot_beep();
 
 void motor_init() {
   if (target.brushless) {
+    target_set_feature(FEATURE_BRUSHLESS);
     motor_dshot_init();
   } else {
+    target_reset_feature(FEATURE_BRUSHLESS);
     motor_pwm_init();
   }
 }

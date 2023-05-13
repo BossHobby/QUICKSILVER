@@ -3,10 +3,31 @@
 #include <string.h>
 
 #include "driver/gpio.h"
+#include "io/quic.h"
 #include "util/cbor_helper.h"
 
 target_t target = {
     .name = "unknown",
+};
+
+#define _MACRO_STR(arg) #arg
+#define MACRO_STR(name) _MACRO_STR(name)
+
+target_info_t target_info = {
+    .mcu = MACRO_STR(TARGET_MCU),
+    .git_version = MACRO_STR(GIT_VERSION),
+    .quic_protocol_version = QUIC_PROTOCOL_VERSION,
+
+#ifdef DEBUG
+    .features = FEATURE_DEBUG,
+#else
+    .features = 0,
+#endif
+    .rx_protocols = {
+        RX_PROTOCOL_UNIFIED_SERIAL,
+    },
+
+    .gyro_id = 0x0,
 };
 
 #define MEMBER CBOR_ENCODE_MEMBER
@@ -38,6 +59,10 @@ CBOR_END_STRUCT_ENCODER()
 
 CBOR_START_STRUCT_ENCODER(target_t)
 TARGET_MEMBERS
+CBOR_END_STRUCT_ENCODER()
+
+CBOR_START_STRUCT_ENCODER(target_info_t)
+TARGET_INFO_MEMBERS
 CBOR_END_STRUCT_ENCODER()
 
 #undef MEMBER
@@ -192,6 +217,14 @@ cbor_result_t cbor_decode_gpio_pins_t(cbor_value_t *dec, gpio_pins_t *t) {
   *t = gpio_pin_lookup[val];
 
   return res;
+}
+
+void target_set_feature(target_feature_t feat) {
+  target_info.features |= feat;
+}
+
+void target_reset_feature(target_feature_t feat) {
+  target_info.features &= ~feat;
 }
 
 bool target_serial_port_valid(const target_serial_port_t *port) {

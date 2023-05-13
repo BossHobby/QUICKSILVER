@@ -382,38 +382,8 @@ typedef struct {
   MEMBER(blackbox, profile_blackbox_t) \
   END_STRUCT()
 
-typedef enum {
-  FEATURE_BRUSHLESS = (1 << 1),
-  FEATURE_OSD = (1 << 2),
-  FEATURE_BLACKBOX = (1 << 3),
-  FEATURE_DEBUG = (1 << 4),
-} target_feature_t;
-
-typedef struct {
-  const char *target_name;
-  const char *git_version;
-
-  uint32_t features;
-  rx_protocol_t rx_protocols[RX_PROTOCOL_MAX];
-  uint32_t quic_protocol_version;
-
-  uint8_t gyro_id;
-} target_info_t;
-
-#define TARGET_INFO_MEMBERS                          \
-  START_STRUCT(target_info_t)                        \
-  STR_MEMBER(target_name)                            \
-  STR_MEMBER(git_version)                            \
-  MEMBER(features, uint32)                           \
-  ARRAY_MEMBER(rx_protocols, RX_PROTOCOL_MAX, uint8) \
-  MEMBER(quic_protocol_version, uint32)              \
-  MEMBER(gyro_id, uint8)                             \
-  END_STRUCT()
-
 extern profile_t profile;
 extern const profile_t default_profile;
-
-extern target_info_t target_info;
 
 extern const pid_rate_preset_t pid_rate_presets[];
 extern const uint32_t pid_rate_presets_count;
@@ -435,4 +405,3 @@ cbor_result_t cbor_encode_blackbox_preset_t(cbor_value_t *enc, const blackbox_pr
 cbor_result_t cbor_decode_blackbox_preset_t(cbor_value_t *dec, blackbox_preset_t *p);
 
 cbor_result_t cbor_encode_pid_rate_preset_t(cbor_value_t *enc, const pid_rate_preset_t *p);
-cbor_result_t cbor_encode_target_info_t(cbor_value_t *enc, const target_info_t *i);

@@ -8,7 +8,7 @@
 #define QUIC_MAGIC '#'
 #define QUIC_HEADER_LEN 4
 
-#define QUIC_PROTOCOL_VERSION MAKE_SEMVER(0, 1, 3)
+#define QUIC_PROTOCOL_VERSION MAKE_SEMVER(0, 2, 0)
 
 typedef enum {
   QUIC_CMD_INVALID,
@@ -60,6 +60,7 @@ typedef enum {
   QUIC_VAL_BIND_INFO,
   QUIC_VAL_PERF_COUNTERS,
   QUIC_VAL_BLACKBOX_PRESETS,
+  QUIC_VAL_TARGET,
 } quic_values;
 
 typedef void (*quic_send_fn_t)(uint8_t *data, uint32_t len, void *priv);

@@ -225,6 +225,13 @@ static void get_quic(quic_t *quic, cbor_value_t *dec) {
     quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
+  case QUIC_VAL_TARGET: {
+    res = cbor_encode_target_t(&enc, &target);
+    check_cbor_error(QUIC_CMD_GET);
+
+    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  }
   default:
     quic_errorf(QUIC_CMD_GET, "INVALID VALUE %d", value);
     break;
@@ -325,6 +332,19 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
     rx_init();
 
     res = cbor_encode_rx_bind_storage_t(&enc, &bind_storage);
+    check_cbor_error(QUIC_CMD_SET);
+
+    quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  }
+  case QUIC_VAL_TARGET: {
+    memset(&target, 0, sizeof(target_t));
+    res = cbor_decode_target_t(dec, &target);
+    check_cbor_error(QUIC_CMD_SET);
+
+    flash_save();
+
+    res = cbor_encode_target_t(&enc, &target);
     check_cbor_error(QUIC_CMD_SET);
 
     quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
