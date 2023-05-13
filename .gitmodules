@@ -1,0 +1,4 @@
+[submodule "targets"]
+	path = targets
+	url = https://github.com/BossHobby/Targets.git
+	branch = targets
