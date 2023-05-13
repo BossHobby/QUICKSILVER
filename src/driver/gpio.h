@@ -8,13 +8,6 @@ typedef struct {
   uint32_t pin;
 } gpio_pin_def_t;
 
-#define MAKE_PIN_DEF(port_num, num) \
-  {                                 \
-    .port = GPIO##port_num,         \
-    .pin_index = num,               \
-    .pin = LL_GPIO_PIN_##num,       \
-  }
-
 extern const gpio_pin_def_t gpio_pin_defs[PINS_MAX];
 
 void gpio_init();

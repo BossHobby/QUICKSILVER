@@ -1,7 +1,9 @@
 #include "driver/gpio.h"
 
 #include "core/project.h"
+#include "driver/adc.h"
 #include "driver/rcc.h"
+#include "driver/timer.h"
 
 static volatile uint8_t fpv_init_done = 0;
 
@@ -101,11 +103,18 @@ uint32_t gpio_pin_read(gpio_pins_t pin) {
   return LL_GPIO_IsInputPinSet(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin);
 }
 
-#define GPIO_PIN(port_num, num) MAKE_PIN_DEF(port_num, num),
+#define GPIO_AF(pin, af, tag)
+#define GPIO_PIN(port_num, num) \
+  {                             \
+      .port = GPIO##port_num,   \
+      .pin_index = num,         \
+      .pin = LL_GPIO_PIN_##num, \
+  },
 
 const gpio_pin_def_t gpio_pin_defs[PINS_MAX] = {
     {},
-#include "config/gpio_pins.in"
+#include "gpio_pins.in"
 };
 
 #undef GPIO_PIN
+#undef GPIO_AF
