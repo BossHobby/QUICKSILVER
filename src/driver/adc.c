@@ -9,15 +9,6 @@
 #include "flight/filter.h"
 #include "util/util.h"
 
-typedef enum {
-  ADC_DEVICE_1,
-#ifdef STM32H7
-  ADC_DEVICE_2,
-  ADC_DEVICE_3,
-#endif
-  ADC_DEVICE_MAX,
-} adc_devs_t;
-
 typedef struct {
   ADC_TypeDef *adc;
   ADC_Common_TypeDef *common;
@@ -25,78 +16,32 @@ typedef struct {
 
 typedef struct {
   gpio_pins_t pin;
-  adc_devs_t dev;
+  adc_devices_t dev;
   uint32_t channel;
 } adc_channel_t;
-
-#ifdef STM32H7
-#define ADC_SAMPLINGTIME LL_ADC_SAMPLINGTIME_387CYCLES_5
-#define READY_TO_CONVERT(dev) LL_ADC_IsActiveFlag_EOC(dev)
-#else
-#define ADC_SAMPLINGTIME LL_ADC_SAMPLINGTIME_480CYCLES
-#define READY_TO_CONVERT(dev) LL_ADC_IsActiveFlag_EOCS(dev)
-#endif
 
 #define VREFINT_CAL (*(VREFINT_CAL_ADDR))
 #define VBAT_SCALE ((float)(VBAT_DIVIDER_R1 + VBAT_DIVIDER_R2) / (float)(VBAT_DIVIDER_R2) * (1.f / 1000.f))
 
 #ifdef STM32H7
-static const adc_dev_t adc_dev[ADC_DEVICE_MAX] = {
+#define ADC_INTERNAL_CHANNEL ADC_DEVICE3
+#define ADC_SAMPLINGTIME LL_ADC_SAMPLINGTIME_387CYCLES_5
+#define READY_TO_CONVERT(dev) LL_ADC_IsActiveFlag_EOC(dev)
+
+static const adc_dev_t adc_dev[ADC_DEVICEMAX] = {
     {.adc = ADC1, .common = ADC12_COMMON},
     {.adc = ADC2, .common = ADC12_COMMON},
     {.adc = ADC3, .common = ADC3_COMMON},
 };
-
-static const adc_channel_t adc_channel_map[] = {
-    {.pin = PIN_NONE, .dev = ADC_DEVICE_3, .channel = LL_ADC_CHANNEL_VREFINT},
-    {.pin = PIN_NONE, .dev = ADC_DEVICE_3, .channel = LL_ADC_CHANNEL_TEMPSENSOR},
-
-    {.pin = PIN_C0, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_10},
-    {.pin = PIN_C1, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_11},
-    {.pin = PIN_C2, .dev = ADC_DEVICE_3, .channel = LL_ADC_CHANNEL_0},
-    {.pin = PIN_C3, .dev = ADC_DEVICE_3, .channel = LL_ADC_CHANNEL_1},
-    {.pin = PIN_C4, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_4},
-    {.pin = PIN_C5, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_8},
-    {.pin = PIN_B0, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_9},
-    {.pin = PIN_B1, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_5},
-    {.pin = PIN_A0, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_16},
-    {.pin = PIN_A1, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_17},
-    {.pin = PIN_A2, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_14},
-    {.pin = PIN_A3, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_15},
-    {.pin = PIN_A4, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_18},
-    {.pin = PIN_A5, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_19},
-    {.pin = PIN_A6, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_3},
-    {.pin = PIN_A7, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_7},
-};
 #else
-static const adc_dev_t adc_dev[ADC_DEVICE_MAX] = {
+#define ADC_INTERNAL_CHANNEL ADC_DEVICE1
+#define ADC_SAMPLINGTIME LL_ADC_SAMPLINGTIME_480CYCLES
+#define READY_TO_CONVERT(dev) LL_ADC_IsActiveFlag_EOCS(dev)
+
+static const adc_dev_t adc_dev[ADC_DEVICEMAX] = {
     {.adc = ADC1, .common = ADC},
 };
-
-static const adc_channel_t adc_channel_map[] = {
-    {.pin = PIN_NONE, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_VREFINT},
-    {.pin = PIN_NONE, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_TEMPSENSOR},
-
-    {.pin = PIN_C0, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_10},
-    {.pin = PIN_C1, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_11},
-    {.pin = PIN_C2, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_12},
-    {.pin = PIN_C3, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_13},
-    {.pin = PIN_C4, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_14},
-    {.pin = PIN_C5, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_15},
-    {.pin = PIN_B0, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_8},
-    {.pin = PIN_B1, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_9},
-    {.pin = PIN_A0, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_0},
-    {.pin = PIN_A1, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_1},
-    {.pin = PIN_A2, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_2},
-    {.pin = PIN_A3, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_3},
-    {.pin = PIN_A4, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_4},
-    {.pin = PIN_A5, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_5},
-    {.pin = PIN_A6, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_6},
-    {.pin = PIN_A7, .dev = ADC_DEVICE_1, .channel = LL_ADC_CHANNEL_7},
-};
 #endif
-
-#define ADC_CHANNEL_MAP_SIZE (sizeof(adc_channel_map) / sizeof(adc_channel_t))
 
 static uint16_t adc_array[ADC_CHAN_MAX];
 static adc_channel_t adc_pins[ADC_CHAN_MAX];
@@ -104,41 +49,68 @@ static adc_channel_t adc_pins[ADC_CHAN_MAX];
 static float temp_cal_a = 0;
 static float temp_cal_b = 0;
 
+static const uint32_t channel_map[] = {
+    LL_ADC_CHANNEL_0,
+    LL_ADC_CHANNEL_1,
+    LL_ADC_CHANNEL_2,
+    LL_ADC_CHANNEL_3,
+    LL_ADC_CHANNEL_4,
+    LL_ADC_CHANNEL_5,
+    LL_ADC_CHANNEL_6,
+    LL_ADC_CHANNEL_7,
+    LL_ADC_CHANNEL_8,
+    LL_ADC_CHANNEL_9,
+    LL_ADC_CHANNEL_10,
+    LL_ADC_CHANNEL_11,
+    LL_ADC_CHANNEL_12,
+    LL_ADC_CHANNEL_13,
+    LL_ADC_CHANNEL_14,
+    LL_ADC_CHANNEL_15,
+    LL_ADC_CHANNEL_16,
+    LL_ADC_CHANNEL_17,
+    LL_ADC_CHANNEL_18,
+};
+
 static void adc_init_pin(adc_chan_t chan, gpio_pins_t pin) {
   adc_array[chan] = 1;
   adc_pins[chan].pin = PIN_NONE;
-  adc_pins[chan].dev = ADC_DEVICE_MAX;
+  adc_pins[chan].dev = ADC_DEVICEMAX;
 
-  for (uint32_t i = 0; i < ADC_CHANNEL_MAP_SIZE; i++) {
-    const adc_channel_t *adc_chan = &adc_channel_map[i];
+  switch (chan) {
+  case ADC_CHAN_VREF:
+    adc_pins[chan].dev = ADC_INTERNAL_CHANNEL;
+    adc_pins[chan].channel = LL_ADC_CHANNEL_VREFINT;
+    break;
 
-    if (adc_chan->pin != pin) {
-      continue;
-    }
-    if (chan == ADC_CHAN_VREF && adc_chan->channel != LL_ADC_CHANNEL_VREFINT) {
-      continue;
-    }
-    if (chan == ADC_CHAN_TEMP && adc_chan->channel != LL_ADC_CHANNEL_TEMPSENSOR) {
-      continue;
-    }
+  case ADC_CHAN_TEMP:
+    adc_pins[chan].dev = ADC_INTERNAL_CHANNEL;
+    adc_pins[chan].channel = LL_ADC_CHANNEL_TEMPSENSOR;
+    break;
 
-    adc_pins[chan].pin = pin;
-    adc_pins[chan].dev = adc_chan->dev;
-    adc_pins[chan].channel = adc_chan->channel;
+  default:
+    for (uint32_t i = 0; i < GPIO_AF_MAX; i++) {
+      const gpio_af_t *func = &gpio_pin_afs[i];
+      if (func->pin != pin || RESOURCE_TAG_TYPE(func->tag) != RESOURCE_ADC) {
+        continue;
+      }
+
+      adc_pins[chan].pin = pin;
+      adc_pins[chan].dev = ADC_TAG_DEV(func->tag);
+      adc_pins[chan].channel = channel_map[ADC_TAG_CH(func->tag)];
+      break;
+    }
     break;
   }
 
-  if (adc_pins[chan].pin == PIN_NONE) {
-    return;
+  if (adc_pins[chan].pin != PIN_NONE) {
+    LL_GPIO_InitTypeDef gpio_init;
+    gpio_init.Mode = LL_GPIO_MODE_ANALOG;
+    gpio_init.Pull = LL_GPIO_PULL_NO;
+    gpio_pin_init(&gpio_init, pin);
   }
-
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_ANALOG;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_pin_init(&gpio_init, pin);
 }
 
-static void adc_init_dev(adc_devs_t index) {
+static void adc_init_dev(adc_devices_t index) {
   const adc_dev_t *dev = &adc_dev[index];
 
   if (!__LL_ADC_IS_ENABLED_ALL_COMMON_INSTANCE(dev->common)) {
@@ -238,7 +210,7 @@ void adc_init() {
   adc_init_pin(ADC_CHAN_IBAT, IBAT_PIN);
 #endif
 
-  for (uint32_t i = 0; i < ADC_DEVICE_MAX; i++) {
+  for (uint32_t i = 0; i < ADC_DEVICEMAX; i++) {
     adc_init_dev(i);
   }
 
@@ -257,7 +229,7 @@ static uint16_t adc_read_raw(adc_chan_t index) {
     do {
       last_adc_chan = (last_adc_chan + 1) % ADC_CHAN_MAX;
       // skip through all channels without a dev
-    } while (adc_pins[last_adc_chan].dev == ADC_DEVICE_MAX);
+    } while (adc_pins[last_adc_chan].dev == ADC_DEVICEMAX);
 
     adc_start_conversion(last_adc_chan);
   }

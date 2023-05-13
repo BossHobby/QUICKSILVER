@@ -1,5 +1,7 @@
 import glob
 import hashlib
+import yaml
+import os
 
 import modm_devices
 
@@ -117,30 +119,103 @@ caches = DevicesCache()
 caches.build()
 
 for device in devices:
+    pins = {}
     key = next((x for x in caches.keys() if x.startswith(device)), None)
-    cache = caches[key]
 
-    print("#ifdef %s" % (device[:-2].upper()))
-    for driver in cache.get_all_drivers("gpio"):
+    for driver in caches[key].get_all_drivers("gpio"):
         for pin in driver["gpio"]:
-            name = (pin["port"] + pin["pin"]).upper()
+            funcs = []
 
-            timer = []
-            spi = []
             if "signal" in pin:
                 for s in pin["signal"]:
                     if s["driver"] == "tim" and s["name"].startswith("ch"):
-                        timer.append(
-                            (
-                                "TIM(%s, %s, %s)" % (s["instance"], s["name"], s["af"])
-                            ).upper()
+                        funcs.append(
+                            {
+                                "func": "timer",
+                                "af": int(s["af"]),
+                                "instance": int(s["instance"]),
+                                "name": s["name"],
+                            }
                         )
-                    if s["driver"] == "spi":
-                        spi.append(("SPI(%s, %s)" % (s["instance"], s["af"])).upper())
 
-            print(
-                "GPIO_PIN(%s, %s, (%s), (%s))"
-                % (pin["port"].upper(), pin["pin"], ", ".join(timer), ", ".join(spi))
-            )
-    print("#endif")
-    print()
+                    if s["driver"] == "spi" and (
+                        s["name"] == "sck" or s["name"] == "mosi" or s["name"] == "miso"
+                    ):
+                        funcs.append(
+                            {
+                                "func": "spi",
+                                "af": int(s["af"]),
+                                "instance": int(s["instance"]),
+                                "name": s["name"],
+                            }
+                        )
+
+                    if (s["driver"] == "uart" or s["driver"] == "usart") and (
+                        s["name"] == "rx" or s["name"] == "tx"
+                    ):
+                        funcs.append(
+                            {
+                                "func": "serial",
+                                "af": int(s["af"]),
+                                "instance": int(s["instance"]),
+                                "name": s["name"],
+                            }
+                        )
+
+                    if s["driver"] == "adc" and not (
+                        s["name"].startswith("inp") or s["name"].startswith("inn")
+                    ):
+                        funcs.append(
+                            {
+                                "func": "adc",
+                                "af": -1,
+                                "instance": int(s["instance"]),
+                                "name": s["name"][2:],
+                            }
+                        )
+
+            pins[f"P{pin['port']}{pin['pin']}".upper()] = funcs
+
+    with open(f"src/system/{device[:-2]}/gpio_pins.yaml", "w") as file:
+        documents = yaml.dump(pins, file, sort_keys=False)
+
+for filename in glob.glob("src/system/*/gpio_pins.yaml"):
+    dir = os.path.dirname(filename)
+
+    with open(filename, "r") as f:
+        pins = yaml.load(f, Loader=yaml.Loader)
+
+    with open(f"{dir}/gpio_pins.in", "w") as file:
+        for k, funcs in pins.items():
+            port = k[1]
+            pin = k[2:]
+            file.write(f"GPIO_PIN({port}, {pin})\n")
+
+            for f in funcs:
+                line = f"GPIO_AF(PIN_{port}{pin}, {f['af']}, "
+
+                if f["func"] == "timer":
+                    line = (
+                        line
+                        + f"TIMER_TAG(TIMER{f['instance']}, TIMER_{f['name'].upper()}))\n"
+                    )
+
+                if f["func"] == "spi":
+                    line = (
+                        line
+                        + f"SPI_TAG(SPI_PORT{f['instance']}, RES_SPI_{f['name'].upper()}))\n"
+                    )
+
+                if f["func"] == "serial":
+                    line = (
+                        line
+                        + f"SERIAL_TAG(SERIAL_PORT{f['instance']}, RES_SERIAL_{f['name'].upper()}))\n"
+                    )
+
+                if f["func"] == "adc":
+                    line = (
+                        line
+                        + f"ADC_TAG(ADC_DEVICE{f['instance']}, {f['name'].upper()}))\n"
+                    )
+
+                file.write(line)
