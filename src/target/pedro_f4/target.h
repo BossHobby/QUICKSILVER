@@ -14,8 +14,6 @@
 // #define DEBUG_PIN0 PIN_A9
 // #define DEBUG_PIN1 PIN_A10
 
-#define HDZERO_USART USART_PORT1
-
 // #define USB_DETECT_PIN LL_GPIO_PIN_5
 // #define USB_DETECT_PORT GPIOC
 
