@@ -66,24 +66,19 @@ function build_target() {
   }
 
   TARGET_NAME="$(target_get '.name')"
-  for config in $(target_get '.configurations[] | @base64'); do
-    config_get() {
-      echo ${config} | base64 --decode | jq -r "${1}"
-    }
-    CONFIG_NAME="$(config_get '.name')"
-    BUILD_NAME="$BUILD_PREFIX.$TARGET_NAME.$CONFIG_NAME"
+  ENV_NAME="${TARGET_NAME%.*}"
+  BUILD_NAME="$BUILD_PREFIX.$TARGET_NAME"
 
-    reset_config
-    set_config "$(config_get '.defines | to_entries[] | @base64')"
+  reset_config
+  set_config "$(target_get '.defines | to_entries[] | @base64')"
 
-    if pio run -e $TARGET_NAME; then 
-      cp "$BUILD_FOLDER/$TARGET_NAME/firmware.hex" "$OUTPUT_FOLDER/$BUILD_NAME.hex"
-      echo -e "\e[32mSuccessfully\e[39m built target $BUILD_NAME"
-    else
-      echo -e "\e[31mError\e[39m building target $BUILD_NAME"
-      exit 1
-    fi
-  done
+  if pio run -e $ENV_NAME; then 
+    cp "$BUILD_FOLDER/$ENV_NAME/firmware.hex" "$OUTPUT_FOLDER/$BUILD_NAME.hex"
+    echo -e "\e[32mSuccessfully\e[39m built target $BUILD_NAME"
+  else
+    echo -e "\e[31mError\e[39m building target $BUILD_NAME"
+    exit 1
+  fi
 }
 
 function generate_html() {
@@ -116,15 +111,9 @@ EOF
     }
 
     TARGET_NAME="$(target_get '.name')"
-    for config in $(target_get '.configurations[] | @base64'); do
-      config_get() {
-        echo ${config} | base64 --decode | jq -r "${1}"
-      }
-      CONFIG_NAME="$(config_get '.name')"
-      BUILD_NAME="$BUILD_PREFIX.$TARGET_NAME.$CONFIG_NAME"
+    BUILD_NAME="$BUILD_PREFIX.$TARGET_NAME"
 
-      echo "<a class=\"list-group-item list-group-item-action\" href=\"$TARGET_NAME/$BUILD_NAME.hex\" download target=\"_blank\">$BUILD_NAME</a>" >> $OUTPUT_FOLDER/index.html
-    done
+    echo "<a class=\"list-group-item list-group-item-action\" href=\"$BUILD_NAME.hex\" download target=\"_blank\">$BUILD_NAME</a>" >> $OUTPUT_FOLDER/index.html
   done
 
   cat <<-EOF >> $OUTPUT_FOLDER/index.html
