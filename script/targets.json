@@ -466,5 +466,11 @@
     "defines": {
       "BRUSHLESS_TARGET": ""
     }
+  },
+  {
+    "name": "talonf7_v2",
+    "defines": {
+      "BRUSHLESS_TARGET": ""
+    }
   }
 ]
