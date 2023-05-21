@@ -8,7 +8,7 @@
 #include "project.h"
 #include "util/util.h"
 
-#if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
+#if defined(RX_EXPRESS_LRS) && defined(USE_SX128X)
 
 #define TIMER_HZ 1000000
 #define TIMER_INSTANCE TIM3

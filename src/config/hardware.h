@@ -85,7 +85,7 @@
 #define RX_FLYSKY
 #endif
 
-#if defined(USE_SX127X) || defined(USE_SX128X)
+#if defined(USE_SX128X)
 #define RX_EXPRESS_LRS
 #endif
 

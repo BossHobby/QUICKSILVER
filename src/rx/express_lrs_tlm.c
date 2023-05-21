@@ -4,7 +4,7 @@
 
 #include "util/util.h"
 
-#if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
+#if defined(RX_EXPRESS_LRS) && defined(USE_SX128X)
 
 typedef enum {
   SENDER_IDLE = 0,
