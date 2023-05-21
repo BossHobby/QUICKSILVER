@@ -131,13 +131,6 @@ bool exti_line_active(gpio_pins_t pin) {
 static void handle_exit_isr() {
   // handle specific exti lines here
 
-#if defined(USE_SX127X) && defined(SX12XX_DIO0_PIN)
-  if (exti_line_active(SX12XX_DIO0_PIN)) {
-    extern void sx127x_handle_exti();
-    sx127x_handle_exti();
-  }
-#endif
-
 #if defined(USE_SX128X) && defined(SX12XX_DIO0_PIN)
   if (exti_line_active(SX12XX_DIO0_PIN)) {
     extern void sx128x_handle_dio0_exti(bool);
