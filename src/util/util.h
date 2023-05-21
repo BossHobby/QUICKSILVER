@@ -3,12 +3,17 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "driver/time.h"
+
 #define DEGTORAD 0.017453292f
 #define RADTODEG 57.29577951f
 
 #define M_PI_F 3.14159265358979323846f
 
 #define MEMORY_ALIGN(offset, size) (((offset) + ((size)-1)) & -(size))
+
+#define WHILE_TIMEOUT(condition, timeout) \
+  for (uint32_t start = time_millis(); (condition) && (time_millis() - start) < (timeout);)
 
 #define LOG2_8BIT(v) (8 - 90 / (((v) / 4 + 14) | 1) - 2 / ((v) / 2 + 1))
 #define LOG2_16BIT(v) (8 * ((v) > 255) + LOG2_8BIT((v) >> 8 * ((v) > 255)))
