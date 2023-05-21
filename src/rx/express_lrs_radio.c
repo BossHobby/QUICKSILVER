@@ -14,26 +14,6 @@
 
 static uint32_t current_rate = 0;
 
-#ifdef USE_SX127X
-
-static const expresslrs_mod_settings_t air_rate_config[ELRS_RATE_MAX] = {
-    {0, RADIO_TYPE_SX127x_LORA, RATE_LORA_200HZ, SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7, TLM_RATIO_1_64, 4, 5000, 8, OTA4_PACKET_SIZE, 1},
-    {1, RADIO_TYPE_SX127x_LORA, RATE_LORA_100HZ_8CH, SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_8, TLM_RATIO_1_32, 4, 10000, 8, OTA8_PACKET_SIZE, 1},
-    {2, RADIO_TYPE_SX127x_LORA, RATE_LORA_100HZ, SX127x_BW_500_00_KHZ, SX127x_SF_7, SX127x_CR_4_7, TLM_RATIO_1_32, 4, 10000, 8, OTA4_PACKET_SIZE, 1},
-    {3, RADIO_TYPE_SX127x_LORA, RATE_LORA_50HZ, SX127x_BW_500_00_KHZ, SX127x_SF_8, SX127x_CR_4_7, TLM_RATIO_1_16, 4, 20000, 10, OTA4_PACKET_SIZE, 1},
-    {4, RADIO_TYPE_SX127x_LORA, RATE_LORA_25HZ, SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_7, TLM_RATIO_1_8, 2, 40000, 10, OTA4_PACKET_SIZE, 1},
-};
-
-static const expresslrs_rf_pref_params_t rf_pref_params[ELRS_RATE_MAX] = {
-    {0, RATE_LORA_200HZ, -112, 4380, 3000, 2500, 600, 5000, SNR_SCALE(1), SNR_SCALE(3.0)},
-    {1, RATE_LORA_100HZ_8CH, -112, 6690, 3500, 2500, 600, 5000, SNR_SCALE(1), SNR_SCALE(3.0)},
-    {2, RATE_LORA_100HZ, -117, 8770, 3500, 2500, 600, 5000, SNR_SCALE(1), SNR_SCALE(2.5)},
-    {3, RATE_LORA_50HZ, -120, 18560, 4000, 2500, 600, 5000, SNR_SCALE(-1), SNR_SCALE(1.5)},
-    {4, RATE_LORA_25HZ, -123, 29950, 6000, 4000, 0, 5000, SNR_SCALE(-3), SNR_SCALE(0.5)},
-};
-
-#endif
-
 #ifdef USE_SX128X
 static const expresslrs_mod_settings_t air_rate_config[ELRS_RATE_MAX] = {
     {0, RADIO_TYPE_SX128x_FLRC, RATE_FLRC_1000HZ, SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2, TLM_RATIO_1_128, 2, 1000, 32, OTA4_PACKET_SIZE, 1},
@@ -71,109 +51,6 @@ const expresslrs_rf_pref_params_t *current_rf_pref_params() {
 }
 
 extern int32_t fhss_update_freq_correction(bool value);
-
-#ifdef USE_SX127X
-
-bool elrs_radio_init() {
-  sx127x_init();
-  return sx127x_detect();
-}
-
-void elrs_set_frequency(int32_t freq) {
-  sx127x_set_mode(SX127x_OPMODE_STANDBY);
-
-  uint8_t buf[3] = {
-      (uint8_t)((freq >> 16) & 0xFF),
-      (uint8_t)((freq >> 8) & 0xFF),
-      (uint8_t)(freq & 0xFF),
-  };
-  sx127x_write_reg_burst(SX127x_FRF_MSB, buf, 3);
-}
-
-void elrs_set_rate(uint8_t index, int32_t freq, bool invert_iq) {
-  sx127x_write_reg(SX127x_OP_MODE, SX127x_OPMODE_SLEEP);
-  sx127x_write_reg(SX127x_OP_MODE, SX127x_OPMODE_LORA);
-  sx127x_set_mode(SX127x_OPMODE_STANDBY);
-
-  sx127x_write_reg(SX127x_IRQ_FLAGS, 0b11111111);
-
-  sx127x_write_reg(SX127x_PAYLOAD_LENGTH, ELRS_BUFFER_SIZE);
-  sx127x_write_reg(SX127x_SYNC_WORD, SYNC_WORD);
-
-  sx127x_write_reg(SX127x_FIFO_RX_BASE_ADDR, FIFO_RX_BASE_ADDR_MAX);
-  sx127x_write_reg(SX127x_FIFO_TX_BASE_ADDR, FIFO_TX_BASE_ADDR_MAX);
-
-  sx127x_set_reg(SX127x_DIO_MAPPING_1, 0b11000000, 7, 6);
-
-  sx127x_write_reg(SX127x_LNA, SX127x_LNA_BOOST_ON);
-  sx127x_write_reg(SX127x_MODEM_CONFIG_3, SX1278_AGC_AUTO_ON | SX1278_LOW_DATA_RATE_OPT_OFF);
-  sx127x_set_reg(SX127x_OCP, SX127X_OCP_ON | SX127X_OCP_150MA, 5, 0);
-
-  sx127x_write_reg(SX127x_PREAMBLE_LSB, air_rate_config[index].preamble_len);
-
-  sx127x_set_reg(SX127x_INVERT_IQ, (uint8_t)(invert_iq), 6, 6);
-
-  sx127x_set_mode(SX127x_OPMODE_STANDBY);
-  sx127x_write_reg(SX127x_PA_CONFIG, SX127x_PA_SELECT_BOOST | SX127x_MAX_OUTPUT_POWER | 0b1111);
-
-  sx127x_set_reg(SX127x_MODEM_CONFIG_2, air_rate_config[index].sf | SX127X_TX_MODE_SINGLE | SX1278_RX_CRC_MODE_OFF, 7, 2);
-  if (air_rate_config[index].sf == SX127x_SF_6) {
-    sx127x_set_reg(SX127x_DETECT_OPTIMIZE, SX127x_DETECT_OPTIMIZE_SF_6, 2, 0);
-    sx127x_write_reg(SX127x_DETECTION_THRESHOLD, SX127x_DETECTION_THRESHOLD_SF_6);
-
-    sx127x_write_reg(SX127x_MODEM_CONFIG_1, air_rate_config[index].bw | air_rate_config[index].cr | SX1278_HEADER_IMPL_MODE);
-  } else {
-    sx127x_set_reg(SX127x_DETECT_OPTIMIZE, SX127x_DETECT_OPTIMIZE_SF_7_12, 2, 0);
-    sx127x_write_reg(SX127x_DETECTION_THRESHOLD, SX127x_DETECTION_THRESHOLD_SF_7_12);
-
-    sx127x_write_reg(SX127x_MODEM_CONFIG_1, air_rate_config[index].bw | air_rate_config[index].cr | SX1278_HEADER_IMPL_MODE);
-  }
-
-  if (air_rate_config[index].bw == SX127x_BW_500_00_KHZ) {
-    // datasheet errata reconmendation http://caxapa.ru/thumbs/972894/SX1276_77_8_ErrataNote_1.1_STD.pdf
-    sx127x_write_reg(0x36, 0x02);
-    sx127x_write_reg(0x3a, 0x64);
-  } else {
-    sx127x_write_reg(0x36, 0x03);
-  }
-
-  elrs_set_frequency(freq);
-
-  current_rate = index;
-}
-
-void elrs_enter_rx(uint8_t *packet) {
-  sx127x_set_mode(SX127x_OPMODE_STANDBY);
-  sx127x_write_reg(SX127x_FIFO_ADDR_PTR, 0x0);
-  sx127x_set_mode(SX127x_OPMODE_RXCONTINUOUS);
-}
-
-void elrs_enter_tx(uint8_t *packet) {
-  sx127x_set_mode(SX127x_OPMODE_STANDBY);
-
-  sx127x_write_reg(SX127x_FIFO_ADDR_PTR, 0x0);
-  sx127x_write_fifo(packet, ELRS_BUFFER_SIZE);
-
-  sx127x_set_mode(SX127x_OPMODE_TX);
-}
-
-bool elrs_read_packet(uint8_t *packet) {
-  if (!sx127x_read_dio0()) {
-    return false;
-  }
-
-  sx127x_read_fifo(packet, ELRS_BUFFER_SIZE);
-  sx127x_write_reg(SX127x_IRQ_FLAGS, 0b11111111);
-
-  return true;
-}
-
-void elrs_freq_correct() {
-  const int32_t offset = fhss_update_freq_correction(((sx127x_read_reg(SX127x_FEI_MSB) & 0b1000) >> 3) ? 1 : 0);
-  sx127x_write_reg(SX127x_PPMOFFSET, (uint8_t)offset);
-}
-
-#endif
 
 #ifdef USE_SX128X
 

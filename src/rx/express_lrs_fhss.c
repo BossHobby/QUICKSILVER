@@ -1,6 +1,6 @@
 #include "rx/express_lrs.h"
 
-#if defined(RX_EXPRESS_LRS) && (defined(USE_SX127X) || defined(USE_SX128X))
+#if defined(RX_EXPRESS_LRS) && defined(USE_SX128X)
 
 typedef struct {
   const char *domain;
@@ -9,19 +9,12 @@ typedef struct {
   uint32_t freq_count;
 } fhss_config_t;
 
-#ifdef USE_SX127X
-#define FREQ_STEP 61.03515625
-#endif
-
 #ifdef USE_SX128X
 #define SX1280_XTAL_FREQ 52000000.0
 #define POW_2_18 262144.0
 #define FREQ_STEP ((double)(SX1280_XTAL_FREQ / POW_2_18))
 #endif
 
-#ifdef USE_SX127X
-#define FREQ_CORRECTION_MAX ((int32_t)(100000 / FREQ_STEP))
-#endif
 #ifdef USE_SX128X
 #define FREQ_CORRECTION_MAX ((int32_t)(200000 / FREQ_STEP))
 #endif
@@ -31,17 +24,6 @@ typedef struct {
 #define FREQ_HZ_TO_REG_VAL(freq) ((uint32_t)((double)freq / (double)FREQ_STEP))
 
 extern expresslrs_mod_settings_t *current_air_rate_config();
-
-#ifdef USE_SX127X
-const fhss_config_t domains[] = {
-    {"AU915", FREQ_HZ_TO_REG_VAL(915500000), FREQ_HZ_TO_REG_VAL(926900000), 20},
-    {"FCC915", FREQ_HZ_TO_REG_VAL(903500000), FREQ_HZ_TO_REG_VAL(926900000), 40},
-    {"EU868", FREQ_HZ_TO_REG_VAL(865275000), FREQ_HZ_TO_REG_VAL(869575000), 13},
-    {"IN866", FREQ_HZ_TO_REG_VAL(865375000), FREQ_HZ_TO_REG_VAL(866950000), 4},
-    {"AU433", FREQ_HZ_TO_REG_VAL(433420000), FREQ_HZ_TO_REG_VAL(434420000), 3},
-    {"EU433", FREQ_HZ_TO_REG_VAL(433100000), FREQ_HZ_TO_REG_VAL(434450000), 3},
-};
-#endif
 
 #ifdef USE_SX128X
 const fhss_config_t domains[] = {

@@ -4,18 +4,12 @@
 
 #include "rx/rx_spi.h"
 
-#include "driver/spi_sx127x.h"
 #include "driver/spi_sx128x.h"
 
 #define ELRS_OTA_VERSION_ID 3
 
 #define ELRS_BUFFER_SIZE 16
 #define ELRS_RATE_DEFAULT 0
-
-#ifdef USE_SX127X
-#define ELRS_RATE_MAX 5
-#define ERLS_RATE_BIND 2
-#endif
 
 #ifdef USE_SX128X
 #define ELRS_RATE_MAX 10
