@@ -4,7 +4,7 @@
 
 #include "core/project.h"
 
-#define USB_BUFFER_SIZE (16 * 1024)
+#define USB_BUFFER_SIZE (4 * 1024)
 
 typedef enum {
   USB_MAGIC_REBOOT = 'R',

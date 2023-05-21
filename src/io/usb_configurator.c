@@ -157,8 +157,13 @@ void usb_configurator() {
         .device = MSP_DEVICE_FC,
     };
 
+    uint8_t data = 0;
     while (true) {
-      msp_status_t status = msp_process_serial(&msp, usb_serial_read_byte());
+      if (usb_serial_read(&data, 1) != 1) {
+        continue;
+      }
+
+      msp_status_t status = msp_process_serial(&msp, data);
       if (status != MSP_EOF) {
         break;
       }
@@ -166,11 +171,18 @@ void usb_configurator() {
     break;
   }
   case USB_MAGIC_QUIC: {
+
+    uint8_t data = 0;
     while (true) {
-      if (!quic_process(&quic, buffer, buffer_size)) {
-        buffer[buffer_size++] = usb_serial_read_byte();
-      } else {
+      if (buffer_size == USB_BUFFER_SIZE) {
+        quic_send_str(&quic, QUIC_CMD_INVALID, QUIC_FLAG_ERROR, "EOF");
         break;
+      }
+      if (quic_process(&quic, buffer, buffer_size)) {
+        break;
+      }
+      if (usb_serial_read(&data, 1) == 1) {
+        buffer[buffer_size++] = data;
       }
     }
     break;

@@ -156,24 +156,6 @@ static void get_quic(quic_t *quic, cbor_value_t *dec) {
 
     quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
-  case QUIC_VAL_OSD_FONT: {
-    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
-
-    uint8_t font[54];
-
-    for (uint16_t i = 0; i < 256; i++) {
-      osd_read_character(i, font, 54);
-
-      cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
-      res = cbor_encode_bstr(&enc, font, 54);
-      check_cbor_error(QUIC_CMD_GET);
-
-      quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
-    }
-
-    quic_send_header(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, 0);
-    break;
-  }
   case QUIC_VAL_BLHEL_SETTINGS: {
     quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
 
@@ -277,24 +259,6 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
     flash_save();
 
     res = cbor_encode_vtx_settings_t(&enc, &vtx_settings);
-    check_cbor_error(QUIC_CMD_SET);
-
-    quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
-    break;
-  }
-  case QUIC_VAL_OSD_FONT: {
-    uint32_t len = 54;
-
-    for (uint16_t i = 0; i < 256; i++) {
-      const uint8_t *ptr = NULL;
-
-      res = cbor_decode_bstr(dec, &ptr, &len);
-      check_cbor_error(QUIC_CMD_SET);
-
-      osd_write_character(i, ptr, 54);
-    }
-
-    res = cbor_encode_str(&enc, "OK");
     check_cbor_error(QUIC_CMD_SET);
 
     quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
@@ -425,7 +389,6 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
     }
 
     quic_send_header(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, 0);
-
     break;
   }
   default:
@@ -494,6 +457,47 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
     quic_errorf(QUIC_CMD_MOTOR, "INVALID CMD %d", cmd);
     break;
   }
+}
+
+static void process_osd(quic_t *quic, cbor_value_t *dec) {
+  cbor_result_t res = CBOR_OK;
+
+  cbor_value_t enc;
+  cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
+
+  quic_osd_command cmd;
+  res = cbor_decode_uint8(dec, &cmd);
+  check_cbor_error(QUIC_CMD_OSD);
+
+  uint16_t index;
+  res = cbor_decode_uint16(dec, &index);
+  check_cbor_error(QUIC_CMD_OSD);
+
+  switch (cmd) {
+  case QUIC_OSD_READ_CHAR: {
+    uint8_t font[54];
+    osd_read_character(index, font, 54);
+    res = cbor_encode_bstr(&enc, font, 54);
+    check_cbor_error(QUIC_CMD_GET);
+
+    quic_send(quic, QUIC_CMD_OSD, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  }
+  case QUIC_OSD_WRITE_CHAR: {
+    uint32_t len = 54;
+    const uint8_t *ptr = NULL;
+
+    res = cbor_decode_bstr(dec, &ptr, &len);
+    check_cbor_error(QUIC_CMD_SET);
+    osd_write_character(index, ptr, 54);
+
+    res = cbor_encode_str(&enc, "OK");
+    check_cbor_error(QUIC_CMD_SET);
+
+    quic_send(quic, QUIC_CMD_OSD, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  }
+  };
 }
 
 static void process_serial(quic_t *quic, cbor_value_t *dec) {
@@ -579,6 +583,9 @@ bool quic_process(quic_t *quic, uint8_t *data, uint32_t size) {
     break;
   case QUIC_CMD_BLACKBOX:
     process_blackbox(quic, &dec);
+    break;
+  case QUIC_CMD_OSD:
+    process_osd(quic, &dec);
     break;
   case QUIC_CMD_MOTOR:
     process_motor_test(quic, &dec);
