@@ -31,6 +31,8 @@ static void flash_write_magic(uint8_t *data, uint32_t magic) {
 }
 
 void flash_save() {
+  __disable_irq();
+
   fmc_unlock();
   fmc_erase();
 
@@ -74,6 +76,7 @@ void flash_save() {
     cbor_result_t res = cbor_encode_profile_t(&enc, &profile);
     if (res < CBOR_OK) {
       fmc_lock();
+      __enable_irq();
       failloop(FAILLOOP_FAULT);
     }
 
@@ -93,6 +96,7 @@ void flash_save() {
     cbor_result_t res = cbor_encode_vtx_settings_t(&enc, &vtx_settings);
     if (res < CBOR_OK) {
       fmc_lock();
+      __enable_irq();
       failloop(FAILLOOP_FAULT);
     }
 
@@ -100,6 +104,7 @@ void flash_save() {
   }
 
   fmc_lock();
+  __enable_irq();
 }
 
 void flash_load() {
