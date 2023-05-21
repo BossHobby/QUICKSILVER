@@ -8,14 +8,11 @@
 
 #define ELRS_OTA_VERSION_ID 3
 
-#define ELRS_BUFFER_SIZE 16
 #define ELRS_RATE_DEFAULT 0
 
-#ifdef USE_SX128X
 #define ELRS_RATE_MAX 10
 #define ERLS_RATE_BIND 9
 #define RADIO_SNR_SCALE 4 // Units for LastPacketSNRRaw
-#endif
 
 #define ELRS_TELEMETRY_SHIFT 2
 #define ELRS_TELEMETRY_BYTES_PER_CALL 5

@@ -116,6 +116,29 @@ typedef struct {
   MEMBER(nss, gpio_pins_t)
 
 typedef struct {
+  spi_ports_t port;
+  gpio_pins_t nss;
+  gpio_pins_t exti;
+  gpio_pins_t ant_sel;
+  gpio_pins_t lna_en;
+  gpio_pins_t tx_en;
+  gpio_pins_t busy;
+  bool busy_exti;
+  gpio_pins_t reset;
+} target_rx_spi_device_t;
+
+#define TARGET_RX_SPI_DEVICE_MEMBERS \
+  MEMBER(port, uint8)                \
+  MEMBER(nss, gpio_pins_t)           \
+  MEMBER(exti, gpio_pins_t)          \
+  MEMBER(ant_sel, gpio_pins_t)       \
+  MEMBER(lna_en, gpio_pins_t)        \
+  MEMBER(tx_en, gpio_pins_t)         \
+  MEMBER(busy, gpio_pins_t)          \
+  MEMBER(busy_exti, bool)            \
+  MEMBER(reset, gpio_pins_t)
+
+typedef struct {
   uint8_t name[32];
 
   bool brushless;
@@ -130,6 +153,7 @@ typedef struct {
   target_spi_device_t osd;
   target_spi_device_t flash;
   target_spi_device_t sdcard;
+  target_rx_spi_device_t rx_spi;
 
   gpio_pins_t usb_detect;
   gpio_pins_t fpv;
@@ -153,6 +177,7 @@ typedef struct {
   MEMBER(osd, target_spi_device_t)                                               \
   MEMBER(flash, target_spi_device_t)                                             \
   MEMBER(sdcard, target_spi_device_t)                                            \
+  MEMBER(rx_spi, target_rx_spi_device_t)                                         \
   MEMBER(usb_detect, gpio_pins_t)                                                \
   MEMBER(fpv, gpio_pins_t)                                                       \
   MEMBER(vbat, gpio_pins_t)                                                      \
@@ -192,6 +217,9 @@ extern target_info_t target_info;
 
 void target_set_feature(target_feature_t feat);
 void target_reset_feature(target_feature_t feat);
+
+void target_add_rx_protocol(rx_protocol_t proto);
+bool target_has_rx_protocol(rx_protocol_t proto);
 
 bool target_serial_port_valid(const target_serial_port_t *port);
 bool target_spi_device_valid(const target_spi_device_t *dev);

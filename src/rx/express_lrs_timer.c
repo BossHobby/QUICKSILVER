@@ -8,7 +8,7 @@
 #include "driver/timer.h"
 #include "util/util.h"
 
-#if defined(RX_EXPRESS_LRS) && defined(USE_SX128X)
+#if defined(RX_EXPRESS_LRS)
 
 #define TIMER timer_defs[TIMER_TAG_TIM(timer_tag)]
 #define TIMER_HZ 1000000
@@ -45,7 +45,9 @@ void elrs_timer_stop() {
 void elrs_timer_init(uint32_t interval_us) {
   current_interval = interval_us;
 
-  timer_tag = timer_alloc(TIMER_USE_ELRS);
+  if (timer_tag == RES_SERIAL_INVALID) {
+    timer_tag = timer_alloc(TIMER_USE_ELRS);
+  }
   timer_up_init(TIMER_TAG_TIM(timer_tag), PWM_CLOCK_FREQ_HZ / TIMER_HZ, (current_interval >> 1) - 1);
   interrupt_enable(TIMER.irq, TIMER_PRIORITY);
 
@@ -147,24 +149,29 @@ void elrs_phase_reset() {
 }
 
 void elrs_timer_irq_handler() {
-  if (LL_TIM_IsActiveFlag_UPDATE(TIMER.instance) == 1) {
-    LL_TIM_ClearFlag_UPDATE(TIMER.instance);
-
-    if (is_tick) {
-      const uint32_t adjusted_period = ((current_interval >> 1) + timer_freq_offset - 1);
-      LL_TIM_SetAutoReload(TIMER.instance, adjusted_period);
-
-      elrs_handle_tick();
-    } else {
-      const uint32_t adjusted_period = ((current_interval >> 1) + phase_shift + timer_freq_offset - 1);
-      LL_TIM_SetAutoReload(TIMER.instance, adjusted_period);
-      phase_shift = 0;
-
-      elrs_handle_tock();
-    }
-
-    is_tick = !is_tick;
+  if (timer_tag == RESOURCE_INVALID) {
+    return;
   }
+
+  if (!LL_TIM_IsActiveFlag_UPDATE(TIMER.instance)) {
+    return;
+  }
+
+  LL_TIM_ClearFlag_UPDATE(TIMER.instance);
+  if (is_tick) {
+    const uint32_t adjusted_period = ((current_interval >> 1) + timer_freq_offset - 1);
+    LL_TIM_SetAutoReload(TIMER.instance, adjusted_period);
+
+    elrs_handle_tick();
+  } else {
+    const uint32_t adjusted_period = ((current_interval >> 1) + phase_shift + timer_freq_offset - 1);
+    LL_TIM_SetAutoReload(TIMER.instance, adjusted_period);
+    phase_shift = 0;
+
+    elrs_handle_tock();
+  }
+
+  is_tick = !is_tick;
 }
 
 #endif

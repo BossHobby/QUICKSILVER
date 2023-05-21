@@ -57,6 +57,10 @@ CBOR_START_STRUCT_ENCODER(target_spi_device_t)
 TARGET_SPI_DEVICE_MEMBERS
 CBOR_END_STRUCT_ENCODER()
 
+CBOR_START_STRUCT_ENCODER(target_rx_spi_device_t)
+TARGET_RX_SPI_DEVICE_MEMBERS
+CBOR_END_STRUCT_ENCODER()
+
 CBOR_START_STRUCT_ENCODER(target_t)
 TARGET_MEMBERS
 CBOR_END_STRUCT_ENCODER()
@@ -97,6 +101,10 @@ CBOR_END_STRUCT_DECODER()
 
 CBOR_START_STRUCT_DECODER(target_spi_device_t)
 TARGET_SPI_DEVICE_MEMBERS
+CBOR_END_STRUCT_DECODER()
+
+CBOR_START_STRUCT_DECODER(target_rx_spi_device_t)
+TARGET_RX_SPI_DEVICE_MEMBERS
 CBOR_END_STRUCT_DECODER()
 
 CBOR_START_STRUCT_DECODER(target_t)
@@ -225,6 +233,33 @@ void target_set_feature(target_feature_t feat) {
 
 void target_reset_feature(target_feature_t feat) {
   target_info.features &= ~feat;
+}
+
+void target_add_rx_protocol(rx_protocol_t proto) {
+  for (uint32_t i = 0; i < RX_PROTOCOL_MAX; i++) {
+    if (target_info.rx_protocols[i] == proto) {
+      // we already have proto
+      break;
+    }
+    if (target_info.rx_protocols[i] == RX_PROTOCOL_INVALID) {
+      // add proto
+      target_info.rx_protocols[i] = proto;
+      break;
+    }
+  }
+}
+
+bool target_has_rx_protocol(rx_protocol_t proto) {
+  for (uint32_t i = 0; i < RX_PROTOCOL_MAX; i++) {
+    if (target_info.rx_protocols[i] == proto) {
+      // we already have proto
+      return true;
+    }
+    if (target_info.rx_protocols[i] == RX_PROTOCOL_INVALID) {
+      return false;
+    }
+  }
+  return false;
 }
 
 bool target_serial_port_valid(const target_serial_port_t *port) {

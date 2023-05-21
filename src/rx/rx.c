@@ -180,7 +180,7 @@ static float rx_apply_deadband(float val) {
   }
 }
 
-void rx_init() {
+static void rx_init_state() {
   for (uint32_t i = 0; i < AUX_CHANNEL_OFF; i++) {
     state.aux[i] = 0;
   }
@@ -191,8 +191,16 @@ void rx_init() {
 #ifdef GESTURE_AUX_START_ON
   state.aux[AUX_CHANNEL_GESTURE] = 1;
 #endif
-
   filter_lp_pt1_init(&rx_filter, rx_filter_state, 4, rx_smoothing_hz());
+}
+
+void rx_init() {
+  rx_init_state();
+  rx_spi_detect();
+
+  if (!target_has_rx_protocol(profile.receiver.protocol)) {
+    profile.receiver.protocol = RX_PROTOCOL_INVALID;
+  }
 
   switch (profile.receiver.protocol) {
   case RX_PROTOCOL_INVALID:

@@ -121,36 +121,26 @@ void exti_interrupt_disable(gpio_pins_t pin) {
 }
 
 bool exti_line_active(gpio_pins_t pin) {
-  if (LL_EXTI_IsActiveFlag_0_31(LINE.exti_line) != RESET) {
-    LL_EXTI_ClearFlag_0_31(LINE.exti_line);
-    return true;
+  if (pin == PIN_NONE) {
+    return false;
   }
-  return false;
+  if (LL_EXTI_IsActiveFlag_0_31(LINE.exti_line) == RESET) {
+    return false;
+  }
+  LL_EXTI_ClearFlag_0_31(LINE.exti_line);
+  return true;
 }
 
 static void handle_exit_isr() {
-  // handle specific exti lines here
-
-#if defined(USE_SX128X) && defined(SX12XX_DIO0_PIN)
-  if (exti_line_active(SX12XX_DIO0_PIN)) {
-    extern void sx128x_handle_dio0_exti(bool);
-    sx128x_handle_dio0_exti(gpio_pin_read(SX12XX_DIO0_PIN));
+  if (exti_line_active(target.rx_spi.exti)) {
+    extern void rx_spi_handle_exti(bool);
+    rx_spi_handle_exti(gpio_pin_read(target.rx_spi.exti));
   }
-#endif
 
-#if defined(USE_SX128X) && defined(USE_SX128X_BUSY_EXTI) && defined(SX12XX_BUSY_PIN)
-  if (exti_line_active(SX12XX_BUSY_PIN)) {
-    extern void sx128x_handle_busy_exti(bool);
-    sx128x_handle_busy_exti(gpio_pin_read(SX12XX_BUSY_PIN));
+  if (target.rx_spi.busy_exti && exti_line_active(target.rx_spi.busy)) {
+    extern void rx_spi_handle_busy_exti(bool);
+    rx_spi_handle_busy_exti(gpio_pin_read(target.rx_spi.busy));
   }
-#endif
-
-#if defined(USE_A7105) && defined(A7105_GIO1_PIN)
-  if (exti_line_active(A7105_GIO1_PIN)) {
-    extern void a7105_handle_busy_exti(bool);
-    a7105_handle_busy_exti(gpio_pin_read(A7105_GIO1_PIN));
-  }
-#endif
 }
 
 void EXTI0_IRQHandler() {

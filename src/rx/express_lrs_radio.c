@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #include "core/looptime.h"
+#include "core/project.h"
 #include "util/util.h"
 
 #if defined(RX_EXPRESS_LRS)
@@ -14,7 +15,6 @@
 
 static uint32_t current_rate = 0;
 
-#ifdef USE_SX128X
 static const expresslrs_mod_settings_t air_rate_config[ELRS_RATE_MAX] = {
     {0, RADIO_TYPE_SX128x_FLRC, RATE_FLRC_1000HZ, SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2, TLM_RATIO_1_128, 2, 1000, 32, OTA4_PACKET_SIZE, 1},
     {1, RADIO_TYPE_SX128x_FLRC, RATE_FLRC_500HZ, SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2, TLM_RATIO_1_128, 2, 2000, 32, OTA4_PACKET_SIZE, 1},
@@ -40,7 +40,6 @@ static const expresslrs_rf_pref_params_t rf_pref_params[ELRS_RATE_MAX] = {
     {8, RATE_LORA_100HZ_8CH, -112, 7605, 3500, 2500, 11, 5000, SNR_SCALE(0), SNR_SCALE(8.5)},
     {9, RATE_LORA_50HZ, -115, 10798, 4000, 2500, 0, 5000, SNR_SCALE(-1), SNR_SCALE(6.5)},
 };
-#endif
 
 const expresslrs_mod_settings_t *current_air_rate_config() {
   return &air_rate_config[current_rate];
@@ -51,8 +50,6 @@ const expresslrs_rf_pref_params_t *current_rf_pref_params() {
 }
 
 extern int32_t fhss_update_freq_correction(bool value);
-
-#ifdef USE_SX128X
 
 volatile uint8_t packet_status[2] = {0, 0};
 
@@ -72,7 +69,9 @@ static bool elrs_radio_detect() {
 
 bool elrs_radio_init() {
   sx128x_wait();
-  sx128x_init();
+  if (!sx128x_init()) {
+    return false;
+  }
   sx128x_reset();
 
   if (!elrs_radio_detect()) {
@@ -176,7 +175,5 @@ void elrs_last_packet_stats(int8_t *rssi, int8_t *snr) {
 void elrs_freq_correct() {
   // TODO: fhss_update_freq_correction(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB)
 }
-
-#endif
 
 #endif

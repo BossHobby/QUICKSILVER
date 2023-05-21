@@ -11,7 +11,7 @@
 #include "util/ring_buffer.h"
 #include "util/util.h"
 
-#if defined(USE_CC2500) && defined(RX_FRSKY)
+#if defined(RX_FRSKY)
 
 // Source https://www.rcgroups.com/forums/showpost.php?p=21864861
 
@@ -91,14 +91,12 @@ typedef struct {
   frsky_d16_telemetry_flag_t telemetry;
 } __attribute__((__packed__)) frsky_d16_frame_header;
 
-extern uint8_t packet[128];
 extern uint8_t protocol_state;
 extern uint8_t list_length;
 
 uint8_t frsky_extract_rssi(uint8_t rssi_raw);
 uint8_t frsky_detect();
 void frsky_handle_bind();
-void frsky_init();
 
 void handle_overflows();
 void calibrate_channels();
@@ -115,19 +113,19 @@ static uint16_t frsky_d16_crc(const uint8_t *data, uint8_t len) {
 
 static void frsky_d16_set_rc_data() {
   uint16_t temp_channels[8] = {
-      (uint16_t)((packet[10] << 8) & 0xF00) | packet[9],
-      (uint16_t)((packet[11] << 4) & 0xFF0) | (packet[10] >> 4),
-      (uint16_t)((packet[13] << 8) & 0xF00) | packet[12],
-      (uint16_t)((packet[14] << 4) & 0xFF0) | (packet[13] >> 4),
-      (uint16_t)((packet[16] << 8) & 0xF00) | packet[15],
-      (uint16_t)((packet[17] << 4) & 0xFF0) | (packet[16] >> 4),
-      (uint16_t)((packet[19] << 8) & 0xF00) | packet[18],
-      (uint16_t)((packet[20] << 4) & 0xFF0) | (packet[19] >> 4),
+      (uint16_t)((rx_spi_packet[10] << 8) & 0xF00) | rx_spi_packet[9],
+      (uint16_t)((rx_spi_packet[11] << 4) & 0xFF0) | (rx_spi_packet[10] >> 4),
+      (uint16_t)((rx_spi_packet[13] << 8) & 0xF00) | rx_spi_packet[12],
+      (uint16_t)((rx_spi_packet[14] << 4) & 0xFF0) | (rx_spi_packet[13] >> 4),
+      (uint16_t)((rx_spi_packet[16] << 8) & 0xF00) | rx_spi_packet[15],
+      (uint16_t)((rx_spi_packet[17] << 4) & 0xFF0) | (rx_spi_packet[16] >> 4),
+      (uint16_t)((rx_spi_packet[19] << 8) & 0xF00) | rx_spi_packet[18],
+      (uint16_t)((rx_spi_packet[20] << 4) & 0xFF0) | (rx_spi_packet[19] >> 4),
   };
 
   static uint16_t channels[FRSKY_D16_CHANNEL_COUNT] = {0};
   for (uint8_t i = 0; i < 8; i++) {
-    if (packet[7] != (0x10 + (i << 1))) {
+    if (rx_spi_packet[7] != (0x10 + (i << 1))) {
       const uint8_t is_shifted = ((temp_channels[i] & 0x800) > 0) ? 1 : 0;
       const uint16_t channel_value = temp_channels[i] & 0x7FF;
       channels[is_shifted ? i + 8 : i] = channel_value - 64;
@@ -223,7 +221,7 @@ static uint8_t frsky_d16_append_telemetry(uint8_t *buf) {
 }
 
 static void frsky_d16_build_telemetry(uint8_t *telemetry) {
-  const uint8_t rssi = frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]);
+  const uint8_t rssi = frsky_extract_rssi(rx_spi_packet[FRSKY_D16_PACKET_LENGTH - 2]);
 
   static uint8_t even_odd = 0;
   static uint8_t local_packet_id = 0;
@@ -231,7 +229,7 @@ static void frsky_d16_build_telemetry(uint8_t *telemetry) {
   telemetry[0] = 0x0E; // length
   telemetry[1] = bind_storage.frsky.tx_id[0];
   telemetry[2] = bind_storage.frsky.tx_id[1];
-  telemetry[3] = packet[3];
+  telemetry[3] = rx_spi_packet[3];
   if (even_odd) {
     telemetry[4] = rssi | 0x80;
   } else {
@@ -239,7 +237,7 @@ static void frsky_d16_build_telemetry(uint8_t *telemetry) {
   }
   even_odd = even_odd == 1 ? 0 : 1;
 
-  frsky_d16_telemetry_flag_t *in_flag = (frsky_d16_telemetry_flag_t *)&packet[21];
+  frsky_d16_telemetry_flag_t *in_flag = (frsky_d16_telemetry_flag_t *)&rx_spi_packet[21];
   frsky_d16_telemetry_flag_t *out_flag = (frsky_d16_telemetry_flag_t *)&telemetry[5];
   if (in_flag->flag.init_request) {
     out_flag->raw = 0;
@@ -305,10 +303,10 @@ static uint8_t frsky_d16_handle_packet() {
   case FRSKY_STATE_DATA: {
     uint8_t len = cc2500_packet_size();
     if (frame_had_packet == 0 && len >= FRSKY_D16_PACKET_LENGTH) {
-      cc2500_read_fifo(packet, FRSKY_D16_PACKET_LENGTH);
-      frsky_d16_frame_header *header = (frsky_d16_frame_header *)packet;
+      cc2500_read_fifo((uint8_t *)rx_spi_packet, FRSKY_D16_PACKET_LENGTH);
+      frsky_d16_frame_header *header = (frsky_d16_frame_header *)rx_spi_packet;
 
-      if (frsky_d16_is_valid_packet(packet)) {
+      if (frsky_d16_is_valid_packet((uint8_t *)rx_spi_packet)) {
         last_packet_received_time = time_micros();
         max_sync_delay = FRSKY_SYNC_DELAY_MAX;
 
@@ -329,7 +327,7 @@ static uint8_t frsky_d16_handle_packet() {
 
         rx_lqi_got_packet();
         if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-          rx_lqi_update_direct(frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]));
+          rx_lqi_update_direct(frsky_extract_rssi(rx_spi_packet[FRSKY_D16_PACKET_LENGTH - 2]));
         }
 
         frame_had_packet = 1;
@@ -382,7 +380,7 @@ static uint8_t frsky_d16_handle_packet() {
   case FRSKY_STATE_TELEMETRY:
     // move to idle state
     if ((cc2500_get_status() & (0x70)) != 0) {
-      const uint8_t rssi = frsky_extract_rssi(packet[FRSKY_D16_PACKET_LENGTH - 2]);
+      const uint8_t rssi = frsky_extract_rssi(rx_spi_packet[FRSKY_D16_PACKET_LENGTH - 2]);
 
       rx_lqi_got_packet();
 
@@ -439,11 +437,9 @@ static uint8_t frsky_d16_handle_packet() {
 }
 
 void rx_frsky_d16_init() {
-  if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
+  if (!frsky_init()) {
     return;
-
-  frsky_init();
-  cc2500_init();
+  }
 
   // enable gdo0 on read
   cc2500_write_reg(CC2500_IOCFG0, 0x01);

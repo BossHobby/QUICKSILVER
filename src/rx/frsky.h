@@ -50,4 +50,5 @@ typedef struct {
   uint32_t value;
 } __attribute__((packed)) smart_port_payload_t;
 
+bool frsky_init();
 void frsky_d16_write_telemetry(smart_port_payload_t *payload);

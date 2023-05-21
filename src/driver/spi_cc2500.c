@@ -5,27 +5,24 @@
 #include "driver/time.h"
 #include "util/util.h"
 
-#if defined(USE_CC2500)
-
 #define SPI_SPEED MHZ_TO_HZ(10.5)
 
 static spi_bus_device_t bus = {
-    .port = CC2500_SPI_PORT,
-    .nss = CC2500_NSS_PIN,
-
     .auto_continue = true,
 };
 
-uint8_t cc2500_read_gdo0() {
-#ifdef CC2500_GDO0_PIN
-  return gpio_pin_read(CC2500_GDO0_PIN);
-#else
-  return cc2500_get_status() & 0xF;
-#endif
+static bool cc2500_spi_device_valid(const target_rx_spi_device_t *dev) {
+  if (dev->port == SPI_PORT_INVALID || dev->nss == PIN_NONE) {
+    return false;
+  }
+  return true;
 }
 
-static void cc2500_hardware_init() {
-#if defined(USE_CC2500_PA_LNA)
+static bool cc2500_hardware_init() {
+  if (!cc2500_spi_device_valid(&target.rx_spi)) {
+    return false;
+  }
+
   {
     LL_GPIO_InitTypeDef gpio_init;
     gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
@@ -34,37 +31,47 @@ static void cc2500_hardware_init() {
     gpio_init.Pull = LL_GPIO_PULL_NO;
 
     // turn antenna on
-#if defined(CC2500_LNA_EN_PIN)
-    gpio_pin_init(&gpio_init, CC2500_LNA_EN_PIN);
-    gpio_pin_set(CC2500_LNA_EN_PIN);
-#endif
+    if (target.rx_spi.lna_en != PIN_NONE) {
+      gpio_pin_init(&gpio_init, target.rx_spi.lna_en);
+      gpio_pin_set(target.rx_spi.lna_en);
+    }
 
     // turn tx off
-    gpio_pin_init(&gpio_init, CC2500_TX_EN_PIN);
-    gpio_pin_reset(CC2500_TX_EN_PIN);
+    if (target.rx_spi.tx_en != PIN_NONE) {
+      gpio_pin_init(&gpio_init, target.rx_spi.tx_en);
+      gpio_pin_reset(target.rx_spi.tx_en);
+    }
 
-#if defined(USE_CC2500_DIVERSITY)
     // choose b?
-    gpio_pin_init(&gpio_init, CC2500_ANT_SEL_PIN);
-    gpio_pin_set(CC2500_ANT_SEL_PIN);
-#endif
+    if (target.rx_spi.ant_sel != PIN_NONE) {
+      gpio_pin_init(&gpio_init, target.rx_spi.ant_sel);
+      gpio_pin_set(target.rx_spi.ant_sel);
+    }
   }
-#endif // USE_CC2500_PA_LNA
 
-#ifdef CC2500_GDO0_PIN
-  {
+  if (target.rx_spi.exti != PIN_NONE) {
     // GDO0
     LL_GPIO_InitTypeDef gpio_init;
     gpio_init.Mode = LL_GPIO_MODE_INPUT;
     gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
     gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
     gpio_init.Pull = LL_GPIO_PULL_DOWN;
-    gpio_pin_init(&gpio_init, CC2500_GDO0_PIN);
+    gpio_pin_init(&gpio_init, target.rx_spi.exti);
   }
-#endif
 
+  bus.port = target.rx_spi.port;
+  bus.nss = target.rx_spi.nss;
   spi_bus_device_init(&bus);
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, SPI_SPEED);
+
+  return true;
+}
+
+uint8_t cc2500_read_gdo0() {
+  if (target.rx_spi.exti != PIN_NONE) {
+    return gpio_pin_read(target.rx_spi.exti);
+  }
+  return cc2500_get_status() & 0xF;
 }
 
 void cc2500_strobe(uint8_t address) {
@@ -201,43 +208,51 @@ void cc2500_reset() {
   cc2500_strobe_sync(CC2500_SIDLE);
 }
 
-void cc2500_init() {
-  cc2500_hardware_init();
+static bool cc2500_dectect() {
+  const uint8_t chipPartNum = cc2500_read_reg(CC2500_PARTNUM | CC2500_READ_BURST); // CC2500 read registers chip part num
+  const uint8_t chipVersion = cc2500_read_reg(CC2500_VERSION | CC2500_READ_BURST); // CC2500 read registers chip version
+  if (chipPartNum == 0x80 && chipVersion == 0x03) {
+    return true;
+  }
+  return false;
+}
+
+bool cc2500_init() {
+  if (!cc2500_hardware_init()) {
+    return false;
+  }
   cc2500_reset();
+  return cc2500_dectect();
 }
 
 void cc2500_switch_antenna() {
-#if defined(USE_CC2500_PA_LNA) && defined(USE_CC2500_DIVERSITY)
-  static uint8_t alternative_selected = 1;
-  if (alternative_selected == 1) {
-    gpio_pin_reset(CC2500_ANT_SEL_PIN);
-  } else {
-    gpio_pin_set(CC2500_ANT_SEL_PIN);
+  if (target.rx_spi.ant_sel != PIN_NONE) {
+    static uint8_t ant_selected = 1;
+    if (ant_selected == 1) {
+      gpio_pin_reset(target.rx_spi.ant_sel);
+    } else {
+      gpio_pin_set(target.rx_spi.ant_sel);
+    }
+    ant_selected = ant_selected ? 0 : 1;
   }
-  alternative_selected = alternative_selected ? 0 : 1;
-#endif
 }
 
 void cc2500_enter_rxmode() {
-#if defined(USE_CC2500_PA_LNA)
-
-#if defined(CC2500_LNA_EN_PIN)
-  gpio_pin_set(CC2500_LNA_EN_PIN);
-#endif
-
-  gpio_pin_reset(CC2500_TX_EN_PIN);
-#endif
+  if (target.rx_spi.lna_en != PIN_NONE) {
+    gpio_pin_set(target.rx_spi.lna_en);
+  }
+  if (target.rx_spi.tx_en != PIN_NONE) {
+    gpio_pin_reset(target.rx_spi.tx_en);
+  }
 }
 
 void cc2500_enter_txmode() {
-#if defined(USE_CC2500_PA_LNA)
-
-#if defined(CC2500_LNA_EN_PIN)
-  gpio_pin_reset(CC2500_LNA_EN_PIN);
-#endif
-
-  gpio_pin_set(CC2500_TX_EN_PIN);
-#endif
+  if (target.rx_spi.lna_en != PIN_NONE) {
+    gpio_pin_reset(target.rx_spi.lna_en);
+  }
+  if (target.rx_spi.tx_en != PIN_NONE) {
+    gpio_pin_set(target.rx_spi.tx_en);
+  }
 }
 
 void cc2500_set_power(uint8_t power) {
@@ -257,5 +272,3 @@ void cc2500_set_power(uint8_t power) {
 
   cc2500_write_reg(CC2500_PATABLE, patable[power]);
 }
-
-#endif
