@@ -29,12 +29,11 @@ void osd_device_init() {
     cols = HDZERO_COLS;
     rows = HDZERO_ROWS;
     hdzero_init();
-  } else if (target_spi_device_valid(&target.osd)) {
+  } else if (target_spi_device_valid(&target.osd) && max7456_init()) {
     target_set_feature(FEATURE_OSD);
     osd_device = OSD_DEVICE_MAX7456;
     cols = MAX7456_COLS;
     rows = MAX7456_ROWS;
-    max7456_init();
   } else {
     target_reset_feature(FEATURE_OSD);
   }
