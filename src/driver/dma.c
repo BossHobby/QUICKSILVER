@@ -90,11 +90,11 @@ typedef struct _dma_allocation {
   struct _dma_allocation *next;
 } __attribute__((aligned(DMA_ALIGN_SIZE))) dma_allocation_t;
 
-static DMA_RAM uint8_t buffer[DMA_ALLOC_BUFFER_SIZE];
+static DMA_RAM uint8_t dma_buffer[DMA_ALLOC_BUFFER_SIZE];
 
 void *dma_alloc(uint32_t min_size) {
   ATOMIC_BLOCK_ALL {
-    dma_allocation_t *alloc = (dma_allocation_t *)buffer;
+    dma_allocation_t *alloc = (dma_allocation_t *)dma_buffer;
     while (alloc != NULL) {
       if (alloc->free && alloc->size >= min_size) {
         break;
@@ -107,7 +107,7 @@ void *dma_alloc(uint32_t min_size) {
       }
       if (alloc->next == NULL) {
         dma_allocation_t *new_alloc = (dma_allocation_t *)((void *)(alloc) + sizeof(dma_allocation_t) + alloc->size);
-        if (((void *)(new_alloc) - (void *)(buffer)) >= DMA_ALLOC_BUFFER_SIZE) {
+        if (((void *)(new_alloc) - (void *)(dma_buffer)) >= DMA_ALLOC_BUFFER_SIZE) {
           failloop(FAILLOOP_FAULT);
         }
 
