@@ -1,10 +1,12 @@
 #include "rx/flysky.h"
 
-#if defined(RX_FLYSKY)
-#include "driver/spi_a7105.h"
 #include <string.h>
 
-//------------------------------------------------------------------------------
+#include "core/project.h"
+#include "driver/spi_a7105.h"
+
+#if defined(RX_FLYSKY)
+
 enum {
   AFHDS_NUM_CHANS = 8
 };
@@ -15,7 +17,6 @@ enum {
   PACKET_TYPE_BIND = 0xAA
 };
 
-//------------------------------------------------------------------------------
 // AFHDS packet structure
 typedef struct __attribute__((packed)) {
   uint8_t type; // PACKET_TYPE_CHANNEL_DATA or PACKET_TYPE_BIND
@@ -23,7 +24,6 @@ typedef struct __attribute__((packed)) {
   uint16_t channel_data[AFHDS_NUM_CHANS]; // little-endian, same as the STM32 running this program, but not aligned
 } afhds_pkt_t;
 
-//------------------------------------------------------------------------------
 static const uint8_t AFHDS_tx_channels[8][4] = {
     {0x12, 0x34, 0x56, 0x78},
     {0x18, 0x27, 0x36, 0x45},
@@ -34,7 +34,6 @@ static const uint8_t AFHDS_tx_channels[8][4] = {
     {0x71, 0x62, 0x84, 0x35},
     {0x71, 0x86, 0x43, 0x52}};
 
-//------------------------------------------------------------------------------
 // Reconstruct the hop table that the TX will be using based on the TX
 // identifier it sent us
 static void build_hop_table(uint32_t tx_id, uint8_t channel_map[16]) {
@@ -60,7 +59,6 @@ static void build_hop_table(uint32_t tx_id, uint8_t channel_map[16]) {
   }
 }
 
-//------------------------------------------------------------------------------
 // Retrieves packet from RX fifo and attempts to respond to it
 // If packet was available and processed, and we're bound, this returns 8
 // (the number of channels in an AFHDS packet), otherwise returns 0

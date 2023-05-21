@@ -1,12 +1,14 @@
 #include "rx/flysky.h"
 
-#if defined(RX_FLYSKY)
+#include <string.h>
+
+#include "core/project.h"
 #include "driver/spi_a7105.h"
 #include "driver/time.h"
 #include "flight/control.h" // for state.vbat_filtered
-#include <string.h>
 
-//------------------------------------------------------------------------------
+#if defined(RX_FLYSKY)
+
 enum {
   AFHDS2A_NUM_CHANS = 14
 };
@@ -27,7 +29,6 @@ enum {
   AFHDS2A_PACKET_TELEMETRY = 0xAA,
 };
 
-//------------------------------------------------------------------------------
 typedef struct __attribute__((packed)) {
   uint8_t type;
   uint8_t number;
@@ -59,7 +60,6 @@ typedef struct __attribute__((packed)) {
   uint16_t channel_data[AFHDS2A_NUM_CHANS]; // little-endian, same as the STM32 running this program, but not aligned
 } afhds2a_channel_pkt_t;
 
-//------------------------------------------------------------------------------
 // Prepares the provided telemetry packet and writes it into the a7105 fifo
 // for later transmission. Note: The tx_id, rx_id members of the packet should be
 // pre-initialized by caller; this is easily done by re-using the RX packet that
@@ -103,7 +103,6 @@ static void prepare_and_write_telemetry(afhds2a_tlm_pkt_t *tlm_pkt) {
   num_to_write = offsetof(afhds2a_tlm_pkt_t, sensor_data) + sizeof(sensor_data_t) * 2;
 }
 
-//------------------------------------------------------------------------------
 // Retrieves packet from RX fifo and attempts to respond to it
 // If channel packet was available and processed, and we're bound, this returns 14
 // (the number of channels in an AFHDS2A packet), otherwise returns 0

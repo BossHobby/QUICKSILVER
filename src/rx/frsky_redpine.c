@@ -7,9 +7,10 @@
 #include "driver/spi_cc2500.h"
 #include "driver/time.h"
 #include "flight/control.h"
+#include "rx/rx_spi.h"
 #include "util/util.h"
 
-#if defined(RX_FRSKY) && defined(USE_CC2500)
+#if defined(RX_FRSKY)
 
 #define LQI_FPS 500
 
@@ -22,7 +23,6 @@
 #define REDPINE_CHANNEL_START 3
 #define REDPINE_CHANNEL_COUNT 16
 
-extern uint8_t packet[128];
 extern uint8_t list_length;
 extern uint8_t protocol_state;
 
@@ -30,7 +30,6 @@ static uint8_t redpine_fast = 1;
 
 uint8_t frsky_extract_rssi(uint8_t rssi_raw);
 void frsky_handle_bind();
-void frsky_init();
 
 void handle_overflows();
 void calibrate_channels();
@@ -38,7 +37,7 @@ void set_address(uint8_t is_bind);
 uint8_t next_channel(uint8_t skip);
 
 static void redpine_set_rc_data() {
-  if (packet[REDPINE_CHANNEL_START] == 1 && packet[REDPINE_CHANNEL_START + 1] == 0) {
+  if (rx_spi_packet[REDPINE_CHANNEL_START] == 1 && rx_spi_packet[REDPINE_CHANNEL_START + 1] == 0) {
     // TODO: vtx command frame
     return;
   }
@@ -48,10 +47,10 @@ static void redpine_set_rc_data() {
   flags.failsafe = 0;
 
   const uint16_t channels[4] = {
-      (uint16_t)((packet[REDPINE_CHANNEL_START + 1] << 8) & 0x700) | packet[REDPINE_CHANNEL_START],
-      (uint16_t)((packet[REDPINE_CHANNEL_START + 2] << 4) & 0x7F0) | ((packet[REDPINE_CHANNEL_START + 1] >> 4) & 0xF),
-      (uint16_t)((packet[REDPINE_CHANNEL_START + 4] << 8) & 0x700) | packet[REDPINE_CHANNEL_START + 3],
-      (uint16_t)((packet[REDPINE_CHANNEL_START + 5] << 4) & 0x7F0) | ((packet[REDPINE_CHANNEL_START + 4] >> 4) & 0xF),
+      (uint16_t)((rx_spi_packet[REDPINE_CHANNEL_START + 1] << 8) & 0x700) | rx_spi_packet[REDPINE_CHANNEL_START],
+      (uint16_t)((rx_spi_packet[REDPINE_CHANNEL_START + 2] << 4) & 0x7F0) | ((rx_spi_packet[REDPINE_CHANNEL_START + 1] >> 4) & 0xF),
+      (uint16_t)((rx_spi_packet[REDPINE_CHANNEL_START + 4] << 8) & 0x700) | rx_spi_packet[REDPINE_CHANNEL_START + 3],
+      (uint16_t)((rx_spi_packet[REDPINE_CHANNEL_START + 5] << 4) & 0x7F0) | ((rx_spi_packet[REDPINE_CHANNEL_START + 4] >> 4) & 0xF),
   };
 
   // AETR channel order
@@ -64,18 +63,18 @@ static void redpine_set_rc_data() {
   rx_map_channels(rc_channels);
 
   // Here we have the AUX channels Silverware supports
-  state.aux[AUX_CHANNEL_0] = (packet[REDPINE_CHANNEL_START + 1] & 0x08) ? 1 : 0;
-  state.aux[AUX_CHANNEL_1] = (packet[REDPINE_CHANNEL_START + 2] & 0x80) ? 1 : 0;
-  state.aux[AUX_CHANNEL_2] = (packet[REDPINE_CHANNEL_START + 4] & 0x08) ? 1 : 0;
-  state.aux[AUX_CHANNEL_3] = (packet[REDPINE_CHANNEL_START + 5] & 0x80) ? 1 : 0;
-  state.aux[AUX_CHANNEL_4] = (packet[REDPINE_CHANNEL_START + 6] & 0x01) ? 1 : 0;
-  state.aux[AUX_CHANNEL_5] = (packet[REDPINE_CHANNEL_START + 6] & 0x02) ? 1 : 0;
-  state.aux[AUX_CHANNEL_6] = (packet[REDPINE_CHANNEL_START + 6] & 0x04) ? 1 : 0;
-  state.aux[AUX_CHANNEL_7] = (packet[REDPINE_CHANNEL_START + 6] & 0x08) ? 1 : 0;
-  state.aux[AUX_CHANNEL_8] = (packet[REDPINE_CHANNEL_START + 6] & 0x10) ? 1 : 0;
-  state.aux[AUX_CHANNEL_9] = (packet[REDPINE_CHANNEL_START + 6] & 0x20) ? 1 : 0;
-  state.aux[AUX_CHANNEL_10] = (packet[REDPINE_CHANNEL_START + 6] & 0x40) ? 1 : 0;
-  state.aux[AUX_CHANNEL_11] = (packet[REDPINE_CHANNEL_START + 6] & 0x80) ? 1 : 0;
+  state.aux[AUX_CHANNEL_0] = (rx_spi_packet[REDPINE_CHANNEL_START + 1] & 0x08) ? 1 : 0;
+  state.aux[AUX_CHANNEL_1] = (rx_spi_packet[REDPINE_CHANNEL_START + 2] & 0x80) ? 1 : 0;
+  state.aux[AUX_CHANNEL_2] = (rx_spi_packet[REDPINE_CHANNEL_START + 4] & 0x08) ? 1 : 0;
+  state.aux[AUX_CHANNEL_3] = (rx_spi_packet[REDPINE_CHANNEL_START + 5] & 0x80) ? 1 : 0;
+  state.aux[AUX_CHANNEL_4] = (rx_spi_packet[REDPINE_CHANNEL_START + 6] & 0x01) ? 1 : 0;
+  state.aux[AUX_CHANNEL_5] = (rx_spi_packet[REDPINE_CHANNEL_START + 6] & 0x02) ? 1 : 0;
+  state.aux[AUX_CHANNEL_6] = (rx_spi_packet[REDPINE_CHANNEL_START + 6] & 0x04) ? 1 : 0;
+  state.aux[AUX_CHANNEL_7] = (rx_spi_packet[REDPINE_CHANNEL_START + 6] & 0x08) ? 1 : 0;
+  state.aux[AUX_CHANNEL_8] = (rx_spi_packet[REDPINE_CHANNEL_START + 6] & 0x10) ? 1 : 0;
+  state.aux[AUX_CHANNEL_9] = (rx_spi_packet[REDPINE_CHANNEL_START + 6] & 0x20) ? 1 : 0;
+  state.aux[AUX_CHANNEL_10] = (rx_spi_packet[REDPINE_CHANNEL_START + 6] & 0x40) ? 1 : 0;
+  state.aux[AUX_CHANNEL_11] = (rx_spi_packet[REDPINE_CHANNEL_START + 6] & 0x80) ? 1 : 0;
 
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
     state.rx_rssi = 0.f;
@@ -114,16 +113,16 @@ static uint8_t redpine_handle_packet() {
 
     uint8_t len = cc2500_packet_size();
     if (len == REDPINE_PACKET_SIZE_W_ADDONS) {
-      cc2500_read_fifo(packet, len);
+      cc2500_read_fifo((uint8_t *)rx_spi_packet, len);
 
-      if ((packet[0] == REDPINE_PACKET_SIZE - 1) &&
-          (packet[1] == bind_storage.frsky.tx_id[0]) &&
-          (packet[2] == bind_storage.frsky.tx_id[1])) {
+      if ((rx_spi_packet[0] == REDPINE_PACKET_SIZE - 1) &&
+          (rx_spi_packet[1] == bind_storage.frsky.tx_id[0]) &&
+          (rx_spi_packet[2] == bind_storage.frsky.tx_id[1])) {
 
         if (redpine_fast) {
-          max_sync_delay = packet[REDPINE_CHANNEL_START + 7] * 100;
+          max_sync_delay = rx_spi_packet[REDPINE_CHANNEL_START + 7] * 100;
         } else {
-          max_sync_delay = packet[REDPINE_CHANNEL_START + 7] * 1000;
+          max_sync_delay = rx_spi_packet[REDPINE_CHANNEL_START + 7] * 1000;
         }
 
         max_sync_delay += max_sync_delay / 8;
@@ -137,7 +136,7 @@ static uint8_t redpine_handle_packet() {
 
         rx_lqi_got_packet();
         if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-          rx_lqi_update_direct(frsky_extract_rssi(packet[REDPINE_PACKET_SIZE_W_ADDONS - 2]));
+          rx_lqi_update_direct(frsky_extract_rssi(rx_spi_packet[REDPINE_PACKET_SIZE_W_ADDONS - 2]));
         }
 
         frames_lost = 0;
@@ -190,20 +189,18 @@ static uint8_t redpine_handle_packet() {
 }
 
 void rx_redpine_init() {
-  if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
+  if (!frsky_init()) {
     return;
+  }
 
-  frsky_init();
-  cc2500_init();
-
-#ifdef CC2500_GDO0_PIN
-  // enable gdo0 on read
-  cc2500_write_reg(CC2500_IOCFG0, 0x01);
-#else
-  // use gdo0 to turn lna on
-  cc2500_write_reg(CC2500_IOCFG0, 0x2F);
-  cc2500_write_reg(CC2500_IOCFG2, 0x2F | 0x40);
-#endif
+  if (target.rx_spi.exti != PIN_NONE) {
+    // enable gdo0 on read
+    cc2500_write_reg(CC2500_IOCFG0, 0x01);
+  } else {
+    // use gdo0 to turn lna on
+    cc2500_write_reg(CC2500_IOCFG0, 0x2F);
+    cc2500_write_reg(CC2500_IOCFG2, 0x2F | 0x40);
+  }
 
   cc2500_write_reg(CC2500_PKTLEN, REDPINE_PACKET_SIZE); // max packet lenght of 25
   cc2500_write_reg(CC2500_PKTCTRL1, 0x0C);              // only append status

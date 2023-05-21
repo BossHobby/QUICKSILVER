@@ -9,9 +9,8 @@
 #include "rx/rx_spi.h"
 #include "util/util.h"
 
-#if defined(RX_FRSKY) && defined(USE_CC2500)
+#if defined(RX_FRSKY)
 
-uint8_t packet[128];
 uint8_t protocol_state = FRSKY_STATE_DETECT;
 uint8_t list_length = 0;
 
@@ -27,15 +26,6 @@ uint8_t frsky_extract_rssi(uint8_t rssi_raw) {
   } else {
     return ((((uint16_t)rssi_raw) * 18) >> 5) + 65;
   }
-}
-
-static uint8_t frsky_dectect() {
-  const uint8_t chipPartNum = cc2500_read_reg(CC2500_PARTNUM | CC2500_READ_BURST); // CC2500 read registers chip part num
-  const uint8_t chipVersion = cc2500_read_reg(CC2500_VERSION | CC2500_READ_BURST); // CC2500 read registers chip version
-  if (chipPartNum == 0x80 && chipVersion == 0x03) {
-    return 1;
-  }
-  return 0;
 }
 
 void handle_overflows() {
@@ -100,7 +90,7 @@ static uint8_t read_packet() {
   if (len == 0) {
     return 0;
   }
-  cc2500_read_fifo(packet, len);
+  cc2500_read_fifo((uint8_t *)rx_spi_packet, len);
   return len;
 }
 
@@ -148,10 +138,10 @@ static uint8_t tune_rx() {
     return 0;
   }
 
-  if (packet[len - 1] & 0x80) {
-    if (packet[2] == 0x01) {
-      uint8_t lqi = packet[len - 1] & 0x7F;
-      packet[len - 1] = 0x0;
+  if (rx_spi_packet[len - 1] & 0x80) {
+    if (rx_spi_packet[2] == 0x01) {
+      uint8_t lqi = rx_spi_packet[len - 1] & 0x7F;
+      rx_spi_packet[len - 1] = 0x0;
 
       // higher lqi represent better link quality
       if (lqi > 50) {
@@ -184,18 +174,18 @@ static uint8_t get_bind() {
     return 0;
   }
 
-  if (packet[len - 1] & 0x80 && packet[2] == 0x01) {
-    quic_debugf("FRSKY: bind packet idx %d vs %d", packet[5], bind_storage.frsky.idx);
-    if (packet[5] == 0x00) {
-      bind_storage.frsky.tx_id[0] = packet[3];
-      bind_storage.frsky.tx_id[1] = packet[4];
-      bind_storage.frsky.rx_num = packet[12];
+  if (rx_spi_packet[len - 1] & 0x80 && rx_spi_packet[2] == 0x01) {
+    quic_debugf("FRSKY: bind packet idx %d vs %d", rx_spi_packet[5], bind_storage.frsky.idx);
+    if (rx_spi_packet[5] == 0x00) {
+      bind_storage.frsky.tx_id[0] = rx_spi_packet[3];
+      bind_storage.frsky.tx_id[1] = rx_spi_packet[4];
+      bind_storage.frsky.rx_num = rx_spi_packet[12];
       quic_debugf("FRSKY: bind packet tx_id %d,%d rx_num %d", bind_storage.frsky.tx_id[0], bind_storage.frsky.tx_id[1], bind_storage.frsky.rx_num);
     }
 
-    if (packet[5] == bind_storage.frsky.idx) {
+    if (rx_spi_packet[5] == bind_storage.frsky.idx) {
       for (uint8_t n = 0; n < 5; n++) {
-        bind_storage.frsky.hop_data[packet[5] + n] = packet[6 + n];
+        bind_storage.frsky.hop_data[rx_spi_packet[5] + n] = rx_spi_packet[6 + n];
       }
       bind_storage.frsky.idx += 5;
     }
@@ -226,16 +216,20 @@ void calibrate_channels() {
   cc2500_strobe(CC2500_SIDLE);
 }
 
-void frsky_init() {
+bool frsky_init() {
+  if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk) {
+    return false;
+  }
+  if (!cc2500_init()) {
+    return false;
+  }
   protocol_state = FRSKY_STATE_INIT;
+  return true;
 }
 
 void frsky_handle_bind() {
   switch (protocol_state) {
   case FRSKY_STATE_DETECT:
-    if (frsky_dectect()) {
-      protocol_state = FRSKY_STATE_INIT;
-    }
     break;
   case FRSKY_STATE_INIT:
     cc2500_enter_rxmode();
@@ -289,7 +283,7 @@ void frsky_handle_bind() {
   }
   case FRSKY_STATE_BIND_BINDING:
     handle_overflows();
-    if (get_bind(packet)) {
+    if (get_bind()) {
       protocol_state = FRSKY_STATE_BIND_COMPLETE;
     }
     break;

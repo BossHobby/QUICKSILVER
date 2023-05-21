@@ -2,9 +2,10 @@
 
 #include <string.h>
 
+#include "core/project.h"
 #include "util/util.h"
 
-#if defined(RX_EXPRESS_LRS) && defined(USE_SX128X)
+#if defined(RX_EXPRESS_LRS)
 
 typedef enum {
   SENDER_IDLE = 0,
