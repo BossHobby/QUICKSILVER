@@ -19,7 +19,8 @@ typedef enum {
   QUIC_CMD_BLACKBOX,
   QUIC_CMD_MOTOR,
   QUIC_CMD_CAL_STICKS,
-  QUIC_CMD_SERIAL
+  QUIC_CMD_SERIAL,
+  QUIC_CMD_OSD,
 } quic_command;
 
 typedef enum {
@@ -41,6 +42,11 @@ typedef enum {
 } quic_serial_command;
 
 typedef enum {
+  QUIC_OSD_READ_CHAR,
+  QUIC_OSD_WRITE_CHAR,
+} quic_osd_command;
+
+typedef enum {
   QUIC_FLAG_NONE,
   QUIC_FLAG_ERROR,
   QUIC_FLAG_STREAMING,
@@ -55,7 +61,7 @@ typedef enum {
   QUIC_VAL_STATE,
   QUIC_VAL_PID_RATE_PRESETS,
   QUIC_VAL_VTX_SETTINGS,
-  QUIC_VAL_OSD_FONT,
+  QUIC_VAL_OSD_FONT, // deprecated
   QUIC_VAL_BLHEL_SETTINGS,
   QUIC_VAL_BIND_INFO,
   QUIC_VAL_PERF_COUNTERS,
