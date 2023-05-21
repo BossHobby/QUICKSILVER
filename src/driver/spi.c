@@ -52,6 +52,7 @@ const spi_port_def_t spi_port_defs[SPI_PORT_MAX] = {
 
 FAST_RAM static volatile spi_port_config_t spi_port_config[SPI_PORT_MAX];
 FAST_RAM static volatile uint8_t dma_transfer_done[16] = {[0 ... 15] = 1};
+FAST_RAM static spi_txn_t txn_pool[SPI_TXN_MAX];
 
 #define PORT spi_port_defs[port]
 
@@ -357,8 +358,8 @@ void spi_bus_device_reconfigure(spi_bus_device_t *bus, spi_mode_t mode, uint32_t
 static spi_txn_t *spi_txn_pop(spi_bus_device_t *bus) {
   ATOMIC_BLOCK_ALL {
     for (uint32_t i = 0; i < SPI_TXN_MAX; i++) {
-      if (bus->txn_pool[i].status == TXN_IDLE) {
-        spi_txn_t *txn = &bus->txn_pool[i];
+      if (txn_pool[i].status == TXN_IDLE) {
+        spi_txn_t *txn = &txn_pool[i];
         txn->status = TXN_WAITING;
         return txn;
       }
