@@ -95,7 +95,7 @@ enum cc2500_modifiers {
   CC2500_READ_BURST = 0xC0,
 };
 
-void cc2500_init();
+bool cc2500_init();
 void cc2500_reset();
 void cc2500_strobe(uint8_t address);
 void cc2500_strobe_sync(uint8_t address);

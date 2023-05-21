@@ -13,9 +13,10 @@
 #include "io/msp.h"
 #include "io/usb_configurator.h"
 #include "rx/crsf.h"
+#include "rx/rx_spi.h"
 #include "util/util.h"
 
-#if defined(RX_EXPRESS_LRS) && defined(USE_SX128X)
+#if defined(RX_EXPRESS_LRS)
 
 #define ELRS_CRC14_POLY 0x2E57 // 0x372B
 #define ELRS_CRC16_POLY 0x3D65 // 0x9eb2
@@ -79,7 +80,6 @@ extern uint8_t tlm_ratio_enum_to_value(expresslrs_tlm_ratio_t val);
 extern uint16_t rate_enum_to_hz(expresslrs_rf_rates_t val);
 
 volatile uint32_t packet_time = 0;
-volatile uint8_t packet[ELRS_BUFFER_SIZE];
 elrs_timer_state_t elrs_timer_state = TIMER_DISCONNECTED;
 volatile uint8_t ota_nonce = 0;
 
@@ -165,7 +165,7 @@ static bool elrs_hop() {
 
   const uint8_t tlm_mod = (ota_nonce + 1) % tlm_denom;
   if (tlm_mod != 0 || tlm_denom == 1) {
-    elrs_enter_rx(packet);
+    elrs_enter_rx(rx_spi_packet);
   }
   return true;
 }
@@ -182,18 +182,18 @@ static bool elrs_tlm() {
 
   rx_lqi_got_packet();
 
-  memset((uint8_t *)packet, 0, current_air_rate_config()->payload_len);
+  memset((uint8_t *)rx_spi_packet, 0, current_air_rate_config()->payload_len);
 
-  packet[0] = TLM_PACKET;
+  rx_spi_packet[0] = TLM_PACKET;
   already_tlm = true;
 
   if (next_tlm_type == TELEMETRY_TYPE_LINK || !elrs_tlm_sender_active()) {
-    packet[1] = TELEMETRY_TYPE_LINK;
-    packet[2] = -rssi;                                                    // rssi
-    packet[3] = (has_model_match << 7);                                   // no diversity
-    packet[4] = uplink_lq | ((elrs_tlm_receiver_confirm() ? 1 : 0) << 7); // uplink_lq &&  msq confirm
-    packet[5] = elrs_snr_mean_get(-16);
-    packet[6] = 0;
+    rx_spi_packet[1] = TELEMETRY_TYPE_LINK;
+    rx_spi_packet[2] = -rssi;                                                    // rssi
+    rx_spi_packet[3] = (has_model_match << 7);                                   // no diversity
+    rx_spi_packet[4] = uplink_lq | ((elrs_tlm_receiver_confirm() ? 1 : 0) << 7); // uplink_lq &&  msq confirm
+    rx_spi_packet[5] = elrs_snr_mean_get(-16);
+    rx_spi_packet[6] = 0;
 
     next_tlm_type = TELEMETRY_TYPE_DATA;
     tlm_burst_count = 1;
@@ -204,15 +204,15 @@ static bool elrs_tlm() {
       next_tlm_type = TELEMETRY_TYPE_LINK;
     }
 
-    const uint8_t package_index = elrs_tlm_sender_current_payload((uint8_t *)packet + 2, 5);
-    packet[1] = (package_index << ELRS_TELEMETRY_SHIFT) + TELEMETRY_TYPE_DATA;
+    const uint8_t package_index = elrs_tlm_sender_current_payload((uint8_t *)rx_spi_packet + 2, 5);
+    rx_spi_packet[1] = (package_index << ELRS_TELEMETRY_SHIFT) + TELEMETRY_TYPE_DATA;
   }
 
-  const uint16_t crc = elrs_crc_calc(packet, 7, crc_initializer);
-  packet[0] |= (crc >> 6) & 0xFC;
-  packet[7] = crc & 0xFF;
+  const uint16_t crc = elrs_crc_calc(rx_spi_packet, 7, crc_initializer);
+  rx_spi_packet[0] |= (crc >> 6) & 0xFC;
+  rx_spi_packet[7] = crc & 0xFF;
 
-  elrs_enter_tx(packet, current_air_rate_config()->payload_len);
+  elrs_enter_tx(rx_spi_packet, current_air_rate_config()->payload_len);
 
   return true;
 }
@@ -301,21 +301,21 @@ static void elrs_update_telemetry() {
 }
 
 static bool elrs_vaild_packet() {
-  elrs_read_packet(packet);
+  elrs_read_packet(rx_spi_packet);
 
-  const uint8_t type = packet[0] & 0b11;
-  const uint16_t their_crc = (((uint16_t)(packet[0] & 0b11111100)) << 6) | packet[7];
+  const uint8_t type = rx_spi_packet[0] & 0b11;
+  const uint16_t their_crc = (((uint16_t)(rx_spi_packet[0] & 0b11111100)) << 6) | rx_spi_packet[7];
 
-  // For smHybrid the CRC only has the packet type in byte 0
+  // For smHybrid the CRC only has the rx_spi_packet type in byte 0
   // For smHybridWide the FHSS slot is added to the CRC in byte 0 on RC_DATA_PACKETs
   if (type == RC_DATA_PACKET && bind_storage.elrs.switch_mode == SWITCH_WIDE_OR_8CH) {
     const uint8_t fhss_result = (ota_nonce % current_air_rate_config()->fhss_hop_interval) + 1;
-    packet[0] = type | (fhss_result << 2);
+    rx_spi_packet[0] = type | (fhss_result << 2);
   } else {
-    packet[0] = type;
+    rx_spi_packet[0] = type;
   }
 
-  const uint16_t our_crc = elrs_crc_calc(packet, OTA4_CRC_CALC_LEN, crc_initializer);
+  const uint16_t our_crc = elrs_crc_calc(rx_spi_packet, OTA4_CRC_CALC_LEN, crc_initializer);
 
   return their_crc == our_crc;
 }
@@ -337,7 +337,7 @@ static void elrs_connection_lost() {
   elrs_phase_reset();
 
   elrs_set_rate(next_rate, fhss_get_sync_freq(), UID[5] & 0x01, elrs_get_uid_mac_seed(), crc_initializer);
-  elrs_enter_rx(packet);
+  elrs_enter_rx(rx_spi_packet);
 }
 
 static void elrs_connection_tentative(uint32_t now) {
@@ -392,7 +392,7 @@ static void elrs_cycle_rf_mode(uint32_t now) {
   elrs_phase_reset();
 
   elrs_set_rate(next_rate, fhss_get_sync_freq(), UID[5] & 0x01, elrs_get_uid_mac_seed(), crc_initializer);
-  elrs_enter_rx(packet);
+  elrs_enter_rx(rx_spi_packet);
 
   rf_mode_cycle_multiplier = 1;
 }
@@ -418,7 +418,7 @@ static void elrs_enter_binding_mode() {
   next_rate = ERLS_RATE_BIND;
 
   elrs_set_rate(next_rate, fhss_get_sync_freq(), UID[5] & 0x01, elrs_get_uid_mac_seed(), crc_initializer);
-  elrs_enter_rx(packet);
+  elrs_enter_rx(rx_spi_packet);
 }
 
 static void elrs_setup_bind(const volatile uint8_t *packet) {
@@ -485,8 +485,8 @@ static void elrs_sample_aux0(bool aux0_value) {
   last_aux0_value = aux0_value;
 }
 
-static bool elrs_unpack_switches_hybrid(const volatile uint8_t *packet) {
-  const uint8_t switch_byte = packet[6];
+static bool elrs_unpack_switches_hybrid(const volatile uint8_t *rx_spi_packet) {
+  const uint8_t switch_byte = rx_spi_packet[6];
 
   elrs_sample_aux0((switch_byte & 0b10000000));
 
@@ -639,29 +639,29 @@ static bool elrs_process_packet(uint32_t packet_time) {
 
   rf_mode_cycle_multiplier = RF_MODE_CYCLE_MULTIPLIER_SLOW;
 
-  const uint8_t type = packet[0] & 0b11;
+  const uint8_t type = rx_spi_packet[0] & 0b11;
   switch (type) {
   case SYNC_PACKET: {
-    if (packet[4] != UID[3] || packet[5] != UID[4]) {
+    if (rx_spi_packet[4] != UID[3] || rx_spi_packet[5] != UID[4]) {
       break;
     }
 
-    if ((packet[6] & ~MODELMATCH_MASK) != (UID[5] & ~MODELMATCH_MASK)) {
+    if ((rx_spi_packet[6] & ~MODELMATCH_MASK) != (UID[5] & ~MODELMATCH_MASK)) {
       break;
     }
 
     sync_packet_millis = time_millis();
 
-    next_rate = ((packet[3] & 0b11110000) >> 4);
+    next_rate = ((rx_spi_packet[3] & 0b11110000) >> 4);
 
     // Switch mode can only change when disconnected, and happens on the main thread
     if (elrs_state == DISCONNECTED) {
       // Add one to the mode because next_switch_mode_pending==0 means no switch pending
       // and that's also a valid switch mode. The 1 is removed when this is handled
-      next_switch_mode_pending = (packet[3] & 0b1) + 1;
+      next_switch_mode_pending = (rx_spi_packet[3] & 0b1) + 1;
     }
 
-    const uint8_t telemetry_rate_index = TLM_RATIO_NO_TLM + ((packet[3] & 0b00001110) >> 1);
+    const uint8_t telemetry_rate_index = TLM_RATIO_NO_TLM + ((rx_spi_packet[3] & 0b00001110) >> 1);
     const uint8_t new_tlm_denom = tlm_ratio_enum_to_value(telemetry_rate_index);
     if (new_tlm_denom != tlm_denom) {
       tlm_denom = new_tlm_denom;
@@ -669,15 +669,15 @@ static bool elrs_process_packet(uint32_t packet_time) {
     }
 
     const uint8_t model_xor = (~elrs_get_model_id()) & MODELMATCH_MASK;
-    const bool model_match = packet[6] == (UID[5] ^ model_xor);
+    const bool model_match = rx_spi_packet[6] == (UID[5] ^ model_xor);
 
     if (elrs_state == DISCONNECTED ||
-        (ota_nonce != packet[2]) ||
-        (fhss_get_index() != packet[1]) ||
+        (ota_nonce != rx_spi_packet[2]) ||
+        (fhss_get_index() != rx_spi_packet[1]) ||
         (has_model_match != model_match)) {
 
-      fhss_set_index(packet[1]);
-      ota_nonce = packet[2];
+      fhss_set_index(rx_spi_packet[1]);
+      ota_nonce = rx_spi_packet[2];
 
       elrs_connection_tentative(time_millis());
 
@@ -692,7 +692,7 @@ static bool elrs_process_packet(uint32_t packet_time) {
     }
 
     uint32_t crsf_channels[4];
-    elrs_unpack_channels(crsf_channels, (uint8_t *)packet + 1);
+    elrs_unpack_channels(crsf_channels, (uint8_t *)rx_spi_packet + 1);
 
     // AETR channel order
     const float channels[4] = {
@@ -711,11 +711,11 @@ static bool elrs_process_packet(uint32_t packet_time) {
     switch (bind_storage.elrs.switch_mode) {
     default:
     case SWITCH_WIDE_OR_8CH:
-      tlm_confirm = elrs_unpack_switches_wide(packet);
+      tlm_confirm = elrs_unpack_switches_wide(rx_spi_packet);
       break;
 
     case SWITCH_HYBRID_OR_16CH:
-      tlm_confirm = elrs_unpack_switches_hybrid(packet);
+      tlm_confirm = elrs_unpack_switches_hybrid(rx_spi_packet);
       break;
     }
 
@@ -723,8 +723,8 @@ static bool elrs_process_packet(uint32_t packet_time) {
     break;
   }
   case MSP_DATA_PACKET: {
-    if (in_binding_mode && packet[1] == 1 && packet[2] == MSP_ELRS_BIND) {
-      elrs_setup_bind(packet);
+    if (in_binding_mode && rx_spi_packet[1] == 1 && rx_spi_packet[2] == MSP_ELRS_BIND) {
+      elrs_setup_bind(rx_spi_packet);
       break;
     }
 
@@ -733,7 +733,7 @@ static bool elrs_process_packet(uint32_t packet_time) {
     }
 
     const bool confirm = elrs_tlm_receiver_confirm();
-    elrs_tlm_receiver_receive_data(packet[1], (uint8_t *)packet + 2, 5);
+    elrs_tlm_receiver_receive_data(rx_spi_packet[1], (uint8_t *)rx_spi_packet + 2, 5);
     if (confirm != elrs_tlm_receiver_confirm()) {
       next_tlm_type = TELEMETRY_TYPE_LINK;
     }
@@ -804,7 +804,7 @@ void rx_expresslrs_init() {
   elrs_set_rate(next_rate, fhss_get_sync_freq(), (UID[5] & 0x01), elrs_get_uid_mac_seed(), crc_initializer);
   elrs_set_switch_mode(SWITCH_WIDE_OR_8CH, current_air_rate_config()->payload_len);
   elrs_timer_init(current_air_rate_config()->interval);
-  elrs_enter_rx(packet);
+  elrs_enter_rx(rx_spi_packet);
 
   radio_is_init = true;
   in_binding_mode = false;

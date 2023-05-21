@@ -1,21 +1,21 @@
 #include "rx/flysky.h"
 
-#if defined(RX_FLYSKY)
+#include <string.h>
+
 #include "core/flash.h"
+#include "core/project.h"
 #include "driver/spi_a7105.h"
 #include "driver/time.h"
 #include "flight/control.h" // for state
 #include "util/util.h"
-#include <string.h>
 
-//------------------------------------------------------------------------------
+#if defined(RX_FLYSKY)
+
 #define AFHDS_BIND_CHANNEL 0x00
 #define AFHDS2A_BIND_CHANNEL 0x0D
 
-//------------------------------------------------------------------------------
 rx_flsky_data_t flysky;
 
-//------------------------------------------------------------------------------
 // Advances current channel index by the specified step amount and then returns
 // the corresponding frequency from our hop table
 uint8_t flysky_get_next_channel(uint8_t step) {
@@ -23,7 +23,6 @@ uint8_t flysky_get_next_channel(uint8_t step) {
   return flysky.rx_channel_map[flysky.channel_index];
 }
 
-//------------------------------------------------------------------------------
 // Called everytime we've successfully processed an RX packet
 void flysky_processed_pkt(uint32_t timestamp) {
   flysky.processed_pkt_count++;
@@ -32,13 +31,11 @@ void flysky_processed_pkt(uint32_t timestamp) {
   flysky.num_timeouts = 0;
 }
 
-//------------------------------------------------------------------------------
 // Returns bind data that was previously stored into flash memory
 rx_flysky_bind_data_t *flysky_get_bind_data() {
   return &bind_storage.flysky;
 }
 
-//------------------------------------------------------------------------------
 // Channel values are in the range of 1000 to 2000 inclusive (but can be as low
 // as 988 and high as 2020). So we convert to range -1.0f to +1.0f and clamp
 static float rescale_aetr(int v) {
@@ -51,7 +48,6 @@ static float rescale_aetr(int v) {
   return v * 0.002f;
 }
 
-//------------------------------------------------------------------------------
 // Checks if RX or TX has completed. If TX complete then switch to RX mode
 // else if RX complete, process the packet.
 //
@@ -148,7 +144,6 @@ static uint8_t flysky_check_packet() {
   return result;
 }
 
-//------------------------------------------------------------------------------
 // Periodic RX check function. Used for both AFHDS and AFHDS2A protocols
 // Called once every main loop iteration
 static bool rx_flysky_check(void) {
@@ -208,7 +203,6 @@ static bool rx_flysky_check(void) {
   return channels_received;
 }
 
-//------------------------------------------------------------------------------
 static void rx_flysky_init_common(uint8_t start_channel) {
   state.rx_status = RX_SPI_STATUS_BINDING;
   flysky.channel_index = 0;
@@ -233,7 +227,6 @@ static void rx_flysky_init_common(uint8_t start_channel) {
   flysky_processed_pkt(time_micros());
 }
 
-//------------------------------------------------------------------------------
 void rx_flysky_afhds_init() {
   flysky.protocol = RX_PROTOCOL_FLYSKY_AFHDS;
   flysky.expected_fps = 1000000.0f / 1500.0f;
@@ -253,7 +246,6 @@ void rx_flysky_afhds_init() {
   rx_flysky_init_common(AFHDS_BIND_CHANNEL);
 }
 
-//------------------------------------------------------------------------------
 void rx_flysky_afhds2a_init() {
   flysky.protocol = RX_PROTOCOL_FLYSKY_AFHDS2A;
   flysky.expected_fps = 1000000.0f / 3850.0f;
@@ -274,12 +266,15 @@ void rx_flysky_afhds2a_init() {
   rx_flysky_init_common(AFHDS2A_BIND_CHANNEL);
 }
 
-//------------------------------------------------------------------------------
 bool rx_flysky_afhds_check() {
   return rx_flysky_check();
 }
 bool rx_flysky_afhds2a_check() {
   return rx_flysky_check();
+}
+
+bool flysky_detect() {
+  return a7105_detect();
 }
 
 #endif

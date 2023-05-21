@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #define SX1280_REG_FREQ_ERR_CORRECTION 0x93C
@@ -213,7 +214,7 @@ typedef enum {
   SX1280_FLRC_PKT_ERROR_SYNC = 1 << 6,
 } sx128x_radio_flrc_crc_t;
 
-void sx128x_init();
+bool sx128x_init();
 void sx128x_reset();
 void sx128x_wait();
 

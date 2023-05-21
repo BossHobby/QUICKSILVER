@@ -7,16 +7,12 @@
 #include "driver/exti.h"
 #include "driver/spi.h"
 #include "driver/time.h"
+#include "rx/rx_spi.h"
 #include "util/util.h"
-
-#if defined(USE_SX128X)
 
 static bool sx128x_poll_for_not_busy();
 
 FAST_RAM static spi_bus_device_t bus = {
-    .port = SX12XX_SPI_PORT,
-    .nss = SX12XX_NSS_PIN,
-
     .auto_continue = true,
     .poll_fn = sx128x_poll_for_not_busy,
 };
@@ -28,37 +24,54 @@ static uint32_t busy_timeout = 1000;
 static uint8_t payload_len = 8;
 
 extern volatile uint32_t packet_time;
-extern volatile uint8_t packet[16];
 extern volatile uint8_t packet_status[2];
 
-void sx128x_init() {
+static bool sx128x_spi_device_valid(const target_rx_spi_device_t *dev) {
+  if (dev->port == SPI_PORT_INVALID || dev->nss == PIN_NONE) {
+    return false;
+  }
+  if (target.rx_spi.reset == PIN_NONE || target.rx_spi.busy == PIN_NONE || target.rx_spi.exti == PIN_NONE) {
+    return false;
+  }
+  return true;
+}
+
+bool sx128x_init() {
+  if (!sx128x_spi_device_valid(&target.rx_spi)) {
+    return false;
+  }
+
   LL_GPIO_InitTypeDef gpio_init;
   gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_pin_init(&gpio_init, SX12XX_RESET_PIN);
-
-  spi_bus_device_init(&bus);
-  spi_bus_device_reconfigure(&bus, true, MHZ_TO_HZ(10));
+  gpio_pin_init(&gpio_init, target.rx_spi.reset);
 
   gpio_init.Mode = LL_GPIO_MODE_INPUT;
   gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
   gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_pin_init(&gpio_init, SX12XX_BUSY_PIN);
-#ifdef USE_SX128X_BUSY_EXTI
-  exti_enable(SX12XX_BUSY_PIN, LL_EXTI_TRIGGER_FALLING);
-#endif
+  gpio_pin_init(&gpio_init, target.rx_spi.busy);
+  if (target.rx_spi.busy_exti) {
+    exti_enable(target.rx_spi.busy, LL_EXTI_TRIGGER_FALLING);
+  }
 
-  gpio_pin_init(&gpio_init, SX12XX_DIO0_PIN);
-  exti_enable(SX12XX_DIO0_PIN, LL_EXTI_TRIGGER_RISING);
+  gpio_pin_init(&gpio_init, target.rx_spi.exti);
+  exti_enable(target.rx_spi.exti, LL_EXTI_TRIGGER_RISING);
+
+  bus.port = target.rx_spi.port;
+  bus.nss = target.rx_spi.nss;
+  spi_bus_device_init(&bus);
+  spi_bus_device_reconfigure(&bus, true, MHZ_TO_HZ(10));
+
+  return true;
 }
 
 void sx128x_reset() {
-  gpio_pin_reset(SX12XX_RESET_PIN);
+  gpio_pin_reset(target.rx_spi.reset);
   time_delay_us(50);
-  gpio_pin_set(SX12XX_RESET_PIN);
+  gpio_pin_set(target.rx_spi.reset);
   time_delay_us(10);
 }
 
@@ -67,13 +80,14 @@ void sx128x_set_busy_timeout(uint32_t timeout) {
 }
 
 static bool sx128x_is_busy() {
-  return gpio_pin_read(SX12XX_BUSY_PIN);
+  return gpio_pin_read(target.rx_spi.busy);
 }
 
 static bool sx128x_poll_for_not_busy() {
-#ifdef USE_SX128X_BUSY_EXTI
-  return !sx128x_is_busy();
-#else
+  if (target.rx_spi.busy_exti) {
+    return !sx128x_is_busy();
+  }
+
   const uint32_t start = time_micros();
   while (sx128x_is_busy()) {
     if ((time_micros() - start) > busy_timeout) {
@@ -82,7 +96,6 @@ static bool sx128x_poll_for_not_busy() {
     __NOP();
   }
   return true;
-#endif
 }
 
 #define read_command_txn(cmd, data, size) \
@@ -108,7 +121,7 @@ static void sx128x_handle_irq_status() {
           spi_make_seg_const(SX1280_RADIO_READ_BUFFER),
           spi_make_seg_delay(NULL, buffer_status + 1, 1),
           spi_make_seg_const(0x00),
-          spi_make_seg_buffer((uint8_t *)packet, NULL, payload_len),
+          spi_make_seg_buffer((uint8_t *)rx_spi_packet, NULL, payload_len),
       };
       spi_seg_submit(&bus, NULL, segs);
     }
@@ -127,13 +140,13 @@ void sx128x_wait() {
   uint32_t start = time_micros();
   while (!spi_txn_ready(&bus)) {
     if ((time_micros() - start) > busy_timeout) {
-#ifdef USE_SX128X_BUSY_EXTI
-      bus.poll_fn = NULL;
-      spi_txn_continue(&bus);
-      bus.poll_fn = sx128x_poll_for_not_busy;
+      if (target.rx_spi.busy_exti) {
+        bus.poll_fn = NULL;
+        spi_txn_continue(&bus);
+        bus.poll_fn = sx128x_poll_for_not_busy;
 
-      start = time_micros();
-#endif
+        start = time_micros();
+      }
       continue;
     }
     spi_txn_continue(&bus);
@@ -162,13 +175,11 @@ void sx128x_handle_dio0_exti(bool level) {
   spi_txn_continue(&bus);
 }
 
-#ifdef USE_SX128X_BUSY_EXTI
 void sx128x_handle_busy_exti(bool level) {
   if (!level) {
     spi_txn_continue(&bus);
   }
 }
-#endif
 
 uint16_t sx128x_read_dio0() {
   register uint8_t active = 0;
@@ -446,5 +457,3 @@ void sx128x_set_output_power(const int8_t power) {
   sx128x_write_command_burst(SX1280_RADIO_SET_TXPARAMS, buf, 2);
   sx128x_wait();
 }
-
-#endif

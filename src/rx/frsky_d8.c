@@ -8,7 +8,7 @@
 #include "flight/control.h"
 #include "util/util.h"
 
-#if defined(RX_FRSKY) && defined(USE_CC2500)
+#if defined(RX_FRSKY)
 
 // Source https://www.rcgroups.com/forums/showpost.php?p=21864861
 
@@ -29,14 +29,13 @@ typedef struct {
   uint8_t crc[2];
 } frsky_d8_frame;
 
-extern uint8_t packet[128];
 extern uint8_t protocol_state;
 extern uint8_t list_length;
 
 uint8_t frsky_extract_rssi(uint8_t rssi_raw);
 uint8_t frsky_detect();
 void frsky_handle_bind();
-void frsky_init();
+;
 
 void handle_overflows();
 void calibrate_channels();
@@ -46,14 +45,14 @@ uint8_t next_channel(uint8_t skip);
 static void frsky_d8_set_rc_data() {
   uint16_t channels[FRSKY_D8_CHANNEL_COUNT];
 
-  channels[0] = (uint16_t)(((packet[10] & 0x0F) << 8 | packet[6]));
-  channels[1] = (uint16_t)(((packet[10] & 0xF0) << 4 | packet[7]));
-  channels[2] = (uint16_t)(((packet[11] & 0x0F) << 8 | packet[8]));
-  channels[3] = (uint16_t)(((packet[11] & 0xF0) << 4 | packet[9]));
-  channels[4] = (uint16_t)(((packet[16] & 0x0F) << 8 | packet[12]));
-  channels[5] = (uint16_t)(((packet[16] & 0xF0) << 4 | packet[13]));
-  channels[6] = (uint16_t)(((packet[17] & 0x0F) << 8 | packet[14]));
-  channels[7] = (uint16_t)(((packet[17] & 0xF0) << 4 | packet[15]));
+  channels[0] = (uint16_t)(((rx_spi_packet[10] & 0x0F) << 8 | rx_spi_packet[6]));
+  channels[1] = (uint16_t)(((rx_spi_packet[10] & 0xF0) << 4 | rx_spi_packet[7]));
+  channels[2] = (uint16_t)(((rx_spi_packet[11] & 0x0F) << 8 | rx_spi_packet[8]));
+  channels[3] = (uint16_t)(((rx_spi_packet[11] & 0xF0) << 4 | rx_spi_packet[9]));
+  channels[4] = (uint16_t)(((rx_spi_packet[16] & 0x0F) << 8 | rx_spi_packet[12]));
+  channels[5] = (uint16_t)(((rx_spi_packet[16] & 0xF0) << 4 | rx_spi_packet[13]));
+  channels[6] = (uint16_t)(((rx_spi_packet[17] & 0x0F) << 8 | rx_spi_packet[14]));
+  channels[7] = (uint16_t)(((rx_spi_packet[17] & 0xF0) << 4 | rx_spi_packet[15]));
 
   // frsky input is us*1.5
   // under normal conditions this is ~1480...3020
@@ -202,8 +201,8 @@ static uint8_t frsky_d8_handle_packet() {
   case FRSKY_STATE_DATA: {
     uint8_t len = cc2500_packet_size();
     if (len >= 20) {
-      cc2500_read_fifo(packet, 20);
-      frsky_d8_frame *frame = (frsky_d8_frame *)packet;
+      cc2500_read_fifo((uint8_t *)rx_spi_packet, 20);
+      frsky_d8_frame *frame = (frsky_d8_frame *)rx_spi_packet;
 
       if (frame->length == 0x11 &&
           (frame->crc[1] & 0x80) &&
@@ -223,13 +222,13 @@ static uint8_t frsky_d8_handle_packet() {
 
 #ifdef FRSKY_ENABLE_TELEMETRY
         if ((frame->counter % 4) == 2) {
-          const uint8_t telemetry_id = packet[4];
+          const uint8_t telemetry_id = rx_spi_packet[4];
           telemetry[0] = 0x11; // length
           telemetry[1] = bind_storage.frsky.tx_id[0];
           telemetry[2] = bind_storage.frsky.tx_id[1];
           telemetry[3] = (uint8_t)(state.vbat_filtered * 100);
           telemetry[4] = (uint8_t)(state.vbat_filtered * 100);
-          telemetry[5] = frsky_extract_rssi(packet[18]);
+          telemetry[5] = frsky_extract_rssi(rx_spi_packet[18]);
 #ifdef FRSKY_ENABLE_HUB_TELEMETRY
           telemetry[6] = frsky_d8_append_hub_telemetry(telemetry_id, telemetry + 8);
 #else
@@ -251,7 +250,7 @@ static uint8_t frsky_d8_handle_packet() {
 
         rx_lqi_got_packet();
         if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-          rx_lqi_update_direct(frsky_extract_rssi(packet[18]));
+          rx_lqi_update_direct(frsky_extract_rssi(rx_spi_packet[18]));
         }
 
         last_packet_received_time = current_packet_received_time;
@@ -299,7 +298,7 @@ static uint8_t frsky_d8_handle_packet() {
 
     // telemetry has to be done ~2000us after rx
     if ((time_micros() - last_packet_received_time) >= 1500) {
-      const uint8_t rssi = frsky_extract_rssi(packet[18]);
+      const uint8_t rssi = frsky_extract_rssi(rx_spi_packet[18]);
 
       rx_lqi_got_packet();
 
@@ -324,11 +323,9 @@ static uint8_t frsky_d8_handle_packet() {
 }
 
 void rx_frsky_d8_init() {
-  if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
+  if (!frsky_init()) {
     return;
-
-  frsky_init();
-  cc2500_init();
+  }
 
   // enable gdo0 on read
   cc2500_write_reg(CC2500_IOCFG0, 0x01);

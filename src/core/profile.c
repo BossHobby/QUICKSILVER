@@ -435,21 +435,7 @@ const profile_t default_profile = {
 #endif
     },
     .receiver = {
-#if defined(RX_EXPRESS_LRS)
-        .protocol = RX_PROTOCOL_EXPRESS_LRS,
-#elif defined(RX_FRSKY)
-        .protocol = RX_PROTOCOL_REDPINE,
-#elif defined(RX_FLYSKY)
-        .protocol = RX_PROTOCOL_FLYSKY_AFHDS2A,
-#elif defined(RX_NRF24_BAYANG_TELEMETRY)
-        .protocol = RX_PROTOCOL_NRF24_BAYANG_TELEMETRY,
-#elif defined(RX_BAYANG_PROTOCOL_BLE_BEACON)
-        .protocol = RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON,
-#elif defined(RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND)
-        .protocol = RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND,
-#else
         .protocol = RX_PROTOCOL_UNIFIED_SERIAL,
-#endif
 
         .aux = {
             ARMING,              // AUX_ARMING

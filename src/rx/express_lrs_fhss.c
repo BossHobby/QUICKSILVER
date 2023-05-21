@@ -1,6 +1,8 @@
 #include "rx/express_lrs.h"
 
-#if defined(RX_EXPRESS_LRS) && defined(USE_SX128X)
+#include "core/project.h"
+
+#if defined(RX_EXPRESS_LRS)
 
 typedef struct {
   const char *domain;
@@ -9,28 +11,22 @@ typedef struct {
   uint32_t freq_count;
 } fhss_config_t;
 
-#ifdef USE_SX128X
 #define SX1280_XTAL_FREQ 52000000.0
 #define POW_2_18 262144.0
 #define FREQ_STEP ((double)(SX1280_XTAL_FREQ / POW_2_18))
-#endif
 
-#ifdef USE_SX128X
-#define FREQ_CORRECTION_MAX ((int32_t)(200000 / FREQ_STEP))
-#endif
 #define FREQ_CORRECTION_MIN (-FREQ_CORRECTION_MAX)
+#define FREQ_CORRECTION_MAX ((int32_t)(200000 / FREQ_STEP))
 
 #define FREQ_SPREAD_SCALE 256
 #define FREQ_HZ_TO_REG_VAL(freq) ((uint32_t)((double)freq / (double)FREQ_STEP))
 
 extern expresslrs_mod_settings_t *current_air_rate_config();
 
-#ifdef USE_SX128X
 const fhss_config_t domains[] = {
     {"ISM2G4", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80},
 };
 const fhss_config_t *config = &domains[0];
-#endif
 
 uint8_t fhss_index = 0;
 
