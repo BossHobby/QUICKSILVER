@@ -65,12 +65,18 @@ static void max7456_dma_spi_write(uint8_t reg, uint8_t data) {
   spi_seg_submit_wait(&bus, segs);
 }
 
-static void max7456_init_display() {
+static bool max7456_init_display() {
   max7456_dma_spi_write(VM0, 0x02); // soft reset
   time_delay_us(200);
 
-  const uint8_t x = max7456_dma_spi_read(OSDBL_R);
-  max7456_dma_spi_write(OSDBL_W, x | 0x10);
+  const uint8_t stat = max7456_dma_spi_read(STAT);
+  if (stat & 0x40) {
+    // reset did not go low, something is wrong
+    return false;
+  }
+
+  const uint8_t black_level = max7456_dma_spi_read(OSDBL_R);
+  max7456_dma_spi_write(OSDBL_W, black_level | 0x10);
 
   switch (current_osd_system) {
   case OSD_SYS_PAL:
@@ -92,16 +98,18 @@ static void max7456_init_display() {
 
   last_osd_system = OSD_SYS_NONE;
   max7456_check_system();
+
+  return true;
 }
 
 // establish initial boot-up state
-void max7456_init() {
+bool max7456_init() {
   bus.port = target.osd.port;
   bus.nss = target.osd.nss;
   spi_bus_device_init(&bus);
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
 
-  max7456_init_display();
+  return max7456_init_display();
 }
 
 // set the video output system PAL /NTSC
@@ -110,17 +118,16 @@ static void max7456_set_system(osd_system_t sys) {
     return;
   }
 
-  uint8_t x = max7456_dma_spi_read(VM0_R);
-
+  const uint8_t vm0 = max7456_dma_spi_read(VM0_R);
   switch (sys) {
   case OSD_SYS_PAL:
-    lastvm0 = x | 0x40;
-    max7456_dma_spi_write(VM0, x | 0x40);
+    lastvm0 = vm0 | 0x40;
+    max7456_dma_spi_write(VM0, vm0 | 0x40);
     break;
 
   case OSD_SYS_NTSC:
-    lastvm0 = x & 0xBF;
-    max7456_dma_spi_write(VM0, x & 0xBF);
+    lastvm0 = vm0 & 0xBF;
+    max7456_dma_spi_write(VM0, vm0 & 0xBF);
     break;
 
   default:
@@ -131,11 +138,11 @@ static void max7456_set_system(osd_system_t sys) {
 }
 
 static osd_system_t max7456_current_system() {
-  uint8_t x = max7456_dma_spi_read(STAT);
-  if ((x & 0x01) == 0x01) {
+  const uint8_t stat = max7456_dma_spi_read(STAT);
+  if ((stat & 0x01) == 0x01) {
     return OSD_SYS_PAL;
   }
-  if ((x & 0x02) == 0x02) {
+  if ((stat & 0x02) == 0x02) {
     return OSD_SYS_NTSC;
   }
 
@@ -309,8 +316,7 @@ void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size) {
   max7456_dma_spi_write(CMM, 0x50);
 
   // wait for NVM to be ready
-  while (max7456_dma_spi_read(STAT) & 0x20)
-    ;
+  WHILE_TIMEOUT(max7456_dma_spi_read(STAT) & 0x20, 200);
 
   for (uint8_t i = 0; i < size; i++) {
     max7456_dma_spi_write(CMAL, i);
@@ -340,8 +346,7 @@ void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size) {
   max7456_dma_spi_write(CMM, 0xA0);
 
   // wait for NVM to be ready
-  while (max7456_dma_spi_read(STAT) & 0x20)
-    ;
+  WHILE_TIMEOUT(max7456_dma_spi_read(STAT) & 0x20, 200);
 
   // enable osd
   max7456_init_display();
