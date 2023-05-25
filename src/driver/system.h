@@ -90,15 +90,3 @@
 #define WITHIN_DTCM_RAM(p) (((uint32_t)p & 0xfffe0000) == 0x20000000)
 #define WITHIN_DMA_RAM(p) (((uint32_t)p & 0xfffe0000) == 0x30000000)
 #endif
-
-#ifdef USE_FAST_RAM
-#define FAST_RAM __attribute__((section(".fast_ram"), aligned(4)))
-#else
-#define FAST_RAM
-#endif
-
-#ifdef USE_DMA_RAM
-#define DMA_RAM __attribute__((section(".dma_ram"), aligned(32)))
-#else
-#define DMA_RAM
-#endif
