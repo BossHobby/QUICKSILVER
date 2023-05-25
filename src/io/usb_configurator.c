@@ -8,7 +8,7 @@
 #include "core/looptime.h"
 #include "core/profile.h"
 #include "core/project.h"
-#include "core/reset.h"
+#include "driver/reset.h"
 #include "driver/serial.h"
 #include "driver/usb.h"
 #include "flight/control.h"

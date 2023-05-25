@@ -40,14 +40,14 @@ typedef enum {
 } dir_change_state_t;
 
 typedef struct {
-  GPIO_TypeDef *port;
+  gpio_port_t *port;
   uint32_t pin;
 
   uint32_t dshot_port;
 } dshot_pin_t;
 
 typedef struct {
-  GPIO_TypeDef *gpio;
+  gpio_port_t *gpio;
 
   uint32_t port_low;  // motor pins for BSRRL, for setting pins low
   uint32_t port_high; // motor pins for BSRRH, for setting pins high
