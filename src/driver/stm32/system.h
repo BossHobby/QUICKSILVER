@@ -85,3 +85,5 @@
 #define WITHIN_DTCM_RAM(p) (((uint32_t)p & 0xfffe0000) == 0x20000000)
 #define WITHIN_DMA_RAM(p) (((uint32_t)p & 0xfffe0000) == 0x30000000)
 #endif
+
+typedef GPIO_TypeDef gpio_port_t;

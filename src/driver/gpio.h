@@ -11,7 +11,7 @@ typedef struct {
 } gpio_af_t;
 
 typedef struct {
-  GPIO_TypeDef *port;
+  gpio_port_t *port;
   uint8_t pin_index;
   uint32_t pin;
 } gpio_pin_def_t;
