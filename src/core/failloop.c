@@ -1,6 +1,6 @@
 #include "core/failloop.h"
 
-#include "core/reset.h"
+#include "driver/reset.h"
 #include "driver/motor.h"
 #include "driver/time.h"
 #include "driver/usb.h"

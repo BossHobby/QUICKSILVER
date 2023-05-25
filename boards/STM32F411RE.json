@@ -2,7 +2,7 @@
   "build": {
     "core": "stm32",
     "cpu": "cortex-m4",
-    "extra_flags": "-DSTM32F411xE -DSTM32F4xx -DSTM32F411 -DSTM32F4 -DMCU_NAME=stm32f411 -DHSE_VALUE=8000000U",
+    "extra_flags": "-DSTM32F411xE -DSTM32F4xx -DSTM32F411 -DSTM32F4 -DSTM32 -DMCU_NAME=stm32f411 -DHSE_VALUE=8000000U",
     "f_cpu": "108000000L",
     "mcu": "stm32f411",
     "product_line": "STM32F411xE",

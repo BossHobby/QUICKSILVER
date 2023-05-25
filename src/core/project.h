@@ -5,7 +5,13 @@
 
 #include "core/target.h"
 
-#include "driver/system.h"
+#ifdef STM32
+#include "driver/stm32/system.h"
+#endif
+
+#ifdef AT32
+#include "driver/at32/system.h"
+#endif
 
 #ifdef USE_FAST_RAM
 #define FAST_RAM __attribute__((section(".fast_ram"), aligned(4)))

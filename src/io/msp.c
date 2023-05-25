@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "core/flash.h"
-#include "core/reset.h"
+#include "driver/reset.h"
 #include "driver/serial.h"
 #include "driver/serial_4way.h"
 #include "flight/control.h"

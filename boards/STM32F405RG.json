@@ -2,7 +2,7 @@
   "build": {
     "core": "stm32",
     "cpu": "cortex-m4",
-    "extra_flags": "-DSTM32F40_41xxx -DSTM32F405xx -DSTM32F4xx -DSTM32F405 -DSTM32F4 -DMCU_NAME=stm32f405 -DHSE_VALUE=8000000U -DUSE_FAST_RAM",
+    "extra_flags": "-DSTM32F40_41xxx -DSTM32F405xx -DSTM32F4xx -DSTM32F405 -DSTM32F4 -DSTM32 -DMCU_NAME=stm32f405 -DHSE_VALUE=8000000U -DUSE_FAST_RAM",
     "f_cpu": "168000000L",
     "mcu": "stm32f405",
     "product_line": "STM32F405xx",
