@@ -39,12 +39,12 @@ void rgb_init() {
       ;
   }
 
-  LL_GPIO_InitTypeDef GPIO_InitStructure;
+  gpio_config_t GPIO_InitStructure;
 
-  GPIO_InitStructure.Mode = LL_GPIO_MODE_OUTPUT;
-  GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStructure.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStructure.mode = GPIO_OUTPUT;
+  GPIO_InitStructure.output = GPIO_PUSHPULL;
+  GPIO_InitStructure.pull = GPIO_NO_PULL;
+  GPIO_InitStructure.drive =GPIO_DRIVE_HIGH;
 
   GPIO_InitStructure.Pin = RGB_PIN;
   LL_GPIO_Init(RGB_PORT, &GPIO_InitStructure);
@@ -270,12 +270,12 @@ void rgb_init() {
       ;
   }
 
-  LL_GPIO_InitTypeDef GPIO_InitStructure;
+  gpio_config_t GPIO_InitStructure;
 
-  GPIO_InitStructure.Mode = LL_GPIO_MODE_OUTPUT;
-  GPIO_InitStructure.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStructure.Pull = LL_GPIO_PULL_UP;
-  GPIO_InitStructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStructure.mode = GPIO_OUTPUT;
+  GPIO_InitStructure.output = GPIO_PUSHPULL;
+  GPIO_InitStructure.pull = GPIO_UP_PULL;
+  GPIO_InitStructure.drive =GPIO_DRIVE_HIGH;
 
   GPIO_InitStructure.Pin = RGB_PIN;
   LL_GPIO_Init(RGB_PORT, &GPIO_InitStructure);

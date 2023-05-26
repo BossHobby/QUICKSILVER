@@ -160,11 +160,11 @@ void rx_spektrum_bind() {
   if (bind_storage.bind_saved == 0) {
     const gpio_pins_t spectrum_bind_pin = target.serial_ports[profile.serial.rx].rx;
 
-    LL_GPIO_InitTypeDef gpio_init;
-    gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
-    gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-    gpio_init.Pull = LL_GPIO_PULL_NO;
-    gpio_pin_init(&gpio_init, spectrum_bind_pin);
+    gpio_config_t gpio_init;
+    gpio_init.mode = GPIO_OUTPUT;
+    gpio_init.output = GPIO_PUSHPULL;
+    gpio_init.pull = GPIO_NO_PULL;
+    gpio_pin_init( spectrum_bind_pin, gpio_init);
 
     // RX line, set high
     gpio_pin_set(spectrum_bind_pin);

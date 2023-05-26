@@ -43,23 +43,23 @@ bool sx128x_init() {
     return false;
   }
 
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_pin_init(&gpio_init, target.rx_spi.reset);
+  gpio_config_t gpio_init;
+  gpio_init.mode = GPIO_OUTPUT;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_NO_PULL;
+  gpio_pin_init(target.rx_spi.reset, gpio_init);
 
-  gpio_init.Mode = LL_GPIO_MODE_INPUT;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_pin_init(&gpio_init, target.rx_spi.busy);
+  gpio_init.mode = GPIO_INPUT;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_NO_PULL;
+  gpio_pin_init(target.rx_spi.busy, gpio_init);
   if (target.rx_spi.busy_exti) {
     exti_enable(target.rx_spi.busy, LL_EXTI_TRIGGER_FALLING);
   }
 
-  gpio_pin_init(&gpio_init, target.rx_spi.exti);
+  gpio_pin_init(target.rx_spi.exti, gpio_init);
   exti_enable(target.rx_spi.exti, LL_EXTI_TRIGGER_RISING);
 
   bus.port = target.rx_spi.port;
