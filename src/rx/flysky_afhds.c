@@ -5,7 +5,7 @@
 #include "core/project.h"
 #include "driver/spi_a7105.h"
 
-#if defined(RX_FLYSKY)
+#if defined(USE_RX_SPI_FLYSKY)
 
 enum {
   AFHDS_NUM_CHANS = 8

@@ -7,7 +7,7 @@
 #include "driver/time.h"
 #include "flight/control.h" // for state.vbat_filtered
 
-#if defined(RX_FLYSKY)
+#if defined(USE_RX_SPI_FLYSKY)
 
 enum {
   AFHDS2A_NUM_CHANS = 14

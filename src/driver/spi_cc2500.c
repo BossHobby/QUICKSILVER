@@ -5,6 +5,8 @@
 #include "driver/time.h"
 #include "util/util.h"
 
+#ifdef USE_RX_SPI_FRSKY
+
 #define SPI_SPEED MHZ_TO_HZ(10.5)
 
 static spi_bus_device_t bus = {
@@ -272,3 +274,5 @@ void cc2500_set_power(uint8_t power) {
 
   cc2500_write_reg(CC2500_PATABLE, patable[power]);
 }
+
+#endif

@@ -76,7 +76,7 @@ float rx_smoothing_hz() {
   case RX_PROTOCOL_UNIFIED_SERIAL:
     return rx_serial_smoothing_cutoff();
 
-#ifdef RX_EXPRESS_LRS
+#ifdef USE_RX_SPI_EXPRESS_LRS
   case RX_PROTOCOL_EXPRESS_LRS:
     return rx_expresslrs_smoothing_cutoff();
 #endif
@@ -222,37 +222,37 @@ void rx_init() {
     break;
 
   case RX_PROTOCOL_FRSKY_D8:
-#ifdef RX_FRSKY
+#ifdef USE_RX_SPI_FRSKY
     rx_frsky_d8_init();
 #endif
     break;
 
   case RX_PROTOCOL_FRSKY_D16_FCC:
   case RX_PROTOCOL_FRSKY_D16_LBT:
-#ifdef RX_FRSKY
+#ifdef USE_RX_SPI_FRSKY
     rx_frsky_d16_init();
 #endif
     break;
 
   case RX_PROTOCOL_REDPINE:
-#ifdef RX_FRSKY
+#ifdef USE_RX_SPI_FRSKY
     rx_redpine_init();
 #endif
     break;
 
   case RX_PROTOCOL_EXPRESS_LRS:
-#ifdef RX_EXPRESS_LRS
+#ifdef USE_RX_SPI_EXPRESS_LRS
     rx_expresslrs_init();
 #endif
     break;
 
   case RX_PROTOCOL_FLYSKY_AFHDS:
-#ifdef RX_FLYSKY
+#ifdef USE_RX_SPI_FLYSKY
     rx_flysky_afhds_init();
 #endif
     break;
   case RX_PROTOCOL_FLYSKY_AFHDS2A:
-#ifdef RX_FLYSKY
+#ifdef USE_RX_SPI_FLYSKY
     rx_flysky_afhds2a_init();
 #endif
     break;
@@ -297,7 +297,7 @@ bool rx_check() {
     return false;
 
   case RX_PROTOCOL_FRSKY_D8:
-#ifdef RX_FRSKY
+#ifdef USE_RX_SPI_FRSKY
     return rx_frsky_d8_check();
 #else
     return false;
@@ -305,34 +305,34 @@ bool rx_check() {
 
   case RX_PROTOCOL_FRSKY_D16_FCC:
   case RX_PROTOCOL_FRSKY_D16_LBT:
-#ifdef RX_FRSKY
+#ifdef USE_RX_SPI_FRSKY
     return rx_frsky_d16_check();
 #else
     return false;
 #endif
 
   case RX_PROTOCOL_REDPINE:
-#ifdef RX_FRSKY
+#ifdef USE_RX_SPI_FRSKY
     return rx_redpine_check();
 #else
     return false;
 #endif
 
   case RX_PROTOCOL_EXPRESS_LRS:
-#ifdef RX_EXPRESS_LRS
+#ifdef USE_RX_SPI_EXPRESS_LRS
     return rx_expresslrs_check();
 #else
     return false;
 #endif
 
   case RX_PROTOCOL_FLYSKY_AFHDS:
-#ifdef RX_FLYSKY
+#ifdef USE_RX_SPI_FLYSKY
     return rx_flysky_afhds_check();
 #else
     return false;
 #endif
   case RX_PROTOCOL_FLYSKY_AFHDS2A:
-#ifdef RX_FLYSKY
+#ifdef USE_RX_SPI_FLYSKY
     return rx_flysky_afhds2a_check();
 #else
     return false;

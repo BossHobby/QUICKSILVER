@@ -9,7 +9,7 @@
 #include "flight/control.h" // for state
 #include "util/util.h"
 
-#if defined(RX_FLYSKY)
+#if defined(USE_RX_SPI_FLYSKY)
 
 #define AFHDS_BIND_CHANNEL 0x00
 #define AFHDS2A_BIND_CHANNEL 0x0D
