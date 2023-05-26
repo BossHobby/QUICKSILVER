@@ -17,7 +17,6 @@
 #include "driver/rgb_led.h"
 #include "driver/serial.h"
 #include "driver/spi.h"
-#include "driver/spi_soft.h"
 #include "driver/time.h"
 #include "driver/usb.h"
 #include "flight/control.h"
@@ -102,7 +101,6 @@ __attribute__((__used__)) int main() {
   buzzer_init();
 
   usb_init();
-  spi_init();
 
   rx_spektrum_bind();
 
