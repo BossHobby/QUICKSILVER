@@ -57,12 +57,12 @@ static gyro_types_t gyro_spi_detect() {
 uint8_t gyro_spi_init() {
 #ifdef GYRO_INT
   // Interrupt GPIO
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_INPUT;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_UP;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  gpio_pin_init(&gpio_init, GYRO_INT);
+  gpio_config_t gpio_init;
+  gpio_init.mode = GPIO_INPUT;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_UP_PULL;
+  gpio_init.drive =GPIO_DRIVE_HIGH;
+  gpio_pin_init( GYRO_INT, gpio_init);
 #endif
 
   if (!target_spi_device_valid(&target.gyro)) {

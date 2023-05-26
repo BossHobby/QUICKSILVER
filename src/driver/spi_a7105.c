@@ -123,12 +123,12 @@ static bool a7105_hardware_init() {
   }
 
   // target.rx_spi.exti is used for triggering interrupt
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_INPUT;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_pin_init(&gpio_init, target.rx_spi.exti);
+  gpio_config_t gpio_init;
+  gpio_init.mode = GPIO_INPUT;
+  gpio_init.drive = GPIO_DRIVE_NORMAL;
+  gpio_init.output = GPIO_OPENDRAIN;
+  gpio_init.pull = GPIO_NO_PULL;
+  gpio_pin_init(target.rx_spi.exti, gpio_init);
   exti_enable(target.rx_spi.exti, LL_EXTI_TRIGGER_RISING);
   exti_interrupt_disable(target.rx_spi.exti);
 

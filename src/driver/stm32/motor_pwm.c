@@ -45,11 +45,11 @@ extern profile_t profile;
 static resource_tag_t timer_tags[MOTOR_PIN_MAX];
 
 void motor_pwm_init() {
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
+  gpio_config_t gpio_init;
+  gpio_init.mode = GPIO_ALTERNATE;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_NO_PULL;
 
   LL_TIM_OC_InitTypeDef tim_oc_init;
   tim_oc_init.OCMode = LL_TIM_OCMODE_PWM1;
@@ -69,7 +69,7 @@ void motor_pwm_init() {
 
       if (timer_alloc_tag(TIMER_USE_MOTOR_PWM, func->tag)) {
         timer_tags[i] = func->tag;
-        gpio_pin_init_af(&gpio_init, pin, func->af);
+        gpio_pin_init_af(pin, gpio_init, func->af);
         break;
       }
     }

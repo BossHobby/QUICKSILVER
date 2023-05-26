@@ -103,10 +103,10 @@ static void adc_init_pin(adc_chan_t chan, gpio_pins_t pin) {
   }
 
   if (adc_pins[chan].pin != PIN_NONE) {
-    LL_GPIO_InitTypeDef gpio_init;
-    gpio_init.Mode = LL_GPIO_MODE_ANALOG;
-    gpio_init.Pull = LL_GPIO_PULL_NO;
-    gpio_pin_init(&gpio_init, pin);
+    gpio_config_t gpio_init;
+    gpio_init.mode = GPIO_ANALOG;
+    gpio_init.pull = GPIO_NO_PULL;
+    gpio_pin_init(pin, gpio_init);
   }
 }
 

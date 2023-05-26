@@ -41,12 +41,12 @@ static void soft_serial_init_rx(serial_ports_t port) {
     return;
   }
 
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_INPUT;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-  gpio_init.Pull = LL_GPIO_PULL_UP;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  gpio_pin_init(&gpio_init, PORT.rx);
+  gpio_config_t gpio_init;
+  gpio_init.mode = GPIO_INPUT;
+  gpio_init.output = GPIO_OPENDRAIN;
+  gpio_init.pull = GPIO_UP_PULL;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_pin_init(PORT.rx, gpio_init);
 
   if (PORT.half_duplex) {
     PORT.tx_active = false;
@@ -59,12 +59,12 @@ static void soft_serial_init_tx(serial_ports_t port) {
     return;
   }
 
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  gpio_pin_init(&gpio_init, PORT.tx);
+  gpio_config_t gpio_init;
+  gpio_init.mode = GPIO_OUTPUT;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_NO_PULL;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_pin_init(PORT.tx, gpio_init);
 
   gpio_pin_set(PORT.tx);
 
