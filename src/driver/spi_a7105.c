@@ -6,6 +6,8 @@
 #include "driver/time.h"
 #include "util/util.h"
 
+#ifdef USE_RX_SPI_FLYSKY
+
 static spi_bus_device_t bus = {
     .auto_continue = true,
 };
@@ -212,3 +214,5 @@ bool a7105_rx_tx_irq_time(uint32_t *irq_time) {
   }
   return false;
 }
+
+#endif

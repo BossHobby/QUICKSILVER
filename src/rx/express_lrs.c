@@ -16,7 +16,7 @@
 #include "rx/rx_spi.h"
 #include "util/util.h"
 
-#if defined(RX_EXPRESS_LRS)
+#if defined(USE_RX_SPI_EXPRESS_LRS)
 
 #define ELRS_CRC14_POLY 0x2E57 // 0x372B
 #define ELRS_CRC16_POLY 0x3D65 // 0x9eb2

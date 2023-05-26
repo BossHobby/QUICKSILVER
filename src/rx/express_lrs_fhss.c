@@ -2,7 +2,7 @@
 
 #include "core/project.h"
 
-#if defined(RX_EXPRESS_LRS)
+#if defined(USE_RX_SPI_EXPRESS_LRS)
 
 typedef struct {
   const char *domain;

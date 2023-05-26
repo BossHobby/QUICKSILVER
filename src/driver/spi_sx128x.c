@@ -10,6 +10,8 @@
 #include "rx/rx_spi.h"
 #include "util/util.h"
 
+#ifdef USE_RX_SPI_EXPRESS_LRS
+
 static bool sx128x_poll_for_not_busy();
 
 FAST_RAM static spi_bus_device_t bus = {
@@ -457,3 +459,5 @@ void sx128x_set_output_power(const int8_t power) {
   sx128x_write_command_burst(SX1280_RADIO_SET_TXPARAMS, buf, 2);
   sx128x_wait();
 }
+
+#endif

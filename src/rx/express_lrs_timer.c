@@ -8,7 +8,7 @@
 #include "driver/timer.h"
 #include "util/util.h"
 
-#if defined(RX_EXPRESS_LRS)
+#if defined(USE_RX_SPI_EXPRESS_LRS)
 
 #define TIMER timer_defs[TIMER_TAG_TIM(timer_tag)]
 #define TIMER_HZ 1000000

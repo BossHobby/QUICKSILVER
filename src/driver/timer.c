@@ -189,7 +189,7 @@ static void timer_irq_handler() {
   extern void soft_serial_timer_irq_handler();
   soft_serial_timer_irq_handler();
 
-#if defined(RX_EXPRESS_LRS)
+#if defined(USE_RX_SPI_EXPRESS_LRS)
   extern void elrs_timer_irq_handler();
   elrs_timer_irq_handler();
 #endif
