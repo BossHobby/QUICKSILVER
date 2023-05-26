@@ -87,10 +87,6 @@
 // #define RX_FPORT
 // #define RX_DSMX
 // #define RX_DSM2
-// #define RX_BAYANG_PROTOCOL_BLE_BEACON
-// #define RX_BAYANG_BLE_APP
-// #define RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
-// #define RX_NRF24_BAYANG_TELEMETRY
 
 // *************Serial Receiver UART Selection (uncomment all for default from target or if using spi receiver)																		//todo:  Many missing usart AF setups, So plenty more to do here
 // #define RX_USART USART_PORT1
@@ -101,16 +97,6 @@
 
 // *************Serial Receiver Inversion Selection  (Normally true for SBUS and FPORT)
 // #define INVERT_UART
-
-// *************Bayang Specific Settings
-// #define USE_DEVO
-// #define USE_MULTI
-
-// #define RADIO_XN297L
-// #define RADIO_XN297
-
-// #define USE_SOFT_SPI_3WIRE
-// #define USE_SOFT_SPI_4WIRE
 
 // *************ELRS Specific Settings
 // #define EXPRESS_LRS_UID 0, 0, 0, 0, 0, 0

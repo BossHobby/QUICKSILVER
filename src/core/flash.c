@@ -160,10 +160,6 @@ void flash_load() {
     fmc_read_buf(offset, buffer, size);
     memcpy((uint8_t *)&bind_storage, buffer, sizeof(rx_bind_storage_t));
 
-#ifdef RX_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND
-    extern int rx_bind_load;
-    rx_bind_load = bind_storage.bind_saved;
-#endif
   } else {
 #ifdef EXPRESS_LRS_UID
     const uint8_t uid[6] = {EXPRESS_LRS_UID};

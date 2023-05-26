@@ -1,6 +1,5 @@
 #pragma once
 
-#include "rx/bayang.h"
 #include "rx/express_lrs.h"
 #include "rx/flysky.h"
 #include "rx/frsky.h"
@@ -34,7 +33,6 @@ typedef struct {
   uint8_t _padding[3];
   union {
     rx_frsky_bind_data_t frsky;
-    rx_bayang_bind_data_t bayang;
     rx_unified_bind_data_t unified;
     rx_elrs_bind_data_t elrs;
     rx_flysky_bind_data_t flysky;
