@@ -61,12 +61,7 @@
 #define PWM_CLOCK_FREQ_HZ 84000000
 #define SPI_CLOCK_FREQ_HZ (SYS_CLOCK_FREQ_HZ / 4)
 
-#if !defined(USE_SOFT_SPI_4WIRE) && !defined(USE_SOFT_SPI_3WIRE)
 #define LOOPTIME LOOPTIME_8K
-#else
-#define LOOPTIME LOOPTIME_4K
-#endif
-
 #endif
 
 #ifdef STM32F7
