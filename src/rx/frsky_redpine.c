@@ -10,7 +10,7 @@
 #include "rx/rx_spi.h"
 #include "util/util.h"
 
-#if defined(RX_FRSKY)
+#if defined(USE_RX_SPI_FRSKY)
 
 #define LQI_FPS 500
 

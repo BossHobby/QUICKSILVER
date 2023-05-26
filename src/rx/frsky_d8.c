@@ -8,7 +8,7 @@
 #include "flight/control.h"
 #include "util/util.h"
 
-#if defined(RX_FRSKY)
+#if defined(USE_RX_SPI_FRSKY)
 
 // Source https://www.rcgroups.com/forums/showpost.php?p=21864861
 

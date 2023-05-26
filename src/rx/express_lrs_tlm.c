@@ -5,7 +5,7 @@
 #include "core/project.h"
 #include "util/util.h"
 
-#if defined(RX_EXPRESS_LRS)
+#if defined(USE_RX_SPI_EXPRESS_LRS)
 
 typedef enum {
   SENDER_IDLE = 0,

@@ -9,7 +9,7 @@
 #include "rx/rx_spi.h"
 #include "util/util.h"
 
-#if defined(RX_FRSKY)
+#if defined(USE_RX_SPI_FRSKY)
 
 uint8_t protocol_state = FRSKY_STATE_DETECT;
 uint8_t list_length = 0;
