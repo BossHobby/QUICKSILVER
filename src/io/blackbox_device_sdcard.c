@@ -9,6 +9,8 @@
 #define FILES_SECTOR_OFFSET 1
 #define PAGE_SIZE SDCARD_PAGE_SIZE
 
+#ifdef USE_SDCARD
+
 typedef enum {
   STATE_DETECT,
   STATE_IDLE,
@@ -212,3 +214,5 @@ blackbox_device_vtable_t blackbox_device_sdcard = {
     .read = blackbox_device_sdcard_read,
     .write = blackbox_device_sdcard_write,
 };
+
+#endif

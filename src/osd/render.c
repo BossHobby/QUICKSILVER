@@ -874,7 +874,9 @@ void osd_display() {
       osd_menu_select_screen(7, OSD_AUTO, "MOTOR SETTINGS", OSD_SCREEN_MOTOR_SETTINGS);
       osd_menu_select_screen(7, OSD_AUTO, "THROTTLE SETTINGS", OSD_SCREEN_THROTTLE_SETTINGS);
       osd_menu_select_screen(7, OSD_AUTO, "SPECIAL FEATURES", OSD_SCREEN_SPECIAL_FEATURES);
+#ifdef USE_BLACKBOX
       osd_menu_select_screen(7, OSD_AUTO, "BLACKBOX", OSD_SCREEN_BLACKBOX);
+#endif
     }
     osd_menu_scroll_finish(7);
 
@@ -1500,8 +1502,8 @@ void osd_display() {
     osd_menu_finish();
     break;
   }
-
   case OSD_SCREEN_BLACKBOX: {
+#ifdef USE_BLACKBOX
     static uint8_t reset_state = 0;
 
     switch (reset_state) {
@@ -1551,10 +1553,12 @@ void osd_display() {
       reset_state = 0;
       break;
     }
+#endif
     break;
   }
 
   case OSD_SCREEN_BLACKBOX_PRESETS: {
+#ifdef USE_BLACKBOX
     osd_menu_start();
     osd_menu_header("BLACKBOX PRESETS");
 
@@ -1594,9 +1598,9 @@ void osd_display() {
 
     osd_menu_select_save_and_exit(3);
     osd_menu_finish();
+#endif
     break;
   }
-
   case OSD_SCREEN_STICK_WIZARD:
     osd_menu_start();
     osd_menu_header("STICK CALIBRATION");

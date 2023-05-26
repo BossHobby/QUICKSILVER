@@ -331,6 +331,7 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
   check_cbor_error(QUIC_CMD_BLACKBOX);
 
   switch (cmd) {
+#ifdef USE_BLACKBOX
   case QUIC_BLACKBOX_RESET:
     blackbox_device_reset();
     quic_send(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, NULL, 0);
@@ -391,6 +392,7 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
     quic_send_header(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, 0);
     break;
   }
+#endif
   default:
     quic_errorf(QUIC_CMD_BLACKBOX, "INVALID CMD %d", cmd);
     break;
