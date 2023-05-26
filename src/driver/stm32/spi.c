@@ -105,31 +105,31 @@ static uint32_t spi_find_divder(uint32_t clk_hz) {
 static void spi_init_pins(spi_ports_t port, gpio_pins_t nss) {
   const target_spi_port_t *dev = &target.spi_ports[port];
 
-  LL_GPIO_InitTypeDef gpio_init;
+  gpio_config_t gpio_init;
 
-  gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_UP;
-  gpio_pin_init_tag(&gpio_init, dev->sck, SPI_TAG(port, RES_SPI_SCK));
+  gpio_init.mode = GPIO_ALTERNATE;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_UP_PULL;
+  gpio_pin_init_tag(dev->sck, gpio_init, SPI_TAG(port, RES_SPI_SCK));
 
-  gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_pin_init_tag(&gpio_init, dev->miso, SPI_TAG(port, RES_SPI_MISO));
+  gpio_init.mode = GPIO_ALTERNATE;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_NO_PULL;
+  gpio_pin_init_tag(dev->miso, gpio_init, SPI_TAG(port, RES_SPI_MISO));
 
-  gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_pin_init_tag(&gpio_init, dev->mosi, SPI_TAG(port, RES_SPI_MOSI));
+  gpio_init.mode = GPIO_ALTERNATE;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_NO_PULL;
+  gpio_pin_init_tag(dev->mosi, gpio_init, SPI_TAG(port, RES_SPI_MOSI));
 
-  gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_UP;
-  gpio_pin_init(&gpio_init, nss);
+  gpio_init.mode = GPIO_OUTPUT;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_UP_PULL;
+  gpio_pin_init(nss, gpio_init);
   gpio_pin_set(nss);
 }
 
@@ -235,20 +235,20 @@ static void spi_reconfigure(spi_bus_device_t *bus) {
   if (config->mode != bus->mode) {
     config->mode = bus->mode;
 
-    LL_GPIO_InitTypeDef gpio_init;
-    gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
-    gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-    gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+    gpio_config_t gpio_init;
+    gpio_init.mode = GPIO_ALTERNATE;
+    gpio_init.drive = GPIO_DRIVE_HIGH;
+    gpio_init.output = GPIO_PUSHPULL;
 
     if (bus->mode == SPI_MODE_LEADING_EDGE) {
-      gpio_init.Pull = LL_GPIO_PULL_DOWN;
-      gpio_pin_init_tag(&gpio_init, dev->sck, SPI_TAG(bus->port, RES_SPI_SCK));
+      gpio_init.pull = GPIO_DOWN_PULL;
+      gpio_pin_init_tag(dev->sck, gpio_init, SPI_TAG(bus->port, RES_SPI_SCK));
 
       LL_SPI_SetClockPhase(port->channel, LL_SPI_PHASE_1EDGE);
       LL_SPI_SetClockPolarity(port->channel, LL_SPI_POLARITY_LOW);
     } else if (bus->mode == SPI_MODE_TRAILING_EDGE) {
-      gpio_init.Pull = LL_GPIO_PULL_UP;
-      gpio_pin_init_tag(&gpio_init, dev->sck, SPI_TAG(bus->port, RES_SPI_SCK));
+      gpio_init.pull = GPIO_UP_PULL;
+      gpio_pin_init_tag(dev->sck, gpio_init, SPI_TAG(bus->port, RES_SPI_SCK));
 
       LL_SPI_SetClockPhase(port->channel, LL_SPI_PHASE_2EDGE);
       LL_SPI_SetClockPolarity(port->channel, LL_SPI_POLARITY_HIGH);

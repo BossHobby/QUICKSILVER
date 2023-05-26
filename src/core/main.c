@@ -9,11 +9,11 @@
 #include "core/looptime.h"
 #include "core/profile.h"
 #include "core/project.h"
-#include "driver/reset.h"
 #include "driver/adc.h"
 #include "driver/fmc.h"
 #include "driver/gpio.h"
 #include "driver/motor.h"
+#include "driver/reset.h"
 #include "driver/rgb_led.h"
 #include "driver/serial.h"
 #include "driver/spi.h"
@@ -90,7 +90,7 @@ __attribute__((__used__)) int main() {
   pid_init();
 
   // init some hardware things
-  gpio_init();
+  gpio_ports_init();
 
   // Turn on LED during boot so that if a delay is used as part of using programming pins for other functions,
   // the FC does not appear inactive while programming times out

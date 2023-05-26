@@ -336,26 +336,26 @@ void OTG_FS_IRQHandler() {
 }
 
 void usb_init() {
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
+  gpio_config_t gpio_init;
+  gpio_init.mode = GPIO_ALTERNATE;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_init.pull = GPIO_NO_PULL;
 
 #ifdef STM32H7
-  gpio_pin_init_af(&gpio_init, PIN_A11, GPIO_AF10_OTG1_FS);
-  gpio_pin_init_af(&gpio_init, PIN_A12, GPIO_AF10_OTG1_FS);
+  gpio_pin_init_af(PIN_A11, gpio_init, GPIO_AF10_OTG1_FS);
+  gpio_pin_init_af(PIN_A12, gpio_init, GPIO_AF10_OTG1_FS);
 #else
-  gpio_pin_init_af(&gpio_init, PIN_A11, GPIO_AF10_OTG_FS);
-  gpio_pin_init_af(&gpio_init, PIN_A12, GPIO_AF10_OTG_FS);
+  gpio_pin_init_af(PIN_A11, gpio_init, GPIO_AF10_OTG_FS);
+  gpio_pin_init_af(PIN_A12, gpio_init, GPIO_AF10_OTG_FS);
 #endif
 
   if (target.usb_detect != PIN_NONE) {
-    gpio_init.Mode = LL_GPIO_MODE_INPUT;
-    gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-    gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-    gpio_init.Pull = LL_GPIO_PULL_NO;
-    gpio_pin_init(&gpio_init, target.usb_detect);
+    gpio_init.mode = GPIO_INPUT;
+    gpio_init.output = GPIO_OPENDRAIN;
+    gpio_init.drive = GPIO_DRIVE_HIGH;
+    gpio_init.pull = GPIO_NO_PULL;
+    gpio_pin_init(target.usb_detect, gpio_init);
   }
 
   interrupt_enable(OTG_FS_IRQn, USB_PRIORITY);

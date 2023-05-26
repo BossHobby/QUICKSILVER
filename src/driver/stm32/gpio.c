@@ -5,9 +5,30 @@
 #include "driver/rcc.h"
 #include "driver/timer.h"
 
-static volatile uint8_t fpv_init_done = 0;
+static const uint32_t mode_map[] = {
+    [GPIO_INPUT] = LL_GPIO_MODE_INPUT,
+    [GPIO_OUTPUT] = LL_GPIO_MODE_OUTPUT,
+    [GPIO_ANALOG] = LL_GPIO_MODE_ANALOG,
+    [GPIO_ALTERNATE] = LL_GPIO_MODE_ALTERNATE,
+};
 
-void gpio_init() {
+static const uint32_t output_map[] = {
+    [GPIO_PUSHPULL] = LL_GPIO_OUTPUT_PUSHPULL,
+    [GPIO_OPENDRAIN] = LL_GPIO_OUTPUT_OPENDRAIN,
+};
+
+static const uint32_t speed_map[] = {
+    [GPIO_DRIVE_NORMAL] = LL_GPIO_SPEED_FREQ_MEDIUM,
+    [GPIO_DRIVE_HIGH] = LL_GPIO_SPEED_FREQ_HIGH,
+};
+
+static const uint32_t pull_map[] = {
+    [GPIO_NO_PULL] = LL_GPIO_PULL_NO,
+    [GPIO_UP_PULL] = LL_GPIO_PULL_UP,
+    [GPIO_DOWN_PULL] = LL_GPIO_PULL_DOWN,
+};
+
+void gpio_ports_init() {
 // clocks on to all ports
 #ifdef STM32F4
   SET_BIT(
@@ -43,6 +64,7 @@ void gpio_init() {
 
 // init fpv pin separately because it may use SWDAT/SWCLK don't want to enable it right away
 bool gpio_init_fpv(uint8_t mode) {
+  static volatile uint8_t fpv_init_done = 0;
   if (target.fpv == PIN_NONE) {
     return false;
   }
@@ -51,12 +73,12 @@ bool gpio_init_fpv(uint8_t mode) {
   // common settings to set ports
   if (mode == 1 && fpv_init_done == 0) {
     // set gpio pin as output no matter what
-    LL_GPIO_InitTypeDef init;
-    init.Mode = LL_GPIO_MODE_OUTPUT;
-    init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-    init.Pull = LL_GPIO_PULL_NO;
-    init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-    gpio_pin_init(&init, target.fpv);
+    gpio_config_t init;
+    init.mode = GPIO_OUTPUT;
+    init.output = GPIO_PUSHPULL;
+    init.pull = GPIO_NO_PULL;
+    init.drive = GPIO_DRIVE_HIGH;
+    gpio_pin_init(target.fpv, init);
     return true;
   }
   if (mode == 1 && fpv_init_done == 1) {
@@ -65,23 +87,34 @@ bool gpio_init_fpv(uint8_t mode) {
   return false;
 }
 
-void gpio_pin_init(LL_GPIO_InitTypeDef *init, gpio_pins_t pin) {
-  init->Pin = gpio_pin_defs[pin].pin;
-  LL_GPIO_Init(gpio_pin_defs[pin].port, init);
+void gpio_pin_init(gpio_pins_t pin, gpio_config_t config) {
+  LL_GPIO_InitTypeDef init;
+  init.Mode = mode_map[config.mode];
+  init.Speed = speed_map[config.drive];
+  init.OutputType = output_map[config.output];
+  init.Pull = pull_map[config.pull];
+  init.Pin = gpio_pin_defs[pin].pin;
+  LL_GPIO_Init(gpio_pin_defs[pin].port, &init);
 }
 
-void gpio_pin_init_af(LL_GPIO_InitTypeDef *init, gpio_pins_t pin, uint8_t af) {
-  init->Alternate = af;
-  gpio_pin_init(init, pin);
+void gpio_pin_init_af(gpio_pins_t pin, gpio_config_t config, uint8_t af) {
+  LL_GPIO_InitTypeDef init;
+  init.Mode = mode_map[config.mode];
+  init.Speed = speed_map[config.drive];
+  init.OutputType = output_map[config.output];
+  init.Pull = pull_map[config.pull];
+  init.Pin = gpio_pin_defs[pin].pin;
+  init.Alternate = af;
+  LL_GPIO_Init(gpio_pin_defs[pin].port, &init);
 }
 
-void gpio_pin_init_tag(LL_GPIO_InitTypeDef *init, gpio_pins_t pin, resource_tag_t tag) {
+void gpio_pin_init_tag(gpio_pins_t pin, gpio_config_t config, resource_tag_t tag) {
   for (uint32_t j = 0; j < GPIO_AF_MAX; j++) {
     const gpio_af_t *func = &gpio_pin_afs[j];
     if (func->pin != pin || func->tag != tag) {
       continue;
     }
-    return gpio_pin_init_af(init, pin, func->af);
+    return gpio_pin_init_af(pin, config, func->af);
   }
 }
 

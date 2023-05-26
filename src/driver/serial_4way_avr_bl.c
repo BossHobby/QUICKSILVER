@@ -53,21 +53,21 @@ static void esc_set_low(gpio_pins_t pin) {
 }
 
 static void esc_set_input(gpio_pins_t pin) {
-  LL_GPIO_InitTypeDef gpio_init = {0};
-  gpio_init.Mode = LL_GPIO_MODE_INPUT;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-  gpio_init.Pull = LL_GPIO_PULL_UP;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  gpio_pin_init(&gpio_init, pin);
+  gpio_config_t gpio_init = {0};
+  gpio_init.mode = GPIO_INPUT;
+  gpio_init.output = GPIO_OPENDRAIN;
+  gpio_init.pull = GPIO_UP_PULL;
+  gpio_init.drive = GPIO_DRIVE_NORMAL;
+  gpio_pin_init(pin, gpio_init);
 }
 
 static void esc_set_output(gpio_pins_t pin) {
-  LL_GPIO_InitTypeDef gpio_init = {0};
-  gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  gpio_pin_init(&gpio_init, pin);
+  gpio_config_t gpio_init = {0};
+  gpio_init.mode = GPIO_OUTPUT;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_NO_PULL;
+  gpio_init.drive = GPIO_DRIVE_NORMAL;
+  gpio_pin_init(pin, gpio_init);
 }
 
 static uint8_t serial_read(gpio_pins_t pin, uint8_t *bt) {

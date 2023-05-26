@@ -26,39 +26,39 @@ static bool cc2500_hardware_init() {
   }
 
   {
-    LL_GPIO_InitTypeDef gpio_init;
-    gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
-    gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-    gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-    gpio_init.Pull = LL_GPIO_PULL_NO;
+    gpio_config_t gpio_init;
+    gpio_init.mode = GPIO_OUTPUT;
+    gpio_init.drive = GPIO_DRIVE_HIGH;
+    gpio_init.output = GPIO_PUSHPULL;
+    gpio_init.pull = GPIO_NO_PULL;
 
     // turn antenna on
     if (target.rx_spi.lna_en != PIN_NONE) {
-      gpio_pin_init(&gpio_init, target.rx_spi.lna_en);
+      gpio_pin_init(target.rx_spi.lna_en, gpio_init);
       gpio_pin_set(target.rx_spi.lna_en);
     }
 
     // turn tx off
     if (target.rx_spi.tx_en != PIN_NONE) {
-      gpio_pin_init(&gpio_init, target.rx_spi.tx_en);
+      gpio_pin_init(target.rx_spi.tx_en, gpio_init);
       gpio_pin_reset(target.rx_spi.tx_en);
     }
 
     // choose b?
     if (target.rx_spi.ant_sel != PIN_NONE) {
-      gpio_pin_init(&gpio_init, target.rx_spi.ant_sel);
+      gpio_pin_init(target.rx_spi.ant_sel, gpio_init);
       gpio_pin_set(target.rx_spi.ant_sel);
     }
   }
 
   if (target.rx_spi.exti != PIN_NONE) {
     // GDO0
-    LL_GPIO_InitTypeDef gpio_init;
-    gpio_init.Mode = LL_GPIO_MODE_INPUT;
-    gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-    gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-    gpio_init.Pull = LL_GPIO_PULL_DOWN;
-    gpio_pin_init(&gpio_init, target.rx_spi.exti);
+    gpio_config_t gpio_init;
+    gpio_init.mode = GPIO_INPUT;
+    gpio_init.drive = GPIO_DRIVE_HIGH;
+    gpio_init.output = GPIO_OPENDRAIN;
+    gpio_init.pull = GPIO_DOWN_PULL;
+    gpio_pin_init(target.rx_spi.exti, gpio_init);
   }
 
   bus.port = target.rx_spi.port;

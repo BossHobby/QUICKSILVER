@@ -108,11 +108,11 @@ void handle_usart_invert(serial_ports_t port, bool invert) {
   }
 
   // Inverter control line, set high
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_pin_init(&gpio_init, dev->inverter);
+  gpio_config_t gpio_init;
+  gpio_init.mode = GPIO_OUTPUT;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_NO_PULL;
+  gpio_pin_init(dev->inverter, gpio_init);
   if (invert) {
     gpio_pin_set(dev->inverter);
   } else {
@@ -141,18 +141,18 @@ static void serial_hard_init(serial_port_t *serial, serial_port_config_t config)
   const serial_ports_t port = config.port;
   const target_serial_port_t *dev = &target.serial_ports[port];
 
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  gpio_config_t gpio_init;
+  gpio_init.mode = GPIO_ALTERNATE;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
   if (config.half_duplex) {
-    gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-    gpio_init.Pull = LL_GPIO_PULL_UP;
-    gpio_pin_init_tag(&gpio_init, dev->tx, SERIAL_TAG(port, RES_SERIAL_TX));
+    gpio_init.output = GPIO_OPENDRAIN;
+    gpio_init.pull = GPIO_UP_PULL;
+    gpio_pin_init_tag(dev->tx, gpio_init, SERIAL_TAG(port, RES_SERIAL_TX));
   } else {
-    gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-    gpio_init.Pull = LL_GPIO_PULL_NO;
-    gpio_pin_init_tag(&gpio_init, dev->rx, SERIAL_TAG(port, RES_SERIAL_RX));
-    gpio_pin_init_tag(&gpio_init, dev->tx, SERIAL_TAG(port, RES_SERIAL_TX));
+    gpio_init.output = GPIO_PUSHPULL;
+    gpio_init.pull = GPIO_NO_PULL;
+    gpio_pin_init_tag(dev->rx, gpio_init, SERIAL_TAG(port, RES_SERIAL_RX));
+    gpio_pin_init_tag(dev->tx, gpio_init, SERIAL_TAG(port, RES_SERIAL_TX));
   }
 
   LL_USART_InitTypeDef usart_init;
