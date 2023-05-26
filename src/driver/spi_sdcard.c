@@ -7,6 +7,8 @@
 #include "driver/time.h"
 #include "util/util.h"
 
+#ifdef USE_SDCARD
+
 typedef enum {
   SDCARD_POWER_UP,
   SDCARD_RESET,
@@ -653,3 +655,5 @@ uint8_t sdcard_write_page(uint8_t *buf, uint32_t sector) {
   }
   return 0;
 }
+
+#endif
