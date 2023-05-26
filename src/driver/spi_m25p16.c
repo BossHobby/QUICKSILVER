@@ -23,6 +23,8 @@
 #define JEDEC_ID_CYPRESS_S25FL128L 0x016018
 #define JEDEC_ID_BERGMICRO_W25Q32 0xE04016
 
+#ifdef USE_DATA_FLASH
+
 static spi_bus_device_t bus = {
     .auto_continue = true,
 };
@@ -195,3 +197,5 @@ void m25p16_get_bounds(blackbox_device_bounds_t *blackbox_bounds) {
   blackbox_bounds->sector_size = blackbox_bounds->pages_per_sector * blackbox_bounds->page_size;
   blackbox_bounds->total_size = blackbox_bounds->sector_size * blackbox_bounds->sectors;
 }
+
+#endif

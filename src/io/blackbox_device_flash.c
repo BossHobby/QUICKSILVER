@@ -22,6 +22,8 @@ typedef enum {
   STATE_WRITE_HEADER,
 } blackbox_device_state_t;
 
+#ifdef USE_DATA_FLASH
+
 static blackbox_device_state_t state = STATE_DETECT;
 static uint8_t should_flush = 0;
 
@@ -208,3 +210,5 @@ blackbox_device_vtable_t blackbox_device_flash = {
     .read = blackbox_device_flash_read,
     .write = blackbox_device_flash_write,
 };
+
+#endif

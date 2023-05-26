@@ -9,6 +9,8 @@
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
+#ifdef USE_BLACKBOX
+
 #define MEMBER CBOR_ENCODE_MEMBER
 #define STR_MEMBER CBOR_ENCODE_STR_MEMBER
 #define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
@@ -64,13 +66,19 @@ blackbox_device_file_t *blackbox_current_file() {
 }
 
 void blackbox_device_init() {
+#ifdef USE_SDCARD
   if (target_spi_device_valid(&target.sdcard)) {
     dev = &blackbox_device_sdcard;
     target_set_feature(FEATURE_BLACKBOX);
-  } else if (target_spi_device_valid(&target.flash)) {
+  } else
+#endif
+#ifdef USE_DATA_FLASH
+      if (target_spi_device_valid(&target.flash)) {
     dev = &blackbox_device_flash;
     target_set_feature(FEATURE_BLACKBOX);
-  } else {
+  } else
+#endif
+  {
     target_reset_feature(FEATURE_BLACKBOX);
   }
 
@@ -179,3 +187,5 @@ cbor_result_t blackbox_device_write(const uint32_t field_flags, const blackbox_t
 
   return res;
 }
+
+#endif
