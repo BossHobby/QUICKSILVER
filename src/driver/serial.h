@@ -55,7 +55,7 @@ typedef struct {
 
 typedef struct {
   uint8_t channel_index;
-  USART_TypeDef *channel;
+  usart_dev_t *channel;
   IRQn_Type irq;
   rcc_reg_t rcc;
 } usart_port_def_t;

@@ -87,3 +87,8 @@
 #endif
 
 typedef GPIO_TypeDef gpio_port_t;
+typedef DMA_TypeDef dma_port_t;
+typedef DMA_Stream_TypeDef dma_stream_t;
+typedef SPI_TypeDef spi_port_t;
+typedef TIM_TypeDef timer_dev_t;
+typedef USART_TypeDef usart_dev_t;

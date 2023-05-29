@@ -16,7 +16,7 @@ typedef enum {
 
 typedef struct {
   uint8_t channel_index;
-  SPI_TypeDef *channel;
+  spi_port_t *channel;
   rcc_reg_t rcc;
   dma_device_t dma_rx;
   dma_device_t dma_tx;

@@ -25,7 +25,7 @@ typedef enum {
 typedef struct {
   dma_device_t device;
 
-  DMA_TypeDef *port;
+  dma_port_t *port;
   uint8_t port_index;
 
   uint32_t channel;
@@ -33,7 +33,7 @@ typedef struct {
 
   uint32_t request;
 
-  DMA_Stream_TypeDef *stream;
+  dma_stream_t *stream;
   uint8_t stream_index;
 
   IRQn_Type irq;
@@ -50,7 +50,7 @@ void dma_prepare_rx_memory(void *addr, uint32_t size);
 
 void dma_enable_rcc(dma_device_t dev);
 
-uint32_t dma_is_flag_active_tc(DMA_TypeDef *dma, uint32_t stream);
-uint32_t dma_is_flag_active_te(DMA_TypeDef *dma, uint32_t stream);
+uint32_t dma_is_flag_active_tc(dma_port_t *dma, uint32_t stream);
+uint32_t dma_is_flag_active_te(dma_port_t *dma, uint32_t stream);
 
-void dma_clear_flag_tc(DMA_TypeDef *dma, uint32_t stream);
+void dma_clear_flag_tc(dma_port_t *dma, uint32_t stream);
