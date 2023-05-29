@@ -56,11 +56,11 @@ bool sx128x_init() {
   gpio_init.pull = GPIO_NO_PULL;
   gpio_pin_init(target.rx_spi.busy, gpio_init);
   if (target.rx_spi.busy_exti) {
-    exti_enable(target.rx_spi.busy, LL_EXTI_TRIGGER_FALLING);
+    exti_enable(target.rx_spi.busy, EXTI_TRIG_FALLING);
   }
 
   gpio_pin_init(target.rx_spi.exti, gpio_init);
-  exti_enable(target.rx_spi.exti, LL_EXTI_TRIGGER_RISING);
+  exti_enable(target.rx_spi.exti, EXTI_TRIG_RISING);
 
   bus.port = target.rx_spi.port;
   bus.nss = target.rx_spi.nss;

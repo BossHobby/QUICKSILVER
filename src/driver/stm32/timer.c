@@ -149,7 +149,7 @@ resource_tag_t timer_alloc(timer_use_t use) {
   return TIMER_TAG(TIMER_INVALID, TIMER_CH_INVALID);
 }
 
-void timer_init(timer_index_t tim, LL_TIM_InitTypeDef *tim_init) {
+static void timer_init(timer_index_t tim, LL_TIM_InitTypeDef *tim_init) {
   rcc_enable(timer_defs[tim].rcc);
   LL_TIM_Init(timer_defs[tim].instance, tim_init);
 }
