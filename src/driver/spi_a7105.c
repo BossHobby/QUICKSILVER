@@ -129,7 +129,7 @@ static bool a7105_hardware_init() {
   gpio_init.output = GPIO_OPENDRAIN;
   gpio_init.pull = GPIO_NO_PULL;
   gpio_pin_init(target.rx_spi.exti, gpio_init);
-  exti_enable(target.rx_spi.exti, LL_EXTI_TRIGGER_RISING);
+  exti_enable(target.rx_spi.exti, EXTI_TRIG_RISING);
   exti_interrupt_disable(target.rx_spi.exti);
 
   // Configure SPI

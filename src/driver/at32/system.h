@@ -13,3 +13,8 @@
 #endif
 
 typedef gpio_type gpio_port_t;
+typedef dma_type dma_port_t;
+typedef dmamux_channel_type dma_stream_t;
+typedef spi_type spi_port_t;
+typedef tmr_type timer_dev_t;
+typedef usart_type usart_dev_t;

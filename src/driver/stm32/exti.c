@@ -95,7 +95,14 @@ static void exti_set_source(gpio_pins_t pin) {
   }
 }
 
-void exti_enable(gpio_pins_t pin, uint32_t trigger) {
+const uint32_t exti_trigger_map[] = {
+    [EXTI_TRIG_NONE] = EXTI_TRIGGER_NONE,
+    [EXTI_TRIG_RISING] = EXTI_TRIGGER_RISING,
+    [EXTI_TRIG_FALLING] = EXTI_TRIGGER_FALLING,
+    [EXTI_TRIG_RISING_FALLING] = EXTI_TRIGGER_RISING_FALLING,
+};
+
+void exti_enable(gpio_pins_t pin, exti_trigger_t trigger) {
   exti_set_source(pin);
 
   LL_EXTI_ClearFlag_0_31(LINE.exti_line);
@@ -104,7 +111,7 @@ void exti_enable(gpio_pins_t pin, uint32_t trigger) {
   exti_init.Line_0_31 = LINE.exti_line;
   exti_init.LineCommand = ENABLE;
   exti_init.Mode = LL_EXTI_MODE_IT;
-  exti_init.Trigger = trigger;
+  exti_init.Trigger = exti_trigger_map[trigger];
   LL_EXTI_Init(&exti_init);
 
   LL_EXTI_EnableIT_0_31(LINE.exti_line);
