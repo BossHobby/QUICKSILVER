@@ -223,7 +223,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       uint8_t data[1] = {1};
       msp_send_reply(msp, magic, cmd, data, 1);
 
-      if (arg == serial_smart_audio_port) {
+      if (arg == serial_vtx.config.port) {
         if (vtx_settings.protocol == VTX_PROTOCOL_TRAMP) {
           usb_serial_passthrough(arg, 9600, 1, true);
         } else {
@@ -269,17 +269,17 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       data[1 + i * 5] = i;
 
       uint32_t function = 0;
-      if (i == serial_rx_port) {
+      if (i == serial_rx.config.port) {
         function = MSP_SERIAL_FUNCTION_RX;
       }
-      if (i == serial_smart_audio_port) {
+      if (i == serial_vtx.config.port) {
         if (vtx_settings.protocol == VTX_PROTOCOL_TRAMP) {
           function = MSP_SERIAL_FUNCTION_TRAMP;
         } else {
           function = MSP_SERIAL_FUNCTION_SA;
         }
       }
-      if (i == serial_hdzero_port) {
+      if (i == serial_hdzero.config.port) {
         function = MSP_SERIAL_FUNCTION_HDZERO;
       }
 

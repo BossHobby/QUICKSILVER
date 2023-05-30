@@ -12,128 +12,143 @@
 #include "util/util.h"
 
 typedef enum {
-  PROTOCOL_INVALID = 0,
+  DSM_PROTO_INVALID = 0,
   DSMX_11_2048 = 0xb2,
   DSMX_22_2048 = 0xa2,
   DSM2_11_2048 = 0x12,
   DSM2_22_1024 = 0x01
 } dsm_protocol_t;
-static dsm_protocol_t dsm_protocol = PROTOCOL_INVALID;
 
-#define DSM_SCALE_PERCENT 147 // this might stay somewhere or be replaced with wizard scaling
+typedef enum {
+  DSM_CHECK_PROTOCOL,
+  DSM_PAYLOAD,
+} dsm_parser_state_t;
 
-extern uint8_t rx_buffer[RX_BUFF_SIZE];
+#define DSM_SCALE_PERCENT 147
+#define DSM_PACKET_SIZE 16
+
+static dsm_protocol_t dsm_protocol = DSM_PROTO_INVALID;
+
+extern int32_t channels[16];
 extern uint8_t rx_data[RX_BUFF_SIZE];
 
-extern volatile uint8_t expected_frame_length;
-extern volatile frame_status_t frame_status;
-
-extern uint16_t bind_safety;
-extern int32_t channels[16];
-
-extern profile_t profile;
-extern int current_pid_axis;
-extern int current_pid_term;
-
-#define USART usart_port_defs[serial_rx_port]
-
-bool rx_serial_process_dsm() {
-  bool channels_received = false;
-
-  for (uint8_t counter = 0; counter < 16; counter++) {    // First up, get the rx_data out of the RX buffer and into somewhere safe
-    rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
+static dsm_protocol_t detect_protocol(uint8_t id) {
+  switch (id) {
+  case DSM2_22_1024:
+    return DSM2_22_1024;
+  case DSMX_11_2048:
+    return DSMX_11_2048;
+  case DSMX_22_2048:
+    return DSMX_22_2048;
+  case DSM2_11_2048:
+    return DSM2_11_2048;
+  default:
+    return DSM_PROTO_INVALID;
   }
+}
 
-  if (dsm_protocol == PROTOCOL_INVALID) { // dsm variant has not been selected yet
-    dsm_protocol = rx_buffer[1];          // detect dsm variant on first contact and run with it
-  }
-
-  uint8_t spek_chan_shift;
-  uint8_t spek_chan_mask;
-  uint8_t dsm_channel_count;
+static packet_status_t dsm_handle_packet(uint8_t *packet) {
+  uint8_t spek_width;
+  uint16_t spek_chan_mask;
+  uint16_t spek_val_mask;
   float dsm_scalefactor;
   float dsm_offset;
 
   switch (dsm_protocol) {
-  case PROTOCOL_INVALID:
-    return channels_received;
   case DSM2_22_1024:
     // 10 bit frames
-    spek_chan_shift = 2;
-    spek_chan_mask = 0x03;
-    dsm_channel_count = 7;
+    spek_width = 10;
+    spek_chan_mask = 0xFC00;
+    spek_val_mask = 0x03FF;
     dsm_scalefactor = (0.29354210f / DSM_SCALE_PERCENT);
     dsm_offset = 512.0f;
     break;
   case DSMX_11_2048:
   case DSMX_22_2048:
   case DSM2_11_2048:
-  default:
     // 11 bit frames
-    spek_chan_shift = 3;
-    spek_chan_mask = 0x07;
-    dsm_channel_count = 12;
+    spek_width = 11;
+    spek_chan_mask = 0x7800;
+    spek_val_mask = 0x07FF;
     dsm_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
     dsm_offset = 1024.0f;
     break;
+
+  default:
+    return PACKET_ERROR;
   }
 
-  for (int b = 3; b < expected_frame_length; b += 2) { // stick data in channels buckets
-    const uint8_t spekChannel = 0x0F & (rx_data[b - 1] >> spek_chan_shift);
-    if (spekChannel < dsm_channel_count && spekChannel < 12) {
-      channels[spekChannel] = ((uint32_t)(rx_data[b - 1] & spek_chan_mask) << 8) + rx_data[b];
-      frame_status = FRAME_RX_DONE; // if we can hold 2 here for an entire frame, then we will decode it
+  const uint16_t *spek_ptr = (uint16_t *)(packet + 2);
+  for (uint32_t i = 0; i < 7; i++) {
+    const uint16_t spek_data = __builtin_bswap16(spek_ptr[i]);
+    const uint16_t spek_val = spek_data & spek_val_mask;
+    const uint8_t spek_chan = (spek_data & spek_chan_mask) >> spek_width;
+    if (spek_chan < 16) {
+      channels[spek_chan] = spek_val;
     } else {
-      // a counter here will flag on 22ms mode which could be used for auto-apply of correct filter cut on rc smoothing
+      dsm_protocol = DSM_PROTO_INVALID;
+      return PACKET_ERROR;
     }
   }
 
-  if (frame_status == FRAME_RX_DONE) {
-    bind_safety++;
-    if (bind_safety < 120)
-      flags.rx_mode = RXMODE_BIND; // this is rapid flash during bind safety
+  // AETR channel order
+  const float rc_channels[4] = {
+      (channels[0] - dsm_offset) * dsm_scalefactor,
+      (channels[1] - dsm_offset) * dsm_scalefactor,
+      (channels[2] - dsm_offset) * dsm_scalefactor,
+      (channels[3] - dsm_offset) * dsm_scalefactor,
+  };
 
-    // AETR channel order
-    const float rc_channels[4] = {
-        (channels[0] - dsm_offset) * dsm_scalefactor,
-        (channels[1] - dsm_offset) * dsm_scalefactor,
-        (channels[2] - dsm_offset) * dsm_scalefactor,
-        (channels[3] - dsm_offset) * dsm_scalefactor,
-    };
+  rx_map_channels(rc_channels);
 
-    rx_map_channels(rc_channels);
+  state.aux[AUX_CHANNEL_0] = (((channels[4] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0; // cutoff intentionally selected to force aux channels low if
+  state.aux[AUX_CHANNEL_1] = (((channels[5] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0; // being controlled by a transmitter using a 3 pos switch in center state
+  state.aux[AUX_CHANNEL_2] = (((channels[6] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
+  state.aux[AUX_CHANNEL_3] = (((channels[7] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
+  state.aux[AUX_CHANNEL_4] = (((channels[8] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
+  state.aux[AUX_CHANNEL_5] = (((channels[9] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
+  state.aux[AUX_CHANNEL_6] = (((channels[10] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
+  state.aux[AUX_CHANNEL_7] = (((channels[11] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
 
-    state.aux[AUX_CHANNEL_0] = (((channels[4] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0; // cutoff intentionally selected to force aux channels low if
-    state.aux[AUX_CHANNEL_1] = (((channels[5] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0; // being controlled by a transmitter using a 3 pos switch in center state
-    state.aux[AUX_CHANNEL_2] = (((channels[6] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
-    state.aux[AUX_CHANNEL_3] = (((channels[7] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
-    state.aux[AUX_CHANNEL_4] = (((channels[8] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
-    state.aux[AUX_CHANNEL_5] = (((channels[9] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
-    state.aux[AUX_CHANNEL_6] = (((channels[10] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
-    state.aux[AUX_CHANNEL_7] = (((channels[11] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
-
-    channels_received = true;
-
-    rx_lqi_got_packet();
-
-    if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
-      rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI] + 4)] - dsm_offset) * dsm_scalefactor * 0.5f) + 0.5f));
-    }
-
-    if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-      rx_lqi_update_direct(0); // no internal rssi data
-    }
-
-    frame_status = FRAME_DONE; // We're done with this frame now.
-
-    if ((bind_safety > 120) && (rx_buffer[1] == dsm_protocol)) { // requires 120 good frames to come in and one last sanity check the protocol still matches before rx_ready safety can be toggled to 1.  About a second of good data
-      flags.rx_ready = 1;                                        // because aux channels initialize low and clear the binding while armed flag before aux updates high
-      flags.rx_mode = !RXMODE_BIND;                              // restores normal led operation
-      bind_safety = 121;                                         // reset counter so it doesnt wrap
-    }
+  rx_lqi_got_packet();
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
+    rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI] + 4)] - dsm_offset) * dsm_scalefactor * 0.5f) + 0.5f));
+  }
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
+    rx_lqi_update_direct(0); // no internal rssi data
   }
 
-  return channels_received;
+  return PACKET_CHANNELS_RECEIVED;
+}
+
+packet_status_t rx_serial_process_dsm() {
+  static dsm_parser_state_t parser_state = DSM_CHECK_PROTOCOL;
+
+dsm_do_more:
+  switch (parser_state) {
+  case DSM_CHECK_PROTOCOL: {
+    if (!serial_read_bytes(&serial_rx, rx_data, 2)) {
+      return PACKET_NEEDS_MORE;
+    }
+    dsm_protocol = detect_protocol(rx_data[1]);
+    if (dsm_protocol != DSM_PROTO_INVALID && rx_data[0] < 4) {
+      parser_state = DSM_PAYLOAD;
+    }
+    goto dsm_do_more;
+  }
+  case DSM_PAYLOAD: {
+    if (serial_bytes_available(&serial_rx) < DSM_PACKET_SIZE - 2) {
+      return PACKET_NEEDS_MORE;
+    }
+    if (serial_read_bytes(&serial_rx, rx_data + 2, DSM_PACKET_SIZE - 2) != DSM_PACKET_SIZE - 2) {
+      return PACKET_ERROR;
+    }
+    parser_state = DSM_CHECK_PROTOCOL;
+    return dsm_handle_packet(rx_data);
+  }
+  }
+
+  return PACKET_ERROR;
 }
 
 // Send Spektrum bind pulses to a GPIO e.g. TX1
@@ -170,7 +185,7 @@ void rx_spektrum_bind() {
 
 uint16_t rx_serial_dsm_smoothing_cutoff() {
   switch (dsm_protocol) {
-  case PROTOCOL_INVALID:
+  case DSM_PROTO_INVALID:
   case DSMX_11_2048:
   case DSM2_11_2048:
     return 40;
@@ -183,7 +198,7 @@ uint16_t rx_serial_dsm_smoothing_cutoff() {
 
 float rx_serial_dsm_expected_fps() {
   switch (dsm_protocol) {
-  case PROTOCOL_INVALID:
+  case DSM_PROTO_INVALID:
   case DSMX_11_2048:
   case DSM2_11_2048:
     return 91;
