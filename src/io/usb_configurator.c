@@ -101,12 +101,19 @@ void usb_serial_passthrough(serial_ports_t port, uint32_t baudrate, uint8_t stop
   serial_port_t serial = {
       .rx_buffer = &rx_buffer,
       .tx_buffer = &tx_buffer,
+
+      .tx_done = true,
   };
 
-  serial_disable_isr(port);
+  serial_port_config_t config;
+  config.port = port;
+  config.baudrate = baudrate;
+  config.direction = SERIAL_DIR_TX_RX;
+  config.stop_bits = stop_bits == 2 ? SERIAL_STOP_BITS_2 : SERIAL_STOP_BITS_1;
+  config.half_duplex = half_duplex;
+  config.invert = false;
 
-  serial_enable_rcc(port);
-  serial_init(&serial, port, baudrate, stop_bits, half_duplex);
+  serial_init(&serial, config);
 
   uint8_t data[512];
   while (1) {

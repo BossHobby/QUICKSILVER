@@ -9,12 +9,8 @@
 #include "driver/time.h"
 #include "util/ring_buffer.h"
 
-#define USART usart_port_defs[serial_smart_audio_port]
-
 typedef enum {
   PARSER_IDLE,
-  PARSER_ERROR,
-  PARSER_INIT,
   PARSER_READ_MAGIC,
   PARSER_READ_PAYLOAD,
   PARSER_READ_CRC,
@@ -28,12 +24,6 @@ static tramp_parser_state_t parser_state = PARSER_IDLE;
 extern uint32_t vtx_last_valid_read;
 extern uint32_t vtx_last_request;
 
-extern volatile uint8_t vtx_transfer_done;
-
-extern uint8_t vtx_frame[VTX_BUFFER_SIZE];
-extern volatile uint8_t vtx_frame_length;
-extern volatile uint8_t vtx_frame_offset;
-
 static uint8_t crc8_data(const uint8_t *data) {
   uint8_t crc = 0;
   for (int i = 0; i < 13; i++) {
@@ -42,51 +32,23 @@ static uint8_t crc8_data(const uint8_t *data) {
   return crc;
 }
 
-static void serial_tramp_reconfigure() {
+void serial_tramp_init() {
   serial_vtx_wait_for_ready();
 
-  if (serial_is_soft(serial_smart_audio_port)) {
-    soft_serial_init(serial_smart_audio_port, 9600, 1);
-    return;
-  }
-
-  const target_serial_port_t *dev = &target.serial_ports[serial_smart_audio_port];
+  const target_serial_port_t *dev = &target.serial_ports[profile.serial.smart_audio];
   if (!target_serial_port_valid(dev)) {
     return;
   }
 
-  serial_disable_isr(serial_smart_audio_port);
+  serial_port_config_t config;
+  config.port = profile.serial.smart_audio;
+  config.baudrate = 9600;
+  config.direction = SERIAL_DIR_TX_RX;
+  config.stop_bits = SERIAL_STOP_BITS_1;
+  config.invert = false;
+  config.half_duplex = true;
 
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-  gpio_init.Pull = LL_GPIO_PULL_UP;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  gpio_pin_init_tag(&gpio_init, dev->tx, SERIAL_TAG(serial_smart_audio_port, RES_SERIAL_TX));
-
-  LL_USART_InitTypeDef usart_init;
-  LL_USART_StructInit(&usart_init);
-  usart_init.BaudRate = 9600;
-  usart_init.DataWidth = LL_USART_DATAWIDTH_8B;
-  usart_init.StopBits = LL_USART_STOPBITS_1;
-  usart_init.Parity = LL_USART_PARITY_NONE;
-  usart_init.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
-  usart_init.TransferDirection = LL_USART_DIRECTION_TX_RX;
-  usart_init.OverSampling = LL_USART_OVERSAMPLING_16;
-  serial_port_init(serial_smart_audio_port, &usart_init, true, false);
-
-  LL_USART_EnableIT_RXNE(USART.channel);
-  LL_USART_EnableIT_TC(USART.channel);
-
-  serial_enable_isr(serial_smart_audio_port);
-}
-
-void serial_tramp_init() {
-  serial_smart_audio_port = profile.serial.smart_audio;
-  if (!serial_is_soft(serial_smart_audio_port)) {
-    serial_enable_rcc(serial_smart_audio_port);
-  }
-  serial_tramp_reconfigure();
+  serial_init(&serial_vtx, config);
 }
 
 static bool tramp_is_query(uint8_t cmd) {
@@ -124,107 +86,61 @@ static uint8_t tramp_parse_packet(uint8_t *payload) {
 }
 
 vtx_update_result_t serial_tramp_update() {
-  if (vtx_transfer_done == 0) {
+  if (!serial_vtx_is_ready()) {
     return VTX_WAIT;
   }
-  if (parser_state > PARSER_INIT && (time_millis() - vtx_last_valid_read) > 500) {
-    quic_debugf("TRAMP: timeout waiting for packet");
-    parser_state = ERROR;
+  if (parser_state > PARSER_IDLE && (time_millis() - vtx_last_valid_read) > 500) {
     return VTX_ERROR;
   }
 
   static uint8_t payload[32];
   static uint8_t payload_offset = 0;
 
+tramp_do_more:
   switch (parser_state) {
-  case PARSER_ERROR:
-    return VTX_ERROR;
-
   case PARSER_IDLE:
     return VTX_IDLE;
 
-  case PARSER_INIT: {
-    if ((time_millis() - vtx_last_request) < 200) {
-      return VTX_WAIT;
-    }
-
-    payload_offset = 0;
-    if (!serial_vtx_send_data(vtx_frame, vtx_frame_length)) {
-      return VTX_WAIT;
-    }
-
-    for (uint32_t i = 0; i < vtx_frame_length; i++) {
-      quic_debugf("TRAMP: sent  0x%x (%d)", vtx_frame[i], i);
-    }
-
-    if (tramp_is_query(vtx_frame[1])) {
-      parser_state = PARSER_READ_MAGIC;
-      return VTX_WAIT;
-    } else {
-      parser_state = PRASER_WAIT_FOR_READY;
-      return VTX_WAIT;
-    }
-  }
   case PARSER_READ_MAGIC: {
-    uint8_t data = 0;
-    if (serial_vtx_read_byte(&data) == 0) {
+    if (serial_vtx_read_byte(&payload[0]) == 0) {
       return VTX_WAIT;
     }
 
-    quic_debugf("TRAMP: magic 0x%x (%d)", data, payload_offset);
-
-    if (data != 0x0F) {
-      quic_debugf("TRAMP: invalid magic (%d:0x%x)", payload_offset, data);
-      parser_state = ERROR;
-      return VTX_ERROR;
-    }
-    payload_offset++;
-
-    if (payload_offset == 1) {
+    if (payload[0] == 0x0F) {
       parser_state = PARSER_READ_PAYLOAD;
+      payload_offset = 1;
     }
-    return VTX_WAIT;
+    goto tramp_do_more;
   }
   case PARSER_READ_PAYLOAD: {
-    uint8_t data = 0;
-    if (serial_vtx_read_byte(&data) == 0) {
+    if (serial_vtx_read_byte(&payload[payload_offset]) == 0) {
       return VTX_WAIT;
     }
 
-    payload[payload_offset - 1] = data;
-    quic_debugf("TRAMP: payload 0x%x (%d)", data, payload_offset);
     payload_offset++;
-
-    // payload done, lets check crc
-    if (payload_offset == 16) {
+    if (payload_offset >= 16) {
       parser_state = PARSER_READ_CRC;
     }
-
-    return VTX_WAIT;
+    goto tramp_do_more;
   }
   case PARSER_READ_CRC: {
-    uint8_t crc = crc8_data(payload);
+    parser_state = PARSER_IDLE;
 
-    if (payload[13] != crc || payload[14] != 0) {
-      quic_debugf("TRAMP: invalid crc 0x%x vs 0x%x", crc, payload[13]);
-      parser_state = ERROR;
+    const uint8_t crc = crc8_data(payload + 1);
+    if (payload[14] != crc || payload[15] != 0) {
       return VTX_ERROR;
     }
 
-    if (!tramp_parse_packet(payload)) {
-      parser_state = ERROR;
+    if (!tramp_parse_packet(payload + 1)) {
       return VTX_ERROR;
     }
 
-    parser_state = PRASER_WAIT_FOR_READY;
-    return VTX_WAIT;
+    return VTX_SUCCESS;
   }
   case PRASER_WAIT_FOR_READY: {
-    if (vtx_transfer_done == 1) {
-      parser_state = PARSER_IDLE;
-      return VTX_SUCCESS;
-    }
-    return VTX_WAIT;
+    // dummy state for non querry packets
+    parser_state = PARSER_IDLE;
+    return VTX_SUCCESS;
   }
   }
 
@@ -236,9 +152,8 @@ void serial_tramp_send_payload(uint8_t cmd, const uint16_t payload) {
     return;
   }
 
-  vtx_frame_length = 16;
-
-  memset(vtx_frame, 0, vtx_frame_length);
+  uint8_t vtx_frame[16];
+  memset(vtx_frame, 0, 16);
 
   vtx_frame[0] = 0x0F;
   vtx_frame[1] = cmd;
@@ -246,6 +161,11 @@ void serial_tramp_send_payload(uint8_t cmd, const uint16_t payload) {
   vtx_frame[3] = (payload >> 8) & 0xff;
   vtx_frame[14] = crc8_data(vtx_frame + 1);
 
-  parser_state = PARSER_INIT;
-  vtx_last_valid_read = time_millis();
+  serial_vtx_send_data(vtx_frame, 16);
+
+  if (tramp_is_query(vtx_frame[1])) {
+    parser_state = PARSER_READ_MAGIC;
+  } else {
+    parser_state = PRASER_WAIT_FOR_READY;
+  }
 }

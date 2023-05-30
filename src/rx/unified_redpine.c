@@ -10,26 +10,19 @@
 #include "flight/control.h"
 #include "util/util.h"
 
+typedef enum {
+  REDPINE_CHECK_MAGIC,
+  REDPINE_PAYLOAD,
+  REDPINE_CHECK_CRC,
+} redpine_parser_state_t;
+
 #define REDPINE_CHANNEL_START 3
 #define REDPINE_CRC16_POLY 0x8005
 
-extern uint8_t rx_buffer[RX_BUFF_SIZE];
+extern int32_t channels[16];
 extern uint8_t rx_data[RX_BUFF_SIZE];
 
-extern volatile uint8_t rx_frame_position;
-extern volatile uint8_t expected_frame_length;
-extern volatile frame_status_t frame_status;
-
-extern uint16_t bind_safety;
-extern int32_t channels[16];
-
-extern profile_t profile;
-extern int current_pid_axis;
-extern int current_pid_term;
-
-#define USART usart_port_defs[serial_rx_port]
-
-uint16_t redpine_crc16(uint8_t *data, uint16_t len) {
+static uint16_t redpine_crc16(uint8_t *data, uint16_t len) {
   uint16_t crc = 0xFFFF;
   for (uint16_t i = 0; i < len; i++) {
     uint8_t val = data[i];
@@ -45,27 +38,7 @@ uint16_t redpine_crc16(uint8_t *data, uint16_t len) {
   return crc;
 }
 
-bool rx_serial_process_redpine() {
-  bool channels_received = false;
-
-  if (rx_frame_position != 11) {
-    quic_debugf("REDPINE: unexpected frame length %d vs %d", rx_frame_position, expected_frame_length);
-  }
-
-  for (uint8_t i = 0; i < 11; i++) {
-    rx_data[i] = rx_buffer[i % RX_BUFF_SIZE];
-  }
-
-  const uint16_t crc_our = redpine_crc16(rx_data + REDPINE_CHANNEL_START, 11 - REDPINE_CHANNEL_START);
-  const uint16_t crc_theirs = (uint16_t)(rx_data[1] << 8) | rx_data[2];
-
-  if (crc_our != crc_theirs) {
-    // invalid crc, bail
-    quic_debugf("REDPINE: invalid crc");
-    frame_status = FRAME_IDLE;
-    return channels_received;
-  }
-
+static packet_status_t redpine_handle_packet(uint8_t *packet) {
   // packet lost flag
   if ((rx_data[0] & 0xc0) != 0x40) {
     rx_lqi_got_packet();
@@ -76,11 +49,6 @@ bool rx_serial_process_redpine() {
         (uint16_t)((rx_data[REDPINE_CHANNEL_START + 4] << 8) & 0x700) | rx_data[REDPINE_CHANNEL_START + 3],
         (uint16_t)((rx_data[REDPINE_CHANNEL_START + 5] << 4) & 0x7F0) | ((rx_data[REDPINE_CHANNEL_START + 4] >> 4) & 0xF),
     };
-
-    // normal rx mode
-    bind_safety++;
-    if (bind_safety < 130)
-      flags.rx_mode = RXMODE_BIND; // this is rapid flash during bind safety
 
     // AETR channel order
     const float rc_channels[4] = {
@@ -105,9 +73,6 @@ bool rx_serial_process_redpine() {
     state.aux[AUX_CHANNEL_9] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x20) ? 1 : 0;
     state.aux[AUX_CHANNEL_10] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x40) ? 1 : 0;
     state.aux[AUX_CHANNEL_11] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x80) ? 1 : 0;
-
-    channels_received = true;
-
   } else {
     rx_lqi_lost_packet();
   }
@@ -119,13 +84,44 @@ bool rx_serial_process_redpine() {
     rx_lqi_update_direct(0); // aux channels are binary and cannot carry rssi
   }
 
-  frame_status = FRAME_DONE; // We're done with this frame now.
+  return PACKET_CHANNELS_RECEIVED;
+}
 
-  if (bind_safety > 131) {        // requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
-    flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
-    flags.rx_mode = !RXMODE_BIND; // restores normal led operation
-    bind_safety = 131;            // reset counter so it doesnt wrap
+packet_status_t rx_serial_process_redpine() {
+  static redpine_parser_state_t parser_state;
+
+redpine_do_more:
+  switch (parser_state) {
+  case REDPINE_CHECK_MAGIC: {
+    uint8_t magic = 0;
+    if (!serial_read_bytes(&serial_rx, &magic, 1)) {
+      return PACKET_NEEDS_MORE;
+    }
+    if ((magic & 0x3F) == 0x2A) {
+      parser_state = REDPINE_PAYLOAD;
+    }
+    rx_data[0] = magic;
+    goto redpine_do_more;
   }
+  case REDPINE_PAYLOAD: {
+    if (serial_bytes_available(&serial_rx) < 11) {
+      return PACKET_NEEDS_MORE;
+    }
+    if (serial_read_bytes(&serial_rx, rx_data + 1, 11) == 11) {
+      parser_state = REDPINE_CHECK_CRC;
+    }
+    goto redpine_do_more;
+  }
+  case REDPINE_CHECK_CRC: {
+    parser_state = REDPINE_CHECK_MAGIC;
 
-  return channels_received;
+    const uint16_t crc_our = redpine_crc16(rx_data + REDPINE_CHANNEL_START, 11 - REDPINE_CHANNEL_START);
+    const uint16_t crc_theirs = (uint16_t)(rx_data[1] << 8) | rx_data[2];
+    if (crc_our != crc_theirs) {
+      return PACKET_ERROR;
+    }
+    return redpine_handle_packet(rx_data);
+  }
+  }
+  return PACKET_ERROR;
 }

@@ -8,111 +8,127 @@
 #include "driver/time.h"
 #include "flight/control.h"
 
-extern uint8_t rx_buffer[RX_BUFF_SIZE];
+#define IBUS_PACKET_SIZE 32
+
+typedef enum {
+  IBUS_CHECK_MAGIC0,
+  IBUS_CHECK_MAGIC1,
+  IBUS_PAYLOAD,
+  IBUS_CHECK_CRC,
+} ibus_parser_state_t;
+
+extern int32_t channels[16];
 extern uint8_t rx_data[RX_BUFF_SIZE];
 
-extern volatile frame_status_t frame_status;
+static packet_status_t ibus_handle_packet(uint8_t *packet) {
+  channels[0] = packet[2] + (packet[3] << 8);
+  channels[1] = packet[4] + (packet[5] << 8);
+  channels[2] = packet[6] + (packet[7] << 8);
+  channels[3] = packet[8] + (packet[9] << 8);
+  channels[4] = packet[10] + (packet[11] << 8);
+  channels[5] = packet[12] + (packet[13] << 8);
+  channels[6] = packet[14] + (packet[15] << 8);
+  channels[7] = packet[16] + (packet[17] << 8);
+  channels[8] = packet[18] + (packet[19] << 8);
+  channels[9] = packet[20] + (packet[21] << 8);
+  channels[10] = packet[22] + (packet[23] << 8);
+  channels[11] = packet[24] + (packet[25] << 8);
+  channels[12] = packet[26] + (packet[27] << 8);
+  channels[13] = packet[28] + (packet[29] << 8);
 
-extern uint16_t bind_safety;
-extern int32_t channels[16];
+  const float rc_channels[4] = {
+      (channels[0] - 1500.f) * 0.002f,
+      (channels[1] - 1500.f) * 0.002f,
+      (channels[2] - 1500.f) * 0.002f,
+      (channels[3] - 1500.f) * 0.002f,
+  };
+  rx_map_channels(rc_channels);
 
-extern profile_t profile;
-extern int current_pid_axis;
-extern int current_pid_term;
+  // Here we have the AUX channels Silverware supports
+  state.aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
+  state.aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
+  state.aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
+  state.aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
+  state.aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
+  state.aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
+  state.aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
+  state.aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
+  state.aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
+  state.aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
+  state.aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
+  state.aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
 
-#define USART usart_port_defs[serial_rx_port]
+  rx_lqi_got_packet();
 
-bool rx_serial_process_ibus() {
-  bool channels_received = false;
-
-  uint8_t frameLength = 0;
-  for (uint8_t counter = 0; counter < 32; counter++) {    // First up, get the data out of the RX buffer and into somewhere safe
-    rx_data[counter] = rx_buffer[counter % RX_BUFF_SIZE]; // This can probably go away, as long as the buffer is large enough
-    frameLength++;                                        // to accept telemetry requests without overwriting control data
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
+    rx_lqi_update_direct(0.1f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 1000));
+  }
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
+    rx_lqi_update_direct(0); // no internal rssi data
   }
 
-  uint16_t crc_byte = 0xFFFF;
-  for (int x = 0; x < 30; x++) {
-    crc_byte = crc_byte - rx_data[x];
-  }
+  return PACKET_CHANNELS_RECEIVED;
+}
 
-  if (crc_byte == rx_data[30] + (rx_data[31] << 8)) { // If the CRC is good, shove it into controls
+packet_status_t rx_serial_process_ibus() {
+  static ibus_parser_state_t parser_state = IBUS_CHECK_MAGIC0;
 
-    // Flysky channels are delightfully straightforward
-    channels[0] = rx_data[2] + (rx_data[3] << 8);
-    channels[1] = rx_data[4] + (rx_data[5] << 8);
-    channels[2] = rx_data[6] + (rx_data[7] << 8);
-    channels[3] = rx_data[8] + (rx_data[9] << 8);
-    channels[4] = rx_data[10] + (rx_data[11] << 8);
-    channels[5] = rx_data[12] + (rx_data[13] << 8);
-    channels[6] = rx_data[14] + (rx_data[15] << 8);
-    channels[7] = rx_data[16] + (rx_data[17] << 8);
-    channels[8] = rx_data[18] + (rx_data[19] << 8);
-    channels[9] = rx_data[20] + (rx_data[21] << 8);
-    channels[10] = rx_data[22] + (rx_data[23] << 8);
-    channels[11] = rx_data[24] + (rx_data[25] << 8);
-    channels[12] = rx_data[26] + (rx_data[27] << 8);
-    channels[13] = rx_data[28] + (rx_data[29] << 8);
+  static uint8_t current_offset = 0;
+  static uint16_t crc = 0;
 
-    frame_status = FRAME_RX;
-
-  } else {
-    // if CRC fails, do this:
-    // while(1){} Enable for debugging to lock the FC if CRC fails. In the air we just drop CRC-failed packets
-    // Most likely reason for failed CRC is a frame that isn't fully here yet. No need to check again until a new byte comes in.
-
-    frame_status = FRAME_IDLE;
-  }
-
-  if (frame_status == FRAME_RX) {
-    // normal rx mode
-    bind_safety++;
-    if (bind_safety < 130)
-      flags.rx_mode = RXMODE_BIND; // this is rapid flash during bind safety
-
-    // AETR channel order
-    const float rc_channels[4] = {
-        (channels[0] - 1500.f) * 0.002f,
-        (channels[1] - 1500.f) * 0.002f,
-        (channels[2] - 1500.f) * 0.002f,
-        (channels[3] - 1500.f) * 0.002f,
-    };
-
-    rx_map_channels(rc_channels);
-
-    // Here we have the AUX channels Silverware supports
-    state.aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
-    state.aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
-    state.aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
-    state.aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
-    state.aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
-    state.aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
-    state.aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
-    state.aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
-    state.aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
-    state.aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
-    state.aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
-    state.aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
-
-    channels_received = true;
-
-    rx_lqi_got_packet();
-
-    if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
-      rx_lqi_update_direct(0.1f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 1000));
+ibus_do_more:
+  switch (parser_state) {
+  case IBUS_CHECK_MAGIC0: {
+    uint8_t magic = 0;
+    if (!serial_read_bytes(&serial_rx, &magic, 1)) {
+      return PACKET_NEEDS_MORE;
     }
-    if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-      rx_lqi_update_direct(0); // no internal rssi data
+    if (magic != 0x20) {
+      return PACKET_ERROR;
     }
-
-    frame_status = FRAME_DONE; // We're done with this frame now.
-
-    if (bind_safety > 131) {        // requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
-      flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
-      flags.rx_mode = !RXMODE_BIND; // restores normal led operation
-      bind_safety = 131;            // reset counter so it doesnt wrap
+    crc = 0xFFFF;
+    current_offset = 0;
+    rx_data[current_offset++] = magic;
+    crc = 0xFFFF - magic;
+    parser_state = IBUS_CHECK_MAGIC1;
+    goto ibus_do_more;
+  }
+  case IBUS_CHECK_MAGIC1: {
+    uint8_t magic = 0;
+    if (!serial_read_bytes(&serial_rx, &magic, 1)) {
+      return PACKET_NEEDS_MORE;
     }
+    if (magic != 0x40) {
+      parser_state = IBUS_CHECK_MAGIC0;
+      return PACKET_ERROR;
+    }
+    rx_data[current_offset++] = magic;
+    crc -= magic;
+    parser_state = IBUS_PAYLOAD;
+    goto ibus_do_more;
+  }
+  case IBUS_PAYLOAD: {
+    uint8_t data = 0;
+    if (!serial_read_bytes(&serial_rx, &data, 1)) {
+      return PACKET_NEEDS_MORE;
+    }
+    rx_data[current_offset++] = data;
+    crc -= data;
+
+    if (current_offset >= 0x20) {
+      parser_state = IBUS_CHECK_CRC;
+    }
+    goto ibus_do_more;
   }
 
-  return channels_received;
+  case IBUS_CHECK_CRC: {
+    parser_state = IBUS_CHECK_MAGIC0;
+    if (crc != 0) {
+      return PACKET_ERROR;
+    }
+    return ibus_handle_packet(rx_data);
+  }
+  }
+
+  return PACKET_ERROR;
 }
