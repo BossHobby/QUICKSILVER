@@ -25,75 +25,81 @@ typedef enum {
   ATTR_BLINK = 0x80,
 } displayport_attr_t;
 
-#define USART usart_port_defs[serial_hdzero_port]
-
-static volatile uint32_t last_heartbeat = 0;
-static bool is_detected = false;
-
-static uint8_t msp_tx_data[512];
-static ring_buffer_t msp_tx_buffer = {
-    .buffer = msp_tx_data,
+static uint8_t tx_data[512];
+static ring_buffer_t tx_buffer = {
+    .buffer = tx_data,
     .head = 0,
     .tail = 0,
     .size = 512,
 };
 
-static uint8_t msp_rx_data[256];
-static ring_buffer_t msp_rx_buffer = {
-    .buffer = msp_rx_data,
+static uint8_t rx_data[512];
+static ring_buffer_t rx_buffer = {
+    .buffer = rx_data,
     .head = 0,
     .tail = 0,
-    .size = 256,
+    .size = 512,
 };
+
+serial_port_t serial_hdzero = {
+    .rx_buffer = &rx_buffer,
+    .tx_buffer = &tx_buffer,
+
+    .tx_done = true,
+};
+
+static volatile uint32_t last_heartbeat = 0;
 
 static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
   if (magic == MSP2_MAGIC) {
-    if (ring_buffer_free(&msp_tx_buffer) < (len + MSP2_HEADER_LEN + 1)) {
-      return;
-    }
+    uint32_t size = 0;
+    uint8_t buf[len + MSP2_HEADER_LEN + 1];
 
-    ring_buffer_write(&msp_tx_buffer, '$');
-    ring_buffer_write(&msp_tx_buffer, MSP2_MAGIC);
-    ring_buffer_write(&msp_tx_buffer, '>');
+    buf[size++] = '$';
+    buf[size++] = MSP2_MAGIC;
+    buf[size++] = '>';
 
     uint8_t crc = 0;
 
-    ring_buffer_write(&msp_tx_buffer, 0); // flag
+    buf[size++] = 0; // flag
     crc = crc8_dvb_s2_calc(crc, 0);
 
-    ring_buffer_write(&msp_tx_buffer, (cmd >> 0) & 0xFF);
+    buf[size++] = (cmd >> 0) & 0xFF;
     crc = crc8_dvb_s2_calc(crc, (cmd >> 0) & 0xFF);
-    ring_buffer_write(&msp_tx_buffer, (cmd >> 8) & 0xFF);
+    buf[size++] = (cmd >> 8) & 0xFF;
     crc = crc8_dvb_s2_calc(crc, (cmd >> 8) & 0xFF);
-    ring_buffer_write(&msp_tx_buffer, (len >> 0) & 0xFF);
+    buf[size++] = (len >> 0) & 0xFF;
     crc = crc8_dvb_s2_calc(crc, (len >> 0) & 0xFF);
-    ring_buffer_write(&msp_tx_buffer, (len >> 8) & 0xFF);
+    buf[size++] = (len >> 8) & 0xFF;
     crc = crc8_dvb_s2_calc(crc, (len >> 8) & 0xFF);
 
-    ring_buffer_write_multi(&msp_tx_buffer, data, len);
+    memcpy(buf + size, data, len);
+    size += len;
 
-    ring_buffer_write(&msp_tx_buffer, crc8_dvb_s2_data(crc, data, len));
+    buf[size++] = crc8_dvb_s2_data(crc, data, len);
+
+    serial_write_bytes(&serial_hdzero, buf, size);
   } else {
-    if (ring_buffer_free(&msp_tx_buffer) < (len + MSP_HEADER_LEN + 1)) {
-      return;
-    }
+    uint32_t size = 0;
+    uint8_t buf[len + MSP_HEADER_LEN + 1];
 
-    ring_buffer_write(&msp_tx_buffer, '$');
-    ring_buffer_write(&msp_tx_buffer, MSP1_MAGIC);
-    ring_buffer_write(&msp_tx_buffer, '>');
-    ring_buffer_write(&msp_tx_buffer, len);
-    ring_buffer_write(&msp_tx_buffer, cmd);
+    buf[size++] = '$';
+    buf[size++] = MSP1_MAGIC;
+    buf[size++] = '>';
+    buf[size++] = len;
+    buf[size++] = cmd;
 
-    ring_buffer_write_multi(&msp_tx_buffer, data, len);
+    memcpy(buf + size, data, len);
+    size += len;
 
     uint8_t chksum = len ^ cmd;
     for (uint8_t i = 0; i < len; i++) {
       chksum ^= data[i];
     }
-    ring_buffer_write(&msp_tx_buffer, chksum);
-  }
+    buf[size++] = chksum;
 
-  LL_USART_EnableIT_TXE(USART.channel);
+    serial_write_bytes(&serial_hdzero, buf, size);
+  }
 }
 
 static uint8_t msp_buffer[128];
@@ -105,27 +111,25 @@ msp_t hdzero_msp = {
     .device = MSP_DEVICE_VTX,
 };
 
-static bool hdzero_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data, const uint8_t size) {
-  if (ring_buffer_free(&msp_tx_buffer) < (MSP_HEADER_LEN + size + 2)) {
-    return false;
-  }
+static bool hdzero_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data, const uint8_t len) {
+  uint32_t size = 0;
+  uint8_t buf[MSP_HEADER_LEN + len + 2];
 
-  ring_buffer_write(&msp_tx_buffer, '$');
-  ring_buffer_write(&msp_tx_buffer, 'M');
-  ring_buffer_write(&msp_tx_buffer, '>');
-  ring_buffer_write(&msp_tx_buffer, size + 1);
-  ring_buffer_write(&msp_tx_buffer, MSP_DISPLAYPORT);
-  ring_buffer_write(&msp_tx_buffer, subcmd);
+  buf[size++] = '$';
+  buf[size++] = 'M';
+  buf[size++] = '>';
+  buf[size++] = len + 1;
+  buf[size++] = MSP_DISPLAYPORT;
+  buf[size++] = subcmd;
 
-  ring_buffer_write_multi(&msp_tx_buffer, data, size);
+  memcpy(buf + size, data, len);
+  size += len;
 
-  uint8_t chksum = (size + 1) ^ MSP_DISPLAYPORT ^ subcmd;
-  for (uint8_t i = 0; i < size; i++) {
+  uint8_t chksum = (len + 1) ^ MSP_DISPLAYPORT ^ subcmd;
+  for (uint8_t i = 0; i < len; i++) {
     chksum ^= data[i];
   }
-  ring_buffer_write(&msp_tx_buffer, chksum);
-
-  LL_USART_EnableIT_TXE(USART.channel);
+  buf[size++] = chksum;
   return true;
 }
 
@@ -144,13 +148,15 @@ static uint8_t hdzero_map_attr(uint8_t attr) {
 }
 
 void hdzero_init() {
-  serial_hdzero_port = profile.serial.hdzero;
+  serial_port_config_t config;
+  config.port = profile.serial.hdzero;
+  config.baudrate = 115200;
+  config.direction = SERIAL_DIR_TX_RX;
+  config.stop_bits = SERIAL_STOP_BITS_1;
+  config.invert = false;
+  config.half_duplex = false;
 
-  serial_enable_rcc(serial_hdzero_port);
-  serial_init(NULL, serial_hdzero_port, 115200, 1, false);
-  serial_enable_isr(serial_hdzero_port);
-
-  LL_USART_EnableIT_RXNE(USART.channel);
+  serial_init(&serial_hdzero, config);
 }
 
 void hdzero_intro() {
@@ -179,26 +185,17 @@ uint8_t hdzero_clear_async() {
 }
 
 bool hdzero_is_ready() {
-  static bool wants_heatbeat = true;
-
-  if (wants_heatbeat) {
+  if ((time_millis() - last_heartbeat) > 500) {
     uint8_t options[2] = {0, 1};
     hdzero_push_subcmd(SUBCMD_SET_OPTIONS, options, 2);
-
-    hdzero_clear_async();
-    wants_heatbeat = false;
+    hdzero_push_subcmd(SUBCMD_HEARTBEAT, NULL, 0);
     last_heartbeat = time_millis();
-    return false;
-  }
-
-  if ((time_millis() - last_heartbeat) > 500) {
-    wants_heatbeat = true;
     return false;
   }
 
   while (true) {
     uint8_t data = 0;
-    if (!ring_buffer_read(&msp_rx_buffer, &data)) {
+    if (!serial_read_bytes(&serial_hdzero, &data, 1)) {
       break;
     }
 
@@ -209,13 +206,6 @@ bool hdzero_is_ready() {
 }
 
 osd_system_t hdzero_check_system() {
-  if ((time_millis() - last_heartbeat) > 250) {
-    // timeout
-    is_detected = false;
-  } else if (!is_detected) {
-    // detected now, but previously was not
-    is_detected = true;
-  }
   return OSD_SYS_HD;
 }
 
@@ -231,36 +221,10 @@ bool hdzero_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data,
 }
 
 bool hdzero_can_fit(uint8_t size) {
-  const uint32_t free = ring_buffer_free(&msp_tx_buffer);
+  const uint32_t free = ring_buffer_free(&tx_buffer);
   return free > (size + 10);
 }
 
 bool hdzero_flush() {
   return hdzero_push_subcmd(SUBCMD_DRAW_SCREEN, NULL, 0);
-}
-
-void hdzero_uart_isr() {
-  if (LL_USART_IsEnabledIT_TC(USART.channel) && LL_USART_IsActiveFlag_TC(USART.channel)) {
-    LL_USART_ClearFlag_TC(USART.channel);
-  }
-
-  if (LL_USART_IsEnabledIT_TXE(USART.channel) && LL_USART_IsActiveFlag_TXE(USART.channel)) {
-    uint8_t data = 0;
-    if (ring_buffer_read(&msp_tx_buffer, &data)) {
-      LL_USART_TransmitData8(USART.channel, data);
-    } else {
-      LL_USART_DisableIT_TXE(USART.channel);
-    }
-  }
-
-  if (LL_USART_IsEnabledIT_RXNE(USART.channel) && LL_USART_IsActiveFlag_RXNE(USART.channel)) {
-    // clear the rx flag by reading, but discard the data
-    const uint8_t data = LL_USART_ReceiveData8(USART.channel);
-    ring_buffer_write(&msp_rx_buffer, data);
-    last_heartbeat = time_millis();
-  }
-
-  if (LL_USART_IsActiveFlag_ORE(USART.channel)) {
-    LL_USART_ClearFlag_ORE(USART.channel);
-  }
 }

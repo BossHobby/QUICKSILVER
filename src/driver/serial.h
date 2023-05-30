@@ -5,7 +5,6 @@
 #include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/rcc.h"
-#include "driver/serial_soft.h"
 #include "util/ring_buffer.h"
 
 typedef enum {
@@ -19,18 +18,39 @@ typedef enum {
   RX_SERIAL_PROTOCOL_SBUS_INVERTED,
   RX_SERIAL_PROTOCOL_FPORT_INVERTED,
   RX_SERIAL_PROTOCOL_REDPINE_INVERTED,
+  RX_SERIAL_PROTOCOL_MAX = RX_SERIAL_PROTOCOL_REDPINE_INVERTED
 } rx_serial_protocol_t;
 
-// potentially a debug tool to limit the detection sequence of universal serial
-// todo:  purge this if deemed unnecessary
-// #define RX_SERIAL_PROTOCOL_MAX RX_SERIAL_PROTOCOL_CRSF
-#define RX_SERIAL_PROTOCOL_MAX RX_SERIAL_PROTOCOL_REDPINE_INVERTED
+typedef enum {
+  SERIAL_STOP_BITS_0_5,
+  SERIAL_STOP_BITS_1,
+  SERIAL_STOP_BITS_1_5,
+  SERIAL_STOP_BITS_2,
+} serial_stop_bits_t;
+
+typedef enum {
+  SERIAL_DIR_NONE,
+  SERIAL_DIR_RX,
+  SERIAL_DIR_TX,
+  SERIAL_DIR_TX_RX,
+} serial_direction_t;
 
 typedef struct {
   serial_ports_t port;
+  uint32_t baudrate;
+  serial_direction_t direction;
+  serial_stop_bits_t stop_bits;
+  bool invert;
+  bool half_duplex;
+} serial_port_config_t;
+
+typedef struct {
+  serial_port_config_t config;
 
   ring_buffer_t *rx_buffer;
   ring_buffer_t *tx_buffer;
+
+  bool tx_done;
 } serial_port_t;
 
 typedef struct {
@@ -42,19 +62,14 @@ typedef struct {
 
 extern const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX];
 
-extern serial_ports_t serial_rx_port;
-extern serial_ports_t serial_smart_audio_port;
-extern serial_ports_t serial_hdzero_port;
+extern serial_port_t serial_rx;
+extern serial_port_t serial_hdzero;
+extern serial_port_t serial_vtx;
 
 void serial_rx_init(rx_serial_protocol_t rx_serial_protocol);
 
-void serial_enable_rcc(serial_ports_t port);
-void serial_port_init(serial_ports_t port, LL_USART_InitTypeDef *usart_init, bool half_duplex, bool invert);
-
-void serial_enable_isr(serial_ports_t port);
-void serial_disable_isr(serial_ports_t port);
-
-void serial_init(serial_port_t *serial, serial_ports_t port, uint32_t baudrate, uint8_t stop_bits, bool half_duplex);
+void serial_init(serial_port_t *serial, serial_port_config_t config);
+uint32_t serial_bytes_available(serial_port_t *serial);
 uint32_t serial_read_bytes(serial_port_t *serial, uint8_t *data, const uint32_t size);
 bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32_t size);
 

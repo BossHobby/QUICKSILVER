@@ -21,14 +21,19 @@ typedef enum {
 } frame_status_t;
 
 typedef enum {
+  PACKET_ERROR,
+  PACKET_NEEDS_MORE,
+  PACKET_DATA_RECEIVED,
+  PACKET_CHANNELS_RECEIVED,
+} packet_status_t;
+
+typedef enum {
   RX_STATUS_NONE = 0,
   RX_STATUS_DETECTING = 100,
   // RX_STATUS_DETECTING + RX_SERIAL_PROTOCOL_X = detecting proto X
   RX_STATUS_DETECTED = 200,
   // RX_STATUS_DETECTED + RX_SERIAL_PROTOCOL_X = detected proto X
 } rx_status_t;
-
-void rx_serial_find_protocol();
 
 float rx_serial_crsf_expected_fps();
 float rx_serial_dsm_expected_fps();
@@ -38,12 +43,12 @@ uint16_t rx_serial_dsm_smoothing_cutoff();
 void rx_serial_init();
 bool rx_serial_check();
 
-bool rx_serial_process_dsm();
-bool rx_serial_process_sbus();
-bool rx_serial_process_ibus();
-bool rx_serial_process_fport();
-bool rx_serial_process_crsf();
-bool rx_serial_process_redpine();
+packet_status_t rx_serial_process_dsm();
+packet_status_t rx_serial_process_sbus();
+packet_status_t rx_serial_process_ibus();
+packet_status_t rx_serial_process_fport();
+packet_status_t rx_serial_process_crsf();
+packet_status_t rx_serial_process_redpine();
 
 void rx_serial_send_telemetry(uint32_t size);
 

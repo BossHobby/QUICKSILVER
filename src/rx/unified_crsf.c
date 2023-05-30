@@ -40,28 +40,12 @@ typedef enum {
   CRSF_FRAME_LENGTH,
   CRSF_PAYLOAD,
   CRSF_CHECK_CRC,
-} crsft_parser_state_t;
+} crsf_parser_state_t;
 
-extern uint8_t rx_buffer[RX_BUFF_SIZE];
+extern int32_t channels[16];
 extern uint8_t rx_data[RX_BUFF_SIZE];
 
 static uint8_t telemetry_counter = 0;
-
-extern volatile frame_status_t frame_status;
-
-extern uint16_t bind_safety;
-extern int32_t channels[16];
-
-extern profile_t profile;
-extern int current_pid_axis;
-extern int current_pid_term;
-
-extern uint8_t telemetry_packet[64];
-
-extern ring_buffer_t rx_ring;
-
-static crsft_parser_state_t parser_state = CRSF_CHECK_MAGIC;
-
 static uint8_t crsf_rf_mode = 0;
 
 void rx_serial_crsf_msp_send(msp_magic_t magic, uint8_t direction, uint16_t code, const uint8_t *data, uint16_t len);
@@ -181,7 +165,7 @@ static uint16_t telemetry_interval() {
 
 static bool tlm_device_info_pending = false;
 
-static bool rx_serial_crsf_process_frame(uint8_t frame_length) {
+static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
   bool channels_received = false;
 
   switch (rx_data[0]) {
@@ -265,74 +249,61 @@ static bool rx_serial_crsf_process_frame(uint8_t frame_length) {
 
   rx_lqi_got_packet();
 
-  bind_safety++;
-  if (bind_safety > 131) {        // requires 130 good frames to come in before rx_ready safety can be toggled to 1.  About a second of good data
-    flags.rx_ready = 1;           // because aux channels initialize low and clear the binding while armed flag before aux updates high
-    flags.rx_mode = !RXMODE_BIND; // restores normal led operation
-    bind_safety = 131;            // reset counter so it doesnt wrap
-  } else {
-    flags.rx_mode = RXMODE_BIND; // this is rapid flash during bind safety
-  }
-
-  return channels_received;
+  return channels_received ? PACKET_CHANNELS_RECEIVED : PACKET_DATA_RECEIVED;
 }
 
-bool rx_serial_process_crsf() {
-  bool channels_received = false;
+packet_status_t rx_serial_process_crsf() {
+  static crsf_parser_state_t parser_state = CRSF_CHECK_MAGIC;
 
   static uint8_t frame_length = 0;
-  static uint8_t magic = 0;
 
 crsf_do_more:
   switch (parser_state) {
   case CRSF_CHECK_MAGIC: {
-    if (!ring_buffer_read(&rx_ring, &magic)) {
-      break;
+    uint8_t magic = 0;
+    if (!serial_read_bytes(&serial_rx, &magic, 1)) {
+      return PACKET_NEEDS_MORE;
     }
     if (magic != CRSF_ADDRESS_FLIGHT_CONTROLLER) {
-      goto crsf_do_more;
+      return PACKET_ERROR;
     }
     parser_state = CRSF_FRAME_LENGTH;
-    break;
+    goto crsf_do_more;
   }
 
   case CRSF_FRAME_LENGTH: {
-    if (!ring_buffer_read(&rx_ring, &frame_length)) {
-      break;
+    if (!serial_read_bytes(&serial_rx, &frame_length, 1)) {
+      return PACKET_NEEDS_MORE;
     }
-    if (frame_length > 0 && frame_length <= 64) {
-      parser_state = CRSF_PAYLOAD;
-      goto crsf_do_more;
+    if (frame_length <= 0 || frame_length > 64) {
+      parser_state = CRSF_CHECK_MAGIC;
+      return PACKET_ERROR;
     }
-    parser_state = CRSF_CHECK_MAGIC;
-    break;
+    parser_state = CRSF_PAYLOAD;
+    goto crsf_do_more;
   }
   case CRSF_PAYLOAD: {
-    if (ring_buffer_available(&rx_ring) < frame_length) {
-      break;
+    if (serial_bytes_available(&serial_rx) < frame_length) {
+      return PACKET_NEEDS_MORE;
     }
-    if (ring_buffer_read_multi(&rx_ring, rx_data, frame_length)) {
+    if (serial_read_bytes(&serial_rx, rx_data, frame_length) == frame_length) {
       parser_state = CRSF_CHECK_CRC;
-      goto crsf_do_more;
     }
-    break;
+    goto crsf_do_more;
   }
   case CRSF_CHECK_CRC: {
     const uint8_t crc_ours = crc8_dvb_s2_data(0, rx_data, frame_length - 1);
     const uint8_t crc_theirs = rx_data[frame_length - 1];
-    if (crc_ours == crc_theirs) {
-      channels_received = rx_serial_crsf_process_frame(frame_length);
-      telemetry_counter++;
-    }
-
     parser_state = CRSF_CHECK_MAGIC;
-    goto crsf_do_more;
-
-    break;
+    if (crc_ours != crc_theirs) {
+      return PACKET_ERROR;
+    }
+    telemetry_counter++;
+    return rx_serial_crsf_process_frame(frame_length);
   }
   }
 
-  return channels_received;
+  return PACKET_ERROR;
 }
 
 void rx_serial_crsf_msp_send(msp_magic_t magic, uint8_t direction, uint16_t code, const uint8_t *data, uint16_t len) {
@@ -351,9 +322,9 @@ void rx_serial_send_crsf_telemetry() {
   if (telemetry_counter < telemetry_interval() && !msp_new_data) {
     return;
   }
-
   telemetry_counter = 0;
 
+  uint8_t telemetry_packet[64];
   crsf_tlm_frame_start(telemetry_packet);
 
   uint32_t payload_size = 0;
@@ -391,7 +362,6 @@ void rx_serial_send_crsf_telemetry() {
     if (msp_tx_sent >= msp_tx_len) {
       msp_tx_len = 0;
       msp_tx_sent = 0;
-      frame_status = FRAME_DONE;
       msp_new_data = false;
     }
 
@@ -403,9 +373,8 @@ void rx_serial_send_crsf_telemetry() {
     } else {
       payload_size = crsf_tlm_frame_battery_sensor(telemetry_packet);
     }
-    frame_status = FRAME_DONE;
   }
 
   const uint32_t telemetry_size = crsf_tlm_frame_finish(telemetry_packet, payload_size);
-  rx_serial_send_telemetry(telemetry_size);
+  serial_write_bytes(&serial_rx, telemetry_packet, telemetry_size);
 }
