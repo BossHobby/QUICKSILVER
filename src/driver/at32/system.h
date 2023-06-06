@@ -10,6 +10,8 @@
 #define SPI_CLOCK_FREQ_HZ (SYS_CLOCK_FREQ_HZ / 2)
 
 #define LOOPTIME LOOPTIME_8K
+
+#define UID_BASE 0x1FFFF7E8
 #endif
 
 typedef gpio_type gpio_port_t;
