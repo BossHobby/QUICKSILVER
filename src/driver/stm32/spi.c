@@ -293,7 +293,7 @@ static void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t l
 }
 
 uint8_t spi_dma_is_ready(spi_ports_t port) {
-#if defined(STM32F4)
+#if defined(STM32F4) && defined(USE_MOTOR_DSHOT)
   if (target.brushless && port == SPI_PORT1) {
     extern volatile int dshot_dma_phase;
     if (dshot_dma_phase != 0) {

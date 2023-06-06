@@ -7,6 +7,8 @@
 #include "driver/time.h"
 #include "util/util.h"
 
+#ifdef USE_GYRO
+
 #define ICM42605_ID (0x42)
 #define ICM42688P_ID (0x47)
 
@@ -102,3 +104,4 @@ void icm42605_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
   };
   spi_seg_submit_wait(&gyro_bus, segs);
 }
+#endif

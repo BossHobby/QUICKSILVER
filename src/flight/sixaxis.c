@@ -31,6 +31,8 @@
 // this is the value of both cos 45 and sin 45 = 1/sqrt(2)
 #define INVSQRT2 0.707106781f
 
+#ifdef USE_GYRO
+
 static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
 
@@ -239,3 +241,13 @@ void sixaxis_acc_cal() {
     limitf(&flash_storage.accelcal[x], ACCEL_BIAS_LIMIT);
   }
 }
+
+#else
+
+bool sixaxis_init() { return false; }
+void sixaxis_read() {}
+
+void sixaxis_gyro_cal() {}
+void sixaxis_acc_cal() {}
+
+#endif

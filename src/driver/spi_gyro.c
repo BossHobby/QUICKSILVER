@@ -8,6 +8,8 @@
 #include "driver/spi_icm42605.h"
 #include "driver/spi_mpu6xxx.h"
 
+#ifdef USE_GYRO
+
 gyro_types_t gyro_type = GYRO_TYPE_INVALID;
 
 spi_bus_device_t gyro_bus = {};
@@ -61,8 +63,8 @@ uint8_t gyro_spi_init() {
   gpio_init.mode = GPIO_INPUT;
   gpio_init.output = GPIO_PUSHPULL;
   gpio_init.pull = GPIO_UP_PULL;
-  gpio_init.drive =GPIO_DRIVE_HIGH;
-  gpio_pin_init( GYRO_INT, gpio_init);
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_pin_init(GYRO_INT, gpio_init);
 #endif
 
   if (!target_spi_device_valid(&target.gyro)) {
@@ -169,3 +171,4 @@ void gyro_spi_calibrate() {
     break;
   }
 }
+#endif

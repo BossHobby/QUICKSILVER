@@ -476,6 +476,7 @@ static void process_osd(quic_t *quic, cbor_value_t *dec) {
   check_cbor_error(QUIC_CMD_OSD);
 
   switch (cmd) {
+#ifdef USE_MAX7456
   case QUIC_OSD_READ_CHAR: {
     uint8_t font[54];
     osd_read_character(index, font, 54);
@@ -499,6 +500,10 @@ static void process_osd(quic_t *quic, cbor_value_t *dec) {
     quic_send(quic, QUIC_CMD_OSD, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
+#endif
+  default:
+    quic_errorf(QUIC_CMD_OSD, "INVALID CMD %d", cmd);
+    break;
   };
 }
 
