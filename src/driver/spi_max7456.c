@@ -9,6 +9,8 @@
 #include "string.h"
 #include "util/util.h"
 
+#ifdef USE_MAX7456
+
 #define DMA_BUFFER_SIZE 128
 #define MAX7456_BAUD_RATE MHZ_TO_HZ(10.5)
 
@@ -351,3 +353,5 @@ void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size) {
   // enable osd
   max7456_init_display();
 }
+
+#endif

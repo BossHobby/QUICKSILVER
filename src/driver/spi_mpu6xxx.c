@@ -9,6 +9,8 @@
 #include "driver/time.h"
 #include "util/util.h"
 
+#ifdef USE_GYRO
+
 #define MPU6000_ID (0x68)
 #define MPU6500_ID (0x70)
 
@@ -125,3 +127,5 @@ void mpu6xxx_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
   };
   spi_seg_submit_wait(&gyro_bus, segs);
 }
+
+#endif
