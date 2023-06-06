@@ -1,6 +1,7 @@
 #pragma once
 
 #ifdef AT32F4
+#include <at32f435_437_clock.h>
 #include <at32f435_437_conf.h>
 #endif
 
