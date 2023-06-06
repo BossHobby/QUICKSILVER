@@ -14,6 +14,8 @@
 #include "flight/control.h"
 #include "util/util.h"
 
+#ifdef USE_MOTOR_DSHOT
+
 #define DSHOT_TIME profile.motor.dshot_time
 #define DSHOT_SYMBOL_TIME (PWM_CLOCK_FREQ_HZ / (3 * DSHOT_TIME * 1000) - 1)
 
@@ -445,3 +447,4 @@ void dshot_dma_isr(dma_device_t dev) {
     break;
   }
 }
+#endif

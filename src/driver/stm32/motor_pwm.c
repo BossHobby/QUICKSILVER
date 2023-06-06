@@ -8,6 +8,8 @@
 #include "driver/timer.h"
 #include "flight/control.h"
 
+#ifdef USE_MOTOR_PWM
+
 #define PWM_DIVIDER 1
 #define PWMTOP ((PWM_CLOCK_FREQ_HZ / PWMFREQ) - 1)
 
@@ -133,3 +135,5 @@ void motor_pwm_write(float *values) {
     }
   }
 }
+
+#endif
