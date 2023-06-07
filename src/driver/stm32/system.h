@@ -86,6 +86,8 @@
 #define WITHIN_DMA_RAM(p) (((uint32_t)p & 0xfffe0000) == 0x30000000)
 #endif
 
+#include "rcc.h"
+
 typedef GPIO_TypeDef gpio_port_t;
 typedef DMA_TypeDef dma_port_t;
 typedef DMA_Stream_TypeDef dma_stream_t;
