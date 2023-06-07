@@ -1,0 +1,1220 @@
+PA0:
+  - func: timer
+    instance: 2
+    name: CH1
+    af: 1
+  - func: timer
+    instance: 5
+    name: CH1
+    af: 2
+  - func: serial
+    instance: 4
+    name: TX
+    af: 8
+  - func: adc
+    instance: 1
+    name: '0'
+    af: -1
+  - func: adc
+    instance: 2
+    name: '0'
+    af: -1
+  - func: adc
+    instance: 3
+    name: '0'
+    af: -1
+PA1:
+  - func: timer
+    instance: 2
+    name: CH2
+    af: 1
+  - func: timer
+    instance: 5
+    name: CH2
+    af: 2
+  - func: spi
+    instance: 4
+    name: MOSI
+    af: 5
+  - func: serial
+    instance: 4
+    name: RX
+    af: 8
+  - func: adc
+    instance: 1
+    name: '1'
+    af: -1
+  - func: adc
+    instance: 2
+    name: '1'
+    af: -1
+  - func: adc
+    instance: 3
+    name: '1'
+    af: -1
+PA2:
+  - func: timer
+    instance: 2
+    name: CH3
+    af: 1
+  - func: timer
+    instance: 5
+    name: CH3
+    af: 2
+  - func: timer
+    instance: 9
+    name: CH1
+    af: 3
+  - func: serial
+    instance: 2
+    name: TX
+    af: 7
+  - func: adc
+    instance: 1
+    name: '2'
+    af: -1
+  - func: adc
+    instance: 2
+    name: '2'
+    af: -1
+  - func: adc
+    instance: 3
+    name: '2'
+    af: -1
+PA3:
+  - func: timer
+    instance: 2
+    name: CH4
+    af: 1
+  - func: timer
+    instance: 5
+    name: CH4
+    af: 2
+  - func: timer
+    instance: 9
+    name: CH2
+    af: 3
+  - func: serial
+    instance: 2
+    name: RX
+    af: 7
+  - func: adc
+    instance: 1
+    name: '3'
+    af: -1
+  - func: adc
+    instance: 2
+    name: '3'
+    af: -1
+  - func: adc
+    instance: 3
+    name: '3'
+    af: -1
+PA4:
+  - func: serial
+    instance: 6
+    name: TX
+    af: 8
+  - func: adc
+    instance: 1
+    name: '4'
+    af: -1
+  - func: adc
+    instance: 2
+    name: '4'
+    af: -1
+PA5:
+  - func: timer
+    instance: 2
+    name: CH1
+    af: 1
+  - func: timer
+    instance: 8
+    name: CH1N
+    af: 3
+  - func: spi
+    instance: 1
+    name: SCK
+    af: 5
+  - func: serial
+    instance: 6
+    name: RX
+    af: 8
+  - func: adc
+    instance: 1
+    name: '5'
+    af: -1
+  - func: adc
+    instance: 2
+    name: '5'
+    af: -1
+PA6:
+  - func: timer
+    instance: 3
+    name: CH1
+    af: 2
+  - func: spi
+    instance: 1
+    name: MISO
+    af: 5
+  - func: timer
+    instance: 13
+    name: CH1
+    af: 9
+  - func: adc
+    instance: 1
+    name: '6'
+    af: -1
+  - func: adc
+    instance: 2
+    name: '6'
+    af: -1
+PA7:
+  - func: timer
+    instance: 1
+    name: CH1N
+    af: 1
+  - func: timer
+    instance: 3
+    name: CH2
+    af: 2
+  - func: timer
+    instance: 8
+    name: CH1N
+    af: 3
+  - func: spi
+    instance: 1
+    name: MOSI
+    af: 5
+  - func: timer
+    instance: 14
+    name: CH1
+    af: 9
+  - func: adc
+    instance: 1
+    name: '7'
+    af: -1
+  - func: adc
+    instance: 2
+    name: '7'
+    af: -1
+PA8:
+  - func: timer
+    instance: 1
+    name: CH1
+    af: 1
+  - func: serial
+    instance: 2
+    name: TX
+    af: 8
+PA9:
+  - func: timer
+    instance: 1
+    name: CH2
+    af: 1
+  - func: spi
+    instance: 2
+    name: SCK
+    af: 5
+  - func: serial
+    instance: 1
+    name: TX
+    af: 7
+PA10:
+  - func: timer
+    instance: 1
+    name: CH3
+    af: 1
+  - func: spi
+    instance: 2
+    name: MOSI
+    af: 5
+  - func: serial
+    instance: 1
+    name: RX
+    af: 7
+PA11:
+  - func: timer
+    instance: 1
+    name: CH4
+    af: 1
+  - func: spi
+    instance: 4
+    name: MISO
+    af: 6
+  - func: serial
+    instance: 6
+    name: TX
+    af: 8
+PA12:
+  - func: spi
+    instance: 2
+    name: MISO
+    af: 5
+  - func: serial
+    instance: 6
+    name: RX
+    af: 8
+PA13:
+  - func: spi
+    instance: 3
+    name: MISO
+    af: 6
+PA14:
+  - func: spi
+    instance: 3
+    name: MOSI
+    af: 6
+  - func: serial
+    instance: 2
+    name: TX
+    af: 8
+PA15:
+  - func: timer
+    instance: 2
+    name: CH1
+    af: 1
+  - func: serial
+    instance: 1
+    name: TX
+    af: 7
+  - func: serial
+    instance: 2
+    name: RX
+    af: 8
+PB0:
+  - func: timer
+    instance: 1
+    name: CH2N
+    af: 1
+  - func: timer
+    instance: 3
+    name: CH3
+    af: 2
+  - func: timer
+    instance: 8
+    name: CH2N
+    af: 3
+  - func: serial
+    instance: 2
+    name: RX
+    af: 6
+  - func: spi
+    instance: 3
+    name: MOSI
+    af: 7
+  - func: adc
+    instance: 1
+    name: '8'
+    af: -1
+  - func: adc
+    instance: 2
+    name: '8'
+    af: -1
+PB1:
+  - func: timer
+    instance: 1
+    name: CH3N
+    af: 1
+  - func: timer
+    instance: 3
+    name: CH4
+    af: 2
+  - func: timer
+    instance: 8
+    name: CH3N
+    af: 3
+  - func: spi
+    instance: 2
+    name: SCK
+    af: 6
+  - func: spi
+    instance: 1
+    name: SCK
+    af: 9
+  - func: adc
+    instance: 1
+    name: '9'
+    af: -1
+  - func: adc
+    instance: 2
+    name: '9'
+    af: -1
+PB2:
+  - func: timer
+    instance: 2
+    name: CH4
+    af: 1
+  - func: timer
+    instance: 20
+    name: CH1
+    af: 2
+  - func: spi
+    instance: 3
+    name: MOSI
+    af: 7
+  - func: spi
+    instance: 1
+    name: SCK
+    af: 9
+PB3:
+  - func: timer
+    instance: 2
+    name: CH2
+    af: 1
+  - func: spi
+    instance: 1
+    name: SCK
+    af: 5
+  - func: spi
+    instance: 3
+    name: SCK
+    af: 6
+  - func: serial
+    instance: 1
+    name: RX
+    af: 7
+  - func: serial
+    instance: 7
+    name: RX
+    af: 8
+PB4:
+  - func: timer
+    instance: 3
+    name: CH1
+    af: 2
+  - func: spi
+    instance: 1
+    name: MISO
+    af: 5
+  - func: spi
+    instance: 3
+    name: MISO
+    af: 6
+  - func: serial
+    instance: 7
+    name: TX
+    af: 8
+PB5:
+  - func: timer
+    instance: 3
+    name: CH2
+    af: 2
+  - func: spi
+    instance: 1
+    name: MOSI
+    af: 5
+  - func: spi
+    instance: 3
+    name: MOSI
+    af: 6
+  - func: serial
+    instance: 5
+    name: RX
+    af: 8
+PB6:
+  - func: timer
+    instance: 4
+    name: CH1
+    af: 2
+  - func: serial
+    instance: 1
+    name: TX
+    af: 7
+  - func: serial
+    instance: 5
+    name: TX
+    af: 8
+PB7:
+  - func: timer
+    instance: 4
+    name: CH2
+    af: 2
+  - func: spi
+    instance: 4
+    name: SCK
+    af: 6
+  - func: serial
+    instance: 1
+    name: RX
+    af: 7
+PB8:
+  - func: timer
+    instance: 2
+    name: CH1
+    af: 1
+  - func: timer
+    instance: 4
+    name: CH3
+    af: 2
+  - func: timer
+    instance: 10
+    name: CH1
+    af: 3
+  - func: spi
+    instance: 4
+    name: MISO
+    af: 6
+  - func: serial
+    instance: 5
+    name: RX
+    af: 8
+PB9:
+  - func: timer
+    instance: 2
+    name: CH2
+    af: 1
+  - func: timer
+    instance: 4
+    name: CH4
+    af: 2
+  - func: timer
+    instance: 11
+    name: CH1
+    af: 3
+  - func: spi
+    instance: 4
+    name: MOSI
+    af: 6
+  - func: serial
+    instance: 5
+    name: TX
+    af: 8
+PB10:
+  - func: timer
+    instance: 2
+    name: CH3
+    af: 1
+  - func: spi
+    instance: 2
+    name: SCK
+    af: 5
+  - func: serial
+    instance: 3
+    name: TX
+    af: 7
+PB11:
+  - func: timer
+    instance: 2
+    name: CH4
+    af: 1
+  - func: timer
+    instance: 5
+    name: CH4
+    af: 2
+  - func: serial
+    instance: 3
+    name: RX
+    af: 7
+PB12:
+  - func: timer
+    instance: 5
+    name: CH1
+    af: 2
+  - func: spi
+    instance: 3
+    name: SCK
+    af: 7
+PB13:
+  - func: timer
+    instance: 1
+    name: CH1N
+    af: 1
+  - func: spi
+    instance: 2
+    name: SCK
+    af: 5
+  - func: spi
+    instance: 4
+    name: SCK
+    af: 6
+PB14:
+  - func: timer
+    instance: 1
+    name: CH2N
+    af: 1
+  - func: timer
+    instance: 8
+    name: CH2N
+    af: 3
+  - func: spi
+    instance: 2
+    name: MISO
+    af: 5
+  - func: timer
+    instance: 12
+    name: CH1
+    af: 9
+PB15:
+  - func: timer
+    instance: 1
+    name: CH3N
+    af: 1
+  - func: timer
+    instance: 8
+    name: CH3N
+    af: 3
+  - func: spi
+    instance: 2
+    name: MOSI
+    af: 5
+  - func: timer
+    instance: 12
+    name: CH2
+    af: 9
+PC0:
+  - func: serial
+    instance: 7
+    name: TX
+    af: 8
+  - func: adc
+    instance: 1
+    name: '10'
+    af: -1
+  - func: adc
+    instance: 2
+    name: '10'
+    af: -1
+  - func: adc
+    instance: 3
+    name: '10'
+    af: -1
+PC1:
+  - func: spi
+    instance: 3
+    name: MOSI
+    af: 5
+  - func: spi
+    instance: 2
+    name: MOSI
+    af: 7
+  - func: serial
+    instance: 7
+    name: RX
+    af: 8
+  - func: adc
+    instance: 1
+    name: '11'
+    af: -1
+  - func: adc
+    instance: 2
+    name: '11'
+    af: -1
+  - func: adc
+    instance: 3
+    name: '11'
+    af: -1
+PC2:
+  - func: timer
+    instance: 20
+    name: CH2
+    af: 2
+  - func: spi
+    instance: 2
+    name: MISO
+    af: 5
+  - func: serial
+    instance: 8
+    name: TX
+    af: 8
+  - func: adc
+    instance: 1
+    name: '12'
+    af: -1
+  - func: adc
+    instance: 2
+    name: '12'
+    af: -1
+  - func: adc
+    instance: 3
+    name: '12'
+    af: -1
+PC3:
+  - func: spi
+    instance: 2
+    name: MOSI
+    af: 5
+  - func: serial
+    instance: 8
+    name: RX
+    af: 8
+  - func: adc
+    instance: 1
+    name: '13'
+    af: -1
+  - func: adc
+    instance: 2
+    name: '13'
+    af: -1
+  - func: adc
+    instance: 3
+    name: '13'
+    af: -1
+PC4:
+  - func: timer
+    instance: 9
+    name: CH1
+    af: 3
+  - func: serial
+    instance: 3
+    name: TX
+    af: 7
+  - func: adc
+    instance: 1
+    name: '14'
+    af: -1
+  - func: adc
+    instance: 2
+    name: '14'
+    af: -1
+PC5:
+  - func: timer
+    instance: 9
+    name: CH2
+    af: 3
+  - func: serial
+    instance: 3
+    name: RX
+    af: 7
+  - func: adc
+    instance: 1
+    name: '15'
+    af: -1
+  - func: adc
+    instance: 2
+    name: '15'
+    af: -1
+PC6:
+  - func: timer
+    instance: 3
+    name: CH1
+    af: 2
+  - func: timer
+    instance: 8
+    name: CH1
+    af: 3
+  - func: serial
+    instance: 6
+    name: TX
+    af: 8
+PC7:
+  - func: timer
+    instance: 3
+    name: CH2
+    af: 2
+  - func: timer
+    instance: 8
+    name: CH2
+    af: 3
+  - func: spi
+    instance: 2
+    name: SCK
+    af: 5
+  - func: serial
+    instance: 6
+    name: RX
+    af: 8
+PC8:
+  - func: timer
+    instance: 3
+    name: CH3
+    af: 2
+  - func: timer
+    instance: 8
+    name: CH3
+    af: 3
+  - func: timer
+    instance: 20
+    name: CH3
+    af: 6
+  - func: serial
+    instance: 8
+    name: TX
+    af: 7
+PC9:
+  - func: timer
+    instance: 3
+    name: CH4
+    af: 2
+  - func: timer
+    instance: 8
+    name: CH4
+    af: 3
+  - func: serial
+    instance: 8
+    name: RX
+    af: 7
+PC10:
+  - func: timer
+    instance: 5
+    name: CH2
+    af: 2
+  - func: spi
+    instance: 3
+    name: SCK
+    af: 6
+  - func: serial
+    instance: 3
+    name: TX
+    af: 7
+  - func: serial
+    instance: 4
+    name: TX
+    af: 8
+PC11:
+  - func: timer
+    instance: 5
+    name: CH3
+    af: 2
+  - func: spi
+    instance: 3
+    name: MISO
+    af: 6
+  - func: serial
+    instance: 3
+    name: RX
+    af: 7
+  - func: serial
+    instance: 4
+    name: RX
+    af: 8
+PC12:
+  - func: spi
+    instance: 3
+    name: MOSI
+    af: 6
+  - func: serial
+    instance: 5
+    name: TX
+    af: 8
+PC13: []
+PC14: []
+PC15: []
+PD0:
+  - func: spi
+    instance: 4
+    name: MISO
+    af: 5
+  - func: spi
+    instance: 3
+    name: MOSI
+    af: 6
+PD1:
+  - func: spi
+    instance: 2
+    name: SCK
+    af: 6
+PD2:
+  - func: serial
+    instance: 5
+    name: RX
+    af: 8
+PD3:
+  - func: spi
+    instance: 2
+    name: SCK
+    af: 5
+  - func: spi
+    instance: 2
+    name: MISO
+    af: 6
+  - func: spi
+    instance: 1
+    name: SCK
+    af: 9
+PD4:
+  - func: spi
+    instance: 2
+    name: MOSI
+    af: 6
+PD5:
+  - func: serial
+    instance: 2
+    name: TX
+    af: 7
+PD6:
+  - func: spi
+    instance: 3
+    name: MOSI
+    af: 5
+  - func: serial
+    instance: 2
+    name: RX
+    af: 7
+PD7: []
+PD8:
+  - func: serial
+    instance: 3
+    name: TX
+    af: 7
+PD9:
+  - func: serial
+    instance: 3
+    name: RX
+    af: 7
+PD10: []
+PD11: []
+PD12:
+  - func: timer
+    instance: 4
+    name: CH1
+    af: 2
+PD13:
+  - func: timer
+    instance: 4
+    name: CH2
+    af: 2
+  - func: serial
+    instance: 8
+    name: TX
+    af: 8
+PD14:
+  - func: timer
+    instance: 4
+    name: CH3
+    af: 2
+  - func: serial
+    instance: 8
+    name: RX
+    af: 8
+PD15:
+  - func: timer
+    instance: 4
+    name: CH4
+    af: 2
+PE0:
+  - func: serial
+    instance: 8
+    name: RX
+    af: 8
+PE1:
+  - func: timer
+    instance: 1
+    name: CH2N
+    af: 1
+  - func: timer
+    instance: 20
+    name: CH4
+    af: 6
+  - func: serial
+    instance: 8
+    name: TX
+    af: 8
+PE2:
+  - func: spi
+    instance: 4
+    name: SCK
+    af: 5
+  - func: timer
+    instance: 20
+    name: CH1
+    af: 6
+PE3:
+  - func: timer
+    instance: 20
+    name: CH2
+    af: 6
+PE4:
+  - func: timer
+    instance: 3
+    name: CH2
+    af: 2
+  - func: timer
+    instance: 20
+    name: CH1N
+    af: 6
+PE5:
+  - func: timer
+    instance: 3
+    name: CH3
+    af: 2
+  - func: timer
+    instance: 9
+    name: CH1
+    af: 3
+  - func: spi
+    instance: 4
+    name: MISO
+    af: 5
+  - func: timer
+    instance: 20
+    name: CH2N
+    af: 6
+PE6:
+  - func: spi
+    instance: 4
+    name: MOSI
+    af: 5
+  - func: timer
+    instance: 20
+    name: CH3N
+    af: 6
+PE7:
+  - func: serial
+    instance: 7
+    name: RX
+    af: 8
+PE8:
+  - func: timer
+    instance: 1
+    name: CH1N
+    af: 1
+  - func: serial
+    instance: 4
+    name: TX
+    af: 7
+  - func: serial
+    instance: 7
+    name: TX
+    af: 8
+PE9:
+  - func: timer
+    instance: 1
+    name: CH1
+    af: 1
+  - func: serial
+    instance: 4
+    name: RX
+    af: 7
+PE10:
+  - func: timer
+    instance: 1
+    name: CH2N
+    af: 1
+  - func: serial
+    instance: 5
+    name: TX
+    af: 8
+PE11:
+  - func: timer
+    instance: 1
+    name: CH2
+    af: 1
+  - func: serial
+    instance: 5
+    name: RX
+    af: 8
+PE12:
+  - func: timer
+    instance: 1
+    name: CH3N
+    af: 1
+PE13:
+  - func: timer
+    instance: 1
+    name: CH3
+    af: 1
+  - func: spi
+    instance: 1
+    name: SCK
+    af: 4
+  - func: spi
+    instance: 4
+    name: MISO
+    af: 5
+PE14:
+  - func: timer
+    instance: 1
+    name: CH4
+    af: 1
+  - func: spi
+    instance: 4
+    name: MOSI
+    af: 5
+PE15: []
+PF0: []
+PF1: []
+PF2:
+  - func: timer
+    instance: 20
+    name: CH3
+    af: 2
+PF3:
+  - func: timer
+    instance: 20
+    name: CH4
+    af: 2
+  - func: adc
+    instance: 3
+    name: '9'
+    af: -1
+PF4:
+  - func: timer
+    instance: 20
+    name: CH1N
+    af: 2
+  - func: adc
+    instance: 3
+    name: '14'
+    af: -1
+PF5:
+  - func: timer
+    instance: 20
+    name: CH2N
+    af: 2
+  - func: adc
+    instance: 3
+    name: '15'
+    af: -1
+PF6:
+  - func: timer
+    instance: 20
+    name: CH4
+    af: 2
+  - func: timer
+    instance: 10
+    name: CH1
+    af: 3
+  - func: serial
+    instance: 7
+    name: RX
+    af: 8
+  - func: adc
+    instance: 3
+    name: '4'
+    af: -1
+PF7:
+  - func: timer
+    instance: 11
+    name: CH1
+    af: 3
+  - func: serial
+    instance: 7
+    name: TX
+    af: 8
+  - func: adc
+    instance: 3
+    name: '5'
+    af: -1
+PF8:
+  - func: timer
+    instance: 13
+    name: CH1
+    af: 9
+  - func: adc
+    instance: 3
+    name: '6'
+    af: -1
+PF9:
+  - func: timer
+    instance: 14
+    name: CH1
+    af: 9
+  - func: adc
+    instance: 3
+    name: '7'
+    af: -1
+PF10:
+  - func: timer
+    instance: 5
+    name: CH4
+    af: 2
+  - func: spi
+    instance: 1
+    name: SCK
+    af: 9
+  - func: adc
+    instance: 3
+    name: '8'
+    af: -1
+PF11: []
+PF12:
+  - func: timer
+    instance: 20
+    name: CH1
+    af: 2
+PF13:
+  - func: timer
+    instance: 20
+    name: CH2
+    af: 2
+PF14:
+  - func: timer
+    instance: 20
+    name: CH3
+    af: 2
+PF15:
+  - func: timer
+    instance: 20
+    name: CH4
+    af: 2
+PG0:
+  - func: timer
+    instance: 20
+    name: CH1N
+    af: 2
+  - func: spi
+    instance: 1
+    name: MISO
+    af: 5
+PG1:
+  - func: timer
+    instance: 20
+    name: CH2N
+    af: 2
+  - func: spi
+    instance: 1
+    name: MOSI
+    af: 5
+PG2:
+  - func: timer
+    instance: 20
+    name: CH3N
+    af: 2
+PG3: []
+PG4: []
+PG5: []
+PG6: []
+PG7: []
+PG8: []
+PG9:
+  - func: serial
+    instance: 6
+    name: RX
+    af: 8
+PG10: []
+PG11:
+  - func: spi
+    instance: 4
+    name: SCK
+    af: 6
+PG12:
+  - func: spi
+    instance: 4
+    name: MISO
+    af: 6
+PG13:
+  - func: spi
+    instance: 2
+    name: SCK
+    af: 5
+  - func: spi
+    instance: 4
+    name: MOSI
+    af: 6
+PG14:
+  - func: serial
+    instance: 6
+    name: TX
+    af: 8
+PG15: []
+PH0: []
+PH1: []
+PH2:
+  - func: timer
+    instance: 5
+    name: CH1
+    af: 2
+  - func: serial
+    instance: 4
+    name: RX
+    af: 8
+PH3:
+  - func: timer
+    instance: 5
+    name: CH2
+    af: 2
+  - func: serial
+    instance: 4
+    name: TX
+    af: 8
