@@ -46,7 +46,7 @@ typedef enum {
   SERIAL_PORT5,
 #endif
   SERIAL_PORT6,
-#if defined(STM32F7) || defined(STM32H7)
+#if defined(STM32F7) || defined(STM32H7) || defined(AT32F4)
   SERIAL_PORT7,
   SERIAL_PORT8,
 #endif
