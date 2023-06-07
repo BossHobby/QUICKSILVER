@@ -25,8 +25,8 @@ ENTRY(Reset_Handler)
 _estack = 0x20060000;    /* end of RAM */
 
 /* Generate a link error if heap and stack don't fit into RAM */
-_Min_Heap_Size = 0x200;      /* required amount of heap  */
-_Min_Stack_Size = 0x400; /* required amount of stack */
+_Min_Heap_Size = 0;      /* required amount of heap  */
+_Min_Stack_Size = 0x4000; /* required amount of stack */
 
 /* Specify the memory areas */
 MEMORY
@@ -39,6 +39,13 @@ RAM (xrw)         : ORIGIN = 0x20000000, LENGTH = 384K
 /* Define output sections */
 SECTIONS
 {
+  .config_flash  :
+  {
+    _config_flash_start = .;
+    KEEP(*(.config_flash))
+    _config_flash_end = .;
+  } >FLASH_CONFIG
+
   /* The startup code goes first into FLASH */
   .isr_vector :
   {
