@@ -14,7 +14,7 @@ typedef enum {
   IDLE = 255,
 } soft_serial_tx_state_t;
 
-static volatile soft_serial_t soft_serial_ports[SERIAL_SOFT_COUNT];
+volatile soft_serial_t soft_serial_ports[SERIAL_SOFT_COUNT];
 
 #define PORT soft_serial_ports[port - SERIAL_SOFT_START]
 #define TIMER timer_defs[TIMER_TAG_TIM(PORT.timer)]
@@ -22,19 +22,8 @@ static volatile soft_serial_t soft_serial_ports[SERIAL_SOFT_COUNT];
 extern void soft_serial_rx_isr(serial_ports_t);
 extern void soft_serial_tx_isr(serial_ports_t);
 
-static void soft_serial_timer_start(serial_ports_t port) {
-  LL_TIM_SetCounter(TIMER.instance, 0);
-
-  LL_TIM_ClearFlag_UPDATE(TIMER.instance);
-  LL_TIM_EnableIT_UPDATE(TIMER.instance);
-
-  LL_TIM_EnableCounter(TIMER.instance);
-}
-
-static void soft_serial_timer_stop(serial_ports_t port) {
-  LL_TIM_DisableIT_UPDATE(TIMER.instance);
-  LL_TIM_DisableCounter(TIMER.instance);
-}
+extern void soft_serial_timer_start(serial_ports_t port);
+extern void soft_serial_timer_stop(serial_ports_t port);
 
 static void soft_serial_init_rx(serial_ports_t port) {
   if (PORT.rx == PIN_NONE) {
@@ -237,21 +226,5 @@ void soft_serial_rx_update(serial_ports_t port) {
     soft_serial_rx_isr(port);
     PORT.rx_state = START_BIT;
     timeout = 0;
-  }
-}
-
-void soft_serial_timer_irq_handler() {
-  for (uint8_t port = SERIAL_SOFT_START; port < SERIAL_SOFT_MAX; port++) {
-    if (PORT.timer == RESOURCE_INVALID) {
-      continue;
-    }
-
-    if (!LL_TIM_IsActiveFlag_UPDATE(TIMER.instance)) {
-      continue;
-    }
-
-    LL_TIM_ClearFlag_UPDATE(TIMER.instance);
-    soft_serial_tx_update(port);
-    soft_serial_rx_update(port);
   }
 }
