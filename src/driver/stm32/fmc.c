@@ -31,7 +31,7 @@ void fmc_unlock() {
   HAL_FLASH_Unlock();
 }
 
-uint8_t fmc_erase() {
+void fmc_erase() {
   // clear error status
   __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS);
 #ifdef STM32H7
@@ -39,7 +39,6 @@ uint8_t fmc_erase() {
 #else
   FLASH_Erase_Sector(FLASH_SECTOR_3, FLASH_VOLTAGE_RANGE_3);
 #endif
-  return 0;
 }
 
 flash_word_t fmc_read(uint32_t addr) {
