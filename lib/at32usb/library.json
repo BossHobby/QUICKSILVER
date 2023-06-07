@@ -1,0 +1,10 @@
+{
+	"name": "at32usb",
+	"version": "0.1.0",
+	"platforms": [
+		"arterytekat32"
+	],
+	"build": {
+		"includeDir": "inc"
+	}
+}

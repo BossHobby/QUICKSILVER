@@ -18,6 +18,8 @@
 #include "util/ring_buffer.h"
 #include "util/util.h"
 
+#define BUFFER_SIZE (4 * 1024)
+
 void usb_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
 
   if (magic == MSP2_MAGIC) {
@@ -139,7 +141,7 @@ void usb_serial_passthrough(serial_ports_t port, uint32_t baudrate, uint8_t stop
 // This function will be where all usb send/receive coms live
 void usb_configurator() {
   uint32_t buffer_size = 1;
-  static uint8_t buffer[USB_BUFFER_SIZE];
+  static uint8_t buffer[BUFFER_SIZE];
 
   if (usb_serial_read(buffer, 1) != 1) {
     return;
@@ -158,7 +160,7 @@ void usb_configurator() {
   case USB_MAGIC_MSP: {
     msp_t msp = {
         .buffer = buffer,
-        .buffer_size = USB_BUFFER_SIZE,
+        .buffer_size = BUFFER_SIZE,
         .buffer_offset = 1,
         .send = usb_msp_send,
         .device = MSP_DEVICE_FC,
@@ -181,7 +183,7 @@ void usb_configurator() {
 
     uint8_t data = 0;
     while (true) {
-      if (buffer_size == USB_BUFFER_SIZE) {
+      if (buffer_size == BUFFER_SIZE) {
         quic_send_str(&quic, QUIC_CMD_INVALID, QUIC_FLAG_ERROR, "EOF");
         break;
       }
