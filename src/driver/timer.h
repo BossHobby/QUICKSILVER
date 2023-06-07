@@ -29,6 +29,9 @@ typedef enum {
   TIMER16,
   TIMER17,
 #endif
+#ifdef AT32F4
+  TIMER20,
+#endif
   TIMER_MAX,
 } timer_index_t;
 
