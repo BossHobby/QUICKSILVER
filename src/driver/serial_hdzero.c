@@ -52,6 +52,10 @@ static volatile uint32_t last_heartbeat = 0;
 
 static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
   if (magic == MSP2_MAGIC) {
+    if (serial_bytes_free(&serial_hdzero) < (len + MSP2_HEADER_LEN + 1)) {
+      return;
+    }
+
     uint32_t size = 0;
     uint8_t buf[len + MSP2_HEADER_LEN + 1];
 
@@ -80,6 +84,10 @@ static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, 
 
     serial_write_bytes(&serial_hdzero, buf, size);
   } else {
+    if (serial_bytes_free(&serial_hdzero) < (len + MSP_HEADER_LEN + 1)) {
+      return;
+    }
+
     uint32_t size = 0;
     uint8_t buf[len + MSP_HEADER_LEN + 1];
 
@@ -112,6 +120,10 @@ msp_t hdzero_msp = {
 };
 
 static bool hdzero_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data, const uint8_t len) {
+  if (serial_bytes_free(&serial_hdzero) < (MSP_HEADER_LEN + len + 2)) {
+    return false;
+  }
+
   uint32_t size = 0;
   uint8_t buf[MSP_HEADER_LEN + len + 2];
 
@@ -130,7 +142,8 @@ static bool hdzero_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data,
     chksum ^= data[i];
   }
   buf[size++] = chksum;
-  return true;
+
+  return serial_write_bytes(&serial_hdzero, buf, size);
 }
 
 static uint8_t hdzero_map_attr(uint8_t attr) {
@@ -221,7 +234,7 @@ bool hdzero_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data,
 }
 
 bool hdzero_can_fit(uint8_t size) {
-  const uint32_t free = ring_buffer_free(&tx_buffer);
+  const uint32_t free = serial_bytes_free(&serial_hdzero);
   return free > (size + 10);
 }
 
