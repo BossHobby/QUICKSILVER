@@ -71,6 +71,6 @@ extern const timer_def_t timer_defs[TIMER_MAX];
 void timer_alloc_init();
 bool timer_alloc_tag(timer_use_t use, resource_tag_t tag);
 resource_tag_t timer_alloc(timer_use_t use);
-uint32_t timer_ll_channel(timer_channel_t chan);
+uint32_t timer_channel_val(timer_channel_t chan);
 
 void timer_up_init(timer_index_t tim, uint16_t divider, uint32_t period);

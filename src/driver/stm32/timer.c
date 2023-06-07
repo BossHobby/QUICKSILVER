@@ -101,70 +101,19 @@ const timer_def_t timer_defs[TIMER_MAX] = {
 #endif
 };
 
-timer_assigment_t timer_assigments[TIMER_ASSIGMENT_MAX] = {};
-
-void timer_alloc_init() {
-  if (target.brushless) {
-    timer_assigments[0].use = TIMER_USE_MOTOR_DSHOT;
-    timer_assigments[0].tag = TIMER_TAG(TIMER1, TIMER_CH1 | TIMER_CH3 | TIMER_CH4);
-  }
-}
-
-bool timer_alloc_tag(timer_use_t use, resource_tag_t tag) {
-  for (uint32_t i = 0; i < TIMER_ASSIGMENT_MAX; i++) {
-    timer_assigment_t *ass = &timer_assigments[i];
-    if (ass->use == TIMER_USE_FREE) {
-      // found free spot
-      timer_assigments[i].use = use;
-      timer_assigments[i].tag = tag;
-      return true;
-    }
-    if (TIMER_TAG_TIM(ass->tag) != TIMER_TAG_TIM(tag)) {
-      continue;
-    }
-    if (ass->use != use) {
-      // timer reserved and use does not match
-      return false;
-    }
-    if ((TIMER_TAG_CH(ass->tag) & TIMER_TAG_CH(tag)) != 0) {
-      // use matches but all timer channels are used up
-      return false;
-    }
-    // add channel to existing assigment
-    ass->tag = TIMER_TAG(TIMER_TAG_TIM(ass->tag), TIMER_TAG_CH(ass->tag) | TIMER_TAG_CH(tag));
-    return true;
-  }
-
-  // we ran out of assigments
-  return false;
-}
-
-resource_tag_t timer_alloc(timer_use_t use) {
-  for (uint8_t i = TIMER1; i < TIMER_MAX; i++) {
-    const resource_tag_t tag = TIMER_TAG(i, TIMER_CH_ALL);
-    if (timer_alloc_tag(use, tag)) {
-      return tag;
-    }
-  }
-  return TIMER_TAG(TIMER_INVALID, TIMER_CH_INVALID);
-}
-
-static void timer_init(timer_index_t tim, LL_TIM_InitTypeDef *tim_init) {
-  rcc_enable(timer_defs[tim].rcc);
-  LL_TIM_Init(timer_defs[tim].instance, tim_init);
-}
-
 void timer_up_init(timer_index_t tim, uint16_t divider, uint32_t period) {
+  rcc_enable(timer_defs[tim].rcc);
+
   LL_TIM_InitTypeDef tim_init;
   tim_init.Prescaler = divider - 1;
   tim_init.CounterMode = LL_TIM_COUNTERMODE_UP;
   tim_init.Autoreload = period;
   tim_init.ClockDivision = 0;
   tim_init.RepetitionCounter = 0;
-  timer_init(tim, &tim_init);
+  LL_TIM_Init(timer_defs[tim].instance, &tim_init);
 }
 
-uint32_t timer_ll_channel(timer_channel_t chan) {
+uint32_t timer_channel_val(timer_channel_t chan) {
   switch (chan) {
   case TIMER_CH1:
     return LL_TIM_CHANNEL_CH1;
