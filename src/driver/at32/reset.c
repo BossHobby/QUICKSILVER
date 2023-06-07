@@ -4,28 +4,15 @@
 
 #include "core/project.h"
 
-#ifdef STM32F4
+#define BKP_INDEX ERTC_DT4
 #define BOOTLOADER_OFFSET 0x1FFF0000
-#endif
-
-#ifdef STM32F7
-#define BOOTLOADER_OFFSET 0x1FF00000
-#endif
-
-#ifdef STM32H7
-#define BOOTLOADER_OFFSET 0x1FF09800
-#endif
-
-#define BKP_INDEX LL_RTC_BKP_DR4
 
 static void backup_register_write(uint32_t val) {
-#ifndef STM32H7
-  __HAL_RCC_PWR_CLK_ENABLE();
-#endif
+  crm_periph_clock_enable(CRM_PWC_PERIPH_CLOCK, TRUE);
 
-  LL_PWR_EnableBkUpAccess();
-  LL_RTC_BAK_SetRegister(RTC, BKP_INDEX, val);
-  LL_PWR_DisableBkUpAccess();
+  pwc_battery_powered_domain_access(TRUE);
+  ertc_bpr_data_write(BKP_INDEX, val);
+  pwc_battery_powered_domain_access(FALSE);
 }
 
 void system_reset_to_bootloader() {
@@ -34,7 +21,7 @@ void system_reset_to_bootloader() {
 }
 
 __attribute__((__used__)) void system_check_for_bootloader() {
-  const uint32_t magic = LL_RTC_BAK_GetRegister(RTC, BKP_INDEX);
+  const uint32_t magic = ertc_bpr_data_read(BKP_INDEX);
 
   switch (magic) {
   case RESET_BOOTLOADER_MAGIC: {
