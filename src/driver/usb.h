@@ -3,6 +3,12 @@
 #include <stdint.h>
 
 #include "core/project.h"
+#include "util/ring_buffer.h"
+
+#define USB_BUFFER_SIZE 4096
+
+extern ring_buffer_t usb_tx_buffer;
+extern ring_buffer_t usb_rx_buffer;
 
 void usb_init();
 uint8_t usb_detect();

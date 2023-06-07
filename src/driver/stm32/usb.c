@@ -5,10 +5,6 @@
 #include "driver/interrupt.h"
 #include "driver/time.h"
 
-#include "util/ring_buffer.h"
-
-#include <stdarg.h>
-#include <stdio.h>
 #include <string.h>
 
 #include <usb.h>
@@ -20,8 +16,6 @@
 #define CDC_DATA_SZ 0x40
 #define CDC_NTF_EP 0x81
 #define CDC_NTF_SZ 0x08
-
-#define BUFFER_SIZE 4096
 
 #define CDC_PROTOCOL USB_PROTO_NONE
 
@@ -171,23 +165,10 @@ static struct usb_cdc_line_coding cdc_line = {
 static usbd_device udev;
 static uint32_t ubuf[0x20];
 
-static volatile bool usb_device_configured = false;
+extern volatile bool usb_device_configured;
 
-static uint8_t tx_buffer_data[BUFFER_SIZE];
-static ring_buffer_t tx_buffer = {
-    .buffer = tx_buffer_data,
-    .head = 0,
-    .tail = 0,
-    .size = BUFFER_SIZE,
-};
-
-static uint8_t rx_buffer_data[BUFFER_SIZE];
-static ring_buffer_t rx_buffer = {
-    .buffer = rx_buffer_data,
-    .head = 0,
-    .tail = 0,
-    .size = BUFFER_SIZE,
-};
+static volatile bool rx_stalled = false;
+static volatile bool tx_stalled = true;
 
 static usbd_respond cdc_getdesc(usbd_ctlreq *req, void **address, uint16_t *length) {
   const uint8_t dtype = req->wValue >> 8;
@@ -239,10 +220,8 @@ static usbd_respond cdc_control(usbd_device *dev, usbd_ctlreq *req, usbd_rqc_cal
   return usbd_fail;
 }
 
-static volatile bool rx_stalled = false;
-
 static void cdc_rxonly(usbd_device *dev, uint8_t event, uint8_t ep) {
-  if (ring_buffer_free(&rx_buffer) <= CDC_DATA_SZ) {
+  if (ring_buffer_free(&usb_rx_buffer) <= CDC_DATA_SZ) {
     interrupt_disable(OTG_FS_IRQn);
     rx_stalled = true;
     return;
@@ -254,7 +233,7 @@ static void cdc_rxonly(usbd_device *dev, uint8_t event, uint8_t ep) {
   if (len == 0) {
     return;
   }
-  ring_buffer_write_multi(&rx_buffer, buf, len);
+  ring_buffer_write_multi(&usb_rx_buffer, buf, len);
 }
 
 static void cdc_kickoff_rx() {
@@ -266,13 +245,11 @@ static void cdc_kickoff_rx() {
   interrupt_enable(OTG_FS_IRQn, USB_PRIORITY);
 }
 
-static volatile bool tx_stalled = true;
-
 static void cdc_txonly(usbd_device *dev, uint8_t event, uint8_t ep) {
   static volatile bool did_zlp = false;
 
   static uint8_t buf[CDC_DATA_SZ];
-  const uint32_t len = ring_buffer_read_multi(&tx_buffer, buf, CDC_DATA_SZ);
+  const uint32_t len = ring_buffer_read_multi(&usb_tx_buffer, buf, CDC_DATA_SZ);
 
   if (len) {
     usbd_ep_write(dev, ep, buf, len);
@@ -335,7 +312,7 @@ void OTG_FS_IRQHandler() {
   usbd_poll(&udev);
 }
 
-void usb_init() {
+void usb_drv_init() {
   gpio_config_t gpio_init;
   gpio_init.mode = GPIO_ALTERNATE;
   gpio_init.output = GPIO_PUSHPULL;
@@ -349,14 +326,6 @@ void usb_init() {
   gpio_pin_init_af(PIN_A11, gpio_init, GPIO_AF10_OTG_FS);
   gpio_pin_init_af(PIN_A12, gpio_init, GPIO_AF10_OTG_FS);
 #endif
-
-  if (target.usb_detect != PIN_NONE) {
-    gpio_init.mode = GPIO_INPUT;
-    gpio_init.output = GPIO_OPENDRAIN;
-    gpio_init.drive = GPIO_DRIVE_HIGH;
-    gpio_init.pull = GPIO_NO_PULL;
-    gpio_pin_init(target.usb_detect, gpio_init);
-  }
 
   interrupt_enable(OTG_FS_IRQn, USB_PRIORITY);
 
@@ -378,23 +347,11 @@ void usb_init() {
 #endif
 }
 
-uint8_t usb_detect() {
-#ifdef USB_DETECT_PIN
-  const uint8_t usb_connect = gpio_pin_read(USB_DETECT_PIN);
-  if (usb_connect != 1) {
-    // no usb connetion, bail
-    return 0;
-  }
-#endif
-
-  return usb_device_configured;
-}
-
 uint32_t usb_serial_read(uint8_t *data, uint32_t len) {
   if (data == NULL || len == 0) {
     return 0;
   }
-  const uint32_t read = ring_buffer_read_multi(&rx_buffer, data, len);
+  const uint32_t read = ring_buffer_read_multi(&usb_rx_buffer, data, len);
   cdc_kickoff_rx();
   return read;
 }
@@ -406,25 +363,7 @@ void usb_serial_write(uint8_t *data, uint32_t len) {
 
   uint32_t written = 0;
   while (written < len) {
-    written += ring_buffer_write_multi(&tx_buffer, data + written, len - written);
+    written += ring_buffer_write_multi(&usb_tx_buffer, data + written, len - written);
     cdc_kickoff_tx();
   }
-}
-
-void usb_serial_print(char *str) {
-  usb_serial_write((uint8_t *)str, strlen(str));
-}
-
-void usb_serial_printf(const char *fmt, ...) {
-  const size_t size = strlen(fmt) + 128;
-  char str[size];
-
-  memset(str, 0, size);
-
-  va_list args;
-  va_start(args, fmt);
-  vsnprintf(str, size, fmt, args);
-  va_end(args);
-
-  usb_serial_print(str);
 }
