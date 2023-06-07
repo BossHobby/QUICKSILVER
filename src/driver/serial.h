@@ -69,7 +69,14 @@ extern serial_port_t serial_vtx;
 void serial_rx_init(rx_serial_protocol_t rx_serial_protocol);
 
 void serial_init(serial_port_t *serial, serial_port_config_t config);
+
+void serial_enable_rcc(serial_ports_t port);
+void serial_enable_isr(serial_ports_t port);
+void serial_disable_isr(serial_ports_t port);
+
 uint32_t serial_bytes_available(serial_port_t *serial);
+uint32_t serial_bytes_free(serial_port_t *serial);
+
 uint32_t serial_read_bytes(serial_port_t *serial, uint8_t *data, const uint32_t size);
 bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32_t size);
 

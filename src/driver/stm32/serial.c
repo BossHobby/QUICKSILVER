@@ -1,12 +1,6 @@
 #include "driver/serial.h"
 
-#include "core/profile.h"
-#include "core/project.h"
-#include "driver/interrupt.h"
-#include "driver/rcc.h"
 #include "driver/serial_soft.h"
-#include "driver/time.h"
-#include "io/usb_configurator.h"
 
 const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX] = {
     {},
@@ -78,24 +72,9 @@ static const uint32_t direction_map[] = {
     [SERIAL_DIR_TX_RX] = LL_USART_DIRECTION_TX_RX,
 };
 
-serial_port_t *serial_ports[SERIAL_PORT_MAX];
+extern serial_port_t *serial_ports[SERIAL_PORT_MAX];
 
 #define USART usart_port_defs[port]
-
-static void serial_enable_rcc(serial_ports_t port) {
-  const rcc_reg_t reg = usart_port_defs[port].rcc;
-  rcc_enable(reg);
-}
-
-static void serial_enable_isr(serial_ports_t port) {
-  const IRQn_Type irq = usart_port_defs[port].irq;
-  interrupt_enable(irq, UART_PRIORITY);
-}
-
-static void serial_disable_isr(serial_ports_t port) {
-  const IRQn_Type irq = usart_port_defs[port].irq;
-  interrupt_disable(irq);
-}
 
 void handle_usart_invert(serial_ports_t port, bool invert) {
 #if defined(STM32F4)
@@ -130,14 +109,7 @@ void handle_usart_invert(serial_ports_t port, bool invert) {
 #endif
 }
 
-bool serial_is_soft(serial_ports_t port) {
-  if (port < SERIAL_PORT_MAX) {
-    return false;
-  }
-  return true;
-}
-
-static void serial_hard_init(serial_port_t *serial, serial_port_config_t config) {
+void serial_hard_init(serial_port_t *serial, serial_port_config_t config) {
   const serial_ports_t port = config.port;
   const target_serial_port_t *dev = &target.serial_ports[port];
 
@@ -211,39 +183,6 @@ static void serial_hard_init(serial_port_t *serial, serial_port_config_t config)
   serial_enable_isr(serial->config.port);
 }
 
-void serial_init(serial_port_t *serial, serial_port_config_t config) {
-  const serial_ports_t port = config.port;
-  if (port == SERIAL_PORT_INVALID || serial == NULL) {
-    return;
-  }
-
-  const target_serial_port_t *dev = &target.serial_ports[port];
-  if (!target_serial_port_valid(dev)) {
-    return;
-  }
-  serial->config = config;
-  serial->tx_done = true;
-
-  serial_ports[port] = serial;
-
-  ring_buffer_clear(serial->rx_buffer);
-  ring_buffer_clear(serial->tx_buffer);
-
-  if (serial_is_soft(config.port)) {
-    soft_serial_init(config);
-  } else {
-    serial_hard_init(serial, config);
-  }
-}
-
-uint32_t serial_bytes_available(serial_port_t *serial) {
-  return ring_buffer_available(serial->rx_buffer);
-}
-
-uint32_t serial_read_bytes(serial_port_t *serial, uint8_t *data, const uint32_t size) {
-  return ring_buffer_read_multi(serial->rx_buffer, data, size);
-}
-
 bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32_t size) {
   if (size == 0) {
     return true;
@@ -261,11 +200,6 @@ bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32
 
   uint32_t written = 0;
   while (written < size) {
-    if (!serial_is_soft(serial->config.port)) {
-      const usart_port_def_t *port = &usart_port_defs[serial->config.port];
-      LL_USART_DisableIT_TXE(port->channel);
-    }
-
     written += ring_buffer_write_multi(serial->tx_buffer, data + written, size - written);
     serial->tx_done = false;
 
@@ -276,25 +210,6 @@ bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32
   }
 
   return true;
-}
-
-void soft_serial_tx_isr(serial_ports_t port) {
-  serial_port_t *serial = serial_ports[port];
-
-  uint8_t data = 0;
-  if (ring_buffer_read(serial->tx_buffer, &data)) {
-    soft_serial_write_byte(port, data);
-  } else {
-    soft_serial_enable_read(port);
-    serial->tx_done = true;
-  }
-}
-
-void soft_serial_rx_isr(serial_ports_t port) {
-  serial_port_t *serial = serial_ports[port];
-
-  const uint8_t data = soft_serial_read_byte(port);
-  ring_buffer_write(serial->rx_buffer, data);
 }
 
 static void handle_serial_isr(serial_port_t *serial) {
@@ -319,7 +234,7 @@ static void handle_serial_isr(serial_port_t *serial) {
   }
 
   if (LL_USART_IsEnabledIT_RXNE(port->channel) && LL_USART_IsActiveFlag_RXNE(port->channel)) {
-    const uint8_t data = LL_USART_ReceiveData8(port->channel);
+    const volatile uint8_t data = LL_USART_ReceiveData8(port->channel);
     ring_buffer_write(serial->rx_buffer, data);
   }
 
