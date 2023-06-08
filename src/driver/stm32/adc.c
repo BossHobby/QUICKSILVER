@@ -1,27 +1,9 @@
 #include "driver/adc.h"
 
-#include "core/debug.h"
-#include "core/profile.h"
-#include "core/project.h"
-#include "driver/gpio.h"
-#include "driver/rcc.h"
-#include "driver/time.h"
-#include "flight/filter.h"
-#include "util/util.h"
-
 typedef struct {
   ADC_TypeDef *adc;
   ADC_Common_TypeDef *common;
 } adc_dev_t;
-
-typedef struct {
-  gpio_pins_t pin;
-  adc_devices_t dev;
-  uint32_t channel;
-} adc_channel_t;
-
-#define VREFINT_CAL (*(VREFINT_CAL_ADDR))
-#define VBAT_SCALE (profile.voltage.vbat_scale * (1.f / 10000.f))
 
 #ifdef STM32H7
 #define ADC_INTERNAL_CHANNEL ADC_DEVICE3
@@ -43,8 +25,8 @@ static const adc_dev_t adc_dev[ADC_DEVICEMAX] = {
 };
 #endif
 
-static uint16_t adc_array[ADC_CHAN_MAX];
-static adc_channel_t adc_pins[ADC_CHAN_MAX];
+extern uint16_t adc_array[ADC_CHAN_MAX];
+extern adc_channel_t adc_pins[ADC_CHAN_MAX];
 
 static float temp_cal_a = 0;
 static float temp_cal_b = 0;
@@ -217,7 +199,7 @@ void adc_init() {
   adc_start_conversion(ADC_CHAN_VREF);
 }
 
-static uint16_t adc_read_raw(adc_chan_t index) {
+uint16_t adc_read_raw(adc_chan_t index) {
   static adc_chan_t last_adc_chan = ADC_CHAN_VREF;
 
   const adc_channel_t *chan = &adc_pins[last_adc_chan];
@@ -237,34 +219,6 @@ static uint16_t adc_read_raw(adc_chan_t index) {
   return adc_array[index];
 }
 
-float adc_convert_to_mv(float value) {
-  const float vref = (float)(VREFINT_CAL * VREFINT_CAL_VREF) / (float)adc_read_raw(ADC_CHAN_VREF);
-  return value * (vref / 4096.0f);
-}
-
-float adc_read(adc_chan_t chan) {
-  switch (chan) {
-  case ADC_CHAN_TEMP: {
-    const float val = adc_read_raw(chan);
-    return temp_cal_a * val + temp_cal_b;
-  }
-
-  case ADC_CHAN_VBAT:
-    if (target.vbat == PIN_NONE) {
-      return 4.20f;
-    }
-    return adc_convert_to_mv(adc_read_raw(chan)) * VBAT_SCALE * (profile.voltage.actual_battery_voltage / profile.voltage.reported_telemetry_voltage);
-
-  case ADC_CHAN_IBAT:
-    if (profile.voltage.ibat_scale == 0) {
-      return 0;
-    }
-    if (target.ibat == PIN_NONE) {
-      return 0;
-    }
-    return adc_convert_to_mv(adc_read_raw(chan)) * (10000.0f / profile.voltage.ibat_scale);
-
-  default:
-    return adc_read_raw(chan);
-  }
+float adc_convert_to_temp(float val) {
+  return temp_cal_a * val + temp_cal_b;
 }

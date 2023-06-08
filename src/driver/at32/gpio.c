@@ -1,6 +1,7 @@
 #include "driver/gpio.h"
 
 #include "core/project.h"
+#include "driver/adc.h"
 #include "driver/rcc.h"
 #include "driver/timer.h"
 
