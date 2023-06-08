@@ -86,6 +86,7 @@
 #define WITHIN_DMA_RAM(p) (((uint32_t)p & 0xfffe0000) == 0x30000000)
 #endif
 
+#include "adc.h"
 #include "rcc.h"
 
 typedef GPIO_TypeDef gpio_port_t;
