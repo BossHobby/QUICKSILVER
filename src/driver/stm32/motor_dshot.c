@@ -231,10 +231,10 @@ void motor_dshot_init() {
 }
 
 static void dshot_dma_setup_port(uint32_t index) {
-  dshot_gpio_port_t *port = &gpio_ports[index];
+  const dshot_gpio_port_t *port = &gpio_ports[index];
   const dma_stream_def_t *dma = &dma_stream_defs[port->dma_device];
 
-  dma_clear_flag_tc(dma->port, dma->stream_index);
+  dma_clear_flag_tc(port->dma_device);
 
   dma->stream->PAR = (uint32_t)&port->gpio->BSRR;
   dma->stream->M0AR = (uint32_t)&port_dma_buffer[index][0];
@@ -433,15 +433,16 @@ void motor_dshot_beep() {
 
 void dshot_dma_isr(dma_device_t dev) {
   for (uint32_t j = 0; j < gpio_port_count; j++) {
-    if (gpio_ports[j].dma_device != dev) {
+    const dshot_gpio_port_t *port = &gpio_ports[j];
+    if (port->dma_device != dev) {
       continue;
     }
 
-    const dma_stream_def_t *dma = &dma_stream_defs[dev];
-    dma_clear_flag_tc(dma->port, dma->stream_index);
+    dma_clear_flag_tc(port->dma_device);
 
+    const dma_stream_def_t *dma = &dma_stream_defs[dev];
     LL_DMA_DisableStream(dma->port, dma->stream_index);
-    dshot_disable_dma_request(gpio_ports[j].timer_channel);
+    dshot_disable_dma_request(port->timer_channel);
 
     dshot_dma_phase--;
     break;
