@@ -1,14 +1,6 @@
 #include "driver/dma.h"
 
-#include <stdbool.h>
-#include <string.h>
-
-#include "core/debug.h"
-#include "core/failloop.h"
-#include "core/project.h"
-#include "driver/interrupt.h"
 #include "driver/rcc.h"
-#include "util/util.h"
 
 // DMA1 Stream0 SPI3_RX
 // DMA1 Stream1
@@ -78,110 +70,6 @@ const dma_stream_def_t dma_stream_defs[DMA_DEVICE_MAX] = {DMA_STREAMS};
 #define CACHE_LINE_MASK (CACHE_LINE_SIZE - 1)
 #endif
 
-#define DMA_ALIGN_SIZE 32
-#define DMA_ALIGN(offset) MEMORY_ALIGN(offset, DMA_ALIGN_SIZE)
-
-typedef struct _dma_allocation {
-  uint32_t size;
-  uint16_t magic;
-  uint16_t free;
-
-  struct _dma_allocation *prev;
-  struct _dma_allocation *next;
-} __attribute__((aligned(DMA_ALIGN_SIZE))) dma_allocation_t;
-
-static DMA_RAM uint8_t dma_buffer[DMA_ALLOC_BUFFER_SIZE];
-
-void *dma_alloc(uint32_t min_size) {
-  ATOMIC_BLOCK_ALL {
-    dma_allocation_t *alloc = (dma_allocation_t *)dma_buffer;
-    while (alloc != NULL) {
-      if (alloc->free && alloc->size >= min_size) {
-        break;
-      }
-      if (alloc->next == NULL && alloc->size == 0) {
-        alloc->size = DMA_ALIGN(min_size);
-        alloc->next = NULL;
-        alloc->prev = NULL;
-        break;
-      }
-      if (alloc->next == NULL) {
-        dma_allocation_t *new_alloc = (dma_allocation_t *)((void *)(alloc) + sizeof(dma_allocation_t) + alloc->size);
-        if (((void *)(new_alloc) - (void *)(dma_buffer)) >= DMA_ALLOC_BUFFER_SIZE) {
-          failloop(FAILLOOP_FAULT);
-        }
-
-        new_alloc->size = DMA_ALIGN(min_size);
-        new_alloc->next = NULL;
-        new_alloc->prev = alloc;
-
-        alloc->next = new_alloc;
-        alloc = new_alloc;
-        break;
-      }
-      alloc = alloc->next;
-    }
-
-    alloc->magic = 0xBEEF;
-    alloc->free = 0;
-
-    return (void *)(alloc) + sizeof(dma_allocation_t);
-  }
-
-  failloop(FAILLOOP_FAULT);
-  return NULL;
-}
-
-void dma_free(void *ptr) {
-  ATOMIC_BLOCK_ALL {
-    dma_allocation_t *alloc = (dma_allocation_t *)(ptr - sizeof(dma_allocation_t));
-    if (alloc->magic != 0xBEEF) {
-      failloop(FAILLOOP_DMA);
-    }
-
-    alloc->free = 1;
-
-    while (alloc->next != NULL) {
-      alloc = alloc->next;
-    }
-
-    while (alloc != NULL && alloc->free) {
-      alloc->free = 0;
-      alloc->size = 0;
-      alloc->next = NULL;
-
-      dma_allocation_t *prev = alloc->prev;
-      if (prev) {
-        prev->next = NULL;
-      }
-      alloc->prev = NULL;
-
-      alloc = prev;
-    }
-  }
-}
-
-void *dma_realloc(void *ptr, uint32_t min_size) {
-  ATOMIC_BLOCK_ALL {
-    dma_allocation_t *alloc = (dma_allocation_t *)(ptr - sizeof(dma_allocation_t));
-    if (alloc->size >= min_size) {
-      return ptr;
-    }
-
-    uint32_t old_size = alloc->size;
-    dma_free(ptr);
-
-    void *new_ptr = dma_alloc(min_size);
-    if (new_ptr && new_ptr != ptr) {
-      memcpy(new_ptr, ptr, old_size);
-    }
-    return new_ptr;
-  }
-
-  failloop(FAILLOOP_FAULT);
-  return NULL;
-}
-
 void dma_prepare_tx_memory(void *addr, uint32_t size) {
 #if defined(STM32F7) || defined(STM32H7)
   if (!WITHIN_DTCM_RAM(addr) && !WITHIN_DMA_RAM(addr)) {
@@ -210,99 +98,81 @@ void dma_enable_rcc(dma_device_t dev) {
   }
 }
 
-uint32_t dma_is_flag_active_tc(DMA_TypeDef *dma, uint32_t stream) {
-  switch (stream) {
+bool dma_is_flag_active_tc(dma_device_t dev) {
+  const dma_stream_def_t *dma = &dma_stream_defs[dev];
+
+  switch (dma->stream_index) {
   case LL_DMA_STREAM_0:
-    return LL_DMA_IsActiveFlag_TC0(dma);
+    return LL_DMA_IsActiveFlag_TC0(dma->port);
   case LL_DMA_STREAM_1:
-    return LL_DMA_IsActiveFlag_TC1(dma);
+    return LL_DMA_IsActiveFlag_TC1(dma->port);
   case LL_DMA_STREAM_2:
-    return LL_DMA_IsActiveFlag_TC2(dma);
+    return LL_DMA_IsActiveFlag_TC2(dma->port);
   case LL_DMA_STREAM_3:
-    return LL_DMA_IsActiveFlag_TC3(dma);
+    return LL_DMA_IsActiveFlag_TC3(dma->port);
   case LL_DMA_STREAM_4:
-    return LL_DMA_IsActiveFlag_TC4(dma);
+    return LL_DMA_IsActiveFlag_TC4(dma->port);
   case LL_DMA_STREAM_5:
-    return LL_DMA_IsActiveFlag_TC5(dma);
+    return LL_DMA_IsActiveFlag_TC5(dma->port);
   case LL_DMA_STREAM_6:
-    return LL_DMA_IsActiveFlag_TC6(dma);
+    return LL_DMA_IsActiveFlag_TC6(dma->port);
   case LL_DMA_STREAM_7:
-    return LL_DMA_IsActiveFlag_TC7(dma);
+    return LL_DMA_IsActiveFlag_TC7(dma->port);
   }
   return 0;
 }
 
-uint32_t dma_is_flag_active_te(DMA_TypeDef *dma, uint32_t stream) {
-  switch (stream) {
-  case LL_DMA_STREAM_0:
-    return LL_DMA_IsActiveFlag_TE0(dma);
-  case LL_DMA_STREAM_1:
-    return LL_DMA_IsActiveFlag_TE1(dma);
-  case LL_DMA_STREAM_2:
-    return LL_DMA_IsActiveFlag_TE2(dma);
-  case LL_DMA_STREAM_3:
-    return LL_DMA_IsActiveFlag_TE3(dma);
-  case LL_DMA_STREAM_4:
-    return LL_DMA_IsActiveFlag_TE4(dma);
-  case LL_DMA_STREAM_5:
-    return LL_DMA_IsActiveFlag_TE5(dma);
-  case LL_DMA_STREAM_6:
-    return LL_DMA_IsActiveFlag_TE6(dma);
-  case LL_DMA_STREAM_7:
-    return LL_DMA_IsActiveFlag_TE7(dma);
-  }
-  return 0;
-}
+void dma_clear_flag_tc(dma_device_t dev) {
+  const dma_stream_def_t *dma = &dma_stream_defs[dev];
 
-void dma_clear_flag_tc(DMA_TypeDef *dma, uint32_t stream) {
-  switch (stream) {
+  switch (dma->stream_index) {
   case LL_DMA_STREAM_0:
-    LL_DMA_ClearFlag_TC0(dma);
-    LL_DMA_ClearFlag_TE0(dma);
-    LL_DMA_ClearFlag_HT0(dma);
-    LL_DMA_ClearFlag_FE0(dma);
+    LL_DMA_ClearFlag_TC0(dma->port);
+    LL_DMA_ClearFlag_TE0(dma->port);
+    LL_DMA_ClearFlag_HT0(dma->port);
+    LL_DMA_ClearFlag_FE0(dma->port);
     break;
   case LL_DMA_STREAM_1:
-    LL_DMA_ClearFlag_TC1(dma);
-    LL_DMA_ClearFlag_TE1(dma);
-    LL_DMA_ClearFlag_HT1(dma);
-    LL_DMA_ClearFlag_FE1(dma);
+    LL_DMA_ClearFlag_TC1(dma->port);
+    LL_DMA_ClearFlag_TE1(dma->port);
+    LL_DMA_ClearFlag_HT1(dma->port);
+    LL_DMA_ClearFlag_FE1(dma->port);
     break;
   case LL_DMA_STREAM_2:
-    LL_DMA_ClearFlag_TC2(dma);
-    LL_DMA_ClearFlag_TE2(dma);
-    LL_DMA_ClearFlag_HT2(dma);
-    LL_DMA_ClearFlag_FE2(dma);
+    LL_DMA_ClearFlag_TC2(dma->port);
+    LL_DMA_ClearFlag_TE2(dma->port);
+    LL_DMA_ClearFlag_HT2(dma->port);
+    LL_DMA_ClearFlag_FE2(dma->port);
     break;
   case LL_DMA_STREAM_3:
-    LL_DMA_ClearFlag_TC3(dma);
-    LL_DMA_ClearFlag_TE3(dma);
-    LL_DMA_ClearFlag_HT3(dma);
-    LL_DMA_ClearFlag_FE3(dma);
+    LL_DMA_ClearFlag_TC3(dma->port);
+    LL_DMA_ClearFlag_TE3(dma->port);
+    LL_DMA_ClearFlag_HT3(dma->port);
+    LL_DMA_ClearFlag_FE3(dma->port);
     break;
   case LL_DMA_STREAM_4:
-    LL_DMA_ClearFlag_TC4(dma);
-    LL_DMA_ClearFlag_TE4(dma);
-    LL_DMA_ClearFlag_HT4(dma);
-    LL_DMA_ClearFlag_FE4(dma);
+    LL_DMA_ClearFlag_TC4(dma->port);
+    LL_DMA_ClearFlag_TE4(dma->port);
+    LL_DMA_ClearFlag_HT4(dma->port);
+    LL_DMA_ClearFlag_FE4(dma->port);
     break;
   case LL_DMA_STREAM_5:
-    LL_DMA_ClearFlag_TC5(dma);
-    LL_DMA_ClearFlag_TE5(dma);
-    LL_DMA_ClearFlag_HT5(dma);
-    LL_DMA_ClearFlag_FE5(dma);
+    LL_DMA_ClearFlag_TC5(dma->port);
+    LL_DMA_ClearFlag_TE5(dma->port);
+    LL_DMA_ClearFlag_HT5(dma->port);
+    LL_DMA_ClearFlag_FE5(dma->port);
     break;
   case LL_DMA_STREAM_6:
-    LL_DMA_ClearFlag_TC6(dma);
-    LL_DMA_ClearFlag_TE6(dma);
-    LL_DMA_ClearFlag_HT6(dma);
-    LL_DMA_ClearFlag_FE6(dma);
+    LL_DMA_ClearFlag_TC6(dma->port);
+    LL_DMA_ClearFlag_TE6(dma->port);
+    LL_DMA_ClearFlag_HT6(dma->port);
+    LL_DMA_ClearFlag_FE6(dma->port);
     break;
   case LL_DMA_STREAM_7:
-    LL_DMA_ClearFlag_TC7(dma);
-    LL_DMA_ClearFlag_TE7(dma);
-    LL_DMA_ClearFlag_HT7(dma);
-    LL_DMA_ClearFlag_FE7(dma);
+    LL_DMA_ClearFlag_TC7(dma->port);
+    LL_DMA_ClearFlag_TE7(dma->port);
+    LL_DMA_ClearFlag_HT7(dma->port);
+    LL_DMA_ClearFlag_FE7(dma->port);
     break;
   }
 }

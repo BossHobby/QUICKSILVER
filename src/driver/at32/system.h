@@ -19,8 +19,21 @@
 #include "rcc.h"
 
 typedef gpio_type gpio_port_t;
-typedef dma_type dma_port_t;
-typedef dmamux_channel_type dma_stream_t;
 typedef spi_type spi_port_t;
 typedef tmr_type timer_dev_t;
 typedef usart_type usart_dev_t;
+
+typedef struct {
+  uint32_t device;
+
+  dma_type *port;
+  uint8_t port_index;
+
+  dma_channel_type *channel;
+  uint8_t channel_index;
+
+  uint32_t request;
+  dmamux_channel_type *mux;
+
+  IRQn_Type irq;
+} dma_stream_def_t;
