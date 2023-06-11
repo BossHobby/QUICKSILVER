@@ -44,15 +44,15 @@ volatile uint32_t dshot_dma_phase = 0; // 0: idle, 1 - (gpio_port_count + 1): ha
 static uint8_t gpio_port_count = 0;
 static dshot_gpio_port_t gpio_ports[DSHOT_MAX_PORT_COUNT] = {
     {
-        .timer_channel = LL_TIM_CHANNEL_CH1,
+        .timer_channel = TMR_SELECT_CHANNEL_1,
         .dma_device = DMA_DEVICE_TIM1_CH1,
     },
     {
-        .timer_channel = LL_TIM_CHANNEL_CH3,
+        .timer_channel = TMR_SELECT_CHANNEL_3,
         .dma_device = DMA_DEVICE_TIM1_CH3,
     },
     {
-        .timer_channel = LL_TIM_CHANNEL_CH4,
+        .timer_channel = TMR_SELECT_CHANNEL_4,
         .dma_device = DMA_DEVICE_TIM1_CH4,
     },
 };
@@ -64,14 +64,14 @@ static void dshot_init_motor_pin(uint32_t index) {
   dshot_pins[index].pin = gpio_pin_defs[target.motor_pins[index]].pin;
   dshot_pins[index].dshot_port = 0;
 
-  LL_GPIO_InitTypeDef gpio_init;
-  gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-  gpio_init.Pin = dshot_pins[index].pin;
-  LL_GPIO_Init(dshot_pins[index].port, &gpio_init);
-  LL_GPIO_ResetOutputPin(dshot_pins[index].port, dshot_pins[index].pin);
+  gpio_init_type init;
+  init.gpio_mode = GPIO_MODE_OUTPUT;
+  init.gpio_drive_strength = GPIO_DRIVE_HIGH;
+  init.gpio_out_type = GPIO_PUSHPULL;
+  init.gpio_pull = GPIO_PULL_NONE;
+  init.gpio_pins = dshot_pins[index].pin;
+  gpio_init(dshot_pins[index].port, &init);
+  gpio_bits_reset(dshot_pins[index].port, dshot_pins[index].pin);
 
   for (uint8_t i = 0; i < DSHOT_MAX_PORT_COUNT; i++) {
     if (gpio_ports[i].gpio == dshot_pins[index].port || i == gpio_port_count) {
@@ -93,73 +93,49 @@ static void dshot_init_motor_pin(uint32_t index) {
 }
 
 static void dshot_init_gpio_port(dshot_gpio_port_t *port) {
-  LL_TIM_OC_InitTypeDef tim_oc_init;
-  LL_TIM_OC_StructInit(&tim_oc_init);
-  tim_oc_init.OCMode = LL_TIM_OCMODE_PWM1;
-  tim_oc_init.OCIdleState = LL_TIM_OCIDLESTATE_HIGH;
-  tim_oc_init.OCState = LL_TIM_OCSTATE_ENABLE;
-  tim_oc_init.OCPolarity = LL_TIM_OCPOLARITY_LOW;
-  tim_oc_init.CompareValue = 10;
-  LL_TIM_OC_Init(TIM1, port->timer_channel, &tim_oc_init);
-  LL_TIM_OC_EnablePreload(TIM1, port->timer_channel);
+  dma_enable_rcc(port->dma_device);
+
+  tmr_output_config_type tim_oc_init;
+  tmr_output_default_para_init(&tim_oc_init);
+  tim_oc_init.oc_mode = TMR_OUTPUT_CONTROL_PWM_MODE_A;
+  tim_oc_init.oc_idle_state = TRUE;
+  tim_oc_init.oc_polarity = TMR_OUTPUT_ACTIVE_LOW;
+  tim_oc_init.oc_output_state = TRUE;
+  tmr_output_channel_config(TMR1, port->timer_channel, &tim_oc_init);
+  tmr_output_channel_buffer_enable(TMR1, port->timer_channel, TRUE);
 
   const dma_stream_def_t *dma = &dma_stream_defs[port->dma_device];
 
-  LL_DMA_DeInit(dma->port, dma->stream_index);
+  dma_reset(dma->channel);
+  dmamux_init(dma->mux, dma->request);
 
-  LL_DMA_InitTypeDef DMA_InitStructure;
-  LL_DMA_StructInit(&DMA_InitStructure);
-#ifdef STM32H7
-  DMA_InitStructure.PeriphRequest = dma->request;
-#else
-  DMA_InitStructure.Channel = dma->channel;
-#endif
-  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&port->gpio->BSRR;
-  DMA_InitStructure.MemoryOrM2MDstAddress = (uint32_t)port_dma_buffer[0];
-  DMA_InitStructure.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
-  DMA_InitStructure.NbData = DSHOT_DMA_BUFFER_SIZE;
-  DMA_InitStructure.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
-  DMA_InitStructure.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
-  DMA_InitStructure.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_WORD;
-  DMA_InitStructure.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_WORD;
-  DMA_InitStructure.Mode = LL_DMA_MODE_NORMAL;
-  DMA_InitStructure.Priority = LL_DMA_PRIORITY_VERYHIGH;
-  DMA_InitStructure.FIFOMode = LL_DMA_FIFOMODE_DISABLE;
-  DMA_InitStructure.MemBurst = LL_DMA_MBURST_SINGLE;
-  DMA_InitStructure.PeriphBurst = LL_DMA_PBURST_SINGLE;
-  LL_DMA_Init(dma->port, dma->stream_index, &DMA_InitStructure);
+  dma_init_type init;
+  init.peripheral_base_addr = (uint32_t)(&port->gpio->scr);
+  init.memory_base_addr = (uint32_t)port_dma_buffer[0];
+  init.direction = DMA_DIR_MEMORY_TO_PERIPHERAL;
+  init.buffer_size = DSHOT_DMA_BUFFER_SIZE;
+  init.peripheral_inc_enable = FALSE;
+  init.memory_inc_enable = TRUE;
+  init.peripheral_data_width = DMA_PERIPHERAL_DATA_WIDTH_WORD;
+  init.memory_data_width = DMA_MEMORY_DATA_WIDTH_WORD;
+  init.loop_mode_enable = FALSE;
+  init.priority = DMA_PRIORITY_VERY_HIGH;
+  dma_init(dma->channel, &init);
+  dma_interrupt_enable(dma->channel, DMA_FDT_INT, TRUE);
 
   interrupt_enable(dma->irq, DMA_PRIORITY);
-
-  LL_DMA_EnableIT_TC(dma->port, dma->stream_index);
 }
 
-static void dshot_enable_dma_request(uint32_t timer_channel) {
+static void dshot_enable_dma_request(uint32_t timer_channel, confirm_state new_state) {
   switch (timer_channel) {
-  case LL_TIM_CHANNEL_CH1:
-    LL_TIM_EnableDMAReq_CC1(TIM1);
+  case TMR_SELECT_CHANNEL_1:
+    tmr_dma_request_enable(TMR1, TMR_C1_DMA_REQUEST, new_state);
     break;
-  case LL_TIM_CHANNEL_CH3:
-    LL_TIM_EnableDMAReq_CC3(TIM1);
+  case TMR_SELECT_CHANNEL_3:
+    tmr_dma_request_enable(TMR1, TMR_C3_DMA_REQUEST, new_state);
     break;
-  case LL_TIM_CHANNEL_CH4:
-    LL_TIM_EnableDMAReq_CC4(TIM1);
-    break;
-  default:
-    break;
-  }
-}
-
-static void dshot_disable_dma_request(uint32_t timer_channel) {
-  switch (timer_channel) {
-  case LL_TIM_CHANNEL_CH1:
-    LL_TIM_DisableDMAReq_CC1(TIM1);
-    break;
-  case LL_TIM_CHANNEL_CH3:
-    LL_TIM_DisableDMAReq_CC3(TIM1);
-    break;
-  case LL_TIM_CHANNEL_CH4:
-    LL_TIM_DisableDMAReq_CC4(TIM1);
+  case TMR_SELECT_CHANNEL_4:
+    tmr_dma_request_enable(TMR1, TMR_C4_DMA_REQUEST, new_state);
     break;
   default:
     break;
@@ -169,19 +145,13 @@ static void dshot_disable_dma_request(uint32_t timer_channel) {
 void motor_dshot_init() {
   gpio_port_count = 0;
 
-  rcc_enable(RCC_APB2_GRP1(TIM1));
-  rcc_enable(RCC_AHB1_GRP1(DMA2));
+  rcc_enable(RCC_ENCODE(TMR1));
 
   // setup timer to 1/3 of the full bit time
-
-  LL_TIM_InitTypeDef tim_init;
-  LL_TIM_StructInit(&tim_init);
-  tim_init.Autoreload = DSHOT_SYMBOL_TIME;
-  tim_init.Prescaler = 0;
-  tim_init.ClockDivision = 0;
-  tim_init.CounterMode = LL_TIM_COUNTERMODE_UP;
-  LL_TIM_Init(TIM1, &tim_init);
-  LL_TIM_EnableARRPreload(TIM1);
+  tmr_base_init(TMR1, DSHOT_SYMBOL_TIME, 0);
+  tmr_clock_source_div_set(TMR1, TMR_CLOCK_DIV1);
+  tmr_cnt_dir_set(TMR1, TMR_COUNT_UP);
+  tmr_period_buffer_enable(TMR1, TRUE);
 
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
     dshot_init_motor_pin(i);
@@ -197,7 +167,7 @@ void motor_dshot_init() {
     }
   }
 
-  LL_TIM_EnableCounter(TIM1);
+  tmr_counter_enable(TMR1, TRUE);
 
   // set failsafetime so signal is off at start
   pwm_failsafe_time = time_micros() - 100000;
@@ -210,12 +180,12 @@ static void dshot_dma_setup_port(uint32_t index) {
 
   dma_clear_flag_tc(port->dma_device);
 
-  dma->stream->PAR = (uint32_t)&port->gpio->BSRR;
-  dma->stream->M0AR = (uint32_t)&port_dma_buffer[index][0];
-  dma->stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
+  dma->channel->paddr = (uint32_t)(&port->gpio->scr);
+  dma->channel->maddr = (uint32_t)&port_dma_buffer[index][0];
+  dma->channel->dtcnt = DSHOT_DMA_BUFFER_SIZE;
 
-  LL_DMA_EnableStream(dma->port, dma->stream_index);
-  dshot_enable_dma_request(port->timer_channel);
+  dma_channel_enable(dma->channel, TRUE);
+  dshot_enable_dma_request(port->timer_channel, TRUE);
 }
 
 // make dshot dma packet, then fire
@@ -282,8 +252,8 @@ void dshot_dma_isr(dma_device_t dev) {
     dma_clear_flag_tc(port->dma_device);
 
     const dma_stream_def_t *dma = &dma_stream_defs[dev];
-    LL_DMA_DisableStream(dma->port, dma->stream_index);
-    dshot_disable_dma_request(port->timer_channel);
+    dma_channel_enable(dma->channel, FALSE);
+    dshot_enable_dma_request(port->timer_channel, FALSE);
 
     dshot_dma_phase--;
     break;
