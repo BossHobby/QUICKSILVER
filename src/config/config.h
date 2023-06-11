@@ -225,11 +225,6 @@
 // *************retune it back up to where it feels good.  I'm finding about 60 to 65% of my previous D value seems to work.
 // #define TORQUE_BOOST 1.0
 
-// *************pwm frequency for motor control
-// *************a higher frequency makes the motors more linear
-// *************in Hz
-#define PWMFREQ 32000
-
 // *************throttle angle compensation in level mode
 // #define AUTO_THROTTLE
 
