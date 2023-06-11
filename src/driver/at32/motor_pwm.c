@@ -16,12 +16,12 @@ void motor_pwm_init() {
   gpio_init.output = GPIO_PUSHPULL;
   gpio_init.pull = GPIO_NO_PULL;
 
-  LL_TIM_OC_InitTypeDef tim_oc_init;
-  tim_oc_init.OCMode = LL_TIM_OCMODE_PWM1;
-  tim_oc_init.OCState = LL_TIM_OCSTATE_ENABLE;
-  tim_oc_init.OCPolarity = LL_TIM_OCPOLARITY_HIGH;
-  tim_oc_init.OCIdleState = LL_TIM_OCIDLESTATE_HIGH;
-  tim_oc_init.CompareValue = 0;
+  tmr_output_config_type tim_oc_init;
+  tmr_output_default_para_init(&tim_oc_init);
+  tim_oc_init.oc_mode = TMR_OUTPUT_CONTROL_PWM_MODE_A;
+  tim_oc_init.oc_idle_state = TRUE;
+  tim_oc_init.oc_polarity = TMR_OUTPUT_ACTIVE_HIGH;
+  tim_oc_init.oc_output_state = TRUE;
 
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
     const gpio_pins_t pin = target.motor_pins[i];
@@ -45,41 +45,28 @@ void motor_pwm_init() {
 
     const uint8_t tim = TIMER_TAG_TIM(timer_tags[i]);
     const uint8_t ch = TIMER_TAG_CH(timer_tags[i]);
+    const timer_def_t *def = &timer_defs[tim];
+
+    tmr_counter_enable(def->instance, FALSE);
+
     timer_up_init(tim, PWM_DIVIDER, PWM_TOP);
-    LL_TIM_OC_Init(timer_defs[tim].instance, timer_channel_val(ch), &tim_oc_init);
-    LL_TIM_EnableCounter(timer_defs[tim].instance);
-#ifndef STM32F411
-    if (tim != TIMER14) {
-      LL_TIM_EnableAllOutputs(timer_defs[tim].instance);
-    }
-#endif
+
+    tmr_output_channel_config(def->instance, timer_channel_val(ch), &tim_oc_init);
+    tmr_channel_value_set(def->instance, timer_channel_val(ch), 0);
+    tmr_output_channel_buffer_enable(def->instance, timer_channel_val(ch), TRUE);
+
+    tmr_output_enable(def->instance, TRUE);
+    tmr_counter_enable(def->instance, TRUE);
   }
 }
 
 void motor_pwm_write(float *values) {
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    const uint16_t pwm = constrain(values[i] * PWM_TOP, 0, PWM_TOP);
-
     const resource_tag_t tag = timer_tags[i];
-    switch (TIMER_TAG_CH(tag)) {
-    case TIMER_CH1:
-    case TIMER_CH1N:
-      WRITE_REG(timer_defs[TIMER_TAG_TIM(tag)].instance->CCR1, pwm);
-      break;
-    case TIMER_CH2:
-    case TIMER_CH2N:
-      WRITE_REG(timer_defs[TIMER_TAG_TIM(tag)].instance->CCR2, pwm);
-      break;
-    case TIMER_CH3:
-    case TIMER_CH3N:
-      WRITE_REG(timer_defs[TIMER_TAG_TIM(tag)].instance->CCR3, pwm);
-      break;
-    case TIMER_CH4:
-      WRITE_REG(timer_defs[TIMER_TAG_TIM(tag)].instance->CCR4, pwm);
-      break;
-    default:
-      break;
-    }
+    const timer_def_t *def = &timer_defs[TIMER_TAG_TIM(tag)];
+
+    const uint16_t pwm = constrain(values[i] * PWM_TOP, 0, PWM_TOP);
+    tmr_channel_value_set(def->instance, timer_channel_val(TIMER_TAG_CH(tag)), pwm);
   }
 }
 
