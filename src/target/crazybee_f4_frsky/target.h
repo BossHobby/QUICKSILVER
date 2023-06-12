@@ -11,10 +11,27 @@
   USART2_PA3PA2
 
 // LEDS
-#define LED_NUMBER 1
+#define LED_NUMBER 2
 #define LED1PIN PIN_C13
 #define LED1_INVERT
+#define LED2PIN PIN_B9
+#define LED2_INVERT
 #define BUZZER_PIN PIN_C15
+
+//--------------------------------------------------------------
+// RGB LEDs
+//--------------------------------------------------------------
+#define RGB_PIN PIN_A0
+//--------------------------------------------------------------
+// DMA => TIM2-CC1 => DMA1, Channel3, Stream5 (See drv_dma.c)
+//--------------------------------------------------------------
+#define RGB_LED_DMA DMA_DEVICE_TIM2_CH1
+//--------------------------------------------------------------
+// Timer for the data signal => TIM2
+//--------------------------------------------------------------
+#define RGB_TIMER TIM2
+#define RGB_TIMER_CHANNEL 1
+#define RGB_TIM_AF GPIO_AF1_TIM2
 
 // #define FPV_PIN LL_GPIO_PIN_13
 // #define FPV_PORT GPIOA

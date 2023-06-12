@@ -4,6 +4,7 @@
 
 #include "driver/usb.h"
 #include "io/quic.h"
+#include "io/rgb_led.h"
 #include "osd/render.h"
 #include "rx/rx.h"
 #include "util/cbor_helper.h"
@@ -479,6 +480,11 @@ const profile_t default_profile = {
 #endif
             AUX_CHANNEL_OFF, // AUX_BLACKBOX
             PREARM,          // AUX_PREARM
+#ifdef RGB_PIN               // AUX_LEDS
+            RGBLEDS,
+#else
+            AUX_CHANNEL_OFF,
+#endif
         },
         .lqi_source = RX_LQI_SOURCE_PACKET_RATE,
         .channel_mapping = RX_MAPPING_AETR,
@@ -520,8 +526,56 @@ const profile_t default_profile = {
             ENCODE_OSD_ELEMENT(1, 0, 0, 17),  // OSD_CURRENT_DRAW
         },
     },
-    .blackbox = {
-        // Initialized by profile_set_defaults(), so nothing to do here
+    .rgb = {
+        .led_count = 0,
+        .low_bat1 = RGB(255, 0, 0),
+        .low_bat2 = RGB(255, 128, 0),
+        .failsafe1 = RGB(0, 128, 0),
+        .failsafe2 = RGB(0, 0, 128),
+        .active_pattern = RGB_PATTERN_RAINBOW,
+        .solid_color = {
+            .color1 = RGB(0, 255, 0), .color2 = RGB(255, 0, 0),
+            .modifier_channel = 2, // Throttle
+        },
+        .wave_sequence = {
+            .colors = {
+                RGB(255, 0, 0),
+                RGB(128, 128, 0),
+                RGB(0, 255, 0),
+                RGB(0, 128, 128),
+                RGB(0, 0, 255),
+                RGB(128, 0, 128),
+            },
+            .num_colors = 6,
+            .fade_steps = 64, // steps between each color - more = smoother, slower rainbow / less = faster
+            .width = 6,       // how many leds till the next color (0 = all leds in sync)
+            .reverse = 0,     // reverse direction of wave motion
+        },
+        .led_sequence = {
+            .led_map = {
+                {
+                    .led_mask1 = 57, // first 16 leds (2 bits per led)
+                    .led_mask2 = 0,  // second set of 16 leds
+                    .colors = {
+                        RGB5BIT(255, 0, 0),
+                        RGB5BIT(128, 0, 0),
+                        RGB5BIT(64, 0, 0),
+                    },
+                },
+                {
+                    .led_mask1 = 1764,
+                    .led_mask2 = 0,
+                    .colors = {
+                        RGB5BIT(255, 0, 0),
+                        RGB5BIT(128, 0, 0),
+                        RGB5BIT(64, 0, 0),
+                    },
+                },
+            },
+            .num_steps = 2,
+            .duration = 1000,
+            .pattern_reverse = 0,
+        },
     },
 };
 
@@ -645,6 +699,11 @@ FILTER_PARAMETER_MEMBERS
 FILTER_MEMBERS
 OSD_MEMBERS
 VOLTAGE_MEMBERS
+RGB_SOLID_MEMBERS
+RGB_RAINBOW_MEMBERS
+RGB_MAP_MEMBERS
+RGB_SEQ_MEMBERS
+RGB_MEMBERS
 PID_RATE_MEMBERS
 ANGLE_PID_RATE_MEMBERS
 PID_RATE_PRESET_MEMBERS
@@ -720,6 +779,11 @@ FILTER_PARAMETER_MEMBERS
 FILTER_MEMBERS
 OSD_MEMBERS
 VOLTAGE_MEMBERS
+RGB_SOLID_MEMBERS
+RGB_RAINBOW_MEMBERS
+RGB_MAP_MEMBERS
+RGB_SEQ_MEMBERS
+RGB_MEMBERS
 PID_RATE_MEMBERS
 ANGLE_PID_RATE_MEMBERS
 STICK_RATE_MEMBERS

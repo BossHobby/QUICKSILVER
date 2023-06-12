@@ -19,7 +19,7 @@
 #include "osd/render.h"
 #include "util/cbor_helper.h"
 
-#define ENCODE_BUFFER_SIZE 2048
+#define ENCODE_BUFFER_SIZE 4096
 
 #define quic_errorf(cmd, args...) quic_send_strf(quic, cmd, QUIC_FLAG_ERROR, args)
 

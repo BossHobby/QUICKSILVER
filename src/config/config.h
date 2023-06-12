@@ -134,6 +134,7 @@
 #define BUZZER_ENABLE AUX_CHANNEL_OFF
 #define MOTORS_TO_THROTTLE_MODE AUX_CHANNEL_OFF
 #define RSSI AUX_CHANNEL_OFF
+#define RGBLEDS AUX_CHANNEL_ON
 // *************switch for fpv / other, requires fet
 // *************comment out to disable
 #define FPV_SWITCH AUX_CHANNEL_ON

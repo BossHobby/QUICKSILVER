@@ -19,6 +19,21 @@
 #define LED2PIN PIN_B4
 #define LED2_INVERT
 
+//--------------------------------------------------------------
+// RGB LEDs 
+//--------------------------------------------------------------
+#define  RGB_PIN           PIN_A0
+//--------------------------------------------------------------
+// DMA => TIM2-CC1 => DMA1, Channel3, Stream5 (See drv_dma.c)
+//--------------------------------------------------------------
+#define  RGB_LED_DMA       DMA_DEVICE_TIM2_CH1
+//--------------------------------------------------------------
+// Timer for the data signal => TIM2
+//--------------------------------------------------------------
+#define  RGB_TIMER         TIM2
+#define  RGB_TIMER_CHANNEL 1
+#define  RGB_TIM_AF        GPIO_AF1_TIM2
+
 #define BUZZER_PIN PIN_A8
 // #define BUZZER_INVERT
 

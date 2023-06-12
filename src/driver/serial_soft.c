@@ -5,6 +5,7 @@
 #include "driver/timer.h"
 #include "project.h"
 
+
 #define TIMER_INSTANCE TIM4
 #define TIMER_IRQN TIM4_IRQn
 #define BAUD_DIVIDER 4
@@ -234,6 +235,7 @@ void soft_serial_rx_update(usart_ports_t port) {
     timeout = 0;
   }
 }
+
 
 void TIM4_IRQHandler() {
   if (LL_TIM_IsActiveFlag_UPDATE(TIMER_INSTANCE)) {
