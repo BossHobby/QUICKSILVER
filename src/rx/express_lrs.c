@@ -50,9 +50,6 @@
 #define CONSIDER_CONN_GOOD_MILLIS 1000
 #define RF_MODE_CYCLE_MULTIPLIER_SLOW 10
 
-#define LOCKUP_TIMEOUT_US 10000
-#define SYNC_TIMEOUT_MS 30000
-
 // Maximum ms between LINK_STATISTICS packets for determining burst max
 #define TELEM_MIN_LINK_INTERVAL 512U
 
@@ -79,7 +76,7 @@ extern expresslrs_rf_pref_params_t *current_rf_pref_params();
 extern uint8_t tlm_ratio_enum_to_value(expresslrs_tlm_ratio_t val);
 extern uint16_t rate_enum_to_hz(expresslrs_rf_rates_t val);
 
-volatile uint32_t packet_time = 0;
+volatile uint32_t packet_time_us = 0;
 elrs_timer_state_t elrs_timer_state = TIMER_DISCONNECTED;
 volatile uint8_t ota_nonce = 0;
 
@@ -301,8 +298,6 @@ static void elrs_update_telemetry() {
 }
 
 static bool elrs_vaild_packet() {
-  elrs_read_packet(rx_spi_packet);
-
   const uint8_t type = rx_spi_packet[0] & 0b11;
   const uint16_t their_crc = (((uint16_t)(rx_spi_packet[0] & 0b11111100)) << 6) | rx_spi_packet[7];
 
@@ -334,7 +329,7 @@ static void elrs_connection_lost() {
 
   elrs_lq_reset();
   fhss_reset();
-  elrs_phase_reset();
+  elrs_phase_reset(true);
 
   elrs_set_rate(next_rate, fhss_get_sync_freq(), UID[5] & 0x01, elrs_get_uid_mac_seed(), crc_initializer);
   elrs_enter_rx(rx_spi_packet);
@@ -349,7 +344,7 @@ static void elrs_connection_tentative(uint32_t now) {
   last_rf_mode_cycle_millis = now;
 
   fhss_reset();
-  elrs_phase_reset();
+  elrs_phase_reset(false);
   elrs_snr_mean_reset();
 
   if (!in_binding_mode && !elrs_timer_is_running()) {
@@ -389,7 +384,7 @@ static void elrs_cycle_rf_mode(uint32_t now) {
 
   elrs_lq_reset();
   fhss_reset();
-  elrs_phase_reset();
+  elrs_phase_reset(true);
 
   elrs_set_rate(next_rate, fhss_get_sync_freq(), UID[5] & 0x01, elrs_get_uid_mac_seed(), crc_initializer);
   elrs_enter_rx(rx_spi_packet);
@@ -612,15 +607,16 @@ static void elrs_msp_process(uint8_t *buf, uint32_t len) {
   }
 }
 
-static bool elrs_process_packet(uint32_t packet_time) {
+static bool elrs_process_packet() {
   if (!elrs_vaild_packet()) {
     return false;
   }
 
   bool channels_received = false;
+  const uint32_t time_ms = time_millis();
 
-  elrs_phase_ext_event(packet_time + PACKET_TO_TOCK_SLACK);
-  last_valid_packet_millis = time_millis();
+  elrs_phase_ext_event(packet_time_us + PACKET_TO_TOCK_SLACK);
+  last_valid_packet_millis = time_ms;
 
   elrs_last_packet_stats(&raw_rssi, &raw_snr);
   rssi = elrs_lpf_update(&rssi_lpf, raw_rssi);
@@ -650,7 +646,7 @@ static bool elrs_process_packet(uint32_t packet_time) {
       break;
     }
 
-    sync_packet_millis = time_millis();
+    sync_packet_millis = time_ms;
 
     next_rate = ((rx_spi_packet[3] & 0b11110000) >> 4);
 
@@ -848,14 +844,6 @@ bool rx_expresslrs_check() {
     return channels_received;
   }
 
-  static uint32_t last_time = 0;
-  if ((elrs_state == CONNECTED) && (time_micros() - last_time) > LOCKUP_TIMEOUT_US) {
-    // we lost 10000us since last visit (flash save, etc)
-    // link has become unsustainable
-    elrs_connection_lost();
-  }
-  last_time = time_micros();
-
   const elrs_irq_status_t irq = elrs_get_irq_status();
 
   // it is possible we caught a packet during boot, but it will be stale by now
@@ -869,7 +857,7 @@ bool rx_expresslrs_check() {
   }
 
   if (irq == IRQ_RX_DONE) {
-    channels_received = elrs_process_packet(packet_time);
+    channels_received = elrs_process_packet();
   }
   // TX handled in irq
 
@@ -890,10 +878,6 @@ bool rx_expresslrs_check() {
   elrs_cycle_rf_mode(time_ms);
 
   if ((elrs_state == CONNECTED) && ((int32_t)(time_ms - last_valid_packet_millis) > current_rf_pref_params()->disconnect_timeout_ms)) {
-    elrs_connection_lost(time_ms);
-  }
-
-  if ((elrs_state == CONNECTED) && ((int32_t)(time_ms - sync_packet_millis) > SYNC_TIMEOUT_MS)) {
     elrs_connection_lost(time_ms);
   }
 
