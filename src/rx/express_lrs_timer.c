@@ -49,9 +49,8 @@ void elrs_timer_init(uint32_t interval_us) {
     timer_tag = timer_alloc(TIMER_USE_ELRS);
   }
   timer_up_init(TIMER_TAG_TIM(timer_tag), PWM_CLOCK_FREQ_HZ / TIMER_HZ, (current_interval >> 1) - 1);
-  interrupt_enable(TIMER.irq, TIMER_PRIORITY);
-
   elrs_timer_stop();
+  interrupt_enable(TIMER.irq, TIMER_PRIORITY);
 }
 
 void elrs_timer_resume(uint32_t interval_us) {
@@ -72,14 +71,7 @@ void elrs_timer_resume(uint32_t interval_us) {
 void elrs_timer_set_phase_shift(int32_t shift) {
   const int32_t min = -(current_interval >> 2);
   const int32_t max = (current_interval >> 2);
-
-  if (shift < min) {
-    phase_shift = min;
-  } else if (shift > max) {
-    phase_shift = max;
-  } else {
-    phase_shift = shift;
-  }
+  phase_shift = constrain(shift, min, max);
 }
 
 void elrs_phase_init() {
@@ -98,41 +90,37 @@ void elrs_phase_ext_event(uint32_t time) {
 }
 
 void elrs_phase_update(elrs_state_t state) {
-  if (state <= DISCONNECTED) {
-    return;
-  }
-
-  pl_state.raw_offset_us = 0;
-  if (pl_state.ext_event_active && pl_state.int_event_active) {
+  if (state != DISCONNECTED && pl_state.ext_event_active && pl_state.int_event_active) {
     pl_state.raw_offset_us = (int32_t)(pl_state.ext_event_time_us - pl_state.int_event_time_us);
-  }
-  pl_state.ext_event_active = false;
-  pl_state.int_event_active = false;
+    pl_state.offset = elrs_lpf_update((elrs_lpf_t *)&pl_state.offset_lpf, pl_state.raw_offset_us);
+    pl_state.offset_dx = elrs_lpf_update((elrs_lpf_t *)&pl_state.offset_dx_lpf, pl_state.raw_offset_us - pl_state.prev_raw_offset_us);
+    pl_state.prev_raw_offset_us = pl_state.raw_offset_us;
 
-  pl_state.offset = elrs_lpf_update((elrs_lpf_t *)&pl_state.offset_lpf, pl_state.raw_offset_us);
-  pl_state.offset_dx = elrs_lpf_update((elrs_lpf_t *)&pl_state.offset_dx_lpf, pl_state.raw_offset_us - pl_state.prev_raw_offset_us);
-
-  if (elrs_timer_state == TIMER_LOCKED && elrs_lq_current_is_set()) {
-    // limit rate of freq offset adjustment slightly
-    if (ota_nonce % 8 == 0) {
-      if (pl_state.offset > 0) {
-        timer_freq_offset++;
-      } else if (pl_state.offset < 0) {
-        timer_freq_offset--;
+    if (elrs_timer_state == TIMER_LOCKED) {
+      // limit rate of freq offset adjustment, use slot 1
+      // because telemetry can fall on slot 1 and will
+      // never get here
+      if (ota_nonce % 8 == 1) {
+        if (pl_state.offset > 0) {
+          timer_freq_offset++;
+        } else if (pl_state.offset < 0) {
+          timer_freq_offset--;
+        }
       }
+    }
+
+    if (state != CONNECTED) {
+      elrs_timer_set_phase_shift(pl_state.raw_offset_us >> 1);
+    } else {
+      elrs_timer_set_phase_shift(pl_state.offset >> 2);
     }
   }
 
-  if (state < CONNECTED) {
-    elrs_timer_set_phase_shift(pl_state.raw_offset_us >> 1);
-  } else {
-    elrs_timer_set_phase_shift(pl_state.offset >> 2);
-  }
-
-  pl_state.prev_raw_offset_us = pl_state.raw_offset_us;
+  pl_state.ext_event_active = false;
+  pl_state.int_event_active = false;
 }
 
-void elrs_phase_reset() {
+void elrs_phase_reset(bool reset_dx) {
   timer_freq_offset = 0;
 
   pl_state.ext_event_active = false;
@@ -142,10 +130,12 @@ void elrs_phase_reset() {
   pl_state.prev_raw_offset_us = 0;
 
   pl_state.offset = 0;
-  pl_state.offset_dx = 0;
-
   elrs_lpf_init((elrs_lpf_t *)&pl_state.offset_lpf, 2);
-  elrs_lpf_init((elrs_lpf_t *)&pl_state.offset_dx_lpf, 4);
+
+  if (reset_dx) {
+    pl_state.offset_dx = 0;
+    elrs_lpf_init((elrs_lpf_t *)&pl_state.offset_dx_lpf, 4);
+  }
 }
 
 void elrs_timer_irq_handler() {

@@ -165,7 +165,6 @@ void elrs_enter_rx(volatile uint8_t *packet);
 void elrs_enter_tx(volatile uint8_t *packet, const uint8_t packet_len);
 
 elrs_irq_status_t elrs_get_irq_status();
-void elrs_read_packet(volatile uint8_t *packet);
 void elrs_last_packet_stats(int8_t *rssi, int8_t *snr);
 
 void elrs_freq_correct();
@@ -179,7 +178,7 @@ void elrs_phase_init();
 void elrs_phase_update(elrs_state_t state);
 void elrs_phase_int_event(uint32_t time);
 void elrs_phase_ext_event(uint32_t time);
-void elrs_phase_reset();
+void elrs_phase_reset(bool reset_dx);
 
 void elrs_lpf_init(elrs_lpf_t *lpf, int32_t beta);
 int32_t elrs_lpf_update(elrs_lpf_t *lpf, int32_t data);
