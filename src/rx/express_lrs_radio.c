@@ -147,10 +147,6 @@ elrs_irq_status_t elrs_get_irq_status() {
   return IRQ_NONE;
 }
 
-void elrs_read_packet(volatile uint8_t *packet) {
-  // async
-}
-
 void elrs_last_packet_stats(int8_t *rssi, int8_t *snr) {
   if (current_air_rate_config()->radio_type == RADIO_TYPE_SX128x_FLRC) {
     // No SNR in FLRC mode

@@ -25,7 +25,7 @@ volatile uint16_t irq_status = 0;
 static uint32_t busy_timeout = 1000;
 static uint8_t payload_len = 8;
 
-extern volatile uint32_t packet_time;
+extern volatile uint32_t packet_time_us;
 extern volatile uint8_t packet_status[2];
 
 static bool sx128x_spi_device_valid(const target_rx_spi_device_t *dev) {
@@ -104,7 +104,7 @@ static bool sx128x_poll_for_not_busy() {
   spi_make_seg_const(cmd), spi_make_seg_const(0x0), spi_make_seg_buffer(data, NULL, size)
 
 static void sx128x_set_dio0_active() {
-  packet_time = time_micros();
+  packet_time_us = time_micros();
   dio0_active = 1;
 }
 
