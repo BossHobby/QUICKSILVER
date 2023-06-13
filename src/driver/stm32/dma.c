@@ -1,74 +1,101 @@
 #include "driver/dma.h"
 
 #include "driver/rcc.h"
+#include "driver/resource.h"
+#include "driver/timer.h"
 
-// DMA1 Stream0 SPI3_RX
-// DMA1 Stream1
-// DMA1 Stream2
-// DMA1 Stream3 SPI2_RX
-// DMA1 Stream4 SPI2_TX
-// DMA1 Stream5
-// DMA1 Stream6
-// DMA1 Stream7 SPI3_TX
-
-// DMA2 Stream0 SPI4_RX
-// DMA2 Stream1 SPI4_TX
-// DMA2 Stream2 SPI1_RX
-// DMA2 Stream3 TIM1_CH1
-// DMA2 Stream4 TIM1_CH4
-// DMA2 Stream5 SPI1_TX
-// DMA2 Stream6 TIM1_CH3
-// DMA2 Stream7
-
-#define DMA_STREAMS             \
-  DMA_STREAM(2, 3, 2, SPI1_RX)  \
-  DMA_STREAM(2, 3, 5, SPI1_TX)  \
-  DMA_STREAM(1, 0, 3, SPI2_RX)  \
-  DMA_STREAM(1, 0, 4, SPI2_TX)  \
-  DMA_STREAM(1, 0, 0, SPI3_RX)  \
-  DMA_STREAM(1, 0, 7, SPI3_TX)  \
-  DMA_STREAM(2, 4, 0, SPI4_RX)  \
-  DMA_STREAM(2, 4, 1, SPI4_TX)  \
-  DMA_STREAM(2, 6, 3, TIM1_CH1) \
-  DMA_STREAM(2, 6, 6, TIM1_CH3) \
-  DMA_STREAM(2, 6, 4, TIM1_CH4)
-
-#ifdef STM32H7
-#define DMA_STREAM(_port, _chan, _stream, _dev)   \
-  [DMA_DEVICE_##_dev] = {                         \
-      .device = DMA_DEVICE_##_dev,                \
-      .port = DMA##_port,                         \
-      .port_index = _port,                        \
-      .channel = -1,                              \
-      .channel_index = -1,                        \
-      .request = LL_DMAMUX1_REQ_##_dev,           \
-      .stream = DMA##_port##_Stream##_stream,     \
-      .stream_index = LL_DMA_STREAM_##_stream,    \
-      .irq = DMA##_port##_Stream##_stream##_IRQn, \
-  },
-#else
-#define DMA_STREAM(_port, _chan, _stream, _dev)   \
-  [DMA_DEVICE_##_dev] = {                         \
-      .device = DMA_DEVICE_##_dev,                \
-      .port = DMA##_port,                         \
-      .port_index = _port,                        \
-      .channel = LL_DMA_CHANNEL_##_chan,          \
-      .channel_index = _chan,                     \
-      .request = -1,                              \
-      .stream = DMA##_port##_Stream##_stream,     \
-      .stream_index = LL_DMA_STREAM_##_stream,    \
-      .irq = DMA##_port##_Stream##_stream##_IRQn, \
-  },
-#endif
-
-const dma_stream_def_t dma_stream_defs[DMA_DEVICE_MAX] = {DMA_STREAMS};
-
-#undef DMA_STREAM
+#define DMA_STREAM_MAX 16
 
 #if defined(STM32F7) || defined(STM32H7)
 #define CACHE_LINE_SIZE 32
 #define CACHE_LINE_MASK (CACHE_LINE_SIZE - 1)
 #endif
+
+#define DMA_STREAM(_port, _stream)              \
+  {                                             \
+    .port = DMA##_port,                         \
+    .port_index = _port,                        \
+    .stream = DMA##_port##_Stream##_stream,     \
+    .stream_index = LL_DMA_STREAM_##_stream,    \
+    .irq = DMA##_port##_Stream##_stream##_IRQn, \
+  }
+static const dma_stream_def_t dma_stream_defs[DMA_STREAM_MAX] = {
+    DMA_STREAM(1, 0),
+    DMA_STREAM(1, 1),
+    DMA_STREAM(1, 2),
+    DMA_STREAM(1, 3),
+    DMA_STREAM(1, 4),
+    DMA_STREAM(1, 5),
+    DMA_STREAM(1, 6),
+    DMA_STREAM(1, 7),
+    DMA_STREAM(2, 0),
+    DMA_STREAM(2, 1),
+    DMA_STREAM(2, 2),
+    DMA_STREAM(2, 3),
+    DMA_STREAM(2, 4),
+    DMA_STREAM(2, 5),
+    DMA_STREAM(2, 6),
+    DMA_STREAM(2, 7),
+};
+#undef DMA_STREAM
+
+typedef struct {
+  resource_tag_t tag;
+  uint8_t port_index;
+  uint8_t stream_index;
+  uint32_t channel;
+} dma_channel_t;
+
+static const dma_channel_t dma_channels[] = {
+    {.tag = SPI_TAG(SPI_PORT1, RES_SPI_MISO), .port_index = 2, .stream_index = 0, .channel = LL_DMA_CHANNEL_3},
+    {.tag = SPI_TAG(SPI_PORT1, RES_SPI_MISO), .port_index = 2, .stream_index = 2, .channel = LL_DMA_CHANNEL_3},
+    {.tag = SPI_TAG(SPI_PORT1, RES_SPI_MOSI), .port_index = 2, .stream_index = 3, .channel = LL_DMA_CHANNEL_3},
+    {.tag = SPI_TAG(SPI_PORT1, RES_SPI_MOSI), .port_index = 2, .stream_index = 5, .channel = LL_DMA_CHANNEL_3},
+    {.tag = SPI_TAG(SPI_PORT2, RES_SPI_MISO), .port_index = 1, .stream_index = 3, .channel = LL_DMA_CHANNEL_0},
+    {.tag = SPI_TAG(SPI_PORT2, RES_SPI_MOSI), .port_index = 1, .stream_index = 4, .channel = LL_DMA_CHANNEL_0},
+    {.tag = SPI_TAG(SPI_PORT3, RES_SPI_MISO), .port_index = 1, .stream_index = 0, .channel = LL_DMA_CHANNEL_0},
+    {.tag = SPI_TAG(SPI_PORT3, RES_SPI_MISO), .port_index = 1, .stream_index = 3, .channel = LL_DMA_CHANNEL_0},
+    {.tag = SPI_TAG(SPI_PORT3, RES_SPI_MOSI), .port_index = 1, .stream_index = 5, .channel = LL_DMA_CHANNEL_0},
+    {.tag = SPI_TAG(SPI_PORT3, RES_SPI_MOSI), .port_index = 1, .stream_index = 7, .channel = LL_DMA_CHANNEL_0},
+    {.tag = SPI_TAG(SPI_PORT4, RES_SPI_MISO), .port_index = 2, .stream_index = 0, .channel = LL_DMA_CHANNEL_4},
+    {.tag = SPI_TAG(SPI_PORT4, RES_SPI_MISO), .port_index = 2, .stream_index = 3, .channel = LL_DMA_CHANNEL_5},
+    {.tag = SPI_TAG(SPI_PORT4, RES_SPI_MOSI), .port_index = 2, .stream_index = 1, .channel = LL_DMA_CHANNEL_4},
+    {.tag = SPI_TAG(SPI_PORT4, RES_SPI_MOSI), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+
+    {.tag = TIMER_TAG(TIMER1, TIMER_CH1), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER1, TIMER_CH2), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER1, TIMER_CH3), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER1, TIMER_CH4), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+
+    {.tag = TIMER_TAG(TIMER2, TIMER_CH1), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER2, TIMER_CH2), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER2, TIMER_CH3), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER2, TIMER_CH4), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+
+    {.tag = TIMER_TAG(TIMER3, TIMER_CH1), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER3, TIMER_CH2), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER3, TIMER_CH3), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER3, TIMER_CH4), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+
+    {.tag = TIMER_TAG(TIMER4, TIMER_CH1), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER4, TIMER_CH2), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER4, TIMER_CH3), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER4, TIMER_CH4), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+
+    {.tag = TIMER_TAG(TIMER5, TIMER_CH1), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER5, TIMER_CH2), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER5, TIMER_CH3), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER5, TIMER_CH4), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+
+    {.tag = TIMER_TAG(TIMER8, TIMER_CH1), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER8, TIMER_CH2), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER8, TIMER_CH3), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+    {.tag = TIMER_TAG(TIMER8, TIMER_CH4), .port_index = 2, .stream_index = 4, .channel = LL_DMA_CHANNEL_5},
+};
+
+#define DMA_CHANNEL_MAX (sizeof(dma_channels) / sizeof(dma_channel_t))
+
+static dma_assigment_t dma_assigments[DMA_STREAM_MAX] = {};
 
 void dma_prepare_tx_memory(void *addr, uint32_t size) {
 #if defined(STM32F7) || defined(STM32H7)
@@ -86,9 +113,8 @@ void dma_prepare_rx_memory(void *addr, uint32_t size) {
 #endif
 }
 
-void dma_enable_rcc(dma_device_t dev) {
-  const dma_stream_def_t *dma = &dma_stream_defs[dev];
-  switch (dma->port_index) {
+void dma_enable_rcc(const dma_assigment_t *ass) {
+  switch (ass->def->port_index) {
   case 1:
     rcc_enable(RCC_AHB1_GRP1(DMA1));
     break;
@@ -98,90 +124,95 @@ void dma_enable_rcc(dma_device_t dev) {
   }
 }
 
-bool dma_is_flag_active_tc(dma_device_t dev) {
-  const dma_stream_def_t *dma = &dma_stream_defs[dev];
-
-  switch (dma->stream_index) {
+bool dma_is_flag_active_tc(const dma_assigment_t *ass) {
+  switch (ass->def->stream_index) {
   case LL_DMA_STREAM_0:
-    return LL_DMA_IsActiveFlag_TC0(dma->port);
+    return LL_DMA_IsActiveFlag_TC0(ass->def->port);
   case LL_DMA_STREAM_1:
-    return LL_DMA_IsActiveFlag_TC1(dma->port);
+    return LL_DMA_IsActiveFlag_TC1(ass->def->port);
   case LL_DMA_STREAM_2:
-    return LL_DMA_IsActiveFlag_TC2(dma->port);
+    return LL_DMA_IsActiveFlag_TC2(ass->def->port);
   case LL_DMA_STREAM_3:
-    return LL_DMA_IsActiveFlag_TC3(dma->port);
+    return LL_DMA_IsActiveFlag_TC3(ass->def->port);
   case LL_DMA_STREAM_4:
-    return LL_DMA_IsActiveFlag_TC4(dma->port);
+    return LL_DMA_IsActiveFlag_TC4(ass->def->port);
   case LL_DMA_STREAM_5:
-    return LL_DMA_IsActiveFlag_TC5(dma->port);
+    return LL_DMA_IsActiveFlag_TC5(ass->def->port);
   case LL_DMA_STREAM_6:
-    return LL_DMA_IsActiveFlag_TC6(dma->port);
+    return LL_DMA_IsActiveFlag_TC6(ass->def->port);
   case LL_DMA_STREAM_7:
-    return LL_DMA_IsActiveFlag_TC7(dma->port);
+    return LL_DMA_IsActiveFlag_TC7(ass->def->port);
   }
   return 0;
 }
 
-void dma_clear_flag_tc(dma_device_t dev) {
-  const dma_stream_def_t *dma = &dma_stream_defs[dev];
-
-  switch (dma->stream_index) {
+void dma_clear_flag_tc(const dma_assigment_t *ass) {
+  switch (ass->def->stream_index) {
   case LL_DMA_STREAM_0:
-    LL_DMA_ClearFlag_TC0(dma->port);
-    LL_DMA_ClearFlag_TE0(dma->port);
-    LL_DMA_ClearFlag_HT0(dma->port);
-    LL_DMA_ClearFlag_FE0(dma->port);
+    LL_DMA_ClearFlag_TC0(ass->def->port);
+    LL_DMA_ClearFlag_TE0(ass->def->port);
+    LL_DMA_ClearFlag_HT0(ass->def->port);
+    LL_DMA_ClearFlag_FE0(ass->def->port);
     break;
   case LL_DMA_STREAM_1:
-    LL_DMA_ClearFlag_TC1(dma->port);
-    LL_DMA_ClearFlag_TE1(dma->port);
-    LL_DMA_ClearFlag_HT1(dma->port);
-    LL_DMA_ClearFlag_FE1(dma->port);
+    LL_DMA_ClearFlag_TC1(ass->def->port);
+    LL_DMA_ClearFlag_TE1(ass->def->port);
+    LL_DMA_ClearFlag_HT1(ass->def->port);
+    LL_DMA_ClearFlag_FE1(ass->def->port);
     break;
   case LL_DMA_STREAM_2:
-    LL_DMA_ClearFlag_TC2(dma->port);
-    LL_DMA_ClearFlag_TE2(dma->port);
-    LL_DMA_ClearFlag_HT2(dma->port);
-    LL_DMA_ClearFlag_FE2(dma->port);
+    LL_DMA_ClearFlag_TC2(ass->def->port);
+    LL_DMA_ClearFlag_TE2(ass->def->port);
+    LL_DMA_ClearFlag_HT2(ass->def->port);
+    LL_DMA_ClearFlag_FE2(ass->def->port);
     break;
   case LL_DMA_STREAM_3:
-    LL_DMA_ClearFlag_TC3(dma->port);
-    LL_DMA_ClearFlag_TE3(dma->port);
-    LL_DMA_ClearFlag_HT3(dma->port);
-    LL_DMA_ClearFlag_FE3(dma->port);
+    LL_DMA_ClearFlag_TC3(ass->def->port);
+    LL_DMA_ClearFlag_TE3(ass->def->port);
+    LL_DMA_ClearFlag_HT3(ass->def->port);
+    LL_DMA_ClearFlag_FE3(ass->def->port);
     break;
   case LL_DMA_STREAM_4:
-    LL_DMA_ClearFlag_TC4(dma->port);
-    LL_DMA_ClearFlag_TE4(dma->port);
-    LL_DMA_ClearFlag_HT4(dma->port);
-    LL_DMA_ClearFlag_FE4(dma->port);
+    LL_DMA_ClearFlag_TC4(ass->def->port);
+    LL_DMA_ClearFlag_TE4(ass->def->port);
+    LL_DMA_ClearFlag_HT4(ass->def->port);
+    LL_DMA_ClearFlag_FE4(ass->def->port);
     break;
   case LL_DMA_STREAM_5:
-    LL_DMA_ClearFlag_TC5(dma->port);
-    LL_DMA_ClearFlag_TE5(dma->port);
-    LL_DMA_ClearFlag_HT5(dma->port);
-    LL_DMA_ClearFlag_FE5(dma->port);
+    LL_DMA_ClearFlag_TC5(ass->def->port);
+    LL_DMA_ClearFlag_TE5(ass->def->port);
+    LL_DMA_ClearFlag_HT5(ass->def->port);
+    LL_DMA_ClearFlag_FE5(ass->def->port);
     break;
   case LL_DMA_STREAM_6:
-    LL_DMA_ClearFlag_TC6(dma->port);
-    LL_DMA_ClearFlag_TE6(dma->port);
-    LL_DMA_ClearFlag_HT6(dma->port);
-    LL_DMA_ClearFlag_FE6(dma->port);
+    LL_DMA_ClearFlag_TC6(ass->def->port);
+    LL_DMA_ClearFlag_TE6(ass->def->port);
+    LL_DMA_ClearFlag_HT6(ass->def->port);
+    LL_DMA_ClearFlag_FE6(ass->def->port);
     break;
   case LL_DMA_STREAM_7:
-    LL_DMA_ClearFlag_TC7(dma->port);
-    LL_DMA_ClearFlag_TE7(dma->port);
-    LL_DMA_ClearFlag_HT7(dma->port);
-    LL_DMA_ClearFlag_FE7(dma->port);
+    LL_DMA_ClearFlag_TC7(ass->def->port);
+    LL_DMA_ClearFlag_TE7(ass->def->port);
+    LL_DMA_ClearFlag_HT7(ass->def->port);
+    LL_DMA_ClearFlag_FE7(ass->def->port);
     break;
   }
 }
 
-extern void dshot_dma_isr(dma_device_t dev);
-extern void spi_dma_isr(dma_device_t dev);
+extern void dshot_dma_isr(const dma_assigment_t *);
+extern void spi_dma_isr(const dma_assigment_t *);
+extern void rgb_dma_isr(const dma_assigment_t *);
 
-static void handle_dma_stream_isr(dma_device_t dev) {
-  switch (dev) {
+static void handle_dma_stream_isr(const dma_assigment_t *ass) {
+  switch (ass->dev) {
+  case DMA_DEVICE_TIM1_CH1:
+  case DMA_DEVICE_TIM1_CH3:
+  case DMA_DEVICE_TIM1_CH4:
+#ifdef USE_MOTOR_DSHOT
+    dshot_dma_isr(ass);
+#endif
+    break;
+
   case DMA_DEVICE_SPI1_RX:
   case DMA_DEVICE_SPI2_RX:
   case DMA_DEVICE_SPI3_RX:
@@ -190,25 +221,66 @@ static void handle_dma_stream_isr(dma_device_t dev) {
   case DMA_DEVICE_SPI2_TX:
   case DMA_DEVICE_SPI3_TX:
   case DMA_DEVICE_SPI4_TX:
-    spi_dma_isr(dev);
+    spi_dma_isr(ass);
     break;
-  case DMA_DEVICE_TIM1_CH1:
-  case DMA_DEVICE_TIM1_CH3:
-  case DMA_DEVICE_TIM1_CH4:
-#ifdef USE_MOTOR_DSHOT
-    dshot_dma_isr(dev);
+
+  case DMA_DEVICE_RGB:
+#ifdef USE_RGB_LED
+    rgb_dma_isr(ass);
 #endif
     break;
+
   case DMA_DEVICE_MAX:
     break;
   }
 }
 
-#define DMA_STREAM(_port, _chan, _stream, _dev)      \
-  void DMA##_port##_Stream##_stream##_IRQHandler() { \
-    handle_dma_stream_isr(DMA_DEVICE_##_dev);        \
-  }
+void DMA1_Stream0_IRQHandler() {
+  handle_dma_stream_isr(&dma_assigments[0]);
+}
+void DMA1_Stream1_IRQHandler() {
+  handle_dma_stream_isr(&dma_assigments[1]);
+}
+void DMA1_Stream2_IRQHandler() {
+  handle_dma_stream_isr(&dma_assigments[2]);
+}
+void DMA1_Stream3_IRQHandler() {
+  handle_dma_stream_isr(&dma_assigments[3]);
+}
+void DMA1_Stream4_IRQHandler() {
+  handle_dma_stream_isr(&dma_assigments[4]);
+}
+void DMA1_Stream5_IRQHandler() {
+  handle_dma_stream_isr(&dma_assigments[5]);
+}
+void DMA1_Stream6_IRQHandler() {
+  handle_dma_stream_isr(&dma_assigments[6]);
+}
+void DMA1_Stream7_IRQHandler() {
+  handle_dma_stream_isr(&dma_assigments[7]);
+}
 
-DMA_STREAMS
-
-#undef DMA_STREAM
+void DMA2_Stream0_IRQHandler() {
+  handle_dma_stream_isr(&dma_assigments[8]);
+}
+void DMA2_Stream1_IRQHandler() {
+  handle_dma_stream_isr(&dma_assigments[9]);
+}
+void DMA2_Stream2_IRQHandler() {
+  handle_dma_stream_isr(&dma_assigments[10]);
+}
+void DMA2_Stream3_IRQHandler() {
+  handle_dma_stream_isr(&dma_assigments[11]);
+}
+void DMA2_Stream4_IRQHandler() {
+  handle_dma_stream_isr(&dma_assigments[12]);
+}
+void DMA2_Stream5_IRQHandler() {
+  handle_dma_stream_isr(&dma_assigments[13]);
+}
+void DMA2_Stream6_IRQHandler() {
+  handle_dma_stream_isr(&dma_assigments[14]);
+}
+void DMA2_Stream7_IRQHandler() {
+  handle_dma_stream_isr(&dma_assigments[15]);
+}

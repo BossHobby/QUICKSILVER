@@ -25,6 +25,8 @@ typedef enum {
 
 typedef uint32_t resource_tag_t;
 
+#define RESOURCE_TAG_ANY 0xFFFFFFFF
+
 #define RESOURCE_TAG(typ, val) ((uint32_t)((typ) << 24) | (uint32_t)(val))
 #define RESOURCE_TAG_TYPE(tag) (resource_type_t)(((tag) >> 24) & 0xFF)
 

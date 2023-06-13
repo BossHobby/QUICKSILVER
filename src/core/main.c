@@ -87,6 +87,8 @@ __attribute__((__used__)) int main() {
   led_init();
   led_on(LEDALL);
 
+  rgb_led_init();
+
   debug_pin_init();
   buzzer_init();
 
@@ -127,7 +129,6 @@ __attribute__((__used__)) int main() {
 
   rx_init();
   vtx_init();
-  rgb_init();
 
   blackbox_init();
   imu_init();

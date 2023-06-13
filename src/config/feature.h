@@ -6,6 +6,7 @@
 #define USE_BLACKBOX
 
 #define USE_MAX7456
+#define USE_RGB_LED
 
 #define USE_MOTOR_DSHOT
 #define USE_MOTOR_PWM

@@ -17,29 +17,29 @@ const spi_port_def_t spi_port_defs[SPI_PORT_MAX] = {
         .channel_index = 1,
         .channel = SPI1,
         .rcc = RCC_ENCODE(SPI1),
-        .dma_rx = DMA_DEVICE_SPI1_RX,
-        .dma_tx = DMA_DEVICE_SPI1_TX,
+        .dma_dev_rx = DMA_DEVICE_SPI1_RX,
+        .dma_dev_tx = DMA_DEVICE_SPI1_TX,
     },
     {
         .channel_index = 2,
         .channel = SPI2,
         .rcc = RCC_ENCODE(SPI2),
-        .dma_rx = DMA_DEVICE_SPI2_RX,
-        .dma_tx = DMA_DEVICE_SPI2_TX,
+        .dma_dev_rx = DMA_DEVICE_SPI2_RX,
+        .dma_dev_tx = DMA_DEVICE_SPI2_TX,
     },
     {
         .channel_index = 3,
         .channel = SPI3,
         .rcc = RCC_ENCODE(SPI3),
-        .dma_rx = DMA_DEVICE_SPI3_RX,
-        .dma_tx = DMA_DEVICE_SPI3_TX,
+        .dma_dev_rx = DMA_DEVICE_SPI3_RX,
+        .dma_dev_tx = DMA_DEVICE_SPI3_TX,
     },
     {
         .channel_index = 4,
         .channel = SPI4,
         .rcc = RCC_ENCODE(SPI4),
-        .dma_rx = DMA_DEVICE_SPI4_RX,
-        .dma_tx = DMA_DEVICE_SPI4_TX,
+        .dma_dev_rx = DMA_DEVICE_SPI4_RX,
+        .dma_dev_tx = DMA_DEVICE_SPI4_TX,
     },
 };
 
@@ -48,6 +48,7 @@ extern FAST_RAM volatile uint8_t dma_transfer_done[16];
 extern FAST_RAM spi_txn_t txn_pool[SPI_TXN_MAX];
 
 #define PORT spi_port_defs[port]
+#define CONF spi_port_config[port]
 
 static uint32_t spi_divider_to_ll(uint32_t divider) {
   switch (divider) {
@@ -119,10 +120,10 @@ static void spi_init_pins(spi_ports_t port, gpio_pins_t nss) {
 }
 
 static void spi_dma_init_rx(spi_ports_t port) {
-  const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_rx];
+  const dma_channel_def_t *dma = CONF.dma_rx->def;
 
   dma_reset(dma->channel);
-  dmamux_init(dma->mux, dma->request);
+  dmamux_init(dma->mux, CONF.dma_rx->request);
 
   dma_init_type init;
   init.peripheral_base_addr = (uint32_t)(&PORT.channel->dt);
@@ -141,16 +142,16 @@ static void spi_dma_init_rx(spi_ports_t port) {
 static void spi_dma_reset_rx(spi_ports_t port, uint8_t *rx_data, uint32_t rx_size) {
   dma_prepare_rx_memory(rx_data, rx_size);
 
-  const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_rx];
+  const dma_channel_def_t *dma = CONF.dma_rx->def;
   dma->channel->maddr = (uint32_t)rx_data;
   dma_data_number_set(dma->channel, rx_size);
 }
 
 static void spi_dma_init_tx(spi_ports_t port) {
-  const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_tx];
+  const dma_channel_def_t *dma = CONF.dma_tx->def;
 
   dma_reset(dma->channel);
-  dmamux_init(dma->mux, dma->request);
+  dmamux_init(dma->mux, CONF.dma_tx->request);
 
   dma_init_type init;
   init.peripheral_base_addr = (uint32_t)(&PORT.channel->dt);
@@ -169,7 +170,7 @@ static void spi_dma_init_tx(spi_ports_t port) {
 static void spi_dma_reset_tx(spi_ports_t port, uint8_t *tx_data, uint32_t tx_size) {
   dma_prepare_tx_memory(tx_data, tx_size);
 
-  const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_tx];
+  const dma_channel_def_t *dma = CONF.dma_tx->def;
   dma->channel->maddr = (uint32_t)tx_data;
   dma_data_number_set(dma->channel, tx_size);
 }
@@ -226,11 +227,11 @@ void spi_reconfigure(spi_bus_device_t *bus) {
 void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) {
   dma_transfer_done[port] = 0;
 
-  const dma_stream_def_t *dma_tx = &dma_stream_defs[PORT.dma_tx];
-  const dma_stream_def_t *dma_rx = &dma_stream_defs[PORT.dma_rx];
+  const dma_channel_def_t *dma_tx = CONF.dma_tx->def;
+  const dma_channel_def_t *dma_rx = CONF.dma_rx->def;
 
-  dma_clear_flag_tc(PORT.dma_rx);
-  dma_clear_flag_tc(PORT.dma_tx);
+  dma_clear_flag_tc(CONF.dma_rx);
+  dma_clear_flag_tc(CONF.dma_tx);
 
   spi_dma_reset_rx(port, buffer, length);
   spi_dma_reset_tx(port, buffer, length);
@@ -259,8 +260,13 @@ void spi_bus_device_init(spi_bus_device_t *bus) {
   spi_enable_rcc(bus->port);
 
   const spi_port_def_t *port = &spi_port_defs[bus->port];
-  dma_enable_rcc(port->dma_rx);
-  dma_enable_rcc(port->dma_tx);
+  volatile spi_port_config_t *conf = &spi_port_config[bus->port];
+
+  conf->dma_rx = dma_alloc(SPI_TAG(bus->port, RES_SPI_MISO), port->dma_dev_rx);
+  conf->dma_tx = dma_alloc(SPI_TAG(bus->port, RES_SPI_MOSI), port->dma_dev_tx);
+
+  dma_enable_rcc(conf->dma_rx);
+  dma_enable_rcc(conf->dma_tx);
 
   spi_i2s_reset(port->channel);
 
@@ -281,8 +287,7 @@ void spi_bus_device_init(spi_bus_device_t *bus) {
   spi_dma_init_rx(bus->port);
   spi_dma_init_tx(bus->port);
 
-  const dma_stream_def_t *dma_rx = &dma_stream_defs[port->dma_rx];
-  interrupt_enable(dma_rx->irq, DMA_PRIORITY);
+  interrupt_enable(conf->dma_rx->def->irq, DMA_PRIORITY);
   dma_transfer_done[bus->port] = 1;
 }
 
@@ -340,15 +345,15 @@ void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs
 }
 
 static void handle_dma_rx_isr(spi_ports_t port) {
-  const dma_stream_def_t *dma_rx = &dma_stream_defs[PORT.dma_rx];
-  const dma_stream_def_t *dma_tx = &dma_stream_defs[PORT.dma_tx];
+  const dma_channel_def_t *dma_rx = CONF.dma_rx->def;
+  const dma_channel_def_t *dma_tx = CONF.dma_tx->def;
 
-  if (!dma_is_flag_active_tc(PORT.dma_rx)) {
+  if (!dma_is_flag_active_tc(CONF.dma_rx)) {
     return;
   }
 
-  dma_clear_flag_tc(PORT.dma_rx);
-  dma_clear_flag_tc(PORT.dma_tx);
+  dma_clear_flag_tc(CONF.dma_rx);
+  dma_clear_flag_tc(CONF.dma_tx);
 
   dma_interrupt_enable(dma_rx->channel, DMA_FDT_INT, FALSE);
   dma_interrupt_enable(dma_rx->channel, DMA_DTERR_INT, FALSE);
@@ -377,8 +382,8 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   }
 }
 
-void spi_dma_isr(dma_device_t dev) {
-  switch (dev) {
+void spi_dma_isr(const dma_assigment_t *ass) {
+  switch (ass->dev) {
   case DMA_DEVICE_SPI1_RX:
     handle_dma_rx_isr(SPI_PORT1);
     break;

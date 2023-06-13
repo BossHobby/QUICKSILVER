@@ -18,8 +18,8 @@ typedef struct {
   uint8_t channel_index;
   spi_port_t *channel;
   rcc_reg_t rcc;
-  dma_device_t dma_rx;
-  dma_device_t dma_tx;
+  dma_device_t dma_dev_rx;
+  dma_device_t dma_dev_tx;
 } spi_port_def_t;
 
 #define SPI_TXN_MAX 32
@@ -107,6 +107,9 @@ typedef struct {
   spi_bus_device_t *active_device;
   spi_mode_t mode;
   uint32_t hz;
+
+  const dma_assigment_t *dma_rx;
+  const dma_assigment_t *dma_tx;
 } spi_port_config_t;
 
 extern const spi_port_def_t spi_port_defs[SPI_PORT_MAX];

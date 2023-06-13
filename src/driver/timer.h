@@ -51,6 +51,7 @@ typedef enum {
   TIMER_USE_FREE,
   TIMER_USE_MOTOR_DSHOT,
   TIMER_USE_MOTOR_PWM,
+  TIMER_USE_RGB_LED,
   TIMER_USE_ELRS,
   TIMER_USE_SOFT_SERIAL,
 } timer_use_t;
@@ -72,5 +73,6 @@ void timer_alloc_init();
 bool timer_alloc_tag(timer_use_t use, resource_tag_t tag);
 resource_tag_t timer_alloc(timer_use_t use);
 uint32_t timer_channel_val(timer_channel_t chan);
+void timer_enable_dma_request(timer_index_t tim, timer_channel_t chan, bool state);
 
 void timer_up_init(timer_index_t tim, uint16_t divider, uint32_t period);
