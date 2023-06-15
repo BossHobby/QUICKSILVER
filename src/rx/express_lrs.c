@@ -911,4 +911,11 @@ bool rx_expresslrs_check() {
   return channels_received;
 }
 
+void rx_expresslrs_stop() {
+  if (!radio_is_init) {
+    return;
+  }
+  elrs_connection_lost(time_millis());
+}
+
 #endif
