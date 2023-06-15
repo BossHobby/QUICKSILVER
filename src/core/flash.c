@@ -8,6 +8,7 @@
 #include "driver/fmc.h"
 #include "driver/serial.h"
 #include "io/vtx.h"
+#include "rx/rx.h"
 #include "util/cbor_helper.h"
 
 extern const profile_t default_profile;
@@ -31,6 +32,8 @@ static void flash_write_magic(uint8_t *data, uint32_t magic) {
 }
 
 void flash_save() {
+  rx_stop();
+
   __disable_irq();
 
   fmc_unlock();

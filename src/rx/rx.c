@@ -353,3 +353,16 @@ void rx_update() {
 
   rx_apply_smoothing();
 }
+
+void rx_stop() {
+  switch (profile.receiver.protocol) {
+#ifdef USE_RX_SPI_EXPRESS_LRS
+  case RX_PROTOCOL_EXPRESS_LRS:
+    rx_expresslrs_stop();
+    break;
+#endif
+
+  default:
+    break;
+  }
+}
