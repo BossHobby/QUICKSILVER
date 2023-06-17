@@ -4,9 +4,12 @@
 #include "driver/time.h"
 #include "flight/control.h"
 
+#define US_TO_CYCLES(us) ((us)*TICKS_PER_US)
+#define CYCLES_TO_US(cycles) ((cycles) / TICKS_PER_US)
+
 uint8_t looptime_warning = 0;
 
-static uint32_t lastlooptime;
+static uint32_t last_loop_cycles;
 
 void looptime_init() {
   // attempt 8k looptime for f405 or 4k looptime for f411
@@ -17,7 +20,7 @@ void looptime_init() {
 }
 
 void looptime_reset() {
-  lastlooptime = time_micros();
+  last_loop_cycles = time_cycles();
 }
 
 static void looptime_auto_detect() {
@@ -65,14 +68,18 @@ static void looptime_auto_detect() {
   }
 }
 
-void looptime_update(uint32_t time) {
-  state.looptime_us = ((uint32_t)(time - lastlooptime));
-  lastlooptime = time;
+void looptime_update() {
+  state.cpu_load = CYCLES_TO_US(time_cycles() - last_loop_cycles);
 
-  if (state.looptime_us <= 0) {
-    state.looptime_us = 1;
-  }
+  const uint32_t delay = US_TO_CYCLES(state.looptime_autodetect);
+  while ((time_cycles() - last_loop_cycles) < delay)
+    __NOP();
+
+  state.looptime_us = CYCLES_TO_US(time_cycles() - last_loop_cycles);
   state.looptime = state.looptime_us * 1e-6f;
+  state.loop_counter++;
+
+  last_loop_cycles = time_cycles();
 
   // max loop 20ms
   if (state.looptime_us > 20000) {

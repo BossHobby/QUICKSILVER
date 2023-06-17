@@ -10,4 +10,4 @@ typedef enum {
 
 void looptime_init();
 void looptime_reset();
-void looptime_update(uint32_t time);
+void looptime_update();
