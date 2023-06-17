@@ -145,8 +145,7 @@ __attribute__((__used__)) int main() {
     perf_counter_start(PERF_COUNTER_TOTAL);
 
     // updates looptime counters & runs auto detect
-    const uint32_t time = time_micros();
-    looptime_update(time);
+    looptime_update();
 
     // read gyro and accelerometer data
     perf_counter_start(PERF_COUNTER_GYRO);
@@ -202,11 +201,6 @@ __attribute__((__used__)) int main() {
       perf_counter_end(PERF_COUNTER_OSD);
     }
 
-    state.cpu_load = (time_micros() - time);
-
-    perf_counter_end(PERF_COUNTER_TOTAL);
-    perf_counter_update();
-
     if (usb_detect()) {
       flags.usb_active = 1;
 #ifndef ALLOW_USB_ARMING
@@ -219,10 +213,7 @@ __attribute__((__used__)) int main() {
       motor_test.active = 0;
     }
 
-    state.loop_counter++;
-
-    while ((time_micros() - time) < state.looptime_autodetect)
-      __NOP();
-
+    perf_counter_end(PERF_COUNTER_TOTAL);
+    perf_counter_update();
   } // end loop
 }
