@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "core/flash.h"
+#include "core/looptime.h"
 #include "driver/reset.h"
 #include "driver/serial.h"
 #include "driver/serial_4way.h"
@@ -461,6 +462,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     }
     if (!flags.arm_state && msp->device != MSP_DEVICE_SPI_RX) {
       flash_save();
+      looptime_reset();
     }
     msp_send_reply(msp, magic, cmd, NULL, 0);
     break;
