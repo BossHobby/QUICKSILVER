@@ -359,10 +359,26 @@ void osd_write_int(int32_t val, uint8_t width) {
 void osd_write_float(float val, uint8_t width, uint8_t precision) {
   const bool is_negative = val < 0;
 
-  uint8_t actual_width = 0;
-  uint8_t buf[width];
+  // reserve one for the dot
+  uint8_t decimals = 1;
 
-  uint32_t value = val * (is_negative ? -1.0f : 1.0f) * ipow(10, precision);
+  uint32_t value = val;
+  while (value) {
+    value /= 10;
+    decimals++;
+  }
+  if (is_negative) {
+    decimals++;
+  }
+  if (decimals > width) {
+    precision = 0;
+  } else {
+    precision = constrain(width - decimals, 0, precision);
+  }
+
+  uint8_t buf[width];
+  uint8_t actual_width = 0;
+  value = val * (is_negative ? -1.0f : 1.0f) * ipow(10, precision);
   for (uint8_t i = 0; i < precision; i++) {
     buf[width - i - 1] = '0' + (value % 10);
     value /= 10;
