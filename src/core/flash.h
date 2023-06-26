@@ -18,7 +18,6 @@
 typedef struct {
   float accelcal[3];
 
-  uint8_t flash_feature_1; // SETUP WIZARD
   uint8_t lvc_lower_throttle;
 } flash_storage_t;
 
