@@ -205,6 +205,9 @@ osd_screens_t osd_pop_screen() {
 
 void osd_handle_input(osd_input_t input) {
   switch (input) {
+  default:
+    break;
+
   case OSD_INPUT_UP:
     if (osd_state.selection) {
       osd_state.selection_increase = 1;
@@ -266,10 +269,10 @@ void osd_save_exit() {
   }
 
   // check for fc reboot request
-  extern int pid_gestures_used;
+  extern bool pid_gestures_used;
   extern int ledcommand;
 
-  pid_gestures_used = 0;
+  pid_gestures_used = false;
   ledcommand = 1;
 
   flash_save();

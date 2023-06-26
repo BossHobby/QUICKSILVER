@@ -6,7 +6,6 @@
 #include "flight/control.h"
 #include "flight/pid.h"
 #include "flight/sixaxis.h"
-#include "osd/render.h"
 #include "rx/rx.h"
 #include "util/util.h"
 
@@ -14,111 +13,96 @@ extern int ledcommand;
 extern int ledblink;
 extern profile_t profile;
 
-int pid_gestures_used = 0;
+bool pid_gestures_used = false;
 
 void gestures() {
-  int command = gestures2();
+  const int32_t command = gestures_detect();
+  if (command == GESTURE_NONE) {
+    return;
+  }
 
-  if (command != GESTURE_NONE) {
-    if (command == GESTURE_DDD) {
+  if (osd_state.screen != OSD_SCREEN_REGULAR) {
+    return osd_handle_input(command);
+  }
 
-      // skip accel calibration if pid gestures used
-      if (!pid_gestures_used) {
-        sixaxis_gyro_cal(); // for flashing lights
-        sixaxis_acc_cal();
-      } else {
-        ledcommand = 1;
-        pid_gestures_used = 0;
-      }
-
-      flash_save();
-      flash_load();
-
-      // reset flash numbers
-      extern int number_of_increments[3][3];
-      for (int i = 0; i < 3; i++)
-        for (int j = 0; j < 3; j++)
-          number_of_increments[i][j] = 0;
-
-      // reset loop time
-      looptime_reset();
-    }
-
-    if (command == GESTURE_DUD) {
-      profile.motor.invert_yaw = !profile.motor.invert_yaw;
-      ledblink = 2 - profile.motor.invert_yaw;
-      pid_gestures_used = 1;
-    }
-
-    if (command == GESTURE_UUU) {
-      bind_storage.bind_saved = !bind_storage.bind_saved;
-      ledblink = 2 - bind_storage.bind_saved;
-      pid_gestures_used = 1;
-    }
-
-    if (command == GESTURE_RRR) {
-      ledblink = 2 - osd_push_screen(OSD_SCREEN_MAIN_MENU);
-    }
-
-    if (command == GESTURE_RRD) {
-      state.aux[AUX_CHANNEL_GESTURE] = 1;
+  switch (command) {
+  case GESTURE_DDD: {
+    // skip accel calibration if pid gestures used
+    if (!pid_gestures_used) {
+      sixaxis_gyro_cal(); // for flashing lights
+      sixaxis_acc_cal();
+    } else {
       ledcommand = 1;
-    }
-    if (command == GESTURE_LLD) {
-      ledcommand = 1;
-      state.aux[AUX_CHANNEL_GESTURE] = 0;
+      pid_gestures_used = false;
     }
 
-    if (command == GESTURE_LRL) {
-      while (osd_pop_screen() != OSD_SCREEN_CLEAR)
-        ;
-    }
+    flash_save();
+    flash_load();
 
-    if (command == GESTURE_OSD_UP) {
-      osd_handle_input(OSD_INPUT_UP);
-    }
+    // reset flash numbers
+    extern int number_of_increments[3][3];
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 3; j++)
+        number_of_increments[i][j] = 0;
 
-    if (command == GESTURE_OSD_DOWN) {
-      osd_handle_input(OSD_INPUT_DOWN);
-    }
-
-    if (command == GESTURE_OSD_RIGHT) {
-      osd_handle_input(OSD_INPUT_RIGHT);
-    }
-
-    if (command == GESTURE_OSD_LEFT) {
-      osd_handle_input(OSD_INPUT_LEFT);
-    }
-
+    // reset loop time
+    looptime_reset();
+    break;
+  }
+  case GESTURE_UUU: {
+    bind_storage.bind_saved = !bind_storage.bind_saved;
+    ledblink = 2 - bind_storage.bind_saved;
+    pid_gestures_used = true;
+    break;
+  }
+  case GESTURE_RRR: {
+    ledblink = 2 - osd_push_screen(OSD_SCREEN_MAIN_MENU);
+    break;
+  }
+  case GESTURE_RRD: {
+    state.aux[AUX_CHANNEL_GESTURE] = 1;
+    ledcommand = 1;
+    break;
+  }
+  case GESTURE_LLD: {
+    state.aux[AUX_CHANNEL_GESTURE] = 0;
+    ledcommand = 1;
+    break;
+  }
+  case GESTURE_LRL: {
+    while (osd_pop_screen() != OSD_SCREEN_CLEAR)
+      ;
+    break;
+  }
 #ifdef PID_GESTURE_TUNING
-    if (command >= GESTURE_UDR)
-      pid_gestures_used = 1;
-
-    if (command == GESTURE_UDU) {
-      // Cycle to next pid term (P I D)
-      ledblink = next_pid_term();
-    }
-    if (command == GESTURE_UDD) {
-      // Cycle to next axis (Roll Pitch Yaw)
-      ledblink = next_pid_axis();
-    }
-    if (command == GESTURE_UDR) {
-      // Increase by 10%
-      ledblink = increase_pid();
-    }
-    if (command == GESTURE_UDL) {
-      // Descrease by 10%
-      ledblink = decrease_pid();
-    }
-    // flash long on zero
-    if (pid_gestures_used && ledblink == 0)
-      ledcommand = 1;
-
-      // U D U - Next PID term
-      // U D D - Next PID Axis
-      // U D R - Increase value
-      // U D L - Descrease value
-      // ledblink = blink; //Will cause led logic to blink the number of times ledblink has stored in it.
+  case GESTURE_UDU: {
+    // Cycle to next pid term (P I D)
+    ledblink = next_pid_term();
+    pid_gestures_used = true;
+    break;
+  }
+  case GESTURE_UDD: {
+    // Cycle to next axis (Roll Pitch Yaw)
+    ledblink = next_pid_axis();
+    pid_gestures_used = true;
+    break;
+  }
+  case GESTURE_UDR: {
+    // Increase by 10%
+    ledblink = increase_pid();
+    pid_gestures_used = true;
+    break;
+  }
+  case GESTURE_UDL: {
+    // Descrease by 10%
+    ledblink = decrease_pid();
+    pid_gestures_used = true;
+    break;
+  }
 #endif
   }
+
+  // flash long on zero
+  if (pid_gestures_used && ledblink == 0)
+    ledcommand = 1;
 }
