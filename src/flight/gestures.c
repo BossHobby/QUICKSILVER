@@ -61,10 +61,6 @@ void gestures() {
     }
 
     if (command == GESTURE_LLL) {
-      flash_storage.flash_feature_1 = !flash_storage.flash_feature_1;
-      ledblink = 1 - flash_storage.flash_feature_1;
-      pid_gestures_used = 1;
-
 #ifdef LVC_LOWER_THROTTLE
       flash_storage.lvc_lower_throttle = !flash_storage.lvc_lower_throttle;
       ledblink = 2 - flash_storage.lvc_lower_throttle;
