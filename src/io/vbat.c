@@ -122,35 +122,3 @@ void vbat_calc() {
   else
     flags.lowbatt = 0;
 }
-
-void vbat_lvc_throttle() {
-#ifdef LVC_LOWER_THROTTLE
-  static float throttle_i = 0.0f;
-
-  if (flash_storage.lvc_lower_throttle == 1) {
-    float throttle_p = 0.0f;
-
-    if (state.vbat_filtered < (float)LVC_LOWER_THROTTLE_VOLTAGE_RAW)
-      throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE_RAW - state.vbat_filtered) * (float)LVC_LOWER_THROTTLE_KP;
-
-    if (state.vbat_compensated < (float)LVC_LOWER_THROTTLE_VOLTAGE)
-      throttle_p = ((float)LVC_LOWER_THROTTLE_VOLTAGE - state.vbat_compensated) * (float)LVC_LOWER_THROTTLE_KP;
-
-    if (throttle_p > 1.0f)
-      throttle_p = 1.0f;
-
-    if (throttle_p > 0) {
-      throttle_i += throttle_p * 0.0001f; // ki
-    } else
-      throttle_i -= 0.001f; // ki on release
-
-    if (throttle_i > 0.5f)
-      throttle_i = 0.5f;
-    if (throttle_i < 0.0f)
-      throttle_i = 0.0f;
-
-    state.throttle -= throttle_p + throttle_i;
-  }
-
-#endif
-}
