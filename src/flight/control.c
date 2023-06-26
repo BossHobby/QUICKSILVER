@@ -453,8 +453,6 @@ void control() {
       if (rx_aux_on(AUX_LEVELMODE)) {
         auto_throttle();
       }
-
-      vbat_lvc_throttle();
     }
 
     motor_mixer_calc(state.motor_mix.axis);

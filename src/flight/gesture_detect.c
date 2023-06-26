@@ -70,9 +70,6 @@ const uint8_t command8[GSIZE] = {GESTURE_CENTER_IDLE, GESTURE_UP, GESTURE_CENTER
 // R R R
 const uint8_t command9[GSIZE] = {GESTURE_CENTER_IDLE, GESTURE_RIGHT, GESTURE_CENTER, GESTURE_RIGHT, GESTURE_CENTER, GESTURE_RIGHT, GESTURE_CENTER};
 
-// L L L
-const uint8_t command10[GSIZE] = {GESTURE_CENTER_IDLE, GESTURE_LEFT, GESTURE_CENTER, GESTURE_LEFT, GESTURE_CENTER, GESTURE_LEFT, GESTURE_CENTER};
-
 // D U D
 const uint8_t command11[GSIZE] = {GESTURE_CENTER_IDLE, GESTURE_DOWN, GESTURE_CENTER, GESTURE_UP, GESTURE_CENTER, GESTURE_DOWN, GESTURE_CENTER};
 
@@ -261,14 +258,6 @@ int gesture_sequence(int currentgesture) {
         // change buffer so it does not trigger again
         gbuffer[1] = GESTURE_OTHER;
         return GESTURE_RRR;
-      }
-
-      if (check_command(&gbuffer[0], &command10[0])) {
-        // command 10
-
-        // change buffer so it does not trigger again
-        gbuffer[1] = GESTURE_OTHER;
-        return GESTURE_LLL;
       }
 
       if (check_command(&gbuffer[0], &command11[0])) {

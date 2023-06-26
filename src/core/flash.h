@@ -17,8 +17,6 @@
 
 typedef struct {
   float accelcal[3];
-
-  uint8_t lvc_lower_throttle;
 } flash_storage_t;
 
 extern flash_storage_t flash_storage;

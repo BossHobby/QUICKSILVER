@@ -60,14 +60,6 @@ void gestures() {
       ledblink = 2 - osd_push_screen(OSD_SCREEN_MAIN_MENU);
     }
 
-    if (command == GESTURE_LLL) {
-#ifdef LVC_LOWER_THROTTLE
-      flash_storage.lvc_lower_throttle = !flash_storage.lvc_lower_throttle;
-      ledblink = 2 - flash_storage.lvc_lower_throttle;
-      pid_gestures_used = 1;
-#endif
-    }
-
     if (command == GESTURE_RRD) {
       state.aux[AUX_CHANNEL_GESTURE] = 1;
       ledcommand = 1;
