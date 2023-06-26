@@ -1199,7 +1199,7 @@ void osd_display() {
 
     osd_menu_select(2, 7, "TRANSITION");
     if (osd_menu_select_vec3(13, 7, rates->transition, 5, 2)) {
-      rates->transition = osd_menu_adjust_vec3(rates->transition, 0.01, -1.0, -1.0);
+      rates->transition = osd_menu_adjust_vec3(rates->transition, 0.01, -1.0, 1.0);
     }
 
     osd_menu_select_save_and_exit(7);
