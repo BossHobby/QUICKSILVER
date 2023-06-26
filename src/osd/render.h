@@ -47,10 +47,12 @@ typedef enum {
 } osd_screens_t;
 
 typedef enum {
+  OSD_INPUT_NONE,
   OSD_INPUT_UP,
   OSD_INPUT_DOWN,
   OSD_INPUT_LEFT,
   OSD_INPUT_RIGHT,
+  OSD_INPUT_MAX,
 } osd_input_t;
 
 typedef enum {
