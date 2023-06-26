@@ -137,14 +137,6 @@
 // *************calculate above factor automatically
 #define AUTO_VDROP_FACTOR
 
-// *************lower throttle when battery below threshold - forced landing low voltage cutoff
-// *************THIS FEATURE WILL BE OFF BY DEFAULT EVEN WHEN DEFINED - USE STICK GESTURE LEFT-LEFT-LEFT TO ACTIVATE THEN DOWN-DOWN-DOWN TO SAVE AS ON
-// *************Led light will blink once when LVC forced landing is turned on, blink twice when turned off, and will blink multiple times upon save command
-// #define LVC_LOWER_THROTTLE
-#define LVC_LOWER_THROTTLE_VOLTAGE 3.30
-#define LVC_LOWER_THROTTLE_VOLTAGE_RAW 2.70
-#define LVC_LOWER_THROTTLE_KP 3.0
-
 // *************voltage/cell to start warning led blinking
 #define VBATTLOW 3.3
 
