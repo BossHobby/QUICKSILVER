@@ -7,6 +7,7 @@
 #include "core/debug.h"
 #include "core/flash.h"
 #include "core/profile.h"
+#include "driver/motor.h"
 #include "driver/serial.h"
 #include "driver/serial_4way.h"
 #include "driver/spi_max7456.h"
@@ -418,6 +419,9 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
     break;
 
   case QUIC_MOTOR_TEST_ENABLE:
+    for (uint8_t i = 0; i < 4; i++) {
+      motor_test.value[i] = MOTOR_OFF;
+    }
     motor_test.active = 1;
 
     res = cbor_encode_uint8(&enc, &motor_test.active);
@@ -427,6 +431,9 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
     break;
 
   case QUIC_MOTOR_TEST_DISABLE:
+    for (uint8_t i = 0; i < 4; i++) {
+      motor_test.value[i] = MOTOR_OFF;
+    }
     motor_test.active = 0;
 
     res = cbor_encode_uint8(&enc, &motor_test.active);
@@ -435,15 +442,26 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
     quic_send(quic, QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
 
-  case QUIC_MOTOR_TEST_SET_VALUE:
-    res = cbor_decode_float_array(dec, motor_test.value, 4);
+  case QUIC_MOTOR_TEST_SET_VALUE: {
+    float values[4];
+    res = cbor_decode_float_array(dec, values, 4);
     check_cbor_error(QUIC_CMD_MOTOR);
+
+    for (uint8_t i = 0; i < 4; i++) {
+      const float val = constrainf(values[i], 0.0f, 1.0f);
+      if (val == 0.0f) {
+        motor_test.value[i] = MOTOR_OFF;
+      } else {
+        motor_test.value[i] = val;
+      }
+    }
 
     res = cbor_encode_float_array(&enc, motor_test.value, 4);
     check_cbor_error(QUIC_CMD_MOTOR);
 
     quic_send(quic, QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
+  }
   case QUIC_MOTOR_ESC4WAY_IF: {
     uint8_t count = serial_4way_init();
 

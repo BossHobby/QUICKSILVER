@@ -79,7 +79,7 @@ FAST_RAM control_state_t state = {
 
 motor_test_t motor_test = {
     .active = 0,
-    .value = {0, 0, 0, 0},
+    .value = {MOTOR_OFF, MOTOR_OFF, MOTOR_OFF, MOTOR_OFF},
 };
 
 static uint8_t arming_release;
