@@ -16,7 +16,6 @@ typedef enum {
 } dir_change_state_t;
 
 uint16_t dshot_packet[MOTOR_PIN_MAX]; // 16bits dshot data for 4 motors
-uint32_t pwm_failsafe_time = 1;
 motor_direction_t motor_dir = MOTOR_FORWARD;
 
 static bool dir_change_done = true;
@@ -46,27 +45,12 @@ void motor_dshot_write(float *values) {
   if (dir_change_done) {
     for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
       uint16_t value = 0;
-
       if (values[i] >= 0.0f) {
         const float pwm = constrainf(values[i], 0.0f, 1.0f);
         value = mapf(pwm, 0.0f, 1.0f, 48, 2047);
       } else {
         value = 0;
       }
-
-      if (flags.failsafe && !flags.motortest_override) {
-        if (!pwm_failsafe_time) {
-          pwm_failsafe_time = time_micros();
-        } else if (time_micros() - pwm_failsafe_time > 4000000) {
-          // 1s after failsafe we turn off the signal for safety
-          // this means the escs won't rearm correctly after 2 secs of signal lost
-          // usually the quad should be gone by then
-          value = 0;
-        }
-      } else {
-        pwm_failsafe_time = 0;
-      }
-
       dshot_make_packet(profile.motor.motor_pins[i], value, false);
     }
 
