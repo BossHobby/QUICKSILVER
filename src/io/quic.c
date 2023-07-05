@@ -419,7 +419,7 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
     break;
 
   case QUIC_MOTOR_TEST_ENABLE:
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
       motor_test.value[i] = MOTOR_OFF;
     }
     motor_test.active = 1;
@@ -431,7 +431,7 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
     break;
 
   case QUIC_MOTOR_TEST_DISABLE:
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
       motor_test.value[i] = MOTOR_OFF;
     }
     motor_test.active = 0;
@@ -443,11 +443,11 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
     break;
 
   case QUIC_MOTOR_TEST_SET_VALUE: {
-    float values[4];
-    res = cbor_decode_float_array(dec, values, 4);
+    float values[MOTOR_PIN_MAX];
+    res = cbor_decode_float_array(dec, values, MOTOR_PIN_MAX);
     check_cbor_error(QUIC_CMD_MOTOR);
 
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
       const float val = constrainf(values[i], 0.0f, 1.0f);
       if (val == 0.0f) {
         motor_test.value[i] = MOTOR_OFF;
@@ -456,7 +456,7 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
       }
     }
 
-    res = cbor_encode_float_array(&enc, motor_test.value, 4);
+    res = cbor_encode_float_array(&enc, motor_test.value, MOTOR_PIN_MAX);
     check_cbor_error(QUIC_CMD_MOTOR);
 
     quic_send(quic, QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));

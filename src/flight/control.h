@@ -146,7 +146,7 @@ typedef struct {
 
 typedef struct {
   uint8_t active;
-  float value[4];
+  float value[MOTOR_PIN_MAX];
 } motor_test_t;
 
 extern control_state_t state;

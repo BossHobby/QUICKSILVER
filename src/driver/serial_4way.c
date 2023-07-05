@@ -26,11 +26,10 @@
 #define ARM_DEVICE_MATCH(device_id) (((device_id >> 8) > 0x00 && (device_id >> 8) < 0x90) && (device_id & 0xFF) == 0x06)
 
 #define INTF_MODE_IDX 3 // index for DeviceInfostate
-#define ESC_COUNT 4
 #define BLHELI_SETTINGS_SIZE 0xFF
 
 static serial_esc4way_device_t device;
-static gpio_pins_t esc_pins[ESC_COUNT] = {PIN_NONE};
+static gpio_pins_t esc_pins[MOTOR_PIN_MAX] = {PIN_NONE};
 
 #define ESC_PIN (esc_pins[device.selected_esc])
 
@@ -138,7 +137,7 @@ uint8_t serial_4way_init() {
     avr_bl_init_pin(pin);
   }
 
-  return ESC_COUNT;
+  return MOTOR_PIN_MAX;
 }
 
 void serial_4way_release() {
@@ -214,7 +213,7 @@ serial_esc4way_ack_t serial_4way_send(uint8_t cmd, uint16_t addr, const uint8_t 
   }
 
   case ESC4WAY_DEVICE_RESET: {
-    if (input[0] >= ESC_COUNT) {
+    if (input[0] >= MOTOR_PIN_MAX) {
       return ESC4WAY_ACK_I_INVALID_CHANNEL;
     }
 
@@ -246,7 +245,7 @@ serial_esc4way_ack_t serial_4way_send(uint8_t cmd, uint16_t addr, const uint8_t 
   case ESC4WAY_DEVICE_INIT_FLASH: {
     device_set_disconnected();
 
-    if (input[0] >= ESC_COUNT) {
+    if (input[0] >= MOTOR_PIN_MAX) {
       return ESC4WAY_ACK_I_INVALID_CHANNEL;
     }
 
