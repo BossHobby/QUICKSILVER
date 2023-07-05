@@ -48,9 +48,16 @@ serial_port_t serial_hdzero = {
     .tx_done = true,
 };
 
+static const uint8_t msp_options[2] = {0, 1};
 static volatile uint32_t last_heartbeat = 0;
+static bool is_detected = false;
 
 static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
+  if (cmd == MSP_FC_VARIANT) {
+    // we got the first MSP_FC_VARIANT request, consider vtx detected
+    is_detected = true;
+  }
+
   if (magic == MSP2_MAGIC) {
     if (serial_bytes_free(&serial_hdzero) < (len + MSP2_HEADER_LEN + 1)) {
       return;
@@ -172,13 +179,18 @@ void hdzero_init() {
   serial_init(&serial_hdzero, config);
 }
 
-void hdzero_intro() {
+static void hdzero_wait_for_ready() {
   const uint32_t start = time_millis();
   while (!hdzero_is_ready()) {
     if ((time_millis() - start) > 500) {
       return;
     }
   }
+}
+
+void hdzero_intro() {
+  hdzero_wait_for_ready();
+  hdzero_clear_async();
 
   uint8_t buffer[24];
   for (uint8_t row = 0; row < 4; row++) {
@@ -186,7 +198,7 @@ void hdzero_intro() {
     for (uint8_t i = 0; i < 24; i++) {
       buffer[i] = start + i;
     }
-
+    hdzero_wait_for_ready();
     hdzero_push_string(OSD_ATTR_TEXT, (HDZERO_COLS / 2) - 12, (HDZERO_ROWS / 2) - 2 + row, buffer, 24);
   }
 
@@ -194,18 +206,11 @@ void hdzero_intro() {
 }
 
 uint8_t hdzero_clear_async() {
+  hdzero_push_subcmd(SUBCMD_SET_OPTIONS, msp_options, 2);
   return hdzero_push_subcmd(SUBCMD_CLEAR_SCREEN, NULL, 0);
 }
 
 bool hdzero_is_ready() {
-  if ((time_millis() - last_heartbeat) > 500) {
-    uint8_t options[2] = {0, 1};
-    hdzero_push_subcmd(SUBCMD_SET_OPTIONS, options, 2);
-    hdzero_push_subcmd(SUBCMD_HEARTBEAT, NULL, 0);
-    last_heartbeat = time_millis();
-    return false;
-  }
-
   while (true) {
     uint8_t data = 0;
     if (!serial_read_bytes(&serial_hdzero, &data, 1)) {
@@ -213,6 +218,19 @@ bool hdzero_is_ready() {
     }
 
     msp_process_serial(&hdzero_msp, data);
+  }
+
+  static bool was_detected = false;
+  if (!was_detected && is_detected) {
+    hdzero_push_subcmd(SUBCMD_SET_OPTIONS, msp_options, 2);
+    was_detected = is_detected;
+    return false;
+  }
+
+  if ((time_millis() - last_heartbeat) > 500) {
+    hdzero_push_subcmd(SUBCMD_HEARTBEAT, NULL, 0);
+    last_heartbeat = time_millis();
+    return false;
   }
 
   return true;
