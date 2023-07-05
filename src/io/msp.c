@@ -5,6 +5,7 @@
 
 #include "core/flash.h"
 #include "core/looptime.h"
+#include "driver/motor.h"
 #include "driver/reset.h"
 #include "driver/serial.h"
 #include "driver/serial_4way.h"
@@ -150,16 +151,17 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   case MSP_MOTOR: {
     // we always have 4 motors, but blheli expects 8
     // these are pwm values
-    uint16_t data[8] = {
-        (uint16_t)mapf(motor_test.value[0], 0.0f, 1.0f, 1000.f, 2000.f),
-        (uint16_t)mapf(motor_test.value[1], 0.0f, 1.0f, 1000.f, 2000.f),
-        (uint16_t)mapf(motor_test.value[2], 0.0f, 1.0f, 1000.f, 2000.f),
-        (uint16_t)mapf(motor_test.value[3], 0.0f, 1.0f, 1000.f, 2000.f),
-        0,
-        0,
-        0,
-        0,
-    };
+    uint16_t data[8];
+    memset(data, 0, 8 * sizeof(uint16_t));
+
+    for (uint8_t i = 0; i < 4; i++) {
+      if (motor_test.value[i] <= 0.0f) {
+        data[i] = 1000;
+      } else {
+        data[i] = mapf(motor_test.value[i], 0.0f, 1.0f, 1000.f, 2000.f);
+      }
+    }
+
     msp_send_reply(msp, magic, cmd, (uint8_t *)data, 8 * sizeof(uint16_t));
     break;
   }
@@ -202,10 +204,17 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   }
   case MSP_SET_MOTOR: {
     uint16_t *values = (uint16_t *)(payload);
+
+    motor_test.active = 0;
     for (uint8_t i = 0; i < 4; i++) {
-      motor_test.value[i] = mapf(values[i], 1000.f, 2000.f, 0.0f, 1.0f);
+      const uint16_t val = constrain(values[i], 1000, 2000);
+      if (val == 1000) {
+        motor_test.value[i] = MOTOR_OFF;
+      } else {
+        motor_test.value[i] = mapf(val, 1000.f, 2000.f, 0.0f, 1.0f);
+        motor_test.active = 1;
+      }
     }
-    motor_test.active = 1;
 
     msp_send_reply(msp, magic, cmd, NULL, 0);
     break;

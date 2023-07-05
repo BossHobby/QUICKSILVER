@@ -238,22 +238,22 @@ void motor_mixer_calc(float mix[4]) {
 void motor_output_calc(float mix[4]) {
   state.thrsum = 0; // reset throttle sum for voltage monitoring logic in main loop
 
+  // only apply digital idle if we are armed and not in motor test
+  float motor_min_value = 0;
+  if (!flags.on_ground && flags.arm_state && !flags.motortest_override) {
+    // 0.0001 for legacy purposes, force motor drivers downstream to round up
+    motor_min_value = 0.0001f + (float)profile.motor.digital_idle * 0.01f;
+  }
+
   // Begin for-loop to send motor commands
-  for (int i = 0; i <= 3; i++) {
-
-    mix[i] = constrainf(mix[i], 0, 1);
-
-    // only apply digital idle if we are armed and not in motor test
-    float motor_min_value = 0;
-    if (!flags.on_ground && flags.arm_state && !flags.motortest_override) {
-      // 0.0001 for legacy purposes, motor drivers downstream to round up
-      motor_min_value = 0.0001f + (float)profile.motor.digital_idle * 0.01f;
+  for (uint32_t i = 0; i < 4; i++) {
+    if (!flags.motortest_override) {
+      // use values as supplied in motor test mode
+      mix[i] = constrainf(mix[i], 0, 1);
+      mix[i] = mapf(mix[i], 0.0f, 1.0f, motor_min_value, profile.motor.motor_limit * 0.01f);
     }
 
-    mix[i] = mapf(mix[i], 0.0f, 1.0f, motor_min_value, profile.motor.motor_limit * 0.01f);
-
 #ifndef NOMOTORS
-    // normal mode
     motor_set(i, mix[i]);
 #endif
     state.thrsum += mix[i];
