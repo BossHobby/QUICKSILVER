@@ -154,7 +154,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     uint16_t data[8];
     memset(data, 0, 8 * sizeof(uint16_t));
 
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
       if (motor_test.value[i] <= 0.0f) {
         data[i] = 1000;
       } else {
@@ -206,7 +206,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     uint16_t *values = (uint16_t *)(payload);
 
     motor_test.active = 0;
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
       const uint16_t val = constrain(values[i], 1000, 2000);
       if (val == 1000) {
         motor_test.value[i] = MOTOR_OFF;
@@ -246,7 +246,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
     default:
     case MSP_PASSTHROUGH_ESC_4WAY: {
-      uint8_t data[1] = {4};
+      uint8_t data[1] = {MOTOR_PIN_MAX};
       msp_send_reply(msp, magic, cmd, data, 1);
 
       motor_test.active = 0;
