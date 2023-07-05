@@ -36,7 +36,6 @@ typedef struct {
 } dshot_gpio_port_t;
 
 extern uint16_t dshot_packet[MOTOR_PIN_MAX];
-extern uint32_t pwm_failsafe_time;
 extern motor_direction_t motor_dir;
 
 volatile uint32_t dshot_dma_phase = 0; // 0: idle, 1 - (gpio_port_count + 1): handle port n
@@ -168,9 +167,6 @@ void motor_dshot_init() {
   }
 
   tmr_counter_enable(TMR1, TRUE);
-
-  // set failsafetime so signal is off at start
-  pwm_failsafe_time = time_micros() - 100000;
   motor_dir = MOTOR_FORWARD;
 }
 
