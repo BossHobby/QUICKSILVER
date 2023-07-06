@@ -14,6 +14,7 @@
 #include "flight/control.h"
 #include "flight/filter.h"
 #include "io/blackbox_device.h"
+#include "io/led.h"
 #include "io/vtx.h"
 #include "osd/menu.h"
 #include "rx/rx.h"
@@ -268,12 +269,7 @@ void osd_save_exit() {
     vtx_set(&vtx_settings_copy);
   }
 
-  // check for fc reboot request
-  extern bool pid_gestures_used;
-  extern int ledcommand;
-
-  pid_gestures_used = false;
-  ledcommand = 1;
+  led_flash();
 
   flash_save();
   flash_load();
