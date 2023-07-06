@@ -6,17 +6,16 @@
 #include "flight/control.h"
 #include "util/util.h"
 
-// for led flash on gestures
-int ledcommand = 0;
-int ledblink = 0;
-uint32_t ledcommandtime = 0;
+#define LED_FLASH -1
+
+static int32_t blink_count = 0;
 
 void led_init() {
   gpio_config_t init;
   init.mode = GPIO_OUTPUT;
   init.output = GPIO_PUSHPULL;
   init.pull = GPIO_NO_PULL;
-  init.drive =GPIO_DRIVE_HIGH;
+  init.drive = GPIO_DRIVE_HIGH;
 
   for (uint8_t i = 0; i < LED_MAX; i++) {
     const target_led_t led = target.leds[i];
@@ -24,7 +23,7 @@ void led_init() {
       continue;
     }
 
-    gpio_pin_init( led.pin, init);
+    gpio_pin_init(led.pin, init);
     if (led.invert) {
       gpio_pin_set(led.pin);
     } else {
@@ -71,14 +70,6 @@ void led_off(uint8_t val) {
   }
 }
 
-void led_flash(uint32_t period, int duty) {
-  if (time_micros() % period > (period * duty) >> 4) {
-    led_on(LEDALL);
-  } else {
-    led_off(LEDALL);
-  }
-}
-
 // delta- sigma first order modulator.
 void led_pwm(uint8_t pwmval, float looptime) {
   static uint32_t last_time = 0;
@@ -103,51 +94,73 @@ void led_pwm(uint8_t pwmval, float looptime) {
   }
 }
 
+// duty 0-16
+static void led_flash_duty(uint32_t period_ms, uint8_t duty) {
+  const uint32_t period = period_ms * 1000;
+  const uint32_t divider = (period * duty) >> 5;
+  if (time_micros() % period > divider) {
+    led_on(LEDALL);
+  } else {
+    led_off(LEDALL);
+  }
+}
+
+void led_flash() {
+  blink_count = LED_FLASH;
+}
+
+void led_blink(uint8_t count) {
+  blink_count = count;
+}
+
 void led_update() {
-  // led flash logic
   if (flags.lowbatt) {
-    led_flash(500000, 8);
-    return;
+    return led_flash_duty(500, 16);
   }
 
-  if (flags.rx_mode == RXMODE_BIND) { // bind mode
-    led_flash(100000, 12);
-    return;
+  if (flags.rx_mode == RXMODE_BIND) {
+    return led_flash_duty(100, 24);
   }
 
   if (flags.failsafe) {
-    led_flash(500000, 15);
-    return;
+    return led_flash_duty(500, 30);
   }
 
-  if (ledcommand) {
-    if (!ledcommandtime)
-      ledcommandtime = time_micros();
-    if (time_micros() - ledcommandtime > 500000) {
-      ledcommand = 0;
-      ledcommandtime = 0;
+  if (flags.arm_switch && (flags.throttle_safety == 1 || flags.arm_safety == 1)) {
+    return led_flash_duty(100, 8);
+  }
+
+  static uint32_t last_time = 0;
+
+  if (blink_count == LED_FLASH) {
+    if (!last_time)
+      last_time = time_micros();
+    if (time_micros() - last_time > 500000) {
+      blink_count = 0;
+      last_time = 0;
     }
-    led_flash(100000, 8);
+    led_flash_duty(100, 8);
     return;
   }
 
-  if (ledblink) {
+  if (blink_count) {
     uint32_t time = time_micros();
-    if (!ledcommandtime) {
-      ledcommandtime = time;
+    if (!last_time) {
+      last_time = time;
       led_off(LEDALL);
     }
-    if (time - ledcommandtime > 500000) {
-      ledblink--;
-      ledcommandtime = 0;
+    if (time - last_time > 500000) {
+      blink_count--;
+      last_time = 0;
     }
-    if (time - ledcommandtime > 300000) {
+    if (time - last_time > 250000) {
       led_on(LEDALL);
     }
-  } else { // led is normally on
-    if (LED_BRIGHTNESS != 15)
-      led_pwm(LED_BRIGHTNESS, state.looptime_autodetect);
-    else
-      led_on(LEDALL);
+    return;
   }
+
+  if (LED_BRIGHTNESS != 15)
+    led_pwm(LED_BRIGHTNESS, state.looptime_autodetect);
+  else
+    led_on(LEDALL);
 }

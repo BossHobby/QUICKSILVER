@@ -7,8 +7,9 @@
 void led_init();
 void led_on(uint8_t val);
 void led_off(uint8_t val);
-void led_flash(uint32_t period, int duty);
+void led_pwm(uint8_t pwmval, float looptime);
+
+void led_flash();
+void led_blink(uint8_t count);
 
 void led_update();
-
-void led_pwm(uint8_t pwmval, float looptime);

@@ -6,16 +6,13 @@
 #include "flight/control.h"
 #include "flight/pid.h"
 #include "flight/sixaxis.h"
+#include "io/led.h"
 #include "rx/rx.h"
 #include "util/util.h"
 
-extern int ledcommand;
-extern int ledblink;
-extern profile_t profile;
-
-bool pid_gestures_used = false;
-
 void gestures() {
+  static bool pid_gestures_used = false;
+
   const int32_t command = gestures_detect();
   if (command == GESTURE_NONE) {
     return;
@@ -32,7 +29,7 @@ void gestures() {
       sixaxis_gyro_cal(); // for flashing lights
       sixaxis_acc_cal();
     } else {
-      ledcommand = 1;
+      led_flash();
       pid_gestures_used = false;
     }
 
@@ -51,22 +48,23 @@ void gestures() {
   }
   case GESTURE_UUU: {
     bind_storage.bind_saved = !bind_storage.bind_saved;
-    ledblink = 2 - bind_storage.bind_saved;
     pid_gestures_used = true;
+    led_flash();
     break;
   }
   case GESTURE_RRR: {
-    ledblink = 2 - osd_push_screen(OSD_SCREEN_MAIN_MENU);
+    osd_push_screen(OSD_SCREEN_MAIN_MENU);
+    led_flash();
     break;
   }
   case GESTURE_RRD: {
     state.aux[AUX_CHANNEL_GESTURE] = 1;
-    ledcommand = 1;
+    led_flash();
     break;
   }
   case GESTURE_LLD: {
     state.aux[AUX_CHANNEL_GESTURE] = 0;
-    ledcommand = 1;
+    led_flash();
     break;
   }
   case GESTURE_LRL: {
@@ -77,32 +75,48 @@ void gestures() {
 #ifdef PID_GESTURE_TUNING
   case GESTURE_UDU: {
     // Cycle to next pid term (P I D)
-    ledblink = next_pid_term();
+    const uint8_t index = next_pid_term();
+    if (index) {
+      led_blink(index);
+    } else {
+      led_flash();
+    }
     pid_gestures_used = true;
     break;
   }
   case GESTURE_UDD: {
     // Cycle to next axis (Roll Pitch Yaw)
-    ledblink = next_pid_axis();
+    const uint8_t index = next_pid_axis();
+    if (index) {
+      led_blink(index);
+    } else {
+      led_flash();
+    }
     pid_gestures_used = true;
     break;
   }
   case GESTURE_UDR: {
     // Increase by 10%
-    ledblink = increase_pid();
+    const uint8_t index = increase_pid();
+    if (index) {
+      led_blink(index);
+    } else {
+      led_flash();
+    }
     pid_gestures_used = true;
     break;
   }
   case GESTURE_UDL: {
     // Descrease by 10%
-    ledblink = decrease_pid();
+    const uint8_t index = decrease_pid();
+    if (index) {
+      led_blink(index);
+    } else {
+      led_flash();
+    }
     pid_gestures_used = true;
     break;
   }
 #endif
   }
-
-  // flash long on zero
-  if (pid_gestures_used && ledblink == 0)
-    ledcommand = 1;
 }
