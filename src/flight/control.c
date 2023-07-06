@@ -84,10 +84,6 @@ motor_test_t motor_test = {
 
 static uint8_t arming_release;
 
-extern int ledcommand;
-
-extern profile_t profile;
-
 #define MEMBER CBOR_ENCODE_MEMBER
 #define STR_MEMBER CBOR_ENCODE_STR_MEMBER
 #define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
@@ -352,9 +348,6 @@ void control() {
     if ((flags.throttle_safety == 1) || (flags.arm_safety == 1)) {
       // override to disarmed state
       flags.arm_state = 0;
-
-      // rapid blink the leds
-      ledcommand = 1;
     } else {
       // CONDITION: quad is being armed in a safe state
 

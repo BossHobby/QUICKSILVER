@@ -6,6 +6,7 @@
 #include "core/project.h"
 #include "driver/time.h"
 #include "flight/control.h"
+#include "io/led.h"
 #include "util/util.h"
 
 #define OSD_TIMEOUT_MILLIS 5000
@@ -98,7 +99,6 @@ static bool stick_wizard_check_for_perfect_sticks() {
 }
 
 static void rx_stick_calibration_wizard() {
-  extern int ledcommand;
   static uint32_t wizard_start_millis;
 
   // take appropriate action based on the wizard phase
@@ -140,7 +140,7 @@ static void rx_stick_calibration_wizard() {
     break;
 
   case STICK_WIZARD_CONFIRMED:
-    ledcommand = 1;
+    led_flash();
 
     flash_save();
     flash_load();
