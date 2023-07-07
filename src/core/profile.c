@@ -78,7 +78,7 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .name = "Thrust/Weight Ratio <8:1 2in",
         .rate = {
             .kp = {91, 91, 78.5},
-            .ki = {70, 70, 70},
+            .ki = {77, 77, 77},
             .kd = {54, 54, 6},
         },
     },
