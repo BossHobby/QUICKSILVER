@@ -176,8 +176,9 @@
 // could have been selected for this feature, a faster moving parabolic one was selected in its place as the goal is not to follow motor noise, but
 // to get the filter out of the way as fast as possible in the interest of better performance and handling through reduced D filter latency when you need it most.
 #define DTERM_DYNAMIC_LPF
-#define DYNAMIC_FREQ_MIN 70
-#define DYNAMIC_FREQ_MAX 260
+#define DTERM_DYNAMIC_EXPO 1.0f
+#define DTERM_DYNAMIC_FREQ_MIN 70
+#define DTERM_DYNAMIC_FREQ_MAX 260
 
 // Fixed D-Term Filters
 // D-Term FILTER PASS 1 - FILTER TYPE  - define only one or none to disable this pass

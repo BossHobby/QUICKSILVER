@@ -202,36 +202,29 @@ void motor_test_calc(bool motortest_usb, float mix[MOTOR_PIN_MAX]) {
 }
 
 void motor_mixer_calc(float mix[MOTOR_PIN_MAX]) {
-  if (profile.motor.invert_yaw) {
-    state.pidoutput.yaw = -state.pidoutput.yaw;
-  }
+  const float yaw = profile.motor.invert_yaw ? -state.pidoutput.yaw : state.pidoutput.yaw;
 
 #ifndef MOTOR_PLUS_CONFIGURATION
   // normal mode, we set mix according to pidoutput
-  mix[MOTOR_FR] = state.throttle - state.pidoutput.roll - state.pidoutput.pitch + state.pidoutput.yaw; // FR
-  mix[MOTOR_FL] = state.throttle + state.pidoutput.roll - state.pidoutput.pitch - state.pidoutput.yaw; // FL
-  mix[MOTOR_BR] = state.throttle - state.pidoutput.roll + state.pidoutput.pitch - state.pidoutput.yaw; // BR
-  mix[MOTOR_BL] = state.throttle + state.pidoutput.roll + state.pidoutput.pitch + state.pidoutput.yaw; // BL
+  mix[MOTOR_FR] = state.throttle - state.pidoutput.roll - state.pidoutput.pitch + yaw; // FR
+  mix[MOTOR_FL] = state.throttle + state.pidoutput.roll - state.pidoutput.pitch - yaw; // FL
+  mix[MOTOR_BR] = state.throttle - state.pidoutput.roll + state.pidoutput.pitch - yaw; // BR
+  mix[MOTOR_BL] = state.throttle + state.pidoutput.roll + state.pidoutput.pitch + yaw; // BL
 #else
   // plus mode, we set mix according to pidoutput
-  mix[MOTOR_FR] = state.throttle - state.pidoutput.pitch + state.pidoutput.yaw; // FRONT
-  mix[MOTOR_FL] = state.throttle + state.pidoutput.roll - state.pidoutput.yaw;  // LEFT
-  mix[MOTOR_BR] = state.throttle - state.pidoutput.roll - state.pidoutput.yaw;  // RIGHT
-  mix[MOTOR_BL] = state.throttle + state.pidoutput.pitch + state.pidoutput.yaw; // BACK
+  mix[MOTOR_FR] = state.throttle - state.pidoutput.pitch + yaw; // FRONT
+  mix[MOTOR_FL] = state.throttle + state.pidoutput.roll - yaw;  // LEFT
+  mix[MOTOR_BR] = state.throttle - state.pidoutput.roll - yaw;  // RIGHT
+  mix[MOTOR_BL] = state.throttle + state.pidoutput.pitch + yaw; // BACK
 #endif
 
-  for (int i = 0; i <= 3; i++) {
-    if (profile.motor.torque_boost > 0.0f) {
+  if (profile.motor.torque_boost > 0.0f) {
+    for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
       mix[i] = motord(mix[i], i);
     }
   }
 
   motor_mixer_scale_calc(mix);
-
-  // we invert again cause it's used by the pid internally (for limit)
-  if (profile.motor.invert_yaw) {
-    state.pidoutput.yaw = -state.pidoutput.yaw;
-  }
 }
 
 //********************************MOTOR OUTPUT***********************************************************

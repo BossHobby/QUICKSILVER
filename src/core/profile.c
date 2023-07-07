@@ -252,11 +252,11 @@ const profile_t default_profile = {
 #else
         .dterm_dynamic_enable = 0,
 #endif
-#ifdef DYNAMIC_FREQ_MIN
-        .dterm_dynamic_min = DYNAMIC_FREQ_MIN,
+#ifdef DTERM_DYNAMIC_FREQ_MIN
+        .dterm_dynamic_min = DTERM_DYNAMIC_FREQ_MIN,
 #endif
-#ifdef DYNAMIC_FREQ_MAX
-        .dterm_dynamic_max = DYNAMIC_FREQ_MAX,
+#ifdef DTERM_DYNAMIC_FREQ_MAX
+        .dterm_dynamic_max = DTERM_DYNAMIC_FREQ_MAX,
 #endif
     },
 
