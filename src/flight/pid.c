@@ -81,7 +81,7 @@ void pid_init() {
 
   if (profile.filter.dterm_dynamic_enable) {
     // zero out filter, freq will be updated later on
-    filter_lp_pt1_init(&dynamic_filter, dynamic_filter_state, 3, DYNAMIC_FREQ_MAX);
+    filter_lp_pt1_init(&dynamic_filter, dynamic_filter_state, 3, DTERM_DYNAMIC_FREQ_MAX);
   }
 }
 
@@ -113,7 +113,7 @@ void pid_precalc() {
   }
 
   if (profile.filter.dterm_dynamic_enable) {
-    float dynamic_throttle = state.throttle * (1 - state.throttle / 2.0f) * 2.0f;
+    float dynamic_throttle = state.throttle + state.throttle * (1 - state.throttle) * DTERM_DYNAMIC_EXPO;
     float d_term_dynamic_freq = mapf(dynamic_throttle, 0.0f, 1.0f, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
     d_term_dynamic_freq = constrainf(d_term_dynamic_freq, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
 
@@ -238,18 +238,23 @@ static void pid(uint8_t x) {
 
 void pid_calc() {
   // rotates errors, originally by joelucid
+  const float gyro_delta_angle[3] = {
+      state.gyro.axis[0] * state.looptime,
+      state.gyro.axis[1] * state.looptime,
+      state.gyro.axis[2] * state.looptime,
+  };
 
   // rotation around x axis:
-  ierror[1] -= ierror[2] * state.gyro.axis[0] * state.looptime;
-  ierror[2] += ierror[1] * state.gyro.axis[0] * state.looptime;
+  ierror[1] -= ierror[2] * gyro_delta_angle[0];
+  ierror[2] += ierror[1] * gyro_delta_angle[0];
 
   // rotation around y axis:
-  ierror[2] -= ierror[0] * state.gyro.axis[1] * state.looptime;
-  ierror[0] += ierror[2] * state.gyro.axis[1] * state.looptime;
+  ierror[2] -= ierror[0] * gyro_delta_angle[1];
+  ierror[0] += ierror[2] * gyro_delta_angle[1];
 
   // rotation around z axis:
-  ierror[0] -= ierror[1] * state.gyro.axis[2] * state.looptime;
-  ierror[1] += ierror[0] * state.gyro.axis[2] * state.looptime;
+  ierror[0] -= ierror[1] * gyro_delta_angle[2];
+  ierror[1] += ierror[0] * gyro_delta_angle[2];
 
   pid(0);
   pid(1);
