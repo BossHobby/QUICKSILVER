@@ -15,8 +15,9 @@
 #define SPI_SPEED_SLOW MHZ_TO_HZ(0.5)
 #define SPI_SPEED_FAST MHZ_TO_HZ(24)
 
-#define AAF_DELT 6
-#define AAF_DELTSQR 36
+// select 213hz filter
+#define AAF_DELT 5
+#define AAF_DELTSQR 25
 #define AAF_BITSHIFT 10
 
 extern spi_bus_device_t gyro_bus;
