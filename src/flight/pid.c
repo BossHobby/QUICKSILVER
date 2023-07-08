@@ -103,6 +103,8 @@ void pid_precalc() {
     if (rx_aux_on(AUX_LEVELMODE))
       v_compensation *= LEVELMODE_PID_ATTENUATION;
 #endif
+  } else {
+    v_compensation = 1.0f;
   }
 
   if (profile.pid.throttle_dterm_attenuation.tda_active) {
@@ -170,16 +172,14 @@ static float pid_filter_dterm(uint8_t x, float dterm) {
 // pid calculation for acro ( rate ) mode
 // input: error[x] = setpoint - gyro
 // output: state.pidoutput.axis[x] = change required from motors
-static void pid(uint8_t x) {
+static inline void pid(uint8_t x) {
   // P term
   const float *setpoint_weigth = target.brushless ? setpoint_weigth_brushless : setpoint_weigth_brushed;
   state.pid_p_term.axis[x] = state.error.axis[x] * (setpoint_weigth[x]) * current_kp[x];
   state.pid_p_term.axis[x] += -(1.0f - setpoint_weigth[x]) * current_kp[x] * state.gyro.axis[x];
 
   // Pid Voltage Comp applied to P term only
-  if (profile.voltage.pid_voltage_compensation) {
-    state.pid_p_term.axis[x] *= v_compensation;
-  }
+  state.pid_p_term.axis[x] *= v_compensation;
 
   // I term
   // in level mode or horizon but not racemode and while on the ground...
