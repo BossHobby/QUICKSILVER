@@ -1021,6 +1021,7 @@ void osd_display() {
         "NONE",
         " PT1",
         " PT2",
+        " PT3",
     };
 
     osd_menu_select(4, 3, "PASS 1 TYPE");
