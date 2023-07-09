@@ -1,19 +1,13 @@
 #include "motor.h"
 
+#include <float.h>
+
 #include "core/profile.h"
 #include "core/project.h"
 #include "driver/motor.h"
 #include "flight/control.h"
 #include "io/usb_configurator.h"
 #include "util/util.h"
-
-#ifndef AIRMODE_STRENGTH
-#define AIRMODE_STRENGTH 1.0f //  Most amount of power that can be added for Airmode
-#endif
-
-#ifndef CLIPPING_LIMIT
-#define CLIPPING_LIMIT 1.0f //  Most amount of power that can be pulled before clipping
-#endif
 
 // options for mix throttle lowering if enabled
 // 0 - 100 range ( 100 = full reduction / 0 = no reduction )
@@ -40,11 +34,10 @@
 extern profile_t profile;
 
 static float motord(float in, int x) {
-  float factor = profile.motor.torque_boost;
   static float lastratexx[4][4];
 
-  float out = (+0.125f * in + 0.250f * lastratexx[x][0] - 0.250f * lastratexx[x][2] - (0.125f) * lastratexx[x][3]) * factor;
-
+  const float factor = profile.motor.torque_boost;
+  const float out = (+0.125f * in + 0.250f * lastratexx[x][0] - 0.250f * lastratexx[x][2] - (0.125f) * lastratexx[x][3]) * factor;
   lastratexx[x][3] = lastratexx[x][2];
   lastratexx[x][2] = lastratexx[x][1];
   lastratexx[x][1] = lastratexx[x][0];
@@ -53,56 +46,45 @@ static float motord(float in, int x) {
   return in + out;
 }
 
-static void motor_brushless_mixer_scale_calc(float mix[MOTOR_PIN_MAX]) {
+static void motor_brushless_mixer_scale_calc(float throttle, float mix[MOTOR_PIN_MAX]) {
   // only enable once really in the air
   if (flags.on_ground || !flags.in_air) {
     return;
   }
 
-  float mix_min = 1000.0f;
-  float mix_max = -1000.0f;
+  float min = FLT_MAX;
+  float max = FLT_MIN;
 
-  for (int i = 0; i < MOTOR_PIN_MAX; i++) {
-    if (mix[i] < mix_min)
-      mix_min = mix[i];
-    if (mix[i] > mix_max)
-      mix_max = mix[i];
-
-    if (mix_min < (-AIRMODE_STRENGTH))
-      mix_min = (-AIRMODE_STRENGTH);
-    if (mix_max > (1 + CLIPPING_LIMIT))
-      mix_max = (1 + CLIPPING_LIMIT);
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (mix[i] < min) {
+      min = mix[i];
+    }
+    if (mix[i] > max) {
+      max = mix[i];
+    }
   }
 
-  float reduce_amount = 0.0f;
+  const float range = max - min;
+  const float scale = range > 1.0f ? 1.0f / range : 1.0f;
 
-  const float mix_range = mix_max - mix_min;
-  if (mix_range > 1.0f) {
-    const float scale = 1.0f / mix_range;
+  const float scaled_min = min * scale;
+  const float scaled_max = max * scale;
+  const float scaled_throttle = constrain(throttle, -scaled_min, 1.0f - scaled_max);
 
-    for (int i = 0; i < MOTOR_PIN_MAX; i++)
-      mix[i] *= scale;
-
-    mix_min *= scale;
-    reduce_amount = mix_min;
-  } else {
-    if (mix_max > 1.0f)
-      reduce_amount = mix_max - 1.0f;
-    else if (mix_min < 0.0f)
-      reduce_amount = mix_min;
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    mix[i] = mix[i] * scale + scaled_throttle;
   }
-
-  for (int i = 0; i < MOTOR_PIN_MAX; i++)
-    mix[i] -= reduce_amount;
 }
 
-static void motor_brushed_mixer_scale_calc(float mix[MOTOR_PIN_MAX]) {
+static void motor_brushed_mixer_scale_calc(float throttle, float mix[MOTOR_PIN_MAX]) {
   // throttle reduction
   float overthrottle = 0;
   float underthrottle = 0.001f;
   static float overthrottlefilt = 0;
 
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    mix[i] += throttle;
+
     if (mix[i] > overthrottle)
       overthrottle = mix[i];
     if (mix[i] < underthrottle)
@@ -159,11 +141,11 @@ static void motor_brushed_mixer_scale_calc(float mix[MOTOR_PIN_MAX]) {
   }
 }
 
-static void motor_mixer_scale_calc(float mix[MOTOR_PIN_MAX]) {
+static void motor_mixer_scale_calc(float throttle, float mix[MOTOR_PIN_MAX]) {
   if (target.brushless) {
-    return motor_brushless_mixer_scale_calc(mix);
+    return motor_brushless_mixer_scale_calc(throttle, mix);
   }
-  return motor_brushed_mixer_scale_calc(mix);
+  return motor_brushed_mixer_scale_calc(throttle, mix);
 }
 
 void motor_test_calc(bool motortest_usb, float mix[MOTOR_PIN_MAX]) {
@@ -206,16 +188,16 @@ void motor_mixer_calc(float mix[MOTOR_PIN_MAX]) {
 
 #ifndef MOTOR_PLUS_CONFIGURATION
   // normal mode, we set mix according to pidoutput
-  mix[MOTOR_FR] = state.throttle - state.pidoutput.roll - state.pidoutput.pitch + yaw; // FR
-  mix[MOTOR_FL] = state.throttle + state.pidoutput.roll - state.pidoutput.pitch - yaw; // FL
-  mix[MOTOR_BR] = state.throttle - state.pidoutput.roll + state.pidoutput.pitch - yaw; // BR
-  mix[MOTOR_BL] = state.throttle + state.pidoutput.roll + state.pidoutput.pitch + yaw; // BL
+  mix[MOTOR_FR] = -state.pidoutput.roll - state.pidoutput.pitch + yaw; // FR
+  mix[MOTOR_FL] = +state.pidoutput.roll - state.pidoutput.pitch - yaw; // FL
+  mix[MOTOR_BR] = -state.pidoutput.roll + state.pidoutput.pitch - yaw; // BR
+  mix[MOTOR_BL] = +state.pidoutput.roll + state.pidoutput.pitch + yaw; // BL
 #else
   // plus mode, we set mix according to pidoutput
-  mix[MOTOR_FR] = state.throttle - state.pidoutput.pitch + yaw; // FRONT
-  mix[MOTOR_FL] = state.throttle + state.pidoutput.roll - yaw;  // LEFT
-  mix[MOTOR_BR] = state.throttle - state.pidoutput.roll - yaw;  // RIGHT
-  mix[MOTOR_BL] = state.throttle + state.pidoutput.pitch + yaw; // BACK
+  mix[MOTOR_FR] = -state.pidoutput.pitch + yaw; // FRONT
+  mix[MOTOR_FL] = +state.pidoutput.roll - yaw;  // LEFT
+  mix[MOTOR_BR] = -state.pidoutput.roll - yaw;  // RIGHT
+  mix[MOTOR_BL] = +state.pidoutput.pitch + yaw; // BACK
 #endif
 
   if (profile.motor.torque_boost > 0.0f) {
@@ -224,7 +206,7 @@ void motor_mixer_calc(float mix[MOTOR_PIN_MAX]) {
     }
   }
 
-  motor_mixer_scale_calc(mix);
+  motor_mixer_scale_calc(state.throttle, mix);
 }
 
 //********************************MOTOR OUTPUT***********************************************************
