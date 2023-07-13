@@ -40,54 +40,75 @@ void buzzer_init() {
   gpio_init.mode = GPIO_OUTPUT;
   gpio_init.output = GPIO_PUSHPULL;
   gpio_init.pull = GPIO_NO_PULL;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
   gpio_pin_init(target.buzzer.pin, gpio_init);
 
   buzzer_off();
 }
 
+static uint32_t buzzer_pulse_rate() {
+  if (flags.lowbatt) {
+    return 200000; // 1/5th second
+  }
+
+  if (flags.failsafe) {
+    return 400000; // 2/5ths second
+  }
+
+  if (rx_aux_on(AUX_BUZZER_ENABLE)) {
+    return 600000; // 3/5ths second
+  }
+
+  return 0;
+}
+
+static uint32_t buzzer_delay() {
+  if (flags.failsafe) {
+    return BUZZER_DELAY;
+  }
+  return 0;
+}
+
 void buzzer_update() {
-  static bool toggle;
-  static uint32_t buzzertime;
+  static uint32_t buzzer_time = 0;
 
-  uint32_t pulse_rate;
+  if (flags.usb_active) {
+    // dont beep on usb
+    buzzer_time = 0;
+    buzzer_off();
+    return;
+  }
 
-  // waits 5 seconds
-  // before configuring the gpio buzzer pin to ensure
-  // there is time to program the chip (if using SWDAT or SWCLK)
+  const uint32_t pulse_rate = buzzer_pulse_rate();
+  if (pulse_rate == 0) {
+    // beeper not active
+    buzzer_time = 0;
+    buzzer_off();
+    return;
+  }
 
-  if ((flags.lowbatt || flags.failsafe || rx_aux_on(AUX_BUZZER_ENABLE)) && !flags.usb_active) {
-    uint32_t time = time_micros();
-    if (buzzertime == 0)
-      buzzertime = time;
-    else {
+  const uint32_t time = time_micros();
+  if (buzzer_time == 0) {
+    buzzer_time = time;
+    return;
+  }
 
-      // rank lowbatt > failsafe > throttle
-      if (flags.lowbatt)
-        pulse_rate = 200000; // 1/5th second
-      else if (flags.failsafe)
-        pulse_rate = 400000; // 2/5ths second
-      else
-        pulse_rate = 600000; // 3/5ths second
+  const uint32_t delay = buzzer_delay();
+  if (time - buzzer_time < delay) {
+    buzzer_off();
+    return;
+  }
 
-      // start the buzzer if timeout has elapsed
-      if (time - buzzertime > BUZZER_DELAY || flags.lowbatt || rx_aux_on(AUX_BUZZER_ENABLE)) {
-
-        // enable buzzer
-        if (time % pulse_rate > pulse_rate / 2) {
-          if (toggle) {
-            buzzer_on();
-          } else {
-            buzzer_off();
-          }
-          toggle = !toggle;
-        } else {
-          buzzer_off();
-        }
-      }
+  // enable buzzer
+  if (time % pulse_rate > pulse_rate / 2) {
+    static bool toggle = false;
+    if (toggle) {
+      buzzer_on();
+    } else {
+      buzzer_off();
     }
-
+    toggle = !toggle;
   } else {
-    buzzertime = 0;
     buzzer_off();
   }
 }
