@@ -35,7 +35,7 @@ static const float setpoint_weigth_brushless[3] = {1, 1, 1}; // ALL PID
 
 /// output limit
 static const float out_limit_brushed[PID_SIZE] = {1.7, 1.7, 0.5};
-static const float out_limit_brushless[PID_SIZE] = {1.0, 1.0, 1.0};
+static const float out_limit_brushless[PID_SIZE] = {0.8, 0.8, 0.6};
 
 // limit of integral term (abs)
 static const float integral_limit_brushed[PID_SIZE] = {1.7, 1.7, 0.5};
