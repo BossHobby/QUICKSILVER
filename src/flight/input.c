@@ -135,6 +135,7 @@ static void calc_bf_rates(vec3_t *rates) {
   vec3_t expo;
   input_get_expo(&expo);
 
+#pragma GCC unroll 3
   for (uint32_t i = 0; i < 3; i++) {
     const float rate = input_apply_expo(state.rx_filtered.axis[i], expo.axis[i]);
 
@@ -168,6 +169,7 @@ static void calc_actual_rates(vec3_t *rates) {
   vec3_t expo;
   input_get_expo(&expo);
 
+#pragma GCC unroll 3
   for (uint32_t i = 0; i < 3; i++) {
     const float rate_no_expo = state.rx_filtered.axis[i];
     const float rate_expo = input_apply_expo(rate_no_expo, expo.axis[i]);
