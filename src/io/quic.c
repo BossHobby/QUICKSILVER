@@ -448,7 +448,7 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
     check_cbor_error(QUIC_CMD_MOTOR);
 
     for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
-      const float val = constrainf(values[i], 0.0f, 1.0f);
+      const float val = constrain(values[i], 0.0f, 1.0f);
       if (val == 0.0f) {
         motor_test.value[i] = MOTOR_OFF;
       } else {

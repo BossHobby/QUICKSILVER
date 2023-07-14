@@ -133,11 +133,11 @@ void rx_lqi_update_from_fps(float expected_fps) {
   state.rx_rssi = state.rx_rssi * state.rx_rssi * state.rx_rssi * LQ_EXPO + state.rx_rssi * (1 - LQ_EXPO);
   state.rx_rssi *= 100.0f;
 
-  state.rx_rssi = constrainf(state.rx_rssi, 0.f, 100.f);
+  state.rx_rssi = constrain(state.rx_rssi, 0.f, 100.f);
 }
 
 void rx_lqi_update_direct(float rssi) {
-  state.rx_rssi = constrainf(rssi, 0.f, 100.f);
+  state.rx_rssi = constrain(rssi, 0.f, 100.f);
 }
 
 static void rx_apply_smoothing() {
@@ -146,20 +146,20 @@ static void rx_apply_smoothing() {
   for (int i = 0; i < 4; ++i) {
     if (i == 3) {
       // throttle is 0 - 1.0
-      state.rx.axis[i] = constrainf(state.rx.axis[i], 0.0, 1.0);
+      state.rx.axis[i] = constrain(state.rx.axis[i], 0.0, 1.0);
     } else {
       // other channels are -1.0 - 1.0
-      state.rx.axis[i] = constrainf(state.rx.axis[i], -1.0, 1.0);
+      state.rx.axis[i] = constrain(state.rx.axis[i], -1.0, 1.0);
     }
 #ifdef RX_SMOOTHING
     state.rx_filtered.axis[i] = filter_lp_pt1_step(&rx_filter, &rx_filter_state[i], state.rx.axis[i]);
 #endif
     if (i == 3) {
       // throttle is 0 - 1.0
-      state.rx_filtered.axis[i] = constrainf(state.rx_filtered.axis[i], 0.0, 1.0);
+      state.rx_filtered.axis[i] = constrain(state.rx_filtered.axis[i], 0.0, 1.0);
     } else {
       // other channels are -1.0 - 1.0
-      state.rx_filtered.axis[i] = constrainf(state.rx_filtered.axis[i], -1.0, 1.0);
+      state.rx_filtered.axis[i] = constrain(state.rx_filtered.axis[i], -1.0, 1.0);
     }
   }
 }
