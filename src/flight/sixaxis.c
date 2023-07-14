@@ -126,16 +126,14 @@ void sixaxis_read() {
   filter_coeff(profile.filter.gyro[1].type, &filter[1], profile.filter.gyro[1].cutoff_freq);
 
   state.gyro.axis[0] = state.gyro_raw.axis[0] = state.gyro_raw.axis[0] * GYRO_RANGE * DEGTORAD;
-  state.gyro.axis[0] = filter_step(profile.filter.gyro[0].type, &filter[0], &filter_state[0][0], state.gyro.axis[0]);
-  state.gyro.axis[0] = filter_step(profile.filter.gyro[1].type, &filter[1], &filter_state[1][0], state.gyro.axis[0]);
-
   state.gyro.axis[1] = state.gyro_raw.axis[1] = -state.gyro_raw.axis[1] * GYRO_RANGE * DEGTORAD;
-  state.gyro.axis[1] = filter_step(profile.filter.gyro[0].type, &filter[0], &filter_state[0][1], state.gyro.axis[1]);
-  state.gyro.axis[1] = filter_step(profile.filter.gyro[1].type, &filter[1], &filter_state[1][1], state.gyro.axis[1]);
-
   state.gyro.axis[2] = state.gyro_raw.axis[2] = -state.gyro_raw.axis[2] * GYRO_RANGE * DEGTORAD;
-  state.gyro.axis[2] = filter_step(profile.filter.gyro[0].type, &filter[0], &filter_state[0][2], state.gyro.axis[2]);
-  state.gyro.axis[2] = filter_step(profile.filter.gyro[1].type, &filter[1], &filter_state[1][2], state.gyro.axis[2]);
+
+#pragma GCC unroll 3
+  for (uint32_t i = 0; i < 3; i++) {
+    state.gyro.axis[i] = filter_step(profile.filter.gyro[0].type, &filter[0], &filter_state[0][i], state.gyro.axis[i]);
+    state.gyro.axis[i] = filter_step(profile.filter.gyro[1].type, &filter[1], &filter_state[1][i], state.gyro.axis[i]);
+  }
 }
 
 static void sixaxis_wait_for_still() {
