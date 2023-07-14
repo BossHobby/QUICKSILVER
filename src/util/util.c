@@ -10,13 +10,6 @@ float mapf(float x, float in_min, float in_max, float out_min, float out_max) {
   return ((x - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min;
 }
 
-void limitf(float *input, const float limit) {
-  if (*input > limit)
-    *input = limit;
-  if (*input < -limit)
-    *input = -limit;
-}
-
 #define sinPolyCoef3 -1.666665710e-1f // Double: -1.666665709650470145824129400050267289858e-1
 #define sinPolyCoef5 8.333017292e-3f  // Double:  8.333017291562218127986291618761571373087e-3
 #define sinPolyCoef7 -1.980661520e-4f // Double: -1.980661520135080504411629636078917643846e-4

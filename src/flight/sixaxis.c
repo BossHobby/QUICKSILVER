@@ -203,7 +203,7 @@ void sixaxis_gyro_cal() {
       if (data.gyro.axis[i] < limit[i])
         limit[i] -= 0.1f;
 
-      limitf(&limit[i], GYRO_BIAS_LIMIT);
+      limit[i] = constrain(limit[i], -GYRO_BIAS_LIMIT, GYRO_BIAS_LIMIT);
       lpf(&gyrocal[i], data.gyro.axis[i], lpfcalc(1000, 0.5 * 1e6));
     }
 
@@ -225,7 +225,7 @@ void sixaxis_acc_cal() {
   flash_storage.accelcal[2] -= 2048;
 
   for (int x = 0; x < 3; x++) {
-    limitf(&flash_storage.accelcal[x], ACCEL_BIAS_LIMIT);
+    flash_storage.accelcal[x] = constrain(flash_storage.accelcal[x], -ACCEL_BIAS_LIMIT, ACCEL_BIAS_LIMIT);
   }
 }
 
