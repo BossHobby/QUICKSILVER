@@ -38,7 +38,6 @@
 #define MAKE_SEMVER(major, minor, patch) ((major << 16) | (minor << 8) | patch)
 
 float mapf(float x, float in_min, float in_max, float out_min, float out_max);
-void limitf(float *input, const float limit);
 
 float atan2approx(float y, float x);
 float Q_rsqrt(float number);

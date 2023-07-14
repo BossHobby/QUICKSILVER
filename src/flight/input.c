@@ -49,9 +49,8 @@ void input_stick_vector(float rx_input[], float maxangle) {
   state.errorvect.axis[0] = (state.GEstG.axis[2] * stickvector[0]) - (state.GEstG.axis[0] * stickvector[2]);
 
   // some limits just in case
-
-  limitf(&state.errorvect.axis[0], 1.0);
-  limitf(&state.errorvect.axis[1], 1.0);
+  state.errorvect.axis[0] = constrain(state.errorvect.axis[0], -1.0f, 1.0f);
+  state.errorvect.axis[1] = constrain(state.errorvect.axis[1], -1.0f, 1.0f);
 
   // fix to recover if triggered inverted
   // the vector cross product results in zero for opposite vectors, so it's bad at 180 error
@@ -63,7 +62,7 @@ float input_apply_expo(float in, float expo) {
     return in;
   }
 
-  limitf(&expo, 1.0);
+  expo = constrain(expo, -1.0f, 1.0f);
 
   float result = 0.0f;
 
@@ -79,8 +78,7 @@ float input_apply_expo(float in, float expo) {
     break;
   }
 
-  limitf(&result, 1.0);
-  return result;
+  return constrain(result, -1.0f, 1.0f);
 }
 
 static void input_get_expo(vec3_t *expo) {

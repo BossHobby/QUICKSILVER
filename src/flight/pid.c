@@ -198,9 +198,9 @@ static inline void pid(uint8_t x) {
   const float *integral_limit = target.brushless ? integral_limit_brushless : integral_limit_brushed;
   const float iterm_windup = pid_compute_iterm_windup(x, pid_output.axis[x]);
   ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + state.error.axis[x]) * current_ki[x] * iterm_windup * state.looptime;
+  ierror[x] = constrain(ierror[x], -integral_limit[x], integral_limit[x]);
   lasterror2[x] = lasterror[x];
   lasterror[x] = state.error.axis[x];
-  limitf(&ierror[x], integral_limit[x]);
 
   state.pid_i_term.axis[x] = ierror[x];
 
@@ -233,7 +233,7 @@ static inline void pid(uint8_t x) {
   state.pidoutput.axis[x] = pid_output.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x];
 
   const float *out_limit = target.brushless ? out_limit_brushless : out_limit_brushed;
-  limitf(&state.pidoutput.axis[x], out_limit[x]);
+  state.pidoutput.axis[x] = constrain(state.pidoutput.axis[x], -out_limit[x], out_limit[x]);
 }
 
 void pid_calc() {
