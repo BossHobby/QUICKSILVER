@@ -17,7 +17,6 @@ linker_flags = []
 
 common_flags = [
     "-Wdouble-promotion",
-    "-Wunsafe-loop-optimizations",
     "-fsingle-precision-constant",
     "-fno-exceptions",
     "-fno-strict-aliasing",
@@ -28,7 +27,6 @@ common_flags = [
     "-fno-asynchronous-unwind-tables",
     "-fno-math-errno",
     "-fmerge-all-constants",
-    "-funsafe-loop-optimizations",
 ]
 
 if env.GetBuildType() == "release":
