@@ -78,7 +78,7 @@ void led_pwm(uint8_t pwmval, float looptime) {
   last_time = time;
 
   static float ds_integrator = 0;
-  limitf(&ds_integrator, 2);
+  ds_integrator = constrain(ds_integrator, -2, 2);
 
   static float last_brightness = 0;
 

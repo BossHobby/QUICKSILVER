@@ -37,7 +37,7 @@ float angle_pid(int x) {
   apidoutput[x] = apidoutput1[x] + apidoutput2[x];
 
   lasterror[x] = state.angleerror[x];
-  limitf(&apidoutput[x], OUTLIMIT_FLOAT);
+  apidoutput[x] = constrain(apidoutput[x], -OUTLIMIT_FLOAT, OUTLIMIT_FLOAT);
 
   return apidoutput[x];
 }
