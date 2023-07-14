@@ -97,7 +97,7 @@ void pid_precalc() {
 
   if (profile.voltage.pid_voltage_compensation) {
     v_compensation = mapf((state.vbat_filtered_decay / (float)state.lipo_cell_count), 2.5f, 3.85f, PID_VC_FACTOR, 1.0f);
-    v_compensation = constrainf(v_compensation, 1.0f, PID_VC_FACTOR);
+    v_compensation = constrain(v_compensation, 1.0f, PID_VC_FACTOR);
 
 #ifdef LEVELMODE_PID_ATTENUATION
     if (rx_aux_on(AUX_LEVELMODE))
@@ -109,7 +109,7 @@ void pid_precalc() {
 
   if (profile.pid.throttle_dterm_attenuation.tda_active) {
     tda_compensation = mapf(state.throttle, profile.pid.throttle_dterm_attenuation.tda_breakpoint, 1.0f, 1.0f, profile.pid.throttle_dterm_attenuation.tda_percent);
-    tda_compensation = constrainf(tda_compensation, profile.pid.throttle_dterm_attenuation.tda_percent, 1.0f);
+    tda_compensation = constrain(tda_compensation, profile.pid.throttle_dterm_attenuation.tda_percent, 1.0f);
   } else {
     tda_compensation = 1.0f;
   }
@@ -117,7 +117,7 @@ void pid_precalc() {
   if (profile.filter.dterm_dynamic_enable) {
     float dynamic_throttle = state.throttle + state.throttle * (1 - state.throttle) * DTERM_DYNAMIC_EXPO;
     float d_term_dynamic_freq = mapf(dynamic_throttle, 0.0f, 1.0f, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
-    d_term_dynamic_freq = constrainf(d_term_dynamic_freq, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
+    d_term_dynamic_freq = constrain(d_term_dynamic_freq, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
 
     filter_lp_pt1_coeff(&dynamic_filter, d_term_dynamic_freq);
   }

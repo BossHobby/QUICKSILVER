@@ -440,7 +440,7 @@ void control() {
 
       if (profile.motor.throttle_boost > 0.0f) {
         state.throttle += (float)(profile.motor.throttle_boost) * throttlehpf(state.throttle);
-        state.throttle = constrainf(state.throttle, 0.0f, 1.0f);
+        state.throttle = constrain(state.throttle, 0.0f, 1.0f);
       }
 
       if (rx_aux_on(AUX_LEVELMODE)) {

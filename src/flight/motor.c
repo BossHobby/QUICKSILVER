@@ -242,7 +242,7 @@ void motor_output_calc(float mix[MOTOR_PIN_MAX]) {
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
     if (!flags.motortest_override) {
       // use values as supplied in motor test mode
-      mix[i] = constrainf(mix[i], 0, 1);
+      mix[i] = constrain(mix[i], 0, 1);
       mix[i] = mapf(mix[i], 0.0f, 1.0f, motor_min_value, profile.motor.motor_limit * 0.01f);
     }
 

@@ -148,11 +148,11 @@ static void calc_bf_rates(vec3_t *rates) {
 
     const float super_rate = profile_current_rates()->rate[BETAFLIGHT_SUPER_RATE].axis[i];
     if (super_rate) {
-      const float super_factor = 1.0f / (constrainf(1.0f - (fabsf(rate) * super_rate), 0.01f, 1.00f));
+      const float super_factor = 1.0f / (constrain(1.0f - (fabsf(rate) * super_rate), 0.01f, 1.00f));
       angleRate *= super_factor;
     }
 
-    rates->axis[i] = constrainf(angleRate, -BF_SETPOINT_RATE_LIMIT, BF_SETPOINT_RATE_LIMIT) * DEGTORAD;
+    rates->axis[i] = constrain(angleRate, -BF_SETPOINT_RATE_LIMIT, BF_SETPOINT_RATE_LIMIT) * DEGTORAD;
   }
 }
 
@@ -204,5 +204,5 @@ float input_throttle_calc(float throttle) {
   const float n = (throttle * 2.f - 1.f);
   const float expo = profile.rate.throttle_expo;
   const float mid = profile.rate.throttle_mid;
-  return constrainf((n * n * n * expo + n * (1.f - expo) + 1.f) * mid, 0.0f, 1.0f);
+  return constrain((n * n * n * expo + n * (1.f - expo) + 1.f) * mid, 0.0f, 1.0f);
 }
