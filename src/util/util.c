@@ -55,14 +55,6 @@ int ipow(int base, int exp) {
   return result;
 }
 
-uint32_t seed = 7;
-uint32_t random() {
-  seed ^= seed << 13;
-  seed ^= seed >> 17;
-  seed ^= seed << 5;
-  return seed;
-}
-
 #define OCTANTIFY(_x, _y, _o) \
   do {                        \
     float _t;                 \
