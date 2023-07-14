@@ -33,7 +33,7 @@ common_flags = [
 
 if env.GetBuildType() == "release":
     common_flags.insert(0, "-flto")
-    common_flags.insert(0, "-O3")
+    common_flags.insert(0, "-Ofast")
     common_flags.insert(0, "-s")
 else:
     common_flags.insert(0, "-O1")
