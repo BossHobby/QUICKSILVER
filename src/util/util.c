@@ -17,14 +17,6 @@ void limitf(float *input, const float limit) {
     *input = -limit;
 }
 
-float constrainf(const float in, const float min, const float max) {
-  if (in > max)
-    return max;
-  if (in < min)
-    return min;
-  return in;
-}
-
 #define sinPolyCoef3 -1.666665710e-1f // Double: -1.666665709650470145824129400050267289858e-1
 #define sinPolyCoef5 8.333017292e-3f  // Double:  8.333017291562218127986291618761571373087e-3
 #define sinPolyCoef7 -1.980661520e-4f // Double: -1.980661520135080504411629636078917643846e-4

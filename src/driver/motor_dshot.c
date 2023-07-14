@@ -46,7 +46,7 @@ void motor_dshot_write(float *values) {
     for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
       uint16_t value = 0;
       if (values[i] >= 0.0f) {
-        const float pwm = constrainf(values[i], 0.0f, 1.0f);
+        const float pwm = constrain(values[i], 0.0f, 1.0f);
         value = mapf(pwm, 0.0f, 1.0f, 48, 2047);
       } else {
         value = 0;
