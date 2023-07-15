@@ -88,6 +88,7 @@ void serial_rx_init(rx_serial_protocol_t proto) {
 
   // RX_SERIAL_PROTOCOL_FPORT_INVERTED requires half duplex off
   config.half_duplex = proto == RX_SERIAL_PROTOCOL_FPORT;
+  config.half_duplex_pp = false;
 
   serial_init(&serial_rx, config);
 }

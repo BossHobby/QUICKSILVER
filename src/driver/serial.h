@@ -42,6 +42,7 @@ typedef struct {
   serial_stop_bits_t stop_bits;
   bool invert;
   bool half_duplex;
+  bool half_duplex_pp;
 } serial_port_config_t;
 
 typedef struct {

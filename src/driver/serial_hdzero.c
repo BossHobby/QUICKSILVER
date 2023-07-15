@@ -175,6 +175,7 @@ void hdzero_init() {
   config.stop_bits = SERIAL_STOP_BITS_1;
   config.invert = false;
   config.half_duplex = false;
+  config.half_duplex_pp = false;
 
   serial_init(&serial_hdzero, config);
 }
