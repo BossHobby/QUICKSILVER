@@ -112,8 +112,9 @@ void usb_serial_passthrough(serial_ports_t port, uint32_t baudrate, uint8_t stop
   config.baudrate = baudrate;
   config.direction = SERIAL_DIR_TX_RX;
   config.stop_bits = stop_bits == 2 ? SERIAL_STOP_BITS_2 : SERIAL_STOP_BITS_1;
-  config.half_duplex = half_duplex;
   config.invert = false;
+  config.half_duplex = half_duplex;
+  config.half_duplex_pp = false;
 
   serial_init(&serial, config);
 
