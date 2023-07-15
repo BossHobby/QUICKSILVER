@@ -104,10 +104,8 @@ __attribute__((__used__)) int main() {
 
   rx_spektrum_bind();
 
-  // init motors and send values so escs init
+  // init motors
   motor_init();
-  motor_set_all(MOTOR_OFF);
-  motor_update();
 
   // wait for devices to wake up
   time_delay_ms(300);
@@ -117,8 +115,19 @@ __attribute__((__used__)) int main() {
     failloop(FAILLOOP_GYRO);
   }
 
-  // give adc time to settle
+  // give the gyro some time to settle
   time_delay_ms(100);
+
+  // display bootlogo while calibrating
+  osd_init();
+  sixaxis_gyro_cal();
+
+  // wait for adc and vtx to wake up
+  time_delay_ms(100);
+
+  // send first value to esc
+  motor_set_all(MOTOR_OFF);
+  motor_update();
 
   adc_init();
   vbat_init();
@@ -127,12 +136,6 @@ __attribute__((__used__)) int main() {
   vtx_init();
   rgb_init();
 
-  osd_init();
-
-  // give the gyro some time to settle
-  time_delay_ms(100);
-
-  sixaxis_gyro_cal();
   blackbox_init();
   imu_init();
 
