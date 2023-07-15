@@ -71,21 +71,6 @@ void handle_usart_invert(serial_ports_t port, bool invert) {
 
 void serial_hard_init(serial_port_t *serial, serial_port_config_t config) {
   const serial_ports_t port = config.port;
-  const target_serial_port_t *dev = &target.serial_ports[port];
-
-  gpio_config_t gpio_init;
-  gpio_init.mode = GPIO_ALTERNATE;
-  gpio_init.drive = GPIO_DRIVE_HIGH;
-  if (config.half_duplex) {
-    gpio_init.output = GPIO_OPENDRAIN;
-    gpio_init.pull = GPIO_UP_PULL;
-    gpio_pin_init_tag(dev->tx, gpio_init, SERIAL_TAG(port, RES_SERIAL_TX));
-  } else {
-    gpio_init.output = GPIO_PUSHPULL;
-    gpio_init.pull = GPIO_NO_PULL;
-    gpio_pin_init_tag(dev->rx, gpio_init, SERIAL_TAG(port, RES_SERIAL_RX));
-    gpio_pin_init_tag(dev->tx, gpio_init, SERIAL_TAG(port, RES_SERIAL_TX));
-  }
 
   serial_enable_rcc(port);
   serial_disable_isr(port);

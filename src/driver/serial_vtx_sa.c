@@ -66,6 +66,7 @@ static void serial_smart_audio_reconfigure() {
   config.stop_bits = SERIAL_STOP_BITS_2;
   config.invert = false;
   config.half_duplex = true;
+  config.half_duplex_pp = true;
 
   serial_init(&serial_vtx, config);
 }

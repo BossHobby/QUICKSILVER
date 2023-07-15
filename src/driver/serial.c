@@ -14,6 +14,30 @@ bool serial_is_soft(serial_ports_t port) {
   return true;
 }
 
+static void serial_hard_pin_init(serial_port_t *serial, serial_port_config_t config) {
+  const serial_ports_t port = config.port;
+  const target_serial_port_t *dev = &target.serial_ports[port];
+
+  gpio_config_t gpio_init;
+  gpio_init.mode = GPIO_ALTERNATE;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  if (config.half_duplex) {
+    if (config.half_duplex_pp) {
+      gpio_init.output = GPIO_PUSHPULL;
+      gpio_init.pull = GPIO_NO_PULL;
+    } else {
+      gpio_init.output = GPIO_OPENDRAIN;
+      gpio_init.pull = GPIO_UP_PULL;
+    }
+    gpio_pin_init_tag(dev->tx, gpio_init, SERIAL_TAG(port, RES_SERIAL_TX));
+  } else {
+    gpio_init.output = GPIO_PUSHPULL;
+    gpio_init.pull = GPIO_NO_PULL;
+    gpio_pin_init_tag(dev->rx, gpio_init, SERIAL_TAG(port, RES_SERIAL_RX));
+    gpio_pin_init_tag(dev->tx, gpio_init, SERIAL_TAG(port, RES_SERIAL_TX));
+  }
+}
+
 void serial_init(serial_port_t *serial, serial_port_config_t config) {
   const serial_ports_t port = config.port;
   if (port == SERIAL_PORT_INVALID || serial == NULL) {
@@ -35,6 +59,7 @@ void serial_init(serial_port_t *serial, serial_port_config_t config) {
   if (serial_is_soft(config.port)) {
     soft_serial_init(config);
   } else {
+    serial_hard_pin_init(serial, config);
     serial_hard_init(serial, config);
   }
 }
