@@ -5,7 +5,7 @@
 
 serial_port_t *serial_ports[SERIAL_PORT_MAX];
 
-extern void serial_hard_init(serial_port_t *serial, serial_port_config_t config);
+extern void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool swap);
 
 bool serial_is_soft(serial_ports_t port) {
   if (port < SERIAL_PORT_MAX) {
@@ -14,9 +14,21 @@ bool serial_is_soft(serial_ports_t port) {
   return true;
 }
 
-static void serial_hard_pin_init(serial_port_t *serial, serial_port_config_t config) {
+static const gpio_af_t *serial_hard_find_af(gpio_pins_t pin) {
+  for (uint32_t i = 0; i < GPIO_AF_MAX; i++) {
+    const gpio_af_t *func = &gpio_pin_afs[i];
+    if (func->pin == pin && RESOURCE_TAG_TYPE(func->tag) == RESOURCE_SERIAL) {
+      return func;
+    }
+  }
+  return NULL;
+}
+
+static bool serial_hard_pin_init(serial_port_t *serial, serial_port_config_t config) {
   const serial_ports_t port = config.port;
   const target_serial_port_t *dev = &target.serial_ports[port];
+
+  bool swap = false;
 
   gpio_config_t gpio_init;
   gpio_init.mode = GPIO_ALTERNATE;
@@ -29,13 +41,37 @@ static void serial_hard_pin_init(serial_port_t *serial, serial_port_config_t con
       gpio_init.output = GPIO_OPENDRAIN;
       gpio_init.pull = GPIO_UP_PULL;
     }
-    gpio_pin_init_tag(dev->tx, gpio_init, SERIAL_TAG(port, RES_SERIAL_TX));
+
+    const gpio_af_t *tx_af = serial_hard_find_af(dev->tx);
+    if (tx_af == NULL) {
+      return false;
+    }
+
+    if (SERIAL_TAG_PIN(tx_af->tag) == RES_SERIAL_RX) {
+      swap = true;
+    }
+
+    gpio_pin_init_af(dev->tx, gpio_init, tx_af->af);
   } else {
     gpio_init.output = GPIO_PUSHPULL;
     gpio_init.pull = GPIO_NO_PULL;
-    gpio_pin_init_tag(dev->rx, gpio_init, SERIAL_TAG(port, RES_SERIAL_RX));
-    gpio_pin_init_tag(dev->tx, gpio_init, SERIAL_TAG(port, RES_SERIAL_TX));
+
+    const gpio_af_t *rx_af = serial_hard_find_af(dev->rx);
+    const gpio_af_t *tx_af = serial_hard_find_af(dev->tx);
+    if (tx_af == NULL || rx_af == NULL) {
+      return false;
+    }
+
+    if (SERIAL_TAG_PIN(rx_af->tag) == RES_SERIAL_TX &&
+        SERIAL_TAG_PIN(tx_af->tag) == RES_SERIAL_RX) {
+      swap = true;
+    }
+
+    gpio_pin_init_af(dev->rx, gpio_init, rx_af->af);
+    gpio_pin_init_af(dev->tx, gpio_init, tx_af->af);
   }
+
+  return swap;
 }
 
 void serial_init(serial_port_t *serial, serial_port_config_t config) {
@@ -65,8 +101,8 @@ void serial_init(serial_port_t *serial, serial_port_config_t config) {
   if (serial_is_soft(config.port)) {
     soft_serial_init(config);
   } else {
-    serial_hard_pin_init(serial, config);
-    serial_hard_init(serial, config);
+    const bool swap = serial_hard_pin_init(serial, config);
+    serial_hard_init(serial, config, swap);
   }
 }
 
