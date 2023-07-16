@@ -51,6 +51,12 @@ void serial_init(serial_port_t *serial, serial_port_config_t config) {
   serial->config = config;
   serial->tx_done = true;
 
+  for (uint32_t i = 0; i < SERIAL_PORT_MAX; i++) {
+    if (serial_ports[i] == serial) {
+      serial_ports[i] = NULL;
+    }
+  }
+
   serial_ports[port] = serial;
 
   ring_buffer_clear(serial->rx_buffer);
