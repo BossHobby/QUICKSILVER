@@ -69,7 +69,7 @@ void handle_usart_invert(serial_ports_t port, bool invert) {
   // no inversion right now
 }
 
-void serial_hard_init(serial_port_t *serial, serial_port_config_t config) {
+void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool swap) {
   const serial_ports_t port = config.port;
 
   serial_enable_rcc(port);
@@ -96,6 +96,9 @@ void serial_hard_init(serial_port_t *serial, serial_port_config_t config) {
 
   handle_usart_invert(port, config.invert);
 
+  if (swap) {
+    usart_transmit_receive_pin_swap(USART.channel, TRUE);
+  }
   if (config.half_duplex) {
     usart_single_line_halfduplex_select(USART.channel, TRUE);
   }

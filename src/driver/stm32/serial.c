@@ -109,7 +109,7 @@ void handle_usart_invert(serial_ports_t port, bool invert) {
 #endif
 }
 
-void serial_hard_init(serial_port_t *serial, serial_port_config_t config) {
+void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool swap) {
   const serial_ports_t port = config.port;
 
   LL_USART_InitTypeDef usart_init;
@@ -130,6 +130,12 @@ void serial_hard_init(serial_port_t *serial, serial_port_config_t config) {
   LL_USART_Init(USART.channel, &usart_init);
 
   handle_usart_invert(port, config.invert);
+
+#ifndef STM32F4
+  if (swap) {
+    LL_USART_SetTXRXSwap(USART.channel, LL_USART_TXRX_SWAPPED);
+  }
+#endif
 
 #if !defined(STM32F7) && !defined(STM32H7)
   LL_USART_ClearFlag_RXNE(USART.channel);
