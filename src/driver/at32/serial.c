@@ -164,11 +164,17 @@ static void handle_serial_isr(serial_port_t *serial) {
   }
 }
 
-static void handle_usart_isr(serial_ports_t port) {
-  if (serial_ports[port]) {
-    handle_serial_isr(serial_ports[port]);
+static void handle_usart_isr(serial_ports_t index) {
+  if (serial_ports[index]) {
+    handle_serial_isr(serial_ports[index]);
     return;
   }
+
+  // stray serial port. disable
+  const usart_port_def_t *port = &usart_port_defs[index];
+  usart_interrupt_enable(port->channel, USART_TDBE_INT, FALSE);
+  usart_interrupt_enable(port->channel, USART_RDBF_INT, FALSE);
+  usart_enable(port->channel, FALSE);
 }
 
 // we need handlers for both U_S_ART and UART.
