@@ -622,16 +622,9 @@ static bool elrs_process_packet() {
   rssi = elrs_lpf_update(&rssi_lpf, raw_rssi);
   elrs_snr_mean_add(raw_snr);
 
-  rx_lqi_got_packet();
-
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-    rx_lqi_update_direct(uplink_lq);
-  }
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-    rx_lqi_update_direct(0.f);
-  }
-
   elrs_lq_add();
+
+  rx_lqi_got_packet();
 
   rf_mode_cycle_multiplier = RF_MODE_CYCLE_MULTIPLIER_SLOW;
 
@@ -904,6 +897,12 @@ bool rx_expresslrs_check() {
 
   rx_lqi_update();
 
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
+    rx_lqi_update_direct(uplink_lq);
+  }
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
+    rx_lqi_update_direct(0.f);
+  }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
     rx_lqi_update_from_fps(rate_enum_to_hz(current_rf_pref_params()->rate));
   }
