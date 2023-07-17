@@ -10,12 +10,10 @@ except ImportError:
     env.Execute("$PYTHONEXE -m pip install dulwich")
     from dulwich import porcelain
 
-
-optimze_flags = [s for s in env.GetProjectOption("system_flags", "").splitlines() if s]
-
-linker_flags = []
+system_flags = [s for s in env.GetProjectOption("system_flags", "").splitlines() if s]
 
 common_flags = [
+    "-std=gnu11",
     "-Wdouble-promotion",
     "-fsingle-precision-constant",
     "-fno-exceptions",
@@ -32,10 +30,6 @@ common_flags = [
 if env.GetBuildType() == "release":
     common_flags.insert(0, "-flto")
     common_flags.insert(0, "-Ofast")
-    common_flags.insert(0, "-s")
-else:
-    common_flags.insert(0, "-O1")
-
 
 git_version = porcelain.describe(".")
 if git_version[0] == "g":
@@ -53,12 +47,11 @@ print("Git Branch", git_branch)
 env.Append(
     GIT_VERSION=git_version,
     GIT_BRANCH=git_branch,
-    BUILD_FLAGS=["-std=gnu11"],
-    BUILD_UNFLAGS=["-Og", "-Os"],
-    ASFLAGS=optimze_flags + common_flags,
-    CCFLAGS=linker_flags + optimze_flags + common_flags,
+    BUILD_UNFLAGS=["-Og", "-Os", "-DDEBUG"],
+    ASFLAGS=system_flags + common_flags,
+    CCFLAGS=system_flags + common_flags,
     CPPDEFINES=[("TARGET_MCU", env["BOARD_MCU"]), ("GIT_VERSION", git_version)],
-    LINKFLAGS=linker_flags + optimze_flags + common_flags,
+    LINKFLAGS=system_flags + common_flags,
 )
 
 
