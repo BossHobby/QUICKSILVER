@@ -22,6 +22,7 @@ int32_t channels[16];
 uint8_t failsafe_noframes = 0;
 uint8_t failsafe_sbus_failsafe = 0;
 extern uint8_t failsafe_siglost;
+rx_serial_protocol_t serial_rx_detected_protcol = RX_SERIAL_PROTOCOL_INVALID;
 
 // A place to put the RX frame so nothing can get overwritten during processing.
 uint8_t rx_data[RX_BUFF_SIZE];
@@ -31,7 +32,7 @@ extern uint32_t last_frame_time_us;
 static uint8_t bind_safety = 0;
 
 static float rx_serial_expected_fps() {
-  switch (bind_storage.unified.protocol) {
+  switch (serial_rx_detected_protcol) {
   case RX_SERIAL_PROTOCOL_INVALID:
     return 0;
 
@@ -100,6 +101,7 @@ static void rx_serial_find_protocol() {
   if (bind_storage.unified.protocol != RX_SERIAL_PROTOCOL_INVALID) {
     state.rx_status = RX_STATUS_DETECTED + bind_storage.unified.protocol;
     serial_rx_init(bind_storage.unified.protocol);
+    serial_rx_detected_protcol = bind_storage.unified.protocol;
     return;
   }
 
@@ -136,6 +138,7 @@ static void rx_serial_find_protocol() {
     flags.rx_mode = RXMODE_NORMAL;
     flags.rx_ready = 1;
     bind_storage.unified.protocol = protocol_to_check;
+    serial_rx_detected_protcol = protocol_to_check;
     quic_debugf("UNIFIED: protocol %d found", protocol_to_check);
   }
 }
@@ -158,7 +161,7 @@ bool rx_serial_check() {
     return false;
   }
 
-  if (bind_storage.unified.protocol == RX_SERIAL_PROTOCOL_INVALID) { // If there's no protocol, there's no reason to check failsafe.
+  if (serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_INVALID) {
     rx_serial_find_protocol();
     return false;
   }
@@ -174,11 +177,11 @@ bool rx_serial_check() {
   if (flags.rx_ready) {
     flags.failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
   }
-  state.rx_status = RX_STATUS_DETECTED + bind_storage.unified.protocol;
+  state.rx_status = RX_STATUS_DETECTED + serial_rx_detected_protcol;
 
-  const packet_status_t status = rx_serial_process(bind_storage.unified.protocol);
+  const packet_status_t status = rx_serial_process(serial_rx_detected_protcol);
   if (status == PACKET_NEEDS_MORE) {
-    switch (bind_storage.unified.protocol) {
+    switch (serial_rx_detected_protcol) {
     case RX_SERIAL_PROTOCOL_FPORT:
     case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
       rx_serial_send_fport_telemetry();

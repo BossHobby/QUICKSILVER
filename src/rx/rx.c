@@ -61,7 +61,8 @@ static const uint16_t SERIAL_PROTO_MAP[] = {
 };
 
 uint16_t rx_serial_smoothing_cutoff() {
-  const uint16_t serial_proto = SERIAL_PROTO_MAP[bind_storage.unified.protocol];
+  extern rx_serial_protocol_t serial_rx_detected_protcol;
+  const uint16_t serial_proto = SERIAL_PROTO_MAP[serial_rx_detected_protcol];
   if (serial_proto == RX_PROTOCOL_CRSF) {
     return rx_serial_crsf_smoothing_cutoff();
   }
