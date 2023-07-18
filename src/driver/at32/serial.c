@@ -165,6 +165,10 @@ static void handle_serial_isr(serial_port_t *serial) {
     const volatile uint8_t data = usart_data_receive(port->channel);
     ring_buffer_write(serial->rx_buffer, data);
   }
+
+  if (usart_flag_get(port->channel, USART_ROERR_FLAG) == SET) {
+    usart_flag_clear(port->channel, USART_ROERR_FLAG);
+  }
 }
 
 static void handle_usart_isr(serial_ports_t index) {
@@ -177,6 +181,7 @@ static void handle_usart_isr(serial_ports_t index) {
   const usart_port_def_t *port = &usart_port_defs[index];
   usart_interrupt_enable(port->channel, USART_TDBE_INT, FALSE);
   usart_interrupt_enable(port->channel, USART_RDBF_INT, FALSE);
+  usart_flag_clear(port->channel, USART_ROERR_FLAG);
   usart_enable(port->channel, FALSE);
 }
 
