@@ -6,7 +6,7 @@ Flight Controller Firmware
 
 ## Features
 
-- Supports F4, F7 and H7 flight controllers
+- Supports stm32 F4, F7 and H7 as well as at32 F435/7 flight controllers
 - Sane defaults and simple configuration
 - Important configuration accessible via the OSD
 - Outstanding level-mode performance
