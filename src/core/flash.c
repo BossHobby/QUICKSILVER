@@ -174,6 +174,8 @@ void flash_load() {
 #endif
   }
 
+  profile_set_defaults();
+
   if (fmc_read(PROFILE_STORAGE_OFFSET) == (FMC_MAGIC | PROFILE_STORAGE_OFFSET)) {
     const uint32_t offset = PROFILE_STORAGE_OFFSET + FMC_MAGIC_SIZE;
     const uint32_t size = PROFILE_STORAGE_SIZE - FMC_MAGIC_SIZE;
