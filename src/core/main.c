@@ -78,7 +78,6 @@ __attribute__((__used__)) int main() {
   looptime_init();
 
   // load settings from flash
-  profile_set_defaults();
   flash_load();
 
   // wait for flash to stabilze
