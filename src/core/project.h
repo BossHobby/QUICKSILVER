@@ -13,6 +13,10 @@
 #include "driver/at32/system.h"
 #endif
 
+#ifdef SIMULATOR
+#include "driver/native/system.h"
+#endif
+
 #ifdef USE_FAST_RAM
 #define FAST_RAM __attribute__((section(".fast_ram"), aligned(4)))
 #else

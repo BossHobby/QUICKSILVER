@@ -5,6 +5,8 @@
 #include "driver/interrupt.h"
 #include "driver/timer.h"
 
+#ifdef USE_SOFT_SERIAL
+
 #define BAUD_DIVIDER 4
 
 typedef enum {
@@ -228,3 +230,5 @@ void soft_serial_rx_update(serial_ports_t port) {
     timeout = 0;
   }
 }
+
+#endif

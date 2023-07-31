@@ -8,6 +8,7 @@
 #include "core/project.h"
 #include "core/scheduler.h"
 #include "driver/osd/osd.h"
+#include "driver/reset.h"
 #include "flight/control.h"
 #include "io/blackbox_device.h"
 #include "io/led.h"
@@ -247,10 +248,12 @@ void osd_exit() {
 void osd_save_exit() {
   osd_exit();
 
+#ifdef USE_VTX
   // check if vtx settings need to be updated
   if (vtx_buffer_populated) {
     vtx_set(&vtx_settings_copy);
   }
+#endif
 
   led_flash();
 
@@ -260,7 +263,7 @@ void osd_save_exit() {
   task_reset_runtime();
 
   if (osd_state.reboot_fc_requested)
-    NVIC_SystemReset();
+    system_reset();
 }
 
 static void print_osd_flightmode(osd_element_t *el) {
@@ -333,6 +336,7 @@ static void print_osd_armtime(osd_element_t *el) {
 
 // print the current vtx settings as Band:Channel:Power
 static void print_osd_vtx(osd_element_t *el) {
+#ifdef USE_VTX
   osd_start(osd_attr(el), el->pos_x, el->pos_y);
 
   switch (vtx_settings.band) {
@@ -371,6 +375,7 @@ static void print_osd_vtx(osd_element_t *el) {
     else
       osd_write_char(vtx_settings.power_level + 49);
   }
+#endif
 }
 
 void osd_init() {
@@ -920,6 +925,7 @@ void osd_display() {
   }
 
   case OSD_SCREEN_VTX:
+#ifdef USE_VTX
     if (vtx_settings.detected) {
       static char power_level_labels_terminated[VTX_POWER_LEVEL_MAX][4];
       if (!vtx_buffer_populated) {
@@ -958,7 +964,9 @@ void osd_display() {
 
       osd_menu_select_save_and_exit(4);
       osd_menu_finish();
-    } else {
+    } else
+#endif
+    {
       osd_menu_start();
       osd_menu_header("VTX CONTROLS");
 
