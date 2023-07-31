@@ -17,12 +17,15 @@
 
 #define BIND_SAFETY_COUNTER 120
 
+rx_serial_protocol_t serial_rx_detected_protcol = RX_SERIAL_PROTOCOL_INVALID;
+
+#ifdef USE_RX_UNIFIED
+
 int32_t channels[16];
 
 uint8_t failsafe_noframes = 0;
 uint8_t failsafe_sbus_failsafe = 0;
 extern uint8_t failsafe_siglost;
-rx_serial_protocol_t serial_rx_detected_protcol = RX_SERIAL_PROTOCOL_INVALID;
 
 // A place to put the RX frame so nothing can get overwritten during processing.
 uint8_t rx_data[RX_BUFF_SIZE];
@@ -216,3 +219,5 @@ bool rx_serial_check() {
 
   return status == PACKET_CHANNELS_RECEIVED;
 }
+
+#endif

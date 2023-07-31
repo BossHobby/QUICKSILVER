@@ -11,7 +11,11 @@ uint8_t looptime_warning = 0;
 static uint32_t last_loop_cycles;
 
 void looptime_init() {
+#ifdef USE_GYRO
   float target = gyro_update_period();
+#else
+  float target = LOOPTIME_MAX;
+#endif
   while (target < LOOPTIME_MAX)
     target *= 2.0f;
   state.looptime = target * 1e-6f;

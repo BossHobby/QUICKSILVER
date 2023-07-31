@@ -6,6 +6,8 @@
 #include "io/usb_configurator.h"
 #include "util/ring_buffer.h"
 
+#ifdef USE_VTX
+
 static uint8_t tx_data[512];
 static ring_buffer_t tx_buffer = {
     .buffer = tx_data,
@@ -67,3 +69,5 @@ uint8_t serial_vtx_read_byte(uint8_t *data) {
   }
   return 0;
 }
+
+#endif

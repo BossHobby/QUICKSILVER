@@ -1,5 +1,7 @@
 #include <sys/types.h>
 
+#ifndef SIMULATOR
+
 register char *stack_ptr asm("sp");
 uint __heap_limit = 0xcafedead;
 
@@ -20,3 +22,5 @@ __attribute__((__used__)) void *_sbrk(ptrdiff_t incr) {
   heap_end += incr;
   return (void *)prev_heap_end;
 }
+
+#endif

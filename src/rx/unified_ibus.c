@@ -8,6 +8,8 @@
 #include "driver/time.h"
 #include "flight/control.h"
 
+#ifdef USE_RX_UNIFIED
+
 #define IBUS_PACKET_SIZE 32
 
 typedef enum {
@@ -132,3 +134,5 @@ ibus_do_more:
 
   return PACKET_ERROR;
 }
+
+#endif

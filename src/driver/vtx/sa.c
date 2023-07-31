@@ -13,6 +13,8 @@
 #include "util/ring_buffer.h"
 #include "util/util.h"
 
+#ifdef USE_VTX
+
 #define SMART_AUDIO_BAUDRATE_MIN 4650
 #define SMART_AUDIO_BAUDRATE_MAX 5050
 
@@ -299,3 +301,5 @@ void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const 
   parser_state = PARSER_READ_MAGIC_1;
   packets_sent++;
 }
+
+#endif

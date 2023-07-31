@@ -85,6 +85,7 @@ void usb_quic_logf(const char *fmt, ...) {
 }
 
 void usb_serial_passthrough(serial_ports_t port, uint32_t baudrate, uint8_t stop_bits, bool half_duplex) {
+#ifdef USE_SERIAL
   uint8_t tx_data[512];
   ring_buffer_t tx_buffer = {
       .buffer = tx_data,
@@ -136,6 +137,7 @@ void usb_serial_passthrough(serial_ports_t port, uint32_t baudrate, uint8_t stop
       usb_serial_write(data, size);
     }
   }
+#endif
 }
 
 // double promition in the following is intended
