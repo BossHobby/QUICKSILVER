@@ -15,6 +15,8 @@
 #include "util/ring_buffer.h"
 #include "util/util.h"
 
+#ifdef USE_RX_UNIFIED
+
 #define BIND_SAFETY_COUNTER 120
 
 int32_t channels[16];
@@ -216,3 +218,5 @@ bool rx_serial_check() {
 
   return status == PACKET_CHANNELS_RECEIVED;
 }
+
+#endif

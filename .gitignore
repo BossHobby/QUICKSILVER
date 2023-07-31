@@ -74,3 +74,4 @@ go.sum
 
 /.pio
 __pycache__
+flash.bin

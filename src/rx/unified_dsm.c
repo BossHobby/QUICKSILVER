@@ -11,6 +11,8 @@
 #include "flight/control.h"
 #include "util/util.h"
 
+#ifdef USE_RX_UNIFIED
+
 typedef enum {
   DSM_PROTO_INVALID = 0,
   DSMX_11_2048 = 0xb2,
@@ -195,3 +197,8 @@ float rx_serial_dsm_expected_fps() {
   }
   return 91;
 }
+
+#else
+void rx_spektrum_bind() {
+}
+#endif

@@ -23,6 +23,7 @@
 #include "io/blackbox.h"
 #include "io/buzzer.h"
 #include "io/led.h"
+#include "io/simulator.h"
 #include "io/vbat.h"
 #include "io/vtx.h"
 #include "osd/render.h"
@@ -91,6 +92,7 @@ __attribute__((__used__)) int main() {
   buzzer_init();
 
   usb_init();
+  simulator_init();
 
   rx_spektrum_bind();
 

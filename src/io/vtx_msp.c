@@ -7,6 +7,8 @@
 #include "driver/serial_vtx_msp.h"
 #include "io/msp.h"
 
+#ifdef USE_VTX
+
 #define MSP_VTX_DETECT_TRIES 5
 
 typedef struct {
@@ -116,3 +118,5 @@ void msp_vtx_set_pit_mode(vtx_pit_mode_t pit_mode) {
   vtx_actual.pit_mode = pit_mode;
   msp_vtx_send_config_reply(msp_vtx, MSP2_MAGIC);
 }
+
+#endif

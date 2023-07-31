@@ -5,6 +5,7 @@
 #include "core/profile.h"
 #include "driver/serial_hdzero.h"
 #include "driver/spi_max7456.h"
+#include "io/simulator.h"
 #include "util/util.h"
 
 #define MAX_ROWS HDZERO_ROWS
@@ -23,6 +24,7 @@ static uint8_t cols = HDZERO_COLS;
 static uint8_t rows = HDZERO_ROWS;
 
 void osd_device_init() {
+#ifdef USE_DIGITAL_VTX
   if (profile.serial.hdzero != SERIAL_PORT_INVALID) {
     target_set_feature(FEATURE_OSD);
     osd_device = OSD_DEVICE_HDZERO;
@@ -30,17 +32,27 @@ void osd_device_init() {
     rows = HDZERO_ROWS;
     hdzero_init();
   }
+#endif
 #ifdef USE_MAX7456
   else if (target_spi_device_valid(&target.osd) && max7456_init()) {
     target_set_feature(FEATURE_OSD);
     osd_device = OSD_DEVICE_MAX7456;
     cols = MAX7456_COLS;
     rows = MAX7456_ROWS;
-  }
+  } else
 #endif
-  else {
+#ifdef SIMULATOR
+  {
+    target_set_feature(FEATURE_OSD);
+    osd_device = OSD_DEVICE_SIMULATOR;
+    cols = HDZERO_COLS;
+    rows = HDZERO_ROWS;
+  }
+#else
+  {
     target_reset_feature(FEATURE_OSD);
   }
+#endif
 }
 
 void osd_intro() {
@@ -50,11 +62,16 @@ void osd_intro() {
     max7456_intro();
     break;
 #endif
-
+#ifdef USE_DIGITAL_VTX
   case OSD_DEVICE_HDZERO:
     hdzero_intro();
     break;
-
+#endif
+#ifdef SIMULATOR
+  case OSD_DEVICE_SIMULATOR:
+    simulator_osd_intro();
+    break;
+#endif
   default:
     break;
   }
@@ -86,13 +103,20 @@ uint8_t osd_clear_async() {
       }
       break;
 #endif
-
+#ifdef USE_DIGITAL_VTX
     case OSD_DEVICE_HDZERO:
       if (!hdzero_clear_async()) {
         return 0;
       }
       break;
-
+#endif
+#ifdef SIMULATOR
+    case OSD_DEVICE_SIMULATOR:
+      if (!simulator_osd_clear_async()) {
+        return 0;
+      }
+      break;
+#endif
     default:
       break;
     }
@@ -142,12 +166,18 @@ osd_system_t osd_check_system() {
     rows = MAX7456_ROWS;
     return max7456_check_system();
 #endif
-
+#ifdef USE_DIGITAL_VTX
   case OSD_DEVICE_HDZERO:
     cols = HDZERO_COLS;
     rows = HDZERO_ROWS;
     return hdzero_check_system();
-
+#endif
+#ifdef SIMULATOR
+  case OSD_DEVICE_SIMULATOR:
+    cols = HDZERO_COLS;
+    rows = HDZERO_ROWS;
+    return simulator_osd_check_system();
+#endif
   default:
     return 0;
   }
@@ -180,10 +210,14 @@ static bool osd_can_fit(uint8_t size) {
   case OSD_DEVICE_MAX7456:
     return max7456_can_fit(size);
 #endif
-
+#ifdef USE_DIGITAL_VTX
   case OSD_DEVICE_HDZERO:
     return hdzero_can_fit(size);
-
+#endif
+#ifdef SIMULATOR
+  case OSD_DEVICE_SIMULATOR:
+    return simulator_osd_can_fit(size);
+#endif
   default:
     return false;
   }
@@ -195,10 +229,14 @@ static bool osd_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *d
   case OSD_DEVICE_MAX7456:
     return max7456_push_string(attr, x, y, data, size);
 #endif
-
+#ifdef USE_DIGITAL_VTX
   case OSD_DEVICE_HDZERO:
     return hdzero_push_string(attr, x, y, data, size);
-
+#endif
+#ifdef SIMULATOR
+  case OSD_DEVICE_SIMULATOR:
+    return simulator_osd_push_string(attr, x, y, data, size);
+#endif
   default:
     return false;
   }
@@ -210,10 +248,14 @@ static bool osd_flush() {
   case OSD_DEVICE_MAX7456:
     return max7456_flush();
 #endif
-
+#ifdef USE_DIGITAL_VTX
   case OSD_DEVICE_HDZERO:
     return hdzero_flush();
-
+#endif
+#ifdef SIMULATOR
+  case OSD_DEVICE_SIMULATOR:
+    return simulator_osd_flush();
+#endif
   default:
     return false;
   }
@@ -290,10 +332,14 @@ bool osd_is_ready() {
   case OSD_DEVICE_MAX7456:
     return max7456_is_ready();
 #endif
-
+#ifdef USE_DIGITAL_VTX
   case OSD_DEVICE_HDZERO:
     return hdzero_is_ready();
-
+#endif
+#ifdef SIMULATOR
+  case OSD_DEVICE_SIMULATOR:
+    return simulator_osd_is_ready();
+#endif
   default:
     return false;
   }

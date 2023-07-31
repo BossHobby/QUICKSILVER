@@ -3,6 +3,8 @@
 #include "core/profile.h"
 #include "driver/time.h"
 
+#ifdef USE_RX_UNIFIED
+
 static uint8_t tx_data[512];
 static ring_buffer_t tx_buffer = {
     .buffer = tx_data,
@@ -96,3 +98,5 @@ void serial_rx_init(rx_serial_protocol_t proto) {
 
   serial_init(&serial_rx, config);
 }
+
+#endif

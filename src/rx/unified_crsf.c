@@ -16,6 +16,8 @@
 #include "util/ring_buffer.h"
 #include "util/util.h"
 
+#ifdef USE_RX_UNIFIED
+
 #define MSP_BUFFER_SIZE 128
 
 typedef enum {
@@ -345,3 +347,5 @@ void rx_serial_send_crsf_telemetry() {
   const uint32_t telemetry_size = crsf_tlm_frame_finish(telemetry_packet, payload_size);
   serial_write_bytes(&serial_rx, telemetry_packet, telemetry_size);
 }
+
+#endif

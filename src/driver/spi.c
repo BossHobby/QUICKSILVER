@@ -5,6 +5,8 @@
 #include "core/failloop.h"
 #include "driver/interrupt.h"
 
+#ifdef USE_SPI
+
 FAST_RAM volatile spi_port_config_t spi_port_config[SPI_PORT_MAX];
 FAST_RAM volatile uint8_t dma_transfer_done[16] = {[0 ... 15] = 1};
 FAST_RAM spi_txn_t txn_pool[SPI_TXN_MAX];
@@ -232,3 +234,5 @@ void spi_txn_finish(spi_bus_device_t *bus) {
     spi_port_config[bus->port].active_device = NULL;
   }
 }
+
+#endif

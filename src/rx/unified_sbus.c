@@ -8,6 +8,8 @@
 #include "driver/time.h"
 #include "flight/control.h"
 
+#ifdef USE_RX_UNIFIED
+
 #define SBUS_PACKET_SIZE 25
 
 typedef enum {
@@ -281,3 +283,5 @@ void rx_serial_send_fport_telemetry() {
 
   serial_write_bytes(&serial_rx, packet, 10);
 }
+
+#endif

@@ -78,6 +78,12 @@ void motor_update() {
     motor_pwm_write(motor_values);
 #endif
   }
+#ifdef SIMULATOR
+  extern float simulator_motor_values[MOTOR_PIN_MAX];
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    simulator_motor_values[i] = motor_values[i];
+  }
+#endif
 }
 
 void motor_set_direction(motor_direction_t dir) {

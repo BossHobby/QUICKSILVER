@@ -9,6 +9,8 @@
 #include "driver/time.h"
 #include "util/ring_buffer.h"
 
+#ifdef USE_VTX
+
 typedef enum {
   PARSER_IDLE,
   PARSER_READ_MAGIC,
@@ -170,3 +172,5 @@ void serial_tramp_send_payload(uint8_t cmd, const uint16_t payload) {
     parser_state = PRASER_WAIT_FOR_READY;
   }
 }
+
+#endif

@@ -6,6 +6,8 @@
 #include "driver/serial_vtx_sa.h"
 #include "util/util.h"
 
+#ifdef USE_VTX
+
 #define SMART_AUDIO_DETECT_TRIES 30
 
 extern uint8_t vtx_connect_tries;
@@ -143,3 +145,5 @@ void smart_audio_set_pit_mode(vtx_pit_mode_t pit_mode) {
     vtx_settings.pit_mode = VTX_PIT_MODE_NO_SUPPORT;
   }
 }
+
+#endif

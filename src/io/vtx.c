@@ -17,6 +17,8 @@
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
+#ifdef USE_VTX
+
 vtx_settings_t vtx_settings = {
     .power_table = {
         .levels = 0,
@@ -424,3 +426,8 @@ CBOR_END_STRUCT_DECODER()
 #undef MEMBER
 #undef ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER
+
+#else
+void vtx_init() {}
+void vtx_update() {}
+#endif

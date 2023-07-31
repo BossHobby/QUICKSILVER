@@ -3,6 +3,8 @@
 #include "driver/interrupt.h"
 #include "driver/serial_soft.h"
 
+#ifdef USE_SERIAL
+
 serial_port_t *serial_ports[SERIAL_PORT_MAX];
 
 extern const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX];
@@ -159,3 +161,5 @@ void soft_serial_rx_isr(serial_ports_t port) {
   const uint8_t data = soft_serial_read_byte(port);
   ring_buffer_write(serial->rx_buffer, data);
 }
+
+#endif

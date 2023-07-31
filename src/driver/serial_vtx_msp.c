@@ -10,6 +10,8 @@
 #include "io/msp.h"
 #include "util/crc.h"
 
+#ifdef USE_VTX
+
 extern msp_t *msp_vtx;
 
 extern uint32_t vtx_last_valid_read;
@@ -138,3 +140,5 @@ vtx_update_result_t serial_msp_vtx_update() {
 
   return VTX_IDLE;
 }
+
+#endif
