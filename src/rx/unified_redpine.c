@@ -10,6 +10,8 @@
 #include "flight/control.h"
 #include "util/util.h"
 
+#ifdef USE_RX_UNIFIED
+
 typedef enum {
   REDPINE_CHECK_MAGIC,
   REDPINE_PAYLOAD,
@@ -125,3 +127,5 @@ redpine_do_more:
   }
   return PACKET_ERROR;
 }
+
+#endif

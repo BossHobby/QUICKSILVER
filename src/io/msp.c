@@ -101,7 +101,27 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     break;
   }
   case MSP_UID: {
+#ifdef SIMULATOR
+    uint8_t data[12] = {
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+
+        0xd,
+        0xe,
+        0xa,
+        0xd,
+
+        0xb,
+        0xe,
+        0xe,
+        0xf,
+    };
+    msp_send_reply(msp, magic, cmd, data, 12);
+#else
     msp_send_reply(msp, magic, cmd, (uint8_t *)UID_BASE, 12);
+#endif
     break;
   }
   case MSP_ANALOG: {
@@ -233,6 +253,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     }
 
     switch (mode) {
+#ifdef USE_SERIAL
     case MSP_PASSTHROUGH_SERIAL_ID: {
       uint8_t data[1] = {1};
       msp_send_reply(msp, magic, cmd, data, 1);
@@ -247,7 +268,8 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       }
       break;
     }
-
+#endif
+#ifdef USE_MOTOR_DSHOT
     default:
     case MSP_PASSTHROUGH_ESC_4WAY: {
       uint8_t data[1] = {MOTOR_PIN_MAX};
@@ -259,6 +281,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       serial_4way_process();
       break;
     }
+#endif
     }
 
     break;
@@ -273,6 +296,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     break;
   }
 
+#ifdef USE_SERIAL
   case MSP2_COMMON_SERIAL_CONFIG: {
     const uint8_t uart_count = SERIAL_PORT_MAX - 1;
     uint8_t data[1 + uart_count * 5];
@@ -306,7 +330,8 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     msp_send_reply(msp, magic, cmd, data, 1 + uart_count * 5);
     break;
   }
-
+#endif
+#ifdef USE_VTX
   case MSP_VTX_CONFIG: {
     msp_vtx_send_config_reply(msp, magic);
     break;
@@ -476,11 +501,14 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     msp_send_reply(msp, magic, cmd, NULL, 0);
     break;
   }
-
+#endif
   case MSP_EEPROM_WRITE: {
+#ifdef USE_VTX
     if (msp->device == MSP_DEVICE_VTX) {
       msp_vtx_detected = 1;
-    } else if (!flags.arm_state && msp->device != MSP_DEVICE_SPI_RX) {
+    } else
+#endif
+        if (!flags.arm_state && msp->device != MSP_DEVICE_SPI_RX) {
       flash_save();
       task_reset_runtime();
     }

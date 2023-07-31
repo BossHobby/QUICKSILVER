@@ -7,6 +7,7 @@
 #include "core/looptime.h"
 #include "driver/time.h"
 #include "flight/control.h"
+#include "io/simulator.h"
 #include "io/usb_configurator.h"
 #include "tasks.h"
 #include "util/cbor_helper.h"
@@ -128,6 +129,8 @@ void scheduler_run() {
   looptime_reset();
 
   while (1) {
+    simulator_update();
+
     const volatile uint32_t cycles = time_cycles();
     const uint8_t task_mask = scheduler_task_mask();
     for (uint32_t i = 0; i < task_queue_size; i++) {

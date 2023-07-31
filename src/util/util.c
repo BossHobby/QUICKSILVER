@@ -116,5 +116,9 @@ int8_t buf_equal_string(const uint8_t *str1, size_t len1, const char *str2) {
 }
 
 uint32_t get_chip_uid() {
+#ifdef SIMULATOR
+  return 0xdeedbeef;
+#else
   return ((uint32_t *)UID_BASE)[0] ^ ((uint32_t *)UID_BASE)[1] ^ ((uint32_t *)UID_BASE)[1];
+#endif
 }

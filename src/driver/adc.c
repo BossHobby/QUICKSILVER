@@ -5,6 +5,8 @@
 #include "core/profile.h"
 #include "core/project.h"
 
+#ifdef USE_ADC
+
 #define VBAT_SCALE (profile.voltage.vbat_scale * (1.f / 10000.f))
 
 uint16_t adc_array[ADC_CHAN_MAX];
@@ -42,3 +44,14 @@ float adc_read(adc_chan_t chan) {
     return adc_read_raw(chan);
   }
 }
+#else
+void adc_init() {}
+float adc_read(adc_chan_t chan) {
+  switch (chan) {
+  case ADC_CHAN_VBAT:
+    return 4.20f;
+  default:
+    return 0;
+  }
+}
+#endif

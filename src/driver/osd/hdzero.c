@@ -8,6 +8,8 @@
 #include "util/crc.h"
 #include "util/ring_buffer.h"
 
+#ifdef USE_DIGITAL_VTX
+
 typedef enum {
   SUBCMD_HEARTBEAT = 0,
   SUBCMD_RELEASE = 1,
@@ -260,3 +262,5 @@ bool hdzero_can_fit(uint8_t size) {
 bool hdzero_flush() {
   return hdzero_push_subcmd(SUBCMD_DRAW_SCREEN, NULL, 0);
 }
+
+#endif

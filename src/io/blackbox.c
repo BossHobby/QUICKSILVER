@@ -148,7 +148,5 @@ void blackbox_update() {
 #else
 void blackbox_init() {}
 void blackbox_set_debug(uint8_t index, int16_t data) {}
-uint8_t blackbox_update() {
-  return 0;
-}
+void blackbox_update() {}
 #endif
