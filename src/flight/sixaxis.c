@@ -309,12 +309,20 @@ void sixaxis_acc_cal() {
 #else
 
 bool sixaxis_detect() {
+#ifdef SIMULATOR
   return true;
+#else
+  return false;
+#endif
 }
 void sixaxis_init() {}
 void sixaxis_read() {}
 
-void sixaxis_gyro_cal() {}
-void sixaxis_acc_cal() {}
+void sixaxis_gyro_cal() {
+  time_delay_ms(1500);
+}
+void sixaxis_acc_cal() {
+  time_delay_ms(1500);
+}
 
 #endif

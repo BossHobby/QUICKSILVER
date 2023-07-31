@@ -5,6 +5,8 @@
 #include "core/failloop.h"
 #include "driver/interrupt.h"
 
+#ifdef USE_SPI
+
 FAST_RAM spi_device_t spi_dev[SPI_PORT_MAX] = {
     [RANGE_INIT(0, SPI_PORT_MAX)] = {.is_init = false, .dma_done = true, .txn_head = 0, .txn_tail = 0},
 };
@@ -235,3 +237,5 @@ void spi_bus_device_init(const spi_bus_device_t *bus) {
   spi_device_init(bus->port);
   spi_dev[bus->port].is_init = true;
 }
+
+#endif

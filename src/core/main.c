@@ -24,6 +24,7 @@
 #include "io/blackbox.h"
 #include "io/buzzer.h"
 #include "io/led.h"
+#include "io/simulator.h"
 #include "io/vbat.h"
 #include "io/vtx.h"
 #include "osd/render.h"
@@ -93,6 +94,7 @@ __attribute__((__used__)) int main() {
   debug_pin_init();
   buzzer_init();
   usb_init();
+  simulator_init();
 
   motor_init();
   motor_set_all(MOTOR_OFF);
