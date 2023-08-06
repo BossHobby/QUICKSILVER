@@ -11,6 +11,8 @@
 #include "flight/filter.h"
 #include "util/util.h"
 
+#define RX_FITER_SAMPLE_TIME (5000)
+
 extern profile_t profile;
 
 uint8_t failsafe_siglost = 0;
@@ -21,71 +23,8 @@ static uint32_t frames_per_second = 0;
 static uint32_t frames_missed = 0;
 static uint32_t frames_received = 0;
 
-static filter_lp_pt1 rx_filter;
+static filter_lp_pt2 rx_filter;
 static filter_state_t rx_filter_state[4];
-
-// Select filter cut, Formula is [(1/rx framerate)/2] * 0.9
-// 0 will trigger selection via rx_smoothing_cutoff
-static const uint16_t RX_SMOOTHING_HZ[RX_PROTOCOL_MAX] = {
-    0,   // RX_PROTOCOL_INVALID, wont happen
-    0,   // RX_PROTOCOL_UNIFIED_SERIAL, will autodetect following
-    25,  // RX_PROTOCOL_SBUS,
-    67,  // RX_PROTOCOL_CRSF,
-    50,  // RX_PROTOCOL_IBUS, check these
-    50,  // RX_PROTOCOL_FPORT, check these
-    0,   // RX_PROTOCOL_DSM,
-    90,  // RX_PROTOCOL_NRF24_BAYANG_TELEMETRY,
-    90,  // RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON,
-    90,  // RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND,
-    50,  // RX_PROTOCOL_FRSKY_D8,
-    50,  // RX_PROTOCOL_FRSKY_D16_FCC,
-    50,  // RX_PROTOCOL_FRSKY_D16_LBT,
-    225, // RX_PROTOCOL_FRSKY_REDPINE,
-    0,   // RX_PROTOCOL_EXPRESS_LRS
-    225, // RX_PROTOCOL_FLYSKY_AFHDS    225 = (666pps * 0.75)/2 * 0.9   Note: mul by 0.75 for expected packet loss
-    88   // RX_PROTOCOL_FLYSKY_AFHDS2A  88 = (260pps * 0.75)/2 * 0.9
-};
-
-static const uint16_t SERIAL_PROTO_MAP[] = {
-    RX_PROTOCOL_INVALID, // RX_SERIAL_PROTOCOL_INVALID
-    RX_PROTOCOL_DSM,     // RX_SERIAL_PROTOCOL_DSM
-    RX_PROTOCOL_SBUS,    // RX_SERIAL_PROTOCOL_SBUS
-    RX_PROTOCOL_IBUS,    // RX_SERIAL_PROTOCOL_IBUS
-    RX_PROTOCOL_FPORT,   // RX_SERIAL_PROTOCOL_FPORT
-    RX_PROTOCOL_CRSF,    // RX_SERIAL_PROTOCOL_CRSF
-    RX_PROTOCOL_REDPINE, // RX_SERIAL_PROTOCOL_REDPINE
-    // No need to filter differently for inverted.
-    RX_PROTOCOL_SBUS,    // RX_SERIAL_PROTOCOL_SBUS_INVERTED
-    RX_PROTOCOL_FPORT,   // RX_SERIAL_PROTOCOL_FPORT_INVERTED
-    RX_PROTOCOL_REDPINE, // RX_SERIAL_PROTOCOL_REDPINE_INVERTED
-};
-
-uint16_t rx_serial_smoothing_cutoff() {
-  extern rx_serial_protocol_t serial_rx_detected_protcol;
-  const uint16_t serial_proto = SERIAL_PROTO_MAP[serial_rx_detected_protcol];
-  if (serial_proto == RX_PROTOCOL_CRSF) {
-    return rx_serial_crsf_smoothing_cutoff();
-  }
-  if (serial_proto == RX_PROTOCOL_DSM) {
-    return rx_serial_dsm_smoothing_cutoff();
-  }
-  return RX_SMOOTHING_HZ[serial_proto];
-}
-
-float rx_smoothing_hz() {
-  switch (profile.receiver.protocol) {
-  case RX_PROTOCOL_UNIFIED_SERIAL:
-    return rx_serial_smoothing_cutoff();
-
-#ifdef USE_RX_SPI_EXPRESS_LRS
-  case RX_PROTOCOL_EXPRESS_LRS:
-    return rx_expresslrs_smoothing_cutoff();
-#endif
-
-  default:
-    return RX_SMOOTHING_HZ[profile.receiver.protocol];
-  }
-}
 
 uint8_t rx_aux_on(aux_function_t function) {
   return state.aux[profile.receiver.aux[function]];
@@ -142,27 +81,25 @@ void rx_lqi_update_direct(float rssi) {
 }
 
 static void rx_apply_smoothing() {
-  filter_lp_pt1_coeff(&rx_filter, rx_smoothing_hz());
-
-  for (int i = 0; i < 4; ++i) {
-    if (i == 3) {
-      // throttle is 0 - 1.0
-      state.rx.axis[i] = constrain(state.rx.axis[i], 0.0, 1.0);
-    } else {
-      // other channels are -1.0 - 1.0
-      state.rx.axis[i] = constrain(state.rx.axis[i], -1.0, 1.0);
-    }
-#ifdef RX_SMOOTHING
-    state.rx_filtered.axis[i] = filter_lp_pt1_step(&rx_filter, &rx_filter_state[i], state.rx.axis[i]);
-#endif
-    if (i == 3) {
-      // throttle is 0 - 1.0
-      state.rx_filtered.axis[i] = constrain(state.rx_filtered.axis[i], 0.0, 1.0);
-    } else {
-      // other channels are -1.0 - 1.0
-      state.rx_filtered.axis[i] = constrain(state.rx_filtered.axis[i], -1.0, 1.0);
-    }
+  if (state.rx_filter_hz <= 0.1f) {
+    state.rx_filtered.roll = state.rx.roll = constrain(state.rx.roll, -1.0, 1.0);
+    state.rx_filtered.pitch = state.rx.pitch = constrain(state.rx.pitch, -1.0, 1.0);
+    state.rx_filtered.yaw = state.rx.yaw = constrain(state.rx.yaw, -1.0, 1.0);
+    state.rx_filtered.throttle = state.rx.throttle = constrain(state.rx.throttle, 0.0, 1.0);
+    return;
   }
+
+  filter_lp_pt2_coeff(&rx_filter, state.rx_filter_hz);
+
+  state.rx.roll = constrain(state.rx.roll, -1.0, 1.0);
+  state.rx.pitch = constrain(state.rx.pitch, -1.0, 1.0);
+  state.rx.yaw = constrain(state.rx.yaw, -1.0, 1.0);
+  state.rx.throttle = constrain(state.rx.throttle, 0.0, 1.0);
+
+  state.rx_filtered.roll = constrain(filter_lp_pt2_step(&rx_filter, &rx_filter_state[0], state.rx.roll), -1.0, 1.0);
+  state.rx_filtered.pitch = constrain(filter_lp_pt2_step(&rx_filter, &rx_filter_state[1], state.rx.pitch), -1.0, 1.0);
+  state.rx_filtered.yaw = constrain(filter_lp_pt2_step(&rx_filter, &rx_filter_state[2], state.rx.yaw), -1.0, 1.0);
+  state.rx_filtered.throttle = constrain(filter_lp_pt2_step(&rx_filter, &rx_filter_state[3], state.rx.throttle), 0.0, 1.0);
 }
 
 static float rx_apply_deadband(float val) {
@@ -192,7 +129,7 @@ static void rx_init_state() {
 #ifdef GESTURE_AUX_START_ON
   state.aux[AUX_CHANNEL_GESTURE] = 1;
 #endif
-  filter_lp_pt1_init(&rx_filter, rx_filter_state, 4, rx_smoothing_hz());
+  filter_lp_pt2_init(&rx_filter, rx_filter_state, 4, state.rx_filter_hz);
 }
 
 void rx_init() {
@@ -344,12 +281,26 @@ bool rx_check() {
 }
 
 void rx_update() {
+  static uint32_t rx_filter_start = 0;
+  static uint32_t rx_filter_counter = 0;
+
   if (rx_check()) {
     rx_apply_stick_scale();
 
     state.rx.roll = rx_apply_deadband(state.rx.roll);
     state.rx.pitch = rx_apply_deadband(state.rx.pitch);
     state.rx.yaw = rx_apply_deadband(state.rx.yaw);
+
+    rx_filter_counter += 1;
+  }
+
+  const uint32_t rx_filter_delta = (time_millis() - rx_filter_start);
+  if (rx_filter_delta > RX_FITER_SAMPLE_TIME) {
+    const float sample_hz = (float)rx_filter_counter / ((float)rx_filter_delta / 1000.0f);
+
+    state.rx_filter_hz = sample_hz * 0.5;
+    rx_filter_start = time_millis();
+    rx_filter_counter = 0;
   }
 
   rx_apply_smoothing();

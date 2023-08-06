@@ -28,6 +28,4 @@ bool rx_flysky_afhds2a_check();
 
 void rx_expresslrs_stop();
 
-uint16_t rx_expresslrs_smoothing_cutoff();
-
 void rx_spi_detect();

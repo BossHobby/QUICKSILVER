@@ -100,37 +100,6 @@ float rx_serial_crsf_expected_fps() {
   return 1;
 }
 
-uint16_t rx_serial_crsf_smoothing_cutoff() {
-  switch (crsf_rf_mode) {
-  case RATE_LORA_4HZ:
-    return 1;
-  case RATE_LORA_25HZ:
-    return 11;
-  case RATE_LORA_50HZ:
-    return 22;
-  case RATE_LORA_100HZ:
-  case RATE_LORA_100HZ_8CH:
-    return 45;
-  case RATE_LORA_150HZ:
-    return 67;
-  case RATE_LORA_200HZ:
-    return 90;
-  case RATE_LORA_250HZ:
-  case RATE_DVDA_250HZ:
-    return 112;
-  case RATE_LORA_333HZ_8CH:
-    return 150;
-  case RATE_LORA_500HZ:
-  case RATE_FLRC_500HZ:
-  case RATE_DVDA_500HZ:
-    return 225;
-  case RATE_FLRC_1000HZ:
-    return 450;
-  }
-
-  return 67;
-}
-
 static uint16_t telemetry_interval() {
   switch (crsf_rf_mode) {
   case RATE_LORA_4HZ:
