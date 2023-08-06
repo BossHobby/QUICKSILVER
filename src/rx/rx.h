@@ -82,7 +82,6 @@ void rx_init();
 void rx_update();
 void rx_stop();
 
-float rx_smoothing_hz();
 void rx_map_channels(const float channels[4]);
 
 void rx_lqi_lost_packet();

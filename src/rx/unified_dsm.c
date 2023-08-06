@@ -164,7 +164,7 @@ void rx_spektrum_bind() {
     gpio_init.mode = GPIO_OUTPUT;
     gpio_init.output = GPIO_PUSHPULL;
     gpio_init.pull = GPIO_NO_PULL;
-    gpio_pin_init( spectrum_bind_pin, gpio_init);
+    gpio_pin_init(spectrum_bind_pin, gpio_init);
 
     // RX line, set high
     gpio_pin_set(spectrum_bind_pin);
@@ -181,19 +181,6 @@ void rx_spektrum_bind() {
       time_delay_us(120);
     }
   }
-}
-
-uint16_t rx_serial_dsm_smoothing_cutoff() {
-  switch (dsm_protocol) {
-  case DSM_PROTO_INVALID:
-  case DSMX_11_2048:
-  case DSM2_11_2048:
-    return 40;
-  case DSMX_22_2048:
-  case DSM2_22_1024:
-    return 20;
-  }
-  return 40;
 }
 
 float rx_serial_dsm_expected_fps() {
