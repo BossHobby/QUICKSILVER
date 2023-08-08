@@ -190,13 +190,14 @@ int32_t osd_menu_adjust_int(int32_t val, const int32_t delta, const int32_t min,
 }
 
 float osd_menu_adjust_float(float val, const float delta, const float min, const float max) {
-  const float rounded = (int)(val * 100.0f + (val <= 0 ? -0.5f : 0.5f));
+  const float rounded = (int)(val * 100000.0f + (val <= 0 ? -0.5f : 0.5f));
+  const float rounded_delta = (int)(100000.0f * delta);
 
   if (osd_state.selection_increase) {
     osd_state.selection_increase = 0;
     osd_menu_had_change();
 
-    val = (rounded + (100.0f * delta)) / 100.0f;
+    val = (rounded + rounded_delta) / 100000.0f;
     if (val > max) {
       val = max;
     }
@@ -205,7 +206,7 @@ float osd_menu_adjust_float(float val, const float delta, const float min, const
     osd_state.selection_decrease = 0;
     osd_menu_had_change();
 
-    val = (rounded - (100.0f * delta)) / 100.0f;
+    val = (rounded - rounded_delta) / 100000.0f;
     if (val < min) {
       val = min;
     }
