@@ -7,41 +7,30 @@
 #include "flight/control.h"
 #include "util/util.h"
 
-#define BF_SETPOINT_RATE_LIMIT 1998.0f
+#define pow3(x) ((x) * (x) * (x))
+#define pow5(x) ((x) * (x) * (x) * (x) * (x))
+
 #define BF_RC_RATE_INCREMENTAL 14.54f
 
-extern profile_t profile;
-
-// cache the last result so it does not get calculated everytime
-static float last_rx[2] = {13.13f, 12.12f};
-static float stickvector[3] = {0, 0, 1};
-
 void input_stick_vector(float rx_input[], float maxangle) {
-  // only compute stick rotation if values changed
-  if (last_rx[0] != rx_input[0] || last_rx[1] != rx_input[1]) {
-    last_rx[0] = rx_input[0];
-    last_rx[1] = rx_input[1];
+  // rotate down vector to match stick position
+  const float pitch = rx_input[1] * profile.rate.level_max_angle * DEGTORAD;
+  const float roll = rx_input[0] * profile.rate.level_max_angle * DEGTORAD;
 
-    float pitch, roll;
+  float stickvector[3] = {
+      stickvector[0] = fastsin(roll),
+      stickvector[1] = fastsin(pitch),
+      stickvector[2] = fastcos(roll) * fastcos(pitch),
+  };
 
-    // rotate down vector to match stick position
-    pitch = rx_input[1] * profile.rate.level_max_angle * DEGTORAD;
-    roll = rx_input[0] * profile.rate.level_max_angle * DEGTORAD;
+  float mag2 = (stickvector[0] * stickvector[0] + stickvector[1] * stickvector[1]);
+  if (mag2 > 0.001f) {
+    mag2 = Q_rsqrt(mag2 / (1 - stickvector[2] * stickvector[2]));
+  } else
+    mag2 = 0.707f;
 
-    stickvector[0] = fastsin(roll);
-    stickvector[1] = fastsin(pitch);
-    stickvector[2] = fastcos(roll) * fastcos(pitch);
-
-    float mag2 = (stickvector[0] * stickvector[0] + stickvector[1] * stickvector[1]);
-
-    if (mag2 > 0.001f) {
-      mag2 = Q_rsqrt(mag2 / (1 - stickvector[2] * stickvector[2]));
-    } else
-      mag2 = 0.707f;
-
-    stickvector[0] *= mag2;
-    stickvector[1] *= mag2;
-  }
+  stickvector[0] *= mag2;
+  stickvector[1] *= mag2;
 
   // find error between stick vector and quad orientation
   // vector cross product
@@ -57,31 +46,7 @@ void input_stick_vector(float rx_input[], float maxangle) {
   // without this the quad will not invert if angle difference = 180
 }
 
-float input_apply_expo(float in, float expo) {
-  if (expo < 0.01f) {
-    return in;
-  }
-
-  expo = constrain(expo, -1.0f, 1.0f);
-
-  float result = 0.0f;
-
-  switch (profile_current_rates()->mode) {
-  case RATE_MODE_SILVERWARE:
-    result = in * in * in * expo + in * (1 - expo);
-    break;
-  case RATE_MODE_BETAFLIGHT:
-    result = fabsf(in) * in * in * in * expo + in * (1 - expo);
-    break;
-  case RATE_MODE_ACTUAL:
-    result = fabsf(in) * (powf(in, 5) * expo + in * (1 - expo));
-    break;
-  }
-
-  return constrain(result, -1.0f, 1.0f);
-}
-
-static void input_get_expo(vec3_t *expo) {
+static vec3_t input_get_expo() {
   vec3_t angle_expo = {
       .roll = 0,
       .pitch = 0,
@@ -108,94 +73,93 @@ static void input_get_expo(vec3_t *expo) {
     break;
   }
 
+  vec3_t expo;
   if (rx_aux_on(AUX_LEVELMODE)) {
     if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON)) {
-      expo->roll = angle_expo.roll;
-      expo->pitch = acro_expo.pitch;
-      expo->yaw = angle_expo.yaw;
+      expo.roll = angle_expo.roll;
+      expo.pitch = acro_expo.pitch;
+      expo.yaw = angle_expo.yaw;
     } else if (rx_aux_on(AUX_HORIZON)) {
-      expo->roll = acro_expo.roll;
-      expo->pitch = acro_expo.pitch;
-      expo->yaw = angle_expo.yaw;
+      expo.roll = acro_expo.roll;
+      expo.pitch = acro_expo.pitch;
+      expo.yaw = angle_expo.yaw;
     } else {
-      expo->roll = angle_expo.roll;
-      expo->pitch = angle_expo.pitch;
-      expo->yaw = angle_expo.yaw;
+      expo.roll = angle_expo.roll;
+      expo.pitch = angle_expo.pitch;
+      expo.yaw = angle_expo.yaw;
     }
   } else {
-    expo->roll = acro_expo.roll;
-    expo->pitch = acro_expo.pitch;
-    expo->yaw = acro_expo.yaw;
+    expo.roll = acro_expo.roll;
+    expo.pitch = acro_expo.pitch;
+    expo.yaw = acro_expo.yaw;
   }
+  return expo;
 }
 
-static void calc_bf_rates(vec3_t *rates) {
-  vec3_t expo;
-  input_get_expo(&expo);
+static float calc_bf_rates(const uint32_t axis, float rc, float expo) {
+  const float rc_abs = fabs(rc);
 
-#pragma GCC unroll 3
-  for (uint32_t i = 0; i < 3; i++) {
-    const float rate = input_apply_expo(state.rx_filtered.axis[i], expo.axis[i]);
-
-    float rc_rate = profile_current_rates()->rate[BETAFLIGHT_RC_RATE].axis[i];
-    if (rc_rate > 2.0f) {
-      rc_rate += BF_RC_RATE_INCREMENTAL * (rc_rate - 2.0f);
-    }
-
-    float angleRate = 200.0f * rc_rate * rate;
-
-    const float super_rate = profile_current_rates()->rate[BETAFLIGHT_SUPER_RATE].axis[i];
-    if (super_rate) {
-      const float super_factor = 1.0f / (constrain(1.0f - (fabsf(rate) * super_rate), 0.01f, 1.00f));
-      angleRate *= super_factor;
-    }
-
-    rates->axis[i] = constrain(angleRate, -BF_SETPOINT_RATE_LIMIT, BF_SETPOINT_RATE_LIMIT) * DEGTORAD;
+  if (expo) {
+    rc = rc * pow3(rc_abs) * expo + rc * (1 - expo);
   }
-}
 
-static void calc_sw_rates(vec3_t *rates) {
-  vec3_t expo;
-  input_get_expo(&expo);
-
-  rates->roll = input_apply_expo(state.rx_filtered.roll, expo.roll) * profile_current_rates()->rate[SILVERWARE_MAX_RATE].roll * DEGTORAD;
-  rates->pitch = input_apply_expo(state.rx_filtered.pitch, expo.pitch) * profile_current_rates()->rate[SILVERWARE_MAX_RATE].pitch * DEGTORAD;
-  rates->yaw = input_apply_expo(state.rx_filtered.yaw, expo.yaw) * profile_current_rates()->rate[SILVERWARE_MAX_RATE].yaw * DEGTORAD;
-}
-
-static void calc_actual_rates(vec3_t *rates) {
-  vec3_t expo;
-  input_get_expo(&expo);
-
-#pragma GCC unroll 3
-  for (uint32_t i = 0; i < 3; i++) {
-    const float rate_no_expo = state.rx_filtered.axis[i];
-    const float rate_expo = input_apply_expo(rate_no_expo, expo.axis[i]);
-
-    const float center_sensitivity = profile_current_rates()->rate[ACTUAL_CENTER_SENSITIVITY].axis[i];
-    const float max_rate = profile_current_rates()->rate[ACTUAL_MAX_RATE].axis[i];
-
-    float stick_movement = max_rate - center_sensitivity;
-    if (stick_movement < 0) {
-      stick_movement = 0;
-    }
-
-    rates->axis[i] = (rate_no_expo * center_sensitivity + stick_movement * rate_expo) * DEGTORAD;
+  float rc_rate = profile_current_rates()->rate[BETAFLIGHT_RC_RATE].axis[axis];
+  if (rc_rate > 2.0f) {
+    rc_rate += BF_RC_RATE_INCREMENTAL * (rc_rate - 2.0f);
   }
+
+  float angle_rate = 200.0f * rc_rate * rc;
+
+  const float super_rate = profile_current_rates()->rate[BETAFLIGHT_SUPER_RATE].axis[axis];
+  if (super_rate) {
+    const float super_factor = 1.0f / (constrain(1.0f - (rc_abs * (super_rate / 100.0f)), 0.01f, 1.00f));
+    angle_rate *= super_factor;
+  }
+
+  return angle_rate * DEGTORAD;
 }
 
-void input_rates_calc(vec3_t *rates) {
+static float calc_sw_rates(const uint32_t axis, float rc, float expo) {
+  const float max_rate = profile_current_rates()->rate[SILVERWARE_MAX_RATE].axis[axis];
+  const float rate_expo = pow3(rc) * expo + rc * (1 - expo);
+
+  return rate_expo * max_rate * DEGTORAD;
+}
+
+static float calc_actual_rates(const uint32_t axis, float rc, float expo) {
+  const float rc_abs = fabs(rc);
+  const float rate_expo = rc_abs * (pow5(rc) * expo + rc * (1 - expo));
+
+  const float center_sensitivity = profile_current_rates()->rate[ACTUAL_CENTER_SENSITIVITY].axis[axis];
+  const float max_rate = profile_current_rates()->rate[ACTUAL_MAX_RATE].axis[axis];
+  const float stick_movement = max(0, max_rate - center_sensitivity);
+
+  return (rc * center_sensitivity + stick_movement * rate_expo) * DEGTORAD;
+}
+
+vec3_t input_rates_calc() {
+  vec3_t rates;
+  vec3_t expo = input_get_expo();
+
   switch (profile_current_rates()->mode) {
   case RATE_MODE_SILVERWARE:
-    calc_sw_rates(rates);
+    rates.axis[0] = calc_sw_rates(0, state.rx_filtered.axis[0], expo.axis[0]);
+    rates.axis[1] = calc_sw_rates(1, state.rx_filtered.axis[1], expo.axis[1]);
+    rates.axis[2] = calc_sw_rates(2, state.rx_filtered.axis[2], expo.axis[2]);
     break;
   case RATE_MODE_BETAFLIGHT:
-    calc_bf_rates(rates);
+    rates.axis[0] = calc_bf_rates(0, state.rx_filtered.axis[0], expo.axis[0]);
+    rates.axis[1] = calc_bf_rates(1, state.rx_filtered.axis[1], expo.axis[1]);
+    rates.axis[2] = calc_bf_rates(2, state.rx_filtered.axis[2], expo.axis[2]);
     break;
   case RATE_MODE_ACTUAL:
-    calc_actual_rates(rates);
+    rates.axis[0] = calc_actual_rates(0, state.rx_filtered.axis[0], expo.axis[0]);
+    rates.axis[1] = calc_actual_rates(1, state.rx_filtered.axis[1], expo.axis[1]);
+    rates.axis[2] = calc_actual_rates(2, state.rx_filtered.axis[2], expo.axis[2]);
     break;
   }
+
+  return rates;
 }
 
 float input_throttle_calc(float throttle) {
