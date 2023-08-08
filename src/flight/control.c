@@ -121,9 +121,7 @@ static void auto_throttle() {
 
 static void control_flight_mode() {
   // flight control
-  vec3_t rates;
-
-  input_rates_calc(&rates);
+  const vec3_t rates = input_rates_calc();
 
   if (rx_aux_on(AUX_LEVELMODE)) {
 
@@ -256,14 +254,13 @@ static void control_flight_mode() {
       state.error.axis[2] = yawerror[2] - state.gyro.axis[2];
     }
   } else { // rate mode
-
     state.setpoint.axis[0] = rates.axis[0];
     state.setpoint.axis[1] = rates.axis[1];
     state.setpoint.axis[2] = rates.axis[2];
 
-    for (int i = 0; i < 3; i++) {
-      state.error.axis[i] = state.setpoint.axis[i] - state.gyro.axis[i];
-    }
+    state.error.axis[0] = state.setpoint.axis[0] - state.gyro.axis[0];
+    state.error.axis[1] = state.setpoint.axis[1] - state.gyro.axis[1];
+    state.error.axis[2] = state.setpoint.axis[2] - state.gyro.axis[2];
   }
 }
 
