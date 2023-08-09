@@ -10,8 +10,6 @@
 #include "io/msp.h"
 #include "util/crc.h"
 
-#define USART usart_port_defs[serial_smart_audio_port]
-
 extern msp_t *msp_vtx;
 
 extern uint32_t vtx_last_valid_read;

@@ -66,8 +66,6 @@ static uint8_t msp_origin = 0;
 static bool msp_new_data = false;
 static bool msp_is_error = false;
 
-#define USART usart_port_defs[serial_rx_port]
-
 float rx_serial_crsf_expected_fps() {
   switch (crsf_rf_mode) {
   case RATE_FLRC_1000HZ:

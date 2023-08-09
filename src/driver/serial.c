@@ -5,6 +5,7 @@
 
 serial_port_t *serial_ports[SERIAL_PORT_MAX];
 
+extern const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX];
 extern void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool swap);
 
 bool serial_is_soft(serial_ports_t port) {

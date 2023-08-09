@@ -61,8 +61,6 @@ typedef struct {
   rcc_reg_t rcc;
 } usart_port_def_t;
 
-extern const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX];
-
 extern serial_port_t serial_rx;
 extern serial_port_t serial_hdzero;
 extern serial_port_t serial_vtx;
