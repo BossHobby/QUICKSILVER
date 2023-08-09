@@ -110,9 +110,11 @@ typedef struct {
   MEMBER(looptime_autodetect, uint16)       \
   MEMBER(looptime, float)                   \
   MEMBER(looptime_us, uint32)               \
+  MEMBER(loop_counter, uint32)              \
   MEMBER(uptime, float)                     \
   MEMBER(armtime, float)                    \
   MEMBER(cpu_load, uint32)                  \
+  MEMBER(failsafe_time_ms, uint32)          \
   MEMBER(lipo_cell_count, uint8)            \
   MEMBER(cpu_temp, float)                   \
   MEMBER(vbat, float)                       \
@@ -142,7 +144,12 @@ typedef struct {
   MEMBER(setpoint, vec3_t)                  \
   MEMBER(error, vec3_t)                     \
   MEMBER(errorvect, vec3_t)                 \
-  MEMBER(pidoutput, vec3_t)
+  MEMBER(pid_p_term, vec3_t)                \
+  MEMBER(pid_i_term, vec3_t)                \
+  MEMBER(pid_d_term, vec3_t)                \
+  MEMBER(pidoutput, vec3_t)                 \
+  MEMBER(motor_mix, vec4_t)                 \
+  ARRAY_MEMBER(angleerror, ANGLE_PID_SIZE, float)
 
 typedef struct {
   uint8_t active;
