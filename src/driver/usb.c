@@ -8,6 +8,7 @@
 #include <string.h>
 
 extern void usb_drv_init();
+extern void usb_drv_update();
 
 volatile bool usb_device_configured = false;
 
@@ -47,7 +48,9 @@ uint8_t usb_detect() {
     }
   }
   */
-
+#ifdef SIMULATOR
+  usb_drv_update();
+#endif
   return usb_device_configured;
 }
 
