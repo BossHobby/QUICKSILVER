@@ -17,7 +17,7 @@ typedef enum {
   PERF_COUNTER_DEBUG,
 
   PERF_COUNTER_MAX
-} perf_counters_t;
+} __attribute__((__packed__)) perf_counters_t;
 
 typedef struct {
   uint32_t min;

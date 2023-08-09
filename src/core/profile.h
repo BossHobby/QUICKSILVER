@@ -16,31 +16,31 @@ typedef enum {
   RATE_MODE_SILVERWARE,
   RATE_MODE_BETAFLIGHT,
   RATE_MODE_ACTUAL,
-} rate_modes_t;
+} __attribute__((__packed__)) rate_modes_t;
 
 typedef enum {
   SILVERWARE_MAX_RATE,
   SILVERWARE_ACRO_EXPO,
   SILVERWARE_ANGLE_EXPO,
-} silverware_rates_t;
+} __attribute__((__packed__)) silverware_rates_t;
 
 typedef enum {
   BETAFLIGHT_RC_RATE,
   BETAFLIGHT_SUPER_RATE,
   BETAFLIGHT_EXPO,
-} betaflight_rates_t;
+} __attribute__((__packed__)) betaflight_rates_t;
 
 typedef enum {
   ACTUAL_CENTER_SENSITIVITY,
   ACTUAL_MAX_RATE,
   ACTUAL_EXPO,
-} actual_rates_t;
+} __attribute__((__packed__)) actual_rates_t;
 
 typedef enum {
   STICK_RATE_PROFILE_1,
   STICK_RATE_PROFILE_2,
   STICK_RATE_PROFILE_MAX
-} rate_profiles_t;
+} __attribute__((__packed__)) rate_profiles_t;
 
 typedef struct {
   rate_modes_t mode;
@@ -113,7 +113,7 @@ typedef enum {
   PID_PROFILE_1,
   PID_PROFILE_2,
   PID_PROFILE_MAX
-} pid_profile_t;
+} __attribute__((__packed__)) pid_profile_t;
 
 typedef struct {
   vec3_t accelerator;
@@ -130,13 +130,13 @@ typedef enum {
   STICK_PROFILE_OFF,
   STICK_PROFILE_ON,
   STICK_PROFILE_MAX
-} stick_profile_t;
+} __attribute__((__packed__)) stick_profile_t;
 
 typedef enum {
   THROTTLE_D_ATTENTUATION_NONE,
   THROTTLE_D_ATTENUATION_ACTIVE,
   THROTTLE_D_ATTENUATION_MAX,
-} tda_active_t;
+} __attribute__((__packed__)) tda_active_t;
 
 typedef struct {
   tda_active_t tda_active;
@@ -180,13 +180,13 @@ typedef enum {
   GYRO_ROTATE_90_CCW = 0x8,
   GYRO_ROTATE_180 = 0x10,
   GYRO_FLIP_180 = 0x20,
-} gyro_rotation_t;
+} __attribute__((__packed__)) gyro_rotation_t;
 
 typedef enum {
   DSHOT_TIME_150 = 150,
   DSHOT_TIME_300 = 300,
   DSHOT_TIME_600 = 600,
-} dshot_time_t;
+} __attribute__((__packed__)) dshot_time_t;
 
 typedef struct {
   float digital_idle;
@@ -216,7 +216,7 @@ typedef struct {
 typedef enum {
   PID_VOLTAGE_COMPENSATION_NONE,
   PID_VOLTAGE_COMPENSATION_ACTIVE,
-} pid_voltage_compensation_t;
+} __attribute__((__packed__)) pid_voltage_compensation_t;
 
 typedef struct {
   uint8_t lipo_cell_count;

@@ -12,6 +12,6 @@ typedef enum {
   FAILLOOP_LOOPTIME = 6,    // loop time issue - if loop time exceeds 20mS
   FAILLOOP_DMA = 7,         // dma error - triggered by dma pool
   FAILLOOP_SPI = 8,         // spi error - triggered by hardware spi driver only
-} failloop_t;
+} __attribute__((__packed__)) failloop_t;
 
 void failloop(failloop_t val);
