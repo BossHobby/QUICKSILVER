@@ -19,7 +19,7 @@ void time_init() {
 
   // interrupt only every 1ms
   systick_clock_source_config(SYSTICK_CLOCK_SOURCE_AHBCLK_NODIV);
-  SysTick_Config(SystemCoreClock / 1000);
+  SysTick_Config(SYS_CLOCK_FREQ_HZ / 1000);
 
   debug_time_init();
 }
@@ -73,7 +73,7 @@ uint32_t time_cycles() {
 }
 
 void time_delay_us(uint32_t us) {
-  volatile uint32_t delay = us * (SystemCoreClock / 1000000L);
+  volatile uint32_t delay = us * (SYS_CLOCK_FREQ_HZ / 1000000L);
   volatile uint32_t start = DWT->CYCCNT;
   while (DWT->CYCCNT - start < delay) {
     __asm("NOP");
