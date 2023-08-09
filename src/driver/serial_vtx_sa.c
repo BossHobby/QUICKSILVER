@@ -20,8 +20,6 @@
 #define SA_MAGIC_1 0xaa
 #define SA_MAGIC_2 0x55
 
-#define USART usart_port_defs[serial_smart_audio_port]
-
 typedef enum {
   PARSER_IDLE,
   PARSER_READ_MAGIC_1,
