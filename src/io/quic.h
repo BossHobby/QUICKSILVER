@@ -21,13 +21,13 @@ typedef enum {
   QUIC_CMD_CAL_STICKS,
   QUIC_CMD_SERIAL,
   QUIC_CMD_OSD,
-} quic_command;
+} __attribute__((__packed__)) quic_command;
 
 typedef enum {
   QUIC_BLACKBOX_RESET,
   QUIC_BLACKBOX_LIST,
   QUIC_BLACKBOX_GET
-} quic_blackbox_command;
+} __attribute__((__packed__)) quic_blackbox_command;
 
 typedef enum {
   QUIC_MOTOR_TEST_STATUS,
@@ -35,23 +35,23 @@ typedef enum {
   QUIC_MOTOR_TEST_DISABLE,
   QUIC_MOTOR_TEST_SET_VALUE,
   QUIC_MOTOR_ESC4WAY_IF
-} quic_motor_command;
+} __attribute__((__packed__)) quic_motor_command;
 
 typedef enum {
   QUIC_SERIAL_ENABLE,
-} quic_serial_command;
+} __attribute__((__packed__)) quic_serial_command;
 
 typedef enum {
   QUIC_OSD_READ_CHAR,
   QUIC_OSD_WRITE_CHAR,
-} quic_osd_command;
+} __attribute__((__packed__)) quic_osd_command;
 
 typedef enum {
   QUIC_FLAG_NONE,
   QUIC_FLAG_ERROR,
   QUIC_FLAG_STREAMING,
   QUIC_FLAG_EXIT,
-} quic_flag;
+} __attribute__((__packed__)) quic_flag;
 
 typedef enum {
   QUIC_VAL_INVALID,
@@ -67,7 +67,7 @@ typedef enum {
   QUIC_VAL_PERF_COUNTERS,
   QUIC_VAL_BLACKBOX_PRESETS,
   QUIC_VAL_TARGET,
-} quic_values;
+} __attribute__((__packed__)) quic_values;
 
 typedef void (*quic_send_fn_t)(uint8_t *data, uint32_t len, void *priv);
 

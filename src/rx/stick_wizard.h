@@ -12,7 +12,7 @@ typedef enum {
   STICK_WIZARD_WAIT_FOR_CONFIRM,
   STICK_WIZARD_CONFIRMED,
   STICK_WIZARD_TIMEOUT,
-} stick_wizard_state_t;
+} __attribute__((__packed__)) stick_wizard_state_t;
 
 void stick_wizard_start(bool from_usb);
 

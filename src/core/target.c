@@ -139,7 +139,7 @@ typedef enum {
   GPIO_PORTO,
   GPIO_PORTP,
   GPIO_PORT_MAX,
-} gpio_ports_t;
+} __attribute__((__packed__)) gpio_ports_t;
 
 #define GPIO_PIN_MAX 16
 

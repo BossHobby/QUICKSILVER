@@ -24,18 +24,18 @@ typedef enum {
   RX_PROTOCOL_FLYSKY_AFHDS,
   RX_PROTOCOL_FLYSKY_AFHDS2A,
   RX_PROTOCOL_MAX,
-} rx_protocol_t;
+} __attribute__((__packed__)) rx_protocol_t;
 
 typedef enum {
   RX_LQI_SOURCE_PACKET_RATE,
   RX_LQI_SOURCE_CHANNEL,
   RX_LQI_SOURCE_DIRECT,
-} rx_lqi_source_t;
+} __attribute__((__packed__)) rx_lqi_source_t;
 
 typedef enum {
   RX_MAPPING_AETR,
   RX_MAPPING_TAER,
-} rx_channel_mapping_t;
+} __attribute__((__packed__)) rx_channel_mapping_t;
 
 typedef enum {
   AUX_CHANNEL_0,
@@ -55,7 +55,7 @@ typedef enum {
   AUX_CHANNEL_GESTURE,
 
   AUX_CHANNEL_MAX
-} aux_channel_t;
+} __attribute__((__packed__)) aux_channel_t;
 
 typedef enum {
   AUX_ARMING,
@@ -74,7 +74,7 @@ typedef enum {
   AUX_PREARM,
 
   AUX_FUNCTION_MAX
-} aux_function_t;
+} __attribute__((__packed__)) aux_function_t;
 
 uint8_t rx_aux_on(aux_function_t function);
 
