@@ -8,6 +8,7 @@
 
 target_t target = {
     .name = "unknown",
+    .brushless = true,
 };
 
 #define _MACRO_STR(arg) #arg
