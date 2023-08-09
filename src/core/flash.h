@@ -22,7 +22,7 @@ typedef struct {
 extern flash_storage_t flash_storage;
 
 #define BIND_STORAGE_OFFSET (FLASH_STORAGE_OFFSET + FLASH_STORAGE_SIZE)
-#define BIND_STORAGE_SIZE FLASH_ALIGN(64)
+#define BIND_STORAGE_SIZE FLASH_ALIGN(128)
 #define BIND_RAW_STORAGE_SIZE 60
 
 typedef struct {
