@@ -4,9 +4,6 @@
 #include "driver/time.h"
 #include "flight/control.h"
 
-#define US_TO_CYCLES(us) ((us)*TICKS_PER_US)
-#define CYCLES_TO_US(cycles) ((cycles) / TICKS_PER_US)
-
 uint8_t looptime_warning = 0;
 
 static uint32_t last_loop_cycles;
