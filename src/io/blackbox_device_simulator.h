@@ -4,4 +4,4 @@
 
 #include "blackbox_device.h"
 
-extern blackbox_device_vtable_t blackbox_device_flash;
+extern blackbox_device_vtable_t blackbox_device_simulator;

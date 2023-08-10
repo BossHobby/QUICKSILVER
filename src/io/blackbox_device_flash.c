@@ -4,6 +4,8 @@
 #include "driver/spi_m25p16.h"
 #include "util/util.h"
 
+#ifdef USE_DATA_FLASH
+
 #define FILES_SECTOR_OFFSET blackbox_bounds.sector_size
 #define PAGE_SIZE M25P16_PAGE_SIZE
 
@@ -21,8 +23,6 @@ typedef enum {
   STATE_ERASE_HEADER,
   STATE_WRITE_HEADER,
 } blackbox_device_state_t;
-
-#ifdef USE_DATA_FLASH
 
 static blackbox_device_state_t state = STATE_DETECT;
 static uint8_t should_flush = 0;

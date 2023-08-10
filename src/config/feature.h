@@ -8,7 +8,6 @@
 #define USE_SOFT_SERIAL
 #define USE_SDCARD
 #define USE_DATA_FLASH
-#define USE_BLACKBOX
 
 #define USE_VTX
 #define USE_DIGITAL_VTX
@@ -25,3 +24,5 @@
 #define USE_RX_SPI_EXPRESS_LRS
 #endif
 #endif
+
+#define USE_BLACKBOX
