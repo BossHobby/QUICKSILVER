@@ -134,7 +134,7 @@ uint32_t timer_channel_val(timer_channel_t chan) {
   }
 }
 
-static void timer_irq_handler() {
+RAM_FUNC static void timer_irq_handler() {
   extern void soft_serial_timer_irq_handler();
   soft_serial_timer_irq_handler();
 
@@ -149,63 +149,63 @@ static void timer_irq_handler() {
 #undef TIM1_TRG_COM_TIM11_IRQHandler
 #endif
 
-void TIM15_IRQHandler() {
+RAM_FUNC void TIM15_IRQHandler() {
   timer_irq_handler();
 }
-void TIM16_IRQHandler() {
+RAM_FUNC void TIM16_IRQHandler() {
   timer_irq_handler();
 }
-void TIM17_IRQHandler() {
+RAM_FUNC void TIM17_IRQHandler() {
   timer_irq_handler();
 }
-void TIM1_BRK_IRQHandler() {
+RAM_FUNC void TIM1_BRK_IRQHandler() {
   timer_irq_handler();
 }
-void TIM1_BRK_TIM9_IRQHandler() {
+RAM_FUNC void TIM1_BRK_TIM9_IRQHandler() {
   timer_irq_handler();
 }
-void TIM1_CC_IRQHandler() {
+RAM_FUNC void TIM1_CC_IRQHandler() {
   timer_irq_handler();
 }
-void TIM1_TRG_COM_IRQHandler() {
+RAM_FUNC void TIM1_TRG_COM_IRQHandler() {
   timer_irq_handler();
 }
-void TIM1_TRG_COM_TIM11_IRQHandler() {
+RAM_FUNC void TIM1_TRG_COM_TIM11_IRQHandler() {
   timer_irq_handler();
 }
-void TIM1_UP_IRQHandler() {
+RAM_FUNC void TIM1_UP_IRQHandler() {
   timer_irq_handler();
 }
-void TIM1_UP_TIM10_IRQHandler() {
+RAM_FUNC void TIM1_UP_TIM10_IRQHandler() {
   timer_irq_handler();
 }
-void TIM2_IRQHandler() {
+RAM_FUNC void TIM2_IRQHandler() {
   timer_irq_handler();
 }
-void TIM3_IRQHandler() {
+RAM_FUNC void TIM3_IRQHandler() {
   timer_irq_handler();
 }
-void TIM4_IRQHandler() {
+RAM_FUNC void TIM4_IRQHandler() {
   timer_irq_handler();
 }
-void TIM5_IRQHandler() {
+RAM_FUNC void TIM5_IRQHandler() {
   timer_irq_handler();
 }
-void TIM6_DAC_IRQHandler() {
+RAM_FUNC void TIM6_DAC_IRQHandler() {
   timer_irq_handler();
 }
-void TIM7_IRQHandler() {
+RAM_FUNC void TIM7_IRQHandler() {
   timer_irq_handler();
 }
-void TIM8_BRK_TIM12_IRQHandler() {
+RAM_FUNC void TIM8_BRK_TIM12_IRQHandler() {
   timer_irq_handler();
 }
-void TIM8_CC_IRQHandler() {
+RAM_FUNC void TIM8_CC_IRQHandler() {
   timer_irq_handler();
 }
-void TIM8_TRG_COM_TIM14_IRQHandler() {
+RAM_FUNC void TIM8_TRG_COM_TIM14_IRQHandler() {
   timer_irq_handler();
 }
-void TIM8_UP_TIM13_IRQHandler() {
+RAM_FUNC void TIM8_UP_TIM13_IRQHandler() {
   timer_irq_handler();
 }

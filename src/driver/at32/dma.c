@@ -84,7 +84,7 @@ void dma_clear_flag_tc(dma_device_t dev) {
 extern void dshot_dma_isr(dma_device_t dev);
 extern void spi_dma_isr(dma_device_t dev);
 
-static void handle_dma_stream_isr(dma_device_t dev) {
+RAM_FUNC static void handle_dma_stream_isr(dma_device_t dev) {
   switch (dev) {
   case DMA_DEVICE_SPI1_RX:
   case DMA_DEVICE_SPI2_RX:
@@ -108,9 +108,9 @@ static void handle_dma_stream_isr(dma_device_t dev) {
   }
 }
 
-#define DMA_STREAM(_port, _chan, _dev)              \
-  void DMA##_port##_Channel##_chan##_IRQHandler() { \
-    handle_dma_stream_isr(DMA_DEVICE_##_dev);       \
+#define DMA_STREAM(_port, _chan, _dev)                       \
+  RAM_FUNC void DMA##_port##_Channel##_chan##_IRQHandler() { \
+    handle_dma_stream_isr(DMA_DEVICE_##_dev);                \
   }
 
 DMA_STREAMS

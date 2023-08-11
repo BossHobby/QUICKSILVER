@@ -138,7 +138,7 @@ bool exti_line_active(gpio_pins_t pin) {
   return true;
 }
 
-static void handle_exit_isr() {
+RAM_FUNC static void handle_exit_isr() {
   if (exti_line_active(target.rx_spi.exti)) {
     extern void rx_spi_handle_exti(bool);
     rx_spi_handle_exti(gpio_pin_read(target.rx_spi.exti));
@@ -150,25 +150,25 @@ static void handle_exit_isr() {
   }
 }
 
-void EXTI0_IRQHandler() {
+RAM_FUNC void EXTI0_IRQHandler() {
   handle_exit_isr();
 }
-void EXTI1_IRQHandler() {
+RAM_FUNC void EXTI1_IRQHandler() {
   handle_exit_isr();
 }
-void EXTI2_IRQHandler() {
+RAM_FUNC void EXTI2_IRQHandler() {
   handle_exit_isr();
 }
-void EXTI3_IRQHandler() {
+RAM_FUNC void EXTI3_IRQHandler() {
   handle_exit_isr();
 }
-void EXTI4_IRQHandler() {
+RAM_FUNC void EXTI4_IRQHandler() {
   handle_exit_isr();
 }
-void EXTI9_5_IRQHandler() {
+RAM_FUNC void EXTI9_5_IRQHandler() {
   handle_exit_isr();
 }
-void EXTI15_10_IRQHandler() {
+RAM_FUNC void EXTI15_10_IRQHandler() {
   handle_exit_isr();
 }
 

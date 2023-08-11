@@ -41,7 +41,7 @@ void time_init() {
   debug_time_init();
 }
 
-void SysTick_Handler() {
+RAM_FUNC void SysTick_Handler() {
   systick_count++;
   systick_val = SysTick->VAL;
   systick_pending = 0;

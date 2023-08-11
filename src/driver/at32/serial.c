@@ -140,7 +140,7 @@ bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32
   return true;
 }
 
-static void handle_serial_isr(serial_port_t *serial) {
+RAM_FUNC static void handle_serial_isr(serial_port_t *serial) {
   const usart_port_def_t *port = &usart_port_defs[serial->config.port];
 
   if (usart_flag_get(port->channel, USART_TDC_FLAG)) {
@@ -171,7 +171,7 @@ static void handle_serial_isr(serial_port_t *serial) {
   }
 }
 
-static void handle_usart_isr(serial_ports_t index) {
+RAM_FUNC static void handle_usart_isr(serial_ports_t index) {
   if (serial_ports[index]) {
     handle_serial_isr(serial_ports[index]);
     return;
@@ -187,12 +187,12 @@ static void handle_usart_isr(serial_ports_t index) {
 
 // we need handlers for both U_S_ART and UART.
 // simply define both for every enabled port.
-#define USART_IRQ_HANDLER(channel)          \
-  void USART##channel##_IRQHandler() {      \
-    handle_usart_isr(SERIAL_PORT##channel); \
-  }                                         \
-  void UART##channel##_IRQHandler() {       \
-    handle_usart_isr(SERIAL_PORT##channel); \
+#define USART_IRQ_HANDLER(channel)              \
+  RAM_FUNC void USART##channel##_IRQHandler() { \
+    handle_usart_isr(SERIAL_PORT##channel);     \
+  }                                             \
+  RAM_FUNC void UART##channel##_IRQHandler() {  \
+    handle_usart_isr(SERIAL_PORT##channel);     \
   }
 
 USART_IRQ_HANDLER(1)

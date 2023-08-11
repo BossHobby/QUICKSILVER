@@ -108,7 +108,7 @@ uint32_t timer_channel_val(timer_channel_t chan) {
   }
 }
 
-static void timer_irq_handler() {
+RAM_FUNC static void timer_irq_handler() {
   extern void soft_serial_timer_irq_handler();
   soft_serial_timer_irq_handler();
 
@@ -118,39 +118,39 @@ static void timer_irq_handler() {
 #endif
 }
 
-void TMR1_OVF_TMR10_IRQHandler() {
+RAM_FUNC void TMR1_OVF_TMR10_IRQHandler() {
   timer_irq_handler();
 }
-void TMR2_GLOBAL_IRQHandler() {
+RAM_FUNC void TMR2_GLOBAL_IRQHandler() {
   timer_irq_handler();
 }
-void TMR3_GLOBAL_IRQHandler() {
+RAM_FUNC void TMR3_GLOBAL_IRQHandler() {
   timer_irq_handler();
 }
-void TMR4_GLOBAL_IRQHandler() {
+RAM_FUNC void TMR4_GLOBAL_IRQHandler() {
   timer_irq_handler();
 }
-void TMR5_GLOBAL_IRQHandler() {
+RAM_FUNC void TMR5_GLOBAL_IRQHandler() {
   timer_irq_handler();
 }
-void TMR6_DAC_GLOBAL_IRQHandler() {
+RAM_FUNC void TMR6_DAC_GLOBAL_IRQHandler() {
   timer_irq_handler();
 }
-void TMR7_GLOBAL_IRQHandler() {
+RAM_FUNC void TMR7_GLOBAL_IRQHandler() {
   timer_irq_handler();
 }
-void TMR8_OVF_TMR13_IRQHandler() {
+RAM_FUNC void TMR8_OVF_TMR13_IRQHandler() {
   timer_irq_handler();
 }
-void TMR1_BRK_TMR9_IRQHandler() {
+RAM_FUNC void TMR1_BRK_TMR9_IRQHandler() {
   timer_irq_handler();
 }
-void TMR1_TRG_HALL_TMR11_IRQHandler() {
+RAM_FUNC void TMR1_TRG_HALL_TMR11_IRQHandler() {
   timer_irq_handler();
 }
-void TMR8_BRK_TMR12_IRQHandler() {
+RAM_FUNC void TMR8_BRK_TMR12_IRQHandler() {
   timer_irq_handler();
 }
-void TMR8_TRG_HALL_TMR14_IRQHandler() {
+RAM_FUNC void TMR8_TRG_HALL_TMR14_IRQHandler() {
   timer_irq_handler();
 }
