@@ -24,3 +24,5 @@
 #else
 #define DMA_RAM
 #endif
+
+#define RAM_FUNC __attribute__((section(".ram_functions")))
