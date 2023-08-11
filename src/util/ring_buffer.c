@@ -9,7 +9,7 @@ uint32_t ring_buffer_free(ring_buffer_t *c) {
   return (c->tail - c->head);
 }
 
-uint8_t ring_buffer_write(ring_buffer_t *c, uint8_t data) {
+RAM_FUNC uint8_t ring_buffer_write(ring_buffer_t *c, uint8_t data) {
   const uint32_t next = (c->head + 1) % c->size;
   if (next == c->tail)
     return 0;
@@ -19,7 +19,7 @@ uint8_t ring_buffer_write(ring_buffer_t *c, uint8_t data) {
   return 1;
 }
 
-uint32_t ring_buffer_write_multi(ring_buffer_t *c, const uint8_t *data, const uint32_t len) {
+RAM_FUNC uint32_t ring_buffer_write_multi(ring_buffer_t *c, const uint8_t *data, const uint32_t len) {
   for (uint32_t i = 0; i < len; i++) {
     const uint32_t next = (c->head + 1) % c->size;
     if (next == c->tail) {
@@ -32,14 +32,14 @@ uint32_t ring_buffer_write_multi(ring_buffer_t *c, const uint8_t *data, const ui
   return len;
 }
 
-uint32_t ring_buffer_available(ring_buffer_t *c) {
+RAM_FUNC uint32_t ring_buffer_available(ring_buffer_t *c) {
   if (c->head >= c->tail) {
     return c->head - c->tail;
   }
   return c->size + c->head - c->tail;
 }
 
-uint8_t ring_buffer_read(ring_buffer_t *c, uint8_t *data) {
+RAM_FUNC uint8_t ring_buffer_read(ring_buffer_t *c, uint8_t *data) {
   if (c->head == c->tail)
     return 0;
 
@@ -48,7 +48,7 @@ uint8_t ring_buffer_read(ring_buffer_t *c, uint8_t *data) {
   return 1;
 }
 
-uint32_t ring_buffer_read_multi(ring_buffer_t *c, uint8_t *data, const uint32_t len) {
+RAM_FUNC uint32_t ring_buffer_read_multi(ring_buffer_t *c, uint8_t *data, const uint32_t len) {
   for (uint32_t i = 0; i < len; i++) {
     if (c->head == c->tail)
       return i;
