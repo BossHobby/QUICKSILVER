@@ -67,12 +67,15 @@ SECTIONS
   } >FLASH_CONFIG
 
   /* The startup code goes first into FLASH */
+  _isr_vector_data = LOADADDR(.isr_vector);
   .isr_vector :
   {
     . = ALIGN(4);
+    _isr_vector_start = .; 
     KEEP(*(.isr_vector)) /* Startup code */
     . = ALIGN(4);
-  } >FLASH
+    _isr_vector_end = .; 
+  } >RAM AT> FLASH
 
   /* The program code and other data goes into FLASH */
   .text :

@@ -54,7 +54,6 @@ MEMORY
   FLASH_CONFIG (r)  : ORIGIN = 0x0800C000, LENGTH = 16K
   FLASH_CODE   (rx) : ORIGIN = 0x08010000, LENGTH = 960K
   RAM (rwx)         : ORIGIN = 0x20000000, LENGTH = 128K
-  MEMORY_B1 (rx)    : ORIGIN = 0x60000000, LENGTH = 0K
   FAST_RAM (rw)     : ORIGIN = 0x10000000, LENGTH = 64K
 }
 
@@ -69,12 +68,15 @@ SECTIONS
   } >FLASH_CONFIG
 
   /* The startup code goes first into FLASH */
+  _isr_vector_data = LOADADDR(.isr_vector);
   .isr_vector :
   {
     . = ALIGN(4);
+    _isr_vector_start = .; 
     KEEP(*(.isr_vector)) /* Startup code */
     . = ALIGN(4);
-  } >FLASH
+    _isr_vector_end = .; 
+  } >RAM AT> FLASH
 
   /* The program code and other data goes into FLASH */
   .text :
@@ -184,16 +186,6 @@ SECTIONS
     . = . + _Min_Stack_Size;
     . = ALIGN(4);
   } >FAST_RAM
-
-  /* MEMORY_bank1 section, code must be located here explicitly            */
-  /* Example: extern int foo() __attribute__ ((section (".mb1text"))); */
-  .memory_b1_text :
-  {
-    *(.mb1text)        /* .mb1text sections (code) */
-    *(.mb1text*)       /* .mb1text* sections (code)  */
-    *(.mb1rodata)      /* read-only data (constants) */
-    *(.mb1rodata*)
-  } >MEMORY_B1
 
   /* Remove information from the standard libraries */
   /DISCARD/ :

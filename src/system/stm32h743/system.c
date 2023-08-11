@@ -51,6 +51,8 @@
 
 #include "stm32h7xx.h"
 
+#include <string.h>
+
 /** @addtogroup CMSIS
  * @{
  */
@@ -103,7 +105,7 @@
 
 /*!< Uncomment the following line if you need to relocate your vector Table in
      Internal SRAM. */
-/* #define VECT_TAB_SRAM */
+#define VECT_TAB_SRAM 
 #define VECT_TAB_OFFSET 0x00 /*!< Vector Table base offset field. \
                                This value must be a multiple of 0x200. */
                              /******************************************************************************/
@@ -783,29 +785,12 @@ __attribute__((__used__)) void SystemInit(void) {
 
   /* Configure the Vector Table location add offset address ------------------*/
 #if defined(VECT_TAB_SRAM)
-#if defined(STM32H743xx) || defined(STM32H750xx) || defined(STM32H723xx) || defined(STM32H725xx) || defined(STM32H730xx)
-  SCB->VTOR = D1_AXISRAM_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal ITCMSRAM */
-#elif defined(STM32H7A3xx) || defined(STM32H7A3xxQ)
-  SCB->VTOR = CD_AXISRAM_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal ITCMSRAM */
-#else
-#error Unknown MCU type
-#endif
-#elif defined(USE_EXST)
-  extern uint8_t isr_vector_table_base;
+  extern uint8_t _isr_vector_start;
+  extern uint8_t _isr_vector_end;
+  extern uint8_t _isr_vector_data;
+  memcpy(&_isr_vector_start, &_isr_vector_data, (size_t)(&_isr_vector_end - &_isr_vector_start));
 
-  SCB->VTOR = (uint32_t)&isr_vector_table_base;
-#if defined(STM32H730xx)
-  /* Configure the Vector Table location add offset address ------------------*/
-
-  extern uint8_t isr_vector_table_flash_base;
-  extern uint8_t isr_vector_table_end;
-
-  extern uint8_t ram_isr_vector_table_base;
-
-  memcpy(&ram_isr_vector_table_base, &isr_vector_table_flash_base, (size_t)(&isr_vector_table_end - &isr_vector_table_base));
-
-  SCB->VTOR = (uint32_t)&ram_isr_vector_table_base;
-#endif
+  SCB->VTOR = (uint32_t)&_isr_vector_start;
 #else
   SCB->VTOR = FLASH_BANK1_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal FLASH */
 #endif
