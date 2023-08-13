@@ -144,10 +144,10 @@ __attribute__((__used__)) int main() {
   looptime_reset();
 
   while (1) {
-    perf_counter_start(PERF_COUNTER_TOTAL);
-
     // updates looptime counters & runs auto detect
     looptime_update();
+
+    perf_counter_start(PERF_COUNTER_TOTAL);
 
     // read gyro and accelerometer data
     perf_counter_start(PERF_COUNTER_GYRO);
