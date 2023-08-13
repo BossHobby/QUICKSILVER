@@ -26,10 +26,6 @@ static uint32_t frames_received = 0;
 static filter_lp_pt2 rx_filter;
 static filter_state_t rx_filter_state[4];
 
-uint8_t rx_aux_on(aux_function_t function) {
-  return state.aux[profile.receiver.aux[function]];
-}
-
 void rx_lqi_lost_packet() {
   frames_missed++;
 

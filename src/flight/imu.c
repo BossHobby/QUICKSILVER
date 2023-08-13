@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "core/profile.h"
 #include "core/project.h"
 #include "driver/time.h"
 #include "flight/control.h"

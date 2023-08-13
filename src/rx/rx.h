@@ -76,7 +76,7 @@ typedef enum {
   AUX_FUNCTION_MAX
 } __attribute__((__packed__)) aux_function_t;
 
-uint8_t rx_aux_on(aux_function_t function);
+#define rx_aux_on(function) (state.aux[profile.receiver.aux[(function)]])
 
 void rx_init();
 void rx_update();
