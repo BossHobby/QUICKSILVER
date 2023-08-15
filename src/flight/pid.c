@@ -129,7 +129,7 @@ void pid_precalc() {
 }
 
 // (iwindup = 0  windup is not allowed)   (iwindup = 1 windup is allowed)
-static float pid_compute_iterm_windup(uint8_t x, float pid_output) {
+static inline float pid_compute_iterm_windup(uint8_t x, float pid_output) {
   const float *out_limit = target.brushless ? out_limit_brushless : out_limit_brushed;
   if ((pid_output >= out_limit[x]) && (state.error.axis[x] > 0)) {
     return 0.0f;
@@ -157,7 +157,7 @@ static float pid_compute_iterm_windup(uint8_t x, float pid_output) {
   return 1.0f;
 }
 
-static float pid_filter_dterm(uint8_t x, float dterm) {
+static inline float pid_filter_dterm(uint8_t x, float dterm) {
   dterm = filter_step(profile.filter.dterm[0].type, &filter[0], &filter_state[0][x], dterm);
   dterm = filter_step(profile.filter.dterm[1].type, &filter[1], &filter_state[1][x], dterm);
 
@@ -220,17 +220,16 @@ static inline void pid(uint8_t x) {
   if (state.rx_filter_hz > 0.1f) {
     setpoint_derivative = filter_lp_pt1_step(&rx_filter, &rx_filter_state[x], setpoint_derivative);
   }
+  lastsetpoint[x] = state.setpoint.axis[x];
 
   const float gyro_derivative = (state.gyro.axis[x] - lastrate[x]) * current_kd[x] * timefactor * tda_compensation;
-  const float dterm = (setpoint_derivative * stick_accelerator * transition_setpoint_weight) - (gyro_derivative);
-  lastsetpoint[x] = state.setpoint.axis[x];
   lastrate[x] = state.gyro.axis[x];
 
+  const float dterm = (setpoint_derivative * stick_accelerator * transition_setpoint_weight) - (gyro_derivative);
   state.pid_d_term.axis[x] = pid_filter_dterm(x, dterm);
 
-  state.pidoutput.axis[x] = pid_output.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x];
-
   const float *out_limit = target.brushless ? out_limit_brushless : out_limit_brushed;
+  state.pidoutput.axis[x] = pid_output.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x];
   state.pidoutput.axis[x] = constrain(state.pidoutput.axis[x], -out_limit[x], out_limit[x]);
 }
 
