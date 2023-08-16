@@ -55,6 +55,9 @@ volatile uint8_t packet_status[2] = {0, 0};
 
 static bool elrs_radio_detect() {
   for (size_t i = 0; i < 10; i++) {
+    sx128x_reset();
+    time_delay_us(50);
+
     uint8_t buf[2];
     sx128x_read_register_burst(SX128x_LR_FIRMWARE_VERSION_MSB, buf, 2);
     sx128x_wait();
@@ -63,6 +66,8 @@ static bool elrs_radio_detect() {
     if ((version != 0) && (version != 65535)) {
       return true;
     }
+
+    time_delay_ms(50);
   }
   return false;
 }
@@ -72,7 +77,6 @@ bool elrs_radio_init() {
   if (!sx128x_init()) {
     return false;
   }
-  sx128x_reset();
 
   if (!elrs_radio_detect()) {
     return false;
