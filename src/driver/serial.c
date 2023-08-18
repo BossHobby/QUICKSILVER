@@ -15,10 +15,10 @@ bool serial_is_soft(serial_ports_t port) {
   return true;
 }
 
-static const gpio_af_t *serial_hard_find_af(gpio_pins_t pin) {
+static const gpio_af_t *serial_hard_find_af(gpio_pins_t pin, serial_ports_t port) {
   for (uint32_t i = 0; i < GPIO_AF_MAX; i++) {
     const gpio_af_t *func = &gpio_pin_afs[i];
-    if (func->pin == pin && RESOURCE_TAG_TYPE(func->tag) == RESOURCE_SERIAL) {
+    if (func->pin == pin && RESOURCE_TAG_TYPE(func->tag) == RESOURCE_SERIAL && SERIAL_TAG_PORT(func->tag) == port) {
       return func;
     }
   }
@@ -43,7 +43,7 @@ static bool serial_hard_pin_init(serial_port_t *serial, serial_port_config_t con
       gpio_init.pull = GPIO_UP_PULL;
     }
 
-    const gpio_af_t *tx_af = serial_hard_find_af(dev->tx);
+    const gpio_af_t *tx_af = serial_hard_find_af(dev->tx, port);
     if (tx_af == NULL) {
       return false;
     }
@@ -57,8 +57,8 @@ static bool serial_hard_pin_init(serial_port_t *serial, serial_port_config_t con
     gpio_init.output = GPIO_PUSHPULL;
     gpio_init.pull = GPIO_NO_PULL;
 
-    const gpio_af_t *rx_af = serial_hard_find_af(dev->rx);
-    const gpio_af_t *tx_af = serial_hard_find_af(dev->tx);
+    const gpio_af_t *rx_af = serial_hard_find_af(dev->rx, port);
+    const gpio_af_t *tx_af = serial_hard_find_af(dev->tx, port);
     if (tx_af == NULL || rx_af == NULL) {
       return false;
     }
