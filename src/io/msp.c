@@ -116,6 +116,20 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     msp_send_reply(msp, magic, cmd, data, 12);
     break;
   }
+  case MSP_ANALOG: {
+    const int16_t current = (int16_t)constrain(state.ibat / 10, -320, 320);
+    const uint16_t rssi = (uint16_t)constrain(state.rx_rssi * 1023 / 100, 0, 1023);
+    const uint16_t vbat = (uint8_t)constrain(state.vbat_filtered / 0.01, 0, 255);
+    uint8_t data[9] = {
+        (uint8_t)constrain(state.vbat_filtered / 0.1, 0, 255), // battery voltage
+        0x0, 0x0,                                              // battery drawn in mAh
+        (rssi >> 8) & 0xFF, rssi & 0xFF,                       // rssi
+        (current >> 8) & 0xFF, current & 0xFF,                 // current in 0.01 A steps, range is -320A to 320A
+        (vbat >> 8) & 0xFF, vbat & 0xFF,                       // battery voltage
+    };
+    msp_send_reply(msp, magic, cmd, data, 9);
+    break;
+  }
   case MSP_BATTERY_STATE: {
     const uint16_t current = state.ibat / 1000;
     uint8_t data[9] = {
