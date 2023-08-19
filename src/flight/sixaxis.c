@@ -136,28 +136,32 @@ void sixaxis_read() {
   }
 }
 
-static void sixaxis_wait_for_still() {
-  const uint32_t start = time_micros();
+static bool test_gyro_move(const gyro_data_t *last_data, const gyro_data_t *data) {
+  bool did_move = false;
+  for (uint8_t i = 0; i < 3; i++) {
+    const float delta = fabsf(fabsf(last_data->gyro.axis[i] * GYRO_RANGE) - fabsf(data->gyro.axis[i] * GYRO_RANGE));
+    if (delta > 0.3f) {
+      did_move = true;
+      break;
+    }
+  }
+  return did_move;
+}
 
-  // turn on led
+// returns true if it's already still, i.e. no move since the first loops
+static bool sixaxis_wait_for_still(uint32_t timeout) {
   uint8_t move_counter = 15;
+  uint32_t loop_counter = 0;
 
   gyro_data_t last_data;
   memset(&last_data, 0, sizeof(gyro_data_t));
 
+  const uint32_t start = time_micros();
   uint32_t now = start;
-  while (now - start < WAIT_TIME && move_counter > 0) {
+  while (now - start < timeout && move_counter > 0) {
     const gyro_data_t data = gyro_spi_read();
 
-    bool did_move = false;
-    for (uint8_t i = 0; i < 3; i++) {
-      const float delta = fabsf(fabsf(last_data.gyro.axis[i] * GYRO_RANGE) - fabsf(data.gyro.axis[i] * GYRO_RANGE));
-      if (delta > 0.3f) {
-        did_move = true;
-        break;
-      }
-    }
-
+    const bool did_move = test_gyro_move(&last_data, &data);
     if (did_move) {
       move_counter = 15;
     } else {
@@ -171,24 +175,30 @@ static void sixaxis_wait_for_still() {
 
     now = time_micros();
     last_data = data;
+    ++loop_counter;
   }
+  return loop_counter < 20;
 }
 
 void sixaxis_gyro_cal() {
-  float limit[3];
-  for (int i = 0; i < 3; i++) {
-    limit[i] = gyrocal[i];
+  for (uint8_t retry = 0; retry < 15; ++retry) {
+    if (sixaxis_wait_for_still(WAIT_TIME / 15)) {
+      // break only if it's already still, otherwise, wait and try again
+      break;
+    }
+    time_delay_ms(200);
   }
-
-  sixaxis_wait_for_still();
   gyro_spi_calibrate();
 
   uint8_t brightness = 0;
   led_pwm(brightness, 1000);
 
+  gyro_data_t last_data = gyro_spi_read();
+
   uint32_t start = time_micros();
   uint32_t now = start;
-  while (now - start < CAL_TIME) {
+  int32_t cal_counter = CAL_TIME / 1000;
+  for (int32_t timeout = WAIT_TIME / 1000; timeout > 0; --timeout) {
     const gyro_data_t data = gyro_spi_read();
 
     led_pwm(brightness, 1000);
@@ -197,20 +207,21 @@ void sixaxis_gyro_cal() {
       brightness &= 0xF;
     }
 
-    for (uint8_t i = 0; i < 3; i++) {
-      if (data.gyro.axis[i] > limit[i])
-        limit[i] += 0.1f; // 100 gyro bias / second change
-      if (data.gyro.axis[i] < limit[i])
-        limit[i] -= 0.1f;
-
-      limit[i] = constrain(limit[i], -GYRO_BIAS_LIMIT, GYRO_BIAS_LIMIT);
-      lpf(&gyrocal[i], data.gyro.axis[i], lpfcalc(1000, 0.5 * 1e6));
+    bool did_move = test_gyro_move(&last_data, &data);
+    if (!did_move) { // only cali gyro when it's still
+      for (uint8_t i = 0; i < 3; i++) {
+        lpf(&gyrocal[i], data.gyro.axis[i], lpfcalc(1000, 0.5 * 1e6));
+      }
+      if (--cal_counter <= 0) {
+        break;
+      }
     }
 
     while ((time_micros() - now) < 1000)
       ;
 
     now = time_micros();
+    last_data = data;
   }
 }
 
