@@ -136,7 +136,7 @@ void sixaxis_read() {
   }
 }
 
-static bool test_gyro_move(const gyro_data_t *last_data,  const gyro_data_t *data){
+static bool test_gyro_move(const gyro_data_t *last_data, const gyro_data_t *data) {
   bool did_move = false;
   for (uint8_t i = 0; i < 3; i++) {
     const float delta = fabsf(fabsf(last_data->gyro.axis[i] * GYRO_RANGE) - fabsf(data->gyro.axis[i] * GYRO_RANGE));
@@ -148,10 +148,10 @@ static bool test_gyro_move(const gyro_data_t *last_data,  const gyro_data_t *dat
   return did_move;
 }
 
-//returns true if it's already still, i.e. no move since the first loops
+// returns true if it's already still, i.e. no move since the first loops
 static bool sixaxis_wait_for_still(uint32_t timeout) {
   const uint32_t start = time_micros();
-  int loop_counter = 0;
+  uint32_t loop_counter = 0;
 
   // turn on led
   uint8_t move_counter = 15;
@@ -184,9 +184,9 @@ static bool sixaxis_wait_for_still(uint32_t timeout) {
 }
 
 void sixaxis_gyro_cal() {
-  for(int retry = 0; retry < 15 ; ++retry){
-    if(sixaxis_wait_for_still(WAIT_TIME / 15)){
-      //break only if it's already still, otherwise, wait and try again
+  for (uint8_t retry = 0; retry < 15; ++retry) {
+    if (sixaxis_wait_for_still(WAIT_TIME / 15)) {
+      // break only if it's already still, otherwise, wait and try again
       break;
     }
     time_delay_ms(200);
@@ -196,11 +196,12 @@ void sixaxis_gyro_cal() {
   uint8_t brightness = 0;
   led_pwm(brightness, 1000);
 
-  gyro_data_t last_data = gyro_spi_read();;
+  gyro_data_t last_data = gyro_spi_read();
+  ;
   uint32_t start = time_micros();
   uint32_t now = start;
-  int cal_counter = CAL_TIME / 1000;
-  for(int timeout = WAIT_TIME / 1000; timeout > 0; --timeout) {
+  int32_t cal_counter = CAL_TIME / 1000;
+  for (int32_t timeout = WAIT_TIME / 1000; timeout > 0; --timeout) {
     const gyro_data_t data = gyro_spi_read();
 
     led_pwm(brightness, 1000);
@@ -210,11 +211,11 @@ void sixaxis_gyro_cal() {
     }
 
     bool did_move = test_gyro_move(&last_data, &data);
-    if(!did_move){//only cali gyro when it's still
+    if (!did_move) { // only cali gyro when it's still
       for (uint8_t i = 0; i < 3; i++) {
         lpf(&gyrocal[i], data.gyro.axis[i], lpfcalc(1000, 0.5 * 1e6));
       }
-      if(--cal_counter <= 0){
+      if (--cal_counter <= 0) {
         break;
       }
     }
