@@ -23,10 +23,6 @@ extern profile_t profile;
 
 float timefactor;
 
-int number_of_increments[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
-int current_pid_axis = 0;
-int current_pid_term = 0;
-
 // "p term setpoint weighting" 0.0 - 1.0 where 1.0 = normal pid
 static const float setpoint_weigth_brushed[3] = {0.93, 0.93, 0.9}; // BRUSHED FREESTYLE
 // float setpoint_weigth_brushed[3] = { 0.97 , 0.98 , 0.95};   //BRUSHED RACE
@@ -273,96 +269,4 @@ void pid_calc() {
   pid(0);
   pid(1);
   pid(2);
-}
-
-// below are functions used with gestures for changing pids by a percentage
-
-// Cycle through P / I / D - The initial value is P
-// The return value is the currently selected TERM (after setting the next one)
-// 1: P
-// 2: I
-// 3: D
-// The return value is used to blink the leds in main.c
-int next_pid_term() {
-  current_pid_term++;
-  if (current_pid_term == 3) {
-    current_pid_term = 0;
-  }
-  return current_pid_term + 1;
-}
-
-vec3_t *current_pid_term_pointer() {
-  switch (current_pid_term) {
-  case 0:
-    return &profile_current_pid_rates()->kp;
-  case 1:
-    return &profile_current_pid_rates()->ki;
-  case 2:
-    return &profile_current_pid_rates()->kd;
-  }
-  return &profile_current_pid_rates()->kp;
-}
-
-// Cycle through the axis - Initial is Roll
-// Return value is the selected axis, after setting the next one.
-// 1: Roll
-// 2: Pitch
-// 3: Yaw
-// The return value is used to blink the leds in main.c
-int next_pid_axis() {
-  const int size = 3;
-  if (current_pid_axis == size - 1) {
-    current_pid_axis = 0;
-  } else {
-#ifdef COMBINE_PITCH_ROLL_PID_TUNING
-    if (current_pid_axis < 2) {
-      // Skip axis == 1 which is roll, and go directly to 2 (Yaw)
-      current_pid_axis = 2;
-    }
-#else
-    current_pid_axis++;
-#endif
-  }
-
-  return current_pid_axis + 1;
-}
-
-float adjust_rounded_pid(float input, float adjust_amount) {
-  const float value = (int)(input * 100.0f + 0.5f);
-  const float result = (float)(value + (100.0f * adjust_amount)) / 100.0f;
-
-  if ((int)(result * 100.0f) <= 0)
-    return 0;
-
-  return result;
-}
-
-int change_pid_value(int increase) {
-  float pid_adjustment = (float)PID_TUNING_ADJUST_AMOUNT;
-  if (increase) {
-    number_of_increments[current_pid_term][current_pid_axis]++;
-  } else {
-    number_of_increments[current_pid_term][current_pid_axis]--;
-    pid_adjustment = -pid_adjustment;
-  }
-
-  current_pid_term_pointer()->axis[current_pid_axis] = adjust_rounded_pid(current_pid_term_pointer()->axis[current_pid_axis], pid_adjustment);
-
-#ifdef COMBINE_PITCH_ROLL_PID_TUNING
-  if (current_pid_axis == 0)
-    current_pid_term_pointer()->axis[current_pid_axis + 1] = adjust_rounded_pid(current_pid_term_pointer()->axis[current_pid_axis + 1], pid_adjustment);
-#endif
-  return abs(number_of_increments[current_pid_term][current_pid_axis]);
-}
-
-// Increase currently selected term, for the currently selected axis, (by functions above) by 1 point
-// The return value, is absolute number of times the specific term/axis was increased or decreased.  For example, if P for Roll was increased by 1 point twice,
-// And then reduced by 1 point 3 times, the return value would be 1  -  The user has to track if the overall command was increase or decrease
-int increase_pid() {
-  return change_pid_value(1);
-}
-
-// Same as increase_pid but... you guessed it... decrease!
-int decrease_pid() {
-  return change_pid_value(0);
 }
