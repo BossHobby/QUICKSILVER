@@ -257,13 +257,6 @@
 // *************0- 15 range
 #define LED_BRIGHTNESS 15
 
-// *************Comment out to disable pid tuning gestures - originally created by SilverAG
-#define PID_GESTURE_TUNING
-// *************Comment out to adjust each axis individually - otherwise they move at the same time
-#define COMBINE_PITCH_ROLL_PID_TUNING
-// *************Feel free to change 1.0 value to your liking
-#define PID_TUNING_ADJUST_AMOUNT 1.0 // fixed inc/dec values for PID tuning
-
 // x (micro)seconds after loss of tx or low bat before buzzer starts
 #define BUZZER_DELAY 30e6
 
