@@ -14,7 +14,7 @@
 
 // these will get absimal range without pa/lna
 #define FRSKY_ENABLE_TELEMETRY
-#define FRSKY_ENABLE_HUB_TELEMETRY
+// #define FRSKY_ENABLE_HUB_TELEMETRY
 
 #define FRSKY_D8_CHANNEL_COUNT 8
 #define FRSKY_D8_HUB_FIRST_USER_ID 0x31
@@ -113,46 +113,7 @@ static uint8_t frsky_d8_hub_encode(uint8_t *buf, uint8_t data) {
 }
 
 static uint8_t frsky_d8_append_hub_telemetry(uint8_t telemetry_id, uint8_t *buf) {
-  static uint8_t pid_axis = 0;
-  extern vec3_t *current_pid_term_pointer();
-
-  extern int current_pid_term;
-  extern int current_pid_axis;
-
-  uint8_t size = 0;
-  buf[size++] = 0;
-  buf[size++] = telemetry_id;
-
-  if (pid_axis >= 3) {
-    const int16_t term = current_pid_term;
-    const int16_t axis = current_pid_axis;
-
-    buf[size++] = 0x5E;
-    buf[size++] = FRSKY_D8_HUB_FIRST_USER_ID + 0;
-    buf[size++] = (uint8_t)(term & 0xff);
-    buf[size++] = (uint8_t)(term >> 8);
-    buf[size++] = 0x5E;
-    buf[size++] = 0x5E;
-    buf[size++] = FRSKY_D8_HUB_FIRST_USER_ID + 1;
-    buf[size++] = (uint8_t)(axis & 0xff);
-    buf[size++] = (uint8_t)(axis >> 8);
-    buf[size++] = 0x5E;
-
-    pid_axis = 0;
-  } else {
-    const int16_t pidk = (int16_t)(current_pid_term_pointer()->axis[pid_axis] * 1000);
-    buf[size++] = 0x5E;
-    buf[size++] = FRSKY_D8_HUB_FIRST_USER_ID + 2 + pid_axis;
-    size += frsky_d8_hub_encode(buf + size, (uint8_t)(pidk & 0xff));
-    size += frsky_d8_hub_encode(buf + size, (uint8_t)(pidk >> 8));
-    buf[size++] = 0x5E;
-
-    pid_axis++;
-  }
-
-  // write size
-  buf[0] = size - 2;
-  return size;
+  return 0;
 }
 #endif
 
