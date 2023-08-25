@@ -274,12 +274,6 @@ void osd_save_exit() {
   flash_save();
   flash_load();
 
-  // reset flash numbers for pids
-  extern int number_of_increments[3][3];
-  for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++)
-      number_of_increments[i][j] = 0;
-
   // reset loop time - maybe not necessary cause it gets reset in the next screen clear
   looptime_reset();
 
