@@ -26,6 +26,7 @@ uint8_t vtx_connect_tries = 0;
 
 static vtx_settings_t vtx_actual;
 
+static uint8_t apply_tries = 0;
 static uint32_t vtx_delay_start = 0;
 static uint32_t vtx_delay_ms = 1000;
 
@@ -177,17 +178,16 @@ static bool vtx_detect_protocol() {
 }
 
 static bool vtx_update_frequency() {
-  static uint8_t frequency_tries = 0;
   if (frequency_table[vtx_actual.band][vtx_actual.channel] == frequency_table[vtx_settings.band][vtx_settings.channel]) {
-    frequency_tries = 0;
+    apply_tries = 0;
     return true;
   }
 
-  if (frequency_tries >= VTX_APPLY_TRIES) {
+  if (apply_tries >= VTX_APPLY_TRIES) {
     // give up
     vtx_settings.band = vtx_actual.band;
     vtx_settings.channel = vtx_actual.channel;
-    frequency_tries = 0;
+    apply_tries = 0;
     return true;
   }
 
@@ -209,22 +209,21 @@ static bool vtx_update_frequency() {
     break;
   }
 
-  frequency_tries++;
+  apply_tries++;
   vtx_delay_ms = 10;
   return false;
 }
 
 static bool vtx_update_powerlevel() {
-  static uint8_t power_level_tries = 0;
   if (vtx_actual.power_level == vtx_settings.power_level) {
-    power_level_tries = 0;
+    apply_tries = 0;
     return true;
   }
 
-  if (power_level_tries >= VTX_APPLY_TRIES) {
+  if (apply_tries >= VTX_APPLY_TRIES) {
     // give up
     vtx_settings.power_level = vtx_actual.power_level;
-    power_level_tries = 0;
+    apply_tries = 0;
     return true;
   }
 
@@ -246,23 +245,22 @@ static bool vtx_update_powerlevel() {
     break;
   }
 
-  power_level_tries++;
+  apply_tries++;
   vtx_delay_ms = 10;
 
   return false;
 }
 
 static bool vtx_update_pitmode() {
-  static uint8_t pit_mode_tries = 0;
   if (vtx_actual.pit_mode == vtx_settings.pit_mode) {
-    pit_mode_tries = 0;
+    apply_tries = 0;
     return true;
   }
 
-  if (pit_mode_tries >= VTX_APPLY_TRIES) {
+  if (apply_tries >= VTX_APPLY_TRIES) {
     // give up
     vtx_settings.pit_mode = vtx_actual.pit_mode;
-    pit_mode_tries = 0;
+    apply_tries = 0;
     return true;
   }
 
@@ -284,7 +282,7 @@ static bool vtx_update_pitmode() {
     break;
   }
 
-  pit_mode_tries++;
+  apply_tries++;
   vtx_delay_ms = 10;
 
   return false;
@@ -391,6 +389,8 @@ void vtx_set(vtx_settings_t *vtx) {
 
   vtx_settings.band = vtx->band < VTX_BAND_MAX ? vtx->band : 0;
   vtx_settings.channel = vtx->channel < VTX_CHANNEL_MAX ? vtx->channel : 0;
+
+  apply_tries = 0;
 }
 
 #define MEMBER CBOR_ENCODE_MEMBER
