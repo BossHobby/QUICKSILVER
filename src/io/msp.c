@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "core/debug.h"
 #include "core/flash.h"
 #include "core/looptime.h"
 #include "driver/motor.h"
@@ -326,8 +327,13 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   }
 
   case MSP_SET_VTX_CONFIG: {
-    vtx_settings_t *settings = msp->device == MSP_DEVICE_VTX ? &msp_vtx_settings : &vtx_settings;
+    vtx_settings_t *settings = &msp_vtx_settings;
     if (msp->device != MSP_DEVICE_VTX) {
+      // store non-msp settings in temporary;
+      static vtx_settings_t _vtx_settings;
+      _vtx_settings = vtx_settings;
+      settings = &_vtx_settings;
+
       settings->magic = VTX_SETTINGS_MAGIC;
     }
 
@@ -381,6 +387,10 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       }
 
       remaining -= 4;
+    }
+
+    if (msp->device != MSP_DEVICE_VTX) {
+      vtx_set(settings);
     }
 
     msp_send_reply(msp, magic, cmd, NULL, 0);

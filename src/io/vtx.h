@@ -3,7 +3,7 @@
 #include <cbor.h>
 
 #define VTX_SETTINGS_MAGIC 0xdeed
-#define VTX_APPLY_TRIES 10
+#define VTX_APPLY_TRIES 50
 
 typedef enum {
   VTX_DETECT_WAIT,
