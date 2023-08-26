@@ -13,7 +13,7 @@ typedef enum {
   PIN_NONE,
 #include "gpio_pins.in"
   PINS_MAX,
-} __attribute__((__packed__))gpio_pins_t;
+} __attribute__((__packed__)) gpio_pins_t;
 #undef GPIO_PIN
 #undef GPIO_AF
 
@@ -23,7 +23,7 @@ typedef enum {
   MOTOR_PIN2,
   MOTOR_PIN3,
   MOTOR_PIN_MAX
-}__attribute__((__packed__)) motor_pin_t;
+} __attribute__((__packed__)) motor_pin_t;
 
 typedef enum {
   SPI_PORT_INVALID,
@@ -34,7 +34,7 @@ typedef enum {
   SPI_PORT5,
   SPI_PORT6,
   SPI_PORT_MAX,
-} __attribute__((__packed__))spi_ports_t;
+} __attribute__((__packed__)) spi_ports_t;
 
 typedef enum {
   SERIAL_PORT_INVALID,
