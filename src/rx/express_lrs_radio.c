@@ -73,6 +73,11 @@ static bool elrs_radio_detect() {
 }
 
 bool elrs_radio_init() {
+  static bool is_init = false;
+  if (is_init) {
+    return true;
+  }
+
   sx128x_wait();
   if (!sx128x_init()) {
     return false;
@@ -86,6 +91,8 @@ bool elrs_radio_init() {
   sx128x_write_register(0x0891, (sx128x_read_register(0x0891) | 0xC0));
   sx128x_write_command(SX1280_RADIO_SET_AUTOFS, 0x01);
   sx128x_wait();
+
+  is_init = true;
 
   return true;
 }
