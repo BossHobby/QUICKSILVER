@@ -13,7 +13,7 @@
 #define TIMER timer_defs[TIMER_TAG_TIM(timer_tag)]
 #define TIMER_HZ 1000000
 
-static resource_tag_t timer_tag;
+static resource_tag_t timer_tag = RESOURCE_INVALID;
 
 static bool is_running = false;
 static volatile bool is_tick = false;
@@ -45,7 +45,7 @@ void elrs_timer_stop() {
 void elrs_timer_init(uint32_t interval_us) {
   current_interval = interval_us;
 
-  if (timer_tag == RES_SERIAL_INVALID) {
+  if (timer_tag == RESOURCE_INVALID) {
     timer_tag = timer_alloc(TIMER_USE_ELRS);
   }
   timer_up_init(TIMER_TAG_TIM(timer_tag), PWM_CLOCK_FREQ_HZ / TIMER_HZ, (current_interval >> 1) - 1);
