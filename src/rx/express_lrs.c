@@ -768,8 +768,7 @@ void elrs_handle_tock() {
 }
 
 void rx_expresslrs_init() {
-  if (!radio_is_init && !elrs_radio_init()) {
-    radio_is_init = false;
+  if (!elrs_radio_init()) {
     return;
   }
 
