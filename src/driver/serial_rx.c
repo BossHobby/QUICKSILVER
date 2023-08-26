@@ -31,6 +31,10 @@ void serial_rx_init(rx_serial_protocol_t proto) {
     return;
   }
 
+  if (serial_is_soft(profile.serial.rx)) {
+    return;
+  }
+
   const target_serial_port_t *dev = &target.serial_ports[profile.serial.rx];
   if (!target_serial_port_valid(dev)) {
     return;

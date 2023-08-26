@@ -15,6 +15,13 @@ bool serial_is_soft(serial_ports_t port) {
   return true;
 }
 
+const target_serial_port_t *serial_get_dev(const serial_ports_t port) {
+  if (serial_is_soft(port)) {
+    return &target.serial_soft_ports[port - SERIAL_SOFT_START];
+  }
+  return &target.serial_ports[port];
+}
+
 static const gpio_af_t *serial_hard_find_af(gpio_pins_t pin, serial_ports_t port) {
   for (uint32_t i = 0; i < GPIO_AF_MAX; i++) {
     const gpio_af_t *func = &gpio_pin_afs[i];
@@ -81,7 +88,7 @@ void serial_init(serial_port_t *serial, serial_port_config_t config) {
     return;
   }
 
-  const target_serial_port_t *dev = &target.serial_ports[port];
+  const target_serial_port_t *dev = serial_get_dev(port);
   if (!target_serial_port_valid(dev)) {
     return;
   }

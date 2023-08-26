@@ -74,7 +74,7 @@ void serial_msp_vtx_init() {
 
   serial_vtx_wait_for_ready();
 
-  const target_serial_port_t *dev = &target.serial_ports[profile.serial.smart_audio];
+  const target_serial_port_t *dev = serial_get_dev(profile.serial.smart_audio);
   if (!target_serial_port_valid(dev)) {
     return;
   }

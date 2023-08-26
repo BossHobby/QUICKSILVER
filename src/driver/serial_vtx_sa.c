@@ -52,7 +52,7 @@ const uint8_t default_dac_power_levels[VTX_POWER_LEVEL_MAX] = {
 static void serial_smart_audio_reconfigure() {
   serial_vtx_wait_for_ready();
 
-  const target_serial_port_t *dev = &target.serial_ports[profile.serial.smart_audio];
+  const target_serial_port_t *dev = serial_get_dev(profile.serial.smart_audio);
   if (!target_serial_port_valid(dev)) {
     return;
   }

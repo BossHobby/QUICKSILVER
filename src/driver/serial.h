@@ -80,3 +80,4 @@ uint32_t serial_read_bytes(serial_port_t *serial, uint8_t *data, const uint32_t 
 bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32_t size);
 
 bool serial_is_soft(serial_ports_t port);
+const target_serial_port_t *serial_get_dev(const serial_ports_t port);
