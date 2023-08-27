@@ -63,7 +63,7 @@ void msp_vtx_send_config_reply(msp_t *msp, msp_magic_t magic) {
       .vtx_table_available = 1,
       .bands = VTX_BAND_MAX,
       .channels = VTX_CHANNEL_MAX,
-      .power_levels = msp_vtx_settings.power_table.levels,
+      .power_levels = vtx_settings.power_table.levels,
   };
 
   msp_send_reply(msp, magic, MSP_VTX_CONFIG, (uint8_t *)&config, sizeof(msp_vtx_config_t));
@@ -101,9 +101,6 @@ vtx_detect_status_t vtx_msp_update(vtx_settings_t *actual) {
       if (vtx_settings.magic != VTX_SETTINGS_MAGIC) {
         vtx_set(actual);
       }
-
-      // always update power-table
-      memcpy(&vtx_settings.power_table, &msp_vtx_settings.power_table, sizeof(vtx_power_table_t));
 
       vtx_settings.detected = VTX_PROTOCOL_MSP_VTX;
       vtx_connect_tries = 0;
