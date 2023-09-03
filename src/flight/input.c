@@ -112,7 +112,7 @@ static float calc_bf_rates(const uint32_t axis, float rc, float expo) {
 
   const float super_rate = profile_current_rates()->rate[BETAFLIGHT_SUPER_RATE].axis[axis];
   if (super_rate) {
-    const float super_factor = 1.0f / (constrain(1.0f - (rc_abs * (super_rate / 100.0f)), 0.01f, 1.00f));
+    const float super_factor = 1.0f / (constrain(1.0f - (rc_abs * super_rate), 0.01f, 1.00f));
     angle_rate *= super_factor;
   }
 
