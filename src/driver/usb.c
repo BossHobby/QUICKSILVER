@@ -40,11 +40,13 @@ void usb_init() {
 }
 
 uint8_t usb_detect() {
+  /* appears this not reliable on a good portion of boards
   if (target.usb_detect) {
     if (!gpio_pin_read(target.usb_detect)) {
       return 0;
     }
   }
+  */
 
   return usb_device_configured;
 }
