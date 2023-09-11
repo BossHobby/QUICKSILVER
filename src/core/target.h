@@ -163,6 +163,9 @@ typedef struct {
   target_invert_pin_t sdcard_detect;
   target_invert_pin_t buzzer;
   gpio_pins_t motor_pins[MOTOR_PIN_MAX];
+
+  uint16_t vbat_scale;
+  uint16_t ibat_scale;
 } target_t;
 
 #define TARGET_MEMBERS                                                           \
@@ -184,7 +187,9 @@ typedef struct {
   MEMBER(ibat, gpio_pins_t)                                                      \
   MEMBER(sdcard_detect, target_invert_pin_t)                                     \
   MEMBER(buzzer, target_invert_pin_t)                                            \
-  ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX, gpio_pins_t)
+  ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX, gpio_pins_t)                           \
+  MEMBER(vbat_scale, uint16)                                                     \
+  MEMBER(ibat_scale, uint16)
 
 typedef enum {
   FEATURE_BRUSHLESS = (1 << 1),
