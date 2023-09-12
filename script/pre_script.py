@@ -50,7 +50,7 @@ env.Append(
     BUILD_UNFLAGS=["-Og", "-Os", "-DDEBUG"],
     ASFLAGS=system_flags + common_flags,
     CCFLAGS=system_flags + common_flags,
-    CPPDEFINES=[("TARGET_MCU", env["BOARD_MCU"]), ("GIT_VERSION", git_version)],
+    CPPDEFINES=[("GIT_VERSION", git_version)],
     LINKFLAGS=system_flags + common_flags,
 )
 
