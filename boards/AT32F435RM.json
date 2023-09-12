@@ -2,7 +2,7 @@
     "build": {
         "core": "ArteryTek AT32",
         "cpu": "cortex-m4",
-        "extra_flags": "-DAT32F4xx -DAT32F435 -DAT32F4 -DAT32 -DMCU_NAME=at32f435",
+        "extra_flags": "-DAT32F4xx -DAT32F435 -DAT32F4 -DAT32 -DMCU_NAME=at32f435m",
         "f_cpu": "288000000L",
         "mcu": "at32f435",
         "product_line": "AT32F435xM",

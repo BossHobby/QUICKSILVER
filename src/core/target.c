@@ -15,7 +15,7 @@ target_t target = {
 #define MACRO_STR(name) _MACRO_STR(name)
 
 target_info_t target_info = {
-    .mcu = MACRO_STR(TARGET_MCU),
+    .mcu = MACRO_STR(MCU_NAME),
     .git_version = MACRO_STR(GIT_VERSION),
     .quic_protocol_version = QUIC_PROTOCOL_VERSION,
 
