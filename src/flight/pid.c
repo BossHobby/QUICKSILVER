@@ -181,12 +181,8 @@ static inline void pid(uint8_t x) {
   state.pid_p_term.axis[x] *= v_compensation;
 
   // I term
-  // in level mode or horizon but not racemode and while on the ground...
-  if ((rx_aux_on(AUX_LEVELMODE)) && (!rx_aux_on(AUX_RACEMODE)) && ((flags.on_ground) || (flags.in_air == 0))) {
-    // wind down the integral error
-    ierror[x] *= 0.98f;
-  } else if (flags.on_ground) {
-    // in acro mode - only wind down integral when idle up is off and throttle is 0
+  if (flags.on_ground || flags.in_air == 0) {
+    // wind down integral while we are still on ground
     ierror[x] *= 0.98f;
   }
 
