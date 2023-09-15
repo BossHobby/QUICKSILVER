@@ -22,8 +22,8 @@
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
-// Throttle must drop below this value if arming feature is enabled for arming to take place.  MIX_INCREASE_THROTTLE_3 if enabled
-// will also not activate on the ground untill this threshold is passed during takeoff for safety and better staging behavior.
+// Throttle must drop below this value if arming feature is enabled for arming to take place.
+// brushed mix increase will also not activate on the ground untill this threshold is passed during takeoff for safety and better staging behavior.
 #define THROTTLE_SAFETY .10f
 
 #ifndef IDLE_THR
@@ -381,26 +381,17 @@ void control() {
 
   } else {
     // CONDITION: armed state variable is 1 so quad is ARMED
-
     if (!rx_aux_on(AUX_IDLE_UP)) {
       // CONDITION: idle up is turned OFF
-
       if (state.rx_filtered.throttle < 0.05f) {
-        // set a small dead zone where throttle is zero and
+        // set a small dead zone where throttle is zero
         state.throttle = 0;
-
-        // deactivate mix increase 3 since throttle is off
-        flags.in_air = 0;
       } else {
         // map the remainder of the the active throttle region to 100%
         state.throttle = (input_throttle_calc(state.rx_filtered.throttle) - 0.05f) * 1.05623158f;
-
-        // activate mix increase since throttle is on
-        flags.in_air = 1;
       }
     } else {
       // CONDITION: idle up is turned ON
-
       if (flags.controls_override) {
         // override is active, set throttle to input
         state.throttle = state.rx_filtered.throttle;
@@ -408,12 +399,12 @@ void control() {
         // throttle range is mapped from idle throttle value to 100%
         state.throttle = (float)IDLE_THR + input_throttle_calc(state.rx_filtered.throttle) * (1.0f - (float)IDLE_THR);
       }
+    }
 
-      if ((state.rx_filtered.throttle > THROTTLE_SAFETY) && (flags.in_air == 0)) {
-        // change the state of in air flag when first crossing the throttle
-        // safety value to indicate craft has taken off for mix increase safety
-        flags.in_air = 1;
-      }
+    if ((state.rx_filtered.throttle > THROTTLE_SAFETY) && (flags.in_air == 0)) {
+      // change the state of in air flag when first crossing the throttle
+      // safety value to indicate craft has taken off for mix increase safety
+      flags.in_air = 1;
     }
   }
 
