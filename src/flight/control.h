@@ -20,8 +20,8 @@ typedef struct {
   uint8_t arm_safety : 1;
   uint8_t throttle_safety : 1; // throttle is above safety limit
 
-  uint8_t in_air : 1;
-  uint8_t on_ground : 1;
+  uint8_t in_air : 1;    // throttle was raised above THROTTLE_SAFETY (10%), only resets on disarm
+  uint8_t on_ground : 1; // armed and we are sending some throttle to the motors
 
   uint8_t failsafe : 1; // failsafe on / off
   uint8_t lowbatt : 1;  // signal for lowbattery
