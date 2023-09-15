@@ -168,6 +168,28 @@ static inline float pid_filter_dterm(uint8_t x, float dterm) {
   return dterm;
 }
 
+static inline bool pid_should_enable_iterm(uint8_t x) {
+  static bool stick_movement = false;
+  if (!flags.arm_state) {
+    // disarmed, disable, flag no movement
+    stick_movement = false;
+    return false;
+  }
+  if (flags.in_air) {
+    // in-air, enable, flag no movement
+    stick_movement = false;
+    return true;
+  }
+
+  if (fabsf(state.setpoint.axis[x]) > 0.1f) {
+    // record first stick crossing
+    stick_movement = true;
+  }
+
+  // enable if we recored stick movement previously
+  return stick_movement;
+}
+
 // pid calculation for acro ( rate ) mode
 // input: error[x] = setpoint - gyro
 // output: state.pidoutput.axis[x] = change required from motors
@@ -181,17 +203,16 @@ static inline void pid(uint8_t x) {
   state.pid_p_term.axis[x] *= v_compensation;
 
   // I term
-  if (flags.on_ground || flags.in_air == 0) {
-    // wind down integral while we are still on ground
-    ierror[x] *= 0.98f;
-  }
-
   static vec3_t pid_output = {.roll = 0, .pitch = 0, .yaw = 0};
 
   // SIMPSON_RULE_INTEGRAL
   // assuming similar time intervals
   const float *integral_limit = target.brushless ? integral_limit_brushless : integral_limit_brushed;
   const float iterm_windup = pid_compute_iterm_windup(x, pid_output.axis[x]);
+  if (!pid_should_enable_iterm(x)) {
+    // wind down integral while we are still on ground and we do not get any input from the sticks
+    ierror[x] *= 0.98f;
+  }
   ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + state.error.axis[x]) * current_ki[x] * iterm_windup * state.looptime;
   ierror[x] = constrain(ierror[x], -integral_limit[x], integral_limit[x]);
   lasterror2[x] = lasterror[x];
