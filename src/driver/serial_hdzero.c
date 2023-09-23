@@ -68,7 +68,7 @@ static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, 
 
     buf[size++] = '$';
     buf[size++] = MSP2_MAGIC;
-    buf[size++] = '>';
+    buf[size++] = direction;
 
     uint8_t crc = 0;
 
@@ -100,7 +100,7 @@ static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, 
 
     buf[size++] = '$';
     buf[size++] = MSP1_MAGIC;
-    buf[size++] = '>';
+    buf[size++] = direction;
     buf[size++] = len;
     buf[size++] = cmd;
 
