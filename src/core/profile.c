@@ -525,8 +525,12 @@ void profile_set_defaults() {
 
   blackbox_preset_apply(&blackbox_presets[DEFAULT_BLACKBOX_PRESET], &profile.blackbox);
   profile.motor.gyro_orientation = target.gyro_orientation;
-  profile.voltage.vbat_scale = target.vbat_scale;
-  profile.voltage.ibat_scale = target.ibat_scale;
+  if (target.vbat_scale > 0) {
+    profile.voltage.vbat_scale = target.vbat_scale;
+  }
+  if (target.ibat_scale > 0) {
+    profile.voltage.ibat_scale = target.ibat_scale;
+  }
 }
 
 pid_rate_t *profile_current_pid_rates() {
