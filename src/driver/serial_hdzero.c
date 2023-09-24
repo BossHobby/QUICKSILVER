@@ -90,7 +90,7 @@ static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, 
     buf[size++] = crc8_dvb_s2_data(crc, data, len);
 
     serial_write_bytes(&serial_hdzero, buf, size);
-  } else {
+  } else if (len < 255) {
     if (serial_bytes_free(&serial_hdzero) < (len + MSP_HEADER_LEN + 1)) {
       return;
     }
