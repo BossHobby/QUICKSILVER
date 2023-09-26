@@ -214,5 +214,5 @@ bool rx_serial_check() {
     flags.rx_ready = 1;
   }
 
-  return true;
+  return status == PACKET_CHANNELS_RECEIVED;
 }
