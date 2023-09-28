@@ -12,7 +12,7 @@
 
 #define BF_RC_RATE_INCREMENTAL 14.54f
 
-void input_stick_vector(float rx_input[], float maxangle) {
+vec3_t input_stick_vector(float rx_input[]) {
   // rotate down vector to match stick position
   const float pitch = rx_input[1] * profile.rate.level_max_angle * DEGTORAD;
   const float roll = rx_input[0] * profile.rate.level_max_angle * DEGTORAD;
@@ -26,24 +26,19 @@ void input_stick_vector(float rx_input[], float maxangle) {
   float mag2 = (stickvector[0] * stickvector[0] + stickvector[1] * stickvector[1]);
   if (mag2 > 0.001f) {
     mag2 = Q_rsqrt(mag2 / (1 - stickvector[2] * stickvector[2]));
-  } else
+  } else {
     mag2 = 0.707f;
+  }
 
   stickvector[0] *= mag2;
   stickvector[1] *= mag2;
 
   // find error between stick vector and quad orientation
   // vector cross product
-  state.errorvect.axis[1] = -((state.GEstG.axis[1] * stickvector[2]) - (state.GEstG.axis[2] * stickvector[1]));
-  state.errorvect.axis[0] = (state.GEstG.axis[2] * stickvector[0]) - (state.GEstG.axis[0] * stickvector[2]);
-
-  // some limits just in case
-  state.errorvect.axis[0] = constrain(state.errorvect.axis[0], -1.0f, 1.0f);
-  state.errorvect.axis[1] = constrain(state.errorvect.axis[1], -1.0f, 1.0f);
-
-  // fix to recover if triggered inverted
-  // the vector cross product results in zero for opposite vectors, so it's bad at 180 error
-  // without this the quad will not invert if angle difference = 180
+  vec3_t errorvect = {.roll = 0, .pitch = 0, .yaw = 0};
+  errorvect.axis[0] = constrain((state.GEstG.axis[2] * stickvector[0]) - (state.GEstG.axis[0] * stickvector[2]), -1.0f, 1.0f);
+  errorvect.axis[1] = constrain(-((state.GEstG.axis[1] * stickvector[2]) - (state.GEstG.axis[2] * stickvector[1])), -1.0f, 1.0f);
+  return errorvect;
 }
 
 static vec3_t input_get_expo() {

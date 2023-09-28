@@ -92,9 +92,8 @@ typedef struct {
   vec3_t GEstG; // gravity vector
   vec3_t attitude;
 
-  vec3_t setpoint;  // angular velocity setpoint from stick input
-  vec3_t error;     // setpoint - gyro = error in angular velocity
-  vec3_t errorvect; // error vector between stick vector and quad orientation
+  vec3_t setpoint; // angular velocity setpoint from stick input
+  vec3_t error;    // setpoint - gyro = error in angular velocity
 
   vec3_t pid_p_term;
   vec3_t pid_i_term;
@@ -144,7 +143,6 @@ typedef struct {
   MEMBER(attitude, vec3_t)                  \
   MEMBER(setpoint, vec3_t)                  \
   MEMBER(error, vec3_t)                     \
-  MEMBER(errorvect, vec3_t)                 \
   MEMBER(pid_p_term, vec3_t)                \
   MEMBER(pid_i_term, vec3_t)                \
   MEMBER(pid_d_term, vec3_t)                \
