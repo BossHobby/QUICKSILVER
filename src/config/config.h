@@ -222,18 +222,9 @@
 // *************BRUSHED TARGET MIXER SETTINGS
 // *************MIX_THROTTLE_REDUCTION_PERCENT reduces thrust imbalances by reducing throttle proportionally to the adjustable reduction percent to the limit set by MIX_THROTTLE_REDUCTION_MAX
 // *************MIX_THROTTLE_INCREASE_MAX increases the authority of the pid controller at lowest throttle values like airmode when combined with idle up
-// *************BRUSHLESS_MIX_SCALING define disables the default brushed mixer and applies the default brushless mixer
 // #define MIX_THROTTLE_REDUCTION_PERCENT 10
 // #define MIX_THROTTLE_INCREASE_MAX 0.2f
 // #define MIX_THROTTLE_REDUCTION_MAX 0.5f
-// #define BRUSHLESS_MIX_SCALING
-
-// *************BRUSHLESS TARGET MIXER SETTINGS
-// *************AIRMODE_STRENGTH is the amount of authority AIRMODE is given over throttle
-// *************Decrease CLIPPING_LIMIT to force clipping in place of mix scaling to
-// *************restore lost power on "promblem quads" by allowing some thrust imbalances to pass through the mixer
-//	#define AIRMODE_STRENGTH  1.0f
-//	#define CLIPPING_LIMIT  1.0f
 
 //**************I-term relax.  Removes roll and pitch bounce back after flips
 #define ITERM_RELAX
