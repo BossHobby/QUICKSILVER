@@ -298,7 +298,7 @@ void rx_update() {
   if (rx_filter_delta > RX_FITER_SAMPLE_TIME) {
     const float sample_hz = (float)rx_filter_counter / ((float)rx_filter_delta / 1000.0f);
 
-    state.rx_filter_hz = sample_hz * 0.5;
+    state.rx_filter_hz = rintf(sample_hz * 0.45f);
     rx_filter_start = time_millis();
     rx_filter_counter = 0;
   }
