@@ -17,7 +17,6 @@
 #define ICM20601_ID (0xAC)
 #define ICM20602_ID (0x12)
 #define ICM20608_ID (0xAF)
-#define ICM20649_ID (0xE1)
 #define ICM20689_ID (0x98)
 
 #define SPI_SPEED_INIT MHZ_TO_HZ(0.5)
@@ -27,9 +26,6 @@ extern spi_bus_device_t gyro_bus;
 static uint32_t mpu6xxx_fast_divider() {
   switch (gyro_type) {
   default:
-  case GYRO_TYPE_ICM20649:
-    return MHZ_TO_HZ(7);
-
   case GYRO_TYPE_ICM20601:
   case GYRO_TYPE_ICM20608:
   case GYRO_TYPE_ICM20689:
@@ -61,8 +57,6 @@ uint8_t mpu6xxx_detect() {
     return GYRO_TYPE_ICM20602;
   case ICM20608_ID:
     return GYRO_TYPE_ICM20608;
-  case ICM20649_ID:
-    return GYRO_TYPE_ICM20649;
   case ICM20689_ID:
     return GYRO_TYPE_ICM20689;
   default:
