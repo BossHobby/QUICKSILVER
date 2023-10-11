@@ -90,6 +90,7 @@
 // #define RX_USART SERIAL_PORT2
 // #define RX_USART SERIAL_PORT3
 // #define RX_USART SERIAL_PORT4
+// #define RX_USART SERIAL_PORT5
 // #define RX_USART SERIAL_PORT6
 
 // *************Serial Receiver Inversion Selection  (Normally true for SBUS and FPORT)
