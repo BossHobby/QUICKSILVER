@@ -402,7 +402,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     }
 
     uint8_t offset = 0;
-    uint8_t buf[4 + 8 + VTX_CHANNEL_MAX * sizeof(uint16_t)];
+    uint8_t buf[5 + 8 + VTX_CHANNEL_MAX * sizeof(uint16_t)];
 
     buf[offset++] = band;
     buf[offset++] = 8;
