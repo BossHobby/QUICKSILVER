@@ -28,7 +28,7 @@ common_flags = [
 ]
 
 if env.GetBuildType() == "release":
-    common_flags.insert(0, "-flto")
+    common_flags.insert(0, "-flto=auto")
     common_flags.insert(0, "-Ofast")
 
 git_version = porcelain.describe(".")
