@@ -114,7 +114,7 @@ void flash_save() {
     flash_write_magic(buffer, FMC_MAGIC | VTX_STORAGE_OFFSET);
 
     cbor_value_t enc;
-    cbor_encoder_init(&enc, buffer + FMC_MAGIC_SIZE, size + FMC_MAGIC_SIZE);
+    cbor_encoder_init(&enc, buffer + FMC_MAGIC_SIZE, size - FMC_MAGIC_SIZE);
 
     cbor_result_t res = cbor_encode_vtx_settings_t(&enc, &vtx_settings);
     if (res < CBOR_OK) {
