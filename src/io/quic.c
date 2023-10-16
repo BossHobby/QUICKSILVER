@@ -37,7 +37,7 @@ static cbor_result_t cbor_encode_motor_test_t(cbor_value_t *enc, const motor_tes
   CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_map_indefinite(enc));
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "active"));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint8(enc, &b->active));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint8_t(enc, &b->active));
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "value"));
   CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->value, 4));
@@ -108,10 +108,10 @@ static void get_quic(quic_t *quic, cbor_value_t *dec) {
   cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
 
   quic_values value = QUIC_CMD_INVALID;
-  res = cbor_decode_uint8(dec, &value);
+  res = cbor_decode_uint8_t(dec, &value);
   check_cbor_error(QUIC_CMD_GET);
 
-  res = cbor_encode_uint8(&enc, &value);
+  res = cbor_encode_uint8_t(&enc, &value);
   check_cbor_error(QUIC_CMD_GET);
 
   switch (value) {
@@ -228,10 +228,10 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
   cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
 
   quic_values value;
-  res = cbor_decode_uint8(dec, &value);
+  res = cbor_decode_uint8_t(dec, &value);
   check_cbor_error(QUIC_CMD_SET);
 
-  res = cbor_encode_uint8(&enc, &value);
+  res = cbor_encode_uint8_t(&enc, &value);
   check_cbor_error(QUIC_CMD_SET);
 
   switch (value) {
@@ -328,7 +328,7 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
   cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
 
   quic_blackbox_command cmd;
-  res = cbor_decode_uint8(dec, &cmd);
+  res = cbor_decode_uint8_t(dec, &cmd);
   check_cbor_error(QUIC_CMD_BLACKBOX);
 
   switch (cmd) {
@@ -344,12 +344,12 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
     res = cbor_encode_str(&enc, "flash_size");
     check_cbor_error(QUIC_CMD_BLACKBOX);
     const uint32_t size_in_kb = blackbox_bounds.total_size / 1024;
-    res = cbor_encode_uint32(&enc, &size_in_kb);
+    res = cbor_encode_uint32_t(&enc, &size_in_kb);
     check_cbor_error(QUIC_CMD_BLACKBOX);
 
     res = cbor_encode_str(&enc, "file_num");
     check_cbor_error(QUIC_CMD_BLACKBOX);
-    res = cbor_encode_uint8(&enc, &blackbox_device_header.file_num);
+    res = cbor_encode_uint8_t(&enc, &blackbox_device_header.file_num);
     check_cbor_error(QUIC_CMD_BLACKBOX);
 
     res = cbor_encode_str(&enc, "files");
@@ -371,7 +371,7 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
     extern blackbox_device_header_t blackbox_device_header;
 
     uint8_t file_index;
-    res = cbor_decode_uint8(dec, &file_index);
+    res = cbor_decode_uint8_t(dec, &file_index);
     check_cbor_error(QUIC_CMD_BLACKBOX);
 
     quic_send(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
@@ -407,7 +407,7 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
   cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
 
   quic_motor_command cmd;
-  res = cbor_decode_uint8(dec, &cmd);
+  res = cbor_decode_uint8_t(dec, &cmd);
   check_cbor_error(QUIC_CMD_MOTOR);
 
   switch (cmd) {
@@ -424,7 +424,7 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
     }
     motor_test.active = 1;
 
-    res = cbor_encode_uint8(&enc, &motor_test.active);
+    res = cbor_encode_uint8_t(&enc, &motor_test.active);
     check_cbor_error(QUIC_CMD_MOTOR);
 
     quic_send(quic, QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
@@ -436,7 +436,7 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
     }
     motor_test.active = 0;
 
-    res = cbor_encode_uint8(&enc, &motor_test.active);
+    res = cbor_encode_uint8_t(&enc, &motor_test.active);
     check_cbor_error(QUIC_CMD_MOTOR);
 
     quic_send(quic, QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
@@ -465,7 +465,7 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
   case QUIC_MOTOR_ESC4WAY_IF: {
     uint8_t count = serial_4way_init();
 
-    res = cbor_encode_uint8(&enc, &count);
+    res = cbor_encode_uint8_t(&enc, &count);
     check_cbor_error(QUIC_CMD_MOTOR);
 
     quic_send(quic, QUIC_CMD_MOTOR, QUIC_FLAG_EXIT, encode_buffer, cbor_encoder_len(&enc));
@@ -486,11 +486,11 @@ static void process_osd(quic_t *quic, cbor_value_t *dec) {
   cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
 
   quic_osd_command cmd;
-  res = cbor_decode_uint8(dec, &cmd);
+  res = cbor_decode_uint8_t(dec, &cmd);
   check_cbor_error(QUIC_CMD_OSD);
 
   uint16_t index;
-  res = cbor_decode_uint16(dec, &index);
+  res = cbor_decode_uint16_t(dec, &index);
   check_cbor_error(QUIC_CMD_OSD);
 
   switch (cmd) {
@@ -532,26 +532,26 @@ static void process_serial(quic_t *quic, cbor_value_t *dec) {
   cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
 
   quic_motor_command cmd;
-  res = cbor_decode_uint8(dec, &cmd);
+  res = cbor_decode_uint8_t(dec, &cmd);
   check_cbor_error(QUIC_CMD_SERIAL);
 
   switch (cmd) {
   case QUIC_SERIAL_ENABLE: {
     serial_ports_t port = SERIAL_PORT_INVALID;
-    res = cbor_decode_uint8(dec, &port);
+    res = cbor_decode_uint8_t(dec, &port);
     check_cbor_error(QUIC_CMD_SERIAL);
 
     uint32_t baudrate = 0;
-    res = cbor_decode_uint32(dec, &baudrate);
+    res = cbor_decode_uint32_t(dec, &baudrate);
     check_cbor_error(QUIC_CMD_SERIAL);
 
     uint8_t half_duplex = 0;
-    res = cbor_decode_uint8(dec, &half_duplex);
+    res = cbor_decode_uint8_t(dec, &half_duplex);
 
     uint8_t stop_bits = 1;
-    res = cbor_decode_uint8(dec, &stop_bits);
+    res = cbor_decode_uint8_t(dec, &stop_bits);
 
-    res = cbor_encode_uint8(&enc, &port);
+    res = cbor_encode_uint8_t(&enc, &port);
     check_cbor_error(QUIC_CMD_SERIAL);
 
     quic_send(quic, QUIC_CMD_SERIAL, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));

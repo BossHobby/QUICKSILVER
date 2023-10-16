@@ -105,49 +105,49 @@ typedef struct {
   float angleerror[ANGLE_PID_SIZE];
 } control_state_t;
 
-#define STATE_MEMBERS                       \
-  MEMBER(failloop, uint8)                   \
-  MEMBER(looptime_autodetect, uint16)       \
-  MEMBER(looptime, float)                   \
-  MEMBER(looptime_us, uint32)               \
-  MEMBER(loop_counter, uint32)              \
-  MEMBER(uptime, float)                     \
-  MEMBER(armtime, float)                    \
-  MEMBER(cpu_load, uint32)                  \
-  MEMBER(failsafe_time_ms, uint32)          \
-  MEMBER(lipo_cell_count, uint8)            \
-  MEMBER(cpu_temp, float)                   \
-  MEMBER(vbat, float)                       \
-  MEMBER(vbat_filtered, float)              \
-  MEMBER(vbat_filtered_decay, float)        \
-  MEMBER(vbat_cell_avg, float)              \
-  MEMBER(vbat_compensated, float)           \
-  MEMBER(vbat_compensated_cell_avg, float)  \
-  MEMBER(ibat, float)                       \
-  MEMBER(ibat_filtered, float)              \
-  MEMBER(rx, vec4_t)                        \
-  MEMBER(rx_filtered, vec4_t)               \
-  MEMBER(rx_override, vec4_t)               \
-  MEMBER(stick_calibration_wizard, uint8)   \
-  MEMBER(rx_rssi, float)                    \
-  MEMBER(rx_status, uint32)                 \
-  MEMBER(throttle, float)                   \
-  MEMBER(thrsum, float)                     \
-  ARRAY_MEMBER(aux, AUX_CHANNEL_MAX, uint8) \
-  MEMBER(accel_raw, vec3_t)                 \
-  MEMBER(accel, vec3_t)                     \
-  MEMBER(gyro_temp, float)                  \
-  MEMBER(gyro_raw, vec3_t)                  \
-  MEMBER(gyro, vec3_t)                      \
-  MEMBER(GEstG, vec3_t)                     \
-  MEMBER(attitude, vec3_t)                  \
-  MEMBER(setpoint, vec3_t)                  \
-  MEMBER(error, vec3_t)                     \
-  MEMBER(pid_p_term, vec3_t)                \
-  MEMBER(pid_i_term, vec3_t)                \
-  MEMBER(pid_d_term, vec3_t)                \
-  MEMBER(pidoutput, vec3_t)                 \
-  MEMBER(motor_mix, vec4_t)                 \
+#define STATE_MEMBERS                         \
+  MEMBER(failloop, uint8_t)                   \
+  MEMBER(looptime_autodetect, uint16_t)       \
+  MEMBER(looptime, float)                     \
+  MEMBER(looptime_us, uint32_t)               \
+  MEMBER(loop_counter, uint32_t)              \
+  MEMBER(uptime, float)                       \
+  MEMBER(armtime, float)                      \
+  MEMBER(cpu_load, uint32_t)                  \
+  MEMBER(failsafe_time_ms, uint32_t)          \
+  MEMBER(lipo_cell_count, uint8_t)            \
+  MEMBER(cpu_temp, float)                     \
+  MEMBER(vbat, float)                         \
+  MEMBER(vbat_filtered, float)                \
+  MEMBER(vbat_filtered_decay, float)          \
+  MEMBER(vbat_cell_avg, float)                \
+  MEMBER(vbat_compensated, float)             \
+  MEMBER(vbat_compensated_cell_avg, float)    \
+  MEMBER(ibat, float)                         \
+  MEMBER(ibat_filtered, float)                \
+  MEMBER(rx, vec4_t)                          \
+  MEMBER(rx_filtered, vec4_t)                 \
+  MEMBER(rx_override, vec4_t)                 \
+  MEMBER(stick_calibration_wizard, uint8_t)   \
+  MEMBER(rx_rssi, float)                      \
+  MEMBER(rx_status, uint32_t)                 \
+  MEMBER(throttle, float)                     \
+  MEMBER(thrsum, float)                       \
+  ARRAY_MEMBER(aux, AUX_CHANNEL_MAX, uint8_t) \
+  MEMBER(accel_raw, vec3_t)                   \
+  MEMBER(accel, vec3_t)                       \
+  MEMBER(gyro_temp, float)                    \
+  MEMBER(gyro_raw, vec3_t)                    \
+  MEMBER(gyro, vec3_t)                        \
+  MEMBER(GEstG, vec3_t)                       \
+  MEMBER(attitude, vec3_t)                    \
+  MEMBER(setpoint, vec3_t)                    \
+  MEMBER(error, vec3_t)                       \
+  MEMBER(pid_p_term, vec3_t)                  \
+  MEMBER(pid_i_term, vec3_t)                  \
+  MEMBER(pid_d_term, vec3_t)                  \
+  MEMBER(pidoutput, vec3_t)                   \
+  MEMBER(motor_mix, vec4_t)                   \
   ARRAY_MEMBER(angleerror, ANGLE_PID_SIZE, float)
 
 typedef struct {

@@ -18,8 +18,8 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b, con
   CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_array_indefinite(enc));
 
   // loop and time are always emitted regardless of what field_flags indicates
-  CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->loop));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &b->time));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint32_t(enc, &b->loop));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint32_t(enc, &b->time));
 
   if (field_flags & (1 << BBOX_FIELD_PID_P_TERM)) {
     CBOR_CHECK_ERROR(res = cbor_encode_compact_vec3_t(enc, &b->pid_p_term));
@@ -60,15 +60,15 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b, con
   }
 
   if (field_flags & (1 << BBOX_FIELD_CPU_LOAD)) {
-    CBOR_CHECK_ERROR(res = cbor_encode_uint16(enc, &b->cpu_load));
+    CBOR_CHECK_ERROR(res = cbor_encode_uint16_t(enc, &b->cpu_load));
   }
 
   if (field_flags & (1 << BBOX_FIELD_DEBUG)) {
     CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 4));
-    CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &b->debug[0]));
-    CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &b->debug[1]));
-    CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &b->debug[2]));
-    CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &b->debug[3]));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &b->debug[0]));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &b->debug[1]));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &b->debug[2]));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &b->debug[3]));
   }
 
   CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));

@@ -66,7 +66,7 @@ cbor_result_t print_value(cbor_value_t *dec, cJSON *decoded) {
   }
   case CBOR_TYPE_UINT: {
     uint32_t val = 0;
-    cbor_result_t res = cbor_decode_uint32(dec, &val);
+    cbor_result_t res = cbor_decode_uint32_t(dec, &val);
     if (res < CBOR_OK) {
       printf("CBOR uint error %d\n", res);
       return res;
@@ -80,7 +80,7 @@ cbor_result_t print_value(cbor_value_t *dec, cJSON *decoded) {
   }
   case CBOR_TYPE_NINT: {
     int32_t val = 0;
-    cbor_result_t res = cbor_decode_int32(dec, &val);
+    cbor_result_t res = cbor_decode_int32_t(dec, &val);
     if (res < CBOR_OK) {
       printf("CBOR int error %d\n", res);
       return res;
@@ -199,7 +199,7 @@ int main(int argc, char const *argv[]) {
   cbor_value_t enc;
   {
     cbor_encoder_init(&enc, buf, 512);
-    cbor_encode_uint16(&enc, 1337);
+    cbor_encode_uint16_t(&enc, 1337);
     uint32_t len = cbor_encoder_len(&enc);
 
     cbor_value_t dec;
@@ -208,7 +208,7 @@ int main(int argc, char const *argv[]) {
   }
   {
     cbor_encoder_init(&enc, buf, 512);
-    cbor_encode_int16(&enc, -1337);
+    cbor_encode_int16_t(&enc, -1337);
     uint32_t len = cbor_encoder_len(&enc);
 
     cbor_value_t dec;
@@ -237,8 +237,8 @@ int main(int argc, char const *argv[]) {
     cbor_encoder_init(&enc, buf, 512);
 
     cbor_encode_array(&enc, 3);
-    cbor_encode_uint16(&enc, 1337);
-    cbor_encode_int16(&enc, -1337);
+    cbor_encode_uint16_t(&enc, 1337);
+    cbor_encode_int16_t(&enc, -1337);
     cbor_encode_float(&enc, -13.37f);
     uint32_t len = cbor_encoder_len(&enc);
 
@@ -251,9 +251,9 @@ int main(int argc, char const *argv[]) {
 
     cbor_encode_map(&enc, 3);
     cbor_encode_tstr(&enc, (uint8_t *)"KEY1", 4);
-    cbor_encode_uint16(&enc, 1337);
+    cbor_encode_uint16_t(&enc, 1337);
     cbor_encode_tstr(&enc, (uint8_t *)"KEY2", 4);
-    cbor_encode_int16(&enc, -1337);
+    cbor_encode_int16_t(&enc, -1337);
     cbor_encode_tstr(&enc, (uint8_t *)"KEY3", 4);
     cbor_encode_float(&enc, -13.37f);
     uint32_t len = cbor_encoder_len(&enc);
@@ -267,9 +267,9 @@ int main(int argc, char const *argv[]) {
 
     cbor_encode_map_indefinite(&enc);
     cbor_encode_tstr(&enc, (uint8_t *)"KEY1", 4);
-    cbor_encode_uint16(&enc, 1337);
+    cbor_encode_uint16_t(&enc, 1337);
     cbor_encode_tstr(&enc, (uint8_t *)"KEY2", 4);
-    cbor_encode_int16(&enc, -1337);
+    cbor_encode_int16_t(&enc, -1337);
     cbor_encode_tstr(&enc, (uint8_t *)"KEY3", 4);
     cbor_encode_float(&enc, -13.37f);
     cbor_encode_end_indefinite(&enc);

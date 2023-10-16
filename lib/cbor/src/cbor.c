@@ -280,21 +280,21 @@ uint32_t cbor_decode_map_size(cbor_value_t *dec, cbor_container_t *map) {
   return UINT32_MAX;
 }
 
-cbor_result_t cbor_decode_uint8(cbor_value_t *dec, uint8_t *val) {
+cbor_result_t cbor_decode_uint8_t(cbor_value_t *dec, uint8_t *val) {
   cbor_result_t type = _cbor_decode_ensure_type(dec, CBOR_TYPE_UINT);
   if (type < 0) {
     return type;
   }
   return _cbor_advance(dec, _cbor_decode_raw(dec, (uint8_t *)val, CBOR_SIZE_BYTE));
 }
-cbor_result_t cbor_decode_uint16(cbor_value_t *dec, uint16_t *val) {
+cbor_result_t cbor_decode_uint16_t(cbor_value_t *dec, uint16_t *val) {
   cbor_result_t type = _cbor_decode_ensure_type(dec, CBOR_TYPE_UINT);
   if (type < 0) {
     return type;
   }
   return _cbor_advance(dec, _cbor_decode_raw(dec, (uint8_t *)val, CBOR_SIZE_SHORT));
 }
-cbor_result_t cbor_decode_uint32(cbor_value_t *dec, uint32_t *val) {
+cbor_result_t cbor_decode_uint32_t(cbor_value_t *dec, uint32_t *val) {
   cbor_result_t type = _cbor_decode_ensure_type(dec, CBOR_TYPE_UINT);
   if (type < 0) {
     return type;
@@ -302,7 +302,7 @@ cbor_result_t cbor_decode_uint32(cbor_value_t *dec, uint32_t *val) {
   return _cbor_advance(dec, _cbor_decode_raw(dec, (uint8_t *)val, CBOR_SIZE_WORD));
 }
 
-cbor_result_t cbor_decode_int8(cbor_value_t *dec, int8_t *val) {
+cbor_result_t cbor_decode_int8_t(cbor_value_t *dec, int8_t *val) {
   if (_cbor_remaining(dec) <= 0) {
     return CBOR_ERR_EOF;
   }
@@ -322,7 +322,7 @@ cbor_result_t cbor_decode_int8(cbor_value_t *dec, int8_t *val) {
   }
   return res;
 }
-cbor_result_t cbor_decode_int16(cbor_value_t *dec, int16_t *val) {
+cbor_result_t cbor_decode_int16_t(cbor_value_t *dec, int16_t *val) {
   if (_cbor_remaining(dec) <= 0) {
     return CBOR_ERR_EOF;
   }
@@ -342,7 +342,7 @@ cbor_result_t cbor_decode_int16(cbor_value_t *dec, int16_t *val) {
   }
   return res;
 }
-cbor_result_t cbor_decode_int32(cbor_value_t *dec, int32_t *val) {
+cbor_result_t cbor_decode_int32_t(cbor_value_t *dec, int32_t *val) {
   if (_cbor_remaining(dec) <= 0) {
     return CBOR_ERR_EOF;
   }
@@ -404,7 +404,7 @@ cbor_result_t cbor_decode_float(cbor_value_t *dec, float *val) {
   switch (type) {
   case CBOR_TYPE_NINT: {
     int32_t intval = 0;
-    cbor_result_t res = cbor_decode_int32(dec, &intval);
+    cbor_result_t res = cbor_decode_int32_t(dec, &intval);
     if (res < CBOR_OK) {
       return res;
     }
@@ -414,7 +414,7 @@ cbor_result_t cbor_decode_float(cbor_value_t *dec, float *val) {
 
   case CBOR_TYPE_UINT: {
     uint32_t intval = 0;
-    cbor_result_t res = cbor_decode_uint32(dec, &intval);
+    cbor_result_t res = cbor_decode_uint32_t(dec, &intval);
     if (res < CBOR_OK) {
       return res;
     }
@@ -522,31 +522,31 @@ cbor_result_t cbor_encode_end_indefinite(cbor_value_t *enc) {
   return CBOR_OK;
 }
 
-cbor_result_t cbor_encode_uint8(cbor_value_t *enc, const uint8_t *val) {
+cbor_result_t cbor_encode_uint8_t(cbor_value_t *enc, const uint8_t *val) {
   return _cbor_encode_raw(enc, CBOR_TYPE_UINT, (const uint8_t *)val, _cbor_size_for_value(*val));
 }
-cbor_result_t cbor_encode_uint16(cbor_value_t *enc, const uint16_t *val) {
+cbor_result_t cbor_encode_uint16_t(cbor_value_t *enc, const uint16_t *val) {
   return _cbor_encode_raw(enc, CBOR_TYPE_UINT, (const uint8_t *)val, _cbor_size_for_value(*val));
 }
-cbor_result_t cbor_encode_uint32(cbor_value_t *enc, const uint32_t *val) {
+cbor_result_t cbor_encode_uint32_t(cbor_value_t *enc, const uint32_t *val) {
   return _cbor_encode_raw(enc, CBOR_TYPE_UINT, (const uint8_t *)val, _cbor_size_for_value(*val));
 }
 
-cbor_result_t cbor_encode_int8(cbor_value_t *enc, const int8_t *val) {
+cbor_result_t cbor_encode_int8_t(cbor_value_t *enc, const int8_t *val) {
   if (*val >= 0) {
     return _cbor_encode_raw(enc, CBOR_TYPE_UINT, (const uint8_t *)val, _cbor_size_for_value(*val));
   }
   uint8_t proxy = (uint8_t)(-*val - 1);
   return _cbor_encode_raw(enc, CBOR_TYPE_NINT, (const uint8_t *)&proxy, _cbor_size_for_value(proxy));
 }
-cbor_result_t cbor_encode_int16(cbor_value_t *enc, const int16_t *val) {
+cbor_result_t cbor_encode_int16_t(cbor_value_t *enc, const int16_t *val) {
   if (*val >= 0) {
     return _cbor_encode_raw(enc, CBOR_TYPE_UINT, (const uint8_t *)val, _cbor_size_for_value(*val));
   }
   uint16_t proxy = (uint16_t)(-*val - 1);
   return _cbor_encode_raw(enc, CBOR_TYPE_NINT, (const uint8_t *)&proxy, _cbor_size_for_value(proxy));
 }
-cbor_result_t cbor_encode_int32(cbor_value_t *enc, const int32_t *val) {
+cbor_result_t cbor_encode_int32_t(cbor_value_t *enc, const int32_t *val) {
   if (*val >= 0) {
     return _cbor_encode_raw(enc, CBOR_TYPE_UINT, (const uint8_t *)val, _cbor_size_for_value(*val));
   }

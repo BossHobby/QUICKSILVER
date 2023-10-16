@@ -49,7 +49,7 @@ typedef struct {
 
 #define RATE_MEMBERS            \
   START_STRUCT(rate_t)          \
-  MEMBER(mode, uint8)           \
+  MEMBER(mode, uint8_t)         \
   ARRAY_MEMBER(rate, 3, vec3_t) \
   END_STRUCT()
 
@@ -64,7 +64,7 @@ typedef struct {
 
 #define PROFILE_RATE_MEMBERS                          \
   START_STRUCT(profile_rate_t)                        \
-  MEMBER(profile, uint8)                              \
+  MEMBER(profile, uint8_t)                            \
   ARRAY_MEMBER(rates, STICK_RATE_PROFILE_MAX, rate_t) \
   MEMBER(level_max_angle, float)                      \
   MEMBER(sticks_deadband, float)                      \
@@ -104,7 +104,7 @@ typedef struct {
 
 #define PID_RATE_PRESET_MEMBERS   \
   START_STRUCT(pid_rate_preset_t) \
-  MEMBER(index, uint32)           \
+  MEMBER(index, uint32_t)         \
   STR_MEMBER(name)                \
   MEMBER(rate, pid_rate_t)        \
   END_STRUCT()
@@ -146,7 +146,7 @@ typedef struct {
 
 #define DTERM_ATTENUATION_MEMBERS            \
   START_STRUCT(throttle_dterm_attenuation_t) \
-  MEMBER(tda_active, uint8)                  \
+  MEMBER(tda_active, uint8_t)                \
   MEMBER(tda_breakpoint, float)              \
   MEMBER(tda_percent, float)                 \
   END_STRUCT()
@@ -163,9 +163,9 @@ typedef struct {
 
 #define PID_MEMBERS                                                \
   START_STRUCT(profile_pid_t)                                      \
-  MEMBER(pid_profile, uint8)                                       \
+  MEMBER(pid_profile, uint8_t)                                     \
   ARRAY_MEMBER(pid_rates, PID_PROFILE_MAX, pid_rate_t)             \
-  MEMBER(stick_profile, uint8)                                     \
+  MEMBER(stick_profile, uint8_t)                                   \
   ARRAY_MEMBER(stick_rates, STICK_PROFILE_MAX, stick_rate_t)       \
   MEMBER(big_angle, angle_pid_rate_t)                              \
   MEMBER(small_angle, angle_pid_rate_t)                            \
@@ -200,17 +200,17 @@ typedef struct {
   float turtle_throttle_percent;
 } profile_motor_t;
 
-#define MOTOR_MEMBERS                            \
-  START_STRUCT(profile_motor_t)                  \
-  MEMBER(digital_idle, float)                    \
-  MEMBER(motor_limit, float)                     \
-  MEMBER(dshot_time, uint16)                     \
-  MEMBER(invert_yaw, uint8)                      \
-  MEMBER(gyro_orientation, uint8)                \
-  MEMBER(torque_boost, float)                    \
-  MEMBER(throttle_boost, float)                  \
-  ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX, uint8) \
-  MEMBER(turtle_throttle_percent, float)         \
+#define MOTOR_MEMBERS                              \
+  START_STRUCT(profile_motor_t)                    \
+  MEMBER(digital_idle, float)                      \
+  MEMBER(motor_limit, float)                       \
+  MEMBER(dshot_time, uint16_t)                     \
+  MEMBER(invert_yaw, uint8_t)                      \
+  MEMBER(gyro_orientation, uint8_t)                \
+  MEMBER(torque_boost, float)                      \
+  MEMBER(throttle_boost, float)                    \
+  ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX, uint8_t) \
+  MEMBER(turtle_throttle_percent, float)           \
   END_STRUCT()
 
 typedef enum {
@@ -230,8 +230,8 @@ typedef struct {
 
 #define VOLTAGE_MEMBERS                     \
   START_STRUCT(profile_voltage_t)           \
-  MEMBER(lipo_cell_count, uint8)            \
-  MEMBER(pid_voltage_compensation, uint8)   \
+  MEMBER(lipo_cell_count, uint8_t)          \
+  MEMBER(pid_voltage_compensation, uint8_t) \
   MEMBER(vbattlow, float)                   \
   MEMBER(actual_battery_voltage, float)     \
   MEMBER(reported_telemetry_voltage, float) \
@@ -260,10 +260,10 @@ typedef struct {
 
 #define RECEIVER_MEMBERS                                                        \
   START_STRUCT(profile_receiver_t)                                              \
-  MEMBER(protocol, uint8)                                                       \
-  ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, uint8)                                    \
-  MEMBER(lqi_source, uint8)                                                     \
-  MEMBER(channel_mapping, uint8)                                                \
+  MEMBER(protocol, uint8_t)                                                     \
+  ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, uint8_t)                                  \
+  MEMBER(lqi_source, uint8_t)                                                   \
+  MEMBER(channel_mapping, uint8_t)                                              \
   ARRAY_MEMBER(stick_calibration_limits, 4, profile_stick_calibration_limits_t) \
   END_STRUCT()
 
@@ -275,9 +275,9 @@ typedef struct {
 
 #define SERIAL_MEMBERS           \
   START_STRUCT(profile_serial_t) \
-  MEMBER(rx, uint8)              \
-  MEMBER(smart_audio, uint8)     \
-  MEMBER(hdzero, uint8)          \
+  MEMBER(rx, uint8_t)            \
+  MEMBER(smart_audio, uint8_t)   \
+  MEMBER(hdzero, uint8_t)        \
   END_STRUCT()
 
 typedef struct {
@@ -287,12 +287,12 @@ typedef struct {
   uint32_t elements_hd[OSD_NUMBER_ELEMENTS];
 } profile_osd_t;
 
-#define OSD_MEMBERS                                      \
-  START_STRUCT(profile_osd_t)                            \
-  MEMBER(guac_mode, uint8)                               \
-  TSTR_MEMBER(callsign, 36)                              \
-  ARRAY_MEMBER(elements, OSD_NUMBER_ELEMENTS, uint32)    \
-  ARRAY_MEMBER(elements_hd, OSD_NUMBER_ELEMENTS, uint32) \
+#define OSD_MEMBERS                                        \
+  START_STRUCT(profile_osd_t)                              \
+  MEMBER(guac_mode, uint8_t)                               \
+  TSTR_MEMBER(callsign, 36)                                \
+  ARRAY_MEMBER(elements, OSD_NUMBER_ELEMENTS, uint32_t)    \
+  ARRAY_MEMBER(elements_hd, OSD_NUMBER_ELEMENTS, uint32_t) \
   END_STRUCT()
 
 typedef struct {
@@ -302,7 +302,7 @@ typedef struct {
 
 #define FILTER_PARAMETER_MEMBERS           \
   START_STRUCT(profile_filter_parameter_t) \
-  MEMBER(type, uint8)                      \
+  MEMBER(type, uint8_t)                    \
   MEMBER(cutoff_freq, float)               \
   END_STRUCT()
 
@@ -318,7 +318,7 @@ typedef struct {
   START_STRUCT(profile_filter_t)                                    \
   ARRAY_MEMBER(gyro, FILTER_MAX_SLOTS, profile_filter_parameter_t)  \
   ARRAY_MEMBER(dterm, FILTER_MAX_SLOTS, profile_filter_parameter_t) \
-  MEMBER(dterm_dynamic_enable, uint8)                               \
+  MEMBER(dterm_dynamic_enable, uint8_t)                             \
   MEMBER(dterm_dynamic_min, float)                                  \
   MEMBER(dterm_dynamic_max, float)                                  \
   END_STRUCT()
@@ -335,8 +335,8 @@ typedef struct {
 
 #define BLACKBOX_MEMBERS           \
   START_STRUCT(profile_blackbox_t) \
-  MEMBER(field_flags, uint32)      \
-  MEMBER(sample_rate_hz, uint32)   \
+  MEMBER(field_flags, uint32_t)    \
+  MEMBER(sample_rate_hz, uint32_t) \
   END_STRUCT()
 
 typedef struct {
@@ -346,12 +346,12 @@ typedef struct {
   const char *name_osd;
 } blackbox_preset_t;
 
-#define BLACKBOX_PRESET_MEMBERS   \
-  START_STRUCT(blackbox_preset_t) \
-  MEMBER(field_flags, uint32)     \
-  MEMBER(sample_rate_hz, uint32)  \
-  STR_MEMBER(name)                \
-  STR_MEMBER(name_osd)            \
+#define BLACKBOX_PRESET_MEMBERS    \
+  START_STRUCT(blackbox_preset_t)  \
+  MEMBER(field_flags, uint32_t)    \
+  MEMBER(sample_rate_hz, uint32_t) \
+  STR_MEMBER(name)                 \
+  STR_MEMBER(name_osd)             \
   END_STRUCT()
 
 // Full Profile

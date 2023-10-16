@@ -54,13 +54,13 @@ uint32_t cbor_decode_array_size(cbor_value_t *dec, cbor_container_t *array);
 cbor_result_t cbor_decode_map(cbor_value_t *dec, cbor_container_t *map);
 uint32_t cbor_decode_map_size(cbor_value_t *dec, cbor_container_t *map);
 
-cbor_result_t cbor_decode_uint8(cbor_value_t *dec, uint8_t *val);
-cbor_result_t cbor_decode_uint16(cbor_value_t *dec, uint16_t *val);
-cbor_result_t cbor_decode_uint32(cbor_value_t *dec, uint32_t *val);
+cbor_result_t cbor_decode_uint8_t(cbor_value_t *dec, uint8_t *val);
+cbor_result_t cbor_decode_uint16_t(cbor_value_t *dec, uint16_t *val);
+cbor_result_t cbor_decode_uint32_t(cbor_value_t *dec, uint32_t *val);
 
-cbor_result_t cbor_decode_int8(cbor_value_t *dec, int8_t *val);
-cbor_result_t cbor_decode_int16(cbor_value_t *dec, int16_t *val);
-cbor_result_t cbor_decode_int32(cbor_value_t *dec, int32_t *val);
+cbor_result_t cbor_decode_int8_t(cbor_value_t *dec, int8_t *val);
+cbor_result_t cbor_decode_int16_t(cbor_value_t *dec, int16_t *val);
+cbor_result_t cbor_decode_int32_t(cbor_value_t *dec, int32_t *val);
 
 cbor_result_t cbor_decode_float(cbor_value_t *dec, float *val);
 
@@ -80,13 +80,13 @@ cbor_result_t cbor_encode_array_indefinite(cbor_value_t *enc);
 cbor_result_t cbor_encode_map_indefinite(cbor_value_t *enc);
 cbor_result_t cbor_encode_end_indefinite(cbor_value_t *enc);
 
-cbor_result_t cbor_encode_uint8(cbor_value_t *enc, const uint8_t *val);
-cbor_result_t cbor_encode_uint16(cbor_value_t *enc, const uint16_t *val);
-cbor_result_t cbor_encode_uint32(cbor_value_t *enc, const uint32_t *val);
+cbor_result_t cbor_encode_uint8_t(cbor_value_t *enc, const uint8_t *val);
+cbor_result_t cbor_encode_uint16_t(cbor_value_t *enc, const uint16_t *val);
+cbor_result_t cbor_encode_uint32_t(cbor_value_t *enc, const uint32_t *val);
 
-cbor_result_t cbor_encode_int8(cbor_value_t *enc, const int8_t *val);
-cbor_result_t cbor_encode_int16(cbor_value_t *enc, const int16_t *val);
-cbor_result_t cbor_encode_int32(cbor_value_t *enc, const int32_t *val);
+cbor_result_t cbor_encode_int8_t(cbor_value_t *enc, const int8_t *val);
+cbor_result_t cbor_encode_int16_t(cbor_value_t *enc, const int16_t *val);
+cbor_result_t cbor_encode_int32_t(cbor_value_t *enc, const int32_t *val);
 
 cbor_result_t cbor_encode_float(cbor_value_t *enc, const float *val);
 

@@ -50,11 +50,11 @@ typedef struct {
 } blackbox_device_file_t;
 
 #define BLACKBOX_DEVICE_FILE_MEMBERS \
-  MEMBER(field_flags, uint32)        \
-  MEMBER(looptime, uint32)           \
-  MEMBER(blackbox_rate, uint8)       \
-  MEMBER(start, uint32)              \
-  MEMBER(size, uint32)
+  MEMBER(field_flags, uint32_t)      \
+  MEMBER(looptime, uint32_t)         \
+  MEMBER(blackbox_rate, uint8_t)     \
+  MEMBER(start, uint32_t)            \
+  MEMBER(size, uint32_t)
 
 #define BLACKBOX_DEVICE_MAX_FILES 10
 
@@ -66,8 +66,8 @@ typedef struct {
 } blackbox_device_header_t;
 
 #define BLACKBOX_DEVICE_HEADER_MEMBERS \
-  MEMBER(magic, uint32)                \
-  MEMBER(file_num, uint8)              \
+  MEMBER(magic, uint32_t)              \
+  MEMBER(file_num, uint8_t)            \
   ARRAY_MEMBER(files, BLACKBOX_DEVICE_MAX_FILES, blackbox_device_file_t)
 
 extern blackbox_device_header_t blackbox_device_header;

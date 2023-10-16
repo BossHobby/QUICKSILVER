@@ -88,7 +88,7 @@ typedef struct {
 } target_serial_port_t;
 
 #define TARGET_SERIAL_MEMBERS \
-  MEMBER(index, uint8)        \
+  MEMBER(index, uint8_t)      \
   MEMBER(rx, gpio_pins_t)     \
   MEMBER(tx, gpio_pins_t)     \
   MEMBER(inverter, gpio_pins_t)
@@ -101,7 +101,7 @@ typedef struct {
 } target_spi_port_t;
 
 #define TARGET_SPI_MEMBERS  \
-  MEMBER(index, uint8)      \
+  MEMBER(index, uint8_t)    \
   MEMBER(miso, gpio_pins_t) \
   MEMBER(mosi, gpio_pins_t) \
   MEMBER(sck, gpio_pins_t)
@@ -112,7 +112,7 @@ typedef struct {
 } target_spi_device_t;
 
 #define TARGET_SPI_DEVICE_MEMBERS \
-  MEMBER(port, uint8)             \
+  MEMBER(port, uint8_t)           \
   MEMBER(nss, gpio_pins_t)
 
 typedef struct {
@@ -128,7 +128,7 @@ typedef struct {
 } target_rx_spi_device_t;
 
 #define TARGET_RX_SPI_DEVICE_MEMBERS \
-  MEMBER(port, uint8)                \
+  MEMBER(port, uint8_t)              \
   MEMBER(nss, gpio_pins_t)           \
   MEMBER(exti, gpio_pins_t)          \
   MEMBER(ant_sel, gpio_pins_t)       \
@@ -176,7 +176,7 @@ typedef struct {
   INDEX_ARRAY_MEMBER(serial_soft_ports, SERIAL_SOFT_COUNT, target_serial_port_t) \
   INDEX_ARRAY_MEMBER(spi_ports, SPI_PORT_MAX, target_spi_port_t)                 \
   MEMBER(gyro, target_spi_device_t)                                              \
-  MEMBER(gyro_orientation, uint8)                                                \
+  MEMBER(gyro_orientation, uint8_t)                                              \
   MEMBER(osd, target_spi_device_t)                                               \
   MEMBER(flash, target_spi_device_t)                                             \
   MEMBER(sdcard, target_spi_device_t)                                            \
@@ -188,8 +188,8 @@ typedef struct {
   MEMBER(sdcard_detect, target_invert_pin_t)                                     \
   MEMBER(buzzer, target_invert_pin_t)                                            \
   ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX, gpio_pins_t)                           \
-  MEMBER(vbat_scale, uint16)                                                     \
-  MEMBER(ibat_scale, uint16)
+  MEMBER(vbat_scale, uint16_t)                                                   \
+  MEMBER(ibat_scale, uint16_t)
 
 typedef enum {
   FEATURE_BRUSHLESS = (1 << 1),
@@ -209,13 +209,13 @@ typedef struct {
   uint8_t gyro_id;
 } target_info_t;
 
-#define TARGET_INFO_MEMBERS                          \
-  STR_MEMBER(mcu)                                    \
-  STR_MEMBER(git_version)                            \
-  MEMBER(quic_protocol_version, uint32)              \
-  MEMBER(features, uint32)                           \
-  ARRAY_MEMBER(rx_protocols, RX_PROTOCOL_MAX, uint8) \
-  MEMBER(gyro_id, uint8)
+#define TARGET_INFO_MEMBERS                            \
+  STR_MEMBER(mcu)                                      \
+  STR_MEMBER(git_version)                              \
+  MEMBER(quic_protocol_version, uint32_t)              \
+  MEMBER(features, uint32_t)                           \
+  ARRAY_MEMBER(rx_protocols, RX_PROTOCOL_MAX, uint8_t) \
+  MEMBER(gyro_id, uint8_t)
 
 extern target_t target;
 extern target_info_t target_info;
