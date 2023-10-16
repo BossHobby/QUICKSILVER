@@ -40,9 +40,9 @@ cbor_result_t cbor_encode_compact_vec3_t(cbor_value_t *enc, const compact_vec3_t
 
   CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 3));
 
-  CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &vec->axis[0]));
-  CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &vec->axis[1]));
-  CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &vec->axis[2]));
+  CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &vec->axis[0]));
+  CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &vec->axis[1]));
+  CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &vec->axis[2]));
 
   return res;
 }
@@ -53,9 +53,9 @@ cbor_result_t cbor_decode_compact_vec3_t(cbor_value_t *it, compact_vec3_t *vec) 
   cbor_container_t array;
   CBOR_CHECK_ERROR(res = cbor_decode_array(it, &array));
 
-  CBOR_CHECK_ERROR(res = cbor_decode_int16(it, &vec->axis[0]));
-  CBOR_CHECK_ERROR(res = cbor_decode_int16(it, &vec->axis[1]));
-  CBOR_CHECK_ERROR(res = cbor_decode_int16(it, &vec->axis[2]));
+  CBOR_CHECK_ERROR(res = cbor_decode_int16_t(it, &vec->axis[0]));
+  CBOR_CHECK_ERROR(res = cbor_decode_int16_t(it, &vec->axis[1]));
+  CBOR_CHECK_ERROR(res = cbor_decode_int16_t(it, &vec->axis[2]));
 
   return res;
 }
@@ -104,10 +104,10 @@ cbor_result_t cbor_encode_compact_vec4_t(cbor_value_t *enc, const compact_vec4_t
 
   CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 4));
 
-  CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &vec->axis[0]));
-  CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &vec->axis[1]));
-  CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &vec->axis[2]));
-  CBOR_CHECK_ERROR(res = cbor_encode_int16(enc, &vec->axis[3]));
+  CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &vec->axis[0]));
+  CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &vec->axis[1]));
+  CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &vec->axis[2]));
+  CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &vec->axis[3]));
 
   return res;
 }
@@ -118,10 +118,10 @@ cbor_result_t cbor_decode_compact_vec4_t(cbor_value_t *it, compact_vec4_t *vec) 
   cbor_container_t array;
   CBOR_CHECK_ERROR(res = cbor_decode_array(it, &array));
 
-  CBOR_CHECK_ERROR(res = cbor_decode_int16(it, &vec->axis[0]));
-  CBOR_CHECK_ERROR(res = cbor_decode_int16(it, &vec->axis[1]));
-  CBOR_CHECK_ERROR(res = cbor_decode_int16(it, &vec->axis[2]));
-  CBOR_CHECK_ERROR(res = cbor_decode_int16(it, &vec->axis[3]));
+  CBOR_CHECK_ERROR(res = cbor_decode_int16_t(it, &vec->axis[0]));
+  CBOR_CHECK_ERROR(res = cbor_decode_int16_t(it, &vec->axis[1]));
+  CBOR_CHECK_ERROR(res = cbor_decode_int16_t(it, &vec->axis[2]));
+  CBOR_CHECK_ERROR(res = cbor_decode_int16_t(it, &vec->axis[3]));
 
   return res;
 }

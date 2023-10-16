@@ -199,13 +199,13 @@ typedef struct {
   uint8_t NAME[16];
 } blheli_settings_t;
 
-#define BLHELI_SETTINGS_MEMBERS  \
-  MEMBER(MAIN_REVISION, uint8)   \
-  MEMBER(SUB_REVISION, uint8)    \
-  MEMBER(LAYOUT_REVISION, uint8) \
-  MEMBER(MOTOR_DIRECTION, uint8) \
-  TSTR_MEMBER(LAYOUT, 16)        \
-  TSTR_MEMBER(MCU, 16)           \
+#define BLHELI_SETTINGS_MEMBERS    \
+  MEMBER(MAIN_REVISION, uint8_t)   \
+  MEMBER(SUB_REVISION, uint8_t)    \
+  MEMBER(LAYOUT_REVISION, uint8_t) \
+  MEMBER(MOTOR_DIRECTION, uint8_t) \
+  TSTR_MEMBER(LAYOUT, 16)          \
+  TSTR_MEMBER(MCU, 16)             \
   TSTR_MEMBER(NAME, 16)
 
 cbor_result_t cbor_decode_blheli_settings_t(cbor_value_t *dec, blheli_settings_t *p);

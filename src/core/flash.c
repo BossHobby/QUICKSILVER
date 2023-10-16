@@ -18,12 +18,12 @@ flash_storage_t flash_storage;
 rx_bind_storage_t bind_storage;
 
 CBOR_START_STRUCT_ENCODER(rx_bind_storage_t)
-CBOR_ENCODE_MEMBER(bind_saved, uint8)
+CBOR_ENCODE_MEMBER(bind_saved, uint8_t)
 CBOR_ENCODE_BSTR_MEMBER(raw, BIND_RAW_STORAGE_SIZE)
 CBOR_END_STRUCT_ENCODER()
 
 CBOR_START_STRUCT_DECODER(rx_bind_storage_t)
-CBOR_DECODE_MEMBER(bind_saved, uint8)
+CBOR_DECODE_MEMBER(bind_saved, uint8_t)
 CBOR_DECODE_BSTR_MEMBER(raw, BIND_RAW_STORAGE_SIZE)
 CBOR_END_STRUCT_DECODER()
 

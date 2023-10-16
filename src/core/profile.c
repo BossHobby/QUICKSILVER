@@ -548,13 +548,13 @@ cbor_result_t cbor_encode_profile_metadata_t(cbor_value_t *enc, const profile_me
 
   const uint32_t version = PROFILE_VERSION;
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "version"));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &version));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint32_t(enc, &version));
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "name"));
   CBOR_CHECK_ERROR(res = cbor_encode_tstr(enc, meta->name, 36));
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "datetime"));
-  CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &meta->datetime));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint32_t(enc, &meta->datetime));
 
   CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
   return res;
@@ -623,7 +623,7 @@ cbor_result_t cbor_decode_profile_metadata_t(cbor_value_t *dec, profile_metadata
     }
 
     if (buf_equal_string(name, name_len, "datetime")) {
-      CBOR_CHECK_ERROR(res = cbor_decode_uint32(dec, &meta->datetime));
+      CBOR_CHECK_ERROR(res = cbor_decode_uint32_t(dec, &meta->datetime));
       continue;
     }
 

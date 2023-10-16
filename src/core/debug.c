@@ -62,7 +62,7 @@ void perf_counter_update() {
 #define ENCODE_CYCLES(val)                                     \
   {                                                            \
     const uint32_t us = (val) / (SYS_CLOCK_FREQ_HZ / 1000000); \
-    CBOR_CHECK_ERROR(res = cbor_encode_uint32(enc, &us));      \
+    CBOR_CHECK_ERROR(res = cbor_encode_uint32_t(enc, &us));      \
   }
 
 cbor_result_t cbor_encode_perf_counters(cbor_value_t *enc) {
