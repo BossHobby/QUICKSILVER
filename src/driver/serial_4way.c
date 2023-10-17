@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "core/debug.h"
+#include "core/profile.h"
 #include "driver/gpio.h"
 #include "driver/motor.h"
 #include "driver/serial_4way.h"
@@ -132,7 +133,7 @@ uint8_t serial_4way_init() {
   time_delay_ms(250);
 
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    const gpio_pins_t pin = target.motor_pins[i];
+    const gpio_pins_t pin = target.motor_pins[profile.motor.motor_pins[i]];
     esc_pins[i] = pin;
     avr_bl_init_pin(pin);
   }
