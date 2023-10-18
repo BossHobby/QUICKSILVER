@@ -12,6 +12,10 @@ Flight Controller Firmware
 - Outstanding level-mode performance
 - Easy save and restore of configuration parameters
 
+## Documentation
+
+Documentation can be found at [docs.bosshobby.com](https://docs.bosshobby.com/)
+
 ## Configurator
 
 QUICKSILVER comes with configuration application for Windows, MacOS and Linux.  
