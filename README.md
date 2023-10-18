@@ -2,7 +2,9 @@
 
 # QUICKSILVER ![example workflow](https://github.com/BossHobby/QUICKSILVER/actions/workflows/build.yml/badge.svg)
 
-Flight Controller Firmware
+Flight Controller Firmware.
+
+Documnetation can be found here:  [https://docs.bosshobby.com/](https://docs.bosshobby.com/)
 
 ## Features
 
