@@ -249,13 +249,13 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       msp_send_reply(msp, magic, cmd, data, 1);
 
       if (arg == serial_vtx.config.port) {
-        if (vtx_settings.protocol == VTX_PROTOCOL_TRAMP) {
-          usb_serial_passthrough(arg, 9600, 1, true);
-        } else {
+        if (vtx_settings.protocol == VTX_PROTOCOL_SMART_AUDIO) {
           usb_serial_passthrough(arg, 4800, 2, true);
+        } else {
+          // MSP & Tramp both use 9600 baud
+          usb_serial_passthrough(arg, 9600, 1, true);
         }
       }
-
       break;
     }
 
