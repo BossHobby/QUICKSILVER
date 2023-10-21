@@ -68,8 +68,6 @@ void usb_cdc_tx_handler() {
   static uint8_t buf[USBD_CDC_OUT_MAXPACKET_SIZE];
   const uint32_t len = ring_buffer_read_multi(&usb_tx_buffer, buf, USBD_CDC_OUT_MAXPACKET_SIZE);
 
-  usb_vcp_send_data(&otg_core_struct.dev, buf, len);
-
   if (len) {
     usb_vcp_send_data(&otg_core_struct.dev, buf, len);
     tx_stalled = false;
@@ -96,7 +94,7 @@ void usb_cdc_kickoff_tx() {
     return;
   }
 
-  usb_vcp_send_data(&otg_core_struct.dev, 0, 0);
+  usb_cdc_tx_handler();
 }
 
 uint32_t usb_serial_read(uint8_t *data, uint32_t len) {
