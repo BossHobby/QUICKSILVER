@@ -8,6 +8,7 @@
 #include "core/looptime.h"
 #include "core/profile.h"
 #include "core/project.h"
+#include "core/scheduler.h"
 #include "driver/reset.h"
 #include "driver/serial.h"
 #include "driver/usb.h"
@@ -141,6 +142,19 @@ void usb_serial_passthrough(serial_ports_t port, uint32_t baudrate, uint8_t stop
 #pragma GCC diagnostic ignored "-Wdouble-promotion"
 // This function will be where all usb send/receive coms live
 void usb_configurator() {
+  if (!usb_detect()) {
+    flags.usb_active = 0;
+    motor_test.active = 0;
+    return;
+  }
+
+  flags.usb_active = 1;
+#ifndef ALLOW_USB_ARMING
+  if (flags.arm_switch) {
+    flags.arm_safety = 1; // final safety check to disallow arming during USB operation
+  }
+#endif
+
   uint32_t buffer_size = 1;
   static uint8_t buffer[BUFFER_SIZE];
 
@@ -200,6 +214,6 @@ void usb_configurator() {
   }
 
   // this will block and handle all usb traffic while active
-  looptime_reset();
+  task_reset_runtime();
 }
 #pragma GCC diagnostic pop

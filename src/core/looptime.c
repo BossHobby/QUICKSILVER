@@ -91,4 +91,6 @@ void looptime_update() {
   if (flags.arm_state) {
     state.armtime += state.looptime;
   }
+
+  state.loop_counter++;
 }
