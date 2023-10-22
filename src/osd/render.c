@@ -5,6 +5,8 @@
 #include "core/flash.h"
 #include "core/looptime.h"
 #include "core/profile.h"
+#include "core/project.h"
+#include "core/scheduler.h"
 #include "driver/osd.h"
 #include "flight/control.h"
 #include "io/blackbox_device.h"
@@ -247,8 +249,7 @@ void osd_save_exit() {
   flash_save();
   flash_load();
 
-  // reset loop time - maybe not necessary cause it gets reset in the next screen clear
-  looptime_reset();
+  task_reset_runtime();
 
   if (osd_state.reboot_fc_requested)
     NVIC_SystemReset();

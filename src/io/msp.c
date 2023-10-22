@@ -6,16 +6,17 @@
 #include "core/debug.h"
 #include "core/flash.h"
 #include "core/looptime.h"
+#include "core/scheduler.h"
 #include "driver/motor.h"
 #include "driver/reset.h"
 #include "driver/serial.h"
 #include "driver/serial_4way.h"
 #include "flight/control.h"
+#include "io/quic.h"
 #include "io/usb_configurator.h"
-#include "quic.h"
+#include "io/vtx.h"
 #include "util/crc.h"
 #include "util/util.h"
-#include "vtx.h"
 
 enum {
   MSP_REBOOT_FIRMWARE = 0,
@@ -495,7 +496,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       msp_vtx_detected = 1;
     } else if (!flags.arm_state && msp->device != MSP_DEVICE_SPI_RX) {
       flash_save();
-      looptime_reset();
+      task_reset_runtime();
     }
     msp_send_reply(msp, magic, cmd, NULL, 0);
     break;

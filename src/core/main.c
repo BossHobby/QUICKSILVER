@@ -9,34 +9,27 @@
 #include "core/looptime.h"
 #include "core/profile.h"
 #include "core/project.h"
+#include "core/scheduler.h"
 #include "driver/adc.h"
-#include "driver/fmc.h"
 #include "driver/gpio.h"
 #include "driver/motor.h"
-#include "driver/reset.h"
 #include "driver/rgb_led.h"
-#include "driver/serial.h"
-#include "driver/spi.h"
 #include "driver/time.h"
+#include "driver/timer.h"
 #include "driver/usb.h"
-#include "flight/control.h"
 #include "flight/filter.h"
-#include "flight/gestures.h"
 #include "flight/imu.h"
 #include "flight/pid.h"
 #include "flight/sixaxis.h"
 #include "io/blackbox.h"
 #include "io/buzzer.h"
 #include "io/led.h"
-#include "io/rgb_led.h"
-#include "io/usb_configurator.h"
 #include "io/vbat.h"
 #include "io/vtx.h"
 #include "osd/render.h"
-#include "rx/rx.h"
-#include "util/util.h"
 
-__attribute__((__used__)) void memory_section_init() {
+__attribute__((__used__)) void
+memory_section_init() {
 #ifdef USE_FAST_RAM
   extern uint8_t _fast_ram_start;
   extern uint8_t _fast_ram_end;
@@ -73,6 +66,8 @@ __attribute__((__used__)) void memory_section_init() {
 }
 
 __attribute__((__used__)) int main() {
+  scheduler_init();
+
   // init timer so we can use delays etc
   time_init();
   looptime_init();
@@ -137,85 +132,7 @@ __attribute__((__used__)) int main() {
 
   blackbox_init();
   imu_init();
-
   osd_clear();
-  perf_counter_init();
 
-  looptime_reset();
-
-  while (1) {
-    // updates looptime counters & runs auto detect
-    looptime_update();
-
-    perf_counter_start(PERF_COUNTER_TOTAL);
-
-    // read gyro and accelerometer data
-    perf_counter_start(PERF_COUNTER_GYRO);
-    sixaxis_read();
-    perf_counter_end(PERF_COUNTER_GYRO);
-
-    // all flight calculations and motors
-    perf_counter_start(PERF_COUNTER_CONTROL);
-    control();
-    perf_counter_end(PERF_COUNTER_CONTROL);
-
-    perf_counter_start(PERF_COUNTER_MISC);
-
-    // attitude calculations for level mode
-    imu_calc();
-
-    // battery low logic
-    vbat_calc();
-
-    // check gestures
-    if (flags.on_ground && !flags.gestures_disabled) {
-      gestures();
-    }
-
-    // handle led commands
-    led_update();
-
-#if (RGB_LED_NUMBER > 0)
-    // RGB led control
-    rgb_led_lvc();
-#ifdef RGB_LED_DMA
-    rgb_dma_start();
-#endif
-#endif
-
-    buzzer_update();
-    vtx_update();
-
-    perf_counter_end(PERF_COUNTER_MISC);
-
-    // receiver function
-    perf_counter_start(PERF_COUNTER_RX);
-    rx_update();
-    perf_counter_end(PERF_COUNTER_RX);
-
-    perf_counter_start(PERF_COUNTER_BLACKBOX);
-    const uint8_t blackbox_active = blackbox_update();
-    perf_counter_end(PERF_COUNTER_BLACKBOX);
-
-    if (!blackbox_active) {
-      perf_counter_start(PERF_COUNTER_OSD);
-      osd_display();
-      perf_counter_end(PERF_COUNTER_OSD);
-    }
-
-    if (usb_detect()) {
-      flags.usb_active = 1;
-#ifndef ALLOW_USB_ARMING
-      if (flags.arm_switch)
-        flags.arm_safety = 1; // final safety check to disallow arming during USB operation
-#endif
-      usb_configurator();
-    } else {
-      flags.usb_active = 0;
-      motor_test.active = 0;
-    }
-
-    perf_counter_end(PERF_COUNTER_TOTAL);
-    perf_counter_update();
-  } // end loop
+  scheduler_run();
 }
