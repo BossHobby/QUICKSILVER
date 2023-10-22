@@ -55,20 +55,14 @@ void imu_init() {
 
 #ifdef SILVERWARE_IMU
 void imu_calc() {
-  const float gyro_delta_angle[3] = {
-      state.gyro.axis[0] * state.looptime,
-      state.gyro.axis[1] * state.looptime,
-      state.gyro.axis[2] * state.looptime,
-  };
+  state.GEstG.axis[2] = state.GEstG.axis[2] - (state.gyro_delta_angle.axis[0]) * state.GEstG.axis[0];
+  state.GEstG.axis[0] = (state.gyro_delta_angle.axis[0]) * state.GEstG.axis[2] + state.GEstG.axis[0];
 
-  state.GEstG.axis[2] = state.GEstG.axis[2] - (gyro_delta_angle[0]) * state.GEstG.axis[0];
-  state.GEstG.axis[0] = (gyro_delta_angle[0]) * state.GEstG.axis[2] + state.GEstG.axis[0];
+  state.GEstG.axis[1] = state.GEstG.axis[1] + (state.gyro_delta_angle.axis[1]) * state.GEstG.axis[2];
+  state.GEstG.axis[2] = -(state.gyro_delta_angle.axis[1]) * state.GEstG.axis[1] + state.GEstG.axis[2];
 
-  state.GEstG.axis[1] = state.GEstG.axis[1] + (gyro_delta_angle[1]) * state.GEstG.axis[2];
-  state.GEstG.axis[2] = -(gyro_delta_angle[1]) * state.GEstG.axis[1] + state.GEstG.axis[2];
-
-  state.GEstG.axis[0] = state.GEstG.axis[0] - (gyro_delta_angle[2]) * state.GEstG.axis[1];
-  state.GEstG.axis[1] = (gyro_delta_angle[2]) * state.GEstG.axis[0] + state.GEstG.axis[1];
+  state.GEstG.axis[0] = state.GEstG.axis[0] - (state.gyro_delta_angle.axis[2]) * state.GEstG.axis[1];
+  state.GEstG.axis[1] = (state.gyro_delta_angle.axis[2]) * state.GEstG.axis[0] + state.GEstG.axis[1];
 
   if (flags.on_ground) { // happyhour bartender - quad is ON GROUND and disarmed
     // calc acc mag
@@ -127,20 +121,14 @@ void imu_calc() {
 
 #ifdef QUICKSILVER_IMU
 void imu_calc() {
-  const float gyro_delta_angle[3] = {
-      state.gyro.axis[0] * state.looptime,
-      state.gyro.axis[1] * state.looptime,
-      state.gyro.axis[2] * state.looptime,
-  };
+  state.GEstG.axis[2] = state.GEstG.axis[2] - (state.gyro_delta_angle.axis[0]) * state.GEstG.axis[0];
+  state.GEstG.axis[0] = (state.gyro_delta_angle.axis[0]) * state.GEstG.axis[2] + state.GEstG.axis[0];
 
-  state.GEstG.axis[2] = state.GEstG.axis[2] - (gyro_delta_angle[0]) * state.GEstG.axis[0];
-  state.GEstG.axis[0] = (gyro_delta_angle[0]) * state.GEstG.axis[2] + state.GEstG.axis[0];
+  state.GEstG.axis[1] = state.GEstG.axis[1] + (state.gyro_delta_angle.axis[1]) * state.GEstG.axis[2];
+  state.GEstG.axis[2] = -(state.gyro_delta_angle.axis[1]) * state.GEstG.axis[1] + state.GEstG.axis[2];
 
-  state.GEstG.axis[1] = state.GEstG.axis[1] + (gyro_delta_angle[1]) * state.GEstG.axis[2];
-  state.GEstG.axis[2] = -(gyro_delta_angle[1]) * state.GEstG.axis[1] + state.GEstG.axis[2];
-
-  state.GEstG.axis[0] = state.GEstG.axis[0] - (gyro_delta_angle[2]) * state.GEstG.axis[1];
-  state.GEstG.axis[1] = (gyro_delta_angle[2]) * state.GEstG.axis[0] + state.GEstG.axis[1];
+  state.GEstG.axis[0] = state.GEstG.axis[0] - (state.gyro_delta_angle.axis[2]) * state.GEstG.axis[1];
+  state.GEstG.axis[1] = (state.gyro_delta_angle.axis[2]) * state.GEstG.axis[0] + state.GEstG.axis[1];
 
   filter_lp_pt1_coeff(&filter, PT1_FILTER_HZ);
 
