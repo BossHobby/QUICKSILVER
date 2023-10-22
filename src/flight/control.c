@@ -265,8 +265,6 @@ static void control_flight_mode() {
 }
 
 void control() {
-  pid_precalc();
-
   if (rx_aux_on(AUX_TURTLE) && !rx_aux_on(AUX_MOTOR_TEST)) { // turtle active when aux high
     turtle_mode_start();
   } else {
