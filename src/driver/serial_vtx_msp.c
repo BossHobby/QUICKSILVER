@@ -22,7 +22,7 @@ static void serial_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, 
 
     vtx_frame[0] = '$';
     vtx_frame[1] = MSP2_MAGIC;
-    vtx_frame[2] = '>';
+    vtx_frame[2] = direction;
     vtx_frame[3] = 0; // flag
     vtx_frame[4] = (cmd >> 0) & 0xFF;
     vtx_frame[5] = (cmd >> 8) & 0xFF;
@@ -39,7 +39,7 @@ static void serial_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, 
 
     vtx_frame[0] = '$';
     vtx_frame[1] = MSP1_MAGIC;
-    vtx_frame[2] = '>';
+    vtx_frame[2] = direction;
     vtx_frame[3] = len;
     vtx_frame[4] = cmd;
 
