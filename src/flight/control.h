@@ -3,9 +3,9 @@
 #include <stdint.h>
 
 #include "core/failloop.h"
+#include "core/looptime.h"
 #include "core/project.h"
 #include "rx/rx.h"
-
 #include "util/vector.h"
 
 #define ANGLE_PID_SIZE 2
@@ -43,7 +43,7 @@ extern control_flags_t flags;
 typedef struct {
   failloop_t failloop;
 
-  uint16_t looptime_autodetect;
+  looptime_t looptime_autodetect;
   float looptime;        // looptime in seconds
   float timefactor;      // timefactor for pid calc
   uint32_t looptime_us;  // looptime in us
