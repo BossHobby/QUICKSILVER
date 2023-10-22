@@ -4,6 +4,7 @@
 #include "core/flash.h"
 #include "core/looptime.h"
 #include "core/profile.h"
+#include "core/scheduler.h"
 #include "driver/spi_cc2500.h"
 #include "driver/time.h"
 #include "flight/control.h"
@@ -179,7 +180,7 @@ static uint8_t redpine_handle_packet() {
       flags.failsafe = 1;
       protocol_state = FRSKY_STATE_INIT;
       rx_redpine_init();
-      looptime_reset();
+      task_reset_runtime();
     }
     break;
   }
