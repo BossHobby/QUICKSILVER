@@ -74,6 +74,8 @@ void looptime_update() {
 
   state.looptime_us = CYCLES_TO_US(time_cycles() - last_loop_cycles);
   state.looptime = state.looptime_us * 1e-6f;
+  // 0.0032f is there for legacy purposes, should be 0.001f = looptime
+  state.timefactor = 0.0032f / state.looptime;
   state.loop_counter++;
 
   last_loop_cycles = time_cycles();

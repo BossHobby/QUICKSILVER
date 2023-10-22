@@ -134,6 +134,10 @@ void sixaxis_read() {
     state.gyro.axis[i] = filter_step(profile.filter.gyro[0].type, &filter[0], &filter_state[0][i], state.gyro.axis[i]);
     state.gyro.axis[i] = filter_step(profile.filter.gyro[1].type, &filter[1], &filter_state[1][i], state.gyro.axis[i]);
   }
+
+  state.gyro_delta_angle.axis[0] = state.gyro.axis[0] * state.looptime;
+  state.gyro_delta_angle.axis[1] = state.gyro.axis[1] * state.looptime;
+  state.gyro_delta_angle.axis[2] = state.gyro.axis[2] * state.looptime;
 }
 
 static bool test_gyro_move(const gyro_data_t *last_data, const gyro_data_t *data) {

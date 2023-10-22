@@ -16,8 +16,6 @@ static float apidoutput2[ANGLE_PID_SIZE];
 static float apidoutput[ANGLE_PID_SIZE];
 static float lasterror[ANGLE_PID_SIZE];
 
-extern float timefactor;
-
 float angle_pid(int x) {
   const float angle_error_abs = fabsf(state.angleerror[x]);
 
@@ -28,10 +26,10 @@ float angle_pid(int x) {
   apidoutput2[x] = angle_error_abs * state.angleerror[x] * profile.pid.big_angle.kp;
 
   // D term 1 weighted + P term 1 weighted
-  apidoutput1[x] += (state.angleerror[x] - lasterror[x]) * profile.pid.small_angle.kd * (1 - angle_error_abs) * timefactor;
+  apidoutput1[x] += (state.angleerror[x] - lasterror[x]) * profile.pid.small_angle.kd * (1 - angle_error_abs) * state.timefactor;
 
   // D term 2 weighted + P term 2 weighted
-  apidoutput2[x] += ((state.angleerror[x] - lasterror[x]) * profile.pid.big_angle.kd * angle_error_abs * timefactor);
+  apidoutput2[x] += ((state.angleerror[x] - lasterror[x]) * profile.pid.big_angle.kd * angle_error_abs * state.timefactor);
 
   // apidoutput sum
   apidoutput[x] = apidoutput1[x] + apidoutput2[x];
