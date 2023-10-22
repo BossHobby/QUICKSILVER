@@ -19,10 +19,6 @@
 #define RELAX_FACTOR (RELAX_FACTOR_DEG * DEGTORAD)
 #define RELAX_FACTOR_YAW (RELAX_FACTOR_YAW_DEG * DEGTORAD)
 
-extern profile_t profile;
-
-float timefactor;
-
 // "p term setpoint weighting" 0.0 - 1.0 where 1.0 = normal pid
 static const float setpoint_weigth_brushed[3] = {0.93, 0.93, 0.9}; // BRUSHED FREESTYLE
 // float setpoint_weigth_brushed[3] = { 0.97 , 0.98 , 0.95};   //BRUSHED RACE
@@ -38,9 +34,9 @@ static const float integral_limit_brushless[PID_SIZE] = {0.8, 0.8, 0.6};
 
 static const float pid_scales[PID_SIZE][PID_SIZE] = {
     // roll, pitch, yaw
-    {628.0f, 628.0f, 314.0f}, // kp
-    {50.0f, 50.0f, 50.0f},    // ki
-    {120.0f, 120.0f, 120.0f}, // kd
+    {1.0f / 628.0f, 1.0f / 628.0f, 1.0f / 314.0f}, // kp
+    {1.0f / 50.0f, 1.0f / 50.0f, 1.0f / 50.0f},    // ki
+    {1.0f / 120.0f, 1.0f / 120.0f, 1.0f / 120.0f}, // kd
 };
 
 static float lasterror[PID_SIZE] = {0, 0, 0};
@@ -49,14 +45,7 @@ static float lasterror2[PID_SIZE] = {0, 0, 0};
 static float lastrate[PID_SIZE] = {0, 0, 0};
 static float lastsetpoint[PID_SIZE] = {0, 0, 0};
 
-static float current_kp[PID_SIZE] = {0, 0, 0};
-static float current_ki[PID_SIZE] = {0, 0, 0};
-static float current_kd[PID_SIZE] = {0, 0, 0};
-
 static float ierror[PID_SIZE] = {0, 0, 0};
-
-static float v_compensation = 1.00;
-static float tda_compensation = 1.00;
 
 static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
@@ -77,50 +66,6 @@ void pid_init() {
   if (profile.filter.dterm_dynamic_enable) {
     // zero out filter, freq will be updated later on
     filter_lp_pt1_init(&dynamic_filter, dynamic_filter_state, 3, DTERM_DYNAMIC_FREQ_MAX);
-  }
-}
-
-// calculate change from ideal loop time
-// 0.0032f is there for legacy purposes, should be 0.001f = looptime
-// this is called in advance as an optimization because it has division
-void pid_precalc() {
-  timefactor = 0.0032f / state.looptime;
-
-  filter_lp_pt1_coeff(&rx_filter, state.rx_filter_hz);
-  filter_coeff(profile.filter.dterm[0].type, &filter[0], profile.filter.dterm[0].cutoff_freq);
-  filter_coeff(profile.filter.dterm[1].type, &filter[1], profile.filter.dterm[1].cutoff_freq);
-
-  if (profile.voltage.pid_voltage_compensation) {
-    v_compensation = mapf((state.vbat_filtered_decay / (float)state.lipo_cell_count), 2.5f, 3.85f, PID_VC_FACTOR, 1.0f);
-    v_compensation = constrain(v_compensation, 1.0f, PID_VC_FACTOR);
-
-#ifdef LEVELMODE_PID_ATTENUATION
-    if (rx_aux_on(AUX_LEVELMODE))
-      v_compensation *= LEVELMODE_PID_ATTENUATION;
-#endif
-  } else {
-    v_compensation = 1.0f;
-  }
-
-  if (profile.pid.throttle_dterm_attenuation.tda_active) {
-    tda_compensation = mapf(state.throttle, profile.pid.throttle_dterm_attenuation.tda_breakpoint, 1.0f, 1.0f, profile.pid.throttle_dterm_attenuation.tda_percent);
-    tda_compensation = constrain(tda_compensation, profile.pid.throttle_dterm_attenuation.tda_percent, 1.0f);
-  } else {
-    tda_compensation = 1.0f;
-  }
-
-  if (profile.filter.dterm_dynamic_enable) {
-    float dynamic_throttle = state.throttle + state.throttle * (1 - state.throttle) * DTERM_DYNAMIC_EXPO;
-    float d_term_dynamic_freq = mapf(dynamic_throttle, 0.0f, 1.0f, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
-    d_term_dynamic_freq = constrain(d_term_dynamic_freq, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
-
-    filter_lp_pt1_coeff(&dynamic_filter, d_term_dynamic_freq);
-  }
-
-  for (uint8_t i = 0; i < PID_SIZE; i++) {
-    current_kp[i] = profile_current_pid_rates()->kp.axis[i] / pid_scales[0][i];
-    current_ki[i] = profile_current_pid_rates()->ki.axis[i] / pid_scales[1][i];
-    current_kd[i] = profile_current_pid_rates()->kd.axis[i] / pid_scales[2][i];
   }
 }
 
@@ -186,87 +131,116 @@ static inline bool pid_should_enable_iterm(uint8_t x) {
   return stick_movement;
 }
 
-// pid calculation for acro ( rate ) mode
-// input: error[x] = setpoint - gyro
-// output: state.pidoutput.axis[x] = change required from motors
-static inline void pid(uint8_t x) {
-  // P term
-  const float *setpoint_weigth = target.brushless ? setpoint_weigth_brushless : setpoint_weigth_brushed;
-  state.pid_p_term.axis[x] = state.error.axis[x] * (setpoint_weigth[x]) * current_kp[x];
-  state.pid_p_term.axis[x] += -(1.0f - setpoint_weigth[x]) * current_kp[x] * state.gyro.axis[x];
-
-  // Pid Voltage Comp applied to P term only
-  state.pid_p_term.axis[x] *= v_compensation;
-
-  // I term
-  static vec3_t pid_output = {.roll = 0, .pitch = 0, .yaw = 0};
-
-  // SIMPSON_RULE_INTEGRAL
-  // assuming similar time intervals
-  const float *integral_limit = target.brushless ? integral_limit_brushless : integral_limit_brushed;
-  const float iterm_windup = pid_compute_iterm_windup(x, pid_output.axis[x]);
-  if (!pid_should_enable_iterm(x)) {
-    // wind down integral while we are still on ground and we do not get any input from the sticks
-    ierror[x] *= 0.98f;
-  }
-  ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + state.error.axis[x]) * current_ki[x] * iterm_windup * state.looptime;
-  ierror[x] = constrain(ierror[x], -integral_limit[x], integral_limit[x]);
-  lasterror2[x] = lasterror[x];
-  lasterror[x] = state.error.axis[x];
-
-  state.pid_i_term.axis[x] = ierror[x];
-
-  // D term
-  const uint8_t stck_boost_profile = rx_aux_on(AUX_STICK_BOOST_PROFILE) ? STICK_PROFILE_ON : STICK_PROFILE_OFF;
-
-  const float stick_accelerator = profile.pid.stick_rates[stck_boost_profile].accelerator.axis[x];
-  const float stick_transition = profile.pid.stick_rates[stck_boost_profile].transition.axis[x];
-
-  float transition_setpoint_weight = 0;
-  if (stick_accelerator < 1) {
-    transition_setpoint_weight = (fabsf(state.rx_filtered.axis[x]) * stick_transition) + (1 - stick_transition);
-  } else {
-    transition_setpoint_weight = (fabsf(state.rx_filtered.axis[x]) * (stick_transition / stick_accelerator)) + (1 - stick_transition);
+static inline float pid_voltage_compensation() {
+  if (!profile.voltage.pid_voltage_compensation) {
+    return 1.0f;
   }
 
-  float setpoint_derivative = (state.setpoint.axis[x] - lastsetpoint[x]) * current_kd[x] * timefactor;
-  if (state.rx_filter_hz > 0.1f) {
-    setpoint_derivative = filter_lp_pt1_step(&rx_filter, &rx_filter_state[x], setpoint_derivative);
-  }
-  lastsetpoint[x] = state.setpoint.axis[x];
-
-  const float gyro_derivative = (state.gyro.axis[x] - lastrate[x]) * current_kd[x] * timefactor * tda_compensation;
-  lastrate[x] = state.gyro.axis[x];
-
-  const float dterm = (setpoint_derivative * stick_accelerator * transition_setpoint_weight) - (gyro_derivative);
-  state.pid_d_term.axis[x] = pid_filter_dterm(x, dterm);
-
-  const float *out_limit = target.brushless ? out_limit_brushless : out_limit_brushed;
-  state.pidoutput.axis[x] = pid_output.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x];
-  state.pidoutput.axis[x] = constrain(state.pidoutput.axis[x], -out_limit[x], out_limit[x]);
+  float res = constrain(mapf((state.vbat_filtered_decay / (float)state.lipo_cell_count), 2.5f, 3.85f, PID_VC_FACTOR, 1.0f), 1.0f, PID_VC_FACTOR);
+#ifdef LEVELMODE_PID_ATTENUATION
+  if (rx_aux_on(AUX_LEVELMODE))
+    res *= LEVELMODE_PID_ATTENUATION;
+#endif
+  return res;
 }
 
+static inline float pid_tda_compensation() {
+  if (!profile.pid.throttle_dterm_attenuation.tda_active) {
+    return 1.0f;
+  }
+  const float tda_compensation = mapf(state.throttle, profile.pid.throttle_dterm_attenuation.tda_breakpoint, 1.0f, 1.0f, profile.pid.throttle_dterm_attenuation.tda_percent);
+  return constrain(tda_compensation, profile.pid.throttle_dterm_attenuation.tda_percent, 1.0f);
+}
+
+// input: error[] = setpoint - gyro
+// output: state.pidoutput.axis[] = change required from motors
 void pid_calc() {
   // rotates errors, originally by joelucid
-  const float gyro_delta_angle[3] = {
-      state.gyro.axis[0] * state.looptime,
-      state.gyro.axis[1] * state.looptime,
-      state.gyro.axis[2] * state.looptime,
-  };
 
   // rotation around x axis:
-  ierror[1] -= ierror[2] * gyro_delta_angle[0];
-  ierror[2] += ierror[1] * gyro_delta_angle[0];
+  ierror[1] -= ierror[2] * state.gyro_delta_angle.axis[0];
+  ierror[2] += ierror[1] * state.gyro_delta_angle.axis[0];
 
   // rotation around y axis:
-  ierror[2] -= ierror[0] * gyro_delta_angle[1];
-  ierror[0] += ierror[2] * gyro_delta_angle[1];
+  ierror[2] -= ierror[0] * state.gyro_delta_angle.axis[1];
+  ierror[0] += ierror[2] * state.gyro_delta_angle.axis[1];
 
   // rotation around z axis:
-  ierror[0] -= ierror[1] * gyro_delta_angle[2];
-  ierror[1] += ierror[0] * gyro_delta_angle[2];
+  ierror[0] -= ierror[1] * state.gyro_delta_angle.axis[2];
+  ierror[1] += ierror[0] * state.gyro_delta_angle.axis[2];
 
-  pid(0);
-  pid(1);
-  pid(2);
+  filter_lp_pt1_coeff(&rx_filter, state.rx_filter_hz);
+  filter_coeff(profile.filter.dterm[0].type, &filter[0], profile.filter.dterm[0].cutoff_freq);
+  filter_coeff(profile.filter.dterm[1].type, &filter[1], profile.filter.dterm[1].cutoff_freq);
+
+  static vec3_t pid_output = {.roll = 0, .pitch = 0, .yaw = 0};
+  const float v_compensation = pid_voltage_compensation();
+  const float tda_compensation = pid_tda_compensation();
+  const float *out_limit = target.brushless ? out_limit_brushless : out_limit_brushed;
+  const float *setpoint_weigth = target.brushless ? setpoint_weigth_brushless : setpoint_weigth_brushed;
+  const float *integral_limit = target.brushless ? integral_limit_brushless : integral_limit_brushed;
+
+  const uint8_t stick_boost_profile = rx_aux_on(AUX_STICK_BOOST_PROFILE) ? STICK_PROFILE_ON : STICK_PROFILE_OFF;
+  const float *stick_accelerator = profile.pid.stick_rates[stick_boost_profile].accelerator.axis;
+  const float *stick_transition = profile.pid.stick_rates[stick_boost_profile].transition.axis;
+
+  if (profile.filter.dterm_dynamic_enable) {
+    float dynamic_throttle = state.throttle + state.throttle * (1 - state.throttle) * DTERM_DYNAMIC_EXPO;
+    float d_term_dynamic_freq = mapf(dynamic_throttle, 0.0f, 1.0f, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
+    d_term_dynamic_freq = constrain(d_term_dynamic_freq, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
+
+    filter_lp_pt1_coeff(&dynamic_filter, d_term_dynamic_freq);
+  }
+
+#pragma GCC unroll 3
+  for (uint8_t x = 0; x < PID_SIZE; x++) {
+    const float current_kp = profile_current_pid_rates()->kp.axis[x] * pid_scales[0][x];
+    const float current_ki = profile_current_pid_rates()->ki.axis[x] * pid_scales[1][x];
+    const float current_kd = profile_current_pid_rates()->kd.axis[x] * pid_scales[2][x];
+
+    // P term
+    state.pid_p_term.axis[x] = state.error.axis[x] * (setpoint_weigth[x]) * current_kp;
+    state.pid_p_term.axis[x] += -(1.0f - setpoint_weigth[x]) * current_kp * state.gyro.axis[x];
+
+    // Pid Voltage Comp applied to P term only
+    state.pid_p_term.axis[x] *= v_compensation;
+
+    // I term
+    const float iterm_windup = pid_compute_iterm_windup(x, pid_output.axis[x]);
+    if (!pid_should_enable_iterm(x)) {
+      // wind down integral while we are still on ground and we do not get any input from the sticks
+      ierror[x] *= 0.98f;
+    }
+    // SIMPSON_RULE_INTEGRAL
+    // assuming similar time intervals
+    ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + state.error.axis[x]) * current_ki * iterm_windup * state.looptime;
+    ierror[x] = constrain(ierror[x], -integral_limit[x], integral_limit[x]);
+    lasterror2[x] = lasterror[x];
+    lasterror[x] = state.error.axis[x];
+
+    state.pid_i_term.axis[x] = ierror[x];
+
+    // D term
+    float transition_setpoint_weight = 0;
+    if (stick_accelerator[x] < 1) {
+      transition_setpoint_weight = (fabsf(state.rx_filtered.axis[x]) * stick_transition[x]) + (1 - stick_transition[x]);
+    } else {
+      transition_setpoint_weight = (fabsf(state.rx_filtered.axis[x]) * (stick_transition[x] / stick_accelerator[x])) + (1 - stick_transition[x]);
+    }
+
+    float setpoint_derivative = (state.setpoint.axis[x] - lastsetpoint[x]) * current_kd * state.timefactor;
+    if (state.rx_filter_hz > 0.1f) {
+      setpoint_derivative = filter_lp_pt1_step(&rx_filter, &rx_filter_state[x], setpoint_derivative);
+    }
+    lastsetpoint[x] = state.setpoint.axis[x];
+
+    const float gyro_derivative = (state.gyro.axis[x] - lastrate[x]) * current_kd * state.timefactor * tda_compensation;
+    lastrate[x] = state.gyro.axis[x];
+
+    const float dterm = (setpoint_derivative * stick_accelerator[x] * transition_setpoint_weight) - (gyro_derivative);
+    state.pid_d_term.axis[x] = pid_filter_dterm(x, dterm);
+
+    state.pidoutput.axis[x] = pid_output.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x];
+    state.pidoutput.axis[x] = constrain(state.pidoutput.axis[x], -out_limit[x], out_limit[x]);
+  }
 }
