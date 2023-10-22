@@ -45,6 +45,7 @@ typedef struct {
 
   uint16_t looptime_autodetect;
   float looptime;        // looptime in seconds
+  float timefactor;      // timefactor for pid calc
   uint32_t looptime_us;  // looptime in us
   uint32_t loop_counter; // number of loops ran
   float uptime;          // running sum of looptimes
@@ -85,9 +86,10 @@ typedef struct {
   vec3_t accel_raw; // raw accel reading with rotation and scaling applied
   vec3_t accel;     // filtered accel readings
 
-  float gyro_temp; // gyro temparture reading
-  vec3_t gyro_raw; // raw gyro reading with rotation and scaling applied
-  vec3_t gyro;     // filtered gyro reading
+  float gyro_temp;         // gyro temparture reading
+  vec3_t gyro_raw;         // raw gyro reading with rotation and scaling applied
+  vec3_t gyro;             // filtered gyro reading
+  vec3_t gyro_delta_angle; // angle covered in  last time interval
 
   vec3_t GEstG; // gravity vector
   vec3_t attitude;
@@ -109,6 +111,7 @@ typedef struct {
   MEMBER(failloop, uint8_t)                   \
   MEMBER(looptime_autodetect, uint16_t)       \
   MEMBER(looptime, float)                     \
+  MEMBER(timefactor, float)                   \
   MEMBER(looptime_us, uint32_t)               \
   MEMBER(loop_counter, uint32_t)              \
   MEMBER(uptime, float)                       \
@@ -139,6 +142,7 @@ typedef struct {
   MEMBER(gyro_temp, float)                    \
   MEMBER(gyro_raw, vec3_t)                    \
   MEMBER(gyro, vec3_t)                        \
+  MEMBER(gyro_delta_angle, vec3_t)            \
   MEMBER(GEstG, vec3_t)                       \
   MEMBER(attitude, vec3_t)                    \
   MEMBER(setpoint, vec3_t)                    \
