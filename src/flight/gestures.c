@@ -3,6 +3,7 @@
 #include "core/flash.h"
 #include "core/looptime.h"
 #include "core/profile.h"
+#include "core/scheduler.h"
 #include "flight/control.h"
 #include "flight/pid.h"
 #include "flight/sixaxis.h"
@@ -11,6 +12,10 @@
 #include "util/util.h"
 
 void gestures() {
+  if (!flags.on_ground || flags.gestures_disabled) {
+    return;
+  }
+
   static bool skip_calib = false;
 
   const int32_t command = gestures_detect();
@@ -37,7 +42,7 @@ void gestures() {
     flash_load();
 
     // reset loop time
-    looptime_reset();
+    task_reset_runtime();
     break;
   }
   case GESTURE_UUU: {

@@ -10,7 +10,6 @@
 #ifdef USE_BLACKBOX
 
 static blackbox_t blackbox;
-
 static uint8_t blackbox_enabled = 0;
 static uint8_t blackbox_rate = 0;
 
@@ -92,34 +91,33 @@ static uint32_t blackbox_rate_div() {
   return (1000000 / state.looptime_autodetect) / profile.blackbox.sample_rate_hz;
 }
 
-uint8_t blackbox_update() {
+void blackbox_update() {
   blackbox_device_result_t flash_result = blackbox_device_update();
   if (flash_result == BLACKBOX_DEVICE_WAIT) {
     // flash is still detecting, dont do anything
-    return 0;
+    return;
   }
 
   // flash is either idle or writing, do blackbox
   if ((!flags.arm_state || !rx_aux_on(AUX_BLACKBOX)) && blackbox_enabled == 1) {
     blackbox_device_finish();
     blackbox_enabled = 0;
-    return 0;
+    return;
   } else if ((flags.arm_state && flags.turtle_ready == 0 && rx_aux_on(AUX_BLACKBOX)) && blackbox_enabled == 0) {
     if (blackbox_device_restart(profile.blackbox.field_flags, blackbox_rate_div(), state.looptime_autodetect)) {
       blackbox_rate = blackbox_rate_div();
       blackbox_enabled = 1;
       blackbox.loop = 0;
     }
-    return 0;
+    return;
   }
 
   if (blackbox_enabled == 0) {
-    return 0;
+    return;
   }
 
   if ((state.loop_counter % blackbox_rate) != 0) {
-    // tell the rest of the code that flash is occuping the spi bus
-    return flash_result == BLACKBOX_DEVICE_WRITE;
+    return;
   }
 
   blackbox.loop++;
@@ -147,9 +145,6 @@ uint8_t blackbox_update() {
   blackbox.cpu_load = state.cpu_load;
 
   blackbox_device_write(profile.blackbox.field_flags, &blackbox);
-
-  // tell the rest of the code that flash is occuping the spi bus
-  return flash_result == BLACKBOX_DEVICE_WRITE;
 }
 #else
 void blackbox_init() {}
