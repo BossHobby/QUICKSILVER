@@ -27,7 +27,7 @@ enum {
 };
 
 extern uint8_t msp_vtx_detected;
-extern vtx_settings_t msp_vtx_settings;
+extern vtx_settings_t vtx_actual;
 extern const uint16_t frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX];
 extern char msp_vtx_band_letters[VTX_BAND_MAX];
 extern char msp_vtx_band_labels[VTX_BAND_MAX][8];
@@ -324,7 +324,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   }
 
   case MSP_SET_VTX_CONFIG: {
-    vtx_settings_t *settings = &msp_vtx_settings;
+    vtx_settings_t *settings = &vtx_actual;
     if (msp->device != MSP_DEVICE_VTX) {
       // store non-msp settings in temporary;
       static vtx_settings_t _vtx_settings;
@@ -451,14 +451,14 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       break;
     }
 
-    const uint16_t power = vtx_settings.power_table.values[level - 1];
+    const uint16_t power = vtx_actual.power_table.values[level - 1];
 
     uint8_t buf[7];
     buf[0] = level;
     buf[1] = power & 0xFF;
     buf[2] = power >> 8;
     buf[3] = 3;
-    memcpy(buf + 4, vtx_settings.power_table.labels[level - 1], 3);
+    memcpy(buf + 4, vtx_actual.power_table.labels[level - 1], 3);
 
     msp_send_reply(msp, magic, cmd, buf, 7);
     break;
@@ -471,12 +471,12 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       break;
     }
 
-    vtx_settings.power_table.levels = max(level, vtx_settings.power_table.levels);
-    vtx_settings.power_table.values[level - 1] = payload[2] << 8 | payload[1];
+    vtx_actual.power_table.levels = max(level, vtx_actual.power_table.levels);
+    vtx_actual.power_table.values[level - 1] = payload[2] << 8 | payload[1];
 
     const uint8_t label_len = payload[3];
     for (uint8_t i = 0; i < 3; i++) {
-      vtx_settings.power_table.labels[level - 1][i] = i >= label_len ? 0 : payload[4 + i];
+      vtx_actual.power_table.labels[level - 1][i] = i >= label_len ? 0 : payload[4 + i];
     }
     msp_send_reply(msp, magic, cmd, NULL, 0);
     break;

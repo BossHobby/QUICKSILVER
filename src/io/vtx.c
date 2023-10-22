@@ -24,7 +24,7 @@ vtx_settings_t vtx_settings = {
 };
 uint8_t vtx_connect_tries = 0;
 
-static vtx_settings_t vtx_actual;
+vtx_settings_t vtx_actual;
 
 static uint8_t apply_tries = 0;
 static uint32_t vtx_delay_start = 0;
