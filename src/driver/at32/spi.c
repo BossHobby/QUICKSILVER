@@ -8,7 +8,7 @@ extern void spi_enable_rcc(spi_ports_t port);
 extern void spi_csn_enable(spi_bus_device_t *bus);
 extern void spi_csn_disable(spi_bus_device_t *bus);
 
-extern bool spi_txn_can_send(spi_bus_device_t *bus);
+extern bool spi_txn_can_send(spi_bus_device_t *bus, bool dma);
 extern void spi_txn_finish(spi_bus_device_t *bus);
 
 const spi_port_def_t spi_port_defs[SPI_PORT_MAX] = {
@@ -289,7 +289,7 @@ void spi_bus_device_init(spi_bus_device_t *bus) {
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count) {
   spi_txn_wait(bus);
 
-  while (!spi_txn_can_send(bus))
+  while (!spi_txn_can_send(bus, true))
     ;
 
   const spi_ports_t port = bus->port;
