@@ -31,14 +31,6 @@ void spi_bus_device_reconfigure(spi_bus_device_t *bus, spi_mode_t mode, uint32_t
 }
 
 uint8_t spi_dma_is_ready(spi_ports_t port) {
-#if defined(STM32F4) && defined(USE_MOTOR_DSHOT)
-  if (target.brushless && port == SPI_PORT1) {
-    extern volatile int dshot_dma_phase;
-    if (dshot_dma_phase != 0) {
-      return 0;
-    }
-  }
-#endif
   return dma_transfer_done[port];
 }
 
@@ -59,10 +51,20 @@ bool spi_txn_ready(spi_bus_device_t *bus) {
   return bus->txn_head == bus->txn_tail;
 }
 
-bool spi_txn_can_send(spi_bus_device_t *bus) {
+bool spi_txn_can_send(spi_bus_device_t *bus, bool dma) {
   if (!spi_dma_is_ready(bus->port)) {
     return false;
   }
+
+#if defined(STM32F4) && defined(USE_MOTOR_DSHOT)
+  extern volatile int dshot_dma_phase;
+  if (dma &&
+      target.brushless &&
+      bus->port == SPI_PORT1 &&
+      dshot_dma_phase != 0) {
+    return false;
+  }
+#endif
 
   volatile spi_port_config_t *config = &spi_port_config[bus->port];
   if (config->active_device != NULL && config->active_device != bus) {
@@ -82,7 +84,7 @@ void spi_txn_continue(spi_bus_device_t *bus) {
       return;
     }
 
-    if (!spi_txn_can_send(bus)) {
+    if (!spi_txn_can_send(bus, true)) {
       return;
     }
 
