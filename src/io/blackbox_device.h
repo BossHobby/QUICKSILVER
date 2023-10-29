@@ -43,7 +43,7 @@ typedef struct {
 
 typedef struct {
   uint32_t field_flags;
-  uint32_t looptime;
+  float looptime;
   uint8_t blackbox_rate;
   uint32_t start;
   uint32_t size;
@@ -51,7 +51,7 @@ typedef struct {
 
 #define BLACKBOX_DEVICE_FILE_MEMBERS \
   MEMBER(field_flags, uint32_t)      \
-  MEMBER(looptime, uint32_t)         \
+  MEMBER(looptime, float)            \
   MEMBER(blackbox_rate, uint8_t)     \
   MEMBER(start, uint32_t)            \
   MEMBER(size, uint32_t)
@@ -86,7 +86,7 @@ uint32_t blackbox_device_usage();
 blackbox_device_file_t *blackbox_current_file();
 
 void blackbox_device_reset();
-bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, uint32_t looptime);
+bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float looptime);
 void blackbox_device_finish();
 
 void blackbox_device_read(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size);
