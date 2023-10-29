@@ -111,6 +111,29 @@ uint8_t gyro_spi_init() {
   return gyro_type;
 }
 
+float gyro_update_period() {
+  switch (gyro_type) {
+  case GYRO_TYPE_MPU6000:
+  case GYRO_TYPE_MPU6500:
+  case GYRO_TYPE_ICM20601:
+  case GYRO_TYPE_ICM20602:
+  case GYRO_TYPE_ICM20608:
+  case GYRO_TYPE_ICM20689:
+    return 125.0f;
+
+  case GYRO_TYPE_ICM42605:
+  case GYRO_TYPE_ICM42688P:
+    return 125.0f;
+
+  case GYRO_TYPE_BMI270:
+  case GYRO_TYPE_BMI323:
+    return 312.5f;
+
+  default:
+    return 250.0f;
+  }
+}
+
 gyro_data_t gyro_spi_read() {
   static gyro_data_t data;
 

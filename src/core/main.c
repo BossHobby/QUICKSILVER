@@ -6,7 +6,6 @@
 #include "core/debug.h"
 #include "core/failloop.h"
 #include "core/flash.h"
-#include "core/looptime.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/scheduler.h"
@@ -66,11 +65,8 @@ memory_section_init() {
 }
 
 __attribute__((__used__)) int main() {
-  scheduler_init();
-
   // init timer so we can use delays etc
   time_init();
-  looptime_init();
 
   // load settings from flash
   flash_load();
@@ -104,10 +100,13 @@ __attribute__((__used__)) int main() {
   // wait for devices to wake up
   time_delay_ms(300);
 
-  if (!sixaxis_init()) {
+  if (!sixaxis_detect()) {
     // gyro not found
     failloop(FAILLOOP_GYRO);
   }
+
+  scheduler_init();
+  sixaxis_init();
 
   // give the gyro some time to settle
   time_delay_ms(100);
