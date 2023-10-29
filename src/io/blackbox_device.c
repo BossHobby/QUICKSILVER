@@ -118,7 +118,7 @@ void blackbox_device_reset() {
   task_reset_runtime();
 }
 
-bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, uint32_t looptime) {
+bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float looptime) {
   if (dev == NULL) {
     return false;
   }

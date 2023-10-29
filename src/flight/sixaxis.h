@@ -3,7 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-bool sixaxis_init();
+bool sixaxis_detect();
+void sixaxis_init();
 void sixaxis_read();
 
 void sixaxis_gyro_cal();

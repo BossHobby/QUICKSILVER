@@ -53,7 +53,7 @@
 #define PWM_CLOCK_FREQ_HZ 108000000
 #define SPI_CLOCK_FREQ_HZ (SYS_CLOCK_FREQ_HZ / 2)
 
-#define LOOPTIME LOOPTIME_4K
+#define LOOPTIME_MAX 250
 #endif
 
 #ifdef STM32F405
@@ -61,7 +61,7 @@
 #define PWM_CLOCK_FREQ_HZ 84000000
 #define SPI_CLOCK_FREQ_HZ (SYS_CLOCK_FREQ_HZ / 4)
 
-#define LOOPTIME LOOPTIME_8K
+#define LOOPTIME_MAX 125
 #endif
 
 #ifdef STM32F7
@@ -69,7 +69,7 @@
 #define PWM_CLOCK_FREQ_HZ 216000000
 #define SPI_CLOCK_FREQ_HZ (SYS_CLOCK_FREQ_HZ / 4)
 
-#define LOOPTIME LOOPTIME_8K
+#define LOOPTIME_MAX 125
 
 #define WITHIN_DTCM_RAM(p) (((uint32_t)p & 0xffff0000) == 0x20000000)
 #define WITHIN_DMA_RAM(p) (false)
@@ -80,7 +80,7 @@
 #define PWM_CLOCK_FREQ_HZ (SYS_CLOCK_FREQ_HZ / 2)
 #define SPI_CLOCK_FREQ_HZ (SYS_CLOCK_FREQ_HZ / 4)
 
-#define LOOPTIME LOOPTIME_8K
+#define LOOPTIME_MAX 125
 
 #define WITHIN_DTCM_RAM(p) (((uint32_t)p & 0xfffe0000) == 0x20000000)
 #define WITHIN_DMA_RAM(p) (((uint32_t)p & 0xfffe0000) == 0x30000000)

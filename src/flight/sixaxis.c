@@ -44,11 +44,12 @@ static sdft_t gyro_sdft[SDFT_AXES];
 static filter_biquad_notch_t notch_filter[SDFT_AXES][SDFT_PEAKS];
 static filter_biquad_state_t notch_filter_state[SDFT_AXES][SDFT_PEAKS];
 
-bool sixaxis_init() {
-  const gyro_types_t id = gyro_spi_init();
+bool sixaxis_detect() {
+  target_info.gyro_id = gyro_spi_init();
+  return target_info.gyro_id != GYRO_TYPE_INVALID;
+}
 
-  target_info.gyro_id = id;
-
+void sixaxis_init() {
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
     filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq);
   }
@@ -59,8 +60,6 @@ bool sixaxis_init() {
       filter_biquad_notch_init(&notch_filter[i][j], &notch_filter_state[i][j], 1, 0);
     }
   }
-
-  return id != GYRO_TYPE_INVALID;
 }
 
 void sixaxis_read() {
