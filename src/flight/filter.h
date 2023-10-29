@@ -24,21 +24,21 @@ typedef struct {
 
 typedef struct {
   float hz;
-  uint32_t sample_period_us;
+  float sample_period_us;
 
   float alpha;
 } filter_lp_pt1;
 
 typedef struct {
   float hz;
-  uint32_t sample_period_us;
+  float sample_period_us;
 
   float alpha;
 } filter_lp_pt2;
 
 typedef struct {
   float hz;
-  uint32_t sample_period_us;
+  float sample_period_us;
 
   float alpha;
 } filter_lp_pt3;

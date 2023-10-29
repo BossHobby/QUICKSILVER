@@ -1,17 +1,22 @@
 #include "core/looptime.h"
 
 #include "core/project.h"
+#include "driver/spi_gyro.h"
 #include "driver/time.h"
 #include "flight/control.h"
+#include "util/util.h"
 
 uint8_t looptime_warning = 0;
 
 static uint32_t last_loop_cycles;
 
 void looptime_init() {
-  // attempt 8k looptime for f405 or 4k looptime for f411
-  state.looptime = LOOPTIME * 1e-6;
-  state.looptime_autodetect = LOOPTIME;
+  float target = gyro_update_period();
+  while (target < LOOPTIME_MAX)
+    target *= 2.0f;
+  state.looptime = target * 1e-6f;
+  state.looptime_us = target;
+  state.looptime_autodetect = target;
 
   looptime_reset();
 }
@@ -37,15 +42,11 @@ static void looptime_auto_detect() {
 
   if (loop_counter == 200) {
     loop_avg /= 200;
-
-    if (loop_avg < 130.f) {
-      state.looptime_autodetect = LOOPTIME_8K;
-    } else if (loop_avg < 255.f) {
-      state.looptime_autodetect = LOOPTIME_4K;
-    } else {
-      state.looptime_autodetect = LOOPTIME_2K;
+    if (loop_avg > (state.looptime_autodetect + 5.0f)) {
+      state.looptime_autodetect = min(500, state.looptime_autodetect * 2.0f);
+    } else if (loop_avg < (state.looptime_autodetect * 0.5f)) {
+      state.looptime_autodetect = max(LOOPTIME_MAX, state.looptime_autodetect * 0.5f);
     }
-
     loop_counter++;
   }
 

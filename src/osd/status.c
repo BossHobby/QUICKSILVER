@@ -146,7 +146,7 @@ bool osd_status_update(osd_element_t *el) {
 
   {
     extern uint8_t looptime_warning;
-    if (looptime_warning && (state.looptime_autodetect != LOOPTIME_8K)) {
+    if (looptime_warning && (state.looptime_autodetect > 125.0f)) {
       osd_status_show(MODE_HOLD, STATUS_LOOPTIME);
       return osd_status_print(el);
     }
