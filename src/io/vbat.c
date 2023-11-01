@@ -39,30 +39,7 @@ void vbat_init() {
   state.vbat_filtered_decay *= (float)state.lipo_cell_count;
 }
 
-void vbat_calc() {
-  state.cpu_temp = adc_read(ADC_CHAN_TEMP);
-
-  // read acd and scale based on processor voltage
-  state.ibat = adc_read(ADC_CHAN_IBAT);
-  lpf(&state.ibat_filtered, state.ibat, FILTERCALC(1000, 5000e3));
-
-  // li-ion battery model compensation time decay ( 18 seconds )
-  state.vbat = adc_read(ADC_CHAN_VBAT);
-  lpf(&state.vbat_filtered, state.vbat, 0.9968f);
-  lpf(&state.vbat_filtered_decay, state.vbat_filtered, FILTERCALC(1000, 18000e3));
-
-  state.vbat_cell_avg = state.vbat_filtered_decay / (float)state.lipo_cell_count;
-
-  // average of all motors
-  // filter motorpwm so it has the same delay as the filtered voltage
-  // ( or they can use a single filter)
-  static float thrfilt = 0;
-  lpf(&thrfilt, state.thrsum, 0.9968f); // 0.5 sec at 1.6ms loop time
-
-  float tempvolt = state.vbat_filtered * (1.00f + CF1) - state.vbat_filtered_decay * (CF1);
-
-#ifdef AUTO_VDROP_FACTOR
-
+static float vbat_auto_vdrop(float thrfilt, float tempvolt) {
   static float lastout[12];
   static float lastin[12];
   static float vcomp[12];
@@ -103,7 +80,33 @@ void vbat_calc() {
     }
   }
 
-  const float vdrop_factor = minindex * 0.1f;
+  return minindex * 0.1f;
+}
+
+void vbat_calc() {
+  state.cpu_temp = adc_read(ADC_CHAN_TEMP);
+
+  // read acd and scale based on processor voltage
+  state.ibat = adc_read(ADC_CHAN_IBAT);
+  lpf(&state.ibat_filtered, state.ibat, FILTERCALC(1000, 5000e3));
+
+  // li-ion battery model compensation time decay ( 18 seconds )
+  state.vbat = adc_read(ADC_CHAN_VBAT);
+  lpf(&state.vbat_filtered, state.vbat, 0.9968f);
+  lpf(&state.vbat_filtered_decay, state.vbat_filtered, FILTERCALC(1000, 18000e3));
+
+  state.vbat_cell_avg = state.vbat_filtered_decay / (float)state.lipo_cell_count;
+
+  // average of all motors
+  // filter motorpwm so it has the same delay as the filtered voltage
+  // ( or they can use a single filter)
+  static float thrfilt = 0;
+  lpf(&thrfilt, state.thrsum, 0.9968f); // 0.5 sec at 1.6ms loop time
+
+  const float tempvolt = state.vbat_filtered * (1.00f + CF1) - state.vbat_filtered_decay * (CF1);
+
+#ifdef AUTO_VDROP_FACTOR
+  const float vdrop_factor = vbat_auto_vdrop(thrfilt, tempvolt);
 #else
   const float vdrop_factor = VDROP_FACTOR;
 #endif
