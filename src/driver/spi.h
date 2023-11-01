@@ -117,12 +117,12 @@ void spi_bus_device_init(spi_bus_device_t *bus);
 void spi_bus_device_reconfigure(spi_bus_device_t *bus, spi_mode_t mode, uint32_t hz);
 
 bool spi_txn_ready(spi_bus_device_t *bus);
-void spi_txn_continue(spi_bus_device_t *bus);
+bool spi_txn_continue(spi_bus_device_t *bus);
 void spi_txn_wait(spi_bus_device_t *bus);
 
 void spi_seg_submit_ex(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const spi_txn_segment_t *segs, const uint32_t count);
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count);
-void spi_seg_submit_continue_ex(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const spi_txn_segment_t *segs, const uint32_t count);
+bool spi_seg_submit_continue_ex(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const spi_txn_segment_t *segs, const uint32_t count);
 
 #define spi_seg_submit(bus, done_fn, segs) spi_seg_submit_ex(bus, done_fn, segs, sizeof(segs) / sizeof(spi_txn_segment_t))
 #define spi_seg_submit_wait(bus, segs) spi_seg_submit_wait_ex(bus, segs, sizeof(segs) / sizeof(spi_txn_segment_t))
