@@ -113,13 +113,9 @@ void mpu6xxx_write(uint8_t reg, uint8_t data) {
 
 void mpu6xxx_read_gyro_data(gyro_data_t *data) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, mpu6xxx_fast_divider());
+  spi_txn_wait(&gyro_bus);
 
-  uint8_t buf[14];
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(MPU_RA_ACCEL_XOUT_H | 0x80),
-      spi_make_seg_buffer(buf, NULL, 14),
-  };
-  spi_seg_submit_wait(&gyro_bus, segs);
+  static uint8_t buf[14];
 
   data->accel.pitch = -(int16_t)((buf[0] << 8) | buf[1]);
   data->accel.roll = -(int16_t)((buf[2] << 8) | buf[3]);
@@ -130,6 +126,14 @@ void mpu6xxx_read_gyro_data(gyro_data_t *data) {
   data->gyro.pitch = (int16_t)((buf[8] << 8) | buf[9]);
   data->gyro.roll = (int16_t)((buf[10] << 8) | buf[11]);
   data->gyro.yaw = (int16_t)((buf[12] << 8) | buf[13]);
+
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(MPU_RA_ACCEL_XOUT_H | 0x80),
+      spi_make_seg_buffer(buf, NULL, 14),
+  };
+  spi_seg_submit(&gyro_bus, segs);
+  while (!spi_txn_continue(&gyro_bus))
+    ;
 }
 
 #endif
