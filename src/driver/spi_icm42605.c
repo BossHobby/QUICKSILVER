@@ -107,13 +107,24 @@ void icm42605_write(uint8_t reg, uint8_t data) {
   spi_seg_submit_wait(&gyro_bus, segs);
 }
 
-void icm42605_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
+void icm42605_read_gyro_data(gyro_data_t *data) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_FAST);
 
+  uint8_t buf[14];
   const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg | 0x80),
-      spi_make_seg_buffer(data, NULL, size),
+      spi_make_seg_const(ICM42605_TEMP_DATA1 | 0x80),
+      spi_make_seg_buffer(buf, NULL, 14),
   };
   spi_seg_submit_wait(&gyro_bus, segs);
+
+  data->temp = (float)((int16_t)((buf[0] << 8) | buf[1])) / 132.48f + 25.f;
+
+  data->accel.axis[0] = -(int16_t)((buf[2] << 8) | buf[3]);
+  data->accel.axis[1] = -(int16_t)((buf[4] << 8) | buf[5]);
+  data->accel.axis[2] = (int16_t)((buf[6] << 8) | buf[7]);
+
+  data->gyro.axis[1] = (int16_t)((buf[8] << 8) | buf[9]);
+  data->gyro.axis[0] = (int16_t)((buf[10] << 8) | buf[11]);
+  data->gyro.axis[2] = (int16_t)((buf[12] << 8) | buf[13]);
 }
 #endif
