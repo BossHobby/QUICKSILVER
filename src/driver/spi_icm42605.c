@@ -49,6 +49,17 @@ void icm42605_configure() {
   icm42605_write(ICM42605_INT_CONFIG, ICM42605_INT1_MODE_PULSED | ICM42605_INT1_DRIVE_CIRCUIT_PP | ICM42605_INT1_POLARITY_ACTIVE_HIGH);
   icm42605_write(ICM42605_INT_CONFIG0, ICM42605_UI_DRDY_INT_CLEAR_ON_SBR);
 
+  {
+    // Disable AFSR to prevent stalls in gyro output
+    // Undocumented setting see
+    // https://github.com/ArduPilot/ardupilot/issues/25025
+    // https://github.com/ArduPilot/ardupilot/pull/25332
+    uint8_t val = icm42605_read(ICM42605_INTF_CONFIG1);
+    val &= ~ICM42605_INTF_CONFIG1_AFSR_MASK;
+    val |= ICM42605_INTF_CONFIG1_AFSR_DISABLE;
+    icm42605_write(ICM42605_INTF_CONFIG1, val);
+  }
+
   // bank 1
   icm42605_write(ICM42605_REG_BANK_SEL, 1);
   icm42605_write(ICM42605_GYRO_CONFIG_STATIC3, AAF_DELT);
