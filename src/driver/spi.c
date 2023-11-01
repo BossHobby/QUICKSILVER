@@ -78,14 +78,14 @@ bool spi_txn_can_send(spi_bus_device_t *bus, bool dma) {
   return true;
 }
 
-void spi_txn_continue(spi_bus_device_t *bus) {
+bool spi_txn_continue(spi_bus_device_t *bus) {
   ATOMIC_BLOCK_ALL {
     if (bus->txn_head == bus->txn_tail) {
-      return;
+      return true;
     }
 
     if (!spi_txn_can_send(bus, true)) {
-      return;
+      return false;
     }
 
     const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
@@ -110,6 +110,7 @@ void spi_txn_continue(spi_bus_device_t *bus) {
     spi_csn_enable(bus);
     spi_dma_transfer_begin(bus->port, txn->buffer, txn->size);
   }
+  return true;
 }
 
 void spi_seg_submit_ex(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const spi_txn_segment_t *segs, const uint32_t count) {
@@ -190,9 +191,9 @@ void spi_seg_submit_ex(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const s
   }
 }
 
-void spi_seg_submit_continue_ex(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const spi_txn_segment_t *segs, const uint32_t count) {
+bool spi_seg_submit_continue_ex(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const spi_txn_segment_t *segs, const uint32_t count) {
   spi_seg_submit_ex(bus, done_fn, segs, count);
-  spi_txn_continue(bus);
+  return spi_txn_continue(bus);
 }
 
 void spi_txn_wait(spi_bus_device_t *bus) {
