@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include "driver/spi_gyro.h"
+
 // Bank 0
 #define ICM42605_DEVICE_CONFIG 0x11
 #define ICM42605_DRIVE_CONFIG 0x13
@@ -196,4 +198,4 @@ void icm42605_configure();
 void icm42605_write(uint8_t reg, uint8_t data);
 
 uint8_t icm42605_read(uint8_t reg);
-void icm42605_read_data(uint8_t reg, uint8_t *data, uint32_t size);
+void icm42605_read_gyro_data(gyro_data_t *data);
