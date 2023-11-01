@@ -177,13 +177,9 @@ void bmi3_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
 
 void bmi323_read_gyro_data(gyro_data_t *data) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_FAST);
+  spi_txn_wait(&gyro_bus);
 
-  uint8_t buf[12];
-  const spi_txn_segment_t gyro_segs[] = {
-      spi_make_seg_const(BMI323_REG_ACC_DATA_X_LSB | 0x80, 0xFF),
-      spi_make_seg_buffer(buf, NULL, 12),
-  };
-  spi_seg_submit_wait(&gyro_bus, gyro_segs);
+  static uint8_t buf[12];
 
   data->accel.pitch = -(int16_t)((buf[1] << 8) | buf[0]);
   data->accel.roll = -(int16_t)((buf[3] << 8) | buf[2]);
@@ -209,6 +205,14 @@ void bmi323_read_gyro_data(gyro_data_t *data) {
   data->gyro.yaw = gyro_data[2];
 
   data->temp = 0;
+
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(BMI323_REG_ACC_DATA_X_LSB | 0x80, 0xFF),
+      spi_make_seg_buffer(buf, NULL, 12),
+  };
+  spi_seg_submit(&gyro_bus, segs);
+  while (!spi_txn_continue(&gyro_bus))
+    ;
 }
 
 #endif
