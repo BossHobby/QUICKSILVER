@@ -108,6 +108,8 @@ uint8_t gyro_spi_init() {
     break;
   }
 
+  gyro_spi_read(); // dummy read to fill buffers
+
   return gyro_type;
 }
 
