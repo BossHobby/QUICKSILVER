@@ -119,6 +119,17 @@ typedef struct {
   spi_ports_t port;
   gpio_pins_t nss;
   gpio_pins_t exti;
+} target_gyro_spi_device_t;
+
+#define TARGET_GYRO_SPI_DEVICE_MEMBERS \
+  MEMBER(port, uint8_t)                \
+  MEMBER(nss, gpio_pins_t)             \
+  MEMBER(exti, gpio_pins_t)
+
+typedef struct {
+  spi_ports_t port;
+  gpio_pins_t nss;
+  gpio_pins_t exti;
   gpio_pins_t ant_sel;
   gpio_pins_t lna_en;
   gpio_pins_t tx_en;
@@ -148,7 +159,7 @@ typedef struct {
   target_serial_port_t serial_soft_ports[SERIAL_SOFT_COUNT];
   target_spi_port_t spi_ports[SPI_PORT_MAX];
 
-  target_spi_device_t gyro;
+  target_gyro_spi_device_t gyro;
   uint8_t gyro_orientation;
   target_spi_device_t osd;
   target_spi_device_t flash;
@@ -175,7 +186,7 @@ typedef struct {
   INDEX_ARRAY_MEMBER(serial_ports, SERIAL_PORT_MAX, target_serial_port_t)        \
   INDEX_ARRAY_MEMBER(serial_soft_ports, SERIAL_SOFT_COUNT, target_serial_port_t) \
   INDEX_ARRAY_MEMBER(spi_ports, SPI_PORT_MAX, target_spi_port_t)                 \
-  MEMBER(gyro, target_spi_device_t)                                              \
+  MEMBER(gyro, target_gyro_spi_device_t)                                         \
   MEMBER(gyro_orientation, uint8_t)                                              \
   MEMBER(osd, target_spi_device_t)                                               \
   MEMBER(flash, target_spi_device_t)                                             \
@@ -227,6 +238,7 @@ void target_add_rx_protocol(rx_protocol_t proto);
 bool target_has_rx_protocol(rx_protocol_t proto);
 
 bool target_serial_port_valid(const target_serial_port_t *port);
+bool target_gyro_spi_device_valid(const target_gyro_spi_device_t *dev);
 bool target_spi_device_valid(const target_spi_device_t *dev);
 bool target_spi_port_valid(const target_spi_port_t *port);
 
