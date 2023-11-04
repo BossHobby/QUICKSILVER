@@ -58,6 +58,10 @@ CBOR_START_STRUCT_ENCODER(target_spi_device_t)
 TARGET_SPI_DEVICE_MEMBERS
 CBOR_END_STRUCT_ENCODER()
 
+CBOR_START_STRUCT_ENCODER(target_gyro_spi_device_t)
+TARGET_GYRO_SPI_DEVICE_MEMBERS
+CBOR_END_STRUCT_ENCODER()
+
 CBOR_START_STRUCT_ENCODER(target_rx_spi_device_t)
 TARGET_RX_SPI_DEVICE_MEMBERS
 CBOR_END_STRUCT_ENCODER()
@@ -98,6 +102,10 @@ CBOR_END_STRUCT_DECODER()
 
 CBOR_START_STRUCT_DECODER(target_spi_port_t)
 TARGET_SPI_MEMBERS
+CBOR_END_STRUCT_DECODER()
+
+CBOR_START_STRUCT_DECODER(target_gyro_spi_device_t)
+TARGET_GYRO_SPI_DEVICE_MEMBERS
 CBOR_END_STRUCT_DECODER()
 
 CBOR_START_STRUCT_DECODER(target_spi_device_t)
@@ -268,6 +276,10 @@ bool target_serial_port_valid(const target_serial_port_t *port) {
 }
 
 bool target_spi_device_valid(const target_spi_device_t *dev) {
+  return dev->port != SPI_PORT_INVALID && dev->nss != PIN_NONE;
+}
+
+bool target_gyro_spi_device_valid(const target_gyro_spi_device_t *dev) {
   return dev->port != SPI_PORT_INVALID && dev->nss != PIN_NONE;
 }
 
