@@ -67,18 +67,22 @@ typedef struct {
   bool invert;
 } target_led_t;
 
-#define TARGET_LED_MEMBERS \
-  MEMBER(pin, gpio_pins_t) \
-  MEMBER(invert, bool)
+#define TARGET_LED_MEMBERS   \
+  START_STRUCT(target_led_t) \
+  MEMBER(pin, gpio_pins_t)   \
+  MEMBER(invert, bool)       \
+  END_STRUCT()
 
 typedef struct {
   gpio_pins_t pin;
   bool invert;
 } target_invert_pin_t;
 
-#define TARGET_BUZZER_MEMBERS \
-  MEMBER(pin, gpio_pins_t)    \
-  MEMBER(invert, bool)
+#define TARGET_BUZZER_MEMBERS       \
+  START_STRUCT(target_invert_pin_t) \
+  MEMBER(pin, gpio_pins_t)          \
+  MEMBER(invert, bool)              \
+  END_STRUCT()
 
 typedef struct {
   uint8_t index;
@@ -87,11 +91,13 @@ typedef struct {
   gpio_pins_t inverter;
 } target_serial_port_t;
 
-#define TARGET_SERIAL_MEMBERS \
-  MEMBER(index, uint8_t)      \
-  MEMBER(rx, gpio_pins_t)     \
-  MEMBER(tx, gpio_pins_t)     \
-  MEMBER(inverter, gpio_pins_t)
+#define TARGET_SERIAL_MEMBERS        \
+  START_STRUCT(target_serial_port_t) \
+  MEMBER(index, uint8_t)             \
+  MEMBER(rx, gpio_pins_t)            \
+  MEMBER(tx, gpio_pins_t)            \
+  MEMBER(inverter, gpio_pins_t)      \
+  END_STRUCT()
 
 typedef struct {
   uint8_t index;
@@ -100,20 +106,24 @@ typedef struct {
   gpio_pins_t sck;
 } target_spi_port_t;
 
-#define TARGET_SPI_MEMBERS  \
-  MEMBER(index, uint8_t)    \
-  MEMBER(miso, gpio_pins_t) \
-  MEMBER(mosi, gpio_pins_t) \
-  MEMBER(sck, gpio_pins_t)
+#define TARGET_SPI_MEMBERS        \
+  START_STRUCT(target_spi_port_t) \
+  MEMBER(index, uint8_t)          \
+  MEMBER(miso, gpio_pins_t)       \
+  MEMBER(mosi, gpio_pins_t)       \
+  MEMBER(sck, gpio_pins_t)        \
+  END_STRUCT()
 
 typedef struct {
   spi_ports_t port;
   gpio_pins_t nss;
 } target_spi_device_t;
 
-#define TARGET_SPI_DEVICE_MEMBERS \
-  MEMBER(port, uint8_t)           \
-  MEMBER(nss, gpio_pins_t)
+#define TARGET_SPI_DEVICE_MEMBERS   \
+  START_STRUCT(target_spi_device_t) \
+  MEMBER(port, uint8_t)             \
+  MEMBER(nss, gpio_pins_t)          \
+  END_STRUCT()
 
 typedef struct {
   spi_ports_t port;
@@ -121,10 +131,12 @@ typedef struct {
   gpio_pins_t exti;
 } target_gyro_spi_device_t;
 
-#define TARGET_GYRO_SPI_DEVICE_MEMBERS \
-  MEMBER(port, uint8_t)                \
-  MEMBER(nss, gpio_pins_t)             \
-  MEMBER(exti, gpio_pins_t)
+#define TARGET_GYRO_SPI_DEVICE_MEMBERS   \
+  START_STRUCT(target_gyro_spi_device_t) \
+  MEMBER(port, uint8_t)                  \
+  MEMBER(nss, gpio_pins_t)               \
+  MEMBER(exti, gpio_pins_t)              \
+  END_STRUCT()
 
 typedef struct {
   spi_ports_t port;
@@ -138,16 +150,18 @@ typedef struct {
   gpio_pins_t reset;
 } target_rx_spi_device_t;
 
-#define TARGET_RX_SPI_DEVICE_MEMBERS \
-  MEMBER(port, uint8_t)              \
-  MEMBER(nss, gpio_pins_t)           \
-  MEMBER(exti, gpio_pins_t)          \
-  MEMBER(ant_sel, gpio_pins_t)       \
-  MEMBER(lna_en, gpio_pins_t)        \
-  MEMBER(tx_en, gpio_pins_t)         \
-  MEMBER(busy, gpio_pins_t)          \
-  MEMBER(busy_exti, bool)            \
-  MEMBER(reset, gpio_pins_t)
+#define TARGET_RX_SPI_DEVICE_MEMBERS   \
+  START_STRUCT(target_rx_spi_device_t) \
+  MEMBER(port, uint8_t)                \
+  MEMBER(nss, gpio_pins_t)             \
+  MEMBER(exti, gpio_pins_t)            \
+  MEMBER(ant_sel, gpio_pins_t)         \
+  MEMBER(lna_en, gpio_pins_t)          \
+  MEMBER(tx_en, gpio_pins_t)           \
+  MEMBER(busy, gpio_pins_t)            \
+  MEMBER(busy_exti, bool)              \
+  MEMBER(reset, gpio_pins_t)           \
+  END_STRUCT()
 
 typedef struct {
   uint8_t name[32];
@@ -180,6 +194,7 @@ typedef struct {
 } target_t;
 
 #define TARGET_MEMBERS                                                           \
+  START_STRUCT(target_t)                                                         \
   TSTR_MEMBER(name, 32)                                                          \
   MEMBER(brushless, bool)                                                        \
   ARRAY_MEMBER(leds, LED_MAX, target_led_t)                                      \
@@ -200,7 +215,8 @@ typedef struct {
   MEMBER(buzzer, target_invert_pin_t)                                            \
   ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX, gpio_pins_t)                           \
   MEMBER(vbat_scale, uint16_t)                                                   \
-  MEMBER(ibat_scale, uint16_t)
+  MEMBER(ibat_scale, uint16_t)                                                   \
+  END_STRUCT()
 
 typedef enum {
   FEATURE_BRUSHLESS = (1 << 1),
@@ -221,12 +237,14 @@ typedef struct {
 } target_info_t;
 
 #define TARGET_INFO_MEMBERS                            \
+  START_STRUCT(target_info_t)                          \
   STR_MEMBER(mcu)                                      \
   STR_MEMBER(git_version)                              \
   MEMBER(quic_protocol_version, uint32_t)              \
   MEMBER(features, uint32_t)                           \
   ARRAY_MEMBER(rx_protocols, RX_PROTOCOL_MAX, uint8_t) \
-  MEMBER(gyro_id, uint8_t)
+  MEMBER(gyro_id, uint8_t)                             \
+  END_STRUCT()
 
 extern target_t target;
 extern target_info_t target_info;
