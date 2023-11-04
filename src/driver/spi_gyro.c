@@ -7,6 +7,7 @@
 #include "driver/spi_bmi270.h"
 #include "driver/spi_icm42605.h"
 #include "driver/spi_mpu6xxx.h"
+#include "driver/spi_bmi323.h"
 
 #ifdef USE_GYRO
 
@@ -47,7 +48,12 @@ static gyro_types_t gyro_spi_detect() {
       break;
     }
     // FALLTHROUGH
-
+  case GYRO_TYPE_BMI323:
+    type = bmi323_detect();
+    if (type != GYRO_TYPE_INVALID) {
+      break;
+    }
+    // FALLTHROUGH
   default:
     break;
   }
@@ -94,6 +100,10 @@ uint8_t gyro_spi_init() {
   case GYRO_TYPE_BMI270:
     bmi270_configure();
     break;
+  case GYRO_TYPE_BMI323:
+    bmi323_configure();
+    break;
+
 
   default:
     break;
@@ -124,6 +134,10 @@ gyro_data_t gyro_spi_read() {
 
   case GYRO_TYPE_BMI270: {
     bmi270_read_gyro_data(&data);
+    break;
+  }
+  case GYRO_TYPE_BMI323: {
+    bmi323_read_gyro_data(&data);
     break;
   }
 
