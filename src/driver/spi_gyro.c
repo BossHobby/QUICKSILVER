@@ -5,9 +5,9 @@
 #include "driver/time.h"
 
 #include "driver/spi_bmi270.h"
+#include "driver/spi_bmi323.h"
 #include "driver/spi_icm42605.h"
 #include "driver/spi_mpu6xxx.h"
-#include "driver/spi_bmi323.h"
 
 #ifdef USE_GYRO
 
@@ -72,7 +72,7 @@ uint8_t gyro_spi_init() {
   gpio_pin_init(GYRO_INT, gpio_init);
 #endif
 
-  if (!target_spi_device_valid(&target.gyro)) {
+  if (!target_gyro_spi_device_valid(&target.gyro)) {
     return GYRO_TYPE_INVALID;
   }
 
@@ -103,7 +103,6 @@ uint8_t gyro_spi_init() {
   case GYRO_TYPE_BMI323:
     bmi323_configure();
     break;
-
 
   default:
     break;
