@@ -125,6 +125,8 @@ static uint8_t msp_origin = 0;
 static bool msp_new_data = false;
 static bool msp_is_error = false;
 
+static bool has_run_once = false;
+
 static uint32_t elrs_get_uid_mac_seed() {
   return ((uint32_t)UID[2] << 24) + ((uint32_t)UID[3] << 16) +
          ((uint32_t)UID[4] << 8) + (UID[5] ^ ELRS_OTA_VERSION_ID);
@@ -809,7 +811,7 @@ bool rx_expresslrs_check() {
 
   // it is possible we caught a packet during boot, but it will be stale by now
   // read the irq state above, but ignore it during the first run of this function
-  static bool has_run_once = false;
+  // same applies for after flash safe, anything caugth will be stale
   if (!has_run_once) {
     // delay mode cycle a bit
     last_rf_mode_cycle_millis = time_millis();
@@ -883,6 +885,7 @@ void rx_expresslrs_stop() {
     return;
   }
   elrs_connection_lost(time_millis());
+  has_run_once = false;
 }
 
 #endif
