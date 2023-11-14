@@ -19,6 +19,8 @@
 // ACC_CONF GYRO_CONF 16bit
 #define BMI323_REG_ACC_CONF 0x20
 #define BMI323_REG_GYRO_CONF 0x21
+#define BMI323_REG_ALT_ACC_CONF 0x28
+#define BMI323_REG_ALT_GYRO_CONF 0x29
 
 // Interupt status for pull
 #define BMI323_REG_INT_STATUS_INT1 0x0D
@@ -52,6 +54,12 @@
 
 #define BMI323_REG_CMD 0x7E
 #define BMI323_REG_CFG_RES 0x7F
+
+//SELF-CALIBRATION FEATURE
+#define BMI323_REG_FEATURE_IO1 0x11
+#define BMI323_FEATURE_IO1_MASK_ERRORSTATUS UINT16_C(0x000F)
+#define BMI323_FEATURE_IO1_MASK_STATE UINT16_C(0x1800)
+#define BMI323_FEATURE_IO1_MASK_GYRO_SC_SUCC UINT16_C(0x30)
 
 /******************************************************************************/
 /*!        Accelerometer Macro Definitions For CONF              */
