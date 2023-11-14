@@ -46,13 +46,13 @@ static void bmi323_init() {
 static void bmi323_init_config() {
   // init acc conf
   uint16_t regdata = 0;
-  regdata = BMI3_ACC_BW_ODR_QUARTER << 7 | BMI323_ACC_RANGE_16G << 4 | BMI323_ACC_ODR_6400HZ;
+  regdata = BMI3_ACC_BW_ODR_QUARTER << 7 | BMI323_ACC_RANGE_16G << 4 | BMI323_ACC_ODR_800HZ;
   regdata |= BMI3_ACC_MODE_HIGH_PERF << 12 | BMI323_ACC_AVG1 << 8;
   bmi3_write16(BMI323_REG_ACC_CONF, regdata, 1);
 
   // init gyro conf
   regdata = 0;
-  regdata = BMI323_GYR_BW_ODR_QUARTER << 7 | BMI323_GYR_RANGE_2000DPS << 4 | BMI323_GYR_ODR_6400HZ;
+  regdata = BMI323_GYR_BW_ODR_QUARTER << 7 | BMI323_GYR_RANGE_2000DPS << 4 | BMI323_GYR_ODR_3200HZ;
   regdata |= BMI323_GYR_MODE_HIGH_PERF << 12 | BMI323_GYR_AVG1 << 8;
   bmi3_write16(BMI323_REG_GYRO_CONF, regdata, 1);
 
@@ -66,11 +66,45 @@ static void bmi323_init_config() {
   bmi3_write16(BMI323_REG_INT_MAP2, regdata, 15);
 }
 
+//enable bmi323 crt self calibration feature
+static void bmi323_enable_crt(){
+//step.0 check self-test status 
+  uint16_t regData=bmi3_read16(BMI323_REG_FEATURE_IO1);
+  for(int i=0; i<3;i++){
+    if((regData & BMI323_FEATURE_IO1_MASK_STATE )==0x00){
+      break;
+    }
+    regData=bmi3_read16(BMI323_REG_FEATURE_IO1);
+    time_delay_ms(10);
+  }
+  regData=0;
+//step.1 set acc high-proformence mode and  ord set to 100hz
+  regData = BMI3_ACC_BW_ODR_QUARTER << 7 | BMI323_ACC_RANGE_16G << 4 | BMI323_ACC_ODR_100HZ;
+  regData |= BMI3_ACC_MODE_HIGH_PERF << 12 | BMI323_ACC_AVG1 << 8;
+  bmi3_write16(BMI323_REG_ACC_CONF, regData, 1);
+  //disable alt-acc and alt-gyro 
+  bmi3_write16(BMI323_REG_ALT_ACC_CONF,0x00,1);
+  bmi3_write16(BMI323_REG_ALT_GYRO_CONF,0X00,1);
+
+//step.2 set crt option GYRO_OFFSET_EN GYRO_SENS_EN ,GYRO_APPLY_CORR TO AUTO APPLY TO OUTPUT  this is default value 
+//NOOP
+//step.3 start self-calibration &delay 350+80ms 
+  bmi3_write16(BMI323_REG_CMD, BMI323_CMD_GYRO_SELF_CALI, 500);
+//step.4 pull status to check till end  
+  regData=bmi3_read16(BMI323_REG_FEATURE_IO1);
+  for(int i=0; i<6;i++){
+    if((regData & BMI323_FEATURE_IO1_MASK_GYRO_SC_SUCC)==0x30){
+      break;
+    }
+    time_delay_ms(100);
+    regData=bmi3_read16(BMI323_REG_FEATURE_IO1);
+  }
+}
+
 void bmi323_configure() {
   bmi323_init();
-  // skip CRT for now
+  bmi323_enable_crt();
   bmi323_init_config();
-  //   bmi323_enable_cas();
 }
 
 uint8_t bmi3_read8(uint8_t reg) {
