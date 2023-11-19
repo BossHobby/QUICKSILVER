@@ -57,13 +57,11 @@ static void bmi323_init_config() {
   bmi3_write16(BMI323_REG_GYRO_CONF, regdata, 1);
 
   // init data ready interupt to pin int1/ push_pull /active_high  NO_LATCH(default)
-  // BMI323_REG_IO_INT_CTRL push_pull/active_high
-  bmi3_write8(BMI323_REG_IO_INT_CTRL, BMI3_INT_OUTPUT_ENABLE << 2 | BMI3_INT_PUSH_PULL << 1 | BMI3_INT_ACTIVE_HIGH, 1);
-
-  // BMI323_REG_INT_MAP2 accready /gyro_ready
-  regdata = 0;
-  regdata = 0x01 << 10 | 0x01 << 8;
-  bmi3_write16(BMI323_REG_INT_MAP2, regdata, 15);
+  bmi3_write16(BMI323_REG_INT_LATCH_CONF, 0x00, 1);
+  // BMI323_REG_INT_MAP2 acc_ready /gyro_ready
+  bmi3_write16(BMI323_REG_INT_MAP2, 0x140, 1);
+  // BMI323_REG_IO_INT_CTRL push_pull/active_high//enable int1
+  bmi3_write16(BMI323_REG_IO_INT_CTRL, BMI3_INT_OUTPUT_ENABLE << 2 | BMI3_INT_PUSH_PULL << 1 | BMI3_INT_ACTIVE_HIGH, 15);
 }
 
 //enable bmi323 crt self calibration feature
