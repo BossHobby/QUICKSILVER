@@ -111,12 +111,7 @@ void vbat_calc() {
   const float vdrop_factor = VDROP_FACTOR;
 #endif
 
-  float hyst;
-  if (flags.lowbatt)
-    hyst = HYST;
-  else
-    hyst = 0.0f;
-
+  const float hyst = flags.lowbatt ? HYST : 0.0f;
   state.vbat_compensated = tempvolt + vdrop_factor * thrfilt;
   state.vbat_compensated_cell_avg = state.vbat_compensated / (float)state.lipo_cell_count;
 
