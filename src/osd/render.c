@@ -1,46 +1,17 @@
 #include "osd/render.h"
 
-#include <float.h>
-#include <stdio.h>
 #include <string.h>
 
-#include "core/debug.h"
 #include "core/flash.h"
 #include "core/looptime.h"
 #include "core/profile.h"
-#include "core/project.h"
 #include "driver/osd.h"
-#include "driver/time.h"
 #include "flight/control.h"
-#include "flight/filter.h"
 #include "io/blackbox_device.h"
 #include "io/led.h"
 #include "io/vtx.h"
 #include "osd/menu.h"
-#include "rx/rx.h"
-#include "util/util.h"
-
-typedef enum {
-  CLEAR,
-  DISARM,
-  ARM,
-  BOOST_1,
-  BOOST_2,
-  FAILSAFE,
-  THRTL_SFTY,
-  ARM_SFTY,
-  LOW_BAT,
-  MOTOR_TEST,
-  TURTL,
-  LOOP
-} osd_status_labels_t;
-
-typedef struct {
-  uint8_t loop_warning;
-  uint8_t aux_boost;
-  uint8_t aux_motor_test;
-  control_flags_t flags;
-} osd_sys_status_t;
+#include "osd/status.h"
 
 #define ICON_RSSI 0x1
 #define ICON_CELSIUS 0xe
@@ -136,7 +107,7 @@ static const vec3_t rate_defaults[RATE_MODE_ACTUAL + 1][3] = {
 
 #pragma GCC diagnostic pop
 
-static uint8_t osd_attr(osd_element_t *el) {
+uint8_t osd_attr(osd_element_t *el) {
   return el->attribute ? OSD_ATTR_INVERT : OSD_ATTR_TEXT;
 }
 
@@ -386,199 +357,6 @@ static void print_osd_vtx(osd_element_t *el) {
   }
 }
 
-// 3 stage return - 0 = stick and hold, 1 = move on but come back to clear, 2 = status print done
-static uint8_t print_status(osd_element_t *el, uint8_t persistence, uint8_t label) {
-  const char *default_system_status_labels[12] = {
-      "                     ",
-      " **DISARMED**        ",
-      "  **ARMED**          ",
-      " STICK BOOST 1       ",
-      " STICK BOOST 2       ",
-      " **FAILSAFE**        ",
-      "THROTTLE SAFETY      ",
-      " ARMING SAFETY       ",
-      "**LOW BATTERY**      ",
-      "**MOTOR TEST**       ",
-      "  **TURTLE**         ",
-      " **LOOPTIME**        ",
-  };
-  const char *guac_system_status_labels[12] = {
-      "                     ",
-      "    **GAME OVER**    ",
-      " **HERE WE GO AGAIN**",
-      "     STICK BOOST 1   ",
-      "     STICK BOOST 2   ",
-      " **404 RX NOT FOUND**",
-      "    **DANGER ZONE**  ",
-      "   **ARMING SAFETY** ",
-      "CONSTRUCT MORE PYLONS",
-      "    **MOTOR TEST**   ",
-      "    \x60THIS SIDE UP\x60   ",
-      "     **LOOPTIME**    ",
-  };
-
-  const char **labels = profile.osd.guac_mode ? guac_system_status_labels : default_system_status_labels;
-
-  static uint8_t last_label;
-  static uint8_t delay_counter = 25;
-  if (last_label != label) { // critical to reset indexers if a print sequence is interrupted by a new request
-    delay_counter = 25;
-  }
-  last_label = label;
-
-  if (delay_counter == 25) {
-    // First run, print the label
-    osd_start(osd_attr(el) | OSD_ATTR_BLINK, el->pos_x, el->pos_y);
-    osd_write_data((uint8_t *)labels[label], 21);
-
-    delay_counter--;
-
-    return 0;
-  }
-
-  if (persistence == HOLD) {
-    // label printed and we should hold
-    return 2;
-  }
-
-  // label printed and its temporary
-  if (!delay_counter) {
-    // timer is elapsed, print clear label
-    osd_start(osd_attr(el), el->pos_x, el->pos_y);
-    osd_write_data((uint8_t *)labels[0], 21);
-
-    delay_counter = 25;
-
-    return 2;
-  }
-
-  delay_counter--;
-  return 1;
-}
-
-static uint8_t print_osd_system_status(osd_element_t *el) {
-  static uint8_t ready = 0;
-  uint8_t print_stage = 2; // 0 makes the main osd function stick and non zero lets it pass on
-
-  static osd_sys_status_t last_sys_status;
-  static osd_sys_status_t printing = {
-      .loop_warning = 0,
-      .aux_boost = 0,
-      .aux_motor_test = 0,
-      .flags = {0},
-  };
-
-  extern uint8_t looptime_warning;
-
-  // things happen here
-  if (ready) {
-    if ((flags.arm_state != last_sys_status.flags.arm_state) || printing.flags.arm_state) {
-      last_sys_status.flags.arm_state = flags.arm_state;
-      printing.flags.arm_state = 1;
-      if (flags.arm_state)
-        print_stage = print_status(el, TEMP, ARM);
-      else
-        print_stage = print_status(el, TEMP, DISARM);
-      if (print_stage == 2)
-        printing.flags.arm_state = 0;
-      return print_stage;
-    }
-    if (((looptime_warning != last_sys_status.loop_warning) || printing.loop_warning) && (state.looptime_autodetect != LOOPTIME_8K)) { // mute warnings till we are on the edge of 4k->2k
-      last_sys_status.loop_warning = looptime_warning;
-      printing.loop_warning = 1;
-      print_stage = print_status(el, TEMP, LOOP);
-      if (print_stage == 2)
-        printing.loop_warning = 0;
-      return print_stage;
-    }
-    if (rx_aux_on(AUX_STICK_BOOST_PROFILE) != last_sys_status.aux_boost || printing.aux_boost) {
-      last_sys_status.aux_boost = rx_aux_on(AUX_STICK_BOOST_PROFILE);
-      printing.aux_boost = 1;
-      if (rx_aux_on(AUX_STICK_BOOST_PROFILE))
-        print_stage = print_status(el, TEMP, BOOST_2);
-      else
-        print_stage = print_status(el, TEMP, BOOST_1);
-      if (print_stage == 2)
-        printing.aux_boost = 0;
-      return print_stage;
-    }
-    if (flags.failsafe != last_sys_status.flags.failsafe || printing.flags.failsafe) {
-      last_sys_status.flags.failsafe = flags.failsafe;
-      printing.flags.failsafe = 1;
-      if (flags.failsafe)
-        print_stage = print_status(el, HOLD, FAILSAFE);
-      else
-        print_stage = print_status(el, HOLD, CLEAR);
-      if (print_stage == 2)
-        printing.flags.failsafe = 0;
-      return print_stage;
-    }
-    if ((flags.arm_safety && !flags.failsafe) || printing.flags.arm_safety) {
-      printing.flags.arm_safety = 1;
-      if (flags.arm_safety) {
-        print_stage = print_status(el, HOLD, ARM_SFTY);
-      } else {
-        print_stage = print_status(el, HOLD, CLEAR);
-        if (print_stage == 2)
-          printing.flags.arm_safety = 0;
-      }
-      return print_stage;
-    }
-    if ((flags.throttle_safety && !flags.arm_safety) || printing.flags.throttle_safety) {
-      printing.flags.throttle_safety = 1;
-      if (flags.throttle_safety) {
-        print_stage = print_status(el, HOLD, THRTL_SFTY);
-      } else {
-        print_stage = print_status(el, HOLD, CLEAR);
-        if (print_stage == 2)
-          printing.flags.throttle_safety = 0;
-      }
-      return print_stage;
-    }
-    if ((flags.lowbatt != last_sys_status.flags.lowbatt && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe) || printing.flags.lowbatt) {
-      last_sys_status.flags.lowbatt = flags.lowbatt;
-      printing.flags.lowbatt = 1;
-      if (flags.lowbatt)
-        print_stage = print_status(el, HOLD, LOW_BAT);
-      else
-        print_stage = print_status(el, HOLD, CLEAR);
-      if (print_stage == 2)
-        printing.flags.lowbatt = 0;
-      return print_stage;
-    }
-    if ((rx_aux_on(AUX_MOTOR_TEST) && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe) || (printing.aux_motor_test && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe)) {
-      printing.aux_motor_test = 1;
-      if (rx_aux_on(AUX_MOTOR_TEST)) {
-        print_stage = print_status(el, HOLD, MOTOR_TEST);
-      } else {
-        print_stage = print_status(el, HOLD, CLEAR);
-        if (print_stage == 2)
-          printing.aux_motor_test = 0;
-      }
-      return print_stage;
-    }
-    if ((flags.turtle && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe) || (printing.flags.turtle && !flags.arm_safety && !flags.throttle_safety && !flags.failsafe)) {
-      printing.flags.turtle = 1;
-      if (flags.turtle) {
-        print_stage = print_status(el, HOLD, TURTL);
-      } else {
-        print_stage = print_status(el, HOLD, CLEAR);
-        if (print_stage == 2)
-          printing.flags.turtle = 0;
-      }
-      return print_stage;
-    }
-  }
-  if (ready == 0) {
-    last_sys_status.loop_warning = looptime_warning;
-    last_sys_status.aux_boost = rx_aux_on(AUX_STICK_BOOST_PROFILE);
-    last_sys_status.aux_motor_test = rx_aux_on(AUX_MOTOR_TEST);
-    last_sys_status.flags = flags;
-    ready = 1;
-  }
-  return ready;
-}
-
 void osd_init() {
   osd_device_init();
   osd_intro();
@@ -659,7 +437,7 @@ static void osd_display_regular() {
   }
 
   case OSD_SYSTEM_STATUS: {
-    if (print_osd_system_status(el))
+    if (osd_status_update(el))
       osd_state.element++;
     break;
   }
