@@ -135,6 +135,8 @@ void osd_display();
 void osd_display_reset();
 void osd_clear();
 
+uint8_t osd_attr(osd_element_t *el);
+
 osd_screens_t osd_push_screen(osd_screens_t screen);
 osd_screens_t osd_push_screen_replace(osd_screens_t screen);
 osd_screens_t osd_pop_screen();
