@@ -190,7 +190,7 @@ static bool rx_flysky_check(void) {
 
   // Check for failsafe
   if ((flags.rx_mode == RXMODE_NORMAL) && !flags.failsafe) {
-    if ((now - flysky.last_rx_time) >= FAILSAFETIME) {
+    if ((now - flysky.last_rx_time) >= FAILSAFE_TIME_US) {
       flags.failsafe = true;
     }
   }

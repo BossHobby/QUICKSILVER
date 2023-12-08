@@ -84,8 +84,6 @@ motor_test_t motor_test = {
     .value = {MOTOR_OFF, MOTOR_OFF, MOTOR_OFF, MOTOR_OFF},
 };
 
-static uint8_t arming_release;
-
 #define MEMBER CBOR_ENCODE_MEMBER
 #define STR_MEMBER CBOR_ENCODE_STR_MEMBER
 #define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
@@ -280,29 +278,44 @@ void control() {
   control_flight_mode();
   pid_calc();
 
+  bool failsafe_lock = false;
   if (flags.failsafe) {
     // failsafe first occured, record time
     if (state.failsafe_time_ms == 0) {
       state.failsafe_time_ms = time_millis();
     }
+    if ((time_millis() - state.failsafe_time_ms) > FAILSAFE_LOCK_TIME_MS) {
+      failsafe_lock = true;
+    }
   } else {
     state.failsafe_time_ms = 0;
+    failsafe_lock = false;
   }
 
   static bool checked_prearm = false;
-  if (rx_aux_on(AUX_ARMING)) {
+  if (rx_aux_on(AUX_ARMING) && !failsafe_lock) {
     // CONDITION: AUX_ARMING is high
-    if (!checked_prearm && rx_aux_on(AUX_PREARM)) {
-      // CONDITION: AUX_PREARM is high AND we have not checked prearm this arm cycle
+
+    if (!checked_prearm && rx_aux_on(AUX_PREARM) && state.rx_filtered.throttle <= THROTTLE_SAFETY) {
+      // CONDITION:  we have not checked prearm this arm cycle AND AUX_PREARM is high AND throttle is zeroed
       flags.arm_switch = 1;
+
+      // we passed the throttle safety check
+      flags.throttle_safety = 0;
 
       if (!flags.turtle_ready) {
         motor_set_direction(MOTOR_FORWARD);
       }
     } else if (!flags.arm_switch) {
-      // throw up arming safety if we didnt manage to arm
-      flags.arm_safety = 1;
+      if (state.rx_filtered.throttle > THROTTLE_SAFETY) {
+        // throw up throttle safety if we crossed the threshold
+        flags.throttle_safety = 1;
+      } else {
+        // throw up arming safety if we didnt manage to arm
+        flags.arm_safety = 1;
+      }
     }
+
     checked_prearm = true;
   } else {
     flags.arm_switch = 0;
@@ -312,39 +325,25 @@ void control() {
       // rx is bound and has been disarmed so clear binding while armed flag
       flags.arm_safety = 0;
     }
+
+    // clear the throttle safety flag
+    flags.throttle_safety = 0;
   }
 
   if (flags.arm_switch) {
-    // CONDITION: throttle is above safety limit and ARMING RELEASE FLAG IS NOT CLEARED
-    if ((state.rx_filtered.throttle > THROTTLE_SAFETY) && (arming_release == 0)) {
-      flags.throttle_safety = 1;
-    } else {
-      flags.throttle_safety = 0;
-    }
-
     // CONDITION: (throttle is above safety limit and ARMING RELEASE FLAG IS NOT CLEARED) OR (bind just took place with transmitter armed)
     if ((flags.throttle_safety == 1) || (flags.arm_safety == 1)) {
       // override to disarmed state
       flags.arm_state = 0;
     } else {
-      // CONDITION: quad is being armed in a safe state
-
       // arm the quad by setting armed state variable to 1
       flags.arm_state = 1;
-
-      // clear the arming release flag - the arming release flag being cleared
-      // is what stops the quad from automatically disarming again the next time
-      // throttle is raised above the safety limit
-      arming_release = 1;
     }
   } else {
     // CONDITION: switch is DISARMED
 
     // disarm the quad by setting armed state variable to zero
     flags.arm_state = 0;
-
-    // clear the throttle safety flag
-    flags.throttle_safety = 0;
   }
 
   // CONDITION: armed state variable is 0 so quad is DISARMED
@@ -354,10 +353,6 @@ void control() {
 
     // flag in air variable as NOT IN THE AIR for mix throttle increase safety
     flags.in_air = 0;
-
-    // arming release flag is set to not cleared to reactivate the throttle safety limit for the next arming event
-    arming_release = 0;
-
   } else {
     // CONDITION: armed state variable is 1 so quad is ARMED
     if (!rx_aux_on(AUX_IDLE_UP)) {
