@@ -268,7 +268,8 @@
 // #define AIRBOT_OSD_PATCH
 
 // failsafe time in uS
-#define FAILSAFETIME 1000000 // one second
+#define FAILSAFE_TIME_US 1000000
+#define FAILSAFE_LOCK_TIME_MS 5000
 
 // debug things ( debug struct and other)
 // #define DEBUG

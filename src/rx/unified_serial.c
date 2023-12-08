@@ -167,7 +167,7 @@ bool rx_serial_check() {
   }
 
   // FAILSAFE! It gets checked every time!
-  if (time_micros() - last_frame_time_us > FAILSAFETIME) {
+  if (time_micros() - last_frame_time_us > FAILSAFE_TIME_US) {
     failsafe_noframes = 1;
   } else {
     failsafe_noframes = 0;
