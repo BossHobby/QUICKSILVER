@@ -33,7 +33,7 @@ void rx_lqi_lost_packet() {
     frame_missed_time_us = time_micros();
   }
 
-  if (time_micros() - frame_missed_time_us > FAILSAFETIME) {
+  if (time_micros() - frame_missed_time_us > FAILSAFE_TIME_US) {
     failsafe_siglost = 1;
   }
 }
