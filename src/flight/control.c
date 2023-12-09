@@ -100,25 +100,6 @@ CBOR_END_STRUCT_ENCODER()
 #undef ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER
 
-// throttle angle compensation
-static void auto_throttle() {
-#ifdef AUTO_THROTTLE
-  // float autothrottle = fastcos(state.attitude.axis[0] * DEGTORAD) * fastcos(state.attitude.axis[1] * DEGTORAD);
-  float autothrottle = state.GEstG.axis[2];
-  float old_throttle = state.throttle;
-  if (autothrottle <= 0.5f)
-    autothrottle = 0.5f;
-  state.throttle = state.throttle / autothrottle;
-  // limit to 90%
-  if (old_throttle < 0.9f)
-    if (state.throttle > 0.9f)
-      state.throttle = 0.9f;
-
-  if (state.throttle > 1.0f)
-    state.throttle = 1.0f;
-#endif
-}
-
 static void control_flight_mode() {
   // flight control
   const vec3_t rates = input_rates_calc();
@@ -429,10 +410,6 @@ void control() {
       if (profile.motor.throttle_boost > 0.0f) {
         state.throttle += (float)(profile.motor.throttle_boost) * throttlehpf(state.throttle);
         state.throttle = constrain(state.throttle, 0.0f, 1.0f);
-      }
-
-      if (rx_aux_on(AUX_LEVELMODE)) {
-        auto_throttle();
       }
     }
 
