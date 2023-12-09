@@ -217,9 +217,6 @@
 // *************retune it back up to where it feels good.  I'm finding about 60 to 65% of my previous D value seems to work.
 // #define TORQUE_BOOST 1.0
 
-// *************throttle angle compensation in level mode
-// #define AUTO_THROTTLE
-
 // *************BRUSHED TARGET MIXER SETTINGS
 // *************MIX_THROTTLE_REDUCTION_PERCENT reduces thrust imbalances by reducing throttle proportionally to the adjustable reduction percent to the limit set by MIX_THROTTLE_REDUCTION_MAX
 // *************MIX_THROTTLE_INCREASE_MAX increases the authority of the pid controller at lowest throttle values like airmode when combined with idle up
