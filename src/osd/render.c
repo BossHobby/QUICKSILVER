@@ -1440,7 +1440,7 @@ void osd_display() {
 
     osd_menu_select(2, 5, "MOTOR THROTTLE BOOST");
     if (osd_menu_select_float(22, 5, profile.motor.throttle_boost, 4, 1)) {
-      profile.motor.throttle_boost = osd_menu_adjust_float(profile.motor.throttle_boost, 0.5, 0, 10.0);
+      profile.motor.throttle_boost = osd_menu_adjust_float(profile.motor.throttle_boost, 0.1, 0, 10.0);
     }
 
     osd_menu_select_save_and_exit(4);
