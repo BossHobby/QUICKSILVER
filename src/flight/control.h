@@ -8,7 +8,7 @@
 #include "rx/rx.h"
 #include "util/vector.h"
 
-#define ANGLE_PID_SIZE 2
+#define ANGLE_PID_SIZE 3
 
 #define RXMODE_BIND 0
 #define RXMODE_NORMAL 1
