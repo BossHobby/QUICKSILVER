@@ -23,22 +23,22 @@ vec3_t input_stick_vector(float rx_input[]) {
       .yaw = fastcos(roll) * fastcos(pitch),
   };
 
-  float mag2 = (stickvector.roll * stickvector.roll + stickvector.pitch * stickvector.pitch);
-  if (mag2 > 0.001f) {
-    mag2 = 1.0f / sqrtf(mag2 / (1 - stickvector.yaw * stickvector.yaw));
+  const float length = (stickvector.roll * stickvector.roll + stickvector.pitch * stickvector.pitch);
+  if (length > 0) {
+    const float mag = 1.0f / sqrtf(length / (1 - stickvector.yaw * stickvector.yaw));
+    stickvector.roll *= mag;
+    stickvector.pitch *= mag;
   } else {
-    mag2 = 0.707f;
+    stickvector.roll = 0.0f;
+    stickvector.pitch = 0.0f;
   }
-
-  stickvector.roll *= mag2;
-  stickvector.pitch *= mag2;
 
   // find error between stick vector and quad orientation
   // vector cross product
   return (vec3_t){
       .roll = constrain((state.GEstG.yaw * stickvector.roll) - (state.GEstG.roll * stickvector.yaw), -1.0f, 1.0f),
       .pitch = constrain(-((state.GEstG.pitch * stickvector.yaw) - (state.GEstG.yaw * stickvector.pitch)), -1.0f, 1.0f),
-      .yaw = 0,
+      .yaw = constrain(((state.GEstG.roll * stickvector.pitch) - (state.GEstG.pitch * stickvector.roll)), -1.0f, 1.0f),
   };
 }
 
