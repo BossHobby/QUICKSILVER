@@ -116,7 +116,7 @@ static void control_flight_mode() {
     };
 
     if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON)) { // racemode with angle behavior on roll ais
-      if (state.GEstG.yaw < 0) {                          // acro on roll and pitch when inverted
+      if (state.GEstG.yaw < 0) {                              // acro on roll and pitch when inverted
         state.setpoint.roll = rates.roll;
         state.setpoint.pitch = rates.pitch;
 
@@ -222,15 +222,12 @@ static void control_flight_mode() {
       state.error.yaw = yawerror[2] - state.gyro.yaw;
 
     } else { // standard level mode
-      // pitch and roll
-      for (int i = 0; i <= 1; i++) {
+      // roll, pitch and yaw
+      for (uint32_t i = 0; i < 3; i++) {
         state.angleerror[i] = errorvect.axis[i];
         state.setpoint.axis[i] = angle_pid(i) + yawerror[i];
         state.error.axis[i] = state.setpoint.axis[i] - state.gyro.axis[i];
       }
-      // yaw
-      state.setpoint.yaw = rates.yaw;
-      state.error.yaw = yawerror[2] - state.gyro.yaw;
     }
   } else { // rate mode
     state.setpoint.roll = rates.roll;
