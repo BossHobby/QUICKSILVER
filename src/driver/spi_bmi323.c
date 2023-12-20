@@ -64,38 +64,38 @@ static void bmi323_init_config() {
   bmi3_write16(BMI323_REG_IO_INT_CTRL, BMI3_INT_OUTPUT_ENABLE << 2 | BMI3_INT_PUSH_PULL << 1 | BMI3_INT_ACTIVE_HIGH, 15);
 }
 
-//enable bmi323 crt self calibration feature
-static void bmi323_enable_crt(){
-//step.0 check self-test status 
-  uint16_t regData=bmi3_read16(BMI323_REG_FEATURE_IO1);
-  for(int i=0; i<3;i++){
-    if((regData & BMI323_FEATURE_IO1_MASK_STATE )==0x00){
+// enable bmi323 crt self calibration feature
+static void bmi323_enable_crt() {
+  // step.0 check self-test status
+  uint16_t regData = bmi3_read16(BMI323_REG_FEATURE_IO1);
+  for (int i = 0; i < 3; i++) {
+    if ((regData & BMI323_FEATURE_IO1_MASK_STATE) == 0x00) {
       break;
     }
-    regData=bmi3_read16(BMI323_REG_FEATURE_IO1);
+    regData = bmi3_read16(BMI323_REG_FEATURE_IO1);
     time_delay_ms(10);
   }
-  regData=0;
-//step.1 set acc high-proformence mode and  ord set to 100hz
+  regData = 0;
+  // step.1 set acc high-proformence mode and  ord set to 100hz
   regData = BMI3_ACC_BW_ODR_QUARTER << 7 | BMI323_ACC_RANGE_16G << 4 | BMI323_ACC_ODR_100HZ;
   regData |= BMI3_ACC_MODE_HIGH_PERF << 12 | BMI323_ACC_AVG1 << 8;
   bmi3_write16(BMI323_REG_ACC_CONF, regData, 1);
-  //disable alt-acc and alt-gyro 
-  bmi3_write16(BMI323_REG_ALT_ACC_CONF,0x00,1);
-  bmi3_write16(BMI323_REG_ALT_GYRO_CONF,0X00,1);
+  // disable alt-acc and alt-gyro
+  bmi3_write16(BMI323_REG_ALT_ACC_CONF, 0x00, 1);
+  bmi3_write16(BMI323_REG_ALT_GYRO_CONF, 0X00, 1);
 
-//step.2 set crt option GYRO_OFFSET_EN GYRO_SENS_EN ,GYRO_APPLY_CORR TO AUTO APPLY TO OUTPUT  this is default value 
-//NOOP
-//step.3 start self-calibration &delay 350+80ms 
+  // step.2 set crt option GYRO_OFFSET_EN GYRO_SENS_EN ,GYRO_APPLY_CORR TO AUTO APPLY TO OUTPUT  this is default value
+  // NOOP
+  // step.3 start self-calibration &delay 350+80ms
   bmi3_write16(BMI323_REG_CMD, BMI323_CMD_GYRO_SELF_CALI, 500);
-//step.4 pull status to check till end  
-  regData=bmi3_read16(BMI323_REG_FEATURE_IO1);
-  for(int i=0; i<6;i++){
-    if((regData & BMI323_FEATURE_IO1_MASK_GYRO_SC_SUCC)==0x30){
+  // step.4 pull status to check till end
+  regData = bmi3_read16(BMI323_REG_FEATURE_IO1);
+  for (int i = 0; i < 6; i++) {
+    if ((regData & BMI323_FEATURE_IO1_MASK_GYRO_SC_SUCC) == 0x30) {
       break;
     }
     time_delay_ms(100);
-    regData=bmi3_read16(BMI323_REG_FEATURE_IO1);
+    regData = bmi3_read16(BMI323_REG_FEATURE_IO1);
   }
 }
 
@@ -190,9 +190,9 @@ void bmi323_read_gyro_data(gyro_data_t *data) {
   };
   spi_seg_submit_wait(&gyro_bus, gyro_segs);
 
-  data->accel.axis[0] = -(int16_t)((buf[1] << 8) | buf[0]);
-  data->accel.axis[1] = -(int16_t)((buf[3] << 8) | buf[2]);
-  data->accel.axis[2] = (int16_t)((buf[5] << 8) | buf[4]);
+  data->accel.roll = -(int16_t)((buf[1] << 8) | buf[0]);
+  data->accel.pitch = -(int16_t)((buf[3] << 8) | buf[2]);
+  data->accel.yaw = (int16_t)((buf[5] << 8) | buf[4]);
 
   int16_t gyro_data[3] = {
       (int16_t)((buf[7] << 8) | buf[6]),
@@ -209,9 +209,9 @@ void bmi323_read_gyro_data(gyro_data_t *data) {
     gyro_data[0] = tempx;
   }
 
-  data->gyro.axis[1] = gyro_data[0];
-  data->gyro.axis[0] = gyro_data[1];
-  data->gyro.axis[2] = gyro_data[2];
+  data->gyro.pitch = gyro_data[0];
+  data->gyro.roll = gyro_data[1];
+  data->gyro.yaw = gyro_data[2];
 
   data->temp = 0;
 }

@@ -131,10 +131,10 @@ uint8_t blackbox_update() {
 
   vec4_compress(&blackbox.rx, &state.rx, BLACKBOX_SCALE);
 
-  blackbox.setpoint.axis[0] = state.setpoint.axis[0] * BLACKBOX_SCALE;
-  blackbox.setpoint.axis[1] = state.setpoint.axis[1] * BLACKBOX_SCALE;
-  blackbox.setpoint.axis[2] = state.setpoint.axis[2] * BLACKBOX_SCALE;
-  blackbox.setpoint.axis[3] = state.throttle * BLACKBOX_SCALE;
+  blackbox.setpoint.roll = state.setpoint.roll * BLACKBOX_SCALE;
+  blackbox.setpoint.pitch = state.setpoint.pitch * BLACKBOX_SCALE;
+  blackbox.setpoint.yaw = state.setpoint.yaw * BLACKBOX_SCALE;
+  blackbox.setpoint.throttle = state.throttle * BLACKBOX_SCALE;
 
   vec3_compress(&blackbox.gyro_filter, &state.gyro, BLACKBOX_SCALE);
   vec3_compress(&blackbox.gyro_raw, &state.gyro_raw, BLACKBOX_SCALE);
