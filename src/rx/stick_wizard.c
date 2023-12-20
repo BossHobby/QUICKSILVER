@@ -68,10 +68,10 @@ static void stick_wizard_reset_test_buffer() {
 
 static bool stick_wizard_check_for_perfect_sticks() {
   // first scale the sticks
-  state.rx.axis[0] = mapf(state.rx.axis[0], LIMITS[0].min, LIMITS[0].max, -1.f, 1.f);
-  state.rx.axis[1] = mapf(state.rx.axis[1], LIMITS[1].min, LIMITS[1].max, -1.f, 1.f);
-  state.rx.axis[2] = mapf(state.rx.axis[2], LIMITS[2].min, LIMITS[2].max, -1.f, 1.f);
-  state.rx.axis[3] = mapf(state.rx.axis[3], LIMITS[3].min, LIMITS[3].max, 0.f, 1.f);
+  state.rx.roll = mapf(state.rx.roll, LIMITS[0].min, LIMITS[0].max, -1.f, 1.f);
+  state.rx.pitch = mapf(state.rx.pitch, LIMITS[1].min, LIMITS[1].max, -1.f, 1.f);
+  state.rx.yaw = mapf(state.rx.yaw, LIMITS[2].min, LIMITS[2].max, -1.f, 1.f);
+  state.rx.throttle = mapf(state.rx.throttle, LIMITS[3].min, LIMITS[3].max, 0.f, 1.f);
 
   // listen for the max stick values and update buffer
   for (uint8_t i = 0; i < 4; i++) {
@@ -164,10 +164,10 @@ void rx_apply_stick_scale() {
   if (state.stick_calibration_wizard >= STICK_WIZARD_START) {
     rx_stick_calibration_wizard();
   } else {
-    state.rx.axis[0] = mapf(state.rx.axis[0], LIMITS[0].min, LIMITS[0].max, -1.f, 1.f);
-    state.rx.axis[1] = mapf(state.rx.axis[1], LIMITS[1].min, LIMITS[1].max, -1.f, 1.f);
-    state.rx.axis[2] = mapf(state.rx.axis[2], LIMITS[2].min, LIMITS[2].max, -1.f, 1.f);
-    state.rx.axis[3] = mapf(state.rx.axis[3], LIMITS[3].min, LIMITS[3].max, 0.f, 1.f);
+    state.rx.roll = mapf(state.rx.roll, LIMITS[0].min, LIMITS[0].max, -1.f, 1.f);
+    state.rx.pitch = mapf(state.rx.pitch, LIMITS[1].min, LIMITS[1].max, -1.f, 1.f);
+    state.rx.yaw = mapf(state.rx.yaw, LIMITS[2].min, LIMITS[2].max, -1.f, 1.f);
+    state.rx.throttle = mapf(state.rx.throttle, LIMITS[3].min, LIMITS[3].max, 0.f, 1.f);
   }
 }
 

@@ -139,19 +139,19 @@ vec3_t input_rates_calc() {
 
   switch (profile_current_rates()->mode) {
   case RATE_MODE_SILVERWARE:
-    rates.axis[0] = calc_sw_rates(0, state.rx_filtered.axis[0], expo.axis[0]);
-    rates.axis[1] = calc_sw_rates(1, state.rx_filtered.axis[1], expo.axis[1]);
-    rates.axis[2] = calc_sw_rates(2, state.rx_filtered.axis[2], expo.axis[2]);
+    rates.roll = calc_sw_rates(0, state.rx_filtered.roll, expo.roll);
+    rates.pitch = calc_sw_rates(1, state.rx_filtered.pitch, expo.pitch);
+    rates.yaw = calc_sw_rates(2, state.rx_filtered.yaw, expo.yaw);
     break;
   case RATE_MODE_BETAFLIGHT:
-    rates.axis[0] = calc_bf_rates(0, state.rx_filtered.axis[0], expo.axis[0]);
-    rates.axis[1] = calc_bf_rates(1, state.rx_filtered.axis[1], expo.axis[1]);
-    rates.axis[2] = calc_bf_rates(2, state.rx_filtered.axis[2], expo.axis[2]);
+    rates.roll = calc_bf_rates(0, state.rx_filtered.roll, expo.roll);
+    rates.pitch = calc_bf_rates(1, state.rx_filtered.pitch, expo.pitch);
+    rates.yaw = calc_bf_rates(2, state.rx_filtered.yaw, expo.yaw);
     break;
   case RATE_MODE_ACTUAL:
-    rates.axis[0] = calc_actual_rates(0, state.rx_filtered.axis[0], expo.axis[0]);
-    rates.axis[1] = calc_actual_rates(1, state.rx_filtered.axis[1], expo.axis[1]);
-    rates.axis[2] = calc_actual_rates(2, state.rx_filtered.axis[2], expo.axis[2]);
+    rates.roll = calc_actual_rates(0, state.rx_filtered.roll, expo.roll);
+    rates.pitch = calc_actual_rates(1, state.rx_filtered.pitch, expo.pitch);
+    rates.yaw = calc_actual_rates(2, state.rx_filtered.yaw, expo.yaw);
     break;
   }
 
