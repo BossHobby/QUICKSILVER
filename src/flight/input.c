@@ -17,28 +17,29 @@ vec3_t input_stick_vector(float rx_input[]) {
   const float pitch = rx_input[1] * profile.rate.level_max_angle * DEGTORAD;
   const float roll = rx_input[0] * profile.rate.level_max_angle * DEGTORAD;
 
-  float stickvector[3] = {
-      stickvector[0] = fastsin(roll),
-      stickvector[1] = fastsin(pitch),
-      stickvector[2] = fastcos(roll) * fastcos(pitch),
+  vec3_t stickvector = {
+      .roll = fastsin(roll),
+      .pitch = fastsin(pitch),
+      .yaw = fastcos(roll) * fastcos(pitch),
   };
 
-  float mag2 = (stickvector[0] * stickvector[0] + stickvector[1] * stickvector[1]);
+  float mag2 = (stickvector.roll * stickvector.roll + stickvector.pitch * stickvector.pitch);
   if (mag2 > 0.001f) {
-    mag2 = Q_rsqrt(mag2 / (1 - stickvector[2] * stickvector[2]));
+    mag2 = Q_rsqrt(mag2 / (1 - stickvector.yaw * stickvector.yaw));
   } else {
     mag2 = 0.707f;
   }
 
-  stickvector[0] *= mag2;
-  stickvector[1] *= mag2;
+  stickvector.roll *= mag2;
+  stickvector.pitch *= mag2;
 
   // find error between stick vector and quad orientation
   // vector cross product
-  vec3_t errorvect = {.roll = 0, .pitch = 0, .yaw = 0};
-  errorvect.axis[0] = constrain((state.GEstG.axis[2] * stickvector[0]) - (state.GEstG.axis[0] * stickvector[2]), -1.0f, 1.0f);
-  errorvect.axis[1] = constrain(-((state.GEstG.axis[1] * stickvector[2]) - (state.GEstG.axis[2] * stickvector[1])), -1.0f, 1.0f);
-  return errorvect;
+  return (vec3_t){
+      .roll = constrain((state.GEstG.yaw * stickvector.roll) - (state.GEstG.roll * stickvector.yaw), -1.0f, 1.0f),
+      .pitch = constrain(-((state.GEstG.pitch * stickvector.yaw) - (state.GEstG.yaw * stickvector.pitch)), -1.0f, 1.0f),
+      .yaw = 0,
+  };
 }
 
 static vec3_t input_get_expo() {
