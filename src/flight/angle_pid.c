@@ -11,31 +11,18 @@ extern profile_t profile;
 // set angle pid output limit to sum of both P terms just in case
 #define OUTLIMIT_FLOAT (profile.pid.small_angle.kp + profile.pid.big_angle.kp)
 
-static float apidoutput1[ANGLE_PID_SIZE];
-static float apidoutput2[ANGLE_PID_SIZE];
-static float apidoutput[ANGLE_PID_SIZE];
-static float lasterror[ANGLE_PID_SIZE];
-
 float angle_pid(int x) {
+  static float lasterror[ANGLE_PID_SIZE];
+
   const float angle_error_abs = fabsf(state.angleerror[x]);
 
-  // P term 1 weighted
-  apidoutput1[x] = (1 - angle_error_abs) * state.angleerror[x] * profile.pid.small_angle.kp;
+  const float small_angle = (1 - angle_error_abs) * state.angleerror[x] * profile.pid.small_angle.kp                                          // P term weighted
+                            + ((state.angleerror[x] - lasterror[x]) * profile.pid.small_angle.kd * (1 - angle_error_abs) * state.timefactor); // D term weighted
 
-  // P term 2 weighted
-  apidoutput2[x] = angle_error_abs * state.angleerror[x] * profile.pid.big_angle.kp;
-
-  // D term 1 weighted + P term 1 weighted
-  apidoutput1[x] += (state.angleerror[x] - lasterror[x]) * profile.pid.small_angle.kd * (1 - angle_error_abs) * state.timefactor;
-
-  // D term 2 weighted + P term 2 weighted
-  apidoutput2[x] += ((state.angleerror[x] - lasterror[x]) * profile.pid.big_angle.kd * angle_error_abs * state.timefactor);
-
-  // apidoutput sum
-  apidoutput[x] = apidoutput1[x] + apidoutput2[x];
+  const float big_angle = angle_error_abs * state.angleerror[x] * profile.pid.big_angle.kp                                          // P term weighted
+                          + ((state.angleerror[x] - lasterror[x]) * profile.pid.big_angle.kd * angle_error_abs * state.timefactor); // D term weighted
 
   lasterror[x] = state.angleerror[x];
-  apidoutput[x] = constrain(apidoutput[x], -OUTLIMIT_FLOAT, OUTLIMIT_FLOAT);
 
-  return apidoutput[x];
+  return constrain(small_angle + big_angle, -OUTLIMIT_FLOAT, OUTLIMIT_FLOAT);
 }
