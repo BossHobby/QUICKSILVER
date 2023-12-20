@@ -1,5 +1,7 @@
 #include "vector.h"
 
+#include <math.h>
+
 #include "cbor_helper.h"
 
 cbor_result_t cbor_encode_vec3_t(cbor_value_t *enc, const vec3_t *vec) {
@@ -32,7 +34,7 @@ float vec3_magnitude(vec3_t *v) {
   for (uint8_t axis = 0; axis < 3; axis++) {
     max += v->axis[axis] * v->axis[axis];
   }
-  return 1.0f / Q_rsqrt(max);
+  return sqrtf(max);
 }
 
 cbor_result_t cbor_encode_compact_vec3_t(cbor_value_t *enc, const compact_vec3_t *vec) {
