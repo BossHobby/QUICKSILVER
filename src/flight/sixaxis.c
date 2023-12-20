@@ -66,80 +66,80 @@ void sixaxis_read() {
   const gyro_data_t data = gyro_spi_read();
 
   // remove bias and reduce to state.accel_raw in G
-  state.accel_raw.axis[0] = (data.accel.axis[0] - flash_storage.accelcal[0]) * (1 / 2048.0f);
-  state.accel_raw.axis[1] = (data.accel.axis[1] - flash_storage.accelcal[1]) * (1 / 2048.0f);
-  state.accel_raw.axis[2] = (data.accel.axis[2] - flash_storage.accelcal[2]) * (1 / 2048.0f);
+  state.accel_raw.roll = (data.accel.roll - flash_storage.accelcal[0]) * (1 / 2048.0f);
+  state.accel_raw.pitch = (data.accel.pitch - flash_storage.accelcal[1]) * (1 / 2048.0f);
+  state.accel_raw.yaw = (data.accel.yaw - flash_storage.accelcal[2]) * (1 / 2048.0f);
 
-  state.gyro_raw.axis[0] = data.gyro.axis[0] - gyrocal[0];
-  state.gyro_raw.axis[1] = data.gyro.axis[1] - gyrocal[1];
-  state.gyro_raw.axis[2] = data.gyro.axis[2] - gyrocal[2];
+  state.gyro_raw.roll = data.gyro.roll - gyrocal[0];
+  state.gyro_raw.pitch = data.gyro.pitch - gyrocal[1];
+  state.gyro_raw.yaw = data.gyro.yaw - gyrocal[2];
 
   state.gyro_temp = data.temp;
 
   float temp = 0;
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CW) {
-    temp = state.accel_raw.axis[1];
-    state.accel_raw.axis[1] = state.accel_raw.axis[0];
-    state.accel_raw.axis[0] = -temp;
+    temp = state.accel_raw.pitch;
+    state.accel_raw.pitch = state.accel_raw.roll;
+    state.accel_raw.roll = -temp;
 
-    temp = state.gyro_raw.axis[1];
-    state.gyro_raw.axis[1] = -state.gyro_raw.axis[0];
-    state.gyro_raw.axis[0] = temp;
+    temp = state.gyro_raw.pitch;
+    state.gyro_raw.pitch = -state.gyro_raw.roll;
+    state.gyro_raw.roll = temp;
   }
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_45_CCW) {
-    temp = state.accel_raw.axis[0];
-    state.accel_raw.axis[0] = (state.accel_raw.axis[0] * INVSQRT2 + state.accel_raw.axis[1] * INVSQRT2);
-    state.accel_raw.axis[1] = -(temp * INVSQRT2 - state.accel_raw.axis[1] * INVSQRT2);
+    temp = state.accel_raw.roll;
+    state.accel_raw.roll = (state.accel_raw.roll * INVSQRT2 + state.accel_raw.pitch * INVSQRT2);
+    state.accel_raw.pitch = -(temp * INVSQRT2 - state.accel_raw.pitch * INVSQRT2);
 
-    temp = state.gyro_raw.axis[1];
-    state.gyro_raw.axis[1] = state.gyro_raw.axis[0] * INVSQRT2 + state.gyro_raw.axis[1] * INVSQRT2;
-    state.gyro_raw.axis[0] = state.gyro_raw.axis[0] * INVSQRT2 - temp * INVSQRT2;
+    temp = state.gyro_raw.pitch;
+    state.gyro_raw.pitch = state.gyro_raw.roll * INVSQRT2 + state.gyro_raw.pitch * INVSQRT2;
+    state.gyro_raw.roll = state.gyro_raw.roll * INVSQRT2 - temp * INVSQRT2;
   }
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_45_CW) {
-    temp = state.accel_raw.axis[1];
-    state.accel_raw.axis[1] = (state.accel_raw.axis[1] * INVSQRT2 + state.accel_raw.axis[0] * INVSQRT2);
-    state.accel_raw.axis[0] = -(temp * INVSQRT2 - state.accel_raw.axis[0] * INVSQRT2);
+    temp = state.accel_raw.pitch;
+    state.accel_raw.pitch = (state.accel_raw.pitch * INVSQRT2 + state.accel_raw.roll * INVSQRT2);
+    state.accel_raw.roll = -(temp * INVSQRT2 - state.accel_raw.roll * INVSQRT2);
 
-    temp = state.gyro_raw.axis[0];
-    state.gyro_raw.axis[0] = state.gyro_raw.axis[1] * INVSQRT2 + state.gyro_raw.axis[0] * INVSQRT2;
-    state.gyro_raw.axis[1] = state.gyro_raw.axis[1] * INVSQRT2 - temp * INVSQRT2;
+    temp = state.gyro_raw.roll;
+    state.gyro_raw.roll = state.gyro_raw.pitch * INVSQRT2 + state.gyro_raw.roll * INVSQRT2;
+    state.gyro_raw.pitch = state.gyro_raw.pitch * INVSQRT2 - temp * INVSQRT2;
   }
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CCW) {
-    temp = state.accel_raw.axis[1];
-    state.accel_raw.axis[1] = -state.accel_raw.axis[0];
-    state.accel_raw.axis[0] = temp;
+    temp = state.accel_raw.pitch;
+    state.accel_raw.pitch = -state.accel_raw.roll;
+    state.accel_raw.roll = temp;
 
-    temp = state.gyro_raw.axis[1];
-    state.gyro_raw.axis[1] = state.gyro_raw.axis[0];
-    state.gyro_raw.axis[0] = -temp;
+    temp = state.gyro_raw.pitch;
+    state.gyro_raw.pitch = state.gyro_raw.roll;
+    state.gyro_raw.roll = -temp;
   }
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_180) {
-    state.accel_raw.axis[1] = -state.accel_raw.axis[1];
-    state.accel_raw.axis[0] = -state.accel_raw.axis[0];
+    state.accel_raw.pitch = -state.accel_raw.pitch;
+    state.accel_raw.roll = -state.accel_raw.roll;
 
-    state.gyro_raw.axis[1] = -state.gyro_raw.axis[1];
-    state.gyro_raw.axis[0] = -state.gyro_raw.axis[0];
+    state.gyro_raw.pitch = -state.gyro_raw.pitch;
+    state.gyro_raw.roll = -state.gyro_raw.roll;
   }
 
   if (profile.motor.gyro_orientation & GYRO_FLIP_180) {
-    state.accel_raw.axis[2] = -state.accel_raw.axis[2];
-    state.accel_raw.axis[0] = -state.accel_raw.axis[0];
+    state.accel_raw.yaw = -state.accel_raw.yaw;
+    state.accel_raw.roll = -state.accel_raw.roll;
 
-    state.gyro_raw.axis[1] = -state.gyro_raw.axis[1];
-    state.gyro_raw.axis[2] = -state.gyro_raw.axis[2];
+    state.gyro_raw.pitch = -state.gyro_raw.pitch;
+    state.gyro_raw.yaw = -state.gyro_raw.yaw;
   }
 
   filter_coeff(profile.filter.gyro[0].type, &filter[0], profile.filter.gyro[0].cutoff_freq);
   filter_coeff(profile.filter.gyro[1].type, &filter[1], profile.filter.gyro[1].cutoff_freq);
 
-  state.gyro.axis[0] = state.gyro_raw.axis[0] = state.gyro_raw.axis[0] * GYRO_RANGE * DEGTORAD;
-  state.gyro.axis[1] = state.gyro_raw.axis[1] = -state.gyro_raw.axis[1] * GYRO_RANGE * DEGTORAD;
-  state.gyro.axis[2] = state.gyro_raw.axis[2] = -state.gyro_raw.axis[2] * GYRO_RANGE * DEGTORAD;
+  state.gyro.roll = state.gyro_raw.roll = state.gyro_raw.roll * GYRO_RANGE * DEGTORAD;
+  state.gyro.pitch = state.gyro_raw.pitch = -state.gyro_raw.pitch * GYRO_RANGE * DEGTORAD;
+  state.gyro.yaw = state.gyro_raw.yaw = -state.gyro_raw.yaw * GYRO_RANGE * DEGTORAD;
 
   for (uint32_t i = 0; i < 3; i++) {
     if (profile.filter.gyro_dynamic_notch_enable) {
@@ -169,9 +169,9 @@ void sixaxis_read() {
     }
   }
 
-  state.gyro_delta_angle.axis[0] = state.gyro.axis[0] * state.looptime;
-  state.gyro_delta_angle.axis[1] = state.gyro.axis[1] * state.looptime;
-  state.gyro_delta_angle.axis[2] = state.gyro.axis[2] * state.looptime;
+  state.gyro_delta_angle.roll = state.gyro.roll * state.looptime;
+  state.gyro_delta_angle.pitch = state.gyro.pitch * state.looptime;
+  state.gyro_delta_angle.yaw = state.gyro.yaw * state.looptime;
 }
 
 static bool test_gyro_move(const gyro_data_t *last_data, const gyro_data_t *data) {

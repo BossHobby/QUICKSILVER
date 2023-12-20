@@ -112,35 +112,35 @@ static void control_flight_mode() {
     // apply yaw from the top of the quad
     // yaw rotation vector
     const float yawerror[3] = {
-        state.GEstG.axis[1] * rates.axis[2],
-        -state.GEstG.axis[0] * rates.axis[2],
-        state.GEstG.axis[2] * rates.axis[2],
+        state.GEstG.pitch * rates.yaw,
+        -state.GEstG.roll * rates.yaw,
+        state.GEstG.yaw * rates.yaw,
     };
 
     if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON)) { // racemode with angle behavior on roll ais
-      if (state.GEstG.axis[2] < 0) {                          // acro on roll and pitch when inverted
-        state.setpoint.axis[0] = rates.axis[0];
-        state.setpoint.axis[1] = rates.axis[1];
+      if (state.GEstG.yaw < 0) {                          // acro on roll and pitch when inverted
+        state.setpoint.roll = rates.roll;
+        state.setpoint.pitch = rates.pitch;
 
-        state.error.axis[0] = rates.axis[0] - state.gyro.axis[0];
-        state.error.axis[1] = rates.axis[1] - state.gyro.axis[1];
+        state.error.roll = rates.roll - state.gyro.roll;
+        state.error.pitch = rates.pitch - state.gyro.pitch;
       } else {
         // roll is leveled to max angle limit
-        state.angleerror[0] = errorvect.axis[0];
-        state.setpoint.axis[0] = angle_pid(0) + yawerror[0];
-        state.error.axis[0] = state.setpoint.axis[0] - state.gyro.axis[0];
+        state.angleerror[0] = errorvect.roll;
+        state.setpoint.roll = angle_pid(0) + yawerror[0];
+        state.error.roll = state.setpoint.roll - state.gyro.roll;
 
         // pitch is acro
-        state.setpoint.axis[1] = rates.axis[1];
-        state.error.axis[1] = rates.axis[1] - state.gyro.axis[1];
+        state.setpoint.pitch = rates.pitch;
+        state.error.pitch = rates.pitch - state.gyro.pitch;
       }
       // yaw
-      state.setpoint.axis[2] = rates.axis[2];
-      state.error.axis[2] = yawerror[2] - state.gyro.axis[2];
+      state.setpoint.yaw = rates.yaw;
+      state.error.yaw = yawerror[2] - state.gyro.yaw;
 
     } else if (rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON)) { // racemode with horizon behavior on roll axis
-      float inclinationRoll = state.attitude.axis[0];
-      float inclinationPitch = state.attitude.axis[1];
+      float inclinationRoll = state.attitude.roll;
+      float inclinationPitch = state.attitude.pitch;
       float inclinationMax;
       if (fabsf(inclinationRoll) >= fabsf(inclinationPitch)) {
         inclinationMax = fabsf(inclinationRoll);
@@ -155,7 +155,7 @@ static void control_flight_mode() {
         angleFade = 1;
       }
       float stickFade;
-      float deflection = fabsf(state.rx_filtered.axis[0]);
+      float deflection = fabsf(state.rx_filtered.roll);
       if (deflection <= HORIZON_STICK_TRANSITION) {
         stickFade = deflection / HORIZON_STICK_TRANSITION;
       } else {
@@ -163,30 +163,30 @@ static void control_flight_mode() {
       }
       float fade = (stickFade * (1 - HORIZON_SLIDER)) + (HORIZON_SLIDER * angleFade);
       // apply acro to roll for inverted behavior
-      if (state.GEstG.axis[2] < 0) {
-        state.setpoint.axis[0] = rates.axis[0];
-        state.setpoint.axis[1] = rates.axis[1];
-        state.error.axis[0] = rates.axis[0] - state.gyro.axis[0];
-        state.error.axis[1] = rates.axis[1] - state.gyro.axis[1];
+      if (state.GEstG.yaw < 0) {
+        state.setpoint.roll = rates.roll;
+        state.setpoint.pitch = rates.pitch;
+        state.error.roll = rates.roll - state.gyro.roll;
+        state.error.pitch = rates.pitch - state.gyro.pitch;
       } else { // apply a transitioning mix of acro and level behavior inside of stick HORIZON_TRANSITION point and full acro beyond stick HORIZON_TRANSITION point
-        state.angleerror[0] = errorvect.axis[0];
+        state.angleerror[0] = errorvect.roll;
         // roll angle strength fades out as sticks approach HORIZON_TRANSITION while acro stength fades in according to value of acroFade factor
-        state.setpoint.axis[0] = (angle_pid(0) + yawerror[0]) * (1.0f - fade) + fade * (rates.axis[0]);
-        state.error.axis[0] = ((angle_pid(0) + yawerror[0] - state.gyro.axis[0]) * (1 - fade)) + (fade * (rates.axis[0] - state.gyro.axis[0]));
+        state.setpoint.roll = (angle_pid(0) + yawerror[0]) * (1.0f - fade) + fade * (rates.roll);
+        state.error.roll = ((angle_pid(0) + yawerror[0] - state.gyro.roll) * (1 - fade)) + (fade * (rates.roll - state.gyro.roll));
         // pitch is acro
-        state.setpoint.axis[1] = rates.axis[1];
-        state.error.axis[1] = rates.axis[1] - state.gyro.axis[1];
+        state.setpoint.pitch = rates.pitch;
+        state.error.pitch = rates.pitch - state.gyro.pitch;
       }
 
       // yaw
-      state.setpoint.axis[2] = rates.axis[2];
-      state.error.axis[2] = yawerror[2] - state.gyro.axis[2];
+      state.setpoint.yaw = rates.yaw;
+      state.error.yaw = yawerror[2] - state.gyro.yaw;
 
     } else if (!rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON)) { // horizon overrites standard level behavior
       // pitch and roll
       for (int i = 0; i <= 1; i++) {
-        float inclinationRoll = state.attitude.axis[0];
-        float inclinationPitch = state.attitude.axis[1];
+        float inclinationRoll = state.attitude.roll;
+        float inclinationPitch = state.attitude.pitch;
         float inclinationMax;
         if (fabsf(inclinationRoll) >= fabsf(inclinationPitch)) {
           inclinationMax = fabsf(inclinationRoll);
@@ -209,7 +209,7 @@ static void control_flight_mode() {
         }
         float fade = (stickFade * (1 - HORIZON_SLIDER)) + (HORIZON_SLIDER * angleFade);
         // apply acro to roll and pitch sticks for inverted behavior
-        if (state.GEstG.axis[2] < 0) {
+        if (state.GEstG.yaw < 0) {
           state.setpoint.axis[i] = rates.axis[i];
           state.error.axis[i] = rates.axis[i] - state.gyro.axis[i];
         } else { // apply a transitioning mix of acro and level behavior inside of stick HORIZON_TRANSITION point and full acro beyond stick HORIZON_TRANSITION point
@@ -220,8 +220,8 @@ static void control_flight_mode() {
         }
       }
       // yaw
-      state.setpoint.axis[2] = rates.axis[2];
-      state.error.axis[2] = yawerror[2] - state.gyro.axis[2];
+      state.setpoint.yaw = rates.yaw;
+      state.error.yaw = yawerror[2] - state.gyro.yaw;
 
     } else { // standard level mode
       // pitch and roll
@@ -231,17 +231,17 @@ static void control_flight_mode() {
         state.error.axis[i] = state.setpoint.axis[i] - state.gyro.axis[i];
       }
       // yaw
-      state.setpoint.axis[2] = rates.axis[2];
-      state.error.axis[2] = yawerror[2] - state.gyro.axis[2];
+      state.setpoint.yaw = rates.yaw;
+      state.error.yaw = yawerror[2] - state.gyro.yaw;
     }
   } else { // rate mode
-    state.setpoint.axis[0] = rates.axis[0];
-    state.setpoint.axis[1] = rates.axis[1];
-    state.setpoint.axis[2] = rates.axis[2];
+    state.setpoint.roll = rates.roll;
+    state.setpoint.pitch = rates.pitch;
+    state.setpoint.yaw = rates.yaw;
 
-    state.error.axis[0] = state.setpoint.axis[0] - state.gyro.axis[0];
-    state.error.axis[1] = state.setpoint.axis[1] - state.gyro.axis[1];
-    state.error.axis[2] = state.setpoint.axis[2] - state.gyro.axis[2];
+    state.error.roll = state.setpoint.roll - state.gyro.roll;
+    state.error.pitch = state.setpoint.pitch - state.gyro.pitch;
+    state.error.yaw = state.setpoint.yaw - state.gyro.yaw;
   }
 }
 

@@ -10,14 +10,14 @@
 #define STICKMAX 0.7f
 #define STICKCENTER 0.2f
 
-#define GMACRO_LEFT (state.rx.axis[0] < -STICKMAX || state.rx.axis[2] < -STICKMAX)
-#define GMACRO_RIGHT (state.rx.axis[0] > STICKMAX || state.rx.axis[2] > STICKMAX)
-#define GMACRO_XCENTER (fabsf(state.rx.axis[0]) < STICKCENTER && fabsf(state.rx.axis[2]) < STICKCENTER)
+#define GMACRO_LEFT (state.rx.roll < -STICKMAX || state.rx.yaw < -STICKMAX)
+#define GMACRO_RIGHT (state.rx.roll > STICKMAX || state.rx.yaw > STICKMAX)
+#define GMACRO_XCENTER (fabsf(state.rx.roll) < STICKCENTER && fabsf(state.rx.yaw) < STICKCENTER)
 
-#define GMACRO_DOWN (state.rx.axis[1] < -STICKMAX)
-#define GMACRO_UP (state.rx.axis[1] > STICKMAX)
+#define GMACRO_DOWN (state.rx.pitch < -STICKMAX)
+#define GMACRO_UP (state.rx.pitch > STICKMAX)
 
-#define GMACRO_PITCHCENTER (fabsf(state.rx.axis[1]) < STICKCENTER)
+#define GMACRO_PITCHCENTER (fabsf(state.rx.pitch) < STICKCENTER)
 
 #define GESTURE_CENTER 0
 #define GESTURE_CENTER_IDLE 12

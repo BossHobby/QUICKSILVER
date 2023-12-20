@@ -84,21 +84,21 @@ void turtle_mode_update() {
   case TURTLE_STAGE_START:
     flags.controls_override = 1;
     flags.motortest_override = 1;
-    state.rx_override.axis[0] = 0;
-    state.rx_override.axis[1] = 0;
+    state.rx_override.roll = 0;
+    state.rx_override.pitch = 0;
     state.rx_override.yaw = 0;
-    state.rx_override.axis[3] = 0;
+    state.rx_override.throttle = 0;
 
     if (!motor_direction_change_done()) {
       // wait for the motor to sucessfully change
       break;
     }
 
-    if (fabsf(state.rx.axis[0]) > 0.5f || fabsf(state.rx.axis[1]) > 0.5f) {
-      if (fabsf(state.rx.axis[0]) < fabsf(state.rx.axis[1])) {
+    if (fabsf(state.rx.roll) > 0.5f || fabsf(state.rx.pitch) > 0.5f) {
+      if (fabsf(state.rx.roll) < fabsf(state.rx.pitch)) {
         turtle_axis = 1;
 
-        if (state.rx.axis[1] > 0) {
+        if (state.rx.pitch > 0) {
           turtle_dir = 1;
         } else {
           turtle_dir = 0;
@@ -106,7 +106,7 @@ void turtle_mode_update() {
       } else {
         turtle_axis = 0;
 
-        if (state.rx.axis[0] > 0) {
+        if (state.rx.roll > 0) {
           turtle_dir = 1;
         } else {
           turtle_dir = 0;
