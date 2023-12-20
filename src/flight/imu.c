@@ -56,14 +56,14 @@ void imu_init() {
 
 #ifdef SILVERWARE_IMU
 void imu_calc() {
-  state.GEstG.axis[2] = state.GEstG.axis[2] - (state.gyro_delta_angle.axis[0]) * state.GEstG.axis[0];
-  state.GEstG.axis[0] = (state.gyro_delta_angle.axis[0]) * state.GEstG.axis[2] + state.GEstG.axis[0];
+  state.GEstG.yaw = state.GEstG.yaw - (state.gyro_delta_angle.roll) * state.GEstG.roll;
+  state.GEstG.roll = (state.gyro_delta_angle.roll) * state.GEstG.yaw + state.GEstG.roll;
 
-  state.GEstG.axis[1] = state.GEstG.axis[1] + (state.gyro_delta_angle.axis[1]) * state.GEstG.axis[2];
-  state.GEstG.axis[2] = -(state.gyro_delta_angle.axis[1]) * state.GEstG.axis[1] + state.GEstG.axis[2];
+  state.GEstG.pitch = state.GEstG.pitch + (state.gyro_delta_angle.pitch) * state.GEstG.yaw;
+  state.GEstG.yaw = -(state.gyro_delta_angle.pitch) * state.GEstG.pitch + state.GEstG.yaw;
 
-  state.GEstG.axis[0] = state.GEstG.axis[0] - (state.gyro_delta_angle.axis[2]) * state.GEstG.axis[1];
-  state.GEstG.axis[1] = (state.gyro_delta_angle.axis[2]) * state.GEstG.axis[0] + state.GEstG.axis[1];
+  state.GEstG.roll = state.GEstG.roll - (state.gyro_delta_angle.yaw) * state.GEstG.pitch;
+  state.GEstG.pitch = (state.gyro_delta_angle.yaw) * state.GEstG.roll + state.GEstG.pitch;
 
   if (flags.on_ground) { // happyhour bartender - quad is ON GROUND and disarmed
     // calc acc mag
@@ -114,63 +114,63 @@ void imu_calc() {
   }
 
   if (rx_aux_on(AUX_HORIZON)) {
-    state.attitude.axis[0] = atan2approx(state.GEstG.axis[0], state.GEstG.axis[2]);
-    state.attitude.axis[1] = atan2approx(state.GEstG.axis[1], state.GEstG.axis[2]);
+    state.attitude.roll = atan2approx(state.GEstG.roll, state.GEstG.yaw);
+    state.attitude.pitch = atan2approx(state.GEstG.pitch, state.GEstG.yaw);
   }
 }
 #endif
 
 #ifdef QUICKSILVER_IMU
 void imu_calc() {
-  state.GEstG.axis[2] = state.GEstG.axis[2] - (state.gyro_delta_angle.axis[0]) * state.GEstG.axis[0];
-  state.GEstG.axis[0] = (state.gyro_delta_angle.axis[0]) * state.GEstG.axis[2] + state.GEstG.axis[0];
+  state.GEstG.yaw = state.GEstG.yaw - (state.gyro_delta_angle.roll) * state.GEstG.roll;
+  state.GEstG.roll = (state.gyro_delta_angle.roll) * state.GEstG.yaw + state.GEstG.roll;
 
-  state.GEstG.axis[1] = state.GEstG.axis[1] + (state.gyro_delta_angle.axis[1]) * state.GEstG.axis[2];
-  state.GEstG.axis[2] = -(state.gyro_delta_angle.axis[1]) * state.GEstG.axis[1] + state.GEstG.axis[2];
+  state.GEstG.pitch = state.GEstG.pitch + (state.gyro_delta_angle.pitch) * state.GEstG.yaw;
+  state.GEstG.yaw = -(state.gyro_delta_angle.pitch) * state.GEstG.pitch + state.GEstG.yaw;
 
-  state.GEstG.axis[0] = state.GEstG.axis[0] - (state.gyro_delta_angle.axis[2]) * state.GEstG.axis[1];
-  state.GEstG.axis[1] = (state.gyro_delta_angle.axis[2]) * state.GEstG.axis[0] + state.GEstG.axis[1];
+  state.GEstG.roll = state.GEstG.roll - (state.gyro_delta_angle.yaw) * state.GEstG.pitch;
+  state.GEstG.pitch = (state.gyro_delta_angle.yaw) * state.GEstG.roll + state.GEstG.pitch;
 
   filter_lp_pt1_coeff(&filter, PT1_FILTER_HZ);
 
-  state.accel.axis[0] = filter_lp_pt1_step(&filter, &filter_pass1[0], state.accel_raw.axis[0]);
-  state.accel.axis[1] = filter_lp_pt1_step(&filter, &filter_pass1[1], state.accel_raw.axis[1]);
-  state.accel.axis[2] = filter_lp_pt1_step(&filter, &filter_pass1[2], state.accel_raw.axis[2]);
+  state.accel.roll = filter_lp_pt1_step(&filter, &filter_pass1[0], state.accel_raw.roll);
+  state.accel.pitch = filter_lp_pt1_step(&filter, &filter_pass1[1], state.accel_raw.pitch);
+  state.accel.yaw = filter_lp_pt1_step(&filter, &filter_pass1[2], state.accel_raw.yaw);
 
-  state.accel.axis[0] = filter_lp_pt1_step(&filter, &filter_pass2[0], state.accel.axis[0]);
-  state.accel.axis[1] = filter_lp_pt1_step(&filter, &filter_pass2[1], state.accel.axis[1]);
-  state.accel.axis[2] = filter_lp_pt1_step(&filter, &filter_pass2[2], state.accel.axis[2]);
+  state.accel.roll = filter_lp_pt1_step(&filter, &filter_pass2[0], state.accel.roll);
+  state.accel.pitch = filter_lp_pt1_step(&filter, &filter_pass2[1], state.accel.pitch);
+  state.accel.yaw = filter_lp_pt1_step(&filter, &filter_pass2[2], state.accel.yaw);
 
   const float accmag = vec3_magnitude(&state.accel);
   if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
-    state.accel.axis[0] = state.accel.axis[0] * (ACC_1G / accmag);
-    state.accel.axis[1] = state.accel.axis[1] * (ACC_1G / accmag);
-    state.accel.axis[2] = state.accel.axis[2] * (ACC_1G / accmag);
+    state.accel.roll = state.accel.roll * (ACC_1G / accmag);
+    state.accel.pitch = state.accel.pitch * (ACC_1G / accmag);
+    state.accel.yaw = state.accel.yaw * (ACC_1G / accmag);
 
     if (flags.on_ground) {
       // happyhour bartender - quad is ON GROUND and disarmed
       const float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FASTFILTER);
-      lpf(&state.GEstG.axis[0], state.accel.axis[0], filtcoeff);
-      lpf(&state.GEstG.axis[1], state.accel.axis[1], filtcoeff);
-      lpf(&state.GEstG.axis[2], state.accel.axis[2], filtcoeff);
+      lpf(&state.GEstG.roll, state.accel.roll, filtcoeff);
+      lpf(&state.GEstG.pitch, state.accel.pitch, filtcoeff);
+      lpf(&state.GEstG.yaw, state.accel.yaw, filtcoeff);
     } else {
       // lateshift bartender - quad is IN AIR and things are getting wild
       const float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FILTERTIME);
-      lpf(&state.GEstG.axis[0], state.accel.axis[0], filtcoeff);
-      lpf(&state.GEstG.axis[1], state.accel.axis[1], filtcoeff);
-      lpf(&state.GEstG.axis[2], state.accel.axis[2], filtcoeff);
+      lpf(&state.GEstG.roll, state.accel.roll, filtcoeff);
+      lpf(&state.GEstG.pitch, state.accel.pitch, filtcoeff);
+      lpf(&state.GEstG.yaw, state.accel.yaw, filtcoeff);
     }
   }
 
   // heal the gravity vector after fusion with accel
   const float GEstGmag = vec3_magnitude(&state.GEstG);
-  state.GEstG.axis[0] = state.GEstG.axis[0] * (ACC_1G / GEstGmag);
-  state.GEstG.axis[1] = state.GEstG.axis[1] * (ACC_1G / GEstGmag);
-  state.GEstG.axis[2] = state.GEstG.axis[2] * (ACC_1G / GEstGmag);
+  state.GEstG.roll = state.GEstG.roll * (ACC_1G / GEstGmag);
+  state.GEstG.pitch = state.GEstG.pitch * (ACC_1G / GEstGmag);
+  state.GEstG.yaw = state.GEstG.yaw * (ACC_1G / GEstGmag);
 
   if (rx_aux_on(AUX_HORIZON)) {
-    state.attitude.axis[0] = atan2approx(state.GEstG.axis[0], state.GEstG.axis[2]);
-    state.attitude.axis[1] = atan2approx(state.GEstG.axis[1], state.GEstG.axis[2]);
+    state.attitude.roll = atan2approx(state.GEstG.roll, state.GEstG.yaw);
+    state.attitude.pitch = atan2approx(state.GEstG.pitch, state.GEstG.yaw);
   }
 }
 #endif
