@@ -25,7 +25,7 @@ vec3_t input_stick_vector(float rx_input[]) {
 
   float mag2 = (stickvector.roll * stickvector.roll + stickvector.pitch * stickvector.pitch);
   if (mag2 > 0.001f) {
-    mag2 = Q_rsqrt(mag2 / (1 - stickvector.yaw * stickvector.yaw));
+    mag2 = 1.0f / sqrtf(mag2 / (1 - stickvector.yaw * stickvector.yaw));
   } else {
     mag2 = 0.707f;
   }
