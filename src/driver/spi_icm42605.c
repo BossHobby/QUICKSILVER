@@ -119,8 +119,8 @@ void icm42605_read_gyro_data(gyro_data_t *data) {
 
   data->temp = (float)((int16_t)((buf[0] << 8) | buf[1])) / 132.48f + 25.f;
 
-  data->accel.roll = -(int16_t)((buf[2] << 8) | buf[3]);
-  data->accel.pitch = -(int16_t)((buf[4] << 8) | buf[5]);
+  data->accel.pitch = -(int16_t)((buf[2] << 8) | buf[3]);
+  data->accel.roll = -(int16_t)((buf[4] << 8) | buf[5]);
   data->accel.yaw = (int16_t)((buf[6] << 8) | buf[7]);
 
   data->gyro.pitch = (int16_t)((buf[8] << 8) | buf[9]);
