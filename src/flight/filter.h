@@ -2,8 +2,6 @@
 
 #include <stdint.h>
 
-#define IMU_FILTER_CUTOFF_FREQ 30.0f
-
 #define FILTER_MAX_SLOTS 2
 
 typedef enum {
