@@ -17,7 +17,7 @@
 
 #define LOG2_8BIT(v) (8 - 90 / (((v) / 4 + 14) | 1) - 2 / ((v) / 2 + 1))
 #define LOG2_16BIT(v) (8 * ((v) > 255) + LOG2_8BIT((v) >> 8 * ((v) > 255)))
-#define LOG2_32BIT(v) (16 * ((v) > 65535L) + LOG2_16BIT((v)*1L >> 16 * ((v) > 65535L)))
+#define LOG2_32BIT(v) (16 * ((v) > 65535L) + LOG2_16BIT((v) * 1L >> 16 * ((v) > 65535L)))
 
 #define SWAP(x, y)      \
   {                     \
@@ -47,7 +47,6 @@
 float mapf(float x, float in_min, float in_max, float out_min, float out_max);
 
 float atan2approx(float y, float x);
-float Q_rsqrt(float number);
 int ipow(int base, int exp);
 float fastsin(float x);
 float fastcos(float x);
