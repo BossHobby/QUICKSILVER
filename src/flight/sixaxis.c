@@ -29,13 +29,16 @@
 
 // gyro has +-2000 divided over 16bit.
 #define GYRO_RANGE (1.f / (65536.f / 4000.f))
-
-// this is the value of both cos 45 and sin 45 = 1/sqrt(2)
-#define INVSQRT2 0.707106781f
+#define ACCEL_RANGE (1.f / 2048.0f)
 
 #ifdef USE_GYRO
 
 static float gyrocal[3];
+static float rot_mat[3][3] = {
+    {1.0f, 0.0f, 0.0f},
+    {0.0f, 1.0f, 0.0f},
+    {0.0f, 0.0f, 1.0f},
+};
 
 static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
@@ -62,86 +65,94 @@ void sixaxis_init() {
   }
 }
 
-void sixaxis_read() {
-  const gyro_data_t data = gyro_spi_read();
+static void sixaxis_compute_matrix() {
+  static uint8_t last_gyro_orientation = GYRO_ROTATE_NONE;
+  if (last_gyro_orientation == profile.motor.gyro_orientation) {
+    return;
+  }
 
-  // remove bias and reduce to state.accel_raw in G
-  state.accel_raw.roll = (data.accel.roll - flash_storage.accelcal[0]) * (1 / 2048.0f);
-  state.accel_raw.pitch = (data.accel.pitch - flash_storage.accelcal[1]) * (1 / 2048.0f);
-  state.accel_raw.yaw = (data.accel.yaw - flash_storage.accelcal[2]) * (1 / 2048.0f);
-
-  state.gyro_raw.roll = data.gyro.roll - gyrocal[0];
-  state.gyro_raw.pitch = data.gyro.pitch - gyrocal[1];
-  state.gyro_raw.yaw = data.gyro.yaw - gyrocal[2];
-
-  state.gyro_temp = data.temp;
-
-  float temp = 0;
+  vec3_t rot = {.roll = 0, .pitch = 0, .yaw = 0};
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CW) {
-    temp = state.accel_raw.pitch;
-    state.accel_raw.pitch = state.accel_raw.roll;
-    state.accel_raw.roll = -temp;
-
-    temp = state.gyro_raw.pitch;
-    state.gyro_raw.pitch = -state.gyro_raw.roll;
-    state.gyro_raw.roll = temp;
+    rot.yaw += 90.0f * DEGTORAD;
   }
-
-  if (profile.motor.gyro_orientation & GYRO_ROTATE_45_CCW) {
-    temp = state.accel_raw.roll;
-    state.accel_raw.roll = (state.accel_raw.roll * INVSQRT2 + state.accel_raw.pitch * INVSQRT2);
-    state.accel_raw.pitch = -(temp * INVSQRT2 - state.accel_raw.pitch * INVSQRT2);
-
-    temp = state.gyro_raw.pitch;
-    state.gyro_raw.pitch = state.gyro_raw.roll * INVSQRT2 + state.gyro_raw.pitch * INVSQRT2;
-    state.gyro_raw.roll = state.gyro_raw.roll * INVSQRT2 - temp * INVSQRT2;
-  }
-
-  if (profile.motor.gyro_orientation & GYRO_ROTATE_45_CW) {
-    temp = state.accel_raw.pitch;
-    state.accel_raw.pitch = (state.accel_raw.pitch * INVSQRT2 + state.accel_raw.roll * INVSQRT2);
-    state.accel_raw.roll = -(temp * INVSQRT2 - state.accel_raw.roll * INVSQRT2);
-
-    temp = state.gyro_raw.roll;
-    state.gyro_raw.roll = state.gyro_raw.pitch * INVSQRT2 + state.gyro_raw.roll * INVSQRT2;
-    state.gyro_raw.pitch = state.gyro_raw.pitch * INVSQRT2 - temp * INVSQRT2;
-  }
-
   if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CCW) {
-    temp = state.accel_raw.pitch;
-    state.accel_raw.pitch = -state.accel_raw.roll;
-    state.accel_raw.roll = temp;
-
-    temp = state.gyro_raw.pitch;
-    state.gyro_raw.pitch = state.gyro_raw.roll;
-    state.gyro_raw.roll = -temp;
+    rot.yaw -= 90.0f * DEGTORAD;
   }
-
+  if (profile.motor.gyro_orientation & GYRO_ROTATE_45_CW) {
+    rot.yaw += 45.0f * DEGTORAD;
+  }
+  if (profile.motor.gyro_orientation & GYRO_ROTATE_45_CCW) {
+    rot.yaw -= 45.0f * DEGTORAD;
+  }
   if (profile.motor.gyro_orientation & GYRO_ROTATE_180) {
-    state.accel_raw.pitch = -state.accel_raw.pitch;
-    state.accel_raw.roll = -state.accel_raw.roll;
-
-    state.gyro_raw.pitch = -state.gyro_raw.pitch;
-    state.gyro_raw.roll = -state.gyro_raw.roll;
+    rot.yaw += 180.0f * DEGTORAD;
   }
-
   if (profile.motor.gyro_orientation & GYRO_FLIP_180) {
-    state.accel_raw.yaw = -state.accel_raw.yaw;
-    state.accel_raw.roll = -state.accel_raw.roll;
-
-    state.gyro_raw.pitch = -state.gyro_raw.pitch;
-    state.gyro_raw.yaw = -state.gyro_raw.yaw;
+    rot.roll += 180.0f * DEGTORAD;
+    rot.yaw += 180.0f * DEGTORAD;
   }
+
+  const float cosx = fastcos(rot.roll);
+  const float sinx = fastsin(rot.roll);
+  const float cosy = fastcos(rot.pitch);
+  const float siny = fastsin(rot.pitch);
+  const float cosz = fastcos(rot.yaw);
+  const float sinz = fastsin(rot.yaw);
+
+  const float coszcosx = cosz * cosx;
+  const float sinzcosx = sinz * cosx;
+  const float coszsinx = sinx * cosz;
+  const float sinzsinx = sinx * sinz;
+
+  rot_mat[0][0] = cosz * cosy;
+  rot_mat[0][1] = -cosy * sinz;
+  rot_mat[0][2] = siny;
+  rot_mat[1][0] = sinzcosx + (coszsinx * siny);
+  rot_mat[1][1] = coszcosx - (sinzsinx * siny);
+  rot_mat[1][2] = -sinx * cosy;
+  rot_mat[2][0] = (sinzsinx) - (coszcosx * siny);
+  rot_mat[2][1] = (coszsinx) + (sinzcosx * siny);
+  rot_mat[2][2] = cosy * cosx;
+
+  last_gyro_orientation = profile.motor.gyro_orientation;
+}
+
+static vec3_t sixaxis_apply_matrix(vec3_t v) {
+  return (vec3_t){
+      .roll = (rot_mat[0][0] * v.roll + rot_mat[1][0] * v.pitch + rot_mat[2][0] * v.yaw),
+      .pitch = (rot_mat[0][1] * v.roll + rot_mat[1][1] * v.pitch + rot_mat[2][1] * v.yaw),
+      .yaw = (rot_mat[0][2] * v.roll + rot_mat[1][2] * v.pitch + rot_mat[2][2] * v.yaw),
+  };
+}
+
+void sixaxis_read() {
+  sixaxis_compute_matrix();
 
   filter_coeff(profile.filter.gyro[0].type, &filter[0], profile.filter.gyro[0].cutoff_freq);
   filter_coeff(profile.filter.gyro[1].type, &filter[1], profile.filter.gyro[1].cutoff_freq);
 
-  state.gyro.roll = state.gyro_raw.roll = state.gyro_raw.roll * GYRO_RANGE * DEGTORAD;
-  state.gyro.pitch = state.gyro_raw.pitch = -state.gyro_raw.pitch * GYRO_RANGE * DEGTORAD;
-  state.gyro.yaw = state.gyro_raw.yaw = -state.gyro_raw.yaw * GYRO_RANGE * DEGTORAD;
+  const gyro_data_t data = gyro_spi_read();
+
+  const vec3_t accel = sixaxis_apply_matrix(data.accel);
+  // swap pitch and roll to match gyro
+  state.accel_raw.roll = (accel.pitch - flash_storage.accelcal[1]) * ACCEL_RANGE;
+  state.accel_raw.pitch = (accel.roll - flash_storage.accelcal[0]) * ACCEL_RANGE;
+  state.accel_raw.yaw = (accel.yaw - flash_storage.accelcal[2]) * ACCEL_RANGE;
+
+  state.gyro_raw.roll = data.gyro.roll - gyrocal[0];
+  state.gyro_raw.pitch = data.gyro.pitch - gyrocal[1];
+  state.gyro_raw.yaw = data.gyro.yaw - gyrocal[2];
+  state.gyro_raw = sixaxis_apply_matrix(state.gyro_raw);
+  state.gyro_raw.roll = state.gyro_raw.roll * GYRO_RANGE * DEGTORAD;
+  state.gyro_raw.pitch = -state.gyro_raw.pitch * GYRO_RANGE * DEGTORAD;
+  state.gyro_raw.yaw = -state.gyro_raw.yaw * GYRO_RANGE * DEGTORAD;
+
+  state.gyro_temp = data.temp;
 
   for (uint32_t i = 0; i < 3; i++) {
+    state.gyro.axis[i] = state.gyro_raw.axis[i];
+
     if (profile.filter.gyro_dynamic_notch_enable) {
       static uint8_t axis_needs_update = 0;
       if (sdft_push(&gyro_sdft[i], state.gyro.axis[i]) && axis_needs_update == 0) {

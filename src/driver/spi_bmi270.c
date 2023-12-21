@@ -209,8 +209,8 @@ void bmi270_read_gyro_data(gyro_data_t *data) {
   };
   spi_seg_submit_wait(&gyro_bus, gyro_segs);
 
-  data->accel.roll = -(int16_t)((buf[1] << 8) | buf[0]);
-  data->accel.pitch = -(int16_t)((buf[3] << 8) | buf[2]);
+  data->accel.pitch = -(int16_t)((buf[1] << 8) | buf[0]);
+  data->accel.roll = -(int16_t)((buf[3] << 8) | buf[2]);
   data->accel.yaw = (int16_t)((buf[5] << 8) | buf[4]);
 
   int16_t gyro_data[3] = {
