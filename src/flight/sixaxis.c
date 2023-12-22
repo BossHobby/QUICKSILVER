@@ -275,12 +275,18 @@ void sixaxis_gyro_cal() {
 }
 
 void sixaxis_acc_cal() {
+  sixaxis_compute_matrix();
+
   flash_storage.accelcal[2] = 2048;
-  for (int y = 0; y < 500; y++) {
-    sixaxis_read();
-    for (int x = 0; x < 3; x++) {
-      lpf(&flash_storage.accelcal[x], state.accel_raw.axis[x], 0.92);
+  for (uint32_t i = 0; i < 500; i++) {
+    const gyro_data_t data = gyro_spi_read();
+    const vec3_t accel = sixaxis_apply_matrix(data.accel);
+
+    for (uint32_t x = 0; x < 3; x++) {
+      lpf(&flash_storage.accelcal[x], accel.axis[x], 0.92);
     }
+
+    time_delay_us(500);
   }
   flash_storage.accelcal[2] -= 2048;
 
