@@ -181,7 +181,7 @@ void adc_init() {
 #endif
 
   temp_cal_a = (float)(TEMPSENSOR_CAL2_TEMP - TEMPSENSOR_CAL1_TEMP) / (float)(*TEMPSENSOR_CAL2_ADDR - *TEMPSENSOR_CAL1_ADDR);
-  temp_cal_b = (float)TEMPSENSOR_CAL1_TEMP - temp_cal_a * *TEMPSENSOR_CAL1_ADDR;
+  temp_cal_b = (float)TEMPSENSOR_CAL1_TEMP - temp_cal_a * (float)(*TEMPSENSOR_CAL1_ADDR);
 
   adc_init_pin(ADC_CHAN_VREF, PIN_NONE);
   adc_init_pin(ADC_CHAN_TEMP, PIN_NONE);
@@ -220,5 +220,9 @@ uint16_t adc_read_raw(adc_chan_t index) {
 }
 
 float adc_convert_to_temp(float val) {
+#ifdef STM32H7
+  // adc cal is 16bit on h7, shift by 4bit left
+  val *= 16;
+#endif
   return temp_cal_a * val + temp_cal_b;
 }
