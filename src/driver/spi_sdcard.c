@@ -76,8 +76,8 @@ void sdcard_init() {
     return;
   }
 
-  bus.port = target.flash.port;
-  bus.nss = target.flash.nss;
+  bus.port = target.sdcard.port;
+  bus.nss = target.sdcard.nss;
   spi_bus_device_init(&bus);
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, SPI_SPEED_SLOW);
 }
@@ -290,6 +290,7 @@ sdcard_status_t sdcard_update() {
   }
 
   if (!spi_txn_ready(&bus)) {
+    spi_txn_continue(&bus);
     return SDCARD_WAIT;
   }
 
