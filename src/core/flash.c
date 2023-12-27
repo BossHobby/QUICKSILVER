@@ -31,6 +31,10 @@ static void flash_write_magic(uint8_t *data, uint32_t magic) {
   *((uint32_t *)data) = magic;
 }
 
+static bool flash_compare_magic(uint32_t addr, uint32_t magic) {
+  return ((uint32_t)fmc_read(addr)) == magic;
+}
+
 void flash_save() {
   rx_stop();
 
@@ -132,7 +136,7 @@ void flash_save() {
 
 void flash_load() {
 
-  if (fmc_read(TARGET_STORAGE_OFFSET) == (FMC_MAGIC | TARGET_STORAGE_OFFSET)) {
+  if (flash_compare_magic(TARGET_STORAGE_OFFSET, (FMC_MAGIC | TARGET_STORAGE_OFFSET))) {
     const uint32_t offset = TARGET_STORAGE_OFFSET + FMC_MAGIC_SIZE;
     const uint32_t size = TARGET_STORAGE_SIZE - FMC_MAGIC_SIZE;
 
@@ -144,7 +148,7 @@ void flash_load() {
     cbor_decode_target_t(&dec, &target);
   }
 
-  if (fmc_read(FLASH_STORAGE_OFFSET) == (FMC_MAGIC | FLASH_STORAGE_OFFSET)) {
+  if (flash_compare_magic(FLASH_STORAGE_OFFSET, (FMC_MAGIC | FLASH_STORAGE_OFFSET))) {
     const uint32_t offset = FLASH_STORAGE_OFFSET + FMC_MAGIC_SIZE;
     const uint32_t size = FLASH_STORAGE_SIZE - FMC_MAGIC_SIZE;
 
@@ -154,7 +158,7 @@ void flash_load() {
     memcpy((uint8_t *)&flash_storage, buffer, sizeof(flash_storage_t));
   }
 
-  if (fmc_read(BIND_STORAGE_OFFSET) == (FMC_MAGIC | BIND_STORAGE_OFFSET)) {
+  if (flash_compare_magic(BIND_STORAGE_OFFSET, (FMC_MAGIC | BIND_STORAGE_OFFSET))) {
     const uint32_t offset = BIND_STORAGE_OFFSET + FMC_MAGIC_SIZE;
     const uint32_t size = BIND_STORAGE_SIZE - FMC_MAGIC_SIZE;
 
@@ -176,7 +180,7 @@ void flash_load() {
 
   profile_set_defaults();
 
-  if (fmc_read(PROFILE_STORAGE_OFFSET) == (FMC_MAGIC | PROFILE_STORAGE_OFFSET)) {
+  if (flash_compare_magic(PROFILE_STORAGE_OFFSET, (FMC_MAGIC | PROFILE_STORAGE_OFFSET))) {
     const uint32_t offset = PROFILE_STORAGE_OFFSET + FMC_MAGIC_SIZE;
     const uint32_t size = PROFILE_STORAGE_SIZE - FMC_MAGIC_SIZE;
 
@@ -193,7 +197,7 @@ void flash_load() {
     }
   }
 
-  if (fmc_read(VTX_STORAGE_OFFSET) == (FMC_MAGIC | VTX_STORAGE_OFFSET)) {
+  if (flash_compare_magic(VTX_STORAGE_OFFSET, (FMC_MAGIC | VTX_STORAGE_OFFSET))) {
     const uint32_t offset = VTX_STORAGE_OFFSET + FMC_MAGIC_SIZE;
     const uint32_t size = VTX_STORAGE_SIZE - FMC_MAGIC_SIZE;
 
