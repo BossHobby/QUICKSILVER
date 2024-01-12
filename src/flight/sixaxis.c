@@ -144,29 +144,40 @@ void sixaxis_read() {
   state.gyro_raw.pitch = data.gyro.pitch - gyrocal[1];
   state.gyro_raw.yaw = data.gyro.yaw - gyrocal[2];
   state.gyro_raw = sixaxis_apply_matrix(state.gyro_raw);
-  state.gyro_raw.roll = state.gyro_raw.roll * GYRO_RANGE * DEGTORAD;
-  state.gyro_raw.pitch = -state.gyro_raw.pitch * GYRO_RANGE * DEGTORAD;
-  state.gyro_raw.yaw = -state.gyro_raw.yaw * GYRO_RANGE * DEGTORAD;
+  state.gyro.roll = state.gyro_raw.roll = state.gyro_raw.roll * GYRO_RANGE * DEGTORAD;
+  state.gyro.pitch = state.gyro_raw.pitch = -state.gyro_raw.pitch * GYRO_RANGE * DEGTORAD;
+  state.gyro.yaw = state.gyro_raw.yaw = -state.gyro_raw.yaw * GYRO_RANGE * DEGTORAD;
 
   state.gyro_temp = data.temp;
 
-  for (uint32_t i = 0; i < 3; i++) {
-    state.gyro.axis[i] = state.gyro_raw.axis[i];
+  if (profile.filter.gyro_dynamic_notch_enable) {
+    // we are updating the sdft state per axis per loop
+    // eg. axis 0 step 0, axis 0 step 1 ... axis 2, step 3
 
-    if (profile.filter.gyro_dynamic_notch_enable) {
-      static uint8_t axis_needs_update = 0;
-      if (sdft_push(&gyro_sdft[i], state.gyro.axis[i]) && axis_needs_update == 0) {
-        axis_needs_update = 3;
-      }
+    // 3 == idle state
+    static uint8_t current_axis = 3;
 
-      if ((axis_needs_update - 1) == i && sdft_update(&gyro_sdft[i])) {
-        for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
-          filter_biquad_notch_coeff(&notch_filter[i][p], gyro_sdft[i].notch_hz[p]);
-        }
-        axis_needs_update--;
+    for (uint32_t i = 0; i < 3; i++) {
+      // push new samples every loop
+      if (sdft_push(&gyro_sdft[i], state.gyro.axis[i]) && current_axis == 3) {
+        // a batch just finished and we are in idle state
+        // kick off a new round of axis updates
+        current_axis = 0;
       }
     }
 
+    // if we have a batch ready, start walking the sdft steps for a given axis
+    if (current_axis < 3 && sdft_update(&gyro_sdft[current_axis])) {
+      // once all sdft update steps are done, we update the filters and continue to the next axis
+      for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
+        filter_biquad_notch_coeff(&notch_filter[current_axis][p], gyro_sdft[current_axis].notch_hz[p]);
+      }
+      // on the last axis we increment this to the idle state 3
+      current_axis++;
+    }
+  }
+
+  for (uint32_t i = 0; i < 3; i++) {
     state.gyro.axis[i] = filter_step(profile.filter.gyro[0].type, &filter[0], &filter_state[0][i], state.gyro.axis[i]);
     state.gyro.axis[i] = filter_step(profile.filter.gyro[1].type, &filter[1], &filter_state[1][i], state.gyro.axis[i]);
 
