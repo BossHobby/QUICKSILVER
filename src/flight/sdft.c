@@ -40,7 +40,7 @@ void sdft_init(sdft_t *sdft) {
     twiddle[i] = cexpf(j * factor);
   }
 
-  sdft->state = SDFT_UPDATE_MAGNITUE;
+  sdft->state = SDFT_UPDATE_MAGNITUDE;
   sdft->idx = 0;
   sdft->sample_avg = 0;
   sdft->sample_accumulator = 0;
@@ -97,7 +97,7 @@ bool sdft_update(sdft_t *sdft) {
   bool filters_updated = false;
 
   switch (sdft->state) {
-  case SDFT_UPDATE_MAGNITUE:
+  case SDFT_UPDATE_MAGNITUDE:
     sdft->noise_floor = 0;
 
     for (uint32_t i = bin_min_index + 1; i < bin_max_index - 1; i++) {
@@ -211,7 +211,7 @@ bool sdft_update(sdft_t *sdft) {
   }
 
   case SDFT_UPDATE_FILTERS:
-    sdft->state = SDFT_UPDATE_MAGNITUE;
+    sdft->state = SDFT_UPDATE_MAGNITUDE;
 
     // re-compute in case looptime changed
     sub_samples = (SAMPLE_HZ / (2.0f * SDFT_MAX_HZ));
