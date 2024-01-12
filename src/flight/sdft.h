@@ -26,6 +26,7 @@ typedef enum {
   SDFT_DETECT_PEAKS,
   SDFT_CALC_FREQ,
   SDFT_UPDATE_FILTERS,
+  SDFT_STEP_COUNT,
 } sdft_state_t;
 
 typedef struct {
