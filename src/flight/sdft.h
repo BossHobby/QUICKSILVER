@@ -22,7 +22,7 @@
 typedef float complex complex_float;
 
 typedef enum {
-  SDFT_UPDATE_MAGNITUE,
+  SDFT_UPDATE_MAGNITUDE,
   SDFT_DETECT_PEAKS,
   SDFT_CALC_FREQ,
   SDFT_UPDATE_FILTERS,
