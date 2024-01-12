@@ -12,6 +12,8 @@
 // and E. Jacobsen and R. Lyons, “An Update to the Sliding DFT”
 
 #define LOOPTIME_S (state.looptime_autodetect * 1e-6)
+// one axis at a time, n steps
+#define FILTER_SAMPLE_PERIOD_S (LOOPTIME_S * (float)(SDFT_STEP_COUNT * 3))
 #define SAMPLE_HZ (1e6f / state.looptime_autodetect)
 
 static float r_to_N;
@@ -201,7 +203,7 @@ bool sdft_update(sdft_t *sdft) {
       const float f_hz = meanBin * (float)resolution_hz;
 
       const float filter_multi = constrain(sdft->peak_values[peak] / sdft->noise_floor, 1.0f, 10.0f);
-      const float gain = LOOPTIME_S / (1 / (2.0f * M_PI_F * (filter_multi * SDFT_FILTER_HZ)) + LOOPTIME_S);
+      const float gain = FILTER_SAMPLE_PERIOD_S / (1 / (2.0f * M_PI_F * (filter_multi * SDFT_FILTER_HZ)) + FILTER_SAMPLE_PERIOD_S);
 
       sdft->notch_hz[peak] += gain * (f_hz - sdft->notch_hz[peak]);
     }
@@ -222,6 +224,11 @@ bool sdft_update(sdft_t *sdft) {
     bin_batches = (bin_max_index - bin_min_index) / sub_samples + 1;
 
     filters_updated = true;
+    break;
+
+  case SDFT_STEP_COUNT:
+    // THIS SHOULD NEVER RUN
+    // ONLY ADDED TO REMOVE COMPILER WARNING
     break;
   }
 
