@@ -137,7 +137,7 @@
 #define AUTO_VDROP_FACTOR
 
 // *************voltage/cell to start warning led blinking
-#define VBATTLOW 3.3
+#define VBATTLOW 3.6
 
 // *************voltage hysteresis in volts
 #define HYST 0.10
