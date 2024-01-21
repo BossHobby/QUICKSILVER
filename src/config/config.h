@@ -152,22 +152,16 @@
 //***********************************************FILTER SETTINGS********************************************************
 
 // Gyro Filters
-// GYRO FILTER PASS 1 - FILTER TYPE  - define only one or none to disable this pass
-#define GYRO_FILTER_PASS1_PT1
-// #define GYRO_FILTER_PASS1_PT2
-//  GYRO FILTER PASS 2 - FILTER TYPE  - define only one or none to disable this pass
-#define GYRO_FILTER_PASS2_PT1
-// #define GYRO_FILTER_PASS2_PT2
+#define GYRO_PASS1_TYPE FILTER_LP_PT3
+#define GYRO_PASS1_FREQ 100
 
-// GYRO FILTER PASS 1 CUTOFF FREQUENCY
-#define GYRO_FREQ_PASS1 90
-// GYRO FILTER PASS 2 CUTOFF FREQUENCY
-#define GYRO_FREQ_PASS2 90
+#define GYRO_PASS2_TYPE FILTER_NONE
+#define GYRO_PASS2_FREQ 0
 
 // Dynamic D term filter
 // a pt1 filter that moves up in cut hz with a parabolic relationship to applied throttle.  The theory here is
 // that propwash is most likely to occur as throttle is applied in dirty air - and propwash is most significantly
-//  caused by latency in the D term filtering.  Therefore, the approach is to reduce latency in the lowest frequency
+// caused by latency in the D term filtering.  Therefore, the approach is to reduce latency in the lowest frequency
 // range of d term filtering which is responsible for the most phase delay as increasing throttle is applied.  Noise pass-through
 // will obviously increase with this approach, but when used in combination with throttle_dterm_attenuation - that gains on D will
 // also be lowered with increasing throttle thereby mitigating much of the danger from reduced filtering while allowing D term to be more effective
@@ -180,17 +174,11 @@
 #define DTERM_DYNAMIC_FREQ_MAX 260
 
 // Fixed D-Term Filters
-// D-Term FILTER PASS 1 - FILTER TYPE  - define only one or none to disable this pass
-#define DTERM_FILTER_PASS1_PT1
-// #define DTERM_FILTER_PASS1_PT2
-//  D-Term FILTER PASS 2 - FILTER TYPE  - define only one or none to disable this pass
-// #define DTERM_FILTER_PASS2_PT1
-// #define DTERM_FILTER_PASS2_PT2
+#define DTERM_PASS1_TYPE FILTER_LP_PT1
+#define DTERM_PASS1_FREQ 260
 
-// D-Term FILTER PASS 1 CUTOFF FREQUENCY
-#define DTERM_FREQ_PASS1 260
-// D-Term FILTER PASS 2 CUTOFF FREQUENCY
-#define DTERM_FREQ_PASS2 150
+#define DTERM_PASS2_TYPE FILTER_NONE
+#define DTERM_PASS2_FREQ 150
 
 //**********************************************************************************************************************
 //***********************************************MOTOR OUTPUT SETTINGS**************************************************

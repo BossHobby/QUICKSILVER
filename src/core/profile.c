@@ -182,69 +182,25 @@ const profile_t default_profile = {
 
     .filter = {
         .gyro = {
-#if defined(GYRO_FILTER_PASS1_PT1) || defined(GYRO_FILTER_PASS1_PT2)
             {
-#ifdef GYRO_FILTER_PASS1_PT1
-                .type = FILTER_LP_PT1,
-                .cutoff_freq = GYRO_FREQ_PASS1,
-#else // GYRO_FILTER_PASS1_PT2
-                .type = FILTER_LP_PT2,
-                .cutoff_freq = GYRO_FREQ_PASS1,
-#endif
+                .type = GYRO_PASS1_TYPE,
+                .cutoff_freq = GYRO_PASS1_FREQ,
             },
-#else
             {
-                .type = FILTER_NONE,
+                .type = GYRO_PASS2_TYPE,
+                .cutoff_freq = GYRO_PASS2_FREQ,
             },
-#endif
-#if defined(GYRO_FILTER_PASS2_PT1) || defined(GYRO_FILTER_PASS2_PT2)
-            {
-#ifdef GYRO_FILTER_PASS2_PT1
-                .type = FILTER_LP_PT1,
-                .cutoff_freq = GYRO_FREQ_PASS1,
-#else // GYRO_FILTER_PASS2_PT2
-                .type = FILTER_LP_PT2,
-                .cutoff_freq = GYRO_FREQ_PASS1,
-#endif
-            }
-#else
-            {
-                .type = FILTER_NONE,
-            }
-#endif
         },
 
         .dterm = {
-#if defined(DTERM_FILTER_PASS1_PT1) || defined(DTERM_FILTER_PASS1_PT2)
             {
-#ifdef DTERM_FILTER_PASS1_PT1
-                .type = FILTER_LP_PT1,
-                .cutoff_freq = DTERM_FREQ_PASS1,
-#else // DTERM_FILTER_PASS1_PT2
-                .type = FILTER_LP_PT2,
-                .cutoff_freq = DTERM_FREQ_PASS1,
-#endif
+                .type = DTERM_PASS1_TYPE,
+                .cutoff_freq = DTERM_PASS1_FREQ,
             },
-#else
             {
-                .type = FILTER_NONE,
+                .type = DTERM_PASS2_TYPE,
+                .cutoff_freq = DTERM_PASS2_FREQ,
             },
-#endif
-#if defined(DTERM_FILTER_PASS2_PT1) || defined(DTERM_FILTER_PASS2_PT2)
-            {
-#ifdef DTERM_FILTER_PASS2_PT1
-                .type = FILTER_LP_PT1,
-                .cutoff_freq = DTERM_FREQ_PASS2,
-#else // DTERM_FILTER_PASS2_PT2
-                .type = FILTER_LP_PT2,
-                .cutoff_freq = DTERM_FREQ_PASS2,
-#endif
-            }
-#else
-            {
-                .type = FILTER_NONE,
-            }
-#endif
         },
 
 #ifdef DTERM_DYNAMIC_LPF
