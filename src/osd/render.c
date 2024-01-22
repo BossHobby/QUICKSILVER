@@ -18,8 +18,10 @@
 #define ICON_RSSI 0x1
 #define ICON_CELSIUS 0xe
 #define ICON_THROTTLE 0x4
+#define ICON_VOLT 0x6
 #define ICON_AMP 0x9a
 #define ICON_DOWN 0x76
+#define ICON_GAUGE 0x70
 
 #define HOLD 0
 #define TEMP 1
@@ -393,7 +395,7 @@ static void osd_display_regular() {
   case OSD_FUELGAUGE_VOLTS: {
     osd_start(osd_attr(el), el->pos_x, el->pos_y);
     osd_write_float(state.vbat_compensated_cell_avg, 4, 1);
-    osd_write_char('V');
+    osd_write_char(ICON_GAUGE);
 
     osd_state.element++;
     break;
@@ -402,7 +404,7 @@ static void osd_display_regular() {
   case OSD_FILTERED_VOLTS: {
     osd_start(osd_attr(el), el->pos_x, el->pos_y);
     osd_write_float(state.vbat_cell_avg, 4, 1);
-    osd_write_char('V');
+    osd_write_char(ICON_VOLT);
 
     osd_state.element++;
     break;
