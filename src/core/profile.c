@@ -47,9 +47,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .index = 0,
         .name = "Thrust/Weight Ratio 14:1 5in",
         .rate = {
-            .kp = {47, 54, 56.5},
+            .kp = {54, 54, 56},
             .ki = {70, 70, 70},
-            .kd = {27.5, 33.5, 4.5},
+            .kd = {33, 33, 4},
         },
     },
 
@@ -57,9 +57,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .index = 1,
         .name = "Thrust/Weight Ratio 12:1 4in",
         .rate = {
-            .kp = {65.5, 70.5, 63},
+            .kp = {70, 70, 63},
             .ki = {70, 70, 70},
-            .kd = {35.5, 39.5, 6},
+            .kd = {39, 39, 6},
         },
     },
 
@@ -67,9 +67,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .index = 2,
         .name = "Thrust/Weight Ratio 10:1 3in",
         .rate = {
-            .kp = {78.5, 80.5, 78.5},
-            .ki = {70, 70, 70},
-            .kd = {42.5, 44.5, 6},
+            .kp = {81, 81, 78},
+            .ki = {77, 77, 77},
+            .kd = {44, 44, 6},
         },
     },
 
