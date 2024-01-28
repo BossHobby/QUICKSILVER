@@ -186,8 +186,6 @@ static void dshot_dma_setup_port(uint32_t index) {
 
 // make dshot dma packet, then fire
 void dshot_dma_start() {
-  motor_wait_for_ready();
-
   for (uint32_t j = 0; j < gpio_port_count; j++) {
     // set all ports to low before and after the packet
     port_dma_buffer[j][0] = gpio_ports[j].port_low;
