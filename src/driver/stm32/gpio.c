@@ -63,24 +63,36 @@ void gpio_ports_init() {
 }
 
 void gpio_pin_init(gpio_pins_t pin, gpio_config_t config) {
-  LL_GPIO_InitTypeDef init;
-  init.Mode = mode_map[config.mode];
-  init.Speed = speed_map[config.drive];
-  init.OutputType = output_map[config.output];
-  init.Pull = pull_map[config.pull];
-  init.Pin = gpio_pin_defs[pin].pin;
-  LL_GPIO_Init(gpio_pin_defs[pin].port, &init);
+  gpio_port_t *port = gpio_pin_defs[pin].port;
+  const uint32_t pin_mask = gpio_pin_defs[pin].pin;
+
+  if ((config.mode == GPIO_OUTPUT) || (config.mode == GPIO_ALTERNATE)) {
+    LL_GPIO_SetPinSpeed(port, pin_mask, speed_map[config.drive]);
+    LL_GPIO_SetPinOutputType(port, pin_mask, output_map[config.output]);
+  }
+  LL_GPIO_SetPinPull(port, pin_mask, pull_map[config.pull]);
+  LL_GPIO_SetPinMode(port, pin_mask, mode_map[config.mode]);
 }
 
 void gpio_pin_init_af(gpio_pins_t pin, gpio_config_t config, uint8_t af) {
-  LL_GPIO_InitTypeDef init;
-  init.Mode = mode_map[config.mode];
-  init.Speed = speed_map[config.drive];
-  init.OutputType = output_map[config.output];
-  init.Pull = pull_map[config.pull];
-  init.Pin = gpio_pin_defs[pin].pin;
-  init.Alternate = af;
-  LL_GPIO_Init(gpio_pin_defs[pin].port, &init);
+  gpio_port_t *port = gpio_pin_defs[pin].port;
+  const uint32_t pin_mask = gpio_pin_defs[pin].pin;
+
+  if ((config.mode == GPIO_OUTPUT) || (config.mode == GPIO_ALTERNATE)) {
+    LL_GPIO_SetPinSpeed(port, pin_mask, speed_map[config.drive]);
+    LL_GPIO_SetPinOutputType(port, pin_mask, output_map[config.output]);
+  }
+  LL_GPIO_SetPinPull(port, pin_mask, pull_map[config.pull]);
+
+  if (config.mode == GPIO_ALTERNATE) {
+    if (POSITION_VAL(pin_mask) < 0x00000008U) {
+      LL_GPIO_SetAFPin_0_7(port, pin_mask, af);
+    } else {
+      LL_GPIO_SetAFPin_8_15(port, pin_mask, af);
+    }
+  }
+
+  LL_GPIO_SetPinMode(port, pin_mask, mode_map[config.mode]);
 }
 
 void gpio_pin_set(gpio_pins_t pin) {
