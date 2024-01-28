@@ -216,8 +216,6 @@ static void dshot_dma_setup_port(uint32_t index) {
 
 // make dshot dma packet, then fire
 void dshot_dma_start() {
-  motor_wait_for_ready();
-
   for (uint32_t j = 0; j < gpio_port_count; j++) {
     // set all ports to low before and after the packet
     port_dma_buffer[j][0] = gpio_ports[j].port_low;
@@ -253,6 +251,11 @@ void dshot_dma_start() {
 
   dma_prepare_tx_memory((void *)port_dma_buffer, sizeof(port_dma_buffer));
 
+#ifdef STM32F4
+  while (spi_dma_is_ready(SPI_PORT1) == 0)
+    __NOP();
+#endif
+
   dshot_dma_phase = gpio_port_count;
   for (uint32_t j = 0; j < gpio_port_count; j++) {
     dshot_dma_setup_port(j);
@@ -260,11 +263,7 @@ void dshot_dma_start() {
 }
 
 void motor_dshot_wait_for_ready() {
-#ifdef STM32F4
-  while (dshot_dma_phase != 0 || spi_dma_is_ready(SPI_PORT1) == 0)
-#else
   while (dshot_dma_phase != 0)
-#endif
     __NOP();
 }
 
