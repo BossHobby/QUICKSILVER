@@ -186,6 +186,7 @@ typedef enum {
   DSHOT_TIME_150 = 150,
   DSHOT_TIME_300 = 300,
   DSHOT_TIME_600 = 600,
+  DSHOT_TIME_MAX = 600,
 } __attribute__((__packed__)) dshot_time_t;
 
 typedef struct {
