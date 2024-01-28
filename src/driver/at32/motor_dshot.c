@@ -11,20 +11,6 @@
 
 #ifdef USE_MOTOR_DSHOT
 
-extern volatile uint32_t dshot_dma_phase;
-extern uint16_t dshot_packet[MOTOR_PIN_MAX];
-extern dshot_pin_t dshot_pins[MOTOR_PIN_MAX];
-
-extern motor_direction_t motor_dir;
-
-extern uint8_t dshot_gpio_port_count;
-extern dshot_gpio_port_t dshot_gpio_ports[DSHOT_MAX_PORT_COUNT];
-
-extern volatile DMA_RAM uint32_t port_dma_buffer[DSHOT_MAX_PORT_COUNT][DSHOT_DMA_BUFFER_SIZE];
-
-extern void dshot_init_motor_pin(uint32_t index);
-extern const dshot_gpio_port_t *dshot_gpio_for_device(const dma_device_t dev);
-
 static void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   dma_enable_rcc(port->dma_device);
 
@@ -59,9 +45,7 @@ static void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   interrupt_enable(dma->irq, DMA_PRIORITY);
 }
 
-void motor_dshot_init() {
-  dshot_gpio_port_count = 0;
-
+void dshot_init_timer() {
   rcc_enable(RCC_ENCODE(TMR1));
 
   // setup timer to 1/3 of the full bit time
@@ -69,10 +53,6 @@ void motor_dshot_init() {
   tmr_clock_source_div_set(TMR1, TMR_CLOCK_DIV1);
   tmr_cnt_dir_set(TMR1, TMR_COUNT_UP);
   tmr_period_buffer_enable(TMR1, TRUE);
-
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    dshot_init_motor_pin(i);
-  }
 
   for (uint32_t j = 0; j < dshot_gpio_port_count; j++) {
     dshot_init_gpio_port(&dshot_gpio_ports[j]);
@@ -85,7 +65,6 @@ void motor_dshot_init() {
   }
 
   tmr_counter_enable(TMR1, TRUE);
-  motor_dir = MOTOR_FORWARD;
 }
 
 void dshot_dma_setup_port(uint32_t index) {
@@ -100,11 +79,6 @@ void dshot_dma_setup_port(uint32_t index) {
 
   dma_channel_enable(dma->channel, TRUE);
   timer_enable_dma_request(TIMER1, port->timer_channel, true);
-}
-
-void motor_dshot_wait_for_ready() {
-  while (dshot_dma_phase != 0)
-    __NOP();
 }
 
 void dshot_dma_isr(dma_device_t dev) {
