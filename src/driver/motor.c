@@ -39,6 +39,8 @@ void motor_wait_for_ready() {
 }
 
 void motor_beep() {
+  motor_wait_for_ready();
+
 #ifdef USE_MOTOR_DSHOT
   if (target.brushless) {
     motor_dshot_beep();
@@ -68,6 +70,7 @@ void motor_set_all(float pwm) {
 
 void motor_update() {
   motor_wait_for_ready();
+
 #ifdef USE_MOTOR_DSHOT
   if (target.brushless) {
     motor_dshot_write(motor_values);
