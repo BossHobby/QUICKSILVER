@@ -7,6 +7,7 @@
 #include <usbd_int.h>
 
 #include "driver/gpio.h"
+#include "driver/interrupt.h"
 #include "driver/time.h"
 
 extern volatile bool usb_device_configured;
@@ -39,7 +40,7 @@ void usb_drv_init() {
 
   crm_periph_clock_enable(CRM_OTGFS1_PERIPH_CLOCK, TRUE);
   usb_enable_clock();
-  nvic_irq_enable(OTGFS1_IRQn, 0, 0);
+  interrupt_enable(OTGFS1_IRQn, USB_PRIORITY);
 
   usbd_init(&otg_core_struct,
             USB_FULL_SPEED_CORE_ID,
@@ -94,7 +95,9 @@ void usb_cdc_kickoff_tx() {
     return;
   }
 
+  interrupt_disable(OTGFS1_IRQn);
   usb_cdc_tx_handler();
+  interrupt_enable(OTGFS1_IRQn, USB_PRIORITY);
 }
 
 uint32_t usb_serial_read(uint8_t *data, uint32_t len) {

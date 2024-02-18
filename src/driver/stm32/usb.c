@@ -241,6 +241,7 @@ static void cdc_kickoff_rx() {
     return;
   }
 
+  interrupt_disable(OTG_FS_IRQn);
   cdc_rxonly(&udev, 0, CDC_RXD_EP);
   interrupt_enable(OTG_FS_IRQn, USB_PRIORITY);
 }
@@ -277,7 +278,9 @@ static void cdc_kickoff_tx() {
     return;
   }
 
+  interrupt_disable(OTG_FS_IRQn);
   cdc_txonly(&udev, 0, CDC_TXD_EP);
+  interrupt_enable(OTG_FS_IRQn, USB_PRIORITY);
 }
 
 static usbd_respond cdc_setconf(usbd_device *dev, uint8_t cfg) {
