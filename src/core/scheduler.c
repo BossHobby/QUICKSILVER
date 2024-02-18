@@ -73,6 +73,11 @@ static inline void task_run(task_t *task) {
   const volatile uint32_t time_taken = time_cycles() - start;
   task->runtime_current = time_taken;
 
+  if (state.loop_counter < 100) {
+    // skip first couple of loops
+    return;
+  }
+
   if (task->flags & TASK_FLAG_SKIP_STATS) {
     return;
   }

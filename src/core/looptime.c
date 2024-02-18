@@ -26,16 +26,14 @@ void looptime_reset() {
 }
 
 static void looptime_auto_detect() {
-  // looptime_autodetect sequence
-  static uint8_t loop_delay = 0;
-  if (loop_delay < 200) {
-    loop_delay++;
+  if (state.loop_counter < 200) {
+    // skip first couple of loops
+    return;
   }
 
   static float loop_avg = 0;
   static uint8_t loop_counter = 0;
-
-  if (loop_delay >= 200 && loop_counter < 200) {
+  if (loop_counter < 200) {
     loop_avg += state.looptime_us;
     loop_counter++;
   }
