@@ -105,9 +105,9 @@ uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, 
   return ret;
 }
 
-uint8_t m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t size) {
+bool m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t size) {
   if (!m25p16_is_ready()) {
-    return 0;
+    return false;
   }
 
   {
@@ -127,23 +127,31 @@ uint8_t m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint3
   }
 
   spi_txn_continue(&bus);
-
-  return 1;
+  return true;
 }
 
-uint8_t m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, const uint32_t len) {
-  m25p16_command(M25P16_WRITE_ENABLE);
+bool m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, const uint32_t len) {
+  if (!m25p16_is_ready()) {
+    return false;
+  }
 
-  uint8_t ret = 0;
+  {
+    const spi_txn_segment_t segs[] = {
+        spi_make_seg_const(M25P16_WRITE_ENABLE),
+    };
+    spi_seg_submit(&bus, NULL, segs);
+  }
+  {
+    const spi_txn_segment_t segs[] = {
+        spi_make_seg_const(cmd),
+        m25p16_set_addr(addr),
+        spi_make_seg_buffer(NULL, data, len),
+    };
+    spi_seg_submit(&bus, NULL, segs);
+  }
 
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_buffer(&ret, &cmd, 1),
-      m25p16_set_addr(addr),
-      spi_make_seg_buffer(NULL, data, len),
-  };
-  spi_seg_submit_continue(&bus, NULL, segs);
-
-  return ret;
+  spi_txn_continue(&bus);
+  return true;
 }
 
 void m25p16_get_bounds(blackbox_device_bounds_t *blackbox_bounds) {

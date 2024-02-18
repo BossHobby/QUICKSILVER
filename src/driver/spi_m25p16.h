@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "io/blackbox_device.h"
@@ -32,5 +33,5 @@ void m25p16_get_bounds(blackbox_device_bounds_t *blackbox_bounds);
 uint8_t m25p16_command(const uint8_t cmd);
 uint8_t m25p16_read_command(const uint8_t cmd, uint8_t *data, const uint32_t len);
 uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, const uint32_t len);
-uint8_t m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, const uint32_t len);
-uint8_t m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t size);
+bool m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, const uint32_t len);
+bool m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t size);
