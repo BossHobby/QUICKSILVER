@@ -82,10 +82,6 @@ static inline void task_run(task_t *task) {
     return;
   }
 
-  if (time_taken < task->runtime_min) {
-    task->runtime_min = time_taken;
-  }
-
   task->runtime_avg_sum -= task->runtime_avg;
   task->runtime_avg_sum += time_taken;
   task->runtime_avg = task->runtime_avg_sum / TASK_AVERAGE_SAMPLES;
@@ -160,9 +156,6 @@ cbor_result_t cbor_encode_task_stats(cbor_value_t *enc) {
 
     CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "current"));
     ENCODE_CYCLES(tasks[i].runtime_current)
-
-    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "min"));
-    ENCODE_CYCLES(tasks[i].runtime_min)
 
     CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "avg"));
     ENCODE_CYCLES(tasks[i].runtime_avg)
