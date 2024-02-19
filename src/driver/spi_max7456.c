@@ -134,6 +134,7 @@ static void max7456_set_system(osd_system_t sys) {
 
 static osd_system_t max7456_current_system() {
   const uint8_t stat = max7456_dma_spi_read(STAT);
+
   if ((stat & 0x01) == 0x01) {
     return OSD_SYS_PAL;
   }
@@ -169,7 +170,7 @@ uint8_t max7456_clear_async() {
 // function to detect and correct ntsc/pal mode or mismatch
 // returns the current system
 osd_system_t max7456_check_system() {
-  if (last_osd_system > OSD_SYS_NONE) {
+  if (!max7456_is_ready() || last_osd_system > OSD_SYS_NONE) {
     return last_osd_system;
   }
 
@@ -208,25 +209,24 @@ osd_system_t max7456_check_system() {
 
     if (warning_sent == 0) {
       // initial screen clear off on first run
-      osd_clear();
-    } else if (warning_sent == 1) {
-      spi_txn_wait(&bus);
-
-      osd_start(OSD_ATTR_BLINK, SYSTEMXPOS, SYSTEMYPOS);
-      osd_write_str("NO CAMERA SIGNAL");
-
-      spi_txn_wait(&bus);
-    } else if (warning_sent > 1) {
-      // done with this sequence, do not increment further
+      if (osd_clear_async()) {
+        warning_sent++;
+      }
       break;
     }
 
-    warning_sent++;
+    if (warning_sent == 1) {
+      osd_start(OSD_ATTR_BLINK, SYSTEMXPOS, SYSTEMYPOS);
+      osd_write_str("NO CAMERA SIGNAL");
+      warning_sent++;
+      break;
+    }
+
     break;
   }
   }
 
-  return current_osd_system;
+  return sys;
 }
 
 // splash screen
