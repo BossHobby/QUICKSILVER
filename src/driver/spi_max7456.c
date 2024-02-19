@@ -140,7 +140,25 @@ static void max7456_set_system(osd_system_t sys) {
 }
 
 static osd_system_t max7456_current_system() {
-  const uint8_t stat = max7456_dma_spi_read(STAT);
+  static uint8_t stat = 0;
+
+  static bool did_send = false;
+  if (!did_send) {
+    spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
+    const spi_txn_segment_t segs[] = {
+        spi_make_seg_const(STAT),
+        spi_make_seg_buffer(&stat, NULL, 1),
+    };
+    spi_seg_submit_continue(&bus, NULL, segs);
+    did_send = true;
+    return last_osd_system;
+  }
+
+  if (!spi_txn_ready(&bus)) {
+    return last_osd_system;
+  }
+  did_send = false;
+
   if ((stat & 0x01) == 0x01) {
     return OSD_SYS_PAL;
   }
@@ -215,25 +233,24 @@ osd_system_t max7456_check_system() {
 
     if (warning_sent == 0) {
       // initial screen clear off on first run
-      osd_clear();
-    } else if (warning_sent == 1) {
-      spi_txn_wait(&bus);
-
-      osd_start(OSD_ATTR_BLINK, SYSTEMXPOS, SYSTEMYPOS);
-      osd_write_str("NO CAMERA SIGNAL");
-
-      spi_txn_wait(&bus);
-    } else if (warning_sent > 1) {
-      // done with this sequence, do not increment further
+      if (osd_clear_async()) {
+        warning_sent++;
+      }
       break;
     }
 
-    warning_sent++;
+    if (warning_sent == 1) {
+      osd_start(OSD_ATTR_BLINK, SYSTEMXPOS, SYSTEMYPOS);
+      osd_write_str("NO CAMERA SIGNAL");
+      warning_sent++;
+      break;
+    }
+
     break;
   }
   }
 
-  return current_osd_system;
+  return sys;
 }
 
 // splash screen

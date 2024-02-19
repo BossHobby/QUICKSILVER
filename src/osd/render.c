@@ -605,6 +605,10 @@ void osd_display() {
     return;
   }
 
+  if (sys == OSD_SYS_NONE) {
+    return;
+  }
+
   static bool did_just_arm = false;
   if (flags.arm_switch) {
     if (!did_just_arm) {
