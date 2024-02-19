@@ -15,8 +15,6 @@ void cbor_decoder_init(cbor_value_t *dec, uint8_t *data, uint32_t len) {
 }
 
 void cbor_encoder_init(cbor_value_t *enc, uint8_t *data, uint32_t len) {
-  memset(data, 0, len);
-
   enc->start = enc->curr = data;
   enc->end = enc->start + len;
 }
@@ -98,17 +96,17 @@ static cbor_result_t _cbor_decode_raw(cbor_value_t *dec, uint8_t *val, uint8_t m
     return CBOR_ERR_EOF;
   }
 
-  memcpy(val + size - bytes, dec->curr + 1, bytes);
-  for (uint8_t i = 0, j = (uint8_t)(size - 1U); i < j; i++, j--) {
-    uint8_t t = val[j];
-    val[j] = val[i];
-    val[i] = t;
+  for (uint32_t i = 0; i < (size - bytes); i++) {
+    val[size - i - 1] = 0;
+  }
+  for (uint32_t i = 0; i < bytes; i++) {
+    val[bytes - i - 1] = dec->curr[i + 1];
   }
 
   return (cbor_result_t)(1 + bytes);
 }
 
-static cbor_result_t _cbor_encode_raw(cbor_value_t *enc, cbor_major_type_t type, const uint8_t *val, uint8_t max) {
+static cbor_result_t _cbor_encode_raw(cbor_value_t *enc, cbor_major_type_t type, const uint8_t *val, cbor_size_type_t max) {
   uint8_t byte_len = max;
   if ((enc->curr + 1) >= enc->end) {
     return CBOR_ERR_EOF;
@@ -124,15 +122,12 @@ static cbor_result_t _cbor_encode_raw(cbor_value_t *enc, cbor_major_type_t type,
   if ((enc->curr + size) >= enc->end) {
     return CBOR_ERR_EOF;
   }
-  memcpy(enc->curr, val, size);
-  for (uint8_t i = 0, j = (uint8_t)(size - 1U); i < j; i++, j--) {
-    uint8_t t = enc->curr[j];
-    enc->curr[j] = enc->curr[i];
-    enc->curr[i] = t;
+  for (uint32_t i = 0; i < size; i++) {
+    enc->curr[size - i - 1] = val[i];
   }
   enc->curr += size;
 
-  return (cbor_result_t)(1 + size);
+  return (cbor_result_t)(size);
 }
 
 cbor_result_t cbor_decode_skip(cbor_value_t *dec) {
