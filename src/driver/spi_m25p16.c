@@ -42,6 +42,7 @@ void m25p16_init() {
 
 uint8_t m25p16_is_ready() {
   if (!spi_txn_ready(&bus)) {
+    spi_txn_continue(&bus);
     return 0;
   }
 
