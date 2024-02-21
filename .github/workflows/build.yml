@@ -11,7 +11,7 @@ jobs:
       targets: ${{ steps.set-targets.outputs.targets }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - id: set-targets
         run: echo "targets=[$(grep '\[env:' platformio.ini | sed 's/.*:\(.*\)].*/"\1"/' | tr '\n' ',')]" >> $GITHUB_OUTPUT
 
@@ -23,9 +23,9 @@ jobs:
         target: ${{fromJSON(needs.targets.outputs.targets)}}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          submodules: "true"
+          submodules: 'true'
 
       - name: Cache pip
         uses: actions/cache@v3
@@ -42,7 +42,7 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
       - name: Install platformio
         run: |
@@ -55,7 +55,7 @@ jobs:
           cp .pio/build/${{ matrix.target }}/firmware.hex  .pio/build/quicksilver.${{ matrix.target }}.hex
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
           path: .pio/build/quicksilver.${{ matrix.target }}.hex
@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: output
 
