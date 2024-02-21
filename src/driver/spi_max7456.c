@@ -149,7 +149,7 @@ static osd_system_t max7456_current_system() {
 }
 
 uint8_t max7456_clear_async() {
-  if (!spi_txn_ready(&bus)) {
+  if (!max7456_is_ready()) {
     return 0;
   }
 
@@ -244,7 +244,7 @@ void max7456_intro() {
 }
 
 bool max7456_can_fit(uint8_t size) {
-  return spi_txn_ready(&bus);
+  return max7456_is_ready();
 }
 
 bool max7456_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size) {
