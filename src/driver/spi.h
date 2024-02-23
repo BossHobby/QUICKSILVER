@@ -35,7 +35,7 @@ typedef struct {
   spi_txn_segment_type_t type;
   union {
     struct {
-      uint8_t byte;
+      uint8_t bytes[8];
     };
     struct {
       const uint8_t *tx_data;
@@ -45,8 +45,8 @@ typedef struct {
   uint32_t size;
 } spi_txn_segment_t;
 
-#define spi_make_seg_const(_byte) \
-  (spi_txn_segment_t) { .type = TXN_CONST, .byte = (_byte), .size = 1 }
+#define spi_make_seg_const(_bytes...) \
+  (spi_txn_segment_t) { .type = TXN_CONST, .bytes = {_bytes}, .size = sizeof((uint8_t[]){_bytes}) }
 #define spi_make_seg_buffer(_rx_data, _tx_data, _size) \
   (spi_txn_segment_t) { .type = TXN_BUFFER, .rx_data = (_rx_data), .tx_data = (_tx_data), .size = (_size) }
 #define spi_make_seg_delay(_rx_data, _tx_data, _size) \

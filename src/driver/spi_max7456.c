@@ -58,8 +58,7 @@ static void max7456_dma_spi_write(uint8_t reg, uint8_t data) {
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
 
   const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg),
-      spi_make_seg_const(data),
+      spi_make_seg_const(reg, data),
   };
   spi_seg_submit_wait(&bus, segs);
 }

@@ -140,13 +140,14 @@ static uint8_t sdcard_command(const uint8_t cmd, const uint32_t args) {
   }
 
   uint32_t count = 0;
-  spi_txn_segment_t segs[7] = {};
+  spi_txn_segment_t segs[3] = {};
 
-  segs[count++] = spi_make_seg_const(0x40 | cmd);
-  segs[count++] = spi_make_seg_const(args >> 24);
-  segs[count++] = spi_make_seg_const(args >> 16);
-  segs[count++] = spi_make_seg_const(args >> 8);
-  segs[count++] = spi_make_seg_const(args >> 0);
+  segs[count++] = spi_make_seg_const(
+      0x40 | cmd,
+      args >> 24,
+      args >> 16,
+      args >> 8,
+      args >> 0);
 
   // we have to send CRC while we are still in SD Bus mode
   switch (cmd) {
@@ -196,8 +197,7 @@ void sdcard_read_data(uint8_t *buf, const uint32_t size) {
   const spi_txn_segment_t segs[] = {
       spi_make_seg_buffer(buf, NULL, size),
       // two bytes CRC
-      spi_make_seg_const(0xFF),
-      spi_make_seg_const(0xFF),
+      spi_make_seg_const(0xFF, 0xFF),
   };
   spi_seg_submit_wait(&bus, segs);
 }
@@ -210,8 +210,7 @@ void sdcard_write_data(const uint8_t token, const uint8_t *buf, const uint32_t s
       spi_make_seg_buffer(NULL, (uint8_t *)buf, size),
 
       // two bytes CRC
-      spi_make_seg_const(0xFF),
-      spi_make_seg_const(0xFF),
+      spi_make_seg_const(0xFF, 0xFF),
 
       // write response
       spi_make_seg_const(0xFF),
@@ -302,10 +301,10 @@ sdcard_status_t sdcard_update() {
       break;
     }
 
-    spi_txn_segment_t segs[20] = {};
-    for (uint32_t i = 0; i < 20; i++) {
-      segs[i] = spi_make_seg_const(0xff);
-    }
+    const uint8_t buf[20] = {[0 ... 19] = 0xff};
+    const spi_txn_segment_t segs[] = {
+        spi_make_seg_buffer(NULL, buf, 20),
+    };
     spi_seg_submit_continue(&bus, NULL, segs);
 
     state = SDCARD_RESET;
@@ -413,8 +412,7 @@ sdcard_status_t sdcard_update() {
           spi_make_seg_buffer(operation.buf + operation.count_done * SDCARD_PAGE_SIZE, NULL, SDCARD_PAGE_SIZE),
 
           // two bytes CRC
-          spi_make_seg_const(0xFF),
-          spi_make_seg_const(0xFF),
+          spi_make_seg_const(0xFF, 0xFF),
       };
       spi_seg_submit_continue(&bus, NULL, segs);
     }
@@ -473,8 +471,7 @@ sdcard_status_t sdcard_update() {
         spi_make_seg_buffer(NULL, operation.buf, SDCARD_PAGE_SIZE),
 
         // two bytes CRC
-        spi_make_seg_const(0xFF),
-        spi_make_seg_const(0xFF),
+        spi_make_seg_const(0xFF, 0xFF),
 
         // write response
         spi_make_seg_const(0xFF),
