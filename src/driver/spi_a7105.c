@@ -26,8 +26,7 @@ void a7105_handle_exti(bool pin_state) {
 
 void a7105_write_reg(a7105_reg_t reg, uint8_t data) {
   const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg),
-      spi_make_seg_const(data),
+      spi_make_seg_const(reg, data),
   };
   spi_seg_submit_continue(&bus, NULL, segs);
 }
