@@ -310,7 +310,7 @@ void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs
     uint8_t *rx_data = NULL;
 
     if (seg->type == TXN_CONST) {
-      tx_data = &seg->byte;
+      tx_data = seg->bytes;
     } else {
       tx_data = seg->tx_data;
       rx_data = seg->rx_data;

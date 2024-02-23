@@ -135,8 +135,7 @@ void bmi3_write8(uint8_t reg, uint8_t data, uint32_t delay) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_SLOW);
 
   const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg),
-      spi_make_seg_const(data),
+      spi_make_seg_const(reg, data),
   };
   spi_seg_submit_wait(&gyro_bus, segs);
 
@@ -147,9 +146,7 @@ void bmi3_write16(uint8_t reg, uint16_t data, uint32_t delay) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_SLOW);
 
   const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg),
-      spi_make_seg_const(data & 0xff),
-      spi_make_seg_const(data >> 8),
+      spi_make_seg_const(reg, data & 0xff, data >> 8),
   };
   spi_seg_submit_wait(&gyro_bus, segs);
 
@@ -172,8 +169,7 @@ void bmi3_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_FAST);
 
   const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg | 0x80),
-      spi_make_seg_const(0xFF),
+      spi_make_seg_const(reg | 0x80, 0xFF),
       spi_make_seg_buffer(data, NULL, size),
   };
   spi_seg_submit_wait(&gyro_bus, segs);
@@ -184,8 +180,7 @@ void bmi323_read_gyro_data(gyro_data_t *data) {
 
   uint8_t buf[12];
   const spi_txn_segment_t gyro_segs[] = {
-      spi_make_seg_const(BMI323_REG_ACC_DATA_X_LSB | 0x80),
-      spi_make_seg_const(0xFF),
+      spi_make_seg_const(BMI323_REG_ACC_DATA_X_LSB | 0x80, 0xFF),
       spi_make_seg_buffer(buf, NULL, 12),
   };
   spi_seg_submit_wait(&gyro_bus, gyro_segs);

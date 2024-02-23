@@ -101,8 +101,7 @@ uint8_t cc2500_get_status() {
 
 void cc2500_write_reg(uint8_t reg, uint8_t data) {
   const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg | CC2500_WRITE_SINGLE),
-      spi_make_seg_const(data),
+      spi_make_seg_const(reg | CC2500_WRITE_SINGLE, data),
   };
   spi_seg_submit_continue(&bus, NULL, segs);
 }
@@ -153,8 +152,7 @@ void cc2500_set_channel(uint8_t channel, uint8_t *cal_data) {
   }
   {
     const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(CC2500_CHANNR | CC2500_WRITE_SINGLE),
-        spi_make_seg_const(channel),
+        spi_make_seg_const(CC2500_CHANNR | CC2500_WRITE_SINGLE, channel),
     };
     spi_seg_submit(&bus, NULL, segs);
   }

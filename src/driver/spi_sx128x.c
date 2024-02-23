@@ -101,7 +101,7 @@ static bool sx128x_poll_for_not_busy() {
 }
 
 #define read_command_txn(cmd, data, size) \
-  spi_make_seg_const(cmd), spi_make_seg_const(0x0), spi_make_seg_buffer(data, NULL, size)
+  spi_make_seg_const(cmd, 0x0), spi_make_seg_buffer(data, NULL, size)
 
 static void sx128x_set_dio0_active() {
   packet_time_us = time_micros();
@@ -168,9 +168,10 @@ void sx128x_handle_dio0_exti(bool level) {
   }
   {
     static const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(SX1280_RADIO_CLR_IRQSTATUS),
-        spi_make_seg_const((uint8_t)(((uint16_t)SX1280_IRQ_RADIO_ALL >> 8) & 0x00FF)),
-        spi_make_seg_const((uint8_t)((uint16_t)SX1280_IRQ_RADIO_ALL & 0x00FF)),
+        spi_make_seg_const(
+            SX1280_RADIO_CLR_IRQSTATUS,
+            (uint8_t)(((uint16_t)SX1280_IRQ_RADIO_ALL >> 8) & 0x00FF),
+            (uint8_t)((uint16_t)SX1280_IRQ_RADIO_ALL & 0x00FF)),
     };
     spi_seg_submit(&bus, sx128x_handle_irq_status, segs);
   }

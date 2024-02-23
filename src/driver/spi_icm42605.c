@@ -101,8 +101,7 @@ void icm42605_write(uint8_t reg, uint8_t data) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_SLOW);
 
   const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg),
-      spi_make_seg_const(data),
+      spi_make_seg_const(reg, data),
   };
   spi_seg_submit_wait(&gyro_bus, segs);
 }
