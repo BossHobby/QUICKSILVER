@@ -23,6 +23,8 @@
 #define JEDEC_ID_CYPRESS_S25FL128L 0x016018
 #define JEDEC_ID_BERGMICRO_W25Q32 0xE04016
 
+#define m25p16_addr(addr) ((addr >> 16) & 0xFF), ((addr >> 8) & 0xFF), (addr & 0xFF)
+
 #ifdef USE_DATA_FLASH
 
 static spi_bus_device_t bus = {
@@ -88,9 +90,6 @@ uint8_t m25p16_read_command(const uint8_t cmd, uint8_t *data, const uint32_t len
   return ret;
 }
 
-#define m25p16_set_addr(addr) \
-  spi_make_seg_const((addr >> 16) & 0xFF), spi_make_seg_const((addr >> 8) & 0xFF), spi_make_seg_const(addr & 0xFF)
-
 uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, const uint32_t len) {
   m25p16_wait_for_ready();
 
@@ -98,7 +97,7 @@ uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, 
 
   const spi_txn_segment_t segs[] = {
       spi_make_seg_buffer(&ret, &cmd, 1),
-      m25p16_set_addr(addr),
+      spi_make_seg_const(m25p16_addr(addr)),
       spi_make_seg_buffer(data, NULL, len),
   };
   spi_seg_submit_wait(&bus, segs);
@@ -120,8 +119,7 @@ bool m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t
 
   {
     const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(M25P16_PAGE_PROGRAM),
-        m25p16_set_addr(addr),
+        spi_make_seg_const(M25P16_PAGE_PROGRAM, m25p16_addr(addr)),
         spi_make_seg_buffer(NULL, buf, size),
     };
     spi_seg_submit(&bus, NULL, segs);
@@ -144,8 +142,7 @@ bool m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, co
   }
   {
     const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(cmd),
-        m25p16_set_addr(addr),
+        spi_make_seg_const(cmd, m25p16_addr(addr)),
         spi_make_seg_buffer(NULL, data, len),
     };
     spi_seg_submit(&bus, NULL, segs);

@@ -5,7 +5,7 @@
 #include "core/failloop.h"
 #include "driver/interrupt.h"
 
-FAST_RAM volatile spi_port_config_t spi_port_config[SPI_PORT_MAX];
+FAST_RAM spi_port_config_t spi_port_config[SPI_PORT_MAX];
 FAST_RAM volatile uint8_t dma_transfer_done[16] = {[0 ... 15] = 1};
 FAST_RAM spi_txn_t txn_pool[SPI_TXN_MAX];
 
@@ -34,7 +34,7 @@ uint8_t spi_dma_is_ready(spi_ports_t port) {
   return dma_transfer_done[port];
 }
 
-spi_txn_t *spi_txn_pop(spi_bus_device_t *bus) {
+static spi_txn_t *spi_txn_pop() {
   ATOMIC_BLOCK_ALL {
     for (uint32_t i = 0; i < SPI_TXN_MAX; i++) {
       if (txn_pool[i].status == TXN_IDLE) {
@@ -66,7 +66,7 @@ bool spi_txn_can_send(spi_bus_device_t *bus, bool dma) {
   }
 #endif
 
-  volatile spi_port_config_t *config = &spi_port_config[bus->port];
+  const spi_port_config_t *config = &spi_port_config[bus->port];
   if (config->active_device != NULL && config->active_device != bus) {
     return false;
   }
@@ -113,7 +113,7 @@ void spi_txn_continue(spi_bus_device_t *bus) {
 }
 
 void spi_seg_submit_ex(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const spi_txn_segment_t *segs, const uint32_t count) {
-  spi_txn_t *txn = spi_txn_pop(bus);
+  spi_txn_t *txn = spi_txn_pop();
   if (txn == NULL) {
     failloop(FAILLOOP_SPI);
   }
@@ -140,7 +140,7 @@ void spi_seg_submit_ex(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const s
 
     switch (seg->type) {
     case TXN_CONST:
-      txn->buffer[txn->size] = seg->byte;
+      memcpy(txn->buffer + txn->size, seg->bytes, seg->size);
       break;
 
     case TXN_BUFFER:
