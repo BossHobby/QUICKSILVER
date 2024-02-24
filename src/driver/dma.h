@@ -4,7 +4,8 @@
 
 #include "core/project.h"
 
-#define DMA_ALLOC_BUFFER_SIZE 4096
+#define DMA_ALIGN_SIZE 32
+#define DMA_ALIGN(offset) MEMORY_ALIGN(offset, DMA_ALIGN_SIZE)
 
 typedef enum {
   DMA_DEVICE_SPI1_RX,
@@ -23,10 +24,6 @@ typedef enum {
 } dma_device_t;
 
 extern const dma_stream_def_t dma_stream_defs[DMA_DEVICE_MAX];
-
-void *dma_mem_alloc(uint32_t min_size);
-void *dma_mem_realloc(void *ptr, uint32_t min_size);
-void dma_mem_free(void *ptr);
 
 void dma_prepare_tx_memory(void *addr, uint32_t size);
 void dma_prepare_rx_memory(void *addr, uint32_t size);

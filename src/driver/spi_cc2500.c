@@ -9,9 +9,7 @@
 
 #define SPI_SPEED MHZ_TO_HZ(10.5)
 
-static spi_bus_device_t bus = {
-    .auto_continue = true,
-};
+static spi_bus_device_t bus = {};
 
 static bool cc2500_spi_device_valid(const target_rx_spi_device_t *dev) {
   if (dev->port == SPI_PORT_INVALID || dev->nss == PIN_NONE) {
@@ -80,7 +78,7 @@ void cc2500_strobe(uint8_t address) {
   const spi_txn_segment_t segs[] = {
       spi_make_seg_const(address),
   };
-  spi_seg_submit_continue(&bus, NULL, segs);
+  spi_seg_submit_continue(&bus, segs);
 }
 
 void cc2500_strobe_sync(uint8_t address) {
@@ -103,7 +101,7 @@ void cc2500_write_reg(uint8_t reg, uint8_t data) {
   const spi_txn_segment_t segs[] = {
       spi_make_seg_const(reg | CC2500_WRITE_SINGLE, data),
   };
-  spi_seg_submit_continue(&bus, NULL, segs);
+  spi_seg_submit_continue(&bus, segs);
 }
 
 uint8_t cc2500_read_reg(uint8_t reg) {
@@ -141,20 +139,20 @@ void cc2500_set_channel(uint8_t channel, uint8_t *cal_data) {
     const spi_txn_segment_t segs[] = {
         spi_make_seg_const(CC2500_SIDLE),
     };
-    spi_seg_submit(&bus, NULL, segs);
+    spi_seg_submit(&bus, segs);
   }
   {
     const spi_txn_segment_t segs[] = {
         spi_make_seg_const(CC2500_FSCAL3 | CC2500_WRITE_BURST),
         spi_make_seg_buffer(NULL, cal_data, 3),
     };
-    spi_seg_submit(&bus, NULL, segs);
+    spi_seg_submit(&bus, segs);
   }
   {
     const spi_txn_segment_t segs[] = {
         spi_make_seg_const(CC2500_CHANNR | CC2500_WRITE_SINGLE, channel),
     };
-    spi_seg_submit(&bus, NULL, segs);
+    spi_seg_submit(&bus, segs);
   }
   spi_txn_continue(&bus);
 }

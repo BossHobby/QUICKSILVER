@@ -8,9 +8,7 @@
 
 #ifdef USE_RX_SPI_FLYSKY
 
-static spi_bus_device_t bus = {
-    .auto_continue = true,
-};
+static spi_bus_device_t bus = {};
 
 static volatile uint32_t irq_timestamp = 0;
 static volatile bool irq_triggered = false;
@@ -28,7 +26,7 @@ void a7105_write_reg(a7105_reg_t reg, uint8_t data) {
   const spi_txn_segment_t segs[] = {
       spi_make_seg_const(reg, data),
   };
-  spi_seg_submit_continue(&bus, NULL, segs);
+  spi_seg_submit_continue(&bus, segs);
 }
 
 static void a7105_write_multi(uint8_t reg, const uint8_t *data, uint8_t len) {
@@ -71,7 +69,7 @@ void a7105_strobe(a7105_strobe_t address) {
   const spi_txn_segment_t segs[] = {
       spi_make_seg_const(address),
   };
-  spi_seg_submit_continue(&bus, NULL, segs);
+  spi_seg_submit_continue(&bus, segs);
 }
 
 void a7105_read_fifo(uint8_t *data, uint8_t num) {

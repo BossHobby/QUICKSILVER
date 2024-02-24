@@ -58,9 +58,7 @@ sdcard_info_t sdcard_info;
 static volatile sdcard_state_t state = SDCARD_POWER_UP;
 static sdcard_operation_t operation;
 
-static spi_bus_device_t bus = {
-    .auto_continue = false,
-};
+static spi_bus_device_t bus = {};
 
 void sdcard_init() {
   if (target.sdcard_detect.pin != PIN_NONE) {
@@ -305,7 +303,7 @@ sdcard_status_t sdcard_update() {
     const spi_txn_segment_t segs[] = {
         spi_make_seg_buffer(NULL, buf, 20),
     };
-    spi_seg_submit_continue(&bus, NULL, segs);
+    spi_seg_submit_continue(&bus, segs);
 
     state = SDCARD_RESET;
     delay_loops = 100;
@@ -414,7 +412,7 @@ sdcard_status_t sdcard_update() {
           // two bytes CRC
           spi_make_seg_const(0xFF, 0xFF),
       };
-      spi_seg_submit_continue(&bus, NULL, segs);
+      spi_seg_submit_continue(&bus, segs);
     }
     break;
   }
@@ -476,7 +474,7 @@ sdcard_status_t sdcard_update() {
         // write response
         spi_make_seg_const(0xFF),
     };
-    spi_seg_submit_continue(&bus, NULL, segs);
+    spi_seg_submit_continue(&bus, segs);
 
     state = SDCARD_WRITE_MULTIPLE_VERIFY;
     break;
@@ -496,7 +494,7 @@ sdcard_status_t sdcard_update() {
     const spi_txn_segment_t segs[] = {
         spi_make_seg_const(0xFD),
     };
-    spi_seg_submit_continue(&bus, NULL, segs);
+    spi_seg_submit_continue(&bus, segs);
 
     state = SDCARD_WRITE_MULTIPLE_FINISH_WAIT;
     break;
