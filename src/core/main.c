@@ -11,6 +11,7 @@
 #include "core/scheduler.h"
 #include "driver/adc.h"
 #include "driver/gpio.h"
+#include "driver/interrupt.h"
 #include "driver/motor.h"
 #include "driver/rgb_led.h"
 #include "driver/time.h"
@@ -65,6 +66,8 @@ memory_section_init() {
 }
 
 __attribute__((__used__)) int main() {
+  interrupt_init();
+
   // init timer so we can use delays etc
   time_init();
 

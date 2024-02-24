@@ -2,6 +2,8 @@
 
 #include "core/project.h"
 
+#define NVIC_PRIORITY_GROUPING 0
+
 #define MAX_PRIORITY 0x1
 #define DMA_PRIORITY 0x2
 #define EXTI_PRIORITY 0x3
@@ -40,5 +42,6 @@ __attribute__((always_inline)) static inline void __int_restore_irq(int *primask
 #define ATOMIC_BLOCK_ALL \
   for (int __basepri_save __attribute__((__cleanup__(__int_restore_irq))) = __int_disable_irq(), __todo = 1; __todo; __todo = 0)
 
+void interrupt_init();
 void interrupt_enable(IRQn_Type irq, uint32_t prio);
 void interrupt_disable(IRQn_Type irq);
