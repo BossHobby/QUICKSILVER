@@ -19,9 +19,7 @@
 static osd_system_t current_osd_system = OSD_SYS_NTSC;
 static osd_system_t last_osd_system = OSD_SYS_NONE;
 
-static spi_bus_device_t bus = {
-    .auto_continue = true,
-};
+static spi_bus_device_t bus = {};
 
 static uint8_t max7456_map_attr(uint8_t attr) {
   // we always want at least text
@@ -281,7 +279,7 @@ bool max7456_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data
   const spi_txn_segment_t segs[] = {
       spi_make_seg_buffer(NULL, buf, offset),
   };
-  spi_seg_submit_continue(&bus, NULL, segs);
+  spi_seg_submit_continue(&bus, segs);
 
   return true;
 }
