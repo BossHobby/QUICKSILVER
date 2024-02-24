@@ -17,24 +17,7 @@ void spi_enable_rcc(spi_ports_t port) {
   rcc_enable(spi_port_defs[port].rcc);
 }
 
-void spi_csn_enable(spi_bus_device_t *bus) {
-  gpio_pin_reset(bus->nss);
-}
-
-void spi_csn_disable(spi_bus_device_t *bus) {
-  gpio_pin_set(bus->nss);
-}
-
-void spi_bus_device_reconfigure(spi_bus_device_t *bus, spi_mode_t mode, uint32_t hz) {
-  bus->mode = mode;
-  bus->hz = hz;
-}
-
-uint8_t spi_dma_is_ready(spi_ports_t port) {
-  return dma_transfer_done[port];
-}
-
-static spi_txn_t *spi_txn_pop() {
+static inline __attribute__((always_inline)) spi_txn_t *spi_txn_pop() {
   ATOMIC_BLOCK_ALL {
     for (uint32_t i = 0; i < SPI_TXN_MAX; i++) {
       if (txn_pool[i].status == TXN_IDLE) {
@@ -45,10 +28,6 @@ static spi_txn_t *spi_txn_pop() {
     }
   }
   return NULL;
-}
-
-bool spi_txn_ready(spi_bus_device_t *bus) {
-  return bus->txn_head == bus->txn_tail;
 }
 
 bool spi_txn_can_send(spi_bus_device_t *bus, bool dma) {
@@ -76,6 +55,12 @@ bool spi_txn_can_send(spi_bus_device_t *bus, bool dma) {
   }
 
   return true;
+}
+
+void spi_txn_wait(spi_bus_device_t *bus) {
+  while (!spi_txn_ready(bus)) {
+    spi_txn_continue(bus);
+  }
 }
 
 void spi_txn_continue(spi_bus_device_t *bus) {
@@ -181,12 +166,6 @@ void spi_seg_submit_ex(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const s
 void spi_seg_submit_continue_ex(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const spi_txn_segment_t *segs, const uint32_t count) {
   spi_seg_submit_ex(bus, done_fn, segs, count);
   spi_txn_continue(bus);
-}
-
-void spi_txn_wait(spi_bus_device_t *bus) {
-  while (!spi_txn_ready(bus)) {
-    spi_txn_continue(bus);
-  }
 }
 
 void spi_txn_finish(spi_bus_device_t *bus) {
