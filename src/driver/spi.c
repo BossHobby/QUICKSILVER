@@ -5,24 +5,24 @@
 #include "core/failloop.h"
 #include "driver/interrupt.h"
 
-FAST_RAM spi_port_config_t spi_port_config[SPI_PORT_MAX];
-FAST_RAM volatile uint8_t dma_transfer_done[16] = {[0 ... 15] = 1};
+FAST_RAM spi_device_t spi_dev[SPI_PORT_MAX];
 FAST_RAM spi_txn_t txn_pool[SPI_TXN_MAX];
+DMA_RAM uint8_t txn_buffers[SPI_TXN_MAX][DMA_ALIGN(512)];
 
 extern void spi_reconfigure(spi_bus_device_t *bus);
-
 extern void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length);
 
 void spi_enable_rcc(spi_ports_t port) {
   rcc_enable(spi_port_defs[port].rcc);
 }
 
-static inline __attribute__((always_inline)) spi_txn_t *spi_txn_pop() {
+static inline __attribute__((always_inline)) spi_txn_t *spi_txn_pop(spi_bus_device_t *bus) {
   ATOMIC_BLOCK_ALL {
     for (uint32_t i = 0; i < SPI_TXN_MAX; i++) {
       if (txn_pool[i].status == TXN_IDLE) {
         spi_txn_t *txn = &txn_pool[i];
         txn->status = TXN_WAITING;
+        txn->buffer = txn_buffers[i];
         return txn;
       }
     }
@@ -45,11 +45,6 @@ bool spi_txn_can_send(spi_bus_device_t *bus, bool dma) {
   }
 #endif
 
-  const spi_port_config_t *config = &spi_port_config[bus->port];
-  if (config->active_device != NULL && config->active_device != bus) {
-    return false;
-  }
-
   if (bus->poll_fn && !bus->poll_fn()) {
     return false;
   }
@@ -63,20 +58,24 @@ void spi_txn_wait(spi_bus_device_t *bus) {
   }
 }
 
-void spi_txn_continue(spi_bus_device_t *bus) {
+void spi_txn_continue_port(spi_ports_t port) {
+  spi_device_t *dev = &spi_dev[port];
+  spi_txn_t *txn = NULL;
+
   ATOMIC_BLOCK_ALL {
-    if (bus->txn_head == bus->txn_tail) {
+    if (dev->txn_head == dev->txn_tail) {
       return;
     }
 
-    if (!spi_txn_can_send(bus, true)) {
+    txn = dev->txns[(dev->txn_tail + 1) % SPI_TXN_MAX];
+    if (txn->status != TXN_READY) {
       return;
     }
 
-    const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
-    spi_txn_t *txn = bus->txns[tail];
+    if (!spi_txn_can_send(txn->bus, true)) {
+      return;
+    }
 
-    spi_port_config[bus->port].active_device = bus;
     txn->status = TXN_IN_PROGRESS;
 
     if (txn->flags & TXN_DELAYED_TX) {
@@ -90,37 +89,30 @@ void spi_txn_continue(spi_bus_device_t *bus) {
       }
     }
 
-    spi_reconfigure(bus);
-
-    spi_csn_enable(bus);
-    spi_dma_transfer_begin(bus->port, txn->buffer, txn->size);
+    dev->dma_done = false;
   }
+
+  spi_reconfigure(txn->bus);
+  spi_csn_enable(txn->bus);
+
+  spi_dma_transfer_begin(port, txn->buffer, txn->size);
 }
 
-void spi_seg_submit_ex(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const spi_txn_segment_t *segs, const uint32_t count) {
-  spi_txn_t *txn = spi_txn_pop();
+void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts) {
+  spi_txn_t *txn = spi_txn_pop(bus);
   if (txn == NULL) {
-    failloop(FAILLOOP_SPI);
-  }
-  if (count >= SPI_TXN_SEG_MAX) {
     failloop(FAILLOOP_SPI);
   }
 
   txn->bus = bus;
-  txn->segment_count = count;
-
-  txn->flags = 0;
   txn->size = 0;
-  txn->done_fn = done_fn;
+  txn->flags = 0;
+  txn->segment_count = opts.seg_count;
+  txn->done_fn = opts.done_fn;
+  txn->done_fn_arg = opts.done_fn_arg;
 
-  txn->buffer_size = 0;
-  for (uint32_t i = 0; i < count; i++) {
-    txn->buffer_size += segs[i].size;
-  }
-  txn->buffer = dma_mem_alloc(txn->buffer_size);
-
-  for (uint32_t i = 0; i < count; i++) {
-    const spi_txn_segment_t *seg = &segs[i];
+  for (uint32_t i = 0; i < opts.seg_count; i++) {
+    const spi_txn_segment_t *seg = &opts.segs[i];
     spi_txn_segment_t *txn_seg = &txn->segments[i];
 
     switch (seg->type) {
@@ -156,21 +148,22 @@ void spi_seg_submit_ex(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const s
   }
 
   ATOMIC_BLOCK_ALL {
-    const uint8_t head = (txn->bus->txn_head + 1) % SPI_TXN_MAX;
+    spi_device_t *dev = &spi_dev[bus->port];
+    const uint8_t head = (dev->txn_head + 1) % SPI_TXN_MAX;
     txn->status = TXN_READY;
-    txn->bus->txns[head] = txn;
-    txn->bus->txn_head = head;
+    dev->txns[head] = txn;
+    dev->txn_head = head;
   }
 }
 
-void spi_seg_submit_continue_ex(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const spi_txn_segment_t *segs, const uint32_t count) {
-  spi_seg_submit_ex(bus, done_fn, segs, count);
-  spi_txn_continue(bus);
-}
+// only called from dma isr
+void spi_txn_finish(spi_ports_t port) {
+  spi_device_t *dev = &spi_dev[port];
 
-void spi_txn_finish(spi_bus_device_t *bus) {
-  const uint32_t tail = (bus->txn_tail + 1) % SPI_TXN_MAX;
-  spi_txn_t *txn = bus->txns[tail];
+  const uint32_t tail = (dev->txn_tail + 1) % SPI_TXN_MAX;
+  spi_txn_t *txn = dev->txns[tail];
+
+  spi_csn_disable(txn->bus);
 
   if (txn->flags & TXN_DELAYED_RX) {
     uint32_t txn_size = 0;
@@ -184,18 +177,14 @@ void spi_txn_finish(spi_bus_device_t *bus) {
   }
 
   if (txn->done_fn) {
-    txn->done_fn();
+    txn->done_fn(txn->done_fn_arg);
   }
 
-  dma_mem_free(txn->buffer);
+  txn->status = TXN_IDLE;
 
-  ATOMIC_BLOCK_ALL {
-    txn->buffer = NULL;
-    txn->status = TXN_IDLE;
+  dev->txns[tail] = NULL;
+  dev->txn_tail = tail;
 
-    bus->txns[tail] = NULL;
-    bus->txn_tail = tail;
-
-    spi_port_config[bus->port].active_device = NULL;
-  }
+  spi_dev[port].dma_done = true;
+  spi_txn_continue_port(port);
 }

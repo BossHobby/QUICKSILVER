@@ -6,7 +6,7 @@
 extern void spi_enable_rcc(spi_ports_t port);
 
 extern bool spi_txn_can_send(spi_bus_device_t *bus, bool dma);
-extern void spi_txn_finish(spi_bus_device_t *bus);
+extern void spi_txn_finish(spi_ports_t port);
 
 const spi_port_def_t spi_port_defs[SPI_PORT_MAX] = {
     {},
@@ -40,8 +40,6 @@ const spi_port_def_t spi_port_defs[SPI_PORT_MAX] = {
     },
 };
 
-extern FAST_RAM volatile spi_port_config_t spi_port_config[SPI_PORT_MAX];
-extern FAST_RAM volatile uint8_t dma_transfer_done[16];
 extern FAST_RAM spi_txn_t txn_pool[SPI_TXN_MAX];
 
 #define PORT spi_port_defs[port]
@@ -84,7 +82,7 @@ static uint32_t spi_find_divder(uint32_t clk_hz) {
   return spi_divider_to_ll(divider);
 }
 
-static void spi_init_pins(spi_ports_t port, gpio_pins_t nss) {
+static void spi_init_pins(spi_ports_t port) {
   const target_spi_port_t *dev = &target.spi_ports[port];
 
   gpio_config_t gpio_init;
@@ -106,13 +104,6 @@ static void spi_init_pins(spi_ports_t port, gpio_pins_t nss) {
   gpio_init.output = GPIO_PUSHPULL;
   gpio_init.pull = GPIO_NO_PULL;
   gpio_pin_init_tag(dev->mosi, gpio_init, SPI_TAG(port, RES_SPI_MOSI));
-
-  gpio_init.mode = GPIO_OUTPUT;
-  gpio_init.drive = GPIO_DRIVE_HIGH;
-  gpio_init.output = GPIO_PUSHPULL;
-  gpio_init.pull = GPIO_UP_PULL;
-  gpio_pin_init(nss, gpio_init);
-  gpio_pin_set(nss);
 }
 
 static void spi_dma_init_rx(spi_ports_t port) {
@@ -188,7 +179,7 @@ static void spi_set_divider(spi_type *channel, spi_mclk_freq_div_type div) {
 }
 
 void spi_reconfigure(spi_bus_device_t *bus) {
-  volatile spi_port_config_t *config = &spi_port_config[bus->port];
+  spi_device_t *config = &spi_dev[bus->port];
   const spi_port_def_t *port = &spi_port_defs[bus->port];
   const target_spi_port_t *dev = &target.spi_ports[bus->port];
 
@@ -221,8 +212,6 @@ void spi_reconfigure(spi_bus_device_t *bus) {
 }
 
 void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) {
-  dma_transfer_done[port] = 0;
-
   const dma_stream_def_t *dma_tx = &dma_stream_defs[PORT.dma_tx];
   const dma_stream_def_t *dma_rx = &dma_stream_defs[PORT.dma_rx];
 
@@ -244,22 +233,19 @@ void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) 
   spi_enable(PORT.channel, TRUE);
 }
 
-void spi_bus_device_init(spi_bus_device_t *bus) {
-  if (!target_spi_port_valid(&target.spi_ports[bus->port])) {
+static void spi_device_init(spi_ports_t port) {
+  if (spi_dev[port].is_init) {
     return;
   }
 
-  bus->txn_head = 0;
-  bus->txn_tail = 0;
+  spi_init_pins(port);
+  spi_enable_rcc(port);
 
-  spi_init_pins(bus->port, bus->nss);
-  spi_enable_rcc(bus->port);
+  const spi_port_def_t *def = &spi_port_defs[port];
+  dma_enable_rcc(def->dma_rx);
+  dma_enable_rcc(def->dma_tx);
 
-  const spi_port_def_t *port = &spi_port_defs[bus->port];
-  dma_enable_rcc(port->dma_rx);
-  dma_enable_rcc(port->dma_tx);
-
-  spi_i2s_reset(port->channel);
+  spi_i2s_reset(def->channel);
 
   spi_init_type default_init;
   default_init.transmission_mode = SPI_TRANSMIT_FULL_DUPLEX;
@@ -270,17 +256,34 @@ void spi_bus_device_init(spi_bus_device_t *bus) {
   default_init.clock_polarity = SPI_CLOCK_POLARITY_HIGH;
   default_init.clock_phase = SPI_CLOCK_PHASE_2EDGE;
   default_init.cs_mode_selection = SPI_CS_SOFTWARE_MODE;
-  spi_init(port->channel, &default_init);
+  spi_init(def->channel, &default_init);
 
-  spi_port_config[bus->port].mode = SPI_MODE_TRAILING_EDGE;
-  spi_port_config[bus->port].hz = 0;
+  spi_dev[port].is_init = true;
+  spi_dev[port].dma_done = true;
+  spi_dev[port].mode = SPI_MODE_TRAILING_EDGE;
+  spi_dev[port].hz = 0;
 
-  spi_dma_init_rx(bus->port);
-  spi_dma_init_tx(bus->port);
+  spi_dma_init_rx(port);
+  spi_dma_init_tx(port);
 
-  const dma_stream_def_t *dma_rx = &dma_stream_defs[port->dma_rx];
+  const dma_stream_def_t *dma_rx = &dma_stream_defs[def->dma_rx];
   interrupt_enable(dma_rx->irq, DMA_PRIORITY);
-  dma_transfer_done[bus->port] = 1;
+}
+
+void spi_bus_device_init(const spi_bus_device_t *bus) {
+  if (!target_spi_port_valid(&target.spi_ports[bus->port])) {
+    return;
+  }
+
+  gpio_config_t gpio_init;
+  gpio_init.mode = GPIO_OUTPUT;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_UP_PULL;
+  gpio_pin_init(bus->nss, gpio_init);
+  gpio_pin_set(bus->nss);
+
+  spi_device_init(bus->port);
 }
 
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count) {
@@ -291,8 +294,7 @@ void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs
 
   const spi_ports_t port = bus->port;
 
-  spi_port_config[port].active_device = bus;
-  dma_transfer_done[port] = 0;
+  spi_dev[port].dma_done = false;
 
   spi_reconfigure(bus);
 
@@ -332,8 +334,7 @@ void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs
   spi_csn_disable(bus);
   spi_enable(PORT.channel, FALSE);
 
-  dma_transfer_done[port] = 1;
-  spi_port_config[port].active_device = NULL;
+  spi_dev[port].dma_done = true;
 }
 
 static void handle_dma_rx_isr(spi_ports_t port) {
@@ -358,20 +359,7 @@ static void handle_dma_rx_isr(spi_ports_t port) {
 
   spi_enable(PORT.channel, FALSE);
 
-  if (!spi_port_config[port].active_device) {
-    dma_transfer_done[port] = 1;
-    return;
-  }
-
-  spi_bus_device_t *bus = spi_port_config[port].active_device;
-  spi_csn_disable(bus);
-
-  spi_txn_finish(bus);
-  dma_transfer_done[port] = 1;
-
-  if (bus->auto_continue) {
-    spi_txn_continue(bus);
-  }
+  spi_txn_finish(port);
 }
 
 void spi_dma_isr(dma_device_t dev) {

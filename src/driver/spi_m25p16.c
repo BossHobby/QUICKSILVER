@@ -27,9 +27,7 @@
 
 #ifdef USE_DATA_FLASH
 
-static spi_bus_device_t bus = {
-    .auto_continue = true,
-};
+static spi_bus_device_t bus = {};
 
 void m25p16_init() {
   if (!target_spi_device_valid(&target.flash)) {
@@ -114,7 +112,7 @@ bool m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t
     const spi_txn_segment_t segs[] = {
         spi_make_seg_const(M25P16_WRITE_ENABLE),
     };
-    spi_seg_submit(&bus, NULL, segs);
+    spi_seg_submit(&bus, segs);
   }
 
   {
@@ -122,7 +120,7 @@ bool m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t
         spi_make_seg_const(M25P16_PAGE_PROGRAM, m25p16_addr(addr)),
         spi_make_seg_buffer(NULL, buf, size),
     };
-    spi_seg_submit(&bus, NULL, segs);
+    spi_seg_submit(&bus, segs);
   }
 
   spi_txn_continue(&bus);
@@ -138,14 +136,14 @@ bool m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, co
     const spi_txn_segment_t segs[] = {
         spi_make_seg_const(M25P16_WRITE_ENABLE),
     };
-    spi_seg_submit(&bus, NULL, segs);
+    spi_seg_submit(&bus, segs);
   }
   {
     const spi_txn_segment_t segs[] = {
         spi_make_seg_const(cmd, m25p16_addr(addr)),
         spi_make_seg_buffer(NULL, data, len),
     };
-    spi_seg_submit(&bus, NULL, segs);
+    spi_seg_submit(&bus, segs);
   }
 
   spi_txn_continue(&bus);

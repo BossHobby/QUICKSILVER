@@ -15,7 +15,6 @@
 static bool sx128x_poll_for_not_busy();
 
 FAST_RAM static spi_bus_device_t bus = {
-    .auto_continue = true,
     .poll_fn = sx128x_poll_for_not_busy,
 };
 
@@ -103,12 +102,12 @@ static bool sx128x_poll_for_not_busy() {
 #define read_command_txn(cmd, data, size) \
   spi_make_seg_const(cmd, 0x0), spi_make_seg_buffer(data, NULL, size)
 
-static void sx128x_set_dio0_active() {
+static void sx128x_set_dio0_active(void *arg) {
   packet_time_us = time_micros();
   dio0_active = 1;
 }
 
-static void sx128x_handle_irq_status() {
+static void sx128x_handle_irq_status(void *arg) {
   const uint16_t irq = ((irq_status & 0xFF) << 8 | ((irq_status >> 8) & 0xFF));
   if ((irq & SX1280_IRQ_RX_DONE)) {
     static uint8_t buffer_status[2] = {0, 0};
@@ -116,7 +115,7 @@ static void sx128x_handle_irq_status() {
       static const spi_txn_segment_t segs[] = {
           read_command_txn(SX1280_RADIO_GET_RXBUFFERSTATUS, buffer_status, 2),
       };
-      spi_seg_submit(&bus, NULL, segs);
+      spi_seg_submit(&bus, segs);
     }
     {
       const spi_txn_segment_t segs[] = {
@@ -125,13 +124,13 @@ static void sx128x_handle_irq_status() {
           spi_make_seg_const(0x00),
           spi_make_seg_buffer((uint8_t *)rx_spi_packet, NULL, payload_len),
       };
-      spi_seg_submit(&bus, NULL, segs);
+      spi_seg_submit(&bus, segs);
     }
     {
       static const spi_txn_segment_t segs[] = {
           read_command_txn(SX1280_RADIO_GET_PACKETSTATUS, (uint8_t *)packet_status, 2),
       };
-      spi_seg_submit(&bus, sx128x_set_dio0_active, segs);
+      spi_seg_submit(&bus, segs, .done_fn = sx128x_set_dio0_active);
     }
   } else if ((irq & SX1280_IRQ_TX_DONE)) {
     sx128x_set_mode_async(SX1280_MODE_RX);
@@ -164,7 +163,7 @@ void sx128x_handle_dio0_exti(bool level) {
     static const spi_txn_segment_t segs[] = {
         read_command_txn(SX1280_RADIO_GET_IRQSTATUS, (uint8_t *)&irq_status, 2),
     };
-    spi_seg_submit(&bus, NULL, segs);
+    spi_seg_submit(&bus, segs);
   }
   {
     static const spi_txn_segment_t segs[] = {
@@ -173,7 +172,7 @@ void sx128x_handle_dio0_exti(bool level) {
             (uint8_t)(((uint16_t)SX1280_IRQ_RADIO_ALL >> 8) & 0x00FF),
             (uint8_t)((uint16_t)SX1280_IRQ_RADIO_ALL & 0x00FF)),
     };
-    spi_seg_submit(&bus, sx128x_handle_irq_status, segs);
+    spi_seg_submit(&bus, segs, .done_fn = sx128x_handle_irq_status);
   }
   spi_txn_continue(&bus);
 }
@@ -211,7 +210,7 @@ void sx128x_read_register_burst(const uint16_t reg, uint8_t *data, const uint8_t
       spi_make_seg_buffer(NULL, buf, 4),
       spi_make_seg_buffer(data, NULL, size),
   };
-  spi_seg_submit(&bus, NULL, segs);
+  spi_seg_submit(&bus, segs);
 }
 
 uint8_t sx128x_read_register(const uint16_t reg) {
@@ -232,7 +231,7 @@ void sx128x_write_register_burst(const uint16_t reg, const uint8_t *data, const 
       spi_make_seg_buffer(NULL, buf, 3),
       spi_make_seg_buffer(NULL, data, size),
   };
-  spi_seg_submit(&bus, NULL, segs);
+  spi_seg_submit(&bus, segs);
 }
 
 void sx128x_write_register(const uint16_t reg, const uint8_t val) {
@@ -243,7 +242,7 @@ void sx128x_read_command_burst(const sx128x_commands_t cmd, uint8_t *data, const
   const spi_txn_segment_t segs[] = {
       read_command_txn(cmd, data, size),
   };
-  spi_seg_submit(&bus, NULL, segs);
+  spi_seg_submit(&bus, segs);
 }
 
 void sx128x_write_command_burst(const sx128x_commands_t cmd, const uint8_t *data, const uint8_t size) {
@@ -251,7 +250,7 @@ void sx128x_write_command_burst(const sx128x_commands_t cmd, const uint8_t *data
       spi_make_seg_const(cmd),
       spi_make_seg_buffer(NULL, data, size),
   };
-  spi_seg_submit(&bus, NULL, segs);
+  spi_seg_submit(&bus, segs);
 }
 
 void sx128x_write_command(const sx128x_commands_t cmd, const uint8_t val) {
@@ -267,7 +266,7 @@ void sx128x_write_tx_buffer(const uint8_t offset, const volatile uint8_t *data, 
       spi_make_seg_buffer(NULL, buf, 2),
       spi_make_seg_buffer(NULL, (uint8_t *)data, size),
   };
-  spi_seg_submit(&bus, NULL, segs);
+  spi_seg_submit(&bus, segs);
 }
 
 void sx128x_set_mode_async(const sx128x_modes_t mode) {
