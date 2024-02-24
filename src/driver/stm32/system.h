@@ -88,6 +88,7 @@
 
 #include "adc.h"
 #include "rcc.h"
+#include "time.h"
 
 typedef GPIO_TypeDef gpio_port_t;
 typedef SPI_TypeDef spi_port_t;
