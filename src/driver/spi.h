@@ -111,14 +111,27 @@ typedef struct {
 
 extern const spi_port_def_t spi_port_defs[SPI_PORT_MAX];
 
-uint8_t spi_dma_is_ready(spi_ports_t port);
+static inline void spi_bus_device_reconfigure(spi_bus_device_t *bus, spi_mode_t mode, uint32_t hz) {
+  bus->mode = mode;
+  bus->hz = hz;
+}
+
+static inline uint8_t spi_dma_is_ready(spi_ports_t port) {
+  extern volatile uint8_t dma_transfer_done[16];
+  return dma_transfer_done[port];
+}
+
+static inline bool spi_txn_ready(spi_bus_device_t *bus) {
+  return bus->txn_head == bus->txn_tail;
+}
+
+static inline void spi_csn_enable(spi_bus_device_t *bus) { gpio_pin_reset(bus->nss); }
+static inline void spi_csn_disable(spi_bus_device_t *bus) { gpio_pin_set(bus->nss); }
 
 void spi_bus_device_init(spi_bus_device_t *bus);
-void spi_bus_device_reconfigure(spi_bus_device_t *bus, spi_mode_t mode, uint32_t hz);
 
-bool spi_txn_ready(spi_bus_device_t *bus);
-void spi_txn_continue(spi_bus_device_t *bus);
 void spi_txn_wait(spi_bus_device_t *bus);
+void spi_txn_continue(spi_bus_device_t *bus);
 
 void spi_seg_submit_ex(spi_bus_device_t *bus, spi_txn_done_fn_t done_fn, const spi_txn_segment_t *segs, const uint32_t count);
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count);
