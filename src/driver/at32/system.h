@@ -17,6 +17,7 @@
 
 #include "adc.h"
 #include "rcc.h"
+#include "time.h"
 
 typedef gpio_type gpio_port_t;
 typedef spi_type spi_port_t;

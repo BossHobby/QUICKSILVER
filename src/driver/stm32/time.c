@@ -9,7 +9,7 @@
 #define DWT_LAR_UNLOCK_VALUE 0xC5ACCE55
 #endif
 
-static volatile uint32_t systick_count = 0;
+volatile uint32_t systick_count = 0;
 static volatile uint32_t systick_val = 0;
 static volatile uint32_t systick_pending = 0;
 
@@ -84,14 +84,6 @@ uint32_t time_micros() {
   } while (count != systick_count || ticks > systick_val);
 
   return (count * 1000) + (TICKS_PER_US * 1000 - ticks) / TICKS_PER_US;
-}
-
-uint32_t time_millis() {
-  return systick_count;
-}
-
-uint32_t time_cycles() {
-  return DWT->CYCCNT;
 }
 
 void time_delay_us(uint32_t us) {
