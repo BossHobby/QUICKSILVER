@@ -143,9 +143,8 @@ bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float
   blackbox_device_header.files[blackbox_device_header.file_num].start = offset;
   blackbox_device_header.file_num++;
 
-  dev->write_header();
-
   ring_buffer_clear(&blackbox_encode_buffer);
+  dev->write_header();
 
   return true;
 }
@@ -160,6 +159,7 @@ void blackbox_device_finish() {
     blackbox_device_header.file_num--;
   }
 
+  ring_buffer_clear(&blackbox_encode_buffer);
   dev->flush();
 }
 
