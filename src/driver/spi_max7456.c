@@ -19,9 +19,6 @@
 static osd_system_t current_osd_system = OSD_SYS_NTSC;
 static osd_system_t last_osd_system = OSD_SYS_NONE;
 
-// detected osd video system starts at 99 and gets updated here by osd_checksystem()
-static uint8_t lastvm0 = 0x55;
-
 static spi_bus_device_t bus = {
     .auto_continue = true,
 };
@@ -82,12 +79,10 @@ static bool max7456_init_display() {
   switch (current_osd_system) {
   case OSD_SYS_PAL:
     max7456_dma_spi_write(VM0, 0x78); // Set pal mode and enable display
-    lastvm0 = 0x78;
     break;
 
   case OSD_SYS_NTSC:
     max7456_dma_spi_write(VM0, 0x08); // Set ntsc mode and enable display
-    lastvm0 = 0x08;
     break;
 
   default:
@@ -122,12 +117,10 @@ static void max7456_set_system(osd_system_t sys) {
   const uint8_t vm0 = max7456_dma_spi_read(VM0_R);
   switch (sys) {
   case OSD_SYS_PAL:
-    lastvm0 = vm0 | 0x40;
     max7456_dma_spi_write(VM0, vm0 | 0x40);
     break;
 
   case OSD_SYS_NTSC:
-    lastvm0 = vm0 & 0xBF;
     max7456_dma_spi_write(VM0, vm0 & 0xBF);
     break;
 
