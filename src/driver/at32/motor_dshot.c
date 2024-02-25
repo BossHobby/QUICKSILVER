@@ -174,7 +174,7 @@ static void dshot_dma_setup_port(uint32_t index) {
   const dshot_gpio_port_t *port = &gpio_ports[index];
   const dma_stream_def_t *dma = &dma_stream_defs[port->dma_device];
 
-  dma_clear_flag_tc(port->dma_device);
+  dma_clear_flag_tc(dma);
 
   dma->channel->paddr = (uint32_t)(&port->gpio->scr);
   dma->channel->maddr = (uint32_t)&port_dma_buffer[index][0];
@@ -239,9 +239,8 @@ void dshot_dma_isr(dma_device_t dev) {
       continue;
     }
 
-    dma_clear_flag_tc(port->dma_device);
-
     const dma_stream_def_t *dma = &dma_stream_defs[dev];
+    dma_clear_flag_tc(dma);
     dma_channel_enable(dma->channel, FALSE);
     dshot_enable_dma_request(port->timer_channel, FALSE);
 

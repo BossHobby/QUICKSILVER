@@ -2,11 +2,6 @@
 
 #include "driver/rcc.h"
 
-#define DMA_GL_FLAG ((uint32_t)0x00000001)
-#define DMA_FDT_FLAG ((uint32_t)0x00000002)
-#define DMA_HDT_FLAG ((uint32_t)0x00000004)
-#define DMA_DTERR_FLAG ((uint32_t)0x00000008)
-
 #define DMAMUX_DMAREQ_ID_TIM1_CH1 DMAMUX_DMAREQ_ID_TMR1_CH1
 #define DMAMUX_DMAREQ_ID_TIM1_CH2 DMAMUX_DMAREQ_ID_TMR1_CH2
 #define DMAMUX_DMAREQ_ID_TIM1_CH3 DMAMUX_DMAREQ_ID_TMR1_CH3
@@ -59,26 +54,6 @@ void dma_enable_rcc(dma_device_t dev) {
     dmamux_enable(DMA2, TRUE);
     break;
   }
-}
-
-static uint32_t dma_flag_for_channel(const dma_stream_def_t *dma, uint32_t val) {
-  // 4bits per channel
-  const uint32_t shift = (dma->channel_index - 1) * 4;
-  const uint32_t port = dma->port_index == 2 ? 0x10000000 : 0x0;
-  return port | (val << shift);
-}
-
-bool dma_is_flag_active_tc(dma_device_t dev) {
-  const dma_stream_def_t *dma = &dma_stream_defs[dev];
-  const uint32_t flag = dma_flag_for_channel(dma, DMA_FDT_FLAG);
-  return dma_flag_get(flag);
-}
-
-void dma_clear_flag_tc(dma_device_t dev) {
-  const dma_stream_def_t *dma = &dma_stream_defs[dev];
-  dma_flag_clear(dma_flag_for_channel(dma, DMA_FDT_FLAG));
-  dma_flag_clear(dma_flag_for_channel(dma, DMA_HDT_FLAG));
-  dma_flag_clear(dma_flag_for_channel(dma, DMA_DTERR_FLAG));
 }
 
 extern void dshot_dma_isr(dma_device_t dev);

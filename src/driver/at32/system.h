@@ -15,11 +15,6 @@
 #define UID_BASE 0x1FFFF7E8
 #endif
 
-#include "adc.h"
-#include "gpio.h"
-#include "rcc.h"
-#include "time.h"
-
 typedef gpio_type gpio_port_t;
 typedef spi_type spi_port_t;
 typedef tmr_type timer_dev_t;
@@ -39,3 +34,9 @@ typedef struct {
 
   IRQn_Type irq;
 } dma_stream_def_t;
+
+#include "adc.h"
+#include "dma.h"
+#include "gpio.h"
+#include "rcc.h"
+#include "time.h"
