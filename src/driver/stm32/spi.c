@@ -132,23 +132,6 @@ static void spi_dma_init_rx(spi_ports_t port) {
   LL_DMA_Init(dma->port, dma->stream_index, &DMA_InitStructure);
 }
 
-static void spi_dma_reset_rx(spi_ports_t port, uint8_t *rx_data, uint32_t rx_size) {
-  const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_rx];
-
-  while (LL_DMA_IsEnabledStream(dma->port, dma->stream_index))
-    ;
-
-  dma_prepare_rx_memory(rx_data, rx_size);
-
-#ifdef STM32H7
-  LL_DMA_SetPeriphAddress(dma->port, dma->stream_index, (uint32_t)&PORT.channel->RXDR);
-#else
-  LL_DMA_SetPeriphAddress(dma->port, dma->stream_index, LL_SPI_DMA_GetRegAddr(PORT.channel));
-#endif
-  LL_DMA_SetMemoryAddress(dma->port, dma->stream_index, (uint32_t)rx_data);
-  LL_DMA_SetDataLength(dma->port, dma->stream_index, rx_size);
-}
-
 static void spi_dma_init_tx(spi_ports_t port) {
   const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_tx];
 
@@ -177,27 +160,9 @@ static void spi_dma_init_tx(spi_ports_t port) {
   LL_DMA_Init(dma->port, dma->stream_index, &DMA_InitStructure);
 }
 
-static void spi_dma_reset_tx(spi_ports_t port, uint8_t *tx_data, uint32_t tx_size) {
-  const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_tx];
-
-  while (LL_DMA_IsEnabledStream(dma->port, dma->stream_index))
-    ;
-
-  dma_prepare_tx_memory(tx_data, tx_size);
-
-#ifdef STM32H7
-  LL_DMA_SetPeriphAddress(dma->port, dma->stream_index, (uint32_t)&PORT.channel->TXDR);
-#else
-  LL_DMA_SetPeriphAddress(dma->port, dma->stream_index, LL_SPI_DMA_GetRegAddr(PORT.channel));
-#endif
-  LL_DMA_SetMemoryAddress(dma->port, dma->stream_index, (uint32_t)tx_data);
-  LL_DMA_SetDataLength(dma->port, dma->stream_index, tx_size);
-}
-
 void spi_reconfigure(spi_bus_device_t *bus) {
   spi_device_t *config = &spi_dev[bus->port];
   const spi_port_def_t *port = &spi_port_defs[bus->port];
-  const target_spi_port_t *dev = &target.spi_ports[bus->port];
 
   if (config->hz != bus->hz) {
     config->hz = bus->hz;
@@ -211,6 +176,7 @@ void spi_reconfigure(spi_bus_device_t *bus) {
     gpio_init.drive = GPIO_DRIVE_HIGH;
     gpio_init.output = GPIO_PUSHPULL;
 
+    const target_spi_port_t *dev = &target.spi_ports[bus->port];
     if (bus->mode == SPI_MODE_LEADING_EDGE) {
       gpio_init.pull = GPIO_DOWN_PULL;
       gpio_pin_init_tag(dev->sck, gpio_init, SPI_TAG(bus->port, RES_SPI_SCK));
@@ -240,11 +206,20 @@ void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) 
   dma_clear_flag_tc(dma_rx);
   dma_clear_flag_tc(dma_tx);
 
-  spi_dma_reset_rx(port, buffer, length);
-  spi_dma_reset_tx(port, buffer, length);
+  dma_prepare_rx_memory(buffer, length);
+  dma_prepare_tx_memory(buffer, length);
 
-  LL_DMA_EnableIT_TC(dma_rx->port, dma_rx->stream_index);
-  LL_DMA_EnableIT_TE(dma_rx->port, dma_rx->stream_index);
+  while (LL_DMA_IsEnabledStream(dma_rx->port, dma_rx->stream_index))
+    ;
+
+  while (LL_DMA_IsEnabledStream(dma_tx->port, dma_tx->stream_index))
+    ;
+
+  LL_DMA_SetMemoryAddress(dma_rx->port, dma_rx->stream_index, (uint32_t)buffer);
+  LL_DMA_SetDataLength(dma_rx->port, dma_rx->stream_index, length);
+
+  LL_DMA_SetMemoryAddress(dma_tx->port, dma_tx->stream_index, (uint32_t)buffer);
+  LL_DMA_SetDataLength(dma_tx->port, dma_tx->stream_index, length);
 
   LL_DMA_EnableStream(dma_rx->port, dma_rx->stream_index);
   LL_DMA_EnableStream(dma_tx->port, dma_tx->stream_index);
@@ -303,6 +278,9 @@ static void spi_device_init(spi_ports_t port) {
 
   const dma_stream_def_t *dma_rx = &dma_stream_defs[def->dma_rx];
   interrupt_enable(dma_rx->irq, DMA_PRIORITY);
+
+  LL_DMA_EnableIT_TC(dma_rx->port, dma_rx->stream_index);
+  LL_DMA_EnableIT_TE(dma_rx->port, dma_rx->stream_index);
 }
 
 void spi_bus_device_init(const spi_bus_device_t *bus) {
@@ -407,9 +385,6 @@ static void handle_dma_rx_isr(spi_ports_t port) {
 
   dma_clear_flag_tc(dma_rx);
   dma_clear_flag_tc(dma_tx);
-
-  LL_DMA_DisableIT_TC(dma_rx->port, dma_rx->stream_index);
-  LL_DMA_DisableIT_TE(dma_rx->port, dma_rx->stream_index);
 
   LL_SPI_DisableDMAReq_TX(PORT.channel);
   LL_SPI_DisableDMAReq_RX(PORT.channel);
