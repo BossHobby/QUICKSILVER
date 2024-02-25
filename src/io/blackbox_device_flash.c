@@ -6,15 +6,13 @@
 
 #define FILES_SECTOR_OFFSET blackbox_bounds.sector_size
 #define PAGE_SIZE M25P16_PAGE_SIZE
+#define MAX_WRITE_SIZE (128)
 
 typedef enum {
   STATE_DETECT,
   STATE_IDLE,
 
-  STATE_START_WRITE,
-  STATE_FILL_WRITE_BUFFER,
-  STATE_CONTINUE_WRITE,
-  STATE_FINISH_WRITE,
+  STATE_WRITE,
 
   STATE_READ_HEADER,
 
@@ -35,11 +33,8 @@ void blackbox_device_flash_init() {
 
 blackbox_device_result_t blackbox_device_flash_update() {
   static uint32_t offset = 0;
-  static uint32_t write_size = PAGE_SIZE;
+  static uint32_t write_size = 0;
 
-  const uint32_t to_write = ring_buffer_available(&blackbox_encode_buffer);
-
-flash_do_more:
   switch (state) {
   case STATE_DETECT:
     if (m25p16_is_ready()) {
@@ -65,63 +60,35 @@ flash_do_more:
     state = STATE_IDLE;
     break;
 
-  case STATE_IDLE:
+  case STATE_IDLE: {
     if (should_flush == 1) {
-      if (to_write > 0 && offset < blackbox_bounds.total_size) {
-        state = STATE_START_WRITE;
-      } else {
-        state = STATE_ERASE_HEADER;
-        should_flush = 0;
-      }
-      goto flash_do_more;
-    }
-    if (to_write >= PAGE_SIZE) {
-      state = STATE_START_WRITE;
-      goto flash_do_more;
-    }
-    break;
-
-  case STATE_START_WRITE: {
-    offset = blackbox_current_file()->start + blackbox_current_file()->size;
-    if (offset >= blackbox_bounds.total_size) {
-      state = STATE_IDLE;
+      state = STATE_ERASE_HEADER;
+      should_flush = 0;
       break;
     }
-    state = STATE_FILL_WRITE_BUFFER;
-    goto flash_do_more;
-  }
 
-  case STATE_FILL_WRITE_BUFFER: {
-    write_size = PAGE_SIZE;
-    if (to_write < PAGE_SIZE) {
-      if (should_flush == 0) {
-        break;
-      }
-      if (to_write == 0) {
-        state = STATE_FINISH_WRITE;
-        goto flash_do_more;
-      }
-
-      write_size = to_write;
+    offset = blackbox_current_file()->start + blackbox_current_file()->size;
+    if (offset >= blackbox_bounds.total_size) {
+      break;
     }
 
-    ring_buffer_read_multi(&blackbox_encode_buffer, blackbox_write_buffer, write_size);
-    state = STATE_CONTINUE_WRITE;
+    if (write_size < MAX_WRITE_SIZE) {
+      write_size += ring_buffer_read_multi(&blackbox_encode_buffer, blackbox_write_buffer + write_size, (MAX_WRITE_SIZE - write_size));
+    }
+    if (write_size >= MAX_WRITE_SIZE || should_flush == 1) {
+      state = STATE_WRITE;
+    }
     break;
   }
 
-  case STATE_CONTINUE_WRITE: {
-    if (!m25p16_page_program(offset, blackbox_write_buffer, PAGE_SIZE)) {
+  case STATE_WRITE: {
+    if (!m25p16_page_program(offset, blackbox_write_buffer, write_size)) {
       break;
     }
     blackbox_current_file()->size += write_size;
-    state = STATE_FINISH_WRITE;
-    return BLACKBOX_DEVICE_WRITE;
-  }
-
-  case STATE_FINISH_WRITE: {
+    write_size = 0;
     state = STATE_IDLE;
-    goto flash_do_more;
+    return BLACKBOX_DEVICE_WRITE;
   }
 
   case STATE_ERASE_HEADER: {
