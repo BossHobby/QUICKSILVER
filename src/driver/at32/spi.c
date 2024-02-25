@@ -226,8 +226,8 @@ void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) 
   const dma_stream_def_t *dma_tx = &dma_stream_defs[PORT.dma_tx];
   const dma_stream_def_t *dma_rx = &dma_stream_defs[PORT.dma_rx];
 
-  dma_clear_flag_tc(PORT.dma_rx);
-  dma_clear_flag_tc(PORT.dma_tx);
+  dma_clear_flag_tc(dma_rx);
+  dma_clear_flag_tc(dma_tx);
 
   spi_dma_reset_rx(port, buffer, length);
   spi_dma_reset_tx(port, buffer, length);
@@ -340,12 +340,12 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   const dma_stream_def_t *dma_rx = &dma_stream_defs[PORT.dma_rx];
   const dma_stream_def_t *dma_tx = &dma_stream_defs[PORT.dma_tx];
 
-  if (!dma_is_flag_active_tc(PORT.dma_rx)) {
+  if (!dma_is_flag_active_tc(dma_rx)) {
     return;
   }
 
-  dma_clear_flag_tc(PORT.dma_rx);
-  dma_clear_flag_tc(PORT.dma_tx);
+  dma_clear_flag_tc(dma_rx);
+  dma_clear_flag_tc(dma_tx);
 
   dma_interrupt_enable(dma_rx->channel, DMA_FDT_INT, FALSE);
   dma_interrupt_enable(dma_rx->channel, DMA_DTERR_INT, FALSE);

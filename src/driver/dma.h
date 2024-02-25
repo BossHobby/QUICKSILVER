@@ -32,6 +32,3 @@ void dma_prepare_tx_memory(void *addr, uint32_t size);
 void dma_prepare_rx_memory(void *addr, uint32_t size);
 
 void dma_enable_rcc(dma_device_t dev);
-
-bool dma_is_flag_active_tc(dma_device_t dev);
-void dma_clear_flag_tc(dma_device_t dev);

@@ -86,11 +86,6 @@
 #define WITHIN_DMA_RAM(p) (((uint32_t)p & 0xfffe0000) == 0x30000000)
 #endif
 
-#include "adc.h"
-#include "gpio.h"
-#include "rcc.h"
-#include "time.h"
-
 typedef GPIO_TypeDef gpio_port_t;
 typedef SPI_TypeDef spi_port_t;
 typedef TIM_TypeDef timer_dev_t;
@@ -112,3 +107,9 @@ typedef struct {
 
   IRQn_Type irq;
 } dma_stream_def_t;
+
+#include "adc.h"
+#include "dma.h"
+#include "gpio.h"
+#include "rcc.h"
+#include "time.h"
