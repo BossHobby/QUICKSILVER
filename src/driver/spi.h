@@ -164,3 +164,23 @@ static inline bool spi_txn_ready(spi_bus_device_t *bus) {
 #define spi_seg_submit_continue(bus, segs, ...) \
   spi_seg_submit(bus, segs, __VA_ARGS__);       \
   spi_txn_continue(bus);
+
+static inline void spi_txn_set_done(void *arg) { *((bool *)arg) = true; }
+#define spi_seg_submit_check(bus, segs, ...)                        \
+  ({                                                                \
+    static volatile bool __did_submit__ = false;                    \
+    static volatile bool __is_done__ = false;                       \
+    if (!__did_submit__) {                                          \
+      __VA_ARGS__;                                                  \
+      spi_seg_submit_continue(bus, segs,                            \
+                              .done_fn = spi_txn_set_done,          \
+                              .done_fn_arg = (void *)&__is_done__); \
+      __did_submit__ = true;                                        \
+    }                                                               \
+    const bool temp = __is_done__;                                  \
+    if (__is_done__) {                                              \
+      __did_submit__ = false;                                       \
+      __is_done__ = false;                                          \
+    }                                                               \
+    temp;                                                           \
+  })
