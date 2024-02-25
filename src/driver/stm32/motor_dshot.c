@@ -58,6 +58,10 @@ static dshot_gpio_port_t gpio_ports[DSHOT_MAX_PORT_COUNT] = {
 static volatile DMA_RAM uint32_t port_dma_buffer[DSHOT_MAX_PORT_COUNT][DSHOT_DMA_BUFFER_SIZE];
 static dshot_pin_t dshot_pins[MOTOR_PIN_MAX];
 
+static const dshot_gpio_port_t *dshot_gpio_for_device(const dma_device_t dev) {
+  return &gpio_ports[dev - DMA_DEVICE_TIM1_CH1];
+}
+
 static void dshot_init_motor_pin(uint32_t index) {
   dshot_pins[index].port = gpio_pin_defs[target.motor_pins[index]].port;
   dshot_pins[index].pin = gpio_pin_defs[target.motor_pins[index]].pin;
@@ -268,19 +272,13 @@ void motor_dshot_wait_for_ready() {
 }
 
 void dshot_dma_isr(dma_device_t dev) {
-  for (uint32_t j = 0; j < gpio_port_count; j++) {
-    const dshot_gpio_port_t *port = &gpio_ports[j];
-    if (port->dma_device != dev) {
-      continue;
-    }
+  const dma_stream_def_t *dma = &dma_stream_defs[dev];
+  dma_clear_flag_tc(dma);
+  LL_DMA_DisableStream(dma->port, dma->stream_index);
 
-    const dma_stream_def_t *dma = &dma_stream_defs[dev];
-    dma_clear_flag_tc(dma);
-    LL_DMA_DisableStream(dma->port, dma->stream_index);
-    dshot_disable_dma_request(port->timer_channel);
+  const dshot_gpio_port_t *port = dshot_gpio_for_device(dev);
+  dshot_disable_dma_request(port->timer_channel);
 
-    dshot_dma_phase--;
-    break;
-  }
+  dshot_dma_phase--;
 }
 #endif
