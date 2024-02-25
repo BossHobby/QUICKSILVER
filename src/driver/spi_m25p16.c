@@ -40,19 +40,23 @@ void m25p16_init() {
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, M25P16_BAUD_RATE);
 }
 
-uint8_t m25p16_is_ready() {
+bool m25p16_is_ready() {
   if (!spi_txn_ready(&bus)) {
     spi_txn_continue(&bus);
-    return 0;
+    return false;
   }
 
-  uint8_t buffer[2] = {M25P16_READ_STATUS_REGISTER, 0xFF};
-
+  static uint8_t buffer[2];
   const spi_txn_segment_t segs[] = {
       spi_make_seg_buffer(buffer, buffer, 2),
   };
-  spi_seg_submit_wait(&bus, segs);
-
+  const bool is_done = spi_seg_submit_check(&bus, segs, {
+    buffer[0] = M25P16_READ_STATUS_REGISTER;
+    buffer[1] = 0xFF;
+  });
+  if (!is_done) {
+    return false;
+  }
   return (buffer[1] & 0x01) == 0;
 }
 

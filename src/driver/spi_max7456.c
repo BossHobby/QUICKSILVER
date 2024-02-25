@@ -130,7 +130,19 @@ static void max7456_set_system(osd_system_t sys) {
 }
 
 static osd_system_t max7456_current_system() {
-  const uint8_t stat = max7456_dma_spi_read(STAT);
+  static uint8_t stat = 0;
+
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(STAT),
+      spi_make_seg_buffer(&stat, NULL, 1),
+  };
+  const bool is_done = spi_seg_submit_check(&bus, segs, {
+    spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
+    stat = 0;
+  });
+  if (!is_done) {
+    return last_osd_system;
+  }
 
   if ((stat & 0x01) == 0x01) {
     return OSD_SYS_PAL;
@@ -167,7 +179,7 @@ uint8_t max7456_clear_async() {
 // function to detect and correct ntsc/pal mode or mismatch
 // returns the current system
 osd_system_t max7456_check_system() {
-  if (!max7456_is_ready() || last_osd_system > OSD_SYS_NONE) {
+  if (last_osd_system > OSD_SYS_NONE) {
     return last_osd_system;
   }
 
