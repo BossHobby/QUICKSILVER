@@ -54,26 +54,6 @@ void gpio_pin_init_af(gpio_pins_t pin, gpio_config_t config, uint8_t af) {
   gpio_pin_mux_config(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin_index, af);
 }
 
-void gpio_pin_set(gpio_pins_t pin) {
-  gpio_bits_set(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin);
-}
-
-void gpio_pin_reset(gpio_pins_t pin) {
-  gpio_bits_reset(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin);
-}
-
-void gpio_pin_toggle(gpio_pins_t pin) {
-  if (gpio_output_data_bit_read(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin)) {
-    gpio_pin_reset(pin);
-  } else {
-    gpio_pin_set(pin);
-  }
-}
-
-uint32_t gpio_pin_read(gpio_pins_t pin) {
-  return gpio_input_data_bit_read(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin);
-}
-
 #define GPIO_AF(pin, af, tag)
 #define GPIO_PIN(port_num, num) \
   {                             \

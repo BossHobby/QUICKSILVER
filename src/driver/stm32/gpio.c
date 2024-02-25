@@ -83,22 +83,6 @@ void gpio_pin_init_af(gpio_pins_t pin, gpio_config_t config, uint8_t af) {
   LL_GPIO_Init(gpio_pin_defs[pin].port, &init);
 }
 
-void gpio_pin_set(gpio_pins_t pin) {
-  LL_GPIO_SetOutputPin(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin);
-}
-
-void gpio_pin_reset(gpio_pins_t pin) {
-  LL_GPIO_ResetOutputPin(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin);
-}
-
-void gpio_pin_toggle(gpio_pins_t pin) {
-  LL_GPIO_TogglePin(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin);
-}
-
-uint32_t gpio_pin_read(gpio_pins_t pin) {
-  return LL_GPIO_IsInputPinSet(gpio_pin_defs[pin].port, gpio_pin_defs[pin].pin);
-}
-
 #define GPIO_AF(pin, af, tag)
 #define GPIO_PIN(port_num, num) \
   {                             \

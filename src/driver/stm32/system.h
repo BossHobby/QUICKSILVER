@@ -87,6 +87,7 @@
 #endif
 
 #include "adc.h"
+#include "gpio.h"
 #include "rcc.h"
 #include "time.h"
 
