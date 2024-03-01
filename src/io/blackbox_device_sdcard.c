@@ -35,7 +35,7 @@ void blackbox_device_sdcard_init() {
   state = STATE_DETECT;
 }
 
-blackbox_device_result_t blackbox_device_sdcard_update() {
+bool blackbox_device_sdcard_update() {
   static uint32_t offset = 0;
   static uint32_t write_size = PAGE_SIZE;
 
@@ -43,7 +43,7 @@ blackbox_device_result_t blackbox_device_sdcard_update() {
 
   sdcard_status_t sdcard_status = sdcard_update();
   if (sdcard_status != SDCARD_IDLE) {
-    return BLACKBOX_DEVICE_WAIT;
+    return false;
   }
 
 sdcard_do_more:
@@ -51,7 +51,7 @@ sdcard_do_more:
   case STATE_DETECT: {
     state = STATE_READ_HEADER;
     sdcard_get_bounds(&blackbox_bounds);
-    return BLACKBOX_DEVICE_WAIT;
+    return false;
   }
 
   case STATE_READ_HEADER: {
@@ -93,7 +93,7 @@ sdcard_do_more:
     if (sdcard_write_pages_start(offset, FLUSH_INTERVAL)) {
       state = STATE_FILL_WRITE_BUFFER;
     }
-    return BLACKBOX_DEVICE_WRITE;
+    break;
   }
 
   case STATE_FILL_WRITE_BUFFER: {
@@ -128,31 +128,31 @@ sdcard_do_more:
         state = STATE_FILL_WRITE_BUFFER;
       }
     }
-    return BLACKBOX_DEVICE_WRITE;
+    break;
   }
 
   case STATE_FINISH_WRITE: {
     if (sdcard_write_pages_finish()) {
       state = STATE_IDLE;
     }
-    return BLACKBOX_DEVICE_WRITE;
+    break;
   }
 
   case STATE_ERASE_HEADER: {
     memcpy(blackbox_write_buffer, (uint8_t *)&blackbox_device_header, sizeof(blackbox_device_header_t));
     state = STATE_WRITE_HEADER;
-    return BLACKBOX_DEVICE_WAIT;
+    return false;
   }
 
   case STATE_WRITE_HEADER: {
     if (sdcard_write_page(blackbox_write_buffer, 0)) {
       state = STATE_IDLE;
     }
-    return BLACKBOX_DEVICE_WAIT;
+    return false;
   }
   }
 
-  return BLACKBOX_DEVICE_IDLE;
+  return true;
 }
 
 void blackbox_device_sdcard_reset() {
@@ -166,11 +166,11 @@ uint32_t blackbox_device_sdcard_usage() {
   return blackbox_current_file()->start + blackbox_current_file()->size;
 }
 
-void blackbox_device_sdcard_flush() {
+void blackbox_device_sdcard_stop() {
   should_flush = 1;
 }
 
-void blackbox_device_sdcard_write_header() {
+void blackbox_device_sdcard_start() {
   state = STATE_ERASE_HEADER;
 }
 
@@ -205,8 +205,9 @@ blackbox_device_vtable_t blackbox_device_sdcard = {
     .init = blackbox_device_sdcard_init,
     .update = blackbox_device_sdcard_update,
     .reset = blackbox_device_sdcard_reset,
-    .write_header = blackbox_device_sdcard_write_header,
-    .flush = blackbox_device_sdcard_flush,
+
+    .start = blackbox_device_sdcard_start,
+    .stop = blackbox_device_sdcard_stop,
 
     .usage = blackbox_device_sdcard_usage,
     .ready = blackbox_device_sdcard_ready,
