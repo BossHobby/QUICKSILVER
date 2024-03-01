@@ -91,9 +91,9 @@ void blackbox_device_init() {
   }
 }
 
-blackbox_device_result_t blackbox_device_update() {
+bool blackbox_device_update() {
   if (dev == NULL) {
-    return BLACKBOX_DEVICE_WAIT;
+    return false;
   }
   return dev->update();
 }
@@ -144,7 +144,7 @@ bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float
   blackbox_device_header.file_num++;
 
   ring_buffer_clear(&blackbox_encode_buffer);
-  dev->write_header();
+  dev->start();
 
   return true;
 }
@@ -159,8 +159,8 @@ void blackbox_device_finish() {
     blackbox_device_header.file_num--;
   }
 
+  dev->stop();
   ring_buffer_clear(&blackbox_encode_buffer);
-  dev->flush();
 }
 
 void blackbox_device_read(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size) {

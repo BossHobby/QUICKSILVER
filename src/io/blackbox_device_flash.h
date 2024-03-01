@@ -5,7 +5,7 @@
 #include "blackbox_device.h"
 
 void blackbox_device_flash_init();
-blackbox_device_result_t blackbox_device_flash_update();
+bool blackbox_device_flash_update();
 void blackbox_device_flash_reset();
 void blackbox_device_flash_write_header();
 void blackbox_device_flash_flush();

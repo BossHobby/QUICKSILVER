@@ -5,7 +5,7 @@
 #include "blackbox_device.h"
 
 void blackbox_device_sdcard_init();
-blackbox_device_result_t blackbox_device_sdcard_update();
+bool blackbox_device_sdcard_update();
 void blackbox_device_sdcard_reset();
 void blackbox_device_sdcard_write_header();
 void blackbox_device_sdcard_flush();

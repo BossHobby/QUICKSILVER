@@ -20,10 +20,16 @@ typedef enum {
   STATE_WRITE_HEADER,
 } blackbox_device_state_t;
 
+typedef enum {
+  PHASE_IDLE,
+  PHASE_WRITE,
+  PHASE_FLUSH,
+} blackbox_device_phase_t;
+
 #ifdef USE_DATA_FLASH
 
 static blackbox_device_state_t state = STATE_DETECT;
-static uint8_t should_flush = 0;
+static blackbox_device_phase_t phase = PHASE_IDLE;
 
 void blackbox_device_flash_init() {
   m25p16_init();
@@ -31,8 +37,7 @@ void blackbox_device_flash_init() {
   state = STATE_DETECT;
 }
 
-blackbox_device_result_t blackbox_device_flash_update() {
-  static uint32_t offset = 0;
+bool blackbox_device_flash_update() {
   static uint32_t write_size = 0;
 
   switch (state) {
@@ -41,11 +46,48 @@ blackbox_device_result_t blackbox_device_flash_update() {
       m25p16_get_bounds(&blackbox_bounds);
       state = STATE_READ_HEADER;
     }
-    return BLACKBOX_DEVICE_WAIT;
+    return false;
+
+  case STATE_IDLE: {
+    if (phase == PHASE_IDLE) {
+      break;
+    }
+    if (phase == PHASE_FLUSH &&
+        ring_buffer_available(&blackbox_encode_buffer) == 0 &&
+        write_size == 0) {
+      state = STATE_ERASE_HEADER;
+      phase = PHASE_IDLE;
+      write_size = 0;
+      break;
+    }
+
+    if (write_size < MAX_WRITE_SIZE) {
+      write_size += ring_buffer_read_multi(&blackbox_encode_buffer, blackbox_write_buffer + write_size, (MAX_WRITE_SIZE - write_size));
+    }
+    if (write_size >= MAX_WRITE_SIZE || phase == PHASE_FLUSH) {
+      state = STATE_WRITE;
+    }
+    break;
+  }
+
+  case STATE_WRITE: {
+    const uint32_t offset = blackbox_current_file()->start + blackbox_current_file()->size;
+    if (offset >= blackbox_bounds.total_size) {
+      write_size = 0;
+      state = STATE_IDLE;
+      break;
+    }
+    if (m25p16_page_program(offset, blackbox_write_buffer, write_size)) {
+      blackbox_current_file()->size += write_size;
+      write_size = 0;
+      state = STATE_IDLE;
+    }
+    break;
+  }
 
   case STATE_READ_HEADER:
     if (!m25p16_is_ready()) {
-      break;
+      return false;
     }
 
     m25p16_read_addr(M25P16_READ_DATA_BYTES, 0x0, (uint8_t *)&blackbox_device_header, sizeof(blackbox_device_header_t));
@@ -54,64 +96,27 @@ blackbox_device_result_t blackbox_device_flash_update() {
       blackbox_device_header.file_num = 0;
 
       state = STATE_ERASE_HEADER;
-      break;
+    } else {
+      state = STATE_IDLE;
     }
-
-    state = STATE_IDLE;
-    break;
-
-  case STATE_IDLE: {
-    if (should_flush == 1) {
-      state = STATE_ERASE_HEADER;
-      should_flush = 0;
-      break;
-    }
-
-    offset = blackbox_current_file()->start + blackbox_current_file()->size;
-    if (offset >= blackbox_bounds.total_size) {
-      break;
-    }
-
-    if (write_size < MAX_WRITE_SIZE) {
-      write_size += ring_buffer_read_multi(&blackbox_encode_buffer, blackbox_write_buffer + write_size, (MAX_WRITE_SIZE - write_size));
-    }
-    if (write_size >= MAX_WRITE_SIZE || should_flush == 1) {
-      state = STATE_WRITE;
-    }
-    break;
-  }
-
-  case STATE_WRITE: {
-    if (!m25p16_page_program(offset, blackbox_write_buffer, write_size)) {
-      break;
-    }
-    blackbox_current_file()->size += write_size;
-    write_size = 0;
-    state = STATE_IDLE;
-    return BLACKBOX_DEVICE_WRITE;
-  }
+    return false;
 
   case STATE_ERASE_HEADER: {
-    if (!m25p16_is_ready()) {
-      return BLACKBOX_DEVICE_WAIT;
+    if (m25p16_write_addr(M25P16_SECTOR_ERASE, 0x0, NULL, 0)) {
+      state = STATE_WRITE_HEADER;
     }
-    m25p16_write_addr(M25P16_SECTOR_ERASE, 0x0, NULL, 0);
-    state = STATE_WRITE_HEADER;
-    return BLACKBOX_DEVICE_WAIT;
+    return false;
   }
 
   case STATE_WRITE_HEADER: {
-    if (!m25p16_is_ready()) {
-      return BLACKBOX_DEVICE_WAIT;
-    }
     if (m25p16_page_program(0x0, (uint8_t *)&blackbox_device_header, sizeof(blackbox_device_header_t))) {
       state = STATE_IDLE;
     }
-    return BLACKBOX_DEVICE_WAIT;
+    return false;
   }
   }
 
-  return BLACKBOX_DEVICE_IDLE;
+  return true;
 }
 
 void blackbox_device_flash_reset() {
@@ -130,12 +135,13 @@ uint32_t blackbox_device_flash_usage() {
   return blackbox_current_file()->start + blackbox_current_file()->size;
 }
 
-void blackbox_device_flash_flush() {
-  should_flush = 1;
+void blackbox_device_flash_stop() {
+  phase = PHASE_FLUSH;
 }
 
-void blackbox_device_flash_write_header() {
+void blackbox_device_flash_start() {
   state = STATE_ERASE_HEADER;
+  phase = PHASE_WRITE;
 }
 
 bool blackbox_device_flash_ready() {
@@ -168,8 +174,9 @@ blackbox_device_vtable_t blackbox_device_flash = {
     .init = blackbox_device_flash_init,
     .update = blackbox_device_flash_update,
     .reset = blackbox_device_flash_reset,
-    .write_header = blackbox_device_flash_write_header,
-    .flush = blackbox_device_flash_flush,
+
+    .start = blackbox_device_flash_start,
+    .stop = blackbox_device_flash_stop,
 
     .usage = blackbox_device_flash_usage,
     .ready = blackbox_device_flash_ready,

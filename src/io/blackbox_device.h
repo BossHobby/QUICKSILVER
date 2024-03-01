@@ -21,18 +21,13 @@ typedef struct {
   uint64_t total_size;
 } blackbox_device_bounds_t;
 
-typedef enum {
-  BLACKBOX_DEVICE_IDLE,
-  BLACKBOX_DEVICE_WAIT,
-  BLACKBOX_DEVICE_WRITE,
-} blackbox_device_result_t;
-
 typedef struct {
   void (*init)();
-  blackbox_device_result_t (*update)();
+  bool (*update)();
   void (*reset)();
-  void (*write_header)();
-  void (*flush)();
+
+  void (*start)();
+  void (*stop)();
 
   uint32_t (*usage)();
   bool (*ready)();
@@ -80,7 +75,7 @@ cbor_result_t cbor_encode_blackbox_device_file_t(cbor_value_t *enc, const blackb
 cbor_result_t cbor_encode_blackbox_device_header_t(cbor_value_t *enc, const blackbox_device_header_t *h);
 
 void blackbox_device_init();
-blackbox_device_result_t blackbox_device_update();
+bool blackbox_device_update();
 uint32_t blackbox_device_usage();
 
 blackbox_device_file_t *blackbox_current_file();
