@@ -35,6 +35,8 @@ typedef enum {
   // RX_STATUS_DETECTED + RX_SERIAL_PROTOCOL_X = detected proto X
 } rx_status_t;
 
+extern rx_serial_protocol_t serial_rx_detected_protcol;
+
 float rx_serial_crsf_expected_fps();
 float rx_serial_dsm_expected_fps();
 

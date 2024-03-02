@@ -23,7 +23,7 @@
 #define MSP_EEPROM_WRITE 250 // in message          no param
 #define MSP_REBOOT 68        // in message reboot settings
 
-#define MSP_ANALOG 110    //out message         vbat, powermetersum, rssi if available on RX
+#define MSP_ANALOG 110        // out message         vbat, powermetersum, rssi if available on RX
 #define MSP_BATTERY_STATE 130 // out message         Connected/Disconnected, Voltage, Current Used
 
 #define MSP_UID 160   // out message         Unique device ID
@@ -83,7 +83,6 @@ typedef enum {
 typedef enum {
   MSP_DEVICE_FC,
   MSP_DEVICE_VTX,
-  MSP_DEVICE_RX,
   MSP_DEVICE_SPI_RX,
 } msp_device_t;
 

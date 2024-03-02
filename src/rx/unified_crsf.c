@@ -51,17 +51,18 @@ static uint8_t crsf_rf_mode = 0;
 void rx_serial_crsf_msp_send(msp_magic_t magic, uint8_t direction, uint16_t code, const uint8_t *data, uint16_t len);
 
 static uint8_t msp_rx_buffer[MSP_BUFFER_SIZE];
-static msp_t msp = {
+msp_t crsf_msp = {
     .buffer = msp_rx_buffer,
     .buffer_size = MSP_BUFFER_SIZE,
     .buffer_offset = 0,
     .send = rx_serial_crsf_msp_send,
-    .device = MSP_DEVICE_RX,
+    .device = MSP_DEVICE_VTX,
 };
 
 static uint8_t msp_tx_buffer[MSP_BUFFER_SIZE];
+static msp_magic_t msp_magic = MSP1_MAGIC;
 static uint32_t msp_tx_len = 0;
-static uint8_t msp_last_cmd = 0;
+static uint16_t msp_last_cmd = 0;
 static uint8_t msp_origin = 0;
 static bool msp_new_data = false;
 static bool msp_is_error = false;
@@ -200,7 +201,7 @@ static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
   case CRSF_FRAMETYPE_MSP_WRITE:
   case CRSF_FRAMETYPE_MSP_REQ: {
     msp_origin = rx_data[2];
-    msp_process_telemetry(&msp, rx_data + 3, frame_length - 4);
+    msp_process_telemetry(&crsf_msp, rx_data + 3, frame_length - 4);
     break;
   }
 
@@ -274,6 +275,7 @@ crsf_do_more:
 }
 
 void rx_serial_crsf_msp_send(msp_magic_t magic, uint8_t direction, uint16_t code, const uint8_t *data, uint16_t len) {
+  msp_magic = magic;
   msp_last_cmd = code;
 
   if (len > 0 && data) {
@@ -303,19 +305,29 @@ void rx_serial_send_crsf_telemetry() {
 
     uint8_t header_size = 0;
     if (msp_tx_sent == 0) { // first chunk
-      payload[header_size++] = MSP_STATUS_START_MASK | (msp_seq++ & MSP_STATUS_SEQUENCE_MASK) | (1 << MSP_STATUS_VERSION_SHIFT);
+      payload[header_size++] = MSP_STATUS_START_MASK | (msp_seq++ & MSP_STATUS_SEQUENCE_MASK);
       if (msp_is_error) {
         payload[0] |= MSP_STATUS_ERROR_MASK;
       }
 
-      if (msp_tx_len > 0xFF) {
-        payload[header_size++] = 0xFF;
-        payload[header_size++] = msp_last_cmd;
+      if (msp_magic == MSP1_MAGIC) {
+        payload[0] |= (1 << MSP_STATUS_VERSION_SHIFT);
+        if (msp_tx_len > 0xFF) {
+          payload[header_size++] = 0xFF;
+          payload[header_size++] = msp_last_cmd;
+          payload[header_size++] = (msp_tx_len >> 0) & 0xFF;
+          payload[header_size++] = (msp_tx_len >> 8) & 0xFF;
+        } else {
+          payload[header_size++] = msp_tx_len;
+          payload[header_size++] = msp_last_cmd;
+        }
+      } else {
+        payload[0] |= (2 << MSP_STATUS_VERSION_SHIFT);
+        payload[header_size++] = 0; // flag
+        payload[header_size++] = (msp_last_cmd >> 0) & 0xFF;
+        payload[header_size++] = (msp_last_cmd >> 8) & 0xFF;
         payload[header_size++] = (msp_tx_len >> 0) & 0xFF;
         payload[header_size++] = (msp_tx_len >> 8) & 0xFF;
-      } else {
-        payload[header_size++] = msp_tx_len;
-        payload[header_size++] = msp_last_cmd;
       }
 
     } else {

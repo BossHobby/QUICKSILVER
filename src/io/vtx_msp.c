@@ -34,6 +34,7 @@ uint8_t msp_vtx_detected = 0;
 msp_t *msp_vtx;
 
 char msp_vtx_band_letters[VTX_BAND_MAX] = {'A', 'B', 'E', 'F', 'R', 'L'};
+uint8_t msp_vtx_band_is_factory[VTX_BAND_MAX] = {1, 1, 1, 1, 1, 1};
 char msp_vtx_band_labels[VTX_BAND_MAX][8] = {
     {'B', 'A', 'N', 'D', '_', 'A', ' ', ' '}, // A
     {'B', 'A', 'N', 'D', '_', 'B', ' ', ' '}, // B
@@ -41,6 +42,14 @@ char msp_vtx_band_labels[VTX_BAND_MAX][8] = {
     {'F', 'A', 'T', 'S', 'H', 'A', 'R', 'K'}, // F
     {'R', 'A', 'C', 'E', ' ', ' ', ' ', ' '}, // R
     {'R', 'A', 'C', 'E', '_', 'L', 'O', 'W'}, // L
+};
+uint16_t msp_vtx_frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX] = {
+    {5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725}, // VTX_BAND_A
+    {5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866}, // VTX_BAND_B
+    {5705, 5685, 5665, 5645, 5885, 5905, 5925, 5945}, // VTX_BAND_E
+    {5740, 5760, 5780, 5800, 5820, 5840, 5860, 5880}, // VTX_BAND_F
+    {5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917}, // VTX_BAND_R
+    {5333, 5373, 5413, 5453, 5493, 5533, 5573, 5613}, // VTX_BAND_L
 };
 
 extern void msp_send_reply(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *data, uint32_t len);

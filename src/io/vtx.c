@@ -14,6 +14,7 @@
 #include "driver/time.h"
 #include "flight/control.h"
 #include "rx/rx.h"
+#include "rx/unified_serial.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
@@ -116,6 +117,26 @@ void vtx_init() {
   vtx_actual.power_level = VTX_POWER_LEVEL_MAX;
 }
 
+static void vtx_update_fpv_pin() {
+  if (target.fpv != PIN_NONE) {
+    static bool fpv_init = false;
+    if (rx_aux_on(AUX_FPV_SWITCH)) {
+      // fpv switch on
+      if (!fpv_init && flags.rx_mode == RXMODE_NORMAL && flags.on_ground == 1) {
+        fpv_init = gpio_init_fpv(flags.rx_mode);
+        vtx_delay_ms = 1000;
+        vtx_connect_tries = 0;
+      }
+      if (fpv_init) {
+        gpio_pin_set(target.fpv);
+      }
+    } else if (fpv_init && flags.on_ground == 1 && !flags.failsafe) {
+      // fpv switch off
+      gpio_pin_reset(target.fpv);
+    }
+  }
+}
+
 static bool vtx_detect_protocol() {
   static vtx_protocol_t protocol_to_check = VTX_PROTOCOL_MSP_VTX;
   static uint8_t protocol_is_init = 0;
@@ -125,6 +146,11 @@ static bool vtx_detect_protocol() {
   }
 
   if (serial_hdzero.config.port != SERIAL_PORT_INVALID) {
+    vtx_settings.protocol = VTX_PROTOCOL_MSP_VTX;
+  }
+
+  if (profile.serial.smart_audio == profile.serial.rx &&
+      serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
     vtx_settings.protocol = VTX_PROTOCOL_MSP_VTX;
   }
 
@@ -289,37 +315,22 @@ static bool vtx_update_pitmode() {
 }
 
 void vtx_update() {
-  if (target.fpv != PIN_NONE) {
-    static bool fpv_init = false;
-    if (rx_aux_on(AUX_FPV_SWITCH)) {
-      // fpv switch on
-      if (!fpv_init && flags.rx_mode == RXMODE_NORMAL && flags.on_ground == 1) {
-        fpv_init = gpio_init_fpv(flags.rx_mode);
-        vtx_delay_ms = 1000;
-        vtx_connect_tries = 0;
-      }
-      if (fpv_init) {
-        gpio_pin_set(target.fpv);
-      }
-    } else {
-      // fpv switch off
-      if (fpv_init && flags.on_ground == 1) {
-        if (flags.failsafe) {
-          // do nothing = hold last state
-        } else {
-          gpio_pin_reset(target.fpv);
-        }
-      }
-    }
-  }
+  vtx_update_fpv_pin();
 
   if (flags.in_air) {
     // never try to do vtx stuff in-air
     return;
   }
 
-  if (profile.serial.smart_audio == SERIAL_PORT_INVALID && serial_hdzero.config.port == SERIAL_PORT_INVALID) {
+  if (profile.serial.smart_audio == SERIAL_PORT_INVALID &&
+      serial_hdzero.config.port == SERIAL_PORT_INVALID) {
     // no serial assigned to vtx or still in use by rx
+    return;
+  }
+
+  if (profile.serial.smart_audio == profile.serial.rx &&
+      serial_rx_detected_protcol != RX_SERIAL_PROTOCOL_CRSF) {
+    // allow same serial for crsf
     return;
   }
 

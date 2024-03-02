@@ -28,9 +28,11 @@ enum {
 
 extern uint8_t msp_vtx_detected;
 extern vtx_settings_t vtx_actual;
-extern const uint16_t frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX];
 extern char msp_vtx_band_letters[VTX_BAND_MAX];
+extern uint8_t msp_vtx_band_is_factory[VTX_BAND_MAX];
 extern char msp_vtx_band_labels[VTX_BAND_MAX][8];
+extern uint16_t msp_vtx_frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX];
+
 extern void msp_vtx_send_config_reply(msp_t *msp, msp_magic_t magic);
 
 void msp_send_reply(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *data, uint32_t len) {
@@ -412,12 +414,12 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     }
 
     buf[offset++] = msp_vtx_band_letters[band - 1];
-    buf[offset++] = 0; // is factory
+    buf[offset++] = msp_vtx_band_is_factory[band - 1];
 
     buf[offset++] = VTX_CHANNEL_MAX;
     for (uint32_t i = 0; i < VTX_CHANNEL_MAX; i++) {
-      buf[offset++] = frequency_table[band - 1][i] & 0xFF;
-      buf[offset++] = frequency_table[band - 1][i] >> 8;
+      buf[offset++] = msp_vtx_frequency_table[band - 1][i] & 0xFF;
+      buf[offset++] = msp_vtx_frequency_table[band - 1][i] >> 8;
     }
 
     msp_send_reply(msp, magic, cmd, buf, offset);
@@ -438,8 +440,14 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     }
 
     msp_vtx_band_letters[band - 1] = payload[offset++];
+    msp_vtx_band_is_factory[band - 1] = payload[offset++];
 
-    // ignore the rest
+    const uint8_t count = payload[offset++];
+    for (uint32_t i = 0; i < count; i++) {
+      msp_vtx_frequency_table[band - 1][i] = (payload[offset + 1] << 8) | payload[offset];
+      offset += 2;
+    }
+
     msp_send_reply(msp, magic, cmd, NULL, 0);
     break;
   }
@@ -605,24 +613,32 @@ msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint32_t len) {
   const uint8_t status = data[offset++];
   const uint8_t version = (status & MSP_STATUS_VERSION_MASK) >> MSP_STATUS_VERSION_SHIFT;
   const uint8_t sequence = status & MSP_STATUS_SEQUENCE_MASK;
-  if (version != 1) {
+  if (version > 2) {
     return MSP_ERROR;
   }
 
   static bool packet_started = false;
 
   static uint16_t last_size = 0;
-  static uint8_t last_cmd = 0;
+  static uint16_t last_cmd = 0;
   static uint8_t last_seq = 0;
 
   if (status & MSP_STATUS_START_MASK) { // first chunk
     if (len < MSP_TLM_HEADER_LEN) {
       return MSP_EOF;
     }
-    last_size = data[offset++];
-    last_cmd = data[offset++];
 
-    if (last_size == 0xFF) {
+    if (version == 1) {
+      last_size = data[offset++];
+      last_cmd = data[offset++];
+      if (last_size == 0xFF) {
+        last_size = (data[offset + 1] << 8) | data[offset];
+        offset += 2;
+      }
+    } else {
+      offset++; // skip flags
+      last_cmd = (data[offset + 1] << 8) | data[offset];
+      offset += 2;
       last_size = (data[offset + 1] << 8) | data[offset];
       offset += 2;
     }
@@ -648,6 +664,7 @@ msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint32_t len) {
     return MSP_EOF;
   }
 
-  msp_process_serial_cmd(msp, MSP1_MAGIC, last_cmd, msp->buffer, last_size);
+  quic_debugf("msp crsf 0x%x", last_cmd);
+  msp_process_serial_cmd(msp, version == 1 ? MSP1_MAGIC : MSP2_MAGIC, last_cmd, msp->buffer, last_size);
   return MSP_SUCCESS;
 }

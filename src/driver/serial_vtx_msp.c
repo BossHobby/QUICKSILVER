@@ -8,6 +8,7 @@
 #include "driver/serial.h"
 #include "driver/serial_hdzero.h"
 #include "io/msp.h"
+#include "rx/unified_serial.h"
 #include "util/crc.h"
 
 extern msp_t *msp_vtx;
@@ -56,6 +57,8 @@ static void serial_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, 
 }
 
 extern msp_t hdzero_msp;
+extern msp_t crsf_msp;
+
 static uint8_t msp_rx_buffer[128];
 static msp_t msp = {
     .buffer = msp_rx_buffer,
@@ -72,7 +75,11 @@ void serial_msp_vtx_init() {
     return;
   }
 
-  serial_vtx_wait_for_ready();
+  if (profile.serial.smart_audio == profile.serial.rx &&
+      serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
+    msp_vtx = &crsf_msp;
+    return;
+  }
 
   const target_serial_port_t *dev = serial_get_dev(profile.serial.smart_audio);
   if (!target_serial_port_valid(dev)) {
@@ -88,6 +95,7 @@ void serial_msp_vtx_init() {
   config.half_duplex = true;
   config.half_duplex_pp = false;
 
+  serial_vtx_wait_for_ready();
   serial_init(&serial_vtx, config);
 
   msp_vtx = &msp;
@@ -98,6 +106,11 @@ vtx_update_result_t serial_msp_vtx_update() {
     if (!hdzero_is_ready()) {
       return VTX_WAIT;
     }
+    return VTX_IDLE;
+  }
+
+  if (profile.serial.smart_audio == profile.serial.rx &&
+      serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
     return VTX_IDLE;
   }
 
