@@ -76,6 +76,7 @@ void serial_disable_isr(serial_ports_t port);
 uint32_t serial_bytes_available(serial_port_t *serial);
 uint32_t serial_bytes_free(serial_port_t *serial);
 
+bool serial_read_byte(serial_port_t *serial, uint8_t *data);
 uint32_t serial_read_bytes(serial_port_t *serial, uint8_t *data, const uint32_t size);
 bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32_t size);
 

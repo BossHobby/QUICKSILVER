@@ -223,6 +223,7 @@ static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
 packet_status_t rx_serial_process_crsf() {
   static crsf_parser_state_t parser_state = CRSF_CHECK_MAGIC;
 
+  static uint8_t frame_offset = 0;
   static uint8_t frame_length = 0;
 
 crsf_do_more:
@@ -247,14 +248,15 @@ crsf_do_more:
       parser_state = CRSF_CHECK_MAGIC;
       return PACKET_ERROR;
     }
+    frame_offset = 0;
     parser_state = CRSF_PAYLOAD;
     goto crsf_do_more;
   }
   case CRSF_PAYLOAD: {
-    if (serial_bytes_available(&serial_rx) < frame_length) {
+    if (!serial_read_byte(&serial_rx, rx_data + frame_offset)) {
       return PACKET_NEEDS_MORE;
     }
-    if (serial_read_bytes(&serial_rx, rx_data, frame_length) == frame_length) {
+    if (++frame_offset == frame_length) {
       parser_state = CRSF_CHECK_CRC;
     }
     goto crsf_do_more;

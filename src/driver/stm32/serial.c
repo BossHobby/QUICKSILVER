@@ -227,6 +227,9 @@ static void handle_serial_isr(serial_port_t *serial) {
   if (LL_USART_IsEnabledIT_RXNE(port->channel) && LL_USART_IsActiveFlag_RXNE(port->channel)) {
     const volatile uint8_t data = LL_USART_ReceiveData8(port->channel);
     ring_buffer_write(serial->rx_buffer, data);
+#if defined(STM32F4)
+    LL_USART_ClearFlag_RXNE(port->channel);
+#endif
   }
 
   if (LL_USART_IsActiveFlag_ORE(port->channel)) {

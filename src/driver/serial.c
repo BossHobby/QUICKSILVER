@@ -137,6 +137,10 @@ uint32_t serial_bytes_free(serial_port_t *serial) {
   return ring_buffer_free(serial->tx_buffer);
 }
 
+bool serial_read_byte(serial_port_t *serial, uint8_t *data) {
+  return ring_buffer_read(serial->rx_buffer, data);
+}
+
 uint32_t serial_read_bytes(serial_port_t *serial, uint8_t *data, const uint32_t size) {
   return ring_buffer_read_multi(serial->rx_buffer, data, size);
 }
