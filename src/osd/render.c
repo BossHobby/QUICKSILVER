@@ -689,6 +689,11 @@ static void osd_display_regular() {
     break;
   }
 
+  case OSD_CROSSHAIR: {
+    print_osd_crosshair(el);
+    osd_state.element++;
+    break;
+  }
   case OSD_VTX_CHANNEL: {
     print_osd_vtx(el);
     osd_state.element++;
@@ -1019,6 +1024,13 @@ void osd_display() {
     osd_menu_finish();
     break;
   }
+
+  case OSD_SCREEN_CROSSHAIR:
+    osd_menu_start();
+    osd_menu_header("CROSSHAIR");
+    osd_menu_select_save_and_exit(4);
+    osd_menu_finish();
+    break;
 
   case OSD_SCREEN_DTERM_FILTER:
     osd_menu_start();
