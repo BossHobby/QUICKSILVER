@@ -22,6 +22,9 @@
 #define ICON_AMP 0x9a
 #define ICON_DOWN 0x76
 #define ICON_GAUGE 0x70
+#define ICON_CROSSHAIR_1 0x72
+#define ICON_CROSSHAIR_2 0x73
+#define ICON_CROSSHAIR_3 0x74
 
 #define HOLD 0
 #define TEMP 1
@@ -67,6 +70,7 @@ static const char *osd_element_labels[] = {
     "THROTTLE",
     "VTX",
     "CURRENT DRAW",
+    "CROSSHAIR",
 };
 
 static const char *aux_channel_labels[] = {
@@ -294,6 +298,13 @@ static void print_osd_rssi(osd_element_t *el) {
   osd_write_char(ICON_RSSI);
 }
 
+static void print_osd_crosshair(osd_element_t *el) {
+  osd_start(osd_attr(el), el->pos_x, el->pos_y);
+  osd_write_char(ICON_CROSSHAIR_1);
+  osd_write_char(ICON_CROSSHAIR_2);
+  osd_write_char(ICON_CROSSHAIR_3);
+}
+
 static void print_osd_armtime(osd_element_t *el) {
   uint32_t time_s = state.armtime;
 
@@ -457,6 +468,11 @@ static void osd_display_regular() {
     break;
   }
 
+  case OSD_CROSSHAIR: {
+    print_osd_crosshair(el);
+    osd_state.element++;
+    break;
+  }
   case OSD_VTX_CHANNEL: {
     print_osd_vtx(el);
     osd_state.element++;
