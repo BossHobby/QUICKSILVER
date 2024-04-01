@@ -132,6 +132,7 @@ void rx_init() {
   rx_init_state();
   rx_spi_detect();
 
+  serial_rx_detected_protcol = RX_SERIAL_PROTOCOL_INVALID;
   if (!target_has_rx_protocol(profile.receiver.protocol)) {
     profile.receiver.protocol = RX_PROTOCOL_INVALID;
   }
