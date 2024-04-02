@@ -56,14 +56,12 @@ void imu_init() {
 
 #ifdef SILVERWARE_IMU
 void imu_calc() {
-  state.GEstG.yaw = state.GEstG.yaw - (state.gyro_delta_angle.roll) * state.GEstG.roll;
-  state.GEstG.roll = (state.gyro_delta_angle.roll) * state.GEstG.yaw + state.GEstG.roll;
-
-  state.GEstG.pitch = state.GEstG.pitch + (state.gyro_delta_angle.pitch) * state.GEstG.yaw;
-  state.GEstG.yaw = -(state.gyro_delta_angle.pitch) * state.GEstG.pitch + state.GEstG.yaw;
-
-  state.GEstG.roll = state.GEstG.roll - (state.gyro_delta_angle.yaw) * state.GEstG.pitch;
-  state.GEstG.pitch = (state.gyro_delta_angle.yaw) * state.GEstG.roll + state.GEstG.pitch;
+  const vec3_t rot = {{
+      -state.gyro_delta_angle.axis[1],
+      state.gyro_delta_angle.axis[0],
+      state.gyro_delta_angle.axis[2],
+  }};
+  state.GEstG = vec3_rotate(state.GEstG, rot);
 
   if (flags.on_ground) { // happyhour bartender - quad is ON GROUND and disarmed
     // calc acc mag
@@ -122,14 +120,12 @@ void imu_calc() {
 
 #ifdef QUICKSILVER_IMU
 void imu_calc() {
-  state.GEstG.yaw = state.GEstG.yaw - (state.gyro_delta_angle.roll) * state.GEstG.roll;
-  state.GEstG.roll = (state.gyro_delta_angle.roll) * state.GEstG.yaw + state.GEstG.roll;
-
-  state.GEstG.pitch = state.GEstG.pitch + (state.gyro_delta_angle.pitch) * state.GEstG.yaw;
-  state.GEstG.yaw = -(state.gyro_delta_angle.pitch) * state.GEstG.pitch + state.GEstG.yaw;
-
-  state.GEstG.roll = state.GEstG.roll - (state.gyro_delta_angle.yaw) * state.GEstG.pitch;
-  state.GEstG.pitch = (state.gyro_delta_angle.yaw) * state.GEstG.roll + state.GEstG.pitch;
+  const vec3_t rot = {{
+      -state.gyro_delta_angle.axis[1],
+      state.gyro_delta_angle.axis[0],
+      state.gyro_delta_angle.axis[2],
+  }};
+  state.GEstG = vec3_rotate(state.GEstG, rot);
 
   filter_lp_pt1_coeff(&filter, PT1_FILTER_HZ);
 
