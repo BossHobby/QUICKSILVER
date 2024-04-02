@@ -39,13 +39,12 @@ static const float pid_scales[PID_SIZE][PID_SIZE] = {
     {1.0f / 120.0f, 1.0f / 120.0f, 1.0f / 120.0f}, // kd
 };
 
-static float lasterror[PID_SIZE] = {0, 0, 0};
-static float lasterror2[PID_SIZE] = {0, 0, 0};
-
 static float lastrate[PID_SIZE] = {0, 0, 0};
 static float lastsetpoint[PID_SIZE] = {0, 0, 0};
 
-static float ierror[PID_SIZE] = {0, 0, 0};
+static vec3_t ierror;
+static vec3_t last_error;
+static vec3_t last_error2;
 
 static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
@@ -155,17 +154,6 @@ static inline float pid_tda_compensation() {
 // input: error[] = setpoint - gyro
 // output: state.pidoutput.axis[] = change required from motors
 void pid_calc() {
-  // rotates errors, by Rodrigues' rotation formula
-  const float ierrortemp[3] = {
-      ierror[0] - ierror[1] * state.gyro_delta_angle.axis[2] + ierror[2] * state.gyro_delta_angle.axis[1],
-      ierror[0] * state.gyro_delta_angle.axis[2] + ierror[1] - ierror[2] * state.gyro_delta_angle.axis[0],
-      -ierror[0] * state.gyro_delta_angle.axis[1] + ierror[1] * state.gyro_delta_angle.axis[0] + ierror[2],
-  };
-
-  ierror[0] = ierrortemp[0];
-  ierror[1] = ierrortemp[1];
-  ierror[2] = ierrortemp[2];
-
   filter_lp_pt1_coeff(&rx_filter, state.rx_filter_hz);
   filter_coeff(profile.filter.dterm[0].type, &filter[0], profile.filter.dterm[0].cutoff_freq);
   filter_coeff(profile.filter.dterm[1].type, &filter[1], profile.filter.dterm[1].cutoff_freq);
@@ -189,6 +177,9 @@ void pid_calc() {
     filter_lp_pt1_coeff(&dynamic_filter, d_term_dynamic_freq);
   }
 
+  // rotates errors
+  ierror = vec3_rotate(ierror, state.gyro_delta_angle);
+
 #pragma GCC unroll 3
   for (uint8_t x = 0; x < PID_SIZE; x++) {
     const float current_kp = profile_current_pid_rates()->kp.axis[x] * pid_scales[0][x];
@@ -206,16 +197,16 @@ void pid_calc() {
     const float iterm_windup = pid_compute_iterm_windup(x, pid_output.axis[x]);
     if (!pid_should_enable_iterm(x)) {
       // wind down integral while we are still on ground and we do not get any input from the sticks
-      ierror[x] *= 0.98f;
+      ierror.axis[x] *= 0.98f;
     }
     // SIMPSON_RULE_INTEGRAL
     // assuming similar time intervals
-    ierror[x] = ierror[x] + 0.5f * (1.0f / 3.0f) * (lasterror2[x] + 4 * lasterror[x] + state.error.axis[x]) * current_ki * iterm_windup * state.looptime;
-    ierror[x] = constrain(ierror[x], -integral_limit[x], integral_limit[x]);
-    lasterror2[x] = lasterror[x];
-    lasterror[x] = state.error.axis[x];
+    ierror.axis[x] = ierror.axis[x] + 0.5f * (1.0f / 3.0f) * (last_error2.axis[x] + 4 * last_error.axis[x] + state.error.axis[x]) * current_ki * iterm_windup * state.looptime;
+    ierror.axis[x] = constrain(ierror.axis[x], -integral_limit[x], integral_limit[x]);
+    last_error2.axis[x] = last_error.axis[x];
+    last_error.axis[x] = state.error.axis[x];
 
-    state.pid_i_term.axis[x] = ierror[x];
+    state.pid_i_term.axis[x] = ierror.axis[x];
 
     // D term
     float transition_setpoint_weight = 0;
