@@ -31,6 +31,15 @@ cbor_result_t cbor_decode_compact_vec3_t(cbor_value_t *dec, compact_vec3_t *vec)
 void vec3_from_array(vec3_t *out, float *in);
 void vec3_compress(compact_vec3_t *out, vec3_t *in, float scale);
 
+// Rodrigues' rotation formula, used in hot paths, lets inline
+static inline vec3_t vec3_rotate(const vec3_t vec, const vec3_t rot) {
+  return (vec3_t){{
+      vec.axis[0] - vec.axis[1] * rot.axis[2] + vec.axis[2] * rot.axis[1],
+      vec.axis[0] * rot.axis[2] + vec.axis[1] - vec.axis[2] * rot.axis[0],
+      -vec.axis[0] * rot.axis[1] + vec.axis[1] * rot.axis[0] + vec.axis[2],
+  }};
+}
+
 typedef union {
   struct {
     float roll;
