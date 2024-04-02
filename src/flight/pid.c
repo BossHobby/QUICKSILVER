@@ -155,19 +155,16 @@ static inline float pid_tda_compensation() {
 // input: error[] = setpoint - gyro
 // output: state.pidoutput.axis[] = change required from motors
 void pid_calc() {
-  // rotates errors, originally by joelucid
+  // rotates errors, by Rodrigues' rotation formula
+  const float ierrortemp[3] = {
+      ierror[0] - ierror[1] * state.gyro_delta_angle.axis[2] + ierror[2] * state.gyro_delta_angle.axis[1],
+      ierror[0] * state.gyro_delta_angle.axis[2] + ierror[1] - ierror[2] * state.gyro_delta_angle.axis[0],
+      -ierror[0] * state.gyro_delta_angle.axis[1] + ierror[1] * state.gyro_delta_angle.axis[0] + ierror[2],
+  };
 
-  // rotation around x axis:
-  ierror[1] -= ierror[2] * state.gyro_delta_angle.axis[0];
-  ierror[2] += ierror[1] * state.gyro_delta_angle.axis[0];
-
-  // rotation around y axis:
-  ierror[2] -= ierror[0] * state.gyro_delta_angle.axis[1];
-  ierror[0] += ierror[2] * state.gyro_delta_angle.axis[1];
-
-  // rotation around z axis:
-  ierror[0] -= ierror[1] * state.gyro_delta_angle.axis[2];
-  ierror[1] += ierror[0] * state.gyro_delta_angle.axis[2];
+  ierror[0] = ierrortemp[0];
+  ierror[1] = ierrortemp[1];
+  ierror[2] = ierrortemp[2];
 
   filter_lp_pt1_coeff(&rx_filter, state.rx_filter_hz);
   filter_coeff(profile.filter.dterm[0].type, &filter[0], profile.filter.dterm[0].cutoff_freq);
