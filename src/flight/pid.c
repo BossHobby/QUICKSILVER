@@ -213,7 +213,7 @@ void pid_calc() {
     }
     // SIMPSON_RULE_INTEGRAL
     // assuming similar time intervals
-    ierror[x] = ierror[x] + 0.166666f * (lasterror2[x] + 4 * lasterror[x] + state.error.axis[x]) * current_ki * iterm_windup * state.looptime;
+    ierror[x] = ierror[x] + 0.5f * (1.0f / 3.0f) * (lasterror2[x] + 4 * lasterror[x] + state.error.axis[x]) * current_ki * iterm_windup * state.looptime;
     ierror[x] = constrain(ierror[x], -integral_limit[x], integral_limit[x]);
     lasterror2[x] = lasterror[x];
     lasterror[x] = state.error.axis[x];
