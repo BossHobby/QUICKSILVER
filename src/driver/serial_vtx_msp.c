@@ -109,7 +109,8 @@ vtx_update_result_t serial_msp_vtx_update() {
     return VTX_IDLE;
   }
 
-  if (profile.serial.smart_audio == profile.serial.rx &&
+  if (profile.serial.smart_audio != SERIAL_PORT_INVALID &&
+      profile.serial.smart_audio == profile.serial.rx &&
       serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
     return VTX_IDLE;
   }

@@ -149,7 +149,8 @@ static bool vtx_detect_protocol() {
     vtx_settings.protocol = VTX_PROTOCOL_MSP_VTX;
   }
 
-  if (profile.serial.smart_audio == profile.serial.rx &&
+  if (profile.serial.smart_audio != SERIAL_PORT_INVALID &&
+      profile.serial.smart_audio == profile.serial.rx &&
       serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
     vtx_settings.protocol = VTX_PROTOCOL_MSP_VTX;
   }
@@ -328,7 +329,8 @@ void vtx_update() {
     return;
   }
 
-  if (profile.serial.smart_audio == profile.serial.rx &&
+  if (profile.serial.smart_audio != SERIAL_PORT_INVALID &&
+      profile.serial.smart_audio == profile.serial.rx &&
       serial_rx_detected_protcol != RX_SERIAL_PROTOCOL_CRSF) {
     // allow same serial for crsf
     return;
