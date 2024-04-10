@@ -44,6 +44,9 @@
 
 #define MAKE_SEMVER(major, minor, patch) ((major << 16) | (minor << 8) | patch)
 
+// workaround for vscode not reconginzing this synatx
+#define RANGE_INIT(start, end) start...(end - 1)
+
 float mapf(float x, float in_min, float in_max, float out_min, float out_max);
 
 float atan2approx(float y, float x);

@@ -106,11 +106,12 @@ typedef struct {
   bool is_init;
   volatile bool dma_done;
 
-  spi_txn_t *txns[SPI_TXN_MAX];
   // only modified by the main loop
   volatile uint8_t txn_head;
   // only modified by the intterupt or protected code
   volatile uint8_t txn_tail;
+
+  spi_txn_t *txns[SPI_TXN_MAX];
 
   spi_mode_t mode;
   uint32_t hz;
@@ -137,7 +138,7 @@ static inline void spi_bus_device_reconfigure(spi_bus_device_t *bus, spi_mode_t 
   bus->hz = hz;
 }
 
-static inline uint8_t spi_dma_is_ready(spi_ports_t port) {
+static inline bool spi_dma_is_ready(spi_ports_t port) {
   const spi_device_t *dev = &spi_dev[port];
   return dev->dma_done;
 }

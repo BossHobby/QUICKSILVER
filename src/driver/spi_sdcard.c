@@ -299,7 +299,7 @@ sdcard_status_t sdcard_update() {
       break;
     }
 
-    const uint8_t buf[20] = {[0 ... 19] = 0xff};
+    const uint8_t buf[20] = {[RANGE_INIT(0, 20)] = 0xff};
     const spi_txn_segment_t segs[] = {
         spi_make_seg_buffer(NULL, buf, 20),
     };

@@ -5,7 +5,9 @@
 #include "core/failloop.h"
 #include "driver/interrupt.h"
 
-FAST_RAM spi_device_t spi_dev[SPI_PORT_MAX];
+FAST_RAM spi_device_t spi_dev[SPI_PORT_MAX] = {
+    [RANGE_INIT(0, SPI_PORT_MAX)] = {.is_init = false, .dma_done = true, .txn_head = 0, .txn_tail = 0},
+};
 FAST_RAM spi_txn_t txn_pool[SPI_TXN_MAX];
 DMA_RAM uint8_t txn_buffers[SPI_TXN_MAX][DMA_ALIGN(512)];
 
