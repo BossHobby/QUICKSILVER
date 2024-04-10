@@ -289,7 +289,7 @@ void spi_bus_device_init(const spi_bus_device_t *bus) {
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count) {
   spi_txn_wait(bus);
 
-  while (!spi_txn_can_send(bus, true))
+  while (!spi_txn_can_send(bus, false))
     ;
 
   const spi_ports_t port = bus->port;
