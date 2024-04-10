@@ -308,9 +308,10 @@ void sixaxis_acc_cal() {
 
 #else
 
-bool sixaxis_init() {
-  return false;
+bool sixaxis_detect() {
+  return true;
 }
+void sixaxis_init() {}
 void sixaxis_read() {}
 
 void sixaxis_gyro_cal() {}

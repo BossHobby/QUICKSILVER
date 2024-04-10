@@ -181,4 +181,8 @@ void gyro_spi_calibrate() {
     break;
   }
 }
+#else
+float gyro_update_period() {
+  return 250.0f;
+}
 #endif
