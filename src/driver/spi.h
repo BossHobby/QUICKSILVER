@@ -123,7 +123,7 @@ extern const spi_port_def_t spi_port_defs[SPI_PORT_MAX];
 void spi_bus_device_init(const spi_bus_device_t *bus);
 
 void spi_txn_wait(spi_bus_device_t *bus);
-void spi_txn_continue_port(spi_ports_t port);
+bool spi_txn_continue_port(spi_ports_t port);
 
 void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts);
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count);
@@ -131,7 +131,7 @@ void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs
 static inline void spi_csn_enable(spi_bus_device_t *bus) { gpio_pin_reset(bus->nss); }
 static inline void spi_csn_disable(spi_bus_device_t *bus) { gpio_pin_set(bus->nss); }
 
-static inline void spi_txn_continue(spi_bus_device_t *bus) { spi_txn_continue_port(bus->port); }
+static inline bool spi_txn_continue(spi_bus_device_t *bus) { return spi_txn_continue_port(bus->port); }
 
 static inline void spi_bus_device_reconfigure(spi_bus_device_t *bus, spi_mode_t mode, uint32_t hz) {
   bus->mode = mode;
@@ -148,32 +148,33 @@ static inline bool spi_txn_ready(spi_bus_device_t *bus) {
   return dev->txn_head == dev->txn_tail;
 }
 
-#define spi_seg_submit_wait(bus, segs)                                                                             \
-  {                                                                                                                \
-    static_assert(__builtin_types_compatible_p(spi_txn_segment_t[], typeof(segs)), "spi segment not const array"); \
-    const uint32_t count = sizeof(segs) / sizeof(spi_txn_segment_t);                                               \
-    static_assert(count < SPI_TXN_SEG_MAX, "spi segment count > max");                                             \
-    spi_seg_submit_wait_ex(bus, segs, count);                                                                      \
+#define spi_seg_submit_wait(_bus, _segs)                                                                            \
+  {                                                                                                                 \
+    static_assert(__builtin_types_compatible_p(spi_txn_segment_t[], typeof(_segs)), "spi segment not const array"); \
+    const uint32_t count = sizeof(_segs) / sizeof(spi_txn_segment_t);                                               \
+    static_assert(count < SPI_TXN_SEG_MAX, "spi segment count > max");                                              \
+    spi_seg_submit_wait_ex(_bus, _segs, count);                                                                     \
   }
-#define spi_seg_submit(bus, segs, ...)                                                                             \
-  {                                                                                                                \
-    static_assert(__builtin_types_compatible_p(spi_txn_segment_t[], typeof(segs)), "spi segment not const array"); \
-    const uint32_t count = sizeof(segs) / sizeof(spi_txn_segment_t);                                               \
-    static_assert(count < SPI_TXN_SEG_MAX, "spi segment count > max");                                             \
-    spi_seg_submit_ex(bus, (spi_txn_opts_t){.segs = segs, .seg_count = count, __VA_ARGS__});                       \
+#define spi_seg_submit(_bus, _segs, ...)                                                                            \
+  {                                                                                                                 \
+    static_assert(__builtin_types_compatible_p(spi_txn_segment_t[], typeof(_segs)), "spi segment not const array"); \
+    const uint32_t count = sizeof(_segs) / sizeof(spi_txn_segment_t);                                               \
+    static_assert(count < SPI_TXN_SEG_MAX, "spi segment count > max");                                              \
+    spi_seg_submit_ex(_bus, (spi_txn_opts_t){.segs = _segs, .seg_count = count, __VA_ARGS__});                      \
   }
-#define spi_seg_submit_continue(bus, segs, ...) \
-  spi_seg_submit(bus, segs, __VA_ARGS__);       \
-  spi_txn_continue(bus);
+#define spi_seg_submit_continue(_bus, _segs, ...) ({ \
+  spi_seg_submit(_bus, _segs, __VA_ARGS__);          \
+  spi_txn_continue(_bus);                            \
+})
 
 static inline void spi_txn_set_done(void *arg) { *((bool *)arg) = true; }
-#define spi_seg_submit_check(bus, segs, ...)                        \
+#define spi_seg_submit_check(_bus, _segs, ...)                      \
   ({                                                                \
     static volatile bool __did_submit__ = false;                    \
     static volatile bool __is_done__ = false;                       \
     if (!__did_submit__) {                                          \
       __VA_ARGS__;                                                  \
-      spi_seg_submit_continue(bus, segs,                            \
+      spi_seg_submit_continue(_bus, _segs,                          \
                               .done_fn = spi_txn_set_done,          \
                               .done_fn_arg = (void *)&__is_done__); \
       __did_submit__ = true;                                        \

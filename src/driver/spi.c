@@ -60,22 +60,22 @@ void spi_txn_wait(spi_bus_device_t *bus) {
   }
 }
 
-void spi_txn_continue_port(spi_ports_t port) {
+bool spi_txn_continue_port(spi_ports_t port) {
   spi_device_t *dev = &spi_dev[port];
   spi_txn_t *txn = NULL;
 
   ATOMIC_BLOCK_ALL {
     if (dev->txn_head == dev->txn_tail) {
-      return;
+      return false;
     }
 
     txn = dev->txns[(dev->txn_tail + 1) % SPI_TXN_MAX];
     if (txn->status != TXN_READY) {
-      return;
+      return false;
     }
 
     if (!spi_txn_can_send(txn->bus, true)) {
-      return;
+      return false;
     }
 
     txn->status = TXN_IN_PROGRESS;
@@ -98,6 +98,8 @@ void spi_txn_continue_port(spi_ports_t port) {
   spi_csn_enable(txn->bus);
 
   spi_dma_transfer_begin(port, txn->buffer, txn->size);
+
+  return true;
 }
 
 void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts) {
