@@ -11,7 +11,7 @@ uint16_t adc_array[ADC_CHAN_MAX];
 adc_channel_t adc_pins[ADC_CHAN_MAX];
 
 extern uint16_t adc_read_raw(adc_chan_t index);
-extern float adc_convert_to_temp(float val);
+extern float adc_convert_to_temp(uint16_t val);
 
 static float adc_convert_to_mv(float value) {
   const float vref = (float)(VREFINT_CAL * VREFINT_CAL_VREF) / (float)adc_read_raw(ADC_CHAN_VREF);
