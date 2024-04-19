@@ -36,12 +36,14 @@ const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX] = {
         .rcc = RCC_APB1_GRP1(UART5),
     },
 #endif
+#ifndef STM32G4
     {
         .channel_index = 6,
         .channel = USART6,
         .irq = USART6_IRQn,
         .rcc = RCC_APB2_GRP1(USART6),
     },
+#endif
 #if defined(STM32F7) || defined(STM32H7)
     {
         .channel_index = 7,
@@ -98,7 +100,7 @@ void handle_usart_invert(serial_ports_t port, bool invert) {
     gpio_pin_reset(dev->inverter);
   }
 #endif
-#if defined(STM32F7) || defined(STM32H7)
+#if defined(STM32F7) || defined(STM32H7) || defined(STM32G4)
   if (invert) {
     LL_USART_SetRXPinLevel(USART.channel, LL_USART_RXPIN_LEVEL_INVERTED);
     LL_USART_SetTXPinLevel(USART.channel, LL_USART_TXPIN_LEVEL_INVERTED);
@@ -137,7 +139,7 @@ void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool s
   }
 #endif
 
-#if !defined(STM32F7) && !defined(STM32H7)
+#if !defined(STM32F7) && !defined(STM32H7) && !defined(STM32G4)
   LL_USART_ClearFlag_RXNE(USART.channel);
 #endif
   LL_USART_ClearFlag_TC(USART.channel);
@@ -268,7 +270,9 @@ USART_IRQ_HANDLER(3)
 USART_IRQ_HANDLER(4)
 USART_IRQ_HANDLER(5)
 #endif
+#ifndef STM32G4
 USART_IRQ_HANDLER(6)
+#endif
 #if defined(STM32F7) || defined(STM32H7)
 USART_IRQ_HANDLER(7)
 USART_IRQ_HANDLER(8)

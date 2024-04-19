@@ -8,6 +8,12 @@
 #define BOOTLOADER_OFFSET 0x1FFF0000
 #endif
 
+#ifdef STM32G4
+#define BOOTLOADER_OFFSET 0x1FFF0000
+#define LL_RTC_BAK_SetRegister LL_RTC_BKP_SetRegister
+#define LL_RTC_BAK_GetRegister LL_RTC_BKP_GetRegister
+#endif
+
 #ifdef STM32F7
 #define BOOTLOADER_OFFSET 0x1FF00000
 #endif
@@ -39,6 +45,11 @@ __attribute__((__used__)) void system_check_for_bootloader() {
   switch (magic) {
   case RESET_BOOTLOADER_MAGIC: {
     backup_register_write(0);
+
+#ifdef STM32G4
+    HAL_RCC_DeInit();
+    __HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH();
+#endif
 
     void (*DfuBootJump)(void) = (void (*)(void))(*((uint32_t *)(BOOTLOADER_OFFSET + 4)));
     __set_MSP(*((uint32_t *)BOOTLOADER_OFFSET));

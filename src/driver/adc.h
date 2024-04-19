@@ -10,7 +10,11 @@ typedef enum {
   ADC_DEVICE2,
   ADC_DEVICE3,
 #endif
-  ADC_DEVICEMAX,
+#ifdef STM32G473
+  ADC_DEVICE4,
+  ADC_DEVICE5,
+#endif
+  ADC_DEVICE_MAX,
 } adc_devices_t;
 
 typedef enum {

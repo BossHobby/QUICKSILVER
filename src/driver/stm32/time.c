@@ -33,6 +33,9 @@ void time_init() {
 #endif
   __HAL_RCC_SYSCFG_CLK_ENABLE();
 
+#ifdef STM32G4
+  LL_PWR_DisableUCPDDeadBattery();
+#endif
   // interrupt only every 1ms
   SysTick_Config(SYS_CLOCK_FREQ_HZ / 1000);
 
