@@ -107,11 +107,12 @@ static void dshot_init_gpio_port(dshot_gpio_port_t *port) {
 
   const dma_stream_def_t *dma = &dma_stream_defs[port->dma_device];
 
+  dma_enable_rcc(port->dma_device);
   LL_DMA_DeInit(dma->port, dma->stream_index);
 
   LL_DMA_InitTypeDef DMA_InitStructure;
   LL_DMA_StructInit(&DMA_InitStructure);
-#ifdef STM32H7
+#if defined(STM32H7) || defined(STM32G4)
   DMA_InitStructure.PeriphRequest = dma->request;
 #else
   DMA_InitStructure.Channel = dma->channel;
@@ -126,9 +127,11 @@ static void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   DMA_InitStructure.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_WORD;
   DMA_InitStructure.Mode = LL_DMA_MODE_NORMAL;
   DMA_InitStructure.Priority = LL_DMA_PRIORITY_VERYHIGH;
+#ifndef STM32G4
   DMA_InitStructure.FIFOMode = LL_DMA_FIFOMODE_DISABLE;
   DMA_InitStructure.MemBurst = LL_DMA_MBURST_SINGLE;
   DMA_InitStructure.PeriphBurst = LL_DMA_PBURST_SINGLE;
+#endif
   LL_DMA_Init(dma->port, dma->stream_index, &DMA_InitStructure);
 
   interrupt_enable(dma->irq, DMA_PRIORITY);
@@ -172,10 +175,8 @@ void motor_dshot_init() {
   gpio_port_count = 0;
 
   rcc_enable(RCC_APB2_GRP1(TIM1));
-  rcc_enable(RCC_AHB1_GRP1(DMA2));
 
   // setup timer to 1/3 of the full bit time
-
   LL_TIM_InitTypeDef tim_init;
   LL_TIM_StructInit(&tim_init);
   tim_init.Autoreload = DSHOT_SYMBOL_TIME;
@@ -184,6 +185,7 @@ void motor_dshot_init() {
   tim_init.CounterMode = LL_TIM_COUNTERMODE_UP;
   LL_TIM_Init(TIM1, &tim_init);
   LL_TIM_EnableARRPreload(TIM1);
+  LL_TIM_DisableMasterSlaveMode(TIM1);
 
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
     dshot_init_motor_pin(i);
@@ -207,9 +209,9 @@ static void dshot_dma_setup_port(uint32_t index) {
 
   dma_clear_flag_tc(dma);
 
-  dma->stream->PAR = (uint32_t)&port->gpio->BSRR;
-  dma->stream->M0AR = (uint32_t)&port_dma_buffer[index][0];
-  dma->stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
+  LL_DMA_SetPeriphAddress(dma->port, dma->stream_index, (uint32_t)&port->gpio->BSRR);
+  LL_DMA_SetMemoryAddress(dma->port, dma->stream_index, (uint32_t)&port_dma_buffer[index][0]);
+  LL_DMA_SetDataLength(dma->port, dma->stream_index, DSHOT_DMA_BUFFER_SIZE);
 
   LL_DMA_EnableStream(dma->port, dma->stream_index);
   dshot_enable_dma_request(port->timer_channel);

@@ -13,7 +13,9 @@
 #define FLASH_FLAG_ALL_ERRORS (FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGSERR)
 #endif
 
-#ifdef STM32H7
+#if defined(STM32G4)
+#define PROGRAM_TYPE FLASH_TYPEPROGRAM_DOUBLEWORD
+#elif defined(STM32H7)
 #define PROGRAM_TYPE FLASH_TYPEPROGRAM_FLASHWORD
 #else
 #define PROGRAM_TYPE FLASH_TYPEPROGRAM_WORD
@@ -34,7 +36,15 @@ void fmc_unlock() {
 void fmc_erase() {
   // clear error status
   __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS);
-#ifdef STM32H7
+#if defined(STM32G4)
+  uint32_t page_error;
+  FLASH_EraseInitTypeDef erase_init;
+  erase_init.TypeErase = FLASH_TYPEERASE_PAGES;
+  erase_init.Banks = FLASH_BANK_1;
+  erase_init.Page = 24;
+  erase_init.NbPages = 8;
+  HAL_FLASHEx_Erase(&erase_init, &page_error);
+#elif defined(STM32H7)
   FLASH_Erase_Sector(FLASH_SECTOR_1, FLASH_BANK_BOTH, FLASH_VOLTAGE_RANGE_3);
 #else
   FLASH_Erase_Sector(FLASH_SECTOR_3, FLASH_VOLTAGE_RANGE_3);

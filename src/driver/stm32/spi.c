@@ -108,11 +108,14 @@ static void spi_dma_init_rx(spi_ports_t port) {
   LL_DMA_DeInit(dma->port, dma->stream_index);
 
   LL_DMA_InitTypeDef DMA_InitStructure;
-#ifdef STM32H7
+#if defined(STM32H7) || defined(STM32G4)
   DMA_InitStructure.PeriphRequest = dma->request;
-  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&PORT.channel->RXDR;
 #else
   DMA_InitStructure.Channel = dma->channel;
+#endif
+#if defined(STM32H7)
+  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&PORT.channel->RXDR;
+#else
   DMA_InitStructure.PeriphOrM2MSrcAddress = LL_SPI_DMA_GetRegAddr(PORT.channel);
 #endif
   DMA_InitStructure.MemoryOrM2MDstAddress = 0;
@@ -124,9 +127,11 @@ static void spi_dma_init_rx(spi_ports_t port) {
   DMA_InitStructure.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_BYTE;
   DMA_InitStructure.Mode = LL_DMA_MODE_NORMAL;
   DMA_InitStructure.Priority = LL_DMA_PRIORITY_HIGH;
+#ifndef STM32G4
   DMA_InitStructure.FIFOMode = LL_DMA_FIFOMODE_DISABLE;
   DMA_InitStructure.MemBurst = LL_DMA_MBURST_SINGLE;
   DMA_InitStructure.PeriphBurst = LL_DMA_PBURST_SINGLE;
+#endif
   LL_DMA_Init(dma->port, dma->stream_index, &DMA_InitStructure);
 }
 
@@ -136,11 +141,14 @@ static void spi_dma_init_tx(spi_ports_t port) {
   LL_DMA_DeInit(dma->port, dma->stream_index);
 
   LL_DMA_InitTypeDef DMA_InitStructure;
-#ifdef STM32H7
+#if defined(STM32H7) || defined(STM32G4)
   DMA_InitStructure.PeriphRequest = dma->request;
-  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&PORT.channel->TXDR;
 #else
   DMA_InitStructure.Channel = dma->channel;
+#endif
+#if defined(STM32H7)
+  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&PORT.channel->TXDR;
+#else
   DMA_InitStructure.PeriphOrM2MSrcAddress = LL_SPI_DMA_GetRegAddr(PORT.channel);
 #endif
   DMA_InitStructure.MemoryOrM2MDstAddress = 0;
@@ -152,9 +160,11 @@ static void spi_dma_init_tx(spi_ports_t port) {
   DMA_InitStructure.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_BYTE;
   DMA_InitStructure.Mode = LL_DMA_MODE_NORMAL;
   DMA_InitStructure.Priority = LL_DMA_PRIORITY_VERYHIGH;
+#ifndef STM32G4
   DMA_InitStructure.FIFOMode = LL_DMA_FIFOMODE_DISABLE;
   DMA_InitStructure.MemBurst = LL_DMA_MBURST_SINGLE;
   DMA_InitStructure.PeriphBurst = LL_DMA_PBURST_SINGLE;
+#endif
   LL_DMA_Init(dma->port, dma->stream_index, &DMA_InitStructure);
 }
 
@@ -265,6 +275,11 @@ static void spi_device_init(spi_ports_t port) {
   LL_SPI_SetFIFOThreshold(def->channel, LL_SPI_FIFO_TH_01DATA);
 #endif
   LL_SPI_Init(def->channel, &default_init);
+#if defined(STM32G4)
+  LL_SPI_SetRxFIFOThreshold(def->channel, LL_SPI_RX_FIFO_TH_QUARTER);
+  LL_SPI_SetStandard(def->channel, LL_SPI_PROTOCOL_MOTOROLA);
+  LL_SPI_DisableNSSPulseMgt(def->channel);
+#endif
 
   spi_dev[port].is_init = true;
   spi_dev[port].dma_done = true;

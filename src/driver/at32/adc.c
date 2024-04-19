@@ -14,7 +14,7 @@
 extern uint16_t adc_array[ADC_CHAN_MAX];
 extern adc_channel_t adc_pins[ADC_CHAN_MAX];
 
-static adc_type *adc_devs[ADC_DEVICEMAX] = {
+static adc_type *adc_devs[ADC_DEVICE_MAX] = {
     ADC1,
     ADC2,
     ADC3,
@@ -23,7 +23,7 @@ static adc_type *adc_devs[ADC_DEVICEMAX] = {
 static void adc_init_pin(adc_chan_t chan, gpio_pins_t pin) {
   adc_array[chan] = 1;
   adc_pins[chan].pin = PIN_NONE;
-  adc_pins[chan].dev = ADC_DEVICEMAX;
+  adc_pins[chan].dev = ADC_DEVICE_MAX;
 
   switch (chan) {
   case ADC_CHAN_VREF:
@@ -72,7 +72,7 @@ static void adc_init_dev() {
   common_init.vbat_state = FALSE;
   adc_common_config(&common_init);
 
-  for (uint32_t i = 0; i < ADC_DEVICEMAX; i++) {
+  for (uint32_t i = 0; i < ADC_DEVICE_MAX; i++) {
     adc_base_config_type base_init;
     base_init.sequence_mode = FALSE;
     base_init.repeat_mode = FALSE;
@@ -143,7 +143,7 @@ uint16_t adc_read_raw(adc_chan_t index) {
     do {
       last_adc_chan = (last_adc_chan + 1) % ADC_CHAN_MAX;
       // skip through all channels without a dev
-    } while (adc_pins[last_adc_chan].dev == ADC_DEVICEMAX);
+    } while (adc_pins[last_adc_chan].dev == ADC_DEVICE_MAX);
 
     adc_start_conversion(last_adc_chan);
   }
@@ -151,6 +151,6 @@ uint16_t adc_read_raw(adc_chan_t index) {
   return adc_array[index];
 }
 
-float adc_convert_to_temp(float val) {
+float adc_convert_to_temp(uint16_t val) {
   return (ADC_TEMP_BASE - val * ADC_VREF / 4096) / ADC_TEMP_SLOPE + 25;
 }
