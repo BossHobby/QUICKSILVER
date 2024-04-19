@@ -19,6 +19,14 @@
 
 #define CDC_PROTOCOL USB_PROTO_NONE
 
+#ifdef STM32G4
+#define USB_IRQ USB_LP_IRQn
+#define USB_IRQ_HANDLER USB_LP_IRQHandler
+#else
+#define USB_IRQ OTG_FS_IRQn
+#define USB_IRQ_HANDLER OTG_FS_IRQHandler
+#endif
+
 struct cdc_config {
   struct usb_config_descriptor config;
   struct usb_iad_descriptor comm_iad;
@@ -222,7 +230,7 @@ static usbd_respond cdc_control(usbd_device *dev, usbd_ctlreq *req, usbd_rqc_cal
 
 static void cdc_rxonly(usbd_device *dev, uint8_t event, uint8_t ep) {
   if (ring_buffer_free(&usb_rx_buffer) <= CDC_DATA_SZ) {
-    interrupt_disable(OTG_FS_IRQn);
+    interrupt_disable(USB_IRQ);
     rx_stalled = true;
     return;
   }
@@ -241,9 +249,9 @@ static void cdc_kickoff_rx() {
     return;
   }
 
-  interrupt_disable(OTG_FS_IRQn);
+  interrupt_disable(USB_IRQ);
   cdc_rxonly(&udev, 0, CDC_RXD_EP);
-  interrupt_enable(OTG_FS_IRQn, USB_PRIORITY);
+  interrupt_enable(USB_IRQ, USB_PRIORITY);
 }
 
 static void cdc_txonly(usbd_device *dev, uint8_t event, uint8_t ep) {
@@ -278,9 +286,9 @@ static void cdc_kickoff_tx() {
     return;
   }
 
-  interrupt_disable(OTG_FS_IRQn);
+  interrupt_disable(USB_IRQ);
   cdc_txonly(&udev, 0, CDC_TXD_EP);
-  interrupt_enable(OTG_FS_IRQn, USB_PRIORITY);
+  interrupt_enable(USB_IRQ, USB_PRIORITY);
 }
 
 static usbd_respond cdc_setconf(usbd_device *dev, uint8_t cfg) {
@@ -311,11 +319,12 @@ static usbd_respond cdc_setconf(usbd_device *dev, uint8_t cfg) {
   }
 }
 
-void OTG_FS_IRQHandler() {
+void USB_IRQ_HANDLER() {
   usbd_poll(&udev);
 }
 
 void usb_drv_init() {
+#ifndef STM32G4
   gpio_config_t gpio_init;
   gpio_init.mode = GPIO_ALTERNATE;
   gpio_init.output = GPIO_PUSHPULL;
@@ -329,8 +338,9 @@ void usb_drv_init() {
   gpio_pin_init_af(PIN_A11, gpio_init, GPIO_AF10_OTG_FS);
   gpio_pin_init_af(PIN_A12, gpio_init, GPIO_AF10_OTG_FS);
 #endif
+#endif
 
-  interrupt_enable(OTG_FS_IRQn, USB_PRIORITY);
+  interrupt_enable(USB_IRQ, USB_PRIORITY);
 
   usbd_init(&udev, &usbd_hw, CDC_EP0_SIZE, ubuf, sizeof(ubuf));
   usbd_reg_config(&udev, cdc_setconf);

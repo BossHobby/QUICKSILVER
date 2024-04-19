@@ -16,6 +16,23 @@
 #include <stm32f4xx_ll_usart.h>
 #endif
 
+#ifdef STM32G4
+#include <stm32g4xx.h>
+#include <stm32g4xx_hal_flash.h>
+#include <stm32g4xx_ll_adc.h>
+#include <stm32g4xx_ll_bus.h>
+#include <stm32g4xx_ll_dma.h>
+#include <stm32g4xx_ll_exti.h>
+#include <stm32g4xx_ll_fmc.h>
+#include <stm32g4xx_ll_gpio.h>
+#include <stm32g4xx_ll_pwr.h>
+#include <stm32g4xx_ll_rtc.h>
+#include <stm32g4xx_ll_spi.h>
+#include <stm32g4xx_ll_system.h>
+#include <stm32g4xx_ll_tim.h>
+#include <stm32g4xx_ll_usart.h>
+#endif
+
 #ifdef STM32F7
 #include <stm32f7xx.h>
 #include <stm32f7xx_hal_flash.h>
@@ -50,10 +67,18 @@
 
 #ifdef STM32F411
 #define SYS_CLOCK_FREQ_HZ 108000000
-#define PWM_CLOCK_FREQ_HZ 108000000
+#define PWM_CLOCK_FREQ_HZ SYS_CLOCK_FREQ_HZ
 #define SPI_CLOCK_FREQ_HZ (SYS_CLOCK_FREQ_HZ / 2)
 
 #define LOOPTIME_MAX 250
+#endif
+
+#ifdef STM32G473
+#define SYS_CLOCK_FREQ_HZ 168000000
+#define PWM_CLOCK_FREQ_HZ SYS_CLOCK_FREQ_HZ
+#define SPI_CLOCK_FREQ_HZ SYS_CLOCK_FREQ_HZ
+
+#define LOOPTIME_MAX 125
 #endif
 
 #ifdef STM32F405
@@ -66,7 +91,7 @@
 
 #ifdef STM32F7
 #define SYS_CLOCK_FREQ_HZ 216000000
-#define PWM_CLOCK_FREQ_HZ 216000000
+#define PWM_CLOCK_FREQ_HZ SYS_CLOCK_FREQ_HZ
 #define SPI_CLOCK_FREQ_HZ (SYS_CLOCK_FREQ_HZ / 4)
 
 #define LOOPTIME_MAX 125
@@ -102,7 +127,11 @@ typedef struct {
 
   uint32_t request;
 
+#ifdef STM32G4
+  DMA_Channel_TypeDef *stream;
+#else
   DMA_Stream_TypeDef *stream;
+#endif
   uint8_t stream_index;
 
   IRQn_Type irq;
