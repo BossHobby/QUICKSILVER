@@ -6,6 +6,20 @@
 
 typedef enum {
   TIMER_INVALID,
+#if defined(STM32G4)
+  TIMER1,
+  TIMER2,
+  TIMER3,
+  TIMER4,
+  TIMER5,
+  TIMER6,
+  TIMER7,
+  TIMER8,
+  TIMER15,
+  TIMER16,
+  TIMER17,
+  TIMER20,
+#else
   TIMER1,
   TIMER2,
   TIMER3,
@@ -19,18 +33,19 @@ typedef enum {
   TIMER9,
   TIMER10,
   TIMER11,
-#ifndef STM32F411
+#if !defined(STM32F411) && !defined(STM32G473)
   TIMER12,
   TIMER13,
   TIMER14,
 #endif
-#ifdef STM32H743
+#if defined(STM32H743) || defined(STM32G473)
   TIMER15,
   TIMER16,
   TIMER17,
 #endif
-#ifdef AT32F4
+#if defined(AT32F4) || defined(STM32G473)
   TIMER20,
+#endif
 #endif
   TIMER_MAX,
 } timer_index_t;
@@ -44,6 +59,7 @@ typedef enum {
   TIMER_CH3 = (0x1 << 4),
   TIMER_CH3N = (0x1 << 5),
   TIMER_CH4 = (0x1 << 6),
+  TIMER_CH4N = (0x1 << 7),
   TIMER_CH_ALL = 0xff,
 } timer_channel_t;
 

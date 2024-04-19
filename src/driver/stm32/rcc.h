@@ -13,7 +13,7 @@ typedef enum {
   RCC_AHB4_GRP1,
 #endif
   RCC_APB1_GRP1,
-#ifdef STM32H7
+#if defined(STM32H7) || defined(STM32G4)
   RCC_APB1_GRP2,
 #endif
   RCC_APB2_GRP1,

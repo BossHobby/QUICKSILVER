@@ -1,0 +1,37 @@
+{
+    "build": {
+        "core": "stm32",
+        "cpu": "cortex-m4",
+        "extra_flags": "-DSTM32G473xx -DSTM32G473 -DSTM32G4xx -DSTM32G4 -DSTM32 -DMCU_NAME=stm32g473 -DHSE_VALUE=8000000U -DUSE_FAST_RAM -DUSB_PMASIZE=0x400",
+        "f_cpu": "170000000L",
+        "mcu": "stm32g473",
+        "product_line": "STM32G473xx",
+        "variant": "Generic_G473"
+    },
+    "debug": {
+        "jlink_device": "STM32G473CB",
+        "openocd_target": "stm32g4x",
+        "svd_path": "STM32G473xx.svd"
+    },
+    "frameworks": [
+        "arduino",
+        "cmsis",
+        "libopencm3",
+        "stm32cube"
+    ],
+    "name": "STM32G473CE (128k RAM. 512k Flash)",
+    "upload": {
+        "maximum_ram_size": 131072,
+        "maximum_size": 524288,
+        "protocol": "stlink",
+        "protocols": [
+            "stlink",
+            "jlink",
+            "cmsis-dap",
+            "blackmagic",
+            "mbed"
+        ]
+    },
+    "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32g473ce.html",
+    "vendor": "ST"
+}

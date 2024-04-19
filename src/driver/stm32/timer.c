@@ -6,98 +6,45 @@
 
 const timer_def_t timer_defs[TIMER_MAX] = {
     [TIMER_INVALID] = {},
-    [TIMER1] = {
-        .rcc = RCC_APB2_GRP1(TIM1),
-        .irq = TIM1_UP_TIM10_IRQn,
-        .instance = TIM1,
-    },
-    [TIMER2] = {
-        .rcc = RCC_APB1_GRP1(TIM2),
-        .irq = TIM2_IRQn,
-        .instance = TIM2,
-    },
-    [TIMER3] = {
-        .rcc = RCC_APB1_GRP1(TIM3),
-        .irq = TIM3_IRQn,
-        .instance = TIM3,
-    },
-    [TIMER4] = {
-        .rcc = RCC_APB1_GRP1(TIM4),
-        .irq = TIM4_IRQn,
-        .instance = TIM4,
-    },
-    [TIMER5] = {
-        .rcc = RCC_APB1_GRP1(TIM5),
-        .irq = TIM5_IRQn,
-        .instance = TIM5,
-    },
+#if defined(STM32G4)
+    [TIMER1] = {.rcc = RCC_APB2_GRP1(TIM1), .irq = TIM1_UP_TIM16_IRQn, .instance = TIM1},
+    [TIMER2] = {.rcc = RCC_APB1_GRP1(TIM2), .irq = TIM2_IRQn, .instance = TIM2},
+    [TIMER3] = {.rcc = RCC_APB1_GRP1(TIM3), .irq = TIM3_IRQn, .instance = TIM3},
+    [TIMER4] = {.rcc = RCC_APB1_GRP1(TIM4), .irq = TIM4_IRQn, .instance = TIM4},
+    [TIMER5] = {.rcc = RCC_APB1_GRP1(TIM5), .irq = TIM5_IRQn, .instance = TIM5},
+    [TIMER6] = {.rcc = RCC_APB1_GRP1(TIM6), .irq = TIM6_DAC_IRQn, .instance = TIM6},
+    [TIMER7] = {.rcc = RCC_APB1_GRP1(TIM7), .irq = TIM7_DAC_IRQn, .instance = TIM7},
+    [TIMER8] = {.rcc = RCC_APB2_GRP1(TIM8), .irq = TIM8_UP_IRQn, .instance = TIM8},
+    [TIMER15] = {.rcc = RCC_APB2_GRP1(TIM15), .irq = TIM1_BRK_TIM15_IRQn, .instance = TIM15},
+    [TIMER16] = {.rcc = RCC_APB2_GRP1(TIM16), .irq = TIM1_UP_TIM16_IRQn, .instance = TIM16},
+    [TIMER17] = {.rcc = RCC_APB2_GRP1(TIM17), .irq = TIM1_TRG_COM_TIM17_IRQn, .instance = TIM17},
+    [TIMER20] = {.rcc = RCC_APB2_GRP1(TIM20), .irq = TIM20_UP_IRQn, .instance = TIM20},
+#else
+    [TIMER1] = {.rcc = RCC_APB2_GRP1(TIM1), .irq = TIM1_UP_TIM10_IRQn, .instance = TIM1},
+    [TIMER2] = {.rcc = RCC_APB1_GRP1(TIM2), .irq = TIM2_IRQn, .instance = TIM2},
+    [TIMER3] = {.rcc = RCC_APB1_GRP1(TIM3), .irq = TIM3_IRQn, .instance = TIM3},
+    [TIMER4] = {.rcc = RCC_APB1_GRP1(TIM4), .irq = TIM4_IRQn, .instance = TIM4},
+    [TIMER5] = {.rcc = RCC_APB1_GRP1(TIM5), .irq = TIM5_IRQn, .instance = TIM5},
 #ifndef STM32F411
-    [TIMER6] = {
-        .rcc = RCC_APB1_GRP1(TIM6),
-        .irq = TIM6_DAC_IRQn,
-        .instance = TIM6,
-    },
-    [TIMER7] = {
-        .rcc = RCC_APB1_GRP1(TIM7),
-        .irq = TIM7_IRQn,
-        .instance = TIM7,
-    },
-    [TIMER8] = {
-        .rcc = RCC_APB2_GRP1(TIM8),
-        .irq = TIM8_UP_TIM13_IRQn,
-        .instance = TIM8,
-    },
+    [TIMER6] = {.rcc = RCC_APB1_GRP1(TIM6), .irq = TIM6_DAC_IRQn, .instance = TIM6},
+    [TIMER7] = {.rcc = RCC_APB1_GRP1(TIM7), .irq = TIM7_IRQn, .instance = TIM7},
+    [TIMER8] = {.rcc = RCC_APB2_GRP1(TIM8), .irq = TIM8_UP_TIM13_IRQn, .instance = TIM8},
 #endif
 #ifndef STM32H7
-    [TIMER9] = {
-        .rcc = RCC_APB2_GRP1(TIM9),
-        .irq = TIM1_BRK_TIM9_IRQn,
-        .instance = TIM9,
-    },
-    [TIMER10] = {
-        .rcc = RCC_APB2_GRP1(TIM10),
-        .irq = TIM1_UP_TIM10_IRQn,
-        .instance = TIM10,
-    },
-    [TIMER11] = {
-        .rcc = RCC_APB2_GRP1(TIM11),
-        .irq = TIM1_TRG_COM_TIM11_IRQn,
-        .instance = TIM11,
-    },
+    [TIMER9] = {.rcc = RCC_APB2_GRP1(TIM9), .irq = TIM1_BRK_TIM9_IRQn, .instance = TIM9},
+    [TIMER10] = {.rcc = RCC_APB2_GRP1(TIM10), .irq = TIM1_UP_TIM10_IRQn, .instance = TIM10},
+    [TIMER11] = {.rcc = RCC_APB2_GRP1(TIM11), .irq = TIM1_TRG_COM_TIM11_IRQn, .instance = TIM11},
 #endif
 #ifndef STM32F411
-    [TIMER12] = {
-        .rcc = RCC_APB1_GRP1(TIM12),
-        .irq = TIM8_BRK_TIM12_IRQn,
-        .instance = TIM12,
-    },
-    [TIMER13] = {
-        .rcc = RCC_APB1_GRP1(TIM13),
-        .irq = TIM8_UP_TIM13_IRQn,
-        .instance = TIM13,
-    },
-    [TIMER14] = {
-        .rcc = RCC_APB1_GRP1(TIM14),
-        .irq = TIM8_TRG_COM_TIM14_IRQn,
-        .instance = TIM14,
-    },
+    [TIMER12] = {.rcc = RCC_APB1_GRP1(TIM12), .irq = TIM8_BRK_TIM12_IRQn, .instance = TIM12},
+    [TIMER13] = {.rcc = RCC_APB1_GRP1(TIM13), .irq = TIM8_UP_TIM13_IRQn, .instance = TIM13},
+    [TIMER14] = {.rcc = RCC_APB1_GRP1(TIM14), .irq = TIM8_TRG_COM_TIM14_IRQn, .instance = TIM14},
 #endif
 #ifdef STM32H743
-    [TIMER15] = {
-        .rcc = RCC_APB2_GRP1(TIM15),
-        .irq = TIM15_IRQn,
-        .instance = TIM15,
-    },
-    [TIMER16] = {
-        .rcc = RCC_APB2_GRP1(TIM16),
-        .irq = TIM16_IRQn,
-        .instance = TIM16,
-    },
-    [TIMER17] = {
-        .rcc = RCC_APB2_GRP1(TIM17),
-        .irq = TIM17_IRQn,
-        .instance = TIM17,
-    },
+    [TIMER15] = {.rcc = RCC_APB2_GRP1(TIM15), .irq = TIM15_IRQn, .instance = TIM15},
+    [TIMER16] = {.rcc = RCC_APB2_GRP1(TIM16), .irq = TIM16_IRQn, .instance = TIM16},
+    [TIMER17] = {.rcc = RCC_APB2_GRP1(TIM17), .irq = TIM17_IRQn, .instance = TIM17},
+#endif
 #endif
 };
 
@@ -149,63 +96,28 @@ static void timer_irq_handler() {
 #undef TIM1_TRG_COM_TIM11_IRQHandler
 #endif
 
-void TIM15_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM16_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM17_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM1_BRK_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM1_BRK_TIM9_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM1_CC_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM1_TRG_COM_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM1_TRG_COM_TIM11_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM1_UP_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM1_UP_TIM10_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM2_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM3_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM4_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM5_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM6_DAC_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM7_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM8_BRK_TIM12_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM8_CC_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM8_TRG_COM_TIM14_IRQHandler() {
-  timer_irq_handler();
-}
-void TIM8_UP_TIM13_IRQHandler() {
-  timer_irq_handler();
-}
+void TIM1_BRK_IRQHandler() { timer_irq_handler(); }
+void TIM1_BRK_TIM15_IRQHandler() { timer_irq_handler(); }
+void TIM1_BRK_TIM9_IRQHandler() { timer_irq_handler(); }
+void TIM1_CC_IRQHandler() { timer_irq_handler(); }
+void TIM1_TRG_COM_IRQHandler() { timer_irq_handler(); }
+void TIM1_TRG_COM_TIM11_IRQHandler() { timer_irq_handler(); }
+void TIM1_TRG_COM_TIM17_IRQHandler() { timer_irq_handler(); }
+void TIM1_UP_IRQHandler() { timer_irq_handler(); }
+void TIM1_UP_TIM10_IRQHandler() { timer_irq_handler(); }
+void TIM1_UP_TIM16_IRQHandler() { timer_irq_handler(); }
+void TIM15_IRQHandler() { timer_irq_handler(); }
+void TIM16_IRQHandler() { timer_irq_handler(); }
+void TIM17_IRQHandler() { timer_irq_handler(); }
+void TIM2_IRQHandler() { timer_irq_handler(); }
+void TIM20_UP_IRQHandler() { timer_irq_handler(); }
+void TIM3_IRQHandler() { timer_irq_handler(); }
+void TIM4_IRQHandler() { timer_irq_handler(); }
+void TIM5_IRQHandler() { timer_irq_handler(); }
+void TIM6_DAC_IRQHandler() { timer_irq_handler(); }
+void TIM7_DAC_IRQHandler() { timer_irq_handler(); }
+void TIM7_IRQHandler() { timer_irq_handler(); }
+void TIM8_BRK_TIM12_IRQHandler() { timer_irq_handler(); }
+void TIM8_TRG_COM_TIM14_IRQHandler() { timer_irq_handler(); }
+void TIM8_UP_IRQHandler() { timer_irq_handler(); }
+void TIM8_UP_TIM13_IRQHandler() { timer_irq_handler(); }

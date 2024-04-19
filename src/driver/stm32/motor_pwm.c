@@ -48,7 +48,7 @@ void motor_pwm_init() {
     timer_up_init(tim, PWM_DIVIDER, PWM_TOP);
     LL_TIM_OC_Init(timer_defs[tim].instance, timer_channel_val(ch), &tim_oc_init);
     LL_TIM_EnableCounter(timer_defs[tim].instance);
-#ifndef STM32F411
+#if defined(TIMER14)
     if (tim != TIMER14) {
       LL_TIM_EnableAllOutputs(timer_defs[tim].instance);
     }

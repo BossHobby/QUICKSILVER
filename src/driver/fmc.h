@@ -4,7 +4,10 @@
 
 #include "util/util.h"
 
-#if defined(STM32H7)
+#if defined(STM32G4)
+#define FLASH_WORD_SIZE 8
+typedef uint64_t flash_word_t;
+#elif defined(STM32H7)
 #define FLASH_WORD_SIZE 32
 typedef uint64_t flash_word_t;
 #else

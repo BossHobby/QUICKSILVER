@@ -33,7 +33,7 @@ class DevicesCache(dict):
         )
 
         # roughly filter to supported devices
-        supported = ["stm32f4", "stm32f7", "stm32h7"]
+        supported = ["stm32f4", "stm32g4", "stm32f7", "stm32h7"]
         device_file_names = [
             dfn for dfn in device_file_names if any(s in dfn for s in supported)
         ]
@@ -109,6 +109,7 @@ class DevicesCache(dict):
 devices = [
     "stm32f405rg",
     "stm32f411re",
+    "stm32g473ceu6",
     "stm32f722re",
     "stm32f745vg",
     "stm32f765vi",
@@ -176,7 +177,7 @@ for device in devices:
 
             pins[f"P{pin['port']}{pin['pin']}".upper()] = funcs
 
-    with open(f"src/system/{device[:-2]}/gpio_pins.yaml", "w") as file:
+    with open(f"src/system/{device[:9]}/gpio_pins.yaml", "w") as file:
         documents = yaml.dump(pins, file, sort_keys=False)
 
 for filename in glob.glob("src/system/*/gpio_pins.yaml"):

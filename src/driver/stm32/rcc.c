@@ -24,7 +24,7 @@ void rcc_enable(rcc_reg_t reg) {
   case RCC_APB1_GRP1:
     LL_APB1_GRP1_EnableClock(periph);
     break;
-#ifdef STM32H7
+#if defined(STM32H7) || defined(STM32G4)
   case RCC_APB1_GRP2:
     LL_APB1_GRP2_EnableClock(periph);
     break;
