@@ -56,7 +56,7 @@ msp_t crsf_msp = {
     .buffer_size = MSP_BUFFER_SIZE,
     .buffer_offset = 0,
     .send = rx_serial_crsf_msp_send,
-    .device = MSP_DEVICE_VTX,
+    .device = MSP_DEVICE_RX,
 };
 
 static uint8_t msp_tx_buffer[MSP_BUFFER_SIZE];
@@ -201,6 +201,7 @@ static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
   case CRSF_FRAMETYPE_MSP_WRITE:
   case CRSF_FRAMETYPE_MSP_REQ: {
     msp_origin = rx_data[2];
+    crsf_msp.device = profile.serial.smart_audio == profile.serial.rx ? MSP_DEVICE_VTX : MSP_DEVICE_RX;
     msp_process_telemetry(&crsf_msp, rx_data + 3, frame_length - 4);
     break;
   }

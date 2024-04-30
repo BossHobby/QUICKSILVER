@@ -83,6 +83,7 @@ typedef enum {
 typedef enum {
   MSP_DEVICE_FC,
   MSP_DEVICE_VTX,
+  MSP_DEVICE_RX,
   MSP_DEVICE_SPI_RX,
 } msp_device_t;
 
