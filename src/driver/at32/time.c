@@ -14,7 +14,6 @@ static void debug_time_init() {
 }
 
 void time_init() {
-  system_clock_config();
   crm_periph_clock_enable(CRM_SCFG_PERIPH_CLOCK, TRUE);
 
   // interrupt only every 1ms
