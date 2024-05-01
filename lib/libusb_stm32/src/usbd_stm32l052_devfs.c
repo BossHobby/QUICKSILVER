@@ -101,7 +101,7 @@ static uint16_t get_next_pma(uint16_t sz) {
         if ((tbl->rx.addr) && (tbl->rx.addr < _result)) _result = tbl->rx.addr;
         if ((tbl->tx.addr) && (tbl->tx.addr < _result)) _result = tbl->tx.addr;
     }
-    return (_result < (0x020 + sz)) ? 0 : (_result - sz);
+    return (_result < (0x020U + sz)) ? 0 : (_result - sz);
 }
 
 static uint32_t getinfo(void) {
@@ -283,7 +283,7 @@ static void ep_deconfig(uint8_t ep) {
 }
 
 static uint16_t pma_read (uint8_t *buf, uint16_t blen, pma_rec *rx) {
-    uint16_t tmp;
+    uint16_t tmp = 0;
     uint16_t *pma = (void*)(USB_PMAADDR + rx->addr);
     uint16_t rxcnt = rx->cnt & 0x03FF;
     rx->cnt &= ~0x3FF;
