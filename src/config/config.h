@@ -148,6 +148,9 @@
 #define ACTUAL_BATTERY_VOLTAGE 4.20
 #define REPORTED_TELEMETRY_VOLTAGE 4.20
 
+// *************Use filtered voltage instead of fuel gauge voltage for low battery warnings
+#define USE_FILTERED_VOLTAGE_FOR_WARNINGS 0
+
 //**********************************************************************************************************************
 //***********************************************FILTER SETTINGS********************************************************
 

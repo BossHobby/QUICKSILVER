@@ -115,8 +115,13 @@ void vbat_calc() {
   state.vbat_compensated = tempvolt + vdrop_factor * thrfilt;
   state.vbat_compensated_cell_avg = state.vbat_compensated / (float)state.lipo_cell_count;
 
-  if ((state.vbat_compensated_cell_avg < profile.voltage.vbattlow + hyst) || (state.vbat_cell_avg < VBATTLOW_ABS))
-    flags.lowbatt = 1;
-  else
-    flags.lowbatt = 0;
+
+  if (profile.voltage.use_filtered_voltage_for_warnings) {
+    flags.lowbatt = state.vbat_cell_avg < profile.voltage.vbattlow ? 1 : 0;
+  } else {
+    if ((state.vbat_compensated_cell_avg < profile.voltage.vbattlow + hyst) || (state.vbat_cell_avg < VBATTLOW_ABS))
+      flags.lowbatt = 1;
+    else
+      flags.lowbatt = 0;
+  }
 }

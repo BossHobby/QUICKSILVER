@@ -224,6 +224,7 @@ typedef struct {
   float vbattlow;
   float actual_battery_voltage;
   float reported_telemetry_voltage;
+  uint8_t use_filtered_voltage_for_warnings;
   float vbat_scale;
   float ibat_scale;
 } profile_voltage_t;
@@ -235,6 +236,7 @@ typedef struct {
   MEMBER(vbattlow, float)                   \
   MEMBER(actual_battery_voltage, float)     \
   MEMBER(reported_telemetry_voltage, float) \
+  MEMBER(use_filtered_voltage_for_warnings, uint8_t) \
   MEMBER(vbat_scale, float)                 \
   MEMBER(ibat_scale, float)                 \
   END_STRUCT()
