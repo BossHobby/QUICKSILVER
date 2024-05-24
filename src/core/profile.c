@@ -383,6 +383,7 @@ const profile_t default_profile = {
         .vbattlow = VBATTLOW,
         .actual_battery_voltage = ACTUAL_BATTERY_VOLTAGE,
         .reported_telemetry_voltage = REPORTED_TELEMETRY_VOLTAGE,
+        .use_filtered_voltage_for_warnings = USE_FILTERED_VOLTAGE_FOR_WARNINGS,
         .vbat_scale = 110,
 #ifdef IBAT_SCALE
         .ibat_scale = IBAT_SCALE,
