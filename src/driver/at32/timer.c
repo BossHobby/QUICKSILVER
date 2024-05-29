@@ -108,6 +108,30 @@ uint32_t timer_channel_val(timer_channel_t chan) {
   }
 }
 
+void timer_enable_dma_request(timer_index_t tim, timer_channel_t chan, bool state) {
+  const timer_def_t *def = &timer_defs[tim];
+
+  switch (chan) {
+  case TIMER_CH1:
+  case TIMER_CH1N:
+    tmr_dma_request_enable(def->instance, TMR_C1_DMA_REQUEST, state ? TRUE : FALSE);
+    break;
+  case TIMER_CH2:
+  case TIMER_CH2N:
+    tmr_dma_request_enable(def->instance, TMR_C2_DMA_REQUEST, state ? TRUE : FALSE);
+    break;
+  case TIMER_CH3:
+  case TIMER_CH3N:
+    tmr_dma_request_enable(def->instance, TMR_C3_DMA_REQUEST, state ? TRUE : FALSE);
+    break;
+  case TIMER_CH4:
+    tmr_dma_request_enable(def->instance, TMR_C4_DMA_REQUEST, state ? TRUE : FALSE);
+    break;
+  default:
+    break;
+  }
+}
+
 static void timer_irq_handler() {
   extern void soft_serial_timer_irq_handler();
   soft_serial_timer_irq_handler();

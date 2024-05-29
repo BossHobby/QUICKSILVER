@@ -31,7 +31,7 @@ typedef struct {
   uint32_t port_low;  // motor pins for BSRRL, for setting pins low
   uint32_t port_high; // motor pins for BSRRH, for setting pins high
 
-  uint32_t timer_channel;
+  timer_channel_t timer_channel;
   dma_device_t dma_device;
 } dshot_gpio_port_t;
 
@@ -43,15 +43,15 @@ volatile uint32_t dshot_dma_phase = 0; // 0: idle, 1 - (gpio_port_count + 1): ha
 static uint8_t gpio_port_count = 0;
 static dshot_gpio_port_t gpio_ports[DSHOT_MAX_PORT_COUNT] = {
     {
-        .timer_channel = TMR_SELECT_CHANNEL_1,
+        .timer_channel = TIMER_CH1,
         .dma_device = DMA_DEVICE_TIM1_CH1,
     },
     {
-        .timer_channel = TMR_SELECT_CHANNEL_3,
+        .timer_channel = TIMER_CH3,
         .dma_device = DMA_DEVICE_TIM1_CH3,
     },
     {
-        .timer_channel = TMR_SELECT_CHANNEL_4,
+        .timer_channel = TIMER_CH4,
         .dma_device = DMA_DEVICE_TIM1_CH4,
     },
 };
@@ -129,22 +129,6 @@ static void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   interrupt_enable(dma->irq, DMA_PRIORITY);
 }
 
-static void dshot_enable_dma_request(uint32_t timer_channel, confirm_state new_state) {
-  switch (timer_channel) {
-  case TMR_SELECT_CHANNEL_1:
-    tmr_dma_request_enable(TMR1, TMR_C1_DMA_REQUEST, new_state);
-    break;
-  case TMR_SELECT_CHANNEL_3:
-    tmr_dma_request_enable(TMR1, TMR_C3_DMA_REQUEST, new_state);
-    break;
-  case TMR_SELECT_CHANNEL_4:
-    tmr_dma_request_enable(TMR1, TMR_C4_DMA_REQUEST, new_state);
-    break;
-  default:
-    break;
-  }
-}
-
 void motor_dshot_init() {
   gpio_port_count = 0;
 
@@ -195,7 +179,7 @@ static void dshot_dma_setup_port(uint32_t index) {
   dma->channel->dtcnt = DSHOT_DMA_BUFFER_SIZE;
 
   dma_channel_enable(dma->channel, TRUE);
-  dshot_enable_dma_request(port->timer_channel, TRUE);
+  timer_enable_dma_request(TIMER1, port->timer_channel, true);
 }
 
 // make dshot dma packet, then fire
