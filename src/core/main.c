@@ -79,21 +79,20 @@ __attribute__((__used__)) int main() {
 
   // setup filters early
   filter_global_init();
-  timer_alloc_init();
   pid_init();
 
   // init some hardware things
   gpio_ports_init();
+  debug_pin_init();
 
   // Turn on LED during boot so that if a delay is used as part of using programming pins for other functions,
   // the FC does not appear inactive while programming times out
   led_init();
   led_on(LEDALL);
 
-  debug_pin_init();
+  usb_init();
   buzzer_init();
   motor_init();
-  usb_init();
 
   // wait for devices to wake up
   time_delay_ms(300);
@@ -126,7 +125,7 @@ __attribute__((__used__)) int main() {
 
   rx_init();
   vtx_init();
-  rgb_init();
+  rgb_led_init();
 
   blackbox_init();
   imu_init();

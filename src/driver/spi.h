@@ -106,6 +106,9 @@ typedef struct {
   bool is_init;
   volatile bool dma_done;
 
+  const dma_assigment_t *dma_rx;
+  const dma_assigment_t *dma_tx;
+
   // only modified by the main loop
   volatile uint8_t txn_head;
   // only modified by the intterupt or protected code

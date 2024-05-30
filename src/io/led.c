@@ -94,7 +94,7 @@ void led_pwm(uint8_t pwmval, float looptime) {
   }
 }
 
-// duty 0-16
+// duty 0-31
 static void led_flash_duty(uint32_t period_ms, uint8_t duty) {
   const uint32_t period = period_ms * 1000;
   const uint32_t divider = (period * duty) >> 5;

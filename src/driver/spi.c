@@ -11,6 +11,7 @@ FAST_RAM spi_device_t spi_dev[SPI_PORT_MAX] = {
 FAST_RAM spi_txn_t txn_pool[SPI_TXN_MAX];
 DMA_RAM uint8_t txn_buffers[SPI_TXN_MAX][DMA_ALIGN(512)];
 
+extern void spi_device_init(spi_ports_t port);
 extern void spi_reconfigure(spi_bus_device_t *bus);
 extern void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length);
 
@@ -191,4 +192,37 @@ void spi_txn_finish(spi_ports_t port) {
 
   spi_dev[port].dma_done = true;
   spi_txn_continue_port(port);
+}
+
+void spi_bus_device_init(const spi_bus_device_t *bus) {
+  if (!target_spi_port_valid(&target.spi_ports[bus->port])) {
+    return;
+  }
+
+  gpio_config_t gpio_init;
+  gpio_init.mode = GPIO_OUTPUT;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_UP_PULL;
+  gpio_pin_init(bus->nss, gpio_init);
+  gpio_pin_set(bus->nss);
+
+  if (spi_dev[bus->port].is_init) {
+    return;
+  }
+
+  const spi_port_def_t *def = &spi_port_defs[bus->port];
+
+  spi_dev[bus->port].dma_rx = dma_alloc(def->dma_rx, SPI_TAG(bus->port, RES_SPI_MISO));
+  if (spi_dev[bus->port].dma_rx == NULL) {
+    failloop(FAILLOOP_DMA);
+  }
+
+  spi_dev[bus->port].dma_tx = dma_alloc(def->dma_tx, SPI_TAG(bus->port, RES_SPI_MOSI));
+  if (spi_dev[bus->port].dma_tx == NULL) {
+    failloop(FAILLOOP_DMA);
+  }
+
+  spi_device_init(bus->port);
+  spi_dev[bus->port].is_init = true;
 }
