@@ -134,7 +134,6 @@ extern osd_state_t osd_state;
 void osd_init();
 void osd_display();
 void osd_display_reset();
-void osd_clear();
 
 uint8_t osd_attr(osd_element_t *el);
 

@@ -372,6 +372,7 @@ static void print_osd_vtx(osd_element_t *el) {
 void osd_init() {
   osd_device_init();
   osd_intro();
+  osd_update_screen(OSD_SCREEN_CLEAR);
 }
 
 static void osd_display_regular() {
@@ -489,11 +490,12 @@ static void osd_display_regular() {
   }
 
   case OSD_ELEMENT_MAX: {
-    // end of regular display - display_trigger counter sticks here till it wraps
-    static uint8_t display_trigger = 0;
-    display_trigger++;
-    if (display_trigger == 0)
-      osd_state.element = OSD_CALLSIGN;
+    if (osd_system == OSD_SYS_NONE) {
+      // display warning if we can not detect a camera
+      osd_start(OSD_ATTR_BLINK, 7, 7);
+      osd_write_str("NO CAMERA SIGNAL");
+    }
+    osd_state.element = 0;
     break;
   }
   }
@@ -613,7 +615,7 @@ void osd_display() {
   if (sys != osd_system) {
     // sytem has changed, reset osd state
     osd_system = sys;
-    osd_display_reset();
+    osd_update_screen(OSD_SCREEN_CLEAR);
     return;
   }
 

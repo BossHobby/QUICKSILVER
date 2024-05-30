@@ -68,6 +68,10 @@ void osd_clear() {
 uint8_t osd_clear_async() {
   static uint8_t row = 0;
 
+  if (row == 0) {
+    memset(display_row_dirty, 0, MAX_ROWS * sizeof(bool));
+    display_dirty = false;
+  }
   if (row < MAX_ROWS) {
     for (uint32_t i = 0; i < MAX_COLS; i++) {
       display[row * MAX_COLS + i].dirty = 0;
@@ -99,11 +103,7 @@ uint8_t osd_clear_async() {
     row++;
     return 0;
   }
-
-  memset(display_row_dirty, 0, MAX_ROWS * sizeof(bool));
-  display_dirty = false;
   row = 0;
-
   return 1;
 }
 
@@ -233,7 +233,7 @@ static bool osd_update_display() {
     uint8_t start = cols;
     uint8_t size = 0;
 
-    volatile bool row_done = true;
+    bool row_done = true;
     for (uint8_t col = 0; col < cols; col++) {
       osd_char_t *entry = &display[row * cols + col];
 

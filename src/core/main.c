@@ -92,16 +92,13 @@ __attribute__((__used__)) int main() {
 
   debug_pin_init();
   buzzer_init();
-
-  usb_init();
-
-  rx_spektrum_bind();
-
-  // init motors
   motor_init();
+  usb_init();
 
   // wait for devices to wake up
   time_delay_ms(300);
+  osd_init();
+  rx_spektrum_bind();
 
   if (!sixaxis_detect()) {
     // gyro not found
@@ -115,7 +112,6 @@ __attribute__((__used__)) int main() {
   time_delay_ms(100);
 
   // display bootlogo while calibrating
-  osd_init();
   sixaxis_gyro_cal();
 
   // wait for adc and vtx to wake up
@@ -134,7 +130,6 @@ __attribute__((__used__)) int main() {
 
   blackbox_init();
   imu_init();
-  osd_clear();
 
   scheduler_run();
 }

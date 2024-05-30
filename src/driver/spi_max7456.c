@@ -190,9 +190,6 @@ osd_system_t max7456_check_system() {
     if (last_osd_system != OSD_SYS_PAL) {
       last_osd_system = OSD_SYS_PAL;
       max7456_set_system(OSD_SYS_PAL);
-
-      // initial screen clear off
-      osd_clear();
     }
     break;
 
@@ -200,39 +197,15 @@ osd_system_t max7456_check_system() {
     if (last_osd_system != OSD_SYS_NTSC) {
       last_osd_system = OSD_SYS_NTSC;
       max7456_set_system(OSD_SYS_NTSC);
-
-      // initial screen clear off
-      osd_clear();
     }
     break;
 
-  default: {
-    static uint8_t warning_sent = 0;
-
+  default:
     if (last_osd_system != OSD_SYS_NONE) {
-      // we lost sync
       last_osd_system = OSD_SYS_NONE;
-      warning_sent = 0;
-      break;
+      max7456_set_system(OSD_SYS_NTSC);
     }
-
-    if (warning_sent == 0) {
-      // initial screen clear off on first run
-      if (osd_clear_async()) {
-        warning_sent++;
-      }
-      break;
-    }
-
-    if (warning_sent == 1) {
-      osd_start(OSD_ATTR_BLINK, SYSTEMXPOS, SYSTEMYPOS);
-      osd_write_str("NO CAMERA SIGNAL");
-      warning_sent++;
-      break;
-    }
-
     break;
-  }
   }
 
   return sys;

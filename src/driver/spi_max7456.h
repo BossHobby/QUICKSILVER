@@ -41,9 +41,6 @@
 #define INVERT 0x09
 #define TEXT 0x01
 
-#define SYSTEMXPOS 7
-#define SYSTEMYPOS 7
-
 #define VM0_R 0x80
 #define OSDBL_R 0xEC
 #define OSDBL_W 0x6C
