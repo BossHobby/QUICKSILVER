@@ -131,10 +131,10 @@ void smart_audio_set_pit_mode(vtx_pit_mode_t pit_mode) {
     uint8_t mode = 0x0;
 
     if (pit_mode == VTX_PIT_MODE_OFF) {
-      mode |= 0x04;
+      mode |= 0x08;
     } else if (pit_mode == VTX_PIT_MODE_ON) {
       // out-range was dropped for VTXes with SA >= v2.1
-      mode |= 0x01;
+      mode |= 0x09;
     }
 
     serial_smart_audio_send_payload(SA_CMD_SET_MODE, &mode, 1);

@@ -364,15 +364,15 @@ void vtx_update() {
     }
   }
 
+  if (!vtx_update_pitmode()) {
+    return;
+  }
+
   if (!vtx_update_frequency()) {
     return;
   }
 
   if (!vtx_update_powerlevel()) {
-    return;
-  }
-
-  if (!vtx_update_pitmode()) {
     return;
   }
 }
