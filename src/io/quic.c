@@ -503,6 +503,9 @@ static void process_osd(quic_t *quic, cbor_value_t *dec) {
     check_cbor_error(QUIC_CMD_GET);
 
     quic_send(quic, QUIC_CMD_OSD, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+
+    osd_clear();
+    osd_display_reset();
     break;
   }
   case QUIC_OSD_WRITE_CHAR: {
@@ -517,6 +520,9 @@ static void process_osd(quic_t *quic, cbor_value_t *dec) {
     check_cbor_error(QUIC_CMD_SET);
 
     quic_send(quic, QUIC_CMD_OSD, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+
+    osd_clear();
+    osd_display_reset();
     break;
   }
 #endif

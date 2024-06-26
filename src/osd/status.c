@@ -132,6 +132,11 @@ static bool osd_status_print(osd_element_t *el) {
   return true;
 }
 
+void osd_status_reset() {
+  current_status.entry = STATUS_MAX;
+  current_status.state = PRINT_IDLE;
+}
+
 bool osd_status_update(osd_element_t *el) {
   if (!flags.rx_ready) {
     osd_status_show(MODE_HOLD, STATUS_RX_WAIT);

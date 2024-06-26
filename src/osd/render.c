@@ -125,6 +125,8 @@ static uint32_t *osd_elements() {
 }
 
 void osd_display_reset() {
+  osd_status_reset();
+
   osd_state.element = OSD_CALLSIGN;
 
   osd_state.screen = OSD_SCREEN_REGULAR;
