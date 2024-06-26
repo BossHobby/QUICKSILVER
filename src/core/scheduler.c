@@ -51,6 +51,9 @@ static inline bool task_should_run(const uint32_t start_cycles, uint8_t task_mas
     // task shall not run in this firmware state
     return false;
   }
+  if (task->period_us > 0 && (start_cycles - task->last_time) < task->period_us) {
+    return false;
+  }
 
   const int32_t time_left = US_TO_CYCLES(state.looptime_autodetect - TASK_RUNTIME_BUFFER) - (time_cycles() - start_cycles);
   if (task->priority != TASK_PRIORITY_REALTIME && task->runtime_worst > time_left) {
@@ -70,7 +73,8 @@ static inline void task_run(task_t *task) {
   task->func();
   active_task = NULL;
 
-  const volatile uint32_t time_taken = time_cycles() - start;
+  task->last_time = time_cycles();
+  const volatile uint32_t time_taken = task->last_time - start;
   task->runtime_current = time_taken;
 
   if (state.loop_counter < 100) {

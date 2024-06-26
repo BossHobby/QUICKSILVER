@@ -48,7 +48,9 @@ typedef struct {
   uint32_t flags;
   task_priority_t priority;
   task_function_t func;
+  uint32_t period_us;
 
+  uint32_t last_time;
   uint32_t runtime_current;
   uint32_t runtime_avg;
   uint32_t runtime_worst;
@@ -57,18 +59,20 @@ typedef struct {
   uint32_t runtime_avg_sum;
 } task_t;
 
-#define CREATE_TASK(p_name, p_mask, p_priority, p_func) \
-  {                                                     \
-    .name = p_name,                                     \
-    .mask = p_mask,                                     \
-    .flags = 0,                                         \
-    .priority = p_priority,                             \
-    .func = p_func,                                     \
-    .runtime_current = 0,                               \
-    .runtime_avg = 0,                                   \
-    .runtime_worst = 0,                                 \
-    .runtime_max = 0,                                   \
-    .runtime_avg_sum = 0,                               \
+#define CREATE_TASK(p_name, p_mask, p_priority, p_func, p_period_us) \
+  {                                                                  \
+    .name = p_name,                                                  \
+    .mask = p_mask,                                                  \
+    .flags = 0,                                                      \
+    .priority = p_priority,                                          \
+    .func = p_func,                                                  \
+    .period_us = p_period_us,                                        \
+    .last_time = 0,                                                  \
+    .runtime_current = 0,                                            \
+    .runtime_avg = 0,                                                \
+    .runtime_worst = 0,                                              \
+    .runtime_max = 0,                                                \
+    .runtime_avg_sum = 0,                                            \
   }
 
 extern task_t tasks[TASK_MAX];
