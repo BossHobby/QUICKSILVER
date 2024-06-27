@@ -195,11 +195,21 @@ void motor_dshot_init() {
   for (uint32_t j = 0; j < gpio_port_count; j++) {
     dshot_init_gpio_port(&gpio_ports[j]);
 
-    for (uint32_t i = 0; i < DSHOT_DMA_BUFFER_SIZE; i += 3) {
-      port_dma_buffer[j][i + 0] = gpio_ports[j].port_low;
-      port_dma_buffer[j][i + 1] = gpio_ports[j].port_low;
-      port_dma_buffer[j][i + 2] = gpio_ports[j].port_low;
+    // set all ports to low before the packet
+    port_dma_buffer[j][0] = gpio_ports[j].port_low;
+    port_dma_buffer[j][1] = gpio_ports[j].port_low;
+    port_dma_buffer[j][2] = gpio_ports[j].port_low;
+
+    for (uint8_t i = 0; i < 16; i++) {
+      port_dma_buffer[j][(i + 1) * 3 + 0] = gpio_ports[j].port_high; // start bit
+      port_dma_buffer[j][(i + 1) * 3 + 1] = 0;                       // actual bit, set below
+      port_dma_buffer[j][(i + 1) * 3 + 2] = gpio_ports[j].port_low;  // return line to low
     }
+
+    // set all ports to low after the packet
+    port_dma_buffer[j][16 * 3 + 0] = gpio_ports[j].port_low;
+    port_dma_buffer[j][16 * 3 + 1] = gpio_ports[j].port_low;
+    port_dma_buffer[j][16 * 3 + 2] = gpio_ports[j].port_low;
   }
 
   LL_TIM_EnableCounter(TIM1);
@@ -222,24 +232,10 @@ static void dshot_dma_setup_port(uint32_t index) {
 
 // make dshot dma packet, then fire
 void dshot_dma_start() {
-  for (uint32_t j = 0; j < gpio_port_count; j++) {
-    // set all ports to low before and after the packet
-    port_dma_buffer[j][0] = gpio_ports[j].port_low;
-    port_dma_buffer[j][1] = gpio_ports[j].port_low;
-    port_dma_buffer[j][2] = gpio_ports[j].port_low;
-
-    port_dma_buffer[j][16 * 3 + 0] = gpio_ports[j].port_low;
-    port_dma_buffer[j][16 * 3 + 1] = gpio_ports[j].port_low;
-    port_dma_buffer[j][16 * 3 + 2] = gpio_ports[j].port_low;
-  }
-
   for (uint8_t i = 0; i < 16; i++) {
     for (uint32_t j = 0; j < gpio_port_count; j++) {
-      port_dma_buffer[j][(i + 1) * 3 + 0] = gpio_ports[j].port_high; // start bit
-      port_dma_buffer[j][(i + 1) * 3 + 1] = 0;                       // actual bit, set below
-      port_dma_buffer[j][(i + 1) * 3 + 2] = gpio_ports[j].port_low;  // return line to low
+      port_dma_buffer[j][(i + 1) * 3 + 1] = 0; // clear middle bit
     }
-
     for (uint8_t motor = 0; motor < MOTOR_PIN_MAX; motor++) {
       const uint32_t port = dshot_pins[motor].dshot_port;
       const uint32_t motor_high = (dshot_pins[motor].pin);
