@@ -158,12 +158,14 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     break;
   }
   case MSP_MOTOR_CONFIG: {
-    uint16_t data[3] = {
-        1070, // min throttle
-        2000, // max throttle
-        1000, // min command
+    uint16_t data[5] = {
+        1070,         // min throttle
+        2000,         // max throttle
+        1000,         // min command
+        (0 << 8) | 4, // motor count &  motor pole count
+        0,            // dshot telemetry & esc sensor
     };
-    msp_send_reply(msp, magic, cmd, (uint8_t *)data, 3 * sizeof(uint16_t));
+    msp_send_reply(msp, magic, cmd, (uint8_t *)data, 5 * sizeof(uint16_t));
     break;
   }
   case MSP_MOTOR: {
