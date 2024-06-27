@@ -16,7 +16,7 @@
 #define DSHOT_SYMBOL_TIME (PWM_CLOCK_FREQ_HZ / (3 * DSHOT_TIME * 1000) - 1)
 
 #define DSHOT_MAX_PORT_COUNT 3
-#define DSHOT_DMA_BUFFER_SIZE (3 * (16 + 2))
+#define DSHOT_DMA_BUFFER_SIZE (3 * 16)
 
 typedef struct {
   gpio_port_t *port;
@@ -162,8 +162,10 @@ void motor_dshot_init() {
   for (uint32_t j = 0; j < gpio_port_count; j++) {
     dshot_init_gpio_port(&gpio_ports[j]);
 
-    for (uint32_t i = 0; i < DSHOT_DMA_BUFFER_SIZE; i++) {
-      port_dma_buffer[j][i] = gpio_ports[j].port_low;
+    for (uint8_t i = 0; i < 16; i++) {
+      port_dma_buffer[j][i * 3 + 0] = gpio_ports[j].port_high; // start bit
+      port_dma_buffer[j][i * 3 + 1] = 0;                       // actual bit, set below
+      port_dma_buffer[j][i * 3 + 2] = gpio_ports[j].port_low;  // return line to low
     }
   }
 
@@ -189,11 +191,8 @@ static void dshot_dma_setup_port(uint32_t index) {
 void dshot_dma_start() {
   for (uint8_t i = 0; i < 16; i++) {
     for (uint32_t j = 0; j < gpio_port_count; j++) {
-      port_dma_buffer[j][(i + 1) * 3 + 0] = gpio_ports[j].port_high; // start bit
-      port_dma_buffer[j][(i + 1) * 3 + 1] = 0;                       // actual bit, set below
-      port_dma_buffer[j][(i + 1) * 3 + 2] = gpio_ports[j].port_low;  // return line to low
+      port_dma_buffer[j][i * 3 + 1] = 0; // clear middle bit
     }
-
     for (uint8_t motor = 0; motor < MOTOR_PIN_MAX; motor++) {
       const uint32_t port = dshot_pins[motor].dshot_port;
       const uint32_t motor_high = (dshot_pins[motor].pin);
@@ -203,7 +202,7 @@ void dshot_dma_start() {
 
       // for 1 hold the line high for two timeunits
       // first timeunit is already applied
-      port_dma_buffer[port][(i + 1) * 3 + 1] |= bit ? motor_high : motor_low;
+      port_dma_buffer[port][i * 3 + 1] |= bit ? motor_high : motor_low;
 
       dshot_packet[motor] <<= 1;
     }
