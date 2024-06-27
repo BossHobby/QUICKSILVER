@@ -96,7 +96,6 @@ static void osd_status_show(osd_status_mode_t mode, osd_status_entries_t entry) 
 }
 
 static bool osd_status_print(osd_element_t *el) {
-  static const uint8_t empty_label[LABEL_LEN] = {' '};
   static uint32_t start_time;
 
   switch (current_status.state) {
@@ -121,7 +120,9 @@ static bool osd_status_print(osd_element_t *el) {
 
   case PRINT_CLEAR:
     osd_start(osd_attr(el) | OSD_ATTR_BLINK, el->pos_x, el->pos_y);
-    osd_write_data(empty_label, LABEL_LEN);
+    for (uint32_t i = 0; i < LABEL_LEN; i++) {
+      osd_write_char(' ');
+    }
     current_status.state = PRINT_IDLE;
     return false;
 
