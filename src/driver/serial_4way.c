@@ -34,7 +34,16 @@ static gpio_pins_t esc_pins[MOTOR_PIN_MAX] = {PIN_NONE};
 
 #define ESC_PIN (esc_pins[device.selected_esc])
 
-uint16_t _crc_xmodem_update(uint16_t crc, uint8_t data) {
+#define write_byte(b) \
+  { *out_buf_ptr++ = b; }
+
+#define write_byte_crc(crc, b)          \
+  {                                     \
+    write_byte(b);                      \
+    *crc = _crc_xmodem_update(*crc, b); \
+  }
+
+static uint16_t _crc_xmodem_update(uint16_t crc, uint8_t data) {
   crc = crc ^ ((uint16_t)data << 8);
   for (uint8_t i = 0; i < 8; i++) {
     if (crc & 0x8000)
@@ -94,15 +103,6 @@ static uint8_t read_byte_crc(uint16_t *crc) {
   uint8_t b = read_byte();
   *crc = _crc_xmodem_update(*crc, b);
   return b;
-}
-
-static void write_byte(uint8_t b) {
-  usb_serial_write(&b, 1);
-}
-
-static void write_byte_crc(uint16_t *crc, uint8_t b) {
-  write_byte(b);
-  *crc = _crc_xmodem_update(*crc, b);
 }
 
 static uint8_t connect_esc(gpio_pins_t pin, uint8_t *data) {
@@ -595,19 +595,26 @@ void serial_4way_process() {
 
     crc_out = 0;
 
-    write_byte_crc(&crc_out, ESC4WAY_REMOTE_ESCAPE);
-    write_byte_crc(&crc_out, cmd);
-    write_byte_crc(&crc_out, addr >> 8);
-    write_byte_crc(&crc_out, addr & 0xFF);
+    {
+      uint8_t out_buf[512];
+      uint8_t *out_buf_ptr = out_buf;
 
-    write_byte_crc(&crc_out, output_size);
-    for (uint16_t i = 0; i < (output_size == 0 ? 256 : output_size); i++) {
-      write_byte_crc(&crc_out, output_buffer[i]);
+      write_byte_crc(&crc_out, ESC4WAY_REMOTE_ESCAPE);
+      write_byte_crc(&crc_out, cmd);
+      write_byte_crc(&crc_out, addr >> 8);
+      write_byte_crc(&crc_out, addr & 0xFF);
+
+      write_byte_crc(&crc_out, output_size);
+      for (uint16_t i = 0; i < (output_size == 0 ? 256 : output_size); i++) {
+        write_byte_crc(&crc_out, output_buffer[i]);
+      }
+
+      write_byte_crc(&crc_out, ack_out);
+      write_byte(crc_out >> 8);
+      write_byte(crc_out & 0xFF);
+
+      usb_serial_write(out_buf, out_buf_ptr - out_buf);
     }
-
-    write_byte_crc(&crc_out, ack_out);
-    write_byte(crc_out >> 8);
-    write_byte(crc_out & 0xFF);
 
     TX_LED_OFF;
     RX_LED_OFF;
