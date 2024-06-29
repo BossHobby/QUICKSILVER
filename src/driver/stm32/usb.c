@@ -148,7 +148,11 @@ static const struct cdc_config config_desc = {
 
 static const struct usb_string_descriptor lang_desc = USB_ARRAY_DESC(USB_LANGID_ENG_US);
 static const struct usb_string_descriptor manuf_desc_en = USB_STRING_DESC("QUICKSILVER");
-static const struct usb_string_descriptor prod_desc_en = USB_STRING_DESC("QUICKSILVER");
+static struct usb_string_descriptor prod_desc_en = {
+    .bLength = 0,
+    .bDescriptorType = USB_DTYPE_STRING,
+    .wString = {[0 ... 32] = 0},
+};
 static const struct usb_string_descriptor *const dtable[] = {
     &lang_desc,
     &manuf_desc_en,
@@ -183,13 +187,20 @@ static usbd_respond cdc_getdesc(usbd_ctlreq *req, void **address, uint16_t *leng
     desc = &config_desc;
     len = sizeof(config_desc);
     break;
-  case USB_DTYPE_STRING:
-    if (dnumber < 3) {
-      desc = dtable[dnumber];
-    } else {
+  case USB_DTYPE_STRING: {
+    if (dnumber >= 3) {
       return usbd_fail;
     }
+
+    const uint32_t target_name_length = strnlen((const char *)target.name, 32);
+    for (uint32_t i = 0; i < target_name_length; i++) {
+      prod_desc_en.wString[i] = target.name[i];
+    }
+    prod_desc_en.bLength = target_name_length * 2 + 2;
+
+    desc = dtable[dnumber];
     break;
+  }
   default:
     return usbd_fail;
   }

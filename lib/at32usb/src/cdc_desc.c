@@ -46,7 +46,7 @@ static usbd_desc_t *get_device_configuration(void);
 static usbd_desc_t *get_device_other_speed(void);
 static usbd_desc_t *get_device_lang_id(void);
 static usbd_desc_t *get_device_manufacturer_string(void);
-static usbd_desc_t *get_device_product_string(void);
+extern usbd_desc_t *get_device_product_string(void);
 static usbd_desc_t *get_device_serial_string(void);
 static usbd_desc_t *get_device_interface_string(void);
 static usbd_desc_t *get_device_config_string(void);
@@ -384,17 +384,6 @@ static usbd_desc_t *get_device_manufacturer_string(void)
   return &vp_desc;
 }
 
-/**
-  * @brief  get product descriptor
-  * @param  none
-  * @retval usbd_desc
-  */
-static usbd_desc_t *get_device_product_string(void)
-{
-  vp_desc.length = usbd_unicode_convert((uint8_t *)USBD_CDC_DESC_PRODUCT_STRING, g_usbd_desc_buffer);
-  vp_desc.descriptor = g_usbd_desc_buffer;
-  return &vp_desc;
-}
 
 /**
   * @brief  get serial descriptor
