@@ -29,6 +29,28 @@ static void usb_enable_clock() {
   acc_calibration_mode_enable(ACC_CAL_HICKTRIM, TRUE);
 }
 
+usbd_desc_t *get_device_product_string(void) {
+  static usbd_desc_t vp_desc;
+  static uint8_t desc_buffer[64];
+
+  uint16_t str_len = 0, id_pos = 2;
+  uint8_t *tmp_str = target.name;
+
+  while (*tmp_str != '\0' && str_len < 32) {
+    str_len++;
+    desc_buffer[id_pos++] = *tmp_str++;
+    desc_buffer[id_pos++] = 0x00;
+  }
+
+  str_len = str_len * 2 + 2;
+  desc_buffer[0] = (uint8_t)str_len;
+  desc_buffer[1] = USB_DESCIPTOR_TYPE_STRING;
+
+  vp_desc.length = str_len;
+  vp_desc.descriptor = desc_buffer;
+  return &vp_desc;
+}
+
 void usb_drv_init() {
   gpio_config_t gpio_init;
   gpio_init.mode = GPIO_ALTERNATE;

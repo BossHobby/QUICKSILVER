@@ -66,7 +66,6 @@ extern "C" {
  * @brief usb string define(vendor, product configuration, interface)
  */
 #define USBD_CDC_DESC_MANUFACTURER_STRING "QUICKSILVER"
-#define USBD_CDC_DESC_PRODUCT_STRING "QUICKSILVER"
 #define USBD_CDC_DESC_CONFIGURATION_STRING "Virtual ComPort Config"
 #define USBD_CDC_DESC_INTERFACE_STRING "Virtual ComPort Interface"
 
