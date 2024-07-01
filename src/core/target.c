@@ -1,5 +1,6 @@
 #include "core/target.h"
 
+#include <ctype.h>
 #include <string.h>
 
 #include "driver/gpio.h"
@@ -165,12 +166,17 @@ cbor_result_t cbor_encode_gpio_pins_t(cbor_value_t *enc, const gpio_pins_t *t) {
 cbor_result_t cbor_decode_gpio_pins_t(cbor_value_t *dec, gpio_pins_t *t) {
   cbor_result_t res = CBOR_OK;
 
-  const uint8_t *buf;
+  const uint8_t *tmp;
   uint32_t size;
-  CBOR_CHECK_ERROR(res = cbor_decode_tstr(dec, &buf, &size));
+  CBOR_CHECK_ERROR(res = cbor_decode_tstr(dec, &tmp, &size));
 
   if (size > 4 && size < 3) {
     return CBOR_ERR_INVALID_TYPE;
+  }
+
+  uint8_t buf[size];
+  for (uint32_t i = 0; i < size; i++) {
+    buf[i] = toupper(tmp[i]);
   }
 
   if (size == 4 && memcmp(buf, pin_none_str, 4) == 0) {
