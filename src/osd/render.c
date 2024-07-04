@@ -379,9 +379,9 @@ void osd_init() {
 
 static void osd_display_regular() {
   osd_element_t *el = (osd_element_t *)(osd_elements() + osd_state.element);
-  if (osd_state.element < OSD_ELEMENT_MAX && !el->active) {
+  while (osd_state.element < OSD_ELEMENT_MAX && !el->active) {
     osd_state.element++;
-    return;
+    el = (osd_element_t *)(osd_elements() + osd_state.element);
   }
 
   switch (osd_state.element) {
