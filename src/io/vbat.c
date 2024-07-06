@@ -40,41 +40,35 @@ void vbat_init() {
 }
 
 static float vbat_auto_vdrop(float thrfilt, float tempvolt) {
-  static float lastout[12];
-  static float lastin[12];
-  static float vcomp[12];
-  static float score[12];
-  static int z = 0;
   static int minindex = 0;
-  static int firstrun = 1;
 
-  if (thrfilt > 0.1f) {
-    vcomp[z] = tempvolt + (float)z * 0.1f * thrfilt;
+  if (thrfilt <= 0.1f) {
+    return minindex * 0.1f;
+  }
 
-    if (firstrun) {
-      for (int y = 0; y < 12; y++)
-        lastin[y] = vcomp[z];
-      firstrun = 0;
-    }
-    //  y(n) = x(n) - x(n-1) + R * y(n-1)
-    //  out = in - lastin + coeff*lastout
-    // hpf
-    const float ans = vcomp[z] - lastin[z] + lpfcalc(1000 * 12, 6000e3) * lastout[z];
-    lastin[z] = vcomp[z];
-    lastout[z] = ans;
-    lpf(&score[z], ans * ans, lpfcalc(1000 * 12, 60e6));
-    z++;
+  static int z = 0;
+  static float lastin[12];
+  static float lastout[12];
 
-    if (z >= 12) {
-      z = 0;
-      float min = score[0];
-      for (int i = 0; i < 12; i++) {
-        if ((score[i]) < min) {
-          min = (score[i]);
-          minindex = i;
-          // add an offset because it seems to be usually early
-          minindex++;
-        }
+  //  y(n) = x(n) - x(n-1) + R * y(n-1)
+  //  out = in - lastin + coeff*lastout
+  const float vcomp = tempvolt + (float)z * 0.1f * thrfilt;
+  const float ans = vcomp - lastin[z] + lpfcalc(1000 * 12, 6000e3) * lastout[z];
+  lastin[z] = vcomp;
+  lastout[z] = ans;
+
+  static float score[12];
+  lpf(&score[z], ans * ans, lpfcalc(1000 * 12, 60e6));
+  z++;
+
+  if (z >= 12) {
+    z = 0;
+    float min = score[0];
+    for (int i = 0; i < 12; i++) {
+      if ((score[i]) < min) {
+        min = (score[i]);
+        // add an offset because it seems to be usually early
+        minindex = i + 1;
       }
     }
   }
@@ -103,14 +97,8 @@ void vbat_calc() {
   lpf(&thrfilt, state.thrsum, lpfcalc(1, 500));
 
   const float tempvolt = state.vbat_filtered * (1.00f + CF1) - state.vbat_filtered_decay * (CF1);
-
-#ifdef AUTO_VDROP_FACTOR
-  const float vdrop_factor = vbat_auto_vdrop(thrfilt, tempvolt);
-#else
-  const float vdrop_factor = VDROP_FACTOR;
-#endif
-
   const float hyst = flags.lowbatt ? HYST : 0.0f;
+  const float vdrop_factor = vbat_auto_vdrop(thrfilt, tempvolt);
   state.vbat_compensated = tempvolt + vdrop_factor * thrfilt;
   state.vbat_compensated_cell_avg = state.vbat_compensated / (float)state.lipo_cell_count;
 
