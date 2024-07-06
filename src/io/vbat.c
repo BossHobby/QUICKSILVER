@@ -56,14 +56,13 @@ static float vbat_auto_vdrop(float thrfilt, float tempvolt) {
         lastin[y] = vcomp[z];
       firstrun = 0;
     }
-    float ans;
     //  y(n) = x(n) - x(n-1) + R * y(n-1)
     //  out = in - lastin + coeff*lastout
     // hpf
-    ans = vcomp[z] - lastin[z] + FILTERCALC(1000 * 12, 6000e3) * lastout[z];
+    const float ans = vcomp[z] - lastin[z] + lpfcalc(1000 * 12, 6000e3) * lastout[z];
     lastin[z] = vcomp[z];
     lastout[z] = ans;
-    lpf(&score[z], ans * ans, FILTERCALC(1000 * 12, 60e6));
+    lpf(&score[z], ans * ans, lpfcalc(1000 * 12, 60e6));
     z++;
 
     if (z >= 12) {
@@ -88,12 +87,12 @@ void vbat_calc() {
 
   // read acd and scale based on processor voltage
   state.ibat = adc_read(ADC_CHAN_IBAT);
-  lpf(&state.ibat_filtered, state.ibat, FILTERCALC(1000, 5000e3));
+  lpf(&state.ibat_filtered, state.ibat, lpfcalc(1000, 5000e3));
 
   // li-ion battery model compensation time decay ( 18 seconds )
   state.vbat = adc_read(ADC_CHAN_VBAT);
   lpf(&state.vbat_filtered, state.vbat, 0.9968f);
-  lpf(&state.vbat_filtered_decay, state.vbat_filtered, FILTERCALC(1000, 18000e3));
+  lpf(&state.vbat_filtered_decay, state.vbat_filtered, lpfcalc(1000, 18000e3));
 
   state.vbat_cell_avg = state.vbat_filtered_decay / (float)state.lipo_cell_count;
 
@@ -114,7 +113,6 @@ void vbat_calc() {
   const float hyst = flags.lowbatt ? HYST : 0.0f;
   state.vbat_compensated = tempvolt + vdrop_factor * thrfilt;
   state.vbat_compensated_cell_avg = state.vbat_compensated / (float)state.lipo_cell_count;
-
 
   if (profile.voltage.use_filtered_voltage_for_warnings) {
     flags.lowbatt = state.vbat_cell_avg < profile.voltage.vbattlow ? 1 : 0;
