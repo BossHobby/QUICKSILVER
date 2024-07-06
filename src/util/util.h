@@ -10,7 +10,7 @@
 
 #define M_PI_F 3.14159265358979323846f
 
-#define MEMORY_ALIGN(offset, size) (((offset) + ((size)-1)) & -(size))
+#define MEMORY_ALIGN(offset, size) (((offset) + ((size) - 1)) & -(size))
 
 #define WHILE_TIMEOUT(condition, timeout) \
   for (uint32_t start = time_millis(); (condition) && (time_millis() - start) < (timeout);)
@@ -26,15 +26,25 @@
     y = temp;           \
   }
 
-#define constrain(val, min, max) ((val) < (min) ? (min) : ((val) > (max) ? (max) : (val)))
-#define min(a, b) \
-  ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a < _b ? _a : _b; })
-#define max(a, b) \
-  ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a > _b ? _a : _b; })
+#define constrain(val, min, max)                                \
+  ({                                                            \
+    typeof(val) _val = (val);                                   \
+    typeof(min) _min = (min);                                   \
+    typeof(max) _max = (max);                                   \
+    (_val < _min) ? (_min) : ((_val > _max) ? (_max) : (_val)); \
+  })
+#define min(a, b)       \
+  ({                    \
+    typeof(a) _a = (a); \
+    typeof(b) _b = (b); \
+    _a < _b ? _a : _b;  \
+  })
+#define max(a, b)       \
+  ({                    \
+    typeof(a) _a = (a); \
+    typeof(b) _b = (b); \
+    _a > _b ? _a : _b;  \
+  })
 
 // this should be precalculated by the compiler when parameters are constant
 //(1 - alpha. filtertime = 1 / filter-cutoff-frequency) as long as filtertime > sampleperiod
