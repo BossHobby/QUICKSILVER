@@ -10,6 +10,7 @@ typedef enum {
   TASK_IMU,
   TASK_PID,
   TASK_RX,
+  TASK_VBAT,
   TASK_UTIL,
   TASK_BLACKBOX,
   TASK_OSD,
