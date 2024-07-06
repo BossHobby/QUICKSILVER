@@ -131,11 +131,6 @@
 #define PID_VOLTAGE_COMPENSATION
 #define LEVELMODE_PID_ATTENUATION 0.90f // used to prevent oscillations in angle modes with pid_voltage_compensation enabled due to high pids
 
-// *************compensation for battery voltage vs throttle drop
-#define VDROP_FACTOR 0.7
-// *************calculate above factor automatically
-#define AUTO_VDROP_FACTOR
-
 // *************voltage/cell to start warning led blinking
 #define VBATTLOW 3.6
 
