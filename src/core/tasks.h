@@ -12,6 +12,7 @@ typedef enum {
   TASK_RX,
   TASK_VBAT,
   TASK_UTIL,
+  TASK_GESTURES,
   TASK_BLACKBOX,
   TASK_OSD,
   TASK_VTX,
