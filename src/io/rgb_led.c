@@ -22,7 +22,7 @@
 // runs the update once every 16 loop times ( 16 mS )
 #define DOWNSAMPLE 16
 
-#define RGB_FILTER_TIME FILTERCALC(1000 * DOWNSAMPLE, RGB_FILTER_TIME_MICROSECONDS)
+#define RGB_FILTER_TIME lpfcalc(1000 * DOWNSAMPLE, RGB_FILTER_TIME_MICROSECONDS)
 #define RGB(r, g, b) ((((int)g & 0xff) << 16) | (((int)r & 0xff) << 8) | ((int)b & 0xff))
 
 #if (RGB_LED_NUMBER > 0)

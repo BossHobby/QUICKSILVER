@@ -293,7 +293,7 @@ static void print_osd_rssi(osd_element_t *el) {
   if (flags.failsafe)
     state.rx_rssi = 0.0f;
 
-  lpf(&rx_rssi_filt, state.rx_rssi, FILTERCALC(state.looptime * 1e6f * 133.0f, 2e6f)); // 2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
+  lpf(&rx_rssi_filt, state.rx_rssi, lpfcalc(state.looptime * 1e6f * 133.0f, 2e6f)); // 2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
 
   osd_start(osd_attr(el), el->pos_x, el->pos_y);
   osd_write_uint(rx_rssi_filt - 0.5f, 4);

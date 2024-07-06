@@ -14,30 +14,6 @@
 #define ORDER2_CORRECTION 1.55377397403f
 #define ORDER3_CORRECTION 1.9614591767f
 
-// calculates the coefficient for lpf filter, times in the same units
-float lpfcalc(float sampleperiod, float filtertime) {
-  float ga = 1.0f - sampleperiod / filtertime;
-  if (ga > 1.0f)
-    ga = 1.0f;
-  if (ga < 0.0f)
-    ga = 0.0f;
-  return ga;
-}
-
-// calculates the coefficient for lpf filter
-float lpfcalc_hz(float sampleperiod, float filterhz) {
-  float ga = 1.0f - sampleperiod * filterhz;
-  if (ga > 1.0f)
-    ga = 1.0f;
-  if (ga < 0.0f)
-    ga = 0.0f;
-  return ga;
-}
-
-void lpf(float *out, float in, float coeff) {
-  *out = (*out) * coeff + in * (1 - coeff);
-}
-
 static void filter_init_state(filter_state_t *state, uint8_t count) {
   memset(state, 0, count * sizeof(filter_state_t));
 }
