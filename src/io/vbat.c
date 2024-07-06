@@ -19,7 +19,7 @@ void vbat_init() {
   int count = 0;
   while (count < 5000) {
     state.vbat = adc_read(ADC_CHAN_VBAT);
-    lpf(&state.vbat_filtered, state.vbat, 0.9968f);
+    lpf(&state.vbat_filtered, state.vbat, lpfcalc(1, 500));
     count++;
   }
 
@@ -87,12 +87,12 @@ void vbat_calc() {
 
   // read acd and scale based on processor voltage
   state.ibat = adc_read(ADC_CHAN_IBAT);
-  lpf(&state.ibat_filtered, state.ibat, lpfcalc(1000, 5000e3));
+  lpf(&state.ibat_filtered, state.ibat, lpfcalc_hz(0.001, 1));
 
   // li-ion battery model compensation time decay ( 18 seconds )
   state.vbat = adc_read(ADC_CHAN_VBAT);
-  lpf(&state.vbat_filtered, state.vbat, 0.9968f);
-  lpf(&state.vbat_filtered_decay, state.vbat_filtered, lpfcalc(1000, 18000e3));
+  lpf(&state.vbat_filtered, state.vbat, lpfcalc(1, 500));
+  lpf(&state.vbat_filtered_decay, state.vbat_filtered, lpfcalc(1, 18000));
 
   state.vbat_cell_avg = state.vbat_filtered_decay / (float)state.lipo_cell_count;
 
@@ -100,7 +100,7 @@ void vbat_calc() {
   // filter motorpwm so it has the same delay as the filtered voltage
   // ( or they can use a single filter)
   static float thrfilt = 0;
-  lpf(&thrfilt, state.thrsum, 0.9968f); // 0.5 sec at 1.6ms loop time
+  lpf(&thrfilt, state.thrsum, lpfcalc(1, 500));
 
   const float tempvolt = state.vbat_filtered * (1.00f + CF1) - state.vbat_filtered_decay * (CF1);
 
