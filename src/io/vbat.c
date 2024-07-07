@@ -82,6 +82,7 @@ void vbat_calc() {
   // read acd and scale based on processor voltage
   state.ibat = adc_read(ADC_CHAN_IBAT);
   lpf(&state.ibat_filtered, state.ibat, lpfcalc_hz(0.001, 1));
+  state.ibat_drawn += state.ibat_filtered / (60.f * 60.f * 10000.f);
 
   // li-ion battery model compensation time decay ( 18 seconds )
   state.vbat = adc_read(ADC_CHAN_VBAT);

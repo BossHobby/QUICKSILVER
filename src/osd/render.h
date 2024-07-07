@@ -69,6 +69,7 @@ typedef enum {
   OSD_VTX_CHANNEL,
   OSD_CURRENT_DRAW,
   OSD_CROSSHAIR,
+  OSD_CURRENT_DRAWN,
 
   OSD_ELEMENT_MAX
 } osd_elements_t;

@@ -68,6 +68,7 @@ typedef struct {
 
   float ibat;
   float ibat_filtered;
+  float ibat_drawn;
 
   vec4_t rx;          // holds the raw or calibrated main four channels, roll, pitch, yaw, throttle
   vec4_t rx_filtered; // same as above, but with constraints (just in case), smoothing and deadband applied
@@ -129,6 +130,7 @@ typedef struct {
   MEMBER(vbat_compensated_cell_avg, float)    \
   MEMBER(ibat, float)                         \
   MEMBER(ibat_filtered, float)                \
+  MEMBER(ibat_drawn, float)                   \
   MEMBER(rx, vec4_t)                          \
   MEMBER(rx_filtered, vec4_t)                 \
   MEMBER(rx_override, vec4_t)                 \
