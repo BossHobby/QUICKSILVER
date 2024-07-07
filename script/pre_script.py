@@ -63,3 +63,25 @@ def rewrite_source(localenv, node):
 
 
 env.AddBuildMiddleware(rewrite_source)
+
+
+def touch(fname, times=None):
+    with open(fname, "a"):
+        os.utime(fname, times)
+
+
+target_remote = "https://github.com/BossHobby/Targets.git"
+target_dir = os.path.join(env["PROJECT_DIR"], "targets")
+
+if not os.path.exists(target_dir):
+    porcelain.clone(target_remote, target=target_dir, branch="targets")
+    touch(os.path.join(env["PROJECT_DIR"], "platformio.ini"))
+else:
+    target_repo = porcelain.open_repo(target_dir)
+    target_ref_before = porcelain.describe(target_repo)
+    porcelain.fetch(target_repo)
+    porcelain.checkout_branch(target_repo, "targets")
+    target_ref_after = porcelain.describe(target_repo)
+
+    if target_ref_before != target_ref_after:
+        touch(os.path.join(env["PROJECT_DIR"], "platformio.ini"))
