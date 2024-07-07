@@ -448,10 +448,11 @@ const profile_t default_profile = {
             ENCODE_OSD_ELEMENT(1, 0, 24, 1),  // OSD_RSSI
             ENCODE_OSD_ELEMENT(1, 0, 24, 13), // OSD_STOPWATCH
             ENCODE_OSD_ELEMENT(1, 0, 4, 6),   // OSD_SYSTEM_STATUS
-            ENCODE_OSD_ELEMENT(1, 0, 1, 13),  // OSD_THROTTLE
+            ENCODE_OSD_ELEMENT(1, 0, 1, 1),   // OSD_THROTTLE
             ENCODE_OSD_ELEMENT(0, 0, 1, 1),   // OSD_VTX_CHANNEL
             ENCODE_OSD_ELEMENT(1, 0, 1, 14),  // OSD_CURRENT_DRAW
             ENCODE_OSD_ELEMENT(0, 0, 14, 6),  // OSD_CROSSHAIR
+            ENCODE_OSD_ELEMENT(1, 0, 1, 13),  // OSD_CURRENT_DRAWN
         },
         .elements_hd = {
             ENCODE_OSD_ELEMENT(1, 1, 19, 0),  // OSD_CALLSIGN
@@ -463,10 +464,11 @@ const profile_t default_profile = {
             ENCODE_OSD_ELEMENT(1, 0, 44, 0),  // OSD_RSSI
             ENCODE_OSD_ELEMENT(1, 0, 44, 16), // OSD_STOPWATCH
             ENCODE_OSD_ELEMENT(1, 0, 14, 8),  // OSD_SYSTEM_STATUS
-            ENCODE_OSD_ELEMENT(1, 0, 0, 16),  // OSD_THROTTLE
+            ENCODE_OSD_ELEMENT(1, 0, 0, 0),   // OSD_THROTTLE
             ENCODE_OSD_ELEMENT(0, 0, 0, 0),   // OSD_VTX_CHANNEL
             ENCODE_OSD_ELEMENT(1, 0, 0, 17),  // OSD_CURRENT_DRAW
             ENCODE_OSD_ELEMENT(0, 0, 15, 8),  // OSD_CROSSHAIR
+            ENCODE_OSD_ELEMENT(1, 0, 0, 16),  // OSD_CURRENT_DRAWN
         },
     },
     .blackbox = {

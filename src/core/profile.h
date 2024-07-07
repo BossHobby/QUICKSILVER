@@ -9,7 +9,7 @@
 
 #define OSD_NUMBER_ELEMENTS 32
 
-#define PROFILE_VERSION MAKE_SEMVER(0, 2, 3)
+#define PROFILE_VERSION MAKE_SEMVER(0, 2, 4)
 
 // Rates
 typedef enum {
@@ -229,16 +229,16 @@ typedef struct {
   float ibat_scale;
 } profile_voltage_t;
 
-#define VOLTAGE_MEMBERS                     \
-  START_STRUCT(profile_voltage_t)           \
-  MEMBER(lipo_cell_count, uint8_t)          \
-  MEMBER(pid_voltage_compensation, uint8_t) \
-  MEMBER(vbattlow, float)                   \
-  MEMBER(actual_battery_voltage, float)     \
-  MEMBER(reported_telemetry_voltage, float) \
+#define VOLTAGE_MEMBERS                              \
+  START_STRUCT(profile_voltage_t)                    \
+  MEMBER(lipo_cell_count, uint8_t)                   \
+  MEMBER(pid_voltage_compensation, uint8_t)          \
+  MEMBER(vbattlow, float)                            \
+  MEMBER(actual_battery_voltage, float)              \
+  MEMBER(reported_telemetry_voltage, float)          \
   MEMBER(use_filtered_voltage_for_warnings, uint8_t) \
-  MEMBER(vbat_scale, float)                 \
-  MEMBER(ibat_scale, float)                 \
+  MEMBER(vbat_scale, float)                          \
+  MEMBER(ibat_scale, float)                          \
   END_STRUCT()
 
 typedef struct {

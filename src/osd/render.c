@@ -19,6 +19,7 @@
 #define ICON_CELSIUS 0xe
 #define ICON_THROTTLE 0x4
 #define ICON_VOLT 0x6
+#define ICON_MAH 0x7
 #define ICON_AMP 0x9a
 #define ICON_DOWN 0x76
 #define ICON_GAUGE 0x70
@@ -71,6 +72,7 @@ static const char *osd_element_labels[] = {
     "VTX",
     "CURRENT DRAW",
     "CROSSHAIR",
+    "CURRENT DRAWN",
 };
 
 static const char *aux_channel_labels[] = {
@@ -486,6 +488,15 @@ static void osd_display_regular() {
     osd_start(osd_attr(el), el->pos_x, el->pos_y);
     osd_write_float(state.ibat_filtered / 1000.0f, 4, 2);
     osd_write_char(ICON_AMP);
+
+    osd_state.element++;
+    break;
+  }
+
+  case OSD_CURRENT_DRAWN: {
+    osd_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_write_float(state.ibat_drawn, 4, 2);
+    osd_write_char(ICON_MAH);
 
     osd_state.element++;
     break;
