@@ -106,7 +106,6 @@ const pid_rate_preset_t pid_rate_presets[] = {
     {
         .index = 6,
         .name = "6mm & 7mm brushed whoop (Alienwhoop ZER0)",
-        //  - set filtering ALIENWHOOP_ZERO_FILTERING
         .rate = {
             .kp = {135, 135, 330},
             .ki = {70, 75, 75},
