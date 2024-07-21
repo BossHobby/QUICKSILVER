@@ -3,8 +3,6 @@
 #include "core/failloop.h"
 #include "driver/interrupt.h"
 
-extern void spi_enable_rcc(spi_ports_t port);
-
 extern bool spi_txn_can_send(spi_bus_device_t *bus, bool dma);
 extern void spi_txn_finish(spi_ports_t port);
 
@@ -242,9 +240,9 @@ static void spi_device_init(spi_ports_t port) {
   }
 
   spi_init_pins(port);
-  spi_enable_rcc(port);
 
   const spi_port_def_t *def = &spi_port_defs[port];
+  rcc_enable(def->rcc);
   dma_enable_rcc(def->dma_rx);
   dma_enable_rcc(def->dma_tx);
 
