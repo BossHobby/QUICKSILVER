@@ -101,23 +101,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     break;
   }
   case MSP_UID: {
-    uint8_t data[12] = {
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-
-        0xd,
-        0xe,
-        0xa,
-        0xd,
-
-        0xb,
-        0xe,
-        0xe,
-        0xf,
-    };
-    msp_send_reply(msp, magic, cmd, data, 12);
+    msp_send_reply(msp, magic, cmd, (uint8_t *)UID_BASE, 12);
     break;
   }
   case MSP_ANALOG: {
