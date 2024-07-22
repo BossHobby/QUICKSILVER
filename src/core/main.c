@@ -92,8 +92,10 @@ __attribute__((__used__)) int main() {
 
   debug_pin_init();
   buzzer_init();
-  motor_init();
   usb_init();
+
+  motor_init();
+  motor_set_all(MOTOR_OFF);
 
   // wait for devices to wake up
   time_delay_ms(300);
@@ -116,10 +118,6 @@ __attribute__((__used__)) int main() {
 
   // wait for adc and vtx to wake up
   time_delay_ms(100);
-
-  // send first value to esc
-  motor_set_all(MOTOR_OFF);
-  motor_update();
 
   adc_init();
   vbat_init();

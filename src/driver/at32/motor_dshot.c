@@ -63,18 +63,17 @@ static const dshot_gpio_port_t *dshot_gpio_for_device(const dma_device_t dev) {
 }
 
 static void dshot_init_motor_pin(uint32_t index) {
+  gpio_config_t gpio_init;
+  gpio_init.mode = GPIO_OUTPUT;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_init.pull = GPIO_NO_PULL;
+  gpio_pin_init(target.motor_pins[index], gpio_init);
+  gpio_pin_set(target.motor_pins[index]);
+
   dshot_pins[index].port = gpio_pin_defs[target.motor_pins[index]].port;
   dshot_pins[index].pin = gpio_pin_defs[target.motor_pins[index]].pin;
   dshot_pins[index].dshot_port = 0;
-
-  gpio_init_type init;
-  init.gpio_mode = GPIO_MODE_OUTPUT;
-  init.gpio_drive_strength = GPIO_DRIVE_HIGH;
-  init.gpio_out_type = GPIO_PUSHPULL;
-  init.gpio_pull = GPIO_PULL_NONE;
-  init.gpio_pins = dshot_pins[index].pin;
-  gpio_init(dshot_pins[index].port, &init);
-  gpio_bits_reset(dshot_pins[index].port, dshot_pins[index].pin);
 
   for (uint8_t i = 0; i < DSHOT_MAX_PORT_COUNT; i++) {
     if (gpio_ports[i].gpio == dshot_pins[index].port || i == gpio_port_count) {
@@ -163,10 +162,8 @@ void motor_dshot_init() {
   for (uint32_t j = 0; j < gpio_port_count; j++) {
     dshot_init_gpio_port(&gpio_ports[j]);
 
-    for (uint32_t i = 0; i < DSHOT_DMA_BUFFER_SIZE; i += 3) {
-      port_dma_buffer[j][i + 0] = gpio_ports[j].port_low;
-      port_dma_buffer[j][i + 1] = gpio_ports[j].port_low;
-      port_dma_buffer[j][i + 2] = gpio_ports[j].port_low;
+    for (uint32_t i = 0; i < DSHOT_DMA_BUFFER_SIZE; i++) {
+      port_dma_buffer[j][i] = gpio_ports[j].port_low;
     }
   }
 
@@ -190,17 +187,6 @@ static void dshot_dma_setup_port(uint32_t index) {
 
 // make dshot dma packet, then fire
 void dshot_dma_start() {
-  for (uint32_t j = 0; j < gpio_port_count; j++) {
-    // set all ports to low before and after the packet
-    port_dma_buffer[j][0] = gpio_ports[j].port_low;
-    port_dma_buffer[j][1] = gpio_ports[j].port_low;
-    port_dma_buffer[j][2] = gpio_ports[j].port_low;
-
-    port_dma_buffer[j][16 * 3 + 0] = gpio_ports[j].port_low;
-    port_dma_buffer[j][16 * 3 + 1] = gpio_ports[j].port_low;
-    port_dma_buffer[j][16 * 3 + 2] = gpio_ports[j].port_low;
-  }
-
   for (uint8_t i = 0; i < 16; i++) {
     for (uint32_t j = 0; j < gpio_port_count; j++) {
       port_dma_buffer[j][(i + 1) * 3 + 0] = gpio_ports[j].port_high; // start bit
