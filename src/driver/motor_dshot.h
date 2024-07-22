@@ -17,7 +17,7 @@ typedef struct {
   uint32_t port_low;  // motor pins for BSRRL, for setting pins low
   uint32_t port_high; // motor pins for BSRRH, for setting pins high
 
-  uint32_t timer_channel;
+  timer_channel_t timer_channel;
   dma_device_t dma_device;
 } dshot_gpio_port_t;
 
