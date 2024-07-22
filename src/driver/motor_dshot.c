@@ -2,6 +2,9 @@
 
 #include "core/profile.h"
 #include "core/project.h"
+#include "driver/dma.h"
+#include "driver/gpio.h"
+#include "driver/spi.h"
 #include "driver/time.h"
 #include "flight/control.h"
 #include "util/util.h"
@@ -15,12 +18,55 @@ typedef enum {
   DIR_CHANGE_STOP,
 } dir_change_state_t;
 
-uint16_t dshot_packet[MOTOR_PIN_MAX]; // 16bits dshot data for 4 motors
-motor_direction_t motor_dir = MOTOR_FORWARD;
+volatile uint32_t dshot_dma_phase = 0; // 0: idle, 1 - (gpio_port_count + 1): handle port n
+uint16_t dshot_packet[MOTOR_PIN_MAX];  // 16bits dshot data for 4 motors
+dshot_pin_t dshot_pins[MOTOR_PIN_MAX];
 
+uint8_t dshot_gpio_port_count = 0;
+extern dshot_gpio_port_t dshot_gpio_ports[DSHOT_MAX_PORT_COUNT];
+
+motor_direction_t motor_dir = MOTOR_FORWARD;
 static bool dir_change_done = true;
 
-extern void dshot_dma_start();
+volatile DMA_RAM uint32_t port_dma_buffer[DSHOT_MAX_PORT_COUNT][DSHOT_DMA_BUFFER_SIZE];
+
+extern void dshot_dma_setup_port(uint32_t index);
+
+const dshot_gpio_port_t *dshot_gpio_for_device(const dma_device_t dev) {
+  return &dshot_gpio_ports[dev - DMA_DEVICE_TIM1_CH1];
+}
+
+void dshot_init_motor_pin(uint32_t index) {
+  gpio_config_t gpio_init;
+  gpio_init.mode = GPIO_OUTPUT;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.drive = GPIO_DRIVE_HIGH;
+  gpio_init.pull = GPIO_NO_PULL;
+  gpio_pin_init(target.motor_pins[index], gpio_init);
+  gpio_pin_reset(target.motor_pins[index]);
+
+  dshot_pins[index].port = gpio_pin_defs[target.motor_pins[index]].port;
+  dshot_pins[index].pin = gpio_pin_defs[target.motor_pins[index]].pin;
+  dshot_pins[index].dshot_port = 0;
+
+  for (uint8_t i = 0; i < DSHOT_MAX_PORT_COUNT; i++) {
+    if (dshot_gpio_ports[i].gpio == dshot_pins[index].port || i == dshot_gpio_port_count) {
+      // we already got a matching port in our array
+      // or we reached the first empty spot
+      dshot_gpio_ports[i].gpio = dshot_pins[index].port;
+      dshot_gpio_ports[i].port_high |= dshot_pins[index].pin;
+      dshot_gpio_ports[i].port_low |= (dshot_pins[index].pin << 16);
+
+      dshot_pins[index].dshot_port = i;
+
+      if (i + 1 > dshot_gpio_port_count) {
+        dshot_gpio_port_count = i + 1;
+      }
+
+      break;
+    }
+  }
+}
 
 void dshot_make_packet(uint8_t number, uint16_t value, bool telemetry) {
   const uint16_t packet = (value << 1) | (telemetry ? 1 : 0);
@@ -38,6 +84,40 @@ void dshot_make_packet(uint8_t number, uint16_t value, bool telemetry) {
 void dshot_make_packet_all(uint16_t value, bool telemetry) {
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
     dshot_make_packet(profile.motor.motor_pins[i], value, telemetry);
+  }
+}
+
+// make dshot dma packet, then fire
+void dshot_dma_start() {
+  for (uint8_t i = 0; i < 16; i++) {
+    for (uint32_t j = 0; j < dshot_gpio_port_count; j++) {
+      port_dma_buffer[j][i * 3 + 1] = 0; // clear middle bit
+    }
+    for (uint8_t motor = 0; motor < MOTOR_PIN_MAX; motor++) {
+      const uint32_t port = dshot_pins[motor].dshot_port;
+      const uint32_t motor_high = (dshot_pins[motor].pin);
+      const uint32_t motor_low = (dshot_pins[motor].pin << 16);
+
+      const bool bit = dshot_packet[motor] & 0x8000;
+
+      // for 1 hold the line high for two timeunits
+      // first timeunit is already applied
+      port_dma_buffer[port][i * 3 + 1] |= bit ? motor_high : motor_low;
+
+      dshot_packet[motor] <<= 1;
+    }
+  }
+
+  dma_prepare_tx_memory((void *)port_dma_buffer, sizeof(port_dma_buffer));
+
+#ifdef STM32F4
+  while (spi_dma_is_ready(SPI_PORT1) == 0)
+    __NOP();
+#endif
+
+  dshot_dma_phase = dshot_gpio_port_count;
+  for (uint32_t j = 0; j < dshot_gpio_port_count; j++) {
+    dshot_dma_setup_port(j);
   }
 }
 
