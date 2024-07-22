@@ -18,20 +18,7 @@ extern dshot_pin_t dshot_pins[MOTOR_PIN_MAX];
 extern motor_direction_t motor_dir;
 
 extern uint8_t dshot_gpio_port_count;
-dshot_gpio_port_t dshot_gpio_ports[DSHOT_MAX_PORT_COUNT] = {
-    {
-        .timer_channel = TMR_SELECT_CHANNEL_1,
-        .dma_device = DMA_DEVICE_TIM1_CH1,
-    },
-    {
-        .timer_channel = TMR_SELECT_CHANNEL_3,
-        .dma_device = DMA_DEVICE_TIM1_CH3,
-    },
-    {
-        .timer_channel = TMR_SELECT_CHANNEL_4,
-        .dma_device = DMA_DEVICE_TIM1_CH4,
-    },
-};
+extern dshot_gpio_port_t dshot_gpio_ports[DSHOT_MAX_PORT_COUNT];
 
 extern volatile DMA_RAM uint32_t port_dma_buffer[DSHOT_MAX_PORT_COUNT][DSHOT_DMA_BUFFER_SIZE];
 
@@ -47,8 +34,8 @@ static void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   tim_oc_init.oc_idle_state = TRUE;
   tim_oc_init.oc_polarity = TMR_OUTPUT_ACTIVE_LOW;
   tim_oc_init.oc_output_state = TRUE;
-  tmr_output_channel_config(TMR1, port->timer_channel, &tim_oc_init);
-  tmr_output_channel_buffer_enable(TMR1, port->timer_channel, TRUE);
+  tmr_output_channel_config(TMR1, timer_channel_val(port->timer_channel), &tim_oc_init);
+  tmr_output_channel_buffer_enable(TMR1, timer_channel_val(port->timer_channel), TRUE);
 
   const dma_stream_def_t *dma = &dma_stream_defs[port->dma_device];
 
@@ -70,22 +57,6 @@ static void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   dma_interrupt_enable(dma->channel, DMA_FDT_INT, TRUE);
 
   interrupt_enable(dma->irq, DMA_PRIORITY);
-}
-
-static void dshot_enable_dma_request(uint32_t timer_channel, confirm_state new_state) {
-  switch (timer_channel) {
-  case TMR_SELECT_CHANNEL_1:
-    tmr_dma_request_enable(TMR1, TMR_C1_DMA_REQUEST, new_state);
-    break;
-  case TMR_SELECT_CHANNEL_3:
-    tmr_dma_request_enable(TMR1, TMR_C3_DMA_REQUEST, new_state);
-    break;
-  case TMR_SELECT_CHANNEL_4:
-    tmr_dma_request_enable(TMR1, TMR_C4_DMA_REQUEST, new_state);
-    break;
-  default:
-    break;
-  }
 }
 
 void motor_dshot_init() {
@@ -128,7 +99,7 @@ void dshot_dma_setup_port(uint32_t index) {
   dma->channel->dtcnt = DSHOT_DMA_BUFFER_SIZE;
 
   dma_channel_enable(dma->channel, TRUE);
-  dshot_enable_dma_request(port->timer_channel, TRUE);
+  timer_enable_dma_request(TIMER1, port->timer_channel, true);
 }
 
 void motor_dshot_wait_for_ready() {
@@ -142,7 +113,7 @@ void dshot_dma_isr(dma_device_t dev) {
   dma_channel_enable(dma->channel, FALSE);
 
   const dshot_gpio_port_t *port = dshot_gpio_for_device(dev);
-  dshot_enable_dma_request(port->timer_channel, FALSE);
+  timer_enable_dma_request(TIMER1, port->timer_channel, false);
 
   dshot_dma_phase--;
 }

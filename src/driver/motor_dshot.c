@@ -23,7 +23,20 @@ uint16_t dshot_packet[MOTOR_PIN_MAX];  // 16bits dshot data for 4 motors
 dshot_pin_t dshot_pins[MOTOR_PIN_MAX];
 
 uint8_t dshot_gpio_port_count = 0;
-extern dshot_gpio_port_t dshot_gpio_ports[DSHOT_MAX_PORT_COUNT];
+dshot_gpio_port_t dshot_gpio_ports[DSHOT_MAX_PORT_COUNT] = {
+    {
+        .timer_channel = TIMER_CH1,
+        .dma_device = DMA_DEVICE_TIM1_CH1,
+    },
+    {
+        .timer_channel = TIMER_CH3,
+        .dma_device = DMA_DEVICE_TIM1_CH3,
+    },
+    {
+        .timer_channel = TIMER_CH4,
+        .dma_device = DMA_DEVICE_TIM1_CH4,
+    },
+};
 
 motor_direction_t motor_dir = MOTOR_FORWARD;
 static bool dir_change_done = true;
