@@ -18,20 +18,8 @@ extern dshot_pin_t dshot_pins[MOTOR_PIN_MAX];
 extern motor_direction_t motor_dir;
 
 extern uint8_t dshot_gpio_port_count;
-dshot_gpio_port_t dshot_gpio_ports[DSHOT_MAX_PORT_COUNT] = {
-    {
-        .timer_channel = LL_TIM_CHANNEL_CH1,
-        .dma_device = DMA_DEVICE_TIM1_CH1,
-    },
-    {
-        .timer_channel = LL_TIM_CHANNEL_CH3,
-        .dma_device = DMA_DEVICE_TIM1_CH3,
-    },
-    {
-        .timer_channel = LL_TIM_CHANNEL_CH4,
-        .dma_device = DMA_DEVICE_TIM1_CH4,
-    },
-};
+extern dshot_gpio_port_t dshot_gpio_ports[DSHOT_MAX_PORT_COUNT];
+
 extern volatile DMA_RAM uint32_t port_dma_buffer[DSHOT_MAX_PORT_COUNT][DSHOT_DMA_BUFFER_SIZE];
 
 extern void dshot_init_motor_pin(uint32_t index);
@@ -45,8 +33,8 @@ static void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   tim_oc_init.OCState = LL_TIM_OCSTATE_ENABLE;
   tim_oc_init.OCPolarity = LL_TIM_OCPOLARITY_LOW;
   tim_oc_init.CompareValue = 10;
-  LL_TIM_OC_Init(TIM1, port->timer_channel, &tim_oc_init);
-  LL_TIM_OC_EnablePreload(TIM1, port->timer_channel);
+  LL_TIM_OC_Init(TIM1, timer_channel_val(port->timer_channel), &tim_oc_init);
+  LL_TIM_OC_EnablePreload(TIM1, timer_channel_val(port->timer_channel));
 
   const dma_stream_def_t *dma = &dma_stream_defs[port->dma_device];
 
@@ -80,38 +68,6 @@ static void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   interrupt_enable(dma->irq, DMA_PRIORITY);
 
   LL_DMA_EnableIT_TC(dma->port, dma->stream_index);
-}
-
-static void dshot_enable_dma_request(uint32_t timer_channel) {
-  switch (timer_channel) {
-  case LL_TIM_CHANNEL_CH1:
-    LL_TIM_EnableDMAReq_CC1(TIM1);
-    break;
-  case LL_TIM_CHANNEL_CH3:
-    LL_TIM_EnableDMAReq_CC3(TIM1);
-    break;
-  case LL_TIM_CHANNEL_CH4:
-    LL_TIM_EnableDMAReq_CC4(TIM1);
-    break;
-  default:
-    break;
-  }
-}
-
-static void dshot_disable_dma_request(uint32_t timer_channel) {
-  switch (timer_channel) {
-  case LL_TIM_CHANNEL_CH1:
-    LL_TIM_DisableDMAReq_CC1(TIM1);
-    break;
-  case LL_TIM_CHANNEL_CH3:
-    LL_TIM_DisableDMAReq_CC3(TIM1);
-    break;
-  case LL_TIM_CHANNEL_CH4:
-    LL_TIM_DisableDMAReq_CC4(TIM1);
-    break;
-  default:
-    break;
-  }
 }
 
 void motor_dshot_init() {
@@ -159,7 +115,7 @@ void dshot_dma_setup_port(uint32_t index) {
   LL_DMA_SetDataLength(dma->port, dma->stream_index, DSHOT_DMA_BUFFER_SIZE);
 
   LL_DMA_EnableStream(dma->port, dma->stream_index);
-  dshot_enable_dma_request(port->timer_channel);
+  timer_enable_dma_request(TIMER1, port->timer_channel, true);
 }
 
 void motor_dshot_wait_for_ready() {
@@ -173,7 +129,7 @@ void dshot_dma_isr(dma_device_t dev) {
   LL_DMA_DisableStream(dma->port, dma->stream_index);
 
   const dshot_gpio_port_t *port = dshot_gpio_for_device(dev);
-  dshot_disable_dma_request(port->timer_channel);
+  timer_enable_dma_request(TIMER1, port->timer_channel, false);
 
   dshot_dma_phase--;
 }
