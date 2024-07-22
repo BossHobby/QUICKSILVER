@@ -40,13 +40,20 @@ void gpio_ports_init() {
 }
 
 void gpio_pin_init(gpio_pins_t pin, gpio_config_t config) {
-  gpio_init_type init;
-  init.gpio_mode = mode_map[config.mode];
-  init.gpio_drive_strength = speed_map[config.drive];
-  init.gpio_out_type = output_map[config.output];
-  init.gpio_pull = pull_map[config.pull];
-  init.gpio_pins = gpio_pin_defs[pin].pin;
-  gpio_init(gpio_pin_defs[pin].port, &init);
+  const uint32_t pin_index = gpio_pin_defs[pin].pin_index;
+  volatile gpio_type *port = gpio_pin_defs[pin].port;
+
+  port->cfgr &= (uint32_t) ~(0x03 << (pin_index * 2));
+  port->cfgr |= (uint32_t)(mode_map[config.mode] << (pin_index * 2));
+
+  port->omode &= (uint32_t) ~(0x01 << (pin_index));
+  port->omode |= (uint32_t)(output_map[config.output] << (pin_index));
+
+  port->odrvr &= (uint32_t) ~(0x03 << (pin_index * 2));
+  port->odrvr |= (uint32_t)(speed_map[config.drive] << (pin_index * 2));
+
+  port->pull &= (uint32_t) ~(0x03 << (pin_index * 2));
+  port->pull |= (uint32_t)(pull_map[config.pull] << (pin_index * 2));
 }
 
 void gpio_pin_init_af(gpio_pins_t pin, gpio_config_t config, uint8_t af) {
