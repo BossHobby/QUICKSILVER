@@ -24,18 +24,9 @@ dshot_pin_t dshot_pins[MOTOR_PIN_MAX];
 
 uint8_t dshot_gpio_port_count = 0;
 dshot_gpio_port_t dshot_gpio_ports[DSHOT_MAX_PORT_COUNT] = {
-    {
-        .timer_channel = TIMER_CH1,
-        .dma_device = DMA_DEVICE_TIM1_CH1,
-    },
-    {
-        .timer_channel = TIMER_CH3,
-        .dma_device = DMA_DEVICE_TIM1_CH3,
-    },
-    {
-        .timer_channel = TIMER_CH4,
-        .dma_device = DMA_DEVICE_TIM1_CH4,
-    },
+    {.dma_device = DMA_DEVICE_DSHOT_CH1},
+    {.dma_device = DMA_DEVICE_DSHOT_CH2},
+    {.dma_device = DMA_DEVICE_DSHOT_CH3},
 };
 
 motor_direction_t motor_dir = MOTOR_FORWARD;
@@ -44,9 +35,10 @@ static bool dir_change_done = true;
 volatile DMA_RAM uint32_t port_dma_buffer[DSHOT_MAX_PORT_COUNT][DSHOT_DMA_BUFFER_SIZE];
 
 extern void dshot_dma_setup_port(uint32_t index);
+extern void dshot_init_gpio_port(dshot_gpio_port_t *port);
 
 const dshot_gpio_port_t *dshot_gpio_for_device(const dma_device_t dev) {
-  return &dshot_gpio_ports[dev - DMA_DEVICE_TIM1_CH1];
+  return &dshot_gpio_ports[dev - DMA_DEVICE_DSHOT_CH1];
 }
 
 void dshot_init_motor_pin(uint32_t index) {
@@ -132,6 +124,26 @@ void dshot_dma_start() {
   for (uint32_t j = 0; j < dshot_gpio_port_count; j++) {
     dshot_dma_setup_port(j);
   }
+}
+
+void motor_dshot_init() {
+  dshot_gpio_port_count = 0;
+
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    dshot_init_motor_pin(i);
+  }
+
+  for (uint32_t j = 0; j < dshot_gpio_port_count; j++) {
+    dshot_init_gpio_port(&dshot_gpio_ports[j]);
+
+    for (uint8_t i = 0; i < 16; i++) {
+      port_dma_buffer[j][i * 3 + 0] = dshot_gpio_ports[j].port_high; // start bit
+      port_dma_buffer[j][i * 3 + 1] = 0;                             // actual bit, set below
+      port_dma_buffer[j][i * 3 + 2] = dshot_gpio_ports[j].port_low;  // return line to low
+    }
+  }
+
+  motor_dir = MOTOR_FORWARD;
 }
 
 void motor_dshot_write(float *values) {

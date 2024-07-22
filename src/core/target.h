@@ -186,6 +186,7 @@ typedef struct {
   gpio_pins_t fpv;
   gpio_pins_t vbat;
   gpio_pins_t ibat;
+  gpio_pins_t rgb_led;
 
   target_invert_pin_t sdcard_detect;
   target_invert_pin_t buzzer;
@@ -213,6 +214,7 @@ typedef struct {
   MEMBER(fpv, gpio_pins_t)                                                       \
   MEMBER(vbat, gpio_pins_t)                                                      \
   MEMBER(ibat, gpio_pins_t)                                                      \
+  MEMBER(rgb_led, gpio_pins_t)                                                   \
   MEMBER(sdcard_detect, target_invert_pin_t)                                     \
   MEMBER(buzzer, target_invert_pin_t)                                            \
   ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX, gpio_pins_t)                           \

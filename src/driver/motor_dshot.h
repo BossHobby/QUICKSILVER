@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/project.h"
 #include "driver/dma.h"
 #include "driver/gpio.h"
 #include "driver/motor.h"
@@ -17,8 +18,10 @@ typedef struct {
   uint32_t port_low;  // motor pins for BSRRL, for setting pins low
   uint32_t port_high; // motor pins for BSRRH, for setting pins high
 
-  timer_channel_t timer_channel;
+  resource_tag_t timer_tag;
+
   dma_device_t dma_device;
+  const dma_assigment_t *dma_ass;
 } dshot_gpio_port_t;
 
 #define DSHOT_CMD_BEEP1 1

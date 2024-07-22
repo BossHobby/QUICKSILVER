@@ -231,6 +231,18 @@ void spi_bus_device_init(const spi_bus_device_t *bus) {
     return;
   }
 
+  const spi_port_def_t *def = &spi_port_defs[bus->port];
+
+  spi_dev[bus->port].dma_rx = dma_alloc(def->dma_rx, SPI_TAG(bus->port, RES_SPI_MISO));
+  if (spi_dev[bus->port].dma_rx == NULL) {
+    failloop(FAILLOOP_DMA);
+  }
+
+  spi_dev[bus->port].dma_tx = dma_alloc(def->dma_tx, SPI_TAG(bus->port, RES_SPI_MOSI));
+  if (spi_dev[bus->port].dma_tx == NULL) {
+    failloop(FAILLOOP_DMA);
+  }
+
   spi_init_pins(bus->port);
   spi_device_init(bus->port);
   spi_dev[bus->port].is_init = true;

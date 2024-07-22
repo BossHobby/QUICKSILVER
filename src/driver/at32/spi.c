@@ -81,10 +81,10 @@ static uint32_t spi_find_divder(uint32_t clk_hz) {
 }
 
 static void spi_dma_init_rx(spi_ports_t port) {
-  const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_rx];
+  const dma_assigment_t *dma = spi_dev[port].dma_rx;
 
-  dma_reset(dma->channel);
-  dmamux_init(dma->mux, dma->request);
+  dma_reset(dma->def->stream);
+  dmamux_init(dma->def->mux, dma->chan->request);
 
   dma_init_type init;
   init.peripheral_base_addr = (uint32_t)(&PORT.channel->dt);
@@ -97,22 +97,14 @@ static void spi_dma_init_rx(spi_ports_t port) {
   init.memory_data_width = DMA_MEMORY_DATA_WIDTH_BYTE;
   init.loop_mode_enable = FALSE;
   init.priority = DMA_PRIORITY_HIGH;
-  dma_init(dma->channel, &init);
-}
-
-static void spi_dma_reset_rx(spi_ports_t port, uint8_t *rx_data, uint32_t rx_size) {
-  dma_prepare_rx_memory(rx_data, rx_size);
-
-  const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_rx];
-  dma->channel->maddr = (uint32_t)rx_data;
-  dma_data_number_set(dma->channel, rx_size);
+  dma_init(dma->def->stream, &init);
 }
 
 static void spi_dma_init_tx(spi_ports_t port) {
-  const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_tx];
+  const dma_assigment_t *dma = spi_dev[port].dma_tx;
 
-  dma_reset(dma->channel);
-  dmamux_init(dma->mux, dma->request);
+  dma_reset(dma->def->stream);
+  dmamux_init(dma->def->mux, dma->chan->request);
 
   dma_init_type init;
   init.peripheral_base_addr = (uint32_t)(&PORT.channel->dt);
@@ -125,15 +117,7 @@ static void spi_dma_init_tx(spi_ports_t port) {
   init.memory_data_width = DMA_MEMORY_DATA_WIDTH_BYTE;
   init.loop_mode_enable = FALSE;
   init.priority = DMA_PRIORITY_HIGH;
-  dma_init(dma->channel, &init);
-}
-
-static void spi_dma_reset_tx(spi_ports_t port, uint8_t *tx_data, uint32_t tx_size) {
-  dma_prepare_tx_memory(tx_data, tx_size);
-
-  const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_tx];
-  dma->channel->maddr = (uint32_t)tx_data;
-  dma_data_number_set(dma->channel, tx_size);
+  dma_init(dma->def->stream, &init);
 }
 
 static void spi_set_divider(spi_type *channel, spi_mclk_freq_div_type div) {
@@ -186,20 +170,26 @@ void spi_reconfigure(spi_bus_device_t *bus) {
 }
 
 void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) {
-  const dma_stream_def_t *dma_tx = &dma_stream_defs[PORT.dma_tx];
-  const dma_stream_def_t *dma_rx = &dma_stream_defs[PORT.dma_rx];
+  const dma_assigment_t *dma_tx = spi_dev[port].dma_tx;
+  const dma_assigment_t *dma_rx = spi_dev[port].dma_rx;
 
-  dma_clear_flag_tc(dma_rx);
-  dma_clear_flag_tc(dma_tx);
+  dma_clear_flag_tc(dma_rx->def);
+  dma_clear_flag_tc(dma_tx->def);
 
-  spi_dma_reset_rx(port, buffer, length);
-  spi_dma_reset_tx(port, buffer, length);
+  dma_prepare_rx_memory(buffer, length);
+  dma_prepare_tx_memory(buffer, length);
 
-  dma_interrupt_enable(dma_rx->channel, DMA_FDT_INT, TRUE);
-  dma_interrupt_enable(dma_rx->channel, DMA_DTERR_INT, TRUE);
+  dma_rx->def->stream->maddr = (uint32_t)buffer;
+  dma_data_number_set(dma_rx->def->stream, length);
 
-  dma_channel_enable(dma_rx->channel, TRUE);
-  dma_channel_enable(dma_tx->channel, TRUE);
+  dma_tx->def->stream->maddr = (uint32_t)buffer;
+  dma_data_number_set(dma_tx->def->stream, length);
+
+  dma_interrupt_enable(dma_rx->def->stream, DMA_FDT_INT, TRUE);
+  dma_interrupt_enable(dma_rx->def->stream, DMA_DTERR_INT, TRUE);
+
+  dma_channel_enable(dma_rx->def->stream, TRUE);
+  dma_channel_enable(dma_tx->def->stream, TRUE);
 
   spi_i2s_dma_transmitter_enable(PORT.channel, TRUE);
   spi_i2s_dma_receiver_enable(PORT.channel, TRUE);
@@ -210,8 +200,9 @@ void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) 
 void spi_device_init(spi_ports_t port) {
   const spi_port_def_t *def = &spi_port_defs[port];
   rcc_enable(def->rcc);
-  dma_enable_rcc(def->dma_rx);
-  dma_enable_rcc(def->dma_tx);
+
+  dma_enable_rcc(spi_dev[port].dma_rx);
+  dma_enable_rcc(spi_dev[port].dma_tx);
 
   spi_i2s_reset(def->channel);
 
@@ -233,8 +224,8 @@ void spi_device_init(spi_ports_t port) {
   spi_dma_init_rx(port);
   spi_dma_init_tx(port);
 
-  const dma_stream_def_t *dma_rx = &dma_stream_defs[def->dma_rx];
-  interrupt_enable(dma_rx->irq, DMA_PRIORITY);
+  const dma_assigment_t *dma_rx = spi_dev[port].dma_rx;
+  interrupt_enable(dma_rx->def->irq, DMA_PRIORITY);
 }
 
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count) {
@@ -289,32 +280,32 @@ void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs
 }
 
 static void handle_dma_rx_isr(spi_ports_t port) {
-  const dma_stream_def_t *dma_rx = &dma_stream_defs[PORT.dma_rx];
-  const dma_stream_def_t *dma_tx = &dma_stream_defs[PORT.dma_tx];
+  const dma_assigment_t *dma_tx = spi_dev[port].dma_tx;
+  const dma_assigment_t *dma_rx = spi_dev[port].dma_rx;
 
-  if (!dma_is_flag_active_tc(dma_rx)) {
+  if (!dma_is_flag_active_tc(dma_rx->def)) {
     return;
   }
 
-  dma_clear_flag_tc(dma_rx);
-  dma_clear_flag_tc(dma_tx);
+  dma_clear_flag_tc(dma_rx->def);
+  dma_clear_flag_tc(dma_tx->def);
 
-  dma_interrupt_enable(dma_rx->channel, DMA_FDT_INT, FALSE);
-  dma_interrupt_enable(dma_rx->channel, DMA_DTERR_INT, FALSE);
+  dma_interrupt_enable(dma_rx->def->stream, DMA_FDT_INT, FALSE);
+  dma_interrupt_enable(dma_rx->def->stream, DMA_DTERR_INT, FALSE);
 
   spi_i2s_dma_transmitter_enable(PORT.channel, FALSE);
   spi_i2s_dma_receiver_enable(PORT.channel, FALSE);
 
-  dma_channel_enable(dma_rx->channel, FALSE);
-  dma_channel_enable(dma_tx->channel, FALSE);
+  dma_channel_enable(dma_rx->def->stream, FALSE);
+  dma_channel_enable(dma_tx->def->stream, FALSE);
 
   spi_enable(PORT.channel, FALSE);
 
   spi_txn_finish(port);
 }
 
-void spi_dma_isr(dma_device_t dev) {
-  switch (dev) {
+void spi_dma_isr(const dma_assigment_t *ass) {
+  switch (ass->dev) {
   case DMA_DEVICE_SPI1_RX:
     handle_dma_rx_isr(SPI_PORT1);
     break;

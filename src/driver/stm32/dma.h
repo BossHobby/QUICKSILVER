@@ -14,6 +14,11 @@
 #define LL_DMA_DisableStream LL_DMA_DisableChannel
 #define LL_DMA_IsEnabledStream LL_DMA_IsEnabledChannel
 
+typedef struct {
+  uint32_t tag;
+  uint32_t request;
+} dma_channel_t;
+
 #else
 #define DMA_FLAG_TC (0x1 << 5)
 #define DMA_FLAG_HT (0x1 << 4)
@@ -34,5 +39,16 @@ static const uint32_t _dma_flag_shift[] = {0, 6, 16, 22, 0, 6, 16, 22};
     else                                                                                                             \
       WRITE_REG(dev->port->HIFCR, dma_flag_for_channel(dev, DMA_FLAG_TC | DMA_FLAG_TE | DMA_FLAG_HT | DMA_FLAG_FE)); \
   }
+
+typedef struct {
+  uint32_t tag;
+#ifdef STM32H7
+  uint32_t request;
+#else
+  int8_t port_index;
+  int8_t stream_index;
+  uint32_t channel;
+#endif
+} dma_channel_t;
 
 #endif
