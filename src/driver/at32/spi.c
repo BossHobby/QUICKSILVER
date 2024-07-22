@@ -80,30 +80,6 @@ static uint32_t spi_find_divder(uint32_t clk_hz) {
   return spi_divider_to_ll(divider);
 }
 
-static void spi_init_pins(spi_ports_t port) {
-  const target_spi_port_t *dev = &target.spi_ports[port];
-
-  gpio_config_t gpio_init;
-
-  gpio_init.mode = GPIO_ALTERNATE;
-  gpio_init.drive = GPIO_DRIVE_HIGH;
-  gpio_init.output = GPIO_PUSHPULL;
-  gpio_init.pull = GPIO_UP_PULL;
-  gpio_pin_init_tag(dev->sck, gpio_init, SPI_TAG(port, RES_SPI_SCK));
-
-  gpio_init.mode = GPIO_ALTERNATE;
-  gpio_init.drive = GPIO_DRIVE_HIGH;
-  gpio_init.output = GPIO_PUSHPULL;
-  gpio_init.pull = GPIO_NO_PULL;
-  gpio_pin_init_tag(dev->miso, gpio_init, SPI_TAG(port, RES_SPI_MISO));
-
-  gpio_init.mode = GPIO_ALTERNATE;
-  gpio_init.drive = GPIO_DRIVE_HIGH;
-  gpio_init.output = GPIO_PUSHPULL;
-  gpio_init.pull = GPIO_NO_PULL;
-  gpio_pin_init_tag(dev->mosi, gpio_init, SPI_TAG(port, RES_SPI_MOSI));
-}
-
 static void spi_dma_init_rx(spi_ports_t port) {
   const dma_stream_def_t *dma = &dma_stream_defs[PORT.dma_rx];
 
@@ -231,13 +207,7 @@ void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) 
   spi_enable(PORT.channel, TRUE);
 }
 
-static void spi_device_init(spi_ports_t port) {
-  if (spi_dev[port].is_init) {
-    return;
-  }
-
-  spi_init_pins(port);
-
+void spi_device_init(spi_ports_t port) {
   const spi_port_def_t *def = &spi_port_defs[port];
   rcc_enable(def->rcc);
   dma_enable_rcc(def->dma_rx);
@@ -256,7 +226,6 @@ static void spi_device_init(spi_ports_t port) {
   default_init.cs_mode_selection = SPI_CS_SOFTWARE_MODE;
   spi_init(def->channel, &default_init);
 
-  spi_dev[port].is_init = true;
   spi_dev[port].dma_done = true;
   spi_dev[port].mode = SPI_MODE_TRAILING_EDGE;
   spi_dev[port].hz = 0;
@@ -266,22 +235,6 @@ static void spi_device_init(spi_ports_t port) {
 
   const dma_stream_def_t *dma_rx = &dma_stream_defs[def->dma_rx];
   interrupt_enable(dma_rx->irq, DMA_PRIORITY);
-}
-
-void spi_bus_device_init(const spi_bus_device_t *bus) {
-  if (!target_spi_port_valid(&target.spi_ports[bus->port])) {
-    return;
-  }
-
-  gpio_config_t gpio_init;
-  gpio_init.mode = GPIO_OUTPUT;
-  gpio_init.drive = GPIO_DRIVE_HIGH;
-  gpio_init.output = GPIO_PUSHPULL;
-  gpio_init.pull = GPIO_UP_PULL;
-  gpio_pin_init(bus->nss, gpio_init);
-  gpio_pin_set(bus->nss);
-
-  spi_device_init(bus->port);
 }
 
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count) {
