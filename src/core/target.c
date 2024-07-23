@@ -48,6 +48,7 @@ TARGET_LED_MEMBERS
 TARGET_BUZZER_MEMBERS
 TARGET_SERIAL_MEMBERS
 TARGET_SPI_MEMBERS
+TARGET_I2C_MEMBERS
 TARGET_SPI_DEVICE_MEMBERS
 TARGET_GYRO_SPI_DEVICE_MEMBERS
 TARGET_RX_SPI_DEVICE_MEMBERS
@@ -77,6 +78,7 @@ TARGET_LED_MEMBERS
 TARGET_BUZZER_MEMBERS
 TARGET_SERIAL_MEMBERS
 TARGET_SPI_MEMBERS
+TARGET_I2C_MEMBERS
 TARGET_GYRO_SPI_DEVICE_MEMBERS
 TARGET_SPI_DEVICE_MEMBERS
 TARGET_RX_SPI_DEVICE_MEMBERS
@@ -254,6 +256,10 @@ bool target_gyro_spi_device_valid(const target_gyro_spi_device_t *dev) {
 
 bool target_spi_port_valid(const target_spi_port_t *port) {
   return port->index != 0 && port->miso != PIN_NONE && port->mosi != PIN_NONE && port->sck != PIN_NONE;
+}
+
+bool target_i2c_port_valid(const target_i2c_port_t *port) {
+  return port->index != 0 && port->sda != PIN_NONE && port->scl != PIN_NONE;
 }
 
 void target_init() {

@@ -10,6 +10,7 @@
 #define DMA_PRIORITY 0x2
 #define EXTI_PRIORITY 0x3
 #define UART_PRIORITY 0x4
+#define I2C_PRIORITY 0x4
 #define TIMER_PRIORITY 0x5
 #define USB_PRIORITY 0x6
 
