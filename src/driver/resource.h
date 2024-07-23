@@ -10,6 +10,7 @@ typedef enum {
   RESOURCE_SPI,
   RESOURCE_SERIAL,
   RESOURCE_ADC,
+  RESOURCE_I2C,
 } resource_type_t;
 
 typedef enum {
@@ -24,6 +25,12 @@ typedef enum {
   RES_SPI_MISO,
   RES_SPI_SCK,
 } resource_spi_t;
+
+typedef enum {
+  RES_I2C_INVALID,
+  RES_I2C_SCL,
+  RES_I2C_SDA,
+} resource_i2c_t;
 
 typedef uint32_t resource_tag_t;
 
@@ -45,6 +52,10 @@ typedef uint32_t resource_tag_t;
 #define ADC_TAG(adc, ch) RESOURCE_TAG(RESOURCE_ADC, (uint32_t)((adc) << 8) | (ch))
 #define ADC_TAG_DEV(tag) (adc_devices_t)(((tag) >> 8) & 0xFF)
 #define ADC_TAG_CH(tag) (uint8_t)((tag) & 0xFF)
+
+#define I2C_TAG(port, pin) RESOURCE_TAG(RESOURCE_I2C, (uint32_t)((port) << 8) | (pin))
+#define I2C_TAG_PORT(tag) (uint8_t)(((tag) >> 8) & 0xFF)
+#define I2C_TAG_PIN(tag) (uint8_t)((tag) & 0xFF)
 
 cbor_result_t cbor_decode_resource_tag_t(cbor_value_t *dec, resource_tag_t *t);
 cbor_result_t cbor_encode_resource_tag_t(cbor_value_t *enc, const resource_tag_t *d);
