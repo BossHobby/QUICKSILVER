@@ -138,9 +138,9 @@ typedef struct {
   float ibat_sag_filtered; // filtered current in amps (fast for mAh tracking)
   float ibat_drawn;        // total mAh consumed
 
-  vec4_t rx;          // holds raw or calibrated role channels; rover steering uses yaw
-  vec4_t rx_filtered; // same as above, but with constraints (just in case), smoothing and deadband applied
-  vec4_t rx_override; // override values, activated by controls_override
+  vec4_t rx;                            // holds raw or calibrated role channels; rover steering uses yaw
+  vec4_t rx_filtered;                   // same as above, but with constraints (just in case), smoothing and deadband applied
+  vec4_t rx_override;                   // override values, activated by controls_override
   uint16_t rx_channels[RX_CHANNEL_MAX]; // full resolution 16-bit receiver channel values
   float rx_filter_hz;
 
@@ -153,7 +153,7 @@ typedef struct {
   float throttle; // input throttle with idle etc applied
   float thrsum;   // average of all 4 motor thrusts
 
-  uint32_t aux_active;           // cached active aux_function_t bitmask
+  uint32_t aux_active; // cached active aux_function_t bitmask
 
   vec3_t accel_raw; // raw accel reading with rotation and scaling applied
   vec3_t accel;     // filtered accel readings
@@ -173,6 +173,8 @@ typedef struct {
   float gps_heading_accuracy;
   gps_coord_t gps_coord;
   float gps_altitude;
+  float baro_pressure;
+  float baro_altitude;
 
   vec3_t setpoint; // angular velocity setpoint from stick input
   vec3_t error;    // setpoint - gyro = error in angular velocity
@@ -245,6 +247,8 @@ typedef struct {
   MEMBER(gps_heading_accuracy, float)                  \
   MEMBER(gps_coord, gps_coord_t)                       \
   MEMBER(gps_altitude, float)                          \
+  MEMBER(baro_pressure, float)                         \
+  MEMBER(baro_altitude, float)                         \
   MEMBER(setpoint, vec3_t)                             \
   MEMBER(error, vec3_t)                                \
   MEMBER(pid_p_term, vec3_t)                           \
