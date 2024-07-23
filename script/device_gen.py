@@ -154,6 +154,15 @@ def map_signal(s):
             },
             "af": -1,
         }
+    elif s["driver"] == "i2c" and (s["name"] == "scl" or s["name"] == "sda"):
+        funcs.append(
+            {
+                "func": "i2c",
+                "af": int(s["af"]),
+                "instance": int(s["instance"]),
+                "name": s["name"],
+            }
+        )
     else:
         return None
 
