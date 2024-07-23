@@ -69,6 +69,15 @@ typedef enum {
 } __attribute__((__packed__)) spi_ports_t;
 
 typedef enum {
+  I2C_PORT_INVALID,
+  I2C_PORT1,
+  I2C_PORT2,
+  I2C_PORT3,
+  I2C_PORT4,
+  I2C_PORT_MAX,
+} __attribute__((__packed__)) i2c_ports_t;
+
+typedef enum {
   SERIAL_PORT_INVALID,
   SERIAL_PORT1,
   SERIAL_PORT2,
@@ -161,6 +170,19 @@ typedef struct {
 
 typedef struct {
   uint8_t index;
+  gpio_pins_t sda;
+  gpio_pins_t scl;
+} target_i2c_port_t;
+
+#define TARGET_I2C_MEMBERS        \
+  START_STRUCT(target_i2c_port_t) \
+  MEMBER(index, uint8_t)          \
+  MEMBER(sda, gpio_pins_t)        \
+  MEMBER(scl, gpio_pins_t)        \
+  END_STRUCT()
+
+typedef struct {
+  uint8_t index;
   gpio_pins_t miso;
   gpio_pins_t mosi;
   gpio_pins_t sck;
@@ -224,6 +246,15 @@ typedef struct {
   END_STRUCT()
 
 typedef struct {
+  i2c_ports_t port;
+} target_i2c_device_t;
+
+#define TARGET_I2C_DEVICE_MEMBERS   \
+  START_STRUCT(target_i2c_device_t) \
+  MEMBER(port, uint8_t)             \
+  END_STRUCT()
+
+typedef struct {
   uint8_t name[32];
   uint8_t manufacturer[32];
 
@@ -231,6 +262,7 @@ typedef struct {
   target_serial_port_t serial_ports[SERIAL_PORT_MAX];
   target_serial_port_t serial_soft_ports[SERIAL_SOFT_COUNT];
   target_spi_port_t spi_ports[SPI_PORT_MAX];
+  target_i2c_port_t i2c_ports[I2C_PORT_MAX];
 
   target_gyro_spi_device_t gyro;
   uint8_t gyro_orientation;
@@ -238,6 +270,8 @@ typedef struct {
   target_spi_device_t flash;
   target_spi_device_t sdcard;
   target_rx_spi_device_t rx_spi;
+
+  target_i2c_device_t baro;
 
   gpio_pins_t usb_detect;
   gpio_pins_t fpv;
@@ -264,12 +298,14 @@ typedef struct {
   INDEX_ARRAY_MEMBER(serial_ports, SERIAL_PORT_MAX, target_serial_port_t)        \
   INDEX_ARRAY_MEMBER(serial_soft_ports, SERIAL_SOFT_COUNT, target_serial_port_t) \
   INDEX_ARRAY_MEMBER(spi_ports, SPI_PORT_MAX, target_spi_port_t)                 \
+  INDEX_ARRAY_MEMBER(i2c_ports, I2C_PORT_MAX, target_i2c_port_t)                 \
   MEMBER(gyro, target_gyro_spi_device_t)                                         \
   MEMBER(gyro_orientation, uint8_t)                                              \
   MEMBER(osd, target_spi_device_t)                                               \
   MEMBER(flash, target_spi_device_t)                                             \
   MEMBER(sdcard, target_spi_device_t)                                            \
   MEMBER(rx_spi, target_rx_spi_device_t)                                         \
+  MEMBER(baro, target_i2c_device_t)                                              \
   MEMBER(usb_detect, gpio_pins_t)                                                \
   MEMBER(fpv, gpio_pins_t)                                                       \
   MEMBER(vbat, gpio_pins_t)                                                      \
@@ -327,6 +363,7 @@ bool target_serial_port_valid(const target_serial_port_t *port);
 bool target_gyro_spi_device_valid(const target_gyro_spi_device_t *dev);
 bool target_spi_device_valid(const target_spi_device_t *dev);
 bool target_spi_port_valid(const target_spi_port_t *port);
+bool target_i2c_port_valid(const target_i2c_port_t *port);
 void target_init();
 
 cbor_result_t cbor_encode_gpio_pins_t(cbor_value_t *enc, const gpio_pins_t *t);
