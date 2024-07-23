@@ -8,6 +8,7 @@
 #include <stm32f4xx_ll_dma.h>
 #include <stm32f4xx_ll_exti.h>
 #include <stm32f4xx_ll_gpio.h>
+#include <stm32f4xx_ll_i2c.h>
 #include <stm32f4xx_ll_pwr.h>
 #include <stm32f4xx_ll_rtc.h>
 #include <stm32f4xx_ll_spi.h>
@@ -25,6 +26,7 @@
 #include <stm32g4xx_ll_exti.h>
 #include <stm32g4xx_ll_fmc.h>
 #include <stm32g4xx_ll_gpio.h>
+#include <stm32g4xx_ll_i2c.h>
 #include <stm32g4xx_ll_pwr.h>
 #include <stm32g4xx_ll_rtc.h>
 #include <stm32g4xx_ll_spi.h>
@@ -41,6 +43,7 @@
 #include <stm32f7xx_ll_dma.h>
 #include <stm32f7xx_ll_exti.h>
 #include <stm32f7xx_ll_gpio.h>
+#include <stm32f7xx_ll_i2c.h>
 #include <stm32f7xx_ll_pwr.h>
 #include <stm32f7xx_ll_rtc.h>
 #include <stm32f7xx_ll_spi.h>
@@ -57,6 +60,7 @@
 #include <stm32h7xx_ll_dma.h>
 #include <stm32h7xx_ll_exti.h>
 #include <stm32h7xx_ll_gpio.h>
+#include <stm32h7xx_ll_i2c.h>
 #include <stm32h7xx_ll_pwr.h>
 #include <stm32h7xx_ll_rtc.h>
 #include <stm32h7xx_ll_spi.h>
@@ -113,6 +117,7 @@
 
 typedef GPIO_TypeDef gpio_port_t;
 typedef SPI_TypeDef spi_port_t;
+typedef I2C_TypeDef i2c_port_t;
 typedef TIM_TypeDef timer_dev_t;
 typedef USART_TypeDef usart_dev_t;
 

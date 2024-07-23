@@ -6,6 +6,7 @@
 #include "control/gestures.h"
 #include "control/imu.h"
 #include "control/sixaxis.h"
+#include "driver/baro/baro.h"
 #include "driver/serial.h"
 #include "driver/usb.h"
 #include "io/blackbox.h"
@@ -27,6 +28,7 @@ void util_task() {
   rgb_led_update();
 
   buzzer_update();
+  baro_update();
 }
 
 FAST_RAM task_t tasks[TASK_MAX] = {
