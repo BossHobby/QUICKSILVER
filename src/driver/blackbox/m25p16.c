@@ -1,4 +1,4 @@
-#include "driver/spi_m25p16.h"
+#include "driver/blackbox/m25p16.h"
 
 #include <string.h>
 
