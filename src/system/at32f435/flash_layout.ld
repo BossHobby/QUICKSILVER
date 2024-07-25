@@ -4,7 +4,7 @@
 **  File        : AT32F435xG_FLASH.ld
 **
 **  Abstract    : Linker script for AT32F435xG Device with
-**                1000KByte FLASH, 384KByte RAM
+**                1024KByte FLASH, 384KByte RAM
 **
 **                Set heap size, stack size and stack location according
 **                to application requirements.
@@ -22,7 +22,7 @@
 ENTRY(Reset_Handler)
 
 /* Highest address of the user mode stack */
-_estack = 0x20060000;    /* end of RAM */
+_estack = ORIGIN(RAM) + LENGTH(RAM);    /* end of RAM */
 
 /* Generate a link error if heap and stack don't fit into RAM */
 _Min_Heap_Size = 0;      /* required amount of heap  */
@@ -31,7 +31,7 @@ _Min_Stack_Size = 0x4000; /* required amount of stack */
 /* Specify the memory areas */
 MEMORY
 {
-FLASH (rx)        : ORIGIN = 0x08000000, LENGTH = 936K
+FLASH (rx)        : ORIGIN = 0x08000000, LENGTH = 960K
 FLASH_CONFIG (r)  : ORIGIN = 0x080F0000, LENGTH = 64K
 RAM (xrw)         : ORIGIN = 0x20000000, LENGTH = 384K
 }
