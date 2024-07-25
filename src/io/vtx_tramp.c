@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "driver/serial.h"
-#include "driver/serial_vtx_tramp.h"
+#include "driver/vtx/tramp.h"
 
 #define TRAMP_DETECT_TRIES 5
 
