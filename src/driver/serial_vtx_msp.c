@@ -5,8 +5,8 @@
 
 #include "core/debug.h"
 #include "core/profile.h"
+#include "driver/osd/hdzero.h"
 #include "driver/serial.h"
-#include "driver/serial_hdzero.h"
 #include "io/msp.h"
 #include "rx/unified_serial.h"
 #include "util/crc.h"
