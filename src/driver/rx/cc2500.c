@@ -1,4 +1,4 @@
-#include "driver/spi_cc2500.h"
+#include "driver/rx/cc2500.h"
 
 #include "core/project.h"
 #include "driver/spi.h"

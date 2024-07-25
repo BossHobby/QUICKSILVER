@@ -1,4 +1,4 @@
-#include "driver/spi_sx128x.h"
+#include "driver/rx/sx128x.h"
 
 #include <stdbool.h>
 #include <string.h>
