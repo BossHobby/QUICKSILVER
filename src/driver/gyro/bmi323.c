@@ -1,9 +1,9 @@
-#include "driver/spi_bmi323.h"
+#include "driver/gyro/bmi323.h"
 
 #include "core/profile.h"
 #include "driver/gpio.h"
+#include "driver/gyro/gyro.h"
 #include "driver/spi.h"
-#include "driver/spi_gyro.h"
 #include "driver/time.h"
 #include "util/util.h"
 

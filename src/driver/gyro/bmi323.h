@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "driver/spi_gyro.h"
+#include "driver/gyro/gyro.h"
 
 #define BMI323_REG_CHIP_ID 0x00
 #define BMI323_WHO_AMI 0x43
@@ -55,7 +55,7 @@
 #define BMI323_REG_CMD 0x7E
 #define BMI323_REG_CFG_RES 0x7F
 
-//SELF-CALIBRATION FEATURE
+// SELF-CALIBRATION FEATURE
 #define BMI323_REG_FEATURE_IO1 0x11
 #define BMI323_FEATURE_IO1_MASK_ERRORSTATUS UINT16_C(0x000F)
 #define BMI323_FEATURE_IO1_MASK_STATE UINT16_C(0x1800)
