@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "driver/osd.h"
+#include "driver/osd/osd.h"
 
 #define HDZERO_ROWS 18
 #define HDZERO_COLS 50

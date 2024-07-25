@@ -1,9 +1,9 @@
-#include "driver/spi_max7456.h"
+#include "driver/osd/max7456.h"
 
 #include <stdio.h>
 
 #include "core/project.h"
-#include "driver/osd.h"
+#include "driver/osd/osd.h"
 #include "driver/spi.h"
 #include "driver/time.h"
 #include "string.h"
