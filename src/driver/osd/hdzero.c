@@ -1,4 +1,4 @@
-#include "driver/serial_hdzero.h"
+#include "driver/osd/hdzero.h"
 
 #include <string.h>
 

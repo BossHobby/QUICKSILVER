@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "driver/osd.h"
+#include "driver/osd/osd.h"
 
 #define MAX7456_READ_FLAG 0x80
 
