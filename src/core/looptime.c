@@ -1,7 +1,7 @@
 #include "core/looptime.h"
 
 #include "core/project.h"
-#include "driver/spi_gyro.h"
+#include "driver/gyro/gyro.h"
 #include "driver/time.h"
 #include "flight/control.h"
 #include "util/util.h"

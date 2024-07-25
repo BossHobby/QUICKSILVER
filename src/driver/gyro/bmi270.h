@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "driver/spi_gyro.h"
+#include "driver/gyro/gyro.h"
 
 #define BMI270_REG_CHIP_ID 0x00
 #define BMI270_REG_ERR_REG 0x02

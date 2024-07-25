@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "driver/spi_gyro.h"
+#include "driver/gyro/gyro.h"
 
 // Bank 0
 #define ICM42605_DEVICE_CONFIG 0x11

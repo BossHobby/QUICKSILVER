@@ -1,9 +1,9 @@
-#include "driver/spi_icm42605.h"
+#include "driver/gyro/icm42605.h"
 
 #include "core/project.h"
 #include "driver/gpio.h"
+#include "driver/gyro/gyro.h"
 #include "driver/spi.h"
-#include "driver/spi_gyro.h"
 #include "driver/time.h"
 #include "util/util.h"
 
