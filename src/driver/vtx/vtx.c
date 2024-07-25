@@ -1,4 +1,4 @@
-#include "driver/serial_vtx.h"
+#include "driver/vtx/vtx.h"
 
 #include "driver/serial.h"
 #include "driver/serial_soft.h"

@@ -1,5 +1,5 @@
 
-#include "driver/serial_vtx_msp.h"
+#include "driver/vtx/msp.h"
 
 #include <string.h>
 
