@@ -4,7 +4,7 @@
 
 #include "core/flash.h"
 #include "core/project.h"
-#include "driver/spi_a7105.h"
+#include "driver/rx/a7105.h"
 #include "driver/time.h"
 #include "flight/control.h" // for state
 #include "util/util.h"

@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "core/project.h"
-#include "driver/spi_a7105.h"
+#include "driver/rx/a7105.h"
 
 #if defined(USE_RX_SPI_FLYSKY)
 

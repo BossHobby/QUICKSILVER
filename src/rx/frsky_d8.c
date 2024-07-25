@@ -3,7 +3,7 @@
 #include "core/debug.h"
 #include "core/flash.h"
 #include "core/profile.h"
-#include "driver/spi_cc2500.h"
+#include "driver/rx/cc2500.h"
 #include "driver/time.h"
 #include "flight/control.h"
 #include "util/util.h"
