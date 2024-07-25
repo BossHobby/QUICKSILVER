@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "driver/serial_vtx.h"
+#include "driver/vtx/vtx.h"
 
 typedef enum {
   SA_CMD_GET_SETTINGS = 0x01,
