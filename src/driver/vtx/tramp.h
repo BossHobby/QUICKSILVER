@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "driver/serial_vtx.h"
+#include "driver/vtx/vtx.h"
 
 typedef struct {
   uint16_t freq_min;
