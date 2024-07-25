@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "driver/spi_gyro.h"
+#include "driver/gyro/gyro.h"
 
 #define MPU_BIT_SLEEP 0x40
 #define MPU_BIT_H_RESET 0x80
