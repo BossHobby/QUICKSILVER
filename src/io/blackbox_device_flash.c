@@ -1,7 +1,7 @@
 #include "blackbox_device_flash.h"
 
 #include "core/project.h"
-#include "driver/spi_m25p16.h"
+#include "driver/blackbox/m25p16.h"
 #include "util/util.h"
 
 #define FILES_SECTOR_OFFSET blackbox_bounds.sector_size
