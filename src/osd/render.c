@@ -7,7 +7,7 @@
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/scheduler.h"
-#include "driver/osd.h"
+#include "driver/osd/osd.h"
 #include "flight/control.h"
 #include "io/blackbox_device.h"
 #include "io/led.h"

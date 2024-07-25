@@ -4,7 +4,7 @@
 
 #include "core/looptime.h"
 #include "core/profile.h"
-#include "driver/osd.h"
+#include "driver/osd/osd.h"
 #include "driver/time.h"
 #include "flight/control.h"
 
