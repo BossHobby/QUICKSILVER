@@ -69,7 +69,7 @@ static void dshot_init_motor_pin(uint32_t index) {
   gpio_init.drive = GPIO_DRIVE_HIGH;
   gpio_init.pull = GPIO_NO_PULL;
   gpio_pin_init(target.motor_pins[index], gpio_init);
-  gpio_pin_set(target.motor_pins[index]);
+  gpio_pin_reset(target.motor_pins[index]);
 
   dshot_pins[index].port = gpio_pin_defs[target.motor_pins[index]].port;
   dshot_pins[index].pin = gpio_pin_defs[target.motor_pins[index]].pin;
