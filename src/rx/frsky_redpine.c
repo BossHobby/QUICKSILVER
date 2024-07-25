@@ -5,7 +5,7 @@
 #include "core/looptime.h"
 #include "core/profile.h"
 #include "core/scheduler.h"
-#include "driver/spi_cc2500.h"
+#include "driver/rx/cc2500.h"
 #include "driver/time.h"
 #include "flight/control.h"
 #include "rx/rx_spi.h"

@@ -1,4 +1,4 @@
-#include "driver/spi_a7105.h"
+#include "driver/rx/a7105.h"
 
 #include "core/project.h"
 #include "driver/exti.h"
