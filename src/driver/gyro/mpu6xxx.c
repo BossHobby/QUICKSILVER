@@ -1,11 +1,11 @@
-#include "driver/spi_mpu6xxx.h"
+#include "driver/gyro/mpu6xxx.h"
 
 #include <stdio.h>
 
 #include "core/project.h"
 #include "driver/gpio.h"
+#include "driver/gyro/gyro.h"
 #include "driver/spi.h"
-#include "driver/spi_gyro.h"
 #include "driver/time.h"
 #include "util/util.h"
 
