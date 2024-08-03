@@ -65,8 +65,6 @@ extern serial_port_t serial_rx;
 extern serial_port_t serial_hdzero;
 extern serial_port_t serial_vtx;
 
-void serial_rx_init(rx_serial_protocol_t rx_serial_protocol);
-
 void serial_init(serial_port_t *serial, serial_port_config_t config);
 
 void serial_enable_rcc(serial_ports_t port);
