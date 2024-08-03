@@ -61,19 +61,18 @@ static gyro_types_t gyro_spi_detect() {
   return type;
 }
 
-uint8_t gyro_spi_init() {
-#ifdef GYRO_INT
-  // Interrupt GPIO
-  gpio_config_t gpio_init;
-  gpio_init.mode = GPIO_INPUT;
-  gpio_init.output = GPIO_PUSHPULL;
-  gpio_init.pull = GPIO_UP_PULL;
-  gpio_init.drive = GPIO_DRIVE_HIGH;
-  gpio_pin_init(GYRO_INT, gpio_init);
-#endif
-
+uint8_t gyro_int() {
   if (!target_gyro_spi_device_valid(&target.gyro)) {
     return GYRO_TYPE_INVALID;
+  }
+
+  if (target.gyro.exti != PIN_NONE) {
+    gpio_config_t gpio_init;
+    gpio_init.mode = GPIO_INPUT;
+    gpio_init.output = GPIO_OPENDRAIN;
+    gpio_init.pull = GPIO_NO_PULL;
+    gpio_init.drive = GPIO_DRIVE_HIGH;
+    gpio_pin_init(target.gyro.exti, gpio_init);
   }
 
   gyro_bus.port = target.gyro.port;
@@ -108,9 +107,16 @@ uint8_t gyro_spi_init() {
     break;
   }
 
-  gyro_spi_read(); // dummy read to fill buffers
+  gyro_read(); // dummy read to fill buffers
 
   return gyro_type;
+}
+
+bool gyro_exti_state() {
+  if (target.gyro.exti == PIN_NONE) {
+    return true;
+  }
+  return gpio_pin_read(target.gyro.exti);
 }
 
 float gyro_update_period() {
@@ -136,7 +142,7 @@ float gyro_update_period() {
   }
 }
 
-gyro_data_t gyro_spi_read() {
+gyro_data_t gyro_read() {
   static gyro_data_t data;
 
   switch (gyro_type) {
@@ -172,7 +178,7 @@ gyro_data_t gyro_spi_read() {
   return data;
 }
 
-void gyro_spi_calibrate() {
+void gyro_calibrate() {
   switch (gyro_type) {
   case GYRO_TYPE_BMI270: {
     bmi270_calibrate();
