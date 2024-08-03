@@ -19,18 +19,11 @@
 #define RELAX_FACTOR (RELAX_FACTOR_DEG * DEGTORAD)
 #define RELAX_FACTOR_YAW (RELAX_FACTOR_YAW_DEG * DEGTORAD)
 
-// "p term setpoint weighting" 0.0 - 1.0 where 1.0 = normal pid
-static const float setpoint_weigth_brushed[3] = {0.93, 0.93, 0.9}; // BRUSHED FREESTYLE
-// float setpoint_weigth_brushed[3] = { 0.97 , 0.98 , 0.95};   //BRUSHED RACE
-static const float setpoint_weigth_brushless[3] = {1, 1, 1}; // ALL PID
-
 /// output limit
-static const float out_limit_brushed[PID_SIZE] = {1.7, 1.7, 0.5};
-static const float out_limit_brushless[PID_SIZE] = {0.8, 0.8, 0.6};
+static const float out_limit[PID_SIZE] = {0.8, 0.8, 0.6};
 
 // limit of integral term (abs)
-static const float integral_limit_brushed[PID_SIZE] = {1.7, 1.7, 0.5};
-static const float integral_limit_brushless[PID_SIZE] = {0.8, 0.8, 0.6};
+static const float integral_limit[PID_SIZE] = {0.8, 0.8, 0.6};
 
 static const float pid_scales[PID_SIZE][PID_SIZE] = {
     // roll, pitch, yaw
@@ -70,7 +63,6 @@ void pid_init() {
 
 // (iwindup = 0  windup is not allowed)   (iwindup = 1 windup is allowed)
 static inline float pid_compute_iterm_windup(uint8_t x, float pid_output) {
-  const float *out_limit = target.brushless ? out_limit_brushless : out_limit_brushed;
   if ((pid_output >= out_limit[x]) && (state.error.axis[x] > 0)) {
     return 0.0f;
   }
@@ -135,7 +127,7 @@ static inline float pid_voltage_compensation() {
     return 1.0f;
   }
 
-  float res = constrain(mapf((state.vbat_filtered_decay / (float)state.lipo_cell_count), 2.5f, 3.85f, PID_VC_FACTOR, 1.0f), 1.0f, PID_VC_FACTOR);
+  float res = constrain(mapf(state.vbat_cell_avg, 2.5f, 3.85f, PID_VC_FACTOR, 1.0f), 1.0f, PID_VC_FACTOR);
 #ifdef LEVELMODE_PID_ATTENUATION
   if (rx_aux_on(AUX_LEVELMODE))
     res *= LEVELMODE_PID_ATTENUATION;
@@ -161,9 +153,6 @@ void pid_calc() {
   static vec3_t pid_output = {.roll = 0, .pitch = 0, .yaw = 0};
   const float v_compensation = pid_voltage_compensation();
   const float tda_compensation = pid_tda_compensation();
-  const float *out_limit = target.brushless ? out_limit_brushless : out_limit_brushed;
-  const float *setpoint_weigth = target.brushless ? setpoint_weigth_brushless : setpoint_weigth_brushed;
-  const float *integral_limit = target.brushless ? integral_limit_brushless : integral_limit_brushed;
 
   const uint8_t stick_boost_profile = rx_aux_on(AUX_STICK_BOOST_PROFILE) ? STICK_PROFILE_ON : STICK_PROFILE_OFF;
   const float *stick_accelerator = profile.pid.stick_rates[stick_boost_profile].accelerator.axis;
@@ -187,8 +176,7 @@ void pid_calc() {
     const float current_kd = profile_current_pid_rates()->kd.axis[x] * pid_scales[2][x];
 
     // P term
-    state.pid_p_term.axis[x] = state.error.axis[x] * (setpoint_weigth[x]) * current_kp;
-    state.pid_p_term.axis[x] += -(1.0f - setpoint_weigth[x]) * current_kp * state.gyro.axis[x];
+    state.pid_p_term.axis[x] = state.error.axis[x] * current_kp;
 
     // Pid Voltage Comp applied to P term only
     state.pid_p_term.axis[x] *= v_compensation;
