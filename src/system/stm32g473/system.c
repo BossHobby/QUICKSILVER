@@ -57,6 +57,10 @@ static void SystemClock_Config(void) {
 
   // Configure the main internal regulator output voltage
   HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1_BOOST);
+  HAL_PWREx_DisableBatteryCharging();
+  HAL_PWREx_DisableInternalWakeUpLine();
+  HAL_PWREx_DisableUCPDDeadBattery();
+  HAL_PWREx_DisableUCPDStandbyMode();
 
   // Initializes the CPU, AHB and APB busses clocks
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
