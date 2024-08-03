@@ -245,15 +245,18 @@
 // x (micro)seconds after loss of tx or low bat before buzzer starts
 #define BUZZER_DELAY 30e6
 
+// The airbot made ab7456 osd chip will not support blink commands
+// #define AIRBOT_OSD_PATCH
+
+// some vtxes eg. from akk need an extra dummy byte
+// #define USE_AKK_SA_WORKAROUND
+
 // #############################################################################################################################
 // #############################################################################################################################
 //  debug / other things
 //  this should not be usually changed or still need work
 // #############################################################################################################################
 // #############################################################################################################################
-
-// The airbot made ab7456 osd chip will not support blink commands
-// #define AIRBOT_OSD_PATCH
 
 // failsafe time in uS
 #define FAILSAFE_TIME_US 1000000
