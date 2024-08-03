@@ -28,7 +28,9 @@ typedef struct {
 
 extern gyro_types_t gyro_type;
 
-uint8_t gyro_spi_init();
 float gyro_update_period();
-gyro_data_t gyro_spi_read();
-void gyro_spi_calibrate();
+bool gyro_exti_state();
+
+uint8_t gyro_int();
+gyro_data_t gyro_read();
+void gyro_calibrate();
