@@ -48,7 +48,7 @@ static filter_biquad_notch_t notch_filter[SDFT_AXES][SDFT_PEAKS];
 static filter_biquad_state_t notch_filter_state[SDFT_AXES][SDFT_PEAKS];
 
 bool sixaxis_detect() {
-  target_info.gyro_id = gyro_spi_init();
+  target_info.gyro_id = gyro_int();
   return target_info.gyro_id != GYRO_TYPE_INVALID;
 }
 
@@ -132,7 +132,7 @@ void sixaxis_read() {
   filter_coeff(profile.filter.gyro[0].type, &filter[0], profile.filter.gyro[0].cutoff_freq);
   filter_coeff(profile.filter.gyro[1].type, &filter[1], profile.filter.gyro[1].cutoff_freq);
 
-  const gyro_data_t data = gyro_spi_read();
+  const gyro_data_t data = gyro_read();
 
   const vec3_t accel = sixaxis_apply_matrix(data.accel);
   // swap pitch and roll to match gyro
@@ -219,7 +219,7 @@ static bool sixaxis_wait_for_still(uint32_t timeout) {
   const uint32_t start = time_micros();
   uint32_t now = start;
   while (now - start < timeout && move_counter > 0) {
-    const gyro_data_t data = gyro_spi_read();
+    const gyro_data_t data = gyro_read();
 
     const bool did_move = test_gyro_move(&last_data, &data);
     if (did_move) {
@@ -248,18 +248,18 @@ void sixaxis_gyro_cal() {
     }
     time_delay_ms(200);
   }
-  gyro_spi_calibrate();
+  gyro_calibrate();
 
   uint8_t brightness = 0;
   led_pwm(brightness, 1000);
 
-  gyro_data_t last_data = gyro_spi_read();
+  gyro_data_t last_data = gyro_read();
 
   uint32_t start = time_micros();
   uint32_t now = start;
   int32_t cal_counter = CAL_TIME / 1000;
   for (int32_t timeout = WAIT_TIME / 1000; timeout > 0; --timeout) {
-    const gyro_data_t data = gyro_spi_read();
+    const gyro_data_t data = gyro_read();
 
     led_pwm(brightness, 1000);
     if ((brightness & 1) ^ ((now - start) % GLOW_TIME > (GLOW_TIME >> 1))) {
@@ -290,7 +290,7 @@ void sixaxis_acc_cal() {
 
   flash_storage.accelcal[2] = 2048;
   for (uint32_t i = 0; i < 500; i++) {
-    const gyro_data_t data = gyro_spi_read();
+    const gyro_data_t data = gyro_read();
     const vec3_t accel = sixaxis_apply_matrix(data.accel);
 
     for (uint32_t x = 0; x < 3; x++) {
