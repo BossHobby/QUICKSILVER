@@ -1,5 +1,6 @@
 #include "driver/vtx/vtx.h"
 
+#include "core/debug.h"
 #include "driver/serial.h"
 #include "driver/serial_soft.h"
 #include "driver/time.h"
@@ -33,6 +34,9 @@ serial_port_t serial_vtx = {
 
 uint32_t vtx_last_valid_read = 0;
 uint32_t vtx_last_request = 0;
+
+uint8_t vtx_payload[32];
+uint8_t vtx_payload_offset = 0;
 
 bool serial_vtx_is_ready() {
   return serial_vtx.tx_done;
