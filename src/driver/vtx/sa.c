@@ -27,8 +27,8 @@ typedef enum {
   PARSER_READ_MAGIC_1,
   PARSER_READ_MAGIC_2,
   PARSER_READ_CMD,
-  PARSER_READ_PAYLOAD,
   PARSER_READ_LENGTH,
+  PARSER_READ_PAYLOAD,
   PARSER_READ_CRC,
 } smart_audio_parser_state_t;
 
@@ -42,6 +42,9 @@ static smart_audio_parser_state_t parser_state = PARSER_IDLE;
 
 extern uint32_t vtx_last_valid_read;
 extern uint32_t vtx_last_request;
+
+extern uint8_t vtx_payload[32];
+extern uint8_t vtx_payload_offset;
 
 const uint8_t default_dac_power_levels[VTX_POWER_LEVEL_MAX] = {
     7,
@@ -103,14 +106,6 @@ static void smart_audio_auto_baud() {
   last_percent = current_percent;
   packets_sent = 0;
   packets_recv = 0;
-}
-
-static uint8_t serial_smart_audio_read_byte_crc(uint8_t *crc, uint8_t *data) {
-  if (serial_vtx_read_byte(data) == 0) {
-    return 0;
-  }
-  *crc = crc8_dvb_s2_calc(*crc, *data);
-  return 1;
 }
 
 static uint8_t serial_smart_audio_parse_packet(uint8_t cmd, uint8_t *payload, uint32_t length) {
@@ -184,93 +179,67 @@ vtx_update_result_t serial_smart_audio_update() {
   if (!serial_vtx_is_ready()) {
     return VTX_WAIT;
   }
-  if (parser_state > PARSER_IDLE && (time_millis() - vtx_last_valid_read) > 500) {
+  if (parser_state == PARSER_IDLE) {
+    return VTX_IDLE;
+  }
+  if ((time_millis() - vtx_last_valid_read) > 500) {
     return VTX_ERROR;
   }
 
-  static uint8_t payload_offset = 0;
-
-  static uint8_t crc = 0;
-  static uint8_t cmd = 0;
   static uint8_t length = 0;
-  static uint8_t payload[32];
 
-sa_do_more:
-  switch (parser_state) {
-  case PARSER_IDLE:
-    return VTX_IDLE;
-
-  case PARSER_READ_MAGIC_1: {
+  while (true) {
     uint8_t data = 0;
     if (serial_vtx_read_byte(&data) == 0) {
       return VTX_WAIT;
     }
+    quic_debugf("VTX parser_state: %d 0x%x", parser_state, data);
+    switch (parser_state) {
+    case PARSER_IDLE:
+      return VTX_IDLE;
 
-    if (data == 0x0) {
-      // skip leading zero
-      goto sa_do_more;
-    }
+    case PARSER_READ_MAGIC_1:
+      if (data == SA_MAGIC_1) {
+        parser_state = PARSER_READ_MAGIC_2;
+      }
+      break;
 
-    if (data == SA_MAGIC_1) {
-      crc = 0;
-      cmd = 0;
-      length = 0;
-      payload_offset = 0;
-      parser_state = PARSER_READ_MAGIC_2;
-    }
-    goto sa_do_more;
-  }
-  case PARSER_READ_MAGIC_2: {
-    uint8_t data = 0;
-    if (serial_vtx_read_byte(&data) == 0) {
-      return VTX_WAIT;
-    }
+    case PARSER_READ_MAGIC_2:
+      if (data != SA_MAGIC_2) {
+        parser_state = PARSER_READ_MAGIC_1;
+      } else {
+        parser_state = PARSER_READ_CMD;
+      }
+      break;
 
-    if (data != SA_MAGIC_2) {
-      parser_state = PARSER_READ_MAGIC_1;
-    } else {
-      parser_state = PARSER_READ_CMD;
-    }
-    goto sa_do_more;
-  }
-  case PARSER_READ_CMD: {
-    if (serial_smart_audio_read_byte_crc(&crc, &cmd) == 0) {
-      return VTX_WAIT;
-    }
-    parser_state = PARSER_READ_LENGTH;
-    goto sa_do_more;
-  }
-  case PARSER_READ_LENGTH: {
-    if (serial_smart_audio_read_byte_crc(&crc, &length) == 0) {
-      return VTX_WAIT;
-    }
-    parser_state = length ? PARSER_READ_PAYLOAD : PARSER_READ_CRC;
-    goto sa_do_more;
-  }
-  case PARSER_READ_PAYLOAD: {
-    uint8_t data = 0;
-    if (serial_smart_audio_read_byte_crc(&crc, &data) == 0) {
-      return VTX_WAIT;
-    }
+    case PARSER_READ_CMD:
+      vtx_payload[0] = data;
+      parser_state = PARSER_READ_LENGTH;
+      break;
 
-    payload[payload_offset++] = data;
-    if (payload_offset >= length) {
-      parser_state = PARSER_READ_CRC;
-    }
-    goto sa_do_more;
-  }
-  case PARSER_READ_CRC: {
-    uint8_t data = 0;
-    if (serial_vtx_read_byte(&data) == 0) {
-      return VTX_WAIT;
-    }
+    case PARSER_READ_LENGTH:
+      length = vtx_payload[1] = data;
+      vtx_payload_offset = 0;
+      parser_state = length ? PARSER_READ_PAYLOAD : PARSER_READ_CRC;
+      break;
 
-    parser_state = PARSER_IDLE;
-    if (data == crc && serial_smart_audio_parse_packet(cmd, payload, length)) {
+    case PARSER_READ_PAYLOAD:
+      vtx_payload[vtx_payload_offset + 2] = data;
+      if (++vtx_payload_offset == (length - 1)) {
+        parser_state = PARSER_READ_CRC;
+      }
+      break;
+
+    case PARSER_READ_CRC:
+      parser_state = PARSER_IDLE;
+      if (data != crc8_dvb_s2_data(0, vtx_payload, length + 1)) {
+        return VTX_ERROR;
+      }
+      if (!serial_smart_audio_parse_packet(vtx_payload[0], vtx_payload + 2, length - 1)) {
+        return VTX_ERROR;
+      }
       return VTX_SUCCESS;
     }
-    return VTX_ERROR;
-  }
   }
 
   return VTX_ERROR;
@@ -281,7 +250,13 @@ void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const 
     return;
   }
 
-  const uint32_t len = size + 2 + SA_HEADER_SIZE;
+#ifdef USE_AKK_SA_WORKAROUND
+#define EXTRA_DUMMY_BYTES 1
+#else
+#define EXTRA_DUMMY_BYTES 0
+#endif
+
+  const uint32_t len = size + 1 + SA_HEADER_SIZE + EXTRA_DUMMY_BYTES;
   uint8_t vtx_frame[len];
 
   vtx_frame[0] = 0x00;
@@ -292,8 +267,10 @@ void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const 
   for (uint8_t i = 0; i < size; i++) {
     vtx_frame[i + SA_HEADER_SIZE] = payload[i];
   }
-  vtx_frame[size + SA_HEADER_SIZE] = crc8_dvb_s2_data(0, vtx_frame + 1, len - 3);
+  vtx_frame[size + SA_HEADER_SIZE] = crc8_dvb_s2_data(0, vtx_frame + 1, len - 2 - EXTRA_DUMMY_BYTES);
+#ifdef USE_AKK_SA_WORKAROUND
   vtx_frame[size + 1 + SA_HEADER_SIZE] = 0x00;
+#endif
 
   smart_audio_auto_baud();
 
