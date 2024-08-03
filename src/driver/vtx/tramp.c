@@ -26,6 +26,9 @@ static tramp_parser_state_t parser_state = PARSER_IDLE;
 extern uint32_t vtx_last_valid_read;
 extern uint32_t vtx_last_request;
 
+extern uint8_t vtx_payload[32];
+extern uint8_t vtx_payload_offset;
+
 static uint8_t crc8_data(const uint8_t *data) {
   uint8_t crc = 0;
   for (int i = 0; i < 13; i++) {
@@ -96,32 +99,29 @@ vtx_update_result_t serial_tramp_update() {
     return VTX_ERROR;
   }
 
-  static uint8_t payload[32];
-  static uint8_t payload_offset = 0;
-
 tramp_do_more:
   switch (parser_state) {
   case PARSER_IDLE:
     return VTX_IDLE;
 
   case PARSER_READ_MAGIC: {
-    if (serial_vtx_read_byte(&payload[0]) == 0) {
+    if (serial_vtx_read_byte(&vtx_payload[0]) == 0) {
       return VTX_WAIT;
     }
 
-    if (payload[0] == 0x0F) {
+    if (vtx_payload[0] == 0x0F) {
       parser_state = PARSER_READ_PAYLOAD;
-      payload_offset = 1;
+      vtx_payload_offset = 1;
     }
     goto tramp_do_more;
   }
   case PARSER_READ_PAYLOAD: {
-    if (serial_vtx_read_byte(&payload[payload_offset]) == 0) {
+    if (serial_vtx_read_byte(&vtx_payload[vtx_payload_offset]) == 0) {
       return VTX_WAIT;
     }
 
-    payload_offset++;
-    if (payload_offset >= 16) {
+    vtx_payload_offset++;
+    if (vtx_payload_offset >= 16) {
       parser_state = PARSER_READ_CRC;
     }
     goto tramp_do_more;
@@ -129,12 +129,12 @@ tramp_do_more:
   case PARSER_READ_CRC: {
     parser_state = PARSER_IDLE;
 
-    const uint8_t crc = crc8_data(payload + 1);
-    if (payload[14] != crc || payload[15] != 0) {
+    const uint8_t crc = crc8_data(vtx_payload + 1);
+    if (vtx_payload[14] != crc || vtx_payload[15] != 0) {
       return VTX_ERROR;
     }
 
-    if (!tramp_parse_packet(payload + 1)) {
+    if (!tramp_parse_packet(vtx_payload + 1)) {
       return VTX_ERROR;
     }
 
