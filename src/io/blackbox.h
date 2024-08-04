@@ -3,6 +3,7 @@
 #include "core/profile.h"
 
 #define BLACKBOX_SCALE 1000
+#define BLACKBOX_DEBUG_SIZE 10
 
 typedef struct {
   uint32_t loop;
@@ -25,7 +26,7 @@ typedef struct {
 
   uint16_t cpu_load;
 
-  int16_t debug[4];
+  int16_t debug[BLACKBOX_DEBUG_SIZE];
 } blackbox_t;
 
 // Blackbox fields (should align with above structure)
