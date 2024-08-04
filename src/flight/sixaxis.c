@@ -183,9 +183,7 @@ void sixaxis_read() {
 
     if (profile.filter.gyro_dynamic_notch_enable) {
       for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
-        if (p == 1) {
-          blackbox_set_debug(i, gyro_sdft[i].notch_hz[p]);
-        }
+        blackbox_set_debug(i * SDFT_PEAKS + p, gyro_sdft[i].notch_hz[p]);
         state.gyro.axis[i] = filter_biquad_notch_step(&notch_filter[i][p], &notch_filter_state[i][p], state.gyro.axis[i]);
       }
     }
