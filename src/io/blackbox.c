@@ -63,11 +63,10 @@ cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b, con
   }
 
   if (field_flags & (1 << BBOX_FIELD_DEBUG)) {
-    CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 4));
-    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &b->debug[0]));
-    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &b->debug[1]));
-    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &b->debug[2]));
-    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &b->debug[3]));
+    CBOR_CHECK_ERROR(res = cbor_encode_array(enc, BLACKBOX_DEBUG_SIZE));
+    for (uint32_t i = 0; i < BLACKBOX_DEBUG_SIZE; i++) {
+      CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &b->debug[i]));
+    }
   }
 
   CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
@@ -80,7 +79,7 @@ void blackbox_init() {
 }
 
 void blackbox_set_debug(uint8_t index, int16_t data) {
-  if (index >= 4) {
+  if (index >= BLACKBOX_DEBUG_SIZE) {
     return;
   }
 
