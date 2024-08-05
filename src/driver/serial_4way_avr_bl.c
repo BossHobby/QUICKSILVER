@@ -297,7 +297,7 @@ void avr_bl_reboot(gpio_pins_t pin) {
 
   esc_set_low(pin);
   time_delay_ms(300);
-  esc_is_high(pin);
+  esc_set_high(pin);
 
   esc_set_input(pin);
 }
