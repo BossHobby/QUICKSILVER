@@ -224,7 +224,7 @@ serial_esc4way_ack_t serial_4way_send(uint8_t cmd, uint16_t addr, const uint8_t 
     device.selected_esc = input[0];
 
     bool reboot_esc = false;
-    if ((addr & 0xFF) == 1) {
+    if (addr) {
       reboot_esc = true;
     }
 
