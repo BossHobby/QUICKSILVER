@@ -518,14 +518,19 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
   case MSP_REBOOT: {
     if (flags.arm_state) {
+      msp_send_error(msp, magic, cmd);
       break;
     }
+
+    msp_send_reply(msp, magic, cmd, payload, 1);
+    time_delay_ms(100);
 
     switch (payload[0]) {
     case MSP_REBOOT_FIRMWARE:
       system_reset();
       break;
 
+    case MSP_REBOOT_BOOTLOADER_FLASH:
     case MSP_REBOOT_BOOTLOADER_ROM:
       system_reset_to_bootloader();
       break;
