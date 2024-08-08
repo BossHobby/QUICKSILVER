@@ -14,6 +14,7 @@
 gyro_types_t gyro_type = GYRO_TYPE_INVALID;
 
 spi_bus_device_t gyro_bus = {};
+uint8_t gyro_buf[32];
 
 static gyro_types_t gyro_spi_detect() {
   gyro_types_t type = GYRO_TYPE_INVALID;

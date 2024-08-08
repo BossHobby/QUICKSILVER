@@ -15,6 +15,7 @@
 #define SPI_SPEED_FAST MHZ_TO_HZ(10.5)
 
 extern spi_bus_device_t gyro_bus;
+extern uint8_t gyro_buf[32];
 extern const uint8_t bmi270_config_file[8192];
 
 static int8_t gyro_cas = 0;
@@ -198,8 +199,6 @@ void bmi270_read_gyro_data(gyro_data_t *data) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_FAST);
   spi_txn_wait(&gyro_bus);
 
-  static uint8_t gyro_buf[12];
-
   data->accel.pitch = -(int16_t)((gyro_buf[1] << 8) | gyro_buf[0]);
   data->accel.roll = -(int16_t)((gyro_buf[3] << 8) | gyro_buf[2]);
   data->accel.yaw = (int16_t)((gyro_buf[5] << 8) | gyro_buf[4]);
@@ -223,6 +222,8 @@ void bmi270_read_gyro_data(gyro_data_t *data) {
   data->gyro.roll = gyro_data[1];
   data->gyro.yaw = gyro_data[2];
 
+  data->temp = (float)((int16_t)((gyro_buf[13] << 8) | gyro_buf[12])) / 512.0 + 23.0;
+
   {
     const spi_txn_segment_t segs[] = {
         spi_make_seg_const(BMI270_REG_ACC_DATA_X_LSB | 0x80, 0xFF),
@@ -230,14 +231,10 @@ void bmi270_read_gyro_data(gyro_data_t *data) {
     };
     spi_seg_submit(&gyro_bus, segs);
   }
-
-  static uint8_t temp_buf[2];
-  data->temp = (float)((int16_t)((temp_buf[1] << 8) | temp_buf[0])) / 512.0 + 23.0;
-
   {
     const spi_txn_segment_t segs[] = {
         spi_make_seg_const(BMI270_REG_TEMPERATURE_LSB | 0x80, 0xFF),
-        spi_make_seg_buffer(temp_buf, NULL, 2),
+        spi_make_seg_buffer(gyro_buf + 12, NULL, 2),
     };
     spi_seg_submit(&gyro_bus, segs);
   }
