@@ -13,6 +13,7 @@
 #define SPI_SPEED_FAST MHZ_TO_HZ(10)
 
 extern spi_bus_device_t gyro_bus;
+extern uint8_t gyro_buf[32];
 
 static int8_t gyro_cas = 0; // not ready
 
@@ -179,16 +180,14 @@ void bmi323_read_gyro_data(gyro_data_t *data) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_FAST);
   spi_txn_wait(&gyro_bus);
 
-  static uint8_t buf[12];
-
-  data->accel.pitch = -(int16_t)((buf[1] << 8) | buf[0]);
-  data->accel.roll = -(int16_t)((buf[3] << 8) | buf[2]);
-  data->accel.yaw = (int16_t)((buf[5] << 8) | buf[4]);
+  data->accel.pitch = -(int16_t)((gyro_buf[1] << 8) | gyro_buf[0]);
+  data->accel.roll = -(int16_t)((gyro_buf[3] << 8) | gyro_buf[2]);
+  data->accel.yaw = (int16_t)((gyro_buf[5] << 8) | gyro_buf[4]);
 
   int16_t gyro_data[3] = {
-      (int16_t)((buf[7] << 8) | buf[6]),
-      (int16_t)((buf[9] << 8) | buf[8]),
-      (int16_t)((buf[11] << 8) | buf[10]),
+      (int16_t)((gyro_buf[7] << 8) | gyro_buf[6]),
+      (int16_t)((gyro_buf[9] << 8) | gyro_buf[8]),
+      (int16_t)((gyro_buf[11] << 8) | gyro_buf[10]),
   };
 
   const int32_t tempx = gyro_data[0] - (int16_t)(gyro_cas * (int16_t)(gyro_data[2]) / 512);
@@ -208,7 +207,7 @@ void bmi323_read_gyro_data(gyro_data_t *data) {
 
   const spi_txn_segment_t segs[] = {
       spi_make_seg_const(BMI323_REG_ACC_DATA_X_LSB | 0x80, 0xFF),
-      spi_make_seg_buffer(buf, NULL, 12),
+      spi_make_seg_buffer(gyro_buf, NULL, 12),
   };
   spi_seg_submit(&gyro_bus, segs);
   while (!spi_txn_continue(&gyro_bus))
