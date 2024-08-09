@@ -125,10 +125,16 @@ typedef struct {
 
   float looptime;            // looptime in seconds
   float looptime_us;         // looptime in us
-  float looptime_autodetect; // desired looptime in us
+  float looptime_autodetect; // Selected nominal period in us; gyro sync adjusts deadlines only.
   float looptime_inverse;    // 1/looptime for derivative calculations
   uint32_t loop_counter;     // number of loops ran
   uint8_t looptime_warning;  // Scheduler rate reductions since init; nonzero means fallback occurred.
+
+  // Gyro DMA ISR publishes timing in CPU cycles; gyro_period_cycles == 0 means unlocked.
+  // Scheduler snapshots with DMA interrupts masked. Runtime only, not serialized.
+  uint32_t gyro_period_cycles;
+  uint32_t gyro_phase_cycles;  // Safe read-completion phase, before scheduler margin.
+  uint32_t gyro_sample_cycles; // DRDY timestamp of the latest completed read.
 
   float uptime;      // running sum of looptimes
   float armtime;     // running sum of looptimes (while armed)

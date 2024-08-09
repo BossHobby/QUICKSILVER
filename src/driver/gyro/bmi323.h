@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "driver/gyro/gyro.h"
+#include "driver/spi.h"
 
 #define BMI323_REG_CHIP_ID 0x00
 #define BMI323_WHO_AMI 0x43
@@ -208,6 +209,8 @@
 #define BMI323_CMD_I3C_SYNC_CONF UINT16_C(0x201)
 #define BMI323_CMD_AXIS_MAP UINT16_C(0x300)
 
+extern const gyro_device_t gyro_device_bmi323;
+
 gyro_types_t bmi323_detect();
 void bmi323_configure();
 
@@ -220,3 +223,5 @@ uint16_t bmi3_read16(uint8_t reg);
 void bmi323_read_data(uint8_t reg, uint8_t *data, uint32_t size);
 
 void bmi323_read_gyro_data(gyro_data_t *data);
+void bmi323_decode(gyro_data_t *data);
+void bmi323_start_read(spi_txn_done_fn_t done_fn);

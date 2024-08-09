@@ -33,6 +33,8 @@
 
 #define LSM6DSO_CHIP_ID 0x6C
 
+extern const gyro_device_t gyro_device_lsm6dso;
+
 gyro_types_t lsm6dso_detect();
 void lsm6dso_configure();
 void lsm6dso_read_gyro_data(gyro_data_t *data);

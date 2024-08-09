@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "driver/gyro/gyro.h"
+#include "driver/spi.h"
 
 #define MPU_BIT_SLEEP 0x40
 #define MPU_BIT_H_RESET 0x80
@@ -127,6 +128,8 @@
 #define MPU_RA_FIFO_R_W 0x74
 #define MPU_RA_WHO_AM_I 0x75
 
+extern const gyro_device_t gyro_device_mpu6xxx;
+
 gyro_types_t mpu6xxx_detect();
 void mpu6xxx_configure();
 
@@ -134,3 +137,5 @@ void mpu6xxx_write(uint8_t reg, uint8_t data);
 
 uint8_t mpu6xxx_read(uint8_t reg);
 void mpu6xxx_read_gyro_data(gyro_data_t *data);
+void mpu6xxx_decode(gyro_data_t *data);
+void mpu6xxx_start_read(spi_txn_done_fn_t done_fn);

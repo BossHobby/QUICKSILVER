@@ -1,6 +1,10 @@
 #include "driver/gyro/gyro.h"
 
+#include "control/control.h"
+#include "core/failloop.h"
 #include "core/project.h"
+#include "driver/exti.h"
+#include "driver/interrupt.h"
 #include "driver/spi.h"
 #include "driver/time.h"
 
@@ -11,74 +15,83 @@
 #include "driver/gyro/lsm6dsv16x.h"
 #include "driver/gyro/mpu6xxx.h"
 
+// Written only by the DMA completion ISR, except while acquisition is stopped.
+static uint32_t sample_period;
+static struct {
+  uint32_t rate_start;
+  uint32_t read_duration;
+  uint8_t count;
+} gyro_clock;
+
+static void gyro_timing_reset(uint32_t period) {
+  sample_period = period;
+  gyro_clock = {};
+  state.gyro_period_cycles = 0;
+  state.gyro_phase_cycles = 0;
+  state.gyro_sample_cycles = 0;
+}
+
+static void gyro_timing_update(uint32_t sample, uint32_t completed, bool mpu6000) {
+  const uint32_t interval = sample - state.gyro_sample_cycles;
+  const uint32_t duration = completed - sample;
+  if (gyro_clock.count == 0 || interval < sample_period / 2 ||
+      interval > sample_period * 3 / 2 || duration > sample_period / 2) {
+    // Reacquire after missing samples instead of measuring the gap as a lower ODR.
+    gyro_timing_reset(sample_period);
+    gyro_clock.rate_start = sample;
+    gyro_clock.count = 1;
+    state.gyro_phase_cycles = sample;
+  } else {
+    // The edge before MPU6000's short interval is its delayed eighth sample.
+    // Other gyros can use every edge as the phase reference.
+    if (!mpu6000 || interval < US_TO_CYCLES(85)) {
+      state.gyro_phase_cycles = state.gyro_sample_cycles + gyro_clock.read_duration;
+    }
+    if (++gyro_clock.count == 65) {
+      state.gyro_period_cycles = (sample - gyro_clock.rate_start + 32) / 64;
+      gyro_clock.rate_start = sample;
+      gyro_clock.count = 1;
+    }
+  }
+  if (duration <= sample_period / 2 && duration > gyro_clock.read_duration) {
+    state.gyro_phase_cycles += duration - gyro_clock.read_duration;
+    gyro_clock.read_duration = duration;
+  }
+  state.gyro_sample_cycles = sample;
+}
+
+#ifdef PIO_UNIT_TESTING
+void gyro_test_timing_reset(uint32_t period) { gyro_timing_reset(period); }
+void gyro_test_timing_update(uint32_t sample, uint32_t completed, bool mpu6000) {
+  gyro_timing_update(sample, completed, mpu6000);
+}
+#endif
+
 #ifdef USE_GYRO
 
 gyro_types_t gyro_type = GYRO_TYPE_INVALID;
-
 spi_bus_device_t gyro_bus = {};
 uint8_t gyro_buf[32];
 
-static gyro_types_t gyro_spi_detect() {
-  gyro_types_t type = GYRO_TYPE_INVALID;
+// Probe in order; each driver owns its operations and timing requirements.
+static constexpr const gyro_device_t *GYRO_DEVICES[] = {
+    &gyro_device_mpu6xxx,
+    &gyro_device_icm42605,
+    &gyro_device_lsm6dso,
+    &gyro_device_lsm6dsv16x,
+    &gyro_device_bmi270,
+    &gyro_device_bmi323,
+};
 
-  switch (type) {
-  case GYRO_TYPE_INVALID:
-    // FALLTHROUGH
+static const gyro_device_t *device;
+static volatile bool exti_enabled;
+static volatile bool read_pending;
+static uint32_t read_started;
+static uint32_t last_completed_us;
+static gyro_data_t completed_sample;
 
-  case GYRO_TYPE_MPU6000:
-  case GYRO_TYPE_MPU6500:
-  case GYRO_TYPE_ICM20601:
-  case GYRO_TYPE_ICM20602:
-  case GYRO_TYPE_ICM20608:
-  case GYRO_TYPE_ICM20689:
-    type = mpu6xxx_detect();
-    if (type != GYRO_TYPE_INVALID) {
-      break;
-    }
-    // FALLTHROUGH
-
-  case GYRO_TYPE_ICM42605:
-  case GYRO_TYPE_ICM42688P:
-  case GYRO_TYPE_ICM42622P:
-  case GYRO_TYPE_ICM42686P:
-    type = icm42605_detect();
-    if (type != GYRO_TYPE_INVALID) {
-      break;
-    }
-    // FALLTHROUGH
-
-  case GYRO_TYPE_LSM6DSO:
-    type = lsm6dso_detect();
-    if (type != GYRO_TYPE_INVALID) {
-      break;
-    }
-    // FALLTHROUGH
-
-  case GYRO_TYPE_LSM6DSV16X:
-  case GYRO_TYPE_LSM6DSK320X:
-    type = lsm6dsv16x_detect();
-    if (type != GYRO_TYPE_INVALID) {
-      break;
-    }
-    // FALLTHROUGH
-
-  case GYRO_TYPE_BMI270:
-    type = bmi270_detect();
-    if (type != GYRO_TYPE_INVALID) {
-      break;
-    }
-    // FALLTHROUGH
-  case GYRO_TYPE_BMI323:
-    type = bmi323_detect();
-    if (type != GYRO_TYPE_INVALID) {
-      break;
-    }
-    // FALLTHROUGH
-  default:
-    break;
-  }
-
-  return type;
+static bool gyro_exti_conflicts(gpio_pins_t pin) {
+  return pin != PIN_NONE && gpio_pin_defs[pin].pin_index == gpio_pin_defs[target.gyro.exti].pin_index;
 }
 
 gyro_types_t gyro_init() {
@@ -86,160 +99,118 @@ gyro_types_t gyro_init() {
     return GYRO_TYPE_INVALID;
   }
 
-  if (target.gyro.exti != PIN_NONE) {
+  gyro_bus.port = target.gyro.port;
+  gyro_bus.nss = target.gyro.nss;
+  spi_bus_device_init(&gyro_bus);
+
+  for (const auto *candidate : GYRO_DEVICES) {
+    gyro_type = candidate->detect();
+    if (gyro_type != GYRO_TYPE_INVALID) {
+      device = candidate;
+      break;
+    }
+  }
+  if (!device)
+    return GYRO_TYPE_INVALID;
+
+  device->configure();
+  gyro_timing_reset(US_TO_CYCLES(device->period_us));
+  gyro_read(); // Prime the existing read pipeline before enabling interrupts.
+  spi_txn_wait(&gyro_bus);
+  if (device->decode)
+    device->decode(&completed_sample);
+  last_completed_us = time_micros();
+
+  if (device->start_read && target.gyro.exti != PIN_NONE &&
+      !gyro_exti_conflicts(target.rx_spi.exti) &&
+      !(target.rx_spi.busy_exti && gyro_exti_conflicts(target.rx_spi.busy))) {
     gpio_config_t gpio_init;
     gpio_init.mode = GPIO_INPUT;
     gpio_init.output = GPIO_OPENDRAIN;
     gpio_init.pull = GPIO_NO_PULL;
     gpio_init.drive = GPIO_DRIVE_HIGH;
     gpio_pin_init(target.gyro.exti, gpio_init);
+    exti_enabled = true;
+    exti_enable(target.gyro.exti, EXTI_TRIG_RISING);
   }
-
-  gyro_bus.port = target.gyro.port;
-  gyro_bus.nss = target.gyro.nss;
-  spi_bus_device_init(&gyro_bus);
-
-  gyro_type = gyro_spi_detect();
-
-  switch (gyro_type) {
-  case GYRO_TYPE_MPU6000:
-  case GYRO_TYPE_MPU6500:
-  case GYRO_TYPE_ICM20601:
-  case GYRO_TYPE_ICM20602:
-  case GYRO_TYPE_ICM20608:
-  case GYRO_TYPE_ICM20689:
-    mpu6xxx_configure();
-    break;
-
-  case GYRO_TYPE_ICM42605:
-  case GYRO_TYPE_ICM42688P:
-  case GYRO_TYPE_ICM42622P:
-  case GYRO_TYPE_ICM42686P:
-    icm42605_configure();
-    break;
-
-  case GYRO_TYPE_LSM6DSO:
-    lsm6dso_configure();
-    break;
-
-  case GYRO_TYPE_LSM6DSV16X:
-  case GYRO_TYPE_LSM6DSK320X:
-    lsm6dsv16x_configure();
-    break;
-
-  case GYRO_TYPE_BMI270:
-    bmi270_configure();
-    break;
-  case GYRO_TYPE_BMI323:
-    bmi323_configure();
-    break;
-
-  default:
-    break;
-  }
-
-  gyro_read(); // dummy read to fill buffers
 
   return gyro_type;
 }
 
-bool gyro_exti_state() {
-  if (target.gyro.exti == PIN_NONE) {
-    return true;
-  }
-  return gpio_pin_read(target.gyro.exti);
+float gyro_update_period() {
+  return device ? device->period_us : 250.0f;
 }
 
-float gyro_update_period() {
-  switch (gyro_type) {
-  case GYRO_TYPE_MPU6000:
-  case GYRO_TYPE_MPU6500:
-  case GYRO_TYPE_ICM20601:
-  case GYRO_TYPE_ICM20602:
-  case GYRO_TYPE_ICM20608:
-  case GYRO_TYPE_ICM20689:
-    return 125.0f;
-
-  case GYRO_TYPE_ICM42605:
-  case GYRO_TYPE_ICM42688P:
-  case GYRO_TYPE_ICM42622P:
-  case GYRO_TYPE_ICM42686P:
-    return 125.0f;
-
-  case GYRO_TYPE_LSM6DSO:
-    return 150.06f;
-
-  case GYRO_TYPE_LSM6DSV16X:
-  case GYRO_TYPE_LSM6DSK320X:
-    return 125.0f;
-
-  case GYRO_TYPE_BMI270:
-  case GYRO_TYPE_BMI323:
-    return 312.5f;
-
-  default:
-    return 250.0f;
-  }
+static void gyro_set_ready(void *arg) {
+  const uint32_t completed = time_cycles();
+  device->decode(&completed_sample);
+  gyro_timing_update(read_started, completed, gyro_type == GYRO_TYPE_MPU6000);
+  last_completed_us = time_micros();
+  read_pending = false;
 }
 
 gyro_data_t gyro_read() {
   static gyro_data_t data;
 
-  switch (gyro_type) {
-  case GYRO_TYPE_MPU6000:
-  case GYRO_TYPE_MPU6500:
-  case GYRO_TYPE_ICM20601:
-  case GYRO_TYPE_ICM20602:
-  case GYRO_TYPE_ICM20608:
-  case GYRO_TYPE_ICM20689: {
-    mpu6xxx_read_gyro_data(&data);
-    break;
+  if (exti_enabled) {
+    // A queued transfer may have been deferred by a shared bus or F4 DMA2 use.
+    spi_txn_continue(&gyro_bus);
+    bool stalled;
+    // DMA publishes the sample; EXTI may start another read during fallback.
+    ATOMIC_BLOCK(DMA_PRIORITY) {
+      data = completed_sample;
+      if (time_micros() - last_completed_us <= 2000) {
+        return data;
+      }
+      stalled = read_pending;
+      exti_enabled = false;
+      exti_disable(target.gyro.exti);
+      state.gyro_period_cycles = 0;
+    }
+    if (stalled)
+      failloop(FAILLOOP_GYRO);
   }
 
-  case GYRO_TYPE_ICM42605:
-  case GYRO_TYPE_ICM42688P:
-  case GYRO_TYPE_ICM42622P:
-  case GYRO_TYPE_ICM42686P: {
-    icm42605_read_gyro_data(&data);
-    break;
-  }
-
-  case GYRO_TYPE_LSM6DSO: {
-    lsm6dso_read_gyro_data(&data);
-    break;
-  }
-
-  case GYRO_TYPE_LSM6DSV16X:
-  case GYRO_TYPE_LSM6DSK320X: {
-    lsm6dsv16x_read_gyro_data(&data);
-    break;
-  }
-
-  case GYRO_TYPE_BMI270: {
-    bmi270_read_gyro_data(&data);
-    break;
-  }
-  case GYRO_TYPE_BMI323: {
-    bmi323_read_gyro_data(&data);
-    break;
-  }
-
-  default:
-    break;
-  }
-
+  if (device)
+    device->read(&data);
   return data;
 }
 
-void gyro_calibrate() {
-  switch (gyro_type) {
-  case GYRO_TYPE_BMI270: {
-    bmi270_calibrate();
-    break;
-  }
+void gyro_handle_exti() {
+  if (!exti_enabled || read_pending)
+    return;
 
-  default:
-    break;
+  // Keep the pool check and submission together.
+  // Mask DMA and lower priorities that can submit to the shared SPI queue.
+  ATOMIC_BLOCK(DMA_PRIORITY) {
+    if (!spi_txn_ready(&gyro_bus) || !spi_txn_has_free()) {
+      return;
+    }
+    read_started = time_cycles();
+    read_pending = true;
+    device->start_read(gyro_set_ready);
+  }
+}
+
+void gyro_calibrate() {
+  if (gyro_type != GYRO_TYPE_BMI270)
+    return;
+
+  const bool resume_exti = exti_enabled;
+  // Stop new reads, then drain DMA before resetting the sensor or timing state.
+  exti_enabled = false;
+  if (resume_exti)
+    exti_disable(target.gyro.exti);
+  spi_txn_wait(&gyro_bus);
+  bmi270_calibrate();
+  device->read(&completed_sample);
+  spi_txn_wait(&gyro_bus);
+  device->decode(&completed_sample);
+  gyro_timing_reset(US_TO_CYCLES(device->period_us));
+  last_completed_us = time_micros();
+  if (resume_exti) {
+    exti_enabled = true;
+    exti_enable(target.gyro.exti, EXTI_TRIG_RISING);
   }
 }
 #else

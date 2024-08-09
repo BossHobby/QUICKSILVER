@@ -5,6 +5,7 @@
 #include "core/project.h"
 #include "driver/dma.h"
 #include "driver/gpio.h"
+#include "driver/interrupt.h"
 #include "driver/spi.h"
 #include "driver/time.h"
 #include "util/util.h"
@@ -165,12 +166,22 @@ void dshot_dma_start() {
   dma_prepare_tx_memory((void *)dshot_output_buffer, sizeof(dshot_output_buffer));
   dma_prepare_rx_memory((void *)dshot_input_buffer, sizeof(dshot_input_buffer));
 
+  const uint32_t phases = dshot_gpio_port_count * (profile.motor.dshot_telemetry ? 2 : 1);
 #ifdef STM32F4
-  while (!dma_can_use_dma2(DMA_DEVICE_INVALID))
-    __NOP();
+  bool reserved = false;
+  do {
+    // Reserve DMA2 before gyro EXTI or a DMA completion can start another SPI transfer.
+    ATOMIC_BLOCK(DMA_PRIORITY) {
+      if (dma_can_use_dma2(DMA_DEVICE_INVALID)) {
+        dshot_phase = phases;
+        reserved = true;
+      }
+    }
+    // Restore interrupts between retries so an active transfer can finish.
+  } while (!reserved);
+#else
+  dshot_phase = phases;
 #endif
-
-  dshot_phase = dshot_gpio_port_count * (profile.motor.dshot_telemetry ? 2 : 1);
   for (uint32_t j = 0; j < dshot_gpio_port_count; j++) {
     dshot_dma_setup_output(j);
   }

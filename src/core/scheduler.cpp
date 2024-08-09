@@ -9,6 +9,7 @@
 #include "core/profile.h"
 #include "driver/gyro/gyro.h"
 #include "driver/time.h"
+#include "driver/interrupt.h"
 #include "io/simulator.h"
 #include "tasks.h"
 #include "util/cbor_helper.h"
@@ -251,13 +252,56 @@ static void scheduler_update_rate(uint32_t flight_runtime_us) {
   control_filter_update(false);
 }
 
+static uint32_t gyro_period = US_TO_CYCLES(125);
+static constexpr uint32_t GYRO_MARGIN = US_TO_CYCLES(4);
+
+static uint32_t scheduler_gyro_sync(uint32_t now, uint32_t previous) {
+  uint32_t period = US_TO_CYCLES(state.looptime_autodetect);
+  uint32_t sample_period, phase, sample;
+  // Keep the three published values coherent with the DMA completion ISR.
+  ATOMIC_BLOCK(DMA_PRIORITY) {
+    sample_period = state.gyro_period_cycles;
+    phase = state.gyro_phase_cycles;
+    sample = state.gyro_sample_cycles;
+  }
+  if (sample_period == 0 || static_cast<int32_t>(now - sample) > static_cast<int32_t>(gyro_period * 4)) {
+    return previous + period;
+  }
+  const uint32_t divider = MAX(1U, (period + gyro_period / 2) / gyro_period);
+  // Follow the measured clock only for deadlines. Filter configuration and
+  // autodetection use the selected nominal period, not DRDY rate fluctuations.
+  period = divider * sample_period;
+  const uint32_t target = previous + period;
+  const uint32_t anchor = phase + GYRO_MARGIN;
+  int32_t skew = static_cast<int32_t>(target - anchor) % static_cast<int32_t>(sample_period);
+  if (skew > static_cast<int32_t>(sample_period / 2)) {
+    skew -= sample_period;
+  } else if (skew < -static_cast<int32_t>(sample_period / 2)) {
+    skew += sample_period;
+  }
+  // Limit phase correction to 1 us per loop; do not reproduce DRDY's long/short cycle.
+  skew = constrain(skew, -static_cast<int32_t>(US_TO_CYCLES(1)), static_cast<int32_t>(US_TO_CYCLES(1)));
+  return target - skew;
+}
+
+#ifdef PIO_UNIT_TESTING
+void scheduler_test_gyro_period(uint32_t period) { gyro_period = period; }
+uint32_t scheduler_test_gyro_sync(uint32_t now, uint32_t previous) {
+  return scheduler_gyro_sync(now, previous);
+}
+#endif
+
 static uint32_t scheduler_update_loop() {
   const uint32_t elapsed_cycles = time_cycles() - last_loop_cycles;
   state.cpu_load = CYCLES_TO_US(elapsed_cycles);
   const uint32_t flight_runtime_us = CYCLES_TO_US(elapsed_cycles - MIN(elapsed_cycles, ground_task_cycles));
 
-  const uint32_t delay = US_TO_CYCLES(state.looptime_autodetect);
-  while ((time_cycles() - last_loop_cycles) < delay)
+#ifdef USE_GYRO
+  const uint32_t deadline = scheduler_gyro_sync(time_cycles(), last_loop_cycles);
+#else
+  const uint32_t deadline = last_loop_cycles + US_TO_CYCLES(state.looptime_autodetect);
+#endif
+  while (static_cast<int32_t>(time_cycles() - deadline) < 0)
     __NOP();
 
   state.looptime_us = CYCLES_TO_US(time_cycles() - last_loop_cycles);
@@ -296,6 +340,7 @@ void scheduler_init() {
 #else
   float target = LOOPTIME_MAX;
 #endif
+  gyro_period = US_TO_CYCLES(target);
   while (target < LOOPTIME_MAX)
     target *= 2.0f;
   state.looptime = target * 1e-6f;

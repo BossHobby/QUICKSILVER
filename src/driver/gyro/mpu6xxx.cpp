@@ -11,6 +11,15 @@
 
 #ifdef USE_GYRO
 
+constexpr gyro_device_t gyro_device_mpu6xxx = {
+    .detect = mpu6xxx_detect,
+    .configure = mpu6xxx_configure,
+    .read = mpu6xxx_read_gyro_data,
+    .start_read = mpu6xxx_start_read,
+    .decode = mpu6xxx_decode,
+    .period_us = 125.0f,
+};
+
 #define MPU6000_ID (0x68)
 #define MPU6500_ID (0x70)
 
@@ -112,10 +121,24 @@ void mpu6xxx_write(uint8_t reg, uint8_t data) {
   spi_seg_submit_wait(&gyro_bus, segs);
 }
 
-void mpu6xxx_read_gyro_data(gyro_data_t *data) {
+void mpu6xxx_start_read(spi_txn_done_fn_t done_fn) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, mpu6xxx_fast_divider());
-  spi_txn_wait(&gyro_bus);
 
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(MPU_RA_ACCEL_XOUT_H | 0x80),
+      spi_make_seg_buffer(gyro_buf, NULL, 14),
+  };
+  spi_seg_submit(&gyro_bus, segs, .done_fn = done_fn);
+  spi_txn_continue(&gyro_bus);
+}
+
+void mpu6xxx_read_gyro_data(gyro_data_t *data) {
+  spi_txn_wait(&gyro_bus);
+  mpu6xxx_decode(data);
+  mpu6xxx_start_read(nullptr);
+}
+
+void mpu6xxx_decode(gyro_data_t *data) {
   data->accel.pitch = -(int16_t)((gyro_buf[0] << 8) | gyro_buf[1]);
   data->accel.roll = -(int16_t)((gyro_buf[2] << 8) | gyro_buf[3]);
   data->accel.yaw = (int16_t)((gyro_buf[4] << 8) | gyro_buf[5]);
@@ -125,14 +148,6 @@ void mpu6xxx_read_gyro_data(gyro_data_t *data) {
   data->gyro.pitch = (int16_t)((gyro_buf[8] << 8) | gyro_buf[9]);
   data->gyro.roll = (int16_t)((gyro_buf[10] << 8) | gyro_buf[11]);
   data->gyro.yaw = (int16_t)((gyro_buf[12] << 8) | gyro_buf[13]);
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(MPU_RA_ACCEL_XOUT_H | 0x80),
-      spi_make_seg_buffer(gyro_buf, NULL, 14),
-  };
-  spi_seg_submit(&gyro_bus, segs);
-  while (!spi_txn_continue(&gyro_bus))
-    ;
 }
 
 #endif

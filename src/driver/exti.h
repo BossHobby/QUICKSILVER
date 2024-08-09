@@ -19,6 +19,9 @@ typedef struct {
 extern const exti_line_def_t exti_line_defs[16];
 
 void exti_enable(gpio_pins_t pin, exti_trigger_t trigger);
+// Mask only this EXTI line; other pins may share its IRQ vector.
+void exti_disable(gpio_pins_t pin);
+bool exti_line_active(gpio_pins_t pin);
 
 // exti_enable() will configure the external interrupt *and enable the interrupt*
 // Thereafter you can enable/disable the interrupt using either of the following

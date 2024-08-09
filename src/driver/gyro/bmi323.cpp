@@ -9,6 +9,15 @@
 
 #ifdef USE_GYRO
 
+constexpr gyro_device_t gyro_device_bmi323 = {
+    .detect = bmi323_detect,
+    .configure = bmi323_configure,
+    .read = bmi323_read_gyro_data,
+    .start_read = bmi323_start_read,
+    .decode = bmi323_decode,
+    .period_us = 312.5f,
+};
+
 #define SPI_SPEED_SLOW MHZ_TO_HZ(4)
 #define SPI_SPEED_FAST MHZ_TO_HZ(10)
 
@@ -59,8 +68,8 @@ static void bmi323_init_config() {
 
   // init data ready interupt to pin int1/ push_pull /active_high  NO_LATCH(default)
   bmi3_write16(BMI323_REG_INT_LATCH_CONF, 0x00, 1);
-  // BMI323_REG_INT_MAP2 acc_ready /gyro_ready
-  bmi3_write16(BMI323_REG_INT_MAP2, 0x140, 1);
+  // Route only gyro DRDY to INT1 (bits 9:8); temperature DRDY would add extra edges.
+  bmi3_write16(BMI323_REG_INT_MAP2, 1 << 8, 1);
   // BMI323_REG_IO_INT_CTRL push_pull/active_high//enable int1
   bmi3_write16(BMI323_REG_IO_INT_CTRL, BMI3_INT_OUTPUT_ENABLE << 2 | BMI3_INT_PUSH_PULL << 1 | BMI3_INT_ACTIVE_HIGH, 15);
 }
@@ -177,9 +186,12 @@ void bmi3_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
 }
 
 void bmi323_read_gyro_data(gyro_data_t *data) {
-  spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_FAST);
   spi_txn_wait(&gyro_bus);
+  bmi323_decode(data);
+  bmi323_start_read(nullptr);
+}
 
+void bmi323_decode(gyro_data_t *data) {
   data->accel.pitch = -(int16_t)((gyro_buf[1] << 8) | gyro_buf[0]);
   data->accel.roll = -(int16_t)((gyro_buf[3] << 8) | gyro_buf[2]);
   data->accel.yaw = (int16_t)((gyro_buf[5] << 8) | gyro_buf[4]);
@@ -204,14 +216,16 @@ void bmi323_read_gyro_data(gyro_data_t *data) {
   data->gyro.yaw = gyro_data[2];
 
   data->temp = 0;
+}
 
+void bmi323_start_read(spi_txn_done_fn_t done_fn) {
+  spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_FAST);
   const spi_txn_segment_t segs[] = {
       spi_make_seg_const(BMI323_REG_ACC_DATA_X_LSB | 0x80, 0xFF),
       spi_make_seg_buffer(gyro_buf, NULL, 12),
   };
-  spi_seg_submit(&gyro_bus, segs);
-  while (!spi_txn_continue(&gyro_bus))
-    ;
+  spi_seg_submit(&gyro_bus, segs, .done_fn = done_fn);
+  spi_txn_continue(&gyro_bus);
 }
 
 #endif

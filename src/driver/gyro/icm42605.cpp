@@ -9,6 +9,15 @@
 
 #ifdef USE_GYRO
 
+constexpr gyro_device_t gyro_device_icm42605 = {
+    .detect = icm42605_detect,
+    .configure = icm42605_configure,
+    .read = icm42605_read_gyro_data,
+    .start_read = icm42605_start_read,
+    .decode = icm42605_decode,
+    .period_us = 125.0f,
+};
+
 #define ICM42605_ID (0x42)
 #define ICM42688P_ID (0x47)
 #define ICM42622P_ID (0x46)
@@ -55,6 +64,12 @@ void icm42605_configure() {
   icm42605_write(ICM42605_GYRO_ACCEL_CONFIG0, (15 << 4) | 15); // low latency
   icm42605_write(ICM42605_INT_CONFIG, ICM42605_INT1_MODE_PULSED | ICM42605_INT1_DRIVE_CIRCUIT_PP | ICM42605_INT1_POLARITY_ACTIVE_HIGH);
   icm42605_write(ICM42605_INT_CONFIG0, ICM42605_UI_DRDY_INT_CLEAR_ON_SBR);
+  icm42605_write(ICM42605_INT_SOURCE0, 1 << 3); // Route UI DRDY to INT1.
+  uint8_t int_config = icm42605_read(ICM42605_INT_CONFIG1);
+  // Clear the default async-reset bit for proper INT pin operation; use 8 us pulses.
+  int_config &= ~(1 << ICM42605_INT_ASYNC_RESET_BIT);
+  int_config |= ICM42605_INT_TPULSE_DURATION_8 | ICM42605_INT_TDEASSERT_DISABLED;
+  icm42605_write(ICM42605_INT_CONFIG1, int_config);
 
   {
     // Disable AFSR to prevent stalls in gyro output
@@ -116,9 +131,12 @@ void icm42605_write(uint8_t reg, uint8_t data) {
 }
 
 void icm42605_read_gyro_data(gyro_data_t *data) {
-  spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_FAST);
   spi_txn_wait(&gyro_bus);
+  icm42605_decode(data);
+  icm42605_start_read(nullptr);
+}
 
+void icm42605_decode(gyro_data_t *data) {
   data->temp = (float)((int16_t)((gyro_buf[0] << 8) | gyro_buf[1])) / 132.48f + 25.f;
 
   data->accel.pitch = -(int16_t)((gyro_buf[2] << 8) | gyro_buf[3]);
@@ -128,13 +146,15 @@ void icm42605_read_gyro_data(gyro_data_t *data) {
   data->gyro.pitch = (int16_t)((gyro_buf[8] << 8) | gyro_buf[9]);
   data->gyro.roll = (int16_t)((gyro_buf[10] << 8) | gyro_buf[11]);
   data->gyro.yaw = (int16_t)((gyro_buf[12] << 8) | gyro_buf[13]);
+}
 
+void icm42605_start_read(spi_txn_done_fn_t done_fn) {
+  spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_FAST);
   const spi_txn_segment_t segs[] = {
       spi_make_seg_const(ICM42605_TEMP_DATA1 | 0x80),
       spi_make_seg_buffer(gyro_buf, NULL, 14),
   };
-  spi_seg_submit(&gyro_bus, segs);
-  while (!spi_txn_continue(&gyro_bus))
-    ;
+  spi_seg_submit(&gyro_bus, segs, .done_fn = done_fn);
+  spi_txn_continue(&gyro_bus);
 }
 #endif

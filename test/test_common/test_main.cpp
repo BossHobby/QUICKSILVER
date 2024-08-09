@@ -1,3 +1,6 @@
+extern void test_gyro_clock_tracks_regular_and_irregular_samples();
+extern void test_gyro_clock_reacquires_after_missing_samples();
+extern void test_looptime_gyro_drift_preserves_selected_rate();
 #include "driver/time.h"
 #include "mock_helpers.h"
 #include <unity.h>
@@ -229,6 +232,10 @@ void tearDown(void) {
 // Main test runner
 int main(int argc, char **argv) {
   UNITY_BEGIN();
+  RUN_TEST(test_gyro_clock_tracks_regular_and_irregular_samples);
+  RUN_TEST(test_gyro_clock_reacquires_after_missing_samples);
+  RUN_TEST(test_looptime_gyro_drift_preserves_selected_rate);
+
   RUN_TEST(test_scheduler_omits_unconfigured_sensor_tasks);
   RUN_TEST(test_imu_without_gps_publishes_tilt_without_heading_estimator);
   RUN_TEST(test_osd_looptime_warning_is_temporary_until_2khz);

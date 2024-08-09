@@ -1,5 +1,6 @@
 #pragma once
 
+#include "driver/spi.h"
 #include "util/vector.h"
 
 typedef enum {
@@ -33,10 +34,18 @@ typedef struct {
   float temp;
 } gyro_data_t;
 
+struct gyro_device_t {
+  gyro_types_t (*detect)();
+  void (*configure)();
+  void (*read)(gyro_data_t *);
+  void (*start_read)(spi_txn_done_fn_t); // Null for polling-only drivers.
+  void (*decode)(gyro_data_t *);
+  float period_us;
+};
+
 extern gyro_types_t gyro_type;
 
 float gyro_update_period();
-bool gyro_exti_state();
 
 gyro_types_t gyro_init();
 gyro_data_t gyro_read();

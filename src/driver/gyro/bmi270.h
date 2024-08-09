@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "driver/gyro/gyro.h"
+#include "driver/spi.h"
 
 #define BMI270_REG_CHIP_ID 0x00
 #define BMI270_REG_ERR_REG 0x02
@@ -87,6 +88,8 @@
 #define BMI270_GYRO_CAS_MASK 0x7F
 #define BMI270_GYRO_CAS_SIGN_BIT_MASK 0x40
 
+extern const gyro_device_t gyro_device_bmi270;
+
 gyro_types_t bmi270_detect();
 void bmi270_configure();
 void bmi270_calibrate();
@@ -99,3 +102,5 @@ uint8_t bmi270_read(uint8_t reg);
 uint16_t bmi270_read16(uint8_t reg);
 void bmi270_read_data(uint8_t reg, uint8_t *data, uint32_t size);
 void bmi270_read_gyro_data(gyro_data_t *data);
+void bmi270_decode(gyro_data_t *data);
+void bmi270_start_read(spi_txn_done_fn_t done_fn);

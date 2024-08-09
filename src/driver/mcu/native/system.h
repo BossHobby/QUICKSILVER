@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #define __NOP() asm("nop")
+#define __get_BASEPRI() 0
 #define __disable_irq() asm("nop")
 #define __enable_irq() asm("nop")
 

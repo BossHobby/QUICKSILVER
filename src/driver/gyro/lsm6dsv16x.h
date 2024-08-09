@@ -68,6 +68,8 @@
 #define LSM6DSV16X_CHIP_ID 0x70
 #define LSM6DSK320X_CHIP_ID 0x75
 
+extern const gyro_device_t gyro_device_lsm6dsv16x;
+
 gyro_types_t lsm6dsv16x_detect();
 void lsm6dsv16x_configure();
 void lsm6dsv16x_read_gyro_data(gyro_data_t *data);

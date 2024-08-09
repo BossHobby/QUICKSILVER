@@ -9,6 +9,15 @@
 
 #ifdef USE_GYRO
 
+constexpr gyro_device_t gyro_device_bmi270 = {
+    .detect = bmi270_detect,
+    .configure = bmi270_configure,
+    .read = bmi270_read_gyro_data,
+    .start_read = bmi270_start_read,
+    .decode = bmi270_decode,
+    .period_us = 312.5f,
+};
+
 #define BMI270_ID 0x24
 
 #define SPI_SPEED_SLOW MHZ_TO_HZ(0.5)
@@ -196,9 +205,12 @@ void bmi270_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
 }
 
 void bmi270_read_gyro_data(gyro_data_t *data) {
-  spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_FAST);
   spi_txn_wait(&gyro_bus);
+  bmi270_decode(data);
+  bmi270_start_read(nullptr);
+}
 
+void bmi270_decode(gyro_data_t *data) {
   data->accel.pitch = -(int16_t)((gyro_buf[1] << 8) | gyro_buf[0]);
   data->accel.roll = -(int16_t)((gyro_buf[3] << 8) | gyro_buf[2]);
   data->accel.yaw = (int16_t)((gyro_buf[5] << 8) | gyro_buf[4]);
@@ -222,25 +234,20 @@ void bmi270_read_gyro_data(gyro_data_t *data) {
   data->gyro.roll = gyro_data[1];
   data->gyro.yaw = gyro_data[2];
 
-  data->temp = (float)((int16_t)((gyro_buf[13] << 8) | gyro_buf[12])) / 512.0 + 23.0;
+  constexpr uint32_t TEMP_OFFSET = BMI270_REG_TEMPERATURE_LSB - BMI270_REG_ACC_DATA_X_LSB;
+  data->temp = (float)((int16_t)((gyro_buf[TEMP_OFFSET + 1] << 8) | gyro_buf[TEMP_OFFSET])) / 512.0f + 23.0f;
+}
 
-  {
-    const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(BMI270_REG_ACC_DATA_X_LSB | 0x80, 0xFF),
-        spi_make_seg_buffer(gyro_buf, NULL, 12),
-    };
-    spi_seg_submit(&gyro_bus, segs);
-  }
-  {
-    const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(BMI270_REG_TEMPERATURE_LSB | 0x80, 0xFF),
-        spi_make_seg_buffer(gyro_buf + 12, NULL, 2),
-    };
-    spi_seg_submit(&gyro_bus, segs);
-  }
-
-  while (!spi_txn_continue(&gyro_bus))
-    ;
+void bmi270_start_read(spi_txn_done_fn_t done_fn) {
+  spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_FAST);
+  // Burst through temperature (0x23), so the complete sample needs one DMA read.
+  constexpr uint32_t READ_SIZE = BMI270_REG_TEMPERATURE_MSB - BMI270_REG_ACC_DATA_X_LSB + 1;
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(BMI270_REG_ACC_DATA_X_LSB | 0x80, 0xFF),
+      spi_make_seg_buffer(gyro_buf, NULL, READ_SIZE),
+  };
+  spi_seg_submit(&gyro_bus, segs, .done_fn = done_fn);
+  spi_txn_continue(&gyro_bus);
 }
 
 const uint8_t bmi270_config_file[8192] = {

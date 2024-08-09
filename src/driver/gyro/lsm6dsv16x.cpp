@@ -9,6 +9,15 @@
 
 #ifdef USE_GYRO
 
+constexpr gyro_device_t gyro_device_lsm6dsv16x = {
+    .detect = lsm6dsv16x_detect,
+    .configure = lsm6dsv16x_configure,
+    .read = lsm6dsv16x_read_gyro_data,
+    .start_read = nullptr,
+    .decode = nullptr,
+    .period_us = 125.0f,
+};
+
 #define SPI_SPEED_SLOW MHZ_TO_HZ(0.5)
 #define SPI_SPEED_FAST MHZ_TO_HZ(10)
 

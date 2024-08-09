@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "driver/gyro/gyro.h"
+#include "driver/spi.h"
 
 // Bank 0
 #define ICM42605_DEVICE_CONFIG 0x11
@@ -192,6 +193,8 @@
 #define ICM42605_INTF_CONFIG1_AFSR_MASK 0xC0
 #define ICM42605_INTF_CONFIG1_AFSR_DISABLE 0x40
 
+extern const gyro_device_t gyro_device_icm42605;
+
 gyro_types_t icm42605_detect();
 void icm42605_configure();
 
@@ -199,3 +202,5 @@ void icm42605_write(uint8_t reg, uint8_t data);
 
 uint8_t icm42605_read(uint8_t reg);
 void icm42605_read_gyro_data(gyro_data_t *data);
+void icm42605_decode(gyro_data_t *data);
+void icm42605_start_read(spi_txn_done_fn_t done_fn);

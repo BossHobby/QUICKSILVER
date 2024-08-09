@@ -252,3 +252,138 @@ void test_scheduler_omits_unconfigured_sensor_tasks() {
   state.gps_lock = saved_lock;
   scheduler_init();
 }
+
+extern void scheduler_test_gyro_period(uint32_t period);
+extern void gyro_test_timing_reset(uint32_t period);
+extern void gyro_test_timing_update(uint32_t sample, uint32_t completed, bool mpu6000);
+extern uint32_t scheduler_test_gyro_sync(uint32_t now, uint32_t previous);
+
+static void check_gyro_clock(bool irregular, uint32_t divider, uint32_t start, float nominal_us = 125, float actual_us = 127) {
+  scheduler_init();
+  scheduler_test_gyro_period(US_TO_CYCLES(nominal_us));
+  gyro_test_timing_reset(US_TO_CYCLES(nominal_us));
+  const uint32_t sensor_period = US_TO_CYCLES(actual_us);
+  state.looptime_autodetect = nominal_us * divider;
+  uint32_t previous = start;
+  uint32_t next_sample = 0;
+  uint32_t consumed = 0;
+  auto deliver = [&](uint32_t until) {
+    while (true) {
+      const uint32_t late = irregular && next_sample % 8 == 7 ? US_TO_CYCLES(45) : 0;
+      const uint32_t edge = start + next_sample * sensor_period + late;
+      if (static_cast<int32_t>(until - (edge + US_TO_CYCLES(5))) < 0)
+        break;
+      gyro_test_timing_update(edge, edge + US_TO_CYCLES(5), irregular);
+      next_sample++;
+    }
+  };
+  for (uint32_t loop = 0; loop < 2000; loop++) {
+    const uint32_t now = previous + US_TO_CYCLES(30);
+    deliver(now);
+    const uint32_t deadline = scheduler_test_gyro_sync(now, previous);
+    const uint32_t period = sensor_period * divider;
+    deliver(deadline);
+    if (loop > 300) {
+      TEST_ASSERT_NOT_EQUAL(0, state.gyro_period_cycles);
+      TEST_ASSERT_EQUAL_FLOAT(nominal_us * divider, state.looptime_autodetect);
+      TEST_ASSERT_UINT32_WITHIN(US_TO_CYCLES(1), period, deadline - previous);
+      // Every scheduled iteration consumes fresh data, even across the delayed eighth.
+      TEST_ASSERT_EQUAL_UINT32(divider, next_sample - consumed);
+    }
+    consumed = next_sample;
+    previous = deadline;
+  }
+}
+
+void test_gyro_clock_tracks_regular_and_irregular_samples() {
+  check_gyro_clock(false, 1, US_TO_CYCLES(1000));
+  check_gyro_clock(true, 1, US_TO_CYCLES(1000));
+  check_gyro_clock(true, 2, US_TO_CYCLES(1000));
+  check_gyro_clock(true, 4, UINT32_MAX - US_TO_CYCLES(1000));
+  check_gyro_clock(false, 1, US_TO_CYCLES(1000), 312.5f, 313.5f);
+  check_gyro_clock(false, 2, UINT32_MAX - US_TO_CYCLES(1000), 312.5f, 313.5f);
+}
+
+void test_gyro_clock_reacquires_after_missing_samples() {
+  scheduler_init();
+  scheduler_test_gyro_period(US_TO_CYCLES(125));
+  gyro_test_timing_reset(US_TO_CYCLES(125));
+  uint32_t sample = US_TO_CYCLES(1000);
+  const uint32_t period = US_TO_CYCLES(125);
+  state.looptime_autodetect = 125.0f;
+  TEST_ASSERT_EQUAL_UINT32(sample + period, scheduler_test_gyro_sync(sample, sample));
+  for (unsigned i = 0; i < 65; i++) {
+    sample += US_TO_CYCLES(125);
+    gyro_test_timing_update(sample, sample + US_TO_CYCLES(5), false);
+  }
+  TEST_ASSERT_EQUAL_UINT32(sample + period + US_TO_CYCLES(1), scheduler_test_gyro_sync(sample + US_TO_CYCLES(10), sample));
+  TEST_ASSERT_EQUAL_UINT32(sample + period, scheduler_test_gyro_sync(sample + US_TO_CYCLES(1000), sample));
+  sample += US_TO_CYCLES(1000);
+  gyro_test_timing_update(sample, sample + US_TO_CYCLES(5), false);
+  TEST_ASSERT_EQUAL_UINT32(0, state.gyro_period_cycles);
+  TEST_ASSERT_EQUAL_UINT32(sample + period, scheduler_test_gyro_sync(sample + US_TO_CYCLES(10), sample));
+  for (unsigned i = 0; i < 64; i++) {
+    sample += US_TO_CYCLES(125);
+    gyro_test_timing_update(sample, sample + US_TO_CYCLES(5), false);
+  }
+  TEST_ASSERT_EQUAL_UINT32(sample + period + US_TO_CYCLES(1), scheduler_test_gyro_sync(sample + US_TO_CYCLES(10), sample));
+  TEST_ASSERT_EQUAL_FLOAT(125.0f, state.looptime_autodetect);
+
+  // A newly completed read may arrive after the scheduler captured 'now'.
+  TEST_ASSERT_EQUAL_UINT32(sample + period + US_TO_CYCLES(1), scheduler_test_gyro_sync(sample - 1, sample));
+
+  // Preserve the longest valid DMA duration when later transfers are quicker.
+  sample += period;
+  gyro_test_timing_update(sample, sample + US_TO_CYCLES(12), false);
+  TEST_ASSERT_EQUAL_UINT32(sample - period + US_TO_CYCLES(12), state.gyro_phase_cycles);
+  sample += period;
+  gyro_test_timing_update(sample, sample + US_TO_CYCLES(5), false);
+  TEST_ASSERT_EQUAL_UINT32(sample - period + US_TO_CYCLES(12), state.gyro_phase_cycles);
+
+  // An excessively delayed DMA read must unlock the clock too.
+  sample += period;
+  gyro_test_timing_update(sample, sample + US_TO_CYCLES(80), false);
+  TEST_ASSERT_EQUAL_UINT32(0, state.gyro_period_cycles);
+  TEST_ASSERT_EQUAL_UINT32(sample + period, scheduler_test_gyro_sync(sample + US_TO_CYCLES(80), sample));
+}
+
+
+void test_looptime_gyro_drift_preserves_selected_rate() {
+  scheduler_init();
+  const float minimum = state.looptime_autodetect;
+  scheduler_test_gyro_period(US_TO_CYCLES(minimum));
+  state.loop_counter = 500;
+  uint32_t previous = UINT32_MAX - US_TO_CYCLES(1000);
+  auto run_window = [&](uint32_t runtime_us, uint32_t divider) {
+    for (uint32_t i = 0; i < 200; i++) {
+      // A changing measured rate must move deadlines without changing the
+      // nominal filter period, including across cycle-counter wrap.
+      const uint32_t sample_period = US_TO_CYCLES(minimum - 2) + i % 3;
+      state.gyro_period_cycles = sample_period;
+      state.gyro_sample_cycles = previous;
+      state.gyro_phase_cycles = previous - US_TO_CYCLES(4);
+      const uint32_t deadline = scheduler_test_gyro_sync(previous + US_TO_CYCLES(10), previous);
+      TEST_ASSERT_EQUAL_UINT32(sample_period * divider, deadline - previous);
+      TEST_ASSERT_EQUAL_FLOAT(minimum * divider, state.looptime_autodetect);
+      previous = deadline;
+      state.cpu_load = runtime_us;
+      state.looptime_us = minimum * divider;
+      state.loop_counter++;
+      scheduler_test_update_rate(runtime_us);
+    }
+  };
+
+  run_window(20, 1);
+  TEST_ASSERT_EQUAL_FLOAT(minimum, state.looptime_autodetect);
+  run_window(minimum + 20, 1);
+  TEST_ASSERT_EQUAL_FLOAT(minimum * 2, state.looptime_autodetect);
+  run_window(minimum, 2); // Insufficient headroom to return to the faster rate.
+  TEST_ASSERT_EQUAL_FLOAT(minimum * 2, state.looptime_autodetect);
+  run_window(20, 2);
+  TEST_ASSERT_EQUAL_FLOAT(minimum * 2, state.looptime_autodetect);
+  run_window(20, 2);
+  TEST_ASSERT_EQUAL_FLOAT(minimum * 2, state.looptime_autodetect);
+  state.gyro_period_cycles = 0;
+  state.gyro_sample_cycles = 0;
+  state.gyro_phase_cycles = 0;
+}

@@ -133,6 +133,7 @@ static vec3_t sixaxis_apply_matrix(vec3_t v) {
 void sixaxis_read() {
   const gyro_data_t data = gyro_read();
 
+  sixaxis_compute_matrix();
   const vec3_t accel = sixaxis_apply_matrix(data.accel);
   // swap pitch and roll to match gyro
   state.accel_raw.roll = (accel.pitch - flash_storage.accelcal[1]) * ACCEL_RANGE;
