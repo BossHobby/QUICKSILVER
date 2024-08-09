@@ -1,6 +1,8 @@
 #include "driver/gyro/gyro.h"
 
+#include "core/debug.h"
 #include "core/project.h"
+#include "driver/exti.h"
 #include "driver/spi.h"
 #include "driver/time.h"
 
@@ -67,15 +69,6 @@ uint8_t gyro_int() {
     return GYRO_TYPE_INVALID;
   }
 
-  if (target.gyro.exti != PIN_NONE) {
-    gpio_config_t gpio_init;
-    gpio_init.mode = GPIO_INPUT;
-    gpio_init.output = GPIO_OPENDRAIN;
-    gpio_init.pull = GPIO_NO_PULL;
-    gpio_init.drive = GPIO_DRIVE_HIGH;
-    gpio_pin_init(target.gyro.exti, gpio_init);
-  }
-
   gyro_bus.port = target.gyro.port;
   gyro_bus.nss = target.gyro.nss;
   spi_bus_device_init(&gyro_bus);
@@ -108,16 +101,17 @@ uint8_t gyro_int() {
     break;
   }
 
-  gyro_read(); // dummy read to fill buffers
+  if (target.gyro.exti != PIN_NONE) {
+    gpio_config_t gpio_init;
+    gpio_init.mode = GPIO_INPUT;
+    gpio_init.output = GPIO_OPENDRAIN;
+    gpio_init.pull = GPIO_NO_PULL;
+    gpio_init.drive = GPIO_DRIVE_HIGH;
+    gpio_pin_init(target.gyro.exti, gpio_init);
+    exti_enable(target.gyro.exti, EXTI_TRIG_RISING);
+  }
 
   return gyro_type;
-}
-
-bool gyro_exti_state() {
-  if (target.gyro.exti == PIN_NONE) {
-    return true;
-  }
-  return gpio_pin_read(target.gyro.exti);
 }
 
 float gyro_update_period() {
@@ -143,7 +137,72 @@ float gyro_update_period() {
   }
 }
 
+typedef enum {
+  GYRO_IDLE,
+  GYRO_READING,
+  GYRO_DATA_READY,
+} gyro_read_state_t;
+
+static volatile gyro_read_state_t gyro_read_state = GYRO_IDLE;
+
+static void gyro_set_ready(void *arg) {
+  gyro_read_state = GYRO_DATA_READY;
+  debug_pin_disable(0);
+}
+
+static void gyro_start_read() {
+  if (gyro_read_state != GYRO_IDLE) {
+    return;
+  }
+
+  debug_pin_enable(0);
+
+  gyro_read_state = GYRO_READING;
+
+  switch (gyro_type) {
+  case GYRO_TYPE_MPU6000:
+  case GYRO_TYPE_MPU6500:
+  case GYRO_TYPE_ICM20601:
+  case GYRO_TYPE_ICM20602:
+  case GYRO_TYPE_ICM20608:
+  case GYRO_TYPE_ICM20689: {
+    mpu6xxx_start_read(gyro_set_ready);
+    break;
+  }
+
+  case GYRO_TYPE_ICM42605:
+  case GYRO_TYPE_ICM42688P: {
+    // icm42605_start_read();
+    break;
+  }
+
+  case GYRO_TYPE_BMI270: {
+    // bmi270_start_read();
+    break;
+  }
+  case GYRO_TYPE_BMI323: {
+    // bmi323_start_read();
+    break;
+  }
+
+  default:
+    break;
+  }
+}
+
+void gyro_wait_for_ready() {
+  while (gyro_read_state != GYRO_DATA_READY)
+    ;
+}
+
 gyro_data_t gyro_read() {
+  // if (gyro_read_state == GYRO_IDLE) {
+  //   gyro_start_read();
+  // }
+  while (gyro_read_state != GYRO_DATA_READY)
+    ;
+  gyro_read_state = GYRO_IDLE;
+
   static gyro_data_t data;
 
   switch (gyro_type) {
@@ -177,6 +236,10 @@ gyro_data_t gyro_read() {
   }
 
   return data;
+}
+
+void gyro_handle_exti(bool level) {
+  gyro_start_read();
 }
 
 void gyro_calibrate() {

@@ -103,6 +103,10 @@ const uint32_t exti_trigger_map[] = {
 };
 
 void exti_enable(gpio_pins_t pin, exti_trigger_t trigger) {
+  if (pin == PIN_NONE) {
+    return;
+  }
+
   exti_set_source(pin);
 
   LL_EXTI_ClearFlag_0_31(LINE.exti_line);
@@ -139,6 +143,11 @@ bool exti_line_active(gpio_pins_t pin) {
 }
 
 static void handle_exit_isr() {
+  if (exti_line_active(target.gyro.exti)) {
+    extern void gyro_handle_exti(bool);
+    gyro_handle_exti(gpio_pin_read(target.gyro.exti));
+  }
+
   if (exti_line_active(target.rx_spi.exti)) {
     extern void rx_spi_handle_exti(bool);
     rx_spi_handle_exti(gpio_pin_read(target.rx_spi.exti));

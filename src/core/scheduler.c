@@ -5,11 +5,12 @@
 
 #include "core/debug.h"
 #include "core/looptime.h"
+#include "core/tasks.h"
+#include "driver/gyro/gyro.h"
 #include "driver/time.h"
 #include "flight/control.h"
 #include "io/simulator.h"
 #include "io/usb_configurator.h"
-#include "tasks.h"
 #include "util/cbor_helper.h"
 
 #define TASK_AVERAGE_SAMPLES 32
@@ -129,6 +130,8 @@ void scheduler_run() {
   looptime_reset();
 
   while (1) {
+    gyro_wait_for_ready();
+    debug_pin_toggle(1);
     simulator_update();
 
     const volatile uint32_t cycles = time_cycles();

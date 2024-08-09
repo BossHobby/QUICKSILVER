@@ -134,3 +134,4 @@ void mpu6xxx_write(uint8_t reg, uint8_t data);
 
 uint8_t mpu6xxx_read(uint8_t reg);
 void mpu6xxx_read_gyro_data(gyro_data_t *data);
+void mpu6xxx_start_read(spi_txn_done_fn_t done_fn);
