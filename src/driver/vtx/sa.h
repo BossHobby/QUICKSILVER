@@ -28,6 +28,7 @@ typedef struct {
   uint8_t power;
   uint8_t mode;
   uint16_t frequency;
+  uint8_t level_count;
   uint16_t dac_power_levels[8];
 } smart_audio_settings_t;
 

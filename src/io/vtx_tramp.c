@@ -21,6 +21,9 @@ static const uint16_t tramp_power_level_values[VTX_POWER_LEVEL_MAX] = {
     200,
     300,
     400,
+    0,
+    0,
+    0,
 };
 
 static const char tramp_power_level_labels[VTX_POWER_LEVEL_MAX][VTX_POWER_LABEL_LEN] = {

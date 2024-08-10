@@ -931,7 +931,7 @@ void osd_display() {
       static char power_level_labels_terminated[VTX_POWER_LEVEL_MAX][VTX_POWER_LABEL_LEN + 1];
       if (!vtx_buffer_populated) {
         vtx_settings_copy = vtx_settings;
-        for (uint8_t i = 0; i < VTX_POWER_LEVEL_MAX; i++) {
+        for (uint8_t i = 0; i < vtx_settings.power_table.levels; i++) {
           memcpy(power_level_labels_terminated[i], vtx_settings.power_table.labels[i], VTX_POWER_LABEL_LEN);
           power_level_labels_terminated[i][VTX_POWER_LABEL_LEN] = 0;
           power_level_labels[i] = power_level_labels_terminated[i];
@@ -947,7 +947,7 @@ void osd_display() {
 
       const char *channel_labels[] = {"1", "2", "3", "4", "5", "6", "7", "8"};
       osd_menu_select_enum_adjust(4, 5, "CHANNEL", 20, &vtx_settings_copy.channel, channel_labels, VTX_CHANNEL_1, VTX_CHANNEL_8);
-      osd_menu_select_enum_adjust(4, 6, "POWER LEVEL", 20, &vtx_settings_copy.power_level, power_level_labels, VTX_POWER_LEVEL_1, VTX_POWER_LEVEL_MAX - 1);
+      osd_menu_select_enum_adjust(4, 6, "POWER LEVEL", 20, &vtx_settings_copy.power_level, power_level_labels, VTX_POWER_LEVEL_1, vtx_settings.power_table.levels - 1);
 
       const char *pit_mode_labels[] = {"OFF", "ON ", "N/A"};
       osd_menu_select(4, 7, "PITMODE");

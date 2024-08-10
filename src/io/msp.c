@@ -466,7 +466,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
   case MSP_VTXTABLE_POWERLEVEL: {
     const uint8_t level = payload[0];
-    if (level <= 0 || level > VTX_POWER_LEVEL_MAX) {
+    if (level <= 0 || level > vtx_actual.power_table.levels) {
       msp_send_error(msp, magic, cmd);
       break;
     }

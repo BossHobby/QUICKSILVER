@@ -1,5 +1,6 @@
 #include "vtx.h"
 
+#include <math.h>
 #include <string.h>
 
 #include "driver/serial.h"
@@ -17,16 +18,35 @@ extern smart_audio_settings_t smart_audio_settings;
 
 static bool smart_audio_needs_update = false;
 
-static const char smart_audio_power_level_labels[VTX_POWER_LEVEL_MAX][VTX_POWER_LABEL_LEN] = {
+static const char smart_audio_power_level_labels[4][VTX_POWER_LABEL_LEN] = {
     "25   ",
-    "100  ",
     "200  ",
-    "300  ",
-    "400  ",
-    "     ",
-    "     ",
-    "     ",
+    "500  ",
+    "800  ",
 };
+
+static uint32_t smart_audio_dbi_to_mw(uint16_t dbi) {
+  uint16_t mw = (uint16_t)powf(10.0f, dbi / 10.0f);
+  if (dbi > 14) {
+    // For powers greater than 25mW round up to a multiple of 50 to match expectations
+    mw = 50 * ((mw + 25) / 50);
+  }
+  return mw;
+}
+
+static char *i2a(char *ptr, uint32_t val) {
+  const uint32_t div = val / 10;
+  if (div > 0)
+    ptr = i2a(ptr, div);
+  *ptr = '0' + (val % 10);
+  return ptr + 1;
+}
+
+static void smart_audio_write_mw(char *buf, uint32_t val) {
+  char *ptr = i2a(buf, val);
+  while (ptr != (buf + VTX_POWER_LABEL_LEN))
+    *ptr++ = ' ';
+}
 
 vtx_detect_status_t vtx_smart_audio_update(vtx_settings_t *actual) {
   if (smart_audio_settings.version == 0 && vtx_connect_tries > SMART_AUDIO_DETECT_TRIES) {
@@ -55,9 +75,15 @@ vtx_detect_status_t vtx_smart_audio_update(vtx_settings_t *actual) {
       actual->channel = channel_index % VTX_CHANNEL_MAX;
     }
 
-    actual->power_table.levels = VTX_POWER_LEVEL_MAX;
+    actual->power_table.levels = smart_audio_settings.level_count;
     memcpy(actual->power_table.values, smart_audio_settings.dac_power_levels, sizeof(smart_audio_settings.dac_power_levels));
-    memcpy(actual->power_table.labels, smart_audio_power_level_labels, sizeof(smart_audio_power_level_labels));
+    if (smart_audio_settings.version == 3) {
+      for (uint32_t i = 0; i < smart_audio_settings.level_count; i++) {
+        smart_audio_write_mw(actual->power_table.labels[i], smart_audio_dbi_to_mw(smart_audio_settings.dac_power_levels[i]));
+      }
+    } else {
+      memcpy(actual->power_table.labels, smart_audio_power_level_labels, sizeof(smart_audio_power_level_labels));
+    }
 
     if (smart_audio_settings.version == 2) {
       actual->power_level = min(smart_audio_settings.power, VTX_POWER_LEVEL_MAX - 1);
