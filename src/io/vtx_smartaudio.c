@@ -17,12 +17,15 @@ extern smart_audio_settings_t smart_audio_settings;
 
 static bool smart_audio_needs_update = false;
 
-static const char smart_audio_power_level_labels[VTX_POWER_LEVEL_MAX][3] = {
-    "25 ",
-    "100",
-    "200",
-    "300",
-    "400",
+static const char smart_audio_power_level_labels[VTX_POWER_LEVEL_MAX][VTX_POWER_LABEL_LEN] = {
+    "25   ",
+    "100  ",
+    "200  ",
+    "300  ",
+    "400  ",
+    "     ",
+    "     ",
+    "     ",
 };
 
 vtx_detect_status_t vtx_smart_audio_update(vtx_settings_t *actual) {

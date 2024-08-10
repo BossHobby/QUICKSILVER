@@ -4,6 +4,7 @@
 
 #define VTX_SETTINGS_MAGIC 0xdeed
 #define VTX_APPLY_TRIES 50
+#define VTX_POWER_LABEL_LEN 5
 
 typedef enum {
   VTX_DETECT_WAIT,
@@ -42,6 +43,9 @@ typedef enum {
   VTX_POWER_LEVEL_3,
   VTX_POWER_LEVEL_4,
   VTX_POWER_LEVEL_5,
+  VTX_POWER_LEVEL_6,
+  VTX_POWER_LEVEL_7,
+  VTX_POWER_LEVEL_8,
 
   VTX_POWER_LEVEL_MAX,
 } vtx_power_level_t;
@@ -65,13 +69,13 @@ typedef enum {
 
 typedef struct {
   uint8_t levels;
-  char labels[VTX_POWER_LEVEL_MAX][3];
+  char labels[VTX_POWER_LEVEL_MAX][VTX_POWER_LABEL_LEN];
   uint16_t values[VTX_POWER_LEVEL_MAX];
 } vtx_power_table_t;
 
-#define VTX_POWER_TABLE_MEMBERS                     \
-  MEMBER(levels, uint8_t)                           \
-  TSTR_ARRAY_MEMBER(labels, VTX_POWER_LEVEL_MAX, 3) \
+#define VTX_POWER_TABLE_MEMBERS                                       \
+  MEMBER(levels, uint8_t)                                             \
+  TSTR_ARRAY_MEMBER(labels, VTX_POWER_LEVEL_MAX, VTX_POWER_LABEL_LEN) \
   ARRAY_MEMBER(values, VTX_POWER_LEVEL_MAX, uint16_t)
 
 typedef struct {

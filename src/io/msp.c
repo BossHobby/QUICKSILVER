@@ -473,12 +473,12 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
     const uint16_t power = vtx_actual.power_table.values[level - 1];
 
-    uint8_t buf[7];
+    uint8_t buf[4 + VTX_POWER_LABEL_LEN];
     buf[0] = level;
     buf[1] = power & 0xFF;
     buf[2] = power >> 8;
-    buf[3] = 3;
-    memcpy(buf + 4, vtx_actual.power_table.labels[level - 1], 3);
+    buf[3] = VTX_POWER_LABEL_LEN;
+    memcpy(buf + 4, vtx_actual.power_table.labels[level - 1], VTX_POWER_LABEL_LEN);
 
     msp_send_reply(msp, magic, cmd, buf, 7);
     break;
@@ -495,7 +495,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     vtx_actual.power_table.values[level - 1] = payload[2] << 8 | payload[1];
 
     const uint8_t label_len = payload[3];
-    for (uint8_t i = 0; i < 3; i++) {
+    for (uint8_t i = 0; i < VTX_POWER_LABEL_LEN; i++) {
       vtx_actual.power_table.labels[level - 1][i] = i >= label_len ? 0 : payload[4 + i];
     }
     msp_send_reply(msp, magic, cmd, NULL, 0);

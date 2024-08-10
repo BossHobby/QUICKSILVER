@@ -52,6 +52,9 @@ const uint8_t default_dac_power_levels[VTX_POWER_LEVEL_MAX] = {
     25,
     40,
     40,
+    40,
+    40,
+    40,
 };
 
 static void serial_smart_audio_reconfigure() {
