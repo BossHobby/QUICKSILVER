@@ -46,14 +46,10 @@ extern uint32_t vtx_last_request;
 extern uint8_t vtx_payload[32];
 extern uint8_t vtx_payload_offset;
 
-const uint8_t default_dac_power_levels[VTX_POWER_LEVEL_MAX] = {
+const uint8_t default_dac_power_levels[4] = {
     7,
     16,
     25,
-    40,
-    40,
-    40,
-    40,
     40,
 };
 
@@ -125,13 +121,18 @@ static uint8_t serial_smart_audio_parse_packet(uint8_t cmd, uint8_t *payload, ui
     if (cmd == SA_CMD_GET_SETTINGS_V21) {
       smart_audio_settings.power = payload[5];
 
-      const uint8_t count = max(payload[6], VTX_POWER_LEVEL_MAX);
+      smart_audio_settings.level_count = min(payload[6], VTX_POWER_LEVEL_MAX);
 
-      for (uint8_t i = 0; i < count; i++) {
-        smart_audio_settings.dac_power_levels[i] = payload[7 + i];
+      // SmartAudio seems to report buf[8] + 1 power levels, but one of them is zero.
+      // zero is indeed a valid power level to set the vtx to, but it activates pit mode.
+      // crucially, after sending 0 dbm, the vtx does NOT report its power level to be 0 dbm.
+      // instead, it reports whatever value was set previously and it reports to be in pit mode.
+      for (uint8_t i = 0; i < smart_audio_settings.level_count; i++) {
+        smart_audio_settings.dac_power_levels[i] = payload[7 + i + 1]; //+ 1 to skip the first power level, as mentioned above
       }
     } else {
-      for (uint8_t i = 0; i < VTX_POWER_LEVEL_MAX; i++) {
+      smart_audio_settings.level_count = 4;
+      for (uint8_t i = 0; i < smart_audio_settings.level_count; i++) {
         smart_audio_settings.dac_power_levels[i] = default_dac_power_levels[i];
       }
     }
