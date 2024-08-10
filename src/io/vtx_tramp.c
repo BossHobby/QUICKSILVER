@@ -23,12 +23,15 @@ static const uint16_t tramp_power_level_values[VTX_POWER_LEVEL_MAX] = {
     400,
 };
 
-static const char tramp_power_level_labels[VTX_POWER_LEVEL_MAX][3] = {
-    "25 ",
-    "100",
-    "200",
-    "300",
-    "400",
+static const char tramp_power_level_labels[VTX_POWER_LEVEL_MAX][VTX_POWER_LABEL_LEN] = {
+    "25   ",
+    "100  ",
+    "200  ",
+    "300  ",
+    "400  ",
+    "     ",
+    "     ",
+    "     ",
 };
 
 vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual) {
