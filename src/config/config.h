@@ -155,7 +155,7 @@
 //***********************************************FILTER SETTINGS********************************************************
 
 // Gyro Filters
-#define GYRO_PASS1_TYPE FILTER_LP_PT3
+#define GYRO_PASS1_TYPE FILTER_LP_PT2
 #define GYRO_PASS1_FREQ 100
 
 #define GYRO_PASS2_TYPE FILTER_NONE

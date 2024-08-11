@@ -87,9 +87,9 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .index = 4,
         .name = "65mm 1s brushless whoop",
         .rate = {
-            .kp = {117, 117, 150},
+            .kp = {108, 108, 118},
             .ki = {77, 77, 77},
-            .kd = {83, 83, 13},
+            .kd = {68, 68, 12},
         },
     },
 
@@ -97,7 +97,7 @@ const pid_rate_preset_t pid_rate_presets[] = {
         .index = 5,
         .name = "75mm 1s brushless whoop",
         .rate = {
-            .kp = {127, 127, 148},
+            .kp = {127, 127, 128},
             .ki = {77, 77, 77},
             .kd = {101, 101, 13},
         },
