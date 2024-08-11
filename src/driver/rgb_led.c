@@ -226,8 +226,8 @@ void rgb_dma_start() {
   }
 
 #ifdef USE_DSHOT_DMA_DRIVER
-  extern int dshot_dma_phase;
-  if (dshot_dma_phase)
+  extern int dshot_phase;
+  if (dshot_phase)
     return;
 #endif
 
