@@ -16,9 +16,9 @@ typedef struct {
 } osd_segment_t;
 
 typedef struct {
+  uint8_t val : 8;
   uint8_t dirty : 1;
   uint8_t attr : 3;
-  uint8_t val : 8;
 } osd_char_t;
 
 typedef enum {

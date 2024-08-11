@@ -55,7 +55,7 @@ static void osd_menu_had_change() {
 }
 
 bool osd_menu_finish() {
-  if (osd_state.screen_phase == OSD_PHASE_CLEAR) {
+  if (osd_state.screen_phase == OSD_PHASE_CLEAR || osd_state.screen_phase == OSD_PHASE_REFRESH) {
     return false;
   }
   if (osd_state.screen_phase == OSD_PHASE_IDLE) {

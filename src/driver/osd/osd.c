@@ -83,51 +83,45 @@ void osd_clear() {
 }
 
 uint8_t osd_clear_async() {
-  static uint8_t row = 0;
+  static uint8_t state = 0;
 
-  if (row == 0) {
+  if (state == 0) {
+    for (uint32_t i = 0; i < (MAX_DISPLAY_SIZE / 2); i++) {
+      ((uint32_t *)display)[i] = ((0x20 << 16) | 0x20);
+    }
     memset(display_row_dirty, 0, MAX_ROWS * sizeof(bool));
     display_dirty = false;
-  }
-  if (row < MAX_ROWS) {
-    for (uint32_t i = 0; i < MAX_COLS; i++) {
-      display[row * MAX_COLS + i].dirty = 0;
-      display[row * MAX_COLS + i].attr = 0;
-      display[row * MAX_COLS + i].val = ' ';
-    }
-    row++;
+    state++;
     return 0;
   }
-  if (row == MAX_ROWS) {
-    switch (osd_device) {
+
+  switch (osd_device) {
 #ifdef USE_MAX7456
-    case OSD_DEVICE_MAX7456:
-      if (!max7456_clear_async()) {
-        return 0;
-      }
-      break;
+  case OSD_DEVICE_MAX7456:
+    if (!max7456_clear_async()) {
+      return 0;
+    }
+    break;
 #endif
 #ifdef USE_DIGITAL_VTX
-    case OSD_DEVICE_HDZERO:
-      if (!hdzero_clear_async()) {
-        return 0;
-      }
-      break;
+  case OSD_DEVICE_HDZERO:
+    if (!hdzero_clear_async()) {
+      return 0;
+    }
+    break;
 #endif
 #ifdef SIMULATOR
-    case OSD_DEVICE_SIMULATOR:
-      if (!simulator_osd_clear_async()) {
-        return 0;
-      }
-      break;
-#endif
-    default:
-      break;
+  case OSD_DEVICE_SIMULATOR:
+    if (!simulator_osd_clear_async()) {
+      return 0;
     }
-    row++;
-    return 0;
+    break;
+#endif
+  default:
+    break;
   }
-  row = 0;
+
+  state = 0;
   return 1;
 }
 
@@ -190,18 +184,14 @@ void osd_start(uint8_t attr, uint8_t x, uint8_t y) {
   osd_seg.offset = 0;
 }
 
-void osd_write_data(const uint8_t *buffer, uint8_t size) {
-  for (uint8_t i = 0; i < size; i++) {
-    osd_display_set(osd_seg.x + osd_seg.offset + i, osd_seg.y, osd_seg.attr, buffer[i]);
-  }
-
-  osd_seg.offset += size;
-}
-
 void osd_write_char(const char val) {
   osd_display_set(osd_seg.x + osd_seg.offset, osd_seg.y, osd_seg.attr, val);
-
   osd_seg.offset += 1;
+}
+
+void osd_write_data(const uint8_t *buffer, uint8_t size) {
+  for (uint8_t i = 0; i < size; i++)
+    osd_write_char(buffer[i]);
 }
 
 static bool osd_can_fit(uint8_t size) {
@@ -224,6 +214,10 @@ static bool osd_can_fit(uint8_t size) {
 }
 
 static bool osd_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size) {
+  if (size == 0) {
+    return true;
+  }
+
   switch (osd_device) {
 #ifdef USE_MAX7456
   case OSD_DEVICE_MAX7456:
@@ -270,27 +264,23 @@ static bool osd_update_display() {
       continue;
     }
 
-    uint8_t string[cols];
+    uint8_t string[HDZERO_COLS];
     uint8_t attr = 0;
     uint8_t start = cols;
     uint8_t size = 0;
 
-    bool row_done = true;
-    for (uint8_t col = 0; col < cols; col++) {
+    uint8_t col = 0;
+    for (; col < cols; col++) {
       osd_char_t *entry = &display[row * cols + col];
-
-      if (size && (!entry->dirty || entry->attr != attr || col == (cols - 1) || row_done == false)) {
+      if (!entry->dirty) {
         osd_push_string(attr, start, row, string, size);
         size = 0;
         start = cols;
-
-        if (!row_done) {
-          break;
-        }
+        continue;
       }
 
-      if (!entry->dirty) {
-        continue;
+      if (!osd_can_fit(size + 1)) {
+        break;
       }
 
       if (col < start) {
@@ -298,9 +288,11 @@ static bool osd_update_display() {
         attr = entry->attr;
       }
 
-      if (!osd_can_fit(size + 1)) {
-        row_done = false;
-        continue;
+      if (entry->attr != attr && size != 0) {
+        osd_push_string(attr, start, row, string, size);
+        attr = entry->attr;
+        start += size;
+        size = 0;
       }
 
       string[size] = entry->val;
@@ -308,7 +300,8 @@ static bool osd_update_display() {
       size++;
     }
 
-    if (row_done) {
+    osd_push_string(attr, start, row, string, size);
+    if (col == cols) {
       display_row_dirty[row] = false;
       row++;
     }
