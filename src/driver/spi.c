@@ -4,6 +4,7 @@
 
 #include "core/failloop.h"
 #include "driver/interrupt.h"
+#include "driver/motor_dshot.h"
 
 #ifdef USE_SPI
 
@@ -37,11 +38,10 @@ bool spi_txn_can_send(spi_bus_device_t *bus, bool dma) {
   }
 
 #if defined(STM32F4) && defined(USE_MOTOR_DSHOT)
-  extern volatile uint32_t dshot_dma_phase;
   if (dma &&
       target.brushless &&
       bus->port == SPI_PORT1 &&
-      dshot_dma_phase != 0) {
+      dshot_phase != 0) {
     return false;
   }
 #endif

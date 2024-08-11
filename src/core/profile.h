@@ -186,12 +186,14 @@ typedef enum {
   DSHOT_TIME_150 = 150,
   DSHOT_TIME_300 = 300,
   DSHOT_TIME_600 = 600,
+  DSHOT_TIME_MAX = 600,
 } __attribute__((__packed__)) dshot_time_t;
 
 typedef struct {
   float digital_idle;
   float motor_limit;
   dshot_time_t dshot_time;
+  bool dshot_telemetry;
   uint8_t invert_yaw;
   uint8_t gyro_orientation;
   float torque_boost;
@@ -205,6 +207,7 @@ typedef struct {
   MEMBER(digital_idle, float)                      \
   MEMBER(motor_limit, float)                       \
   MEMBER(dshot_time, uint16_t)                     \
+  MEMBER(dshot_telemetry, bool)                    \
   MEMBER(invert_yaw, uint8_t)                      \
   MEMBER(gyro_orientation, uint8_t)                \
   MEMBER(torque_boost, float)                      \
