@@ -78,8 +78,11 @@ void blackbox_init() {
   blackbox_device_init();
 }
 
-void blackbox_set_debug(uint8_t index, int16_t data) {
+void blackbox_set_debug(blackbox_debug_flag_t flag, uint8_t index, int16_t data) {
   if (index >= BLACKBOX_DEBUG_SIZE) {
+    return;
+  }
+  if ((profile.blackbox.field_flags & flag) != flag) {
     return;
   }
 
@@ -146,6 +149,6 @@ void blackbox_update() {
 }
 #else
 void blackbox_init() {}
-void blackbox_set_debug(uint8_t index, int16_t data) {}
+void blackbox_set_debug(blackbox_debug_flag_t flag, uint8_t index, int16_t data) {}
 void blackbox_update() {}
 #endif

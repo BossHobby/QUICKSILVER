@@ -472,7 +472,10 @@ const profile_t default_profile = {
         },
     },
     .blackbox = {
-        // Initialized by profile_set_defaults(), so nothing to do here
+#ifdef BLACKBOX_DEBUG_FLAGS
+        .debug_flags = BLACKBOX_DEBUG_FLAGS,
+#endif
+        // rest is initialized by profile_set_defaults()
     },
 };
 
