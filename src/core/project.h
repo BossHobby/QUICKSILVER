@@ -6,15 +6,15 @@
 #include "core/target.h"
 
 #ifdef STM32
-#include "driver/stm32/system.h"
+#include "driver/mcu/stm32/system.h"
 #endif
 
 #ifdef AT32
-#include "driver/at32/system.h"
+#include "driver/mcu/at32/system.h"
 #endif
 
 #ifdef SIMULATOR
-#include "driver/native/system.h"
+#include "driver/mcu/native/system.h"
 #endif
 
 #ifdef USE_FAST_RAM
