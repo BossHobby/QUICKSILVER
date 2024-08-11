@@ -161,6 +161,8 @@
 #define GYRO_PASS2_TYPE FILTER_NONE
 #define GYRO_PASS2_FREQ 0
 
+// #define GYRO_DYNAMIC_NOTCH
+
 // Dynamic D term filter
 // a pt1 filter that moves up in cut hz with a parabolic relationship to applied throttle.  The theory here is
 // that propwash is most likely to occur as throttle is applied in dirty air - and propwash is most significantly
