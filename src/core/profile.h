@@ -334,12 +334,14 @@ typedef struct {
 
 typedef struct {
   uint32_t field_flags;
+  uint32_t debug_flags;
   uint32_t sample_rate_hz;
 } profile_blackbox_t;
 
 #define BLACKBOX_MEMBERS           \
   START_STRUCT(profile_blackbox_t) \
   MEMBER(field_flags, uint32_t)    \
+  MEMBER(debug_flags, uint32_t)    \
   MEMBER(sample_rate_hz, uint32_t) \
   END_STRUCT()
 
