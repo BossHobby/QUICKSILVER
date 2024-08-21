@@ -69,19 +69,22 @@ void dshot_gpio_init_input(gpio_pins_t pin) {
 
 static void dshot_init_motor_pin(uint32_t index) {
   dshot_gpio_init_output(target.motor_pins[index]);
-  gpio_pin_reset(target.motor_pins[index]);
+  if (profile.motor.dshot_telemetry)
+    gpio_pin_set(target.motor_pins[index]);
+  else
+    gpio_pin_reset(target.motor_pins[index]);
 
+  const gpio_pin_def_t *def = &gpio_pin_defs[target.motor_pins[index]];
+  const uint32_t pin_mask = dshot_pins[index].pin_mask = 0x1 << def->pin_index;
   dshot_pins[index].dshot_port = 0;
-  dshot_pins[index].pin = gpio_pin_defs[target.motor_pins[index]].pin;
-  dshot_pins[index].port = gpio_pin_defs[target.motor_pins[index]].port;
-  dshot_pins[index].set_mask = profile.motor.dshot_telemetry ? (dshot_pins[index].pin << 16) : dshot_pins[index].pin;
-  dshot_pins[index].reset_mask = profile.motor.dshot_telemetry ? dshot_pins[index].pin : (dshot_pins[index].pin << 16);
+  dshot_pins[index].set_mask = profile.motor.dshot_telemetry ? (pin_mask << 16) : pin_mask;
+  dshot_pins[index].reset_mask = profile.motor.dshot_telemetry ? pin_mask : (pin_mask << 16);
 
   for (uint8_t i = 0; i < DSHOT_MAX_PORT_COUNT; i++) {
-    if (dshot_gpio_ports[i].gpio == dshot_pins[index].port || i == dshot_gpio_port_count) {
+    if (dshot_gpio_ports[i].gpio == def->port || i == dshot_gpio_port_count) {
       // we already got a matching port in our array
       // or we reached the first empty spot
-      dshot_gpio_ports[i].gpio = dshot_pins[index].port;
+      dshot_gpio_ports[i].gpio = def->port;
       dshot_gpio_ports[i].set_mask |= dshot_pins[index].set_mask;
       dshot_gpio_ports[i].reset_mask |= dshot_pins[index].reset_mask;
 
@@ -90,7 +93,6 @@ static void dshot_init_motor_pin(uint32_t index) {
       if (i + 1 > dshot_gpio_port_count) {
         dshot_gpio_port_count = i + 1;
       }
-
       break;
     }
   }
@@ -125,7 +127,7 @@ void dshot_dma_start() {
   if (profile.motor.dshot_telemetry) {
     for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
       const uint32_t port = dshot_pins[i].dshot_port;
-      state.dshot_rpm[i] = dshot_decode_eRPM_telemetry_value(dshot_decode_gcr((uint16_t *)dshot_input_buffer[port], dshot_pins[i].pin));
+      state.dshot_rpm[i] = dshot_decode_eRPM_telemetry_value(dshot_decode_gcr((uint16_t *)dshot_input_buffer[port], dshot_pins[i].pin_mask));
       dshot_gpio_init_output(i);
     }
   }

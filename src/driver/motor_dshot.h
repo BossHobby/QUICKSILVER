@@ -6,13 +6,11 @@
 #include "driver/motor.h"
 
 typedef struct {
-  gpio_port_t *port;
-  uint32_t pin;
+  uint32_t pin_mask;
+  uint32_t dshot_port;
 
   uint32_t set_mask;
   uint32_t reset_mask;
-
-  uint32_t dshot_port;
 } dshot_pin_t;
 
 typedef struct {
