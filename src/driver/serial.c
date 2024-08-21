@@ -38,7 +38,7 @@ static bool serial_hard_pin_init(serial_port_t *serial, serial_port_config_t con
 
   bool swap = false;
 
-  gpio_config_t gpio_init;
+  gpio_config_t gpio_init = gpio_config_default();
   gpio_init.mode = GPIO_ALTERNATE;
   gpio_init.drive = GPIO_DRIVE_HIGH;
   if (config.half_duplex) {

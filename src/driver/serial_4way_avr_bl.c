@@ -53,7 +53,7 @@ static void esc_set_low(gpio_pins_t pin) {
 }
 
 static void esc_set_input(gpio_pins_t pin) {
-  gpio_config_t gpio_init = {0};
+  gpio_config_t gpio_init = gpio_config_default();
   gpio_init.mode = GPIO_INPUT;
   gpio_init.output = GPIO_OPENDRAIN;
   gpio_init.pull = GPIO_UP_PULL;
@@ -62,7 +62,7 @@ static void esc_set_input(gpio_pins_t pin) {
 }
 
 static void esc_set_output(gpio_pins_t pin) {
-  gpio_config_t gpio_init = {0};
+  gpio_config_t gpio_init = gpio_config_default();
   gpio_init.mode = GPIO_OUTPUT;
   gpio_init.output = GPIO_PUSHPULL;
   gpio_init.pull = GPIO_NO_PULL;

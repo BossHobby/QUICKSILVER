@@ -36,7 +36,7 @@ void buzzer_init() {
     return;
   }
 
-  gpio_config_t gpio_init;
+  gpio_config_t gpio_init = gpio_config_default();
   gpio_init.mode = GPIO_OUTPUT;
   gpio_init.output = GPIO_PUSHPULL;
   gpio_init.pull = GPIO_NO_PULL;

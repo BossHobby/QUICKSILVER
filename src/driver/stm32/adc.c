@@ -87,6 +87,8 @@ static void adc_init_pin(adc_chan_t chan, gpio_pins_t pin) {
   if (adc_pins[chan].pin != PIN_NONE) {
     gpio_config_t gpio_init;
     gpio_init.mode = GPIO_ANALOG;
+    gpio_init.output = GPIO_OPENDRAIN;
+    gpio_init.output = GPIO_DRIVE_NORMAL;
     gpio_init.pull = GPIO_NO_PULL;
     gpio_pin_init(pin, gpio_init);
   }

@@ -87,7 +87,7 @@ void handle_usart_invert(serial_ports_t port, bool invert) {
   }
 
   // Inverter control line, set high
-  gpio_config_t gpio_init;
+  gpio_config_t gpio_init = gpio_config_default();
   gpio_init.mode = GPIO_OUTPUT;
   gpio_init.output = GPIO_PUSHPULL;
   gpio_init.pull = GPIO_NO_PULL;

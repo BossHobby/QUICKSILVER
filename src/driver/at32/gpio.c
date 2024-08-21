@@ -5,24 +5,24 @@
 #include "driver/rcc.h"
 #include "driver/timer.h"
 
-static const uint32_t mode_map[] = {
+static const gpio_mode_type mode_map[] = {
     [GPIO_INPUT] = GPIO_MODE_INPUT,
     [GPIO_OUTPUT] = GPIO_MODE_OUTPUT,
     [GPIO_ANALOG] = GPIO_MODE_ANALOG,
     [GPIO_ALTERNATE] = GPIO_MODE_MUX,
 };
 
-static const uint32_t output_map[] = {
+static const gpio_output_type output_map[] = {
     [GPIO_PUSHPULL] = GPIO_OUTPUT_PUSH_PULL,
     [GPIO_OPENDRAIN] = GPIO_OUTPUT_OPEN_DRAIN,
 };
 
-static const uint32_t speed_map[] = {
+static const gpio_drive_type speed_map[] = {
     [GPIO_DRIVE_NORMAL] = GPIO_DRIVE_STRENGTH_MODERATE,
     [GPIO_DRIVE_HIGH] = GPIO_DRIVE_STRENGTH_STRONGER,
 };
 
-static const uint32_t pull_map[] = {
+static const gpio_pull_type pull_map[] = {
     [GPIO_NO_PULL] = GPIO_PULL_NONE,
     [GPIO_UP_PULL] = GPIO_PULL_UP,
     [GPIO_DOWN_PULL] = GPIO_PULL_DOWN,

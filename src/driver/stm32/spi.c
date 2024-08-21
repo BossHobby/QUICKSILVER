@@ -169,7 +169,7 @@ void spi_reconfigure(spi_bus_device_t *bus) {
   if (config->mode != bus->mode) {
     config->mode = bus->mode;
 
-    gpio_config_t gpio_init;
+    gpio_config_t gpio_init = gpio_config_default();
     gpio_init.mode = GPIO_ALTERNATE;
     gpio_init.drive = GPIO_DRIVE_HIGH;
     gpio_init.output = GPIO_PUSHPULL;

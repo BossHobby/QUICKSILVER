@@ -5,8 +5,8 @@
 #include "driver/timer.h"
 
 typedef enum {
-  GPIO_INPUT,
   GPIO_OUTPUT,
+  GPIO_INPUT,
   GPIO_ANALOG,
   GPIO_ALTERNATE,
 } gpio_mode_t;
@@ -49,6 +49,13 @@ typedef struct {
 extern const gpio_pin_def_t gpio_pin_defs[PINS_MAX];
 extern const gpio_af_t gpio_pin_afs[];
 extern const uint32_t GPIO_AF_MAX;
+
+#define gpio_config_default() { \
+    .mode = GPIO_OUTPUT,        \
+    .output = GPIO_PUSHPULL,    \
+    .drive = GPIO_DRIVE_NORMAL, \
+    .pull = GPIO_NO_PULL,       \
+}
 
 void gpio_ports_init();
 
