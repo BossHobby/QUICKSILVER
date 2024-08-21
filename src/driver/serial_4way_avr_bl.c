@@ -285,8 +285,12 @@ uint8_t avr_bl_send_keepalive(gpio_pins_t pin) {
 }
 
 void avr_bl_send_restart(gpio_pins_t pin, uint8_t *data) {
-  uint8_t buf[] = {RestartBootloader, 0};
-  avr_bl_write(pin, buf, 2); // sends simply 4 x 0x00 (CRC =00)
+  esc_set_output(pin);
+  serial_write(pin, RestartBootloader);
+  serial_write(pin, 0);
+  serial_write(pin, 0);
+  serial_write(pin, 0);
+  esc_set_input(pin);
   data[0] = 1;
 }
 
