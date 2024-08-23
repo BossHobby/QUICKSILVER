@@ -406,7 +406,7 @@ const profile_t default_profile = {
             RACEMODE,            // AUX_RACEMODE
             HORIZON,             // AUX_HORIZON
             STICK_BOOST_PROFILE, // AUX_STICK_BOOST_PROFILE
-            AUX_CHANNEL_OFF,     // AUX_RATE_PROFILE
+            AUX_CHANNEL_OFF,     // UNUSED_AUX_HIGH_RATES
 #ifdef BUZZER_ENABLE             // AUX_BUZZER_ENABLE
             BUZZER_ENABLE,
 #else
@@ -427,6 +427,7 @@ const profile_t default_profile = {
 #endif
             AUX_CHANNEL_OFF, // AUX_BLACKBOX
             PREARM,          // AUX_PREARM
+            AUX_CHANNEL_OFF, // AUX_OSD_PROFILE
         },
         .lqi_source = RX_LQI_SOURCE_PACKET_RATE,
         .channel_mapping = RX_MAPPING_AETR,
@@ -438,39 +439,48 @@ const profile_t default_profile = {
         },
     },
     .osd = {
-        .callsign = "QUICKSILVER",
-        .elements = {
-            ENCODE_OSD_ELEMENT(1, 1, 9, 1),   // OSD_CALLSIGN
-            ENCODE_OSD_ELEMENT(1, 0, 11, 14), // OSD_CELL_COUNT
-            ENCODE_OSD_ELEMENT(0, 0, 1, 14),  // OSD_FUELGAUGE_VOLTS
-            ENCODE_OSD_ELEMENT(1, 0, 14, 14), // OSD_FILTERED_VOLTS
-            ENCODE_OSD_ELEMENT(1, 0, 24, 14), // OSD_GYRO_TEMP
-            ENCODE_OSD_ELEMENT(1, 0, 10, 13), // OSD_FLIGHT_MODE
-            ENCODE_OSD_ELEMENT(1, 0, 24, 1),  // OSD_RSSI
-            ENCODE_OSD_ELEMENT(1, 0, 24, 13), // OSD_STOPWATCH
-            ENCODE_OSD_ELEMENT(1, 0, 4, 6),   // OSD_SYSTEM_STATUS
-            ENCODE_OSD_ELEMENT(1, 0, 1, 1),   // OSD_THROTTLE
-            ENCODE_OSD_ELEMENT(0, 0, 1, 1),   // OSD_VTX_CHANNEL
-            ENCODE_OSD_ELEMENT(1, 0, 1, 14),  // OSD_CURRENT_DRAW
-            ENCODE_OSD_ELEMENT(0, 0, 14, 6),  // OSD_CROSSHAIR
-            ENCODE_OSD_ELEMENT(1, 0, 1, 13),  // OSD_CURRENT_DRAWN
+        .guac_mode = 0,
+        .profiles = {
+            [OSD_PROFILE_1] = {
+                .callsign = "QUICKSILVER",
+                .elements = {
+                    ENCODE_OSD_ELEMENT(1, 1, 9, 1, 19, 0),    // OSD_CALLSIGN
+                    ENCODE_OSD_ELEMENT(1, 0, 11, 14, 21, 17), // OSD_CELL_COUNT
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 14, 0, 17),   // OSD_FUELGAUGE_VOLTS
+                    ENCODE_OSD_ELEMENT(1, 0, 14, 14, 24, 17), // OSD_FILTERED_VOLTS
+                    ENCODE_OSD_ELEMENT(1, 0, 24, 14, 44, 17), // OSD_GYRO_TEMP
+                    ENCODE_OSD_ELEMENT(1, 0, 10, 13, 20, 16), // OSD_FLIGHT_MODE
+                    ENCODE_OSD_ELEMENT(1, 0, 24, 1, 44, 0),   // OSD_RSSI
+                    ENCODE_OSD_ELEMENT(1, 0, 24, 13, 44, 16), // OSD_STOPWATCH
+                    ENCODE_OSD_ELEMENT(1, 0, 4, 6, 14, 8),    // OSD_SYSTEM_STATUS
+                    ENCODE_OSD_ELEMENT(1, 0, 1, 1, 0, 0),     // OSD_THROTTLE
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 1, 0, 0),     // OSD_VTX_CHANNEL
+                    ENCODE_OSD_ELEMENT(1, 0, 1, 14, 0, 17),   // OSD_CURRENT_DRAW
+                    ENCODE_OSD_ELEMENT(0, 0, 14, 6, 15, 8),   // OSD_CROSSHAIR
+                    ENCODE_OSD_ELEMENT(1, 0, 1, 13, 0, 16),   // OSD_CURRENT_DRAWN
+                },
+            },
+            [OSD_PROFILE_2] = {
+                .callsign = "QUICKSILVER",
+                .elements = {
+                    ENCODE_OSD_ELEMENT(0, 1, 9, 1, 19, 0),    // OSD_CALLSIGN
+                    ENCODE_OSD_ELEMENT(0, 0, 11, 14, 21, 17), // OSD_CELL_COUNT
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 14, 0, 17),   // OSD_FUELGAUGE_VOLTS
+                    ENCODE_OSD_ELEMENT(0, 0, 14, 14, 24, 17), // OSD_FILTERED_VOLTS
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 14, 44, 17), // OSD_GYRO_TEMP
+                    ENCODE_OSD_ELEMENT(0, 0, 10, 13, 20, 16), // OSD_FLIGHT_MODE
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 1, 44, 0),   // OSD_RSSI
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 13, 44, 16), // OSD_STOPWATCH
+                    ENCODE_OSD_ELEMENT(0, 0, 4, 6, 14, 8),    // OSD_SYSTEM_STATUS
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 1, 0, 0),     // OSD_THROTTLE
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 1, 0, 0),     // OSD_VTX_CHANNEL
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 14, 0, 17),   // OSD_CURRENT_DRAW
+                    ENCODE_OSD_ELEMENT(0, 0, 14, 6, 15, 8),   // OSD_CROSSHAIR
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 13, 0, 16),   // OSD_CURRENT_DRAWN
+                },
+            },
         },
-        .elements_hd = {
-            ENCODE_OSD_ELEMENT(1, 1, 19, 0),  // OSD_CALLSIGN
-            ENCODE_OSD_ELEMENT(1, 0, 21, 17), // OSD_CELL_COUNT
-            ENCODE_OSD_ELEMENT(0, 0, 0, 17),  // OSD_FUELGAUGE_VOLTS
-            ENCODE_OSD_ELEMENT(1, 0, 24, 17), // OSD_FILTERED_VOLTS
-            ENCODE_OSD_ELEMENT(1, 0, 44, 17), // OSD_GYRO_TEMP
-            ENCODE_OSD_ELEMENT(1, 0, 20, 16), // OSD_FLIGHT_MODE
-            ENCODE_OSD_ELEMENT(1, 0, 44, 0),  // OSD_RSSI
-            ENCODE_OSD_ELEMENT(1, 0, 44, 16), // OSD_STOPWATCH
-            ENCODE_OSD_ELEMENT(1, 0, 14, 8),  // OSD_SYSTEM_STATUS
-            ENCODE_OSD_ELEMENT(1, 0, 0, 0),   // OSD_THROTTLE
-            ENCODE_OSD_ELEMENT(0, 0, 0, 0),   // OSD_VTX_CHANNEL
-            ENCODE_OSD_ELEMENT(1, 0, 0, 17),  // OSD_CURRENT_DRAW
-            ENCODE_OSD_ELEMENT(0, 0, 15, 8),  // OSD_CROSSHAIR
-            ENCODE_OSD_ELEMENT(1, 0, 0, 16),  // OSD_CURRENT_DRAWN
-        },
+
     },
     .blackbox = {
 #ifdef BLACKBOX_DEBUG_FLAGS
@@ -543,6 +553,7 @@ MOTOR_MEMBERS
 SERIAL_MEMBERS
 FILTER_PARAMETER_MEMBERS
 FILTER_MEMBERS
+OSD_PROFILE_MEMBERS
 OSD_MEMBERS
 VOLTAGE_MEMBERS
 PID_RATE_MEMBERS
@@ -617,6 +628,7 @@ MOTOR_MEMBERS
 SERIAL_MEMBERS
 FILTER_PARAMETER_MEMBERS
 FILTER_MEMBERS
+OSD_PROFILE_MEMBERS
 OSD_MEMBERS
 VOLTAGE_MEMBERS
 PID_RATE_MEMBERS

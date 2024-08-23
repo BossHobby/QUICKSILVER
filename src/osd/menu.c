@@ -21,8 +21,6 @@ typedef struct {
 
 static osd_menu_state_t menu_state;
 
-extern osd_system_t osd_system;
-
 void osd_menu_start() {
   menu_state.onscreen_elements = 0;
   menu_state.active_elements = 0;

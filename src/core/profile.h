@@ -9,7 +9,7 @@
 
 #define OSD_NUMBER_ELEMENTS 32
 
-#define PROFILE_VERSION MAKE_SEMVER(0, 2, 4)
+#define PROFILE_VERSION MAKE_SEMVER(0, 2, 5)
 
 // Rates
 typedef enum {
@@ -285,19 +285,32 @@ typedef struct {
   MEMBER(hdzero, uint8_t)        \
   END_STRUCT()
 
+typedef enum {
+  OSD_PROFILE_1,
+  OSD_PROFILE_2,
+  OSD_PROFILE_MAX,
+} __attribute__((__packed__)) osd_profiles_t;
+
 typedef struct {
-  uint8_t guac_mode;
   uint8_t callsign[36];
   uint32_t elements[OSD_NUMBER_ELEMENTS];
-  uint32_t elements_hd[OSD_NUMBER_ELEMENTS];
+} profile_osd_profile_t;
+
+#define OSD_PROFILE_MEMBERS                             \
+  START_STRUCT(profile_osd_profile_t)                   \
+  TSTR_MEMBER(callsign, 36)                             \
+  ARRAY_MEMBER(elements, OSD_NUMBER_ELEMENTS, uint32_t) \
+  END_STRUCT()
+
+typedef struct {
+  uint8_t guac_mode;
+  profile_osd_profile_t profiles[OSD_PROFILE_MAX];
 } profile_osd_t;
 
-#define OSD_MEMBERS                                        \
-  START_STRUCT(profile_osd_t)                              \
-  MEMBER(guac_mode, uint8_t)                               \
-  TSTR_MEMBER(callsign, 36)                                \
-  ARRAY_MEMBER(elements, OSD_NUMBER_ELEMENTS, uint32_t)    \
-  ARRAY_MEMBER(elements_hd, OSD_NUMBER_ELEMENTS, uint32_t) \
+#define OSD_MEMBERS                                              \
+  START_STRUCT(profile_osd_t)                                    \
+  MEMBER(guac_mode, uint8_t)                                     \
+  ARRAY_MEMBER(profiles, OSD_PROFILE_MAX, profile_osd_profile_t) \
   END_STRUCT()
 
 typedef struct {

@@ -7,7 +7,6 @@
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/scheduler.h"
-#include "driver/osd/osd.h"
 #include "driver/reset.h"
 #include "flight/control.h"
 #include "io/blackbox_device.h"
@@ -121,11 +120,23 @@ uint8_t osd_attr(osd_element_t *el) {
   return el->attribute ? OSD_ATTR_INVERT : OSD_ATTR_TEXT;
 }
 
+static osd_profiles_t osd_profile_index() {
+  return rx_aux_on(AUX_OSD_PROFILE) ? OSD_PROFILE_2 : OSD_PROFILE_1;
+}
+
+static profile_osd_profile_t *osd_profile() {
+  return &profile.osd.profiles[osd_profile_index()];
+}
+
 static uint32_t *osd_elements() {
-  if (osd_system == OSD_SYS_HD) {
-    return profile.osd.elements_hd;
-  }
-  return profile.osd.elements;
+  return osd_profile()->elements;
+}
+
+static void osd_start_el(osd_element_t *el) {
+  if (osd_system == OSD_SYS_HD)
+    osd_start(osd_attr(el), el->pos_hd_x, el->pos_hd_y);
+  else
+    osd_start(osd_attr(el), el->pos_sd_x, el->pos_sd_y);
 }
 
 void osd_display_reset() {
@@ -290,7 +301,7 @@ static void print_osd_flightmode(osd_element_t *el) {
     flightmode = 0;
   }
 
-  osd_start(osd_attr(el), el->pos_x, el->pos_y);
+  osd_start_el(el);
   osd_write_data(flightmode_labels[flightmode], 10);
 }
 
@@ -301,13 +312,13 @@ static void print_osd_rssi(osd_element_t *el) {
 
   lpf(&rx_rssi_filt, state.rx_rssi, lpfcalc(state.looptime * 1e6f * 133.0f, 2e6f)); // 2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
 
-  osd_start(osd_attr(el), el->pos_x, el->pos_y);
+  osd_start_el(el);
   osd_write_uint(rx_rssi_filt - 0.5f, 4);
   osd_write_char(ICON_RSSI);
 }
 
 static void print_osd_crosshair(osd_element_t *el) {
-  osd_start(osd_attr(el), el->pos_x, el->pos_y);
+  osd_start_el(el);
   osd_write_char(ICON_CROSSHAIR_1);
   osd_write_char(ICON_CROSSHAIR_2);
   osd_write_char(ICON_CROSSHAIR_3);
@@ -322,7 +333,7 @@ static void print_osd_armtime(osd_element_t *el) {
     time_s -= 3600;
   }
 
-  osd_start(osd_attr(el), el->pos_x, el->pos_y);
+  osd_start_el(el);
 
   const uint32_t minutes = time_s / 60;
   osd_write_uint(minutes / 10, 1);
@@ -338,7 +349,7 @@ static void print_osd_armtime(osd_element_t *el) {
 // print the current vtx settings as Band:Channel:Power
 static void print_osd_vtx(osd_element_t *el) {
 #ifdef USE_VTX
-  osd_start(osd_attr(el), el->pos_x, el->pos_y);
+  osd_start_el(el);
 
   switch (vtx_settings.band) {
   case VTX_BAND_A:
@@ -394,8 +405,8 @@ static void osd_display_regular() {
 
   switch (osd_state.element) {
   case OSD_CALLSIGN: {
-    osd_start(osd_attr(el), el->pos_x, el->pos_y);
-    osd_write_str((const char *)profile.osd.callsign);
+    osd_start_el(el);
+    osd_write_str((const char *)osd_profile()->callsign);
 
     osd_state.element++;
     break;
@@ -403,9 +414,9 @@ static void osd_display_regular() {
 
   case OSD_CELL_COUNT: {
     if (!flags.lowbatt) {
-      osd_start(osd_attr(el), el->pos_x, el->pos_y);
+      osd_start_el(el);
     } else {
-      osd_start(OSD_ATTR_BLINK | OSD_ATTR_INVERT, el->pos_x, el->pos_y);
+      osd_start(OSD_ATTR_BLINK | OSD_ATTR_INVERT, pos_x(el), pos_y(el));
     }
     osd_write_uint(state.lipo_cell_count, 1);
     osd_write_char('S');
@@ -415,7 +426,7 @@ static void osd_display_regular() {
   }
 
   case OSD_FUELGAUGE_VOLTS: {
-    osd_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_start_el(el);
     osd_write_float(state.vbat_compensated_cell_avg, 4, 1);
     osd_write_char(ICON_GAUGE);
 
@@ -424,7 +435,7 @@ static void osd_display_regular() {
   }
 
   case OSD_FILTERED_VOLTS: {
-    osd_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_start_el(el);
     osd_write_float(state.vbat_cell_avg, 4, 1);
     osd_write_char(ICON_VOLT);
 
@@ -433,7 +444,7 @@ static void osd_display_regular() {
   }
 
   case OSD_GYRO_TEMP: {
-    osd_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_start_el(el);
     osd_write_int(state.gyro_temp, 4);
     osd_write_char(ICON_CELSIUS);
 
@@ -466,7 +477,7 @@ static void osd_display_regular() {
   }
 
   case OSD_THROTTLE: {
-    osd_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_start_el(el);
     const float throttle = state.rx_filtered.throttle * 100.0f;
     if (profile.osd.guac_mode && throttle > 99.0f) {
       osd_write_str("GUAC");
@@ -491,7 +502,7 @@ static void osd_display_regular() {
   }
 
   case OSD_CURRENT_DRAW: {
-    osd_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_start_el(el);
     osd_write_float(state.ibat_filtered / 1000.0f, 4, 2);
     osd_write_char(ICON_AMP);
 
@@ -500,7 +511,7 @@ static void osd_display_regular() {
   }
 
   case OSD_CURRENT_DRAWN: {
-    osd_start(osd_attr(el), el->pos_x, el->pos_y);
+    osd_start_el(el);
     osd_write_float(state.ibat_drawn, 4, 2);
     osd_write_char(ICON_MAH);
 
@@ -660,10 +671,16 @@ void osd_display() {
       osd_display_reset();
     break;
 
-  case OSD_SCREEN_REGULAR:
+  case OSD_SCREEN_REGULAR: {
+    static osd_profiles_t last_osd_profile_index = OSD_PROFILE_MAX;
+    if (last_osd_profile_index != osd_profile_index()) {
+      last_osd_profile_index = osd_profile_index();
+      osd_update_screen(OSD_SCREEN_CLEAR);
+      break;
+    }
     osd_display_regular();
     break;
-
+  }
   case OSD_SCREEN_MAIN_MENU: {
     osd_menu_start();
     osd_menu_header("MENU");
@@ -901,12 +918,13 @@ void osd_display() {
       osd_menu_select_enum_adjust(4, OSD_AUTO, "STICK BOOST", 17, &profile.receiver.aux[AUX_STICK_BOOST_PROFILE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
 
       // PAGE 2
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "RATE", 17, &profile.receiver.aux[AUX_RATE_PROFILE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
       osd_menu_select_enum_adjust(4, OSD_AUTO, "BUZZER", 17, &profile.receiver.aux[AUX_BUZZER_ENABLE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
       osd_menu_select_enum_adjust(4, OSD_AUTO, "TURTLE", 17, &profile.receiver.aux[AUX_TURTLE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
       osd_menu_select_enum_adjust(4, OSD_AUTO, "MOTOR TEST", 17, &profile.receiver.aux[AUX_MOTOR_TEST], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
       osd_menu_select_enum_adjust(4, OSD_AUTO, "FPV SWITCH", 17, &profile.receiver.aux[AUX_FPV_SWITCH], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
       osd_menu_select_enum_adjust(4, OSD_AUTO, "BLACKBOX", 17, &profile.receiver.aux[AUX_BLACKBOX], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "PREARM", 17, &profile.receiver.aux[AUX_PREARM], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "OSD PROFILE", 17, &profile.receiver.aux[AUX_OSD_PROFILE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
     }
     osd_menu_scroll_finish(4);
 
@@ -1071,11 +1089,17 @@ void osd_display() {
       osd_element_t *el = (osd_element_t *)(osd_elements() + i);
 
       osd_menu_select(3, OSD_AUTO, osd_element_labels[i]);
-      if (osd_menu_select_int(20, OSD_AUTO, el->pos_x, 3)) {
-        el->pos_x = osd_menu_adjust_int(el->pos_x, 1, 0, osd_system == OSD_SYS_HD ? HD_COLS : SD_COLS);
+      if (osd_menu_select_int(20, OSD_AUTO, pos_x(el), 3)) {
+        if (osd_system == OSD_SYS_HD)
+          el->pos_hd_x = osd_menu_adjust_int(el->pos_hd_x, 1, 0, HD_ROWS);
+        else
+          el->pos_sd_x = osd_menu_adjust_int(el->pos_sd_x, 1, 0, SD_ROWS);
       }
-      if (osd_menu_select_int(26, OSD_AUTO, el->pos_y, 3)) {
-        el->pos_y = osd_menu_adjust_int(el->pos_y, 1, 0, osd_system == OSD_SYS_HD ? HD_ROWS : SD_ROWS);
+      if (osd_menu_select_int(26, OSD_AUTO, pos_y(el), 3)) {
+        if (osd_system == OSD_SYS_HD)
+          el->pos_hd_y = osd_menu_adjust_int(el->pos_hd_y, 1, 0, HD_ROWS);
+        else
+          el->pos_sd_y = osd_menu_adjust_int(el->pos_sd_y, 1, 0, SD_ROWS);
       }
     }
     osd_menu_scroll_finish(3);
@@ -1113,8 +1137,8 @@ void osd_display() {
     osd_menu_header("CALLSIGN");
 
     osd_menu_select(1, 5, "EDIT:");
-    if (osd_menu_select_str(8, 5, (char *)profile.osd.callsign)) {
-      osd_menu_adjust_str((char *)profile.osd.callsign);
+    if (osd_menu_select_str(8, 5, (char *)osd_profile()->callsign)) {
+      osd_menu_adjust_str((char *)osd_profile()->callsign);
     }
     osd_menu_label(8, 6, "-------------------");
 
