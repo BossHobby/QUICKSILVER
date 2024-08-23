@@ -63,7 +63,7 @@ typedef enum {
   AUX_RACEMODE,
   AUX_HORIZON,
   AUX_STICK_BOOST_PROFILE,
-  AUX_RATE_PROFILE,
+  UNUSED_AUX_HIGH_RATES, // used to multiply rates by a constant factor
   AUX_BUZZER_ENABLE,
   AUX_TURTLE,
   AUX_MOTOR_TEST,
@@ -71,6 +71,7 @@ typedef enum {
   AUX_FPV_SWITCH,
   AUX_BLACKBOX,
   AUX_PREARM,
+  AUX_OSD_PROFILE,
 
   AUX_FUNCTION_MAX
 } __attribute__((__packed__)) aux_function_t;

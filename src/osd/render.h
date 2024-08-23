@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include "driver/osd/osd.h"
+
 #define OSD_HISTORY_SIZE 8
 
 typedef enum {
@@ -74,32 +76,19 @@ typedef enum {
   OSD_ELEMENT_MAX
 } osd_elements_t;
 
-/*
-screen elements characteristics written like registers in a 32bit binany number
-BIT
-0			-		0 is display element inactive , 1 is display element active
-1			-		0 is TEXT, 1 is INVERT
-2:10	-		the X screen position (column)
-11:17	-		the Y screen position	(row)
-17:32	-		not currently used
-*/
-
-typedef enum {
-  ACTIVE = 0,
-  ATTRIBUTE = 1,
-  POSITIONX = 2,
-  POSITIONY = 3,
-} osd_element_attrs_t;
-
 typedef struct {
   uint32_t active : 1;
   uint32_t attribute : 1;
-  uint32_t pos_x : 8;
-  uint32_t pos_y : 8;
-  uint32_t _unused : 14;
+  uint32_t pos_sd_x : 5;
+  uint32_t pos_sd_y : 5;
+  uint32_t pos_hd_x : 7;
+  uint32_t pos_hd_y : 7;
+  uint32_t _unused : 6;
 } __attribute__((packed)) osd_element_t;
 
-#define ENCODE_OSD_ELEMENT(active, attr, x, y) ((y << 10) | (x << 2) | (attr << 1) | active)
+#define ENCODE_OSD_ELEMENT(active, attr, sd_x, sd_y, hd_x, hd_y) ((hd_y << 20) | (hd_x << 12) | (sd_y << 7) | (sd_x << 2) | (attr << 1) | active)
+#define pos_x(el) (osd_system == OSD_SYS_HD ? el->pos_hd_x : el->pos_sd_x)
+#define pos_y(el) (osd_system == OSD_SYS_HD ? el->pos_hd_y : el->pos_sd_y)
 
 typedef enum {
   OSD_PHASE_CLEAR,
@@ -131,6 +120,7 @@ typedef struct {
 } osd_state_t;
 
 extern osd_state_t osd_state;
+extern osd_system_t osd_system;
 
 void osd_init();
 void osd_display();

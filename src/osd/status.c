@@ -100,7 +100,7 @@ static bool osd_status_print(osd_element_t *el) {
 
   switch (current_status.state) {
   case PRINT_START:
-    osd_start(osd_attr(el) | OSD_ATTR_BLINK, el->pos_x, el->pos_y);
+    osd_start(osd_attr(el) | OSD_ATTR_BLINK, pos_x(el), pos_y(el));
     osd_write_data(current_status.label, LABEL_LEN);
 
     if (current_status.mode == MODE_HOLD) {
@@ -119,7 +119,7 @@ static bool osd_status_print(osd_element_t *el) {
     return false;
 
   case PRINT_CLEAR:
-    osd_start(osd_attr(el) | OSD_ATTR_BLINK, el->pos_x, el->pos_y);
+    osd_start(osd_attr(el) | OSD_ATTR_BLINK, pos_x(el), pos_y(el));
     for (uint32_t i = 0; i < LABEL_LEN; i++) {
       osd_write_char(' ');
     }
