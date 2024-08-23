@@ -1,4 +1,4 @@
-#include "driver/osd/hdzero.h"
+#include "driver/osd/displayport.h"
 
 #include <string.h>
 
@@ -43,7 +43,7 @@ static ring_buffer_t rx_buffer = {
     .size = 512,
 };
 
-serial_port_t serial_hdzero = {
+serial_port_t serial_displayport = {
     .rx_buffer = &rx_buffer,
     .tx_buffer = &tx_buffer,
 
@@ -54,14 +54,14 @@ static const uint8_t msp_options[2] = {0, 1};
 static volatile uint32_t last_heartbeat = 0;
 static bool is_detected = false;
 
-static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
+static void displayport_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
   if (cmd == MSP_FC_VARIANT) {
     // we got the first MSP_FC_VARIANT request, consider vtx detected
     is_detected = true;
   }
 
   if (magic == MSP2_MAGIC) {
-    if (serial_bytes_free(&serial_hdzero) < (len + MSP2_HEADER_LEN + 1)) {
+    if (serial_bytes_free(&serial_displayport) < (len + MSP2_HEADER_LEN + 1)) {
       return;
     }
 
@@ -91,9 +91,9 @@ static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, 
 
     buf[size++] = crc8_dvb_s2_data(crc, data, len);
 
-    serial_write_bytes(&serial_hdzero, buf, size);
+    serial_write_bytes(&serial_displayport, buf, size);
   } else if (len < 255) {
-    if (serial_bytes_free(&serial_hdzero) < (len + MSP_HEADER_LEN + 1)) {
+    if (serial_bytes_free(&serial_displayport) < (len + MSP_HEADER_LEN + 1)) {
       return;
     }
 
@@ -115,21 +115,21 @@ static void hdzero_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, 
     }
     buf[size++] = chksum;
 
-    serial_write_bytes(&serial_hdzero, buf, size);
+    serial_write_bytes(&serial_displayport, buf, size);
   }
 }
 
 static uint8_t msp_buffer[128];
-msp_t hdzero_msp = {
+msp_t displayport_msp = {
     .buffer = msp_buffer,
     .buffer_size = 128,
     .buffer_offset = 0,
-    .send = hdzero_msp_send,
+    .send = displayport_msp_send,
     .device = MSP_DEVICE_VTX,
 };
 
-static bool hdzero_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data, const uint8_t len) {
-  if (serial_bytes_free(&serial_hdzero) < (MSP_HEADER_LEN + len + 2)) {
+static bool displayport_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data, const uint8_t len) {
+  if (serial_bytes_free(&serial_displayport) < (MSP_HEADER_LEN + len + 2)) {
     return false;
   }
 
@@ -152,10 +152,10 @@ static bool hdzero_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data,
   }
   buf[size++] = chksum;
 
-  return serial_write_bytes(&serial_hdzero, buf, size);
+  return serial_write_bytes(&serial_displayport, buf, size);
 }
 
-static uint8_t hdzero_map_attr(uint8_t attr) {
+static uint8_t displayport_map_attr(uint8_t attr) {
   uint8_t val = 0;
   if (attr & OSD_ATTR_INVERT) {
     val |= 0x1;
@@ -169,7 +169,7 @@ static uint8_t hdzero_map_attr(uint8_t attr) {
   return val;
 }
 
-void hdzero_init() {
+void displayport_init() {
   serial_port_config_t config;
   config.port = profile.serial.hdzero;
   config.baudrate = 115200;
@@ -179,21 +179,21 @@ void hdzero_init() {
   config.half_duplex = false;
   config.half_duplex_pp = false;
 
-  serial_init(&serial_hdzero, config);
+  serial_init(&serial_displayport, config);
 }
 
-static void hdzero_wait_for_ready() {
+static void displayport_wait_for_ready() {
   const uint32_t start = time_millis();
-  while (!hdzero_is_ready()) {
+  while (!displayport_is_ready()) {
     if ((time_millis() - start) > 500) {
       return;
     }
   }
 }
 
-void hdzero_intro() {
-  hdzero_wait_for_ready();
-  hdzero_clear_async();
+void displayport_intro() {
+  displayport_wait_for_ready();
+  displayport_clear_async();
 
   uint8_t buffer[24];
   for (uint8_t row = 0; row < 4; row++) {
@@ -201,37 +201,37 @@ void hdzero_intro() {
     for (uint8_t i = 0; i < 24; i++) {
       buffer[i] = start + i;
     }
-    hdzero_wait_for_ready();
-    hdzero_push_string(OSD_ATTR_TEXT, (HDZERO_COLS / 2) - 12, (HDZERO_ROWS / 2) - 2 + row, buffer, 24);
+    displayport_wait_for_ready();
+    displayport_push_string(OSD_ATTR_TEXT, (DISPLAYPORT_COLS / 2) - 12, (DISPLAYPORT_ROWS / 2) - 2 + row, buffer, 24);
   }
 
-  hdzero_push_subcmd(SUBCMD_DRAW_SCREEN, NULL, 0);
+  displayport_push_subcmd(SUBCMD_DRAW_SCREEN, NULL, 0);
 }
 
-uint8_t hdzero_clear_async() {
-  hdzero_push_subcmd(SUBCMD_SET_OPTIONS, msp_options, 2);
-  return hdzero_push_subcmd(SUBCMD_CLEAR_SCREEN, NULL, 0);
+uint8_t displayport_clear_async() {
+  displayport_push_subcmd(SUBCMD_SET_OPTIONS, msp_options, 2);
+  return displayport_push_subcmd(SUBCMD_CLEAR_SCREEN, NULL, 0);
 }
 
-bool hdzero_is_ready() {
+bool displayport_is_ready() {
   while (true) {
     uint8_t data = 0;
-    if (!serial_read_bytes(&serial_hdzero, &data, 1)) {
+    if (!serial_read_bytes(&serial_displayport, &data, 1)) {
       break;
     }
 
-    msp_process_serial(&hdzero_msp, data);
+    msp_process_serial(&displayport_msp, data);
   }
 
   static bool was_detected = false;
   if (!was_detected && is_detected) {
-    hdzero_push_subcmd(SUBCMD_SET_OPTIONS, msp_options, 2);
+    displayport_push_subcmd(SUBCMD_SET_OPTIONS, msp_options, 2);
     was_detected = is_detected;
     return false;
   }
 
   if ((time_millis() - last_heartbeat) > 500) {
-    hdzero_push_subcmd(SUBCMD_HEARTBEAT, NULL, 0);
+    displayport_push_subcmd(SUBCMD_HEARTBEAT, NULL, 0);
     last_heartbeat = time_millis();
     return false;
   }
@@ -239,28 +239,28 @@ bool hdzero_is_ready() {
   return true;
 }
 
-osd_system_t hdzero_check_system() {
+osd_system_t displayport_check_system() {
   return OSD_SYS_HD;
 }
 
-bool hdzero_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size) {
+bool displayport_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size) {
   uint8_t buffer[size + 3];
   buffer[0] = y;
   buffer[1] = x;
-  buffer[2] = hdzero_map_attr(attr);
+  buffer[2] = displayport_map_attr(attr);
 
   memcpy(buffer + 3, data, size);
 
-  return hdzero_push_subcmd(SUBCMD_WRITE_STRING, buffer, size + 3);
+  return displayport_push_subcmd(SUBCMD_WRITE_STRING, buffer, size + 3);
 }
 
-bool hdzero_can_fit(uint8_t size) {
-  const uint32_t free = serial_bytes_free(&serial_hdzero);
+bool displayport_can_fit(uint8_t size) {
+  const uint32_t free = serial_bytes_free(&serial_displayport);
   return free > (size + 10);
 }
 
-bool hdzero_flush() {
-  return hdzero_push_subcmd(SUBCMD_DRAW_SCREEN, NULL, 0);
+bool displayport_flush() {
+  return displayport_push_subcmd(SUBCMD_DRAW_SCREEN, NULL, 0);
 }
 
 #endif

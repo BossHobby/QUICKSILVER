@@ -173,8 +173,8 @@ const profile_t default_profile = {
 #else
         .smart_audio = SERIAL_PORT_INVALID,
 #endif
-#ifdef HDZERO_USART
-        .hdzero = HDZERO_USART,
+#ifdef DISPLAYPORT_USART
+        .hdzero = DISPLAYPORT_USART,
 #else
         .hdzero = SERIAL_PORT_INVALID,
 #endif

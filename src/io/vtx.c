@@ -147,7 +147,7 @@ static bool vtx_detect_protocol() {
     return true;
   }
 
-  if (serial_hdzero.config.port != SERIAL_PORT_INVALID) {
+  if (serial_displayport.config.port != SERIAL_PORT_INVALID) {
     vtx_settings.protocol = VTX_PROTOCOL_MSP_VTX;
   }
 
@@ -326,7 +326,7 @@ void vtx_update() {
   }
 
   if (profile.serial.smart_audio == SERIAL_PORT_INVALID &&
-      serial_hdzero.config.port == SERIAL_PORT_INVALID) {
+      serial_displayport.config.port == SERIAL_PORT_INVALID) {
     // no serial assigned to vtx or still in use by rx
     return;
   }

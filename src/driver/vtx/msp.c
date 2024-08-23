@@ -5,7 +5,7 @@
 
 #include "core/debug.h"
 #include "core/profile.h"
-#include "driver/osd/hdzero.h"
+#include "driver/osd/displayport.h"
 #include "driver/serial.h"
 #include "io/msp.h"
 #include "rx/unified_serial.h"
@@ -58,7 +58,7 @@ static void serial_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, 
   }
 }
 
-extern msp_t hdzero_msp;
+extern msp_t displayport_msp;
 extern msp_t crsf_msp;
 
 static uint8_t msp_rx_buffer[128];
@@ -71,9 +71,9 @@ static msp_t msp = {
 };
 
 void serial_msp_vtx_init() {
-  if (serial_hdzero.config.port != SERIAL_PORT_INVALID) {
+  if (serial_displayport.config.port != SERIAL_PORT_INVALID) {
     // reuse existing msp for hdz
-    msp_vtx = &hdzero_msp;
+    msp_vtx = &displayport_msp;
     return;
   }
 
@@ -104,8 +104,8 @@ void serial_msp_vtx_init() {
 }
 
 vtx_update_result_t serial_msp_vtx_update() {
-  if (serial_hdzero.config.port != SERIAL_PORT_INVALID) {
-    if (!hdzero_is_ready()) {
+  if (serial_displayport.config.port != SERIAL_PORT_INVALID) {
+    if (!displayport_is_ready()) {
       return VTX_WAIT;
     }
     return VTX_IDLE;

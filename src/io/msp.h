@@ -70,7 +70,7 @@ typedef enum {
   MSP_SERIAL_FUNCTION_RX = (1 << 0),
   MSP_SERIAL_FUNCTION_SA = (1 << 1),
   MSP_SERIAL_FUNCTION_TRAMP = (1 << 2),
-  MSP_SERIAL_FUNCTION_HDZERO = (1 << 3),
+  MSP_SERIAL_FUNCTION_DISPLAYPORT = (1 << 3),
 } msp_serial_function_t;
 
 typedef enum {

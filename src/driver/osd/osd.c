@@ -3,34 +3,34 @@
 #include <string.h>
 
 #include "core/profile.h"
-#include "driver/osd/hdzero.h"
+#include "driver/osd/displayport.h"
 #include "driver/osd/max7456.h"
 #include "io/simulator.h"
 #include "util/util.h"
 
-#define MAX_ROWS HDZERO_ROWS
-#define MAX_COLS HDZERO_COLS
+#define MAX_ROWS DISPLAYPORT_ROWS
+#define MAX_COLS DISPLAYPORT_COLS
 
-#define MAX_DISPLAY_SIZE (HDZERO_COLS * HDZERO_ROWS)
+#define MAX_DISPLAY_SIZE (DISPLAYPORT_COLS * DISPLAYPORT_ROWS)
 
 static osd_segment_t osd_seg;
 static osd_device_t osd_device = OSD_DEVICE_NONE;
 
 static osd_char_t display[MAX_DISPLAY_SIZE];
-static bool display_row_dirty[HDZERO_ROWS];
+static bool display_row_dirty[DISPLAYPORT_ROWS];
 static bool display_dirty = false;
 
-static uint8_t cols = HDZERO_COLS;
-static uint8_t rows = HDZERO_ROWS;
+static uint8_t cols = DISPLAYPORT_COLS;
+static uint8_t rows = DISPLAYPORT_ROWS;
 
 void osd_device_init() {
 #ifdef USE_DIGITAL_VTX
   if (profile.serial.hdzero != SERIAL_PORT_INVALID) {
     target_set_feature(FEATURE_OSD);
-    osd_device = OSD_DEVICE_HDZERO;
-    cols = HDZERO_COLS;
-    rows = HDZERO_ROWS;
-    hdzero_init();
+    osd_device = OSD_DEVICE_DISPLAYPORT;
+    cols = DISPLAYPORT_COLS;
+    rows = DISPLAYPORT_ROWS;
+    displayport_init();
   }
 #endif
 #ifdef USE_MAX7456
@@ -45,8 +45,8 @@ void osd_device_init() {
   {
     target_set_feature(FEATURE_OSD);
     osd_device = OSD_DEVICE_SIMULATOR;
-    cols = HDZERO_COLS;
-    rows = HDZERO_ROWS;
+    cols = DISPLAYPORT_COLS;
+    rows = DISPLAYPORT_ROWS;
   }
 #else
   {
@@ -63,8 +63,8 @@ void osd_intro() {
     break;
 #endif
 #ifdef USE_DIGITAL_VTX
-  case OSD_DEVICE_HDZERO:
-    hdzero_intro();
+  case OSD_DEVICE_DISPLAYPORT:
+    displayport_intro();
     break;
 #endif
 #ifdef SIMULATOR
@@ -104,8 +104,8 @@ uint8_t osd_clear_async() {
     break;
 #endif
 #ifdef USE_DIGITAL_VTX
-  case OSD_DEVICE_HDZERO:
-    if (!hdzero_clear_async()) {
+  case OSD_DEVICE_DISPLAYPORT:
+    if (!displayport_clear_async()) {
       return 0;
     }
     break;
@@ -161,15 +161,15 @@ osd_system_t osd_check_system() {
     return max7456_check_system();
 #endif
 #ifdef USE_DIGITAL_VTX
-  case OSD_DEVICE_HDZERO:
-    cols = HDZERO_COLS;
-    rows = HDZERO_ROWS;
-    return hdzero_check_system();
+  case OSD_DEVICE_DISPLAYPORT:
+    cols = DISPLAYPORT_COLS;
+    rows = DISPLAYPORT_ROWS;
+    return displayport_check_system();
 #endif
 #ifdef SIMULATOR
   case OSD_DEVICE_SIMULATOR:
-    cols = HDZERO_COLS;
-    rows = HDZERO_ROWS;
+    cols = DISPLAYPORT_COLS;
+    rows = DISPLAYPORT_ROWS;
     return simulator_osd_check_system();
 #endif
   default:
@@ -201,8 +201,8 @@ static bool osd_can_fit(uint8_t size) {
     return max7456_can_fit(size);
 #endif
 #ifdef USE_DIGITAL_VTX
-  case OSD_DEVICE_HDZERO:
-    return hdzero_can_fit(size);
+  case OSD_DEVICE_DISPLAYPORT:
+    return displayport_can_fit(size);
 #endif
 #ifdef SIMULATOR
   case OSD_DEVICE_SIMULATOR:
@@ -224,8 +224,8 @@ static bool osd_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *d
     return max7456_push_string(attr, x, y, data, size);
 #endif
 #ifdef USE_DIGITAL_VTX
-  case OSD_DEVICE_HDZERO:
-    return hdzero_push_string(attr, x, y, data, size);
+  case OSD_DEVICE_DISPLAYPORT:
+    return displayport_push_string(attr, x, y, data, size);
 #endif
 #ifdef SIMULATOR
   case OSD_DEVICE_SIMULATOR:
@@ -243,8 +243,8 @@ static bool osd_flush() {
     return max7456_flush();
 #endif
 #ifdef USE_DIGITAL_VTX
-  case OSD_DEVICE_HDZERO:
-    return hdzero_flush();
+  case OSD_DEVICE_DISPLAYPORT:
+    return displayport_flush();
 #endif
 #ifdef SIMULATOR
   case OSD_DEVICE_SIMULATOR:
@@ -264,7 +264,7 @@ static bool osd_update_display() {
       continue;
     }
 
-    uint8_t string[HDZERO_COLS];
+    uint8_t string[DISPLAYPORT_COLS];
     uint8_t attr = 0;
     uint8_t start = cols;
     uint8_t size = 0;
@@ -326,8 +326,8 @@ bool osd_is_ready() {
     return max7456_is_ready();
 #endif
 #ifdef USE_DIGITAL_VTX
-  case OSD_DEVICE_HDZERO:
-    return hdzero_is_ready();
+  case OSD_DEVICE_DISPLAYPORT:
+    return displayport_is_ready();
 #endif
 #ifdef SIMULATOR
   case OSD_DEVICE_SIMULATOR:

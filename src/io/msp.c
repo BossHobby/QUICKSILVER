@@ -317,8 +317,8 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
           function = MSP_SERIAL_FUNCTION_SA;
         }
       }
-      if (i == serial_hdzero.config.port) {
-        function = MSP_SERIAL_FUNCTION_HDZERO;
+      if (i == serial_displayport.config.port) {
+        function = MSP_SERIAL_FUNCTION_DISPLAYPORT;
       }
 
       data[1 + i * 5 + 1] = (function >> 0) & 0xFF;

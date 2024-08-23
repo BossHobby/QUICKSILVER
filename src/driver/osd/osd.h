@@ -31,7 +31,7 @@ typedef enum {
 typedef enum {
   OSD_DEVICE_NONE,
   OSD_DEVICE_MAX7456,
-  OSD_DEVICE_HDZERO,
+  OSD_DEVICE_DISPLAYPORT,
   OSD_DEVICE_SIMULATOR,
 } osd_device_t;
 
