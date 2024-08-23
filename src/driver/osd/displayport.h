@@ -4,9 +4,6 @@
 
 #include "driver/osd/osd.h"
 
-#define DISPLAYPORT_ROWS 18
-#define DISPLAYPORT_COLS 50
-
 void displayport_init();
 bool displayport_is_ready();
 void displayport_intro();

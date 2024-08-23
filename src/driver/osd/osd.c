@@ -8,20 +8,17 @@
 #include "io/simulator.h"
 #include "util/util.h"
 
-#define MAX_ROWS DISPLAYPORT_ROWS
-#define MAX_COLS DISPLAYPORT_COLS
-
-#define MAX_DISPLAY_SIZE (DISPLAYPORT_COLS * DISPLAYPORT_ROWS)
+#define MAX_DISPLAY_SIZE (HD_COLS * HD_ROWS)
 
 static osd_segment_t osd_seg;
 static osd_device_t osd_device = OSD_DEVICE_NONE;
 
 static osd_char_t display[MAX_DISPLAY_SIZE];
-static bool display_row_dirty[DISPLAYPORT_ROWS];
+static bool display_row_dirty[HD_ROWS];
 static bool display_dirty = false;
 
-static uint8_t cols = DISPLAYPORT_COLS;
-static uint8_t rows = DISPLAYPORT_ROWS;
+static uint8_t cols = HD_COLS;
+static uint8_t rows = HD_ROWS;
 
 void osd_device_init() {
 #ifdef USE_DIGITAL_VTX
@@ -89,7 +86,7 @@ uint8_t osd_clear_async() {
     for (uint32_t i = 0; i < (MAX_DISPLAY_SIZE / 2); i++) {
       ((uint32_t *)display)[i] = ((0x20 << 16) | 0x20);
     }
-    memset(display_row_dirty, 0, MAX_ROWS * sizeof(bool));
+    memset(display_row_dirty, 0, HD_ROWS * sizeof(bool));
     display_dirty = false;
     state++;
     return 0;

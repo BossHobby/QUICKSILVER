@@ -31,9 +31,6 @@
 #define HOLD 0
 #define TEMP 1
 
-#define HD_ROWS 18
-#define HD_COLS 50
-
 extern profile_t profile;
 
 static vtx_settings_t vtx_settings_copy;
@@ -1081,10 +1078,10 @@ void osd_display() {
 
       osd_menu_select(3, OSD_AUTO, osd_element_labels[i]);
       if (osd_menu_select_int(20, OSD_AUTO, el->pos_x, 3)) {
-        el->pos_x = osd_menu_adjust_int(el->pos_x, 1, 0, osd_system == OSD_SYS_HD ? HD_COLS : 30);
+        el->pos_x = osd_menu_adjust_int(el->pos_x, 1, 0, osd_system == OSD_SYS_HD ? HD_COLS : SD_COLS);
       }
       if (osd_menu_select_int(26, OSD_AUTO, el->pos_y, 3)) {
-        el->pos_y = osd_menu_adjust_int(el->pos_y, 1, 0, osd_system == OSD_SYS_HD ? HD_ROWS : 15);
+        el->pos_y = osd_menu_adjust_int(el->pos_y, 1, 0, osd_system == OSD_SYS_HD ? HD_ROWS : SD_ROWS);
       }
     }
     osd_menu_scroll_finish(3);

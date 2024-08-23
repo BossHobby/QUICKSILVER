@@ -3,6 +3,18 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define MAX7456_COLS 30
+#define MAX7456_ROWS 16
+
+#define DISPLAYPORT_ROWS 18
+#define DISPLAYPORT_COLS 50
+
+#define HD_ROWS DISPLAYPORT_ROWS
+#define HD_COLS DISPLAYPORT_COLS
+
+#define SD_COLS MAX7456_COLS
+#define SD_ROWS MAX7456_ROWS
+
 #define OSD_TXN_BUFFER 128
 #define OSD_TXN_MAX 16
 

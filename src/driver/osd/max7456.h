@@ -6,9 +6,6 @@
 
 #define MAX7456_READ_FLAG 0x80
 
-#define MAX7456_COLS 32
-#define MAX7456_ROWS 16
-
 #define VM0 0x00
 #define VM1 0x01
 #define VOS 0x03

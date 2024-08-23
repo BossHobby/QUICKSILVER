@@ -246,7 +246,7 @@ bool max7456_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data
   buf[offset++] = DMM;
   buf[offset++] = max7456_map_attr(attr);
 
-  const uint16_t pos = x + y * 30;
+  const uint16_t pos = x + y * MAX7456_COLS;
   buf[offset++] = DMAH;
   buf[offset++] = (pos >> 8) & 0xFF;
   buf[offset++] = DMAL;
