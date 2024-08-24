@@ -229,20 +229,23 @@ vtx_update_result_t serial_smart_audio_update() {
 
     case PARSER_READ_PAYLOAD:
       vtx_payload[vtx_payload_offset + 2] = data;
-      if (++vtx_payload_offset == (length - 1)) {
+      if (++vtx_payload_offset == length) {
         parser_state = PARSER_READ_CRC;
       }
       break;
 
-    case PARSER_READ_CRC:
+    case PARSER_READ_CRC: {
       parser_state = PARSER_IDLE;
-      if (data != crc8_dvb_s2_data(0, vtx_payload, length + 1)) {
+      const uint8_t theirs = crc8_dvb_s2_data(0, vtx_payload, length + 2);
+      if (data != theirs) {
+        quic_debugf("VTX crc error 0x%x vs 0x%x", data, theirs);
         return VTX_ERROR;
       }
-      if (!serial_smart_audio_parse_packet(vtx_payload[0], vtx_payload + 2, length - 1)) {
+      if (!serial_smart_audio_parse_packet(vtx_payload[0], vtx_payload + 2, length - 2)) {
         return VTX_ERROR;
       }
       return VTX_SUCCESS;
+    }
     }
   }
 
@@ -279,7 +282,9 @@ void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const 
   smart_audio_auto_baud();
 
   serial_vtx_send_data(vtx_frame, len);
-  parser_state = PARSER_READ_MAGIC_1;
+  if (parser_state == PARSER_IDLE) {
+    parser_state = PARSER_READ_MAGIC_1;
+  }
   packets_sent++;
 }
 
