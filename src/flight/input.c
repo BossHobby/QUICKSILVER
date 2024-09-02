@@ -17,28 +17,25 @@ vec3_t input_stick_vector(float rx_input[]) {
   const float pitch = rx_input[1] * profile.rate.level_max_angle * DEGTORAD;
   const float roll = rx_input[0] * profile.rate.level_max_angle * DEGTORAD;
 
-  vec3_t stickvector = {
-      .roll = fastsin(roll),
-      .pitch = fastsin(pitch),
-      .yaw = fastcos(roll) * fastcos(pitch),
-  };
+  state.stick_vector.roll = fastsin(roll);
+  state.stick_vector.pitch = fastsin(pitch);
+  state.stick_vector.yaw = fastcos(roll) * fastcos(pitch);
 
-  if (stickvector.yaw < 1.0f) {
-    const float length = (stickvector.roll * stickvector.roll + stickvector.pitch * stickvector.pitch);
-    const float mag = 1.0f / sqrtf(length / (1.0f - stickvector.yaw * stickvector.yaw));
-    stickvector.roll *= mag;
-    stickvector.pitch *= mag;
+  if (state.stick_vector.yaw < 1.0f) {
+    const float length = (state.stick_vector.roll * state.stick_vector.roll + state.stick_vector.pitch * state.stick_vector.pitch);
+    const float mag = 1.0f / sqrtf(length / (1.0f - state.stick_vector.yaw * state.stick_vector.yaw));
+    state.stick_vector.roll *= mag;
+    state.stick_vector.pitch *= mag;
   } else {
-    stickvector.roll = 0.0f;
-    stickvector.pitch = 0.0f;
+    state.stick_vector.roll = 0.0f;
+    state.stick_vector.pitch = 0.0f;
   }
 
-  // find error between stick vector and quad orientation
-  // vector cross product
+  // find vector cross product between stick vector and quad orientation
   return (vec3_t){
-      .roll = constrain((state.GEstG.yaw * stickvector.roll) - (state.GEstG.roll * stickvector.yaw), -1.0f, 1.0f),
-      .pitch = constrain(-((state.GEstG.pitch * stickvector.yaw) - (state.GEstG.yaw * stickvector.pitch)), -1.0f, 1.0f),
-      .yaw = constrain(((state.GEstG.roll * stickvector.pitch) - (state.GEstG.pitch * stickvector.roll)), -1.0f, 1.0f),
+      .roll = constrain((state.GEstG.yaw * state.stick_vector.roll) - (state.GEstG.roll * state.stick_vector.yaw), -1.0f, 1.0f),
+      .pitch = constrain(-((state.GEstG.pitch * state.stick_vector.yaw) - (state.GEstG.yaw * state.stick_vector.pitch)), -1.0f, 1.0f),
+      .yaw = constrain(((state.GEstG.roll * state.stick_vector.pitch) - (state.GEstG.pitch * state.stick_vector.roll)), -1.0f, 1.0f),
   };
 }
 

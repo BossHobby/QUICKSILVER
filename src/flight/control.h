@@ -105,6 +105,7 @@ typedef struct {
   vec4_t motor_mix;
 
   vec3_t angle_error;
+  vec3_t stick_vector;
 
   uint32_t dshot_rpm[4];
 } control_state_t;
@@ -156,6 +157,7 @@ typedef struct {
   MEMBER(pidoutput, vec3_t)                   \
   MEMBER(motor_mix, vec4_t)                   \
   MEMBER(angle_error, vec3_t)                 \
+  MEMBER(stick_vector, vec3_t)                \
   ARRAY_MEMBER(dshot_rpm, 4, uint32_t)
 
 typedef struct {
