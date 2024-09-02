@@ -21,11 +21,11 @@
 // filter times in seconds
 // time to correct gyro readings using the accelerometer
 // 1-4 are generally good
-#define FASTFILTER 0.05 // on_ground filter
-// #define PREFILTER 0.2   //in_air prefilter (this can be commented out)
-#define FILTERTIME 2.0 // in_air fusion filter
+#define FASTFILTER 0.15f // on_ground filter
+// #define PREFILTER 0.6f   //in_air prefilter (this can be commented out)
+#define FILTERTIME 6.0f // in_air fusion filter
 
-#define PT1_FILTER_HZ 10
+#define PT1_FILTER_HZ 10.0f
 
 // accel magnitude limits for drift correction
 #define ACC_MIN 0.7f
@@ -72,7 +72,7 @@ void imu_calc() {
         state.accel_raw.axis[axis] = state.accel_raw.axis[axis] * (ACC_1G / accmag);
       }
 
-      float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FASTFILTER);
+      float filtcoeff = lpfcalc(state.looptime, FASTFILTER);
       for (int x = 0; x < 3; x++) {
         lpf(&state.GEstG.axis[x], state.accel_raw.axis[x], filtcoeff);
       }
@@ -81,7 +81,7 @@ void imu_calc() {
     // lateshift bartender - quad is IN AIR and things are getting wild
     //  hit state.accel_raw.axis[3] with a sledgehammer
 #ifdef PREFILTER
-    float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)PREFILTER);
+    float filtcoeff = lpfcalc(state.looptime, PREFILTER);
     for (int x = 0; x < 3; x++) {
       lpf(&state.accel.axis[x], state.accel_raw.axis[x], filtcoeff);
     }
@@ -99,7 +99,7 @@ void imu_calc() {
         state.accel.axis[axis] = state.accel.axis[axis] * (ACC_1G / accmag);
       }
       // filter accel on to GEstG
-      float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FILTERTIME);
+      float filtcoeff = lpfcalc(state.looptime, FILTERTIME);
       for (int x = 0; x < 3; x++) {
         lpf(&state.GEstG.axis[x], state.accel.axis[x], filtcoeff);
       }
@@ -145,13 +145,13 @@ void imu_calc() {
 
     if (flags.on_ground) {
       // happyhour bartender - quad is ON GROUND and disarmed
-      const float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FASTFILTER);
+      const float filtcoeff = lpfcalc(state.looptime, (float)FASTFILTER);
       lpf(&state.GEstG.roll, state.accel.roll, filtcoeff);
       lpf(&state.GEstG.pitch, state.accel.pitch, filtcoeff);
       lpf(&state.GEstG.yaw, state.accel.yaw, filtcoeff);
     } else {
       // lateshift bartender - quad is IN AIR and things are getting wild
-      const float filtcoeff = lpfcalc_hz(state.looptime, 1.0f / (float)FILTERTIME);
+      const float filtcoeff = lpfcalc(state.looptime, (float)FILTERTIME);
       lpf(&state.GEstG.roll, state.accel.roll, filtcoeff);
       lpf(&state.GEstG.pitch, state.accel.pitch, filtcoeff);
       lpf(&state.GEstG.yaw, state.accel.yaw, filtcoeff);
