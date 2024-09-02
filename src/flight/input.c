@@ -23,9 +23,9 @@ vec3_t input_stick_vector(float rx_input[]) {
       .yaw = fastcos(roll) * fastcos(pitch),
   };
 
-  const float length = (stickvector.roll * stickvector.roll + stickvector.pitch * stickvector.pitch);
-  if (length > 0) {
-    const float mag = 1.0f / sqrtf(length / (1 - stickvector.yaw * stickvector.yaw));
+  if (stickvector.yaw < 1.0f) {
+    const float length = (stickvector.roll * stickvector.roll + stickvector.pitch * stickvector.pitch);
+    const float mag = 1.0f / sqrtf(length / (1.0f - stickvector.yaw * stickvector.yaw));
     stickvector.roll *= mag;
     stickvector.pitch *= mag;
   } else {
