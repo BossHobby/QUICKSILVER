@@ -14,8 +14,10 @@
 #include "io/vtx.h"
 #include "osd/menu.h"
 #include "osd/status.h"
+#include "rx/crsf.h"
 
 #define ICON_RSSI 0x1
+#define ICON_LQI 0x7b
 #define ICON_CELSIUS 0xe
 #define ICON_THROTTLE 0x4
 #define ICON_VOLT 0x6
@@ -313,8 +315,14 @@ static void print_osd_rssi(osd_element_t *el) {
   lpf(&rx_rssi_filt, state.rx_rssi, lpfcalc(state.looptime * 1e6f * 133.0f, 2e6f)); // 2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
 
   osd_start_el(el);
-  osd_write_uint(rx_rssi_filt - 0.5f, 4);
-  osd_write_char(ICON_RSSI);
+  if (serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
+    osd_write_uint(crsf_stats.rf_mode, 1);
+    osd_write_char(':');
+    osd_write_uint(rx_rssi_filt - 0.5f, 2);
+  } else {
+    osd_write_uint(rx_rssi_filt - 0.5f, 4);
+  }
+  osd_write_char(ICON_LQI);
 }
 
 static void print_osd_crosshair(osd_element_t *el) {
