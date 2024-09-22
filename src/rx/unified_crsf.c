@@ -48,7 +48,6 @@ extern int32_t channels[16];
 extern uint8_t rx_data[RX_BUFF_SIZE];
 
 static uint8_t telemetry_counter = 0;
-static uint8_t crsf_rf_mode = 0;
 
 void rx_serial_crsf_msp_send(msp_magic_t magic, uint8_t direction, uint16_t code, const uint8_t *data, uint16_t len);
 
@@ -70,7 +69,7 @@ static bool msp_new_data = false;
 static bool msp_is_error = false;
 
 float rx_serial_crsf_expected_fps() {
-  switch (crsf_rf_mode) {
+  switch (crsf_stats.rf_mode) {
   case RATE_FLRC_1000HZ:
     return 1000;
   case RATE_FLRC_500HZ:
@@ -104,7 +103,7 @@ float rx_serial_crsf_expected_fps() {
 }
 
 static uint16_t telemetry_interval() {
-  switch (crsf_rf_mode) {
+  switch (crsf_stats.rf_mode) {
   case RATE_LORA_4HZ:
     return 3;
   case RATE_LORA_25HZ:
@@ -190,12 +189,10 @@ static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
   }
 
   case CRSF_FRAMETYPE_LINK_STATISTICS: {
-    const crsf_stats_t *stats = (crsf_stats_t *)&rx_data[1];
-
-    crsf_rf_mode = stats->rf_mode;
+    memcpy(&crsf_stats, &rx_data[1], sizeof(crsf_stats));
 
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
-      rx_lqi_update_direct(stats->uplink_link_quality);
+      rx_lqi_update_direct(crsf_stats.uplink_link_quality);
     }
     break;
   }

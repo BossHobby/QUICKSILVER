@@ -6,6 +6,8 @@
 #include "flight/control.h"
 #include "util/crc.h"
 
+crsf_stats_t crsf_stats;
+
 void crsf_tlm_frame_start(uint8_t *buf) {
   buf[0] = CRSF_SYNC_BYTE;
 }

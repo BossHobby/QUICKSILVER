@@ -129,6 +129,8 @@ typedef union {
   crsf_frame_def_t frame;
 } crsf_frame_t;
 
+extern crsf_stats_t crsf_stats;
+
 uint8_t crsf_crc8(uint8_t *data, uint16_t len);
 
 void crsf_tlm_frame_start(uint8_t *buf);
