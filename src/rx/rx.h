@@ -52,7 +52,6 @@ typedef enum {
   AUX_CHANNEL_11,
   AUX_CHANNEL_OFF,
   AUX_CHANNEL_ON,
-  AUX_CHANNEL_GESTURE,
 
   AUX_CHANNEL_MAX
 } __attribute__((__packed__)) aux_channel_t;

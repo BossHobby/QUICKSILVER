@@ -88,7 +88,6 @@ static const char *aux_channel_labels[] = {
     "CHANNEL 16 ",
     "ALWAYS OFF ",
     "ALWAYS ON  ",
-    "GESTURE AUX",
 };
 
 static const char *on_off_labels[] = {
@@ -894,20 +893,20 @@ void osd_display() {
     {
       // PAGE 1
       osd_menu_select_enum_adjust(4, OSD_AUTO, "ARMING", 17, &profile.receiver.aux[AUX_ARMING], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "PREARM", 17, &profile.receiver.aux[AUX_PREARM], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "IDLE UP", 17, &profile.receiver.aux[AUX_IDLE_UP], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "LEVELMODE", 17, &profile.receiver.aux[AUX_LEVELMODE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "RACEMODE", 17, &profile.receiver.aux[AUX_RACEMODE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "HORIZON", 17, &profile.receiver.aux[AUX_HORIZON], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "STICK BOOST", 17, &profile.receiver.aux[AUX_STICK_BOOST_PROFILE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "PREARM", 17, &profile.receiver.aux[AUX_PREARM], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "IDLE UP", 17, &profile.receiver.aux[AUX_IDLE_UP], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "LEVELMODE", 17, &profile.receiver.aux[AUX_LEVELMODE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "RACEMODE", 17, &profile.receiver.aux[AUX_RACEMODE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "HORIZON", 17, &profile.receiver.aux[AUX_HORIZON], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "STICK BOOST", 17, &profile.receiver.aux[AUX_STICK_BOOST_PROFILE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
 
       // PAGE 2
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "RATE", 17, &profile.receiver.aux[AUX_RATE_PROFILE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "BUZZER", 17, &profile.receiver.aux[AUX_BUZZER_ENABLE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "TURTLE", 17, &profile.receiver.aux[AUX_TURTLE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "MOTOR TEST", 17, &profile.receiver.aux[AUX_MOTOR_TEST], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "FPV SWITCH", 17, &profile.receiver.aux[AUX_FPV_SWITCH], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "BLACKBOX", 17, &profile.receiver.aux[AUX_BLACKBOX], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_GESTURE);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "RATE", 17, &profile.receiver.aux[AUX_RATE_PROFILE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "BUZZER", 17, &profile.receiver.aux[AUX_BUZZER_ENABLE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "TURTLE", 17, &profile.receiver.aux[AUX_TURTLE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "MOTOR TEST", 17, &profile.receiver.aux[AUX_MOTOR_TEST], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "FPV SWITCH", 17, &profile.receiver.aux[AUX_FPV_SWITCH], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
+      osd_menu_select_enum_adjust(4, OSD_AUTO, "BLACKBOX", 17, &profile.receiver.aux[AUX_BLACKBOX], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
     }
     osd_menu_scroll_finish(4);
 
