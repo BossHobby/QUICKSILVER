@@ -91,6 +91,11 @@ static const char *aux_channel_labels[] = {
     "GESTURE AUX",
 };
 
+static const char *on_off_labels[] = {
+    " OFF",
+    "  ON",
+};
+
 #pragma GCC diagnostic ignored "-Wmissing-braces"
 
 static const vec3_t rate_defaults[RATE_MODE_ACTUAL + 1][3] = {
@@ -794,11 +799,6 @@ void osd_display() {
         " PT3",
     };
 
-    const char *filter_enable_labels[] = {
-        " OFF",
-        "  ON",
-    };
-
     osd_menu_select(4, 4, "PASS 1 TYPE");
     if (osd_menu_select_enum(18, 4, profile.filter.gyro[0].type, filter_type_labels)) {
       profile.filter.gyro[0].type = osd_menu_adjust_int(profile.filter.gyro[0].type, 1, 0, FILTER_LP_PT3);
@@ -822,7 +822,7 @@ void osd_display() {
     }
 
     osd_menu_select(4, 8, "DYNAMIC NOTCH");
-    if (osd_menu_select_enum(18, 8, profile.filter.gyro_dynamic_notch_enable, filter_enable_labels)) {
+    if (osd_menu_select_enum(18, 8, profile.filter.gyro_dynamic_notch_enable, on_off_labels)) {
       profile.filter.gyro_dynamic_notch_enable = osd_menu_adjust_int(profile.filter.gyro_dynamic_notch_enable, 1, 0, 1);
       osd_state.reboot_fc_requested = 1;
     }
@@ -841,11 +841,6 @@ void osd_display() {
         " PT1",
         " PT2",
         " PT3",
-    };
-
-    const char *filter_enable_labels[] = {
-        " OFF",
-        "  ON",
     };
 
     osd_menu_select(4, 3, "PASS 1 TYPE");
@@ -871,7 +866,7 @@ void osd_display() {
     }
 
     osd_menu_select(4, 7, "DYNAMIC");
-    if (osd_menu_select_enum(18, 7, profile.filter.dterm_dynamic_enable, filter_enable_labels)) {
+    if (osd_menu_select_enum(18, 7, profile.filter.dterm_dynamic_enable, on_off_labels)) {
       profile.filter.dterm_dynamic_enable = osd_menu_adjust_int(profile.filter.dterm_dynamic_enable, 1, 0, 1);
       osd_state.reboot_fc_requested = 1;
     }
@@ -1161,28 +1156,34 @@ void osd_display() {
     osd_menu_finish();
     break;
 
-  case OSD_SCREEN_MOTOR_SETTINGS:
+  case OSD_SCREEN_MOTOR_SETTINGS: {
     osd_menu_start();
     osd_menu_header("MOTOR SETTINGS");
 
-    osd_menu_select(4, 5, "DIGITAL IDLE %");
-    if (osd_menu_select_float(22, 5, profile.motor.digital_idle, 4, 1)) {
+    osd_menu_select(4, 5, "INVERT YAW");
+    if (osd_menu_select_enum(22, 5, profile.motor.invert_yaw, on_off_labels)) {
+      profile.motor.invert_yaw = osd_menu_adjust_int(profile.motor.invert_yaw, 1, 0, 1);
+    }
+
+    osd_menu_select(4, 6, "DIGITAL IDLE %");
+    if (osd_menu_select_float(22, 6, profile.motor.digital_idle, 4, 1)) {
       profile.motor.digital_idle = osd_menu_adjust_float(profile.motor.digital_idle, 0.1, 0, 25.0);
     }
 
-    osd_menu_select(4, 6, "TURTLE THROTTLE %");
-    if (osd_menu_select_float(22, 6, profile.motor.turtle_throttle_percent, 4, 0)) {
+    osd_menu_select(4, 7, "TURTLE THROTTLE %");
+    if (osd_menu_select_float(22, 7, profile.motor.turtle_throttle_percent, 4, 0)) {
       profile.motor.turtle_throttle_percent = osd_menu_adjust_float(profile.motor.turtle_throttle_percent, 1, 0, 100);
     }
 
-    osd_menu_select(4, 7, "MOTOR LIMIT %");
-    if (osd_menu_select_float(22, 7, profile.motor.motor_limit, 4, 0)) {
+    osd_menu_select(4, 8, "MOTOR LIMIT %");
+    if (osd_menu_select_float(22, 8, profile.motor.motor_limit, 4, 0)) {
       profile.motor.motor_limit = osd_menu_adjust_float(profile.motor.motor_limit, 1, 0, 100);
     }
 
     osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
+  }
 
   case OSD_SCREEN_THROTTLE_SETTINGS:
     osd_menu_start();
