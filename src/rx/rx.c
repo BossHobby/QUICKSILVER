@@ -123,9 +123,7 @@ static void rx_init_state() {
   // set always on channel to on
   state.aux[AUX_CHANNEL_ON] = 1;
   state.aux[AUX_CHANNEL_OFF] = 0;
-#ifdef GESTURE_AUX_START_ON
-  state.aux[AUX_CHANNEL_GESTURE] = 1;
-#endif
+
   filter_lp_pt2_init(&rx_filter, rx_filter_state, 4, state.rx_filter_hz);
 }
 

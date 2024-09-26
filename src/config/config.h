@@ -109,9 +109,6 @@
 // *************comment out to disable
 #define FPV_SWITCH AUX_CHANNEL_ON
 
-// *************RRD/LLD stick gesture aux start up state.  Gesture aux is AUX_CHANNEL_GESTURE
-// #define GESTURE_AUX_START_ON
-
 // *************failsafe time in uS
 #define FAILSAFE_TIME_US 1000000
 #define FAILSAFE_LOCK_TIME_MS 5000
@@ -186,7 +183,7 @@
 // *************limits the maxium power applied to the motors
 #define MOTOR_LIMIT 100.0
 
-// *************invert yaw pid for "PROPS OUT" configuration - This feature is switchable to "PROPS IN" when active with stick gesture DOWN-UP-DOWN, Save selection with DOWN-DOWN-DOWN
+// *************invert yaw pid for "PROPS OUT" configuration
 #define INVERT_YAW_PID
 
 // *************throttle boost - can intensify small throttle imbalances visible in FPV if factor is set too high on brushed or actually rob performance on brushless due to thrust imbalances
