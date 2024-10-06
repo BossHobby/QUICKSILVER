@@ -30,7 +30,7 @@ vtx_settings_t vtx_actual;
 
 static uint8_t apply_tries = 0;
 static uint32_t vtx_delay_start = 0;
-static uint32_t vtx_delay_ms = 1000;
+static uint32_t vtx_delay_ms = 100;
 static bool protocol_is_init = false;
 
 extern uint8_t smart_audio_detected;
@@ -126,7 +126,7 @@ static void vtx_update_fpv_pin() {
       // fpv switch on
       if (!fpv_init && flags.rx_mode == RXMODE_NORMAL && flags.on_ground == 1) {
         fpv_init = gpio_init_fpv(flags.rx_mode);
-        vtx_delay_ms = 1000;
+        vtx_delay_ms = 100;
       }
       if (fpv_init) {
         gpio_pin_set(target.fpv);
