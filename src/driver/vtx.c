@@ -1,4 +1,4 @@
-#include "driver/vtx/vtx.h"
+#include "driver/vtx.h"
 
 #include "core/debug.h"
 #include "driver/serial.h"
@@ -58,7 +58,9 @@ bool serial_vtx_send_data(uint8_t *data, uint32_t size) {
     return false;
   }
 
-  serial_write_bytes(&serial_vtx, data, size);
+  if (!serial_write_bytes(&serial_vtx, data, size)) {
+    return false;
+  }
 
   vtx_last_request = time_millis();
   vtx_last_valid_read = time_millis();
