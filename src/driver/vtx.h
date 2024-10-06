@@ -3,12 +3,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef enum {
-  VTX_ERROR,
-  VTX_IDLE,
-  VTX_WAIT,
-  VTX_SUCCESS
-} vtx_update_result_t;
+extern uint32_t vtx_last_valid_read;
+extern uint32_t vtx_last_request;
+
+extern uint8_t vtx_payload[32];
+extern uint8_t vtx_payload_offset;
 
 bool serial_vtx_is_ready();
 bool serial_vtx_wait_for_ready();
