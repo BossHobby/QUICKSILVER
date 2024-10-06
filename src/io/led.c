@@ -71,7 +71,7 @@ void led_off(uint8_t val) {
 }
 
 // delta- sigma first order modulator.
-void led_pwm(uint8_t pwmval, float looptime) {
+void led_pwm(float desired_brightness, float looptime) {
   static uint32_t last_time = 0;
   const uint32_t time = time_micros();
   const uint32_t ledtime = time - last_time;
@@ -81,8 +81,6 @@ void led_pwm(uint8_t pwmval, float looptime) {
   ds_integrator = constrain(ds_integrator, -2, 2);
 
   static float last_brightness = 0;
-
-  const float desired_brightness = pwmval * (1.0f / 15.0f);
   ds_integrator += (desired_brightness - last_brightness) * ledtime * (1.0f / looptime);
 
   if (ds_integrator > 0.49f) {
