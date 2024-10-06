@@ -67,9 +67,9 @@ memory_section_init() {
 }
 
 __attribute__((__used__)) int main() {
-  interrupt_init();
-
   // init timer so we can use delays etc
+  gpio_ports_init();
+  interrupt_init();
   time_init();
 
   // load settings from flash
@@ -82,9 +82,6 @@ __attribute__((__used__)) int main() {
   filter_global_init();
   timer_alloc_init();
   pid_init();
-
-  // init some hardware things
-  gpio_ports_init();
 
   // Turn on LED during boot so that if a delay is used as part of using programming pins for other functions,
   // the FC does not appear inactive while programming times out
@@ -100,26 +97,16 @@ __attribute__((__used__)) int main() {
   motor_set_all(MOTOR_OFF);
 
   // wait for devices to wake up
-  time_delay_ms(300);
-  osd_init();
+  time_delay_ms(100);
   rx_spektrum_bind();
 
-  if (!sixaxis_detect()) {
-    // gyro not found
-    failloop(FAILLOOP_GYRO);
-  }
-
-  scheduler_init();
+  osd_init();
   sixaxis_init();
+  // needs to happen after gyro is detected so we know its update period
+  scheduler_init();
 
-  // give the gyro some time to settle
-  time_delay_ms(100);
-
-  // display bootlogo while calibrating
+  time_delay_ms(50);
   sixaxis_gyro_cal();
-
-  // wait for adc and vtx to wake up
-  time_delay_ms(100);
 
   adc_init();
   vbat_init();
