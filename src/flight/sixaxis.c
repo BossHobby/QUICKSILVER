@@ -20,9 +20,9 @@
 #include "io/led.h"
 #include "util/util.h"
 
-#define CAL_TIME 2e6
-#define WAIT_TIME 15e6
-#define GLOW_TIME 62500
+#define CAL_INTERVAL 2000           // time between measurements in us
+#define CAL_COUNT 500               // count of samples
+#define CAL_TRIES (CAL_COUNT * 100) // number of attempts
 
 #define GYRO_BIAS_LIMIT 800
 #define ACCEL_BIAS_LIMIT 800
@@ -226,7 +226,7 @@ static bool sixaxis_wait_for_still(uint32_t timeout) {
       move_counter--;
     }
 
-    led_pwm(move_counter, 1000);
+    led_pwm(move_counter / 15.f, 1000);
 
     while ((time_micros() - now) < 1000)
       ;
@@ -240,45 +240,31 @@ static bool sixaxis_wait_for_still(uint32_t timeout) {
 
 void sixaxis_gyro_cal() {
   for (uint8_t retry = 0; retry < 15; ++retry) {
-    if (sixaxis_wait_for_still(WAIT_TIME / 15)) {
+    if (sixaxis_wait_for_still(CAL_INTERVAL)) {
       // break only if it's already still, otherwise, wait and try again
       break;
     }
-    time_delay_ms(200);
+    time_delay_ms(100);
   }
   gyro_calibrate();
 
-  uint8_t brightness = 0;
-  led_pwm(brightness, 1000);
-
   gyro_data_t last_data = gyro_read();
-
-  uint32_t start = time_micros();
-  uint32_t now = start;
-  int32_t cal_counter = CAL_TIME / 1000;
-  for (int32_t timeout = WAIT_TIME / 1000; timeout > 0; --timeout) {
+  for (uint32_t tries = 0, cal_counter = 0; tries < CAL_TRIES; tries++) {
     const gyro_data_t data = gyro_read();
 
-    led_pwm(brightness, 1000);
-    if ((brightness & 1) ^ ((now - start) % GLOW_TIME > (GLOW_TIME >> 1))) {
-      brightness++;
-      brightness &= 0xF;
-    }
+    led_pwm(((float)(cal_counter) / (float)(CAL_COUNT)), CAL_INTERVAL);
 
     bool did_move = test_gyro_move(&last_data, &data);
     if (!did_move) { // only cali gyro when it's still
       for (uint8_t i = 0; i < 3; i++) {
-        lpf(&gyrocal[i], data.gyro.axis[i], lpfcalc(1000, 0.5 * 1e6));
+        lpf(&gyrocal[i], data.gyro.axis[i], lpfcalc(CAL_INTERVAL, 0.5 * 1e6));
       }
-      if (--cal_counter <= 0) {
+      if (cal_counter++ == CAL_COUNT) {
         break;
       }
     }
 
-    while ((time_micros() - now) < 1000)
-      ;
-
-    now = time_micros();
+    time_delay_us(CAL_INTERVAL);
     last_data = data;
   }
 }
