@@ -31,7 +31,7 @@ vtx_settings_t vtx_actual;
 
 static uint8_t apply_tries = 0;
 static uint32_t vtx_delay_start = 0;
-static uint32_t vtx_delay_ms = 1000;
+static uint32_t vtx_delay_ms = 100;
 
 extern uint8_t smart_audio_detected;
 extern smart_audio_settings_t smart_audio_settings;
@@ -126,7 +126,7 @@ static void vtx_update_fpv_pin() {
       // fpv switch on
       if (!fpv_init && flags.rx_mode == RXMODE_NORMAL && flags.on_ground == 1) {
         fpv_init = gpio_init_fpv(flags.rx_mode);
-        vtx_delay_ms = 1000;
+        vtx_delay_ms = 100;
         vtx_connect_tries = 0;
       }
       if (fpv_init) {
@@ -191,7 +191,7 @@ static bool vtx_detect_protocol() {
   } else if (status == VTX_DETECT_ERROR) {
     vtx_connect_tries = 0;
     protocol_is_init = 0;
-    vtx_delay_ms = 500;
+    vtx_delay_ms = 100;
 
     if (vtx_settings.protocol == VTX_PROTOCOL_INVALID) {
       // only switch protocol if we are not fixed to one
