@@ -10,7 +10,6 @@ typedef enum {
   VTX_DETECT_WAIT,
   VTX_DETECT_ERROR,
   VTX_DETECT_SUCCESS,
-  VTX_DETECT_UPDATE
 } vtx_detect_status_t;
 
 typedef enum {
@@ -102,6 +101,14 @@ typedef struct {
   MEMBER(pit_mode, uint8_t)    \
   MEMBER(power_level, uint8_t) \
   MEMBER(power_table, vtx_power_table_t)
+
+typedef struct {
+  void (*init)(void);
+  vtx_detect_status_t (*update)(vtx_settings_t *);
+  bool (*set_frequency)(vtx_band_t, vtx_channel_t);
+  bool (*set_power_level)(vtx_power_level_t);
+  bool (*set_pit_mode)(vtx_pit_mode_t);
+} vtx_device_t;
 
 extern vtx_settings_t vtx_settings;
 
