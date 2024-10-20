@@ -28,7 +28,7 @@ enum {
   MSP_REBOOT_COUNT,
 };
 
-extern uint8_t msp_vtx_detected;
+extern bool msp_vtx_detected;
 extern vtx_settings_t vtx_actual;
 extern char msp_vtx_band_letters[VTX_BAND_MAX];
 extern uint8_t msp_vtx_band_is_factory[VTX_BAND_MAX];
@@ -52,6 +52,16 @@ static void msp_send_error(msp_t *msp, msp_magic_t magic, uint16_t cmd) {
 static void msp_quic_send(uint8_t *data, uint32_t len, void *priv) {
   msp_t *msp = (msp_t *)priv;
   msp_send_reply(msp, MSP1_MAGIC, MSP_RESERVE_1, data, len);
+}
+
+static void msp_check_vtx_detected(msp_t *msp) {
+  if (msp_vtx_detected || msp->device != MSP_DEVICE_VTX)
+    return;
+
+  if (vtx_actual.power_table.levels == 0)
+    return;
+
+  msp_vtx_detected = true;
 }
 
 static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *payload, uint16_t size) {
@@ -411,6 +421,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 #endif
 #ifdef USE_VTX
   case MSP_VTX_CONFIG: {
+    msp_check_vtx_detected(msp);
     msp_vtx_send_config_reply(msp, magic);
     break;
   }
@@ -482,6 +493,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       vtx_set(settings);
     }
 
+    msp_check_vtx_detected(msp);
     msp_send_reply(msp, magic, cmd, NULL, 0);
     break;
   }
@@ -583,7 +595,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   case MSP_EEPROM_WRITE: {
 #ifdef USE_VTX
     if (msp->device == MSP_DEVICE_VTX) {
-      msp_vtx_detected = 1;
+      msp_check_vtx_detected(msp);
     } else
 #endif
         if (!flags.arm_state && msp->device != MSP_DEVICE_SPI_RX) {
