@@ -9,9 +9,6 @@
 #include "driver/gpio.h"
 #include "driver/serial.h"
 #include "driver/time.h"
-#include "driver/vtx/msp.h"
-#include "driver/vtx/sa.h"
-#include "driver/vtx/tramp.h"
 #include "flight/control.h"
 #include "rx/rx.h"
 #include "rx/unified_serial.h"
@@ -33,28 +30,10 @@ static uint32_t vtx_delay_start = 0;
 static uint32_t vtx_delay_ms = 100;
 static bool protocol_is_init = false;
 
-extern uint8_t smart_audio_detected;
-extern smart_audio_settings_t smart_audio_settings;
-
-vtx_detect_status_t vtx_smart_audio_update(vtx_settings_t *actual);
-void smart_audio_set_frequency(vtx_band_t band, vtx_channel_t channel);
-void smart_audio_set_power_level(vtx_power_level_t power);
-void smart_audio_set_pit_mode(vtx_pit_mode_t pit_mode);
-
-extern uint8_t tramp_detected;
-extern tramp_settings_t tramp_settings;
-
-vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual);
-void tramp_set_frequency(vtx_band_t band, vtx_channel_t channel);
-void tramp_set_power_level(vtx_power_level_t power);
-void tramp_set_pit_mode(vtx_pit_mode_t pit_mode);
-
-extern uint8_t msp_vtx_detected;
-
-vtx_detect_status_t vtx_msp_update(vtx_settings_t *actual);
-void msp_vtx_set_frequency(vtx_band_t band, vtx_channel_t channel);
-void msp_vtx_set_power_level(vtx_power_level_t power);
-void msp_vtx_set_pit_mode(vtx_pit_mode_t pit_mode);
+static const vtx_device_t *vtx_device = NULL;
+extern const vtx_device_t msp_vtx_device;
+extern const vtx_device_t smart_audio_vtx_device;
+extern const vtx_device_t tramp_vtx_device;
 
 const uint16_t frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX] = {
     {5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725}, // VTX_BAND_A
@@ -87,25 +66,6 @@ vtx_power_level_t vtx_power_level_index(vtx_power_table_t *power_table, uint16_t
     }
   }
   return VTX_POWER_LEVEL_1;
-}
-
-static vtx_detect_status_t vtx_update_protocol(vtx_protocol_t proto, vtx_settings_t *actual) {
-  switch (proto) {
-  case VTX_PROTOCOL_TRAMP:
-    return vtx_tramp_update(actual);
-
-  case VTX_PROTOCOL_SMART_AUDIO:
-    return vtx_smart_audio_update(actual);
-
-  case VTX_PROTOCOL_MSP_VTX:
-    return vtx_msp_update(actual);
-
-  case VTX_PROTOCOL_INVALID:
-  case VTX_PROTOCOL_MAX:
-    return VTX_DETECT_ERROR;
-  }
-
-  return VTX_DETECT_ERROR;
 }
 
 void vtx_init() {
@@ -141,21 +101,23 @@ static void vtx_update_fpv_pin() {
 static void vtx_init_protocol() {
   switch (vtx_settings.protocol) {
   case VTX_PROTOCOL_TRAMP:
-    serial_tramp_init();
+    vtx_device = &tramp_vtx_device;
     break;
 
   case VTX_PROTOCOL_SMART_AUDIO:
-    serial_smart_audio_init();
+    vtx_device = &smart_audio_vtx_device;
     break;
 
   case VTX_PROTOCOL_MSP_VTX:
-    serial_msp_vtx_init();
+    vtx_device = &msp_vtx_device;
     break;
 
   case VTX_PROTOCOL_INVALID:
   case VTX_PROTOCOL_MAX:
-    break;
+    vtx_device = NULL;
+    return;
   }
+  vtx_device->init();
 }
 
 static bool vtx_update_frequency() {
@@ -172,26 +134,10 @@ static bool vtx_update_frequency() {
     return true;
   }
 
-  switch (vtx_settings.detected) {
-  case VTX_PROTOCOL_TRAMP:
-    tramp_set_frequency(vtx_settings.band, vtx_settings.channel);
-    break;
-
-  case VTX_PROTOCOL_SMART_AUDIO:
-    smart_audio_set_frequency(vtx_settings.band, vtx_settings.channel);
-    break;
-
-  case VTX_PROTOCOL_MSP_VTX:
-    msp_vtx_set_frequency(vtx_settings.band, vtx_settings.channel);
-    break;
-
-  case VTX_PROTOCOL_INVALID:
-  case VTX_PROTOCOL_MAX:
-    break;
+  if (vtx_device->set_frequency(vtx_settings.band, vtx_settings.channel)) {
+    vtx_delay_ms = 10;
+    apply_tries++;
   }
-
-  apply_tries++;
-  vtx_delay_ms = 10;
   return false;
 }
 
@@ -208,27 +154,10 @@ static bool vtx_update_powerlevel() {
     return true;
   }
 
-  switch (vtx_settings.detected) {
-  case VTX_PROTOCOL_TRAMP:
-    tramp_set_power_level(vtx_settings.power_level);
-    break;
-
-  case VTX_PROTOCOL_SMART_AUDIO:
-    smart_audio_set_power_level(vtx_settings.power_level);
-    break;
-
-  case VTX_PROTOCOL_MSP_VTX:
-    msp_vtx_set_power_level(vtx_settings.power_level);
-    break;
-
-  case VTX_PROTOCOL_INVALID:
-  case VTX_PROTOCOL_MAX:
-    break;
+  if (vtx_device->set_power_level(vtx_settings.power_level)) {
+    vtx_delay_ms = 10;
+    apply_tries++;
   }
-
-  apply_tries++;
-  vtx_delay_ms = 10;
-
   return false;
 }
 
@@ -245,27 +174,10 @@ static bool vtx_update_pitmode() {
     return true;
   }
 
-  switch (vtx_settings.detected) {
-  case VTX_PROTOCOL_TRAMP:
-    tramp_set_pit_mode(vtx_settings.pit_mode);
-    break;
-
-  case VTX_PROTOCOL_SMART_AUDIO:
-    smart_audio_set_pit_mode(vtx_settings.pit_mode);
-    break;
-
-  case VTX_PROTOCOL_MSP_VTX:
-    msp_vtx_set_pit_mode(vtx_settings.pit_mode);
-    break;
-
-  case VTX_PROTOCOL_INVALID:
-  case VTX_PROTOCOL_MAX:
-    break;
+  if (vtx_device->set_pit_mode(vtx_settings.pit_mode)) {
+    vtx_delay_ms = 10;
+    apply_tries++;
   }
-
-  apply_tries++;
-  vtx_delay_ms = 10;
-
   return false;
 }
 
@@ -299,7 +211,7 @@ void vtx_update() {
                serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
       vtx_settings.protocol = VTX_PROTOCOL_MSP_VTX;
     } else {
-      return; // vtx_settings.protocol == VTX_PROTOCOL_INVALID
+      return;
     }
   }
 
@@ -309,7 +221,10 @@ void vtx_update() {
     return;
   }
 
-  const vtx_detect_status_t status = vtx_update_protocol(vtx_settings.detected ? vtx_settings.detected : vtx_settings.protocol, &vtx_actual);
+  if (vtx_device == NULL)
+    return;
+
+  const vtx_detect_status_t status = vtx_device->update(&vtx_actual);
   if (status < VTX_DETECT_SUCCESS)
     return;
 
@@ -327,13 +242,8 @@ void vtx_set(vtx_settings_t *vtx) {
     vtx_settings.protocol = vtx->protocol;
     vtx_settings.magic = 0xFFFF;
     vtx_settings.power_table.levels = 1;
-
-    smart_audio_settings.version = 0;
-    smart_audio_detected = 0;
-    tramp_settings.freq_min = 0;
-    tramp_detected = 0;
-    msp_vtx_detected = 0;
     protocol_is_init = false;
+    vtx_device = NULL;
   } else {
     vtx_settings.magic = VTX_SETTINGS_MAGIC;
     memcpy(&vtx_settings.power_table, &vtx->power_table, sizeof(vtx_power_table_t));
