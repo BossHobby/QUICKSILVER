@@ -2,19 +2,26 @@
 
 #include <string.h>
 
+#include "core/profile.h"
 #include "driver/serial.h"
-#include "driver/vtx/tramp.h"
+#include "driver/vtx.h"
 
 #ifdef USE_VTX
+
+typedef enum {
+  PARSER_IDLE,
+  PARSER_READ_MAGIC,
+  PARSER_READ_PAYLOAD,
+  PARSER_READ_CRC,
+  PRASER_WAIT_FOR_READY
+} tramp_parser_state_t;
 
 #define TRAMP_DETECT_TRIES 5
 
 extern uint8_t vtx_connect_tries;
 extern const uint16_t frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX];
 
-uint8_t tramp_detected = 0;
-extern tramp_settings_t tramp_settings;
-
+static tramp_parser_state_t parser_state = PARSER_IDLE;
 static const uint16_t tramp_power_level_values[VTX_POWER_LEVEL_MAX] = {
     25,
     100,
@@ -25,7 +32,6 @@ static const uint16_t tramp_power_level_values[VTX_POWER_LEVEL_MAX] = {
     0,
     0,
 };
-
 static const char tramp_power_level_labels[VTX_POWER_LEVEL_MAX][VTX_POWER_LABEL_LEN] = {
     "25   ",
     "100  ",
@@ -37,32 +43,59 @@ static const char tramp_power_level_labels[VTX_POWER_LEVEL_MAX][VTX_POWER_LABEL_
     "     ",
 };
 
-vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual) {
-  if (tramp_settings.freq_min == 0 && vtx_connect_tries > TRAMP_DETECT_TRIES) {
-    return VTX_DETECT_ERROR;
+static uint8_t crc8_data(const uint8_t *data) {
+  uint8_t crc = 0;
+  for (int i = 0; i < 13; i++) {
+    crc += data[i];
+  }
+  return crc;
+}
+
+static void tramp_init() {
+  const target_serial_port_t *dev = serial_get_dev(profile.serial.smart_audio);
+  if (!target_serial_port_valid(dev)) {
+    return;
   }
 
-  vtx_update_result_t result = serial_tramp_update();
+  serial_port_config_t config;
+  config.port = profile.serial.smart_audio;
+  config.baudrate = 9600;
+  config.direction = SERIAL_DIR_TX_RX;
+  config.stop_bits = SERIAL_STOP_BITS_1;
+  config.invert = false;
+  config.half_duplex = true;
+  config.half_duplex_pp = false;
 
-  if ((result == VTX_IDLE || result == VTX_ERROR) && tramp_settings.freq_min == 0 && vtx_connect_tries <= TRAMP_DETECT_TRIES) {
-    // no tramp detected, try again
-    serial_tramp_send_payload('r', 0);
-    vtx_connect_tries++;
-    return VTX_DETECT_WAIT;
+  serial_vtx_wait_for_ready();
+  serial_init(&serial_vtx, config);
+}
+
+static bool tramp_is_query(uint8_t cmd) {
+  switch (cmd) {
+  case 'r':
+  case 'v':
+  case 's':
+    return true;
   }
+  return false;
+}
 
-  if (result == VTX_SUCCESS) {
-    if (tramp_settings.freq_min == 0) {
-      // tramp reset was successful but returned empty data
-      return VTX_DETECT_WAIT;
-    }
+static void tramp_parse_packet(vtx_settings_t *actual, uint8_t *payload) {
+  switch (payload[0]) {
+  case 'r':
+    // freq_min = payload[1] | (payload[2] << 8);
+    // freq_max = payload[3] | (payload[4] << 8);
+    // power_max = payload[5] | (payload[6] << 8);
+    break;
 
-    if (tramp_settings.frequency == 0) {
-      serial_tramp_send_payload('v', 0);
-      return VTX_DETECT_WAIT;
-    }
+  case 'v': {
+    const uint16_t frequency = payload[1] | (payload[2] << 8);
+    const uint16_t power = payload[3] | (payload[4] << 8);
+    // const uint8_t control_mode = payload[5];
+    const uint8_t pit_mode = payload[6];
+    // const uint16_t current_power = payload[7] | (payload[8] << 8);
 
-    int8_t channel_index = vtx_find_frequency_index(tramp_settings.frequency);
+    int8_t channel_index = vtx_find_frequency_index(frequency);
     if (channel_index >= 0) {
       actual->band = channel_index / VTX_CHANNEL_MAX;
       actual->channel = channel_index % VTX_CHANNEL_MAX;
@@ -72,19 +105,10 @@ vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual) {
     memcpy(actual->power_table.values, tramp_power_level_values, sizeof(tramp_power_level_values));
     memcpy(actual->power_table.labels, tramp_power_level_labels, sizeof(tramp_power_level_labels));
 
-    actual->power_level = vtx_power_level_index(&actual->power_table, tramp_settings.power);
-    actual->pit_mode = tramp_settings.pit_mode;
+    actual->power_level = vtx_power_level_index(&actual->power_table, power);
+    actual->pit_mode = pit_mode;
 
-    // not all vtxes seem to return a non-zero value. :(
-    // as its unused lets just drop it.
-    // if (tramp_settings.temp == 0) {
-    //   serial_tramp_send_payload('s', 0);
-    //   return VTX_DETECT_WAIT;
-    // }
-
-    if (tramp_settings.freq_min != 0 && tramp_settings.frequency != 0 && tramp_detected == 0) {
-      tramp_detected = 1;
-
+    if (vtx_settings.detected != VTX_PROTOCOL_TRAMP) {
       if (vtx_settings.magic != VTX_SETTINGS_MAGIC) {
         vtx_set(actual);
       }
@@ -92,32 +116,129 @@ vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual) {
       vtx_settings.detected = VTX_PROTOCOL_TRAMP;
       vtx_connect_tries = 0;
     }
-    return VTX_DETECT_SUCCESS;
+    break;
   }
-
-  if ((result == VTX_IDLE || result == VTX_ERROR) && tramp_detected) {
-    // we are detected and vtx is in idle, we can update stuff
-    return VTX_DETECT_UPDATE;
+  case 's':
+    // temp = payload[5] | (payload[6] << 8);
+    break;
   }
-
-  // wait otherwise
-  return VTX_DETECT_WAIT;
 }
 
-void tramp_set_frequency(vtx_band_t band, vtx_channel_t channel) {
+static bool tramp_send_payload(uint8_t cmd, const uint16_t payload) {
+  if (!serial_vtx_is_ready()) {
+    return false;
+  }
+
+  uint8_t vtx_frame[16];
+  memset(vtx_frame, 0, 16);
+
+  vtx_frame[0] = 0x0F;
+  vtx_frame[1] = cmd;
+  vtx_frame[2] = payload & 0xff;
+  vtx_frame[3] = (payload >> 8) & 0xff;
+  vtx_frame[14] = crc8_data(vtx_frame + 1);
+
+  if (!serial_vtx_send_data(vtx_frame, 16)) {
+    return false;
+  }
+
+  if (tramp_is_query(vtx_frame[1])) {
+    parser_state = PARSER_READ_MAGIC;
+  } else {
+    parser_state = PRASER_WAIT_FOR_READY;
+  }
+  return true;
+}
+
+static vtx_detect_status_t tramp_update(vtx_settings_t *actual) {
+  if (!serial_vtx_is_ready()) {
+    return VTX_DETECT_WAIT;
+  }
+  if (vtx_connect_tries > TRAMP_DETECT_TRIES) {
+    return VTX_DETECT_ERROR;
+  }
+
+  while (parser_state > PARSER_IDLE) {
+    if ((time_millis() - vtx_last_valid_read) > 500) {
+      parser_state = PARSER_IDLE;
+      if (vtx_settings.detected != VTX_PROTOCOL_TRAMP) {
+        vtx_connect_tries++;
+      }
+      return VTX_DETECT_WAIT;
+    }
+
+    switch (parser_state) {
+    case PARSER_IDLE:
+      break;
+
+    case PARSER_READ_MAGIC: {
+      if (serial_vtx_read_byte(&vtx_payload[0]) == 0) {
+        return VTX_DETECT_WAIT;
+      }
+
+      if (vtx_payload[0] == 0x0F) {
+        parser_state = PARSER_READ_PAYLOAD;
+        vtx_payload_offset = 1;
+      }
+      break;
+    }
+    case PARSER_READ_PAYLOAD: {
+      if (serial_vtx_read_byte(&vtx_payload[vtx_payload_offset]) == 0) {
+        return VTX_DETECT_WAIT;
+      }
+
+      vtx_payload_offset++;
+      if (vtx_payload_offset >= 16) {
+        parser_state = PARSER_READ_CRC;
+      }
+      break;
+    }
+    case PARSER_READ_CRC: {
+      parser_state = PARSER_IDLE;
+
+      const uint8_t crc = crc8_data(vtx_payload + 1);
+      if (vtx_payload[14] == crc && vtx_payload[15] == 0) {
+        tramp_parse_packet(actual, vtx_payload + 1);
+      }
+      break;
+    }
+    case PRASER_WAIT_FOR_READY: {
+      // dummy state for non querry packets
+      parser_state = PARSER_IDLE;
+      break;
+    }
+    }
+  }
+
+  if (vtx_settings.detected != VTX_PROTOCOL_TRAMP && vtx_connect_tries <= TRAMP_DETECT_TRIES) {
+    // no tramp detected, try again
+    tramp_send_payload('v', 0);
+    vtx_connect_tries++;
+    return VTX_DETECT_WAIT;
+  }
+
+  return VTX_DETECT_SUCCESS;
+}
+
+static bool tramp_set_frequency(vtx_band_t band, vtx_channel_t channel) {
   const uint16_t frequency = frequency_table[band][channel];
-  serial_tramp_send_payload('F', frequency);
-  tramp_settings.frequency = 0;
+  return tramp_send_payload('F', frequency);
 }
 
-void tramp_set_power_level(vtx_power_level_t power) {
-  serial_tramp_send_payload('P', tramp_power_level_values[power]);
-  tramp_settings.frequency = 0;
+static bool tramp_set_power_level(vtx_power_level_t power) {
+  return tramp_send_payload('P', tramp_power_level_values[power]);
 }
 
-void tramp_set_pit_mode(vtx_pit_mode_t pit_mode) {
-  serial_tramp_send_payload('I', pit_mode == VTX_PIT_MODE_ON ? 0 : 1);
-  tramp_settings.frequency = 0;
+static bool tramp_set_pit_mode(vtx_pit_mode_t pit_mode) {
+  return tramp_send_payload('I', pit_mode == VTX_PIT_MODE_ON ? 0 : 1);
 }
+
+const vtx_device_t tramp_vtx_device = {
+    .init = tramp_init,
+    .update = tramp_update,
+    .set_frequency = tramp_set_frequency,
+    .set_power_level = tramp_set_power_level,
+    .set_pit_mode = tramp_set_pit_mode,
+};
 
 #endif
