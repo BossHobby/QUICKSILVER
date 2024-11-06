@@ -70,6 +70,7 @@ static const char *osd_element_labels[] = {
     "CURRENT DRAW",
     "CROSSHAIR",
     "CURRENT DRAWN",
+    "READY",
 };
 
 static const char *aux_channel_labels[] = {
@@ -305,6 +306,16 @@ static void print_osd_flightmode(osd_element_t *el) {
   osd_write_data(flightmode_labels[flightmode], 10);
 }
 
+static void print_ready(osd_element_t *el){
+  if(rx_aux_on(AUX_READY)){
+    static uint8_t ready_string[1][5]={
+      {"READY"},
+    };
+    osd_start_el(el);
+    osd_write_data(ready_string[0], 5);
+  }
+}
+
 static void print_osd_rssi(osd_element_t *el) {
   static float rx_rssi_filt;
   if (flags.failsafe)
@@ -515,6 +526,12 @@ static void osd_display_regular() {
     osd_write_float(state.ibat_drawn, 4, 2);
     osd_write_char(ICON_MAH);
 
+    osd_state.element++;
+    break;
+  }
+
+  case OSD_READY:{
+    print_ready();
     osd_state.element++;
     break;
   }
