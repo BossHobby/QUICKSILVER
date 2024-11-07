@@ -5,7 +5,7 @@
 #include "io/blackbox.h"
 #include "util/ring_buffer.h"
 
-#define BLACKBOX_HEADER_MAGIC 0xdeadbeef
+#define BLACKBOX_HEADER_MAGIC (0xdeadbeef ^ (sizeof(blackbox_t) << 24) ^ BLACKBOX_VERSION)
 
 // max size for a given entry
 #define BLACKBOX_MAX_SIZE 255

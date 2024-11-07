@@ -18,6 +18,8 @@ typedef enum {
 
   STATE_READ_HEADER,
 
+  STATE_ERASE_CHIP,
+
   STATE_ERASE_HEADER,
   STATE_WRITE_HEADER,
 } blackbox_device_state_t;
@@ -95,9 +97,15 @@ bool blackbox_device_flash_update() {
       blackbox_device_header.magic = BLACKBOX_HEADER_MAGIC;
       blackbox_device_header.file_num = 0;
 
-      state = STATE_ERASE_HEADER;
+      state = STATE_ERASE_CHIP;
     } else {
       state = STATE_IDLE;
+    }
+    return false;
+
+  case STATE_ERASE_CHIP:
+    if (m25p16_chip_erase()) {
+      state = STATE_WRITE_HEADER;
     }
     return false;
 
@@ -120,12 +128,11 @@ bool blackbox_device_flash_update() {
 }
 
 void blackbox_device_flash_reset() {
-  m25p16_command(M25P16_WRITE_ENABLE);
-  m25p16_command(M25P16_BULK_ERASE);
-
+  while (!m25p16_chip_erase())
+    ;
   m25p16_wait_for_ready();
 
-  state = STATE_ERASE_HEADER;
+  state = STATE_WRITE_HEADER;
 }
 
 uint32_t blackbox_device_flash_usage() {

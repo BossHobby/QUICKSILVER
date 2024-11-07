@@ -1,6 +1,9 @@
 #pragma once
 
 #include "core/profile.h"
+#include "util/util.h"
+
+#define BLACKBOX_VERSION MAKE_SEMVER(0, 1, 0)
 
 #define BLACKBOX_SCALE 1000
 #define BLACKBOX_DEBUG_SIZE 10

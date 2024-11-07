@@ -154,6 +154,28 @@ bool m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, co
   return true;
 }
 
+bool m25p16_chip_erase() {
+  if (!m25p16_is_ready()) {
+    return false;
+  }
+
+  {
+    const spi_txn_segment_t segs[] = {
+        spi_make_seg_const(M25P16_WRITE_ENABLE),
+    };
+    spi_seg_submit(&bus, segs);
+  }
+  {
+    const spi_txn_segment_t segs[] = {
+        spi_make_seg_const(M25P16_BULK_ERASE),
+    };
+    spi_seg_submit(&bus, segs);
+  }
+
+  spi_txn_continue(&bus);
+  return true;
+}
+
 void m25p16_get_bounds(blackbox_device_bounds_t *blackbox_bounds) {
   uint8_t raw_id[3];
   m25p16_read_command(M25P16_READ_IDENTIFICATION, raw_id, 3);
