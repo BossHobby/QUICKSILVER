@@ -48,7 +48,7 @@ static filter_biquad_notch_t notch_filter[SDFT_AXES][SDFT_PEAKS];
 static filter_biquad_state_t notch_filter_state[SDFT_AXES][SDFT_PEAKS];
 
 bool sixaxis_detect() {
-  target_info.gyro_id = gyro_int();
+  target_info.gyro_id = gyro_init();
   return target_info.gyro_id != GYRO_TYPE_INVALID;
 }
 
