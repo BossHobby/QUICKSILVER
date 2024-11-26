@@ -9,10 +9,10 @@ import serial.tools.list_ports
 Import("env")
 
 try:
-    from target_inject import process_elf_action, inject_target, copy_hex
+    from target_inject import target_hash, process_elf_action, inject_target, copy_hex
 except ImportError:
     env.Execute("$PYTHONEXE -m pip install pyelftools pyyaml cbor2")
-    from target_inject import process_elf_action, inject_target, copy_hex
+    from target_inject import target_hash, process_elf_action, inject_target, copy_hex
 
 
 def before_upload(source, target, env):
@@ -29,6 +29,10 @@ for scope in ("ASFLAGS", "CCFLAGS", "LINKFLAGS", "LIBS"):
     for option in remove_flags:
         while option in env[scope]:
             env[scope].remove(option)
+
+env.Append(
+    CPPDEFINES=[("TARGET_HASH", target_hash(env))],
+)
 
 objcopy_args = [
     "$OBJCOPY",
