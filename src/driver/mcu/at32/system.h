@@ -20,17 +20,13 @@ typedef tmr_type timer_dev_t;
 typedef usart_type usart_dev_t;
 
 typedef struct {
-  uint32_t device;
-
   dma_type *port;
   uint8_t port_index;
 
-  dma_channel_type *channel;
-  uint8_t channel_index;
+  dma_channel_type *stream;
+  uint8_t stream_index;
 
-  uint32_t request;
   dmamux_channel_type *mux;
-
   IRQn_Type irq;
 } dma_stream_def_t;
 
