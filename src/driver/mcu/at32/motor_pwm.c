@@ -43,8 +43,8 @@ void motor_pwm_init() {
       continue;
     }
 
-    const uint8_t tim = TIMER_TAG_TIM(timer_tags[i]);
-    const uint8_t ch = TIMER_TAG_CH(timer_tags[i]);
+    const timer_index_t tim = TIMER_TAG_TIM(timer_tags[i]);
+    const timer_channel_t ch = TIMER_TAG_CH(timer_tags[i]);
     const timer_def_t *def = &timer_defs[tim];
 
     tmr_counter_enable(def->instance, FALSE);
@@ -54,6 +54,7 @@ void motor_pwm_init() {
     tmr_output_channel_config(def->instance, timer_channel_val(ch), &tim_oc_init);
     tmr_channel_value_set(def->instance, timer_channel_val(ch), 0);
     tmr_output_channel_buffer_enable(def->instance, timer_channel_val(ch), TRUE);
+    tmr_channel_enable(def->instance, timer_channel_val(ch), TRUE);
 
     tmr_output_enable(def->instance, TRUE);
     tmr_counter_enable(def->instance, TRUE);
