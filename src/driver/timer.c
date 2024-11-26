@@ -4,11 +4,20 @@
 
 timer_assigment_t timer_assigments[TIMER_ASSIGMENT_MAX] = {};
 
-void timer_alloc_init() {
-  if (target.brushless) {
-    timer_assigments[0].use = TIMER_USE_MOTOR_DSHOT;
-    timer_assigments[0].tag = TIMER_TAG(TIMER1, TIMER_CH1 | TIMER_CH3 | TIMER_CH4);
+static void timer_alloc_dma(timer_use_t use, const target_dma_t *entry) {
+  if (entry->dma == DMA_STREAM_INVALID || RESOURCE_TAG_TYPE(entry->tag) != RESOURCE_TIM) {
+    return;
   }
+
+  timer_alloc_tag(use, entry->tag);
+}
+
+void timer_alloc_init() {
+  for (uint32_t i = DMA_DEVICE_DSHOT_CH1; i <= DMA_DEVICE_DSHOT_CH3; i++) {
+    timer_alloc_dma(TIMER_USE_MOTOR_DSHOT, &target.dma[i]);
+  }
+
+  timer_alloc_dma(TIMER_USE_RGB_LED, &target.dma[DMA_DEVICE_RGB]);
 }
 
 bool timer_alloc_tag(timer_use_t use, resource_tag_t tag) {
