@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "core/failloop.h"
+#include "driver/dma.h"
 #include "driver/interrupt.h"
 #include "driver/motor_dshot.h"
 
@@ -37,12 +38,11 @@ bool spi_txn_can_send(spi_bus_device_t *bus, bool dma) {
     return false;
   }
 
-#if defined(STM32F4) && defined(USE_MOTOR_DSHOT)
-  if (dma &&
-      target.brushless &&
-      bus->port == SPI_PORT1 &&
-      dshot_phase != 0) {
-    return false;
+#ifdef STM32F4
+  if (dma && bus->port == SPI_PORT1) {
+    if (!dma_can_use_dma2(DMA_DEVICE_SPI1_TX)) {
+      return false;
+    }
   }
 #endif
 
