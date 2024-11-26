@@ -3,6 +3,7 @@
 #include <cbor.h>
 #include <stdbool.h>
 
+#include "driver/dma.h"
 #include "rx/rx.h"
 
 #define LED_MAX 4
@@ -63,6 +64,32 @@ typedef enum {
   SERIAL_SOFT_START = SERIAL_SOFT_INVALID,
   SERIAL_SOFT_COUNT = SERIAL_SOFT_MAX - SERIAL_SOFT_START,
 } __attribute__((__packed__)) serial_ports_t;
+
+typedef struct {
+#if defined(STM32H7) || defined(STM32G4) || defined(AT32)
+  uint32_t request;
+#else
+  uint32_t channel;
+#endif
+  resource_tag_t tag;
+  dma_stream_t dma;
+} target_dma_t;
+
+#if defined(STM32H7) || defined(STM32G4) || defined(AT32)
+#define TARGET_DMA_MEMBERS    \
+  START_STRUCT(target_dma_t)  \
+  MEMBER(request, uint32_t)   \
+  MEMBER(tag, resource_tag_t) \
+  MEMBER(dma, dma_stream_t)   \
+  END_STRUCT()
+#else
+#define TARGET_DMA_MEMBERS    \
+  START_STRUCT(target_dma_t)  \
+  MEMBER(channel, uint32_t)   \
+  MEMBER(tag, resource_tag_t) \
+  MEMBER(dma, dma_stream_t)   \
+  END_STRUCT()
+#endif
 
 typedef struct {
   gpio_pins_t pin;
@@ -186,6 +213,7 @@ typedef struct {
   gpio_pins_t fpv;
   gpio_pins_t vbat;
   gpio_pins_t ibat;
+  gpio_pins_t rgb_led;
 
   target_invert_pin_t sdcard_detect;
   target_invert_pin_t buzzer;
@@ -193,6 +221,8 @@ typedef struct {
 
   uint16_t vbat_scale;
   uint16_t ibat_scale;
+
+  target_dma_t dma[DMA_DEVICE_MAX];
 } target_t;
 
 #define TARGET_MEMBERS                                                           \
@@ -213,11 +243,13 @@ typedef struct {
   MEMBER(fpv, gpio_pins_t)                                                       \
   MEMBER(vbat, gpio_pins_t)                                                      \
   MEMBER(ibat, gpio_pins_t)                                                      \
+  MEMBER(rgb_led, gpio_pins_t)                                                   \
   MEMBER(sdcard_detect, target_invert_pin_t)                                     \
   MEMBER(buzzer, target_invert_pin_t)                                            \
   ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX, gpio_pins_t)                           \
   MEMBER(vbat_scale, uint16_t)                                                   \
   MEMBER(ibat_scale, uint16_t)                                                   \
+  MEMBER(dma, target_dma_array)                                                  \
   END_STRUCT()
 
 typedef enum {
@@ -268,4 +300,10 @@ cbor_result_t cbor_decode_gpio_pins_t(cbor_value_t *dec, gpio_pins_t *t);
 cbor_result_t cbor_encode_target_t(cbor_value_t *enc, const target_t *t);
 cbor_result_t cbor_decode_target_t(cbor_value_t *dec, target_t *t);
 
+cbor_result_t cbor_encode_target_dma_t(cbor_value_t *enc, const target_dma_t *dma);
+cbor_result_t cbor_decode_target_dma_t(cbor_value_t *dec, target_dma_t *dma);
+
 cbor_result_t cbor_encode_target_info_t(cbor_value_t *enc, const target_info_t *i);
+
+cbor_result_t cbor_encode_target_dma_array(cbor_value_t *dec, const target_dma_t (*dma)[DMA_DEVICE_MAX]);
+cbor_result_t cbor_decode_target_dma_array(cbor_value_t *dec, target_dma_t (*dma)[DMA_DEVICE_MAX]);

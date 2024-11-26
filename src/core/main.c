@@ -123,7 +123,7 @@ __attribute__((__used__)) int main() {
 
   rx_init();
   vtx_init();
-  rgb_init();
+  rgb_led_init();
 
   blackbox_init();
   imu_init();
