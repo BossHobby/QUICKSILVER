@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/profile.h"
+#include "core/project.h"
 #include "driver/dma.h"
 #include "driver/gpio.h"
 #include "driver/motor.h"
@@ -19,7 +20,8 @@ typedef struct {
   uint32_t set_mask;
   uint32_t reset_mask;
 
-  timer_channel_t timer_channel;
+  resource_tag_t timer_tag;
+
   dma_device_t dma_device;
 } dshot_gpio_port_t;
 
@@ -60,7 +62,7 @@ extern volatile DMA_RAM uint32_t dshot_output_buffer[DSHOT_MAX_PORT_COUNT][DSHOT
 
 const dshot_gpio_port_t *dshot_gpio_for_device(const dma_device_t dev);
 
-void dshot_init_timer();
+void dshot_init_gpio_port(dshot_gpio_port_t *port);
 
 void dshot_gpio_init_output(gpio_pins_t pin);
 void dshot_dma_setup_output(uint32_t index);
