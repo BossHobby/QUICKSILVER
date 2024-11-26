@@ -43,8 +43,8 @@ void motor_pwm_init() {
       continue;
     }
 
-    const uint8_t tim = TIMER_TAG_TIM(timer_tags[i]);
-    const uint8_t ch = TIMER_TAG_CH(timer_tags[i]);
+    const timer_index_t tim = TIMER_TAG_TIM(timer_tags[i]);
+    const timer_channel_t ch = TIMER_TAG_CH(timer_tags[i]);
     timer_up_init(tim, PWM_DIVIDER, PWM_TOP);
     LL_TIM_OC_Init(timer_defs[tim].instance, timer_channel_val(ch), &tim_oc_init);
     LL_TIM_EnableCounter(timer_defs[tim].instance);
