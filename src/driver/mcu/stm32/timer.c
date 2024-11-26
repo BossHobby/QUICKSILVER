@@ -81,6 +81,25 @@ uint32_t timer_channel_val(timer_channel_t chan) {
   }
 }
 
+uint32_t timer_channel_addr(timer_dev_t *timer, timer_channel_t chan) {
+  switch (chan) {
+  case TIMER_CH1:
+  case TIMER_CH1N:
+    return (uint32_t)(&timer->CCR1);
+  case TIMER_CH2:
+  case TIMER_CH2N:
+    return (uint32_t)(&timer->CCR2);
+  case TIMER_CH3:
+  case TIMER_CH3N:
+    return (uint32_t)(&timer->CCR3);
+  case TIMER_CH4:
+  case TIMER_CH4N:
+    return (uint32_t)(&timer->CCR4);
+  default:
+    return 0;
+  }
+}
+
 void timer_enable_dma_request(timer_index_t tim, timer_channel_t chan, bool state) {
   const timer_def_t *def = &timer_defs[tim];
 
