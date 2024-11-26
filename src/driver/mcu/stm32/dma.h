@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 #ifdef STM32G4
 #define DMA_FLAG_TE (0x1 << 3)
 #define DMA_FLAG_HT (0x1 << 2)
@@ -13,6 +15,24 @@
 #define LL_DMA_EnableStream LL_DMA_EnableChannel
 #define LL_DMA_DisableStream LL_DMA_DisableChannel
 #define LL_DMA_IsEnabledStream LL_DMA_IsEnabledChannel
+
+#define DMA_STREAMS \
+  DMA_STREAM(1, 1)  \
+  DMA_STREAM(1, 2)  \
+  DMA_STREAM(1, 3)  \
+  DMA_STREAM(1, 4)  \
+  DMA_STREAM(1, 5)  \
+  DMA_STREAM(1, 6)  \
+  DMA_STREAM(1, 7)  \
+  DMA_STREAM(1, 8)  \
+  DMA_STREAM(2, 1)  \
+  DMA_STREAM(2, 2)  \
+  DMA_STREAM(2, 3)  \
+  DMA_STREAM(2, 4)  \
+  DMA_STREAM(2, 5)  \
+  DMA_STREAM(2, 6)  \
+  DMA_STREAM(2, 7)  \
+  DMA_STREAM(2, 8)
 
 #else
 #define DMA_FLAG_TC (0x1 << 5)
@@ -35,4 +55,24 @@ static const uint32_t _dma_flag_shift[] = {0, 6, 16, 22, 0, 6, 16, 22};
       WRITE_REG(dev->port->HIFCR, dma_flag_for_channel(dev, DMA_FLAG_TC | DMA_FLAG_TE | DMA_FLAG_HT | DMA_FLAG_FE)); \
   }
 
+#define DMA_STREAMS \
+  DMA_STREAM(1, 0)  \
+  DMA_STREAM(1, 1)  \
+  DMA_STREAM(1, 2)  \
+  DMA_STREAM(1, 3)  \
+  DMA_STREAM(1, 4)  \
+  DMA_STREAM(1, 5)  \
+  DMA_STREAM(1, 6)  \
+  DMA_STREAM(1, 7)  \
+  DMA_STREAM(2, 0)  \
+  DMA_STREAM(2, 1)  \
+  DMA_STREAM(2, 2)  \
+  DMA_STREAM(2, 3)  \
+  DMA_STREAM(2, 4)  \
+  DMA_STREAM(2, 5)  \
+  DMA_STREAM(2, 6)  \
+  DMA_STREAM(2, 7)
+
 #endif
+
+uint32_t dma_map_channel(uint32_t channel);
