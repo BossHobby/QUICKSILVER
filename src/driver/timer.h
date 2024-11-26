@@ -4,50 +4,102 @@
 #include "driver/rcc.h"
 #include "driver/resource.h"
 
+#if defined(STM32G4)
+#define TIMERS \
+  TIMER(1)     \
+  TIMER(2)     \
+  TIMER(3)     \
+  TIMER(4)     \
+  TIMER(5)     \
+  TIMER(6)     \
+  TIMER(7)     \
+  TIMER(8)     \
+  TIMER(15)    \
+  TIMER(16)    \
+  TIMER(17)    \
+  TIMER(20)
+#elif defined(STM32F411)
+#define TIMERS \
+  TIMER(1)     \
+  TIMER(2)     \
+  TIMER(3)     \
+  TIMER(4)     \
+  TIMER(5)     \
+  TIMER(9)     \
+  TIMER(10)    \
+  TIMER(11)
+#elif defined(STM32F405)
+#define TIMERS \
+  TIMER(1)     \
+  TIMER(2)     \
+  TIMER(3)     \
+  TIMER(4)     \
+  TIMER(5)     \
+  TIMER(6)     \
+  TIMER(7)     \
+  TIMER(8)     \
+  TIMER(9)     \
+  TIMER(10)    \
+  TIMER(11)    \
+  TIMER(12)    \
+  TIMER(13)    \
+  TIMER(14)
+#elif defined(STM32F7)
+#define TIMERS \
+  TIMER(1)     \
+  TIMER(2)     \
+  TIMER(3)     \
+  TIMER(4)     \
+  TIMER(5)     \
+  TIMER(6)     \
+  TIMER(7)     \
+  TIMER(8)     \
+  TIMER(9)     \
+  TIMER(10)    \
+  TIMER(11)    \
+  TIMER(12)    \
+  TIMER(13)    \
+  TIMER(14)
+#elif defined(STM32H743)
+#define TIMERS \
+  TIMER(1)     \
+  TIMER(2)     \
+  TIMER(3)     \
+  TIMER(4)     \
+  TIMER(5)     \
+  TIMER(6)     \
+  TIMER(7)     \
+  TIMER(8)     \
+  TIMER(12)    \
+  TIMER(13)    \
+  TIMER(14)    \
+  TIMER(15)    \
+  TIMER(16)    \
+  TIMER(17)
+#elif defined(AT32F4)
+#define TIMERS \
+  TIMER(1)     \
+  TIMER(2)     \
+  TIMER(3)     \
+  TIMER(4)     \
+  TIMER(5)     \
+  TIMER(6)     \
+  TIMER(7)     \
+  TIMER(8)     \
+  TIMER(9)     \
+  TIMER(10)    \
+  TIMER(11)    \
+  TIMER(12)    \
+  TIMER(13)    \
+  TIMER(14)    \
+  TIMER(20)
+#endif
+
 typedef enum {
   TIMER_INVALID,
-#if defined(STM32G4)
-  TIMER1,
-  TIMER2,
-  TIMER3,
-  TIMER4,
-  TIMER5,
-  TIMER6,
-  TIMER7,
-  TIMER8,
-  TIMER15,
-  TIMER16,
-  TIMER17,
-  TIMER20,
-#else
-  TIMER1,
-  TIMER2,
-  TIMER3,
-  TIMER4,
-  TIMER5,
-#ifndef STM32F411
-  TIMER6,
-  TIMER7,
-  TIMER8,
-#endif
-  TIMER9,
-  TIMER10,
-  TIMER11,
-#if !defined(STM32F411) && !defined(STM32G473)
-  TIMER12,
-  TIMER13,
-  TIMER14,
-#endif
-#if defined(STM32H743) || defined(STM32G473)
-  TIMER15,
-  TIMER16,
-  TIMER17,
-#endif
-#if defined(AT32F4) || defined(STM32G473)
-  TIMER20,
-#endif
-#endif
-  TIMER_MAX,
+#define TIMER(_num) TIMER##_num,
+  TIMERS TIMER_MAX
+#undef TIMER
 } timer_index_t;
 
 typedef enum {
@@ -67,6 +119,7 @@ typedef enum {
   TIMER_USE_FREE,
   TIMER_USE_MOTOR_DSHOT,
   TIMER_USE_MOTOR_PWM,
+  TIMER_USE_RGB_LED,
   TIMER_USE_ELRS,
   TIMER_USE_SOFT_SERIAL,
 } timer_use_t;
@@ -88,6 +141,7 @@ void timer_alloc_init();
 bool timer_alloc_tag(timer_use_t use, resource_tag_t tag);
 resource_tag_t timer_alloc(timer_use_t use);
 uint32_t timer_channel_val(timer_channel_t chan);
+uint32_t timer_channel_addr(timer_dev_t *timer, timer_channel_t chan);
 void timer_enable_dma_request(timer_index_t tim, timer_channel_t chan, bool state);
 
 void timer_up_init(timer_index_t tim, uint16_t divider, uint32_t period);
