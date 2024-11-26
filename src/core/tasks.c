@@ -11,6 +11,7 @@
 #include "io/blackbox.h"
 #include "io/buzzer.h"
 #include "io/led.h"
+#include "io/rgb_led.h"
 #include "io/usb_configurator.h"
 #include "io/vbat.h"
 #include "io/vtx.h"
@@ -22,14 +23,7 @@
 void util_task() {
   // handle led commands
   led_update();
-
-#if (RGB_LED_NUMBER > 0)
-  // RGB led control
-  rgb_led_lvc();
-#ifdef RGB_LED_DMA
-  rgb_dma_start();
-#endif
-#endif
+  rgb_led_update();
 
   buzzer_update();
 }
