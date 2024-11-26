@@ -4,6 +4,7 @@ import os
 import shutil
 import cbor2
 import yaml
+import hashlib
 
 from elftools.elf.elffile import ELFFile
 
@@ -71,3 +72,15 @@ def copy_hex(source, target, env):
         env.subst("$BUILD_DIR/${PROGNAME}.hex"),
         env.subst(os.path.join("output", hex_name)),
     )
+
+
+def target_hash(env):
+    target_yaml = env.subst("targets/${PIOENV}.yaml")
+    if not os.path.isfile(target_yaml):
+        return ""
+
+    md5 = hashlib.md5()
+    with open(target_yaml, "rb") as f:
+        for chunk in iter(lambda: f.read(2**20), b""):
+            md5.update(chunk)
+    return md5.hexdigest()
