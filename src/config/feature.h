@@ -12,6 +12,7 @@
 #define USE_VTX
 #define USE_DIGITAL_VTX
 #define USE_MAX7456
+#define USE_RGB_LED
 
 #define USE_MOTOR_DSHOT
 #define USE_MOTOR_PWM
