@@ -195,10 +195,9 @@ osd_screens_t osd_pop_screen() {
     return OSD_SCREEN_CLEAR;
   }
 
-  const uint32_t screen = osd_state.screen_history[osd_state.screen_history_size - 1];
+  const osd_screens_t screen = osd_state.screen_history[osd_state.screen_history_size - 1];
   osd_update_screen(screen);
   osd_state.screen_history_size--;
-
   return screen;
 }
 

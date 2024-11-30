@@ -170,7 +170,7 @@ osd_system_t osd_check_system() {
     return simulator_osd_check_system();
 #endif
   default:
-    return 0;
+    return OSD_SYS_NONE;
   }
 }
 
