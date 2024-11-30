@@ -167,7 +167,7 @@ void spi_reconfigure(spi_bus_device_t *bus) {
   }
 }
 
-void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) {
+void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length, bool has_rx) {
   const dma_stream_def_t *dma_tx = &dma_stream_defs[target.dma[spi_port_defs[port].dma_tx].dma];
   const dma_stream_def_t *dma_rx = &dma_stream_defs[target.dma[spi_port_defs[port].dma_rx].dma];
 
@@ -228,6 +228,18 @@ void spi_device_init(spi_ports_t port) {
   interrupt_enable(dma_rx->irq, DMA_PRIORITY);
 }
 
+static inline void spi_put(const spi_ports_t port, const uint8_t data) {
+  while (!spi_i2s_flag_get(spi_port_defs[port].channel, SPI_I2S_TDBE_FLAG))
+    ;
+  spi_i2s_data_transmit(spi_port_defs[port].channel, data);
+}
+
+static inline uint8_t spi_get(const spi_ports_t port) {
+  while (!spi_i2s_flag_get(spi_port_defs[port].channel, SPI_I2S_RDBF_FLAG))
+    ;
+  return spi_i2s_data_receive(spi_port_defs[port].channel);
+}
+
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count) {
   spi_txn_wait(bus);
 
@@ -257,18 +269,20 @@ void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs
       rx_data = seg->rx_data;
     }
 
-    for (uint32_t j = 0; j < size; j++) {
-      while (!spi_i2s_flag_get(spi_port_defs[port].channel, SPI_I2S_TDBE_FLAG))
-        ;
-
-      spi_i2s_data_transmit(spi_port_defs[port].channel, tx_data ? tx_data[j] : 0xFF);
-
-      while (!spi_i2s_flag_get(spi_port_defs[port].channel, SPI_I2S_RDBF_FLAG))
-        ;
-
-      const uint8_t ret = spi_i2s_data_receive(spi_port_defs[port].channel);
-      if (rx_data != NULL) {
-        rx_data[j] = ret;
+    if (tx_data && rx_data) {
+      for (uint32_t j = 0; j < size; j++) {
+        spi_put(port, *tx_data++);
+        *rx_data++ = spi_get(port);
+      }
+    } else if (tx_data) {
+      for (uint32_t j = 0; j < size; j++) {
+        spi_put(port, *tx_data++);
+        spi_get(port);
+      }
+    } else if (rx_data) {
+      for (uint32_t j = 0; j < size; j++) {
+        spi_put(port, 0xFF);
+        *rx_data++ = spi_get(port);
       }
     }
   }
@@ -283,7 +297,7 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   const dma_stream_def_t *dma_tx = &dma_stream_defs[target.dma[spi_port_defs[port].dma_tx].dma];
   const dma_stream_def_t *dma_rx = &dma_stream_defs[target.dma[spi_port_defs[port].dma_rx].dma];
 
-  if (!dma_is_flag_active_tc(dma_rx)) {
+  if (!dma_is_flag_active(dma_rx, DMA_FDT_FLAG)) {
     return;
   }
 
