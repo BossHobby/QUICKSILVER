@@ -28,7 +28,7 @@ static void bmi270_reset_to_spi() {
   time_delay_ms(10);
 }
 
-uint8_t bmi270_detect() {
+gyro_types_t bmi270_detect() {
   bmi270_reset_to_spi();
 
   const uint8_t id = bmi270_read(BMI270_REG_CHIP_ID);
