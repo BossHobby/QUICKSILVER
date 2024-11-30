@@ -27,68 +27,68 @@
 
 static void exti_set_source(gpio_pins_t pin) {
   switch ((uint32_t)gpio_pin_defs[pin].port) {
-#if defined(GPIOA)
-  case (uint32_t)GPIOA:
+#if defined(GPIOA_BASE)
+  case (uint32_t)GPIOA_BASE:
     LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTA, LINE.syscfg_exti_line);
     break;
 #endif
 
-#if defined(GPIOB)
-  case (uint32_t)GPIOB:
+#if defined(GPIOB_BASE)
+  case (uint32_t)GPIOB_BASE:
     LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTB, LINE.syscfg_exti_line);
     break;
 #endif
 
-#if defined(GPIOC)
-  case (uint32_t)GPIOC:
+#if defined(GPIOC_BASE)
+  case (uint32_t)GPIOC_BASE:
     LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTC, LINE.syscfg_exti_line);
     break;
 #endif
 
-#if defined(GPIOD)
-  case (uint32_t)GPIOD:
+#if defined(GPIOD_BASE)
+  case (uint32_t)GPIOD_BASE:
     LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTD, LINE.syscfg_exti_line);
     break;
 #endif
 
-#if defined(GPIOE)
-  case (uint32_t)GPIOE:
+#if defined(GPIOE_BASE)
+  case (uint32_t)GPIOE_BASE:
     LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTE, LINE.syscfg_exti_line);
     break;
 #endif
 
-#if defined(GPIOF)
-  case (uint32_t)GPIOF:
+#if defined(GPIOF_BASE)
+  case (uint32_t)GPIOF_BASE:
     LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTF, LINE.syscfg_exti_line);
     break;
 #endif
 
-#if defined(GPIOG)
-  case (uint32_t)GPIOG:
+#if defined(GPIOG_BASE)
+  case (uint32_t)GPIOG_BASE:
     LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTG, LINE.syscfg_exti_line);
     break;
 #endif
 
-#if defined(GPIOH)
-  case (uint32_t)GPIOH:
+#if defined(GPIOH_BASE)
+  case (uint32_t)GPIOH_BASE:
     LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTH, LINE.syscfg_exti_line);
     break;
 #endif
 
-#if defined(GPIOI)
-  case (uint32_t)GPIOI:
+#if defined(GPIOI_BASE)
+  case (uint32_t)GPIOI_BASE:
     LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTI, LINE.syscfg_exti_line);
     break;
 #endif
 
-#if defined(GPIOJ)
-  case (uint32_t)GPIOJ:
+#if defined(GPIOJ_BASE)
+  case (uint32_t)GPIOJ_BASE:
     LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTJ, LINE.syscfg_exti_line);
     break;
 #endif
 
-#if defined(GPIOK)
-  case (uint32_t)GPIOK:
+#if defined(GPIOK_BASE)
+  case (uint32_t)GPIOK_BASE:
     LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTK, LINE.syscfg_exti_line);
     break;
 #endif
