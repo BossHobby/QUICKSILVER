@@ -28,7 +28,6 @@ typedef struct {
 typedef enum {
   TXN_CONST,
   TXN_BUFFER,
-  TXN_DELAY,
 } spi_txn_segment_type_t;
 
 typedef struct {
@@ -49,8 +48,6 @@ typedef struct {
   (spi_txn_segment_t) { .type = TXN_CONST, .bytes = {_bytes}, .size = sizeof((uint8_t[]){_bytes}) }
 #define spi_make_seg_buffer(_rx_data, _tx_data, _size) \
   (spi_txn_segment_t) { .type = TXN_BUFFER, .rx_data = (_rx_data), .tx_data = (_tx_data), .size = (_size) }
-#define spi_make_seg_delay(_rx_data, _tx_data, _size) \
-  (spi_txn_segment_t) { .type = TXN_DELAY, .rx_data = (_rx_data), .tx_data = (_tx_data), .size = (_size) }
 
 struct spi_bus_device;
 
@@ -62,7 +59,6 @@ typedef enum {
 } spi_txn_status_t;
 
 typedef enum {
-  TXN_DELAYED_TX = (1 << 0),
   TXN_DELAYED_RX = (1 << 1),
 } spi_txn_flags_t;
 
