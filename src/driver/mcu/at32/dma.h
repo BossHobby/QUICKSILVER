@@ -8,7 +8,7 @@
 // 4bits per stream
 #define dma_flag_for_stream(dev, flags) ((dev->port_index == 2 ? 0x10000000 : 0x0) | ((flags) << ((dev->stream_index - 1) * 4)))
 
-#define dma_is_flag_active_tc(dev) (dma_flag_get(dma_flag_for_stream(dev, DMA_FDT_FLAG)))
+#define dma_is_flag_active(dev, flag) (dma_flag_get(dma_flag_for_stream(dev, (flag))))
 #define dma_clear_flag_tc(dev) dma_flag_clear(dma_flag_for_stream(dev, DMA_FDT_FLAG | DMA_HDT_FLAG | DMA_DTERR_FLAG))
 
 #define DMA_STREAMS \
