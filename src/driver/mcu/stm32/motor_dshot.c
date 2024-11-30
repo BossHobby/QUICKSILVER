@@ -129,7 +129,7 @@ void dshot_dma_isr(dma_device_t dev) {
   if (profile.motor.dshot_telemetry && dshot_phase == dshot_gpio_port_count) {
     // output phase done, lets swap to input
     for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-      dshot_gpio_init_input(i);
+      dshot_gpio_init_input(target.motor_pins[i]);
     }
     for (uint32_t j = 0; j < dshot_gpio_port_count; j++) {
       dshot_dma_setup_input(j);

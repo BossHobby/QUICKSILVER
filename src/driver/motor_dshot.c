@@ -128,7 +128,7 @@ void dshot_dma_start() {
     for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
       const uint32_t port = dshot_pins[i].dshot_port;
       state.dshot_rpm[i] = dshot_decode_eRPM_telemetry_value(dshot_decode_gcr((uint16_t *)dshot_input_buffer[port], dshot_pins[i].pin_mask));
-      dshot_gpio_init_output(i);
+      dshot_gpio_init_output(target.motor_pins[i]);
     }
   }
 
