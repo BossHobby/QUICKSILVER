@@ -64,7 +64,7 @@ bool sx128x_init() {
   bus.port = target.rx_spi.port;
   bus.nss = target.rx_spi.nss;
   spi_bus_device_init(&bus);
-  spi_bus_device_reconfigure(&bus, true, MHZ_TO_HZ(10));
+  spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MHZ_TO_HZ(10));
 
   return true;
 }
