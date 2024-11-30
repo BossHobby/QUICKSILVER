@@ -78,18 +78,6 @@ bool spi_txn_continue_port(spi_ports_t port) {
     }
 
     txn->status = TXN_IN_PROGRESS;
-
-    if (txn->flags & TXN_DELAYED_TX) {
-      uint32_t txn_size = 0;
-      for (uint32_t i = 0; i < txn->segment_count; ++i) {
-        spi_txn_segment_t *seg = &txn->segments[i];
-        if (seg->tx_data) {
-          memcpy((uint8_t *)txn->buffer + txn_size, seg->tx_data, seg->size);
-        }
-        txn_size += seg->size;
-      }
-    }
-
     dev->dma_done = false;
   }
 
@@ -133,12 +121,6 @@ void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts) {
       } else {
         memset(txn->buffer + txn->size, 0xFF, seg->size);
       }
-      break;
-
-    case TXN_DELAY:
-      txn_seg->tx_data = seg->tx_data;
-      txn_seg->rx_data = seg->rx_data;
-      txn->flags |= TXN_DELAYED_TX;
       break;
     }
 
