@@ -43,7 +43,7 @@ static uint32_t mpu6xxx_fast_divider() {
   return SPI_SPEED_INIT;
 }
 
-uint8_t mpu6xxx_detect() {
+gyro_types_t mpu6xxx_detect() {
   time_delay_ms(100);
 
   const uint8_t id = mpu6xxx_read(MPU_RA_WHO_AM_I);

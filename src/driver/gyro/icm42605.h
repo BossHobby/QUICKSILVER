@@ -192,7 +192,7 @@
 #define ICM42605_INTF_CONFIG1_AFSR_MASK 0xC0
 #define ICM42605_INTF_CONFIG1_AFSR_DISABLE 0x40
 
-uint8_t icm42605_detect();
+gyro_types_t icm42605_detect();
 void icm42605_configure();
 
 void icm42605_write(uint8_t reg, uint8_t data);

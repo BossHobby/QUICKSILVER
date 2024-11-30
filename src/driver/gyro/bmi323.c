@@ -25,7 +25,7 @@ static void bmi323_reset_to_spi() {
   time_delay_ms(10);
 }
 
-uint8_t bmi323_detect() {
+gyro_types_t bmi323_detect() {
   bmi323_reset_to_spi();
 
   const uint8_t whoami = bmi3_read8(BMI323_REG_CHIP_ID);

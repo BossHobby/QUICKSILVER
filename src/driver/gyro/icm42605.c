@@ -23,7 +23,7 @@
 extern spi_bus_device_t gyro_bus;
 extern uint8_t gyro_buf[32];
 
-uint8_t icm42605_detect() {
+gyro_types_t icm42605_detect() {
   const uint8_t id = icm42605_read(ICM42605_WHO_AM_I);
   switch (id) {
   case ICM42605_ID:

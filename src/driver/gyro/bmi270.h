@@ -87,7 +87,7 @@
 #define BMI270_GYRO_CAS_MASK 0x7F
 #define BMI270_GYRO_CAS_SIGN_BIT_MASK 0x40
 
-uint8_t bmi270_detect();
+gyro_types_t bmi270_detect();
 void bmi270_configure();
 void bmi270_calibrate();
 

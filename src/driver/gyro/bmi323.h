@@ -208,7 +208,7 @@
 #define BMI323_CMD_I3C_SYNC_CONF UINT16_C(0x201)
 #define BMI323_CMD_AXIS_MAP UINT16_C(0x300)
 
-uint8_t bmi323_detect();
+gyro_types_t bmi323_detect();
 void bmi323_configure();
 
 void bmi3_write8(uint8_t reg, uint8_t data, uint32_t delay);
