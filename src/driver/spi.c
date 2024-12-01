@@ -18,18 +18,35 @@ extern void spi_device_init(spi_ports_t port);
 extern void spi_reconfigure(spi_bus_device_t *bus);
 extern void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length);
 
-static inline __attribute__((always_inline)) spi_txn_t *spi_txn_pop(spi_bus_device_t *bus) {
+spi_txn_t *spi_txn_pop(spi_bus_device_t *bus, const spi_txn_opts_t opt) {
   ATOMIC_BLOCK_ALL {
     for (uint32_t i = 0; i < SPI_TXN_MAX; i++) {
       if (txn_pool[i].status == TXN_IDLE) {
         spi_txn_t *txn = &txn_pool[i];
         txn->status = TXN_WAITING;
         txn->buffer = txn_buffers[i];
+        txn->bus = bus;
+        txn->size = 0;
+        txn->flags = 0;
+        txn->segment_count = 0;
+        txn->done_fn = opt.done_fn;
+        txn->done_fn_arg = opt.done_fn_arg;
         return txn;
       }
     }
   }
+  failloop(FAILLOOP_SPI);
   return NULL;
+}
+
+void spi_txn_push(spi_bus_device_t *bus, spi_txn_t *txn) {
+  ATOMIC_BLOCK_ALL {
+    spi_device_t *dev = &spi_dev[bus->port];
+    const uint8_t head = (dev->txn_head + 1) % SPI_TXN_MAX;
+    txn->status = TXN_READY;
+    dev->txns[head] = txn;
+    dev->txn_head = head;
+  }
 }
 
 bool spi_txn_can_send(spi_bus_device_t *bus, bool dma) {
@@ -87,58 +104,6 @@ bool spi_txn_continue_port(spi_ports_t port) {
   spi_dma_transfer_begin(port, txn->buffer, txn->size);
 
   return true;
-}
-
-void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts) {
-  spi_txn_t *txn = spi_txn_pop(bus);
-  if (txn == NULL) {
-    failloop(FAILLOOP_SPI);
-  }
-
-  txn->bus = bus;
-  txn->size = 0;
-  txn->flags = 0;
-  txn->segment_count = opts.seg_count;
-  txn->done_fn = opts.done_fn;
-  txn->done_fn_arg = opts.done_fn_arg;
-
-  for (uint32_t i = 0; i < opts.seg_count; i++) {
-    const spi_txn_segment_t *seg = &opts.segs[i];
-    spi_txn_segment_t *txn_seg = &txn->segments[i];
-
-    switch (seg->type) {
-    case TXN_CONST:
-      txn_seg->rx_data = NULL;
-      txn_seg->tx_data = NULL;
-      memcpy(txn->buffer + txn->size, seg->bytes, seg->size);
-      break;
-
-    case TXN_BUFFER:
-      txn_seg->tx_data = NULL;
-      txn_seg->rx_data = seg->rx_data;
-      if (seg->tx_data) {
-        memcpy(txn->buffer + txn->size, seg->tx_data, seg->size);
-      } else {
-        memset(txn->buffer + txn->size, 0xFF, seg->size);
-      }
-      break;
-    }
-
-    if (txn_seg->rx_data) {
-      txn->flags |= TXN_DELAYED_RX;
-    }
-
-    txn_seg->size = seg->size;
-    txn->size += seg->size;
-  }
-
-  ATOMIC_BLOCK_ALL {
-    spi_device_t *dev = &spi_dev[bus->port];
-    const uint8_t head = (dev->txn_head + 1) % SPI_TXN_MAX;
-    txn->status = TXN_READY;
-    dev->txns[head] = txn;
-    dev->txn_head = head;
-  }
 }
 
 // only called from dma isr

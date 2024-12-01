@@ -47,13 +47,9 @@ bool m25p16_is_ready() {
   }
 
   static uint8_t buffer[2];
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_buffer(buffer, buffer, 2),
-  };
-  const bool is_done = spi_seg_submit_check(&bus, segs, {
+  const bool is_done = spi_seg_submit_check(&bus, { spi_make_seg_buffer(buffer, buffer, 2); }, {
     buffer[0] = M25P16_READ_STATUS_REGISTER;
-    buffer[1] = 0xFF;
-  });
+    buffer[1] = 0xFF; });
   if (!is_done) {
     return false;
   }
@@ -69,12 +65,9 @@ uint8_t m25p16_command(const uint8_t cmd) {
   m25p16_wait_for_ready();
 
   uint8_t ret = 0;
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_buffer(&ret, &cmd, 1),
-  };
-  spi_seg_submit_wait(&bus, segs);
-
+  spi_seg_submit_wait(&bus, {
+    spi_make_seg_buffer(&ret, &cmd, 1);
+  });
   return ret;
 }
 
@@ -82,13 +75,10 @@ uint8_t m25p16_read_command(const uint8_t cmd, uint8_t *data, const uint32_t len
   m25p16_wait_for_ready();
 
   uint8_t ret = 0;
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_buffer(&ret, &cmd, 1),
-      spi_make_seg_buffer(data, NULL, len),
-  };
-  spi_seg_submit_wait(&bus, segs);
-
+  spi_seg_submit_wait(&bus, {
+    spi_make_seg_buffer(&ret, &cmd, 1);
+    spi_make_seg_buffer(data, NULL, len);
+  });
   return ret;
 }
 
@@ -96,14 +86,11 @@ uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, 
   m25p16_wait_for_ready();
 
   uint8_t ret = 0;
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_buffer(&ret, &cmd, 1),
-      spi_make_seg_const(m25p16_addr(addr)),
-      spi_make_seg_buffer(data, NULL, len),
-  };
-  spi_seg_submit_wait(&bus, segs);
-
+  spi_seg_submit_wait(&bus, {
+    spi_make_seg_buffer(&ret, &cmd, 1);
+    spi_make_seg_const(m25p16_addr(addr));
+    spi_make_seg_buffer(data, NULL, len);
+  });
   return ret;
 }
 
@@ -112,22 +99,15 @@ bool m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t
     return false;
   }
 
-  {
-    const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(M25P16_WRITE_ENABLE),
-    };
-    spi_seg_submit(&bus, segs);
-  }
-
-  {
-    const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(M25P16_PAGE_PROGRAM, m25p16_addr(addr)),
-        spi_make_seg_buffer(NULL, buf, size),
-    };
-    spi_seg_submit(&bus, segs);
-  }
-
+  spi_seg_submit(&bus, {
+    spi_make_seg_const(M25P16_WRITE_ENABLE);
+  });
+  spi_seg_submit(&bus, {
+    spi_make_seg_const(M25P16_PAGE_PROGRAM, m25p16_addr(addr));
+    spi_make_seg_buffer(NULL, buf, size);
+  });
   spi_txn_continue(&bus);
+
   return true;
 }
 
@@ -136,21 +116,15 @@ bool m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, co
     return false;
   }
 
-  {
-    const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(M25P16_WRITE_ENABLE),
-    };
-    spi_seg_submit(&bus, segs);
-  }
-  {
-    const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(cmd, m25p16_addr(addr)),
-        spi_make_seg_buffer(NULL, data, len),
-    };
-    spi_seg_submit(&bus, segs);
-  }
-
+  spi_seg_submit(&bus, {
+    spi_make_seg_const(M25P16_WRITE_ENABLE);
+  });
+  spi_seg_submit(&bus, {
+    spi_make_seg_const(cmd, m25p16_addr(addr));
+    spi_make_seg_buffer(NULL, data, len);
+  });
   spi_txn_continue(&bus);
+
   return true;
 }
 
@@ -159,19 +133,12 @@ bool m25p16_chip_erase() {
     return false;
   }
 
-  {
-    const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(M25P16_WRITE_ENABLE),
-    };
-    spi_seg_submit(&bus, segs);
-  }
-  {
-    const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(M25P16_BULK_ERASE),
-    };
-    spi_seg_submit(&bus, segs);
-  }
-
+  spi_seg_submit(&bus, {
+    spi_make_seg_const(M25P16_WRITE_ENABLE);
+  });
+  spi_seg_submit(&bus, {
+    spi_make_seg_const(M25P16_BULK_ERASE);
+  });
   spi_txn_continue(&bus);
   return true;
 }

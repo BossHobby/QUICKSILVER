@@ -41,24 +41,19 @@ static uint8_t max7456_dma_spi_read(uint8_t reg) {
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
 
   uint8_t ret = 0;
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg),
-      spi_make_seg_buffer(&ret, NULL, 1),
-  };
-  spi_seg_submit_wait(&bus, segs);
-
+  spi_seg_submit_wait(&bus, {
+    spi_make_seg_const(reg);
+    spi_make_seg_buffer(&ret, NULL, 1);
+  });
   return ret;
 }
 
 // blocking dma write of a single register
 static void max7456_dma_spi_write(uint8_t reg, uint8_t data) {
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg, data),
-  };
-  spi_seg_submit_wait(&bus, segs);
+  spi_seg_submit_wait(&bus, {
+    spi_make_seg_const(reg, data);
+  });
 }
 
 static bool max7456_init_display() {
@@ -131,15 +126,11 @@ static void max7456_set_system(osd_system_t sys) {
 
 static osd_system_t max7456_current_system() {
   static uint8_t stat = 0;
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(STAT),
-      spi_make_seg_buffer(&stat, NULL, 1),
-  };
-  const bool is_done = spi_seg_submit_check(&bus, segs, {
+  const bool is_done = spi_seg_submit_check(&bus, {
+      spi_make_seg_const(STAT);
+      spi_make_seg_buffer(&stat, NULL, 1); }, {
     spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
-    stat = 0;
-  });
+    stat = 0; });
   if (!is_done) {
     return last_osd_system;
   }
@@ -240,31 +231,23 @@ bool max7456_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data
 
   spi_bus_device_reconfigure(&bus, SPI_MODE_LEADING_EDGE, MAX7456_BAUD_RATE);
 
-  uint32_t offset = 0;
-  uint8_t buf[8 + size * 2];
-
-  buf[offset++] = DMM;
-  buf[offset++] = max7456_map_attr(attr);
-
-  const uint16_t pos = x + y * MAX7456_COLS;
-  buf[offset++] = DMAH;
-  buf[offset++] = (pos >> 8) & 0xFF;
-  buf[offset++] = DMAL;
-  buf[offset++] = pos & 0xFF;
-
+  uint8_t buf[size * 2];
   for (uint8_t i = 0; i < size; i++) {
-    buf[offset++] = DMDI;
-    buf[offset++] = data[i];
+    buf[i * 2 + 0] = DMDI;
+    buf[i * 2 + 1] = data[i];
   }
 
-  // off autoincrement mode
-  buf[offset++] = DMDI;
-  buf[offset++] = 0xFF;
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_buffer(NULL, buf, offset),
-  };
-  spi_seg_submit_continue(&bus, segs);
+  const uint16_t pos = x + y * MAX7456_COLS;
+  spi_seg_submit(&bus, {
+    spi_make_seg_const(
+        DMM,
+        max7456_map_attr(attr),
+        DMAH, (pos >> 8) & 0xFF,
+        DMAL, pos & 0xFF);
+    spi_make_seg_buffer(NULL, buf, size * 2);
+    spi_make_seg_const(DMDI, 0xFF); // off autoincrement mode
+  });
+  spi_txn_continue(&bus);
 
   return true;
 }

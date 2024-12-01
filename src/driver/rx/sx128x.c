@@ -100,8 +100,7 @@ static bool sx128x_poll_for_not_busy() {
   return true;
 }
 
-#define read_command_txn(cmd, data, size) \
-  spi_make_seg_const(cmd, 0x0), spi_make_seg_buffer(data, NULL, size)
+#define read_command_txn(cmd, data, size)
 
 static void sx128x_set_dio0_active(void *arg) {
   packet_time_us = time_micros();
@@ -109,28 +108,21 @@ static void sx128x_set_dio0_active(void *arg) {
 }
 
 static void sx128x_read_buffer(void *arg) {
-  {
-    const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(SX1280_RADIO_READ_BUFFER, buffer_status[1], 0x00),
-        spi_make_seg_buffer((uint8_t *)rx_spi_packet, NULL, payload_len),
-    };
-    spi_seg_submit(&bus, segs);
-  }
-  {
-    const spi_txn_segment_t segs[] = {
-        read_command_txn(SX1280_RADIO_GET_PACKETSTATUS, (uint8_t *)packet_status, 2),
-    };
-    spi_seg_submit(&bus, segs, .done_fn = sx128x_set_dio0_active);
-  }
+  spi_seg_submit(&bus, {
+    spi_make_seg_const(SX1280_RADIO_READ_BUFFER, buffer_status[1], 0x00);
+    spi_make_seg_buffer((uint8_t *)rx_spi_packet, NULL, payload_len);
+  });
+  spi_seg_submit(&bus, { 
+     spi_make_seg_const(SX1280_RADIO_GET_PACKETSTATUS, 0x0);
+     spi_make_seg_buffer((uint8_t *)packet_status, NULL, 2); }, .done_fn = sx128x_set_dio0_active);
 }
 
 static void sx128x_handle_irq_status(void *arg) {
   const uint16_t irq = ((irq_status & 0xFF) << 8 | ((irq_status >> 8) & 0xFF));
   if ((irq & SX1280_IRQ_RX_DONE)) {
-    const spi_txn_segment_t segs[] = {
-        read_command_txn(SX1280_RADIO_GET_RXBUFFERSTATUS, buffer_status, 2),
-    };
-    spi_seg_submit(&bus, segs, .done_fn = sx128x_read_buffer);
+    spi_seg_submit(&bus, { 
+     spi_make_seg_const(SX1280_RADIO_GET_RXBUFFERSTATUS, 0x0);
+     spi_make_seg_buffer(buffer_status, NULL, 2); }, .done_fn = sx128x_read_buffer);
   } else if ((irq & SX1280_IRQ_TX_DONE)) {
     sx128x_set_mode_async(SX1280_MODE_RX);
   }
@@ -158,21 +150,14 @@ void sx128x_handle_dio0_exti(bool level) {
   if (!level)
     return;
 
-  {
-    const spi_txn_segment_t segs[] = {
-        read_command_txn(SX1280_RADIO_GET_IRQSTATUS, (uint8_t *)&irq_status, 2),
-    };
-    spi_seg_submit(&bus, segs);
-  }
-  {
-    const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(
-            SX1280_RADIO_CLR_IRQSTATUS,
-            (uint8_t)(((uint16_t)SX1280_IRQ_RADIO_ALL >> 8) & 0x00FF),
-            (uint8_t)((uint16_t)SX1280_IRQ_RADIO_ALL & 0x00FF)),
-    };
-    spi_seg_submit(&bus, segs, .done_fn = sx128x_handle_irq_status);
-  }
+  spi_seg_submit(&bus, {
+    spi_make_seg_const(SX1280_RADIO_GET_IRQSTATUS, 0x0);
+    spi_make_seg_buffer((uint8_t *)&irq_status, NULL, 2);
+  });
+  spi_seg_submit(&bus, { spi_make_seg_const(
+                             SX1280_RADIO_CLR_IRQSTATUS,
+                             (uint8_t)(((uint16_t)SX1280_IRQ_RADIO_ALL >> 8) & 0x00FF),
+                             (uint8_t)((uint16_t)SX1280_IRQ_RADIO_ALL & 0x00FF)); }, .done_fn = sx128x_handle_irq_status);
   spi_txn_continue(&bus);
 }
 
@@ -198,14 +183,13 @@ uint16_t sx128x_read_dio0() {
 }
 
 void sx128x_read_register_burst(const uint16_t reg, uint8_t *data, const uint8_t size) {
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const((SX1280_RADIO_READ_REGISTER),
-                         ((reg & 0xFF00) >> 8),
-                         (reg & 0x00FF),
-                         0x00),
-      spi_make_seg_buffer(data, NULL, size),
-  };
-  spi_seg_submit(&bus, segs);
+  spi_seg_submit(&bus, {
+    spi_make_seg_const((SX1280_RADIO_READ_REGISTER),
+                       ((reg & 0xFF00) >> 8),
+                       (reg & 0x00FF),
+                       0x00);
+    spi_make_seg_buffer(data, NULL, size);
+  });
 }
 
 uint8_t sx128x_read_register(const uint16_t reg) {
@@ -216,13 +200,12 @@ uint8_t sx128x_read_register(const uint16_t reg) {
 }
 
 void sx128x_write_register_burst(const uint16_t reg, const uint8_t *data, const uint8_t size) {
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const((uint8_t)SX1280_RADIO_WRITE_REGISTER,
-                         ((reg & 0xFF00) >> 8),
-                         (reg & 0x00FF)),
-      spi_make_seg_buffer(NULL, data, size),
-  };
-  spi_seg_submit(&bus, segs);
+  spi_seg_submit(&bus, {
+    spi_make_seg_const((uint8_t)SX1280_RADIO_WRITE_REGISTER,
+                       ((reg & 0xFF00) >> 8),
+                       (reg & 0x00FF));
+    spi_make_seg_buffer(NULL, data, size);
+  });
 }
 
 void sx128x_write_register(const uint16_t reg, const uint8_t val) {
@@ -230,18 +213,17 @@ void sx128x_write_register(const uint16_t reg, const uint8_t val) {
 }
 
 void sx128x_read_command_burst(const sx128x_commands_t cmd, uint8_t *data, const uint8_t size) {
-  const spi_txn_segment_t segs[] = {
-      read_command_txn(cmd, data, size),
-  };
-  spi_seg_submit(&bus, segs);
+  spi_seg_submit(&bus, {
+    spi_make_seg_const(cmd, 0x0);
+    spi_make_seg_buffer(data, NULL, size);
+  });
 }
 
 void sx128x_write_command_burst(const sx128x_commands_t cmd, const uint8_t *data, const uint8_t size) {
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(cmd),
-      spi_make_seg_buffer(NULL, data, size),
-  };
-  spi_seg_submit(&bus, segs);
+  spi_seg_submit(&bus, {
+    spi_make_seg_const(cmd);
+    spi_make_seg_buffer(NULL, data, size);
+  });
 }
 
 void sx128x_write_command(const sx128x_commands_t cmd, const uint8_t val) {
@@ -249,11 +231,10 @@ void sx128x_write_command(const sx128x_commands_t cmd, const uint8_t val) {
 }
 
 void sx128x_write_tx_buffer(const uint8_t offset, const volatile uint8_t *data, const uint8_t size) {
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(SX1280_RADIO_WRITE_BUFFER, offset),
-      spi_make_seg_buffer(NULL, (uint8_t *)data, size),
-  };
-  spi_seg_submit(&bus, segs);
+  spi_seg_submit(&bus, {
+    spi_make_seg_const(SX1280_RADIO_WRITE_BUFFER, offset);
+    spi_make_seg_buffer(NULL, (uint8_t *)data, size);
+  });
 }
 
 void sx128x_set_mode_async(const sx128x_modes_t mode) {
