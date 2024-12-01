@@ -130,10 +130,9 @@ uint8_t bmi270_read(uint8_t reg) {
 
   uint8_t buffer[3] = {reg | 0x80, 0x0, 0x0};
 
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_buffer(buffer, buffer, 3),
-  };
-  spi_seg_submit_wait(&gyro_bus, segs);
+  spi_seg_submit_wait(&gyro_bus, {
+    spi_make_seg_buffer(buffer, buffer, 3);
+  });
 
   return buffer[2];
 }
@@ -142,57 +141,43 @@ uint16_t bmi270_read16(uint8_t reg) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_SLOW);
 
   uint8_t buffer[4] = {reg | 0x80, 0x0, 0x0, 0x0};
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_buffer(buffer, buffer, 4),
-  };
-  spi_seg_submit_wait(&gyro_bus, segs);
-
+  spi_seg_submit_wait(&gyro_bus, {
+    spi_make_seg_buffer(buffer, buffer, 4);
+  });
   return ((buffer[3] << 8) | buffer[2]);
 }
 
 void bmi270_write(uint8_t reg, uint8_t data, uint32_t delay) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_SLOW);
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg, data),
-  };
-  spi_seg_submit_wait(&gyro_bus, segs);
-
+  spi_seg_submit_wait(&gyro_bus, {
+    spi_make_seg_const(reg, data);
+  });
   time_delay_ms(delay);
 }
 
 void bmi270_write16(uint8_t reg, uint16_t data, uint32_t delay) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_SLOW);
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg, data & 0xff, data >> 8),
-  };
-  spi_seg_submit_wait(&gyro_bus, segs);
-
+  spi_seg_submit_wait(&gyro_bus, {
+    spi_make_seg_const(reg, data & 0xff, data >> 8);
+  });
   time_delay_ms(delay);
 }
 
 void bmi270_write_data(uint8_t reg, uint8_t *data, uint32_t size, uint32_t delay) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_SLOW);
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg),
-      spi_make_seg_buffer(NULL, data, size),
-  };
-  spi_seg_submit_wait(&gyro_bus, segs);
-
+  spi_seg_submit_wait(&gyro_bus, {
+    spi_make_seg_const(reg);
+    spi_make_seg_buffer(NULL, data, size);
+  });
   time_delay_ms(delay);
 }
 
 void bmi270_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_FAST);
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg | 0x80, 0xFF),
-      spi_make_seg_buffer(data, NULL, size),
-  };
-  spi_seg_submit_wait(&gyro_bus, segs);
+  spi_seg_submit_wait(&gyro_bus, {
+    spi_make_seg_const(reg | 0x80, 0xFF);
+    spi_make_seg_buffer(data, NULL, size);
+  });
 }
 
 void bmi270_read_gyro_data(gyro_data_t *data) {
@@ -224,21 +209,14 @@ void bmi270_read_gyro_data(gyro_data_t *data) {
 
   data->temp = (float)((int16_t)((gyro_buf[13] << 8) | gyro_buf[12])) / 512.0 + 23.0;
 
-  {
-    const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(BMI270_REG_ACC_DATA_X_LSB | 0x80, 0xFF),
-        spi_make_seg_buffer(gyro_buf, NULL, 12),
-    };
-    spi_seg_submit(&gyro_bus, segs);
-  }
-  {
-    const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(BMI270_REG_TEMPERATURE_LSB | 0x80, 0xFF),
-        spi_make_seg_buffer(gyro_buf + 12, NULL, 2),
-    };
-    spi_seg_submit(&gyro_bus, segs);
-  }
-
+  spi_seg_submit(&gyro_bus, {
+    spi_make_seg_const(BMI270_REG_ACC_DATA_X_LSB | 0x80, 0xFF);
+    spi_make_seg_buffer(gyro_buf, NULL, 12);
+  });
+  spi_seg_submit(&gyro_bus, {
+    spi_make_seg_const(BMI270_REG_TEMPERATURE_LSB | 0x80, 0xFF);
+    spi_make_seg_buffer(gyro_buf + 12, NULL, 2);
+  });
   while (!spi_txn_continue(&gyro_bus))
     ;
 }

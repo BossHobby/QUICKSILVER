@@ -228,50 +228,39 @@ void spi_device_init(spi_ports_t port) {
   interrupt_enable(dma_rx->irq, DMA_PRIORITY);
 }
 
-void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count) {
-  spi_txn_wait(bus);
+void spi_seg_transfer_start(spi_bus_device_t *bus) {
+  const spi_ports_t port = bus->port;
 
+  spi_txn_wait(bus);
   while (!spi_txn_can_send(bus, false))
     ;
 
-  const spi_ports_t port = bus->port;
-
   spi_dev[port].dma_done = false;
-
   spi_reconfigure(bus);
-
   spi_csn_enable(bus);
   spi_enable(spi_port_defs[port].channel, TRUE);
+}
 
-  for (uint32_t i = 0; i < count; i++) {
-    const spi_txn_segment_t *seg = &segs[i];
-    const uint32_t size = seg->size;
+void spi_seg_transfer_bytes(spi_bus_device_t *bus, const uint8_t *tx_data, uint8_t *rx_data, const uint32_t size) {
+  const spi_ports_t port = bus->port;
 
-    const uint8_t *tx_data = NULL;
-    uint8_t *rx_data = NULL;
+  for (uint32_t i = 0; i < size; i++) {
+    while (!spi_i2s_flag_get(spi_port_defs[port].channel, SPI_I2S_TDBE_FLAG))
+      ;
 
-    if (seg->type == TXN_CONST) {
-      tx_data = seg->bytes;
-    } else {
-      tx_data = seg->tx_data;
-      rx_data = seg->rx_data;
-    }
+    spi_i2s_data_transmit(spi_port_defs[port].channel, tx_data ? tx_data[i] : 0xFF);
 
-    for (uint32_t j = 0; j < size; j++) {
-      while (!spi_i2s_flag_get(spi_port_defs[port].channel, SPI_I2S_TDBE_FLAG))
-        ;
+    while (!spi_i2s_flag_get(spi_port_defs[port].channel, SPI_I2S_RDBF_FLAG))
+      ;
 
-      spi_i2s_data_transmit(spi_port_defs[port].channel, tx_data ? tx_data[j] : 0xFF);
-
-      while (!spi_i2s_flag_get(spi_port_defs[port].channel, SPI_I2S_RDBF_FLAG))
-        ;
-
-      const uint8_t ret = spi_i2s_data_receive(spi_port_defs[port].channel);
-      if (rx_data != NULL) {
-        rx_data[j] = ret;
-      }
-    }
+    const uint8_t ret = spi_i2s_data_receive(spi_port_defs[port].channel);
+    if (rx_data)
+      rx_data[i] = ret;
   }
+}
+
+void spi_seg_transfer_finish(spi_bus_device_t *bus) {
+  const spi_ports_t port = bus->port;
 
   spi_csn_disable(bus);
   spi_enable(spi_port_defs[port].channel, FALSE);

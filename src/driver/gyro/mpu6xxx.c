@@ -93,23 +93,18 @@ uint8_t mpu6xxx_read(uint8_t reg) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_INIT);
 
   uint8_t buffer[2] = {reg | 0x80, 0x00};
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_buffer(buffer, buffer, 2),
-  };
-  spi_seg_submit_wait(&gyro_bus, segs);
-
+  spi_seg_submit_wait(&gyro_bus, {
+    spi_make_seg_buffer(buffer, buffer, 2);
+  });
   return buffer[1];
 }
 
 // blocking dma write of a single register
 void mpu6xxx_write(uint8_t reg, uint8_t data) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_INIT);
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg, data),
-  };
-  spi_seg_submit_wait(&gyro_bus, segs);
+  spi_seg_submit_wait(&gyro_bus, {
+    spi_make_seg_const(reg, data);
+  });
 }
 
 void mpu6xxx_read_gyro_data(gyro_data_t *data) {
@@ -126,11 +121,10 @@ void mpu6xxx_read_gyro_data(gyro_data_t *data) {
   data->gyro.roll = (int16_t)((gyro_buf[10] << 8) | gyro_buf[11]);
   data->gyro.yaw = (int16_t)((gyro_buf[12] << 8) | gyro_buf[13]);
 
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(MPU_RA_ACCEL_XOUT_H | 0x80),
-      spi_make_seg_buffer(gyro_buf, NULL, 14),
-  };
-  spi_seg_submit(&gyro_bus, segs);
+  spi_seg_submit(&gyro_bus, {
+    spi_make_seg_const(MPU_RA_ACCEL_XOUT_H | 0x80);
+    spi_make_seg_buffer(gyro_buf, NULL, 14);
+  });
   while (!spi_txn_continue(&gyro_bus))
     ;
 }

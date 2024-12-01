@@ -23,38 +23,33 @@ void a7105_handle_exti(bool pin_state) {
 }
 
 void a7105_write_reg(a7105_reg_t reg, uint8_t data) {
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg, data),
-  };
-  spi_seg_submit_continue(&bus, segs);
+  spi_seg_submit(&bus, {
+    spi_make_seg_const(reg, data);
+  });
+  spi_txn_continue(&bus);
 }
 
 static void a7105_write_multi(uint8_t reg, const uint8_t *data, uint8_t len) {
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg),
-      spi_make_seg_buffer(NULL, data, len),
-  };
-  spi_seg_submit_wait(&bus, segs);
+  spi_seg_submit_wait(&bus, {
+    spi_make_seg_const(reg);
+    spi_make_seg_buffer(NULL, data, len);
+  });
 }
 
 uint8_t a7105_read_reg(a7105_reg_t reg) {
   uint8_t ret = 0;
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg | 0x40),
-      spi_make_seg_buffer(&ret, NULL, 1),
-  };
-  spi_seg_submit_wait(&bus, segs);
-
+  spi_seg_submit_wait(&bus, {
+    spi_make_seg_const(reg | 0x40);
+    spi_make_seg_buffer(&ret, NULL, 1);
+  });
   return ret;
 }
 
 static void a7105_read_multi(uint8_t reg, uint8_t *result, uint8_t len) {
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(reg),
-      spi_make_seg_buffer(result, NULL, len),
-  };
-  spi_seg_submit_wait(&bus, segs);
+  spi_seg_submit_wait(&bus, {
+    spi_make_seg_const(reg);
+    spi_make_seg_buffer(result, NULL, len);
+  });
 }
 
 void a7105_strobe(a7105_strobe_t address) {
@@ -66,10 +61,10 @@ void a7105_strobe(a7105_strobe_t address) {
     exti_interrupt_disable(target.rx_spi.exti);
   }
 
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(address),
-  };
-  spi_seg_submit_continue(&bus, segs);
+  spi_seg_submit(&bus, {
+    spi_make_seg_const(address);
+  });
+  spi_txn_continue(&bus);
 }
 
 void a7105_read_fifo(uint8_t *data, uint8_t num) {
