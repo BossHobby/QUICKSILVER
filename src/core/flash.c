@@ -147,7 +147,11 @@ void flash_load() {
 
     cbor_value_t dec;
     cbor_decoder_init(&dec, buffer, size);
-    cbor_decode_target_t(&dec, &target);
+
+    cbor_result_t res = cbor_decode_target_t(&dec, &target);
+    if (res < CBOR_OK) {
+      failloop(FAILLOOP_FAULT);
+    }
   }
 
   if (flash_compare_magic(FLASH_STORAGE_OFFSET, (FMC_MAGIC | FLASH_STORAGE_OFFSET))) {
