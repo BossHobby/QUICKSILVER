@@ -62,7 +62,7 @@ static gyro_types_t gyro_spi_detect() {
   return type;
 }
 
-uint8_t gyro_init() {
+gyro_types_t gyro_init() {
   if (!target_gyro_spi_device_valid(&target.gyro)) {
     return GYRO_TYPE_INVALID;
   }

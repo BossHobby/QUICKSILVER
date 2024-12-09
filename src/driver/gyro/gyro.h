@@ -31,6 +31,6 @@ extern gyro_types_t gyro_type;
 float gyro_update_period();
 bool gyro_exti_state();
 
-uint8_t gyro_init();
+gyro_types_t gyro_init();
 gyro_data_t gyro_read();
 void gyro_calibrate();
