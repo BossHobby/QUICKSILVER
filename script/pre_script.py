@@ -81,8 +81,8 @@ def fetch_thread():
     else:
         target_repo = porcelain.open_repo(target_dir)
         target_ref_before = porcelain.describe(target_repo)
-        porcelain.fetch(target_repo)
-        porcelain.checkout_branch(target_repo, "targets")
+        update = porcelain.fetch(target_repo, target_remote, b"refs/heads/targets")
+        porcelain.checkout_branch(target_repo, update[b"refs/heads/targets"])
         target_ref_after = porcelain.describe(target_repo)
 
         if target_ref_before != target_ref_after:
