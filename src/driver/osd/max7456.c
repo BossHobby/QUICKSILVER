@@ -14,9 +14,6 @@
 #define DMA_BUFFER_SIZE 128
 #define MAX7456_BAUD_RATE MHZ_TO_HZ(10.5)
 
-// osd video system (PAL/NTSC) at startup if no video input is present
-// after input is present the last detected system will be used.
-static osd_system_t current_osd_system = OSD_SYS_NTSC;
 static osd_system_t last_osd_system = OSD_SYS_NONE;
 
 static spi_bus_device_t bus = {};
@@ -73,20 +70,7 @@ static bool max7456_init_display() {
 
   const uint8_t black_level = max7456_dma_spi_read(OSDBL_R);
   max7456_dma_spi_write(OSDBL_W, black_level | 0x10);
-
-  switch (current_osd_system) {
-  case OSD_SYS_PAL:
-    max7456_dma_spi_write(VM0, 0x78); // Set pal mode and enable display
-    break;
-
-  case OSD_SYS_NTSC:
-    max7456_dma_spi_write(VM0, 0x08); // Set ntsc mode and enable display
-    break;
-
-  default:
-    break;
-  }
-
+  max7456_dma_spi_write(VM0, 0x08);  // Set ntsc mode and enable display
   max7456_dma_spi_write(VM1, 0x0C);  // set background brightness (bits 456), blinking time(bits 23), blinking duty cycle (bits 01)
   max7456_dma_spi_write(OSDM, 0x2D); // osd mux & rise/fall ( lowest sharpness)
 
@@ -108,10 +92,6 @@ bool max7456_init() {
 
 // set the video output system PAL /NTSC
 static void max7456_set_system(osd_system_t sys) {
-  if (current_osd_system == sys) {
-    return;
-  }
-
   const uint8_t vm0 = max7456_dma_spi_read(VM0_R);
   switch (sys) {
   case OSD_SYS_PAL:
@@ -125,8 +105,6 @@ static void max7456_set_system(osd_system_t sys) {
   default:
     break;
   }
-
-  current_osd_system = sys;
 }
 
 static osd_system_t max7456_current_system() {
