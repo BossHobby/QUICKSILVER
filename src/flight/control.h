@@ -44,7 +44,7 @@ typedef struct {
   float looptime;            // looptime in seconds
   float looptime_us;         // looptime in us
   float looptime_autodetect; // desired looptime in us
-  float timefactor;          // timefactor for pid calc
+  float looptime_inverse;    // 1/looptime for derivative calculations
   uint32_t loop_counter;     // number of loops ran
 
   float uptime;      // running sum of looptimes
@@ -116,7 +116,7 @@ typedef struct {
   MEMBER(looptime, float)                     \
   MEMBER(looptime_us, float)                  \
   MEMBER(looptime_autodetect, float)          \
-  MEMBER(timefactor, float)                   \
+  MEMBER(looptime_inverse, float)            \
   MEMBER(loop_counter, uint32_t)              \
   MEMBER(uptime, float)                       \
   MEMBER(armtime, float)                      \
