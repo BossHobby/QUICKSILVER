@@ -31,7 +31,41 @@ cbor_result_t cbor_decode_compact_vec3_t(cbor_value_t *dec, compact_vec3_t *vec)
 void vec3_from_array(vec3_t *out, float *in);
 void vec3_compress(compact_vec3_t *out, vec3_t *in, float scale);
 
-// Rodrigues' rotation formula, used in hot paths, lets inline
+// Helper functions for vec3_rotate
+static inline vec3_t vec3_add(vec3_t a, vec3_t b) {
+  return (vec3_t){{a.axis[0] + b.axis[0],
+                   a.axis[1] + b.axis[1],
+                   a.axis[2] + b.axis[2]}};
+}
+
+static inline vec3_t vec3_sub(vec3_t a, vec3_t b) {
+  return (vec3_t){{a.axis[0] - b.axis[0],
+                   a.axis[1] - b.axis[1],
+                   a.axis[2] - b.axis[2]}};
+}
+
+static inline vec3_t vec3_mul(vec3_t v, float s) {
+  return (vec3_t){{v.axis[0] * s,
+                   v.axis[1] * s,
+                   v.axis[2] * s}};
+}
+
+static inline vec3_t vec3_mul_elem(vec3_t a, vec3_t b) {
+  return (vec3_t){{a.axis[0] * b.axis[0],
+                   a.axis[1] * b.axis[1],
+                   a.axis[2] * b.axis[2]}};
+}
+
+static inline float vec3_dot(vec3_t a, vec3_t b) {
+  return a.axis[0] * b.axis[0] + a.axis[1] * b.axis[1] + a.axis[2] * b.axis[2];
+}
+
+static inline vec3_t vec3_cross(vec3_t a, vec3_t b) {
+  return (vec3_t){{a.axis[1] * b.axis[2] - a.axis[2] * b.axis[1],
+                   a.axis[2] * b.axis[0] - a.axis[0] * b.axis[2],
+                   a.axis[0] * b.axis[1] - a.axis[1] * b.axis[0]}};
+}
+
 static inline vec3_t vec3_rotate(const vec3_t vec, const vec3_t rot) {
   return (vec3_t){{
       vec.axis[0] - vec.axis[1] * rot.axis[2] + vec.axis[2] * rot.axis[1],
