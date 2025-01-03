@@ -160,8 +160,7 @@
 // at eliminating propwash.  Motor noise related to rpm is known to have a quadratic relationship with increasing throttle.  While a quadratic curve
 // could have been selected for this feature, a faster moving parabolic one was selected in its place as the goal is not to follow motor noise, but
 // to get the filter out of the way as fast as possible in the interest of better performance and handling through reduced D filter latency when you need it most.
-#define DTERM_DYNAMIC_LPF
-#define DTERM_DYNAMIC_EXPO 1.0f
+#define DTERM_DYNAMIC_TYPE FILTER_LP_PT1
 #define DTERM_DYNAMIC_FREQ_MIN 70
 #define DTERM_DYNAMIC_FREQ_MAX 260
 
