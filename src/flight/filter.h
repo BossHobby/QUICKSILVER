@@ -9,12 +9,20 @@ typedef enum {
   FILTER_LP_PT1,
   FILTER_LP_PT2,
   FILTER_LP_PT3,
+  FILTER_LP_LULU,
 
   FILTER_MAX
 } __attribute__((__packed__)) filter_type_t;
 
-typedef struct {
-  float delay_element[3];
+typedef union {
+  struct {
+    float delay_element[3];
+  };
+  struct {
+    float interim[32];
+    float interim_b[32];
+    uint8_t window_buf_index;
+  };
 } filter_state_t;
 
 typedef struct {
@@ -45,6 +53,15 @@ typedef struct {
   float alpha;
 } filter_lp_pt3;
 
+// Max N = 15
+typedef struct {
+  float hz;
+  uint32_t sample_period_us;
+
+  uint8_t window_size;
+  uint8_t num_samples;
+} filter_lp_lulu;
+
 typedef struct {
   float hz;
   uint32_t sample_period_us;
@@ -60,6 +77,7 @@ typedef union {
   filter_lp_pt1 lp_pt1;
   filter_lp_pt2 lp_pt2;
   filter_lp_pt3 lp_pt3;
+  filter_lp_lulu lp_lulu;
 } filter_t;
 
 typedef struct {
@@ -98,6 +116,10 @@ float filter_lp_pt2_step(filter_lp_pt2 *filter, filter_state_t *state, float in)
 void filter_lp_pt3_init(filter_lp_pt3 *filter, filter_state_t *state, uint8_t count, float hz);
 void filter_lp_pt3_coeff(filter_lp_pt3 *filter, float hz);
 float filter_lp_pt3_step(filter_lp_pt3 *filter, filter_state_t *state, float in);
+
+void filter_lp_lulu_init(filter_lp_lulu *filter, filter_state_t *state, uint8_t count, float hz);
+void filter_lp_lulu_coeff(filter_lp_lulu *filter, float hz);
+float filter_lp_lulu_step(filter_lp_lulu *filter, filter_state_t *state, float in);
 
 void filter_biquad_notch_init(filter_biquad_notch_t *filter, filter_biquad_state_t *state, uint8_t count, float hz);
 void filter_biquad_notch_coeff(filter_biquad_notch_t *filter, float hz);
