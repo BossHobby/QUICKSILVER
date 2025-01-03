@@ -43,7 +43,7 @@ static vec3_t last_error2;
 static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
 
-static filter_lp_pt1 dynamic_filter;
+static filter_t dynamic_filter;
 static filter_state_t dynamic_filter_state[3];
 
 static filter_lp_pt1 rx_filter;
@@ -51,15 +51,10 @@ static filter_state_t rx_filter_state[3];
 
 void pid_init() {
   filter_lp_pt1_init(&rx_filter, rx_filter_state, 3, state.rx_filter_hz, task_get_period_us(TASK_PID));
-
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
     filter_init(profile.filter.dterm[i].type, &filter[i], filter_state[i], 3, profile.filter.dterm[i].cutoff_freq, task_get_period_us(TASK_PID));
   }
-
-  if (profile.filter.dterm_dynamic_enable) {
-    // zero out filter, freq will be updated later on
-    filter_lp_pt1_init(&dynamic_filter, dynamic_filter_state, 3, DTERM_DYNAMIC_FREQ_MAX, task_get_period_us(TASK_PID));
-  }
+  filter_init(profile.filter.dterm_dynamic_type, &dynamic_filter, dynamic_filter_state, 3, DTERM_DYNAMIC_FREQ_MAX, task_get_period_us(TASK_PID));
 }
 
 // (iwindup = 0  windup is not allowed)   (iwindup = 1 windup is allowed)
@@ -93,11 +88,7 @@ static inline float pid_compute_iterm_windup(uint8_t x, float pid_output) {
 static inline float pid_filter_dterm(uint8_t x, float dterm) {
   dterm = filter_step(profile.filter.dterm[0].type, &filter[0], &filter_state[0][x], dterm);
   dterm = filter_step(profile.filter.dterm[1].type, &filter[1], &filter_state[1][x], dterm);
-
-  if (profile.filter.dterm_dynamic_enable) {
-    dterm = filter_lp_pt1_step(&dynamic_filter, &dynamic_filter_state[x], dterm);
-  }
-
+  dterm = filter_step(profile.filter.dterm_dynamic_type, &dynamic_filter, &dynamic_filter_state[x], dterm);
   return dterm;
 }
 
@@ -148,8 +139,14 @@ static inline float pid_tda_compensation() {
 // output: state.pidoutput.axis[] = change required from motors
 void pid_calc() {
   filter_lp_pt1_coeff(&rx_filter, state.rx_filter_hz, task_get_period_us(TASK_PID));
+
   filter_coeff(profile.filter.dterm[0].type, &filter[0], profile.filter.dterm[0].cutoff_freq, task_get_period_us(TASK_PID));
   filter_coeff(profile.filter.dterm[1].type, &filter[1], profile.filter.dterm[1].cutoff_freq, task_get_period_us(TASK_PID));
+
+  const float dynamic_throttle = state.throttle + state.throttle * (1.0f - state.throttle);
+  const float dterm_dynamic_raw_freq = mapf(dynamic_throttle, 0.0f, 1.0f, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
+  const float dterm_dynamic_freq = constrain(dterm_dynamic_raw_freq, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
+  filter_coeff(profile.filter.dterm_dynamic_type, &dynamic_filter, dterm_dynamic_freq, task_get_period_us(TASK_PID));
 
   static vec3_t pid_output = {.roll = 0, .pitch = 0, .yaw = 0};
   const float v_compensation = pid_voltage_compensation();
@@ -158,14 +155,6 @@ void pid_calc() {
   const uint8_t stick_boost_profile = rx_aux_on(AUX_STICK_BOOST_PROFILE) ? STICK_PROFILE_ON : STICK_PROFILE_OFF;
   const float *stick_accelerator = profile.pid.stick_rates[stick_boost_profile].accelerator.axis;
   const float *stick_transition = profile.pid.stick_rates[stick_boost_profile].transition.axis;
-
-  if (profile.filter.dterm_dynamic_enable) {
-    float dynamic_throttle = state.throttle + state.throttle * (1 - state.throttle) * DTERM_DYNAMIC_EXPO;
-    float d_term_dynamic_freq = mapf(dynamic_throttle, 0.0f, 1.0f, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
-    d_term_dynamic_freq = constrain(d_term_dynamic_freq, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
-
-    filter_lp_pt1_coeff(&dynamic_filter, d_term_dynamic_freq, task_get_period_us(TASK_PID));
-  }
 
   // rotates errors
   ierror = vec3_rotate(ierror, state.gyro_delta_angle);
