@@ -9,6 +9,8 @@ typedef enum {
   FILTER_LP_PT1,
   FILTER_LP_PT2,
   FILTER_LP_PT3,
+
+  FILTER_MAX
 } __attribute__((__packed__)) filter_type_t;
 
 typedef struct {
