@@ -96,6 +96,13 @@ static const char *on_off_labels[] = {
     "  ON",
 };
 
+static const char *filter_type_labels[] = {
+    "NONE",
+    " PT1",
+    " PT2",
+    " PT3",
+};
+
 #pragma GCC diagnostic ignored "-Wmissing-braces"
 
 static const vec3_t rate_defaults[RATE_MODE_ACTUAL + 1][3] = {
@@ -815,16 +822,9 @@ void osd_display() {
     osd_menu_start();
     osd_menu_header("GYRO FILTERS");
 
-    const char *filter_type_labels[] = {
-        "NONE",
-        " PT1",
-        " PT2",
-        " PT3",
-    };
-
     osd_menu_select(4, 4, "PASS 1 TYPE");
     if (osd_menu_select_enum(18, 4, profile.filter.gyro[0].type, filter_type_labels)) {
-      profile.filter.gyro[0].type = osd_menu_adjust_int(profile.filter.gyro[0].type, 1, 0, FILTER_LP_PT3);
+      profile.filter.gyro[0].type = osd_menu_adjust_int(profile.filter.gyro[0].type, 1, 0, FILTER_MAX - 1);
       osd_state.reboot_fc_requested = 1;
     }
 
@@ -835,7 +835,7 @@ void osd_display() {
 
     osd_menu_select(4, 6, "PASS 2 TYPE");
     if (osd_menu_select_enum(18, 6, profile.filter.gyro[1].type, filter_type_labels)) {
-      profile.filter.gyro[1].type = osd_menu_adjust_int(profile.filter.gyro[1].type, 1, 0, FILTER_LP_PT3);
+      profile.filter.gyro[1].type = osd_menu_adjust_int(profile.filter.gyro[1].type, 1, 0, FILTER_MAX - 1);
       osd_state.reboot_fc_requested = 1;
     }
 
@@ -859,16 +859,9 @@ void osd_display() {
     osd_menu_start();
     osd_menu_header("D-TERM FILTERS");
 
-    const char *filter_type_labels[] = {
-        "NONE",
-        " PT1",
-        " PT2",
-        " PT3",
-    };
-
     osd_menu_select(4, 3, "PASS 1 TYPE");
     if (osd_menu_select_enum(18, 3, profile.filter.dterm[0].type, filter_type_labels)) {
-      profile.filter.dterm[0].type = osd_menu_adjust_int(profile.filter.dterm[0].type, 1, 0, FILTER_LP_PT2);
+      profile.filter.dterm[0].type = osd_menu_adjust_int(profile.filter.dterm[0].type, 1, 0, FILTER_MAX - 1);
       osd_state.reboot_fc_requested = 1;
     }
 
@@ -879,7 +872,7 @@ void osd_display() {
 
     osd_menu_select(4, 5, "PASS 2 TYPE");
     if (osd_menu_select_enum(18, 5, profile.filter.dterm[1].type, filter_type_labels)) {
-      profile.filter.dterm[1].type = osd_menu_adjust_int(profile.filter.dterm[1].type, 1, 0, FILTER_LP_PT2);
+      profile.filter.dterm[1].type = osd_menu_adjust_int(profile.filter.dterm[1].type, 1, 0, FILTER_MAX - 1);
       osd_state.reboot_fc_requested = 1;
     }
 
@@ -888,9 +881,9 @@ void osd_display() {
       profile.filter.dterm[1].cutoff_freq = osd_menu_adjust_float(profile.filter.dterm[1].cutoff_freq, 10, 50, 500);
     }
 
-    osd_menu_select(4, 7, "DYNAMIC");
-    if (osd_menu_select_enum(18, 7, profile.filter.dterm_dynamic_enable, on_off_labels)) {
-      profile.filter.dterm_dynamic_enable = osd_menu_adjust_int(profile.filter.dterm_dynamic_enable, 1, 0, 1);
+    osd_menu_select(4, 7, "DYNAMIC TYPE");
+    if (osd_menu_select_enum(18, 7, profile.filter.dterm_dynamic_type, filter_type_labels)) {
+      profile.filter.dterm_dynamic_type = osd_menu_adjust_int(profile.filter.dterm_dynamic_type, 1, 0, FILTER_MAX - 1);
       osd_state.reboot_fc_requested = 1;
     }
 
