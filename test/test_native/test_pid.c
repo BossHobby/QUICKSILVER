@@ -10,6 +10,7 @@
 // Include the PID module
 #include "core/profile.h"
 #include "driver/time.h"
+#include "flight/angle_pid.h"
 #include "flight/control.h"
 #include "flight/pid.h"
 
@@ -41,6 +42,7 @@ static void pid_setUp(void) {
 
   // Initialize control state
   state.looptime = 0.000125f; // 8kHz
+  state.looptime_inverse = 1.0f / state.looptime; // 8000Hz
   state.vbat_filtered = 4.0f;
   state.vbat_compensated = 1.0f;
 
@@ -105,28 +107,128 @@ void test_pid_integral_accumulation(void) {
   TEST_ASSERT_FLOAT_WITHIN(0.001f, expected_integral, state.pidoutput.roll);
 }
 
-// Test derivative calculation
+// Test derivative calculation - gyro response
 void test_pid_derivative_calculation(void) {
   pid_setUp();
-  // Setup
+  // Setup - only D term enabled
   profile.pid.pid_rates[0].kp.roll = 0.0f;
   profile.pid.pid_rates[0].ki.roll = 0.0f;
   profile.pid.pid_rates[0].kd.roll = 1.0f;
 
-  // Initialize with no error
-  state.error.roll = 0.0f;
+  // Initialize stick profile (needed for D-term calculation)
+  profile.pid.stick_rates[0].accelerator.roll = 1.0f;
+  profile.pid.stick_rates[0].transition.roll = 1.0f;
+  
+  // Initialize state.looptime_inverse (needed for D-term)
+  state.looptime_inverse = 1.0f / state.looptime;
+  
+  // Initialize with no gyro rate
+  state.gyro.roll = 0.0f;
+  state.setpoint.roll = 0.0f;
   pid_init();
   pid_calc();
 
-  // Introduce error step
-  state.error.roll = 1.0f;
+  // Introduce gyro rate change - this should produce negative D-term output
+  state.gyro.roll = 1.0f;
   pid_calc();
 
-  // The derivative should detect the change in error
-  // D = Kd * (error - previous_error) / dt
-  float expected_d = profile.pid.pid_rates[0].kd.roll * (1.0f - 0.0f) / state.looptime;
+  // QUICKSILVER D-term = setpoint_derivative - gyro_derivative
+  // With no setpoint change but gyro change, we expect negative output
+  TEST_ASSERT_TRUE(state.pidoutput.roll < -0.1f);
+}
+
+// Test D-term setpoint response
+void test_pid_dterm_setpoint_response(void) {
+  pid_setUp();
+  // Setup - only D term enabled
+  profile.pid.pid_rates[0].kp.roll = 0.0f;
+  profile.pid.pid_rates[0].ki.roll = 0.0f;
+  profile.pid.pid_rates[0].kd.roll = 1.0f;
+
+  // Initialize stick profile (need transition < 1 for setpoint to have effect)
+  profile.pid.stick_rates[0].accelerator.roll = 1.0f;
+  profile.pid.stick_rates[0].transition.roll = 0.0f; // No transition weighting
   
-  // Note: actual implementation might differ, this is a basic test
+  // Initialize state.looptime_inverse
+  state.looptime_inverse = 1.0f / state.looptime;
+  
+  // Set some stick input so transition weight isn't 0
+  state.rx_filtered.roll = 0.0f; // No stick input
+  
+  // Initialize with no movement
+  state.gyro.roll = 0.0f;
+  state.setpoint.roll = 0.0f;
+  pid_init();
+  pid_calc();
+
+  // Introduce setpoint change - this should produce positive D-term output
+  state.setpoint.roll = 1.0f;
+  pid_calc();
+
+  // With setpoint change but no gyro change, we expect positive output
+  TEST_ASSERT_TRUE(state.pidoutput.roll > 0.1f);
+}
+
+// Test D-term combined response
+void test_pid_dterm_combined_response(void) {
+  pid_setUp();
+  // Setup - only D term enabled
+  profile.pid.pid_rates[0].kp.roll = 0.0f;
+  profile.pid.pid_rates[0].ki.roll = 0.0f;
+  profile.pid.pid_rates[0].kd.roll = 1.0f;
+
+  // Initialize stick profile
+  profile.pid.stick_rates[0].accelerator.roll = 1.0f;
+  profile.pid.stick_rates[0].transition.roll = 0.0f;
+  
+  // Initialize state.looptime_inverse
+  state.looptime_inverse = 1.0f / state.looptime;
+  
+  // Initialize
+  state.gyro.roll = 0.0f;
+  state.setpoint.roll = 0.0f;
+  pid_init();
+  pid_calc();
+
+  // Introduce matching setpoint and gyro changes
+  // This should result in minimal D-term output (setpoint_deriv - gyro_deriv ≈ 0)
+  state.setpoint.roll = 1.0f;
+  state.gyro.roll = 1.0f;
+  pid_calc();
+
+  // The D-term should be close to zero but not exactly zero due to stick weighting
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 0.0f, state.pidoutput.roll);
+}
+
+// Test D-term stick transition weighting
+void test_pid_dterm_stick_weighting(void) {
+  pid_setUp();
+  // Setup - only D term enabled
+  profile.pid.pid_rates[0].kp.roll = 0.0f;
+  profile.pid.pid_rates[0].ki.roll = 0.0f;
+  profile.pid.pid_rates[0].kd.roll = 1.0f;
+
+  // Test different stick accelerator values
+  profile.pid.stick_rates[0].accelerator.roll = 2.0f; // Higher than 1
+  profile.pid.stick_rates[0].transition.roll = 0.0f; // Ensure setpoint has effect
+  
+  // Initialize state.looptime_inverse
+  state.looptime_inverse = 1.0f / state.looptime;
+  
+  // Set some stick input
+  state.rx_filtered.roll = 0.5f;
+  
+  // Initialize
+  state.gyro.roll = 0.0f;
+  state.setpoint.roll = 0.0f;
+  pid_init();
+  pid_calc();
+
+  // Introduce setpoint change
+  state.setpoint.roll = 1.0f;
+  pid_calc();
+
+  // Should still have output (could be positive or negative depending on stick weighting)
   TEST_ASSERT_NOT_EQUAL(0.0f, state.pidoutput.roll);
 }
 
@@ -177,3 +279,21 @@ void test_pid_complete_loop(void) {
   }
 }
 
+void test_angle_pid_uses_legacy_dterm_timefactor(void) {
+  pid_setUp();
+
+  profile.pid.small_angle.kp = 10.0f;
+  profile.pid.small_angle.kd = 1.0f;
+  profile.pid.big_angle.kp = 0.0f;
+  profile.pid.big_angle.kd = 0.0f;
+
+  state.angle_error.roll = 0.0f;
+  angle_pid(0);
+
+  state.angle_error.roll = 0.1f;
+  const float output = angle_pid(0);
+
+  const float p_term = 0.1f * 10.0f * (1.0f - 0.1f);
+  const float d_term = 0.1f * 1.0f * (1.0f - 0.1f) * (0.0032f * state.looptime_inverse);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, p_term + d_term, output);
+}
