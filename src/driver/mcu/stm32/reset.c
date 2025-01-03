@@ -46,10 +46,21 @@ __attribute__((__used__)) void system_check_for_bootloader() {
   case RESET_BOOTLOADER_MAGIC: {
     backup_register_write(0);
 
-#ifdef STM32G4
+    __disable_irq();
+
+    SysTick->CTRL = 0;
+
     HAL_RCC_DeInit();
+#ifdef STM32G4
     __HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH();
 #endif
+
+    for (uint8_t i = 0; i < sizeof(NVIC->ICER) / sizeof(NVIC->ICER[0]); i++)
+      NVIC->ICER[i] = 0xFFFFFFFF;
+    for (uint8_t i = 0; i < sizeof(NVIC->ICPR) / sizeof(NVIC->ICPR[0]); i++)
+      NVIC->ICPR[i] = 0xFFFFFFFF;
+
+    __enable_irq();
 
     void (*DfuBootJump)(void) = (void (*)(void))(*((uint32_t *)(BOOTLOADER_OFFSET + 4)));
     __set_MSP(*((uint32_t *)BOOTLOADER_OFFSET));
