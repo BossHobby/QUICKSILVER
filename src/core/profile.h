@@ -9,7 +9,7 @@
 
 #define OSD_NUMBER_ELEMENTS 32
 
-#define PROFILE_VERSION MAKE_SEMVER(0, 2, 5)
+#define PROFILE_VERSION MAKE_SEMVER(0, 2, 6)
 
 // Rates
 typedef enum {
@@ -327,7 +327,7 @@ typedef struct {
 typedef struct {
   profile_filter_parameter_t gyro[FILTER_MAX_SLOTS];
   profile_filter_parameter_t dterm[FILTER_MAX_SLOTS];
-  uint8_t dterm_dynamic_enable;
+  filter_type_t dterm_dynamic_type;
   float dterm_dynamic_min;
   float dterm_dynamic_max;
   uint8_t gyro_dynamic_notch_enable;
@@ -337,7 +337,7 @@ typedef struct {
   START_STRUCT(profile_filter_t)                                    \
   ARRAY_MEMBER(gyro, FILTER_MAX_SLOTS, profile_filter_parameter_t)  \
   ARRAY_MEMBER(dterm, FILTER_MAX_SLOTS, profile_filter_parameter_t) \
-  MEMBER(dterm_dynamic_enable, uint8_t)                             \
+  MEMBER(dterm_dynamic_type, uint8_t)                               \
   MEMBER(dterm_dynamic_min, float)                                  \
   MEMBER(dterm_dynamic_max, float)                                  \
   MEMBER(gyro_dynamic_notch_enable, uint8_t)                        \
