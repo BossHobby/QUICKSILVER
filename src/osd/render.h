@@ -81,9 +81,9 @@ typedef struct {
   uint32_t attribute : 1;
   uint32_t pos_sd_x : 5;
   uint32_t pos_sd_y : 5;
-  uint32_t pos_hd_x : 7;
-  uint32_t pos_hd_y : 7;
-  uint32_t _unused : 6;
+  uint32_t pos_hd_x : 8;
+  uint32_t pos_hd_y : 8;
+  uint32_t _unused : 4;
 } __attribute__((packed)) osd_element_t;
 
 #define ENCODE_OSD_ELEMENT(active, attr, sd_x, sd_y, hd_x, hd_y) ((hd_y << 20) | (hd_x << 12) | (sd_y << 7) | (sd_x << 2) | (attr << 1) | active)
