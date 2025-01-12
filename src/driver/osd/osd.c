@@ -79,7 +79,64 @@ void osd_clear() {
     ;
 }
 
-uint8_t osd_clear_async() {
+static bool osd_device_clear_async() {
+  switch (osd_device) {
+#ifdef USE_MAX7456
+  case OSD_DEVICE_MAX7456:
+    if (!max7456_clear_async()) {
+      return false;
+    }
+    break;
+#endif
+#ifdef USE_DIGITAL_VTX
+  case OSD_DEVICE_DISPLAYPORT:
+    if (!displayport_clear_async()) {
+      return false;
+    }
+    break;
+#endif
+#ifdef SIMULATOR
+  case OSD_DEVICE_SIMULATOR:
+    if (!simulator_osd_clear_async()) {
+      return false;
+    }
+    break;
+#endif
+  default:
+    break;
+  }
+
+  return true;
+}
+
+bool osd_mark_dirty() {
+  static uint8_t state = 0;
+
+  switch (state) {
+  case 0:
+    for (uint32_t i = 0; i < MAX_DISPLAY_SIZE; i++) {
+      if (display[i].val != ' ') {
+        display[i].dirty = 1;
+      }
+    }
+    memset(display_row_dirty, 1, HD_ROWS * sizeof(bool));
+    display_dirty = true;
+    state++;
+    return false;
+
+  case 1:
+    if (osd_device_clear_async()) {
+      state++;
+    }
+    return false;
+
+  default:
+    state = 0;
+    return true;
+  }
+}
+
+bool osd_clear_async() {
   static uint8_t state = 0;
 
   if (state == 0) {
@@ -89,37 +146,15 @@ uint8_t osd_clear_async() {
     memset(display_row_dirty, 0, HD_ROWS * sizeof(bool));
     display_dirty = false;
     state++;
-    return 0;
+    return false;
   }
 
-  switch (osd_device) {
-#ifdef USE_MAX7456
-  case OSD_DEVICE_MAX7456:
-    if (!max7456_clear_async()) {
-      return 0;
-    }
-    break;
-#endif
-#ifdef USE_DIGITAL_VTX
-  case OSD_DEVICE_DISPLAYPORT:
-    if (!displayport_clear_async()) {
-      return 0;
-    }
-    break;
-#endif
-#ifdef SIMULATOR
-  case OSD_DEVICE_SIMULATOR:
-    if (!simulator_osd_clear_async()) {
-      return 0;
-    }
-    break;
-#endif
-  default:
-    break;
+  if (!osd_device_clear_async()) {
+    return false;
   }
 
   state = 0;
-  return 1;
+  return true;
 }
 
 static void osd_display_set(uint8_t x, uint8_t y, uint8_t attr, uint8_t val) {

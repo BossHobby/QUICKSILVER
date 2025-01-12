@@ -656,6 +656,14 @@ void osd_display() {
     return;
   }
 
+  static uint32_t last_redraw = 0;
+  if ((time_millis() - last_redraw) > 1000) {
+    if (osd_mark_dirty()) {
+      last_redraw = time_millis();
+    }
+    return;
+  }
+
   if (!osd_update()) {
     return;
   }

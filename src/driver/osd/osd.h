@@ -60,7 +60,8 @@ bool osd_is_ready();
 bool osd_update();
 
 void osd_clear();
-uint8_t osd_clear_async();
+bool osd_mark_dirty();
+bool osd_clear_async();
 
 void osd_display_refresh();
 
