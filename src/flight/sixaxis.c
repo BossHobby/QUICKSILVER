@@ -199,7 +199,7 @@ static bool test_gyro_move(const gyro_data_t *last_data, const gyro_data_t *data
   bool did_move = false;
   for (uint8_t i = 0; i < 3; i++) {
     const float delta = fabsf(fabsf(last_data->gyro.axis[i] * GYRO_RANGE) - fabsf(data->gyro.axis[i] * GYRO_RANGE));
-    if (delta > 0.3f) {
+    if (delta > 0.5f) {
       did_move = true;
       break;
     }
