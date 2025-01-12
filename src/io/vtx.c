@@ -355,8 +355,7 @@ void vtx_update() {
     return;
   }
 
-  if (!flags.usb_active &&
-      profile.receiver.aux[AUX_FPV_SWITCH] <= AUX_CHANNEL_11 &&
+  if (profile.receiver.aux[AUX_FPV_SWITCH] <= AUX_CHANNEL_11 &&
       vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT) {
     // we got a aux switch set, switch pit_mode accordingly
     if (rx_aux_on(AUX_FPV_SWITCH)) {
