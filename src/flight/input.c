@@ -156,8 +156,18 @@ vec3_t input_rates_calc() {
 }
 
 float input_throttle_calc(float throttle) {
-  const float n = (throttle * 2.f - 1.f);
   const float expo = profile.rate.throttle_expo;
   const float mid = profile.rate.throttle_mid;
-  return constrain((n * n * n * expo + n * (1.f - expo) + 1.f) * mid, 0.0f, 1.0f);
+  const float throttle_minus_mid = throttle - mid;
+
+  float divisor = 1;
+  if (throttle_minus_mid > 0.0f) {
+    divisor = 1 - mid;
+  }
+  if (throttle_minus_mid < 0.0f) {
+    divisor = mid;
+  }
+
+  // betaflight's throttle curve: https://github.com/betaflight/betaflight/blob/c513b102b6f2af9aa0390cfa7ef908ec652552fc/src/main/fc/rc.c#L838
+  return constrain(mid + throttle_minus_mid * (1 - expo + expo * (throttle_minus_mid * throttle_minus_mid) / (divisor * divisor)), 0.0f, 1.0f);
 }
