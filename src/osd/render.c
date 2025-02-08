@@ -101,6 +101,7 @@ static const char *filter_type_labels[] = {
     " PT1",
     " PT2",
     " PT3",
+    " LULU",
 };
 
 #pragma GCC diagnostic ignored "-Wmissing-braces"
