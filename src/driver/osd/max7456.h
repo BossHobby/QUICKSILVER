@@ -46,10 +46,10 @@ bool max7456_init();
 bool max7456_is_ready();
 void max7456_intro();
 
-uint8_t max7456_clear_async();
+bool max7456_clear_async();
 osd_system_t max7456_check_system();
 
-bool max7456_can_fit(uint8_t size);
+uint8_t max7456_can_fit();
 bool max7456_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size);
 bool max7456_flush();
 

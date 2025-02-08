@@ -135,7 +135,7 @@ static osd_system_t max7456_current_system() {
   return OSD_SYS_NONE;
 }
 
-uint8_t max7456_clear_async() {
+bool max7456_clear_async() {
   if (!max7456_is_ready()) {
     return 0;
   }
@@ -203,8 +203,8 @@ void max7456_intro() {
   }
 }
 
-bool max7456_can_fit(uint8_t size) {
-  return max7456_is_ready();
+uint8_t max7456_can_fit() {
+  return max7456_is_ready() ? 255 : 0;
 }
 
 bool max7456_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size) {

@@ -138,7 +138,7 @@ void simulator_osd_intro() {
   simulator_update();
 }
 
-uint8_t simulator_osd_clear_async() {
+bool simulator_osd_clear_async() {
   memset(osd, ' ', sizeof(osd));
   return 1;
 }
@@ -146,15 +146,17 @@ osd_system_t simulator_osd_check_system() {
   return OSD_SYS_HD;
 }
 
-bool simulator_osd_can_fit(uint8_t size) {
-  return true;
+uint8_t simulator_osd_can_fit() {
+  return 255;
 }
+
 bool simulator_osd_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size) {
   for (uint32_t i = 0; i < size; i++) {
     osd[y * 50 + x + i] = data[i];
   }
   return true;
 }
+
 bool simulator_osd_flush() {
   return true;
 }

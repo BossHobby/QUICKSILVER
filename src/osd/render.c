@@ -399,6 +399,7 @@ static void print_osd_vtx(osd_element_t *el) {
 
 void osd_init() {
   osd_device_init();
+  osd_clear();
   osd_intro();
   osd_update_screen(OSD_SCREEN_CLEAR);
 }
@@ -653,14 +654,6 @@ void osd_display() {
     // sytem has changed, reset osd state
     osd_system = sys;
     osd_update_screen(OSD_SCREEN_CLEAR);
-    return;
-  }
-
-  static uint32_t last_redraw = 0;
-  if ((time_millis() - last_redraw) > 1000) {
-    if (osd_mark_dirty()) {
-      last_redraw = time_millis();
-    }
     return;
   }
 

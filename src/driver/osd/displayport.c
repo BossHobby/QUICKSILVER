@@ -51,7 +51,6 @@ serial_port_t serial_displayport = {
 };
 
 static const uint8_t msp_options[2] = {0, 1};
-static volatile uint32_t last_heartbeat = 0;
 static bool is_detected = false;
 
 static void displayport_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
@@ -193,7 +192,8 @@ static void displayport_wait_for_ready() {
 
 void displayport_intro() {
   displayport_wait_for_ready();
-  displayport_clear_async();
+  while (!displayport_clear_async())
+    ;
 
   uint8_t buffer[24];
   for (uint8_t row = 0; row < 4; row++) {
@@ -202,24 +202,22 @@ void displayport_intro() {
       buffer[i] = start + i;
     }
     displayport_wait_for_ready();
-    displayport_push_string(OSD_ATTR_TEXT, (DISPLAYPORT_COLS / 2) - 12, (DISPLAYPORT_ROWS / 2) - 2 + row, buffer, 24);
+    while (!displayport_push_string(OSD_ATTR_TEXT, (DISPLAYPORT_COLS / 2) - 12, (DISPLAYPORT_ROWS / 2) - 2 + row, buffer, 24))
+      ;
   }
 
-  displayport_push_subcmd(SUBCMD_DRAW_SCREEN, NULL, 0);
+  while (displayport_push_subcmd(SUBCMD_DRAW_SCREEN, NULL, 0))
+    ;
 }
 
-uint8_t displayport_clear_async() {
+bool displayport_clear_async() {
   displayport_push_subcmd(SUBCMD_SET_OPTIONS, msp_options, 2);
   return displayport_push_subcmd(SUBCMD_CLEAR_SCREEN, NULL, 0);
 }
 
 bool displayport_is_ready() {
-  while (true) {
-    uint8_t data = 0;
-    if (!serial_read_bytes(&serial_displayport, &data, 1)) {
-      break;
-    }
-
+  uint8_t data = 0;
+  while (serial_read_byte(&serial_displayport, &data)) {
     msp_process_serial(&displayport_msp, data);
   }
 
@@ -230,6 +228,7 @@ bool displayport_is_ready() {
     return false;
   }
 
+  static uint32_t last_heartbeat = 0;
   if ((time_millis() - last_heartbeat) > 500) {
     displayport_push_subcmd(SUBCMD_HEARTBEAT, NULL, 0);
     last_heartbeat = time_millis();
@@ -254,9 +253,10 @@ bool displayport_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *
   return displayport_push_subcmd(SUBCMD_WRITE_STRING, buffer, size + 3);
 }
 
-bool displayport_can_fit(uint8_t size) {
+uint8_t displayport_can_fit() {
   const uint32_t free = serial_bytes_free(&serial_displayport);
-  return free > (size + 10);
+  const uint32_t overhead = MSP_HEADER_LEN + 2 + 3 + 1;
+  return (free > overhead) ? (free - overhead) : 0;
 }
 
 bool displayport_flush() {
