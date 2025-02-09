@@ -9,6 +9,7 @@
 uint8_t looptime_warning = 0;
 
 static uint32_t last_loop_cycles;
+static bool skip_looptime_update = false;
 
 void looptime_init() {
 #ifdef USE_GYRO
@@ -22,17 +23,26 @@ void looptime_init() {
   state.looptime_us = target;
   state.looptime_autodetect = target;
 
-  looptime_reset();
+  last_loop_cycles = time_cycles();
 }
 
 void looptime_reset() {
-  last_loop_cycles = time_cycles();
+  skip_looptime_update = true;
 }
 
 static void looptime_auto_detect() {
   if (state.loop_counter < 200) {
     // skip first couple of loops
     return;
+  }
+  if (skip_looptime_update) {
+    skip_looptime_update = false;
+    return;
+  }
+
+  // max loop 20ms
+  if (state.looptime_us > 20000) {
+    failloop(FAILLOOP_LOOPTIME);
   }
 
   static float loop_avg = 0;
@@ -53,7 +63,7 @@ static void looptime_auto_detect() {
   }
 
   if (loop_counter == 201) {
-    static uint8_t blown_loop_counter;
+    static uint8_t blown_loop_counter = 0;
 
     if (state.cpu_load > state.looptime_autodetect + 5) {
       blown_loop_counter++;
@@ -82,11 +92,6 @@ void looptime_update() {
   state.loop_counter++;
 
   last_loop_cycles = time_cycles();
-
-  // max loop 20ms
-  if (state.looptime_us > 20000) {
-    failloop(FAILLOOP_LOOPTIME);
-  }
 
   looptime_auto_detect();
 
