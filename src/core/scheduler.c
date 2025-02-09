@@ -52,7 +52,7 @@ static inline bool task_should_run(const uint32_t start_cycles, uint8_t task_mas
     // task shall not run in this firmware state
     return false;
   }
-  if (task->period_us > 0 && (start_cycles - task->last_time) < task->period_us) {
+  if (task->period_cycles > 0 && (start_cycles - task->last_time) < task->period_cycles) {
     return false;
   }
 
