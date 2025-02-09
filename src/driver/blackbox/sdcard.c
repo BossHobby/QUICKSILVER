@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "core/project.h"
+#include "core/scheduler.h"
 #include "driver/spi.h"
 #include "driver/time.h"
 #include "util/util.h"
@@ -304,6 +305,7 @@ sdcard_status_t sdcard_update() {
         spi_make_seg_buffer(NULL, buf, 20),
     };
     spi_seg_submit_continue(&bus, segs);
+    task_reset_runtime();
 
     state = SDCARD_RESET;
     delay_loops = 100;
@@ -314,6 +316,7 @@ sdcard_status_t sdcard_update() {
   case SDCARD_RESET: {
     static uint32_t tries = 0;
 
+    task_reset_runtime();
     uint8_t ret = sdcard_command(SDCARD_GO_IDLE, 0);
     if (ret == 0x01) {
       state = SDCARD_DETECT_INTERFACE;
@@ -329,6 +332,8 @@ sdcard_status_t sdcard_update() {
     break;
   }
   case SDCARD_DETECT_INTERFACE: {
+    task_reset_runtime();
+
     uint8_t ret = sdcard_command(SDCARD_IF_COND, 0x1AA);
     if (ret == SDCARD_R1_IDLE) {
       uint32_t voltage_check = sdcard_read_response();
@@ -351,6 +356,8 @@ sdcard_status_t sdcard_update() {
     break;
   }
   case SDCARD_DETECT_INIT: {
+    task_reset_runtime();
+
     uint8_t ret = sdcard_app_command(SDCARD_ACMD_OD_COND, sdcard_info.version == 2 ? (1 << 30) : 0);
     if (ret == 0x0) {
       state = SDCARD_DETECT_READ_INFO;
@@ -359,6 +366,8 @@ sdcard_status_t sdcard_update() {
   }
 
   case SDCARD_DETECT_READ_INFO: {
+    task_reset_runtime();
+
     uint8_t ret = sdcard_command(SDCARD_OCR, 0);
     if (ret != 0x0) {
       state = SDCARD_DETECT_FAILED;
@@ -389,6 +398,8 @@ sdcard_status_t sdcard_update() {
 
   case SDCARD_DETECT_FINISH: {
     if (!sdcard_info.high_capacity) {
+      task_reset_runtime();
+
       uint8_t ret = sdcard_command(SDACARD_SET_BLOCK_LEN, SDCARD_PAGE_SIZE);
       if (ret != 0x0) {
         state = SDCARD_DETECT_FAILED;
