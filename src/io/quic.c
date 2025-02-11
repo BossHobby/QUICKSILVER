@@ -12,6 +12,7 @@
 #include "driver/osd/max7456.h"
 #include "driver/serial.h"
 #include "driver/serial_4way.h"
+#include "driver/serial_esc.h"
 #include "driver/usb.h"
 #include "flight/control.h"
 #include "flight/sixaxis.h"
@@ -481,6 +482,28 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
     quic_send(quic, QUIC_CMD_MOTOR, QUIC_FLAG_EXIT, encode_buffer, cbor_encoder_len(&enc));
 
     serial_4way_process();
+    break;
+  }
+  case QUIC_MOTOR_SERIAL: {
+    uint8_t index = 4;
+    res = cbor_decode_uint8_t(dec, &index);
+    check_cbor_error(QUIC_CMD_MOTOR);
+
+    if (index >= 4) {
+      quic_errorf(QUIC_CMD_MOTOR, "INVALID INDEX %d", index);
+      break;
+    }
+
+    res = cbor_encode_uint8_t(&enc, &index);
+    check_cbor_error(QUIC_CMD_MOTOR);
+
+    uint32_t baud = 0;
+    res = cbor_decode_uint32_t(dec, &baud);
+    check_cbor_error(QUIC_CMD_MOTOR);
+
+    quic_send(quic, QUIC_CMD_MOTOR, QUIC_FLAG_EXIT, encode_buffer, cbor_encoder_len(&enc));
+
+    serial_esc_process(index, baud);
     break;
   }
 #endif

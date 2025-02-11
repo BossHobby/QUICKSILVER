@@ -2,6 +2,7 @@
 
 #include "driver/gpio.h"
 #include "driver/serial_4way.h"
+#include "driver/serial_esc.h"
 #include "driver/time.h"
 
 #ifdef USE_MOTOR_DSHOT
@@ -32,109 +33,10 @@
 #define CMD_BOOTINIT 0x07
 #define CMD_BOOTSIGN 0x08
 
+#define ESC_BAUD 19200
 #define START_BIT_TIMEOUT_MS 2
 
-#define BIT_TIME (SYS_CLOCK_FREQ_HZ / 19200)
-#define BIT_TIME_HALF (BIT_TIME / 2)
-#define BIT_TIME_3_4 (BIT_TIME_HALF + (BIT_TIME_HALF / 2))
-#define START_BIT_TIME (BIT_TIME_3_4)
-#define STOP_BIT_TIME ((BIT_TIME * 9) + BIT_TIME_HALF)
-
 extern bool device_is_connected();
-
-static bool esc_is_high(gpio_pins_t pin) {
-  return gpio_pin_read(pin) > 0;
-}
-
-static void esc_set_high(gpio_pins_t pin) {
-  gpio_pin_set(pin);
-}
-
-static void esc_set_low(gpio_pins_t pin) {
-  gpio_pin_reset(pin);
-}
-
-static void esc_set_input(gpio_pins_t pin) {
-  gpio_config_t gpio_init = gpio_config_default();
-  gpio_init.mode = GPIO_INPUT;
-  gpio_init.output = GPIO_OPENDRAIN;
-  gpio_init.pull = GPIO_UP_PULL;
-  gpio_init.drive = GPIO_DRIVE_NORMAL;
-  gpio_pin_init(pin, gpio_init);
-}
-
-static void esc_set_output(gpio_pins_t pin) {
-  gpio_config_t gpio_init = gpio_config_default();
-  gpio_init.mode = GPIO_OUTPUT;
-  gpio_init.output = GPIO_PUSHPULL;
-  gpio_init.pull = GPIO_NO_PULL;
-  gpio_init.drive = GPIO_DRIVE_NORMAL;
-  gpio_pin_init(pin, gpio_init);
-}
-
-static uint8_t serial_read(gpio_pins_t pin, uint8_t *bt) {
-  uint32_t start_time = time_millis();
-
-  while (esc_is_high(pin)) {
-    // check for startbit begin
-    if (time_millis() - start_time > START_BIT_TIMEOUT_MS) {
-      return 0;
-    }
-  }
-
-  // start bit
-  start_time = time_cycles();
-  uint32_t btime = START_BIT_TIME;
-  uint16_t bitmask = 0;
-  uint8_t bit = 0;
-
-  while (time_cycles() - start_time < btime)
-    ;
-
-  while (1) {
-    if (esc_is_high(pin)) {
-      bitmask |= (1 << bit);
-    }
-    btime = btime + BIT_TIME;
-    bit++;
-
-    if (bit == 10)
-      break;
-
-    while (time_cycles() - start_time < btime)
-      ;
-  }
-
-  // check start bit and stop bit
-  if ((bitmask & 1) || (!(bitmask & (1 << 9)))) {
-    return 0;
-  }
-
-  *bt = bitmask >> 1;
-
-  return 1;
-}
-
-static void serial_write(gpio_pins_t pin, uint8_t data) {
-  // shift out stopbit first
-  uint16_t bitmask = (data << 2) | 1 | (1 << 10);
-  while (1) {
-    const uint32_t start_time = time_cycles();
-    if (bitmask & 1) {
-      esc_set_high(pin);
-    } else {
-      esc_set_low(pin);
-    }
-
-    bitmask = (bitmask >> 1);
-
-    if (bitmask == 0)
-      break; // stopbit shifted out - but don't wait
-
-    while (time_cycles() - start_time < BIT_TIME)
-      ;
-  }
-}
 
 static uint16_t crc_update(uint8_t data, uint16_t crc) {
   for (uint8_t i = 0; i < 8; i++) {
@@ -154,7 +56,7 @@ static uint8_t avr_bl_read(gpio_pins_t esc, uint8_t *buf, uint8_t size) {
 
   // len 0 means 256
   for (uint16_t i = 0; i < (size == 0 ? 256 : size); i++) {
-    if (!serial_read(esc, buf + i)) {
+    if (!serial_esc_read(esc, ESC_BAUD, buf + i)) {
       return 0;
     }
     crc = crc_update(buf[i], crc);
@@ -164,10 +66,10 @@ static uint8_t avr_bl_read(gpio_pins_t esc, uint8_t *buf, uint8_t size) {
   if (device_is_connected()) {
     // With CRC read 3 more
     uint8_t crc_buf[2];
-    if (!serial_read(esc, &crc_buf[0])) {
+    if (!serial_esc_read(esc, ESC_BAUD, &crc_buf[0])) {
       return 0;
     }
-    if (!serial_read(esc, &crc_buf[1])) {
+    if (!serial_esc_read(esc, ESC_BAUD, &crc_buf[1])) {
       return 0;
     }
 
@@ -177,32 +79,32 @@ static uint8_t avr_bl_read(gpio_pins_t esc, uint8_t *buf, uint8_t size) {
     }
   }
 
-  if (!serial_read(esc, &ack)) {
+  if (!serial_esc_read(esc, ESC_BAUD, &ack)) {
     return 0;
   }
   return ack == brSUCCESS;
 }
 
 static void avr_bl_write(gpio_pins_t esc, const uint8_t *buf, const uint8_t size) {
-  esc_set_output(esc);
+  serial_esc_set_output(esc);
 
   uint16_t crc = 0;
   for (uint16_t i = 0; i < (size == 0 ? 256 : size); i++) {
-    serial_write(esc, buf[i]);
+    serial_esc_write(esc, ESC_BAUD, buf[i]);
     crc = crc_update(buf[i], crc);
   }
 
   if (device_is_connected()) {
-    serial_write(esc, (crc >> 0) & 0xFF);
-    serial_write(esc, (crc >> 8) & 0xFF);
+    serial_esc_write(esc, ESC_BAUD, (crc >> 0) & 0xFF);
+    serial_esc_write(esc, ESC_BAUD, (crc >> 8) & 0xFF);
   }
 
-  esc_set_input(esc);
+  serial_esc_set_input(esc);
 }
 
 static uint8_t avr_bl_get_ack(gpio_pins_t pin, uint32_t timeout) {
   uint8_t ack = brNONE;
-  while (!serial_read(pin, &ack) && timeout) {
+  while (!serial_esc_read(pin, ESC_BAUD, &ack) && timeout) {
     timeout--;
   };
   return ack;
@@ -246,8 +148,8 @@ static uint8_t avr_bl_send_set_buffer(gpio_pins_t pin, const uint8_t *data, uint
 }
 
 void avr_bl_init_pin(gpio_pins_t pin) {
-  esc_set_input(pin);
-  esc_set_high(pin);
+  serial_esc_set_input(pin);
+  serial_esc_set_high(pin);
 }
 
 uint8_t avr_bl_connect(gpio_pins_t pin, uint8_t *data) {
@@ -287,23 +189,23 @@ uint8_t avr_bl_send_keepalive(gpio_pins_t pin) {
 }
 
 void avr_bl_send_restart(gpio_pins_t pin, uint8_t *data) {
-  esc_set_output(pin);
-  serial_write(pin, RestartBootloader);
-  serial_write(pin, 0);
-  serial_write(pin, 0);
-  serial_write(pin, 0);
-  esc_set_input(pin);
+  serial_esc_set_output(pin);
+  serial_esc_write(pin, ESC_BAUD, RestartBootloader);
+  serial_esc_write(pin, ESC_BAUD, 0);
+  serial_esc_write(pin, ESC_BAUD, 0);
+  serial_esc_write(pin, ESC_BAUD, 0);
+  serial_esc_set_input(pin);
   data[0] = 1;
 }
 
 void avr_bl_reboot(gpio_pins_t pin) {
-  esc_set_output(pin);
+  serial_esc_set_output(pin);
 
-  esc_set_low(pin);
+  serial_esc_set_low(pin);
   time_delay_ms(300);
-  esc_set_high(pin);
+  serial_esc_set_high(pin);
 
-  esc_set_input(pin);
+  serial_esc_set_input(pin);
 }
 
 static uint8_t avr_bl_read_cmd(gpio_pins_t pin, uint8_t cmd, uint16_t addr, uint8_t *data, uint8_t size) {
