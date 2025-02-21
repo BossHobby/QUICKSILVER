@@ -566,10 +566,109 @@ PC12:
 PC13: []
 PC14: []
 PC15: []
+PD0: []
+PD1: []
 PD2:
 - func: serial
   af: 8
   instance: 5
   name: rx
+PD3: []
+PD4: []
+PD5:
+- func: serial
+  af: 7
+  instance: 2
+  name: tx
+PD6:
+- func: serial
+  af: 7
+  instance: 2
+  name: rx
+PD7: []
+PD8:
+- func: serial
+  af: 7
+  instance: 3
+  name: tx
+PD9:
+- func: serial
+  af: 7
+  instance: 3
+  name: rx
+PD10: []
+PD11: []
+PD12:
+- func: timer
+  af: 2
+  instance: 4
+  name: ch1
+PD13:
+- func: timer
+  af: 2
+  instance: 4
+  name: ch2
+PD14:
+- func: timer
+  af: 2
+  instance: 4
+  name: ch3
+PD15:
+- func: timer
+  af: 2
+  instance: 4
+  name: ch4
+PE0: []
+PE1: []
+PE2: []
+PE3: []
+PE4: []
+PE5:
+- func: timer
+  af: 3
+  instance: 9
+  name: ch1
+PE6:
+- func: timer
+  af: 3
+  instance: 9
+  name: ch2
+PE7: []
+PE8:
+- func: timer
+  af: 1
+  instance: 1
+  name: ch1n
+PE9:
+- func: timer
+  af: 1
+  instance: 1
+  name: ch1
+PE10:
+- func: timer
+  af: 1
+  instance: 1
+  name: ch2n
+PE11:
+- func: timer
+  af: 1
+  instance: 1
+  name: ch2
+PE12:
+- func: timer
+  af: 1
+  instance: 1
+  name: ch3n
+PE13:
+- func: timer
+  af: 1
+  instance: 1
+  name: ch3
+PE14:
+- func: timer
+  af: 1
+  instance: 1
+  name: ch4
+PE15: []
 PH0: []
 PH1: []

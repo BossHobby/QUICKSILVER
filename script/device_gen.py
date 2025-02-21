@@ -107,7 +107,7 @@ class DevicesCache(dict):
 
 
 devices = [
-    "stm32f405rg",
+    "stm32f405vg",
     "stm32f411re",
     "stm32g473ceu6",
     "stm32f722re",
