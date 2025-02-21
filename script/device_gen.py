@@ -1,6 +1,7 @@
 import glob
 import hashlib
 import re
+import yaml
 
 import modm_devices
 
@@ -111,10 +112,12 @@ def map_signal(s):
 
     if s["driver"] == "tim" and s["name"].startswith("ch"):
         return {
-            "func": "timer",
+            "tag": {
+                "type": "timer",
+                "index": int(s["instance"]),
+                "func": s["name"],
+            },
             "af": int(s.get("af", "-1")),
-            "instance": int(s["instance"]),
-            "name": s["name"],
         }
     elif s["driver"] == "spi" and (
         s["name"] == "sck"
@@ -124,26 +127,32 @@ def map_signal(s):
         or s["name"] == "rx"
     ):
         return {
-            "func": "spi",
+            "tag": {
+                "type": "spi",
+                "index": int(s["instance"]),
+                "func": {"tx": "mosi", "rx": "miso"}.get(s["name"], s["name"]),
+            },
             "af": int(s.get("af", "-1")),
-            "instance": int(s["instance"]),
-            "name": {"tx": "mosi", "rx": "miso"}.get(s["name"], s["name"]),
         }
     elif (s["driver"] == "uart" or s["driver"] == "usart") and (
         s["name"] == "rx" or s["name"] == "tx"
     ):
         return {
-            "func": "serial",
+            "tag": {
+                "type": "serial",
+                "index": int(s["instance"]),
+                "func": s["name"],
+            },
             "af": int(s.get("af", "-1")),
-            "instance": int(s["instance"]),
-            "name": s["name"],
         }
     elif s["driver"] == "adc" and re.match(r"in\d+", s.get("name", "in0")):
         return {
-            "func": "adc",
+            "tag": {
+                "type": "adc",
+                "index": int(s["instance"]),
+                "func": s.get("name", "in0xff")[2:],
+            },
             "af": -1,
-            "instance": int(s["instance"]),
-            "name": s.get("name", "in0xff")[2:],
         }
     else:
         return None
@@ -153,14 +162,14 @@ def map_tag(f):
     if f is None:
         return None
 
-    if f["func"] == "timer":
-        return f"TIMER_TAG(TIMER{f['instance']}, TIMER_{f['name']})".upper()
-    elif f["func"] == "spi":
-        return f"SPI_TAG(SPI_PORT{f['instance']}, RES_SPI_{f['name']})".upper()
-    elif f["func"] == "serial":
-        return f"SERIAL_TAG(SERIAL_PORT{f['instance']}, RES_SERIAL_{f['name']})".upper()
-    elif f["func"] == "adc":
-        return f"ADC_TAG(ADC_DEVICE{f['instance']}, {f['name']})".upper()
+    if f["tag"]["type"] == "timer":
+        return f"TIMER_TAG(TIMER{f['tag']['index']}, TIMER_{f['tag']['func']})".upper()
+    elif f["tag"]["type"] == "spi":
+        return f"SPI_TAG(SPI_PORT{f['tag']['index']}, RES_SPI_{f['tag']['func']})".upper()
+    elif f["tag"]["type"] == "serial":
+        return f"SERIAL_TAG(SERIAL_PORT{f['tag']['index']}, RES_SERIAL_{f['tag']['func']})".upper()
+    elif f["tag"]["type"] == "adc":
+        return f"ADC_TAG(ADC_DEVICE{f['tag']['index']}, {f['tag']['func']})".upper()
     else:
         return None
 
@@ -189,51 +198,54 @@ for device in devices:
                 if "signal" not in pin:
                     continue
 
+                signals = []
                 for s in pin["signal"]:
                     f = map_signal(s)
                     s = map_tag(f)
                     if s is None:
                         continue
+                    signals.append(f)
                     file.write(
                         f"GPIO_AF(PIN_{pin['port']}{pin['pin']}, {f['af']}, {s})\n".upper()
                     )
 
-    with open(f"src/system/{device[:9]}/dma.in", "w") as file:
-        for driver in caches[key].get_all_drivers("dma"):
-            if "streams" in driver:
-                for dma in driver["streams"]:
-                    for stream in dma["stream"]:
-                        for channel in stream["channel"]:
-                            funcs = [
-                                r
-                                for s in channel["signal"]
-                                if (r := map_tag(map_signal(s))) is not None
-                            ]
-                            for func in funcs:
-                                entry = ", ".join(
-                                    [
-                                        f".tag = {func}",
-                                        f".port_index = {dma['instance']}",
-                                        f".stream_index = {stream['position']}",
-                                        f".channel = LL_DMA_CHANNEL_{channel['position']}",
-                                    ]
-                                )
-                                file.write("{ " + entry + " },\n")
-            if "requests" in driver:
-                for dma in driver["requests"]:
-                    for request in dma["request"]:
+                pins[f"P{pin['port']}{pin['pin']}".upper()] = signals
+
+    with open(f"../Targets/mcu/{device[:9]}/gpio.yaml", "w") as file:
+        yaml.dump(pins, file, sort_keys=False)
+
+    dma_index = []
+    for driver in caches[key].get_all_drivers("dma"):
+        if "streams" in driver:
+            for dma in driver["streams"]:
+                for stream in dma["stream"]:
+                    for channel in stream["channel"]:
                         funcs = [
                             r
-                            for s in request["signal"]
-                            if (r := map_tag(map_signal(s))) is not None
+                            for s in channel["signal"]
+                            if (r := map_signal(s)) is not None
                         ]
                         for func in funcs:
-                            entry = ", ".join(
-                                [
-                                    f".tag = {func}",
-                                    f".port_index = -1",
-                                    f".stream_index = -1",
-                                    f".request = {request['position']}",
-                                ]
-                            )
-                            file.write("{ " + entry + " },\n")
+                            dma_index.append({
+                                "tag": func['tag'],
+                                "dma": {
+                                    "port": int(dma['instance']),
+                                    "stream": int(stream['position']),
+                                },
+                                "channel": int(channel['position'])
+                            })
+        if "requests" in driver:
+            for dma in driver["requests"]:
+                for request in dma["request"]:
+                    funcs = [
+                        r
+                        for s in request["signal"]
+                        if (r := map_signal(s)) is not None
+                    ]
+                    for func in funcs:
+                        dma_index.append({
+                            "tag": func['tag'], 
+                            "request": int(request['position'])
+                        })
+    with open(f"../Targets/mcu/{device[:9]}/dma.yaml", "w") as file:
+        yaml.dump(dma_index, file, sort_keys=False)
