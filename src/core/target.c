@@ -190,7 +190,7 @@ cbor_result_t cbor_decode_gpio_pins_t(cbor_value_t *dec, gpio_pins_t *t) {
 
   uint32_t val = (buf[1] - 'A') * GPIO_PORT_MAX;
   if (size == 4) {
-    val += 10;
+    val += (buf[2] - '0') * 10;
     val += buf[3] - '0';
   } else {
     val += buf[2] - '0';
