@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 
+#include "driver/baro/baro.h"
 #include "driver/serial.h"
 #include "driver/usb.h"
 #include "flight/control.h"
@@ -26,6 +27,7 @@ void util_task() {
   rgb_led_update();
 
   buzzer_update();
+  baro_update();
 }
 
 FAST_RAM task_t tasks[TASK_MAX] = {

@@ -215,6 +215,15 @@ typedef struct {
   END_STRUCT()
 
 typedef struct {
+  i2c_ports_t port;
+} target_i2c_device_t;
+
+#define TARGET_I2C_DEVICE_MEMBERS   \
+  START_STRUCT(target_i2c_device_t) \
+  MEMBER(port, uint8_t)             \
+  END_STRUCT()
+
+typedef struct {
   uint8_t name[32];
   uint8_t manufacturer[32];
 
@@ -232,6 +241,8 @@ typedef struct {
   target_spi_device_t flash;
   target_spi_device_t sdcard;
   target_rx_spi_device_t rx_spi;
+
+  target_i2c_device_t baro;
 
   gpio_pins_t usb_detect;
   gpio_pins_t fpv;
@@ -265,6 +276,7 @@ typedef struct {
   MEMBER(flash, target_spi_device_t)                                             \
   MEMBER(sdcard, target_spi_device_t)                                            \
   MEMBER(rx_spi, target_rx_spi_device_t)                                         \
+  MEMBER(baro, target_i2c_device_t)                                              \
   MEMBER(usb_detect, gpio_pins_t)                                                \
   MEMBER(fpv, gpio_pins_t)                                                       \
   MEMBER(vbat, gpio_pins_t)                                                      \

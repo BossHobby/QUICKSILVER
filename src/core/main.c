@@ -11,6 +11,7 @@
 #include "core/scheduler.h"
 #include "core/target.h"
 #include "driver/adc.h"
+#include "driver/baro/baro.h"
 #include "driver/gpio.h"
 #include "driver/interrupt.h"
 #include "driver/motor.h"
@@ -105,6 +106,8 @@ __attribute__((__used__)) int main() {
 
   // wait for devices to wake up
   time_delay_ms(100);
+
+  baro_init();
   rx_spektrum_bind();
 
   osd_init();
