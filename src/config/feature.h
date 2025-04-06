@@ -2,9 +2,11 @@
 
 #ifndef SIMULATOR
 #define USE_ADC
+#define USE_I2C
 #define USE_SPI
 #define USE_SERIAL
 #define USE_GYRO
+#define USE_BARO
 #define USE_SOFT_SERIAL
 #define USE_SDCARD
 #define USE_DATA_FLASH
