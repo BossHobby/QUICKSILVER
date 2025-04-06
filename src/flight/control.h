@@ -95,6 +95,8 @@ typedef struct {
   vec3_t GEstG; // gravity vector
   vec3_t attitude;
 
+  float altitude;
+
   vec3_t setpoint; // angular velocity setpoint from stick input
   vec3_t error;    // setpoint - gyro = error in angular velocity
 
@@ -151,6 +153,7 @@ typedef struct {
   MEMBER(gyro_delta_angle, vec3_t)            \
   MEMBER(GEstG, vec3_t)                       \
   MEMBER(attitude, vec3_t)                    \
+  MEMBER(altitude, float)                     \
   MEMBER(setpoint, vec3_t)                    \
   MEMBER(error, vec3_t)                       \
   MEMBER(pid_p_term, vec3_t)                  \

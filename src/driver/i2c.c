@@ -1,5 +1,7 @@
 #include "driver/i2c.h"
 
+#ifdef USE_I2C
+
 // Clock period in us during unstick transfer
 #define UNSTICK_CLK_US 10 // 100Khz
 // Allow 500us for clock stretch to complete during unstick
@@ -167,3 +169,4 @@ uint8_t i2c_read_reg(const i2c_bus_device_t *bus, const uint8_t reg) {
   i2c_wait_idle(bus);
   return data;
 }
+#endif // USE_I2C
