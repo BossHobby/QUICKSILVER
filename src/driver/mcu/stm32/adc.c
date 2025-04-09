@@ -158,20 +158,16 @@ static void adc_init_dev(adc_devices_t index) {
 #endif
 
   if (adc_pins[ADC_CHAN_VREF].dev == index) {
-#if defined(STM32G4)
+#if defined(STM32G4) || defined(STM32H7)
     LL_ADC_SetCommonPathInternalChAdd(dev->common, LL_ADC_PATH_INTERNAL_VREFINT);
-#elif defined(STM32H7)
-    LL_ADC_SetCommonPathInternalCh(dev->common, LL_ADC_GetCommonPathInternalCh(dev->common) | LL_ADC_PATH_INTERNAL_VREFINT);
 #else
     LL_ADC_SetCommonPathInternalCh(dev->common, LL_ADC_PATH_INTERNAL_VREFINT);
 #endif
   }
 
   if (adc_pins[ADC_CHAN_TEMP].dev == index) {
-#if defined(STM32G4)
+#if defined(STM32G4) || defined(STM32H7)
     LL_ADC_SetCommonPathInternalChAdd(dev->common, LL_ADC_PATH_INTERNAL_TEMPSENSOR);
-#elif defined(STM32H7)
-    LL_ADC_SetCommonPathInternalCh(dev->common, LL_ADC_GetCommonPathInternalCh(dev->common) | LL_ADC_PATH_INTERNAL_TEMPSENSOR);
 #else
     LL_ADC_SetCommonPathInternalCh(dev->common, LL_ADC_PATH_INTERNAL_TEMPSENSOR);
 #endif
