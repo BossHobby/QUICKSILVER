@@ -44,29 +44,29 @@ void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   dma_enable_rcc(dma);
   LL_DMA_DeInit(dma->port, dma->stream_index);
 
-  LL_DMA_InitTypeDef DMA_InitStructure;
-  LL_DMA_StructInit(&DMA_InitStructure);
+  LL_DMA_InitTypeDef dma_init;
+  LL_DMA_StructInit(&dma_init);
 #if defined(STM32H7) || defined(STM32G4)
-  DMA_InitStructure.PeriphRequest = target.dma[port->dma_device].request;
+  dma_init.PeriphRequest = target.dma[port->dma_device].request;
 #else
-  DMA_InitStructure.Channel = dma_map_channel(target.dma[port->dma_device].channel);
+  dma_init.Channel = dma_map_channel(target.dma[port->dma_device].channel);
 #endif
-  DMA_InitStructure.PeriphOrM2MSrcAddress = 0x0; // overwritten later
-  DMA_InitStructure.MemoryOrM2MDstAddress = 0x0; // overwritten later
-  DMA_InitStructure.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
-  DMA_InitStructure.NbData = DSHOT_DMA_BUFFER_SIZE;
-  DMA_InitStructure.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
-  DMA_InitStructure.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
-  DMA_InitStructure.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_WORD;
-  DMA_InitStructure.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_WORD;
-  DMA_InitStructure.Mode = LL_DMA_MODE_NORMAL;
-  DMA_InitStructure.Priority = LL_DMA_PRIORITY_VERYHIGH;
+  dma_init.PeriphOrM2MSrcAddress = 0x0; // overwritten later
+  dma_init.MemoryOrM2MDstAddress = 0x0; // overwritten later
+  dma_init.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
+  dma_init.NbData = DSHOT_DMA_BUFFER_SIZE;
+  dma_init.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
+  dma_init.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
+  dma_init.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_WORD;
+  dma_init.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_WORD;
+  dma_init.Mode = LL_DMA_MODE_NORMAL;
+  dma_init.Priority = LL_DMA_PRIORITY_VERYHIGH;
 #ifndef STM32G4
-  DMA_InitStructure.FIFOMode = LL_DMA_FIFOMODE_DISABLE;
-  DMA_InitStructure.MemBurst = LL_DMA_MBURST_SINGLE;
-  DMA_InitStructure.PeriphBurst = LL_DMA_PBURST_SINGLE;
+  dma_init.FIFOMode = LL_DMA_FIFOMODE_DISABLE;
+  dma_init.MemBurst = LL_DMA_MBURST_SINGLE;
+  dma_init.PeriphBurst = LL_DMA_PBURST_SINGLE;
 #endif
-  LL_DMA_Init(dma->port, dma->stream_index, &DMA_InitStructure);
+  LL_DMA_Init(dma->port, dma->stream_index, &dma_init);
 
   interrupt_enable(dma->irq, DMA_PRIORITY);
   LL_DMA_EnableIT_TC(dma->port, dma->stream_index);
