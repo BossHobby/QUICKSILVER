@@ -81,32 +81,33 @@ static void spi_dma_init_rx(spi_ports_t port) {
 
   LL_DMA_DeInit(dma->port, dma->stream_index);
 
-  LL_DMA_InitTypeDef DMA_InitStructure;
+  LL_DMA_InitTypeDef dma_init;
+  LL_DMA_StructInit(&dma_init);
 #if defined(STM32H7) || defined(STM32G4)
-  DMA_InitStructure.PeriphRequest = target.dma[spi_port_defs[port].dma_rx].request;
+  dma_init.PeriphRequest = target.dma[spi_port_defs[port].dma_rx].request;
 #else
-  DMA_InitStructure.Channel = dma_map_channel(target.dma[spi_port_defs[port].dma_rx].channel);
+  dma_init.Channel = dma_map_channel(target.dma[spi_port_defs[port].dma_rx].channel);
 #endif
 #if defined(STM32H7)
-  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&spi_port_defs[port].channel->RXDR;
+  dma_init.PeriphOrM2MSrcAddress = (uint32_t)&spi_port_defs[port].channel->RXDR;
 #else
-  DMA_InitStructure.PeriphOrM2MSrcAddress = LL_SPI_DMA_GetRegAddr(spi_port_defs[port].channel);
+  dma_init.PeriphOrM2MSrcAddress = LL_SPI_DMA_GetRegAddr(spi_port_defs[port].channel);
 #endif
-  DMA_InitStructure.MemoryOrM2MDstAddress = 0;
-  DMA_InitStructure.Direction = LL_DMA_DIRECTION_PERIPH_TO_MEMORY;
-  DMA_InitStructure.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
-  DMA_InitStructure.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
-  DMA_InitStructure.NbData = 0;
-  DMA_InitStructure.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_BYTE;
-  DMA_InitStructure.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_BYTE;
-  DMA_InitStructure.Mode = LL_DMA_MODE_NORMAL;
-  DMA_InitStructure.Priority = LL_DMA_PRIORITY_HIGH;
+  dma_init.MemoryOrM2MDstAddress = 0;
+  dma_init.Direction = LL_DMA_DIRECTION_PERIPH_TO_MEMORY;
+  dma_init.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
+  dma_init.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
+  dma_init.NbData = 0;
+  dma_init.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_BYTE;
+  dma_init.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_BYTE;
+  dma_init.Mode = LL_DMA_MODE_NORMAL;
+  dma_init.Priority = LL_DMA_PRIORITY_HIGH;
 #ifndef STM32G4
-  DMA_InitStructure.FIFOMode = LL_DMA_FIFOMODE_DISABLE;
-  DMA_InitStructure.MemBurst = LL_DMA_MBURST_SINGLE;
-  DMA_InitStructure.PeriphBurst = LL_DMA_PBURST_SINGLE;
+  dma_init.FIFOMode = LL_DMA_FIFOMODE_DISABLE;
+  dma_init.MemBurst = LL_DMA_MBURST_SINGLE;
+  dma_init.PeriphBurst = LL_DMA_PBURST_SINGLE;
 #endif
-  LL_DMA_Init(dma->port, dma->stream_index, &DMA_InitStructure);
+  LL_DMA_Init(dma->port, dma->stream_index, &dma_init);
   LL_DMA_DisableStream(dma->port, dma->stream_index);
 }
 
@@ -115,32 +116,33 @@ static void spi_dma_init_tx(spi_ports_t port) {
 
   LL_DMA_DeInit(dma->port, dma->stream_index);
 
-  LL_DMA_InitTypeDef DMA_InitStructure;
+  LL_DMA_InitTypeDef dma_init;
+  LL_DMA_StructInit(&dma_init);
 #if defined(STM32H7) || defined(STM32G4)
-  DMA_InitStructure.PeriphRequest = target.dma[spi_port_defs[port].dma_tx].request;
+  dma_init.PeriphRequest = target.dma[spi_port_defs[port].dma_tx].request;
 #else
-  DMA_InitStructure.Channel = dma_map_channel(target.dma[spi_port_defs[port].dma_tx].channel);
+  dma_init.Channel = dma_map_channel(target.dma[spi_port_defs[port].dma_tx].channel);
 #endif
 #if defined(STM32H7)
-  DMA_InitStructure.PeriphOrM2MSrcAddress = (uint32_t)&spi_port_defs[port].channel->TXDR;
+  dma_init.PeriphOrM2MSrcAddress = (uint32_t)&spi_port_defs[port].channel->TXDR;
 #else
-  DMA_InitStructure.PeriphOrM2MSrcAddress = LL_SPI_DMA_GetRegAddr(spi_port_defs[port].channel);
+  dma_init.PeriphOrM2MSrcAddress = LL_SPI_DMA_GetRegAddr(spi_port_defs[port].channel);
 #endif
-  DMA_InitStructure.MemoryOrM2MDstAddress = 0;
-  DMA_InitStructure.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
-  DMA_InitStructure.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
-  DMA_InitStructure.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
-  DMA_InitStructure.NbData = 0;
-  DMA_InitStructure.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_BYTE;
-  DMA_InitStructure.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_BYTE;
-  DMA_InitStructure.Mode = LL_DMA_MODE_NORMAL;
-  DMA_InitStructure.Priority = LL_DMA_PRIORITY_VERYHIGH;
+  dma_init.MemoryOrM2MDstAddress = 0;
+  dma_init.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
+  dma_init.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
+  dma_init.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
+  dma_init.NbData = 0;
+  dma_init.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_BYTE;
+  dma_init.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_BYTE;
+  dma_init.Mode = LL_DMA_MODE_NORMAL;
+  dma_init.Priority = LL_DMA_PRIORITY_VERYHIGH;
 #ifndef STM32G4
-  DMA_InitStructure.FIFOMode = LL_DMA_FIFOMODE_DISABLE;
-  DMA_InitStructure.MemBurst = LL_DMA_MBURST_SINGLE;
-  DMA_InitStructure.PeriphBurst = LL_DMA_PBURST_SINGLE;
+  dma_init.FIFOMode = LL_DMA_FIFOMODE_DISABLE;
+  dma_init.MemBurst = LL_DMA_MBURST_SINGLE;
+  dma_init.PeriphBurst = LL_DMA_PBURST_SINGLE;
 #endif
-  LL_DMA_Init(dma->port, dma->stream_index, &DMA_InitStructure);
+  LL_DMA_Init(dma->port, dma->stream_index, &dma_init);
   LL_DMA_DisableStream(dma->port, dma->stream_index);
 }
 
@@ -205,15 +207,16 @@ void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) 
   LL_DMA_SetMemoryAddress(dma_tx->port, dma_tx->stream_index, (uint32_t)buffer);
   LL_DMA_SetDataLength(dma_tx->port, dma_tx->stream_index, length);
 
+#ifdef STM32H7
+  LL_SPI_SetTransferSize(spi_port_defs[port].channel, length);
+#endif
+
   LL_DMA_EnableStream(dma_rx->port, dma_rx->stream_index);
   LL_DMA_EnableStream(dma_tx->port, dma_tx->stream_index);
 
   LL_SPI_EnableDMAReq_RX(spi_port_defs[port].channel);
   LL_SPI_EnableDMAReq_TX(spi_port_defs[port].channel);
 
-#ifdef STM32H7
-  LL_SPI_SetTransferSize(spi_port_defs[port].channel, length);
-#endif
   LL_SPI_Enable(spi_port_defs[port].channel);
 #ifdef STM32H7
   LL_SPI_StartMasterTransfer(spi_port_defs[port].channel);
@@ -233,6 +236,7 @@ void spi_device_init(spi_ports_t port) {
   LL_SPI_DeInit(def->channel);
 
   LL_SPI_InitTypeDef default_init;
+  LL_SPI_StructInit(&default_init);
   default_init.TransferDirection = LL_SPI_FULL_DUPLEX;
   default_init.Mode = LL_SPI_MODE_MASTER;
   default_init.DataWidth = LL_SPI_DATAWIDTH_8BIT;
