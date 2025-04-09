@@ -115,6 +115,7 @@ void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool s
   const serial_ports_t port = config.port;
 
   LL_USART_InitTypeDef usart_init;
+  LL_USART_StructInit(&usart_init);
   usart_init.BaudRate = config.baudrate;
   usart_init.DataWidth = LL_USART_DATAWIDTH_8B;
   usart_init.StopBits = stop_bits_map[config.stop_bits];
