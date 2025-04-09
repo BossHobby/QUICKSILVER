@@ -80,29 +80,29 @@ void rgb_led_init() {
   dma_enable_rcc(rgb_dma);
   LL_DMA_DeInit(rgb_dma->port, rgb_dma->stream_index);
 
-  LL_DMA_InitTypeDef DMA_InitStructure;
-  LL_DMA_StructInit(&DMA_InitStructure);
+  LL_DMA_InitTypeDef dma_init;
+  LL_DMA_StructInit(&dma_init);
 #if defined(STM32H7) || defined(STM32G4)
-  DMA_InitStructure.PeriphRequest = target.dma[DMA_DEVICE_RGB].request;
+  dma_init.PeriphRequest = target.dma[DMA_DEVICE_RGB].request;
 #else
-  DMA_InitStructure.Channel = dma_map_channel(target.dma[DMA_DEVICE_RGB].channel);
+  dma_init.Channel = dma_map_channel(target.dma[DMA_DEVICE_RGB].channel);
 #endif
-  DMA_InitStructure.PeriphOrM2MSrcAddress = timer_channel_addr(def->instance, ch);
-  DMA_InitStructure.MemoryOrM2MDstAddress = (uint32_t)rgb_timer_buffer;
-  DMA_InitStructure.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
-  DMA_InitStructure.NbData = RGB_BUFFER_SIZE;
-  DMA_InitStructure.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
-  DMA_InitStructure.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
-  DMA_InitStructure.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_WORD;
-  DMA_InitStructure.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_WORD;
-  DMA_InitStructure.Mode = LL_DMA_MODE_NORMAL;
-  DMA_InitStructure.Priority = LL_DMA_PRIORITY_VERYHIGH;
+  dma_init.PeriphOrM2MSrcAddress = timer_channel_addr(def->instance, ch);
+  dma_init.MemoryOrM2MDstAddress = (uint32_t)rgb_timer_buffer;
+  dma_init.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
+  dma_init.NbData = RGB_BUFFER_SIZE;
+  dma_init.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
+  dma_init.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
+  dma_init.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_WORD;
+  dma_init.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_WORD;
+  dma_init.Mode = LL_DMA_MODE_NORMAL;
+  dma_init.Priority = LL_DMA_PRIORITY_VERYHIGH;
 #ifndef STM32G4
-  DMA_InitStructure.FIFOMode = LL_DMA_FIFOMODE_DISABLE;
-  DMA_InitStructure.MemBurst = LL_DMA_MBURST_SINGLE;
-  DMA_InitStructure.PeriphBurst = LL_DMA_PBURST_SINGLE;
+  dma_init.FIFOMode = LL_DMA_FIFOMODE_DISABLE;
+  dma_init.MemBurst = LL_DMA_MBURST_SINGLE;
+  dma_init.PeriphBurst = LL_DMA_PBURST_SINGLE;
 #endif
-  LL_DMA_Init(rgb_dma->port, rgb_dma->stream_index, &DMA_InitStructure);
+  LL_DMA_Init(rgb_dma->port, rgb_dma->stream_index, &dma_init);
 
   LL_DMA_EnableIT_TC(rgb_dma->port, rgb_dma->stream_index);
   interrupt_enable(rgb_dma->irq, DMA_PRIORITY);
