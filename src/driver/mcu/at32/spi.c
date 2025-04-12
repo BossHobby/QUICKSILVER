@@ -167,7 +167,7 @@ void spi_reconfigure(spi_bus_device_t *bus) {
   }
 }
 
-void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length) {
+void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length, bool has_rx) {
   const dma_stream_def_t *dma_tx = &dma_stream_defs[target.dma[spi_port_defs[port].dma_tx].dma];
   const dma_stream_def_t *dma_rx = &dma_stream_defs[target.dma[spi_port_defs[port].dma_rx].dma];
 
@@ -283,7 +283,7 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   const dma_stream_def_t *dma_tx = &dma_stream_defs[target.dma[spi_port_defs[port].dma_tx].dma];
   const dma_stream_def_t *dma_rx = &dma_stream_defs[target.dma[spi_port_defs[port].dma_rx].dma];
 
-  if (!dma_is_flag_active_tc(dma_rx)) {
+  if (!dma_is_flag_active(dma_rx, DMA_FDT_FLAG)) {
     return;
   }
 
