@@ -16,7 +16,7 @@ DMA_RAM uint8_t txn_buffers[SPI_TXN_MAX][DMA_ALIGN(512)];
 
 extern void spi_device_init(spi_ports_t port);
 extern void spi_reconfigure(spi_bus_device_t *bus);
-extern void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length);
+extern void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length, bool has_rx);
 
 static inline __attribute__((always_inline)) spi_txn_t *spi_txn_pop(spi_bus_device_t *bus) {
   ATOMIC_BLOCK_ALL {
@@ -84,7 +84,7 @@ bool spi_txn_continue_port(spi_ports_t port) {
   spi_reconfigure(txn->bus);
   spi_csn_enable(txn->bus);
 
-  spi_dma_transfer_begin(port, txn->buffer, txn->size);
+  spi_dma_transfer_begin(port, txn->buffer, txn->size, txn->flags & TXN_DELAYED_RX);
 
   return true;
 }
