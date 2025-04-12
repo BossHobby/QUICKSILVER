@@ -100,7 +100,10 @@ typedef struct spi_bus_device {
 
 typedef struct {
   bool is_init;
+
   volatile bool dma_done;
+  volatile bool dma_rx_done;
+  volatile bool dma_tx_done;
 
   // only modified by the main loop
   volatile uint8_t txn_head;

@@ -9,14 +9,14 @@
 #ifdef USE_SPI
 
 FAST_RAM spi_device_t spi_dev[SPI_PORT_MAX] = {
-    [RANGE_INIT(0, SPI_PORT_MAX)] = {.is_init = false, .dma_done = true, .txn_head = 0, .txn_tail = 0},
+    [RANGE_INIT(0, SPI_PORT_MAX)] = {.is_init = false, .dma_done = true, .dma_tx_done = true, .dma_rx_done = true, .txn_head = 0, .txn_tail = 0},
 };
 FAST_RAM spi_txn_t txn_pool[SPI_TXN_MAX];
 DMA_RAM uint8_t txn_buffers[SPI_TXN_MAX][DMA_ALIGN(512)];
 
 extern void spi_device_init(spi_ports_t port);
 extern void spi_reconfigure(spi_bus_device_t *bus);
-extern void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length);
+extern void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length, bool has_rx);
 
 static inline __attribute__((always_inline)) spi_txn_t *spi_txn_pop(spi_bus_device_t *bus) {
   ATOMIC_BLOCK_ALL {
@@ -84,7 +84,7 @@ bool spi_txn_continue_port(spi_ports_t port) {
   spi_reconfigure(txn->bus);
   spi_csn_enable(txn->bus);
 
-  spi_dma_transfer_begin(port, txn->buffer, txn->size);
+  spi_dma_transfer_begin(port, txn->buffer, txn->size, txn->flags & TXN_DELAYED_RX);
 
   return true;
 }
