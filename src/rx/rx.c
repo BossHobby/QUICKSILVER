@@ -5,6 +5,7 @@
 #include "core/flash.h"
 #include "core/profile.h"
 #include "core/project.h"
+#include "core/tasks.h"
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "flight/control.h"
@@ -86,7 +87,7 @@ static void rx_apply_smoothing() {
     return;
   }
 
-  filter_lp_pt2_coeff(&rx_filter, state.rx_filter_hz);
+  filter_lp_pt2_coeff(&rx_filter, state.rx_filter_hz, task_get_period_us(TASK_RX));
 
   state.rx.roll = constrain(state.rx.roll, -1.0, 1.0);
   state.rx.pitch = constrain(state.rx.pitch, -1.0, 1.0);
@@ -124,7 +125,7 @@ static void rx_init_state() {
   state.aux[AUX_CHANNEL_ON] = 1;
   state.aux[AUX_CHANNEL_OFF] = 0;
 
-  filter_lp_pt2_init(&rx_filter, rx_filter_state, 4, state.rx_filter_hz);
+  filter_lp_pt2_init(&rx_filter, rx_filter_state, 4, state.rx_filter_hz, task_get_period_us(TASK_RX));
 }
 
 void rx_init() {

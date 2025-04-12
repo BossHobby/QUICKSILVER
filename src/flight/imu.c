@@ -7,6 +7,7 @@
 
 #include "core/profile.h"
 #include "core/project.h"
+#include "core/tasks.h"
 #include "driver/time.h"
 #include "flight/control.h"
 #include "flight/filter.h"
@@ -49,8 +50,8 @@ void imu_init() {
   }
 
 #ifdef QUICKSILVER_IMU
-  filter_lp_pt1_init(&filter, filter_pass1, 3, PT1_FILTER_HZ);
-  filter_lp_pt1_init(&filter, filter_pass2, 3, PT1_FILTER_HZ);
+  filter_lp_pt1_init(&filter, filter_pass1, 3, PT1_FILTER_HZ, task_get_period_us(TASK_IMU));
+  filter_lp_pt1_init(&filter, filter_pass2, 3, PT1_FILTER_HZ, task_get_period_us(TASK_IMU));
 #endif
 }
 
@@ -127,7 +128,7 @@ void imu_calc() {
   }};
   state.GEstG = vec3_rotate(state.GEstG, rot);
 
-  filter_lp_pt1_coeff(&filter, PT1_FILTER_HZ);
+  filter_lp_pt1_coeff(&filter, PT1_FILTER_HZ, task_get_period_us(TASK_IMU));
 
   state.accel.roll = filter_lp_pt1_step(&filter, &filter_pass1[0], state.accel_raw.roll);
   state.accel.pitch = filter_lp_pt1_step(&filter, &filter_pass1[1], state.accel_raw.pitch);

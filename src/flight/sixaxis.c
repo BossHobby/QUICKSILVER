@@ -9,6 +9,7 @@
 #include "core/flash.h"
 #include "core/profile.h"
 #include "core/project.h"
+#include "core/tasks.h"
 #include "driver/gyro/gyro.h"
 #include "driver/serial.h"
 #include "driver/time.h"
@@ -54,13 +55,13 @@ bool sixaxis_detect() {
 
 void sixaxis_init() {
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
-    filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq);
+    filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq, task_get_period_us(TASK_GYRO));
   }
 
   for (uint8_t i = 0; i < SDFT_AXES; i++) {
     sdft_init(&gyro_sdft[i]);
     for (uint8_t j = 0; j < SDFT_PEAKS; j++) {
-      filter_biquad_notch_init(&notch_filter[i][j], &notch_filter_state[i][j], 1, 0);
+      filter_biquad_notch_init(&notch_filter[i][j], &notch_filter_state[i][j], 1, 0, task_get_period_us(TASK_GYRO));
     }
   }
 }
@@ -129,8 +130,8 @@ static vec3_t sixaxis_apply_matrix(vec3_t v) {
 void sixaxis_read() {
   sixaxis_compute_matrix();
 
-  filter_coeff(profile.filter.gyro[0].type, &filter[0], profile.filter.gyro[0].cutoff_freq);
-  filter_coeff(profile.filter.gyro[1].type, &filter[1], profile.filter.gyro[1].cutoff_freq);
+  filter_coeff(profile.filter.gyro[0].type, &filter[0], profile.filter.gyro[0].cutoff_freq, task_get_period_us(TASK_GYRO));
+  filter_coeff(profile.filter.gyro[1].type, &filter[1], profile.filter.gyro[1].cutoff_freq, task_get_period_us(TASK_GYRO));
 
   const gyro_data_t data = gyro_read();
 
@@ -170,7 +171,7 @@ void sixaxis_read() {
     if (current_axis < 3 && sdft_update(&gyro_sdft[current_axis])) {
       // once all sdft update steps are done, we update the filters and continue to the next axis
       for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
-        filter_biquad_notch_coeff(&notch_filter[current_axis][p], gyro_sdft[current_axis].notch_hz[p]);
+        filter_biquad_notch_coeff(&notch_filter[current_axis][p], gyro_sdft[current_axis].notch_hz[p], task_get_period_us(TASK_GYRO));
       }
       // on the last axis we increment this to the idle state 3
       current_axis++;

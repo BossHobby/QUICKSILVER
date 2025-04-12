@@ -5,6 +5,9 @@
 
 #include "project.h"
 
+#include "driver/time.h"
+#include "flight/control.h"
+
 typedef enum {
   TASK_GYRO,
   TASK_IMU,
@@ -21,6 +24,7 @@ typedef enum {
   TASK_MAX
 
 } task_id_t;
+
 typedef enum {
   TASK_PRIORITY_REALTIME,
   TASK_PRIORITY_HIGH,
@@ -78,3 +82,10 @@ typedef struct {
   }
 
 extern task_t tasks[TASK_MAX];
+
+static inline float task_get_period_us(task_id_t id) {
+  const float period = CYCLES_TO_US(tasks[id].period_cycles);
+  if (period > 0.0f)
+    return period;
+  return state.looptime_autodetect;
+}

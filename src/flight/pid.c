@@ -6,6 +6,7 @@
 
 #include "core/profile.h"
 #include "core/project.h"
+#include "core/tasks.h"
 #include "flight/control.h"
 #include "flight/filter.h"
 #include "io/led.h"
@@ -49,15 +50,15 @@ static filter_lp_pt1 rx_filter;
 static filter_state_t rx_filter_state[3];
 
 void pid_init() {
-  filter_lp_pt1_init(&rx_filter, rx_filter_state, 3, state.rx_filter_hz);
+  filter_lp_pt1_init(&rx_filter, rx_filter_state, 3, state.rx_filter_hz, task_get_period_us(TASK_PID));
 
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
-    filter_init(profile.filter.dterm[i].type, &filter[i], filter_state[i], 3, profile.filter.dterm[i].cutoff_freq);
+    filter_init(profile.filter.dterm[i].type, &filter[i], filter_state[i], 3, profile.filter.dterm[i].cutoff_freq, task_get_period_us(TASK_PID));
   }
 
   if (profile.filter.dterm_dynamic_enable) {
     // zero out filter, freq will be updated later on
-    filter_lp_pt1_init(&dynamic_filter, dynamic_filter_state, 3, DTERM_DYNAMIC_FREQ_MAX);
+    filter_lp_pt1_init(&dynamic_filter, dynamic_filter_state, 3, DTERM_DYNAMIC_FREQ_MAX, task_get_period_us(TASK_PID));
   }
 }
 
@@ -146,9 +147,9 @@ static inline float pid_tda_compensation() {
 // input: error[] = setpoint - gyro
 // output: state.pidoutput.axis[] = change required from motors
 void pid_calc() {
-  filter_lp_pt1_coeff(&rx_filter, state.rx_filter_hz);
-  filter_coeff(profile.filter.dterm[0].type, &filter[0], profile.filter.dterm[0].cutoff_freq);
-  filter_coeff(profile.filter.dterm[1].type, &filter[1], profile.filter.dterm[1].cutoff_freq);
+  filter_lp_pt1_coeff(&rx_filter, state.rx_filter_hz, task_get_period_us(TASK_PID));
+  filter_coeff(profile.filter.dterm[0].type, &filter[0], profile.filter.dterm[0].cutoff_freq, task_get_period_us(TASK_PID));
+  filter_coeff(profile.filter.dterm[1].type, &filter[1], profile.filter.dterm[1].cutoff_freq, task_get_period_us(TASK_PID));
 
   static vec3_t pid_output = {.roll = 0, .pitch = 0, .yaw = 0};
   const float v_compensation = pid_voltage_compensation();
@@ -163,7 +164,7 @@ void pid_calc() {
     float d_term_dynamic_freq = mapf(dynamic_throttle, 0.0f, 1.0f, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
     d_term_dynamic_freq = constrain(d_term_dynamic_freq, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
 
-    filter_lp_pt1_coeff(&dynamic_filter, d_term_dynamic_freq);
+    filter_lp_pt1_coeff(&dynamic_filter, d_term_dynamic_freq, task_get_period_us(TASK_PID));
   }
 
   // rotates errors

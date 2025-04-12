@@ -45,7 +45,7 @@ typedef struct {
 
 typedef struct {
   float hz;
-  uint32_t sample_period_us;
+  float sample_period_us;
 
   float b0;
   float b1;
@@ -59,10 +59,6 @@ typedef union {
   filter_lp_pt2 lp_pt2;
   filter_lp_pt3 lp_pt3;
 } filter_t;
-
-typedef struct {
-  float v[2];
-} filter_lp_sp;
 
 typedef struct {
   float v[2];
@@ -85,30 +81,27 @@ typedef struct {
 
 void filter_global_init();
 
-void filter_lp_pt1_init(filter_lp_pt1 *filter, filter_state_t *state, uint8_t count, float hz);
-void filter_lp_pt1_coeff(filter_lp_pt1 *filter, float hz);
+void filter_lp_pt1_init(filter_lp_pt1 *filter, filter_state_t *state, uint8_t count, float hz, float sample_period_us);
+void filter_lp_pt1_coeff(filter_lp_pt1 *filter, float hz, float sample_period_us);
 float filter_lp_pt1_step(filter_lp_pt1 *filter, filter_state_t *state, float in);
 
-void filter_lp_pt2_init(filter_lp_pt2 *filter, filter_state_t *state, uint8_t count, float hz);
-void filter_lp_pt2_coeff(filter_lp_pt2 *filter, float hz);
+void filter_lp_pt2_init(filter_lp_pt2 *filter, filter_state_t *state, uint8_t count, float hz, float sample_period_us);
+void filter_lp_pt2_coeff(filter_lp_pt2 *filter, float hz, float sample_period_us);
 float filter_lp_pt2_step(filter_lp_pt2 *filter, filter_state_t *state, float in);
 
-void filter_lp_pt3_init(filter_lp_pt3 *filter, filter_state_t *state, uint8_t count, float hz);
-void filter_lp_pt3_coeff(filter_lp_pt3 *filter, float hz);
+void filter_lp_pt3_init(filter_lp_pt3 *filter, filter_state_t *state, uint8_t count, float hz, float sample_period_us);
+void filter_lp_pt3_coeff(filter_lp_pt3 *filter, float hz, float sample_period_us);
 float filter_lp_pt3_step(filter_lp_pt3 *filter, filter_state_t *state, float in);
 
-void filter_biquad_notch_init(filter_biquad_notch_t *filter, filter_biquad_state_t *state, uint8_t count, float hz);
-void filter_biquad_notch_coeff(filter_biquad_notch_t *filter, float hz);
+void filter_biquad_notch_init(filter_biquad_notch_t *filter, filter_biquad_state_t *state, uint8_t count, float hz, float sample_period_us);
+void filter_biquad_notch_coeff(filter_biquad_notch_t *filter, float hz, float sample_period_us);
 float filter_biquad_notch_step(filter_biquad_notch_t *filter, filter_biquad_state_t *state, float in);
-
-void filter_lp_sp_init(filter_lp_sp *filter, uint8_t count);
-float filter_lp_sp_step(filter_lp_sp *filter, float x);
 
 void filter_hp_be_init(filter_hp_be *filter);
 float filter_hp_be_step(filter_hp_be *filter, float x);
 
-void filter_init(filter_type_t type, filter_t *filter, filter_state_t *state, uint8_t count, float hz);
-void filter_coeff(filter_type_t type, filter_t *filter, float hz);
+void filter_init(filter_type_t type, filter_t *filter, filter_state_t *state, uint8_t count, float hz, float sample_period_us);
+void filter_coeff(filter_type_t type, filter_t *filter, float hz, float sample_period_us);
 float filter_step(filter_type_t type, filter_t *filter, filter_state_t *state, float in);
 
 float throttlehpf(float in);
