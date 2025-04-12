@@ -96,6 +96,7 @@ __attribute__((__used__)) int main() {
   usb_init();
   simulator_init();
 
+  rgb_led_init();
   motor_init();
   motor_set_all(MOTOR_OFF);
 
@@ -123,7 +124,6 @@ __attribute__((__used__)) int main() {
 
   rx_init();
   vtx_init();
-  rgb_led_init();
 
   blackbox_init();
   imu_init();
