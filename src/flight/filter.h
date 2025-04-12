@@ -101,6 +101,7 @@ void filter_hp_be_init(filter_hp_be *filter);
 float filter_hp_be_step(filter_hp_be *filter, float x);
 
 void filter_init(filter_type_t type, filter_t *filter, filter_state_t *state, uint8_t count, float hz, float sample_period_us);
+void filter_init_state(filter_state_t *state, uint8_t count);
 void filter_coeff(filter_type_t type, filter_t *filter, float hz, float sample_period_us);
 float filter_step(filter_type_t type, filter_t *filter, filter_state_t *state, float in);
 

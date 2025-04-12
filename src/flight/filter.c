@@ -14,7 +14,7 @@
 #define ORDER2_CORRECTION 1.55377397403f
 #define ORDER3_CORRECTION 1.9614591767f
 
-static void filter_init_state(filter_state_t *state, uint8_t count) {
+void filter_init_state(filter_state_t *state, uint8_t count) {
   memset(state, 0, count * sizeof(filter_state_t));
 }
 

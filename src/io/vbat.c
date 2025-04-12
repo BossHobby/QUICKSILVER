@@ -2,6 +2,7 @@
 
 #include "core/flash.h"
 #include "core/profile.h"
+#include "core/tasks.h"
 #include "driver/adc.h"
 #include "flight/control.h"
 #include "util/util.h"
@@ -13,22 +14,31 @@
 // the lowest vbatt is ever allowed to go
 #define VBATTLOW_ABS 2.7f
 
+#define IBAT_SCALE (60.f * 60.f * 1000000.f)
+
 extern profile_t profile;
 
+static filter_lp_pt1 display_filter;
+static filter_state_t vbat_filter_state;
+static filter_state_t ibat_filter_state;
+static filter_state_t thrsum_filter_state;
+
 void vbat_init() {
-  int count = 0;
-  while (count < 5000) {
+  filter_lp_pt1_coeff(&display_filter, 60, task_get_period_us(TASK_VBAT));
+  filter_init_state(&vbat_filter_state, 1);
+  filter_init_state(&ibat_filter_state, 1);
+  filter_init_state(&thrsum_filter_state, 1);
+
+  for (size_t i = 0; i < 5000; i++) {
     state.vbat = adc_read(ADC_CHAN_VBAT);
-    lpf(&state.vbat_filtered, state.vbat, lpfcalc(1, 500));
-    count++;
+    state.vbat_filtered = filter_lp_pt1_step(&display_filter, &vbat_filter_state, state.vbat);
   }
 
   if (profile.voltage.lipo_cell_count == 0) {
     // Lipo count not specified, trigger auto detect
-    for (int i = 6; i > 0; i--) {
-      float cells = i;
-      if (state.vbat_filtered / cells > 3.7f) {
-        state.lipo_cell_count = cells;
+    for (uint32_t i = 8; i > 0; i--) {
+      if (state.vbat_filtered / (float)(i) > 3.7f) {
+        state.lipo_cell_count = i;
         break;
       }
     }
@@ -81,22 +91,19 @@ void vbat_calc() {
 
   // read acd and scale based on processor voltage
   state.ibat = adc_read(ADC_CHAN_IBAT);
-  lpf(&state.ibat_filtered, state.ibat, lpfcalc_hz(0.001, 1));
-  state.ibat_drawn += state.ibat_filtered / (60.f * 60.f * 10000.f);
+  state.ibat_filtered = filter_lp_pt1_step(&display_filter, &ibat_filter_state, state.ibat);
+  state.ibat_drawn += state.ibat_filtered * task_get_period_us(TASK_VBAT) / IBAT_SCALE;
 
   // li-ion battery model compensation time decay ( 18 seconds )
   state.vbat = adc_read(ADC_CHAN_VBAT);
-  lpf(&state.vbat_filtered, state.vbat, lpfcalc(1, 500));
-  lpf(&state.vbat_filtered_decay, state.vbat_filtered, lpfcalc(1, 18000));
+  state.vbat_filtered = filter_lp_pt1_step(&display_filter, &vbat_filter_state, state.vbat);
+  lpf(&state.vbat_filtered_decay, state.vbat_filtered, lpfcalc(0.001, 18));
 
-  state.vbat_cell_avg = state.vbat_filtered_decay / (float)state.lipo_cell_count;
+  state.vbat_cell_avg = state.vbat_filtered / (float)state.lipo_cell_count;
 
   // average of all motors
   // filter motorpwm so it has the same delay as the filtered voltage
-  // ( or they can use a single filter)
-  static float thrfilt = 0;
-  lpf(&thrfilt, state.thrsum, lpfcalc(1, 500));
-
+  const float thrfilt = filter_lp_pt1_step(&display_filter, &thrsum_filter_state, state.thrsum);
   const float tempvolt = state.vbat_filtered * (1.00f + CF1) - state.vbat_filtered_decay * (CF1);
   const float hyst = flags.lowbatt ? HYST : 0.0f;
   const float vdrop_factor = vbat_auto_vdrop(thrfilt, tempvolt);
