@@ -95,7 +95,10 @@ typedef struct {
   vec3_t GEstG; // gravity vector
   vec3_t attitude;
 
-  float altitude;
+  float baro_pressure;
+  float baro_altitude;        // baro altitude
+  float baro_launch_altitude; // baro altitude over launchpoint
+  float altitude;             // altitude over launchpoint
 
   vec3_t setpoint; // angular velocity setpoint from stick input
   vec3_t error;    // setpoint - gyro = error in angular velocity

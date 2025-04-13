@@ -455,6 +455,8 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(1, 0, 1, 14, 0, 17),   // OSD_CURRENT_DRAW
                     ENCODE_OSD_ELEMENT(0, 0, 14, 6, 15, 8),   // OSD_CROSSHAIR
                     ENCODE_OSD_ELEMENT(1, 0, 1, 13, 0, 16),   // OSD_CURRENT_DRAWN
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 2, 44, 1),   // OSD_ALTITUDE
+
                 },
             },
             [OSD_PROFILE_2] = {
@@ -474,6 +476,8 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(0, 0, 1, 14, 0, 17),   // OSD_CURRENT_DRAW
                     ENCODE_OSD_ELEMENT(0, 0, 14, 6, 15, 8),   // OSD_CROSSHAIR
                     ENCODE_OSD_ELEMENT(0, 0, 1, 13, 0, 16),   // OSD_CURRENT_DRAWN
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 2, 44, 1),   // OSD_ALTITUDE
+
                 },
             },
         },

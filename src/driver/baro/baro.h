@@ -19,4 +19,4 @@ typedef struct {
 extern uint8_t baro_buf[6];
 
 baro_types_t baro_init();
-void baro_update();
+bool baro_update();
