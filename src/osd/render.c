@@ -18,6 +18,9 @@
 
 #define ICON_RSSI 0x1
 #define ICON_LQI 0x7b
+#define ICON_ALTITUDE 0x7f
+#define ICON_METERS 0xc
+#define ICON_KILOMETERS 0x7d
 #define ICON_CELSIUS 0xe
 #define ICON_THROTTLE 0x4
 #define ICON_VOLT 0x6
@@ -72,6 +75,7 @@ static const char *osd_element_labels[] = {
     "CURRENT DRAW",
     "CROSSHAIR",
     "CURRENT DRAWN",
+    "ALTITUDE",
 };
 
 static const char *aux_channel_labels[] = {
@@ -509,6 +513,19 @@ static void osd_display_regular() {
       osd_start_el(el);
       osd_write_float(state.ibat_drawn, 4, 2);
       osd_write_char(ICON_MAH);
+      break;
+    }
+
+    case OSD_ALTITUDE: {
+      osd_start_el(el);
+      osd_write_char(ICON_ALTITUDE);
+      if (state.altitude > 1000.f) {
+        osd_write_float(state.altitude / 1000.f, 3, 1);
+        osd_write_char(ICON_KILOMETERS);
+      } else {
+        osd_write_float(state.altitude, 3, 1);
+        osd_write_char(ICON_METERS);
+      }
       break;
     }
     }
