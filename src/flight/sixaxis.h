@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-bool sixaxis_detect();
 void sixaxis_init();
 void sixaxis_read();
 

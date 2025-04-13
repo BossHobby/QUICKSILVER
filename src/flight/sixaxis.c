@@ -48,12 +48,12 @@ static sdft_t gyro_sdft[SDFT_AXES];
 static filter_biquad_notch_t notch_filter[SDFT_AXES][SDFT_PEAKS];
 static filter_biquad_state_t notch_filter_state[SDFT_AXES][SDFT_PEAKS];
 
-bool sixaxis_detect() {
-  target_info.gyro_id = gyro_init();
-  return target_info.gyro_id != GYRO_TYPE_INVALID;
-}
-
 void sixaxis_init() {
+  target_info.gyro_id = gyro_init();
+  if (target_info.gyro_id == GYRO_TYPE_INVALID) {
+    failloop(FAILLOOP_GYRO);
+  }
+
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
     filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq, task_get_period_us(TASK_GYRO));
   }
@@ -293,13 +293,6 @@ void sixaxis_acc_cal() {
 
 #else
 
-bool sixaxis_detect() {
-#ifdef SIMULATOR
-  return true;
-#else
-  return false;
-#endif
-}
 void sixaxis_init() {}
 void sixaxis_read() {}
 
