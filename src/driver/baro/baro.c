@@ -47,12 +47,12 @@ static float baro_pressure_to_altitude(const float pressure) {
   return (1.0f - powf(pressure / P0, 1.0f / 5.25588f)) / 2.25577e-5f;
 }
 
-void baro_update() {
+bool baro_update() {
   if (baro_type == BARO_TYPE_INVALID)
-    return;
+    return false;
 
   if (!i2c_is_idle(&baro_bus))
-    return;
+    return false;
 
   if (!baro->get_pressure(&state.baro_pressure))
     return false;
