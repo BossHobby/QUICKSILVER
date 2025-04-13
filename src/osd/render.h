@@ -73,6 +73,7 @@ typedef enum {
   OSD_CROSSHAIR,
   OSD_CURRENT_DRAWN,
   OSD_WATTS,
+  OSD_ALTITUDE,
 
   OSD_ELEMENT_MAX
 } osd_elements_t;
