@@ -94,6 +94,7 @@ __attribute__((__used__)) int main() {
   debug_pin_init();
   buzzer_init();
   usb_init();
+  scheduler_init();
   simulator_init();
 
   rgb_led_init();
@@ -102,21 +103,12 @@ __attribute__((__used__)) int main() {
 
   // wait for devices to wake up
   time_delay_ms(100);
-  osd_init();
   rx_spektrum_bind();
 
-  if (!sixaxis_detect()) {
-    // gyro not found
-    failloop(FAILLOOP_GYRO);
-  }
-
-  scheduler_init();
+  osd_init();
   sixaxis_init();
 
-  // give the gyro some time to settle
   time_delay_ms(50);
-
-  // display bootlogo while calibrating
   sixaxis_gyro_cal();
 
   adc_init();
