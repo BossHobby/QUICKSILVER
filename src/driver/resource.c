@@ -36,11 +36,11 @@ cbor_result_t cbor_decode_resource_tag_t(cbor_value_t *dec, resource_tag_t *t) {
     }
   } else if (check_str("TIMER")) {
     int32_t index = TIMER_INVALID;
-    switch (*end) {
+    const int32_t num = strtol(end, &end, 10);
+    switch (num) {
 #define TIMER(_num)      \
-  case '0' + _num:       \
+  case _num:             \
     index = TIMER##_num; \
-    end++;               \
     break;
       TIMERS
 #undef TIMER
