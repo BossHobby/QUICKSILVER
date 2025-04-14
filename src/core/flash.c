@@ -48,6 +48,7 @@ void flash_save() {
     const uint32_t size = TARGET_STORAGE_SIZE;
 
     uint8_t buffer[size];
+    memset(buffer, 0, size);
     flash_write_magic(buffer, FMC_MAGIC | TARGET_STORAGE_OFFSET);
 
     cbor_value_t enc;
@@ -68,6 +69,7 @@ void flash_save() {
     const uint32_t size = FLASH_STORAGE_SIZE;
 
     uint8_t buffer[size];
+    memset(buffer, 0, size);
     flash_write_magic(buffer, FMC_MAGIC | FLASH_STORAGE_OFFSET);
     memcpy(buffer + FMC_MAGIC_SIZE, (uint8_t *)&flash_storage, sizeof(flash_storage_t));
     fmc_write_buf(offset, buffer, size);
@@ -95,6 +97,7 @@ void flash_save() {
     const uint32_t size = PROFILE_STORAGE_SIZE;
 
     uint8_t buffer[size];
+    memset(buffer, 0, size);
     flash_write_magic(buffer, FMC_MAGIC | PROFILE_STORAGE_OFFSET);
 
     cbor_value_t enc;
