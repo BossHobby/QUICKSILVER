@@ -24,6 +24,4 @@ void fmc_erase();
 
 flash_word_t fmc_read(uint32_t addr);
 void fmc_read_buf(uint32_t offset, uint8_t *data, uint32_t size);
-
-void fmc_write(uint32_t addr, flash_word_t value);
 void fmc_write_buf(uint32_t addr, uint8_t *data, uint32_t size);
