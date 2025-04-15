@@ -98,6 +98,12 @@ typedef struct {
   float baro_pressure;
   float baro_altitude;        // baro altitude
   float baro_launch_altitude; // baro altitude over launchpoint
+
+  uint8_t gps_sats;
+  int32_t gps_lon;
+  int32_t gps_lat;
+  float gps_altitude;
+
   float altitude;             // altitude over launchpoint
 
   vec3_t setpoint; // angular velocity setpoint from stick input
@@ -156,6 +162,13 @@ typedef struct {
   MEMBER(gyro_delta_angle, vec3_t)            \
   MEMBER(GEstG, vec3_t)                       \
   MEMBER(attitude, vec3_t)                    \
+  MEMBER(baro_pressure, float)                \
+  MEMBER(baro_altitude, float)                \
+  MEMBER(baro_launch_altitude, float)         \
+  MEMBER(gps_sats, uint8_t)                   \
+  MEMBER(gps_lon, int32_t)                    \
+  MEMBER(gps_lat, int32_t)                    \
+  MEMBER(gps_altitude, float)                 \
   MEMBER(altitude, float)                     \
   MEMBER(setpoint, vec3_t)                    \
   MEMBER(error, vec3_t)                       \
