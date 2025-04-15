@@ -7,7 +7,7 @@
 #include "io/quic.h"
 #include "util/cbor_helper.h"
 
-target_t target = {
+FAST_RAM target_t target = {
     .name = "unknown",
     .brushless = true,
 };
