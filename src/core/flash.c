@@ -1,5 +1,6 @@
 #include "core/flash.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "core/failloop.h"
@@ -40,6 +41,11 @@ void flash_save() {
 
   __disable_irq();
 
+  uint8_t *buffer = (uint8_t *)malloc(PROFILE_STORAGE_SIZE);
+  if (buffer == NULL) {
+    failloop(FAILLOOP_FAULT);
+  }
+
   fmc_unlock();
   fmc_erase();
 
@@ -47,7 +53,6 @@ void flash_save() {
     const uint32_t offset = TARGET_STORAGE_OFFSET;
     const uint32_t size = TARGET_STORAGE_SIZE;
 
-    uint8_t buffer[size];
     memset(buffer, 0, size);
     flash_write_magic(buffer, FMC_MAGIC | TARGET_STORAGE_OFFSET);
 
@@ -68,7 +73,6 @@ void flash_save() {
     const uint32_t offset = FLASH_STORAGE_OFFSET;
     const uint32_t size = FLASH_STORAGE_SIZE;
 
-    uint8_t buffer[size];
     memset(buffer, 0, size);
     flash_write_magic(buffer, FMC_MAGIC | FLASH_STORAGE_OFFSET);
     memcpy(buffer + FMC_MAGIC_SIZE, (uint8_t *)&flash_storage, sizeof(flash_storage_t));
@@ -79,7 +83,6 @@ void flash_save() {
     const uint32_t offset = BIND_STORAGE_OFFSET;
     const uint32_t size = BIND_STORAGE_SIZE;
 
-    uint8_t buffer[size];
     memset(buffer, 0, size);
     flash_write_magic(buffer, FMC_MAGIC | BIND_STORAGE_OFFSET);
 
@@ -96,7 +99,6 @@ void flash_save() {
     const uint32_t offset = PROFILE_STORAGE_OFFSET;
     const uint32_t size = PROFILE_STORAGE_SIZE;
 
-    uint8_t buffer[size];
     memset(buffer, 0, size);
     flash_write_magic(buffer, FMC_MAGIC | PROFILE_STORAGE_OFFSET);
 
@@ -118,7 +120,6 @@ void flash_save() {
     const uint32_t offset = VTX_STORAGE_OFFSET;
     const uint32_t size = VTX_STORAGE_SIZE;
 
-    uint8_t buffer[size];
     flash_write_magic(buffer, FMC_MAGIC | VTX_STORAGE_OFFSET);
 
     cbor_value_t enc;
@@ -136,16 +137,20 @@ void flash_save() {
 #endif
 
   fmc_lock();
+  free(buffer);
   __enable_irq();
 }
 
 void flash_load() {
+  uint8_t *buffer = (uint8_t *)malloc(PROFILE_STORAGE_SIZE);
+  if (buffer == NULL) {
+    failloop(FAILLOOP_FAULT);
+  }
 
   if (flash_compare_magic(TARGET_STORAGE_OFFSET, (FMC_MAGIC | TARGET_STORAGE_OFFSET))) {
     const uint32_t offset = TARGET_STORAGE_OFFSET + FMC_MAGIC_SIZE;
     const uint32_t size = TARGET_STORAGE_SIZE - FMC_MAGIC_SIZE;
 
-    uint8_t buffer[size];
     fmc_read_buf(offset, buffer, size);
 
     cbor_value_t dec;
@@ -161,8 +166,6 @@ void flash_load() {
     const uint32_t offset = FLASH_STORAGE_OFFSET + FMC_MAGIC_SIZE;
     const uint32_t size = FLASH_STORAGE_SIZE - FMC_MAGIC_SIZE;
 
-    uint8_t buffer[size];
-
     fmc_read_buf(offset, buffer, size);
     memcpy((uint8_t *)&flash_storage, buffer, sizeof(flash_storage_t));
   }
@@ -170,8 +173,6 @@ void flash_load() {
   if (flash_compare_magic(BIND_STORAGE_OFFSET, (FMC_MAGIC | BIND_STORAGE_OFFSET))) {
     const uint32_t offset = BIND_STORAGE_OFFSET + FMC_MAGIC_SIZE;
     const uint32_t size = BIND_STORAGE_SIZE - FMC_MAGIC_SIZE;
-
-    uint8_t buffer[size];
 
     fmc_read_buf(offset, buffer, size);
     memcpy((uint8_t *)&bind_storage, buffer, sizeof(rx_bind_storage_t));
@@ -193,7 +194,6 @@ void flash_load() {
     const uint32_t offset = PROFILE_STORAGE_OFFSET + FMC_MAGIC_SIZE;
     const uint32_t size = PROFILE_STORAGE_SIZE - FMC_MAGIC_SIZE;
 
-    uint8_t buffer[size];
     fmc_read_buf(offset, buffer, size);
 
     cbor_value_t dec;
@@ -210,8 +210,6 @@ void flash_load() {
     const uint32_t offset = VTX_STORAGE_OFFSET + FMC_MAGIC_SIZE;
     const uint32_t size = VTX_STORAGE_SIZE - FMC_MAGIC_SIZE;
 
-    uint8_t buffer[size];
-
     fmc_read_buf(offset, buffer, size);
 
     cbor_value_t dec;
@@ -223,4 +221,6 @@ void flash_load() {
     }
   }
 #endif
+
+  free(buffer);
 }
