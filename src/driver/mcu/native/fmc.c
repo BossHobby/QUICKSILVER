@@ -41,13 +41,6 @@ void fmc_read_buf(uint32_t addr, uint8_t *data, uint32_t size) {
   fclose(file);
 }
 
-void fmc_write(uint32_t addr, flash_word_t value) {
-  FILE *file = open_file();
-  fseek(file, addr, SEEK_SET);
-  fwrite(&value, sizeof(flash_word_t), 1, file);
-  fclose(file);
-}
-
 void fmc_write_buf(uint32_t addr, uint8_t *data, uint32_t size) {
   FILE *file = open_file();
   fseek(file, addr, SEEK_SET);

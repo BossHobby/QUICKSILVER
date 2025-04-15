@@ -55,33 +55,26 @@ flash_word_t fmc_read(uint32_t addr) {
   return *((flash_word_t *)(_config_flash + addr));
 }
 
-void fmc_read_buf(uint32_t offset, uint8_t *data, uint32_t size) {
-  flash_word_t *ptr = (flash_word_t *)data;
-
-  for (uint32_t i = 0; i < (size / sizeof(flash_word_t)); i++) {
-    ptr[i] = fmc_read(offset + i * sizeof(flash_word_t));
-  }
-}
-
-void fmc_write(uint32_t offset, flash_word_t value) {
-#ifdef STM32H7
-  uint8_t data[FLASH_WORD_SIZE];
-  memcpy(data, &value, sizeof(flash_word_t));
-
-  HAL_StatusTypeDef result = HAL_FLASH_Program(PROGRAM_TYPE, (uint32_t)FLASH_PTR(offset), (uint64_t)(uint32_t)(data));
-#else
-  HAL_StatusTypeDef result = HAL_FLASH_Program(PROGRAM_TYPE, (uint32_t)FLASH_PTR(offset), value);
-#endif
-
-  if (result != HAL_OK) {
+void fmc_read_buf(uint32_t start, uint8_t *data, uint32_t size) {
+  if (size < FLASH_WORD_SIZE || (size % FLASH_WORD_SIZE) || (start + size) > sizeof(_config_flash)) {
     fmc_lock();
     failloop(FAILLOOP_FAULT);
   }
+
+  flash_word_t *ptr = (flash_word_t *)data;
+  for (uint32_t i = 0; i < (size / sizeof(flash_word_t)); i++) {
+    ptr[i] = fmc_read(start + i * sizeof(flash_word_t));
+  }
 }
 
-void fmc_write_buf(uint32_t offset, uint8_t *data, uint32_t size) {
+void fmc_write_buf(uint32_t start, uint8_t *data, uint32_t size) {
+  if (size < FLASH_WORD_SIZE || (size % FLASH_WORD_SIZE) || (start + size) > sizeof(_config_flash)) {
+    fmc_lock();
+    failloop(FAILLOOP_FAULT);
+  }
+
   for (uint32_t i = 0; i < (size / FLASH_WORD_SIZE); i++) {
-    const uint32_t addr = (uint32_t)FLASH_PTR(offset + i * FLASH_WORD_SIZE);
+    const uint32_t addr = (uint32_t)FLASH_PTR(start + i * FLASH_WORD_SIZE);
 
 #ifdef STM32H7
     const uint32_t ptr = (uint32_t)(data + i * FLASH_WORD_SIZE);
