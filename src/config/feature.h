@@ -9,6 +9,7 @@
 #ifndef SIMULATOR
 #define USE_GYRO
 #define USE_BARO
+#define USE_GPS
 #define USE_SOFT_SERIAL
 #define USE_SDCARD
 #define USE_DATA_FLASH

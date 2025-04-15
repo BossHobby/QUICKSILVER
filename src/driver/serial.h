@@ -64,6 +64,7 @@ typedef struct {
 extern serial_port_t serial_rx;
 extern serial_port_t serial_displayport;
 extern serial_port_t serial_vtx;
+extern serial_port_t serial_gps;
 
 void serial_init(serial_port_t *serial, serial_port_config_t config);
 

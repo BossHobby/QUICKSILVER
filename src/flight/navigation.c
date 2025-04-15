@@ -2,8 +2,11 @@
 
 #include "driver/baro/baro.h"
 #include "flight/control.h"
+#include "io/gps.h"
 
 void nav_update() {
+  gps_update();
+
   const bool had_baro_update = baro_update();
 
   static uint8_t last_arm_state = 0;
