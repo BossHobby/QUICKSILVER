@@ -2,6 +2,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "core/debug.h"
@@ -158,9 +159,14 @@ void usb_configurator() {
 #endif
 
   uint32_t buffer_size = 1;
-  static uint8_t buffer[BUFFER_SIZE];
+
+  uint8_t *buffer = (uint8_t *)malloc(BUFFER_SIZE);
+  if (buffer == NULL) {
+    return;
+  }
 
   if (usb_serial_read(buffer, 1) != 1) {
+    free(buffer);
     return;
   }
 
@@ -217,5 +223,6 @@ void usb_configurator() {
 
   // this will block and handle all usb traffic while active
   task_reset_runtime();
+  free(buffer);
 }
 #pragma GCC diagnostic pop
