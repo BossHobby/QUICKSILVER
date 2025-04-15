@@ -124,6 +124,9 @@ cbor_result_t cbor_handle_error(cbor_result_t err);
     for (uint32_t i = 0; i < min(size, cbor_decode_array_size(dec, &array)); i++) { \
       type tmp = {};                                                                \
       CBOR_CHECK_ERROR(res = cbor_decode_##type(dec, &tmp));                        \
+      if (tmp.index >= size) {                                                      \
+        CBOR_CHECK_ERROR(res = CBOR_ERR_OVERFLOW);                                  \
+      }                                                                             \
       o->member[tmp.index] = tmp;                                                   \
     }                                                                               \
     continue;                                                                       \
