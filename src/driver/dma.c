@@ -1,5 +1,7 @@
 #include "dma.h"
 
+#include <string.h>
+
 #include "core/project.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
@@ -74,6 +76,9 @@ cbor_result_t cbor_encode_dma_stream_t(cbor_value_t *enc, const dma_stream_t *d)
 
 cbor_result_t cbor_decode_target_dma_array(cbor_value_t *dec, target_dma_t (*dma)[DMA_DEVICE_MAX]) {
   cbor_result_t res = CBOR_OK;
+
+  memset(dma, 0, DMA_DEVICE_MAX * sizeof(target_dma_t));
+  memset(dma_stream_map, 0, DMA_STREAM_MAX * sizeof(dma_device_t));
 
   cbor_container_t map;
   CBOR_CHECK_ERROR(res = cbor_decode_map(dec, &map));
