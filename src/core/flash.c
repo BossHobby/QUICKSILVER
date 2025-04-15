@@ -1,5 +1,6 @@
 #include "core/flash.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "core/failloop.h"
@@ -40,11 +41,15 @@ void flash_save() {
 
   __disable_irq();
 
+  uint8_t *buffer = (uint8_t *)malloc(PROFILE_STORAGE_SIZE);
+  if (buffer == NULL) {
+    failloop(FAILLOOP_FAULT);
+  }
+
   fmc_unlock();
   fmc_erase();
 
   {
-    uint8_t buffer[TARGET_STORAGE_SIZE];
     memset(buffer, 0, TARGET_STORAGE_SIZE);
     flash_write_magic(buffer, FMC_MAGIC | TARGET_STORAGE_OFFSET);
 
@@ -62,7 +67,6 @@ void flash_save() {
   }
 
   {
-    uint8_t buffer[FLASH_STORAGE_SIZE];
     memset(buffer, 0, FLASH_STORAGE_SIZE);
     flash_write_magic(buffer, FMC_MAGIC | FLASH_STORAGE_OFFSET);
     memcpy(buffer + FMC_MAGIC_SIZE, (uint8_t *)&flash_storage, sizeof(flash_storage_t));
@@ -70,7 +74,6 @@ void flash_save() {
   }
 
   {
-    uint8_t buffer[BIND_STORAGE_SIZE];
     memset(buffer, 0, BIND_STORAGE_SIZE);
     flash_write_magic(buffer, FMC_MAGIC | BIND_STORAGE_OFFSET);
 
@@ -84,7 +87,6 @@ void flash_save() {
   }
 
   {
-    uint8_t buffer[PROFILE_STORAGE_SIZE];
     memset(buffer, 0, PROFILE_STORAGE_SIZE);
     flash_write_magic(buffer, FMC_MAGIC | PROFILE_STORAGE_OFFSET);
 
@@ -103,7 +105,6 @@ void flash_save() {
 
 #ifdef USE_VTX
   {
-    uint8_t buffer[VTX_STORAGE_SIZE];
     flash_write_magic(buffer, FMC_MAGIC | VTX_STORAGE_OFFSET);
 
     cbor_value_t enc;
@@ -121,13 +122,17 @@ void flash_save() {
 #endif
 
   fmc_lock();
+  free(buffer);
   __enable_irq();
 }
 
 void flash_load() {
+  uint8_t *buffer = (uint8_t *)malloc(PROFILE_STORAGE_SIZE);
+  if (buffer == NULL) {
+    failloop(FAILLOOP_FAULT);
+  }
 
   if (flash_compare_magic(TARGET_STORAGE_OFFSET, (FMC_MAGIC | TARGET_STORAGE_OFFSET))) {
-    uint8_t buffer[TARGET_STORAGE_SIZE];
     fmc_read_buf(TARGET_STORAGE_OFFSET, buffer, TARGET_STORAGE_SIZE);
 
     cbor_value_t dec;
@@ -140,13 +145,11 @@ void flash_load() {
   }
 
   if (flash_compare_magic(FLASH_STORAGE_OFFSET, (FMC_MAGIC | FLASH_STORAGE_OFFSET))) {
-    uint8_t buffer[FLASH_STORAGE_SIZE];
     fmc_read_buf(FLASH_STORAGE_OFFSET, buffer, FLASH_STORAGE_SIZE);
     memcpy((uint8_t *)&flash_storage, buffer + FMC_MAGIC_SIZE, sizeof(flash_storage_t));
   }
 
   if (flash_compare_magic(BIND_STORAGE_OFFSET, (FMC_MAGIC | BIND_STORAGE_OFFSET))) {
-    uint8_t buffer[BIND_STORAGE_SIZE];
     fmc_read_buf(BIND_STORAGE_OFFSET, buffer, BIND_STORAGE_SIZE);
     memcpy((uint8_t *)&bind_storage, buffer + FMC_MAGIC_SIZE, sizeof(rx_bind_storage_t));
 
@@ -164,7 +167,6 @@ void flash_load() {
   profile_set_defaults();
 
   if (flash_compare_magic(PROFILE_STORAGE_OFFSET, (FMC_MAGIC | PROFILE_STORAGE_OFFSET))) {
-    uint8_t buffer[PROFILE_STORAGE_SIZE];
     fmc_read_buf(PROFILE_STORAGE_OFFSET, buffer, PROFILE_STORAGE_SIZE);
 
     cbor_value_t dec;
@@ -178,7 +180,6 @@ void flash_load() {
 
 #ifdef USE_VTX
   if (flash_compare_magic(VTX_STORAGE_OFFSET, (FMC_MAGIC | VTX_STORAGE_OFFSET))) {
-    uint8_t buffer[VTX_STORAGE_SIZE];
     fmc_read_buf(VTX_STORAGE_OFFSET, buffer, VTX_STORAGE_SIZE);
 
     cbor_value_t dec;
@@ -190,4 +191,6 @@ void flash_load() {
     }
   }
 #endif
+
+  free(buffer);
 }
