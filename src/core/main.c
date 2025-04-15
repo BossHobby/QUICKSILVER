@@ -24,6 +24,7 @@
 #include "flight/sixaxis.h"
 #include "io/blackbox.h"
 #include "io/buzzer.h"
+#include "io/gps.h"
 #include "io/led.h"
 #include "io/simulator.h"
 #include "io/vbat.h"
@@ -118,6 +119,7 @@ __attribute__((__used__)) int main() {
   vbat_init();
 
   rx_init();
+  gps_init();
   vtx_init();
 
   blackbox_init();
