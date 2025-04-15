@@ -103,8 +103,10 @@ void rgb_led_init() {
   dma_init.PeriphBurst = LL_DMA_PBURST_SINGLE;
 #endif
   LL_DMA_Init(rgb_dma->port, rgb_dma->stream_index, &dma_init);
+  LL_DMA_DisableStream(rgb_dma->port, rgb_dma->stream_index);
 
   LL_DMA_EnableIT_TC(rgb_dma->port, rgb_dma->stream_index);
+  dma_clear_flag_tc(rgb_dma);
   interrupt_enable(rgb_dma->irq, DMA_PRIORITY);
 }
 
