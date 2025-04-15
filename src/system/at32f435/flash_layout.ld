@@ -140,12 +140,18 @@ SECTIONS
   } >RAM
 
   /* User_heap_stack section, used to check that there is enough RAM left */
-  ._user_heap_stack :
+  ._user_heap :
   {
     . = ALIGN(8);
-    PROVIDE ( end = . );
-    PROVIDE ( _end = . );
+    _heap_end = .;
     . = . + _Min_Heap_Size;
+    . = ALIGN(8);
+    _heap_start = .;
+  } >RAM
+
+  ._user_stack :
+  {
+    . = ALIGN(8);
     . = . + _Min_Stack_Size;
     . = ALIGN(8);
   } >RAM
