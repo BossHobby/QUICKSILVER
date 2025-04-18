@@ -457,7 +457,9 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(0, 0, 14, 6, 15, 8),   // OSD_CROSSHAIR
                     ENCODE_OSD_ELEMENT(1, 0, 1, 13, 0, 16),   // OSD_CURRENT_DRAWN
                     ENCODE_OSD_ELEMENT(0, 0, 24, 2, 44, 1),   // OSD_ALTITUDE
-
+                    ENCODE_OSD_ELEMENT(0, 0, 25, 2, 45, 1),   // OSD_GPS_SATS
+                    ENCODE_OSD_ELEMENT(0, 0, 2, 2, 1, 1),     // OSD_GPS_SPEED
+                    ENCODE_OSD_ELEMENT(0, 0, 12, 2, 22, 1),   // OSD_GPS_HOME
                 },
             },
             [OSD_PROFILE_2] = {
@@ -478,7 +480,9 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(0, 0, 14, 6, 15, 8),   // OSD_CROSSHAIR
                     ENCODE_OSD_ELEMENT(0, 0, 1, 13, 0, 16),   // OSD_CURRENT_DRAWN
                     ENCODE_OSD_ELEMENT(0, 0, 24, 2, 44, 1),   // OSD_ALTITUDE
-
+                    ENCODE_OSD_ELEMENT(0, 0, 25, 2, 45, 1),   // OSD_GPS_SATS
+                    ENCODE_OSD_ELEMENT(0, 0, 2, 2, 1, 1),     // OSD_GPS_SPEED
+                    ENCODE_OSD_ELEMENT(0, 0, 12, 2, 22, 1),   // OSD_GPS_HOME
                 },
             },
         },
