@@ -426,6 +426,7 @@ const profile_t default_profile = {
             AUX_CHANNEL_OFF, // AUX_BLACKBOX
             PREARM,          // AUX_PREARM
             AUX_CHANNEL_OFF, // AUX_OSD_PROFILE
+            AUX_CHANNEL_OFF, // AUX_RETURN_TO_HOME
         },
         .lqi_source = RX_LQI_SOURCE_DIRECT,
 #ifdef CHANNEL_MAPPING
@@ -461,7 +462,9 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(0, 0, 14, 6, 15, 8),   // OSD_CROSSHAIR
                     ENCODE_OSD_ELEMENT(1, 0, 1, 13, 0, 16),   // OSD_CURRENT_DRAWN
                     ENCODE_OSD_ELEMENT(0, 0, 24, 2, 44, 1),   // OSD_ALTITUDE
-
+                    ENCODE_OSD_ELEMENT(0, 0, 25, 2, 45, 1),   // OSD_GPS_SATS
+                    ENCODE_OSD_ELEMENT(0, 0, 2, 2, 1, 1),     // OSD_GPS_SPEED
+                    ENCODE_OSD_ELEMENT(0, 0, 12, 2, 22, 1),   // OSD_GPS_HOME
                 },
             },
             [OSD_PROFILE_2] = {
@@ -482,7 +485,9 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(0, 0, 14, 6, 15, 8),   // OSD_CROSSHAIR
                     ENCODE_OSD_ELEMENT(0, 0, 1, 13, 0, 16),   // OSD_CURRENT_DRAWN
                     ENCODE_OSD_ELEMENT(0, 0, 24, 2, 44, 1),   // OSD_ALTITUDE
-
+                    ENCODE_OSD_ELEMENT(0, 0, 25, 2, 45, 1),   // OSD_GPS_SATS
+                    ENCODE_OSD_ELEMENT(0, 0, 2, 2, 1, 1),     // OSD_GPS_SPEED
+                    ENCODE_OSD_ELEMENT(0, 0, 12, 2, 22, 1),   // OSD_GPS_HOME
                 },
             },
         },
@@ -493,6 +498,11 @@ const profile_t default_profile = {
         .debug_flags = BLACKBOX_DEBUG_FLAGS,
 #endif
         // rest is initialized by profile_set_defaults()
+    },
+    .navigation = {
+        .rth_altitude = 10.0f,      // 10m above current position
+        .rth_on_failsafe = true,    // Enable RTH on failsafe
+        .rth_auto_land = false,     // Don't auto-land by default
     },
 };
 
@@ -571,6 +581,7 @@ PID_MEMBERS
 CALIBRATION_LIMIT_MEMBERS
 RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
+NAVIGATION_MEMBERS
 BLACKBOX_PRESET_MEMBERS
 PROFILE_MEMBERS
 
@@ -645,6 +656,7 @@ PID_MEMBERS
 CALIBRATION_LIMIT_MEMBERS
 RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
+NAVIGATION_MEMBERS
 PROFILE_MEMBERS
 
 #undef START_STRUCT
