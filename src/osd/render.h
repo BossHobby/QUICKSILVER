@@ -73,6 +73,9 @@ typedef enum {
   OSD_CROSSHAIR,
   OSD_CURRENT_DRAWN,
   OSD_ALTITUDE,
+  OSD_GPS_SATS,
+  OSD_GPS_SPEED,
+  OSD_GPS_HOME,
 
   OSD_ELEMENT_MAX
 } osd_elements_t;
