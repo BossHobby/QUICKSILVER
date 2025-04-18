@@ -37,6 +37,10 @@ float vec3_magnitude(vec3_t *v) {
   return sqrtf(max);
 }
 
+float vec3_dot(vec3_t va, vec3_t vb) {
+  return va.roll * vb.roll + va.pitch * vb.pitch + va.yaw * vb.yaw;
+}
+
 cbor_result_t cbor_encode_compact_vec3_t(cbor_value_t *enc, const compact_vec3_t *vec) {
   cbor_result_t res = CBOR_OK;
 

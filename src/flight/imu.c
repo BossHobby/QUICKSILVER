@@ -112,10 +112,8 @@ void imu_calc() {
     }
   }
 
-  if (rx_aux_on(AUX_HORIZON)) {
-    state.attitude.roll = atan2approx(state.GEstG.roll, state.GEstG.yaw);
-    state.attitude.pitch = atan2approx(state.GEstG.pitch, state.GEstG.yaw);
-  }
+  state.attitude.roll = atan2approx(state.GEstG.roll, state.GEstG.yaw);
+  state.attitude.pitch = atan2approx(state.GEstG.pitch, state.GEstG.yaw);
 }
 #endif
 
@@ -165,9 +163,8 @@ void imu_calc() {
   state.GEstG.pitch = state.GEstG.pitch * (ACC_1G / GEstGmag);
   state.GEstG.yaw = state.GEstG.yaw * (ACC_1G / GEstGmag);
 
-  if (rx_aux_on(AUX_HORIZON)) {
-    state.attitude.roll = atan2approx(state.GEstG.roll, state.GEstG.yaw);
-    state.attitude.pitch = atan2approx(state.GEstG.pitch, state.GEstG.yaw);
-  }
+  state.attitude.roll = atan2approx(state.GEstG.roll, state.GEstG.yaw);
+  state.attitude.pitch = atan2approx(state.GEstG.pitch, state.GEstG.yaw);
+  state.attitude.yaw = normalize_rad(state.attitude.yaw + vec3_dot(state.gyro_delta_angle, state.GEstG));
 }
 #endif

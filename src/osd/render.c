@@ -31,6 +31,11 @@
 #define ICON_CROSSHAIR_1 0x72
 #define ICON_CROSSHAIR_2 0x73
 #define ICON_CROSSHAIR_3 0x74
+#define ICON_SAT_L 0x1E
+#define ICON_SAT_R 0x1F
+#define ICON_ARROW_SOUTH 0x60
+#define ICON_KPH 0x9E
+#define ICON_HOME 0x05
 
 #define HOLD 0
 #define TEMP 1
@@ -76,6 +81,9 @@ static const char *osd_element_labels[] = {
     "CROSSHAIR",
     "CURRENT DRAWN",
     "ALTITUDE",
+    "GPS SATS",
+    "GPS SPEED",
+    "GPS HOME",
 };
 
 static const char *aux_channel_labels[] = {
@@ -408,6 +416,11 @@ static void print_osd_vtx(osd_element_t *el) {
 #endif
 }
 
+static void print_heading(float heading_deg) {
+  const uint8_t direction = (uint8_t)((normalize_deg(heading_deg) / (360.f / 16.f)) + 24) % 16;
+  osd_write_char(ICON_ARROW_SOUTH + direction);
+}
+
 void osd_init() {
   osd_device_init();
   osd_clear();
@@ -541,11 +554,49 @@ static void osd_display_regular() {
   case OSD_ALTITUDE: {
     osd_start_el(el);
     osd_write_char(ICON_ALTITUDE);
-    if (state.altitude > 1000.f) {
+    if (state.altitude >= 1000.f) {
       osd_write_float(state.altitude / 1000.f, 3, 1);
       osd_write_char(ICON_KILOMETERS);
     } else {
       osd_write_float(state.altitude, 3, 1);
+      osd_write_char(ICON_METERS);
+    }
+
+    osd_state.element++;
+    break;
+  }
+
+  case OSD_GPS_SATS: {
+    osd_start(osd_attr(el) | (state.gps_lock ? 0x0 : OSD_ATTR_BLINK), pos_x(el), pos_y(el));
+    osd_write_char(ICON_SAT_L);
+    osd_write_char(ICON_SAT_R);
+    osd_write_int(state.gps_sats, 2);
+
+    osd_state.element++;
+    break;
+  }
+
+  case OSD_GPS_SPEED: {
+    osd_start_el(el);
+    osd_write_float(state.gps_speed, 3, 1);
+    osd_write_char(ICON_KPH);
+
+    osd_state.element++;
+    break;
+  }
+
+  case OSD_GPS_HOME: {
+    osd_start_el(el);
+    if (state.home_distance < 5.f) {
+      osd_write_char(ICON_HOME);
+    } else {
+      print_heading(360.f - state.home_bearing - state.heading);
+    }
+    if (state.home_distance >= 1000.f) {
+      osd_write_float(state.home_distance / 1000.f, 4, 1);
+      osd_write_char(ICON_KILOMETERS);
+    } else {
+      osd_write_float(state.home_distance, 4, 1);
       osd_write_char(ICON_METERS);
     }
 
