@@ -41,6 +41,22 @@ float fastcos(float x) {
   return fastsin(x + (0.5f * M_PI_F));
 }
 
+float normalize_deg(float deg) {
+  while (deg > 360.f)
+    deg -= 360.f;
+  while (deg < 0.f)
+    deg += 360.f;
+  return deg;
+}
+
+float normalize_rad(float rad) {
+  while (rad > M_PI_F * 2.f)
+    rad -= M_PI_F * 2.f;
+  while (rad < 0.f)
+    rad += M_PI_F * 2.f;
+  return rad;
+}
+
 int ipow(int base, int exp) {
   int result = 1;
   for (;;) {

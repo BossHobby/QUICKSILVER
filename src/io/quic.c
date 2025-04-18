@@ -17,6 +17,7 @@
 #include "flight/control.h"
 #include "flight/sixaxis.h"
 #include "io/blackbox_device.h"
+#include "io/gps.h"
 #include "io/usb_configurator.h"
 #include "io/vtx.h"
 #include "osd/render.h"
@@ -221,6 +222,15 @@ static void get_quic(quic_t *quic, cbor_value_t *dec) {
     quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
+#ifdef USE_GPS
+  case QUIC_VAL_GPS_STATUS: {
+    res = cbor_encode_gps_status_t(&enc, &gps_status);
+    check_cbor_error(QUIC_CMD_GET);
+
+    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  }
+#endif
   default:
     quic_errorf(QUIC_CMD_GET, "INVALID VALUE %d", value);
     break;

@@ -27,6 +27,14 @@ extern void test_imu_accel_fusion_ground(void);
 extern void test_imu_accel_magnitude_rejection(void);
 extern void test_imu_attitude_calculation(void);
 extern void test_imu_in_flight_behavior(void);
+extern void test_imu_heading_level(void);
+extern void test_imu_heading_tilted(void);
+extern void test_imu_gps_fusion_low_speed(void);
+extern void test_imu_gps_fusion_variable_gain(void);
+extern void test_imu_gps_fusion_trust_speed(void);
+extern void test_imu_heading_normalization(void);
+extern void test_imu_gps_fusion_poor_accuracy(void);
+extern void test_imu_heading_complex_rotation(void);
 
 // Vector tests
 extern void test_vec3_magnitude(void);
@@ -98,6 +106,20 @@ extern void test_blackbox_cbor_vec3_roundtrip(void);
 extern void test_blackbox_cbor_vec4_roundtrip(void);
 extern void test_blackbox_iframe_interval(void);
 
+// Attitude tests
+extern void test_attitude_initial_state(void);
+extern void test_attitude_level_flight(void);
+extern void test_attitude_roll_rotation(void);
+extern void test_attitude_pitch_rotation(void);
+extern void test_attitude_yaw_rotation(void);
+extern void test_attitude_accel_correction(void);
+extern void test_attitude_gps_heading_fusion(void);
+extern void test_attitude_gps_suppression_yaw_stick(void);
+extern void test_attitude_gps_suppression_roll(void);
+extern void test_attitude_no_gps_when_stationary(void);
+extern void test_attitude_quaternion_normalization(void);
+extern void test_attitude_heading_wraparound(void);
+
 // Common setUp and tearDown
 void setUp(void) {
   // Reset hardware mocks before each test
@@ -137,6 +159,14 @@ int main(int argc, char **argv) {
   RUN_TEST(test_imu_accel_magnitude_rejection);
   RUN_TEST(test_imu_attitude_calculation);
   RUN_TEST(test_imu_in_flight_behavior);
+  RUN_TEST(test_imu_heading_level);
+  RUN_TEST(test_imu_heading_tilted);
+  RUN_TEST(test_imu_gps_fusion_low_speed);
+  RUN_TEST(test_imu_gps_fusion_variable_gain);
+  RUN_TEST(test_imu_gps_fusion_trust_speed);
+  RUN_TEST(test_imu_heading_normalization);
+  RUN_TEST(test_imu_gps_fusion_poor_accuracy);
+  RUN_TEST(test_imu_heading_complex_rotation);
 
   // Vector tests
   RUN_TEST(test_vec3_magnitude);
@@ -207,6 +237,20 @@ int main(int argc, char **argv) {
   RUN_TEST(test_blackbox_cbor_vec3_roundtrip);
   RUN_TEST(test_blackbox_cbor_vec4_roundtrip);
   RUN_TEST(test_blackbox_iframe_interval);
+
+  // Attitude tests
+  RUN_TEST(test_attitude_initial_state);
+  RUN_TEST(test_attitude_level_flight);
+  RUN_TEST(test_attitude_roll_rotation);
+  RUN_TEST(test_attitude_pitch_rotation);
+  RUN_TEST(test_attitude_yaw_rotation);
+  RUN_TEST(test_attitude_accel_correction);
+  RUN_TEST(test_attitude_gps_heading_fusion);
+  RUN_TEST(test_attitude_gps_suppression_yaw_stick);
+  RUN_TEST(test_attitude_gps_suppression_roll);
+  RUN_TEST(test_attitude_no_gps_when_stationary);
+  RUN_TEST(test_attitude_quaternion_normalization);
+  RUN_TEST(test_attitude_heading_wraparound);
 
   return UNITY_END();
 }

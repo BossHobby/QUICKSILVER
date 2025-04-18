@@ -72,6 +72,7 @@ typedef enum {
   AUX_BLACKBOX,
   AUX_PREARM,
   AUX_OSD_PROFILE,
+  AUX_RETURN_TO_HOME,
 
   AUX_FUNCTION_MAX
 } __attribute__((__packed__)) aux_function_t;

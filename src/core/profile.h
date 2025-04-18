@@ -9,7 +9,7 @@
 
 #define OSD_NUMBER_ELEMENTS 32
 
-#define PROFILE_VERSION MAKE_SEMVER(0, 2, 6)
+#define PROFILE_VERSION MAKE_SEMVER(0, 2, 7)
 
 // Rates
 typedef enum {
@@ -378,6 +378,20 @@ typedef struct {
   STR_MEMBER(name_osd)             \
   END_STRUCT()
 
+typedef struct {
+  // RTH parameters
+  float rth_altitude;        // Altitude offset from current position
+  bool rth_on_failsafe;      // Activate RTH on failsafe
+  bool rth_auto_land;        // Automatically land after reaching home
+} profile_navigation_t;
+
+#define NAVIGATION_MEMBERS                   \
+  START_STRUCT(profile_navigation_t)         \
+  MEMBER(rth_altitude, float)                \
+  MEMBER(rth_on_failsafe, bool)              \
+  MEMBER(rth_auto_land, bool)                \
+  END_STRUCT()
+
 // Full Profile
 typedef struct {
   profile_metadata_t meta;
@@ -390,6 +404,7 @@ typedef struct {
   profile_pid_t pid;
   profile_voltage_t voltage;
   profile_blackbox_t blackbox;
+  profile_navigation_t navigation;
 } profile_t;
 
 #define PROFILE_MEMBERS                \
@@ -400,10 +415,11 @@ typedef struct {
   MEMBER(filter, profile_filter_t)     \
   MEMBER(osd, profile_osd_t)           \
   MEMBER(rate, profile_rate_t)         \
-  MEMBER(receiver, profile_receiver_t) \
-  MEMBER(pid, profile_pid_t)           \
-  MEMBER(voltage, profile_voltage_t)   \
-  MEMBER(blackbox, profile_blackbox_t) \
+  MEMBER(receiver, profile_receiver_t)   \
+  MEMBER(pid, profile_pid_t)             \
+  MEMBER(voltage, profile_voltage_t)     \
+  MEMBER(blackbox, profile_blackbox_t)   \
+  MEMBER(navigation, profile_navigation_t) \
   END_STRUCT()
 
 extern profile_t profile;

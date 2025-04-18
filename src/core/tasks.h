@@ -11,6 +11,7 @@
 typedef enum {
   TASK_GYRO,
   TASK_IMU,
+  TASK_ATTITUDE,
   TASK_PID,
   TASK_RX,
   TASK_VBAT,

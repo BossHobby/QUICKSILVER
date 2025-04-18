@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Build all targets: `pio run`
 - Build specific target: `pio run -e stm32f405` (other targets: stm32f411, stm32f722, stm32f745, stm32f765, stm32g473, stm32h743, at32f435, simulator)
 - Clean: `pio run -t clean`
-- run native tests: `pio test --environment test_native`
+- Run native tests: `pio test --environment test_native`
 - Verify build across all main targets: `pio run -e stm32f405 -e stm32f411 -e stm32f745 -e stm32f765 -e stm32f722 -e stm32h743 -e stm32g473 -e at32f435 -e at32f435m -e test_native`
 
 ## Code Style Guidelines
@@ -15,15 +15,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Includes: group by standard libraries first, then project modules
 - Indentation: 2 spaces
 - Braces: opening brace on same line for functions and control structures
-- Function naming: snake_case
+- Function naming: snake_case, follow pattern <noun>_<action> (e.g., gps_heading_update, nav_update_rth)
 - Variable naming: snake_case
 - Constants/Macros: UPPER_CASE
 - Error handling: use failloop.h for critical errors
-- Comments: document non-obvious behavior and complex algorithms
+- Comments: lowercase, concise, document non-obvious behavior and complex algorithms
 - Type safety: use appropriate typedefs (uint8_t, etc.) for hardware registers
 - Hardware access: use appropriate driver abstraction layers
 - Memory sections: respect DMA and FAST RAM sections where specified
 - Use const whenever possible
+- Avoid intermediate variables where practical, prefer direct expressions
+- Use ternary operators for simple conditionals
+- Global state: prefer extern declarations in headers over getter functions for accessing module state
+- Visibility: use static for functions and variables that are only used within a module; only expose what's needed externally
+- Loop variables: use descriptive names (e.g., 'axis' instead of 'i' for axis loops)
+- Always use braces for control structures, even single-line statements
+- No inline comments in struct definitions
 
 ## Test System
 
@@ -40,7 +47,6 @@ The project uses Unity test framework integrated with PlatformIO for unit testin
 ### Test Structure
 
 Tests are located in `test/test_native/`:
-
 - `test_main.c` - Main test runner that registers and executes all tests
 - `test_<module>.c` - Individual test modules for different components
 - `mock_helpers.h/.c` - Mock hardware functions for testing
@@ -48,7 +54,6 @@ Tests are located in `test/test_native/`:
 ### Test Organization
 
 Each test module follows this pattern:
-
 1. Include Unity: `#include <unity.h>`
 2. Include mock helpers: `#include "mock_helpers.h"`
 3. Include module under test
@@ -60,43 +65,20 @@ Each test module follows this pattern:
 ### Unity Assertions
 
 Common Unity assertions used:
-
 - `TEST_ASSERT_EQUAL_FLOAT(expected, actual)` - Float equality
 - `TEST_ASSERT_FLOAT_WITHIN(delta, expected, actual)` - Float within tolerance
 - `TEST_ASSERT_NOT_NULL(pointer)` - Pointer not null
-- `TEST_ASSERT_TRUE(condition)` - Boolean true
-- `TEST_ASSERT_FALSE(condition)` - Boolean false
+- `TEST_ASSERT_TRUE/FALSE(condition)` - Boolean assertions
 - `TEST_ASSERT_EQUAL_INT(expected, actual)` - Integer equality
 - `TEST_ASSERT_EQUAL_MEMORY(expected, actual, length)` - Memory block comparison
-
-### PlatformIO Test Configuration
-
-The `test_native` environment in `platformio.ini`:
-
-```ini
-[env:test_native]
-extends = common
-board = SIMULATOR
-platform = native
-test_build_src = true
-test_filter = test_native
-debug_test = test_native
-debug_tool = custom
-build_src_filter = ${common.build_src_filter} +<driver/mcu/native> +<system/native>
-build_flags =
-  ${common.build_flags}
-  -lm
-  -DSIMULATOR
-  -Isrc/system/native
-```
 
 ### Test Coverage
 
 Current test modules include:
-
 - **Filter tests** - DSP filter initialization, low-pass filtering, frequency attenuation
 - **PID tests** - Proportional/integral/derivative control, voltage compensation
 - **IMU tests** - Gravity vector, gyro integration, accelerometer fusion, attitude calculation
+- **Attitude tests** - Quaternion-based attitude estimation, GPS heading fusion, suppression logic
 - **Vector tests** - 3D/4D vector operations, rotations, magnitude calculations
 - **CRC tests** - Checksum calculations and verification
 - **Ring buffer tests** - Circular buffer operations, wraparound, multi-read/write
@@ -124,17 +106,6 @@ Current test modules include:
 - Use appropriate Unity assertions for the data type being tested
 - Add tolerance when comparing floating-point values
 
-### Serial Testing
-
-- **USE_SERIAL macro is now enabled** for simulator builds to exercise more code paths
-- Serial mock implementation exists in `src/driver/mcu/native/serial.c`
-- Ring buffer implementation used for simulating serial hardware
-- Virtual pins are used instead of actual GPIO pins for simulator
-- When testing serial functionality:
-  - Use SERIAL_PORT1 instead of 0 (which is SERIAL_PORT_INVALID)
-  - Initialize serial ports correctly with mock_serial_init()
-  - Check for NULL pointers before using ring buffers
-
 ## Feature Macros (src/config/feature.h)
 
 The project uses feature macros to control conditional compilation for different hardware targets and build configurations.
@@ -148,7 +119,6 @@ The project uses feature macros to control conditional compilation for different
 ### Feature Categories
 
 #### Core Hardware Features (disabled in SIMULATOR builds)
-
 - `USE_ADC` - Analog-to-digital converter support
 - `USE_SPI` - SPI bus interface
 - `USE_SERIAL` - Hardware UART/USART serial ports
@@ -156,31 +126,26 @@ The project uses feature macros to control conditional compilation for different
 - `USE_SOFT_SERIAL` - Software-emulated serial port
 
 #### Storage Features (disabled in SIMULATOR builds)
-
 - `USE_SDCARD` - SD card support for blackbox logging
 - `USE_DATA_FLASH` - Onboard flash memory for blackbox
 
 #### Motor Control (disabled in SIMULATOR builds)
-
 - `USE_MOTOR_DSHOT` - Digital shot protocol for brushless motors
 - `USE_MOTOR_PWM` - PWM control for brushed motors
 
 #### Video/OSD Features (disabled in SIMULATOR builds)
-
 - `USE_VTX` - Video transmitter control
 - `USE_DIGITAL_VTX` - Digital VTX protocols
 - `USE_MAX7456` - OSD chip support
 - `USE_RGB_LED` - Addressable RGB LED support
 
 #### Receiver Features (disabled in SIMULATOR builds)
-
 - `USE_RX_UNIFIED` - Serial receiver protocols (CRSF, SBUS, IBUS, DSM)
 - `USE_RX_SPI_FRSKY` - FrSky SPI receivers (not on AT32F4)
 - `USE_RX_SPI_FLYSKY` - FlySky SPI receivers (not on AT32F4)
 - `USE_RX_SPI_EXPRESS_LRS` - ExpressLRS SPI receivers (not on AT32F4)
 
 #### Always-Enabled Features (available in all builds including SIMULATOR)
-
 - `USE_SERIAL` - Serial port functionality (required for CRSF and other serial protocols)
 - `USE_RX_UNIFIED` - Unified serial receiver support (CRSF, SBUS, IBUS, DSM)
 - `USE_BLACKBOX` - Flight data logging
@@ -208,72 +173,26 @@ The project uses feature macros to control conditional compilation for different
 #endif
 ```
 
-### Dependencies
-
-- SPI receivers require `USE_SPI`
-- VTX features require `USE_SERIAL`
-- Blackbox can use either `USE_SDCARD` or `USE_DATA_FLASH`
-- Motor control requires either `USE_MOTOR_DSHOT` or `USE_MOTOR_PWM`
-
-### Testing Considerations
-
-When writing tests:
-
-- Mock implementations should respect these feature flags
-- Test builds use `-DSIMULATOR` which disables most hardware features
-- Include guards should follow the same pattern as production code
-- Feature-specific tests should be wrapped in appropriate #ifdef blocks
-
 ## Hardware Feature Implementation Guidelines (Simulator/Native)
 
 When enabling hardware features (ADC, SPI, etc.) for the simulator/native platform:
 
 ### Header Organization
-
 - Keep native headers minimal to avoid circular dependencies
 - Native headers should only contain platform-specific constants and types
 - Avoid including system headers from native headers
 - Use `#pragma once` for include guards
-- Example structure:
-
-  ```c
-  // src/driver/mcu/native/adc.h
-  #pragma once
-
-  #define VREFINT_CAL (1489)
-  #define VREFINT_CAL_VREF (3300)
-  ```
 
 ### Common Variables
-
 - Use `extern` declarations in native implementation files for shared variables
 - Never define variables in native code (they should be in common driver code)
-- Example:
-  ```c
-  // src/driver/mcu/native/adc.c
-  extern uint16_t adc_array[ADC_CHAN_MAX];
-  extern adc_channel_t adc_pins[ADC_CHAN_MAX];
-  ```
 
 ### Test Files
-
 - Add `extern` declarations for test functions at the top of test files
 - Do not include conditional compilation (#ifdef USE_ADC) in test files
 - The test environment always has access to all features
-- Example:
-
-  ```c
-  // test/test_native/test_adc.c
-  extern void adc_set_raw_value(adc_chan_t chan, uint16_t value);
-
-  void test_adc_read_raw() {
-    adc_set_raw_value(ADC_CHAN_VBAT, 3000);
-    TEST_ASSERT_EQUAL_INT(3000, adc_read_raw(ADC_CHAN_VBAT));
-  }
-  ```
 
 ### Implementation Patterns
-
 1. Create stub implementations that satisfy linker requirements
 2. Provide reasonable default values for simulated hardware
 3. Implement minimal functionality needed for tests
@@ -281,7 +200,6 @@ When enabling hardware features (ADC, SPI, etc.) for the simulator/native platfo
 5. Add helper functions for test manipulation (set_raw_value, etc.)
 
 ### Common Pitfalls to Avoid
-
 - Don't include system.h in native headers (causes circular dependencies)
 - Don't define common variables in native code (use extern)
 - Don't wrap test files in feature macros
@@ -293,14 +211,12 @@ When enabling hardware features (ADC, SPI, etc.) for the simulator/native platfo
 When implementing tests for hardware features like serial:
 
 ### Ring Buffer Management
-
 - Serial ports require initialized ring buffers for rx_buffer and tx_buffer
 - Create static ring buffer data arrays in test files
 - Initialize ring_buffer_t structures with proper data, head, tail, and size
 - Clear ring buffers between tests to ensure test isolation
 
 ### Test Structure
-
 ```c
 // Create ring buffers for testing
 static uint8_t rx_buffer_data[512];
@@ -321,7 +237,6 @@ serial_port_t port = {
 ```
 
 ### Validation Considerations
-
 - Native/simulator implementations may not pass hardware validation checks
 - Target device validation (target_serial_port_valid) may fail in test environment
 - Focus tests on functionality that can be exercised in simulator
@@ -543,3 +458,75 @@ Benefits:
 - Automatically adapts to gyro timing variations
 
 This would require gyro EXTI support and available hardware timers, but could significantly improve timing precision for supported hardware.
+
+## BossHobby Repository Ecosystem
+
+QUICKSILVER is part of a larger ecosystem of repositories under the BossHobby organization. See ~/src/github.com/BossHobby/ for all related repositories.
+
+### Main Components
+
+1. **QUICKSILVER** (this repository)
+   - Flight controller firmware written in C
+   - Uses PlatformIO for multi-platform builds
+   - Supports STM32F4/F7/H7/G4 and AT32F4 MCUs
+   - Embeds target configurations during build
+
+2. **Configurator**
+   - Web-based GUI built with Vue 3 + TypeScript
+   - Desktop app via Electron packaging
+   - Communicates with QUICKSILVER firmware via CBOR protocol over serial/USB
+   - Features: PID tuning, rates configuration, OSD setup, blackbox viewer, firmware flashing
+
+3. **Targets**
+   - TypeScript CLI tool for hardware target management
+   - Converts Betaflight target definitions to QUICKSILVER format
+   - Generates YAML files with pin mappings, peripherals, and features
+   - Output is embedded into firmware binaries via build scripts
+
+4. **Simulator**
+   - Rust-based physics simulator using Bevy game engine
+   - Communicates with QUICKSILVER's simulator build via shared memory IPC
+   - Enables testing without physical hardware
+   - Supports 3D visualization and physics simulation
+
+5. **OSD_Font**
+   - Custom font generation for HD video systems
+   - Supports DJI, HDZero, and Walksnail formats
+   - Python scripts convert SVG sources to binary fonts
+
+6. **Docs**
+   - Documentation site using MkDocs
+   - Hosted at docs.bosshobby.com
+
+### Key Interactions
+
+#### Build Flow
+```
+Targets repo → YAML files → QUICKSILVER build → Firmware binary
+```
+- Target YAML files are injected into the ELF during build
+- Each firmware contains its specific hardware configuration
+
+#### Configuration Flow
+```
+Configurator ↔ QUICKSILVER firmware
+```
+- Uses CBOR (Concise Binary Object Representation) protocol
+- Serial communication over USB or UART
+- Real-time parameter updates and telemetry
+
+#### Development/Testing Flow
+```
+Simulator ↔ QUICKSILVER (simulator build)
+```
+- Shared memory IPC for high-speed communication
+- Physics simulation for realistic testing
+- No hardware required for development
+
+### Directory Structure References
+
+When working with cross-repository features:
+- Target definitions: `../Targets/targets/*.yaml`
+- Configurator builds: `../Configurator/dist/`
+- Font files: `../OSD_Font/*/`
+- Simulator integration: Build with `-e simulator`

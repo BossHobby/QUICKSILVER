@@ -5,11 +5,34 @@
 #include "core/failloop.h"
 #include "core/project.h"
 #include "core/scheduler.h"
+#include "io/gps.h"
 #include "rx/rx.h"
 #include "util/vector.h"
 
 #define RXMODE_BIND 0
 #define RXMODE_NORMAL 1
+
+typedef enum {
+  VER_INVALID,
+  VER_M5 = 0x00040005,
+  VER_M6 = 0x00040007,
+  VER_M7 = 0x00070000,
+  VER_M8 = 0x00080000,
+  VER_M9 = 0x00190000,
+  VER_M10 = 0x000A0000,
+  VER_MAX = 0xFFFFFFFF,
+} gps_version_t;
+
+typedef struct {
+  int32_t lon;
+  int32_t lat;
+} gps_coord_t;
+
+#define GPS_COORD_MEMBERS   \
+  START_STRUCT(gps_coord_t) \
+  MEMBER(lon, int32_t)      \
+  MEMBER(lat, int32_t)      \
+  END_STRUCT()
 
 // THE UN OF STRUCTS
 typedef struct {
@@ -99,12 +122,20 @@ typedef struct {
   float baro_altitude;        // baro altitude
   float baro_launch_altitude; // baro altitude over launchpoint
 
+  gps_version_t gps_version;
+  bool gps_lock;
   uint8_t gps_sats;
-  int32_t gps_lon;
-  int32_t gps_lat;
+  float gps_speed;
+  float gps_heading;
+  float gps_heading_accuracy; // remove
+  gps_coord_t gps_coord;
+  gps_coord_t gps_home;
   float gps_altitude;
 
-  float altitude;             // altitude over launchpoint
+  float heading;
+  float home_bearing;
+  float home_distance;
+  float altitude; // altitude over launchpoint
 
   vec3_t setpoint; // angular velocity setpoint from stick input
   vec3_t error;    // setpoint - gyro = error in angular velocity
@@ -123,6 +154,7 @@ typedef struct {
 } control_state_t;
 
 #define STATE_MEMBERS                         \
+  START_STRUCT(control_state_t)               \
   MEMBER(failloop, uint8_t)                   \
   MEMBER(looptime, float)                     \
   MEMBER(looptime_us, float)                  \
@@ -165,10 +197,17 @@ typedef struct {
   MEMBER(baro_pressure, float)                \
   MEMBER(baro_altitude, float)                \
   MEMBER(baro_launch_altitude, float)         \
+  MEMBER(gps_version, uint32_t)               \
+  MEMBER(gps_lock, bool)                      \
   MEMBER(gps_sats, uint8_t)                   \
-  MEMBER(gps_lon, int32_t)                    \
-  MEMBER(gps_lat, int32_t)                    \
+  MEMBER(gps_speed, float)                    \
+  MEMBER(gps_heading, float)                  \
+  MEMBER(gps_coord, gps_coord_t)              \
+  MEMBER(gps_home, gps_coord_t)               \
   MEMBER(gps_altitude, float)                 \
+  MEMBER(heading, float)                      \
+  MEMBER(home_bearing, float)                 \
+  MEMBER(home_distance, float)                \
   MEMBER(altitude, float)                     \
   MEMBER(setpoint, vec3_t)                    \
   MEMBER(error, vec3_t)                       \
@@ -179,7 +218,8 @@ typedef struct {
   MEMBER(motor_mix, vec4_t)                   \
   MEMBER(angle_error, vec3_t)                 \
   MEMBER(stick_vector, vec3_t)                \
-  ARRAY_MEMBER(dshot_rpm, 4, uint32_t)
+  ARRAY_MEMBER(dshot_rpm, 4, uint32_t)        \
+  END_STRUCT()
 
 typedef struct {
   uint8_t active;

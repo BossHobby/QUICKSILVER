@@ -31,6 +31,11 @@
 #define ICON_CROSSHAIR_1 0x72
 #define ICON_CROSSHAIR_2 0x73
 #define ICON_CROSSHAIR_3 0x74
+#define ICON_SAT_L 0x1E
+#define ICON_SAT_R 0x1F
+#define ICON_ARROW_NORTH 0x60 // First arrow points North (0°)
+#define ICON_KPH 0x9E
+#define ICON_HOME 0x05
 
 #define HOLD 0
 #define TEMP 1
@@ -76,6 +81,9 @@ static const char *osd_element_labels[] = {
     "CROSSHAIR",
     "CURRENT DRAWN",
     "ALTITUDE",
+    "GPS SATS",
+    "GPS SPEED",
+    "GPS HOME",
 };
 
 static const char *aux_channel_labels[] = {
@@ -291,16 +299,19 @@ void osd_save_exit() {
 }
 
 static void print_osd_flightmode(osd_element_t *el) {
-  const uint8_t flightmode_labels[5][10] = {
+  const uint8_t flightmode_labels[6][10] = {
       {"   ACRO   "},
       {"  LEVEL   "},
       {" RACEMODE "},
       {" HORIZON  "},
       {"RM HORIZON"},
+      {"   RTH    "},
   };
 
-  uint8_t flightmode;
-  if (rx_aux_on(AUX_LEVELMODE)) {
+  uint8_t flightmode = 0;
+  if (rx_aux_on(AUX_RETURN_TO_HOME)) {
+    flightmode = 5;
+  } else if (rx_aux_on(AUX_LEVELMODE)) {
     if (rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON))
       flightmode = 4;
     if (!rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON))
@@ -406,6 +417,13 @@ static void print_osd_vtx(osd_element_t *el) {
       osd_write_char(vtx_settings.power_level + 49);
   }
 #endif
+}
+
+static void print_heading(float heading_deg) {
+  // Convert to 16-direction index (0-15) with proper rounding
+  // Add 11.25 degrees (half of 22.5) for rounding to nearest direction
+  const uint8_t direction = (uint8_t)((normalize_deg(heading_deg) + 11.25f) / 22.5f) % 16;
+  osd_write_char(ICON_ARROW_NORTH + direction);
 }
 
 void osd_init() {
@@ -524,6 +542,41 @@ static void osd_display_regular() {
         osd_write_char(ICON_KILOMETERS);
       } else {
         osd_write_float(state.altitude, 3, 1);
+        osd_write_char(ICON_METERS);
+      }
+      break;
+    }
+
+    case OSD_GPS_SATS: {
+      osd_start(osd_attr(el) | (state.gps_lock ? 0x0 : OSD_ATTR_BLINK), pos_x(el), pos_y(el));
+      osd_write_char(ICON_SAT_L);
+      osd_write_char(ICON_SAT_R);
+      osd_write_int(state.gps_sats, 2);
+      break;
+    }
+
+    case OSD_GPS_SPEED: {
+      osd_start_el(el);
+      osd_write_float(state.gps_speed * 3.6f, 3, 1); // Convert m/s to km/h for display
+      osd_write_char(ICON_KPH);
+      break;
+    }
+
+    case OSD_GPS_HOME: {
+      osd_start_el(el);
+      if (state.home_distance < 5.f) {
+        osd_write_char(ICON_HOME);
+      } else {
+        // Show arrow relative to craft heading
+        // Add 180° to flip the arrow if it appears back-to-front
+        // If home is behind (180° relative), arrow should point backwards
+        print_heading(state.home_bearing - state.heading + 180.0f);
+      }
+      if (state.home_distance >= 1000.f) {
+        osd_write_float(state.home_distance / 1000.f, 4, 1);
+        osd_write_char(ICON_KILOMETERS);
+      } else {
+        osd_write_float(state.home_distance, 4, 1);
         osd_write_char(ICON_METERS);
       }
       break;

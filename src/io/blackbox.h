@@ -29,6 +29,7 @@ typedef enum {
 
 typedef enum {
   BBOX_DEBUG_DYN_NOTCH = 0x1 << 0,
+  BBOX_DEBUG_NAVIGATION = 0x1 << 1,
 } blackbox_debug_flag_t;
 
 typedef struct {
