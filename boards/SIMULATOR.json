@@ -1,11 +1,13 @@
 {
-    "name": "native",
+    "name": "SIMULATOR",
     "build": {
         "core": "native",
         "cpu": "native",
         "extra_flags": "",
         "mcu": "native"
     },
+    "frameworks": ["native"],
+    "platform": "native",
     "upload": {
         "maximum_ram_size": 104857600,
         "maximum_size": 10485760
