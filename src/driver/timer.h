@@ -93,6 +93,8 @@
   TIMER(13)    \
   TIMER(14)    \
   TIMER(20)
+#elif defined(SIMULATOR)
+#define TIMERS
 #endif
 
 typedef enum {
