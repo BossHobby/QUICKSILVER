@@ -77,3 +77,11 @@ __pycache__
 /targets
 flash.bin
 blackbox.bin
+
+# Claude Code and AI assistant files
+.claude-code/
+.ai/
+.assistant/
+claude.log
+*.claude-backup
+.claude-todo
