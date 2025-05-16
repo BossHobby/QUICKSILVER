@@ -66,6 +66,7 @@ memory_section_init() {
 #endif
 }
 
+#ifndef PIO_UNIT_TESTING
 __attribute__((__used__)) int main() {
   // init timer so we can use delays etc
   gpio_ports_init();
@@ -120,3 +121,4 @@ __attribute__((__used__)) int main() {
 
   scheduler_run();
 }
+#endif
