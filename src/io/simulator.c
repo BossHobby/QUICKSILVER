@@ -67,6 +67,10 @@ void simulator_init() {
 }
 
 void simulator_update() {
+  if (shared == NULL) {
+    return;
+  }
+
   pthread_mutex_lock(&shared->mutex);
 
   if (shared->state.rc_updated) {
