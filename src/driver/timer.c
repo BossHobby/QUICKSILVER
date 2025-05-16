@@ -50,7 +50,7 @@ bool timer_alloc_tag(timer_use_t use, resource_tag_t tag) {
 }
 
 resource_tag_t timer_alloc(timer_use_t use) {
-  for (uint8_t i = TIMER1; i < TIMER_MAX; i++) {
+  for (uint8_t i = TIMER_INVALID + 1; i < TIMER_MAX; i++) {
     const resource_tag_t tag = TIMER_TAG(i, TIMER_CH_ALL);
     if (timer_alloc_tag(use, tag)) {
       return tag;
