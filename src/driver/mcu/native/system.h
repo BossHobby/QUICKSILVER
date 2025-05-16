@@ -18,5 +18,6 @@ typedef uint32_t timer_dev_t;
 typedef uint32_t usart_dev_t;
 typedef uint32_t dma_stream_def_t;
 
+#include "dma.h"
 #include "gpio.h"
 #include "time.h"
