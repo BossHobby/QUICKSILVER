@@ -115,6 +115,7 @@ static void msp_quic_send(uint8_t *data, uint32_t len, void *priv) {
 }
 
 static void msp_check_vtx_detected(msp_t *msp) {
+#ifdef USE_VTX
   if (msp_vtx_detected || msp->device != MSP_DEVICE_VTX)
     return;
 
@@ -122,6 +123,7 @@ static void msp_check_vtx_detected(msp_t *msp) {
     return;
 
   msp_vtx_detected = true;
+#endif
 }
 
 static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *payload, uint16_t size) {
@@ -481,7 +483,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     case MSP_PASSTHROUGH_SERIAL_ID: {
       uint8_t data[1] = {1};
       msp_send_reply(msp, magic, cmd, data, 1);
-
+#ifdef USE_VTX
       if (arg == serial_vtx.config.port) {
         if (vtx_settings.protocol == VTX_PROTOCOL_SMART_AUDIO) {
           usb_serial_passthrough(arg, 4800, 2, true);
@@ -490,6 +492,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
           usb_serial_passthrough(arg, 9600, 1, true);
         }
       }
+#endif
       break;
     }
 #endif
@@ -534,6 +537,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       if (i == serial_rx.config.port) {
         function = MSP_SERIAL_FUNCTION_RX;
       }
+#ifdef USE_VTX
       if (i == serial_vtx.config.port) {
         if (vtx_settings.protocol == VTX_PROTOCOL_TRAMP) {
           function = MSP_SERIAL_FUNCTION_TRAMP;
@@ -541,9 +545,12 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
           function = MSP_SERIAL_FUNCTION_SA;
         }
       }
+#endif
+#ifdef USE_DIGITAL_VTX
       if (i == serial_displayport.config.port) {
         function = MSP_SERIAL_FUNCTION_DISPLAYPORT;
       }
+#endif
 
       data[1 + i * 5 + 1] = (function >> 0) & 0xFF;
       data[1 + i * 5 + 2] = (function >> 8) & 0xFF;
