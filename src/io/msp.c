@@ -66,6 +66,7 @@ static void msp_write_uint32_t(uint8_t *data, uint32_t val) {
 }
 
 static void msp_check_vtx_detected(msp_t *msp) {
+#ifdef USE_VTX
   if (msp_vtx_detected || msp->device != MSP_DEVICE_VTX)
     return;
 
@@ -73,6 +74,7 @@ static void msp_check_vtx_detected(msp_t *msp) {
     return;
 
   msp_vtx_detected = true;
+#endif
 }
 
 static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *payload, uint16_t size) {
