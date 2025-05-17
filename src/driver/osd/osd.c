@@ -337,10 +337,10 @@ static bool osd_update_display() {
     return false;
   }
 
-  if (osd_flush()) {
-    row = 0;
-    return true;
+  if (!osd_flush()) {
+    return false;
   }
+  row = 0;
   return true;
 }
 
