@@ -374,12 +374,15 @@ void gps_init() {
 }
 
 static bool gps_read_ublox() {
+  bool had_update = false;
+
   uint8_t byte = 0;
   WHILE_TIMEOUT(serial_read_byte(&serial_gps, &byte), 500) {
     if (gps_parse_ubx(byte))
-      return true;
+      had_update = true;
   }
-  return false;
+
+  return had_update;
 }
 
 bool gps_update() {

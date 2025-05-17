@@ -299,16 +299,19 @@ void osd_save_exit() {
 }
 
 static void print_osd_flightmode(osd_element_t *el) {
-  const uint8_t flightmode_labels[5][10] = {
+  const uint8_t flightmode_labels[6][10] = {
       {"   ACRO   "},
       {"  LEVEL   "},
       {" RACEMODE "},
       {" HORIZON  "},
       {"RM HORIZON"},
+      {"   RTH    "},
   };
 
-  uint8_t flightmode;
-  if (rx_aux_on(AUX_LEVELMODE)) {
+  uint8_t flightmode = 0;
+  if (rx_aux_on(AUX_RETURN_TO_HOME)) {
+    flightmode = 5;
+  } else if (rx_aux_on(AUX_LEVELMODE)) {
     if (rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON))
       flightmode = 4;
     if (!rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON))
@@ -568,8 +571,13 @@ static void osd_display_regular() {
 
   case OSD_GPS_SATS: {
     osd_start(osd_attr(el) | (state.gps_lock ? 0x0 : OSD_ATTR_BLINK), pos_x(el), pos_y(el));
-    osd_write_char(ICON_SAT_L);
-    osd_write_char(ICON_SAT_R);
+    if (state.gps_lock) {
+      osd_write_char(ICON_SAT_L);
+      osd_write_char(ICON_SAT_R);
+    } else {
+      osd_write_char(' ');
+      osd_write_char(' ');
+    }
     osd_write_int(state.gps_sats, 2);
 
     osd_state.element++;

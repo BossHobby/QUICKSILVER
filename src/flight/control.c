@@ -106,7 +106,25 @@ static void control_flight_mode() {
   // flight control
   const vec3_t rates = input_rates_calc();
 
-  if (rx_aux_on(AUX_LEVELMODE)) {
+  if (rx_aux_on(AUX_RETURN_TO_HOME)) {
+    // calculate roll / pitch error
+    state.angle_error = input_stick_vector(state.rx_filtered.axis);
+
+    // apply yaw from the top of the quad
+    // yaw rotation vector
+    const vec3_t yaw_error = {
+        .roll = state.GEstG.pitch * rates.yaw,
+        .pitch = -state.GEstG.roll * rates.yaw,
+        .yaw = state.GEstG.yaw * rates.yaw,
+    };
+
+    // roll, pitch and yaw
+    for (uint32_t i = 0; i < 3; i++) {
+      state.setpoint.axis[i] = angle_pid(i) + yaw_error.axis[i];
+      state.error.axis[i] = state.setpoint.axis[i] - state.gyro.axis[i];
+    }
+
+  } else if (rx_aux_on(AUX_LEVELMODE)) {
 
     // calculate roll / pitch error
     state.angle_error = input_stick_vector(state.rx_filtered.axis);
