@@ -426,6 +426,7 @@ const profile_t default_profile = {
             AUX_CHANNEL_OFF, // AUX_BLACKBOX
             PREARM,          // AUX_PREARM
             AUX_CHANNEL_OFF, // AUX_OSD_PROFILE
+            AUX_CHANNEL_OFF, // AUX_RETURN_TO_HOME
         },
         .lqi_source = RX_LQI_SOURCE_DIRECT,
         .channel_mapping = RX_MAPPING_AETR,
