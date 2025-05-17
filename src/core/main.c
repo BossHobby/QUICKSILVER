@@ -66,6 +66,7 @@ memory_section_init() {
 #endif
 }
 
+#ifndef PIO_UNIT_TESTING
 __attribute__((__used__)) int main() {
   interrupt_init();
 
@@ -122,3 +123,4 @@ __attribute__((__used__)) int main() {
 
   scheduler_run();
 }
+#endif
