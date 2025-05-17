@@ -56,6 +56,12 @@ extern void test_ring_buffer_clear(void);
 extern void test_ring_buffer_partial_multi_write(void);
 extern void test_ring_buffer_partial_multi_read(void);
 
+// SPI tests
+extern void test_spi_init(void);
+extern void test_spi_txn_queue(void);
+extern void test_spi_dma_ready(void);
+extern void test_spi_reconfigure(void);
+
 // Common setUp and tearDown
 void setUp(void) {
   // Reset hardware mocks before each test
@@ -123,6 +129,12 @@ int main(int argc, char **argv) {
   RUN_TEST(test_ring_buffer_clear);
   RUN_TEST(test_ring_buffer_partial_multi_write);
   RUN_TEST(test_ring_buffer_partial_multi_read);
+
+  // SPI tests
+  RUN_TEST(test_spi_init);
+  RUN_TEST(test_spi_txn_queue);
+  RUN_TEST(test_spi_dma_ready);
+  RUN_TEST(test_spi_reconfigure);
 
   return UNITY_END();
 }
