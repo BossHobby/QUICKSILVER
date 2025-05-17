@@ -68,6 +68,16 @@ extern void test_adc_read_temperature(void);
 extern void test_adc_read_vbat(void);
 extern void test_adc_read_ibat(void);
 
+// Serial tests
+extern void test_serial_init(void);
+extern void test_serial_write_bytes(void);
+extern void test_serial_write_bytes_null_port(void);
+extern void test_serial_write_bytes_null_data(void);
+extern void test_serial_write_bytes_zero_count(void);
+extern void test_serial_port_defs(void);
+extern void test_serial_read_bytes(void);
+extern void test_serial_drain(void);
+
 // Common setUp and tearDown
 void setUp(void) {
   // Reset hardware mocks before each test
@@ -147,6 +157,16 @@ int main(int argc, char **argv) {
   RUN_TEST(test_adc_read_temperature);
   RUN_TEST(test_adc_read_vbat);
   RUN_TEST(test_adc_read_ibat);
+
+  // Serial tests
+  RUN_TEST(test_serial_init);
+  RUN_TEST(test_serial_write_bytes);
+  RUN_TEST(test_serial_write_bytes_null_port);
+  RUN_TEST(test_serial_write_bytes_null_data);
+  RUN_TEST(test_serial_write_bytes_zero_count);
+  RUN_TEST(test_serial_port_defs);
+  RUN_TEST(test_serial_read_bytes);
+  RUN_TEST(test_serial_drain);
 
   return UNITY_END();
 }

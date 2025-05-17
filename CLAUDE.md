@@ -99,8 +99,9 @@ Current test modules include:
 - **Vector tests** - 3D/4D vector operations, rotations, magnitude calculations
 - **CRC tests** - Checksum calculations and verification
 - **Ring buffer tests** - Circular buffer operations, wraparound, multi-read/write
-- **Serial mock tests** - Serial port simulation, buffer management, overflow handling
-- **CRSF tests** - CRSF protocol packet parsing, CRC verification
+- **SPI tests** - SPI initialization, DMA transfer simulation, transaction queuing
+- **ADC tests** - ADC reading, temperature, voltage, and current measurements
+- **Serial tests** - Serial port configuration, data transmission/reception, buffer management
 
 ### Writing New Tests
 
@@ -277,3 +278,40 @@ When enabling hardware features (ADC, SPI, etc.) for the simulator/native platfo
 - Don't define common variables in native code (use extern)
 - Don't wrap test files in feature macros
 - Don't create complex dependencies between native implementations
+- Don't duplicate setUp/tearDown functions across test files
+
+## Serial Testing Guidelines
+
+When implementing tests for hardware features like serial:
+
+### Ring Buffer Management
+- Serial ports require initialized ring buffers for rx_buffer and tx_buffer
+- Create static ring buffer data arrays in test files
+- Initialize ring_buffer_t structures with proper data, head, tail, and size
+- Clear ring buffers between tests to ensure test isolation
+
+### Test Structure
+```c
+// Create ring buffers for testing
+static uint8_t rx_buffer_data[512];
+static uint8_t tx_buffer_data[512];
+static ring_buffer_t rx_buffer = {
+    .buffer = rx_buffer_data,
+    .head = 0,
+    .tail = 0,
+    .size = sizeof(rx_buffer_data),
+};
+
+// Initialize port with buffers
+serial_port_t port = {
+    .rx_buffer = &rx_buffer,
+    .tx_buffer = &tx_buffer,
+    .tx_done = true,
+};
+```
+
+### Validation Considerations
+- Native/simulator implementations may not pass hardware validation checks
+- Target device validation (target_serial_port_valid) may fail in test environment
+- Focus tests on functionality that can be exercised in simulator
+- Test edge cases and error conditions that don't require hardware
