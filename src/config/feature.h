@@ -4,9 +4,9 @@
 #define USE_SERIAL
 #define USE_RX_UNIFIED
 #define USE_BLACKBOX
+#define USE_ADC
 
 #ifndef SIMULATOR
-#define USE_ADC
 #define USE_GYRO
 #define USE_SOFT_SERIAL
 #define USE_SDCARD

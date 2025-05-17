@@ -62,6 +62,12 @@ extern void test_spi_txn_queue(void);
 extern void test_spi_dma_ready(void);
 extern void test_spi_reconfigure(void);
 
+// ADC tests
+extern void test_adc_init(void);
+extern void test_adc_read_temperature(void);
+extern void test_adc_read_vbat(void);
+extern void test_adc_read_ibat(void);
+
 // Common setUp and tearDown
 void setUp(void) {
   // Reset hardware mocks before each test
@@ -135,6 +141,12 @@ int main(int argc, char **argv) {
   RUN_TEST(test_spi_txn_queue);
   RUN_TEST(test_spi_dma_ready);
   RUN_TEST(test_spi_reconfigure);
+
+  // ADC tests
+  RUN_TEST(test_adc_init);
+  RUN_TEST(test_adc_read_temperature);
+  RUN_TEST(test_adc_read_vbat);
+  RUN_TEST(test_adc_read_ibat);
 
   return UNITY_END();
 }
