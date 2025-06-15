@@ -203,7 +203,7 @@ void max7456_intro() {
   }
 }
 
-uint8_t max7456_can_fit() {
+uint32_t max7456_can_fit() {
   return max7456_is_ready() ? 255 : 0;
 }
 

@@ -14,6 +14,6 @@ void simulator_osd_intro();
 bool simulator_osd_clear_async();
 osd_system_t simulator_osd_check_system();
 
-uint8_t simulator_osd_can_fit();
+uint32_t simulator_osd_can_fit();
 bool simulator_osd_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size);
 bool simulator_osd_flush();

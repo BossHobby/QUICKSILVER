@@ -32,7 +32,7 @@ static ring_buffer_t tx_buffer = {
     .buffer = tx_data,
     .head = 0,
     .tail = 0,
-    .size = 512,
+    .size = sizeof(tx_data),
 };
 
 static uint8_t rx_data[512];
@@ -40,7 +40,7 @@ static ring_buffer_t rx_buffer = {
     .buffer = rx_data,
     .head = 0,
     .tail = 0,
-    .size = 512,
+    .size = sizeof(rx_data),
 };
 
 serial_port_t serial_displayport = {
@@ -253,7 +253,7 @@ bool displayport_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *
   return displayport_push_subcmd(SUBCMD_WRITE_STRING, buffer, size + 3);
 }
 
-uint8_t displayport_can_fit() {
+uint32_t displayport_can_fit() {
   const uint32_t free = serial_bytes_free(&serial_displayport);
   const uint32_t overhead = MSP_HEADER_LEN + 2 + 3 + 1;
   return (free > overhead) ? (free - overhead) : 0;

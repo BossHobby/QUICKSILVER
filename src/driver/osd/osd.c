@@ -226,7 +226,7 @@ void osd_write_data(const uint8_t *buffer, uint8_t size) {
     osd_write_char(buffer[i]);
 }
 
-static uint8_t osd_can_fit() {
+static uint32_t osd_can_fit() {
   switch (osd_device) {
 #ifdef USE_MAX7456
   case OSD_DEVICE_MAX7456:

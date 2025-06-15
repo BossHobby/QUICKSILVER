@@ -146,7 +146,7 @@ osd_system_t simulator_osd_check_system() {
   return OSD_SYS_HD;
 }
 
-uint8_t simulator_osd_can_fit() {
+uint32_t simulator_osd_can_fit() {
   return 255;
 }
 
