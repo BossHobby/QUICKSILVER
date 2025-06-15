@@ -277,19 +277,18 @@ bool rx_serial_check() {
   state.rx_status = RX_STATUS_DETECTED + serial_rx_detected_protcol;
 
   const packet_status_t status = rx_serial_process(serial_rx_detected_protcol);
-  if (status == PACKET_NEEDS_MORE) {
-    switch (serial_rx_detected_protcol) {
-    case RX_SERIAL_PROTOCOL_FPORT:
-    case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
-      rx_serial_send_fport_telemetry();
-      break;
-    case RX_SERIAL_PROTOCOL_CRSF:
-      rx_serial_send_crsf_telemetry();
-      break;
 
-    default:
-      break;
-    }
+  switch (serial_rx_detected_protcol) {
+  case RX_SERIAL_PROTOCOL_FPORT:
+  case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
+    rx_serial_send_fport_telemetry();
+    break;
+  case RX_SERIAL_PROTOCOL_CRSF:
+    rx_serial_send_crsf_telemetry();
+    break;
+
+  default:
+    break;
   }
 
   rx_lqi_update();
