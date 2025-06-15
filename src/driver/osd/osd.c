@@ -19,6 +19,8 @@ static uint32_t display_dirty = 0;
 static uint8_t cols = HD_COLS;
 static uint8_t rows = HD_ROWS;
 
+static bool blink_phase = false;
+
 #define display_dirty_bit (1 << 31)
 
 #define display_is_row_dirty(index) ((display_dirty >> (index)) & 0x1)
@@ -144,6 +146,23 @@ static bool osd_mark_dirty() {
     return true;
   }
   }
+}
+
+static bool osd_mark_blink_dirty() {
+  osd_char_t *ptr = display;
+  for (uint8_t row = 0; row < rows; row++) {
+    bool row_has_blink = false;
+    for (uint8_t col = 0; col < cols; col++, ptr++) {
+      if ((ptr->attr & OSD_ATTR_BLINK) && ptr->val != ' ') {
+        ptr->dirty = 1;
+        row_has_blink = true;
+      }
+    }
+    if (row_has_blink) {
+      display_mark_row_dirty(row);
+    }
+  }
+  return true;
 }
 
 bool osd_clear_async() {
@@ -345,9 +364,12 @@ static bool osd_update_display() {
       uint8_t attr = row_start[col].attr;
       uint8_t size = 0;
 
-      while (col < cols && size < max_size &&
-             row_start[col].dirty && row_start[col].attr == attr) {
-        string[size++] = row_start[col].val;
+      while (col < cols && size < max_size && row_start[col].dirty && row_start[col].attr == attr) {
+        if (osd_device == OSD_DEVICE_DISPLAYPORT && (attr & OSD_ATTR_BLINK) && !blink_phase) {
+          string[size++] = ' ';
+        } else {
+          string[size++] = row_start[col].val;
+        }
         row_start[col].dirty = 0;
         col++;
       }
@@ -393,28 +415,30 @@ bool osd_is_ready() {
 }
 
 bool osd_update() {
-  static uint32_t last_redraw = 0;
+  if (display_dirty) {
+    if (osd_update_display())
+      display_dirty = 0;
+    return false;
+  }
 
-  // Check if display needs update
-  if (!display_dirty) {
-    // Periodic refresh for displayport devices
-    if (osd_device == OSD_DEVICE_DISPLAYPORT) {
-      const uint32_t current_time = time_millis();
-      if (current_time - last_redraw > 5000) {
-        if (osd_mark_dirty()) {
-          last_redraw = current_time;
-        }
-        return false;
-      }
+  // Periodic refresh for displayport devices
+  if (osd_device == OSD_DEVICE_DISPLAYPORT) {
+    const uint32_t now = time_millis();
+
+    static uint32_t last_blink = 0;
+    if (now - last_blink > 250) {
+      osd_mark_blink_dirty();
+      blink_phase = !blink_phase;
+      last_blink = now;
     }
-    return true;
-  }
 
-  // Update display if dirty
-  if (osd_update_display()) {
-    display_dirty = 0;
+    static uint32_t last_redraw = 0;
+    if (now - last_redraw > 5000) {
+      if (osd_mark_dirty())
+        last_redraw = now;
+    }
   }
-  return false;
+  return true;
 }
 
 void osd_write_str(const char *buffer) {
