@@ -70,7 +70,22 @@ void handle_usart_invert(serial_ports_t port, bool invert) {
 }
 
 void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool swap) {
+  if (!serial || !serial->rx_buffer || !serial->tx_buffer) {
+    return;
+  }
+
   const serial_ports_t port = config.port;
+  if (port <= SERIAL_PORT_INVALID || port >= SERIAL_PORT_MAX) {
+    return;
+  }
+
+  if (config.stop_bits >= (sizeof(stop_bits_map) / sizeof(stop_bits_map[0]))) {
+    return;
+  }
+
+  if (!USART.channel) {
+    return;
+  }
 
   serial_enable_rcc(port);
   serial_disable_isr(port);
@@ -112,8 +127,16 @@ void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool s
 }
 
 bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32_t size) {
+  if (!serial || !data || !serial->tx_buffer) {
+    return false;
+  }
+
   if (size == 0) {
     return true;
+  }
+
+  if (serial->config.port <= SERIAL_PORT_INVALID || serial->config.port >= SERIAL_PORT_MAX) {
+    return false;
   }
 
   if (serial->config.half_duplex) {
@@ -143,9 +166,30 @@ bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32
 static void handle_serial_isr(serial_port_t *serial) {
   const usart_port_def_t *port = &usart_port_defs[serial->config.port];
 
+  if (usart_flag_get(port->channel, USART_ROERR_FLAG) == SET) {
+    usart_flag_clear(port->channel, USART_ROERR_FLAG);
+    ring_buffer_clear(serial->rx_buffer);
+  }
+  if (usart_flag_get(port->channel, USART_PERR_FLAG) == SET) {
+    usart_flag_clear(port->channel, USART_PERR_FLAG);
+    usart_data_receive(port->channel);
+  }
+  if (usart_flag_get(port->channel, USART_FERR_FLAG) == SET) {
+    usart_flag_clear(port->channel, USART_FERR_FLAG);
+    usart_data_receive(port->channel);
+  }
+  if (usart_flag_get(port->channel, USART_NERR_FLAG) == SET) {
+    usart_flag_clear(port->channel, USART_NERR_FLAG);
+    usart_data_receive(port->channel);
+  }
+  if (usart_flag_get(port->channel, USART_BFF_FLAG) == SET) {
+    usart_flag_clear(port->channel, USART_BFF_FLAG);
+    usart_data_receive(port->channel);
+  }
+
   if (usart_flag_get(port->channel, USART_TDC_FLAG)) {
     usart_flag_clear(port->channel, USART_TDC_FLAG);
-    if (serial->tx_done && serial->config.half_duplex) {
+    if (serial->tx_done && serial->config.half_duplex && port->channel) {
       usart_receiver_enable(port->channel, TRUE);
       usart_transmitter_enable(port->channel, FALSE);
     }
@@ -165,23 +209,25 @@ static void handle_serial_isr(serial_port_t *serial) {
     const volatile uint8_t data = usart_data_receive(port->channel);
     ring_buffer_write(serial->rx_buffer, data);
   }
-
-  if (usart_flag_get(port->channel, USART_ROERR_FLAG) == SET) {
-    usart_flag_clear(port->channel, USART_ROERR_FLAG);
-  }
 }
 
 static void handle_usart_isr(serial_ports_t index) {
+  if (index <= SERIAL_PORT_INVALID || index >= SERIAL_PORT_MAX) {
+    return;
+  }
+
   if (serial_ports[index]) {
     handle_serial_isr(serial_ports[index]);
     return;
   }
 
-  // stray serial port. disable
+  // stray serial port. disable all interrupts and clear error flags
   const usart_port_def_t *port = &usart_port_defs[index];
   usart_interrupt_enable(port->channel, USART_TDBE_INT, FALSE);
   usart_interrupt_enable(port->channel, USART_RDBF_INT, FALSE);
-  usart_flag_clear(port->channel, USART_ROERR_FLAG);
+  usart_interrupt_enable(port->channel, USART_TDC_INT, FALSE);
+  usart_flag_clear(port->channel, USART_ROERR_FLAG | USART_PERR_FLAG | USART_FERR_FLAG |
+                                      USART_NERR_FLAG | USART_BFF_FLAG | USART_TDC_FLAG | USART_TDBE_FLAG | USART_RDBF_FLAG);
   usart_enable(port->channel, FALSE);
 }
 
