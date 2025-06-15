@@ -23,6 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Type safety: use appropriate typedefs (uint8_t, etc.) for hardware registers
 - Hardware access: use appropriate driver abstraction layers
 - Memory sections: respect DMA and FAST RAM sections where specified
+- Use const whenever possible
 
 ## Architecture Overview
 
@@ -296,20 +297,23 @@ When writing tests:
 When enabling hardware features (ADC, SPI, etc.) for the simulator/native platform:
 
 ### Header Organization
+
 - Keep native headers minimal to avoid circular dependencies
 - Native headers should only contain platform-specific constants and types
 - Avoid including system headers from native headers
 - Use `#pragma once` for include guards
 - Example structure:
+
   ```c
   // src/driver/mcu/native/adc.h
   #pragma once
-  
+
   #define VREFINT_CAL (1489)
   #define VREFINT_CAL_VREF (3300)
   ```
 
 ### Common Variables
+
 - Use `extern` declarations in native implementation files for shared variables
 - Never define variables in native code (they should be in common driver code)
 - Example:
@@ -320,14 +324,16 @@ When enabling hardware features (ADC, SPI, etc.) for the simulator/native platfo
   ```
 
 ### Test Files
+
 - Add `extern` declarations for test functions at the top of test files
 - Do not include conditional compilation (#ifdef USE_ADC) in test files
 - The test environment always has access to all features
 - Example:
+
   ```c
   // test/test_native/test_adc.c
   extern void adc_set_raw_value(adc_chan_t chan, uint16_t value);
-  
+
   void test_adc_read_raw() {
     adc_set_raw_value(ADC_CHAN_VBAT, 3000);
     TEST_ASSERT_EQUAL_INT(3000, adc_read_raw(ADC_CHAN_VBAT));
@@ -335,6 +341,7 @@ When enabling hardware features (ADC, SPI, etc.) for the simulator/native platfo
   ```
 
 ### Implementation Patterns
+
 1. Create stub implementations that satisfy linker requirements
 2. Provide reasonable default values for simulated hardware
 3. Implement minimal functionality needed for tests
@@ -342,6 +349,7 @@ When enabling hardware features (ADC, SPI, etc.) for the simulator/native platfo
 5. Add helper functions for test manipulation (set_raw_value, etc.)
 
 ### Common Pitfalls to Avoid
+
 - Don't include system.h in native headers (causes circular dependencies)
 - Don't define common variables in native code (use extern)
 - Don't wrap test files in feature macros
@@ -353,12 +361,14 @@ When enabling hardware features (ADC, SPI, etc.) for the simulator/native platfo
 When implementing tests for hardware features like serial:
 
 ### Ring Buffer Management
+
 - Serial ports require initialized ring buffers for rx_buffer and tx_buffer
 - Create static ring buffer data arrays in test files
 - Initialize ring_buffer_t structures with proper data, head, tail, and size
 - Clear ring buffers between tests to ensure test isolation
 
 ### Test Structure
+
 ```c
 // Create ring buffers for testing
 static uint8_t rx_buffer_data[512];
@@ -379,6 +389,7 @@ serial_port_t port = {
 ```
 
 ### Validation Considerations
+
 - Native/simulator implementations may not pass hardware validation checks
 - Target device validation (target_serial_port_valid) may fail in test environment
 - Focus tests on functionality that can be exercised in simulator
