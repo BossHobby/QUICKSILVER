@@ -47,8 +47,6 @@ typedef enum {
 extern int32_t channels[16];
 extern uint8_t rx_data[RX_BUFF_SIZE];
 
-static uint8_t telemetry_counter = 0;
-
 void rx_serial_crsf_msp_send(msp_magic_t magic, uint8_t direction, uint16_t code, const uint8_t *data, uint16_t len);
 
 static uint8_t msp_rx_buffer[MSP_BUFFER_SIZE];
@@ -100,36 +98,6 @@ float rx_serial_crsf_expected_fps() {
     return 4;
   }
   return 1;
-}
-
-static uint16_t telemetry_interval() {
-  switch (crsf_stats.rf_mode) {
-  case RATE_LORA_4HZ:
-    return 3;
-  case RATE_LORA_25HZ:
-    return 3;
-  case RATE_LORA_50HZ:
-    return 3;
-  case RATE_LORA_100HZ:
-  case RATE_LORA_100HZ_8CH:
-    return 6;
-  case RATE_LORA_150HZ:
-    return 9;
-  case RATE_LORA_200HZ:
-    return 12;
-  case RATE_LORA_250HZ:
-  case RATE_DVDA_250HZ:
-  case RATE_LORA_333HZ_8CH:
-    return 16;
-  case RATE_LORA_500HZ:
-  case RATE_FLRC_500HZ:
-  case RATE_DVDA_500HZ:
-    return 32;
-  case RATE_FLRC_1000HZ:
-    return 64;
-  }
-
-  return 5;
 }
 
 static bool tlm_device_info_pending = false;
@@ -244,7 +212,7 @@ crsf_do_more:
     if (!serial_read_bytes(&serial_rx, &frame_length, 1)) {
       return PACKET_NEEDS_MORE;
     }
-    if (frame_length <= 0 || frame_length > 64) {
+    if (frame_length < 2 || frame_length > 62) {
       parser_state = CRSF_CHECK_MAGIC;
       return PACKET_ERROR;
     }
@@ -268,7 +236,6 @@ crsf_do_more:
     if (crc_ours != crc_theirs) {
       return PACKET_ERROR;
     }
-    telemetry_counter++;
     return rx_serial_crsf_process_frame(frame_length);
   }
   }
@@ -290,16 +257,20 @@ void rx_serial_crsf_msp_send(msp_magic_t magic, uint8_t direction, uint16_t code
 }
 
 void rx_serial_send_crsf_telemetry() {
-  if (telemetry_counter < telemetry_interval() && !msp_new_data) {
+  static uint32_t telemetry_time = 0;
+  if ((time_millis() - telemetry_time) < 10 && !msp_new_data && !tlm_device_info_pending) {
     return;
   }
-  telemetry_counter = 0;
+  telemetry_time = time_millis();
 
   uint8_t telemetry_packet[64];
   crsf_tlm_frame_start(telemetry_packet);
 
   uint32_t payload_size = 0;
-  if (msp_new_data) {
+  if (tlm_device_info_pending) {
+    payload_size = crsf_tlm_frame_device_info(telemetry_packet);
+    tlm_device_info_pending = false;
+  } else if (msp_new_data) {
     static uint8_t msp_seq = 0;
     static uint16_t msp_tx_sent = 0;
 
@@ -348,12 +319,7 @@ void rx_serial_send_crsf_telemetry() {
 
     payload_size = crsf_tlm_frame_msp_resp(telemetry_packet, msp_origin, payload, msp_size + header_size);
   } else {
-    if (tlm_device_info_pending) {
-      payload_size = crsf_tlm_frame_device_info(telemetry_packet);
-      tlm_device_info_pending = false;
-    } else {
-      payload_size = crsf_tlm_frame_battery_sensor(telemetry_packet);
-    }
+    payload_size = crsf_tlm_frame_battery_sensor(telemetry_packet);
   }
 
   const uint32_t telemetry_size = crsf_tlm_frame_finish(telemetry_packet, payload_size);
