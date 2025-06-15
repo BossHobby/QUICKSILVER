@@ -150,7 +150,23 @@ uint32_t simulator_osd_can_fit() {
   return 255;
 }
 
+#ifdef PIO_UNIT_TESTING
+static uint32_t osd_test_pushes;
+static bool osd_test_reject;
+void simulator_osd_test_reset(bool reject) {
+  osd_test_pushes = 0;
+  osd_test_reject = reject;
+}
+uint32_t simulator_osd_test_push_count() { return osd_test_pushes; }
+uint8_t simulator_osd_test_char(uint8_t x, uint8_t y) { return osd[y * 50 + x]; }
+#endif
+
 bool simulator_osd_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size) {
+#ifdef PIO_UNIT_TESTING
+  osd_test_pushes++;
+  if (osd_test_reject)
+    return false;
+#endif
   for (uint32_t i = 0; i < size; i++) {
     osd[y * 50 + x + i] = data[i];
   }
