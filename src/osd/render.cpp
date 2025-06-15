@@ -303,6 +303,7 @@ static void osd_update_screen(osd_screens_t screen) {
   }
 #endif
   osd_state.screen = screen;
+  osd_state.element = OSD_CALLSIGN;
   osd_state.screen_phase = OSD_PHASE_CLEAR;
 }
 
@@ -585,178 +586,154 @@ static void print_osd_crsf_tx_power(osd_element_t *el) {
 
 void osd_init() {
   osd_device_init();
-  osd_clear();
   osd_intro();
   osd_update_screen(OSD_SCREEN_CLEAR);
 }
 
 static void osd_display_regular() {
-  osd_element_t *el = (osd_element_t *)(osd_elements() + osd_state.element);
-  while (osd_state.element < OSD_ELEMENT_MAX && !el->active) {
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    el = (osd_element_t *)(osd_elements() + osd_state.element);
-  }
+  // Build one element per call; publish the framebuffer after the full pass.
+  while (osd_state.element < OSD_ELEMENT_MAX) {
+    const uint8_t element = osd_state.element;
+    osd_state.element = static_cast<osd_elements_t>(element + 1);
+    osd_element_t *el = (osd_element_t *)(osd_elements() + element);
+    if (!el->active) {
+      continue;
+    }
 
-  switch (osd_state.element) {
-  case OSD_CALLSIGN: {
-    osd_start_el(el);
-    osd_write_str((const char *)osd_profile()->callsign);
-
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_CELL_COUNT: {
-    if (!flags.lowbatt) {
+    switch (element) {
+    case OSD_CALLSIGN: {
       osd_start_el(el);
-    } else {
-      osd_start(OSD_ATTR_BLINK | OSD_ATTR_INVERT, pos_x(el), pos_y(el));
+      osd_write_str((const char *)osd_profile()->callsign);
+      break;
     }
-    osd_write_uint(state.lipo_cell_count, 1);
-    osd_write_char('S');
 
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_FUELGAUGE_VOLTS: {
-    osd_start_el(el);
-    osd_write_float(state.vbat_compensated_cell_avg, 4, 1);
-    osd_write_char(ICON_GAUGE);
-
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_FILTERED_VOLTS: {
-    osd_start_el(el);
-    osd_write_float(state.vbat_cell_avg, 4, 1);
-    osd_write_char(ICON_VOLT);
-
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_GYRO_TEMP: {
-    osd_start_el(el);
-    osd_write_int(state.gyro_temp, 4);
-    osd_write_char(ICON_CELSIUS);
-
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_FLIGHT_MODE: {
-    print_osd_flightmode(el);
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_RSSI: {
-    print_osd_rssi(el);
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_STOPWATCH: {
-    print_osd_armtime(el);
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_SYSTEM_STATUS: {
-    if (osd_status_update(el))
-      osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_THROTTLE: {
-    osd_start_el(el);
-    const float throttle = state.rx_filtered.throttle * 100.0f;
-    if (profile.osd.guac_mode && throttle > 99.0f) {
-      osd_write_str("GUAC");
-    } else {
-      osd_write_uint(throttle, 4);
+    case OSD_CELL_COUNT: {
+      if (!flags.lowbatt) {
+        osd_start_el(el);
+      } else {
+        osd_start(OSD_ATTR_BLINK | OSD_ATTR_INVERT, pos_x(el), pos_y(el));
+      }
+      osd_write_uint(state.lipo_cell_count, 1);
+      osd_write_char('S');
+      break;
     }
-    osd_write_char(ICON_THROTTLE);
 
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_CROSSHAIR: {
-    print_osd_crosshair(el);
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-  case OSD_VTX_CHANNEL: {
-    print_osd_vtx(el);
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_CURRENT_DRAW: {
-    osd_start_el(el);
-    osd_write_float(state.ibat_filtered / 1000.0f, 4, 2);
-    osd_write_char(ICON_AMP);
-
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_CURRENT_DRAWN: {
-    osd_start_el(el);
-    osd_write_float(state.ibat_drawn, 4, 2);
-    osd_write_char(ICON_MAH);
-
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_WATTS: {
-    print_osd_watts(el);
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_GPS_SATS: {
-    osd_start(osd_attr(el) | (state.gps_lock ? 0x0 : OSD_ATTR_BLINK), pos_x(el), pos_y(el));
-    osd_write_char(ICON_SAT_L);
-    osd_write_char(ICON_SAT_R);
-    osd_write_int(state.gps_sats, 2);
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_GPS_SPEED: {
-    osd_start(osd_attr(el), pos_x(el), pos_y(el));
-    osd_write_int((uint32_t)(state.gps_speed * 3.6f), 3);
-    osd_write_char(ICON_KPH);
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_ROVER_INCLINOMETER: {
-    print_osd_inclinometer(el);
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_CRSF_TX_POWER: {
-    print_osd_crsf_tx_power(el);
-    osd_state.element = static_cast<osd_elements_t>(osd_state.element + 1);
-    break;
-  }
-
-  case OSD_ELEMENT_MAX: {
-    if (osd_system == OSD_SYS_NONE) {
-      // display warning if we can not detect a camera
-      osd_start(OSD_ATTR_BLINK, 7, 7);
-      osd_write_str("NO CAMERA SIGNAL");
+    case OSD_FUELGAUGE_VOLTS: {
+      osd_start_el(el);
+      osd_write_float(state.vbat_compensated_cell_avg, 4, 1);
+      osd_write_char(ICON_GAUGE);
+      break;
     }
-    osd_state.element = OSD_CALLSIGN;
-    break;
+
+    case OSD_FILTERED_VOLTS: {
+      osd_start_el(el);
+      osd_write_float(state.vbat_cell_avg, 4, 1);
+      osd_write_char(ICON_VOLT);
+      break;
+    }
+
+    case OSD_GYRO_TEMP: {
+      osd_start_el(el);
+      osd_write_int(state.gyro_temp, 4);
+      osd_write_char(ICON_CELSIUS);
+      break;
+    }
+
+    case OSD_FLIGHT_MODE: {
+      print_osd_flightmode(el);
+      break;
+    }
+
+    case OSD_RSSI: {
+      print_osd_rssi(el);
+      break;
+    }
+
+    case OSD_STOPWATCH: {
+      print_osd_armtime(el);
+      break;
+    }
+
+    case OSD_SYSTEM_STATUS: {
+      osd_status_update(el);
+      break;
+    }
+
+    case OSD_THROTTLE: {
+      osd_start_el(el);
+      const float throttle = state.rx_filtered.throttle * 100.0f;
+      if (profile.osd.guac_mode && throttle > 99.0f) {
+        osd_write_str("GUAC");
+      } else {
+        osd_write_uint(throttle, 4);
+      }
+      osd_write_char(ICON_THROTTLE);
+      break;
+    }
+
+    case OSD_CROSSHAIR: {
+      print_osd_crosshair(el);
+      break;
+    }
+    case OSD_VTX_CHANNEL: {
+      print_osd_vtx(el);
+      break;
+    }
+
+    case OSD_CURRENT_DRAW: {
+      osd_start_el(el);
+      osd_write_float(state.ibat_filtered / 1000.0f, 4, 2);
+      osd_write_char(ICON_AMP);
+      break;
+    }
+
+    case OSD_CURRENT_DRAWN: {
+      osd_start_el(el);
+      osd_write_float(state.ibat_drawn, 4, 2);
+      osd_write_char(ICON_MAH);
+      break;
+    }
+
+    case OSD_WATTS: {
+      print_osd_watts(el);
+      break;
+    }
+
+    case OSD_GPS_SATS: {
+      osd_start(osd_attr(el) | (state.gps_lock ? 0x0 : OSD_ATTR_BLINK), pos_x(el), pos_y(el));
+      osd_write_char(ICON_SAT_L);
+      osd_write_char(ICON_SAT_R);
+      osd_write_int(state.gps_sats, 2);
+      break;
+    }
+
+    case OSD_GPS_SPEED: {
+      osd_start(osd_attr(el), pos_x(el), pos_y(el));
+      osd_write_int((uint32_t)(state.gps_speed * 3.6f), 3);
+      osd_write_char(ICON_KPH);
+      break;
+    }
+
+    case OSD_ROVER_INCLINOMETER: {
+      print_osd_inclinometer(el);
+      break;
+    }
+
+    case OSD_CRSF_TX_POWER: {
+      print_osd_crsf_tx_power(el);
+      break;
+    }
+
+    }
+    return;
   }
+
+  osd_state.element = OSD_CALLSIGN;
+
+  // Handle no camera signal warning after all elements
+  if (osd_system == OSD_SYS_NONE) {
+    osd_start(OSD_ATTR_BLINK, 7, 7);
+    osd_write_str("NO CAMERA SIGNAL");
   }
 }
 
@@ -880,7 +857,8 @@ void osd_display() {
     return;
   }
 
-  if (!osd_update()) {
+  // Finish the regular render pass before sending any of its dirty characters.
+  if ((osd_state.screen != OSD_SCREEN_REGULAR || osd_state.element == OSD_CALLSIGN) && !osd_update()) {
     return;
   }
 

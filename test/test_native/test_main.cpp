@@ -3,6 +3,8 @@
 #include "mock_helpers.h"
 
 // Test declarations
+extern void test_osd_transfer_is_bounded_and_retries();
+extern void test_osd_render_completes_before_transfer();
 // Filter tests
 extern void test_filter_init(void);
 extern void test_filter_lowpass_pt1(void);
@@ -152,6 +154,8 @@ void tearDown(void) {
 // Main test runner
 int main(int argc, char **argv) {
   UNITY_BEGIN();
+  RUN_TEST(test_osd_transfer_is_bounded_and_retries);
+  RUN_TEST(test_osd_render_completes_before_transfer);
 
   // Filter tests
   RUN_TEST(test_filter_init);
