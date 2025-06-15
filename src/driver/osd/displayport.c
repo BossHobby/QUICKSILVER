@@ -229,11 +229,9 @@ bool displayport_is_ready() {
   }
 
   static uint32_t last_heartbeat = 0;
-  if ((time_millis() - last_heartbeat) > 500) {
-    displayport_push_subcmd(SUBCMD_HEARTBEAT, NULL, 0);
-    last_heartbeat = time_millis();
-    return false;
-  }
+  if ((time_millis() - last_heartbeat) > 500)
+    if (displayport_push_subcmd(SUBCMD_HEARTBEAT, NULL, 0))
+      last_heartbeat = time_millis();
 
   return true;
 }

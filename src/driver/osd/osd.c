@@ -125,15 +125,24 @@ static bool osd_mark_dirty() {
     state++;
     // FALLTHROUGH
 
-  default:
-    for (uint32_t i = 0; i < MAX_DISPLAY_SIZE; i++) {
-      if (display[i].val != ' ') {
-        display_mark_row_dirty(i / cols);
-        display[i].dirty = 1;
+  default: {
+    // Process rows to minimize division operations
+    osd_char_t *ptr = display;
+    for (uint8_t row = 0; row < rows; row++) {
+      bool row_has_content = false;
+      for (uint8_t col = 0; col < cols; col++, ptr++) {
+        if (ptr->val != ' ') {
+          ptr->dirty = 1;
+          row_has_content = true;
+        }
+      }
+      if (row_has_content) {
+        display_mark_row_dirty(row);
       }
     }
     state = 0;
     return true;
+  }
   }
 }
 
@@ -289,59 +298,79 @@ static bool osd_flush() {
 
 static bool osd_update_display() {
   static uint8_t row = 0;
+  static uint8_t string[DISPLAYPORT_COLS];
 
-  while (row < rows) {
-    if (!display_is_row_dirty(row)) {
-      row++;
-      continue;
-    }
+  // Early exit if no dirty rows
+  if ((display_dirty & ~display_dirty_bit) == 0) {
+    return true;
+  }
 
-    uint8_t start = 0;
-    uint8_t max_size = osd_can_fit();
-    uint8_t string[DISPLAYPORT_COLS];
-    osd_char_t *entry = &display[row * cols];
-
-    while (start < cols) {
-      if (max_size == 0) {
-        return false;
-      }
-
-      // find start
-      while (!entry->dirty) {
-        if (start++ >= cols) {
-          goto osd_finish_row;
-        }
-        entry++;
-      }
-
-      uint8_t size = 0;
-      uint8_t attr = entry->attr;
-
-      while (size < max_size && (start + size) < cols &&
-             entry->dirty && entry->attr == attr) {
-        string[size] = entry->val;
-        entry->dirty = 0;
-        size++;
-        entry++;
-      }
-
-      osd_push_string(attr, start, row, string, size);
-
-      start += size;
-      max_size -= size;
-    }
-
-  osd_finish_row:
-    display_clear_row_dirty(row);
-    row++;
+  uint32_t max_size = osd_can_fit();
+  if (max_size == 0) {
     return false;
   }
 
-  if (osd_flush()) {
-    row = 0;
-    return true;
+  // Process rows until we run out of max_size or dirty rows
+  while (max_size > 0) {
+    // Find next dirty row
+    while (row < rows && !display_is_row_dirty(row)) {
+      row++;
+    }
+
+    if (row >= rows) {
+      if (osd_flush()) {
+        row = 0;
+        return true;
+      }
+      return false;
+    }
+
+    const uint16_t row_offset = row * cols;
+    osd_char_t *row_start = &display[row_offset];
+    uint8_t col = 0;
+    bool row_processed = false;
+
+    while (col < cols && max_size > 0) {
+      // Skip clean characters
+      while (col < cols && !row_start[col].dirty) {
+        col++;
+      }
+
+      if (col >= cols) {
+        break;
+      }
+
+      // Found dirty character, build string with same attribute
+      uint8_t start = col;
+      uint8_t attr = row_start[col].attr;
+      uint8_t size = 0;
+
+      while (col < cols && size < max_size &&
+             row_start[col].dirty && row_start[col].attr == attr) {
+        string[size++] = row_start[col].val;
+        row_start[col].dirty = 0;
+        col++;
+      }
+
+      if (!osd_push_string(attr, start, row, string, size)) {
+        // Restore dirty flags if push failed
+        for (uint8_t i = 0; i < size; i++)
+          row_start[start + i].dirty = 1;
+        return false;
+      }
+
+      max_size = osd_can_fit();
+      row_processed = true;
+    }
+
+    // If we processed some data from this row, mark it clean and move to next
+    if (row_processed) {
+      display_clear_row_dirty(row);
+      row++;
+    }
   }
-  return true;
+
+  return false;
 }
 
 bool osd_is_ready() {
@@ -365,20 +394,27 @@ bool osd_is_ready() {
 
 bool osd_update() {
   static uint32_t last_redraw = 0;
-  if (osd_device == OSD_DEVICE_DISPLAYPORT &&
-      !display_dirty && time_millis() - last_redraw > 5000) {
-    if (osd_mark_dirty()) {
-      last_redraw = time_millis();
+
+  // Check if display needs update
+  if (!display_dirty) {
+    // Periodic refresh for displayport devices
+    if (osd_device == OSD_DEVICE_DISPLAYPORT) {
+      const uint32_t current_time = time_millis();
+      if (current_time - last_redraw > 5000) {
+        if (osd_mark_dirty()) {
+          last_redraw = current_time;
+        }
+        return false;
+      }
     }
-    return false;
+    return true;
   }
-  if (display_dirty) {
-    if (osd_update_display()) {
-      display_dirty = 0;
-    }
-    return false;
+
+  // Update display if dirty
+  if (osd_update_display()) {
+    display_dirty = 0;
   }
-  return true;
+  return false;
 }
 
 void osd_write_str(const char *buffer) {
