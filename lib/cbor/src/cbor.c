@@ -459,7 +459,7 @@ cbor_result_t cbor_decode_tstr(cbor_value_t *dec, const uint8_t **buf, uint32_t 
   }
   if (res > 0) {
     *buf = (dec->curr);
-    _cbor_advance(dec, (int32_t)*len);
+    res = _cbor_advance(dec, (int32_t)*len);
   }
   return res;
 }
