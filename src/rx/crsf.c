@@ -75,12 +75,11 @@ uint32_t crsf_tlm_frame_battery_sensor(uint8_t *buf) {
   buf[4] = (int)(state.vbat_cell_avg * 10);
   buf[5] = (int)(state.ibat_filtered * 10) >> 8;
   buf[6] = (int)(state.ibat_filtered * 10);
-  const uint32_t mah_drawn = 0;
-  const uint8_t battery_remaining_percentage = 0;
+  const uint32_t mah_drawn = (uint32_t)(state.ibat_drawn);
   buf[7] = mah_drawn >> 16;
   buf[8] = mah_drawn >> 8;
   buf[9] = mah_drawn;
-  buf[10] = battery_remaining_percentage;
+  buf[10] = 100;
   return CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE;
 }
 
