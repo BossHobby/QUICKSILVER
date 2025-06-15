@@ -34,6 +34,7 @@
 #define MSP_STATUS 101       // out message         cycletime & errors_count & sensor present & box activation & current setting number
 #define MSP_RC 105           // out message         rc channels and more
 #define MSP_MOTOR_CONFIG 131 // out message         Motor configuration (min/max throttle, etc)
+#define MSP_STATUS_EX 150    // out message         Cycletime, errors_count, CPU load, sensor present etc
 
 #define MSP_SET_MOTOR 214       // in message          PropBalance function
 #define MSP_SET_PASSTHROUGH 245 // in message          serial passthrough

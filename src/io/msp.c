@@ -15,6 +15,7 @@
 #include "io/quic.h"
 #include "io/usb_configurator.h"
 #include "io/vtx.h"
+#include "rx/rx.h"
 #include "util/crc.h"
 #include "util/util.h"
 
@@ -36,7 +37,7 @@ extern uint16_t msp_vtx_frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX];
 
 extern void msp_vtx_send_config_reply(msp_t *msp, msp_magic_t magic);
 
-void msp_send_reply(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *data, uint32_t len) {
+void msp_send_reply(msp_t *msp, msp_magic_t magic, uint16_t cmd, const uint8_t *data, uint32_t len) {
   if (msp->send) {
     msp->send(magic, '>', cmd, data, len);
   }
@@ -51,18 +52,6 @@ static void msp_send_error(msp_t *msp, msp_magic_t magic, uint16_t cmd) {
 static void msp_quic_send(uint8_t *data, uint32_t len, void *priv) {
   msp_t *msp = (msp_t *)priv;
   msp_send_reply(msp, MSP1_MAGIC, MSP_RESERVE_1, data, len);
-}
-
-static void msp_write_uint16_t(uint8_t *data, uint16_t val) {
-  data[0] = val >> 0;
-  data[1] = val >> 8;
-}
-
-static void msp_write_uint32_t(uint8_t *data, uint32_t val) {
-  data[0] = val >> 0;
-  data[1] = val >> 8;
-  data[2] = val >> 16;
-  data[3] = val >> 24;
 }
 
 static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *payload, uint16_t size) {
@@ -125,30 +114,53 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     break;
   }
   case MSP_ANALOG: {
-    const int16_t current = (int16_t)constrain(state.ibat / 10, -320, 320);
+    const uint8_t vbat_legacy = (uint8_t)constrain(state.vbat_filtered / 0.1, 0, 255);
+    const uint16_t mah_drawn = (uint16_t)constrain(state.ibat_drawn, 0, 0xFFFF);
     const uint16_t rssi = (uint16_t)constrain(state.rx_rssi * 1023 / 100, 0, 1023);
-    const uint16_t vbat = (uint8_t)constrain(state.vbat_filtered / 0.01, 0, 255);
-    uint8_t data[9] = {
-        (uint8_t)constrain(state.vbat_filtered / 0.1, 0, 255), // battery voltage
-        0x0, 0x0,                                              // battery drawn in mAh
-        (rssi >> 8) & 0xFF, rssi & 0xFF,                       // rssi
-        (current >> 8) & 0xFF, current & 0xFF,                 // current in 0.01 A steps, range is -320A to 320A
-        (vbat >> 8) & 0xFF, vbat & 0xFF,                       // battery voltage
+    const int16_t current = (int16_t)constrain(state.ibat / 10, -0x8000, 0x7FFF);
+    const uint16_t voltage = (uint16_t)constrain(state.vbat_filtered / 0.01, 0, 0xFFFF);
+
+    const uint8_t data[9] = {
+        vbat_legacy,
+        mah_drawn & 0xFF,
+        mah_drawn >> 8,
+        rssi & 0xFF,
+        rssi >> 8,
+        current & 0xFF,
+        current >> 8,
+        voltage & 0xFF,
+        voltage >> 8,
     };
+
     msp_send_reply(msp, magic, cmd, data, 9);
     break;
   }
   case MSP_BATTERY_STATE: {
-    const uint16_t current = state.ibat / 1000;
-    uint8_t data[9] = {
-        state.lipo_cell_count,                                 // battery detected
-        0x0, 0x0,                                              // battery capacity
-        (uint8_t)constrain(state.vbat_filtered / 0.1, 0, 255), // battery voltage
-        0x0, 0x0,                                              // battery drawn in mAh
-        (current >> 8) & 0xFF, current & 0xFF,                 // battery current draw in A
-        0x0                                                    // battery status
+    const uint8_t cell_count = state.lipo_cell_count;
+    const uint16_t capacity = 0; // battery capacity not stored in QUICKSILVER
+    const uint8_t vbat_legacy = (uint8_t)constrain(state.vbat_filtered / 0.1, 0, 255);
+    const uint16_t mah_drawn = (uint16_t)constrain(state.ibat_drawn, 0, 0xFFFF);
+    const int16_t current = (int16_t)constrain(state.ibat / 10, -0x8000, 0x7FFF);
+    // Battery state matching Betaflight's batteryState_e enum
+    // 0 = BATTERY_OK, 1 = BATTERY_WARNING, 2 = BATTERY_CRITICAL
+    const uint8_t battery_state = flags.lowbatt ? 1 : 0;
+    const uint16_t voltage = (uint16_t)constrain(state.vbat_filtered / 0.01, 0, 0xFFFF);
+
+    const uint8_t data[11] = {
+        cell_count,
+        capacity & 0xFF,
+        capacity >> 8,
+        vbat_legacy,
+        mah_drawn & 0xFF,
+        mah_drawn >> 8,
+        current & 0xFF,
+        current >> 8,
+        battery_state,
+        voltage & 0xFF,
+        voltage >> 8,
     };
-    msp_send_reply(msp, magic, cmd, data, 9);
+
+    msp_send_reply(msp, magic, cmd, data, 11);
     break;
   }
   case MSP_FEATURE_CONFIG: {
@@ -189,22 +201,88 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     msp_send_reply(msp, magic, cmd, (uint8_t *)data, 8 * sizeof(uint16_t));
     break;
   }
+  case MSP_STATUS_EX:
   case MSP_STATUS: {
-    uint8_t data[22];
-    memset(data, 0, 22);
-
-    msp_write_uint16_t(data, state.cpu_load);
-    msp_write_uint16_t(data + 2, 0); // i2c errors
-    msp_write_uint16_t(data + 4, 0); // sensors
-
-    // flight mode, only arm for now
+    const uint16_t looptime = state.looptime_us;
+    const uint16_t i2c_errors = 0;
+    const uint16_t sensors = 0x21; // ACC (bit 0) + GYRO (bit 5)
+    
+    // Pack flight mode flags similar to Betaflight
+    // DJI expects ARMED flag in the packed flight mode flags
     uint32_t flight_mode = 0;
     if (flags.arm_state) {
-      flight_mode |= 0x1;
+      flight_mode |= 0x1; // ARMED flag at bit 0
     }
-    msp_write_uint32_t(data + 6, flight_mode);
-
-    msp_send_reply(msp, magic, cmd, data, 22);
+    // Add other active modes if needed
+    if (rx_aux_on(AUX_LEVELMODE)) {
+      flight_mode |= (1 << 1); // ANGLE mode at bit 1
+    }
+    if (rx_aux_on(AUX_HORIZON)) {
+      flight_mode |= (1 << 2); // HORIZON mode at bit 2
+    }
+    
+    const uint8_t pid_profile = 0;
+    const uint16_t cpu_load = state.cpu_load;
+    const uint16_t gyro_cycle = state.looptime_autodetect;
+    
+    // Calculate arming disable flags
+    uint32_t arming_disable_flags = 0;
+    if (!flags.arm_safety) {
+      arming_disable_flags |= 0x01; // ARM_SWITCH flag
+    }
+    if (state.rx_filtered.throttle > 0.1f) {
+      arming_disable_flags |= 0x02; // THROTTLE flag
+    }
+    
+    // Build the response based on command type
+    uint8_t data[30]; // Max possible size
+    uint8_t *ptr = data;
+    
+    // Common fields for both MSP_STATUS and MSP_STATUS_EX
+    *ptr++ = looptime & 0xFF;
+    *ptr++ = looptime >> 8;
+    *ptr++ = i2c_errors & 0xFF;
+    *ptr++ = i2c_errors >> 8;
+    *ptr++ = sensors & 0xFF;
+    *ptr++ = sensors >> 8;
+    *ptr++ = flight_mode & 0xFF;
+    *ptr++ = (flight_mode >> 8) & 0xFF;
+    *ptr++ = (flight_mode >> 16) & 0xFF;
+    *ptr++ = (flight_mode >> 24) & 0xFF;
+    *ptr++ = pid_profile;
+    *ptr++ = cpu_load & 0xFF;
+    *ptr++ = cpu_load >> 8;
+    
+    if (cmd == MSP_STATUS_EX) {
+      *ptr++ = 1; // PID profile count
+      *ptr++ = 0; // current control rate profile index
+    } else {
+      *ptr++ = gyro_cycle & 0xFF;
+      *ptr++ = gyro_cycle >> 8;
+    }
+    
+    // Extended flight mode flags header (always included)
+    *ptr++ = 0; // byte count for extended flags (0 = no extra bytes)
+    
+    // Arming disable flags
+    *ptr++ = 1; // arming disable flags count (1 = 4 bytes)
+    *ptr++ = arming_disable_flags & 0xFF;
+    *ptr++ = (arming_disable_flags >> 8) & 0xFF;
+    *ptr++ = (arming_disable_flags >> 16) & 0xFF;
+    *ptr++ = (arming_disable_flags >> 24) & 0xFF;
+    
+    // Config state flags
+    *ptr++ = 0; // reboot required (bit 0)
+    
+    // CPU temperature (added in API 1.46)
+    const uint16_t cpu_temp_celsius = (uint16_t)state.cpu_temp;
+    *ptr++ = cpu_temp_celsius & 0xFF;
+    *ptr++ = cpu_temp_celsius >> 8;
+    
+    // Control rate profile count
+    *ptr++ = 1; // control rate profile count
+    
+    msp_send_reply(msp, magic, cmd, data, ptr - data);
     break;
   }
   case MSP_RC: {
