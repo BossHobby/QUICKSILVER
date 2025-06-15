@@ -59,23 +59,29 @@ static void max7456_dma_spi_write(uint8_t reg, uint8_t data) {
 }
 
 static bool max7456_init_display() {
-  max7456_dma_spi_write(VM0, 0x02); // soft reset
-  time_delay_us(200);
+  // AT7456E requires specific timing per datasheet
+  max7456_dma_spi_write(VM0, 0x00); // Disable display (VM0[3]=0)
+  time_delay_us(100);               // AT7456E requires 30us after disabling display
 
-  const uint8_t stat = max7456_dma_spi_read(STAT);
-  if (stat & 0x40) {
-    // reset did not go low, something is wrong
-    return false;
-  }
+  max7456_dma_spi_write(VM0, 0x02); // soft reset
+  time_delay_us(200);               // Wait for reset
+
+  // Skip reset status check - not reliable on AT7456E
 
   const uint8_t black_level = max7456_dma_spi_read(OSDBL_R);
   max7456_dma_spi_write(OSDBL_W, black_level | 0x10);
-  max7456_dma_spi_write(VM0, 0x08);  // Set ntsc mode and enable display
+
+  max7456_dma_spi_write(VM0, 0x08); // Set NTSC mode and enable display (VM0[3]=1)
+  time_delay_us(10);                // AT7456E requires 10us after enabling display
+
   max7456_dma_spi_write(VM1, 0x0C);  // set background brightness (bits 456), blinking time(bits 23), blinking duty cycle (bits 01)
   max7456_dma_spi_write(OSDM, 0x2D); // osd mux & rise/fall ( lowest sharpness)
 
   last_osd_system = OSD_SYS_NONE;
   max7456_check_system();
+
+  max7456_dma_spi_write(DMM, 0x04);
+  time_delay_us(40);
 
   return true;
 }
@@ -136,22 +142,35 @@ static osd_system_t max7456_current_system() {
 }
 
 bool max7456_clear_async() {
-  if (!max7456_is_ready()) {
-    return 0;
+  static uint32_t clear_start_time = 0;
+
+  // If we have a clear in progress, check if it's done
+  if (clear_start_time) {
+    if ((time_micros() - clear_start_time) >= 50) {
+      // Clear is done
+      clear_start_time = 0;
+      return true;
+    }
+    // Still clearing
+    return false;
   }
 
-  static uint8_t row = 0;
-
-  static const uint8_t buffer[] = "                                ";
-  max7456_push_string(OSD_ATTR_TEXT, 0, row, buffer, 32);
-
-  row++;
-
-  if (row > MAX7456_ROWS) {
-    row = 0;
-    return 1;
+  // No clear in progress, start a new one
+  if (!spi_txn_has_free()) {
+    return false;
   }
-  return 0;
+
+  // Set DMM[2]=1 for clear operation
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(DMM, 0x04),
+  };
+  spi_seg_submit_continue(&bus, segs);
+
+  // Record when we started the clear operation
+  clear_start_time = time_micros();
+
+  // Clear started but not done yet
+  return false;
 }
 
 // function to detect and correct ntsc/pal mode or mismatch
@@ -198,16 +217,32 @@ void max7456_intro() {
       buffer[i] = start + i;
     }
 
-    max7456_push_string(OSD_ATTR_TEXT, 3, row + 5, buffer, 24);
-    spi_txn_wait(&bus);
+    while (!max7456_push_string(OSD_ATTR_TEXT, 3, row + 5, buffer, 24))
+      ;
   }
 }
 
 uint32_t max7456_can_fit() {
-  return max7456_is_ready() ? 255 : 0;
+  // Reserve at least 8 slots for critical devices (gyro, etc)
+  // This prevents OSD from starving real-time SPI devices
+  if (spi_txn_free_count() <= 8) {
+    return 0;
+  }
+  // MAX7456 protocol overhead per string:
+  // - 6 bytes: DMM, attr, DMAH, addr_high, DMAL, addr_low
+  // - 2 bytes per character: DMDI + character
+  // - 2 bytes: DMDI + 0xFF terminator
+  // Total: 8 + (2 * character_count)
+  return (SPI_TXN_BUFFER_SIZE - 8) / 2;
 }
 
 bool max7456_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size) {
+  // Check if we have transactions available before building the buffer
+  if (!spi_txn_has_free()) {
+    // No free transactions, let the caller retry later
+    return false;
+  }
+
   // NTSC adjustment 3 lines up if after line 12 or maybe this should be 8
   if (last_osd_system != OSD_SYS_PAL && y > 12) {
     y = y - 2;

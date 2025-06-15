@@ -216,9 +216,12 @@ bool displayport_clear_async() {
 }
 
 bool displayport_is_ready() {
+  bool had_packet = false;
+
   uint8_t data = 0;
   while (serial_read_byte(&serial_displayport, &data)) {
-    msp_process_serial(&displayport_msp, data);
+    if (msp_process_serial(&displayport_msp, data) == MSP_SUCCESS)
+      had_packet = true;
   }
 
   static bool was_detected = false;
@@ -229,13 +232,11 @@ bool displayport_is_ready() {
   }
 
   static uint32_t last_heartbeat = 0;
-  if ((time_millis() - last_heartbeat) > 500) {
-    displayport_push_subcmd(SUBCMD_HEARTBEAT, NULL, 0);
-    last_heartbeat = time_millis();
-    return false;
-  }
+  if ((time_millis() - last_heartbeat) > 500)
+    if (displayport_push_subcmd(SUBCMD_HEARTBEAT, NULL, 0))
+      last_heartbeat = time_millis();
 
-  return true;
+  return had_packet ? false : true;
 }
 
 osd_system_t displayport_check_system() {
