@@ -11,7 +11,9 @@ dma_device_t dma_stream_map[DMA_STREAM_MAX];
 cbor_result_t cbor_decode_dma_device_t(cbor_value_t *dec, dma_device_t *d) {
   const uint8_t *name;
   uint32_t name_len;
-  cbor_result_t res = cbor_decode_tstr(dec, &name, &name_len);
+
+  cbor_result_t res = CBOR_OK;
+  CBOR_CHECK_ERROR(res = cbor_decode_tstr(dec, &name, &name_len));
 
 #define DMA_DEVICE(member)                       \
   if (buf_equal_string(name, name_len, #member)) \
@@ -86,6 +88,7 @@ cbor_result_t cbor_decode_target_dma_array(cbor_value_t *dec, target_dma_t (*dma
     dma_device_t dev = DMA_DEVICE_INVALID;
     CBOR_CHECK_ERROR(res = cbor_decode_dma_device_t(dec, &dev));
     if (dev == DMA_DEVICE_INVALID) {
+      cbor_decode_skip(dec);
       continue;
     }
 

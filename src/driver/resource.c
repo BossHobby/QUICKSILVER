@@ -65,7 +65,7 @@ cbor_result_t cbor_decode_resource_tag_t(cbor_value_t *dec, resource_tag_t *t) {
       return CBOR_ERR_INVALID_TYPE;
     };
   } else {
-    return CBOR_ERR_INVALID_TYPE;
+    *t = RESOURCE_INVALID;
   }
 
   return res;
