@@ -43,11 +43,27 @@ typedef enum {
 #define GESTURETIME_MAX 500e3
 #define GESTURETIME_IDLE 700e3
 #define GESTURETIME_IDLE_OSD 100e3
+#define GESTURETIME_OSD_REPEAT 125e3
 
 #define GSIZE 7
 #define OSD_GSIZE 3
 
 static gesture_key_t gbuffer[GSIZE];
+
+static osd_input_t gesture_to_osd_input(gesture_key_t gesture) {
+  switch (gesture) {
+  case GESTURE_UP:
+    return OSD_INPUT_UP;
+  case GESTURE_DOWN:
+    return OSD_INPUT_DOWN;
+  case GESTURE_LEFT:
+    return OSD_INPUT_LEFT;
+  case GESTURE_RIGHT:
+    return OSD_INPUT_RIGHT;
+  default:
+    return OSD_INPUT_NONE;
+  }
+}
 
 static const gesture_key_t commands[GESTURE_MAX][GSIZE] = {
     [GESTURE_NONE] = {},
@@ -126,6 +142,7 @@ int32_t gestures_detect() {
   static gesture_key_t last_gesture;
   static gesture_key_t current_gesture;
   static uint32_t gesture_time;
+  static uint32_t osd_repeat_time;
 
   if (!flags.on_ground) {
     current_gesture = GESTURE_OTHER;
@@ -148,6 +165,18 @@ int32_t gestures_detect() {
   const uint32_t time = time_micros();
   if (gesture_start != last_gesture) {
     gesture_time = time;
+    osd_repeat_time = time;
+  }
+
+  if (osd_state.screen != OSD_SCREEN_REGULAR && time - gesture_time > GESTURETIME_MAX && time - osd_repeat_time > GESTURETIME_OSD_REPEAT) {
+    const osd_input_t input = gesture_to_osd_input(gesture_start);
+    if (input != OSD_INPUT_NONE) {
+      osd_repeat_time = time;
+      for (uint8_t i = 0; i < OSD_GSIZE; i++) {
+        gbuffer[i] = GESTURE_OTHER;
+      }
+      return input;
+    }
   }
 
   if (time - gesture_time > GESTURETIME_MIN) {
