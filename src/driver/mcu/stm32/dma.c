@@ -98,9 +98,87 @@ uint32_t dma_map_channel(uint32_t channel) {
 }
 #endif
 
+#ifdef STM32F4
+// STM32F4 fixed DMA stream-channel assignments based on AN4031
+typedef struct {
+  dma_device_t device;
+  dma_stream_t stream;
+  uint32_t channel;
+} stm32f4_dma_assignment_t;
+
+static const stm32f4_dma_assignment_t stm32f4_dma_assignments[] = {
+    // USART1
+    {DMA_DEVICE_SERIAL1_RX, DMA2_STREAM2, 4}, // Primary option
+    {DMA_DEVICE_SERIAL1_RX, DMA2_STREAM5, 4}, // Alternative option
+    {DMA_DEVICE_SERIAL1_TX, DMA2_STREAM7, 4},
+
+    // USART2
+    {DMA_DEVICE_SERIAL2_RX, DMA1_STREAM5, 4},
+    {DMA_DEVICE_SERIAL2_TX, DMA1_STREAM6, 4},
+
+    // USART3
+    {DMA_DEVICE_SERIAL3_RX, DMA1_STREAM1, 4},
+    {DMA_DEVICE_SERIAL3_TX, DMA1_STREAM3, 4}, // Primary option
+    {DMA_DEVICE_SERIAL3_TX, DMA1_STREAM4, 7}, // Alternative option
+
+    // UART4
+    {DMA_DEVICE_SERIAL4_RX, DMA1_STREAM2, 4},
+    {DMA_DEVICE_SERIAL4_TX, DMA1_STREAM4, 4},
+
+    // UART5
+    {DMA_DEVICE_SERIAL5_RX, DMA1_STREAM0, 4},
+    {DMA_DEVICE_SERIAL5_TX, DMA1_STREAM7, 4},
+
+    // USART6
+    {DMA_DEVICE_SERIAL6_RX, DMA2_STREAM1, 5}, // Primary option
+    {DMA_DEVICE_SERIAL6_RX, DMA2_STREAM2, 5}, // Alternative option
+    {DMA_DEVICE_SERIAL6_TX, DMA2_STREAM6, 5}, // Primary option
+    {DMA_DEVICE_SERIAL6_TX, DMA2_STREAM7, 5}, // Alternative option
+};
+
+bool dma_allocate_stream(dma_device_t device, uint32_t channel, resource_tag_t tag) {
+  if (target.dma[device].dma != DMA_STREAM_INVALID) {
+    return true;
+  }
+
+  // STM32F4 uses fixed stream-channel assignments for serial devices
+  if (device >= DMA_DEVICE_SERIAL1_RX && device <= DMA_DEVICE_SERIAL8_TX) {
+    for (uint32_t i = 0; i < sizeof(stm32f4_dma_assignments) / sizeof(stm32f4_dma_assignment_t); i++) {
+      const stm32f4_dma_assignment_t *assignment = &stm32f4_dma_assignments[i];
+
+      if (assignment->device == device && assignment->channel == channel) {
+        // Check if this stream is available
+        if (dma_stream_map[assignment->stream] == DMA_DEVICE_INVALID) {
+          dma_stream_map[assignment->stream] = device;
+          target.dma[device].dma = assignment->stream;
+          target.dma[device].channel = assignment->channel;
+          target.dma[device].tag = tag;
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // For non-serial devices, use simple allocation
+  for (uint32_t i = 1; i < DMA_STREAM_MAX; i++) {
+    if (dma_stream_map[i] == DMA_DEVICE_INVALID) {
+      dma_stream_map[i] = device;
+      target.dma[device].dma = (dma_stream_t)i;
+      target.dma[device].channel = channel;
+      target.dma[device].tag = tag;
+      return true;
+    }
+  }
+
+  return false;
+}
+#endif
+
 extern void dshot_dma_isr(const dma_device_t);
 extern void spi_dma_isr(const dma_device_t);
 extern void rgb_dma_isr(const dma_device_t);
+extern void serial_dma_isr(const dma_device_t);
 
 static void handle_dma_stream_isr(const dma_device_t dev) {
   switch (dev) {
@@ -119,6 +197,26 @@ static void handle_dma_stream_isr(const dma_device_t dev) {
   case DMA_DEVICE_DSHOT_CH3:
 #ifdef USE_MOTOR_DSHOT
     dshot_dma_isr(dev);
+#endif
+    break;
+  case DMA_DEVICE_SERIAL1_RX:
+  case DMA_DEVICE_SERIAL1_TX:
+  case DMA_DEVICE_SERIAL2_RX:
+  case DMA_DEVICE_SERIAL2_TX:
+  case DMA_DEVICE_SERIAL3_RX:
+  case DMA_DEVICE_SERIAL3_TX:
+  case DMA_DEVICE_SERIAL4_RX:
+  case DMA_DEVICE_SERIAL4_TX:
+  case DMA_DEVICE_SERIAL5_RX:
+  case DMA_DEVICE_SERIAL5_TX:
+  case DMA_DEVICE_SERIAL6_RX:
+  case DMA_DEVICE_SERIAL6_TX:
+  case DMA_DEVICE_SERIAL7_RX:
+  case DMA_DEVICE_SERIAL7_TX:
+  case DMA_DEVICE_SERIAL8_RX:
+  case DMA_DEVICE_SERIAL8_TX:
+#ifdef USE_SERIAL
+    serial_dma_isr(dev);
 #endif
     break;
   case DMA_DEVICE_RGB:

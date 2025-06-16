@@ -24,6 +24,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Hardware access: use appropriate driver abstraction layers
 - Memory sections: respect DMA and FAST RAM sections where specified
 
+## Build Environment Notes
+
+- platformio stores sdks in ~/.platformio/packages/
+
 ## Test System
 
 ### Overview

@@ -9,18 +9,34 @@
 #define DMA_ALIGN_SIZE 32
 #define DMA_ALIGN(offset) MEMORY_ALIGN(offset, DMA_ALIGN_SIZE)
 
-#define DMA_DEVICES     \
-  DMA_DEVICE(DSHOT_CH1) \
-  DMA_DEVICE(DSHOT_CH2) \
-  DMA_DEVICE(DSHOT_CH3) \
-  DMA_DEVICE(SPI1_RX)   \
-  DMA_DEVICE(SPI1_TX)   \
-  DMA_DEVICE(SPI2_RX)   \
-  DMA_DEVICE(SPI2_TX)   \
-  DMA_DEVICE(SPI3_RX)   \
-  DMA_DEVICE(SPI3_TX)   \
-  DMA_DEVICE(SPI4_RX)   \
-  DMA_DEVICE(SPI4_TX)   \
+#define DMA_DEVICES      \
+  DMA_DEVICE(DSHOT_CH1)  \
+  DMA_DEVICE(DSHOT_CH2)  \
+  DMA_DEVICE(DSHOT_CH3)  \
+  DMA_DEVICE(SPI1_RX)    \
+  DMA_DEVICE(SPI1_TX)    \
+  DMA_DEVICE(SPI2_RX)    \
+  DMA_DEVICE(SPI2_TX)    \
+  DMA_DEVICE(SPI3_RX)    \
+  DMA_DEVICE(SPI3_TX)    \
+  DMA_DEVICE(SPI4_RX)    \
+  DMA_DEVICE(SPI4_TX)    \
+  DMA_DEVICE(SERIAL1_RX) \
+  DMA_DEVICE(SERIAL1_TX) \
+  DMA_DEVICE(SERIAL2_RX) \
+  DMA_DEVICE(SERIAL2_TX) \
+  DMA_DEVICE(SERIAL3_RX) \
+  DMA_DEVICE(SERIAL3_TX) \
+  DMA_DEVICE(SERIAL4_RX) \
+  DMA_DEVICE(SERIAL4_TX) \
+  DMA_DEVICE(SERIAL5_RX) \
+  DMA_DEVICE(SERIAL5_TX) \
+  DMA_DEVICE(SERIAL6_RX) \
+  DMA_DEVICE(SERIAL6_TX) \
+  DMA_DEVICE(SERIAL7_RX) \
+  DMA_DEVICE(SERIAL7_TX) \
+  DMA_DEVICE(SERIAL8_RX) \
+  DMA_DEVICE(SERIAL8_TX) \
   DMA_DEVICE(RGB)
 
 typedef enum {
@@ -55,3 +71,5 @@ void dma_enable_rcc(const dma_stream_def_t *def);
 // STM32F4 errata 2.2.19: Check if DMA2 can be safely used
 bool dma_can_use_dma2(dma_device_t device);
 #endif
+
+bool dma_allocate_stream(dma_device_t device, uint32_t request_or_channel, resource_tag_t tag);

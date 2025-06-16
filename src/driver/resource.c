@@ -34,6 +34,15 @@ cbor_result_t cbor_decode_resource_tag_t(cbor_value_t *dec, resource_tag_t *t) {
     } else {
       return CBOR_ERR_INVALID_TYPE;
     }
+  } else if (check_str("SERIAL")) {
+    const int32_t index = strtol(end, &end, 10);
+    if (check_str("_RX")) {
+      *t = SERIAL_TAG(index, RES_SERIAL_RX);
+    } else if (check_str("_TX")) {
+      *t = SERIAL_TAG(index, RES_SERIAL_TX);
+    } else {
+      return CBOR_ERR_INVALID_TYPE;
+    }
   } else if (check_str("TIMER")) {
     int32_t index = TIMER_INVALID;
     const int32_t num = strtol(end, &end, 10);
@@ -86,6 +95,18 @@ cbor_result_t cbor_encode_resource_tag_t(cbor_value_t *enc, const resource_tag_t
       break;
     case RES_SPI_SCK:
       len = snprintf(tag, 64, "SPI%d_SCK", SPI_TAG_PORT(*d));
+      break;
+    default:
+      break;
+    }
+    break;
+  case RESOURCE_SERIAL:
+    switch (SERIAL_TAG_PIN(*d)) {
+    case RES_SERIAL_RX:
+      len = snprintf(tag, 64, "SERIAL%d_RX", SERIAL_TAG_PORT(*d));
+      break;
+    case RES_SERIAL_TX:
+      len = snprintf(tag, 64, "SERIAL%d_TX", SERIAL_TAG_PORT(*d));
       break;
     default:
       break;

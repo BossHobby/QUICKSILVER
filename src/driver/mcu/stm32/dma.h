@@ -12,6 +12,10 @@
 #define dma_is_flag_active(dev, flag) READ_BIT(dev->port->ISR, dma_flag_for_channel(dev, (flag)))
 #define dma_clear_flag_tc(dev) WRITE_REG(dev->port->IFCR, dma_flag_for_channel(dev, DMA_FLAG_TC | DMA_FLAG_TE | DMA_FLAG_HT | DMA_FLAG_GI));
 
+// STM32G4 doesn't have DME (Direct Mode Error) - map to TE (Transfer Error)
+#define DMA_FLAG_DME DMA_FLAG_TE
+#define dma_clear_flag_dme(dev) WRITE_REG(dev->port->IFCR, dma_flag_for_channel(dev, DMA_FLAG_TE));
+
 #define LL_DMA_EnableStream LL_DMA_EnableChannel
 #define LL_DMA_DisableStream LL_DMA_DisableChannel
 #define LL_DMA_IsEnabledStream LL_DMA_IsEnabledChannel
@@ -53,6 +57,14 @@ static const uint32_t _dma_flag_shift[] = {0, 6, 16, 22, 0, 6, 16, 22};
       WRITE_REG(dev->port->LIFCR, dma_flag_for_channel(dev, DMA_FLAG_TC | DMA_FLAG_TE | DMA_FLAG_HT | DMA_FLAG_FE)); \
     else                                                                                                             \
       WRITE_REG(dev->port->HIFCR, dma_flag_for_channel(dev, DMA_FLAG_TC | DMA_FLAG_TE | DMA_FLAG_HT | DMA_FLAG_FE)); \
+  }
+
+#define dma_clear_flag_dme(dev)                                             \
+  {                                                                         \
+    if (dev->stream_index < LL_DMA_STREAM_4)                                \
+      WRITE_REG(dev->port->LIFCR, dma_flag_for_channel(dev, DMA_FLAG_DME)); \
+    else                                                                    \
+      WRITE_REG(dev->port->HIFCR, dma_flag_for_channel(dev, DMA_FLAG_DME)); \
   }
 
 #define DMA_STREAMS \

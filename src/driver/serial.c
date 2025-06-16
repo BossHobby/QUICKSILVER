@@ -1,6 +1,8 @@
 #include "driver/serial.h"
 
+#include "driver/dma.h"
 #include "driver/interrupt.h"
+#include "driver/resource.h"
 #include "driver/serial_soft.h"
 
 #ifdef USE_SERIAL
@@ -9,6 +11,66 @@ serial_port_t *serial_ports[SERIAL_PORT_MAX];
 
 extern const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX];
 extern void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool swap);
+
+const dma_stream_def_t *serial_get_dma_rx(serial_ports_t port) {
+  if (port <= SERIAL_PORT_INVALID || port >= SERIAL_PORT_MAX) {
+    return NULL;
+  }
+
+  const dma_device_t dev = usart_port_defs[port].dma_rx;
+  if (dev == DMA_DEVICE_INVALID) {
+    return NULL;
+  }
+
+  // Check if already assigned a valid stream
+  if (target.dma[dev].dma != DMA_STREAM_INVALID) {
+    return &dma_stream_defs[target.dma[dev].dma];
+  }
+
+  // Auto-allocate DMA stream
+  resource_tag_t tag = SERIAL_TAG(port, RES_SERIAL_RX);
+  uint32_t channel_or_request = 0;
+#ifdef STM32F4
+  channel_or_request = usart_port_defs[port].dma_channel_rx;
+#elif defined(STM32G4) || defined(STM32H7)
+  channel_or_request = usart_port_defs[port].dma_request_rx;
+#endif
+  if (!dma_allocate_stream(dev, channel_or_request, tag)) {
+    return NULL;
+  }
+
+  return &dma_stream_defs[target.dma[dev].dma];
+}
+
+const dma_stream_def_t *serial_get_dma_tx(serial_ports_t port) {
+  if (port <= SERIAL_PORT_INVALID || port >= SERIAL_PORT_MAX) {
+    return NULL;
+  }
+
+  const dma_device_t dev = usart_port_defs[port].dma_tx;
+  if (dev == DMA_DEVICE_INVALID) {
+    return NULL;
+  }
+
+  // Check if already assigned a valid stream
+  if (target.dma[dev].dma != DMA_STREAM_INVALID) {
+    return &dma_stream_defs[target.dma[dev].dma];
+  }
+
+  // Auto-allocate DMA stream
+  resource_tag_t tag = SERIAL_TAG(port, RES_SERIAL_TX);
+  uint32_t channel_or_request = 0;
+#ifdef STM32F4
+  channel_or_request = usart_port_defs[port].dma_channel_tx;
+#elif defined(STM32G4) || defined(STM32H7)
+  channel_or_request = usart_port_defs[port].dma_request_tx;
+#endif
+  if (!dma_allocate_stream(dev, channel_or_request, tag)) {
+    return NULL;
+  }
+
+  return &dma_stream_defs[target.dma[dev].dma];
+}
 
 bool serial_is_soft(serial_ports_t port) {
   if (port < SERIAL_PORT_MAX) {
@@ -94,6 +156,10 @@ void serial_init(serial_port_t *serial, serial_port_config_t config) {
   if (!target_serial_port_valid(dev)) {
     return;
   }
+
+  while (!serial->tx_done)
+    ;
+
   serial->config = config;
   serial->tx_done = true;
 

@@ -9,6 +9,8 @@
 
 #ifdef USE_SPI
 
+extern const spi_port_def_t spi_port_defs[SPI_PORT_MAX];
+
 FAST_RAM spi_device_t spi_dev[SPI_PORT_MAX] = {
     [RANGE_INIT(0, SPI_PORT_MAX)] = {.is_init = false, .dma_done = true, .txn_head = 0, .txn_tail = 0},
 };
@@ -39,10 +41,10 @@ bool spi_txn_can_send(spi_bus_device_t *bus, bool dma) {
   }
 
 #ifdef STM32F4
-  if (dma && bus->port == SPI_PORT1) {
-    // STM32F4 errata 2.2.19: Check if DMA2 can be used for SPI1
-    if (!dma_can_use_dma2(DMA_DEVICE_SPI1_TX)) {
-      return false;
+  if (dma) {
+    const dma_device_t tx_dev = spi_port_defs[bus->port].dma_tx;
+    if (!dma_can_use_dma2(tx_dev)) {
+      return false; // STM32F4 errata 2.2.19: defer SPI if DMA2 conflicts exist
     }
   }
 #endif

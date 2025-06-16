@@ -36,6 +36,7 @@ void dma_prepare_rx_memory(void *addr, uint32_t size) {}
 extern void dshot_dma_isr(const dma_device_t);
 extern void spi_dma_isr(const dma_device_t);
 extern void rgb_dma_isr(const dma_device_t);
+extern void serial_dma_isr(const dma_device_t);
 
 static void handle_dma_stream_isr(const dma_device_t dev) {
   switch (dev) {
@@ -54,6 +55,26 @@ static void handle_dma_stream_isr(const dma_device_t dev) {
   case DMA_DEVICE_DSHOT_CH3:
 #ifdef USE_MOTOR_DSHOT
     dshot_dma_isr(dev);
+#endif
+    break;
+  case DMA_DEVICE_SERIAL1_RX:
+  case DMA_DEVICE_SERIAL1_TX:
+  case DMA_DEVICE_SERIAL2_RX:
+  case DMA_DEVICE_SERIAL2_TX:
+  case DMA_DEVICE_SERIAL3_RX:
+  case DMA_DEVICE_SERIAL3_TX:
+  case DMA_DEVICE_SERIAL4_RX:
+  case DMA_DEVICE_SERIAL4_TX:
+  case DMA_DEVICE_SERIAL5_RX:
+  case DMA_DEVICE_SERIAL5_TX:
+  case DMA_DEVICE_SERIAL6_RX:
+  case DMA_DEVICE_SERIAL6_TX:
+  case DMA_DEVICE_SERIAL7_RX:
+  case DMA_DEVICE_SERIAL7_TX:
+  case DMA_DEVICE_SERIAL8_RX:
+  case DMA_DEVICE_SERIAL8_TX:
+#ifdef USE_SERIAL
+    serial_dma_isr(dev);
 #endif
     break;
   case DMA_DEVICE_RGB:

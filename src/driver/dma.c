@@ -3,10 +3,39 @@
 #include <string.h>
 
 #include "core/project.h"
+#include "core/target.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
 dma_device_t dma_stream_map[DMA_STREAM_MAX];
+
+#ifndef STM32F4
+bool dma_allocate_stream(dma_device_t device, uint32_t request_or_channel, resource_tag_t tag) {
+  // Check if already allocated for this device
+  if (target.dma[device].dma != DMA_STREAM_INVALID) {
+    return true;
+  }
+  
+  // Find first available stream
+  for (uint32_t i = 1; i < DMA_STREAM_MAX; i++) {
+    if (dma_stream_map[i] == DMA_DEVICE_INVALID) {
+      dma_stream_map[i] = device;
+
+      target.dma[device].dma = (dma_stream_t)i;
+#if defined(STM32G4) || defined(STM32H7) || defined(AT32)
+      target.dma[device].request = request_or_channel;
+#else
+      target.dma[device].channel = request_or_channel;
+#endif
+      target.dma[device].tag = tag;
+
+      return true;
+    }
+  }
+
+  return false;
+}
+#endif
 
 cbor_result_t cbor_decode_dma_device_t(cbor_value_t *dec, dma_device_t *d) {
   const uint8_t *name;

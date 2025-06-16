@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #include "core/project.h"
+#include "driver/dma.h"
 #include "driver/gpio.h"
 #include "driver/rcc.h"
 #include "util/ring_buffer.h"
@@ -51,7 +52,8 @@ typedef struct {
   ring_buffer_t *rx_buffer;
   ring_buffer_t *tx_buffer;
 
-  bool tx_done;
+  volatile bool tx_done;
+  volatile uint32_t tx_dma_transfer_size;
 } serial_port_t;
 
 typedef struct {
@@ -59,6 +61,15 @@ typedef struct {
   usart_dev_t *channel;
   IRQn_Type irq;
   rcc_reg_t rcc;
+  dma_device_t dma_rx;
+  dma_device_t dma_tx;
+#ifdef STM32F4
+  uint32_t dma_channel_rx;
+  uint32_t dma_channel_tx;
+#elif defined(STM32G4) || defined(STM32H7) || defined(AT32F4)
+  uint32_t dma_request_rx;
+  uint32_t dma_request_tx;
+#endif
 } usart_port_def_t;
 
 extern serial_port_t serial_rx;
@@ -80,3 +91,6 @@ bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32
 
 bool serial_is_soft(serial_ports_t port);
 const target_serial_port_t *serial_get_dev(const serial_ports_t port);
+
+const dma_stream_def_t *serial_get_dma_rx(serial_ports_t port);
+const dma_stream_def_t *serial_get_dma_tx(serial_ports_t port);
