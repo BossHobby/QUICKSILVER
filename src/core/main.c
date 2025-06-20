@@ -95,7 +95,6 @@ __attribute__((__used__)) int main() {
   debug_pin_init();
   buzzer_init();
   usb_init();
-  scheduler_init();
   simulator_init();
 
   rgb_led_init();
@@ -108,6 +107,8 @@ __attribute__((__used__)) int main() {
 
   osd_init();
   sixaxis_init();
+  // needs to happen after gyro is detected so we know its update period
+  scheduler_init();
 
   time_delay_ms(50);
   sixaxis_gyro_cal();
