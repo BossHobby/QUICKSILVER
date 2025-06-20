@@ -246,7 +246,7 @@ static void gps_handle_packet(const uint16_t class_id, const uint8_t *payload, c
   switch (class_id) {
   case UBX_NAV_PVT: {
     ubx_nav_pvt_t *nav_pvt = (ubx_nav_pvt_t *)payload;
-    state.gps_lock = nav_pvt->flags & FLAGS_GNSS_FIX_OK;
+    state.gps_lock = (nav_pvt->flags & FLAGS_GNSS_FIX_OK) && (nav_pvt->numSV >= GPS_MIN_SATS_FOR_LOCK);
     state.gps_sats = nav_pvt->numSV;
     state.gps_coord.lon = nav_pvt->lon;
     state.gps_coord.lat = nav_pvt->lat;

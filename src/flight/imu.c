@@ -32,6 +32,12 @@
 #define ACC_MIN 0.7f
 #define ACC_MAX 1.3f
 
+// GPS heading fusion parameters  
+// Gain calculation: 0.02 (nav rate) × 100Hz ÷ 8000Hz = 0.00025
+#define GPS_HEADING_FUSION_GAIN 0.00025f // Equivalent to 0.02 at nav rate
+#define GPS_HEADING_MIN_SPEED 2.0f       // Minimum speed for reliable GPS heading
+#define GPS_HEADING_MAX_ACCURACY 3.0f    // Maximum heading accuracy for fusion
+
 #ifdef QUICKSILVER_IMU
 static filter_lp_pt1 filter;
 static filter_state_t filter_pass1[3];
@@ -166,6 +172,25 @@ void imu_calc() {
   state.attitude.roll = atan2approx(state.GEstG.roll, state.GEstG.yaw);
   state.attitude.pitch = atan2approx(state.GEstG.pitch, state.GEstG.yaw);
   state.attitude.yaw = normalize_rad(state.attitude.yaw + vec3_dot(state.gyro_delta_angle, state.GEstG));
+  
+  // GPS heading fusion for drift correction
+  if (state.gps_lock && 
+      state.gps_speed > GPS_HEADING_MIN_SPEED && 
+      state.gps_heading_accuracy < GPS_HEADING_MAX_ACCURACY) {
+    
+    // Calculate heading difference (GPS - IMU) in radians
+    const float gps_heading_rad = state.gps_heading * DEGTORAD;
+    float heading_error = gps_heading_rad - state.attitude.yaw;
+    
+    // Normalize to -π to π
+    while (heading_error > M_PI_F) heading_error -= 2.0f * M_PI_F;
+    while (heading_error < -M_PI_F) heading_error += 2.0f * M_PI_F;
+    
+    // Apply small correction (complementary filter)
+    state.attitude.yaw += heading_error * GPS_HEADING_FUSION_GAIN;
+    state.attitude.yaw = normalize_rad(state.attitude.yaw);
+  }
+  
   state.heading = normalize_deg(state.attitude.yaw * RADTODEG);
 }
 #endif

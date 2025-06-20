@@ -495,6 +495,11 @@ const profile_t default_profile = {
 #endif
         // rest is initialized by profile_set_defaults()
     },
+    .navigation = {
+        .rth_altitude = 10.0f,      // 10m above current position
+        .rth_on_failsafe = true,    // Enable RTH on failsafe
+        .rth_auto_land = false,     // Don't auto-land by default
+    },
 };
 
 #pragma GCC diagnostic pop
@@ -572,6 +577,7 @@ PID_MEMBERS
 CALIBRATION_LIMIT_MEMBERS
 RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
+NAVIGATION_MEMBERS
 BLACKBOX_PRESET_MEMBERS
 PROFILE_MEMBERS
 
@@ -646,6 +652,7 @@ PID_MEMBERS
 CALIBRATION_LIMIT_MEMBERS
 RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
+NAVIGATION_MEMBERS
 PROFILE_MEMBERS
 
 #undef START_STRUCT
