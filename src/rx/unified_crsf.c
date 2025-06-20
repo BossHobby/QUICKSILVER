@@ -323,7 +323,14 @@ void rx_serial_send_crsf_telemetry() {
 
     payload_size = crsf_tlm_frame_msp_resp(telemetry_packet, msp_origin, payload, msp_size + header_size);
   } else {
-    payload_size = crsf_tlm_frame_battery_sensor(telemetry_packet);
+    static uint8_t telemetry_counter = 0;
+    
+    // Alternate between battery sensor and GPS telemetry
+    if ((telemetry_counter++ % 4) == 0 && profile.serial.gps != SERIAL_PORT_INVALID) {
+      payload_size = crsf_tlm_frame_gps(telemetry_packet);
+    } else {
+      payload_size = crsf_tlm_frame_battery_sensor(telemetry_packet);
+    }
   }
 
   const uint32_t telemetry_size = crsf_tlm_frame_finish(telemetry_packet, payload_size);

@@ -83,6 +83,55 @@ uint32_t crsf_tlm_frame_battery_sensor(uint8_t *buf) {
   return CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE;
 }
 
+/*
+0x02 GPS (CRSF_FRAMETYPE_GPS)
+Payload:
+int32_t     Latitude ( degrees / 10,000,000 )
+int32_t     Longitude ( degrees / 10,000,000 )
+uint16_t    Groundspeed ( km/h / 100 )
+uint16_t    GPS heading ( degrees / 100 )
+uint16_t    Altitude ( meters + 1000m offset )
+uint8_t     Satellites in view
+*/
+uint32_t crsf_tlm_frame_gps(uint8_t *buf) {
+  buf[1] = CRSF_FRAME_GPS_PAYLOAD_SIZE + CRSF_FRAME_LENGTH_TYPE_CRC;
+  buf[2] = CRSF_FRAMETYPE_GPS;
+  
+  // Latitude: degrees / 10,000,000 (big endian)
+  const int32_t lat = state.gps_coord.lat;
+  buf[3] = lat >> 24;
+  buf[4] = lat >> 16;
+  buf[5] = lat >> 8;
+  buf[6] = lat;
+  
+  // Longitude: degrees / 10,000,000 (big endian)
+  const int32_t lon = state.gps_coord.lon;
+  buf[7] = lon >> 24;
+  buf[8] = lon >> 16;
+  buf[9] = lon >> 8;
+  buf[10] = lon;
+  
+  // Groundspeed: km/h / 100 (big endian)
+  const uint16_t speed = (uint16_t)(state.gps_speed * 100);
+  buf[11] = speed >> 8;
+  buf[12] = speed;
+  
+  // GPS heading: degrees / 100 (big endian)
+  const uint16_t heading = (uint16_t)(state.gps_heading * 100);
+  buf[13] = heading >> 8;
+  buf[14] = heading;
+  
+  // Altitude: meters + 1000m offset (big endian)
+  const uint16_t altitude = (uint16_t)(state.gps_altitude + 1000);
+  buf[15] = altitude >> 8;
+  buf[16] = altitude;
+  
+  // Satellites in view
+  buf[17] = state.gps_sats;
+  
+  return CRSF_FRAME_GPS_PAYLOAD_SIZE;
+}
+
 uint32_t crsf_tlm_frame_msp_resp(uint8_t *buf, uint8_t origin, uint8_t *payload, uint8_t size) {
   buf[1] = size + CRSF_FRAME_LENGTH_EXT_TYPE_CRC;
   buf[2] = CRSF_FRAMETYPE_MSP_RESP;
