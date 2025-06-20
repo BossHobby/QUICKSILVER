@@ -50,3 +50,8 @@ void dma_prepare_tx_memory(void *addr, uint32_t size);
 void dma_prepare_rx_memory(void *addr, uint32_t size);
 
 void dma_enable_rcc(const dma_stream_def_t *def);
+
+#ifdef STM32F4
+// STM32F4 errata 2.2.19: Check if DMA2 can be safely used
+bool dma_can_use_dma2(dma_device_t device);
+#endif
