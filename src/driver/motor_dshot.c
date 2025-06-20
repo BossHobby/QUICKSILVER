@@ -142,7 +142,9 @@ void dshot_dma_start() {
   dma_prepare_rx_memory((void *)dshot_input_buffer, sizeof(dshot_input_buffer));
 
 #ifdef STM32F4
-  while (spi_dma_is_ready(SPI_PORT1) == 0)
+  // STM32F4 errata 2.2.19: DSHOT bitbang always uses DMA2 for GPIO writes
+  // Wait for DMA2 to be available (checking SPI1 and other DMA2 users)
+  while (!dma_can_use_dma2(DMA_DEVICE_INVALID))
     __NOP();
 #endif
 
