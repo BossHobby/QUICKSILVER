@@ -1,10 +1,18 @@
 #include "driver/dma.h"
 
 #include "core/failloop.h"
+#include "core/target.h"
 #include "driver/adc.h"
 #include "driver/rcc.h"
 #include "driver/resource.h"
 #include "driver/timer.h"
+
+#ifdef STM32F4
+#ifdef USE_MOTOR_DSHOT
+#include "driver/motor_dshot.h"
+#endif
+#include "driver/spi.h"
+#endif
 
 #if defined(STM32F7) || defined(STM32H7)
 #define CACHE_LINE_SIZE 32
@@ -131,3 +139,31 @@ static void handle_dma_stream_isr(const dma_device_t dev) {
 DMA_STREAMS
 
 #undef DMA_STREAM
+
+#ifdef STM32F4
+// STM32F4 errata 2.2.19: centralized DMA2 conflict check
+bool dma_can_use_dma2(dma_device_t device) {
+  // If device is valid, check if it uses DMA2
+  if (device != DMA_DEVICE_INVALID) {
+    const dma_stream_def_t *dma = &dma_stream_defs[target.dma[device].dma];
+    if (dma->port_index != 2) {
+      return true; // Not DMA2, no conflict possible
+    }
+  }
+
+#ifdef USE_MOTOR_DSHOT
+  // DSHOT bitbang always uses DMA2 for GPIO writes which triggers the errata
+  if (target.brushless && dshot_phase != 0) {
+    return false; // DSHOT bitbang active, DMA2 conflict exists
+  }
+#endif
+
+  // Check if SPI1 is busy (APB2 peripheral that uses DMA2)
+  const dma_stream_def_t *spi1_dma = &dma_stream_defs[target.dma[DMA_DEVICE_SPI1_TX].dma];
+  if (spi1_dma->port_index == 2 && !spi_dma_is_ready(SPI_PORT1)) {
+    return false;
+  }
+
+  return true;
+}
+#endif
