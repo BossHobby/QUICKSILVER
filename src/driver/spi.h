@@ -144,6 +144,9 @@ static inline bool spi_txn_ready(spi_bus_device_t *bus) {
   return dev->txn_head == dev->txn_tail;
 }
 
+bool spi_txn_has_free(void);
+uint8_t spi_txn_free_count(void);
+
 #define spi_seg_submit_wait(_bus, _segs)                                                                            \
   {                                                                                                                 \
     static_assert(__builtin_types_compatible_p(spi_txn_segment_t[], typeof(_segs)), "spi segment not const array"); \

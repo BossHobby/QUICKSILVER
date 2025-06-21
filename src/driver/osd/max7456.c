@@ -204,7 +204,12 @@ void max7456_intro() {
 }
 
 uint32_t max7456_can_fit() {
-  return max7456_is_ready() ? 255 : 0;
+  // Reserve at least 8 slots for critical devices (gyro, etc)
+  // This prevents OSD from starving real-time SPI devices
+  if (spi_txn_free_count() <= 8) {
+    return 0;
+  }
+  return 512;
 }
 
 bool max7456_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size) {

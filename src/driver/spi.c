@@ -14,23 +14,35 @@ FAST_RAM spi_device_t spi_dev[SPI_PORT_MAX] = {
 };
 FAST_RAM spi_txn_t txn_pool[SPI_TXN_MAX];
 DMA_RAM uint8_t txn_buffers[SPI_TXN_MAX][DMA_ALIGN(512)];
+static volatile uint32_t txn_free_bitmap = 0xFFFFFFFF; // All 32 bits set = all free
 
 extern void spi_device_init(spi_ports_t port);
 extern void spi_reconfigure(spi_bus_device_t *bus);
 extern void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length, bool has_rx);
 
 static inline __attribute__((always_inline)) spi_txn_t *spi_txn_pop(spi_bus_device_t *bus) {
+  spi_txn_t *txn = NULL;
   ATOMIC_BLOCK_ALL {
-    for (uint32_t i = 0; i < SPI_TXN_MAX; i++) {
-      if (txn_pool[i].status == TXN_IDLE) {
-        spi_txn_t *txn = &txn_pool[i];
-        txn->status = TXN_WAITING;
-        txn->buffer = txn_buffers[i];
-        return txn;
-      }
+    if (txn_free_bitmap != 0) {
+      // Find first set bit (first free transaction)
+      uint32_t idx = __builtin_ctz(txn_free_bitmap);
+      // Clear the bit to mark as allocated
+      txn_free_bitmap &= ~(1U << idx);
+      
+      txn = &txn_pool[idx];
+      txn->status = TXN_WAITING;
+      txn->buffer = txn_buffers[idx];
     }
   }
-  return NULL;
+  return txn;
+}
+
+bool spi_txn_has_free(void) {
+  return txn_free_bitmap != 0;
+}
+
+uint8_t spi_txn_free_count(void) {
+  return __builtin_popcount(txn_free_bitmap);
 }
 
 bool spi_txn_can_send(spi_bus_device_t *bus, bool dma) {
@@ -167,6 +179,12 @@ void spi_txn_finish(spi_ports_t port) {
   }
 
   txn->status = TXN_IDLE;
+  
+  // Free the transaction back to the bitmap
+  uint32_t idx = txn - txn_pool;
+  ATOMIC_BLOCK_ALL {
+    txn_free_bitmap |= (1U << idx);
+  }
 
   dev->txns[tail] = NULL;
   dev->txn_tail = tail;
