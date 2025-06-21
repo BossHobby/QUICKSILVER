@@ -256,6 +256,12 @@
 // #define RESET_ON_FAULT
 // #define BLACKBOX_DEBUG_FLAGS BBOX_DEBUG_DYN_NOTCH
 
+// ---- DEBUG PINS ----
+// Define pins for debugging with logic analyzer or oscilloscope
+// Example: Use PA0 and PA1 as debug output pins
+// #define DEBUG_PIN0 PIN_A0
+// #define DEBUG_PIN1 PIN_A1
+
 // ---- DEVELOPMENT OPTIONS ----
 // #define ALLOW_USB_ARMING          // allow arming while connected to USB
 // #define NOMOTORS                  // disable motor output for bench testing
