@@ -20,10 +20,12 @@ typedef struct {
   rcc_reg_t rcc;
   dma_device_t dma_rx;
   dma_device_t dma_tx;
+  uint32_t irq;
 } spi_port_def_t;
 
 #define SPI_TXN_MAX 32
 #define SPI_TXN_SEG_MAX 8
+#define SPI_TXN_BUFFER_SIZE DMA_ALIGN(512)
 
 typedef enum {
   TXN_CONST,
@@ -143,6 +145,9 @@ static inline bool spi_txn_ready(spi_bus_device_t *bus) {
   const spi_device_t *dev = &spi_dev[bus->port];
   return dev->txn_head == dev->txn_tail;
 }
+
+bool spi_txn_has_free(void);
+uint8_t spi_txn_free_count(void);
 
 #define spi_seg_submit_wait(_bus, _segs)                                                                            \
   {                                                                                                                 \
