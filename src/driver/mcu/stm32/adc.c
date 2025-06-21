@@ -131,11 +131,6 @@ static void adc_init_dev(adc_devices_t index) {
 #endif
   LL_ADC_REG_Init(dev->adc, &adc_reg_init);
 
-#if defined(STM32G4)
-  LL_ADC_SetGainCompensation(dev->adc, 0);
-  LL_ADC_SetOverSamplingScope(dev->adc, LL_ADC_OVS_DISABLE);
-#endif
-
   LL_ADC_InitTypeDef adc_init;
   LL_ADC_StructInit(&adc_init);
   adc_init.Resolution = LL_ADC_RESOLUTION_12B;
@@ -150,6 +145,17 @@ static void adc_init_dev(adc_devices_t index) {
   adc_init.SequencersScanMode = LL_ADC_SEQ_SCAN_DISABLE;
 #endif
   LL_ADC_Init(dev->adc, &adc_init);
+
+#if defined(STM32G4) || defined(STM32H7)
+  // Configure oversampling for G4/H7 - 64x with shorter sample time for fast conversion
+#if defined(STM32G4)
+  LL_ADC_SetGainCompensation(dev->adc, 0);
+  LL_ADC_ConfigOverSamplingRatioShift(dev->adc, LL_ADC_OVS_RATIO_64, LL_ADC_OVS_SHIFT_RIGHT_6);
+#else // STM32H7
+  LL_ADC_ConfigOverSamplingRatioShift(dev->adc, 64, LL_ADC_OVS_SHIFT_RIGHT_6);
+#endif
+  LL_ADC_SetOverSamplingScope(dev->adc, LL_ADC_OVS_GRP_REGULAR_CONTINUED);
+#endif
 
   if (adc_pins[ADC_CHAN_VREF].dev == index) {
 #if defined(STM32G4)
@@ -237,26 +243,45 @@ void adc_init() {
   }
 
   adc_start_conversion(ADC_CHAN_VREF);
+
+  // Count active channels
+  extern uint8_t adc_active_channels;
+  adc_active_channels = 0;
+  for (uint32_t i = 0; i < ADC_CHAN_MAX; i++) {
+    if (adc_pins[i].dev != ADC_DEVICE_MAX) {
+      adc_active_channels++;
+    }
+  }
 }
 
-uint16_t adc_read_raw(adc_chan_t index) {
-  static adc_chan_t last_adc_chan = ADC_CHAN_VREF;
+bool adc_read_raw(adc_chan_t index, uint16_t *val) {
+  static adc_chan_t current_chan = ADC_CHAN_VREF;
+  static bool updated[ADC_CHAN_MAX] = {false};
 
-  const adc_channel_t *chan = &adc_pins[last_adc_chan];
+  const adc_channel_t *chan = &adc_pins[current_chan];
   const adc_dev_t *dev = &adc_dev[chan->dev];
 
   if (READY_TO_CONVERT(dev->adc)) {
-    adc_array[last_adc_chan] = LL_ADC_REG_ReadConversionData12(dev->adc);
+    // Read conversion data - no oversampling
+    adc_array[current_chan] = LL_ADC_REG_ReadConversionData12(dev->adc);
+    updated[current_chan] = true;
 
+    // Move to next active channel
     do {
-      last_adc_chan = (last_adc_chan + 1) % ADC_CHAN_MAX;
-      // skip through all channels without a dev
-    } while (adc_pins[last_adc_chan].dev == ADC_DEVICE_MAX);
+      current_chan = (current_chan + 1) % ADC_CHAN_MAX;
+    } while (adc_pins[current_chan].dev == ADC_DEVICE_MAX);
 
-    adc_start_conversion(last_adc_chan);
+    adc_start_conversion(current_chan);
   }
 
-  return adc_array[index];
+  // Return requested channel data
+  if (updated[index]) {
+    if (val)
+      *val = adc_array[index];
+    updated[index] = false;
+    return true;
+  }
+  return false;
 }
 
 float adc_convert_to_temp(uint16_t val) {

@@ -58,15 +58,16 @@ typedef struct {
   float cpu_temp;
 
   float vbat;                      // battery in volts
-  float vbat_filtered;             // filtered battery in volts
-  float vbat_filtered_decay;       // filtered battery with time decay
+  float vbat_filtered;             // filtered battery in volts (slow for display)
+  float vbat_sag_filtered;         // filtered battery in volts (fast for warnings)
   float vbat_cell_avg;             // filtered battery divided by cell count
   float vbat_compensated;          // battery compensated for sag
   float vbat_compensated_cell_avg; // battery compensated for sag divided by cell count
 
-  float ibat;
-  float ibat_filtered;
-  float ibat_drawn;
+  float ibat;              // battery current in amps
+  float ibat_filtered;     // filtered current in amps (slow for display)
+  float ibat_sag_filtered; // filtered current in amps (fast for mAh tracking)
+  float ibat_drawn;        // total mAh consumed
 
   vec4_t rx;          // holds the raw or calibrated main four channels, roll, pitch, yaw, throttle
   vec4_t rx_filtered; // same as above, but with constraints (just in case), smoothing and deadband applied
@@ -125,12 +126,13 @@ typedef struct {
   MEMBER(cpu_temp, float)                     \
   MEMBER(vbat, float)                         \
   MEMBER(vbat_filtered, float)                \
-  MEMBER(vbat_filtered_decay, float)          \
+  MEMBER(vbat_sag_filtered, float)           \
   MEMBER(vbat_cell_avg, float)                \
   MEMBER(vbat_compensated, float)             \
   MEMBER(vbat_compensated_cell_avg, float)    \
   MEMBER(ibat, float)                         \
   MEMBER(ibat_filtered, float)                \
+  MEMBER(ibat_sag_filtered, float)            \
   MEMBER(ibat_drawn, float)                   \
   MEMBER(rx, vec4_t)                          \
   MEMBER(rx_filtered, vec4_t)                 \

@@ -32,4 +32,6 @@ typedef struct {
 } adc_channel_t;
 
 void adc_init();
-float adc_read(adc_chan_t chan);
+bool adc_read(adc_chan_t chan, float *val);
+uint8_t adc_get_active_channels();
+bool adc_read_raw(adc_chan_t chan, uint16_t *val);

@@ -59,11 +59,12 @@ FAST_RAM control_state_t state = {
 
     .vbat = 0.0,
     .vbat_filtered = 0.0,
-    .vbat_filtered_decay = 4.2,
+    .vbat_sag_filtered = 0.0,
     .vbat_compensated = 4.2,
 
     .ibat = 0.0,
     .ibat_filtered = 0.0,
+    .ibat_sag_filtered = 0.0,
     .ibat_drawn = 0.0,
 
     .stick_calibration_wizard = STICK_WIZARD_INACTIVE,
