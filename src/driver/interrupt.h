@@ -6,6 +6,7 @@
 
 #define MAX_PRIORITY 0x1
 #define DMA_PRIORITY 0x2
+#define SPI_PRIORITY 0x3
 #define EXTI_PRIORITY 0x3
 #define UART_PRIORITY 0x4
 #define TIMER_PRIORITY 0x5
