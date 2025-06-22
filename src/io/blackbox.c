@@ -82,7 +82,7 @@ void blackbox_set_debug(blackbox_debug_flag_t flag, uint8_t index, int16_t data)
   if (index >= BLACKBOX_DEBUG_SIZE) {
     return;
   }
-  if ((profile.blackbox.field_flags & flag) != flag) {
+  if ((profile.blackbox.debug_flags & flag) != flag) {
     return;
   }
 
