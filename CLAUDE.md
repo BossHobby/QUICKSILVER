@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Build specific target: `pio run -e stm32f405` (other targets: stm32f411, stm32f722, stm32f745, stm32f765, stm32g473, stm32h743, at32f435, simulator)
 - Clean: `pio run -t clean`
 - run native tests: `pio test --environment test_native`
-- Verify build across all main targets: `pio run -e stm32f405 -e stm32f411 -e stm32f745 -e stm32f765 -e stm32f722 -e stm32h743 -e stm32g473 -e at32f435 -e at32f435m`
+- Verify build across all main targets: `pio run -e stm32f405 -e stm32f411 -e stm32f745 -e stm32f765 -e stm32f722 -e stm32h743 -e stm32g473 -e at32f435 -e at32f435m -e test_native`
 
 ## Code Style Guidelines
 

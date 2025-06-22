@@ -14,6 +14,7 @@ const spi_port_def_t spi_port_defs[SPI_PORT_MAX] = {
         .rcc = RCC_APB2_GRP1(SPI1),
         .dma_rx = DMA_DEVICE_SPI1_RX,
         .dma_tx = DMA_DEVICE_SPI1_TX,
+        .irq = SPI1_IRQn,
     },
     {
         .channel_index = 2,
@@ -21,6 +22,7 @@ const spi_port_def_t spi_port_defs[SPI_PORT_MAX] = {
         .rcc = RCC_APB1_GRP1(SPI2),
         .dma_rx = DMA_DEVICE_SPI2_RX,
         .dma_tx = DMA_DEVICE_SPI2_TX,
+        .irq = SPI2_IRQn,
     },
     {
         .channel_index = 3,
@@ -28,6 +30,7 @@ const spi_port_def_t spi_port_defs[SPI_PORT_MAX] = {
         .rcc = RCC_APB1_GRP1(SPI3),
         .dma_rx = DMA_DEVICE_SPI3_RX,
         .dma_tx = DMA_DEVICE_SPI3_TX,
+        .irq = SPI3_IRQn,
     },
 #if defined(STM32F7) || defined(STM32H7)
     {
@@ -36,6 +39,7 @@ const spi_port_def_t spi_port_defs[SPI_PORT_MAX] = {
         .rcc = RCC_APB2_GRP1(SPI4),
         .dma_rx = DMA_DEVICE_SPI4_RX,
         .dma_tx = DMA_DEVICE_SPI4_TX,
+        .irq = SPI4_IRQn,
     },
 #endif
 };
@@ -110,10 +114,8 @@ static void spi_dma_init_rx(spi_ports_t port) {
   LL_DMA_Init(dma->port, dma->stream_index, &dma_init);
   LL_DMA_DisableStream(dma->port, dma->stream_index);
 
-  interrupt_enable(dma->irq, DMA_PRIORITY);
+  // No interrupt setup for RX DMA - we handle cleanup in SPI TXE ISR
   dma_clear_flag_tc(dma);
-  LL_DMA_EnableIT_TC(dma->port, dma->stream_index);
-  LL_DMA_EnableIT_TE(dma->port, dma->stream_index);
 }
 
 static void spi_dma_init_tx(spi_ports_t port) {
@@ -160,17 +162,24 @@ void spi_reconfigure(spi_bus_device_t *bus) {
   spi_device_t *config = &spi_dev[bus->port];
   const spi_port_def_t *port = &spi_port_defs[bus->port];
 
-  if (config->hz != bus->hz) {
+  if (config->hz != bus->hz || config->mode != bus->mode) {
+
+#ifdef STM32F4
+    while (LL_SPI_IsActiveFlag_BSY(port->channel))
+      ;
+
+    LL_SPI_Disable(port->channel);
+#endif
+
     config->hz = bus->hz;
-    LL_SPI_SetBaudRatePrescaler(port->channel, spi_find_divder(bus->hz));
-  }
-  if (config->mode != bus->mode) {
     config->mode = bus->mode;
 
     gpio_config_t gpio_init = gpio_config_default();
     gpio_init.mode = GPIO_ALTERNATE;
     gpio_init.drive = GPIO_DRIVE_HIGH;
     gpio_init.output = GPIO_PUSHPULL;
+
+    LL_SPI_SetBaudRatePrescaler(port->channel, spi_find_divder(bus->hz));
 
     const target_spi_port_t *dev = &target.spi_ports[bus->port];
     if (bus->mode == SPI_MODE_LEADING_EDGE) {
@@ -186,11 +195,16 @@ void spi_reconfigure(spi_bus_device_t *bus) {
       LL_SPI_SetClockPhase(port->channel, LL_SPI_PHASE_2EDGE);
       LL_SPI_SetClockPolarity(port->channel, LL_SPI_POLARITY_HIGH);
     }
+#ifdef STM32F4
+    LL_SPI_Enable(port->channel);
+#endif
   }
 }
 
 void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length, bool has_rx) {
 #if !defined(STM32H7)
+  while (LL_SPI_IsActiveFlag_BSY(spi_port_defs[port].channel))
+    ;
   // dummy read
   while (LL_SPI_IsActiveFlag_RXNE(spi_port_defs[port].channel) || LL_SPI_IsActiveFlag_OVR(spi_port_defs[port].channel))
     LL_SPI_ReceiveData8(spi_port_defs[port].channel);
@@ -273,6 +287,9 @@ void spi_device_init(spi_ports_t port) {
 
   spi_dma_init_rx(port);
   spi_dma_init_tx(port);
+  
+  // Enable SPI interrupt for TXE detection
+  interrupt_enable(def->irq, SPI_PRIORITY);
 }
 
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count) {
@@ -360,20 +377,6 @@ static void txn_finish(spi_ports_t port) {
   spi_txn_finish(port);
 }
 
-static void handle_dma_rx_isr(spi_ports_t port) {
-  const spi_port_def_t *def = &spi_port_defs[port];
-  const dma_stream_def_t *dma = &dma_stream_defs[target.dma[def->dma_rx].dma];
-  if (!dma_is_flag_active(dma, DMA_FLAG_TC))
-    return;
-
-  dma_clear_flag_tc(dma);
-  LL_SPI_DisableDMAReq_RX(def->channel);
-  LL_DMA_DisableStream(dma->port, dma->stream_index);
-
-  if (!LL_SPI_IsEnabledDMAReq_TX(def->channel)) {
-    txn_finish(port);
-  }
-}
 
 static void handle_dma_tx_isr(spi_ports_t port) {
   const spi_port_def_t *def = &spi_port_defs[port];
@@ -384,8 +387,39 @@ static void handle_dma_tx_isr(spi_ports_t port) {
   dma_clear_flag_tc(dma);
   LL_SPI_DisableDMAReq_TX(def->channel);
   LL_DMA_DisableStream(dma->port, dma->stream_index);
+  
+#ifdef STM32H7
+  // Enable TXP interrupt to detect when SPI is done
+  LL_SPI_EnableIT_TXP(def->channel);
+#else
+  // Enable TXE interrupt to detect when SPI is done
+  LL_SPI_EnableIT_TXE(def->channel);
+#endif
+}
 
-  if (!LL_SPI_IsEnabledDMAReq_RX(def->channel)) {
+static void handle_spi_txe_isr(spi_ports_t port) {
+  const spi_port_def_t *def = &spi_port_defs[port];
+  
+#ifdef STM32H7
+  // H7 uses TXP flag instead of TXE
+  if (LL_SPI_IsEnabledIT_TXP(def->channel) && LL_SPI_IsActiveFlag_EOT(def->channel)) {
+    // Disable TXP interrupt
+    LL_SPI_DisableIT_TXP(def->channel);
+#else
+  // Check if TXE interrupt is enabled and SPI is not busy
+  if (LL_SPI_IsEnabledIT_TXE(def->channel) && !LL_SPI_IsActiveFlag_BSY(def->channel)) {
+    // SPI is done, disable TXE interrupt
+    LL_SPI_DisableIT_TXE(def->channel);
+#endif
+    
+    // Clean up RX DMA if it was used
+    if (LL_SPI_IsEnabledDMAReq_RX(def->channel)) {
+      const dma_stream_def_t *dma_rx = &dma_stream_defs[target.dma[def->dma_rx].dma];
+      dma_clear_flag_tc(dma_rx);
+      LL_SPI_DisableDMAReq_RX(def->channel);
+      LL_DMA_DisableStream(dma_rx->port, dma_rx->stream_index);
+    }
+    
     // read to clear overrun flag
     LL_SPI_ReceiveData8(def->channel);
     txn_finish(port);
@@ -394,37 +428,40 @@ static void handle_dma_tx_isr(spi_ports_t port) {
 
 void spi_dma_isr(const dma_device_t dev) {
   switch (dev) {
-  case DMA_DEVICE_SPI1_RX:
-    handle_dma_rx_isr(SPI_PORT1);
-    break;
   case DMA_DEVICE_SPI1_TX:
     handle_dma_tx_isr(SPI_PORT1);
-    break;
-
-  case DMA_DEVICE_SPI2_RX:
-    handle_dma_rx_isr(SPI_PORT2);
     break;
   case DMA_DEVICE_SPI2_TX:
     handle_dma_tx_isr(SPI_PORT2);
     break;
-
-  case DMA_DEVICE_SPI3_RX:
-    handle_dma_rx_isr(SPI_PORT3);
-    break;
   case DMA_DEVICE_SPI3_TX:
     handle_dma_tx_isr(SPI_PORT3);
     break;
-
 #if defined(STM32F7) || defined(STM32H7)
-  case DMA_DEVICE_SPI4_RX:
-    handle_dma_rx_isr(SPI_PORT4);
-    break;
   case DMA_DEVICE_SPI4_TX:
     handle_dma_tx_isr(SPI_PORT4);
     break;
 #endif
 
+  // RX DMA interrupts are not used - cleanup happens in SPI TXE ISR
+  case DMA_DEVICE_SPI1_RX:
+  case DMA_DEVICE_SPI2_RX:
+  case DMA_DEVICE_SPI3_RX:
+#if defined(STM32F7) || defined(STM32H7)
+  case DMA_DEVICE_SPI4_RX:
+#endif
+    // Ignore RX DMA interrupts
+    break;
+
   default:
     break;
   }
 }
+
+// SPI interrupt handlers
+void SPI1_IRQHandler() { handle_spi_txe_isr(SPI_PORT1); }
+void SPI2_IRQHandler() { handle_spi_txe_isr(SPI_PORT2); }
+void SPI3_IRQHandler() { handle_spi_txe_isr(SPI_PORT3); }
+#if defined(STM32F7) || defined(STM32H7)
+void SPI4_IRQHandler() { handle_spi_txe_isr(SPI_PORT4); }
+#endif
