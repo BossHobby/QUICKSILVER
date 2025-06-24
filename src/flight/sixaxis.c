@@ -271,23 +271,44 @@ void sixaxis_gyro_cal() {
 }
 
 void sixaxis_acc_cal() {
+  for (uint8_t retry = 0; retry < 15; ++retry) {
+    if (sixaxis_wait_for_still(CAL_INTERVAL)) {
+      // break only if it's already still, otherwise, wait and try again
+      break;
+    }
+    time_delay_ms(100);
+  }
+
   sixaxis_compute_matrix();
 
+  flash_storage.accelcal[0] = 0;
+  flash_storage.accelcal[1] = 0;
   flash_storage.accelcal[2] = 2048;
-  for (uint32_t i = 0; i < 500; i++) {
-    const gyro_data_t data = gyro_read();
-    const vec3_t accel = sixaxis_apply_matrix(data.accel);
 
-    for (uint32_t x = 0; x < 3; x++) {
-      lpf(&flash_storage.accelcal[x], accel.axis[x], 0.92);
+  gyro_data_t last_data = gyro_read();
+  for (uint32_t tries = 0, cal_counter = 0; tries < CAL_TRIES; tries++) {
+    const gyro_data_t data = gyro_read();
+
+    led_pwm(((float)(cal_counter) / (float)(CAL_COUNT)), CAL_INTERVAL);
+
+    // Skip samples if gyro shows movement
+    if (!test_gyro_move(&last_data, &data)) {
+      const vec3_t accel = sixaxis_apply_matrix(data.accel);
+      for (uint8_t i = 0; i < 3; i++) {
+        lpf(&flash_storage.accelcal[i], accel.axis[i], lpfcalc(CAL_INTERVAL, 0.5 * 1e6));
+      }
+
+      if (cal_counter++ == CAL_COUNT) {
+        break;
+      }
     }
 
-    time_delay_us(500);
+    time_delay_us(CAL_INTERVAL);
+    last_data = data;
   }
-  flash_storage.accelcal[2] -= 2048;
 
-  for (int x = 0; x < 3; x++) {
-    flash_storage.accelcal[x] = constrain(flash_storage.accelcal[x], -ACCEL_BIAS_LIMIT, ACCEL_BIAS_LIMIT);
+  for (uint8_t i = 0; i < 3; i++) {
+    flash_storage.accelcal[i] = constrain(flash_storage.accelcal[i], -ACCEL_BIAS_LIMIT, ACCEL_BIAS_LIMIT);
   }
 }
 
