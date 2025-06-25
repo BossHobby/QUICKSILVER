@@ -1,6 +1,7 @@
 #include "blackbox_device_flash.h"
 
 #include "core/project.h"
+#include "core/target.h"
 #include "driver/blackbox/m25p16.h"
 #include "util/util.h"
 
@@ -12,6 +13,7 @@
 
 typedef enum {
   STATE_DETECT,
+  STATE_UNSUPPORTED,
   STATE_IDLE,
 
   STATE_WRITE,
@@ -46,8 +48,16 @@ bool blackbox_device_flash_update() {
   case STATE_DETECT:
     if (m25p16_is_ready()) {
       m25p16_get_bounds(&blackbox_bounds);
+      if (blackbox_bounds.total_size == 0) {
+        target_reset_feature(FEATURE_BLACKBOX);
+        state = STATE_UNSUPPORTED;
+        return false;
+      }
       state = STATE_READ_HEADER;
     }
+    return false;
+
+  case STATE_UNSUPPORTED:
     return false;
 
   case STATE_IDLE: {
@@ -63,8 +73,19 @@ bool blackbox_device_flash_update() {
       break;
     }
 
+    const uint32_t offset = blackbox_current_file()->start + blackbox_current_file()->size + write_size;
+    if (offset >= blackbox_bounds.total_size) {
+      if (phase == PHASE_FLUSH) {
+        state = STATE_ERASE_HEADER;
+        phase = PHASE_IDLE;
+        write_size = 0;
+      }
+      break;
+    }
+
     if (write_size < MAX_WRITE_SIZE) {
-      write_size += ring_buffer_read_multi(&blackbox_encode_buffer, blackbox_write_buffer + write_size, (MAX_WRITE_SIZE - write_size));
+      const uint32_t capacity_left = (uint32_t)(blackbox_bounds.total_size - offset);
+      write_size += ring_buffer_read_multi(&blackbox_encode_buffer, blackbox_write_buffer + write_size, min(MAX_WRITE_SIZE - write_size, capacity_left));
     }
     if (write_size >= MAX_WRITE_SIZE || phase == PHASE_FLUSH) {
       state = STATE_WRITE;
@@ -79,6 +100,7 @@ bool blackbox_device_flash_update() {
       state = STATE_IDLE;
       break;
     }
+    write_size = min(write_size, (uint32_t)(blackbox_bounds.total_size - offset));
     if (m25p16_page_program(offset, blackbox_write_buffer, write_size)) {
       blackbox_current_file()->size += write_size;
       write_size = 0;
@@ -155,12 +177,12 @@ bool blackbox_device_flash_ready() {
   return state == STATE_IDLE;
 }
 
-void blackbox_device_flash_write(const uint8_t *buffer, const uint8_t size) {
-  if (size >= ring_buffer_free(&blackbox_encode_buffer)) {
-    return;
+bool blackbox_device_flash_write(const uint8_t *buffer, const uint8_t size) {
+  if (size > ring_buffer_free(&blackbox_encode_buffer)) {
+    return false;
   }
 
-  ring_buffer_write_multi(&blackbox_encode_buffer, buffer, size);
+  return ring_buffer_write_multi(&blackbox_encode_buffer, buffer, size) == size;
 }
 
 void blackbox_device_flash_read(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size) {

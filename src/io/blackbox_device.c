@@ -63,6 +63,22 @@ uint8_t blackbox_write_buffer[BLACKBOX_WRITE_BUFFER_SIZE];
 
 static blackbox_device_vtable_t *dev = NULL;
 
+static bool blackbox_device_write_profile(const profile_t *profile) {
+  blackbox_encode_buffer.head = 0;
+  blackbox_encode_buffer.tail = 0;
+
+  cbor_value_t enc;
+  cbor_encoder_init(&enc, encode_buffer_data, BLACKBOX_ENCODE_BUFFER_SIZE);
+
+  cbor_result_t res = cbor_encode_profile_t(&enc, profile);
+  if (res < CBOR_OK) {
+    return false;
+  }
+
+  blackbox_encode_buffer.head = cbor_encoder_len(&enc);
+  return true;
+}
+
 blackbox_device_file_t *blackbox_current_file() {
   return &blackbox_device_header.files[blackbox_device_header.file_num - 1];
 }
@@ -118,6 +134,7 @@ void blackbox_device_reset() {
     return;
   }
 
+  ring_buffer_clear(&blackbox_encode_buffer);
   dev->reset();
 
   blackbox_device_header.magic = BLACKBOX_HEADER_MAGIC;
@@ -144,14 +161,18 @@ bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float
     return false;
   }
 
-  blackbox_device_header.files[blackbox_device_header.file_num].field_flags = field_flags;
-  blackbox_device_header.files[blackbox_device_header.file_num].looptime = looptime;
-  blackbox_device_header.files[blackbox_device_header.file_num].blackbox_rate = blackbox_rate;
-  blackbox_device_header.files[blackbox_device_header.file_num].size = 0;
-  blackbox_device_header.files[blackbox_device_header.file_num].start = offset;
-  blackbox_device_header.file_num++;
+  blackbox_device_file_t *file = &blackbox_device_header.files[blackbox_device_header.file_num];
+  file->field_flags = field_flags;
+  file->looptime = looptime;
+  file->blackbox_rate = blackbox_rate;
+  file->size = 0;
+  file->start = offset;
 
-  ring_buffer_clear(&blackbox_encode_buffer);
+  if (!blackbox_device_write_profile(&profile)) {
+    return false;
+  }
+
+  blackbox_device_header.file_num++;
   dev->start();
 
   return true;
@@ -162,13 +183,12 @@ void blackbox_device_finish() {
     return;
   }
 
-  if (blackbox_current_file()->size == 0) {
+  if (blackbox_current_file()->size == 0 && ring_buffer_available(&blackbox_encode_buffer) == 0) {
     // file was empty, lets remove it
     blackbox_device_header.file_num--;
   }
 
   dev->stop();
-  ring_buffer_clear(&blackbox_encode_buffer);
 }
 
 void blackbox_device_read(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size) {
@@ -177,9 +197,9 @@ void blackbox_device_read(const uint32_t file_index, const uint32_t offset, uint
   }
 }
 
-cbor_result_t blackbox_device_write(const uint32_t field_flags, const blackbox_t *b) {
+bool blackbox_device_write_frame(const uint32_t field_flags, const blackbox_t *current, const blackbox_t *previous, blackbox_frame_type_t frame_type) {
   if (dev == NULL) {
-    return CBOR_OK;
+    return false;
   }
 
   uint8_t buffer[BLACKBOX_MAX_SIZE];
@@ -187,14 +207,19 @@ cbor_result_t blackbox_device_write(const uint32_t field_flags, const blackbox_t
   cbor_value_t enc;
   cbor_encoder_init(&enc, buffer, BLACKBOX_MAX_SIZE);
 
-  cbor_result_t res = cbor_encode_blackbox_t(&enc, b, field_flags);
+  cbor_result_t res = cbor_encode_blackbox_frame(&enc, current, previous, frame_type, field_flags);
   if (res < CBOR_OK) {
-    return res;
+    return false;
   }
 
-  dev->write(buffer, cbor_encoder_len(&enc));
+  return dev->write(buffer, cbor_encoder_len(&enc));
+}
 
-  return res;
+bool blackbox_device_write(const uint8_t *buffer, const uint8_t size) {
+  if (dev == NULL) {
+    return false;
+  }
+  return dev->write(buffer, size);
 }
 
 #endif
