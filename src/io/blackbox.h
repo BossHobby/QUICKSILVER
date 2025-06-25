@@ -55,9 +55,18 @@ typedef struct {
   int16_t debug[BLACKBOX_DEBUG_SIZE];
 } blackbox_t;
 
+// Frame types for I-frame/P-frame encoding
+typedef enum {
+  BLACKBOX_FRAME_I = 0,  // Intra frame - complete data
+  BLACKBOX_FRAME_P = 1,  // Predicted frame - delta from previous
+} blackbox_frame_type_t;
+
+// Special flag to indicate frame type is stored in upper bit of field flags
+#define BLACKBOX_FRAME_TYPE_BIT (1UL << 31)
+
 // Blackbox fields (should align with above structure)
 
-cbor_result_t cbor_encode_blackbox_t(cbor_value_t *enc, const blackbox_t *b, const uint32_t field_flags);
+cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *current, const blackbox_t *previous, blackbox_frame_type_t frame_type, const uint32_t field_flags);
 
 void blackbox_init();
 void blackbox_set_debug(blackbox_debug_flag_t flag, uint8_t index, int16_t data);

@@ -81,6 +81,23 @@ extern void test_serial_port_defs(void);
 extern void test_serial_read_bytes(void);
 extern void test_serial_drain(void);
 
+// Blackbox tests
+extern void test_blackbox_delta_int16(void);
+extern void test_blackbox_compact_vec3_delta(void);
+extern void test_blackbox_compact_vec4_delta(void);
+extern void test_blackbox_vec3_zero_detection(void);
+extern void test_blackbox_vec4_zero_detection(void);
+extern void test_blackbox_debug_change_detection(void);
+extern void test_blackbox_iframe_encoding(void);
+extern void test_blackbox_pframe_encoding(void);
+extern void test_blackbox_frame_type_bit(void);
+extern void test_blackbox_cpu_load_delta(void);
+extern void test_blackbox_delta_overflow(void);
+extern void test_blackbox_pframe_field_optimization(void);
+extern void test_blackbox_cbor_vec3_roundtrip(void);
+extern void test_blackbox_cbor_vec4_roundtrip(void);
+extern void test_blackbox_iframe_interval(void);
+
 // Common setUp and tearDown
 void setUp(void) {
   // Reset hardware mocks before each test
@@ -173,6 +190,23 @@ int main(int argc, char **argv) {
   RUN_TEST(test_serial_port_defs);
   RUN_TEST(test_serial_read_bytes);
   RUN_TEST(test_serial_drain);
+
+  // Blackbox tests
+  RUN_TEST(test_blackbox_delta_int16);
+  RUN_TEST(test_blackbox_compact_vec3_delta);
+  RUN_TEST(test_blackbox_compact_vec4_delta);
+  RUN_TEST(test_blackbox_vec3_zero_detection);
+  RUN_TEST(test_blackbox_vec4_zero_detection);
+  RUN_TEST(test_blackbox_debug_change_detection);
+  RUN_TEST(test_blackbox_iframe_encoding);
+  RUN_TEST(test_blackbox_pframe_encoding);
+  RUN_TEST(test_blackbox_frame_type_bit);
+  RUN_TEST(test_blackbox_cpu_load_delta);
+  RUN_TEST(test_blackbox_delta_overflow);
+  RUN_TEST(test_blackbox_pframe_field_optimization);
+  RUN_TEST(test_blackbox_cbor_vec3_roundtrip);
+  RUN_TEST(test_blackbox_cbor_vec4_roundtrip);
+  RUN_TEST(test_blackbox_iframe_interval);
 
   return UNITY_END();
 }
