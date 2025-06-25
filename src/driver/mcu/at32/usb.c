@@ -14,6 +14,7 @@ extern volatile bool usb_device_configured;
 
 static otg_core_type otg_core_struct;
 
+static volatile bool rx_stalled = false;
 static volatile bool tx_stalled = true;
 
 static void usb_enable_clock() {
@@ -74,6 +75,14 @@ void usb_drv_init() {
 void usb_cdc_rx_handler() {
   usb_device_configured = true;
 
+  // Check if we have enough space before reading
+  if (ring_buffer_free(&usb_rx_buffer) < USBD_CDC_IN_MAXPACKET_SIZE) {
+    // Don't read data, USB will NAK automatically
+    rx_stalled = true;
+    return;
+  }
+  rx_stalled = false;
+
   static uint8_t buf[USBD_CDC_IN_MAXPACKET_SIZE];
 
   const uint16_t len = usb_vcp_get_rxdata(&otg_core_struct.dev, buf);
@@ -81,6 +90,16 @@ void usb_cdc_rx_handler() {
     return;
   }
   ring_buffer_write_multi(&usb_rx_buffer, buf, len);
+}
+
+static void usb_cdc_kickoff_rx() {
+  if (!rx_stalled) {
+    return;
+  }
+
+  interrupt_disable(OTGFS1_IRQn);
+  usb_cdc_rx_handler();
+  interrupt_enable(OTGFS1_IRQn, USB_PRIORITY);
 }
 
 void usb_cdc_tx_handler() {
@@ -126,7 +145,9 @@ uint32_t usb_serial_read(uint8_t *data, uint32_t len) {
   if (data == NULL || len == 0) {
     return 0;
   }
-  return ring_buffer_read_multi(&usb_rx_buffer, data, len);
+  const uint32_t read = ring_buffer_read_multi(&usb_rx_buffer, data, len);
+  usb_cdc_kickoff_rx();
+  return read;
 }
 
 void usb_serial_write(uint8_t *data, uint32_t len) {
