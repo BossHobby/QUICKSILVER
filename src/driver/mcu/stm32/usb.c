@@ -240,8 +240,8 @@ static usbd_respond cdc_control(usbd_device *dev, usbd_ctlreq *req, usbd_rqc_cal
 }
 
 static void cdc_rxonly(usbd_device *dev, uint8_t event, uint8_t ep) {
-  if (ring_buffer_free(&usb_rx_buffer) <= CDC_DATA_SZ) {
-    interrupt_disable(USB_IRQ);
+  if (ring_buffer_free(&usb_rx_buffer) < CDC_DATA_SZ) {
+    // Don't read data, USB will NAK automatically
     rx_stalled = true;
     return;
   }
