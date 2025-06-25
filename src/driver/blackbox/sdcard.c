@@ -46,6 +46,7 @@ typedef struct {
   uint32_t sector;
   uint32_t count;
   uint32_t count_done;
+  uint8_t write_response;
 } sdcard_operation_t;
 
 // how many cycles to delay for write confirm
@@ -186,11 +187,11 @@ uint32_t sdcard_read_response() {
   return (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | (buf[3] << 0);
 }
 
-void sdcard_read_data(uint8_t *buf, const uint32_t size) {
+static bool sdcard_read_data(uint8_t *buf, const uint32_t size) {
   // wait for data token
   uint8_t token = sdcard_wait_non_idle();
   if (token != 0xFE) {
-    return;
+    return false;
   }
 
   const spi_txn_segment_t segs[] = {
@@ -199,6 +200,7 @@ void sdcard_read_data(uint8_t *buf, const uint32_t size) {
       spi_make_seg_const(0xFF, 0xFF),
   };
   spi_seg_submit_wait(&bus, segs);
+  return true;
 }
 
 void sdcard_write_data(const uint8_t token, const uint8_t *buf, const uint32_t size) {
@@ -381,7 +383,10 @@ sdcard_status_t sdcard_update() {
       state = SDCARD_DETECT_FAILED;
       break;
     }
-    sdcard_read_data((uint8_t *)&sdcard_info.cid, 16);
+    if (!sdcard_read_data((uint8_t *)&sdcard_info.cid, 16)) {
+      state = SDCARD_DETECT_FAILED;
+      break;
+    }
 
     ret = sdcard_command(SDCARD_CSD, 0);
     if (ret != 0x0) {
@@ -389,7 +394,10 @@ sdcard_status_t sdcard_update() {
       break;
     }
     uint8_t csd_buffer[sizeof(sdcard_cid_t)];
-    sdcard_read_data(csd_buffer, sizeof(sdcard_cid_t));
+    if (!sdcard_read_data(csd_buffer, sizeof(sdcard_cid_t))) {
+      state = SDCARD_DETECT_FAILED;
+      break;
+    }
     sdcard_parse_csd(&sdcard_info.csd, csd_buffer);
 
     state = SDCARD_DETECT_FINISH;
@@ -473,6 +481,7 @@ sdcard_status_t sdcard_update() {
       break;
     }
 
+    operation.write_response = 0xFF;
     const spi_txn_segment_t segs[] = {
         // token
         spi_make_seg_const(0xFC),
@@ -483,7 +492,7 @@ sdcard_status_t sdcard_update() {
         spi_make_seg_const(0xFF, 0xFF),
 
         // write response
-        spi_make_seg_const(0xFF),
+        spi_make_seg_buffer(&operation.write_response, NULL, 1),
     };
     spi_seg_submit_continue(&bus, segs);
 
@@ -492,6 +501,11 @@ sdcard_status_t sdcard_update() {
   }
 
   case SDCARD_WRITE_MULTIPLE_VERIFY: {
+    if ((operation.write_response & 0x1F) != 0x05) {
+      state = SDCARD_DETECT_FAILED;
+      break;
+    }
+
     if (!sdcard_wait_for_idle()) {
       break;
     }
@@ -568,9 +582,12 @@ void sdcard_get_bounds(blackbox_device_bounds_t *blackbox_bounds) {
     uint32_t blocknr = (sdcard_info.csd.v1.C_SIZE + 1) * mult;
 
     size = blocknr * block_len;
-  } else {
+  } else if (sdcard_info.csd.CSD_STRUCTURE_VER == 1) {
     size = (sdcard_info.csd.v2.C_SIZE + 1) * (((uint64_t)512) << 10);
   }
+
+  const uint64_t max_size = UINT32_MAX - (UINT32_MAX % SDCARD_PAGE_SIZE);
+  size = min(size, max_size);
 
   blackbox_bounds->page_size = SDCARD_PAGE_SIZE;
   blackbox_bounds->pages_per_sector = 1;
@@ -579,6 +596,7 @@ void sdcard_get_bounds(blackbox_device_bounds_t *blackbox_bounds) {
 
   blackbox_bounds->sector_size = SDCARD_PAGE_SIZE;
   blackbox_bounds->total_size = size;
+  blackbox_bounds->use_4byte_addresses = false;
 }
 
 uint8_t sdcard_write_pages_start(uint32_t sector, uint32_t count) {

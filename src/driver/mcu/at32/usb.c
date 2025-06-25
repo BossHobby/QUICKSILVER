@@ -16,6 +16,11 @@ static otg_core_type otg_core_struct;
 static volatile bool rx_stalled = false;
 static volatile bool tx_stalled = true;
 
+static bool usb_cdc_tx_ready() {
+  cdc_struct_type *pcdc = (cdc_struct_type *)otg_core_struct.dev.class_handler->pdata;
+  return pcdc && pcdc->g_tx_completed;
+}
+
 static void usb_enable_clock() {
   crm_usb_clock_source_select(CRM_USB_CLOCK_SOURCE_HICK);
 
@@ -105,8 +110,12 @@ void usb_cdc_tx_handler() {
   flags.usb_active = 1;
 
   static volatile bool did_zlp = false;
-
   static uint8_t buf[USBD_CDC_OUT_MAXPACKET_SIZE];
+
+  if (!usb_cdc_tx_ready()) {
+    return;
+  }
+
   const uint32_t len = ring_buffer_read_multi(&usb_tx_buffer, buf, USBD_CDC_OUT_MAXPACKET_SIZE);
 
   if (len) {
