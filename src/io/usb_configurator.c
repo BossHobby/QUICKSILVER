@@ -21,13 +21,18 @@
 #include "util/util.h"
 
 #define BUFFER_SIZE (4 * 1024)
+#define MAX_USB_MSP_FRAME_SIZE 1024
+
 
 void usb_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
 
   if (magic == MSP2_MAGIC) {
-    const uint8_t size = len + MSP2_HEADER_LEN + 1;
+    const uint16_t size = len + MSP2_HEADER_LEN + 1;
+    if (size > MAX_USB_MSP_FRAME_SIZE) {
+      return; // Frame too large
+    }
 
-    uint8_t frame[size];
+    uint8_t frame[MAX_USB_MSP_FRAME_SIZE];
     frame[0] = '$';
     frame[1] = MSP2_MAGIC;
     frame[2] = '>';
@@ -42,9 +47,12 @@ void usb_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint
 
     usb_serial_write(frame, size);
   } else {
-    const uint8_t size = len + MSP_HEADER_LEN + 1;
+    const uint16_t size = len + MSP_HEADER_LEN + 1;
+    if (size > MAX_USB_MSP_FRAME_SIZE || len > (MAX_USB_MSP_FRAME_SIZE - MSP_HEADER_LEN - 1)) {
+      return; // Frame too large
+    }
 
-    uint8_t frame[size];
+    uint8_t frame[MAX_USB_MSP_FRAME_SIZE];
     frame[0] = '$';
     frame[1] = MSP1_MAGIC;
     frame[2] = '>';
