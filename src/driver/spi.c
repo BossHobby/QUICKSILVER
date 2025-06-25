@@ -28,7 +28,7 @@ static inline __attribute__((always_inline)) spi_txn_t *spi_txn_pop(spi_bus_devi
       uint32_t idx = __builtin_ctz(txn_free_bitmap);
       // Clear the bit to mark as allocated
       txn_free_bitmap &= ~(1U << idx);
-      
+
       txn = &txn_pool[idx];
       txn->status = TXN_WAITING;
       txn->buffer = txn_buffers[idx];
@@ -155,9 +155,7 @@ void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts) {
     const uint8_t head = (dev->txn_head + 1) % SPI_TXN_MAX;
     dev->txns[head] = txn;
     dev->txn_head = head;
-    // Memory barrier to ensure all writes complete before setting status
-    __DMB();
-    // Set status last to ensure transaction is fully queued before marking ready
+    MEMORY_BARRIER();
     txn->status = TXN_READY;
   }
 }
@@ -184,14 +182,11 @@ void spi_txn_finish(spi_ports_t port) {
     txn->done_fn(txn->done_fn_arg);
   }
 
-  // Remove from queue first to prevent reuse while still queued
   dev->txns[tail] = NULL;
   dev->txn_tail = tail;
 
-  // Mark as idle after removing from queue
   txn->status = TXN_IDLE;
-  
-  // Free the transaction back to the bitmap
+
   txn_free_bitmap |= (1U << (txn - txn_pool));
 
   spi_dev[port].dma_done = true;

@@ -67,6 +67,10 @@ void gpio_ports_init() {
 }
 
 void gpio_pin_init(gpio_pins_t pin, gpio_config_t config) {
+  if (pin >= PINS_MAX) {
+    return; // Invalid pin
+  }
+  
   gpio_port_t *port = gpio_pin_defs[pin].port;
   const uint32_t pin_mask = gpio_pin_defs[pin].pin;
 
@@ -79,6 +83,10 @@ void gpio_pin_init(gpio_pins_t pin, gpio_config_t config) {
 }
 
 void gpio_pin_init_af(gpio_pins_t pin, gpio_config_t config, uint8_t af) {
+  if (pin >= PINS_MAX) {
+    return; // Invalid pin
+  }
+  
   gpio_port_t *port = gpio_pin_defs[pin].port;
   const uint32_t pin_mask = gpio_pin_defs[pin].pin;
 
