@@ -38,7 +38,7 @@ void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   dma_enable_rcc(dma);
 
   dma_reset(dma->stream);
-  dmamux_init(dma->mux, target.dma[port->dma_device].request);
+  dmamux_init(dma->mux, (dmamux_requst_id_sel_type)target.dma[port->dma_device].request);
 
   dma_init_type init;
   init.peripheral_base_addr = 0x0; // overwritten later

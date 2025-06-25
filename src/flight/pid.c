@@ -210,7 +210,11 @@ void pid_calc() {
     if (stick_accelerator[x] < 1) {
       transition_setpoint_weight = (fabsf(state.rx_filtered.axis[x]) * stick_transition[x]) + (1 - stick_transition[x]);
     } else {
-      transition_setpoint_weight = (fabsf(state.rx_filtered.axis[x]) * (stick_transition[x] / stick_accelerator[x])) + (1 - stick_transition[x]);
+      if (stick_accelerator[x] > 0) {
+        transition_setpoint_weight = (fabsf(state.rx_filtered.axis[x]) * (stick_transition[x] / stick_accelerator[x])) + (1 - stick_transition[x]);
+      } else {
+        transition_setpoint_weight = 1.0f;
+      }
     }
 
     float setpoint_derivative = setpoint_delta.axis[x] * current_kd.axis[x];

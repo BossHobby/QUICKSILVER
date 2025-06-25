@@ -172,7 +172,7 @@ cbor_result_t cbor_decode_gpio_pins_t(cbor_value_t *dec, gpio_pins_t *t) {
   uint32_t size;
   CBOR_CHECK_ERROR(res = cbor_decode_tstr(dec, &tmp, &size));
 
-  if (size > 4 && size < 3) {
+  if (size > 4 || size < 3) {
     return CBOR_ERR_INVALID_TYPE;
   }
 

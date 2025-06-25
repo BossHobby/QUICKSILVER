@@ -58,8 +58,12 @@ static uint32_t ring_buffer_read_chunk(ring_buffer_t *c, uint8_t *data, uint32_t
 }
 
 uint32_t ring_buffer_free(ring_buffer_t *c) {
+  // Take atomic snapshot of volatile pointers
   const uint32_t head = c->head;
   const uint32_t tail = c->tail;
+  
+  // Memory barrier to ensure reads are not reordered
+  MEMORY_BARRIER();
   
   if (head >= tail) {
     return (c->size - 1) - (head - tail);
@@ -73,6 +77,10 @@ uint8_t ring_buffer_write(ring_buffer_t *c, uint8_t data) {
     return 0;
 
   c->buffer[c->head] = data;
+  
+  // Memory barrier to ensure write completes before updating head
+  MEMORY_BARRIER();
+  
   c->head = next;
   return 1;
 }
@@ -104,8 +112,12 @@ uint32_t ring_buffer_write_multi(ring_buffer_t *c, const uint8_t *data, const ui
 }
 
 uint32_t ring_buffer_available(ring_buffer_t *c) {
+  // Take atomic snapshot of volatile pointers
   const uint32_t head = c->head;
   const uint32_t tail = c->tail;
+  
+  // Memory barrier to ensure reads are not reordered
+  MEMORY_BARRIER();
   
   if (head >= tail) {
     return head - tail;
@@ -122,6 +134,10 @@ uint8_t ring_buffer_read(ring_buffer_t *c, uint8_t *data) {
     return 0;
 
   *data = c->buffer[c->tail];
+  
+  // Memory barrier to ensure read completes before updating tail
+  MEMORY_BARRIER();
+  
   c->tail = (c->tail + 1) % c->size;
   return 1;
 }
