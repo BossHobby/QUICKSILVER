@@ -177,7 +177,7 @@ void blackbox_device_read(const uint32_t file_index, const uint32_t offset, uint
   }
 }
 
-cbor_result_t blackbox_device_write(const uint32_t field_flags, const blackbox_t *b) {
+cbor_result_t blackbox_device_write_frame(const uint32_t field_flags, const blackbox_t *current, const blackbox_t *previous, blackbox_frame_type_t frame_type) {
   if (dev == NULL) {
     return CBOR_OK;
   }
@@ -187,7 +187,7 @@ cbor_result_t blackbox_device_write(const uint32_t field_flags, const blackbox_t
   cbor_value_t enc;
   cbor_encoder_init(&enc, buffer, BLACKBOX_MAX_SIZE);
 
-  cbor_result_t res = cbor_encode_blackbox_t(&enc, b, field_flags);
+  cbor_result_t res = cbor_encode_blackbox_frame(&enc, current, previous, frame_type, field_flags);
   if (res < CBOR_OK) {
     return res;
   }

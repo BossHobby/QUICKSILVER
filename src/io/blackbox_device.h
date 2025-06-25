@@ -85,4 +85,4 @@ bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float
 void blackbox_device_finish();
 
 void blackbox_device_read(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size);
-cbor_result_t blackbox_device_write(const uint32_t field_flags, const blackbox_t *b);
+cbor_result_t blackbox_device_write_frame(const uint32_t field_flags, const blackbox_t *current, const blackbox_t *previous, blackbox_frame_type_t frame_type);
