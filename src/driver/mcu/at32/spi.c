@@ -82,7 +82,7 @@ static void spi_dma_init_rx(spi_ports_t port) {
   const dma_stream_def_t *dma = &dma_stream_defs[target.dma[spi_port_defs[port].dma_rx].dma];
 
   dma_reset(dma->stream);
-  dmamux_init(dma->mux, target.dma[spi_port_defs[port].dma_rx].request);
+  dmamux_init(dma->mux, (dmamux_requst_id_sel_type)target.dma[spi_port_defs[port].dma_rx].request);
 
   dma_init_type init;
   init.peripheral_base_addr = (uint32_t)(&spi_port_defs[port].channel->dt);
@@ -102,7 +102,7 @@ static void spi_dma_init_tx(spi_ports_t port) {
   const dma_stream_def_t *dma = &dma_stream_defs[target.dma[spi_port_defs[port].dma_tx].dma];
 
   dma_reset(dma->stream);
-  dmamux_init(dma->mux, target.dma[spi_port_defs[port].dma_tx].request);
+  dmamux_init(dma->mux, (dmamux_requst_id_sel_type)target.dma[spi_port_defs[port].dma_tx].request);
 
   dma_init_type init;
   init.peripheral_base_addr = (uint32_t)(&spi_port_defs[port].channel->dt);

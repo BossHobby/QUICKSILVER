@@ -12,6 +12,8 @@
 
 #ifdef USE_VTX
 
+#define MAX_VTX_MSP_FRAME_SIZE 1024
+
 typedef struct {
   uint8_t vtx_type;
   uint8_t band;
@@ -58,13 +60,13 @@ uint16_t msp_vtx_frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX] = {
 };
 
 typedef enum {
-    VTXDEV_UNSUPPORTED = 0, // reserved for MSP
-    VTXDEV_RTC6705     = 1,
-    // 2 reserved
-    VTXDEV_SMARTAUDIO  = 3,
-    VTXDEV_TRAMP       = 4,
-    VTXDEV_MSP         = 5,
-    VTXDEV_UNKNOWN     = 0xFF,
+  VTXDEV_UNSUPPORTED = 0, // reserved for MSP
+  VTXDEV_RTC6705 = 1,
+  // 2 reserved
+  VTXDEV_SMARTAUDIO = 3,
+  VTXDEV_TRAMP = 4,
+  VTXDEV_MSP = 5,
+  VTXDEV_UNKNOWN = 0xFF,
 } vtxDevType_e;
 
 extern void msp_send_reply(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *data, uint32_t len);
@@ -93,9 +95,13 @@ void msp_vtx_send_config_reply(msp_t *msp, msp_magic_t magic) {
 }
 
 static void serial_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
+  if (len > MAX_VTX_MSP_FRAME_SIZE - MSP2_HEADER_LEN - 1) {
+    return; // Payload too large
+  }
+
   if (magic == MSP2_MAGIC) {
     const uint32_t size = len + MSP2_HEADER_LEN + 1;
-    uint8_t vtx_frame[size];
+    uint8_t vtx_frame[MAX_VTX_MSP_FRAME_SIZE];
 
     vtx_frame[0] = '$';
     vtx_frame[1] = MSP2_MAGIC;
@@ -111,8 +117,11 @@ static void serial_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, 
 
     serial_vtx_send_data(vtx_frame, size);
   } else {
+    if (len > 255) {
+      return; // MSP1 max payload is 255
+    }
     const uint32_t size = len + MSP_HEADER_LEN + 1;
-    uint8_t vtx_frame[size];
+    uint8_t vtx_frame[MAX_VTX_MSP_FRAME_SIZE];
 
     vtx_frame[0] = '$';
     vtx_frame[1] = MSP1_MAGIC;
