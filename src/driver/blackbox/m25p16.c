@@ -29,11 +29,28 @@
 #define JEDEC_ID_ZBIT_ZB25VQ128 0x5E4018
 #define JEDEC_ID_BERGMICRO_W25Q32 0xE04016
 
-#define m25p16_addr(addr) ((addr >> 16) & 0xFF), ((addr >> 8) & 0xFF), (addr & 0xFF)
-
 #ifdef USE_DATA_FLASH
 
 static spi_bus_device_t bus = {};
+
+static uint8_t m25p16_addr_size() {
+  return blackbox_bounds.use_4byte_addresses ? 4 : 3;
+}
+
+static void m25p16_make_cmd_addr(uint8_t *buffer, const uint8_t cmd, const uint32_t addr) {
+  buffer[0] = cmd;
+  if (blackbox_bounds.use_4byte_addresses) {
+    buffer[1] = (addr >> 24) & 0xFF;
+    buffer[2] = (addr >> 16) & 0xFF;
+    buffer[3] = (addr >> 8) & 0xFF;
+    buffer[4] = addr & 0xFF;
+    return;
+  }
+
+  buffer[1] = (addr >> 16) & 0xFF;
+  buffer[2] = (addr >> 8) & 0xFF;
+  buffer[3] = addr & 0xFF;
+}
 
 void m25p16_init() {
   if (!target_spi_device_valid(&target.flash)) {
@@ -102,10 +119,12 @@ uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, 
   m25p16_wait_for_ready();
 
   uint8_t ret = 0;
+  uint8_t cmd_addr[5];
+  m25p16_make_cmd_addr(cmd_addr, cmd, addr);
 
   const spi_txn_segment_t segs[] = {
-      spi_make_seg_buffer(&ret, &cmd, 1),
-      spi_make_seg_const(m25p16_addr(addr)),
+      spi_make_seg_buffer(&ret, cmd_addr, 1),
+      spi_make_seg_buffer(NULL, cmd_addr + 1, m25p16_addr_size()),
       spi_make_seg_buffer(data, NULL, len),
   };
   spi_seg_submit_wait(&bus, segs);
@@ -118,6 +137,9 @@ bool m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t
     return false;
   }
 
+  uint8_t cmd_addr[5];
+  m25p16_make_cmd_addr(cmd_addr, M25P16_PAGE_PROGRAM, addr);
+
   {
     const spi_txn_segment_t segs[] = {
         spi_make_seg_const(M25P16_WRITE_ENABLE),
@@ -127,7 +149,7 @@ bool m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t
 
   {
     const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(M25P16_PAGE_PROGRAM, m25p16_addr(addr)),
+        spi_make_seg_buffer(NULL, cmd_addr, 1 + m25p16_addr_size()),
         spi_make_seg_buffer(NULL, buf, size),
     };
     spi_seg_submit(&bus, segs);
@@ -142,6 +164,9 @@ bool m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, co
     return false;
   }
 
+  uint8_t cmd_addr[5];
+  m25p16_make_cmd_addr(cmd_addr, cmd, addr);
+
   {
     const spi_txn_segment_t segs[] = {
         spi_make_seg_const(M25P16_WRITE_ENABLE),
@@ -150,7 +175,7 @@ bool m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, co
   }
   {
     const spi_txn_segment_t segs[] = {
-        spi_make_seg_const(cmd, m25p16_addr(addr)),
+        spi_make_seg_buffer(NULL, cmd_addr, 1 + m25p16_addr_size()),
         spi_make_seg_buffer(NULL, data, len),
     };
     spi_seg_submit(&bus, segs);
@@ -182,38 +207,37 @@ bool m25p16_chip_erase() {
   return true;
 }
 
-void m25p16_get_bounds(blackbox_device_bounds_t *blackbox_bounds) {
+void m25p16_get_bounds(blackbox_device_bounds_t *bounds) {
+  bounds->use_4byte_addresses = false;
+
   uint8_t raw_id[3];
   m25p16_read_command(M25P16_READ_IDENTIFICATION, raw_id, 3);
 
   const uint32_t chip_id = (raw_id[0] << 16) | (raw_id[1] << 8) | raw_id[2];
   switch (chip_id) {
   case JEDEC_ID_WINBOND_W25Q80:
-    blackbox_bounds->sectors = 16;
-    blackbox_bounds->pages_per_sector = 256;
+    bounds->sectors = 16;
+    bounds->pages_per_sector = 256;
     break;
   case JEDEC_ID_WINBOND_W25Q16:
   case JEDEC_ID_MICRON_M25P16:
-    blackbox_bounds->sectors = 32;
-    blackbox_bounds->pages_per_sector = 256;
+    bounds->sectors = 32;
+    bounds->pages_per_sector = 256;
     break;
   case JEDEC_ID_BERGMICRO_W25Q32:
-    blackbox_bounds->sectors = 1024;
-    blackbox_bounds->pages_per_sector = 16;
-    break;
   case JEDEC_ID_WINBOND_W25X32:
   case JEDEC_ID_WINBOND_W25Q32:
   case JEDEC_ID_MACRONIX_MX25L3206E:
-    blackbox_bounds->sectors = 64;
-    blackbox_bounds->pages_per_sector = 256;
+    bounds->sectors = 64;
+    bounds->pages_per_sector = 256;
     break;
   case JEDEC_ID_MICRON_N25Q064:
   case JEDEC_ID_WINBOND_W25Q64:
   case JEDEC_ID_WINBOND_W25Q64_DTR:
   case JEDEC_ID_MACRONIX_MX25L6406E:
   case JEDEC_ID_CYPRESS_S25FL064L:
-    blackbox_bounds->sectors = 128;
-    blackbox_bounds->pages_per_sector = 256;
+    bounds->sectors = 128;
+    bounds->pages_per_sector = 256;
     break;
   case JEDEC_ID_MICRON_N25Q128:
   case JEDEC_ID_WINBOND_W25Q128:
@@ -221,26 +245,31 @@ void m25p16_get_bounds(blackbox_device_bounds_t *blackbox_bounds) {
   case JEDEC_ID_CYPRESS_S25FL128L:
   case JEDEC_ID_PUYA_PY25Q128:
   case JEDEC_ID_ZBIT_ZB25VQ128:
-    blackbox_bounds->sectors = 256;
-    blackbox_bounds->pages_per_sector = 256;
+    bounds->sectors = 256;
+    bounds->pages_per_sector = 256;
     break;
   case JEDEC_ID_WINBOND_W25Q256:
   case JEDEC_ID_MACRONIX_MX25L25635E:
-    blackbox_bounds->sectors = 512;
-    blackbox_bounds->pages_per_sector = 256;
+    bounds->use_4byte_addresses = true;
+    bounds->sectors = 512;
+    bounds->pages_per_sector = 256;
     break;
   default:
     // Unsupported chip or not an SPI NOR flash
-    blackbox_bounds->sectors = 0;
-    blackbox_bounds->pages_per_sector = 0;
-    blackbox_bounds->sector_size = 0;
-    blackbox_bounds->total_size = 0;
+    bounds->sectors = 0;
+    bounds->pages_per_sector = 0;
+    bounds->sector_size = 0;
+    bounds->total_size = 0;
     return;
   }
 
-  blackbox_bounds->page_size = M25P16_PAGE_SIZE;
-  blackbox_bounds->sector_size = blackbox_bounds->pages_per_sector * blackbox_bounds->page_size;
-  blackbox_bounds->total_size = blackbox_bounds->sector_size * blackbox_bounds->sectors;
+  bounds->page_size = M25P16_PAGE_SIZE;
+  bounds->sector_size = bounds->pages_per_sector * bounds->page_size;
+  bounds->total_size = bounds->sector_size * bounds->sectors;
+
+  if (bounds->use_4byte_addresses) {
+    m25p16_command(M25P16_ENTER_4BYTE_ADDRESS_MODE);
+  }
 }
 
 #endif

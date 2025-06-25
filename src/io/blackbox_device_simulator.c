@@ -1,6 +1,7 @@
 #include "blackbox_device_simulator.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "core/project.h"
 #include "util/util.h"
@@ -51,8 +52,6 @@ bool blackbox_device_simulator_update() {
   static uint32_t offset = 0;
   static uint32_t write_size = PAGE_SIZE;
 
-  const uint32_t to_write = ring_buffer_available(&blackbox_encode_buffer);
-
 simulator_do_more:
   switch (state) {
   case STATE_DETECT: {
@@ -62,6 +61,7 @@ simulator_do_more:
     blackbox_bounds.sectors = size / PAGE_SIZE;
     blackbox_bounds.sector_size = PAGE_SIZE;
     blackbox_bounds.total_size = size;
+    blackbox_bounds.use_4byte_addresses = false;
     state = STATE_READ_HEADER;
     return false;
   }
@@ -78,9 +78,10 @@ simulator_do_more:
     state = STATE_WRITE_HEADER;
     break;
 
-  case STATE_IDLE:
+  case STATE_IDLE: {
+    const uint32_t to_write = ring_buffer_available(&blackbox_encode_buffer);
     if (should_flush == 1) {
-      if (to_write > 0 && offset < blackbox_bounds.total_size) {
+      if (to_write > 0 && (blackbox_current_file()->start + blackbox_current_file()->size) < blackbox_bounds.total_size) {
         state = STATE_START_WRITE;
       } else {
         state = STATE_WRITE_HEADER;
@@ -93,11 +94,13 @@ simulator_do_more:
       goto simulator_do_more;
     }
     break;
+  }
 
   case STATE_START_WRITE: {
     offset = blackbox_current_file()->start + blackbox_current_file()->size;
     if (offset >= blackbox_bounds.total_size) {
-      state = STATE_IDLE;
+      state = should_flush ? STATE_WRITE_HEADER : STATE_IDLE;
+      should_flush = 0;
       break;
     }
     state = STATE_FILL_WRITE_BUFFER;
@@ -105,7 +108,13 @@ simulator_do_more:
   }
 
   case STATE_FILL_WRITE_BUFFER: {
-    write_size = PAGE_SIZE;
+    const uint32_t to_write = ring_buffer_available(&blackbox_encode_buffer);
+    if (offset >= blackbox_bounds.total_size) {
+      state = STATE_FINISH_WRITE;
+      goto simulator_do_more;
+    }
+
+    write_size = min(PAGE_SIZE, blackbox_bounds.total_size - offset);
     if (to_write < PAGE_SIZE) {
       if (should_flush == 0) {
         break;
@@ -114,11 +123,15 @@ simulator_do_more:
         state = STATE_FINISH_WRITE;
         goto simulator_do_more;
       }
-
-      write_size = to_write;
+      write_size = min(write_size, to_write);
     }
 
-    ring_buffer_read_multi(&blackbox_encode_buffer, blackbox_write_buffer, write_size);
+    if (ring_buffer_read_multi(&blackbox_encode_buffer, blackbox_write_buffer, write_size) != write_size) {
+      break;
+    }
+    if (write_size < PAGE_SIZE) {
+      memset(blackbox_write_buffer + write_size, 0, PAGE_SIZE - write_size);
+    }
     state = STATE_CONTINUE_WRITE;
     break;
   }
@@ -169,12 +182,12 @@ bool blackbox_device_simulator_ready() {
   return state == STATE_IDLE;
 }
 
-void blackbox_device_simulator_write(const uint8_t *buffer, const uint8_t size) {
-  if (size >= ring_buffer_free(&blackbox_encode_buffer)) {
-    return;
+bool blackbox_device_simulator_write(const uint8_t *buffer, const uint8_t size) {
+  if (size > ring_buffer_free(&blackbox_encode_buffer)) {
+    return false;
   }
 
-  ring_buffer_write_multi(&blackbox_encode_buffer, buffer, size);
+  return ring_buffer_write_multi(&blackbox_encode_buffer, buffer, size) == size;
 }
 
 void blackbox_device_simulator_read(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size) {
