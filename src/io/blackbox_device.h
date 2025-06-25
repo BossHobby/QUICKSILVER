@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 #include <cbor.h>
 
 #include "io/blackbox.h"
@@ -19,6 +21,7 @@ typedef struct {
   uint32_t sectors;
   uint32_t sector_size;
   uint64_t total_size;
+  bool use_4byte_addresses;
 } blackbox_device_bounds_t;
 
 typedef struct {
@@ -33,13 +36,13 @@ typedef struct {
   bool (*ready)();
 
   void (*read)(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size);
-  void (*write)(const uint8_t *buffer, const uint8_t size);
+  bool (*write)(const uint8_t *buffer, const uint8_t size);
 } blackbox_device_vtable_t;
 
 typedef struct {
   uint32_t field_flags;
   float looptime;
-  uint8_t blackbox_rate;
+  uint32_t blackbox_rate;
   uint32_t start;
   uint32_t size;
 } blackbox_device_file_t;
@@ -47,7 +50,7 @@ typedef struct {
 #define BLACKBOX_DEVICE_FILE_MEMBERS \
   MEMBER(field_flags, uint32_t)      \
   MEMBER(looptime, float)            \
-  MEMBER(blackbox_rate, uint8_t)     \
+  MEMBER(blackbox_rate, uint32_t)    \
   MEMBER(start, uint32_t)            \
   MEMBER(size, uint32_t)
 
@@ -85,4 +88,5 @@ bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float
 void blackbox_device_finish();
 
 void blackbox_device_read(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size);
-cbor_result_t blackbox_device_write(const uint32_t field_flags, const blackbox_t *b);
+bool blackbox_device_write_frame(const uint32_t field_flags, const blackbox_t *current, const blackbox_t *previous, blackbox_frame_type_t frame_type);
+bool blackbox_device_write(const uint8_t *buffer, const uint8_t size);
