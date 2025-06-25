@@ -2,8 +2,18 @@
 
 #include <stdint.h>
 
-// This Ring Buffer _should_ be interrupt-safe given a single consumer/producer scenario.
-// Monitor usage closely to ensure above condition is true. All internal blocking has been removed.
+// This Ring Buffer implementation is interrupt-safe for single producer/single consumer scenarios.
+// 
+// Safety guarantees:
+// - One context writes (producer), one context reads (consumer)
+// - Head is only modified by producer, tail only by consumer
+// - ring_buffer_free() and ring_buffer_available() take atomic snapshots of volatile pointers
+// - These functions may return slightly stale values if called during concurrent access,
+//   but the values are always valid and safe (conservative for buffer overflow prevention)
+// 
+// Typical usage:
+// - ISR writes to RX buffer, main reads from RX buffer
+// - Main writes to TX buffer, ISR reads from TX buffer
 typedef struct {
   uint8_t *const buffer;
   volatile uint32_t head;
