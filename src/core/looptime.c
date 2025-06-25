@@ -88,9 +88,13 @@ void looptime_update() {
   state.looptime_us = CYCLES_TO_US(time_cycles() - last_loop_cycles);
   state.looptime = state.looptime_us * 1e-6f;
   // looptime_inverse is the loop frequency (1/looptime)
-  state.looptime_inverse = 1.0f / state.looptime;
-  state.loop_counter++;
+  if (state.looptime > 0.0f) {
+    state.looptime_inverse = 1.0f / state.looptime;
+  } else {
+    state.looptime_inverse = 0.0f;
+  }
 
+  state.loop_counter++;
   last_loop_cycles = time_cycles();
 
   looptime_auto_detect();

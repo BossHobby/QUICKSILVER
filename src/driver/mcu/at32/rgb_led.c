@@ -88,7 +88,7 @@ void rgb_led_init() {
   init.loop_mode_enable = FALSE;
   init.priority = DMA_PRIORITY_MEDIUM;
   dma_init(rgb_dma->stream, &init);
-  dmamux_init(rgb_dma->mux, target.dma[DMA_DEVICE_RGB].request);
+  dmamux_init(rgb_dma->mux, (dmamux_requst_id_sel_type)target.dma[DMA_DEVICE_RGB].request);
 
   interrupt_enable(rgb_dma->irq, DMA_PRIORITY);
 
