@@ -1,6 +1,7 @@
 #include "driver/motor.h"
 
 #include "core/project.h"
+#include "util/util.h"
 
 static float motor_values[MOTOR_PIN_MAX];
 
@@ -54,11 +55,11 @@ void motor_beep() {
 }
 
 void motor_set(motor_position_t pos, float pwm) {
-  if ((uint8_t)pos > MOTOR_PIN_MAX) {
+  if ((uint8_t)pos >= MOTOR_PIN_MAX) {
     return;
   }
 
-  motor_values[pos] = pwm;
+  motor_values[pos] = constrain(pwm, 0.0f, 1.0f);
 }
 
 void motor_set_all(float pwm) {

@@ -11,6 +11,8 @@
 
 #ifdef USE_VTX
 
+#define MAX_VTX_MSP_FRAME_SIZE 1024
+
 #define MSP_VTX_DETECT_TRIES 5
 
 typedef struct {
@@ -84,10 +86,15 @@ void msp_vtx_send_config_reply(msp_t *msp, msp_magic_t magic) {
   msp_send_reply(msp, magic, MSP_VTX_CONFIG, (uint8_t *)&config, sizeof(msp_vtx_config_t));
 }
 
+
 static void serial_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
+  if (len > MAX_VTX_MSP_FRAME_SIZE - MSP2_HEADER_LEN - 1) {
+    return; // Payload too large
+  }
+
   if (magic == MSP2_MAGIC) {
     const uint32_t size = len + MSP2_HEADER_LEN + 1;
-    uint8_t vtx_frame[size];
+    uint8_t vtx_frame[MAX_VTX_MSP_FRAME_SIZE];
 
     vtx_frame[0] = '$';
     vtx_frame[1] = MSP2_MAGIC;
@@ -103,8 +110,11 @@ static void serial_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, 
 
     serial_vtx_send_data(vtx_frame, size);
   } else {
+    if (len > 255) {
+      return; // MSP1 max payload is 255
+    }
     const uint32_t size = len + MSP_HEADER_LEN + 1;
-    uint8_t vtx_frame[size];
+    uint8_t vtx_frame[MAX_VTX_MSP_FRAME_SIZE];
 
     vtx_frame[0] = '$';
     vtx_frame[1] = MSP1_MAGIC;

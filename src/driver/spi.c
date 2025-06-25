@@ -156,9 +156,7 @@ void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts) {
     dev->txns[head] = txn;
     dev->txn_head = head;
     // Memory barrier to ensure all writes complete before setting status
-#ifndef SIMULATOR
-    __DMB();
-#endif
+    MEMORY_BARRIER();
     // Set status last to ensure transaction is fully queued before marking ready
     txn->status = TXN_READY;
   }
