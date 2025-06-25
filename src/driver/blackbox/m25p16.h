@@ -23,6 +23,8 @@ enum m25p16_commands {
 
   M25P16_SECTOR_ERASE = 0xD8,
   M25P16_BULK_ERASE = 0xC7,
+
+  M25P16_ENTER_4BYTE_ADDRESS_MODE = 0xB7,
 };
 
 void m25p16_init();
