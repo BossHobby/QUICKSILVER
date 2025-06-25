@@ -31,7 +31,7 @@ void usb_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint
     }
     const uint16_t size = len + MSP2_HEADER_LEN + 1;
 
-    uint8_t frame[size];
+    uint8_t frame[MAX_USB_MSP_FRAME_SIZE];
     frame[0] = '$';
     frame[1] = MSP2_MAGIC;
     frame[2] = '>';
@@ -51,7 +51,7 @@ void usb_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint
     }
     const uint16_t size = len + MSP_HEADER_LEN + 1;
 
-    uint8_t frame[size];
+    uint8_t frame[MAX_USB_MSP_FRAME_SIZE];
     frame[0] = '$';
     frame[1] = MSP1_MAGIC;
     frame[2] = '>';
