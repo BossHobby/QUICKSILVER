@@ -41,6 +41,7 @@ static void pid_setUp(void) {
 
   // Initialize control state
   state.looptime = 0.000125f; // 8kHz
+  state.looptime_inverse = 1.0f / state.looptime; // 8000Hz
   state.vbat_filtered = 4.0f;
   state.vbat_compensated = 1.0f;
 
@@ -117,8 +118,8 @@ void test_pid_derivative_calculation(void) {
   profile.pid.stick_rates[0].accelerator.roll = 1.0f;
   profile.pid.stick_rates[0].transition.roll = 1.0f;
   
-  // Initialize state.timefactor (needed for D-term)
-  state.timefactor = 0.0032f / state.looptime; // Original timefactor calculation
+  // Initialize state.looptime_inverse (needed for D-term)
+  state.looptime_inverse = 1.0f / state.looptime;
   
   // Initialize with no gyro rate
   state.gyro.roll = 0.0f;
@@ -147,8 +148,8 @@ void test_pid_dterm_setpoint_response(void) {
   profile.pid.stick_rates[0].accelerator.roll = 1.0f;
   profile.pid.stick_rates[0].transition.roll = 0.0f; // No transition weighting
   
-  // Initialize state.timefactor
-  state.timefactor = 0.0032f / state.looptime;
+  // Initialize state.looptime_inverse
+  state.looptime_inverse = 1.0f / state.looptime;
   
   // Set some stick input so transition weight isn't 0
   state.rx_filtered.roll = 0.0f; // No stick input
@@ -179,8 +180,8 @@ void test_pid_dterm_combined_response(void) {
   profile.pid.stick_rates[0].accelerator.roll = 1.0f;
   profile.pid.stick_rates[0].transition.roll = 0.0f;
   
-  // Initialize state.timefactor
-  state.timefactor = 0.0032f / state.looptime;
+  // Initialize state.looptime_inverse
+  state.looptime_inverse = 1.0f / state.looptime;
   
   // Initialize
   state.gyro.roll = 0.0f;
@@ -210,8 +211,8 @@ void test_pid_dterm_stick_weighting(void) {
   profile.pid.stick_rates[0].accelerator.roll = 2.0f; // Higher than 1
   profile.pid.stick_rates[0].transition.roll = 0.0f; // Ensure setpoint has effect
   
-  // Initialize state.timefactor
-  state.timefactor = 0.0032f / state.looptime;
+  // Initialize state.looptime_inverse
+  state.looptime_inverse = 1.0f / state.looptime;
   
   // Set some stick input
   state.rx_filtered.roll = 0.5f;
