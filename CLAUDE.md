@@ -326,3 +326,102 @@ serial_port_t port = {
 - Target device validation (target_serial_port_valid) may fail in test environment
 - Focus tests on functionality that can be exercised in simulator
 - Test edge cases and error conditions that don't require hardware
+
+## Task Scheduler
+
+### Overview
+
+The task scheduler manages execution of flight controller tasks with different priorities and timing requirements. It uses a runtime equalization system to ensure predictable task execution and prevent loop timing overruns.
+
+### Task Priorities
+
+Tasks are assigned one of four priority levels:
+- `TASK_PRIORITY_REALTIME` - Critical control tasks (GYRO, IMU, PID, RX) that must run every loop
+- `TASK_PRIORITY_HIGH` - Important tasks that should run frequently
+- `TASK_PRIORITY_MEDIUM` - Regular tasks (BLACKBOX, VTXTELEM, etc.)
+- `TASK_PRIORITY_LOW` - Background tasks that can be deferred
+
+### Runtime Equalization System
+
+The scheduler tracks task runtime to make scheduling decisions:
+
+```c
+typedef struct {
+  uint32_t runtime_avg;     // Running average over 32 samples
+  uint32_t runtime_worst;   // Worst-case runtime estimate
+} task_runtime_t;
+```
+
+Key constants:
+- `TASK_RUNTIME_MARGIN`: 1.25x - Safety margin applied to average runtime
+- `TASK_RUNTIME_REDUCTION`: 0.75x - Reduction when task is skipped
+- `TASK_RUNTIME_BUFFER`: 10μs - Buffer before loop deadline
+
+### Scheduling Algorithm
+
+1. **Task Selection**: Tasks are checked in priority order
+2. **Runtime Check**: For non-REALTIME tasks, the scheduler checks if `task->runtime_worst > time_left`
+3. **Skip Decision**: If insufficient time remains, the task is skipped and its worst-case estimate is reduced
+4. **Runtime Update**: After execution, worst-case is maintained at minimum 1.25x the running average
+
+### Task Definition
+
+Tasks are defined in `src/core/tasks.c` using the CREATE_TASK macro:
+```c
+CREATE_TASK("BLACKBOX", TASK_MASK_ALWAYS, TASK_PRIORITY_MEDIUM, blackbox_update, 0)
+```
+
+Parameters:
+- Name: Task identifier for debugging
+- Mask: When task should run (ALWAYS, ARMED, etc.)
+- Priority: Scheduling priority
+- Function: Task implementation
+- Period: Minimum microseconds between runs (0 = every loop if time permits)
+
+### Writing Predictable Tasks
+
+To ensure predictable runtime:
+1. **Avoid variable workloads** - Use fixed-size operations where possible
+2. **Implement rate limiting** - Process fixed amounts of data per iteration
+3. **Use state machines** - Break large operations into smaller steps
+4. **Monitor runtime** - Check task runtime statistics during development
+5. **Consider priority** - Only use REALTIME for critical control tasks
+
+### Example: Blackbox Task
+
+The blackbox task demonstrates good practices:
+- Uses rate divider based on `profile.blackbox.sample_rate_hz`
+- Processes one sample per iteration
+- Has consistent workload (compress and write fixed data structure)
+- Gracefully handles write failures without blocking
+
+### Common Runtime Issues to Avoid
+
+1. **Unbounded loops** - Never use `while(true)` or loops without fixed bounds in tasks
+2. **Variable-size operations** - Limit processing to fixed chunks per iteration
+3. **Blocking I/O** - Use non-blocking operations or state machines for I/O
+4. **Complex calculations** - Break into smaller steps across multiple iterations
+5. **Dynamic memory allocation** - Avoid malloc/free in task loops
+
+### Task Exceptions
+
+Some tasks are designed with different constraints:
+- **USB Task** - Blocks scheduler intentionally during configuration (flight is disabled)
+- **VTX Task** - Only runs on ground, blocked during flight for safety
+
+These tasks assume the user is not flying while configuring the system.
+
+### Tasks with Good Runtime Behavior
+
+- **OSD Task** - Already optimized for predictable runtime
+- **Blackbox Task** - Uses rate limiting and fixed workload per iteration
+
+### Runtime Optimization Guidelines
+
+When implementing new tasks or modifying existing ones:
+1. Use state machines for operations that span multiple iterations
+2. Implement per-iteration processing limits
+3. Add early exit conditions when approaching time budgets
+4. Use incremental processing for large operations
+5. Cache results to avoid repeated calculations
+6. Consider whether the task needs to run during flight
