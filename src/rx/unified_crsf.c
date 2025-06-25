@@ -244,6 +244,10 @@ crsf_do_more:
 }
 
 void rx_serial_crsf_msp_send(msp_magic_t magic, uint8_t direction, uint16_t code, const uint8_t *data, uint16_t len) {
+  if (len > MSP_BUFFER_SIZE) {
+    return; // Data too large for buffer
+  }
+  
   msp_magic = magic;
   msp_last_cmd = code;
 
