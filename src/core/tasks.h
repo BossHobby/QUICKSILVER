@@ -63,6 +63,23 @@ typedef struct {
   uint32_t runtime_max;
 
   uint32_t runtime_avg_sum;
+
+
+  // Exponential moving average of peaks for P95 estimation
+  uint32_t runtime_peak_ema;
+
+#ifdef DEBUG
+  // Minimal metrics for debug builds only
+  uint32_t metric_skip_count;
+  uint32_t metric_overrun_count;
+  uint8_t metric_consecutive_skips;
+  uint8_t metric_max_consecutive_skips;
+  
+  // Simplified variance tracking
+  uint32_t metric_variance;
+  float metric_mean_acc;
+  float metric_m2;
+#endif
 } task_t;
 
 #define CREATE_TASK(p_name, p_mask, p_priority, p_func, p_period_us) \
@@ -79,6 +96,7 @@ typedef struct {
       .runtime_worst = 0,                                            \
       .runtime_max = 0,                                              \
       .runtime_avg_sum = 0,                                          \
+      .runtime_peak_ema = 0,                                         \
   }
 
 extern task_t tasks[TASK_MAX];
