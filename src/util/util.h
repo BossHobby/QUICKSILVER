@@ -12,6 +12,9 @@
 
 #define MEMORY_ALIGN(offset, size) (((offset) + ((size) - 1)) & -(size))
 
+// Force inline for performance-critical functions
+#define FORCE_INLINE __attribute__((always_inline)) inline
+
 #define WHILE_TIMEOUT(condition, timeout) \
   for (uint32_t start = time_millis(); (condition) && (time_millis() - start) < (timeout);)
 
