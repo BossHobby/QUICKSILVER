@@ -353,7 +353,6 @@ typedef struct {
 ```
 
 Key constants:
-- `TASK_RUNTIME_MARGIN`: 1.25x - Safety margin applied to average runtime
 - `TASK_RUNTIME_REDUCTION`: 0.75x - Reduction when task is skipped
 - `TASK_RUNTIME_BUFFER`: 10μs - Buffer before loop deadline
 
@@ -425,3 +424,122 @@ When implementing new tasks or modifying existing ones:
 4. Use incremental processing for large operations
 5. Cache results to avoid repeated calculations
 6. Consider whether the task needs to run during flight
+
+## Scheduler Performance Metrics
+
+### Overview
+
+The scheduler includes comprehensive runtime metrics collection to monitor task performance and optimize scheduling decisions. These metrics are essential for identifying performance bottlenecks and ensuring stable flight performance.
+
+### Available Metrics
+
+The scheduler tracks the following metrics for each task:
+
+#### Core Runtime Metrics
+- **current**: Most recent execution time in microseconds
+- **avg**: Running average over 32 samples
+- **max**: Maximum observed runtime
+- **worst**: Worst-case estimate used for scheduling decisions
+- **percentile_95**: Smooth 95th percentile estimate using exponential moving average
+
+#### Variability Metrics (Debug builds only)
+- **stddev**: Standard deviation of runtime
+- **cv_percent**: Coefficient of Variation (stddev/avg × 100%) - measures relative variability
+- **skips**: Total number of times task was skipped due to insufficient time
+- **max_skips**: Maximum consecutive skips observed
+- **overruns**: Number of times task exceeded its worst-case estimate
+
+### Percentile Calculation
+
+The scheduler uses an exponential moving average approach for smooth P95 estimation:
+
+```c
+// Track values above average as potential peaks
+if (time_taken > task->runtime_avg) {
+  if (time_taken > task->runtime_peak_ema) {
+    // Fast upward adjustment (1/8 weight)
+    task->runtime_peak_ema = ((task->runtime_peak_ema * 7) + time_taken) >> 3;
+  } else {
+    // Slow downward adjustment (1/32 weight)
+    task->runtime_peak_ema = ((task->runtime_peak_ema * 31) + time_taken) >> 5;
+  }
+}
+// Continuous decay to forget old peaks
+task->runtime_peak_ema = (task->runtime_peak_ema * 511) >> 9;
+```
+
+This provides stable P95 estimates without the noise of traditional percentile calculations.
+
+### Scheduling Algorithm
+
+The scheduler uses a predictive approach based on runtime statistics:
+
+1. **Priority-based selection**: REALTIME tasks always run, others checked in priority order
+2. **Runtime prediction**: Uses `runtime_worst` (based on P95 + margin) to estimate if task will fit
+3. **Skip decision**: Non-realtime tasks skipped if `runtime_worst > time_remaining`
+4. **Skip penalty**: When a task is skipped, its `runtime_worst` is reduced by 25% (`* 3/4`) to increase future execution probability
+5. **Adaptive margins**: Uses conservative margins during startup, transitions to P95-based prediction
+
+#### Skip Penalty System
+
+When a task is skipped due to insufficient time, the scheduler applies a reduction penalty:
+
+```c
+// Reduce worst-case estimate by 25% (0.75x)
+task->runtime_worst = (task->runtime_worst * 3) >> 2;
+```
+
+This serves multiple purposes:
+- **Prevents starvation**: Skipped tasks become more likely to run in future loops
+- **Adapts to changing conditions**: Reduces estimates that may be too conservative
+- **Balances throughput**: Ensures non-realtime tasks still get execution time
+- **Self-correcting**: Over-pessimistic estimates naturally decay through skipping
+
+### Interpreting Metrics
+
+#### Coefficient of Variation (CV%)
+- **< 5%**: Very stable task with consistent runtime
+- **5-15%**: Normal variability for most tasks
+- **> 20%**: High variability, may need optimization
+
+#### Skip Patterns
+- **Occasional skips**: Normal for non-realtime tasks under load
+- **High consecutive skips**: May indicate task period too aggressive
+- **No skips**: Either REALTIME priority or very light task
+
+#### Overrun Analysis
+- **Low overruns**: Good scheduling prediction accuracy
+- **High overruns**: May need P95 margin adjustment or task optimization
+
+### Optimization Strategies
+
+Based on metrics analysis:
+
+1. **High CV% tasks**: Consider breaking into smaller steps or reducing workload
+2. **Frequent skips**: Reduce task frequency or optimize runtime
+3. **High overruns**: Tasks running longer than predicted, need runtime optimization
+4. **Consistent high runtime**: Consider priority adjustment or period increase
+
+### Future Enhancements
+
+Potential scheduler improvements being considered:
+
+#### Hardware Timer PLL
+Using hardware timers synchronized to gyro EXTI interrupts for improved timing precision:
+
+```c
+// PLL-based scheduler concept
+typedef struct {
+  int32_t phase_error;      // Gyro timing vs expected
+  int32_t frequency_error;  // Accumulated correction
+  uint32_t timer_period;    // Hardware timer period
+} scheduler_pll_t;
+```
+
+Benefits:
+- Eliminates busy-wait timing overhead
+- Locks main loop to actual gyro sampling rate
+- Reduces jitter through hardware-driven timing
+- Automatically adapts to gyro timing variations
+
+This would require gyro EXTI support and available hardware timers, but could significantly improve timing precision for supported hardware.
