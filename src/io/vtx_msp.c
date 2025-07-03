@@ -54,12 +54,22 @@ uint16_t msp_vtx_frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX] = {
     {5333, 5373, 5413, 5453, 5493, 5533, 5573, 5613}, // VTX_BAND_L
 };
 
+typedef enum {
+    VTXDEV_UNSUPPORTED = 0, // reserved for MSP
+    VTXDEV_RTC6705     = 1,
+    // 2 reserved
+    VTXDEV_SMARTAUDIO  = 3,
+    VTXDEV_TRAMP       = 4,
+    VTXDEV_MSP         = 5,
+    VTXDEV_UNKNOWN     = 0xFF,
+} vtxDevType_e;
+
 extern void msp_send_reply(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *data, uint32_t len);
 
 void msp_vtx_send_config_reply(msp_t *msp, msp_magic_t magic) {
   const uint16_t freq = vtx_frequency_from_channel(vtx_actual.band, vtx_actual.channel);
   msp_vtx_config_t config = {
-      .vtx_type = 0,
+      .vtx_type = VTXDEV_MSP,
       .band = vtx_actual.band + 1,
       .channel = vtx_actual.channel + 1,
       .power = vtx_actual.power_level + 1,
