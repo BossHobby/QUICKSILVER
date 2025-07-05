@@ -4,8 +4,8 @@
 #include <stdint.h>
 
 #define RGB_LED_MAX 32
+#define RGB_LEDS_PER_UPDATE 8
 
 void rgb_led_init();
-void rgb_led_set_value(uint32_t value, uint32_t count);
-void rgb_led_send();
+void rgb_led_send(uint32_t count);
 bool rgb_led_busy();

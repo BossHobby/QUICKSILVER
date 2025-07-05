@@ -10,6 +10,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - run native tests: `pio test --environment test_native`
 - Verify build across all main targets: `pio run -e stm32f405 -e stm32f411 -e stm32f745 -e stm32f765 -e stm32f722 -e stm32h743 -e stm32g473 -e at32f435 -e at32f435m -e test_native`
 
+## DSHOT Bitbang Implementation
+
+### Important: DSHOT uses one DMA channel per GPIO port, NOT per motor!
+
+The DSHOT bitbang implementation groups all motors on the same GPIO port together and controls them with a single DMA channel. For example:
+- If motors 1, 2, 3 are on GPIOC (PC8, PC9, PC6) - they all share DSHOT_CH1
+- If motor 4 is on GPIOB (PB5) - it uses DSHOT_CH2
+
+Common mistake: Defining DSHOT_CH1, DSHOT_CH2, DSHOT_CH3, DSHOT_CH4 for each motor. This is incorrect!
+
+The number of DSHOT DMA channels needed equals the number of unique GPIO ports used by the motors, typically 1-3 channels maximum.
+
 ## Code Style Guidelines
 
 - Includes: group by standard libraries first, then project modules

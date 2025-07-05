@@ -485,6 +485,10 @@ const profile_t default_profile = {
 #endif
         // rest is initialized by profile_set_defaults()
     },
+    .rgb_led = {
+        .count = 0,
+        .color_armed = 0x00FF00, // Green (GRB format)
+    },
 };
 
 #pragma GCC diagnostic pop
@@ -563,6 +567,7 @@ CALIBRATION_LIMIT_MEMBERS
 RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
 BLACKBOX_PRESET_MEMBERS
+RGB_LED_MEMBERS
 PROFILE_MEMBERS
 
 #undef START_STRUCT
@@ -636,6 +641,7 @@ PID_MEMBERS
 CALIBRATION_LIMIT_MEMBERS
 RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
+RGB_LED_MEMBERS
 PROFILE_MEMBERS
 
 #undef START_STRUCT

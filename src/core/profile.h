@@ -376,6 +376,19 @@ typedef struct {
   STR_MEMBER(name_osd)             \
   END_STRUCT()
 
+typedef struct {
+  uint8_t count;
+  uint32_t color_armed;
+  uint32_t color_disarmed;
+} profile_rgb_led_t;
+
+#define RGB_LED_MEMBERS           \
+  START_STRUCT(profile_rgb_led_t) \
+  MEMBER(count, uint8_t) \
+  MEMBER(color_armed, uint32_t) \
+  MEMBER(color_disarmed, uint32_t) \
+  END_STRUCT()
+
 // Full Profile
 typedef struct {
   profile_metadata_t meta;
@@ -388,6 +401,7 @@ typedef struct {
   profile_pid_t pid;
   profile_voltage_t voltage;
   profile_blackbox_t blackbox;
+  profile_rgb_led_t rgb_led;
 } profile_t;
 
 #define PROFILE_MEMBERS                \
@@ -402,6 +416,7 @@ typedef struct {
   MEMBER(pid, profile_pid_t)           \
   MEMBER(voltage, profile_voltage_t)   \
   MEMBER(blackbox, profile_blackbox_t) \
+  MEMBER(rgb_led, profile_rgb_led_t)   \
   END_STRUCT()
 
 extern profile_t profile;
