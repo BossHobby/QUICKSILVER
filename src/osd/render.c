@@ -28,6 +28,7 @@
 #define ICON_CROSSHAIR_1 0x72
 #define ICON_CROSSHAIR_2 0x73
 #define ICON_CROSSHAIR_3 0x74
+#define ICON_WATT 0x57  // Added watts icon
 
 #define HOLD 0
 #define TEMP 1
