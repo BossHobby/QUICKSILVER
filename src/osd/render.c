@@ -72,6 +72,7 @@ static const char *osd_element_labels[] = {
     "CURRENT DRAW",
     "CROSSHAIR",
     "CURRENT DRAWN",
+    "WATTS",  // Added watts label
 };
 
 static const char *aux_channel_labels[] = {
@@ -397,6 +398,19 @@ static void print_osd_vtx(osd_element_t *el) {
 #endif
 }
 
+// print the watts (power usage) calculation: voltage * current
+static void print_osd_watts(osd_element_t *el) {
+  osd_start_el(el);
+
+  // Calculate watts = volts * amps
+  // state.vbat_filtered is battery voltage in volts
+  // state.ibat_filtered is current in milliamps, so divide by 1000 to get amps
+  const float watts = state.vbat_filtered * (state.ibat_filtered / 1000.0f);
+
+  osd_write_float(watts, 4, 1);
+  osd_write_char(ICON_WATT);
+}
+
 void osd_init() {
   osd_device_init();
   osd_clear();
@@ -526,6 +540,12 @@ static void osd_display_regular() {
     osd_state.element++;
     break;
   }
+
+  case OSD_WATTS: {
+   print_osd_watts(el);
+   osd_state.element++;
+   break;
+ }
 
   case OSD_ELEMENT_MAX: {
     if (osd_system == OSD_SYS_NONE) {
