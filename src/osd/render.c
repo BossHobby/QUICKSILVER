@@ -1067,9 +1067,9 @@ void osd_display() {
       osd_menu_select(3, OSD_AUTO, osd_element_labels[i]);
       if (osd_menu_select_int(20, OSD_AUTO, pos_x(el), 3)) {
         if (osd_system == OSD_SYS_HD)
-          el->pos_hd_x = osd_menu_adjust_int(el->pos_hd_x, 1, 0, HD_ROWS);
+          el->pos_hd_x = osd_menu_adjust_int(el->pos_hd_x, 1, 0, HD_COLS);
         else
-          el->pos_sd_x = osd_menu_adjust_int(el->pos_sd_x, 1, 0, SD_ROWS);
+          el->pos_sd_x = osd_menu_adjust_int(el->pos_sd_x, 1, 0, SD_COLS);
       }
       if (osd_menu_select_int(26, OSD_AUTO, pos_y(el), 3)) {
         if (osd_system == OSD_SYS_HD)
