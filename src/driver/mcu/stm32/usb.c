@@ -226,8 +226,11 @@ static usbd_respond cdc_control(usbd_device *dev, usbd_ctlreq *req, usbd_rqc_cal
     case USB_CDC_SET_CONTROL_LINE_STATE:
       return usbd_ack;
     case USB_CDC_SET_LINE_CODING:
-      memcpy(&cdc_line, req->data, sizeof(cdc_line));
-      return usbd_ack;
+      if (req->wLength >= sizeof(cdc_line)) {
+        memcpy(&cdc_line, req->data, sizeof(cdc_line));
+        return usbd_ack;
+      }
+      return usbd_fail;
     case USB_CDC_GET_LINE_CODING:
       dev->status.data_ptr = &cdc_line;
       dev->status.data_count = sizeof(cdc_line);
@@ -240,8 +243,8 @@ static usbd_respond cdc_control(usbd_device *dev, usbd_ctlreq *req, usbd_rqc_cal
 }
 
 static void cdc_rxonly(usbd_device *dev, uint8_t event, uint8_t ep) {
-  if (ring_buffer_free(&usb_rx_buffer) <= CDC_DATA_SZ) {
-    interrupt_disable(USB_IRQ);
+  if (ring_buffer_free(&usb_rx_buffer) < CDC_DATA_SZ) {
+    // Don't read data, USB will NAK automatically
     rx_stalled = true;
     return;
   }

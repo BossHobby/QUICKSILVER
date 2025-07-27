@@ -8,7 +8,7 @@
 #define QUIC_MAGIC '#'
 #define QUIC_HEADER_LEN 4
 
-#define QUIC_PROTOCOL_VERSION MAKE_SEMVER(0, 2, 3)
+#define QUIC_PROTOCOL_VERSION MAKE_SEMVER(0, 2, 5)
 
 typedef enum {
   QUIC_CMD_INVALID,
@@ -34,7 +34,8 @@ typedef enum {
   QUIC_MOTOR_TEST_ENABLE,
   QUIC_MOTOR_TEST_DISABLE,
   QUIC_MOTOR_TEST_SET_VALUE,
-  QUIC_MOTOR_ESC4WAY_IF
+  QUIC_MOTOR_ESC4WAY_IF,
+  QUIC_MOTOR_SERIAL,
 } __attribute__((__packed__)) quic_motor_command;
 
 typedef enum {

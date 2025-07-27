@@ -10,6 +10,8 @@
 
 #ifdef USE_DIGITAL_VTX
 
+#define MAX_MSP_FRAME_SIZE 1024
+
 typedef enum {
   SUBCMD_HEARTBEAT = 0,
   SUBCMD_RELEASE = 1,
@@ -53,10 +55,15 @@ serial_port_t serial_displayport = {
 static const uint8_t msp_options[2] = {0, 1};
 static bool is_detected = false;
 
+
 static void displayport_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
   if (cmd == MSP_FC_VARIANT) {
     // we got the first MSP_FC_VARIANT request, consider vtx detected
     is_detected = true;
+  }
+
+  if (len > MAX_MSP_FRAME_SIZE - MSP2_HEADER_LEN - 1) {
+    return; // Payload too large
   }
 
   if (magic == MSP2_MAGIC) {
@@ -65,7 +72,7 @@ static void displayport_msp_send(msp_magic_t magic, uint8_t direction, uint16_t 
     }
 
     uint32_t size = 0;
-    uint8_t buf[len + MSP2_HEADER_LEN + 1];
+    uint8_t buf[MAX_MSP_FRAME_SIZE];
 
     buf[size++] = '$';
     buf[size++] = MSP2_MAGIC;
@@ -97,7 +104,7 @@ static void displayport_msp_send(msp_magic_t magic, uint8_t direction, uint16_t 
     }
 
     uint32_t size = 0;
-    uint8_t buf[len + MSP_HEADER_LEN + 1];
+    uint8_t buf[MAX_MSP_FRAME_SIZE];
 
     buf[size++] = '$';
     buf[size++] = MSP1_MAGIC;
@@ -127,13 +134,18 @@ msp_t displayport_msp = {
     .device = MSP_DEVICE_VTX,
 };
 
+
 static bool displayport_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *data, const uint8_t len) {
+  if (len > MAX_MSP_FRAME_SIZE - MSP_HEADER_LEN - 2) {
+    return false; // Data too large
+  }
+
   if (serial_bytes_free(&serial_displayport) < (MSP_HEADER_LEN + len + 2)) {
     return false;
   }
 
   uint32_t size = 0;
-  uint8_t buf[MSP_HEADER_LEN + len + 2];
+  uint8_t buf[MAX_MSP_FRAME_SIZE];
 
   buf[size++] = '$';
   buf[size++] = 'M';
@@ -216,9 +228,12 @@ bool displayport_clear_async() {
 }
 
 bool displayport_is_ready() {
+  bool had_packet = false;
+
   uint8_t data = 0;
   while (serial_read_byte(&serial_displayport, &data)) {
-    msp_process_serial(&displayport_msp, data);
+    if (msp_process_serial(&displayport_msp, data) == MSP_SUCCESS)
+      had_packet = true;
   }
 
   static bool was_detected = false;
@@ -229,13 +244,11 @@ bool displayport_is_ready() {
   }
 
   static uint32_t last_heartbeat = 0;
-  if ((time_millis() - last_heartbeat) > 500) {
-    displayport_push_subcmd(SUBCMD_HEARTBEAT, NULL, 0);
-    last_heartbeat = time_millis();
-    return false;
-  }
+  if ((time_millis() - last_heartbeat) > 500)
+    if (displayport_push_subcmd(SUBCMD_HEARTBEAT, NULL, 0))
+      last_heartbeat = time_millis();
 
-  return true;
+  return had_packet ? false : true;
 }
 
 osd_system_t displayport_check_system() {
@@ -243,7 +256,11 @@ osd_system_t displayport_check_system() {
 }
 
 bool displayport_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size) {
-  uint8_t buffer[size + 3];
+  if (size > (MAX_MSP_FRAME_SIZE - 3)) {
+    return false; // String too large
+  }
+
+  uint8_t buffer[MAX_MSP_FRAME_SIZE];
   buffer[0] = y;
   buffer[1] = x;
   buffer[2] = displayport_map_attr(attr);

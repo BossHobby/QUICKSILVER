@@ -48,12 +48,12 @@ static sdft_t gyro_sdft[SDFT_AXES];
 static filter_biquad_notch_t notch_filter[SDFT_AXES][SDFT_PEAKS];
 static filter_biquad_state_t notch_filter_state[SDFT_AXES][SDFT_PEAKS];
 
-bool sixaxis_detect() {
-  target_info.gyro_id = gyro_init();
-  return target_info.gyro_id != GYRO_TYPE_INVALID;
-}
-
 void sixaxis_init() {
+  target_info.gyro_id = gyro_init();
+  if (target_info.gyro_id == GYRO_TYPE_INVALID) {
+    failloop(FAILLOOP_GYRO);
+  }
+
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
     filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq, task_get_period_us(TASK_GYRO));
   }
@@ -271,35 +271,49 @@ void sixaxis_gyro_cal() {
 }
 
 void sixaxis_acc_cal() {
+  for (uint8_t retry = 0; retry < 15; ++retry) {
+    if (sixaxis_wait_for_still(CAL_INTERVAL)) {
+      // break only if it's already still, otherwise, wait and try again
+      break;
+    }
+    time_delay_ms(100);
+  }
+
   sixaxis_compute_matrix();
 
+  flash_storage.accelcal[0] = 0;
+  flash_storage.accelcal[1] = 0;
   flash_storage.accelcal[2] = 2048;
-  for (uint32_t i = 0; i < 500; i++) {
-    const gyro_data_t data = gyro_read();
-    const vec3_t accel = sixaxis_apply_matrix(data.accel);
 
-    for (uint32_t x = 0; x < 3; x++) {
-      lpf(&flash_storage.accelcal[x], accel.axis[x], 0.92);
+  gyro_data_t last_data = gyro_read();
+  for (uint32_t tries = 0, cal_counter = 0; tries < CAL_TRIES; tries++) {
+    const gyro_data_t data = gyro_read();
+
+    led_pwm(((float)(cal_counter) / (float)(CAL_COUNT)), CAL_INTERVAL);
+
+    // Skip samples if gyro shows movement
+    if (!test_gyro_move(&last_data, &data)) {
+      const vec3_t accel = sixaxis_apply_matrix(data.accel);
+      for (uint8_t i = 0; i < 3; i++) {
+        lpf(&flash_storage.accelcal[i], accel.axis[i], lpfcalc(CAL_INTERVAL, 0.5 * 1e6));
+      }
+
+      if (cal_counter++ == CAL_COUNT) {
+        break;
+      }
     }
 
-    time_delay_us(500);
+    time_delay_us(CAL_INTERVAL);
+    last_data = data;
   }
-  flash_storage.accelcal[2] -= 2048;
 
-  for (int x = 0; x < 3; x++) {
-    flash_storage.accelcal[x] = constrain(flash_storage.accelcal[x], -ACCEL_BIAS_LIMIT, ACCEL_BIAS_LIMIT);
+  for (uint8_t i = 0; i < 3; i++) {
+    flash_storage.accelcal[i] = constrain(flash_storage.accelcal[i], -ACCEL_BIAS_LIMIT, ACCEL_BIAS_LIMIT);
   }
 }
 
 #else
 
-bool sixaxis_detect() {
-#ifdef SIMULATOR
-  return true;
-#else
-  return false;
-#endif
-}
 void sixaxis_init() {}
 void sixaxis_read() {}
 

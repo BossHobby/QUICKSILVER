@@ -66,6 +66,7 @@ memory_section_init() {
 #endif
 }
 
+#ifndef PIO_UNIT_TESTING
 __attribute__((__used__)) int main() {
   interrupt_init();
 
@@ -96,40 +97,31 @@ __attribute__((__used__)) int main() {
   usb_init();
   simulator_init();
 
+  rgb_led_init();
   motor_init();
   motor_set_all(MOTOR_OFF);
 
   // wait for devices to wake up
-  time_delay_ms(300);
-  osd_init();
+  time_delay_ms(100);
   rx_spektrum_bind();
 
-  if (!sixaxis_detect()) {
-    // gyro not found
-    failloop(FAILLOOP_GYRO);
-  }
-
-  scheduler_init();
+  osd_init();
   sixaxis_init();
+  // needs to happen after gyro is detected so we know its update period
+  scheduler_init();
 
-  // give the gyro some time to settle
-  time_delay_ms(100);
-
-  // display bootlogo while calibrating
+  time_delay_ms(50);
   sixaxis_gyro_cal();
-
-  // wait for adc and vtx to wake up
-  time_delay_ms(100);
 
   adc_init();
   vbat_init();
 
   rx_init();
   vtx_init();
-  rgb_init();
 
   blackbox_init();
   imu_init();
 
   scheduler_run();
 }
+#endif

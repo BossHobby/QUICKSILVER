@@ -2,10 +2,13 @@
 
 #include "core/project.h"
 
-#define NVIC_PRIORITY_GROUPING 0
+// Priority grouping 4: No preemption, sequential execution
+// Avoids context switch overhead between interrupts
+#define NVIC_PRIORITY_GROUPING 4
 
 #define MAX_PRIORITY 0x1
 #define DMA_PRIORITY 0x2
+#define SPI_PRIORITY 0x3
 #define EXTI_PRIORITY 0x3
 #define UART_PRIORITY 0x4
 #define TIMER_PRIORITY 0x5
@@ -51,6 +54,13 @@ __attribute__((always_inline)) static inline void __int_restore_irq(int *primask
 
 #define ATOMIC_BLOCK_ALL \
   for (int __basepri_save __attribute__((__cleanup__(__int_restore_irq))) = __int_disable_irq(), __todo = 1; __todo; __todo = 0)
+
+// Memory barrier macro for ensuring memory ordering
+#ifndef SIMULATOR
+#define MEMORY_BARRIER() __DMB()
+#else
+#define MEMORY_BARRIER()
+#endif
 
 void interrupt_init();
 void interrupt_enable(IRQn_Type irq, uint32_t prio);

@@ -7,7 +7,7 @@
 #include "io/quic.h"
 #include "util/cbor_helper.h"
 
-target_t target = {
+FAST_RAM target_t target = {
     .name = "unknown",
     .brushless = true,
 };
@@ -41,6 +41,7 @@ target_info_t target_info = {
 #define INDEX_ARRAY_MEMBER CBOR_ENCODE_INDEX_ARRAY_MEMBER
 #define STR_ARRAY_MEMBER CBOR_ENCODE_STR_ARRAY_MEMBER
 
+TARGET_DMA_MEMBERS
 TARGET_LED_MEMBERS
 TARGET_BUZZER_MEMBERS
 TARGET_SERIAL_MEMBERS
@@ -69,6 +70,7 @@ TARGET_INFO_MEMBERS
 #define INDEX_ARRAY_MEMBER CBOR_DECODE_INDEX_ARRAY_MEMBER
 #define STR_ARRAY_MEMBER CBOR_DECODE_STR_ARRAY_MEMBER
 
+TARGET_DMA_MEMBERS
 TARGET_LED_MEMBERS
 TARGET_BUZZER_MEMBERS
 TARGET_SERIAL_MEMBERS
@@ -170,7 +172,7 @@ cbor_result_t cbor_decode_gpio_pins_t(cbor_value_t *dec, gpio_pins_t *t) {
   uint32_t size;
   CBOR_CHECK_ERROR(res = cbor_decode_tstr(dec, &tmp, &size));
 
-  if (size > 4 && size < 3) {
+  if (size > 4 || size < 3) {
     return CBOR_ERR_INVALID_TYPE;
   }
 

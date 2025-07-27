@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "core/failloop.h"
+#include "driver/dma.h"
 #include "driver/interrupt.h"
 #include "driver/motor_dshot.h"
 
@@ -12,24 +13,36 @@ FAST_RAM spi_device_t spi_dev[SPI_PORT_MAX] = {
     [RANGE_INIT(0, SPI_PORT_MAX)] = {.is_init = false, .dma_done = true, .txn_head = 0, .txn_tail = 0},
 };
 FAST_RAM spi_txn_t txn_pool[SPI_TXN_MAX];
-DMA_RAM uint8_t txn_buffers[SPI_TXN_MAX][DMA_ALIGN(512)];
+DMA_RAM uint8_t txn_buffers[SPI_TXN_MAX][SPI_TXN_BUFFER_SIZE];
+static volatile uint32_t txn_free_bitmap = 0xFFFFFFFF; // All 32 bits set = all free
 
 extern void spi_device_init(spi_ports_t port);
 extern void spi_reconfigure(spi_bus_device_t *bus);
-extern void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length);
+extern void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length, bool has_rx);
 
 static inline __attribute__((always_inline)) spi_txn_t *spi_txn_pop(spi_bus_device_t *bus) {
+  spi_txn_t *txn = NULL;
   ATOMIC_BLOCK_ALL {
-    for (uint32_t i = 0; i < SPI_TXN_MAX; i++) {
-      if (txn_pool[i].status == TXN_IDLE) {
-        spi_txn_t *txn = &txn_pool[i];
-        txn->status = TXN_WAITING;
-        txn->buffer = txn_buffers[i];
-        return txn;
-      }
+    if (txn_free_bitmap != 0) {
+      // Find first set bit (first free transaction)
+      uint32_t idx = __builtin_ctz(txn_free_bitmap);
+      // Clear the bit to mark as allocated
+      txn_free_bitmap &= ~(1U << idx);
+      
+      txn = &txn_pool[idx];
+      txn->status = TXN_WAITING;
+      txn->buffer = txn_buffers[idx];
     }
   }
-  return NULL;
+  return txn;
+}
+
+bool spi_txn_has_free(void) {
+  return txn_free_bitmap != 0;
+}
+
+uint8_t spi_txn_free_count(void) {
+  return __builtin_popcount(txn_free_bitmap);
 }
 
 bool spi_txn_can_send(spi_bus_device_t *bus, bool dma) {
@@ -37,12 +50,12 @@ bool spi_txn_can_send(spi_bus_device_t *bus, bool dma) {
     return false;
   }
 
-#if defined(STM32F4) && defined(USE_MOTOR_DSHOT)
-  if (dma &&
-      target.brushless &&
-      bus->port == SPI_PORT1 &&
-      dshot_phase != 0) {
-    return false;
+#ifdef STM32F4
+  if (dma && bus->port == SPI_PORT1) {
+    // STM32F4 errata 2.2.19: Check if DMA2 can be used for SPI1
+    if (!dma_can_use_dma2(DMA_DEVICE_SPI1_TX)) {
+      return false;
+    }
   }
 #endif
 
@@ -69,7 +82,7 @@ bool spi_txn_continue_port(spi_ports_t port) {
     }
 
     txn = dev->txns[(dev->txn_tail + 1) % SPI_TXN_MAX];
-    if (txn->status != TXN_READY) {
+    if (txn == NULL || txn->status != TXN_READY) {
       return false;
     }
 
@@ -78,25 +91,13 @@ bool spi_txn_continue_port(spi_ports_t port) {
     }
 
     txn->status = TXN_IN_PROGRESS;
-
-    if (txn->flags & TXN_DELAYED_TX) {
-      uint32_t txn_size = 0;
-      for (uint32_t i = 0; i < txn->segment_count; ++i) {
-        spi_txn_segment_t *seg = &txn->segments[i];
-        if (seg->tx_data) {
-          memcpy((uint8_t *)txn->buffer + txn_size, seg->tx_data, seg->size);
-        }
-        txn_size += seg->size;
-      }
-    }
-
     dev->dma_done = false;
   }
 
   spi_reconfigure(txn->bus);
   spi_csn_enable(txn->bus);
 
-  spi_dma_transfer_begin(port, txn->buffer, txn->size);
+  spi_dma_transfer_begin(port, txn->buffer, txn->size, txn->flags & TXN_DELAYED_RX);
 
   return true;
 }
@@ -118,6 +119,11 @@ void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts) {
     const spi_txn_segment_t *seg = &opts.segs[i];
     spi_txn_segment_t *txn_seg = &txn->segments[i];
 
+    // Check if this segment will fit in the buffer
+    if ((txn->size + seg->size) > SPI_TXN_BUFFER_SIZE) {
+      failloop(FAILLOOP_SPI);
+    }
+
     switch (seg->type) {
     case TXN_CONST:
       txn_seg->rx_data = NULL;
@@ -134,12 +140,6 @@ void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts) {
         memset(txn->buffer + txn->size, 0xFF, seg->size);
       }
       break;
-
-    case TXN_DELAY:
-      txn_seg->tx_data = seg->tx_data;
-      txn_seg->rx_data = seg->rx_data;
-      txn->flags |= TXN_DELAYED_TX;
-      break;
     }
 
     if (txn_seg->rx_data) {
@@ -153,9 +153,12 @@ void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts) {
   ATOMIC_BLOCK_ALL {
     spi_device_t *dev = &spi_dev[bus->port];
     const uint8_t head = (dev->txn_head + 1) % SPI_TXN_MAX;
-    txn->status = TXN_READY;
     dev->txns[head] = txn;
     dev->txn_head = head;
+    // Memory barrier to ensure all writes complete before setting status
+    MEMORY_BARRIER();
+    // Set status last to ensure transaction is fully queued before marking ready
+    txn->status = TXN_READY;
   }
 }
 
@@ -165,8 +168,6 @@ void spi_txn_finish(spi_ports_t port) {
 
   const uint32_t tail = (dev->txn_tail + 1) % SPI_TXN_MAX;
   spi_txn_t *txn = dev->txns[tail];
-
-  spi_csn_disable(txn->bus);
 
   if (txn->flags & TXN_DELAYED_RX) {
     uint32_t txn_size = 0;
@@ -183,12 +184,19 @@ void spi_txn_finish(spi_ports_t port) {
     txn->done_fn(txn->done_fn_arg);
   }
 
-  txn->status = TXN_IDLE;
-
+  // Remove from queue first to prevent reuse while still queued
   dev->txns[tail] = NULL;
   dev->txn_tail = tail;
 
+  // Mark as idle after removing from queue
+  txn->status = TXN_IDLE;
+  
+  // Free the transaction back to the bitmap
+  txn_free_bitmap |= (1U << (txn - txn_pool));
+
   spi_dev[port].dma_done = true;
+
+  spi_csn_disable(txn->bus);
   spi_txn_continue_port(port);
 }
 

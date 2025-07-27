@@ -98,6 +98,13 @@ static const char *on_off_labels[] = {
     "  ON",
 };
 
+static const char *filter_type_labels[] = {
+    "NONE",
+    " PT1",
+    " PT2",
+    " PT3",
+};
+
 #pragma GCC diagnostic ignored "-Wmissing-braces"
 
 static const vec3_t rate_defaults[RATE_MODE_ACTUAL + 1][3] = {
@@ -414,149 +421,125 @@ static void print_osd_watts(osd_element_t *el) {
 
 void osd_init() {
   osd_device_init();
-  osd_clear();
   osd_intro();
   osd_update_screen(OSD_SCREEN_CLEAR);
 }
 
 static void osd_display_regular() {
-  osd_element_t *el = (osd_element_t *)(osd_elements() + osd_state.element);
-  while (osd_state.element < OSD_ELEMENT_MAX && !el->active) {
-    osd_state.element++;
-    el = (osd_element_t *)(osd_elements() + osd_state.element);
-  }
+  // Process all elements in one call
+  for (uint8_t element = 0; element < OSD_ELEMENT_MAX; element++) {
+    osd_element_t *el = (osd_element_t *)(osd_elements() + element);
+    if (!el->active) {
+      continue;
+    }
 
-  switch (osd_state.element) {
-  case OSD_CALLSIGN: {
-    osd_start_el(el);
-    osd_write_str((const char *)osd_profile()->callsign);
-
-    osd_state.element++;
-    break;
-  }
-
-  case OSD_CELL_COUNT: {
-    if (!flags.lowbatt) {
+    switch (element) {
+    case OSD_CALLSIGN: {
       osd_start_el(el);
-    } else {
-      osd_start(OSD_ATTR_BLINK | OSD_ATTR_INVERT, pos_x(el), pos_y(el));
+      osd_write_str((const char *)osd_profile()->callsign);
+      break;
     }
-    osd_write_uint(state.lipo_cell_count, 1);
-    osd_write_char('S');
 
-    osd_state.element++;
-    break;
-  }
+    case OSD_CELL_COUNT: {
+      if (!flags.lowbatt) {
+        osd_start_el(el);
+      } else {
+        osd_start(OSD_ATTR_BLINK | OSD_ATTR_INVERT, pos_x(el), pos_y(el));
+      }
+      osd_write_uint(state.lipo_cell_count, 1);
+      osd_write_char('S');
+      break;
+    }
 
-  case OSD_FUELGAUGE_VOLTS: {
-    osd_start_el(el);
-    osd_write_float(state.vbat_compensated_cell_avg, 4, 1);
-    osd_write_char(ICON_GAUGE);
+    case OSD_FUELGAUGE_VOLTS: {
+      osd_start_el(el);
+      osd_write_float(state.vbat_compensated_cell_avg, 4, 1);
+      osd_write_char(ICON_GAUGE);
+      break;
+    }
 
-    osd_state.element++;
-    break;
-  }
+    case OSD_FILTERED_VOLTS: {
+      osd_start_el(el);
+      osd_write_float(state.vbat_cell_avg, 4, 1);
+      osd_write_char(ICON_VOLT);
+      break;
+    }
 
-  case OSD_FILTERED_VOLTS: {
-    osd_start_el(el);
-    osd_write_float(state.vbat_cell_avg, 4, 1);
-    osd_write_char(ICON_VOLT);
+    case OSD_GYRO_TEMP: {
+      osd_start_el(el);
+      osd_write_int(state.gyro_temp, 4);
+      osd_write_char(ICON_CELSIUS);
+      break;
+    }
 
-    osd_state.element++;
-    break;
-  }
+    case OSD_FLIGHT_MODE: {
+      print_osd_flightmode(el);
+      break;
+    }
 
-  case OSD_GYRO_TEMP: {
-    osd_start_el(el);
-    osd_write_int(state.gyro_temp, 4);
-    osd_write_char(ICON_CELSIUS);
+    case OSD_RSSI: {
+      print_osd_rssi(el);
+      break;
+    }
 
-    osd_state.element++;
-    break;
-  }
+    case OSD_STOPWATCH: {
+      print_osd_armtime(el);
+      break;
+    }
 
-  case OSD_FLIGHT_MODE: {
-    print_osd_flightmode(el);
-    osd_state.element++;
-    break;
-  }
+    case OSD_SYSTEM_STATUS: {
+      osd_status_update(el);
+      break;
+    }
 
-  case OSD_RSSI: {
-    print_osd_rssi(el);
-    osd_state.element++;
-    break;
-  }
+    case OSD_THROTTLE: {
+      osd_start_el(el);
+      const float throttle = state.rx_filtered.throttle * 100.0f;
+      if (profile.osd.guac_mode && throttle > 99.0f) {
+        osd_write_str("GUAC");
+      } else {
+        osd_write_uint(throttle, 4);
+      }
+      osd_write_char(ICON_THROTTLE);
+      break;
+    }
 
-  case OSD_STOPWATCH: {
-    print_osd_armtime(el);
-    osd_state.element++;
-    break;
-  }
+    case OSD_CROSSHAIR: {
+      print_osd_crosshair(el);
+      break;
+    }
+    case OSD_VTX_CHANNEL: {
+      print_osd_vtx(el);
+      break;
+    }
 
-  case OSD_SYSTEM_STATUS: {
-    if (osd_status_update(el))
+    case OSD_CURRENT_DRAW: {
+      osd_start_el(el);
+      osd_write_float(state.ibat_filtered / 1000.0f, 4, 2);
+      osd_write_char(ICON_AMP);
+      break;
+    }
+
+    case OSD_CURRENT_DRAWN: {
+      osd_start_el(el);
+      osd_write_float(state.ibat_drawn, 4, 2);
+      osd_write_char(ICON_MAH);
+      break;
+    }
+    
+    case OSD_WATTS: {
+      print_osd_watts(el);
       osd_state.element++;
-    break;
-  }
-
-  case OSD_THROTTLE: {
-    osd_start_el(el);
-    const float throttle = state.rx_filtered.throttle * 100.0f;
-    if (profile.osd.guac_mode && throttle > 99.0f) {
-      osd_write_str("GUAC");
-    } else {
-      osd_write_uint(throttle, 4);
+      break;
     }
-    osd_write_char(ICON_THROTTLE);
-
-    osd_state.element++;
-    break;
-  }
-
-  case OSD_CROSSHAIR: {
-    print_osd_crosshair(el);
-    osd_state.element++;
-    break;
-  }
-  case OSD_VTX_CHANNEL: {
-    print_osd_vtx(el);
-    osd_state.element++;
-    break;
-  }
-
-  case OSD_CURRENT_DRAW: {
-    osd_start_el(el);
-    osd_write_float(state.ibat_filtered / 1000.0f, 4, 2);
-    osd_write_char(ICON_AMP);
-
-    osd_state.element++;
-    break;
-  }
-
-  case OSD_CURRENT_DRAWN: {
-    osd_start_el(el);
-    osd_write_float(state.ibat_drawn, 4, 2);
-    osd_write_char(ICON_MAH);
-
-    osd_state.element++;
-    break;
-  }
-
-  case OSD_WATTS: {
-   print_osd_watts(el);
-   osd_state.element++;
-   break;
- }
-
-  case OSD_ELEMENT_MAX: {
-    if (osd_system == OSD_SYS_NONE) {
-      // display warning if we can not detect a camera
-      osd_start(OSD_ATTR_BLINK, 7, 7);
-      osd_write_str("NO CAMERA SIGNAL");
+    
     }
-    osd_state.element = 0;
-    break;
   }
+
+  // Handle no camera signal warning after all elements
+  if (osd_system == OSD_SYS_NONE) {
+    osd_start(OSD_ATTR_BLINK, 7, 7);
+    osd_write_str("NO CAMERA SIGNAL");
   }
 }
 
@@ -837,16 +820,9 @@ void osd_display() {
     osd_menu_start();
     osd_menu_header("GYRO FILTERS");
 
-    const char *filter_type_labels[] = {
-        "NONE",
-        " PT1",
-        " PT2",
-        " PT3",
-    };
-
     osd_menu_select(4, 4, "PASS 1 TYPE");
     if (osd_menu_select_enum(18, 4, profile.filter.gyro[0].type, filter_type_labels)) {
-      profile.filter.gyro[0].type = osd_menu_adjust_int(profile.filter.gyro[0].type, 1, 0, FILTER_LP_PT3);
+      profile.filter.gyro[0].type = osd_menu_adjust_int(profile.filter.gyro[0].type, 1, 0, FILTER_MAX - 1);
       osd_state.reboot_fc_requested = 1;
     }
 
@@ -857,7 +833,7 @@ void osd_display() {
 
     osd_menu_select(4, 6, "PASS 2 TYPE");
     if (osd_menu_select_enum(18, 6, profile.filter.gyro[1].type, filter_type_labels)) {
-      profile.filter.gyro[1].type = osd_menu_adjust_int(profile.filter.gyro[1].type, 1, 0, FILTER_LP_PT3);
+      profile.filter.gyro[1].type = osd_menu_adjust_int(profile.filter.gyro[1].type, 1, 0, FILTER_MAX - 1);
       osd_state.reboot_fc_requested = 1;
     }
 
@@ -881,16 +857,9 @@ void osd_display() {
     osd_menu_start();
     osd_menu_header("D-TERM FILTERS");
 
-    const char *filter_type_labels[] = {
-        "NONE",
-        " PT1",
-        " PT2",
-        " PT3",
-    };
-
     osd_menu_select(4, 3, "PASS 1 TYPE");
     if (osd_menu_select_enum(18, 3, profile.filter.dterm[0].type, filter_type_labels)) {
-      profile.filter.dterm[0].type = osd_menu_adjust_int(profile.filter.dterm[0].type, 1, 0, FILTER_LP_PT2);
+      profile.filter.dterm[0].type = osd_menu_adjust_int(profile.filter.dterm[0].type, 1, 0, FILTER_MAX - 1);
       osd_state.reboot_fc_requested = 1;
     }
 
@@ -901,7 +870,7 @@ void osd_display() {
 
     osd_menu_select(4, 5, "PASS 2 TYPE");
     if (osd_menu_select_enum(18, 5, profile.filter.dterm[1].type, filter_type_labels)) {
-      profile.filter.dterm[1].type = osd_menu_adjust_int(profile.filter.dterm[1].type, 1, 0, FILTER_LP_PT2);
+      profile.filter.dterm[1].type = osd_menu_adjust_int(profile.filter.dterm[1].type, 1, 0, FILTER_MAX - 1);
       osd_state.reboot_fc_requested = 1;
     }
 
@@ -910,9 +879,9 @@ void osd_display() {
       profile.filter.dterm[1].cutoff_freq = osd_menu_adjust_float(profile.filter.dterm[1].cutoff_freq, 10, 50, 500);
     }
 
-    osd_menu_select(4, 7, "DYNAMIC");
-    if (osd_menu_select_enum(18, 7, profile.filter.dterm_dynamic_enable, on_off_labels)) {
-      profile.filter.dterm_dynamic_enable = osd_menu_adjust_int(profile.filter.dterm_dynamic_enable, 1, 0, 1);
+    osd_menu_select(4, 7, "DYNAMIC TYPE");
+    if (osd_menu_select_enum(18, 7, profile.filter.dterm_dynamic_type, filter_type_labels)) {
+      profile.filter.dterm_dynamic_type = osd_menu_adjust_int(profile.filter.dterm_dynamic_type, 1, 0, FILTER_MAX - 1);
       osd_state.reboot_fc_requested = 1;
     }
 
@@ -1120,9 +1089,9 @@ void osd_display() {
       osd_menu_select(3, OSD_AUTO, osd_element_labels[i]);
       if (osd_menu_select_int(20, OSD_AUTO, pos_x(el), 3)) {
         if (osd_system == OSD_SYS_HD)
-          el->pos_hd_x = osd_menu_adjust_int(el->pos_hd_x, 1, 0, HD_ROWS);
+          el->pos_hd_x = osd_menu_adjust_int(el->pos_hd_x, 1, 0, HD_COLS);
         else
-          el->pos_sd_x = osd_menu_adjust_int(el->pos_sd_x, 1, 0, SD_ROWS);
+          el->pos_sd_x = osd_menu_adjust_int(el->pos_sd_x, 1, 0, SD_COLS);
       }
       if (osd_menu_select_int(26, OSD_AUTO, pos_y(el), 3)) {
         if (osd_system == OSD_SYS_HD)
