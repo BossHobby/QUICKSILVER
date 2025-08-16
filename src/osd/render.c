@@ -73,7 +73,9 @@ static const char *osd_element_labels[] = {
     "CURRENT DRAW",
     "CROSSHAIR",
     "CURRENT DRAWN",
-    "WATTS",  // Added watts label
+    "WATTS",
+    "MAX MOTOR",
+    "WINDUP",
 };
 
 static const char *aux_channel_labels[] = {
@@ -406,17 +408,98 @@ static void print_osd_vtx(osd_element_t *el) {
 #endif
 }
 
-// print the watts (power usage) calculation: voltage * current
 static void print_osd_watts(osd_element_t *el) {
   osd_start_el(el);
 
-  // Calculate watts = volts * amps
-  // state.vbat_filtered is battery voltage in volts
-  // state.ibat_filtered is current in milliamps, so divide by 1000 to get amps
   const float watts = state.vbat_filtered * (state.ibat_filtered / 1000.0f);
 
   osd_write_float(watts, 4, 1);
   osd_write_char(ICON_WATT);
+}
+
+static void print_osd_max_motor(osd_element_t *el) {
+    static float peak_effort = 0.0f;
+    static uint32_t last_reset = 0;
+
+    osd_start_el(el);
+
+    if (!flags.arm_state || flags.on_ground) {
+        osd_write_str("MAX:  0");
+        peak_effort = 0.0f;
+        last_reset = 0;
+        return;
+    }
+
+    float motor_max = 0.0f;
+    float motor_min = 1.0f;
+
+    for (uint32_t i = 0; i < 4; i++) {
+        if (state.motor_mix.axis[i] > motor_max) {
+            motor_max = state.motor_mix.axis[i];
+        }
+        if (state.motor_mix.axis[i] < motor_min) {
+            motor_min = state.motor_mix.axis[i];
+        }
+    }
+
+    float saturation_high = motor_max;
+    float saturation_low = (motor_min < 0.0f) ? -motor_min : 0.0f;
+    float motor_saturation = (saturation_high > saturation_low) ? saturation_high : saturation_low;
+    uint32_t effort_percent = (uint32_t)(motor_saturation * 100.0f);
+    if (effort_percent > 100) effort_percent = 100;
+
+    if (effort_percent > peak_effort) {
+        peak_effort = effort_percent;
+    }
+
+    uint32_t now = time_millis();
+    if (last_reset == 0) last_reset = now;
+
+    if (now - last_reset > 3000) {
+        peak_effort = effort_percent;
+        last_reset = now;
+    }
+
+    osd_write_str("MAX:");
+    osd_write_uint((uint32_t)peak_effort, 3);
+}
+
+static void print_osd_windup(osd_element_t *el) {
+    static float peak_windup = 0.0f;
+    static uint32_t last_reset = 0;
+
+    osd_start_el(el);
+
+    if (!flags.arm_state || flags.on_ground) {
+        osd_write_str("WND:  0");
+        peak_windup = 0.0f;
+        last_reset = 0;
+        return;
+    }
+
+    float i_term_magnitude = sqrtf(state.pid_i_term.roll * state.pid_i_term.roll +
+                                   state.pid_i_term.pitch * state.pid_i_term.pitch +
+                                   state.pid_i_term.yaw * state.pid_i_term.yaw);
+
+    float max_i_term = sqrtf(0.8f * 0.8f + 0.8f * 0.8f + 0.6f * 0.6f);
+
+    uint32_t windup_percent = (uint32_t)((i_term_magnitude / max_i_term) * 100.0f);
+    if (windup_percent > 100) windup_percent = 100;
+
+    if (windup_percent > peak_windup) {
+        peak_windup = windup_percent;
+    }
+
+    uint32_t now = time_millis();
+    if (last_reset == 0) last_reset = now;
+
+    if (now - last_reset > 3000) {
+        peak_windup = windup_percent;
+        last_reset = now;
+    }
+
+    osd_write_str("WND:");
+    osd_write_uint((uint32_t)peak_windup, 2);
 }
 
 void osd_init() {
@@ -526,13 +609,22 @@ static void osd_display_regular() {
       osd_write_char(ICON_MAH);
       break;
     }
-    
+
     case OSD_WATTS: {
       print_osd_watts(el);
       osd_state.element++;
       break;
     }
-    
+    case OSD_MAX_MOTOR: {
+      print_osd_max_motor(el);
+      break;
+    }
+
+    case OSD_WINDUP: {
+      print_osd_windup(el);
+      break;
+    }
+
     }
   }
 

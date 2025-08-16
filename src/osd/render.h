@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <math.h>
 
 #include "driver/osd/osd.h"
 
@@ -10,7 +11,6 @@ typedef enum {
   OSD_SCREEN_CLEAR,
   OSD_SCREEN_MAIN_MENU,
   OSD_SCREEN_REGULAR,
-
   OSD_SCREEN_PID_PROFILE,
   OSD_SCREEN_PID,
   OSD_SCREEN_FILTERS,
@@ -73,7 +73,8 @@ typedef enum {
   OSD_CROSSHAIR,
   OSD_CURRENT_DRAWN,
   OSD_WATTS,
-
+  OSD_MAX_MOTOR,
+  OSD_WINDUP,
   OSD_ELEMENT_MAX
 } osd_elements_t;
 
