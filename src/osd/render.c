@@ -28,7 +28,7 @@
 #define ICON_CROSSHAIR_1 0x72
 #define ICON_CROSSHAIR_2 0x73
 #define ICON_CROSSHAIR_3 0x74
-#define ICON_WATT 0x57  // Added watts icon
+#define ICON_WATT 0x57
 
 #define HOLD 0
 #define TEMP 1
@@ -74,8 +74,7 @@ static const char *osd_element_labels[] = {
     "CROSSHAIR",
     "CURRENT DRAWN",
     "WATTS",
-    "MAX MOTOR",
-    "WINDUP",
+    "STRESS",
 };
 
 static const char *aux_channel_labels[] = {
@@ -417,53 +416,6 @@ static void print_osd_watts(osd_element_t *el) {
   osd_write_char(ICON_WATT);
 }
 
-static void print_osd_max_motor(osd_element_t *el) {
-    static float peak_effort = 0.0f;
-    static uint32_t last_reset = 0;
-
-    osd_start_el(el);
-
-    if (!flags.arm_state || flags.on_ground) {
-        osd_write_str("MAX:  0");
-        peak_effort = 0.0f;
-        last_reset = 0;
-        return;
-    }
-
-    float motor_max = 0.0f;
-    float motor_min = 1.0f;
-
-    for (uint32_t i = 0; i < 4; i++) {
-        if (state.motor_mix.axis[i] > motor_max) {
-            motor_max = state.motor_mix.axis[i];
-        }
-        if (state.motor_mix.axis[i] < motor_min) {
-            motor_min = state.motor_mix.axis[i];
-        }
-    }
-
-    float saturation_high = motor_max;
-    float saturation_low = (motor_min < 0.0f) ? -motor_min : 0.0f;
-    float motor_saturation = (saturation_high > saturation_low) ? saturation_high : saturation_low;
-    uint32_t effort_percent = (uint32_t)(motor_saturation * 100.0f);
-    if (effort_percent > 100) effort_percent = 100;
-
-    if (effort_percent > peak_effort) {
-        peak_effort = effort_percent;
-    }
-
-    uint32_t now = time_millis();
-    if (last_reset == 0) last_reset = now;
-
-    if (now - last_reset > 3000) {
-        peak_effort = effort_percent;
-        last_reset = now;
-    }
-
-    osd_write_str("MAX:");
-    osd_write_uint((uint32_t)peak_effort, 3);
-}
-
 static void print_osd_windup(osd_element_t *el) {
     static float peak_windup = 0.0f;
     static uint32_t last_reset = 0;
@@ -471,7 +423,7 @@ static void print_osd_windup(osd_element_t *el) {
     osd_start_el(el);
 
     if (!flags.arm_state || flags.on_ground) {
-        osd_write_str("WND:  0");
+        osd_write_str("0!");
         peak_windup = 0.0f;
         last_reset = 0;
         return;
@@ -498,8 +450,8 @@ static void print_osd_windup(osd_element_t *el) {
         last_reset = now;
     }
 
-    osd_write_str("WND:");
     osd_write_uint((uint32_t)peak_windup, 2);
+    osd_write_char('!');
 }
 
 void osd_init() {
@@ -613,10 +565,6 @@ static void osd_display_regular() {
     case OSD_WATTS: {
       print_osd_watts(el);
       osd_state.element++;
-      break;
-    }
-    case OSD_MAX_MOTOR: {
-      print_osd_max_motor(el);
       break;
     }
 
