@@ -9,7 +9,7 @@
         "variant": "Generic_G473"
     },
     "debug": {
-        "jlink_device": "STM32G473CB",
+        "jlink_device": "STM32G473CE",
         "openocd_target": "stm32g4x",
         "svd_path": "STM32G473xx.svd"
     },
