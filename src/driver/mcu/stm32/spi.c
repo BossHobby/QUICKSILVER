@@ -278,6 +278,28 @@ void spi_device_init(spi_ports_t port) {
   spi_dma_init_tx(port);
 }
 
+static inline void spi_put(const spi_ports_t port, const uint8_t data) {
+#if defined(STM32H7)
+  while (!LL_SPI_IsActiveFlag_TXP(spi_port_defs[port].channel))
+    ;
+#else
+  while (!LL_SPI_IsActiveFlag_TXE(spi_port_defs[port].channel))
+    ;
+#endif
+  LL_SPI_TransmitData8(spi_port_defs[port].channel, data);
+}
+
+static inline uint8_t spi_get(const spi_ports_t port) {
+#if defined(STM32H7)
+  while (!LL_SPI_IsActiveFlag_RXP(spi_port_defs[port].channel))
+    ;
+#else
+  while (!LL_SPI_IsActiveFlag_RXNE(spi_port_defs[port].channel))
+    ;
+#endif
+  return LL_SPI_ReceiveData8(spi_port_defs[port].channel);
+}
+
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count) {
   spi_txn_wait(bus);
 
@@ -317,26 +339,27 @@ void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs
       rx_data = seg->rx_data;
     }
 
-    for (uint32_t j = 0; j < size; j++) {
-#if defined(STM32H7)
-      while (!LL_SPI_IsActiveFlag_TXP(spi_port_defs[port].channel))
-        ;
-#else
-      while (!LL_SPI_IsActiveFlag_TXE(spi_port_defs[port].channel))
-        ;
-#endif
-      LL_SPI_TransmitData8(spi_port_defs[port].channel, tx_data ? tx_data[j] : 0xFF);
-#if defined(STM32H7)
-      while (!LL_SPI_IsActiveFlag_RXP(spi_port_defs[port].channel))
-        ;
-#else
-      while (!LL_SPI_IsActiveFlag_RXNE(spi_port_defs[port].channel))
-        ;
-#endif
-      const uint8_t ret = LL_SPI_ReceiveData8(spi_port_defs[port].channel);
-      if (rx_data != NULL) {
-        rx_data[j] = ret;
+    if (tx_data && rx_data) {
+      spi_put(port, *tx_data++);
+      for (uint32_t j = 1; j < size; j++) {
+        spi_put(port, *tx_data++);
+        *rx_data++ = spi_get(port);
       }
+      *rx_data = spi_get(port);
+    } else if (tx_data) {
+      spi_put(port, *tx_data++);
+      for (uint32_t j = 1; j < size; j++) {
+        spi_put(port, *tx_data++);
+        spi_get(port);
+      }
+      spi_get(port);
+    } else if (rx_data) {
+      spi_put(port, 0xFF);
+      for (uint32_t j = 1; j < size; j++) {
+        spi_put(port, 0xFF);
+        *rx_data++ = spi_get(port);
+      }
+      *rx_data = spi_get(port);
     }
   }
 
