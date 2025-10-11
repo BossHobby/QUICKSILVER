@@ -1,5 +1,6 @@
 #include "msp.h"
 
+#include <ctype.h>
 #include <stdbool.h>
 #include <string.h>
 
@@ -7,6 +8,7 @@
 #include "core/flash.h"
 #include "core/looptime.h"
 #include "core/scheduler.h"
+#include "core/target.h"
 #include "driver/motor.h"
 #include "driver/reset.h"
 #include "driver/serial.h"
@@ -36,6 +38,64 @@ extern char msp_vtx_band_labels[VTX_BAND_MAX][8];
 extern uint16_t msp_vtx_frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX];
 
 extern void msp_vtx_send_config_reply(msp_t *msp, msp_magic_t magic);
+
+// MCU type IDs matching Betaflight
+typedef enum {
+  MCU_TYPE_UNKNOWN = 0,
+  MCU_TYPE_F103 = 1,
+  MCU_TYPE_F303 = 2,
+  MCU_TYPE_F40X = 3,
+  MCU_TYPE_F411 = 4,
+  MCU_TYPE_F446 = 5,
+  MCU_TYPE_F722 = 6,
+  MCU_TYPE_F745 = 7,
+  MCU_TYPE_F746 = 8,
+  MCU_TYPE_F765 = 9,
+  MCU_TYPE_H750 = 10,
+  MCU_TYPE_H743_REVISION_UNKNOWN = 11,
+  MCU_TYPE_H743_REV_Y = 12,
+  MCU_TYPE_H743_REV_X = 13,
+  MCU_TYPE_H743_REV_V = 14,
+  MCU_TYPE_H7A3 = 15,
+  MCU_TYPE_H723_725 = 16,
+  MCU_TYPE_G474 = 17,
+  MCU_TYPE_H730 = 18,
+  MCU_TYPE_AT32F435 = 255,
+} mcu_type_id_t;
+
+static uint8_t msp_get_mcu_type_id() {
+#if defined(STM32F411)
+  return MCU_TYPE_F411;
+#elif defined(STM32F405) || defined(STM32F407)
+  return MCU_TYPE_F40X;
+#elif defined(STM32F446)
+  return MCU_TYPE_F446;
+#elif defined(STM32F722)
+  return MCU_TYPE_F722;
+#elif defined(STM32F745)
+  return MCU_TYPE_F745;
+#elif defined(STM32F746)
+  return MCU_TYPE_F746;
+#elif defined(STM32F765)
+  return MCU_TYPE_F765;
+#elif defined(STM32H743)
+  return MCU_TYPE_H743_REVISION_UNKNOWN;
+#elif defined(STM32H750)
+  return MCU_TYPE_H750;
+#elif defined(STM32H730)
+  return MCU_TYPE_H730;
+#elif defined(STM32H7A3)
+  return MCU_TYPE_H7A3;
+#elif defined(STM32H723) || defined(STM32H725)
+  return MCU_TYPE_H723_725;
+#elif defined(STM32G4) || defined(STM32G474)
+  return MCU_TYPE_G474;
+#elif defined(AT32F435) || defined(AT32F437)
+  return MCU_TYPE_AT32F435;
+#else
+  return MCU_TYPE_UNKNOWN;
+#endif
+}
 
 void msp_send_reply(msp_t *msp, msp_magic_t magic, uint16_t cmd, const uint8_t *data, uint32_t len) {
   if (msp->send) {
@@ -85,8 +145,84 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     break;
   }
   case MSP_BOARD_INFO: {
-    uint8_t data[6] = {'Q', 'U', 'I', 'C', 0, 0};
-    msp_send_reply(msp, magic, cmd, data, 6);
+    uint8_t buf[256];
+    uint8_t *ptr = buf;
+
+    // board identifier (4 bytes) - manufacturer field uppercase
+    for (uint8_t i = 0; i < 4; i++) {
+      *ptr++ = (i < sizeof(target.manufacturer) && target.manufacturer[i] != '\0') ? toupper((unsigned char)target.manufacturer[i]) : ' ';
+    }
+
+    *ptr++ = 0; // hardware revision low
+    *ptr++ = 0; // hardware revision high
+
+    *ptr++ = (target_info.features & FEATURE_OSD) ? 2 : 0; // board type: 0=FC, 2=FC+OSD
+
+    *ptr++ = (1 << 0) | (1 << 1) | (1 << 3); // capabilities: VCP | Soft Serial | Flash Bootloader
+
+    // target name - mcu type uppercase
+    const char *target_name = target_info.mcu;
+    const uint8_t target_name_len = strlen(target_name);
+    *ptr++ = target_name_len;
+    for (uint8_t i = 0; i < target_name_len; i++) {
+      *ptr++ = toupper((unsigned char)target_name[i]);
+    }
+
+    // board name - target.name uppercase
+    const char *board_name = (const char *)target.name;
+    const uint8_t board_name_len = strnlen(board_name, sizeof(target.name));
+    *ptr++ = board_name_len;
+    for (uint8_t i = 0; i < board_name_len; i++) {
+      *ptr++ = toupper((unsigned char)board_name[i]);
+    }
+
+    // manufacturer id - uppercase
+    const char *manufacturer = (const char *)target.manufacturer;
+    const uint8_t manufacturer_len = strnlen(manufacturer, sizeof(target.manufacturer));
+    *ptr++ = manufacturer_len;
+    for (uint8_t i = 0; i < manufacturer_len; i++) {
+      *ptr++ = toupper((unsigned char)manufacturer[i]);
+    }
+
+    // signature (32 bytes) - device uid
+#ifndef SIMULATOR
+    memcpy(ptr, (uint8_t *)UID_BASE, 12);
+    memset(ptr + 12, 0, 20);
+#else
+    memset(ptr, 0, 32);
+#endif
+    ptr += 32;
+
+    *ptr++ = msp_get_mcu_type_id(); // mcu type id
+
+    *ptr++ = 0; // configuration state (API 1.42)
+
+    // gyro sample rate (API 1.43)
+    const uint16_t gyro_rate_hz = state.looptime_autodetect > 0 ? (uint16_t)(1000000.0f / state.looptime_autodetect) : 8000;
+    *ptr++ = gyro_rate_hz & 0xFF;
+    *ptr++ = (gyro_rate_hz >> 8) & 0xFF;
+
+    // configuration problems (API 1.43)
+    const uint32_t config_problems = 0;
+    *ptr++ = config_problems & 0xFF;
+    *ptr++ = (config_problems >> 8) & 0xFF;
+    *ptr++ = (config_problems >> 16) & 0xFF;
+    *ptr++ = (config_problems >> 24) & 0xFF;
+
+    // device counts (API 1.44)
+    uint8_t spi_count = 0;
+    if (target_gyro_spi_device_valid(&target.gyro))
+      spi_count++;
+    if (target_spi_device_valid(&target.osd))
+      spi_count++;
+    if (target_spi_device_valid(&target.flash))
+      spi_count++;
+    if (target_spi_device_valid(&target.sdcard))
+      spi_count++;
+    *ptr++ = spi_count; // spi device count
+    *ptr++ = 0;         // i2c device count
+
+    msp_send_reply(msp, magic, cmd, buf, ptr - buf);
     break;
   }
   case MSP_UID: {

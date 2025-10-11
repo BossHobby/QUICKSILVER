@@ -167,6 +167,7 @@ typedef struct {
 
 typedef struct {
   uint8_t name[32];
+  uint8_t manufacturer[32];
 
   bool brushless;
 
@@ -198,6 +199,7 @@ typedef struct {
 #define TARGET_MEMBERS                                                           \
   START_STRUCT(target_t)                                                         \
   TSTR_MEMBER(name, 32)                                                          \
+  TSTR_MEMBER(manufacturer, 32)                                                  \
   MEMBER(brushless, bool)                                                        \
   ARRAY_MEMBER(leds, LED_MAX, target_led_t)                                      \
   INDEX_ARRAY_MEMBER(serial_ports, SERIAL_PORT_MAX, target_serial_port_t)        \
