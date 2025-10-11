@@ -299,20 +299,23 @@ void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size) {
   spi_txn_wait(&bus);
 
   // disable osd
+  WHILE_TIMEOUT(max7456_dma_spi_read(STAT) & 0x20, 200);
   max7456_dma_spi_write(VM0, 0x0);
-  time_delay_us(10);
 
+  WHILE_TIMEOUT(max7456_dma_spi_read(STAT) & 0x20, 200);
   max7456_dma_spi_write(CMAH, addr);
+
+  WHILE_TIMEOUT(max7456_dma_spi_read(STAT) & 0x20, 200);
   max7456_dma_spi_write(CMM, 0x50);
 
-  // wait for NVM to be ready
-  WHILE_TIMEOUT(max7456_dma_spi_read(STAT) & 0x20, 200);
-
   for (uint8_t i = 0; i < size; i++) {
+    WHILE_TIMEOUT(max7456_dma_spi_read(STAT) & 0x20, 200);
     max7456_dma_spi_write(CMAL, i);
     out[i] = max7456_dma_spi_read(CMDO);
     time_delay_us(1);
   }
+
+  WHILE_TIMEOUT(max7456_dma_spi_read(STAT) & 0x20, 200);
 
   // enable osd
   max7456_init_display();
@@ -323,19 +326,22 @@ void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size) {
   spi_txn_wait(&bus);
 
   // disable osd
+  WHILE_TIMEOUT(max7456_dma_spi_read(STAT) & 0x20, 200);
   max7456_dma_spi_write(VM0, 0x0);
-  time_delay_us(10);
 
+  WHILE_TIMEOUT(max7456_dma_spi_read(STAT) & 0x20, 200);
   max7456_dma_spi_write(CMAH, addr);
+
   for (uint8_t i = 0; i < size; i++) {
+    WHILE_TIMEOUT(max7456_dma_spi_read(STAT) & 0x20, 200);
     max7456_dma_spi_write(CMAL, i);
     max7456_dma_spi_write(CMDI, in[i]);
     time_delay_us(1);
   }
 
+  WHILE_TIMEOUT(max7456_dma_spi_read(STAT) & 0x20, 200);
   max7456_dma_spi_write(CMM, 0xA0);
 
-  // wait for NVM to be ready
   WHILE_TIMEOUT(max7456_dma_spi_read(STAT) & 0x20, 200);
 
   // enable osd
