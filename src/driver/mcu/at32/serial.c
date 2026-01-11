@@ -1,5 +1,6 @@
 #include "driver/serial.h"
 
+#include "driver/interrupt.h"
 #include "driver/serial_soft.h"
 
 const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX] = {
@@ -105,35 +106,42 @@ void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool s
 
   usart_enable(USART.channel, TRUE);
 
-  usart_interrupt_enable(USART.channel, USART_TDC_INT, TRUE);
   usart_interrupt_enable(USART.channel, USART_RDBF_INT, TRUE);
 
   serial_enable_isr(serial->config.port);
 }
 
 bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32_t size) {
+  if (!serial || !data || !serial->tx_buffer || serial->config.port <= SERIAL_PORT_INVALID || serial->config.port >= SERIAL_PORT_MAX) {
+    return false;
+  }
+
   if (size == 0) {
     return true;
   }
 
-  if (serial->config.half_duplex) {
-    if (!serial_is_soft(serial->config.port)) {
-      const usart_port_def_t *port = &usart_port_defs[serial->config.port];
-      usart_receiver_enable(port->channel, FALSE);
-      usart_transmitter_enable(port->channel, TRUE);
-    } else {
-      soft_serial_enable_write(serial->config.port);
-    }
-  }
+  const bool is_soft = serial_is_soft(serial->config.port);
+  const usart_port_def_t *port = is_soft ? NULL : &usart_port_defs[serial->config.port];
 
   uint32_t written = 0;
   while (written < size) {
     written += ring_buffer_write_multi(serial->tx_buffer, data + written, size - written);
-    serial->tx_done = false;
 
-    if (!serial_is_soft(serial->config.port)) {
-      const usart_port_def_t *port = &usart_port_defs[serial->config.port];
-      usart_interrupt_enable(port->channel, USART_TDBE_INT, TRUE);
+    if (is_soft) {
+      if (serial->config.half_duplex) {
+        soft_serial_enable_write(serial->config.port);
+      }
+      serial->tx_done = false;
+    } else {
+      // If TDC handler completed while we were writing, switch back to TX
+      if (serial->config.half_duplex && serial->tx_done) {
+        usart_receiver_enable(port->channel, FALSE);
+        usart_transmitter_enable(port->channel, TRUE);
+      }
+      ATOMIC_BLOCK(UART_PRIORITY) {
+        usart_interrupt_enable(port->channel, USART_TDBE_INT, TRUE);
+        serial->tx_done = false;
+      }
     }
   }
 
@@ -143,22 +151,20 @@ bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32
 static void handle_serial_isr(serial_port_t *serial) {
   const usart_port_def_t *port = &usart_port_defs[serial->config.port];
 
-  if (usart_flag_get(port->channel, USART_TDC_FLAG)) {
-    usart_flag_clear(port->channel, USART_TDC_FLAG);
-    if (serial->tx_done && serial->config.half_duplex) {
-      usart_receiver_enable(port->channel, TRUE);
-      usart_transmitter_enable(port->channel, FALSE);
-    }
+  if (usart_flag_get(port->channel, USART_ROERR_FLAG) == SET) {
+    usart_flag_clear(port->channel, USART_ROERR_FLAG);
   }
-
-  if (usart_flag_get(port->channel, USART_TDBE_FLAG)) {
-    uint8_t data = 0;
-    if (ring_buffer_read(serial->tx_buffer, &data)) {
-      usart_data_transmit(port->channel, data);
-    } else {
-      usart_interrupt_enable(port->channel, USART_TDBE_INT, FALSE);
-      serial->tx_done = true;
-    }
+  if (usart_flag_get(port->channel, USART_PERR_FLAG) == SET) {
+    usart_flag_clear(port->channel, USART_PERR_FLAG);
+  }
+  if (usart_flag_get(port->channel, USART_FERR_FLAG) == SET) {
+    usart_flag_clear(port->channel, USART_FERR_FLAG);
+  }
+  if (usart_flag_get(port->channel, USART_NERR_FLAG) == SET) {
+    usart_flag_clear(port->channel, USART_NERR_FLAG);
+  }
+  if (usart_flag_get(port->channel, USART_BFF_FLAG) == SET) {
+    usart_flag_clear(port->channel, USART_BFF_FLAG);
   }
 
   if (usart_flag_get(port->channel, USART_RDBF_FLAG)) {
@@ -166,8 +172,31 @@ static void handle_serial_isr(serial_port_t *serial) {
     ring_buffer_write(serial->rx_buffer, data);
   }
 
-  if (usart_flag_get(port->channel, USART_ROERR_FLAG) == SET) {
-    usart_flag_clear(port->channel, USART_ROERR_FLAG);
+  if (usart_interrupt_flag_get(port->channel, USART_TDBE_FLAG)) {
+    uint8_t data = 0;
+    if (ring_buffer_read(serial->tx_buffer, &data)) {
+      usart_data_transmit(port->channel, data);
+    }
+    if (ring_buffer_available(serial->tx_buffer) == 0) {
+      usart_interrupt_enable(port->channel, USART_TDBE_INT, FALSE);
+      usart_flag_clear(port->channel, USART_TDC_FLAG);
+      usart_interrupt_enable(port->channel, USART_TDC_INT, TRUE);
+    }
+  }
+
+  if (usart_interrupt_flag_get(port->channel, USART_TDC_FLAG)) {
+    usart_flag_clear(port->channel, USART_TDC_FLAG);
+    usart_interrupt_enable(port->channel, USART_TDC_INT, FALSE);
+
+    if (ring_buffer_available(serial->tx_buffer)) {
+      usart_interrupt_enable(port->channel, USART_TDBE_INT, TRUE);
+    } else {
+      if (serial->config.half_duplex) {
+        usart_transmitter_enable(port->channel, FALSE);
+        usart_receiver_enable(port->channel, TRUE);
+      }
+      serial->tx_done = true;
+    }
   }
 }
 

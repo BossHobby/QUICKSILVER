@@ -95,7 +95,6 @@ void serial_init(serial_port_t *serial, serial_port_config_t config) {
     return;
   }
   serial->config = config;
-  serial->tx_done = true;
 
   for (uint32_t i = 0; i < SERIAL_PORT_MAX; i++) {
     if (serial_ports[i] == serial) {
@@ -154,8 +153,8 @@ void soft_serial_tx_isr(serial_ports_t port) {
   if (ring_buffer_read(serial->tx_buffer, &data)) {
     soft_serial_write_byte(port, data);
   } else {
-    soft_serial_enable_read(port);
     serial->tx_done = true;
+    soft_serial_enable_read(port);
   }
 }
 

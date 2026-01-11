@@ -1,5 +1,6 @@
 #include "driver/serial.h"
 
+#include "driver/interrupt.h"
 #include "driver/serial_soft.h"
 
 const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX] = {
@@ -114,7 +115,14 @@ void handle_usart_invert(serial_ports_t port, bool invert) {
 void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool swap) {
   const serial_ports_t port = config.port;
 
+  serial_enable_rcc(port);
+  serial_disable_isr(port);
+
+  LL_USART_Disable(USART.channel);
+  LL_USART_DeInit(USART.channel);
+
   LL_USART_InitTypeDef usart_init;
+  LL_USART_StructInit(&usart_init);
   usart_init.BaudRate = config.baudrate;
   usart_init.DataWidth = LL_USART_DATAWIDTH_8B;
   usart_init.StopBits = stop_bits_map[config.stop_bits];
@@ -122,13 +130,6 @@ void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool s
   usart_init.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
   usart_init.TransferDirection = direction_map[config.direction];
   usart_init.OverSampling = LL_USART_OVERSAMPLING_16;
-
-  serial_enable_rcc(port);
-  serial_disable_isr(port);
-
-  LL_USART_Disable(USART.channel);
-  LL_USART_DeInit(USART.channel);
-
   LL_USART_Init(USART.channel, &usart_init);
 
   handle_usart_invert(port, config.invert);
@@ -147,58 +148,69 @@ void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool s
   LL_USART_DisableIT_RXNE(USART.channel);
   LL_USART_DisableIT_TC(USART.channel);
 
-#ifdef STM32H7
+#if defined(STM32H7) || defined(STM32G4)
   LL_USART_SetTXFIFOThreshold(USART.channel, LL_USART_FIFOTHRESHOLD_1_8);
   LL_USART_SetRXFIFOThreshold(USART.channel, LL_USART_FIFOTHRESHOLD_1_8);
   LL_USART_DisableFIFO(USART.channel);
 #endif
 
   if (config.half_duplex) {
+    LL_USART_SetTransferDirection(USART.channel, LL_USART_DIRECTION_RX);
     LL_USART_ConfigHalfDuplexMode(USART.channel);
   }
 
   LL_USART_Enable(USART.channel);
 
-#ifdef STM32H7
-  if (usart_init.TransferDirection & LL_USART_DIRECTION_RX) {
-    while (!(LL_USART_IsActiveFlag_REACK(USART.channel)))
+#if defined(STM32H7) || defined(STM32G4)
+  if (LL_USART_GetTransferDirection(USART.channel) & LL_USART_DIRECTION_RX)
+    while (!LL_USART_IsActiveFlag_REACK(USART.channel))
       ;
-  }
-  if (usart_init.TransferDirection & LL_USART_DIRECTION_TX) {
-    while (!(LL_USART_IsActiveFlag_TEACK(USART.channel)))
+#endif
+#if defined(STM32F7) || defined(STM32H7) || defined(STM32G4)
+  if (LL_USART_GetTransferDirection(USART.channel) & LL_USART_DIRECTION_TX)
+    while (!LL_USART_IsActiveFlag_TEACK(USART.channel))
       ;
-  }
 #endif
 
-  LL_USART_EnableIT_TC(usart_port_defs[serial->config.port].channel);
   LL_USART_EnableIT_RXNE(usart_port_defs[serial->config.port].channel);
 
   serial_enable_isr(serial->config.port);
 }
 
 bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32_t size) {
+  if (!serial || !data || !serial->tx_buffer || serial->config.port <= SERIAL_PORT_INVALID || serial->config.port >= SERIAL_PORT_MAX) {
+    return false;
+  }
+
   if (size == 0) {
     return true;
   }
 
-  if (serial->config.half_duplex) {
-    if (!serial_is_soft(serial->config.port)) {
-      const usart_port_def_t *port = &usart_port_defs[serial->config.port];
-      LL_USART_DisableDirectionRx(port->channel);
-      LL_USART_EnableDirectionTx(port->channel);
-    } else {
-      soft_serial_enable_write(serial->config.port);
-    }
-  }
+  const bool is_soft = serial_is_soft(serial->config.port);
+  const usart_port_def_t *port = is_soft ? NULL : &usart_port_defs[serial->config.port];
 
   uint32_t written = 0;
   while (written < size) {
     written += ring_buffer_write_multi(serial->tx_buffer, data + written, size - written);
-    serial->tx_done = false;
 
-    if (!serial_is_soft(serial->config.port)) {
-      const usart_port_def_t *port = &usart_port_defs[serial->config.port];
-      LL_USART_EnableIT_TXE(port->channel);
+    if (is_soft) {
+      if (serial->config.half_duplex && serial->tx_done) {
+        soft_serial_enable_write(serial->config.port);
+      }
+      serial->tx_done = false;
+    } else {
+      // If TC handler completed while we were writing, switch back to TX
+      if (serial->config.half_duplex && serial->tx_done) {
+        LL_USART_SetTransferDirection(port->channel, LL_USART_DIRECTION_TX);
+#if defined(STM32F7) || defined(STM32H7) || defined(STM32G4)
+        while (!LL_USART_IsActiveFlag_TEACK(port->channel))
+          ;
+#endif
+      }
+      ATOMIC_BLOCK(UART_PRIORITY) {
+        LL_USART_EnableIT_TXE(port->channel);
+        serial->tx_done = false;
+      }
     }
   }
 
@@ -208,22 +220,8 @@ bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32
 static void handle_serial_isr(serial_port_t *serial) {
   const usart_port_def_t *port = &usart_port_defs[serial->config.port];
 
-  if (LL_USART_IsEnabledIT_TC(port->channel) && LL_USART_IsActiveFlag_TC(port->channel)) {
-    LL_USART_ClearFlag_TC(port->channel);
-    if (serial->tx_done && serial->config.half_duplex) {
-      LL_USART_DisableDirectionTx(port->channel);
-      LL_USART_EnableDirectionRx(port->channel);
-    }
-  }
-
-  if (LL_USART_IsEnabledIT_TXE(port->channel) && LL_USART_IsActiveFlag_TXE(port->channel)) {
-    uint8_t data = 0;
-    if (ring_buffer_read(serial->tx_buffer, &data)) {
-      LL_USART_TransmitData8(port->channel, data);
-    } else {
-      LL_USART_DisableIT_TXE(port->channel);
-      serial->tx_done = true;
-    }
+  if (LL_USART_IsActiveFlag_ORE(port->channel)) {
+    LL_USART_ClearFlag_ORE(port->channel);
   }
 
   if (LL_USART_IsEnabledIT_RXNE(port->channel) && LL_USART_IsActiveFlag_RXNE(port->channel)) {
@@ -234,8 +232,29 @@ static void handle_serial_isr(serial_port_t *serial) {
 #endif
   }
 
-  if (LL_USART_IsActiveFlag_ORE(port->channel)) {
-    LL_USART_ClearFlag_ORE(port->channel);
+  if (LL_USART_IsEnabledIT_TXE(port->channel) && LL_USART_IsActiveFlag_TXE(port->channel)) {
+    uint8_t data = 0;
+    if (ring_buffer_read(serial->tx_buffer, &data)) {
+      LL_USART_TransmitData8(port->channel, data);
+    }
+    if (ring_buffer_available(serial->tx_buffer) == 0) {
+      LL_USART_DisableIT_TXE(port->channel);
+      LL_USART_ClearFlag_TC(port->channel);
+      LL_USART_EnableIT_TC(port->channel);
+    }
+  }
+
+  if (LL_USART_IsEnabledIT_TC(port->channel) && LL_USART_IsActiveFlag_TC(port->channel)) {
+    LL_USART_ClearFlag_TC(port->channel);
+    LL_USART_DisableIT_TC(port->channel);
+
+    if (ring_buffer_available(serial->tx_buffer)) {
+      LL_USART_EnableIT_TXE(port->channel);
+    } else {
+      if (serial->config.half_duplex)
+        LL_USART_SetTransferDirection(port->channel, LL_USART_DIRECTION_RX);
+      serial->tx_done = true;
+    }
   }
 }
 

@@ -51,7 +51,7 @@ typedef struct {
   ring_buffer_t *rx_buffer;
   ring_buffer_t *tx_buffer;
 
-  bool tx_done;
+  volatile bool tx_done;
 } serial_port_t;
 
 typedef struct {
