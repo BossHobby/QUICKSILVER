@@ -37,6 +37,7 @@ smart_audio_settings_t smart_audio_settings;
 static uint32_t baud_rate = 4800;
 static uint32_t packets_sent = 0;
 static uint32_t packets_recv = 0;
+static smart_audio_workaround_t current_workaround = SA_WORKAROUND_NONE;
 
 static smart_audio_parser_state_t parser_state = PARSER_IDLE;
 
@@ -252,19 +253,18 @@ vtx_update_result_t serial_smart_audio_update() {
   return VTX_ERROR;
 }
 
+void serial_smart_audio_set_workaround(smart_audio_workaround_t workaround) {
+  current_workaround = workaround;
+}
+
 void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const uint32_t size) {
   if (!serial_vtx_is_ready()) {
     return;
   }
 
-#ifdef USE_AKK_SA_WORKAROUND
-#define EXTRA_DUMMY_BYTES 1
-#else
-#define EXTRA_DUMMY_BYTES 0
-#endif
-
-  const uint32_t len = size + 1 + SA_HEADER_SIZE + EXTRA_DUMMY_BYTES;
-  uint8_t vtx_frame[len];
+  const uint8_t extra_bytes = (current_workaround == SA_WORKAROUND_TRAILING_BYTE) ? 1 : 0;
+  const uint32_t len = size + 1 + SA_HEADER_SIZE + extra_bytes;
+  uint8_t vtx_frame[16]; // max payload size + header + crc + workaround byte
 
   vtx_frame[0] = 0x00;
   vtx_frame[1] = 0xAA;
@@ -274,10 +274,10 @@ void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const 
   for (uint8_t i = 0; i < size; i++) {
     vtx_frame[i + SA_HEADER_SIZE] = payload[i];
   }
-  vtx_frame[size + SA_HEADER_SIZE] = crc8_dvb_s2_data(0, vtx_frame + 1, len - 2 - EXTRA_DUMMY_BYTES);
-#ifdef USE_AKK_SA_WORKAROUND
-  vtx_frame[size + 1 + SA_HEADER_SIZE] = 0x00;
-#endif
+  vtx_frame[size + SA_HEADER_SIZE] = crc8_dvb_s2_data(0, vtx_frame + 1, len - 2 - extra_bytes);
+  if (current_workaround == SA_WORKAROUND_TRAILING_BYTE) {
+    vtx_frame[size + 1 + SA_HEADER_SIZE] = 0x00;
+  }
 
   smart_audio_auto_baud();
 

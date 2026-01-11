@@ -9,8 +9,6 @@
 
 #ifdef USE_VTX
 
-#define MSP_VTX_DETECT_TRIES 5
-
 typedef struct {
   uint8_t vtx_type;
   uint8_t band;
@@ -29,7 +27,6 @@ typedef struct {
   uint8_t power_levels;
 } msp_vtx_config_t;
 
-extern uint8_t vtx_connect_tries;
 extern vtx_settings_t vtx_actual;
 
 uint8_t msp_vtx_detected = 0;
@@ -90,35 +87,29 @@ void msp_vtx_send_config_reply(msp_t *msp, msp_magic_t magic) {
 }
 
 vtx_detect_status_t vtx_msp_update(vtx_settings_t *actual) {
-  if (vtx_connect_tries > MSP_VTX_DETECT_TRIES) {
-    return VTX_DETECT_ERROR;
-  }
-
   const vtx_update_result_t result = serial_msp_vtx_update();
   switch (result) {
   case VTX_ERROR:
-    vtx_connect_tries++;
   case VTX_WAIT:
     return VTX_DETECT_WAIT;
 
   case VTX_SUCCESS:
   case VTX_IDLE:
-    if (!msp_vtx_detected) {
+    if (!msp_vtx_detected || actual->power_table.levels == 0) {
       return VTX_DETECT_WAIT;
     }
 
-    if (vtx_settings.magic != VTX_SETTINGS_MAGIC) {
-      vtx_set(actual);
+    if (vtx_settings.detected != VTX_PROTOCOL_MSP_VTX) {
+      if (vtx_settings.magic != VTX_SETTINGS_MAGIC) {
+        vtx_set(actual);
+      }
+
+      memcpy(&vtx_settings.power_table, &actual->power_table, sizeof(vtx_power_table_t));
+      vtx_settings.detected = VTX_PROTOCOL_MSP_VTX;
     }
-
-    memcpy(&vtx_settings.power_table, &actual->power_table, sizeof(vtx_power_table_t));
-
-    vtx_settings.detected = VTX_PROTOCOL_MSP_VTX;
-    vtx_connect_tries = 0;
     return VTX_DETECT_SUCCESS;
   }
 
-  // wait otherwise
   return VTX_DETECT_WAIT;
 }
 

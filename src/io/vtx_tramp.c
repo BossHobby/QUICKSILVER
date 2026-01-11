@@ -7,9 +7,6 @@
 
 #ifdef USE_VTX
 
-#define TRAMP_DETECT_TRIES 5
-
-extern uint8_t vtx_connect_tries;
 extern const uint16_t frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX];
 
 uint8_t tramp_detected = 0;
@@ -38,16 +35,11 @@ static const char tramp_power_level_labels[VTX_POWER_LEVEL_MAX][VTX_POWER_LABEL_
 };
 
 vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual) {
-  if (tramp_settings.freq_min == 0 && vtx_connect_tries > TRAMP_DETECT_TRIES) {
-    return VTX_DETECT_ERROR;
-  }
-
   vtx_update_result_t result = serial_tramp_update();
 
-  if ((result == VTX_IDLE || result == VTX_ERROR) && tramp_settings.freq_min == 0 && vtx_connect_tries <= TRAMP_DETECT_TRIES) {
+  if ((result == VTX_IDLE || result == VTX_ERROR) && tramp_settings.freq_min == 0) {
     // no tramp detected, try again
     serial_tramp_send_payload('r', 0);
-    vtx_connect_tries++;
     return VTX_DETECT_WAIT;
   }
 
@@ -82,15 +74,15 @@ vtx_detect_status_t vtx_tramp_update(vtx_settings_t *actual) {
     //   return VTX_DETECT_WAIT;
     // }
 
-    if (tramp_settings.freq_min != 0 && tramp_settings.frequency != 0 && tramp_detected == 0) {
+    if (tramp_settings.freq_min != 0 && tramp_settings.frequency != 0 && tramp_detected == 0 && actual->power_table.levels > 0) {
       tramp_detected = 1;
 
       if (vtx_settings.magic != VTX_SETTINGS_MAGIC) {
         vtx_set(actual);
       }
 
+      memcpy(&vtx_settings.power_table, &actual->power_table, sizeof(vtx_power_table_t));
       vtx_settings.detected = VTX_PROTOCOL_TRAMP;
-      vtx_connect_tries = 0;
     }
     return VTX_DETECT_SUCCESS;
   }

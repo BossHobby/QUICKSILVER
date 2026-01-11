@@ -22,6 +22,12 @@ typedef enum {
   SA_MODE_UNLOCKED = 1 << 4,
 } smart_mode_t;
 
+typedef enum {
+  SA_WORKAROUND_NONE = 0,
+  SA_WORKAROUND_TRAILING_BYTE,
+  SA_WORKAROUND_MAX,
+} smart_audio_workaround_t;
+
 typedef struct {
   uint8_t version;
   uint8_t channel;
@@ -35,3 +41,4 @@ typedef struct {
 void serial_smart_audio_init();
 vtx_update_result_t serial_smart_audio_update();
 void serial_smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const uint32_t size);
+void serial_smart_audio_set_workaround(smart_audio_workaround_t workaround);

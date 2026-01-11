@@ -9,14 +9,14 @@
 
 #ifdef USE_VTX
 
-#define SMART_AUDIO_DETECT_TRIES 30
-
-extern uint8_t vtx_connect_tries;
+#define SMART_AUDIO_WORKAROUND_SWITCH_TRIES 30
 
 uint8_t smart_audio_detected = 0;
 extern smart_audio_settings_t smart_audio_settings;
 
 static bool smart_audio_needs_update = false;
+static smart_audio_workaround_t smart_audio_workaround = SA_WORKAROUND_NONE;
+static uint8_t smart_audio_detect_tries = 0;
 
 static const char smart_audio_power_level_labels[4][VTX_POWER_LABEL_LEN] = {
     "25   ",
@@ -49,16 +49,21 @@ static void smart_audio_write_mw(char *buf, uint32_t val) {
 }
 
 vtx_detect_status_t vtx_smart_audio_update(vtx_settings_t *actual) {
-  if (smart_audio_settings.version == 0 && vtx_connect_tries > SMART_AUDIO_DETECT_TRIES) {
-    return VTX_DETECT_ERROR;
-  }
-
   const vtx_update_result_t result = serial_smart_audio_update();
 
-  if ((result == VTX_IDLE || result == VTX_ERROR) && smart_audio_settings.version == 0 && vtx_connect_tries <= SMART_AUDIO_DETECT_TRIES) {
+  if ((result == VTX_IDLE || result == VTX_ERROR) && smart_audio_settings.version == 0) {
     // no smart audio detected, try again
+    if (smart_audio_detect_tries >= SMART_AUDIO_WORKAROUND_SWITCH_TRIES) {
+      // cycle to next workaround
+      smart_audio_workaround++;
+      if (smart_audio_workaround >= SA_WORKAROUND_MAX) {
+        smart_audio_workaround = SA_WORKAROUND_NONE;
+      }
+      serial_smart_audio_set_workaround(smart_audio_workaround);
+      smart_audio_detect_tries = 0;
+    }
     serial_smart_audio_send_payload(SA_CMD_GET_SETTINGS, NULL, 0);
-    vtx_connect_tries++;
+    smart_audio_detect_tries++;
     return VTX_DETECT_WAIT;
   }
 
@@ -97,15 +102,15 @@ vtx_detect_status_t vtx_smart_audio_update(vtx_settings_t *actual) {
       actual->pit_mode = VTX_PIT_MODE_NO_SUPPORT;
     }
 
-    if (smart_audio_settings.version != 0 && smart_audio_detected == 0) {
+    if (smart_audio_settings.version != 0 && smart_audio_detected == 0 && actual->power_table.levels > 0) {
       smart_audio_detected = 1;
 
       if (vtx_settings.magic != VTX_SETTINGS_MAGIC) {
         vtx_set(actual);
       }
 
+      memcpy(&vtx_settings.power_table, &actual->power_table, sizeof(vtx_power_table_t));
       vtx_settings.detected = VTX_PROTOCOL_SMART_AUDIO;
-      vtx_connect_tries = 0;
     }
 
     if (smart_audio_needs_update) {

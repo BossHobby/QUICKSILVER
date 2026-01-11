@@ -25,13 +25,13 @@ vtx_settings_t vtx_settings = {
         .levels = 0,
     },
 };
-uint8_t vtx_connect_tries = 0;
 
 vtx_settings_t vtx_actual;
 
 static uint8_t apply_tries = 0;
 static uint32_t vtx_delay_start = 0;
 static uint32_t vtx_delay_ms = 1000;
+static bool protocol_is_init = false;
 
 extern uint8_t smart_audio_detected;
 extern smart_audio_settings_t smart_audio_settings;
@@ -127,7 +127,6 @@ static void vtx_update_fpv_pin() {
       if (!fpv_init && flags.rx_mode == RXMODE_NORMAL && flags.on_ground == 1) {
         fpv_init = gpio_init_fpv(flags.rx_mode);
         vtx_delay_ms = 1000;
-        vtx_connect_tries = 0;
       }
       if (fpv_init) {
         gpio_pin_set(target.fpv);
@@ -139,71 +138,24 @@ static void vtx_update_fpv_pin() {
   }
 }
 
-static bool vtx_detect_protocol() {
-  static vtx_protocol_t protocol_to_check = VTX_PROTOCOL_MSP_VTX;
-  static uint8_t protocol_is_init = 0;
+static void vtx_init_protocol() {
+  switch (vtx_settings.protocol) {
+  case VTX_PROTOCOL_TRAMP:
+    serial_tramp_init();
+    break;
 
-  if (vtx_settings.detected) {
-    return true;
+  case VTX_PROTOCOL_SMART_AUDIO:
+    serial_smart_audio_init();
+    break;
+
+  case VTX_PROTOCOL_MSP_VTX:
+    serial_msp_vtx_init();
+    break;
+
+  case VTX_PROTOCOL_INVALID:
+  case VTX_PROTOCOL_MAX:
+    break;
   }
-
-  if (serial_displayport.config.port != SERIAL_PORT_INVALID) {
-    vtx_settings.protocol = VTX_PROTOCOL_MSP_VTX;
-  }
-
-  if (profile.serial.smart_audio != SERIAL_PORT_INVALID &&
-      profile.serial.smart_audio == profile.serial.rx &&
-      serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
-    vtx_settings.protocol = VTX_PROTOCOL_MSP_VTX;
-  }
-
-  if (vtx_settings.protocol != VTX_PROTOCOL_INVALID) {
-    protocol_to_check = vtx_settings.protocol;
-  }
-
-  if (!protocol_is_init) {
-    switch (protocol_to_check) {
-    case VTX_PROTOCOL_TRAMP:
-      serial_tramp_init();
-      break;
-
-    case VTX_PROTOCOL_SMART_AUDIO:
-      serial_smart_audio_init();
-      break;
-
-    case VTX_PROTOCOL_MSP_VTX:
-      serial_msp_vtx_init();
-      break;
-
-    case VTX_PROTOCOL_INVALID:
-    case VTX_PROTOCOL_MAX:
-      break;
-    }
-    protocol_is_init = 1;
-    return false;
-  }
-
-  const vtx_detect_status_t status = vtx_update_protocol(protocol_to_check, &vtx_actual);
-
-  if (status == VTX_DETECT_SUCCESS) {
-    // detect success, save detected proto
-    vtx_settings.protocol = protocol_to_check;
-  } else if (status == VTX_DETECT_ERROR) {
-    vtx_connect_tries = 0;
-    protocol_is_init = 0;
-    vtx_delay_ms = 500;
-
-    if (vtx_settings.protocol == VTX_PROTOCOL_INVALID) {
-      // only switch protocol if we are not fixed to one
-      protocol_to_check++;
-
-      if (protocol_to_check == VTX_PROTOCOL_MAX) {
-        protocol_to_check = VTX_PROTOCOL_INVALID;
-      }
-    }
-  }
-
-  return false;
 }
 
 static bool vtx_update_frequency() {
@@ -320,62 +272,52 @@ static bool vtx_update_pitmode() {
 void vtx_update() {
   vtx_update_fpv_pin();
 
-  if (flags.in_air) {
-    // never try to do vtx stuff in-air
+  if (flags.in_air)
     return;
-  }
 
   if (profile.serial.smart_audio == SERIAL_PORT_INVALID &&
-      serial_displayport.config.port == SERIAL_PORT_INVALID) {
-    // no serial assigned to vtx or still in use by rx
+      serial_displayport.config.port == SERIAL_PORT_INVALID)
     return;
-  }
 
   if (profile.serial.smart_audio != SERIAL_PORT_INVALID &&
       profile.serial.smart_audio == profile.serial.rx &&
-      serial_rx_detected_protcol != RX_SERIAL_PROTOCOL_CRSF) {
-    // allow same serial for crsf
+      serial_rx_detected_protcol != RX_SERIAL_PROTOCOL_CRSF)
     return;
-  }
 
-  if ((time_millis() - vtx_delay_start) < vtx_delay_ms) {
+  if ((time_millis() - vtx_delay_start) < vtx_delay_ms)
     return;
-  }
 
   vtx_delay_ms = 0;
   vtx_delay_start = time_millis();
 
-  if (!vtx_detect_protocol()) {
-    return;
-  }
-
-  const vtx_detect_status_t status = vtx_update_protocol(vtx_settings.detected, &vtx_actual);
-  if (status < VTX_DETECT_SUCCESS) {
-    // we are in wait or error state, do nothing
-    return;
-  }
-
-  if (profile.receiver.aux[AUX_FPV_SWITCH] <= AUX_CHANNEL_11 &&
-      vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT) {
-    // we got a aux switch set, switch pit_mode accordingly
-    if (rx_aux_on(AUX_FPV_SWITCH)) {
-      vtx_settings.pit_mode = 0;
+  // auto-select MSP_VTX for displayport or CRSF setups
+  if (vtx_settings.protocol == VTX_PROTOCOL_INVALID) {
+    if (serial_displayport.config.port != SERIAL_PORT_INVALID) {
+      vtx_settings.protocol = VTX_PROTOCOL_MSP_VTX;
+    } else if (profile.serial.smart_audio != SERIAL_PORT_INVALID &&
+               profile.serial.smart_audio == profile.serial.rx &&
+               serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
+      vtx_settings.protocol = VTX_PROTOCOL_MSP_VTX;
     } else {
-      vtx_settings.pit_mode = 1;
+      return; // vtx_settings.protocol == VTX_PROTOCOL_INVALID
     }
   }
 
-  if (!vtx_update_pitmode()) {
+  if (!protocol_is_init) {
+    vtx_init_protocol();
+    protocol_is_init = true;
     return;
   }
 
-  if (!vtx_update_frequency()) {
+  const vtx_detect_status_t status = vtx_update_protocol(vtx_settings.detected ? vtx_settings.detected : vtx_settings.protocol, &vtx_actual);
+  if (status < VTX_DETECT_SUCCESS)
     return;
-  }
 
-  if (!vtx_update_powerlevel()) {
+  if (profile.receiver.aux[AUX_FPV_SWITCH] <= AUX_CHANNEL_11 && vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT)
+    vtx_settings.pit_mode = rx_aux_on(AUX_FPV_SWITCH) ? 0 : 1;
+
+  if (!vtx_update_pitmode() || !vtx_update_frequency() || !vtx_update_powerlevel())
     return;
-  }
 }
 
 void vtx_set(vtx_settings_t *vtx) {
@@ -391,6 +333,7 @@ void vtx_set(vtx_settings_t *vtx) {
     tramp_settings.freq_min = 0;
     tramp_detected = 0;
     msp_vtx_detected = 0;
+    protocol_is_init = false;
   } else {
     vtx_settings.magic = VTX_SETTINGS_MAGIC;
     memcpy(&vtx_settings.power_table, &vtx->power_table, sizeof(vtx_power_table_t));
