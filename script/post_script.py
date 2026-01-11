@@ -24,7 +24,7 @@ def before_upload(source, target, env):
             time.sleep(2)
 
 
-remove_flags = ["gcc", "stdc++", "nosys", "--specs=nosys.specs"]
+remove_flags = ["gcc", "nosys", "--specs=nosys.specs"]
 for scope in ("ASFLAGS", "CCFLAGS", "LINKFLAGS", "LIBS"):
     for option in remove_flags:
         while option in env[scope]:

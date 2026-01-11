@@ -46,10 +46,14 @@ typedef struct {
   uint32_t size;
 } spi_txn_segment_t;
 
-#define spi_make_seg_const(_bytes...) \
-  (spi_txn_segment_t) { .type = TXN_CONST, .bytes = {_bytes}, .size = sizeof((uint8_t[]){_bytes}) }
-#define spi_make_seg_buffer(_rx_data, _tx_data, _size) \
-  (spi_txn_segment_t) { .type = TXN_BUFFER, .rx_data = (_rx_data), .tx_data = (_tx_data), .size = (_size) }
+template <typename... Bytes>
+constexpr spi_txn_segment_t spi_make_seg_const(Bytes... bytes) {
+  return spi_txn_segment_t{.type = TXN_CONST, .bytes = {static_cast<uint8_t>(bytes)...}, .size = sizeof...(bytes)};
+}
+
+constexpr spi_txn_segment_t spi_make_seg_buffer(uint8_t *rx_data, const uint8_t *tx_data, uint32_t size) {
+  return spi_txn_segment_t{.type = TXN_BUFFER, .tx_data = tx_data, .rx_data = rx_data, .size = size};
+}
 
 struct spi_bus_device;
 
@@ -83,11 +87,11 @@ typedef struct {
 } spi_txn_t;
 
 typedef struct {
-  spi_txn_done_fn_t done_fn;
-  void *done_fn_arg;
-
   const spi_txn_segment_t *segs;
   uint32_t seg_count;
+
+  spi_txn_done_fn_t done_fn;
+  void *done_fn_arg;
 } spi_txn_opts_t;
 
 typedef struct spi_bus_device {
@@ -152,19 +156,17 @@ static inline bool spi_txn_ready(spi_bus_device_t *bus) {
 bool spi_txn_has_free(void);
 uint8_t spi_txn_free_count(void);
 
-#define spi_seg_submit_wait(_bus, _segs)                                                                            \
-  {                                                                                                                 \
-    static_assert(__builtin_types_compatible_p(spi_txn_segment_t[], typeof(_segs)), "spi segment not const array"); \
-    const uint32_t count = sizeof(_segs) / sizeof(spi_txn_segment_t);                                               \
-    static_assert(count < SPI_TXN_SEG_MAX, "spi segment count > max");                                              \
-    spi_seg_submit_wait_ex(_bus, _segs, count);                                                                     \
+#define spi_seg_submit_wait(_bus, _segs)                                \
+  {                                                                     \
+    const uint32_t count = sizeof(_segs) / sizeof(spi_txn_segment_t);   \
+    static_assert(count < SPI_TXN_SEG_MAX, "spi segment count > max");  \
+    spi_seg_submit_wait_ex(_bus, _segs, count);                         \
   }
-#define spi_seg_submit(_bus, _segs, ...)                                                                            \
-  {                                                                                                                 \
-    static_assert(__builtin_types_compatible_p(spi_txn_segment_t[], typeof(_segs)), "spi segment not const array"); \
-    const uint32_t count = sizeof(_segs) / sizeof(spi_txn_segment_t);                                               \
-    static_assert(count < SPI_TXN_SEG_MAX, "spi segment count > max");                                              \
-    spi_seg_submit_ex(_bus, (spi_txn_opts_t){.segs = _segs, .seg_count = count, __VA_ARGS__});                      \
+#define spi_seg_submit(_bus, _segs, ...)                                \
+  {                                                                     \
+    const uint32_t count = sizeof(_segs) / sizeof(spi_txn_segment_t);   \
+    static_assert(count < SPI_TXN_SEG_MAX, "spi segment count > max");  \
+    spi_seg_submit_ex(_bus, (spi_txn_opts_t){.segs = _segs, .seg_count = count, __VA_ARGS__}); \
   }
 #define spi_seg_submit_continue(_bus, _segs, ...) ({ \
   spi_seg_submit(_bus, _segs, __VA_ARGS__);          \

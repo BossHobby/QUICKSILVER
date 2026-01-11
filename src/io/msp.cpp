@@ -1,0 +1,924 @@
+#include "msp.h"
+
+#include <ctype.h>
+#include <stdbool.h>
+#include <string.h>
+
+#include "core/debug.h"
+#include "core/flash.h"
+#include "core/looptime.h"
+#include "core/scheduler.h"
+#include "core/target.h"
+#include "driver/motor.h"
+#include "driver/reset.h"
+#include "driver/serial.h"
+#include "driver/serial_4way.h"
+#include "flight/control.h"
+#include "io/quic.h"
+#include "io/usb_configurator.h"
+#include "io/vtx.h"
+#include "rx/rx.h"
+#include "util/crc.h"
+#include "util/util.h"
+
+enum {
+  MSP_REBOOT_FIRMWARE = 0,
+  MSP_REBOOT_BOOTLOADER_ROM,
+  MSP_REBOOT_MSC,
+  MSP_REBOOT_MSC_UTC,
+  MSP_REBOOT_BOOTLOADER_FLASH,
+  MSP_REBOOT_COUNT,
+};
+
+extern bool msp_vtx_detected;
+extern vtx_settings_t vtx_actual;
+extern char msp_vtx_band_letters[VTX_BAND_MAX];
+extern uint8_t msp_vtx_band_is_factory[VTX_BAND_MAX];
+extern char msp_vtx_band_labels[VTX_BAND_MAX][8];
+extern uint16_t msp_vtx_frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX];
+
+extern void msp_vtx_send_config_reply(msp_t *msp, msp_magic_t magic);
+
+// MCU type IDs matching Betaflight
+typedef enum {
+  MCU_TYPE_UNKNOWN = 0,
+  MCU_TYPE_F103 = 1,
+  MCU_TYPE_F303 = 2,
+  MCU_TYPE_F40X = 3,
+  MCU_TYPE_F411 = 4,
+  MCU_TYPE_F446 = 5,
+  MCU_TYPE_F722 = 6,
+  MCU_TYPE_F745 = 7,
+  MCU_TYPE_F746 = 8,
+  MCU_TYPE_F765 = 9,
+  MCU_TYPE_H750 = 10,
+  MCU_TYPE_H743_REVISION_UNKNOWN = 11,
+  MCU_TYPE_H743_REV_Y = 12,
+  MCU_TYPE_H743_REV_X = 13,
+  MCU_TYPE_H743_REV_V = 14,
+  MCU_TYPE_H7A3 = 15,
+  MCU_TYPE_H723_725 = 16,
+  MCU_TYPE_G474 = 17,
+  MCU_TYPE_H730 = 18,
+  MCU_TYPE_AT32F435 = 255,
+} mcu_type_id_t;
+
+static uint8_t msp_get_mcu_type_id() {
+#if defined(STM32F411)
+  return MCU_TYPE_F411;
+#elif defined(STM32F405) || defined(STM32F407)
+  return MCU_TYPE_F40X;
+#elif defined(STM32F446)
+  return MCU_TYPE_F446;
+#elif defined(STM32F722)
+  return MCU_TYPE_F722;
+#elif defined(STM32F745)
+  return MCU_TYPE_F745;
+#elif defined(STM32F746)
+  return MCU_TYPE_F746;
+#elif defined(STM32F765)
+  return MCU_TYPE_F765;
+#elif defined(STM32H743)
+  return MCU_TYPE_H743_REVISION_UNKNOWN;
+#elif defined(STM32H750)
+  return MCU_TYPE_H750;
+#elif defined(STM32H730)
+  return MCU_TYPE_H730;
+#elif defined(STM32H7A3)
+  return MCU_TYPE_H7A3;
+#elif defined(STM32H723) || defined(STM32H725)
+  return MCU_TYPE_H723_725;
+#elif defined(STM32G4) || defined(STM32G474)
+  return MCU_TYPE_G474;
+#elif defined(AT32F435) || defined(AT32F437)
+  return MCU_TYPE_AT32F435;
+#else
+  return MCU_TYPE_UNKNOWN;
+#endif
+}
+
+void msp_send_reply(msp_t *msp, msp_magic_t magic, uint16_t cmd, const uint8_t *data, uint32_t len) {
+  if (msp->send) {
+    msp->send(magic, '>', cmd, data, len);
+  }
+}
+
+static void msp_send_error(msp_t *msp, msp_magic_t magic, uint16_t cmd) {
+  if (msp->send) {
+    msp->send(magic, '!', cmd, NULL, 0);
+  }
+}
+
+static void msp_quic_send(uint8_t *data, uint32_t len, void *priv) {
+  msp_t *msp = (msp_t *)priv;
+  msp_send_reply(msp, MSP1_MAGIC, MSP_RESERVE_1, data, len);
+}
+
+static void msp_check_vtx_detected(msp_t *msp) {
+#ifdef USE_VTX
+  if (msp_vtx_detected || msp->device != MSP_DEVICE_VTX)
+    return;
+
+  if (vtx_actual.power_table.levels == 0)
+    return;
+
+  msp_vtx_detected = true;
+#endif
+}
+
+static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *payload, uint16_t size) {
+  switch (cmd) {
+  case MSP_API_VERSION: {
+    uint8_t data[3] = {
+        0,  // MSP_PROTOCOL_VERSION
+        1,  // API_VERSION_MAJOR
+        42, // API_VERSION_MINOR
+    };
+    msp_send_reply(msp, magic, cmd, data, 3);
+    break;
+  }
+  case MSP_FC_VARIANT: {
+    uint8_t data[4] = {'Q', 'U', 'I', 'C'};
+    msp_send_reply(msp, magic, cmd, data, 4);
+    break;
+  }
+  case MSP_FC_VERSION: {
+    uint8_t data[3] = {
+        0, // FC_VERSION_MAJOR
+        1, // FC_VERSION_MINOR
+        0, // FC_VERSION_PATCH_LEVEL
+    };
+    msp_send_reply(msp, magic, cmd, data, 3);
+    break;
+  }
+  case MSP_BUILD_INFO: {
+    uint8_t data[19];
+    memcpy(data, MSP_BUILD_DATE_TIME, 19);
+    msp_send_reply(msp, magic, cmd, data, 19);
+    break;
+  }
+  case MSP_BOARD_INFO: {
+    uint8_t buf[256];
+    uint8_t *ptr = buf;
+
+    // board identifier (4 bytes) - manufacturer field uppercase
+    for (uint8_t i = 0; i < 4; i++) {
+      *ptr++ = (i < sizeof(target.manufacturer) && target.manufacturer[i] != '\0') ? toupper((unsigned char)target.manufacturer[i]) : ' ';
+    }
+
+    *ptr++ = 0; // hardware revision low
+    *ptr++ = 0; // hardware revision high
+
+    *ptr++ = (target_info.features & FEATURE_OSD) ? 2 : 0; // board type: 0=FC, 2=FC+OSD
+
+    *ptr++ = (1 << 0) | (1 << 1) | (1 << 3); // capabilities: VCP | Soft Serial | Flash Bootloader
+
+    // target name - mcu type uppercase
+    const char *target_name = target_info.mcu;
+    const uint8_t target_name_len = strlen(target_name);
+    *ptr++ = target_name_len;
+    for (uint8_t i = 0; i < target_name_len; i++) {
+      *ptr++ = toupper((unsigned char)target_name[i]);
+    }
+
+    // board name - target.name uppercase
+    const char *board_name = (const char *)target.name;
+    const uint8_t board_name_len = strnlen(board_name, sizeof(target.name));
+    *ptr++ = board_name_len;
+    for (uint8_t i = 0; i < board_name_len; i++) {
+      *ptr++ = toupper((unsigned char)board_name[i]);
+    }
+
+    // manufacturer id - uppercase
+    const char *manufacturer = (const char *)target.manufacturer;
+    const uint8_t manufacturer_len = strnlen(manufacturer, sizeof(target.manufacturer));
+    *ptr++ = manufacturer_len;
+    for (uint8_t i = 0; i < manufacturer_len; i++) {
+      *ptr++ = toupper((unsigned char)manufacturer[i]);
+    }
+
+    // signature (32 bytes) - device uid
+#ifndef SIMULATOR
+    memcpy(ptr, (uint8_t *)UID_BASE, 12);
+    memset(ptr + 12, 0, 20);
+#else
+    memset(ptr, 0, 32);
+#endif
+    ptr += 32;
+
+    *ptr++ = msp_get_mcu_type_id(); // mcu type id
+
+    *ptr++ = 0; // configuration state (API 1.42)
+
+    // gyro sample rate (API 1.43)
+    const uint16_t gyro_rate_hz = state.looptime_autodetect > 0 ? (uint16_t)(1000000.0f / state.looptime_autodetect) : 8000;
+    *ptr++ = gyro_rate_hz & 0xFF;
+    *ptr++ = (gyro_rate_hz >> 8) & 0xFF;
+
+    // configuration problems (API 1.43)
+    const uint32_t config_problems = 0;
+    *ptr++ = config_problems & 0xFF;
+    *ptr++ = (config_problems >> 8) & 0xFF;
+    *ptr++ = (config_problems >> 16) & 0xFF;
+    *ptr++ = (config_problems >> 24) & 0xFF;
+
+    // device counts (API 1.44)
+    uint8_t spi_count = 0;
+    if (target_gyro_spi_device_valid(&target.gyro))
+      spi_count++;
+    if (target_spi_device_valid(&target.osd))
+      spi_count++;
+    if (target_spi_device_valid(&target.flash))
+      spi_count++;
+    if (target_spi_device_valid(&target.sdcard))
+      spi_count++;
+    *ptr++ = spi_count; // spi device count
+    *ptr++ = 0;         // i2c device count
+
+    msp_send_reply(msp, magic, cmd, buf, ptr - buf);
+    break;
+  }
+  case MSP_UID: {
+#ifdef SIMULATOR
+    uint8_t data[12] = {
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+
+        0xd,
+        0xe,
+        0xa,
+        0xd,
+
+        0xb,
+        0xe,
+        0xe,
+        0xf,
+    };
+    msp_send_reply(msp, magic, cmd, data, 12);
+#else
+    msp_send_reply(msp, magic, cmd, (uint8_t *)UID_BASE, 12);
+#endif
+    break;
+  }
+  case MSP_ANALOG: {
+    const uint8_t vbat_legacy = (uint8_t)constrain(state.vbat_filtered / 0.1, 0, 255);
+    const uint16_t mah_drawn = (uint16_t)constrain(state.ibat_drawn, 0, 0xFFFF);
+    const uint16_t rssi = (uint16_t)constrain(state.rx_rssi * 1023 / 100, 0, 1023);
+    const int16_t current = (int16_t)constrain(state.ibat / 10, -0x8000, 0x7FFF);
+    const uint16_t voltage = (uint16_t)constrain(state.vbat_filtered / 0.01, 0, 0xFFFF);
+
+    const uint8_t data[9] = {
+        vbat_legacy,
+        mah_drawn & 0xFF,
+        mah_drawn >> 8,
+        rssi & 0xFF,
+        rssi >> 8,
+        current & 0xFF,
+        current >> 8,
+        voltage & 0xFF,
+        voltage >> 8,
+    };
+
+    msp_send_reply(msp, magic, cmd, data, 9);
+    break;
+  }
+  case MSP_BATTERY_STATE: {
+    const uint8_t cell_count = state.lipo_cell_count;
+    const uint16_t capacity = 0; // battery capacity not stored in QUICKSILVER
+    const uint8_t vbat_legacy = (uint8_t)constrain(state.vbat_filtered / 0.1, 0, 255);
+    const uint16_t mah_drawn = (uint16_t)constrain(state.ibat_drawn, 0, 0xFFFF);
+    const int16_t current = (int16_t)constrain(state.ibat / 10, -0x8000, 0x7FFF);
+    // Battery state matching Betaflight's batteryState_e enum
+    // 0 = BATTERY_OK, 1 = BATTERY_WARNING, 2 = BATTERY_CRITICAL
+    const uint8_t battery_state = flags.lowbatt ? 1 : 0;
+    const uint16_t voltage = (uint16_t)constrain(state.vbat_filtered / 0.01, 0, 0xFFFF);
+
+    const uint8_t data[11] = {
+        cell_count,
+        capacity & 0xFF,
+        capacity >> 8,
+        vbat_legacy,
+        mah_drawn & 0xFF,
+        mah_drawn >> 8,
+        current & 0xFF,
+        current >> 8,
+        battery_state,
+        voltage & 0xFF,
+        voltage >> 8,
+    };
+
+    msp_send_reply(msp, magic, cmd, data, 11);
+    break;
+  }
+  case MSP_FEATURE_CONFIG: {
+    uint8_t data[4] = {
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+    };
+    msp_send_reply(msp, magic, cmd, data, 4);
+    break;
+  }
+  case MSP_MOTOR_CONFIG: {
+    uint16_t data[5] = {
+        1070,         // min throttle
+        2000,         // max throttle
+        1000,         // min command
+        (0 << 8) | 4, // motor count &  motor pole count
+        0,            // dshot telemetry & esc sensor
+    };
+    msp_send_reply(msp, magic, cmd, (uint8_t *)data, 5 * sizeof(uint16_t));
+    break;
+  }
+  case MSP_MOTOR: {
+    // we always have 4 motors, but blheli expects 8
+    // these are pwm values
+    uint16_t data[8];
+    memset(data, 0, 8 * sizeof(uint16_t));
+
+    for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
+      if (motor_test.value[i] <= 0.0f) {
+        data[i] = 1000;
+      } else {
+        data[i] = mapf(motor_test.value[i], 0.0f, 1.0f, 1000.f, 2000.f);
+      }
+    }
+
+    msp_send_reply(msp, magic, cmd, (uint8_t *)data, 8 * sizeof(uint16_t));
+    break;
+  }
+  case MSP_STATUS_EX:
+  case MSP_STATUS: {
+    const uint16_t looptime = state.looptime_us;
+    const uint16_t i2c_errors = 0;
+    const uint16_t sensors = 0x21; // ACC (bit 0) + GYRO (bit 5)
+    
+    // Pack flight mode flags similar to Betaflight
+    // DJI expects ARMED flag in the packed flight mode flags
+    uint32_t flight_mode = 0;
+    if (flags.arm_state) {
+      flight_mode |= 0x1; // ARMED flag at bit 0
+    }
+    // Add other active modes if needed
+    if (rx_aux_on(AUX_LEVELMODE)) {
+      flight_mode |= (1 << 1); // ANGLE mode at bit 1
+    }
+    if (rx_aux_on(AUX_HORIZON)) {
+      flight_mode |= (1 << 2); // HORIZON mode at bit 2
+    }
+    
+    const uint8_t pid_profile = 0;
+    const uint16_t cpu_load = state.cpu_load;
+    const uint16_t gyro_cycle = state.looptime_autodetect;
+    
+    // Calculate arming disable flags
+    uint32_t arming_disable_flags = 0;
+    if (!flags.arm_safety) {
+      arming_disable_flags |= 0x01; // ARM_SWITCH flag
+    }
+    if (state.rx_filtered.throttle > 0.1f) {
+      arming_disable_flags |= 0x02; // THROTTLE flag
+    }
+    
+    // Build the response based on command type
+    uint8_t data[30]; // Max possible size
+    uint8_t *ptr = data;
+    
+    // Common fields for both MSP_STATUS and MSP_STATUS_EX
+    *ptr++ = looptime & 0xFF;
+    *ptr++ = looptime >> 8;
+    *ptr++ = i2c_errors & 0xFF;
+    *ptr++ = i2c_errors >> 8;
+    *ptr++ = sensors & 0xFF;
+    *ptr++ = sensors >> 8;
+    *ptr++ = flight_mode & 0xFF;
+    *ptr++ = (flight_mode >> 8) & 0xFF;
+    *ptr++ = (flight_mode >> 16) & 0xFF;
+    *ptr++ = (flight_mode >> 24) & 0xFF;
+    *ptr++ = pid_profile;
+    *ptr++ = cpu_load & 0xFF;
+    *ptr++ = cpu_load >> 8;
+    
+    if (cmd == MSP_STATUS_EX) {
+      *ptr++ = 1; // PID profile count
+      *ptr++ = 0; // current control rate profile index
+    } else {
+      *ptr++ = gyro_cycle & 0xFF;
+      *ptr++ = gyro_cycle >> 8;
+    }
+    
+    // Extended flight mode flags header (always included)
+    *ptr++ = 0; // byte count for extended flags (0 = no extra bytes)
+    
+    // Arming disable flags
+    *ptr++ = 1; // arming disable flags count (1 = 4 bytes)
+    *ptr++ = arming_disable_flags & 0xFF;
+    *ptr++ = (arming_disable_flags >> 8) & 0xFF;
+    *ptr++ = (arming_disable_flags >> 16) & 0xFF;
+    *ptr++ = (arming_disable_flags >> 24) & 0xFF;
+    
+    // Config state flags
+    *ptr++ = 0; // reboot required (bit 0)
+    
+    // CPU temperature (added in API 1.46)
+    const uint16_t cpu_temp_celsius = (uint16_t)state.cpu_temp;
+    *ptr++ = cpu_temp_celsius & 0xFF;
+    *ptr++ = cpu_temp_celsius >> 8;
+    
+    // Control rate profile count
+    *ptr++ = 1; // control rate profile count
+    
+    msp_send_reply(msp, magic, cmd, data, ptr - data);
+    break;
+  }
+  case MSP_RC: {
+    uint16_t data[16];
+
+    data[0] = mapf(state.rx_filtered.roll, -1.0f, 1.0f, 1000.f, 2000.f);
+    data[1] = mapf(state.rx_filtered.pitch, -1.0f, 1.0f, 1000.f, 2000.f);
+    data[2] = mapf(state.rx_filtered.yaw, -1.0f, 1.0f, 1000.f, 2000.f);
+    data[3] = mapf(state.rx_filtered.throttle, 0.0f, 1.0f, 1000.f, 2000.f);
+
+    for (uint32_t i = 0; i < AUX_CHANNEL_OFF; i++) {
+      if (state.aux[i]) {
+        data[i + 4] = 2000;
+      } else {
+        data[i + 4] = 1000;
+      }
+    }
+
+    msp_send_reply(msp, magic, cmd, (uint8_t *)data, 32);
+    break;
+  }
+  case MSP_SET_MOTOR: {
+    uint16_t *values = (uint16_t *)(payload);
+
+    motor_test.active = 0;
+    for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
+      const uint16_t val = constrain(values[i], 1000, 2000);
+      if (val == 1000) {
+        motor_test.value[i] = MOTOR_OFF;
+      } else {
+        motor_test.value[i] = mapf(val, 1000.f, 2000.f, 0.0f, 1.0f);
+        motor_test.active = 1;
+      }
+    }
+
+    msp_send_reply(msp, magic, cmd, NULL, 0);
+    break;
+  }
+  case MSP_SET_PASSTHROUGH: {
+    msp_passthrough_mode_t mode = MSP_PASSTHROUGH_ESC_4WAY;
+    uint8_t arg = 0;
+
+    if (size != 0) {
+      mode = (msp_passthrough_mode_t)payload[0];
+      arg = payload[1];
+    }
+
+    switch (mode) {
+#ifdef USE_SERIAL
+    case MSP_PASSTHROUGH_SERIAL_ID: {
+      uint8_t data[1] = {1};
+      msp_send_reply(msp, magic, cmd, data, 1);
+#ifdef USE_VTX
+      if (arg == serial_vtx.config.port) {
+        if (vtx_settings.protocol == VTX_PROTOCOL_SMART_AUDIO) {
+          usb_serial_passthrough((serial_ports_t)arg, 4800, 2, true);
+        } else {
+          // MSP & Tramp both use 9600 baud
+          usb_serial_passthrough((serial_ports_t)arg, 9600, 1, true);
+        }
+      }
+#endif
+      break;
+    }
+#endif
+#ifdef USE_MOTOR_DSHOT
+    default:
+    case MSP_PASSTHROUGH_ESC_4WAY: {
+      uint8_t data[1] = {MOTOR_PIN_MAX};
+      msp_send_reply(msp, magic, cmd, data, 1);
+
+      motor_test.active = 0;
+
+      serial_4way_init();
+      serial_4way_process();
+      break;
+    }
+#endif
+    }
+
+    break;
+  }
+
+  case MSP_RESERVE_1: {
+    quic_t quic = {
+        .priv_data = msp,
+        .send = msp_quic_send,
+    };
+    quic_process(&quic, payload, size);
+    break;
+  }
+
+#ifdef USE_SERIAL
+  case MSP2_COMMON_SERIAL_CONFIG: {
+    const uint8_t uart_count = SERIAL_PORT_MAX - 1;
+    uint8_t data[1 + uart_count * 5];
+
+    data[0] = uart_count;
+
+    for (uint32_t i = 0; i < uart_count; i++) {
+      data[1 + i * 5] = i;
+
+      uint32_t function = 0;
+      if (i == serial_rx.config.port) {
+        function = MSP_SERIAL_FUNCTION_RX;
+      }
+#ifdef USE_VTX
+      if (i == serial_vtx.config.port) {
+        if (vtx_settings.protocol == VTX_PROTOCOL_TRAMP) {
+          function = MSP_SERIAL_FUNCTION_TRAMP;
+        } else {
+          function = MSP_SERIAL_FUNCTION_SA;
+        }
+      }
+#endif
+#ifdef USE_DIGITAL_VTX
+      if (i == serial_displayport.config.port) {
+        function = MSP_SERIAL_FUNCTION_DISPLAYPORT;
+      }
+#endif
+
+      data[1 + i * 5 + 1] = (function >> 0) & 0xFF;
+      data[1 + i * 5 + 2] = (function >> 8) & 0xFF;
+      data[1 + i * 5 + 3] = (function >> 16) & 0xFF;
+      data[1 + i * 5 + 4] = (function >> 24) & 0xFF;
+    }
+
+    msp_send_reply(msp, magic, cmd, data, 1 + uart_count * 5);
+    break;
+  }
+#endif
+#ifdef USE_VTX
+  case MSP_VTX_CONFIG: {
+    msp_check_vtx_detected(msp);
+    msp_vtx_send_config_reply(msp, magic);
+    break;
+  }
+
+  case MSP_SET_VTX_CONFIG: {
+    vtx_settings_t *settings = &vtx_actual;
+    if (msp->device != MSP_DEVICE_VTX) {
+      // store non-msp settings in temporary;
+      static vtx_settings_t _vtx_settings;
+      _vtx_settings = vtx_settings;
+      settings = &_vtx_settings;
+
+      settings->magic = VTX_SETTINGS_MAGIC;
+    }
+
+    uint16_t remaining = size;
+
+    uint16_t freq = (payload[1] << 8) | payload[0];
+    remaining -= 2;
+    if (freq < VTX_BAND_MAX * VTX_CHANNEL_MAX) {
+      settings->band = (vtx_band_t)(freq / VTX_CHANNEL_MAX);
+      settings->channel = (vtx_channel_t)(freq % VTX_CHANNEL_MAX);
+    } else {
+      int8_t channel_index = vtx_find_frequency_index(freq);
+      settings->band = (vtx_band_t)(channel_index / VTX_CHANNEL_MAX);
+      settings->channel = (vtx_channel_t)(channel_index % VTX_CHANNEL_MAX);
+    }
+
+    if (remaining >= 2) {
+      settings->power_level = (vtx_power_level_t)(MAX(payload[2], 1) - 1);
+      settings->pit_mode = (vtx_pit_mode_t)payload[3];
+      remaining -= 2;
+    }
+
+    if (remaining) {
+      // payload[4] lowpower disarm, unused
+      remaining -= 1;
+    }
+
+    if (remaining >= 2) {
+      // payload[5], payload[6] pit mode freq, unused
+      remaining -= 2;
+    }
+
+    if (remaining >= 4) {
+      settings->band = (vtx_band_t)(payload[7] - 1);
+      settings->channel = (vtx_channel_t)(payload[8] - 1);
+      //  payload[9], payload[10]  freq, unused
+      remaining -= 4;
+    }
+
+    if (remaining >= 4) {
+      // payload[11], band count, unused
+      // payload[12], channel count, unused
+      settings->power_table.levels = payload[13];
+
+      if (payload[14]) {
+        // clear tables
+        for (uint32_t i = 0; i < VTX_POWER_LEVEL_MAX; i++) {
+          settings->power_table.values[i] = 0;
+          memset(settings->power_table.labels[i], 0, 3);
+        }
+      }
+
+      remaining -= 4;
+    }
+
+    if (msp->device != MSP_DEVICE_VTX) {
+      vtx_set(settings);
+    }
+
+    msp_check_vtx_detected(msp);
+    msp_send_reply(msp, magic, cmd, NULL, 0);
+    break;
+  }
+
+  case MSP_VTXTABLE_BAND: {
+    const uint8_t band = payload[0];
+    if (band <= 0 || band > VTX_BAND_MAX) {
+      msp_send_error(msp, magic, cmd);
+      break;
+    }
+
+    uint8_t offset = 0;
+    uint8_t buf[5 + 8 + VTX_CHANNEL_MAX * sizeof(uint16_t)];
+
+    buf[offset++] = band;
+    buf[offset++] = 8;
+
+    for (uint32_t i = 0; i < 8; i++) {
+      buf[offset++] = msp_vtx_band_labels[band - 1][i];
+    }
+
+    buf[offset++] = msp_vtx_band_letters[band - 1];
+    buf[offset++] = msp_vtx_band_is_factory[band - 1];
+
+    buf[offset++] = VTX_CHANNEL_MAX;
+    for (uint32_t i = 0; i < VTX_CHANNEL_MAX; i++) {
+      buf[offset++] = msp_vtx_frequency_table[band - 1][i] & 0xFF;
+      buf[offset++] = msp_vtx_frequency_table[band - 1][i] >> 8;
+    }
+
+    msp_send_reply(msp, magic, cmd, buf, offset);
+    break;
+  }
+
+  case MSP_SET_VTXTABLE_BAND: {
+    uint8_t offset = 0;
+    const uint8_t band = payload[offset++];
+    if (band <= 0 || band > VTX_BAND_MAX) {
+      msp_send_error(msp, magic, cmd);
+      break;
+    }
+
+    const uint8_t label_len = payload[offset++];
+    for (uint8_t i = 0; i < 8; i++) {
+      msp_vtx_band_labels[band - 1][i] = i >= label_len ? 0 : payload[offset++];
+    }
+
+    msp_vtx_band_letters[band - 1] = payload[offset++];
+    msp_vtx_band_is_factory[band - 1] = payload[offset++];
+
+    const uint8_t count = payload[offset++];
+    for (uint32_t i = 0; i < count; i++) {
+      msp_vtx_frequency_table[band - 1][i] = (payload[offset + 1] << 8) | payload[offset];
+      offset += 2;
+    }
+
+    msp_send_reply(msp, magic, cmd, NULL, 0);
+    break;
+  }
+
+  case MSP_VTXTABLE_POWERLEVEL: {
+    const uint8_t level = payload[0];
+    if (level <= 0 || level > vtx_actual.power_table.levels) {
+      msp_send_error(msp, magic, cmd);
+      break;
+    }
+
+    const uint16_t power = vtx_actual.power_table.values[level - 1];
+
+    uint8_t buf[4 + VTX_POWER_LABEL_LEN];
+    buf[0] = level;
+    buf[1] = power & 0xFF;
+    buf[2] = power >> 8;
+    buf[3] = VTX_POWER_LABEL_LEN;
+    memcpy(buf + 4, vtx_actual.power_table.labels[level - 1], VTX_POWER_LABEL_LEN);
+
+    msp_send_reply(msp, magic, cmd, buf, 7);
+    break;
+  }
+
+  case MSP_SET_VTXTABLE_POWERLEVEL: {
+    const uint8_t level = payload[0];
+    if (level <= 0 || level > VTX_POWER_LEVEL_MAX) {
+      msp_send_error(msp, magic, cmd);
+      break;
+    }
+
+    vtx_actual.power_table.levels = MAX(level, vtx_actual.power_table.levels);
+    vtx_actual.power_table.values[level - 1] = payload[2] << 8 | payload[1];
+
+    const uint8_t label_len = payload[3];
+    for (uint8_t i = 0; i < VTX_POWER_LABEL_LEN; i++) {
+      vtx_actual.power_table.labels[level - 1][i] = i >= label_len ? 0 : payload[4 + i];
+    }
+    msp_send_reply(msp, magic, cmd, NULL, 0);
+    break;
+  }
+#endif
+  case MSP_EEPROM_WRITE: {
+#ifdef USE_VTX
+    if (msp->device == MSP_DEVICE_VTX) {
+      msp_check_vtx_detected(msp);
+    } else
+#endif
+        if (!flags.arm_state && msp->device != MSP_DEVICE_SPI_RX) {
+      flash_save();
+      task_reset_runtime();
+    }
+    msp_send_reply(msp, magic, cmd, NULL, 0);
+    break;
+  }
+
+  case MSP_REBOOT: {
+    if (flags.arm_state) {
+      msp_send_error(msp, magic, cmd);
+      break;
+    }
+
+    msp_send_reply(msp, magic, cmd, payload, 1);
+    time_delay_ms(100);
+
+    switch (payload[0]) {
+    case MSP_REBOOT_FIRMWARE:
+      system_reset();
+      break;
+
+    case MSP_REBOOT_BOOTLOADER_FLASH:
+    case MSP_REBOOT_BOOTLOADER_ROM:
+      system_reset_to_bootloader();
+      break;
+
+    default:
+      break;
+    }
+    break;
+  }
+
+  default:
+    msp_send_error(msp, magic, cmd);
+    break;
+  }
+}
+
+msp_status_t msp_process_serial(msp_t *msp, uint8_t data) {
+  if (msp->buffer_offset >= msp->buffer_size) {
+    msp->buffer_offset = 0;
+    return MSP_ERROR;
+  }
+
+  msp->buffer[msp->buffer_offset] = data;
+  msp->buffer_offset++;
+
+  if (msp->buffer[0] != '$') {
+    msp->buffer_offset = 0;
+    return MSP_ERROR;
+  }
+
+  if (msp->buffer_offset < 3) {
+    return MSP_EOF;
+  }
+
+  switch (msp->buffer[1]) {
+  case 'M': {
+    if (msp->buffer_offset < MSP_HEADER_LEN) {
+      return MSP_EOF;
+    }
+
+    const uint8_t size = msp->buffer[3];
+    const uint8_t cmd = msp->buffer[4];
+
+    if (msp->buffer_offset < (MSP_HEADER_LEN + size + 1)) {
+      return MSP_EOF;
+    }
+
+    uint8_t chksum = size ^ cmd;
+    for (uint8_t i = 0; i < size; i++) {
+      chksum ^= msp->buffer[MSP_HEADER_LEN + i];
+    }
+
+    if (msp->buffer[MSP_HEADER_LEN + size] != chksum) {
+      msp->buffer_offset = 0;
+      return MSP_ERROR;
+    }
+
+    msp_process_serial_cmd(msp, MSP1_MAGIC, cmd, msp->buffer + MSP_HEADER_LEN, size);
+    msp->buffer_offset = 0;
+    return MSP_SUCCESS;
+  }
+
+  case 'X': {
+    if (msp->buffer_offset < MSP2_HEADER_LEN) {
+      return MSP_EOF;
+    }
+
+    //  msp->buffer[3] flag
+    const uint16_t cmd = (msp->buffer[5] << 8) | msp->buffer[4];
+    const uint16_t size = (msp->buffer[7] << 8) | msp->buffer[6];
+
+    if (msp->buffer_offset < (MSP2_HEADER_LEN + size + 1)) {
+      return MSP_EOF;
+    }
+
+    const uint8_t chksum = crc8_dvb_s2_data(0, msp->buffer + 3, size + 5);
+    if (msp->buffer[MSP2_HEADER_LEN + size] != chksum) {
+      msp->buffer_offset = 0;
+      return MSP_ERROR;
+    }
+
+    msp_process_serial_cmd(msp, MSP2_MAGIC, cmd, msp->buffer + MSP2_HEADER_LEN, size);
+    msp->buffer_offset = 0;
+    return MSP_SUCCESS;
+  }
+
+  default:
+    msp->buffer_offset = 0;
+    return MSP_ERROR;
+  }
+}
+
+msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint32_t len) {
+  if (len < 1) {
+    return MSP_EOF;
+  }
+
+  uint8_t offset = 0;
+
+  const uint8_t status = data[offset++];
+  const uint8_t version = (status & MSP_STATUS_VERSION_MASK) >> MSP_STATUS_VERSION_SHIFT;
+  const uint8_t sequence = status & MSP_STATUS_SEQUENCE_MASK;
+  if (version > 2) {
+    return MSP_ERROR;
+  }
+
+  static bool packet_started = false;
+
+  static uint16_t last_size = 0;
+  static uint16_t last_cmd = 0;
+  static uint8_t last_seq = 0;
+
+  if (status & MSP_STATUS_START_MASK) { // first chunk
+    if (len < MSP_TLM_HEADER_LEN) {
+      return MSP_EOF;
+    }
+
+    if (version == 1) {
+      last_size = data[offset++];
+      last_cmd = data[offset++];
+      if (last_size == 0xFF) {
+        last_size = (data[offset + 1] << 8) | data[offset];
+        offset += 2;
+      }
+    } else {
+      offset++; // skip flags
+      last_cmd = (data[offset + 1] << 8) | data[offset];
+      offset += 2;
+      last_size = (data[offset + 1] << 8) | data[offset];
+      offset += 2;
+    }
+
+    packet_started = true;
+    msp->buffer_offset = 0;
+  } else { // second chunk
+    if (!packet_started) {
+      return MSP_ERROR;
+    }
+    if (((last_seq + 1) & MSP_STATUS_SEQUENCE_MASK) != sequence) {
+      packet_started = false;
+      return MSP_ERROR;
+    }
+  }
+
+  last_seq = sequence;
+
+  memcpy(msp->buffer + msp->buffer_offset, data + offset, len - offset);
+  msp->buffer_offset += len - offset;
+
+  if (msp->buffer_offset < last_size) {
+    return MSP_EOF;
+  }
+
+  quic_debugf("msp crsf 0x%x", last_cmd);
+  msp_process_serial_cmd(msp, version == 1 ? MSP1_MAGIC : MSP2_MAGIC, last_cmd, msp->buffer, last_size);
+  return MSP_SUCCESS;
+}

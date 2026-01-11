@@ -14,10 +14,8 @@ except ImportError:
 system_flags = [s for s in env.GetProjectOption("system_flags", "").splitlines() if s]
 
 common_flags = [
-    "-std=gnu11",
     "-Wdouble-promotion",
     "-fsingle-precision-constant",
-    "-fno-exceptions",
     "-fno-strict-aliasing",
     "-fstack-usage",
     "-fno-stack-protector",
@@ -26,6 +24,15 @@ common_flags = [
     "-fno-asynchronous-unwind-tables",
     "-fno-math-errno",
     "-fmerge-all-constants",
+]
+
+c_flags = [
+    "-std=gnu11",
+]
+
+cxx_flags = [
+    "-std=gnu++17",
+    "-fno-exceptions",
 ]
 
 if env.GetBuildType() == "release":
@@ -51,8 +58,10 @@ env.Append(
     BUILD_UNFLAGS=["-Og", "-Os", "-DDEBUG"],
     ASFLAGS=system_flags + common_flags,
     CCFLAGS=system_flags + common_flags,
+    CFLAGS=c_flags,
+    CXXFLAGS=cxx_flags,
     CPPDEFINES=[("GIT_VERSION", git_version)],
-    LINKFLAGS=system_flags + common_flags,
+    LINKFLAGS=system_flags + common_flags + cxx_flags,
 )
 
 

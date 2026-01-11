@@ -22,31 +22,31 @@
 #define LOG2_16BIT(v) (8 * ((v) > 255) + LOG2_8BIT((v) >> 8 * ((v) > 255)))
 #define LOG2_32BIT(v) (16 * ((v) > 65535L) + LOG2_16BIT((v) * 1L >> 16 * ((v) > 65535L)))
 
-#define SWAP(x, y)      \
-  {                     \
-    typeof(x) temp = x; \
-    x = y;              \
-    y = temp;           \
+#define SWAP(x, y)          \
+  {                         \
+    __typeof__(x) temp = x; \
+    x = y;                  \
+    y = temp;               \
   }
 
-#define constrain(val, min, max)                                \
-  ({                                                            \
-    typeof(val) _val = (val);                                   \
-    typeof(min) _min = (min);                                   \
-    typeof(max) _max = (max);                                   \
-    (_val < _min) ? (_min) : ((_val > _max) ? (_max) : (_val)); \
+#define constrain(val, lower, upper)                                    \
+  ({                                                                    \
+    __typeof__(val) _val = (val);                                       \
+    __typeof__(lower) _lower = (lower);                                 \
+    __typeof__(upper) _upper = (upper);                                 \
+    (_val < _lower) ? (_lower) : ((_val > _upper) ? (_upper) : (_val)); \
   })
-#define min(a, b)       \
-  ({                    \
-    typeof(a) _a = (a); \
-    typeof(b) _b = (b); \
-    _a < _b ? _a : _b;  \
+#define MIN(a, b)             \
+  ({                          \
+    __typeof__(a) _a = (a);   \
+    __typeof__(b) _b = (b);   \
+    _a < _b ? _a : _b;        \
   })
-#define max(a, b)       \
-  ({                    \
-    typeof(a) _a = (a); \
-    typeof(b) _b = (b); \
-    _a > _b ? _a : _b;  \
+#define MAX(a, b)             \
+  ({                          \
+    __typeof__(a) _a = (a);   \
+    __typeof__(b) _b = (b);   \
+    _a > _b ? _a : _b;        \
   })
 
 #define MHZ_TO_HZ(mhz) (mhz * 1000000)

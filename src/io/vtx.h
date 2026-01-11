@@ -4,7 +4,7 @@
 
 #define VTX_SETTINGS_MAGIC 0xdeed
 #define VTX_APPLY_TRIES 50
-#define VTX_POWER_LABEL_LEN 5
+#define VTX_POWER_LABEL_LEN 6
 
 typedef enum {
   VTX_DETECT_WAIT,
