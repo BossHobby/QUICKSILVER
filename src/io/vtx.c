@@ -384,7 +384,7 @@ void vtx_set(vtx_settings_t *vtx) {
     vtx_settings.detected = VTX_PROTOCOL_INVALID;
     vtx_settings.protocol = vtx->protocol;
     vtx_settings.magic = 0xFFFF;
-    vtx_settings.power_table.levels = 0;
+    vtx_settings.power_table.levels = 1;
 
     smart_audio_settings.version = 0;
     smart_audio_detected = 0;
