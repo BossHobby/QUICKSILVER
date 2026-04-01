@@ -226,6 +226,9 @@ void motor_output_calc(float mix[MOTOR_PIN_MAX]) {
       // use values as supplied in motor test mode
       mix[i] = constrain(mix[i], 0, 1);
       mix[i] = mapf(mix[i], 0.0f, 1.0f, motor_min_value, profile.motor.motor_limit * 0.01f);
+    } else if (mix[i] <= 0.0f) {
+      // zero throttle in motor test must map to MOTOR_OFF (-1) so the dshot driver sends value 0 (stop) rather than 48 (min throttle)
+      mix[i] = MOTOR_OFF;
     }
 
 #ifndef NOMOTORS
