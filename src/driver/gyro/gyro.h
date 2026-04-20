@@ -21,6 +21,10 @@ typedef enum {
 
   GYRO_TYPE_ICM42622P,
   GYRO_TYPE_ICM42686P,
+
+  GYRO_TYPE_LSM6DSO,
+  GYRO_TYPE_LSM6DSV16X,
+  GYRO_TYPE_LSM6DSK320X,
 } gyro_types_t;
 
 typedef struct {

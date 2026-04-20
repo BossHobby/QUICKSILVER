@@ -7,6 +7,8 @@
 #include "driver/gyro/bmi270.h"
 #include "driver/gyro/bmi323.h"
 #include "driver/gyro/icm42605.h"
+#include "driver/gyro/lsm6dso.h"
+#include "driver/gyro/lsm6dsv16x.h"
 #include "driver/gyro/mpu6xxx.h"
 
 #ifdef USE_GYRO
@@ -40,6 +42,21 @@ static gyro_types_t gyro_spi_detect() {
   case GYRO_TYPE_ICM42622P:
   case GYRO_TYPE_ICM42686P:
     type = icm42605_detect();
+    if (type != GYRO_TYPE_INVALID) {
+      break;
+    }
+    // FALLTHROUGH
+
+  case GYRO_TYPE_LSM6DSO:
+    type = lsm6dso_detect();
+    if (type != GYRO_TYPE_INVALID) {
+      break;
+    }
+    // FALLTHROUGH
+
+  case GYRO_TYPE_LSM6DSV16X:
+  case GYRO_TYPE_LSM6DSK320X:
+    type = lsm6dsv16x_detect();
     if (type != GYRO_TYPE_INVALID) {
       break;
     }
@@ -101,6 +118,15 @@ gyro_types_t gyro_init() {
     icm42605_configure();
     break;
 
+  case GYRO_TYPE_LSM6DSO:
+    lsm6dso_configure();
+    break;
+
+  case GYRO_TYPE_LSM6DSV16X:
+  case GYRO_TYPE_LSM6DSK320X:
+    lsm6dsv16x_configure();
+    break;
+
   case GYRO_TYPE_BMI270:
     bmi270_configure();
     break;
@@ -140,6 +166,13 @@ float gyro_update_period() {
   case GYRO_TYPE_ICM42686P:
     return 125.0f;
 
+  case GYRO_TYPE_LSM6DSO:
+    return 150.06f;
+
+  case GYRO_TYPE_LSM6DSV16X:
+  case GYRO_TYPE_LSM6DSK320X:
+    return 125.0f;
+
   case GYRO_TYPE_BMI270:
   case GYRO_TYPE_BMI323:
     return 312.5f;
@@ -168,6 +201,17 @@ gyro_data_t gyro_read() {
   case GYRO_TYPE_ICM42622P:
   case GYRO_TYPE_ICM42686P: {
     icm42605_read_gyro_data(&data);
+    break;
+  }
+
+  case GYRO_TYPE_LSM6DSO: {
+    lsm6dso_read_gyro_data(&data);
+    break;
+  }
+
+  case GYRO_TYPE_LSM6DSV16X:
+  case GYRO_TYPE_LSM6DSK320X: {
+    lsm6dsv16x_read_gyro_data(&data);
     break;
   }
 
