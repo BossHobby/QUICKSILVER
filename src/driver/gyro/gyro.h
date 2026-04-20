@@ -18,6 +18,9 @@ typedef enum {
 
   GYRO_TYPE_BMI270,
   GYRO_TYPE_BMI323,
+
+  GYRO_TYPE_ICM42622P,
+  GYRO_TYPE_ICM42686P,
 } gyro_types_t;
 
 typedef struct {

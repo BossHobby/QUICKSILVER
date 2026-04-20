@@ -37,6 +37,8 @@ static gyro_types_t gyro_spi_detect() {
 
   case GYRO_TYPE_ICM42605:
   case GYRO_TYPE_ICM42688P:
+  case GYRO_TYPE_ICM42622P:
+  case GYRO_TYPE_ICM42686P:
     type = icm42605_detect();
     if (type != GYRO_TYPE_INVALID) {
       break;
@@ -94,6 +96,8 @@ gyro_types_t gyro_init() {
 
   case GYRO_TYPE_ICM42605:
   case GYRO_TYPE_ICM42688P:
+  case GYRO_TYPE_ICM42622P:
+  case GYRO_TYPE_ICM42686P:
     icm42605_configure();
     break;
 
@@ -132,6 +136,8 @@ float gyro_update_period() {
 
   case GYRO_TYPE_ICM42605:
   case GYRO_TYPE_ICM42688P:
+  case GYRO_TYPE_ICM42622P:
+  case GYRO_TYPE_ICM42686P:
     return 125.0f;
 
   case GYRO_TYPE_BMI270:
@@ -158,7 +164,9 @@ gyro_data_t gyro_read() {
   }
 
   case GYRO_TYPE_ICM42605:
-  case GYRO_TYPE_ICM42688P: {
+  case GYRO_TYPE_ICM42688P:
+  case GYRO_TYPE_ICM42622P:
+  case GYRO_TYPE_ICM42686P: {
     icm42605_read_gyro_data(&data);
     break;
   }

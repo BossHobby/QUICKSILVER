@@ -11,6 +11,8 @@
 
 #define ICM42605_ID (0x42)
 #define ICM42688P_ID (0x47)
+#define ICM42622P_ID (0x46)
+#define ICM42686P_ID (0x44)
 
 #define SPI_SPEED_SLOW MHZ_TO_HZ(0.5)
 #define SPI_SPEED_FAST MHZ_TO_HZ(24)
@@ -30,6 +32,10 @@ gyro_types_t icm42605_detect() {
     return GYRO_TYPE_ICM42605;
   case ICM42688P_ID:
     return GYRO_TYPE_ICM42688P;
+  case ICM42622P_ID:
+    return GYRO_TYPE_ICM42622P;
+  case ICM42686P_ID:
+    return GYRO_TYPE_ICM42686P;
   default:
     return GYRO_TYPE_INVALID;
   }
@@ -78,10 +84,12 @@ void icm42605_configure() {
   icm42605_write(ICM42605_PWR_MGMT0, ICM42605_PWR_MGMT0_ACCEL_MODE_LN | ICM42605_PWR_MGMT0_GYRO_MODE_LN | ICM42605_PWR_MGMT0_TEMP_DISABLE_OFF);
   time_delay_ms(1);
 
-  icm42605_write(ICM42605_GYRO_CONFIG0, ICM42605_GFS_2000DPS | ICM42605_GODR_8000Hz);
+  // ICM-42686-P uses FS_SEL=1 for ±2000DPS / ±16G (FS_SEL=0 is ±4000DPS / ±32G)
+  const uint8_t fs_sel = (gyro_type == GYRO_TYPE_ICM42686P) ? (1 << 5) : ICM42605_GFS_2000DPS;
+  icm42605_write(ICM42605_GYRO_CONFIG0, fs_sel | ICM42605_GODR_8000Hz);
   time_delay_ms(15);
 
-  icm42605_write(ICM42605_ACCEL_CONFIG0, ICM42605_AFS_16G | ICM42605_AODR_8000Hz);
+  icm42605_write(ICM42605_ACCEL_CONFIG0, fs_sel | ICM42605_AODR_8000Hz);
   time_delay_ms(15);
 }
 
