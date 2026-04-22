@@ -63,10 +63,9 @@ void motor_set(motor_position_t pos, float pwm) {
 }
 
 void motor_set_all(float pwm) {
-  motor_set(MOTOR_BL, pwm);
-  motor_set(MOTOR_FL, pwm);
-  motor_set(MOTOR_FR, pwm);
-  motor_set(MOTOR_BR, pwm);
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    motor_values[i] = pwm;
+  }
 }
 
 void motor_update() {

@@ -9,7 +9,7 @@
 
 #define OSD_NUMBER_ELEMENTS 32
 
-#define PROFILE_VERSION MAKE_SEMVER(0, 2, 6)
+#define PROFILE_VERSION MAKE_SEMVER(0, 2, 7)
 
 // Rates
 typedef enum {
@@ -356,6 +356,62 @@ typedef struct {
   uint32_t sample_rate_hz;
 } profile_blackbox_t;
 
+typedef enum {
+  ROVER_STEER_MODE_MANUAL,
+  ROVER_STEER_MODE_RATE_ASSIST,
+  ROVER_STEER_MODE_HEADING_HOLD,
+} __attribute__((__packed__)) rover_steer_mode_t;
+
+typedef struct {
+  float kp;
+  float ki;
+  float kd;
+  float i_limit;
+  float heading_deadband;
+  profile_filter_parameter_t dterm_filter;
+} rover_pid_rate_t;
+
+#define ROVER_PID_RATE_MEMBERS      \
+  START_STRUCT(rover_pid_rate_t)    \
+  MEMBER(kp, float)                 \
+  MEMBER(ki, float)                 \
+  MEMBER(kd, float)                 \
+  MEMBER(i_limit, float)            \
+  MEMBER(heading_deadband, float)   \
+  MEMBER(dterm_filter, profile_filter_parameter_t) \
+  END_STRUCT()
+
+typedef struct {
+  rover_steer_mode_t steer_mode;
+  float throttle_fwd_limit;
+  float throttle_rev_limit;
+  rover_pid_rate_t pid;
+  float center_deadband;
+  float steer_authority;
+  float throttle_scale_breakpoint;
+  float throttle_scale_factor;
+  uint8_t motor_index;
+  uint8_t servo_index;
+  uint16_t servo_pwm_hz;
+  uint8_t reversible;
+} profile_rover_t;
+
+#define ROVER_MEMBERS               \
+  START_STRUCT(profile_rover_t)     \
+  MEMBER(steer_mode, uint8_t)       \
+  MEMBER(throttle_fwd_limit, float) \
+  MEMBER(throttle_rev_limit, float) \
+  MEMBER(pid, rover_pid_rate_t)     \
+  MEMBER(center_deadband, float)    \
+  MEMBER(steer_authority, float)    \
+  MEMBER(throttle_scale_breakpoint, float) \
+  MEMBER(throttle_scale_factor, float) \
+  MEMBER(motor_index, uint8_t)      \
+  MEMBER(servo_index, uint8_t)      \
+  MEMBER(servo_pwm_hz, uint16_t)    \
+  MEMBER(reversible, uint8_t)       \
+  END_STRUCT()
+
 #define BLACKBOX_MEMBERS           \
   START_STRUCT(profile_blackbox_t) \
   MEMBER(field_flags, uint32_t)    \
@@ -390,6 +446,7 @@ typedef struct {
   profile_pid_t pid;
   profile_voltage_t voltage;
   profile_blackbox_t blackbox;
+  profile_rover_t rover;
 } profile_t;
 
 #define PROFILE_MEMBERS                \
@@ -404,6 +461,7 @@ typedef struct {
   MEMBER(pid, profile_pid_t)           \
   MEMBER(voltage, profile_voltage_t)   \
   MEMBER(blackbox, profile_blackbox_t) \
+  MEMBER(rover, profile_rover_t)       \
   END_STRUCT()
 
 extern profile_t profile;

@@ -15,11 +15,13 @@
 #include "driver/interrupt.h"
 #include "driver/motor.h"
 #include "driver/rgb_led.h"
+#include "driver/servo.h"
 #include "driver/time.h"
 #include "driver/timer.h"
 #include "driver/usb.h"
 #include "flight/filter.h"
 #include "flight/imu.h"
+#include "flight/motor.h"
 #include "flight/pid.h"
 #include "flight/sixaxis.h"
 #include "io/blackbox.h"
@@ -101,8 +103,13 @@ __attribute__((__used__)) int main() {
   simulator_init();
 
   rgb_led_init();
+
+#ifdef VEHICLE_ROVER
+  servo_init();
+#else
   motor_init();
   motor_set_all(MOTOR_OFF);
+#endif
 
   // wait for devices to wake up
   time_delay_ms(100);
@@ -112,6 +119,10 @@ __attribute__((__used__)) int main() {
   sixaxis_init();
   // needs to happen after gyro is detected so we know its update period
   scheduler_init();
+
+#ifdef VEHICLE_ROVER
+  rover_pid_init();
+#endif
 
   time_delay_ms(50);
   sixaxis_gyro_cal();

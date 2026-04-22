@@ -23,8 +23,18 @@ typedef enum {
   MOTOR_PIN1,
   MOTOR_PIN2,
   MOTOR_PIN3,
+  MOTOR_PIN4,
+  MOTOR_PIN5,
+  MOTOR_PIN6,
+  MOTOR_PIN7,
   MOTOR_PIN_MAX
 } __attribute__((__packed__)) motor_pin_t;
+
+typedef enum {
+  VEHICLE_TYPE_MULTI = (1 << 0),
+  VEHICLE_TYPE_ROVER = (1 << 1),
+  VEHICLE_TYPE_WING = (1 << 2),
+} vehicle_type_t;
 
 typedef enum {
   SPI_PORT_INVALID,
@@ -220,6 +230,7 @@ typedef struct {
   target_invert_pin_t buzzer;
   gpio_pins_t motor_pins[MOTOR_PIN_MAX];
 
+  uint8_t vehicles;
   uint16_t vbat_scale;
   uint16_t ibat_scale;
 
@@ -249,6 +260,7 @@ typedef struct {
   MEMBER(sdcard_detect, target_invert_pin_t)                                     \
   MEMBER(buzzer, target_invert_pin_t)                                            \
   ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX, gpio_pins_t)                           \
+  MEMBER(vehicles, uint8_t)                                                      \
   MEMBER(vbat_scale, uint16_t)                                                   \
   MEMBER(ibat_scale, uint16_t)                                                   \
   MEMBER(dma, target_dma_array)                                                  \
@@ -270,6 +282,7 @@ typedef struct {
   rx_protocol_t rx_protocols[RX_PROTOCOL_MAX];
 
   uint8_t gyro_id;
+  uint8_t vehicle_type;
 } target_info_t;
 
 #define TARGET_INFO_MEMBERS                            \
@@ -280,6 +293,7 @@ typedef struct {
   MEMBER(features, uint32_t)                           \
   ARRAY_MEMBER(rx_protocols, RX_PROTOCOL_MAX, uint8_t) \
   MEMBER(gyro_id, uint8_t)                             \
+  MEMBER(vehicle_type, uint8_t)                        \
   END_STRUCT()
 
 extern target_t target;

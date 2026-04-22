@@ -1,5 +1,4 @@
 #include "core/target.h"
-
 #include "core/failloop.h"
 
 #include <ctype.h>
@@ -32,6 +31,14 @@ target_info_t target_info = {
     },
 
     .gyro_id = 0x0,
+
+#ifdef VEHICLE_ROVER
+    .vehicle_type = VEHICLE_TYPE_ROVER,
+#elif defined(VEHICLE_WING)
+    .vehicle_type = VEHICLE_TYPE_WING,
+#else
+    .vehicle_type = VEHICLE_TYPE_MULTI,
+#endif
 };
 
 #define START_STRUCT CBOR_START_STRUCT_ENCODER
@@ -260,4 +267,17 @@ void target_init() {
   if (strcmp((const char *)target.name, "unknown") == 0) {
     failloop(FAILLOOP_NO_TARGET);
   }
+
+  uint8_t vehicles = target.vehicles;
+  if (vehicles == 0) {
+    vehicles = VEHICLE_TYPE_MULTI;
+  }
+#if defined(VEHICLE_ROVER)
+  if ((vehicles & VEHICLE_TYPE_ROVER) == 0)
+#elif defined(VEHICLE_WING)
+  if ((vehicles & VEHICLE_TYPE_WING) == 0)
+#else
+  if ((vehicles & VEHICLE_TYPE_MULTI) == 0)
+#endif
+    failloop(FAILLOOP_VEHICLE);
 }

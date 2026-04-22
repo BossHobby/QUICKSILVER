@@ -1,4 +1,13 @@
 // ================================================================================================
+// VEHICLE TYPE
+// ================================================================================================
+
+// Select vehicle type (define only one)
+// #define VEHICLE_MULTI
+// #define VEHICLE_ROVER
+// #define VEHICLE_WING
+
+// ================================================================================================
 // RATES & EXPO SETTINGS
 // ================================================================================================
 
@@ -132,6 +141,7 @@
 #define MOTORS_TO_THROTTLE_MODE AUX_CHANNEL_OFF
 #define RSSI AUX_CHANNEL_OFF
 #define FPV_SWITCH AUX_CHANNEL_ON
+#define STEER_MODE AUX_CHANNEL_OFF
 
 // ---- FAILSAFE ----
 #define FAILSAFE_TIME_US 1000000      // 1 second

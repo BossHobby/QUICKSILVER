@@ -1,13 +1,19 @@
 #include "motor.h"
 
 #include <float.h>
+#include <math.h>
 
 #include "core/profile.h"
 #include "core/project.h"
+#include "core/tasks.h"
 #include "driver/motor.h"
 #include "flight/control.h"
 #include "io/usb_configurator.h"
 #include "util/util.h"
+
+#ifdef VEHICLE_ROVER
+#include "driver/servo.h"
+#endif
 
 // options for mix throttle lowering if enabled
 // 0 - 100 range ( 100 = full reduction / 0 = no reduction )
@@ -30,6 +36,8 @@
 #ifndef MIX_THROTTLE_INCREASE_MAX
 #define MIX_THROTTLE_INCREASE_MAX 0.2f
 #endif
+
+#define MOTOR_MIXER_COUNT 4
 
 extern profile_t profile;
 
@@ -55,7 +63,7 @@ static void motor_brushless_mixer_scale_calc(float throttle, float mix[MOTOR_PIN
   float min = FLT_MAX;
   float max = FLT_MIN;
 
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+  for (uint32_t i = 0; i < MOTOR_MIXER_COUNT; i++) {
     if (mix[i] < min) {
       min = mix[i];
     }
@@ -71,7 +79,7 @@ static void motor_brushless_mixer_scale_calc(float throttle, float mix[MOTOR_PIN
   const float scaled_max = max * scale;
   const float scaled_throttle = constrain(throttle, -scaled_min, 1.0f - scaled_max);
 
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+  for (uint32_t i = 0; i < MOTOR_MIXER_COUNT; i++) {
     mix[i] = mix[i] * scale + scaled_throttle;
   }
 }
@@ -82,7 +90,7 @@ static void motor_brushed_mixer_scale_calc(float throttle, float mix[MOTOR_PIN_M
   float underthrottle = 0.001f;
   static float overthrottlefilt = 0;
 
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+  for (uint32_t i = 0; i < MOTOR_MIXER_COUNT; i++) {
     mix[i] += throttle;
 
     if (mix[i] > overthrottle)
@@ -116,7 +124,7 @@ static void motor_brushed_mixer_scale_calc(float throttle, float mix[MOTOR_PIN_M
 
   if (overthrottle > 0) { // exceeding max motor thrust
     float temp = overthrottle;
-    for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    for (uint32_t i = 0; i < MOTOR_MIXER_COUNT; i++) {
       mix[i] -= temp;
     }
   }
@@ -125,7 +133,7 @@ static void motor_brushed_mixer_scale_calc(float throttle, float mix[MOTOR_PIN_M
   if (flags.in_air == 1) {
     float underthrottle = 0;
 
-    for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    for (uint32_t i = 0; i < MOTOR_MIXER_COUNT; i++) {
       if (mix[i] < underthrottle)
         underthrottle = mix[i];
     }
@@ -135,7 +143,7 @@ static void motor_brushed_mixer_scale_calc(float throttle, float mix[MOTOR_PIN_M
       underthrottle = -(float)MIX_THROTTLE_INCREASE_MAX;
 
     if (underthrottle < 0.0f) {
-      for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++)
+      for (uint32_t i = 0; i < MOTOR_MIXER_COUNT; i++)
         mix[i] -= underthrottle;
     }
   }
@@ -201,7 +209,7 @@ void motor_mixer_calc(float mix[MOTOR_PIN_MAX]) {
 #endif
 
   if (profile.motor.torque_boost > 0.0f) {
-    for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    for (uint32_t i = 0; i < MOTOR_MIXER_COUNT; i++) {
       mix[i] = motord(mix[i], i);
     }
   }
@@ -221,7 +229,7 @@ void motor_output_calc(float mix[MOTOR_PIN_MAX]) {
   }
 
   // Begin for-loop to send motor commands
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+  for (uint32_t i = 0; i < MOTOR_MIXER_COUNT; i++) {
     if (!flags.motortest_override) {
       // use values as supplied in motor test mode
       mix[i] = constrain(mix[i], 0, 1);
@@ -238,5 +246,166 @@ void motor_output_calc(float mix[MOTOR_PIN_MAX]) {
   }
 
   // calculate throttle sum for voltage monitoring logic in main loop
-  state.thrsum = state.thrsum / MOTOR_PIN_MAX;
+  state.thrsum = state.thrsum / MOTOR_MIXER_COUNT;
 }
+
+#ifdef VEHICLE_ROVER
+
+static float rover_heading = 0.0f;
+static float rover_heading_i_error = 0.0f;
+static float rover_heading_target = 0.0f;
+static bool rover_heading_locked = false;
+static float rover_last_gyro_yaw = 0.0f;
+static bool rover_has_gyro_history = false;
+static filter_t rover_dterm_filter;
+static filter_state_t rover_dterm_filter_state;
+
+static rover_steer_mode_t rover_active_steer_mode() {
+  if (!rx_aux_on(AUX_STEER_MODE)) {
+    return ROVER_STEER_MODE_MANUAL;
+  }
+
+  if ((rover_steer_mode_t)profile.rover.steer_mode == ROVER_STEER_MODE_HEADING_HOLD) {
+    return ROVER_STEER_MODE_HEADING_HOLD;
+  }
+
+  return ROVER_STEER_MODE_RATE_ASSIST;
+}
+
+static float rover_throttle_scale(float throttle) {
+  const float breakpoint = constrain(profile.rover.throttle_scale_breakpoint, 0.0f, 1.0f);
+  if (breakpoint <= 0.0f || breakpoint >= 1.0f) {
+    return 1.0f;
+  }
+
+  const float factor = constrain(profile.rover.throttle_scale_factor, 0.0f, 1.0f);
+  const float throttle_abs = constrain(fabsf(throttle), 0.0f, 1.0f);
+  if (throttle_abs <= breakpoint) {
+    return 1.0f;
+  }
+
+  const float t = (throttle_abs - breakpoint) / (1.0f - breakpoint);
+  const float scale = 1.0f - (1.0f - factor) * t * t;
+  return constrain(scale, 0.0f, 1.0f);
+}
+
+static float rover_rate_assist_output(float yaw_stick, float authority, float gyro_yaw, float gyro_dterm) {
+  const float target_yaw_rate = yaw_stick * authority;
+  const float yaw_error = target_yaw_rate - gyro_yaw;
+
+  float output = target_yaw_rate;
+  output += yaw_error * profile.rover.pid.kp;
+  output -= gyro_dterm * profile.rover.pid.kd;
+
+  return constrain(output, -authority, authority);
+}
+
+void rover_pid_init() {
+  filter_init(profile.rover.pid.dterm_filter.type, &rover_dterm_filter, &rover_dterm_filter_state, 1,
+              profile.rover.pid.dterm_filter.cutoff_freq, task_get_period_us(TASK_PID));
+  rover_heading_reset();
+}
+
+void rover_mixer_calc(float *motor_out, float *servo_out) {
+  motor_out[0] = state.throttle;
+
+  const float yaw_stick = state.rx_filtered.yaw;
+  const float authority = constrain(profile.rover.steer_authority * rover_throttle_scale(state.throttle), 0.0f, 1.0f);
+  const float gyro_yaw = state.gyro.yaw;
+  float gyro_dterm = 0.0f;
+
+  if (rover_has_gyro_history && state.looptime > 0.0f) {
+    gyro_dterm = (gyro_yaw - rover_last_gyro_yaw) / state.looptime;
+    gyro_dterm = filter_step(profile.rover.pid.dterm_filter.type, &rover_dterm_filter, &rover_dterm_filter_state, gyro_dterm);
+  }
+  rover_last_gyro_yaw = gyro_yaw;
+  rover_has_gyro_history = true;
+
+  switch (rover_active_steer_mode()) {
+  case ROVER_STEER_MODE_MANUAL:
+    rover_heading_target = rover_heading;
+    rover_heading_i_error = 0.0f;
+    rover_heading_locked = false;
+    servo_out[0] = constrain(yaw_stick * authority, -authority, authority);
+    break;
+
+  case ROVER_STEER_MODE_RATE_ASSIST: {
+    rover_heading_target = rover_heading;
+    rover_heading_i_error = 0.0f;
+    rover_heading_locked = false;
+    servo_out[0] = rover_rate_assist_output(yaw_stick, authority, gyro_yaw, gyro_dterm);
+    break;
+  }
+
+  case ROVER_STEER_MODE_HEADING_HOLD: {
+    rover_heading += gyro_yaw * state.looptime;
+
+    if (fabsf(yaw_stick) > profile.rover.pid.heading_deadband) {
+      rover_heading_target = rover_heading;
+      rover_heading_i_error = 0.0f;
+      rover_heading_locked = false;
+      servo_out[0] = rover_rate_assist_output(yaw_stick, authority, gyro_yaw, gyro_dterm);
+    } else {
+      if (!rover_heading_locked) {
+        rover_heading_target = rover_heading;
+        rover_heading_i_error = 0.0f;
+        rover_heading_locked = true;
+      }
+
+      float heading_error = rover_heading_target - rover_heading;
+      if (heading_error > M_PI) {
+        heading_error -= 2.0f * M_PI;
+      } else if (heading_error < -M_PI) {
+        heading_error += 2.0f * M_PI;
+      }
+
+      rover_heading_i_error += heading_error * state.looptime;
+      rover_heading_i_error = constrain(rover_heading_i_error, -profile.rover.pid.i_limit, profile.rover.pid.i_limit);
+
+      servo_out[0] = heading_error * profile.rover.pid.kp + rover_heading_i_error * profile.rover.pid.ki - gyro_dterm * profile.rover.pid.kd;
+      servo_out[0] = constrain(servo_out[0], -authority, authority);
+    }
+    break;
+  }
+  }
+}
+
+void rover_heading_reset() {
+  rover_heading = 0.0f;
+  rover_heading_i_error = 0.0f;
+  rover_heading_target = 0.0f;
+  rover_heading_locked = false;
+  rover_last_gyro_yaw = 0.0f;
+  rover_has_gyro_history = false;
+  filter_init_state(&rover_dterm_filter_state, 1);
+}
+
+void rover_motor_output_calc(float motor_out, float servo_out) {
+  state.thrsum = fabsf(motor_out);
+
+  motor_out *= profile.motor.motor_limit * 0.01f;
+
+  float drive_value = (fabsf(motor_out) < 0.001f) ? 0.0f : motor_out;
+  if (!profile.rover.reversible) {
+    drive_value = drive_value * 2.0f - 1.0f;
+  }
+  servo_set(SERVO_DRIVE, drive_value);
+  servo_set(SERVO_STEERING, constrain(servo_out, -1.0f, 1.0f));
+  servo_write();
+}
+
+void rover_test_calc(bool motortest_usb, float *motor_out, float *servo_out) {
+  const uint8_t motor_idx = profile.rover.motor_index;
+  if (motortest_usb) {
+    motor_out[0] = motor_test.value[motor_idx];
+  } else {
+    motor_out[0] = state.throttle;
+  }
+  if (motortest_usb) {
+    servo_out[0] = motor_test.value[profile.rover.servo_index];
+  } else {
+    servo_out[0] = 0.0f;
+  }
+}
+
+#endif

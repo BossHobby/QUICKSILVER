@@ -1,5 +1,13 @@
 #pragma once
 
+#if !defined(VEHICLE_MULTI) && !defined(VEHICLE_ROVER) && !defined(VEHICLE_WING)
+#define VEHICLE_MULTI
+#endif
+
+#ifdef VEHICLE_ROVER
+#define USE_SERVO
+#endif
+
 #define USE_SPI
 #define USE_SERIAL
 #define USE_RX_UNIFIED
@@ -18,8 +26,11 @@
 #define USE_MAX7456
 #define USE_RGB_LED
 
+#ifndef VEHICLE_ROVER
 #define USE_MOTOR_DSHOT
+#endif
 #define USE_MOTOR_PWM
+#define USE_SERIAL_4WAY
 
 #ifndef AT32F4
 #define USE_RX_SPI_FRSKY

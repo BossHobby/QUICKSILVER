@@ -11,9 +11,10 @@
 #include "driver/serial_soft.h"
 #include "driver/usb.h"
 #include "io/led.h"
+#include "driver/servo.h"
 #include "util/cbor_helper.h"
 
-#ifdef USE_MOTOR_DSHOT
+#ifdef USE_SERIAL_4WAY
 
 #define RX_LED_OFF led_off(1)
 #define RX_LED_ON led_on(1)
@@ -132,15 +133,44 @@ uint8_t serial_4way_init() {
   motor_set_all(MOTOR_OFF);
   motor_wait_for_ready();
 
+#ifdef USE_SERVO
+  servo_stop();
+#endif
+
   time_delay_ms(250);
 
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    const gpio_pins_t pin = target.motor_pins[profile.motor.motor_pins[i]];
+    esc_pins[i] = PIN_NONE;
+  }
+
+#ifdef VEHICLE_ROVER
+  const uint8_t pin_index = profile.motor.motor_pins[profile.rover.motor_index];
+  if (pin_index < MOTOR_PIN_MAX) {
+    const gpio_pins_t pin = target.motor_pins[pin_index];
+    esc_pins[0] = pin;
+    if (pin != PIN_NONE) {
+      avr_bl_init_pin(pin);
+    }
+  }
+  return 1;
+#else
+
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    const uint8_t pin_index = profile.motor.motor_pins[i];
+    if (pin_index >= MOTOR_PIN_MAX) {
+      esc_pins[i] = PIN_NONE;
+      continue;
+    }
+
+    const gpio_pins_t pin = target.motor_pins[pin_index];
     esc_pins[i] = pin;
-    avr_bl_init_pin(pin);
+    if (pin != PIN_NONE) {
+      avr_bl_init_pin(pin);
+    }
   }
 
   return MOTOR_PIN_MAX;
+#endif
 }
 
 void serial_4way_release() {
@@ -148,6 +178,10 @@ void serial_4way_release() {
 
   motor_init();
   motor_set_all(MOTOR_OFF);
+
+#ifdef USE_SERVO
+  servo_init();
+#endif
 }
 
 serial_esc4way_ack_t serial_4way_send(uint8_t cmd, uint16_t addr, const uint8_t *input, const uint8_t input_size, uint8_t *output, uint8_t *output_size) {

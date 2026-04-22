@@ -22,6 +22,10 @@
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
+#ifdef VEHICLE_ROVER
+#include "driver/servo.h"
+#endif
+
 // Throttle must drop below this value if arming feature is enabled for arming to take place.
 // brushed mix increase will also not activate on the ground untill this threshold is passed during takeoff for safety and better staging behavior.
 #define THROTTLE_SAFETY .10f
@@ -106,9 +110,15 @@ CBOR_END_STRUCT_ENCODER()
 #undef ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER
 
+#ifndef VEHICLE_ROVER
 static void control_flight_mode() {
   // flight control
   const vec3_t rates = input_rates_calc();
+
+#ifdef VEHICLE_ROVER
+  (void)rates;
+  return;
+#endif
 
   if (rx_aux_on(AUX_LEVELMODE)) {
 
@@ -245,8 +255,103 @@ static void control_flight_mode() {
     state.error.yaw = state.setpoint.yaw - state.gyro.yaw;
   }
 }
+#endif
 
-void control() {
+#ifdef VEHICLE_ROVER
+
+static void rover_control() {
+  bool motortest_usb = false;
+  if (flags.usb_active && motor_test.active) {
+    flags.arm_state = 1;
+    flags.on_ground = 0;
+    flags.motortest_override = 1;
+    motortest_usb = true;
+  } else {
+    flags.motortest_override = 0;
+  }
+
+  bool failsafe_lock = false;
+  if (flags.failsafe) {
+    if (state.failsafe_time_ms == 0) {
+      state.failsafe_time_ms = time_millis();
+    }
+    if ((time_millis() - state.failsafe_time_ms) > FAILSAFE_LOCK_TIME_MS) {
+      failsafe_lock = true;
+    }
+  } else {
+    state.failsafe_time_ms = 0;
+  }
+
+  static bool checked_prearm = false;
+  if (rx_aux_on(AUX_ARMING) && !failsafe_lock) {
+    if (!checked_prearm) {
+      flags.arm_switch = 1;
+      flags.throttle_safety = 0;
+    }
+    checked_prearm = true;
+  } else {
+    flags.arm_switch = 0;
+    checked_prearm = false;
+    flags.throttle_safety = 0;
+  }
+
+  if (flags.arm_switch) {
+    flags.arm_state = 1;
+  } else {
+    flags.arm_state = 0;
+  }
+
+  if (flags.arm_state == 0) {
+    state.throttle = 0;
+    flags.in_air = 0;
+    rover_heading_reset();
+  } else {
+    const float rx_thr = state.rx_filtered.throttle;
+    const float deadband = profile.rover.center_deadband;
+
+    if (fabsf(rx_thr - 0.5f) < deadband) {
+      state.throttle = 0;
+    } else if (rx_thr > 0.5f) {
+      state.throttle = (rx_thr - 0.5f - deadband) / (0.5f - deadband);
+      state.throttle = constrain(state.throttle, 0.0f, 1.0f);
+    } else if (profile.rover.reversible) {
+      state.throttle = -((0.5f - deadband - rx_thr) / (0.5f - deadband));
+      state.throttle = constrain(state.throttle, -1.0f, 0.0f);
+    } else {
+      state.throttle = 0;
+    }
+
+    state.throttle = state.throttle * profile.motor.motor_limit * 0.01f;
+
+    flags.in_air = 1;
+  }
+
+  float motor_out = 0;
+  float servo_out = 0;
+
+  if (flags.motortest_override) {
+    rover_test_calc(motortest_usb, &motor_out, &servo_out);
+    rover_motor_output_calc(motor_out, servo_out);
+  } else if (!flags.arm_state || flags.failsafe) {
+    flags.on_ground = 1;
+    state.throttle = 0;
+    state.thrsum = 0;
+    rover_mixer_calc(&motor_out, &servo_out);
+    rover_motor_output_calc(0.0f, servo_out);
+  } else {
+    flags.on_ground = 0;
+    rover_mixer_calc(&motor_out, &servo_out);
+    rover_motor_output_calc(motor_out, servo_out);
+  }
+}
+#endif
+
+#ifndef VEHICLE_ROVER
+static void quad_control();
+#endif
+
+#ifdef VEHICLE_MULIT
+static void quad_control() {
   if (rx_aux_on(AUX_TURTLE) && !rx_aux_on(AUX_MOTOR_TEST)) { // turtle active when aux high
     turtle_mode_start();
   } else {
@@ -429,4 +534,12 @@ void control() {
     motor_update();
   }
 }
-// end of control function
+#endif
+
+void control() {
+#ifdef VEHICLE_ROVER
+  rover_control();
+#else
+  quad_control();
+#endif
+}
