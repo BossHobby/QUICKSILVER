@@ -178,6 +178,11 @@ const profile_t default_profile = {
 #else
         .hdzero = SERIAL_PORT_INVALID,
 #endif
+#ifdef GPS_USART
+        .gps = GPS_USART,
+#else
+        .gps = SERIAL_PORT_INVALID,
+#endif
     },
 
     .filter = {

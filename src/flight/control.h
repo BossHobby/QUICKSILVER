@@ -6,10 +6,33 @@
 #include "core/project.h"
 #include "core/scheduler.h"
 #include "rx/rx.h"
+#include "io/gps.h"
 #include "util/vector.h"
 
 #define RXMODE_BIND 0
 #define RXMODE_NORMAL 1
+
+typedef enum {
+  VER_INVALID,
+  VER_M5 = 0x00040005,
+  VER_M6 = 0x00040007,
+  VER_M7 = 0x00070000,
+  VER_M8 = 0x00080000,
+  VER_M9 = 0x00190000,
+  VER_M10 = 0x000A0000,
+  VER_MAX = 0xFFFFFFFF,
+} gps_version_t;
+
+typedef struct {
+  int32_t lon;
+  int32_t lat;
+} gps_coord_t;
+
+#define GPS_COORD_MEMBERS   \
+  START_STRUCT(gps_coord_t) \
+  MEMBER(lon, int32_t)      \
+  MEMBER(lat, int32_t)      \
+  END_STRUCT()
 
 // THE UN OF STRUCTS
 typedef struct {
@@ -95,6 +118,14 @@ typedef struct {
   vec3_t GEstG; // gravity vector
   vec3_t attitude;
 
+  bool gps_lock;
+  uint8_t gps_sats;
+  float gps_speed;
+  float gps_heading;
+  float gps_heading_accuracy;
+  gps_coord_t gps_coord;
+  float gps_altitude;
+
   vec3_t setpoint; // angular velocity setpoint from stick input
   vec3_t error;    // setpoint - gyro = error in angular velocity
 
@@ -151,6 +182,13 @@ typedef struct {
   MEMBER(gyro_delta_angle, vec3_t)            \
   MEMBER(GEstG, vec3_t)                       \
   MEMBER(attitude, vec3_t)                    \
+  MEMBER(gps_lock, bool)                     \
+  MEMBER(gps_sats, uint8_t)                  \
+  MEMBER(gps_speed, float)                   \
+  MEMBER(gps_heading, float)                 \
+  MEMBER(gps_heading_accuracy, float)        \
+  MEMBER(gps_coord, gps_coord_t)             \
+  MEMBER(gps_altitude, float)                \
   MEMBER(setpoint, vec3_t)                    \
   MEMBER(error, vec3_t)                       \
   MEMBER(pid_p_term, vec3_t)                  \
