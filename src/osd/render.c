@@ -871,7 +871,9 @@ void osd_display() {
     osd_menu_header("FILTERS");
 
     osd_menu_select_screen(7, 4, "GYRO", OSD_SCREEN_GYRO_FILTER);
+#ifndef VEHICLE_ROVER
     osd_menu_select_screen(7, 5, "D-TERM", OSD_SCREEN_DTERM_FILTER);
+#endif
 
     osd_menu_finish();
     break;
@@ -1345,14 +1347,14 @@ void osd_display() {
     osd_menu_header("ROVER DTERM FILT");
 
     osd_menu_select(3, 5, "TYPE");
-    if (osd_menu_select_enum(20, 5, profile.rover.pid.dterm_filter.type, filter_type_labels)) {
-      profile.rover.pid.dterm_filter.type = osd_menu_adjust_int(profile.rover.pid.dterm_filter.type, 1, 0, FILTER_MAX - 1);
+    if (osd_menu_select_enum(20, 5, profile.filter.dterm[0].type, filter_type_labels)) {
+      profile.filter.dterm[0].type = osd_menu_adjust_int(profile.filter.dterm[0].type, 1, 0, FILTER_MAX - 1);
       osd_state.reboot_fc_requested = 1;
     }
 
     osd_menu_select(3, 6, "FREQ");
-    if (osd_menu_select_float(20, 6, profile.rover.pid.dterm_filter.cutoff_freq, 5, 0)) {
-      profile.rover.pid.dterm_filter.cutoff_freq = osd_menu_adjust_float(profile.rover.pid.dterm_filter.cutoff_freq, 5.0f, 0.0f, 500.0f);
+    if (osd_menu_select_float(20, 6, profile.filter.dterm[0].cutoff_freq, 5, 0)) {
+      profile.filter.dterm[0].cutoff_freq = osd_menu_adjust_float(profile.filter.dterm[0].cutoff_freq, 5.0f, 0.0f, 500.0f);
     }
 
     osd_menu_select_save_and_exit(3);

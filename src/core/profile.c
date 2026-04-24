@@ -202,6 +202,16 @@ const profile_t default_profile = {
         },
 
         .dterm = {
+#ifdef VEHICLE_ROVER
+            {
+                .type = FILTER_LP_PT1,
+                .cutoff_freq = 50.0f,
+            },
+            {
+                .type = FILTER_LP_PT1,
+                .cutoff_freq = 50.0f,
+            },
+#else
             {
                 .type = DTERM_PASS1_TYPE,
                 .cutoff_freq = DTERM_PASS1_FREQ,
@@ -210,6 +220,7 @@ const profile_t default_profile = {
                 .type = DTERM_PASS2_TYPE,
                 .cutoff_freq = DTERM_PASS2_FREQ,
             },
+#endif
         },
 
         .dterm_dynamic_type = DTERM_DYNAMIC_TYPE,
@@ -497,18 +508,12 @@ const profile_t default_profile = {
     },
     .rover = {
         .steer_mode = ROVER_STEER_MODE_MANUAL,
-        .throttle_fwd_limit = 1.0f,
-        .throttle_rev_limit = 0.5f,
         .pid = {
             .kp = 1.5f,
             .ki = 0.1f,
             .kd = 0.0f,
             .i_limit = 0.5f,
             .heading_deadband = 0.05f,
-            .dterm_filter = {
-                .type = FILTER_LP_PT1,
-                .cutoff_freq = 50.0f,
-            },
         },
         .center_deadband = 0.05f,
         .steer_authority = 1.0f,

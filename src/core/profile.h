@@ -335,6 +335,14 @@ typedef struct {
   uint8_t gyro_dynamic_notch_enable;
 } profile_filter_t;
 
+#ifdef VEHICLE_ROVER
+#define FILTER_MEMBERS                                             \
+  START_STRUCT(profile_filter_t)                                   \
+  ARRAY_MEMBER(gyro, FILTER_MAX_SLOTS, profile_filter_parameter_t) \
+  ARRAY_MEMBER(dterm, FILTER_MAX_SLOTS, profile_filter_parameter_t) \
+  MEMBER(gyro_dynamic_notch_enable, uint8_t)                       \
+  END_STRUCT()
+#else
 #define FILTER_MEMBERS                                              \
   START_STRUCT(profile_filter_t)                                    \
   ARRAY_MEMBER(gyro, FILTER_MAX_SLOTS, profile_filter_parameter_t)  \
@@ -344,6 +352,7 @@ typedef struct {
   MEMBER(dterm_dynamic_max, float)                                  \
   MEMBER(gyro_dynamic_notch_enable, uint8_t)                        \
   END_STRUCT()
+#endif
 
 typedef struct {
   uint8_t name[36];
@@ -368,7 +377,6 @@ typedef struct {
   float kd;
   float i_limit;
   float heading_deadband;
-  profile_filter_parameter_t dterm_filter;
 } rover_pid_rate_t;
 
 #define ROVER_PID_RATE_MEMBERS      \
@@ -378,13 +386,10 @@ typedef struct {
   MEMBER(kd, float)                 \
   MEMBER(i_limit, float)            \
   MEMBER(heading_deadband, float)   \
-  MEMBER(dterm_filter, profile_filter_parameter_t) \
   END_STRUCT()
 
 typedef struct {
   rover_steer_mode_t steer_mode;
-  float throttle_fwd_limit;
-  float throttle_rev_limit;
   rover_pid_rate_t pid;
   float center_deadband;
   float steer_authority;
@@ -399,8 +404,6 @@ typedef struct {
 #define ROVER_MEMBERS               \
   START_STRUCT(profile_rover_t)     \
   MEMBER(steer_mode, uint8_t)       \
-  MEMBER(throttle_fwd_limit, float) \
-  MEMBER(throttle_rev_limit, float) \
   MEMBER(pid, rover_pid_rate_t)     \
   MEMBER(center_deadband, float)    \
   MEMBER(steer_authority, float)    \
@@ -449,6 +452,20 @@ typedef struct {
   profile_rover_t rover;
 } profile_t;
 
+#ifdef VEHICLE_ROVER
+#define PROFILE_MEMBERS                \
+  START_STRUCT(profile_t)              \
+  MEMBER(meta, profile_metadata_t)     \
+  MEMBER(motor, profile_motor_t)       \
+  MEMBER(serial, profile_serial_t)     \
+  MEMBER(filter, profile_filter_t)     \
+  MEMBER(osd, profile_osd_t)           \
+  MEMBER(receiver, profile_receiver_t) \
+  MEMBER(voltage, profile_voltage_t)   \
+  MEMBER(blackbox, profile_blackbox_t) \
+  MEMBER(rover, profile_rover_t)       \
+  END_STRUCT()
+#else
 #define PROFILE_MEMBERS                \
   START_STRUCT(profile_t)              \
   MEMBER(meta, profile_metadata_t)     \
@@ -461,8 +478,8 @@ typedef struct {
   MEMBER(pid, profile_pid_t)           \
   MEMBER(voltage, profile_voltage_t)   \
   MEMBER(blackbox, profile_blackbox_t) \
-  MEMBER(rover, profile_rover_t)       \
   END_STRUCT()
+#endif
 
 extern profile_t profile;
 extern const profile_t default_profile;

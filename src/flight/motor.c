@@ -301,8 +301,8 @@ static float rover_rate_assist_output(float yaw_stick, float authority, float gy
 }
 
 void rover_pid_init() {
-  filter_init(profile.rover.pid.dterm_filter.type, &rover_dterm_filter, &rover_dterm_filter_state, 1,
-              profile.rover.pid.dterm_filter.cutoff_freq, task_get_period_us(TASK_PID));
+  filter_init(profile.filter.dterm[0].type, &rover_dterm_filter, &rover_dterm_filter_state, 1,
+              profile.filter.dterm[0].cutoff_freq, task_get_period_us(TASK_PID));
   rover_heading_reset();
 }
 
@@ -316,7 +316,7 @@ void rover_mixer_calc(float *motor_out, float *servo_out) {
 
   if (rover_has_gyro_history && state.looptime > 0.0f) {
     gyro_dterm = (gyro_yaw - rover_last_gyro_yaw) / state.looptime;
-    gyro_dterm = filter_step(profile.rover.pid.dterm_filter.type, &rover_dterm_filter, &rover_dterm_filter_state, gyro_dterm);
+    gyro_dterm = filter_step(profile.filter.dterm[0].type, &rover_dterm_filter, &rover_dterm_filter_state, gyro_dterm);
   }
   rover_last_gyro_yaw = gyro_yaw;
   rover_has_gyro_history = true;

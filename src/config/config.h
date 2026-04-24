@@ -4,7 +4,7 @@
 
 // Select vehicle type (define only one)
 // #define VEHICLE_MULTI
-// #define VEHICLE_ROVER
+#define VEHICLE_ROVER
 // #define VEHICLE_WING
 
 // ================================================================================================
