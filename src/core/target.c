@@ -1,5 +1,7 @@
 #include "core/target.h"
 
+#include "core/failloop.h"
+
 #include <ctype.h>
 #include <string.h>
 
@@ -252,4 +254,10 @@ bool target_gyro_spi_device_valid(const target_gyro_spi_device_t *dev) {
 
 bool target_spi_port_valid(const target_spi_port_t *port) {
   return port->index != 0 && port->miso != PIN_NONE && port->mosi != PIN_NONE && port->sck != PIN_NONE;
+}
+
+void target_init() {
+  if (strcmp((const char *)target.name, "unknown") == 0) {
+    failloop(FAILLOOP_NO_TARGET);
+  }
 }
