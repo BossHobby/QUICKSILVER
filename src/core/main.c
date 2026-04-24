@@ -9,6 +9,7 @@
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/scheduler.h"
+#include "core/target.h"
 #include "driver/adc.h"
 #include "driver/gpio.h"
 #include "driver/interrupt.h"
@@ -95,6 +96,7 @@ __attribute__((__used__)) int main() {
   debug_pin_init();
   buzzer_init();
   usb_init();
+  target_init();
   simulator_init();
 
   rgb_led_init();

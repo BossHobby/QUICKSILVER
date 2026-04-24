@@ -1,6 +1,5 @@
 #include "driver/usb.h"
 
-#include "core/project.h"
 #include "driver/gpio.h"
 
 #include <stdarg.h>

@@ -58,9 +58,12 @@ void motor_pwm_init() {
 
 void motor_pwm_write(float *values) {
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    const uint16_t pwm = constrain(values[i] * PWM_TOP, 0, PWM_TOP);
-
     const resource_tag_t tag = timer_tags[i];
+    if (tag == 0) {
+      continue;
+    }
+
+    const uint16_t pwm = constrain(values[i] * PWM_TOP, 0, PWM_TOP);
     switch (TIMER_TAG_CH(tag)) {
     case TIMER_CH1:
     case TIMER_CH1N:

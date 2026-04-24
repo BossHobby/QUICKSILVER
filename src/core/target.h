@@ -295,6 +295,7 @@ bool target_serial_port_valid(const target_serial_port_t *port);
 bool target_gyro_spi_device_valid(const target_gyro_spi_device_t *dev);
 bool target_spi_device_valid(const target_spi_device_t *dev);
 bool target_spi_port_valid(const target_spi_port_t *port);
+void target_init();
 
 cbor_result_t cbor_encode_gpio_pins_t(cbor_value_t *enc, const gpio_pins_t *t);
 cbor_result_t cbor_decode_gpio_pins_t(cbor_value_t *dec, gpio_pins_t *t);

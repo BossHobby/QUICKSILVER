@@ -42,7 +42,7 @@ static cbor_result_t cbor_encode_motor_test_t(cbor_value_t *enc, const motor_tes
   CBOR_CHECK_ERROR(res = cbor_encode_uint8_t(enc, &b->active));
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "value"));
-  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->value, 4));
+  CBOR_CHECK_ERROR(res = cbor_encode_float_array(enc, b->value, MOTOR_PIN_MAX));
 
   CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
 

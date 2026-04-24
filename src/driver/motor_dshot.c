@@ -30,11 +30,19 @@ dshot_gpio_port_t dshot_gpio_ports[DSHOT_MAX_PORT_COUNT] = {
 volatile DMA_RAM uint16_t dshot_input_buffer[DSHOT_MAX_PORT_COUNT][GCR_DMA_BUFFER_SIZE];
 volatile DMA_RAM uint32_t dshot_output_buffer[DSHOT_MAX_PORT_COUNT][DSHOT_DMA_BUFFER_SIZE];
 
-static uint16_t dshot_packet[MOTOR_PIN_MAX]; // 16bits dshot data for 4 motors
+static uint16_t dshot_packet[MOTOR_PIN_MAX];
 static dshot_pin_t dshot_pins[MOTOR_PIN_MAX];
 
 static motor_direction_t motor_dir = MOTOR_FORWARD;
 static bool dir_change_done = true;
+
+static bool dshot_motor_slot_active(uint32_t slot) {
+  const uint8_t pin_index = profile.motor.motor_pins[slot];
+  if (pin_index >= MOTOR_PIN_MAX) {
+    return false;
+  }
+  return target.motor_pins[pin_index] != PIN_NONE;
+}
 
 const dshot_gpio_port_t *dshot_gpio_for_device(const dma_device_t dev) {
   return &dshot_gpio_ports[dev - DMA_DEVICE_DSHOT_CH1];
@@ -59,6 +67,10 @@ void dshot_gpio_init_input(gpio_pins_t pin) {
 }
 
 static void dshot_init_motor_pin(uint32_t index) {
+  if (target.motor_pins[index] == PIN_NONE) {
+    return;
+  }
+
   dshot_gpio_init_output(target.motor_pins[index]);
   if (profile.motor.dshot_telemetry)
     gpio_pin_set(target.motor_pins[index]);
@@ -109,6 +121,9 @@ static void dshot_make_packet(uint8_t number, uint16_t value, bool telemetry) {
 
 static void dshot_make_packet_all(uint16_t value, bool telemetry) {
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (!dshot_motor_slot_active(i)) {
+      continue;
+    }
     dshot_make_packet(profile.motor.motor_pins[i], value, telemetry);
   }
 }
@@ -117,6 +132,9 @@ static void dshot_make_packet_all(uint16_t value, bool telemetry) {
 void dshot_dma_start() {
   if (profile.motor.dshot_telemetry) {
     for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+      if (target.motor_pins[i] == PIN_NONE) {
+        continue;
+      }
       const uint32_t port = dshot_pins[i].dshot_port;
       state.dshot_rpm[i] = dshot_decode_eRPM_telemetry_value(dshot_decode_gcr((uint16_t *)dshot_input_buffer[port], dshot_pins[i].pin_mask));
       dshot_gpio_init_output(target.motor_pins[i]);
@@ -245,6 +263,9 @@ void motor_dshot_write(float *values) {
       value = mapf(pwm, 0.0f, 1.0f, 48, 2047);
     } else {
       value = 0;
+    }
+    if (!dshot_motor_slot_active(i)) {
+      continue;
     }
     dshot_make_packet(profile.motor.motor_pins[i], value, false);
   }
