@@ -100,7 +100,19 @@ void serial_esc_write(gpio_pins_t pin, uint32_t baud, uint8_t data) {
 }
 
 void serial_esc_process(uint8_t index, uint32_t baud) {
-  const gpio_pins_t pin = target.motor_pins[profile.motor.motor_pins[index]];
+  if (index >= MOTOR_PIN_MAX) {
+    return;
+  }
+
+  const uint8_t pin_index = profile.motor.motor_pins[index];
+  if (pin_index >= MOTOR_PIN_MAX) {
+    return;
+  }
+
+  const gpio_pins_t pin = target.motor_pins[pin_index];
+  if (pin == PIN_NONE) {
+    return;
+  }
 
   motor_set_all(MOTOR_OFF);
   motor_wait_for_ready();
