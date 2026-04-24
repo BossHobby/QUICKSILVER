@@ -86,3 +86,4 @@ claude.log
 *.claude-backup
 .claude-todo
 CLAUDE.local.md
+.opencode
