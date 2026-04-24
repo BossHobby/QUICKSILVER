@@ -64,6 +64,10 @@ void motor_pwm_init() {
 void motor_pwm_write(float *values) {
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
     const resource_tag_t tag = timer_tags[i];
+    if (tag == 0) {
+      continue;
+    }
+
     const timer_def_t *def = &timer_defs[TIMER_TAG_TIM(tag)];
 
     const uint16_t pwm = constrain(values[i] * PWM_TOP, 0, PWM_TOP);
