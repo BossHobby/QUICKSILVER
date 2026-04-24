@@ -28,6 +28,7 @@
 #include "io/simulator.h"
 #include "io/vbat.h"
 #include "io/vtx.h"
+#include "io/gps.h"
 #include "osd/render.h"
 
 __attribute__((__used__)) void
@@ -119,6 +120,7 @@ __attribute__((__used__)) int main() {
   vbat_init();
 
   rx_init();
+  gps_init();
   vtx_init();
 
   blackbox_init();

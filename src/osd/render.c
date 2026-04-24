@@ -29,6 +29,9 @@
 #define ICON_CROSSHAIR_2 0x73
 #define ICON_CROSSHAIR_3 0x74
 #define ICON_WATT 0x57  // Added watts icon
+#define ICON_SAT_L 0x1E
+#define ICON_SAT_R 0x1F
+#define ICON_KPH 0x9E
 
 #define HOLD 0
 #define TEMP 1
@@ -74,6 +77,8 @@ static const char *osd_element_labels[] = {
     "CROSSHAIR",
     "CURRENT DRAWN",
     "WATTS",  // Added watts label
+    "GPS SATS",
+    "GPS SPEED",
 };
 
 static const char *aux_channel_labels[] = {
@@ -532,7 +537,22 @@ static void osd_display_regular() {
       osd_state.element++;
       break;
     }
-    
+
+    case OSD_GPS_SATS: {
+      osd_start(osd_attr(el) | (state.gps_lock ? 0x0 : OSD_ATTR_BLINK), pos_x(el), pos_y(el));
+      osd_write_char(ICON_SAT_L);
+      osd_write_char(ICON_SAT_R);
+      osd_write_int(state.gps_sats, 2);
+      break;
+    }
+
+    case OSD_GPS_SPEED: {
+      osd_start(osd_attr(el), pos_x(el), pos_y(el));
+      osd_write_int((uint32_t)(state.gps_speed * 3.6f), 3);
+      osd_write_char(ICON_KPH);
+      break;
+    }
+
     }
   }
 

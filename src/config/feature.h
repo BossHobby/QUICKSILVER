@@ -5,6 +5,7 @@
 #define USE_RX_UNIFIED
 #define USE_BLACKBOX
 #define USE_ADC
+#define USE_GPS
 
 #ifndef SIMULATOR
 #define USE_GYRO
