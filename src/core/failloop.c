@@ -24,6 +24,8 @@ const char *failloop_string(failloop_t val) {
     return "dma error";
   case FAILLOOP_SPI:
     return "spi error";
+  case FAILLOOP_NO_TARGET:
+    return "no target configured - connect configurator and load target";
   default:
     return "unknown error";
   }
