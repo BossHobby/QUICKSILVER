@@ -135,6 +135,7 @@ uint8_t crsf_crc8(uint8_t *data, uint16_t len);
 
 void crsf_tlm_frame_start(uint8_t *buf);
 uint32_t crsf_tlm_frame_battery_sensor(uint8_t *buf);
+uint32_t crsf_tlm_frame_gps(uint8_t *buf);
 uint32_t crsf_tlm_frame_device_info(uint8_t *buf);
 uint32_t crsf_tlm_frame_finish(uint8_t *buf, uint32_t payload_size);
 uint32_t crsf_tlm_frame_msp_resp(uint8_t *buf, uint8_t origin, uint8_t *payload, uint8_t size);
