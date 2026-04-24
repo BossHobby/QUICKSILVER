@@ -10,6 +10,7 @@
 #include "flight/sixaxis.h"
 #include "io/blackbox.h"
 #include "io/buzzer.h"
+#include "io/gps.h"
 #include "io/led.h"
 #include "io/rgb_led.h"
 #include "io/usb_configurator.h"
@@ -40,4 +41,5 @@ FAST_RAM task_t tasks[TASK_MAX] = {
     [TASK_OSD] = CREATE_TASK("OSD", TASK_MASK_ALWAYS, TASK_PRIORITY_MEDIUM, osd_display, 8000),
     [TASK_VTX] = CREATE_TASK("VTX", TASK_MASK_ON_GROUND, TASK_PRIORITY_LOW, vtx_update, 0),
     [TASK_USB] = CREATE_TASK("USB", TASK_MASK_ON_GROUND, TASK_PRIORITY_LOW, usb_configurator, 0),
+    [TASK_GPS] = CREATE_TASK("GPS", TASK_MASK_ALWAYS, TASK_PRIORITY_LOW, gps_task, 5000),
 };
