@@ -276,6 +276,7 @@ typedef struct {
   serial_ports_t rx;
   serial_ports_t smart_audio;
   serial_ports_t hdzero;
+  serial_ports_t gps;
 } profile_serial_t;
 
 #define SERIAL_MEMBERS           \
@@ -283,6 +284,7 @@ typedef struct {
   MEMBER(rx, uint8_t)            \
   MEMBER(smart_audio, uint8_t)   \
   MEMBER(hdzero, uint8_t)        \
+  MEMBER(gps, uint8_t)           \
   END_STRUCT()
 
 typedef enum {
