@@ -68,6 +68,7 @@ typedef enum {
   QUIC_VAL_PERF_COUNTERS,
   QUIC_VAL_BLACKBOX_PRESETS,
   QUIC_VAL_TARGET,
+  QUIC_VAL_GPS_STATUS,
 } __attribute__((__packed__)) quic_values;
 
 typedef void (*quic_send_fn_t)(uint8_t *data, uint32_t len, void *priv);

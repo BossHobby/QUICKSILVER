@@ -20,6 +20,7 @@ typedef enum {
   TASK_OSD,
   TASK_VTX,
   TASK_USB,
+  TASK_GPS,
 
   TASK_MAX
 
