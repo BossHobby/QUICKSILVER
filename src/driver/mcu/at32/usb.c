@@ -9,8 +9,7 @@
 #include "driver/gpio.h"
 #include "driver/interrupt.h"
 #include "driver/time.h"
-
-extern volatile bool usb_device_configured;
+#include "flight/control.h"
 
 static otg_core_type otg_core_struct;
 
@@ -73,7 +72,7 @@ void usb_drv_init() {
 }
 
 void usb_cdc_rx_handler() {
-  usb_device_configured = true;
+  flags.usb_active = 1;
 
   // Check if we have enough space before reading
   if (ring_buffer_free(&usb_rx_buffer) < USBD_CDC_IN_MAXPACKET_SIZE) {
@@ -103,7 +102,7 @@ static void usb_cdc_kickoff_rx() {
 }
 
 void usb_cdc_tx_handler() {
-  usb_device_configured = true;
+  flags.usb_active = 1;
 
   static volatile bool did_zlp = false;
 

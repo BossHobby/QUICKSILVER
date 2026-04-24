@@ -8,9 +8,6 @@
 #include <string.h>
 
 extern void usb_drv_init();
-extern void usb_drv_update();
-
-volatile bool usb_device_configured = false;
 
 static uint8_t tx_buffer_data[USB_BUFFER_SIZE];
 ring_buffer_t usb_tx_buffer = {
@@ -30,7 +27,7 @@ ring_buffer_t usb_rx_buffer = {
 
 void usb_init() {
   if (target.usb_detect != PIN_NONE) {
-    gpio_config_t gpio_init;
+    gpio_config_t gpio_init = gpio_config_default();
     gpio_init.mode = GPIO_INPUT;
     gpio_init.output = GPIO_OPENDRAIN;
     gpio_init.drive = GPIO_DRIVE_HIGH;
@@ -38,20 +35,6 @@ void usb_init() {
     gpio_pin_init(target.usb_detect, gpio_init);
   }
   usb_drv_init();
-}
-
-uint8_t usb_detect() {
-  /* appears this not reliable on a good portion of boards
-  if (target.usb_detect) {
-    if (!gpio_pin_read(target.usb_detect)) {
-      return 0;
-    }
-  }
-  */
-#ifdef SIMULATOR
-  usb_drv_update();
-#endif
-  return usb_device_configured;
 }
 
 void usb_serial_print(char *str) {

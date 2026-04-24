@@ -332,6 +332,10 @@ void control() {
     if ((flags.throttle_safety == 1) || (flags.arm_safety == 1)) {
       // override to disarmed state
       flags.arm_state = 0;
+#ifndef ALLOW_USB_ARMING
+    } else if (!flags.arm_state && flags.usb_active) {
+      flags.arm_state = 0;
+#endif
     } else {
       // arm the quad by setting armed state variable to 1
       flags.arm_state = 1;

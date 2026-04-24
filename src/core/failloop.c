@@ -38,7 +38,7 @@ void failloop(failloop_t val) {
 
     state.failloop = val;
 
-    if (usb_detect()) {
+    if (flags.usb_active) {
       usb_configurator();
     }
 

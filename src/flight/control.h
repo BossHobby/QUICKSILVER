@@ -33,7 +33,7 @@ typedef struct {
   uint8_t turtle_ready : 1;
   uint8_t gestures_disabled : 1;
 
-  uint8_t usb_active : 1;
+  volatile uint8_t usb_active;
 } control_flags_t;
 
 extern control_flags_t flags;

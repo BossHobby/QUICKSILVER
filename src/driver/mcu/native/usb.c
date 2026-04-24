@@ -1,8 +1,7 @@
 #include "driver/usb.h"
+#include "flight/control.h"
 
 #include <mongoose.h>
-
-extern volatile bool usb_device_configured;
 
 static struct mg_mgr mgr;
 static struct mg_connection *client = NULL;
@@ -14,7 +13,7 @@ static void handler(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     struct mg_http_message *hm = (struct mg_http_message *)ev_data;
     if (mg_http_match_uri(hm, "/websocket")) {
       mg_ws_upgrade(c, hm, NULL);
-      usb_device_configured = true;
+      flags.usb_active = 1;
       client = c;
     } else {
       mg_http_reply(c, 404, "", "");
@@ -27,7 +26,7 @@ static void handler(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       ring_buffer_write_multi(&usb_rx_buffer, wm->data.ptr, wm->data.len);
     }
     if (wm->flags & WEBSOCKET_OP_CLOSE) {
-      usb_device_configured = false;
+      flags.usb_active = 0;
       client = NULL;
     }
     break;

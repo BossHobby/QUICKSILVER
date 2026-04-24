@@ -4,6 +4,7 @@
 #include "driver/gpio.h"
 #include "driver/interrupt.h"
 #include "driver/time.h"
+#include "flight/control.h"
 
 #include <string.h>
 
@@ -177,8 +178,6 @@ static struct usb_cdc_line_coding cdc_line = {
 static usbd_device udev;
 static uint32_t ubuf[0x20];
 
-extern volatile bool usb_device_configured;
-
 static volatile bool rx_stalled = false;
 static volatile bool tx_stalled = true;
 
@@ -311,7 +310,7 @@ static usbd_respond cdc_setconf(usbd_device *dev, uint8_t cfg) {
     usbd_ep_deconfig(dev, CDC_RXD_EP);
     usbd_reg_endpoint(dev, CDC_RXD_EP, 0);
     usbd_reg_endpoint(dev, CDC_TXD_EP, 0);
-    usb_device_configured = false;
+    flags.usb_active = 0;
     return usbd_ack;
 
   case 1:
@@ -321,11 +320,11 @@ static usbd_respond cdc_setconf(usbd_device *dev, uint8_t cfg) {
     usbd_ep_config(dev, CDC_NTF_EP, USB_EPTYPE_INTERRUPT, CDC_NTF_SZ);
     usbd_reg_endpoint(dev, CDC_RXD_EP, cdc_rxonly);
     usbd_reg_endpoint(dev, CDC_TXD_EP, cdc_txonly);
-    usb_device_configured = true;
+    flags.usb_active = 1;
     return usbd_ack;
 
   default:
-    usb_device_configured = false;
+    flags.usb_active = 0;
     return usbd_fail;
   }
 }
