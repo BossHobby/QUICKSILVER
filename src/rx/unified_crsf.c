@@ -136,23 +136,15 @@ static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
 
     rx_map_channels(rc_channels);
 
-    state.aux[AUX_CHANNEL_0] = (channels[4] > 1100) ? 1 : 0; // 1100 cutoff intentionally selected to force aux channels low if
-    state.aux[AUX_CHANNEL_1] = (channels[5] > 1100) ? 1 : 0; // being controlled by a transmitter using a 3 pos switch in center state
-    state.aux[AUX_CHANNEL_2] = (channels[6] > 1100) ? 1 : 0;
-    state.aux[AUX_CHANNEL_3] = (channels[7] > 1100) ? 1 : 0;
-    state.aux[AUX_CHANNEL_4] = (channels[8] > 1100) ? 1 : 0;
-    state.aux[AUX_CHANNEL_5] = (channels[9] > 1100) ? 1 : 0;
-    state.aux[AUX_CHANNEL_6] = (channels[10] > 1100) ? 1 : 0;
-    state.aux[AUX_CHANNEL_7] = (channels[11] > 1100) ? 1 : 0;
-    state.aux[AUX_CHANNEL_8] = (channels[12] > 1100) ? 1 : 0;
-    state.aux[AUX_CHANNEL_9] = (channels[13] > 1100) ? 1 : 0;
-    state.aux[AUX_CHANNEL_10] = (channels[14] > 1100) ? 1 : 0;
-    state.aux[AUX_CHANNEL_11] = (channels[15] > 1100) ? 1 : 0;
+    for (uint32_t i = 0; i <= AUX_CHANNEL_11; i++) {
+      const int32_t raw = constrain(channels[4 + i], 0, 1984);
+      state.aux[i] = (uint16_t)(((uint32_t)raw * 65535) / 1984);
+    }
 
     channels_received = true;
 
-    if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
-      rx_lqi_update_direct(0.00062853551f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 191.0f));
+    if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel <= AUX_CHANNEL_11) {
+      rx_lqi_update_direct(0.00062853551f * (channels[(profile.receiver.aux[AUX_RSSI].channel + 4)] - 191.0f));
     }
     break;
   }

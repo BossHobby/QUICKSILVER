@@ -63,7 +63,7 @@ typedef enum {
   AUX_RACEMODE,
   AUX_HORIZON,
   AUX_STICK_BOOST_PROFILE,
-  UNUSED_AUX_HIGH_RATES, // used to multiply rates by a constant factor
+  UNUSED_AUX_HIGH_RATES,
   AUX_BUZZER_ENABLE,
   AUX_TURTLE,
   AUX_MOTOR_TEST,
@@ -76,7 +76,17 @@ typedef enum {
   AUX_FUNCTION_MAX
 } __attribute__((__packed__)) aux_function_t;
 
-#define rx_aux_on(function) (state.aux[profile.receiver.aux[(function)]])
+typedef struct {
+  aux_channel_t channel;
+  uint16_t range_min;
+  uint16_t range_max;
+} aux_function_map_t;
+
+#define AUX_VALUE_MAX 65535
+#define AUX_VALUE_MID 32768
+
+#define rx_aux_on(function) ((state.aux_active & (1U << (function))) != 0)
+#define rx_aux_value(channel) (state.aux[(channel)])
 
 void rx_init();
 void rx_update();
