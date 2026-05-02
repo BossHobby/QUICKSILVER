@@ -398,34 +398,34 @@ const profile_t default_profile = {
         .protocol = RX_PROTOCOL_UNIFIED_SERIAL,
 
         .aux = {
-            ARMING,              // AUX_ARMING
-            IDLE_UP,             // AUX_IDLE_UP
-            LEVELMODE,           // AUX_LEVELMODE
-            RACEMODE,            // AUX_RACEMODE
-            HORIZON,             // AUX_HORIZON
-            STICK_BOOST_PROFILE, // AUX_STICK_BOOST_PROFILE
-            AUX_CHANNEL_OFF,     // UNUSED_AUX_HIGH_RATES
-#ifdef BUZZER_ENABLE             // AUX_BUZZER_ENABLE
-            BUZZER_ENABLE,
+            ARMING,                  // AUX_ARMING
+            IDLE_UP,                 // AUX_IDLE_UP
+            LEVELMODE,               // AUX_LEVELMODE
+            RACEMODE,                // AUX_RACEMODE
+            HORIZON,                 // AUX_HORIZON
+            STICK_BOOST_PROFILE,     // AUX_STICK_BOOST_PROFILE
+            {AUX_CHANNEL_OFF, 0, 0}, // UNUSED_AUX_HIGH_RATES
+#ifdef BUZZER_ENABLE
+            BUZZER_ENABLE, // AUX_BUZZER_ENABLE
 #else
-            AUX_CHANNEL_OFF,
+            {AUX_CHANNEL_OFF, 0, 0},
 #endif
             TURTLE, // AUX_TURTLE
 
-#ifdef MOTORS_TO_THROTTLE_MODE // AUX_MOTOR_TEST
-            MOTORS_TO_THROTTLE_MODE,
+#ifdef MOTORS_TO_THROTTLE_MODE
+            MOTORS_TO_THROTTLE_MODE, // AUX_MOTOR_TEST
 #else
-            AUX_CHANNEL_OFF,
+            {AUX_CHANNEL_OFF, 0, 0},
 #endif
-            RSSI,
-#ifdef FPV_SWITCH // AUX_FPV_SWITCH
-            FPV_SWITCH,
+            RSSI, // AUX_RSSI
+#ifdef FPV_SWITCH
+            FPV_SWITCH, // AUX_FPV_SWITCH
 #else
-            AUX_CHANNEL_OFF,
+            {AUX_CHANNEL_OFF, 0, 0},
 #endif
-            AUX_CHANNEL_OFF, // AUX_BLACKBOX
-            PREARM,          // AUX_PREARM
-            AUX_CHANNEL_OFF, // AUX_OSD_PROFILE
+            {AUX_CHANNEL_OFF, 0, 0}, // AUX_BLACKBOX
+            PREARM,                  // AUX_PREARM
+            {AUX_CHANNEL_OFF, 0, 0}, // AUX_OSD_PROFILE
         },
         .lqi_source = RX_LQI_SOURCE_DIRECT,
 #ifdef CHANNEL_MAPPING
@@ -565,6 +565,7 @@ STICK_RATE_MEMBERS
 DTERM_ATTENUATION_MEMBERS
 PID_MEMBERS
 CALIBRATION_LIMIT_MEMBERS
+AUX_FUNCTION_MAP_MEMBERS
 RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
 BLACKBOX_PRESET_MEMBERS
@@ -639,6 +640,7 @@ STICK_RATE_MEMBERS
 DTERM_ATTENUATION_MEMBERS
 PID_MEMBERS
 CALIBRATION_LIMIT_MEMBERS
+AUX_FUNCTION_MAP_MEMBERS
 RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
 PROFILE_MEMBERS

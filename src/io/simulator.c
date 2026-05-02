@@ -79,10 +79,10 @@ void simulator_update() {
     state.rx.yaw = shared->state.rc_channels[2];
     state.rx.throttle = shared->state.rc_channels[3];
 
-    state.aux[AUX_CHANNEL_0] = shared->state.rc_aux[0];
-    state.aux[AUX_CHANNEL_1] = shared->state.rc_aux[1];
-    state.aux[AUX_CHANNEL_2] = shared->state.rc_aux[2];
-    state.aux[AUX_CHANNEL_3] = shared->state.rc_aux[3];
+    state.aux[AUX_CHANNEL_0] = shared->state.rc_aux[0] ? AUX_VALUE_MAX : 0;
+    state.aux[AUX_CHANNEL_1] = shared->state.rc_aux[1] ? AUX_VALUE_MAX : 0;
+    state.aux[AUX_CHANNEL_2] = shared->state.rc_aux[2] ? AUX_VALUE_MAX : 0;
+    state.aux[AUX_CHANNEL_3] = shared->state.rc_aux[3] ? AUX_VALUE_MAX : 0;
     state.aux[AUX_CHANNEL_4] = 0;
     state.aux[AUX_CHANNEL_5] = 0;
     state.aux[AUX_CHANNEL_6] = 0;

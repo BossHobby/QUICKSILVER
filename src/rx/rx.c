@@ -116,14 +116,33 @@ static float rx_apply_deadband(float val) {
   }
 }
 
+static void rx_update_aux_active() {
+  uint32_t active = 0;
+
+  for (uint32_t i = 0; i < AUX_FUNCTION_MAX; i++) {
+    const aux_function_map_t *map = &profile.receiver.aux[i];
+
+    if (map->channel != AUX_CHANNEL_OFF &&
+        (map->range_min != 0 || map->range_max != 0) &&
+        state.aux[map->channel] >= map->range_min &&
+        state.aux[map->channel] <= map->range_max) {
+      active |= 1U << i;
+    }
+  }
+
+  state.aux_active = active;
+}
+
 static void rx_init_state() {
   for (uint32_t i = 0; i < AUX_CHANNEL_OFF; i++) {
     state.aux[i] = 0;
   }
 
   // set always on channel to on
-  state.aux[AUX_CHANNEL_ON] = 1;
+  state.aux[AUX_CHANNEL_ON] = AUX_VALUE_MAX;
   state.aux[AUX_CHANNEL_OFF] = 0;
+  state.aux_active = 0;
+  rx_update_aux_active();
 
   filter_lp_pt2_init(&rx_filter, rx_filter_state, 4, state.rx_filter_hz, task_get_period_us(TASK_RX));
 }
@@ -293,6 +312,7 @@ void rx_update() {
 
   if (rx_check()) {
     rx_apply_stick_scale();
+    rx_update_aux_active();
 
     state.rx.roll = rx_apply_deadband(state.rx.roll);
     state.rx.pitch = rx_apply_deadband(state.rx.pitch);
