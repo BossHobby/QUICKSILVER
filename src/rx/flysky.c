@@ -183,8 +183,8 @@ static bool rx_flysky_check(void) {
         break;
       }
       const int aux_chan = i - 4;
-      const uint16_t threshold = 1200; // low is 1000, high is 2000
-      state.aux[aux_chan] = (flysky.channel_data[i] > threshold) ? 1 : 0;
+      const uint16_t raw = constrain(flysky.channel_data[i], 1000, 2000);
+      state.aux[aux_chan] = (uint16_t)(((uint32_t)(raw - 1000) * 65535) / (2000 - 1000));
     }
   }
 

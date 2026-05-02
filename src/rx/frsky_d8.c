@@ -79,21 +79,16 @@ static void frsky_d8_set_rc_data() {
   rx_map_channels(rc_channels);
 
   // Here we have the AUX channels Silverware supports
-  state.aux[AUX_CHANNEL_0] = (channels[4] > 2000) ? 1 : 0;
-  state.aux[AUX_CHANNEL_1] = (channels[5] > 2000) ? 1 : 0;
-  state.aux[AUX_CHANNEL_2] = (channels[6] > 2000) ? 1 : 0;
-  state.aux[AUX_CHANNEL_3] = (channels[7] > 2000) ? 1 : 0;
-  state.aux[AUX_CHANNEL_4] = 0;
-  state.aux[AUX_CHANNEL_5] = 0;
-  state.aux[AUX_CHANNEL_6] = 0;
-  state.aux[AUX_CHANNEL_7] = 0;
-  state.aux[AUX_CHANNEL_8] = 0;
-  state.aux[AUX_CHANNEL_9] = 0;
-  state.aux[AUX_CHANNEL_10] = 0;
-  state.aux[AUX_CHANNEL_11] = 0;
+  for (uint32_t i = 0; i <= AUX_CHANNEL_3; i++) {
+    const int32_t raw = constrain(channels[4 + i], 1200, 3300);
+    state.aux[i] = (uint16_t)(((uint32_t)(raw - 1200) * 65535) / (3300 - 1200));
+  }
+  for (uint32_t i = AUX_CHANNEL_4; i <= AUX_CHANNEL_11; i++) {
+    state.aux[i] = 0;
+  }
 
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_8) {
-    rx_lqi_update_direct(((channels[(profile.receiver.aux[AUX_RSSI] + 4)]) - 1500) * 100.f / 1500.f);
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel <= AUX_CHANNEL_8) {
+    rx_lqi_update_direct(((channels[(profile.receiver.aux[AUX_RSSI].channel + 4)]) - 1500) * 100.f / 1500.f);
   }
 }
 

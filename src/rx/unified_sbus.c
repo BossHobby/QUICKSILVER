@@ -7,6 +7,7 @@
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "flight/control.h"
+#include "util/util.h"
 
 #ifdef USE_RX_UNIFIED
 
@@ -62,18 +63,10 @@ static void decode_sbus_channels(uint8_t *data) {
   rx_map_channels(rc_channels);
 
   // Here we have the AUX channels Silverware supports
-  state.aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
+  for (uint32_t i = 0; i <= AUX_CHANNEL_11; i++) {
+    const int32_t raw = constrain(channels[4 + i], 172, 1811);
+    state.aux[i] = (uint16_t)(((uint32_t)(raw - 172) * 65535) / (1811 - 172));
+  }
 
   if (data[22] & (1 << 2)) {
     // RX sets this bit when it knows it missed a frame. Presumably this is a timer in the RX.
@@ -88,8 +81,8 @@ static void decode_sbus_channels(uint8_t *data) {
     failsafe_sbus_failsafe = 0;
   }
 
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
-    rx_lqi_update_direct(0.0610128f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 173));
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel <= AUX_CHANNEL_11) {
+    rx_lqi_update_direct(0.0610128f * (channels[(profile.receiver.aux[AUX_RSSI].channel + 4)] - 173));
   }
 
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
