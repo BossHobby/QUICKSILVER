@@ -11,6 +11,7 @@
 #include "driver/time.h"
 #include "flight/control.h"
 #include "rx/rx.h"
+#include "util/util.h"
 
 #ifdef USE_RX_UNIFIED
 
@@ -87,9 +88,6 @@
 #define MAVLINK_CHANNEL_IGNORE 0xFFFF
 #define MAVLINK_CHANNEL_RELEASE 0xFFFE
 #define MAVLINK_CHANNEL_RELEASE_LOW 0
-
-// Aux switch threshold, matches the other unified serial protocols
-#define MAVLINK_AUX_THRESHOLD 1600
 
 // MAVLink "unknown" sentinels
 #define MAVLINK_UNKNOWN_I8 ((int8_t)-1)
@@ -231,7 +229,8 @@ static bool mavlink_apply_channels() {
     if (!mavlink_channels_known[channel]) {
       continue;
     }
-    state.aux[AUX_CHANNEL_0 + i] = mavlink_channels[channel] > MAVLINK_AUX_THRESHOLD ? 1 : 0;
+    const int32_t raw = constrain(mavlink_channels[channel], 1000, 2000);
+    state.aux[AUX_CHANNEL_0 + i] = (uint16_t)(((uint32_t)(raw - 1000) * 65535) / (2000 - 1000));
   }
 
   return true;
