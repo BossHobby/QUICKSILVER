@@ -55,6 +55,7 @@ static packet_status_t dsm_handle_packet(uint8_t *packet) {
   uint16_t spek_val_mask;
   float dsm_scalefactor;
   float dsm_offset;
+  uint16_t dsm_max;
 
   switch (dsm_protocol) {
   case DSM2_22_1024:
@@ -64,6 +65,7 @@ static packet_status_t dsm_handle_packet(uint8_t *packet) {
     spek_val_mask = 0x03FF;
     dsm_scalefactor = (0.29354210f / DSM_SCALE_PERCENT);
     dsm_offset = 512.0f;
+    dsm_max = 1023;
     break;
   case DSMX_11_2048:
   case DSMX_22_2048:
@@ -74,6 +76,7 @@ static packet_status_t dsm_handle_packet(uint8_t *packet) {
     spek_val_mask = 0x07FF;
     dsm_scalefactor = (0.14662756f / DSM_SCALE_PERCENT);
     dsm_offset = 1024.0f;
+    dsm_max = 2047;
     break;
 
   default:
@@ -103,18 +106,14 @@ static packet_status_t dsm_handle_packet(uint8_t *packet) {
 
   rx_map_channels(rc_channels);
 
-  state.aux[AUX_CHANNEL_0] = (((channels[4] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0; // cutoff intentionally selected to force aux channels low if
-  state.aux[AUX_CHANNEL_1] = (((channels[5] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0; // being controlled by a transmitter using a 3 pos switch in center state
-  state.aux[AUX_CHANNEL_2] = (((channels[6] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
-  state.aux[AUX_CHANNEL_3] = (((channels[7] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
-  state.aux[AUX_CHANNEL_4] = (((channels[8] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
-  state.aux[AUX_CHANNEL_5] = (((channels[9] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
-  state.aux[AUX_CHANNEL_6] = (((channels[10] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
-  state.aux[AUX_CHANNEL_7] = (((channels[11] - dsm_offset) * dsm_scalefactor) > 0.11f) ? 1 : 0;
+  for (uint32_t i = 0; i <= AUX_CHANNEL_7; i++) {
+    const int32_t raw = constrain(channels[4 + i], 0, dsm_max);
+    state.aux[i] = (uint16_t)(((uint32_t)raw * 65535) / dsm_max);
+  }
 
   rx_lqi_got_packet();
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
-    rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI] + 4)] - dsm_offset) * dsm_scalefactor * 0.5f) + 0.5f));
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel <= AUX_CHANNEL_11) {
+    rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI].channel + 4)] - dsm_offset) * dsm_scalefactor * 0.5f) + 0.5f));
   }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
     rx_lqi_update_direct(0); // no internal rssi data
