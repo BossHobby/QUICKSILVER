@@ -228,7 +228,7 @@ void vtx_update() {
   if (status < VTX_DETECT_SUCCESS)
     return;
 
-  if (profile.receiver.aux[AUX_FPV_SWITCH] <= AUX_CHANNEL_11 && vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT)
+  if (profile.receiver.aux[AUX_FPV_SWITCH].channel <= AUX_CHANNEL_11 && vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT)
     vtx_settings.pit_mode = rx_aux_on(AUX_FPV_SWITCH) ? 0 : 1;
 
   if (!vtx_update_pitmode() || !vtx_update_frequency() || !vtx_update_powerlevel())
