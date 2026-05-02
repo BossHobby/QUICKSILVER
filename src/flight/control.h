@@ -105,7 +105,8 @@ typedef struct {
   float throttle; // input throttle with idle etc applied
   float thrsum;   // average of all 4 motor thrusts
 
-  uint8_t aux[AUX_CHANNEL_MAX]; // digital on / off channels
+  uint16_t aux[AUX_CHANNEL_MAX]; // full resolution 16-bit AUX channel values
+  uint32_t aux_active;           // cached active aux_function_t bitmask
 
   vec3_t accel_raw; // raw accel reading with rotation and scaling applied
   vec3_t accel;     // filtered accel readings
@@ -173,7 +174,8 @@ typedef struct {
   MEMBER(rx_status, uint32_t)                 \
   MEMBER(throttle, float)                     \
   MEMBER(thrsum, float)                       \
-  ARRAY_MEMBER(aux, AUX_CHANNEL_MAX, uint8_t) \
+  ARRAY_MEMBER(aux, AUX_CHANNEL_MAX, uint16_t)        \
+  MEMBER(aux_active, uint32_t)                        \
   MEMBER(accel_raw, vec3_t)                   \
   MEMBER(accel, vec3_t)                       \
   MEMBER(gyro_temp, float)                    \

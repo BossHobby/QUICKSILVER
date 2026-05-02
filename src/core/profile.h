@@ -9,7 +9,7 @@
 
 #define OSD_NUMBER_ELEMENTS 32
 
-#define PROFILE_VERSION MAKE_SEMVER(0, 2, 7)
+#define PROFILE_VERSION MAKE_SEMVER(0, 3, 0)
 
 // Rates
 typedef enum {
@@ -257,16 +257,23 @@ typedef struct {
 
 typedef struct {
   rx_protocol_t protocol;
-  aux_channel_t aux[AUX_FUNCTION_MAX];
+  aux_function_map_t aux[AUX_FUNCTION_MAX];
   rx_channel_mapping_t channel_mapping;
   rx_lqi_source_t lqi_source;
   profile_stick_calibration_limits_t stick_calibration_limits[4];
 } profile_receiver_t;
 
+#define AUX_FUNCTION_MAP_MEMBERS   \
+  START_STRUCT(aux_function_map_t) \
+  MEMBER(channel, uint8_t)         \
+  MEMBER(range_min, uint16_t)      \
+  MEMBER(range_max, uint16_t)      \
+  END_STRUCT()
+
 #define RECEIVER_MEMBERS                                                        \
   START_STRUCT(profile_receiver_t)                                              \
   MEMBER(protocol, uint8_t)                                                     \
-  ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, uint8_t)                                  \
+  ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, aux_function_map_t)                       \
   MEMBER(lqi_source, uint8_t)                                                   \
   MEMBER(channel_mapping, uint8_t)                                              \
   ARRAY_MEMBER(stick_calibration_limits, 4, profile_stick_calibration_limits_t) \

@@ -7,6 +7,7 @@
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "flight/control.h"
+#include "util/util.h"
 
 #ifdef USE_RX_UNIFIED
 
@@ -47,23 +48,15 @@ static packet_status_t ibus_handle_packet(uint8_t *packet) {
   rx_map_channels(rc_channels);
 
   // Here we have the AUX channels Silverware supports
-  state.aux[AUX_CHANNEL_0] = (channels[4] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_1] = (channels[5] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_2] = (channels[6] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_3] = (channels[7] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_4] = (channels[8] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_5] = (channels[9] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_6] = (channels[10] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_7] = (channels[11] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_8] = (channels[12] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_9] = (channels[13] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_10] = (channels[14] > 1600) ? 1 : 0;
-  state.aux[AUX_CHANNEL_11] = (channels[15] > 1600) ? 1 : 0;
+  for (uint32_t i = 0; i <= AUX_CHANNEL_11; i++) {
+    const int32_t raw = constrain(channels[4 + i], 1000, 2000);
+    state.aux[i] = (uint16_t)(((uint32_t)(raw - 1000) * 65535) / (2000 - 1000));
+  }
 
   rx_lqi_got_packet();
 
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI] <= AUX_CHANNEL_11) {
-    rx_lqi_update_direct(0.1f * (channels[(profile.receiver.aux[AUX_RSSI] + 4)] - 1000));
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel <= AUX_CHANNEL_11) {
+    rx_lqi_update_direct(0.1f * (channels[(profile.receiver.aux[AUX_RSSI].channel + 4)] - 1000));
   }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
     rx_lqi_update_direct(0); // no internal rssi data

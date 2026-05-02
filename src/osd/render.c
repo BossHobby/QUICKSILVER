@@ -98,6 +98,23 @@ static const char *aux_channel_labels[] = {
     "ALWAYS ON  ",
 };
 
+static const char *aux_channel_short_labels[] = {
+    "CH5 ",
+    "CH6 ",
+    "CH7 ",
+    "CH8 ",
+    "CH9 ",
+    "CH10",
+    "CH11",
+    "CH12",
+    "CH13",
+    "CH14",
+    "CH15",
+    "CH16",
+    "OFF ",
+    "ON  ",
+};
+
 static const char *on_off_labels[] = {
     " OFF",
     "  ON",
@@ -153,6 +170,51 @@ static void osd_start_el(osd_element_t *el) {
     osd_start(osd_attr(el), el->pos_hd_x, el->pos_hd_y);
   else
     osd_start(osd_attr(el), el->pos_sd_x, el->pos_sd_y);
+}
+
+static uint8_t aux_value_to_percent(uint16_t value) {
+  return (uint32_t)value * 100 / 65535;
+}
+
+static uint16_t aux_percent_to_value(uint8_t percent) {
+  if (percent >= 100) {
+    return 65535;
+  }
+  return (uint32_t)percent * 65535 / 100;
+}
+
+static void osd_menu_select_aux_adjust(int8_t x, int8_t y, const char *text, uint8_t channel_x, uint8_t range_x, aux_function_map_t *map) {
+  osd_menu_select(x, y, text);
+
+  if (osd_menu_select_enum(channel_x, y, map->channel, aux_channel_short_labels)) {
+    map->channel = osd_menu_adjust_int(map->channel, 1, AUX_CHANNEL_0, AUX_CHANNEL_MAX - 1);
+  }
+
+  int32_t range_min_percent = aux_value_to_percent(map->range_min);
+  if (osd_menu_select_int(range_x, y, range_min_percent, 4)) {
+    range_min_percent = osd_menu_adjust_int(range_min_percent, 1, 0, 100);
+    map->range_min = aux_percent_to_value(range_min_percent);
+    if (map->range_min > map->range_max) {
+      map->range_max = map->range_min;
+    }
+  }
+
+  if (osd_menu_label_start(range_x + 4, y)) {
+    osd_write_char('-');
+  }
+
+  int32_t range_max_percent = aux_value_to_percent(map->range_max);
+  if (osd_menu_select_int(range_x + 5, y, range_max_percent, 4)) {
+    range_max_percent = osd_menu_adjust_int(range_max_percent, 1, 0, 100);
+    map->range_max = aux_percent_to_value(range_max_percent);
+    if (map->range_max < map->range_min) {
+      map->range_min = map->range_max;
+    }
+  }
+
+  if (osd_menu_label_start(range_x + 9, y)) {
+    osd_write_char('%');
+  }
 }
 
 void osd_display_reset() {
@@ -927,22 +989,22 @@ void osd_display() {
     osd_menu_scroll_start(4, 2, 7);
     {
       // PAGE 1
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "ARMING", 17, &profile.receiver.aux[AUX_ARMING], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_MAX - 1);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "PREARM", 17, &profile.receiver.aux[AUX_PREARM], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_MAX - 1);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "IDLE UP", 17, &profile.receiver.aux[AUX_IDLE_UP], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_MAX - 1);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "LEVELMODE", 17, &profile.receiver.aux[AUX_LEVELMODE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_MAX - 1);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "RACEMODE", 17, &profile.receiver.aux[AUX_RACEMODE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_MAX - 1);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "HORIZON", 17, &profile.receiver.aux[AUX_HORIZON], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_MAX - 1);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "STICK BOOST", 17, &profile.receiver.aux[AUX_STICK_BOOST_PROFILE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_MAX - 1);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "ARMING", 17, 22, &profile.receiver.aux[AUX_ARMING]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "PREARM", 17, 22, &profile.receiver.aux[AUX_PREARM]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "IDLE UP", 17, 22, &profile.receiver.aux[AUX_IDLE_UP]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "LEVELMODE", 17, 22, &profile.receiver.aux[AUX_LEVELMODE]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "RACEMODE", 17, 22, &profile.receiver.aux[AUX_RACEMODE]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "HORIZON", 17, 22, &profile.receiver.aux[AUX_HORIZON]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "STICK BOOST", 17, 22, &profile.receiver.aux[AUX_STICK_BOOST_PROFILE]);
 
       // PAGE 2
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "BUZZER", 17, &profile.receiver.aux[AUX_BUZZER_ENABLE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_MAX - 1);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "TURTLE", 17, &profile.receiver.aux[AUX_TURTLE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_MAX - 1);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "MOTOR TEST", 17, &profile.receiver.aux[AUX_MOTOR_TEST], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_MAX - 1);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "FPV SWITCH", 17, &profile.receiver.aux[AUX_FPV_SWITCH], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_MAX - 1);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "BLACKBOX", 17, &profile.receiver.aux[AUX_BLACKBOX], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_MAX - 1);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "PREARM", 17, &profile.receiver.aux[AUX_PREARM], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_MAX - 1);
-      osd_menu_select_enum_adjust(4, OSD_AUTO, "OSD PROFILE", 17, &profile.receiver.aux[AUX_OSD_PROFILE], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_MAX - 1);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "BUZZER", 17, 22, &profile.receiver.aux[AUX_BUZZER_ENABLE]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "TURTLE", 17, 22, &profile.receiver.aux[AUX_TURTLE]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "MOTOR TEST", 17, 22, &profile.receiver.aux[AUX_MOTOR_TEST]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "FPV SWITCH", 17, 22, &profile.receiver.aux[AUX_FPV_SWITCH]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "PREARM", 17, 22, &profile.receiver.aux[AUX_PREARM]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
     }
     osd_menu_scroll_finish(4);
 
@@ -1358,7 +1420,7 @@ void osd_display() {
 
     osd_menu_select_enum_adjust(4, 4, "RSSI FROM", 16, &profile.receiver.lqi_source, rssi_source_labels, RX_LQI_SOURCE_PACKET_RATE, RX_LQI_SOURCE_DIRECT);
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-      osd_menu_select_enum_adjust(4, 5, "SELECT AUX", 16, &profile.receiver.aux[AUX_RSSI], aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
+      osd_menu_select_enum_adjust(4, 5, "SELECT AUX", 16, &profile.receiver.aux[AUX_RSSI].channel, aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
     }
 
     osd_menu_select_save_and_exit(4);

@@ -442,11 +442,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     data[3] = mapf(state.rx_filtered.throttle, 0.0f, 1.0f, 1000.f, 2000.f);
 
     for (uint32_t i = 0; i < AUX_CHANNEL_OFF; i++) {
-      if (state.aux[i]) {
-        data[i + 4] = 2000;
-      } else {
-        data[i + 4] = 1000;
-      }
+      data[i + 4] = 1000 + ((uint32_t)state.aux[i] * 1000) / AUX_VALUE_MAX;
     }
 
     msp_send_reply(msp, magic, cmd, (uint8_t *)data, 32);
