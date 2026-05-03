@@ -1,12 +1,12 @@
 #include "rx/stick_wizard.h"
 
+#include "control/control.h"
 #include "core/flash.h"
 #include "core/looptime.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/scheduler.h"
 #include "driver/time.h"
-#include "flight/control.h"
 #include "io/led.h"
 #include "util/util.h"
 

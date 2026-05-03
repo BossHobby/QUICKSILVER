@@ -2,12 +2,12 @@
 
 #include <stddef.h>
 
+#include "control/control.h"
+#include "control/gestures.h"
+#include "control/imu.h"
+#include "control/sixaxis.h"
 #include "driver/serial.h"
 #include "driver/usb.h"
-#include "flight/control.h"
-#include "flight/gestures.h"
-#include "flight/imu.h"
-#include "flight/sixaxis.h"
 #include "io/blackbox.h"
 #include "io/buzzer.h"
 #include "io/gps.h"

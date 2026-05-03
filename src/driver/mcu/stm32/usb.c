@@ -1,10 +1,10 @@
 #include "driver/usb.h"
 
+#include "control/control.h"
 #include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/interrupt.h"
 #include "driver/time.h"
-#include "flight/control.h"
 
 #include <string.h>
 

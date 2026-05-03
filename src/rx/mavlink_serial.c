@@ -5,11 +5,11 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "control/control.h"
 #include "core/profile.h"
 #include "core/target.h"
 #include "driver/serial.h"
 #include "driver/time.h"
-#include "flight/control.h"
 #include "rx/rx.h"
 #include "util/util.h"
 
