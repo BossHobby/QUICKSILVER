@@ -45,6 +45,11 @@ except:
     pass
 print("Git Branch", git_branch)
 
+targets_branch = os.environ.get("TARGETS_BRANCH")
+if not targets_branch:
+    targets_branch = "targets" if git_branch == "" else "targets-develop"
+print("Targets Branch", targets_branch)
+
 env.Append(
     GIT_VERSION=git_version,
     GIT_BRANCH=git_branch,
@@ -76,14 +81,18 @@ def fetch_thread():
     target_dir = os.path.join(env["PROJECT_DIR"], "targets")
 
     if not os.path.exists(target_dir):
-        porcelain.clone(target_remote, target=target_dir, branch="targets")
+        porcelain.clone(target_remote, target_dir, branch=targets_branch)
         touch(os.path.join(env["PROJECT_DIR"], "platformio.ini"))
     else:
-        target_repo = porcelain.open_repo(target_dir)
-        target_ref_before = porcelain.describe(target_repo)
-        update = porcelain.fetch(target_repo, target_remote, b"refs/heads/targets")
-        porcelain.checkout(target_repo, target="targets", force=True)
-        target_ref_after = porcelain.describe(target_repo)
+        target_ref_before = porcelain.describe(target_dir)
+        porcelain.pull(
+            target_dir,
+            target_remote,
+            refspecs=f"+refs/heads/{targets_branch}:refs/heads/{targets_branch}",
+            force=True,
+        )
+        porcelain.checkout(target_dir, targets_branch, force=True)
+        target_ref_after = porcelain.describe(target_dir)
 
         if target_ref_before != target_ref_after:
             touch(os.path.join(env["PROJECT_DIR"], "platformio.ini"))
