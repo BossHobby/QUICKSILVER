@@ -2,11 +2,11 @@
 
 #include <string.h>
 
+#include "control/control.h"
 #include "core/looptime.h"
 #include "core/profile.h"
 #include "driver/osd/osd.h"
 #include "driver/time.h"
-#include "flight/control.h"
 
 #define LABEL_LEN 22
 

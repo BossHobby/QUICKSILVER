@@ -3,8 +3,8 @@
 #include <cbor.h>
 
 #include "core/project.h"
-#include "flight/filter.h"
 #include "rx/rx.h"
+#include "util/filter.h"
 #include "util/vector.h"
 
 #define OSD_NUMBER_ELEMENTS 32

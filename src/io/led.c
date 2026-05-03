@@ -1,9 +1,9 @@
 #include "io/led.h"
 
+#include "control/control.h"
 #include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/time.h"
-#include "flight/control.h"
 #include "util/util.h"
 
 #define LED_FLASH -1

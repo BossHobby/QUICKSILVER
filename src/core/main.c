@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "control/imu.h"
+#include "control/multi/pid.h"
+#include "control/sixaxis.h"
 #include "core/debug.h"
 #include "core/failloop.h"
 #include "core/flash.h"
@@ -18,18 +21,15 @@
 #include "driver/time.h"
 #include "driver/timer.h"
 #include "driver/usb.h"
-#include "flight/filter.h"
-#include "flight/imu.h"
-#include "flight/pid.h"
-#include "flight/sixaxis.h"
 #include "io/blackbox.h"
 #include "io/buzzer.h"
+#include "io/gps.h"
 #include "io/led.h"
 #include "io/simulator.h"
 #include "io/vbat.h"
 #include "io/vtx.h"
-#include "io/gps.h"
 #include "osd/render.h"
+#include "util/filter.h"
 
 __attribute__((__used__)) void
 memory_section_init() {

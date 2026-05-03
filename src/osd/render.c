@@ -2,13 +2,13 @@
 
 #include <string.h>
 
+#include "control/control.h"
 #include "core/flash.h"
 #include "core/looptime.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/scheduler.h"
 #include "driver/reset.h"
-#include "flight/control.h"
 #include "io/blackbox_device.h"
 #include "io/led.h"
 #include "io/vtx.h"

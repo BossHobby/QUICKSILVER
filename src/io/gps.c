@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "control/control.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "driver/serial.h"
 #include "driver/time.h"
-#include "flight/control.h"
 #include "util/cbor_helper.h"
 #include "util/ring_buffer.h"
 
