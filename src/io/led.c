@@ -124,7 +124,7 @@ void led_update() {
     return led_flash_duty(500, 30);
   }
 
-  if (flags.arm_switch && (flags.throttle_safety == 1 || flags.arm_safety == 1)) {
+  if (flags.arm_request && flags.arming_disabled_flags != ARMING_DISABLED_NONE) {
     return led_flash_duty(100, 8);
   }
 
