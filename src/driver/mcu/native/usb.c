@@ -1,5 +1,5 @@
 #include "driver/usb.h"
-#include "flight/control.h"
+#include "control/control.h"
 
 #include <mongoose.h>
 

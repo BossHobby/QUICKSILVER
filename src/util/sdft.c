@@ -2,9 +2,9 @@
 
 #include <math.h>
 
+#include "control/control.h"
 #include "core/looptime.h"
-#include "flight/control.h"
-#include "flight/filter.h"
+#include "util/filter.h"
 #include "util/util.h"
 
 // from https://www.dsprelated.com/showarticle/776.php

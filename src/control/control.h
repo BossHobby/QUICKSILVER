@@ -9,6 +9,10 @@
 #include "io/gps.h"
 #include "util/vector.h"
 
+// Throttle must drop below this value if arming feature is enabled for arming to take place.
+// Brushed mix increase will also not activate on the ground until this threshold is passed during takeoff.
+#define THROTTLE_SAFETY .10f
+
 #define RXMODE_BIND 0
 #define RXMODE_NORMAL 1
 
@@ -219,4 +223,5 @@ extern motor_test_t motor_test;
 
 cbor_result_t cbor_encode_control_state_t(cbor_value_t *enc, const control_state_t *s);
 
+void control_update_arming();
 void control();
