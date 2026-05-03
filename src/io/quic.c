@@ -162,7 +162,7 @@ static void get_quic(quic_t *quic, cbor_value_t *dec) {
     quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
 #endif
-#ifdef USE_MOTOR_DSHOT
+#ifdef USE_SERIAL_4WAY
   case QUIC_VAL_BLHEL_SETTINGS: {
     quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
 
@@ -482,7 +482,7 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
     quic_send(quic, QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
-#ifdef USE_MOTOR_DSHOT
+#ifdef USE_SERIAL_4WAY
   case QUIC_MOTOR_ESC4WAY_IF: {
     uint8_t count = serial_4way_init();
 

@@ -20,6 +20,7 @@
 
 #define USE_MOTOR_DSHOT
 #define USE_MOTOR_PWM
+#define USE_SERIAL_4WAY
 
 #ifndef AT32F4
 #define USE_RX_SPI_FRSKY

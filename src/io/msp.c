@@ -485,7 +485,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       break;
     }
 #endif
-#ifdef USE_MOTOR_DSHOT
+#ifdef USE_SERIAL_4WAY
     default:
     case MSP_PASSTHROUGH_ESC_4WAY: {
       uint8_t data[1] = {MOTOR_PIN_MAX};
