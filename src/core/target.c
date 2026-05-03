@@ -1,10 +1,9 @@
 #include "core/target.h"
 
-#include "core/failloop.h"
-
 #include <ctype.h>
 #include <string.h>
 
+#include "core/failloop.h"
 #include "driver/gpio.h"
 #include "io/quic.h"
 #include "util/cbor_helper.h"
@@ -46,6 +45,7 @@ target_info_t target_info = {
 TARGET_DMA_MEMBERS
 TARGET_LED_MEMBERS
 TARGET_BUZZER_MEMBERS
+TARGET_OUTPUT_MEMBERS
 TARGET_SERIAL_MEMBERS
 TARGET_SPI_MEMBERS
 TARGET_SPI_DEVICE_MEMBERS
@@ -75,6 +75,7 @@ TARGET_INFO_MEMBERS
 TARGET_DMA_MEMBERS
 TARGET_LED_MEMBERS
 TARGET_BUZZER_MEMBERS
+TARGET_OUTPUT_MEMBERS
 TARGET_SERIAL_MEMBERS
 TARGET_SPI_MEMBERS
 TARGET_GYRO_SPI_DEVICE_MEMBERS
@@ -201,6 +202,89 @@ cbor_result_t cbor_decode_gpio_pins_t(cbor_value_t *dec, gpio_pins_t *t) {
   }
 
   *t = gpio_pin_lookup[val];
+
+  return res;
+}
+
+cbor_result_t cbor_encode_output_caps_t(cbor_value_t *enc, const output_caps_t *t) {
+  cbor_result_t res = CBOR_OK;
+
+  uint32_t count = 0;
+  if (*t & OUTPUT_CAP_MOTOR) {
+    count++;
+  }
+  if (*t & OUTPUT_CAP_SERVO) {
+    count++;
+  }
+
+  CBOR_CHECK_ERROR(res = cbor_encode_array(enc, count));
+  if (*t & OUTPUT_CAP_MOTOR) {
+    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "motor"));
+  }
+  if (*t & OUTPUT_CAP_SERVO) {
+    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "servo"));
+  }
+
+  return res;
+}
+
+cbor_result_t cbor_decode_output_caps_t(cbor_value_t *dec, output_caps_t *t) {
+  cbor_result_t res = CBOR_OK;
+
+  cbor_container_t array;
+  CBOR_CHECK_ERROR(res = cbor_decode_array(dec, &array));
+
+  output_caps_t caps = 0;
+  for (uint32_t i = 0; i < cbor_decode_array_size(dec, &array); i++) {
+    const uint8_t *name;
+    uint32_t name_len;
+    CBOR_CHECK_ERROR(res = cbor_decode_tstr(dec, &name, &name_len));
+    if (buf_equal_string(name, name_len, "motor")) {
+      caps |= OUTPUT_CAP_MOTOR;
+    } else if (buf_equal_string(name, name_len, "servo")) {
+      caps |= OUTPUT_CAP_SERVO;
+    }
+  }
+
+  *t = caps;
+  return res;
+}
+
+cbor_result_t cbor_decode_target_output_array(cbor_value_t *dec, target_output_t (*outputs)[MOTOR_PIN_MAX]) {
+  cbor_result_t res = CBOR_OK;
+
+  memset(outputs, 0, MOTOR_PIN_MAX * sizeof(target_output_t));
+
+  cbor_container_t array;
+  CBOR_CHECK_ERROR(res = cbor_decode_array(dec, &array));
+
+  const uint32_t array_size = cbor_decode_array_size(dec, &array);
+  const uint32_t limit = min(MOTOR_PIN_MAX, array_size);
+  for (uint32_t i = 0; i < limit; i++) {
+    CBOR_CHECK_ERROR(res = cbor_decode_target_output_t(dec, &(*outputs)[i]));
+  }
+  for (uint32_t i = limit; i < array_size; i++) {
+    CBOR_CHECK_ERROR(res = cbor_decode_skip(dec));
+  }
+
+  return res;
+}
+
+cbor_result_t cbor_encode_target_output_array(cbor_value_t *enc, const target_output_t (*outputs)[MOTOR_PIN_MAX]) {
+  cbor_result_t res = CBOR_OK;
+
+  uint32_t count = 0;
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    const target_output_t *output = &(*outputs)[i];
+    if (output->pin != PIN_NONE || output->caps != 0) {
+      count = i + 1;
+    }
+  }
+
+  CBOR_CHECK_ERROR(res = cbor_encode_array(enc, count));
+  for (uint32_t i = 0; i < count; i++) {
+    CBOR_CHECK_ERROR(res = cbor_encode_target_output_t(enc, &(*outputs)[i]));
+  }
 
   return res;
 }

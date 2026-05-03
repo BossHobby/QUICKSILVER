@@ -135,7 +135,10 @@ uint8_t serial_4way_init() {
   time_delay_ms(250);
 
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    const gpio_pins_t pin = target.motor_pins[profile.motor.motor_pins[i]];
+    const profile_output_t *output = profile_output_for_role(OUTPUT_ROLE_MOTOR_1 + i);
+    const gpio_pins_t pin = output && output->target_output < MOTOR_PIN_MAX && profile_output_slot_uses_motor(output->target_output)
+                              ? target.outputs[output->target_output].pin
+                              : PIN_NONE;
     esc_pins[i] = pin;
     avr_bl_init_pin(pin);
   }
