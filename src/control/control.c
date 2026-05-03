@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 #include "angle_pid.h"
-#include "control/filter.h"
 #include "control/gestures.h"
 #include "control/imu.h"
 #include "control/input.h"
@@ -20,6 +19,7 @@
 #include "motor.h"
 #include "turtle_mode.h"
 #include "util/cbor_helper.h"
+#include "util/filter.h"
 #include "util/util.h"
 
 // Throttle must drop below this value if arming feature is enabled for arming to take place.

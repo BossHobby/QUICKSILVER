@@ -2,9 +2,9 @@
 
 #include <cbor.h>
 
-#include "control/filter.h"
 #include "core/project.h"
 #include "rx/rx.h"
+#include "util/filter.h"
 #include "util/vector.h"
 
 #define OSD_NUMBER_ELEMENTS 32

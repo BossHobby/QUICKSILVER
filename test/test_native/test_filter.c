@@ -7,9 +7,9 @@
 
 // Include filter module
 #include "control/control.h"
-#include "control/filter.h"
 #include "core/profile.h"
 #include "driver/time.h"
+#include "util/filter.h"
 
 // Test fixtures
 static void filter_setUp(void) {

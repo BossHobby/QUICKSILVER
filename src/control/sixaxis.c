@@ -6,8 +6,6 @@
 #include <string.h>
 
 #include "control/control.h"
-#include "control/filter.h"
-#include "control/sdft.h"
 #include "control/sixaxis.h"
 #include "core/debug.h"
 #include "core/flash.h"
@@ -19,6 +17,8 @@
 #include "driver/time.h"
 #include "io/blackbox.h"
 #include "io/led.h"
+#include "util/filter.h"
+#include "util/sdft.h"
 #include "util/util.h"
 
 #define CAL_INTERVAL 2000           // time between measurements in us

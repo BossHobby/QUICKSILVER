@@ -5,11 +5,11 @@
 #include <stdlib.h>
 
 #include "control/control.h"
-#include "control/filter.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/tasks.h"
 #include "io/led.h"
+#include "util/filter.h"
 #include "util/util.h"
 #include "util/vector.h"
 

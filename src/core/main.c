@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "control/filter.h"
 #include "control/imu.h"
 #include "control/pid.h"
 #include "control/sixaxis.h"
@@ -30,6 +29,7 @@
 #include "io/vbat.h"
 #include "io/vtx.h"
 #include "osd/render.h"
+#include "util/filter.h"
 
 __attribute__((__used__)) void
 memory_section_init() {

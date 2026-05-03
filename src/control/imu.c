@@ -6,12 +6,12 @@
 #include <stdlib.h>
 
 #include "control/control.h"
-#include "control/filter.h"
 #include "control/sixaxis.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/tasks.h"
 #include "driver/time.h"
+#include "util/filter.h"
 #include "util/util.h"
 #include "util/vector.h"
 

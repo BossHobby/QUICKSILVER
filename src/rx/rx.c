@@ -3,7 +3,6 @@
 #include <math.h>
 
 #include "control/control.h"
-#include "control/filter.h"
 #include "core/flash.h"
 #include "core/profile.h"
 #include "core/project.h"
@@ -11,6 +10,7 @@
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "io/simulator.h"
+#include "util/filter.h"
 #include "util/util.h"
 
 #define RX_FITER_SAMPLE_TIME (5000)

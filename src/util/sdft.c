@@ -3,8 +3,8 @@
 #include <math.h>
 
 #include "control/control.h"
-#include "control/filter.h"
 #include "core/looptime.h"
+#include "util/filter.h"
 #include "util/util.h"
 
 // from https://www.dsprelated.com/showarticle/776.php
