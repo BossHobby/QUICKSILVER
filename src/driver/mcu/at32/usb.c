@@ -6,10 +6,10 @@
 #include <usb_core.h>
 #include <usbd_int.h>
 
+#include "control/control.h"
 #include "driver/gpio.h"
 #include "driver/interrupt.h"
 #include "driver/time.h"
-#include "flight/control.h"
 
 static otg_core_type otg_core_struct;
 

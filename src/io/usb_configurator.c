@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "control/control.h"
 #include "core/debug.h"
 #include "core/looptime.h"
 #include "core/profile.h"
@@ -13,7 +14,6 @@
 #include "driver/reset.h"
 #include "driver/serial.h"
 #include "driver/usb.h"
-#include "flight/control.h"
 #include "io/msp.h"
 #include "io/quic.h"
 #include "util/crc.h"
