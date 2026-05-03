@@ -3,6 +3,7 @@
 #include <float.h>
 
 #include "control/control.h"
+#include "control/output.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "driver/motor.h"
@@ -232,7 +233,7 @@ void motor_output_calc(float mix[MOTOR_PIN_MAX]) {
     }
 
 #ifndef NOMOTORS
-    motor_set(i, mix[i]);
+    output_set_role(OUTPUT_ROLE_MOTOR_1 + i, mix[i]);
 #endif
     state.thrsum += mix[i];
   }
