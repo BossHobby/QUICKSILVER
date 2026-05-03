@@ -198,22 +198,59 @@ typedef struct {
   uint8_t gyro_orientation;
   float torque_boost;
   float throttle_boost;
-  motor_pin_t motor_pins[MOTOR_PIN_MAX];
   float turtle_throttle_percent;
 } profile_motor_t;
 
-#define MOTOR_MEMBERS                              \
-  START_STRUCT(profile_motor_t)                    \
-  MEMBER(digital_idle, float)                      \
-  MEMBER(motor_limit, float)                       \
-  MEMBER(dshot_time, uint16_t)                     \
-  MEMBER(dshot_telemetry, bool)                    \
-  MEMBER(invert_yaw, uint8_t)                      \
-  MEMBER(gyro_orientation, uint8_t)                \
-  MEMBER(torque_boost, float)                      \
-  MEMBER(throttle_boost, float)                    \
-  ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX, uint8_t) \
-  MEMBER(turtle_throttle_percent, float)           \
+#define MOTOR_MEMBERS                    \
+  START_STRUCT(profile_motor_t)          \
+  MEMBER(digital_idle, float)            \
+  MEMBER(motor_limit, float)             \
+  MEMBER(dshot_time, uint16_t)           \
+  MEMBER(dshot_telemetry, bool)          \
+  MEMBER(invert_yaw, uint8_t)            \
+  MEMBER(gyro_orientation, uint8_t)      \
+  MEMBER(torque_boost, float)            \
+  MEMBER(throttle_boost, float)          \
+  MEMBER(turtle_throttle_percent, float) \
+  END_STRUCT()
+
+typedef enum {
+  OUTPUT_PROTOCOL_NONE,
+  OUTPUT_PROTOCOL_DSHOT,
+  OUTPUT_PROTOCOL_MOTOR_PWM,
+  OUTPUT_PROTOCOL_SERVO_PWM,
+} __attribute__((__packed__)) output_protocol_t;
+
+typedef enum {
+  OUTPUT_ROLE_NONE,
+  OUTPUT_ROLE_MOTOR_1,
+  OUTPUT_ROLE_MOTOR_2,
+  OUTPUT_ROLE_MOTOR_3,
+  OUTPUT_ROLE_MOTOR_4,
+  OUTPUT_ROLE_MAX,
+} __attribute__((__packed__)) output_role_t;
+
+typedef struct {
+  uint8_t target_output;
+  output_role_t role;
+  output_protocol_t protocol;
+  uint8_t invert;
+  int16_t trim;
+  int16_t min;
+  int16_t max;
+  uint16_t rate_hz;
+} profile_output_t;
+
+#define PROFILE_OUTPUT_MEMBERS   \
+  START_STRUCT(profile_output_t) \
+  MEMBER(target_output, uint8_t) \
+  MEMBER(role, uint8_t)          \
+  MEMBER(protocol, uint8_t)      \
+  MEMBER(invert, uint8_t)        \
+  MEMBER(trim, int16_t)          \
+  MEMBER(min, int16_t)           \
+  MEMBER(max, int16_t)           \
+  MEMBER(rate_hz, uint16_t)      \
   END_STRUCT()
 
 typedef enum {
@@ -388,6 +425,7 @@ typedef struct {
 // Full Profile
 typedef struct {
   profile_metadata_t meta;
+  profile_output_t outputs[MOTOR_PIN_MAX];
   profile_motor_t motor;
   profile_serial_t serial;
   profile_filter_t filter;
@@ -399,18 +437,19 @@ typedef struct {
   profile_blackbox_t blackbox;
 } profile_t;
 
-#define PROFILE_MEMBERS                \
-  START_STRUCT(profile_t)              \
-  MEMBER(meta, profile_metadata_t)     \
-  MEMBER(motor, profile_motor_t)       \
-  MEMBER(serial, profile_serial_t)     \
-  MEMBER(filter, profile_filter_t)     \
-  MEMBER(osd, profile_osd_t)           \
-  MEMBER(rate, profile_rate_t)         \
-  MEMBER(receiver, profile_receiver_t) \
-  MEMBER(pid, profile_pid_t)           \
-  MEMBER(voltage, profile_voltage_t)   \
-  MEMBER(blackbox, profile_blackbox_t) \
+#define PROFILE_MEMBERS                                                              \
+  START_STRUCT(profile_t)                                                            \
+  MEMBER(meta, profile_metadata_t)                                                   \
+  COUNT_ARRAY_MEMBER(outputs, MOTOR_PIN_MAX, profile_output_t, profile_output_count) \
+  MEMBER(motor, profile_motor_t)                                                     \
+  MEMBER(serial, profile_serial_t)                                                   \
+  MEMBER(filter, profile_filter_t)                                                   \
+  MEMBER(osd, profile_osd_t)                                                         \
+  MEMBER(rate, profile_rate_t)                                                       \
+  MEMBER(receiver, profile_receiver_t)                                               \
+  MEMBER(pid, profile_pid_t)                                                         \
+  MEMBER(voltage, profile_voltage_t)                                                 \
+  MEMBER(blackbox, profile_blackbox_t)                                               \
   END_STRUCT()
 
 extern profile_t profile;
@@ -428,6 +467,9 @@ uint8_t blackbox_preset_equals(const blackbox_preset_t *preset, profile_blackbox
 void profile_set_defaults();
 pid_rate_t *profile_current_pid_rates();
 rate_t *profile_current_rates();
+const profile_output_t *profile_output_for_role(output_role_t role);
+bool profile_output_slot_uses_motor(uint8_t target_output);
+uint32_t profile_output_count(const profile_output_t *outputs, uint32_t size);
 
 cbor_result_t cbor_encode_profile_t(cbor_value_t *enc, const profile_t *p);
 cbor_result_t cbor_decode_profile_t(cbor_value_t *dec, profile_t *p);

@@ -23,8 +23,30 @@ typedef enum {
   MOTOR_PIN1,
   MOTOR_PIN2,
   MOTOR_PIN3,
+  MOTOR_PIN4,
+  MOTOR_PIN5,
+  MOTOR_PIN6,
+  MOTOR_PIN7,
   MOTOR_PIN_MAX
 } __attribute__((__packed__)) motor_pin_t;
+
+typedef enum {
+  OUTPUT_CAP_MOTOR = (1 << 0),
+  OUTPUT_CAP_SERVO = (1 << 1),
+} output_cap_t;
+
+typedef uint8_t output_caps_t;
+
+typedef struct {
+  gpio_pins_t pin;
+  output_caps_t caps;
+} target_output_t;
+
+#define TARGET_OUTPUT_MEMBERS   \
+  START_STRUCT(target_output_t) \
+  MEMBER(pin, gpio_pins_t)      \
+  MEMBER(caps, output_caps_t)   \
+  END_STRUCT()
 
 typedef enum {
   SPI_PORT_INVALID,
@@ -218,7 +240,7 @@ typedef struct {
 
   target_invert_pin_t sdcard_detect;
   target_invert_pin_t buzzer;
-  gpio_pins_t motor_pins[MOTOR_PIN_MAX];
+  target_output_t outputs[MOTOR_PIN_MAX];
 
   uint16_t vbat_scale;
   uint16_t ibat_scale;
@@ -248,7 +270,7 @@ typedef struct {
   MEMBER(rgb_led, gpio_pins_t)                                                   \
   MEMBER(sdcard_detect, target_invert_pin_t)                                     \
   MEMBER(buzzer, target_invert_pin_t)                                            \
-  ARRAY_MEMBER(motor_pins, MOTOR_PIN_MAX, gpio_pins_t)                           \
+  MEMBER(outputs, target_output_array)                                           \
   MEMBER(vbat_scale, uint16_t)                                                   \
   MEMBER(ibat_scale, uint16_t)                                                   \
   MEMBER(dma, target_dma_array)                                                  \
@@ -299,6 +321,10 @@ void target_init();
 
 cbor_result_t cbor_encode_gpio_pins_t(cbor_value_t *enc, const gpio_pins_t *t);
 cbor_result_t cbor_decode_gpio_pins_t(cbor_value_t *dec, gpio_pins_t *t);
+cbor_result_t cbor_encode_output_caps_t(cbor_value_t *enc, const output_caps_t *t);
+cbor_result_t cbor_decode_output_caps_t(cbor_value_t *dec, output_caps_t *t);
+cbor_result_t cbor_encode_target_output_array(cbor_value_t *enc, const target_output_t (*outputs)[MOTOR_PIN_MAX]);
+cbor_result_t cbor_decode_target_output_array(cbor_value_t *dec, target_output_t (*outputs)[MOTOR_PIN_MAX]);
 
 cbor_result_t cbor_encode_target_t(cbor_value_t *enc, const target_t *t);
 cbor_result_t cbor_decode_target_t(cbor_value_t *dec, target_t *t);
