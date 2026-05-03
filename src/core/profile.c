@@ -39,6 +39,27 @@ uint8_t blackbox_preset_equals(const blackbox_preset_t *preset, profile_blackbox
   return preset->field_flags == profile->field_flags && preset->sample_rate_hz == profile->sample_rate_hz;
 }
 
+static bool profile_output_configured(const profile_output_t *output) {
+  return output->target_output != 0 ||
+         output->role != OUTPUT_ROLE_NONE ||
+         output->protocol != OUTPUT_PROTOCOL_NONE ||
+         output->invert != 0 ||
+         output->trim != 0 ||
+         output->min != 0 ||
+         output->max != 0 ||
+         output->rate_hz != 0;
+}
+
+uint32_t profile_output_count(const profile_output_t *outputs, uint32_t size) {
+  uint32_t count = 0;
+  for (uint32_t i = 0; i < size; i++) {
+    if (profile_output_configured(&outputs[i])) {
+      count = i + 1;
+    }
+  }
+  return count;
+}
+
 #define DEFAULT_PID_RATE_PRESET 0
 
 const pid_rate_preset_t pid_rate_presets[] = {
@@ -131,6 +152,13 @@ const profile_t default_profile = {
         .datetime = 0,
     },
 
+    .outputs = {
+        {.target_output = 0, .role = OUTPUT_ROLE_MOTOR_1, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 1, .role = OUTPUT_ROLE_MOTOR_2, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 2, .role = OUTPUT_ROLE_MOTOR_3, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 3, .role = OUTPUT_ROLE_MOTOR_4, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+    },
+
     .motor = {
 #ifdef INVERT_YAW_PID
         .invert_yaw = 1,
@@ -153,12 +181,6 @@ const profile_t default_profile = {
         .throttle_boost = 0.0,
 #endif
         .gyro_orientation = GYRO_ROTATE_NONE,
-        .motor_pins = {
-            MOTOR_PIN0,
-            MOTOR_PIN1,
-            MOTOR_PIN2,
-            MOTOR_PIN3,
-        },
         .turtle_throttle_percent = 10.0f,
     },
 
@@ -497,6 +519,26 @@ const profile_t default_profile = {
 // the actual profile
 FAST_RAM profile_t profile;
 
+const profile_output_t *profile_output_for_role(output_role_t role) {
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (profile.outputs[i].role == role) {
+      return &profile.outputs[i];
+    }
+  }
+  return 0;
+}
+
+bool profile_output_slot_uses_motor(uint8_t target_output) {
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (profile.outputs[i].target_output == target_output &&
+        profile.outputs[i].protocol != OUTPUT_PROTOCOL_NONE &&
+        profile.outputs[i].protocol != OUTPUT_PROTOCOL_SERVO_PWM) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void profile_set_defaults() {
   memcpy(&profile, &default_profile, sizeof(profile_t));
 
@@ -547,6 +589,7 @@ cbor_result_t cbor_encode_profile_metadata_t(cbor_value_t *enc, const profile_me
 #define STR_MEMBER CBOR_ENCODE_STR_MEMBER
 #define TSTR_MEMBER CBOR_ENCODE_TSTR_MEMBER
 #define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
+#define COUNT_ARRAY_MEMBER CBOR_ENCODE_COUNT_ARRAY_MEMBER
 #define STR_ARRAY_MEMBER CBOR_ENCODE_STR_ARRAY_MEMBER
 
 RATE_MEMBERS
@@ -569,6 +612,7 @@ AUX_FUNCTION_MAP_MEMBERS
 RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
 BLACKBOX_PRESET_MEMBERS
+PROFILE_OUTPUT_MEMBERS
 PROFILE_MEMBERS
 
 #undef START_STRUCT
@@ -577,6 +621,7 @@ PROFILE_MEMBERS
 #undef STR_MEMBER
 #undef TSTR_MEMBER
 #undef ARRAY_MEMBER
+#undef COUNT_ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER
 
 cbor_result_t cbor_decode_profile_metadata_t(cbor_value_t *dec, profile_metadata_t *meta) {
@@ -623,6 +668,7 @@ cbor_result_t cbor_decode_profile_metadata_t(cbor_value_t *dec, profile_metadata
 #define STR_MEMBER CBOR_DECODE_STR_MEMBER
 #define TSTR_MEMBER CBOR_DECODE_TSTR_MEMBER
 #define ARRAY_MEMBER CBOR_DECODE_ARRAY_MEMBER
+#define COUNT_ARRAY_MEMBER CBOR_DECODE_COUNT_ARRAY_MEMBER
 #define STR_ARRAY_MEMBER CBOR_DECODE_STR_ARRAY_MEMBER
 
 RATE_MEMBERS
@@ -643,6 +689,7 @@ CALIBRATION_LIMIT_MEMBERS
 AUX_FUNCTION_MAP_MEMBERS
 RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
+PROFILE_OUTPUT_MEMBERS
 PROFILE_MEMBERS
 
 #undef START_STRUCT
@@ -651,4 +698,5 @@ PROFILE_MEMBERS
 #undef STR_MEMBER
 #undef TSTR_MEMBER
 #undef ARRAY_MEMBER
+#undef COUNT_ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER

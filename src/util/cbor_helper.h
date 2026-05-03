@@ -46,6 +46,14 @@ cbor_result_t cbor_handle_error(cbor_result_t err);
     CBOR_CHECK_ERROR(res = cbor_encode_##type(enc, &o->member[i])); \
   }
 
+#define CBOR_ENCODE_COUNT_ARRAY_MEMBER(member, size, type, count_fn) \
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, #member));             \
+  const uint32_t member##_count = count_fn(o->member, size);         \
+  CBOR_CHECK_ERROR(res = cbor_encode_array(enc, member##_count));    \
+  for (uint32_t i = 0; i < member##_count; i++) {                    \
+    CBOR_CHECK_ERROR(res = cbor_encode_##type(enc, &o->member[i]));  \
+  }
+
 #define CBOR_ENCODE_INDEX_ARRAY_MEMBER(member, size, type)          \
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, #member));            \
   CBOR_CHECK_ERROR(res = cbor_encode_array(enc, size - 1));         \
@@ -109,6 +117,25 @@ cbor_result_t cbor_handle_error(cbor_result_t err);
 
 #define CBOR_DECODE_ARRAY_MEMBER(member, size, type)                                \
   if (buf_equal_string(name, name_len, #member)) {                                  \
+    cbor_container_t array;                                                         \
+    CBOR_CHECK_ERROR(res = cbor_decode_array(dec, &array));                         \
+    const uint32_t array_size = cbor_decode_array_size(dec, &array);                \
+    const uint32_t limit = min(size, array_size);                                   \
+    for (uint32_t i = 0; i < limit; i++) {                                          \
+      CBOR_CHECK_ERROR(res = cbor_decode_##type(dec, &o->member[i]));               \
+    }                                                                               \
+    for (uint32_t i = limit; i < array_size; i++) {                                 \
+      CBOR_CHECK_ERROR(res = cbor_decode_skip(dec));                                \
+    }                                                                               \
+    continue;                                                                       \
+  }
+
+#define CBOR_DECODE_COUNT_ARRAY_MEMBER(member, size, type, count_fn)                \
+  if (buf_equal_string(name, name_len, #member)) {                                  \
+    for (uint32_t i = 0; i < size; i++) {                                           \
+      type tmp = {};                                                                \
+      o->member[i] = tmp;                                                           \
+    }                                                                               \
     cbor_container_t array;                                                         \
     CBOR_CHECK_ERROR(res = cbor_decode_array(dec, &array));                         \
     const uint32_t array_size = cbor_decode_array_size(dec, &array);                \

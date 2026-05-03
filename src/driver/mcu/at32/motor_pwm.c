@@ -1,5 +1,6 @@
 #include "driver/motor_pwm.h"
 
+#include "core/profile.h"
 #include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/timer.h"
@@ -24,7 +25,10 @@ void motor_pwm_init() {
   tim_oc_init.oc_output_state = TRUE;
 
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    const gpio_pins_t pin = target.motor_pins[i];
+    const gpio_pins_t pin = target.outputs[i].pin;
+    if (pin == PIN_NONE || (target.outputs[i].caps & OUTPUT_CAP_MOTOR) == 0 || !profile_output_slot_uses_motor(i)) {
+      continue;
+    }
 
     for (uint32_t j = 0; j < GPIO_AF_MAX; j++) {
       const gpio_af_t *func = &gpio_pin_afs[j];

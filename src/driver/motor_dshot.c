@@ -37,11 +37,10 @@ static motor_direction_t motor_dir = MOTOR_FORWARD;
 static bool dir_change_done = true;
 
 static bool dshot_motor_slot_active(uint32_t slot) {
-  const uint8_t pin_index = profile.motor.motor_pins[slot];
-  if (pin_index >= MOTOR_PIN_MAX) {
+  if (slot >= MOTOR_PIN_MAX) {
     return false;
   }
-  return target.motor_pins[pin_index] != PIN_NONE;
+  return target.outputs[slot].pin != PIN_NONE && (target.outputs[slot].caps & OUTPUT_CAP_MOTOR) != 0 && profile_output_slot_uses_motor(slot);
 }
 
 const dshot_gpio_port_t *dshot_gpio_for_device(const dma_device_t dev) {
@@ -67,17 +66,18 @@ void dshot_gpio_init_input(gpio_pins_t pin) {
 }
 
 static void dshot_init_motor_pin(uint32_t index) {
-  if (target.motor_pins[index] == PIN_NONE) {
+  const gpio_pins_t pin = target.outputs[index].pin;
+  if (pin == PIN_NONE) {
     return;
   }
 
-  dshot_gpio_init_output(target.motor_pins[index]);
+  dshot_gpio_init_output(pin);
   if (profile.motor.dshot_telemetry)
-    gpio_pin_set(target.motor_pins[index]);
+    gpio_pin_set(pin);
   else
-    gpio_pin_reset(target.motor_pins[index]);
+    gpio_pin_reset(pin);
 
-  const gpio_pin_def_t *def = &gpio_pin_defs[target.motor_pins[index]];
+  const gpio_pin_def_t *def = &gpio_pin_defs[pin];
   const uint32_t pin_mask = dshot_pins[index].pin_mask = 0x1 << def->pin_index;
   dshot_pins[index].dshot_port = 0;
   dshot_pins[index].set_mask = profile.motor.dshot_telemetry ? (pin_mask << 16) : pin_mask;
@@ -124,7 +124,7 @@ static void dshot_make_packet_all(uint16_t value, bool telemetry) {
     if (!dshot_motor_slot_active(i)) {
       continue;
     }
-    dshot_make_packet(profile.motor.motor_pins[i], value, telemetry);
+    dshot_make_packet(i, value, telemetry);
   }
 }
 
@@ -132,12 +132,12 @@ static void dshot_make_packet_all(uint16_t value, bool telemetry) {
 void dshot_dma_start() {
   if (profile.motor.dshot_telemetry) {
     for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-      if (target.motor_pins[i] == PIN_NONE) {
+      if (!dshot_motor_slot_active(i)) {
         continue;
       }
       const uint32_t port = dshot_pins[i].dshot_port;
       state.dshot_rpm[i] = dshot_decode_eRPM_telemetry_value(dshot_decode_gcr((uint16_t *)dshot_input_buffer[port], dshot_pins[i].pin_mask));
-      dshot_gpio_init_output(target.motor_pins[i]);
+      dshot_gpio_init_output(target.outputs[i].pin);
     }
   }
 
@@ -146,6 +146,9 @@ void dshot_dma_start() {
       dshot_output_buffer[j][i * 3 + 1] = 0; // clear middle bit
     }
     for (uint8_t motor = 0; motor < MOTOR_PIN_MAX; motor++) {
+      if (!dshot_motor_slot_active(motor)) {
+        continue;
+      }
       // for 1 hold the line high for two timeunits
       // first timeunit is already applied
       const bool bit = dshot_packet[motor] & 0x8000;
@@ -226,6 +229,9 @@ void motor_dshot_init() {
   dshot_gpio_port_count = 0;
   motor_dir = MOTOR_FORWARD;
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (!dshot_motor_slot_active(i)) {
+      continue;
+    }
     dshot_init_motor_pin(i);
   }
 
@@ -265,7 +271,7 @@ void motor_dshot_write(float *values) {
     if (!dshot_motor_slot_active(i)) {
       continue;
     }
-    dshot_make_packet(profile.motor.motor_pins[i], value, false);
+    dshot_make_packet(i, value, false);
   }
 
   dshot_dma_start();
