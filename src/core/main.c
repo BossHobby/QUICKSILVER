@@ -70,9 +70,9 @@ memory_section_init() {
 
 #ifndef PIO_UNIT_TESTING
 __attribute__((__used__)) int main() {
-  interrupt_init();
-
   // init timer so we can use delays etc
+  gpio_ports_init();
+  interrupt_init();
   time_init();
 
   // load settings from flash
@@ -85,9 +85,6 @@ __attribute__((__used__)) int main() {
   filter_global_init();
   timer_alloc_init();
   pid_init();
-
-  // init some hardware things
-  gpio_ports_init();
 
   // Turn on LED during boot so that if a delay is used as part of using programming pins for other functions,
   // the FC does not appear inactive while programming times out
