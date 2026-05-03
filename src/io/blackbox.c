@@ -1,7 +1,7 @@
 #include "io/blackbox.h"
 
+#include "control/control.h"
 #include "driver/time.h"
-#include "flight/control.h"
 #include "io/blackbox_device.h"
 #include "io/usb_configurator.h"
 #include "util/cbor_helper.h"

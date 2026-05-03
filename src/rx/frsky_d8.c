@@ -1,11 +1,11 @@
 #include "rx/frsky.h"
 
+#include "control/control.h"
 #include "core/debug.h"
 #include "core/flash.h"
 #include "core/profile.h"
 #include "driver/rx/cc2500.h"
 #include "driver/time.h"
-#include "flight/control.h"
 #include "util/util.h"
 
 #if defined(USE_RX_SPI_FRSKY)

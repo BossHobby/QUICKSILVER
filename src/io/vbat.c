@@ -1,10 +1,10 @@
 #include "io/vbat.h"
 
+#include "control/control.h"
 #include "core/flash.h"
 #include "core/profile.h"
 #include "core/tasks.h"
 #include "driver/adc.h"
-#include "flight/control.h"
 #include "util/util.h"
 
 // compensation factor for li-ion internal model
