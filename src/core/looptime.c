@@ -1,9 +1,9 @@
 #include "core/looptime.h"
 
+#include "control/control.h"
 #include "core/project.h"
 #include "driver/gyro/gyro.h"
 #include "driver/time.h"
-#include "flight/control.h"
 #include "util/util.h"
 
 uint8_t looptime_warning = 0;

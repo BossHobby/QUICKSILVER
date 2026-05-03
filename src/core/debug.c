@@ -1,8 +1,8 @@
 #include "core/debug.h"
 
+#include "control/control.h"
 #include "driver/gpio.h"
 #include "driver/time.h"
-#include "flight/control.h"
 #include "util/cbor_helper.h"
 
 #ifdef DEBUG

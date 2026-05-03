@@ -11,7 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "flight/control.h"
+#include "control/control.h"
 
 typedef struct {
   float gyro[3];
