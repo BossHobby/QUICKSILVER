@@ -2,10 +2,10 @@
 
 #include <string.h>
 
+#include "control/control.h" // for state.vbat_filtered
 #include "core/project.h"
 #include "driver/rx/a7105.h"
 #include "driver/time.h"
-#include "flight/control.h" // for state.vbat_filtered
 
 #if defined(USE_RX_SPI_FLYSKY)
 
