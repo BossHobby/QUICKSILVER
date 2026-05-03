@@ -748,7 +748,7 @@ void osd_display() {
   }
 
   static bool did_just_arm = false;
-  if (flags.arm_switch) {
+  if (flags.arm_state) {
     if (!did_just_arm) {
       while (osd_pop_screen() != OSD_SCREEN_CLEAR)
         ;

@@ -373,14 +373,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     const uint16_t cpu_load = state.cpu_load;
     const uint16_t gyro_cycle = state.looptime_autodetect;
     
-    // Calculate arming disable flags
-    uint32_t arming_disable_flags = 0;
-    if (!flags.arm_safety) {
-      arming_disable_flags |= 0x01; // ARM_SWITCH flag
-    }
-    if (state.rx_filtered.throttle > 0.1f) {
-      arming_disable_flags |= 0x02; // THROTTLE flag
-    }
+    const uint32_t arming_disable_flags = flags.arming_disabled_flags;
     
     // Build the response based on command type
     uint8_t data[30]; // Max possible size

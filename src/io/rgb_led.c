@@ -53,7 +53,7 @@ void rgb_led_update() {
   if (flags.failsafe) {
     new_value = rgb_ledflash(RGB(255, 0, 0), RGB(0, 0, 255), 500, 30);
   }
-  if (flags.arm_switch && (flags.throttle_safety == 1 || flags.arm_safety == 1)) {
+  if (flags.arm_request && flags.arming_disabled_flags != ARMING_DISABLED_NONE) {
     new_value = rgb_ledflash(RGB(255, 0, 0), RGB(0, 0, 255), 100, 8);
   }
 

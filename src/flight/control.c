@@ -32,8 +32,7 @@
 
 FAST_RAM control_flags_t flags = {
     .arm_state = 0,
-    .arm_safety = 1,
-    .throttle_safety = 0,
+    .arming_disabled_flags = ARMING_DISABLED_ARM_SWITCH,
 
     .in_air = 0,
     .on_ground = 1,
@@ -246,6 +245,90 @@ static void control_flight_mode() {
   }
 }
 
+static void control_update_arming() {
+  static bool checked_prearm = false;
+  static uint32_t arming_disabled_latch = ARMING_DISABLED_ARM_SWITCH;
+  bool failsafe_lock = false;
+
+  flags.arm_request = rx_aux_on(AUX_ARMING);
+  flags.arming_disabled_flags = ARMING_DISABLED_NONE;
+
+  if (flags.failsafe) {
+    const uint32_t now_ms = time_millis();
+
+    // failsafe first occurred, record time
+    if (state.failsafe_time_ms == 0) {
+      state.failsafe_time_ms = now_ms;
+    }
+
+    if ((now_ms - state.failsafe_time_ms) > FAILSAFE_LOCK_TIME_MS) {
+      failsafe_lock = true;
+    }
+  } else {
+    state.failsafe_time_ms = 0;
+  }
+
+  if (failsafe_lock) {
+    flags.arming_disabled_flags |= ARMING_DISABLED_FAILSAFE;
+  }
+
+  if (flags.usb_active) {
+    flags.arming_disabled_flags |= ARMING_DISABLED_USB;
+  }
+
+  if (flags.arm_request && (failsafe_lock || flags.usb_active)) {
+    arming_disabled_latch |= ARMING_DISABLED_ARM_SWITCH;
+  }
+
+  if (flags.arm_request && !failsafe_lock && !flags.usb_active) {
+    // CONDITION: AUX_ARMING is high
+
+    if (!checked_prearm &&
+        rx_aux_on(AUX_PREARM) &&
+        state.rx_filtered.throttle <= THROTTLE_SAFETY &&
+        arming_disabled_latch == ARMING_DISABLED_NONE) {
+      // CONDITION:  we have not checked prearm this arm cycle AND AUX_PREARM is high AND throttle is zeroed
+      flags.arm_state = 1;
+
+      if (!flags.turtle_ready) {
+        motor_set_direction(MOTOR_FORWARD);
+      }
+    } else if (!flags.arm_state) {
+      if (state.rx_filtered.throttle > THROTTLE_SAFETY) {
+        // throw up throttle safety if we crossed the threshold
+        arming_disabled_latch |= ARMING_DISABLED_THROTTLE;
+      } else {
+        // throw up arming safety if we didnt manage to arm
+        arming_disabled_latch |= ARMING_DISABLED_ARM_SWITCH;
+      }
+    }
+
+    checked_prearm = true;
+  } else {
+    flags.arm_state = 0;
+    checked_prearm = false;
+
+    if (flags.rx_ready == 1) {
+      // rx is bound and has been disarmed so clear binding while armed flag
+      arming_disabled_latch &= ~ARMING_DISABLED_ARM_SWITCH;
+    }
+
+    // clear the throttle safety flag
+    arming_disabled_latch &= ~ARMING_DISABLED_THROTTLE;
+  }
+
+  if (flags.turtle && !flags.turtle_ready) {
+    arming_disabled_latch |= ARMING_DISABLED_ARM_SWITCH;
+  }
+
+  flags.arming_disabled_flags |= arming_disabled_latch;
+
+  if (flags.arming_disabled_flags != ARMING_DISABLED_NONE) {
+    // disarm the quad by setting armed state variable to zero
+    flags.arm_state = 0;
+  }
+}
+
 void control() {
   if (rx_aux_on(AUX_TURTLE) && !rx_aux_on(AUX_MOTOR_TEST)) { // turtle active when aux high
     turtle_mode_start();
@@ -280,78 +363,7 @@ void control() {
 
   control_flight_mode();
   pid_calc();
-
-  bool failsafe_lock = false;
-  if (flags.failsafe) {
-    // failsafe first occured, record time
-    if (state.failsafe_time_ms == 0) {
-      state.failsafe_time_ms = time_millis();
-    }
-    if ((time_millis() - state.failsafe_time_ms) > FAILSAFE_LOCK_TIME_MS) {
-      failsafe_lock = true;
-    }
-  } else {
-    state.failsafe_time_ms = 0;
-    failsafe_lock = false;
-  }
-
-  static bool checked_prearm = false;
-  if (rx_aux_on(AUX_ARMING) && !failsafe_lock) {
-    // CONDITION: AUX_ARMING is high
-
-    if (!checked_prearm && rx_aux_on(AUX_PREARM) && state.rx_filtered.throttle <= THROTTLE_SAFETY) {
-      // CONDITION:  we have not checked prearm this arm cycle AND AUX_PREARM is high AND throttle is zeroed
-      flags.arm_switch = 1;
-
-      // we passed the throttle safety check
-      flags.throttle_safety = 0;
-
-      if (!flags.turtle_ready) {
-        motor_set_direction(MOTOR_FORWARD);
-      }
-    } else if (!flags.arm_switch) {
-      if (state.rx_filtered.throttle > THROTTLE_SAFETY) {
-        // throw up throttle safety if we crossed the threshold
-        flags.throttle_safety = 1;
-      } else {
-        // throw up arming safety if we didnt manage to arm
-        flags.arm_safety = 1;
-      }
-    }
-
-    checked_prearm = true;
-  } else {
-    flags.arm_switch = 0;
-    checked_prearm = false;
-
-    if (flags.rx_ready == 1) {
-      // rx is bound and has been disarmed so clear binding while armed flag
-      flags.arm_safety = 0;
-    }
-
-    // clear the throttle safety flag
-    flags.throttle_safety = 0;
-  }
-
-  if (flags.arm_switch) {
-    // CONDITION: (throttle is above safety limit and ARMING RELEASE FLAG IS NOT CLEARED) OR (bind just took place with transmitter armed)
-    if ((flags.throttle_safety == 1) || (flags.arm_safety == 1)) {
-      // override to disarmed state
-      flags.arm_state = 0;
-#ifndef ALLOW_USB_ARMING
-    } else if (!flags.arm_state && flags.usb_active) {
-      flags.arm_state = 0;
-#endif
-    } else {
-      // arm the quad by setting armed state variable to 1
-      flags.arm_state = 1;
-    }
-  } else {
-    // CONDITION: switch is DISARMED
-
-    // disarm the quad by setting armed state variable to zero
-    flags.arm_state = 0;
-  }
+  control_update_arming();
 
   // CONDITION: armed state variable is 0 so quad is DISARMED
   if (flags.arm_state == 0) {
