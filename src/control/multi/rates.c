@@ -1,4 +1,4 @@
-#include "control/input.h"
+#include "control/multi/rates.h"
 
 #include <math.h>
 #include <string.h>

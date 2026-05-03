@@ -9,7 +9,7 @@
 
 // Include the PID module
 #include "control/control.h"
-#include "control/pid.h"
+#include "control/multi/pid.h"
 #include "core/profile.h"
 #include "driver/time.h"
 
@@ -277,4 +277,3 @@ void test_pid_complete_loop(void) {
     state.error.yaw *= 0.9f;
   }
 }
-

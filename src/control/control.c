@@ -1,34 +1,12 @@
 #include "control/control.h"
 
-#include <math.h>
 #include <stdint.h>
 
-#include "angle_pid.h"
 #include "control/gestures.h"
 #include "control/imu.h"
-#include "control/input.h"
-#include "control/pid.h"
-#include "control/sixaxis.h"
-#include "core/profile.h"
-#include "driver/fmc.h"
 #include "driver/motor.h"
 #include "driver/time.h"
-#include "io/led.h"
-#include "io/usb_configurator.h"
-#include "io/vbat.h"
-#include "motor.h"
-#include "turtle_mode.h"
 #include "util/cbor_helper.h"
-#include "util/filter.h"
-#include "util/util.h"
-
-// Throttle must drop below this value if arming feature is enabled for arming to take place.
-// brushed mix increase will also not activate on the ground untill this threshold is passed during takeoff for safety and better staging behavior.
-#define THROTTLE_SAFETY .10f
-
-#ifndef IDLE_THR
-#define IDLE_THR .001f // just enough to override motor stop at 0 throttle
-#endif
 
 FAST_RAM control_flags_t flags = {
     .arm_state = 0,
@@ -80,11 +58,6 @@ FAST_RAM control_state_t state = {
     },
 };
 
-motor_test_t motor_test = {
-    .active = 0,
-    .value = {MOTOR_OFF, MOTOR_OFF, MOTOR_OFF, MOTOR_OFF},
-};
-
 #define MEMBER CBOR_ENCODE_MEMBER
 #define STR_MEMBER CBOR_ENCODE_STR_MEMBER
 #define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
@@ -105,147 +78,7 @@ CBOR_END_STRUCT_ENCODER()
 #undef ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER
 
-static void control_flight_mode() {
-  // flight control
-  const vec3_t rates = input_rates_calc();
-
-  if (rx_aux_on(AUX_LEVELMODE)) {
-
-    // calculate roll / pitch error
-    state.angle_error = input_stick_vector(state.rx_filtered.axis);
-
-    // apply yaw from the top of the quad
-    // yaw rotation vector
-    const vec3_t yaw_error = {
-        .roll = state.GEstG.pitch * rates.yaw,
-        .pitch = -state.GEstG.roll * rates.yaw,
-        .yaw = state.GEstG.yaw * rates.yaw,
-    };
-
-    if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON)) { // racemode with angle behavior on roll ais
-      if (state.GEstG.yaw < 0) {                              // acro on roll and pitch when inverted
-        state.setpoint.roll = rates.roll;
-        state.setpoint.pitch = rates.pitch;
-
-        state.error.roll = rates.roll - state.gyro.roll;
-        state.error.pitch = rates.pitch - state.gyro.pitch;
-      } else {
-        // roll is leveled to max angle limit
-        state.setpoint.roll = angle_pid(0) + yaw_error.axis[0];
-        state.error.roll = state.setpoint.roll - state.gyro.roll;
-
-        // pitch is acro
-        state.setpoint.pitch = rates.pitch;
-        state.error.pitch = rates.pitch - state.gyro.pitch;
-      }
-      // yaw
-      state.setpoint.yaw = rates.yaw;
-      state.error.yaw = yaw_error.axis[2] - state.gyro.yaw;
-
-    } else if (rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON)) { // racemode with horizon behavior on roll axis
-      float inclinationRoll = state.attitude.roll;
-      float inclinationPitch = state.attitude.pitch;
-      float inclinationMax;
-      if (fabsf(inclinationRoll) >= fabsf(inclinationPitch)) {
-        inclinationMax = fabsf(inclinationRoll);
-      } else {
-        inclinationMax = fabsf(inclinationPitch);
-      }
-      float angleFade;
-      // constrains acroFade variable between 0 and 1
-      if (inclinationMax <= HORIZON_ANGLE_TRANSITION) {
-        angleFade = inclinationMax / HORIZON_ANGLE_TRANSITION;
-      } else {
-        angleFade = 1;
-      }
-      float stickFade;
-      float deflection = fabsf(state.rx_filtered.roll);
-      if (deflection <= HORIZON_STICK_TRANSITION) {
-        stickFade = deflection / HORIZON_STICK_TRANSITION;
-      } else {
-        stickFade = 1;
-      }
-      float fade = (stickFade * (1 - HORIZON_SLIDER)) + (HORIZON_SLIDER * angleFade);
-      // apply acro to roll for inverted behavior
-      if (state.GEstG.yaw < 0) {
-        state.setpoint.roll = rates.roll;
-        state.setpoint.pitch = rates.pitch;
-        state.error.roll = rates.roll - state.gyro.roll;
-        state.error.pitch = rates.pitch - state.gyro.pitch;
-      } else {
-        // apply a transitioning mix of acro and level behavior inside of stick HORIZON_TRANSITION point and full acro beyond stick HORIZON_TRANSITION point
-        // roll angle strength fades out as sticks approach HORIZON_TRANSITION while acro stength fades in according to value of acroFade factor
-        state.setpoint.roll = (angle_pid(0) + yaw_error.axis[0]) * (1.0f - fade) + fade * (rates.roll);
-        state.error.roll = ((angle_pid(0) + yaw_error.axis[0] - state.gyro.roll) * (1 - fade)) + (fade * (rates.roll - state.gyro.roll));
-        // pitch is acro
-        state.setpoint.pitch = rates.pitch;
-        state.error.pitch = rates.pitch - state.gyro.pitch;
-      }
-
-      // yaw
-      state.setpoint.yaw = rates.yaw;
-      state.error.yaw = yaw_error.axis[2] - state.gyro.yaw;
-
-    } else if (!rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON)) { // horizon overrites standard level behavior
-      // pitch and roll
-      for (int i = 0; i <= 1; i++) {
-        float inclinationRoll = state.attitude.roll;
-        float inclinationPitch = state.attitude.pitch;
-        float inclinationMax;
-        if (fabsf(inclinationRoll) >= fabsf(inclinationPitch)) {
-          inclinationMax = fabsf(inclinationRoll);
-        } else {
-          inclinationMax = fabsf(inclinationPitch);
-        }
-        float angleFade;
-        // constrains acroFade variable between 0 and 1
-        if (inclinationMax <= HORIZON_ANGLE_TRANSITION) {
-          angleFade = inclinationMax / HORIZON_ANGLE_TRANSITION;
-        } else {
-          angleFade = 1;
-        }
-        float stickFade;
-        float deflection = fabsf(state.rx_filtered.axis[i]);
-        if (deflection <= HORIZON_STICK_TRANSITION) {
-          stickFade = deflection / HORIZON_STICK_TRANSITION;
-        } else {
-          stickFade = 1;
-        }
-        float fade = (stickFade * (1 - HORIZON_SLIDER)) + (HORIZON_SLIDER * angleFade);
-        // apply acro to roll and pitch sticks for inverted behavior
-        if (state.GEstG.yaw < 0) {
-          state.setpoint.axis[i] = rates.axis[i];
-          state.error.axis[i] = rates.axis[i] - state.gyro.axis[i];
-        } else {
-          // apply a transitioning mix of acro and level behavior inside of stick HORIZON_TRANSITION point and full acro beyond stick HORIZON_TRANSITION point
-          // angle strength fades out as sticks approach HORIZON_TRANSITION while acro stength fades in according to value of acroFade factor
-          state.setpoint.axis[i] = (angle_pid(i) + yaw_error.axis[i]) * (1.0f - fade) + fade * (rates.axis[i]);
-          state.error.axis[i] = ((angle_pid(i) + yaw_error.axis[i] - state.gyro.axis[i]) * (1 - fade)) + (fade * (rates.axis[i] - state.gyro.axis[i]));
-        }
-      }
-      // yaw
-      state.setpoint.yaw = rates.yaw;
-      state.error.yaw = yaw_error.axis[2] - state.gyro.yaw;
-
-    } else { // standard level mode
-      // roll, pitch and yaw
-      for (uint32_t i = 0; i < 3; i++) {
-        state.setpoint.axis[i] = angle_pid(i) + yaw_error.axis[i];
-        state.error.axis[i] = state.setpoint.axis[i] - state.gyro.axis[i];
-      }
-    }
-  } else { // rate mode
-    state.setpoint.roll = rates.roll;
-    state.setpoint.pitch = rates.pitch;
-    state.setpoint.yaw = rates.yaw;
-
-    state.error.roll = state.setpoint.roll - state.gyro.roll;
-    state.error.pitch = state.setpoint.pitch - state.gyro.pitch;
-    state.error.yaw = state.setpoint.yaw - state.gyro.yaw;
-  }
-}
-
-static void control_update_arming() {
+void control_update_arming() {
   static bool checked_prearm = false;
   static uint32_t arming_disabled_latch = ARMING_DISABLED_ARM_SWITCH;
   bool failsafe_lock = false;
@@ -328,117 +161,3 @@ static void control_update_arming() {
     flags.arm_state = 0;
   }
 }
-
-void control() {
-  if (rx_aux_on(AUX_TURTLE) && !rx_aux_on(AUX_MOTOR_TEST)) { // turtle active when aux high
-    turtle_mode_start();
-  } else {
-    turtle_mode_cancel();
-  }
-
-  turtle_mode_update();
-
-  bool motortest_usb = false;
-  if (flags.usb_active && motor_test.active) {
-    // enable motortest for usb
-    flags.arm_state = 1;
-    flags.on_ground = 0;
-    flags.motortest_override = 1;
-    // motor test overwrites turtle
-    flags.controls_override = 0;
-    motortest_usb = true;
-  } else if (flags.arm_state && rx_aux_on(AUX_MOTOR_TEST)) {
-    // enable motortest for switch
-    flags.motortest_override = 1;
-    // motor test overwrites turtle
-    flags.controls_override = 0;
-  } else if (!flags.turtle) {
-    // disable motortest unless turtle is active
-    flags.motortest_override = 0;
-  }
-
-  if (flags.controls_override) {
-    state.rx_filtered = state.rx_override;
-  }
-
-  control_flight_mode();
-  pid_calc();
-  control_update_arming();
-
-  // CONDITION: armed state variable is 0 so quad is DISARMED
-  if (flags.arm_state == 0) {
-    // override throttle to 0
-    state.throttle = 0;
-
-    // flag in air variable as NOT IN THE AIR for mix throttle increase safety
-    flags.in_air = 0;
-  } else {
-    // CONDITION: armed state variable is 1 so quad is ARMED
-    if (!rx_aux_on(AUX_IDLE_UP)) {
-      // CONDITION: idle up is turned OFF
-      if (state.rx_filtered.throttle < 0.05f) {
-        // set a small dead zone where throttle is zero
-        state.throttle = 0;
-      } else {
-        // map the remainder of the the active throttle region to 100%
-        state.throttle = (input_throttle_calc(state.rx_filtered.throttle) - 0.05f) * 1.05623158f;
-      }
-    } else {
-      // CONDITION: idle up is turned ON
-      if (flags.controls_override) {
-        // override is active, set throttle to input
-        state.throttle = state.rx_filtered.throttle;
-      } else {
-        // throttle range is mapped from idle throttle value to 100%
-        state.throttle = (float)IDLE_THR + input_throttle_calc(state.rx_filtered.throttle) * (1.0f - (float)IDLE_THR);
-      }
-    }
-
-    if ((state.rx_filtered.throttle > THROTTLE_SAFETY) && (flags.in_air == 0)) {
-      // change the state of in air flag when first crossing the throttle
-      // safety value to indicate craft has taken off for mix increase safety
-      flags.in_air = 1;
-    }
-  }
-
-  if (flags.motortest_override) {
-    motor_test_calc(motortest_usb, state.motor_mix.axis);
-    motor_output_calc(state.motor_mix.axis);
-  } else if (!flags.arm_state || flags.failsafe || (state.throttle < 0.001f)) {
-    // CONDITION: disarmed OR failsafe OR throttle off
-    flags.on_ground = 1;
-
-    // zero throttle to reflect motors being off
-    state.throttle = 0;
-    state.thrsum = 0;
-
-    motor_set_all(MOTOR_OFF);
-  } else {
-    // motors on - normal flight
-    flags.on_ground = 0;
-
-    if (!flags.controls_override) {
-      // only modify throttle for stick input.
-      // leave override values raw
-
-      if (profile.motor.throttle_boost > 0.0f) {
-        state.throttle += (float)(profile.motor.throttle_boost) * throttlehpf(state.throttle);
-        state.throttle = constrain(state.throttle, 0.0f, 1.0f);
-      }
-    }
-
-    motor_mixer_calc(state.motor_mix.axis);
-    motor_output_calc(state.motor_mix.axis);
-  }
-
-#ifdef MOTOR_BEEPS
-  if ((flags.usb_active == 0 && flags.rx_ready && flags.failsafe && (time_millis() - state.failsafe_time_ms) > MOTOR_BEEPS_TIMEOUT) ||
-      (flags.on_ground && rx_aux_on(AUX_BUZZER_ENABLE))) {
-    motor_beep();
-  } else
-#endif
-  {
-    motor_update();
-  }
-}
-// end of control function

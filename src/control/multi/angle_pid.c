@@ -1,8 +1,8 @@
 #include <stdbool.h>
 
 #include "control/control.h"
-#include "control/pid.h"
 #include "core/profile.h"
+#include "control/multi/pid.h"
 #include "math.h"
 #include "util/util.h"
 

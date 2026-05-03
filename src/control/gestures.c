@@ -3,7 +3,6 @@
 #include <math.h>
 
 #include "control/control.h"
-#include "control/pid.h"
 #include "control/sixaxis.h"
 #include "core/flash.h"
 #include "core/looptime.h"

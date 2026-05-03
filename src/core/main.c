@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "control/imu.h"
-#include "control/pid.h"
+#include "control/multi/pid.h"
 #include "control/sixaxis.h"
 #include "core/debug.h"
 #include "core/failloop.h"

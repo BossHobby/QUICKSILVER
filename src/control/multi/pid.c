@@ -1,4 +1,4 @@
-#include "control/pid.h"
+#include "control/multi/pid.h"
 
 #include <math.h>
 #include <stdbool.h>
