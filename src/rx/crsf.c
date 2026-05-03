@@ -2,8 +2,8 @@
 
 #include <string.h>
 
+#include "control/control.h"
 #include "core/profile.h"
-#include "flight/control.h"
 #include "util/crc.h"
 
 crsf_stats_t crsf_stats;

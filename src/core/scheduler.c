@@ -4,10 +4,10 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "control/control.h"
 #include "core/debug.h"
 #include "core/looptime.h"
 #include "driver/time.h"
-#include "flight/control.h"
 #include "io/simulator.h"
 #include "io/usb_configurator.h"
 #include "tasks.h"

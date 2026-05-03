@@ -7,12 +7,12 @@
 #include "mock_helpers.h"
 
 // Include the IMU module
-#include "flight/imu.h"
-#include "flight/control.h"
-#include "util/vector.h"
-#include "util/util.h"
+#include "control/control.h"
+#include "control/imu.h"
 #include "core/profile.h"
 #include "core/tasks.h"
+#include "util/util.h"
+#include "util/vector.h"
 
 // Constants
 #define ACC_1G 1.0f

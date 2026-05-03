@@ -1,8 +1,8 @@
 #include <stdbool.h>
 
+#include "control/control.h"
 #include "core/profile.h"
-#include "flight/control.h"
-#include "flight/pid.h"
+#include "control/multi/pid.h"
 #include "math.h"
 #include "util/util.h"
 

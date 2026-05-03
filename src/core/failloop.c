@@ -1,10 +1,10 @@
 #include "core/failloop.h"
 
-#include "driver/reset.h"
+#include "control/control.h"
 #include "driver/motor.h"
+#include "driver/reset.h"
 #include "driver/time.h"
 #include "driver/usb.h"
-#include "flight/control.h"
 #include "io/led.h"
 #include "io/usb_configurator.h"
 

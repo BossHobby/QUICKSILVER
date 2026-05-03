@@ -8,11 +8,11 @@
 #include "mock_helpers.h"
 
 // Include the PID module
+#include "control/control.h"
+#include "control/multi/angle_pid.h"
+#include "control/multi/pid.h"
 #include "core/profile.h"
 #include "driver/time.h"
-#include "flight/angle_pid.h"
-#include "flight/control.h"
-#include "flight/pid.h"
 
 // Test fixtures
 static void pid_setUp(void) {
@@ -278,7 +278,6 @@ void test_pid_complete_loop(void) {
     state.error.yaw *= 0.9f;
   }
 }
-
 void test_angle_pid_uses_legacy_dterm_timefactor(void) {
   pid_setUp();
 
