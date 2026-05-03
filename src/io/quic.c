@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "control/control.h"
+#include "control/sixaxis.h"
 #include "core/debug.h"
 #include "core/flash.h"
 #include "core/profile.h"
@@ -14,8 +16,6 @@
 #include "driver/serial_4way.h"
 #include "driver/serial_esc.h"
 #include "driver/usb.h"
-#include "flight/control.h"
-#include "flight/sixaxis.h"
 #include "io/blackbox_device.h"
 #include "io/gps.h"
 #include "io/usb_configurator.h"

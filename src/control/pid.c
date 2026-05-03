@@ -1,14 +1,14 @@
-#include "flight/pid.h"
+#include "control/pid.h"
 
 #include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include "control/control.h"
+#include "control/filter.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/tasks.h"
-#include "flight/control.h"
-#include "flight/filter.h"
 #include "io/led.h"
 #include "util/util.h"
 #include "util/vector.h"
@@ -28,9 +28,9 @@ static const vec3_t out_limit = {.roll = 0.8f, .pitch = 0.8f, .yaw = 0.6f};
 static const vec3_t integral_limit = {.roll = 0.8f, .pitch = 0.8f, .yaw = 0.6f};
 
 static const vec3_t pid_scales[PID_SIZE] = {
-    {.roll = 1.0f / 628.0f, .pitch = 1.0f / 628.0f, .yaw = 1.0f / 314.0f}, // kp
-    {.roll = 1.0f / 100.0f, .pitch = 1.0f / 100.0f, .yaw = 1.0f / 100.0f}, // ki - includes historical 0.5x scaling from Silverware
-    {.roll = 1.0f / 37500.0f, .pitch = 1.0f / 37500.0f, .yaw = 1.0f / 37500.0f},    // kd - includes 0.0032 constant (0.0032 / 120 = 1 / 37500)
+    {.roll = 1.0f / 628.0f, .pitch = 1.0f / 628.0f, .yaw = 1.0f / 314.0f},       // kp
+    {.roll = 1.0f / 100.0f, .pitch = 1.0f / 100.0f, .yaw = 1.0f / 100.0f},       // ki - includes historical 0.5x scaling from Silverware
+    {.roll = 1.0f / 37500.0f, .pitch = 1.0f / 37500.0f, .yaw = 1.0f / 37500.0f}, // kd - includes 0.0032 constant (0.0032 / 120 = 1 / 37500)
 };
 
 static vec3_t lastrate = {.roll = 0, .pitch = 0, .yaw = 0};

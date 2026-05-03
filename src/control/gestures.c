@@ -1,16 +1,16 @@
-#include "flight/gestures.h"
+#include "control/gestures.h"
 
 #include <math.h>
 
+#include "control/control.h"
+#include "control/pid.h"
+#include "control/sixaxis.h"
 #include "core/flash.h"
 #include "core/looptime.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/scheduler.h"
 #include "driver/time.h"
-#include "flight/control.h"
-#include "flight/pid.h"
-#include "flight/sixaxis.h"
 #include "io/led.h"
 #include "osd/render.h"
 #include "rx/rx.h"

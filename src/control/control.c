@@ -1,19 +1,19 @@
-#include "flight/control.h"
+#include "control/control.h"
 
 #include <math.h>
 #include <stdint.h>
 
 #include "angle_pid.h"
+#include "control/filter.h"
+#include "control/gestures.h"
+#include "control/imu.h"
+#include "control/input.h"
+#include "control/pid.h"
+#include "control/sixaxis.h"
 #include "core/profile.h"
 #include "driver/fmc.h"
 #include "driver/motor.h"
 #include "driver/time.h"
-#include "flight/filter.h"
-#include "flight/gestures.h"
-#include "flight/imu.h"
-#include "flight/input.h"
-#include "flight/pid.h"
-#include "flight/sixaxis.h"
 #include "io/led.h"
 #include "io/usb_configurator.h"
 #include "io/vbat.h"

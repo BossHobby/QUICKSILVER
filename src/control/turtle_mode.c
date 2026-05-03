@@ -2,10 +2,10 @@
 
 #include <math.h>
 
+#include "control/control.h"
 #include "core/profile.h"
 #include "driver/motor.h"
 #include "driver/time.h"
-#include "flight/control.h"
 
 #define TURTLE_TIMEOUT 1000 // 1 second timeout for auto turtle
 

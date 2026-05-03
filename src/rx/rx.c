@@ -2,14 +2,14 @@
 
 #include <math.h>
 
+#include "control/control.h"
+#include "control/filter.h"
 #include "core/flash.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/tasks.h"
 #include "driver/serial.h"
 #include "driver/time.h"
-#include "flight/control.h"
-#include "flight/filter.h"
 #include "io/simulator.h"
 #include "util/util.h"
 

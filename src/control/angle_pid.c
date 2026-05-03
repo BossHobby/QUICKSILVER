@@ -1,8 +1,8 @@
 #include <stdbool.h>
 
+#include "control/control.h"
+#include "control/pid.h"
 #include "core/profile.h"
-#include "flight/control.h"
-#include "flight/pid.h"
 #include "math.h"
 #include "util/util.h"
 
@@ -16,10 +16,10 @@ float angle_pid(int x) {
 
   const float angle_error_abs = fabsf(state.angle_error.axis[x]);
 
-  const float small_angle = (1 - angle_error_abs) * state.angle_error.axis[x] * profile.pid.small_angle.kp                                               // P term weighted
+  const float small_angle = (1 - angle_error_abs) * state.angle_error.axis[x] * profile.pid.small_angle.kp                                                     // P term weighted
                             + ((state.angle_error.axis[x] - lasterror.axis[x]) * profile.pid.small_angle.kd * (1 - angle_error_abs) * state.looptime_inverse); // D term weighted
 
-  const float big_angle = angle_error_abs * state.angle_error.axis[x] * profile.pid.big_angle.kp                                               // P term weighted
+  const float big_angle = angle_error_abs * state.angle_error.axis[x] * profile.pid.big_angle.kp                                                     // P term weighted
                           + ((state.angle_error.axis[x] - lasterror.axis[x]) * profile.pid.big_angle.kd * angle_error_abs * state.looptime_inverse); // D term weighted
 
   lasterror.axis[x] = state.angle_error.axis[x];

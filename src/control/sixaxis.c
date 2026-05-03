@@ -1,10 +1,14 @@
-#include "flight/sixaxis.h"
+#include "control/sixaxis.h"
 
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "control/control.h"
+#include "control/filter.h"
+#include "control/sdft.h"
+#include "control/sixaxis.h"
 #include "core/debug.h"
 #include "core/flash.h"
 #include "core/profile.h"
@@ -13,10 +17,6 @@
 #include "driver/gyro/gyro.h"
 #include "driver/serial.h"
 #include "driver/time.h"
-#include "flight/control.h"
-#include "flight/filter.h"
-#include "flight/sdft.h"
-#include "flight/sixaxis.h"
 #include "io/blackbox.h"
 #include "io/led.h"
 #include "util/util.h"

@@ -8,10 +8,10 @@
 #include "mock_helpers.h"
 
 // Include the PID module
+#include "control/control.h"
+#include "control/pid.h"
 #include "core/profile.h"
 #include "driver/time.h"
-#include "flight/control.h"
-#include "flight/pid.h"
 
 // Test fixtures
 static void pid_setUp(void) {

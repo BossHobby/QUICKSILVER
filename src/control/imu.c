@@ -1,17 +1,17 @@
-#include "flight/imu.h"
+#include "control/imu.h"
 
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "control/control.h"
+#include "control/filter.h"
+#include "control/sixaxis.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/tasks.h"
 #include "driver/time.h"
-#include "flight/control.h"
-#include "flight/filter.h"
-#include "flight/sixaxis.h"
 #include "util/util.h"
 #include "util/vector.h"
 

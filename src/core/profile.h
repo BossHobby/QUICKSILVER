@@ -2,8 +2,8 @@
 
 #include <cbor.h>
 
+#include "control/filter.h"
 #include "core/project.h"
-#include "flight/filter.h"
 #include "rx/rx.h"
 #include "util/vector.h"
 

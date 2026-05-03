@@ -5,8 +5,8 @@
 
 #include "project.h"
 
+#include "control/control.h"
 #include "driver/time.h"
-#include "flight/control.h"
 
 typedef enum {
   TASK_GYRO,

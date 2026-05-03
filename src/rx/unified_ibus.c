@@ -3,10 +3,10 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include "control/control.h"
 #include "core/profile.h"
 #include "driver/serial.h"
 #include "driver/time.h"
-#include "flight/control.h"
 #include "util/util.h"
 
 #ifdef USE_RX_UNIFIED

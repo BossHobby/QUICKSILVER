@@ -1,11 +1,11 @@
 
 #include "io/buzzer.h"
 
+#include "control/control.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/time.h"
-#include "flight/control.h"
 
 static void buzzer_on() {
   if (target.buzzer.pin == PIN_NONE) {

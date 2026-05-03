@@ -2,10 +2,10 @@
 
 #include <float.h>
 
+#include "control/control.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "driver/motor.h"
-#include "flight/control.h"
 #include "io/usb_configurator.h"
 #include "util/util.h"
 

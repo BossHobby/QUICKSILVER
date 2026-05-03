@@ -1,9 +1,9 @@
 #include "io/rgb_led.h"
 
+#include "control/control.h"
+#include "control/filter.h"
 #include "core/project.h"
 #include "driver/rgb_led.h"
-#include "flight/control.h"
-#include "flight/filter.h"
 #include "util/util.h"
 
 #define RGB_LED_COUNT 0

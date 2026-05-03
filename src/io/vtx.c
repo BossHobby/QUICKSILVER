@@ -3,13 +3,13 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "control/control.h"
 #include "core/debug.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "driver/gpio.h"
 #include "driver/serial.h"
 #include "driver/time.h"
-#include "flight/control.h"
 #include "rx/rx.h"
 #include "rx/unified_serial.h"
 #include "util/cbor_helper.h"

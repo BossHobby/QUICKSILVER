@@ -6,10 +6,10 @@
 #include "mock_helpers.h"
 
 // Include filter module
+#include "control/control.h"
+#include "control/filter.h"
 #include "core/profile.h"
 #include "driver/time.h"
-#include "flight/control.h"
-#include "flight/filter.h"
 
 // Test fixtures
 static void filter_setUp(void) {

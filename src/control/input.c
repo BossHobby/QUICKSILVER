@@ -1,10 +1,10 @@
-#include "flight/input.h"
+#include "control/input.h"
 
 #include <math.h>
 #include <string.h>
 
+#include "control/control.h"
 #include "core/profile.h"
-#include "flight/control.h"
 #include "util/util.h"
 
 #define pow3(x) ((x) * (x) * (x))

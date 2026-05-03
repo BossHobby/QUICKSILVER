@@ -1,10 +1,10 @@
-#include "flight/filter.h"
+#include "control/filter.h"
 
 #include <math.h>
 #include <string.h>
 
+#include "control/control.h"
 #include "core/project.h"
-#include "flight/control.h"
 #include "util/util.h"
 
 #define NOTCH_Q 3.0f

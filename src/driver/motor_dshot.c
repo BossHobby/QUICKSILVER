@@ -1,12 +1,12 @@
 #include "driver/motor_dshot.h"
 
+#include "control/control.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "driver/dma.h"
 #include "driver/gpio.h"
 #include "driver/spi.h"
 #include "driver/time.h"
-#include "flight/control.h"
 #include "util/util.h"
 
 #ifdef USE_MOTOR_DSHOT
