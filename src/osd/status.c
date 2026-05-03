@@ -14,6 +14,7 @@ typedef enum {
   STATUS_RX_WAIT,
   STATUS_FAILSAFE,
   STATUS_LOOPTIME,
+  STATUS_USB_SAFETY,
   STATUS_ARM_SAFETY,
   STATUS_THROTTLE_SAFETY,
   STATUS_ARM,
@@ -52,6 +53,7 @@ const char *default_system_status_labels[STATUS_MAX] = {
     [STATUS_RX_WAIT] = "WAIT FOR RX",
     [STATUS_FAILSAFE] = "**FAILSAFE**",
     [STATUS_LOOPTIME] = "**LOOPTIME**",
+    [STATUS_USB_SAFETY] = "USB SAFETY",
     [STATUS_ARM_SAFETY] = "ARMING SAFETY",
     [STATUS_THROTTLE_SAFETY] = "THROTTLE SAFETY",
     [STATUS_ARM] = "**ARMED**",
@@ -65,6 +67,7 @@ const char *guac_system_status_labels[STATUS_MAX] = {
     [STATUS_RX_WAIT] = "RX LOADING",
     [STATUS_FAILSAFE] = "**404 RX NOT FOUND**",
     [STATUS_LOOPTIME] = "**LOOPTIME**",
+    [STATUS_USB_SAFETY] = "**USB SAFETY**",
     [STATUS_ARM_SAFETY] = "**ARMING SAFETY**",
     [STATUS_THROTTLE_SAFETY] = "**DANGER ZONE**",
     [STATUS_ARM] = "**HERE WE GO AGAIN**",
@@ -158,12 +161,17 @@ bool osd_status_update(osd_element_t *el) {
     }
   }
 
-  if (flags.arm_safety) {
+  if (flags.arming_disabled_flags & ARMING_DISABLED_USB) {
+    osd_status_show(MODE_HOLD, STATUS_USB_SAFETY);
+    return osd_status_print(el);
+  }
+
+  if (flags.arming_disabled_flags & ARMING_DISABLED_ARM_SWITCH) {
     osd_status_show(MODE_HOLD, STATUS_ARM_SAFETY);
     return osd_status_print(el);
   }
 
-  if (flags.throttle_safety) {
+  if (flags.arming_disabled_flags & ARMING_DISABLED_THROTTLE) {
     osd_status_show(MODE_HOLD, STATUS_THROTTLE_SAFETY);
     return osd_status_print(el);
   }
