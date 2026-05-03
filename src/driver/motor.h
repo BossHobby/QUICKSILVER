@@ -25,6 +25,6 @@ void motor_set_direction(motor_direction_t dir);
 bool motor_direction_change_done();
 
 // generic functions
-void motor_set(motor_position_t pos, float pwm);
+void motor_set(uint8_t pos, float pwm);
 void motor_set_all(float pwm);
 void motor_update();

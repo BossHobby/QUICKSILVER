@@ -1,5 +1,7 @@
 #include "driver/timer.h"
 
+#include "core/profile.h"
+
 #define TIMER_ASSIGMENT_MAX 32
 
 timer_assigment_t timer_assigments[TIMER_ASSIGMENT_MAX] = {};
@@ -12,8 +14,21 @@ static void timer_alloc_dma(timer_use_t use, const target_dma_t *entry) {
   timer_alloc_tag(use, entry->tag);
 }
 
+static bool output_slot_uses_dshot(uint32_t target_output) {
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (profile.outputs[i].target_output == target_output && profile.outputs[i].protocol == OUTPUT_PROTOCOL_DSHOT) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void timer_alloc_init() {
   for (uint32_t i = DMA_DEVICE_DSHOT_CH1; i <= DMA_DEVICE_DSHOT_CH3; i++) {
+    const uint32_t output = i - DMA_DEVICE_DSHOT_CH1;
+    if (!output_slot_uses_dshot(output)) {
+      continue;
+    }
     timer_alloc_dma(TIMER_USE_MOTOR_DSHOT, &target.dma[i]);
   }
 
