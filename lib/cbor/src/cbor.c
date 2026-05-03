@@ -1,7 +1,5 @@
 #include "cbor.h"
 
-#define __USE_MISC
-
 #include <math.h>
 #include <string.h>
 
