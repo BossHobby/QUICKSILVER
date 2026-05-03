@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "control/control.h"
 #include "core/debug.h"
 #include "core/flash.h"
 #include "core/looptime.h"
@@ -13,7 +14,6 @@
 #include "driver/reset.h"
 #include "driver/serial.h"
 #include "driver/serial_4way.h"
-#include "flight/control.h"
 #include "io/quic.h"
 #include "io/usb_configurator.h"
 #include "io/vtx.h"

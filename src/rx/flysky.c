@@ -2,11 +2,11 @@
 
 #include <string.h>
 
+#include "control/control.h" // for state
 #include "core/flash.h"
 #include "core/project.h"
 #include "driver/rx/a7105.h"
 #include "driver/time.h"
-#include "flight/control.h" // for state
 #include "util/util.h"
 
 #if defined(USE_RX_SPI_FLYSKY)
