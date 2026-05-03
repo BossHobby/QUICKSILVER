@@ -5,7 +5,7 @@
 #include "driver/serial_esc.h"
 #include "driver/time.h"
 
-#ifdef USE_MOTOR_DSHOT
+#ifdef USE_SERIAL_4WAY
 
 #define BOOT_MSG_LEN 4
 #define DevSignHi (BOOT_MSG_LEN)
