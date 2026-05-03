@@ -34,12 +34,18 @@ typedef struct {
   MEMBER(lat, int32_t)      \
   END_STRUCT()
 
+typedef enum {
+  ARMING_DISABLED_NONE = 0,
+  ARMING_DISABLED_ARM_SWITCH = 1U << 0,
+  ARMING_DISABLED_THROTTLE = 1U << 1,
+  ARMING_DISABLED_FAILSAFE = 1U << 2,
+  ARMING_DISABLED_USB = 1U << 3,
+} arming_disabled_flags_t;
+
 // THE UN OF STRUCTS
 typedef struct {
-  uint8_t arm_switch : 1; // arming switch (AUX_ARMING + AUX_PREARM) has been tripped
-  uint8_t arm_state : 1;  // armed after all saftey checks have passed
-  uint8_t arm_safety : 1;
-  uint8_t throttle_safety : 1; // throttle is above safety limit
+  uint8_t arm_request : 1; // arming AUX is currently requested
+  uint8_t arm_state : 1;   // armed after all safety checks have passed
 
   uint8_t in_air : 1;    // throttle was raised above THROTTLE_SAFETY (10%), only resets on disarm
   uint8_t on_ground : 1; // armed and we are sending some throttle to the motors
@@ -57,6 +63,7 @@ typedef struct {
   uint8_t gestures_disabled : 1;
 
   volatile uint8_t usb_active;
+  uint32_t arming_disabled_flags;
 } control_flags_t;
 
 extern control_flags_t flags;
