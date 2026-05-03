@@ -276,6 +276,5 @@
 // #define DEBUG_PIN1 PIN_A1
 
 // ---- DEVELOPMENT OPTIONS ----
-// #define ALLOW_USB_ARMING          // allow arming while connected to USB
 // #define NOMOTORS                  // disable motor output for bench testing
 // #define MOTOR_PLUS_CONFIGURATION  // use + motor layout instead of X
