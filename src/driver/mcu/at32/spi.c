@@ -269,31 +269,21 @@ void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs
       rx_data = seg->rx_data;
     }
 
-    // Branch once outside loop for maximum efficiency
     if (tx_data && rx_data) {
-      // Full duplex - most common case
-      spi_put(port, *tx_data++);
-      for (uint32_t j = 1; j < size; j++) {
+      for (uint32_t j = 0; j < size; j++) {
         spi_put(port, *tx_data++);
         *rx_data++ = spi_get(port);
       }
-      *rx_data = spi_get(port);
     } else if (tx_data) {
-      // TX only
-      spi_put(port, *tx_data++);
-      for (uint32_t j = 1; j < size; j++) {
+      for (uint32_t j = 0; j < size; j++) {
         spi_put(port, *tx_data++);
         spi_get(port);
       }
-      spi_get(port);
     } else if (rx_data) {
-      // RX only - send 0xFF dummy bytes
-      spi_put(port, 0xFF);
-      for (uint32_t j = 1; j < size; j++) {
+      for (uint32_t j = 0; j < size; j++) {
         spi_put(port, 0xFF);
         *rx_data++ = spi_get(port);
       }
-      *rx_data = spi_get(port);
     }
   }
 
