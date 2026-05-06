@@ -80,11 +80,16 @@ CBOR_END_STRUCT_ENCODER()
 
 void control_update_arming() {
   static bool checked_prearm = false;
+  static bool rx_ready_seen = false;
   static uint32_t arming_disabled_latch = ARMING_DISABLED_ARM_SWITCH;
   bool failsafe_lock = false;
 
   flags.arm_request = rx_aux_on(AUX_ARMING);
   flags.arming_disabled_flags = ARMING_DISABLED_NONE;
+
+  if (flags.rx_ready != 1) {
+    rx_ready_seen = false;
+  }
 
   if (flags.failsafe) {
     const uint32_t now_ms = time_millis();
@@ -142,8 +147,11 @@ void control_update_arming() {
     checked_prearm = false;
 
     if (flags.rx_ready == 1) {
-      // rx is bound and has been disarmed so clear binding while armed flag
-      arming_disabled_latch &= ~ARMING_DISABLED_ARM_SWITCH;
+      // rx is ready and arm switch has been low for a full control cycle
+      if (rx_ready_seen) {
+        arming_disabled_latch &= ~ARMING_DISABLED_ARM_SWITCH;
+      }
+      rx_ready_seen = true;
     }
 
     // clear the throttle safety flag
