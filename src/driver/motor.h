@@ -1,9 +1,10 @@
 #pragma once
 
 #include <stdbool.h>
+#include <float.h>
 #include <stdint.h>
 
-#define MOTOR_OFF -1.0f
+#define MOTOR_OFF (-FLT_MAX)
 
 typedef enum {
   MOTOR_FORWARD,

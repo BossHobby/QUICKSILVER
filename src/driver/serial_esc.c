@@ -110,7 +110,7 @@ void serial_esc_process(uint8_t index, uint32_t baud) {
   }
   const gpio_pins_t pin = target.outputs[index].pin;
 #else
-  const profile_output_t *output = profile_output_for_role(OUTPUT_ROLE_MOTOR_1 + index);
+  const profile_output_t *output = profile_output_for_source(OUTPUT_SOURCE_MOTOR_1 + index);
   if (!output || output->target_output >= MOTOR_PIN_MAX || !profile_output_slot_uses_motor(output->target_output)) {
     return;
   }

@@ -195,10 +195,12 @@ bool osd_status_update(osd_element_t *el) {
     return osd_status_print(el);
   }
 
+#ifndef VEHICLE_ROVER
   if (rx_aux_on(AUX_MOTOR_TEST)) {
     osd_status_show(MODE_HOLD, STATUS_MOTOR_TEST);
     return osd_status_print(el);
   }
+#endif
 
   if (flags.turtle) {
     osd_status_show(MODE_HOLD, STATUS_TURTLE);
