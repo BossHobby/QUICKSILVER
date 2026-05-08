@@ -225,6 +225,32 @@ static void dshot_handle_dir_change() {
   }
 }
 
+static uint16_t dshot_encode_motor_value(float value) {
+#ifdef VEHICLE_ROVER
+  if (profile.rover.reversible) {
+    if (value == MOTOR_OFF) {
+      return DSHOT_CMD_MOTOR_STOP;
+    }
+    if (value > 0.0f) {
+      const float pwm = constrain(value, 0.0f, 1.0f);
+      return mapf(pwm, 0.0f, 1.0f, DSHOT_3D_FORWARD_MIN, DSHOT_3D_FORWARD_MAX);
+    }
+    if (value < 0.0f) {
+      const float pwm = constrain(value, -1.0f, 0.0f);
+      return mapf(pwm, -1.0f, 0.0f, DSHOT_3D_REVERSE_MIN, DSHOT_3D_REVERSE_MAX);
+    }
+    return DSHOT_CMD_MOTOR_STOP;
+  }
+#endif
+
+  if (value >= 0.0f) {
+    const float pwm = constrain(value, 0.0f, 1.0f);
+    return mapf(pwm, 0.0f, 1.0f, DSHOT_THROTTLE_MIN, DSHOT_THROTTLE_MAX);
+  }
+
+  return DSHOT_CMD_MOTOR_STOP;
+}
+
 void motor_dshot_init() {
   dshot_gpio_port_count = 0;
   motor_dir = MOTOR_FORWARD;
@@ -261,16 +287,10 @@ void motor_dshot_write(float *values) {
   }
 
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    uint16_t value = 0;
-    if (values[i] >= 0.0f) {
-      const float pwm = constrain(values[i], 0.0f, 1.0f);
-      value = mapf(pwm, 0.0f, 1.0f, 48, 2047);
-    } else {
-      value = 0;
-    }
     if (!dshot_motor_slot_active(i)) {
       continue;
     }
+    const uint16_t value = dshot_encode_motor_value(values[i]);
     dshot_make_packet(i, value, false);
   }
 
