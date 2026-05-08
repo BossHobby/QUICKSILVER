@@ -33,7 +33,7 @@ resource_tag_t servo_alloc_func(gpio_pins_t pin) {
 
 static uint16_t output_pwm_hz() {
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    if (profile.outputs[i].protocol == OUTPUT_PROTOCOL_SERVO_PWM && profile.outputs[i].rate_hz > 0) {
+    if (profile.outputs[i].protocol == OUTPUT_PROTOCOL_PWM && profile.outputs[i].rate_hz > 0) {
       return profile.outputs[i].rate_hz;
     }
   }
@@ -58,7 +58,7 @@ void servo_init() {
       continue;
     }
 
-    if ((target.outputs[i].caps & OUTPUT_CAP_SERVO) != 0) {
+    if ((target.outputs[i].caps & (OUTPUT_CAP_MOTOR | OUTPUT_CAP_SERVO)) != 0) {
       pins[i] = target.outputs[i].pin;
     }
   }
