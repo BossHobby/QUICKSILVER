@@ -72,9 +72,8 @@
 #define MAVLINK_RC_OVERRIDE_EXT_OFFSET 18
 
 // Channels we retain, and how many of them carry the primary controls
-#define MAVLINK_RC_CHANNEL_COUNT 16
+#define MAVLINK_RC_CHANNEL_COUNT RX_CHANNEL_MAX
 #define MAVLINK_RC_PRIMARY 4
-#define MAVLINK_RC_AUX (MAVLINK_RC_CHANNEL_COUNT - MAVLINK_RC_PRIMARY)
 
 // RC_CHANNELS_OVERRIDE can address 18 channels, even though we only retain 16
 #define MAVLINK_RC_OVERRIDE_CHANNEL_COUNT 18
@@ -208,29 +207,22 @@ static bool mavlink_primary_valid() {
   return true;
 }
 
-// Convert the retained PWM values to the +-1 representation rx_map_channels()
-// expects. Returns false when the four primary controls are incomplete, in which
-// case the retained set must not be applied and the frame is not fresh input.
+// Stage the retained PWM values as full-range rx_channels. Returns false when
+// the four primary controls are incomplete, in which case the retained set must
+// not be applied and the frame is not fresh input.
 static bool mavlink_apply_channels() {
   if (!mavlink_primary_valid()) {
     return false;
   }
 
-  float rc_channels[MAVLINK_RC_PRIMARY];
-  for (uint32_t i = 0; i < MAVLINK_RC_PRIMARY; i++) {
-    rc_channels[i] = ((float)mavlink_channels[i] - 1500.0f) * 0.002f;
-  }
-  rx_map_channels(rc_channels);
-
-  // Aux channels are only written when a message supplied a usable value, so a
+  // Channels are only written when a message supplied a usable value, so a
   // channel that was never provided keeps whatever the previous message left.
-  for (uint32_t i = 0; i < MAVLINK_RC_AUX; i++) {
-    const uint32_t channel = MAVLINK_RC_PRIMARY + i;
+  for (uint32_t channel = 0; channel < MAVLINK_RC_CHANNEL_COUNT; channel++) {
     if (!mavlink_channels_known[channel]) {
       continue;
     }
     const int32_t raw = constrain(mavlink_channels[channel], 1000, 2000);
-    state.aux[AUX_CHANNEL_0 + i] = (uint16_t)(((uint32_t)(raw - 1000) * 65535) / (2000 - 1000));
+    state.rx_channels[channel] = (uint16_t)(((uint32_t)(raw - 1000) * 65535) / (2000 - 1000));
   }
 
   return true;
