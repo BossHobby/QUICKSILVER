@@ -15,6 +15,7 @@
 #include "driver/serial.h"
 #include "driver/serial_4way.h"
 #include "driver/serial_esc.h"
+#include "driver/servo.h"
 #include "driver/time.h"
 #include "driver/usb.h"
 #include "io/blackbox_device.h"
@@ -257,6 +258,9 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
     check_cbor_error(QUIC_CMD_SET);
 
     flash_save();
+
+    servo_stop();
+    servo_init();
 
     osd_clear();
     osd_display_reset();
