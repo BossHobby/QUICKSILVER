@@ -448,7 +448,11 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
 
   case QUIC_MOTOR_TEST_ENABLE:
     for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
+#ifdef VEHICLE_ROVER
+      motor_test.value[i] = 0.0f;
+#else
       motor_test.value[i] = MOTOR_OFF;
+#endif
     }
     motor_test.active = 1;
 
@@ -460,7 +464,11 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
 
   case QUIC_MOTOR_TEST_DISABLE:
     for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
+#ifdef VEHICLE_ROVER
+      motor_test.value[i] = 0.0f;
+#else
       motor_test.value[i] = MOTOR_OFF;
+#endif
     }
     motor_test.active = 0;
 
@@ -476,12 +484,15 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
     check_cbor_error(QUIC_CMD_MOTOR);
 
     for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
-      const float val = constrain(values[i], 0.0f, 1.0f);
-      if (val == 0.0f) {
+#ifdef VEHICLE_ROVER
+      motor_test.value[i] = values[i];
+#else
+      if (values[i] == 0.0f) {
         motor_test.value[i] = MOTOR_OFF;
       } else {
-        motor_test.value[i] = val;
+        motor_test.value[i] = values[i];
       }
+#endif
     }
 
     res = cbor_encode_float_array(&enc, motor_test.value, MOTOR_PIN_MAX);
