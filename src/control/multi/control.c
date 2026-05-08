@@ -10,6 +10,7 @@
 #include "control/multi/pid.h"
 #include "control/multi/rates.h"
 #include "control/multi/turtle_mode.h"
+#include "control/output.h"
 #include "core/profile.h"
 #include "driver/motor.h"
 #include "driver/time.h"
@@ -202,6 +203,9 @@ void control() {
   if (flags.motortest_override) {
     motor_test_calc(motortest_usb, state.motor_mix.axis);
     motor_output_calc(state.motor_mix.axis);
+#ifndef NOMOTORS
+    output_apply_mapped_sources();
+#endif
   } else if (!flags.arm_state || flags.failsafe || (state.throttle < 0.001f)) {
     flags.on_ground = 1;
     state.throttle = 0;
@@ -219,6 +223,9 @@ void control() {
 
     motor_mixer_calc(state.motor_mix.axis);
     motor_output_calc(state.motor_mix.axis);
+#ifndef NOMOTORS
+    output_apply_mapped_sources();
+#endif
   }
 
 #ifdef MOTOR_BEEPS

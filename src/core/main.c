@@ -3,8 +3,14 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "control/imu.h"
+#include "config/feature.h"
+
+#ifdef VEHICLE_ROVER
+#include "control/rover/control.h"
+#else
 #include "control/multi/pid.h"
+#endif
+#include "control/imu.h"
 #include "control/sixaxis.h"
 #include "core/debug.h"
 #include "core/failloop.h"
@@ -18,6 +24,7 @@
 #include "driver/interrupt.h"
 #include "driver/motor.h"
 #include "driver/rgb_led.h"
+#include "driver/servo.h"
 #include "driver/time.h"
 #include "driver/timer.h"
 #include "driver/usb.h"
@@ -84,7 +91,6 @@ __attribute__((__used__)) int main() {
   // setup filters early
   filter_global_init();
   timer_alloc_init();
-  pid_init();
 
   // Turn on LED during boot so that if a delay is used as part of using programming pins for other functions,
   // the FC does not appear inactive while programming times out
@@ -100,6 +106,7 @@ __attribute__((__used__)) int main() {
   rgb_led_init();
   motor_init();
   motor_set_all(MOTOR_OFF);
+  servo_init();
 
   // wait for devices to wake up
   time_delay_ms(100);
@@ -109,6 +116,8 @@ __attribute__((__used__)) int main() {
   sixaxis_init();
   // needs to happen after gyro is detected so we know its update period
   scheduler_init();
+
+  pid_init();
 
   time_delay_ms(50);
   sixaxis_gyro_cal();

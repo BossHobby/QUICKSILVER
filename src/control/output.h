@@ -4,7 +4,7 @@
 
 #include "core/profile.h"
 
-void output_set_role(output_role_t role, float value);
+void output_apply_mapped_sources();
 void output_write_all();
 void output_stop_all();
-bool output_role_configured(output_role_t role);
+bool output_source_configured(output_source_t source);
