@@ -9,6 +9,7 @@
 #include "driver/serial_4way.h"
 #include "driver/serial_4way_avr_bl.h"
 #include "driver/serial_soft.h"
+#include "driver/servo.h"
 #include "driver/usb.h"
 #include "io/led.h"
 #include "util/cbor_helper.h"
@@ -132,15 +133,29 @@ uint8_t serial_4way_init() {
   motor_set_all(MOTOR_OFF);
   motor_wait_for_ready();
 
+#ifdef USE_SERVO
+  servo_stop();
+#endif
+
   time_delay_ms(250);
 
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    esc_pins[i] = PIN_NONE;
+  }
+
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+#ifdef VEHICLE_ROVER
+    const gpio_pins_t pin = profile_output_slot_uses_motor(i) ? target.outputs[i].pin : PIN_NONE;
+#else
     const profile_output_t *output = profile_output_for_role(OUTPUT_ROLE_MOTOR_1 + i);
     const gpio_pins_t pin = output && output->target_output < MOTOR_PIN_MAX && profile_output_slot_uses_motor(output->target_output)
                               ? target.outputs[output->target_output].pin
                               : PIN_NONE;
+#endif
     esc_pins[i] = pin;
-    avr_bl_init_pin(pin);
+    if (pin != PIN_NONE) {
+      avr_bl_init_pin(pin);
+    }
   }
 
   return MOTOR_PIN_MAX;
@@ -151,6 +166,10 @@ void serial_4way_release() {
 
   motor_init();
   motor_set_all(MOTOR_OFF);
+
+#ifdef USE_SERVO
+  servo_init();
+#endif
 }
 
 serial_esc4way_ack_t serial_4way_send(uint8_t cmd, uint16_t addr, const uint8_t *input, const uint8_t input_size, uint8_t *output, uint8_t *output_size) {
