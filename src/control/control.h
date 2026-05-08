@@ -103,9 +103,10 @@ typedef struct {
   float ibat_sag_filtered; // filtered current in amps (fast for mAh tracking)
   float ibat_drawn;        // total mAh consumed
 
-  vec4_t rx;          // holds the raw or calibrated main four channels, roll, pitch, yaw, throttle
+  vec4_t rx;          // holds raw or calibrated role channels; rover steering uses yaw
   vec4_t rx_filtered; // same as above, but with constraints (just in case), smoothing and deadband applied
   vec4_t rx_override; // override values, activated by controls_override
+  uint16_t rx_channels[RX_CHANNEL_MAX]; // full resolution 16-bit receiver channel values
   float rx_filter_hz;
 
   stick_wizard_state_t stick_calibration_wizard; // current phase of the calibration wizard
@@ -116,7 +117,6 @@ typedef struct {
   float throttle; // input throttle with idle etc applied
   float thrsum;   // average of all 4 motor thrusts
 
-  uint16_t aux[AUX_CHANNEL_MAX]; // full resolution 16-bit AUX channel values
   uint32_t aux_active;           // cached active aux_function_t bitmask
 
   vec3_t accel_raw; // raw accel reading with rotation and scaling applied
@@ -180,12 +180,12 @@ typedef struct {
   MEMBER(rx, vec4_t)                          \
   MEMBER(rx_filtered, vec4_t)                 \
   MEMBER(rx_override, vec4_t)                 \
+  ARRAY_MEMBER(rx_channels, RX_CHANNEL_MAX, uint16_t) \
   MEMBER(stick_calibration_wizard, uint8_t)   \
   MEMBER(rx_rssi, float)                      \
   MEMBER(rx_status, uint32_t)                 \
   MEMBER(throttle, float)                     \
   MEMBER(thrsum, float)                       \
-  ARRAY_MEMBER(aux, AUX_CHANNEL_MAX, uint16_t)        \
   MEMBER(aux_active, uint32_t)                        \
   MEMBER(accel_raw, vec3_t)                   \
   MEMBER(accel, vec3_t)                       \

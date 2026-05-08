@@ -39,24 +39,18 @@ static packet_status_t ibus_handle_packet(uint8_t *packet) {
   channels[12] = packet[26] + (packet[27] << 8);
   channels[13] = packet[28] + (packet[29] << 8);
 
-  const float rc_channels[4] = {
-      (channels[0] - 1500.f) * 0.002f,
-      (channels[1] - 1500.f) * 0.002f,
-      (channels[2] - 1500.f) * 0.002f,
-      (channels[3] - 1500.f) * 0.002f,
-  };
-  rx_map_channels(rc_channels);
-
-  // Here we have the AUX channels Silverware supports
-  for (uint32_t i = 0; i <= AUX_CHANNEL_11; i++) {
-    const int32_t raw = constrain(channels[4 + i], 1000, 2000);
-    state.aux[i] = (uint16_t)(((uint32_t)(raw - 1000) * 65535) / (2000 - 1000));
+  for (uint32_t channel = 0; channel < 14; channel++) {
+    const int32_t raw = constrain(channels[channel], 1000, 2000);
+    state.rx_channels[channel] = (uint16_t)(((uint32_t)(raw - 1000) * 65535) / (2000 - 1000));
+  }
+  for (uint32_t channel = 14; channel < RX_CHANNEL_MAX; channel++) {
+    state.rx_channels[channel] = 0;
   }
 
   rx_lqi_got_packet();
 
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel <= AUX_CHANNEL_11) {
-    rx_lqi_update_direct(0.1f * (channels[(profile.receiver.aux[AUX_RSSI].channel + 4)] - 1000));
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel < 14) {
+    rx_lqi_update_direct(0.1f * (channels[(profile.receiver.aux[AUX_RSSI].channel)] - 1000));
   }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
     rx_lqi_update_direct(0); // no internal rssi data

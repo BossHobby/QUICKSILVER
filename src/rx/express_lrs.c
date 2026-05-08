@@ -478,7 +478,7 @@ static uint8_t elrs_unpack_n_switch(uint16_t val, uint16_t max) {
 
 static void elrs_sample_aux0(bool aux0_value) {
   static bool last_aux0_value = false;
-  state.aux[AUX_CHANNEL_0] = (!last_aux0_value && !aux0_value) ? 0 : AUX_VALUE_MAX;
+  state.rx_channels[4] = (!last_aux0_value && !aux0_value) ? 0 : AUX_VALUE_MAX;
   last_aux0_value = aux0_value;
 }
 
@@ -491,33 +491,33 @@ static bool elrs_unpack_switches_hybrid(const volatile uint8_t *rx_spi_packet) {
   const uint16_t value = elrs_unpack_3b_switch(switch_byte & 0b111);
   switch (index) {
   case 0:
-    state.aux[AUX_CHANNEL_1] = value ? AUX_VALUE_MAX : 0;
+    state.rx_channels[5] = value ? AUX_VALUE_MAX : 0;
     break;
   case 1:
-    state.aux[AUX_CHANNEL_2] = value ? AUX_VALUE_MAX : 0;
+    state.rx_channels[6] = value ? AUX_VALUE_MAX : 0;
     break;
   case 2:
-    state.aux[AUX_CHANNEL_3] = value ? AUX_VALUE_MAX : 0;
+    state.rx_channels[7] = value ? AUX_VALUE_MAX : 0;
     break;
   case 3:
-    state.aux[AUX_CHANNEL_4] = value ? AUX_VALUE_MAX : 0;
+    state.rx_channels[8] = value ? AUX_VALUE_MAX : 0;
     break;
   case 4:
-    state.aux[AUX_CHANNEL_5] = value ? AUX_VALUE_MAX : 0;
+    state.rx_channels[9] = value ? AUX_VALUE_MAX : 0;
     break;
   case 5:
-    state.aux[AUX_CHANNEL_6] = value ? AUX_VALUE_MAX : 0;
+    state.rx_channels[10] = value ? AUX_VALUE_MAX : 0;
     break;
   case 6: // Because AUX1 (index 0) is the low latency switch, the low bit
   case 7: // of the switchIndex can be used as data, and arrives as index "6"
-    state.aux[AUX_CHANNEL_7] = elrs_unpack_n_switch(switch_byte & 0b1111, 15) ? AUX_VALUE_MAX : 0;
+    state.rx_channels[11] = elrs_unpack_n_switch(switch_byte & 0b1111, 15) ? AUX_VALUE_MAX : 0;
     break;
   }
 
-  state.aux[AUX_CHANNEL_8] = 0;
-  state.aux[AUX_CHANNEL_9] = 0;
-  state.aux[AUX_CHANNEL_10] = 0;
-  state.aux[AUX_CHANNEL_11] = 0;
+  state.rx_channels[12] = 0;
+  state.rx_channels[13] = 0;
+  state.rx_channels[14] = 0;
+  state.rx_channels[15] = 0;
 
   // TelemetryStatus bit
   return switch_byte & (1 << 6);
@@ -564,7 +564,7 @@ static bool elrs_unpack_switches_wide(const volatile uint8_t *packet) {
   }
 
   switch_value = elrs_unpack_n_switch(switch_value, bins);
-  state.aux[AUX_CHANNEL_1 + index] = switch_value ? AUX_VALUE_MAX : 0;
+  state.rx_channels[5 + index] = switch_value ? AUX_VALUE_MAX : 0;
 
   return telemetry_status;
 }
@@ -685,15 +685,10 @@ static bool elrs_process_packet() {
     uint32_t crsf_channels[4];
     elrs_unpack_channels(crsf_channels, (uint8_t *)rx_spi_packet + 1);
 
-    // AETR channel order
-    const float channels[4] = {
-        ((float)crsf_channels[0] - 1024.f) * (1.0f / 1024.f),
-        ((float)crsf_channels[1] - 1024.f) * (1.0f / 1024.f),
-        ((float)crsf_channels[2] - 1024.f) * (1.0f / 1024.f),
-        ((float)crsf_channels[3] - 1024.f) * (1.0f / 1024.f),
-    };
-
-    rx_map_channels(channels);
+    for (uint32_t i = 0; i < 4; i++) {
+      const uint32_t raw = constrain(crsf_channels[i], 0, 2047);
+      state.rx_channels[i] = (uint16_t)((raw * 65535) / 2047);
+    }
 
     channels_received = true;
 

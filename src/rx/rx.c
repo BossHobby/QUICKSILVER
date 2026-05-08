@@ -101,6 +101,9 @@ static void rx_apply_smoothing() {
 }
 
 static float rx_apply_deadband(float val) {
+#ifdef VEHICLE_ROVER
+  return val;
+#else
   if (profile.rate.sticks_deadband <= 0.0f) {
     return val;
   }
@@ -114,6 +117,7 @@ static float rx_apply_deadband(float val) {
   } else {
     return mapf(val, -profile.rate.sticks_deadband, -1, 0, -1);
   }
+#endif
 }
 
 static void rx_update_aux_active() {
@@ -122,10 +126,15 @@ static void rx_update_aux_active() {
   for (uint32_t i = 0; i < AUX_FUNCTION_MAX; i++) {
     const aux_function_map_t *map = &profile.receiver.aux[i];
 
-    if (map->channel != AUX_CHANNEL_OFF &&
+    if (map->channel == RX_CHANNEL_ON) {
+      active |= 1U << i;
+      continue;
+    }
+
+    if (map->channel != RX_CHANNEL_OFF && map->channel < RX_CHANNEL_MAX &&
         (map->range_min != 0 || map->range_max != 0) &&
-        state.aux[map->channel] >= map->range_min &&
-        state.aux[map->channel] <= map->range_max) {
+        state.rx_channels[map->channel] >= map->range_min &&
+        state.rx_channels[map->channel] <= map->range_max) {
       active |= 1U << i;
     }
   }
@@ -134,13 +143,9 @@ static void rx_update_aux_active() {
 }
 
 static void rx_init_state() {
-  for (uint32_t i = 0; i < AUX_CHANNEL_OFF; i++) {
-    state.aux[i] = 0;
+  for (uint32_t i = 0; i < RX_CHANNEL_MAX; i++) {
+    state.rx_channels[i] = 0;
   }
-
-  // set always on channel to on
-  state.aux[AUX_CHANNEL_ON] = AUX_VALUE_MAX;
-  state.aux[AUX_CHANNEL_OFF] = 0;
   state.aux_active = 0;
   rx_update_aux_active();
 
@@ -215,22 +220,31 @@ void rx_init() {
   }
 }
 
-void rx_map_channels(const float channels[4]) {
-  switch (profile.receiver.channel_mapping) {
-  case RX_MAPPING_AETR:
-    state.rx.roll = channels[0];
-    state.rx.pitch = channels[1];
-    state.rx.throttle = (channels[2] + 1.0f) * 0.5f;
-    state.rx.yaw = channels[3];
-    break;
-
-  case RX_MAPPING_TAER:
-    state.rx.throttle = (channels[0] + 1.0f) * 0.5f;
-    state.rx.roll = channels[1];
-    state.rx.pitch = channels[2];
-    state.rx.yaw = channels[3];
-    break;
+static void rx_update_roles() {
+  float roles[RX_ROLE_MAX] = {0};
+  for (uint32_t i = 0; i < RX_ROLE_MAX; i++) {
+    const rx_role_map_t *map = &profile.receiver.role_map[i];
+    if (map->channel >= RX_CHANNEL_MAX) {
+      continue;
+    }
+    float value = (float)state.rx_channels[map->channel] / (float)AUX_VALUE_MAX * 2.0f - 1.0f;
+    if (value < map->center) {
+      value = mapf(value, map->min, map->center, -1.0f, 0.0f);
+    } else {
+      value = mapf(value, map->center, map->max, 0.0f, 1.0f);
   }
+    roles[i] = constrain(value, -1.0f, 1.0f);
+  }
+
+#ifdef VEHICLE_ROVER
+  state.rx.throttle = (roles[RX_ROLE_THROTTLE] + 1.0f) * 0.5f;
+  state.rx.yaw = roles[RX_ROLE_STEERING];
+#else
+  state.rx.roll = roles[RX_ROLE_ROLL];
+  state.rx.pitch = roles[RX_ROLE_PITCH];
+  state.rx.yaw = roles[RX_ROLE_YAW];
+  state.rx.throttle = (roles[RX_ROLE_THROTTLE] + 1.0f) * 0.5f;
+#endif
 }
 
 bool rx_check() {
@@ -312,6 +326,7 @@ void rx_update() {
 
   if (rx_check()) {
     rx_apply_stick_scale();
+    rx_update_roles();
     rx_update_aux_active();
 
     state.rx.roll = rx_apply_deadband(state.rx.roll);

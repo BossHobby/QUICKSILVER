@@ -187,7 +187,7 @@ static void osd_menu_select_aux_adjust(int8_t x, int8_t y, const char *text, uin
   osd_menu_select(x, y, text);
 
   if (osd_menu_select_enum(channel_x, y, map->channel, aux_channel_short_labels)) {
-    map->channel = osd_menu_adjust_int(map->channel, 1, AUX_CHANNEL_0, AUX_CHANNEL_MAX - 1);
+    map->channel = osd_menu_adjust_int(map->channel, 1, RX_CHANNEL_1, RX_CHANNEL_COUNT - 1);
   }
 
   int32_t range_min_percent = aux_value_to_percent(map->range_min);
@@ -1419,7 +1419,7 @@ void osd_display() {
 
     osd_menu_select_enum_adjust(4, 4, "RSSI FROM", 16, &profile.receiver.lqi_source, rssi_source_labels, RX_LQI_SOURCE_PACKET_RATE, RX_LQI_SOURCE_DIRECT);
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
-      osd_menu_select_enum_adjust(4, 5, "SELECT AUX", 16, &profile.receiver.aux[AUX_RSSI].channel, aux_channel_labels, AUX_CHANNEL_0, AUX_CHANNEL_11);
+      osd_menu_select_enum_adjust(4, 5, "SELECT AUX", 16, &profile.receiver.aux[AUX_RSSI].channel, aux_channel_labels, RX_CHANNEL_1, RX_CHANNEL_16);
     }
 
     osd_menu_select_save_and_exit(4);
