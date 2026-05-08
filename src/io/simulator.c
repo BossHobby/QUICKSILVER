@@ -78,19 +78,15 @@ void simulator_update() {
     state.rx.pitch = shared->state.rc_channels[1];
     state.rx.yaw = shared->state.rc_channels[2];
     state.rx.throttle = shared->state.rc_channels[3];
+    state.rx_channels[0] = (uint16_t)((shared->state.rc_channels[0] + 1.0f) * 0.5f * AUX_VALUE_MAX);
+    state.rx_channels[1] = (uint16_t)((shared->state.rc_channels[1] + 1.0f) * 0.5f * AUX_VALUE_MAX);
+    state.rx_channels[2] = (uint16_t)((shared->state.rc_channels[2] + 1.0f) * 0.5f * AUX_VALUE_MAX);
+    state.rx_channels[3] = (uint16_t)(shared->state.rc_channels[3] * AUX_VALUE_MAX);
 
-    state.aux[AUX_CHANNEL_0] = shared->state.rc_aux[0] ? AUX_VALUE_MAX : 0;
-    state.aux[AUX_CHANNEL_1] = shared->state.rc_aux[1] ? AUX_VALUE_MAX : 0;
-    state.aux[AUX_CHANNEL_2] = shared->state.rc_aux[2] ? AUX_VALUE_MAX : 0;
-    state.aux[AUX_CHANNEL_3] = shared->state.rc_aux[3] ? AUX_VALUE_MAX : 0;
-    state.aux[AUX_CHANNEL_4] = 0;
-    state.aux[AUX_CHANNEL_5] = 0;
-    state.aux[AUX_CHANNEL_6] = 0;
-    state.aux[AUX_CHANNEL_7] = 0;
-    state.aux[AUX_CHANNEL_8] = 0;
-    state.aux[AUX_CHANNEL_9] = 0;
-    state.aux[AUX_CHANNEL_10] = 0;
-    state.aux[AUX_CHANNEL_11] = 0;
+    for (uint32_t channel = 4; channel < RX_CHANNEL_MAX; channel++) {
+      const uint32_t aux_index = channel - 4;
+      state.rx_channels[channel] = aux_index < 4 && shared->state.rc_aux[aux_index] ? AUX_VALUE_MAX : 0;
+    }
 
     rc_updated = true;
     shared->state.rc_updated = 0;

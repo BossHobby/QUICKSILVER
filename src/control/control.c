@@ -30,7 +30,7 @@ FAST_RAM control_flags_t flags = {
 FAST_RAM control_state_t state = {
     .failsafe_time_ms = 0,
 
-    .aux = {0},
+    .rx_channels = {0},
 
     .loop_counter = 0,
 
@@ -94,7 +94,6 @@ void control_update_arming() {
   if (flags.failsafe) {
     const uint32_t now_ms = time_millis();
 
-    // failsafe first occurred, record time
     if (state.failsafe_time_ms == 0) {
       state.failsafe_time_ms = now_ms;
     }
@@ -119,26 +118,30 @@ void control_update_arming() {
   }
 
   if (flags.arm_request && !failsafe_lock && !flags.usb_active) {
-    // CONDITION: AUX_ARMING is high
+    bool can_arm = !checked_prearm && arming_disabled_latch == ARMING_DISABLED_NONE;
 
-    if (!checked_prearm &&
-        rx_aux_on(AUX_PREARM) &&
-        state.rx_filtered.throttle <= THROTTLE_SAFETY &&
-        arming_disabled_latch == ARMING_DISABLED_NONE) {
-      // CONDITION:  we have not checked prearm this arm cycle AND AUX_PREARM is high AND throttle is zeroed
+#ifdef VEHICLE_MULTI
+    can_arm = can_arm && rx_aux_on(AUX_PREARM) && state.rx_filtered.throttle <= THROTTLE_SAFETY;
+#endif
+
+    if (can_arm) {
       flags.arm_state = 1;
 
+#ifdef VEHICLE_MULTI
       if (!flags.turtle_ready) {
         motor_set_direction(MOTOR_FORWARD);
       }
+#endif
     } else if (!flags.arm_state) {
+#ifdef VEHICLE_MULTI
       if (state.rx_filtered.throttle > THROTTLE_SAFETY) {
-        // throw up throttle safety if we crossed the threshold
         arming_disabled_latch |= ARMING_DISABLED_THROTTLE;
       } else {
-        // throw up arming safety if we didnt manage to arm
         arming_disabled_latch |= ARMING_DISABLED_ARM_SWITCH;
       }
+#else
+      arming_disabled_latch |= ARMING_DISABLED_ARM_SWITCH;
+#endif
     }
 
     checked_prearm = true;
@@ -154,18 +157,18 @@ void control_update_arming() {
       rx_ready_seen = true;
     }
 
-    // clear the throttle safety flag
     arming_disabled_latch &= ~ARMING_DISABLED_THROTTLE;
   }
 
+#ifdef VEHICLE_MULTI
   if (flags.turtle && !flags.turtle_ready) {
     arming_disabled_latch |= ARMING_DISABLED_ARM_SWITCH;
   }
+#endif
 
   flags.arming_disabled_flags |= arming_disabled_latch;
 
   if (flags.arming_disabled_flags != ARMING_DISABLED_NONE) {
-    // disarm the quad by setting armed state variable to zero
     flags.arm_state = 0;
   }
 }
