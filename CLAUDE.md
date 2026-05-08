@@ -611,3 +611,92 @@ Benefits:
 - Automatically adapts to gyro timing variations
 
 This would require gyro EXTI support and available hardware timers, but could significantly improve timing precision for supported hardware.
+
+## Three-Repo Architecture
+
+QUICKSILVER is part of a three-repo system:
+
+### BossHobby/Targets
+- Hardware board definitions (500+ FC boards) as YAML files in `targets/`
+- `src/schema/target.json` — JSON schema for target YAML validation
+- `src/types.ts` — TypeScript `target_t` interface (mirrors firmware `target_t`)
+- `src/index.ts` — validates YAMLs, generates `output/_index.json`, `output/_index.ini`, and cleaned YAMLs
+- CI pushes `output/` to `targets` branch for firmware consumption
+- Key files: `src/schema/target.json`, `src/types.ts`, `src/index.ts`, `src/dma.ts`, `manufacturers.yaml`
+
+### BossHobby/QUICKSILVER (this repo)
+- `script/pre_script.py` clones/fetches Targets repo (branch `targets`) into local `targets/` at build time
+- `targets/_index.ini` provides PlatformIO env entries (`[env:board-name] extends = mcu_type`)
+- One ELF per MCU type; `script/target_inject.py` copies MCU ELF and injects target YAML as CBOR into `.config_flash` section
+- `TARGET_HASH` (MD5 of YAML) compiled in to detect config changes
+- At runtime, `flash.c` decodes CBOR into `target_t` struct (defined in `src/core/target.h`)
+- CBOR serialization uses `TARGET_MEMBERS` macro pattern
+
+### BossHobby/Configurator
+- Desktop/web UI (Vue + Electron/Vite)
+- Communicates via custom **QUIC protocol** (NOT MSP) over WebSerial at 921600 baud
+- CBOR-encoded payloads; protocol defined in `src/store/serial/quic.ts`
+- Fetches `QuicVal.Info` (MCU/version/features), `QuicVal.Target` (pin mappings), `QuicVal.Profile` (all settings)
+- Motor labels hardcoded as quad in `src/store/motor.ts` (will need vehicle-type gating)
+- OSD elements hardcoded in `src/panel/OSDElements.vue`
+- AUX functions hardcoded for quad in `src/store/constants.ts`
+
+### Data Flow for Target Fields
+```
+Targets repo YAML → (git fetch) → QUICKSILVER targets/ dir → (CBOR inject) → ELF .config_flash
+                                                                     ↓ (runtime decode)
+                                                               target_t struct
+                                                                     ↓ (QUIC protocol)
+                                                               Configurator reads target_t
+```
+
+When adding new target fields (e.g. `vehicles`, `servo_pins`):
+1. Add to Targets repo: schema (`target.json`), types (`types.ts`), `target_keys`
+2. Add to QUICKSILVER: `target_t` struct + `TARGET_MEMBERS` CBOR macro in `target.h`
+3. Add to Configurator: `target_t` in `types.ts`, UI gating logic
+
+## Vehicle Type System
+
+### Overview
+The firmware supports multiple vehicle types via compile-time defines:
+- `VEHICLE_MULTI` — Multirotor (default, existing quad firmware)
+- `VEHICLE_ROVER` — Ground rover (Ackermann steering: 1 drive motor + 1 steering servo)
+- `VEHICLE_WING` — Fixed wing (future)
+
+The vehicle type is a **build-time choice**, set via `VEHICLE_*` compile flag. Only one is active per firmware build. Default is `VEHICLE_MULTI` if none specified.
+
+Target YAMLs include a `vehicles` field listing which vehicle types a board's hardware supports:
+```yaml
+vehicles: [multi, rover]
+```
+
+This is a **capability list**, not a selection. At runtime, the firmware validates that the loaded target's `vehicles` list includes the compiled vehicle type. If the target doesn't support the compiled type, the firmware enters failloop.
+
+### Build and Runtime Validation Flow
+1. **Build time**: `VEHICLE_ROVER` is set via build flag on the MCU env (e.g., `pio run -e stm32h743 -DVEHICLE_ROVER`). Per-target envs are dev-only; release builds compile per-MCU.
+2. **Build time**: Target YAML (with `vehicles: [multi, rover]`) is injected as CBOR into ELF by `target_inject.py`
+3. **Runtime**: `flash.c` decodes target, including `vehicles` field
+4. **Runtime**: Firmware checks if compiled `VEHICLE_*` is in `target.vehicles` → failloop if incompatible
+
+Existing targets without a `vehicles` field default to `[multi]` — only compatible with `VEHICLE_MULTI` builds.
+
+### Target Struct Extensions (Rover)
+- `target_t.vehicles` — bitmask of supported vehicle types (decoded from YAML `vehicles` array)
+- `target_t.servo_pins[SERVO_PIN_MAX]` — GPIO pins for servo outputs (50-333Hz PWM)
+
+### Rover Architecture
+- **Drive motor**: Motor pin 0, forward-only DShot or PWM (MVP). Bidirectional DShot3D deferred.
+- **Steering servo**: Servo pin 0, standard 1-2ms PWM at 50-333Hz
+- **Mixer**: Throttle → motor[0], yaw stick → servo[0]. No gyro assist in MVP.
+- **Arming**: Simplified — center throttle required, arm switch enables
+- **OSD**: Rover-specific elements (throttle bar, steering indicator, heading)
+
+### Servo Driver
+New driver in `src/driver/servo.h` + `src/driver/servo.c` + `src/driver/mcu/stm32/servo.c`:
+- Uses `TIMER_USE_SERVO` timer allocation
+- Timer config: prescaler for ~1MHz tick, ARR for desired refresh rate
+- CCR range: 1000-2000 for 1-2ms servo pulse
+- API: `servo_init()`, `servo_set(pin, value)` where value is [-1.0, +1.0]
+
+### Future: src/vehicle/ Rename
+When multi-vehicle support matures, plan to rename `src/flight/` → `src/vehicle/` as the code is vehicle-agnostic (PID, IMU, filters, input). Only `control.c` and `motor.c` have vehicle-specific branching.

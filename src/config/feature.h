@@ -18,8 +18,12 @@
 #define USE_MAX7456
 #define USE_RGB_LED
 
+#ifndef VEHICLE_ROVER
 #define USE_MOTOR_DSHOT
 #define USE_MOTOR_PWM
+#else
+#define USE_SERVO
+#endif
 #define USE_SERIAL_4WAY
 
 #ifndef AT32F4
