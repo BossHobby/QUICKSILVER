@@ -31,6 +31,14 @@ target_info_t target_info = {
     },
 
     .gyro_id = 0x0,
+
+#ifdef VEHICLE_ROVER
+    .vehicle_type = VEHICLE_TYPE_ROVER,
+#elif defined(VEHICLE_WING)
+    .vehicle_type = VEHICLE_TYPE_WING,
+#else
+    .vehicle_type = VEHICLE_TYPE_MULTI,
+#endif
 };
 
 #define START_STRUCT CBOR_START_STRUCT_ENCODER
@@ -206,6 +214,55 @@ cbor_result_t cbor_decode_gpio_pins_t(cbor_value_t *dec, gpio_pins_t *t) {
   return res;
 }
 
+cbor_result_t cbor_encode_vehicle_flags_t(cbor_value_t *enc, const vehicle_flags_t *t) {
+  cbor_result_t res = CBOR_OK;
+
+  uint32_t count = 0;
+  if (*t & VEHICLE_TYPE_MULTI)
+    count++;
+  if (*t & VEHICLE_TYPE_ROVER)
+    count++;
+  if (*t & VEHICLE_TYPE_WING)
+    count++;
+
+  CBOR_CHECK_ERROR(res = cbor_encode_array(enc, count));
+  if (*t & VEHICLE_TYPE_MULTI) {
+    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "multi"));
+  }
+  if (*t & VEHICLE_TYPE_ROVER) {
+    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "rover"));
+  }
+  if (*t & VEHICLE_TYPE_WING) {
+    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "wing"));
+  }
+
+  return res;
+}
+
+cbor_result_t cbor_decode_vehicle_flags_t(cbor_value_t *dec, vehicle_flags_t *t) {
+  cbor_result_t res = CBOR_OK;
+
+  cbor_container_t array;
+  CBOR_CHECK_ERROR(res = cbor_decode_array(dec, &array));
+
+  vehicle_flags_t flags = 0;
+  for (uint32_t i = 0; i < cbor_decode_array_size(dec, &array); i++) {
+    const uint8_t *name;
+    uint32_t name_len;
+    CBOR_CHECK_ERROR(res = cbor_decode_tstr(dec, &name, &name_len));
+    if (buf_equal_string(name, name_len, "multi")) {
+      flags |= VEHICLE_TYPE_MULTI;
+    } else if (buf_equal_string(name, name_len, "rover")) {
+      flags |= VEHICLE_TYPE_ROVER;
+    } else if (buf_equal_string(name, name_len, "wing")) {
+      flags |= VEHICLE_TYPE_WING;
+    }
+  }
+
+  *t = flags;
+  return res;
+}
+
 cbor_result_t cbor_encode_output_caps_t(cbor_value_t *enc, const output_caps_t *t) {
   cbor_result_t res = CBOR_OK;
 
@@ -344,4 +401,17 @@ void target_init() {
   if (strcmp((const char *)target.name, "unknown") == 0) {
     failloop(FAILLOOP_NO_TARGET);
   }
+
+  uint8_t vehicles = target.vehicles;
+  if (vehicles == 0) {
+    vehicles = VEHICLE_TYPE_MULTI;
+  }
+#if defined(VEHICLE_ROVER)
+  if ((vehicles & VEHICLE_TYPE_ROVER) == 0)
+#elif defined(VEHICLE_WING)
+  if ((vehicles & VEHICLE_TYPE_WING) == 0)
+#else
+  if ((vehicles & VEHICLE_TYPE_MULTI) == 0)
+#endif
+    failloop(FAILLOOP_VEHICLE);
 }

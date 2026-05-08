@@ -31,6 +31,14 @@ typedef enum {
 } __attribute__((__packed__)) motor_pin_t;
 
 typedef enum {
+  VEHICLE_TYPE_MULTI = (1 << 0),
+  VEHICLE_TYPE_ROVER = (1 << 1),
+  VEHICLE_TYPE_WING = (1 << 2),
+} vehicle_type_t;
+
+typedef uint8_t vehicle_flags_t;
+
+typedef enum {
   OUTPUT_CAP_MOTOR = (1 << 0),
   OUTPUT_CAP_SERVO = (1 << 1),
 } output_cap_t;
@@ -242,6 +250,7 @@ typedef struct {
   target_invert_pin_t buzzer;
   target_output_t outputs[MOTOR_PIN_MAX];
 
+  vehicle_flags_t vehicles;
   uint16_t vbat_scale;
   uint16_t ibat_scale;
 
@@ -271,6 +280,7 @@ typedef struct {
   MEMBER(sdcard_detect, target_invert_pin_t)                                     \
   MEMBER(buzzer, target_invert_pin_t)                                            \
   MEMBER(outputs, target_output_array)                                           \
+  MEMBER(vehicles, vehicle_flags_t)                                              \
   MEMBER(vbat_scale, uint16_t)                                                   \
   MEMBER(ibat_scale, uint16_t)                                                   \
   MEMBER(dma, target_dma_array)                                                  \
@@ -292,6 +302,7 @@ typedef struct {
   rx_protocol_t rx_protocols[RX_PROTOCOL_MAX];
 
   uint8_t gyro_id;
+  uint8_t vehicle_type;
 } target_info_t;
 
 #define TARGET_INFO_MEMBERS                            \
@@ -302,6 +313,7 @@ typedef struct {
   MEMBER(features, uint32_t)                           \
   ARRAY_MEMBER(rx_protocols, RX_PROTOCOL_MAX, uint8_t) \
   MEMBER(gyro_id, uint8_t)                             \
+  MEMBER(vehicle_type, uint8_t)                        \
   END_STRUCT()
 
 extern target_t target;
@@ -321,6 +333,8 @@ void target_init();
 
 cbor_result_t cbor_encode_gpio_pins_t(cbor_value_t *enc, const gpio_pins_t *t);
 cbor_result_t cbor_decode_gpio_pins_t(cbor_value_t *dec, gpio_pins_t *t);
+cbor_result_t cbor_encode_vehicle_flags_t(cbor_value_t *enc, const vehicle_flags_t *t);
+cbor_result_t cbor_decode_vehicle_flags_t(cbor_value_t *dec, vehicle_flags_t *t);
 cbor_result_t cbor_encode_output_caps_t(cbor_value_t *enc, const output_caps_t *t);
 cbor_result_t cbor_decode_output_caps_t(cbor_value_t *dec, output_caps_t *t);
 cbor_result_t cbor_encode_target_output_array(cbor_value_t *enc, const target_output_t (*outputs)[MOTOR_PIN_MAX]);
