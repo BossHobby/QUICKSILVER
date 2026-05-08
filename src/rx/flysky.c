@@ -36,18 +36,6 @@ rx_flysky_bind_data_t *flysky_get_bind_data() {
   return &bind_storage.flysky;
 }
 
-// Channel values are in the range of 1000 to 2000 inclusive (but can be as low
-// as 988 and high as 2020). So we convert to range -1.0f to +1.0f and clamp
-static float rescale_aetr(int v) {
-  v -= 1500;
-  if (v < -500) {
-    v = -500;
-  } else if (v > 500) {
-    v = 500;
-  }
-  return v * 0.002f;
-}
-
 // Checks if RX or TX has completed. If TX complete then switch to RX mode
 // else if RX complete, process the packet.
 //
@@ -169,22 +157,12 @@ static bool rx_flysky_check(void) {
     flags.failsafe = 0;
     rx_lqi_got_packet();
 
-    // AETR channels
-    const float rc_channels[4] = {
-        rescale_aetr(flysky.channel_data[0]),
-        rescale_aetr(flysky.channel_data[1]),
-        rescale_aetr(flysky.channel_data[2]),
-        rescale_aetr(flysky.channel_data[3])};
-    rx_map_channels(rc_channels);
-
-    // AUX channels
-    for (int i = 4; i < num_avail_channels; i++) {
-      if (i > AUX_CHANNEL_11) {
+    for (int i = 0; i < num_avail_channels; i++) {
+      if (i >= RX_CHANNEL_MAX) {
         break;
       }
-      const int aux_chan = i - 4;
       const uint16_t raw = constrain(flysky.channel_data[i], 1000, 2000);
-      state.aux[aux_chan] = (uint16_t)(((uint32_t)(raw - 1000) * 65535) / (2000 - 1000));
+      state.rx_channels[i] = (uint16_t)(((uint32_t)(raw - 1000) * 65535) / (2000 - 1000));
     }
   }
 
