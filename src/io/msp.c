@@ -324,11 +324,16 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     break;
   }
   case MSP_MOTOR_CONFIG: {
-    uint16_t data[5] = {
+#ifdef VEHICLE_ROVER
+    const uint8_t motor_count = 1;
+#else
+    const uint8_t motor_count = 4;
+#endif
+    const uint16_t data[5] = {
         1070,         // min throttle
         2000,         // max throttle
         1000,         // min command
-        (0 << 8) | 4, // motor count &  motor pole count
+        (0 << 8) | motor_count, // motor count & motor pole count
         0,            // dshot telemetry & esc sensor
     };
     msp_send_reply(msp, magic, cmd, (uint8_t *)data, 5 * sizeof(uint16_t));
@@ -363,6 +368,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     if (flags.arm_state) {
       flight_mode |= 0x1; // ARMED flag at bit 0
     }
+#ifndef VEHICLE_ROVER
     // Add other active modes if needed
     if (rx_aux_on(AUX_LEVELMODE)) {
       flight_mode |= (1 << 1); // ANGLE mode at bit 1
@@ -370,6 +376,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     if (rx_aux_on(AUX_HORIZON)) {
       flight_mode |= (1 << 2); // HORIZON mode at bit 2
     }
+#endif
     
     const uint8_t pid_profile = 0;
     const uint16_t cpu_load = state.cpu_load;
@@ -487,19 +494,33 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       break;
     }
 #endif
-#ifdef USE_SERIAL_4WAY
-    default:
-    case MSP_PASSTHROUGH_ESC_4WAY: {
-      uint8_t data[1] = {MOTOR_PIN_MAX};
-      msp_send_reply(msp, magic, cmd, data, 1);
+    case MSP_PASSTHROUGH_SERIAL_FUNCTION_ID: {
+      msp_send_reply(msp, magic, cmd, NULL, 0);
+      break;
+    }
 
+    case MSP_PASSTHROUGH_ESC_4WAY: {
+#ifdef USE_SERIAL_4WAY
       motor_test.active = 0;
+
+      uint8_t count = MOTOR_PIN_MAX;
+#ifdef VEHICLE_ROVER
+      count = 1;
+#endif
+      uint8_t data[1] = {count};
+      msp_send_reply(msp, magic, cmd, data, 1);
 
       serial_4way_init();
       serial_4way_process();
+#else
+      msp_send_reply(msp, magic, cmd, NULL, 0);
+#endif
       break;
     }
-#endif
+
+    default:
+      msp_send_reply(msp, magic, cmd, NULL, 0);
+      break;
     }
 
     break;

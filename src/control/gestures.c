@@ -29,6 +29,16 @@ typedef enum {
 #define STICKMAX 0.7f
 #define STICKCENTER 0.2f
 
+#ifdef VEHICLE_ROVER
+#define GMACRO_TRIGGER ((state.rx.throttle - 0.5f) * 2.0f)
+#define GMACRO_LEFT (GMACRO_TRIGGER < -STICKMAX)
+#define GMACRO_RIGHT (GMACRO_TRIGGER > STICKMAX)
+#define GMACRO_XCENTER (fabsf(GMACRO_TRIGGER) < STICKCENTER)
+
+#define GMACRO_DOWN (state.rx.yaw > STICKMAX)
+#define GMACRO_UP (state.rx.yaw < -STICKMAX)
+#define GMACRO_PITCHCENTER (fabsf(state.rx.yaw) < STICKCENTER)
+#else
 #define GMACRO_LEFT (state.rx.roll < -STICKMAX || state.rx.yaw < -STICKMAX)
 #define GMACRO_RIGHT (state.rx.roll > STICKMAX || state.rx.yaw > STICKMAX)
 #define GMACRO_XCENTER (fabsf(state.rx.roll) < STICKCENTER && fabsf(state.rx.yaw) < STICKCENTER)
@@ -37,6 +47,7 @@ typedef enum {
 #define GMACRO_UP (state.rx.pitch > STICKMAX)
 
 #define GMACRO_PITCHCENTER (fabsf(state.rx.pitch) < STICKCENTER)
+#endif
 
 #define GESTURETIME_MIN 50e3
 #define GESTURETIME_MAX 500e3
