@@ -153,10 +153,15 @@ const profile_t default_profile = {
     },
 
     .outputs = {
+#ifdef VEHICLE_ROVER
+        {.target_output = 0, .role = OUTPUT_ROLE_THROTTLE, .protocol = OUTPUT_PROTOCOL_SERVO_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
+        {.target_output = 3, .role = OUTPUT_ROLE_SERVO, .protocol = OUTPUT_PROTOCOL_SERVO_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
+#else
         {.target_output = 0, .role = OUTPUT_ROLE_MOTOR_1, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
         {.target_output = 1, .role = OUTPUT_ROLE_MOTOR_2, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
         {.target_output = 2, .role = OUTPUT_ROLE_MOTOR_3, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
         {.target_output = 3, .role = OUTPUT_ROLE_MOTOR_4, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+#endif
     },
 
     .motor = {
@@ -220,6 +225,16 @@ const profile_t default_profile = {
         },
 
         .dterm = {
+#ifdef VEHICLE_ROVER
+            {
+                .type = FILTER_LP_PT1,
+                .cutoff_freq = 50.0f,
+            },
+            {
+                .type = FILTER_LP_PT1,
+                .cutoff_freq = 50.0f,
+            },
+#else
             {
                 .type = DTERM_PASS1_TYPE,
                 .cutoff_freq = DTERM_PASS1_FREQ,
@@ -228,6 +243,7 @@ const profile_t default_profile = {
                 .type = DTERM_PASS2_TYPE,
                 .cutoff_freq = DTERM_PASS2_FREQ,
             },
+#endif
         },
 
         .dterm_dynamic_type = DTERM_DYNAMIC_TYPE,
@@ -241,6 +257,7 @@ const profile_t default_profile = {
 #endif
     },
 
+#ifndef VEHICLE_ROVER
     .rate = {
         .profile = STICK_RATE_PROFILE_1,
         .rates = {
@@ -335,6 +352,7 @@ const profile_t default_profile = {
         .throttle_mid = THROTTLE_MID,
         .throttle_expo = THROTTLE_EXPO,
     },
+#endif
 
     //************************************PIDS****************************************
     .pid = {
@@ -421,45 +439,53 @@ const profile_t default_profile = {
 
         .aux = {
             ARMING,                  // AUX_ARMING
+#ifndef VEHICLE_ROVER
             IDLE_UP,                 // AUX_IDLE_UP
             LEVELMODE,               // AUX_LEVELMODE
             RACEMODE,                // AUX_RACEMODE
             HORIZON,                 // AUX_HORIZON
             STICK_BOOST_PROFILE,     // AUX_STICK_BOOST_PROFILE
-            {AUX_CHANNEL_OFF, 0, 0}, // UNUSED_AUX_HIGH_RATES
+            {RX_CHANNEL_OFF, 0, 0}, // UNUSED_AUX_HIGH_RATES
+#endif
 #ifdef BUZZER_ENABLE
             BUZZER_ENABLE, // AUX_BUZZER_ENABLE
 #else
-            {AUX_CHANNEL_OFF, 0, 0},
+            {RX_CHANNEL_OFF, 0, 0},
 #endif
+#ifndef VEHICLE_ROVER
             TURTLE, // AUX_TURTLE
 
 #ifdef MOTORS_TO_THROTTLE_MODE
             MOTORS_TO_THROTTLE_MODE, // AUX_MOTOR_TEST
 #else
-            {AUX_CHANNEL_OFF, 0, 0},
+            {RX_CHANNEL_OFF, 0, 0},
+#endif
 #endif
             RSSI, // AUX_RSSI
 #ifdef FPV_SWITCH
             FPV_SWITCH, // AUX_FPV_SWITCH
 #else
-            {AUX_CHANNEL_OFF, 0, 0},
+            {RX_CHANNEL_OFF, 0, 0},
 #endif
-            {AUX_CHANNEL_OFF, 0, 0}, // AUX_BLACKBOX
+            {RX_CHANNEL_OFF, 0, 0}, // AUX_BLACKBOX
             PREARM,                  // AUX_PREARM
-            {AUX_CHANNEL_OFF, 0, 0}, // AUX_OSD_PROFILE
+            {RX_CHANNEL_OFF, 0, 0}, // AUX_OSD_PROFILE
+#ifdef VEHICLE_ROVER
+            RATE_ASSIST,             // AUX_RATE_ASSIST
+            RATE_THROTTLE,           // AUX_RATE_THROTTLE
+#endif
         },
         .lqi_source = RX_LQI_SOURCE_DIRECT,
-#ifdef CHANNEL_MAPPING
-        .channel_mapping = CHANNEL_MAPPING,
+        .role_map = {
+#ifdef VEHICLE_ROVER
+            [RX_ROLE_THROTTLE] = {.channel = 2, .min = -1.0f, .center = 0.0f, .max = 1.0f},
+            [RX_ROLE_STEERING] = {.channel = 3, .min = -1.0f, .center = 0.0f, .max = 1.0f},
 #else
-        .channel_mapping = RX_MAPPING_AETR,
+            [RX_ROLE_ROLL] = {.channel = 0, .min = -1.0f, .center = 0.0f, .max = 1.0f},
+            [RX_ROLE_PITCH] = {.channel = 1, .min = -1.0f, .center = 0.0f, .max = 1.0f},
+            [RX_ROLE_THROTTLE] = {.channel = 2, .min = -1.0f, .center = 0.0f, .max = 1.0f},
+            [RX_ROLE_YAW] = {.channel = 3, .min = -1.0f, .center = 0.0f, .max = 1.0f},
 #endif
-        .stick_calibration_limits = {
-            {.min = -1, .max = 1}, // axis[0]
-            {.min = -1, .max = 1}, // axis[1]
-            {.min = -1, .max = 1}, // axis[2]
-            {.min = 0, .max = 1}   // axis[3]
         },
     },
     .osd = {
@@ -512,6 +538,18 @@ const profile_t default_profile = {
 #endif
         // rest is initialized by profile_set_defaults()
     },
+    .rover = {
+        .pid = {
+            .kp = 70.0f,
+            .kd = 6.0f,
+        },
+        .center_deadband = 0.05f,
+        .steer_authority = 1.0f,
+        .yaw_rate = 180.0f,
+        .throttle_scale_breakpoint = 0.0f,
+        .throttle_scale_factor = 0.5f,
+        .reversible = 1,
+    },
 };
 
 #pragma GCC diagnostic pop
@@ -539,6 +577,15 @@ bool profile_output_slot_uses_motor(uint8_t target_output) {
   return false;
 }
 
+bool profile_output_slot_uses_servo(uint8_t target_output) {
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (profile.outputs[i].target_output == target_output && profile.outputs[i].protocol == OUTPUT_PROTOCOL_SERVO_PWM) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void profile_set_defaults() {
   memcpy(&profile, &default_profile, sizeof(profile_t));
 
@@ -560,9 +607,11 @@ pid_rate_t *profile_current_pid_rates() {
   return &profile.pid.pid_rates[profile.pid.pid_profile];
 }
 
+#ifndef VEHICLE_ROVER
 rate_t *profile_current_rates() {
   return &profile.rate.rates[profile.rate.profile];
 }
+#endif
 
 cbor_result_t cbor_encode_profile_metadata_t(cbor_value_t *enc, const profile_metadata_t *meta) {
   cbor_result_t res = CBOR_OK;
@@ -607,11 +656,13 @@ PID_RATE_PRESET_MEMBERS
 STICK_RATE_MEMBERS
 DTERM_ATTENUATION_MEMBERS
 PID_MEMBERS
-CALIBRATION_LIMIT_MEMBERS
+RX_ROLE_MAP_MEMBERS
 AUX_FUNCTION_MAP_MEMBERS
 RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
 BLACKBOX_PRESET_MEMBERS
+ROVER_PID_RATE_MEMBERS
+ROVER_MEMBERS
 PROFILE_OUTPUT_MEMBERS
 PROFILE_MEMBERS
 
@@ -685,10 +736,12 @@ ANGLE_PID_RATE_MEMBERS
 STICK_RATE_MEMBERS
 DTERM_ATTENUATION_MEMBERS
 PID_MEMBERS
-CALIBRATION_LIMIT_MEMBERS
+RX_ROLE_MAP_MEMBERS
 AUX_FUNCTION_MAP_MEMBERS
 RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
+ROVER_PID_RATE_MEMBERS
+ROVER_MEMBERS
 PROFILE_OUTPUT_MEMBERS
 PROFILE_MEMBERS
 
