@@ -52,29 +52,23 @@ static packet_status_t redpine_handle_packet(uint8_t *packet) {
         (uint16_t)((rx_data[REDPINE_CHANNEL_START + 5] << 4) & 0x7F0) | ((rx_data[REDPINE_CHANNEL_START + 4] >> 4) & 0xF),
     };
 
-    // AETR channel order
-    const float rc_channels[4] = {
-        (channels[0] - 1020.f) * (1.0f / 820.f),
-        (channels[1] - 1020.f) * (1.0f / 820.f),
-        (channels[2] - 1020.f) * (1.0f / 820.f),
-        (channels[3] - 1020.f) * (1.0f / 820.f),
-    };
+    for (uint32_t i = 0; i < 4; i++) {
+      const int32_t raw = constrain(channels[i], 200, 1840);
+      state.rx_channels[i] = (uint16_t)(((uint32_t)(raw - 200) * 65535) / (1840 - 200));
+    }
 
-    rx_map_channels(rc_channels);
-
-    // Here we have the AUX channels Silverware supports
-    state.aux[AUX_CHANNEL_0] = (rx_data[REDPINE_CHANNEL_START + 1] & 0x08) ? AUX_VALUE_MAX : 0;
-    state.aux[AUX_CHANNEL_1] = (rx_data[REDPINE_CHANNEL_START + 2] & 0x80) ? AUX_VALUE_MAX : 0;
-    state.aux[AUX_CHANNEL_2] = (rx_data[REDPINE_CHANNEL_START + 4] & 0x08) ? AUX_VALUE_MAX : 0;
-    state.aux[AUX_CHANNEL_3] = (rx_data[REDPINE_CHANNEL_START + 5] & 0x80) ? AUX_VALUE_MAX : 0;
-    state.aux[AUX_CHANNEL_4] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x01) ? AUX_VALUE_MAX : 0;
-    state.aux[AUX_CHANNEL_5] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x02) ? AUX_VALUE_MAX : 0;
-    state.aux[AUX_CHANNEL_6] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x04) ? AUX_VALUE_MAX : 0;
-    state.aux[AUX_CHANNEL_7] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x08) ? AUX_VALUE_MAX : 0;
-    state.aux[AUX_CHANNEL_8] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x10) ? AUX_VALUE_MAX : 0;
-    state.aux[AUX_CHANNEL_9] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x20) ? AUX_VALUE_MAX : 0;
-    state.aux[AUX_CHANNEL_10] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x40) ? AUX_VALUE_MAX : 0;
-    state.aux[AUX_CHANNEL_11] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x80) ? AUX_VALUE_MAX : 0;
+    state.rx_channels[4] = (rx_data[REDPINE_CHANNEL_START + 1] & 0x08) ? AUX_VALUE_MAX : 0;
+    state.rx_channels[5] = (rx_data[REDPINE_CHANNEL_START + 2] & 0x80) ? AUX_VALUE_MAX : 0;
+    state.rx_channels[6] = (rx_data[REDPINE_CHANNEL_START + 4] & 0x08) ? AUX_VALUE_MAX : 0;
+    state.rx_channels[7] = (rx_data[REDPINE_CHANNEL_START + 5] & 0x80) ? AUX_VALUE_MAX : 0;
+    state.rx_channels[8] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x01) ? AUX_VALUE_MAX : 0;
+    state.rx_channels[9] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x02) ? AUX_VALUE_MAX : 0;
+    state.rx_channels[10] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x04) ? AUX_VALUE_MAX : 0;
+    state.rx_channels[11] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x08) ? AUX_VALUE_MAX : 0;
+    state.rx_channels[12] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x10) ? AUX_VALUE_MAX : 0;
+    state.rx_channels[13] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x20) ? AUX_VALUE_MAX : 0;
+    state.rx_channels[14] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x40) ? AUX_VALUE_MAX : 0;
+    state.rx_channels[15] = (rx_data[REDPINE_CHANNEL_START + 6] & 0x80) ? AUX_VALUE_MAX : 0;
   } else {
     rx_lqi_lost_packet();
   }
