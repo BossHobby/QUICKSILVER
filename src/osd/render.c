@@ -1,5 +1,6 @@
 #include "osd/render.h"
 
+#include <math.h>
 #include <string.h>
 
 #include "control/control.h"
@@ -15,6 +16,7 @@
 #include "osd/menu.h"
 #include "osd/status.h"
 #include "rx/crsf.h"
+#include "util/util.h"
 
 #define ICON_RSSI 0x1
 #define ICON_LQI 0x7b
@@ -32,6 +34,8 @@
 #define ICON_SAT_L 0x1E
 #define ICON_SAT_R 0x1F
 #define ICON_KPH 0x9E
+
+#define ROVER_ROLLOVER_WARNING_DEGREES 45
 
 #define HOLD 0
 #define TEMP 1
@@ -79,9 +83,14 @@ static const char *osd_element_labels[] = {
     "WATTS",  // Added watts label
     "GPS SATS",
     "GPS SPEED",
+    "INCLINOMETER",
 };
 
 static const char *aux_channel_labels[] = {
+    "CHANNEL 1  ",
+    "CHANNEL 2  ",
+    "CHANNEL 3  ",
+    "CHANNEL 4  ",
     "CHANNEL 5  ",
     "CHANNEL 6  ",
     "CHANNEL 7  ",
@@ -99,6 +108,10 @@ static const char *aux_channel_labels[] = {
 };
 
 static const char *aux_channel_short_labels[] = {
+    "CH1 ",
+    "CH2 ",
+    "CH3 ",
+    "CH4 ",
     "CH5 ",
     "CH6 ",
     "CH7 ",
@@ -129,6 +142,7 @@ static const char *filter_type_labels[] = {
 
 #pragma GCC diagnostic ignored "-Wmissing-braces"
 
+#ifndef VEHICLE_ROVER
 static const vec3_t rate_defaults[RATE_MODE_ACTUAL + 1][3] = {
     {
         {MAX_RATE, MAX_RATE, MAX_RATEYAW},
@@ -146,6 +160,7 @@ static const vec3_t rate_defaults[RATE_MODE_ACTUAL + 1][3] = {
         {ACTUAL_EXPO_ROLL, ACTUAL_EXPO_PITCH, ACTUAL_EXPO_YAW},
     },
 };
+#endif
 
 #pragma GCC diagnostic pop
 
@@ -356,6 +371,23 @@ void osd_save_exit() {
 }
 
 static void print_osd_flightmode(osd_element_t *el) {
+#ifdef VEHICLE_ROVER
+  const uint8_t steer_mode_labels[3][10] = {
+      {"  MANUAL  "},
+      {"RATE ASST "},
+      {"RATE THR  "},
+  };
+
+  uint8_t steer_mode = ROVER_STEER_MODE_MANUAL;
+  if (rx_aux_on(AUX_RATE_THROTTLE)) {
+    steer_mode = ROVER_STEER_MODE_RATE_THROTTLE;
+  } else if (rx_aux_on(AUX_RATE_ASSIST)) {
+    steer_mode = ROVER_STEER_MODE_RATE_ASSIST;
+  }
+
+  osd_start_el(el);
+  osd_write_data(steer_mode_labels[steer_mode], 10);
+#else
   const uint8_t flightmode_labels[5][10] = {
       {"   ACRO   "},
       {"  LEVEL   "},
@@ -380,6 +412,7 @@ static void print_osd_flightmode(osd_element_t *el) {
 
   osd_start_el(el);
   osd_write_data(flightmode_labels[flightmode], 10);
+#endif
 }
 
 static void print_osd_rssi(osd_element_t *el) {
@@ -484,6 +517,19 @@ static void print_osd_watts(osd_element_t *el) {
 
   osd_write_float(watts, 4, 1);
   osd_write_char(ICON_WATT);
+}
+
+static void print_osd_inclinometer(osd_element_t *el) {
+  const int32_t roll = lrintf(state.attitude.roll);
+  const int32_t pitch = lrintf(state.attitude.pitch);
+  const bool rollover_warning = fabsf((float)roll) >= ROVER_ROLLOVER_WARNING_DEGREES ||
+                                fabsf((float)pitch) >= ROVER_ROLLOVER_WARNING_DEGREES;
+
+  osd_start(osd_attr(el) | (rollover_warning ? OSD_ATTR_BLINK : 0), pos_x(el), pos_y(el));
+  osd_write_char('R');
+  osd_write_int(roll, 3);
+  osd_write_char('P');
+  osd_write_int(pitch, 3);
 }
 
 void osd_init() {
@@ -614,6 +660,11 @@ static void osd_display_regular() {
       break;
     }
 
+    case OSD_ROVER_INCLINOMETER: {
+      print_osd_inclinometer(el);
+      break;
+    }
+
     }
   }
 
@@ -624,6 +675,7 @@ static void osd_display_regular() {
   }
 }
 
+#ifndef VEHICLE_ROVER
 void osd_display_rate_menu() {
   osd_menu_start();
 
@@ -727,6 +779,7 @@ void osd_display_rate_menu() {
   osd_menu_select_save_and_exit(2);
   osd_menu_finish();
 }
+#endif
 
 void osd_display() {
   if (!osd_is_ready()) {
@@ -774,12 +827,32 @@ void osd_display() {
     osd_display_regular();
     break;
   }
+#ifdef VEHICLE_ROVER
+  case OSD_SCREEN_RATE_PROFILES:
+  case OSD_SCREEN_RATES:
+  case OSD_SCREEN_THROTTLE_SETTINGS:
+  case OSD_SCREEN_LEVEL_MAX_ANGLE:
+    osd_update_screen(OSD_SCREEN_MAIN_MENU);
+    break;
+#endif
   case OSD_SCREEN_MAIN_MENU: {
     osd_menu_start();
     osd_menu_header("MENU");
 
     osd_menu_scroll_start(7, 2, 7);
     {
+#ifdef VEHICLE_ROVER
+      osd_menu_select_screen(7, OSD_AUTO, "VTX", OSD_SCREEN_VTX);
+      osd_menu_select_screen(7, OSD_AUTO, "ROVER TUNING", OSD_SCREEN_ROVER_TUNING);
+      osd_menu_select_screen(7, OSD_AUTO, "FILTERS", OSD_SCREEN_FILTERS);
+      osd_menu_select_screen(7, OSD_AUTO, "FLIGHT MODES", OSD_SCREEN_FLIGHT_MODES);
+      osd_menu_select_screen(7, OSD_AUTO, "RC LINK", OSD_SCREEN_RC_LINK);
+      osd_menu_select_screen(7, OSD_AUTO, "OSD ELEMENTS", OSD_SCREEN_ELEMENTS);
+      osd_menu_select_screen(7, OSD_AUTO, "MOTOR SETTINGS", OSD_SCREEN_MOTOR_SETTINGS);
+#ifdef USE_BLACKBOX
+      osd_menu_select_screen(7, OSD_AUTO, "BLACKBOX", OSD_SCREEN_BLACKBOX);
+#endif
+#else
       // PAGE 1
       osd_menu_select_screen(7, OSD_AUTO, "VTX", OSD_SCREEN_VTX);
       osd_menu_select_screen(7, OSD_AUTO, "PIDS", OSD_SCREEN_PID_PROFILE);
@@ -797,6 +870,7 @@ void osd_display() {
       osd_menu_select_screen(7, OSD_AUTO, "SPECIAL FEATURES", OSD_SCREEN_SPECIAL_FEATURES);
 #ifdef USE_BLACKBOX
       osd_menu_select_screen(7, OSD_AUTO, "BLACKBOX", OSD_SCREEN_BLACKBOX);
+#endif
 #endif
     }
     osd_menu_scroll_finish(7);
@@ -861,6 +935,7 @@ void osd_display() {
     osd_menu_finish();
     break;
 
+#ifndef VEHICLE_ROVER
   case OSD_SCREEN_RATE_PROFILES:
     osd_menu_start();
     osd_menu_header("RATE PROFILES");
@@ -886,13 +961,16 @@ void osd_display() {
   case OSD_SCREEN_RATES:
     osd_display_rate_menu();
     break;
+#endif
 
   case OSD_SCREEN_FILTERS:
     osd_menu_start();
     osd_menu_header("FILTERS");
 
     osd_menu_select_screen(7, 4, "GYRO", OSD_SCREEN_GYRO_FILTER);
+#ifndef VEHICLE_ROVER
     osd_menu_select_screen(7, 5, "D-TERM", OSD_SCREEN_DTERM_FILTER);
+#endif
 
     osd_menu_finish();
     break;
@@ -987,6 +1065,15 @@ void osd_display() {
 
     osd_menu_scroll_start(4, 2, 7);
     {
+#ifdef VEHICLE_ROVER
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "ARMING", 17, 22, &profile.receiver.aux[AUX_ARMING]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "PREARM", 17, 22, &profile.receiver.aux[AUX_PREARM]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "RATE ASSIST", 17, 22, &profile.receiver.aux[AUX_RATE_ASSIST]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "RATE THROTTLE", 17, 22, &profile.receiver.aux[AUX_RATE_THROTTLE]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "BUZZER", 17, 22, &profile.receiver.aux[AUX_BUZZER_ENABLE]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
+#else
       // PAGE 1
       osd_menu_select_aux_adjust(4, OSD_AUTO, "ARMING", 17, 22, &profile.receiver.aux[AUX_ARMING]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "PREARM", 17, 22, &profile.receiver.aux[AUX_PREARM]);
@@ -1004,6 +1091,7 @@ void osd_display() {
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "PREARM", 17, 22, &profile.receiver.aux[AUX_PREARM]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
+#endif
     }
     osd_menu_scroll_finish(4);
 
@@ -1287,6 +1375,7 @@ void osd_display() {
     break;
   }
 
+#ifndef VEHICLE_ROVER
   case OSD_SCREEN_THROTTLE_SETTINGS:
     osd_menu_start();
     osd_menu_header("THROTTLE SETTINGS");
@@ -1304,7 +1393,106 @@ void osd_display() {
     osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
+#endif
 
+#ifdef VEHICLE_ROVER
+  case OSD_SCREEN_ROVER_TUNING:
+    osd_menu_start();
+    osd_menu_header("ROVER TUNING");
+
+    osd_menu_select_screen(6, 4, "STEER PID", OSD_SCREEN_ROVER_PID);
+    osd_menu_select_screen(6, 5, "DTERM FILTER", OSD_SCREEN_ROVER_FILTER);
+    osd_menu_select_screen(6, 6, "STEERING", OSD_SCREEN_ROVER_STEERING);
+    osd_menu_select_screen(6, 7, "THROTTLE SCALE", OSD_SCREEN_ROVER_THROTTLE);
+
+    osd_menu_finish();
+    break;
+
+  case OSD_SCREEN_ROVER_PID:
+    osd_menu_start();
+    osd_menu_header("ROVER STEER PID");
+
+    osd_menu_select(3, 4, "KP");
+    if (osd_menu_select_float(20, 4, profile.rover.pid.kp, 5, 2)) {
+      profile.rover.pid.kp = osd_menu_adjust_float(profile.rover.pid.kp, 1.0f, 0.0f, 500.0f);
+    }
+
+    osd_menu_select(3, 5, "KI");
+    if (osd_menu_select_float(20, 5, profile.rover.pid.ki, 5, 2)) {
+      profile.rover.pid.ki = osd_menu_adjust_float(profile.rover.pid.ki, 1.0f, 0.0f, 500.0f);
+    }
+
+    osd_menu_select(3, 6, "KD");
+    if (osd_menu_select_float(20, 6, profile.rover.pid.kd, 5, 2)) {
+      profile.rover.pid.kd = osd_menu_adjust_float(profile.rover.pid.kd, 1.0f, 0.0f, 500.0f);
+    }
+
+    osd_menu_select_save_and_exit(3);
+    osd_menu_finish();
+    break;
+
+  case OSD_SCREEN_ROVER_FILTER:
+    osd_menu_start();
+    osd_menu_header("ROVER DTERM FILT");
+
+    osd_menu_select(3, 5, "TYPE");
+    if (osd_menu_select_enum(20, 5, profile.filter.dterm[0].type, filter_type_labels)) {
+      profile.filter.dterm[0].type = osd_menu_adjust_int(profile.filter.dterm[0].type, 1, 0, FILTER_MAX - 1);
+      osd_state.reboot_fc_requested = 1;
+    }
+
+    osd_menu_select(3, 6, "FREQ");
+    if (osd_menu_select_float(20, 6, profile.filter.dterm[0].cutoff_freq, 5, 0)) {
+      profile.filter.dterm[0].cutoff_freq = osd_menu_adjust_float(profile.filter.dterm[0].cutoff_freq, 5.0f, 0.0f, 500.0f);
+    }
+
+    osd_menu_select_save_and_exit(3);
+    osd_menu_finish();
+    break;
+
+  case OSD_SCREEN_ROVER_STEERING:
+    osd_menu_start();
+    osd_menu_header("ROVER STEERING");
+
+    osd_menu_select(3, 4, "CTR DEADBAND");
+    if (osd_menu_select_float(20, 4, profile.rover.center_deadband, 5, 2)) {
+      profile.rover.center_deadband = osd_menu_adjust_float(profile.rover.center_deadband, 0.01f, 0.0f, 0.50f);
+    }
+
+    osd_menu_select(3, 5, "YAW RATE");
+    if (osd_menu_select_float(20, 5, profile.rover.yaw_rate, 5, 0)) {
+      profile.rover.yaw_rate = osd_menu_adjust_float(profile.rover.yaw_rate, 5.0f, 0.0f, 720.0f);
+    }
+
+    osd_menu_select_save_and_exit(3);
+    osd_menu_finish();
+    break;
+
+  case OSD_SCREEN_ROVER_THROTTLE:
+    osd_menu_start();
+    osd_menu_header("ROVER THR SCALE");
+
+    osd_menu_select(3, 5, "BREAKPOINT");
+    if (osd_menu_select_float(20, 5, profile.rover.throttle_scale_breakpoint, 5, 2)) {
+      profile.rover.throttle_scale_breakpoint = osd_menu_adjust_float(profile.rover.throttle_scale_breakpoint, 0.05f, 0.0f, 1.0f);
+    }
+
+    osd_menu_select(3, 6, "FACTOR");
+    if (osd_menu_select_float(20, 6, profile.rover.throttle_scale_factor, 5, 2)) {
+      profile.rover.throttle_scale_factor = osd_menu_adjust_float(profile.rover.throttle_scale_factor, 0.05f, 0.0f, 1.0f);
+    }
+
+    osd_menu_select(3, 7, "REVERSIBLE");
+    if (osd_menu_select_enum(20, 7, profile.rover.reversible, on_off_labels)) {
+      profile.rover.reversible = osd_menu_adjust_int(profile.rover.reversible, 1, 0, 1);
+    }
+
+    osd_menu_select_save_and_exit(3);
+    osd_menu_finish();
+    break;
+#endif
+
+#ifndef VEHICLE_ROVER
   case OSD_SCREEN_LEVEL_MAX_ANGLE:
     osd_menu_start();
     osd_menu_header("LEVEL MODE");
@@ -1317,6 +1505,7 @@ void osd_display() {
     osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
+#endif
 
   case OSD_SCREEN_LEVEL_STRENGTH:
     osd_menu_start();
