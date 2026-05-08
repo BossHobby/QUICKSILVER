@@ -1,6 +1,7 @@
 #include "control/output.h"
 
 #include "driver/motor.h"
+#include "driver/servo.h"
 #include "osd/render.h"
 #include "util/util.h"
 
@@ -28,16 +29,35 @@ void output_set_role(output_role_t role, float value) {
     return;
   }
 
-  motor_set(output->target_output, output_apply_config(output, value));
+  value = output_apply_config(output, value);
+
+#ifdef VEHICLE_ROVER
+  if (output->protocol == OUTPUT_PROTOCOL_SERVO_PWM) {
+    servo_set(output->target_output, value);
+  } else {
+    motor_set(output->target_output, value);
+  }
+#else
+  motor_set(output->target_output, value);
+#endif
 }
 
 void output_write_all() {
   motor_update();
+#ifdef VEHICLE_ROVER
+  servo_update();
+#endif
 }
 
 void output_stop_all() {
   motor_set_all(MOTOR_OFF);
   motor_update();
+#ifdef VEHICLE_ROVER
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    servo_set(i, 0.0f);
+  }
+  servo_update();
+#endif
 }
 
 bool output_role_configured(output_role_t role) {
@@ -49,7 +69,11 @@ bool output_role_configured(output_role_t role) {
   if (target_output->pin == PIN_NONE) {
     return false;
   }
-  return output->protocol == OUTPUT_PROTOCOL_DSHOT || output->protocol == OUTPUT_PROTOCOL_MOTOR_PWM
-             ? (target_output->caps & OUTPUT_CAP_MOTOR) != 0
-             : false;
+  if (output->protocol == OUTPUT_PROTOCOL_DSHOT || output->protocol == OUTPUT_PROTOCOL_MOTOR_PWM) {
+    return (target_output->caps & OUTPUT_CAP_MOTOR) != 0;
+  }
+  if (output->protocol == OUTPUT_PROTOCOL_SERVO_PWM) {
+    return (target_output->caps & OUTPUT_CAP_SERVO) != 0;
+  }
+  return false;
 }
