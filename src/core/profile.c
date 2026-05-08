@@ -41,8 +41,9 @@ uint8_t blackbox_preset_equals(const blackbox_preset_t *preset, profile_blackbox
 
 static bool profile_output_configured(const profile_output_t *output) {
   return output->target_output != 0 ||
-         output->role != OUTPUT_ROLE_NONE ||
+         output->source != OUTPUT_SOURCE_NONE ||
          output->protocol != OUTPUT_PROTOCOL_NONE ||
+         output->source_index != 0 ||
          output->invert != 0 ||
          output->trim != 0 ||
          output->min != 0 ||
@@ -154,13 +155,13 @@ const profile_t default_profile = {
 
     .outputs = {
 #ifdef VEHICLE_ROVER
-        {.target_output = 0, .role = OUTPUT_ROLE_THROTTLE, .protocol = OUTPUT_PROTOCOL_SERVO_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
-        {.target_output = 3, .role = OUTPUT_ROLE_SERVO, .protocol = OUTPUT_PROTOCOL_SERVO_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
+        {.target_output = 0, .source = OUTPUT_SOURCE_THROTTLE, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
+        {.target_output = 3, .source = OUTPUT_SOURCE_STEERING, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
 #else
-        {.target_output = 0, .role = OUTPUT_ROLE_MOTOR_1, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
-        {.target_output = 1, .role = OUTPUT_ROLE_MOTOR_2, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
-        {.target_output = 2, .role = OUTPUT_ROLE_MOTOR_3, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
-        {.target_output = 3, .role = OUTPUT_ROLE_MOTOR_4, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 0, .source = OUTPUT_SOURCE_MOTOR_1, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 1, .source = OUTPUT_SOURCE_MOTOR_2, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 2, .source = OUTPUT_SOURCE_MOTOR_3, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 3, .source = OUTPUT_SOURCE_MOTOR_4, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
 #endif
     },
 
@@ -438,13 +439,13 @@ const profile_t default_profile = {
         .protocol = RX_PROTOCOL_UNIFIED_SERIAL,
 
         .aux = {
-            ARMING,                  // AUX_ARMING
+            ARMING, // AUX_ARMING
 #ifndef VEHICLE_ROVER
-            IDLE_UP,                 // AUX_IDLE_UP
-            LEVELMODE,               // AUX_LEVELMODE
-            RACEMODE,                // AUX_RACEMODE
-            HORIZON,                 // AUX_HORIZON
-            STICK_BOOST_PROFILE,     // AUX_STICK_BOOST_PROFILE
+            IDLE_UP,                // AUX_IDLE_UP
+            LEVELMODE,              // AUX_LEVELMODE
+            RACEMODE,               // AUX_RACEMODE
+            HORIZON,                // AUX_HORIZON
+            STICK_BOOST_PROFILE,    // AUX_STICK_BOOST_PROFILE
             {RX_CHANNEL_OFF, 0, 0}, // UNUSED_AUX_HIGH_RATES
 #endif
 #ifdef BUZZER_ENABLE
@@ -468,11 +469,11 @@ const profile_t default_profile = {
             {RX_CHANNEL_OFF, 0, 0},
 #endif
             {RX_CHANNEL_OFF, 0, 0}, // AUX_BLACKBOX
-            PREARM,                  // AUX_PREARM
+            PREARM,                 // AUX_PREARM
             {RX_CHANNEL_OFF, 0, 0}, // AUX_OSD_PROFILE
 #ifdef VEHICLE_ROVER
-            RATE_ASSIST,             // AUX_RATE_ASSIST
-            RATE_THROTTLE,           // AUX_RATE_THROTTLE
+            RATE_ASSIST,   // AUX_RATE_ASSIST
+            RATE_THROTTLE, // AUX_RATE_THROTTLE
 #endif
         },
         .lqi_source = RX_LQI_SOURCE_DIRECT,
@@ -508,6 +509,10 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(1, 0, 1, 14, 0, 17),   // OSD_CURRENT_DRAW
                     ENCODE_OSD_ELEMENT(0, 0, 14, 6, 15, 8),   // OSD_CROSSHAIR
                     ENCODE_OSD_ELEMENT(1, 0, 1, 13, 0, 16),   // OSD_CURRENT_DRAWN
+                    ENCODE_OSD_ELEMENT(0, 0, 7, 14, 10, 17),   // OSD_WATTS
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 12, 0, 15),    // OSD_GPS_SATS
+                    ENCODE_OSD_ELEMENT(0, 0, 8, 12, 10, 15),   // OSD_GPS_SPEED
+                    ENCODE_OSD_ELEMENT(0, 0, 12, 12, 19, 15),  // OSD_ROVER_INCLINOMETER
                 },
             },
             [OSD_PROFILE_2] = {
@@ -527,6 +532,10 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(0, 0, 1, 14, 0, 17),   // OSD_CURRENT_DRAW
                     ENCODE_OSD_ELEMENT(0, 0, 14, 6, 15, 8),   // OSD_CROSSHAIR
                     ENCODE_OSD_ELEMENT(0, 0, 1, 13, 0, 16),   // OSD_CURRENT_DRAWN
+                    ENCODE_OSD_ELEMENT(0, 0, 7, 14, 10, 17),   // OSD_WATTS
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 12, 0, 15),    // OSD_GPS_SATS
+                    ENCODE_OSD_ELEMENT(0, 0, 8, 12, 10, 15),   // OSD_GPS_SPEED
+                    ENCODE_OSD_ELEMENT(0, 0, 12, 12, 19, 15),  // OSD_ROVER_INCLINOMETER
                 },
             },
         },
@@ -541,12 +550,12 @@ const profile_t default_profile = {
     .rover = {
         .pid = {
             .kp = 70.0f,
+            .ki = 0.0f,
             .kd = 6.0f,
         },
         .center_deadband = 0.05f,
-        .steer_authority = 1.0f,
         .yaw_rate = 180.0f,
-        .throttle_scale_breakpoint = 0.0f,
+        .throttle_scale_breakpoint = 1.0f,
         .throttle_scale_factor = 0.5f,
         .reversible = 1,
     },
@@ -557,9 +566,9 @@ const profile_t default_profile = {
 // the actual profile
 FAST_RAM profile_t profile;
 
-const profile_output_t *profile_output_for_role(output_role_t role) {
+const profile_output_t *profile_output_for_source(output_source_t source) {
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    if (profile.outputs[i].role == role) {
+    if (profile.outputs[i].source == source) {
       return &profile.outputs[i];
     }
   }
@@ -570,7 +579,7 @@ bool profile_output_slot_uses_motor(uint8_t target_output) {
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
     if (profile.outputs[i].target_output == target_output &&
         profile.outputs[i].protocol != OUTPUT_PROTOCOL_NONE &&
-        profile.outputs[i].protocol != OUTPUT_PROTOCOL_SERVO_PWM) {
+        profile.outputs[i].protocol != OUTPUT_PROTOCOL_PWM) {
       return true;
     }
   }
@@ -579,7 +588,7 @@ bool profile_output_slot_uses_motor(uint8_t target_output) {
 
 bool profile_output_slot_uses_servo(uint8_t target_output) {
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    if (profile.outputs[i].target_output == target_output && profile.outputs[i].protocol == OUTPUT_PROTOCOL_SERVO_PWM) {
+    if (profile.outputs[i].target_output == target_output && profile.outputs[i].protocol == OUTPUT_PROTOCOL_PWM) {
       return true;
     }
   }
