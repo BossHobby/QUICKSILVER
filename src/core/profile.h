@@ -275,28 +275,30 @@ typedef struct {
 typedef enum {
   OUTPUT_PROTOCOL_NONE,
   OUTPUT_PROTOCOL_DSHOT,
-  OUTPUT_PROTOCOL_MOTOR_PWM,
-  OUTPUT_PROTOCOL_SERVO_PWM,
+  OUTPUT_PROTOCOL_BRUSHED,
+  OUTPUT_PROTOCOL_PWM,
 } __attribute__((__packed__)) output_protocol_t;
 
 typedef enum {
-  OUTPUT_ROLE_NONE,
+  OUTPUT_SOURCE_NONE,
 #ifdef VEHICLE_ROVER
-  OUTPUT_ROLE_THROTTLE,
-  OUTPUT_ROLE_SERVO,
+  OUTPUT_SOURCE_THROTTLE,
+  OUTPUT_SOURCE_STEERING,
 #else
-  OUTPUT_ROLE_MOTOR_1,
-  OUTPUT_ROLE_MOTOR_2,
-  OUTPUT_ROLE_MOTOR_3,
-  OUTPUT_ROLE_MOTOR_4,
+  OUTPUT_SOURCE_MOTOR_1,
+  OUTPUT_SOURCE_MOTOR_2,
+  OUTPUT_SOURCE_MOTOR_3,
+  OUTPUT_SOURCE_MOTOR_4,
 #endif
-  OUTPUT_ROLE_MAX,
-} __attribute__((__packed__)) output_role_t;
+  OUTPUT_SOURCE_RX_CHANNEL,
+  OUTPUT_SOURCE_MAX,
+} __attribute__((__packed__)) output_source_t;
 
 typedef struct {
   uint8_t target_output;
-  output_role_t role;
+  output_source_t source;
   output_protocol_t protocol;
+  uint8_t source_index;
   uint8_t invert;
   int16_t trim;
   int16_t min;
@@ -307,8 +309,9 @@ typedef struct {
 #define PROFILE_OUTPUT_MEMBERS   \
   START_STRUCT(profile_output_t) \
   MEMBER(target_output, uint8_t) \
-  MEMBER(role, uint8_t)          \
+  MEMBER(source, uint8_t)        \
   MEMBER(protocol, uint8_t)      \
+  MEMBER(source_index, uint8_t)  \
   MEMBER(invert, uint8_t)        \
   MEMBER(trim, int16_t)          \
   MEMBER(min, int16_t)           \
@@ -417,19 +420,20 @@ typedef enum {
 
 typedef struct {
   float kp;
+  float ki;
   float kd;
 } rover_pid_rate_t;
 
 #define ROVER_PID_RATE_MEMBERS    \
   START_STRUCT(rover_pid_rate_t)  \
   MEMBER(kp, float)               \
+  MEMBER(ki, float)               \
   MEMBER(kd, float)               \
   END_STRUCT()
 
 typedef struct {
   rover_pid_rate_t pid;
   float center_deadband;
-  float steer_authority;
   float yaw_rate;
   float throttle_scale_breakpoint;
   float throttle_scale_factor;
@@ -440,7 +444,6 @@ typedef struct {
   START_STRUCT(profile_rover_t)            \
   MEMBER(pid, rover_pid_rate_t)            \
   MEMBER(center_deadband, float)           \
-  MEMBER(steer_authority, float)           \
   MEMBER(yaw_rate, float)                  \
   MEMBER(throttle_scale_breakpoint, float) \
   MEMBER(throttle_scale_factor, float)     \
@@ -536,7 +539,7 @@ pid_rate_t *profile_current_pid_rates();
 #ifndef VEHICLE_ROVER
 rate_t *profile_current_rates();
 #endif
-const profile_output_t *profile_output_for_role(output_role_t role);
+const profile_output_t *profile_output_for_source(output_source_t source);
 bool profile_output_slot_uses_motor(uint8_t target_output);
 bool profile_output_slot_uses_servo(uint8_t target_output);
 uint32_t profile_output_count(const profile_output_t *outputs, uint32_t size);
