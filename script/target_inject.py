@@ -9,6 +9,13 @@ import hashlib
 from elftools.elf.elffile import ELFFile
 
 
+def get_custom_option(env, name: str, default: str):
+    value = env.GetProjectOption(f"custom_{name}", None)
+    if value is not None:
+        return value
+    return env.GetProjectOption(name, default)
+
+
 def process_elf(target_yaml: str, target_elf: str):
     magic = 0x12AA0001
     section_name = ".config_flash"
@@ -33,7 +40,8 @@ def process_elf(target_yaml: str, target_elf: str):
 
 
 def process_elf_action(source, target, env):
-    target_yaml = env.subst("targets/${PIOENV}.yaml")
+    target_name = get_custom_option(env, "target_name", env["PIOENV"])
+    target_yaml = env.subst(f"targets/{target_name}.yaml")
     if not os.path.isfile(target_yaml):
         print(f"Skipping injecting {target_yaml}")
         return
@@ -43,15 +51,17 @@ def process_elf_action(source, target, env):
 
 
 def inject_target(source, target, env):
-    target_yaml = env.subst("targets/${PIOENV}.yaml")
+    target_name = get_custom_option(env, "target_name", env["PIOENV"])
+    target_yaml = env.subst(f"targets/{target_name}.yaml")
     if not os.path.isfile(target_yaml):
         print(f"Skipping injecting {target_yaml}")
         return
 
+    base_env = get_custom_option(env, "base_env", env["BOARD_MCU"])
     mcu_elf = env.subst(
         os.path.join(
             "$PROJECT_BUILD_DIR",
-            "$BOARD_MCU",
+            base_env,
             "${PROGNAME}.elf",
         )
     )
@@ -75,7 +85,8 @@ def copy_hex(source, target, env):
 
 
 def target_hash(env):
-    target_yaml = env.subst("targets/${PIOENV}.yaml")
+    target_name = get_custom_option(env, "target_name", env["PIOENV"])
+    target_yaml = env.subst(f"targets/{target_name}.yaml")
     if not os.path.isfile(target_yaml):
         return ""
 
