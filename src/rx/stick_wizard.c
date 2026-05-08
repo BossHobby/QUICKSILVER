@@ -12,17 +12,18 @@
 
 #define OSD_TIMEOUT_MILLIS 5000
 #define USB_TIMEOUT_MILLIS 20000
-#define LIMITS profile.receiver.stick_calibration_limits
-
 static uint32_t wizard_timeout = OSD_TIMEOUT_MILLIS;
 
 //{max, min}
-static float test_buffer[4][2] = {
-    {-1, 1},
-    {-1, 1},
-    {-1, 1},
-    {0, 1},
-};
+static float test_buffer[RX_ROLE_MAX][2];
+
+static float role_raw_value(uint8_t role) {
+  const rx_role_map_t *map = &profile.receiver.role_map[role];
+  if (map->channel >= RX_CHANNEL_MAX) {
+    return 0.0f;
+  }
+  return (float)state.rx_channels[map->channel] / (float)AUX_VALUE_MAX * 2.0f - 1.0f;
+}
 
 /*stick calibration wizard sequence notes
 1. user selects start stick calibration sequence
@@ -31,69 +32,58 @@ static float test_buffer[4][2] = {
 4. If sticks test +/- 1% perfect - calibration passes and profile with scaling data saves.  wizard_phase enum will hold results that indicate STICK_WIZARD_CONFIRMED or STICK_WIZARD_TIMEOUT after the sequence.
 */
 static void stick_wizard_capture() {
-  for (uint8_t i = 0; i < 4; i++) {
-    if (state.rx.axis[i] > LIMITS[i].max)
-      LIMITS[i].max = state.rx.axis[i]; // record max value during calibration to array
-    if (state.rx.axis[i] < LIMITS[i].min)
-      LIMITS[i].min = state.rx.axis[i]; // record min value during calibration to array
+  for (uint8_t i = 0; i < RX_ROLE_MAX; i++) {
+    const float value = role_raw_value(i);
+    if (value > profile.receiver.role_map[i].max)
+      profile.receiver.role_map[i].max = value;
+    if (value < profile.receiver.role_map[i].min)
+      profile.receiver.role_map[i].min = value;
   }
 }
 
 static void stick_wizard_reset_scale() {
-  for (uint8_t i = 0; i < 3; i++) {
-    LIMITS[i].min = -1;
-    LIMITS[i].max = 1;
+  for (uint8_t i = 0; i < RX_ROLE_MAX; i++) {
+    profile.receiver.role_map[i].min = -1.0f;
+    profile.receiver.role_map[i].center = 0.0f;
+    profile.receiver.role_map[i].max = 1.0f;
   }
-  LIMITS[3].max = 1;
-  LIMITS[3].min = 0;
 }
 
 static void stick_wizard_temp_scale() {
-  for (uint8_t i = 0; i < 3; i++) {
-    LIMITS[i].min = 1;
-    LIMITS[i].max = -1;
+  for (uint8_t i = 0; i < RX_ROLE_MAX; i++) {
+    profile.receiver.role_map[i].min = 1.0f;
+    profile.receiver.role_map[i].center = role_raw_value(i);
+    profile.receiver.role_map[i].max = -1.0f;
   }
-  LIMITS[3].max = 0;
-  LIMITS[3].min = 1;
 }
 
 static void stick_wizard_reset_test_buffer() {
-  for (uint8_t i = 0; i < 3; i++) {
-    test_buffer[i][0] = -1;
-    test_buffer[i][1] = 1;
+  for (uint8_t i = 0; i < RX_ROLE_MAX; i++) {
+    test_buffer[i][0] = -1.0f;
+    test_buffer[i][1] = 1.0f;
   }
-  test_buffer[3][0] = 0;
-  test_buffer[3][1] = 1;
 }
 
 static bool stick_wizard_check_for_perfect_sticks() {
-  // first scale the sticks
-  state.rx.roll = mapf(state.rx.roll, LIMITS[0].min, LIMITS[0].max, -1.f, 1.f);
-  state.rx.pitch = mapf(state.rx.pitch, LIMITS[1].min, LIMITS[1].max, -1.f, 1.f);
-  state.rx.yaw = mapf(state.rx.yaw, LIMITS[2].min, LIMITS[2].max, -1.f, 1.f);
-  state.rx.throttle = mapf(state.rx.throttle, LIMITS[3].min, LIMITS[3].max, 0.f, 1.f);
-
   // listen for the max stick values and update buffer
-  for (uint8_t i = 0; i < 4; i++) {
-    if (state.rx.axis[i] > test_buffer[i][0])
-      test_buffer[i][0] = state.rx.axis[i]; // record max value during calibration to array
-    if (state.rx.axis[i] < test_buffer[i][1])
-      test_buffer[i][1] = state.rx.axis[i]; // record min value during calibration to array
+  for (uint8_t i = 0; i < RX_ROLE_MAX; i++) {
+    const float value = role_raw_value(i);
+    if (value > test_buffer[i][0])
+      test_buffer[i][0] = value;
+    if (value < test_buffer[i][1])
+      test_buffer[i][1] = value;
   }
 
   // test the "4 corners key"
   uint8_t sum = 0;
-  for (uint8_t i = 0; i < 4; i++) {
-    if (test_buffer[i][0] > 0.98f && test_buffer[i][0] < 1.02f)
+  for (uint8_t i = 0; i < RX_ROLE_MAX; i++) {
+    if (test_buffer[i][0] > 0.8f)
       sum += 1; // test the max
-    if (test_buffer[i][1] < -0.98f && test_buffer[i][1] > -1.02f)
-      sum += 1; // test the min - throttle should fail
-  }
-  if (test_buffer[3][1] < .01 && test_buffer[3][1] > -.01) {
-    sum += 1; // yes we tested throttle low twice because it doesnt go negative
+    if (test_buffer[i][1] < -0.8f)
+      sum += 1; // test the min
   }
 
-  if (sum == 8) {
+  if (sum == RX_ROLE_MAX * 2) {
     return true;
   }
   return false;
@@ -163,11 +153,6 @@ static void rx_stick_calibration_wizard() {
 void rx_apply_stick_scale() {
   if (state.stick_calibration_wizard >= STICK_WIZARD_START) {
     rx_stick_calibration_wizard();
-  } else {
-    state.rx.roll = mapf(state.rx.roll, LIMITS[0].min, LIMITS[0].max, -1.f, 1.f);
-    state.rx.pitch = mapf(state.rx.pitch, LIMITS[1].min, LIMITS[1].max, -1.f, 1.f);
-    state.rx.yaw = mapf(state.rx.yaw, LIMITS[2].min, LIMITS[2].max, -1.f, 1.f);
-    state.rx.throttle = mapf(state.rx.throttle, LIMITS[3].min, LIMITS[3].max, 0.f, 1.f);
   }
 }
 

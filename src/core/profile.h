@@ -201,56 +201,17 @@ typedef struct {
   float turtle_throttle_percent;
 } profile_motor_t;
 
-#define MOTOR_MEMBERS                    \
-  START_STRUCT(profile_motor_t)          \
-  MEMBER(digital_idle, float)            \
-  MEMBER(motor_limit, float)             \
-  MEMBER(dshot_time, uint16_t)           \
-  MEMBER(dshot_telemetry, bool)          \
-  MEMBER(invert_yaw, uint8_t)            \
-  MEMBER(gyro_orientation, uint8_t)      \
-  MEMBER(torque_boost, float)            \
-  MEMBER(throttle_boost, float)          \
-  MEMBER(turtle_throttle_percent, float) \
-  END_STRUCT()
-
-typedef enum {
-  OUTPUT_PROTOCOL_NONE,
-  OUTPUT_PROTOCOL_DSHOT,
-  OUTPUT_PROTOCOL_MOTOR_PWM,
-  OUTPUT_PROTOCOL_SERVO_PWM,
-} __attribute__((__packed__)) output_protocol_t;
-
-typedef enum {
-  OUTPUT_ROLE_NONE,
-  OUTPUT_ROLE_MOTOR_1,
-  OUTPUT_ROLE_MOTOR_2,
-  OUTPUT_ROLE_MOTOR_3,
-  OUTPUT_ROLE_MOTOR_4,
-  OUTPUT_ROLE_MAX,
-} __attribute__((__packed__)) output_role_t;
-
-typedef struct {
-  uint8_t target_output;
-  output_role_t role;
-  output_protocol_t protocol;
-  uint8_t invert;
-  int16_t trim;
-  int16_t min;
-  int16_t max;
-  uint16_t rate_hz;
-} profile_output_t;
-
-#define PROFILE_OUTPUT_MEMBERS   \
-  START_STRUCT(profile_output_t) \
-  MEMBER(target_output, uint8_t) \
-  MEMBER(role, uint8_t)          \
-  MEMBER(protocol, uint8_t)      \
-  MEMBER(invert, uint8_t)        \
-  MEMBER(trim, int16_t)          \
-  MEMBER(min, int16_t)           \
-  MEMBER(max, int16_t)           \
-  MEMBER(rate_hz, uint16_t)      \
+#define MOTOR_MEMBERS                              \
+  START_STRUCT(profile_motor_t)                    \
+  MEMBER(digital_idle, float)                      \
+  MEMBER(motor_limit, float)                       \
+  MEMBER(dshot_time, uint16_t)                     \
+  MEMBER(dshot_telemetry, bool)                    \
+  MEMBER(invert_yaw, uint8_t)                      \
+  MEMBER(gyro_orientation, uint8_t)                \
+  MEMBER(torque_boost, float)                      \
+  MEMBER(throttle_boost, float)                    \
+  MEMBER(turtle_throttle_percent, float)           \
   END_STRUCT()
 
 typedef enum {
@@ -282,23 +243,19 @@ typedef struct {
   END_STRUCT()
 
 typedef struct {
-  float min;
-  float max;
-} profile_stick_calibration_limits_t;
-
-#define CALIBRATION_LIMIT_MEMBERS                  \
-  START_STRUCT(profile_stick_calibration_limits_t) \
-  MEMBER(min, float)                               \
-  MEMBER(max, float)                               \
-  END_STRUCT()
-
-typedef struct {
   rx_protocol_t protocol;
   aux_function_map_t aux[AUX_FUNCTION_MAX];
-  rx_channel_mapping_t channel_mapping;
+  rx_role_map_t role_map[RX_ROLE_MAX];
   rx_lqi_source_t lqi_source;
-  profile_stick_calibration_limits_t stick_calibration_limits[4];
 } profile_receiver_t;
+
+#define RX_ROLE_MAP_MEMBERS   \
+  START_STRUCT(rx_role_map_t) \
+  MEMBER(channel, uint8_t)    \
+  MEMBER(min, float)          \
+  MEMBER(center, float)       \
+  MEMBER(max, float)          \
+  END_STRUCT()
 
 #define AUX_FUNCTION_MAP_MEMBERS   \
   START_STRUCT(aux_function_map_t) \
@@ -312,8 +269,51 @@ typedef struct {
   MEMBER(protocol, uint8_t)                                                     \
   ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, aux_function_map_t)                       \
   MEMBER(lqi_source, uint8_t)                                                   \
-  MEMBER(channel_mapping, uint8_t)                                              \
-  ARRAY_MEMBER(stick_calibration_limits, 4, profile_stick_calibration_limits_t) \
+  ARRAY_MEMBER(role_map, RX_ROLE_MAX, rx_role_map_t)      \
+  END_STRUCT()
+
+typedef enum {
+  OUTPUT_PROTOCOL_NONE,
+  OUTPUT_PROTOCOL_DSHOT,
+  OUTPUT_PROTOCOL_MOTOR_PWM,
+  OUTPUT_PROTOCOL_SERVO_PWM,
+} __attribute__((__packed__)) output_protocol_t;
+
+typedef enum {
+  OUTPUT_ROLE_NONE,
+#ifdef VEHICLE_ROVER
+  OUTPUT_ROLE_THROTTLE,
+  OUTPUT_ROLE_SERVO,
+#else
+  OUTPUT_ROLE_MOTOR_1,
+  OUTPUT_ROLE_MOTOR_2,
+  OUTPUT_ROLE_MOTOR_3,
+  OUTPUT_ROLE_MOTOR_4,
+#endif
+  OUTPUT_ROLE_MAX,
+} __attribute__((__packed__)) output_role_t;
+
+typedef struct {
+  uint8_t target_output;
+  output_role_t role;
+  output_protocol_t protocol;
+  uint8_t invert;
+  int16_t trim;
+  int16_t min;
+  int16_t max;
+  uint16_t rate_hz;
+} profile_output_t;
+
+#define PROFILE_OUTPUT_MEMBERS   \
+  START_STRUCT(profile_output_t) \
+  MEMBER(target_output, uint8_t) \
+  MEMBER(role, uint8_t)          \
+  MEMBER(protocol, uint8_t)      \
+  MEMBER(invert, uint8_t)        \
+  MEMBER(trim, int16_t)          \
+  MEMBER(min, int16_t)           \
+  MEMBER(max, int16_t)           \
+  MEMBER(rate_hz, uint16_t)      \
   END_STRUCT()
 
 typedef struct {
@@ -379,6 +379,14 @@ typedef struct {
   uint8_t gyro_dynamic_notch_enable;
 } profile_filter_t;
 
+#ifdef VEHICLE_ROVER
+#define FILTER_MEMBERS                                              \
+  START_STRUCT(profile_filter_t)                                    \
+  ARRAY_MEMBER(gyro, FILTER_MAX_SLOTS, profile_filter_parameter_t)  \
+  ARRAY_MEMBER(dterm, FILTER_MAX_SLOTS, profile_filter_parameter_t) \
+  MEMBER(gyro_dynamic_notch_enable, uint8_t)                        \
+  END_STRUCT()
+#else
 #define FILTER_MEMBERS                                              \
   START_STRUCT(profile_filter_t)                                    \
   ARRAY_MEMBER(gyro, FILTER_MAX_SLOTS, profile_filter_parameter_t)  \
@@ -388,6 +396,7 @@ typedef struct {
   MEMBER(dterm_dynamic_max, float)                                  \
   MEMBER(gyro_dynamic_notch_enable, uint8_t)                        \
   END_STRUCT()
+#endif
 
 typedef struct {
   uint8_t name[36];
@@ -399,6 +408,44 @@ typedef struct {
   uint32_t debug_flags;
   uint32_t sample_rate_hz;
 } profile_blackbox_t;
+
+typedef enum {
+  ROVER_STEER_MODE_MANUAL,
+  ROVER_STEER_MODE_RATE_ASSIST,
+  ROVER_STEER_MODE_RATE_THROTTLE,
+} __attribute__((__packed__)) rover_steer_mode_t;
+
+typedef struct {
+  float kp;
+  float kd;
+} rover_pid_rate_t;
+
+#define ROVER_PID_RATE_MEMBERS    \
+  START_STRUCT(rover_pid_rate_t)  \
+  MEMBER(kp, float)               \
+  MEMBER(kd, float)               \
+  END_STRUCT()
+
+typedef struct {
+  rover_pid_rate_t pid;
+  float center_deadband;
+  float steer_authority;
+  float yaw_rate;
+  float throttle_scale_breakpoint;
+  float throttle_scale_factor;
+  uint8_t reversible;
+} profile_rover_t;
+
+#define ROVER_MEMBERS                      \
+  START_STRUCT(profile_rover_t)            \
+  MEMBER(pid, rover_pid_rate_t)            \
+  MEMBER(center_deadband, float)           \
+  MEMBER(steer_authority, float)           \
+  MEMBER(yaw_rate, float)                  \
+  MEMBER(throttle_scale_breakpoint, float) \
+  MEMBER(throttle_scale_factor, float)     \
+  MEMBER(reversible, uint8_t)              \
+  END_STRUCT()
 
 #define BLACKBOX_MEMBERS           \
   START_STRUCT(profile_blackbox_t) \
@@ -430,13 +477,17 @@ typedef struct {
   profile_serial_t serial;
   profile_filter_t filter;
   profile_osd_t osd;
+#ifndef VEHICLE_ROVER
   profile_rate_t rate;
+#endif
   profile_receiver_t receiver;
   profile_pid_t pid;
   profile_voltage_t voltage;
   profile_blackbox_t blackbox;
+  profile_rover_t rover;
 } profile_t;
 
+#ifdef VEHICLE_ROVER
 #define PROFILE_MEMBERS                                                              \
   START_STRUCT(profile_t)                                                            \
   MEMBER(meta, profile_metadata_t)                                                   \
@@ -445,12 +496,28 @@ typedef struct {
   MEMBER(serial, profile_serial_t)                                                   \
   MEMBER(filter, profile_filter_t)                                                   \
   MEMBER(osd, profile_osd_t)                                                         \
-  MEMBER(rate, profile_rate_t)                                                       \
   MEMBER(receiver, profile_receiver_t)                                               \
   MEMBER(pid, profile_pid_t)                                                         \
   MEMBER(voltage, profile_voltage_t)                                                 \
   MEMBER(blackbox, profile_blackbox_t)                                               \
+  MEMBER(rover, profile_rover_t)                                                     \
   END_STRUCT()
+#else
+#define PROFILE_MEMBERS                \
+  START_STRUCT(profile_t)              \
+  MEMBER(meta, profile_metadata_t)     \
+  COUNT_ARRAY_MEMBER(outputs, MOTOR_PIN_MAX, profile_output_t, profile_output_count) \
+  MEMBER(motor, profile_motor_t)       \
+  MEMBER(serial, profile_serial_t)     \
+  MEMBER(filter, profile_filter_t)     \
+  MEMBER(osd, profile_osd_t)           \
+  MEMBER(rate, profile_rate_t)         \
+  MEMBER(receiver, profile_receiver_t) \
+  MEMBER(pid, profile_pid_t)           \
+  MEMBER(voltage, profile_voltage_t)   \
+  MEMBER(blackbox, profile_blackbox_t) \
+  END_STRUCT()
+#endif
 
 extern profile_t profile;
 extern const profile_t default_profile;
@@ -466,9 +533,12 @@ uint8_t blackbox_preset_equals(const blackbox_preset_t *preset, profile_blackbox
 
 void profile_set_defaults();
 pid_rate_t *profile_current_pid_rates();
+#ifndef VEHICLE_ROVER
 rate_t *profile_current_rates();
+#endif
 const profile_output_t *profile_output_for_role(output_role_t role);
 bool profile_output_slot_uses_motor(uint8_t target_output);
+bool profile_output_slot_uses_servo(uint8_t target_output);
 uint32_t profile_output_count(const profile_output_t *outputs, uint32_t size);
 
 cbor_result_t cbor_encode_profile_t(cbor_value_t *enc, const profile_t *p);

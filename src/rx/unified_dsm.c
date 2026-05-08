@@ -96,24 +96,17 @@ static packet_status_t dsm_handle_packet(uint8_t *packet) {
     }
   }
 
-  // AETR channel order
-  const float rc_channels[4] = {
-      (channels[0] - dsm_offset) * dsm_scalefactor,
-      (channels[1] - dsm_offset) * dsm_scalefactor,
-      (channels[2] - dsm_offset) * dsm_scalefactor,
-      (channels[3] - dsm_offset) * dsm_scalefactor,
-  };
-
-  rx_map_channels(rc_channels);
-
-  for (uint32_t i = 0; i <= AUX_CHANNEL_7; i++) {
-    const int32_t raw = constrain(channels[4 + i], 0, dsm_max);
-    state.aux[i] = (uint16_t)(((uint32_t)raw * 65535) / dsm_max);
+  for (uint32_t channel = 0; channel < 12; channel++) {
+    const int32_t raw = constrain(channels[channel], 0, dsm_max);
+    state.rx_channels[channel] = (uint16_t)(((uint32_t)raw * 65535) / dsm_max);
+  }
+  for (uint32_t channel = 12; channel < RX_CHANNEL_MAX; channel++) {
+    state.rx_channels[channel] = 0;
   }
 
   rx_lqi_got_packet();
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel <= AUX_CHANNEL_11) {
-    rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI].channel + 4)] - dsm_offset) * dsm_scalefactor * 0.5f) + 0.5f));
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel < 12) {
+    rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI].channel)] - dsm_offset) * dsm_scalefactor * 0.5f) + 0.5f));
   }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
     rx_lqi_update_direct(0); // no internal rssi data
