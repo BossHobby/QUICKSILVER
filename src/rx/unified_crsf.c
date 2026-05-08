@@ -20,6 +20,9 @@
 #ifdef USE_RX_UNIFIED
 
 #define MSP_BUFFER_SIZE 128
+#define CRSF_CHANNEL_VALUE_MIN 172
+#define CRSF_CHANNEL_VALUE_MAX 1811
+#define CRSF_CHANNEL_VALUE_RANGE (CRSF_CHANNEL_VALUE_MAX - CRSF_CHANNEL_VALUE_MIN)
 
 typedef enum {
   RATE_LORA_4HZ = 0,
@@ -126,25 +129,16 @@ static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
     channels[14] = chan->chan14;
     channels[15] = chan->chan15;
 
-    // AETR channel order
-    const float rc_channels[4] = {
-        (channels[0] - 990.5f) * 0.00125707103f,
-        (channels[1] - 990.5f) * 0.00125707103f,
-        (channels[2] - 990.5f) * 0.00125707103f,
-        (channels[3] - 990.5f) * 0.00125707103f,
-    };
-
-    rx_map_channels(rc_channels);
-
-    for (uint32_t i = 0; i <= AUX_CHANNEL_11; i++) {
-      const int32_t raw = constrain(channels[4 + i], 0, 1984);
-      state.aux[i] = (uint16_t)(((uint32_t)raw * 65535) / 1984);
+    for (uint32_t channel = 0; channel < RX_CHANNEL_MAX; channel++) {
+      const int32_t raw = constrain(channels[channel], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX);
+      state.rx_channels[channel] = (uint16_t)(
+          (uint32_t)(raw - CRSF_CHANNEL_VALUE_MIN) * AUX_VALUE_MAX / CRSF_CHANNEL_VALUE_RANGE);
     }
 
     channels_received = true;
 
-    if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel <= AUX_CHANNEL_11) {
-      rx_lqi_update_direct(0.00062853551f * (channels[(profile.receiver.aux[AUX_RSSI].channel + 4)] - 191.0f));
+    if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel < RX_CHANNEL_MAX) {
+      rx_lqi_update_direct(0.00062853551f * (channels[(profile.receiver.aux[AUX_RSSI].channel)] - 191.0f));
     }
     break;
   }

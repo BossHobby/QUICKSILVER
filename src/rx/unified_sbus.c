@@ -52,20 +52,9 @@ static void decode_sbus_channels(uint8_t *data) {
   channels[14] = ((data[19] >> 2 | data[20] << 6) & 0x07FF);
   channels[15] = ((data[20] >> 5 | data[21] << 3) & 0x07FF);
 
-  // AETR channel order
-  const float rc_channels[4] = {
-      (channels[0] - 993.f) * 0.00122026f,
-      (channels[1] - 993.f) * 0.00122026f,
-      (channels[2] - 993.f) * 0.00122026f,
-      (channels[3] - 993.f) * 0.00122026f,
-  };
-
-  rx_map_channels(rc_channels);
-
-  // Here we have the AUX channels Silverware supports
-  for (uint32_t i = 0; i <= AUX_CHANNEL_11; i++) {
-    const int32_t raw = constrain(channels[4 + i], 172, 1811);
-    state.aux[i] = (uint16_t)(((uint32_t)(raw - 172) * 65535) / (1811 - 172));
+  for (uint32_t channel = 0; channel < RX_CHANNEL_MAX; channel++) {
+    const int32_t raw = constrain(channels[channel], 172, 1811);
+    state.rx_channels[channel] = (uint16_t)(((uint32_t)(raw - 172) * 65535) / (1811 - 172));
   }
 
   if (data[22] & (1 << 2)) {
@@ -81,8 +70,8 @@ static void decode_sbus_channels(uint8_t *data) {
     failsafe_sbus_failsafe = 0;
   }
 
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel <= AUX_CHANNEL_11) {
-    rx_lqi_update_direct(0.0610128f * (channels[(profile.receiver.aux[AUX_RSSI].channel + 4)] - 173));
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel < RX_CHANNEL_MAX) {
+    rx_lqi_update_direct(0.0610128f * (channels[(profile.receiver.aux[AUX_RSSI].channel)] - 173));
   }
 
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
