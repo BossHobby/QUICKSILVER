@@ -64,13 +64,28 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: output
 
+      - name: Prepare release notes
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          awk '
+            $0 == "## " tag { in_section = 1; next }
+            in_section && /^## / { exit }
+            in_section && !seen_content && $0 == "" { next }
+            in_section { seen_content = 1 }
+            in_section { print }
+          ' tag="${{ github.ref_name }}" CHANGELOG.md > RELEASE.md
+
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          body_path: RELEASE.md
           files: output/*/quicksilver*.hex
