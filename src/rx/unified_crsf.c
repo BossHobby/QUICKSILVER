@@ -281,6 +281,9 @@ void rx_serial_crsf_msp_send(msp_magic_t magic, uint8_t direction, uint16_t code
   msp_last_cmd = code;
 
   if (len > 0 && data) {
+    if (len > MSP_BUFFER_SIZE) {
+      len = MSP_BUFFER_SIZE;
+    }
     memcpy(msp_tx_buffer, data, len);
   }
   msp_tx_len = len;
