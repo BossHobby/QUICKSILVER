@@ -9,7 +9,7 @@
 
 #define OSD_NUMBER_ELEMENTS 32
 
-#define PROFILE_VERSION MAKE_SEMVER(0, 2, 6)
+#define PROFILE_VERSION MAKE_SEMVER(0, 2, 7)
 
 // Rates
 typedef enum {
