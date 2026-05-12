@@ -84,6 +84,9 @@ uint32_t crsf_tlm_frame_battery_sensor(uint8_t *buf) {
 }
 
 uint32_t crsf_tlm_frame_msp_resp(uint8_t *buf, uint8_t origin, uint8_t *payload, uint8_t size) {
+  if (size > CRSF_MSP_PAYLOAD_SIZE_MAX) {
+    size = CRSF_MSP_PAYLOAD_SIZE_MAX;
+  }
   buf[1] = size + CRSF_FRAME_LENGTH_EXT_TYPE_CRC;
   buf[2] = CRSF_FRAMETYPE_MSP_RESP;
   buf[3] = origin;
