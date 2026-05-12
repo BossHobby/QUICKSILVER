@@ -18,6 +18,8 @@ jobs:
   build:
     needs: targets
     runs-on: ubuntu-latest
+    env:
+      SKIP_TARGETS_CHECKOUT: "1"
     strategy:
       matrix:
         target: ${{fromJSON(needs.targets.outputs.targets)}}

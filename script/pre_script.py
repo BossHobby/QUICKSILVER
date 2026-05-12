@@ -72,6 +72,10 @@ def touch(fname, times=None):
 
 
 def fetch_thread():
+    if os.environ.get("SKIP_TARGETS_CHECKOUT"):
+        print("Skipping targets checkout")
+        return
+
     target_remote = "https://github.com/BossHobby/Targets.git"
     target_dir = os.path.join(env["PROJECT_DIR"], "targets")
 
