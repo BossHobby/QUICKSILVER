@@ -189,20 +189,12 @@ static void dshot_handle_dir_change() {
     break;
 
   case DIR_CHANGE_CMD: {
-    if ((time_micros() - dir_change_time) < DSHOT_DIR_CHANGE_CMD_TIME_US) {
-      break;
-    }
-
     const uint16_t value = motor_dir == MOTOR_REVERSE ? DSHOT_CMD_ROTATE_REVERSE : DSHOT_CMD_ROTATE_NORMAL;
-    if (counter < 10) {
-      dshot_make_packet_all(value, true);
-      dshot_dma_start();
-      counter++;
-    } else {
+    dshot_make_packet_all(value, true);
+    dshot_dma_start();
+    if ((time_micros() - dir_change_time) >= DSHOT_DIR_CHANGE_CMD_TIME_US) {
       state = DIR_CHANGE_STOP;
-      counter = 0;
     }
-    dir_change_time = time_micros();
     break;
   }
 
