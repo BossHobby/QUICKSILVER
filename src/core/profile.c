@@ -41,9 +41,7 @@ uint8_t blackbox_preset_equals(const blackbox_preset_t *preset, profile_blackbox
 
 static bool profile_output_configured(const profile_output_t *output) {
   return output->target_output != 0 ||
-         output->source != OUTPUT_SOURCE_NONE ||
          output->protocol != OUTPUT_PROTOCOL_NONE ||
-         output->source_index != 0 ||
          output->invert != 0 ||
          output->trim != 0 ||
          output->min != 0 ||
@@ -55,6 +53,23 @@ uint32_t profile_output_count(const profile_output_t *outputs, uint32_t size) {
   uint32_t count = 0;
   for (uint32_t i = 0; i < size; i++) {
     if (profile_output_configured(&outputs[i])) {
+      count = i + 1;
+    }
+  }
+  return count;
+}
+
+static bool profile_mixer_rule_configured(const profile_mixer_rule_t *rule) {
+  return rule->output_index != 0 ||
+         rule->source != OUTPUT_SOURCE_NONE ||
+         rule->source_index != 0 ||
+         rule->weight != 0;
+}
+
+uint32_t profile_mixer_rule_count(const profile_mixer_rule_t *mixer, uint32_t size) {
+  uint32_t count = 0;
+  for (uint32_t i = 0; i < size; i++) {
+    if (profile_mixer_rule_configured(&mixer[i])) {
       count = i + 1;
     }
   }
@@ -155,22 +170,37 @@ const profile_t default_profile = {
 
     .outputs = {
 #ifdef VEHICLE_ROVER
-        {.target_output = 0, .source = OUTPUT_SOURCE_THROTTLE, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
-        {.target_output = 3, .source = OUTPUT_SOURCE_STEERING, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
+        {.target_output = 0, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
+        {.target_output = 3, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
 #else
-        {.target_output = 0, .source = OUTPUT_SOURCE_MOTOR_1, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
-        {.target_output = 1, .source = OUTPUT_SOURCE_MOTOR_2, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
-        {.target_output = 2, .source = OUTPUT_SOURCE_MOTOR_3, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
-        {.target_output = 3, .source = OUTPUT_SOURCE_MOTOR_4, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 0, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 1, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 2, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 3, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+#endif
+    },
+
+    .mixer = {
+#ifdef VEHICLE_ROVER
+        {.output_index = 0, .source = OUTPUT_SOURCE_THROTTLE, .weight = 100},
+        {.output_index = 1, .source = OUTPUT_SOURCE_YAW, .weight = 100},
+#else
+        {.output_index = 0, .source = OUTPUT_SOURCE_ROLL, .weight = 100},
+        {.output_index = 0, .source = OUTPUT_SOURCE_PITCH, .weight = 100},
+        {.output_index = 0, .source = OUTPUT_SOURCE_YAW, .weight = 100},
+        {.output_index = 1, .source = OUTPUT_SOURCE_ROLL, .weight = 100},
+        {.output_index = 1, .source = OUTPUT_SOURCE_PITCH, .weight = -100},
+        {.output_index = 1, .source = OUTPUT_SOURCE_YAW, .weight = -100},
+        {.output_index = 2, .source = OUTPUT_SOURCE_ROLL, .weight = -100},
+        {.output_index = 2, .source = OUTPUT_SOURCE_PITCH, .weight = 100},
+        {.output_index = 2, .source = OUTPUT_SOURCE_YAW, .weight = -100},
+        {.output_index = 3, .source = OUTPUT_SOURCE_ROLL, .weight = -100},
+        {.output_index = 3, .source = OUTPUT_SOURCE_PITCH, .weight = -100},
+        {.output_index = 3, .source = OUTPUT_SOURCE_YAW, .weight = 100},
 #endif
     },
 
     .motor = {
-#ifdef INVERT_YAW_PID
-        .invert_yaw = 1,
-#else
-        .invert_yaw = 0,
-#endif
         .motor_limit = MOTOR_LIMIT,
         .digital_idle = DIGITAL_IDLE,
         .dshot_time = DSHOT_TIME_600,
@@ -566,15 +596,6 @@ const profile_t default_profile = {
 // the actual profile
 FAST_RAM profile_t profile;
 
-const profile_output_t *profile_output_for_source(output_source_t source) {
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    if (profile.outputs[i].source == source) {
-      return &profile.outputs[i];
-    }
-  }
-  return 0;
-}
-
 bool profile_output_slot_uses_motor(uint8_t target_output) {
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
     if (profile.outputs[i].target_output == target_output &&
@@ -673,6 +694,7 @@ BLACKBOX_PRESET_MEMBERS
 ROVER_PID_RATE_MEMBERS
 ROVER_MEMBERS
 PROFILE_OUTPUT_MEMBERS
+PROFILE_MIXER_RULE_MEMBERS
 PROFILE_MEMBERS
 
 #undef START_STRUCT
@@ -752,6 +774,7 @@ BLACKBOX_MEMBERS
 ROVER_PID_RATE_MEMBERS
 ROVER_MEMBERS
 PROFILE_OUTPUT_MEMBERS
+PROFILE_MIXER_RULE_MEMBERS
 PROFILE_MEMBERS
 
 #undef START_STRUCT

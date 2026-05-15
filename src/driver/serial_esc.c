@@ -104,18 +104,11 @@ void serial_esc_process(uint8_t index, uint32_t baud) {
     return;
   }
 
-#ifdef VEHICLE_ROVER
-  if (!profile_output_slot_uses_motor(index)) {
-    return;
-  }
-  const gpio_pins_t pin = target.outputs[index].pin;
-#else
-  const profile_output_t *output = profile_output_for_source(OUTPUT_SOURCE_MOTOR_1 + index);
+  const profile_output_t *output = &profile.outputs[index];
   if (!output || output->target_output >= MOTOR_PIN_MAX || !profile_output_slot_uses_motor(output->target_output)) {
     return;
   }
   const gpio_pins_t pin = target.outputs[output->target_output].pin;
-#endif
   if (pin == PIN_NONE) {
     return;
   }
