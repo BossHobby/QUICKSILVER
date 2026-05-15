@@ -47,6 +47,27 @@ typedef enum {
   ARMING_DISABLED_USB = 1U << 3,
 } arming_disabled_flags_t;
 
+typedef enum {
+  WING_LAUNCH_IDLE,
+  WING_LAUNCH_IDLE_DELAY,
+  WING_LAUNCH_WAIT,
+  WING_LAUNCH_DETECTED,
+  WING_LAUNCH_MOTOR_DELAY,
+  WING_LAUNCH_SPINUP,
+  WING_LAUNCH_ACTIVE,
+  WING_LAUNCH_FINISH,
+  WING_LAUNCH_DONE,
+  WING_LAUNCH_ABORTED,
+} wing_launch_state_t;
+
+typedef enum {
+  WING_AUTOTRIM_IDLE,
+  WING_AUTOTRIM_ACTIVE,
+  WING_AUTOTRIM_BLOCKED_ATTITUDE,
+  WING_AUTOTRIM_SAVE_PENDING,
+  WING_AUTOTRIM_SAVED,
+} wing_autotrim_state_t;
+
 // THE UN OF STRUCTS
 typedef struct {
   uint8_t arm_request : 1; // arming AUX is currently requested
@@ -153,6 +174,9 @@ typedef struct {
 
   vec3_t angle_error;
   vec3_t stick_vector;
+  uint8_t wing_launch_state;
+  bool wing_launch_available;
+  uint8_t wing_autotrim_state;
 
   uint32_t dshot_rpm[4];
 } control_state_t;
@@ -216,6 +240,9 @@ typedef struct {
   ARRAY_MEMBER(output_active, MOTOR_PIN_MAX, uint8_t)  \
   MEMBER(angle_error, vec3_t)                          \
   MEMBER(stick_vector, vec3_t)                         \
+  MEMBER(wing_launch_state, uint8_t)                   \
+  MEMBER(wing_launch_available, bool)                  \
+  MEMBER(wing_autotrim_state, uint8_t)                 \
   ARRAY_MEMBER(dshot_rpm, 4, uint32_t)
 
 typedef struct {

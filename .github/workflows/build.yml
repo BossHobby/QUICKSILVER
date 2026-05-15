@@ -25,7 +25,7 @@ jobs:
                   if not match:
                       continue
                   target = match.group(1)
-                  if target == "simulator" or target.startswith("test_"):
+                  if "simulator" in target or target.startswith("test_"):
                       continue
                   targets.append(target)
 
