@@ -373,9 +373,11 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     if (rx_aux_on(AUX_LEVELMODE)) {
       flight_mode |= (1 << 1); // ANGLE mode at bit 1
     }
+#ifndef VEHICLE_WING
     if (rx_aux_on(AUX_HORIZON)) {
       flight_mode |= (1 << 2); // HORIZON mode at bit 2
     }
+#endif
 #endif
     
     const uint8_t pid_profile = 0;
