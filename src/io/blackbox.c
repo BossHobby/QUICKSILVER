@@ -42,6 +42,23 @@ static void blackbox_compress_vec4(compact_vec4_t *out, const vec4_t *in) {
   out->axis[3] = blackbox_compress_float(in->axis[3]);
 }
 
+static void blackbox_compress_output(compact_output_t *out, const float in[MOTOR_PIN_MAX]) {
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    out->axis[i] = blackbox_compress_float(in[i]);
+  }
+}
+
+cbor_result_t cbor_encode_compact_output_t(cbor_value_t *enc, const compact_output_t *output) {
+  cbor_result_t res = CBOR_OK;
+
+  CBOR_CHECK_ERROR(res = cbor_encode_array(enc, MOTOR_PIN_MAX));
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &output->axis[i]));
+  }
+
+  return res;
+}
+
 // Helper functions for delta encoding
 static inline int16_t delta_int16(int16_t current, int16_t previous) {
   return current - previous;
@@ -59,6 +76,12 @@ static void compact_vec4_delta(compact_vec4_t *delta, const compact_vec4_t *curr
   }
 }
 
+static void compact_output_delta(compact_output_t *delta, const compact_output_t *current, const compact_output_t *previous) {
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    delta->axis[i] = delta_int16(current->axis[i], previous->axis[i]);
+  }
+}
+
 // Check if vec3 is zero
 static bool compact_vec3_is_zero(const compact_vec3_t *vec) {
   return vec->axis[0] == 0 && vec->axis[1] == 0 && vec->axis[2] == 0;
@@ -67,6 +90,15 @@ static bool compact_vec3_is_zero(const compact_vec3_t *vec) {
 // Check if vec4 is zero
 static bool compact_vec4_is_zero(const compact_vec4_t *vec) {
   return vec->axis[0] == 0 && vec->axis[1] == 0 && vec->axis[2] == 0 && vec->axis[3] == 0;
+}
+
+static bool compact_output_is_zero(const compact_output_t *output) {
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (output->axis[i] != 0) {
+      return false;
+    }
+  }
+  return true;
 }
 
 // Check if debug array has changed
@@ -91,6 +123,11 @@ static inline bool compute_and_check_vec4_delta(compact_vec4_t *delta, const com
   return !compact_vec4_is_zero(delta);
 }
 
+static inline bool compute_and_check_output_delta(compact_output_t *delta, const compact_output_t *current, const compact_output_t *previous) {
+  compact_output_delta(delta, current, previous);
+  return !compact_output_is_zero(delta);
+}
+
 // Helper function to encode vec3 field if present in flags
 static inline cbor_result_t encode_vec3_field_if_present(cbor_value_t *enc, uint32_t flags, blackbox_field_t field_id, const compact_vec3_t *data) {
   if (flags & (1 << field_id)) {
@@ -103,6 +140,13 @@ static inline cbor_result_t encode_vec3_field_if_present(cbor_value_t *enc, uint
 static inline cbor_result_t encode_vec4_field_if_present(cbor_value_t *enc, uint32_t flags, blackbox_field_t field_id, const compact_vec4_t *data) {
   if (flags & (1 << field_id)) {
     return cbor_encode_compact_vec4_t(enc, data);
+  }
+  return CBOR_OK;
+}
+
+static inline cbor_result_t encode_output_field_if_present(cbor_value_t *enc, uint32_t flags, blackbox_field_t field_id, const compact_output_t *data) {
+  if (flags & (1 << field_id)) {
+    return cbor_encode_compact_output_t(enc, data);
   }
   return CBOR_OK;
 }
@@ -146,8 +190,8 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
     if ((field_flags & (1 << BBOX_FIELD_GYRO_FILTER)) && compute_and_check_vec3_delta(&deltas.gyro_filter, &current->gyro_filter, &previous->gyro_filter)) {
       active_fields |= (1 << BBOX_FIELD_GYRO_FILTER);
     }
-    if ((field_flags & (1 << BBOX_FIELD_MOTOR)) && compute_and_check_vec4_delta(&deltas.motor, &current->motor, &previous->motor)) {
-      active_fields |= (1 << BBOX_FIELD_MOTOR);
+    if ((field_flags & (1 << BBOX_FIELD_OUTPUT)) && compute_and_check_output_delta(&deltas.output, &current->output, &previous->output)) {
+      active_fields |= (1 << BBOX_FIELD_OUTPUT);
     }
     
     // Check CPU load
@@ -199,7 +243,7 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
   CBOR_CHECK_ERROR(res = encode_vec3_field_if_present(enc, active_flags, BBOX_FIELD_ACCEL_FILTER, &source->accel_filter));
   CBOR_CHECK_ERROR(res = encode_vec3_field_if_present(enc, active_flags, BBOX_FIELD_GYRO_RAW, &source->gyro_raw));
   CBOR_CHECK_ERROR(res = encode_vec3_field_if_present(enc, active_flags, BBOX_FIELD_GYRO_FILTER, &source->gyro_filter));
-  CBOR_CHECK_ERROR(res = encode_vec4_field_if_present(enc, active_flags, BBOX_FIELD_MOTOR, &source->motor));
+  CBOR_CHECK_ERROR(res = encode_output_field_if_present(enc, active_flags, BBOX_FIELD_OUTPUT, &source->output));
   
   // CPU load needs special handling for type differences
   if (active_flags & (1 << BBOX_FIELD_CPU_LOAD)) {
@@ -317,8 +361,8 @@ void blackbox_update() {
     blackbox_compress_vec3(&blackbox.accel_raw, &state.accel_raw);
   }
 
-  if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_MOTOR)) {
-    blackbox_compress_vec4(&blackbox.motor, &state.motor_mix);
+  if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_OUTPUT)) {
+    blackbox_compress_output(&blackbox.output, state.output);
   }
 
   if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_CPU_LOAD)) {

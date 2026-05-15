@@ -144,14 +144,10 @@ uint8_t serial_4way_init() {
   }
 
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-#ifdef VEHICLE_ROVER
-    const gpio_pins_t pin = profile_output_slot_uses_motor(i) ? target.outputs[i].pin : PIN_NONE;
-#else
-    const profile_output_t *output = profile_output_for_source(OUTPUT_SOURCE_MOTOR_1 + i);
+    const profile_output_t *output = &profile.outputs[i];
     const gpio_pins_t pin = output && output->target_output < MOTOR_PIN_MAX && profile_output_slot_uses_motor(output->target_output)
                               ? target.outputs[output->target_output].pin
                               : PIN_NONE;
-#endif
     esc_pins[i] = pin;
     if (pin != PIN_NONE) {
       avr_bl_init_pin(pin);
