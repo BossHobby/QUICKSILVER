@@ -8,7 +8,7 @@
 #define QUIC_MAGIC '#'
 #define QUIC_HEADER_LEN 4
 
-#define QUIC_PROTOCOL_VERSION MAKE_SEMVER(0, 2, 7)
+#define QUIC_PROTOCOL_VERSION MAKE_SEMVER(0, 2, 8)
 
 typedef enum {
   QUIC_CMD_INVALID,
@@ -21,6 +21,7 @@ typedef enum {
   QUIC_CMD_CAL_STICKS,
   QUIC_CMD_SERIAL,
   QUIC_CMD_OSD,
+  QUIC_CMD_RX,
 } __attribute__((__packed__)) quic_command;
 
 typedef enum {
@@ -46,6 +47,10 @@ typedef enum {
   QUIC_OSD_READ_CHAR,
   QUIC_OSD_WRITE_CHAR,
 } __attribute__((__packed__)) quic_osd_command;
+
+typedef enum {
+  QUIC_RX_BIND,
+} __attribute__((__packed__)) quic_rx_command;
 
 typedef enum {
   QUIC_FLAG_NONE,
