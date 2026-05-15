@@ -9,8 +9,8 @@
 
 // Include the PID module
 #include "control/control.h"
-#include "control/multi/angle_pid.h"
-#include "control/multi/pid.h"
+#include "control/angle_pid.h"
+#include "control/pid.h"
 #include "core/profile.h"
 #include "driver/time.h"
 

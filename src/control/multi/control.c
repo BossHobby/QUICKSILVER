@@ -3,14 +3,14 @@
 #include <math.h>
 #include <stdint.h>
 
+#include "control/angle_pid.h"
 #include "control/control.h"
 #include "control/gestures.h"
-#include "control/multi/angle_pid.h"
 #include "control/multi/motor.h"
-#include "control/multi/pid.h"
-#include "control/multi/rates.h"
 #include "control/multi/turtle_mode.h"
 #include "control/output.h"
+#include "control/pid.h"
+#include "control/rates.h"
 #include "core/profile.h"
 #include "driver/motor.h"
 #include "driver/time.h"

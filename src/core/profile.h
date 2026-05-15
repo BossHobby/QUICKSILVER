@@ -22,7 +22,7 @@ typedef enum {
   VTX_BAND_L,
 
   VTX_BAND_MAX
-} vtx_band_t;
+} __attribute__((__packed__)) vtx_band_t;
 
 typedef enum {
   VTX_CHANNEL_1,
@@ -35,7 +35,7 @@ typedef enum {
   VTX_CHANNEL_8,
 
   VTX_CHANNEL_MAX,
-} vtx_channel_t;
+} __attribute__((__packed__)) vtx_channel_t;
 
 typedef enum {
   VTX_POWER_LEVEL_1,
@@ -48,7 +48,7 @@ typedef enum {
   VTX_POWER_LEVEL_8,
 
   VTX_POWER_LEVEL_MAX,
-} vtx_power_level_t;
+} __attribute__((__packed__)) vtx_power_level_t;
 
 typedef enum {
   VTX_PIT_MODE_OFF,
@@ -56,7 +56,7 @@ typedef enum {
   VTX_PIT_MODE_NO_SUPPORT,
 
   VTX_PIT_MODE_MAX,
-} vtx_pit_mode_t;
+} __attribute__((__packed__)) vtx_pit_mode_t;
 
 typedef enum {
   VTX_PROTOCOL_INVALID,
@@ -65,7 +65,7 @@ typedef enum {
   VTX_PROTOCOL_MSP_VTX,
 
   VTX_PROTOCOL_MAX,
-} vtx_protocol_t;
+} __attribute__((__packed__)) vtx_protocol_t;
 
 // Rates
 typedef enum {
@@ -548,6 +548,63 @@ typedef struct {
   MEMBER(reversible, uint8_t)              \
   END_STRUCT()
 
+typedef struct {
+  float threshold;
+  float step;
+} profile_wing_autotrim_t;
+
+#define WING_AUTOTRIM_MEMBERS      \
+  START_STRUCT(profile_wing_autotrim_t) \
+  MEMBER(threshold, float)              \
+  MEMBER(step, float)                  \
+  END_STRUCT()
+
+typedef struct {
+  float accel_threshold;
+  float velocity_threshold;
+  float max_altitude;
+  float idle_throttle;
+  float throttle;
+  float pitch_angle;
+  float stick_deadband;
+  uint16_t detect_time_ms;
+  uint16_t idle_delay_ms;
+  uint16_t motor_delay_ms;
+  uint16_t spinup_ms;
+  uint16_t min_time_ms;
+  uint16_t timeout_ms;
+  uint16_t finish_ms;
+} profile_wing_autolaunch_t;
+
+#define WING_AUTOLAUNCH_MEMBERS          \
+  START_STRUCT(profile_wing_autolaunch_t) \
+  MEMBER(accel_threshold, float)          \
+  MEMBER(velocity_threshold, float)       \
+  MEMBER(max_altitude, float)            \
+  MEMBER(idle_throttle, float)           \
+  MEMBER(throttle, float)                \
+  MEMBER(pitch_angle, float)             \
+  MEMBER(stick_deadband, float)          \
+  MEMBER(detect_time_ms, uint16_t)       \
+  MEMBER(idle_delay_ms, uint16_t)        \
+  MEMBER(motor_delay_ms, uint16_t)       \
+  MEMBER(spinup_ms, uint16_t)            \
+  MEMBER(min_time_ms, uint16_t)          \
+  MEMBER(timeout_ms, uint16_t)           \
+  MEMBER(finish_ms, uint16_t)            \
+  END_STRUCT()
+
+typedef struct {
+  profile_wing_autotrim_t autotrim;
+  profile_wing_autolaunch_t autolaunch;
+} profile_wing_t;
+
+#define WING_MEMBERS                               \
+  START_STRUCT(profile_wing_t)                     \
+  MEMBER(autotrim, profile_wing_autotrim_t)        \
+  MEMBER(autolaunch, profile_wing_autolaunch_t)    \
+  END_STRUCT()
+
 #define BLACKBOX_MEMBERS           \
   START_STRUCT(profile_blackbox_t) \
   MEMBER(field_flags, uint32_t)    \
@@ -616,6 +673,7 @@ typedef struct {
   profile_blackbox_t blackbox;
   profile_vtx_t vtx;
   profile_rover_t rover;
+  profile_wing_t wing;
 } profile_t;
 
 #ifdef VEHICLE_ROVER
@@ -634,6 +692,24 @@ typedef struct {
   MEMBER(blackbox, profile_blackbox_t)                                                      \
   MEMBER(vtx, profile_vtx_t)                                                                \
   MEMBER(rover, profile_rover_t)                                                            \
+  END_STRUCT()
+#elif defined(VEHICLE_WING)
+#define PROFILE_MEMBERS                                                                     \
+  START_STRUCT(profile_t)                                                                   \
+  MEMBER(meta, profile_metadata_t)                                                          \
+  COUNT_ARRAY_MEMBER(outputs, MOTOR_PIN_MAX, profile_output_t, profile_output_count)        \
+  COUNT_ARRAY_MEMBER(mixer, MIXER_RULE_MAX, profile_mixer_rule_t, profile_mixer_rule_count) \
+  MEMBER(motor, profile_motor_t)                                                            \
+  MEMBER(serial, profile_serial_t)                                                          \
+  MEMBER(filter, profile_filter_t)                                                          \
+  MEMBER(osd, profile_osd_t)                                                                \
+  MEMBER(rate, profile_rate_t)                                                              \
+  MEMBER(receiver, profile_receiver_t)                                                      \
+  MEMBER(pid, profile_pid_t)                                                                \
+  MEMBER(voltage, profile_voltage_t)                                                        \
+  MEMBER(blackbox, profile_blackbox_t)                                                      \
+  MEMBER(vtx, profile_vtx_t)                                                                \
+  MEMBER(wing, profile_wing_t)                                                              \
   END_STRUCT()
 #else
 #define PROFILE_MEMBERS                                                                     \

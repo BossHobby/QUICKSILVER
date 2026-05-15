@@ -8,7 +8,7 @@
 #ifdef VEHICLE_ROVER
 #include "control/rover/control.h"
 #else
-#include "control/multi/pid.h"
+#include "control/pid.h"
 #endif
 #include "control/imu.h"
 #include "control/sixaxis.h"

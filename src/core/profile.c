@@ -172,6 +172,11 @@ const profile_t default_profile = {
 #ifdef VEHICLE_ROVER
         {.target_output = 0, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
         {.target_output = 3, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
+#elif defined(VEHICLE_WING)
+        {.target_output = 0, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 1, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
+        {.target_output = 2, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
+        {.target_output = 3, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
 #else
         {.target_output = 0, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
         {.target_output = 1, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
@@ -184,6 +189,13 @@ const profile_t default_profile = {
 #ifdef VEHICLE_ROVER
         {.output_index = 0, .source = OUTPUT_SOURCE_THROTTLE, .weight = 100},
         {.output_index = 1, .source = OUTPUT_SOURCE_YAW, .weight = 100},
+#elif defined(VEHICLE_WING)
+        {.output_index = 0, .source = OUTPUT_SOURCE_THROTTLE, .weight = 100},
+        {.output_index = 1, .source = OUTPUT_SOURCE_ROLL, .weight = 100},
+        {.output_index = 1, .source = OUTPUT_SOURCE_PITCH, .weight = 100},
+        {.output_index = 2, .source = OUTPUT_SOURCE_ROLL, .weight = -100},
+        {.output_index = 2, .source = OUTPUT_SOURCE_PITCH, .weight = 100},
+        {.output_index = 3, .source = OUTPUT_SOURCE_YAW, .weight = 100},
 #else
         {.output_index = 0, .source = OUTPUT_SOURCE_ROLL, .weight = 100},
         {.output_index = 0, .source = OUTPUT_SOURCE_PITCH, .weight = 100},
@@ -473,17 +485,21 @@ const profile_t default_profile = {
 #ifndef VEHICLE_ROVER
             IDLE_UP,                // AUX_IDLE_UP
             LEVELMODE,              // AUX_LEVELMODE
+#ifdef VEHICLE_WING
+            {RX_CHANNEL_OFF, 0, 0}, // AUX_ACROMODE
+#else
             RACEMODE,               // AUX_RACEMODE
             HORIZON,                // AUX_HORIZON
             STICK_BOOST_PROFILE,    // AUX_STICK_BOOST_PROFILE
             {RX_CHANNEL_OFF, 0, 0}, // UNUSED_AUX_HIGH_RATES
+#endif
 #endif
 #ifdef BUZZER_ENABLE
             BUZZER_ENABLE, // AUX_BUZZER_ENABLE
 #else
             {RX_CHANNEL_OFF, 0, 0},
 #endif
-#ifndef VEHICLE_ROVER
+#if !defined(VEHICLE_ROVER) && !defined(VEHICLE_WING)
             TURTLE, // AUX_TURTLE
 
 #ifdef MOTORS_TO_THROTTLE_MODE
@@ -504,6 +520,10 @@ const profile_t default_profile = {
 #ifdef VEHICLE_ROVER
             RATE_ASSIST,   // AUX_RATE_ASSIST
             RATE_THROTTLE, // AUX_RATE_THROTTLE
+#endif
+#ifdef VEHICLE_WING
+            AUTOTRIM,   // AUX_AUTOTRIM
+            AUTOLAUNCH, // AUX_AUTOLAUNCH
 #endif
         },
         .lqi_source = RX_LQI_SOURCE_DIRECT,
@@ -593,6 +613,28 @@ const profile_t default_profile = {
         .throttle_scale_breakpoint = 1.0f,
         .throttle_scale_factor = 0.5f,
         .reversible = 1,
+    },
+    .wing = {
+        .autotrim = {
+            .threshold = 0.04f,
+            .step = 0.005f,
+        },
+        .autolaunch = {
+            .accel_threshold = 1.5f,
+            .velocity_threshold = 3.0f,
+            .max_altitude = 0.0f,
+            .idle_throttle = 0.08f,
+            .throttle = 0.70f,
+            .pitch_angle = 18.0f,
+            .stick_deadband = 0.15f,
+            .detect_time_ms = 40,
+            .idle_delay_ms = 0,
+            .motor_delay_ms = 500,
+            .spinup_ms = 100,
+            .min_time_ms = 0,
+            .timeout_ms = 5000,
+            .finish_ms = 3000,
+        },
     },
 };
 
@@ -707,6 +749,9 @@ BLACKBOX_MEMBERS
 BLACKBOX_PRESET_MEMBERS
 ROVER_PID_RATE_MEMBERS
 ROVER_MEMBERS
+WING_AUTOTRIM_MEMBERS
+WING_AUTOLAUNCH_MEMBERS
+WING_MEMBERS
 PROFILE_OUTPUT_MEMBERS
 PROFILE_MIXER_RULE_MEMBERS
 PROFILE_MEMBERS
@@ -790,6 +835,9 @@ RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
 ROVER_PID_RATE_MEMBERS
 ROVER_MEMBERS
+WING_AUTOTRIM_MEMBERS
+WING_AUTOLAUNCH_MEMBERS
+WING_MEMBERS
 PROFILE_OUTPUT_MEMBERS
 PROFILE_MIXER_RULE_MEMBERS
 PROFILE_MEMBERS

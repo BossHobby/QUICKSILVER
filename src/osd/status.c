@@ -9,6 +9,9 @@
 #include "driver/time.h"
 
 #define LABEL_LEN 22
+#define LABEL_MAX_LEN 64
+#define SCROLL_PADDING 4
+#define SCROLL_INTERVAL_MS 250
 
 typedef enum {
   STATUS_RX_WAIT,
@@ -22,6 +25,8 @@ typedef enum {
   STATUS_LOW_BAT,
   STATUS_MOTOR_TEST,
   STATUS_TURTLE,
+  STATUS_AUTOLAUNCH,
+  STATUS_AUTOTRIM,
   STATUS_MAX,
 } osd_status_entries_t;
 
@@ -41,7 +46,10 @@ typedef struct {
   osd_status_entries_t entry;
   osd_print_state_t state;
   osd_status_mode_t mode;
-  uint8_t label[LABEL_LEN];
+  uint8_t label[LABEL_MAX_LEN + 1];
+  uint8_t label_len;
+  uint8_t scroll_offset;
+  uint32_t last_scroll_ms;
 } osd_status_t;
 
 static osd_status_t current_status = {
@@ -61,6 +69,8 @@ const char *default_system_status_labels[STATUS_MAX] = {
     [STATUS_LOW_BAT] = "**LOW BATTERY**",
     [STATUS_MOTOR_TEST] = "**MOTOR TEST**",
     [STATUS_TURTLE] = "**TURTLE**",
+    [STATUS_AUTOLAUNCH] = "AUTO LAUNCH",
+    [STATUS_AUTOTRIM] = "AUTOTRIM",
 };
 
 const char *guac_system_status_labels[STATUS_MAX] = {
@@ -75,36 +85,142 @@ const char *guac_system_status_labels[STATUS_MAX] = {
     [STATUS_LOW_BAT] = "CONSTRUCT MORE PYLONS",
     [STATUS_MOTOR_TEST] = "**MOTOR TEST**",
     [STATUS_TURTLE] = "\x60THIS SIDE UP\x60",
+    [STATUS_AUTOLAUNCH] = "AUTO LAUNCH",
+    [STATUS_AUTOTRIM] = "AUTOTRIM",
 };
 
-static void osd_status_show(osd_status_mode_t mode, osd_status_entries_t entry) {
-  if (current_status.entry == entry) {
+static void osd_status_write_label(osd_element_t *el) {
+  osd_start(osd_attr(el) | OSD_ATTR_BLINK, pos_x(el), pos_y(el));
+  if (current_status.label_len <= LABEL_LEN) {
+    const uint32_t offset = (LABEL_LEN - current_status.label_len) / 2;
+    for (uint32_t i = 0; i < offset; i++) {
+      osd_write_char(' ');
+    }
+    osd_write_data(current_status.label, current_status.label_len);
+    for (uint32_t i = offset + current_status.label_len; i < LABEL_LEN; i++) {
+      osd_write_char(' ');
+    }
     return;
   }
 
-  const char **labels = profile.osd.guac_mode ? guac_system_status_labels : default_system_status_labels;
-  const char *label = labels[entry];
+  const uint8_t scroll_len = current_status.label_len + SCROLL_PADDING;
+  for (uint32_t i = 0; i < LABEL_LEN; i++) {
+    const uint8_t pos = (current_status.scroll_offset + i) % scroll_len;
+    osd_write_char(pos < current_status.label_len ? current_status.label[pos] : ' ');
+  }
+}
+
+static void osd_status_show_text(osd_status_mode_t mode, osd_status_entries_t entry, const char *label) {
+  if (current_status.entry == entry && strcmp((const char *)current_status.label, label) == 0) {
+    return;
+  }
 
   current_status.entry = entry;
   current_status.state = PRINT_START;
   current_status.mode = mode;
+  current_status.scroll_offset = 0;
+  current_status.last_scroll_ms = 0;
+
   const uint32_t len = strlen(label);
-  if (len >= LABEL_LEN) {
-    memcpy(current_status.label, label, LABEL_LEN);
-  } else {
-    const uint32_t offset = (LABEL_LEN - len) / 2;
-    memset(current_status.label, ' ', LABEL_LEN);
-    memcpy(current_status.label + offset, label, len);
-  }
+  current_status.label_len = len > LABEL_MAX_LEN ? LABEL_MAX_LEN : len;
+  memset(current_status.label, 0, sizeof(current_status.label));
+  memcpy(current_status.label, label, current_status.label_len);
 }
+
+static void osd_status_show(osd_status_mode_t mode, osd_status_entries_t entry) {
+  const char **labels = profile.osd.guac_mode ? guac_system_status_labels : default_system_status_labels;
+  osd_status_show_text(mode, entry, labels[entry]);
+}
+
+#ifdef VEHICLE_WING
+static const char *osd_wing_autolaunch_message(void) {
+  if (!rx_aux_on(AUX_AUTOLAUNCH)) {
+    return NULL;
+  }
+  if (!flags.arm_state) {
+    return "AUTO LAUNCH: ARM FIRST";
+  }
+  if (!state.wing_launch_available) {
+    return "AUTO LAUNCH: ENABLE BEFORE ARMING";
+  }
+  if (state.rx_filtered.throttle < THROTTLE_SAFETY) {
+    return "AUTO LAUNCH: RAISE THROTTLE";
+  }
+
+  switch (state.wing_launch_state) {
+  case WING_LAUNCH_IDLE:
+  case WING_LAUNCH_IDLE_DELAY:
+    return "AUTO LAUNCH: PREPARING";
+
+  case WING_LAUNCH_WAIT:
+    return "AUTO LAUNCH: THROW NOW";
+
+  case WING_LAUNCH_DETECTED:
+    return "AUTO LAUNCH: DETECTED";
+
+  case WING_LAUNCH_MOTOR_DELAY:
+  case WING_LAUNCH_SPINUP:
+  case WING_LAUNCH_ACTIVE:
+    return "AUTO LAUNCH: MOVE STICKS TO ABORT";
+
+  case WING_LAUNCH_FINISH:
+    return "AUTO LAUNCH: TAKE CONTROL";
+
+  case WING_LAUNCH_DONE:
+    return "AUTO LAUNCH DONE";
+
+  case WING_LAUNCH_ABORTED:
+    return "AUTO LAUNCH ABORTED";
+  }
+  return NULL;
+}
+
+static bool osd_wing_autolaunch_message_temp(void) {
+  return state.wing_launch_state == WING_LAUNCH_DONE || state.wing_launch_state == WING_LAUNCH_ABORTED;
+}
+
+static const char *osd_wing_autotrim_message(void) {
+  if (state.wing_autotrim_state == WING_AUTOTRIM_SAVED) {
+    return "AUTOTRIM DONE";
+  }
+  if (!rx_aux_on(AUX_AUTOTRIM)) {
+    return NULL;
+  }
+  if (!flags.arm_state) {
+    return "AUTOTRIM: ARM FIRST";
+  }
+  if (flags.failsafe) {
+    return "AUTOTRIM: FAILSAFE";
+  }
+
+  switch (state.wing_autotrim_state) {
+  case WING_AUTOTRIM_BLOCKED_ATTITUDE:
+    return "AUTOTRIM: LEVEL AIRCRAFT";
+
+  case WING_AUTOTRIM_SAVE_PENDING:
+    return "AUTOTRIM: DISARM THEN AUX OFF TO SAVE";
+
+  case WING_AUTOTRIM_ACTIVE:
+  case WING_AUTOTRIM_IDLE:
+    return "AUTOTRIM: HOLD LEVEL";
+
+  case WING_AUTOTRIM_SAVED:
+    return "AUTOTRIM DONE";
+  }
+  return NULL;
+}
+
+static bool osd_wing_autotrim_message_temp(void) {
+  return state.wing_autotrim_state == WING_AUTOTRIM_SAVED;
+}
+#endif
 
 static bool osd_status_print(osd_element_t *el) {
   static uint32_t start_time;
 
   switch (current_status.state) {
   case PRINT_START:
-    osd_start(osd_attr(el) | OSD_ATTR_BLINK, pos_x(el), pos_y(el));
-    osd_write_data(current_status.label, LABEL_LEN);
+    osd_status_write_label(el);
 
     if (current_status.mode == MODE_HOLD) {
       current_status.state = PRINT_IDLE;
@@ -112,6 +228,7 @@ static bool osd_status_print(osd_element_t *el) {
       current_status.state = PRINT_WAIT;
     }
     start_time = time_millis();
+    current_status.last_scroll_ms = start_time;
     return false;
 
   case PRINT_WAIT:
@@ -130,6 +247,15 @@ static bool osd_status_print(osd_element_t *el) {
     return false;
 
   case PRINT_IDLE:
+    if (current_status.mode == MODE_HOLD && current_status.label_len > LABEL_LEN) {
+      const uint32_t now_ms = time_millis();
+      if (now_ms - current_status.last_scroll_ms >= SCROLL_INTERVAL_MS) {
+        current_status.last_scroll_ms = now_ms;
+        current_status.scroll_offset = (current_status.scroll_offset + 1) % (current_status.label_len + SCROLL_PADDING);
+        osd_status_write_label(el);
+        return false;
+      }
+    }
     return true;
   }
 
@@ -195,7 +321,21 @@ bool osd_status_update(osd_element_t *el) {
     return osd_status_print(el);
   }
 
-#ifndef VEHICLE_ROVER
+#ifdef VEHICLE_WING
+  const char *autolaunch_message = osd_wing_autolaunch_message();
+  if (autolaunch_message) {
+    osd_status_show_text(osd_wing_autolaunch_message_temp() ? MODE_TEMP : MODE_HOLD, STATUS_AUTOLAUNCH, autolaunch_message);
+    return osd_status_print(el);
+  }
+
+  const char *autotrim_message = osd_wing_autotrim_message();
+  if (autotrim_message) {
+    osd_status_show_text(osd_wing_autotrim_message_temp() ? MODE_TEMP : MODE_HOLD, STATUS_AUTOTRIM, autotrim_message);
+    return osd_status_print(el);
+  }
+#endif
+
+#if !defined(VEHICLE_ROVER) && !defined(VEHICLE_WING)
   if (rx_aux_on(AUX_MOTOR_TEST)) {
     osd_status_show(MODE_HOLD, STATUS_MOTOR_TEST);
     return osd_status_print(el);
