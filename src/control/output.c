@@ -1,5 +1,7 @@
 #include "control/output.h"
 
+#include <math.h>
+
 #include "control/control.h"
 #include "driver/motor.h"
 #include "driver/servo.h"
@@ -47,39 +49,116 @@ static void output_stop_slot(const profile_output_t *output) {
   }
 }
 
-static bool output_source_value(const profile_output_t *output, float *value) {
-  switch (output->source) {
-  case OUTPUT_SOURCE_NONE:
-    return false;
-
-  case OUTPUT_SOURCE_RX_CHANNEL: {
-    if (output->source_index >= RX_CHANNEL_MAX) {
-      return false;
-    }
-    const float channel = (float)state.rx_channels[output->source_index] / (float)AUX_VALUE_MAX;
-    *value = channel * 2.0f - 1.0f;
-    return true;
+void output_apply_mixer_rules(void) {
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    state.output[i] = 0.0f;
+    state.output_active[i] = false;
   }
 
-#ifdef VEHICLE_ROVER
-  case OUTPUT_SOURCE_THROTTLE:
-    *value = state.motor_mix.axis[0];
-    return true;
+  for (uint32_t i = 0; i < MIXER_RULE_MAX; i++) {
+    const profile_mixer_rule_t *rule = &profile.mixer[i];
+    const uint8_t output_index = rule->output_index;
+    if (rule->source == OUTPUT_SOURCE_NONE || rule->source >= OUTPUT_SOURCE_MAX || output_index >= MOTOR_PIN_MAX || rule->weight == 0) {
+      continue;
+    }
 
-  case OUTPUT_SOURCE_STEERING:
-    *value = state.motor_mix.axis[1];
-    return true;
-#else
-  case OUTPUT_SOURCE_MOTOR_1:
-  case OUTPUT_SOURCE_MOTOR_2:
-  case OUTPUT_SOURCE_MOTOR_3:
-  case OUTPUT_SOURCE_MOTOR_4:
-    *value = state.motor_mix.axis[output->source - OUTPUT_SOURCE_MOTOR_1];
-    return true;
-#endif
+    float value = state.mixer_source[rule->source];
+    if (rule->source == OUTPUT_SOURCE_RX_CHANNEL) {
+      if (rule->source_index >= RX_CHANNEL_MAX) {
+        continue;
+      }
+      value = (float)state.rx_channels[rule->source_index] / (float)AUX_VALUE_MAX;
+      value = value * 2.0f - 1.0f;
+    }
 
-  default:
+    state.output[output_index] += value * ((float)rule->weight / 100.0f);
+    state.output_active[output_index] = true;
+  }
+}
+
+void output_activate_count(uint8_t count) {
+  if (count > MOTOR_PIN_MAX) {
+    count = MOTOR_PIN_MAX;
+  }
+
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    state.output_active[i] = i < count;
+  }
+}
+
+static bool output_has_mixer_source(uint8_t output_index, output_source_t source) {
+  for (uint32_t i = 0; i < MIXER_RULE_MAX; i++) {
+    const profile_mixer_rule_t *rule = &profile.mixer[i];
+    if (rule->output_index == output_index && rule->source == source && rule->weight != 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool output_is_motor_value(uint8_t index, const profile_output_t *output) {
+  if (!state.output_active[index] || output->protocol == OUTPUT_PROTOCOL_NONE || output->target_output >= MOTOR_PIN_MAX) {
     return false;
+  }
+
+  const target_output_t *target_output = &target.outputs[output->target_output];
+  if (target_output->pin == PIN_NONE || (target_output->caps & OUTPUT_CAP_MOTOR) == 0) {
+    return false;
+  }
+
+  return output->protocol != OUTPUT_PROTOCOL_PWM || output_has_mixer_source(index, OUTPUT_SOURCE_THROTTLE);
+}
+
+static float output_finalize_pwm_motor(float *value, float motor_limit) {
+#ifdef VEHICLE_ROVER
+  if (profile.rover.reversible) {
+    *value = constrain(*value, -1.0f, 1.0f) * motor_limit;
+    return fabsf(*value);
+  }
+
+  *value = constrain(*value, -1.0f, (motor_limit * 2.0f) - 1.0f);
+  return (*value + 1.0f) * 0.5f;
+#else
+  *value = constrain(*value, -1.0f, 1.0f) * motor_limit;
+  return fabsf(*value);
+#endif
+}
+
+void output_finalize_motor_values(void) {
+  state.thrsum = 0.0f;
+  uint8_t motor_count = 0;
+
+  float motor_min_value = 0.0f;
+  if (!flags.on_ground && flags.arm_state && !flags.motortest_override) {
+    // 0.0001 for legacy purposes, force motor drivers downstream to round up
+    motor_min_value = 0.0001f + (float)profile.motor.digital_idle * 0.01f;
+  }
+
+  const float motor_limit = profile.motor.motor_limit * 0.01f;
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    profile_output_t *output = &profile.outputs[i];
+    if (!output_is_motor_value(i, output)) {
+      continue;
+    }
+
+    if (output->protocol == OUTPUT_PROTOCOL_PWM) {
+      state.thrsum += output_finalize_pwm_motor(&state.output[i], motor_limit);
+    } else if (!flags.motortest_override) {
+      state.output[i] = constrain(state.output[i], 0.0f, 1.0f);
+      state.output[i] = mapf(state.output[i], 0.0f, 1.0f, motor_min_value, motor_limit);
+      state.thrsum += state.output[i];
+    } else if (state.output[i] <= 0.0f) {
+      // Zero throttle in motor test must send stop rather than min throttle.
+      state.output[i] = MOTOR_OFF;
+    } else {
+      state.thrsum += state.output[i];
+    }
+
+    motor_count++;
+  }
+
+  if (motor_count > 0) {
+    state.thrsum = state.thrsum / motor_count;
   }
 }
 
@@ -93,24 +172,19 @@ static bool output_allowed(const profile_output_t *output) {
   return flags.arm_state || flags.motortest_override;
 }
 
-void output_apply_mapped_sources() {
+void output_write_values() {
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
     const profile_output_t *output = &profile.outputs[i];
     if (output->protocol == OUTPUT_PROTOCOL_NONE || output->target_output >= MOTOR_PIN_MAX) {
       continue;
     }
 
-    if (!output_allowed(output)) {
+    if (!output_allowed(output) || !state.output_active[i]) {
       output_stop_slot(output);
       continue;
     }
 
-    float value = 0.0f;
-    if (output_source_value(output, &value)) {
-      output_set_slot(output, value);
-    } else {
-      output_stop_slot(output);
-    }
+    output_set_slot(output, state.output[i]);
   }
 }
 
@@ -129,22 +203,27 @@ void output_stop_all() {
 }
 
 bool output_source_configured(output_source_t source) {
-  const profile_output_t *output = profile_output_for_source(source);
-  if (!output || output->target_output >= MOTOR_PIN_MAX) {
-    return false;
-  }
-  const target_output_t *target_output = &target.outputs[output->target_output];
-  if (target_output->pin == PIN_NONE) {
-    return false;
-  }
-  if (output->protocol == OUTPUT_PROTOCOL_DSHOT) {
-    return target.brushless && (target_output->caps & OUTPUT_CAP_MOTOR) != 0;
-  }
-  if (output->protocol == OUTPUT_PROTOCOL_BRUSHED) {
-    return !target.brushless && (target_output->caps & OUTPUT_CAP_MOTOR) != 0;
-  }
-  if (output->protocol == OUTPUT_PROTOCOL_PWM) {
-    return (target_output->caps & (OUTPUT_CAP_MOTOR | OUTPUT_CAP_SERVO)) != 0;
+  for (uint32_t i = 0; i < MIXER_RULE_MAX; i++) {
+    if (profile.mixer[i].source != source || profile.mixer[i].output_index >= MOTOR_PIN_MAX) {
+      continue;
+    }
+    const profile_output_t *output = &profile.outputs[profile.mixer[i].output_index];
+    if (output->protocol == OUTPUT_PROTOCOL_NONE || output->target_output >= MOTOR_PIN_MAX) {
+      continue;
+    }
+    const target_output_t *target_output = &target.outputs[output->target_output];
+    if (target_output->pin == PIN_NONE) {
+      continue;
+    }
+    if (output->protocol == OUTPUT_PROTOCOL_DSHOT) {
+      return target.brushless && (target_output->caps & OUTPUT_CAP_MOTOR) != 0;
+    }
+    if (output->protocol == OUTPUT_PROTOCOL_BRUSHED) {
+      return !target.brushless && (target_output->caps & OUTPUT_CAP_MOTOR) != 0;
+    }
+    if (output->protocol == OUTPUT_PROTOCOL_PWM) {
+      return (target_output->caps & (OUTPUT_CAP_MOTOR | OUTPUT_CAP_SERVO)) != 0;
+    }
   }
   return false;
 }
