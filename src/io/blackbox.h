@@ -20,7 +20,7 @@ typedef enum {
   BBOX_FIELD_ACCEL_FILTER,
   BBOX_FIELD_GYRO_RAW,
   BBOX_FIELD_GYRO_FILTER,
-  BBOX_FIELD_MOTOR,
+  BBOX_FIELD_OUTPUT,
   BBOX_FIELD_CPU_LOAD,
   BBOX_FIELD_DEBUG,
 
@@ -31,6 +31,12 @@ typedef enum {
   BBOX_DEBUG_DYN_NOTCH = 0x1 << 0,
   BBOX_DEBUG_ROVER = 0x1 << 1,
 } blackbox_debug_flag_t;
+
+typedef struct {
+  int16_t axis[MOTOR_PIN_MAX];
+} compact_output_t;
+
+cbor_result_t cbor_encode_compact_output_t(cbor_value_t *enc, const compact_output_t *output);
 
 typedef struct {
   uint32_t loop;
@@ -49,7 +55,7 @@ typedef struct {
   compact_vec3_t gyro_raw;
   compact_vec3_t gyro_filter;
 
-  compact_vec4_t motor;
+  compact_output_t output;
 
   uint16_t cpu_load;
 

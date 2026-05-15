@@ -194,7 +194,6 @@ typedef struct {
   float motor_limit;
   dshot_time_t dshot_time;
   bool dshot_telemetry;
-  uint8_t invert_yaw;
   uint8_t gyro_orientation;
   float torque_boost;
   float throttle_boost;
@@ -207,7 +206,6 @@ typedef struct {
   MEMBER(motor_limit, float)                       \
   MEMBER(dshot_time, uint16_t)                     \
   MEMBER(dshot_telemetry, bool)                    \
-  MEMBER(invert_yaw, uint8_t)                      \
   MEMBER(gyro_orientation, uint8_t)                \
   MEMBER(torque_boost, float)                      \
   MEMBER(throttle_boost, float)                    \
@@ -281,24 +279,17 @@ typedef enum {
 
 typedef enum {
   OUTPUT_SOURCE_NONE,
-#ifdef VEHICLE_ROVER
   OUTPUT_SOURCE_THROTTLE,
-  OUTPUT_SOURCE_STEERING,
-#else
-  OUTPUT_SOURCE_MOTOR_1,
-  OUTPUT_SOURCE_MOTOR_2,
-  OUTPUT_SOURCE_MOTOR_3,
-  OUTPUT_SOURCE_MOTOR_4,
-#endif
+  OUTPUT_SOURCE_ROLL,
+  OUTPUT_SOURCE_PITCH,
+  OUTPUT_SOURCE_YAW,
   OUTPUT_SOURCE_RX_CHANNEL,
   OUTPUT_SOURCE_MAX,
 } __attribute__((__packed__)) output_source_t;
 
 typedef struct {
   uint8_t target_output;
-  output_source_t source;
   output_protocol_t protocol;
-  uint8_t source_index;
   uint8_t invert;
   int16_t trim;
   int16_t min;
@@ -309,14 +300,29 @@ typedef struct {
 #define PROFILE_OUTPUT_MEMBERS   \
   START_STRUCT(profile_output_t) \
   MEMBER(target_output, uint8_t) \
-  MEMBER(source, uint8_t)        \
   MEMBER(protocol, uint8_t)      \
-  MEMBER(source_index, uint8_t)  \
   MEMBER(invert, uint8_t)        \
   MEMBER(trim, int16_t)          \
   MEMBER(min, int16_t)           \
   MEMBER(max, int16_t)           \
   MEMBER(rate_hz, uint16_t)      \
+  END_STRUCT()
+
+#define MIXER_RULE_MAX (MOTOR_PIN_MAX * 4)
+
+typedef struct {
+  uint8_t output_index;
+  output_source_t source;
+  uint8_t source_index;
+  int8_t weight;
+} profile_mixer_rule_t;
+
+#define PROFILE_MIXER_RULE_MEMBERS \
+  START_STRUCT(profile_mixer_rule_t) \
+  MEMBER(output_index, uint8_t)      \
+  MEMBER(source, uint8_t)            \
+  MEMBER(source_index, uint8_t)      \
+  MEMBER(weight, int8_t)             \
   END_STRUCT()
 
 typedef struct {
@@ -476,6 +482,7 @@ typedef struct {
 typedef struct {
   profile_metadata_t meta;
   profile_output_t outputs[MOTOR_PIN_MAX];
+  profile_mixer_rule_t mixer[MIXER_RULE_MAX];
   profile_motor_t motor;
   profile_serial_t serial;
   profile_filter_t filter;
@@ -495,6 +502,7 @@ typedef struct {
   START_STRUCT(profile_t)                                                            \
   MEMBER(meta, profile_metadata_t)                                                   \
   COUNT_ARRAY_MEMBER(outputs, MOTOR_PIN_MAX, profile_output_t, profile_output_count) \
+  COUNT_ARRAY_MEMBER(mixer, MIXER_RULE_MAX, profile_mixer_rule_t, profile_mixer_rule_count) \
   MEMBER(motor, profile_motor_t)                                                     \
   MEMBER(serial, profile_serial_t)                                                   \
   MEMBER(filter, profile_filter_t)                                                   \
@@ -510,6 +518,7 @@ typedef struct {
   START_STRUCT(profile_t)              \
   MEMBER(meta, profile_metadata_t)     \
   COUNT_ARRAY_MEMBER(outputs, MOTOR_PIN_MAX, profile_output_t, profile_output_count) \
+  COUNT_ARRAY_MEMBER(mixer, MIXER_RULE_MAX, profile_mixer_rule_t, profile_mixer_rule_count) \
   MEMBER(motor, profile_motor_t)       \
   MEMBER(serial, profile_serial_t)     \
   MEMBER(filter, profile_filter_t)     \
@@ -539,10 +548,10 @@ pid_rate_t *profile_current_pid_rates();
 #ifndef VEHICLE_ROVER
 rate_t *profile_current_rates();
 #endif
-const profile_output_t *profile_output_for_source(output_source_t source);
 bool profile_output_slot_uses_motor(uint8_t target_output);
 bool profile_output_slot_uses_servo(uint8_t target_output);
 uint32_t profile_output_count(const profile_output_t *outputs, uint32_t size);
+uint32_t profile_mixer_rule_count(const profile_mixer_rule_t *mixer, uint32_t size);
 
 cbor_result_t cbor_encode_profile_t(cbor_value_t *enc, const profile_t *p);
 cbor_result_t cbor_decode_profile_t(cbor_value_t *dec, profile_t *p);

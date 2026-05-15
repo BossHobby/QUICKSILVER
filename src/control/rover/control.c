@@ -13,11 +13,6 @@
 #include "util/util.h"
 
 enum {
-  ROVER_MIX_THROTTLE,
-  ROVER_MIX_STEERING,
-};
-
-enum {
   ROVER_DEBUG_MODE,
   ROVER_DEBUG_STEERING_CLAMP,
   ROVER_DEBUG_STEERING_SCALE,
@@ -68,9 +63,9 @@ static rover_steer_mode_t rover_active_steer_mode() {
 }
 
 static uint8_t rover_output_index_for_source(output_source_t source) {
-  for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    if (profile.outputs[i].source == source) {
-      return profile.outputs[i].target_output;
+  for (uint8_t i = 0; i < MIXER_RULE_MAX; i++) {
+    if (profile.mixer[i].source == source) {
+      return profile.mixer[i].output_index;
     }
   }
   return MOTOR_PIN_MAX;
@@ -163,13 +158,6 @@ static float rover_update_iterm(float yaw_stick, float pid_no_i, float steering_
   return rover_ierror_yaw;
 }
 
-static void rover_set_mix(float throttle, float steering) {
-  state.motor_mix.axis[ROVER_MIX_THROTTLE] = throttle;
-  state.motor_mix.axis[ROVER_MIX_STEERING] = constrain(steering, -1.0f, 1.0f);
-  state.motor_mix.axis[2] = 0.0f;
-  state.motor_mix.axis[3] = 0.0f;
-}
-
 static void rover_calc_steering() {
   const rover_steer_mode_t steer_mode = rover_active_steer_mode();
   int16_t debug_throttle_assist = 0;
@@ -245,22 +233,21 @@ static void rover_calc_steering() {
   blackbox_set_debug(BBOX_DEBUG_ROVER, ROVER_DEBUG_MODE, steer_mode);
   blackbox_set_debug(BBOX_DEBUG_ROVER, ROVER_DEBUG_STEERING_CLAMP, debug_steering_clamp);
   blackbox_set_debug(BBOX_DEBUG_ROVER, ROVER_DEBUG_THROTTLE_ASSIST, debug_throttle_assist);
-
-  rover_set_mix(state.throttle, state.pidoutput.yaw);
 }
 
 static void rover_apply_outputs(float throttle, float steering) {
-  state.thrsum = fabsf(throttle);
-
-  throttle *= profile.motor.motor_limit * 0.01f;
-
   float drive_value = (fabsf(throttle) < 0.001f) ? 0.0f : throttle;
   if (!profile.rover.reversible) {
     drive_value = drive_value * 2.0f - 1.0f;
   }
-  rover_set_mix(drive_value, steering);
+  state.mixer_source[OUTPUT_SOURCE_THROTTLE] = drive_value;
+  state.mixer_source[OUTPUT_SOURCE_ROLL] = 0.0f;
+  state.mixer_source[OUTPUT_SOURCE_PITCH] = 0.0f;
+  state.mixer_source[OUTPUT_SOURCE_YAW] = constrain(steering, -1.0f, 1.0f);
 
-  output_apply_mapped_sources();
+  output_apply_mixer_rules();
+  output_finalize_motor_values();
+  output_write_values();
   output_write_all();
 }
 
@@ -325,16 +312,16 @@ void control() {
 
   if (flags.motortest_override) {
     const float throttle = motortest_usb ? rover_test_value(OUTPUT_SOURCE_THROTTLE, MOTOR_OFF) : state.throttle;
-    const float steering = motortest_usb ? rover_test_value(OUTPUT_SOURCE_STEERING, 0.0f) : 0.0f;
+    const float steering = motortest_usb ? rover_test_value(OUTPUT_SOURCE_YAW, 0.0f) : 0.0f;
     rover_apply_outputs(throttle, steering);
   } else if (!flags.arm_state || flags.failsafe) {
     flags.on_ground = 1;
     state.throttle = 0.0f;
     rover_calc_steering();
-    rover_apply_outputs(0.0f, state.motor_mix.axis[ROVER_MIX_STEERING]);
+    rover_apply_outputs(0.0f, state.pidoutput.yaw);
   } else {
     flags.on_ground = 0;
     rover_calc_steering();
-    rover_apply_outputs(state.motor_mix.axis[ROVER_MIX_THROTTLE], state.motor_mix.axis[ROVER_MIX_STEERING]);
+    rover_apply_outputs(state.throttle, state.pidoutput.yaw);
   }
 }
