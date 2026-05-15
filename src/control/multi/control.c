@@ -201,10 +201,11 @@ void control() {
   }
 
   if (flags.motortest_override) {
-    motor_test_calc(motortest_usb, state.motor_mix.axis);
-    motor_output_calc(state.motor_mix.axis);
+    motor_test_calc(motortest_usb);
 #ifndef NOMOTORS
-    output_apply_mapped_sources();
+    output_activate_count(MULTI_MOTOR_COUNT);
+    output_finalize_motor_values();
+    output_write_values();
 #endif
   } else if (!flags.arm_state || flags.failsafe || (state.throttle < 0.001f)) {
     flags.on_ground = 1;
@@ -221,10 +222,10 @@ void control() {
       }
     }
 
-    motor_mixer_calc(state.motor_mix.axis);
-    motor_output_calc(state.motor_mix.axis);
+    motor_mixer_calc();
 #ifndef NOMOTORS
-    output_apply_mapped_sources();
+    output_finalize_motor_values();
+    output_write_values();
 #endif
   }
 
