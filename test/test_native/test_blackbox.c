@@ -61,11 +61,11 @@ static void create_test_blackbox_frame(blackbox_t *frame, uint32_t loop, uint32_
   frame->gyro_filter.pitch = 22;
   frame->gyro_filter.yaw = 32;
   
-  // Set motor values
-  frame->motor.roll = 1200;
-  frame->motor.pitch = 1300;
-  frame->motor.yaw = 1100;
-  frame->motor.throttle = 1250;
+  // Set output values
+  frame->output.axis[0] = 1200;
+  frame->output.axis[1] = 1300;
+  frame->output.axis[2] = 1100;
+  frame->output.axis[3] = 1250;
   
   // Set CPU load
   frame->cpu_load = 75;
