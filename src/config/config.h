@@ -279,4 +279,3 @@
 
 // ---- DEVELOPMENT OPTIONS ----
 // #define NOMOTORS                  // disable motor output for bench testing
-// #define MOTOR_PLUS_CONFIGURATION  // use + motor layout instead of X
