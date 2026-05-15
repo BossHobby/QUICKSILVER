@@ -120,7 +120,7 @@ void control_update_arming() {
   if (flags.arm_request && !failsafe_lock && !flags.usb_active) {
     bool can_arm = !checked_prearm && arming_disabled_latch == ARMING_DISABLED_NONE;
 
-#ifdef VEHICLE_MULTI
+#if defined(VEHICLE_MULTI) || defined(VEHICLE_WING)
     can_arm = can_arm && rx_aux_on(AUX_PREARM) && state.rx_filtered.throttle <= THROTTLE_SAFETY;
 #endif
 
@@ -133,7 +133,7 @@ void control_update_arming() {
       }
 #endif
     } else if (!flags.arm_state) {
-#ifdef VEHICLE_MULTI
+#if defined(VEHICLE_MULTI) || defined(VEHICLE_WING)
       if (state.rx_filtered.throttle > THROTTLE_SAFETY) {
         arming_disabled_latch |= ARMING_DISABLED_THROTTLE;
       } else {
