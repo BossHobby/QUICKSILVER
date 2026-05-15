@@ -1,14 +1,14 @@
-#include <stdbool.h>
+#include "control/angle_pid.h"
+
+#include <math.h>
 
 #include "control/control.h"
 #include "core/profile.h"
-#include "control/multi/pid.h"
-#include "math.h"
 #include "util/util.h"
 
 extern profile_t profile;
 
-// set angle pid output limit to sum of both P terms just in case
+// Set angle PID output limit to the sum of both P terms just in case.
 #define OUTLIMIT_FLOAT (profile.pid.small_angle.kp + profile.pid.big_angle.kp)
 #define ANGLE_PID_DTIME_FACTOR 0.0032f
 
