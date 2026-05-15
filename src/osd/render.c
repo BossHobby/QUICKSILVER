@@ -1350,11 +1350,6 @@ void osd_display() {
     osd_menu_start();
     osd_menu_header("MOTOR SETTINGS");
 
-    osd_menu_select(4, 5, "INVERT YAW");
-    if (osd_menu_select_enum(22, 5, profile.motor.invert_yaw, on_off_labels)) {
-      profile.motor.invert_yaw = osd_menu_adjust_int(profile.motor.invert_yaw, 1, 0, 1);
-    }
-
     osd_menu_select(4, 6, "DIGITAL IDLE %");
     if (osd_menu_select_float(22, 6, profile.motor.digital_idle, 4, 1)) {
       profile.motor.digital_idle = osd_menu_adjust_float(profile.motor.digital_idle, 0.1, 0, 25.0);
