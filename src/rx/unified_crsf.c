@@ -326,4 +326,24 @@ void rx_serial_send_crsf_telemetry() {
   serial_write_bytes(&serial_rx, telemetry_packet, telemetry_size);
 }
 
+bool rx_serial_crsf_bind() {
+  if (serial_rx.config.port == SERIAL_PORT_INVALID) {
+    return false;
+  }
+
+  const uint8_t bind_frame[] = {
+      CRSF_SYNC_BYTE,
+      0x07,
+      CRSF_FRAMETYPE_COMMAND,
+      CRSF_ADDRESS_CRSF_RECEIVER,
+      CRSF_ADDRESS_FLIGHT_CONTROLLER,
+      CRSF_COMMAND_SUBCMD_RX,
+      CRSF_COMMAND_SUBCMD_RX_BIND,
+      0x9E,
+      0xE8,
+  };
+  serial_write_bytes(&serial_rx, bind_frame, sizeof(bind_frame));
+  return true;
+}
+
 #endif
