@@ -47,7 +47,7 @@ static float motord(float in, int x) {
   return in + out;
 }
 
-static void motor_brushless_mixer_scale_calc(float throttle, float mix[MULTI_MOTOR_COUNT]) {
+static void motor_brushless_mixer_scale_calc(float throttle) {
   // only enable once really in the air
   if (flags.on_ground || !flags.in_air) {
     return;
@@ -57,11 +57,11 @@ static void motor_brushless_mixer_scale_calc(float throttle, float mix[MULTI_MOT
   float max = FLT_MIN;
 
   for (uint32_t i = 0; i < MULTI_MOTOR_COUNT; i++) {
-    if (mix[i] < min) {
-      min = mix[i];
+    if (state.output[i] < min) {
+      min = state.output[i];
     }
-    if (mix[i] > max) {
-      max = mix[i];
+    if (state.output[i] > max) {
+      max = state.output[i];
     }
   }
 
@@ -73,23 +73,23 @@ static void motor_brushless_mixer_scale_calc(float throttle, float mix[MULTI_MOT
   const float scaled_throttle = constrain(throttle, -scaled_min, 1.0f - scaled_max);
 
   for (uint32_t i = 0; i < MULTI_MOTOR_COUNT; i++) {
-    mix[i] = mix[i] * scale + scaled_throttle;
+    state.output[i] = state.output[i] * scale + scaled_throttle;
   }
 }
 
-static void motor_brushed_mixer_scale_calc(float throttle, float mix[MULTI_MOTOR_COUNT]) {
+static void motor_brushed_mixer_scale_calc(float throttle) {
   // throttle reduction
   float overthrottle = 0;
   float underthrottle = 0.001f;
   static float overthrottlefilt = 0;
 
   for (uint32_t i = 0; i < MULTI_MOTOR_COUNT; i++) {
-    mix[i] += throttle;
+    state.output[i] += throttle;
 
-    if (mix[i] > overthrottle)
-      overthrottle = mix[i];
-    if (mix[i] < underthrottle)
-      underthrottle = mix[i];
+    if (state.output[i] > overthrottle)
+      overthrottle = state.output[i];
+    if (state.output[i] < underthrottle)
+      underthrottle = state.output[i];
   }
 
   overthrottle -= MIX_MOTOR_MAX;
@@ -118,7 +118,7 @@ static void motor_brushed_mixer_scale_calc(float throttle, float mix[MULTI_MOTOR
   if (overthrottle > 0) { // exceeding max motor thrust
     float temp = overthrottle;
     for (uint32_t i = 0; i < MULTI_MOTOR_COUNT; i++) {
-      mix[i] -= temp;
+      state.output[i] -= temp;
     }
   }
 
@@ -127,8 +127,8 @@ static void motor_brushed_mixer_scale_calc(float throttle, float mix[MULTI_MOTOR
     float underthrottle = 0;
 
     for (uint32_t i = 0; i < MULTI_MOTOR_COUNT; i++) {
-      if (mix[i] < underthrottle)
-        underthrottle = mix[i];
+      if (state.output[i] < underthrottle)
+        underthrottle = state.output[i];
     }
 
     // limit to half throttle max reduction
@@ -137,104 +137,63 @@ static void motor_brushed_mixer_scale_calc(float throttle, float mix[MULTI_MOTOR
 
     if (underthrottle < 0.0f) {
       for (uint32_t i = 0; i < MULTI_MOTOR_COUNT; i++)
-        mix[i] -= underthrottle;
+        state.output[i] -= underthrottle;
     }
   }
 }
 
-static void motor_mixer_scale_calc(float throttle, float mix[MULTI_MOTOR_COUNT]) {
-  if (target.brushless) {
-    return motor_brushless_mixer_scale_calc(throttle, mix);
-  }
-  return motor_brushed_mixer_scale_calc(throttle, mix);
-}
-
-void motor_test_calc(bool motortest_usb, float mix[MULTI_MOTOR_COUNT]) {
+void motor_test_calc(bool motortest_usb) {
   if (motortest_usb) {
     // set mix according to values we got via usb
-    mix[MOTOR_FR] = motor_test.value[MOTOR_FR];
-    mix[MOTOR_FL] = motor_test.value[MOTOR_FL];
-    mix[MOTOR_BR] = motor_test.value[MOTOR_BR];
-    mix[MOTOR_BL] = motor_test.value[MOTOR_BL];
+    state.output[MOTOR_FR] = motor_test.value[MOTOR_FR];
+    state.output[MOTOR_FL] = motor_test.value[MOTOR_FL];
+    state.output[MOTOR_BR] = motor_test.value[MOTOR_BR];
+    state.output[MOTOR_BL] = motor_test.value[MOTOR_BL];
   } else {
     // set mix according to sticks
     if (state.rx_filtered.roll < -0.5f || state.rx_filtered.pitch < -0.5f) {
-      mix[MOTOR_FR] = 0;
+      state.output[MOTOR_FR] = 0;
     } else {
-      mix[MOTOR_FR] = state.throttle;
+      state.output[MOTOR_FR] = state.throttle;
     }
 
     if (state.rx_filtered.roll > 0.5f || state.rx_filtered.pitch < -0.5f) {
-      mix[MOTOR_FL] = 0;
+      state.output[MOTOR_FL] = 0;
     } else {
-      mix[MOTOR_FL] = state.throttle;
+      state.output[MOTOR_FL] = state.throttle;
     }
 
     if (state.rx_filtered.roll < -0.5f || state.rx_filtered.pitch > 0.5f) {
-      mix[MOTOR_BR] = 0;
+      state.output[MOTOR_BR] = 0;
     } else {
-      mix[MOTOR_BR] = state.throttle;
+      state.output[MOTOR_BR] = state.throttle;
     }
 
     if (state.rx_filtered.roll > 0.5f || state.rx_filtered.pitch > 0.5f) {
-      mix[MOTOR_BL] = 0;
+      state.output[MOTOR_BL] = 0;
     } else {
-      mix[MOTOR_BL] = state.throttle;
+      state.output[MOTOR_BL] = state.throttle;
     }
   }
 }
 
-void motor_mixer_calc(float mix[MULTI_MOTOR_COUNT]) {
-  const float yaw = profile.motor.invert_yaw ? -state.pidoutput.yaw : state.pidoutput.yaw;
+void motor_mixer_calc(void) {
+  state.mixer_source[OUTPUT_SOURCE_THROTTLE] = state.throttle;
+  state.mixer_source[OUTPUT_SOURCE_ROLL] = state.pidoutput.roll;
+  state.mixer_source[OUTPUT_SOURCE_PITCH] = state.pidoutput.pitch;
+  state.mixer_source[OUTPUT_SOURCE_YAW] = state.pidoutput.yaw;
 
-#ifndef MOTOR_PLUS_CONFIGURATION
-  // normal mode, we set mix according to pidoutput
-  mix[MOTOR_FR] = -state.pidoutput.roll - state.pidoutput.pitch + yaw; // FR
-  mix[MOTOR_FL] = +state.pidoutput.roll - state.pidoutput.pitch - yaw; // FL
-  mix[MOTOR_BR] = -state.pidoutput.roll + state.pidoutput.pitch - yaw; // BR
-  mix[MOTOR_BL] = +state.pidoutput.roll + state.pidoutput.pitch + yaw; // BL
-#else
-  // plus mode, we set mix according to pidoutput
-  mix[MOTOR_FR] = -state.pidoutput.pitch + yaw; // FRONT
-  mix[MOTOR_FL] = +state.pidoutput.roll - yaw;  // LEFT
-  mix[MOTOR_BR] = -state.pidoutput.roll - yaw;  // RIGHT
-  mix[MOTOR_BL] = +state.pidoutput.pitch + yaw; // BACK
-#endif
+  output_apply_mixer_rules();
 
   if (profile.motor.torque_boost > 0.0f) {
     for (uint32_t i = 0; i < MULTI_MOTOR_COUNT; i++) {
-      mix[i] = motord(mix[i], i);
+      state.output[i] = motord(state.output[i], i);
     }
   }
 
-  motor_mixer_scale_calc(state.throttle, mix);
-}
-
-//********************************MOTOR OUTPUT***********************************************************
-void motor_output_calc(float mix[MULTI_MOTOR_COUNT]) {
-  state.thrsum = 0; // reset throttle sum for voltage monitoring logic in main loop
-
-  // only apply digital idle if we are armed and not in motor test
-  float motor_min_value = 0;
-  if (!flags.on_ground && flags.arm_state && !flags.motortest_override) {
-    // 0.0001 for legacy purposes, force motor drivers downstream to round up
-    motor_min_value = 0.0001f + (float)profile.motor.digital_idle * 0.01f;
+  if (target.brushless) {
+    motor_brushless_mixer_scale_calc(state.throttle);
+  } else {
+    motor_brushed_mixer_scale_calc(state.throttle);
   }
-
-  // Begin for-loop to send motor commands
-  for (uint32_t i = 0; i < MULTI_MOTOR_COUNT; i++) {
-    if (!flags.motortest_override) {
-      // use values as supplied in motor test mode
-      mix[i] = constrain(mix[i], 0, 1);
-      mix[i] = mapf(mix[i], 0.0f, 1.0f, motor_min_value, profile.motor.motor_limit * 0.01f);
-    } else if (mix[i] <= 0.0f) {
-      // zero throttle in motor test must map to MOTOR_OFF so the dshot driver sends stop rather than min throttle
-      mix[i] = MOTOR_OFF;
-    }
-
-    state.thrsum += mix[i];
-  }
-
-  // calculate throttle sum for voltage monitoring logic in main loop
-  state.thrsum = state.thrsum / MULTI_MOTOR_COUNT;
 }
