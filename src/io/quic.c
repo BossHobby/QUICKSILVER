@@ -23,6 +23,7 @@
 #include "io/usb_configurator.h"
 #include "io/vtx.h"
 #include "osd/render.h"
+#include "rx/unified_serial.h"
 #include "util/cbor_helper.h"
 
 #define ENCODE_BUFFER_SIZE 4096
@@ -635,6 +636,36 @@ static void process_serial(quic_t *quic, cbor_value_t *dec) {
   }
 }
 
+static void process_rx(quic_t *quic, cbor_value_t *dec) {
+  cbor_result_t res = CBOR_OK;
+
+  quic_rx_command cmd;
+  res = cbor_decode_uint8_t(dec, &cmd);
+  check_cbor_error(QUIC_CMD_RX);
+
+  switch (cmd) {
+  case QUIC_RX_BIND:
+#ifdef USE_RX_UNIFIED
+    if (profile.receiver.protocol == RX_PROTOCOL_CRSF || serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
+      if (rx_serial_crsf_bind()) {
+        quic_send(quic, QUIC_CMD_RX, QUIC_FLAG_NONE, NULL, 0);
+      } else {
+        quic_errorf(QUIC_CMD_RX, "CRSF RX NOT ACTIVE");
+      }
+    } else {
+      quic_errorf(QUIC_CMD_RX, "CRSF RX NOT SELECTED");
+    }
+#else
+    quic_errorf(QUIC_CMD_RX, "CRSF RX NOT SUPPORTED");
+#endif
+    break;
+
+  default:
+    quic_errorf(QUIC_CMD_RX, "INVALID CMD %d", cmd);
+    break;
+  }
+}
+
 bool quic_process(quic_t *quic, uint8_t *data, uint32_t size) {
   if (size < 4) {
     return false;
@@ -690,6 +721,9 @@ bool quic_process(quic_t *quic, uint8_t *data, uint32_t size) {
     break;
   case QUIC_CMD_SERIAL:
     process_serial(quic, &dec);
+    break;
+  case QUIC_CMD_RX:
+    process_rx(quic, &dec);
     break;
   default:
     quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);

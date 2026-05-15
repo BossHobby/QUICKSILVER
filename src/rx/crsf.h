@@ -63,10 +63,19 @@ typedef enum {
   CRSF_FRAMETYPE_FLIGHT_MODE = 0x21,
   CRSF_FRAMETYPE_DEVICE_PING = 0x28,
   CRSF_FRAMETYPE_DEVICE_INFO = 0x29,
+  CRSF_FRAMETYPE_COMMAND = 0x32,
   CRSF_FRAMETYPE_MSP_REQ = 0x7A,  // response request using msp sequence as command
   CRSF_FRAMETYPE_MSP_RESP = 0x7B, // reply with 58 byte chunked binary
   CRSF_FRAMETYPE_MSP_WRITE = 0x7C // write with 8 byte chunked binary (OpenTX outbound telemetry buffer limit)
 } crsf_frame_type_t;
+
+typedef enum {
+  CRSF_COMMAND_SUBCMD_RX = 0x10,
+} crsf_command_subcmd_t;
+
+typedef enum {
+  CRSF_COMMAND_SUBCMD_RX_BIND = 0x01,
+} crsf_command_rx_subcmd_t;
 
 typedef enum {
   CRSF_ADDRESS_BROADCAST = 0x00,
