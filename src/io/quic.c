@@ -412,7 +412,7 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
 
   case QUIC_MOTOR_TEST_ENABLE:
     for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
-#ifdef VEHICLE_ROVER
+#if defined(VEHICLE_ROVER) || defined(VEHICLE_WING)
       motor_test.value[i] = 0.0f;
 #else
       motor_test.value[i] = MOTOR_OFF;
@@ -428,7 +428,7 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
 
   case QUIC_MOTOR_TEST_DISABLE:
     for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
-#ifdef VEHICLE_ROVER
+#if defined(VEHICLE_ROVER) || defined(VEHICLE_WING)
       motor_test.value[i] = 0.0f;
 #else
       motor_test.value[i] = MOTOR_OFF;
@@ -448,7 +448,7 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
     check_cbor_error(QUIC_CMD_MOTOR);
 
     for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
-#ifdef VEHICLE_ROVER
+#if defined(VEHICLE_ROVER) || defined(VEHICLE_WING)
       motor_test.value[i] = values[i];
 #else
       if (values[i] == 0.0f) {

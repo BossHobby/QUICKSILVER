@@ -425,6 +425,22 @@ static void print_osd_flightmode(osd_element_t *el) {
 
   osd_start_el(el);
   osd_write_data(steer_mode_labels[steer_mode], 10);
+#elif defined(VEHICLE_WING)
+  const uint8_t flightmode_labels[3][10] = {
+      {"  MANUAL "},
+      {"   ACRO  "},
+      {"  LEVEL  "},
+  };
+
+  uint8_t flightmode = 0;
+  if (rx_aux_on(AUX_LEVELMODE)) {
+    flightmode = 2;
+  } else if (rx_aux_on(AUX_ACROMODE)) {
+    flightmode = 1;
+  }
+
+  osd_start_el(el);
+  osd_write_data(flightmode_labels[flightmode], 10);
 #else
   const uint8_t flightmode_labels[5][10] = {
       {"   ACRO   "},
@@ -918,6 +934,16 @@ void osd_display() {
 #ifdef USE_BLACKBOX
       osd_menu_select_screen(7, OSD_AUTO, "BLACKBOX", OSD_SCREEN_BLACKBOX);
 #endif
+#elif defined(VEHICLE_WING)
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "ARMING", 17, 22, &profile.receiver.aux[AUX_ARMING]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "PREARM", 17, 22, &profile.receiver.aux[AUX_PREARM]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "ACRO", 17, 22, &profile.receiver.aux[AUX_ACROMODE]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "LEVEL", 17, 22, &profile.receiver.aux[AUX_LEVELMODE]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "AUTOTRIM", 17, 22, &profile.receiver.aux[AUX_AUTOTRIM]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "AUTOLAUNCH", 17, 22, &profile.receiver.aux[AUX_AUTOLAUNCH]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "BUZZER", 17, 22, &profile.receiver.aux[AUX_BUZZER_ENABLE]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
 #else
       // PAGE 1
       osd_menu_select_screen(7, OSD_AUTO, "VTX", OSD_SCREEN_VTX);
@@ -1136,6 +1162,16 @@ void osd_display() {
       osd_menu_select_aux_adjust(4, OSD_AUTO, "PREARM", 17, 22, &profile.receiver.aux[AUX_PREARM]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "RATE ASSIST", 17, 22, &profile.receiver.aux[AUX_RATE_ASSIST]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "RATE THROTTLE", 17, 22, &profile.receiver.aux[AUX_RATE_THROTTLE]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "BUZZER", 17, 22, &profile.receiver.aux[AUX_BUZZER_ENABLE]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
+#elif defined(VEHICLE_WING)
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "ARMING", 17, 22, &profile.receiver.aux[AUX_ARMING]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "PREARM", 17, 22, &profile.receiver.aux[AUX_PREARM]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "ACRO", 17, 22, &profile.receiver.aux[AUX_ACROMODE]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "LEVEL", 17, 22, &profile.receiver.aux[AUX_LEVELMODE]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "AUTOTRIM", 17, 22, &profile.receiver.aux[AUX_AUTOTRIM]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "AUTOLAUNCH", 17, 22, &profile.receiver.aux[AUX_AUTOLAUNCH]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BUZZER", 17, 22, &profile.receiver.aux[AUX_BUZZER_ENABLE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
