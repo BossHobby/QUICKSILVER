@@ -39,8 +39,9 @@ typedef enum {
 typedef uint8_t vehicle_flags_t;
 
 typedef enum {
-  OUTPUT_CAP_MOTOR = (1 << 0),
-  OUTPUT_CAP_SERVO = (1 << 1),
+  OUTPUT_CAP_PWM = (1 << 0),
+  OUTPUT_CAP_DSHOT = (1 << 1),
+  OUTPUT_CAP_BRUSHED = (1 << 2),
 } output_cap_t;
 
 typedef uint8_t output_caps_t;
@@ -226,8 +227,6 @@ typedef struct {
   uint8_t name[32];
   uint8_t manufacturer[32];
 
-  bool brushless;
-
   target_led_t leds[LED_MAX];
   target_serial_port_t serial_ports[SERIAL_PORT_MAX];
   target_serial_port_t serial_soft_ports[SERIAL_SOFT_COUNT];
@@ -261,7 +260,6 @@ typedef struct {
   START_STRUCT(target_t)                                                         \
   TSTR_MEMBER(name, 32)                                                          \
   TSTR_MEMBER(manufacturer, 32)                                                  \
-  MEMBER(brushless, bool)                                                        \
   ARRAY_MEMBER(leds, LED_MAX, target_led_t)                                      \
   INDEX_ARRAY_MEMBER(serial_ports, SERIAL_PORT_MAX, target_serial_port_t)        \
   INDEX_ARRAY_MEMBER(serial_soft_ports, SERIAL_SOFT_COUNT, target_serial_port_t) \

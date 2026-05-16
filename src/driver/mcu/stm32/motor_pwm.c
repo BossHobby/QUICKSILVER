@@ -26,7 +26,8 @@ void motor_pwm_init() {
 
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
     const gpio_pins_t pin = target.outputs[i].pin;
-    if (pin == PIN_NONE || (target.outputs[i].caps & OUTPUT_CAP_MOTOR) == 0 || !profile_output_slot_uses_motor(i)) {
+    if (pin == PIN_NONE || (target.outputs[i].caps & OUTPUT_CAP_BRUSHED) == 0 ||
+        !profile_output_slot_uses_protocol(i, OUTPUT_PROTOCOL_BRUSHED)) {
       continue;
     }
 
