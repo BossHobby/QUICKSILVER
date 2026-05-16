@@ -596,11 +596,18 @@ const profile_t default_profile = {
 // the actual profile
 FAST_RAM profile_t profile;
 
-bool profile_output_slot_uses_motor(uint8_t target_output) {
+bool profile_output_slot_uses_protocol(uint8_t target_output, output_protocol_t protocol) {
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    if (profile.outputs[i].target_output == target_output &&
-        profile.outputs[i].protocol != OUTPUT_PROTOCOL_NONE &&
-        profile.outputs[i].protocol != OUTPUT_PROTOCOL_PWM) {
+    if (profile.outputs[i].target_output == target_output && profile.outputs[i].protocol == protocol) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool profile_outputs_use_protocol(output_protocol_t protocol) {
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (profile.outputs[i].protocol == protocol) {
       return true;
     }
   }
