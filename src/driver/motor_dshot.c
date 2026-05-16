@@ -40,7 +40,8 @@ static bool dshot_motor_slot_active(uint32_t slot) {
   if (slot >= MOTOR_PIN_MAX) {
     return false;
   }
-  return target.outputs[slot].pin != PIN_NONE && (target.outputs[slot].caps & OUTPUT_CAP_MOTOR) != 0 && profile_output_slot_uses_motor(slot);
+  return target.outputs[slot].pin != PIN_NONE && (target.outputs[slot].caps & OUTPUT_CAP_DSHOT) != 0 &&
+         profile_output_slot_uses_protocol(slot, OUTPUT_PROTOCOL_DSHOT);
 }
 
 const dshot_gpio_port_t *dshot_gpio_for_device(const dma_device_t dev) {

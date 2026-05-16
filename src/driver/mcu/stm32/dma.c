@@ -150,7 +150,7 @@ bool dma_can_use_dma2(dma_device_t device) {
   }
 
 #ifdef USE_MOTOR_DSHOT
-  if (target.brushless && dshot_phase != 0) {
+  if (dshot_phase != 0) {
     return false;
   }
 #endif
