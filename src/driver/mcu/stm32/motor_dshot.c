@@ -124,7 +124,8 @@ void dshot_dma_isr(const dma_device_t dev) {
   if (profile.motor.dshot_telemetry && dshot_phase == dshot_gpio_port_count) {
     // output phase done, lets swap to input
     for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-      if (target.outputs[i].pin == PIN_NONE || (target.outputs[i].caps & OUTPUT_CAP_MOTOR) == 0 || !profile_output_slot_uses_motor(i)) {
+      if (target.outputs[i].pin == PIN_NONE || (target.outputs[i].caps & OUTPUT_CAP_DSHOT) == 0 ||
+          !profile_output_slot_uses_protocol(i, OUTPUT_PROTOCOL_DSHOT)) {
         continue;
       }
       dshot_gpio_init_input(target.outputs[i].pin);

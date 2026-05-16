@@ -58,7 +58,7 @@ void servo_init() {
       continue;
     }
 
-    if ((target.outputs[i].caps & (OUTPUT_CAP_MOTOR | OUTPUT_CAP_SERVO)) != 0) {
+    if ((target.outputs[i].caps & OUTPUT_CAP_PWM) != 0) {
       pins[i] = target.outputs[i].pin;
     }
   }

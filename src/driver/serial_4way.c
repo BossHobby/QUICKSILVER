@@ -145,9 +145,9 @@ uint8_t serial_4way_init() {
 
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
     const profile_output_t *output = &profile.outputs[i];
-    const gpio_pins_t pin = output && output->target_output < MOTOR_PIN_MAX && profile_output_slot_uses_motor(output->target_output)
-                              ? target.outputs[output->target_output].pin
-                              : PIN_NONE;
+    const bool passthrough = output && output->target_output < MOTOR_PIN_MAX &&
+                             (output->protocol == OUTPUT_PROTOCOL_DSHOT || output->protocol == OUTPUT_PROTOCOL_PWM);
+    const gpio_pins_t pin = passthrough ? target.outputs[output->target_output].pin : PIN_NONE;
     esc_pins[i] = pin;
     if (pin != PIN_NONE) {
       avr_bl_init_pin(pin);

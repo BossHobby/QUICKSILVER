@@ -22,7 +22,7 @@ static uint8_t turtle_axis = 0;
 static uint8_t turtle_dir = 0;
 
 void turtle_mode_start() {
-  if (!target.brushless) {
+  if (!profile_outputs_use_protocol(OUTPUT_PROTOCOL_DSHOT)) {
     return;
   }
 
@@ -37,7 +37,7 @@ void turtle_mode_start() {
 }
 
 void turtle_mode_cancel() {
-  if (!target.brushless) {
+  if (!profile_outputs_use_protocol(OUTPUT_PROTOCOL_DSHOT)) {
     return;
   }
 
@@ -45,7 +45,7 @@ void turtle_mode_cancel() {
 }
 
 void turtle_mode_update() {
-  if (!target.brushless) {
+  if (!profile_outputs_use_protocol(OUTPUT_PROTOCOL_DSHOT)) {
     return;
   }
 
