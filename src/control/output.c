@@ -102,11 +102,20 @@ static bool output_is_motor_value(uint8_t index, const profile_output_t *output)
   }
 
   const target_output_t *target_output = &target.outputs[output->target_output];
-  if (target_output->pin == PIN_NONE || (target_output->caps & OUTPUT_CAP_MOTOR) == 0) {
+  if (target_output->pin == PIN_NONE) {
     return false;
   }
 
-  return output->protocol != OUTPUT_PROTOCOL_PWM || output_has_mixer_source(index, OUTPUT_SOURCE_THROTTLE);
+  if (output->protocol == OUTPUT_PROTOCOL_DSHOT) {
+    return (target_output->caps & OUTPUT_CAP_DSHOT) != 0;
+  }
+  if (output->protocol == OUTPUT_PROTOCOL_BRUSHED) {
+    return (target_output->caps & OUTPUT_CAP_BRUSHED) != 0;
+  }
+  if (output->protocol == OUTPUT_PROTOCOL_PWM) {
+    return (target_output->caps & OUTPUT_CAP_PWM) != 0 && output_has_mixer_source(index, OUTPUT_SOURCE_THROTTLE);
+  }
+  return false;
 }
 
 static float output_finalize_pwm_motor(float *value, float motor_limit) {
@@ -215,14 +224,16 @@ bool output_source_configured(output_source_t source) {
     if (target_output->pin == PIN_NONE) {
       continue;
     }
+    output_caps_t cap = 0;
     if (output->protocol == OUTPUT_PROTOCOL_DSHOT) {
-      return target.brushless && (target_output->caps & OUTPUT_CAP_MOTOR) != 0;
+      cap = OUTPUT_CAP_DSHOT;
+    } else if (output->protocol == OUTPUT_PROTOCOL_BRUSHED) {
+      cap = OUTPUT_CAP_BRUSHED;
+    } else if (output->protocol == OUTPUT_PROTOCOL_PWM) {
+      cap = OUTPUT_CAP_PWM;
     }
-    if (output->protocol == OUTPUT_PROTOCOL_BRUSHED) {
-      return !target.brushless && (target_output->caps & OUTPUT_CAP_MOTOR) != 0;
-    }
-    if (output->protocol == OUTPUT_PROTOCOL_PWM) {
-      return (target_output->caps & (OUTPUT_CAP_MOTOR | OUTPUT_CAP_SERVO)) != 0;
+    if ((target_output->caps & cap) != 0) {
+      return true;
     }
   }
   return false;
