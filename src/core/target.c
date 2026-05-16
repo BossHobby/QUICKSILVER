@@ -10,7 +10,6 @@
 
 FAST_RAM target_t target = {
     .name = "unknown",
-    .brushless = true,
 };
 
 #define _MACRO_STR(arg) #arg
@@ -267,19 +266,25 @@ cbor_result_t cbor_encode_output_caps_t(cbor_value_t *enc, const output_caps_t *
   cbor_result_t res = CBOR_OK;
 
   uint32_t count = 0;
-  if (*t & OUTPUT_CAP_MOTOR) {
+  if (*t & OUTPUT_CAP_PWM) {
     count++;
   }
-  if (*t & OUTPUT_CAP_SERVO) {
+  if (*t & OUTPUT_CAP_DSHOT) {
+    count++;
+  }
+  if (*t & OUTPUT_CAP_BRUSHED) {
     count++;
   }
 
   CBOR_CHECK_ERROR(res = cbor_encode_array(enc, count));
-  if (*t & OUTPUT_CAP_MOTOR) {
-    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "motor"));
+  if (*t & OUTPUT_CAP_PWM) {
+    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "pwm"));
   }
-  if (*t & OUTPUT_CAP_SERVO) {
-    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "servo"));
+  if (*t & OUTPUT_CAP_DSHOT) {
+    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "dshot"));
+  }
+  if (*t & OUTPUT_CAP_BRUSHED) {
+    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "brushed"));
   }
 
   return res;
@@ -296,10 +301,12 @@ cbor_result_t cbor_decode_output_caps_t(cbor_value_t *dec, output_caps_t *t) {
     const uint8_t *name;
     uint32_t name_len;
     CBOR_CHECK_ERROR(res = cbor_decode_tstr(dec, &name, &name_len));
-    if (buf_equal_string(name, name_len, "motor")) {
-      caps |= OUTPUT_CAP_MOTOR;
-    } else if (buf_equal_string(name, name_len, "servo")) {
-      caps |= OUTPUT_CAP_SERVO;
+    if (buf_equal_string(name, name_len, "pwm")) {
+      caps |= OUTPUT_CAP_PWM;
+    } else if (buf_equal_string(name, name_len, "dshot")) {
+      caps |= OUTPUT_CAP_DSHOT;
+    } else if (buf_equal_string(name, name_len, "brushed")) {
+      caps |= OUTPUT_CAP_BRUSHED;
     }
   }
 

@@ -1,5 +1,6 @@
 #include "driver/motor.h"
 
+#include "core/profile.h"
 #include "core/project.h"
 #include "util/util.h"
 
@@ -18,22 +19,24 @@ extern void motor_dshot_beep();
 
 void motor_init() {
 #ifdef USE_MOTOR_DSHOT
-  if (target.brushless) {
+  if (profile_outputs_use_protocol(OUTPUT_PROTOCOL_DSHOT)) {
     target_set_feature(FEATURE_BRUSHLESS);
     motor_dshot_init();
-  } else
+  } else {
+    target_reset_feature(FEATURE_BRUSHLESS);
+  }
 #endif
-  {
 #ifdef USE_MOTOR_PWM
+  if (profile_outputs_use_protocol(OUTPUT_PROTOCOL_BRUSHED)) {
     target_reset_feature(FEATURE_BRUSHLESS);
     motor_pwm_init();
-#endif
   }
+#endif
 }
 
 void motor_wait_for_ready() {
 #ifdef USE_MOTOR_DSHOT
-  if (target.brushless) {
+  if (profile_outputs_use_protocol(OUTPUT_PROTOCOL_DSHOT)) {
     motor_dshot_wait_for_ready();
   }
 #endif
@@ -43,15 +46,15 @@ void motor_beep() {
   motor_wait_for_ready();
 
 #ifdef USE_MOTOR_DSHOT
-  if (target.brushless) {
+  if (profile_outputs_use_protocol(OUTPUT_PROTOCOL_DSHOT)) {
     motor_dshot_beep();
-  } else
-#endif
-  {
-#ifdef USE_MOTOR_PWM
-    motor_pwm_beep();
-#endif
   }
+#endif
+#ifdef USE_MOTOR_PWM
+  if (profile_outputs_use_protocol(OUTPUT_PROTOCOL_BRUSHED)) {
+    motor_pwm_beep();
+  }
+#endif
 }
 
 void motor_set(uint8_t pos, float pwm) {
@@ -72,15 +75,15 @@ void motor_update() {
   motor_wait_for_ready();
 
 #ifdef USE_MOTOR_DSHOT
-  if (target.brushless) {
+  if (profile_outputs_use_protocol(OUTPUT_PROTOCOL_DSHOT)) {
     motor_dshot_write(motor_values);
-  } else
-#endif
-  {
-#ifdef USE_MOTOR_PWM
-    motor_pwm_write(motor_values);
-#endif
   }
+#endif
+#ifdef USE_MOTOR_PWM
+  if (profile_outputs_use_protocol(OUTPUT_PROTOCOL_BRUSHED)) {
+    motor_pwm_write(motor_values);
+  }
+#endif
 #ifdef SIMULATOR
   extern float simulator_motor_values[MOTOR_PIN_MAX];
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
@@ -91,7 +94,7 @@ void motor_update() {
 
 void motor_set_direction(motor_direction_t dir) {
 #ifdef USE_MOTOR_DSHOT
-  if (target.brushless) {
+  if (profile_outputs_use_protocol(OUTPUT_PROTOCOL_DSHOT)) {
     motor_dshot_set_direction(dir);
   }
 #endif
@@ -99,7 +102,7 @@ void motor_set_direction(motor_direction_t dir) {
 
 bool motor_direction_change_done() {
 #ifdef USE_MOTOR_DSHOT
-  if (target.brushless) {
+  if (profile_outputs_use_protocol(OUTPUT_PROTOCOL_DSHOT)) {
     return motor_dshot_direction_change_done();
   }
 #endif

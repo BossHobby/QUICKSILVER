@@ -191,7 +191,7 @@ void motor_mixer_calc(void) {
     }
   }
 
-  if (target.brushless) {
+  if (profile_outputs_use_protocol(OUTPUT_PROTOCOL_DSHOT)) {
     motor_brushless_mixer_scale_calc(state.throttle);
   } else {
     motor_brushed_mixer_scale_calc(state.throttle);

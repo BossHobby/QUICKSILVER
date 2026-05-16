@@ -105,7 +105,8 @@ void serial_esc_process(uint8_t index, uint32_t baud) {
   }
 
   const profile_output_t *output = &profile.outputs[index];
-  if (!output || output->target_output >= MOTOR_PIN_MAX || !profile_output_slot_uses_motor(output->target_output)) {
+  if (!output || output->target_output >= MOTOR_PIN_MAX ||
+      (output->protocol != OUTPUT_PROTOCOL_DSHOT && output->protocol != OUTPUT_PROTOCOL_PWM)) {
     return;
   }
   const gpio_pins_t pin = target.outputs[output->target_output].pin;
