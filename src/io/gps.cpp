@@ -30,22 +30,25 @@
 #define UBX_ACK_ACK 0x0501
 #define UBX_ACK_NAK 0x0500
 
-// Configuration keys for M10
-// Note: Performance mode changes require a power cycle to take effect
-// M10 modules support 25Hz with all constellations only in performance mode
-#define CFG_PM_OPERATEMODE 0x20d00001   // Power mode: 0=Full power, 1=Balanced, 2=Low power
-#define CFG_SIGNAL_GPS_ENA 0x1031001f   // GPS enable
-#define CFG_SIGNAL_GLO_ENA 0x10310025   // GLONASS enable
-#define CFG_SIGNAL_GAL_ENA 0x10310021   // Galileo enable
-#define CFG_SIGNAL_BDS_ENA 0x10310022   // BeiDou enable
+// Configuration database keys for M9/M10.
+#define CFG_PM_OPERATEMODE 0x20d00001 // Power management: 0=Full power
+#define CFG_SIGNAL_GPS_ENA 0x1031001f // GPS enable
+#define CFG_SIGNAL_GLO_ENA 0x10310025 // GLONASS enable
+#define CFG_SIGNAL_GAL_ENA 0x10310021 // Galileo enable
+#define CFG_SIGNAL_BDS_ENA 0x10310022 // BeiDou enable
 
 // Ground assistance configuration keys
 #define CFG_NAVSPG_UTCSTANDARD 0x2011001c // UTC standard (0=auto)
 #define CFG_NAVSPG_DYNMODEL 0x20110021    // Dynamic platform model
 #define CFG_NAVSPG_FIXMODE 0x20110011     // Position fix mode
+#define CFG_RATE_MEAS 0x30210001          // Measurement interval, U2 milliseconds
+#define CFG_RATE_NAV 0x30210002           // Measurements per navigation solution, U2
+#define CFG_RATE_TIMEREF 0x20210003       // Time reference, U1
 
 #define CFG_MSGOUT_UBX_NAV_PVT_UART1 0x20910007 // UBX-NAV-PVT output rate on UART1
 #define CFG_MSGOUT_UBX_NAV_SAT_UART1 0x20910016 // UBX-NAV-SAT output rate on UART1
+
+#define GPS_SOLUTION_STALE_MS 500U
 
 typedef struct {
   uint32_t baud;
@@ -259,7 +262,7 @@ static uint8_t current_baudrate = 0;
 
 static bool performance_mode_checked = false;
 static uint8_t current_power_mode = 0xFF; // 0xFF = unknown
-static uint8_t constellation_index = 0;
+static uint8_t configured_dynamic_model = 0xff;
 
 // GPS status tracking
 gps_status_t gps_status = {
@@ -311,7 +314,7 @@ static bool gps_send_message(const uint16_t class_id, const uint8_t *payload, co
 }
 
 // Helper function to send CFG-VALSET message
-static void gps_send_cfg_valset(uint32_t key, uint8_t value, uint8_t layer) {
+static bool gps_send_cfg_valset(uint32_t key, uint8_t value, uint8_t layer) {
   if (gps_status.version == VER_M9 || gps_status.version == VER_M10) {
     const uint8_t cfg_valset[] = {
         0,
@@ -324,8 +327,9 @@ static void gps_send_cfg_valset(uint32_t key, uint8_t value, uint8_t layer) {
         uint8_t((key >> 24) & 0xff),
         value,
     };
-    gps_send_message(UBX_CFG_VALSET, cfg_valset, sizeof(cfg_valset));
+    return gps_send_message(UBX_CFG_VALSET, cfg_valset, sizeof(cfg_valset));
   }
+  return false;
 }
 
 static void gps_reset_ack_state() {
@@ -348,8 +352,62 @@ static void gps_set_message_rate(uint8_t msg_class, uint8_t msg_id, uint8_t rate
       0,
       0,
   };
-  gps_send_message(UBX_CFG_MSG, cfg_msg, sizeof(cfg_msg));
-  gps_send_cfg_valset(cfg_key, rate, 0x01);
+  if (gps_status.version == VER_M9 || gps_status.version == VER_M10)
+    gps_send_cfg_valset(cfg_key, rate, 0x01);
+  else
+    gps_send_message(UBX_CFG_MSG, cfg_msg, sizeof(cfg_msg));
+}
+
+static void gps_set_update_rate() {
+  if (gps_status.version == VER_M9 || gps_status.version == VER_M10) {
+    // M9/M10 use the configuration database. Pack U2 rate values explicitly;
+    // the one-byte VALSET helper is only suitable for U1 and boolean keys.
+    const uint8_t config[] = {
+        0,
+        1,
+        0,
+        0,
+        uint8_t(CFG_RATE_MEAS),
+        uint8_t(CFG_RATE_MEAS >> 8),
+        uint8_t(CFG_RATE_MEAS >> 16),
+        uint8_t(CFG_RATE_MEAS >> 24),
+        100,
+        0,
+        uint8_t(CFG_RATE_NAV),
+        uint8_t(CFG_RATE_NAV >> 8),
+        uint8_t(CFG_RATE_NAV >> 16),
+        uint8_t(CFG_RATE_NAV >> 24),
+        1,
+        0,
+        uint8_t(CFG_RATE_TIMEREF),
+        uint8_t(CFG_RATE_TIMEREF >> 8),
+        uint8_t(CFG_RATE_TIMEREF >> 16),
+        uint8_t(CFG_RATE_TIMEREF >> 24),
+        1,
+    };
+    gps_send_message(UBX_CFG_VALSET, config, sizeof(config));
+  } else {
+    const ubx_cfg_rate_t rate = {.measRate = 100, .navRate = 1, .timeRef = 1};
+    gps_send_message(UBX_CFG_RATE, (const uint8_t *)&rate, sizeof(rate));
+  }
+}
+
+static bool gps_set_constellations() {
+  if (gps_status.version != VER_M9 && gps_status.version != VER_M10)
+    return true;
+  uint8_t selection = profile.gps.constellations & 0x0f;
+  if (!selection)
+    selection = GPS_CONSTELLATION_GPS | GPS_CONSTELLATION_GALILEO;
+
+  // Apply the complete selection together in RAM; no receiver flash writes.
+  const uint32_t keys[] = {CFG_SIGNAL_GPS_ENA, CFG_SIGNAL_GLO_ENA, CFG_SIGNAL_GAL_ENA, CFG_SIGNAL_BDS_ENA};
+  uint8_t config[4 + 5 * 4] = {0, 1, 0, 0};
+  for (unsigned i = 0; i < 4; i++) {
+    for (unsigned b = 0; b < 4; b++)
+      config[4 + i * 5 + b] = uint8_t(keys[i] >> (8 * b));
+    config[8 + i * 5] = (selection >> i) & 1;
+  }
+  return gps_send_message(UBX_CFG_VALSET, config, sizeof(config));
 }
 
 static void gps_set_nav_pvt_messages(bool enable) {
@@ -362,36 +420,23 @@ static void gps_set_nav_sat_messages(bool enable) {
 }
 
 // Helper function to update dynamic model
-static void gps_update_dynamic_model(bool should_be_static) {
-  uint8_t new_dyn_model = should_be_static ? 2 : 8; // 2=Stationary, 8=Airborne<4g
-  uint8_t new_static_hold = 0;
+static bool gps_update_dynamic_model(bool should_be_static) {
+  const uint8_t new_dyn_model = should_be_static ? 2 : 8; // 2=Stationary, 8=Airborne<4g
+  bool sent;
 
   if (gps_status.version == VER_M9 || gps_status.version == VER_M10) {
-    gps_send_cfg_valset(CFG_NAVSPG_DYNMODEL, new_dyn_model, 0x01);
+    sent = gps_send_cfg_valset(CFG_NAVSPG_DYNMODEL, new_dyn_model, 0x01);
   } else {
     // Use CFG-NAV5 for M8
     const ubx_cfg_nav5_t cfg_nav5 = {
-        .mask = 0x0005, // Only update dynModel and staticHoldThresh
+        .mask = 0x0001, // Only update dynModel; preserve receiver defaults.
         .dynModel = new_dyn_model,
-        .fixMode = 3,
-        .fixedAlt = 0,
-        .fixedAltVar = 10000,
-        .minElev = 5,
-        .drLimit = 0,
-        .pDop = 250,
-        .tDop = 250,
-        .pAcc = 100,
-        .tAcc = 300,
-        .staticHoldThresh = new_static_hold,
-        .dgnssTimeout = 60,
-        .cnoThreshNumSVs = 0,
-        .cnoThresh = 0,
-        .staticHoldMaxDist = 200,
-        .utcStandard = 0,
     };
-    gps_send_message(UBX_CFG_NAV5, (uint8_t *)&cfg_nav5, sizeof(cfg_nav5));
+    sent = gps_send_message(UBX_CFG_NAV5, (uint8_t *)&cfg_nav5, sizeof(cfg_nav5));
   }
-
+  if (sent)
+    configured_dynamic_model = new_dyn_model;
+  return sent;
 }
 
 static void gps_handle_packet(const uint16_t class_id, const uint8_t *payload, const uint16_t size) {
@@ -403,14 +448,20 @@ static void gps_handle_packet(const uint16_t class_id, const uint8_t *payload, c
     ubx_nav_pvt_t *nav_pvt = (ubx_nav_pvt_t *)payload;
 
     // Update basic state
-    state.gps_lock = (nav_pvt->flags & FLAGS_GNSS_FIX_OK) && (nav_pvt->numSV >= GPS_MIN_SATS_FOR_LOCK);
+    state.gps_lock = (nav_pvt->flags & FLAGS_GNSS_FIX_OK) &&
+                     (nav_pvt->fixType == GPS_FIX_3D || nav_pvt->fixType == GPS_FIX_GNSS_DR) &&
+                     (nav_pvt->numSV >= GPS_MIN_SATS_FOR_LOCK);
     state.gps_sats = nav_pvt->numSV;
     state.gps_coord.lon = nav_pvt->lon;
     state.gps_coord.lat = nav_pvt->lat;
     state.gps_altitude = nav_pvt->hMSL / 1000.0f;
     state.gps_heading = nav_pvt->headMot / 100000.0f;
     state.gps_heading_accuracy = nav_pvt->headAcc / 100000.0f;
+    state.gps_horizontal_accuracy = nav_pvt->hAcc * 0.001f;
+    state.gps_last_update_ms = time_millis();
     state.gps_speed = nav_pvt->gSpeed * 0.001f; // mm/s to m/s
+    state.gps_vel_north = nav_pvt->velN * 0.001f;
+    state.gps_vel_east = nav_pvt->velE * 0.001f;
 
     // Update comprehensive status
     gps_status.fix_type = nav_pvt->fixType;
@@ -647,6 +698,7 @@ void gps_init() {
   is_init = true;
   ubx_parser_state = UBX_SYNC1;
   current_baudrate = next_baudrate;
+  configured_dynamic_model = 0xff;
 }
 
 static bool gps_read_ublox() {
@@ -667,6 +719,19 @@ void gps_task() {
 
   static uint32_t last_baud_rate_change = 0;
   static uint32_t config_request_time = 0;
+
+  // Keep ground acquisition settings until arming, even after the first fix.
+  // Arming without a fix must still select airborne tracking. On disarm,
+  // restore the stationary model and satellite diagnostics without a restart.
+  if (gps_status.state >= GPS_WAITING_FOR_LOCK && gps_status.state <= GPS_RUNNING_NAV_SAT_OFF &&
+      configured_dynamic_model != (flags.arm_state ? 8 : 2) && serial_bytes_free(&serial_gps) >= 64) {
+    if (gps_update_dynamic_model(!flags.arm_state)) {
+      gps_set_nav_sat_messages(!flags.arm_state);
+      config_request_time = time_millis();
+      gps_reset_ack_state();
+      gps_status.state = GPS_CONFIG_FLIGHT_MODEL;
+    }
+  }
 
   switch (gps_status.state) {
   case GPS_DETECT_BAUD: {
@@ -731,8 +796,7 @@ void gps_task() {
 
       if (need_performance_mode) {
         // Set to full power (high performance) mode
-        // NOTE: This change requires a power cycle to take effect!
-        gps_send_cfg_valset(CFG_PM_OPERATEMODE, 0, 0x07);
+        gps_send_cfg_valset(CFG_PM_OPERATEMODE, 0, 0x01);
       }
 
       // Move to constellation config
@@ -744,46 +808,16 @@ void gps_task() {
     break;
   }
   case GPS_CONFIG_CONSTELLATIONS: {
-    // Only M9 and M10 support CFG-VALSET for constellation configuration
-    if (gps_status.version == VER_M9 || gps_status.version == VER_M10) {
-      // Enable all GNSS constellations for best accuracy
-      // Only enable if in performance mode (M10) or always for M9
-      if (gps_status.version == VER_M9 || current_power_mode == 0) {
-        const struct {
-          uint32_t key;
-          uint8_t value;
-        } gnss_config[] = {
-            {CFG_SIGNAL_GPS_ENA, 1}, // GPS
-            {CFG_SIGNAL_GLO_ENA, 1}, // GLONASS
-            {CFG_SIGNAL_GAL_ENA, 1}, // Galileo
-            {CFG_SIGNAL_BDS_ENA, 1}, // BeiDou
-        };
-
-        if (constellation_index < sizeof(gnss_config) / sizeof(gnss_config[0])) {
-          gps_send_cfg_valset(gnss_config[constellation_index].key, gnss_config[constellation_index].value, 0x01);
-          constellation_index++;
-          break; // Stay in this state until all constellations are configured
-        }
-      }
-    }
-
-    gps_status.state = GPS_CONFIG_UPDATE_RATE;
+    if (gps_set_constellations())
+      gps_status.state = GPS_CONFIG_UPDATE_RATE;
     break;
   }
   case GPS_CONFIG_UPDATE_RATE: {
-    // Match Betaflight's conservative default. Higher rates can increase UART load before lock.
-    const uint16_t rate = 100; // 10Hz
-
-    const ubx_cfg_rate_t cfg_rate = {
-        .measRate = rate,
-        .navRate = 1,
-        .timeRef = 1,
-    };
-    gps_send_message(UBX_CFG_RATE, (uint8_t *)&cfg_rate, sizeof(cfg_rate));
+    gps_set_update_rate(); // Betaflight's default: 10 Hz at 115200 baud.
     config_request_time = time_millis();
 
     // Update status with configured rate
-    gps_status.update_rate = 1000 / rate;
+    gps_status.update_rate = 10;
 
     gps_status.state = GPS_CONFIG_NAV_MODEL;
     gps_reset_ack_state();
@@ -791,34 +825,7 @@ void gps_task() {
   }
   case GPS_CONFIG_NAV_MODEL: {
     if (gps_had_ack_response() || (time_millis() - config_request_time) > 500) {
-      // Configure for optimal acquisition on ground vs in flight
-      uint8_t dyn_model = 8; // Default: Airborne < 4g
-
-      // If on ground and not moving, use static model for faster lock
-      if (!flags.arm_state && state.gps_speed < 1.0f) {
-        dyn_model = 2; // Stationary model
-      }
-
-      const ubx_cfg_nav5_t cfg_nav5 = {
-          .mask = 0xFFFF,
-          .dynModel = dyn_model,
-          .fixMode = 3, // 3 = Auto 2D/3D
-          .fixedAlt = 0,
-          .fixedAltVar = 10000,
-          .minElev = 5, // 5 degrees minimum elevation to reduce multipath
-          .drLimit = 0, // No dead reckoning
-          .pDop = 250,
-          .tDop = 250,
-          .pAcc = 100,
-          .tAcc = 300,
-          .staticHoldThresh = 0,
-          .dgnssTimeout = 60,
-          .cnoThreshNumSVs = 0,     // No minimum satellites required
-          .cnoThresh = 0,           // Accept all signal strengths
-          .staticHoldMaxDist = 200, // 200m static hold distance
-          .utcStandard = 0,
-      };
-      gps_send_message(UBX_CFG_NAV5, (uint8_t *)&cfg_nav5, sizeof(cfg_nav5));
+      gps_update_dynamic_model(!flags.arm_state);
       config_request_time = time_millis();
       gps_status.state++;
       gps_reset_ack_state();
@@ -861,10 +868,7 @@ void gps_task() {
     gps_read_ublox();
 
     if (state.gps_lock) {
-      gps_update_dynamic_model(false);
-      config_request_time = time_millis();
-      gps_reset_ack_state();
-      gps_status.state = GPS_CONFIG_FLIGHT_MODEL;
+      gps_status.state = GPS_RUNNING;
       break;
     }
 
@@ -927,6 +931,11 @@ void gps_task() {
   default:
     break;
   }
+  // NAV-SAT is optional diagnostics; only fresh NAV-PVT solutions keep the
+  // shared fix valid. Retain the last measurements, but make the OSD blink
+  // and consumers reject the fix if the receiver stops delivering solutions.
+  if (time_millis() - state.gps_last_update_ms > GPS_SOLUTION_STALE_MS)
+    state.gps_lock = false;
 }
 
 // CBOR encoding functions

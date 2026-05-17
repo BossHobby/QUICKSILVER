@@ -296,3 +296,27 @@ void test_angle_pid_uses_legacy_dterm_timefactor(void) {
   const float d_term = 0.1f * 1.0f * (1.0f - 0.1f) * (0.0032f * state.looptime_inverse);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, p_term + d_term, output);
 }
+
+void test_angle_pid_rth_damps_rotation_without_target_kick(void) {
+  pid_setUp();
+  state.rth_active = true;
+  profile.pid.small_angle.kp = profile.pid.big_angle.kp = 1;
+  profile.pid.small_angle.kd = profile.pid.big_angle.kd = 3;
+  for (int axis = 0; axis < 2; axis++) {
+    state.angle_error.axis[axis] = 0;
+    angle_pid(axis);
+    state.angle_error.axis[axis] = 0.2f;
+    TEST_ASSERT_FLOAT_WITHIN(0.00001f, 0.2f, angle_pid(axis));
+    state.angle_error.axis[axis] = -0.2f;
+    TEST_ASSERT_FLOAT_WITHIN(0.00001f, -0.2f, angle_pid(axis));
+    state.angle_error.axis[axis] = 0;
+    state.gyro.axis[axis] = 1;
+    TEST_ASSERT_FLOAT_WITHIN(0.00001f, -0.0096f, angle_pid(axis));
+    state.gyro.axis[axis] = -1;
+    TEST_ASSERT_FLOAT_WITHIN(0.00001f, 0.0096f, angle_pid(axis));
+    state.gyro.axis[axis] = 0;
+    state.rth_active = false;
+    TEST_ASSERT_FLOAT_WITHIN(0.00001f, 0, angle_pid(axis));
+    state.rth_active = true;
+  }
+}
