@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "driver/usb.h"
+#include "io/gps.h"
 #include "io/quic.h"
 #include "osd/render.h"
 #include "rx/rx.h"
@@ -276,6 +277,7 @@ const profile_t default_profile = {
 #endif
     },
 
+    .gps = {.constellations = GPS_CONSTELLATION_GPS | GPS_CONSTELLATION_GALILEO},
     .filter = {
         .gyro = {
             {
@@ -346,6 +348,8 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(0, 0, 8, 12, 10, 15),   // OSD_GPS_SPEED
                     ENCODE_OSD_ELEMENT(0, 0, 12, 12, 19, 15),  // OSD_ROVER_INCLINOMETER
                     ENCODE_OSD_ELEMENT(0, 0, 19, 1, 37, 0),    // OSD_CRSF_TX_POWER
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 2, 44, 1),    // OSD_ALTITUDE
+                    ENCODE_OSD_ELEMENT(0, 0, 12, 2, 22, 1),    // OSD_GPS_HOME
                 },
             },
             [OSD_PROFILE_2] = {
@@ -370,6 +374,8 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(0, 0, 8, 12, 10, 15),   // OSD_GPS_SPEED
                     ENCODE_OSD_ELEMENT(0, 0, 12, 12, 19, 15),  // OSD_ROVER_INCLINOMETER
                     ENCODE_OSD_ELEMENT(0, 0, 19, 1, 37, 0),    // OSD_CRSF_TX_POWER
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 2, 44, 1),    // OSD_ALTITUDE
+                    ENCODE_OSD_ELEMENT(0, 0, 12, 2, 22, 1),    // OSD_GPS_HOME
                 },
             },
         },
@@ -512,6 +518,7 @@ const profile_t default_profile = {
             {RX_CHANNEL_OFF, 0, 0}, // AUX_BLACKBOX
             PREARM,                 // AUX_PREARM
             {RX_CHANNEL_OFF, 0, 0}, // AUX_OSD_PROFILE
+            {RX_CHANNEL_OFF, 0, 0}, // AUX_RETURN_TO_HOME
 #ifdef VEHICLE_ROVER
             RATE_ASSIST,   // AUX_RATE_ASSIST
             RATE_THROTTLE, // AUX_RATE_THROTTLE
@@ -670,6 +677,14 @@ const profile_t default_profile = {
             .finish_ms = 3000,
         },
     },
+    .navigation = {
+        .rth_altitude = 10.0f,   // 10m above current position
+        .rth_on_failsafe = true, // Enable RTH on failsafe
+        .rth_cruise_speed = 30.0f / 3.6f, // 30 km/h
+        .rth_throttle_min = 0.1f,
+        .rth_throttle_hover = 0.5f,
+        .rth_throttle_max = 0.75f,
+    },
 };
 
 #pragma GCC diagnostic pop
@@ -764,6 +779,7 @@ RATE_MEMBERS
 PROFILE_RATE_MEMBERS
 MOTOR_MEMBERS
 SERIAL_MEMBERS
+GPS_PROFILE_MEMBERS
 FILTER_PARAMETER_MEMBERS
 FILTER_MEMBERS
 OSD_PROFILE_MEMBERS
@@ -780,6 +796,7 @@ AUX_FUNCTION_MAP_MEMBERS
 PROFILE_RECEIVER_BIND_MEMBERS
 RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
+NAVIGATION_MEMBERS
 BLACKBOX_PRESET_MEMBERS
 ROVER_PID_RATE_MEMBERS
 ROVER_MEMBERS
@@ -852,6 +869,7 @@ RATE_MEMBERS
 PROFILE_RATE_MEMBERS
 MOTOR_MEMBERS
 SERIAL_MEMBERS
+GPS_PROFILE_MEMBERS
 FILTER_PARAMETER_MEMBERS
 FILTER_MEMBERS
 OSD_PROFILE_MEMBERS
@@ -874,6 +892,7 @@ WING_MEMBERS
 SERVO_MEMBERS
 PROFILE_OUTPUT_MEMBERS
 PROFILE_MIXER_RULE_MEMBERS
+NAVIGATION_MEMBERS
 PROFILE_MEMBERS
 
 #undef START_STRUCT

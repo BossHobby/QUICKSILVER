@@ -20,10 +20,17 @@ static constexpr float failsafe_neutral_throttle = 0.5f;
 #else
 static constexpr float failsafe_neutral_throttle = 0.0f;
 #endif
+#ifdef VEHICLE_MULTI
+extern void nav_test_reset(void);
+extern void nav_test_set_rth_active(bool active);
+#endif
 
 static void failsafe_reset(uint32_t now_us) {
   time_test_reset();
   time_test_set_us(now_us);
+#ifdef VEHICLE_MULTI
+  nav_test_reset();
+#endif
 
   flags.rx_ready = 1;
   flags.failsafe_signal_lost = 0;
@@ -320,6 +327,28 @@ void test_failsafe_stage2_drop_blocks_outputs_and_disarms(void) {
   TEST_ASSERT_FALSE(flags.arm_state);
   TEST_ASSERT_TRUE(flags.failsafe_outputs_blocked);
 }
+
+#ifdef VEHICLE_MULTI
+void test_failsafe_rth_keeps_outputs_allowed_past_stage2_time(void) {
+  failsafe_reset(1000000);
+  profile.navigation.rth_on_failsafe = true;
+  flags.failsafe_signal_lost = 1;
+  flags.failsafe = 1;
+  flags.controls_override = 1;
+  state.failsafe_phase = FAILSAFE_PHASE_STAGE1_GUARD;
+  nav_test_set_rth_active(true);
+  time_test_set_us(1000000 + FAILSAFE_HOLD_TIME_US + FAILSAFE_STAGE2_TIME_US + 1000);
+
+  control_failsafe_update();
+
+  TEST_ASSERT_TRUE(state.rth_failsafe_active);
+  TEST_ASSERT_EQUAL_UINT8(FAILSAFE_PHASE_STAGE1_GUARD, state.failsafe_phase);
+  TEST_ASSERT_TRUE(flags.failsafe);
+  TEST_ASSERT_TRUE(flags.arm_state);
+  TEST_ASSERT_TRUE(flags.controls_override);
+  TEST_ASSERT_FALSE(flags.failsafe_outputs_blocked);
+}
+#endif
 
 void test_failsafe_recovery_clears_with_arm_switch_high_but_blocks_rearm(void) {
   failsafe_reset(1000000);

@@ -4,7 +4,11 @@
 
 #include "control/control.h"
 #include "control/gestures.h"
+#include "control/attitude.h"
 #include "control/imu.h"
+#ifdef VEHICLE_MULTI
+#include "control/multi/navigation.h"
+#endif
 #include "control/sixaxis.h"
 #include "driver/baro/baro.h"
 #include "driver/serial.h"
@@ -28,15 +32,25 @@ void util_task() {
   rgb_led_update();
 
   buzzer_update();
-  baro_update();
 }
+
+#ifndef VEHICLE_MULTI
+static void task_noop() {
+}
+#endif
 
 FAST_RAM task_t tasks[TASK_MAX] = {
     [TASK_GYRO] = CREATE_TASK("GYRO", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, sixaxis_read, 0),
     [TASK_IMU] = CREATE_TASK("IMU", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, imu_calc, 0),
+    [TASK_ATTITUDE] = CREATE_TASK("ATTITUDE", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, attitude_update, 0),
     [TASK_PID] = CREATE_TASK("PID", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, control, 0),
     [TASK_RX] = CREATE_TASK("RX", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, rx_update, 0),
     [TASK_VBAT] = CREATE_TASK("VBAT", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, vbat_calc, 1000),
+#ifdef VEHICLE_MULTI
+    [TASK_NAV] = CREATE_TASK("NAV", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, nav_update, 10000),
+#else
+    [TASK_NAV] = CREATE_TASK("NAV", 0, TASK_PRIORITY_HIGH, task_noop, 0),
+#endif
     [TASK_UTIL] = CREATE_TASK("UTIL", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, util_task, 1000),
     [TASK_GESTURES] = CREATE_TASK("GESTURES", TASK_MASK_ON_GROUND, TASK_PRIORITY_MEDIUM, gestures, 0),
     [TASK_BLACKBOX] = CREATE_TASK("BLACKBOX", TASK_MASK_ALWAYS, TASK_PRIORITY_MEDIUM, blackbox_update, 0),

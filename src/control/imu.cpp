@@ -32,6 +32,7 @@
 #define ACC_MIN 0.7f
 #define ACC_MAX 1.3f
 
+
 #ifdef QUICKSILVER_IMU
 static filter_lp_pt1 filter;
 static filter_state_t filter_pass1[3];
@@ -136,7 +137,7 @@ void imu_calc() {
   state.accel.pitch = filter_lp_pt1_step(&filter, &filter_pass2[1], state.accel.pitch);
   state.accel.yaw = filter_lp_pt1_step(&filter, &filter_pass2[2], state.accel.yaw);
 
-  const float accmag = vec3_magnitude(&state.accel);
+  const float accmag = vec3_magnitude(state.accel);
   if ((accmag > ACC_MIN * ACC_1G) && (accmag < ACC_MAX * ACC_1G)) {
     state.accel.roll = state.accel.roll * (ACC_1G / accmag);
     state.accel.pitch = state.accel.pitch * (ACC_1G / accmag);
@@ -158,12 +159,13 @@ void imu_calc() {
   }
 
   // heal the gravity vector after fusion with accel
-  const float GEstGmag = vec3_magnitude(&state.GEstG);
-  state.GEstG.roll = state.GEstG.roll * (ACC_1G / GEstGmag);
-  state.GEstG.pitch = state.GEstG.pitch * (ACC_1G / GEstGmag);
-  state.GEstG.yaw = state.GEstG.yaw * (ACC_1G / GEstGmag);
+  const float GEstGmag = vec3_magnitude(state.GEstG);
+  if (isfinite(GEstGmag) && GEstGmag > 0.01f) {
+    state.GEstG.roll = state.GEstG.roll * (ACC_1G / GEstGmag);
+    state.GEstG.pitch = state.GEstG.pitch * (ACC_1G / GEstGmag);
+    state.GEstG.yaw = state.GEstG.yaw * (ACC_1G / GEstGmag);
+  }
 
-  state.attitude.roll = atan2approx(state.GEstG.roll, state.GEstG.yaw);
-  state.attitude.pitch = atan2approx(state.GEstG.pitch, state.GEstG.yaw);
+  // Attitude angles are now computed in attitude_update()
 }
 #endif
