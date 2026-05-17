@@ -13,6 +13,8 @@
 
 // PROFILE version changelog (schema compatibility):
 // 0.3.1: osd: add CRSF TX power.
+//        gps: add persisted constellation selection.
+//        navigation: expose return height, speed, failsafe and throttle limits only.
 // 0.3.0 (1e5b55c3): feat: add full 16-bit aux channel resolution with range-based function mapping.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
@@ -661,6 +663,42 @@ typedef struct {
   STR_MEMBER(name_osd)             \
   END_STRUCT()
 
+typedef struct {
+  // RTH parameters
+  float rth_altitude;        // Altitude offset from current position
+  bool rth_on_failsafe;      // Activate RTH on failsafe
+  float rth_cruise_speed;    // m/s target horizontal return speed
+  float rth_throttle_min;
+  float rth_throttle_hover;
+  float rth_throttle_max;
+} profile_navigation_t;
+
+#define NAVIGATION_MEMBERS            \
+  START_STRUCT(profile_navigation_t)  \
+  MEMBER(rth_altitude, float)         \
+  MEMBER(rth_on_failsafe, bool)       \
+  MEMBER(rth_cruise_speed, float)     \
+  MEMBER(rth_throttle_min, float)     \
+  MEMBER(rth_throttle_hover, float)   \
+  MEMBER(rth_throttle_max, float)     \
+  END_STRUCT()
+
+enum {
+  GPS_CONSTELLATION_GPS = 1 << 0,
+  GPS_CONSTELLATION_GLONASS = 1 << 1,
+  GPS_CONSTELLATION_GALILEO = 1 << 2,
+  GPS_CONSTELLATION_BEIDOU = 1 << 3,
+};
+
+typedef struct {
+  uint8_t constellations; // M9/M10 enable mask; empty selection uses GPS + Galileo.
+} profile_gps_t;
+
+#define GPS_PROFILE_MEMBERS       \
+  START_STRUCT(profile_gps_t)     \
+  MEMBER(constellations, uint8_t) \
+  END_STRUCT()
+
 // Full Profile
 typedef struct {
   profile_metadata_t meta;
@@ -669,6 +707,7 @@ typedef struct {
   profile_mixer_rule_t mixer[MIXER_RULE_MAX];
   profile_motor_t motor;
   profile_serial_t serial;
+  profile_gps_t gps;
   profile_filter_t filter;
   profile_osd_t osd;
 #ifndef VEHICLE_ROVER
@@ -681,6 +720,7 @@ typedef struct {
   profile_vtx_t vtx;
   profile_rover_t rover;
   profile_wing_t wing;
+  profile_navigation_t navigation;
 } profile_t;
 
 #ifdef VEHICLE_ROVER
@@ -692,6 +732,7 @@ typedef struct {
   COUNT_ARRAY_MEMBER(mixer, MIXER_RULE_MAX, profile_mixer_rule_t, profile_mixer_rule_count) \
   MEMBER(motor, profile_motor_t)                                                            \
   MEMBER(serial, profile_serial_t)                                                          \
+  MEMBER(gps, profile_gps_t)                                                                \
   MEMBER(filter, profile_filter_t)                                                          \
   MEMBER(osd, profile_osd_t)                                                                \
   MEMBER(receiver, profile_receiver_t)                                                      \
@@ -700,6 +741,7 @@ typedef struct {
   MEMBER(blackbox, profile_blackbox_t)                                                      \
   MEMBER(vtx, profile_vtx_t)                                                                \
   MEMBER(rover, profile_rover_t)                                                            \
+  MEMBER(navigation, profile_navigation_t)                                                  \
   END_STRUCT()
 #elif defined(VEHICLE_WING)
 #define PROFILE_MEMBERS                                                                     \
@@ -710,6 +752,7 @@ typedef struct {
   COUNT_ARRAY_MEMBER(mixer, MIXER_RULE_MAX, profile_mixer_rule_t, profile_mixer_rule_count) \
   MEMBER(motor, profile_motor_t)                                                            \
   MEMBER(serial, profile_serial_t)                                                          \
+  MEMBER(gps, profile_gps_t)                                                                \
   MEMBER(filter, profile_filter_t)                                                          \
   MEMBER(osd, profile_osd_t)                                                                \
   MEMBER(rate, profile_rate_t)                                                              \
@@ -729,6 +772,7 @@ typedef struct {
   COUNT_ARRAY_MEMBER(mixer, MIXER_RULE_MAX, profile_mixer_rule_t, profile_mixer_rule_count) \
   MEMBER(motor, profile_motor_t)                                                            \
   MEMBER(serial, profile_serial_t)                                                          \
+  MEMBER(gps, profile_gps_t)                                                                \
   MEMBER(filter, profile_filter_t)                                                          \
   MEMBER(osd, profile_osd_t)                                                                \
   MEMBER(rate, profile_rate_t)                                                              \
@@ -737,6 +781,7 @@ typedef struct {
   MEMBER(voltage, profile_voltage_t)                                                        \
   MEMBER(blackbox, profile_blackbox_t)                                                      \
   MEMBER(vtx, profile_vtx_t)                                                                \
+  MEMBER(navigation, profile_navigation_t)                                                  \
   END_STRUCT()
 #endif
 

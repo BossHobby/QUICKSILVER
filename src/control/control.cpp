@@ -48,9 +48,7 @@ FAST_RAM control_state_t state = {
 #define END_STRUCT CBOR_END_STRUCT_ENCODER
 
 GPS_COORD_MEMBERS
-CBOR_START_STRUCT_ENCODER(control_state_t)
 STATE_MEMBERS
-CBOR_END_STRUCT_ENCODER()
 
 #undef START_STRUCT
 #undef END_STRUCT
@@ -77,6 +75,10 @@ const char *control_flight_mode_name(void) {
     return "ACRO";
   return "MANUAL";
 #else
+  if (state.rth_failsafe_active)
+    return "FS RTH";
+  if (state.rth_active || rx_aux_on(AUX_RETURN_TO_HOME))
+    return "RTH";
   if (!rx_aux_on(AUX_LEVELMODE))
     return "ACRO";
   if (rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON))
@@ -106,6 +108,11 @@ static void failsafe_set_phase(failsafe_phase_t phase, uint32_t now_us) {
 
 static void failsafe_clear_stage1_fallback(void) {
   if (state.failsafe_phase == FAILSAFE_PHASE_STAGE1_GUARD) {
+#ifdef VEHICLE_MULTI
+    if (state.rth_active) {
+      return;
+    }
+#endif
     flags.controls_override = 0;
   }
 }
@@ -150,6 +157,8 @@ static void failsafe_clear(uint32_t now_us) {
 
 void control_failsafe_update() {
   const uint32_t now_us = time_micros();
+  // Receiver loss can change between navigation updates.
+  state.rth_failsafe_active = state.rth_active && profile.navigation.rth_on_failsafe && flags.failsafe_signal_lost;
 
   if (flags.rx_ready != 1) {
     flags.failsafe = 1;
@@ -160,6 +169,15 @@ void control_failsafe_update() {
   }
 
   if (flags.failsafe_signal_lost) {
+#ifdef VEHICLE_MULTI
+    if (state.rth_failsafe_active) {
+      flags.failsafe = 1;
+      flags.failsafe_outputs_blocked = 0;
+      failsafe_set_phase(FAILSAFE_PHASE_STAGE1_GUARD, now_us);
+      return;
+    }
+#endif
+
     if (state.failsafe_phase == FAILSAFE_PHASE_STAGE2_DROP ||
         state.failsafe_phase == FAILSAFE_PHASE_RECOVERY) {
       flags.failsafe = 1;
