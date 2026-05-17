@@ -8,16 +8,16 @@
 // Test vec3 magnitude calculation
 void test_vec3_magnitude(void) {
   vec3_t v1 = {{3.0f, 4.0f, 0.0f}};
-  TEST_ASSERT_EQUAL_FLOAT(5.0f, vec3_magnitude(&v1));
+  TEST_ASSERT_EQUAL_FLOAT(5.0f, vec3_magnitude(v1));
   
   vec3_t v2 = {{1.0f, 1.0f, 1.0f}};
-  TEST_ASSERT_EQUAL_FLOAT(sqrtf(3.0f), vec3_magnitude(&v2));
+  TEST_ASSERT_EQUAL_FLOAT(sqrtf(3.0f), vec3_magnitude(v2));
   
   vec3_t v3 = {{0.0f, 0.0f, 0.0f}};
-  TEST_ASSERT_EQUAL_FLOAT(0.0f, vec3_magnitude(&v3));
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, vec3_magnitude(v3));
   
   vec3_t v4 = {{2.0f, 2.0f, 2.0f}};
-  TEST_ASSERT_EQUAL_FLOAT(sqrtf(12.0f), vec3_magnitude(&v4));
+  TEST_ASSERT_EQUAL_FLOAT(sqrtf(12.0f), vec3_magnitude(v4));
 }
 
 // Test vec3 rotation (Rodrigues' formula)

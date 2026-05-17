@@ -152,7 +152,20 @@ static inline cbor_result_t encode_output_field_if_present(cbor_value_t *enc, ui
 }
 
 // Encode a frame with I-frame/P-frame compression
+static bool delta_fits_int32(int32_t current, int32_t previous) {
+  const int64_t delta = (int64_t)current - previous;
+  return delta >= INT32_MIN && delta <= INT32_MAX;
+}
+
 cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *current, const blackbox_t *previous, blackbox_frame_type_t frame_type, const uint32_t field_flags) {
+  // A dateline crossing or home reset can exceed a signed 32-bit delta.
+  if (frame_type == BLACKBOX_FRAME_P) {
+    for (unsigned i = 0; i < 2; i++) {
+      if (((field_flags & (1 << BBOX_FIELD_GPS_COORD)) && !delta_fits_int32(current->gps_coord[i], previous->gps_coord[i])) ||
+          ((field_flags & (1 << BBOX_FIELD_GPS_HOME)) && !delta_fits_int32(current->gps_home[i], previous->gps_home[i])))
+        frame_type = BLACKBOX_FRAME_I;
+    }
+  }
   CBOR_CHECK_ERROR(cbor_result_t res = cbor_encode_array_indefinite(enc));
 
   blackbox_t deltas = {0};
@@ -211,7 +224,23 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
         active_fields |= (1 << BBOX_FIELD_DEBUG);
       }
     }
-    
+
+    for (unsigned i = 0; i < 2; i++) {
+      if (field_flags & (1 << BBOX_FIELD_GPS_COORD)) {
+        deltas.gps_coord[i] = current->gps_coord[i] - previous->gps_coord[i];
+        if (deltas.gps_coord[i])
+          active_fields |= 1 << BBOX_FIELD_GPS_COORD;
+      }
+      if (field_flags & (1 << BBOX_FIELD_GPS_HOME)) {
+        deltas.gps_home[i] = current->gps_home[i] - previous->gps_home[i];
+        if (deltas.gps_home[i])
+          active_fields |= 1 << BBOX_FIELD_GPS_HOME;
+      }
+    }
+    if (field_flags & (1 << BBOX_FIELD_ALTITUDE)) {
+      if (current->altitude != previous->altitude)
+        active_fields |= 1 << BBOX_FIELD_ALTITUDE;
+    }
     encoded_field_flags = active_fields | BLACKBOX_FRAME_TYPE_BIT;
   }
   
@@ -254,15 +283,32 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
       CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &cpu_delta));
     }
   }
-  
-  // Debug array
+
+  if (active_flags & (1 << BBOX_FIELD_GPS_COORD)) {
+    CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 2));
+    for (const int32_t value : source->gps_coord) {
+      CBOR_CHECK_ERROR(res = cbor_encode_int32_t(enc, &value));
+    }
+  }
+  if (active_flags & (1 << BBOX_FIELD_GPS_HOME)) {
+    CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 2));
+    for (const int32_t value : source->gps_home) {
+      CBOR_CHECK_ERROR(res = cbor_encode_int32_t(enc, &value));
+    }
+  }
+  if (active_flags & (1 << BBOX_FIELD_ALTITUDE)) {
+    const int32_t altitude = frame_type == BLACKBOX_FRAME_I
+                                 ? current->altitude
+                                 : (int32_t)current->altitude - previous->altitude;
+    CBOR_CHECK_ERROR(res = cbor_encode_int32_t(enc, &altitude));
+  }
+  // Debug remains the last field in the wire format.
   if (active_flags & (1 << BBOX_FIELD_DEBUG)) {
     CBOR_CHECK_ERROR(res = cbor_encode_array(enc, BLACKBOX_DEBUG_SIZE));
     for (uint32_t i = 0; i < BLACKBOX_DEBUG_SIZE; i++) {
       CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &source->debug[i]));
     }
   }
-
   CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
   return res;
 }
@@ -325,7 +371,17 @@ void blackbox_update() {
 
   blackbox.loop++;
   blackbox.time = time_micros();
-
+  if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_GPS_COORD)) {
+    blackbox.gps_coord[0] = state.gps_coord.lat;
+    blackbox.gps_coord[1] = state.gps_coord.lon;
+  }
+  if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_GPS_HOME)) {
+    blackbox.gps_home[0] = state.gps_home.lat;
+    blackbox.gps_home[1] = state.gps_home.lon;
+  }
+  if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_ALTITUDE)) {
+    blackbox.altitude = (int16_t)constrain(state.altitude * 10.0f, -32768.0f, 32767.0f);
+  }
   if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_PID_P_TERM)) {
     blackbox_compress_vec3(&blackbox.pid_p_term, &state.pid_p_term);
   }

@@ -23,6 +23,23 @@
 static void control_flight_mode() {
   const vec3_t rates = input_rates_calc();
 
+  if (flags.controls_override && state.rth_active) {
+    state.angle_error = input_stick_vector(state.rx_filtered.axis);
+    const float yaw_rate = state.rth_yaw_rate;
+
+    const vec3_t yaw_error = {
+        .roll = state.GEstG.pitch * yaw_rate,
+        .pitch = -state.GEstG.roll * yaw_rate,
+        .yaw = state.GEstG.yaw * yaw_rate,
+    };
+
+    for (uint32_t i = 0; i < 3; i++) {
+      state.setpoint.axis[i] = angle_pid(i) + yaw_error.axis[i];
+      state.error.axis[i] = state.setpoint.axis[i] - state.gyro.axis[i];
+    }
+    return;
+  }
+
   if (rx_aux_on(AUX_LEVELMODE)) {
     state.angle_error = input_stick_vector(state.rx_filtered.axis);
 
@@ -50,8 +67,8 @@ static void control_flight_mode() {
       state.error.yaw = yaw_error.axis[2] - state.gyro.yaw;
 
     } else if (rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON)) {
-      float inclinationRoll = state.attitude.roll;
-      float inclinationPitch = state.attitude.pitch;
+      float inclinationRoll = state.attitude.roll * RADTODEG;
+      float inclinationPitch = state.attitude.pitch * RADTODEG;
       float inclinationMax;
       if (fabsf(inclinationRoll) >= fabsf(inclinationPitch)) {
         inclinationMax = fabsf(inclinationRoll);
@@ -90,8 +107,8 @@ static void control_flight_mode() {
 
     } else if (!rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON)) {
       for (int i = 0; i <= 1; i++) {
-        float inclinationRoll = state.attitude.roll;
-        float inclinationPitch = state.attitude.pitch;
+        float inclinationRoll = state.attitude.roll * RADTODEG;
+        float inclinationPitch = state.attitude.pitch * RADTODEG;
         float inclinationMax;
         if (fabsf(inclinationRoll) >= fabsf(inclinationPitch)) {
           inclinationMax = fabsf(inclinationRoll);
@@ -141,10 +158,30 @@ static void control_flight_mode() {
   }
 }
 
+bool control_failsafe_active() {
+  return flags.failsafe_outputs_blocked;
+}
+
 motor_test_t motor_test = {
     .active = 0,
     .value = {MOTOR_OFF, MOTOR_OFF, MOTOR_OFF, MOTOR_OFF},
 };
+
+static float control_throttle_input(void) {
+  if (flags.controls_override && state.rth_active) {
+    return state.rx_override.throttle;
+  }
+  if (!rx_aux_on(AUX_IDLE_UP)) {
+    if (state.rx_filtered.throttle < 0.05f) {
+      return 0;
+    }
+    return (input_throttle_calc(state.rx_filtered.throttle) - 0.05f) * 1.05623158f;
+  }
+  if (flags.controls_override) {
+    return state.rx_filtered.throttle;
+  }
+  return (float)IDLE_THR + input_throttle_calc(state.rx_filtered.throttle) * (1.0f - (float)IDLE_THR);
+}
 
 void control() {
   if (rx_aux_on(AUX_TURTLE) && !rx_aux_on(AUX_MOTOR_TEST)) {
@@ -182,19 +219,7 @@ void control() {
     state.throttle = 0;
     flags.in_air = 0;
   } else {
-    if (!rx_aux_on(AUX_IDLE_UP)) {
-      if (state.rx_filtered.throttle < 0.05f) {
-        state.throttle = 0;
-      } else {
-        state.throttle = (input_throttle_calc(state.rx_filtered.throttle) - 0.05f) * 1.05623158f;
-      }
-    } else {
-      if (flags.controls_override) {
-        state.throttle = state.rx_filtered.throttle;
-      } else {
-        state.throttle = (float)IDLE_THR + input_throttle_calc(state.rx_filtered.throttle) * (1.0f - (float)IDLE_THR);
-      }
-    }
+    state.throttle = control_throttle_input();
 
     if ((state.rx_filtered.throttle > THROTTLE_SAFETY) && (flags.in_air == 0)) {
       flags.in_air = 1;
@@ -208,7 +233,7 @@ void control() {
     output_finalize_motor_values();
     output_write_values();
 #endif
-  } else if (!flags.arm_state || flags.failsafe_outputs_blocked || (state.throttle < 0.001f)) {
+  } else if (!flags.arm_state || control_failsafe_active() || (state.throttle < 0.001f)) {
     flags.on_ground = 1;
     state.throttle = 0;
     state.thrsum = 0;
@@ -240,3 +265,8 @@ void control() {
     motor_update();
   }
 }
+
+#ifdef PIO_UNIT_TESTING
+void control_test_flight_mode(void) { control_flight_mode(); }
+float control_test_throttle_input(void) { return control_throttle_input(); }
+#endif

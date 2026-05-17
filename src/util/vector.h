@@ -1,5 +1,6 @@
 #pragma once
 
+#include <math.h>
 #include <cbor.h>
 
 typedef union {
@@ -14,7 +15,13 @@ typedef union {
 cbor_result_t cbor_encode_vec3_t(cbor_value_t *enc, const vec3_t *vec);
 cbor_result_t cbor_decode_vec3_t(cbor_value_t *dec, vec3_t *vec);
 
-float vec3_magnitude(vec3_t *v);
+static inline float vec3_dot(vec3_t a, vec3_t b) {
+  return a.axis[0] * b.axis[0] + a.axis[1] * b.axis[1] + a.axis[2] * b.axis[2];
+}
+
+static inline float vec3_magnitude(vec3_t v) {
+  return sqrtf(vec3_dot(v, v));
+}
 
 typedef union {
   struct {
@@ -31,7 +38,7 @@ cbor_result_t cbor_decode_compact_vec3_t(cbor_value_t *dec, compact_vec3_t *vec)
 void vec3_from_array(vec3_t *out, float *in);
 void vec3_compress(compact_vec3_t *out, vec3_t *in, float scale);
 
-// Helper functions for vec3_rotate
+// Vec3 operations
 static inline vec3_t vec3_add(vec3_t a, vec3_t b) {
   return (vec3_t){{a.axis[0] + b.axis[0],
                    a.axis[1] + b.axis[1],
@@ -56,15 +63,12 @@ static inline vec3_t vec3_mul_elem(vec3_t a, vec3_t b) {
                    a.axis[2] * b.axis[2]}};
 }
 
-static inline float vec3_dot(vec3_t a, vec3_t b) {
-  return a.axis[0] * b.axis[0] + a.axis[1] * b.axis[1] + a.axis[2] * b.axis[2];
-}
-
 static inline vec3_t vec3_cross(vec3_t a, vec3_t b) {
   return (vec3_t){{a.axis[1] * b.axis[2] - a.axis[2] * b.axis[1],
                    a.axis[2] * b.axis[0] - a.axis[0] * b.axis[2],
                    a.axis[0] * b.axis[1] - a.axis[1] * b.axis[0]}};
 }
+
 
 static inline vec3_t vec3_rotate(const vec3_t vec, const vec3_t rot) {
   return (vec3_t){{
@@ -102,3 +106,12 @@ cbor_result_t cbor_decode_compact_vec4_t(cbor_value_t *dec, compact_vec4_t *vec)
 
 void vec4_from_array(vec4_t *out, float *in);
 void vec4_compress(compact_vec4_t *out, vec4_t *in, float scale);
+
+static inline vec3_t vec3_normalize(vec3_t v) {
+  float mag = vec3_magnitude(v);
+  if (mag > 0.0f) {
+    float inv_mag = 1.0f / mag;
+    return (vec3_t){{v.axis[0] * inv_mag, v.axis[1] * inv_mag, v.axis[2] * inv_mag}};
+  }
+  return v;
+}
