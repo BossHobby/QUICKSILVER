@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "driver/usb.h"
+#include "io/gps.h"
 #include "io/quic.h"
 #include "osd/render.h"
 #include "rx/rx.h"
@@ -501,6 +502,7 @@ const profile_t default_profile = {
             {RX_CHANNEL_OFF, 0, 0}, // AUX_BLACKBOX
             PREARM,                 // AUX_PREARM
             {RX_CHANNEL_OFF, 0, 0}, // AUX_OSD_PROFILE
+            {RX_CHANNEL_OFF, 0, 0}, // AUX_RETURN_TO_HOME
 #ifdef VEHICLE_ROVER
             RATE_ASSIST,   // AUX_RATE_ASSIST
             RATE_THROTTLE, // AUX_RATE_THROTTLE
@@ -539,10 +541,12 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(1, 0, 1, 14, 0, 17),   // OSD_CURRENT_DRAW
                     ENCODE_OSD_ELEMENT(0, 0, 14, 6, 15, 8),   // OSD_CROSSHAIR
                     ENCODE_OSD_ELEMENT(1, 0, 1, 13, 0, 16),   // OSD_CURRENT_DRAWN
-                    ENCODE_OSD_ELEMENT(0, 0, 7, 14, 10, 17),   // OSD_WATTS
-                    ENCODE_OSD_ELEMENT(0, 0, 1, 12, 0, 15),    // OSD_GPS_SATS
-                    ENCODE_OSD_ELEMENT(0, 0, 8, 12, 10, 15),   // OSD_GPS_SPEED
-                    ENCODE_OSD_ELEMENT(0, 0, 12, 12, 19, 15),  // OSD_ROVER_INCLINOMETER
+                    ENCODE_OSD_ELEMENT(0, 0, 7, 14, 10, 17),  // OSD_WATTS
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 12, 0, 15),   // OSD_GPS_SATS
+                    ENCODE_OSD_ELEMENT(0, 0, 8, 12, 10, 15),  // OSD_GPS_SPEED
+                    ENCODE_OSD_ELEMENT(0, 0, 12, 12, 19, 15), // OSD_ROVER_INCLINOMETER
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 2, 44, 1),   // OSD_ALTITUDE
+                    ENCODE_OSD_ELEMENT(0, 0, 12, 2, 22, 1),   // OSD_GPS_HOME
                 },
             },
             [OSD_PROFILE_2] = {
@@ -562,10 +566,12 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(0, 0, 1, 14, 0, 17),   // OSD_CURRENT_DRAW
                     ENCODE_OSD_ELEMENT(0, 0, 14, 6, 15, 8),   // OSD_CROSSHAIR
                     ENCODE_OSD_ELEMENT(0, 0, 1, 13, 0, 16),   // OSD_CURRENT_DRAWN
-                    ENCODE_OSD_ELEMENT(0, 0, 7, 14, 10, 17),   // OSD_WATTS
-                    ENCODE_OSD_ELEMENT(0, 0, 1, 12, 0, 15),    // OSD_GPS_SATS
-                    ENCODE_OSD_ELEMENT(0, 0, 8, 12, 10, 15),   // OSD_GPS_SPEED
-                    ENCODE_OSD_ELEMENT(0, 0, 12, 12, 19, 15),  // OSD_ROVER_INCLINOMETER
+                    ENCODE_OSD_ELEMENT(0, 0, 7, 14, 10, 17),  // OSD_WATTS
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 12, 0, 15),   // OSD_GPS_SATS
+                    ENCODE_OSD_ELEMENT(0, 0, 8, 12, 10, 15),  // OSD_GPS_SPEED
+                    ENCODE_OSD_ELEMENT(0, 0, 12, 12, 19, 15), // OSD_ROVER_INCLINOMETER
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 2, 44, 1),   // OSD_ALTITUDE
+                    ENCODE_OSD_ELEMENT(0, 0, 12, 2, 22, 1),   // OSD_GPS_HOME
                 },
             },
         },
@@ -588,6 +594,30 @@ const profile_t default_profile = {
         .throttle_scale_breakpoint = 1.0f,
         .throttle_scale_factor = 0.5f,
         .reversible = 1,
+    },
+    .navigation = {
+        .rth_altitude = 10.0f,   // 10m above current position
+        .rth_on_failsafe = true, // Enable RTH on failsafe
+        .rth_climb_rate = 2.0f,
+        .rth_descent_rate = 2.0f,
+        .rth_cruise_speed = 4.0f,
+        .rth_home_radius = 3.0f,
+        .rth_max_angle = 15.0f,
+        .rth_max_yaw_rate = 45.0f,
+        .rth_angle_slew_rate = 2.0f,
+        .rth_throttle_min = 0.1f,
+        .rth_throttle_hover = 0.5f,
+        .rth_throttle_max = 0.75f,
+        .rth_min_distance = 10.0f,
+        .rth_min_sats = GPS_MIN_SATS_FOR_LOCK,
+        .rth_max_horizontal_accuracy = 30.0f,
+        .rth_max_position_jump = 50.0f,
+        .rth_gps_stale_ms = 500,
+        .rth_progress_timeout_ms = 5000,
+        .rth_progress_distance = 5.0f,
+        .nav_vel_kp = 0.12f,
+        .nav_vel_ki = 0.02f,
+        .nav_vel_kd = 0.0f,
     },
 };
 
@@ -697,6 +727,7 @@ RX_ROLE_MAP_MEMBERS
 AUX_FUNCTION_MAP_MEMBERS
 RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
+NAVIGATION_MEMBERS
 BLACKBOX_PRESET_MEMBERS
 ROVER_PID_RATE_MEMBERS
 ROVER_MEMBERS
@@ -782,6 +813,7 @@ ROVER_PID_RATE_MEMBERS
 ROVER_MEMBERS
 PROFILE_OUTPUT_MEMBERS
 PROFILE_MIXER_RULE_MEMBERS
+NAVIGATION_MEMBERS
 PROFILE_MEMBERS
 
 #undef START_STRUCT

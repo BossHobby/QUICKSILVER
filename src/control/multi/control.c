@@ -7,6 +7,7 @@
 #include "control/gestures.h"
 #include "control/multi/angle_pid.h"
 #include "control/multi/motor.h"
+#include "control/multi/navigation.h"
 #include "control/multi/pid.h"
 #include "control/multi/rates.h"
 #include "control/multi/turtle_mode.h"
@@ -22,6 +23,22 @@
 
 static void control_flight_mode() {
   const vec3_t rates = input_rates_calc();
+
+  if (flags.controls_override && nav_rth_active()) {
+    state.angle_error = input_stick_vector(state.rx_filtered.axis);
+
+    const vec3_t yaw_error = {
+        .roll = state.GEstG.pitch * rates.yaw,
+        .pitch = -state.GEstG.roll * rates.yaw,
+        .yaw = state.GEstG.yaw * rates.yaw,
+    };
+
+    for (uint32_t i = 0; i < 3; i++) {
+      state.setpoint.axis[i] = angle_pid(i) + yaw_error.axis[i];
+      state.error.axis[i] = state.setpoint.axis[i] - state.gyro.axis[i];
+    }
+    return;
+  }
 
   if (rx_aux_on(AUX_LEVELMODE)) {
     state.angle_error = input_stick_vector(state.rx_filtered.axis);
@@ -141,6 +158,10 @@ static void control_flight_mode() {
   }
 }
 
+bool control_failsafe_active() {
+  return flags.failsafe && !nav_rth_active();
+}
+
 motor_test_t motor_test = {
     .active = 0,
     .value = {MOTOR_OFF, MOTOR_OFF, MOTOR_OFF, MOTOR_OFF},
@@ -207,7 +228,7 @@ void control() {
     output_finalize_motor_values();
     output_write_values();
 #endif
-  } else if (!flags.arm_state || flags.failsafe || (state.throttle < 0.001f)) {
+  } else if (!flags.arm_state || control_failsafe_active() || (state.throttle < 0.001f)) {
     flags.on_ground = 1;
     state.throttle = 0;
     state.thrsum = 0;

@@ -296,6 +296,10 @@ void pid_init() {
   rover_steering_throttle = 0.0f;
 }
 
+bool control_failsafe_active() {
+  return flags.failsafe;
+}
+
 void control() {
   bool motortest_usb = false;
   if (flags.usb_active && motor_test.active) {
@@ -314,7 +318,7 @@ void control() {
     const float throttle = motortest_usb ? rover_test_value(OUTPUT_SOURCE_THROTTLE, MOTOR_OFF) : state.throttle;
     const float steering = motortest_usb ? rover_test_value(OUTPUT_SOURCE_YAW, 0.0f) : 0.0f;
     rover_apply_outputs(throttle, steering);
-  } else if (!flags.arm_state || flags.failsafe) {
+  } else if (!flags.arm_state || control_failsafe_active()) {
     flags.on_ground = 1;
     state.throttle = 0.0f;
     rover_calc_steering();

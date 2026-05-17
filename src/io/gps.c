@@ -391,7 +391,6 @@ static void gps_update_dynamic_model(bool should_be_static) {
     };
     gps_send_message(UBX_CFG_NAV5, (uint8_t *)&cfg_nav5, sizeof(cfg_nav5));
   }
-
 }
 
 static void gps_handle_packet(const uint16_t class_id, const uint8_t *payload, const uint16_t size) {
@@ -410,7 +409,11 @@ static void gps_handle_packet(const uint16_t class_id, const uint8_t *payload, c
     state.gps_altitude = nav_pvt->hMSL / 1000.0f;
     state.gps_heading = nav_pvt->headMot / 100000.0f;
     state.gps_heading_accuracy = nav_pvt->headAcc / 100000.0f;
+    state.gps_horizontal_accuracy = nav_pvt->hAcc * 0.001f;
+    state.gps_last_update_ms = time_millis();
     state.gps_speed = nav_pvt->gSpeed * 0.001f; // mm/s to m/s
+    state.gps_vel_north = nav_pvt->velN * 0.001f;
+    state.gps_vel_east = nav_pvt->velE * 0.001f;
 
     // Update comprehensive status
     gps_status.fix_type = nav_pvt->fixType;

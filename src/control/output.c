@@ -172,7 +172,7 @@ void output_finalize_motor_values(void) {
 }
 
 static bool output_allowed(const profile_output_t *output) {
-  if (flags.failsafe && !flags.motortest_override) {
+  if (control_failsafe_active() && !flags.motortest_override) {
     return false;
   }
   if (output->protocol == OUTPUT_PROTOCOL_PWM) {

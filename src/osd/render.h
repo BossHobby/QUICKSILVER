@@ -83,6 +83,8 @@ typedef enum {
   OSD_GPS_SATS,
   OSD_GPS_SPEED,
   OSD_ROVER_INCLINOMETER,
+  OSD_ALTITUDE,
+  OSD_GPS_HOME,
 
   OSD_ELEMENT_MAX
 } osd_elements_t;

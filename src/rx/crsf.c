@@ -98,8 +98,8 @@ uint32_t crsf_tlm_frame_gps(uint8_t *buf) {
   buf[8] = lon >> 16;
   buf[9] = lon >> 8;
   buf[10] = lon;
-
-  const uint16_t speed = (uint16_t)(state.gps_speed * 3.6f * 100);
+  // Groundspeed: km/h / 100 (big endian)
+  const uint16_t speed = (uint16_t)(state.gps_speed * 3.6f * 100); // Convert m/s to km/h then scale by 100
   buf[11] = speed >> 8;
   buf[12] = speed;
 

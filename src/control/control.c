@@ -66,9 +66,7 @@ FAST_RAM control_state_t state = {
 #define END_STRUCT CBOR_END_STRUCT_ENCODER
 
 GPS_COORD_MEMBERS
-CBOR_START_STRUCT_ENCODER(control_state_t)
 STATE_MEMBERS
-CBOR_END_STRUCT_ENCODER()
 
 #undef START_STRUCT
 #undef END_STRUCT
@@ -91,7 +89,7 @@ void control_update_arming() {
     rx_ready_seen = false;
   }
 
-  if (flags.failsafe) {
+  if (control_failsafe_active()) {
     const uint32_t now_ms = time_millis();
 
     if (state.failsafe_time_ms == 0) {

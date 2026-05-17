@@ -3,10 +3,10 @@
 #include "core/profile.h"
 #include "util/util.h"
 
-#define BLACKBOX_VERSION MAKE_SEMVER(0, 2, 0)
+#define BLACKBOX_VERSION MAKE_SEMVER(0, 3, 0)
 
 #define BLACKBOX_SCALE 100
-#define BLACKBOX_DEBUG_SIZE 10
+#define BLACKBOX_DEBUG_SIZE 16
 
 typedef enum {
   BBOX_FIELD_LOOP,
@@ -30,6 +30,7 @@ typedef enum {
 typedef enum {
   BBOX_DEBUG_DYN_NOTCH = 0x1 << 0,
   BBOX_DEBUG_ROVER = 0x1 << 1,
+  BBOX_DEBUG_NAVIGATION = 0x1 << 2,
 } blackbox_debug_flag_t;
 
 typedef struct {

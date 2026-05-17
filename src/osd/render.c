@@ -20,6 +20,9 @@
 
 #define ICON_RSSI 0x1
 #define ICON_LQI 0x7b
+#define ICON_ALTITUDE 0x7f
+#define ICON_METERS 0xc
+#define ICON_KILOMETERS 0x7d
 #define ICON_CELSIUS 0xe
 #define ICON_THROTTLE 0x4
 #define ICON_VOLT 0x6
@@ -36,6 +39,8 @@
 #define ICON_KPH 0x9E
 
 #define ROVER_ROLLOVER_WARNING_DEGREES 45
+#define ICON_ARROW_NORTH 0x60 // First arrow points North (0°)
+#define ICON_HOME 0x05
 
 #define HOLD 0
 #define TEMP 1
@@ -80,10 +85,12 @@ static const char *osd_element_labels[] = {
     "CURRENT DRAW",
     "CROSSHAIR",
     "CURRENT DRAWN",
-    "WATTS",  // Added watts label
+    "WATTS",
     "GPS SATS",
     "GPS SPEED",
     "INCLINOMETER",
+    "ALTITUDE",
+    "GPS HOME",
 };
 
 static const char *aux_channel_labels[] = {
@@ -388,16 +395,19 @@ static void print_osd_flightmode(osd_element_t *el) {
   osd_start_el(el);
   osd_write_data(steer_mode_labels[steer_mode], 10);
 #else
-  const uint8_t flightmode_labels[5][10] = {
+  const uint8_t flightmode_labels[6][10] = {
       {"   ACRO   "},
       {"  LEVEL   "},
       {" RACEMODE "},
       {" HORIZON  "},
       {"RM HORIZON"},
+      {"   RTH    "},
   };
 
-  uint8_t flightmode;
-  if (rx_aux_on(AUX_LEVELMODE)) {
+  uint8_t flightmode = 0;
+  if (rx_aux_on(AUX_RETURN_TO_HOME)) {
+    flightmode = 5;
+  } else if (rx_aux_on(AUX_LEVELMODE)) {
     if (rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON))
       flightmode = 4;
     if (!rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON))
@@ -530,6 +540,13 @@ static void print_osd_inclinometer(osd_element_t *el) {
   osd_write_int(roll, 3);
   osd_write_char('P');
   osd_write_int(pitch, 3);
+}
+
+static void print_heading(float heading_deg) {
+  // Convert to 16-direction index (0-15) with proper rounding
+  // Add 11.25 degrees (half of 22.5) for rounding to nearest direction
+  const uint8_t direction = (uint8_t)((normalize_deg(heading_deg) + 11.25f) / 22.5f) % 16;
+  osd_write_char(ICON_ARROW_NORTH + direction);
 }
 
 void osd_init() {
@@ -665,6 +682,38 @@ static void osd_display_regular() {
       break;
     }
 
+    case OSD_ALTITUDE: {
+      osd_start_el(el);
+      osd_write_char(ICON_ALTITUDE);
+      if (state.altitude > 1000.f) {
+        osd_write_float(state.altitude / 1000.f, 3, 1);
+        osd_write_char(ICON_KILOMETERS);
+      } else {
+        osd_write_float(state.altitude, 3, 1);
+        osd_write_char(ICON_METERS);
+      }
+      break;
+    }
+
+    case OSD_GPS_HOME: {
+      osd_start_el(el);
+      if (state.home_distance < 5.f) {
+        osd_write_char(ICON_HOME);
+      } else {
+        // Show arrow relative to craft heading
+        // Add 180° to flip the arrow if it appears back-to-front
+        // If home is behind (180° relative), arrow should point backwards
+        print_heading(state.home_bearing - state.heading + 180.0f);
+      }
+      if (state.home_distance >= 1000.f) {
+        osd_write_float(state.home_distance / 1000.f, 4, 1);
+        osd_write_char(ICON_KILOMETERS);
+      } else {
+        osd_write_float(state.home_distance, 4, 1);
+        osd_write_char(ICON_METERS);
+      }
+      break;
+    }
     }
   }
 

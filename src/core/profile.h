@@ -9,7 +9,7 @@
 
 #define OSD_NUMBER_ELEMENTS 32
 
-#define PROFILE_VERSION MAKE_SEMVER(0, 3, 0)
+#define PROFILE_VERSION MAKE_SEMVER(0, 5, 0)
 
 // Rates
 typedef enum {
@@ -478,6 +478,58 @@ typedef struct {
   STR_MEMBER(name_osd)             \
   END_STRUCT()
 
+typedef struct {
+  // RTH parameters
+  float rth_altitude;        // Altitude offset from current position
+  bool rth_on_failsafe;      // Activate RTH on failsafe
+  float rth_climb_rate;      // m/s climb rate during initial climb
+  float rth_descent_rate;    // m/s descent rate during return/descent
+  float rth_cruise_speed;    // m/s target horizontal return speed
+  float rth_home_radius;     // meters considered home reached
+  float rth_max_angle;       // degrees maximum navigation tilt command
+  float rth_max_yaw_rate;    // deg/s maximum yaw rate toward home
+  float rth_angle_slew_rate; // stick units per second for nav roll/pitch commands
+  float rth_throttle_min;
+  float rth_throttle_hover;
+  float rth_throttle_max;
+  float rth_min_distance;
+  uint8_t rth_min_sats;
+  float rth_max_horizontal_accuracy;
+  float rth_max_position_jump;
+  uint32_t rth_gps_stale_ms;
+  uint32_t rth_progress_timeout_ms;
+  float rth_progress_distance;
+  float nav_vel_kp;
+  float nav_vel_ki;
+  float nav_vel_kd;
+} profile_navigation_t;
+
+#define NAVIGATION_MEMBERS            \
+  START_STRUCT(profile_navigation_t)  \
+  MEMBER(rth_altitude, float)         \
+  MEMBER(rth_on_failsafe, bool)       \
+  MEMBER(rth_climb_rate, float)       \
+  MEMBER(rth_descent_rate, float)     \
+  MEMBER(rth_cruise_speed, float)     \
+  MEMBER(rth_home_radius, float)      \
+  MEMBER(rth_max_angle, float)        \
+  MEMBER(rth_max_yaw_rate, float)     \
+  MEMBER(rth_angle_slew_rate, float)  \
+  MEMBER(rth_throttle_min, float)     \
+  MEMBER(rth_throttle_hover, float)   \
+  MEMBER(rth_throttle_max, float)     \
+  MEMBER(rth_min_distance, float)     \
+  MEMBER(rth_min_sats, uint8_t)       \
+  MEMBER(rth_max_horizontal_accuracy, float) \
+  MEMBER(rth_max_position_jump, float) \
+  MEMBER(rth_gps_stale_ms, uint32_t)  \
+  MEMBER(rth_progress_timeout_ms, uint32_t) \
+  MEMBER(rth_progress_distance, float) \
+  MEMBER(nav_vel_kp, float)           \
+  MEMBER(nav_vel_ki, float)           \
+  MEMBER(nav_vel_kd, float)           \
+  END_STRUCT()
+
 // Full Profile
 typedef struct {
   profile_metadata_t meta;
@@ -495,6 +547,7 @@ typedef struct {
   profile_voltage_t voltage;
   profile_blackbox_t blackbox;
   profile_rover_t rover;
+  profile_navigation_t navigation;
 } profile_t;
 
 #ifdef VEHICLE_ROVER
@@ -512,6 +565,7 @@ typedef struct {
   MEMBER(voltage, profile_voltage_t)                                                 \
   MEMBER(blackbox, profile_blackbox_t)                                               \
   MEMBER(rover, profile_rover_t)                                                     \
+  MEMBER(navigation, profile_navigation_t)                                           \
   END_STRUCT()
 #else
 #define PROFILE_MEMBERS                \
@@ -524,10 +578,11 @@ typedef struct {
   MEMBER(filter, profile_filter_t)     \
   MEMBER(osd, profile_osd_t)           \
   MEMBER(rate, profile_rate_t)         \
-  MEMBER(receiver, profile_receiver_t) \
-  MEMBER(pid, profile_pid_t)           \
-  MEMBER(voltage, profile_voltage_t)   \
-  MEMBER(blackbox, profile_blackbox_t) \
+  MEMBER(receiver, profile_receiver_t)   \
+  MEMBER(pid, profile_pid_t)             \
+  MEMBER(voltage, profile_voltage_t)     \
+  MEMBER(blackbox, profile_blackbox_t)   \
+  MEMBER(navigation, profile_navigation_t) \
   END_STRUCT()
 #endif
 

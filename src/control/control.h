@@ -134,12 +134,23 @@ typedef struct {
   bool gps_lock;
   uint8_t gps_sats;
   float gps_speed;
+  float gps_vel_north;
+  float gps_vel_east;
   float gps_heading;
   float gps_heading_accuracy;
+  float gps_horizontal_accuracy;
+  uint32_t gps_last_update_ms;
   gps_coord_t gps_coord;
   float gps_altitude;
   float baro_pressure;
-  float baro_altitude;
+  float baro_altitude;        // baro altitude
+  float baro_launch_altitude; // baro altitude over launchpoint
+  uint32_t gps_version;
+  gps_coord_t gps_home;
+  float heading;
+  float home_bearing;
+  float home_distance;
+  float altitude; // altitude over launchpoint
 
   vec3_t setpoint; // angular velocity setpoint from stick input
   vec3_t error;    // setpoint - gyro = error in angular velocity
@@ -159,68 +170,78 @@ typedef struct {
   uint32_t dshot_rpm[4];
 } control_state_t;
 
-#define STATE_MEMBERS                                  \
-  MEMBER(failloop, uint8_t)                            \
-  MEMBER(looptime, float)                              \
-  MEMBER(looptime_us, float)                           \
-  MEMBER(looptime_autodetect, float)                   \
-  MEMBER(looptime_inverse, float)                      \
-  MEMBER(loop_counter, uint32_t)                       \
-  MEMBER(uptime, float)                                \
-  MEMBER(armtime, float)                               \
-  MEMBER(cpu_load, uint32_t)                           \
-  MEMBER(failsafe_time_ms, uint32_t)                   \
-  MEMBER(lipo_cell_count, uint8_t)                     \
-  MEMBER(cpu_temp, float)                              \
-  MEMBER(vbat, float)                                  \
-  MEMBER(vbat_filtered, float)                         \
-  MEMBER(vbat_sag_filtered, float)                     \
-  MEMBER(vbat_cell_avg, float)                         \
-  MEMBER(vbat_compensated, float)                      \
-  MEMBER(vbat_compensated_cell_avg, float)             \
-  MEMBER(ibat, float)                                  \
-  MEMBER(ibat_filtered, float)                         \
-  MEMBER(ibat_sag_filtered, float)                     \
-  MEMBER(ibat_drawn, float)                            \
-  MEMBER(rx, vec4_t)                                   \
-  MEMBER(rx_filtered, vec4_t)                          \
-  MEMBER(rx_override, vec4_t)                          \
-  ARRAY_MEMBER(rx_channels, RX_CHANNEL_MAX, uint16_t)  \
-  MEMBER(stick_calibration_wizard, uint8_t)            \
-  MEMBER(rx_rssi, float)                               \
-  MEMBER(rx_status, uint32_t)                          \
-  MEMBER(throttle, float)                              \
-  MEMBER(thrsum, float)                                \
-  MEMBER(aux_active, uint32_t)                         \
-  MEMBER(accel_raw, vec3_t)                            \
-  MEMBER(accel, vec3_t)                                \
-  MEMBER(gyro_temp, float)                             \
-  MEMBER(gyro_raw, vec3_t)                             \
-  MEMBER(gyro, vec3_t)                                 \
-  MEMBER(gyro_delta_angle, vec3_t)                     \
-  MEMBER(GEstG, vec3_t)                                \
-  MEMBER(attitude, vec3_t)                             \
-  MEMBER(gps_lock, bool)                               \
-  MEMBER(gps_sats, uint8_t)                            \
-  MEMBER(gps_speed, float)                             \
-  MEMBER(gps_heading, float)                           \
-  MEMBER(gps_heading_accuracy, float)                  \
-  MEMBER(gps_coord, gps_coord_t)                       \
-  MEMBER(gps_altitude, float)                          \
-  MEMBER(baro_pressure, float)                         \
-  MEMBER(baro_altitude, float)                         \
-  MEMBER(setpoint, vec3_t)                             \
-  MEMBER(error, vec3_t)                                \
-  MEMBER(pid_p_term, vec3_t)                           \
-  MEMBER(pid_i_term, vec3_t)                           \
-  MEMBER(pid_d_term, vec3_t)                           \
-  MEMBER(pidoutput, vec3_t)                            \
-  ARRAY_MEMBER(mixer_source, OUTPUT_SOURCE_MAX, float) \
-  ARRAY_MEMBER(output, MOTOR_PIN_MAX, float)           \
-  ARRAY_MEMBER(output_active, MOTOR_PIN_MAX, uint8_t)  \
-  MEMBER(angle_error, vec3_t)                          \
-  MEMBER(stick_vector, vec3_t)                         \
-  ARRAY_MEMBER(dshot_rpm, 4, uint32_t)
+#define STATE_MEMBERS                                 \
+  START_STRUCT(control_state_t)                       \
+  MEMBER(failloop, uint8_t)                           \
+  MEMBER(looptime, float)                             \
+  MEMBER(looptime_us, float)                          \
+  MEMBER(looptime_autodetect, float)                  \
+  MEMBER(looptime_inverse, float)                     \
+  MEMBER(loop_counter, uint32_t)                      \
+  MEMBER(uptime, float)                               \
+  MEMBER(armtime, float)                              \
+  MEMBER(cpu_load, uint32_t)                          \
+  MEMBER(failsafe_time_ms, uint32_t)                  \
+  MEMBER(lipo_cell_count, uint8_t)                    \
+  MEMBER(cpu_temp, float)                             \
+  MEMBER(vbat, float)                                 \
+  MEMBER(vbat_filtered, float)                        \
+  MEMBER(vbat_sag_filtered, float)                    \
+  MEMBER(vbat_cell_avg, float)                        \
+  MEMBER(vbat_compensated, float)                     \
+  MEMBER(vbat_compensated_cell_avg, float)            \
+  MEMBER(ibat, float)                                 \
+  MEMBER(ibat_filtered, float)                        \
+  MEMBER(ibat_sag_filtered, float)                    \
+  MEMBER(ibat_drawn, float)                           \
+  MEMBER(rx, vec4_t)                                  \
+  MEMBER(rx_filtered, vec4_t)                         \
+  MEMBER(rx_override, vec4_t)                         \
+  ARRAY_MEMBER(rx_channels, RX_CHANNEL_MAX, uint16_t) \
+  MEMBER(stick_calibration_wizard, uint8_t)           \
+  MEMBER(rx_rssi, float)                              \
+  MEMBER(rx_status, uint32_t)                         \
+  MEMBER(throttle, float)                             \
+  MEMBER(thrsum, float)                               \
+  MEMBER(aux_active, uint32_t)                        \
+  MEMBER(accel_raw, vec3_t)                           \
+  MEMBER(accel, vec3_t)                               \
+  MEMBER(gyro_temp, float)                            \
+  MEMBER(gyro_raw, vec3_t)                            \
+  MEMBER(gyro, vec3_t)                                \
+  MEMBER(gyro_delta_angle, vec3_t)                    \
+  MEMBER(GEstG, vec3_t)                               \
+  MEMBER(attitude, vec3_t)                            \
+  MEMBER(gps_lock, bool)                              \
+  MEMBER(gps_sats, uint8_t)                           \
+  MEMBER(gps_speed, float)                            \
+  MEMBER(gps_vel_north, float)                        \
+  MEMBER(gps_vel_east, float)                         \
+  MEMBER(gps_heading, float)                          \
+  MEMBER(gps_heading_accuracy, float)                 \
+  MEMBER(gps_horizontal_accuracy, float)              \
+  MEMBER(gps_last_update_ms, uint32_t)                \
+  MEMBER(gps_coord, gps_coord_t)                      \
+  MEMBER(gps_altitude, float)                         \
+  MEMBER(baro_pressure, float)                        \
+  MEMBER(baro_altitude, float)                        \
+  MEMBER(baro_launch_altitude, float)                 \
+  MEMBER(gps_version, uint32_t)                       \
+  MEMBER(gps_home, gps_coord_t)                       \
+  MEMBER(heading, float)                              \
+  MEMBER(home_bearing, float)                         \
+  MEMBER(home_distance, float)                        \
+  MEMBER(altitude, float)                             \
+  MEMBER(setpoint, vec3_t)                            \
+  MEMBER(error, vec3_t)                               \
+  MEMBER(pid_p_term, vec3_t)                          \
+  MEMBER(pid_i_term, vec3_t)                          \
+  MEMBER(pid_d_term, vec3_t)                          \
+  MEMBER(pidoutput, vec3_t)                           \
+  MEMBER(angle_error, vec3_t)                         \
+  MEMBER(stick_vector, vec3_t)                        \
+  ARRAY_MEMBER(dshot_rpm, 4, uint32_t)                \
+  END_STRUCT()
 
 typedef struct {
   uint8_t active;
@@ -233,4 +254,5 @@ extern motor_test_t motor_test;
 cbor_result_t cbor_encode_control_state_t(cbor_value_t *enc, const control_state_t *s);
 
 void control_update_arming();
+bool control_failsafe_active();
 void control();

@@ -2,8 +2,8 @@
 
 #include <math.h>
 
-#include "driver/i2c.h"
 #include "control/control.h"
+#include "driver/i2c.h"
 
 #include "driver/baro/bmp280.h"
 #include "driver/baro/bmp388.h"
@@ -25,7 +25,7 @@ static baro_interface_t *const baro_interfaces[BARO_TYPE_MAX] = {
     [BARO_TYPE_DPS310] = &dps310_interface,
 };
 
-baro_types_t baro_init() {
+baro_types_t baro_init(void) {
   if (target.baro.port == I2C_PORT_INVALID)
     return baro_type;
 
@@ -47,19 +47,20 @@ static float baro_pressure_to_altitude(const float pressure) {
   return (1.0f - powf(pressure / P0, 1.0f / 5.25588f)) / 2.25577e-5f;
 }
 
-void baro_update(void) {
+bool baro_update(void) {
   if (baro_type == BARO_TYPE_INVALID)
-    return;
+    return false;
 
   if (!i2c_is_idle(&baro_bus))
-    return;
+    return false;
 
   if (!baro->get_pressure(&state.baro_pressure))
-    return;
+    return false;
 
   state.baro_altitude = baro_pressure_to_altitude(state.baro_pressure);
+  return true;
 }
 #else
 baro_types_t baro_init(void) { return BARO_TYPE_INVALID; }
-void baro_update(void) { return; }
+bool baro_update(void) { return false; }
 #endif

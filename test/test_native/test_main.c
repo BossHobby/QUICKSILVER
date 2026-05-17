@@ -26,8 +26,17 @@ extern void test_imu_gravity_vector_init(void);
 extern void test_imu_gyro_integration(void);
 extern void test_imu_accel_fusion_ground(void);
 extern void test_imu_accel_magnitude_rejection(void);
+extern void test_imu_zero_gravity_vector_does_not_nan(void);
 extern void test_imu_attitude_calculation(void);
 extern void test_imu_in_flight_behavior(void);
+extern void test_imu_heading_level(void);
+extern void test_imu_heading_tilted(void);
+extern void test_imu_gps_fusion_low_speed(void);
+extern void test_imu_gps_fusion_variable_gain(void);
+extern void test_imu_gps_fusion_trust_speed(void);
+extern void test_imu_heading_normalization(void);
+extern void test_imu_gps_fusion_poor_accuracy(void);
+extern void test_imu_heading_complex_rotation(void);
 
 // Vector tests
 extern void test_vec3_magnitude(void);
@@ -99,6 +108,32 @@ extern void test_blackbox_cbor_vec3_roundtrip(void);
 extern void test_blackbox_cbor_vec4_roundtrip(void);
 extern void test_blackbox_iframe_interval(void);
 
+// Attitude tests
+extern void test_attitude_initial_state(void);
+extern void test_attitude_level_flight(void);
+extern void test_attitude_accepts_scaled_gravity_vector(void);
+extern void test_attitude_ignores_invalid_gravity_vector(void);
+extern void test_attitude_converges_faster_when_disarmed(void);
+extern void test_attitude_roll_rotation(void);
+extern void test_attitude_pitch_rotation(void);
+extern void test_attitude_yaw_rotation(void);
+extern void test_attitude_accel_correction(void);
+extern void test_attitude_gps_heading_fusion(void);
+extern void test_attitude_gps_suppression_yaw_stick(void);
+extern void test_attitude_gps_suppression_roll(void);
+extern void test_attitude_no_gps_when_stationary(void);
+extern void test_attitude_quaternion_normalization(void);
+extern void test_attitude_heading_wraparound(void);
+
+// Navigation tests
+extern void test_navigation_target_north_commands_forward_pitch(void);
+extern void test_navigation_target_south_commands_backward_pitch(void);
+extern void test_navigation_target_east_commands_right_roll(void);
+extern void test_navigation_heading_east_target_north_commands_left_roll(void);
+extern void test_navigation_north_velocity_overshoot_commands_backward_pitch(void);
+extern void test_navigation_east_velocity_overshoot_commands_left_roll(void);
+extern void test_navigation_command_respects_rth_angle_limit(void);
+
 // Common setUp and tearDown
 void setUp(void) {
   // Reset hardware mocks before each test
@@ -137,8 +172,17 @@ int main(int argc, char **argv) {
   RUN_TEST(test_imu_gyro_integration);
   RUN_TEST(test_imu_accel_fusion_ground);
   RUN_TEST(test_imu_accel_magnitude_rejection);
+  RUN_TEST(test_imu_zero_gravity_vector_does_not_nan);
   RUN_TEST(test_imu_attitude_calculation);
   RUN_TEST(test_imu_in_flight_behavior);
+  RUN_TEST(test_imu_heading_level);
+  RUN_TEST(test_imu_heading_tilted);
+  RUN_TEST(test_imu_gps_fusion_low_speed);
+  RUN_TEST(test_imu_gps_fusion_variable_gain);
+  RUN_TEST(test_imu_gps_fusion_trust_speed);
+  RUN_TEST(test_imu_heading_normalization);
+  RUN_TEST(test_imu_gps_fusion_poor_accuracy);
+  RUN_TEST(test_imu_heading_complex_rotation);
 
   // Vector tests
   RUN_TEST(test_vec3_magnitude);
@@ -209,6 +253,31 @@ int main(int argc, char **argv) {
   RUN_TEST(test_blackbox_cbor_vec3_roundtrip);
   RUN_TEST(test_blackbox_cbor_vec4_roundtrip);
   RUN_TEST(test_blackbox_iframe_interval);
+
+  // Attitude tests
+  RUN_TEST(test_attitude_initial_state);
+  RUN_TEST(test_attitude_level_flight);
+  RUN_TEST(test_attitude_accepts_scaled_gravity_vector);
+  RUN_TEST(test_attitude_ignores_invalid_gravity_vector);
+  RUN_TEST(test_attitude_converges_faster_when_disarmed);
+  RUN_TEST(test_attitude_roll_rotation);
+  RUN_TEST(test_attitude_pitch_rotation);
+  RUN_TEST(test_attitude_yaw_rotation);
+  RUN_TEST(test_attitude_accel_correction);
+  RUN_TEST(test_attitude_gps_heading_fusion);
+  RUN_TEST(test_attitude_gps_suppression_yaw_stick);
+  RUN_TEST(test_attitude_gps_suppression_roll);
+  RUN_TEST(test_attitude_no_gps_when_stationary);
+  RUN_TEST(test_attitude_quaternion_normalization);
+  RUN_TEST(test_attitude_heading_wraparound);
+  // Navigation tests
+  RUN_TEST(test_navigation_target_north_commands_forward_pitch);
+  RUN_TEST(test_navigation_target_south_commands_backward_pitch);
+  RUN_TEST(test_navigation_target_east_commands_right_roll);
+  RUN_TEST(test_navigation_heading_east_target_north_commands_left_roll);
+  RUN_TEST(test_navigation_north_velocity_overshoot_commands_backward_pitch);
+  RUN_TEST(test_navigation_east_velocity_overshoot_commands_left_roll);
+  RUN_TEST(test_navigation_command_respects_rth_angle_limit);
 
   return UNITY_END();
 }
