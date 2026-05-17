@@ -27,6 +27,12 @@ This file provides repository guidance for coding agents working in this reposit
 - Memory sections: respect DMA and FAST RAM sections where specified
 - Use const whenever possible
 
+## Profile Compatibility
+
+- Profile versions advance once for a new release after the previous version has had a public release. Do not bump `PROFILE_VERSION` repeatedly while working on the next unreleased version, even when additional persisted fields or schema changes are added. Extend the current unreleased version's changelog entry instead. Check public release history before deciding a version bump is needed.
+- The same public-release boundary applies to Configurator migrations: migrate publicly released profile formats only. Do not add migrations, compatibility adapters, or migration-time default filling for intermediate development profiles or artifacts. Update the current schema and its normal defaults directly.
+- Do not add on-device profile migrations. When changing persisted profile layout, update defaults/schema/versioning and expect old on-device profiles to be reset or rewritten off-device rather than migrated in firmware.
+
 ## Architecture Overview
 
 QUICKSILVER is FPV drone flight controller firmware supporting STM32 F4/F7/H7/G4 and AT32 F435 MCUs.
@@ -159,7 +165,7 @@ Common Unity assertions used:
 
 The native test environments inherit their matching simulator environments:
 
-- `multi-test` inherits `multi-simulator`: shared tests and flight PID tests
+- `multi-test` inherits `multi-simulator`: shared tests, flight PID tests, and navigation tests
 - `rover-test` inherits `rover-simulator`: shared tests and rover control tests
 - `wing-test` inherits `wing-simulator`: shared tests, flight PID tests, and wing control tests
 
@@ -168,7 +174,7 @@ use Unity's entry point and shared hardware test doubles; simulators use the
 normal firmware entry point. The `native-test` section holds common test settings.
 
 Suites are split into `test/test_common`, `test/test_pid`, `test/test_rover`, and
-`test/test_wing`. PlatformIO requires the `test_` directory prefix for discovery;
+`test/test_wing`, plus multirotor-only `test/test_navigation`. PlatformIO requires the `test_` directory prefix for discovery;
 environment names use hyphens. Shared mocks live directly under `test/`.
 
 ### Test Coverage

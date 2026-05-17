@@ -29,13 +29,6 @@ cbor_result_t cbor_decode_vec3_t(cbor_value_t *it, vec3_t *vec) {
   return res;
 }
 
-float vec3_magnitude(vec3_t *v) {
-  float max = 0;
-  for (uint8_t axis = 0; axis < 3; axis++) {
-    max += v->axis[axis] * v->axis[axis];
-  }
-  return sqrtf(max);
-}
 
 cbor_result_t cbor_encode_compact_vec3_t(cbor_value_t *enc, const compact_vec3_t *vec) {
   cbor_result_t res = CBOR_OK;

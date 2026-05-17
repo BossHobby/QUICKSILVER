@@ -451,6 +451,10 @@ static void wing_update_throttle() {
   }
 }
 
+bool control_failsafe_active() {
+  return flags.failsafe_outputs_blocked;
+}
+
 void control() {
   bool motortest_usb = false;
   if (flags.usb_active && motor_test.active) {

@@ -6,9 +6,9 @@
 
 #include "driver/time.h"
 
-constexpr float DEGTORAD = 0.017453292f;
-constexpr float RADTODEG = 57.29577951f;
 constexpr float M_PI_F = 3.14159265358979323846f;
+constexpr float DEGTORAD = M_PI_F / 180.0f;
+constexpr float RADTODEG = 180.0f / M_PI_F;
 
 #define MEMORY_ALIGN(offset, size) (((offset) + ((size) - 1)) & -(size))
 
@@ -62,6 +62,9 @@ float atan2approx(float y, float x);
 int ipow(int base, int exp);
 float fastsin(float x);
 float fastcos(float x);
+
+float normalize_deg(float deg);
+float normalize_rad(float rad);
 
 int8_t buf_equal(const uint8_t *str1, size_t len1, const uint8_t *str2, size_t len2);
 int8_t buf_equal_string(const uint8_t *str1, size_t len1, const char *str2);
