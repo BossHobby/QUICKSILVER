@@ -4,10 +4,86 @@
 
 // Include blackbox headers
 #include "io/blackbox.h"
+#include "io/blackbox_device.h"
 #include "util/vector.h"
 #include "util/cbor_helper.h"
 
 // Define constants for testing (from blackbox.c)
+void test_blackbox_navigation_roundtrip_and_unchanged_home(void) {
+  const uint32_t fields = (1 << BBOX_FIELD_GPS_COORD) | (1 << BBOX_FIELD_GPS_HOME) |
+                          (1 << BBOX_FIELD_ALTITUDE) | (1 << BBOX_FIELD_DEBUG);
+  blackbox_t previous = {};
+  previous.gps_coord[0] = -338765432;
+  previous.gps_coord[1] = 1511234567;
+  previous.gps_home[0] = -338765000;
+  previous.gps_home[1] = 1511234000;
+  previous.altitude = -123;
+  previous.debug[0] = 42;
+  for (int pass = 0; pass < 3; pass++) {
+    blackbox_t current = previous;
+    if (pass == 1) {
+      current.gps_coord[0] += 7;
+      current.gps_coord[1] -= 9;
+      current.altitude = 321;
+    }
+    if (pass == 2) current.gps_coord[1] = -1799999999;
+    uint8_t buffer[BLACKBOX_MAX_SIZE];
+    cbor_value_t codec;
+    cbor_encoder_init(&codec, buffer, sizeof(buffer));
+    TEST_ASSERT_EQUAL(CBOR_OK, cbor_encode_blackbox_frame(&codec, &current, &previous,
+        pass == 0 ? BLACKBOX_FRAME_I : BLACKBOX_FRAME_P, fields));
+    const auto length = cbor_encoder_len(&codec);
+    cbor_decoder_init(&codec, buffer, length);
+    cbor_container_t array;
+    TEST_ASSERT_TRUE(cbor_decode_array(&codec, &array) >= CBOR_OK);
+    uint32_t flags;
+    TEST_ASSERT_TRUE(cbor_decode_uint32_t(&codec, &flags) >= CBOR_OK);
+    TEST_ASSERT_EQUAL(pass == 1, (flags & BLACKBOX_FRAME_TYPE_BIT) != 0);
+    TEST_ASSERT_EQUAL(pass != 1, (flags & (1 << BBOX_FIELD_GPS_HOME)) != 0);
+    TEST_ASSERT_TRUE(cbor_decode_skip(&codec) >= CBOR_OK); // loop
+    TEST_ASSERT_TRUE(cbor_decode_skip(&codec) >= CBOR_OK); // time
+    TEST_ASSERT_TRUE(cbor_decode_array(&codec, &array) >= CBOR_OK);
+    for (unsigned i = 0; i < 2; i++) {
+      int32_t value;
+      TEST_ASSERT_TRUE(cbor_decode_int32_t(&codec, &value) >= CBOR_OK);
+      TEST_ASSERT_EQUAL_INT32(current.gps_coord[i], pass == 1 ? previous.gps_coord[i] + value : value);
+    }
+    if (pass != 1) {
+      TEST_ASSERT_TRUE(cbor_decode_array(&codec, &array) >= CBOR_OK);
+      for (unsigned i = 0; i < 2; i++) {
+        int32_t value;
+        TEST_ASSERT_TRUE(cbor_decode_int32_t(&codec, &value) >= CBOR_OK);
+        TEST_ASSERT_EQUAL_INT32(current.gps_home[i], value);
+      }
+    }
+    int32_t altitude;
+    TEST_ASSERT_TRUE(cbor_decode_int32_t(&codec, &altitude) >= CBOR_OK);
+    TEST_ASSERT_EQUAL_INT32(current.altitude, pass == 1 ? previous.altitude + altitude : altitude);
+    if (pass != 1) {
+      TEST_ASSERT_TRUE(cbor_decode_array(&codec, &array) >= CBOR_OK);
+      int16_t debug;
+      TEST_ASSERT_TRUE(cbor_decode_int16_t(&codec, &debug) >= CBOR_OK);
+      TEST_ASSERT_EQUAL_INT16(42, debug);
+    }
+  }
+}
+
+void test_blackbox_full_frame_fits_device_buffer(void) {
+  blackbox_t frame;
+  memset(&frame, 0x7f, sizeof(frame));
+  frame.gps_coord[0] = -900000000;
+  frame.gps_coord[1] = -1800000000;
+  frame.gps_home[0] = 900000000;
+  frame.gps_home[1] = 1800000000;
+  frame.altitude = INT16_MIN;
+  uint8_t buffer[BLACKBOX_MAX_SIZE];
+  cbor_value_t codec;
+  cbor_encoder_init(&codec, buffer, sizeof(buffer));
+  TEST_ASSERT_EQUAL(CBOR_OK, cbor_encode_blackbox_frame(&codec, &frame, &frame,
+      BLACKBOX_FRAME_I, (1 << BBOX_FIELD_MAX) - 1));
+  TEST_ASSERT_TRUE(cbor_encoder_len(&codec) <= sizeof(buffer));
+}
+
 #define BLACKBOX_I_FRAME_INTERVAL 32
 
 // Test helper functions for blackbox delta encoding

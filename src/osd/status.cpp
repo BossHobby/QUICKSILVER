@@ -27,6 +27,7 @@ typedef enum {
   STATUS_TURTLE,
   STATUS_AUTOLAUNCH,
   STATUS_AUTOTRIM,
+  STATUS_RTH,
   STATUS_MAX,
 } osd_status_entries_t;
 
@@ -71,6 +72,7 @@ const char *default_system_status_labels[STATUS_MAX] = {
     [STATUS_TURTLE] = "**TURTLE**",
     [STATUS_AUTOLAUNCH] = "AUTO LAUNCH",
     [STATUS_AUTOTRIM] = "AUTOTRIM",
+    [STATUS_RTH] = "RTH",
 };
 
 const char *guac_system_status_labels[STATUS_MAX] = {
@@ -87,6 +89,7 @@ const char *guac_system_status_labels[STATUS_MAX] = {
     [STATUS_TURTLE] = "\x60THIS SIDE UP\x60",
     [STATUS_AUTOLAUNCH] = "AUTO LAUNCH",
     [STATUS_AUTOTRIM] = "AUTOTRIM",
+    [STATUS_RTH] = "RTH",
 };
 
 static void osd_status_write_label(osd_element_t *el) {
@@ -214,6 +217,37 @@ static bool osd_wing_autotrim_message_temp(void) {
 }
 #endif
 
+#ifdef VEHICLE_MULTI
+static const char *osd_rth_message() {
+  if (state.rth_state == RTH_STATE_ABORTED) {
+    return "ABORTED";
+  }
+
+  if (state.rth_active) {
+    switch (state.rth_state) {
+    case RTH_STATE_CLIMB:
+      return "CLIMB";
+    case RTH_STATE_ACQUIRE_HEADING:
+      return "ACQUIRING HEADING";
+    case RTH_STATE_TURN:
+      return "TURN HOME";
+    case RTH_STATE_NAVIGATE:
+      return "RETURN HOME";
+    case RTH_STATE_HOVER_HOME:
+      return "HOLD HOME";
+    case RTH_STATE_HEADING_FAILED:
+      return "HEADING FAILED";
+    }
+  }
+
+  if (rx_aux_on(AUX_RETURN_TO_HOME)) {
+    if (!flags.arm_state) return "ARM FIRST";
+    return "UNAVAILABLE";
+  }
+  return NULL;
+}
+#endif
+
 static bool osd_status_print(osd_element_t *el) {
   static uint32_t start_time;
 
@@ -274,6 +308,13 @@ bool osd_status_update(osd_element_t *el) {
 
   if (flags.failsafe && flags.rx_ready) {
     // only show failsafe if rx was ready
+#ifdef VEHICLE_MULTI
+    const char *rth_message = osd_rth_message();
+    if (rth_message && (state.rth_failsafe_active || state.rth_state == RTH_STATE_ABORTED)) {
+      osd_status_show_text(MODE_HOLD, STATUS_RTH, rth_message);
+      return osd_status_print(el);
+    }
+#endif
     osd_status_show(MODE_HOLD, STATUS_FAILSAFE);
     return osd_status_print(el);
   }
@@ -345,6 +386,14 @@ bool osd_status_update(osd_element_t *el) {
     osd_status_show(MODE_HOLD, STATUS_TURTLE);
     return osd_status_print(el);
   }
+
+#ifdef VEHICLE_MULTI
+  const char *rth_message = osd_rth_message();
+  if (rth_message) {
+    osd_status_show_text(MODE_HOLD, STATUS_RTH, rth_message);
+    return osd_status_print(el);
+  }
+#endif
 
   if (current_status.mode != MODE_TEMP && current_status.entry != STATUS_MAX) {
     current_status.entry = STATUS_MAX;
