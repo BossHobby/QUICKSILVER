@@ -9,6 +9,9 @@
 #define QUIC_HEADER_LEN 4
 
 // QUIC protocol changelog (protocol compatibility):
+// 0.2.10: blackbox: add GPS/home coordinates and navigation altitude (0.1 m), move Debug to field 16.
+//         state: add RTH heading acquisition and heading-failed phases; reorder RTH phase values.
+//         profile: add GPS constellation selection.
 // 0.2.9 (30cde6a5e): profile: move bind and vtx settings into profile.
 // 0.2.8 (fab52980): rx: add CRSF bind command.
 // 0.2.7 (399b96c5): blackbox: harden logging and transfer handling.
@@ -21,7 +24,7 @@
 // 0.1.2 (9eb3a5a2): increment quic protocol version.
 // 0.1.1 (e1e99633): extract quic protocol.
 // 0.1.0: introduce QUIC protocol serialization.
-#define QUIC_PROTOCOL_VERSION MAKE_SEMVER(0, 2, 9)
+#define QUIC_PROTOCOL_VERSION MAKE_SEMVER(0, 2, 10)
 
 typedef enum {
   QUIC_CMD_INVALID,

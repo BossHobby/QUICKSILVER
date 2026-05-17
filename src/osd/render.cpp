@@ -21,6 +21,9 @@
 
 #define ICON_RSSI 0x1
 #define ICON_LQI 0x7b
+#define ICON_ALTITUDE 0x7f
+#define ICON_METERS 0xc
+#define ICON_KILOMETERS 0x7d
 #define ICON_CELSIUS 0xe
 #define ICON_THROTTLE 0x4
 #define ICON_VOLT 0x6
@@ -37,6 +40,8 @@
 #define ICON_KPH 0x9E
 
 #define ROVER_ROLLOVER_WARNING_DEGREES 45
+#define ICON_ARROW_SOUTH 0x60
+#define ICON_HOME 0x05
 
 #define HOLD 0
 #define TEMP 1
@@ -111,11 +116,13 @@ static const char *osd_element_labels[] = {
     "CURRENT DRAW",
     "CROSSHAIR",
     "CURRENT DRAWN",
-    "WATTS",  // Added watts label
+    "WATTS",
     "GPS SATS",
     "GPS SPEED",
     "INCLINOMETER",
     "CRSF TX POWER",
+    "ALTITUDE",
+    "GPS HOME",
 };
 
 static const uint16_t crsf_tx_power_mw[CRSF_TX_POWER_MAX] = {
@@ -415,11 +422,8 @@ void osd_save_exit() {
   osd_state.reboot_fc_requested = 0;
 
   osd_exit();
-
   led_flash();
-
   flash_save();
-
   task_reset_runtime();
 
   if (reboot_fc_requested)
@@ -552,8 +556,8 @@ static void print_osd_watts(osd_element_t *el) {
 }
 
 static void print_osd_inclinometer(osd_element_t *el) {
-  const int32_t roll = lrintf(state.attitude.roll);
-  const int32_t pitch = lrintf(state.attitude.pitch);
+  const int32_t roll = lrintf(state.attitude.roll * RADTODEG);
+  const int32_t pitch = lrintf(state.attitude.pitch * RADTODEG);
   const bool rollover_warning = fabsf((float)roll) >= ROVER_ROLLOVER_WARNING_DEGREES ||
                                 fabsf((float)pitch) >= ROVER_ROLLOVER_WARNING_DEGREES;
 
@@ -582,6 +586,12 @@ static void print_osd_crsf_tx_power(osd_element_t *el) {
     osd_write_float(tx_power_mw / 1000.0f, 3, 1);
     osd_write_char(ICON_WATT);
   }
+}
+
+static void print_heading(float heading_deg) {
+  // Bearings run clockwise; font arrows run from south toward east and north.
+  const uint8_t direction = (uint8_t)((normalize_deg(heading_deg) + 11.25f) / 22.5f) % 16;
+  osd_write_char(ICON_ARROW_SOUTH + (24 - direction) % 16);
 }
 
 void osd_init() {
@@ -724,6 +734,35 @@ static void osd_display_regular() {
       break;
     }
 
+    case OSD_ALTITUDE: {
+      osd_start_el(el);
+      osd_write_char(ICON_ALTITUDE);
+      if (state.altitude > 1000.f) {
+        osd_write_float(state.altitude / 1000.f, 3, 1);
+        osd_write_char(ICON_KILOMETERS);
+      } else {
+        osd_write_float(state.altitude, 3, 1);
+        osd_write_char(ICON_METERS);
+      }
+      break;
+    }
+
+    case OSD_GPS_HOME: {
+      osd_start_el(el);
+      if (state.home_distance < 5.f) {
+        osd_write_char(ICON_HOME);
+      } else {
+        print_heading(state.home_bearing - state.heading);
+      }
+      if (state.home_distance >= 1000.f) {
+        osd_write_float(state.home_distance / 1000.f, 4, 1);
+        osd_write_char(ICON_KILOMETERS);
+      } else {
+        osd_write_float(state.home_distance, 4, 1);
+        osd_write_char(ICON_METERS);
+      }
+      break;
+    }
     }
     return;
   }

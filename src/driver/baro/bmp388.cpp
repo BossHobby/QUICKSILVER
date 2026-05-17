@@ -2,7 +2,11 @@
 
 #include "driver/i2c.h"
 
-#ifdef USE_BARO
+#if defined(USE_BARO) || defined(PIO_UNIT_TESTING)
+
+#ifdef PIO_UNIT_TESTING
+#include <string.h>
+#endif
 
 #define BMP388_I2C_ADDR (0x76)        // same as BMP280/BMP180
 #define BMP388_DEFAULT_CHIP_ID (0x50) // from https://github.com/BoschSensortec/BMP3-Sensor-API/blob/master/bmp3_defs.h#L130
@@ -112,8 +116,10 @@ typedef struct {
 } __attribute__((packed)) bmp388_calib_param_t;
 static_assert(sizeof(bmp388_calib_param_t) == BMP388_TRIMMING_DATA_LENGTH, "bmp388_calib_param_t has wrong size");
 
-extern i2c_bus_device_t baro_bus;
 static bmp388_calib_param_t bmp388_cal;
+
+#ifdef USE_BARO
+extern i2c_bus_device_t baro_bus;
 
 static baro_types_t bmp388_init() {
   baro_bus.address = BMP388_I2C_ADDR;
@@ -134,17 +140,11 @@ static baro_types_t bmp388_init() {
 
   return BARO_TYPE_BMP388;
 }
+#endif
 
-static bool bmp388_get_pressure(float *pressure) {
-  static uint8_t status = 0;
-  if (!i2c_read_async(&baro_bus, BMP388_STATUS_REG, &status, 1))
-    return false;
-
-  if ((status & BMP388_DRDY_PRESS) == 0 || (status & BMP388_DRDY_TEMP) == 0)
-    return false;
-
-  const uint32_t uncomp_pressure = baro_buf[0] << 0 | baro_buf[1] << 8 | baro_buf[2] << 16;
-  const uint32_t uncomp_temperature = baro_buf[3] << 0 | baro_buf[4] << 8 | baro_buf[5] << 16;
+static float bmp388_compensate(const uint8_t data[6]) {
+  const uint32_t uncomp_pressure = data[0] << 0 | data[1] << 8 | data[2] << 16;
+  const uint32_t uncomp_temperature = data[3] << 0 | data[4] << 8 | data[5] << 16;
 
   const int64_t temp_data1 = (int64_t)(uncomp_temperature - ((int64_t)256 * bmp388_cal.t1));
   const int64_t temp_data2 = (int64_t)(bmp388_cal.t2 * temp_data1);
@@ -173,14 +173,26 @@ static bool bmp388_get_pressure(float *pressure) {
   partial_data4 = (int64_t)((partial_data3 * uncomp_pressure) / (int32_t)8192);
   partial_data5 = (int64_t)((uncomp_pressure * (partial_data4 / 10)) / (int32_t)512);
   partial_data5 = (int64_t)(partial_data5 * 10);
-  partial_data6 = (int64_t)(uncomp_pressure * uncomp_pressure);
+  partial_data6 = (int64_t)uncomp_pressure * uncomp_pressure;
 
   partial_data2 = (int64_t)((bmp388_cal.p11 * partial_data6) / (int32_t)65536);
   partial_data3 = (int64_t)((int64_t)(partial_data2 * uncomp_pressure) / 128);
   partial_data4 = (int64_t)((offset / 4) + partial_data1 + partial_data5 + partial_data3);
 
   const uint64_t comp_press = (((uint64_t)partial_data4 * 25) / (uint64_t)1099511627776);
-  *pressure = comp_press / 100.f;
+  return comp_press / 100.f;
+}
+
+#ifdef USE_BARO
+static bool bmp388_get_pressure(float *pressure) {
+  static uint8_t status = 0;
+  if (!i2c_read_async(&baro_bus, BMP388_STATUS_REG, &status, 1))
+    return false;
+
+  if ((status & BMP388_DRDY_PRESS) == 0 || (status & BMP388_DRDY_TEMP) == 0)
+    return false;
+
+  *pressure = bmp388_compensate(baro_buf);
 
   i2c_read_reg_bytes(&baro_bus, BMP388_DATA_0_REG, baro_buf, sizeof(baro_buf));
 
@@ -191,5 +203,13 @@ baro_interface_t bmp388_interface = {
     .init = bmp388_init,
     .get_pressure = bmp388_get_pressure,
 };
+#endif
+
+#ifdef PIO_UNIT_TESTING
+float bmp388_test_compensate(const uint8_t calibration[21], const uint8_t data[6]) {
+  memcpy(&bmp388_cal, calibration, sizeof(bmp388_cal));
+  return bmp388_compensate(data);
+}
+#endif
 
 #endif

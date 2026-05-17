@@ -2,7 +2,11 @@
 
 #include "driver/i2c.h"
 
-#ifdef USE_BARO
+#if defined(USE_BARO) || defined(PIO_UNIT_TESTING)
+
+#ifdef PIO_UNIT_TESTING
+#include <string.h>
+#endif
 
 #define BMP280_I2C_ADDR (0x76)
 #define BMP280_DEFAULT_CHIP_ID (0x58)
@@ -55,8 +59,10 @@ typedef struct {
 } __attribute__((packed)) bmp280_calib_param_t; // packed as we read directly from the device into this structure.
 static_assert(sizeof(bmp280_calib_param_t) == BMP280_PRESSURE_TEMPERATURE_CALIB_DATA_LENGTH, "bmp280_calib_param_t has wrong size");
 
-extern i2c_bus_device_t baro_bus;
 static bmp280_calib_param_t bmp280_cal;
+
+#ifdef USE_BARO
+extern i2c_bus_device_t baro_bus;
 
 static baro_types_t bmp280_init() {
   baro_bus.address = BMP280_I2C_ADDR;
@@ -75,17 +81,11 @@ static baro_types_t bmp280_init() {
 
   return BARO_TYPE_BMP280;
 }
+#endif
 
-static bool bmp280_get_pressure(float *pressure) {
-  static uint8_t status = 0;
-  if (!i2c_read_async(&baro_bus, BMP280_STAT_REG, &status, 1))
-    return false;
-
-  if ((status & BMP280_MEASURING) != 0)
-    return false;
-
-  const uint32_t uncomp_pressure = baro_buf[0] << 0 | baro_buf[1] << 8 | baro_buf[2] << 16;
-  const uint32_t uncomp_temperature = baro_buf[3] << 0 | baro_buf[4] << 8 | baro_buf[5] << 16;
+static float bmp280_compensate(const uint8_t data[6]) {
+  const int32_t uncomp_pressure = (int32_t)data[0] << 12 | (int32_t)data[1] << 4 | data[2] >> 4;
+  const int32_t uncomp_temperature = (int32_t)data[3] << 12 | (int32_t)data[4] << 4 | data[5] >> 4;
 
   const int32_t t_var1 = ((((uncomp_temperature >> 3) - ((int32_t)bmp280_cal.dig_T1 << 1))) * ((int32_t)bmp280_cal.dig_T2)) >> 11;
   const int32_t t_var2 = (((((uncomp_temperature >> 4) - ((int32_t)bmp280_cal.dig_T1)) * ((uncomp_temperature >> 4) - ((int32_t)bmp280_cal.dig_T1))) >> 12) * ((int32_t)bmp280_cal.dig_T3)) >> 14;
@@ -99,14 +99,27 @@ static bool bmp280_get_pressure(float *pressure) {
   var1 = ((var1 * var1 * (int64_t)bmp280_cal.dig_P3) >> 8) + ((var1 * (int64_t)bmp280_cal.dig_P2) << 12);
   var1 = (((((int64_t)1) << 47) + var1)) * ((int64_t)bmp280_cal.dig_P1) >> 33;
   if (var1 == 0) {
-    *pressure = 0.f;
+    return 0.f;
   } else {
     int64_t p = 1048576 - uncomp_pressure;
     p = (((p << 31) - var2) * 3125) / var1;
     var1 = (((int64_t)bmp280_cal.dig_P9) * (p >> 13) * (p >> 13)) >> 25;
     var2 = (((int64_t)bmp280_cal.dig_P8) * p) >> 19;
-    *pressure = ((p + var1 + var2) >> 8) + (((int64_t)bmp280_cal.dig_P7) << 4) / 100.f;
+    p = ((p + var1 + var2) >> 8) + (((int64_t)bmp280_cal.dig_P7) << 4);
+    return p / 256.0f; // Q24.8 pressure to pascals
   }
+}
+
+#ifdef USE_BARO
+static bool bmp280_get_pressure(float *pressure) {
+  static uint8_t status = 0;
+  if (!i2c_read_async(&baro_bus, BMP280_STAT_REG, &status, 1))
+    return false;
+
+  if ((status & BMP280_MEASURING) != 0)
+    return false;
+
+  *pressure = bmp280_compensate(baro_buf);
 
   i2c_read_reg_bytes(&baro_bus, BMP280_PRESSURE_MSB_REG, baro_buf, sizeof(baro_buf));
 
@@ -117,5 +130,13 @@ baro_interface_t bmp280_interface = {
     .init = bmp280_init,
     .get_pressure = bmp280_get_pressure,
 };
+#endif
+
+#ifdef PIO_UNIT_TESTING
+float bmp280_test_compensate(const uint8_t calibration[24], const uint8_t data[6]) {
+  memcpy(&bmp280_cal, calibration, sizeof(bmp280_cal));
+  return bmp280_compensate(data);
+}
+#endif
 
 #endif

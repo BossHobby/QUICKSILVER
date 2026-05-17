@@ -3,10 +3,10 @@
 #include "core/profile.h"
 #include "util/util.h"
 
-#define BLACKBOX_VERSION MAKE_SEMVER(0, 2, 0)
+#define BLACKBOX_VERSION MAKE_SEMVER(0, 3, 1)
 
 #define BLACKBOX_SCALE 100
-#define BLACKBOX_DEBUG_SIZE 10
+#define BLACKBOX_DEBUG_SIZE 16
 
 typedef enum {
   BBOX_FIELD_LOOP,
@@ -22,6 +22,9 @@ typedef enum {
   BBOX_FIELD_GYRO_FILTER,
   BBOX_FIELD_OUTPUT,
   BBOX_FIELD_CPU_LOAD,
+  BBOX_FIELD_GPS_COORD,
+  BBOX_FIELD_GPS_HOME,
+  BBOX_FIELD_ALTITUDE,
   BBOX_FIELD_DEBUG,
 
   BBOX_FIELD_MAX,
@@ -30,6 +33,7 @@ typedef enum {
 typedef enum {
   BBOX_DEBUG_DYN_NOTCH = 0x1 << 0,
   BBOX_DEBUG_ROVER = 0x1 << 1,
+  BBOX_DEBUG_NAVIGATION = 0x1 << 2,
 } blackbox_debug_flag_t;
 
 typedef struct {
@@ -58,6 +62,10 @@ typedef struct {
   compact_output_t output;
 
   uint16_t cpu_load;
+
+  int32_t gps_coord[2]; // latitude, longitude; degrees * 1e7
+  int32_t gps_home[2];  // same order and units; captured home used by navigation
+  int16_t altitude;     // state.altitude, decimeters above launch; saturated
 
   int16_t debug[BLACKBOX_DEBUG_SIZE];
 } blackbox_t;

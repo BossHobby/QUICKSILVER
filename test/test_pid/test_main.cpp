@@ -11,6 +11,7 @@ extern void test_pid_dterm_stick_weighting(void);
 extern void test_pid_voltage_compensation(void);
 extern void test_pid_complete_loop(void);
 extern void test_angle_pid_uses_legacy_dterm_timefactor(void);
+extern void test_angle_pid_rth_damps_rotation_without_target_kick(void);
 
 void setUp() { time_test_reset(); }
 void tearDown() {}
@@ -27,6 +28,7 @@ int main() {
   RUN_TEST(test_pid_voltage_compensation);
   RUN_TEST(test_pid_complete_loop);
   RUN_TEST(test_angle_pid_uses_legacy_dterm_timefactor);
+  RUN_TEST(test_angle_pid_rth_damps_rotation_without_target_kick);
 
   return UNITY_END();
 }

@@ -124,6 +124,19 @@ static float calc_actual_rates(const uint32_t axis, float rc, float expo) {
   return (rc * center_sensitivity + stick_movement * rate_expo) * DEGTORAD;
 }
 
+float input_rate_max(uint32_t axis) {
+  switch (profile_current_rates()->mode) {
+  case RATE_MODE_SILVERWARE:
+    return profile_current_rates()->rate[SILVERWARE_MAX_RATE].axis[axis] * DEGTORAD;
+  case RATE_MODE_BETAFLIGHT:
+    return calc_bf_rates(axis, 1.0f, 0.0f);
+  case RATE_MODE_ACTUAL:
+    return profile_current_rates()->rate[ACTUAL_MAX_RATE].axis[axis] * DEGTORAD;
+  }
+
+  return 1.0f * DEGTORAD;
+}
+
 vec3_t input_rates_calc() {
   vec3_t rates;
   vec3_t expo = input_get_expo();
