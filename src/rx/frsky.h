@@ -1,18 +1,10 @@
 #pragma once
 
 #include "core/project.h"
+#include "rx/rx.h"
 
 #define FRSKY_SYNC_DELAY_MAX 9000
 #define FRSKY_MAX_MISSING_FRAMES 150
-
-typedef struct {
-  int8_t offset;
-  uint8_t idx;
-  uint8_t tx_id[2];
-  uint8_t hop_data[50];
-  uint8_t rx_num;
-  uint8_t _pad;
-} rx_frsky_bind_data_t;
 
 typedef enum {
   FRSKY_STATE_DETECT = 0,

@@ -5,6 +5,7 @@
 #include "rx/rx_spi.h"
 
 #include "driver/rx/sx128x.h"
+#include "rx/rx.h"
 
 #define ELRS_OTA_VERSION_ID 3
 
@@ -91,14 +92,6 @@ typedef enum {
   SWITCH_WIDE_OR_8CH,
   SWITCH_HYBRID_OR_16CH,
 } elrs_switch_mode_t;
-
-typedef struct {
-  uint8_t is_set;
-  uint8_t uid[6];
-  uint8_t magic;
-  uint8_t switch_mode;
-  uint8_t model_id;
-} rx_elrs_bind_data_t;
 
 typedef struct {
   int32_t beta;     // Length = 16
