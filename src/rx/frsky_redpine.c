@@ -112,8 +112,8 @@ static uint8_t redpine_handle_packet() {
       cc2500_read_fifo((uint8_t *)rx_spi_packet, len);
 
       if ((rx_spi_packet[0] == REDPINE_PACKET_SIZE - 1) &&
-          (rx_spi_packet[1] == bind_storage.frsky.tx_id[0]) &&
-          (rx_spi_packet[2] == bind_storage.frsky.tx_id[1])) {
+          (rx_spi_packet[1] == profile.receiver.bind.frsky.tx_id[0]) &&
+          (rx_spi_packet[2] == profile.receiver.bind.frsky.tx_id[1])) {
 
         if (redpine_fast) {
           max_sync_delay = rx_spi_packet[REDPINE_CHANNEL_START + 7] * 100;

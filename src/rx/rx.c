@@ -10,6 +10,7 @@
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "io/simulator.h"
+#include "rx/unified_serial.h"
 #include "util/filter.h"
 #include "util/util.h"
 

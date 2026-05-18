@@ -17,18 +17,12 @@
 
 #ifdef USE_VTX
 
-vtx_settings_t vtx_settings = {
-    .power_table = {
-        .levels = 0,
-    },
-};
-
-vtx_settings_t vtx_actual;
+vtx_status_t vtx_actual;
 
 static uint8_t apply_tries = 0;
 static uint32_t vtx_delay_start = 0;
 static uint32_t vtx_delay_ms = 100;
-static bool protocol_is_init = false;
+static vtx_protocol_t initialized_protocol = VTX_PROTOCOL_INVALID;
 
 static const vtx_device_t *vtx_device = NULL;
 extern const vtx_device_t msp_vtx_device;
@@ -69,9 +63,10 @@ vtx_power_level_t vtx_power_level_index(vtx_power_table_t *power_table, uint16_t
 }
 
 void vtx_init() {
-  vtx_settings.detected = VTX_PROTOCOL_INVALID;
   vtx_delay_start = time_millis();
+  initialized_protocol = VTX_PROTOCOL_INVALID;
 
+  vtx_actual.protocol = VTX_PROTOCOL_INVALID;
   vtx_actual.band = VTX_BAND_MAX;
   vtx_actual.channel = VTX_CHANNEL_MAX;
 
@@ -98,8 +93,23 @@ static void vtx_update_fpv_pin() {
   }
 }
 
-static void vtx_init_protocol() {
-  switch (vtx_settings.protocol) {
+static vtx_protocol_t vtx_desired_protocol() {
+  if (profile.vtx.protocol != VTX_PROTOCOL_INVALID) {
+    return profile.vtx.protocol;
+  }
+  if (serial_displayport.config.port != SERIAL_PORT_INVALID) {
+    return VTX_PROTOCOL_MSP_VTX;
+  }
+  if (profile.serial.smart_audio != SERIAL_PORT_INVALID &&
+      profile.serial.smart_audio == profile.serial.rx &&
+      serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
+    return VTX_PROTOCOL_MSP_VTX;
+  }
+  return VTX_PROTOCOL_INVALID;
+}
+
+static void vtx_init_protocol(vtx_protocol_t protocol) {
+  switch (protocol) {
   case VTX_PROTOCOL_TRAMP:
     vtx_device = &tramp_vtx_device;
     break;
@@ -121,20 +131,17 @@ static void vtx_init_protocol() {
 }
 
 static bool vtx_update_frequency() {
-  if (frequency_table[vtx_actual.band][vtx_actual.channel] == frequency_table[vtx_settings.band][vtx_settings.channel]) {
+  if (frequency_table[vtx_actual.band][vtx_actual.channel] == frequency_table[profile.vtx.band][profile.vtx.channel]) {
     apply_tries = 0;
     return true;
   }
 
   if (apply_tries >= VTX_APPLY_TRIES) {
-    // give up
-    vtx_settings.band = vtx_actual.band;
-    vtx_settings.channel = vtx_actual.channel;
     apply_tries = 0;
     return true;
   }
 
-  if (vtx_device->set_frequency(vtx_settings.band, vtx_settings.channel)) {
+  if (vtx_device->set_frequency(profile.vtx.band, profile.vtx.channel)) {
     vtx_delay_ms = 10;
     apply_tries++;
   }
@@ -142,39 +149,35 @@ static bool vtx_update_frequency() {
 }
 
 static bool vtx_update_powerlevel() {
-  if (vtx_actual.power_level == vtx_settings.power_level) {
+  if (vtx_actual.power_level == profile.vtx.power_level) {
     apply_tries = 0;
     return true;
   }
 
   if (apply_tries >= VTX_APPLY_TRIES) {
-    // give up
-    vtx_settings.power_level = vtx_actual.power_level;
     apply_tries = 0;
     return true;
   }
 
-  if (vtx_device->set_power_level(vtx_settings.power_level)) {
+  if (vtx_device->set_power_level(profile.vtx.power_level)) {
     vtx_delay_ms = 10;
     apply_tries++;
   }
   return false;
 }
 
-static bool vtx_update_pitmode() {
-  if (vtx_actual.pit_mode == vtx_settings.pit_mode) {
+static bool vtx_update_pitmode(vtx_pit_mode_t pit_mode) {
+  if (vtx_actual.pit_mode == pit_mode) {
     apply_tries = 0;
     return true;
   }
 
   if (apply_tries >= VTX_APPLY_TRIES) {
-    // give up
-    vtx_settings.pit_mode = vtx_actual.pit_mode;
     apply_tries = 0;
     return true;
   }
 
-  if (vtx_device->set_pit_mode(vtx_settings.pit_mode)) {
+  if (vtx_device->set_pit_mode(pit_mode)) {
     vtx_delay_ms = 10;
     apply_tries++;
   }
@@ -202,22 +205,16 @@ void vtx_update() {
   vtx_delay_ms = 0;
   vtx_delay_start = time_millis();
 
-  // auto-select MSP_VTX for displayport or CRSF setups
-  if (vtx_settings.protocol == VTX_PROTOCOL_INVALID) {
-    if (serial_displayport.config.port != SERIAL_PORT_INVALID) {
-      vtx_settings.protocol = VTX_PROTOCOL_MSP_VTX;
-    } else if (profile.serial.smart_audio != SERIAL_PORT_INVALID &&
-               profile.serial.smart_audio == profile.serial.rx &&
-               serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
-      vtx_settings.protocol = VTX_PROTOCOL_MSP_VTX;
-    } else {
-      return;
-    }
+  const vtx_protocol_t protocol = vtx_desired_protocol();
+  if (protocol == VTX_PROTOCOL_INVALID) {
+    return;
   }
 
-  if (!protocol_is_init) {
-    vtx_init_protocol();
-    protocol_is_init = true;
+  if (initialized_protocol != protocol) {
+    vtx_actual.protocol = VTX_PROTOCOL_INVALID;
+    vtx_init_protocol(protocol);
+    initialized_protocol = protocol;
+    apply_tries = 0;
     return;
   }
 
@@ -228,37 +225,18 @@ void vtx_update() {
   if (status < VTX_DETECT_SUCCESS)
     return;
 
-  if (profile.receiver.aux[AUX_FPV_SWITCH].channel <= RX_CHANNEL_16 && vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT)
-    vtx_settings.pit_mode = rx_aux_on(AUX_FPV_SWITCH) ? 0 : 1;
+  vtx_pit_mode_t pit_mode = profile.vtx.pit_mode;
+  if (profile.receiver.aux[AUX_FPV_SWITCH].channel <= RX_CHANNEL_16 && pit_mode != VTX_PIT_MODE_NO_SUPPORT)
+    pit_mode = rx_aux_on(AUX_FPV_SWITCH) ? VTX_PIT_MODE_OFF : VTX_PIT_MODE_ON;
 
-  if (!vtx_update_pitmode() || !vtx_update_frequency() || !vtx_update_powerlevel())
+  if (!vtx_update_pitmode(pit_mode) || !vtx_update_frequency() || !vtx_update_powerlevel())
     return;
 }
 
-void vtx_set(vtx_settings_t *vtx) {
-  if (vtx->protocol != VTX_PROTOCOL_INVALID && vtx_settings.protocol != vtx->protocol) {
-    // if the selected protocol was changed, restart detection
-    vtx_settings.detected = VTX_PROTOCOL_INVALID;
-    vtx_settings.protocol = vtx->protocol;
-    vtx_settings.magic = 0xFFFF;
-    vtx_settings.power_table.levels = 1;
-    protocol_is_init = false;
-    vtx_device = NULL;
-  } else {
-    vtx_settings.magic = VTX_SETTINGS_MAGIC;
-    memcpy(&vtx_settings.power_table, &vtx->power_table, sizeof(vtx_power_table_t));
-  }
-
-  if (vtx_settings.pit_mode != VTX_PIT_MODE_NO_SUPPORT)
-    vtx_settings.pit_mode = vtx->pit_mode;
-
-  vtx_settings.power_level = vtx->power_level < vtx_settings.power_table.levels ? vtx->power_level : (vtx_settings.power_table.levels - 1);
-
-  vtx_settings.band = vtx->band < VTX_BAND_MAX ? vtx->band : 0;
-  vtx_settings.channel = vtx->channel < VTX_CHANNEL_MAX ? vtx->channel : 0;
-
-  apply_tries = 0;
-}
+#else
+void vtx_init() {}
+void vtx_update() {}
+#endif
 
 #define MEMBER CBOR_ENCODE_MEMBER
 #define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
@@ -268,8 +246,12 @@ CBOR_START_STRUCT_ENCODER(vtx_power_table_t)
 VTX_POWER_TABLE_MEMBERS
 CBOR_END_STRUCT_ENCODER()
 
-CBOR_START_STRUCT_ENCODER(vtx_settings_t)
-VTX_SETTINGS_MEMBERS
+CBOR_START_STRUCT_ENCODER(profile_vtx_t)
+PROFILE_VTX_MEMBERS
+CBOR_END_STRUCT_ENCODER()
+
+CBOR_START_STRUCT_ENCODER(vtx_status_t)
+VTX_STATUS_MEMBERS
 CBOR_END_STRUCT_ENCODER()
 
 #undef MEMBER
@@ -284,15 +266,10 @@ CBOR_START_STRUCT_DECODER(vtx_power_table_t)
 VTX_POWER_TABLE_MEMBERS
 CBOR_END_STRUCT_DECODER()
 
-CBOR_START_STRUCT_DECODER(vtx_settings_t)
-VTX_SETTINGS_MEMBERS
+CBOR_START_STRUCT_DECODER(profile_vtx_t)
+PROFILE_VTX_MEMBERS
 CBOR_END_STRUCT_DECODER()
 
 #undef MEMBER
 #undef ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER
-
-#else
-void vtx_init() {}
-void vtx_update() {}
-#endif
