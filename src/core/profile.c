@@ -577,6 +577,11 @@ const profile_t default_profile = {
 #endif
         // rest is initialized by profile_set_defaults()
     },
+    .vtx = {
+        .power_table = {
+            .levels = 0,
+        },
+    },
     .rover = {
         .pid = {
             .kp = 70.0f,
@@ -677,6 +682,7 @@ cbor_result_t cbor_encode_profile_metadata_t(cbor_value_t *enc, const profile_me
 #define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
 #define COUNT_ARRAY_MEMBER CBOR_ENCODE_COUNT_ARRAY_MEMBER
 #define STR_ARRAY_MEMBER CBOR_ENCODE_STR_ARRAY_MEMBER
+#define BSTR_MEMBER CBOR_ENCODE_BSTR_MEMBER
 
 RATE_MEMBERS
 PROFILE_RATE_MEMBERS
@@ -695,6 +701,7 @@ DTERM_ATTENUATION_MEMBERS
 PID_MEMBERS
 RX_ROLE_MAP_MEMBERS
 AUX_FUNCTION_MAP_MEMBERS
+PROFILE_RECEIVER_BIND_MEMBERS
 RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
 BLACKBOX_PRESET_MEMBERS
@@ -712,6 +719,7 @@ PROFILE_MEMBERS
 #undef ARRAY_MEMBER
 #undef COUNT_ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER
+#undef BSTR_MEMBER
 
 cbor_result_t cbor_decode_profile_metadata_t(cbor_value_t *dec, profile_metadata_t *meta) {
   cbor_result_t res = CBOR_OK;
@@ -759,6 +767,7 @@ cbor_result_t cbor_decode_profile_metadata_t(cbor_value_t *dec, profile_metadata
 #define ARRAY_MEMBER CBOR_DECODE_ARRAY_MEMBER
 #define COUNT_ARRAY_MEMBER CBOR_DECODE_COUNT_ARRAY_MEMBER
 #define STR_ARRAY_MEMBER CBOR_DECODE_STR_ARRAY_MEMBER
+#define BSTR_MEMBER CBOR_DECODE_BSTR_MEMBER
 
 RATE_MEMBERS
 PROFILE_RATE_MEMBERS
@@ -776,6 +785,7 @@ DTERM_ATTENUATION_MEMBERS
 PID_MEMBERS
 RX_ROLE_MAP_MEMBERS
 AUX_FUNCTION_MAP_MEMBERS
+PROFILE_RECEIVER_BIND_MEMBERS
 RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
 ROVER_PID_RATE_MEMBERS
@@ -792,3 +802,4 @@ PROFILE_MEMBERS
 #undef ARRAY_MEMBER
 #undef COUNT_ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER
+#undef BSTR_MEMBER

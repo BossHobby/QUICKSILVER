@@ -152,8 +152,8 @@ static uint8_t frsky_d8_handle_packet() {
 
       if (frame->length == 0x11 &&
           (frame->crc[1] & 0x80) &&
-          frame->tx_id[0] == bind_storage.frsky.tx_id[0] &&
-          frame->tx_id[1] == bind_storage.frsky.tx_id[1]) {
+          frame->tx_id[0] == profile.receiver.bind.frsky.tx_id[0] &&
+          frame->tx_id[1] == profile.receiver.bind.frsky.tx_id[1]) {
 
         if (frame_index >= 188) {
           frame_index = 0;
@@ -170,8 +170,8 @@ static uint8_t frsky_d8_handle_packet() {
         if ((frame->counter % 4) == 2) {
           const uint8_t telemetry_id = rx_spi_packet[4];
           telemetry[0] = 0x11; // length
-          telemetry[1] = bind_storage.frsky.tx_id[0];
-          telemetry[2] = bind_storage.frsky.tx_id[1];
+          telemetry[1] = profile.receiver.bind.frsky.tx_id[0];
+          telemetry[2] = profile.receiver.bind.frsky.tx_id[1];
           telemetry[3] = (uint8_t)(state.vbat_filtered * 100);
           telemetry[4] = (uint8_t)(state.vbat_filtered * 100);
           telemetry[5] = frsky_extract_rssi(rx_spi_packet[18]);
