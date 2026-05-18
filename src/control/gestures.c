@@ -241,7 +241,7 @@ void gestures() {
     break;
   }
   case GESTURE_UUU: {
-    bind_storage.bind_saved = !bind_storage.bind_saved;
+    profile.receiver.bind.bind_saved = !profile.receiver.bind.bind_saved;
     skip_calib = true;
     led_flash();
     break;

@@ -32,7 +32,7 @@ typedef struct {
   uint8_t power_levels;
 } msp_vtx_config_t;
 
-extern vtx_settings_t vtx_actual;
+extern vtx_status_t vtx_actual;
 
 extern msp_t displayport_msp;
 extern msp_t crsf_msp;
@@ -81,7 +81,7 @@ void msp_vtx_send_config_reply(msp_t *msp, msp_magic_t magic) {
       .pitmode = vtx_actual.pit_mode == VTX_PIT_MODE_ON ? 1 : 0,
       .freq_lsb = freq & 0xFF,
       .freq_msb = (freq >> 8),
-      .device_is_ready = vtx_actual.detected,
+      .device_is_ready = vtx_actual.protocol != VTX_PROTOCOL_INVALID,
       .low_power_disarm = 0,
       .pit_mode_freq_lsb = freq & 0xFF,
       .pit_mode_freq_msb = (freq >> 8),
@@ -152,6 +152,7 @@ static msp_t msp = {
 
 static void msp_vtx_init() {
   msp_vtx_detected = false;
+  vtx_actual.power_table = profile.vtx.power_table;
 
   if (serial_displayport.config.port != SERIAL_PORT_INVALID) {
     // reuse existing msp for hdz
@@ -209,21 +210,14 @@ static bool msp_vtx_feed_parser() {
   return msp_vtx->buffer_offset && (time_millis() - vtx_last_valid_read) > 500;
 }
 
-static vtx_detect_status_t msp_vtx_update(vtx_settings_t *actual) {
+static vtx_detect_status_t msp_vtx_update(vtx_status_t *actual) {
   msp_vtx_feed_parser();
 
   if (!msp_vtx_detected || actual->power_table.levels == 0) {
     return VTX_DETECT_WAIT;
   }
 
-  if (vtx_settings.detected != VTX_PROTOCOL_MSP_VTX) {
-    if (vtx_settings.magic != VTX_SETTINGS_MAGIC) {
-      vtx_set(actual);
-    }
-
-    memcpy(&vtx_settings.power_table, &actual->power_table, sizeof(vtx_power_table_t));
-    vtx_settings.detected = VTX_PROTOCOL_MSP_VTX;
-  }
+  actual->protocol = VTX_PROTOCOL_MSP_VTX;
   return VTX_DETECT_SUCCESS;
 }
 

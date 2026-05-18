@@ -151,7 +151,7 @@ void rx_spektrum_bind() {
     return;
   }
 
-  if (bind_storage.bind_saved == 0) {
+  if (profile.receiver.bind.bind_saved == 0) {
     const gpio_pins_t spectrum_bind_pin = target.serial_ports[profile.serial.rx].rx;
 
     gpio_config_t gpio_init = gpio_config_default();

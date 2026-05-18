@@ -8,8 +8,64 @@
 #include "util/vector.h"
 
 #define OSD_NUMBER_ELEMENTS 32
+#define BIND_RAW_STORAGE_SIZE 60
+#define VTX_POWER_LABEL_LEN 5
 
 #define PROFILE_VERSION MAKE_SEMVER(0, 3, 0)
+
+typedef enum {
+  VTX_BAND_A,
+  VTX_BAND_B,
+  VTX_BAND_E,
+  VTX_BAND_F,
+  VTX_BAND_R,
+  VTX_BAND_L,
+
+  VTX_BAND_MAX
+} vtx_band_t;
+
+typedef enum {
+  VTX_CHANNEL_1,
+  VTX_CHANNEL_2,
+  VTX_CHANNEL_3,
+  VTX_CHANNEL_4,
+  VTX_CHANNEL_5,
+  VTX_CHANNEL_6,
+  VTX_CHANNEL_7,
+  VTX_CHANNEL_8,
+
+  VTX_CHANNEL_MAX,
+} vtx_channel_t;
+
+typedef enum {
+  VTX_POWER_LEVEL_1,
+  VTX_POWER_LEVEL_2,
+  VTX_POWER_LEVEL_3,
+  VTX_POWER_LEVEL_4,
+  VTX_POWER_LEVEL_5,
+  VTX_POWER_LEVEL_6,
+  VTX_POWER_LEVEL_7,
+  VTX_POWER_LEVEL_8,
+
+  VTX_POWER_LEVEL_MAX,
+} vtx_power_level_t;
+
+typedef enum {
+  VTX_PIT_MODE_OFF,
+  VTX_PIT_MODE_ON,
+  VTX_PIT_MODE_NO_SUPPORT,
+
+  VTX_PIT_MODE_MAX,
+} vtx_pit_mode_t;
+
+typedef enum {
+  VTX_PROTOCOL_INVALID,
+  VTX_PROTOCOL_TRAMP,
+  VTX_PROTOCOL_SMART_AUDIO,
+  VTX_PROTOCOL_MSP_VTX,
+
+  VTX_PROTOCOL_MAX,
+} vtx_protocol_t;
 
 // Rates
 typedef enum {
@@ -241,7 +297,51 @@ typedef struct {
   END_STRUCT()
 
 typedef struct {
+  int8_t offset;
+  uint8_t idx;
+  uint8_t tx_id[2];
+  uint8_t hop_data[50];
+  uint8_t rx_num;
+  uint8_t _pad;
+} profile_receiver_bind_frsky_t;
+
+typedef struct {
+  uint8_t protocol;
+} profile_receiver_bind_unified_t;
+
+typedef struct {
+  uint8_t is_set;
+  uint8_t uid[6];
+  uint8_t magic;
+  uint8_t switch_mode;
+  uint8_t model_id;
+} profile_receiver_bind_elrs_t;
+
+typedef struct {
+  uint8_t rx_channel_map[16];
+  uint32_t tx_id;
+} profile_receiver_bind_flysky_t;
+
+typedef struct {
+  uint8_t bind_saved;
+  union {
+    profile_receiver_bind_frsky_t frsky;
+    profile_receiver_bind_unified_t unified;
+    profile_receiver_bind_elrs_t elrs;
+    profile_receiver_bind_flysky_t flysky;
+    uint8_t raw[BIND_RAW_STORAGE_SIZE];
+  };
+} profile_receiver_bind_t;
+
+#define PROFILE_RECEIVER_BIND_MEMBERS           \
+  START_STRUCT(profile_receiver_bind_t)         \
+  MEMBER(bind_saved, uint8_t)                   \
+  BSTR_MEMBER(raw, BIND_RAW_STORAGE_SIZE)       \
+  END_STRUCT()
+
+typedef struct {
   rx_protocol_t protocol;
+  profile_receiver_bind_t bind;
   aux_function_map_t aux[AUX_FUNCTION_MAX];
   rx_role_map_t role_map[RX_ROLE_MAX];
   rx_lqi_source_t lqi_source;
@@ -262,11 +362,12 @@ typedef struct {
   MEMBER(range_max, uint16_t)      \
   END_STRUCT()
 
-#define RECEIVER_MEMBERS                                                        \
-  START_STRUCT(profile_receiver_t)                                              \
-  MEMBER(protocol, uint8_t)                                                     \
-  ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, aux_function_map_t)                       \
-  MEMBER(lqi_source, uint8_t)                                                   \
+#define RECEIVER_MEMBERS                                  \
+  START_STRUCT(profile_receiver_t)                        \
+  MEMBER(protocol, uint8_t)                               \
+  MEMBER(bind, profile_receiver_bind_t)                   \
+  ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, aux_function_map_t) \
+  MEMBER(lqi_source, uint8_t)                             \
   ARRAY_MEMBER(role_map, RX_ROLE_MAX, rx_role_map_t)      \
   END_STRUCT()
 
@@ -463,6 +564,34 @@ typedef struct {
   MEMBER(sample_rate_hz, uint32_t) \
   END_STRUCT()
 
+typedef struct vtx_power_table_s {
+  uint8_t levels;
+  char labels[VTX_POWER_LEVEL_MAX][VTX_POWER_LABEL_LEN];
+  uint16_t values[VTX_POWER_LEVEL_MAX];
+} vtx_power_table_t;
+
+#define VTX_POWER_TABLE_MEMBERS                                       \
+  MEMBER(levels, uint8_t)                                             \
+  TSTR_ARRAY_MEMBER(labels, VTX_POWER_LEVEL_MAX, VTX_POWER_LABEL_LEN) \
+  ARRAY_MEMBER(values, VTX_POWER_LEVEL_MAX, uint16_t)
+
+typedef struct profile_vtx_s {
+  vtx_protocol_t protocol;
+  vtx_band_t band;
+  vtx_channel_t channel;
+  vtx_pit_mode_t pit_mode;
+  vtx_power_level_t power_level;
+  vtx_power_table_t power_table;
+} profile_vtx_t;
+
+#define PROFILE_VTX_MEMBERS             \
+  MEMBER(protocol, uint8_t)             \
+  MEMBER(band, uint8_t)                 \
+  MEMBER(channel, uint8_t)              \
+  MEMBER(pit_mode, uint8_t)             \
+  MEMBER(power_level, uint8_t)          \
+  MEMBER(power_table, vtx_power_table_t)
+
 typedef struct {
   uint32_t field_flags;
   uint32_t sample_rate_hz;
@@ -494,40 +623,43 @@ typedef struct {
   profile_pid_t pid;
   profile_voltage_t voltage;
   profile_blackbox_t blackbox;
+  profile_vtx_t vtx;
   profile_rover_t rover;
 } profile_t;
 
 #ifdef VEHICLE_ROVER
-#define PROFILE_MEMBERS                                                              \
-  START_STRUCT(profile_t)                                                            \
-  MEMBER(meta, profile_metadata_t)                                                   \
-  COUNT_ARRAY_MEMBER(outputs, MOTOR_PIN_MAX, profile_output_t, profile_output_count) \
+#define PROFILE_MEMBERS                                                                     \
+  START_STRUCT(profile_t)                                                                   \
+  MEMBER(meta, profile_metadata_t)                                                          \
+  COUNT_ARRAY_MEMBER(outputs, MOTOR_PIN_MAX, profile_output_t, profile_output_count)        \
   COUNT_ARRAY_MEMBER(mixer, MIXER_RULE_MAX, profile_mixer_rule_t, profile_mixer_rule_count) \
-  MEMBER(motor, profile_motor_t)                                                     \
-  MEMBER(serial, profile_serial_t)                                                   \
-  MEMBER(filter, profile_filter_t)                                                   \
-  MEMBER(osd, profile_osd_t)                                                         \
-  MEMBER(receiver, profile_receiver_t)                                               \
-  MEMBER(pid, profile_pid_t)                                                         \
-  MEMBER(voltage, profile_voltage_t)                                                 \
-  MEMBER(blackbox, profile_blackbox_t)                                               \
-  MEMBER(rover, profile_rover_t)                                                     \
+  MEMBER(motor, profile_motor_t)                                                            \
+  MEMBER(serial, profile_serial_t)                                                          \
+  MEMBER(filter, profile_filter_t)                                                          \
+  MEMBER(osd, profile_osd_t)                                                                \
+  MEMBER(receiver, profile_receiver_t)                                                      \
+  MEMBER(pid, profile_pid_t)                                                                \
+  MEMBER(voltage, profile_voltage_t)                                                        \
+  MEMBER(blackbox, profile_blackbox_t)                                                      \
+  MEMBER(vtx, profile_vtx_t)                                                                \
+  MEMBER(rover, profile_rover_t)                                                            \
   END_STRUCT()
 #else
-#define PROFILE_MEMBERS                \
-  START_STRUCT(profile_t)              \
-  MEMBER(meta, profile_metadata_t)     \
-  COUNT_ARRAY_MEMBER(outputs, MOTOR_PIN_MAX, profile_output_t, profile_output_count) \
+#define PROFILE_MEMBERS                                                                     \
+  START_STRUCT(profile_t)                                                                   \
+  MEMBER(meta, profile_metadata_t)                                                          \
+  COUNT_ARRAY_MEMBER(outputs, MOTOR_PIN_MAX, profile_output_t, profile_output_count)        \
   COUNT_ARRAY_MEMBER(mixer, MIXER_RULE_MAX, profile_mixer_rule_t, profile_mixer_rule_count) \
-  MEMBER(motor, profile_motor_t)       \
-  MEMBER(serial, profile_serial_t)     \
-  MEMBER(filter, profile_filter_t)     \
-  MEMBER(osd, profile_osd_t)           \
-  MEMBER(rate, profile_rate_t)         \
-  MEMBER(receiver, profile_receiver_t) \
-  MEMBER(pid, profile_pid_t)           \
-  MEMBER(voltage, profile_voltage_t)   \
-  MEMBER(blackbox, profile_blackbox_t) \
+  MEMBER(motor, profile_motor_t)                                                            \
+  MEMBER(serial, profile_serial_t)                                                          \
+  MEMBER(filter, profile_filter_t)                                                          \
+  MEMBER(osd, profile_osd_t)                                                                \
+  MEMBER(rate, profile_rate_t)                                                              \
+  MEMBER(receiver, profile_receiver_t)                                                      \
+  MEMBER(pid, profile_pid_t)                                                                \
+  MEMBER(voltage, profile_voltage_t)                                                        \
+  MEMBER(blackbox, profile_blackbox_t)                                                      \
+  MEMBER(vtx, profile_vtx_t)                                                                \
   END_STRUCT()
 #endif
 
@@ -556,6 +688,12 @@ uint32_t profile_mixer_rule_count(const profile_mixer_rule_t *mixer, uint32_t si
 
 cbor_result_t cbor_encode_profile_t(cbor_value_t *enc, const profile_t *p);
 cbor_result_t cbor_decode_profile_t(cbor_value_t *dec, profile_t *p);
+
+cbor_result_t cbor_encode_profile_receiver_bind_t(cbor_value_t *enc, const profile_receiver_bind_t *s);
+cbor_result_t cbor_decode_profile_receiver_bind_t(cbor_value_t *enc, profile_receiver_bind_t *s);
+
+cbor_result_t cbor_encode_profile_vtx_t(cbor_value_t *enc, const profile_vtx_t *vtx);
+cbor_result_t cbor_decode_profile_vtx_t(cbor_value_t *dec, profile_vtx_t *vtx);
 
 cbor_result_t cbor_encode_blackbox_preset_t(cbor_value_t *enc, const blackbox_preset_t *p);
 cbor_result_t cbor_decode_blackbox_preset_t(cbor_value_t *dec, blackbox_preset_t *p);

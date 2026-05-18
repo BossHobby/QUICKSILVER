@@ -180,25 +180,25 @@ static void serial_rx_init(rx_serial_protocol_t proto) {
 
 static void rx_serial_find_protocol() {
 #ifdef RX_SBUS
-  bind_storage.unified.protocol = RX_SERIAL_PROTOCOL_SBUS;
+    profile.receiver.bind.unified.protocol = RX_SERIAL_PROTOCOL_SBUS;
 #endif
 #ifdef RX_CRSF
-  bind_storage.unified.protocol = RX_SERIAL_PROTOCOL_CRSF;
+    profile.receiver.bind.unified.protocol = RX_SERIAL_PROTOCOL_CRSF;
 #endif
 #ifdef RX_IBUS
-  bind_storage.unified.protocol = RX_SERIAL_PROTOCOL_IBUS;
+    profile.receiver.bind.unified.protocol = RX_SERIAL_PROTOCOL_IBUS;
 #endif
 #ifdef RX_FPORT
-  bind_storage.unified.protocol = RX_SERIAL_PROTOCOL_FPORT;
+    profile.receiver.bind.unified.protocol = RX_SERIAL_PROTOCOL_FPORT;
 #endif
 #ifdef RX_DSM
-  bind_storage.unified.protocol = RX_SERIAL_PROTOCOL_DSM;
+    profile.receiver.bind.unified.protocol = RX_SERIAL_PROTOCOL_DSM;
 #endif
 
-  if (bind_storage.unified.protocol != RX_SERIAL_PROTOCOL_INVALID) {
-    state.rx_status = RX_STATUS_DETECTED + bind_storage.unified.protocol;
-    serial_rx_init(bind_storage.unified.protocol);
-    serial_rx_detected_protcol = bind_storage.unified.protocol;
+  if (profile.receiver.bind.unified.protocol != RX_SERIAL_PROTOCOL_INVALID) {
+    state.rx_status = RX_STATUS_DETECTED + profile.receiver.bind.unified.protocol;
+    serial_rx_init(profile.receiver.bind.unified.protocol);
+    serial_rx_detected_protcol = profile.receiver.bind.unified.protocol;
     return;
   }
 
@@ -234,7 +234,7 @@ static void rx_serial_find_protocol() {
   } else {
     flags.rx_mode = RXMODE_NORMAL;
     flags.rx_ready = 1;
-    bind_storage.unified.protocol = protocol_to_check;
+    profile.receiver.bind.unified.protocol = protocol_to_check;
     serial_rx_detected_protcol = protocol_to_check;
     quic_debugf("UNIFIED: protocol %d found", protocol_to_check);
   }
