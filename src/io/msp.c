@@ -21,6 +21,8 @@
 #include "util/crc.h"
 #include "util/util.h"
 
+#define MSP_VTX_POWER_LABEL_LEN 3
+
 enum {
   MSP_REBOOT_FIRMWARE = 0,
   MSP_REBOOT_BOOTLOADER_ROM,
@@ -607,7 +609,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
         // clear tables
         for (uint32_t i = 0; i < VTX_POWER_LEVEL_MAX; i++) {
           settings->power_table.values[i] = 0;
-          memset(settings->power_table.labels[i], 0, 3);
+          memset(settings->power_table.labels[i], 0, VTX_POWER_LABEL_LEN);
         }
       }
 
@@ -687,14 +689,14 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
     const uint16_t power = vtx_actual.power_table.values[level - 1];
 
-    uint8_t buf[4 + VTX_POWER_LABEL_LEN];
+    uint8_t buf[4 + MSP_VTX_POWER_LABEL_LEN];
     buf[0] = level;
     buf[1] = power & 0xFF;
     buf[2] = power >> 8;
-    buf[3] = VTX_POWER_LABEL_LEN;
-    memcpy(buf + 4, vtx_actual.power_table.labels[level - 1], VTX_POWER_LABEL_LEN);
+    buf[3] = MSP_VTX_POWER_LABEL_LEN;
+    memcpy(buf + 4, vtx_actual.power_table.labels[level - 1], MSP_VTX_POWER_LABEL_LEN);
 
-    msp_send_reply(msp, magic, cmd, buf, 7);
+    msp_send_reply(msp, magic, cmd, buf, sizeof(buf));
     break;
   }
 
