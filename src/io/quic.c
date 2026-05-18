@@ -159,7 +159,7 @@ static void get_quic(quic_t *quic, cbor_value_t *dec) {
     break;
 #ifdef USE_VTX
   case QUIC_VAL_VTX_SETTINGS:
-    res = cbor_encode_vtx_settings_t(&enc, &vtx_settings);
+    res = cbor_encode_vtx_status_t(&enc, &vtx_actual);
     check_cbor_error(QUIC_CMD_GET);
 
     quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
@@ -192,13 +192,6 @@ static void get_quic(quic_t *quic, cbor_value_t *dec) {
     break;
   }
 #endif
-  case QUIC_VAL_BIND_INFO: {
-    res = cbor_encode_rx_bind_storage_t(&enc, &bind_storage);
-    check_cbor_error(QUIC_CMD_GET);
-
-    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
-    break;
-  }
 #ifdef DEBUG
   case QUIC_VAL_PERF_COUNTERS: {
     res = cbor_encode_task_stats(&enc);
@@ -272,23 +265,6 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
     quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
-#ifdef USE_VTX
-  case QUIC_VAL_VTX_SETTINGS: {
-    vtx_settings_t settings;
-
-    res = cbor_decode_vtx_settings_t(dec, &settings);
-    check_cbor_error(QUIC_CMD_SET);
-
-    vtx_set(&settings);
-    flash_save();
-
-    res = cbor_encode_vtx_settings_t(&enc, &vtx_settings);
-    check_cbor_error(QUIC_CMD_SET);
-
-    quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
-    break;
-  }
-#endif
 #ifdef USE_MOTOR_DSHOT
   case QUIC_VAL_BLHEL_SETTINGS: {
     uint8_t count = serial_4way_init();
@@ -315,19 +291,6 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
     break;
   }
 #endif
-  case QUIC_VAL_BIND_INFO: {
-    res = cbor_decode_rx_bind_storage_t(dec, &bind_storage);
-    check_cbor_error(QUIC_CMD_SET);
-
-    flash_save();
-    rx_init();
-
-    res = cbor_encode_rx_bind_storage_t(&enc, &bind_storage);
-    check_cbor_error(QUIC_CMD_SET);
-
-    quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
-    break;
-  }
   case QUIC_VAL_TARGET: {
     memset(&target, 0, sizeof(target_t));
     res = cbor_decode_target_t(dec, &target);

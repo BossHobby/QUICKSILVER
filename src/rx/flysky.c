@@ -31,9 +31,9 @@ void flysky_processed_pkt(uint32_t timestamp) {
   flysky.num_timeouts = 0;
 }
 
-// Returns bind data that was previously stored into flash memory
-rx_flysky_bind_data_t *flysky_get_bind_data() {
-  return &bind_storage.flysky;
+// Returns bind data stored in the profile.
+static profile_receiver_bind_flysky_t *flysky_get_bind_data() {
+  return &profile.receiver.bind.flysky;
 }
 
 // Checks if RX or TX has completed. If TX complete then switch to RX mode
@@ -123,7 +123,7 @@ static uint8_t flysky_check_packet() {
     if (((time_micros() - flysky.last_bind_time) > 250000) && flysky.rx_channel_map[0] != 0 && flysky.tx_id != 0) {
       result = 1;
       flysky.bound = true;
-      rx_flysky_bind_data_t *bind_data = flysky_get_bind_data();
+      profile_receiver_bind_flysky_t *bind_data = flysky_get_bind_data();
       bind_data->tx_id = flysky.tx_id; // store tx_id
       memcpy(bind_data->rx_channel_map, flysky.rx_channel_map, sizeof(bind_data->rx_channel_map) / sizeof(bind_data->rx_channel_map[0]));
     }
@@ -186,7 +186,7 @@ static void rx_flysky_init_common(uint8_t start_channel) {
   flysky.channel_index = 0;
 
   // Do we have previously saved bind data?
-  const rx_flysky_bind_data_t *bind_data = flysky_get_bind_data();
+  const profile_receiver_bind_flysky_t *bind_data = flysky_get_bind_data();
   flysky.tx_id = bind_data->tx_id;
   if (flysky.tx_id == 0) {
     flysky.bound = false;

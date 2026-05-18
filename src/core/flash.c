@@ -16,17 +16,6 @@ extern const profile_t default_profile;
 extern profile_t profile;
 
 flash_storage_t flash_storage;
-rx_bind_storage_t bind_storage;
-
-CBOR_START_STRUCT_ENCODER(rx_bind_storage_t)
-CBOR_ENCODE_MEMBER(bind_saved, uint8_t)
-CBOR_ENCODE_BSTR_MEMBER(raw, BIND_RAW_STORAGE_SIZE)
-CBOR_END_STRUCT_ENCODER()
-
-CBOR_START_STRUCT_DECODER(rx_bind_storage_t)
-CBOR_DECODE_MEMBER(bind_saved, uint8_t)
-CBOR_DECODE_BSTR_MEMBER(raw, BIND_RAW_STORAGE_SIZE)
-CBOR_END_STRUCT_DECODER()
 
 static void flash_write_magic(uint8_t *data, uint32_t magic) {
   *((uint32_t *)data) = magic;
@@ -38,6 +27,10 @@ static bool flash_compare_magic(uint32_t addr, uint32_t magic) {
 
 void flash_save() {
   rx_stop();
+
+  if (sizeof(profile_t) > PROFILE_STORAGE_SIZE - FMC_MAGIC_SIZE) {
+    failloop(FAILLOOP_FAULT);
+  }
 
   __disable_irq();
 
@@ -74,52 +67,17 @@ void flash_save() {
   }
 
   {
-    memset(buffer, 0, BIND_STORAGE_SIZE);
-    flash_write_magic(buffer, FMC_MAGIC | BIND_STORAGE_OFFSET);
-
-    if (bind_storage.bind_saved == 0) {
-      // reset all bind data
-      memset(bind_storage.raw, 0, BIND_RAW_STORAGE_SIZE);
-    }
-
-    memcpy(buffer + FMC_MAGIC_SIZE, (uint8_t *)&bind_storage, sizeof(rx_bind_storage_t));
-    fmc_write_buf(BIND_STORAGE_OFFSET, buffer, BIND_STORAGE_SIZE);
-  }
-
-  {
     memset(buffer, 0, PROFILE_STORAGE_SIZE);
     flash_write_magic(buffer, FMC_MAGIC | PROFILE_STORAGE_OFFSET);
 
-    cbor_value_t enc;
-    cbor_encoder_init(&enc, buffer + FMC_MAGIC_SIZE, PROFILE_STORAGE_SIZE - FMC_MAGIC_SIZE);
-
-    cbor_result_t res = cbor_encode_profile_t(&enc, &profile);
-    if (res < CBOR_OK) {
-      fmc_lock();
-      __enable_irq();
-      failloop(FAILLOOP_FAULT);
+    if (profile.receiver.bind.bind_saved == 0) {
+      // reset all bind data
+      memset(profile.receiver.bind.raw, 0, BIND_RAW_STORAGE_SIZE);
     }
 
+    memcpy(buffer + FMC_MAGIC_SIZE, (uint8_t *)&profile, sizeof(profile_t));
     fmc_write_buf(PROFILE_STORAGE_OFFSET, buffer, PROFILE_STORAGE_SIZE);
   }
-
-#ifdef USE_VTX
-  {
-    flash_write_magic(buffer, FMC_MAGIC | VTX_STORAGE_OFFSET);
-
-    cbor_value_t enc;
-    cbor_encoder_init(&enc, buffer + FMC_MAGIC_SIZE, VTX_STORAGE_SIZE - FMC_MAGIC_SIZE);
-
-    cbor_result_t res = cbor_encode_vtx_settings_t(&enc, &vtx_settings);
-    if (res < CBOR_OK) {
-      fmc_lock();
-      __enable_irq();
-      failloop(FAILLOOP_FAULT);
-    }
-
-    fmc_write_buf(VTX_STORAGE_OFFSET, buffer, VTX_STORAGE_SIZE);
-  }
-#endif
 
   fmc_lock();
   free(buffer);
@@ -149,46 +107,21 @@ void flash_load() {
     memcpy((uint8_t *)&flash_storage, buffer + FMC_MAGIC_SIZE, sizeof(flash_storage_t));
   }
 
-  if (flash_compare_magic(BIND_STORAGE_OFFSET, (FMC_MAGIC | BIND_STORAGE_OFFSET))) {
-    fmc_read_buf(BIND_STORAGE_OFFSET, buffer, BIND_STORAGE_SIZE);
-    memcpy((uint8_t *)&bind_storage, buffer + FMC_MAGIC_SIZE, sizeof(rx_bind_storage_t));
-
-  } else {
-#ifdef EXPRESS_LRS_UID
-    const uint8_t uid[6] = {EXPRESS_LRS_UID};
-    bind_storage.bind_saved = 1;
-
-    bind_storage.elrs.is_set = 0x1;
-    bind_storage.elrs.magic = 0x37;
-    memcpy(bind_storage.elrs.uid, uid, 6);
-#endif
-  }
-
   profile_set_defaults();
 
   if (flash_compare_magic(PROFILE_STORAGE_OFFSET, (FMC_MAGIC | PROFILE_STORAGE_OFFSET))) {
     fmc_read_buf(PROFILE_STORAGE_OFFSET, buffer, PROFILE_STORAGE_SIZE);
-
-    cbor_value_t dec;
-    cbor_decoder_init(&dec, buffer + FMC_MAGIC_SIZE, PROFILE_STORAGE_SIZE - FMC_MAGIC_SIZE);
-
-    cbor_result_t res = cbor_decode_profile_t(&dec, &profile);
-    if (res < CBOR_OK) {
-      failloop(FAILLOOP_FAULT);
-    }
+    memcpy((uint8_t *)&profile, buffer + FMC_MAGIC_SIZE, sizeof(profile_t));
   }
 
-#ifdef USE_VTX
-  if (flash_compare_magic(VTX_STORAGE_OFFSET, (FMC_MAGIC | VTX_STORAGE_OFFSET))) {
-    fmc_read_buf(VTX_STORAGE_OFFSET, buffer, VTX_STORAGE_SIZE);
+#ifdef EXPRESS_LRS_UID
+  if (profile.receiver.bind.bind_saved == 0) {
+    const uint8_t uid[6] = {EXPRESS_LRS_UID};
+    profile.receiver.bind.bind_saved = 1;
 
-    cbor_value_t dec;
-    cbor_decoder_init(&dec, buffer + FMC_MAGIC_SIZE, VTX_STORAGE_SIZE - FMC_MAGIC_SIZE);
-
-    cbor_result_t res = cbor_decode_vtx_settings_t(&dec, &vtx_settings);
-    if (res < CBOR_OK) {
-      failloop(FAILLOOP_FAULT);
-    }
+    profile.receiver.bind.elrs.is_set = 0x1;
+    profile.receiver.bind.elrs.magic = 0x37;
+    memcpy(profile.receiver.bind.elrs.uid, uid, 6);
   }
 #endif
 
