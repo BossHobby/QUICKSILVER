@@ -16,6 +16,7 @@
 #include "osd/menu.h"
 #include "osd/status.h"
 #include "rx/crsf.h"
+#include "rx/unified_serial.h"
 #include "util/util.h"
 
 #define ICON_RSSI 0x1
@@ -41,9 +42,39 @@
 #define TEMP 1
 
 extern profile_t profile;
+extern vtx_status_t vtx_actual;
 
-static vtx_settings_t vtx_settings_copy;
-static uint8_t vtx_buffer_populated = 0;
+#ifdef USE_VTX
+static profile_vtx_t osd_vtx_profile;
+static uint8_t osd_vtx_profile_staged = 0;
+
+static void osd_vtx_stage_reset() {
+  osd_vtx_profile_staged = 0;
+}
+
+static profile_vtx_t *osd_vtx_stage() {
+  if (!osd_vtx_profile_staged) {
+    osd_vtx_profile = profile.vtx;
+    if (vtx_actual.power_table.levels > 0) {
+      osd_vtx_profile.power_table = vtx_actual.power_table;
+      if (osd_vtx_profile.power_level >= osd_vtx_profile.power_table.levels) {
+        osd_vtx_profile.power_level = osd_vtx_profile.power_table.levels - 1;
+      }
+    }
+    osd_vtx_profile_staged = 1;
+  }
+  return &osd_vtx_profile;
+}
+
+static void osd_vtx_stage_commit() {
+  if (osd_vtx_profile_staged) {
+    profile.vtx = osd_vtx_profile;
+  }
+  osd_vtx_stage_reset();
+}
+#else
+static void osd_vtx_stage_reset() {}
+#endif
 
 osd_system_t osd_system = OSD_SYS_NONE;
 
@@ -233,6 +264,10 @@ static void osd_menu_select_aux_adjust(int8_t x, int8_t y, const char *text, uin
 }
 
 void osd_display_reset() {
+#ifdef USE_VTX
+  osd_vtx_stage_reset();
+#endif
+
   osd_status_reset();
 
   osd_state.element = OSD_CALLSIGN;
@@ -249,6 +284,11 @@ void osd_display_reset() {
 }
 
 static void osd_update_screen(osd_screens_t screen) {
+#ifdef USE_VTX
+  if (osd_state.screen == OSD_SCREEN_VTX && screen != OSD_SCREEN_VTX) {
+    osd_vtx_stage_reset();
+  }
+#endif
   osd_state.screen = screen;
   osd_state.screen_phase = OSD_PHASE_CLEAR;
 }
@@ -343,6 +383,11 @@ void osd_handle_input(osd_input_t input) {
 }
 
 void osd_exit() {
+#ifdef USE_VTX
+  if (osd_state.screen == OSD_SCREEN_VTX) {
+    osd_vtx_stage_reset();
+  }
+#endif
   osd_state.selection = 0;
   osd_state.cursor = 1;
   osd_state.cursor_history_size = 0;
@@ -351,13 +396,6 @@ void osd_exit() {
 
 void osd_save_exit() {
   osd_exit();
-
-#ifdef USE_VTX
-  // check if vtx settings need to be updated
-  if (vtx_buffer_populated) {
-    vtx_set(&vtx_settings_copy);
-  }
-#endif
 
   led_flash();
 
@@ -467,7 +505,7 @@ static void print_osd_vtx(osd_element_t *el) {
 #ifdef USE_VTX
   osd_start_el(el);
 
-  switch (vtx_settings.band) {
+  switch (profile.vtx.band) {
   case VTX_BAND_A:
     osd_write_char('A');
     break;
@@ -492,16 +530,16 @@ static void print_osd_vtx(osd_element_t *el) {
   }
 
   osd_write_char(':');
-  osd_write_char(vtx_settings.channel + 49);
+  osd_write_char(profile.vtx.channel + 49);
   osd_write_char(':');
 
-  if (vtx_settings.pit_mode == 1) {
+  if (profile.vtx.pit_mode == 1) {
     osd_write_char(21); // "pit", probably from Pitch, but we will use it here
   } else {
-    if (vtx_settings.power_level == 4)
+    if (profile.vtx.power_level == 4)
       osd_write_char(36); // "max"
     else
-      osd_write_char(vtx_settings.power_level + 49);
+      osd_write_char(profile.vtx.power_level + 49);
   }
 #endif
 }
@@ -1102,40 +1140,48 @@ void osd_display() {
 
   case OSD_SCREEN_VTX:
 #ifdef USE_VTX
-    if (vtx_settings.detected) {
+    if (vtx_actual.protocol != VTX_PROTOCOL_INVALID) {
+      profile_vtx_t *vtx_profile = osd_vtx_stage();
       static const char *power_level_labels[VTX_POWER_LEVEL_MAX];
       static char power_level_labels_terminated[VTX_POWER_LEVEL_MAX][VTX_POWER_LABEL_LEN + 1];
-      if (!vtx_buffer_populated) {
-        vtx_settings_copy = vtx_settings;
-        for (uint8_t i = 0; i < vtx_settings.power_table.levels; i++) {
-          memcpy(power_level_labels_terminated[i], vtx_settings.power_table.labels[i], VTX_POWER_LABEL_LEN);
-          power_level_labels_terminated[i][VTX_POWER_LABEL_LEN] = 0;
-          power_level_labels[i] = power_level_labels_terminated[i];
-        }
-        vtx_buffer_populated = 1;
+      const uint8_t power_levels = min(vtx_actual.power_table.levels, VTX_POWER_LEVEL_MAX);
+      for (uint8_t i = 0; i < power_levels; i++) {
+        memcpy(power_level_labels_terminated[i], vtx_actual.power_table.labels[i], VTX_POWER_LABEL_LEN);
+        power_level_labels_terminated[i][VTX_POWER_LABEL_LEN] = 0;
+        power_level_labels[i] = power_level_labels_terminated[i];
+      }
+      if (power_levels > 0 && vtx_profile->power_level >= power_levels) {
+        vtx_profile->power_level = power_levels - 1;
       }
 
       osd_menu_start();
       osd_menu_header("VTX CONTROLS");
 
       const char *band_labels[] = {"A", "B", "E", "F", "R", "L"};
-      osd_menu_select_enum_adjust(4, 4, "BAND", 20, &vtx_settings_copy.band, band_labels, VTX_BAND_A, VTX_BAND_MAX - 1);
+      osd_menu_select_enum_adjust(4, 4, "BAND", 20, &vtx_profile->band, band_labels, VTX_BAND_A, VTX_BAND_MAX - 1);
 
       const char *channel_labels[] = {"1", "2", "3", "4", "5", "6", "7", "8"};
-      osd_menu_select_enum_adjust(4, 5, "CHANNEL", 20, &vtx_settings_copy.channel, channel_labels, VTX_CHANNEL_1, VTX_CHANNEL_8);
-      osd_menu_select_enum_adjust(4, 6, "POWER LEVEL", 20, &vtx_settings_copy.power_level, power_level_labels, VTX_POWER_LEVEL_1, vtx_settings.power_table.levels - 1);
+      osd_menu_select_enum_adjust(4, 5, "CHANNEL", 20, &vtx_profile->channel, channel_labels, VTX_CHANNEL_1, VTX_CHANNEL_8);
+      if (power_levels > 0) {
+        osd_menu_select_enum_adjust(4, 6, "POWER LEVEL", 20, &vtx_profile->power_level, power_level_labels, VTX_POWER_LEVEL_1, power_levels - 1);
+      }
 
       const char *pit_mode_labels[] = {"OFF", "ON ", "N/A"};
       osd_menu_select(4, 7, "PITMODE");
-      if (osd_menu_select_enum(20, 7, vtx_settings_copy.pit_mode, pit_mode_labels) && vtx_settings_copy.pit_mode != VTX_PIT_MODE_NO_SUPPORT) {
-        vtx_settings_copy.pit_mode = osd_menu_adjust_int(vtx_settings_copy.pit_mode, 1, VTX_PIT_MODE_OFF, VTX_PIT_MODE_ON);
+      if (osd_menu_select_enum(20, 7, vtx_profile->pit_mode, pit_mode_labels) && vtx_profile->pit_mode != VTX_PIT_MODE_NO_SUPPORT) {
+        vtx_profile->pit_mode = osd_menu_adjust_int(vtx_profile->pit_mode, 1, VTX_PIT_MODE_OFF, VTX_PIT_MODE_ON);
       }
 
-      osd_menu_select_save_and_exit(4);
+      if (osd_menu_button(4, OSD_END, "SAVE AND EXIT")) {
+        osd_vtx_stage_commit();
+        osd_save_exit();
+      }
       osd_menu_finish();
     } else
 #endif
     {
+      osd_vtx_stage_reset();
+
       osd_menu_start();
       osd_menu_header("VTX CONTROLS");
 

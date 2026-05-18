@@ -8,10 +8,6 @@
 
 #define LQ_EXPO 0.9f
 
-typedef struct {
-  rx_serial_protocol_t protocol;
-} rx_unified_bind_data_t;
-
 typedef enum {
   FRAME_INVALID,
   FRAME_IDLE,

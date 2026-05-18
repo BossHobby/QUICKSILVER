@@ -63,7 +63,7 @@ static uint32_t packets_recv = 0;
 
 static smart_audio_workaround_t workaround = SA_WORKAROUND_NONE;
 
-extern vtx_settings_t vtx_actual;
+extern vtx_status_t vtx_actual;
 extern const uint16_t frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX];
 
 static uint8_t smart_audio_mode = 0;
@@ -199,7 +199,7 @@ static bool smart_audio_send_payload(uint8_t cmd, const uint8_t *payload, const 
   return true;
 }
 
-static void smart_audio_parse_packet(vtx_settings_t *actual, uint8_t cmd, uint8_t *payload, uint32_t length) {
+static void smart_audio_parse_packet(vtx_status_t *actual, uint8_t cmd, uint8_t *payload, uint32_t length) {
   switch (cmd) {
   case SA_CMD_GET_SETTINGS:
   case SA_CMD_GET_SETTINGS_V2:
@@ -251,14 +251,7 @@ static void smart_audio_parse_packet(vtx_settings_t *actual, uint8_t cmd, uint8_
       actual->power_level = vtx_power_level_index(&actual->power_table, power);
     }
 
-    if (vtx_settings.detected != VTX_PROTOCOL_SMART_AUDIO) {
-      if (vtx_settings.magic != VTX_SETTINGS_MAGIC) {
-        vtx_set(actual);
-      }
-
-      memcpy(&vtx_settings.power_table, &actual->power_table, sizeof(vtx_power_table_t));
-      vtx_settings.detected = VTX_PROTOCOL_SMART_AUDIO;
-    }
+    actual->protocol = VTX_PROTOCOL_SMART_AUDIO;
     break;
   }
   case SA_CMD_SET_FREQUENCY: {
@@ -295,7 +288,7 @@ static void smart_audio_parse_packet(vtx_settings_t *actual, uint8_t cmd, uint8_
   packets_recv++;
 }
 
-static vtx_detect_status_t smart_audio_update(vtx_settings_t *actual) {
+static vtx_detect_status_t smart_audio_update(vtx_status_t *actual) {
   if (!serial_vtx_is_ready()) {
     return VTX_DETECT_WAIT;
   }
@@ -367,7 +360,7 @@ static vtx_detect_status_t smart_audio_update(vtx_settings_t *actual) {
     }
   }
 
-  if (vtx_settings.detected != VTX_PROTOCOL_SMART_AUDIO) {
+  if (actual->protocol != VTX_PROTOCOL_SMART_AUDIO) {
     // no smart audio detected, try again
     smart_audio_send_payload(SA_CMD_GET_SETTINGS, NULL, 0);
     return VTX_DETECT_WAIT;
@@ -423,7 +416,7 @@ static bool smart_audio_set_power_level(vtx_power_level_t power) {
 
 static bool smart_audio_set_pit_mode(vtx_pit_mode_t pit_mode) {
   if (smart_audio_version < 3) {
-    vtx_settings.pit_mode = VTX_PIT_MODE_NO_SUPPORT;
+    vtx_actual.pit_mode = VTX_PIT_MODE_NO_SUPPORT;
     return true;
   }
 

@@ -33,7 +33,7 @@ enum {
 };
 
 extern bool msp_vtx_detected;
-extern vtx_settings_t vtx_actual;
+extern vtx_status_t vtx_actual;
 extern char msp_vtx_band_letters[VTX_BAND_MAX];
 extern uint8_t msp_vtx_band_is_factory[VTX_BAND_MAX];
 extern char msp_vtx_band_labels[VTX_BAND_MAX][8];
@@ -483,7 +483,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       msp_send_reply(msp, magic, cmd, data, 1);
 #ifdef USE_VTX
       if (arg == serial_vtx.config.port) {
-        if (vtx_settings.protocol == VTX_PROTOCOL_SMART_AUDIO) {
+        if (profile.vtx.protocol == VTX_PROTOCOL_SMART_AUDIO) {
           usb_serial_passthrough(arg, 4800, 2, true);
         } else {
           // MSP & Tramp both use 9600 baud
@@ -551,7 +551,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       }
 #ifdef USE_VTX
       if (i == serial_vtx.config.port) {
-        if (vtx_settings.protocol == VTX_PROTOCOL_TRAMP) {
+        if (profile.vtx.protocol == VTX_PROTOCOL_TRAMP) {
           function = MSP_SERIAL_FUNCTION_TRAMP;
         } else {
           function = MSP_SERIAL_FUNCTION_SA;
@@ -582,14 +582,26 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   }
 
   case MSP_SET_VTX_CONFIG: {
-    vtx_settings_t *settings = &vtx_actual;
-    if (msp->device != MSP_DEVICE_VTX) {
-      // store non-msp settings in temporary;
-      static vtx_settings_t _vtx_settings;
-      _vtx_settings = vtx_settings;
-      settings = &_vtx_settings;
+    struct {
+      vtx_band_t *band;
+      vtx_channel_t *channel;
+      vtx_pit_mode_t *pit_mode;
+      vtx_power_level_t *power_level;
+      vtx_power_table_t *power_table;
+    } target = {
+        .band = &vtx_actual.band,
+        .channel = &vtx_actual.channel,
+        .pit_mode = &vtx_actual.pit_mode,
+        .power_level = &vtx_actual.power_level,
+        .power_table = &vtx_actual.power_table,
+    };
 
-      settings->magic = VTX_SETTINGS_MAGIC;
+    if (msp->device != MSP_DEVICE_VTX) {
+      target.band = &profile.vtx.band;
+      target.channel = &profile.vtx.channel;
+      target.pit_mode = &profile.vtx.pit_mode;
+      target.power_level = &profile.vtx.power_level;
+      target.power_table = &profile.vtx.power_table;
     }
 
     uint16_t remaining = size;
@@ -597,17 +609,17 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     uint16_t freq = (payload[1] << 8) | payload[0];
     remaining -= 2;
     if (freq < VTX_BAND_MAX * VTX_CHANNEL_MAX) {
-      settings->band = freq / VTX_CHANNEL_MAX;
-      settings->channel = freq % VTX_CHANNEL_MAX;
+      *target.band = freq / VTX_CHANNEL_MAX;
+      *target.channel = freq % VTX_CHANNEL_MAX;
     } else {
       int8_t channel_index = vtx_find_frequency_index(freq);
-      settings->band = channel_index / VTX_CHANNEL_MAX;
-      settings->channel = channel_index % VTX_CHANNEL_MAX;
+      *target.band = channel_index / VTX_CHANNEL_MAX;
+      *target.channel = channel_index % VTX_CHANNEL_MAX;
     }
 
     if (remaining >= 2) {
-      settings->power_level = max(payload[2], 1) - 1;
-      settings->pit_mode = payload[3];
+      *target.power_level = max(payload[2], 1) - 1;
+      *target.pit_mode = payload[3];
       remaining -= 2;
     }
 
@@ -622,8 +634,8 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     }
 
     if (remaining >= 4) {
-      settings->band = payload[7] - 1;
-      settings->channel = payload[8] - 1;
+      *target.band = payload[7] - 1;
+      *target.channel = payload[8] - 1;
       //  payload[9], payload[10]  freq, unused
       remaining -= 4;
     }
@@ -631,21 +643,17 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     if (remaining >= 4) {
       // payload[11], band count, unused
       // payload[12], channel count, unused
-      settings->power_table.levels = payload[13];
+      const uint8_t power_levels = payload[13];
 
+      target.power_table->levels = power_levels;
       if (payload[14]) {
-        // clear tables
         for (uint32_t i = 0; i < VTX_POWER_LEVEL_MAX; i++) {
-          settings->power_table.values[i] = 0;
-          memset(settings->power_table.labels[i], 0, VTX_POWER_LABEL_LEN);
+          target.power_table->values[i] = 0;
+          memset(target.power_table->labels[i], 0, VTX_POWER_LABEL_LEN);
         }
       }
 
       remaining -= 4;
-    }
-
-    if (msp->device != MSP_DEVICE_VTX) {
-      vtx_set(settings);
     }
 
     msp_check_vtx_detected(msp);
@@ -736,13 +744,26 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       break;
     }
 
-    vtx_actual.power_table.levels = max(level, vtx_actual.power_table.levels);
-    vtx_actual.power_table.values[level - 1] = payload[2] << 8 | payload[1];
+    if (msp->device == MSP_DEVICE_VTX) {
+      vtx_actual.power_table.values[level - 1] = payload[2] << 8 | payload[1];
+
+      const uint8_t label_len = payload[3];
+      for (uint8_t i = 0; i < VTX_POWER_LABEL_LEN; i++) {
+        vtx_actual.power_table.labels[level - 1][i] = i >= label_len ? 0 : payload[4 + i];
+      }
+      vtx_actual.power_table.levels = max(level, vtx_actual.power_table.levels);
+
+      msp_send_reply(msp, magic, cmd, NULL, 0);
+      break;
+    }
+
+    profile.vtx.power_table.values[level - 1] = payload[2] << 8 | payload[1];
 
     const uint8_t label_len = payload[3];
     for (uint8_t i = 0; i < VTX_POWER_LABEL_LEN; i++) {
-      vtx_actual.power_table.labels[level - 1][i] = i >= label_len ? 0 : payload[4 + i];
+      profile.vtx.power_table.labels[level - 1][i] = i >= label_len ? 0 : payload[4 + i];
     }
+
     msp_send_reply(msp, magic, cmd, NULL, 0);
     break;
   }
