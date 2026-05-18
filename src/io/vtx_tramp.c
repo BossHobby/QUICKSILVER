@@ -78,7 +78,7 @@ static bool tramp_is_query(uint8_t cmd) {
   return false;
 }
 
-static void tramp_parse_packet(vtx_settings_t *actual, uint8_t *payload) {
+static void tramp_parse_packet(vtx_status_t *actual, uint8_t *payload) {
   switch (payload[0]) {
   case 'r':
     // freq_min = payload[1] | (payload[2] << 8);
@@ -106,14 +106,7 @@ static void tramp_parse_packet(vtx_settings_t *actual, uint8_t *payload) {
     actual->power_level = vtx_power_level_index(&actual->power_table, power);
     actual->pit_mode = pit_mode;
 
-    if (vtx_settings.detected != VTX_PROTOCOL_TRAMP) {
-      if (vtx_settings.magic != VTX_SETTINGS_MAGIC) {
-        vtx_set(actual);
-      }
-
-      memcpy(&vtx_settings.power_table, &actual->power_table, sizeof(vtx_power_table_t));
-      vtx_settings.detected = VTX_PROTOCOL_TRAMP;
-    }
+    actual->protocol = VTX_PROTOCOL_TRAMP;
     break;
   }
   case 's':
@@ -148,7 +141,7 @@ static bool tramp_send_payload(uint8_t cmd, const uint16_t payload) {
   return true;
 }
 
-static vtx_detect_status_t tramp_update(vtx_settings_t *actual) {
+static vtx_detect_status_t tramp_update(vtx_status_t *actual) {
   if (!serial_vtx_is_ready()) {
     return VTX_DETECT_WAIT;
   }
@@ -202,7 +195,7 @@ static vtx_detect_status_t tramp_update(vtx_settings_t *actual) {
     }
   }
 
-  if (vtx_settings.detected != VTX_PROTOCOL_TRAMP) {
+  if (actual->protocol != VTX_PROTOCOL_TRAMP) {
     // no tramp detected, try again
     tramp_send_payload('v', 0);
     return VTX_DETECT_WAIT;

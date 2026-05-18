@@ -53,7 +53,7 @@
 // Maximum ms between LINK_STATISTICS packets for determining burst max
 #define TELEM_MIN_LINK_INTERVAL 512U
 
-#define UID bind_storage.elrs.uid
+#define UID profile.receiver.bind.elrs.uid
 
 extern volatile elrs_phase_lock_state_t pl_state;
 
@@ -141,12 +141,12 @@ static void elrs_set_switch_mode(const elrs_switch_mode_t mode, uint8_t packet_s
     elrs_crc_init(14, ELRS_CRC14_POLY);
   }
 
-  bind_storage.elrs.switch_mode = mode;
+  profile.receiver.bind.elrs.switch_mode = mode;
 }
 
 static uint8_t elrs_get_model_id() {
   // invert value so default (0x0) equals no model match
-  return bind_storage.elrs.model_id ^ 0xFF;
+  return profile.receiver.bind.elrs.model_id ^ 0xFF;
 }
 
 static bool elrs_hop() {
@@ -305,7 +305,7 @@ static bool elrs_vaild_packet() {
 
   // For smHybrid the CRC only has the rx_spi_packet type in byte 0
   // For smHybridWide the FHSS slot is added to the CRC in byte 0 on RC_DATA_PACKETs
-  if (type == RC_DATA_PACKET && bind_storage.elrs.switch_mode == SWITCH_WIDE_OR_8CH) {
+  if (type == RC_DATA_PACKET && profile.receiver.bind.elrs.switch_mode == SWITCH_WIDE_OR_8CH) {
     const uint8_t fhss_result = (ota_nonce % current_air_rate_config()->fhss_hop_interval) + 1;
     rx_spi_packet[0] = type | (fhss_result << 2);
   } else {
@@ -423,8 +423,8 @@ static void elrs_setup_bind(const volatile uint8_t *packet) {
     UID[i + 2] = packet[i + 3];
   }
 
-  bind_storage.elrs.is_set = 0x1;
-  bind_storage.elrs.magic = 0x37;
+  profile.receiver.bind.elrs.is_set = 0x1;
+  profile.receiver.bind.elrs.magic = 0x37;
 
   crc_initializer = ((UID[4] << 8) | UID[5]) ^ ELRS_OTA_VERSION_ID;
   fhss_randomize(elrs_get_uid_mac_seed());
@@ -592,7 +592,7 @@ static void elrs_msp_process(uint8_t *buf, uint32_t len) {
   };
 
   if (buf[7] == MSP_SET_RX_CONFIG && buf[8] == MSP_ELRS_MODEL_ID) {
-    bind_storage.elrs.model_id = buf[9] ^ 0xFF;
+    profile.receiver.bind.elrs.model_id = buf[9] ^ 0xFF;
     return;
   }
 
@@ -694,7 +694,7 @@ static bool elrs_process_packet() {
 
     bool tlm_confirm = false;
 
-    switch (bind_storage.elrs.switch_mode) {
+    switch (profile.receiver.bind.elrs.switch_mode) {
     default:
     case SWITCH_WIDE_OR_8CH:
       tlm_confirm = elrs_unpack_switches_wide(rx_spi_packet);
@@ -847,7 +847,7 @@ bool rx_expresslrs_check() {
     elrs_timer_state = TIMER_LOCKED;
   }
 
-  if (bind_storage.elrs.is_set == 0x0 && bind_storage.elrs.magic != 0x37) {
+  if (profile.receiver.bind.elrs.is_set == 0x0 && profile.receiver.bind.elrs.magic != 0x37) {
     elrs_enter_binding_mode();
   } else {
     state.rx_status = RX_SPI_STATUS_BOUND;

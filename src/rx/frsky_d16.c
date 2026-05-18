@@ -158,9 +158,9 @@ uint8_t frsky_d16_is_valid_packet(uint8_t *packet) {
   }
 
   return header->length == (FRSKY_D16_PACKET_LENGTH - 3) &&
-         header->tx_id[0] == bind_storage.frsky.tx_id[0] &&
-         header->tx_id[1] == bind_storage.frsky.tx_id[1] &&
-         (bind_storage.frsky.rx_num == 0 || header->rx_num == 0 || bind_storage.frsky.rx_num == header->rx_num);
+         header->tx_id[0] == profile.receiver.bind.frsky.tx_id[0] &&
+         header->tx_id[1] == profile.receiver.bind.frsky.tx_id[1] &&
+         (profile.receiver.bind.frsky.rx_num == 0 || header->rx_num == 0 || profile.receiver.bind.frsky.rx_num == header->rx_num);
 }
 
 #define SMART_PORT_DATA_SIZE 128
@@ -209,8 +209,8 @@ static void frsky_d16_build_telemetry(uint8_t *telemetry) {
   static uint8_t local_packet_id = 0;
 
   telemetry[0] = 0x0E; // length
-  telemetry[1] = bind_storage.frsky.tx_id[0];
-  telemetry[2] = bind_storage.frsky.tx_id[1];
+  telemetry[1] = profile.receiver.bind.frsky.tx_id[0];
+  telemetry[2] = profile.receiver.bind.frsky.tx_id[1];
   telemetry[3] = rx_spi_packet[3];
   if (even_odd) {
     telemetry[4] = rssi | 0x80;
