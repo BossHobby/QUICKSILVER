@@ -165,33 +165,6 @@ static void get_quic(quic_t *quic, cbor_value_t *dec) {
     quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
 #endif
-#ifdef USE_SERIAL_4WAY
-  case QUIC_VAL_BLHEL_SETTINGS: {
-    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
-
-    const uint8_t count = serial_4way_init();
-    time_delay_ms(500);
-
-    for (uint8_t i = 0; i < count; i++) {
-      blheli_settings_t settings;
-      serial_esc4way_ack_t ack = serial_4way_read_settings(&settings, i);
-      if (ack != ESC4WAY_ACK_OK) {
-        continue;
-      }
-
-      cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
-      res = cbor_encode_blheli_settings_t(&enc, &settings);
-      check_cbor_error(QUIC_CMD_GET);
-
-      quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, encode_buffer, cbor_encoder_len(&enc));
-    }
-
-    serial_4way_release();
-
-    quic_send_header(quic, QUIC_CMD_GET, QUIC_FLAG_STREAMING, 0);
-    break;
-  }
-#endif
 #ifdef DEBUG
   case QUIC_VAL_PERF_COUNTERS: {
     res = cbor_encode_task_stats(&enc);
@@ -265,32 +238,6 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
     quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
   }
-#ifdef USE_MOTOR_DSHOT
-  case QUIC_VAL_BLHEL_SETTINGS: {
-    uint8_t count = serial_4way_init();
-    time_delay_ms(500);
-
-    for (uint8_t i = 0; i < count; i++) {
-      blheli_settings_t settings;
-
-      res = cbor_decode_blheli_settings_t(dec, &settings);
-      check_cbor_error(QUIC_CMD_SET);
-
-      serial_esc4way_ack_t ack = serial_4way_write_settings(&settings, i);
-      if (ack != ESC4WAY_ACK_OK) {
-        break;
-      }
-    }
-
-    serial_4way_release();
-
-    res = cbor_encode_str(&enc, "OK");
-    check_cbor_error(QUIC_CMD_SET);
-
-    quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
-    break;
-  }
-#endif
   case QUIC_VAL_TARGET: {
     memset(&target, 0, sizeof(target_t));
     res = cbor_decode_target_t(dec, &target);
@@ -461,6 +408,37 @@ static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
     }
 
     res = cbor_encode_float_array(&enc, motor_test.value, MOTOR_PIN_MAX);
+    check_cbor_error(QUIC_CMD_MOTOR);
+
+    quic_send(quic, QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  }
+
+  case QUIC_MOTOR_SET_DIRECTION: {
+    if (flags.arm_state) {
+      quic_errorf(QUIC_CMD_MOTOR, "ARMED");
+      break;
+    }
+
+    uint8_t index = MOTOR_PIN_MAX;
+    res = cbor_decode_uint8_t(dec, &index);
+    check_cbor_error(QUIC_CMD_MOTOR);
+
+    uint8_t direction = 0;
+    res = cbor_decode_uint8_t(dec, &direction);
+    check_cbor_error(QUIC_CMD_MOTOR);
+
+    if (direction != MOTOR_FORWARD && direction != MOTOR_REVERSE) {
+      quic_errorf(QUIC_CMD_MOTOR, "INVALID DIRECTION %d", direction);
+      break;
+    }
+
+    if (!motor_configure_direction(index, static_cast<motor_direction_t>(direction))) {
+      quic_errorf(QUIC_CMD_MOTOR, "MOTOR DIRECTION FAILED");
+      break;
+    }
+
+    res = cbor_encode_str(&enc, "OK");
     check_cbor_error(QUIC_CMD_MOTOR);
 
     quic_send(quic, QUIC_CMD_MOTOR, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
