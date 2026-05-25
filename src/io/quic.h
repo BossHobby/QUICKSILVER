@@ -50,6 +50,7 @@ typedef enum {
   QUIC_MOTOR_TEST_SET_VALUE,
   QUIC_MOTOR_ESC4WAY_IF,
   QUIC_MOTOR_SERIAL,
+  QUIC_MOTOR_SET_DIRECTION,
 } __attribute__((__packed__)) quic_motor_command;
 
 typedef enum {
@@ -81,7 +82,7 @@ typedef enum {
   QUIC_VAL_PID_RATE_PRESETS,
   QUIC_VAL_VTX_SETTINGS, // deprecated
   QUIC_VAL_OSD_FONT, // deprecated
-  QUIC_VAL_BLHEL_SETTINGS,
+  QUIC_VAL_BLHEL_SETTINGS, // deprecated
   QUIC_VAL_BIND_INFO, // deprecated
   QUIC_VAL_PERF_COUNTERS,
   QUIC_VAL_BLACKBOX_PRESETS,
