@@ -22,6 +22,9 @@ typedef enum {
 void motor_init();
 void motor_wait_for_ready();
 void motor_beep();
+// Persist the ESC direction for a logical profile output while disarmed and not testing.
+// Success means the command sequence was transmitted, not acknowledged by the ESC.
+bool motor_configure_direction(uint8_t index, motor_direction_t dir);
 void motor_set_direction(motor_direction_t dir);
 bool motor_direction_change_done();
 
