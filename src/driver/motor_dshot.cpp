@@ -174,6 +174,24 @@ void dshot_dma_start() {
   }
 }
 
+void motor_dshot_wait_for_ready() {
+  while (dshot_phase != 0)
+    __NOP();
+}
+
+static void dshot_send_packet(uint8_t index, uint16_t value, bool telemetry) {
+  motor_dshot_wait_for_ready();
+
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (!dshot_motor_slot_active(i)) {
+      continue;
+    }
+    dshot_make_packet(i, i == index ? value : DSHOT_CMD_MOTOR_STOP, telemetry && i == index);
+  }
+
+  dshot_dma_start();
+}
+
 static void dshot_handle_dir_change() {
   static uint8_t counter = 0;
   static uint32_t dir_change_time = 0;
@@ -202,7 +220,7 @@ static void dshot_handle_dir_change() {
     break;
 
   case DIR_CHANGE_CMD: {
-    const uint16_t value = motor_dir == MOTOR_REVERSE ? DSHOT_CMD_ROTATE_REVERSE : DSHOT_CMD_ROTATE_NORMAL;
+    const uint16_t value = motor_dir == MOTOR_REVERSE ? DSHOT_CMD_SPIN_DIRECTION_REVERSED : DSHOT_CMD_SPIN_DIRECTION_NORMAL;
     dshot_make_packet_all(value, true);
     dshot_dma_start();
     if ((time_micros() - dir_change_time) >= DSHOT_DIR_CHANGE_CMD_TIME_US) {
@@ -290,11 +308,6 @@ void motor_dshot_write(float *values) {
   dshot_dma_start();
 }
 
-void motor_dshot_wait_for_ready() {
-  while (dshot_phase != 0)
-    __NOP();
-}
-
 void motor_dshot_set_direction(motor_direction_t dir) {
   if (dir_change_done) {
     motor_dir = dir;
@@ -304,6 +317,38 @@ void motor_dshot_set_direction(motor_direction_t dir) {
 
 bool motor_dshot_direction_change_done() {
   return dir_change_done;
+}
+
+bool motor_dshot_configure_direction(uint8_t index, motor_direction_t dir) {
+  if (!dir_change_done || index >= MOTOR_PIN_MAX || !dshot_motor_slot_active(index)) {
+    return false;
+  }
+
+  for (uint8_t i = 0; i < 100; i++) {
+    dshot_send_packet(index, DSHOT_CMD_MOTOR_STOP, false);
+  }
+
+  time_delay_us(DSHOT_DIR_CHANGE_IDLE_TIME_US);
+
+  // 7/8 configure the base direction; 20/21 temporarily reverse it for turtle mode.
+  const uint16_t command = dir == MOTOR_REVERSE ? DSHOT_CMD_SPIN_DIRECTION_2 : DSHOT_CMD_SPIN_DIRECTION_1;
+  for (uint8_t i = 0; i < 10; i++) {
+    dshot_send_packet(index, command, true);
+    time_delay_us(DSHOT_DIR_CHANGE_CMD_TIME_US);
+  }
+
+  for (uint8_t i = 0; i < 10; i++) {
+    dshot_send_packet(index, DSHOT_CMD_SAVE_SETTINGS, true);
+    time_delay_us(DSHOT_DIR_CHANGE_CMD_TIME_US);
+  }
+
+  // Allow the ESC to finish its nonvolatile write before sending more packets.
+  time_delay_ms(35);
+
+  dshot_send_packet(index, DSHOT_CMD_MOTOR_STOP, false);
+  motor_dshot_wait_for_ready();
+
+  return true;
 }
 
 void motor_dshot_beep() {
