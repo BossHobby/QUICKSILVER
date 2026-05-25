@@ -1,5 +1,6 @@
 #include "driver/motor.h"
 
+#include "control/control.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "util/util.h"
@@ -13,6 +14,7 @@ extern void motor_pwm_write(float *values);
 extern void motor_dshot_init();
 extern void motor_dshot_wait_for_ready();
 extern void motor_dshot_write(float *values);
+extern bool motor_dshot_configure_direction(uint8_t index, motor_direction_t dir);
 extern void motor_dshot_set_direction(motor_direction_t dir);
 extern bool motor_dshot_direction_change_done();
 extern void motor_dshot_beep();
@@ -55,6 +57,20 @@ void motor_beep() {
     motor_pwm_beep();
   }
 #endif
+}
+
+bool motor_configure_direction(uint8_t index, motor_direction_t dir) {
+  if (flags.arm_state || motor_test.active || index >= MOTOR_PIN_MAX || (dir != MOTOR_FORWARD && dir != MOTOR_REVERSE)) {
+    return false;
+  }
+#ifdef USE_MOTOR_DSHOT
+  const profile_output_t *output = &profile.outputs[index];
+  if (output->protocol == OUTPUT_PROTOCOL_DSHOT) {
+    return motor_dshot_configure_direction(output->target_output, dir);
+  }
+#endif
+
+  return false;
 }
 
 void motor_set(uint8_t pos, float pwm) {
