@@ -8,6 +8,19 @@
 #define QUIC_MAGIC '#'
 #define QUIC_HEADER_LEN 4
 
+// QUIC protocol changelog (protocol compatibility):
+// 0.2.9 (30cde6a5e): profile: move bind and vtx settings into profile.
+// 0.2.8 (fab52980): rx: add CRSF bind command.
+// 0.2.7 (399b96c5): blackbox: harden logging and transfer handling.
+// 0.2.4 (116782b9): add support for esc serial passthrough.
+// 0.2.3 (073633ad): vtx: increase power level count, increase label length.
+// 0.2.2 (f2a6eeee): adjust serial 4 way pass-through order to match with profile.
+// 0.2.1 (33646963): quic: bump protocol.
+// 0.2.0 (227c6435): quic field cleanup and compatibility-related tweaks.
+// 0.1.3 (33e3666d): increment quic protocol version.
+// 0.1.2 (9eb3a5a2): increment quic protocol version.
+// 0.1.1 (e1e99633): extract quic protocol.
+// 0.1.0: introduce QUIC protocol serialization.
 #define QUIC_PROTOCOL_VERSION MAKE_SEMVER(0, 2, 9)
 
 typedef enum {
