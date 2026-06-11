@@ -179,8 +179,6 @@ static bool elrs_tlm() {
     return false;
   }
 
-  rx_lqi_got_packet();
-
   memset((uint8_t *)rx_spi_packet, 0, current_air_rate_config()->payload_len);
 
   rx_spi_packet[0] = TLM_PACKET;
@@ -317,12 +315,12 @@ static bool elrs_vaild_packet() {
   return their_crc == our_crc;
 }
 
-static void elrs_connection_lost() {
+static void elrs_connection_lost(void) {
   elrs_state = DISCONNECTED;
   elrs_timer_state = TIMER_DISCONNECTED;
   elrs_timer_stop();
 
-  flags.failsafe = 1;
+  flags.failsafe_signal_lost = 1;
 
   already_hop = false;
   rf_mode_cycle_multiplier = 1;
@@ -335,6 +333,15 @@ static void elrs_connection_lost() {
 
   elrs_set_rate(next_rate, fhss_get_sync_freq(), UID[5] & 0x01, elrs_get_uid_mac_seed(), crc_initializer);
   elrs_enter_rx(rx_spi_packet);
+}
+
+static void elrs_update_signal_loss(uint32_t now_us) {
+  if (elrs_state == CONNECTED &&
+      flags.rx_ready &&
+      state.last_frame_time_us != 0 &&
+      now_us - state.last_frame_time_us > FAILSAFE_DETECT_TIME_US) {
+    flags.failsafe_signal_lost = 1;
+  }
 }
 
 static void elrs_connection_tentative(uint32_t now) {
@@ -362,7 +369,7 @@ static void elrs_connected(uint32_t now) {
   connected_millis = now;
 
   flags.rx_ready = 1;
-  flags.failsafe = 0;
+  flags.failsafe_signal_lost = 0;
 
   flags.rx_mode = RXMODE_NORMAL;
 
@@ -626,8 +633,6 @@ static bool elrs_process_packet() {
 
   elrs_lq_add();
 
-  rx_lqi_got_packet();
-
   rf_mode_cycle_multiplier = RF_MODE_CYCLE_MULTIPLIER_SLOW;
 
   const uint8_t type = rx_spi_packet[0] & 0b11;
@@ -734,6 +739,10 @@ static bool elrs_process_packet() {
     break;
   }
 
+  if (channels_received) {
+    rx_lqi_got_packet();
+  }
+
   return channels_received;
 }
 
@@ -835,8 +844,10 @@ bool rx_expresslrs_check() {
 
   elrs_cycle_rf_mode(time_ms);
 
+  elrs_update_signal_loss(time_micros());
+
   if ((elrs_state == CONNECTED) && ((int32_t)(time_ms - last_valid_packet_millis) > current_rf_pref_params()->disconnect_timeout_ms)) {
-    elrs_connection_lost(time_ms);
+    elrs_connection_lost();
   }
 
   if ((elrs_state == TENTATIVE) && (abs(pl_state.offset_dx) <= 10) && (pl_state.offset < 100) && (elrs_lq_get_raw() > fhss_min_lq_for_chaos())) {
@@ -860,16 +871,13 @@ bool rx_expresslrs_check() {
     next_switch_mode_pending = 0;
   }
 
-  rx_lqi_update();
+  rx_lqi_update(rate_enum_to_hz(current_rf_pref_params()->rate));
 
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
     rx_lqi_update_direct(uplink_lq);
   }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL) {
     rx_lqi_update_direct(0.f);
-  }
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-    rx_lqi_update_from_fps(rate_enum_to_hz(current_rf_pref_params()->rate));
   }
 
   return channels_received;
@@ -879,7 +887,7 @@ void rx_expresslrs_stop() {
   if (!radio_is_init) {
     return;
   }
-  elrs_connection_lost(time_millis());
+  elrs_connection_lost();
   has_run_once = false;
 }
 

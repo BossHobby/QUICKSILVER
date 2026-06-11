@@ -28,13 +28,12 @@ typedef enum {
 } sbus_parser_state_t;
 
 extern int32_t channels[16];
-extern uint8_t failsafe_sbus_failsafe;
 
 extern uint8_t rx_data[RX_BUFF_SIZE];
 
 static bool fport_telemetry_allowed = false;
 
-static void decode_sbus_channels(uint8_t *data) {
+static packet_status_t decode_sbus_channels(uint8_t *data) {
   channels[0] = ((data[0] | data[1] << 8) & 0x07FF);
   channels[1] = ((data[1] >> 3 | data[2] << 5) & 0x07FF);
   channels[2] = ((data[2] >> 6 | data[3] << 2 | data[4] << 10) & 0x07FF);
@@ -57,17 +56,19 @@ static void decode_sbus_channels(uint8_t *data) {
     state.rx_channels[channel] = (uint16_t)(((uint32_t)(raw - 172) * 65535) / (1811 - 172));
   }
 
-  if (data[22] & (1 << 2)) {
+  const bool sbus_frame_lost = data[22] & (1 << 2);
+  const bool sbus_failsafe = data[22] & (1 << 3);
+  packet_status_t status = PACKET_CHANNELS_RECEIVED;
+
+  if (sbus_frame_lost || sbus_failsafe) {
     // RX sets this bit when it knows it missed a frame. Presumably this is a timer in the RX.
     rx_lqi_lost_packet();
-  } else {
-    rx_lqi_got_packet();
+    status = PACKET_DATA_RECEIVED;
   }
-  if (data[22] & (1 << 3)) {
-    failsafe_sbus_failsafe = 1;              // Sbus packets have a failsafe bit. This is cool. If you forget to trust it you get programs though.
-    flags.failsafe = failsafe_sbus_failsafe; // set failsafe rtf-now
-  } else {
-    failsafe_sbus_failsafe = 0;
+
+  if (sbus_failsafe) {
+    // SBUS failsafe frames are not valid control input even though bytes are still arriving.
+    flags.failsafe_signal_lost = 1;
   }
 
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel < RX_CHANNEL_MAX) {
@@ -77,6 +78,8 @@ static void decode_sbus_channels(uint8_t *data) {
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
     rx_lqi_update_direct(data[23]); // no internal rssi data
   }
+
+  return status;
 }
 
 packet_status_t rx_serial_process_sbus() {
@@ -108,8 +111,7 @@ sbus_do_more:
     if (rx_data[24] != 0x0) {
       return PACKET_ERROR;
     }
-    decode_sbus_channels(rx_data + 1);
-    return PACKET_CHANNELS_RECEIVED;
+    return decode_sbus_channels(rx_data + 1);
   }
   };
 
@@ -119,12 +121,10 @@ sbus_do_more:
 static packet_status_t fport_handle_packet(uint8_t *packet) {
   switch (packet[2]) {
   case 0x00:
-    decode_sbus_channels(packet + 3);
-    return PACKET_CHANNELS_RECEIVED;
+    return decode_sbus_channels(packet + 3);
 
   case 0x1:
     fport_telemetry_allowed = true;
-    rx_lqi_got_packet();
     return PACKET_DATA_RECEIVED;
 
   default:

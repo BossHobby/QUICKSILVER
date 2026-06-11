@@ -41,9 +41,11 @@ static uint16_t redpine_crc16(uint8_t *data, uint16_t len) {
 }
 
 static packet_status_t redpine_handle_packet(uint8_t *packet) {
+  bool channels_received = false;
+
   // packet lost flag
   if ((rx_data[0] & 0xc0) != 0x40) {
-    rx_lqi_got_packet();
+    channels_received = true;
 
     const uint16_t channels[4] = {
         (uint16_t)((rx_data[REDPINE_CHANNEL_START + 1] << 8) & 0x700) | rx_data[REDPINE_CHANNEL_START],
@@ -80,7 +82,7 @@ static packet_status_t redpine_handle_packet(uint8_t *packet) {
     rx_lqi_update_direct(0); // aux channels are binary and cannot carry rssi
   }
 
-  return PACKET_CHANNELS_RECEIVED;
+  return channels_received ? PACKET_CHANNELS_RECEIVED : PACKET_DATA_RECEIVED;
 }
 
 packet_status_t rx_serial_process_redpine() {

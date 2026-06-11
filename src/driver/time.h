@@ -13,3 +13,9 @@ uint32_t time_micros();
 
 void time_delay_us(uint32_t us);
 void time_delay_ms(uint32_t ms);
+
+#ifdef PIO_UNIT_TESTING
+void time_test_reset(void);
+void time_test_set_us(uint32_t time_us);
+void time_test_advance_us(uint32_t delta_us);
+#endif

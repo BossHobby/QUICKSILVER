@@ -48,6 +48,14 @@ typedef enum {
 } arming_disabled_flags_t;
 
 typedef enum {
+  FAILSAFE_PHASE_IDLE,
+  FAILSAFE_PHASE_HOLD_LAST,
+  FAILSAFE_PHASE_STAGE1_GUARD,
+  FAILSAFE_PHASE_STAGE2_DROP,
+  FAILSAFE_PHASE_RECOVERY,
+} failsafe_phase_t;
+
+typedef enum {
   WING_LAUNCH_IDLE,
   WING_LAUNCH_IDLE_DELAY,
   WING_LAUNCH_WAIT,
@@ -76,8 +84,11 @@ typedef struct {
   uint8_t in_air : 1;    // throttle was raised above THROTTLE_SAFETY (10%), only resets on disarm
   uint8_t on_ground : 1; // armed and we are sending some throttle to the motors
 
-  uint8_t failsafe : 1; // failsafe on / off
-  uint8_t lowbatt : 1;  // signal for lowbattery
+  uint8_t failsafe : 1;                 // failsafe warning / recovery is active
+  uint8_t failsafe_outputs_blocked : 1; // failsafe has blocked output writes
+  uint8_t failsafe_signal_lost : 1;     // receiver has reported signal loss
+
+  uint8_t lowbatt : 1; // signal for lowbattery
 
   uint8_t rx_mode : 1; // bind / normal rx mode
   uint8_t rx_ready : 1;
@@ -107,7 +118,8 @@ typedef struct {
   float armtime;     // running sum of looptimes (while armed)
   uint32_t cpu_load; // micros we have had left last loop
 
-  uint32_t failsafe_time_ms; // time the last failsafe occured in ms
+  uint32_t failsafe_time_ms; // time the current failsafe started in ms
+  uint8_t failsafe_phase;
 
   uint8_t lipo_cell_count;
 
@@ -135,6 +147,7 @@ typedef struct {
 
   float rx_rssi;
   uint32_t rx_status;
+  uint32_t last_frame_time_us;
 
   float throttle; // input throttle with idle etc applied
   float thrsum;   // average of all 4 motor thrusts
@@ -192,6 +205,7 @@ typedef struct {
   MEMBER(armtime, float)                               \
   MEMBER(cpu_load, uint32_t)                           \
   MEMBER(failsafe_time_ms, uint32_t)                   \
+  MEMBER(failsafe_phase, uint8_t)                      \
   MEMBER(lipo_cell_count, uint8_t)                     \
   MEMBER(cpu_temp, float)                              \
   MEMBER(vbat, float)                                  \
@@ -211,6 +225,7 @@ typedef struct {
   MEMBER(stick_calibration_wizard, uint8_t)            \
   MEMBER(rx_rssi, float)                               \
   MEMBER(rx_status, uint32_t)                          \
+  MEMBER(last_frame_time_us, uint32_t)                 \
   MEMBER(throttle, float)                              \
   MEMBER(thrsum, float)                                \
   MEMBER(aux_active, uint32_t)                         \
@@ -256,4 +271,5 @@ extern motor_test_t motor_test;
 cbor_result_t cbor_encode_control_state_t(cbor_value_t *enc, const control_state_t *s);
 
 void control_update_arming();
+void control_failsafe_update();
 void control();

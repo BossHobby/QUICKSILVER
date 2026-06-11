@@ -41,6 +41,8 @@ enum {
   CRSF_FRAME_GPS_PAYLOAD_SIZE = 15,
   CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = 8,
   CRSF_FRAME_LINK_STATISTICS_PAYLOAD_SIZE = 10,
+  CRSF_FRAME_LINK_STATISTICS_RX_PAYLOAD_SIZE = 5,
+  CRSF_FRAME_LINK_STATISTICS_TX_PAYLOAD_SIZE = 6,
   CRSF_FRAME_RC_CHANNELS_PAYLOAD_SIZE = 22, // 11 bits per channel * 16 channels = 22 bytes.
   CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = 6,
   CRSF_FRAME_TX_MSP_FRAME_SIZE = 58,
@@ -59,6 +61,8 @@ typedef enum {
   CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
   CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
   CRSF_FRAMETYPE_RC_CHANNELS_PACKED = 0x16,
+  CRSF_FRAMETYPE_LINK_STATISTICS_RX = 0x1C,
+  CRSF_FRAMETYPE_LINK_STATISTICS_TX = 0x1D,
   CRSF_FRAMETYPE_ATTITUDE = 0x1E,
   CRSF_FRAMETYPE_FLIGHT_MODE = 0x21,
   CRSF_FRAMETYPE_DEVICE_PING = 0x28,
@@ -125,6 +129,23 @@ typedef struct {
   uint8_t downlink_link_quality;
   int8_t downlink_snr;
 } crsf_stats_t;
+
+typedef struct {
+  uint8_t rssi_db;
+  uint8_t rssi_percent;
+  uint8_t link_quality;
+  int8_t snr;
+  uint8_t rf_power_db;
+} __attribute__((__packed__)) crsf_link_stats_rx_t;
+
+typedef struct {
+  uint8_t rssi_db;
+  uint8_t rssi_percent;
+  uint8_t link_quality;
+  int8_t snr;
+  uint8_t rf_power_db;
+  uint8_t fps;
+} __attribute__((__packed__)) crsf_link_stats_tx_t;
 
 typedef struct {
   uint8_t device_address;
