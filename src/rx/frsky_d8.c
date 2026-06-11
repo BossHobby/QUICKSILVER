@@ -67,7 +67,7 @@ static void frsky_d8_set_rc_data() {
 
   // if we made it this far, data is ready
   flags.rx_ready = 1;
-  flags.failsafe = 0;
+  flags.failsafe_signal_lost = 0;
 
   for (uint32_t channel = 0; channel < FRSKY_D8_CHANNEL_COUNT; channel++) {
     const int32_t raw = constrain(channels[channel], 1200, 3300);
@@ -222,7 +222,7 @@ static uint8_t frsky_d8_handle_packet() {
       if (frames_lost >= FRSKY_MAX_MISSING_FRAMES) {
         quic_debugf("FRSKY_D8: failsafe");
         max_sync_delay = 10 * FRSKY_SYNC_DELAY_MAX;
-        flags.failsafe = 1;
+        flags.failsafe_signal_lost = 1;
       }
 
       quic_debugf("FRSKY_D8: frame lost %u=%u (%u)", frame_index, (frame_index % 4), (current_packet_received_time - last_packet_received_time));
@@ -245,8 +245,6 @@ static uint8_t frsky_d8_handle_packet() {
     // telemetry has to be done ~2000us after rx
     if ((time_micros() - last_packet_received_time) >= 1500) {
       const uint8_t rssi = frsky_extract_rssi(rx_spi_packet[18]);
-
-      rx_lqi_got_packet();
 
       cc2500_strobe(CC2500_SIDLE);
       if (rssi > 110) {
@@ -345,11 +343,7 @@ bool rx_frsky_d8_check() {
     channels_received = true;
   }
 
-  rx_lqi_update();
-
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-    rx_lqi_update_from_fps(LQI_FPS);
-  }
+  rx_lqi_update(LQI_FPS);
 
   return channels_received;
 }

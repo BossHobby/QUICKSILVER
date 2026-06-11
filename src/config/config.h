@@ -141,8 +141,10 @@
 #define RATE_THROTTLE {RX_CHANNEL_OFF, 0, 0}
 
 // ---- FAILSAFE ----
-#define FAILSAFE_TIME_US 1000000      // 1 second
-#define FAILSAFE_LOCK_TIME_MS 5000    // 5 seconds
+#define FAILSAFE_DETECT_TIME_US 150000   // 150ms without valid RX before loss is detected
+#define FAILSAFE_HOLD_TIME_US 300000     // 300ms hold-last-good window from last valid RX
+#define FAILSAFE_STAGE2_TIME_US 1000000  // Stage 1 fallback time before Stage 2 procedure
+#define FAILSAFE_RECOVERY_TIME_US 500000 // stable RX required after Stage 2 before unlock
 
 // ================================================================================================
 // VOLTAGE & BATTERY
