@@ -134,8 +134,7 @@ void rx_stop();
 void rx_lqi_lost_packet();
 void rx_lqi_got_packet();
 
-void rx_lqi_update();
-void rx_lqi_update_from_fps(float expected_fps);
+void rx_lqi_update(float expected_fps);
 void rx_lqi_update_direct(float rssi);
 
 void rx_spektrum_bind();

@@ -471,18 +471,25 @@ static void print_osd_flightmode(osd_element_t *el) {
 
 static void print_osd_rssi(osd_element_t *el) {
   static float rx_rssi_filt;
-  if (flags.failsafe)
-    state.rx_rssi = 0.0f;
+  float rx_rssi = constrain(state.rx_rssi, 0.0f, 100.0f);
 
-  lpf(&rx_rssi_filt, state.rx_rssi, lpfcalc(state.looptime * 1e6f * 133.0f, 2e6f)); // 2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
+  if (profile.receiver.lqi_source != RX_LQI_SOURCE_DIRECT) {
+    if (flags.failsafe) {
+      rx_rssi = 0.0f;
+    }
+    lpf(&rx_rssi_filt, rx_rssi, lpfcalc(state.looptime * 1e6f * 133.0f, 2e6f)); // 2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
+    rx_rssi = rx_rssi_filt;
+  } else {
+    rx_rssi_filt = rx_rssi;
+  }
 
   osd_start_el(el);
   if (serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
     osd_write_uint(crsf_stats.rf_mode, 1);
     osd_write_char(':');
-    osd_write_uint(rx_rssi_filt - 0.5f, 2);
+    osd_write_uint(rx_rssi - 0.5f, 2);
   } else {
-    osd_write_uint(rx_rssi_filt - 0.5f, 4);
+    osd_write_uint(rx_rssi - 0.5f, 4);
   }
   osd_write_char(ICON_LQI);
 }

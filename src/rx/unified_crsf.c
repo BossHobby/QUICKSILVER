@@ -106,11 +106,23 @@ float rx_serial_crsf_expected_fps() {
 
 static bool tlm_device_info_pending = false;
 
+static uint8_t rx_serial_crsf_payload_length(uint8_t frame_length) {
+  if (frame_length < CRSF_FRAME_LENGTH_TYPE_CRC) {
+    return 0;
+  }
+  return frame_length - CRSF_FRAME_LENGTH_TYPE_CRC;
+}
+
 static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
   bool channels_received = false;
+  const uint8_t payload_length = rx_serial_crsf_payload_length(frame_length);
 
   switch (rx_data[0]) {
   case CRSF_FRAMETYPE_RC_CHANNELS_PACKED: {
+    if (payload_length < CRSF_FRAME_RC_CHANNELS_PAYLOAD_SIZE) {
+      break;
+    }
+
     const crsf_channels_t *chan = (crsf_channels_t *)&rx_data[1];
     channels[0] = chan->chan0;
     channels[1] = chan->chan1;
@@ -136,18 +148,51 @@ static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
     }
 
     channels_received = true;
-
-    if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel < RX_CHANNEL_MAX) {
-      rx_lqi_update_direct(0.00062853551f * (channels[(profile.receiver.aux[AUX_RSSI].channel)] - 191.0f));
-    }
     break;
   }
 
   case CRSF_FRAMETYPE_LINK_STATISTICS: {
+    if (payload_length < CRSF_FRAME_LINK_STATISTICS_PAYLOAD_SIZE) {
+      break;
+    }
+
     memcpy(&crsf_stats, &rx_data[1], sizeof(crsf_stats));
 
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
       rx_lqi_update_direct(crsf_stats.uplink_link_quality);
+    }
+    break;
+  }
+
+  case CRSF_FRAMETYPE_LINK_STATISTICS_RX: {
+    if (payload_length < CRSF_FRAME_LINK_STATISTICS_RX_PAYLOAD_SIZE) {
+      break;
+    }
+
+    const crsf_link_stats_rx_t *stats = (const crsf_link_stats_rx_t *)&rx_data[1];
+    crsf_stats.downlink_rssi = stats->rssi_db;
+    crsf_stats.downlink_link_quality = stats->link_quality;
+    crsf_stats.downlink_snr = stats->snr;
+
+    if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
+      rx_lqi_update_direct(stats->link_quality);
+    }
+    break;
+  }
+
+  case CRSF_FRAMETYPE_LINK_STATISTICS_TX: {
+    if (payload_length < CRSF_FRAME_LINK_STATISTICS_TX_PAYLOAD_SIZE) {
+      break;
+    }
+
+    const crsf_link_stats_tx_t *stats = (const crsf_link_stats_tx_t *)&rx_data[1];
+    crsf_stats.uplink_rssi_1 = stats->rssi_db;
+    crsf_stats.uplink_rssi_2 = stats->rssi_db;
+    crsf_stats.uplink_link_quality = stats->link_quality;
+    crsf_stats.uplink_snr = stats->snr;
+
+    if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
+      rx_lqi_update_direct(stats->link_quality);
     }
     break;
   }
@@ -170,7 +215,11 @@ static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
     break;
   }
 
-  rx_lqi_got_packet();
+  if (channels_received) {
+    if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel < RX_CHANNEL_MAX) {
+      rx_lqi_update_direct(0.00062853551f * (channels[(profile.receiver.aux[AUX_RSSI].channel)] - 191.0f));
+    }
+  }
 
   return channels_received ? PACKET_CHANNELS_RECEIVED : PACKET_DATA_RECEIVED;
 }

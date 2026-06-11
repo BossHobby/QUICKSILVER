@@ -418,6 +418,7 @@ void control() {
     flags.motortest_override = 0;
   }
 
+  control_failsafe_update();
   if (flags.controls_override) {
     state.rx_filtered = state.rx_override;
   }
@@ -444,7 +445,7 @@ void control() {
     } else {
       wing_apply_outputs(state.throttle, state.rx_filtered.roll, state.rx_filtered.pitch, state.rx_filtered.yaw);
     }
-  } else if (!flags.arm_state || flags.failsafe) {
+  } else if (!flags.arm_state || flags.failsafe_outputs_blocked) {
     flags.on_ground = 1;
     state.throttle = 0.0f;
     wing_apply_outputs(

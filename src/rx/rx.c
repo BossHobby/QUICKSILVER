@@ -18,10 +18,6 @@
 
 extern profile_t profile;
 
-uint8_t failsafe_siglost = 0;
-
-uint32_t last_frame_time_us = 0;
-static uint32_t frame_missed_time_us = 0;
 static uint32_t frames_per_second = 0;
 static uint32_t frames_missed = 0;
 static uint32_t frames_received = 0;
@@ -31,43 +27,21 @@ static filter_state_t rx_filter_state[4];
 
 void rx_lqi_lost_packet() {
   frames_missed++;
-
-  if (frame_missed_time_us == 0) {
-    frame_missed_time_us = time_micros();
-  }
-
-  if (time_micros() - frame_missed_time_us > FAILSAFE_TIME_US) {
-    failsafe_siglost = 1;
-  }
 }
 
 void rx_lqi_got_packet() {
+  const uint32_t now_us = time_micros();
   frames_received++;
-  last_frame_time_us = time_micros();
-
-  frame_missed_time_us = 0;
-  failsafe_siglost = 0;
+  state.last_frame_time_us = now_us;
+  flags.failsafe_signal_lost = 0;
 }
 
-void rx_lqi_update() {
-  const uint32_t time = time_micros();
-
-  // link quality & rssi
-  static uint32_t last_time = 0;
-  if (time - last_time < 1000000) {
-    // we only run once per second
+static void rx_lqi_update_from_fps(float expected_fps) {
+  if (flags.failsafe_signal_lost) {
+    state.rx_rssi = 0.0f;
     return;
   }
 
-  frames_per_second = frames_received;
-
-  frames_received = 0;
-  frames_missed = 0;
-
-  last_time = time;
-}
-
-void rx_lqi_update_from_fps(float expected_fps) {
   state.rx_rssi = frames_per_second / expected_fps;
   state.rx_rssi = state.rx_rssi * state.rx_rssi * state.rx_rssi * LQ_EXPO + state.rx_rssi * (1 - LQ_EXPO);
   state.rx_rssi *= 100.0f;
@@ -75,7 +49,36 @@ void rx_lqi_update_from_fps(float expected_fps) {
   state.rx_rssi = constrain(state.rx_rssi, 0.f, 100.f);
 }
 
+void rx_lqi_update(float expected_fps) {
+  const uint32_t time = time_micros();
+
+  if (flags.rx_ready && time - state.last_frame_time_us > FAILSAFE_DETECT_TIME_US)
+    flags.failsafe_signal_lost = 1;
+
+  if (flags.failsafe_signal_lost)
+    state.rx_rssi = 0.0f;
+
+  // link quality & rssi
+  static uint32_t last_time = 0;
+  if (time - last_time >= 1000000) {
+    frames_per_second = frames_received;
+
+    frames_received = 0;
+    frames_missed = 0;
+
+    last_time = time;
+  }
+
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE && expected_fps > 0.0f)
+    rx_lqi_update_from_fps(expected_fps);
+}
+
 void rx_lqi_update_direct(float rssi) {
+  if (flags.failsafe_signal_lost) {
+    state.rx_rssi = 0.0f;
+    return;
+  }
+
   state.rx_rssi = constrain(rssi, 0.f, 100.f);
 }
 
@@ -325,7 +328,7 @@ void rx_update() {
   static uint32_t rx_filter_start = 0;
   static uint32_t rx_filter_counter = 0;
 
-  if (rx_check()) {
+  if (rx_check() && !flags.failsafe_signal_lost) {
     rx_apply_stick_scale();
     rx_update_roles();
     rx_update_aux_active();
