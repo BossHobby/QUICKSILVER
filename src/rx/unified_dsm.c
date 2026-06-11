@@ -104,7 +104,6 @@ static packet_status_t dsm_handle_packet(uint8_t *packet) {
     state.rx_channels[channel] = 0;
   }
 
-  rx_lqi_got_packet();
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel < 12) {
     rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI].channel)] - dsm_offset) * dsm_scalefactor * 0.5f) + 0.5f));
   }
