@@ -154,7 +154,7 @@ static bool rx_flysky_check(void) {
     state.rx_status = RX_SPI_STATUS_BOUND;
     flags.rx_mode = RXMODE_NORMAL;
     flags.rx_ready = 1;
-    flags.failsafe = 0;
+    flags.failsafe_signal_lost = 0;
     rx_lqi_got_packet();
 
     for (int i = 0; i < num_avail_channels; i++) {
@@ -167,16 +167,13 @@ static bool rx_flysky_check(void) {
   }
 
   // Check for failsafe
-  if ((flags.rx_mode == RXMODE_NORMAL) && !flags.failsafe) {
-    if ((now - flysky.last_rx_time) >= FAILSAFE_TIME_US) {
-      flags.failsafe = true;
+  if ((flags.rx_mode == RXMODE_NORMAL) && !flags.failsafe_signal_lost) {
+    if ((now - flysky.last_rx_time) >= FAILSAFE_DETECT_TIME_US) {
+      flags.failsafe_signal_lost = true;
     }
   }
 
-  rx_lqi_update();
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-    rx_lqi_update_from_fps(flysky.expected_fps);
-  }
+  rx_lqi_update(flysky.expected_fps);
 
   return channels_received;
 }
