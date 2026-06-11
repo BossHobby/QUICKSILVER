@@ -1,4 +1,5 @@
 #include <unity.h>
+#include "driver/time.h"
 #include "mock_helpers.h"
 
 // Test declarations
@@ -99,10 +100,31 @@ extern void test_blackbox_cbor_vec3_roundtrip(void);
 extern void test_blackbox_cbor_vec4_roundtrip(void);
 extern void test_blackbox_iframe_interval(void);
 
+// Failsafe tests
+extern void test_failsafe_holds_last_values_before_hold_timeout(void);
+extern void test_failsafe_blocks_outputs_while_rx_not_ready(void);
+extern void test_failsafe_stage1_applies_centered_zero_throttle_fallback(void);
+extern void test_failsafe_stage2_drop_blocks_outputs_and_disarms(void);
+extern void test_failsafe_recovery_clears_with_arm_switch_high_but_blocks_rearm(void);
+extern void test_failsafe_repeated_loss_keeps_outputs_blocked_after_stage2(void);
+extern void test_failsafe_blocks_new_arming_while_outputs_are_allowed(void);
+extern void test_failsafe_hold_keeps_existing_arm_until_stage2(void);
+extern void test_regular_rearm_requires_prearm_cycle_after_disarm(void);
+extern void test_default_prearm_allows_regular_rearm_when_always_on(void);
+extern void test_failsafe_rearm_allows_held_prearm_after_drop(void);
+extern void test_failsafe_recovery_blocks_automatic_rearm_when_arm_stays_held(void);
+extern void test_sbus_failsafe_frame_does_not_refresh_last_frame_time(void);
+extern void test_crsf_no_frame_timeout_forces_rssi_to_zero(void);
+extern void test_crsf_channel_frame_clears_signal_lost_on_recovery(void);
+extern void test_crsf_channel_frame_allows_stage2_failsafe_recovery(void);
+extern void test_crsf_tx_link_statistics_updates_direct_lqi(void);
+extern void test_crsf_rx_link_statistics_updates_direct_lqi_and_downlink_stats(void);
+
 // Common setUp and tearDown
 void setUp(void) {
   // Reset hardware mocks before each test
   mock_hardware_reset_all();
+  time_test_reset();
 }
 
 void tearDown(void) {
@@ -209,6 +231,26 @@ int main(int argc, char **argv) {
   RUN_TEST(test_blackbox_cbor_vec3_roundtrip);
   RUN_TEST(test_blackbox_cbor_vec4_roundtrip);
   RUN_TEST(test_blackbox_iframe_interval);
+
+  // Failsafe tests
+  RUN_TEST(test_failsafe_holds_last_values_before_hold_timeout);
+  RUN_TEST(test_failsafe_blocks_outputs_while_rx_not_ready);
+  RUN_TEST(test_failsafe_stage1_applies_centered_zero_throttle_fallback);
+  RUN_TEST(test_failsafe_stage2_drop_blocks_outputs_and_disarms);
+  RUN_TEST(test_failsafe_recovery_clears_with_arm_switch_high_but_blocks_rearm);
+  RUN_TEST(test_failsafe_repeated_loss_keeps_outputs_blocked_after_stage2);
+  RUN_TEST(test_failsafe_blocks_new_arming_while_outputs_are_allowed);
+  RUN_TEST(test_failsafe_hold_keeps_existing_arm_until_stage2);
+  RUN_TEST(test_regular_rearm_requires_prearm_cycle_after_disarm);
+  RUN_TEST(test_default_prearm_allows_regular_rearm_when_always_on);
+  RUN_TEST(test_failsafe_rearm_allows_held_prearm_after_drop);
+  RUN_TEST(test_failsafe_recovery_blocks_automatic_rearm_when_arm_stays_held);
+  RUN_TEST(test_sbus_failsafe_frame_does_not_refresh_last_frame_time);
+  RUN_TEST(test_crsf_no_frame_timeout_forces_rssi_to_zero);
+  RUN_TEST(test_crsf_channel_frame_clears_signal_lost_on_recovery);
+  RUN_TEST(test_crsf_channel_frame_allows_stage2_failsafe_recovery);
+  RUN_TEST(test_crsf_tx_link_statistics_updates_direct_lqi);
+  RUN_TEST(test_crsf_rx_link_statistics_updates_direct_lqi_and_downlink_stats);
 
   return UNITY_END();
 }

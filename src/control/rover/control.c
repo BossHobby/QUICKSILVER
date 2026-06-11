@@ -333,6 +333,11 @@ void control() {
     flags.motortest_override = 0;
   }
 
+  control_failsafe_update();
+  if (flags.controls_override) {
+    state.rx_filtered = state.rx_override;
+  }
+
   control_update_arming();
   rover_update_throttle();
 
@@ -340,7 +345,7 @@ void control() {
     const float throttle = motortest_usb ? rover_test_value(OUTPUT_SOURCE_THROTTLE, MOTOR_OFF) : state.throttle;
     const float steering = motortest_usb ? rover_test_value(OUTPUT_SOURCE_YAW, 0.0f) : 0.0f;
     rover_apply_outputs(throttle, steering);
-  } else if (!flags.arm_state || flags.failsafe) {
+  } else if (!flags.arm_state || flags.failsafe_outputs_blocked) {
     flags.on_ground = 1;
     state.throttle = 0.0f;
     rover_calc_steering();

@@ -45,7 +45,7 @@ static void redpine_set_rc_data() {
 
   // if we made it this far, data is ready
   flags.rx_ready = 1;
-  flags.failsafe = 0;
+  flags.failsafe_signal_lost = 0;
 
   const uint16_t channels[4] = {
       (uint16_t)((rx_spi_packet[REDPINE_CHANNEL_START + 1] << 8) & 0x700) | rx_spi_packet[REDPINE_CHANNEL_START],
@@ -172,7 +172,7 @@ static uint8_t redpine_handle_packet() {
       redpine_fast = redpine_fast == 1 ? 0 : 1;
       max_sync_delay = REDPINE_PACKET_TIME_US;
       protocol_time = time_micros();
-      flags.failsafe = 1;
+      flags.failsafe_signal_lost = 1;
       protocol_state = FRSKY_STATE_INIT;
       rx_redpine_init();
       task_reset_runtime();
@@ -303,11 +303,7 @@ bool rx_redpine_check() {
     channels_received = true;
   }
 
-  rx_lqi_update();
-
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-    rx_lqi_update_from_fps(LQI_FPS);
-  }
+  rx_lqi_update(LQI_FPS);
 
   return channels_received;
 }
