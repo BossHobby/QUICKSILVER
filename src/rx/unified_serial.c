@@ -46,19 +46,13 @@ serial_port_t serial_rx = {
 
 int32_t channels[16];
 
-uint8_t failsafe_noframes = 0;
-uint8_t failsafe_sbus_failsafe = 0;
-extern uint8_t failsafe_siglost;
-
 // A place to put the RX frame so nothing can get overwritten during processing.
 uint8_t rx_data[RX_BUFF_SIZE];
 
-extern uint32_t last_frame_time_us;
-
 static uint8_t bind_safety = 0;
 
-static float rx_serial_expected_fps() {
-  switch (serial_rx_detected_protcol) {
+static float rx_serial_expected_fps(rx_serial_protocol_t proto) {
+  switch (proto) {
   case RX_SERIAL_PROTOCOL_INVALID:
     return 0;
 
@@ -83,6 +77,13 @@ static float rx_serial_expected_fps() {
   }
 
   return 0;
+}
+
+static void rx_serial_update_lqi(rx_serial_protocol_t proto, packet_status_t status) {
+  if (status == PACKET_CHANNELS_RECEIVED)
+    rx_lqi_got_packet();
+
+  rx_lqi_update(rx_serial_expected_fps(proto));
 }
 
 static packet_status_t rx_serial_process(rx_serial_protocol_t proto) {
@@ -221,6 +222,9 @@ static void rx_serial_find_protocol() {
   }
 
   const packet_status_t status = rx_serial_process(protocol_to_check);
+  if (status > PACKET_NEEDS_MORE)
+    rx_serial_update_lqi(protocol_to_check, status);
+
   if (status <= PACKET_NEEDS_MORE) {
     // no channels received, we are done here.
     return;
@@ -263,17 +267,6 @@ bool rx_serial_check() {
     return false;
   }
 
-  // FAILSAFE! It gets checked every time!
-  if (time_micros() - last_frame_time_us > FAILSAFE_TIME_US) {
-    failsafe_noframes = 1;
-  } else {
-    failsafe_noframes = 0;
-  }
-
-  // add the 3 failsafes together
-  if (flags.rx_ready) {
-    flags.failsafe = failsafe_noframes || failsafe_siglost || failsafe_sbus_failsafe;
-  }
   state.rx_status = RX_STATUS_DETECTED + serial_rx_detected_protcol;
 
   const packet_status_t status = rx_serial_process(serial_rx_detected_protcol);
@@ -291,11 +284,7 @@ bool rx_serial_check() {
     break;
   }
 
-  rx_lqi_update();
-
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_PACKET_RATE) {
-    rx_lqi_update_from_fps(rx_serial_expected_fps());
-  }
+  rx_serial_update_lqi(serial_rx_detected_protcol, status);
 
   if (status <= PACKET_NEEDS_MORE) {
     // no channels received, we are done here.

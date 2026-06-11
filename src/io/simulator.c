@@ -108,7 +108,7 @@ void simulator_update() {
   memcpy(shared->osd, osd, sizeof(osd));
 
   flags.rx_ready = 1;
-  flags.failsafe = 0;
+  flags.failsafe_signal_lost = 0;
 
   pthread_mutex_unlock(&shared->mutex);
 }
