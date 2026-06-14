@@ -115,6 +115,19 @@ static const char *osd_element_labels[] = {
     "GPS SATS",
     "GPS SPEED",
     "INCLINOMETER",
+    "CRSF TX POWER",
+};
+
+static const uint16_t crsf_tx_power_mw[CRSF_TX_POWER_MAX] = {
+    [CRSF_TX_POWER_0_MW] = 0,
+    [CRSF_TX_POWER_10_MW] = 10,
+    [CRSF_TX_POWER_25_MW] = 25,
+    [CRSF_TX_POWER_100_MW] = 100,
+    [CRSF_TX_POWER_500_MW] = 500,
+    [CRSF_TX_POWER_1000_MW] = 1000,
+    [CRSF_TX_POWER_2000_MW] = 2000,
+    [CRSF_TX_POWER_250_MW] = 250,
+    [CRSF_TX_POWER_50_MW] = 50,
 };
 
 static const char *aux_channel_labels[] = {
@@ -593,6 +606,26 @@ static void print_osd_inclinometer(osd_element_t *el) {
   osd_write_int(pitch, 3);
 }
 
+static void print_osd_crsf_tx_power(osd_element_t *el) {
+  osd_start_el(el);
+
+  if (serial_rx_detected_protcol != RX_SERIAL_PROTOCOL_CRSF || crsf_stats.uplink_tx_power >= CRSF_TX_POWER_MAX) {
+    osd_write_char(ICON_RSSI);
+    osd_write_str("---MW");
+    return;
+  }
+
+  osd_write_char(ICON_RSSI);
+  const uint16_t tx_power_mw = crsf_tx_power_mw[crsf_stats.uplink_tx_power];
+  if (tx_power_mw < 1000) {
+    osd_write_uint(tx_power_mw, 3);
+    osd_write_str("MW");
+  } else {
+    osd_write_float(tx_power_mw / 1000.0f, 3, 1);
+    osd_write_char(ICON_WATT);
+  }
+}
+
 void osd_init() {
   osd_device_init();
   osd_clear();
@@ -748,6 +781,12 @@ static void osd_display_regular() {
 
   case OSD_ROVER_INCLINOMETER: {
     print_osd_inclinometer(el);
+    osd_state.element++;
+    break;
+  }
+
+  case OSD_CRSF_TX_POWER: {
+    print_osd_crsf_tx_power(el);
     osd_state.element++;
     break;
   }

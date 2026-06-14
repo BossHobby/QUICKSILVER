@@ -97,6 +97,21 @@ typedef enum {
   CRSF_ADDRESS_CRSF_TRANSMITTER = 0xEE
 } crsf_address_t;
 
+typedef enum {
+  // Link-stat TX power enum order: 250mW was added after 2000mW, and
+  // 50mW is used by ExpressLRS, so this is not sorted by power.
+  CRSF_TX_POWER_0_MW,
+  CRSF_TX_POWER_10_MW,
+  CRSF_TX_POWER_25_MW,
+  CRSF_TX_POWER_100_MW,
+  CRSF_TX_POWER_500_MW,
+  CRSF_TX_POWER_1000_MW,
+  CRSF_TX_POWER_2000_MW,
+  CRSF_TX_POWER_250_MW,
+  CRSF_TX_POWER_50_MW,
+  CRSF_TX_POWER_MAX,
+} crsf_tx_power_t;
+
 typedef struct {
   // 176 bits of data (11 bits per channel * 16 channels) = 22 bytes.
   uint32_t chan0 : 11;
