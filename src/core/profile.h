@@ -12,6 +12,7 @@
 #define VTX_POWER_LABEL_LEN 5
 
 // PROFILE version changelog (schema compatibility):
+// 0.3.1: osd: add CRSF TX power.
 // 0.3.0 (1e5b55c3): feat: add full 16-bit aux channel resolution with range-based function mapping.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
@@ -22,7 +23,7 @@
 // 0.2.1 (d622372a): bump profile version.
 // 0.2.0 (4918c3f8): add version to profile metadata.
 // 0.1.0: initial versioned profile format for persisted settings.
-#define PROFILE_VERSION MAKE_SEMVER(0, 3, 0)
+#define PROFILE_VERSION MAKE_SEMVER(0, 3, 1)
 
 typedef enum {
   VTX_BAND_A,
