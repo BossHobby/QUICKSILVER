@@ -13,6 +13,7 @@
 
 // PROFILE version changelog (schema compatibility):
 // 0.3.0 (1e5b55c3): feat: add full 16-bit aux channel resolution with range-based function mapping.
+//        osd: add CRSF TX power.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
 // 0.2.5 (c9dec9f1): add osd profiles.

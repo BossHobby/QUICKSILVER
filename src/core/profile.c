@@ -563,6 +563,7 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(0, 0, 1, 12, 0, 15),    // OSD_GPS_SATS
                     ENCODE_OSD_ELEMENT(0, 0, 8, 12, 10, 15),   // OSD_GPS_SPEED
                     ENCODE_OSD_ELEMENT(0, 0, 12, 12, 19, 15),  // OSD_ROVER_INCLINOMETER
+                    ENCODE_OSD_ELEMENT(0, 0, 19, 1, 37, 0),    // OSD_CRSF_TX_POWER
                 },
             },
             [OSD_PROFILE_2] = {
@@ -586,6 +587,7 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(0, 0, 1, 12, 0, 15),    // OSD_GPS_SATS
                     ENCODE_OSD_ELEMENT(0, 0, 8, 12, 10, 15),   // OSD_GPS_SPEED
                     ENCODE_OSD_ELEMENT(0, 0, 12, 12, 19, 15),  // OSD_ROVER_INCLINOMETER
+                    ENCODE_OSD_ELEMENT(0, 0, 19, 1, 37, 0),    // OSD_CRSF_TX_POWER
                 },
             },
         },
