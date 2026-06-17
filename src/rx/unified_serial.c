@@ -30,7 +30,7 @@ static ring_buffer_t tx_buffer = {
     .size = 512,
 };
 
-static uint8_t rx_buffer_data[512];
+static DMA_RAM uint8_t rx_buffer_data[512];
 static ring_buffer_t rx_buffer = {
     .buffer = rx_buffer_data,
     .head = 0,
@@ -123,7 +123,7 @@ static void serial_rx_init(rx_serial_protocol_t proto) {
     return;
   }
 
-  serial_port_config_t config;
+  serial_port_config_t config = {0};
   config.port = profile.serial.rx;
 
   switch (proto) {
@@ -132,6 +132,7 @@ static void serial_rx_init(rx_serial_protocol_t proto) {
     config.baudrate = 115200;
     config.stop_bits = SERIAL_STOP_BITS_1;
     config.direction = SERIAL_DIR_RX;
+    config.dma_mode = SERIAL_DMA_RX;
     break;
 
   case RX_SERIAL_PROTOCOL_FPORT:
@@ -139,6 +140,7 @@ static void serial_rx_init(rx_serial_protocol_t proto) {
     config.baudrate = 115200;
     config.stop_bits = SERIAL_STOP_BITS_1;
     config.direction = SERIAL_DIR_TX_RX;
+    config.dma_mode = SERIAL_DMA_BOTH;
     break;
 
   case RX_SERIAL_PROTOCOL_SBUS:
@@ -146,12 +148,14 @@ static void serial_rx_init(rx_serial_protocol_t proto) {
     config.baudrate = 100000;
     config.stop_bits = SERIAL_STOP_BITS_2;
     config.direction = SERIAL_DIR_RX;
+    config.dma_mode = SERIAL_DMA_RX;
     break;
 
   case RX_SERIAL_PROTOCOL_CRSF:
     config.baudrate = CRSF_BAUDRATE_DEFAULT;
     config.stop_bits = SERIAL_STOP_BITS_1;
     config.direction = SERIAL_DIR_TX_RX;
+    config.dma_mode = SERIAL_DMA_BOTH;
     break;
 
   case RX_SERIAL_PROTOCOL_REDPINE:
@@ -159,6 +163,7 @@ static void serial_rx_init(rx_serial_protocol_t proto) {
     config.baudrate = 230400;
     config.stop_bits = SERIAL_STOP_BITS_1;
     config.direction = SERIAL_DIR_RX;
+    config.dma_mode = SERIAL_DMA_RX;
     break;
 
   default:
