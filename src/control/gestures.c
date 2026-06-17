@@ -205,7 +205,6 @@ void gestures() {
     }
 
     flash_save();
-    flash_load();
 
     // reset loop time
     task_reset_runtime();

@@ -232,7 +232,7 @@ static ring_buffer_t tx_buffer = {
     .size = 128,
 };
 
-static uint8_t rx_data[512];
+static DMA_RAM uint8_t rx_data[512];
 static ring_buffer_t rx_buffer = {
     .buffer = rx_data,
     .head = 0,
@@ -633,7 +633,7 @@ void gps_init() {
     return;
   }
 
-  serial_port_config_t config;
+  serial_port_config_t config = {0};
   config.port = profile.serial.gps;
   config.baudrate = baudrates[next_baudrate].baud;
   config.direction = SERIAL_DIR_TX_RX;
@@ -641,6 +641,7 @@ void gps_init() {
   config.invert = false;
   config.half_duplex = false;
   config.half_duplex_pp = false;
+  config.dma_mode = SERIAL_DMA_RX;
   serial_init(&serial_gps, config);
 
   is_init = true;

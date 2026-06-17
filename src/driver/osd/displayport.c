@@ -37,7 +37,7 @@ static ring_buffer_t tx_buffer = {
     .size = sizeof(tx_data),
 };
 
-static uint8_t rx_data[512];
+static DMA_RAM uint8_t rx_data[512];
 static ring_buffer_t rx_buffer = {
     .buffer = rx_data,
     .head = 0,
@@ -181,7 +181,7 @@ static uint8_t displayport_map_attr(uint8_t attr) {
 }
 
 void displayport_init() {
-  serial_port_config_t config;
+  serial_port_config_t config = {0};
   config.port = profile.serial.hdzero;
   config.baudrate = 115200;
   config.direction = SERIAL_DIR_TX_RX;
@@ -189,6 +189,7 @@ void displayport_init() {
   config.invert = false;
   config.half_duplex = false;
   config.half_duplex_pp = false;
+  config.dma_mode = SERIAL_DMA_BOTH;
 
   serial_init(&serial_displayport, config);
 }

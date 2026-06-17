@@ -134,7 +134,6 @@ static void rx_stick_calibration_wizard() {
     led_flash();
 
     flash_save();
-    flash_load();
     task_reset_runtime();
 
     flags.gestures_disabled = 0;

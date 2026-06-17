@@ -101,9 +101,17 @@ uint32_t dma_map_channel(uint32_t channel) {
 extern void dshot_dma_isr(const dma_device_t);
 extern void spi_dma_isr(const dma_device_t);
 extern void rgb_dma_isr(const dma_device_t);
+extern void serial_dma_tx_isr(dma_stream_t stream);
 
-static void handle_dma_stream_isr(const dma_device_t dev) {
+static void handle_dma_stream_isr(const dma_stream_t stream) {
+  const dma_device_t dev = dma_stream_map[stream];
+
   switch (dev) {
+  case DMA_DEVICE_SERIAL_TX:
+    serial_dma_tx_isr(stream);
+    break;
+  case DMA_DEVICE_SERIAL_RX:
+    break;
   case DMA_DEVICE_SPI1_RX:
   case DMA_DEVICE_SPI2_RX:
   case DMA_DEVICE_SPI3_RX:
@@ -133,8 +141,8 @@ static void handle_dma_stream_isr(const dma_device_t dev) {
 }
 
 #define DMA_STREAM(_port, _stream)                                                                                          \
-  void DMA##_port##_Stream##_stream##_IRQHandler() { handle_dma_stream_isr(dma_stream_map[DMA##_port##_STREAM##_stream]); } \
-  void DMA##_port##_Channel##_stream##_IRQHandler() { handle_dma_stream_isr(dma_stream_map[DMA##_port##_STREAM##_stream]); }
+  void DMA##_port##_Stream##_stream##_IRQHandler() { handle_dma_stream_isr(DMA##_port##_STREAM##_stream); }                 \
+  void DMA##_port##_Channel##_stream##_IRQHandler() { handle_dma_stream_isr(DMA##_port##_STREAM##_stream); }
 
 DMA_STREAMS
 

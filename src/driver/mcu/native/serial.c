@@ -33,6 +33,9 @@ bool serial_hard_set_baudrate(serial_port_t *serial, uint32_t baudrate) {
   return serial != NULL && baudrate != 0;
 }
 
+void serial_hard_sync_rx(serial_port_t *serial) {
+}
+
 bool serial_write_bytes(serial_port_t *port, const uint8_t *data, const uint32_t count) {
   if (!port || !data || count == 0) {
     return false;
