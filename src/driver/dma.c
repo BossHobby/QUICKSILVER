@@ -8,6 +8,31 @@
 
 dma_device_t dma_stream_map[DMA_STREAM_MAX];
 
+dma_stream_t dma_claim_unused(dma_device_t device) {
+  if (device == DMA_DEVICE_INVALID || device >= DMA_DEVICE_MAX) {
+    return DMA_STREAM_INVALID;
+  }
+
+  for (dma_stream_t stream = DMA_STREAM_INVALID + 1; stream < DMA_STREAM_MAX; stream++) {
+    if (dma_stream_map[stream] != DMA_DEVICE_INVALID) {
+      continue;
+    }
+    dma_stream_map[stream] = device;
+    return stream;
+  }
+
+  return DMA_STREAM_INVALID;
+}
+
+void dma_release(dma_stream_t stream, dma_device_t device) {
+  if (stream <= DMA_STREAM_INVALID || stream >= DMA_STREAM_MAX) {
+    return;
+  }
+  if (dma_stream_map[stream] == device) {
+    dma_stream_map[stream] = DMA_DEVICE_INVALID;
+  }
+}
+
 cbor_result_t cbor_decode_dma_device_t(cbor_value_t *dec, dma_device_t *d) {
   const uint8_t *name;
   uint32_t name_len;

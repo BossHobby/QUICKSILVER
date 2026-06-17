@@ -117,7 +117,7 @@ void usb_serial_passthrough(serial_ports_t port, uint32_t baudrate, uint8_t stop
       .tx_done = true,
   };
 
-  serial_port_config_t config;
+  serial_port_config_t config = {0};
   config.port = port;
   config.baudrate = baudrate;
   config.direction = SERIAL_DIR_TX_RX;
