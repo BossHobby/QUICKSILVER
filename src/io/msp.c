@@ -41,6 +41,10 @@ extern uint16_t msp_vtx_frequency_table[VTX_BAND_MAX][VTX_CHANNEL_MAX];
 
 extern void msp_vtx_send_config_reply(msp_t *msp, msp_magic_t magic);
 
+#ifdef USE_GPS
+extern serial_port_t serial_gps;
+#endif
+
 // MCU type IDs matching Betaflight
 typedef enum {
   MCU_TYPE_UNKNOWN = 0,
@@ -126,6 +130,232 @@ static void msp_check_vtx_detected(msp_t *msp) {
 
   msp_vtx_detected = true;
 #endif
+}
+
+#ifdef USE_SERIAL
+typedef struct {
+  serial_ports_t port;
+  uint32_t baudrate;
+  uint8_t stop_bits;
+  bool half_duplex;
+} msp_serial_passthrough_config_t;
+
+#define MSP_BF_SERIAL_UART_FIRST 51
+
+extern const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX];
+
+static bool msp_serial_port_available(serial_ports_t port) {
+  return port > SERIAL_PORT_INVALID &&
+         port < SERIAL_PORT_MAX &&
+         target_serial_port_valid(&target.serial_ports[port]);
+}
+
+static uint8_t msp_betaflight_serial_id_for_port(serial_ports_t port) {
+  if (!msp_serial_port_available(port) || usart_port_defs[port].channel_index == 0) {
+    return 0;
+  }
+
+  return MSP_BF_SERIAL_UART_FIRST + usart_port_defs[port].channel_index - 1;
+}
+
+static bool msp_serial_port_from_betaflight_id(uint8_t identifier, serial_ports_t *port) {
+  if (identifier < MSP_BF_SERIAL_UART_FIRST) {
+    return false;
+  }
+
+  const uint8_t channel_index = identifier - MSP_BF_SERIAL_UART_FIRST + 1;
+  for (serial_ports_t candidate = SERIAL_PORT1; candidate < SERIAL_PORT_MAX; candidate++) {
+    if (msp_serial_port_available(candidate) &&
+        usart_port_defs[candidate].channel_index == channel_index) {
+      *port = candidate;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+static const uint32_t msp_betaflight_baudrates[MSP_BF_BAUD_COUNT] = {
+    [MSP_BF_BAUD_AUTO] = 0,
+    [MSP_BF_BAUD_9600] = 9600,
+    [MSP_BF_BAUD_19200] = 19200,
+    [MSP_BF_BAUD_38400] = 38400,
+    [MSP_BF_BAUD_57600] = 57600,
+    [MSP_BF_BAUD_115200] = 115200,
+    [MSP_BF_BAUD_230400] = 230400,
+    [MSP_BF_BAUD_250000] = 250000,
+    [MSP_BF_BAUD_400000] = 400000,
+    [MSP_BF_BAUD_460800] = 460800,
+    [MSP_BF_BAUD_500000] = 500000,
+    [MSP_BF_BAUD_921600] = 921600,
+    [MSP_BF_BAUD_1000000] = 1000000,
+    [MSP_BF_BAUD_1500000] = 1500000,
+    [MSP_BF_BAUD_2000000] = 2000000,
+    [MSP_BF_BAUD_2470000] = 2470000,
+};
+
+static uint8_t msp_betaflight_baudrate_index(uint32_t baudrate) {
+  for (uint32_t i = 0; i < MSP_BF_BAUD_COUNT; i++) {
+    if (msp_betaflight_baudrates[i] == baudrate) {
+      return i;
+    }
+  }
+
+  return MSP_BF_BAUD_AUTO;
+}
+
+static uint8_t msp_serial_stop_bits(serial_stop_bits_t stop_bits) {
+  return stop_bits == SERIAL_STOP_BITS_2 ? 2 : 1;
+}
+
+static bool msp_serial_passthrough_config_from_serial(const serial_port_t *serial, msp_serial_passthrough_config_t *config) {
+  if (serial->config.port == SERIAL_PORT_INVALID || serial->config.baudrate == 0) {
+    return false;
+  }
+
+  config->port = serial->config.port;
+  config->baudrate = serial->config.baudrate;
+  config->stop_bits = msp_serial_stop_bits(serial->config.stop_bits);
+  config->half_duplex = serial->config.half_duplex;
+  return true;
+}
+
+static bool msp_find_passthrough_config_by_port(serial_ports_t port, msp_serial_passthrough_config_t *config) {
+  if (!msp_serial_port_available(port)) {
+    return false;
+  }
+
+  if (port == serial_rx.config.port) {
+    return msp_serial_passthrough_config_from_serial(&serial_rx, config);
+  }
+
+#ifdef USE_GPS
+  if (port == serial_gps.config.port) {
+    return msp_serial_passthrough_config_from_serial(&serial_gps, config);
+  }
+#endif
+
+#ifdef USE_VTX
+  if (port == serial_vtx.config.port) {
+    return msp_serial_passthrough_config_from_serial(&serial_vtx, config);
+  }
+#endif
+
+#ifdef USE_DIGITAL_VTX
+  if (port == serial_displayport.config.port) {
+    return msp_serial_passthrough_config_from_serial(&serial_displayport, config);
+  }
+#endif
+
+  return false;
+}
+
+static bool msp_find_passthrough_config_by_serial_id(uint8_t identifier, msp_serial_passthrough_config_t *config) {
+  serial_ports_t port;
+  return msp_serial_port_from_betaflight_id(identifier, &port) &&
+         msp_find_passthrough_config_by_port(port, config);
+}
+
+static bool msp_find_passthrough_config_by_function(uint8_t function_index, msp_serial_passthrough_config_t *config) {
+  if (function_index >= 32) {
+    return false;
+  }
+
+  switch ((uint32_t)(1UL << function_index)) {
+  case MSP_SERIAL_FUNCTION_MSP:
+#ifdef USE_DIGITAL_VTX
+    return msp_find_passthrough_config_by_port(serial_displayport.config.port, config);
+#else
+    break;
+#endif
+
+  case MSP_SERIAL_FUNCTION_RX_SERIAL:
+    return msp_find_passthrough_config_by_port(serial_rx.config.port, config);
+
+#ifdef USE_GPS
+  case MSP_SERIAL_FUNCTION_GPS:
+    return msp_find_passthrough_config_by_port(serial_gps.config.port, config);
+#endif
+
+#ifdef USE_VTX
+  case MSP_SERIAL_FUNCTION_VTX_SMARTAUDIO:
+    if (profile.vtx.protocol == VTX_PROTOCOL_SMART_AUDIO) {
+      return msp_find_passthrough_config_by_port(serial_vtx.config.port, config);
+    }
+    break;
+
+  case MSP_SERIAL_FUNCTION_VTX_TRAMP:
+    if (profile.vtx.protocol == VTX_PROTOCOL_TRAMP) {
+      return msp_find_passthrough_config_by_port(serial_vtx.config.port, config);
+    }
+    break;
+
+  case MSP_SERIAL_FUNCTION_VTX_MSP:
+    if (profile.vtx.protocol == VTX_PROTOCOL_MSP_VTX &&
+        msp_find_passthrough_config_by_port(serial_vtx.config.port, config)) {
+      return true;
+    }
+    break;
+#endif
+
+  default:
+    break;
+  }
+
+#ifdef USE_DIGITAL_VTX
+  if ((uint32_t)(1UL << function_index) == MSP_SERIAL_FUNCTION_VTX_MSP) {
+    return msp_find_passthrough_config_by_port(serial_displayport.config.port, config);
+  }
+#endif
+
+  return false;
+}
+
+static uint32_t msp_serial_function_mask_for_port(serial_ports_t port) {
+  uint32_t function = 0;
+
+  if (port == serial_rx.config.port) {
+    function |= MSP_SERIAL_FUNCTION_RX_SERIAL;
+  }
+
+#ifdef USE_GPS
+  if (port == serial_gps.config.port) {
+    function |= MSP_SERIAL_FUNCTION_GPS;
+  }
+#endif
+
+#ifdef USE_VTX
+  if (port == serial_vtx.config.port) {
+    switch (profile.vtx.protocol) {
+    case VTX_PROTOCOL_SMART_AUDIO:
+      function |= MSP_SERIAL_FUNCTION_VTX_SMARTAUDIO;
+      break;
+    case VTX_PROTOCOL_TRAMP:
+      function |= MSP_SERIAL_FUNCTION_VTX_TRAMP;
+      break;
+    case VTX_PROTOCOL_MSP_VTX:
+      function |= MSP_SERIAL_FUNCTION_VTX_MSP;
+      break;
+    case VTX_PROTOCOL_INVALID:
+    case VTX_PROTOCOL_MAX:
+      break;
+    }
+  }
+#endif
+
+#ifdef USE_DIGITAL_VTX
+  if (port == serial_displayport.config.port) {
+    function |= MSP_SERIAL_FUNCTION_MSP | MSP_SERIAL_FUNCTION_VTX_MSP;
+  }
+#endif
+
+  return function;
+}
+#endif
+
+static void msp_send_passthrough_result(msp_t *msp, msp_magic_t magic, uint16_t cmd, bool success) {
+  uint8_t data[1] = {success ? 1 : 0};
+  msp_send_reply(msp, magic, cmd, data, 1);
 }
 
 static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *payload, uint16_t size) {
@@ -475,29 +705,42 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
     if (size != 0) {
       mode = payload[0];
+    }
+    if (size > 1) {
       arg = payload[1];
     }
 
     switch (mode) {
 #ifdef USE_SERIAL
     case MSP_PASSTHROUGH_SERIAL_ID: {
-      uint8_t data[1] = {1};
-      msp_send_reply(msp, magic, cmd, data, 1);
-#ifdef USE_VTX
-      if (arg == serial_vtx.config.port) {
-        if (profile.vtx.protocol == VTX_PROTOCOL_SMART_AUDIO) {
-          usb_serial_passthrough(arg, 4800, 2, true);
-        } else {
-          // MSP & Tramp both use 9600 baud
-          usb_serial_passthrough(arg, 9600, 1, true);
-        }
+      msp_serial_passthrough_config_t config = {0};
+      const bool success = msp_find_passthrough_config_by_serial_id(arg, &config);
+      msp_send_passthrough_result(msp, magic, cmd, success);
+      if (success) {
+        usb_serial_passthrough(
+            config.port,
+            config.baudrate,
+            config.stop_bits,
+            config.half_duplex);
       }
-#endif
       break;
     }
 #endif
     case MSP_PASSTHROUGH_SERIAL_FUNCTION_ID: {
-      msp_send_reply(msp, magic, cmd, NULL, 0);
+#ifdef USE_SERIAL
+      msp_serial_passthrough_config_t config = {0};
+      const bool success = msp_find_passthrough_config_by_function(arg, &config);
+      msp_send_passthrough_result(msp, magic, cmd, success);
+      if (success) {
+        usb_serial_passthrough(
+            config.port,
+            config.baudrate,
+            config.stop_bits,
+            config.half_duplex);
+      }
+#else
+      msp_send_passthrough_result(msp, magic, cmd, false);
+#endif
       break;
     }
 
@@ -515,13 +758,13 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       serial_4way_init();
       serial_4way_process();
 #else
-      msp_send_reply(msp, magic, cmd, NULL, 0);
+      msp_send_passthrough_result(msp, magic, cmd, false);
 #endif
       break;
     }
 
     default:
-      msp_send_reply(msp, magic, cmd, NULL, 0);
+      msp_send_passthrough_result(msp, magic, cmd, false);
       break;
     }
 
@@ -539,40 +782,55 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
 #ifdef USE_SERIAL
   case MSP2_COMMON_SERIAL_CONFIG: {
-    const uint8_t uart_count = SERIAL_PORT_MAX - 1;
-    uint8_t data[1 + uart_count * 5];
+    uint8_t uart_count = 0;
+    uint8_t data[1 + (SERIAL_PORT_MAX - 1) * 9];
 
-    data[0] = uart_count;
-
-    for (uint32_t i = 0; i < uart_count; i++) {
-      data[1 + i * 5] = i;
-
-      uint32_t function = 0;
-      if (i == serial_rx.config.port) {
-        function = MSP_SERIAL_FUNCTION_RX;
+    for (serial_ports_t port = SERIAL_PORT1; port < SERIAL_PORT_MAX; port++) {
+      if (msp_serial_port_available(port)) {
+        uart_count++;
       }
-#ifdef USE_VTX
-      if (i == serial_vtx.config.port) {
-        if (profile.vtx.protocol == VTX_PROTOCOL_TRAMP) {
-          function = MSP_SERIAL_FUNCTION_TRAMP;
-        } else {
-          function = MSP_SERIAL_FUNCTION_SA;
-        }
-      }
-#endif
-#ifdef USE_DIGITAL_VTX
-      if (i == serial_displayport.config.port) {
-        function = MSP_SERIAL_FUNCTION_DISPLAYPORT;
-      }
-#endif
-
-      data[1 + i * 5 + 1] = (function >> 0) & 0xFF;
-      data[1 + i * 5 + 2] = (function >> 8) & 0xFF;
-      data[1 + i * 5 + 3] = (function >> 16) & 0xFF;
-      data[1 + i * 5 + 4] = (function >> 24) & 0xFF;
     }
 
-    msp_send_reply(msp, magic, cmd, data, 1 + uart_count * 5);
+    uint8_t *ptr = data;
+    *ptr++ = uart_count;
+
+    for (serial_ports_t port = SERIAL_PORT1; port < SERIAL_PORT_MAX; port++) {
+      if (!msp_serial_port_available(port)) {
+        continue;
+      }
+
+      *ptr++ = msp_betaflight_serial_id_for_port(port);
+      const uint32_t function = msp_serial_function_mask_for_port(port);
+
+      *ptr++ = (function >> 0) & 0xFF;
+      *ptr++ = (function >> 8) & 0xFF;
+      *ptr++ = (function >> 16) & 0xFF;
+      *ptr++ = (function >> 24) & 0xFF;
+
+      uint8_t msp_baudrate = MSP_BF_BAUD_115200;
+      uint8_t gps_baudrate = MSP_BF_BAUD_57600;
+      const uint8_t telemetry_baudrate = MSP_BF_BAUD_AUTO;
+      const uint8_t blackbox_baudrate = MSP_BF_BAUD_115200;
+
+#ifdef USE_DIGITAL_VTX
+      if (port == serial_displayport.config.port) {
+        msp_baudrate = msp_betaflight_baudrate_index(serial_displayport.config.baudrate);
+      }
+#endif
+
+#ifdef USE_GPS
+      if (port == serial_gps.config.port) {
+        gps_baudrate = msp_betaflight_baudrate_index(serial_gps.config.baudrate);
+      }
+#endif
+
+      *ptr++ = msp_baudrate;
+      *ptr++ = gps_baudrate;
+      *ptr++ = telemetry_baudrate;
+      *ptr++ = blackbox_baudrate;
+    }
+
+    msp_send_reply(msp, magic, cmd, data, ptr - data);
     break;
   }
 #endif
