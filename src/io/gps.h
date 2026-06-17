@@ -58,8 +58,14 @@ typedef struct {
   gps_constellation_t galileo;
   gps_constellation_t beidou;
   uint16_t pdop;
+  int32_t height;
+  int32_t vel_n;
+  int32_t vel_e;
+  int32_t vel_d;
   uint32_t h_acc;
   uint32_t v_acc;
+  uint32_t speed_acc;
+  uint32_t head_acc;
   uint8_t power_mode;
   uint8_t update_rate;
   uint8_t avg_cno;
@@ -86,8 +92,14 @@ typedef struct {
   MEMBER(galileo, gps_constellation_t) \
   MEMBER(beidou, gps_constellation_t)  \
   MEMBER(pdop, uint16_t)               \
+  MEMBER(height, int32_t)              \
+  MEMBER(vel_n, int32_t)               \
+  MEMBER(vel_e, int32_t)               \
+  MEMBER(vel_d, int32_t)               \
   MEMBER(h_acc, uint32_t)              \
   MEMBER(v_acc, uint32_t)              \
+  MEMBER(speed_acc, uint32_t)          \
+  MEMBER(head_acc, uint32_t)           \
   MEMBER(power_mode, uint8_t)          \
   MEMBER(update_rate, uint8_t)         \
   MEMBER(avg_cno, uint8_t)             \

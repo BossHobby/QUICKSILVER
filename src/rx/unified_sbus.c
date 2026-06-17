@@ -12,6 +12,7 @@
 #ifdef USE_RX_UNIFIED
 
 #define SBUS_PACKET_SIZE 25
+#define FPORT_TELEMETRY_PACKET_SIZE 10
 
 typedef enum {
   FPORT_CHECK_MAGIC,
@@ -132,7 +133,7 @@ static packet_status_t fport_handle_packet(uint8_t *packet) {
   }
 }
 
-packet_status_t rx_serial_process_fport() {
+static packet_status_t rx_serial_process_fport_frame_stream() {
   static fport_parser_state_t parser_state = FPORT_CHECK_MAGIC;
 
   static uint8_t current_offset = 0;
@@ -225,11 +226,12 @@ fport_do_more:
   return PACKET_ERROR;
 }
 
-void rx_serial_send_fport_telemetry() {
-  if (!fport_telemetry_allowed) {
+static void rx_serial_send_fport_telemetry() {
+  if (!fport_telemetry_allowed)
     return;
-  }
-  fport_telemetry_allowed = false;
+
+  if (serial_bytes_free(&serial_rx) < FPORT_TELEMETRY_PACKET_SIZE)
+    return;
 
   static uint8_t current_id = 0;
   static const uint16_t telemetry_ids[] = {
@@ -237,7 +239,7 @@ void rx_serial_send_fport_telemetry() {
       0x0211, // VFAS1, use for vbat_filtered
   };
 
-  uint8_t packet[16];
+  uint8_t packet[FPORT_TELEMETRY_PACKET_SIZE];
   packet[0] = 0x08;
   packet[1] = 0x81;
   packet[2] = 0x10;
@@ -258,12 +260,23 @@ void rx_serial_send_fport_telemetry() {
   }
 
   uint16_t crc = 0;
-  for (uint32_t i = 0; i < 9; i++) {
+  for (uint32_t i = 0; i < FPORT_TELEMETRY_PACKET_SIZE - 1; i++) {
     crc += packet[i];
   }
   packet[9] = crc >> 8;
 
-  serial_write_bytes(&serial_rx, packet, 10);
+  if (!serial_write_bytes(&serial_rx, packet, FPORT_TELEMETRY_PACKET_SIZE))
+    return;
+
+  fport_telemetry_allowed = false;
+}
+
+packet_status_t rx_serial_process_fport() {
+  const packet_status_t status = rx_serial_process_fport_frame_stream();
+  if (serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_FPORT ||
+      serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_FPORT_INVERTED)
+    rx_serial_send_fport_telemetry();
+  return status;
 }
 
 #endif

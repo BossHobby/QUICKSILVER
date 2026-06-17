@@ -177,6 +177,57 @@ void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool s
   serial_enable_isr(serial->config.port);
 }
 
+static uint32_t serial_hard_get_clock(serial_ports_t port) {
+  if (USART.channel == USART1
+#if defined(USART6)
+      || USART.channel == USART6
+#endif
+  ) {
+    return HAL_RCC_GetPCLK2Freq();
+  }
+  return HAL_RCC_GetPCLK1Freq();
+}
+
+bool serial_hard_set_baudrate(serial_port_t *serial, uint32_t baudrate) {
+  if (!serial || baudrate == 0 || serial->config.port <= SERIAL_PORT_INVALID || serial->config.port >= SERIAL_PORT_MAX) {
+    return false;
+  }
+
+  const serial_ports_t port = serial->config.port;
+  const uint32_t periphclk = serial_hard_get_clock(port);
+  if (periphclk == 0) {
+    return false;
+  }
+
+  const uint32_t was_enabled = LL_USART_IsEnabled(USART.channel);
+  if (was_enabled) {
+    LL_USART_Disable(USART.channel);
+  }
+
+#if defined(STM32H7) || defined(STM32G4)
+  LL_USART_SetBaudRate(USART.channel, periphclk, LL_USART_PRESCALER_DIV1, LL_USART_OVERSAMPLING_16, baudrate);
+#else
+  LL_USART_SetBaudRate(USART.channel, periphclk, LL_USART_OVERSAMPLING_16, baudrate);
+#endif
+
+  if (was_enabled) {
+    LL_USART_Enable(USART.channel);
+
+#if defined(STM32H7) || defined(STM32G4)
+    if (LL_USART_GetTransferDirection(USART.channel) & LL_USART_DIRECTION_RX)
+      while (!LL_USART_IsActiveFlag_REACK(USART.channel))
+        ;
+#endif
+#if defined(STM32F7) || defined(STM32H7) || defined(STM32G4)
+    if (LL_USART_GetTransferDirection(USART.channel) & LL_USART_DIRECTION_TX)
+      while (!LL_USART_IsActiveFlag_TEACK(USART.channel))
+        ;
+#endif
+  }
+
+  return true;
+}
+
 bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32_t size) {
   if (!serial || !data || !serial->tx_buffer || serial->config.port <= SERIAL_PORT_INVALID || serial->config.port >= SERIAL_PORT_MAX) {
     return false;
@@ -220,9 +271,25 @@ bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32
 static void handle_serial_isr(serial_port_t *serial) {
   const usart_port_def_t *port = &usart_port_defs[serial->config.port];
 
-  if (LL_USART_IsActiveFlag_ORE(port->channel)) {
+  const bool overrun_error = LL_USART_IsActiveFlag_ORE(port->channel);
+  const bool parity_error = LL_USART_IsActiveFlag_PE(port->channel);
+  const bool framing_error = LL_USART_IsActiveFlag_FE(port->channel);
+  const bool noise_error = LL_USART_IsActiveFlag_NE(port->channel);
+
+#if defined(STM32F4)
+  if (overrun_error || parity_error || framing_error || noise_error)
     LL_USART_ClearFlag_ORE(port->channel);
-  }
+#else
+  if (overrun_error)
+    LL_USART_ClearFlag_ORE(port->channel);
+  if (parity_error)
+    LL_USART_ClearFlag_PE(port->channel);
+  if (framing_error)
+    LL_USART_ClearFlag_FE(port->channel);
+  if (noise_error)
+    LL_USART_ClearFlag_NE(port->channel);
+#endif
+  serial->rx_error_count += overrun_error + parity_error + framing_error + noise_error;
 
   if (LL_USART_IsEnabledIT_RXNE(port->channel) && LL_USART_IsActiveFlag_RXNE(port->channel)) {
     const volatile uint8_t data = LL_USART_ReceiveData8(port->channel);
