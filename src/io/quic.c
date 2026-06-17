@@ -665,7 +665,6 @@ bool quic_process(quic_t *quic, uint8_t *data, uint32_t size) {
     sixaxis_acc_cal();
 
     flash_save();
-    flash_load();
 
     quic_send(quic, QUIC_CMD_CAL_IMU, QUIC_FLAG_NONE, NULL, 0);
     break;

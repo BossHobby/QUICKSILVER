@@ -10,6 +10,7 @@ serial_port_t *serial_ports[SERIAL_PORT_MAX];
 extern const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX];
 extern void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool swap);
 extern bool serial_hard_set_baudrate(serial_port_t *serial, uint32_t baudrate);
+extern void serial_hard_sync_rx(serial_port_t *serial);
 
 bool serial_is_soft(serial_ports_t port) {
   if (port < SERIAL_PORT_MAX) {
@@ -160,6 +161,9 @@ void serial_disable_isr(serial_ports_t port) {
 }
 
 uint32_t serial_bytes_available(serial_port_t *serial) {
+  if (serial && !serial_is_soft(serial->config.port)) {
+    serial_hard_sync_rx(serial);
+  }
   return ring_buffer_available(serial->rx_buffer);
 }
 
@@ -168,10 +172,16 @@ uint32_t serial_bytes_free(serial_port_t *serial) {
 }
 
 bool serial_read_byte(serial_port_t *serial, uint8_t *data) {
+  if (serial && !serial_is_soft(serial->config.port)) {
+    serial_hard_sync_rx(serial);
+  }
   return ring_buffer_read(serial->rx_buffer, data);
 }
 
 uint32_t serial_read_bytes(serial_port_t *serial, uint8_t *data, const uint32_t size) {
+  if (serial && !serial_is_soft(serial->config.port)) {
+    serial_hard_sync_rx(serial);
+  }
   return ring_buffer_read_multi(serial->rx_buffer, data, size);
 }
 
