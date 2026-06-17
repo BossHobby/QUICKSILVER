@@ -51,6 +51,7 @@ typedef struct {
   ring_buffer_t *rx_buffer;
   ring_buffer_t *tx_buffer;
 
+  volatile uint32_t rx_error_count;
   volatile bool tx_done;
 } serial_port_t;
 
@@ -66,6 +67,7 @@ extern serial_port_t serial_displayport;
 extern serial_port_t serial_vtx;
 
 void serial_init(serial_port_t *serial, serial_port_config_t config);
+bool serial_set_baudrate(serial_port_t *serial, uint32_t baudrate);
 
 void serial_enable_rcc(serial_ports_t port);
 void serial_enable_isr(serial_ports_t port);
