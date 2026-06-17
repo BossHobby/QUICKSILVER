@@ -29,11 +29,18 @@ typedef enum {
 } serial_stop_bits_t;
 
 typedef enum {
-  SERIAL_DIR_NONE,
-  SERIAL_DIR_RX,
-  SERIAL_DIR_TX,
-  SERIAL_DIR_TX_RX,
+  SERIAL_DIR_NONE = 0,
+  SERIAL_DIR_RX = 1 << 0,
+  SERIAL_DIR_TX = 1 << 1,
+  SERIAL_DIR_TX_RX = SERIAL_DIR_RX | SERIAL_DIR_TX,
 } serial_direction_t;
+
+typedef enum {
+  SERIAL_DMA_NONE = 0,
+  SERIAL_DMA_RX = 1 << 0,
+  SERIAL_DMA_TX = 1 << 1,
+  SERIAL_DMA_BOTH = SERIAL_DMA_RX | SERIAL_DMA_TX,
+} serial_dma_mode_t;
 
 typedef struct {
   serial_ports_t port;
@@ -43,6 +50,7 @@ typedef struct {
   bool invert;
   bool half_duplex;
   bool half_duplex_pp;
+  serial_dma_mode_t dma_mode;
 } serial_port_config_t;
 
 typedef struct {
@@ -56,10 +64,16 @@ typedef struct {
 } serial_port_t;
 
 typedef struct {
+  uint32_t rx;
+  uint32_t tx;
+} serial_dma_request_t;
+
+typedef struct {
   uint8_t channel_index;
   usart_dev_t *channel;
   IRQn_Type irq;
   rcc_reg_t rcc;
+  serial_dma_request_t dma_request;
 } usart_port_def_t;
 
 extern serial_port_t serial_rx;
