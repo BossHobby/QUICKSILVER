@@ -422,64 +422,17 @@ void osd_save_exit() {
 }
 
 static void print_osd_flightmode(osd_element_t *el) {
-#ifdef VEHICLE_ROVER
-  const uint8_t steer_mode_labels[3][10] = {
-      {"  MANUAL  "},
-      {"RATE ASST "},
-      {"RATE THR  "},
-  };
-
-  uint8_t steer_mode = ROVER_STEER_MODE_MANUAL;
-  if (rx_aux_on(AUX_RATE_THROTTLE)) {
-    steer_mode = ROVER_STEER_MODE_RATE_THROTTLE;
-  } else if (rx_aux_on(AUX_RATE_ASSIST)) {
-    steer_mode = ROVER_STEER_MODE_RATE_ASSIST;
-  }
-
+  const char *flightmode = control_flight_mode_name();
+  uint8_t size = 0;
+  while (size < 10 && flightmode[size])
+    size++;
+  const uint8_t padding = (10 - size) / 2;
   osd_start_el(el);
-  osd_write_data(steer_mode_labels[steer_mode], 10);
-#elif defined(VEHICLE_WING)
-  const uint8_t flightmode_labels[3][10] = {
-      {"  MANUAL "},
-      {"   ACRO  "},
-      {"  LEVEL  "},
-  };
-
-  uint8_t flightmode = 0;
-  if (rx_aux_on(AUX_LEVELMODE)) {
-    flightmode = 2;
-  } else if (rx_aux_on(AUX_ACROMODE)) {
-    flightmode = 1;
-  }
-
-  osd_start_el(el);
-  osd_write_data(flightmode_labels[flightmode], 10);
-#else
-  const uint8_t flightmode_labels[5][10] = {
-      {"   ACRO   "},
-      {"  LEVEL   "},
-      {" RACEMODE "},
-      {" HORIZON  "},
-      {"RM HORIZON"},
-  };
-
-  uint8_t flightmode;
-  if (rx_aux_on(AUX_LEVELMODE)) {
-    if (rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON))
-      flightmode = 4;
-    if (!rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON))
-      flightmode = 3;
-    if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON))
-      flightmode = 2;
-    if (!rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON))
-      flightmode = 1;
-  } else {
-    flightmode = 0;
-  }
-
-  osd_start_el(el);
-  osd_write_data(flightmode_labels[flightmode], 10);
-#endif
+  for (uint8_t i = 0; i < padding; i++)
+    osd_write_char(' ');
+  osd_write_data((const uint8_t *)flightmode, size);
+  for (uint8_t i = padding + size; i < 10; i++)
+    osd_write_char(' ');
 }
 
 static void print_osd_rssi(osd_element_t *el) {

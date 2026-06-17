@@ -105,6 +105,8 @@ typedef struct {
 
 extern control_flags_t flags;
 
+const char *control_flight_mode_name(void);
+
 typedef struct {
   failloop_t failloop;
 

@@ -18,6 +18,7 @@ FAST_RAM target_t target = {
 target_info_t target_info = {
     .mcu = MACRO_STR(MCU_NAME),
     .git_version = MACRO_STR(GIT_VERSION),
+    .firmware_version = FIRMWARE_VERSION,
     .quic_protocol_version = QUIC_PROTOCOL_VERSION,
 
 #ifdef DEBUG
