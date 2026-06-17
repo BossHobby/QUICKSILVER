@@ -48,6 +48,4 @@ packet_status_t rx_serial_process_redpine();
 
 void rx_serial_send_telemetry(uint32_t size);
 
-void rx_serial_send_fport_telemetry();
-void rx_serial_send_crsf_telemetry();
 bool rx_serial_crsf_bind();

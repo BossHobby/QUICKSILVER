@@ -86,6 +86,32 @@ CBOR_END_STRUCT_ENCODER()
 static uint32_t failsafe_phase_start_us = 0;
 static bool failsafe_rearm_allows_prearm_hold = false;
 
+const char *control_flight_mode_name(void) {
+#ifdef VEHICLE_ROVER
+  if (rx_aux_on(AUX_RATE_THROTTLE))
+    return "RATE THR";
+  if (rx_aux_on(AUX_RATE_ASSIST))
+    return "RATE ASST";
+  return "MANUAL";
+#elif defined(VEHICLE_WING)
+  if (rx_aux_on(AUX_LEVELMODE))
+    return "LEVEL";
+  if (rx_aux_on(AUX_ACROMODE))
+    return "ACRO";
+  return "MANUAL";
+#else
+  if (!rx_aux_on(AUX_LEVELMODE))
+    return "ACRO";
+  if (rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON))
+    return "RM HORIZON";
+  if (!rx_aux_on(AUX_RACEMODE) && rx_aux_on(AUX_HORIZON))
+    return "HORIZON";
+  if (rx_aux_on(AUX_RACEMODE) && !rx_aux_on(AUX_HORIZON))
+    return "RACEMODE";
+  return "LEVEL";
+#endif
+}
+
 static void failsafe_set_phase(failsafe_phase_t phase, uint32_t now_us) {
   const failsafe_phase_t previous_phase = state.failsafe_phase;
 
