@@ -111,7 +111,7 @@ static void smart_audio_init() {
     return;
   }
 
-  serial_port_config_t config;
+  serial_port_config_t config = {0};
   config.port = profile.serial.smart_audio;
   config.baudrate = baud_rate;
   config.direction = SERIAL_DIR_TX_RX;
