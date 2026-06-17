@@ -413,7 +413,6 @@ void osd_save_exit() {
   led_flash();
 
   flash_save();
-  flash_load();
 
   task_reset_runtime();
 
