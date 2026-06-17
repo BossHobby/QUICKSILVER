@@ -13,6 +13,8 @@
   DMA_DEVICE(DSHOT_CH1) \
   DMA_DEVICE(DSHOT_CH2) \
   DMA_DEVICE(DSHOT_CH3) \
+  DMA_DEVICE(SERIAL_RX) \
+  DMA_DEVICE(SERIAL_TX) \
   DMA_DEVICE(SPI1_RX)   \
   DMA_DEVICE(SPI1_TX)   \
   DMA_DEVICE(SPI2_RX)   \
@@ -50,6 +52,8 @@ void dma_prepare_tx_memory(void *addr, uint32_t size);
 void dma_prepare_rx_memory(void *addr, uint32_t size);
 
 void dma_enable_rcc(const dma_stream_def_t *def);
+dma_stream_t dma_claim_unused(dma_device_t device);
+void dma_release(dma_stream_t stream, dma_device_t device);
 
 #ifdef STM32F4
 bool dma_can_use_dma2(dma_device_t device);
