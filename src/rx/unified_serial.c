@@ -12,6 +12,7 @@
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "io/led.h"
+#include "rx/crsf.h"
 #include "util/ring_buffer.h"
 #include "util/util.h"
 
@@ -148,7 +149,7 @@ static void serial_rx_init(rx_serial_protocol_t proto) {
     break;
 
   case RX_SERIAL_PROTOCOL_CRSF:
-    config.baudrate = 420000;
+    config.baudrate = CRSF_BAUDRATE_DEFAULT;
     config.stop_bits = SERIAL_STOP_BITS_1;
     config.direction = SERIAL_DIR_TX_RX;
     break;
@@ -270,19 +271,6 @@ bool rx_serial_check() {
   state.rx_status = RX_STATUS_DETECTED + serial_rx_detected_protcol;
 
   const packet_status_t status = rx_serial_process(serial_rx_detected_protcol);
-
-  switch (serial_rx_detected_protcol) {
-  case RX_SERIAL_PROTOCOL_FPORT:
-  case RX_SERIAL_PROTOCOL_FPORT_INVERTED:
-    rx_serial_send_fport_telemetry();
-    break;
-  case RX_SERIAL_PROTOCOL_CRSF:
-    rx_serial_send_crsf_telemetry();
-    break;
-
-  default:
-    break;
-  }
 
   rx_serial_update_lqi(serial_rx_detected_protcol, status);
 

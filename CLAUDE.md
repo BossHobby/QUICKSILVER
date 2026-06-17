@@ -15,6 +15,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Includes: group by standard libraries first, then project modules
 - Indentation: 2 spaces
 - Braces: opening brace on same line for functions and control structures
+- Braces may be omitted for simple single-statement `if` bodies when it improves readability; use braces when a sequence of guard clauses or branches is clearer with visual blocks
+- Prefer named intermediate values over awkward line breaks made only to satisfy a column limit
 - Function naming: snake_case
 - Variable naming: snake_case
 - Constants/Macros: UPPER_CASE

@@ -416,8 +416,14 @@ static void gps_handle_packet(const uint16_t class_id, const uint8_t *payload, c
     gps_status.fix_type = nav_pvt->fixType;
     gps_status.sats_used = nav_pvt->numSV;
     gps_status.pdop = nav_pvt->pDOP;
+    gps_status.height = nav_pvt->height;
+    gps_status.vel_n = nav_pvt->velN;
+    gps_status.vel_e = nav_pvt->velE;
+    gps_status.vel_d = nav_pvt->velD;
     gps_status.h_acc = nav_pvt->hAcc;
     gps_status.v_acc = nav_pvt->vAcc;
+    gps_status.speed_acc = nav_pvt->sAcc;
+    gps_status.head_acc = nav_pvt->headAcc;
 
     // Update fix quality (0-100%)
     if (nav_pvt->fixType >= GPS_FIX_3D) {

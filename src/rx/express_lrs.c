@@ -116,6 +116,7 @@ static uint8_t tlm_burst_max = 1;
 static bool tlm_burst_valid = false;
 static uint8_t tlm_buffer[CRSF_FRAME_SIZE_MAX];
 static bool tlm_device_info_pending = false;
+static uint8_t tlm_device_info_destination = CRSF_ADDRESS_RADIO_TRANSMITTER;
 static uint8_t tlm_denom = 1;
 
 static uint8_t msp_tx_buffer[MSP_BUFFER_SIZE];
@@ -240,9 +241,7 @@ static void elrs_update_telemetry() {
   }
 
   if (!elrs_tlm_sender_active()) {
-    crsf_tlm_frame_start(tlm_buffer);
-
-    uint32_t payload_size = 0;
+    uint32_t full_size = 0;
     if (msp_new_data) {
       static uint8_t msp_seq = 0;
       static uint16_t msp_tx_sent = 0;
@@ -280,17 +279,16 @@ static void elrs_update_telemetry() {
         msp_new_data = false;
       }
 
-      payload_size = crsf_tlm_frame_msp_resp(tlm_buffer, msp_origin, payload, msp_size + header_size);
+      full_size = crsf_tlm_frame_msp_resp(tlm_buffer, msp_origin, payload, msp_size + header_size);
     } else {
       if (tlm_device_info_pending) {
-        payload_size = crsf_tlm_frame_device_info(tlm_buffer);
+        full_size = crsf_tlm_frame_device_info(tlm_buffer, tlm_device_info_destination);
         tlm_device_info_pending = false;
       } else {
-        payload_size = crsf_tlm_frame_battery_sensor(tlm_buffer);
+        full_size = crsf_tlm_frame_battery_sensor(tlm_buffer);
       }
     }
 
-    const uint32_t full_size = crsf_tlm_frame_finish(tlm_buffer, payload_size);
     elrs_tlm_sender_set_data(tlm_buffer, full_size);
   }
 
@@ -605,6 +603,7 @@ static void elrs_msp_process(uint8_t *buf, uint32_t len) {
 
   switch (buf[2]) {
   case CRSF_FRAMETYPE_DEVICE_PING:
+    tlm_device_info_destination = len > 4 ? buf[4] : CRSF_ADDRESS_RADIO_TRANSMITTER;
     tlm_device_info_pending = true;
     break;
 

@@ -9,6 +9,7 @@ serial_port_t *serial_ports[SERIAL_PORT_MAX];
 
 extern const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX];
 extern void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool swap);
+extern bool serial_hard_set_baudrate(serial_port_t *serial, uint32_t baudrate);
 
 bool serial_is_soft(serial_ports_t port) {
   if (port < SERIAL_PORT_MAX) {
@@ -104,6 +105,7 @@ void serial_init(serial_port_t *serial, serial_port_config_t config) {
 
   serial_ports[port] = serial;
 
+  serial->rx_error_count = 0;
   ring_buffer_clear(serial->rx_buffer);
   ring_buffer_clear(serial->tx_buffer);
 
@@ -113,6 +115,33 @@ void serial_init(serial_port_t *serial, serial_port_config_t config) {
     const bool swap = serial_hard_pin_init(serial, config);
     serial_hard_init(serial, config, swap);
   }
+}
+
+bool serial_set_baudrate(serial_port_t *serial, uint32_t baudrate) {
+  if (serial == NULL || baudrate == 0 || serial->config.port == SERIAL_PORT_INVALID) {
+    return false;
+  }
+
+  const serial_ports_t port = serial->config.port;
+  if (serial->config.baudrate == baudrate) {
+    return true;
+  }
+
+  bool success = false;
+  if (serial_is_soft(port)) {
+    serial_port_config_t config = serial->config;
+    config.baudrate = baudrate;
+    soft_serial_init(config);
+    success = true;
+  } else if (port < SERIAL_PORT_MAX) {
+    success = serial_hard_set_baudrate(serial, baudrate);
+  }
+
+  if (success) {
+    serial->config.baudrate = baudrate;
+    serial->rx_error_count = 0;
+  }
+  return success;
 }
 
 void serial_enable_rcc(serial_ports_t port) {
