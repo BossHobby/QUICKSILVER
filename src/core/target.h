@@ -294,6 +294,7 @@ typedef enum {
 typedef struct {
   const char *mcu;
   const char *git_version;
+  uint32_t firmware_version;
   uint32_t quic_protocol_version;
 
   uint32_t features;
@@ -307,6 +308,7 @@ typedef struct {
   START_STRUCT(target_info_t)                          \
   STR_MEMBER(mcu)                                      \
   STR_MEMBER(git_version)                              \
+  MEMBER(firmware_version, uint32_t)                   \
   MEMBER(quic_protocol_version, uint32_t)              \
   MEMBER(features, uint32_t)                           \
   ARRAY_MEMBER(rx_protocols, RX_PROTOCOL_MAX, uint8_t) \

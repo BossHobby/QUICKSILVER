@@ -29,6 +29,10 @@ const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX] = {
 void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool swap) {
 }
 
+bool serial_hard_set_baudrate(serial_port_t *serial, uint32_t baudrate) {
+  return serial != NULL && baudrate != 0;
+}
+
 bool serial_write_bytes(serial_port_t *port, const uint8_t *data, const uint32_t count) {
   if (!port || !data || count == 0) {
     return false;
@@ -37,6 +41,9 @@ bool serial_write_bytes(serial_port_t *port, const uint8_t *data, const uint32_t
   // In a real simulator, this would write to a virtual serial port
   // For now, just store data in the TX buffer
   uint32_t written = ring_buffer_write_multi(port->tx_buffer, data, count);
+  if (written == count) {
+    port->tx_done = false;
+  }
   return written == count;
 }
 

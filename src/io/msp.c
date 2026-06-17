@@ -376,9 +376,9 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   }
   case MSP_FC_VERSION: {
     uint8_t data[3] = {
-        0, // FC_VERSION_MAJOR
-        1, // FC_VERSION_MINOR
-        0, // FC_VERSION_PATCH_LEVEL
+        (uint8_t)(target_info.firmware_version >> 16), // FC_VERSION_MAJOR
+        (uint8_t)(target_info.firmware_version >> 8),  // FC_VERSION_MINOR
+        (uint8_t)(target_info.firmware_version >> 0),  // FC_VERSION_PATCH_LEVEL
     };
     msp_send_reply(msp, magic, cmd, data, 3);
     break;
