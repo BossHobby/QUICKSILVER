@@ -1,12 +1,12 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 /*
  * CRSF protocol
  *
- * CRSF protocol uses a single wire half duplex uart connection.
- * The master sends one frame every 4ms and the slave replies between two frames from the master.
+ * CRSF protocol uses a full-duplex uart connection between FC and receiver.
  *
  * 420000 baud
  * not inverted
@@ -33,18 +33,24 @@
 #define CRSF_PAYLOAD_SIZE_MAX 60
 #define CRSF_MSP_PAYLOAD_SIZE_MAX (CRSF_PAYLOAD_SIZE_MAX - CRSF_FRAME_LENGTH_TYPE_CRC)
 #define CRSF_SYNC_BYTE 0xC8
+#define CRSF_BAUDRATE_DEFAULT 420000
 
 #define CRSF_DEVICEINFO_VERSION 0x01
 #define CRSF_DEVICEINFO_PARAMETER_COUNT 0
+#define CRSF_DEVICEINFO_HARDWARE_ID 0x51530000
+#define CRSF_COMMAND_CRC_POLY 0xBA
 
 enum {
   CRSF_FRAME_GPS_PAYLOAD_SIZE = 15,
+  CRSF_FRAME_GPS_EXTENDED_PAYLOAD_SIZE = 20,
   CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = 8,
   CRSF_FRAME_LINK_STATISTICS_PAYLOAD_SIZE = 10,
   CRSF_FRAME_LINK_STATISTICS_RX_PAYLOAD_SIZE = 5,
   CRSF_FRAME_LINK_STATISTICS_TX_PAYLOAD_SIZE = 6,
   CRSF_FRAME_RC_CHANNELS_PAYLOAD_SIZE = 22, // 11 bits per channel * 16 channels = 22 bytes.
+  CRSF_FRAME_RC_CHANNELS_SUBSET_MIN_PAYLOAD_SIZE = 3,
   CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = 6,
+  CRSF_FRAME_FLIGHT_MODE_PAYLOAD_SIZE = 16,
   CRSF_FRAME_TX_MSP_FRAME_SIZE = 58,
   CRSF_FRAME_RX_MSP_FRAME_SIZE = 8,
   CRSF_FRAME_ORIGIN_DEST_SIZE = 2,
@@ -58,9 +64,11 @@ enum {
 
 typedef enum {
   CRSF_FRAMETYPE_GPS = 0x02,
+  CRSF_FRAMETYPE_GPS_EXTENDED = 0x06,
   CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
   CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
   CRSF_FRAMETYPE_RC_CHANNELS_PACKED = 0x16,
+  CRSF_FRAMETYPE_RC_CHANNELS_SUBSET_PACKED = 0x17,
   CRSF_FRAMETYPE_LINK_STATISTICS_RX = 0x1C,
   CRSF_FRAMETYPE_LINK_STATISTICS_TX = 0x1D,
   CRSF_FRAMETYPE_ATTITUDE = 0x1E,
@@ -74,8 +82,14 @@ typedef enum {
 } crsf_frame_type_t;
 
 typedef enum {
+  CRSF_COMMAND_SUBCMD_GENERAL = 0x0A,
   CRSF_COMMAND_SUBCMD_RX = 0x10,
 } crsf_command_subcmd_t;
+
+typedef enum {
+  CRSF_COMMAND_SUBCMD_GENERAL_CRSF_SPEED_PROPOSAL = 0x70,
+  CRSF_COMMAND_SUBCMD_GENERAL_CRSF_SPEED_RESPONSE = 0x71,
+} crsf_command_general_subcmd_t;
 
 typedef enum {
   CRSF_COMMAND_SUBCMD_RX_BIND = 0x01,
@@ -97,20 +111,142 @@ typedef enum {
   CRSF_ADDRESS_CRSF_TRANSMITTER = 0xEE
 } crsf_address_t;
 
+typedef struct {
+  uint8_t destination;
+  uint8_t origin;
+  uint8_t subcommand;
+  uint8_t command;
+} __attribute__((__packed__)) crsf_command_header_t;
+
+typedef struct {
+  crsf_command_header_t header;
+  uint8_t port_id;
+  uint32_t baudrate;
+  uint8_t command_crc;
+} __attribute__((__packed__)) crsf_speed_proposal_payload_t;
+
+typedef struct {
+  crsf_command_header_t header;
+  uint8_t port_id;
+  uint8_t response;
+} __attribute__((__packed__)) crsf_speed_response_payload_t;
+
+typedef struct {
+  crsf_command_header_t header;
+} __attribute__((__packed__)) crsf_bind_payload_t;
+
+typedef struct {
+  uint8_t address;
+  uint8_t frame_length;
+  uint8_t type;
+} __attribute__((__packed__)) crsf_frame_header_t;
+
+typedef struct {
+  uint8_t destination;
+  uint8_t origin;
+} __attribute__((__packed__)) crsf_extended_header_t;
+
+typedef struct {
+  uint8_t address;
+  uint8_t frame_length;
+  uint8_t type;
+  crsf_speed_response_payload_t payload;
+  uint8_t command_crc;
+  uint8_t crc;
+} __attribute__((__packed__)) crsf_speed_response_frame_t;
+
+typedef struct {
+  uint8_t address;
+  uint8_t frame_length;
+  uint8_t type;
+  crsf_bind_payload_t payload;
+  uint8_t command_crc;
+  uint8_t crc;
+} __attribute__((__packed__)) crsf_bind_frame_t;
+
 typedef enum {
-  // Link-stat TX power enum order: 250mW was added after 2000mW, and
-  // 50mW is used by ExpressLRS, so this is not sorted by power.
-  CRSF_TX_POWER_0_MW,
-  CRSF_TX_POWER_10_MW,
-  CRSF_TX_POWER_25_MW,
-  CRSF_TX_POWER_100_MW,
-  CRSF_TX_POWER_500_MW,
-  CRSF_TX_POWER_1000_MW,
-  CRSF_TX_POWER_2000_MW,
-  CRSF_TX_POWER_250_MW,
-  CRSF_TX_POWER_50_MW,
-  CRSF_TX_POWER_MAX,
+  CRSF_TX_POWER_0_MW = 0,
+  CRSF_TX_POWER_10_MW = 1,
+  CRSF_TX_POWER_25_MW = 2,
+  CRSF_TX_POWER_100_MW = 3,
+  CRSF_TX_POWER_500_MW = 4,
+  CRSF_TX_POWER_1000_MW = 5,
+  CRSF_TX_POWER_2000_MW = 6,
+  CRSF_TX_POWER_23_DBM_220_MW = 7,
+  CRSF_TX_POWER_250_MW = CRSF_TX_POWER_23_DBM_220_MW,
+  CRSF_TX_POWER_50_MW = 8,
+  CRSF_TX_POWER_MAX = 9,
 } crsf_tx_power_t;
+
+typedef struct {
+  uint16_t voltage;
+  uint16_t current;
+  uint32_t capacity_used : 24;
+  uint32_t remaining : 8;
+} __attribute__((__packed__)) crsf_battery_sensor_payload_t;
+
+typedef struct {
+  uint32_t latitude;
+  uint32_t longitude;
+  uint16_t ground_speed;
+  uint16_t heading;
+  uint16_t altitude;
+  uint8_t satellites;
+} __attribute__((__packed__)) crsf_gps_payload_t;
+
+typedef struct {
+  uint8_t fix_type;
+  uint16_t n_speed;
+  uint16_t e_speed;
+  uint16_t v_speed;
+  uint16_t h_speed_acc;
+  uint16_t track_acc;
+  uint16_t alt_ellipsoid;
+  uint16_t h_acc;
+  uint16_t v_acc;
+  uint8_t reserved;
+  uint8_t hdop;
+  uint8_t vdop;
+} __attribute__((__packed__)) crsf_gps_extended_payload_t;
+
+typedef struct {
+  char flight_mode[CRSF_FRAME_FLIGHT_MODE_PAYLOAD_SIZE];
+} __attribute__((__packed__)) crsf_flight_mode_payload_t;
+
+typedef struct {
+  crsf_extended_header_t extended;
+  uint8_t data[CRSF_MSP_PAYLOAD_SIZE_MAX];
+} __attribute__((__packed__)) crsf_msp_response_payload_t;
+
+typedef struct {
+  crsf_frame_header_t header;
+  crsf_battery_sensor_payload_t payload;
+  uint8_t crc;
+} __attribute__((__packed__)) crsf_battery_sensor_frame_t;
+
+typedef struct {
+  crsf_frame_header_t header;
+  crsf_gps_payload_t payload;
+  uint8_t crc;
+} __attribute__((__packed__)) crsf_gps_frame_t;
+
+typedef struct {
+  crsf_frame_header_t header;
+  crsf_gps_extended_payload_t payload;
+  uint8_t crc;
+} __attribute__((__packed__)) crsf_gps_extended_frame_t;
+
+typedef struct {
+  crsf_frame_header_t header;
+  crsf_flight_mode_payload_t payload;
+  uint8_t crc;
+} __attribute__((__packed__)) crsf_flight_mode_frame_t;
+
+typedef struct {
+  crsf_frame_header_t header;
+  crsf_msp_response_payload_t payload;
+  uint8_t crc;
+} __attribute__((__packed__)) crsf_msp_response_frame_t;
 
 typedef struct {
   // 176 bits of data (11 bits per channel * 16 channels) = 22 bytes.
@@ -133,6 +269,11 @@ typedef struct {
 } __attribute__((__packed__)) crsf_channels_t;
 
 typedef struct {
+  uint8_t config;
+  uint8_t data[];
+} __attribute__((__packed__)) crsf_channels_subset_payload_t;
+
+typedef struct {
   uint8_t uplink_rssi_2;
   uint8_t uplink_rssi_1;
   uint8_t uplink_link_quality;
@@ -143,6 +284,26 @@ typedef struct {
   uint8_t downlink_rssi;
   uint8_t downlink_link_quality;
   int8_t downlink_snr;
+} __attribute__((__packed__)) crsf_link_statistics_payload_t;
+
+#if defined(__cplusplus)
+static_assert(sizeof(crsf_link_statistics_payload_t) == CRSF_FRAME_LINK_STATISTICS_PAYLOAD_SIZE, "wrong crsf link statistics payload size");
+#else
+_Static_assert(sizeof(crsf_link_statistics_payload_t) == CRSF_FRAME_LINK_STATISTICS_PAYLOAD_SIZE, "wrong crsf link statistics payload size");
+#endif
+
+typedef struct {
+  uint8_t uplink_rssi_2;
+  uint8_t uplink_rssi_1;
+  uint8_t uplink_link_quality;
+  int8_t uplink_snr;
+  uint8_t active_antenna;
+  uint8_t rf_mode;
+  uint8_t uplink_tx_power;
+  uint8_t downlink_rssi;
+  uint8_t downlink_link_quality;
+  int8_t downlink_snr;
+  uint16_t uplink_fps;
 } crsf_stats_t;
 
 typedef struct {
@@ -177,10 +338,13 @@ typedef union {
 extern crsf_stats_t crsf_stats;
 
 uint8_t crsf_crc8(uint8_t *data, uint16_t len);
+uint8_t crsf_command_crc8(const uint8_t *data, uint8_t size);
 
-void crsf_tlm_frame_start(uint8_t *buf);
+uint32_t crsf_frame_speed_response(uint8_t *buf, uint8_t destination, uint8_t port_id, bool response);
+uint32_t crsf_frame_bind(uint8_t *buf);
 uint32_t crsf_tlm_frame_battery_sensor(uint8_t *buf);
 uint32_t crsf_tlm_frame_gps(uint8_t *buf);
-uint32_t crsf_tlm_frame_device_info(uint8_t *buf);
-uint32_t crsf_tlm_frame_finish(uint8_t *buf, uint32_t payload_size);
-uint32_t crsf_tlm_frame_msp_resp(uint8_t *buf, uint8_t origin, uint8_t *payload, uint8_t size);
+uint32_t crsf_tlm_frame_gps_extended(uint8_t *buf);
+uint32_t crsf_tlm_frame_flight_mode(uint8_t *buf);
+uint32_t crsf_tlm_frame_device_info(uint8_t *buf, uint8_t destination);
+uint32_t crsf_tlm_frame_msp_resp(uint8_t *buf, uint8_t origin, const uint8_t *payload, uint8_t size);

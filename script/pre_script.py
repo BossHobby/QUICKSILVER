@@ -39,6 +39,30 @@ git_version = porcelain.describe(".")
 if git_version[0] == "g":
     git_version = git_version[1:]
 print("Git Version", git_version)
+
+with open(os.path.join(env.subst("$PROJECT_DIR"), "VERSION"), "r") as version_file:
+    firmware_version_string = version_file.read().strip()
+print("Firmware Version", firmware_version_string)
+
+
+def parse_firmware_version(version):
+    if version.startswith("v"):
+        version = version[1:]
+
+    components = []
+    for component in version.split("-", 1)[0].split(".")[:3]:
+        if not component.isdigit():
+            break
+        components.append(min(int(component), 255))
+
+    while len(components) < 3:
+        components.append(0)
+
+    return (components[0] << 16) | (components[1] << 8) | components[2]
+
+
+firmware_version = parse_firmware_version(firmware_version_string)
+print("Firmware Version ID", f"0x{firmware_version:06X}")
 try:
     git_branch = porcelain.active_branch(".").decode("utf-8")
     if git_branch == "master":
@@ -55,11 +79,12 @@ print("Targets Branch", targets_branch)
 
 env.Append(
     GIT_VERSION=git_version,
+    FIRMWARE_VERSION=firmware_version,
     GIT_BRANCH=git_branch,
     BUILD_UNFLAGS=["-Og", "-Os", "-DDEBUG"],
     ASFLAGS=system_flags + common_flags,
     CCFLAGS=system_flags + common_flags,
-    CPPDEFINES=[("GIT_VERSION", git_version)],
+    CPPDEFINES=[("GIT_VERSION", git_version), ("FIRMWARE_VERSION", firmware_version)],
     LINKFLAGS=system_flags + common_flags,
 )
 

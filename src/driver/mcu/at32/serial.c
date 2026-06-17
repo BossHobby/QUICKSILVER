@@ -111,6 +111,22 @@ void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool s
   serial_enable_isr(serial->config.port);
 }
 
+bool serial_hard_set_baudrate(serial_port_t *serial, uint32_t baudrate) {
+  if (!serial || baudrate == 0 || serial->config.port <= SERIAL_PORT_INVALID || serial->config.port >= SERIAL_PORT_MAX) {
+    return false;
+  }
+
+  const serial_ports_t port = serial->config.port;
+  crm_clocks_freq_type clocks_freq;
+  crm_clocks_freq_get(&clocks_freq);
+
+  const uint32_t apb_clock = (USART.channel == USART1 || USART.channel == USART6) ? clocks_freq.apb2_freq : clocks_freq.apb1_freq;
+  uint32_t div = apb_clock * 10 / baudrate;
+  div = (div % 10) < 5 ? (div / 10) : (div / 10) + 1;
+  USART.channel->baudr_bit.div = div;
+  return true;
+}
+
 bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32_t size) {
   if (!serial || !data || !serial->tx_buffer || serial->config.port <= SERIAL_PORT_INVALID || serial->config.port >= SERIAL_PORT_MAX) {
     return false;
@@ -151,21 +167,23 @@ bool serial_write_bytes(serial_port_t *serial, const uint8_t *data, const uint32
 static void handle_serial_isr(serial_port_t *serial) {
   const usart_port_def_t *port = &usart_port_defs[serial->config.port];
 
-  if (usart_flag_get(port->channel, USART_ROERR_FLAG) == SET) {
+  const bool overrun_error = usart_flag_get(port->channel, USART_ROERR_FLAG) == SET;
+  const bool parity_error = usart_flag_get(port->channel, USART_PERR_FLAG) == SET;
+  const bool framing_error = usart_flag_get(port->channel, USART_FERR_FLAG) == SET;
+  const bool noise_error = usart_flag_get(port->channel, USART_NERR_FLAG) == SET;
+  const bool break_error = usart_flag_get(port->channel, USART_BFF_FLAG) == SET;
+
+  if (overrun_error)
     usart_flag_clear(port->channel, USART_ROERR_FLAG);
-  }
-  if (usart_flag_get(port->channel, USART_PERR_FLAG) == SET) {
+  if (parity_error)
     usart_flag_clear(port->channel, USART_PERR_FLAG);
-  }
-  if (usart_flag_get(port->channel, USART_FERR_FLAG) == SET) {
+  if (framing_error)
     usart_flag_clear(port->channel, USART_FERR_FLAG);
-  }
-  if (usart_flag_get(port->channel, USART_NERR_FLAG) == SET) {
+  if (noise_error)
     usart_flag_clear(port->channel, USART_NERR_FLAG);
-  }
-  if (usart_flag_get(port->channel, USART_BFF_FLAG) == SET) {
+  if (break_error)
     usart_flag_clear(port->channel, USART_BFF_FLAG);
-  }
+  serial->rx_error_count += overrun_error + parity_error + framing_error + noise_error + break_error;
 
   if (usart_flag_get(port->channel, USART_RDBF_FLAG)) {
     const volatile uint8_t data = usart_data_receive(port->channel);
