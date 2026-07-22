@@ -32,12 +32,12 @@ void flash_save() {
     failloop(FAILLOOP_FAULT);
   }
 
-  __disable_irq();
-
   uint8_t *buffer = (uint8_t *)malloc(PROFILE_STORAGE_SIZE);
   if (buffer == NULL) {
     failloop(FAILLOOP_FAULT);
   }
+
+  __disable_irq();
 
   fmc_unlock();
   fmc_erase();

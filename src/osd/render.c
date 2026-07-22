@@ -404,10 +404,15 @@ void osd_exit() {
   osd_state.selection = 0;
   osd_state.cursor = 1;
   osd_state.cursor_history_size = 0;
+  osd_state.screen_history_size = 0;
+  osd_state.screen_phase = OSD_PHASE_CLEAR;
   osd_state.screen = OSD_SCREEN_CLEAR;
 }
 
 void osd_save_exit() {
+  const uint8_t reboot_fc_requested = osd_state.reboot_fc_requested;
+  osd_state.reboot_fc_requested = 0;
+
   osd_exit();
 
   led_flash();
@@ -416,7 +421,7 @@ void osd_save_exit() {
 
   task_reset_runtime();
 
-  if (osd_state.reboot_fc_requested)
+  if (reboot_fc_requested)
     system_reset();
 }
 
