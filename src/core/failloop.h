@@ -14,6 +14,7 @@ typedef enum {
   FAILLOOP_SPI = 8,         // spi error
   FAILLOOP_VEHICLE = 9,     // vehicle type not supported by target
   FAILLOOP_NO_TARGET = 10,  // no target configured - connect configurator and load target
+  FAILLOOP_OUTPUT = 11,     // invalid servo PWM rate
 } __attribute__((__packed__)) failloop_t;
 
 void failloop(failloop_t val);
