@@ -53,6 +53,7 @@ extern void test_ring_buffer_partial_multi_write(void);
 extern void test_ring_buffer_partial_multi_read(void);
 
 // CBOR tests
+extern void test_cbor_profile_servo_rate_roundtrip(void);
 extern void test_cbor_enum_wire_format(void);
 extern void test_cbor_failed_enum_decode_preserves_value(void);
 
@@ -194,6 +195,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_ring_buffer_partial_multi_read);
 
   // CBOR tests
+  RUN_TEST(test_cbor_profile_servo_rate_roundtrip);
   RUN_TEST(test_cbor_enum_wire_format);
   RUN_TEST(test_cbor_failed_enum_decode_preserves_value);
 

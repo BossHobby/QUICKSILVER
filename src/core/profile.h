@@ -407,7 +407,6 @@ typedef struct {
   int16_t trim;
   int16_t min;
   int16_t max;
-  uint16_t rate_hz;
 } profile_output_t;
 
 #define PROFILE_OUTPUT_MEMBERS   \
@@ -418,7 +417,15 @@ typedef struct {
   MEMBER(trim, int16_t)          \
   MEMBER(min, int16_t)           \
   MEMBER(max, int16_t)           \
-  MEMBER(rate_hz, uint16_t)      \
+  END_STRUCT()
+
+typedef struct {
+  uint16_t pwm_rate_hz; // Shared by all PWM outputs, 50-333 Hz.
+} profile_servo_t;
+
+#define SERVO_MEMBERS            \
+  START_STRUCT(profile_servo_t)  \
+  MEMBER(pwm_rate_hz, uint16_t)   \
   END_STRUCT()
 
 #define MIXER_RULE_MAX (MOTOR_PIN_MAX * 4)
@@ -561,17 +568,6 @@ typedef struct {
   END_STRUCT()
 
 typedef struct {
-  float threshold;
-  float step;
-} profile_wing_autotrim_t;
-
-#define WING_AUTOTRIM_MEMBERS      \
-  START_STRUCT(profile_wing_autotrim_t) \
-  MEMBER(threshold, float)              \
-  MEMBER(step, float)                  \
-  END_STRUCT()
-
-typedef struct {
   float accel_threshold;
   float velocity_threshold;
   float max_altitude;
@@ -607,13 +603,11 @@ typedef struct {
   END_STRUCT()
 
 typedef struct {
-  profile_wing_autotrim_t autotrim;
   profile_wing_autolaunch_t autolaunch;
 } profile_wing_t;
 
 #define WING_MEMBERS                               \
   START_STRUCT(profile_wing_t)                     \
-  MEMBER(autotrim, profile_wing_autotrim_t)        \
   MEMBER(autolaunch, profile_wing_autolaunch_t)    \
   END_STRUCT()
 
@@ -670,6 +664,7 @@ typedef struct {
 // Full Profile
 typedef struct {
   profile_metadata_t meta;
+  profile_servo_t servo;
   profile_output_t outputs[MOTOR_PIN_MAX];
   profile_mixer_rule_t mixer[MIXER_RULE_MAX];
   profile_motor_t motor;
@@ -691,6 +686,7 @@ typedef struct {
 #ifdef VEHICLE_ROVER
 #define PROFILE_MEMBERS                                                                     \
   START_STRUCT(profile_t)                                                                   \
+  MEMBER(servo, profile_servo_t)                                                            \
   MEMBER(meta, profile_metadata_t)                                                          \
   COUNT_ARRAY_MEMBER(outputs, MOTOR_PIN_MAX, profile_output_t, profile_output_count)        \
   COUNT_ARRAY_MEMBER(mixer, MIXER_RULE_MAX, profile_mixer_rule_t, profile_mixer_rule_count) \
@@ -708,6 +704,7 @@ typedef struct {
 #elif defined(VEHICLE_WING)
 #define PROFILE_MEMBERS                                                                     \
   START_STRUCT(profile_t)                                                                   \
+  MEMBER(servo, profile_servo_t)                                                            \
   MEMBER(meta, profile_metadata_t)                                                          \
   COUNT_ARRAY_MEMBER(outputs, MOTOR_PIN_MAX, profile_output_t, profile_output_count)        \
   COUNT_ARRAY_MEMBER(mixer, MIXER_RULE_MAX, profile_mixer_rule_t, profile_mixer_rule_count) \
@@ -726,6 +723,7 @@ typedef struct {
 #else
 #define PROFILE_MEMBERS                                                                     \
   START_STRUCT(profile_t)                                                                   \
+  MEMBER(servo, profile_servo_t)                                                            \
   MEMBER(meta, profile_metadata_t)                                                          \
   COUNT_ARRAY_MEMBER(outputs, MOTOR_PIN_MAX, profile_output_t, profile_output_count)        \
   COUNT_ARRAY_MEMBER(mixer, MIXER_RULE_MAX, profile_mixer_rule_t, profile_mixer_rule_count) \
