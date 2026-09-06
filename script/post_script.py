@@ -20,7 +20,8 @@ def before_upload(source, target, env):
         return
     for port in serial.tools.list_ports.grep("USB VID:PID=(0483|2E3C):5740"):
         with serial.Serial(port.device) as ser:
-            ser.write(b"R\r\n")
+            # Betaflight cancels a pending reboot if another byte arrives within 100 ms.
+            ser.write(b"R")
             time.sleep(2)
 
 
