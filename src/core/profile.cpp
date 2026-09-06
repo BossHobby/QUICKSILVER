@@ -1,0 +1,856 @@
+#include "core/profile.h"
+
+#include <string.h>
+
+#include "driver/usb.h"
+#include "io/quic.h"
+#include "osd/render.h"
+#include "rx/rx.h"
+#include "util/cbor_helper.h"
+#include "util/util.h"
+
+// Default values for our profile
+// ignore -Wmissing-braces here, gcc bug with nested structs
+#pragma GCC diagnostic ignored "-Wmissing-braces"
+
+#define DEFAULT_BLACKBOX_PRESET 0
+const blackbox_preset_t blackbox_presets[] = {
+    {
+        .field_flags = ((1 << BBOX_FIELD_MAX) - 1), // Set all bits
+        .sample_rate_hz = 1000,
+        .name = "All fields, Sample Rate=1000",
+        .name_osd = "ALL, HZ=1000",
+    },
+    {
+        .field_flags = (1 << BBOX_FIELD_GYRO_FILTER) | (1 << BBOX_FIELD_LOOP) | (1 << BBOX_FIELD_TIME),
+        .sample_rate_hz = 200,
+        .name = "Gyro Filtered, Sample Rate=200",
+        .name_osd = "GYRO FILTERED, HZ=200",
+    },
+};
+const uint32_t blackbox_presets_count = sizeof(blackbox_presets) / sizeof(blackbox_preset_t);
+
+void blackbox_preset_apply(const blackbox_preset_t *preset, profile_blackbox_t *profile) {
+  profile->field_flags = preset->field_flags | (1 << BBOX_FIELD_LOOP) | (1 << BBOX_FIELD_TIME);
+  profile->sample_rate_hz = preset->sample_rate_hz;
+}
+
+uint8_t blackbox_preset_equals(const blackbox_preset_t *preset, profile_blackbox_t *profile) {
+  return preset->field_flags == profile->field_flags && preset->sample_rate_hz == profile->sample_rate_hz;
+}
+
+static bool profile_output_configured(const profile_output_t *output) {
+  return output->target_output != 0 ||
+         output->protocol != OUTPUT_PROTOCOL_NONE ||
+         output->invert != 0 ||
+         output->trim != 0 ||
+         output->min != 0 ||
+         output->max != 0 ||
+         output->rate_hz != 0;
+}
+
+uint32_t profile_output_count(const profile_output_t *outputs, uint32_t size) {
+  uint32_t count = 0;
+  for (uint32_t i = 0; i < size; i++) {
+    if (profile_output_configured(&outputs[i])) {
+      count = i + 1;
+    }
+  }
+  return count;
+}
+
+static bool profile_mixer_rule_configured(const profile_mixer_rule_t *rule) {
+  return rule->output_index != 0 ||
+         rule->source != OUTPUT_SOURCE_NONE ||
+         rule->source_index != 0 ||
+         rule->weight != 0;
+}
+
+uint32_t profile_mixer_rule_count(const profile_mixer_rule_t *mixer, uint32_t size) {
+  uint32_t count = 0;
+  for (uint32_t i = 0; i < size; i++) {
+    if (profile_mixer_rule_configured(&mixer[i])) {
+      count = i + 1;
+    }
+  }
+  return count;
+}
+
+#define DEFAULT_PID_RATE_PRESET 0
+
+const pid_rate_preset_t pid_rate_presets[] = {
+    // Brushless Pids
+    {
+        .index = 0,
+        .name = "Thrust/Weight Ratio 14:1 5in",
+        .rate = {
+            .kp = {54, 54, 56},
+            .ki = {70, 70, 70},
+            .kd = {33, 33, 4},
+        },
+    },
+
+    {
+        .index = 1,
+        .name = "Thrust/Weight Ratio 12:1 4in",
+        .rate = {
+            .kp = {70, 70, 63},
+            .ki = {70, 70, 70},
+            .kd = {39, 39, 6},
+        },
+    },
+
+    {
+        .index = 2,
+        .name = "Thrust/Weight Ratio 10:1 3in",
+        .rate = {
+            .kp = {81, 81, 78},
+            .ki = {77, 77, 77},
+            .kd = {44, 44, 6},
+        },
+    },
+
+    {
+        .index = 3,
+        .name = "Thrust/Weight Ratio <8:1 2in",
+        .rate = {
+            .kp = {91, 91, 78.5},
+            .ki = {77, 77, 77},
+            .kd = {54, 54, 6},
+        },
+    },
+
+    {
+        .index = 4,
+        .name = "65mm 1s brushless whoop",
+        .rate = {
+            .kp = {108, 108, 118},
+            .ki = {77, 77, 77},
+            .kd = {68, 68, 12},
+        },
+    },
+
+    {
+        .index = 5,
+        .name = "75mm 1s brushless whoop",
+        .rate = {
+            .kp = {127, 127, 128},
+            .ki = {77, 77, 77},
+            .kd = {101, 101, 13},
+        },
+    },
+
+    {
+        .index = 6,
+        .name = "6mm & 7mm brushed whoop (Alienwhoop ZER0)",
+        .rate = {
+            .kp = {135, 135, 330},
+            .ki = {70, 75, 75},
+            .kd = {89, 89, 66},
+        },
+    },
+
+    {
+        .index = 7,
+        .name = "7mm brushed micro",
+        .rate = {
+            .kp = {122.5, 122.5, 298},
+            .ki = {60, 60, 40},
+            .kd = {128.5, 128.5, 24},
+        },
+    },
+};
+
+const uint32_t pid_rate_presets_count = sizeof(pid_rate_presets) / sizeof(pid_rate_preset_t);
+const profile_t default_profile = {
+    .meta = {
+        .name = "default",
+        .datetime = 0,
+    },
+
+    .outputs = {
+#ifdef VEHICLE_ROVER
+        {.target_output = 0, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
+        {.target_output = 3, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
+#elif defined(VEHICLE_WING)
+        {.target_output = 0, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 1, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
+        {.target_output = 2, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
+        {.target_output = 3, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
+#else
+        {.target_output = 0, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 1, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 2, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 3, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+#endif
+    },
+
+    .mixer = {
+#ifdef VEHICLE_ROVER
+        {.output_index = 0, .source = OUTPUT_SOURCE_THROTTLE, .weight = 100},
+        {.output_index = 1, .source = OUTPUT_SOURCE_YAW, .weight = 100},
+#elif defined(VEHICLE_WING)
+        {.output_index = 0, .source = OUTPUT_SOURCE_THROTTLE, .weight = 100},
+        {.output_index = 1, .source = OUTPUT_SOURCE_ROLL, .weight = 100},
+        {.output_index = 1, .source = OUTPUT_SOURCE_PITCH, .weight = 100},
+        {.output_index = 2, .source = OUTPUT_SOURCE_ROLL, .weight = -100},
+        {.output_index = 2, .source = OUTPUT_SOURCE_PITCH, .weight = 100},
+        {.output_index = 3, .source = OUTPUT_SOURCE_YAW, .weight = 100},
+#else
+        {.output_index = 0, .source = OUTPUT_SOURCE_ROLL, .weight = 100},
+        {.output_index = 0, .source = OUTPUT_SOURCE_PITCH, .weight = 100},
+        {.output_index = 0, .source = OUTPUT_SOURCE_YAW, .weight = 100},
+        {.output_index = 1, .source = OUTPUT_SOURCE_ROLL, .weight = 100},
+        {.output_index = 1, .source = OUTPUT_SOURCE_PITCH, .weight = -100},
+        {.output_index = 1, .source = OUTPUT_SOURCE_YAW, .weight = -100},
+        {.output_index = 2, .source = OUTPUT_SOURCE_ROLL, .weight = -100},
+        {.output_index = 2, .source = OUTPUT_SOURCE_PITCH, .weight = 100},
+        {.output_index = 2, .source = OUTPUT_SOURCE_YAW, .weight = -100},
+        {.output_index = 3, .source = OUTPUT_SOURCE_ROLL, .weight = -100},
+        {.output_index = 3, .source = OUTPUT_SOURCE_PITCH, .weight = -100},
+        {.output_index = 3, .source = OUTPUT_SOURCE_YAW, .weight = 100},
+#endif
+    },
+
+    .motor = {
+        .digital_idle = DIGITAL_IDLE,
+        .motor_limit = MOTOR_LIMIT,
+        .dshot_time = DSHOT_TIME_600,
+        .dshot_telemetry = false,
+        .gyro_orientation = GYRO_ROTATE_NONE,
+
+#ifdef TORQUE_BOOST
+        .torque_boost = TORQUE_BOOST,
+#else
+        .torque_boost = 0.0,
+#endif
+#ifdef THROTTLE_BOOST
+        .throttle_boost = THROTTLE_BOOST,
+#else
+        .throttle_boost = 0.0,
+#endif
+        .turtle_throttle_percent = 10.0f,
+    },
+
+    .serial = {
+#ifdef RX_USART
+        .rx = RX_USART,
+#else
+        .rx = SERIAL_PORT_INVALID,
+#endif
+#ifdef SMART_AUDIO_USART
+        .smart_audio = SMART_AUDIO_USART,
+#else
+        .smart_audio = SERIAL_PORT_INVALID,
+#endif
+#ifdef DISPLAYPORT_USART
+        .hdzero = DISPLAYPORT_USART,
+#else
+        .hdzero = SERIAL_PORT_INVALID,
+#endif
+#ifdef GPS_USART
+        .gps = GPS_USART,
+#else
+        .gps = SERIAL_PORT_INVALID,
+#endif
+    },
+
+    .filter = {
+        .gyro = {
+            {
+                .type = GYRO_PASS1_TYPE,
+                .cutoff_freq = GYRO_PASS1_FREQ,
+            },
+            {
+                .type = GYRO_PASS2_TYPE,
+                .cutoff_freq = GYRO_PASS2_FREQ,
+            },
+        },
+
+        .dterm = {
+#ifdef VEHICLE_ROVER
+            {
+                .type = FILTER_LP_PT1,
+                .cutoff_freq = 50.0f,
+            },
+            {
+                .type = FILTER_LP_PT1,
+                .cutoff_freq = 50.0f,
+            },
+#else
+            {
+                .type = DTERM_PASS1_TYPE,
+                .cutoff_freq = DTERM_PASS1_FREQ,
+            },
+            {
+                .type = DTERM_PASS2_TYPE,
+                .cutoff_freq = DTERM_PASS2_FREQ,
+            },
+#endif
+        },
+
+        .dterm_dynamic_type = DTERM_DYNAMIC_TYPE,
+        .dterm_dynamic_min = DTERM_DYNAMIC_FREQ_MIN,
+        .dterm_dynamic_max = DTERM_DYNAMIC_FREQ_MAX,
+
+#ifdef GYRO_DYNAMIC_NOTCH
+        .gyro_dynamic_notch_enable = 1,
+#else
+        .gyro_dynamic_notch_enable = 0,
+#endif
+    },
+
+    .osd = {
+        .guac_mode = 0,
+        .profiles = {
+            [OSD_PROFILE_1] = {
+                .callsign = "QUICKSILVER",
+                .elements = {
+                    ENCODE_OSD_ELEMENT(1, 1, 9, 1, 19, 0),    // OSD_CALLSIGN
+                    ENCODE_OSD_ELEMENT(1, 0, 11, 14, 21, 17), // OSD_CELL_COUNT
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 14, 0, 17),   // OSD_FUELGAUGE_VOLTS
+                    ENCODE_OSD_ELEMENT(1, 0, 14, 14, 24, 17), // OSD_FILTERED_VOLTS
+                    ENCODE_OSD_ELEMENT(1, 0, 24, 14, 44, 17), // OSD_GYRO_TEMP
+                    ENCODE_OSD_ELEMENT(1, 0, 10, 13, 20, 16), // OSD_FLIGHT_MODE
+                    ENCODE_OSD_ELEMENT(1, 0, 24, 1, 44, 0),   // OSD_RSSI
+                    ENCODE_OSD_ELEMENT(1, 0, 24, 13, 44, 16), // OSD_STOPWATCH
+                    ENCODE_OSD_ELEMENT(1, 0, 4, 6, 14, 8),    // OSD_SYSTEM_STATUS
+                    ENCODE_OSD_ELEMENT(1, 0, 1, 1, 0, 0),     // OSD_THROTTLE
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 1, 0, 0),     // OSD_VTX_CHANNEL
+                    ENCODE_OSD_ELEMENT(1, 0, 1, 14, 0, 17),   // OSD_CURRENT_DRAW
+                    ENCODE_OSD_ELEMENT(0, 0, 14, 6, 15, 8),   // OSD_CROSSHAIR
+                    ENCODE_OSD_ELEMENT(1, 0, 1, 13, 0, 16),   // OSD_CURRENT_DRAWN
+                    ENCODE_OSD_ELEMENT(0, 0, 7, 14, 10, 17),   // OSD_WATTS
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 12, 0, 15),    // OSD_GPS_SATS
+                    ENCODE_OSD_ELEMENT(0, 0, 8, 12, 10, 15),   // OSD_GPS_SPEED
+                    ENCODE_OSD_ELEMENT(0, 0, 12, 12, 19, 15),  // OSD_ROVER_INCLINOMETER
+                    ENCODE_OSD_ELEMENT(0, 0, 19, 1, 37, 0),    // OSD_CRSF_TX_POWER
+                },
+            },
+            [OSD_PROFILE_2] = {
+                .callsign = "QUICKSILVER",
+                .elements = {
+                    ENCODE_OSD_ELEMENT(0, 1, 9, 1, 19, 0),    // OSD_CALLSIGN
+                    ENCODE_OSD_ELEMENT(0, 0, 11, 14, 21, 17), // OSD_CELL_COUNT
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 14, 0, 17),   // OSD_FUELGAUGE_VOLTS
+                    ENCODE_OSD_ELEMENT(0, 0, 14, 14, 24, 17), // OSD_FILTERED_VOLTS
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 14, 44, 17), // OSD_GYRO_TEMP
+                    ENCODE_OSD_ELEMENT(0, 0, 10, 13, 20, 16), // OSD_FLIGHT_MODE
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 1, 44, 0),   // OSD_RSSI
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 13, 44, 16), // OSD_STOPWATCH
+                    ENCODE_OSD_ELEMENT(0, 0, 4, 6, 14, 8),    // OSD_SYSTEM_STATUS
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 1, 0, 0),     // OSD_THROTTLE
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 1, 0, 0),     // OSD_VTX_CHANNEL
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 14, 0, 17),   // OSD_CURRENT_DRAW
+                    ENCODE_OSD_ELEMENT(0, 0, 14, 6, 15, 8),   // OSD_CROSSHAIR
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 13, 0, 16),   // OSD_CURRENT_DRAWN
+                    ENCODE_OSD_ELEMENT(0, 0, 7, 14, 10, 17),   // OSD_WATTS
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 12, 0, 15),    // OSD_GPS_SATS
+                    ENCODE_OSD_ELEMENT(0, 0, 8, 12, 10, 15),   // OSD_GPS_SPEED
+                    ENCODE_OSD_ELEMENT(0, 0, 12, 12, 19, 15),  // OSD_ROVER_INCLINOMETER
+                    ENCODE_OSD_ELEMENT(0, 0, 19, 1, 37, 0),    // OSD_CRSF_TX_POWER
+                },
+            },
+        },
+
+    },
+#ifndef VEHICLE_ROVER
+    .rate = {
+        .profile = STICK_RATE_PROFILE_1,
+        .rates = {
+#ifdef SILVERWARE_RATES
+            {
+                .mode = RATE_MODE_SILVERWARE,
+                .rate = {
+                    {
+                        MAX_RATE,
+                        MAX_RATE,
+                        MAX_RATEYAW,
+                    },
+                    {
+                        ACRO_EXPO_ROLL,
+                        ACRO_EXPO_PITCH,
+                        ACRO_EXPO_YAW,
+                    },
+                    {
+                        ANGLE_EXPO_ROLL,
+                        ANGLE_EXPO_PITCH,
+                        ANGLE_EXPO_YAW,
+                    },
+                },
+            },
+            {
+                .mode = RATE_MODE_BETAFLIGHT,
+                .rate = {
+                    {
+                        BF_RC_RATE_ROLL,
+                        BF_RC_RATE_PITCH,
+                        BF_RC_RATE_YAW,
+                    },
+                    {
+                        BF_SUPER_RATE_ROLL,
+                        BF_SUPER_RATE_PITCH,
+                        BF_SUPER_RATE_YAW,
+                    },
+                    {
+                        BF_EXPO_ROLL,
+                        BF_EXPO_PITCH,
+                        BF_EXPO_YAW,
+                    },
+                },
+            },
+#endif
+#ifdef BETAFLIGHT_RATES
+            {
+                .mode = RATE_MODE_BETAFLIGHT,
+                .rate = {
+                    {
+                        BF_RC_RATE_ROLL,
+                        BF_RC_RATE_PITCH,
+                        BF_RC_RATE_YAW,
+                    },
+                    {
+                        BF_SUPER_RATE_ROLL,
+                        BF_SUPER_RATE_PITCH,
+                        BF_SUPER_RATE_YAW,
+                    },
+                    {
+                        BF_EXPO_ROLL,
+                        BF_EXPO_PITCH,
+                        BF_EXPO_YAW,
+                    },
+                },
+            },
+            {
+                .mode = RATE_MODE_SILVERWARE,
+                .rate = {
+                    {
+                        MAX_RATE,
+                        MAX_RATE,
+                        MAX_RATEYAW,
+                    },
+                    {
+                        ACRO_EXPO_ROLL,
+                        ACRO_EXPO_PITCH,
+                        ACRO_EXPO_YAW,
+                    },
+                    {
+                        ANGLE_EXPO_ROLL,
+                        ANGLE_EXPO_PITCH,
+                        ANGLE_EXPO_YAW,
+                    },
+                },
+            },
+#endif
+        },
+
+        .level_max_angle = LEVEL_MAX_ANGLE,
+        .sticks_deadband = STICKS_DEADBAND,
+        .throttle_mid = THROTTLE_MID,
+        .throttle_expo = THROTTLE_EXPO,
+    },
+#endif
+
+    .receiver = {
+        .protocol = RX_PROTOCOL_UNIFIED_SERIAL,
+
+        .aux = {
+            ARMING, // AUX_ARMING
+#ifndef VEHICLE_ROVER
+            IDLE_UP,                // AUX_IDLE_UP
+            LEVELMODE,              // AUX_LEVELMODE
+#ifdef VEHICLE_WING
+            {RX_CHANNEL_OFF, 0, 0}, // AUX_ACROMODE
+#else
+            RACEMODE,               // AUX_RACEMODE
+            HORIZON,                // AUX_HORIZON
+            STICK_BOOST_PROFILE,    // AUX_STICK_BOOST_PROFILE
+            {RX_CHANNEL_OFF, 0, 0}, // UNUSED_AUX_HIGH_RATES
+#endif
+#endif
+#ifdef BUZZER_ENABLE
+            BUZZER_ENABLE, // AUX_BUZZER_ENABLE
+#else
+            {RX_CHANNEL_OFF, 0, 0},
+#endif
+#if !defined(VEHICLE_ROVER) && !defined(VEHICLE_WING)
+            TURTLE, // AUX_TURTLE
+
+#ifdef MOTORS_TO_THROTTLE_MODE
+            MOTORS_TO_THROTTLE_MODE, // AUX_MOTOR_TEST
+#else
+            {RX_CHANNEL_OFF, 0, 0},
+#endif
+#endif
+            RSSI, // AUX_RSSI
+#ifdef FPV_SWITCH
+            FPV_SWITCH, // AUX_FPV_SWITCH
+#else
+            {RX_CHANNEL_OFF, 0, 0},
+#endif
+            {RX_CHANNEL_OFF, 0, 0}, // AUX_BLACKBOX
+            PREARM,                 // AUX_PREARM
+            {RX_CHANNEL_OFF, 0, 0}, // AUX_OSD_PROFILE
+#ifdef VEHICLE_ROVER
+            RATE_ASSIST,   // AUX_RATE_ASSIST
+            RATE_THROTTLE, // AUX_RATE_THROTTLE
+#endif
+#ifdef VEHICLE_WING
+            AUTOTRIM,   // AUX_AUTOTRIM
+            AUTOLAUNCH, // AUX_AUTOLAUNCH
+#endif
+        },
+        .role_map = {
+#ifdef VEHICLE_ROVER
+            [RX_ROLE_THROTTLE] = {.channel = 2, .min = -1.0f, .center = 0.0f, .max = 1.0f},
+            [RX_ROLE_STEERING] = {.channel = 3, .min = -1.0f, .center = 0.0f, .max = 1.0f},
+#else
+            [RX_ROLE_ROLL] = {.channel = 0, .min = -1.0f, .center = 0.0f, .max = 1.0f},
+            [RX_ROLE_PITCH] = {.channel = 1, .min = -1.0f, .center = 0.0f, .max = 1.0f},
+            [RX_ROLE_YAW] = {.channel = 3, .min = -1.0f, .center = 0.0f, .max = 1.0f},
+            [RX_ROLE_THROTTLE] = {.channel = 2, .min = -1.0f, .center = 0.0f, .max = 1.0f},
+#endif
+        },
+        .lqi_source = RX_LQI_SOURCE_DIRECT,
+    },
+
+    //************************************PIDS****************************************
+    .pid = {
+        .pid_profile = PID_PROFILE_1,
+        .pid_rates = {},
+        .stick_profile = STICK_PROFILE_OFF,
+        .stick_rates = {
+            //**************************ADVANCED PID CONTROLLER - WITH PROFILE SWITCHING ON AUX SWITCH STICK_BOOST_PROFILE*******************************
+            // GENERAL SUMMARY OF THIS FEATURE:
+            // stickAccelerator and stickTransition are a more detailed version of the traditional D term setpoint weight and transition variables that you may be familiar with in other firmwares.
+            // The difference here is that we name the D term setpoint weight "Stick Accelerator" because it's actual function is to accelerate the response of the pid controller to stick inputs.
+            // Another difference is that negative stick transitions are possible meaning that you can have a higher stick acceleration near center stick which fades to a lower stick acceleration at
+            // full stick throws should you desire to see what that feels like.  Traditionally we are only used to being able to transition from a low setpoint to a higher one.
+            // The final differences are that you can adjust each axis independently and also set up two seperate profiles so that you can switch "feels" in flight with the STICK_BOOST_PROFILE aux
+            // channel selection set up in the receiver section of config.h
+            //
+            // HOW TO USE THIS FEATURE:
+            // Safe values for stickAccelerator are from 0 to about 2.5 where 0 represents a "MEASUREMENT" based D term calculation and is the traditional Silverware PID controller, and a
+            // a value of 1 represents an "ERROR" based D term calculation.  Values above 1 add even more acceleration but be reasonable and keep this below about 2.5.
+
+            // Range of acceptable values for stickTransition are from -1 to 1.  Do not input a value outside of this range.  When stick transition is 0 - no stick transition will take place
+            // and stick acceleration will remain constant regardless of stick position.  Positive values up to 1 will represent a transition where stick acceleration at it's maximum at full
+            // stick deflection and is reduced by whatever percentage you enter here at stick center.  For example accelerator at 1 and transition at .3 means that there will be 30% reduction
+            // of acceleration at stick center, and acceleration strength of 1 at full stick.
+            {
+                // pid profile A	Roll  PITCH  YAW
+                .accelerator = {0.0, 0.0, 0.0}, // keep values between 0 and 2.5
+                .transition = {0.0, 0.0, 0.0},  // keep values between -1 and 1
+            },
+            {
+                // pid profile B	Roll  PITCH  YAW
+                .accelerator = {1.5, 1.5, 1.0}, // keep values between 0 and 2.5
+                .transition = {0.3, 0.3, 0.0},  // keep values between -1 and 1
+            },
+        },
+        //**************************** ANGLE PIDS - used in level mode to set leveling strength
+
+        // Leveling algorithm coefficients for large errors  (stick banging or collisions)
+        .big_angle = {
+            .kp = 5.00, // P TERM GAIN ROLL + PITCH
+            .kd = 0.0,  // D TERM GAIN ROLL + PITCH
+        },
+
+        // Leveling algorithm coefficients for small errors  (normal flying)
+        .small_angle = {
+            .kp = 10.00, // P TERM GAIN ROLL + PITCH
+            .kd = 3.0,   // D TERM GAIN ROLL + PITCH
+        },
+
+        .throttle_dterm_attenuation = {
+#ifdef THROTTLE_D_ATTENUATION
+            .tda_active = THROTTLE_D_ATTENUATION_ACTIVE,
+#else
+            .tda_active = THROTTLE_D_ATTENUATION_NONE,
+#endif
+            .tda_breakpoint = TDA_BREAKPOINT,
+            .tda_percent = TDA_PERCENT,
+        },
+    },
+    .voltage = {
+#ifdef LIPO_CELL_COUNT
+        .lipo_cell_count = LIPO_CELL_COUNT,
+#else
+        .lipo_cell_count = 0,
+#endif
+#ifdef PID_VOLTAGE_COMPENSATION
+        .pid_voltage_compensation = PID_VOLTAGE_COMPENSATION_ACTIVE,
+#else
+        .pid_voltage_compensation = PID_VOLTAGE_COMPENSATION_NONE,
+#endif
+        .vbattlow = VBATTLOW,
+        .actual_battery_voltage = ACTUAL_BATTERY_VOLTAGE,
+        .reported_telemetry_voltage = REPORTED_TELEMETRY_VOLTAGE,
+        .use_filtered_voltage_for_warnings = USE_FILTERED_VOLTAGE_FOR_WARNINGS,
+        .vbat_scale = 110,
+#ifdef IBAT_SCALE
+        .ibat_scale = IBAT_SCALE,
+#else
+        .ibat_scale = 0,
+#endif
+    },
+    .blackbox = {
+#ifdef BLACKBOX_DEBUG_FLAGS
+        .debug_flags = BLACKBOX_DEBUG_FLAGS,
+#endif
+        // rest is initialized by profile_set_defaults()
+    },
+    .vtx = {
+        .power_table = {
+            .levels = 0,
+        },
+    },
+    .rover = {
+        .pid = {
+            .kp = 70.0f,
+            .ki = 0.0f,
+            .kd = 6.0f,
+        },
+        .center_deadband = 0.05f,
+        .yaw_rate = 180.0f,
+        .throttle_scale_breakpoint = 1.0f,
+        .throttle_scale_factor = 0.5f,
+        .reversible = 1,
+    },
+    .wing = {
+        .autotrim = {
+            .threshold = 0.04f,
+            .step = 0.005f,
+        },
+        .autolaunch = {
+            .accel_threshold = 1.5f,
+            .velocity_threshold = 3.0f,
+            .max_altitude = 0.0f,
+            .idle_throttle = 0.08f,
+            .throttle = 0.70f,
+            .pitch_angle = 18.0f,
+            .stick_deadband = 0.15f,
+            .detect_time_ms = 40,
+            .idle_delay_ms = 0,
+            .motor_delay_ms = 500,
+            .spinup_ms = 100,
+            .min_time_ms = 0,
+            .timeout_ms = 5000,
+            .finish_ms = 3000,
+        },
+    },
+};
+
+#pragma GCC diagnostic pop
+
+// the actual profile
+FAST_RAM profile_t profile;
+
+bool profile_output_slot_uses_protocol(uint8_t target_output, output_protocol_t protocol) {
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (profile.outputs[i].target_output == target_output && profile.outputs[i].protocol == protocol) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool profile_outputs_use_protocol(output_protocol_t protocol) {
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (profile.outputs[i].protocol == protocol) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool profile_output_slot_uses_servo(uint8_t target_output) {
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (profile.outputs[i].target_output == target_output && profile.outputs[i].protocol == OUTPUT_PROTOCOL_PWM) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void profile_set_defaults() {
+  memcpy(&profile, &default_profile, sizeof(profile_t));
+
+  for (uint8_t i = 0; i < PID_PROFILE_MAX; i++) {
+    profile.pid.pid_rates[i] = pid_rate_presets[DEFAULT_PID_RATE_PRESET].rate;
+  }
+
+  blackbox_preset_apply(&blackbox_presets[DEFAULT_BLACKBOX_PRESET], &profile.blackbox);
+  profile.motor.gyro_orientation = target.gyro_orientation;
+  if (target.vbat_scale > 0) {
+    profile.voltage.vbat_scale = target.vbat_scale;
+  }
+  if (target.ibat_scale > 0) {
+    profile.voltage.ibat_scale = target.ibat_scale;
+  }
+}
+
+pid_rate_t *profile_current_pid_rates() {
+  return &profile.pid.pid_rates[profile.pid.pid_profile];
+}
+
+#ifndef VEHICLE_ROVER
+rate_t *profile_current_rates() {
+  return &profile.rate.rates[profile.rate.profile];
+}
+#endif
+
+cbor_result_t cbor_encode_profile_metadata_t(cbor_value_t *enc, const profile_metadata_t *meta) {
+  cbor_result_t res = CBOR_OK;
+
+  CBOR_CHECK_ERROR(res = cbor_encode_map_indefinite(enc));
+
+  const uint32_t version = PROFILE_VERSION;
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "version"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint32_t(enc, &version));
+
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "name"));
+  CBOR_CHECK_ERROR(res = cbor_encode_tstr(enc, meta->name, 36));
+
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "datetime"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint32_t(enc, &meta->datetime));
+
+  CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
+  return res;
+}
+
+#define START_STRUCT CBOR_START_STRUCT_ENCODER
+#define END_STRUCT CBOR_END_STRUCT_ENCODER
+#define MEMBER CBOR_ENCODE_MEMBER
+#define STR_MEMBER CBOR_ENCODE_STR_MEMBER
+#define TSTR_MEMBER CBOR_ENCODE_TSTR_MEMBER
+#define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
+#define COUNT_ARRAY_MEMBER CBOR_ENCODE_COUNT_ARRAY_MEMBER
+#define STR_ARRAY_MEMBER CBOR_ENCODE_STR_ARRAY_MEMBER
+#define BSTR_MEMBER CBOR_ENCODE_BSTR_MEMBER
+
+RATE_MEMBERS
+PROFILE_RATE_MEMBERS
+MOTOR_MEMBERS
+SERIAL_MEMBERS
+FILTER_PARAMETER_MEMBERS
+FILTER_MEMBERS
+OSD_PROFILE_MEMBERS
+OSD_MEMBERS
+VOLTAGE_MEMBERS
+PID_RATE_MEMBERS
+ANGLE_PID_RATE_MEMBERS
+PID_RATE_PRESET_MEMBERS
+STICK_RATE_MEMBERS
+DTERM_ATTENUATION_MEMBERS
+PID_MEMBERS
+RX_ROLE_MAP_MEMBERS
+AUX_FUNCTION_MAP_MEMBERS
+PROFILE_RECEIVER_BIND_MEMBERS
+RECEIVER_MEMBERS
+BLACKBOX_MEMBERS
+BLACKBOX_PRESET_MEMBERS
+ROVER_PID_RATE_MEMBERS
+ROVER_MEMBERS
+WING_AUTOTRIM_MEMBERS
+WING_AUTOLAUNCH_MEMBERS
+WING_MEMBERS
+PROFILE_OUTPUT_MEMBERS
+PROFILE_MIXER_RULE_MEMBERS
+PROFILE_MEMBERS
+
+#undef START_STRUCT
+#undef END_STRUCT
+#undef MEMBER
+#undef STR_MEMBER
+#undef TSTR_MEMBER
+#undef ARRAY_MEMBER
+#undef COUNT_ARRAY_MEMBER
+#undef STR_ARRAY_MEMBER
+#undef BSTR_MEMBER
+
+cbor_result_t cbor_decode_profile_metadata_t(cbor_value_t *dec, profile_metadata_t *meta) {
+  cbor_result_t res = CBOR_OK;
+
+  cbor_container_t map;
+  res = cbor_decode_map(dec, &map);
+  if (res < CBOR_OK)
+    return res;
+
+  const uint8_t *name;
+  uint32_t name_len;
+  for (uint32_t i = 0; i < cbor_decode_map_size(dec, &map); i++) {
+    res = cbor_decode_tstr(dec, &name, &name_len);
+    if (res < CBOR_OK)
+      return res;
+
+    if (buf_equal_string(name, name_len, "name")) {
+      CBOR_CHECK_ERROR(res = cbor_decode_tstr(dec, &name, &name_len));
+
+      if (name_len > 36) {
+        name_len = 36;
+      }
+      memset(meta->name, 0, 36);
+      memcpy(meta->name, name, name_len);
+      continue;
+    }
+
+    if (buf_equal_string(name, name_len, "datetime")) {
+      CBOR_CHECK_ERROR(res = cbor_decode_uint32_t(dec, &meta->datetime));
+      continue;
+    }
+
+    res = cbor_decode_skip(dec);
+    if (res < CBOR_OK)
+      return res;
+  }
+  return res;
+}
+
+#define START_STRUCT CBOR_START_STRUCT_DECODER
+#define END_STRUCT CBOR_END_STRUCT_DECODER
+#define MEMBER CBOR_DECODE_MEMBER
+#define STR_MEMBER CBOR_DECODE_STR_MEMBER
+#define TSTR_MEMBER CBOR_DECODE_TSTR_MEMBER
+#define ARRAY_MEMBER CBOR_DECODE_ARRAY_MEMBER
+#define COUNT_ARRAY_MEMBER CBOR_DECODE_COUNT_ARRAY_MEMBER
+#define STR_ARRAY_MEMBER CBOR_DECODE_STR_ARRAY_MEMBER
+#define BSTR_MEMBER CBOR_DECODE_BSTR_MEMBER
+
+RATE_MEMBERS
+PROFILE_RATE_MEMBERS
+MOTOR_MEMBERS
+SERIAL_MEMBERS
+FILTER_PARAMETER_MEMBERS
+FILTER_MEMBERS
+OSD_PROFILE_MEMBERS
+OSD_MEMBERS
+VOLTAGE_MEMBERS
+PID_RATE_MEMBERS
+ANGLE_PID_RATE_MEMBERS
+STICK_RATE_MEMBERS
+DTERM_ATTENUATION_MEMBERS
+PID_MEMBERS
+RX_ROLE_MAP_MEMBERS
+AUX_FUNCTION_MAP_MEMBERS
+PROFILE_RECEIVER_BIND_MEMBERS
+RECEIVER_MEMBERS
+BLACKBOX_MEMBERS
+ROVER_PID_RATE_MEMBERS
+ROVER_MEMBERS
+WING_AUTOTRIM_MEMBERS
+WING_AUTOLAUNCH_MEMBERS
+WING_MEMBERS
+PROFILE_OUTPUT_MEMBERS
+PROFILE_MIXER_RULE_MEMBERS
+PROFILE_MEMBERS
+
+#undef START_STRUCT
+#undef END_STRUCT
+#undef MEMBER
+#undef STR_MEMBER
+#undef TSTR_MEMBER
+#undef ARRAY_MEMBER
+#undef COUNT_ARRAY_MEMBER
+#undef STR_ARRAY_MEMBER
+#undef BSTR_MEMBER
