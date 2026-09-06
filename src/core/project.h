@@ -18,5 +18,3 @@
 #else
 #define DMA_RAM
 #endif
-
-#define static_assert(...) _Static_assert(__VA_ARGS__)
