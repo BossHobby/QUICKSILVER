@@ -76,8 +76,8 @@ typedef struct {
 
 #define lpf(out, in, coeff)                                  \
   ({                                                         \
-    typeof(coeff) _coeff = (coeff);                          \
-    typeof(in) _in = (in);                                   \
+    __typeof__(coeff) _coeff = (coeff);                          \
+    __typeof__(in) _in = (in);                                   \
     (*(out) = (*(out)) * (_coeff) + (_in) * (1 - (_coeff))); \
   })
 
