@@ -51,6 +51,8 @@ typedef struct {
   output_caps_t caps;
 } target_output_t;
 
+typedef target_output_t target_output_array[MOTOR_PIN_MAX];
+
 #define TARGET_OUTPUT_MEMBERS   \
   START_STRUCT(target_output_t) \
   MEMBER(pin, gpio_pins_t)      \
@@ -105,6 +107,8 @@ typedef struct {
   resource_tag_t tag;
   dma_stream_t dma;
 } target_dma_t;
+
+typedef target_dma_t target_dma_array_t[DMA_DEVICE_MAX];
 
 #if defined(STM32H7) || defined(STM32G4) || defined(AT32)
 #define TARGET_DMA_MEMBERS    \
@@ -281,7 +285,7 @@ typedef struct {
   MEMBER(vehicles, vehicle_flags_t)                                              \
   MEMBER(vbat_scale, uint16_t)                                                   \
   MEMBER(ibat_scale, uint16_t)                                                   \
-  MEMBER(dma, target_dma_array)                                                  \
+  MEMBER(dma, target_dma_array_t)                                                  \
   END_STRUCT()
 
 typedef enum {
@@ -346,5 +350,5 @@ cbor_result_t cbor_decode_target_t(cbor_value_t *dec, target_t *t);
 cbor_result_t cbor_encode_target_dma_t(cbor_value_t *enc, const target_dma_t *dma);
 cbor_result_t cbor_decode_target_dma_t(cbor_value_t *dec, target_dma_t *dma);
 cbor_result_t cbor_encode_target_info_t(cbor_value_t *enc, const target_info_t *i);
-cbor_result_t cbor_encode_target_dma_array(cbor_value_t *dec, const target_dma_t (*dma)[DMA_DEVICE_MAX]);
-cbor_result_t cbor_decode_target_dma_array(cbor_value_t *dec, target_dma_t (*dma)[DMA_DEVICE_MAX]);
+cbor_result_t cbor_encode_target_dma_array_t(cbor_value_t *dec, const target_dma_array_t *dma);
+cbor_result_t cbor_decode_target_dma_array_t(cbor_value_t *dec, target_dma_array_t *dma);

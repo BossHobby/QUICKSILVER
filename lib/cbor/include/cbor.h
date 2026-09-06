@@ -3,6 +3,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
   CBOR_OK = 0,
   CBOR_ERR_EOF = -1,
@@ -96,3 +100,7 @@ cbor_result_t cbor_encode_str(cbor_value_t *enc, const char *buf);
 
 cbor_result_t cbor_encode_tag(cbor_value_t *enc, const uint32_t *val);
 cbor_result_t cbor_encode_bool(cbor_value_t *enc, const bool *val);
+
+#ifdef __cplusplus
+}
+#endif
