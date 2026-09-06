@@ -15,6 +15,12 @@
 #include "util/ring_buffer.h"
 #include "util/util.h"
 
+#ifdef VEHICLE_ROVER
+static constexpr float failsafe_neutral_throttle = 0.5f;
+#else
+static constexpr float failsafe_neutral_throttle = 0.0f;
+#endif
+
 static void failsafe_reset(uint32_t now_us) {
   time_test_reset();
   time_test_set_us(now_us);
@@ -28,6 +34,8 @@ static void failsafe_reset(uint32_t now_us) {
   flags.arm_state = 1;
   flags.usb_active = 0;
   flags.arming_disabled_flags = ARMING_DISABLED_NONE;
+  profile.rover.center_deadband = 0.05f;
+  profile.rover.reversible = 1;
   flags.turtle = 0;
   flags.turtle_ready = 0;
 
@@ -37,7 +45,7 @@ static void failsafe_reset(uint32_t now_us) {
   state.failsafe_time_ms = 0;
   state.failsafe_phase = FAILSAFE_PHASE_IDLE;
   state.last_frame_time_us = now_us;
-  state.rx_filtered.throttle = 0.0f;
+  state.rx_filtered.throttle = failsafe_neutral_throttle;
   state.rx_override.roll = 0.5f;
   state.rx_override.pitch = -0.5f;
   state.rx_override.yaw = 0.25f;
@@ -52,7 +60,7 @@ static void failsafe_clear_arm_switch_latch(void) {
   flags.usb_active = 0;
   flags.arm_state = 0;
   state.aux_active = 0;
-  state.rx_filtered.throttle = 0.0f;
+  state.rx_filtered.throttle = failsafe_neutral_throttle;
 
   control_update_arming();
   control_update_arming();
@@ -278,7 +286,7 @@ void test_failsafe_blocks_outputs_while_rx_not_ready(void) {
   TEST_ASSERT_FALSE(flags.failsafe_outputs_blocked);
 }
 
-void test_failsafe_stage1_applies_centered_zero_throttle_fallback(void) {
+void test_failsafe_stage1_applies_neutral_fallback(void) {
   failsafe_reset(1000000);
   flags.failsafe_signal_lost = 1;
   time_test_set_us(1000000 + FAILSAFE_HOLD_TIME_US + 1000);
@@ -291,7 +299,7 @@ void test_failsafe_stage1_applies_centered_zero_throttle_fallback(void) {
   TEST_ASSERT_EQUAL_FLOAT(0.0f, state.rx_override.roll);
   TEST_ASSERT_EQUAL_FLOAT(0.0f, state.rx_override.pitch);
   TEST_ASSERT_EQUAL_FLOAT(0.0f, state.rx_override.yaw);
-  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.rx_override.throttle);
+  TEST_ASSERT_EQUAL_FLOAT(failsafe_neutral_throttle, state.rx_override.throttle);
   TEST_ASSERT_FALSE(flags.failsafe_outputs_blocked);
 }
 
@@ -856,7 +864,16 @@ void test_crsf_gps_extended_frame_uses_gps_status(void) {
 
 void test_crsf_flight_mode_frame_reports_mode_text(void) {
   crsf_test_reset(8200000);
+#if defined(VEHICLE_ROVER)
+  state.aux_active = 1U << AUX_RATE_ASSIST;
+  const char *expected_mode = "RATE ASST*";
+#elif defined(VEHICLE_WING)
+  state.aux_active = 1U << AUX_LEVELMODE;
+  const char *expected_mode = "LEVEL*";
+#else
   state.aux_active = (1U << AUX_LEVELMODE) | (1U << AUX_RACEMODE) | (1U << AUX_HORIZON);
+  const char *expected_mode = "RM HORIZON*";
+#endif
   flags.arm_state = 0;
   flags.arming_disabled_flags = ARMING_DISABLED_NONE;
 
@@ -865,7 +882,7 @@ void test_crsf_flight_mode_frame_reports_mode_text(void) {
 
   crsf_test_assert_frame_crc(frame, frame_size);
   TEST_ASSERT_EQUAL_UINT8(CRSF_FRAMETYPE_FLIGHT_MODE, frame[2]);
-  TEST_ASSERT_EQUAL_STRING("RM HORIZON*", (char *)&frame[3]);
+  TEST_ASSERT_EQUAL_STRING(expected_mode, (char *)&frame[3]);
 }
 
 void test_crsf_msp_request_queues_response_immediately(void) {
