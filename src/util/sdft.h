@@ -3,9 +3,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <complex.h>
-#undef I
-
 #define SDFT_AXES 3
 #define SDFT_PEAKS 3
 
@@ -19,7 +16,8 @@
 
 #define SDFT_DAMPING_FACTOR 0.9999f
 
-typedef float complex complex_float;
+// Keep the C implementation's complex arithmetic and trivial initialization.
+typedef __complex__ float complex_float;
 
 typedef enum {
   SDFT_UPDATE_MAGNITUDE,

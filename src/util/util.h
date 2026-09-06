@@ -2,13 +2,13 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <type_traits>
 
 #include "driver/time.h"
 
-#define DEGTORAD 0.017453292f
-#define RADTODEG 57.29577951f
-
-#define M_PI_F 3.14159265358979323846f
+constexpr float DEGTORAD = 0.017453292f;
+constexpr float RADTODEG = 57.29577951f;
+constexpr float M_PI_F = 3.14159265358979323846f;
 
 #define MEMORY_ALIGN(offset, size) (((offset) + ((size) - 1)) & -(size))
 
@@ -22,32 +22,28 @@
 #define LOG2_16BIT(v) (8 * ((v) > 255) + LOG2_8BIT((v) >> 8 * ((v) > 255)))
 #define LOG2_32BIT(v) (16 * ((v) > 65535L) + LOG2_16BIT((v) * 1L >> 16 * ((v) > 65535L)))
 
-#define SWAP(x, y)      \
-  {                     \
-    typeof(x) temp = x; \
-    x = y;              \
-    y = temp;           \
+#define SWAP(x, y)          \
+  {                         \
+    __typeof__(x) temp = x; \
+    x = y;                  \
+    y = temp;               \
   }
 
-#define constrain(val, min, max)                                \
-  ({                                                            \
-    typeof(val) _val = (val);                                   \
-    typeof(min) _min = (min);                                   \
-    typeof(max) _max = (max);                                   \
-    (_val < _min) ? (_min) : ((_val > _max) ? (_max) : (_val)); \
-  })
-#define min(a, b)       \
-  ({                    \
-    typeof(a) _a = (a); \
-    typeof(b) _b = (b); \
-    _a < _b ? _a : _b;  \
-  })
-#define max(a, b)       \
-  ({                    \
-    typeof(a) _a = (a); \
-    typeof(b) _b = (b); \
-    _a > _b ? _a : _b;  \
-  })
+template <typename T, typename L, typename U>
+constexpr auto constrain(T val, L lower, U upper) {
+  // Unary + preserves the C conditional operator's integer promotions.
+  return (val < lower) ? +lower : ((val > upper) ? +upper : +val);
+}
+
+template <typename T, typename U>
+constexpr auto MIN(T a, U b) {
+  return +a < +b ? +a : +b;
+}
+
+template <typename T, typename U>
+constexpr auto MAX(T a, U b) {
+  return +a > +b ? +a : +b;
+}
 
 #define MHZ_TO_HZ(mhz) (mhz * 1000000)
 
