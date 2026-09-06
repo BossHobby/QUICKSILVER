@@ -13,17 +13,6 @@ extern void test_filter_reset(void);
 extern void test_filter_types(void);
 extern void test_filter_cascade(void);
 
-// PID tests  
-extern void test_pid_proportional_control(void);
-extern void test_pid_integral_accumulation(void);
-extern void test_pid_derivative_calculation(void);
-extern void test_pid_dterm_setpoint_response(void);
-extern void test_pid_dterm_combined_response(void);
-extern void test_pid_dterm_stick_weighting(void);
-extern void test_pid_voltage_compensation(void);
-extern void test_pid_complete_loop(void);
-extern void test_angle_pid_uses_legacy_dterm_timefactor(void);
-
 // IMU tests
 extern void test_imu_gravity_vector_init(void);
 extern void test_imu_gyro_integration(void);
@@ -110,7 +99,7 @@ extern void test_blackbox_iframe_interval(void);
 // Failsafe tests
 extern void test_failsafe_holds_last_values_before_hold_timeout(void);
 extern void test_failsafe_blocks_outputs_while_rx_not_ready(void);
-extern void test_failsafe_stage1_applies_centered_zero_throttle_fallback(void);
+extern void test_failsafe_stage1_applies_neutral_fallback(void);
 extern void test_failsafe_stage2_drop_blocks_outputs_and_disarms(void);
 extern void test_failsafe_recovery_clears_with_arm_switch_high_but_blocks_rearm(void);
 extern void test_failsafe_repeated_loss_keeps_outputs_blocked_after_stage2(void);
@@ -164,17 +153,6 @@ int main(int argc, char **argv) {
   RUN_TEST(test_filter_reset);
   RUN_TEST(test_filter_types);
   RUN_TEST(test_filter_cascade);
-
-  // PID tests
-  RUN_TEST(test_pid_proportional_control);
-  RUN_TEST(test_pid_integral_accumulation);
-  RUN_TEST(test_pid_derivative_calculation);
-  RUN_TEST(test_pid_dterm_setpoint_response);
-  RUN_TEST(test_pid_dterm_combined_response);
-  RUN_TEST(test_pid_dterm_stick_weighting);
-  RUN_TEST(test_pid_voltage_compensation);
-  RUN_TEST(test_pid_complete_loop);
-  RUN_TEST(test_angle_pid_uses_legacy_dterm_timefactor);
 
   // IMU tests
   RUN_TEST(test_imu_gravity_vector_init);
@@ -262,7 +240,7 @@ int main(int argc, char **argv) {
   // Failsafe tests
   RUN_TEST(test_failsafe_holds_last_values_before_hold_timeout);
   RUN_TEST(test_failsafe_blocks_outputs_while_rx_not_ready);
-  RUN_TEST(test_failsafe_stage1_applies_centered_zero_throttle_fallback);
+  RUN_TEST(test_failsafe_stage1_applies_neutral_fallback);
   RUN_TEST(test_failsafe_stage2_drop_blocks_outputs_and_disarms);
   RUN_TEST(test_failsafe_recovery_clears_with_arm_switch_high_but_blocks_rearm);
   RUN_TEST(test_failsafe_repeated_loss_keeps_outputs_blocked_after_stage2);

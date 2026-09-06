@@ -7,7 +7,7 @@ This file provides repository guidance for coding agents working in this reposit
 - Build all targets: `pio run`
 - Build specific target: `pio run -e stm32f405` (other targets: stm32f411, stm32f722, stm32f745, stm32f765, stm32g473, stm32h743, at32f435, multi-simulator, rover-simulator, wing-simulator)
 - Clean: `pio run -t clean`
-- run native tests: `pio test --environment test_native`
+- run native tests: `pio test -e multi-test -e rover-test -e wing-test`
 - Verify build across all main targets: `pio run -e stm32f405 -e stm32f411 -e stm32f745 -e stm32f765 -e stm32f722 -e stm32h743 -e stm32g473 -e at32f435 -e at32f435m`
 
 ## Code Style Guidelines
@@ -119,17 +119,17 @@ The project uses Unity test framework integrated with PlatformIO for unit testin
 
 ### Test Commands
 
-- Run all tests: `pio test --environment test_native`
-- Run with verbose output: `pio test --environment test_native -v`
-- Run specific test filter: `pio test --environment test_native --filter="test_filter"`
+- Run all tests: `pio test -e multi-test -e rover-test -e wing-test`
+- Run with verbose output: `pio test -e multi-test -e rover-test -e wing-test -v`
+- Run a specific suite: `pio test -e wing-test --filter=test_wing`
 
 ### Test Structure
 
-Tests are located in `test/test_native/`:
+Shared tests are located in `test/test_common/`:
 
-- `test_main.c` - Main test runner that registers and executes all tests
-- `test_<module>.c` - Individual test modules for different components
-- `mock_helpers.h/.c` - Mock hardware functions for testing
+- `test_main.cpp` - Suite runner that registers and executes shared tests
+- `test_<module>.cpp` - Individual test modules for different components
+- `test/mock_helpers.h/.cpp` and `test/mock_outputs.h/.cpp` - Shared test doubles
 
 ### Test Organization
 
@@ -157,24 +157,19 @@ Common Unity assertions used:
 
 ### PlatformIO Test Configuration
 
-The `test_native` environment in `platformio.ini`:
+The native test environments inherit their matching simulator environments:
 
-```ini
-[env:test_native]
-extends = common
-board = SIMULATOR
-platform = native
-test_build_src = true
-test_filter = test_native
-debug_test = test_native
-debug_tool = custom
-build_src_filter = ${common.build_src_filter} +<driver/mcu/native> +<system/native>
-build_flags =
-  ${common.build_flags}
-  -lm
-  -DSIMULATOR
-  -Isrc/system/native
-```
+- `multi-test` inherits `multi-simulator`: shared tests and flight PID tests
+- `rover-test` inherits `rover-simulator`: shared tests and rover control tests
+- `wing-test` inherits `wing-simulator`: shared tests, flight PID tests, and wing control tests
+
+Each selects the matching `VEHICLE_*` define and controller sources. Test builds
+use Unity's entry point and shared hardware test doubles; simulators use the
+normal firmware entry point. The `native-test` section holds common test settings.
+
+Suites are split into `test/test_common`, `test/test_pid`, `test/test_rover`, and
+`test/test_wing`. PlatformIO requires the `test_` directory prefix for discovery;
+environment names use hyphens. Shared mocks live directly under `test/`.
 
 ### Test Coverage
 
@@ -192,13 +187,13 @@ Current test modules include:
 
 ### Writing New Tests
 
-1. Create new test file: `test/test_native/test_mymodule.c`
+1. Create a `.cpp` test file in the appropriate shared or vehicle-specific suite
 2. Include Unity and necessary headers
 3. Write test functions with descriptive names
-4. Add extern declarations to `test_main.c`
-5. Register tests with `RUN_TEST()` in `test_main.c`
+4. Add extern declarations to that suite's `test_main.cpp`
+5. Register tests with `RUN_TEST()` in that suite's `test_main.cpp`
 6. Use mock_helpers to isolate hardware dependencies
-7. Run with `pio test --environment test_native`
+7. Run with `pio test -e multi-test -e rover-test -e wing-test`
 
 ### Test Best Practices
 
@@ -349,7 +344,7 @@ When enabling hardware features (ADC, SPI, etc.) for the simulator/native platfo
 - Example:
 
   ```c
-  // test/test_native/test_adc.c
+  // test/test_common/test_adc.c
   extern void adc_set_raw_value(adc_chan_t chan, uint16_t value);
 
   void test_adc_read_raw() {
