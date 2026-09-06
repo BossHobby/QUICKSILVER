@@ -79,6 +79,7 @@ flash.bin
 blackbox.bin
 
 # Claude Code and AI assistant files
+.codex/
 .claude-code/
 .ai/
 .assistant/
