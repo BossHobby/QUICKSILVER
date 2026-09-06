@@ -11,7 +11,7 @@
 
 static resource_tag_t servo_tags[MOTOR_PIN_MAX];
 
-void servo_pwm_init(const gpio_pins_t *pins, uint16_t pwm_hz) {
+void servo_pwm_init(const gpio_pins_t *pins, uint16_t pwm_hz, const float *values) {
   gpio_config_t gpio_init;
   gpio_init.mode = GPIO_ALTERNATE;
   gpio_init.drive = GPIO_DRIVE_HIGH;
@@ -49,7 +49,7 @@ void servo_pwm_init(const gpio_pins_t *pins, uint16_t pwm_hz) {
     tmr_counter_enable(def->instance, FALSE);
     timer_up_init(tim, divider, period);
     tmr_output_channel_config(def->instance, static_cast<tmr_channel_select_type>(timer_channel_val(ch)), &tim_oc_init);
-    tmr_channel_value_set(def->instance, static_cast<tmr_channel_select_type>(timer_channel_val(ch)), SERVO_PULSE_CENTER);
+    tmr_channel_value_set(def->instance, static_cast<tmr_channel_select_type>(timer_channel_val(ch)), SERVO_PULSE_CENTER + values[i] * (SERVO_PULSE_MAX - SERVO_PULSE_CENTER));
     tmr_output_channel_buffer_enable(def->instance, static_cast<tmr_channel_select_type>(timer_channel_val(ch)), TRUE);
     tmr_channel_enable(def->instance, static_cast<tmr_channel_select_type>(timer_channel_val(ch)), TRUE);
     tmr_output_enable(def->instance, TRUE);

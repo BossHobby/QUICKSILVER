@@ -3,6 +3,23 @@
 #include "core/profile.h"
 #include "util/cbor_helper.h"
 
+extern const profile_t default_profile;
+
+void test_cbor_profile_servo_rate_roundtrip(void) {
+  profile_t source = default_profile;
+  source.servo.pwm_rate_hz = 333;
+  uint8_t buffer[4096] = {}; // QUIC profile response capacity.
+  cbor_value_t codec;
+  cbor_encoder_init(&codec, buffer, sizeof(buffer));
+  TEST_ASSERT_TRUE(cbor_encode_profile_t(&codec, &source) >= CBOR_OK);
+  const auto size = cbor_encoder_len(&codec);
+  profile_t decoded = {};
+  cbor_decoder_init(&codec, buffer, size);
+  TEST_ASSERT_TRUE(cbor_decode_profile_t(&codec, &decoded) >= CBOR_OK);
+  TEST_ASSERT_EQUAL_UINT16(333, decoded.servo.pwm_rate_hz);
+  TEST_ASSERT_EQUAL(source.outputs[0].protocol, decoded.outputs[0].protocol);
+}
+
 // Both ordinary members and enum storage must match the selected wire codec.
 template <typename T, typename Wire>
 concept cbor_codec_matches = requires(cbor_value_t *codec, T *value,
