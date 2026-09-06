@@ -8,7 +8,7 @@
 #include "osd/render.h"
 #include "util/util.h"
 
-static float output_apply_config(const profile_output_t *output, float value) {
+float output_apply_config(const profile_output_t *output, float value) {
   if (output->invert) {
     value = -value;
   }
@@ -18,7 +18,29 @@ static float output_apply_config(const profile_output_t *output, float value) {
   return constrain(value, min, max);
 }
 
-static void output_set_slot(const profile_output_t *output, float value) {
+static bool output_has_mixer_source(uint8_t output_index, output_source_t source) {
+  for (uint32_t i = 0; i < MIXER_RULE_MAX; i++) {
+    const profile_mixer_rule_t *rule = &profile.mixer[i];
+    if (rule->output_index == output_index && rule->source == source && rule->weight != 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+float output_pwm_stop_value(uint8_t index) {
+  if (!output_has_mixer_source(index, OUTPUT_SOURCE_THROTTLE)) {
+    return 0.0f;
+  }
+#ifdef VEHICLE_ROVER
+  if (profile.rover.reversible) {
+    return 0.0f;
+  }
+#endif
+  return -1.0f;
+}
+
+static void output_set_slot(uint8_t index, const profile_output_t *output, float value) {
   if (!output || output->target_output >= MOTOR_PIN_MAX) {
     return;
   }
@@ -31,19 +53,24 @@ static void output_set_slot(const profile_output_t *output, float value) {
   value = output_apply_config(output, value);
 
   if (output->protocol == OUTPUT_PROTOCOL_PWM) {
+#ifdef VEHICLE_WING
+    if (output_has_mixer_source(index, OUTPUT_SOURCE_THROTTLE)) {
+      value = constrain(value, 0.0f, 1.0f) * 2.0f - 1.0f;
+    }
+#endif
     servo_set(output->target_output, value);
   } else {
     motor_set(output->target_output, value);
   }
 }
 
-static void output_stop_slot(const profile_output_t *output) {
+static void output_stop_slot(uint8_t index, const profile_output_t *output) {
   if (!output || output->target_output >= MOTOR_PIN_MAX) {
     return;
   }
 
   if (output->protocol == OUTPUT_PROTOCOL_PWM) {
-    servo_set(output->target_output, 0.0f);
+    servo_set(output->target_output, output_pwm_stop_value(index));
   } else {
     motor_set(output->target_output, MOTOR_OFF);
   }
@@ -86,16 +113,6 @@ void output_activate_count(uint8_t count) {
   }
 }
 
-static bool output_has_mixer_source(uint8_t output_index, output_source_t source) {
-  for (uint32_t i = 0; i < MIXER_RULE_MAX; i++) {
-    const profile_mixer_rule_t *rule = &profile.mixer[i];
-    if (rule->output_index == output_index && rule->source == source && rule->weight != 0) {
-      return true;
-    }
-  }
-  return false;
-}
-
 static bool output_is_motor_value(uint8_t index, const profile_output_t *output) {
   if (!state.output_active[index] || output->protocol == OUTPUT_PROTOCOL_NONE || output->target_output >= MOTOR_PIN_MAX) {
     return false;
@@ -127,6 +144,9 @@ static float output_finalize_pwm_motor(float *value, float motor_limit) {
 
   *value = constrain(*value, -1.0f, (motor_limit * 2.0f) - 1.0f);
   return (*value + 1.0f) * 0.5f;
+#elif defined(VEHICLE_WING)
+  *value = constrain(*value, 0.0f, 1.0f) * motor_limit;
+  return *value;
 #else
   *value = constrain(*value, -1.0f, 1.0f) * motor_limit;
   return fabsf(*value);
@@ -152,6 +172,10 @@ void output_finalize_motor_values(void) {
 
     if (output->protocol == OUTPUT_PROTOCOL_PWM) {
       state.thrsum += output_finalize_pwm_motor(&state.output[i], motor_limit);
+#ifdef VEHICLE_WING
+    } else if (state.output[i] <= 0.0f) {
+      state.output[i] = MOTOR_OFF;
+#endif
     } else if (!flags.motortest_override) {
       state.output[i] = constrain(state.output[i], 0.0f, 1.0f);
       state.output[i] = mapf(state.output[i], 0.0f, 1.0f, motor_min_value, motor_limit);
@@ -171,12 +195,13 @@ void output_finalize_motor_values(void) {
   }
 }
 
-static bool output_allowed(const profile_output_t *output) {
+static bool output_allowed(uint8_t index, const profile_output_t *output) {
   if (flags.failsafe_outputs_blocked && !flags.motortest_override) {
     return false;
   }
   if (output->protocol == OUTPUT_PROTOCOL_PWM) {
-    return osd_state.screen_history_size == 0;
+    return osd_state.screen_history_size == 0 &&
+           (!output_has_mixer_source(index, OUTPUT_SOURCE_THROTTLE) || flags.arm_state || flags.motortest_override);
   }
   return flags.arm_state || flags.motortest_override;
 }
@@ -188,12 +213,12 @@ void output_write_values() {
       continue;
     }
 
-    if (!output_allowed(output) || !state.output_active[i]) {
-      output_stop_slot(output);
+    if (!output_allowed(i, output) || !state.output_active[i]) {
+      output_stop_slot(i, output);
       continue;
     }
 
-    output_set_slot(output, state.output[i]);
+    output_set_slot(i, output, state.output[i]);
   }
 }
 
@@ -207,6 +232,11 @@ void output_stop_all() {
   motor_update();
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
     servo_set(i, 0.0f);
+  }
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (profile.outputs[i].protocol == OUTPUT_PROTOCOL_PWM) {
+      output_stop_slot(i, &profile.outputs[i]);
+    }
   }
   servo_update();
 }

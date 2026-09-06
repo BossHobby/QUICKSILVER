@@ -11,3 +11,9 @@ void output_write_values();
 void output_write_all();
 void output_stop_all();
 bool output_source_configured(output_source_t source);
+
+// Apply inversion, trim and travel limits to a normalized mixer output.
+float output_apply_config(const profile_output_t *output, float value);
+
+// PWM stop command in normalized servo units; throttle outputs respect reversibility.
+float output_pwm_stop_value(uint8_t index);

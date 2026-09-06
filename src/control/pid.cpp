@@ -45,10 +45,16 @@ static filter_state_t dynamic_filter_state[3];
 static filter_lp_pt1 rx_filter;
 static filter_state_t rx_filter_state[3];
 
+void pid_reset_i(uint8_t axis) {
+  ierror.axis[axis] = 0.0f;
+  last_error.axis[axis] = 0.0f;
+  last_error2.axis[axis] = 0.0f;
+}
+
 void pid_reset_i() {
-  ierror = (vec3_t){0};
-  last_error = (vec3_t){0};
-  last_error2 = (vec3_t){0};
+  for (uint8_t axis = 0; axis < PID_SIZE; axis++) {
+    pid_reset_i(axis);
+  }
 }
 
 const vec3_t *pid_get_ierror() {

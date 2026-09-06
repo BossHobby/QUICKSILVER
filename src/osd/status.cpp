@@ -194,15 +194,14 @@ static const char *osd_wing_autotrim_message(void) {
   }
 
   switch (state.wing_autotrim_state) {
-  case WING_AUTOTRIM_BLOCKED_ATTITUDE:
-    return "AUTOTRIM: LEVEL AIRCRAFT";
-
   case WING_AUTOTRIM_SAVE_PENDING:
-    return "AUTOTRIM: DISARM THEN AUX OFF TO SAVE";
+    return "AUTOTRIM: DISARM TO SAVE / AUX OFF CANCEL";
 
   case WING_AUTOTRIM_ACTIVE:
-  case WING_AUTOTRIM_IDLE:
     return "AUTOTRIM: HOLD LEVEL";
+
+  case WING_AUTOTRIM_IDLE:
+    return "AUTOTRIM: CYCLE AUX";
 
   case WING_AUTOTRIM_SAVED:
     return "AUTOTRIM DONE";

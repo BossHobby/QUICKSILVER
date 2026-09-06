@@ -70,8 +70,7 @@ typedef enum {
 
 typedef enum {
   WING_AUTOTRIM_IDLE,
-  WING_AUTOTRIM_ACTIVE,
-  WING_AUTOTRIM_BLOCKED_ATTITUDE,
+  WING_AUTOTRIM_ACTIVE, // Collecting commanded surface positions for two seconds.
   WING_AUTOTRIM_SAVE_PENDING,
   WING_AUTOTRIM_SAVED,
 } wing_autotrim_state_t;
@@ -82,7 +81,7 @@ typedef struct {
   uint8_t arm_state : 1;   // armed after all safety checks have passed
 
   uint8_t in_air : 1;    // throttle was raised above THROTTLE_SAFETY (10%), only resets on disarm
-  uint8_t on_ground : 1; // armed and we are sending some throttle to the motors
+  uint8_t on_ground : 1; // vehicle-owned ground state; wings stay airborne through glides until disarm
 
   uint8_t failsafe : 1;                 // failsafe warning / recovery is active
   uint8_t failsafe_outputs_blocked : 1; // failsafe has blocked output writes
