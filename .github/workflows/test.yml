@@ -8,6 +8,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        vehicle: [multi, rover, wing]
 
     steps:
     - uses: actions/checkout@v4
@@ -42,12 +45,15 @@ jobs:
     - name: Install PlatformIO libraries
       run: pio lib install
 
+    - name: Build simulator
+      run: pio run -e ${{ matrix.vehicle }}-simulator
+
     - name: Run tests
-      run: pio test -e test_native
+      run: pio test -e ${{ matrix.vehicle }}-test
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: failure()
       with:
-        name: test-results
-        path: .pio/build/test_native/test/
+        name: test-results-${{ matrix.vehicle }}
+        path: .pio/build/${{ matrix.vehicle }}-test/test/
