@@ -45,8 +45,7 @@ static bool profile_output_configured(const profile_output_t *output) {
          output->invert != 0 ||
          output->trim != 0 ||
          output->min != 0 ||
-         output->max != 0 ||
-         output->rate_hz != 0;
+         output->max != 0;
 }
 
 uint32_t profile_output_count(const profile_output_t *outputs, uint32_t size) {
@@ -168,20 +167,21 @@ const profile_t default_profile = {
         .datetime = 0,
     },
 
+    .servo = {.pwm_rate_hz = 50},
     .outputs = {
 #ifdef VEHICLE_ROVER
-        {.target_output = 0, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
-        {.target_output = 3, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
+        {.target_output = 0, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000},
+        {.target_output = 3, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000},
 #elif defined(VEHICLE_WING)
-        {.target_output = 0, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
-        {.target_output = 1, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
-        {.target_output = 2, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
-        {.target_output = 3, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000, .rate_hz = 50},
+        {.target_output = 0, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000},
+        {.target_output = 1, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000},
+        {.target_output = 2, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000},
+        {.target_output = 3, .protocol = OUTPUT_PROTOCOL_PWM, .invert = 0, .trim = 0, .min = -1000, .max = 1000},
 #else
-        {.target_output = 0, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
-        {.target_output = 1, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
-        {.target_output = 2, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
-        {.target_output = 3, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000, .rate_hz = 0},
+        {.target_output = 0, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000},
+        {.target_output = 1, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000},
+        {.target_output = 2, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000},
+        {.target_output = 3, .protocol = OUTPUT_PROTOCOL_DSHOT, .invert = 0, .trim = 0, .min = 0, .max = 1000},
 #endif
     },
 
@@ -618,10 +618,6 @@ const profile_t default_profile = {
         .reversible = 1,
     },
     .wing = {
-        .autotrim = {
-            .threshold = 0.04f,
-            .step = 0.005f,
-        },
         .autolaunch = {
             .accel_threshold = 1.5f,
             .velocity_threshold = 3.0f,
@@ -752,9 +748,9 @@ BLACKBOX_MEMBERS
 BLACKBOX_PRESET_MEMBERS
 ROVER_PID_RATE_MEMBERS
 ROVER_MEMBERS
-WING_AUTOTRIM_MEMBERS
 WING_AUTOLAUNCH_MEMBERS
 WING_MEMBERS
+SERVO_MEMBERS
 PROFILE_OUTPUT_MEMBERS
 PROFILE_MIXER_RULE_MEMBERS
 PROFILE_MEMBERS
@@ -838,9 +834,9 @@ RECEIVER_MEMBERS
 BLACKBOX_MEMBERS
 ROVER_PID_RATE_MEMBERS
 ROVER_MEMBERS
-WING_AUTOTRIM_MEMBERS
 WING_AUTOLAUNCH_MEMBERS
 WING_MEMBERS
+SERVO_MEMBERS
 PROFILE_OUTPUT_MEMBERS
 PROFILE_MIXER_RULE_MEMBERS
 PROFILE_MEMBERS

@@ -13,6 +13,7 @@
 #include "core/profile.h"
 #include "driver/motor.h"
 #include "driver/time.h"
+#include "osd/render.h"
 #include "util/util.h"
 
 typedef enum {
@@ -21,23 +22,33 @@ typedef enum {
   WING_MODE_LEVEL,
 } wing_mode_t;
 
-#define WING_AUTOTRIM_INTERVAL_MS 500
-#define WING_AUTOTRIM_ATTITUDE_LIMIT 30.0f
+#define WING_AUTOTRIM_CAPTURE_MS 2000
 #define WING_LAUNCH_IDLE_SPINUP_MS 1500
 #define WING_FLYING_MIN_SPEED 3.5f
 #define WING_FLYING_MIN_ALTITUDE 5.0f
 #define WING_FLYING_ACCEL_THRESHOLD 0.3f
 #define WING_FLYING_ACCEL_TIME_MS 250
 
-static uint32_t wing_launch_state_start_ms = 0;
-static uint32_t wing_launch_detect_start_ms = 0;
-static float wing_launch_throttle_start = 0.0f;
-static float wing_launch_takeoff_altitude = 0.0f;
-static bool wing_launch_takeoff_altitude_valid = false;
-static bool wing_launch_flying_detected = false;
-static uint32_t wing_launch_flying_detect_start_ms = 0;
-static uint32_t wing_autotrim_last_ms = 0;
-static bool wing_autotrim_save_pending = false;
+static struct {
+  uint32_t state_start_ms;
+  uint32_t detect_start_ms;
+  float throttle_start;
+  float takeoff_altitude;
+  bool takeoff_altitude_valid;
+  bool flying_detected;
+  uint32_t flying_detect_start_ms;
+} launch;
+
+static struct {
+  bool ready = true;
+  uint32_t start_ms;
+  uint32_t samples;
+  struct {
+    bool selected;
+    int16_t backup;
+    float sum;
+  } outputs[MOTOR_PIN_MAX];
+} autotrim;
 
 motor_test_t motor_test = {
     .active = 0,
@@ -80,7 +91,7 @@ static void wing_calc_stabilized(wing_mode_t mode) {
     const float target_pitch = profile.wing.autolaunch.pitch_angle * DEGTORAD;
     float pitch = target_pitch;
     if (state.wing_launch_state == WING_LAUNCH_FINISH) {
-      const uint32_t elapsed_ms = time_millis() - wing_launch_state_start_ms;
+      const uint32_t elapsed_ms = time_millis() - launch.state_start_ms;
       const float t = constrain((float)elapsed_ms / (float)MAX(profile.wing.autolaunch.finish_ms, 1), 0.0f, 1.0f);
       pitch = target_pitch * (1.0f - t) + state.rx_filtered.pitch * profile.rate.level_max_angle * DEGTORAD * t;
     }
@@ -116,86 +127,115 @@ static bool wing_launch_sticks_moved() {
          fabsf(state.rx_filtered.pitch) >= deadband;
 }
 
-static void wing_apply_autotrim_source(output_source_t source, float correction) {
+static bool wing_autotrim_surface(uint8_t index) {
+  const profile_output_t *output = &profile.outputs[index];
+  if (output->protocol != OUTPUT_PROTOCOL_PWM || output->target_output >= MOTOR_PIN_MAX ||
+      target.outputs[output->target_output].pin == PIN_NONE ||
+      !(target.outputs[output->target_output].caps & OUTPUT_CAP_PWM) || !state.output_active[index]) {
+    return false;
+  }
+  bool surface = false;
   for (uint8_t i = 0; i < MIXER_RULE_MAX; i++) {
     const profile_mixer_rule_t *rule = &profile.mixer[i];
-    if (rule->source != source || rule->output_index >= MOTOR_PIN_MAX || rule->weight == 0) {
+    if (rule->output_index != index || rule->weight == 0) {
       continue;
     }
-    profile_output_t *output = &profile.outputs[rule->output_index];
-    if (output->protocol == OUTPUT_PROTOCOL_PWM) {
-      const float direction = rule->weight > 0 ? 1.0f : -1.0f;
-      output->trim = constrain(output->trim + (int16_t)lrintf(correction * direction * 1000.0f), -500, 500);
+    if (rule->source == OUTPUT_SOURCE_THROTTLE) {
+      return false;
+    }
+    surface |= rule->source == OUTPUT_SOURCE_ROLL || rule->source == OUTPUT_SOURCE_PITCH || rule->source == OUTPUT_SOURCE_YAW;
+  }
+  return surface;
+}
+
+static void wing_cancel_autotrim() {
+  if (state.wing_autotrim_state == WING_AUTOTRIM_SAVE_PENDING) {
+    for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
+      if (autotrim.outputs[i].selected) {
+        profile.outputs[i].trim = autotrim.outputs[i].backup;
+      }
     }
   }
+  state.wing_autotrim_state = WING_AUTOTRIM_IDLE;
 }
 
 static void wing_update_autotrim() {
   if (!rx_aux_on(AUX_AUTOTRIM)) {
-    if (wing_autotrim_save_pending && !flags.arm_state) {
+    wing_cancel_autotrim();
+    autotrim.ready = true;
+    return;
+  }
+  if (flags.failsafe || flags.failsafe_outputs_blocked || flags.motortest_override || osd_state.screen_history_size != 0) {
+    wing_cancel_autotrim();
+    autotrim.ready = false;
+    return;
+  }
+  if (state.wing_autotrim_state == WING_AUTOTRIM_SAVE_PENDING) {
+    if (!flags.arm_state) {
       flash_save();
-      wing_autotrim_save_pending = false;
       state.wing_autotrim_state = WING_AUTOTRIM_SAVED;
-    } else if (state.wing_autotrim_state != WING_AUTOTRIM_SAVED) {
-      state.wing_autotrim_state = WING_AUTOTRIM_IDLE;
     }
     return;
   }
-
+  if (!flags.arm_state) {
+    if (state.wing_autotrim_state == WING_AUTOTRIM_ACTIVE) {
+      wing_cancel_autotrim();
+    }
+    return;
+  }
   const uint32_t now_ms = time_millis();
-  if (!flags.arm_state || flags.failsafe) {
-    state.wing_autotrim_state = WING_AUTOTRIM_IDLE;
+  if (autotrim.ready) {
+    autotrim.ready = false;
+    autotrim.start_ms = now_ms;
+    autotrim.samples = 0;
+    bool has_surface = false;
+    for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
+      autotrim.outputs[i].selected = wing_autotrim_surface(i);
+      has_surface |= autotrim.outputs[i].selected;
+      autotrim.outputs[i].backup = profile.outputs[i].trim;
+      autotrim.outputs[i].sum = 0.0f;
+    }
+    if (!has_surface) {
+      return;
+    }
+    state.wing_autotrim_state = WING_AUTOTRIM_ACTIVE;
+  }
+  if (state.wing_autotrim_state != WING_AUTOTRIM_ACTIVE) {
     return;
   }
-  if (now_ms - wing_autotrim_last_ms < WING_AUTOTRIM_INTERVAL_MS) {
-    return;
-  }
-  wing_autotrim_last_ms = now_ms;
 
-  const bool level = fabsf(state.attitude.roll) < (WING_AUTOTRIM_ATTITUDE_LIMIT * DEGTORAD) &&
-                      fabsf(state.attitude.pitch) < (WING_AUTOTRIM_ATTITUDE_LIMIT * DEGTORAD);
-  if (!level) {
-    state.wing_autotrim_state = WING_AUTOTRIM_BLOCKED_ATTITUDE;
-    return;
+  // Sample each surface once, after mixing, inversion, trim and travel limits.
+  // These are normalized commanded positions, not measured servo feedback.
+  for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (autotrim.outputs[i].selected) {
+      autotrim.outputs[i].sum += output_apply_config(&profile.outputs[i], state.output[i]);
+    }
   }
-
-  state.wing_autotrim_state = wing_autotrim_save_pending ? WING_AUTOTRIM_SAVE_PENDING : WING_AUTOTRIM_ACTIVE;
-
-  const float step = profile.wing.autotrim.step;
-  const vec3_t *ierror = pid_get_ierror();
-  if (fabsf(ierror->roll) > profile.wing.autotrim.threshold) {
-    wing_apply_autotrim_source(OUTPUT_SOURCE_ROLL, copysignf(step, ierror->roll));
+  autotrim.samples++;
+  if (now_ms - autotrim.start_ms >= WING_AUTOTRIM_CAPTURE_MS) {
+    for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
+      if (autotrim.outputs[i].selected) {
+        profile.outputs[i].trim = constrain((int32_t)lrintf(1000.0f * autotrim.outputs[i].sum / autotrim.samples), -500, 500);
+      }
+    }
     pid_reset_i();
-    wing_autotrim_save_pending = true;
-    state.wing_autotrim_state = WING_AUTOTRIM_SAVE_PENDING;
-  }
-  if (fabsf(ierror->pitch) > profile.wing.autotrim.threshold) {
-    wing_apply_autotrim_source(OUTPUT_SOURCE_PITCH, copysignf(step, ierror->pitch));
-    pid_reset_i();
-    wing_autotrim_save_pending = true;
-    state.wing_autotrim_state = WING_AUTOTRIM_SAVE_PENDING;
-  }
-  if (fabsf(ierror->yaw) > profile.wing.autotrim.threshold) {
-    wing_apply_autotrim_source(OUTPUT_SOURCE_YAW, copysignf(step, ierror->yaw));
-    pid_reset_i();
-    wing_autotrim_save_pending = true;
     state.wing_autotrim_state = WING_AUTOTRIM_SAVE_PENDING;
   }
 }
 
 static void wing_launch_set_state(wing_launch_state_t next_state) {
   state.wing_launch_state = next_state;
-  wing_launch_state_start_ms = time_millis();
+  launch.state_start_ms = time_millis();
   if (next_state != WING_LAUNCH_WAIT) {
-    wing_launch_detect_start_ms = 0;
+    launch.detect_start_ms = 0;
   }
   if (next_state == WING_LAUNCH_IDLE) {
-    wing_launch_flying_detected = false;
-    wing_launch_flying_detect_start_ms = 0;
+    launch.flying_detected = false;
+    launch.flying_detect_start_ms = 0;
   }
   if (next_state == WING_LAUNCH_MOTOR_DELAY || next_state == WING_LAUNCH_ACTIVE) {
-    wing_launch_takeoff_altitude = state.gps_altitude;
-    wing_launch_takeoff_altitude_valid = state.gps_lock;
+    launch.takeoff_altitude = state.gps_altitude;
+    launch.takeoff_altitude_valid = state.gps_lock;
   }
 }
 
@@ -204,37 +244,37 @@ static bool wing_launch_abort_allowed(uint32_t elapsed_ms) {
 }
 
 static bool wing_launch_is_flying() {
-  if (wing_launch_flying_detected || state.wing_launch_state == WING_LAUNCH_DONE) {
+  if (launch.flying_detected || state.wing_launch_state == WING_LAUNCH_DONE) {
     return true;
   }
 
   const bool throttle_condition = state.throttle >= profile.wing.autolaunch.throttle;
   const bool velocity_condition = state.gps_speed > WING_FLYING_MIN_SPEED;
-  const bool altitude_condition = wing_launch_takeoff_altitude_valid && fabsf(state.gps_altitude - wing_launch_takeoff_altitude) > WING_FLYING_MIN_ALTITUDE;
+  const bool altitude_condition = launch.takeoff_altitude_valid && fabsf(state.gps_altitude - launch.takeoff_altitude) > WING_FLYING_MIN_ALTITUDE;
 
   return state.gps_lock && throttle_condition && velocity_condition && altitude_condition;
 }
 
 static void wing_launch_update_flying_detected(uint32_t now_ms) {
-  if (state.wing_launch_state < WING_LAUNCH_SPINUP || state.wing_launch_state >= WING_LAUNCH_DONE || wing_launch_flying_detected) {
+  if (state.wing_launch_state < WING_LAUNCH_SPINUP || state.wing_launch_state >= WING_LAUNCH_DONE || launch.flying_detected) {
     return;
   }
 
   if (wing_launch_is_flying()) {
-    wing_launch_flying_detected = true;
+    launch.flying_detected = true;
     return;
   }
 
   const bool accel_condition = state.accel_raw.pitch > (WING_FLYING_ACCEL_THRESHOLD * ACC_1G);
   if (!accel_condition) {
-    wing_launch_flying_detect_start_ms = 0;
+    launch.flying_detect_start_ms = 0;
     return;
   }
-  if (wing_launch_flying_detect_start_ms == 0) {
-    wing_launch_flying_detect_start_ms = now_ms;
+  if (launch.flying_detect_start_ms == 0) {
+    launch.flying_detect_start_ms = now_ms;
   }
-  if (now_ms - wing_launch_flying_detect_start_ms >= WING_FLYING_ACCEL_TIME_MS) {
-    wing_launch_flying_detected = true;
+  if (now_ms - launch.flying_detect_start_ms >= WING_FLYING_ACCEL_TIME_MS) {
+    launch.flying_detected = true;
   }
 }
 
@@ -265,9 +305,9 @@ static bool wing_launch_detected() {
 
 static bool wing_launch_max_altitude_reached() {
   return profile.wing.autolaunch.max_altitude > 0.0f &&
-         wing_launch_takeoff_altitude_valid &&
+         launch.takeoff_altitude_valid &&
          state.gps_lock &&
-          state.gps_altitude - wing_launch_takeoff_altitude >= profile.wing.autolaunch.max_altitude;
+          state.gps_altitude - launch.takeoff_altitude >= profile.wing.autolaunch.max_altitude;
 }
 
 static float wing_autolaunch_throttle() {
@@ -286,7 +326,7 @@ static float wing_autolaunch_throttle() {
   }
 
   const uint32_t now_ms = time_millis();
-  const uint32_t elapsed_ms = now_ms - wing_launch_state_start_ms;
+  const uint32_t elapsed_ms = now_ms - launch.state_start_ms;
   wing_launch_update_flying_detected(now_ms);
   switch (state.wing_launch_state) {
   case WING_LAUNCH_IDLE:
@@ -325,14 +365,14 @@ static float wing_autolaunch_throttle() {
     }
     const bool detected = wing_launch_detected();
     if (detected) {
-      if (wing_launch_detect_start_ms == 0) {
-        wing_launch_detect_start_ms = now_ms;
+      if (launch.detect_start_ms == 0) {
+        launch.detect_start_ms = now_ms;
       }
-      if (now_ms - wing_launch_detect_start_ms >= profile.wing.autolaunch.detect_time_ms) {
+      if (now_ms - launch.detect_start_ms >= profile.wing.autolaunch.detect_time_ms) {
         wing_launch_set_state(WING_LAUNCH_DETECTED);
       }
     } else {
-      wing_launch_detect_start_ms = 0;
+      launch.detect_start_ms = 0;
     }
     return profile.wing.autolaunch.idle_throttle;
 
@@ -347,7 +387,7 @@ static float wing_autolaunch_throttle() {
       return 0.0f;
     }
     if (elapsed_ms >= profile.wing.autolaunch.motor_delay_ms) {
-      wing_launch_throttle_start = profile.wing.autolaunch.idle_throttle;
+      launch.throttle_start = profile.wing.autolaunch.idle_throttle;
       wing_launch_set_state(WING_LAUNCH_SPINUP);
     }
     return profile.wing.autolaunch.idle_throttle;
@@ -361,7 +401,7 @@ static float wing_autolaunch_throttle() {
       wing_launch_set_state(WING_LAUNCH_ACTIVE);
       return profile.wing.autolaunch.throttle;
     }
-    return wing_launch_ramp(wing_launch_throttle_start, profile.wing.autolaunch.throttle, elapsed_ms, profile.wing.autolaunch.spinup_ms);
+    return wing_launch_ramp(launch.throttle_start, profile.wing.autolaunch.throttle, elapsed_ms, profile.wing.autolaunch.spinup_ms);
 
   case WING_LAUNCH_ACTIVE:
     if (wing_launch_abort_allowed(profile.wing.autolaunch.motor_delay_ms + profile.wing.autolaunch.spinup_ms + elapsed_ms)) {
@@ -369,9 +409,9 @@ static float wing_autolaunch_throttle() {
       return state.throttle;
     }
     if (elapsed_ms >= profile.wing.autolaunch.timeout_ms || wing_launch_max_altitude_reached()) {
-      wing_launch_throttle_start = profile.wing.autolaunch.throttle;
+      launch.throttle_start = profile.wing.autolaunch.throttle;
       wing_launch_set_state(WING_LAUNCH_FINISH);
-      return wing_launch_throttle_start;
+      return launch.throttle_start;
     }
     return profile.wing.autolaunch.throttle;
 
@@ -380,7 +420,7 @@ static float wing_autolaunch_throttle() {
       wing_launch_set_state(WING_LAUNCH_DONE);
       return state.throttle;
     }
-    return wing_launch_ramp(wing_launch_throttle_start, state.throttle, elapsed_ms, profile.wing.autolaunch.finish_ms);
+    return wing_launch_ramp(launch.throttle_start, state.throttle, elapsed_ms, profile.wing.autolaunch.finish_ms);
 
   case WING_LAUNCH_DONE:
   case WING_LAUNCH_ABORTED:
@@ -439,7 +479,6 @@ void control() {
   } else {
     wing_calc_stabilized(wing_mode);
   }
-  wing_update_autotrim();
 
   if (flags.motortest_override) {
     if (motortest_usb) {
@@ -456,11 +495,14 @@ void control() {
         state.mixer_source[OUTPUT_SOURCE_PITCH],
         state.mixer_source[OUTPUT_SOURCE_YAW]);
   } else {
-    flags.on_ground = state.throttle < 0.001f;
+    // Once airborne, retain flight IMU filtering through unpowered glides.
+    flags.on_ground = !flags.in_air;
     wing_apply_outputs(
         state.mixer_source[OUTPUT_SOURCE_THROTTLE],
         state.mixer_source[OUTPUT_SOURCE_ROLL],
         state.mixer_source[OUTPUT_SOURCE_PITCH],
         state.mixer_source[OUTPUT_SOURCE_YAW]);
   }
+  // Update centers after writing this loop's outputs, as in INAV's switched trim.
+  wing_update_autotrim();
 }

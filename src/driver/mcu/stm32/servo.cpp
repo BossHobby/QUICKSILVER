@@ -11,7 +11,7 @@
 
 static resource_tag_t servo_tags[MOTOR_PIN_MAX];
 
-void servo_pwm_init(const gpio_pins_t *pins, uint16_t pwm_hz) {
+void servo_pwm_init(const gpio_pins_t *pins, uint16_t pwm_hz, const float *values) {
   gpio_config_t gpio_init;
   gpio_init.mode = GPIO_ALTERNATE;
   gpio_init.drive = GPIO_DRIVE_HIGH;
@@ -47,6 +47,7 @@ void servo_pwm_init(const gpio_pins_t *pins, uint16_t pwm_hz) {
     const timer_channel_t ch = TIMER_TAG_CH(tag);
     gpio_pin_init_tag(pins[i], gpio_init, tag);
     timer_up_init(tim, divider, period);
+    tim_oc_init.CompareValue = SERVO_PULSE_CENTER + values[i] * (SERVO_PULSE_MAX - SERVO_PULSE_CENTER);
     LL_TIM_OC_Init(timer_defs[tim].instance, timer_channel_val(ch), &tim_oc_init);
     LL_TIM_EnableCounter(timer_defs[tim].instance);
     LL_TIM_EnableAllOutputs(timer_defs[tim].instance);

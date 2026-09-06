@@ -26,6 +26,8 @@ const char *failloop_string(failloop_t val) {
     return "spi error";
   case FAILLOOP_VEHICLE:
     return "vehicle type not supported by target";
+  case FAILLOOP_OUTPUT:
+    return "invalid servo PWM rate";
   case FAILLOOP_NO_TARGET:
     return "no target configured - connect configurator and load target";
   default:
