@@ -11,6 +11,8 @@
 #include "mock_outputs.h"
 #include "util/util.h"
 
+extern const profile_t default_profile;
+
 // Script sensor inputs and advance the real controller, as in navigation tests.
 // This checks command direction and transitions, not airframe dynamics.
 static bool finite_float(float value) {
@@ -34,7 +36,7 @@ static void tick(uint32_t milliseconds = 1) {
 }
 
 static void prepare(uint32_t mode) {
-  profile_set_defaults(); // Include the actual default gains, not the zero-gain template.
+  profile_set_defaults(); // Use the same startup defaults as hardware.
   profile.receiver.aux[AUX_PREARM].channel = RX_CHANNEL_ON;
   state.looptime_autodetect = 1000;
   state.rx_filter_hz = 50;
@@ -175,6 +177,47 @@ static void test_wing_imu_tracks_scripted_bank() {
   TEST_ASSERT_FLOAT_WITHIN(0.02f, 0.5f, state.GEstG.roll);
 }
 
+static void test_wing_default_rate_response_across_profiles_and_loop_times() {
+  prepare(1U << AUX_ACROMODE);
+  flags.in_air = 1;
+  const uint32_t periods_us[] = {250, 1000, 2000};
+  for (uint8_t bank = 0; bank < PID_PROFILE_MAX; bank++) {
+    // Configurator's default-profile response must agree with boot defaults.
+    TEST_ASSERT_EQUAL_MEMORY(&profile.pid.pid_rates[bank], &default_profile.pid.pid_rates[bank], sizeof(pid_rate_t));
+    profile.pid.pid_profile = (pid_profile_t)bank;
+    for (uint32_t period_us : periods_us) {
+      state.looptime = period_us * 0.000001f;
+      state.looptime_inverse = 1.0f / state.looptime;
+      state.looptime_autodetect = period_us;
+      pid_init();
+      state.error = {{1, 1, 1}}; // Sustained 57.3 deg/s rate error.
+      for (uint32_t elapsed_us = 0; elapsed_us < 1000000; elapsed_us += period_us)
+        pid_calc();
+      // Modest initial response plus slow roll/pitch integration, not saturation.
+      TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.302f, state.pidoutput.roll);
+      TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.251f, state.pidoutput.pitch);
+      TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.032f, state.pidoutput.yaw);
+      TEST_ASSERT_EQUAL_FLOAT(0, state.pid_d_term.roll);
+      TEST_ASSERT_EQUAL_FLOAT(0, state.pid_d_term.pitch);
+      TEST_ASSERT_EQUAL_FLOAT(0, state.pid_i_term.yaw);
+    }
+  }
+}
+
+static void test_wing_default_level_response_has_no_derivative_kick_or_voltage_boost() {
+  prepare(1U << AUX_LEVELMODE);
+  state.GEstG = {{0.5f, 0, 0.8660254f}}; // 30-degree bank, zero angular rate.
+  tick();
+  const float first_target = state.setpoint.roll;
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, -1.5f, first_target);
+  tick();
+  TEST_ASSERT_EQUAL_FLOAT(first_target, state.setpoint.roll);
+  const float first_p = state.pid_p_term.roll;
+  state.vbat_cell_avg = 2.5f;
+  tick();
+  TEST_ASSERT_EQUAL_FLOAT(first_p, state.pid_p_term.roll);
+}
+
 void run_wing_safety_tests() {
   RUN_TEST(test_wing_angle_corrects_roll_and_pitch_in_both_directions);
   RUN_TEST(test_wing_angle_stick_commands_and_manual_handoff);
@@ -183,4 +226,6 @@ void run_wing_safety_tests() {
   RUN_TEST(test_wing_launch_failsafe_stops_motor_and_disarms);
   RUN_TEST(test_wing_launch_zero_level_limit_and_zero_pitch_stays_finite);
   RUN_TEST(test_wing_imu_tracks_scripted_bank);
+  RUN_TEST(test_wing_default_rate_response_across_profiles_and_loop_times);
+  RUN_TEST(test_wing_default_level_response_has_no_derivative_kick_or_voltage_boost);
 }
