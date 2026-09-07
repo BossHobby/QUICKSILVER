@@ -77,7 +77,27 @@ uint32_t profile_mixer_rule_count(const profile_mixer_rule_t *mixer, uint32_t si
 
 #define DEFAULT_PID_RATE_PRESET 0
 
+#ifdef VEHICLE_WING
+// Starting feedback gains for servo-driven wings, not an airframe tune.
+// In normalized output units: roll/pitch P ~= 0.102/0.051 per rad/s,
+// I ~= 0.2 per rad (the shared integrator has a 2x historical scaling).
+// Comparable to ArduPilot's 0.08/0.04 P and 0.15 I at unity airspeed scaling
+// after converting its degree output to +/-45 degrees. We have no rate FF.
+static constexpr pid_rate_t wing_default_pid_rates = {
+    .kp = {64, 32, 10},
+    .ki = {10, 10, 0},
+    .kd = {0, 0, 0},
+};
+#endif
+
 const pid_rate_preset_t pid_rate_presets[] = {
+#ifdef VEHICLE_WING
+    {
+        .index = 0,
+        .name = "Wing starting point",
+        .rate = wing_default_pid_rates,
+    },
+#else
     // Brushless Pids
     {
         .index = 0,
@@ -158,6 +178,7 @@ const pid_rate_preset_t pid_rate_presets[] = {
             .kd = {128.5, 128.5, 24},
         },
     },
+#endif
 };
 
 const uint32_t pid_rate_presets_count = sizeof(pid_rate_presets) / sizeof(pid_rate_preset_t);
@@ -517,7 +538,11 @@ const profile_t default_profile = {
     //************************************PIDS****************************************
     .pid = {
         .pid_profile = PID_PROFILE_1,
+#ifdef VEHICLE_WING
+        .pid_rates = {wing_default_pid_rates, wing_default_pid_rates},
+#else
         .pid_rates = {},
+#endif
         .stick_profile = STICK_PROFILE_OFF,
         .stick_rates = {
             //**************************ADVANCED PID CONTROLLER - WITH PROFILE SWITCHING ON AUX SWITCH STICK_BOOST_PROFILE*******************************
@@ -552,14 +577,24 @@ const profile_t default_profile = {
 
         // Leveling algorithm coefficients for large errors  (stick banging or collisions)
         .big_angle = {
+#ifdef VEHICLE_WING
+            .kp = 3.0f,
+            .kd = 0.0f,
+#else
             .kp = 5.00, // P TERM GAIN ROLL + PITCH
             .kd = 0.0,  // D TERM GAIN ROLL + PITCH
+#endif
         },
 
         // Leveling algorithm coefficients for small errors  (normal flying)
         .small_angle = {
+#ifdef VEHICLE_WING
+            .kp = 3.0f,
+            .kd = 0.0f,
+#else
             .kp = 10.00, // P TERM GAIN ROLL + PITCH
             .kd = 3.0,   // D TERM GAIN ROLL + PITCH
+#endif
         },
 
         .throttle_dterm_attenuation = {
@@ -578,7 +613,7 @@ const profile_t default_profile = {
 #else
         .lipo_cell_count = 0,
 #endif
-#ifdef PID_VOLTAGE_COMPENSATION
+#if defined(PID_VOLTAGE_COMPENSATION) && !defined(VEHICLE_WING)
         .pid_voltage_compensation = PID_VOLTAGE_COMPENSATION_ACTIVE,
 #else
         .pid_voltage_compensation = PID_VOLTAGE_COMPENSATION_NONE,
