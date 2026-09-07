@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.11.3
+
+changes since 0.11.2:
+
+- use Betaflight throttle curve for throttle mid/expo
+- accel_cal: add visual feedback and skip samples while moving
+- osd: add watts element
+- crsf: limit MSP payload sizes to prevent buffer overflow
+- stm32h7: fix ADC internal paths and voltage reference scaling
+- vtx: fix MSP power label length
+- motor: fix BLHeli_S direction changes by sending commands over the full reinit window
+- build: use certifi for targets checkout
+
+Throttle mid/expo behavior has changed, please re-verify your throttle curve.
+
 ## v0.11.2
 
 changes since 0.11.1:
