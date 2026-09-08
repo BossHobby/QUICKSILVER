@@ -1,6 +1,6 @@
 #include "blackbox_device_sdcard.h"
 
-#ifdef USE_SDCARD
+#ifdef USE_BLACKBOX
 
 #include <string.h>
 
@@ -27,14 +27,14 @@ typedef enum {
 } sdcard_device_state_t;
 
 static sdcard_device_state_t state = STATE_DETECT;
-static uint8_t should_flush = 0;
+static bool flush_pending = false;
 static uint32_t write_count = 0;
 
 void blackbox_device_sdcard_init() {
   sdcard_init();
 
   state = STATE_DETECT;
-  should_flush = 0;
+  flush_pending = false;
   write_count = 0;
 }
 
@@ -42,14 +42,16 @@ bool blackbox_device_sdcard_update() {
   static uint32_t offset = 0;
   static uint32_t write_size = PAGE_SIZE;
 
-  sdcard_status_t sdcard_status = sdcard_update();
-  if (sdcard_status != SDCARD_IDLE) {
+  const sdcard_status_t sdcard_status = sdcard_update();
+  if (sdcard_status == SDCARD_ERROR) {
     return false;
   }
 
 sdcard_do_more:
   switch (state) {
   case STATE_DETECT: {
+    if (sdcard_status != SDCARD_IDLE)
+      return false;
     state = STATE_READ_HEADER;
     sdcard_get_bounds(&blackbox_bounds);
     blackbox_bounds.use_4byte_addresses = false;
@@ -65,13 +67,13 @@ sdcard_do_more:
         blackbox_device_header.file_num = 0;
 
         state = STATE_ERASE_HEADER;
-        break;
+        return false;
       }
 
       state = STATE_IDLE;
       goto sdcard_do_more;
     }
-    break;
+    return false;
   }
 
   case STATE_IDLE: {
@@ -80,13 +82,13 @@ sdcard_do_more:
       state = STATE_START_WRITE;
       goto sdcard_do_more;
     }
-    if (should_flush == 1 && to_write > 0) {
+    if (flush_pending && to_write > 0) {
       state = STATE_START_WRITE;
       goto sdcard_do_more;
     }
-    if (should_flush == 1) {
+    if (flush_pending) {
       state = STATE_ERASE_HEADER;
-      should_flush = 0;
+      flush_pending = false;
       goto sdcard_do_more;
     }
     break;
@@ -95,8 +97,8 @@ sdcard_do_more:
   case STATE_START_WRITE: {
     const uint32_t byte_offset = blackbox_current_file()->start + blackbox_current_file()->size;
     if (byte_offset >= blackbox_bounds.total_size) {
-      state = should_flush ? STATE_ERASE_HEADER : STATE_IDLE;
-      should_flush = 0;
+      state = flush_pending ? STATE_ERASE_HEADER : STATE_IDLE;
+      flush_pending = false;
       break;
     }
 
@@ -118,7 +120,7 @@ sdcard_do_more:
 
     write_size = MIN(PAGE_SIZE, blackbox_bounds.total_size - byte_offset);
     if (to_write < PAGE_SIZE) {
-      if (should_flush == 0) {
+      if (!flush_pending) {
         break;
       }
       if (to_write == 0) {
@@ -168,6 +170,7 @@ sdcard_do_more:
 
   case STATE_WRITE_HEADER: {
     if (sdcard_write_page(blackbox_write_buffer, 0)) {
+      flush_pending = false;
       state = STATE_IDLE;
     }
     return false;
@@ -179,7 +182,7 @@ sdcard_do_more:
 
 void blackbox_device_sdcard_reset() {
   state = STATE_ERASE_HEADER;
-  should_flush = 0;
+  flush_pending = false;
   write_count = 0;
 }
 
@@ -191,17 +194,17 @@ uint32_t blackbox_device_sdcard_usage() {
 }
 
 void blackbox_device_sdcard_stop() {
-  should_flush = 1;
+  flush_pending = true;
 }
 
 void blackbox_device_sdcard_start() {
   state = STATE_ERASE_HEADER;
-  should_flush = 0;
+  flush_pending = false;
   write_count = 0;
 }
 
 bool blackbox_device_sdcard_ready() {
-  return state == STATE_IDLE;
+  return state == STATE_IDLE && !flush_pending;
 }
 
 bool blackbox_device_sdcard_write(const uint8_t *buffer, const uint8_t size) {
@@ -219,7 +222,8 @@ void blackbox_device_sdcard_read(const uint32_t file_index, const uint32_t offse
   const uint32_t sectors = size / PAGE_SIZE + (size % PAGE_SIZE ? 1 : 0);
 
   while (1) {
-    sdcard_update();
+    if (sdcard_update() == SDCARD_ERROR)
+      break;
     if (sdcard_read_pages(buffer, sector_offset, sectors)) {
       break;
     }

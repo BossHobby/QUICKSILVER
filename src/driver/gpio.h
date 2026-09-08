@@ -62,5 +62,6 @@ void gpio_ports_init();
 void gpio_pin_init(gpio_pins_t pin, gpio_config_t config);
 void gpio_pin_init_af(gpio_pins_t pin, gpio_config_t config, uint8_t af);
 void gpio_pin_init_tag(gpio_pins_t pin, gpio_config_t config, resource_tag_t tag);
+bool gpio_pin_has_tag(gpio_pins_t pin, resource_tag_t tag);
 
 bool gpio_init_fpv(uint8_t mode);
