@@ -134,6 +134,17 @@ def map_signal(s):
             },
             "af": int(s.get("af", "-1")),
         }
+    elif s["driver"] in ("sdmmc", "sdio") and s["name"] in (
+        "ck", "clk", "cmd", "d0", "d1", "d2", "d3"
+    ):
+        return {
+            "tag": {
+                "type": "sdio",
+                "index": int(s.get("instance") or 1),
+                "func": "clk" if s["name"] == "ck" else s["name"],
+            },
+            "af": int(s.get("af", "-1")),
+        }
     elif (s["driver"] == "uart" or s["driver"] == "usart") and (
         s["name"] == "rx" or s["name"] == "tx"
     ):
@@ -168,6 +179,8 @@ def map_tag(f):
         return f"SPI_TAG(SPI_PORT{f['tag']['index']}, RES_SPI_{f['tag']['func']})".upper()
     elif f["tag"]["type"] == "serial":
         return f"SERIAL_TAG(SERIAL_PORT{f['tag']['index']}, RES_SERIAL_{f['tag']['func']})".upper()
+    elif f["tag"]["type"] == "sdio":
+        return f"SDIO_TAG({f['tag']['index']}, RES_SDIO_{f['tag']['func']})".upper()
     elif f["tag"]["type"] == "adc":
         return f"ADC_TAG(ADC_DEVICE{f['tag']['index']}, {f['tag']['func']})".upper()
     else:
