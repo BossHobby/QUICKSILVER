@@ -7,6 +7,7 @@
 #include "rx/rx.h"
 
 #define LED_MAX 4
+#define SDIO_PORT_MAX 3 // Index zero is unused; H743 supports SDMMC1 and SDMMC2.
 
 #define GPIO_AF(pin, af, tag)
 #define GPIO_PIN(port, num) PIN_##port##num,
@@ -183,6 +184,42 @@ typedef struct {
   gpio_pins_t nss;
 } target_spi_device_t;
 
+typedef struct {
+  uint8_t index;
+  gpio_pins_t clk;
+  gpio_pins_t cmd;
+  gpio_pins_t d0;
+  gpio_pins_t d1;
+  gpio_pins_t d2;
+  gpio_pins_t d3;
+} target_sdio_port_t;
+
+#define TARGET_SDIO_MEMBERS        \
+  START_STRUCT(target_sdio_port_t) \
+  MEMBER(index, uint8_t)           \
+  MEMBER(clk, gpio_pins_t)         \
+  MEMBER(cmd, gpio_pins_t)         \
+  MEMBER(d0, gpio_pins_t)          \
+  MEMBER(d1, gpio_pins_t)          \
+  MEMBER(d2, gpio_pins_t)          \
+  MEMBER(d3, gpio_pins_t)          \
+  END_STRUCT()
+
+typedef struct {
+  spi_ports_t port;
+  gpio_pins_t nss;
+  // Selects an entry in sdio_ports (H743 SDMMC1 or SDMMC2, four-bit).
+  // Mutually exclusive with SPI port/nss. Zero selects the legacy SPI path.
+  uint8_t sdio;
+} target_sdcard_t;
+
+#define TARGET_SDCARD_MEMBERS   \
+  START_STRUCT(target_sdcard_t) \
+  MEMBER(port, uint8_t)         \
+  MEMBER(nss, gpio_pins_t)      \
+  MEMBER(sdio, uint8_t)         \
+  END_STRUCT()
+
 #define TARGET_SPI_DEVICE_MEMBERS   \
   START_STRUCT(target_spi_device_t) \
   MEMBER(port, uint8_t)             \
@@ -235,12 +272,13 @@ typedef struct {
   target_serial_port_t serial_ports[SERIAL_PORT_MAX];
   target_serial_port_t serial_soft_ports[SERIAL_SOFT_COUNT];
   target_spi_port_t spi_ports[SPI_PORT_MAX];
+  target_sdio_port_t sdio_ports[SDIO_PORT_MAX];
 
   target_gyro_spi_device_t gyro;
   uint8_t gyro_orientation;
   target_spi_device_t osd;
   target_spi_device_t flash;
-  target_spi_device_t sdcard;
+  target_sdcard_t sdcard;
   target_rx_spi_device_t rx_spi;
 
   gpio_pins_t usb_detect;
@@ -268,11 +306,12 @@ typedef struct {
   INDEX_ARRAY_MEMBER(serial_ports, SERIAL_PORT_MAX, target_serial_port_t)        \
   INDEX_ARRAY_MEMBER(serial_soft_ports, SERIAL_SOFT_COUNT, target_serial_port_t) \
   INDEX_ARRAY_MEMBER(spi_ports, SPI_PORT_MAX, target_spi_port_t)                 \
+  INDEX_ARRAY_MEMBER(sdio_ports, SDIO_PORT_MAX, target_sdio_port_t)              \
   MEMBER(gyro, target_gyro_spi_device_t)                                         \
   MEMBER(gyro_orientation, uint8_t)                                              \
   MEMBER(osd, target_spi_device_t)                                               \
   MEMBER(flash, target_spi_device_t)                                             \
-  MEMBER(sdcard, target_spi_device_t)                                            \
+  MEMBER(sdcard, target_sdcard_t)                                                \
   MEMBER(rx_spi, target_rx_spi_device_t)                                         \
   MEMBER(usb_detect, gpio_pins_t)                                                \
   MEMBER(fpv, gpio_pins_t)                                                       \
@@ -332,6 +371,9 @@ bool target_has_rx_protocol(rx_protocol_t proto);
 bool target_serial_port_valid(const target_serial_port_t *port);
 bool target_gyro_spi_device_valid(const target_gyro_spi_device_t *dev);
 bool target_spi_device_valid(const target_spi_device_t *dev);
+bool target_sdcard_spi_valid();
+bool target_sdcard_sdio_valid();
+bool target_sdio_port_valid(const target_sdio_port_t *port);
 bool target_spi_port_valid(const target_spi_port_t *port);
 void target_init();
 

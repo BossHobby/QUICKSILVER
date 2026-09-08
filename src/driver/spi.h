@@ -24,8 +24,11 @@ typedef struct {
 } spi_port_def_t;
 
 #define SPI_TXN_MAX 32
+// Keep an empty ring slot even when every transaction is on one port.
+#define SPI_TXN_QUEUE_SIZE (SPI_TXN_MAX + 1)
 #define SPI_TXN_SEG_MAX 8
-#define SPI_TXN_BUFFER_SIZE DMA_ALIGN(512)
+// SD writes include a token, a 512-byte block, CRC and a response byte.
+#define SPI_TXN_BUFFER_SIZE DMA_ALIGN(512 + 4)
 
 typedef enum {
   TXN_CONST,
@@ -116,7 +119,7 @@ typedef struct spi_bus {
   // only modified by the intterupt or protected code
   volatile uint8_t txn_tail;
 
-  spi_txn_t *txns[SPI_TXN_MAX];
+  spi_txn_t *txns[SPI_TXN_QUEUE_SIZE];
 
   spi_mode_t mode;
   uint32_t hz;

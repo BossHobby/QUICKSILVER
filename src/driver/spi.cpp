@@ -78,7 +78,7 @@ bool spi_txn_continue_port(spi_ports_t port) {
       return false;
     }
 
-    txn = dev->txns[(dev->txn_tail + 1) % SPI_TXN_MAX];
+    txn = dev->txns[(dev->txn_tail + 1) % SPI_TXN_QUEUE_SIZE];
     if (txn == NULL || txn->status != TXN_READY) {
       return false;
     }
@@ -149,7 +149,7 @@ void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts) {
 
   ATOMIC_BLOCK_ALL {
     spi_device_t *dev = &spi_dev[bus->port];
-    const uint8_t head = (dev->txn_head + 1) % SPI_TXN_MAX;
+    const uint8_t head = (dev->txn_head + 1) % SPI_TXN_QUEUE_SIZE;
     dev->txns[head] = txn;
     dev->txn_head = head;
     MEMORY_BARRIER();
@@ -161,7 +161,7 @@ void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts) {
 void spi_txn_finish(spi_ports_t port) {
   spi_device_t *dev = &spi_dev[port];
 
-  const uint32_t tail = (dev->txn_tail + 1) % SPI_TXN_MAX;
+  const uint32_t tail = (dev->txn_tail + 1) % SPI_TXN_QUEUE_SIZE;
   spi_txn_t *txn = dev->txns[tail];
 
   if (txn->flags & TXN_DELAYED_RX) {

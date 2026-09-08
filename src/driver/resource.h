@@ -10,6 +10,7 @@ typedef enum {
   RESOURCE_SPI,
   RESOURCE_SERIAL,
   RESOURCE_ADC,
+  RESOURCE_SDIO,
 } resource_type_t;
 
 typedef enum {
@@ -25,6 +26,16 @@ typedef enum {
   RES_SPI_SCK,
 } resource_spi_t;
 
+typedef enum {
+  RES_SDIO_INVALID,
+  RES_SDIO_CLK,
+  RES_SDIO_CMD,
+  RES_SDIO_D0,
+  RES_SDIO_D1,
+  RES_SDIO_D2,
+  RES_SDIO_D3,
+} resource_sdio_t;
+
 typedef uint32_t resource_tag_t;
 
 #define RESOURCE_TAG(typ, val) ((uint32_t)((typ) << 24) | (uint32_t)(val))
@@ -37,6 +48,8 @@ typedef uint32_t resource_tag_t;
 #define SPI_TAG(port, pin) RESOURCE_TAG(RESOURCE_SPI, (uint32_t)((port) << 8) | (pin))
 #define SPI_TAG_PORT(tag) (uint8_t)(((tag) >> 8) & 0xFF)
 #define SPI_TAG_PIN(tag) (uint8_t)((tag) & 0xFF)
+
+#define SDIO_TAG(port, pin) RESOURCE_TAG(RESOURCE_SDIO, (uint32_t)((port) << 8) | (pin))
 
 #define SERIAL_TAG(serial, pin) RESOURCE_TAG(RESOURCE_SERIAL, (uint32_t)((serial) << 8) | (pin))
 #define SERIAL_TAG_PORT(tag) (uint8_t)(((tag) >> 8) & 0xFF)
