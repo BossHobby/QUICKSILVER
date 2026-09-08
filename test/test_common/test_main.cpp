@@ -1,9 +1,18 @@
-#include <unity.h>
 #include "driver/time.h"
 #include "mock_helpers.h"
+#include <unity.h>
 
 // Test declarations
 extern void test_resource_timer_tag_roundtrip();
+extern void test_sdcard_csd_capacity();
+extern void test_sdcard_target_cbor();
+extern void test_sdcard_transport_initialization();
+extern void test_sdcard_transport_late_insertion();
+extern void test_sdcard_transport_reads();
+extern void test_sdcard_transport_writes();
+extern void test_sdcard_transport_errors();
+extern void test_sdcard_transport_busy_and_timer_wrap();
+extern void test_sdcard_device_samples_during_write();
 // Filter tests
 extern void test_filter_init(void);
 extern void test_filter_lowpass_pt1(void);
@@ -60,6 +69,8 @@ extern void test_cbor_failed_enum_decode_preserves_value(void);
 extern void test_spi_initial_state(void);
 extern void test_spi_init(void);
 extern void test_spi_txn_queue(void);
+extern void test_spi_txn_full_queue(void);
+extern void test_spi_sdcard_block_transfers(void);
 extern void test_spi_dma_ready(void);
 extern void test_spi_reconfigure(void);
 
@@ -144,6 +155,15 @@ void tearDown(void) {
 int main(int argc, char **argv) {
   UNITY_BEGIN();
   RUN_TEST(test_resource_timer_tag_roundtrip);
+  RUN_TEST(test_sdcard_csd_capacity);
+  RUN_TEST(test_sdcard_target_cbor);
+  RUN_TEST(test_sdcard_transport_initialization);
+  RUN_TEST(test_sdcard_transport_late_insertion);
+  RUN_TEST(test_sdcard_transport_reads);
+  RUN_TEST(test_sdcard_transport_writes);
+  RUN_TEST(test_sdcard_transport_errors);
+  RUN_TEST(test_sdcard_transport_busy_and_timer_wrap);
+  RUN_TEST(test_sdcard_device_samples_during_write);
 
   // Filter tests
   RUN_TEST(test_filter_init);
@@ -201,6 +221,8 @@ int main(int argc, char **argv) {
   RUN_TEST(test_spi_initial_state);
   RUN_TEST(test_spi_init);
   RUN_TEST(test_spi_txn_queue);
+  RUN_TEST(test_spi_txn_full_queue);
+  RUN_TEST(test_spi_sdcard_block_transfers);
   RUN_TEST(test_spi_dma_ready);
   RUN_TEST(test_spi_reconfigure);
 
