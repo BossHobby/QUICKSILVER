@@ -56,7 +56,9 @@ TARGET_BUZZER_MEMBERS
 TARGET_OUTPUT_MEMBERS
 TARGET_SERIAL_MEMBERS
 TARGET_SPI_MEMBERS
+TARGET_SDIO_MEMBERS
 TARGET_SPI_DEVICE_MEMBERS
+TARGET_SDCARD_MEMBERS
 TARGET_GYRO_SPI_DEVICE_MEMBERS
 TARGET_RX_SPI_DEVICE_MEMBERS
 TARGET_MEMBERS
@@ -86,8 +88,10 @@ TARGET_BUZZER_MEMBERS
 TARGET_OUTPUT_MEMBERS
 TARGET_SERIAL_MEMBERS
 TARGET_SPI_MEMBERS
+TARGET_SDIO_MEMBERS
 TARGET_GYRO_SPI_DEVICE_MEMBERS
 TARGET_SPI_DEVICE_MEMBERS
+TARGET_SDCARD_MEMBERS
 TARGET_RX_SPI_DEVICE_MEMBERS
 TARGET_MEMBERS
 
@@ -401,6 +405,35 @@ bool target_serial_port_valid(const target_serial_port_t *port) {
 
 bool target_spi_device_valid(const target_spi_device_t *dev) {
   return dev->port != SPI_PORT_INVALID && dev->nss != PIN_NONE;
+}
+
+bool target_sdcard_spi_valid() {
+  return !target.sdcard.sdio && target.sdcard.port != SPI_PORT_INVALID && target.sdcard.nss != PIN_NONE;
+}
+
+bool target_sdcard_sdio_valid() {
+#ifdef STM32H7
+  const uint8_t index = target.sdcard.sdio;
+  return index > 0 && index < SDIO_PORT_MAX && target.sdcard.port == SPI_PORT_INVALID && target.sdcard.nss == PIN_NONE &&
+         target.sdio_ports[index].index == index && target_sdio_port_valid(&target.sdio_ports[index]);
+#else
+  return false;
+#endif
+}
+
+bool target_sdio_port_valid(const target_sdio_port_t *port) {
+  if (port->index == 0 || port->index >= SDIO_PORT_MAX)
+    return false;
+  const gpio_pins_t pins[] = {port->clk, port->cmd, port->d0, port->d1, port->d2, port->d3};
+  for (uint32_t i = 0; i < 6; i++) {
+    if (pins[i] == PIN_NONE || pins[i] >= PINS_MAX)
+      return false;
+    for (uint32_t j = 0; j < i; j++) {
+      if (pins[i] == pins[j])
+        return false;
+    }
+  }
+  return true;
 }
 
 bool target_gyro_spi_device_valid(const target_gyro_spi_device_t *dev) {

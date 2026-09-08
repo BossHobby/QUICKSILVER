@@ -463,7 +463,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       spi_count++;
     if (target_spi_device_valid(&target.flash))
       spi_count++;
-    if (target_spi_device_valid(&target.sdcard))
+    if (target_sdcard_spi_valid())
       spi_count++;
     *ptr++ = spi_count; // spi device count
     *ptr++ = 0;         // i2c device count
