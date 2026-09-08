@@ -85,7 +85,7 @@ blackbox_device_file_t *blackbox_current_file() {
 
 void blackbox_device_init() {
 #ifdef USE_SDCARD
-  if (target_spi_device_valid(&target.sdcard)) {
+  if (target_sdcard_spi_valid() || target_sdcard_sdio_valid()) {
     dev = &blackbox_device_sdcard;
     target_set_feature(FEATURE_BLACKBOX);
   } else
