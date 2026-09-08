@@ -107,6 +107,80 @@ void test_spi_txn_queue(void) {
   TEST_ASSERT_TRUE(spi_txn_ready(&bus));
 }
 
+void test_spi_txn_full_queue(void) {
+  test_spi_setup();
+  spi_bus_device_t bus = {
+      .port = SPI_PORT1,
+      .nss = PIN_A4,
+      .mode = SPI_MODE_LEADING_EDGE,
+      .hz = 1000000,
+  };
+  spi_bus_device_init(&bus);
+
+  // Repeated fills also exercise wraparound at different ring positions.
+  for (uint32_t round = 0; round < 3; round++) {
+    uint8_t rx[SPI_TXN_MAX] = {};
+    bool done[SPI_TXN_MAX] = {};
+    for (uint32_t i = 0; i < SPI_TXN_MAX; i++) {
+      const uint8_t tx = i + 1;
+      const spi_txn_segment_t segs[] = {spi_make_seg_buffer(&rx[i], &tx, 1)};
+      spi_seg_submit(&bus, segs, .done_fn = spi_txn_set_done, .done_fn_arg = &done[i]);
+    }
+    TEST_ASSERT_FALSE(spi_txn_has_free());
+    TEST_ASSERT_EQUAL_UINT8(0, spi_txn_free_count());
+    TEST_ASSERT_FALSE(spi_txn_ready(&bus));
+    TEST_ASSERT_TRUE(spi_txn_continue(&bus));
+    for (uint32_t i = 0; i < SPI_TXN_MAX; i++) {
+      TEST_ASSERT_FALSE(done[i]);
+      spi_dma_complete_port(bus.port);
+      TEST_ASSERT_TRUE(done[i]);
+      TEST_ASSERT_EQUAL_UINT8(uint8_t(~(i + 1)), rx[i]);
+      TEST_ASSERT_EQUAL_UINT8(i + 1, spi_txn_free_count());
+      TEST_ASSERT_EQUAL(i + 1 == SPI_TXN_MAX, spi_txn_ready(&bus));
+    }
+    TEST_ASSERT_TRUE(spi_txn_has_free());
+  }
+}
+
+void test_spi_sdcard_block_transfers(void) {
+  test_spi_setup();
+  spi_bus_device_t bus = {
+      .port = SPI_PORT1,
+      .nss = PIN_A4,
+      .mode = SPI_MODE_LEADING_EDGE,
+      .hz = 25000000,
+  };
+  spi_bus_device_init(&bus);
+  uint8_t block[512];
+  for (uint32_t i = 0; i < sizeof(block); i++)
+    block[i] = 0xa5;
+  const spi_txn_segment_t read_segs[] = {
+      spi_make_seg_buffer(block, nullptr, sizeof(block)),
+      spi_make_seg_const(0xff, 0xff),
+  };
+  bool done = false;
+  spi_seg_submit_continue(&bus, read_segs, .done_fn = spi_txn_set_done, .done_fn_arg = &done);
+  spi_dma_complete_port(bus.port);
+  TEST_ASSERT_TRUE(done);
+  for (const auto byte : block)
+    TEST_ASSERT_EQUAL_UINT8(0, byte); // Native SPI inverts the 0xff read clocks.
+
+  uint8_t response = 0xff;
+  const spi_txn_segment_t write_segs[] = {
+      spi_make_seg_const(0xfc),
+      spi_make_seg_buffer(nullptr, block, sizeof(block)),
+      spi_make_seg_const(0xff, 0xff),
+      spi_make_seg_buffer(&response, nullptr, 1),
+  };
+  done = false;
+  spi_seg_submit_continue(&bus, write_segs, .done_fn = spi_txn_set_done, .done_fn_arg = &done);
+  spi_dma_complete_port(bus.port);
+  TEST_ASSERT_TRUE(done);
+  TEST_ASSERT_EQUAL_UINT8(0, response);
+  TEST_ASSERT_TRUE(spi_txn_ready(&bus));
+  TEST_ASSERT_EQUAL_UINT8(SPI_TXN_MAX, spi_txn_free_count());
+}
+
 // Test that SPI DMA is ready
 void test_spi_dma_ready(void) {
   TEST_ASSERT_TRUE(spi_dma_is_ready(SPI_PORT1));
