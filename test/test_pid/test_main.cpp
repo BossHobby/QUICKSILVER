@@ -3,6 +3,12 @@
 
 // PID tests
 extern void test_pid_proportional_control(void);
+extern void test_pid_rates_update_preserves_integral(void);
+extern void test_pid_relax_tracks_during_saturation(void);
+extern void test_pid_relax_period_change_preserves_history(void);
+#ifdef VEHICLE_MULTI
+extern void test_horizon_error_matches_setpoint(void);
+#endif
 extern void test_pid_integral_accumulation(void);
 extern void test_pid_derivative_calculation(void);
 extern void test_pid_dterm_setpoint_response(void);
@@ -20,6 +26,12 @@ int main() {
   UNITY_BEGIN();
   // PID tests
   RUN_TEST(test_pid_proportional_control);
+  RUN_TEST(test_pid_rates_update_preserves_integral);
+  RUN_TEST(test_pid_relax_tracks_during_saturation);
+  RUN_TEST(test_pid_relax_period_change_preserves_history);
+#ifdef VEHICLE_MULTI
+  RUN_TEST(test_horizon_error_matches_setpoint);
+#endif
   RUN_TEST(test_pid_integral_accumulation);
   RUN_TEST(test_pid_derivative_calculation);
   RUN_TEST(test_pid_dterm_setpoint_response);

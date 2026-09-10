@@ -42,6 +42,7 @@ static void pid_setUp(void) {
 
   // Initialize control state
   state.looptime = 0.000125f; // 8kHz
+  state.looptime_autodetect = 125.0f;
   state.looptime_inverse = 1.0f / state.looptime; // 8000Hz
   state.vbat_filtered = 4.0f;
   state.vbat_compensated = 1.0f;
@@ -52,6 +53,80 @@ static void pid_setUp(void) {
 
 
 // Test basic proportional control
+void test_pid_relax_tracks_during_saturation(void) {
+  pid_setUp();
+  flags.arm_state = flags.in_air = 1;
+  profile.pid.pid_rates[0].kp = (vec3_t){0};
+  profile.pid.pid_rates[0].kd = (vec3_t){0};
+  pid_rates_update();
+  pid_calc(); // Clear the previous output before driving saturation.
+
+  profile.pid.pid_rates[0].kp.roll = 628.0f;
+  pid_rates_update();
+  state.error.roll = 1.0f;
+  state.setpoint.roll = 2.0f;
+  for (int i = 0; i < 2000; i++) {
+    pid_calc();
+  }
+  profile.pid.pid_rates[0].kp.roll = 0.0f;
+  pid_rates_update();
+  pid_calc(); // Release saturation; the following loop can integrate again.
+  const float before = state.pid_i_term.roll;
+  pid_calc();
+  TEST_ASSERT_GREATER_THAN_FLOAT(1e-6f, state.pid_i_term.roll - before);
+}
+
+void test_pid_relax_period_change_preserves_history(void) {
+  pid_setUp();
+  flags.arm_state = flags.in_air = 1;
+  profile.pid.pid_rates[0].kp = (vec3_t){0};
+  profile.pid.pid_rates[0].kd = (vec3_t){0};
+  pid_rates_update();
+  pid_calc();
+  state.setpoint.roll = 2.0f;
+  for (int i = 0; i < 2000; i++) {
+    pid_calc();
+  }
+  state.looptime_autodetect = 500.0f;
+  state.looptime = 0.0005f;
+  state.looptime_inverse = 2000.0f;
+  control_filter_update(false);
+  state.error.roll = 1.0f;
+  pid_calc();
+  TEST_ASSERT_GREATER_THAN_FLOAT(1e-7f, state.pid_i_term.roll);
+
+  // A small step exposes the new coefficient without fully suppressing I.
+  state.setpoint.roll += 0.05f;
+  const float before = state.pid_i_term.roll;
+  pid_calc();
+  const float expected_relax = 1.0f - 0.05f * (1.0f - 6.0f * 0.0005f / (3.0f * 0.0005f + 1.0f / 20.0f)) / (5.7f * 0.01745329252f);
+  const float expected_delta = 5.0f * (0.5f / 100.0f) * (0.0005f / 3.0f) * expected_relax;
+  TEST_ASSERT_FLOAT_WITHIN(2e-9f, expected_delta, state.pid_i_term.roll - before);
+}
+
+#ifdef VEHICLE_MULTI
+void test_horizon_error_matches_setpoint(void) {
+  for (int race = 0; race < 2; race++) {
+    pid_setUp();
+    profile.pid.small_angle.kp = profile.pid.big_angle.kp = 10.0f;
+    profile.pid.small_angle.kd = profile.pid.big_angle.kd = 0.1f;
+    state.aux_active = (1U << AUX_LEVELMODE) | (1U << AUX_HORIZON);
+    if (race) {
+      state.aux_active |= 1U << AUX_RACEMODE;
+    }
+    state.GEstG = (vec3_t){{0.1f, 0.2f, 0.9746794f}};
+    state.gyro = (vec3_t){{0.3f, -0.2f, 0.0f}};
+    state.angle_error = (vec3_t){0};
+    angle_pid(0);
+    angle_pid(1);
+    control();
+    TEST_ASSERT_GREATER_THAN_FLOAT(0.01f, fabsf(state.angle_error.roll));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, state.setpoint.roll - state.gyro.roll, state.error.roll);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, state.setpoint.pitch - state.gyro.pitch, state.error.pitch);
+  }
+}
+#endif
+
 void test_pid_proportional_control(void) {
   pid_setUp();
   // Setup
@@ -80,6 +155,34 @@ void test_pid_proportional_control(void) {
   TEST_ASSERT_EQUAL_FLOAT(1.0f * roll_scale, state.pidoutput.roll);
   TEST_ASSERT_EQUAL_FLOAT(0.5f * pitch_scale, state.pidoutput.pitch);
   TEST_ASSERT_EQUAL_FLOAT(0.0f, state.pidoutput.yaw);
+}
+
+void test_pid_rates_update_preserves_integral(void) {
+  pid_setUp();
+  flags.arm_state = flags.in_air = 1;
+  profile.pid.pid_rates[0].kd = (vec3_t){0};
+  pid_rates_update();
+  state.error.roll = 0.1f;
+  for (int i = 0; i < 20; i++) {
+    pid_calc();
+  }
+  const float integral = state.pid_i_term.roll;
+  TEST_ASSERT_GREATER_THAN_FLOAT(0.0f, integral);
+
+  profile.pid.pid_rates[1].kp = (vec3_t){{62.8f, 62.8f, 31.4f}};
+  profile.pid.pid_rates[1].ki = (vec3_t){0};
+  profile.pid.pid_rates[1].kd = (vec3_t){0};
+  profile.pid.pid_profile = PID_PROFILE_2;
+  pid_rates_update();
+  pid_calc();
+  TEST_ASSERT_FLOAT_WITHIN(1e-7f, 0.01f, state.pid_p_term.roll);
+  TEST_ASSERT_EQUAL_FLOAT(integral, state.pid_i_term.roll);
+
+  profile.pid.pid_rates[1].kp.roll *= 2.0f;
+  pid_rates_update();
+  pid_calc();
+  TEST_ASSERT_FLOAT_WITHIN(1e-7f, 0.02f, state.pid_p_term.roll);
+  TEST_ASSERT_EQUAL_FLOAT(integral, state.pid_i_term.roll);
 }
 
 // Test integral accumulation

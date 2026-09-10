@@ -38,6 +38,31 @@ void test_filter_init(void) {
 }
 
 // Test low-pass filtering
+void test_filter_reconfigure_type(void) {
+  for (int from = FILTER_NONE; from < FILTER_MAX; from++) {
+    for (int to = FILTER_NONE; to < FILTER_MAX; to++) {
+      filter_t changed;
+      filter_state_t history[3];
+      filter_init((filter_type_t)from, &changed, history, 3, 100.0f, 125.0f);
+      for (int i = 0; i < 100; i++) {
+        for (int axis = 0; axis < 3; axis++) {
+          filter_step((filter_type_t)from, &changed, &history[axis], 5.0f);
+        }
+      }
+      filter_init((filter_type_t)to, &changed, history, 3, 100.0f, 125.0f);
+      filter_t fresh;
+      filter_state_t fresh_history;
+      filter_init((filter_type_t)to, &fresh, &fresh_history, 1, 100.0f, 125.0f);
+      for (int i = 0; i < 10; i++) {
+        const float expected = filter_step((filter_type_t)to, &fresh, &fresh_history, 1.0f);
+        for (int axis = 0; axis < 3; axis++) {
+          TEST_ASSERT_FLOAT_WITHIN(1e-6f, expected, filter_step((filter_type_t)to, &changed, &history[axis], 1.0f));
+        }
+      }
+    }
+  }
+}
+
 void test_filter_lowpass_pt1(void) {
   filter_setUp();
   filter_t filter;
@@ -131,4 +156,3 @@ void test_filter_cascade(void) {
   // Cascaded output should be more filtered
   TEST_ASSERT_LESS_THAN_FLOAT(intermediate, output);
 }
-

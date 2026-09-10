@@ -2,7 +2,6 @@
 #include <string.h>
 #include <unity.h>
 
-#include "control/control.h"
 #include "util/sdft.h"
 #include "util/util.h"
 
@@ -11,9 +10,8 @@ static constexpr float frequencies[] = {100.0f, 117.0f, 300.0f, 550.0f, 600.0f};
 
 void test_sdft_batches_match_direct_transform() {
   for (float period : periods) {
-    state.looptime_autodetect = period;
     sdft_t sdft;
-    sdft_init(&sdft);
+    sdft_init(&sdft, period);
     float samples[SDFT_SAMPLE_SIZE] = {};
     uint32_t idx = 0;
     float sum = 0;
@@ -70,11 +68,10 @@ static void assert_tone(const sdft_t *sdft, float frequency, float tolerance) {
 
 void test_sdft_tracks_tones_across_sample_rates() {
   for (float period : periods) {
-    state.looptime_autodetect = period;
     for (float frequency : frequencies) {
       sdft_t axes[SDFT_AXES];
       for (auto &axis : axes) {
-        sdft_init(&axis);
+        sdft_init(&axis, period);
       }
       uint8_t current_axis = SDFT_AXES;
       for (uint32_t n = 0; n < (uint32_t)(1e6f / period); n++) {
@@ -89,10 +86,9 @@ void test_sdft_tracks_tones_across_sample_rates() {
 
 void test_sdft_tracks_frequency_sweep() {
   for (float period : periods) {
-    state.looptime_autodetect = period;
     sdft_t axes[SDFT_AXES];
     for (auto &axis : axes) {
-      sdft_init(&axis);
+      sdft_init(&axis, period);
     }
     uint8_t current_axis = SDFT_AXES;
     float phase = 0;
@@ -111,9 +107,8 @@ void test_sdft_tracks_frequency_sweep() {
 }
 
 void test_sdft_waits_for_complete_spectrum() {
-  state.looptime_autodetect = 125.0f;
   sdft_t sdft;
-  sdft_init(&sdft);
+  sdft_init(&sdft, 125.0f);
   sdft_push(&sdft, 1.0f);
   TEST_ASSERT_FALSE(sdft_update(&sdft));
   TEST_ASSERT_EQUAL(SDFT_UPDATE_MAGNITUDE, sdft.state);
@@ -125,18 +120,19 @@ void test_sdft_waits_for_complete_spectrum() {
 }
 
 void test_sdft_resets_history_on_sample_rate_change() {
-  state.looptime_autodetect = 0;
   sdft_t axes[SDFT_AXES];
   for (auto &axis : axes) {
     memset(&axis, 0xff, sizeof(axis));
-    sdft_init(&axis);
+    sdft_init(&axis, 0);
     TEST_ASSERT_FALSE(sdft_push(&axis, 1.0f));
     TEST_ASSERT_FALSE(sdft_update(&axis));
   }
   uint8_t current_axis = SDFT_AXES;
   for (float period : periods) {
-    state.looptime_autodetect = period;
     const float previous_notch = axes[0].notch_hz[0];
+    for (auto &axis : axes) {
+      sdft_update_period(&axis, period);
+    }
     push_axes(axes, &current_axis, 0.5f);
     TEST_ASSERT_EQUAL_FLOAT(previous_notch, axes[0].notch_hz[0]);
     for (uint32_t k = 0; k < SDFT_BIN_COUNT; k++) {
@@ -149,5 +145,8 @@ void test_sdft_resets_history_on_sample_rate_change() {
     for (const auto &axis : axes) {
       assert_tone(&axis, 550.0f, 5.0f);
     }
+    const sdft_t previous = axes[0];
+    sdft_update_period(&axes[0], period);
+    TEST_ASSERT_EQUAL_MEMORY(&previous, &axes[0], sizeof(previous));
   }
 }

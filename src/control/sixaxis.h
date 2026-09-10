@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 void sixaxis_init();
+void sixaxis_filter_update(bool reset);
 void sixaxis_read();
 
 void sixaxis_gyro_cal();

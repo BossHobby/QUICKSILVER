@@ -341,3 +341,7 @@ void control_update_arming();
 void control_failsafe_update();
 bool control_failsafe_active();
 void control();
+
+// Apply filter configuration after edits (reset=true), or refresh timing while
+// retaining history (reset=false). Call between control iterations.
+void control_filter_update(bool reset);

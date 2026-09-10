@@ -54,14 +54,24 @@ void sixaxis_init() {
     failloop(FAILLOOP_GYRO);
   }
 
-  for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
-    filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq, task_get_period_us(TASK_GYRO));
-  }
+  sixaxis_filter_update(true);
 
   for (uint8_t i = 0; i < SDFT_AXES; i++) {
-    sdft_init(&gyro_sdft[i]);
     for (uint8_t j = 0; j < SDFT_PEAKS; j++) {
       filter_biquad_notch_init(&notch_filter[i][j], &notch_filter_state[i][j], 1, 0, task_get_period_us(TASK_GYRO));
+    }
+  }
+}
+
+void sixaxis_filter_update(bool reset) {
+  for (uint8_t i = 0; i < SDFT_AXES; i++) {
+    sdft_update_period(&gyro_sdft[i], task_get_period_us(TASK_GYRO));
+  }
+  for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
+    if (reset) {
+      filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq, task_get_period_us(TASK_GYRO));
+    } else {
+      filter_coeff(profile.filter.gyro[i].type, &filter[i], profile.filter.gyro[i].cutoff_freq, task_get_period_us(TASK_GYRO));
     }
   }
 }
@@ -129,9 +139,6 @@ static vec3_t sixaxis_apply_matrix(vec3_t v) {
 
 void sixaxis_read() {
   sixaxis_compute_matrix();
-
-  filter_coeff(profile.filter.gyro[0].type, &filter[0], profile.filter.gyro[0].cutoff_freq, task_get_period_us(TASK_GYRO));
-  filter_coeff(profile.filter.gyro[1].type, &filter[1], profile.filter.gyro[1].cutoff_freq, task_get_period_us(TASK_GYRO));
 
   const gyro_data_t data = gyro_read();
 
@@ -315,6 +322,7 @@ void sixaxis_acc_cal() {
 #else
 
 void sixaxis_init() {}
+void sixaxis_filter_update(bool reset) {}
 void sixaxis_read() {}
 
 void sixaxis_gyro_cal() {

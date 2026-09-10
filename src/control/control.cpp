@@ -5,6 +5,8 @@
 
 #include "control/gestures.h"
 #include "control/imu.h"
+#include "control/pid.h"
+#include "control/sixaxis.h"
 #include "driver/motor.h"
 #include "driver/time.h"
 #include "util/cbor_helper.h"
@@ -60,6 +62,11 @@ STATE_MEMBERS
 
 static uint32_t failsafe_phase_start_us = 0;
 static bool failsafe_rearm_allows_prearm_hold = false;
+
+void control_filter_update(bool reset) {
+  sixaxis_filter_update(reset);
+  pid_filter_update(reset);
+}
 
 const char *control_flight_mode_name(void) {
 #ifdef VEHICLE_ROVER

@@ -57,6 +57,7 @@ typedef struct {
   float notch_hz[SDFT_PEAKS];
 } sdft_t;
 
-void sdft_init(sdft_t *sdft);
+void sdft_init(sdft_t *sdft, float sample_period_us);
+void sdft_update_period(sdft_t *sdft, float sample_period_us);
 bool sdft_push(sdft_t *sdft, float val);
 bool sdft_update(sdft_t *sdft);

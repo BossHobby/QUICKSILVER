@@ -51,6 +51,7 @@ extern void test_vbat_integrates_elapsed_time_across_delays_and_wrap();
 
 // Filter tests
 extern void test_filter_init(void);
+extern void test_filter_reconfigure_type(void);
 extern void test_filter_lowpass_pt1(void);
 extern void test_filter_highfreq_attenuation(void);
 extern void test_filter_reset(void);
@@ -269,6 +270,7 @@ int main(int argc, char **argv) {
 
   // Filter tests
   RUN_TEST(test_filter_init);
+  RUN_TEST(test_filter_reconfigure_type);
   RUN_TEST(test_filter_lowpass_pt1);
   RUN_TEST(test_filter_highfreq_attenuation);
   RUN_TEST(test_filter_reset);

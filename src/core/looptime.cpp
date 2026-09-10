@@ -76,6 +76,9 @@ static void looptime_auto_detect() {
     state.looptime_autodetect = faster_period;
   }
   looptime_reset_window();
+  if (state.looptime_autodetect != previous_period) {
+    control_filter_update(false);
+  }
 }
 
 #ifdef PIO_UNIT_TESTING

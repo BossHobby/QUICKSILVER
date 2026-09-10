@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "control/control.h"
+#include "control/pid.h"
 #include "control/sixaxis.h"
 #include "core/debug.h"
 #include "core/flash.h"
@@ -225,6 +226,9 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
     check_cbor_error(QUIC_CMD_SET);
 
     flash_save();
+
+    control_filter_update(true);
+    pid_rates_update();
 
     servo_stop();
     servo_init();

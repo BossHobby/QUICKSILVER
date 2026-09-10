@@ -27,8 +27,8 @@ static constexpr vec3_t integral_limit = {{0.8f, 0.8f, 0.6f}};
 // PID scaling factors - pre-computed reciprocals for kp, ki, kd
 // These divisions are guaranteed to be evaluated at compile-time
 static constexpr vec3_t pid_scales[PID_SIZE] = {
-    {{1.0f / 628.0f, 1.0f / 628.0f, 1.0f / 314.0f}},     // kp
-    {{1.0f / 100.0f, 1.0f / 100.0f, 1.0f / 100.0f}},     // ki - includes historical 0.5x scaling from Silverware
+    {{1.0f / 628.0f, 1.0f / 628.0f, 1.0f / 314.0f}},       // kp
+    {{1.0f / 100.0f, 1.0f / 100.0f, 1.0f / 100.0f}},       // ki - includes historical 0.5x scaling from Silverware
     {{1.0f / 37500.0f, 1.0f / 37500.0f, 1.0f / 37500.0f}}, // kd - includes 0.0032 constant (0.0032 / 120 = 1 / 37500)
 };
 
@@ -37,6 +37,7 @@ static vec3_t lastsetpoint = {0};
 static vec3_t ierror = {0};
 static vec3_t last_error = {0};
 static vec3_t last_error2 = {0};
+static pid_rate_t scaled_rates;
 
 static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
@@ -44,6 +45,12 @@ static filter_t dynamic_filter;
 static filter_state_t dynamic_filter_state[3];
 static filter_lp_pt1 rx_filter;
 static filter_state_t rx_filter_state[3];
+
+#ifdef ITERM_RELAX
+static vec3_t avg_setpoint = {0};
+static float relax_coeff = 0;
+static float relax_coeff_yaw = 0;
+#endif
 
 void pid_reset_i(uint8_t axis) {
   ierror.axis[axis] = 0.0f;
@@ -62,48 +69,66 @@ const vec3_t *pid_get_ierror() {
 }
 
 void pid_init() {
+  pid_rates_update();
   filter_lp_pt1_init(&rx_filter, rx_filter_state, 3, state.rx_filter_hz, task_get_period_us(TASK_PID));
-  for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
-    filter_init(profile.filter.dterm[i].type, &filter[i], filter_state[i], 3, profile.filter.dterm[i].cutoff_freq, task_get_period_us(TASK_PID));
-  }
-  filter_init(profile.filter.dterm_dynamic_type, &dynamic_filter, dynamic_filter_state, 3, DTERM_DYNAMIC_FREQ_MAX, task_get_period_us(TASK_PID));
+  pid_filter_update(true);
   lastrate = (vec3_t){0};
   lastsetpoint = (vec3_t){0};
+#ifdef ITERM_RELAX
+  avg_setpoint = (vec3_t){0};
+#endif
   pid_reset_i();
+}
+
+void pid_rates_update() {
+  const pid_rate_t *rates = profile_current_pid_rates();
+  scaled_rates.kp = vec3_mul_elem(rates->kp, pid_scales[0]);
+  // Cache the Simpson sum's 1/3 factor; the measured loop time is applied in pid_calc().
+  scaled_rates.ki = vec3_mul(vec3_mul_elem(rates->ki, pid_scales[1]), 1.0f / 3.0f);
+  scaled_rates.kd = vec3_mul_elem(rates->kd, pid_scales[2]);
+}
+
+void pid_filter_update(bool reset) {
+  for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
+    if (reset) {
+      filter_init(profile.filter.dterm[i].type, &filter[i], filter_state[i], 3, profile.filter.dterm[i].cutoff_freq, task_get_period_us(TASK_PID));
+    } else {
+      filter_coeff(profile.filter.dterm[i].type, &filter[i], profile.filter.dterm[i].cutoff_freq, task_get_period_us(TASK_PID));
+    }
+  }
+  if (reset) {
+    filter_init(profile.filter.dterm_dynamic_type, &dynamic_filter, dynamic_filter_state, 3, DTERM_DYNAMIC_FREQ_MAX, task_get_period_us(TASK_PID));
+  }
+#ifdef ITERM_RELAX
+  const float sample_period = task_get_period_us(TASK_PID) * 1e-6f;
+  relax_coeff = lpfcalc(sample_period, 1.0f / (float)RELAX_FREQUENCY_HZ);
+  relax_coeff_yaw = lpfcalc(sample_period, 1.0f / (float)RELAX_FREQUENCY_HZ_YAW);
+#endif
 }
 
 static inline vec3_t pid_compute_iterm_windup_vec(const vec3_t *pid_output) {
   vec3_t windup = {.roll = 1.0f, .pitch = 1.0f, .yaw = 1.0f};
 
   for (uint8_t x = 0; x < PID_SIZE; x++) {
-    if ((pid_output->axis[x] >= out_limit.axis[x]) && (state.error.axis[x] > 0)) {
-      windup.axis[x] = 0.0f;
-    } else if ((pid_output->axis[x] <= -out_limit.axis[x]) && (state.error.axis[x] < 0)) {
-      windup.axis[x] = 0.0f;
-    }
 #ifdef ITERM_RELAX
-    else {
-      static vec3_t avg_setpoint = {.roll = 0, .pitch = 0, .yaw = 0};
-      static float lpf_coeff = 0;
-      static float lpf_coeff_yaw = 0;
-      if (lpf_coeff == 0) {
-        lpf_coeff = lpfcalc(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ);
-        lpf_coeff_yaw = lpfcalc(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ_YAW);
-      }
-      if (x < 2) {
-        lpf(&avg_setpoint.axis[x], state.setpoint.axis[x], lpf_coeff);
-        const float hpf_setpoint = fabsf(state.setpoint.axis[x] - avg_setpoint.axis[x]);
-        windup.axis[x] = MAX(1.0f - hpf_setpoint / RELAX_FACTOR, 0.0f);
-      }
+    if (x < 2) {
+      lpf(&avg_setpoint.axis[x], state.setpoint.axis[x], relax_coeff);
+      const float hpf_setpoint = fabsf(state.setpoint.axis[x] - avg_setpoint.axis[x]);
+      windup.axis[x] = MAX(1.0f - hpf_setpoint / RELAX_FACTOR, 0.0f);
+    }
 #ifdef ITERM_RELAX_YAW
-      else {
-        lpf(&avg_setpoint.axis[x], state.setpoint.axis[x], lpf_coeff_yaw);
-        const float hpf_setpoint = fabsf(state.setpoint.axis[x] - avg_setpoint.axis[x]);
-        windup.axis[x] = MAX(1.0f - hpf_setpoint / RELAX_FACTOR_YAW, 0.0f);
-      }
-#endif
+    else {
+      lpf(&avg_setpoint.axis[x], state.setpoint.axis[x], relax_coeff_yaw);
+      const float hpf_setpoint = fabsf(state.setpoint.axis[x] - avg_setpoint.axis[x]);
+      windup.axis[x] = MAX(1.0f - hpf_setpoint / RELAX_FACTOR_YAW, 0.0f);
     }
 #endif
+#endif
+    // Keep relax history current even while output saturation inhibits integration.
+    if ((pid_output->axis[x] >= out_limit.axis[x] && state.error.axis[x] > 0) ||
+        (pid_output->axis[x] <= -out_limit.axis[x] && state.error.axis[x] < 0)) {
+      windup.axis[x] = 0.0f;
+    }
   }
 
   return windup;
@@ -161,8 +186,6 @@ static inline float pid_tda_compensation() {
 
 void pid_calc() {
   filter_lp_pt1_coeff(&rx_filter, state.rx_filter_hz, task_get_period_us(TASK_PID));
-  filter_coeff(profile.filter.dterm[0].type, &filter[0], profile.filter.dterm[0].cutoff_freq, task_get_period_us(TASK_PID));
-  filter_coeff(profile.filter.dterm[1].type, &filter[1], profile.filter.dterm[1].cutoff_freq, task_get_period_us(TASK_PID));
 
   const float dynamic_throttle = state.throttle + state.throttle * (1.0f - state.throttle);
   const float dterm_dynamic_raw_freq = mapf(dynamic_throttle, 0.0f, 1.0f, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
@@ -184,11 +207,9 @@ void pid_calc() {
 
   const vec3_t setpoint_delta = vec3_sub(state.setpoint, lastsetpoint);
   const vec3_t gyro_delta = vec3_sub(state.gyro, lastrate);
-  const pid_rate_t *rates = profile_current_pid_rates();
-  const vec3_t current_kp = vec3_mul(vec3_mul_elem(rates->kp, pid_scales[0]), v_compensation);
-  const float ki_looptime = state.looptime * (1.0f / 3.0f);
-  const vec3_t current_ki = vec3_mul(vec3_mul_elem(rates->ki, pid_scales[1]), ki_looptime);
-  const vec3_t current_kd = vec3_mul(vec3_mul_elem(rates->kd, pid_scales[2]), state.looptime_inverse);
+  const vec3_t current_kp = vec3_mul(scaled_rates.kp, v_compensation);
+  const vec3_t current_ki = vec3_mul(scaled_rates.ki, state.looptime);
+  const vec3_t current_kd = vec3_mul(scaled_rates.kd, state.looptime_inverse);
   const vec3_t iterm_enable = pid_should_enable_iterm_vec();
   const vec3_t iterm_windup = pid_compute_iterm_windup_vec(&pid_output);
   const bool rx_filter_enabled = state.rx_filter_hz > 0.1f;

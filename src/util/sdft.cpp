@@ -4,7 +4,6 @@
 #include <math.h>
 #include <string.h>
 
-#include "control/control.h"
 #include "util/util.h"
 
 // from https://www.dsprelated.com/showarticle/776.php
@@ -26,9 +25,8 @@ static constexpr auto TWIDDLE = [] {
   return values;
 }();
 
-void sdft_init(sdft_t *sdft) {
+void sdft_init(sdft_t *sdft, float sample_period_us) {
   *sdft = {};
-  const float sample_period_us = state.looptime_autodetect;
   // Gyro initialization precedes scheduler/looptime initialization.
   if (sample_period_us <= 0.0f) {
     return;
@@ -45,16 +43,19 @@ void sdft_init(sdft_t *sdft) {
   sdft->bin_batches = (bin_count + sdft->sub_samples - 1) / sdft->sub_samples;
 }
 
-bool sdft_push(sdft_t *sdft, float val) {
-  if (state.looptime_autodetect <= 0.0f) {
-    return false;
-  }
-  if (sdft->sample_period_us != state.looptime_autodetect) {
+void sdft_update_period(sdft_t *sdft, float sample_period_us) {
+  if (sdft->sample_period_us != sample_period_us) {
     // Rebuild spectral history at the new rate, retaining applied centres.
     float notch_hz[SDFT_PEAKS];
     memcpy(notch_hz, sdft->notch_hz, sizeof(notch_hz));
-    sdft_init(sdft);
+    sdft_init(sdft, sample_period_us);
     memcpy(sdft->notch_hz, notch_hz, sizeof(notch_hz));
+  }
+}
+
+bool sdft_push(sdft_t *sdft, float val) {
+  if (sdft->sample_period_us <= 0.0f) {
+    return false;
   }
 
   sdft->update_samples++;
