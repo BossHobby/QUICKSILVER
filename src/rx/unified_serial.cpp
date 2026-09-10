@@ -273,7 +273,7 @@ bool rx_serial_check() {
     return false;
   }
 
-  state.rx_status = RX_STATUS_DETECTED + serial_rx_detected_protcol;
+  state.rx_status = unsigned(RX_STATUS_DETECTED) + unsigned(serial_rx_detected_protcol);
 
   const packet_status_t status = rx_serial_process(serial_rx_detected_protcol);
 
