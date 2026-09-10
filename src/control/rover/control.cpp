@@ -235,8 +235,9 @@ static void rover_calc_steering() {
 
       debug_throttle_assist = rover_debug_scale(throttle_assist);
 
-      state.throttle += throttle_assist * copysignf(1.0f, state.throttle);
-      state.throttle = constrain(state.throttle, -1.0f, 1.0f);
+      // Throttle assistance may stop drive, but must not reverse the pilot's command.
+      const float throttle_magnitude = constrain(fabsf(state.throttle) + throttle_assist, 0.0f, 1.0f);
+      state.throttle = copysignf(throttle_magnitude, state.throttle);
     } else {
       rover_rate_throttle_filter_state.delay_element[0] = 0.0f;
     }
