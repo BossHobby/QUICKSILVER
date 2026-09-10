@@ -86,8 +86,8 @@ static wing_mode_t wing_active_mode() {
   return WING_MODE_MANUAL;
 }
 
-static void wing_calc_stabilized(wing_mode_t mode) {
-  if (state.wing_launch_state == WING_LAUNCH_ACTIVE || state.wing_launch_state == WING_LAUNCH_FINISH) {
+static void wing_calc_stabilized(wing_mode_t mode, bool launch_stabilized) {
+  if (launch_stabilized) {
     const float target_pitch = profile.wing.autolaunch.pitch_angle * DEGTORAD;
     float pitch = target_pitch;
     if (state.wing_launch_state == WING_LAUNCH_FINISH) {
@@ -314,6 +314,9 @@ static float wing_autolaunch_throttle() {
   const bool launch_aux_on = rx_aux_on(AUX_AUTOLAUNCH);
   if (!flags.arm_state) {
     state.wing_launch_available = launch_aux_on;
+  } else if (flags.failsafe) {
+    // A recovered link must not restart launch detection while still armed.
+    state.wing_launch_available = false;
   }
 
   if (!launch_aux_on || !flags.arm_state || flags.failsafe) {
@@ -470,14 +473,16 @@ void control() {
   state.throttle = wing_autolaunch_throttle();
   wing_launch_reset_pids_if_needed();
   const wing_mode_t wing_mode = wing_active_mode();
-  if (wing_mode == WING_MODE_MANUAL && state.wing_launch_state != WING_LAUNCH_ACTIVE && state.wing_launch_state != WING_LAUNCH_FINISH) {
+  const bool launch_stabilized = rx_aux_on(AUX_AUTOLAUNCH) && state.wing_launch_available &&
+                                 !flags.failsafe && state.wing_launch_state < WING_LAUNCH_DONE;
+  if (wing_mode == WING_MODE_MANUAL && !launch_stabilized) {
     pid_reset_i();
     state.mixer_source[OUTPUT_SOURCE_THROTTLE] = state.throttle;
     state.mixer_source[OUTPUT_SOURCE_ROLL] = constrain(state.rx_filtered.roll, -1.0f, 1.0f);
     state.mixer_source[OUTPUT_SOURCE_PITCH] = constrain(state.rx_filtered.pitch, -1.0f, 1.0f);
     state.mixer_source[OUTPUT_SOURCE_YAW] = constrain(state.rx_filtered.yaw, -1.0f, 1.0f);
   } else {
-    wing_calc_stabilized(wing_mode);
+    wing_calc_stabilized(wing_mode, launch_stabilized);
   }
 
   if (flags.motortest_override) {
