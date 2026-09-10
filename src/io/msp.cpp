@@ -355,7 +355,7 @@ static uint32_t msp_serial_function_mask_for_port(serial_ports_t port) {
 #endif
 
 static void msp_send_passthrough_result(msp_t *msp, msp_magic_t magic, uint16_t cmd, bool success) {
-  uint8_t data[1] = {success ? 1 : 0};
+  uint8_t data[1] = {uint8_t(success)};
   msp_send_reply(msp, magic, cmd, data, 1);
 }
 
@@ -872,7 +872,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
     uint16_t freq = (payload[1] << 8) | payload[0];
     remaining -= 2;
-    if (freq < VTX_BAND_MAX * VTX_CHANNEL_MAX) {
+    if (freq < unsigned(VTX_BAND_MAX) * unsigned(VTX_CHANNEL_MAX)) {
       *target.band = static_cast<vtx_band_t>(freq / VTX_CHANNEL_MAX);
       *target.channel = static_cast<vtx_channel_t>(freq % VTX_CHANNEL_MAX);
     } else {

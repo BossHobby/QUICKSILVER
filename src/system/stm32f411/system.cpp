@@ -82,7 +82,7 @@ static void SetSysClock() {
   /* Wait till HSE is ready and if Time out is reached exit */
   do {
     HSEStatus = RCC->CR & RCC_CR_HSERDY;
-    StartUpCounter++;
+    StartUpCounter = StartUpCounter + 1;
   } while ((HSEStatus == 0) && (StartUpCounter != HSE_STARTUP_TIMEOUT));
 
   if ((RCC->CR & RCC_CR_HSERDY) != RESET) {
