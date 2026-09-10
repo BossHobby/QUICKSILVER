@@ -3,6 +3,7 @@
 #include "mock_helpers.h"
 
 // Test declarations
+extern void test_resource_timer_tag_roundtrip();
 // Filter tests
 extern void test_filter_init(void);
 extern void test_filter_lowpass_pt1(void);
@@ -142,6 +143,7 @@ void tearDown(void) {
 // Main test runner
 int main(int argc, char **argv) {
   UNITY_BEGIN();
+  RUN_TEST(test_resource_timer_tag_roundtrip);
 
   // Filter tests
   RUN_TEST(test_filter_init);
