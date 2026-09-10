@@ -176,10 +176,10 @@
 #define ICM42605_INT1_POLARITY_ACTIVE_LOW (0 << 0)
 #define ICM42605_INT1_POLARITY_ACTIVE_HIGH (1 << 0)
 
-#define ICM42605_UI_DRDY_INT_CLEAR_ON_SBR ((0 << 5) || (0 << 4))
-#define ICM42605_UI_DRDY_INT_CLEAR_ON_SBR_DUPLICATE ((0 << 5) || (0 << 4)) // duplicate settings in datasheet, Rev 1.2.
-#define ICM42605_UI_DRDY_INT_CLEAR_ON_F1BR ((1 << 5) || (0 << 4))
-#define ICM42605_UI_DRDY_INT_CLEAR_ON_SBR_AND_F1BR ((1 << 5) || (1 << 4))
+#define ICM42605_UI_DRDY_INT_CLEAR_ON_SBR ((0 << 5) | (0 << 4))
+#define ICM42605_UI_DRDY_INT_CLEAR_ON_SBR_DUPLICATE ((0 << 5) | (0 << 4)) // duplicate settings in datasheet, Rev 1.2.
+#define ICM42605_UI_DRDY_INT_CLEAR_ON_F1BR ((1 << 5) | (0 << 4))
+#define ICM42605_UI_DRDY_INT_CLEAR_ON_SBR_AND_F1BR ((1 << 5) | (1 << 4))
 
 #define ICM42605_INT_ASYNC_RESET_BIT 4
 #define ICM42605_INT_TDEASSERT_DISABLE_BIT 5

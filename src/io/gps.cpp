@@ -283,16 +283,16 @@ static void gps_crc(uint8_t *ck_a, uint8_t *ck_b, uint8_t data) {
 }
 
 static bool gps_send_message(const uint16_t class_id, const uint8_t *payload, const uint16_t size) {
-  if (serial_bytes_free(&serial_gps) < 8 + size)
+  if (serial_bytes_free(&serial_gps) < 8u + size)
     return false;
 
   const uint8_t header[] = {
       UBX_SYNC1_CHAR,
       UBX_SYNC2_CHAR,
-      class_id >> 8,
-      class_id & 0xff,
-      size & 0xFF,
-      size >> 8,
+      uint8_t(class_id >> 8),
+      uint8_t(class_id & 0xff),
+      uint8_t(size & 0xFF),
+      uint8_t(size >> 8),
   };
 
   uint8_t crc[2] = {0, 0};
@@ -318,10 +318,10 @@ static void gps_send_cfg_valset(uint32_t key, uint8_t value, uint8_t layer) {
         layer,
         0,
         0,
-        key & 0xff,
-        (key >> 8) & 0xff,
-        (key >> 16) & 0xff,
-        (key >> 24) & 0xff,
+        uint8_t(key & 0xff),
+        uint8_t((key >> 8) & 0xff),
+        uint8_t((key >> 16) & 0xff),
+        uint8_t((key >> 24) & 0xff),
         value,
     };
     gps_send_message(UBX_CFG_VALSET, cfg_valset, sizeof(cfg_valset));
