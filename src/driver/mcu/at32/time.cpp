@@ -24,22 +24,22 @@ void time_init() {
 }
 
 extern "C" void SysTick_Handler() {
-  systick_count++;
+  systick_count = systick_count + 1;
   systick_val = SysTick->VAL;
   systick_pending = 0;
   (void)(SysTick->CTRL);
 }
 
 uint32_t time_micros_isr() {
-  register uint32_t ticks = SysTick->VAL;
+  uint32_t ticks = SysTick->VAL;
 
   if (SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) {
     systick_pending = 1;
     ticks = SysTick->VAL;
   }
 
-  register uint32_t count = systick_count;
-  register uint32_t pending = systick_pending;
+  uint32_t count = systick_count;
+  uint32_t pending = systick_pending;
 
   return ((count + pending) * 1000) + (TICKS_PER_US * 1000 - ticks) / TICKS_PER_US;
 }
@@ -49,8 +49,8 @@ uint32_t time_micros() {
     return time_micros_isr();
   }
 
-  register uint32_t count = 0;
-  register uint32_t ticks = 0;
+  uint32_t count = 0;
+  uint32_t ticks = 0;
 
   do {
     // number of 1ms systicks

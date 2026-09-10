@@ -148,7 +148,15 @@ extern "C" {
 #include "at32f435_437_sdio.h"
 #endif
 #ifdef XMC_MODULE_ENABLED
+// The vendor API uses a deprecated volatile-qualified value parameter.
+#ifdef __cplusplus
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvolatile"
+#endif
 #include "at32f435_437_xmc.h"
+#ifdef __cplusplus
+#pragma GCC diagnostic pop
+#endif
 #endif
 #ifdef ACC_MODULE_ENABLED
 #include "at32f435_437_acc.h"
