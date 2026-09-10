@@ -91,28 +91,40 @@ cbor_result_t cbor_encode_resource_tag_t(cbor_value_t *enc, const resource_tag_t
       break;
     }
     break;
-  case RESOURCE_TIM:
+  case RESOURCE_TIM: {
+    uint32_t timer_number = 0;
+    switch (TIMER_TAG_TIM(*d)) {
+#define TIMER(_num)       \
+  case TIMER##_num:       \
+    timer_number = _num;  \
+    break;
+      TIMERS
+#undef TIMER
+    default:
+      break;
+    }
     switch (TIMER_TAG_CH(*d)) {
     case TIMER_CH1:
     case TIMER_CH1N:
-      len = snprintf(tag, 64, "TIMER%d_CH1", TIMER_TAG_TIM(*d));
+      len = snprintf(tag, 64, "TIMER%u_CH1", timer_number);
       break;
     case TIMER_CH2:
     case TIMER_CH2N:
-      len = snprintf(tag, 64, "TIMER%d_CH2", TIMER_TAG_TIM(*d));
+      len = snprintf(tag, 64, "TIMER%u_CH2", timer_number);
       break;
     case TIMER_CH3:
     case TIMER_CH3N:
-      len = snprintf(tag, 64, "TIMER%d_CH3", TIMER_TAG_TIM(*d));
+      len = snprintf(tag, 64, "TIMER%u_CH3", timer_number);
       break;
     case TIMER_CH4:
     case TIMER_CH4N:
-      len = snprintf(tag, 64, "TIMER%d_CH4", TIMER_TAG_TIM(*d));
+      len = snprintf(tag, 64, "TIMER%u_CH4", timer_number);
       break;
     default:
       break;
     }
     break;
+  }
   default:
     break;
   }
