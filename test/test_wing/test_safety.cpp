@@ -99,18 +99,54 @@ static void prepare_launch() {
   TEST_ASSERT_EQUAL_FLOAT(MOTOR_OFF, state.output[0]);
 }
 
+static void assert_launch_stabilized() {
+  TEST_ASSERT_TRUE(state.setpoint.roll < 0);
+  TEST_ASSERT_TRUE(state.pidoutput.roll < 0);
+  TEST_ASSERT_TRUE(state.setpoint.pitch > 0);
+  TEST_ASSERT_TRUE(state.pidoutput.pitch > 0);
+}
+
+static void test_wing_launch_stabilizes_while_waiting_and_releases_on_switch_off() {
+  prepare(1U << AUX_AUTOLAUNCH);
+  state.GEstG = {{0.5f, 0, 0.8660254f}};
+  tick();
+  TEST_ASSERT_EQUAL(WING_LAUNCH_IDLE, state.wing_launch_state);
+  assert_launch_stabilized();
+  state.rx_filtered.throttle = 0.5f;
+  tick();
+  TEST_ASSERT_EQUAL(WING_LAUNCH_IDLE_DELAY, state.wing_launch_state);
+  assert_launch_stabilized();
+  tick(1500);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_WAIT, state.wing_launch_state);
+  assert_launch_stabilized();
+  state.aux_active |= 1U << AUX_ACROMODE;
+  tick();
+  assert_launch_stabilized();
+  state.aux_active |= 1U << AUX_LEVELMODE;
+  tick();
+  assert_launch_stabilized();
+  state.aux_active &= ~((1U << AUX_AUTOLAUNCH) | (1U << AUX_ACROMODE) | (1U << AUX_LEVELMODE));
+  tick();
+  TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[1]);
+  TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[2]);
+}
+
 static void launch_to_active() {
   prepare_launch();
+  state.GEstG = {{0.5f, 0, 0.8660254f}};
   state.accel_raw.pitch = 2.0f;
   tick(profile.wing.autolaunch.detect_time_ms + 1);
   TEST_ASSERT_EQUAL(WING_LAUNCH_DETECTED, state.wing_launch_state);
+  assert_launch_stabilized();
   tick();
   TEST_ASSERT_EQUAL(WING_LAUNCH_MOTOR_DELAY, state.wing_launch_state);
+  assert_launch_stabilized();
   state.accel_raw.pitch = 0;
   tick(profile.wing.autolaunch.motor_delay_ms - 1);
   TEST_ASSERT_EQUAL_FLOAT(MOTOR_OFF, state.output[0]);
   tick();
   TEST_ASSERT_EQUAL(WING_LAUNCH_SPINUP, state.wing_launch_state);
+  assert_launch_stabilized();
   tick(profile.wing.autolaunch.spinup_ms);
   TEST_ASSERT_EQUAL(WING_LAUNCH_ACTIVE, state.wing_launch_state);
   TEST_ASSERT_TRUE(state.setpoint.pitch > 0);
@@ -132,8 +168,11 @@ static void test_wing_launch_delay_ramp_and_timed_handoff() {
   TEST_ASSERT_FLOAT_WITHIN(0.001f, profile.wing.autolaunch.throttle, state.throttle);
   tick(profile.wing.autolaunch.timeout_ms);
   TEST_ASSERT_EQUAL(WING_LAUNCH_FINISH, state.wing_launch_state);
+  assert_launch_stabilized();
   tick(profile.wing.autolaunch.finish_ms);
   TEST_ASSERT_EQUAL(WING_LAUNCH_DONE, state.wing_launch_state);
+  TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[1]);
+  TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[2]);
   tick();
   TEST_ASSERT_FALSE(state.wing_launch_available);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, (0.5f - 0.05f) * 1.0526316f, state.throttle);
@@ -151,6 +190,54 @@ static void test_wing_launch_failsafe_stops_motor_and_disarms() {
   TEST_ASSERT_TRUE(flags.failsafe_outputs_blocked);
   TEST_ASSERT_EQUAL_FLOAT(MOTOR_OFF, state.output[0]);
   TEST_ASSERT_EQUAL(WING_LAUNCH_IDLE, state.wing_launch_state);
+}
+
+static void test_wing_launch_abort_returns_surfaces_to_manual() {
+  launch_to_active();
+  state.rx_filtered.roll = 0.2f;
+  tick();
+  TEST_ASSERT_EQUAL(WING_LAUNCH_ABORTED, state.wing_launch_state);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.2f, pwm_values[1]);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, -0.2f, pwm_values[2]);
+}
+
+static void test_wing_launch_stage1_recovery_requires_disarm_before_relaunch() {
+  launch_to_active();
+  state.last_frame_time_us = time_micros();
+  flags.failsafe_signal_lost = 1;
+  tick(FAILSAFE_HOLD_TIME_US / 1000 - 1);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_ACTIVE, state.wing_launch_state);
+  TEST_ASSERT_TRUE(state.wing_launch_available);
+  tick(1);
+  TEST_ASSERT_EQUAL(FAILSAFE_PHASE_STAGE1_GUARD, state.failsafe_phase);
+  TEST_ASSERT_TRUE(flags.arm_state);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_IDLE, state.wing_launch_state);
+  TEST_ASSERT_FALSE(state.wing_launch_available);
+
+  flags.failsafe_signal_lost = 0;
+  state.rx_filtered.throttle = 0.5f;
+  state.accel_raw.pitch = 2.0f; // Even a fresh launch trigger must be ignored.
+  tick(2000);
+  TEST_ASSERT_TRUE(flags.arm_state);
+  TEST_ASSERT_FALSE(flags.failsafe);
+  TEST_ASSERT_FALSE(state.wing_launch_available);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_IDLE, state.wing_launch_state);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, (0.5f - 0.05f) * 1.0526316f, state.throttle);
+  TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[1]);
+  TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[2]);
+
+  state.aux_active &= ~(1U << AUX_ARMING);
+  state.rx_filtered.throttle = 0;
+  state.accel_raw.pitch = 0;
+  tick(2);
+  TEST_ASSERT_FALSE(flags.arm_state);
+  TEST_ASSERT_TRUE(state.wing_launch_available);
+  state.aux_active |= 1U << AUX_ARMING;
+  tick();
+  TEST_ASSERT_TRUE(flags.arm_state);
+  state.rx_filtered.throttle = 0.5f;
+  tick();
+  TEST_ASSERT_EQUAL(WING_LAUNCH_WAIT, state.wing_launch_state);
 }
 
 static void test_wing_launch_zero_level_limit_and_zero_pitch_stays_finite() {
@@ -221,9 +308,12 @@ static void test_wing_default_level_response_has_no_derivative_kick_or_voltage_b
 void run_wing_safety_tests() {
   RUN_TEST(test_wing_angle_corrects_roll_and_pitch_in_both_directions);
   RUN_TEST(test_wing_angle_stick_commands_and_manual_handoff);
+  RUN_TEST(test_wing_launch_stabilizes_while_waiting_and_releases_on_switch_off);
   RUN_TEST(test_wing_launch_rejects_short_acceleration_pulse);
   RUN_TEST(test_wing_launch_delay_ramp_and_timed_handoff);
   RUN_TEST(test_wing_launch_failsafe_stops_motor_and_disarms);
+  RUN_TEST(test_wing_launch_abort_returns_surfaces_to_manual);
+  RUN_TEST(test_wing_launch_stage1_recovery_requires_disarm_before_relaunch);
   RUN_TEST(test_wing_launch_zero_level_limit_and_zero_pitch_stays_finite);
   RUN_TEST(test_wing_imu_tracks_scripted_bank);
   RUN_TEST(test_wing_default_rate_response_across_profiles_and_loop_times);
