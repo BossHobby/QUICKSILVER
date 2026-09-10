@@ -20,6 +20,7 @@ enum {
   ROVER_DEBUG_DECEL_FACTOR,
   ROVER_DEBUG_THROTTLE_ASSIST,
   ROVER_DEBUG_ACCEL_FACTOR,
+  ROVER_DEBUG_ACCEL_FORWARD,
 };
 
 #define ROVER_PID_KP_SCALE (1.0f / 628.0f)
@@ -33,14 +34,18 @@ enum {
 #define ROVER_STEERING_THROTTLE_ACCEL_HZ 4.0f
 #define ROVER_STEERING_THROTTLE_DECEL_HZ 4.0f
 #define ROVER_STEERING_THROTTLE_ACCEL_MIN_FACTOR 0.125f
-#define ROVER_STEERING_THROTTLE_DECEL_MIN_FACTOR 0.125f
 #define ROVER_STEERING_ACCEL_RESPONSE 0.20f
+#define ROVER_STEERING_COAST_RATE 0.15f
+#define ROVER_STEERING_ACCEL_FILTER_HZ 10.0f
 
 static float rover_last_gyro_yaw = 0.0f;
 static float rover_ierror_yaw = 0.0f;
 static float rover_last_error_yaw = 0.0f;
 static float rover_last_error_yaw2 = 0.0f;
 static float rover_steering_throttle = 0.0f;
+static float rover_motion_direction = 1.0f;
+static filter_lp_pt1 rover_accel_filter;
+static filter_state_t rover_accel_filter_state;
 static filter_t rover_dterm_filter[FILTER_MAX_SLOTS];
 static filter_state_t rover_dterm_filter_state[FILTER_MAX_SLOTS];
 static filter_t rover_dterm_dynamic_filter;
@@ -120,19 +125,37 @@ static float rover_steering_scale() {
   const float throttle_abs = constrain(fabsf(state.throttle), 0.0f, 1.0f);
   float accel_factor = 0.0f;
   float decel_factor = 0.0f;
+  float accel_forward_filtered = 0.0f;
 
   if (!flags.arm_state || flags.failsafe) {
     rover_steering_throttle = 0.0f;
-  } else if (throttle_abs > rover_steering_throttle) {
-    accel_factor = rover_steering_rate_factor(-state.accel.pitch, ROVER_STEERING_THROTTLE_ACCEL_MIN_FACTOR);
-    const float attack_hz = ROVER_STEERING_THROTTLE_ACCEL_HZ * accel_factor;
-    const float alpha = constrain(state.looptime * attack_hz, 0.0f, 1.0f);
-    rover_steering_throttle += (throttle_abs - rover_steering_throttle) * alpha;
+    rover_accel_filter_state = {};
+    rover_motion_direction = 1.0f;
   } else {
-    decel_factor = rover_steering_rate_factor(state.accel.pitch, ROVER_STEERING_THROTTLE_DECEL_MIN_FACTOR);
-    const float decay_hz = ROVER_STEERING_THROTTLE_DECEL_HZ * decel_factor;
-    const float alpha = constrain(state.looptime * decay_hz, 0.0f, 1.0f);
+    // Both inputs are in body axes and g. The IMU's filtered accel is normalized,
+    // so use raw accel and filter the gravity-compensated component separately.
+    const float accel_forward = constrain(state.GEstG.pitch - state.accel_raw.pitch, -1.0f, 1.0f);
+    filter_lp_pt1_coeff(&rover_accel_filter, ROVER_STEERING_ACCEL_FILTER_HZ, task_get_period_us(TASK_PID));
+    accel_forward_filtered = filter_lp_pt1_step(&rover_accel_filter, &rover_accel_filter_state, accel_forward);
+    if (throttle_abs > 0.0f) {
+      rover_motion_direction = copysignf(1.0f, state.throttle);
+    }
+    // Retain the last commanded direction through neutral. This is only a
+    // scaling heuristic; during a reversal it cannot establish travel direction.
+    const float accel_along_drive = accel_forward_filtered * rover_motion_direction;
+    float response_rate;
+    if (throttle_abs > rover_steering_throttle) {
+      accel_factor = rover_steering_rate_factor(accel_along_drive, ROVER_STEERING_THROTTLE_ACCEL_MIN_FACTOR);
+      response_rate = ROVER_STEERING_THROTTLE_ACCEL_HZ * accel_factor;
+    } else {
+      decel_factor = rover_accel_response(-accel_along_drive);
+      response_rate = ROVER_STEERING_COAST_RATE +
+                      (ROVER_STEERING_THROTTLE_DECEL_HZ - ROVER_STEERING_COAST_RATE) * decel_factor;
+    }
+    const float response = state.looptime * response_rate;
+    const float alpha = response / (1.0f + response);
     rover_steering_throttle += (throttle_abs - rover_steering_throttle) * alpha;
+    rover_steering_throttle = constrain(rover_steering_throttle, 0.0f, 1.0f);
   }
 
   const float steering_scale = rover_throttle_scale(rover_steering_throttle);
@@ -140,6 +163,7 @@ static float rover_steering_scale() {
   blackbox_set_debug(BBOX_DEBUG_ROVER, ROVER_DEBUG_STEERING_THROTTLE, rover_debug_scale(rover_steering_throttle));
   blackbox_set_debug(BBOX_DEBUG_ROVER, ROVER_DEBUG_DECEL_FACTOR, rover_debug_scale(decel_factor));
   blackbox_set_debug(BBOX_DEBUG_ROVER, ROVER_DEBUG_ACCEL_FACTOR, rover_debug_scale(accel_factor));
+  blackbox_set_debug(BBOX_DEBUG_ROVER, ROVER_DEBUG_ACCEL_FORWARD, rover_debug_scale(accel_forward_filtered));
 
   return steering_scale;
 }
@@ -185,6 +209,7 @@ static void rover_calc_steering() {
   const float drive_direction = state.throttle < 0.0f ? -1.0f : 1.0f;
   const float yaw_stick = state.rx_filtered.yaw;
   const float steering_scale = rover_steering_scale();
+  const float steering_limit = steer_mode == ROVER_STEER_MODE_MANUAL ? steering_scale : 1.0f;
 
   const float gyro_yaw = state.gyro.yaw * drive_direction;
   const float gyro_delta = (state.gyro.yaw - rover_last_gyro_yaw) * drive_direction;
@@ -197,7 +222,7 @@ static void rover_calc_steering() {
   state.pid_d_term = (vec3_t){0};
   state.pidoutput = (vec3_t){0};
 
-  state.setpoint.yaw = rover_yaw_rate(yaw_stick);
+  state.setpoint.yaw = rover_yaw_rate(yaw_stick) * steering_scale;
   state.error.yaw = state.setpoint.yaw - gyro_yaw;
 
   switch (steer_mode) {
@@ -210,16 +235,16 @@ static void rover_calc_steering() {
 
   case ROVER_STEER_MODE_RATE_THROTTLE:
   case ROVER_STEER_MODE_RATE_ASSIST: {
-    state.pid_p_term.yaw = state.error.yaw * profile.rover.pid.kp * ROVER_PID_KP_SCALE * steering_scale;
+    state.pid_p_term.yaw = state.error.yaw * profile.rover.pid.kp * ROVER_PID_KP_SCALE;
 
     filter_coeff(profile.filter.dterm[0].type, &rover_dterm_filter[0], profile.filter.dterm[0].cutoff_freq, task_get_period_us(TASK_PID));
     filter_coeff(profile.filter.dterm[1].type, &rover_dterm_filter[1], profile.filter.dterm[1].cutoff_freq, task_get_period_us(TASK_PID));
     filter_coeff(profile.filter.dterm_dynamic_type, &rover_dterm_dynamic_filter, rover_dterm_dynamic_frequency(), task_get_period_us(TASK_PID));
-    const float gyro_derivative = -gyro_delta * profile.rover.pid.kd * ROVER_PID_KD_SCALE * state.looptime_inverse * steering_scale;
+    const float gyro_derivative = -gyro_delta * profile.rover.pid.kd * ROVER_PID_KD_SCALE * state.looptime_inverse;
     state.pid_d_term.yaw = rover_filter_dterm(gyro_derivative);
 
     const float pid_no_i = state.pid_p_term.yaw + state.pid_d_term.yaw;
-    state.pid_i_term.yaw = rover_update_iterm(yaw_stick, pid_no_i, steering_scale);
+    state.pid_i_term.yaw = rover_update_iterm(yaw_stick, pid_no_i, steering_limit);
 
     state.pidoutput.yaw = pid_no_i + state.pid_i_term.yaw;
     break;
@@ -246,10 +271,10 @@ static void rover_calc_steering() {
   }
 
   const float unconstrained_steering = state.pidoutput.yaw;
-  state.pidoutput.yaw = constrain(state.pidoutput.yaw, -steering_scale, steering_scale);
-  if (unconstrained_steering < -steering_scale) {
+  state.pidoutput.yaw = constrain(state.pidoutput.yaw, -steering_limit, steering_limit);
+  if (unconstrained_steering < -steering_limit) {
     debug_steering_clamp = -1;
-  } else if (unconstrained_steering > steering_scale) {
+  } else if (unconstrained_steering > steering_limit) {
     debug_steering_clamp = 1;
   }
 
@@ -320,7 +345,10 @@ void pid_init() {
   rover_ierror_yaw = 0.0f;
   rover_last_error_yaw = 0.0f;
   rover_last_error_yaw2 = 0.0f;
+  filter_lp_pt1_init(&rover_accel_filter, &rover_accel_filter_state, 1,
+                     ROVER_STEERING_ACCEL_FILTER_HZ, task_get_period_us(TASK_PID));
   rover_steering_throttle = 0.0f;
+  rover_motion_direction = 1.0f;
 }
 
 void control() {

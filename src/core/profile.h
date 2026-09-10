@@ -552,6 +552,8 @@ typedef struct {
   rover_pid_rate_t pid;
   float center_deadband;
   float yaw_rate;
+  // Motion-based scaling: manual steering travel, or assisted yaw-rate demand.
+  // Assisted PID gains and correction travel are not reduced. Breakpoint 1 disables it.
   float throttle_scale_breakpoint;
   float throttle_scale_factor;
   uint8_t reversible;
