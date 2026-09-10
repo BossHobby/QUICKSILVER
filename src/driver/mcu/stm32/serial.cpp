@@ -347,7 +347,7 @@ static void serial_dma_sync_rx(serial_port_t *serial) {
     dma_clear_flag_tc(dma);
   }
   if (transfer_error) {
-    serial->rx_error_count++;
+    serial->rx_error_count = serial->rx_error_count + 1;
   }
 
   const uint32_t pos = (rx_buffer->size - LL_DMA_GetDataLength(dma->port, dma->stream_index)) % rx_buffer->size;
@@ -361,7 +361,7 @@ static void serial_dma_sync_rx(serial_port_t *serial) {
   }
 
   if (received > ring_buffer_free(rx_buffer)) {
-    serial->rx_error_count++;
+    serial->rx_error_count = serial->rx_error_count + 1;
     rx_buffer->tail = (pos + 1) % rx_buffer->size;
   }
 
@@ -653,7 +653,7 @@ static void handle_serial_isr(serial_port_t *serial) {
   if (noise_error)
     LL_USART_ClearFlag_NE(port->channel);
 #endif
-  serial->rx_error_count += overrun_error + parity_error + framing_error + noise_error;
+  serial->rx_error_count = serial->rx_error_count + overrun_error + parity_error + framing_error + noise_error;
 
   if (LL_USART_IsEnabledIT_RXNE(port->channel) && LL_USART_IsActiveFlag_RXNE(port->channel)) {
     const volatile uint8_t data = LL_USART_ReceiveData8(port->channel);

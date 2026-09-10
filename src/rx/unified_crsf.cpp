@@ -254,22 +254,22 @@ static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
 
     const crsf_channels_t *chan = (crsf_channels_t *)&rx_data[1];
     const uint16_t raw_channels[RX_CHANNEL_MAX] = {
-        chan->chan0,
-        chan->chan1,
-        chan->chan2,
-        chan->chan3,
-        chan->chan4,
-        chan->chan5,
-        chan->chan6,
-        chan->chan7,
-        chan->chan8,
-        chan->chan9,
-        chan->chan10,
-        chan->chan11,
-        chan->chan12,
-        chan->chan13,
-        chan->chan14,
-        chan->chan15,
+        uint16_t(chan->chan0),
+        uint16_t(chan->chan1),
+        uint16_t(chan->chan2),
+        uint16_t(chan->chan3),
+        uint16_t(chan->chan4),
+        uint16_t(chan->chan5),
+        uint16_t(chan->chan6),
+        uint16_t(chan->chan7),
+        uint16_t(chan->chan8),
+        uint16_t(chan->chan9),
+        uint16_t(chan->chan10),
+        uint16_t(chan->chan11),
+        uint16_t(chan->chan12),
+        uint16_t(chan->chan13),
+        uint16_t(chan->chan14),
+        uint16_t(chan->chan15),
     };
 
     for (uint8_t channel = 0; channel < RX_CHANNEL_MAX; channel++) {

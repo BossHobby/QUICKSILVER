@@ -104,7 +104,7 @@ void dshot_dma_isr(const dma_device_t dev) {
   const dshot_gpio_port_t *port = dshot_gpio_for_device(dev);
   timer_enable_dma_request(TIMER_TAG_TIM(port->timer_tag), TIMER_TAG_CH(port->timer_tag), false);
 
-  dshot_phase--;
+  dshot_phase = dshot_phase - 1;
 
   if (profile.motor.dshot_telemetry && dshot_phase == dshot_gpio_port_count) {
     // output phase done, lets swap to input
