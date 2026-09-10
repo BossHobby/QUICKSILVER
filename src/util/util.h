@@ -32,17 +32,21 @@ constexpr float M_PI_F = 3.14159265358979323846f;
 template <typename T, typename L, typename U>
 constexpr auto constrain(T val, L lower, U upper) {
   // Unary + preserves the C conditional operator's integer promotions.
-  return (val < lower) ? +lower : ((val > upper) ? +upper : +val);
+  using lower_type = std::common_type_t<decltype(+val), decltype(+lower)>;
+  using upper_type = std::common_type_t<decltype(+val), decltype(+upper)>;
+  return (lower_type(val) < lower_type(lower)) ? +lower : ((upper_type(val) > upper_type(upper)) ? +upper : +val);
 }
 
 template <typename T, typename U>
 constexpr auto MIN(T a, U b) {
-  return +a < +b ? +a : +b;
+  using common_type = std::common_type_t<decltype(+a), decltype(+b)>;
+  return common_type(a) < common_type(b) ? +a : +b;
 }
 
 template <typename T, typename U>
 constexpr auto MAX(T a, U b) {
-  return +a > +b ? +a : +b;
+  using common_type = std::common_type_t<decltype(+a), decltype(+b)>;
+  return common_type(a) > common_type(b) ? +a : +b;
 }
 
 #define MHZ_TO_HZ(mhz) (mhz * 1000000)

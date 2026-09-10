@@ -761,12 +761,12 @@ void test_crsf_negotiated_baudrate_falls_back_to_default_on_serial_errors(void) 
   ring_buffer_clear(serial_rx.tx_buffer);
 
   for (uint32_t i = 0; i < 199; i++) {
-    serial_rx.rx_error_count++;
+    serial_rx.rx_error_count = serial_rx.rx_error_count + 1;
     TEST_ASSERT_FALSE(rx_serial_check());
     TEST_ASSERT_EQUAL_UINT32(1500000U, serial_rx.config.baudrate);
   }
 
-  serial_rx.rx_error_count++;
+  serial_rx.rx_error_count = serial_rx.rx_error_count + 1;
 
   TEST_ASSERT_FALSE(rx_serial_check());
   TEST_ASSERT_EQUAL_UINT32(CRSF_BAUDRATE_DEFAULT, serial_rx.config.baudrate);

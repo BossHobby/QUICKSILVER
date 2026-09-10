@@ -104,7 +104,7 @@ typedef struct spi_bus_device {
   uint32_t hz;
 } spi_bus_device_t;
 
-typedef struct {
+typedef struct spi_bus {
   bool is_init;
 
   volatile bool dma_done = true;
