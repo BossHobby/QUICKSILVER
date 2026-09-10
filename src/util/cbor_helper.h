@@ -85,10 +85,13 @@ inline cbor_result_t cbor_decode_member(cbor_value_t *dec, E *value, cbor_result
 
 #define CBOR_ENCODE_INDEX_ARRAY_MEMBER(member, size, type)                              \
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, #member));                                \
-  CBOR_CHECK_ERROR(res = cbor_encode_array(enc, size - 1));                             \
+  CBOR_CHECK_ERROR(res = cbor_encode_array_indefinite(enc));                            \
   for (uint32_t i = 1; i < size; i++) {                                                 \
+    if (o->member[i].index == 0)                                                      \
+      continue;                                                                      \
     CBOR_CHECK_ERROR(res = cbor_encode_member(enc, &o->member[i], cbor_encode_##type)); \
-  }
+  }                                                                                  \
+  CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
 
 #define CBOR_ENCODE_STR_ARRAY_MEMBER(member, size)              \
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, #member));        \
@@ -182,18 +185,17 @@ inline cbor_result_t cbor_decode_member(cbor_value_t *dec, E *value, cbor_result
   if (buf_equal_string(name, name_len, #member)) {                                  \
     cbor_container_t array;                                                         \
     CBOR_CHECK_ERROR(res = cbor_decode_array(dec, &array));                         \
-    const uint32_t array_size = cbor_decode_array_size(dec, &array);                \
-    const uint32_t limit = MIN(size, array_size);                                   \
-    for (uint32_t i = 0; i < limit; i++) {                                          \
+    for (uint32_t i = 0; i < cbor_decode_array_size(dec, &array); i++) {             \
+      if (i >= size) {                                                             \
+        CBOR_CHECK_ERROR(res = cbor_decode_skip(dec));                              \
+        continue;                                                                 \
+      }                                                                           \
       type tmp = {};                                                                \
       CBOR_CHECK_ERROR(res = cbor_decode_##type(dec, &tmp));                        \
       if (tmp.index >= size) {                                                      \
         CBOR_CHECK_ERROR(res = CBOR_ERR_OVERFLOW);                                  \
       }                                                                             \
       o->member[tmp.index] = tmp;                                                   \
-    }                                                                               \
-    for (uint32_t i = limit; i < array_size; i++) {                                 \
-      CBOR_CHECK_ERROR(res = cbor_decode_skip(dec));                                \
     }                                                                               \
     continue;                                                                       \
   }
