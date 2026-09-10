@@ -440,15 +440,21 @@ typedef struct {
 ```
 
 Key constants:
-- `TASK_RUNTIME_REDUCTION`: 0.75x - Reduction when task is skipped
+- `TASK_STARVATION_SKIPS`: 32 - Budget skips before a forced retry becomes eligible
 - `TASK_RUNTIME_BUFFER`: 10μs - Buffer before loop deadline
 
 ### Scheduling Algorithm
 
 1. **Task Selection**: Tasks are checked in priority order
 2. **Runtime Check**: For non-REALTIME tasks, the scheduler checks if `task->runtime_worst > time_left`
-3. **Skip Decision**: If insufficient time remains, the task is skipped and its worst-case estimate is reduced
-4. **Runtime Update**: After execution, worst-case is maintained at minimum 1.25x the running average
+3. **Skip Decision**: Insufficient budget skips the task without changing its runtime estimate. After 32 skips, it may use the loop's single forced retry, even under overload.
+4. **Runtime Update**: Accepted samples update the average and peak EMA. Admission uses startup margins, then 1.125x the peak EMA; this is not a worst-case execution bound.
+
+Periodic eligibility uses the loop-start timestamp of the last execution, not its completion time. Missed releases do not generate catch-up bursts. `task_get_period_us()` supplies nominal cadence for configuration; `task_get_last_period_us()` supplies actual start-to-start microseconds for integration, published before execution and zero on the first call.
+
+Loop-time autodetection evaluates execution time before busy-wait padding in 200-loop windows. Speedup requires every sample to leave 10 us headroom at the faster rate, and cannot exceed the gyro/MCU rate established during initialization.
+
+Each scheduler iteration calls `looptime_update()` and passes its returned timing boundary to task admission. Housekeeping and filter updates after that boundary consume the task budget; do not start a fresh budget at task dispatch.
 
 ### Task Definition
 
@@ -527,18 +533,18 @@ The scheduler tracks the following metrics for each task:
 - **avg**: Running average over 32 samples
 - **max**: Maximum observed runtime
 - **worst**: Worst-case estimate used for scheduling decisions
-- **percentile_95**: Smooth 95th percentile estimate using exponential moving average
+- **runtime_peak**: EMA of above-average runtimes (replaces the misleading `percentile_95` debug key)
 
 #### Variability Metrics (Debug builds only)
 - **stddev**: Standard deviation of runtime
-- **cv_percent**: Coefficient of Variation (stddev/avg × 100%) - measures relative variability
+- **cv_percent**: Coefficient of Variation (stddev/sample mean × 100%) - measures relative variability
 - **skips**: Total number of times task was skipped due to insufficient time
 - **max_skips**: Maximum consecutive skips observed
 - **overruns**: Number of times task exceeded its worst-case estimate
 
-### Percentile Calculation
+### Peak Runtime Estimate
 
-The scheduler uses an exponential moving average approach for smooth P95 estimation:
+The scheduler uses an exponential moving average of above-average runtime samples:
 
 ```c
 // Track values above average as potential peaks
@@ -551,36 +557,26 @@ if (time_taken > task->runtime_avg) {
     task->runtime_peak_ema = ((task->runtime_peak_ema * 31) + time_taken) >> 5;
   }
 }
-// Continuous decay to forget old peaks
-task->runtime_peak_ema = (task->runtime_peak_ema * 511) >> 9;
+// Decay by 511/512 without overflowing a 32-bit intermediate product.
+const uint32_t decay = (task->runtime_peak_ema >> 9) + ((task->runtime_peak_ema & 511) != 0);
+task->runtime_peak_ema -= decay;
 ```
 
-This provides stable P95 estimates without the noise of traditional percentile calculations.
+This is a heuristic peak estimate, not a percentile or execution-time bound. Debug variance and mean use each task's accepted sample count, excluding startup and explicitly skipped statistics.
 
 ### Scheduling Algorithm
 
 The scheduler uses a predictive approach based on runtime statistics:
 
 1. **Priority-based selection**: REALTIME tasks always run, others checked in priority order
-2. **Runtime prediction**: Uses `runtime_worst` (based on P95 + margin) to estimate if task will fit
+2. **Runtime prediction**: Uses `runtime_worst` (based on peak EMA + margin) to estimate if task will fit
 3. **Skip decision**: Non-realtime tasks skipped if `runtime_worst > time_remaining`
-4. **Skip penalty**: When a task is skipped, its `runtime_worst` is reduced by 25% (`* 3/4`) to increase future execution probability
-5. **Adaptive margins**: Uses conservative margins during startup, transitions to P95-based prediction
+4. **Starvation recovery**: After 32 budget skips, permit a forced retry to obtain a fresh sample; at most one forced retry may execute per loop
+5. **Adaptive margins**: Uses conservative margins during startup, transitions to peak-EMA-based prediction
 
-#### Skip Penalty System
+#### Starvation Recovery
 
-When a task is skipped due to insufficient time, the scheduler applies a reduction penalty:
-
-```c
-// Reduce worst-case estimate by 25% (0.75x)
-task->runtime_worst = (task->runtime_worst * 3) >> 2;
-```
-
-This serves multiple purposes:
-- **Prevents starvation**: Skipped tasks become more likely to run in future loops
-- **Adapts to changing conditions**: Reduces estimates that may be too conservative
-- **Balances throughput**: Ensures non-realtime tasks still get execution time
-- **Self-correcting**: Over-pessimistic estimates naturally decay through skipping
+Skipping supplies no runtime measurement and does not reduce the estimate. A forced retry can exceed the loop deadline, but only one such retry is permitted per loop. Its skip counter resets on execution. Because the retry threshold exceeds the number of tasks, other eligible starved tasks get a turn before that task can retry again. Masks and periods remain mandatory.
 
 ### Interpreting Metrics
 
@@ -596,7 +592,7 @@ This serves multiple purposes:
 
 #### Overrun Analysis
 - **Low overruns**: Good scheduling prediction accuracy
-- **High overruns**: May need P95 margin adjustment or task optimization
+- **High overruns**: May need peak-estimate margin adjustment or task optimization
 
 ### Optimization Strategies
 

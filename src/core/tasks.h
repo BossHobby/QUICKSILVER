@@ -59,27 +59,32 @@ typedef struct {
   task_function_t func;
   uint32_t period_cycles;
 
-  uint32_t last_time;
+  uint32_t last_time; // Loop-start cycles of the last execution, for periodic release.
+  uint32_t last_start_us;
+  uint32_t last_period_us; // Actual start-to-start interval; zero on first execution.
   uint32_t runtime_current;
   uint32_t runtime_avg;
   uint32_t runtime_worst;
   uint32_t runtime_max;
+  // Consecutive budget skips; permits an occasional retry of a stale estimate.
+  uint8_t runtime_skips;
+  bool has_started;
 
   uint32_t runtime_avg_sum;
 
-
-  // Exponential moving average of peaks for P95 estimation
+  // EMA of above-average runtimes, not a percentile or worst-case bound.
   uint32_t runtime_peak_ema;
 
-#ifdef DEBUG
+#if defined(DEBUG) || defined(PIO_UNIT_TESTING)
   // Minimal metrics for debug builds only
   uint32_t metric_skip_count;
   uint32_t metric_overrun_count;
   uint8_t metric_consecutive_skips;
   uint8_t metric_max_consecutive_skips;
-  
-  // Simplified variance tracking
-  uint32_t metric_variance;
+
+  // Per-task sample variance in cycles squared.
+  uint32_t metric_sample_count;
+  float metric_variance;
   float metric_mean_acc;
   float metric_m2;
 #endif
@@ -94,19 +99,30 @@ typedef struct {
       .func = p_func,                                                \
       .period_cycles = US_TO_CYCLES(p_period_us),                    \
       .last_time = 0,                                                \
+      .last_start_us = 0,                                            \
+      .last_period_us = 0,                                           \
       .runtime_current = 0,                                          \
       .runtime_avg = 0,                                              \
       .runtime_worst = 0,                                            \
       .runtime_max = 0,                                              \
+      .runtime_skips = 0,                                            \
+      .has_started = false,                                          \
       .runtime_avg_sum = 0,                                          \
       .runtime_peak_ema = 0,                                         \
   }
 
 extern task_t tasks[TASK_MAX];
 
+// Nominal cadence for configuration, not elapsed time for integration.
 static inline float task_get_period_us(task_id_t id) {
   const float period = CYCLES_TO_US(tasks[id].period_cycles);
   if (period > 0.0f)
     return period;
   return state.looptime_autodetect;
+}
+
+// Published before the task runs; includes delayed/skipped releases. Unsigned
+// subtraction supports timer wrap, provided starts are less than ~71 min apart.
+static inline uint32_t task_get_last_period_us(task_id_t id) {
+  return tasks[id].last_period_us;
 }

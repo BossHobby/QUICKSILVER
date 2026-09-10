@@ -10,6 +10,16 @@ uint8_t looptime_warning = 0;
 
 static uint32_t last_loop_cycles;
 static bool skip_looptime_update = false;
+static float minimum_period;
+static float runtime_sum;
+static uint16_t runtime_samples;
+static bool window_has_headroom = true;
+
+static void looptime_reset_window() {
+  runtime_sum = 0;
+  runtime_samples = 0;
+  window_has_headroom = true;
+}
 
 void looptime_init() {
 #ifdef USE_GYRO
@@ -22,12 +32,16 @@ void looptime_init() {
   state.looptime = target * 1e-6f;
   state.looptime_us = target;
   state.looptime_autodetect = target;
+  minimum_period = target;
+  looptime_reset_window();
+  skip_looptime_update = false;
 
   last_loop_cycles = time_cycles();
 }
 
 void looptime_reset() {
   skip_looptime_update = true;
+  looptime_reset_window();
 }
 
 static void looptime_auto_detect() {
@@ -45,40 +59,32 @@ static void looptime_auto_detect() {
     failloop(FAILLOOP_LOOPTIME);
   }
 
-  static float loop_avg = 0;
-  static uint8_t loop_counter = 0;
-  if (loop_counter < 200) {
-    loop_avg += state.looptime_us;
-    loop_counter++;
+  // Measure work before the busy-wait. Require a complete 200-loop window
+  // with 10 us spare at the faster rate before reducing the period.
+  const float faster_period = MAX(minimum_period, state.looptime_autodetect * 0.5f);
+  runtime_sum += state.cpu_load;
+  window_has_headroom &= state.cpu_load + 10.0f <= faster_period;
+  if (++runtime_samples < 200) {
+    return;
   }
 
-  if (loop_counter == 200) {
-    loop_avg /= 200;
-    if (loop_avg > (state.looptime_autodetect + 5.0f)) {
-      state.looptime_autodetect = MIN(500, state.looptime_autodetect * 2.0f);
-    } else if (loop_avg < (state.looptime_autodetect * 0.5f)) {
-      state.looptime_autodetect = MAX(LOOPTIME_MAX, state.looptime_autodetect * 0.5f);
-    }
-    loop_counter++;
+  const float previous_period = state.looptime_autodetect;
+  if (runtime_sum / runtime_samples > previous_period + 5.0f) {
+    state.looptime_autodetect = MIN(MAX(500.0f, minimum_period), previous_period * 2.0f);
+    looptime_warning++;
+  } else if (window_has_headroom) {
+    state.looptime_autodetect = faster_period;
   }
-
-  if (loop_counter == 201) {
-    static uint8_t blown_loop_counter = 0;
-
-    if (state.cpu_load > state.looptime_autodetect + 5) {
-      blown_loop_counter++;
-    }
-
-    if (blown_loop_counter > 100) {
-      blown_loop_counter = 0;
-      loop_counter = 0;
-      loop_avg = 0;
-      looptime_warning++;
-    }
-  }
+  looptime_reset_window();
 }
 
-void looptime_update() {
+#ifdef PIO_UNIT_TESTING
+void looptime_test_auto_detect() {
+  looptime_auto_detect();
+}
+#endif
+
+uint32_t looptime_update() {
   state.cpu_load = CYCLES_TO_US(time_cycles() - last_loop_cycles);
 
   const uint32_t delay = US_TO_CYCLES(state.looptime_autodetect);
@@ -103,4 +109,5 @@ void looptime_update() {
   if (flags.arm_state) {
     state.armtime += state.looptime;
   }
+  return last_loop_cycles;
 }

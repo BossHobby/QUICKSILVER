@@ -115,8 +115,8 @@ void vbat_calc() {
     state.ibat_filtered = filter_lp_pt2_step(&display_filter, &ibat_display_filter_state, state.ibat);
     state.ibat_sag_filtered = filter_lp_pt1_step(&sag_filter, &ibat_sag_filter_state, state.ibat);
   }
-  // Always accumulate current draw based on sag filtered value (faster response)
-  state.ibat_drawn += state.ibat_sag_filtered * task_get_period_us(TASK_VBAT) / IBAT_SCALE;
+  // Integrate actual elapsed time, including delayed or skipped task releases.
+  state.ibat_drawn += state.ibat_sag_filtered * task_get_last_period_us(TASK_VBAT) / IBAT_SCALE;
 
   // li-ion battery model compensation time decay ( 18 seconds )
   if (adc_read(ADC_CHAN_VBAT, &state.vbat)) {

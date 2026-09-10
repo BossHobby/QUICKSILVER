@@ -142,7 +142,7 @@ typedef struct {
 
   float uptime;      // running sum of looptimes
   float armtime;     // running sum of looptimes (while armed)
-  uint32_t cpu_load; // micros we have had left last loop
+  uint32_t cpu_load; // Execution time in microseconds before loop busy-wait padding.
 
   uint32_t failsafe_time_ms; // time the current failsafe started in ms
   uint8_t failsafe_phase;

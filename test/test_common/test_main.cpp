@@ -23,6 +23,27 @@ extern void test_attitude_imu_pipeline_yaw_while_tilted(void);
 extern void test_bmp280_raw_reference_sample_returns_pascals(void);
 extern void test_bmp280_discards_unused_sample_nibbles(void);
 extern void test_bmp388_raw_reference_sample_retains_cubic_correction(void);
+// Scheduler tests
+extern void test_scheduler_rejects_exhausted_budget();
+extern void test_scheduler_preserves_runtime_estimate_on_skips();
+extern void test_scheduler_budget_handles_cycle_wrap();
+extern void test_scheduler_realtime_respects_mask_and_period();
+extern void test_scheduler_period_handles_cycle_wrap();
+extern void test_scheduler_recovers_after_runtime_spike();
+extern void test_scheduler_recovers_from_sustained_budget_exhaustion();
+extern void test_scheduler_limits_forced_retries_and_services_all_tasks();
+extern void test_scheduler_period_uses_loop_release_not_completion();
+extern void test_scheduler_variance_counts_task_samples();
+extern void test_scheduler_queue_insertion_preserves_priority_order();
+extern void test_scheduler_publishes_actual_period_before_execution();
+extern void test_scheduler_refreshes_mask_after_control();
+extern void test_scheduler_peak_decay_does_not_overflow();
+extern void test_scheduler_budget_includes_work_before_dispatch();
+extern void test_looptime_recovers_after_load_reduces();
+extern void test_looptime_requires_sustained_headroom();
+extern void test_looptime_reset_discards_partial_window();
+extern void test_vbat_integrates_elapsed_time_across_delays_and_wrap();
+
 // Filter tests
 extern void test_filter_init(void);
 extern void test_filter_lowpass_pt1(void);
@@ -215,6 +236,26 @@ int main(int argc, char **argv) {
   RUN_TEST(test_sdcard_transport_errors);
   RUN_TEST(test_sdcard_transport_busy_and_timer_wrap);
   RUN_TEST(test_sdcard_device_samples_during_write);
+
+  RUN_TEST(test_scheduler_rejects_exhausted_budget);
+  RUN_TEST(test_scheduler_preserves_runtime_estimate_on_skips);
+  RUN_TEST(test_scheduler_budget_handles_cycle_wrap);
+  RUN_TEST(test_scheduler_realtime_respects_mask_and_period);
+  RUN_TEST(test_scheduler_period_handles_cycle_wrap);
+  RUN_TEST(test_scheduler_recovers_after_runtime_spike);
+  RUN_TEST(test_scheduler_recovers_from_sustained_budget_exhaustion);
+  RUN_TEST(test_scheduler_limits_forced_retries_and_services_all_tasks);
+  RUN_TEST(test_scheduler_period_uses_loop_release_not_completion);
+  RUN_TEST(test_scheduler_variance_counts_task_samples);
+  RUN_TEST(test_scheduler_queue_insertion_preserves_priority_order);
+  RUN_TEST(test_scheduler_publishes_actual_period_before_execution);
+  RUN_TEST(test_scheduler_refreshes_mask_after_control);
+  RUN_TEST(test_scheduler_peak_decay_does_not_overflow);
+  RUN_TEST(test_scheduler_budget_includes_work_before_dispatch);
+  RUN_TEST(test_looptime_recovers_after_load_reduces);
+  RUN_TEST(test_looptime_requires_sustained_headroom);
+  RUN_TEST(test_looptime_reset_discards_partial_window);
+  RUN_TEST(test_vbat_integrates_elapsed_time_across_delays_and_wrap);
 
   // Filter tests
   RUN_TEST(test_filter_init);
