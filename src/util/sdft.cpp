@@ -1,108 +1,104 @@
 #include "sdft.h"
 
+#include <array>
 #include <math.h>
+#include <string.h>
 
 #include "control/control.h"
-#include "core/looptime.h"
-#include "util/filter.h"
 #include "util/util.h"
 
 // from https://www.dsprelated.com/showarticle/776.php
 // citing E. Jacobsen and R. Lyons, “The Sliding DFT”
 // and E. Jacobsen and R. Lyons, “An Update to the Sliding DFT”
 
-#define LOOPTIME_S (state.looptime_autodetect * 1e-6)
-// one axis at a time, n steps
-#define FILTER_SAMPLE_PERIOD_S (LOOPTIME_S * (float)(SDFT_STEP_COUNT * 3))
-#define SAMPLE_HZ (1e6f / state.looptime_autodetect)
-
-static float r_to_N;
-static complex_float twiddle[SDFT_SAMPLE_SIZE];
-
-static uint32_t sub_samples;
-static uint32_t resolution_hz;
-
-static uint32_t bin_min_index;
-static uint32_t bin_max_index;
-static uint32_t bin_batches;
+// Interpolation needs one magnitude neighbour; Hann needs one more DFT bin.
+static constexpr uint32_t MAGNITUDE_HALO = 1;
+static constexpr uint32_t SPECTRUM_HALO = MAGNITUDE_HALO + 1;
+static constexpr float TRACKING_OMEGA = 2.0f * M_PI_F * SDFT_FILTER_HZ;
+static constexpr float MAX_TRACKING_MULTIPLIER = 10.0f;
+static constexpr float WINDOW_DAMPING = __builtin_powf(SDFT_DAMPING_FACTOR, SDFT_SAMPLE_SIZE);
+static constexpr auto TWIDDLE = [] {
+  std::array<complex_float, SDFT_BIN_COUNT> values{};
+  for (uint32_t i = 0; i < SDFT_BIN_COUNT; i++) {
+    const float angle = 2.0f * M_PI_F * (float)i / SDFT_SAMPLE_SIZE;
+    values[i] = {__builtin_cosf(angle), __builtin_sinf(angle)};
+  }
+  return values;
+}();
 
 void sdft_init(sdft_t *sdft) {
-  sub_samples = (SAMPLE_HZ / (2.0f * SDFT_MAX_HZ));
-  resolution_hz = ((SAMPLE_HZ / (float)sub_samples) / SDFT_SAMPLE_SIZE);
-
-  bin_min_index = (float)SDFT_MIN_HZ / (float)resolution_hz + 0.5f;
-  bin_max_index = (float)SDFT_MAX_HZ / (float)resolution_hz + 0.5f;
-  bin_batches = (bin_max_index - bin_min_index) / sub_samples + 1;
-
-  r_to_N = powf(SDFT_DAMPING_FACTOR, SDFT_SAMPLE_SIZE);
-
-  const complex_float j = {0.0f, 1.0f};
-  for (uint32_t i = 0; i < SDFT_SAMPLE_SIZE; i++) {
-    const float factor = 2.0f * M_PI_F * (float)i / (float)SDFT_SAMPLE_SIZE;
-    twiddle[i] = __builtin_cexpf(j * factor);
+  *sdft = {};
+  const float sample_period_us = state.looptime_autodetect;
+  // Gyro initialization precedes scheduler/looptime initialization.
+  if (sample_period_us <= 0.0f) {
+    return;
   }
 
-  sdft->state = SDFT_UPDATE_MAGNITUDE;
-  sdft->idx = 0;
-  sdft->sample_avg = 0;
-  sdft->sample_accumulator = 0;
-  sdft->sample_count = 0;
-  sdft->noise_floor = 0;
-
-  for (uint32_t i = 0; i < SDFT_SAMPLE_SIZE; i++) {
-    sdft->samples[i] = 0.0f;
-  }
-
-  for (uint32_t i = 0; i < SDFT_BIN_COUNT; i++) {
-    sdft->data[i] = 0.0f;
-  }
-
-  for (uint32_t peak = 0; peak < SDFT_PEAKS; peak++) {
-    sdft->peak_values[peak] = 0;
-    sdft->peak_indicies[peak] = 0;
-    sdft->notch_hz[peak] = 0;
-  }
+  const float sample_hz = 1e6f / sample_period_us;
+  sdft->sample_period_us = sample_period_us;
+  sdft->sub_samples = MAX(1U, (uint32_t)(sample_hz / (2.0f * SDFT_MAX_HZ)));
+  sdft->resolution_hz = sample_hz / (float)sdft->sub_samples / SDFT_SAMPLE_SIZE;
+  constexpr uint32_t LAST_PEAK_BIN = SDFT_BIN_COUNT - SPECTRUM_HALO - 1;
+  sdft->bin_min_index = constrain(SDFT_MIN_HZ / sdft->resolution_hz + 0.5f, SPECTRUM_HALO, LAST_PEAK_BIN);
+  sdft->bin_max_index = constrain(SDFT_MAX_HZ / sdft->resolution_hz + 0.5f, sdft->bin_min_index, LAST_PEAK_BIN);
+  const uint32_t bin_count = sdft->bin_max_index - sdft->bin_min_index + 1 + 2 * SPECTRUM_HALO;
+  sdft->bin_batches = (bin_count + sdft->sub_samples - 1) / sdft->sub_samples;
 }
 
 bool sdft_push(sdft_t *sdft, float val) {
-  bool batch_finished = false;
+  if (state.looptime_autodetect <= 0.0f) {
+    return false;
+  }
+  if (sdft->sample_period_us != state.looptime_autodetect) {
+    // Rebuild spectral history at the new rate, retaining applied centres.
+    float notch_hz[SDFT_PEAKS];
+    memcpy(notch_hz, sdft->notch_hz, sizeof(notch_hz));
+    sdft_init(sdft);
+    memcpy(sdft->notch_hz, notch_hz, sizeof(notch_hz));
+  }
 
-  const uint32_t bin_min = bin_batches * sdft->sample_count;
-  const uint32_t bin_max = MIN(bin_min + bin_batches, SDFT_BIN_COUNT);
+  sdft->update_samples++;
+  const uint32_t bin_min = sdft->bin_min_index - SPECTRUM_HALO + sdft->bin_batches * sdft->sample_count;
+  const uint32_t bin_max = MIN(bin_min + sdft->bin_batches, sdft->bin_max_index + SPECTRUM_HALO + 1);
+  for (uint32_t i = bin_min; i < bin_max; i++) {
+    sdft->data[i] = TWIDDLE[i] * (SDFT_DAMPING_FACTOR * sdft->data[i] + sdft->sample_delta);
+  }
 
-  const float last_sample = r_to_N * sdft->samples[sdft->idx];
-
+  // Accumulate the next sample while finishing the current spectrum.
   sdft->sample_accumulator += val;
   sdft->sample_count++;
 
-  if (sdft->sample_count >= sub_samples) {
-    sdft->sample_avg = sdft->sample_accumulator / (float)sdft->sample_count;
+  if (sdft->sample_count >= sdft->sub_samples) {
+    const float sample_avg = sdft->sample_accumulator / (float)sdft->sample_count;
+    sdft->sample_delta = sample_avg - WINDOW_DAMPING * sdft->samples[sdft->idx];
     sdft->sample_accumulator = 0;
     sdft->sample_count = 0;
 
-    sdft->samples[sdft->idx] = sdft->sample_avg;
+    sdft->samples[sdft->idx] = sample_avg;
     sdft->idx = (sdft->idx + 1) % SDFT_SAMPLE_SIZE;
-
-    batch_finished = true;
+    return true;
   }
 
-  const float delta = sdft->sample_avg - last_sample;
-
-  for (uint32_t i = bin_min; i < bin_max; i++) {
-    sdft->data[i] = twiddle[i] * (SDFT_DAMPING_FACTOR * sdft->data[i] + delta);
-  }
-
-  return batch_finished;
+  return false;
 }
 
 bool sdft_update(sdft_t *sdft) {
   bool filters_updated = false;
+  const uint32_t bin_min_index = sdft->bin_min_index;
+  const uint32_t bin_max_index = sdft->bin_max_index;
+  if (sdft->sample_period_us <= 0.0f) {
+    return false;
+  }
 
   switch (sdft->state) {
   case SDFT_UPDATE_MAGNITUDE:
+    // Other axes can reach this step halfway through a distributed update.
+    if (sdft->sample_count != 0) {
+      break;
+    }
     sdft->noise_floor = 0;
 
-    for (uint32_t i = bin_min_index + 1; i < bin_max_index - 1; i++) {
+    for (uint32_t i = bin_min_index - MAGNITUDE_HALO; i <= bin_max_index + MAGNITUDE_HALO; i++) {
       // Hann window in frequency domain: X[k] = -0.25 * X[k-1] +0.5 * X[k] -0.25 * X[k+1]
       const complex_float val = sdft->data[i] - 0.5f * (sdft->data[i - 1] + sdft->data[i + 1]);
       const float re = __real__ val;
@@ -121,7 +117,7 @@ bool sdft_update(sdft_t *sdft) {
       sdft->peak_indicies[peak] = 0;
     }
 
-    for (uint32_t i = bin_min_index + 1; i < bin_max_index - 1; i++) {
+    for (uint32_t i = bin_min_index; i <= bin_max_index; i++) {
       if (sdft->magnitude[i] <= sdft->magnitude[i - 1] || sdft->magnitude[i] <= sdft->magnitude[i + 1]) {
         // neighbours are higher, not a peak
         continue;
@@ -180,48 +176,43 @@ bool sdft_update(sdft_t *sdft) {
       sdft->noise_floor -= 0.75f * sdft->magnitude[sdft->peak_indicies[peak] + 1];
       peak_count++;
     }
-    sdft->noise_floor = (sdft->noise_floor / (bin_max_index - bin_min_index - peak_count - 1)) * 2.0f;
+    const uint32_t magnitude_bins = bin_max_index - bin_min_index + 1 + 2 * MAGNITUDE_HALO;
+    const uint32_t noise_bins = magnitude_bins - peak_count;
+    sdft->noise_floor = MAX(0.0f, sdft->noise_floor) / noise_bins * 2.0f;
 
+    const float tracking_step = TRACKING_OMEGA * sdft->update_samples * sdft->sample_period_us * 1e-6f;
     for (uint32_t peak = 0; peak < SDFT_PEAKS; peak++) {
       if (sdft->peak_indicies[peak] == 0 || sdft->peak_values[peak] <= sdft->noise_floor) {
         continue;
       }
 
-      const float y0 = 0.95 * sdft->magnitude[sdft->peak_indicies[peak] - 1];
+      const float y0 = sdft->magnitude[sdft->peak_indicies[peak] - 1];
       const float y1 = sdft->magnitude[sdft->peak_indicies[peak]];
-      const float y2 = 1.25f * sdft->magnitude[sdft->peak_indicies[peak] + 1];
+      const float y2 = sdft->magnitude[sdft->peak_indicies[peak] + 1];
 
-      // Estimate true peak position aka. meanBin (fit parabola y(x) over y0, y1 and y2, solve dy/dx=0 for x)
-      float meanBin = sdft->peak_indicies[peak];
-      const float denom = y0 + y1 + y2;
-      if (denom != 0.0f) {
-        float lower_ratio = y0 / denom;
-        float upper_ratio = y2 / denom;
-        meanBin += upper_ratio - lower_ratio;
+      // Parabolic interpolation of the peak and its two neighbours.
+      float mean_bin = sdft->peak_indicies[peak];
+      const float denom = y0 - 2.0f * y1 + y2;
+      if (denom < 0.0f) {
+        mean_bin += constrain(0.5f * (y0 - y2) / denom, -0.5f, 0.5f);
       }
 
-      const float f_hz = meanBin * (float)resolution_hz;
+      const float f_hz = constrain(mean_bin * sdft->resolution_hz, SDFT_MIN_HZ, SDFT_MAX_HZ);
 
-      const float filter_multi = constrain(sdft->peak_values[peak] / sdft->noise_floor, 1.0f, 10.0f);
-      const float gain = FILTER_SAMPLE_PERIOD_S / (1 / (2.0f * M_PI_F * (filter_multi * SDFT_FILTER_HZ)) + FILTER_SAMPLE_PERIOD_S);
+      const float filter_multi = sdft->noise_floor > 0.0f ? constrain(sdft->peak_values[peak] / sdft->noise_floor, 1.0f, MAX_TRACKING_MULTIPLIER) : MAX_TRACKING_MULTIPLIER;
+      const float step = tracking_step * filter_multi;
+      const float gain = step / (1.0f + step);
 
       sdft->notch_hz[peak] += gain * (f_hz - sdft->notch_hz[peak]);
     }
 
+    sdft->update_samples = 0;
     sdft->state = SDFT_UPDATE_FILTERS;
     break;
   }
 
   case SDFT_UPDATE_FILTERS:
     sdft->state = SDFT_UPDATE_MAGNITUDE;
-
-    // re-compute in case looptime changed
-    sub_samples = (SAMPLE_HZ / (2.0f * SDFT_MAX_HZ));
-    resolution_hz = ((SAMPLE_HZ / (float)sub_samples) / SDFT_SAMPLE_SIZE);
-
-    bin_min_index = (float)SDFT_MIN_HZ / (float)resolution_hz + 0.5f;
-    bin_max_index = (float)SDFT_MAX_HZ / (float)resolution_hz + 0.5f;
-    bin_batches = (bin_max_index - bin_min_index) / sub_samples + 1;
 
     filters_updated = true;
     break;
