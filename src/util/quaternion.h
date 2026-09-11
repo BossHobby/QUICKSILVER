@@ -67,7 +67,7 @@ static inline vec3_t quat_rotate_vector(const quat_t *q, const vec3_t *v) {
 static inline void quat_to_euler(const quat_t *q, float *roll, float *pitch, float *yaw) {
   const float sinr_cosp = 2.0f * (q->w * q->x + q->y * q->z);
   const float cosr_cosp = 1.0f - 2.0f * (q->x * q->x + q->y * q->y);
-  *roll = atan2f(sinr_cosp, cosr_cosp);
+  *roll = atan2approx_rad(sinr_cosp, cosr_cosp);
 
   const float sinp = 2.0f * (q->w * q->y - q->z * q->x);
   if (fabsf(sinp) >= 1.0f) {
@@ -78,7 +78,7 @@ static inline void quat_to_euler(const quat_t *q, float *roll, float *pitch, flo
 
   const float siny_cosp = 2.0f * (q->w * q->z + q->x * q->y);
   const float cosy_cosp = 1.0f - 2.0f * (q->y * q->y + q->z * q->z);
-  *yaw = atan2f(siny_cosp, cosy_cosp);
+  *yaw = atan2approx_rad(siny_cosp, cosy_cosp);
 }
 
 // Create quaternion from Euler angles (ZYX convention)
