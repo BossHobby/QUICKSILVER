@@ -1,6 +1,3 @@
-extern void test_gyro_clock_tracks_regular_and_irregular_samples();
-extern void test_gyro_clock_reacquires_after_missing_samples();
-extern void test_looptime_gyro_drift_preserves_selected_rate();
 #include "driver/time.h"
 #include "mock_helpers.h"
 #include <unity.h>
@@ -57,6 +54,10 @@ extern void test_filter_highfreq_attenuation(void);
 extern void test_filter_reset(void);
 extern void test_filter_types(void);
 extern void test_filter_cascade(void);
+
+extern void test_gyro_clock_tracks_regular_and_irregular_samples();
+extern void test_gyro_clock_reacquires_after_missing_samples();
+extern void test_looptime_gyro_drift_preserves_selected_rate();
 
 // IMU tests
 extern void test_imu_gravity_vector_init(void);
@@ -269,7 +270,6 @@ int main(int argc, char **argv) {
   // Filter tests
   RUN_TEST(test_filter_init);
   RUN_TEST(test_output_protocol_snapshot_updates_explicitly);
-  RUN_TEST(test_atan2approx_accuracy);
   RUN_TEST(test_filter_reconfigure_type);
   RUN_TEST(test_notch_matches_reference_with_changing_frequency);
   RUN_TEST(test_filter_lowpass_pt1);
@@ -280,6 +280,7 @@ int main(int argc, char **argv) {
 
   // IMU tests
   RUN_TEST(test_imu_gravity_vector_init);
+  RUN_TEST(test_atan2approx_accuracy);
   RUN_TEST(test_imu_gyro_integration);
   RUN_TEST(test_imu_accel_fusion_ground);
   RUN_TEST(test_imu_accel_magnitude_rejection);

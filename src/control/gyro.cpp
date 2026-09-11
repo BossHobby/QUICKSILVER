@@ -1,4 +1,4 @@
-#include "control/sixaxis.h"
+#include "control/gyro.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "control/control.h"
-#include "control/sixaxis.h"
 #include "core/debug.h"
 #include "core/flash.h"
 #include "core/profile.h"
@@ -48,7 +47,7 @@ static sdft_t gyro_sdft[SDFT_AXES];
 static filter_biquad_notch_t notch_filter[SDFT_AXES][SDFT_PEAKS];
 static filter_biquad_state_t notch_filter_state[SDFT_AXES][SDFT_PEAKS];
 
-void sixaxis_orientation_update() {
+static void gyro_compute_matrix() {
   vec3_t rot = {.roll = 0, .pitch = 0, .yaw = 0};
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CW) {
@@ -94,7 +93,10 @@ void sixaxis_orientation_update() {
   rot_mat[2][2] = cosy * cosx;
 }
 
-void sixaxis_filter_update(bool reset) {
+void gyro_filter_update(bool reset) {
+  if (reset) {
+    gyro_compute_matrix();
+  }
   for (uint8_t i = 0; i < SDFT_AXES; i++) {
     sdft_update_period(&gyro_sdft[i], task_get_period_us(TASK_GYRO));
   }
@@ -107,13 +109,13 @@ void sixaxis_filter_update(bool reset) {
   }
 }
 
-void sixaxis_init() {
+void gyro_control_init() {
   target_info.gyro_id = gyro_init();
   if (target_info.gyro_id == GYRO_TYPE_INVALID) {
     failloop(FAILLOOP_GYRO);
   }
-  sixaxis_orientation_update();
-  sixaxis_filter_update(true);
+
+  gyro_filter_update(true);
 
   for (uint8_t i = 0; i < SDFT_AXES; i++) {
     for (uint8_t j = 0; j < SDFT_PEAKS; j++) {
@@ -122,7 +124,7 @@ void sixaxis_init() {
   }
 }
 
-static vec3_t sixaxis_apply_matrix(vec3_t v) {
+static vec3_t gyro_apply_matrix(vec3_t v) {
   return (vec3_t){
       .roll = (rot_mat[0][0] * v.roll + rot_mat[1][0] * v.pitch + rot_mat[2][0] * v.yaw),
       .pitch = (rot_mat[0][1] * v.roll + rot_mat[1][1] * v.pitch + rot_mat[2][1] * v.yaw),
@@ -130,10 +132,10 @@ static vec3_t sixaxis_apply_matrix(vec3_t v) {
   };
 }
 
-void sixaxis_read() {
+void gyro_update() {
   const gyro_data_t data = gyro_read();
 
-  const vec3_t accel = sixaxis_apply_matrix(data.accel);
+  const vec3_t accel = gyro_apply_matrix(data.accel);
   // swap pitch and roll to match gyro
   state.accel_raw.roll = (accel.pitch - flash_storage.accelcal[1]) * ACCEL_RANGE;
   state.accel_raw.pitch = (accel.roll - flash_storage.accelcal[0]) * ACCEL_RANGE;
@@ -142,7 +144,7 @@ void sixaxis_read() {
   state.gyro_raw.roll = data.gyro.roll - gyrocal[0];
   state.gyro_raw.pitch = data.gyro.pitch - gyrocal[1];
   state.gyro_raw.yaw = data.gyro.yaw - gyrocal[2];
-  state.gyro_raw = sixaxis_apply_matrix(state.gyro_raw);
+  state.gyro_raw = gyro_apply_matrix(state.gyro_raw);
   state.gyro.roll = state.gyro_raw.roll = state.gyro_raw.roll * GYRO_RANGE * DEGTORAD;
   state.gyro.pitch = state.gyro_raw.pitch = -state.gyro_raw.pitch * GYRO_RANGE * DEGTORAD;
   state.gyro.yaw = state.gyro_raw.yaw = -state.gyro_raw.yaw * GYRO_RANGE * DEGTORAD;
@@ -206,7 +208,7 @@ static bool test_gyro_move(const gyro_data_t *last_data, const gyro_data_t *data
 }
 
 // returns true if it's already still, i.e. no move since the first loops
-static bool sixaxis_wait_for_still(uint32_t timeout) {
+static bool gyro_wait_for_still(uint32_t timeout) {
   uint8_t move_counter = 15;
   uint32_t loop_counter = 0;
 
@@ -237,9 +239,9 @@ static bool sixaxis_wait_for_still(uint32_t timeout) {
   return loop_counter < 20;
 }
 
-void sixaxis_gyro_cal() {
+void gyro_calibrate_bias() {
   for (uint8_t retry = 0; retry < 15; ++retry) {
-    if (sixaxis_wait_for_still(CAL_INTERVAL)) {
+    if (gyro_wait_for_still(CAL_INTERVAL)) {
       // break only if it's already still, otherwise, wait and try again
       break;
     }
@@ -268,16 +270,16 @@ void sixaxis_gyro_cal() {
   }
 }
 
-void sixaxis_acc_cal() {
+void accel_calibrate() {
   for (uint8_t retry = 0; retry < 15; ++retry) {
-    if (sixaxis_wait_for_still(CAL_INTERVAL)) {
+    if (gyro_wait_for_still(CAL_INTERVAL)) {
       // break only if it's already still, otherwise, wait and try again
       break;
     }
     time_delay_ms(100);
   }
 
-  sixaxis_orientation_update();
+  gyro_compute_matrix();
 
   flash_storage.accelcal[0] = 0;
   flash_storage.accelcal[1] = 0;
@@ -291,7 +293,7 @@ void sixaxis_acc_cal() {
 
     // Skip samples if gyro shows movement
     if (!test_gyro_move(&last_data, &data)) {
-      const vec3_t accel = sixaxis_apply_matrix(data.accel);
+      const vec3_t accel = gyro_apply_matrix(data.accel);
       for (uint8_t i = 0; i < 3; i++) {
         lpf(&flash_storage.accelcal[i], accel.axis[i], lpfcalc(CAL_INTERVAL, 0.5 * 1e6));
       }
@@ -312,15 +314,14 @@ void sixaxis_acc_cal() {
 
 #else
 
-void sixaxis_init() {}
-void sixaxis_filter_update(bool reset) {}
-void sixaxis_orientation_update() {}
-void sixaxis_read() {}
+void gyro_control_init() {}
+void gyro_filter_update(bool reset) {}
+void gyro_update() {}
 
-void sixaxis_gyro_cal() {
+void gyro_calibrate_bias() {
   time_delay_ms(1500);
 }
-void sixaxis_acc_cal() {
+void accel_calibrate() {
   time_delay_ms(1500);
 }
 

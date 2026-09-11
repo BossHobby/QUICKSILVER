@@ -614,7 +614,7 @@ void test_attitude_normal_heading_pitch_weight_matches_vehicle(void) {
 static void imu_pipeline_setup(float roll, float pitch) {
   attitude_test_setup();
   state.looptime_autodetect = 1000;
-  // Sensor values after sixaxis_read(): positive roll -> positive accel.roll,
+  // Sensor values after gyro_update(): positive roll -> positive accel.roll,
   // positive nose-down pitch -> positive accel.pitch.
   state.accel_raw = (vec3_t){{sinf(roll) * cosf(pitch), sinf(pitch), cosf(roll) * cosf(pitch)}};
   imu_init();
@@ -633,7 +633,7 @@ void test_attitude_imu_pipeline_roll_and_pitch(void) {
       state.gyro = (vec3_t){0};
       state.gyro.axis[axis] = i < 500 ? rate : 0;
       state.gyro_delta_angle = vec3_mul(state.gyro, state.looptime);
-      imu_calc();
+      imu_update();
       TEST_ASSERT_FLOAT_WITHIN(0.5f * DEGTORAD, roll, state.attitude.roll);
       TEST_ASSERT_FLOAT_WITHIN(0.5f * DEGTORAD, pitch, state.attitude.pitch);
       TEST_ASSERT_FLOAT_WITHIN(0.5f * DEGTORAD, 0, state.attitude.yaw);
@@ -648,7 +648,7 @@ void test_attitude_imu_pipeline_yaw_while_tilted(void) {
   flags.on_ground = 1;
   // Acquire the actual IMU gravity estimate before rotating around earth-up.
   for (int i = 0; i < 5000; i++) {
-    imu_calc();
+    imu_update();
   }
   const float initial_yaw = state.attitude.yaw;
   flags.arm_state = 1;
@@ -657,7 +657,7 @@ void test_attitude_imu_pipeline_yaw_while_tilted(void) {
   state.gyro = (vec3_t){{yaw_rate * sinf(pitch), -yaw_rate * sinf(roll) * cosf(pitch), yaw_rate * cosf(roll) * cosf(pitch)}};
   state.gyro_delta_angle = vec3_mul(state.gyro, state.looptime);
   for (int i = 0; i < 3000; i++) {
-    imu_calc();
+    imu_update();
   }
   TEST_ASSERT_FLOAT_WITHIN(0.5f * DEGTORAD, roll, state.attitude.roll);
   TEST_ASSERT_FLOAT_WITHIN(0.5f * DEGTORAD, pitch, state.attitude.pitch);
@@ -699,7 +699,7 @@ void test_imu_without_gps_publishes_tilt_without_heading_estimator() {
     state.gps_heading = 90;
     state.gps_speed = 10;
     for (unsigned i = 0; i < 100; i++) {
-      imu_calc();
+      imu_update();
     }
     TEST_ASSERT_FLOAT_WITHIN(0.5f * DEGTORAD, roll, state.attitude.roll);
     TEST_ASSERT_FLOAT_WITHIN(0.5f * DEGTORAD, pitch, state.attitude.pitch);

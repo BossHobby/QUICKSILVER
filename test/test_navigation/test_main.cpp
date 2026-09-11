@@ -480,7 +480,7 @@ void test_navigation_pitch_command_matches_imu_and_angle_control(void) {
     state.accel_raw = (vec3_t){{0, sinf(pitch), cosf(pitch)}};
     state.gyro.pitch = target_pitch * 1.5f / 2;
     state.gyro_delta_angle.pitch = state.gyro.pitch * state.looptime;
-    imu_calc();
+    imu_update();
     state.rx_filtered = state.rx_override;
     control_test_flight_mode();
     if (i == 0) TEST_ASSERT_TRUE(state.setpoint.pitch > 0);

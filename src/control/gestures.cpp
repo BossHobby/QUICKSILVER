@@ -3,7 +3,7 @@
 #include <math.h>
 
 #include "control/control.h"
-#include "control/sixaxis.h"
+#include "control/gyro.h"
 #include "core/flash.h"
 #include "core/profile.h"
 #include "core/project.h"
@@ -222,8 +222,8 @@ void gestures() {
   case GESTURE_DDD: {
     // skip accel calibration if pid gestures used
     if (!skip_calib) {
-      sixaxis_gyro_cal(); // for flashing lights
-      sixaxis_acc_cal();
+      gyro_calibrate_bias(); // for flashing lights
+      accel_calibrate();
     } else {
       led_flash();
       skip_calib = false;

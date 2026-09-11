@@ -12,7 +12,7 @@
 #include "control/pid.h"
 #endif
 #include "control/imu.h"
-#include "control/sixaxis.h"
+#include "control/gyro.h"
 #include "core/debug.h"
 #include "core/failloop.h"
 #include "core/flash.h"
@@ -117,7 +117,7 @@ __attribute__((__used__)) int main() {
   rx_spektrum_bind();
 
   osd_init();
-  sixaxis_init();
+  gyro_control_init();
   // needs to happen after gyro is detected so we know its update period
   scheduler_init();
 
@@ -125,7 +125,7 @@ __attribute__((__used__)) int main() {
   control_filter_update(false);
 
   time_delay_ms(50);
-  sixaxis_gyro_cal();
+  gyro_calibrate_bias();
 
   adc_init();
   vbat_init();

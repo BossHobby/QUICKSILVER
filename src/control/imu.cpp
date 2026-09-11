@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "control/control.h"
-#include "control/sixaxis.h"
+#include "control/gyro.h"
 #include "control/imu.h"
 #include "core/profile.h"
 #include "core/project.h"
@@ -259,7 +259,7 @@ void imu_filter_update() {
 void imu_init() {
   // init the gravity vector with accel values
   for (int sample = 0; sample < 100; sample++) {
-    sixaxis_read();
+    gyro_update();
 
     for (int axis = 0; axis < 3; axis++) {
       lpf(&state.GEstG.axis[axis], state.accel_raw.axis[axis], 0.85f);
@@ -273,7 +273,7 @@ void imu_init() {
   imu_reset_attitude();
 }
 
-void imu_calc() {
+void imu_update() {
   // Predict gravity from the gyro delta, then correct it with filtered acceleration.
   const vec3_t rot = {{
       -state.gyro_delta_angle.axis[1],

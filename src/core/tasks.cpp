@@ -8,7 +8,7 @@
 #ifdef VEHICLE_MULTI
 #include "control/multi/navigation.h"
 #endif
-#include "control/sixaxis.h"
+#include "control/gyro.h"
 #include "driver/baro/baro.h"
 #include "driver/serial.h"
 #include "driver/usb.h"
@@ -39,8 +39,8 @@ static void task_noop() {
 #endif
 
 FAST_RAM task_t tasks[TASK_MAX] = {
-    [TASK_GYRO] = CREATE_TASK("GYRO", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, sixaxis_read, 0),
-    [TASK_IMU] = CREATE_TASK("IMU", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, imu_calc, 0),
+    [TASK_GYRO] = CREATE_TASK("GYRO", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, gyro_update, 0),
+    [TASK_IMU] = CREATE_TASK("IMU", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, imu_update, 0),
     [TASK_PID] = CREATE_TASK("PID", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, control, 0),
     [TASK_RX] = CREATE_TASK("RX", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, rx_update, 0),
     [TASK_VBAT] = CREATE_TASK("VBAT", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, vbat_calc, 1000),

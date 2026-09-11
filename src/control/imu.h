@@ -4,4 +4,5 @@
 
 void imu_init();
 void imu_filter_update();
-void imu_calc();
+// Update gravity, attitude, and heading from the current sensor sample.
+void imu_update();

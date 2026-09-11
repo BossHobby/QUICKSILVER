@@ -6,7 +6,7 @@
 
 #include "control/control.h"
 #include "control/pid.h"
-#include "control/sixaxis.h"
+#include "control/gyro.h"
 #include "core/debug.h"
 #include "core/flash.h"
 #include "core/profile.h"
@@ -227,7 +227,6 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
     // Decoding can update fields before reporting a malformed profile.
     profile_output_update();
     pid_rates_update();
-    sixaxis_orientation_update();
     control_filter_update(true);
     check_cbor_error(QUIC_CMD_SET);
 
@@ -648,8 +647,8 @@ bool quic_process(quic_t *quic, uint8_t *data, uint32_t size) {
     set_quic(quic, &dec);
     break;
   case QUIC_CMD_CAL_IMU:
-    sixaxis_gyro_cal();
-    sixaxis_acc_cal();
+    gyro_calibrate_bias();
+    accel_calibrate();
 
     flash_save();
 

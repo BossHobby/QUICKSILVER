@@ -263,7 +263,7 @@ static void test_wing_imu_tracks_scripted_bank() {
     state.accel_raw = {{sinf(bank), 0, cosf(bank)}};
     state.gyro_delta_angle = {{i < 500 ? 30.0f * DEGTORAD / 500.0f : 0, 0, 0}};
     state.gyro.roll = state.gyro_delta_angle.roll * state.looptime_inverse;
-    imu_calc();
+    imu_update();
   }
   // The attitude task publishes radians; PID input uses the gravity vector.
   TEST_ASSERT_FLOAT_WITHIN(1.0f * DEGTORAD, 30.0f * DEGTORAD, state.attitude.roll);

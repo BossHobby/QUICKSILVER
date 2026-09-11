@@ -19,6 +19,7 @@
 
 // Test initialization
 static void imu_setUp(void) {
+  profile.serial.gps = SERIAL_PORT1;
   // Reset hardware mocks
   mock_hardware_reset_all();
 
@@ -29,7 +30,8 @@ static void imu_setUp(void) {
   // Set default values
   state.looptime = 0.000125f; // 8kHz
   state.looptime_autodetect = 125.0f;
-  imu_filter_update();
+  state.accel_raw.yaw = ACC_1G;
+  imu_init();
 
   // Initialize gravity vector to (0, 0, 1g)
   state.GEstG.axis[0] = 0.0f;
@@ -63,7 +65,7 @@ void test_imu_gyro_integration(void) {
   state.gyro_delta_angle.yaw = 0.0f;
 
   // Execute IMU calculation
-  imu_calc();
+  imu_update();
 
   // After rotation around transformed pitch axis, roll component should change
   TEST_ASSERT_FLOAT_WITHIN(0.02f, -0.01f, state.GEstG.roll);
@@ -87,7 +89,7 @@ void test_imu_accel_fusion_ground(void) {
 
   // Run multiple iterations to see fusion
   for (int i = 0; i < 10; i++) {
-    imu_calc();
+    imu_update();
   }
 
   // Gravity estimate should move toward accelerometer
@@ -107,7 +109,7 @@ void test_imu_accel_magnitude_rejection(void) {
   state.accel_raw.pitch = 2.0f;
   state.accel_raw.yaw = 2.0f;
 
-  imu_calc();
+  imu_update();
 
   // Gravity should not change significantly
   TEST_ASSERT_FLOAT_WITHIN(0.1f, initial_gravity.roll, state.GEstG.roll);
@@ -125,7 +127,7 @@ void test_imu_zero_gravity_vector_does_not_nan(void) {
   state.accel_raw.pitch = 2.0f;
   state.accel_raw.yaw = 2.0f;
 
-  imu_calc();
+  imu_update();
 
   TEST_ASSERT_TRUE(isfinite(state.GEstG.roll));
   TEST_ASSERT_TRUE(isfinite(state.GEstG.pitch));
@@ -166,7 +168,7 @@ void test_imu_in_flight_behavior(void) {
 
   // Run IMU calculations
   for (int i = 0; i < 20; i++) {
-    imu_calc();
+    imu_update();
   }
 
   // Check that fusion is happening but slower than on ground
@@ -201,14 +203,15 @@ void test_imu_gps_fusion_low_speed(void) {
 
   // GPS data with low speed
   state.gps_lock = true;
-  state.gps_speed = 1.5f; // Below minimum
+  state.gps_speed = 0.5f; // Below the 1 m/s minimum
   state.gps_heading = 90.0f;
   state.gps_heading_accuracy = 2.0f;
 
-  imu_calc();
+  imu_update();
 
   // Should not fuse GPS (speed too low)
   TEST_ASSERT_FLOAT_WITHIN(0.1f, 0.0f, state.heading);
+  TEST_ASSERT_TRUE(state.heading_correction_flags & HEADING_LOW_SPEED);
 }
 
 // Test GPS heading fusion with variable gain - REMOVED
@@ -247,12 +250,13 @@ void test_imu_gps_fusion_poor_accuracy(void) {
   state.gps_lock = true;
   state.gps_speed = 15.0f; // Good speed
   state.gps_heading = 90.0f;
-  state.gps_heading_accuracy = 10.0f; // Poor accuracy (> 5 degrees)
+  state.gps_heading_accuracy = 20.0f; // Beyond the 15-degree rejection threshold
 
-  imu_calc();
+  imu_update();
 
   // Should not fuse GPS (accuracy too poor)
   TEST_ASSERT_FLOAT_WITHIN(0.1f, 0.0f, state.heading);
+  TEST_ASSERT_TRUE(state.heading_correction_flags & HEADING_POOR_ACCURACY);
 }
 
 // Test heading with complex rotation - REMOVED

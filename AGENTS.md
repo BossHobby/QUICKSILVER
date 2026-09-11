@@ -66,8 +66,8 @@ When adding or changing subsystem behavior:
 ### Flight Control (`src/flight/`)
 - `control.c` - Main control loop, mode handling (acro/angle), arming logic
 - `pid.c` - PID controller with D-term filtering and voltage compensation
-- `imu.c` - 6-axis sensor fusion, angle calculation
-- `sixaxis.c` - Gyro/accel reading and calibration
+- `src/control/imu.cpp` - Gravity and quaternion estimation, GPS heading fusion, and the combined IMU task
+- `src/control/gyro.cpp` - Gyro/accel preparation, calibration, orientation, and gyro filtering
 - `filter.c` - Digital filters (PT1, dynamic filtering, SDFT)
 - `input.c` - Receiver input processing and expo curves
 
