@@ -25,6 +25,8 @@ extern void test_attitude_imu_pipeline_yaw_while_tilted(void);
 extern void test_bmp280_raw_reference_sample_returns_pascals(void);
 extern void test_bmp280_discards_unused_sample_nibbles(void);
 extern void test_bmp388_raw_reference_sample_retains_cubic_correction(void);
+extern void test_sdft_explicit_period_update();
+
 // Filter tests
 extern void test_filter_init(void);
 extern void test_atan2approx_accuracy(void);
@@ -222,6 +224,8 @@ int main(int argc, char **argv) {
   RUN_TEST(test_sdcard_transport_errors);
   RUN_TEST(test_sdcard_transport_busy_and_timer_wrap);
   RUN_TEST(test_sdcard_device_samples_during_write);
+
+  RUN_TEST(test_sdft_explicit_period_update);
 
   // Filter tests
   RUN_TEST(test_filter_init);

@@ -53,6 +53,7 @@ static void looptime_auto_detect() {
   }
 
   if (loop_counter == 200) {
+    const float previous_period = state.looptime_autodetect;
     loop_avg /= 200;
     if (loop_avg > (state.looptime_autodetect + 5.0f)) {
       state.looptime_autodetect = MIN(500, state.looptime_autodetect * 2.0f);
@@ -60,6 +61,9 @@ static void looptime_auto_detect() {
       state.looptime_autodetect = MAX(LOOPTIME_MAX, state.looptime_autodetect * 0.5f);
     }
     loop_counter++;
+    if (state.looptime_autodetect != previous_period) {
+      control_filter_update(false);
+    }
   }
 
   if (loop_counter == 201) {
