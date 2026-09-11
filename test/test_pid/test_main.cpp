@@ -2,6 +2,9 @@
 #include <unity.h>
 
 // PID tests
+#ifdef VEHICLE_MULTI
+extern void test_horizon_error_matches_setpoint(void);
+#endif
 extern void test_pid_proportional_control(void);
 extern void test_pid_integral_accumulation(void);
 extern void test_pid_derivative_calculation(void);
@@ -19,6 +22,9 @@ void tearDown() {}
 int main() {
   UNITY_BEGIN();
   // PID tests
+#ifdef VEHICLE_MULTI
+  RUN_TEST(test_horizon_error_matches_setpoint);
+#endif
   RUN_TEST(test_pid_proportional_control);
   RUN_TEST(test_pid_integral_accumulation);
   RUN_TEST(test_pid_derivative_calculation);
