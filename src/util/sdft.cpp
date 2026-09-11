@@ -1,20 +1,14 @@
 #include "sdft.h"
 
 #include <math.h>
+#include <string.h>
 
-#include "control/control.h"
-#include "core/looptime.h"
 #include "util/filter.h"
 #include "util/util.h"
 
 // from https://www.dsprelated.com/showarticle/776.php
 // citing E. Jacobsen and R. Lyons, “The Sliding DFT”
 // and E. Jacobsen and R. Lyons, “An Update to the Sliding DFT”
-
-#define LOOPTIME_S (state.looptime_autodetect * 1e-6)
-// one axis at a time, n steps
-#define FILTER_SAMPLE_PERIOD_S (LOOPTIME_S * (float)(SDFT_STEP_COUNT * 3))
-#define SAMPLE_HZ (1e6f / state.looptime_autodetect)
 
 static float r_to_N;
 static complex_float twiddle[SDFT_SAMPLE_SIZE];
@@ -26,9 +20,15 @@ static uint32_t bin_min_index;
 static uint32_t bin_max_index;
 static uint32_t bin_batches;
 
-void sdft_init(sdft_t *sdft) {
-  sub_samples = (SAMPLE_HZ / (2.0f * SDFT_MAX_HZ));
-  resolution_hz = ((SAMPLE_HZ / (float)sub_samples) / SDFT_SAMPLE_SIZE);
+void sdft_init(sdft_t *sdft, float sample_period_us) {
+  *sdft = {};
+  if (sample_period_us <= 0.0f) {
+    return;
+  }
+  sdft->sample_period_us = sample_period_us;
+  const float sample_hz = 1e6f / sample_period_us;
+  sub_samples = MAX(1U, (uint32_t)(sample_hz / (2.0f * SDFT_MAX_HZ)));
+  resolution_hz = ((sample_hz / (float)sub_samples) / SDFT_SAMPLE_SIZE);
 
   bin_min_index = (float)SDFT_MIN_HZ / (float)resolution_hz + 0.5f;
   bin_max_index = (float)SDFT_MAX_HZ / (float)resolution_hz + 0.5f;
@@ -43,28 +43,23 @@ void sdft_init(sdft_t *sdft) {
   }
 
   sdft->state = SDFT_UPDATE_MAGNITUDE;
-  sdft->idx = 0;
-  sdft->sample_avg = 0;
-  sdft->sample_accumulator = 0;
-  sdft->sample_count = 0;
-  sdft->noise_floor = 0;
+}
 
-  for (uint32_t i = 0; i < SDFT_SAMPLE_SIZE; i++) {
-    sdft->samples[i] = 0.0f;
+void sdft_update_period(sdft_t *sdft, float sample_period_us) {
+  if (sdft->sample_period_us == sample_period_us) {
+    return;
   }
-
-  for (uint32_t i = 0; i < SDFT_BIN_COUNT; i++) {
-    sdft->data[i] = 0.0f;
-  }
-
-  for (uint32_t peak = 0; peak < SDFT_PEAKS; peak++) {
-    sdft->peak_values[peak] = 0;
-    sdft->peak_indicies[peak] = 0;
-    sdft->notch_hz[peak] = 0;
-  }
+  // Restart spectral history at the new rate, retaining applied notch centres.
+  float notch_hz[SDFT_PEAKS];
+  memcpy(notch_hz, sdft->notch_hz, sizeof(notch_hz));
+  sdft_init(sdft, sample_period_us);
+  memcpy(sdft->notch_hz, notch_hz, sizeof(notch_hz));
 }
 
 bool sdft_push(sdft_t *sdft, float val) {
+  if (sdft->sample_period_us <= 0.0f) {
+    return false;
+  }
   bool batch_finished = false;
 
   const uint32_t bin_min = bin_batches * sdft->sample_count;
@@ -96,6 +91,9 @@ bool sdft_push(sdft_t *sdft, float val) {
 }
 
 bool sdft_update(sdft_t *sdft) {
+  if (sdft->sample_period_us <= 0.0f) {
+    return false;
+  }
   bool filters_updated = false;
 
   switch (sdft->state) {
@@ -203,7 +201,8 @@ bool sdft_update(sdft_t *sdft) {
       const float f_hz = meanBin * (float)resolution_hz;
 
       const float filter_multi = constrain(sdft->peak_values[peak] / sdft->noise_floor, 1.0f, 10.0f);
-      const float gain = FILTER_SAMPLE_PERIOD_S / (1 / (2.0f * M_PI_F * (filter_multi * SDFT_FILTER_HZ)) + FILTER_SAMPLE_PERIOD_S);
+      const float filter_period = sdft->sample_period_us * 1e-6f * (float)(SDFT_STEP_COUNT * 3);
+      const float gain = filter_period / (1 / (2.0f * M_PI_F * (filter_multi * SDFT_FILTER_HZ)) + filter_period);
 
       sdft->notch_hz[peak] += gain * (f_hz - sdft->notch_hz[peak]);
     }
@@ -214,14 +213,6 @@ bool sdft_update(sdft_t *sdft) {
 
   case SDFT_UPDATE_FILTERS:
     sdft->state = SDFT_UPDATE_MAGNITUDE;
-
-    // re-compute in case looptime changed
-    sub_samples = (SAMPLE_HZ / (2.0f * SDFT_MAX_HZ));
-    resolution_hz = ((SAMPLE_HZ / (float)sub_samples) / SDFT_SAMPLE_SIZE);
-
-    bin_min_index = (float)SDFT_MIN_HZ / (float)resolution_hz + 0.5f;
-    bin_max_index = (float)SDFT_MAX_HZ / (float)resolution_hz + 0.5f;
-    bin_batches = (bin_max_index - bin_min_index) / sub_samples + 1;
 
     filters_updated = true;
     break;

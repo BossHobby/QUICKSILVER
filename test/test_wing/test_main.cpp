@@ -183,10 +183,12 @@ static void test_autotrim_captures_integral_correction_before_reset() {
   state.aux_active |= (1U << AUX_ACROMODE);
   flags.in_air = 1;
   profile.pid.pid_rates[0].ki = (vec3_t){{100.0f, 100.0f, 100.0f}};
+  pid_rates_update();
   state.error = (vec3_t){{0.05f, 0.1f, -0.075f}};
   for (unsigned i = 0; i < 1000; i++)
     pid_calc();
   profile.pid.pid_rates[0].ki = {};
+  pid_rates_update();
   start_autotrim();
   const float before = pwm_values[1];
   TEST_ASSERT_TRUE(before > 0.1f);
