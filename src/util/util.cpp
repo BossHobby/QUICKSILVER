@@ -6,14 +6,17 @@
 #include "core/project.h"
 #include "driver/time.h"
 
-float mapf(float x, float in_min, float in_max, float out_min, float out_max) {
-  return ((x - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min;
-}
-
 #define sinPolyCoef3 -1.666665710e-1f // Double: -1.666665709650470145824129400050267289858e-1
 #define sinPolyCoef5 8.333017292e-3f  // Double:  8.333017291562218127986291618761571373087e-3
 #define sinPolyCoef7 -1.980661520e-4f // Double: -1.980661520135080504411629636078917643846e-4
 #define sinPolyCoef9 2.600054768e-6f  // Double:  2.600054767890361277123254766503271638682e-6
+
+// Rational atan approximation used by Betaflight's common/maths.c.
+static constexpr float ATAN_COEFFICIENTS[] = {3.14551665884836e-07f, 0.99997356613987f, 0.14744007058297684f, 0.3099814292351353f, 0.05030176425872175f, 0.1471039133652469f, 0.6444640676891548f};
+
+float mapf(float x, float in_min, float in_max, float out_min, float out_max) {
+  return ((x - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min;
+}
 
 float fastsin(float x) {
   const int32_t xint = x;
@@ -71,48 +74,25 @@ int ipow(int base, int exp) {
   return result;
 }
 
-#define OCTANTIFY(_x, _y, _o) \
-  do {                        \
-    float _t;                 \
-    _o = 0;                   \
-    if (_y < 0) {             \
-      _x = -_x;               \
-      _y = -_y;               \
-      _o += 4;                \
-    }                         \
-    if (_x <= 0) {            \
-      _t = _x;                \
-      _x = _y;                \
-      _y = -_t;               \
-      _o += 2;                \
-    }                         \
-    if (_x <= _y) {           \
-      _t = _y - _x;           \
-      _x = _x + _y;           \
-      _y = _t;                \
-      _o += 1;                \
-    }                         \
-  } while (0);
+float atan2approx_rad(float y, float x) {
+  if (y == 0.0f) return x < 0.0f ? copysignf(M_PI_F, y) : y;
+  if (x == 0.0f) return copysignf(M_PI_F * 0.5f, y);
 
-// +-0.09 deg error
+  const float abs_x = fabsf(x);
+  const float abs_y = fabsf(y);
+  const float largest = MAX(abs_x, abs_y);
+  const float ratio = MIN(abs_x, abs_y) / largest;
+  const float numerator = -((((ATAN_COEFFICIENTS[4] * ratio - ATAN_COEFFICIENTS[3]) * ratio - ATAN_COEFFICIENTS[2]) * ratio - ATAN_COEFFICIENTS[1]) * ratio - ATAN_COEFFICIENTS[0]);
+  const float denominator = (ATAN_COEFFICIENTS[6] * ratio + ATAN_COEFFICIENTS[5]) * ratio + 1.0f;
+  float angle = numerator / denominator;
+  if (abs_y > abs_x) angle = M_PI_F * 0.5f - angle;
+  if (x < 0.0f) angle = M_PI_F - angle;
+  if (y < 0.0f) angle = -angle;
+  return angle;
+}
+
 float atan2approx(float y, float x) {
-
-  if (x == 0)
-    x = 123e-15f;
-  float phi = 0;
-  float dphi;
-  float t;
-
-  OCTANTIFY(x, y, phi);
-
-  t = (y / x);
-  // atan function for 0 - 1 interval
-  dphi = t * ((M_PI / 4 + 0.2447f) + t * ((-0.2447f + 0.0663f) + t * (-0.0663f)));
-  phi *= M_PI / 4;
-  dphi = phi + dphi;
-  if (dphi > (float)M_PI)
-    dphi -= 2 * M_PI;
-  return RADTODEG * dphi;
+  return atan2approx_rad(y, x) * RADTODEG;
 }
 
 int8_t buf_equal(const uint8_t *str1, size_t len1, const uint8_t *str2, size_t len2) {
