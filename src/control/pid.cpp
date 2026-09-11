@@ -37,6 +37,7 @@ static vec3_t lastsetpoint = {0};
 static vec3_t ierror = {0};
 static vec3_t last_error = {0};
 static vec3_t last_error2 = {0};
+static pid_rate_t scaled_rates;
 
 static filter_t filter[FILTER_MAX_SLOTS];
 static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
@@ -61,12 +62,30 @@ const vec3_t *pid_get_ierror() {
   return &ierror;
 }
 
-void pid_init() {
-  filter_lp_pt1_init(&rx_filter, rx_filter_state, 3, state.rx_filter_hz, task_get_period_us(TASK_PID));
+void pid_rates_update() {
+  const pid_rate_t *rates = profile_current_pid_rates();
+  scaled_rates.kp = vec3_mul_elem(rates->kp, pid_scales[0]);
+  scaled_rates.ki = vec3_mul(vec3_mul_elem(rates->ki, pid_scales[1]), 1.0f / 3.0f);
+  scaled_rates.kd = vec3_mul_elem(rates->kd, pid_scales[2]);
+}
+
+void pid_filter_update(bool reset) {
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
-    filter_init(profile.filter.dterm[i].type, &filter[i], filter_state[i], 3, profile.filter.dterm[i].cutoff_freq, task_get_period_us(TASK_PID));
+    if (reset) {
+      filter_init(profile.filter.dterm[i].type, &filter[i], filter_state[i], 3, profile.filter.dterm[i].cutoff_freq, task_get_period_us(TASK_PID));
+    } else {
+      filter_coeff(profile.filter.dterm[i].type, &filter[i], profile.filter.dterm[i].cutoff_freq, task_get_period_us(TASK_PID));
+    }
   }
-  filter_init(profile.filter.dterm_dynamic_type, &dynamic_filter, dynamic_filter_state, 3, DTERM_DYNAMIC_FREQ_MAX, task_get_period_us(TASK_PID));
+  if (reset) {
+    filter_init(profile.filter.dterm_dynamic_type, &dynamic_filter, dynamic_filter_state, 3, DTERM_DYNAMIC_FREQ_MAX, task_get_period_us(TASK_PID));
+  }
+}
+
+void pid_init() {
+  pid_rates_update();
+  filter_lp_pt1_init(&rx_filter, rx_filter_state, 3, state.rx_filter_hz, task_get_period_us(TASK_PID));
+  pid_filter_update(true);
   lastrate = (vec3_t){0};
   lastsetpoint = (vec3_t){0};
   pid_reset_i();
@@ -161,8 +180,6 @@ static inline float pid_tda_compensation() {
 
 void pid_calc() {
   filter_lp_pt1_coeff(&rx_filter, state.rx_filter_hz, task_get_period_us(TASK_PID));
-  filter_coeff(profile.filter.dterm[0].type, &filter[0], profile.filter.dterm[0].cutoff_freq, task_get_period_us(TASK_PID));
-  filter_coeff(profile.filter.dterm[1].type, &filter[1], profile.filter.dterm[1].cutoff_freq, task_get_period_us(TASK_PID));
 
   const float dynamic_throttle = state.throttle + state.throttle * (1.0f - state.throttle);
   const float dterm_dynamic_raw_freq = mapf(dynamic_throttle, 0.0f, 1.0f, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
@@ -184,11 +201,9 @@ void pid_calc() {
 
   const vec3_t setpoint_delta = vec3_sub(state.setpoint, lastsetpoint);
   const vec3_t gyro_delta = vec3_sub(state.gyro, lastrate);
-  const pid_rate_t *rates = profile_current_pid_rates();
-  const vec3_t current_kp = vec3_mul(vec3_mul_elem(rates->kp, pid_scales[0]), v_compensation);
-  const float ki_looptime = state.looptime * (1.0f / 3.0f);
-  const vec3_t current_ki = vec3_mul(vec3_mul_elem(rates->ki, pid_scales[1]), ki_looptime);
-  const vec3_t current_kd = vec3_mul(vec3_mul_elem(rates->kd, pid_scales[2]), state.looptime_inverse);
+  const vec3_t current_kp = vec3_mul(scaled_rates.kp, v_compensation);
+  const vec3_t current_ki = vec3_mul(scaled_rates.ki, state.looptime);
+  const vec3_t current_kd = vec3_mul(scaled_rates.kd, state.looptime_inverse);
   const vec3_t iterm_enable = pid_should_enable_iterm_vec();
   const vec3_t iterm_windup = pid_compute_iterm_windup_vec(&pid_output);
   const bool rx_filter_enabled = state.rx_filter_hz > 0.1f;

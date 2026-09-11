@@ -39,6 +39,12 @@ static filter_state_t filter_pass1[3];
 static filter_state_t filter_pass2[3];
 #endif
 
+void imu_filter_update() {
+#ifdef QUICKSILVER_IMU
+  filter_lp_pt1_coeff(&filter, PT1_FILTER_HZ, task_get_period_us(TASK_IMU));
+#endif
+}
+
 void imu_init() {
   // init the gravity vector with accel values
   for (int xx = 0; xx < 100; xx++) {
@@ -126,8 +132,6 @@ void imu_calc() {
       state.gyro_delta_angle.axis[2],
   }};
   state.GEstG = vec3_rotate(state.GEstG, rot);
-
-  filter_lp_pt1_coeff(&filter, PT1_FILTER_HZ, task_get_period_us(TASK_IMU));
 
   state.accel.roll = filter_lp_pt1_step(&filter, &filter_pass1[0], state.accel_raw.roll);
   state.accel.pitch = filter_lp_pt1_step(&filter, &filter_pass1[1], state.accel_raw.pitch);
