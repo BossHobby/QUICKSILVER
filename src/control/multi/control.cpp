@@ -97,7 +97,7 @@ static void control_flight_mode() {
         state.error.pitch = rates.pitch - state.gyro.pitch;
       } else {
         state.setpoint.roll = (angle_pid(0) + yaw_error.axis[0]) * (1.0f - fade) + fade * (rates.roll);
-        state.error.roll = ((angle_pid(0) + yaw_error.axis[0] - state.gyro.roll) * (1 - fade)) + (fade * (rates.roll - state.gyro.roll));
+        state.error.roll = state.setpoint.roll - state.gyro.roll;
         state.setpoint.pitch = rates.pitch;
         state.error.pitch = rates.pitch - state.gyro.pitch;
       }
@@ -135,7 +135,7 @@ static void control_flight_mode() {
           state.error.axis[i] = rates.axis[i] - state.gyro.axis[i];
         } else {
           state.setpoint.axis[i] = (angle_pid(i) + yaw_error.axis[i]) * (1.0f - fade) + fade * (rates.axis[i]);
-          state.error.axis[i] = ((angle_pid(i) + yaw_error.axis[i] - state.gyro.axis[i]) * (1 - fade)) + (fade * (rates.axis[i] - state.gyro.axis[i]));
+          state.error.axis[i] = state.setpoint.axis[i] - state.gyro.axis[i];
         }
       }
       state.setpoint.yaw = rates.yaw;
