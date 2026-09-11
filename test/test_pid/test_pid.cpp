@@ -13,6 +13,7 @@
 #include "control/pid.h"
 #include "core/profile.h"
 #include "driver/time.h"
+#include "util/util.h"
 
 // Test fixtures
 static void pid_setUp(void) {
@@ -73,6 +74,68 @@ void test_horizon_error_matches_setpoint(void) {
   }
 }
 #endif
+
+void test_pid_rates_update_preserves_integral(void) {
+  pid_setUp();
+  flags.arm_state = flags.in_air = 1;
+  profile.pid.pid_rates[0].kd = (vec3_t){0};
+  pid_rates_update();
+  state.error.roll = 0.1f;
+  for (int i = 0; i < 20; i++) {
+    pid_calc();
+  }
+  const float integral = state.pid_i_term.roll;
+  TEST_ASSERT_GREATER_THAN_FLOAT(0.0f, integral);
+
+  profile.pid.pid_rates[1].kp = (vec3_t){{62.8f, 62.8f, 31.4f}};
+  profile.pid.pid_rates[1].ki = (vec3_t){0};
+  profile.pid.pid_rates[1].kd = (vec3_t){0};
+  profile.pid.pid_profile = PID_PROFILE_2;
+  pid_rates_update();
+  pid_calc();
+  TEST_ASSERT_FLOAT_WITHIN(1e-7f, 0.01f, state.pid_p_term.roll);
+  TEST_ASSERT_EQUAL_FLOAT(integral, state.pid_i_term.roll);
+
+  profile.pid.pid_rates[1].kp.roll *= 2.0f;
+  pid_rates_update();
+  pid_calc();
+  TEST_ASSERT_FLOAT_WITHIN(1e-7f, 0.02f, state.pid_p_term.roll);
+  TEST_ASSERT_EQUAL_FLOAT(integral, state.pid_i_term.roll);
+}
+
+void test_pid_filter_update_retains_history_on_period_change(void) {
+  pid_setUp();
+  state.looptime_autodetect = 125.0f;
+  profile.filter.dterm[0].type = FILTER_LP_PT1;
+  profile.filter.dterm[0].cutoff_freq = 100.0f;
+  profile.pid.pid_rates[0].kd.roll = 1.0f;
+  pid_init();
+
+  state.gyro.roll = 0.001f;
+  pid_calc();
+  const float omega = 2.0f * M_PI_F * 100.0f;
+  const float alpha = omega * state.looptime / (1.0f + omega * state.looptime);
+  const float expected = -0.001f / 37500.0f * state.looptime_inverse * alpha;
+  TEST_ASSERT_FLOAT_WITHIN(1e-8f, expected, state.pid_d_term.roll);
+
+  state.looptime_autodetect = 250.0f;
+  state.looptime = 0.00025f;
+  state.looptime_inverse = 4000.0f;
+  control_filter_update(false);
+  pid_calc(); // No new gyro delta; the existing filter tail must survive.
+  const float next_alpha = omega * state.looptime / (1.0f + omega * state.looptime);
+  TEST_ASSERT_FLOAT_WITHIN(1e-8f, expected * (1.0f - next_alpha), state.pid_d_term.roll);
+
+  profile.filter.dterm[0].type = FILTER_LP_PT2;
+  control_filter_update(true);
+  pid_calc();
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.pid_d_term.roll);
+  state.gyro.roll += 0.001f;
+  pid_calc();
+  const float pt2_step = omega * 1.55377397403f * state.looptime;
+  const float pt2_alpha = pt2_step / (1.0f + pt2_step);
+  TEST_ASSERT_FLOAT_WITHIN(1e-8f, -0.001f / 37500.0f * state.looptime_inverse * pt2_alpha * pt2_alpha, state.pid_d_term.roll);
+}
 
 // Test basic proportional control
 void test_pid_proportional_control(void) {

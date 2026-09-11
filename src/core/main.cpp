@@ -6,6 +6,7 @@
 #include "config/feature.h"
 
 #include "control/attitude.h"
+#include "control/control.h"
 #ifdef VEHICLE_ROVER
 #include "control/rover/control.h"
 #else
@@ -122,6 +123,7 @@ __attribute__((__used__)) int main() {
   scheduler_init();
 
   pid_init();
+  control_filter_update(false);
 
   time_delay_ms(50);
   sixaxis_gyro_cal();

@@ -28,6 +28,7 @@ static void imu_setUp(void) {
 
   // Set default values
   state.looptime = 0.000125f; // 8kHz
+  imu_filter_update();
 
   // Initialize gravity vector to (0, 0, 1g)
   state.GEstG.axis[0] = 0.0f;
