@@ -161,6 +161,7 @@ void filter_global_init() {
 }
 
 void filter_init(filter_type_t type, filter_t *filter, filter_state_t *state, uint8_t count, float hz, float sample_period_us) {
+  memset(filter, 0, sizeof(*filter));
   switch (type) {
   case FILTER_LP_PT1:
     filter_lp_pt1_init(&filter->lp_pt1, state, count, hz, sample_period_us);
@@ -172,7 +173,7 @@ void filter_init(filter_type_t type, filter_t *filter, filter_state_t *state, ui
     filter_lp_pt3_init(&filter->lp_pt3, state, count, hz, sample_period_us);
     break;
   default:
-    // no filter, do nothing
+    filter_init_state(state, count);
     break;
   }
 }
