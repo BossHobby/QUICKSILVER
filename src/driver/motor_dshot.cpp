@@ -146,14 +146,16 @@ void dshot_dma_start() {
     for (uint32_t j = 0; j < dshot_gpio_port_count; j++) {
       dshot_output_buffer[j][i * 3 + 1] = 0; // clear middle bit
     }
-    for (uint8_t motor = 0; motor < MOTOR_PIN_MAX; motor++) {
-      if (!dshot_motor_slot_active(motor)) {
-        continue;
-      }
+  }
+  for (uint8_t motor = 0; motor < MOTOR_PIN_MAX; motor++) {
+    if (!dshot_motor_slot_active(motor)) {
+      continue;
+    }
+    const uint32_t port = dshot_pins[motor].dshot_port;
+    for (uint8_t i = 0; i < 16; i++) {
       // for 1 hold the line high for two timeunits
       // first timeunit is already applied
       const bool bit = dshot_packet[motor] & 0x8000;
-      const uint32_t port = dshot_pins[motor].dshot_port;
       dshot_output_buffer[port][i * 3 + 1] |= bit ? dshot_pins[motor].set_mask : dshot_pins[motor].reset_mask;
 
       dshot_packet[motor] <<= 1;
