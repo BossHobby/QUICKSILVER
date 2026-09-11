@@ -222,6 +222,8 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
   switch (value) {
   case QUIC_VAL_PROFILE: {
     res = cbor_decode_profile_t(dec, &profile);
+    // Decoding can update fields before reporting a malformed profile.
+    sixaxis_orientation_update();
     check_cbor_error(QUIC_CMD_SET);
 
     flash_save();
