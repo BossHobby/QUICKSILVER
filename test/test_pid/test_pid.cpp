@@ -51,6 +51,29 @@ static void pid_setUp(void) {
 }
 
 
+#ifdef VEHICLE_MULTI
+void test_horizon_error_matches_setpoint(void) {
+  for (int race = 0; race < 2; race++) {
+    pid_setUp();
+    profile.pid.small_angle.kp = profile.pid.big_angle.kp = 10.0f;
+    profile.pid.small_angle.kd = profile.pid.big_angle.kd = 0.1f;
+    state.aux_active = (1U << AUX_LEVELMODE) | (1U << AUX_HORIZON);
+    if (race) {
+      state.aux_active |= 1U << AUX_RACEMODE;
+    }
+    state.GEstG = (vec3_t){{0.1f, 0.2f, 0.9746794f}};
+    state.gyro = (vec3_t){{0.3f, -0.2f, 0.0f}};
+    state.angle_error = (vec3_t){0};
+    angle_pid(0);
+    angle_pid(1);
+    control();
+    TEST_ASSERT_GREATER_THAN_FLOAT(0.01f, fabsf(state.angle_error.roll));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, state.setpoint.roll - state.gyro.roll, state.error.roll);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, state.setpoint.pitch - state.gyro.pitch, state.error.pitch);
+  }
+}
+#endif
+
 // Test basic proportional control
 void test_pid_proportional_control(void) {
   pid_setUp();
