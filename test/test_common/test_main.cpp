@@ -27,6 +27,7 @@ extern void test_bmp280_discards_unused_sample_nibbles(void);
 extern void test_bmp388_raw_reference_sample_retains_cubic_correction(void);
 // Filter tests
 extern void test_filter_init(void);
+extern void test_atan2approx_accuracy(void);
 extern void test_filter_reconfigure_type(void);
 extern void test_notch_matches_reference_with_changing_frequency(void);
 extern void test_filter_lowpass_pt1(void);
@@ -224,6 +225,7 @@ int main(int argc, char **argv) {
 
   // Filter tests
   RUN_TEST(test_filter_init);
+  RUN_TEST(test_atan2approx_accuracy);
   RUN_TEST(test_filter_reconfigure_type);
   RUN_TEST(test_notch_matches_reference_with_changing_frequency);
   RUN_TEST(test_filter_lowpass_pt1);
