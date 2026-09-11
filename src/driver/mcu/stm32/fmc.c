@@ -10,7 +10,7 @@
 #endif
 
 #if defined(STM32H7)
-#define FLASH_FLAG_ALL_ERRORS (FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGSERR)
+#define FLASH_FLAG_ALL_ERRORS (FLASH_FLAG_EOP_BANK1 | FLASH_FLAG_ALL_ERRORS_BANK1)
 #endif
 
 #if defined(STM32G4)
@@ -45,7 +45,19 @@ void fmc_erase() {
   erase_init.NbPages = 8;
   HAL_FLASHEx_Erase(&erase_init, &page_error);
 #elif defined(STM32H7)
-  FLASH_Erase_Sector(FLASH_SECTOR_1, FLASH_BANK_BOTH, FLASH_VOLTAGE_RANGE_3);
+  // FLASH_CONFIG is bank 1, sector 1. The HAL waits and clears erase mode before programming.
+  uint32_t sector_error;
+  FLASH_EraseInitTypeDef erase_init = {0};
+  erase_init.TypeErase = FLASH_TYPEERASE_SECTORS;
+  erase_init.Banks = FLASH_BANK_1;
+  erase_init.Sector = FLASH_SECTOR_1;
+  erase_init.NbSectors = 1;
+  erase_init.VoltageRange = FLASH_VOLTAGE_RANGE_3;
+  if (HAL_FLASHEx_Erase(&erase_init, &sector_error) != HAL_OK) {
+    fmc_lock();
+    __enable_irq();
+    failloop(FAILLOOP_FAULT);
+  }
 #else
   FLASH_Erase_Sector(FLASH_SECTOR_3, FLASH_VOLTAGE_RANGE_3);
 #endif
