@@ -21,6 +21,9 @@ typedef enum {
 
 volatile uint32_t dshot_phase = 0;
 
+uint32_t dshot_output_period;
+uint32_t dshot_input_period;
+
 uint8_t dshot_gpio_port_count = 0;
 dshot_gpio_port_t dshot_gpio_ports[DSHOT_MAX_PORT_COUNT] = {
     {.dma_device = DMA_DEVICE_DSHOT_CH1},
@@ -275,7 +278,21 @@ static uint16_t dshot_encode_motor_value(float value) {
   return DSHOT_CMD_MOTOR_STOP;
 }
 
+void motor_dshot_update_config() {
+  // Caller drains the previous transfer before applying profile changes.
+  if (dshot_gpio_port_count == 0) {
+    return;
+  }
+  dshot_output_period = DSHOT_SYMBOL_TIME;
+  dshot_input_period = GCR_SYMBOL_TIME;
+  for (uint32_t j = 0; j < dshot_gpio_port_count; j++) {
+    dshot_dma_configure_output(j);
+  }
+}
+
 void motor_dshot_init() {
+  dshot_output_period = DSHOT_SYMBOL_TIME;
+  dshot_input_period = GCR_SYMBOL_TIME;
   dshot_gpio_port_count = 0;
   motor_dir = MOTOR_FORWARD;
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
@@ -294,6 +311,7 @@ void motor_dshot_init() {
     }
 
     dshot_init_gpio_port(port);
+    dshot_dma_configure_output(j);
 
     for (uint8_t i = 0; i < DSHOT_DMA_SYMBOLS; i++) {
       dshot_output_buffer[j][i * 3 + 0] = port->set_mask;   // start bit

@@ -222,6 +222,7 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
 
   switch (value) {
   case QUIC_VAL_PROFILE: {
+    motor_wait_for_ready();
     res = cbor_decode_profile_t(dec, &profile);
     // Decoding can update fields before reporting a malformed profile.
     profile_output_update();
@@ -232,6 +233,7 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
 
     flash_save();
 
+    motor_update_config();
     servo_stop();
     servo_init();
 

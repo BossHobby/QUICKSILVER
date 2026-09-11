@@ -20,8 +20,12 @@ typedef enum {
 
 // driver functions
 void motor_init();
+
+// Apply timing changes with the previous DMA transfer already drained.
+void motor_update_config();
 void motor_wait_for_ready();
 void motor_beep();
+
 // Persist the ESC direction for a logical profile output while disarmed and not testing.
 // Success means the command sequence was transmitted, not acknowledged by the ESC.
 bool motor_configure_direction(uint8_t index, motor_direction_t dir);

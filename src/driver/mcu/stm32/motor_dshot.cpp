@@ -20,7 +20,7 @@ void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   // setup timer to 1/3 of the full bit time
   LL_TIM_InitTypeDef tim_init;
   LL_TIM_StructInit(&tim_init);
-  tim_init.Autoreload = DSHOT_SYMBOL_TIME;
+  tim_init.Autoreload = dshot_output_period;
   tim_init.Prescaler = 0;
   tim_init.ClockDivision = 0;
   tim_init.CounterMode = LL_TIM_COUNTERMODE_UP;
@@ -74,20 +74,28 @@ void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   LL_TIM_EnableCounter(tim->instance);
 }
 
-void dshot_dma_setup_output(uint32_t index) {
+void dshot_dma_configure_output(uint32_t index) {
   const dshot_gpio_port_t *port = &dshot_gpio_ports[index];
 
   const timer_def_t *tim = &timer_defs[TIMER_TAG_TIM(port->timer_tag)];
-  LL_TIM_SetAutoReload(tim->instance, DSHOT_SYMBOL_TIME);
+  LL_TIM_SetAutoReload(tim->instance, dshot_output_period);
 
   const dma_stream_def_t *dma = &dma_stream_defs[target.dma[port->dma_device].dma];
   LL_DMA_SetPeriphAddress(dma->port, dma->stream_index, (uint32_t)&port->gpio->BSRR);
   LL_DMA_SetMemoryAddress(dma->port, dma->stream_index, (uint32_t)&dshot_output_buffer[index][0]);
-  LL_DMA_SetDataLength(dma->port, dma->stream_index, DSHOT_DMA_BUFFER_SIZE);
   LL_DMA_SetDataTransferDirection(dma->port, dma->stream_index, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
   LL_DMA_SetPeriphSize(dma->port, dma->stream_index, LL_DMA_PDATAALIGN_WORD);
   LL_DMA_SetMemorySize(dma->port, dma->stream_index, LL_DMA_MDATAALIGN_WORD);
+}
 
+void dshot_dma_setup_output(uint32_t index) {
+  // Bidirectional frames must restore the registers changed by input capture.
+  if (profile.motor.dshot_telemetry) {
+    dshot_dma_configure_output(index);
+  }
+  const dshot_gpio_port_t *port = &dshot_gpio_ports[index];
+  const dma_stream_def_t *dma = &dma_stream_defs[target.dma[port->dma_device].dma];
+  LL_DMA_SetDataLength(dma->port, dma->stream_index, DSHOT_DMA_BUFFER_SIZE);
   LL_DMA_EnableStream(dma->port, dma->stream_index);
   timer_enable_dma_request(TIMER_TAG_TIM(port->timer_tag), TIMER_TAG_CH(port->timer_tag), true);
 }
@@ -96,7 +104,7 @@ void dshot_dma_setup_input(uint32_t index) {
   const dshot_gpio_port_t *port = &dshot_gpio_ports[index];
 
   const timer_def_t *tim = &timer_defs[TIMER_TAG_TIM(port->timer_tag)];
-  LL_TIM_SetAutoReload(tim->instance, GCR_SYMBOL_TIME);
+  LL_TIM_SetAutoReload(tim->instance, dshot_input_period);
 
   const dma_stream_def_t *dma = &dma_stream_defs[target.dma[port->dma_device].dma];
   LL_DMA_SetPeriphAddress(dma->port, dma->stream_index, (uint32_t)&port->gpio->IDR);

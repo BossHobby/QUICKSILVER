@@ -18,7 +18,7 @@ void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   rcc_enable(tim->rcc);
 
   // setup timer to 1/3 of the full bit time
-  tmr_base_init(tim->instance, DSHOT_SYMBOL_TIME, 0);
+  tmr_base_init(tim->instance, dshot_output_period, 0);
   tmr_clock_source_div_set(tim->instance, TMR_CLOCK_DIV1);
   tmr_cnt_dir_set(tim->instance, TMR_COUNT_UP);
   tmr_period_buffer_enable(tim->instance, TRUE);
@@ -59,11 +59,11 @@ void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   tmr_counter_enable(tim->instance, TRUE);
 }
 
-void dshot_dma_setup_output(uint32_t index) {
+void dshot_dma_configure_output(uint32_t index) {
   const dshot_gpio_port_t *port = &dshot_gpio_ports[index];
 
   const timer_def_t *tim = &timer_defs[TIMER_TAG_TIM(port->timer_tag)];
-  tmr_period_value_set(tim->instance, DSHOT_SYMBOL_TIME);
+  tmr_period_value_set(tim->instance, dshot_output_period);
 
   const dma_stream_def_t *dma = &dma_stream_defs[target.dma[port->dma_device].dma];
   dma->stream->ctrl_bit.dtd = 1; // DMA_DIR_MEMORY_TO_PERIPHERAL
@@ -71,6 +71,15 @@ void dshot_dma_setup_output(uint32_t index) {
   dma->stream->ctrl_bit.pwidth = DMA_PERIPHERAL_DATA_WIDTH_WORD;
   dma->stream->paddr = (uint32_t)(&port->gpio->scr);
   dma->stream->maddr = (uint32_t)(&dshot_output_buffer[index][0]);
+}
+
+void dshot_dma_setup_output(uint32_t index) {
+  // Bidirectional frames must restore the registers changed by input capture.
+  if (profile.motor.dshot_telemetry) {
+    dshot_dma_configure_output(index);
+  }
+  const dshot_gpio_port_t *port = &dshot_gpio_ports[index];
+  const dma_stream_def_t *dma = &dma_stream_defs[target.dma[port->dma_device].dma];
   dma->stream->dtcnt_bit.cnt = DSHOT_DMA_BUFFER_SIZE;
 
   dma_channel_enable(dma->stream, TRUE);
@@ -81,7 +90,7 @@ void dshot_dma_setup_input(uint32_t index) {
   const dshot_gpio_port_t *port = &dshot_gpio_ports[index];
 
   const timer_def_t *tim = &timer_defs[TIMER_TAG_TIM(port->timer_tag)];
-  tmr_period_value_set(tim->instance, GCR_SYMBOL_TIME);
+  tmr_period_value_set(tim->instance, dshot_input_period);
 
   const dma_stream_def_t *dma = &dma_stream_defs[target.dma[port->dma_device].dma];
   dma->stream->ctrl_bit.dtd = 0; // DMA_DIR_PERIPHERAL_TO_MEMORY

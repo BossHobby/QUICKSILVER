@@ -12,6 +12,7 @@ extern void motor_pwm_beep();
 extern void motor_pwm_write(float *values);
 
 extern void motor_dshot_init();
+extern void motor_dshot_update_config();
 extern void motor_dshot_wait_for_ready();
 extern void motor_dshot_write(float *values);
 extern bool motor_dshot_configure_direction(uint8_t index, motor_direction_t dir);
@@ -41,6 +42,12 @@ void motor_wait_for_ready() {
   if (profile_outputs_use_protocol(OUTPUT_PROTOCOL_DSHOT)) {
     motor_dshot_wait_for_ready();
   }
+#endif
+}
+
+void motor_update_config() {
+#ifdef USE_MOTOR_DSHOT
+  motor_dshot_update_config();
 #endif
 }
 

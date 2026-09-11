@@ -68,6 +68,10 @@ typedef struct {
 
 extern volatile uint32_t dshot_phase;
 
+// Driver configuration shared by all GPIO ports, in timer ticks.
+extern uint32_t dshot_output_period;
+extern uint32_t dshot_input_period;
+
 extern uint8_t dshot_gpio_port_count;
 extern dshot_gpio_port_t dshot_gpio_ports[DSHOT_MAX_PORT_COUNT];
 
@@ -79,6 +83,7 @@ const dshot_gpio_port_t *dshot_gpio_for_device(const dma_device_t dev);
 void dshot_init_gpio_port(dshot_gpio_port_t *port);
 
 void dshot_gpio_init_output(gpio_pins_t pin);
+void dshot_dma_configure_output(uint32_t index);
 void dshot_dma_setup_output(uint32_t index);
 
 void dshot_gpio_init_input(gpio_pins_t pin);

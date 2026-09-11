@@ -65,8 +65,8 @@ static bool failsafe_rearm_allows_prearm_hold = false;
 
 void control_filter_update(bool reset) {
   sixaxis_filter_update(reset);
-  pid_filter_update(reset);
   imu_filter_update();
+  pid_filter_update(reset);
 }
 
 const char *control_flight_mode_name(void) {
