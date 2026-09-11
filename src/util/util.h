@@ -59,6 +59,8 @@ constexpr auto MAX(T a, U b) {
 float mapf(float x, float in_min, float in_max, float out_min, float out_max);
 
 float atan2approx(float y, float x);
+// Finite inputs; radians in [-pi, pi], (0, 0) returns zero.
+float atan2approx_rad(float y, float x);
 int ipow(int base, int exp);
 float fastsin(float x);
 float fastcos(float x);
