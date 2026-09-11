@@ -341,3 +341,7 @@ void control_update_arming();
 void control_failsafe_update();
 bool control_failsafe_active();
 void control();
+
+// Apply profile edits with reset=true; refresh loop timing with reset=false
+// to retain filter history. Call between control iterations.
+void control_filter_update(bool reset);

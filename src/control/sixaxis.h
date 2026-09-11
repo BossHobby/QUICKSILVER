@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 void sixaxis_init();
+void sixaxis_filter_update(bool reset);
 // Rebuild the sensor rotation after changing profile.motor.gyro_orientation.
 void sixaxis_orientation_update();
 void sixaxis_read();

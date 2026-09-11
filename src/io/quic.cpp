@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "control/control.h"
+#include "control/pid.h"
 #include "control/sixaxis.h"
 #include "core/debug.h"
 #include "core/flash.h"
@@ -223,7 +224,9 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
   case QUIC_VAL_PROFILE: {
     res = cbor_decode_profile_t(dec, &profile);
     // Decoding can update fields before reporting a malformed profile.
+    pid_rates_update();
     sixaxis_orientation_update();
+    control_filter_update(true);
     check_cbor_error(QUIC_CMD_SET);
 
     flash_save();

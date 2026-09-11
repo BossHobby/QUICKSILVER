@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "control/control.h"
+#include "control/pid.h"
 #include "core/flash.h"
 #include "core/looptime.h"
 #include "core/profile.h"
@@ -1003,11 +1004,13 @@ void osd_display() {
 
     if (osd_menu_button(7, 5, "PID PROFILE 1")) {
       profile.pid.pid_profile = PID_PROFILE_1;
+      pid_rates_update();
       osd_push_screen(OSD_SCREEN_PID);
     }
 
     if (osd_menu_button(7, 6, "PID PROFILE 2")) {
       profile.pid.pid_profile = PID_PROFILE_2;
+      pid_rates_update();
       osd_push_screen(OSD_SCREEN_PID);
     }
 
@@ -1031,16 +1034,19 @@ void osd_display() {
     osd_menu_select(4, 6, "KP");
     if (osd_menu_select_vec3(8, 6, rates->kp, 6, 0)) {
       rates->kp = osd_menu_adjust_vec3(rates->kp, 1, 0.0, 400.0);
+      pid_rates_update();
     }
 
     osd_menu_select(4, 7, "KI");
     if (osd_menu_select_vec3(8, 7, rates->ki, 6, 0)) {
       rates->ki = osd_menu_adjust_vec3(rates->ki, 1, 0.0, 100.0);
+      pid_rates_update();
     }
 
     osd_menu_select(4, 8, "KD");
     if (osd_menu_select_vec3(8, 8, rates->kd, 6, 0)) {
       rates->kd = osd_menu_adjust_vec3(rates->kd, 1, 0.0, 120.0);
+      pid_rates_update();
     }
 
     osd_menu_select_save_and_exit(7);
@@ -1095,28 +1101,33 @@ void osd_display() {
     osd_menu_select(4, 4, "PASS 1 TYPE");
     if (osd_menu_select_enum(18, 4, profile.filter.gyro[0].type, filter_type_labels)) {
       profile.filter.gyro[0].type = (filter_type_t)osd_menu_adjust_int(profile.filter.gyro[0].type, 1, 0, FILTER_MAX - 1);
+      control_filter_update(true);
       osd_state.reboot_fc_requested = 1;
     }
 
     osd_menu_select(4, 5, "PASS 1 FREQ");
     if (osd_menu_select_float(18, 5, profile.filter.gyro[0].cutoff_freq, 4, 0)) {
       profile.filter.gyro[0].cutoff_freq = osd_menu_adjust_float(profile.filter.gyro[0].cutoff_freq, 10, 50, 500);
+      control_filter_update(true);
     }
 
     osd_menu_select(4, 6, "PASS 2 TYPE");
     if (osd_menu_select_enum(18, 6, profile.filter.gyro[1].type, filter_type_labels)) {
       profile.filter.gyro[1].type = (filter_type_t)osd_menu_adjust_int(profile.filter.gyro[1].type, 1, 0, FILTER_MAX - 1);
+      control_filter_update(true);
       osd_state.reboot_fc_requested = 1;
     }
 
     osd_menu_select(4, 7, "PASS 2 FREQ");
     if (osd_menu_select_float(18, 7, profile.filter.gyro[1].cutoff_freq, 4, 0)) {
       profile.filter.gyro[1].cutoff_freq = osd_menu_adjust_float(profile.filter.gyro[1].cutoff_freq, 10, 50, 500);
+      control_filter_update(true);
     }
 
     osd_menu_select(4, 8, "DYNAMIC NOTCH");
     if (osd_menu_select_enum(18, 8, profile.filter.gyro_dynamic_notch_enable, on_off_labels)) {
       profile.filter.gyro_dynamic_notch_enable = osd_menu_adjust_int(profile.filter.gyro_dynamic_notch_enable, 1, 0, 1);
+      control_filter_update(true);
       osd_state.reboot_fc_requested = 1;
     }
 
@@ -1132,39 +1143,46 @@ void osd_display() {
     osd_menu_select(4, 3, "PASS 1 TYPE");
     if (osd_menu_select_enum(18, 3, profile.filter.dterm[0].type, filter_type_labels)) {
       profile.filter.dterm[0].type = (filter_type_t)osd_menu_adjust_int(profile.filter.dterm[0].type, 1, 0, FILTER_MAX - 1);
+      control_filter_update(true);
       osd_state.reboot_fc_requested = 1;
     }
 
     osd_menu_select(4, 4, "PASS 1 FREQ");
     if (osd_menu_select_float(18, 4, profile.filter.dterm[0].cutoff_freq, 4, 0)) {
       profile.filter.dterm[0].cutoff_freq = osd_menu_adjust_float(profile.filter.dterm[0].cutoff_freq, 10, 50, 500);
+      control_filter_update(true);
     }
 
     osd_menu_select(4, 5, "PASS 2 TYPE");
     if (osd_menu_select_enum(18, 5, profile.filter.dterm[1].type, filter_type_labels)) {
       profile.filter.dterm[1].type = (filter_type_t)osd_menu_adjust_int(profile.filter.dterm[1].type, 1, 0, FILTER_MAX - 1);
+      control_filter_update(true);
       osd_state.reboot_fc_requested = 1;
     }
 
     osd_menu_select(4, 6, "PASS 2 FREQ");
     if (osd_menu_select_float(18, 6, profile.filter.dterm[1].cutoff_freq, 4, 0)) {
       profile.filter.dterm[1].cutoff_freq = osd_menu_adjust_float(profile.filter.dterm[1].cutoff_freq, 10, 50, 500);
+      control_filter_update(true);
     }
 
     osd_menu_select(4, 7, "DYNAMIC TYPE");
     if (osd_menu_select_enum(18, 7, profile.filter.dterm_dynamic_type, filter_type_labels)) {
       profile.filter.dterm_dynamic_type = (filter_type_t)osd_menu_adjust_int(profile.filter.dterm_dynamic_type, 1, 0, FILTER_MAX - 1);
+      control_filter_update(true);
       osd_state.reboot_fc_requested = 1;
     }
 
     osd_menu_select(4, 8, "FREQ MIN");
     if (osd_menu_select_float(18, 8, profile.filter.dterm_dynamic_min, 4, 0)) {
       profile.filter.dterm_dynamic_min = osd_menu_adjust_float(profile.filter.dterm_dynamic_min, 10, 50, 500);
+      control_filter_update(true);
     }
 
     osd_menu_select(4, 9, "FREQ MAX");
     if (osd_menu_select_float(18, 9, profile.filter.dterm_dynamic_max, 4, 0)) {
       profile.filter.dterm_dynamic_max = osd_menu_adjust_float(profile.filter.dterm_dynamic_max, 10, 50, 500);
+      control_filter_update(true);
     }
 
     osd_menu_select_save_and_exit(4);
@@ -1565,12 +1583,14 @@ void osd_display() {
     osd_menu_select(3, 5, "TYPE");
     if (osd_menu_select_enum(20, 5, profile.filter.dterm[0].type, filter_type_labels)) {
       profile.filter.dterm[0].type = static_cast<filter_type_t>(osd_menu_adjust_int(profile.filter.dterm[0].type, 1, 0, FILTER_MAX - 1));
+      control_filter_update(true);
       osd_state.reboot_fc_requested = 1;
     }
 
     osd_menu_select(3, 6, "FREQ");
     if (osd_menu_select_float(20, 6, profile.filter.dterm[0].cutoff_freq, 5, 0)) {
       profile.filter.dterm[0].cutoff_freq = osd_menu_adjust_float(profile.filter.dterm[0].cutoff_freq, 5.0f, 0.0f, 500.0f);
+      control_filter_update(true);
     }
 
     osd_menu_select_save_and_exit(3);
