@@ -109,6 +109,7 @@ typedef struct spi_bus_device {
 
 typedef struct spi_bus {
   bool is_init;
+  bool use_dma = true; // Fixed during port initialization.
 
   volatile bool dma_done = true;
   volatile bool dma_rx_done = true;
@@ -133,6 +134,8 @@ void spi_bus_device_init(const spi_bus_device_t *bus);
 void spi_txn_wait(spi_bus_device_t *bus);
 bool spi_txn_continue_port(spi_ports_t port);
 
+// DMA ports enqueue; polled ports complete transfer and callback before returning.
+// Polled submissions must run in thread context, not peripheral interrupts.
 void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts);
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count);
 

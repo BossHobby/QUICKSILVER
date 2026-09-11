@@ -5,7 +5,6 @@
 #include "core/failloop.h"
 #include "driver/dma.h"
 #include "driver/interrupt.h"
-#include "driver/motor_dshot.h"
 
 #ifdef USE_SPI
 
@@ -43,18 +42,10 @@ uint8_t spi_txn_free_count(void) {
   return __builtin_popcount(txn_free_bitmap);
 }
 
-bool spi_txn_can_send(spi_bus_device_t *bus, bool dma) {
+bool spi_txn_can_send(spi_bus_device_t *bus) {
   if (!spi_dma_is_ready(bus->port)) {
     return false;
   }
-
-#ifdef STM32F4
-  if (dma && bus->port == SPI_PORT1) {
-    if (!dma_can_use_dma2(DMA_DEVICE_SPI1_TX)) {
-      return false;
-    }
-  }
-#endif
 
   if (bus->poll_fn && !bus->poll_fn()) {
     return false;
@@ -83,7 +74,7 @@ bool spi_txn_continue_port(spi_ports_t port) {
       return false;
     }
 
-    if (!spi_txn_can_send(txn->bus, true)) {
+    if (!spi_txn_can_send(txn->bus)) {
       return false;
     }
 
@@ -100,6 +91,13 @@ bool spi_txn_continue_port(spi_ports_t port) {
 }
 
 void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts) {
+  if (!spi_dev[bus->port].use_dma) {
+    spi_seg_submit_wait_ex(bus, opts.segs, opts.seg_count);
+    if (opts.done_fn)
+      opts.done_fn(opts.done_fn_arg);
+    return;
+  }
+
   spi_txn_t *txn = spi_txn_pop(bus);
   if (txn == NULL) {
     failloop(FAILLOOP_SPI);

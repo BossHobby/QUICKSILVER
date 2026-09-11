@@ -87,7 +87,7 @@ static const gyro_device_t *device;
 static volatile bool exti_enabled;
 static volatile bool read_pending;
 static uint32_t read_started;
-static uint32_t last_completed_us;
+static uint32_t last_sample_us; // DMA completion, or DRDY arrival on polled ports.
 static gyro_data_t completed_sample;
 
 static bool gyro_exti_conflicts(gpio_pins_t pin) {
@@ -119,7 +119,7 @@ gyro_types_t gyro_init() {
   spi_txn_wait(&gyro_bus);
   if (device->decode)
     device->decode(&completed_sample);
-  last_completed_us = time_micros();
+  last_sample_us = time_micros();
 
   if (device->start_read && target.gyro.exti != PIN_NONE &&
       !gyro_exti_conflicts(target.rx_spi.exti) &&
@@ -145,21 +145,30 @@ static void gyro_set_ready(void *arg) {
   const uint32_t completed = time_cycles();
   device->decode(&completed_sample);
   gyro_timing_update(read_started, completed, gyro_type == GYRO_TYPE_MPU6000);
-  last_completed_us = time_micros();
+  last_sample_us = time_micros();
   read_pending = false;
 }
 
 gyro_data_t gyro_read() {
   static gyro_data_t data;
 
+  const bool polled = device && device->start_read && !spi_dev[gyro_bus.port].use_dma;
+  if (polled) {
+    // Read the current sample, rather than the previous DMA pipeline buffer.
+    device->start_read(nullptr);
+    device->decode(&data);
+    completed_sample = data;
+  }
+
   if (exti_enabled) {
-    // A queued transfer may have been deferred by a shared bus or F4 DMA2 use.
+    // A queued DMA transfer may have been deferred by another device on the bus.
     spi_txn_continue(&gyro_bus);
     bool stalled;
-    // DMA publishes the sample; EXTI may start another read during fallback.
+    // DMA publishes asynchronous samples; EXTI timestamps polled samples.
+    // Mask both while deciding whether to disable EXTI on a stalled source.
     ATOMIC_BLOCK(DMA_PRIORITY) {
       data = completed_sample;
-      if (time_micros() - last_completed_us <= 2000) {
+      if (time_micros() - last_sample_us <= 2000) {
         return data;
       }
       stalled = read_pending;
@@ -171,7 +180,7 @@ gyro_data_t gyro_read() {
       failloop(FAILLOOP_GYRO);
   }
 
-  if (device)
+  if (device && !polled)
     device->read(&data);
   return data;
 }
@@ -179,6 +188,13 @@ gyro_data_t gyro_read() {
 void gyro_handle_exti() {
   if (!exti_enabled || read_pending)
     return;
+
+  if (!spi_dev[gyro_bus.port].use_dma) {
+    const uint32_t sample = time_cycles();
+    gyro_timing_update(sample, sample, gyro_type == GYRO_TYPE_MPU6000);
+    last_sample_us = time_micros();
+    return;
+  }
 
   // Keep the pool check and submission together.
   // Mask DMA and lower priorities that can submit to the shared SPI queue.
@@ -207,7 +223,7 @@ void gyro_calibrate() {
   spi_txn_wait(&gyro_bus);
   device->decode(&completed_sample);
   gyro_timing_reset(US_TO_CYCLES(device->period_us));
-  last_completed_us = time_micros();
+  last_sample_us = time_micros();
   if (resume_exti) {
     exti_enabled = true;
     exti_enable(target.gyro.exti, EXTI_TRIG_RISING);

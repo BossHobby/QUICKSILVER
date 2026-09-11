@@ -133,8 +133,8 @@ typedef struct {
   // Gyro DMA ISR publishes timing in CPU cycles; gyro_period_cycles == 0 means unlocked.
   // Scheduler snapshots with DMA interrupts masked. Runtime only, not serialized.
   uint32_t gyro_period_cycles;
-  uint32_t gyro_phase_cycles;  // Safe read-completion phase, before scheduler margin.
-  uint32_t gyro_sample_cycles; // DRDY timestamp of the latest completed read.
+  uint32_t gyro_phase_cycles;  // DMA completion phase, or DRDY phase for polled reads; before scheduler margin.
+  uint32_t gyro_sample_cycles; // Latest DRDY timestamp; DMA ports publish after transfer completion.
 
   float uptime;      // running sum of looptimes
   float armtime;     // running sum of looptimes (while armed)

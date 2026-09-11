@@ -2,8 +2,9 @@
 
 #include "core/failloop.h"
 #include "driver/interrupt.h"
+#include "driver/motor_dshot.h"
 
-extern bool spi_txn_can_send(spi_bus_device_t *bus, bool dma);
+extern bool spi_txn_can_send(spi_bus_device_t *bus);
 extern void spi_txn_finish(spi_ports_t port);
 
 const spi_port_def_t spi_port_defs[SPI_PORT_MAX] = {
@@ -286,8 +287,20 @@ void spi_device_init(spi_ports_t port) {
   spi_dev[port].mode = SPI_MODE_TRAILING_EDGE;
   spi_dev[port].hz = 0;
 
-  spi_dma_init_rx(port);
-  spi_dma_init_tx(port);
+  spi_dev[port].use_dma = true;
+#if defined(STM32F4) && defined(USE_MOTOR_DSHOT)
+  // F405/F407 erratum: DMA2 must not access GPIO (bitbang DShot) and SPI concurrently.
+  // Like Betaflight, keep affected SPI ports polled while bitbang DShot is configured.
+  if (dshot_gpio_port_count > 0) {
+    const auto &rx_dma = dma_stream_defs[target.dma[def->dma_rx].dma];
+    const auto &tx_dma = dma_stream_defs[target.dma[def->dma_tx].dma];
+    spi_dev[port].use_dma = rx_dma.port_index != 2 && tx_dma.port_index != 2;
+  }
+#endif
+  if (spi_dev[port].use_dma) {
+    spi_dma_init_rx(port);
+    spi_dma_init_tx(port);
+  }
   interrupt_enable(static_cast<IRQn_Type>(def->irq), SPI_PRIORITY);
 }
 
@@ -316,7 +329,7 @@ static inline uint8_t spi_get(const spi_ports_t port) {
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count) {
   spi_txn_wait(bus);
 
-  while (!spi_txn_can_send(bus, false))
+  while (!spi_txn_can_send(bus))
     ;
 
   const spi_ports_t port = bus->port;

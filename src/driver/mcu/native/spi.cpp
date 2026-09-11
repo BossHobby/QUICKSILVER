@@ -93,6 +93,19 @@ void spi_dma_transfer_begin(spi_ports_t port, uint8_t *buffer, uint32_t length, 
 }
 
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count) {
+  spi_reconfigure(bus);
+  spi_csn_enable(bus);
+  spi_dev[bus->port].dma_done = false;
+  for (uint32_t i = 0; i < count; i++) {
+    const spi_txn_segment_t &seg = segs[i];
+    if (seg.type != TXN_BUFFER || !seg.rx_data) continue;
+    for (uint32_t j = 0; j < seg.size; j++) {
+      const uint8_t sent = seg.tx_data ? seg.tx_data[j] : 0xFF;
+      seg.rx_data[j] = sent ? uint8_t(~sent) : 0;
+    }
+  }
+  spi_csn_disable(bus);
+  spi_dev[bus->port].dma_done = true;
 }
 
 // Called by interrupt handler to finish SPI transaction

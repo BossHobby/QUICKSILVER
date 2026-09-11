@@ -74,6 +74,48 @@ void test_spi_init(void) {
   TEST_ASSERT_EQUAL(1000000, spi_dev[SPI_PORT1].hz);
 }
 
+void test_spi_polled_submission(void) {
+  test_spi_setup();
+  spi_bus_device_t bus = {.port = SPI_PORT1, .nss = PIN_A4, .mode = SPI_MODE_LEADING_EDGE, .hz = 1000000};
+  spi_bus_device_init(&bus);
+  spi_dev[bus.port].use_dma = false;
+  const uint8_t free_before = spi_txn_free_count();
+  const uint8_t tx[] = {0x12, 0x34, 0x56};
+  uint8_t rx[3] = {};
+  struct completion_t {
+    spi_bus_device_t *bus;
+    uint8_t *rx;
+    bool completed;
+    uint8_t followup_rx;
+  } completion = {&bus, rx, false, 0};
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(0x80),
+      spi_make_seg_buffer(rx, tx, sizeof(tx)),
+  };
+  spi_seg_submit(&bus, segs, .done_fn = [](void *arg) {
+    auto &completion = *static_cast<completion_t *>(arg);
+    const uint8_t expected[] = {0xED, 0xCB, 0xA9};
+    TEST_ASSERT_EQUAL_MEMORY(expected, completion.rx, sizeof(expected));
+    TEST_ASSERT_TRUE(spi_dma_is_ready(completion.bus->port));
+    // Receiver callbacks can submit follow-up transfers on the same bus.
+    const uint8_t tx = 0xA5;
+    const spi_txn_segment_t followup[] = {spi_make_seg_buffer(&completion.followup_rx, &tx, 1)};
+    spi_seg_submit(completion.bus, followup);
+    completion.completed = true;
+  }, .done_fn_arg = &completion);
+  TEST_ASSERT_TRUE(completion.completed);
+  TEST_ASSERT_EQUAL_HEX8(0x5A, completion.followup_rx);
+  const uint8_t expected[] = {0xED, 0xCB, 0xA9};
+  TEST_ASSERT_EQUAL_MEMORY(expected, rx, sizeof(rx));
+  TEST_ASSERT_EQUAL_UINT8(free_before, spi_txn_free_count());
+  TEST_ASSERT_TRUE(spi_txn_ready(&bus));
+  TEST_ASSERT_TRUE(spi_dma_is_ready(bus.port));
+  // Existing callers may continue/wait after submitting an already completed transfer.
+  TEST_ASSERT_FALSE(spi_txn_continue(&bus));
+  spi_txn_wait(&bus);
+  spi_dev[bus.port].use_dma = true;
+}
+
 // Test that SPI transactions can be queued
 void test_spi_txn_queue(void) {
   test_spi_setup();

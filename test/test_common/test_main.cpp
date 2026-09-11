@@ -115,6 +115,7 @@ extern void test_cbor_failed_enum_decode_preserves_value(void);
 // SPI tests
 extern void test_spi_initial_state(void);
 extern void test_spi_init(void);
+extern void test_spi_polled_submission(void);
 extern void test_spi_txn_queue(void);
 extern void test_spi_txn_full_queue(void);
 extern void test_spi_sdcard_block_transfers(void);
@@ -335,6 +336,7 @@ int main(int argc, char **argv) {
   // SPI tests
   RUN_TEST(test_spi_initial_state);
   RUN_TEST(test_spi_init);
+  RUN_TEST(test_spi_polled_submission);
   RUN_TEST(test_spi_txn_queue);
   RUN_TEST(test_spi_txn_full_queue);
   RUN_TEST(test_spi_sdcard_block_transfers);

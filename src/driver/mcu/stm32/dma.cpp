@@ -7,13 +7,6 @@
 #include "driver/resource.h"
 #include "driver/timer.h"
 
-#ifdef STM32F4
-#ifdef USE_MOTOR_DSHOT
-#include "driver/motor_dshot.h"
-#endif
-#include "driver/spi.h"
-#endif
-
 #if defined(STM32F7) || defined(STM32H7)
 #define CACHE_LINE_SIZE 32
 #define CACHE_LINE_MASK (CACHE_LINE_SIZE - 1)
@@ -152,27 +145,3 @@ DMA_STREAMS
 }
 
 #undef DMA_STREAM
-
-#ifdef STM32F4
-bool dma_can_use_dma2(dma_device_t device) {
-  if (device != DMA_DEVICE_INVALID) {
-    const dma_stream_def_t *dma = &dma_stream_defs[target.dma[device].dma];
-    if (dma->port_index != 2) {
-      return true;
-    }
-  }
-
-#ifdef USE_MOTOR_DSHOT
-  if (dshot_phase != 0) {
-    return false;
-  }
-#endif
-
-  const dma_stream_def_t *spi1_dma = &dma_stream_defs[target.dma[DMA_DEVICE_SPI1_TX].dma];
-  if (spi1_dma->port_index == 2 && !spi_dma_is_ready(SPI_PORT1)) {
-    return false;
-  }
-
-  return true;
-}
-#endif

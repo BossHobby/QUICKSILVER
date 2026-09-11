@@ -20,6 +20,7 @@ FAST_RAM static spi_bus_device_t bus = {
 
 volatile uint8_t dio0_active = 0;
 volatile uint16_t irq_status = 0;
+static volatile bool dio0_pending = false;
 
 static uint32_t busy_timeout = 1000;
 static uint8_t payload_len = 8;
@@ -154,10 +155,7 @@ void sx128x_wait() {
   }
 }
 
-void sx128x_handle_dio0_exti(bool level) {
-  if (!level)
-    return;
-
+static void sx128x_read_irq_status() {
   {
     const spi_txn_segment_t segs[] = {
         read_command_txn(SX1280_RADIO_GET_IRQSTATUS, (uint8_t *)&irq_status, 2),
@@ -176,6 +174,15 @@ void sx128x_handle_dio0_exti(bool level) {
   spi_txn_continue(&bus);
 }
 
+void sx128x_handle_dio0_exti(bool level) {
+  if (!level) return;
+  if (!spi_dev[bus.port].use_dma) {
+    dio0_pending = true;
+    return;
+  }
+  sx128x_read_irq_status();
+}
+
 void sx128x_handle_busy_exti(bool level) {
   if (!level) {
     spi_txn_continue(&bus);
@@ -183,6 +190,10 @@ void sx128x_handle_busy_exti(bool level) {
 }
 
 uint16_t sx128x_read_dio0() {
+  if (dio0_pending) {
+    dio0_pending = false;
+    sx128x_read_irq_status();
+  }
   uint8_t active = 0;
 
   do {

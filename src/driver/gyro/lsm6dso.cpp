@@ -86,6 +86,13 @@ void lsm6dso_read_gyro_data(gyro_data_t *data) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_FAST);
   spi_txn_wait(&gyro_bus);
 
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(LSM6DSO_REG_OUT_TEMP_L | 0x80),
+      spi_make_seg_buffer(gyro_buf, NULL, 14),
+  };
+  if (!spi_dev[gyro_bus.port].use_dma)
+    spi_seg_submit_wait(&gyro_bus, segs);
+
   // Temperature: 16-bit signed, 256 LSB/°C, offset 0°C
   data->temp = (float)((int16_t)((gyro_buf[0] << 8) | gyro_buf[1])) / 256.0f;
 
@@ -99,10 +106,7 @@ void lsm6dso_read_gyro_data(gyro_data_t *data) {
   data->gyro.roll = (int16_t)((gyro_buf[10] << 8) | gyro_buf[11]);
   data->gyro.yaw = (int16_t)((gyro_buf[12] << 8) | gyro_buf[13]);
 
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(LSM6DSO_REG_OUT_TEMP_L | 0x80),
-      spi_make_seg_buffer(gyro_buf, NULL, 14),
-  };
+  if (!spi_dev[gyro_bus.port].use_dma) return;
   spi_seg_submit(&gyro_bus, segs);
   while (!spi_txn_continue(&gyro_bus))
     ;

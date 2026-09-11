@@ -3,7 +3,7 @@
 #include "core/failloop.h"
 #include "driver/interrupt.h"
 
-extern bool spi_txn_can_send(spi_bus_device_t *bus, bool dma);
+extern bool spi_txn_can_send(spi_bus_device_t *bus);
 extern void spi_txn_finish(spi_ports_t port);
 
 const spi_port_def_t spi_port_defs[SPI_PORT_MAX] = {
@@ -243,7 +243,7 @@ static inline uint8_t spi_get(const spi_ports_t port) {
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count) {
   spi_txn_wait(bus);
 
-  while (!spi_txn_can_send(bus, false))
+  while (!spi_txn_can_send(bus))
     ;
 
   const spi_ports_t port = bus->port;
