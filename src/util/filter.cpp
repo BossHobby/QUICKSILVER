@@ -127,7 +127,8 @@ float filter_biquad_notch_step(filter_biquad_notch_t *filter, filter_biquad_stat
     return in;
   }
 
-  const float result = filter->b0 * in + filter->b1 * state->x1 + filter->b2 * state->x2 - filter->a1 * state->y1 - filter->a2 * state->y2;
+  // Notch symmetry: b0 == b2 and b1 == a1.
+  const float result = filter->b0 * (in + state->x2) + filter->b1 * (state->x1 - state->y1) - filter->a2 * state->y2;
 
   state->x2 = state->x1;
   state->x1 = in;
