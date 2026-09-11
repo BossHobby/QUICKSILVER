@@ -29,6 +29,7 @@ typedef enum {
 
 typedef struct {
   sdft_state_t state;
+  float sample_period_us;
 
   uint32_t idx;
 
@@ -48,6 +49,7 @@ typedef struct {
   float notch_hz[SDFT_PEAKS];
 } sdft_t;
 
-void sdft_init(sdft_t *sdft);
+void sdft_init(sdft_t *sdft, float sample_period_us);
+void sdft_update_period(sdft_t *sdft, float sample_period_us);
 bool sdft_push(sdft_t *sdft, float val);
 bool sdft_update(sdft_t *sdft);

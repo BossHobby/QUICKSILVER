@@ -212,8 +212,6 @@ static void rover_calc_steering() {
   case ROVER_STEER_MODE_RATE_ASSIST: {
     state.pid_p_term.yaw = state.error.yaw * profile.rover.pid.kp * ROVER_PID_KP_SCALE * steering_scale;
 
-    filter_coeff(profile.filter.dterm[0].type, &rover_dterm_filter[0], profile.filter.dterm[0].cutoff_freq, task_get_period_us(TASK_PID));
-    filter_coeff(profile.filter.dterm[1].type, &rover_dterm_filter[1], profile.filter.dterm[1].cutoff_freq, task_get_period_us(TASK_PID));
     filter_coeff(profile.filter.dterm_dynamic_type, &rover_dterm_dynamic_filter, rover_dterm_dynamic_frequency(), task_get_period_us(TASK_PID));
     const float gyro_derivative = -gyro_delta * profile.rover.pid.kd * ROVER_PID_KD_SCALE * state.looptime_inverse * steering_scale;
     state.pid_d_term.yaw = rover_filter_dterm(gyro_derivative);
@@ -307,13 +305,24 @@ static void rover_update_throttle() {
   flags.in_air = 1;
 }
 
-void pid_init() {
+// Rover reads its separate gains directly.
+void pid_rates_update() {}
+
+void pid_filter_update(bool reset) {
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
-    filter_init(profile.filter.dterm[i].type, &rover_dterm_filter[i], &rover_dterm_filter_state[i], 1,
-                profile.filter.dterm[i].cutoff_freq, task_get_period_us(TASK_PID));
+    if (reset) {
+      filter_init(profile.filter.dterm[i].type, &rover_dterm_filter[i], &rover_dterm_filter_state[i], 1, profile.filter.dterm[i].cutoff_freq, task_get_period_us(TASK_PID));
+    } else {
+      filter_coeff(profile.filter.dterm[i].type, &rover_dterm_filter[i], profile.filter.dterm[i].cutoff_freq, task_get_period_us(TASK_PID));
+    }
   }
-  filter_init(profile.filter.dterm_dynamic_type, &rover_dterm_dynamic_filter, &rover_dterm_dynamic_filter_state, 1,
-              DTERM_DYNAMIC_FREQ_MAX, task_get_period_us(TASK_PID));
+  if (reset) {
+    filter_init(profile.filter.dterm_dynamic_type, &rover_dterm_dynamic_filter, &rover_dterm_dynamic_filter_state, 1, DTERM_DYNAMIC_FREQ_MAX, task_get_period_us(TASK_PID));
+  }
+}
+
+void pid_init() {
+  pid_filter_update(true);
   filter_lp_pt1_init(&rover_rate_throttle_filter, &rover_rate_throttle_filter_state, 1,
                      ROVER_RATE_THROTTLE_FILTER_HZ, task_get_period_us(TASK_PID));
   rover_last_gyro_yaw = state.gyro.yaw;
