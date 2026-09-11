@@ -12,6 +12,43 @@
 #include "util/filter.h"
 
 // Test fixtures
+void test_notch_matches_reference_with_changing_frequency() {
+  const float periods[] = {125, 250, 500};
+  for (float period : periods) {
+    filter_biquad_notch_t filters[3];
+    filter_biquad_state_t history[3];
+    double x1[3] = {}, x2[3] = {}, y1[3] = {}, y2[3] = {};
+    for (unsigned p = 0; p < 3; p++) {
+      filter_biquad_notch_init(&filters[p], &history[p], 1, 100 + p * 200, period);
+    }
+    for (unsigned i = 0; i < 12000; i++) {
+      if (i % 97 == 0) {
+        for (unsigned p = 0; p < 3; p++) {
+          // Include low centres, moving peaks, and disabling/re-enabling.
+          const float hz = i >= 4000 && i < 4200 ? 0 : 100 + (i / 97 + p * 200) % 501;
+          filter_biquad_notch_coeff(&filters[p], hz, period);
+        }
+      }
+      float actual = 10 * sinf(i * 0.11f) + 5 * cosf(i * 0.73f) + (i % 251 == 0 ? 20 : 0);
+      double expected = actual;
+      for (unsigned p = 0; p < 3; p++) {
+        const auto &f = filters[p];
+        if (f.hz >= 0.1f) {
+          // General direct-form equation, evaluated independently in double.
+          const double result = f.b0 * expected + f.b1 * x1[p] + f.b2 * x2[p] - f.a1 * y1[p] - f.a2 * y2[p];
+          x2[p] = x1[p];
+          x1[p] = expected;
+          y2[p] = y1[p];
+          y1[p] = result;
+          expected = result;
+        }
+        actual = filter_biquad_notch_step(&filters[p], &history[p], actual);
+      }
+      TEST_ASSERT_FLOAT_WITHIN(0.002f, expected, actual);
+    }
+  }
+}
+
 static void filter_setUp(void) {
   // Reset hardware mocks before each test
   mock_hardware_reset_all();

@@ -48,30 +48,7 @@ static sdft_t gyro_sdft[SDFT_AXES];
 static filter_biquad_notch_t notch_filter[SDFT_AXES][SDFT_PEAKS];
 static filter_biquad_state_t notch_filter_state[SDFT_AXES][SDFT_PEAKS];
 
-void sixaxis_init() {
-  target_info.gyro_id = gyro_init();
-  if (target_info.gyro_id == GYRO_TYPE_INVALID) {
-    failloop(FAILLOOP_GYRO);
-  }
-
-  for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
-    filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq, task_get_period_us(TASK_GYRO));
-  }
-
-  for (uint8_t i = 0; i < SDFT_AXES; i++) {
-    sdft_init(&gyro_sdft[i]);
-    for (uint8_t j = 0; j < SDFT_PEAKS; j++) {
-      filter_biquad_notch_init(&notch_filter[i][j], &notch_filter_state[i][j], 1, 0, task_get_period_us(TASK_GYRO));
-    }
-  }
-}
-
-static void sixaxis_compute_matrix() {
-  static uint8_t last_gyro_orientation = GYRO_ROTATE_NONE;
-  if (last_gyro_orientation == profile.motor.gyro_orientation) {
-    return;
-  }
-
+void sixaxis_orientation_update() {
   vec3_t rot = {.roll = 0, .pitch = 0, .yaw = 0};
 
   if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CW) {
@@ -115,8 +92,25 @@ static void sixaxis_compute_matrix() {
   rot_mat[2][0] = (sinzsinx) - (coszcosx * siny);
   rot_mat[2][1] = (coszsinx) + (sinzcosx * siny);
   rot_mat[2][2] = cosy * cosx;
+}
 
-  last_gyro_orientation = profile.motor.gyro_orientation;
+void sixaxis_init() {
+  target_info.gyro_id = gyro_init();
+  if (target_info.gyro_id == GYRO_TYPE_INVALID) {
+    failloop(FAILLOOP_GYRO);
+  }
+  sixaxis_orientation_update();
+
+  for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
+    filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq, task_get_period_us(TASK_GYRO));
+  }
+
+  for (uint8_t i = 0; i < SDFT_AXES; i++) {
+    sdft_init(&gyro_sdft[i]);
+    for (uint8_t j = 0; j < SDFT_PEAKS; j++) {
+      filter_biquad_notch_init(&notch_filter[i][j], &notch_filter_state[i][j], 1, 0, task_get_period_us(TASK_GYRO));
+    }
+  }
 }
 
 static vec3_t sixaxis_apply_matrix(vec3_t v) {
@@ -128,8 +122,6 @@ static vec3_t sixaxis_apply_matrix(vec3_t v) {
 }
 
 void sixaxis_read() {
-  sixaxis_compute_matrix();
-
   filter_coeff(profile.filter.gyro[0].type, &filter[0], profile.filter.gyro[0].cutoff_freq, task_get_period_us(TASK_GYRO));
   filter_coeff(profile.filter.gyro[1].type, &filter[1], profile.filter.gyro[1].cutoff_freq, task_get_period_us(TASK_GYRO));
 
@@ -172,6 +164,7 @@ void sixaxis_read() {
       // once all sdft update steps are done, we update the filters and continue to the next axis
       for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
         filter_biquad_notch_coeff(&notch_filter[current_axis][p], gyro_sdft[current_axis].notch_hz[p], task_get_period_us(TASK_GYRO));
+        blackbox_set_debug(BBOX_DEBUG_DYN_NOTCH, current_axis * SDFT_PEAKS + p, gyro_sdft[current_axis].notch_hz[p]);
       }
       // on the last axis we increment this to the idle state 3
       current_axis++;
@@ -184,7 +177,6 @@ void sixaxis_read() {
 
     if (profile.filter.gyro_dynamic_notch_enable) {
       for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
-        blackbox_set_debug(BBOX_DEBUG_DYN_NOTCH, i * SDFT_PEAKS + p, gyro_sdft[i].notch_hz[p]);
         state.gyro.axis[i] = filter_biquad_notch_step(&notch_filter[i][p], &notch_filter_state[i][p], state.gyro.axis[i]);
       }
     }
@@ -279,7 +271,7 @@ void sixaxis_acc_cal() {
     time_delay_ms(100);
   }
 
-  sixaxis_compute_matrix();
+  sixaxis_orientation_update();
 
   flash_storage.accelcal[0] = 0;
   flash_storage.accelcal[1] = 0;
@@ -315,6 +307,7 @@ void sixaxis_acc_cal() {
 #else
 
 void sixaxis_init() {}
+void sixaxis_orientation_update() {}
 void sixaxis_read() {}
 
 void sixaxis_gyro_cal() {
