@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.0.0
+
+The v1 release line continues v0.11.x on `master`. Development of v2 continues on `develop`.
+
+changes since 0.11.3:
+
+- stm32h7: erase only the configuration sector in bank 1, wait for completion, and handle erase errors
+- cbor: reject out-of-range array indices and skip excess entries without losing decoder alignment
+- usb: fix MSP frame-size overflow and checksum iteration for maximum-length MSP1 payloads
+
+Profile and QUIC protocol formats are unchanged from v0.11.3.
+
 ## v0.11.3
 
 changes since 0.11.2:
