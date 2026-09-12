@@ -17,6 +17,8 @@ static blackbox_t blackbox_previous;  // Store previous frame for delta encoding
 static uint8_t blackbox_enabled = 0;
 static uint8_t blackbox_has_previous = 0;
 static uint32_t blackbox_rate = 1;
+static uint32_t blackbox_last_sample_loop;
+static uint32_t blackbox_last_storage_loop;
 
 static int16_t blackbox_compress_float(float value) {
   const float scaled = value * BLACKBOX_SCALE;
@@ -339,9 +341,16 @@ static uint32_t blackbox_rate_div() {
 }
 
 void blackbox_update() {
-  if (!blackbox_device_update()) {
-    // flash is still detecting, dont do anything
-    return;
+  const bool recording = blackbox_enabled && flags.arm_state && rx_aux_on(AUX_BLACKBOX);
+  const bool sample_due = (uint32_t)(state.loop_counter - blackbox_last_sample_loop) >= blackbox_rate;
+  const bool storage_recent = (uint32_t)(state.loop_counter - blackbox_last_storage_loop) == 1;
+  // Split work only when storage was serviced in the preceding control loop.
+  // After skipped calls, service storage and take the overdue sample together.
+  if (!recording || blackbox_rate == 1 || !sample_due || !storage_recent) {
+    if (!blackbox_device_update()) {
+      return;
+    }
+    blackbox_last_storage_loop = state.loop_counter;
   }
 
   // flash is either idle or writing, do blackbox
@@ -352,6 +361,7 @@ void blackbox_update() {
   } else if ((flags.arm_state && flags.turtle_ready == 0 && rx_aux_on(AUX_BLACKBOX)) && blackbox_enabled == 0) {
     if (blackbox_device_restart(profile.blackbox.field_flags, blackbox_rate_div(), state.looptime_autodetect)) {
       blackbox_rate = blackbox_rate_div();
+      blackbox_last_sample_loop = state.loop_counter;
       blackbox_enabled = 1;
       blackbox.loop = 0;
       blackbox_has_previous = 0;
@@ -363,9 +373,11 @@ void blackbox_update() {
     return;
   }
 
-  if ((state.loop_counter % blackbox_rate) != 0) {
+  if (!sample_due) {
     return;
   }
+  // Schedule from this sample, without catch-up bursts after missed calls.
+  blackbox_last_sample_loop = state.loop_counter;
 
   const uint32_t field_flags = profile.blackbox.field_flags;
 
