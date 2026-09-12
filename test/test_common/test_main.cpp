@@ -26,7 +26,11 @@ extern void test_attitude_imu_pipeline_yaw_while_tilted(void);
 extern void test_bmp280_raw_reference_sample_returns_pascals(void);
 extern void test_bmp280_discards_unused_sample_nibbles(void);
 extern void test_bmp388_raw_reference_sample_retains_cubic_correction(void);
-extern void test_sdft_explicit_period_update();
+extern void test_sdft_batches_match_direct_transform();
+extern void test_sdft_tracks_tones_across_sample_rates();
+extern void test_sdft_tracks_frequency_sweep();
+extern void test_sdft_waits_for_complete_spectrum();
+extern void test_sdft_resets_history_on_sample_rate_change();
 
 // Filter tests
 extern void test_filter_init(void);
@@ -227,7 +231,11 @@ int main(int argc, char **argv) {
   RUN_TEST(test_sdcard_transport_busy_and_timer_wrap);
   RUN_TEST(test_sdcard_device_samples_during_write);
 
-  RUN_TEST(test_sdft_explicit_period_update);
+  RUN_TEST(test_sdft_batches_match_direct_transform);
+  RUN_TEST(test_sdft_tracks_tones_across_sample_rates);
+  RUN_TEST(test_sdft_tracks_frequency_sweep);
+  RUN_TEST(test_sdft_waits_for_complete_spectrum);
+  RUN_TEST(test_sdft_resets_history_on_sample_rate_change);
 
   // Filter tests
   RUN_TEST(test_filter_init);
