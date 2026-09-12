@@ -8,6 +8,8 @@ extern const profile_t default_profile;
 void test_cbor_profile_servo_rate_roundtrip(void) {
   profile_t source = default_profile;
   source.servo.pwm_rate_hz = 333;
+  source.pid.pid_rates[0].kff = (vec3_t){{44, 30, 10}};
+  source.pid.pid_rates[1].kff = (vec3_t){{20, 15, 0}};
   uint8_t buffer[4096] = {}; // QUIC profile response capacity.
   cbor_value_t codec;
   cbor_encoder_init(&codec, buffer, sizeof(buffer));
@@ -18,6 +20,11 @@ void test_cbor_profile_servo_rate_roundtrip(void) {
   TEST_ASSERT_TRUE(cbor_decode_profile_t(&codec, &decoded) >= CBOR_OK);
   TEST_ASSERT_EQUAL_UINT16(333, decoded.servo.pwm_rate_hz);
   TEST_ASSERT_EQUAL(source.outputs[0].protocol, decoded.outputs[0].protocol);
+#ifndef VEHICLE_ROVER
+  for (unsigned i = 0; i < PID_PROFILE_MAX; i++) {
+    TEST_ASSERT_EQUAL_MEMORY(&source.pid.pid_rates[i].kff, &decoded.pid.pid_rates[i].kff, sizeof(vec3_t));
+  }
+#endif
 }
 
 // Both ordinary members and enum storage must match the selected wire codec.

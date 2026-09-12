@@ -16,6 +16,7 @@
 //        osd: add CRSF TX power.
 //        gps: add persisted constellation selection.
 //        navigation: expose return height, speed, failsafe and throttle limits only.
+//        pid: add per-axis wing rate feedforward to each PID profile.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
 // 0.2.5 (c9dec9f1): add osd profiles.
@@ -146,6 +147,7 @@ typedef struct {
   vec3_t kp;
   vec3_t ki;
   vec3_t kd;
+  vec3_t kff; // Wing rate feedforward: 100 = 1 normalized output per rad/s.
 } pid_rate_t;
 
 #define PID_RATE_MEMBERS   \
@@ -153,6 +155,7 @@ typedef struct {
   MEMBER(kp, vec3_t)       \
   MEMBER(ki, vec3_t)       \
   MEMBER(kd, vec3_t)       \
+  MEMBER(kff, vec3_t)      \
   END_STRUCT()
 
 typedef struct {
