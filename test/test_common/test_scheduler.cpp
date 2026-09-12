@@ -2,9 +2,11 @@
 
 #include "control/control.h"
 #include "core/scheduler.h"
+#include "core/profile.h"
 #include "core/tasks.h"
 #include "driver/time.h"
 
+extern bool scheduler_test_task_registered(task_id_t id);
 extern bool scheduler_test_should_run(uint32_t start_cycles, uint8_t task_mask, task_t *task);
 extern void scheduler_test_run(task_t *task);
 extern uint32_t scheduler_test_loop_start();
@@ -224,4 +226,29 @@ void test_scheduler_ground_work_does_not_indirectly_reduce_flight_rate() {
   }
   TEST_ASSERT_EQUAL_FLOAT(250, state.looptime_autodetect);
   TEST_ASSERT_EQUAL_UINT8(1, state.looptime_warning);
+}
+
+void test_scheduler_omits_unconfigured_sensor_tasks() {
+  const auto saved_gps = profile.serial.gps;
+  const bool saved_baro = state.baro_detected;
+  const bool saved_lock = state.gps_lock;
+  for (unsigned combination = 0; combination < 4; combination++) {
+    const bool gps = combination & 1;
+    const bool baro = combination & 2;
+    profile.serial.gps = gps ? SERIAL_PORT1 : SERIAL_PORT_INVALID;
+    state.baro_detected = baro;
+    state.gps_lock = false; // Configured receivers must still acquire a fix.
+    scheduler_init();
+    TEST_ASSERT_TRUE(scheduler_test_task_registered(TASK_IMU));
+    TEST_ASSERT_TRUE(scheduler_test_task_registered(TASK_PID));
+    TEST_ASSERT_EQUAL(gps, scheduler_test_task_registered(TASK_GPS));
+    TEST_ASSERT_EQUAL(gps && tasks[TASK_NAV].mask != 0, scheduler_test_task_registered(TASK_NAV));
+    TEST_ASSERT_EQUAL(baro, scheduler_test_task_registered(TASK_BARO));
+    state.gps_lock = true;
+    TEST_ASSERT_EQUAL(gps, scheduler_test_task_registered(TASK_GPS));
+  }
+  profile.serial.gps = saved_gps;
+  state.baro_detected = saved_baro;
+  state.gps_lock = saved_lock;
+  scheduler_init();
 }

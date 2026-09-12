@@ -3,6 +3,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+// Freshness limit for consumers of the published filtered altitude/velocity.
+#define BARO_STALE_MS 500U
+
 typedef enum {
   BARO_TYPE_INVALID,
   BARO_TYPE_BMP280,
@@ -19,4 +22,4 @@ typedef struct {
 extern uint8_t baro_buf[6];
 
 baro_types_t baro_init(void);
-bool baro_update(void);
+void baro_update(void);
