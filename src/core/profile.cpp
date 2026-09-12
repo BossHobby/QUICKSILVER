@@ -83,11 +83,13 @@ uint32_t profile_mixer_rule_count(const profile_mixer_rule_t *mixer, uint32_t si
 // In normalized output units: roll/pitch P ~= 0.102/0.051 per rad/s,
 // I ~= 0.2 per rad (the shared integrator has a 2x historical scaling).
 // Comparable to ArduPilot's 0.08/0.04 P and 0.15 I at unity airspeed scaling
-// after converting its degree output to +/-45 degrees. We have no rate FF.
+// after converting its degree output to +/-45 degrees. Rate FF of 0.44
+// output/(rad/s) corresponds to about 0.345 in ArduPlane at unity scaling.
 static constexpr pid_rate_t wing_default_pid_rates = {
     .kp = {64, 32, 10},
     .ki = {10, 10, 0},
     .kd = {0, 0, 0},
+    .kff = {44, 44, 0},
 };
 #endif
 
