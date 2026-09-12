@@ -2,7 +2,6 @@
 
 #include <string.h>
 
-#include "core/looptime.h"
 #include "core/project.h"
 #include "core/scheduler.h"
 #include "io/blackbox_device_flash.h"

@@ -2,7 +2,6 @@
 
 #include "control/control.h"
 #include "core/flash.h"
-#include "core/looptime.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/scheduler.h"

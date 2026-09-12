@@ -5,6 +5,13 @@
 // Test declarations
 extern void test_osd_transfer_is_bounded_and_retries();
 extern void test_osd_render_completes_before_transfer();
+extern void test_scheduler_ground_only_starvation_does_not_reduce_flight_rate();
+extern void test_scheduler_ground_work_does_not_indirectly_reduce_flight_rate();
+extern void test_scheduler_exhausted_budget_and_wrap();
+extern void test_scheduler_slows_after_starvation_without_forcing_work();
+extern void test_scheduler_masks_periods_and_reset_do_not_trigger_fallback();
+extern void test_scheduler_fallback_cap_and_no_automatic_speedup();
+extern void test_scheduler_accounts_for_housekeeping_and_realtime_overload();
 extern void test_resource_timer_tag_roundtrip();
 extern void test_sdcard_csd_capacity();
 extern void test_sdcard_target_cbor();
@@ -220,6 +227,13 @@ int main(int argc, char **argv) {
   UNITY_BEGIN();
   RUN_TEST(test_osd_transfer_is_bounded_and_retries);
   RUN_TEST(test_osd_render_completes_before_transfer);
+  RUN_TEST(test_scheduler_ground_only_starvation_does_not_reduce_flight_rate);
+  RUN_TEST(test_scheduler_ground_work_does_not_indirectly_reduce_flight_rate);
+  RUN_TEST(test_scheduler_exhausted_budget_and_wrap);
+  RUN_TEST(test_scheduler_slows_after_starvation_without_forcing_work);
+  RUN_TEST(test_scheduler_masks_periods_and_reset_do_not_trigger_fallback);
+  RUN_TEST(test_scheduler_fallback_cap_and_no_automatic_speedup);
+  RUN_TEST(test_scheduler_accounts_for_housekeeping_and_realtime_overload);
   RUN_TEST(test_resource_timer_tag_roundtrip);
   RUN_TEST(test_sdcard_csd_capacity);
   RUN_TEST(test_sdcard_target_cbor);

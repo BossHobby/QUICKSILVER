@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "control/control.h"
-#include "core/looptime.h"
 #include "core/profile.h"
 #include "driver/osd/osd.h"
 #include "driver/time.h"
@@ -319,12 +318,9 @@ bool osd_status_update(osd_element_t *el) {
     return osd_status_print(el);
   }
 
-  {
-    extern uint8_t looptime_warning;
-    if (looptime_warning && (state.looptime_autodetect > 125.0f)) {
-      osd_status_show(MODE_HOLD, STATUS_LOOPTIME);
-      return osd_status_print(el);
-    }
+  if (state.looptime_warning && state.looptime_autodetect > 125.0f) {
+    osd_status_show(MODE_HOLD, STATUS_LOOPTIME);
+    return osd_status_print(el);
   }
 
   if (flags.arming_disabled_flags & ARMING_DISABLED_USB) {
