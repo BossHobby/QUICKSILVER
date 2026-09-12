@@ -1,3 +1,4 @@
+#include <initializer_list>
 #include <unity.h>
 #include <string.h>
 #include "mock_helpers.h"
@@ -5,8 +6,102 @@
 // Include blackbox headers
 #include "io/blackbox.h"
 #include "io/blackbox_device.h"
+#include "io/blackbox_device_simulator.h"
+#include "control/control.h"
 #include "util/vector.h"
 #include "util/cbor_helper.h"
+
+void test_blackbox_balances_work_without_delaying_overdue_samples() {
+  const auto saved_device = blackbox_device_simulator;
+  const auto saved_profile = profile;
+  const auto saved_state = state;
+  const auto saved_flags = flags;
+  const auto saved_bounds = blackbox_bounds;
+  const auto saved_header = blackbox_device_header;
+  static unsigned writes, storage_calls, stops;
+  static bool storage_ready;
+  writes = storage_calls = stops = 0;
+  storage_ready = true;
+  blackbox_device_simulator.init = []() {};
+  blackbox_device_simulator.update = []() {
+    storage_calls++;
+    return storage_ready;
+  };
+  blackbox_device_simulator.ready = []() { return true; };
+  blackbox_device_simulator.usage = []() { return 256U; };
+  blackbox_device_simulator.start = []() {};
+  blackbox_device_simulator.stop = []() { stops++; };
+  blackbox_device_simulator.write = [](const uint8_t *, uint8_t) {
+    writes++;
+    return true;
+  };
+  blackbox_device_init();
+  blackbox_bounds.page_size = 256;
+  blackbox_bounds.total_size = 1048576;
+  profile_set_defaults();
+  state.looptime_autodetect = 125;
+  state.aux_active = 1U << AUX_BLACKBOX;
+  flags.turtle_ready = 0;
+
+  for (uint32_t divider : {1U, 2U, 4U, 8U}) {
+    profile.blackbox.sample_rate_hz = 8000 / divider;
+    for (uint32_t start : {0U, UINT32_MAX - 8U}) {
+      flags.arm_state = 1;
+      state.loop_counter = start;
+      blackbox_update();
+      const unsigned initial_writes = writes;
+      for (unsigned i = 1; i <= divider * 3; i++) {
+        state.loop_counter++;
+        const unsigned before_storage = storage_calls;
+        blackbox_update();
+        TEST_ASSERT_EQUAL_UINT(initial_writes + i / divider, writes);
+        const bool sample_only = divider > 1 && i % divider == 0;
+        TEST_ASSERT_EQUAL_UINT(before_storage + !sample_only, storage_calls);
+      }
+
+      // Even if every call is a sample call, storage must continue progressing.
+      for (uint32_t gap : {divider, divider + 1}) {
+        for (unsigned i = 0; i < 4; i++) {
+          state.loop_counter += gap;
+          const unsigned before_writes = writes;
+          const unsigned before_storage = storage_calls;
+          blackbox_update();
+          TEST_ASSERT_EQUAL_UINT(before_writes + 1, writes);
+          TEST_ASSERT_EQUAL_UINT(before_storage + 1, storage_calls);
+        }
+      }
+
+      // Recovery services storage and records immediately, in the same call.
+      state.loop_counter += divider;
+      storage_ready = false;
+      const unsigned before_writes = writes;
+      blackbox_update();
+      TEST_ASSERT_EQUAL_UINT(before_writes, writes);
+      state.loop_counter++;
+      storage_ready = true;
+      const unsigned before_storage = storage_calls;
+      blackbox_update();
+      TEST_ASSERT_EQUAL_UINT(before_writes + 1, writes);
+      TEST_ASSERT_EQUAL_UINT(before_storage + 1, storage_calls);
+
+      blackbox_update(); // No duplicate sample in the same control loop.
+      TEST_ASSERT_EQUAL_UINT(before_writes + 1, writes);
+      flags.arm_state = 0;
+      state.loop_counter++;
+      const unsigned before_stops = stops;
+      blackbox_update();
+      TEST_ASSERT_EQUAL_UINT(before_stops + 1, stops);
+      TEST_ASSERT_EQUAL_UINT(before_writes + 1, writes);
+    }
+  }
+  blackbox_device_simulator = saved_device;
+  blackbox_bounds = saved_bounds;
+  blackbox_device_header = saved_header;
+  profile = saved_profile;
+  profile_output_update();
+  state = saved_state;
+  flags = saved_flags;
+}
 
 // Define constants for testing (from blackbox.c)
 void test_blackbox_navigation_roundtrip_and_unchanged_home(void) {
