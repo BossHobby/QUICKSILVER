@@ -5,7 +5,6 @@
 
 #include "config/feature.h"
 
-#include "control/attitude.h"
 #include "control/control.h"
 #ifdef VEHICLE_ROVER
 #include "control/rover/control.h"
@@ -137,7 +136,6 @@ __attribute__((__used__)) int main() {
 
   blackbox_init();
   imu_init();
-  attitude_init();
 
   scheduler_run();
 }

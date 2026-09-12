@@ -38,7 +38,6 @@
 #define RTH_NAV_COMMAND_TIME_CONSTANT 0.15f // seconds, smooth GPS-driven tilt changes
 #define RTH_THROTTLE_HEADROOM 0.15f
 #define RTH_THROTTLE_SLEW_RATE 1.5f
-#define RTH_ALTITUDE_STALE_MS 500U
 #define RTH_GPS_LOSS_TIMEOUT_MS 3000U
 #define RTH_CLIMB_TIMEOUT_MS 10000U
 #define RTH_YAW_KP 1.0f
@@ -60,12 +59,6 @@ static struct {
     bool position_valid;
     uint32_t checked_ms;
   } gps;
-  struct {
-    bool valid;
-    uint32_t updated_ms;
-    float altitude; // filtered absolute barometer altitude, meters
-    float velocity; // filtered vertical velocity, m/s
-  } baro;
   struct {
     bool armed;
     bool rth_aux;
@@ -110,28 +103,6 @@ static struct {
     float altitude; // meters above launch, latched on loss
   } gps_loss;
 } rth;
-
-static void nav_update_altitude_sample(float altitude, uint32_t now_ms) {
-  // Firmware uses -Ofast, which can optimize away floating-point isfinite().
-  const union { float value; uint32_t bits; } sample = {.value = altitude};
-  if ((sample.bits & 0x7f800000U) == 0x7f800000U) {
-    nav.baro.valid = false;
-    return;
-  }
-  const uint32_t elapsed_ms = now_ms - nav.baro.updated_ms;
-  if (!nav.baro.valid || elapsed_ms > RTH_ALTITUDE_STALE_MS) {
-    nav.baro.altitude = altitude;
-    nav.baro.velocity = 0.0f;
-  } else if (elapsed_ms > 0) {
-    const float dt = elapsed_ms * 0.001f;
-    const float previous = nav.baro.altitude;
-    nav.baro.altitude += dt / (0.1f + dt) * (altitude - nav.baro.altitude);
-    const float velocity = (nav.baro.altitude - previous) / dt;
-    nav.baro.velocity += dt / (0.2f + dt) * (velocity - nav.baro.velocity);
-  }
-  nav.baro.valid = true;
-  nav.baro.updated_ms = now_ms;
-}
 
 static void nav_update_gps(const gps_coord_t start, const gps_coord_t end) {
   const float scale = M_PI_F / (180.0f * 10000000.0f);
@@ -212,8 +183,8 @@ static void nav_update_gps_sanity(void) {
 }
 
 static bool nav_altitude_source_ok(void) {
-  return nav.baro.valid &&
-         (time_millis() - nav.baro.updated_ms) <= RTH_ALTITUDE_STALE_MS;
+  return state.baro_valid &&
+         (time_millis() - state.baro_last_update_ms) <= BARO_STALE_MS;
 }
 
 static bool nav_rth_can_start(void) {
@@ -241,7 +212,7 @@ static void nav_update_altitude_control(float target_alt, float max_rate, float 
 
   const float desired_rate = constrain(ALT_POSITION_KP * error, -max_rate, max_rate);
   rth.vertical.desired_rate = nav_slew(rth.vertical.desired_rate, desired_rate, ALT_ACCEL_LIMIT * safe_dt);
-  const float rate_error = rth.vertical.desired_rate - nav.baro.velocity;
+  const float rate_error = rth.vertical.desired_rate - state.baro_vertical_speed;
   const float tilt = MAX(cosf(state.attitude.roll) * cosf(state.attitude.pitch), 0.5f);
   // A low-hover-throttle craft gets more acceleration per throttle unit.
   // Scale the velocity gains with the trimmed hover estimate to compensate.
@@ -603,7 +574,7 @@ void nav_rth_start() {
   // takeover. This is an initial condition, not a learned hover measurement.
   const float tilt = MAX(cosf(state.attitude.roll) * cosf(state.attitude.pitch), 0.5f);
   rth.vertical.integral = rth.vertical.throttle_command * tilt - profile.navigation.rth_throttle_hover;
-  rth.vertical.desired_rate = constrain(nav.baro.velocity, -RTH_DESCENT_RATE, RTH_CLIMB_RATE);
+  rth.vertical.desired_rate = constrain(state.baro_vertical_speed, -RTH_DESCENT_RATE, RTH_CLIMB_RATE);
   rth.updated_us = time_micros();
   rth.progress.updated_ms = time_millis();
   nav_reset_horizontal();
@@ -649,15 +620,10 @@ static void nav_update_request() {
 }
 
 void nav_update() {
-  const bool had_baro_update = baro_update();
-  if (had_baro_update) {
-    nav_update_altitude_sample(state.baro_altitude, time_millis());
-  }
   nav_update_gps_sanity();
 
   if (flags.arm_state != nav.previous.armed) {
     if (flags.arm_state) {
-      state.baro_launch_altitude = nav.baro.altitude;
       nav.home_valid = nav.gps.valid;
       if (nav.home_valid)
         state.gps_home = state.gps_coord;
@@ -666,17 +632,12 @@ void nav_update() {
   }
 
   if (!flags.arm_state) {
-    state.altitude = 0;
-    state.baro_launch_altitude = 0;
     state.gps_home = state.gps_coord;
     nav.home_valid = false;
 
     nav_rth_stop();
     nav.previous.rth_aux = nav.previous.failsafe = 0;
   } else {
-    if (had_baro_update) {
-      state.altitude = nav.baro.altitude - state.baro_launch_altitude;
-    }
     if (nav.gps.valid && nav.home_valid) {
       nav_update_gps(state.gps_coord, state.gps_home);
     }
@@ -687,7 +648,6 @@ void nav_update() {
     }
   }
   // Navigation debug: 0 heading, 1 GPS course, 2 altitude (dm), 3 confidence.
-  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 2, (int16_t)constrain(state.altitude * 10.0f, -32768.0f, 32767.0f));
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 4, (int16_t)(state.rth_state));
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 5, (int16_t)(state.home_distance)); // meters
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 6, (int16_t)(state.home_bearing * 10)); // 0.1 deg
@@ -722,22 +682,12 @@ void nav_test_set_gps_sane(bool sane) {
   nav.gps.valid = sane;
 }
 
-void nav_test_set_altitude_source(bool valid, uint32_t update_ms) {
-  nav.baro.valid = valid;
-  nav.baro.updated_ms = update_ms;
-}
-
 void nav_test_set_rth_active(bool active) {
   state.rth_active = active;
   state.rth_state = active ? RTH_STATE_CLIMB : RTH_STATE_INACTIVE;
 }
 
 void nav_test_update_rth(void) { nav_update_rth(); }
-void nav_test_altitude_sample(float altitude, uint32_t now_ms) {
-  nav_update_altitude_sample(altitude, now_ms);
-  state.altitude = nav.baro.altitude - state.baro_launch_altitude;
-}
-float nav_test_vertical_rate(void) { return nav.baro.velocity; }
 void nav_test_altitude_control(float target, float rate, float dt) {
   nav_update_altitude_control(target, rate, dt);
 }

@@ -17,17 +17,6 @@
 #define RXMODE_BIND 0
 #define RXMODE_NORMAL 1
 
-typedef enum {
-  VER_INVALID,
-  VER_M5 = 0x00040005,
-  VER_M6 = 0x00040007,
-  VER_M7 = 0x00070000,
-  VER_M8 = 0x00080000,
-  VER_M9 = 0x00190000,
-  VER_M10 = 0x000A0000,
-  VER_MAX = 0xFFFFFFFF,
-} gps_version_t;
-
 typedef struct {
   int32_t lon;
   int32_t lat;
@@ -184,15 +173,20 @@ typedef struct {
   vec3_t accel_raw; // raw accel reading with rotation and scaling applied
   vec3_t accel;     // filtered accel readings
 
-  float gyro_temp;         // gyro temparture reading
+  float gyro_temp;         // gyro temperature reading
   vec3_t gyro_raw;         // raw gyro reading with rotation and scaling applied
   vec3_t gyro;             // filtered gyro reading
   vec3_t gyro_delta_angle; // angle covered in  last time interval
 
-  vec3_t GEstG; // gravity vector
-  vec3_t attitude;
+  // IMU: attitude and GPS-aided heading.
+  vec3_t GEstG;                     // gravity vector
+  vec3_t attitude;                  // roll/pitch/yaw radians, positive nose-down pitch; yaw is zero without GPS configured.
+  float heading;                    // Heading in degrees, 0..360; zero without GPS configured.
+  float heading_confidence;         // 0..1; reset at init/arming, retained during fresh-GPS hover
+  uint8_t heading_correction_flags; // latest blocking reasons, 0 permits correction on a new GPS sample
 
-  bool gps_lock;    // GPS producer: valid 3D fix with enough satellites; cleared after 500ms without NAV-PVT.
+  // GPS: latest receiver solution.
+  bool gps_lock;    // valid 3D fix with enough satellites; cleared after 500ms without NAV-PVT.
   uint8_t gps_sats; // Latest NAV-PVT satellites used, including while armed.
   float gps_speed;
   float gps_vel_north;
@@ -203,18 +197,18 @@ typedef struct {
   uint32_t gps_last_update_ms;
   gps_coord_t gps_coord;
   float gps_altitude;
-  float baro_pressure;
-  float baro_altitude;        // baro altitude
-  float baro_launch_altitude; // baro altitude over launchpoint
-  uint32_t gps_version;
+
+  // Barometer: detection, sample health and filtered outputs.
+  bool baro_detected;           // Set by baro_init after probing; controls task registration.
+  bool baro_valid;              // last filtered sample was finite; check timestamp for freshness.
+  uint32_t baro_last_update_ms; // time of last finite sample; zero at init, valid distinguishes a sample at time zero.
+  float baro_vertical_speed;    // filtered vertical velocity, m/s up; zero at init/reacquisition.
+  float altitude;               // filtered meters above launch; zero at init/disarmed, held without a new valid sample.
+
+  // Navigation: home reference and return-to-home commands.
   gps_coord_t gps_home;
-  float heading;
-  float heading_confidence;         // attitude producer, 0..1; reset at init/arming, retained during fresh-GPS hover
-  uint8_t heading_correction_flags; // attitude producer; latest blocking reasons, 0 permits correction on a new GPS sample
   float home_bearing;
   float home_distance;
-  float altitude; // altitude over launchpoint
-
   uint8_t rth_state; // rth_state_t
   bool rth_active;
   bool rth_failsafe_active;
@@ -226,7 +220,7 @@ typedef struct {
   vec3_t pid_p_term;
   vec3_t pid_i_term;
   vec3_t pid_d_term;
-  vec3_t pidoutput; // combinded output of the pid controller
+  vec3_t pidoutput; // combined output of the pid controller
 
   float mixer_source[OUTPUT_SOURCE_MAX];
   float output[MOTOR_PIN_MAX];
@@ -241,92 +235,92 @@ typedef struct {
   uint32_t dshot_rpm[4];
 } control_state_t;
 
-#define STATE_MEMBERS                                 \
-  START_STRUCT(control_state_t)                       \
-  MEMBER(failloop, uint8_t)                           \
-  MEMBER(looptime, float)                             \
-  MEMBER(looptime_us, float)                          \
-  MEMBER(looptime_autodetect, float)                  \
-  MEMBER(looptime_inverse, float)                     \
+#define STATE_MEMBERS                                  \
+  START_STRUCT(control_state_t)                        \
+  MEMBER(failloop, uint8_t)                            \
+  MEMBER(looptime, float)                              \
+  MEMBER(looptime_us, float)                           \
+  MEMBER(looptime_autodetect, float)                   \
+  MEMBER(looptime_inverse, float)                      \
+  MEMBER(loop_counter, uint32_t)                       \
   MEMBER(looptime_warning, uint8_t)                    \
-  MEMBER(loop_counter, uint32_t)                      \
-  MEMBER(uptime, float)                               \
-  MEMBER(armtime, float)                              \
-  MEMBER(cpu_load, uint32_t)                          \
-  MEMBER(failsafe_time_ms, uint32_t)                  \
-  MEMBER(failsafe_phase, uint8_t)                     \
-  MEMBER(lipo_cell_count, uint8_t)                    \
-  MEMBER(cpu_temp, float)                             \
-  MEMBER(vbat, float)                                 \
-  MEMBER(vbat_filtered, float)                        \
-  MEMBER(vbat_sag_filtered, float)                    \
-  MEMBER(vbat_cell_avg, float)                        \
-  MEMBER(vbat_compensated, float)                     \
-  MEMBER(vbat_compensated_cell_avg, float)            \
-  MEMBER(ibat, float)                                 \
-  MEMBER(ibat_filtered, float)                        \
-  MEMBER(ibat_sag_filtered, float)                    \
-  MEMBER(ibat_drawn, float)                           \
-  MEMBER(rx, vec4_t)                                  \
-  MEMBER(rx_filtered, vec4_t)                         \
-  MEMBER(rx_override, vec4_t)                         \
-  ARRAY_MEMBER(rx_channels, RX_CHANNEL_MAX, uint16_t) \
-  MEMBER(stick_calibration_wizard, uint8_t)           \
-  MEMBER(rx_rssi, float)                              \
-  MEMBER(rx_status, uint32_t)                         \
-  MEMBER(last_frame_time_us, uint32_t)                \
-  MEMBER(throttle, float)                             \
-  MEMBER(thrsum, float)                               \
-  MEMBER(aux_active, uint32_t)                        \
-  MEMBER(accel_raw, vec3_t)                           \
-  MEMBER(accel, vec3_t)                               \
-  MEMBER(gyro_temp, float)                            \
-  MEMBER(gyro_raw, vec3_t)                            \
-  MEMBER(gyro, vec3_t)                                \
-  MEMBER(gyro_delta_angle, vec3_t)                    \
-  MEMBER(GEstG, vec3_t)                               \
-  MEMBER(attitude, vec3_t)                            \
-  MEMBER(gps_lock, bool)                              \
-  MEMBER(gps_sats, uint8_t)                           \
-  MEMBER(gps_speed, float)                            \
-  MEMBER(gps_vel_north, float)                        \
-  MEMBER(gps_vel_east, float)                         \
-  MEMBER(gps_heading, float)                          \
-  MEMBER(gps_heading_accuracy, float)                 \
-  MEMBER(gps_horizontal_accuracy, float)              \
-  MEMBER(gps_last_update_ms, uint32_t)                \
-  MEMBER(gps_coord, gps_coord_t)                      \
-  MEMBER(gps_altitude, float)                         \
-  MEMBER(baro_pressure, float)                        \
-  MEMBER(baro_altitude, float)                        \
-  MEMBER(baro_launch_altitude, float)                 \
-  MEMBER(gps_version, uint32_t)                       \
-  MEMBER(gps_home, gps_coord_t)                       \
-  MEMBER(heading, float)                              \
-  MEMBER(heading_confidence, float)                   \
-  MEMBER(heading_correction_flags, uint8_t)           \
-  MEMBER(home_bearing, float)                         \
-  MEMBER(home_distance, float)                        \
-  MEMBER(altitude, float)                             \
-  MEMBER(rth_state, uint8_t)                          \
-  MEMBER(rth_active, bool)                            \
-  MEMBER(rth_failsafe_active, bool)                   \
-  MEMBER(rth_yaw_rate, float)                         \
-  MEMBER(setpoint, vec3_t)                            \
-  MEMBER(error, vec3_t)                               \
-  MEMBER(pid_p_term, vec3_t)                          \
-  MEMBER(pid_i_term, vec3_t)                          \
-  MEMBER(pid_d_term, vec3_t)                          \
-  MEMBER(pidoutput, vec3_t)                           \
+  MEMBER(uptime, float)                                \
+  MEMBER(armtime, float)                               \
+  MEMBER(cpu_load, uint32_t)                           \
+  MEMBER(failsafe_time_ms, uint32_t)                   \
+  MEMBER(failsafe_phase, uint8_t)                      \
+  MEMBER(lipo_cell_count, uint8_t)                     \
+  MEMBER(cpu_temp, float)                              \
+  MEMBER(vbat, float)                                  \
+  MEMBER(vbat_filtered, float)                         \
+  MEMBER(vbat_sag_filtered, float)                     \
+  MEMBER(vbat_cell_avg, float)                         \
+  MEMBER(vbat_compensated, float)                      \
+  MEMBER(vbat_compensated_cell_avg, float)             \
+  MEMBER(ibat, float)                                  \
+  MEMBER(ibat_filtered, float)                         \
+  MEMBER(ibat_sag_filtered, float)                     \
+  MEMBER(ibat_drawn, float)                            \
+  MEMBER(rx, vec4_t)                                   \
+  MEMBER(rx_filtered, vec4_t)                          \
+  MEMBER(rx_override, vec4_t)                          \
+  ARRAY_MEMBER(rx_channels, RX_CHANNEL_MAX, uint16_t)  \
+  MEMBER(stick_calibration_wizard, uint8_t)            \
+  MEMBER(rx_rssi, float)                               \
+  MEMBER(rx_status, uint32_t)                          \
+  MEMBER(last_frame_time_us, uint32_t)                 \
+  MEMBER(throttle, float)                              \
+  MEMBER(thrsum, float)                                \
+  MEMBER(aux_active, uint32_t)                         \
+  MEMBER(accel_raw, vec3_t)                            \
+  MEMBER(accel, vec3_t)                                \
+  MEMBER(gyro_temp, float)                             \
+  MEMBER(gyro_raw, vec3_t)                             \
+  MEMBER(gyro, vec3_t)                                 \
+  MEMBER(gyro_delta_angle, vec3_t)                     \
+  MEMBER(GEstG, vec3_t)                                \
+  MEMBER(attitude, vec3_t)                             \
+  MEMBER(heading, float)                               \
+  MEMBER(heading_confidence, float)                    \
+  MEMBER(heading_correction_flags, uint8_t)            \
+  MEMBER(gps_lock, bool)                               \
+  MEMBER(gps_sats, uint8_t)                            \
+  MEMBER(gps_speed, float)                             \
+  MEMBER(gps_vel_north, float)                         \
+  MEMBER(gps_vel_east, float)                          \
+  MEMBER(gps_heading, float)                           \
+  MEMBER(gps_heading_accuracy, float)                  \
+  MEMBER(gps_horizontal_accuracy, float)               \
+  MEMBER(gps_last_update_ms, uint32_t)                 \
+  MEMBER(gps_coord, gps_coord_t)                       \
+  MEMBER(gps_altitude, float)                          \
+  MEMBER(baro_detected, bool)                          \
+  MEMBER(baro_valid, bool)                             \
+  MEMBER(baro_last_update_ms, uint32_t)                \
+  MEMBER(baro_vertical_speed, float)                   \
+  MEMBER(altitude, float)                              \
+  MEMBER(gps_home, gps_coord_t)                        \
+  MEMBER(home_bearing, float)                          \
+  MEMBER(home_distance, float)                         \
+  MEMBER(rth_state, uint8_t)                           \
+  MEMBER(rth_active, bool)                             \
+  MEMBER(rth_failsafe_active, bool)                    \
+  MEMBER(rth_yaw_rate, float)                          \
+  MEMBER(setpoint, vec3_t)                             \
+  MEMBER(error, vec3_t)                                \
+  MEMBER(pid_p_term, vec3_t)                           \
+  MEMBER(pid_i_term, vec3_t)                           \
+  MEMBER(pid_d_term, vec3_t)                           \
+  MEMBER(pidoutput, vec3_t)                            \
   ARRAY_MEMBER(mixer_source, OUTPUT_SOURCE_MAX, float) \
   ARRAY_MEMBER(output, MOTOR_PIN_MAX, float)           \
   ARRAY_MEMBER(output_active, MOTOR_PIN_MAX, uint8_t)  \
-  MEMBER(angle_error, vec3_t)                         \
-  MEMBER(stick_vector, vec3_t)                        \
-  MEMBER(wing_launch_state, uint8_t)                  \
-  MEMBER(wing_launch_available, bool)                 \
-  MEMBER(wing_autotrim_state, uint8_t)                \
-  ARRAY_MEMBER(dshot_rpm, 4, uint32_t)                \
+  MEMBER(angle_error, vec3_t)                          \
+  MEMBER(stick_vector, vec3_t)                         \
+  MEMBER(wing_launch_state, uint8_t)                   \
+  MEMBER(wing_launch_available, bool)                  \
+  MEMBER(wing_autotrim_state, uint8_t)                 \
+  ARRAY_MEMBER(dshot_rpm, 4, uint32_t)                 \
   END_STRUCT()
 
 typedef struct {
