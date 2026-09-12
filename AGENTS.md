@@ -20,6 +20,7 @@ This file provides repository guidance for coding agents working in this reposit
 - Function naming: snake_case
 - Variable naming: snake_case
 - Constants/Macros: UPPER_CASE
+- Before adding declarations, compare the surrounding file and nearby files in the same subsystem and follow their organization. Group header constants after includes and before types, followed by extern variables and function declarations; do not insert constants between function declarations. Keep type-dependent macros beside their types and implementation-only constants in the owning source file.
 - Error handling: use failloop.h for critical errors
 - Comments: document non-obvious behavior and complex algorithms
 - Type safety: use appropriate typedefs (uint8_t, etc.) for hardware registers

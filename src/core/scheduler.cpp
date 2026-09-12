@@ -6,6 +6,7 @@
 
 #include "control/control.h"
 #include "core/debug.h"
+#include "core/profile.h"
 #include "driver/gyro/gyro.h"
 #include "driver/time.h"
 #include "io/simulator.h"
@@ -307,8 +308,16 @@ void scheduler_init() {
   last_loop_cycles = time_cycles();
   ground_task_cycles = 0;
 
-  for (auto &task : tasks) {
-    task_queue_push(&task);
+  task_queue_size = 0;
+  memset(task_queue, 0, sizeof(task_queue));
+  for (uint32_t id = 0; id < TASK_MAX; id++) {
+    if (!tasks[id].mask)
+      continue;
+    if ((id == TASK_GPS || id == TASK_NAV) && profile.serial.gps == SERIAL_PORT_INVALID)
+      continue;
+    if (id == TASK_BARO && !state.baro_detected)
+      continue;
+    task_queue_push(&tasks[id]);
   }
 }
 
@@ -329,6 +338,10 @@ void scheduler_run() {
 }
 
 #ifdef PIO_UNIT_TESTING
+bool scheduler_test_task_registered(task_id_t id) {
+  return task_queue_contains(&tasks[id]);
+}
+
 void scheduler_test_update_rate(uint32_t flight_runtime_us) {
   scheduler_update_rate(flight_runtime_us);
 }
