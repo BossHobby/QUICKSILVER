@@ -2,7 +2,6 @@
 
 #include <stdbool.h>
 
-#include "core/looptime.h"
 #include "core/project.h"
 #include "core/scheduler.h"
 #include "util/util.h"

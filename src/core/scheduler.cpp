@@ -6,16 +6,23 @@
 
 #include "control/control.h"
 #include "core/debug.h"
-#include "core/looptime.h"
+#include "driver/gyro/gyro.h"
 #include "driver/time.h"
 #include "io/simulator.h"
-#include "io/usb_configurator.h"
 #include "tasks.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
 #define TASK_AVERAGE_SAMPLES 32
 #define TASK_RUNTIME_BUFFER 10
+#define TASK_STARVATION_SKIPS 32
+
+static uint32_t last_loop_cycles;
+static uint32_t ground_task_cycles; // Excluded from flight-rate decisions, not from actual admission.
+static bool skip_loop_sample = false;
+static bool slowdown_requested;
+static uint32_t runtime_sum;
+static uint8_t runtime_samples;
 
 static FAST_RAM uint32_t task_queue_size = 0;
 static FAST_RAM task_t *task_queue[TASK_MAX];
@@ -47,7 +54,7 @@ static bool task_queue_push(task_t *task) {
   return false;
 }
 
-static FORCE_INLINE bool task_should_run(const uint32_t start_cycles, uint8_t task_mask, task_t *task, uint32_t task_id) {
+static FORCE_INLINE bool task_should_run(const uint32_t start_cycles, uint8_t task_mask, task_t *task) {
   if ((task_mask & task->mask) == 0) {
     // task shall not run in this firmware state
     return false;
@@ -56,13 +63,25 @@ static FORCE_INLINE bool task_should_run(const uint32_t start_cycles, uint8_t ta
     return false;
   }
 
-  const int32_t time_left = US_TO_CYCLES(state.looptime_autodetect - TASK_RUNTIME_BUFFER) - (time_cycles() - start_cycles);
-  // Preserve the C scheduler's unsigned comparison, including after an overrun.
-  if (task->priority != TASK_PRIORITY_REALTIME && task->runtime_worst > static_cast<uint32_t>(time_left)) {
-    // we dont have any time left this loop and task is not realtime
+  if (task->priority == TASK_PRIORITY_REALTIME) {
+    return true;
+  }
 
-    // Simple skip penalty using bit shift (faster than float multiply)
-    task->runtime_worst = (task->runtime_worst * 3) >> 2; // 3/4 = 0.75
+  const uint32_t budget_cycles = US_TO_CYCLES(MAX(0.0f, state.looptime_autodetect - TASK_RUNTIME_BUFFER));
+  const uint32_t elapsed_cycles = time_cycles() - start_cycles;
+  if (elapsed_cycles >= budget_cycles || task->runtime_worst > budget_cycles - elapsed_cycles) {
+    // Ground-only work must not lower the flight rate, directly or by delaying
+    // a flight task that would otherwise fit. Actual admission still uses all work.
+    if (task->mask & (TASK_MASK_DEFAULT | TASK_MASK_IN_AIR)) {
+      const uint32_t flight_cycles = elapsed_cycles - MIN(elapsed_cycles, ground_task_cycles);
+      if (flight_cycles >= budget_cycles || task->runtime_worst > budget_cycles - flight_cycles) {
+        if (task->runtime_skips < TASK_STARVATION_SKIPS && ++task->runtime_skips == TASK_STARVATION_SKIPS) {
+          slowdown_requested = true;
+        }
+      } else {
+        task->runtime_skips = 0;
+      }
+    }
 
 #ifdef DEBUG
     // Inline metrics update for skipped task
@@ -79,9 +98,10 @@ static FORCE_INLINE bool task_should_run(const uint32_t start_cycles, uint8_t ta
   return true;
 }
 
-static FORCE_INLINE void task_run(task_t *task, uint32_t task_id) {
+static FORCE_INLINE void task_run(task_t *task) {
   const volatile uint32_t start = time_cycles();
 
+  task->runtime_skips = 0;
   task->flags = 0;
   active_task = task;
   task->func();
@@ -90,6 +110,9 @@ static FORCE_INLINE void task_run(task_t *task, uint32_t task_id) {
   task->last_time = time_cycles();
   const volatile uint32_t time_taken = task->last_time - start;
   task->runtime_current = time_taken;
+  if (!(task->mask & (TASK_MASK_DEFAULT | TASK_MASK_IN_AIR))) {
+    ground_task_cycles += time_taken;
+  }
 
   if (state.loop_counter < 100) {
     // skip first couple of loops
@@ -185,41 +208,143 @@ static FORCE_INLINE uint8_t scheduler_task_mask() {
   return task_mask;
 }
 
+static void scheduler_reset_budget() {
+  slowdown_requested = false;
+  runtime_sum = 0;
+  runtime_samples = 0;
+  for (auto &task : tasks) {
+    task.runtime_skips = 0;
+  }
+}
+
+static void scheduler_update_rate(uint32_t flight_runtime_us) {
+  if (skip_loop_sample) {
+    skip_loop_sample = false;
+    return;
+  }
+
+  if (state.loop_counter >= 200) {
+    if (state.looptime_us > 20000) {
+      failloop(FAILLOOP_LOOPTIME);
+    }
+    // Exclude ground-only tasks and busy-wait padding. Keep fallback until init.
+    runtime_sum += flight_runtime_us;
+    if (++runtime_samples == 200) {
+      slowdown_requested |= runtime_sum / 200.0f > state.looptime_autodetect + 5.0f;
+      runtime_sum = 0;
+      runtime_samples = 0;
+    }
+  }
+
+  if (!slowdown_requested) {
+    return;
+  }
+  slowdown_requested = false;
+  if (state.looptime_autodetect >= 500.0f) {
+    return;
+  }
+
+  state.looptime_autodetect = MIN(500.0f, state.looptime_autodetect * 2.0f);
+  scheduler_reset_budget();
+  state.looptime_warning++;
+  control_filter_update(false);
+}
+
+static uint32_t scheduler_update_loop() {
+  const uint32_t elapsed_cycles = time_cycles() - last_loop_cycles;
+  state.cpu_load = CYCLES_TO_US(elapsed_cycles);
+  const uint32_t flight_runtime_us = CYCLES_TO_US(elapsed_cycles - MIN(elapsed_cycles, ground_task_cycles));
+
+  const uint32_t delay = US_TO_CYCLES(state.looptime_autodetect);
+  while ((time_cycles() - last_loop_cycles) < delay)
+    __NOP();
+
+  state.looptime_us = CYCLES_TO_US(time_cycles() - last_loop_cycles);
+  state.looptime = state.looptime_us * 1e-6f;
+  // looptime_inverse is the loop frequency (1/looptime)
+  if (state.looptime > 0.0f) {
+    state.looptime_inverse = 1.0f / state.looptime;
+  } else {
+    state.looptime_inverse = 0.0f;
+  }
+
+  state.loop_counter++;
+  last_loop_cycles = time_cycles();
+
+  ground_task_cycles = 0;
+  scheduler_update_rate(flight_runtime_us);
+
+  state.uptime += state.looptime;
+  if (flags.arm_state) {
+    state.armtime += state.looptime;
+  }
+  return last_loop_cycles;
+}
+
 void task_reset_runtime() {
+  scheduler_reset_budget();
   if (active_task != NULL) {
     active_task->flags |= TASK_FLAG_SKIP_STATS;
   }
-  looptime_reset();
+  skip_loop_sample = true;
 }
 
 void scheduler_init() {
-  looptime_init();
+#ifdef USE_GYRO
+  float target = gyro_update_period();
+#else
+  float target = LOOPTIME_MAX;
+#endif
+  while (target < LOOPTIME_MAX)
+    target *= 2.0f;
+  state.looptime = target * 1e-6f;
+  state.looptime_us = target;
+  state.looptime_autodetect = target;
+  state.looptime_warning = 0;
 
-  for (uint32_t i = 0; i < TASK_MAX; i++) {
-    task_queue_push(&tasks[i]);
+  scheduler_reset_budget();
+  skip_loop_sample = false;
+  last_loop_cycles = time_cycles();
+  ground_task_cycles = 0;
+
+  for (auto &task : tasks) {
+    task_queue_push(&task);
   }
 }
 
 void scheduler_run() {
-  looptime_reset();
+  task_reset_runtime();
 
   while (1) {
+    const uint32_t cycles = scheduler_update_loop();
     simulator_update();
-
-    const volatile uint32_t cycles = time_cycles();
     const uint8_t task_mask = scheduler_task_mask();
     for (uint32_t i = 0; i < task_queue_size; i++) {
       task_t *task = task_queue[i];
-      // Pass task index to avoid lookup later
-      uint32_t task_id = task - tasks; // Pointer arithmetic to get index
-      if (task_should_run(cycles, task_mask, task, task_id)) {
-        task_run(task, task_id);
+      if (task_should_run(cycles, task_mask, task)) {
+        task_run(task);
       }
     }
-
-    looptime_update();
   }
 }
+
+#ifdef PIO_UNIT_TESTING
+void scheduler_test_update_rate(uint32_t flight_runtime_us) {
+  scheduler_update_rate(flight_runtime_us);
+}
+
+uint32_t scheduler_test_loop_start() {
+  return scheduler_update_loop();
+}
+
+bool scheduler_test_should_run(uint32_t start_cycles, uint8_t task_mask, task_t *task) {
+  return task_should_run(start_cycles, task_mask, task);
+}
+
+void scheduler_test_run(task_t *task) {
+  task_run(task);
+}
+#endif
 
 #ifdef DEBUG
 
