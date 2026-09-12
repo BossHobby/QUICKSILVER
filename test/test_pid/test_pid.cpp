@@ -52,6 +52,57 @@ static void pid_setUp(void) {
 }
 
 
+#ifdef VEHICLE_WING
+void test_wing_rate_feedforward_tracks_target_while_disarmed() {
+  pid_setUp();
+  profile.pid.pid_rates[0] = {};
+  profile.pid.pid_rates[0].kff = (vec3_t){{44.0f, 30.0f, 10.0f}};
+  pid_rates_update();
+  state.setpoint = (vec3_t){{1.0f, -0.5f, 0.2f}};
+  state.gyro = state.setpoint;
+  state.error = {};
+  for (int i = 0; i < 100; i++) {
+    pid_calc();
+  }
+  TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.44f, state.pidoutput.roll);
+  TEST_ASSERT_FLOAT_WITHIN(1e-6f, -0.15f, state.pidoutput.pitch);
+  TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.02f, state.pidoutput.yaw);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.pid_i_term.roll);
+
+  state.setpoint = {};
+  // Settle the shared I-term relax filter before the next test.
+  for (int i = 0; i < 1000; i++) {
+    pid_calc();
+  }
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.pidoutput.roll);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.pidoutput.pitch);
+}
+
+void test_wing_rate_feedforward_profile_switch_and_limits() {
+  pid_setUp();
+  profile.pid.pid_rates[0] = {};
+  profile.pid.pid_rates[0].kff = (vec3_t){{100, 100, 100}};
+  pid_rates_update();
+  state.setpoint = (vec3_t){{10, -10, 10}};
+  pid_calc();
+  TEST_ASSERT_EQUAL_FLOAT(0.8f, state.pidoutput.roll);
+  TEST_ASSERT_EQUAL_FLOAT(-0.8f, state.pidoutput.pitch);
+  TEST_ASSERT_EQUAL_FLOAT(0.6f, state.pidoutput.yaw);
+
+  profile.pid.pid_rates[1] = {};
+  profile.pid.pid_profile = PID_PROFILE_2;
+  pid_rates_update();
+  pid_calc();
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.pidoutput.roll);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.pidoutput.pitch);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.pidoutput.yaw);
+  state.setpoint = {};
+  for (int i = 0; i < 1000; i++) {
+    pid_calc();
+  }
+}
+#endif
+
 #ifdef VEHICLE_MULTI
 void test_horizon_error_matches_setpoint(void) {
   for (int race = 0; race < 2; race++) {

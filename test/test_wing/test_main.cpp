@@ -87,6 +87,21 @@ static void test_pwm_motor_stops_but_disarmed_surfaces_work() {
   output_stop_all();
   TEST_ASSERT_EQUAL_FLOAT(-1.0f, pwm_values[0]);
 }
+
+static void test_level_tilt_moves_disarmed_surfaces_without_integral() {
+  pwm_motor();
+  state.aux_active = 1U << AUX_LEVELMODE;
+  state.GEstG.pitch = 0.5f;
+  state.GEstG.yaw = 0.8660254f;
+  for (int i = 0; i < 20; i++) {
+    control();
+  }
+  TEST_ASSERT_FALSE(flags.arm_state);
+  TEST_ASSERT_EQUAL_FLOAT(-1.0f, pwm_values[0]);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.pid_i_term.pitch);
+  TEST_ASSERT_LESS_THAN_FLOAT(-0.6f, pwm_values[1]);
+  TEST_ASSERT_LESS_THAN_FLOAT(-0.6f, pwm_values[2]);
+}
 static void test_pwm_shared_rate_validation() {
   servo_init();
   TEST_ASSERT_EQUAL(50, pwm_rate);
@@ -298,6 +313,7 @@ int main() {
   UNITY_BEGIN();
   RUN_TEST(test_pwm_throttle_range_and_limit);
   RUN_TEST(test_pwm_motor_stops_but_disarmed_surfaces_work);
+  RUN_TEST(test_level_tilt_moves_disarmed_surfaces_without_integral);
   RUN_TEST(test_pwm_shared_rate_validation);
   RUN_TEST(test_gliding_retains_airborne_state_and_motor_cutoff);
   RUN_TEST(test_autotrim_requires_switch_and_averages_applied_surfaces_once);
