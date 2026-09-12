@@ -692,31 +692,34 @@ const profile_t default_profile = {
 // the actual profile
 FAST_RAM profile_t profile;
 
-bool profile_output_slot_uses_protocol(uint8_t target_output, output_protocol_t protocol) {
+// Derived configuration, rebuilt at boot and after profile decoding.
+// Hardware pin/timer allocation still follows the existing initialization path.
+static uint8_t output_protocol_slots[OUTPUT_PROTOCOL_PWM + 1];
+static uint8_t output_protocols;
+static_assert(MOTOR_PIN_MAX <= 8);
+
+void profile_output_update() {
+  memset(output_protocol_slots, 0, sizeof(output_protocol_slots));
+  output_protocols = 0;
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    if (profile.outputs[i].target_output == target_output && profile.outputs[i].protocol == protocol) {
-      return true;
+    const profile_output_t *output = &profile.outputs[i];
+    if (output->protocol > OUTPUT_PROTOCOL_PWM) {
+      continue;
+    }
+    output_protocols |= 1U << output->protocol;
+    if (output->target_output < MOTOR_PIN_MAX) {
+      output_protocol_slots[output->protocol] |= 1U << output->target_output;
     }
   }
-  return false;
+}
+
+bool profile_output_slot_uses_protocol(uint8_t target_output, output_protocol_t protocol) {
+  return target_output < MOTOR_PIN_MAX && protocol <= OUTPUT_PROTOCOL_PWM &&
+         (output_protocol_slots[protocol] & (1U << target_output)) != 0;
 }
 
 bool profile_outputs_use_protocol(output_protocol_t protocol) {
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    if (profile.outputs[i].protocol == protocol) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool profile_output_slot_uses_servo(uint8_t target_output) {
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    if (profile.outputs[i].target_output == target_output && profile.outputs[i].protocol == OUTPUT_PROTOCOL_PWM) {
-      return true;
-    }
-  }
-  return false;
+  return protocol <= OUTPUT_PROTOCOL_PWM && (output_protocols & (1U << protocol)) != 0;
 }
 
 void profile_set_defaults() {
@@ -734,6 +737,7 @@ void profile_set_defaults() {
   if (target.ibat_scale > 0) {
     profile.voltage.ibat_scale = target.ibat_scale;
   }
+  profile_output_update();
 }
 
 pid_rate_t *profile_current_pid_rates() {

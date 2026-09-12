@@ -60,7 +60,7 @@ void servo_init() {
     }
   }
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    if (!profile_output_slot_uses_servo(i)) {
+    if (!profile_output_slot_uses_protocol(i, OUTPUT_PROTOCOL_PWM)) {
       continue;
     }
 

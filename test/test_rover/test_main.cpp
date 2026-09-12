@@ -10,6 +10,7 @@ extern const profile_t default_profile;
 
 void setUp() {
   profile = default_profile;
+  profile_output_update();
   profile.motor.motor_limit = 100;
   state = {};
   flags = {};
