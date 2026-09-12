@@ -214,13 +214,13 @@ typedef struct {
   bool rth_failsafe_active;
   float rth_yaw_rate; // radians/s, independent of pilot rates
 
-  vec3_t setpoint; // angular velocity setpoint from stick input
+  vec3_t setpoint; // Requested body rates (rad/s), from sticks or attitude control.
   vec3_t error;    // setpoint - gyro = error in angular velocity
 
   vec3_t pid_p_term;
   vec3_t pid_i_term;
   vec3_t pid_d_term;
-  vec3_t pidoutput; // combined output of the pid controller
+  vec3_t pidoutput; // Limited normalized P + I + D output, including rate FF on wings.
 
   float mixer_source[OUTPUT_SOURCE_MAX];
   float output[MOTOR_PIN_MAX];

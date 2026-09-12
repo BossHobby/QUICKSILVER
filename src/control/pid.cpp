@@ -67,6 +67,9 @@ void pid_rates_update() {
   scaled_rates.kp = vec3_mul_elem(rates->kp, pid_scales[0]);
   scaled_rates.ki = vec3_mul(vec3_mul_elem(rates->ki, pid_scales[1]), 1.0f / 3.0f);
   scaled_rates.kd = vec3_mul_elem(rates->kd, pid_scales[2]);
+#ifdef VEHICLE_WING
+  scaled_rates.kff = vec3_mul(rates->kff, 0.01f);
+#endif
 }
 
 void pid_filter_update(bool reset) {
@@ -237,8 +240,13 @@ void pid_calc() {
     const float dterm = (setpoint_derivative * stick_accelerator[x] * transition_setpoint_weight) - gyro_derivative;
     state.pid_d_term.axis[x] = pid_filter_dterm(x, dterm);
 
-    state.pidoutput.axis[x] = pid_output.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x];
-    state.pidoutput.axis[x] = constrain(state.pidoutput.axis[x], -out_limit.axis[x], out_limit.axis[x]);
+    pid_output.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x];
+#ifdef VEHICLE_WING
+    // Feed the requested body rate, including level/autolaunch corrections.
+    // This remains active while disarmed; the output layer gates motors.
+    pid_output.axis[x] += state.setpoint.axis[x] * scaled_rates.kff.axis[x];
+#endif
+    state.pidoutput.axis[x] = constrain(pid_output.axis[x], -out_limit.axis[x], out_limit.axis[x]);
   }
 
   last_error2 = last_error;
