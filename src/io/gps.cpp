@@ -13,8 +13,22 @@
 
 #ifdef USE_GPS
 
+typedef enum {
+  VER_INVALID,
+  VER_M5 = 0x00040005,
+  VER_M6 = 0x00040007,
+  VER_M7 = 0x00070000,
+  VER_M8 = 0x00080000,
+  VER_M9 = 0x00190000,
+  VER_M10 = 0x000A0000,
+  VER_MAX = 0xFFFFFFFF,
+} gps_version_t;
+
 #define UBX_SYNC1_CHAR 0xb5
 #define UBX_SYNC2_CHAR 0x62
+
+// At the 5 ms task period, this exceeds 115200-baud throughput.
+#define GPS_RX_BYTES_PER_UPDATE 128U
 
 #define UBX_MON_VER 0x0a04
 #define UBX_NAV_PVT 0x0107
@@ -702,15 +716,14 @@ void gps_init() {
 }
 
 static bool gps_read_ublox() {
-  bool had_update = false;
-
   uint8_t byte = 0;
-  WHILE_TIMEOUT(serial_read_byte(&serial_gps, &byte), 500) {
+  // Preserve partial frames between calls and handle at most one packet.
+  for (uint32_t count = 0; count < GPS_RX_BYTES_PER_UPDATE && serial_read_byte(&serial_gps, &byte); count++) {
     if (gps_parse_ubx(byte))
-      had_update = true;
+      return true;
   }
 
-  return had_update;
+  return false;
 }
 
 void gps_task() {

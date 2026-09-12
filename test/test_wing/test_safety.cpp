@@ -2,15 +2,18 @@
 #include <math.h>
 #include <unity.h>
 
-#include "control/attitude.h"
-#include "control/control.h"
 #include "control/imu.h"
+
+#include "control/control.h"
 #include "control/pid.h"
 #include "core/profile.h"
 #include "driver/motor.h"
 #include "driver/time.h"
 #include "mock_outputs.h"
 #include "util/util.h"
+
+extern void imu_test_attitude_init();
+extern void imu_test_attitude_update();
 
 extern const profile_t default_profile;
 
@@ -254,14 +257,13 @@ static void test_wing_imu_tracks_scripted_bank() {
   state.looptime_autodetect = 1000;
   state.accel_raw = {{0, 0, 1}};
   imu_init();
-  attitude_init();
+  imu_test_attitude_init();
   for (unsigned i = 0; i < 2000; i++) {
     const float bank = MIN(i, 500U) * (30.0f * DEGTORAD / 500.0f);
     state.accel_raw = {{sinf(bank), 0, cosf(bank)}};
     state.gyro_delta_angle = {{i < 500 ? 30.0f * DEGTORAD / 500.0f : 0, 0, 0}};
     state.gyro.roll = state.gyro_delta_angle.roll * state.looptime_inverse;
     imu_calc();
-    attitude_update();
   }
   // The attitude task publishes radians; PID input uses the gravity vector.
   TEST_ASSERT_FLOAT_WITHIN(1.0f * DEGTORAD, 30.0f * DEGTORAD, state.attitude.roll);
