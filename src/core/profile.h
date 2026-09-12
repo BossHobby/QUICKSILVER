@@ -802,9 +802,12 @@ pid_rate_t *profile_current_pid_rates();
 #ifndef VEHICLE_ROVER
 rate_t *profile_current_rates();
 #endif
-bool profile_output_slot_uses_protocol(uint8_t target_output, output_protocol_t protocol);
+
+// Call after changing profile.outputs; runtime protocol queries use this snapshot.
+void profile_output_update();
 bool profile_outputs_use_protocol(output_protocol_t protocol);
-bool profile_output_slot_uses_servo(uint8_t target_output);
+bool profile_output_slot_uses_protocol(uint8_t target_output, output_protocol_t protocol);
+
 uint32_t profile_output_count(const profile_output_t *outputs, uint32_t size);
 uint32_t profile_mixer_rule_count(const profile_mixer_rule_t *mixer, uint32_t size);
 

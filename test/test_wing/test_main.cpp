@@ -20,6 +20,7 @@ extern const profile_t default_profile;
 extern void run_wing_safety_tests();
 void setUp() {
   profile = default_profile;
+  profile_output_update();
   state = {};
   flags = {};
   target = {};
@@ -44,6 +45,7 @@ void tearDown() {}
 
 static void pwm_motor() {
   profile.outputs[0].protocol = OUTPUT_PROTOCOL_PWM;
+  profile_output_update();
   servo_init();
 }
 static void write_throttle(float value) {
