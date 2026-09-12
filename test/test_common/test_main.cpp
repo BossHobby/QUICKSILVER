@@ -6,6 +6,9 @@
 extern void test_osd_looptime_warning_is_temporary_until_2khz();
 extern void test_osd_transfer_is_bounded_and_retries();
 extern void test_osd_render_completes_before_transfer();
+extern void test_scheduler_omits_unconfigured_sensor_tasks();
+extern void test_imu_without_gps_publishes_tilt_without_heading_estimator();
+extern void test_baro_altitude_reference_without_gps();
 extern void test_scheduler_ground_only_starvation_does_not_reduce_flight_rate();
 extern void test_scheduler_ground_work_does_not_indirectly_reduce_flight_rate();
 extern void test_scheduler_exhausted_budget_and_wrap();
@@ -203,6 +206,7 @@ extern void test_attitude_course_accuracy_tapers_recovery(void);
 extern void test_attitude_forward_flight_builds_and_hover_retains_confidence(void);
 extern void test_attitude_yaw_between_gps_samples_suppresses_correction(void);
 extern void test_gps_configuration_and_fix_validity(void);
+extern void test_gps_burst_resumes_partial_packet(void);
 extern void test_gps_ground_and_airborne_configuration(void);
 extern void test_gps_satellite_and_fix_loss_remain_visible_armed(void);
 
@@ -226,9 +230,12 @@ void tearDown(void) {
 // Main test runner
 int main(int argc, char **argv) {
   UNITY_BEGIN();
+  RUN_TEST(test_scheduler_omits_unconfigured_sensor_tasks);
+  RUN_TEST(test_imu_without_gps_publishes_tilt_without_heading_estimator);
   RUN_TEST(test_osd_looptime_warning_is_temporary_until_2khz);
   RUN_TEST(test_osd_transfer_is_bounded_and_retries);
   RUN_TEST(test_osd_render_completes_before_transfer);
+  RUN_TEST(test_baro_altitude_reference_without_gps);
   RUN_TEST(test_scheduler_ground_only_starvation_does_not_reduce_flight_rate);
   RUN_TEST(test_scheduler_ground_work_does_not_indirectly_reduce_flight_rate);
   RUN_TEST(test_scheduler_exhausted_budget_and_wrap);
@@ -421,6 +428,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_attitude_forward_flight_builds_and_hover_retains_confidence);
   RUN_TEST(test_attitude_yaw_between_gps_samples_suppresses_correction);
   RUN_TEST(test_gps_configuration_and_fix_validity);
+  RUN_TEST(test_gps_burst_resumes_partial_packet);
   RUN_TEST(test_gps_ground_and_airborne_configuration);
   RUN_TEST(test_gps_satellite_and_fix_loss_remain_visible_armed);
   RUN_TEST(test_attitude_gps_reacquisition_does_not_snap_yaw);
