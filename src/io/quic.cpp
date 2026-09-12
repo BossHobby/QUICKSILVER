@@ -224,6 +224,7 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
   case QUIC_VAL_PROFILE: {
     res = cbor_decode_profile_t(dec, &profile);
     // Decoding can update fields before reporting a malformed profile.
+    profile_output_update();
     pid_rates_update();
     sixaxis_orientation_update();
     control_filter_update(true);
