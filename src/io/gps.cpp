@@ -13,6 +13,17 @@
 
 #ifdef USE_GPS
 
+typedef enum {
+  VER_INVALID,
+  VER_M5 = 0x00040005,
+  VER_M6 = 0x00040007,
+  VER_M7 = 0x00070000,
+  VER_M8 = 0x00080000,
+  VER_M9 = 0x00190000,
+  VER_M10 = 0x000A0000,
+  VER_MAX = 0xFFFFFFFF,
+} gps_version_t;
+
 #define UBX_SYNC1_CHAR 0xb5
 #define UBX_SYNC2_CHAR 0x62
 
