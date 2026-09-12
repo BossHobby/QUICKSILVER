@@ -7,7 +7,6 @@
 
 #include "control/control.h"
 #include "core/debug.h"
-#include "core/looptime.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/scheduler.h"
