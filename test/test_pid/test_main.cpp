@@ -2,6 +2,10 @@
 #include <unity.h>
 
 // PID tests
+#ifdef VEHICLE_WING
+extern void test_wing_rate_feedforward_tracks_target_while_disarmed(void);
+extern void test_wing_rate_feedforward_profile_switch_and_limits(void);
+#endif
 #ifdef VEHICLE_MULTI
 extern void test_horizon_error_matches_setpoint(void);
 #endif
@@ -24,6 +28,10 @@ void tearDown() {}
 int main() {
   UNITY_BEGIN();
   // PID tests
+#ifdef VEHICLE_WING
+  RUN_TEST(test_wing_rate_feedforward_tracks_target_while_disarmed);
+  RUN_TEST(test_wing_rate_feedforward_profile_switch_and_limits);
+#endif
 #ifdef VEHICLE_MULTI
   RUN_TEST(test_horizon_error_matches_setpoint);
 #endif
