@@ -65,6 +65,8 @@ typedef struct {
   uint32_t runtime_worst;
   uint32_t runtime_max;
 
+  uint8_t runtime_skips; // Consecutive eligible budget skips, saturated at the fallback threshold.
+
   uint32_t runtime_avg_sum;
 
 
