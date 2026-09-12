@@ -5,6 +5,9 @@
 // Test declarations
 extern void test_osd_transfer_is_bounded_and_retries();
 extern void test_osd_render_completes_before_transfer();
+extern void test_scheduler_omits_unconfigured_sensor_tasks();
+extern void test_imu_without_gps_publishes_tilt_without_heading_estimator();
+extern void test_baro_altitude_reference_without_gps();
 extern void test_scheduler_ground_only_starvation_does_not_reduce_flight_rate();
 extern void test_scheduler_ground_work_does_not_indirectly_reduce_flight_rate();
 extern void test_scheduler_exhausted_budget_and_wrap();
@@ -225,8 +228,11 @@ void tearDown(void) {
 // Main test runner
 int main(int argc, char **argv) {
   UNITY_BEGIN();
+  RUN_TEST(test_scheduler_omits_unconfigured_sensor_tasks);
+  RUN_TEST(test_imu_without_gps_publishes_tilt_without_heading_estimator);
   RUN_TEST(test_osd_transfer_is_bounded_and_retries);
   RUN_TEST(test_osd_render_completes_before_transfer);
+  RUN_TEST(test_baro_altitude_reference_without_gps);
   RUN_TEST(test_scheduler_ground_only_starvation_does_not_reduce_flight_rate);
   RUN_TEST(test_scheduler_ground_work_does_not_indirectly_reduce_flight_rate);
   RUN_TEST(test_scheduler_exhausted_budget_and_wrap);

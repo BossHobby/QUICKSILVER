@@ -66,12 +66,12 @@ void test_gps_configuration_and_fix_validity() {
   TEST_ASSERT_TRUE(cbor_decode_profile_t(&decoder, &decoded) >= CBOR_OK);
   TEST_ASSERT_EQUAL_UINT8(profile.gps.constellations, decoded.gps.constellations);
   uint8_t packet[128];
-  const uint32_t versions[] = {VER_M8, VER_M9, VER_M10};
+  const uint32_t versions[] = {0x00080000U, 0x00190000U, 0x000A0000U};
   for (uint32_t version : versions) {
     gps_test_reset(version);
     gps_status.state = GPS_CONFIG_CONSTELLATIONS;
     gps_task();
-    if (version == VER_M8) {
+    if (version == 0x00080000U) {
       TEST_ASSERT_EQUAL_UINT32(0, ring_buffer_read_multi(serial_gps.tx_buffer, packet, sizeof(packet)));
     } else {
       gps_test_read_packet(packet);
@@ -85,7 +85,7 @@ void test_gps_configuration_and_fix_validity() {
     gps_task();
     gps_test_read_packet(packet);
     TEST_ASSERT_EQUAL_HEX8(0x06, packet[2]);
-    if (version == VER_M8) {
+    if (version == 0x00080000U) {
       TEST_ASSERT_EQUAL_HEX8(0x08, packet[3]);
       const uint8_t rate[] = {100, 0, 1, 0, 1, 0};
       TEST_ASSERT_EQUAL_MEMORY(rate, packet + 6, sizeof(rate));
@@ -100,7 +100,7 @@ void test_gps_configuration_and_fix_validity() {
     time_test_advance_us(600000);
     gps_task(); // Initial stationary acquisition model.
     gps_test_read_packet(packet);
-    if (version == VER_M8) {
+    if (version == 0x00080000U) {
       TEST_ASSERT_EQUAL_HEX8(0x24, packet[3]);
       TEST_ASSERT_EQUAL_UINT8(1, packet[6]); // Only dynamic-model mask.
       TEST_ASSERT_EQUAL_UINT8(2, packet[8]);
@@ -113,7 +113,7 @@ void test_gps_configuration_and_fix_validity() {
 
   // Feed real UBX packets through the serial parser, including valid-checksum
   // 2D/time-only solutions that must not authorize heading or home capture.
-  gps_test_reset(VER_M10);
+  gps_test_reset(0x000A0000U);
   profile.gps.constellations = 0;
   gps_status.state = GPS_CONFIG_CONSTELLATIONS;
   gps_task();
@@ -133,7 +133,7 @@ void test_gps_configuration_and_fix_validity() {
 }
 
 void test_gps_ground_and_airborne_configuration() {
-  gps_test_reset(VER_M10);
+  gps_test_reset(0x000A0000U);
   gps_status.state = GPS_WAITING_FOR_LOCK;
   flags.arm_state = false;
   state.gps_lock = false;
@@ -170,7 +170,7 @@ void test_gps_ground_and_airborne_configuration() {
 }
 
 void test_gps_satellite_and_fix_loss_remain_visible_armed() {
-  gps_test_reset(VER_M10);
+  gps_test_reset(0x000A0000U);
   flags.arm_state = true;
   gps_status.state = GPS_RUNNING_NAV_SAT_OFF;
   gps_test_feed_solution(GPS_FIX_3D, 12, 1);
