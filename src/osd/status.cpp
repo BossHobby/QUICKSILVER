@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "control/control.h"
-#include "core/looptime.h"
 #include "core/profile.h"
 #include "driver/osd/osd.h"
 #include "driver/time.h"
@@ -114,7 +113,7 @@ static void osd_status_write_label(osd_element_t *el) {
 }
 
 static void osd_status_show_text(osd_status_mode_t mode, osd_status_entries_t entry, const char *label) {
-  if (current_status.entry == entry && strcmp((const char *)current_status.label, label) == 0) {
+  if (current_status.entry == entry && current_status.mode == mode && strcmp((const char *)current_status.label, label) == 0) {
     return;
   }
 
@@ -319,12 +318,9 @@ bool osd_status_update(osd_element_t *el) {
     return osd_status_print(el);
   }
 
-  {
-    extern uint8_t looptime_warning;
-    if (looptime_warning && (state.looptime_autodetect > 125.0f)) {
-      osd_status_show(MODE_HOLD, STATUS_LOOPTIME);
-      return osd_status_print(el);
-    }
+  if (state.looptime_warning && state.looptime_autodetect >= 500.0f) {
+    osd_status_show(MODE_HOLD, STATUS_LOOPTIME);
+    return osd_status_print(el);
   }
 
   if (flags.arming_disabled_flags & ARMING_DISABLED_USB) {
@@ -352,6 +348,19 @@ bool osd_status_update(osd_element_t *el) {
       }
       last_arm_state = flags.arm_state;
       return osd_status_print(el);
+    }
+  }
+
+  {
+    static uint8_t last_looptime_warning = 0;
+    if (state.looptime_warning != last_looptime_warning) {
+      const bool reduced = state.looptime_warning > last_looptime_warning;
+      last_looptime_warning = state.looptime_warning;
+      if (reduced) {
+        osd_status_show(MODE_TEMP, STATUS_LOOPTIME);
+        current_status.state = PRINT_START; // Restart even if the previous reduction showed the same label.
+        return osd_status_print(el);
+      }
     }
   }
 

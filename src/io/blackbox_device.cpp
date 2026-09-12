@@ -2,7 +2,6 @@
 
 #include <string.h>
 
-#include "core/looptime.h"
 #include "core/project.h"
 #include "core/scheduler.h"
 #include "io/blackbox_device_flash.h"
@@ -174,6 +173,11 @@ bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float
 
   blackbox_device_header.file_num++;
   dev->start();
+
+  // Exclude one-time profile encoding from task estimates and loop-rate accounting.
+  // TODO: Prepare the encoded profile before arming; this still delays the next
+  // control loop (~593 us on G473), including when recording starts in flight.
+  task_reset_runtime();
 
   return true;
 }
