@@ -7,7 +7,6 @@
 #include "control/control.h"
 #include "core/debug.h"
 #include "core/flash.h"
-#include "core/looptime.h"
 #include "core/scheduler.h"
 #include "core/target.h"
 #include "driver/motor.h"
