@@ -139,10 +139,11 @@ typedef struct {
   float looptime_autodetect; // desired looptime in us
   float looptime_inverse;    // 1/looptime for derivative calculations
   uint32_t loop_counter;     // number of loops ran
+  uint8_t looptime_warning;  // Scheduler rate reductions since init; nonzero means fallback occurred.
 
   float uptime;      // running sum of looptimes
   float armtime;     // running sum of looptimes (while armed)
-  uint32_t cpu_load; // micros we have had left last loop
+  uint32_t cpu_load; // Execution time in microseconds before busy-wait padding.
 
   uint32_t failsafe_time_ms; // time the current failsafe started in ms
   uint8_t failsafe_phase;
@@ -247,6 +248,7 @@ typedef struct {
   MEMBER(looptime_us, float)                          \
   MEMBER(looptime_autodetect, float)                  \
   MEMBER(looptime_inverse, float)                     \
+  MEMBER(looptime_warning, uint8_t)                    \
   MEMBER(loop_counter, uint32_t)                      \
   MEMBER(uptime, float)                               \
   MEMBER(armtime, float)                              \
