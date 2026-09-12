@@ -113,6 +113,7 @@ void flash_load() {
     fmc_read_buf(PROFILE_STORAGE_OFFSET, buffer, PROFILE_STORAGE_SIZE);
     memcpy((uint8_t *)&profile, buffer + FMC_MAGIC_SIZE, sizeof(profile_t));
   }
+  profile_output_update();
 
 #ifdef EXPRESS_LRS_UID
   if (profile.receiver.bind.bind_saved == 0) {

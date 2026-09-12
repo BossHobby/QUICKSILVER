@@ -29,6 +29,7 @@ extern void test_sdft_explicit_period_update();
 
 // Filter tests
 extern void test_filter_init(void);
+extern void test_output_protocol_snapshot_updates_explicitly(void);
 extern void test_atan2approx_accuracy(void);
 extern void test_filter_reconfigure_type(void);
 extern void test_notch_matches_reference_with_changing_frequency(void);
@@ -229,6 +230,7 @@ int main(int argc, char **argv) {
 
   // Filter tests
   RUN_TEST(test_filter_init);
+  RUN_TEST(test_output_protocol_snapshot_updates_explicitly);
   RUN_TEST(test_atan2approx_accuracy);
   RUN_TEST(test_filter_reconfigure_type);
   RUN_TEST(test_notch_matches_reference_with_changing_frequency);
