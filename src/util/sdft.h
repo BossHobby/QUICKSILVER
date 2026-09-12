@@ -1,20 +1,19 @@
 #pragma once
 
-#include <stdbool.h>
 #include <stdint.h>
 
-#define SDFT_AXES 3
-#define SDFT_PEAKS 3
+constexpr uint32_t SDFT_AXES = 3;
+constexpr uint32_t SDFT_PEAKS = 3;
 
-#define SDFT_FILTER_HZ 4
+constexpr float SDFT_FILTER_HZ = 4.0f;
 
-#define SDFT_MIN_HZ 100
-#define SDFT_MAX_HZ 600
+constexpr float SDFT_MIN_HZ = 100.0f;
+constexpr float SDFT_MAX_HZ = 600.0f;
 
-#define SDFT_SAMPLE_SIZE 62
-#define SDFT_BIN_COUNT (SDFT_SAMPLE_SIZE / 2)
+constexpr uint32_t SDFT_SAMPLE_SIZE = 62;
+constexpr uint32_t SDFT_BIN_COUNT = SDFT_SAMPLE_SIZE / 2;
 
-#define SDFT_DAMPING_FACTOR 0.9999f
+constexpr float SDFT_DAMPING_FACTOR = 0.9999f;
 
 // Keep the C implementation's complex arithmetic and trivial initialization.
 typedef __complex__ float complex_float;
@@ -29,13 +28,22 @@ typedef enum {
 
 typedef struct {
   sdft_state_t state;
-  float sample_period_us;
 
   uint32_t idx;
 
+  float resolution_hz;
+  float sample_period_us;
+
+  uint32_t sub_samples;
+  uint32_t bin_min_index;
+  uint32_t bin_max_index;
+  uint32_t bins_per_push;
+
   float sample_accumulator;
-  float sample_avg;
+  float sample_delta; // One completed decimated sample delta, shared by every bin batch.
+
   uint32_t sample_count;
+  uint32_t update_samples;
 
   float samples[SDFT_SAMPLE_SIZE];
   complex_float data[SDFT_BIN_COUNT];
@@ -44,7 +52,7 @@ typedef struct {
   float magnitude[SDFT_BIN_COUNT];
 
   float peak_values[SDFT_PEAKS];
-  uint32_t peak_indicies[SDFT_PEAKS];
+  uint32_t peak_indices[SDFT_PEAKS];
 
   float notch_hz[SDFT_PEAKS];
 } sdft_t;
