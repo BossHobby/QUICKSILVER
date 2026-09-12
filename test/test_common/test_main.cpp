@@ -17,6 +17,7 @@ extern void test_sdcard_transport_busy_and_timer_wrap();
 extern void test_sdcard_device_samples_during_write();
 extern void test_blackbox_navigation_roundtrip_and_unchanged_home(void);
 extern void test_blackbox_full_frame_fits_device_buffer(void);
+extern void test_blackbox_balances_work_without_delaying_overdue_samples();
 extern void test_attitude_rth_recovery_strengthens_when_moving_away(void);
 extern void test_attitude_rth_recovery_requires_valid_course_and_phase(void);
 extern void test_attitude_normal_heading_pitch_weight_matches_vehicle(void);
@@ -327,6 +328,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_blackbox_debug_change_detection);
   RUN_TEST(test_blackbox_navigation_roundtrip_and_unchanged_home);
   RUN_TEST(test_blackbox_full_frame_fits_device_buffer);
+  RUN_TEST(test_blackbox_balances_work_without_delaying_overdue_samples);
   RUN_TEST(test_blackbox_iframe_encoding);
   RUN_TEST(test_blackbox_pframe_encoding);
   RUN_TEST(test_blackbox_frame_type_bit);
