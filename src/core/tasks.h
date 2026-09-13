@@ -9,10 +9,7 @@
 #include "driver/time.h"
 
 typedef enum {
-  TASK_GYRO,
-  TASK_IMU,
-  TASK_PID,
-  TASK_RX,
+  TASK_FLIGHT,
   TASK_VBAT,
   TASK_BARO,
   TASK_NAV,
