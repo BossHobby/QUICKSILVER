@@ -7,7 +7,6 @@
 
 #include "control/control.h"
 #include "core/profile.h"
-#include "core/tasks.h"
 #include "util/filter.h"
 #include "util/util.h"
 #include "util/vector.h"
@@ -75,19 +74,19 @@ void pid_rates_update() {
 void pid_filter_update(bool reset) {
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
     if (reset) {
-      filter_init(profile.filter.dterm[i].type, &filter[i], filter_state[i], 3, profile.filter.dterm[i].cutoff_freq, task_get_period_us(TASK_FLIGHT));
+      filter_init(profile.filter.dterm[i].type, &filter[i], filter_state[i], 3, profile.filter.dterm[i].cutoff_freq, state.looptime_autodetect);
     } else {
-      filter_coeff(profile.filter.dterm[i].type, &filter[i], profile.filter.dterm[i].cutoff_freq, task_get_period_us(TASK_FLIGHT));
+      filter_coeff(profile.filter.dterm[i].type, &filter[i], profile.filter.dterm[i].cutoff_freq, state.looptime_autodetect);
     }
   }
   if (reset) {
-    filter_init(profile.filter.dterm_dynamic_type, &dynamic_filter, dynamic_filter_state, 3, DTERM_DYNAMIC_FREQ_MAX, task_get_period_us(TASK_FLIGHT));
+    filter_init(profile.filter.dterm_dynamic_type, &dynamic_filter, dynamic_filter_state, 3, DTERM_DYNAMIC_FREQ_MAX, state.looptime_autodetect);
   }
 }
 
 void pid_init() {
   pid_rates_update();
-  filter_lp_pt1_init(&rx_filter, rx_filter_state, 3, state.rx_filter_hz, task_get_period_us(TASK_FLIGHT));
+  filter_lp_pt1_init(&rx_filter, rx_filter_state, 3, state.rx_filter_hz, state.looptime_autodetect);
   pid_filter_update(true);
   lastrate = (vec3_t){0};
   lastsetpoint = (vec3_t){0};
@@ -182,12 +181,12 @@ static inline float pid_tda_compensation() {
 }
 
 void pid_calc() {
-  filter_lp_pt1_coeff(&rx_filter, state.rx_filter_hz, task_get_period_us(TASK_FLIGHT));
+  filter_lp_pt1_coeff(&rx_filter, state.rx_filter_hz, state.looptime_autodetect);
 
   const float dynamic_throttle = state.throttle + state.throttle * (1.0f - state.throttle);
   const float dterm_dynamic_raw_freq = mapf(dynamic_throttle, 0.0f, 1.0f, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
   const float dterm_dynamic_freq = constrain(dterm_dynamic_raw_freq, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
-  filter_coeff(profile.filter.dterm_dynamic_type, &dynamic_filter, dterm_dynamic_freq, task_get_period_us(TASK_FLIGHT));
+  filter_coeff(profile.filter.dterm_dynamic_type, &dynamic_filter, dterm_dynamic_freq, state.looptime_autodetect);
 
   static vec3_t pid_output = {.roll = 0, .pitch = 0, .yaw = 0};
   const float v_compensation = pid_voltage_compensation();

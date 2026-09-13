@@ -6,23 +6,13 @@
 #include "core/tasks.h"
 #include "driver/i2c.h"
 #include "driver/time.h"
-#include "io/blackbox.h"
-#include "util/util.h"
 
 #include "driver/baro/bmp280.h"
 #include "driver/baro/bmp388.h"
 #include "driver/baro/dps310.h"
 
-struct baro_sample_t {
-  float altitude;
-  float vertical_speed;
-  uint32_t last_update_ms;
-  bool valid;
-};
-
-static float filtered_altitude;
-static float launch_altitude; // Filtered absolute altitude latched on arming, meters.
-static bool was_armed;
+static baro_sample_t latest_sample;
+static bool sample_pending;
 
 #ifdef USE_BARO
 
@@ -83,78 +73,37 @@ static bool baro_read(float &altitude) { return false; }
 #endif
 
 baro_types_t baro_init() {
-  filtered_altitude = 0;
-  was_armed = false;
-  state.baro_valid = false;
-  state.baro_last_update_ms = 0;
-  state.baro_vertical_speed = 0;
-  launch_altitude = 0;
-  state.altitude = 0;
+  sample_pending = false;
   const baro_types_t detected = baro_detect();
   state.baro_detected = detected != BARO_TYPE_INVALID;
   return detected;
 }
 
-// TODO: Move filtering, vertical speed and launch-relative altitude to a shared altitude estimator.
-static void baro_filter_sample(float altitude, uint32_t now_ms, baro_sample_t &next) {
-  // Hardware uses -Ofast, which can remove ordinary isfinite() checks.
-  const union { float value; uint32_t bits; } sample = {.value = altitude};
-  if ((sample.bits & 0x7f800000U) == 0x7f800000U) {
-    next.valid = false;
-    return;
-  }
-  const uint32_t elapsed_ms = now_ms - next.last_update_ms;
-  if (!next.valid || elapsed_ms > BARO_STALE_MS) {
-    filtered_altitude = altitude;
-    next.vertical_speed = 0;
-  } else if (elapsed_ms > 0) {
-    const float dt = elapsed_ms * 0.001f;
-    const float previous = filtered_altitude;
-    filtered_altitude += dt / (0.1f + dt) * (altitude - filtered_altitude);
-    const float velocity = (filtered_altitude - previous) / dt;
-    next.vertical_speed += dt / (0.2f + dt) * (velocity - next.vertical_speed);
-  }
-  next.valid = true;
-  next.last_update_ms = now_ms;
+static void baro_publish_sample(float altitude, uint32_t timestamp_ms) {
+  taskENTER_CRITICAL();
+  latest_sample = {altitude, timestamp_ms};
+  sample_pending = true;
+  taskEXIT_CRITICAL();
 }
 
-static void baro_publish_sample(const baro_sample_t &next) {
-  // Only the completed sample publication excludes Flight preemption.
+bool baro_take_sample(baro_sample_t &sample) {
   taskENTER_CRITICAL();
-  state.altitude = next.altitude;
-  state.baro_vertical_speed = next.vertical_speed;
-  state.baro_last_update_ms = next.last_update_ms;
-  state.baro_valid = next.valid;
+  const bool pending = sample_pending;
+  if (pending)
+    sample = latest_sample;
+  sample_pending = false;
   taskEXIT_CRITICAL();
+  return pending;
 }
 
 void baro_update() {
   float altitude;
-  const bool updated = baro_read(altitude);
-  baro_sample_t next = {state.altitude, state.baro_vertical_speed, state.baro_last_update_ms, state.baro_valid};
-  if (updated)
-    baro_filter_sample(altitude, time_millis(), next);
-
-  const bool armed = flags.arm_state;
-  if (armed && !was_armed)
-    launch_altitude = filtered_altitude;
-  was_armed = armed;
-
-  if (!armed) {
-    next.altitude = 0;
-    launch_altitude = 0;
-  } else if (updated && next.valid) {
-    next.altitude = filtered_altitude - launch_altitude;
-  }
-  baro_publish_sample(next);
-  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 2, (int16_t)constrain(state.altitude * 10.0f, -32768.0f, 32767.0f));
+  if (baro_read(altitude))
+    baro_publish_sample(altitude, time_millis());
 }
 
 #ifdef PIO_UNIT_TESTING
-void baro_test_sample(float altitude, uint32_t now_ms) {
-  baro_sample_t next = {state.altitude, state.baro_vertical_speed, state.baro_last_update_ms, state.baro_valid};
-  baro_filter_sample(altitude, now_ms, next);
-  next.altitude = filtered_altitude - launch_altitude;
-  baro_publish_sample(next);
+void baro_test_sample(float altitude, uint32_t timestamp_ms) {
+  baro_publish_sample(altitude, timestamp_ms);
 }
 #endif

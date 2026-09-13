@@ -5,7 +5,6 @@
 #include "core/failloop.h"
 #include "core/profile.h"
 #include "core/project.h"
-#include "core/scheduler.h"
 #include "io/gps.h"
 #include "rx/rx.h"
 #include "util/vector.h"
@@ -199,7 +198,8 @@ typedef struct {
   float gps_altitude;
 
   // Barometer: detection, sample health and filtered outputs.
-  bool baro_detected;           // Set by baro_init after probing; controls task registration.
+  bool baro_detected;           // Set by baro_init after probing; enables IO barometer updates.
+  // Flight navigation owns the derived barometer fields below.
   bool baro_valid;              // last filtered sample was finite; check timestamp for freshness.
   uint32_t baro_last_update_ms; // time of last finite sample; zero at init, valid distinguishes a sample at time zero.
   float baro_vertical_speed;    // filtered vertical velocity, m/s up; zero at init/reacquisition.
