@@ -9,6 +9,7 @@
 #include "control/multi/navigation.h"
 #endif
 #include "control/sixaxis.h"
+#include "core/scheduler.h"
 #include "driver/baro/baro.h"
 #include "driver/serial.h"
 #include "driver/usb.h"
@@ -24,6 +25,8 @@
 #include "profile.h"
 #include "project.h"
 #include "rx/rx.h"
+
+static StackType_t flight_stack[2048];
 
 static void flight_task() {
   sixaxis_read();
@@ -44,6 +47,34 @@ void util_task() {
 static void task_noop() {
 }
 #endif
+
+static void flight_thread(void *) {
+  task_reset_runtime();
+  while (1) {
+    scheduler_run();
+  }
+}
+
+extern "C" void thread_assert_failed() {
+  failloop(FAILLOOP_FAULT);
+}
+
+extern "C" void vApplicationStackOverflowHook(TaskHandle_t, char *) {
+  thread_assert_failed();
+}
+
+thread_t threads[THREAD_MAX] = {
+    [THREAD_FLIGHT] = CREATE_THREAD("flight", 1, flight_thread, flight_stack),
+};
+
+void threads_start() {
+  for (auto &thread : threads) {
+    thread.handle = xTaskCreateStatic(thread.entry, thread.name, thread.stack_size, nullptr, thread.priority, thread.stack, &thread.control);
+    configASSERT(thread.handle);
+  }
+  vTaskStartScheduler();
+  thread_assert_failed();
+}
 
 FAST_RAM task_t tasks[TASK_MAX] = {
     [TASK_FLIGHT] = CREATE_TASK("FLIGHT", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, flight_task, 0),

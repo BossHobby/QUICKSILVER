@@ -1,5 +1,7 @@
 #include "driver/time.h"
 
+#include <FreeRTOS.h>
+
 #include "core/project.h"
 
 #if defined(STM32F7) || defined(STM32H7)
@@ -9,6 +11,7 @@
 #define DWT_LAR_UNLOCK_VALUE 0xC5ACCE55
 #endif
 
+static volatile bool kernel_tick_active;
 volatile uint32_t systick_count = 0;
 static volatile uint32_t systick_val = 0;
 static volatile uint32_t systick_pending = 0;
@@ -39,6 +42,16 @@ void time_init() {
   debug_time_init();
 }
 
+// Keep the existing running 1 ms timebase through kernel startup. Resetting
+// SysTick here would make time_micros() jump and lose HAL time.
+extern "C" void vPortSetupTimerInterrupt() {
+  static_assert(configTICK_RATE_HZ == 1000);
+  NVIC_SetPriority(SysTick_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY);
+  kernel_tick_active = true;
+}
+
+extern "C" void xPortSysTickHandler();
+
 extern "C" void SysTick_Handler() {
   systick_count = systick_count + 1;
   systick_val = SysTick->VAL;
@@ -47,6 +60,9 @@ extern "C" void SysTick_Handler() {
 
   // used by the HAL for some timekeeping and timeouts, should always be 1ms
   HAL_IncTick();
+  if (kernel_tick_active) {
+    xPortSysTickHandler();
+  }
 }
 
 uint32_t time_micros_isr() {
