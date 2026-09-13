@@ -31,6 +31,6 @@ kernel_env.Append(CCFLAGS=["-fno-lto"])
 kernel_library = kernel_env.BuildLibrary(
     env.subst("$BUILD_DIR/FreeRTOS-Kernel"),
     str(kernel),
-    src_filter=["-<*>", "+<tasks.c>", "+<list.c>", f"+<{port}/port.c>"] + port_sources,
+    src_filter=["-<*>", "+<tasks.c>", "+<list.c>", "+<queue.c>", f"+<{port}/port.c>"] + port_sources,
 )
 env.Prepend(LIBS=[kernel_library])

@@ -1,5 +1,8 @@
 #include "driver/timer.h"
 
+#include <FreeRTOS.h>
+#include <task.h>
+
 #include "driver/rcc.h"
 
 #define TIMER_ASSIGMENT_MAX 32
@@ -137,7 +140,31 @@ void timer_enable_dma_request(timer_index_t tim, timer_channel_t chan, bool stat
   }
 }
 
+void timer_up_set_period(timer_index_t tim, uint32_t period) {
+  LL_TIM_SetAutoReload(timer_defs[tim].instance, period);
+}
+
+void timer_up_start(timer_index_t tim) {
+  auto *instance = timer_defs[tim].instance;
+  LL_TIM_GenerateEvent_UPDATE(instance);
+  LL_TIM_ClearFlag_UPDATE(instance);
+  LL_TIM_EnableARRPreload(instance);
+  LL_TIM_EnableIT_UPDATE(instance);
+  LL_TIM_EnableCounter(instance);
+}
+
+bool timer_up_pending(timer_index_t tim) {
+  auto *instance = timer_defs[tim].instance;
+  if (!LL_TIM_IsEnabledIT_UPDATE(instance) || !LL_TIM_IsActiveFlag_UPDATE(instance))
+    return false;
+  LL_TIM_ClearFlag_UPDATE(instance);
+  return true;
+}
+
 static void timer_irq_handler() {
+  extern bool flight_timer_irq_handler();
+  const bool wake = flight_timer_irq_handler();
+
   extern void soft_serial_timer_irq_handler();
   soft_serial_timer_irq_handler();
 
@@ -145,6 +172,7 @@ static void timer_irq_handler() {
   extern void elrs_timer_irq_handler();
   elrs_timer_irq_handler();
 #endif
+  portYIELD_FROM_ISR(wake);
 }
 
 #ifdef STM32H7

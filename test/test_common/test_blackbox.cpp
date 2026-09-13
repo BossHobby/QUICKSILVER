@@ -1,7 +1,18 @@
 #include <initializer_list>
+#include <atomic>
+#include <signal.h>
+#include <stdio.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#include <FreeRTOS.h>
+#include <task.h>
+#include <semphr.h>
 #include <unity.h>
 #include <string.h>
 #include "mock_helpers.h"
+#include "core/tasks.h"
+#include "driver/time.h"
 
 // Include blackbox headers
 #include "io/blackbox.h"
@@ -11,97 +22,357 @@
 #include "util/vector.h"
 #include "util/cbor_helper.h"
 
-void test_blackbox_balances_work_without_delaying_overdue_samples() {
-  const auto saved_device = blackbox_device_simulator;
-  const auto saved_profile = profile;
-  const auto saved_state = state;
-  const auto saved_flags = flags;
-  const auto saved_bounds = blackbox_bounds;
-  const auto saved_header = blackbox_device_header;
-  static unsigned writes, storage_calls, stops;
-  static bool storage_ready;
-  writes = storage_calls = stops = 0;
-  storage_ready = true;
-  blackbox_device_simulator.init = []() {};
-  blackbox_device_simulator.update = []() {
-    storage_calls++;
-    return storage_ready;
-  };
-  blackbox_device_simulator.ready = []() { return true; };
-  blackbox_device_simulator.usage = []() { return 256U; };
-  blackbox_device_simulator.start = []() {};
-  blackbox_device_simulator.stop = []() { stops++; };
-  blackbox_device_simulator.write = [](const uint8_t *, uint8_t) {
-    writes++;
-    return true;
-  };
-  blackbox_device_init();
-  blackbox_bounds.page_size = 256;
-  blackbox_bounds.total_size = 1048576;
-  profile_set_defaults(&profile);
-  profile_output_update();
-  state.looptime_autodetect = 125;
-  state.aux_active = 1U << AUX_BLACKBOX;
-  flags.turtle_ready = 0;
+namespace {
+struct recorded_frame_t {
+  uint8_t bytes[BLACKBOX_MAX_SIZE];
+  uint8_t size;
+};
+static recorded_frame_t recorded[64];
+static unsigned writes, storage_calls, starts, stops, flushing;
+static bool storage_ready, reject_write;
 
+// Deterministic tests permit one service pass at a time through the mock device.
+static SemaphoreHandle_t step_requested, step_done;
+static bool step_in_progress;
+
+static void step_blackbox() {
+  TEST_ASSERT_EQUAL(pdTRUE, xSemaphoreGive(step_requested));
+  TEST_ASSERT_EQUAL(pdTRUE, xSemaphoreTake(step_done, pdMS_TO_TICKS(100)));
+}
+
+static void run_blackbox_test(void (*body)()) {
+  const pid_t child = fork();
+  TEST_ASSERT_TRUE(child >= 0);
+  if (child == 0) {
+    static StaticSemaphore_t requested_storage, done_storage;
+    step_requested = xSemaphoreCreateBinaryStatic(&requested_storage);
+    step_done = xSemaphoreCreateBinaryStatic(&done_storage);
+    static StaticTask_t task;
+    static StackType_t stack[2048];
+    auto entry = [](void *arg) {
+      (*static_cast<void (**)()>(arg))();
+      fflush(stdout);
+      _exit(Unity.CurrentTestFailed ? 1 : 0);
+    };
+    if (!xTaskCreateStatic(entry, "test", 2048, &body, 2, stack, &task)) _exit(2);
+    vTaskStartScheduler();
+    _exit(3);
+  }
+  int status;
+  for (unsigned i = 0; i < 5000; i++) {
+    if (waitpid(child, &status, WNOHANG) == child) {
+      TEST_ASSERT_TRUE(WIFEXITED(status));
+      TEST_ASSERT_EQUAL_INT(0, WEXITSTATUS(status));
+      return;
+    }
+    usleep(1000);
+  }
+  kill(child, SIGKILL);
+  waitpid(child, &status, 0);
+  TEST_FAIL_MESSAGE("Blackbox service pass stalled");
+}
+
+struct blackbox_test_t {
+  decltype(blackbox_device_simulator) saved_device = blackbox_device_simulator;
+  profile_t saved_profile = profile;
+  control_state_t saved_state = state;
+  decltype(flags) saved_flags = flags;
+  decltype(target_info) saved_info = target_info;
+  decltype(blackbox_bounds) saved_bounds = blackbox_bounds;
+  decltype(blackbox_device_header) saved_header = blackbox_device_header;
+
+  blackbox_test_t() {
+    writes = storage_calls = starts = stops = flushing = 0;
+    storage_ready = true;
+    reject_write = false;
+    blackbox_device_simulator.init = []() {};
+    blackbox_device_simulator.update = []() {
+      if (step_requested) {
+        if (step_in_progress) xSemaphoreGive(step_done);
+        xSemaphoreTake(step_requested, portMAX_DELAY);
+        step_in_progress = true;
+      }
+      storage_calls++;
+      if (flushing) --flushing;
+      return storage_ready;
+    };
+    blackbox_device_simulator.ready = []() { return flushing == 0; };
+    blackbox_device_simulator.usage = []() { return 256U; };
+    blackbox_device_simulator.start = []() { starts++; };
+    blackbox_device_simulator.stop = []() { stops++; flushing = 3; };
+    blackbox_device_simulator.reset = []() {};
+    blackbox_device_simulator.write = [](const uint8_t *bytes, uint8_t size) {
+      if (reject_write || writes >= 64) return false;
+      memcpy(recorded[writes].bytes, bytes, size);
+      recorded[writes++].size = size;
+      return true;
+    };
+    profile_set_defaults(&profile);
+    profile_output_update();
+    state = {};
+    flags = {};
+    state.looptime_autodetect = 125;
+    state.aux_active = 1U << AUX_BLACKBOX;
+    profile.blackbox.sample_rate_hz = 8000;
+    profile.blackbox.field_flags = (1U << BBOX_FIELD_PID_P_TERM) | (1U << BBOX_FIELD_GYRO_RAW) |
+                                   (1U << BBOX_FIELD_OUTPUT) | (1U << BBOX_FIELD_DEBUG);
+    profile.blackbox.debug_flags = BBOX_DEBUG_DYN_NOTCH;
+    if (step_requested && threads[THREAD_BLACKBOX].handle == nullptr) {
+      blackbox_init();
+    } else {
+      blackbox_reset();
+      blackbox_device_init();
+    }
+    blackbox_bounds.page_size = 256;
+    blackbox_bounds.total_size = 1048576;
+  }
+
+  ~blackbox_test_t() {
+    blackbox_reset();
+    blackbox_device_simulator = saved_device;
+    blackbox_bounds = saved_bounds;
+    blackbox_device_header = saved_header;
+    target_info = saved_info;
+    profile = saved_profile;
+    profile_output_update();
+    state = saved_state;
+    flags = saved_flags;
+  }
+};
+
+static blackbox_t capture_frame(uint32_t sequence, uint32_t loop, uint32_t timestamp, float value) {
+  state.loop_counter = loop;
+  time_test_set_us(timestamp);
+  state.pid_p_term.roll = value;
+  state.gyro_raw.pitch = value;
+  state.output[0] = value;
+  blackbox_set_debug(BBOX_DEBUG_DYN_NOTCH, 0, (int16_t)value);
+  blackbox_capture();
+  blackbox_t expected = {};
+  expected.loop = sequence;
+  expected.time = timestamp;
+  expected.pid_p_term.roll = value * BLACKBOX_SCALE;
+  expected.gyro_raw.pitch = value * BLACKBOX_SCALE;
+  expected.output.axis[0] = value * BLACKBOX_SCALE;
+  expected.debug[0] = value;
+  return expected;
+}
+
+static void expect_frame(unsigned index, uint32_t fields, const blackbox_t &current,
+                         const blackbox_t &previous, blackbox_frame_type_t type) {
+  TEST_ASSERT_TRUE(index < writes);
+  uint8_t expected[BLACKBOX_MAX_SIZE];
+  cbor_value_t enc;
+  cbor_encoder_init(&enc, expected, sizeof(expected));
+  TEST_ASSERT_EQUAL(CBOR_OK, cbor_encode_blackbox_frame(&enc, &current, &previous, type, fields));
+  TEST_ASSERT_EQUAL_UINT(cbor_encoder_len(&enc), recorded[index].size);
+  TEST_ASSERT_EQUAL_MEMORY(expected, recorded[index].bytes, recorded[index].size);
+}
+}
+
+static void test_blackbox_captures_before_delayed_encoding_body() {
   for (uint32_t divider : {1U, 2U, 4U, 8U}) {
-    profile.blackbox.sample_rate_hz = 8000 / divider;
     for (uint32_t start : {0U, UINT32_MAX - 8U}) {
+      blackbox_test_t fixture;
+      profile.blackbox.sample_rate_hz = 8000 / divider;
+      const uint32_t fields = profile.blackbox.field_flags;
       flags.arm_state = 1;
       state.loop_counter = start;
-      blackbox_update();
-      const unsigned initial_writes = writes;
-      for (unsigned i = 1; i <= divider * 3; i++) {
-        state.loop_counter++;
-        const unsigned before_storage = storage_calls;
-        blackbox_update();
-        TEST_ASSERT_EQUAL_UINT(initial_writes + i / divider, writes);
-        const bool sample_only = divider > 1 && i % divider == 0;
-        TEST_ASSERT_EQUAL_UINT(before_storage + !sample_only, storage_calls);
-      }
-
-      // Even if every call is a sample call, storage must continue progressing.
-      for (uint32_t gap : {divider, divider + 1}) {
-        for (unsigned i = 0; i < 4; i++) {
-          state.loop_counter += gap;
-          const unsigned before_writes = writes;
-          const unsigned before_storage = storage_calls;
-          blackbox_update();
-          TEST_ASSERT_EQUAL_UINT(before_writes + 1, writes);
-          TEST_ASSERT_EQUAL_UINT(before_storage + 1, storage_calls);
+      blackbox_capture();
+      blackbox_t previous = {};
+      for (uint32_t sequence = 1; sequence <= 3; sequence++) {
+        blackbox_t expected = {};
+        const unsigned before = storage_calls;
+        for (uint32_t i = 1; i <= divider; i++) {
+          const uint32_t loop = (sequence - 1) * divider + i;
+          expected = capture_frame(sequence, start + loop, loop * 125, sequence);
         }
+        blackbox_capture(); // Same loop must not publish another sample.
+        TEST_ASSERT_EQUAL_UINT(sequence - 1, writes);
+        TEST_ASSERT_EQUAL_UINT(before, storage_calls);
+
+        // Encoding must use captured data and session format, not live values.
+        state.pid_p_term.roll = state.gyro_raw.pitch = state.output[0] = 99;
+        blackbox_set_debug(BBOX_DEBUG_DYN_NOTCH, 0, 99);
+        profile.blackbox.field_flags = 0;
+        state.looptime_autodetect = 500;
+        step_blackbox();
+        TEST_ASSERT_EQUAL_UINT(fields, blackbox_current_file()->field_flags);
+        TEST_ASSERT_EQUAL_UINT(divider, blackbox_current_file()->blackbox_rate);
+        TEST_ASSERT_EQUAL_FLOAT(125, blackbox_current_file()->looptime);
+        TEST_ASSERT_EQUAL_UINT(sequence, writes);
+        expect_frame(sequence - 1, fields, expected, previous,
+                     sequence == 1 ? BLACKBOX_FRAME_I : BLACKBOX_FRAME_P);
+        previous = expected;
       }
-
-      // Recovery services storage and records immediately, in the same call.
-      state.loop_counter += divider;
-      storage_ready = false;
-      const unsigned before_writes = writes;
-      blackbox_update();
-      TEST_ASSERT_EQUAL_UINT(before_writes, writes);
-      state.loop_counter++;
-      storage_ready = true;
-      const unsigned before_storage = storage_calls;
-      blackbox_update();
-      TEST_ASSERT_EQUAL_UINT(before_writes + 1, writes);
-      TEST_ASSERT_EQUAL_UINT(before_storage + 1, storage_calls);
-
-      blackbox_update(); // No duplicate sample in the same control loop.
-      TEST_ASSERT_EQUAL_UINT(before_writes + 1, writes);
+      step_blackbox();
+      TEST_ASSERT_EQUAL_UINT(3, writes);
       flags.arm_state = 0;
-      state.loop_counter++;
-      const unsigned before_stops = stops;
-      blackbox_update();
-      TEST_ASSERT_EQUAL_UINT(before_stops + 1, stops);
-      TEST_ASSERT_EQUAL_UINT(before_writes + 1, writes);
+      blackbox_capture();
+      step_blackbox();
+      TEST_ASSERT_EQUAL_UINT(1, stops);
+      const unsigned before = storage_calls;
+      for (unsigned i = 0; i < 4; i++) step_blackbox();
+      TEST_ASSERT_EQUAL_UINT(before + 4, storage_calls);
+      TEST_ASSERT_EQUAL_UINT(0, flushing);
     }
   }
-  blackbox_device_simulator = saved_device;
-  blackbox_bounds = saved_bounds;
-  blackbox_device_header = saved_header;
-  profile = saved_profile;
-  profile_output_update();
-  state = saved_state;
-  flags = saved_flags;
+}
+
+static void test_blackbox_mailbox_overrun_and_session_drain_body() {
+  blackbox_test_t fixture;
+  const uint32_t fields = profile.blackbox.field_flags;
+  flags.arm_state = 1;
+  blackbox_capture();
+  const auto first = capture_frame(1, 1, 125, 1);
+  for (unsigned i = 2; i <= 40; i++) capture_frame(i, i, i * 125, 9);
+  step_blackbox();
+  TEST_ASSERT_EQUAL_UINT(1, writes);
+  expect_frame(0, fields, first, first, BLACKBOX_FRAME_I);
+  const auto last = capture_frame(41, 41, 5125, 2);
+  flags.arm_state = 0;
+  blackbox_capture();
+  // Rearm before the old sample is consumed. It must retain its old session.
+  flags.arm_state = 1;
+  blackbox_capture();
+  capture_frame(1, 42, 5250, 9); // Busy mailbox: drop, never overwrite the old frame.
+  step_blackbox();
+  TEST_ASSERT_EQUAL_UINT(2, writes);
+  expect_frame(1, fields, last, first, BLACKBOX_FRAME_P);
+  const auto next = capture_frame(2, 43, 5375, 3);
+  step_blackbox(); // Finish old session before starting the next.
+  TEST_ASSERT_EQUAL_UINT(1, stops);
+  for (unsigned i = 0; i < 2; i++) {
+    step_blackbox();
+    TEST_ASSERT_EQUAL_UINT(1, starts);
+  }
+  step_blackbox();
+  TEST_ASSERT_EQUAL_UINT(2, starts);
+  expect_frame(2, fields, next, next, BLACKBOX_FRAME_I);
+  flags.arm_state = 0;
+  blackbox_capture();
+  step_blackbox();
+  TEST_ASSERT_EQUAL_UINT(2, stops);
+}
+
+static void test_blackbox_storage_stall_and_rejected_delta_body() {
+  blackbox_test_t fixture;
+  const uint32_t fields = profile.blackbox.field_flags;
+  flags.arm_state = 1;
+  blackbox_capture();
+  const auto first = capture_frame(1, 1, 125, 1);
+  storage_ready = false;
+  for (unsigned i = 0; i < 4; i++) step_blackbox();
+  TEST_ASSERT_EQUAL_UINT(0, writes);
+  storage_ready = true;
+  step_blackbox();
+  capture_frame(2, 2, 250, 2);
+  reject_write = true;
+  step_blackbox();
+  reject_write = false;
+  const auto third = capture_frame(3, 3, 375, 3);
+  // Once open, encoding can continue into the writer FIFO while storage is busy.
+  storage_ready = false;
+  step_blackbox();
+  TEST_ASSERT_EQUAL_UINT(2, writes);
+  expect_frame(0, fields, first, first, BLACKBOX_FRAME_I);
+  expect_frame(1, fields, third, first, BLACKBOX_FRAME_P);
+  storage_ready = true;
+
+  capture_frame(4, 4, 500, 4);
+  blackbox_device_reset(); // Erasing logs also discards pending samples and delta history.
+  step_blackbox();
+  TEST_ASSERT_EQUAL_UINT(2, writes);
+  TEST_ASSERT_EQUAL_UINT(0, blackbox_device_header.file_num);
+  blackbox_capture();
+  const auto restarted = capture_frame(1, 5, 625, 5);
+  step_blackbox();
+  expect_frame(2, fields, restarted, restarted, BLACKBOX_FRAME_I);
+}
+
+// Run the real POSIX FreeRTOS port in a child: the normal Unity runner does
+// not start a kernel, and kernel shutdown is not supported on Cortex-M.
+static std::atomic<bool> worker_entered, worker_preempted, worker_encoded;
+static std::atomic<unsigned> worker_passes;
+
+static void blackbox_test_flight(void *) {
+  flags.arm_state = 1;
+  state.loop_counter = 0;
+  blackbox_capture();
+  capture_frame(1, 1, 125, 1);
+  xTaskNotifyGive(threads[THREAD_BLACKBOX].handle);
+  for (unsigned tick = 0; tick < 20; tick++) {
+    vTaskDelay(1);
+    if (worker_entered.load()) worker_preempted.store(true);
+    if (worker_encoded.load()) {
+      if (!worker_preempted.load()) _exit(11);
+      flags.arm_state = 0;
+      blackbox_capture();
+      unsigned passes;
+      {
+        mutex_guard_t guard(blackbox_storage_mutex);
+        passes = worker_passes.load();
+        if (blackbox_device_header.file_num != 1) _exit(16);
+        uint8_t data[4] = {};
+        blackbox_device_read(0, 7, data, sizeof(data));
+        if (data[0] != 42) _exit(17);
+        vTaskDelay(3);
+        if (worker_passes.load() != passes) _exit(22);
+        blackbox_device_reset();
+        if (blackbox_device_header.file_num != 0) _exit(18);
+      }
+      vTaskDelay(3);
+      if (worker_passes.load() == passes) _exit(23);
+      _exit(0);
+    }
+  }
+  _exit(12);
+}
+
+void test_blackbox_runs_in_own_freertos_task() {
+  const pid_t child = fork();
+  TEST_ASSERT_TRUE(child >= 0);
+  if (child == 0) {
+    blackbox_test_t fixture;
+    blackbox_device_simulator.update = []() {
+      if (strcmp(pcTaskGetName(nullptr), "blackbox") != 0) _exit(13);
+      worker_passes.fetch_add(1);
+      worker_entered.store(true);
+      // Intentionally long work: only preemption by Flight can release it.
+      while (!worker_preempted.load()) {}
+      return true;
+    };
+    blackbox_device_simulator.write = [](const uint8_t *, uint8_t) {
+      worker_encoded.store(true);
+      return true;
+    };
+    blackbox_device_simulator.read = [](uint32_t file, uint32_t offset, uint8_t *data, uint32_t size) {
+      if (strcmp(pcTaskGetName(nullptr), "flight") != 0 || file != 0 || offset != 7 || size != 4) _exit(19);
+      data[0] = 42;
+    };
+    blackbox_device_simulator.reset = []() {
+      if (strcmp(pcTaskGetName(nullptr), "flight") != 0) _exit(20);
+    };
+    static StaticTask_t task;
+    static StackType_t stack[2048];
+    if (!xTaskCreateStatic(blackbox_test_flight, "flight", 2048, nullptr, 2, stack, &task)) _exit(14);
+    blackbox_init();
+    if (!threads[THREAD_BLACKBOX].handle) _exit(21);
+    vTaskStartScheduler();
+    _exit(15);
+  }
+  int status = 0;
+  for (unsigned i = 0; i < 2000; i++) {
+    if (waitpid(child, &status, WNOHANG) == child) {
+      TEST_ASSERT_TRUE(WIFEXITED(status));
+      TEST_ASSERT_EQUAL_INT(0, WEXITSTATUS(status));
+      return;
+    }
+    usleep(1000);
+  }
+  kill(child, SIGKILL);
+  waitpid(child, &status, 0);
+  TEST_FAIL_MESSAGE("Blackbox worker or Flight preemption stalled");
 }
 
 // Define constants for testing (from blackbox.c)
@@ -582,4 +853,16 @@ void test_blackbox_iframe_interval() {
   // Frame 33 should be P-frame
   bool is_iframe_33 = (33 == 1 || 33 % BLACKBOX_I_FRAME_INTERVAL == 0);
   TEST_ASSERT_FALSE(is_iframe_33);
+}
+
+void test_blackbox_captures_before_delayed_encoding() {
+  run_blackbox_test(test_blackbox_captures_before_delayed_encoding_body);
+}
+
+void test_blackbox_mailbox_overrun_and_session_drain() {
+  run_blackbox_test(test_blackbox_mailbox_overrun_and_session_drain_body);
+}
+
+void test_blackbox_storage_stall_and_rejected_delta() {
+  run_blackbox_test(test_blackbox_storage_stall_and_rejected_delta_body);
 }

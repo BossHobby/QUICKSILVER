@@ -1,6 +1,14 @@
 #include "io/blackbox.h"
 
+#include <atomic>
+#include <string.h>
+
+#include <FreeRTOS.h>
+#include <semphr.h>
+#include <task.h>
+
 #include "control/control.h"
+#include "core/tasks.h"
 #include "driver/time.h"
 #include "io/blackbox_device.h"
 #include "io/usb_configurator.h"
@@ -12,13 +20,42 @@
 #define BLACKBOX_I_FRAME_INTERVAL 32  // Every 32nd frame is an I-frame
 #define BLACKBOX_FIELD_ENABLED(flags, field) ((flags) & (1 << (field)))
 
-static blackbox_t blackbox;
-static blackbox_t blackbox_previous;  // Store previous frame for delta encoding
-static uint8_t blackbox_enabled = 0;
-static uint8_t blackbox_has_previous = 0;
-static uint32_t blackbox_rate = 1;
-static uint32_t blackbox_last_sample_loop;
-static uint32_t blackbox_last_storage_loop;
+struct blackbox_settings_t {
+  uint32_t field_flags;
+  uint32_t rate; // Flight loops per sample.
+  float looptime; // Microseconds per flight loop.
+};
+
+// Flight owns capture timing and fixed recording settings. Debug producers still run
+// in the same cooperative loop as Flight.
+static struct {
+  uint32_t session_id;
+  blackbox_settings_t settings;
+  uint32_t sequence;
+  uint32_t last_loop;
+  int16_t debug[BLACKBOX_DEBUG_SIZE];
+} capture;
+
+// Flight publishes one complete sample; Blackbox releases it after encoding
+// into the existing writer FIFO. Recording == 0 means capture has stopped.
+static_assert(std::atomic<bool>::is_always_lock_free);
+static_assert(std::atomic<uint32_t>::is_always_lock_free);
+static struct {
+  blackbox_t frame;
+  profile_t profile; // Copied once per recording, before publishing its first sample.
+  uint32_t session_id;
+  blackbox_settings_t settings;
+  std::atomic<bool> pending;
+  std::atomic<uint32_t> recording;
+} mailbox;
+
+// Blackbox owns the open log and its last successfully encoded frame.
+static struct {
+  uint32_t session_id;
+  blackbox_t previous;
+} writer;
+
+SemaphoreHandle_t blackbox_storage_mutex;
 
 static int16_t blackbox_compress_float(float value) {
   const float scaled = value * BLACKBOX_SCALE;
@@ -112,7 +149,6 @@ static bool debug_has_changed(const int16_t *current, const int16_t *previous, u
   }
   return false;
 }
-
 
 // Helper function to compute and check if delta should be encoded
 static inline bool compute_and_check_vec3_delta(compact_vec3_t *delta, const compact_vec3_t *current, const compact_vec3_t *previous) {
@@ -315,8 +351,24 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
   return res;
 }
 
+void blackbox_reset() {
+  // Runs before task startup, or during ground-only erase with storage locked.
+  mailbox.session_id = 0;
+  mailbox.settings = {};
+  mailbox.pending = false;
+  mailbox.recording = 0;
+  capture = {};
+  writer = {};
+}
+
 void blackbox_init() {
+  blackbox_reset();
   blackbox_device_init();
+
+  static StaticSemaphore_t mutex;
+  blackbox_storage_mutex = xSemaphoreCreateMutexStatic(&mutex);
+  configASSERT(blackbox_storage_mutex);
+  thread_start(THREAD_BLACKBOX);
 }
 
 void blackbox_set_debug(blackbox_debug_flag_t flag, uint8_t index, int16_t data) {
@@ -327,7 +379,7 @@ void blackbox_set_debug(blackbox_debug_flag_t flag, uint8_t index, int16_t data)
     return;
   }
 
-  blackbox.debug[index] = data;
+  capture.debug[index] = data;
 }
 
 static uint32_t blackbox_rate_div() {
@@ -340,48 +392,44 @@ static uint32_t blackbox_rate_div() {
   return MAX(1U, rate);
 }
 
-void blackbox_update() {
-  const bool recording = blackbox_enabled && flags.arm_state && rx_aux_on(AUX_BLACKBOX);
-  const bool sample_due = (uint32_t)(state.loop_counter - blackbox_last_sample_loop) >= blackbox_rate;
-  const bool storage_recent = (uint32_t)(state.loop_counter - blackbox_last_storage_loop) == 1;
-  // Split work only when storage was serviced in the preceding control loop.
-  // After skipped calls, service storage and take the overdue sample together.
-  if (!recording || blackbox_rate == 1 || !sample_due || !storage_recent) {
-    if (!blackbox_device_update()) {
+void blackbox_capture() {
+  const bool requested = (target_info.features & FEATURE_BLACKBOX) && flags.arm_state && rx_aux_on(AUX_BLACKBOX);
+  if (!requested) {
+    mailbox.recording.store(0, std::memory_order_release);
+    return;
+  }
+  if (mailbox.recording.load(std::memory_order_relaxed) == 0) {
+    if (flags.turtle_ready) {
       return;
     }
-    blackbox_last_storage_loop = state.loop_counter;
-  }
-
-  // flash is either idle or writing, do blackbox
-  if ((!flags.arm_state || !rx_aux_on(AUX_BLACKBOX)) && blackbox_enabled == 1) {
-    blackbox_device_finish();
-    blackbox_enabled = 0;
-    return;
-  } else if ((flags.arm_state && flags.turtle_ready == 0 && rx_aux_on(AUX_BLACKBOX)) && blackbox_enabled == 0) {
-    if (blackbox_device_restart(profile.blackbox.field_flags, blackbox_rate_div(), state.looptime_autodetect)) {
-      blackbox_rate = blackbox_rate_div();
-      blackbox_last_sample_loop = state.loop_counter;
-      blackbox_enabled = 1;
-      blackbox.loop = 0;
-      blackbox_has_previous = 0;
+    // Session metadata stays fixed, including when the worker is delayed.
+    if (++capture.session_id == 0) {
+      ++capture.session_id;
     }
+    capture.settings.field_flags = profile.blackbox.field_flags;
+    capture.settings.rate = blackbox_rate_div();
+    capture.settings.looptime = state.looptime_autodetect;
+    capture.sequence = 0;
+    capture.last_loop = state.loop_counter;
+    mailbox.recording.store(capture.session_id, std::memory_order_release);
+    return;
+  }
+  if ((uint32_t)(state.loop_counter - capture.last_loop) < capture.settings.rate) {
+    return;
+  }
+  capture.last_loop = state.loop_counter;
+  // Count attempts so a busy mailbox leaves a visible sequence gap.
+  capture.sequence++;
+  if (mailbox.pending.load(std::memory_order_acquire)) {
     return;
   }
 
-  if (blackbox_enabled == 0) {
-    return;
-  }
-
-  if (!sample_due) {
-    return;
-  }
-  // Schedule from this sample, without catch-up bursts after missed calls.
-  blackbox_last_sample_loop = state.loop_counter;
-
-  const uint32_t field_flags = profile.blackbox.field_flags;
-
-  blackbox.loop++;
+  const uint32_t field_flags = capture.settings.field_flags;
+  if (mailbox.session_id != capture.session_id) mailbox.profile = profile;
+  mailbox.session_id = capture.session_id;
+  mailbox.settings = capture.settings;
+  blackbox_t &blackbox = mailbox.frame;
+  blackbox.loop = capture.sequence;
   blackbox.time = time_micros();
   if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_GPS_COORD)) {
     blackbox.gps_coord[0] = state.gps_coord.lat;
@@ -437,20 +485,64 @@ void blackbox_update() {
     blackbox.cpu_load = state.cpu_load;
   }
 
-  // Determine frame type based on blackbox.loop counter
-  // First frame (loop == 1) is always an I-frame, then every BLACKBOX_I_FRAME_INTERVAL frames
-  blackbox_frame_type_t frame_type = (!blackbox_has_previous || blackbox.loop % BLACKBOX_I_FRAME_INTERVAL == 0) ?
-                                     BLACKBOX_FRAME_I : BLACKBOX_FRAME_P;
-  
-  // Write the frame using I-frame/P-frame encoding
-  if (blackbox_device_write_frame(field_flags, &blackbox, &blackbox_previous, frame_type)) {
-    // Store only frames that were queued so P-frame deltas stay decodable after drops.
-    blackbox_previous = blackbox;
-    blackbox_has_previous = 1;
+  if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_DEBUG)) {
+    memcpy(blackbox.debug, capture.debug, sizeof(blackbox.debug));
+  }
+
+  mailbox.pending.store(true, std::memory_order_release);
+}
+
+void blackbox_thread(void *) {
+  for (;;) {
+    ulTaskNotifyTake(pdTRUE, 1); // Poll detection and final flush even without samples.
+    mutex_guard_t guard(blackbox_storage_mutex);
+    // Keep storage progressing even when no new sample is available. Once a log
+    // is open, its writer FIFO can accept samples while device I/O is busy.
+    const bool storage_ready = blackbox_device_update();
+    if (!mailbox.pending.load(std::memory_order_acquire)) {
+      // Recheck after observing stop, in case the producer just published its
+      // final sample. Finalization must follow encoding that sample.
+      if (storage_ready && writer.session_id != 0 && mailbox.recording.load(std::memory_order_acquire) != writer.session_id &&
+          !mailbox.pending.load(std::memory_order_acquire)) {
+        blackbox_device_finish();
+        writer.session_id = 0;
+      }
+      continue;
+    }
+
+    if (writer.session_id != mailbox.session_id) {
+      if (!storage_ready) {
+        continue;
+      }
+      if (writer.session_id != 0) {
+        blackbox_device_finish();
+        writer.session_id = 0;
+        continue;
+      }
+      if (!blackbox_device_restart(mailbox.settings.field_flags, mailbox.settings.rate, mailbox.settings.looptime, &mailbox.profile)) {
+        continue;
+      }
+      writer.session_id = mailbox.session_id;
+      writer.previous = {};
+    }
+
+    const blackbox_t &frame = mailbox.frame;
+    const blackbox_frame_type_t frame_type = (writer.previous.loop == 0 || frame.loop % BLACKBOX_I_FRAME_INTERVAL == 0) ?
+                                                BLACKBOX_FRAME_I : BLACKBOX_FRAME_P;
+    if (blackbox_device_write_frame(mailbox.settings.field_flags, &frame, &writer.previous, frame_type)) {
+      writer.previous = frame;
+    }
+    // A rejected write is a dropped frame. Keep the last successful delta base.
+    mailbox.pending.store(false, std::memory_order_release);
   }
 }
+
 #else
-void blackbox_init() {}
+void blackbox_init() { thread_start(THREAD_BLACKBOX); }
+void blackbox_reset() {}
 void blackbox_set_debug(blackbox_debug_flag_t flag, uint8_t index, int16_t data) {}
-void blackbox_update() {}
+void blackbox_capture() {}
+void blackbox_thread(void *) {
+  for (;;) ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+}
 #endif

@@ -78,13 +78,22 @@ memory_section_init() {
 #endif
 }
 
-#ifndef PIO_UNIT_TESTING
-__attribute__((__used__)) int main() {
-  // init timer so we can use delays etc
-  gpio_ports_init();
-  interrupt_init();
-  time_init();
+static timer_index_t flight_timer;
 
+static uint32_t flight_timer_period() {
+  return (uint32_t)(state.looptime_autodetect * 2.0f + 0.5f) - 1;
+}
+
+bool flight_timer_irq_handler() {
+  if (flight_timer == TIMER_INVALID || !timer_up_pending(flight_timer))
+    return false;
+
+  BaseType_t wake = pdFALSE;
+  vTaskNotifyGiveFromISR(threads[THREAD_FLIGHT].handle, &wake);
+  return wake == pdTRUE;
+}
+
+void flight_thread(void *) {
   // load settings from flash
   flash_load();
 
@@ -138,6 +147,42 @@ __attribute__((__used__)) int main() {
   blackbox_init();
   imu_init();
 
-  threads_start();
+  task_reset_runtime();
+
+  uint32_t last_loop_cycles = time_cycles();
+
+  flight_timer = TIMER_TAG_TIM(timer_alloc(TIMER_USE_SCHEDULER));
+  configASSERT(flight_timer != TIMER_INVALID);
+
+  timer_up_init(flight_timer, PWM_CLOCK_FREQ_HZ / 2000000, flight_timer_period());
+  interrupt_enable(timer_defs[flight_timer].irq, TIMER_PRIORITY);
+  timer_up_start(flight_timer);
+
+  while (1) {
+    xTaskNotifyGive(threads[THREAD_BLACKBOX].handle);
+
+    const uint32_t elapsed_cycles = time_cycles() - last_loop_cycles;
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // Coalesce overruns; never replay old cycles.
+
+    const float previous_period = state.looptime_autodetect;
+    const uint32_t cycles = scheduler_update_loop(elapsed_cycles);
+    last_loop_cycles = cycles;
+    if (state.looptime_autodetect != previous_period) {
+      timer_up_set_period(flight_timer, flight_timer_period());
+    }
+
+    simulator_update();
+    scheduler_run(cycles);
+  }
+}
+
+#ifndef PIO_UNIT_TESTING
+__attribute__((__used__)) int main() {
+  gpio_ports_init();
+  interrupt_init();
+  time_init();
+  thread_start(THREAD_FLIGHT);
+  vTaskStartScheduler();
+  failloop(FAILLOOP_FAULT);
 }
 #endif

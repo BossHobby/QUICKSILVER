@@ -28,7 +28,7 @@ static bool sdcard_spi_init() {
   uint8_t clocks[20];
   memset(clocks, 0xff, sizeof(clocks));
   const spi_txn_segment_t segs[] = {spi_make_seg_buffer(nullptr, clocks, sizeof(clocks))};
-  spi_seg_submit_wait(&sdcard.bus, segs);
+  spi_seg_submit_dma_wait(&sdcard.bus, segs);
   return true;
 }
 
@@ -51,7 +51,7 @@ static bool sdcard_spi_ready() {
 static uint8_t sdcard_spi_byte() {
   uint8_t byte = 0xff;
   const spi_txn_segment_t segs[] = {spi_make_seg_buffer(&byte, nullptr, 1)};
-  spi_seg_submit_wait(&sdcard.bus, segs);
+  spi_seg_submit_dma_wait(&sdcard.bus, segs);
   return byte;
 }
 
@@ -75,7 +75,7 @@ static sdcard_transfer_status_t sdcard_spi_command(uint8_t index, uint32_t argum
         spi_make_seg_const(0xff), // CMD12 stuff byte, otherwise first response byte.
     };
     // Only CMD12 has a stuff byte; do not discard the response of other commands.
-    spi_seg_submit_wait_ex(&sdcard.bus, segs, index == 12 ? 3 : 2);
+    spi_seg_submit_dma_wait_ex(&sdcard.bus, segs, index == 12 ? 3 : 2);
     sdcard.command_pending = true;
   }
   const uint8_t r1 = sdcard_spi_byte();
@@ -90,7 +90,7 @@ static sdcard_transfer_status_t sdcard_spi_command(uint8_t index, uint32_t argum
   if (response == SDCARD_RESPONSE_R3 || response == SDCARD_RESPONSE_R7) {
     uint8_t bytes[4];
     const spi_txn_segment_t segs[] = {spi_make_seg_buffer(bytes, nullptr, sizeof(bytes))};
-    spi_seg_submit_wait(&sdcard.bus, segs);
+    spi_seg_submit_dma_wait(&sdcard.bus, segs);
     result->words[0] = (uint32_t(bytes[0]) << 24) | (uint32_t(bytes[1]) << 16) | (uint32_t(bytes[2]) << 8) | bytes[3];
   }
   return SDCARD_TRANSFER_DONE;
