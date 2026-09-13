@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "core/project.h"
+#include "core/tasks.h"
 #include "io/blackbox_device_flash.h"
 #include "io/blackbox_device_sdcard.h"
 #include "io/blackbox_device_simulator.h"
@@ -113,11 +114,19 @@ void blackbox_device_init() {
   }
 }
 
-bool blackbox_device_update() {
+void blackbox_device_notify_from_isr(void *) {
+  BaseType_t wake = pdFALSE;
+  vTaskNotifyGiveFromISR(threads[THREAD_BLACKBOX].handle, &wake);
+  portYIELD_FROM_ISR(wake);
+}
+
+bool blackbox_device_update(TickType_t &wait) {
+  wait = 1; // Hardware busy and gated SPI launches need a timed retry.
   if (dev == NULL) {
+    wait = portMAX_DELAY;
     return false;
   }
-  return dev->update();
+  return dev->update(wait);
 }
 
 bool blackbox_device_ready() {
@@ -139,6 +148,8 @@ void blackbox_device_reset() {
   blackbox_reset();
   ring_buffer_clear(&blackbox_encode_buffer);
   dev->reset();
+
+  xTaskNotifyGive(threads[THREAD_BLACKBOX].handle);
 
   blackbox_device_header.magic = BLACKBOX_HEADER_MAGIC;
   blackbox_device_header.file_num = 0;
