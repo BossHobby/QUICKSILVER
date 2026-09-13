@@ -2,6 +2,7 @@
 
 #ifdef SIMULATOR
 
+#include <atomic>
 #include <fcntl.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -36,7 +37,7 @@ static int shm_fd = 0;
 static shared_memory_t *shared = NULL;
 static uint8_t osd[50 * 18];
 
-static bool rc_updated = false;
+static std::atomic<bool> rc_updated = false;
 
 static void simulator_read_file(const char *filename, char *buf) {
   FILE *f = fopen(filename, "rb");
@@ -74,14 +75,14 @@ void simulator_update() {
   pthread_mutex_lock(&shared->mutex);
 
   if (shared->state.rc_updated) {
-    state.rx_channels[0] = (uint16_t)((shared->state.rc_channels[0] + 1.0f) * 0.5f * AUX_VALUE_MAX);
-    state.rx_channels[1] = (uint16_t)((shared->state.rc_channels[1] + 1.0f) * 0.5f * AUX_VALUE_MAX);
-    state.rx_channels[2] = (uint16_t)((shared->state.rc_channels[2] + 1.0f) * 0.5f * AUX_VALUE_MAX);
-    state.rx_channels[3] = (uint16_t)(shared->state.rc_channels[3] * AUX_VALUE_MAX);
+    rx_channels[0] = (uint16_t)((shared->state.rc_channels[0] + 1.0f) * 0.5f * AUX_VALUE_MAX);
+    rx_channels[1] = (uint16_t)((shared->state.rc_channels[1] + 1.0f) * 0.5f * AUX_VALUE_MAX);
+    rx_channels[2] = (uint16_t)((shared->state.rc_channels[2] + 1.0f) * 0.5f * AUX_VALUE_MAX);
+    rx_channels[3] = (uint16_t)(shared->state.rc_channels[3] * AUX_VALUE_MAX);
 
     for (uint32_t channel = 4; channel < RX_CHANNEL_MAX; channel++) {
       const uint32_t aux_index = channel - 4;
-      state.rx_channels[channel] = aux_index < 4 && shared->state.rc_aux[aux_index] ? AUX_VALUE_MAX : 0;
+      rx_channels[channel] = aux_index < 4 && shared->state.rc_aux[aux_index] ? AUX_VALUE_MAX : 0;
     }
 
     rc_updated = true;
@@ -110,9 +111,7 @@ void simulator_update() {
 }
 
 bool simulator_rx_check() {
-  const bool value = rc_updated;
-  rc_updated = false;
-  return value;
+  return rc_updated.exchange(false);
 }
 
 bool simulator_osd_is_ready() {
@@ -147,6 +146,11 @@ uint32_t simulator_osd_can_fit() {
 }
 
 #ifdef PIO_UNIT_TESTING
+void simulator_rx_test_frame(const uint16_t *channels) {
+  memcpy(rx_channels, channels, sizeof(rx_channels));
+  rc_updated = true;
+}
+
 static uint32_t osd_test_pushes;
 static bool osd_test_reject;
 void simulator_osd_test_reset(bool reject) {

@@ -34,14 +34,6 @@ static void flight_task() {
   blackbox_capture();
 }
 
-void util_task() {
-  // handle led commands
-  led_update();
-  rgb_led_update();
-
-  buzzer_update();
-}
-
 #ifndef VEHICLE_MULTI
 static void task_noop() {
 }
@@ -53,6 +45,7 @@ static FAST_RAM StackType_t flight_stack[1024]; // 4 KiB
 static StackType_t blackbox_stack[512];        // 2 KiB
 static StackType_t usb_stack[512];             // 2 KiB
 static StackType_t osd_stack[1024];            // 4 KiB, including DisplayPort frames
+static StackType_t io_stack[1024];             // 4 KiB: RX MSP dispatch and VTX frames.
 
 extern "C" void thread_assert_failed() {
   failloop(FAILLOOP_FAULT);
@@ -67,6 +60,7 @@ thread_t threads[THREAD_MAX] = {
     [THREAD_BLACKBOX] = CREATE_THREAD("blackbox", TASK_MASK_ALWAYS, 1, blackbox_thread, blackbox_stack),
     [THREAD_USB] = CREATE_THREAD("usb", TASK_MASK_ON_GROUND, 1, usb_configurator_thread, usb_stack),
     [THREAD_OSD] = CREATE_THREAD("osd", TASK_MASK_ALWAYS, 1, osd_thread, osd_stack),
+    [THREAD_IO] = CREATE_THREAD("io", TASK_MASK_ALWAYS, 1, io_thread, io_stack),
 };
 
 void thread_start(thread_id_t id) {
@@ -96,15 +90,37 @@ void threads_update() {
 
 FAST_RAM task_t tasks[TASK_MAX] = {
     [TASK_FLIGHT] = CREATE_TASK("FLIGHT", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, flight_task, 0),
-    [TASK_RX] = CREATE_TASK("RX", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, rx_update, 0),
-    [TASK_VBAT] = CREATE_TASK("VBAT", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, vbat_calc, 1000),
-    [TASK_BARO] = CREATE_TASK("BARO", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, baro_update, 10000),
 #ifdef VEHICLE_MULTI
     [TASK_NAV] = CREATE_TASK("NAV", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, nav_update, 10000),
 #else
     [TASK_NAV] = CREATE_TASK("NAV", 0, TASK_PRIORITY_HIGH, task_noop, 0),
 #endif
-    [TASK_UTIL] = CREATE_TASK("UTIL", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, util_task, 1000),
-    [TASK_VTX] = CREATE_TASK("VTX", TASK_MASK_ON_GROUND, TASK_PRIORITY_LOW, vtx_update, 0),
-    [TASK_GPS] = CREATE_TASK("GPS", TASK_MASK_ALWAYS, TASK_PRIORITY_LOW, gps_task, 5000),
 };
+
+void io_thread(void *) {
+  uint32_t last_baro = time_micros();
+  uint32_t last_gps = last_baro;
+  while (true) {
+    // Configuration commands own their locks; receiving channels does not.
+    rx_update();
+    vbat_calc();
+    const uint32_t now = time_micros();
+    if (state.baro_detected && now - last_baro >= 10000) {
+      last_baro = now;
+      baro_update();
+    }
+    led_update();
+    rgb_led_update();
+    buzzer_update();
+#ifdef USE_DIGITAL_VTX
+    if (serial_displayport.config.port == SERIAL_PORT_INVALID)
+#endif
+    if (!flags.arm_state && !flags.in_air)
+      vtx_update();
+    if (profile.serial.gps != SERIAL_PORT_INVALID && now - last_gps >= 5000) {
+      last_gps = now;
+      gps_task();
+    }
+    vTaskDelay(1);
+  }
+}

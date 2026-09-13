@@ -162,7 +162,7 @@ static bool rx_flysky_check(void) {
         break;
       }
       const uint16_t raw = constrain(flysky.channel_data[i], 1000, 2000);
-      state.rx_channels[i] = (uint16_t)(((uint32_t)(raw - 1000) * 65535) / (2000 - 1000));
+      rx_channels[i] = (uint16_t)(((uint32_t)(raw - 1000) * 65535) / (2000 - 1000));
     }
   }
 

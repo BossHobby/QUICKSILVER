@@ -222,7 +222,7 @@ static bool mavlink_apply_channels() {
       continue;
     }
     const int32_t raw = constrain(int32_t(mavlink_channels[channel]), 1000, 2000);
-    state.rx_channels[channel] = (uint16_t)(((uint32_t)(raw - 1000) * 65535) / (2000 - 1000));
+    rx_channels[channel] = (uint16_t)(((uint32_t)(raw - 1000) * 65535) / (2000 - 1000));
   }
 
   return true;
