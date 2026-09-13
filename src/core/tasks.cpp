@@ -3,7 +3,6 @@
 #include <stddef.h>
 
 #include "control/control.h"
-#include "control/gestures.h"
 #include "control/imu.h"
 #ifdef VEHICLE_MULTI
 #include "control/multi/navigation.h"
@@ -53,6 +52,7 @@ static void task_noop() {
 static FAST_RAM StackType_t flight_stack[1024]; // 4 KiB
 static StackType_t blackbox_stack[512];        // 2 KiB
 static StackType_t usb_stack[512];             // 2 KiB
+static StackType_t osd_stack[1024];            // 4 KiB, including DisplayPort frames
 
 extern "C" void thread_assert_failed() {
   failloop(FAILLOOP_FAULT);
@@ -66,6 +66,7 @@ thread_t threads[THREAD_MAX] = {
     [THREAD_FLIGHT] = CREATE_THREAD("flight", TASK_MASK_ALWAYS, 2, flight_thread, flight_stack),
     [THREAD_BLACKBOX] = CREATE_THREAD("blackbox", TASK_MASK_ALWAYS, 1, blackbox_thread, blackbox_stack),
     [THREAD_USB] = CREATE_THREAD("usb", TASK_MASK_ON_GROUND, 1, usb_configurator_thread, usb_stack),
+    [THREAD_OSD] = CREATE_THREAD("osd", TASK_MASK_ALWAYS, 1, osd_thread, osd_stack),
 };
 
 void thread_start(thread_id_t id) {
@@ -104,8 +105,6 @@ FAST_RAM task_t tasks[TASK_MAX] = {
     [TASK_NAV] = CREATE_TASK("NAV", 0, TASK_PRIORITY_HIGH, task_noop, 0),
 #endif
     [TASK_UTIL] = CREATE_TASK("UTIL", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, util_task, 1000),
-    [TASK_GESTURES] = CREATE_TASK("GESTURES", TASK_MASK_ON_GROUND, TASK_PRIORITY_MEDIUM, gestures, 0),
-    [TASK_OSD] = CREATE_TASK("OSD", TASK_MASK_ALWAYS, TASK_PRIORITY_MEDIUM, osd_display, 1000),
     [TASK_VTX] = CREATE_TASK("VTX", TASK_MASK_ON_GROUND, TASK_PRIORITY_LOW, vtx_update, 0),
     [TASK_GPS] = CREATE_TASK("GPS", TASK_MASK_ALWAYS, TASK_PRIORITY_LOW, gps_task, 5000),
 };

@@ -55,7 +55,6 @@ serial_port_t serial_displayport = {
 static const uint8_t msp_options[2] = {0, 1};
 static bool is_detected = false;
 
-
 static void displayport_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
   if (cmd == MSP_FC_VARIANT) {
     // we got the first MSP_FC_VARIANT request, consider vtx detected
@@ -230,9 +229,10 @@ bool displayport_clear_async() {
 
 bool displayport_is_ready() {
   bool had_packet = false;
-
+  // Consume only the bytes already buffered at entry, even if more arrive.
+  const uint32_t available = serial_bytes_available(&serial_displayport);
   uint8_t data = 0;
-  while (serial_read_byte(&serial_displayport, &data)) {
+  for (uint32_t i = 0; i < available && serial_read_byte(&serial_displayport, &data); i++) {
     if (msp_process_serial(&displayport_msp, data) == MSP_SUCCESS)
       had_packet = true;
   }
@@ -249,7 +249,7 @@ bool displayport_is_ready() {
     if (displayport_push_subcmd(SUBCMD_HEARTBEAT, NULL, 0))
       last_heartbeat = time_millis();
 
-  return had_packet ? false : true;
+  return !had_packet;
 }
 
 osd_system_t displayport_check_system() {

@@ -112,8 +112,6 @@ typedef enum {
 } osd_screen_phase_t;
 
 typedef struct {
-  osd_elements_t element;
-
   osd_screens_t screen;
   osd_screens_t screen_history[OSD_HISTORY_SIZE];
   uint8_t screen_history_size;
@@ -138,6 +136,7 @@ extern osd_system_t osd_system;
 
 void osd_init();
 void osd_display();
+void osd_thread(void *);
 void osd_display_reset();
 
 uint8_t osd_attr(osd_element_t *el);

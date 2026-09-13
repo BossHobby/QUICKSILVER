@@ -2,15 +2,7 @@
 
 #include <math.h>
 
-#include "control/control.h"
-#include "control/sixaxis.h"
-#include "core/flash.h"
-#include "core/profile.h"
 #include "core/project.h"
-#include "core/scheduler.h"
-#include "driver/time.h"
-#include "io/led.h"
-#include "osd/render.h"
 
 enum gesture_direction_t {
   DIRECTION_INVALID,
@@ -154,42 +146,4 @@ gesture_command_t gestures_detect(const vec4_t &sticks, bool enabled, bool menu,
     }
   }
   return GESTURE_NONE;
-}
-
-void gestures() {
-  const bool enabled = !flags.arm_state && !flags.in_air && flags.on_ground &&
-                       flags.rx_ready && !flags.failsafe && !flags.gestures_disabled;
-  const bool menu = osd_state.screen != OSD_SCREEN_REGULAR && osd_state.screen != OSD_SCREEN_CLEAR;
-  const auto command = gestures_detect(state.rx, enabled, menu, time_micros());
-  static bool save_bind_only = false;
-  switch (command) {
-  case GESTURE_CALIBRATE_SAVE:
-    if (!save_bind_only) {
-      sixaxis_gyro_cal();
-      sixaxis_acc_cal();
-    } else {
-      led_flash();
-      save_bind_only = false;
-    }
-    flash_save();
-    task_reset_runtime();
-    break;
-  case GESTURE_TOGGLE_BIND:
-    profile.receiver.bind.bind_saved = !profile.receiver.bind.bind_saved;
-    save_bind_only = true;
-    led_flash();
-    break;
-  case GESTURE_OPEN_MENU:
-    osd_push_screen(OSD_SCREEN_MAIN_MENU);
-    led_flash();
-    break;
-  case GESTURE_RESET_OSD:
-    osd_exit();
-    break;
-  case GESTURE_MENU_UP: osd_handle_input(OSD_INPUT_UP); break;
-  case GESTURE_MENU_DOWN: osd_handle_input(OSD_INPUT_DOWN); break;
-  case GESTURE_MENU_LEFT: osd_handle_input(OSD_INPUT_LEFT); break;
-  case GESTURE_MENU_RIGHT: osd_handle_input(OSD_INPUT_RIGHT); break;
-  case GESTURE_NONE: break;
-  }
 }
