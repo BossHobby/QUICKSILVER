@@ -3,6 +3,7 @@
 #include <unity.h>
 
 // Test declarations
+extern void test_rx_transport_leaves_conditioning_to_flight();
 extern void test_osd_looptime_warning_is_temporary_until_2khz();
 extern void test_osd_transfer_is_bounded_and_retries();
 extern void test_osd_render_completes_before_transfer();
@@ -235,6 +236,7 @@ void tearDown(void) {
 // Main test runner
 int main(int argc, char **argv) {
   UNITY_BEGIN();
+  RUN_TEST(test_rx_transport_leaves_conditioning_to_flight);
   RUN_TEST(test_scheduler_omits_unconfigured_sensor_tasks);
   RUN_TEST(test_imu_without_gps_publishes_tilt_without_heading_estimator);
   RUN_TEST(test_osd_looptime_warning_is_temporary_until_2khz);
