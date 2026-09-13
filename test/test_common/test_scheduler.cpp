@@ -240,6 +240,7 @@ void test_scheduler_omits_unconfigured_sensor_tasks() {
     state.gps_lock = false; // Configured receivers must still acquire a fix.
     scheduler_init();
     TEST_ASSERT_TRUE(scheduler_test_task_registered(TASK_FLIGHT));
+    TEST_ASSERT_TRUE(scheduler_test_task_registered(TASK_RX));
     TEST_ASSERT_EQUAL(gps, scheduler_test_task_registered(TASK_GPS));
     TEST_ASSERT_EQUAL(gps && tasks[TASK_NAV].mask != 0, scheduler_test_task_registered(TASK_NAV));
     TEST_ASSERT_EQUAL(baro, scheduler_test_task_registered(TASK_BARO));

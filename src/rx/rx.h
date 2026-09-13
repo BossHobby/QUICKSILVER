@@ -129,7 +129,10 @@ typedef struct {
 #define rx_aux_value(channel) (state.rx_channels[(channel)])
 
 void rx_init();
+// Cooperative transport task: polls serial/SPI and publishes receiver state.
 void rx_update();
+// Flight task: consumes received channels and conditions commands before control.
+void rx_process();
 void rx_stop();
 
 void rx_lqi_lost_packet();

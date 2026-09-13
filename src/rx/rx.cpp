@@ -22,6 +22,11 @@ static uint32_t frames_per_second = 0;
 static uint32_t frames_missed = 0;
 static uint32_t frames_received = 0;
 
+// RX and Flight are cooperative scheduler entries, not concurrent threads.
+static bool rx_frame_pending;
+static uint32_t rx_filter_start;
+static uint32_t rx_filter_counter;
+
 static filter_lp_pt2 rx_filter;
 static filter_state_t rx_filter_state[4];
 
@@ -147,6 +152,9 @@ static void rx_update_aux_active() {
 }
 
 static void rx_init_state() {
+  rx_frame_pending = false;
+  rx_filter_start = time_millis();
+  rx_filter_counter = 0;
   for (uint32_t i = 0; i < RX_CHANNEL_MAX; i++) {
     state.rx_channels[i] = 0;
   }
@@ -251,7 +259,7 @@ static void rx_update_roles() {
 #endif
 }
 
-bool rx_check() {
+static bool rx_check() {
 #ifdef SIMULATOR
   return simulator_rx_check();
 #else
@@ -325,10 +333,22 @@ bool rx_check() {
 }
 
 void rx_update() {
-  static uint32_t rx_filter_start = 0;
-  static uint32_t rx_filter_counter = 0;
-
   if (rx_check() && !flags.failsafe_signal_lost) {
+    rx_frame_pending = true;
+    rx_filter_counter++;
+  }
+}
+
+void rx_process() {
+#ifndef SIMULATOR
+  // Transport may be deferred by the scheduler; signal-loss detection must not be.
+  if (flags.rx_ready && time_micros() - state.last_frame_time_us > FAILSAFE_DETECT_TIME_US) {
+    flags.failsafe_signal_lost = 1;
+    state.rx_rssi = 0.0f;
+  }
+#endif
+
+  if (rx_frame_pending && !flags.failsafe_signal_lost) {
     rx_apply_stick_scale();
     rx_update_roles();
     rx_update_aux_active();
@@ -336,9 +356,8 @@ void rx_update() {
     state.rx.roll = rx_apply_deadband(state.rx.roll);
     state.rx.pitch = rx_apply_deadband(state.rx.pitch);
     state.rx.yaw = rx_apply_deadband(state.rx.yaw);
-
-    rx_filter_counter += 1;
   }
+  rx_frame_pending = false;
 
   const uint32_t rx_filter_delta = (time_millis() - rx_filter_start);
   if (rx_filter_delta > RX_FITER_SAMPLE_TIME) {
