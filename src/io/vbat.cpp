@@ -3,8 +3,8 @@
 #include "control/control.h"
 #include "core/flash.h"
 #include "core/profile.h"
-#include "core/tasks.h"
 #include "driver/adc.h"
+#include "driver/time.h"
 #include "util/util.h"
 
 // compensation factor for li-ion internal model
@@ -15,6 +15,7 @@
 #define VBATTLOW_ABS 2.7f
 
 #define IBAT_SCALE (60.f * 60.f * 1000000.f)
+#define VBAT_PERIOD_US 1000
 
 extern profile_t profile;
 
@@ -28,10 +29,11 @@ static filter_state_t ibat_sag_filter_state;
 static filter_state_t thrsum_filter_state;
 
 static float vbat_filtered_decay = 0;     // Li-ion voltage decay model (local to vbat.c)
+static uint32_t last_ibat_update_us;
 
 void vbat_init() {
   // Calculate actual ADC update period based on active channels
-  const uint32_t adc_period_us = task_get_period_us(TASK_VBAT) * adc_get_active_channels();
+  const uint32_t adc_period_us = VBAT_PERIOD_US * adc_get_active_channels();
 
   // Configure filters for actual ADC update rate per channel
   // Display filter: Low cutoff (2Hz) for smooth OSD display with reasonable response
@@ -41,7 +43,7 @@ void vbat_init() {
   filter_lp_pt1_coeff(&sag_filter, 5.0, adc_period_us);
   
   // Throttle filter runs at task rate (1kHz) for flight control sync
-  filter_lp_pt1_coeff(&thrsum_filter, 60, task_get_period_us(TASK_VBAT));
+  filter_lp_pt1_coeff(&thrsum_filter, 60, VBAT_PERIOD_US);
   
   filter_init_state(&vbat_display_filter_state, 1);
   filter_init_state(&vbat_sag_filter_state, 1);
@@ -68,6 +70,7 @@ void vbat_init() {
   }
 
   vbat_filtered_decay = state.vbat_sag_filtered;
+  last_ibat_update_us = time_micros();
 }
 
 static float vbat_auto_vdrop(float thrfilt, float tempvolt) {
@@ -108,6 +111,9 @@ static float vbat_auto_vdrop(float thrfilt, float tempvolt) {
 }
 
 void vbat_calc() {
+  const uint32_t now = time_micros();
+  const uint32_t elapsed_us = now - last_ibat_update_us;
+  last_ibat_update_us = now;
   adc_read(ADC_CHAN_TEMP, &state.cpu_temp);
 
   // read acd and scale based on processor voltage
@@ -115,8 +121,8 @@ void vbat_calc() {
     state.ibat_filtered = filter_lp_pt2_step(&display_filter, &ibat_display_filter_state, state.ibat);
     state.ibat_sag_filtered = filter_lp_pt1_step(&sag_filter, &ibat_sag_filter_state, state.ibat);
   }
-  // Always accumulate current draw based on sag filtered value (faster response)
-  state.ibat_drawn += state.ibat_sag_filtered * task_get_period_us(TASK_VBAT) / IBAT_SCALE;
+  // Integrate over elapsed time, including delays in worker service.
+  state.ibat_drawn += state.ibat_sag_filtered * elapsed_us / IBAT_SCALE;
 
   // li-ion battery model compensation time decay ( 18 seconds )
   if (adc_read(ADC_CHAN_VBAT, &state.vbat)) {

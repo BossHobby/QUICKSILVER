@@ -54,7 +54,7 @@ static packet_status_t decode_sbus_channels(uint8_t *data) {
 
   for (uint32_t channel = 0; channel < RX_CHANNEL_MAX; channel++) {
     const int32_t raw = constrain(channels[channel], 172, 1811);
-    state.rx_channels[channel] = (uint16_t)(((uint32_t)(raw - 172) * 65535) / (1811 - 172));
+    rx_channels[channel] = (uint16_t)(((uint32_t)(raw - 172) * 65535) / (1811 - 172));
   }
 
   const bool sbus_frame_lost = data[22] & (1 << 2);
@@ -72,8 +72,9 @@ static packet_status_t decode_sbus_channels(uint8_t *data) {
     flags.failsafe_signal_lost = 1;
   }
 
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel < RX_CHANNEL_MAX) {
-    rx_lqi_update_direct(0.0610128f * (channels[(profile.receiver.aux[AUX_RSSI].channel)] - 173));
+  const auto rssi_channel = profile.receiver.aux[AUX_RSSI].channel;
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && rssi_channel < RX_CHANNEL_MAX) {
+    rx_lqi_update_direct(0.0610128f * (channels[rssi_channel] - 173));
   }
 
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {

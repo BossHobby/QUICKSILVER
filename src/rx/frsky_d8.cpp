@@ -71,14 +71,15 @@ static void frsky_d8_set_rc_data() {
 
   for (uint32_t channel = 0; channel < FRSKY_D8_CHANNEL_COUNT; channel++) {
     const int32_t raw = constrain(channels[channel], 1200, 3300);
-    state.rx_channels[channel] = (uint16_t)(((uint32_t)(raw - 1200) * 65535) / (3300 - 1200));
+    rx_channels[channel] = (uint16_t)(((uint32_t)(raw - 1200) * 65535) / (3300 - 1200));
   }
   for (uint32_t channel = FRSKY_D8_CHANNEL_COUNT; channel < RX_CHANNEL_MAX; channel++) {
-    state.rx_channels[channel] = 0;
+    rx_channels[channel] = 0;
   }
 
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel < FRSKY_D8_CHANNEL_COUNT) {
-    rx_lqi_update_direct(((channels[(profile.receiver.aux[AUX_RSSI].channel)]) - 1500) * 100.f / 1500.f);
+  const auto rssi_channel = profile.receiver.aux[AUX_RSSI].channel;
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && rssi_channel < FRSKY_D8_CHANNEL_COUNT) {
+    rx_lqi_update_direct((channels[rssi_channel] - 1500) * 100.f / 1500.f);
   }
 }
 

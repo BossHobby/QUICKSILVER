@@ -34,7 +34,7 @@ static void a7105_write_multi(uint8_t reg, const uint8_t *data, uint8_t len) {
       spi_make_seg_const(reg),
       spi_make_seg_buffer(NULL, data, len),
   };
-  spi_seg_submit_wait(&bus, segs);
+  spi_seg_submit_dma_wait(&bus, segs);
 }
 
 uint8_t a7105_read_reg(a7105_reg_t reg) {
@@ -44,7 +44,7 @@ uint8_t a7105_read_reg(a7105_reg_t reg) {
       spi_make_seg_const(reg | 0x40),
       spi_make_seg_buffer(&ret, NULL, 1),
   };
-  spi_seg_submit_wait(&bus, segs);
+  spi_seg_submit_dma_wait(&bus, segs);
 
   return ret;
 }
@@ -54,7 +54,7 @@ static void a7105_read_multi(uint8_t reg, uint8_t *result, uint8_t len) {
       spi_make_seg_const(reg),
       spi_make_seg_buffer(result, NULL, len),
   };
-  spi_seg_submit_wait(&bus, segs);
+  spi_seg_submit_dma_wait(&bus, segs);
 }
 
 void a7105_strobe(a7105_strobe_t address) {
