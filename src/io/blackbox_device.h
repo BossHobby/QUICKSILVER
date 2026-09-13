@@ -5,6 +5,7 @@
 #include <cbor.h>
 
 #include "io/blackbox.h"
+#include "util/mutex.h"
 #include "util/ring_buffer.h"
 
 #define BLACKBOX_HEADER_MAGIC (0xdeadbeef ^ (sizeof(blackbox_t) << 24) ^ BLACKBOX_VERSION)
@@ -68,6 +69,9 @@ typedef struct {
   MEMBER(file_num, uint8_t)            \
   ARRAY_MEMBER(files, BLACKBOX_DEVICE_MAX_FILES, blackbox_device_file_t)
 
+// Lock once per worker pass or complete ground operation; helpers never lock.
+extern SemaphoreHandle_t blackbox_storage_mutex;
+
 extern blackbox_device_header_t blackbox_device_header;
 extern blackbox_device_bounds_t blackbox_bounds;
 
@@ -79,12 +83,13 @@ cbor_result_t cbor_encode_blackbox_device_header_t(cbor_value_t *enc, const blac
 
 void blackbox_device_init();
 bool blackbox_device_update();
+bool blackbox_device_ready();
 uint32_t blackbox_device_usage();
 
 blackbox_device_file_t *blackbox_current_file();
 
 void blackbox_device_reset();
-bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float looptime);
+bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float looptime, const profile_t *recording_profile = &profile);
 void blackbox_device_finish();
 
 void blackbox_device_read(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size);

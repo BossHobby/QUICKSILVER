@@ -89,12 +89,13 @@ bool spi_txn_continue_port(spi_ports_t port) {
 
     txn->status = TXN_IN_PROGRESS;
     dev->dma_done = false;
+
+    // Do not let Flight preempt a worker after claiming the bus but before
+    // launching DMA: a higher-priority waiter must be able to make progress.
+    spi_reconfigure(txn->bus);
+    spi_csn_enable(txn->bus);
+    spi_dma_transfer_begin(port, txn->buffer, txn->size, txn->flags & TXN_DELAYED_RX);
   }
-
-  spi_reconfigure(txn->bus);
-  spi_csn_enable(txn->bus);
-
-  spi_dma_transfer_begin(port, txn->buffer, txn->size, txn->flags & TXN_DELAYED_RX);
 
   return true;
 }
@@ -155,6 +156,12 @@ void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts) {
     MEMORY_BARRIER();
     txn->status = TXN_READY;
   }
+}
+
+void spi_seg_submit_dma_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, uint32_t count) {
+  spi_txn_wait(bus);
+  spi_seg_submit_ex(bus, {.segs = segs, .seg_count = count});
+  spi_txn_wait(bus);
 }
 
 // Called from DMA or SPI completion interrupts.
