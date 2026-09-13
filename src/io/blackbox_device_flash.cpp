@@ -76,6 +76,8 @@ bool blackbox_device_flash_update() {
     const uint32_t offset = blackbox_current_file()->start + blackbox_current_file()->size + write_size;
     if (offset >= blackbox_bounds.total_size) {
       if (phase == PHASE_FLUSH) {
+        // Storage is full; discard unwritable data so completed logs can be downloaded.
+        ring_buffer_clear(&blackbox_encode_buffer);
         state = STATE_ERASE_HEADER;
         phase = PHASE_IDLE;
         write_size = 0;
@@ -174,7 +176,7 @@ void blackbox_device_flash_start() {
 }
 
 bool blackbox_device_flash_ready() {
-  return state == STATE_IDLE;
+  return state == STATE_IDLE && phase == PHASE_IDLE;
 }
 
 bool blackbox_device_flash_write(const uint8_t *buffer, const uint8_t size) {

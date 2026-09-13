@@ -13,6 +13,7 @@
 
 enum thread_id_t {
   THREAD_FLIGHT,
+  THREAD_BLACKBOX,
   THREAD_MAX,
 };
 
@@ -37,7 +38,6 @@ typedef enum {
   TASK_NAV,
   TASK_UTIL,
   TASK_GESTURES,
-  TASK_BLACKBOX,
   TASK_OSD,
   TASK_VTX,
   TASK_USB,
@@ -126,7 +126,9 @@ typedef struct {
 extern thread_t threads[THREAD_MAX];
 extern task_t tasks[TASK_MAX];
 
-void threads_start();
+void flight_thread(void *);
+void thread_start(thread_id_t id);
+bool flight_timer_irq_handler();
 
 static inline float task_get_period_us(task_id_t id) {
   const float period = CYCLES_TO_US(tasks[id].period_cycles);

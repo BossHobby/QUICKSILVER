@@ -1764,6 +1764,7 @@ void osd_display() {
   }
   case OSD_SCREEN_BLACKBOX: {
 #ifdef USE_BLACKBOX
+    mutex_guard_t guard(blackbox_storage_mutex);
     static uint8_t reset_state = 0;
 
     switch (reset_state) {
