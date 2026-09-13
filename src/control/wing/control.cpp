@@ -13,7 +13,6 @@
 #include "core/profile.h"
 #include "driver/motor.h"
 #include "driver/time.h"
-#include "osd/render.h"
 #include "util/util.h"
 
 typedef enum {
@@ -165,7 +164,7 @@ static void wing_update_autotrim() {
     autotrim.ready = true;
     return;
   }
-  if (flags.failsafe || flags.failsafe_outputs_blocked || flags.motortest_override || osd_state.screen_history_size != 0) {
+  if (flags.failsafe || flags.failsafe_outputs_blocked || flags.motortest_override) {
     wing_cancel_autotrim();
     autotrim.ready = false;
     return;
