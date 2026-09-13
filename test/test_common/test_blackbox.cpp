@@ -2,6 +2,7 @@
 #include <atomic>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -30,6 +31,7 @@ struct recorded_frame_t {
 static recorded_frame_t recorded[64];
 static unsigned writes, storage_calls, starts, stops, flushing;
 static bool storage_ready, reject_write;
+static bool complete_during_update;
 
 // Deterministic tests permit one service pass at a time through the mock device.
 static SemaphoreHandle_t step_requested, step_done;
@@ -86,11 +88,14 @@ struct blackbox_test_t {
     storage_ready = true;
     reject_write = false;
     blackbox_device_simulator.init = []() {};
-    blackbox_device_simulator.update = []() {
+    blackbox_device_simulator.update = [](TickType_t &) {
       if (step_requested) {
         if (step_in_progress) xSemaphoreGive(step_done);
         xSemaphoreTake(step_requested, portMAX_DELAY);
         step_in_progress = true;
+        // Permit the next mock entry to acknowledge this completed pass,
+        // including when production would otherwise sleep until new work.
+        xTaskNotifyGive(threads[THREAD_BLACKBOX].handle);
       }
       storage_calls++;
       if (flushing) --flushing;
@@ -334,7 +339,7 @@ void test_blackbox_runs_in_own_freertos_task() {
   TEST_ASSERT_TRUE(child >= 0);
   if (child == 0) {
     blackbox_test_t fixture;
-    blackbox_device_simulator.update = []() {
+    blackbox_device_simulator.update = [](TickType_t &) {
       if (strcmp(pcTaskGetName(nullptr), "blackbox") != 0) _exit(13);
       worker_passes.fetch_add(1);
       worker_entered.store(true);
@@ -865,4 +870,207 @@ void test_blackbox_mailbox_overrun_and_session_drain() {
 
 void test_blackbox_storage_stall_and_rejected_delta() {
   run_blackbox_test(test_blackbox_storage_stall_and_rejected_delta_body);
+}
+
+static void test_blackbox_sleeps_until_recording_or_reset_body() {
+  blackbox_test_t fixture;
+  blackbox_device_simulator.update = [](TickType_t &wait) {
+    storage_calls++;
+    if (flushing) --flushing;
+    wait = flushing ? 1 : portMAX_DELAY;
+    return true;
+  };
+
+  // Armed flight with logging disabled must not wake the idle worker.
+  flags.arm_state = 1;
+  state.aux_active = 0;
+  vTaskDelay(3);
+  unsigned before = storage_calls;
+  TEST_ASSERT_TRUE(before > 0);
+  for (unsigned i = 0; i < 5; i++) {
+    blackbox_capture();
+    vTaskDelay(1);
+  }
+  TEST_ASSERT_EQUAL_UINT(before, storage_calls);
+
+  state.aux_active = 1U << AUX_BLACKBOX;
+  blackbox_capture();
+  capture_frame(1, 1, 125, 1);
+  vTaskDelay(3);
+  TEST_ASSERT_EQUAL_UINT(1, starts);
+  TEST_ASSERT_EQUAL_UINT(1, writes);
+
+  // Stopping the log while still armed must wake and finish all flush passes.
+  state.aux_active = 0;
+  blackbox_capture();
+  vTaskDelay(8);
+  TEST_ASSERT_EQUAL_UINT(1, stops);
+  TEST_ASSERT_EQUAL_UINT(0, flushing);
+  before = storage_calls;
+  vTaskDelay(3);
+  TEST_ASSERT_EQUAL_UINT(before, storage_calls);
+
+  flags.arm_state = 0;
+  {
+    mutex_guard_t guard(blackbox_storage_mutex);
+    blackbox_device_reset();
+  }
+  vTaskDelay(3);
+  TEST_ASSERT_TRUE(storage_calls > before);
+  before = storage_calls;
+  vTaskDelay(3);
+  TEST_ASSERT_EQUAL_UINT(before, storage_calls);
+
+  flags.arm_state = 1;
+  state.aux_active = 1U << AUX_BLACKBOX;
+  blackbox_capture();
+  capture_frame(1, 2, 250, 2);
+  vTaskDelay(3);
+  TEST_ASSERT_EQUAL_UINT(2, starts);
+  TEST_ASSERT_EQUAL_UINT(2, writes);
+}
+
+void test_blackbox_sleeps_until_recording_or_reset() {
+  run_blackbox_test(test_blackbox_sleeps_until_recording_or_reset_body);
+}
+
+static void test_blackbox_wakes_for_samples_and_storage_body() {
+  blackbox_test_t fixture;
+  profile.blackbox.sample_rate_hz = 1000;
+  storage_ready = false;
+  complete_during_update = false;
+  blackbox_device_simulator.update = [](TickType_t &wait) {
+    storage_calls++;
+    wait = portMAX_DELAY;
+    if (complete_during_update) {
+      complete_during_update = false;
+      storage_ready = true;
+      // Model an interrupt completing the operation before this pass waits.
+      blackbox_device_notify_from_isr(nullptr);
+      return false;
+    }
+    if (flushing) {
+      --flushing;
+      wait = flushing ? 0 : portMAX_DELAY;
+    }
+    return storage_ready;
+  };
+
+  flags.arm_state = 1;
+  blackbox_capture();
+  vTaskDelay(2);
+  capture_frame(1, 8, 1000, 1);
+  vTaskDelay(2);
+  TEST_ASSERT_EQUAL_UINT(0, writes);
+  unsigned before = storage_calls;
+  for (unsigned loop = 9; loop < 16; loop++) {
+    state.loop_counter = loop;
+    blackbox_capture();
+    vTaskDelay(1);
+  }
+  TEST_ASSERT_EQUAL_UINT(before, storage_calls);
+
+  // Storage completion must release the pending sample without another capture.
+  storage_ready = true;
+  blackbox_device_notify_from_isr(nullptr);
+  vTaskDelay(2);
+  TEST_ASSERT_EQUAL_UINT(1, writes);
+  before = storage_calls;
+  vTaskDelay(3);
+  TEST_ASSERT_EQUAL_UINT(before, storage_calls);
+
+  capture_frame(2, 16, 2000, 2);
+  vTaskDelay(2);
+  TEST_ASSERT_EQUAL_UINT(2, writes);
+
+  // Stop wakes the worker, and software-only flush stages make progress
+  // without Flight or periodic retries supplying extra notifications.
+  state.aux_active = 0;
+  blackbox_capture();
+  vTaskDelay(3);
+  TEST_ASSERT_EQUAL_UINT(1, stops);
+  TEST_ASSERT_EQUAL_UINT(0, flushing);
+  before = storage_calls;
+  vTaskDelay(3);
+  TEST_ASSERT_EQUAL_UINT(before, storage_calls);
+
+  state.aux_active = 1U << AUX_BLACKBOX;
+  blackbox_capture();
+  vTaskDelay(2);
+  complete_during_update = true;
+  storage_ready = false;
+  capture_frame(1, 24, 3000, 3);
+  vTaskDelay(3);
+  TEST_ASSERT_FALSE(complete_during_update);
+  TEST_ASSERT_EQUAL_UINT(3, writes);
+  TEST_ASSERT_EQUAL_UINT(2, starts);
+}
+
+void test_blackbox_wakes_for_samples_and_storage() {
+  run_blackbox_test(test_blackbox_wakes_for_samples_and_storage_body);
+}
+
+static unsigned peer_observed_passes;
+
+static void blackbox_completion_peer(void *) {
+  peer_observed_passes = storage_calls;
+  for (;;) ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+}
+
+static void test_blackbox_completion_bursts_share_cpu_body() {
+  blackbox_test_t fixture;
+  peer_observed_passes = 0;
+  blackbox_device_simulator.update = [](TickType_t &wait) {
+    ++storage_calls;
+    if (storage_calls == 1) {
+      static StaticTask_t control;
+      static StackType_t stack[128];
+      configASSERT(xTaskCreateStatic(blackbox_completion_peer, "peer", 128, nullptr, 1, stack, &control));
+    }
+    wait = storage_calls <= 8 ? 1 : portMAX_DELAY;
+    if (storage_calls <= 8) blackbox_device_notify_from_isr(nullptr);
+    return false;
+  };
+  vTaskDelay(5);
+  TEST_ASSERT_EQUAL_UINT(9, storage_calls);
+  TEST_ASSERT_GREATER_THAN_UINT(0, peer_observed_passes);
+  TEST_ASSERT_LESS_THAN_UINT(9, peer_observed_passes);
+}
+
+void test_blackbox_completion_bursts_share_cpu() {
+  run_blackbox_test(test_blackbox_completion_bursts_share_cpu_body);
+}
+
+static void test_blackbox_simulator_full_storage_sleeps_body() {
+  char directory[] = "/tmp/qs-blackbox-full-XXXXXX";
+  TEST_ASSERT_NOT_NULL(mkdtemp(directory));
+  TEST_ASSERT_EQUAL_INT(0, chdir(directory));
+  auto &device = blackbox_device_simulator;
+  ring_buffer_clear(&blackbox_encode_buffer);
+  device.init();
+  TickType_t wait = 0;
+  for (unsigned i = 0; i < 8 && !device.ready(); i++) device.update(wait);
+  TEST_ASSERT_TRUE(device.ready());
+  blackbox_device_header.file_num = 1;
+  blackbox_device_header.files[0] = {.start = 1024, .size = 256};
+  blackbox_bounds.total_size = 1280;
+  const uint8_t bytes[128] = {};
+  TEST_ASSERT_TRUE(device.write(bytes, sizeof(bytes)));
+  TEST_ASSERT_TRUE(device.write(bytes, sizeof(bytes)));
+
+  TEST_ASSERT_TRUE(device.update(wait));
+  TEST_ASSERT_EQUAL(portMAX_DELAY, wait);
+  TEST_ASSERT_EQUAL_UINT(256, blackbox_current_file()->size);
+  TEST_ASSERT_EQUAL_UINT(256, ring_buffer_available(&blackbox_encode_buffer));
+
+  device.stop();
+  device.update(wait);
+  TEST_ASSERT_EQUAL_UINT(0, wait);
+  TEST_ASSERT_TRUE(device.ready());
+  device.update(wait);
+  TEST_ASSERT_EQUAL(portMAX_DELAY, wait);
+}
+
+void test_blackbox_simulator_full_storage_sleeps() {
+  run_blackbox_test(test_blackbox_simulator_full_storage_sleeps_body);
 }

@@ -7,6 +7,7 @@
 #include "util/util.h"
 
 #define M25P16_BAUD_RATE MHZ_TO_HZ(21)
+#define M25P16_BUSY_RETRY_US 1000
 
 #define JEDEC_ID_MACRONIX_MX25L3206E 0xC22016
 #define JEDEC_ID_MACRONIX_MX25L6406E 0xC22017
@@ -32,6 +33,16 @@
 #ifdef USE_DATA_FLASH
 
 static spi_bus_device_t bus = {};
+static bool status_pending;
+static volatile bool status_done;
+static uint8_t status_buffer[2];
+static bool status_busy;
+static uint32_t status_checked_at;
+
+static void m25p16_status_done(void *) {
+  status_done = true;
+  blackbox_device_notify_from_isr(nullptr);
+}
 
 static uint8_t m25p16_addr_size() {
   return blackbox_bounds.use_4byte_addresses ? 4 : 3;
@@ -64,23 +75,34 @@ void m25p16_init() {
 }
 
 bool m25p16_is_ready() {
+  // Completion and capture notifications may arrive before the worker waits.
+  // Once BUSY was observed, they must not trigger another status transaction
+  // before the device retry deadline. DMA completion itself remains immediate.
+  if (status_busy && uint32_t(time_micros() - status_checked_at) < M25P16_BUSY_RETRY_US) {
+    return false;
+  }
   if (!spi_txn_ready(&bus)) {
     spi_txn_continue(&bus);
     return false;
   }
 
-  static uint8_t buffer[2];
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_buffer(buffer, buffer, 2),
-  };
-  const bool is_done = spi_seg_submit_check(&bus, segs, {
-    buffer[0] = M25P16_READ_STATUS_REGISTER;
-    buffer[1] = 0xFF;
-  });
-  if (!is_done) {
+  if (!status_pending) {
+    status_buffer[0] = M25P16_READ_STATUS_REGISTER;
+    status_buffer[1] = 0xFF;
+    status_done = false;
+    status_pending = true;
+    const spi_txn_segment_t segs[] = {
+        spi_make_seg_buffer(status_buffer, status_buffer, 2),
+    };
+    spi_seg_submit_continue(&bus, segs, .done_fn = m25p16_status_done);
+  }
+  if (!status_done) {
     return false;
   }
-  return (buffer[1] & 0x01) == 0;
+  status_pending = false;
+  status_busy = (status_buffer[1] & 0x01) != 0;
+  status_checked_at = time_micros();
+  return !status_busy;
 }
 
 void m25p16_wait_for_ready() {
@@ -152,7 +174,7 @@ bool m25p16_page_program(const uint32_t addr, const uint8_t *buf, const uint32_t
         spi_make_seg_buffer(NULL, cmd_addr, 1 + m25p16_addr_size()),
         spi_make_seg_buffer(NULL, buf, size),
     };
-    spi_seg_submit(&bus, segs);
+    spi_seg_submit(&bus, segs, .done_fn = blackbox_device_notify_from_isr);
   }
 
   spi_txn_continue(&bus);
@@ -178,7 +200,7 @@ bool m25p16_write_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, co
         spi_make_seg_buffer(NULL, cmd_addr, 1 + m25p16_addr_size()),
         spi_make_seg_buffer(NULL, data, len),
     };
-    spi_seg_submit(&bus, segs);
+    spi_seg_submit(&bus, segs, .done_fn = blackbox_device_notify_from_isr);
   }
 
   spi_txn_continue(&bus);
@@ -200,7 +222,7 @@ bool m25p16_chip_erase() {
     const spi_txn_segment_t segs[] = {
         spi_make_seg_const(M25P16_BULK_ERASE),
     };
-    spi_seg_submit(&bus, segs);
+    spi_seg_submit(&bus, segs, .done_fn = blackbox_device_notify_from_isr);
   }
 
   spi_txn_continue(&bus);

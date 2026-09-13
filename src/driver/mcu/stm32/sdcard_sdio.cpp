@@ -8,6 +8,11 @@
 
 #include "driver/blackbox/sdcard.h"
 #include "driver/gpio.h"
+#include "driver/interrupt.h"
+
+static constexpr uint32_t SDCARD_COMMAND_EVENTS = SDMMC_STA_CMDREND | SDMMC_STA_CMDSENT | SDMMC_STA_CTIMEOUT | SDMMC_STA_CCRCFAIL;
+static constexpr uint32_t SDCARD_DATA_EVENTS = SDMMC_STA_DATAEND | SDMMC_STA_DCRCFAIL | SDMMC_STA_DTIMEOUT |
+                                            SDMMC_STA_TXUNDERR | SDMMC_STA_RXOVERR | SDMMC_STA_IDMATE;
 
 static struct {
   SDMMC_TypeDef *instance;
@@ -25,6 +30,7 @@ static struct {
 static void sdcard_sdio_abort() {
   if (!sdcard.instance)
     return;
+  sdcard.instance->MASK = 0;
   sdcard.instance->IDMACTRL = 0;
   sdcard.instance->DCTRL = 0;
   sdcard.instance->CMD = 0;
@@ -73,8 +79,8 @@ static bool sdcard_sdio_init() {
     gpio_pin_init_tag(pins[i], config, SDIO_TAG(port.index, signals[i]));
   }
 
-  // Completion is polled by the scheduler, not an interrupt handler.
   sdcard.instance->MASK = 0;
+  interrupt_enable(port.index == 1 ? SDMMC1_IRQn : SDMMC2_IRQn, DMA_PRIORITY);
   sdcard.instance->CLKCR = (sdcard.kernel_clock + 799999) / 800000; // At most 400 kHz.
   sdcard.instance->POWER = SDMMC_POWER_PWRCTRL;
   return true;
@@ -93,9 +99,12 @@ static sdcard_transfer_status_t sdcard_sdio_command(uint8_t index, uint32_t argu
     else if (response == SDCARD_RESPONSE_R2)
       wait = SDMMC_CMD_WAITRESP;
 
-    sdcard.instance->ICR = SDMMC_STATIC_CMD_FLAGS;
-    sdcard.instance->ARG = argument;
-    sdcard.instance->CMD = index | wait | SDMMC_CMD_CPSMEN | (sdcard.data.active ? SDMMC_CMD_CMDTRANS : 0);
+    ATOMIC_BLOCK(DMA_PRIORITY) {
+      sdcard.instance->ICR = SDMMC_STATIC_CMD_FLAGS;
+      sdcard.instance->MASK |= SDCARD_COMMAND_EVENTS;
+      sdcard.instance->ARG = argument;
+      sdcard.instance->CMD = index | wait | SDMMC_CMD_CPSMEN | (sdcard.data.active ? SDMMC_CMD_CMDTRANS : 0);
+    }
     sdcard.command_pending = true;
     return SDCARD_TRANSFER_WAIT;
   }
@@ -145,7 +154,10 @@ static void sdcard_sdio_data_prepare(uint8_t *buffer, uint32_t size, bool read) 
     SCB_CleanDCache_by_Addr((uint32_t *)sdcard.dma_buffer, sizeof(sdcard.dma_buffer));
   }
   __DSB();
-  sdcard.instance->ICR = SDMMC_STATIC_DATA_FLAGS;
+  ATOMIC_BLOCK(DMA_PRIORITY) {
+    sdcard.instance->ICR = SDMMC_STATIC_DATA_FLAGS;
+    sdcard.instance->MASK |= SDCARD_DATA_EVENTS;
+  }
   sdcard.instance->DTIMER = sdcard.kernel_clock;
   sdcard.instance->DLEN = size;
   sdcard.instance->DCTRL = (9 << SDMMC_DCTRL_DBLOCKSIZE_Pos) | (read ? SDMMC_DCTRL_DTDIR : 0);
@@ -181,4 +193,18 @@ const sdcard_transport_t sdcard_sdio = {
     .data_prepare = sdcard_sdio_data_prepare,
     .data_poll = sdcard_sdio_data_poll,
 };
+
+static void sdcard_sdio_irq(SDMMC_TypeDef *instance) {
+  const uint32_t events = instance->STA & instance->MASK;
+  uint32_t disable = 0;
+  if (events & SDCARD_COMMAND_EVENTS) disable |= SDCARD_COMMAND_EVENTS;
+  if (events & SDCARD_DATA_EVENTS) disable |= SDCARD_DATA_EVENTS;
+  // Leave status latched for command/data consumption in the worker. Mask
+  // each completed operation until the worker starts its successor.
+  instance->MASK &= ~disable;
+  if (disable) blackbox_device_notify_from_isr(nullptr);
+}
+
+extern "C" void SDMMC1_IRQHandler() { sdcard_sdio_irq(SDMMC1); }
+extern "C" void SDMMC2_IRQHandler() { sdcard_sdio_irq(SDMMC2); }
 #endif
