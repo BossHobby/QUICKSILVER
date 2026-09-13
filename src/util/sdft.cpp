@@ -15,9 +15,13 @@ static constexpr uint32_t SPECTRUM_HALO = MAGNITUDE_HALO + 1;
 
 static constexpr float TRACKING_OMEGA = 2.0f * M_PI_F * SDFT_FILTER_HZ;
 static constexpr float MAX_TRACKING_MULTIPLIER = 10.0f;
-static constexpr float WINDOW_DAMPING = __builtin_powf(SDFT_DAMPING_FACTOR, SDFT_SAMPLE_SIZE);
 
+// Clang initializes these once at startup; GCC evaluates them at compile time.
+#ifdef __clang__
+static std::array<complex_float, SDFT_BIN_COUNT> make_twiddle() {
+#else
 static constexpr std::array<complex_float, SDFT_BIN_COUNT> make_twiddle() {
+#endif
   std::array<complex_float, SDFT_BIN_COUNT> values{};
   for (uint32_t i = 0; i < SDFT_BIN_COUNT; i++) {
     const float angle = 2.0f * M_PI_F * (float)i / SDFT_SAMPLE_SIZE;
@@ -26,7 +30,8 @@ static constexpr std::array<complex_float, SDFT_BIN_COUNT> make_twiddle() {
   return values;
 }
 
-static constexpr auto TWIDDLE = make_twiddle();
+static const float WINDOW_DAMPING = __builtin_powf(SDFT_DAMPING_FACTOR, SDFT_SAMPLE_SIZE);
+static const auto TWIDDLE = make_twiddle();
 
 void sdft_init(sdft_t *sdft, float sample_period_us) {
   *sdft = {};
