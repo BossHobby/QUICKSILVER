@@ -1,10 +1,15 @@
 #include <unity.h>
 
+#include <signal.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include "control/control.h"
 #include "core/scheduler.h"
 #include "core/profile.h"
 #include "core/tasks.h"
 #include "driver/time.h"
+#include "driver/timer.h"
 
 extern bool scheduler_test_task_registered(task_id_t id);
 extern bool scheduler_test_should_run(uint32_t start_cycles, uint8_t task_mask, task_t *task);
@@ -251,4 +256,58 @@ void test_scheduler_omits_unconfigured_sensor_tasks() {
   state.baro_detected = saved_baro;
   state.gps_lock = saved_lock;
   scheduler_init();
+}
+
+static void timer_test_flight(void *) {
+  if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) _exit(8);
+  if (threads[THREAD_BLACKBOX].handle != nullptr) _exit(9);
+  thread_start(THREAD_BLACKBOX);
+  timer_up_init(TIMER1, PWM_CLOCK_FREQ_HZ / 2000000, 1999); // 1 ms.
+  timer_up_start(TIMER1);
+  vTaskDelay(1);
+  if (!timer_up_pending(TIMER1)) _exit(1);
+
+  // A buffered period change becomes active at the next expiration.
+  timer_up_set_period(TIMER1, 5999); // 3 ms at the native 2 MHz timer clock.
+  vTaskDelay(1);
+  if (!timer_up_pending(TIMER1)) _exit(2);
+  vTaskDelay(2);
+  if (timer_up_pending(TIMER1)) _exit(3);
+  vTaskDelay(1);
+  if (!timer_up_pending(TIMER1)) _exit(4);
+
+  // Missed expirations coalesce into one pending update flag.
+  vTaskDelay(10);
+  if (!timer_up_pending(TIMER1)) _exit(5);
+  if (timer_up_pending(TIMER1)) _exit(6);
+  _exit(0);
+}
+
+static void timer_test_background(void *) {
+  for (;;) ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+}
+
+void test_scheduler_native_timer_period_and_coalescing() {
+  const pid_t child = fork();
+  TEST_ASSERT_TRUE(child >= 0);
+  if (child == 0) {
+    state.looptime_autodetect = 125;
+    threads[THREAD_FLIGHT].entry = timer_test_flight;
+    threads[THREAD_BLACKBOX].entry = timer_test_background;
+    thread_start(THREAD_FLIGHT);
+    vTaskStartScheduler();
+    _exit(7);
+  }
+  int status;
+  for (unsigned i = 0; i < 2000; i++) {
+    if (waitpid(child, &status, WNOHANG) == child) {
+      TEST_ASSERT_TRUE(WIFEXITED(status));
+      TEST_ASSERT_EQUAL_INT(0, WEXITSTATUS(status));
+      return;
+    }
+    usleep(1000);
+  }
+  kill(child, SIGKILL);
+  waitpid(child, &status, 0);
+  TEST_FAIL_MESSAGE("Native timer or thread startup stalled");
 }

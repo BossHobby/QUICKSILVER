@@ -84,5 +84,9 @@ typedef enum {
 cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *current, const blackbox_t *previous, blackbox_frame_type_t frame_type, const uint32_t field_flags);
 
 void blackbox_init();
+void blackbox_thread(void *);
+void blackbox_reset();
 void blackbox_set_debug(blackbox_debug_flag_t flag, uint8_t index, int16_t data);
-void blackbox_update();
+
+// Flight captures after control; the Blackbox task encodes and services storage.
+void blackbox_capture();

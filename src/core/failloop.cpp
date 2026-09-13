@@ -1,5 +1,8 @@
 #include "core/failloop.h"
 
+#include <FreeRTOS.h>
+#include <task.h>
+
 #include "control/control.h"
 #include "driver/motor.h"
 #include "driver/reset.h"
@@ -36,6 +39,10 @@ const char *failloop_string(failloop_t val) {
 }
 
 void failloop(failloop_t val) {
+  // A fatal worker error must prevent Flight from publishing further outputs.
+  if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED)
+    vTaskSuspendAll();
+
   uint32_t blink_counter = 0;
   uint32_t blink_start = time_millis();
 

@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "core/project.h"
-#include "core/scheduler.h"
 #include "io/blackbox_device_flash.h"
 #include "io/blackbox_device_sdcard.h"
 #include "io/blackbox_device_simulator.h"
@@ -121,6 +120,10 @@ bool blackbox_device_update() {
   return dev->update();
 }
 
+bool blackbox_device_ready() {
+  return dev != nullptr && dev->ready();
+}
+
 uint32_t blackbox_device_usage() {
   if (dev == NULL) {
     return 0;
@@ -133,16 +136,15 @@ void blackbox_device_reset() {
     return;
   }
 
+  blackbox_reset();
   ring_buffer_clear(&blackbox_encode_buffer);
   dev->reset();
 
   blackbox_device_header.magic = BLACKBOX_HEADER_MAGIC;
   blackbox_device_header.file_num = 0;
-
-  task_reset_runtime();
 }
 
-bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float looptime) {
+bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float looptime, const profile_t *recording_profile) {
   if (dev == NULL) {
     return false;
   }
@@ -167,17 +169,12 @@ bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float
   file->size = 0;
   file->start = offset;
 
-  if (!blackbox_device_write_profile(&profile)) {
+  if (!blackbox_device_write_profile(recording_profile)) {
     return false;
   }
 
   blackbox_device_header.file_num++;
   dev->start();
-
-  // Exclude one-time profile encoding from task estimates and loop-rate accounting.
-  // TODO: Prepare the encoded profile before arming; this still delays the next
-  // control loop (~593 us on G473), including when recording starts in flight.
-  task_reset_runtime();
 
   return true;
 }

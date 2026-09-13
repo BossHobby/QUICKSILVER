@@ -1,5 +1,8 @@
 #include "driver/timer.h"
 
+#include <FreeRTOS.h>
+#include <task.h>
+
 #include "driver/rcc.h"
 
 const timer_def_t timer_defs[TIMER_MAX] = {
@@ -153,7 +156,31 @@ void timer_enable_dma_request(timer_index_t tim, timer_channel_t chan, bool stat
   }
 }
 
+void timer_up_set_period(timer_index_t tim, uint32_t period) {
+  tmr_period_value_set(timer_defs[tim].instance, period);
+}
+
+void timer_up_start(timer_index_t tim) {
+  auto *instance = timer_defs[tim].instance;
+  tmr_event_sw_trigger(instance, TMR_OVERFLOW_SWTRIG);
+  tmr_flag_clear(instance, TMR_OVF_FLAG);
+  tmr_period_buffer_enable(instance, TRUE);
+  tmr_interrupt_enable(instance, TMR_OVF_INT, TRUE);
+  tmr_counter_enable(instance, TRUE);
+}
+
+bool timer_up_pending(timer_index_t tim) {
+  auto *instance = timer_defs[tim].instance;
+  if (!tmr_interrupt_flag_get(instance, TMR_OVF_FLAG))
+    return false;
+  tmr_flag_clear(instance, TMR_OVF_FLAG);
+  return true;
+}
+
 static void timer_irq_handler() {
+  extern bool flight_timer_irq_handler();
+  const bool wake = flight_timer_irq_handler();
+
   extern void soft_serial_timer_irq_handler();
   soft_serial_timer_irq_handler();
 
@@ -161,6 +188,7 @@ static void timer_irq_handler() {
   extern void elrs_timer_irq_handler();
   elrs_timer_irq_handler();
 #endif
+  portYIELD_FROM_ISR(wake);
 }
 
 extern "C" {

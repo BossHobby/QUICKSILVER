@@ -9,6 +9,7 @@
 #include "control/multi/navigation.h"
 #endif
 #include "control/sixaxis.h"
+#include "core/failloop.h"
 #include "core/scheduler.h"
 #include "driver/baro/baro.h"
 #include "driver/serial.h"
@@ -26,13 +27,12 @@
 #include "project.h"
 #include "rx/rx.h"
 
-static StackType_t flight_stack[2048];
-
 static void flight_task() {
   sixaxis_read();
   imu_calc();
   rx_process();
   control();
+  blackbox_capture();
 }
 
 void util_task() {
@@ -48,12 +48,8 @@ static void task_noop() {
 }
 #endif
 
-static void flight_thread(void *) {
-  task_reset_runtime();
-  while (1) {
-    scheduler_run();
-  }
-}
+static StackType_t flight_stack[2048];
+static StackType_t blackbox_stack[2048];
 
 extern "C" void thread_assert_failed() {
   failloop(FAILLOOP_FAULT);
@@ -64,16 +60,15 @@ extern "C" void vApplicationStackOverflowHook(TaskHandle_t, char *) {
 }
 
 thread_t threads[THREAD_MAX] = {
-    [THREAD_FLIGHT] = CREATE_THREAD("flight", 1, flight_thread, flight_stack),
+    [THREAD_FLIGHT] = CREATE_THREAD("flight", 2, flight_thread, flight_stack),
+    [THREAD_BLACKBOX] = CREATE_THREAD("blackbox", 1, blackbox_thread, blackbox_stack),
 };
 
-void threads_start() {
-  for (auto &thread : threads) {
-    thread.handle = xTaskCreateStatic(thread.entry, thread.name, thread.stack_size, nullptr, thread.priority, thread.stack, &thread.control);
-    configASSERT(thread.handle);
-  }
-  vTaskStartScheduler();
-  thread_assert_failed();
+void thread_start(thread_id_t id) {
+  auto &thread = threads[id];
+  configASSERT(thread.handle == nullptr);
+  thread.handle = xTaskCreateStatic(thread.entry, thread.name, thread.stack_size, nullptr, thread.priority, thread.stack, &thread.control);
+  configASSERT(thread.handle);
 }
 
 FAST_RAM task_t tasks[TASK_MAX] = {
@@ -88,7 +83,6 @@ FAST_RAM task_t tasks[TASK_MAX] = {
 #endif
     [TASK_UTIL] = CREATE_TASK("UTIL", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, util_task, 1000),
     [TASK_GESTURES] = CREATE_TASK("GESTURES", TASK_MASK_ON_GROUND, TASK_PRIORITY_MEDIUM, gestures, 0),
-    [TASK_BLACKBOX] = CREATE_TASK("BLACKBOX", TASK_MASK_ALWAYS, TASK_PRIORITY_MEDIUM, blackbox_update, 0),
     [TASK_OSD] = CREATE_TASK("OSD", TASK_MASK_ALWAYS, TASK_PRIORITY_MEDIUM, osd_display, 1000),
     [TASK_VTX] = CREATE_TASK("VTX", TASK_MASK_ON_GROUND, TASK_PRIORITY_LOW, vtx_update, 0),
     [TASK_USB] = CREATE_TASK("USB", TASK_MASK_ON_GROUND, TASK_PRIORITY_LOW, usb_configurator, 0),
