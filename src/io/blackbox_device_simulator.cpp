@@ -179,7 +179,7 @@ void blackbox_device_simulator_stop() {
 }
 
 bool blackbox_device_simulator_ready() {
-  return state == STATE_IDLE;
+  return state == STATE_IDLE && !should_flush;
 }
 
 bool blackbox_device_simulator_write(const uint8_t *buffer, const uint8_t size) {

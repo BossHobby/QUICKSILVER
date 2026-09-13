@@ -7,6 +7,7 @@
 #define __enable_irq() asm("nop")
 
 #define SYS_CLOCK_FREQ_HZ 500000000
+#define PWM_CLOCK_FREQ_HZ 2000000
 
 #define LOOPTIME_MAX 250
 
