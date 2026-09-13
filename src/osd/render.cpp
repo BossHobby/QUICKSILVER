@@ -4,11 +4,14 @@
 #include <string.h>
 
 #include "control/control.h"
+#include "control/gestures.h"
 #include "control/pid.h"
+#include "control/sixaxis.h"
 #include "core/flash.h"
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/scheduler.h"
+#include "core/tasks.h"
 #include "driver/reset.h"
 #include "io/blackbox_device.h"
 #include "io/led.h"
@@ -45,6 +48,9 @@
 
 #define HOLD 0
 #define TEMP 1
+#define OSD_RENDER_PERIOD_US 33333
+
+static uint32_t last_render_time;
 
 extern profile_t profile;
 extern vtx_status_t vtx_actual;
@@ -84,8 +90,6 @@ static void osd_vtx_stage_reset() {}
 osd_system_t osd_system = OSD_SYS_NONE;
 
 osd_state_t osd_state = {
-    .element = OSD_CALLSIGN,
-
     .screen = OSD_SCREEN_REGULAR,
     .screen_history_size = 0,
     .screen_phase = OSD_PHASE_CLEAR,
@@ -290,7 +294,7 @@ void osd_display_reset() {
 
   osd_status_reset();
 
-  osd_state.element = OSD_CALLSIGN;
+  last_render_time = time_micros() - OSD_RENDER_PERIOD_US;
 
   osd_state.screen = OSD_SCREEN_REGULAR;
   osd_state.screen_phase = OSD_PHASE_CLEAR;
@@ -310,7 +314,6 @@ static void osd_update_screen(osd_screens_t screen) {
   }
 #endif
   osd_state.screen = screen;
-  osd_state.element = OSD_CALLSIGN;
   osd_state.screen_phase = OSD_PHASE_CLEAR;
 }
 
@@ -428,6 +431,44 @@ void osd_save_exit() {
 
   if (reboot_fc_requested)
     system_reset();
+}
+
+static void osd_handle_gestures() {
+  const bool enabled = !flags.arm_state && !flags.in_air && flags.on_ground &&
+                       flags.rx_ready && !flags.failsafe && !flags.gestures_disabled;
+  const bool menu = osd_state.screen != OSD_SCREEN_REGULAR && osd_state.screen != OSD_SCREEN_CLEAR;
+  const auto command = gestures_detect(state.rx, enabled, menu, time_micros());
+  static bool save_bind_only = false;
+  switch (command) {
+  case GESTURE_CALIBRATE_SAVE:
+    if (!save_bind_only) {
+      sixaxis_gyro_cal();
+      sixaxis_acc_cal();
+    } else {
+      led_flash();
+      save_bind_only = false;
+    }
+    flash_save();
+    task_reset_runtime();
+    break;
+  case GESTURE_TOGGLE_BIND:
+    profile.receiver.bind.bind_saved = !profile.receiver.bind.bind_saved;
+    save_bind_only = true;
+    led_flash();
+    break;
+  case GESTURE_OPEN_MENU:
+    osd_push_screen(OSD_SCREEN_MAIN_MENU);
+    led_flash();
+    break;
+  case GESTURE_RESET_OSD:
+    osd_exit();
+    break;
+  case GESTURE_MENU_UP: osd_handle_input(OSD_INPUT_UP); break;
+  case GESTURE_MENU_DOWN: osd_handle_input(OSD_INPUT_DOWN); break;
+  case GESTURE_MENU_LEFT: osd_handle_input(OSD_INPUT_LEFT); break;
+  case GESTURE_MENU_RIGHT: osd_handle_input(OSD_INPUT_RIGHT); break;
+  case GESTURE_NONE: break;
+  }
 }
 
 static void print_osd_flightmode(osd_element_t *el) {
@@ -571,14 +612,15 @@ static void print_osd_inclinometer(osd_element_t *el) {
 static void print_osd_crsf_tx_power(osd_element_t *el) {
   osd_start_el(el);
 
-  if (serial_rx_detected_protcol != RX_SERIAL_PROTOCOL_CRSF || crsf_stats.uplink_tx_power >= CRSF_TX_POWER_MAX) {
+  const uint8_t tx_power = crsf_stats.uplink_tx_power;
+  if (serial_rx_detected_protcol != RX_SERIAL_PROTOCOL_CRSF || tx_power >= CRSF_TX_POWER_MAX) {
     osd_write_char(ICON_RSSI);
     osd_write_str("---MW");
     return;
   }
 
   osd_write_char(ICON_RSSI);
-  const uint16_t tx_power_mw = crsf_tx_power_mw[crsf_stats.uplink_tx_power];
+  const uint16_t tx_power_mw = crsf_tx_power_mw[tx_power];
   if (tx_power_mw < 1000) {
     osd_write_uint(tx_power_mw, 3);
     osd_write_str("MW");
@@ -598,13 +640,13 @@ void osd_init() {
   osd_device_init();
   osd_intro();
   osd_update_screen(OSD_SCREEN_CLEAR);
+  thread_start(THREAD_OSD);
 }
 
 static void osd_display_regular() {
-  // Build one element per call; publish the framebuffer after the full pass.
-  while (osd_state.element < OSD_ELEMENT_MAX) {
-    const uint8_t element = osd_state.element;
-    osd_state.element = static_cast<osd_elements_t>(element + 1);
+  // Display telemetry uses the latest scalar values. Elements may reflect
+  // different Flight passes; no control decision depends on a coherent frame.
+  for (uint8_t element = 0; element < OSD_ELEMENT_MAX; element++) {
     osd_element_t *el = (osd_element_t *)(osd_elements() + element);
     if (!el->active) {
       continue;
@@ -764,10 +806,7 @@ static void osd_display_regular() {
       break;
     }
     }
-    return;
   }
-
-  osd_state.element = OSD_CALLSIGN;
 
   // Handle no camera signal warning after all elements
   if (osd_system == OSD_SYS_NONE) {
@@ -883,6 +922,12 @@ void osd_display_rate_menu() {
 #endif
 
 void osd_display() {
+  // Close menus before transport readiness checks. A busy display must not
+  // preserve configuration actions across an arming transition.
+  if ((flags.arm_state || flags.in_air) && osd_state.screen != OSD_SCREEN_REGULAR && osd_state.screen != OSD_SCREEN_CLEAR) {
+    while (osd_pop_screen() != OSD_SCREEN_CLEAR)
+      ;
+  }
   if (!osd_is_ready()) {
     return;
   }
@@ -896,21 +941,9 @@ void osd_display() {
     return;
   }
 
-  // Finish the regular render pass before sending any of its dirty characters.
-  if ((osd_state.screen != OSD_SCREEN_REGULAR || osd_state.element == OSD_CALLSIGN) && !osd_update()) {
+  // Drain the previous frame even while waiting for the next render deadline.
+  if (!osd_update()) {
     return;
-  }
-
-  static bool did_just_arm = false;
-  if (flags.arm_state) {
-    if (!did_just_arm) {
-      while (osd_pop_screen() != OSD_SCREEN_CLEAR)
-        ;
-      did_just_arm = true;
-      return;
-    }
-  } else {
-    did_just_arm = false;
   }
 
   switch (osd_state.screen) {
@@ -926,7 +959,11 @@ void osd_display() {
       osd_update_screen(OSD_SCREEN_CLEAR);
       break;
     }
-    osd_display_regular();
+    const uint32_t now = time_micros();
+    if (now - last_render_time >= OSD_RENDER_PERIOD_US) {
+      last_render_time = now;
+      osd_display_regular();
+    }
     break;
   }
 #ifdef VEHICLE_ROVER
@@ -1816,6 +1853,8 @@ void osd_display() {
       reset_state = 0;
       break;
     }
+    // Storage ownership can wait for the Blackbox worker as well as erase.
+    task_reset_runtime();
 #endif
     break;
   }
@@ -1923,5 +1962,18 @@ void osd_display() {
       osd_state.selection = 0;
     }
     break;
+  }
+}
+
+void osd_thread(void *) {
+  while (true) {
+    {
+      // Flight must own this same mutex before it can arm. Once armed, OSD
+      // keeps servicing telemetry while gestures and menu edits are excluded.
+      mutex_guard_t configuration(profile_mutex);
+      osd_handle_gestures();
+      osd_display();
+    }
+    vTaskDelay(1);
   }
 }

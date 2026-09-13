@@ -19,5 +19,3 @@ enum gesture_command_t {
 // Stick recognition. Disabled input and mode changes discard partial
 // commands and require a neutral dwell before accepting another direction.
 gesture_command_t gestures_detect(const vec4_t &sticks, bool enabled, bool menu, uint32_t now_us);
-
-void gestures();
