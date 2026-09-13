@@ -277,6 +277,13 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
 }
 
 static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
+  if (flags.arm_state) {
+    quic_errorf(QUIC_CMD_BLACKBOX, "DISARM BEFORE ACCESSING LOGS");
+    return;
+  }
+#ifdef USE_BLACKBOX
+  mutex_guard_t guard(blackbox_storage_mutex);
+#endif
   cbor_result_t res = CBOR_OK;
 
   cbor_value_t enc;
@@ -324,13 +331,11 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
     break;
   }
   case QUIC_BLACKBOX_GET: {
-    extern blackbox_device_header_t blackbox_device_header;
-
     uint8_t file_index;
     res = cbor_decode_uint8_t(dec, &file_index);
     check_cbor_error(QUIC_CMD_BLACKBOX);
 
-    if (!blackbox_device_update()) {
+    if (!blackbox_device_ready() || ring_buffer_available(&blackbox_encode_buffer) != 0) {
       quic_errorf(QUIC_CMD_BLACKBOX, "BLACKBOX BUSY");
       break;
     }

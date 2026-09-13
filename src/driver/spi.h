@@ -134,6 +134,7 @@ void spi_txn_wait(spi_bus_device_t *bus);
 bool spi_txn_continue_port(spi_ports_t port);
 
 void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts);
+void spi_seg_submit_dma_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, uint32_t count);
 void spi_seg_submit_wait_ex(spi_bus_device_t *bus, const spi_txn_segment_t *segs, const uint32_t count);
 
 static inline void spi_csn_enable(spi_bus_device_t *bus) { gpio_pin_reset(bus->nss); }
@@ -158,6 +159,13 @@ static inline bool spi_txn_ready(spi_bus_device_t *bus) {
 
 bool spi_txn_has_free(void);
 uint8_t spi_txn_free_count(void);
+
+// Background storage uses DMA even for short commands, so preemption never
+// leaves a higher-priority task waiting on a suspended byte-polling writer.
+template <size_t N>
+inline void spi_seg_submit_dma_wait(spi_bus_device_t *bus, const spi_txn_segment_t (&segs)[N]) {
+  spi_seg_submit_dma_wait_ex(bus, segs, N);
+}
 
 template <size_t N>
   requires(N < SPI_TXN_SEG_MAX)

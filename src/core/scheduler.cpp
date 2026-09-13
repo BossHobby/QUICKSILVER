@@ -9,7 +9,6 @@
 #include "core/profile.h"
 #include "driver/gyro/gyro.h"
 #include "driver/time.h"
-#include "io/simulator.h"
 #include "tasks.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
@@ -251,14 +250,9 @@ static void scheduler_update_rate(uint32_t flight_runtime_us) {
   control_filter_update(false);
 }
 
-static uint32_t scheduler_update_loop() {
-  const uint32_t elapsed_cycles = time_cycles() - last_loop_cycles;
+uint32_t scheduler_update_loop(uint32_t elapsed_cycles) {
   state.cpu_load = CYCLES_TO_US(elapsed_cycles);
   const uint32_t flight_runtime_us = CYCLES_TO_US(elapsed_cycles - MIN(elapsed_cycles, ground_task_cycles));
-
-  const uint32_t delay = US_TO_CYCLES(state.looptime_autodetect);
-  while ((time_cycles() - last_loop_cycles) < delay)
-    __NOP();
 
   state.looptime_us = CYCLES_TO_US(time_cycles() - last_loop_cycles);
   state.looptime = state.looptime_us * 1e-6f;
@@ -321,9 +315,7 @@ void scheduler_init() {
   }
 }
 
-void scheduler_run() {
-  const uint32_t cycles = scheduler_update_loop();
-  simulator_update();
+void scheduler_run(uint32_t cycles) {
   const uint8_t task_mask = scheduler_task_mask();
   for (uint32_t i = 0; i < task_queue_size; i++) {
     task_t *task = task_queue[i];
@@ -343,7 +335,7 @@ void scheduler_test_update_rate(uint32_t flight_runtime_us) {
 }
 
 uint32_t scheduler_test_loop_start() {
-  return scheduler_update_loop();
+  return scheduler_update_loop(time_cycles() - last_loop_cycles);
 }
 
 bool scheduler_test_should_run(uint32_t start_cycles, uint8_t task_mask, task_t *task) {
