@@ -239,8 +239,7 @@ void test_scheduler_omits_unconfigured_sensor_tasks() {
     state.baro_detected = baro;
     state.gps_lock = false; // Configured receivers must still acquire a fix.
     scheduler_init();
-    TEST_ASSERT_TRUE(scheduler_test_task_registered(TASK_IMU));
-    TEST_ASSERT_TRUE(scheduler_test_task_registered(TASK_PID));
+    TEST_ASSERT_TRUE(scheduler_test_task_registered(TASK_FLIGHT));
     TEST_ASSERT_EQUAL(gps, scheduler_test_task_registered(TASK_GPS));
     TEST_ASSERT_EQUAL(gps && tasks[TASK_NAV].mask != 0, scheduler_test_task_registered(TASK_NAV));
     TEST_ASSERT_EQUAL(baro, scheduler_test_task_registered(TASK_BARO));
