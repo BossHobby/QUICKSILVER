@@ -410,7 +410,7 @@ static bool nav_update_progress(uint32_t now_ms) {
   return now_ms - rth.progress.updated_ms <= RTH_PROGRESS_TIMEOUT_MS;
 }
 
-static void nav_update_rth() {
+static void nav_update_rth_control() {
   const uint32_t now = time_micros();
   const uint32_t now_ms = time_millis();
   const float dt = (now - rth.updated_us) * 1e-6f;
@@ -619,7 +619,7 @@ static void nav_update_request() {
   }
 }
 
-void nav_update() {
+void nav_update_rth() {
   nav_update_gps_sanity();
 
   if (flags.arm_state != nav.previous.armed) {
@@ -644,7 +644,7 @@ void nav_update() {
 
     nav_update_request();
     if (state.rth_active) {
-      nav_update_rth();
+      nav_update_rth_control();
     }
   }
   // Navigation debug: 0 heading, 1 GPS course, 2 altitude (dm), 3 confidence.
@@ -687,7 +687,7 @@ void nav_test_set_rth_active(bool active) {
   state.rth_state = active ? RTH_STATE_CLIMB : RTH_STATE_INACTIVE;
 }
 
-void nav_test_update_rth(void) { nav_update_rth(); }
+void nav_test_update_rth(void) { nav_update_rth_control(); }
 void nav_test_altitude_control(float target, float rate, float dt) {
   nav_update_altitude_control(target, rate, dt);
 }

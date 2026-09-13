@@ -19,18 +19,16 @@ extern void test_gestures_shortcuts_and_clock_wrap();
 extern void test_gestures_menu_taps_and_hold_repeat();
 extern void test_gestures_reset_disabled_mode_changes_and_ambiguous_input();
 extern void test_gestures_threshold_crossing_and_long_shortcut_press();
-extern void test_scheduler_native_timer_period_and_coalescing();
+extern void test_flight_native_timer_period_and_coalescing();
+extern void test_flight_timing_separates_runtime_and_period_across_wrap();
+extern void test_flight_rate_fallback_cap_and_no_automatic_speedup();
+extern void test_flight_maintenance_reset_excludes_delays_and_restarts_average();
+#ifdef VEHICLE_MULTI
+extern void test_flight_navigation_cadence_configuration_and_wrap();
+#endif
 extern void test_threads_suspend_ground_workers_with_pending_work();
-extern void test_scheduler_omits_unconfigured_navigation();
 extern void test_imu_without_gps_publishes_tilt_without_heading_estimator();
 extern void test_baro_altitude_reference_without_gps();
-extern void test_scheduler_ground_only_starvation_does_not_reduce_flight_rate();
-extern void test_scheduler_ground_work_does_not_indirectly_reduce_flight_rate();
-extern void test_scheduler_exhausted_budget_and_wrap();
-extern void test_scheduler_slows_after_starvation_without_forcing_work();
-extern void test_scheduler_masks_periods_and_reset_do_not_trigger_fallback();
-extern void test_scheduler_fallback_cap_and_no_automatic_speedup();
-extern void test_scheduler_accounts_for_housekeeping_and_realtime_overload();
 extern void test_resource_timer_tag_roundtrip();
 extern void test_sdcard_csd_capacity();
 extern void test_sdcard_target_cbor();
@@ -254,9 +252,14 @@ int main(int argc, char **argv) {
   RUN_TEST(test_vbat_integrates_current_over_elapsed_time);
   RUN_TEST(test_rx_mailbox_coalesces_complete_frames);
   RUN_TEST(test_io_worker_publishes_rx_without_configuration_wait);
-  RUN_TEST(test_scheduler_native_timer_period_and_coalescing);
+  RUN_TEST(test_flight_native_timer_period_and_coalescing);
+  RUN_TEST(test_flight_timing_separates_runtime_and_period_across_wrap);
+  RUN_TEST(test_flight_rate_fallback_cap_and_no_automatic_speedup);
+  RUN_TEST(test_flight_maintenance_reset_excludes_delays_and_restarts_average);
+#ifdef VEHICLE_MULTI
+  RUN_TEST(test_flight_navigation_cadence_configuration_and_wrap);
+#endif
   RUN_TEST(test_threads_suspend_ground_workers_with_pending_work);
-  RUN_TEST(test_scheduler_omits_unconfigured_navigation);
   RUN_TEST(test_imu_without_gps_publishes_tilt_without_heading_estimator);
   RUN_TEST(test_osd_looptime_warning_is_temporary_until_2khz);
   RUN_TEST(test_osd_transfer_is_bounded_and_retries);
@@ -270,13 +273,6 @@ int main(int argc, char **argv) {
   RUN_TEST(test_gestures_reset_disabled_mode_changes_and_ambiguous_input);
   RUN_TEST(test_gestures_threshold_crossing_and_long_shortcut_press);
   RUN_TEST(test_baro_altitude_reference_without_gps);
-  RUN_TEST(test_scheduler_ground_only_starvation_does_not_reduce_flight_rate);
-  RUN_TEST(test_scheduler_ground_work_does_not_indirectly_reduce_flight_rate);
-  RUN_TEST(test_scheduler_exhausted_budget_and_wrap);
-  RUN_TEST(test_scheduler_slows_after_starvation_without_forcing_work);
-  RUN_TEST(test_scheduler_masks_periods_and_reset_do_not_trigger_fallback);
-  RUN_TEST(test_scheduler_fallback_cap_and_no_automatic_speedup);
-  RUN_TEST(test_scheduler_accounts_for_housekeeping_and_realtime_overload);
   RUN_TEST(test_resource_timer_tag_roundtrip);
   RUN_TEST(test_sdcard_csd_capacity);
   RUN_TEST(test_sdcard_target_cbor);
