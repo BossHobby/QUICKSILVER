@@ -74,10 +74,6 @@ void simulator_update() {
   pthread_mutex_lock(&shared->mutex);
 
   if (shared->state.rc_updated) {
-    state.rx.roll = shared->state.rc_channels[0];
-    state.rx.pitch = shared->state.rc_channels[1];
-    state.rx.yaw = shared->state.rc_channels[2];
-    state.rx.throttle = shared->state.rc_channels[3];
     state.rx_channels[0] = (uint16_t)((shared->state.rc_channels[0] + 1.0f) * 0.5f * AUX_VALUE_MAX);
     state.rx_channels[1] = (uint16_t)((shared->state.rc_channels[1] + 1.0f) * 0.5f * AUX_VALUE_MAX);
     state.rx_channels[2] = (uint16_t)((shared->state.rc_channels[2] + 1.0f) * 0.5f * AUX_VALUE_MAX);
