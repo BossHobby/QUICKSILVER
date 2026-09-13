@@ -38,11 +38,11 @@ void blackbox_device_sdcard_init() {
   write_count = 0;
 }
 
-bool blackbox_device_sdcard_update() {
+bool blackbox_device_sdcard_update(TickType_t &wait) {
   static uint32_t offset = 0;
   static uint32_t write_size = PAGE_SIZE;
 
-  const sdcard_status_t sdcard_status = sdcard_update();
+  const sdcard_status_t sdcard_status = sdcard_update(&wait);
   if (sdcard_status == SDCARD_ERROR) {
     return false;
   }
@@ -53,6 +53,7 @@ sdcard_do_more:
     if (sdcard_status != SDCARD_IDLE)
       return false;
     state = STATE_READ_HEADER;
+    wait = 0;
     sdcard_get_bounds(&blackbox_bounds);
     blackbox_bounds.use_4byte_addresses = false;
     return false;
@@ -67,6 +68,7 @@ sdcard_do_more:
         blackbox_device_header.file_num = 0;
 
         state = STATE_ERASE_HEADER;
+        wait = 0;
         return false;
       }
 
@@ -91,6 +93,7 @@ sdcard_do_more:
       flush_pending = false;
       goto sdcard_do_more;
     }
+    wait = portMAX_DELAY;
     break;
   }
 
@@ -99,6 +102,7 @@ sdcard_do_more:
     if (byte_offset >= blackbox_bounds.total_size) {
       state = flush_pending ? STATE_ERASE_HEADER : STATE_IDLE;
       flush_pending = false;
+      wait = state == STATE_IDLE ? portMAX_DELAY : 0;
       break;
     }
 
@@ -121,6 +125,7 @@ sdcard_do_more:
     write_size = MIN(PAGE_SIZE, blackbox_bounds.total_size - byte_offset);
     if (to_write < PAGE_SIZE) {
       if (!flush_pending) {
+        wait = portMAX_DELAY;
         break;
       }
       if (to_write == 0) {
@@ -137,6 +142,7 @@ sdcard_do_more:
       memset(blackbox_write_buffer + write_size, 0, PAGE_SIZE - write_size);
     }
     state = STATE_CONTINUE_WRITE;
+    wait = 0;
     break;
   }
 
@@ -150,6 +156,7 @@ sdcard_do_more:
       } else {
         state = STATE_FILL_WRITE_BUFFER;
       }
+      wait = 0;
     }
     break;
   }
@@ -158,6 +165,7 @@ sdcard_do_more:
     if (sdcard_write_pages_finish()) {
       write_count = 0;
       state = STATE_IDLE;
+      wait = 0;
     }
     break;
   }
@@ -165,6 +173,7 @@ sdcard_do_more:
   case STATE_ERASE_HEADER: {
     memcpy(blackbox_write_buffer, (uint8_t *)&blackbox_device_header, sizeof(blackbox_device_header_t));
     state = STATE_WRITE_HEADER;
+    wait = 0;
     return false;
   }
 
@@ -172,6 +181,7 @@ sdcard_do_more:
     if (sdcard_write_page(blackbox_write_buffer, 0)) {
       flush_pending = false;
       state = STATE_IDLE;
+      wait = 0;
     }
     return false;
   }

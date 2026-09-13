@@ -242,8 +242,6 @@ void flight_thread(void *) {
   timer_up_start(flight_timer);
 
   while (1) {
-    xTaskNotifyGive(threads[THREAD_BLACKBOX].handle);
-
     const uint32_t elapsed_cycles = time_cycles() - last_loop_cycles;
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // Coalesce overruns; never replay old cycles.
 
