@@ -48,7 +48,8 @@ static void simulator_write(uint32_t addr, uint8_t *data, uint32_t size) {
   fflush(file);
 }
 
-bool blackbox_device_simulator_update() {
+bool blackbox_device_simulator_update(TickType_t &wait) {
+  wait = 0;
   static uint32_t offset = 0;
   static uint32_t write_size = PAGE_SIZE;
 
@@ -93,6 +94,7 @@ simulator_do_more:
       state = STATE_START_WRITE;
       goto simulator_do_more;
     }
+    wait = portMAX_DELAY;
     break;
   }
 
@@ -101,6 +103,7 @@ simulator_do_more:
     if (offset >= blackbox_bounds.total_size) {
       state = should_flush ? STATE_WRITE_HEADER : STATE_IDLE;
       should_flush = 0;
+      wait = state == STATE_IDLE ? portMAX_DELAY : 0;
       break;
     }
     state = STATE_FILL_WRITE_BUFFER;
@@ -117,6 +120,7 @@ simulator_do_more:
     write_size = MIN(PAGE_SIZE, blackbox_bounds.total_size - offset);
     if (to_write < PAGE_SIZE) {
       if (should_flush == 0) {
+        wait = portMAX_DELAY;
         break;
       }
       if (to_write == 0) {

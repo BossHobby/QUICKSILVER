@@ -130,7 +130,7 @@ static sdcard_transfer_status_t sdcard_spi_data_poll() {
         spi_make_seg_buffer(sdcard.data.bytes, nullptr, sdcard.data.size),
         spi_make_seg_const(0xff, 0xff),
     };
-    spi_seg_submit_continue(&sdcard.bus, segs);
+    spi_seg_submit_continue(&sdcard.bus, segs, .done_fn = blackbox_device_notify_from_isr);
   } else {
     const spi_txn_segment_t segs[] = {
         spi_make_seg_const(0xfc),
@@ -138,7 +138,7 @@ static sdcard_transfer_status_t sdcard_spi_data_poll() {
         spi_make_seg_const(0xff, 0xff),
         spi_make_seg_buffer(&sdcard.data.response, nullptr, 1),
     };
-    spi_seg_submit_continue(&sdcard.bus, segs);
+    spi_seg_submit_continue(&sdcard.bus, segs, .done_fn = blackbox_device_notify_from_isr);
   }
   sdcard.data.pending = true;
   return SDCARD_TRANSFER_WAIT;
@@ -146,7 +146,7 @@ static sdcard_transfer_status_t sdcard_spi_data_poll() {
 
 static void sdcard_spi_stop_write() {
   const spi_txn_segment_t segs[] = {spi_make_seg_const(0xfd)};
-  spi_seg_submit_continue(&sdcard.bus, segs);
+  spi_seg_submit_continue(&sdcard.bus, segs, .done_fn = blackbox_device_notify_from_isr);
 }
 
 const sdcard_transport_t sdcard_spi = {

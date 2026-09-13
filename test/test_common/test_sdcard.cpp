@@ -338,25 +338,28 @@ void test_sdcard_transport_busy_and_timer_wrap() {
 }
 
 static void card_device_wait_ready() {
+  TickType_t wait = 1;
   for (uint32_t i = 0; i < 200 && !blackbox_device_sdcard.ready(); i++) {
-    time_test_advance_us(1000);
-    blackbox_device_sdcard.update();
+    TEST_ASSERT_NOT_EQUAL(portMAX_DELAY, wait);
+    time_test_advance_us(wait * 1000);
+    blackbox_device_sdcard.update(wait);
   }
   TEST_ASSERT_TRUE(blackbox_device_sdcard.ready());
 }
 
 void test_sdcard_device_samples_during_write() {
+  TickType_t wait = 1;
   for (const bool spi : {false, true}) {
     ring_buffer_clear(&blackbox_encode_buffer);
     blackbox_device_sdcard.init();
-    TEST_ASSERT_FALSE(blackbox_device_sdcard.update());
+    TEST_ASSERT_FALSE(blackbox_device_sdcard.update(wait));
     card_start(spi);
     card_device_wait_ready();
 
     blackbox_device_header.file_num = 1;
     blackbox_device_header.files[0] = {.start = 512};
     blackbox_device_sdcard.start();
-    TEST_ASSERT_FALSE(blackbox_device_sdcard.update());
+    TEST_ASSERT_FALSE(blackbox_device_sdcard.update(wait));
     card_device_wait_ready();
 
     uint8_t sample[32] = {};
@@ -366,7 +369,7 @@ void test_sdcard_device_samples_during_write() {
     card.stall_busy = true;
     for (uint32_t i = 0; i < 40; i++) {
       time_test_advance_us(125);
-      TEST_ASSERT_TRUE(blackbox_device_sdcard.update());
+      TEST_ASSERT_TRUE(blackbox_device_sdcard.update(wait));
     }
     TEST_ASSERT_EQUAL_UINT32(writes + 1, card.blocks_written);
     TEST_ASSERT_EQUAL_UINT32(0, ring_buffer_available(&blackbox_encode_buffer));
@@ -374,7 +377,7 @@ void test_sdcard_device_samples_during_write() {
     // Reproduce the longest observed card pause while continuing 1 kHz sampling.
     for (uint32_t i = 0; i < 183; i++) {
       time_test_advance_us(1000);
-      TEST_ASSERT_TRUE(blackbox_device_sdcard.update());
+      TEST_ASSERT_TRUE(blackbox_device_sdcard.update(wait));
       TEST_ASSERT_TRUE(blackbox_device_sdcard.write(sample, sizeof(sample)));
     }
     TEST_ASSERT_EQUAL_UINT32(183 * sizeof(sample), ring_buffer_available(&blackbox_encode_buffer));
@@ -389,17 +392,18 @@ void test_sdcard_device_samples_during_write() {
 
     // Finishing the flush must leave the device ready for another file.
     blackbox_device_sdcard.start();
-    TEST_ASSERT_FALSE(blackbox_device_sdcard.update());
+    TEST_ASSERT_FALSE(blackbox_device_sdcard.update(wait));
     card_device_wait_ready();
-    TEST_ASSERT_TRUE(blackbox_device_sdcard.update());
+    TEST_ASSERT_TRUE(blackbox_device_sdcard.update(wait));
+    TEST_ASSERT_EQUAL(portMAX_DELAY, wait);
 
     for (uint32_t i = 0; i < 16; i++)
       TEST_ASSERT_TRUE(blackbox_device_sdcard.write(sample, sizeof(sample)));
     card.fail_data = true;
     for (uint32_t i = 0; i < 40 && !card.aborted; i++)
-      blackbox_device_sdcard.update();
+      blackbox_device_sdcard.update(wait);
     TEST_ASSERT_TRUE(card.aborted);
-    TEST_ASSERT_FALSE(blackbox_device_sdcard.update());
+    TEST_ASSERT_FALSE(blackbox_device_sdcard.update(wait));
     ring_buffer_clear(&blackbox_encode_buffer);
   }
 }
