@@ -23,6 +23,7 @@ enum thread_id_t {
   THREAD_FLIGHT,
   THREAD_BLACKBOX,
   THREAD_USB,
+  THREAD_OSD,
   THREAD_MAX,
 };
 
@@ -47,8 +48,6 @@ typedef enum {
   TASK_BARO,
   TASK_NAV,
   TASK_UTIL,
-  TASK_GESTURES,
-  TASK_OSD,
   TASK_VTX,
   TASK_GPS,
 

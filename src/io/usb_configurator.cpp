@@ -23,7 +23,6 @@
 #define BUFFER_SIZE (4 * 1024)
 #define MAX_USB_MSP_FRAME_SIZE 1024
 
-
 void usb_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
 
   if (magic == MSP2_MAGIC) {
@@ -242,7 +241,7 @@ void usb_configurator() {
 void usb_configurator_thread(void *) {
   while (true) {
     {
-      mutex_guard_t guard(usb_configurator_mutex);
+      mutex_guard_t guard(profile_mutex);
       usb_configurator();
     }
     vTaskDelay(1);
