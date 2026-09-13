@@ -11,14 +11,24 @@
 #include "control/control.h"
 #include "driver/time.h"
 
+typedef enum {
+  TASK_MASK_DEFAULT = (0x1 << 0),
+  TASK_MASK_ON_GROUND = (0x1 << 1),
+  TASK_MASK_IN_AIR = (0x1 << 2),
+
+  TASK_MASK_ALWAYS = 0xFF,
+} task_mask_t;
+
 enum thread_id_t {
   THREAD_FLIGHT,
   THREAD_BLACKBOX,
+  THREAD_USB,
   THREAD_MAX,
 };
 
 struct thread_t {
   const char *name;
+  uint8_t mask;
   UBaseType_t priority;
   TaskFunction_t entry;
   StackType_t *stack;
@@ -27,8 +37,8 @@ struct thread_t {
   TaskHandle_t handle;
 };
 
-#define CREATE_THREAD(p_name, p_priority, p_entry, p_stack) \
-  {p_name, p_priority, p_entry, p_stack, sizeof(p_stack) / sizeof(p_stack[0]), {}, nullptr}
+#define CREATE_THREAD(p_name, p_mask, p_priority, p_entry, p_stack) \
+  {p_name, p_mask, p_priority, p_entry, p_stack, sizeof(p_stack) / sizeof(p_stack[0]), {}, nullptr}
 
 typedef enum {
   TASK_FLIGHT,
@@ -40,7 +50,6 @@ typedef enum {
   TASK_GESTURES,
   TASK_OSD,
   TASK_VTX,
-  TASK_USB,
   TASK_GPS,
 
   TASK_MAX
@@ -53,14 +62,6 @@ typedef enum {
   TASK_PRIORITY_MEDIUM,
   TASK_PRIORITY_LOW,
 } task_priority_t;
-
-typedef enum {
-  TASK_MASK_DEFAULT = (0x1 << 0),
-  TASK_MASK_ON_GROUND = (0x1 << 1),
-  TASK_MASK_IN_AIR = (0x1 << 2),
-
-  TASK_MASK_ALWAYS = 0xFF,
-} task_mask_t;
 
 typedef enum {
   TASK_FLAG_SKIP_STATS = (0x1 << 0),
@@ -128,6 +129,8 @@ extern task_t tasks[TASK_MAX];
 
 void flight_thread(void *);
 void thread_start(thread_id_t id);
+// Called by Flight between passes, with ground configuration ownership held.
+void threads_update();
 bool flight_timer_irq_handler();
 
 static inline float task_get_period_us(task_id_t id) {

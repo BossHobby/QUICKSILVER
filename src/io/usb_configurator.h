@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #include "core/project.h"
+#include "util/mutex.h"
 
 typedef enum {
   USB_MAGIC_REBOOT = 'R',
@@ -11,8 +12,11 @@ typedef enum {
   USB_MAGIC_QUIC = '#',
 } usb_magics;
 
+extern SemaphoreHandle_t usb_configurator_mutex;
+
 void usb_serial_passthrough(serial_ports_t port, uint32_t baudrate, uint8_t stop_bits, bool half_duplex);
 void usb_process_msp();
 void usb_process_quic();
 void usb_quic_logf(const char *fmt, ...);
 void usb_configurator();
+void usb_configurator_thread(void *);
