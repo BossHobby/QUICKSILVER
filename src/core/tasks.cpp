@@ -25,6 +25,13 @@
 #include "project.h"
 #include "rx/rx.h"
 
+static void flight_task() {
+  sixaxis_read();
+  imu_calc();
+  control();
+  rx_update();
+}
+
 void util_task() {
   // handle led commands
   led_update();
@@ -39,10 +46,7 @@ static void task_noop() {
 #endif
 
 FAST_RAM task_t tasks[TASK_MAX] = {
-    [TASK_GYRO] = CREATE_TASK("GYRO", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, sixaxis_read, 0),
-    [TASK_IMU] = CREATE_TASK("IMU", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, imu_calc, 0),
-    [TASK_PID] = CREATE_TASK("PID", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, control, 0),
-    [TASK_RX] = CREATE_TASK("RX", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, rx_update, 0),
+    [TASK_FLIGHT] = CREATE_TASK("FLIGHT", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, flight_task, 0),
     [TASK_VBAT] = CREATE_TASK("VBAT", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, vbat_calc, 1000),
     [TASK_BARO] = CREATE_TASK("BARO", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, baro_update, 10000),
 #ifdef VEHICLE_MULTI
