@@ -110,6 +110,7 @@ static packet_status_t rx_serial_process(rx_serial_protocol_t proto) {
 }
 
 static void serial_rx_init(rx_serial_protocol_t proto) {
+  mutex_guard_t configuration(profile_mutex);
   if (proto == RX_SERIAL_PROTOCOL_INVALID || profile.serial.rx == SERIAL_PORT_INVALID) {
     return;
   }
@@ -186,6 +187,9 @@ static void serial_rx_init(rx_serial_protocol_t proto) {
 }
 
 static void rx_serial_find_protocol() {
+  rx_serial_protocol_t saved_protocol;
+  {
+    mutex_guard_t configuration(profile_mutex);
 #ifdef RX_SBUS
     profile.receiver.bind.unified.protocol = RX_SERIAL_PROTOCOL_SBUS;
 #endif
@@ -201,11 +205,13 @@ static void rx_serial_find_protocol() {
 #ifdef RX_DSM
     profile.receiver.bind.unified.protocol = RX_SERIAL_PROTOCOL_DSM;
 #endif
+    saved_protocol = static_cast<rx_serial_protocol_t>(profile.receiver.bind.unified.protocol);
+  }
 
-  if (profile.receiver.bind.unified.protocol != RX_SERIAL_PROTOCOL_INVALID) {
-    state.rx_status = RX_STATUS_DETECTED + profile.receiver.bind.unified.protocol;
-    serial_rx_init(static_cast<rx_serial_protocol_t>(profile.receiver.bind.unified.protocol));
-    serial_rx_detected_protcol = static_cast<rx_serial_protocol_t>(profile.receiver.bind.unified.protocol);
+  if (saved_protocol != RX_SERIAL_PROTOCOL_INVALID) {
+    state.rx_status = RX_STATUS_DETECTED + saved_protocol;
+    serial_rx_init(saved_protocol);
+    serial_rx_detected_protcol = saved_protocol;
     return;
   }
 
@@ -242,6 +248,7 @@ static void rx_serial_find_protocol() {
     flags.rx_mode = RXMODE_BIND;
     bind_safety++;
   } else {
+    mutex_guard_t configuration(profile_mutex);
     flags.rx_mode = RXMODE_NORMAL;
     flags.rx_ready = 1;
     profile.receiver.bind.unified.protocol = protocol_to_check;

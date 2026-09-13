@@ -1,8 +1,17 @@
 #include <unity.h>
 
+#include <signal.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include "control/control.h"
 #include "core/profile.h"
+#include "core/tasks.h"
+#include "driver/adc.h"
+#include "io/vbat.h"
 #include "rx/rx.h"
+
+extern void simulator_rx_test_frame(const uint16_t *channels);
 
 void test_rx_transport_leaves_conditioning_to_flight() {
   const auto saved_state = state;
@@ -37,4 +46,92 @@ void test_rx_transport_leaves_conditioning_to_flight() {
 
   state = saved_state;
   profile.receiver.protocol = saved_protocol;
+}
+
+void test_rx_mailbox_coalesces_complete_frames() {
+  const auto saved_state = state;
+  const auto saved_flags = flags;
+  const auto saved_profile = profile;
+  profile.receiver.protocol = RX_PROTOCOL_INVALID;
+  flags = {};
+  rx_init();
+  uint16_t channels[RX_CHANNEL_MAX];
+  for (auto &channel : channels) channel = 1000;
+  simulator_rx_test_frame(channels);
+  rx_update();
+  for (auto &channel : channels) channel = 2000;
+  simulator_rx_test_frame(channels);
+  rx_update();
+  for (auto channel : state.rx_channels) TEST_ASSERT_EQUAL_UINT16(0, channel);
+
+  // A decoder may be building another frame when Flight preempts it.
+  rx_channels[0] = 3000;
+  rx_process();
+  for (auto channel : state.rx_channels) TEST_ASSERT_EQUAL_UINT16(2000, channel);
+  rx_process();
+  TEST_ASSERT_EQUAL_UINT16(2000, state.rx_channels[0]);
+
+  state = saved_state;
+  flags = saved_flags;
+  profile = saved_profile;
+}
+
+static void io_test_flight(void *) {
+  flags = {};
+  state = {};
+  profile_set_defaults();
+  profile.receiver.protocol = RX_PROTOCOL_INVALID;
+  profile.serial.gps = SERIAL_PORT_INVALID;
+  profile.voltage.lipo_cell_count = 1;
+  state.looptime_autodetect = 1000;
+  rx_init();
+  adc_init();
+  vbat_init();
+  profile_mutex_init();
+  if (xSemaphoreTake(profile_mutex, 0) != pdTRUE) _exit(1);
+  thread_start(THREAD_IO);
+
+  uint16_t channels[RX_CHANNEL_MAX];
+  for (auto &channel : channels) channel = 1000;
+  simulator_rx_test_frame(channels);
+  vTaskDelay(3);
+  // Receiving does not wait for configuration ownership; Flight still owns
+  // channel publication and conditioning.
+  if (state.rx_channels[0] != 0) _exit(2);
+  rx_process();
+  for (auto channel : state.rx_channels) if (channel != 1000) _exit(4);
+
+  flags.arm_state = 1;
+  threads_update();
+  for (auto &channel : channels) channel = 2000;
+  simulator_rx_test_frame(channels);
+  vTaskDelay(3);
+  rx_process();
+  for (auto channel : state.rx_channels) if (channel != 2000) _exit(5);
+  if (eTaskGetState(threads[THREAD_IO].handle) == eSuspended) _exit(6);
+  xSemaphoreGive(profile_mutex);
+  _exit(0);
+}
+
+void test_io_worker_publishes_rx_without_configuration_wait() {
+  const pid_t child = fork();
+  TEST_ASSERT_TRUE(child >= 0);
+  if (child == 0) {
+    threads[THREAD_FLIGHT].entry = io_test_flight;
+    thread_start(THREAD_FLIGHT);
+    vTaskStartScheduler();
+    _exit(7);
+  }
+  int status;
+  for (unsigned i = 0; i < 2000; i++) {
+    if (waitpid(child, &status, WNOHANG) == child) {
+      TEST_ASSERT_TRUE(WIFEXITED(status));
+      TEST_ASSERT_EQUAL_INT(0, WEXITSTATUS(status));
+      return;
+    }
+    usleep(1000);
+  }
+  kill(child, SIGKILL);
+  waitpid(child, &status, 0);
+  TEST_FAIL_MESSAGE("IO worker stalled");
 }

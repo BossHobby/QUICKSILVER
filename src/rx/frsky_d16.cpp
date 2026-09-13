@@ -138,11 +138,12 @@ static void frsky_d16_set_rc_data() {
 
   for (uint32_t channel = 0; channel < RX_CHANNEL_MAX; channel++) {
     const int32_t raw = constrain(channels[channel] + 64, 0, 2047);
-    state.rx_channels[channel] = (uint16_t)(((uint32_t)raw * 65535) / 2047);
+    rx_channels[channel] = (uint16_t)(((uint32_t)raw * 65535) / 2047);
   }
 
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel < RX_CHANNEL_MAX) {
-    rx_lqi_update_direct(((channels[(profile.receiver.aux[AUX_RSSI].channel)]) - 200) * 100.f / 1520.f);
+  const auto rssi_channel = profile.receiver.aux[AUX_RSSI].channel;
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && rssi_channel < RX_CHANNEL_MAX) {
+    rx_lqi_update_direct((channels[rssi_channel] - 200) * 100.f / 1520.f);
   }
 }
 

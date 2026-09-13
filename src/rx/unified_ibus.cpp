@@ -41,14 +41,15 @@ static packet_status_t ibus_handle_packet(uint8_t *packet) {
 
   for (uint32_t channel = 0; channel < 14; channel++) {
     const int32_t raw = constrain(channels[channel], 1000, 2000);
-    state.rx_channels[channel] = (uint16_t)(((uint32_t)(raw - 1000) * 65535) / (2000 - 1000));
+    rx_channels[channel] = (uint16_t)(((uint32_t)(raw - 1000) * 65535) / (2000 - 1000));
   }
   for (uint32_t channel = 14; channel < RX_CHANNEL_MAX; channel++) {
-    state.rx_channels[channel] = 0;
+    rx_channels[channel] = 0;
   }
 
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel < 14) {
-    rx_lqi_update_direct(0.1f * (channels[(profile.receiver.aux[AUX_RSSI].channel)] - 1000));
+  const auto rssi_channel = profile.receiver.aux[AUX_RSSI].channel;
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && rssi_channel < 14) {
+    rx_lqi_update_direct(0.1f * (channels[rssi_channel] - 1000));
   }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
     rx_lqi_update_direct(0); // no internal rssi data
