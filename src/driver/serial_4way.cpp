@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "core/debug.h"
@@ -392,8 +393,13 @@ serial_esc4way_ack_t serial_4way_send(uint8_t cmd, uint16_t addr, const uint8_t 
 // Return
 // ESC CMD PARAM_LEN [PARAM (if len > 0)] + ACK (uint8_t OK or ERR) + CRC16_Hi CRC16_Lo
 void serial_4way_process() {
-  uint8_t input_buffer[256];
-  uint8_t output_buffer[256];
+  uint8_t *buffer = (uint8_t *)malloc(256 + 256 + 512);
+  if (buffer == nullptr) {
+    serial_4way_release();
+    return;
+  }
+  uint8_t *input_buffer = buffer;
+  uint8_t *output_buffer = buffer + 256;
   uint8_t output_size = 0;
 
   uint16_t crc_in = 0;
@@ -439,7 +445,7 @@ void serial_4way_process() {
     crc_out = 0;
 
     {
-      uint8_t out_buf[512];
+      uint8_t *out_buf = buffer + 256 + 256;
       uint8_t *out_buf_ptr = out_buf;
 
       write_byte_crc(&crc_out, ESC4WAY_REMOTE_ESCAPE);
@@ -463,6 +469,7 @@ void serial_4way_process() {
     RX_LED_OFF;
 
     if (cmd == ESC4WAY_INTERFACE_EXIT) {
+      free(buffer);
       return;
     }
   };

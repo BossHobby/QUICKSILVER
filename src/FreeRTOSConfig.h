@@ -21,6 +21,7 @@
 #define INCLUDE_xTaskGetSchedulerState 1
 #define INCLUDE_vTaskDelay 1
 #define INCLUDE_vTaskSuspend 1
+#define INCLUDE_eTaskGetState 1
 #define configUSE_TIMERS 0
 #define configCHECK_FOR_STACK_OVERFLOW 2
 #define configUSE_IDLE_HOOK 0

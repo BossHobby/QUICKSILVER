@@ -5,7 +5,7 @@ QUICKSILVER is flight-controller firmware for STM32 F4/F7/G4/H7 and AT32 F435, w
 ## Approach
 
 - Trace callers, initialization order, task priorities and state writers before editing. Establish which conditions are reachable; do not add guards, startup handshakes or tests for hypothetical states the application cannot enter.
-- Keep changes focused. Address adjacent issues separately unless they block the requested change.
+- Keep changes focused. Moving USB into a thread does not authorize changing serial reads, simulator polling, protocol parsing or fault handling. Address adjacent issues separately unless they block the requested change.
 - Follow existing subsystem structure before inventing abstractions. Avoid trivial wrappers, redundant state, speculative counters and APIs with empty implementations added just to hide a conditional.
 - Comments should explain actual ownership, timing and invariants. Do not justify code with a scenario contradicted by startup or arming rules.
 - Use `rg` for searches and `apply_patch` for edits, not Python or shell replacement scripts merely to modify source text.
@@ -15,10 +15,9 @@ QUICKSILVER is flight-controller firmware for STM32 F4/F7/G4/H7 and AT32 F435, w
 - Use 2-space indentation, same-line opening braces, `snake_case` functions/variables, `UPPER_CASE` constants/macros, `const` where possible and fixed-width hardware types.
 - Simple single-statement guards may omit braces; use braces when they clarify branches. Prefer named intermediate values to awkward line wrapping.
 - Follow neighboring include conventions: standard libraries before project modules, with the owning header first where established.
-- Order functions from supporting operations toward orchestration. Keep helpers near and before their callers, initialization before the update/service function, and any thread entry loop last.
+- Order functions from supporting operations toward orchestration. Keep helpers near and before their callers, initialization before the update/service function, and the thread entry loop last. USB order: transport/protocol helpers, `usb_configurator()`, `usb_configurator_thread()`.
 - Do not group new public functions or thread entries at the top merely because they are public. Avoid forward declarations introduced only to invert the established order.
 - Headers generally contain includes, constants, types, extern variables, then functions. Keep type-dependent macros beside their types and implementation-only constants in the source file.
-- In source files, put file-scope state declarations (including synchronization storage and handles) with the other state near the top, after includes/constants/types and before functions. Do not insert them between function definitions beside the function that initializes them.
 - Keep internals private. Do not change production linkage with constructs such as `#ifndef PIO_UNIT_TESTING static #endif` to expose them to tests.
 - Use existing driver boundaries and `failloop.h` for critical errors. Respect `FAST_RAM`/`DMA_RAM`; check stack, heap and DMA accessibility when adding threads or buffers.
 
@@ -27,6 +26,7 @@ QUICKSILVER is flight-controller firmware for STM32 F4/F7/G4/H7 and AT32 F435, w
 - Use `subsystem: short imperative summary`. Check recent history for component terminology rather than generic Conventional Commit types.
 - Lowercase subsystem and initial imperative verb; preserve proper names/acronyms and omit the trailing period.
 - Prefer a subject-only commit. Add a brief body only for a reason or non-obvious constraint, not routine summaries or test logs.
+- Example: `blackbox: move storage into a dedicated FreeRTOS thread`.
 
 ## Build and test
 
@@ -39,21 +39,35 @@ Environment names include the vehicle prefix. Current `platformio.ini` and gener
 - Simulators: `multi-simulator`, `rover-simulator`, `wing-simulator`.
 - Test meaningful behavior and reachable transitions, not implementation details. Run checks appropriate to the change; distinguish build/test evidence from hardware validation. Report and investigate intermittent failures rather than silently rerunning until green.
 
-## Scheduling and timing
+## Startup and scheduling
 
-- This branch uses the cooperative scheduler in `src/core/scheduler.cpp`; task definitions, priorities, masks and periods live in `src/core/tasks.cpp`. `src/core/main.cpp` initializes hardware before entering the scheduler.
-- Preserve the ordered `TASK_FLIGHT` path: `sixaxis_read()` → `imu_calc()` → `control()` → `rx_update()`. It runs every loop at REALTIME priority. Lower priorities run only when their mask, period and remaining budget allow.
-- Battery and utility tasks have 1 ms periods, barometer and multirotor navigation 10 ms, OSD 1 ms and GPS 5 ms. Registration omits GPS/navigation without a configured GPS port and barometer without detection. Check actual producer/consumer cadence before changing scheduling.
-- Ground means neither `flags.arm_state` nor `flags.in_air`. USB, VTX and gestures are ground-only. USB activity blocks normal arming; an arm request during USB activity latches the arm-switch disable. Motor testing is a separate output override.
-- Keep flight-time work bounded and non-blocking: limit bytes/items per call, use incremental state machines, and avoid dynamic allocation. Ground configuration may block; preserve `task_reset_runtime()` around maintenance that must be excluded from timing statistics.
-- Reject exhausted budgets before unsigned subtraction. Budget skips are not runtime samples and do not reduce `runtime_worst`. Sustained eligible starvation or overload requests a slower loop rate; ground-only work counts for admission but is excluded from flight-rate decisions.
-- Runtime fields use CPU cycles internally; debug serialization converts them to microseconds. `percentile_95` is a smoothed peak estimate, not an exact percentile. Consult source for thresholds and fallback behavior instead of copying formulas into guidance.
-- If introducing concurrency, identify each resource's owner and publication boundary, audit shared drivers/buffers as well as state, and keep synchronization with its owner. Arming gates and `volatile` do not provide synchronization. Keep interrupt-masked sections short and never wait while masking a required completion interrupt.
-- FreeRTOS threads are declared in the `threads` table in `src/core/tasks.cpp` with `CREATE_THREAD`; keep thread entry functions private to their owning source files where possible. `main()` starts Flight with `thread_start(THREAD_FLIGHT)` and then starts the scheduler after the essential GPIO, interrupt, and timebase setup. The Flight thread in `main.cpp` initializes peripherals with the scheduler running, then starts its pacing timer. Subsystem initialization creates its own worker with `thread_start()` after preparing its device and synchronization objects. Thread management belongs in `tasks.cpp`; Flight startup and timer notification handling belong in `main.cpp`; `scheduler.cpp` owns cooperative scheduling and loop accounting. The cooperative `tasks` table in `tasks.cpp` describes work performed within Flight. Keep simulator timer behavior in `src/driver/mcu/native/timer.cpp`; the scheduler uses the same timer API and notification wait on all platforms.
-- Data exchanged between tasks during flight must use the mailbox/snapshot pattern. Keep the flight path bounded and non-blocking; it must not wait for a peripheral worker or a configuration mutex.
-- Temporary configuration and maintenance access while disarmed may block and use mutexes. Examples include listing, downloading, and erasing Blackbox logs. Enforce the ground-only condition at the entry point.
-- Acquire a mutex once around the complete configuration operation and once around the worker's corresponding service pass. Keep lower-level device helpers lock-free under that ownership; do not add nested or recursive locking throughout the call chain.
-- Keep synchronization machinery private to its owner. Use the existing writer FIFO for encoded data and a mailbox for flight samples; do not introduce a request/response protocol for otherwise synchronous ground-only access.
+- `main.cpp` owns Flight startup, timer notifications and loop orchestration. `main()` initializes GPIO, interrupts and time, creates Flight, then starts FreeRTOS. Flight initializes peripherals with the scheduler running, then starts its pacing timer.
+- `tasks.cpp` owns static thread definitions/stacks and cooperative tasks. Subsystem initialization prepares devices and synchronization objects, then calls `thread_start()`. Current threads are created during boot, before arming; `thread_start()` only creates them.
+- `scheduler.cpp` owns cooperative scheduling and loop accounting. Native timer behavior stays in `src/driver/mcu/native/timer.cpp`; Flight uses the same timer API and notification wait on all platforms.
+- Flight applies thread context masks after control resolves arming. Ground means neither `flags.arm_state` nor `flags.in_air`. Excluded threads remain suspended despite delays or notifications. Flight and Blackbox run always; USB is ground-only.
+- Cooperative REALTIME work runs every pass; other work is admitted by priority, period, context and available budget. Read the scheduler implementation rather than copying formulas into documentation.
+- Keep flight work bounded and non-blocking: no peripheral/configuration mutex waits, unbounded service loops or dynamic allocation. Worker entry loops may run indefinitely but must wait or delay between passes. Ground maintenance may block.
+
+## Continuing the FreeRTOS migration
+
+- Move one subsystem at a time. Identify the bounded Flight-side capture/publication step, worker-owned state, configuration callers and shared peripherals before moving its service loop. Remove its cooperative entry when the worker takes ownership; avoid servicing it from both schedulers.
+- Read `src/FreeRTOSConfig.h` and `script/freertos.py` before changing kernel assumptions. Flight has priority 2, workers priority 1, with time slicing disabled. A ready worker can starve its peers; use an actual wait/delay between passes, and choose notification coalescing, polling or queued delivery deliberately.
+- Preserve the early scheduler start. Creating FreeRTOS synchronization objects before starting it previously left BASEPRI masking DMA interrupts, stalling gyro calibration on G4. Peripheral initialization therefore runs inside Flight after FreeRTOS starts.
+- Audit preemption boundaries in shared drivers, not just subsystem variables. In `spi_txn_continue_port()`, claiming a transaction through launching DMA is atomic so Flight cannot preempt the worker and wait for an operation it has not started. Keep critical sections short; never wait for hardware while masking its completion interrupt. ISR kernel calls must use the `FromISR` API and obey the configured interrupt-priority ceiling.
+- Audit shared parser/encoding buffers, driver pools and libc allocation when adding another concurrent caller. The USB/Flight configuration mutex does not protect unrelated workers, and `configUSE_NEWLIB_REENTRANT` is disabled. Do not assume `volatile`, separate task stacks or heap allocation provide synchronization.
+- Size stacks from compiler `.su` reports (including LTO reports beside the ELF), complete call paths and saved context, then measure on hardware. Flight currently has 4 KiB in fast RAM; Blackbox and USB have 2 KiB each. Keep large maintenance buffers on the heap with explicit lifetimes. Native FreeRTOS uses pthread stacks, so passing native tests does not validate Cortex-M stack reservations; account for the separate linker-reserved interrupt stack too.
+- USB still calls `task_reset_runtime()` because a long command holds the configuration mutex and delays Flight. Removing that call without changing Flight's accounting can trigger a false 20 ms loop-time fault. Moving this accounting into Flight is follow-up work, not accomplished by moving USB into a thread.
+- Use `test/test_common/test_scheduler.cpp` and `test_blackbox.cpp` as examples for real FreeRTOS tests of preemption, pending work, mask transitions and storage stalls. Hardware follow-up remains USB connect/save/download, arm/disarm transitions, and stack high-water measurements under the heavy paths. Builds and native tests alone are not evidence that those hardware checks passed.
+
+## Configuration, arming and synchronization
+
+- `control_update_arming()` blocks normal arming while USB is active. An arm request during USB activity latches the arm-switch disable; unplugging does not permit arming without lowering the switch. New arming also needs cleared latches, valid prearm, safe throttle and no failsafe. Motor testing is a separate output override.
+- Distinguish the arming gate from synchronization. USB commands modify live settings/filters, so disarmed Flight and USB serialize complete passes with `usb_configurator_mutex`. USB can disconnect before a command finishes. Armed Flight never takes this mutex.
+- Apply thread masks before releasing ground configuration ownership; do not suspend a worker holding a mutex another task needs. Prefer scoped ownership to manual take/give blocks.
+- During flight, exchange data through mailboxes/snapshots. Blackbox captures Flight samples into a mailbox, then encodes/drains its writer FIFO in its worker. Do not introduce request/response machinery for synchronous ground-only operations.
+- Enforce ground-only maintenance at command entry points. Acquire the storage mutex once per complete operation and once per worker service pass; lower-level device helpers stay lock-free under that ownership. Avoid nested/recursive locking.
+- Keep synchronization machinery with its owner. Share a handle only when another owner must acquire it, as Flight does for USB configuration.
+- Preserve `usb_configurator()` for the existing fault loop, which runs with the scheduler suspended. A fault-mode redesign that keeps only USB alive is separate future work.
 
 ## Shared runtime state
 
@@ -71,6 +85,7 @@ Environment names include the vehicle prefix. Current `platformio.ini` and gener
 - Do not add on-device profile migrations. Changed persisted layouts are reset or rewritten off-device.
 - Vehicle selection is compile-time: `VEHICLE_MULTI`, `VEHICLE_ROVER` or `VEHICLE_WING`. Target YAML `vehicles` lists capabilities, not selection; absent capabilities default to multirotor. `target_init()` rejects incompatible vehicles.
 - Target field changes must align across **BossHobby/Targets** schema (`src/schema/target.json`), types (`src/types.ts`) and generated keys; firmware `target_t`/`TARGET_MEMBERS` in `src/core/target.h`; and **BossHobby/Configurator** types/UI.
+- Build scripts consume generated Targets YAML/index files and inject CBOR into `.config_flash`; firmware decodes it into `target_t`. Inspect the scripts for current generation/injection details.
 - Targets `src/index.ts` generates `output/` YAML and indexes; CI publishes the generated branches. Firmware `script/pre_script.py` fetches these into `targets/`; `TARGETS_BRANCH` overrides branch selection. Use `SKIP_TARGETS_CHECKOUT=1` when intentionally building against an existing local target checkout.
 - `targets/_index.json` indexes boards and `targets/_index.ini` supplies board environments. `script/target_inject.py` copies the vehicle/MCU ELF for board injection and writes target CBOR into `.config_flash`; firmware decodes it into `target_t`. `TARGET_HASH` is the YAML's MD5. Check `script/post_script.py` for build/injection wiring.
 - Outputs are routed through `profile.mixer`, `profile.outputs` and `target.outputs`; trace `src/control/output.cpp` rather than assuming fixed motor/servo slots. PWM uses `src/driver/servo.cpp` and MCU implementations, with `TIMER_USE_SERVO` allocation. Normalized values [-1, +1] map to 1000–2000 µs pulses; `profile.servo.pwm_rate_hz` must be 50–333 Hz.
