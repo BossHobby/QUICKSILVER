@@ -10,6 +10,7 @@
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/scheduler.h"
+#include "core/tasks.h"
 #include "driver/reset.h"
 #include "driver/serial.h"
 #include "driver/usb.h"
@@ -22,6 +23,7 @@
 #define BUFFER_SIZE (4 * 1024)
 #define MAX_USB_MSP_FRAME_SIZE 1024
 
+
 void usb_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
 
   if (magic == MSP2_MAGIC) {
@@ -30,7 +32,10 @@ void usb_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint
     }
     const uint16_t size = len + MSP2_HEADER_LEN + 1;
 
-    uint8_t frame[MAX_USB_MSP_FRAME_SIZE];
+    uint8_t *frame = (uint8_t *)malloc(size);
+    if (frame == nullptr) {
+      return;
+    }
     frame[0] = '$';
     frame[1] = MSP2_MAGIC;
     frame[2] = '>';
@@ -44,13 +49,17 @@ void usb_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint
     frame[len + MSP2_HEADER_LEN] = crc8_dvb_s2_data(0, frame + 3, len + 5);
 
     usb_serial_write(frame, size);
+    free(frame);
   } else {
     if (len > UINT8_MAX) {
       return;
     }
     const uint16_t size = len + MSP_HEADER_LEN + 1;
 
-    uint8_t frame[MAX_USB_MSP_FRAME_SIZE];
+    uint8_t *frame = (uint8_t *)malloc(size);
+    if (frame == nullptr) {
+      return;
+    }
     frame[0] = '$';
     frame[1] = MSP1_MAGIC;
     frame[2] = '>';
@@ -66,6 +75,7 @@ void usb_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint
     frame[len + MSP_HEADER_LEN] = chksum;
 
     usb_serial_write(frame, size);
+    free(frame);
   }
 }
 
@@ -93,17 +103,21 @@ void usb_quic_logf(const char *fmt, ...) {
 
 void usb_serial_passthrough(serial_ports_t port, uint32_t baudrate, uint8_t stop_bits, bool half_duplex) {
 #ifdef USE_SERIAL
-  uint8_t tx_data[512];
+  // Passthrough runs until reset; the serial driver retains these buffers.
+  uint8_t *buffer = (uint8_t *)malloc(3 * 512);
+  if (buffer == nullptr) {
+    return;
+  }
+
   ring_buffer_t tx_buffer = {
-      .buffer = tx_data,
+      .buffer = buffer,
       .head = 0,
       .tail = 0,
       .size = 512,
   };
 
-  uint8_t rx_data[512];
   ring_buffer_t rx_buffer = {
-      .buffer = rx_data,
+      .buffer = buffer + 512,
       .head = 0,
       .tail = 0,
       .size = 512,
@@ -127,7 +141,7 @@ void usb_serial_passthrough(serial_ports_t port, uint32_t baudrate, uint8_t stop
 
   serial_init(&serial, config);
 
-  uint8_t data[512];
+  uint8_t *data = buffer + 2 * 512;
   while (1) {
     while (1) {
       const uint32_t size = usb_serial_read(data, 512);
@@ -219,8 +233,18 @@ void usb_configurator() {
   }
   }
 
-  // this will block and handle all usb traffic while active
+  // Configuration work is excluded from Flight loop-rate decisions.
   task_reset_runtime();
   free(buffer);
 }
 #pragma GCC diagnostic pop
+
+void usb_configurator_thread(void *) {
+  while (true) {
+    {
+      mutex_guard_t guard(usb_configurator_mutex);
+      usb_configurator();
+    }
+    vTaskDelay(1);
+  }
+}

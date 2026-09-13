@@ -285,14 +285,20 @@ void control_update_arming() {
   }
 
   if (flags.usb_active) {
+    // Configurator access excludes normal arming; motor testing has its own
+    // output override and does not bypass this arming gate.
     flags.arming_disabled_flags |= ARMING_DISABLED_USB;
   }
 
+  // An arm request during USB configuration or a disarmed failsafe must be
+  // lowered before another attempt. Unplugging USB must not arm the vehicle.
   if (flags.arm_request && ((failsafe_active && !flags.arm_state) || flags.usb_active)) {
     arming_disabled_latch |= ARMING_DISABLED_ARM_SWITCH;
   }
 
   if (flags.arm_request && !flags.usb_active && (flags.arm_state || !failsafe_active)) {
+    // A new arm needs cleared latches, valid prearm, safe throttle and no
+    // failsafe. An already armed vehicle follows the failsafe output policy.
     bool can_arm = !failsafe_active && !checked_prearm && arming_disabled_latch == ARMING_DISABLED_NONE;
 
     const bool prearm_allows_arm =

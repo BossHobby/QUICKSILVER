@@ -12,6 +12,7 @@ extern void test_gestures_menu_taps_and_hold_repeat();
 extern void test_gestures_reset_disabled_mode_changes_and_ambiguous_input();
 extern void test_gestures_threshold_crossing_and_long_shortcut_press();
 extern void test_scheduler_native_timer_period_and_coalescing();
+extern void test_threads_suspend_ground_workers_with_pending_work();
 extern void test_scheduler_omits_unconfigured_sensor_tasks();
 extern void test_imu_without_gps_publishes_tilt_without_heading_estimator();
 extern void test_baro_altitude_reference_without_gps();
@@ -242,6 +243,7 @@ int main(int argc, char **argv) {
   UNITY_BEGIN();
   RUN_TEST(test_rx_transport_leaves_conditioning_to_flight);
   RUN_TEST(test_scheduler_native_timer_period_and_coalescing);
+  RUN_TEST(test_threads_suspend_ground_workers_with_pending_work);
   RUN_TEST(test_scheduler_omits_unconfigured_sensor_tasks);
   RUN_TEST(test_imu_without_gps_publishes_tilt_without_heading_estimator);
   RUN_TEST(test_osd_looptime_warning_is_temporary_until_2khz);
