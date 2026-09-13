@@ -9,6 +9,7 @@
 #include "core/flash.h"
 #include "core/scheduler.h"
 #include "core/target.h"
+#include "driver/interrupt.h"
 #include "driver/motor.h"
 #include "driver/reset.h"
 #include "driver/serial.h"
@@ -115,13 +116,10 @@ static void msp_send_error(msp_t *msp, msp_magic_t magic, uint16_t cmd) {
 
 static void msp_check_vtx_detected(msp_t *msp) {
 #ifdef USE_VTX
-  if (msp_vtx_detected || msp->device != MSP_DEVICE_VTX)
-    return;
-
-  if (vtx_actual.power_table.levels == 0)
-    return;
-
-  msp_vtx_detected = true;
+  ATOMIC_BLOCK_ALL {
+    if (msp->device == MSP_DEVICE_VTX && vtx_actual.power_table.levels != 0)
+      msp_vtx_detected = true;
+  }
 #endif
 }
 
@@ -353,6 +351,28 @@ static void msp_send_passthrough_result(msp_t *msp, msp_magic_t magic, uint16_t 
 }
 
 static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *payload, uint16_t size) {
+  // RX and DisplayPort also reach this dispatcher while armed. Maintenance
+  // requires ground configuration ownership; OSD keeps rendering in flight.
+  if (flags.arm_state || flags.in_air) {
+    switch (cmd) {
+    case MSP_SET_MOTOR:
+    case MSP_SET_PASSTHROUGH:
+    case MSP_SET_VTXTABLE_BAND:
+    case MSP_REBOOT:
+      msp_send_error(msp, magic, cmd);
+      return;
+    case MSP_SET_VTX_CONFIG:
+    case MSP_SET_VTXTABLE_POWERLEVEL:
+    case MSP_EEPROM_WRITE:
+      if (msp->device != MSP_DEVICE_VTX) {
+        msp_send_error(msp, magic, cmd);
+        return;
+      }
+      break;
+    default:
+      break;
+    }
+  }
   switch (cmd) {
   case MSP_API_VERSION: {
     uint8_t data[3] = {
@@ -852,56 +872,30 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       target.power_table = &profile.vtx.power_table;
     }
 
-    uint16_t remaining = size;
-
-    uint16_t freq = (payload[1] << 8) | payload[0];
-    remaining -= 2;
-    if (freq < unsigned(VTX_BAND_MAX) * unsigned(VTX_CHANNEL_MAX)) {
-      *target.band = static_cast<vtx_band_t>(freq / VTX_CHANNEL_MAX);
-      *target.channel = static_cast<vtx_channel_t>(freq % VTX_CHANNEL_MAX);
-    } else {
-      int8_t channel_index = vtx_find_frequency_index(freq);
+    const uint16_t freq = (payload[1] << 8) | payload[0];
+    const int32_t channel_index = freq < unsigned(VTX_BAND_MAX) * unsigned(VTX_CHANNEL_MAX) ? freq : vtx_find_frequency_index(freq);
+    // RX and DisplayPort may report VTX status concurrently. Publish only
+    // fields present in this packet, with no transport call inside the block.
+    ATOMIC_BLOCK_ALL {
       *target.band = static_cast<vtx_band_t>(channel_index / VTX_CHANNEL_MAX);
       *target.channel = static_cast<vtx_channel_t>(channel_index % VTX_CHANNEL_MAX);
-    }
-
-    if (remaining >= 2) {
-      *target.power_level = static_cast<vtx_power_level_t>(MAX(payload[2], 1) - 1);
-      *target.pit_mode = static_cast<vtx_pit_mode_t>(payload[3]);
-      remaining -= 2;
-    }
-
-    if (remaining) {
-      // payload[4] lowpower disarm, unused
-      remaining -= 1;
-    }
-
-    if (remaining >= 2) {
-      // payload[5], payload[6] pit mode freq, unused
-      remaining -= 2;
-    }
-
-    if (remaining >= 4) {
-      *target.band = static_cast<vtx_band_t>(payload[7] - 1);
-      *target.channel = static_cast<vtx_channel_t>(payload[8] - 1);
-      //  payload[9], payload[10]  freq, unused
-      remaining -= 4;
-    }
-
-    if (remaining >= 4) {
-      // payload[11], band count, unused
-      // payload[12], channel count, unused
-      const uint8_t power_levels = payload[13];
-
-      target.power_table->levels = power_levels;
-      if (payload[14]) {
-        for (uint32_t i = 0; i < VTX_POWER_LEVEL_MAX; i++) {
-          target.power_table->values[i] = 0;
-          memset(target.power_table->labels[i], 0, VTX_POWER_LABEL_LEN);
+      if (size >= 4) {
+        *target.power_level = static_cast<vtx_power_level_t>(MAX(payload[2], 1) - 1);
+        *target.pit_mode = static_cast<vtx_pit_mode_t>(payload[3]);
+      }
+      if (size >= 11) {
+        *target.band = static_cast<vtx_band_t>(payload[7] - 1);
+        *target.channel = static_cast<vtx_channel_t>(payload[8] - 1);
+      }
+      if (size >= 15) {
+        target.power_table->levels = payload[13];
+        if (payload[14]) {
+          for (uint32_t i = 0; i < VTX_POWER_LEVEL_MAX; i++) {
+            target.power_table->values[i] = 0;
+            memset(target.power_table->labels[i], 0, VTX_POWER_LABEL_LEN);
+          }
         }
       }
-
-      remaining -= 4;
     }
 
     msp_check_vtx_detected(msp);
@@ -966,20 +960,24 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   }
 
   case MSP_VTXTABLE_POWERLEVEL: {
+    vtx_power_table_t power_table;
+    ATOMIC_BLOCK_ALL {
+      power_table = vtx_actual.power_table;
+    }
     const uint8_t level = payload[0];
-    if (level <= 0 || level > vtx_actual.power_table.levels) {
+    if (level <= 0 || level > power_table.levels) {
       msp_send_error(msp, magic, cmd);
       break;
     }
 
-    const uint16_t power = vtx_actual.power_table.values[level - 1];
+    const uint16_t power = power_table.values[level - 1];
 
     uint8_t buf[4 + MSP_VTX_POWER_LABEL_LEN];
     buf[0] = level;
     buf[1] = power & 0xFF;
     buf[2] = power >> 8;
     buf[3] = MSP_VTX_POWER_LABEL_LEN;
-    memcpy(buf + 4, vtx_actual.power_table.labels[level - 1], MSP_VTX_POWER_LABEL_LEN);
+    memcpy(buf + 4, power_table.labels[level - 1], MSP_VTX_POWER_LABEL_LEN);
 
     msp_send_reply(msp, magic, cmd, buf, sizeof(buf));
     break;
@@ -993,13 +991,14 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     }
 
     if (msp->device == MSP_DEVICE_VTX) {
-      vtx_actual.power_table.values[level - 1] = payload[2] << 8 | payload[1];
-
-      const uint8_t label_len = payload[3];
-      for (uint8_t i = 0; i < VTX_POWER_LABEL_LEN; i++) {
-        vtx_actual.power_table.labels[level - 1][i] = i >= label_len ? 0 : payload[4 + i];
+      ATOMIC_BLOCK_ALL {
+        vtx_actual.power_table.values[level - 1] = payload[2] << 8 | payload[1];
+        const uint8_t label_len = payload[3];
+        for (uint8_t i = 0; i < VTX_POWER_LABEL_LEN; i++) {
+          vtx_actual.power_table.labels[level - 1][i] = i >= label_len ? 0 : payload[4 + i];
+        }
+        vtx_actual.power_table.levels = MAX(level, vtx_actual.power_table.levels);
       }
-      vtx_actual.power_table.levels = MAX(level, vtx_actual.power_table.levels);
 
       msp_send_reply(msp, magic, cmd, NULL, 0);
       break;

@@ -3,7 +3,6 @@
 #include <math.h>
 #include <stdint.h>
 
-#include "control/gestures.h"
 #include "control/imu.h"
 #include "control/pid.h"
 #include "control/sixaxis.h"

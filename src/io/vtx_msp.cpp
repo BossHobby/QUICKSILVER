@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "core/profile.h"
+#include "driver/interrupt.h"
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "driver/vtx.h"
@@ -72,6 +73,10 @@ typedef enum {
 extern void msp_send_reply(msp_t *msp, msp_magic_t magic, uint16_t cmd, const uint8_t *data, uint32_t len);
 
 void msp_vtx_send_config_reply(msp_t *msp, msp_magic_t magic) {
+  vtx_status_t vtx_actual;
+  ATOMIC_BLOCK_ALL {
+    vtx_actual = ::vtx_actual;
+  }
   const uint16_t freq = vtx_frequency_from_channel(vtx_actual.band, vtx_actual.channel);
   msp_vtx_config_t config = {
       .vtx_type = VTXDEV_MSP,
