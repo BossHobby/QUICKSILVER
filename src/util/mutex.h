@@ -8,12 +8,16 @@ class mutex_guard_t {
   SemaphoreHandle_t mutex;
 
 public:
-  explicit mutex_guard_t(SemaphoreHandle_t mutex) : mutex(mutex) {
+  explicit mutex_guard_t(SemaphoreHandle_t mutex, bool enabled = true) : mutex(enabled ? mutex : nullptr) {
+    if (!enabled)
+      return;
     const BaseType_t acquired = xSemaphoreTake(mutex, portMAX_DELAY);
     configASSERT(acquired == pdTRUE);
   }
 
   ~mutex_guard_t() {
+    if (mutex == nullptr)
+      return;
     const BaseType_t released = xSemaphoreGive(mutex);
     configASSERT(released == pdTRUE);
   }

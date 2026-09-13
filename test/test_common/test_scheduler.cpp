@@ -10,6 +10,7 @@
 #include "core/tasks.h"
 #include "driver/time.h"
 #include "driver/timer.h"
+#include "util/mutex.h"
 
 extern bool scheduler_test_task_registered(task_id_t id);
 extern bool scheduler_test_should_run(uint32_t start_cycles, uint8_t task_mask, task_t *task);
@@ -310,4 +311,84 @@ void test_scheduler_native_timer_period_and_coalescing() {
   kill(child, SIGKILL);
   waitpid(child, &status, 0);
   TEST_FAIL_MESSAGE("Native timer or thread startup stalled");
+}
+
+static StaticSemaphore_t context_mutex_storage;
+static SemaphoreHandle_t context_mutex;
+static volatile unsigned context_worker_passes;
+
+static void context_test_worker(void *) {
+  while (true) {
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    mutex_guard_t guard(context_mutex);
+    context_worker_passes++;
+  }
+}
+
+static void context_test_flight(void *) {
+  context_mutex = xSemaphoreCreateMutexStatic(&context_mutex_storage);
+  flags.arm_state = 0;
+  flags.in_air = 0;
+  thread_start(THREAD_USB);
+  xTaskNotifyGive(threads[THREAD_USB].handle);
+  vTaskDelay(2);
+  if (context_worker_passes != 1) _exit(1);
+
+  // Let the worker block on configuration ownership, then arm while holding it.
+  if (xSemaphoreTake(context_mutex, 0) != pdTRUE) _exit(3);
+  {
+    mutex_guard_t disabled(context_mutex, false);
+  }
+  if (xSemaphoreTake(context_mutex, 0) != pdFALSE) _exit(2);
+  xTaskNotifyGive(threads[THREAD_USB].handle);
+  vTaskDelay(2);
+  flags.arm_state = 1;
+  threads_update();
+  xSemaphoreGive(context_mutex);
+  xTaskNotifyGive(threads[THREAD_USB].handle);
+  vTaskDelay(2);
+  if (context_worker_passes != 1) _exit(4);
+  if (xSemaphoreTake(context_mutex, 0) != pdTRUE) _exit(5);
+  xSemaphoreGive(context_mutex);
+
+  // Reapplying the same mask must leave the worker suspended, even with a
+  // pending notification. Disarming in the air still excludes ground work.
+  threads_update();
+  flags.arm_state = 0;
+  flags.in_air = 1;
+  threads_update();
+  vTaskDelay(2);
+  if (context_worker_passes != 1) _exit(6);
+
+  flags.in_air = 0;
+  threads_update();
+  vTaskDelay(2);
+  if (context_worker_passes < 2) _exit(7);
+  if (xSemaphoreTake(context_mutex, 0) != pdTRUE) _exit(8);
+  xSemaphoreGive(context_mutex);
+  _exit(0);
+}
+
+void test_threads_suspend_ground_workers_with_pending_work() {
+  const pid_t child = fork();
+  TEST_ASSERT_TRUE(child >= 0);
+  if (child == 0) {
+    threads[THREAD_FLIGHT].entry = context_test_flight;
+    threads[THREAD_USB].entry = context_test_worker;
+    thread_start(THREAD_FLIGHT);
+    vTaskStartScheduler();
+    _exit(9);
+  }
+  int status;
+  for (unsigned i = 0; i < 2000; i++) {
+    if (waitpid(child, &status, WNOHANG) == child) {
+      TEST_ASSERT_TRUE(WIFEXITED(status));
+      TEST_ASSERT_EQUAL_INT(0, WEXITSTATUS(status));
+      return;
+    }
+    usleep(1000);
+  }
+  kill(child, SIGKILL);
+  waitpid(child, &status, 0);
+  TEST_FAIL_MESSAGE("Thread context transition stalled");
 }
