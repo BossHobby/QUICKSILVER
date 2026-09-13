@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-// Freshness limit for consumers of the published filtered altitude/velocity.
+// Freshness limit for navigation's filtered altitude/velocity.
 #define BARO_STALE_MS 500U
 
 typedef enum {
@@ -19,7 +19,14 @@ typedef struct {
   bool (*get_pressure)(float *);
 } baro_interface_t;
 
+struct baro_sample_t {
+  float altitude; // Unfiltered pressure altitude in meters above standard sea level.
+  uint32_t timestamp_ms;
+};
+
 extern uint8_t baro_buf[6];
 
 baro_types_t baro_init(void);
 void baro_update(void);
+// Flight consumes the latest complete IO sample, coalescing unread samples.
+bool baro_take_sample(baro_sample_t &sample);

@@ -42,84 +42,7 @@ struct thread_t {
 #define CREATE_THREAD(p_name, p_mask, p_priority, p_entry, p_stack) \
   {p_name, p_mask, p_priority, p_entry, p_stack, sizeof(p_stack) / sizeof(p_stack[0]), {}, nullptr}
 
-typedef enum {
-  TASK_FLIGHT,
-  TASK_NAV,
-
-  TASK_MAX
-
-} task_id_t;
-
-typedef enum {
-  TASK_PRIORITY_REALTIME,
-  TASK_PRIORITY_HIGH,
-  TASK_PRIORITY_MEDIUM,
-  TASK_PRIORITY_LOW,
-} task_priority_t;
-
-typedef enum {
-  TASK_FLAG_SKIP_STATS = (0x1 << 0),
-} task_flag_t;
-
-typedef void (*task_function_t)();
-typedef bool (*task_poll_function_t)();
-
-typedef struct {
-  const char *name;
-
-  uint8_t mask;
-  uint32_t flags;
-  task_priority_t priority;
-  task_function_t func;
-  uint32_t period_cycles;
-
-  uint32_t last_time;
-  uint32_t runtime_current;
-  uint32_t runtime_avg;
-  uint32_t runtime_worst;
-  uint32_t runtime_max;
-
-  uint8_t runtime_skips; // Consecutive eligible budget skips, saturated at the fallback threshold.
-
-  uint32_t runtime_avg_sum;
-
-
-  // Exponential moving average of peaks for P95 estimation
-  uint32_t runtime_peak_ema;
-
-#ifdef DEBUG
-  // Minimal metrics for debug builds only
-  uint32_t metric_skip_count;
-  uint32_t metric_overrun_count;
-  uint8_t metric_consecutive_skips;
-  uint8_t metric_max_consecutive_skips;
-  
-  // Simplified variance tracking
-  uint32_t metric_variance;
-  float metric_mean_acc;
-  float metric_m2;
-#endif
-} task_t;
-
-#define CREATE_TASK(p_name, p_mask, p_priority, p_func, p_period_us) \
-  {                                                                  \
-      .name = p_name,                                                \
-      .mask = p_mask,                                                \
-      .flags = 0,                                                    \
-      .priority = p_priority,                                        \
-      .func = p_func,                                                \
-      .period_cycles = US_TO_CYCLES(p_period_us),                    \
-      .last_time = 0,                                                \
-      .runtime_current = 0,                                          \
-      .runtime_avg = 0,                                              \
-      .runtime_worst = 0,                                            \
-      .runtime_max = 0,                                              \
-      .runtime_avg_sum = 0,                                          \
-      .runtime_peak_ema = 0,                                         \
-  }
-
 extern thread_t threads[THREAD_MAX];
-extern task_t tasks[TASK_MAX];
 
 void flight_thread(void *);
 void io_thread(void *);
@@ -127,10 +50,4 @@ void thread_start(thread_id_t id);
 // Called by Flight between passes, with ground configuration ownership held.
 void threads_update();
 bool flight_timer_irq_handler();
-
-static inline float task_get_period_us(task_id_t id) {
-  const float period = CYCLES_TO_US(tasks[id].period_cycles);
-  if (period > 0.0f)
-    return period;
-  return state.looptime_autodetect;
-}
+void flight_reset_runtime();

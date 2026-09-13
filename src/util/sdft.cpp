@@ -35,7 +35,7 @@ static const auto TWIDDLE = make_twiddle();
 
 void sdft_init(sdft_t *sdft, float sample_period_us) {
   *sdft = {};
-  // Gyro initialization precedes scheduler/looptime initialization.
+  // Gyro initialization precedes Flight looptime initialization.
   if (sample_period_us <= 0.0f) {
     return;
   }

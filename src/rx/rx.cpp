@@ -105,7 +105,7 @@ static void rx_apply_smoothing() {
     return;
   }
 
-  filter_lp_pt2_coeff(&rx_filter, state.rx_filter_hz, task_get_period_us(TASK_FLIGHT));
+  filter_lp_pt2_coeff(&rx_filter, state.rx_filter_hz, state.looptime_autodetect);
 
   state.rx.roll = constrain(state.rx.roll, -1.0, 1.0);
   state.rx.pitch = constrain(state.rx.pitch, -1.0, 1.0);
@@ -171,7 +171,7 @@ static void rx_init_state() {
   state.aux_active = 0;
   rx_update_aux_active();
 
-  filter_lp_pt2_init(&rx_filter, rx_filter_state, 4, state.rx_filter_hz, task_get_period_us(TASK_FLIGHT));
+  filter_lp_pt2_init(&rx_filter, rx_filter_state, 4, state.rx_filter_hz, state.looptime_autodetect);
 }
 
 void rx_init() {
@@ -354,7 +354,7 @@ void rx_update() {
 
 void rx_process() {
 #ifndef SIMULATOR
-  // Transport may be deferred by the scheduler; signal-loss detection must not be.
+  // Signal-loss detection stays in Flight even when the IO worker is delayed.
   if (flags.rx_ready && time_micros() - state.last_frame_time_us > FAILSAFE_DETECT_TIME_US) {
     flags.failsafe_signal_lost = 1;
     state.rx_rssi = 0.0f;
