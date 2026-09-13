@@ -395,7 +395,10 @@ static uint32_t blackbox_rate_div() {
 void blackbox_capture() {
   const bool requested = (target_info.features & FEATURE_BLACKBOX) && flags.arm_state && rx_aux_on(AUX_BLACKBOX);
   if (!requested) {
-    mailbox.recording.store(0, std::memory_order_release);
+    if (mailbox.recording.load(std::memory_order_relaxed) != 0) {
+      mailbox.recording.store(0, std::memory_order_release);
+      xTaskNotifyGive(threads[THREAD_BLACKBOX].handle);
+    }
     return;
   }
   if (mailbox.recording.load(std::memory_order_relaxed) == 0) {
@@ -412,6 +415,7 @@ void blackbox_capture() {
     capture.sequence = 0;
     capture.last_loop = state.loop_counter;
     mailbox.recording.store(capture.session_id, std::memory_order_release);
+    xTaskNotifyGive(threads[THREAD_BLACKBOX].handle);
     return;
   }
   if ((uint32_t)(state.loop_counter - capture.last_loop) < capture.settings.rate) {
@@ -490,15 +494,20 @@ void blackbox_capture() {
   }
 
   mailbox.pending.store(true, std::memory_order_release);
+  xTaskNotifyGive(threads[THREAD_BLACKBOX].handle);
 }
 
 void blackbox_thread(void *) {
+  TickType_t wait = 0;
   for (;;) {
-    ulTaskNotifyTake(pdTRUE, 1); // Poll detection and final flush even without samples.
+    // A pending notification can satisfy even a timed wait immediately.
+    // Share every pass with ready workers, including those completion bursts.
+    taskYIELD();
+    ulTaskNotifyTake(pdTRUE, wait);
     mutex_guard_t guard(blackbox_storage_mutex);
     // Keep storage progressing even when no new sample is available. Once a log
     // is open, its writer FIFO can accept samples while device I/O is busy.
-    const bool storage_ready = blackbox_device_update();
+    const bool storage_ready = blackbox_device_update(wait);
     if (!mailbox.pending.load(std::memory_order_acquire)) {
       // Recheck after observing stop, in case the producer just published its
       // final sample. Finalization must follow encoding that sample.
@@ -506,6 +515,7 @@ void blackbox_thread(void *) {
           !mailbox.pending.load(std::memory_order_acquire)) {
         blackbox_device_finish();
         writer.session_id = 0;
+        wait = 0;
       }
       continue;
     }
@@ -517,6 +527,7 @@ void blackbox_thread(void *) {
       if (writer.session_id != 0) {
         blackbox_device_finish();
         writer.session_id = 0;
+        wait = 0;
         continue;
       }
       if (!blackbox_device_restart(mailbox.settings.field_flags, mailbox.settings.rate, mailbox.settings.looptime, &mailbox.profile)) {
@@ -524,6 +535,7 @@ void blackbox_thread(void *) {
       }
       writer.session_id = mailbox.session_id;
       writer.previous = {};
+      wait = 0;
     }
 
     const blackbox_t &frame = mailbox.frame;
@@ -531,6 +543,9 @@ void blackbox_thread(void *) {
                                                 BLACKBOX_FRAME_I : BLACKBOX_FRAME_P;
     if (blackbox_device_write_frame(mailbox.settings.field_flags, &frame, &writer.previous, frame_type)) {
       writer.previous = frame;
+      // Encoding supplied bytes after the storage pass. An idle backend now
+      // has work; a busy backend keeps its completion/retry deadline.
+      if (wait == portMAX_DELAY) wait = 0;
     }
     // A rejected write is a dropped frame. Keep the last successful delta base.
     mailbox.pending.store(false, std::memory_order_release);
