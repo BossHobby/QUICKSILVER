@@ -96,7 +96,8 @@ static void wing_calc_stabilized(wing_mode_t mode, bool launch_stabilized) {
     }
 
     const float max_angle = profile.rate.level_max_angle * DEGTORAD;
-    float angle_input[3] = {0.0f, constrain(pitch / max_angle, -1.0f, 1.0f), 0.0f};
+    const float pitch_input = max_angle > 0.0f ? constrain(pitch / max_angle, -1.0f, 1.0f) : 0.0f;
+    float angle_input[3] = {0.0f, pitch_input, 0.0f};
     state.angle_error = input_stick_vector(angle_input);
     state.setpoint.roll = angle_pid(0);
     state.setpoint.pitch = angle_pid(1);
