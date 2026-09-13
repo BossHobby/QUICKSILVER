@@ -1,5 +1,8 @@
 #include "core/failloop.h"
 
+#include <FreeRTOS.h>
+#include <task.h>
+
 #include "control/control.h"
 #include "driver/motor.h"
 #include "driver/reset.h"
@@ -39,6 +42,10 @@ void failloop(failloop_t val) {
   // Callers from the flash write path reach here with interrupts masked;
   // the blink pattern and USB fault log need SysTick and USB interrupts.
   __enable_irq();
+
+  // A fatal worker error must prevent Flight from publishing further outputs.
+  if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED)
+    vTaskSuspendAll();
 
   uint32_t blink_counter = 0;
   uint32_t blink_start = time_millis();

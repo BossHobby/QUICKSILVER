@@ -94,7 +94,7 @@
   TIMER(14)    \
   TIMER(20)
 #elif defined(SIMULATOR)
-#define TIMERS
+#define TIMERS TIMER(1)
 #endif
 
 typedef enum {
@@ -125,6 +125,7 @@ typedef enum {
   TIMER_USE_SERVO,
   TIMER_USE_ELRS,
   TIMER_USE_SOFT_SERIAL,
+  TIMER_USE_SCHEDULER,
 } timer_use_t;
 
 typedef struct {
@@ -148,3 +149,6 @@ uint32_t timer_channel_addr(timer_dev_t *timer, timer_channel_t chan);
 void timer_enable_dma_request(timer_index_t tim, timer_channel_t chan, bool state);
 
 void timer_up_init(timer_index_t tim, uint16_t divider, uint32_t period);
+void timer_up_set_period(timer_index_t tim, uint32_t period);
+void timer_up_start(timer_index_t tim);
+bool timer_up_pending(timer_index_t tim);

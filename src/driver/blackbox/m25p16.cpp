@@ -96,7 +96,7 @@ uint8_t m25p16_command(const uint8_t cmd) {
   const spi_txn_segment_t segs[] = {
       spi_make_seg_buffer(&ret, &cmd, 1),
   };
-  spi_seg_submit_wait(&bus, segs);
+  spi_seg_submit_dma_wait(&bus, segs);
 
   return ret;
 }
@@ -110,7 +110,7 @@ uint8_t m25p16_read_command(const uint8_t cmd, uint8_t *data, const uint32_t len
       spi_make_seg_buffer(&ret, &cmd, 1),
       spi_make_seg_buffer(data, NULL, len),
   };
-  spi_seg_submit_wait(&bus, segs);
+  spi_seg_submit_dma_wait(&bus, segs);
 
   return ret;
 }
@@ -127,7 +127,7 @@ uint8_t m25p16_read_addr(const uint8_t cmd, const uint32_t addr, uint8_t *data, 
       spi_make_seg_buffer(NULL, cmd_addr + 1, m25p16_addr_size()),
       spi_make_seg_buffer(data, NULL, len),
   };
-  spi_seg_submit_wait(&bus, segs);
+  spi_seg_submit_dma_wait(&bus, segs);
 
   return ret;
 }

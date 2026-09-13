@@ -6,22 +6,29 @@
 #define configUSE_TIME_SLICING 0
 #define configUSE_TICKLESS_IDLE 0
 #define configTICK_RATE_HZ 1000
-#define configMAX_PRIORITIES 2
+#define configMAX_PRIORITIES 3
 // Bare idle has no local stack or FP context; allow for the saved integer
 // context, alignment and overflow guard (128 bytes on Cortex-M).
 // Recheck if idle hooks or task deletion cleanup are enabled.
 #define configMINIMAL_STACK_SIZE 32
-#define configMAX_TASK_NAME_LEN 8
+#define configMAX_TASK_NAME_LEN 12
 #define configTICK_TYPE_WIDTH_IN_BITS TICK_TYPE_WIDTH_32_BITS
 #define configSUPPORT_STATIC_ALLOCATION 1
 #define configSUPPORT_DYNAMIC_ALLOCATION 0
 #define configKERNEL_PROVIDED_STATIC_MEMORY 1
-#define configUSE_MUTEXES 0
-#define configUSE_TASK_NOTIFICATIONS 0
+#define configUSE_MUTEXES 1
+#define configUSE_TASK_NOTIFICATIONS 1
+#define INCLUDE_xTaskGetSchedulerState 1
+#define INCLUDE_vTaskDelay 1
+#define INCLUDE_vTaskSuspend 1
 #define configUSE_TIMERS 0
 #define configCHECK_FOR_STACK_OVERFLOW 2
 #define configUSE_IDLE_HOOK 0
+#ifdef SIMULATOR
+#define configUSE_TICK_HOOK 1
+#else
 #define configUSE_TICK_HOOK 0
+#endif
 #define configUSE_TRACE_FACILITY 0
 #define configUSE_NEWLIB_REENTRANT 0
 

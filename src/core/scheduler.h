@@ -5,7 +5,8 @@
 #include <cbor.h>
 
 void scheduler_init();
-void scheduler_run();
+uint32_t scheduler_update_loop(uint32_t elapsed_cycles);
+void scheduler_run(uint32_t cycles);
 
 void task_reset_runtime();
 
