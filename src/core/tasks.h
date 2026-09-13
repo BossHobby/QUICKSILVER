@@ -24,6 +24,7 @@ enum thread_id_t {
   THREAD_BLACKBOX,
   THREAD_USB,
   THREAD_OSD,
+  THREAD_IO,
   THREAD_MAX,
 };
 
@@ -43,13 +44,7 @@ struct thread_t {
 
 typedef enum {
   TASK_FLIGHT,
-  TASK_RX,
-  TASK_VBAT,
-  TASK_BARO,
   TASK_NAV,
-  TASK_UTIL,
-  TASK_VTX,
-  TASK_GPS,
 
   TASK_MAX
 
@@ -127,6 +122,7 @@ extern thread_t threads[THREAD_MAX];
 extern task_t tasks[TASK_MAX];
 
 void flight_thread(void *);
+void io_thread(void *);
 void thread_start(thread_id_t id);
 // Called by Flight between passes, with ground configuration ownership held.
 void threads_update();

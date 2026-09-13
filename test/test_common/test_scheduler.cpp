@@ -71,24 +71,24 @@ void test_scheduler_exhausted_budget_and_wrap() {
 
 void test_scheduler_slows_after_starvation_without_forcing_work() {
   begin_timing();
-  const task_t saved_sibling = tasks[TASK_VBAT];
-  tasks[TASK_VBAT] = background_task(30);
-  const task_t saved = tasks[TASK_GPS];
-  auto &task = tasks[TASK_GPS];
+  const task_t saved_sibling = tasks[TASK_FLIGHT];
+  tasks[TASK_FLIGHT] = background_task(30);
+  const task_t saved = tasks[TASK_NAV];
+  auto &task = tasks[TASK_NAV];
   task = background_task(30);
   for (uint32_t i = 0; i < 32; i++) {
     const uint32_t boundary = next_loop();
     time_test_advance_us(110);
     TEST_ASSERT_FALSE(scheduler_test_should_run(boundary, TASK_MASK_IN_AIR, &task));
-    TEST_ASSERT_FALSE(scheduler_test_should_run(boundary, TASK_MASK_IN_AIR, &tasks[TASK_VBAT]));
+    TEST_ASSERT_FALSE(scheduler_test_should_run(boundary, TASK_MASK_IN_AIR, &tasks[TASK_FLIGHT]));
     TEST_ASSERT_EQUAL_FLOAT(125, state.looptime_autodetect);
     TEST_ASSERT_EQUAL_UINT32(US_TO_CYCLES(30), task.runtime_worst);
   }
   const uint32_t boundary = next_loop();
   TEST_ASSERT_EQUAL_FLOAT(250, state.looptime_autodetect);
   TEST_ASSERT_EQUAL_UINT8(1, state.looptime_warning);
-  TEST_ASSERT_EQUAL_UINT8(0, tasks[TASK_VBAT].runtime_skips);
-  tasks[TASK_VBAT] = saved_sibling;
+  TEST_ASSERT_EQUAL_UINT8(0, tasks[TASK_FLIGHT].runtime_skips);
+  tasks[TASK_FLIGHT] = saved_sibling;
   TEST_ASSERT_EQUAL_UINT8(0, task.runtime_skips);
   time_test_advance_us(110);
   TEST_ASSERT_TRUE(scheduler_test_should_run(boundary, TASK_MASK_IN_AIR, &task));
@@ -96,7 +96,7 @@ void test_scheduler_slows_after_starvation_without_forcing_work() {
   task.runtime_skips = 12;
   scheduler_test_run(&task);
   TEST_ASSERT_EQUAL_UINT8(0, task.runtime_skips);
-  tasks[TASK_GPS] = saved;
+  tasks[TASK_NAV] = saved;
 }
 
 void test_scheduler_masks_periods_and_reset_do_not_trigger_fallback() {
@@ -117,21 +117,21 @@ void test_scheduler_masks_periods_and_reset_do_not_trigger_fallback() {
   next_loop();
   TEST_ASSERT_EQUAL_FLOAT(125, state.looptime_autodetect);
 
-  const task_t saved = tasks[TASK_GPS];
-  tasks[TASK_GPS].runtime_skips = 31;
+  const task_t saved = tasks[TASK_NAV];
+  tasks[TASK_NAV].runtime_skips = 31;
   request_slowdown();
   task_reset_runtime();
-  TEST_ASSERT_EQUAL_UINT8(0, tasks[TASK_GPS].runtime_skips);
+  TEST_ASSERT_EQUAL_UINT8(0, tasks[TASK_NAV].runtime_skips);
   next_loop();
   next_loop();
   TEST_ASSERT_EQUAL_FLOAT(125, state.looptime_autodetect);
-  tasks[TASK_GPS] = saved;
+  tasks[TASK_NAV] = saved;
 }
 
 void test_scheduler_fallback_cap_and_no_automatic_speedup() {
   begin_timing();
-  const task_t saved = tasks[TASK_GPS];
-  auto &task = tasks[TASK_GPS];
+  const task_t saved = tasks[TASK_NAV];
+  auto &task = tasks[TASK_NAV];
   task = background_task(1000);
   for (uint32_t i = 0; i < 100; i++) {
     const uint32_t boundary = next_loop();
@@ -150,7 +150,7 @@ void test_scheduler_fallback_cap_and_no_automatic_speedup() {
   request_slowdown();
   next_loop();
   TEST_ASSERT_EQUAL_FLOAT(1000, state.looptime_autodetect);
-  tasks[TASK_GPS] = saved;
+  tasks[TASK_NAV] = saved;
 }
 
 void test_scheduler_accounts_for_housekeeping_and_realtime_overload() {
@@ -234,27 +234,19 @@ void test_scheduler_ground_work_does_not_indirectly_reduce_flight_rate() {
   TEST_ASSERT_EQUAL_UINT8(1, state.looptime_warning);
 }
 
-void test_scheduler_omits_unconfigured_sensor_tasks() {
+void test_scheduler_omits_unconfigured_navigation() {
   const auto saved_gps = profile.serial.gps;
-  const bool saved_baro = state.baro_detected;
   const bool saved_lock = state.gps_lock;
-  for (unsigned combination = 0; combination < 4; combination++) {
-    const bool gps = combination & 1;
-    const bool baro = combination & 2;
+  for (unsigned gps = 0; gps < 2; gps++) {
     profile.serial.gps = gps ? SERIAL_PORT1 : SERIAL_PORT_INVALID;
-    state.baro_detected = baro;
     state.gps_lock = false; // Configured receivers must still acquire a fix.
     scheduler_init();
     TEST_ASSERT_TRUE(scheduler_test_task_registered(TASK_FLIGHT));
-    TEST_ASSERT_TRUE(scheduler_test_task_registered(TASK_RX));
-    TEST_ASSERT_EQUAL(gps, scheduler_test_task_registered(TASK_GPS));
     TEST_ASSERT_EQUAL(gps && tasks[TASK_NAV].mask != 0, scheduler_test_task_registered(TASK_NAV));
-    TEST_ASSERT_EQUAL(baro, scheduler_test_task_registered(TASK_BARO));
     state.gps_lock = true;
-    TEST_ASSERT_EQUAL(gps, scheduler_test_task_registered(TASK_GPS));
+    TEST_ASSERT_EQUAL(gps && tasks[TASK_NAV].mask != 0, scheduler_test_task_registered(TASK_NAV));
   }
   profile.serial.gps = saved_gps;
-  state.baro_detected = saved_baro;
   state.gps_lock = saved_lock;
   scheduler_init();
 }

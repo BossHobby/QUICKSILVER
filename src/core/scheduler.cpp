@@ -307,9 +307,7 @@ void scheduler_init() {
   for (uint32_t id = 0; id < TASK_MAX; id++) {
     if (!tasks[id].mask)
       continue;
-    if ((id == TASK_GPS || id == TASK_NAV) && profile.serial.gps == SERIAL_PORT_INVALID)
-      continue;
-    if (id == TASK_BARO && !state.baro_detected)
+    if (id == TASK_NAV && profile.serial.gps == SERIAL_PORT_INVALID)
       continue;
     task_queue_push(&tasks[id]);
   }

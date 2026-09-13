@@ -163,7 +163,7 @@ void usb_serial_passthrough(serial_ports_t port, uint32_t baudrate, uint8_t stop
 // double promition in the following is intended
 #pragma GCC diagnostic ignored "-Wdouble-promotion"
 // This function will be where all usb send/receive coms live
-void usb_configurator() {
+void usb_configurator(bool fault_mode) {
   if (!flags.usb_active) {
     motor_test.active = 0;
     return;
@@ -206,7 +206,7 @@ void usb_configurator() {
         continue;
       }
 
-      msp_status_t status = msp_process_serial(&msp, data);
+      msp_status_t status = msp_process_serial(&msp, data, fault_mode);
       if (status != MSP_EOF) {
         break;
       }
@@ -221,7 +221,7 @@ void usb_configurator() {
         quic_send_str(&quic, QUIC_CMD_INVALID, QUIC_FLAG_ERROR, "EOF");
         break;
       }
-      if (quic_process(&quic, buffer, buffer_size)) {
+      if (quic_process(&quic, buffer, buffer_size, fault_mode)) {
         break;
       }
       if (usb_serial_read(&data, 1) == 1) {
@@ -240,10 +240,7 @@ void usb_configurator() {
 
 void usb_configurator_thread(void *) {
   while (true) {
-    {
-      mutex_guard_t guard(profile_mutex);
-      usb_configurator();
-    }
+    usb_configurator();
     vTaskDelay(1);
   }
 }

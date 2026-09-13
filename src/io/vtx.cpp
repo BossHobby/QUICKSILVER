@@ -187,7 +187,7 @@ static bool vtx_update_pitmode(vtx_pit_mode_t pit_mode) {
 void vtx_update() {
   vtx_update_fpv_pin();
 
-  if (flags.in_air)
+  if (flags.arm_state || flags.in_air)
     return;
 
   if (profile.serial.smart_audio == SERIAL_PORT_INVALID &&
@@ -211,6 +211,9 @@ void vtx_update() {
   }
 
   if (initialized_protocol != protocol) {
+    mutex_guard_t configuration(profile_mutex);
+    if (flags.arm_state || flags.in_air)
+      return;
     vtx_actual.protocol = VTX_PROTOCOL_INVALID;
     vtx_init_protocol(protocol);
     initialized_protocol = protocol;
@@ -223,6 +226,12 @@ void vtx_update() {
 
   const vtx_detect_status_t status = vtx_device->update(&vtx_actual);
   if (status < VTX_DETECT_SUCCESS)
+    return;
+
+  // Receive/dispatch above may itself execute a configuration command. Take
+  // ownership only for applying settings, and recheck after any mutex wait.
+  mutex_guard_t configuration(profile_mutex);
+  if (flags.arm_state || flags.in_air)
     return;
 
   vtx_pit_mode_t pit_mode = profile.vtx.pit_mode;

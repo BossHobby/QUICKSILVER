@@ -1,22 +1,27 @@
+#include "core/profile.h"
 #include "driver/time.h"
 #include "mock_helpers.h"
 #include <unity.h>
 
 // Test declarations
+extern void test_vbat_integrates_current_over_elapsed_time();
 extern void test_rx_transport_leaves_conditioning_to_flight();
+extern void test_rx_mailbox_coalesces_complete_frames();
+extern void test_io_worker_publishes_rx_without_configuration_wait();
 extern void test_osd_looptime_warning_is_temporary_until_2khz();
 extern void test_osd_transfer_is_bounded_and_retries();
 extern void test_osd_render_completes_before_transfer();
 extern void test_osd_renders_latest_telemetry();
 extern void test_osd_worker_serializes_configuration_and_keeps_rendering_armed();
 extern void test_osd_msp_keeps_telemetry_but_rejects_airborne_maintenance();
+extern void test_msp_maintenance_rechecks_arming_after_configuration_wait();
 extern void test_gestures_shortcuts_and_clock_wrap();
 extern void test_gestures_menu_taps_and_hold_repeat();
 extern void test_gestures_reset_disabled_mode_changes_and_ambiguous_input();
 extern void test_gestures_threshold_crossing_and_long_shortcut_press();
 extern void test_scheduler_native_timer_period_and_coalescing();
 extern void test_threads_suspend_ground_workers_with_pending_work();
-extern void test_scheduler_omits_unconfigured_sensor_tasks();
+extern void test_scheduler_omits_unconfigured_navigation();
 extern void test_imu_without_gps_publishes_tilt_without_heading_estimator();
 extern void test_baro_altitude_reference_without_gps();
 extern void test_scheduler_ground_only_starvation_does_not_reduce_flight_rate();
@@ -238,6 +243,7 @@ void setUp(void) {
   // Reset hardware mocks before each test
   mock_hardware_reset_all();
   time_test_reset();
+  profile_mutex_init();
 }
 
 void tearDown(void) {
@@ -248,9 +254,12 @@ void tearDown(void) {
 int main(int argc, char **argv) {
   UNITY_BEGIN();
   RUN_TEST(test_rx_transport_leaves_conditioning_to_flight);
+  RUN_TEST(test_vbat_integrates_current_over_elapsed_time);
+  RUN_TEST(test_rx_mailbox_coalesces_complete_frames);
+  RUN_TEST(test_io_worker_publishes_rx_without_configuration_wait);
   RUN_TEST(test_scheduler_native_timer_period_and_coalescing);
   RUN_TEST(test_threads_suspend_ground_workers_with_pending_work);
-  RUN_TEST(test_scheduler_omits_unconfigured_sensor_tasks);
+  RUN_TEST(test_scheduler_omits_unconfigured_navigation);
   RUN_TEST(test_imu_without_gps_publishes_tilt_without_heading_estimator);
   RUN_TEST(test_osd_looptime_warning_is_temporary_until_2khz);
   RUN_TEST(test_osd_transfer_is_bounded_and_retries);
@@ -258,6 +267,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_osd_renders_latest_telemetry);
   RUN_TEST(test_osd_worker_serializes_configuration_and_keeps_rendering_armed);
   RUN_TEST(test_osd_msp_keeps_telemetry_but_rejects_airborne_maintenance);
+  RUN_TEST(test_msp_maintenance_rechecks_arming_after_configuration_wait);
   RUN_TEST(test_gestures_shortcuts_and_clock_wrap);
   RUN_TEST(test_gestures_menu_taps_and_hold_repeat);
   RUN_TEST(test_gestures_reset_disabled_mode_changes_and_ambiguous_input);

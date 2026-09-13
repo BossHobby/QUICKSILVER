@@ -99,18 +99,18 @@ typedef struct {
 
   uint8_t failsafe : 1;                 // failsafe warning / recovery is active
   uint8_t failsafe_outputs_blocked : 1; // failsafe has blocked output writes
-  uint8_t failsafe_signal_lost : 1;     // receiver has reported signal loss
-
-  uint8_t lowbatt : 1; // signal for lowbattery
-
-  uint8_t rx_mode : 1; // bind / normal rx mode
-  uint8_t rx_ready : 1;
 
   uint8_t controls_override : 1;  // will activate rx_override below & will write directly to the motors (motor_test)
   uint8_t motortest_override : 1; // tuns off digital idle in the dshot driver & will write either sticks or usb_motortest values directly to motors
   uint8_t turtle : 1;
   uint8_t turtle_ready : 1;
   uint8_t gestures_disabled : 1;
+
+  // Separate bytes prevent IO flag writes from overwriting Flight's bitfields.
+  uint8_t failsafe_signal_lost; // RX reports loss; Flight also enforces timeout.
+  uint8_t lowbatt;
+  uint8_t rx_mode;
+  uint8_t rx_ready;
 
   volatile uint8_t usb_active;
   uint32_t arming_disabled_flags;
@@ -156,7 +156,7 @@ typedef struct {
   vec4_t rx;                            // Flight-owned calibrated, deadbanded roles; rover steering uses yaw
   vec4_t rx_filtered;                   // Flight-owned constrained, smoothed roles; held input is smoothed every loop
   vec4_t rx_override;                   // override values, activated by controls_override
-  uint16_t rx_channels[RX_CHANNEL_MAX]; // RX transport publishes 0..65535 channels; simulator_update supplies simulator input
+  uint16_t rx_channels[RX_CHANNEL_MAX]; // Flight-owned latest complete RC frame, 0..65535; initialized to zero.
   float rx_filter_hz;
 
   stick_wizard_state_t stick_calibration_wizard; // current phase of the calibration wizard

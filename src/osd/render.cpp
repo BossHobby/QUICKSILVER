@@ -13,6 +13,7 @@
 #include "core/scheduler.h"
 #include "core/tasks.h"
 #include "driver/reset.h"
+#include "driver/serial.h"
 #include "io/blackbox_device.h"
 #include "io/led.h"
 #include "io/vtx.h"
@@ -439,6 +440,12 @@ static void osd_handle_gestures() {
   const bool menu = osd_state.screen != OSD_SCREEN_REGULAR && osd_state.screen != OSD_SCREEN_CLEAR;
   const auto command = gestures_detect(state.rx, enabled, menu, time_micros());
   static bool save_bind_only = false;
+  if (command == GESTURE_NONE)
+    return;
+
+  mutex_guard_t configuration(profile_mutex);
+  if (flags.arm_state || flags.in_air || !flags.on_ground)
+    return;
   switch (command) {
   case GESTURE_CALIBRATE_SAVE:
     if (!save_bind_only) {
@@ -922,13 +929,19 @@ void osd_display_rate_menu() {
 #endif
 
 void osd_display() {
-  // Close menus before transport readiness checks. A busy display must not
+  // MSP dispatch owns its command locks. Only ground rendering reads settings
+  // that USB may be replacing; airborne telemetry never takes profile_mutex.
+  const bool ready = osd_is_ready();
+  const bool maintenance = ready && !flags.arm_state && !flags.in_air;
+  mutex_guard_t configuration(profile_mutex, maintenance);
+
+  // Close menus before returning for a busy transport. A busy display must not
   // preserve configuration actions across an arming transition.
-  if ((flags.arm_state || flags.in_air) && osd_state.screen != OSD_SCREEN_REGULAR && osd_state.screen != OSD_SCREEN_CLEAR) {
+  if ((flags.arm_state || flags.in_air || (ready && !maintenance)) && osd_state.screen != OSD_SCREEN_REGULAR && osd_state.screen != OSD_SCREEN_CLEAR) {
     while (osd_pop_screen() != OSD_SCREEN_CLEAR)
       ;
   }
-  if (!osd_is_ready()) {
+  if (!ready) {
     return;
   }
 
@@ -1967,13 +1980,12 @@ void osd_display() {
 
 void osd_thread(void *) {
   while (true) {
-    {
-      // Flight must own this same mutex before it can arm. Once armed, OSD
-      // keeps servicing telemetry while gestures and menu edits are excluded.
-      mutex_guard_t configuration(profile_mutex);
-      osd_handle_gestures();
-      osd_display();
-    }
+    osd_handle_gestures();
+    osd_display();
+#ifdef USE_DIGITAL_VTX
+    if (serial_displayport.config.port != SERIAL_PORT_INVALID && !flags.arm_state && !flags.in_air)
+      vtx_update();
+#endif
     vTaskDelay(1);
   }
 }

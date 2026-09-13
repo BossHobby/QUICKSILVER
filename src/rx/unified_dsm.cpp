@@ -98,14 +98,15 @@ static packet_status_t dsm_handle_packet(uint8_t *packet) {
 
   for (uint32_t channel = 0; channel < 12; channel++) {
     const int32_t raw = constrain(channels[channel], 0, dsm_max);
-    state.rx_channels[channel] = (uint16_t)(((uint32_t)raw * 65535) / dsm_max);
+    rx_channels[channel] = (uint16_t)(((uint32_t)raw * 65535) / dsm_max);
   }
   for (uint32_t channel = 12; channel < RX_CHANNEL_MAX; channel++) {
-    state.rx_channels[channel] = 0;
+    rx_channels[channel] = 0;
   }
 
-  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel < 12) {
-    rx_lqi_update_direct(100 * (((channels[(profile.receiver.aux[AUX_RSSI].channel)] - dsm_offset) * dsm_scalefactor * 0.5f) + 0.5f));
+  const auto rssi_channel = profile.receiver.aux[AUX_RSSI].channel;
+  if (profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && rssi_channel < 12) {
+    rx_lqi_update_direct(100 * (((channels[rssi_channel] - dsm_offset) * dsm_scalefactor * 0.5f) + 0.5f));
   }
   if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT) {
     rx_lqi_update_direct(0); // no internal rssi data

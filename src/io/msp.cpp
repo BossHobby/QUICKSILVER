@@ -7,6 +7,7 @@
 #include "control/control.h"
 #include "core/debug.h"
 #include "core/flash.h"
+#include "core/profile.h"
 #include "core/scheduler.h"
 #include "core/target.h"
 #include "driver/interrupt.h"
@@ -350,29 +351,37 @@ static void msp_send_passthrough_result(msp_t *msp, msp_magic_t magic, uint16_t 
   msp_send_reply(msp, magic, cmd, data, 1);
 }
 
-static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *payload, uint16_t size) {
-  // RX and DisplayPort also reach this dispatcher while armed. Maintenance
-  // requires ground configuration ownership; OSD keeps rendering in flight.
-  if (flags.arm_state || flags.in_air) {
-    switch (cmd) {
-    case MSP_SET_MOTOR:
-    case MSP_SET_PASSTHROUGH:
-    case MSP_SET_VTXTABLE_BAND:
-    case MSP_REBOOT:
-      msp_send_error(msp, magic, cmd);
-      return;
-    case MSP_SET_VTX_CONFIG:
-    case MSP_SET_VTXTABLE_POWERLEVEL:
-    case MSP_EEPROM_WRITE:
-      if (msp->device != MSP_DEVICE_VTX) {
-        msp_send_error(msp, magic, cmd);
-        return;
-      }
-      break;
-    default:
-      break;
-    }
+static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, uint8_t *payload, uint16_t size, bool fault_mode = false) {
+  bool maintenance = false;
+  switch (cmd) {
+  case MSP_SET_MOTOR:
+  case MSP_SET_PASSTHROUGH:
+  case MSP_SET_VTXTABLE_BAND:
+  case MSP_REBOOT:
+    maintenance = true;
+    break;
+  case MSP_SET_VTX_CONFIG:
+  case MSP_SET_VTXTABLE_POWERLEVEL:
+  case MSP_EEPROM_WRITE:
+    maintenance = msp->device != MSP_DEVICE_VTX;
+    break;
+  default:
+    break;
   }
+  if (maintenance && (flags.arm_state || flags.in_air)) {
+    msp_send_error(msp, magic, cmd);
+    return;
+  }
+
+  // Parsing and telemetry do not take configuration ownership. Recheck after
+  // a wait: Flight may have armed before this command acquired the mutex.
+  mutex_guard_t configuration(profile_mutex, maintenance && !fault_mode);
+  if (maintenance && (flags.arm_state || flags.in_air)) {
+    msp_send_error(msp, magic, cmd);
+    return;
+  }
+  if (maintenance)
+    task_reset_runtime();
   switch (cmd) {
   case MSP_API_VERSION: {
     uint8_t data[3] = {
@@ -1060,7 +1069,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   }
 }
 
-msp_status_t msp_process_serial(msp_t *msp, uint8_t data) {
+msp_status_t msp_process_serial(msp_t *msp, uint8_t data, bool fault_mode) {
   if (msp->buffer_offset >= msp->buffer_size) {
     msp->buffer_offset = 0;
     return MSP_ERROR;
@@ -1101,7 +1110,7 @@ msp_status_t msp_process_serial(msp_t *msp, uint8_t data) {
       return MSP_ERROR;
     }
 
-    msp_process_serial_cmd(msp, MSP1_MAGIC, cmd, msp->buffer + MSP_HEADER_LEN, size);
+    msp_process_serial_cmd(msp, MSP1_MAGIC, cmd, msp->buffer + MSP_HEADER_LEN, size, fault_mode);
     msp->buffer_offset = 0;
     return MSP_SUCCESS;
   }
@@ -1125,7 +1134,7 @@ msp_status_t msp_process_serial(msp_t *msp, uint8_t data) {
       return MSP_ERROR;
     }
 
-    msp_process_serial_cmd(msp, MSP2_MAGIC, cmd, msp->buffer + MSP2_HEADER_LEN, size);
+    msp_process_serial_cmd(msp, MSP2_MAGIC, cmd, msp->buffer + MSP2_HEADER_LEN, size, fault_mode);
     msp->buffer_offset = 0;
     return MSP_SUCCESS;
   }

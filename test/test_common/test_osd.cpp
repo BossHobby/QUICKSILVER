@@ -37,6 +37,7 @@ void test_osd_transfer_is_bounded_and_retries() {
   TEST_ASSERT_EQUAL_UINT32(1, simulator_osd_test_push_count());
   TEST_ASSERT_EQUAL_UINT8(' ', simulator_osd_test_char(0, 0));
   simulator_osd_test_reset(false);
+  if (xSemaphoreTake(profile_mutex, 0) != pdTRUE) _exit(9);
   for (uint32_t i = 1; i <= 3; i++) {
     TEST_ASSERT_FALSE(osd_update());
     TEST_ASSERT_EQUAL_UINT32(i, simulator_osd_test_push_count());
@@ -230,6 +231,7 @@ static void osd_test_flight(void *) {
   if (simulator_osd_test_push_count() == 0) _exit(5);
   if (osd_state.screen != OSD_SCREEN_CLEAR && osd_state.screen != OSD_SCREEN_REGULAR) _exit(3);
   if (eTaskGetState(threads[THREAD_OSD].handle) == eSuspended) _exit(6);
+  xSemaphoreGive(profile_mutex);
 
   {
     mutex_guard_t configuration(profile_mutex);
@@ -270,7 +272,7 @@ static void capture_msp_reply(msp_magic_t, uint8_t direction, uint16_t, const ui
   msp_reply_size = size;
 }
 
-static void osd_msp_request(uint8_t command, const uint8_t *payload, uint8_t size) {
+static void osd_msp_request(uint8_t command, const uint8_t *payload, uint8_t size, bool fault_mode = false) {
   uint8_t buffer[64];
   msp_t msp = {
       .buffer = buffer,
@@ -280,13 +282,86 @@ static void osd_msp_request(uint8_t command, const uint8_t *payload, uint8_t siz
   };
   msp_reply_direction = 0;
   const uint8_t header[] = {'$', 'M', '<', size, command};
-  for (uint8_t byte : header) msp_process_serial(&msp, byte);
+  for (uint8_t byte : header) msp_process_serial(&msp, byte, fault_mode);
   uint8_t checksum = size ^ command;
   for (uint8_t i = 0; i < size; i++) {
-    msp_process_serial(&msp, payload[i]);
+    msp_process_serial(&msp, payload[i], fault_mode);
     checksum ^= payload[i];
   }
-  TEST_ASSERT_EQUAL(MSP_SUCCESS, msp_process_serial(&msp, checksum));
+  TEST_ASSERT_EQUAL(MSP_SUCCESS, msp_process_serial(&msp, checksum, fault_mode));
+}
+
+static volatile uint8_t maintenance_stage;
+static uint32_t quic_reply_count;
+
+static void capture_quic_reply(uint8_t *, uint32_t, void *) {
+  quic_reply_count++;
+}
+
+static void maintenance_test_worker(void *) {
+  osd_msp_request(MSP_ANALOG, nullptr, 0);
+  if (msp_reply_direction != '>') _exit(1);
+  maintenance_stage = 1;
+  uint16_t motors[MOTOR_PIN_MAX] = {};
+  for (auto &motor : motors) motor = 1500;
+  osd_msp_request(MSP_SET_MOTOR, (const uint8_t *)motors, sizeof(motors));
+  if (msp_reply_direction != '!' || motor_test.active) _exit(2);
+  maintenance_stage = 2;
+  for (;;) vTaskDelay(1);
+}
+
+static void maintenance_test_flight(void *) {
+  flags = {};
+  motor_test.active = 0;
+  profile_mutex_init();
+  if (xSemaphoreTake(profile_mutex, 0) != pdTRUE) _exit(3);
+
+  // Receiving an incomplete USB command must not wait on configuration.
+  quic_t quic = {.send = capture_quic_reply};
+  uint8_t request[] = {QUIC_MAGIC, QUIC_CMD_GET, 0, 1, QUIC_VAL_INFO};
+  if (quic_process(&quic, request, sizeof(request) - 1)) _exit(4);
+  if (quic_reply_count != 0) _exit(5);
+
+  // Fault USB explicitly bypasses locks, even if the stopped task owned one.
+  if (!quic_process(&quic, request, sizeof(request), true) || quic_reply_count != 1) _exit(6);
+  uint16_t motors[MOTOR_PIN_MAX] = {};
+  for (auto &motor : motors) motor = 1500;
+  osd_msp_request(MSP_SET_MOTOR, (const uint8_t *)motors, sizeof(motors), true);
+  if (msp_reply_direction != '>' || !motor_test.active) _exit(7);
+  motor_test.active = 0;
+
+  thread_start(THREAD_IO);
+  vTaskDelay(3);
+  if (maintenance_stage != 1) _exit(8);
+  flags.arm_state = 1;
+  xSemaphoreGive(profile_mutex);
+  vTaskDelay(3);
+  if (maintenance_stage != 2 || motor_test.active) _exit(9);
+  _exit(0);
+}
+
+void test_msp_maintenance_rechecks_arming_after_configuration_wait() {
+  const pid_t child = fork();
+  TEST_ASSERT_TRUE(child >= 0);
+  if (child == 0) {
+    threads[THREAD_FLIGHT].entry = maintenance_test_flight;
+    threads[THREAD_IO].entry = maintenance_test_worker;
+    thread_start(THREAD_FLIGHT);
+    vTaskStartScheduler();
+    _exit(10);
+  }
+  int status;
+  for (unsigned i = 0; i < 2000; i++) {
+    if (waitpid(child, &status, WNOHANG) == child) {
+      TEST_ASSERT_TRUE(WIFEXITED(status));
+      TEST_ASSERT_EQUAL_INT(0, WEXITSTATUS(status));
+      return;
+    }
+    usleep(1000);
+  }
+  kill(child, SIGKILL);
+  waitpid(child, &status, 0);
+  TEST_FAIL_MESSAGE("MSP maintenance or fault USB blocked on configuration");
 }
 
 void test_osd_msp_keeps_telemetry_but_rejects_airborne_maintenance() {
