@@ -322,17 +322,13 @@ void scheduler_init() {
 }
 
 void scheduler_run() {
-  task_reset_runtime();
-
-  while (1) {
-    const uint32_t cycles = scheduler_update_loop();
-    simulator_update();
-    const uint8_t task_mask = scheduler_task_mask();
-    for (uint32_t i = 0; i < task_queue_size; i++) {
-      task_t *task = task_queue[i];
-      if (task_should_run(cycles, task_mask, task)) {
-        task_run(task);
-      }
+  const uint32_t cycles = scheduler_update_loop();
+  simulator_update();
+  const uint8_t task_mask = scheduler_task_mask();
+  for (uint32_t i = 0; i < task_queue_size; i++) {
+    task_t *task = task_queue[i];
+    if (task_should_run(cycles, task_mask, task)) {
+      task_run(task);
     }
   }
 }

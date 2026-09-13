@@ -19,6 +19,7 @@
 #include "core/profile.h"
 #include "core/project.h"
 #include "core/scheduler.h"
+#include "core/tasks.h"
 #include "core/target.h"
 #include "driver/adc.h"
 #include "driver/baro/baro.h"
@@ -137,6 +138,6 @@ __attribute__((__used__)) int main() {
   blackbox_init();
   imu_init();
 
-  scheduler_run();
+  threads_start();
 }
 #endif
