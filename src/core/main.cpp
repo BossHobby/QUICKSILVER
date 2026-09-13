@@ -42,9 +42,6 @@
 #include "osd/render.h"
 #include "util/filter.h"
 
-static StaticSemaphore_t usb_mutex_storage;
-SemaphoreHandle_t usb_configurator_mutex;
-
 extern "C" __attribute__((__used__)) void
 memory_section_init() {
 #ifdef USE_FAST_RAM
@@ -130,6 +127,7 @@ void flight_thread(void *) {
   baro_init();
   rx_spektrum_bind();
 
+  profile_mutex_init();
   osd_init();
   sixaxis_init();
   // needs to happen after gyro is detected so we know its update period
@@ -150,8 +148,6 @@ void flight_thread(void *) {
 
   blackbox_init();
   imu_init();
-  usb_configurator_mutex = xSemaphoreCreateMutexStatic(&usb_mutex_storage);
-  configASSERT(usb_configurator_mutex);
   thread_start(THREAD_USB);
 
   task_reset_runtime();
@@ -171,10 +167,9 @@ void flight_thread(void *) {
     const uint32_t elapsed_cycles = time_cycles() - last_loop_cycles;
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // Coalesce overruns; never replay old cycles.
 
-    // USB blocks arming in control_update_arming(). This lock protects live
-    // settings, including a command still finishing after USB disconnects.
-    // Armed Flight never locks: the ground-only USB thread is suspended.
-    mutex_guard_t configuration(usb_configurator_mutex, !flags.arm_state);
+    // Ground workers can finish live edits before the next Flight pass can
+    // arm. Armed Flight never locks; OSD then only renders telemetry.
+    mutex_guard_t configuration(profile_mutex, !flags.arm_state);
 
     const float previous_period = state.looptime_autodetect;
     const uint32_t cycles = scheduler_update_loop(elapsed_cycles);

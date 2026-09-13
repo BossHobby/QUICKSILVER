@@ -10,6 +10,9 @@
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
+static StaticSemaphore_t profile_mutex_storage;
+SemaphoreHandle_t profile_mutex;
+
 // Default values for our profile
 // ignore -Wmissing-braces here, gcc bug with nested structs
 #pragma GCC diagnostic ignored "-Wmissing-braces"
@@ -722,6 +725,11 @@ bool profile_output_slot_uses_protocol(uint8_t target_output, output_protocol_t 
 
 bool profile_outputs_use_protocol(output_protocol_t protocol) {
   return protocol <= OUTPUT_PROTOCOL_PWM && (output_protocols & (1U << protocol)) != 0;
+}
+
+void profile_mutex_init() {
+  profile_mutex = xSemaphoreCreateMutexStatic(&profile_mutex_storage);
+  configASSERT(profile_mutex);
 }
 
 // Fills the supplied profile with the generic defaults plus the target-derived
