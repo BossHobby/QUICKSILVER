@@ -157,7 +157,7 @@ void spi_seg_submit_ex(spi_bus_device_t *bus, const spi_txn_opts_t opts) {
   }
 }
 
-// only called from dma isr
+// Called from DMA or SPI completion interrupts.
 void spi_txn_finish(spi_ports_t port) {
   spi_device_t *dev = &spi_dev[port];
 
@@ -179,16 +179,17 @@ void spi_txn_finish(spi_ports_t port) {
     txn->done_fn(txn->done_fn_arg);
   }
 
-  dev->txns[tail] = NULL;
-  dev->txn_tail = tail;
+  // Completion interrupts can nest across ports. Retire the transaction before
+  // making its slot reusable, and serialize the shared free bitmap update.
+  ATOMIC_BLOCK_ALL {
+    spi_csn_disable(txn->bus);
+    dev->txns[tail] = NULL;
+    dev->txn_tail = tail;
+    txn->status = TXN_IDLE;
+    txn_free_bitmap |= (1U << (txn - txn_pool));
+    dev->dma_done = true;
+  }
 
-  txn->status = TXN_IDLE;
-
-  txn_free_bitmap |= (1U << (txn - txn_pool));
-
-  spi_dev[port].dma_done = true;
-
-  spi_csn_disable(txn->bus);
   spi_txn_continue_port(port);
 }
 

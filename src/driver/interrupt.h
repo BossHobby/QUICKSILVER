@@ -2,9 +2,8 @@
 
 #include "core/project.h"
 
-// Priority grouping 4: No preemption, sequential execution
-// Avoids context switch overhead between interrupts
-#define NVIC_PRIORITY_GROUPING 4
+// FreeRTOS requires all implemented priority bits to be preemption bits.
+#define NVIC_PRIORITY_GROUPING 0
 
 #define MAX_PRIORITY 0x1
 #define DMA_PRIORITY 0x2
