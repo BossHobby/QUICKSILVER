@@ -18,14 +18,14 @@ FAST_RAM control_flags_t flags = {
 
     .failsafe = 1,
     .failsafe_outputs_blocked = 1,
+    .controls_override = 0,
+    .motortest_override = 0,
+
     .failsafe_signal_lost = 1,
     .lowbatt = 1,
 
     .rx_mode = RXMODE_BIND,
     .rx_ready = 0,
-
-    .controls_override = 0,
-    .motortest_override = 0,
 
     .usb_active = 0,
     .arming_disabled_flags = ARMING_DISABLED_ARM_SWITCH,

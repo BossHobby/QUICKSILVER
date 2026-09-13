@@ -27,9 +27,5 @@
 #endif
 #define USE_SERIAL_4WAY
 
-#ifndef AT32F4
-#define USE_RX_SPI_FRSKY
-#define USE_RX_SPI_FLYSKY
-#define USE_RX_SPI_EXPRESS_LRS
-#endif
+// SPI receivers are temporarily disabled pending the SPI interrupt-safety fixes.
 #endif

@@ -92,7 +92,7 @@ uint8_t cc2500_get_status() {
   const spi_txn_segment_t segs[] = {
       spi_make_seg_buffer(&status, NULL, 1),
   };
-  spi_seg_submit_wait(&bus, segs);
+  spi_seg_submit_dma_wait(&bus, segs);
 
   return status;
 }
@@ -111,7 +111,7 @@ uint8_t cc2500_read_reg(uint8_t reg) {
       spi_make_seg_const(reg | CC2500_READ_SINGLE),
       spi_make_seg_buffer(&ret, NULL, 1),
   };
-  spi_seg_submit_wait(&bus, segs);
+  spi_seg_submit_dma_wait(&bus, segs);
 
   return ret;
 }
@@ -121,7 +121,7 @@ static uint8_t cc2500_read_multi(uint8_t reg, uint8_t *result, uint8_t len) {
       spi_make_seg_buffer(&reg, &reg, 1),
       spi_make_seg_buffer(result, NULL, len),
   };
-  spi_seg_submit_wait(&bus, segs);
+  spi_seg_submit_dma_wait(&bus, segs);
 
   return reg;
 }
@@ -131,7 +131,7 @@ static void cc2500_write_multi(uint8_t reg, uint8_t *data, uint8_t len) {
       spi_make_seg_const(reg),
       spi_make_seg_buffer(NULL, data, len),
   };
-  spi_seg_submit_wait(&bus, segs);
+  spi_seg_submit_dma_wait(&bus, segs);
 }
 
 void cc2500_set_channel(uint8_t channel, uint8_t *cal_data) {
@@ -178,7 +178,7 @@ uint8_t cc2500_packet_size() {
           spi_make_seg_const(static_cast<uint8_t>(CC2500_RXBYTES) | static_cast<uint8_t>(CC2500_READ_SINGLE)),
           spi_make_seg_buffer(&len2, NULL, 1),
       };
-      spi_seg_submit_wait(&bus, segs);
+      spi_seg_submit_dma_wait(&bus, segs);
     }
 
     // valid len found?

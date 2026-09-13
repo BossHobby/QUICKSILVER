@@ -111,6 +111,7 @@ static void serial_test_reset(uint32_t now_us, rx_serial_protocol_t protocol, ui
 
 static void crsf_test_reset(uint32_t now_us) {
   serial_test_reset(now_us, RX_SERIAL_PROTOCOL_CRSF, 420000, SERIAL_DIR_TX_RX, SERIAL_STOP_BITS_1);
+  memset(rx_channels, 0, sizeof(rx_channels));
   memset(&crsf_stats, 0, sizeof(crsf_stats));
 }
 
@@ -722,15 +723,15 @@ void test_crsf_v3_subset_channel_frame_clears_signal_lost_on_recovery(void) {
   TEST_ASSERT_TRUE(rx_serial_check());
   TEST_ASSERT_FALSE(flags.failsafe_signal_lost);
   TEST_ASSERT_EQUAL_UINT32(time_micros(), state.last_frame_time_us);
-  TEST_ASSERT_EQUAL_UINT16(0U, state.rx_channels[0]);
-  TEST_ASSERT_EQUAL_UINT16(crsf_test_scale_subset_channel(1024, 11), state.rx_channels[1]);
-  TEST_ASSERT_EQUAL_UINT16(AUX_VALUE_MAX, state.rx_channels[2]);
-  TEST_ASSERT_EQUAL_UINT16(crsf_test_scale_subset_channel(800, 11), state.rx_channels[15]);
+  TEST_ASSERT_EQUAL_UINT16(0U, rx_channels[0]);
+  TEST_ASSERT_EQUAL_UINT16(crsf_test_scale_subset_channel(1024, 11), rx_channels[1]);
+  TEST_ASSERT_EQUAL_UINT16(AUX_VALUE_MAX, rx_channels[2]);
+  TEST_ASSERT_EQUAL_UINT16(crsf_test_scale_subset_channel(800, 11), rx_channels[15]);
 }
 
 void test_crsf_v3_subset_channel_frame_handles_offset_10bit_channels(void) {
   crsf_test_reset(5000000);
-  state.rx_channels[3] = 1234;
+  rx_channels[3] = 1234;
 
   const uint16_t values[4] = {0, 341, 682, 1023};
   uint8_t payload[CRSF_PAYLOAD_SIZE_MAX] = {0};
@@ -738,11 +739,11 @@ void test_crsf_v3_subset_channel_frame_handles_offset_10bit_channels(void) {
   crsf_test_write_frame(CRSF_FRAMETYPE_RC_CHANNELS_SUBSET_PACKED, payload, payload_length);
 
   TEST_ASSERT_TRUE(rx_serial_check());
-  TEST_ASSERT_EQUAL_UINT16(1234U, state.rx_channels[3]);
-  TEST_ASSERT_EQUAL_UINT16(0U, state.rx_channels[4]);
-  TEST_ASSERT_EQUAL_UINT16(crsf_test_scale_subset_channel(341, 10), state.rx_channels[5]);
-  TEST_ASSERT_EQUAL_UINT16(crsf_test_scale_subset_channel(682, 10), state.rx_channels[6]);
-  TEST_ASSERT_EQUAL_UINT16(AUX_VALUE_MAX, state.rx_channels[7]);
+  TEST_ASSERT_EQUAL_UINT16(1234U, rx_channels[3]);
+  TEST_ASSERT_EQUAL_UINT16(0U, rx_channels[4]);
+  TEST_ASSERT_EQUAL_UINT16(crsf_test_scale_subset_channel(341, 10), rx_channels[5]);
+  TEST_ASSERT_EQUAL_UINT16(crsf_test_scale_subset_channel(682, 10), rx_channels[6]);
+  TEST_ASSERT_EQUAL_UINT16(AUX_VALUE_MAX, rx_channels[7]);
 }
 
 void test_crsf_speed_proposal_accepts_baudrate_after_response_flush_and_delay(void) {
