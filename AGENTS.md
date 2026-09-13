@@ -49,6 +49,7 @@ Environment names include the vehicle prefix. Current `platformio.ini` and gener
 - Reject exhausted budgets before unsigned subtraction. Budget skips are not runtime samples and do not reduce `runtime_worst`. Sustained eligible starvation or overload requests a slower loop rate; ground-only work counts for admission but is excluded from flight-rate decisions.
 - Runtime fields use CPU cycles internally; debug serialization converts them to microseconds. `percentile_95` is a smoothed peak estimate, not an exact percentile. Consult source for thresholds and fallback behavior instead of copying formulas into guidance.
 - If introducing concurrency, identify each resource's owner and publication boundary, audit shared drivers/buffers as well as state, and keep synchronization with its owner. Arming gates and `volatile` do not provide synchronization. Keep interrupt-masked sections short and never wait while masking a required completion interrupt.
+- Declare FreeRTOS threads in the `threads` table in `src/core/tasks.cpp` using `CREATE_THREAD`. Keep thread entry functions private to their owning source files where possible. `tasks.cpp` owns thread creation, kernel startup, and FreeRTOS hooks; `scheduler.cpp` retains cooperative dispatch and loop accounting. The Flight thread runs one cooperative scheduler pass per iteration.
 
 ## Shared runtime state
 

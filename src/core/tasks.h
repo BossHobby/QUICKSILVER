@@ -3,10 +3,31 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <FreeRTOS.h>
+#include <task.h>
+
 #include "project.h"
 
 #include "control/control.h"
 #include "driver/time.h"
+
+enum thread_id_t {
+  THREAD_FLIGHT,
+  THREAD_MAX,
+};
+
+struct thread_t {
+  const char *name;
+  UBaseType_t priority;
+  TaskFunction_t entry;
+  StackType_t *stack;
+  uint32_t stack_size;
+  StaticTask_t control;
+  TaskHandle_t handle;
+};
+
+#define CREATE_THREAD(p_name, p_priority, p_entry, p_stack) \
+  {p_name, p_priority, p_entry, p_stack, sizeof(p_stack) / sizeof(p_stack[0]), {}, nullptr}
 
 typedef enum {
   TASK_FLIGHT,
@@ -102,7 +123,10 @@ typedef struct {
       .runtime_peak_ema = 0,                                         \
   }
 
+extern thread_t threads[THREAD_MAX];
 extern task_t tasks[TASK_MAX];
+
+void threads_start();
 
 static inline float task_get_period_us(task_id_t id) {
   const float period = CYCLES_TO_US(tasks[id].period_cycles);
