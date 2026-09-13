@@ -1,3 +1,4 @@
+#include <atomic>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -6,6 +7,7 @@
 #include "config/feature.h"
 
 #include "control/control.h"
+#include "control/navigation.h"
 #ifdef VEHICLE_ROVER
 #include "control/rover/control.h"
 #else
@@ -18,12 +20,12 @@
 #include "core/flash.h"
 #include "core/profile.h"
 #include "core/project.h"
-#include "core/scheduler.h"
 #include "core/tasks.h"
 #include "core/target.h"
 #include "driver/adc.h"
 #include "driver/baro/baro.h"
 #include "driver/gpio.h"
+#include "driver/gyro/gyro.h"
 #include "driver/interrupt.h"
 #include "driver/motor.h"
 #include "driver/rgb_led.h"
@@ -40,7 +42,15 @@
 #include "io/vbat.h"
 #include "io/vtx.h"
 #include "osd/render.h"
+#include "rx/rx.h"
 #include "util/filter.h"
+
+static timer_index_t flight_timer;
+static uint32_t last_loop_cycles;
+static uint32_t runtime_sum;
+static uint8_t runtime_samples;
+static std::atomic<bool> skip_loop_sample;
+static_assert(std::atomic<bool>::is_always_lock_free);
 
 extern "C" __attribute__((__used__)) void
 memory_section_init() {
@@ -79,7 +89,74 @@ memory_section_init() {
 #endif
 }
 
-static timer_index_t flight_timer;
+static void flight_timing_init() {
+#ifdef USE_GYRO
+  float target = gyro_update_period();
+#else
+  float target = LOOPTIME_MAX;
+#endif
+  while (target < LOOPTIME_MAX)
+    target *= 2.0f;
+  state.looptime = target * 1e-6f;
+  state.looptime_us = target;
+  state.looptime_autodetect = target;
+  state.looptime_warning = 0;
+  runtime_sum = 0;
+  runtime_samples = 0;
+  skip_loop_sample = false;
+  last_loop_cycles = time_cycles();
+}
+
+void flight_reset_runtime() {
+  // Maintenance can delay ground Flight while holding profile_mutex. Flight
+  // consumes the reset itself so workers never modify its runtime history.
+  skip_loop_sample = true;
+}
+
+static void flight_update_rate(uint32_t runtime_us) {
+  if (skip_loop_sample.exchange(false)) {
+    runtime_sum = 0;
+    runtime_samples = 0;
+    return;
+  }
+  if (state.loop_counter < 200)
+    return;
+  if (state.looptime_us > 20000)
+    failloop(FAILLOOP_LOOPTIME);
+
+  // Measure Flight work, excluding the notification and configuration waits.
+  runtime_sum += runtime_us;
+  if (++runtime_samples < 200)
+    return;
+  const bool overloaded = runtime_sum / 200.0f > state.looptime_autodetect + 5.0f;
+  runtime_sum = 0;
+  runtime_samples = 0;
+  if (!overloaded || state.looptime_autodetect >= 500.0f)
+    return;
+
+  state.looptime_autodetect = MIN(500.0f, state.looptime_autodetect * 2.0f);
+  state.looptime_warning++;
+  control_filter_update(false);
+}
+
+static void flight_update_loop(uint32_t elapsed_cycles) {
+  const uint32_t now = time_cycles();
+  state.cpu_load = CYCLES_TO_US(elapsed_cycles);
+  state.looptime_us = CYCLES_TO_US(now - last_loop_cycles);
+  state.looptime = state.looptime_us * 1e-6f;
+  state.looptime_inverse = state.looptime > 0.0f ? 1.0f / state.looptime : 0.0f;
+  state.loop_counter++;
+  last_loop_cycles = now;
+  flight_update_rate(state.cpu_load);
+  state.uptime += state.looptime;
+  if (flags.arm_state)
+    state.armtime += state.looptime;
+}
+
+#ifdef PIO_UNIT_TESTING
+void flight_test_timing_init() { flight_timing_init(); }
+void flight_test_update_loop(uint32_t elapsed_cycles) { flight_update_loop(elapsed_cycles); }
+#endif
 
 static uint32_t flight_timer_period() {
   return (uint32_t)(state.looptime_autodetect * 2.0f + 0.5f) - 1;
@@ -125,6 +202,7 @@ void flight_thread(void *) {
   time_delay_ms(100);
 
   baro_init();
+  nav_init();
   rx_spektrum_bind();
 
   profile_mutex_init();
@@ -133,7 +211,7 @@ void flight_thread(void *) {
   osd_init();
   sixaxis_init();
   // needs to happen after gyro is detected so we know its update period
-  scheduler_init();
+  flight_timing_init();
 
   pid_init();
   control_filter_update(false);
@@ -152,11 +230,11 @@ void flight_thread(void *) {
   thread_start(THREAD_USB);
   thread_start(THREAD_IO);
 
-  task_reset_runtime();
+  flight_reset_runtime();
 
-  uint32_t last_loop_cycles = time_cycles();
+  last_loop_cycles = time_cycles();
 
-  flight_timer = TIMER_TAG_TIM(timer_alloc(TIMER_USE_SCHEDULER));
+  flight_timer = TIMER_TAG_TIM(timer_alloc(TIMER_USE_FLIGHT));
   configASSERT(flight_timer != TIMER_INVALID);
 
   timer_up_init(flight_timer, PWM_CLOCK_FREQ_HZ / 2000000, flight_timer_period());
@@ -174,14 +252,18 @@ void flight_thread(void *) {
     mutex_guard_t configuration(profile_mutex, !flags.arm_state);
 
     const float previous_period = state.looptime_autodetect;
-    const uint32_t cycles = scheduler_update_loop(elapsed_cycles);
-    last_loop_cycles = cycles;
+    flight_update_loop(elapsed_cycles);
     if (state.looptime_autodetect != previous_period) {
       timer_up_set_period(flight_timer, flight_timer_period());
     }
 
     simulator_update();
-    scheduler_run(cycles);
+    sixaxis_read();
+    imu_calc();
+    rx_process();
+    control();
+    blackbox_capture();
+    nav_update();
 
     // Apply masks after control resolves arming, before releasing configuration
     // ownership: a ground worker must never be suspended holding its mutex.
