@@ -125,7 +125,7 @@ typedef enum {
   TIMER_USE_SERVO,
   TIMER_USE_ELRS,
   TIMER_USE_SOFT_SERIAL,
-  TIMER_USE_SCHEDULER,
+  TIMER_USE_FLIGHT,
 } timer_use_t;
 
 typedef struct {

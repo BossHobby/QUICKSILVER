@@ -4,7 +4,7 @@
 #include "core/flash.h"
 #include "core/profile.h"
 #include "core/project.h"
-#include "core/scheduler.h"
+#include "core/tasks.h"
 #include "driver/time.h"
 #include "io/led.h"
 #include "util/util.h"
@@ -133,7 +133,7 @@ static void rx_stick_calibration_wizard() {
     led_flash();
 
     flash_save();
-    task_reset_runtime();
+    flight_reset_runtime();
 
     flags.gestures_disabled = 0;
     state.stick_calibration_wizard = STICK_WIZARD_SUCCESS;

@@ -4,7 +4,7 @@
 #include "core/debug.h"
 #include "core/flash.h"
 #include "core/profile.h"
-#include "core/scheduler.h"
+#include "core/tasks.h"
 #include "driver/rx/cc2500.h"
 #include "driver/time.h"
 #include "rx/rx_spi.h"
@@ -174,7 +174,7 @@ static uint8_t redpine_handle_packet() {
       flags.failsafe_signal_lost = 1;
       protocol_state = FRSKY_STATE_INIT;
       rx_redpine_init();
-      task_reset_runtime();
+      flight_reset_runtime();
     }
     break;
   }

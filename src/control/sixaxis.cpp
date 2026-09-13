@@ -11,7 +11,6 @@
 #include "core/flash.h"
 #include "core/profile.h"
 #include "core/project.h"
-#include "core/tasks.h"
 #include "driver/gyro/gyro.h"
 #include "driver/serial.h"
 #include "driver/time.h"
@@ -96,13 +95,13 @@ void sixaxis_orientation_update() {
 
 void sixaxis_filter_update(bool reset) {
   for (uint8_t i = 0; i < SDFT_AXES; i++) {
-    sdft_update_period(&gyro_sdft[i], task_get_period_us(TASK_FLIGHT));
+    sdft_update_period(&gyro_sdft[i], state.looptime_autodetect);
   }
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
     if (reset) {
-      filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq, task_get_period_us(TASK_FLIGHT));
+      filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq, state.looptime_autodetect);
     } else {
-      filter_coeff(profile.filter.gyro[i].type, &filter[i], profile.filter.gyro[i].cutoff_freq, task_get_period_us(TASK_FLIGHT));
+      filter_coeff(profile.filter.gyro[i].type, &filter[i], profile.filter.gyro[i].cutoff_freq, state.looptime_autodetect);
     }
   }
 }
@@ -117,7 +116,7 @@ void sixaxis_init() {
 
   for (uint8_t i = 0; i < SDFT_AXES; i++) {
     for (uint8_t j = 0; j < SDFT_PEAKS; j++) {
-      filter_biquad_notch_init(&notch_filter[i][j], &notch_filter_state[i][j], 1, 0, task_get_period_us(TASK_FLIGHT));
+      filter_biquad_notch_init(&notch_filter[i][j], &notch_filter_state[i][j], 1, 0, state.looptime_autodetect);
     }
   }
 }
@@ -169,7 +168,7 @@ void sixaxis_read() {
     if (current_axis < 3 && sdft_update(&gyro_sdft[current_axis])) {
       // once all sdft update steps are done, we update the filters and continue to the next axis
       for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
-        filter_biquad_notch_coeff(&notch_filter[current_axis][p], gyro_sdft[current_axis].notch_hz[p], task_get_period_us(TASK_FLIGHT));
+        filter_biquad_notch_coeff(&notch_filter[current_axis][p], gyro_sdft[current_axis].notch_hz[p], state.looptime_autodetect);
         blackbox_set_debug(BBOX_DEBUG_DYN_NOTCH, current_axis * SDFT_PEAKS + p, gyro_sdft[current_axis].notch_hz[p]);
       }
       // on the last axis we increment this to the idle state 3

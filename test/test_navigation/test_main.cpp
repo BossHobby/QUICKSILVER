@@ -5,6 +5,7 @@
 
 #include "control/control.h"
 #include "control/imu.h"
+#include "control/navigation.h"
 
 #include "rx/rx.h"
 #include "util/util.h"
@@ -22,7 +23,7 @@ void tearDown() {}
 
 extern void nav_test_reset(void);
 extern void nav_test_update_rth(void);
-extern void baro_test_sample(float altitude, uint32_t now_ms);
+extern void nav_test_altitude_sample(float altitude, uint32_t now_ms);
 extern void nav_test_altitude_control(float target, float rate, float dt);
 extern void control_test_flight_mode(void);
 extern float control_test_throttle_input(void);
@@ -45,6 +46,7 @@ static void navigation_test_setup(void) {
   memset(&flags, 0, sizeof(flags));
 
   baro_init();
+  nav_init();
   profile.serial.gps = SERIAL_PORT1;
   state.gps_lock = true;
   state.gps_sats = GPS_MIN_SATS_FOR_LOCK;
@@ -278,7 +280,7 @@ static void start_test_rth(void) {
   flags.rx_ready = 1;
   nav_test_set_home_valid(true);
   nav_test_set_gps_sane(true);
-  baro_test_sample(0, time_millis());
+  nav_test_altitude_sample(0, time_millis());
   state.home_distance = 100;
   state.gps_coord.lat = 8990;
   state.throttle = 0.5f;
@@ -306,14 +308,14 @@ void test_navigation_throttle_bypasses_pilot_curves(void) {
 
 void test_navigation_vertical_rate_uses_sample_interval(void) {
   navigation_test_setup();
-  baro_test_sample(0, 0);
+  nav_test_altitude_sample(0, 0);
   float height = 0;
   uint32_t stamp = 0;
   for (int i = 0; i < 200; i++) {
     const uint32_t step = i % 2 ? 40 : 60;
     stamp += step;
     height += 2.0f * step * 0.001f;
-    baro_test_sample(height, stamp);
+    nav_test_altitude_sample(height, stamp);
     const float velocity = state.baro_vertical_speed;
     for (int j = 0; j < 5; j++) {
       nav_test_altitude_control(state.altitude, 2, 0.01f);
@@ -388,7 +390,7 @@ void test_navigation_altitude_recovers_with_wrong_hover_setting(void) {
     for (int i = 0; i < 6000; i++) {
       time_test_advance_us(10000);
       if (i % 5 == 0)
-        baro_test_sample(height, time_millis());
+        nav_test_altitude_sample(height, time_millis());
       nav_test_altitude_control(10, 2, dt);
       velocity += dt * (9.81f * (state.rx_override.throttle / actual_hover - 1) - 0.3f * velocity);
       height += velocity * dt;
@@ -425,7 +427,7 @@ void test_navigation_altitude_handles_delay_and_noise(void) {
       history[i % 30] = height;
       if (i % 5 == 0) {
         const float noise = 0.15f * sinf(i * 0.01f * 5) + 0.05f * sinf(i * 0.01f * 19);
-        baro_test_sample(delayed_height + noise, time_millis());
+        nav_test_altitude_sample(delayed_height + noise, time_millis());
       }
       nav_test_altitude_control(10, 2, 0.01f);
       thrust += 0.01f / 0.1f * (state.rx_override.throttle - thrust);
@@ -537,11 +539,11 @@ void test_navigation_altitude_loss_aborts_and_blocks_restart(void) {
 
 void test_navigation_nonfinite_altitude_aborts(void) {
   start_test_rth();
-  baro_test_sample(NAN, time_millis());
+  nav_test_altitude_sample(NAN, time_millis());
   nav_test_update_rth();
   TEST_ASSERT_EQUAL(RTH_STATE_ABORTED, state.rth_state);
   start_test_rth();
-  baro_test_sample(INFINITY, time_millis());
+  nav_test_altitude_sample(INFINITY, time_millis());
   nav_test_update_rth();
   TEST_ASSERT_EQUAL(RTH_STATE_ABORTED, state.rth_state);
 }
@@ -626,12 +628,12 @@ void test_navigation_abort_restores_existing_failsafe_drop(void) {
 void test_navigation_failed_rescue_does_not_restart_from_nav_update(void) {
   navigation_test_setup();
   time_test_set_us(1000000);
-  baro_test_sample(0, time_millis());
+  nav_test_altitude_sample(0, time_millis());
   flags.arm_state = 1;
   state.gps_last_update_ms = time_millis();
   nav_update(); // capture home at arming
   state.gps_coord.lat = 2697; // 30m from home, within the jump threshold.
-  time_test_advance_us(1000);
+  time_test_advance_us(10000);
   state.gps_last_update_ms = time_millis();
   flags.failsafe = flags.failsafe_signal_lost = 1;
   nav_update();
@@ -642,18 +644,21 @@ void test_navigation_failed_rescue_does_not_restart_from_nav_update(void) {
   for (int i = 0; i < 100; i++) {
     time_test_advance_us(10000);
     state.gps_last_update_ms = time_millis();
-    baro_test_sample(0, time_millis());
+    nav_test_altitude_sample(0, time_millis());
     nav_update();
     TEST_ASSERT_FALSE(state.rth_active);
   }
   // A healthy pilot can explicitly clear the latch by cycling the RTH switch.
   flags.failsafe = flags.failsafe_signal_lost = 0;
   state.aux_active = 1U << AUX_RETURN_TO_HOME;
+  time_test_advance_us(10000);
   nav_update();
   TEST_ASSERT_FALSE(state.rth_active);
   state.aux_active = 0;
+  time_test_advance_us(10000);
   nav_update();
   state.aux_active = 1U << AUX_RETURN_TO_HOME;
+  time_test_advance_us(10000);
   nav_update();
   TEST_ASSERT_TRUE(state.rth_active);
 }
@@ -683,7 +688,7 @@ void test_navigation_closed_loop_return_with_irregular_samples(void) {
       next_gps_ms += gps_samples++ % 2 ? 80 : 120;
     }
     if (time_millis() >= next_baro_ms) {
-      baro_test_sample(height, time_millis());
+      nav_test_altitude_sample(height, time_millis());
       next_baro_ms += baro_samples++ % 2 ? 40 : 60;
     }
     state.heading = normalize_deg(heading * RADTODEG);

@@ -10,7 +10,6 @@
 #include "core/flash.h"
 #include "core/profile.h"
 #include "core/project.h"
-#include "core/scheduler.h"
 #include "core/tasks.h"
 #include "driver/reset.h"
 #include "driver/serial.h"
@@ -428,7 +427,7 @@ void osd_save_exit() {
   osd_exit();
   led_flash();
   flash_save();
-  task_reset_runtime();
+  flight_reset_runtime();
 
   if (reboot_fc_requested)
     system_reset();
@@ -456,7 +455,7 @@ static void osd_handle_gestures() {
       save_bind_only = false;
     }
     flash_save();
-    task_reset_runtime();
+    flight_reset_runtime();
     break;
   case GESTURE_TOGGLE_BIND:
     profile.receiver.bind.bind_saved = !profile.receiver.bind.bind_saved;
@@ -1867,7 +1866,7 @@ void osd_display() {
       break;
     }
     // Storage ownership can wait for the Blackbox worker as well as erase.
-    task_reset_runtime();
+    flight_reset_runtime();
 #endif
     break;
   }

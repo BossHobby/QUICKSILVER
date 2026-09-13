@@ -8,7 +8,7 @@
 #include "core/debug.h"
 #include "core/flash.h"
 #include "core/profile.h"
-#include "core/scheduler.h"
+#include "core/tasks.h"
 #include "core/target.h"
 #include "driver/interrupt.h"
 #include "driver/motor.h"
@@ -381,7 +381,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     return;
   }
   if (maintenance)
-    task_reset_runtime();
+    flight_reset_runtime();
   switch (cmd) {
   case MSP_API_VERSION: {
     uint8_t data[3] = {
@@ -1032,7 +1032,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 #endif
         if (!flags.arm_state && msp->device != MSP_DEVICE_SPI_RX) {
       flash_save();
-      task_reset_runtime();
+      flight_reset_runtime();
     }
     msp_send_reply(msp, magic, cmd, NULL, 0);
     break;

@@ -5,7 +5,6 @@
 #include "control/control.h"
 #include "control/output.h"
 #include "core/profile.h"
-#include "core/tasks.h"
 #include "driver/motor.h"
 #include "io/blackbox.h"
 #include "io/usb_configurator.h"
@@ -212,7 +211,7 @@ static void rover_calc_steering() {
   case ROVER_STEER_MODE_RATE_ASSIST: {
     state.pid_p_term.yaw = state.error.yaw * profile.rover.pid.kp * ROVER_PID_KP_SCALE * steering_scale;
 
-    filter_coeff(profile.filter.dterm_dynamic_type, &rover_dterm_dynamic_filter, rover_dterm_dynamic_frequency(), task_get_period_us(TASK_FLIGHT));
+    filter_coeff(profile.filter.dterm_dynamic_type, &rover_dterm_dynamic_filter, rover_dterm_dynamic_frequency(), state.looptime_autodetect);
     const float gyro_derivative = -gyro_delta * profile.rover.pid.kd * ROVER_PID_KD_SCALE * state.looptime_inverse * steering_scale;
     state.pid_d_term.yaw = rover_filter_dterm(gyro_derivative);
 
@@ -311,20 +310,20 @@ void pid_rates_update() {}
 void pid_filter_update(bool reset) {
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
     if (reset) {
-      filter_init(profile.filter.dterm[i].type, &rover_dterm_filter[i], &rover_dterm_filter_state[i], 1, profile.filter.dterm[i].cutoff_freq, task_get_period_us(TASK_FLIGHT));
+      filter_init(profile.filter.dterm[i].type, &rover_dterm_filter[i], &rover_dterm_filter_state[i], 1, profile.filter.dterm[i].cutoff_freq, state.looptime_autodetect);
     } else {
-      filter_coeff(profile.filter.dterm[i].type, &rover_dterm_filter[i], profile.filter.dterm[i].cutoff_freq, task_get_period_us(TASK_FLIGHT));
+      filter_coeff(profile.filter.dterm[i].type, &rover_dterm_filter[i], profile.filter.dterm[i].cutoff_freq, state.looptime_autodetect);
     }
   }
   if (reset) {
-    filter_init(profile.filter.dterm_dynamic_type, &rover_dterm_dynamic_filter, &rover_dterm_dynamic_filter_state, 1, DTERM_DYNAMIC_FREQ_MAX, task_get_period_us(TASK_FLIGHT));
+    filter_init(profile.filter.dterm_dynamic_type, &rover_dterm_dynamic_filter, &rover_dterm_dynamic_filter_state, 1, DTERM_DYNAMIC_FREQ_MAX, state.looptime_autodetect);
   }
 }
 
 void pid_init() {
   pid_filter_update(true);
   filter_lp_pt1_init(&rover_rate_throttle_filter, &rover_rate_throttle_filter_state, 1,
-                     ROVER_RATE_THROTTLE_FILTER_HZ, task_get_period_us(TASK_FLIGHT));
+                     ROVER_RATE_THROTTLE_FILTER_HZ, state.looptime_autodetect);
   rover_last_gyro_yaw = state.gyro.yaw;
   rover_ierror_yaw = 0.0f;
   rover_last_error_yaw = 0.0f;

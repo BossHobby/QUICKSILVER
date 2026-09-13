@@ -3,13 +3,7 @@
 #include <stddef.h>
 
 #include "control/control.h"
-#include "control/imu.h"
-#ifdef VEHICLE_MULTI
-#include "control/multi/navigation.h"
-#endif
-#include "control/sixaxis.h"
 #include "core/failloop.h"
-#include "core/scheduler.h"
 #include "driver/baro/baro.h"
 #include "driver/serial.h"
 #include "driver/usb.h"
@@ -25,19 +19,6 @@
 #include "profile.h"
 #include "project.h"
 #include "rx/rx.h"
-
-static void flight_task() {
-  sixaxis_read();
-  imu_calc();
-  rx_process();
-  control();
-  blackbox_capture();
-}
-
-#ifndef VEHICLE_MULTI
-static void task_noop() {
-}
-#endif
 
 // Cortex-M budgets include callers and saved task context. DisplayPort uses a
 // ~2 KiB frame and Blackbox encoding ~600 B; USB frame buffers live on the heap.
@@ -87,15 +68,6 @@ void threads_update() {
     }
   }
 }
-
-FAST_RAM task_t tasks[TASK_MAX] = {
-    [TASK_FLIGHT] = CREATE_TASK("FLIGHT", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, flight_task, 0),
-#ifdef VEHICLE_MULTI
-    [TASK_NAV] = CREATE_TASK("NAV", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, nav_update, 10000),
-#else
-    [TASK_NAV] = CREATE_TASK("NAV", 0, TASK_PRIORITY_HIGH, task_noop, 0),
-#endif
-};
 
 void io_thread(void *) {
   uint32_t last_baro = time_micros();

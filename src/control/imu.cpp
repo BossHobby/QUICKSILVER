@@ -7,7 +7,6 @@
 #include "control/imu.h"
 #include "core/profile.h"
 #include "core/project.h"
-#include "core/tasks.h"
 #include "driver/time.h"
 #include "io/blackbox.h"
 #include "util/filter.h"
@@ -53,7 +52,7 @@ typedef struct {
 } attitude_state_t;
 
 static attitude_state_t attitude_state;
-static bool gps_enabled; // Latched at init, like GPS task registration.
+static bool gps_enabled; // GPS heading correction is configured at IMU initialization.
 static filter_lp_pt1 accel_filter;
 static filter_state_t accel_filter_state[2][3];
 
@@ -253,7 +252,7 @@ static void imu_reset_attitude() {
 }
 
 void imu_filter_update() {
-  filter_lp_pt1_coeff(&accel_filter, ACCEL_FILTER_HZ, task_get_period_us(TASK_FLIGHT));
+  filter_lp_pt1_coeff(&accel_filter, ACCEL_FILTER_HZ, state.looptime_autodetect);
 }
 
 void imu_init() {
@@ -268,7 +267,7 @@ void imu_init() {
   }
 
   for (auto &pass : accel_filter_state) {
-    filter_lp_pt1_init(&accel_filter, pass, 3, ACCEL_FILTER_HZ, task_get_period_us(TASK_FLIGHT));
+    filter_lp_pt1_init(&accel_filter, pass, 3, ACCEL_FILTER_HZ, state.looptime_autodetect);
   }
   imu_reset_attitude();
 }

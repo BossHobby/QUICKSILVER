@@ -11,7 +11,7 @@
 #include "core/debug.h"
 #include "core/flash.h"
 #include "core/profile.h"
-#include "core/scheduler.h"
+#include "core/tasks.h"
 #include "driver/motor.h"
 #include "driver/osd/max7456.h"
 #include "driver/serial.h"
@@ -181,7 +181,8 @@ static void get_quic(quic_t *quic, cbor_value_t *dec) {
 #endif
 #ifdef DEBUG
   case QUIC_VAL_PERF_COUNTERS: {
-    res = cbor_encode_task_stats(&enc);
+    // Cooperative task counters are retired; preserve the array response.
+    res = cbor_encode_array(&enc, 0);
     check_cbor_error(QUIC_CMD_GET);
     quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
     break;
@@ -656,7 +657,7 @@ bool quic_process(quic_t *quic, uint8_t *data, uint32_t size, bool fault_mode) {
   // USB is the only command transport. Receive the whole request before
   // excluding ground Flight; the fault loop runs with scheduling suspended.
   mutex_guard_t configuration(profile_mutex, !fault_mode);
-  task_reset_runtime();
+  flight_reset_runtime();
 
   cbor_value_t dec;
   cbor_decoder_init(&dec, data + QUIC_HEADER_LEN, payload_size);
