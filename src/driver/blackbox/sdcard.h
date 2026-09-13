@@ -14,7 +14,9 @@ typedef enum {
 
 void sdcard_init();
 
-sdcard_status_t sdcard_update();
+// Optional next-service delay for Blackbox; synchronous maintenance callers
+// can keep consuming the transport state without waiting on the scheduler.
+sdcard_status_t sdcard_update(TickType_t *wait = nullptr);
 
 void sdcard_get_bounds(blackbox_device_bounds_t *blackbox_bounds);
 
