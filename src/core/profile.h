@@ -5,6 +5,7 @@
 #include "core/project.h"
 #include "rx/rx.h"
 #include "util/filter.h"
+#include "util/mutex.h"
 #include "util/vector.h"
 
 #define OSD_NUMBER_ELEMENTS 32
@@ -788,6 +789,9 @@ typedef struct {
   END_STRUCT()
 #endif
 
+// Ground Flight, USB and OSD own complete configuration passes. Armed Flight
+// never waits for this mutex.
+extern SemaphoreHandle_t profile_mutex;
 extern profile_t profile;
 extern const profile_t default_profile;
 
@@ -801,6 +805,7 @@ void blackbox_preset_apply(const blackbox_preset_t *preset, profile_blackbox_t *
 uint8_t blackbox_preset_equals(const blackbox_preset_t *preset, profile_blackbox_t *profile);
 
 void profile_set_defaults();
+void profile_mutex_init();
 pid_rate_t *profile_current_pid_rates();
 #ifndef VEHICLE_ROVER
 rate_t *profile_current_rates();
