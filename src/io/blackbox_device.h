@@ -27,7 +27,9 @@ typedef struct {
 
 typedef struct {
   void (*init)();
-  bool (*update)();
+  // Return readiness separately from the next service deadline. Zero means
+  // software progress remains; portMAX_DELAY waits for new work only.
+  bool (*update)(TickType_t &wait);
   void (*reset)();
 
   void (*start)();
@@ -82,7 +84,8 @@ cbor_result_t cbor_encode_blackbox_device_file_t(cbor_value_t *enc, const blackb
 cbor_result_t cbor_encode_blackbox_device_header_t(cbor_value_t *enc, const blackbox_device_header_t *h);
 
 void blackbox_device_init();
-bool blackbox_device_update();
+bool blackbox_device_update(TickType_t &wait);
+void blackbox_device_notify_from_isr(void *);
 bool blackbox_device_ready();
 uint32_t blackbox_device_usage();
 

@@ -177,9 +177,13 @@ static void sdcard_decode_csd() {
     sdcard_next(sdcard.transport->spi ? SDCARD_BLOCK_LEN : SDCARD_SELECT);
 }
 
-sdcard_status_t sdcard_update() {
-  if (sdcard.state == SDCARD_FAILED)
+sdcard_status_t sdcard_update(TickType_t *wait) {
+  if (wait) *wait = 1;
+  if (sdcard.state == SDCARD_FAILED) {
+    if (wait) *wait = portMAX_DELAY;
     return SDCARD_ERROR;
+  }
+  const sdcard_state_t previous_state = sdcard.state;
   if (target.sdcard_detect.pin != PIN_NONE &&
       bool(gpio_pin_read(target.sdcard_detect.pin)) == bool(target.sdcard_detect.invert)) {
     if (sdcard.state == SDCARD_DETECT)
@@ -209,6 +213,8 @@ sdcard_status_t sdcard_update() {
   case SDCARD_WRITE_READY:
   case SDCARD_WRITE_DONE:
   case SDCARD_WRITE_FINISHED:
+    // The caller can consume the completed operation or start the next one.
+    if (wait) *wait = 0;
     return SDCARD_IDLE;
   default:
     if (sdcard.state > SDCARD_READY && uint32_t(now - sdcard.phase_started) > SDCARD_DATA_TIMEOUT_US) {
@@ -379,6 +385,7 @@ sdcard_status_t sdcard_update() {
   default:
     break;
   }
+  if (wait && sdcard.state != previous_state) *wait = 0;
   return sdcard.state == SDCARD_FAILED ? SDCARD_ERROR : SDCARD_WAIT;
 }
 
