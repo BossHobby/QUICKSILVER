@@ -43,7 +43,7 @@ static uint8_t max7456_dma_spi_read(uint8_t reg) {
       spi_make_seg_const(reg),
       spi_make_seg_buffer(&ret, NULL, 1),
   };
-  spi_seg_submit_wait(&bus, segs);
+  spi_seg_submit_dma_wait(&bus, segs);
 
   return ret;
 }
@@ -55,7 +55,7 @@ static void max7456_dma_spi_write(uint8_t reg, uint8_t data) {
   const spi_txn_segment_t segs[] = {
       spi_make_seg_const(reg, data),
   };
-  spi_seg_submit_wait(&bus, segs);
+  spi_seg_submit_dma_wait(&bus, segs);
 }
 
 static bool max7456_init_display() {

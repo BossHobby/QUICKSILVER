@@ -36,10 +36,14 @@
 #include "io/gps.h"
 #include "io/led.h"
 #include "io/simulator.h"
+#include "io/usb_configurator.h"
 #include "io/vbat.h"
 #include "io/vtx.h"
 #include "osd/render.h"
 #include "util/filter.h"
+
+static StaticSemaphore_t usb_mutex_storage;
+SemaphoreHandle_t usb_configurator_mutex;
 
 extern "C" __attribute__((__used__)) void
 memory_section_init() {
@@ -146,6 +150,9 @@ void flight_thread(void *) {
 
   blackbox_init();
   imu_init();
+  usb_configurator_mutex = xSemaphoreCreateMutexStatic(&usb_mutex_storage);
+  configASSERT(usb_configurator_mutex);
+  thread_start(THREAD_USB);
 
   task_reset_runtime();
 
@@ -164,6 +171,11 @@ void flight_thread(void *) {
     const uint32_t elapsed_cycles = time_cycles() - last_loop_cycles;
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // Coalesce overruns; never replay old cycles.
 
+    // USB blocks arming in control_update_arming(). This lock protects live
+    // settings, including a command still finishing after USB disconnects.
+    // Armed Flight never locks: the ground-only USB thread is suspended.
+    mutex_guard_t configuration(usb_configurator_mutex, !flags.arm_state);
+
     const float previous_period = state.looptime_autodetect;
     const uint32_t cycles = scheduler_update_loop(elapsed_cycles);
     last_loop_cycles = cycles;
@@ -173,6 +185,10 @@ void flight_thread(void *) {
 
     simulator_update();
     scheduler_run(cycles);
+
+    // Apply masks after control resolves arming, before releasing configuration
+    // ownership: a ground worker must never be suspended holding its mutex.
+    threads_update();
   }
 }
 
