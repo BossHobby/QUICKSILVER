@@ -91,7 +91,7 @@ static void rx_apply_smoothing() {
     return;
   }
 
-  filter_lp_pt2_coeff(&rx_filter, state.rx_filter_hz, task_get_period_us(TASK_RX));
+  filter_lp_pt2_coeff(&rx_filter, state.rx_filter_hz, task_get_period_us(TASK_FLIGHT));
 
   state.rx.roll = constrain(state.rx.roll, -1.0, 1.0);
   state.rx.pitch = constrain(state.rx.pitch, -1.0, 1.0);
@@ -153,7 +153,7 @@ static void rx_init_state() {
   state.aux_active = 0;
   rx_update_aux_active();
 
-  filter_lp_pt2_init(&rx_filter, rx_filter_state, 4, state.rx_filter_hz, task_get_period_us(TASK_RX));
+  filter_lp_pt2_init(&rx_filter, rx_filter_state, 4, state.rx_filter_hz, task_get_period_us(TASK_FLIGHT));
 }
 
 void rx_init() {

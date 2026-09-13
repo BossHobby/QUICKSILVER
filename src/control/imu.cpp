@@ -253,7 +253,7 @@ static void imu_reset_attitude() {
 }
 
 void imu_filter_update() {
-  filter_lp_pt1_coeff(&accel_filter, ACCEL_FILTER_HZ, task_get_period_us(TASK_IMU));
+  filter_lp_pt1_coeff(&accel_filter, ACCEL_FILTER_HZ, task_get_period_us(TASK_FLIGHT));
 }
 
 void imu_init() {
@@ -268,7 +268,7 @@ void imu_init() {
   }
 
   for (auto &pass : accel_filter_state) {
-    filter_lp_pt1_init(&accel_filter, pass, 3, ACCEL_FILTER_HZ, task_get_period_us(TASK_IMU));
+    filter_lp_pt1_init(&accel_filter, pass, 3, ACCEL_FILTER_HZ, task_get_period_us(TASK_FLIGHT));
   }
   imu_reset_attitude();
 }
