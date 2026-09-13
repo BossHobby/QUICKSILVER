@@ -9,7 +9,6 @@
 #include "core/debug.h"
 #include "core/profile.h"
 #include "core/project.h"
-#include "core/scheduler.h"
 #include "core/tasks.h"
 #include "driver/reset.h"
 #include "driver/serial.h"
@@ -233,7 +232,7 @@ void usb_configurator(bool fault_mode) {
   }
 
   // Configuration work is excluded from Flight loop-rate decisions.
-  task_reset_runtime();
+  flight_reset_runtime();
   free(buffer);
 }
 #pragma GCC diagnostic pop
