@@ -128,8 +128,12 @@ typedef struct {
 #define rx_aux_on(function) ((state.aux_active & (1U << (function))) != 0)
 #define rx_aux_value(channel) (state.rx_channels[(channel)])
 
+// Decoder-owned staging, including retained channels in partial frames.
+// Consumers use state.rx_channels, published by Flight from the mailbox.
+extern uint16_t rx_channels[RX_CHANNEL_MAX];
+
 void rx_init();
-// Cooperative transport task: polls serial/SPI and publishes receiver state.
+// IO thread: polls serial/SPI and publishes receiver state.
 void rx_update();
 // Flight task: consumes received channels and conditions commands before control.
 void rx_process();

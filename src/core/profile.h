@@ -789,8 +789,9 @@ typedef struct {
   END_STRUCT()
 #endif
 
-// Ground Flight, USB and OSD own complete configuration passes. Armed Flight
-// never waits for this mutex.
+// Serializes ground Flight with complete configuration commands, binding,
+// OSD edits/ground rendering and VTX setup. Routine IO and airborne telemetry
+// do not take it; frame reception never owns a configuration operation.
 extern SemaphoreHandle_t profile_mutex;
 extern profile_t profile;
 extern const profile_t default_profile;

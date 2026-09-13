@@ -160,7 +160,7 @@ static void rx_serial_crsf_update_channel(uint8_t channel, uint32_t raw, uint32_
     return;
 
   const uint32_t value = constrain(raw, raw_min, raw_max) - raw_min;
-  state.rx_channels[channel] = (uint16_t)(value * AUX_VALUE_MAX / (raw_max - raw_min));
+  rx_channels[channel] = (uint16_t)(value * AUX_VALUE_MAX / (raw_max - raw_min));
 }
 
 static void rx_serial_crsf_process_subset_channels(const uint8_t *payload, uint8_t payload_length) {
@@ -368,8 +368,9 @@ static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
     break;
   }
 
-  if (channels_received && profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && profile.receiver.aux[AUX_RSSI].channel < RX_CHANNEL_MAX)
-    rx_lqi_update_direct((float)state.rx_channels[profile.receiver.aux[AUX_RSSI].channel] * CRSF_CHANNEL_LQI_SCALE);
+  const auto rssi_channel = profile.receiver.aux[AUX_RSSI].channel;
+  if (channels_received && profile.receiver.lqi_source == RX_LQI_SOURCE_CHANNEL && rssi_channel < RX_CHANNEL_MAX)
+    rx_lqi_update_direct((float)rx_channels[rssi_channel] * CRSF_CHANNEL_LQI_SCALE);
 
   return channels_received ? PACKET_CHANNELS_RECEIVED : PACKET_DATA_RECEIVED;
 }

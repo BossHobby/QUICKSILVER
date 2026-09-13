@@ -128,6 +128,8 @@ void flight_thread(void *) {
   rx_spektrum_bind();
 
   profile_mutex_init();
+  // DisplayPort-backed VTX service starts with OSD; initialize its state first.
+  vtx_init();
   osd_init();
   sixaxis_init();
   // needs to happen after gyro is detected so we know its update period
@@ -144,11 +146,11 @@ void flight_thread(void *) {
 
   rx_init();
   gps_init();
-  vtx_init();
 
   blackbox_init();
   imu_init();
   thread_start(THREAD_USB);
+  thread_start(THREAD_IO);
 
   task_reset_runtime();
 

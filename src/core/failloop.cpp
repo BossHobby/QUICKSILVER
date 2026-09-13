@@ -52,7 +52,7 @@ void failloop(failloop_t val) {
     state.failloop = val;
 
     if (flags.usb_active) {
-      usb_configurator();
+      usb_configurator(true); // No task can release a mutex in fault mode.
     }
 
     if ((time_millis() - blink_start) >= 1000) {

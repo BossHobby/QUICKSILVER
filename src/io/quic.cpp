@@ -263,13 +263,13 @@ static void set_quic(quic_t *quic, cbor_value_t *dec) {
   }
 }
 
-static void process_blackbox(quic_t *quic, cbor_value_t *dec) {
+static void process_blackbox(quic_t *quic, cbor_value_t *dec, bool fault_mode) {
   if (flags.arm_state) {
     quic_errorf(QUIC_CMD_BLACKBOX, "DISARM BEFORE ACCESSING LOGS");
     return;
   }
 #ifdef USE_BLACKBOX
-  mutex_guard_t guard(blackbox_storage_mutex);
+  mutex_guard_t guard(blackbox_storage_mutex, !fault_mode);
 #endif
   cbor_result_t res = CBOR_OK;
 
@@ -619,7 +619,7 @@ static void process_rx(quic_t *quic, cbor_value_t *dec) {
   }
 }
 
-bool quic_process(quic_t *quic, uint8_t *data, uint32_t size) {
+bool quic_process(quic_t *quic, uint8_t *data, uint32_t size, bool fault_mode) {
   if (size < 4) {
     return false;
   }
@@ -640,6 +640,11 @@ bool quic_process(quic_t *quic, uint8_t *data, uint32_t size) {
     return false;
   }
 
+  // USB is the only command transport. Receive the whole request before
+  // excluding ground Flight; the fault loop runs with scheduling suspended.
+  mutex_guard_t configuration(profile_mutex, !fault_mode);
+  task_reset_runtime();
+
   cbor_value_t dec;
   cbor_decoder_init(&dec, data + QUIC_HEADER_LEN, payload_size);
 
@@ -659,7 +664,7 @@ bool quic_process(quic_t *quic, uint8_t *data, uint32_t size) {
     quic_send(quic, QUIC_CMD_CAL_IMU, QUIC_FLAG_NONE, NULL, 0);
     break;
   case QUIC_CMD_BLACKBOX:
-    process_blackbox(quic, &dec);
+    process_blackbox(quic, &dec, fault_mode);
     break;
   case QUIC_CMD_OSD:
     process_osd(quic, &dec);

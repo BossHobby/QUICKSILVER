@@ -135,5 +135,5 @@ typedef struct {
   msp_device_t device;
 } msp_t;
 
-msp_status_t msp_process_serial(msp_t *msp, uint8_t data);
+msp_status_t msp_process_serial(msp_t *msp, uint8_t data, bool fault_mode = false);
 msp_status_t msp_process_telemetry(msp_t *msp, uint8_t *data, uint32_t len);
