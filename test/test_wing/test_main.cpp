@@ -14,7 +14,6 @@
 #include "driver/motor.h"
 #include "driver/servo.h"
 #include "driver/time.h"
-#include "osd/render.h"
 
 extern const profile_t default_profile;
 extern void run_wing_safety_tests();
@@ -24,7 +23,6 @@ void setUp() {
   state = {};
   flags = {};
   target = {};
-  osd_state.screen_history_size = 0;
   fault = FAILLOOP_NONE;
   pwm_rate = 0;
   time_test_set_us(1000000);

@@ -5,7 +5,6 @@
 
 #include "control/angle_pid.h"
 #include "control/control.h"
-#include "control/gestures.h"
 #include "control/multi/motor.h"
 #include "control/multi/turtle_mode.h"
 #include "control/output.h"

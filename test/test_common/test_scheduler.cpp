@@ -71,8 +71,8 @@ void test_scheduler_exhausted_budget_and_wrap() {
 
 void test_scheduler_slows_after_starvation_without_forcing_work() {
   begin_timing();
-  const task_t saved_sibling = tasks[TASK_OSD];
-  tasks[TASK_OSD] = background_task(30);
+  const task_t saved_sibling = tasks[TASK_VBAT];
+  tasks[TASK_VBAT] = background_task(30);
   const task_t saved = tasks[TASK_GPS];
   auto &task = tasks[TASK_GPS];
   task = background_task(30);
@@ -80,15 +80,15 @@ void test_scheduler_slows_after_starvation_without_forcing_work() {
     const uint32_t boundary = next_loop();
     time_test_advance_us(110);
     TEST_ASSERT_FALSE(scheduler_test_should_run(boundary, TASK_MASK_IN_AIR, &task));
-    TEST_ASSERT_FALSE(scheduler_test_should_run(boundary, TASK_MASK_IN_AIR, &tasks[TASK_OSD]));
+    TEST_ASSERT_FALSE(scheduler_test_should_run(boundary, TASK_MASK_IN_AIR, &tasks[TASK_VBAT]));
     TEST_ASSERT_EQUAL_FLOAT(125, state.looptime_autodetect);
     TEST_ASSERT_EQUAL_UINT32(US_TO_CYCLES(30), task.runtime_worst);
   }
   const uint32_t boundary = next_loop();
   TEST_ASSERT_EQUAL_FLOAT(250, state.looptime_autodetect);
   TEST_ASSERT_EQUAL_UINT8(1, state.looptime_warning);
-  TEST_ASSERT_EQUAL_UINT8(0, tasks[TASK_OSD].runtime_skips);
-  tasks[TASK_OSD] = saved_sibling;
+  TEST_ASSERT_EQUAL_UINT8(0, tasks[TASK_VBAT].runtime_skips);
+  tasks[TASK_VBAT] = saved_sibling;
   TEST_ASSERT_EQUAL_UINT8(0, task.runtime_skips);
   time_test_advance_us(110);
   TEST_ASSERT_TRUE(scheduler_test_should_run(boundary, TASK_MASK_IN_AIR, &task));
