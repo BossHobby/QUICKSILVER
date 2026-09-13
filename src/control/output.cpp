@@ -5,7 +5,6 @@
 #include "control/control.h"
 #include "driver/motor.h"
 #include "driver/servo.h"
-#include "osd/render.h"
 #include "util/util.h"
 
 float output_apply_config(const profile_output_t *output, float value) {
@@ -200,8 +199,7 @@ static bool output_allowed(uint8_t index, const profile_output_t *output) {
     return false;
   }
   if (output->protocol == OUTPUT_PROTOCOL_PWM) {
-    return osd_state.screen_history_size == 0 &&
-           (!output_has_mixer_source(index, OUTPUT_SOURCE_THROTTLE) || flags.arm_state || flags.motortest_override);
+    return !output_has_mixer_source(index, OUTPUT_SOURCE_THROTTLE) || flags.arm_state || flags.motortest_override;
   }
   return flags.arm_state || flags.motortest_override;
 }
