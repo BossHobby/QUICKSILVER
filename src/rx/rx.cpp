@@ -1,6 +1,8 @@
 #include "rx/rx.h"
 
+#include <atomic>
 #include <math.h>
+#include <string.h>
 
 #include "control/control.h"
 #include "core/flash.h"
@@ -22,10 +24,17 @@ static uint32_t frames_per_second = 0;
 static uint32_t frames_missed = 0;
 static uint32_t frames_received = 0;
 
-// RX and Flight are cooperative scheduler entries, not concurrent threads.
-static bool rx_frame_pending;
+uint16_t rx_channels[RX_CHANNEL_MAX];
+
+// Complete frames are copied under a short task critical section. Neither
+// decoder work nor Flight-side conditioning runs with interrupts masked.
+static struct {
+  uint16_t channels[RX_CHANNEL_MAX];
+  bool pending;
+} rx_mailbox;
 static uint32_t rx_filter_start;
-static uint32_t rx_filter_counter;
+static std::atomic<uint32_t> rx_filter_counter;
+static_assert(std::atomic<uint32_t>::is_always_lock_free);
 
 static filter_lp_pt2 rx_filter;
 static filter_state_t rx_filter_state[4];
@@ -152,7 +161,8 @@ static void rx_update_aux_active() {
 }
 
 static void rx_init_state() {
-  rx_frame_pending = false;
+  rx_mailbox = {};
+  memset(rx_channels, 0, sizeof(rx_channels));
   rx_filter_start = time_millis();
   rx_filter_counter = 0;
   for (uint32_t i = 0; i < RX_CHANNEL_MAX; i++) {
@@ -334,7 +344,10 @@ static bool rx_check() {
 
 void rx_update() {
   if (rx_check() && !flags.failsafe_signal_lost) {
-    rx_frame_pending = true;
+    taskENTER_CRITICAL();
+    memcpy(rx_mailbox.channels, rx_channels, sizeof(rx_channels));
+    rx_mailbox.pending = true;
+    taskEXIT_CRITICAL();
     rx_filter_counter++;
   }
 }
@@ -348,7 +361,14 @@ void rx_process() {
   }
 #endif
 
-  if (rx_frame_pending && !flags.failsafe_signal_lost) {
+  taskENTER_CRITICAL();
+  const bool frame_pending = rx_mailbox.pending;
+  if (frame_pending)
+    memcpy(state.rx_channels, rx_mailbox.channels, sizeof(state.rx_channels));
+  rx_mailbox.pending = false;
+  taskEXIT_CRITICAL();
+
+  if (frame_pending && !flags.failsafe_signal_lost) {
     rx_apply_stick_scale();
     rx_update_roles();
     rx_update_aux_active();
@@ -357,15 +377,13 @@ void rx_process() {
     state.rx.pitch = rx_apply_deadband(state.rx.pitch);
     state.rx.yaw = rx_apply_deadband(state.rx.yaw);
   }
-  rx_frame_pending = false;
 
   const uint32_t rx_filter_delta = (time_millis() - rx_filter_start);
   if (rx_filter_delta > RX_FITER_SAMPLE_TIME) {
-    const float sample_hz = (float)rx_filter_counter / ((float)rx_filter_delta / 1000.0f);
+    const float sample_hz = (float)rx_filter_counter.exchange(0) / ((float)rx_filter_delta / 1000.0f);
 
     state.rx_filter_hz = rintf(sample_hz * 0.45f);
     rx_filter_start = time_millis();
-    rx_filter_counter = 0;
   }
 
   rx_apply_smoothing();

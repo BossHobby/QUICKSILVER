@@ -6,6 +6,7 @@
 #include "control/control.h"
 #include "core/profile.h"
 #include "core/project.h"
+#include "core/tasks.h"
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "util/cbor_helper.h"
@@ -463,7 +464,8 @@ static void gps_handle_packet(const uint16_t class_id, const uint8_t *payload, c
 
     ubx_nav_pvt_t *nav_pvt = (ubx_nav_pvt_t *)payload;
 
-    // Update basic state
+    // Publish one complete solution before Flight can consume navigation data.
+    taskENTER_CRITICAL();
     state.gps_lock = (nav_pvt->flags & FLAGS_GNSS_FIX_OK) &&
                      (nav_pvt->fixType == GPS_FIX_3D || nav_pvt->fixType == GPS_FIX_GNSS_DR) &&
                      (nav_pvt->numSV >= GPS_MIN_SATS_FOR_LOCK);
@@ -478,6 +480,7 @@ static void gps_handle_packet(const uint16_t class_id, const uint8_t *payload, c
     state.gps_speed = nav_pvt->gSpeed * 0.001f; // mm/s to m/s
     state.gps_vel_north = nav_pvt->velN * 0.001f;
     state.gps_vel_east = nav_pvt->velE * 0.001f;
+    taskEXIT_CRITICAL();
 
     // Update comprehensive status
     gps_status.fix_type = nav_pvt->fixType;

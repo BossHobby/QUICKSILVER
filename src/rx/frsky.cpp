@@ -95,6 +95,7 @@ static uint8_t read_packet() {
 }
 
 static void init_tune_rx() {
+  mutex_guard_t configuration(profile_mutex);
   cc2500_write_reg(CC2500_FOCCFG, 0x14);
 
   time_tuned_ms = time_millis();
@@ -110,6 +111,7 @@ static void init_tune_rx() {
 }
 
 static void tune_rx_offset(int8_t offset) {
+  mutex_guard_t configuration(profile_mutex);
   profile.receiver.bind.frsky.offset = offset;
   if (profile.receiver.bind.frsky.offset >= 126) {
     profile.receiver.bind.frsky.offset = -126;
@@ -153,6 +155,7 @@ static uint8_t tune_rx() {
 }
 
 static void init_get_bind() {
+  mutex_guard_t configuration(profile_mutex);
   set_channel(0);
   cc2500_strobe_sync(CC2500_SFRX);
   time_delay_us(20); // waiting flush FIFO
@@ -175,6 +178,7 @@ static uint8_t get_bind() {
   }
 
   if (rx_spi_packet[len - 1] & 0x80 && rx_spi_packet[2] == 0x01) {
+    mutex_guard_t configuration(profile_mutex);
     quic_debugf("FRSKY: bind packet idx %d vs %d", rx_spi_packet[5], profile.receiver.bind.frsky.idx);
     if (rx_spi_packet[5] == 0x00) {
       profile.receiver.bind.frsky.tx_id[0] = rx_spi_packet[3];

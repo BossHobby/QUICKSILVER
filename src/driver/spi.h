@@ -160,7 +160,7 @@ static inline bool spi_txn_ready(spi_bus_device_t *bus) {
 bool spi_txn_has_free(void);
 uint8_t spi_txn_free_count(void);
 
-// Background storage uses DMA even for short commands, so preemption never
+// Background workers use DMA even for short commands, so preemption never
 // leaves a higher-priority task waiting on a suspended byte-polling writer.
 template <size_t N>
 inline void spi_seg_submit_dma_wait(spi_bus_device_t *bus, const spi_txn_segment_t (&segs)[N]) {

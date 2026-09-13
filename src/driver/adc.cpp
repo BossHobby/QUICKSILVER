@@ -37,16 +37,20 @@ bool adc_read(adc_chan_t chan, float *val) {
     *val = adc_convert_to_temp(raw_value);
     break;
 
-  case ADC_CHAN_VBAT:
+  case ADC_CHAN_VBAT: {
+    const float reported_voltage = profile.voltage.reported_telemetry_voltage;
     *val = (target.vbat == PIN_NONE) ? 4.20f 
-         : (profile.voltage.reported_telemetry_voltage == 0.0f) ? 0.0f
-         : (float)adc_to_mv(raw_value) * VBAT_SCALE * (profile.voltage.actual_battery_voltage / profile.voltage.reported_telemetry_voltage);
+         : (reported_voltage == 0.0f) ? 0.0f
+         : (float)adc_to_mv(raw_value) * VBAT_SCALE * (profile.voltage.actual_battery_voltage / reported_voltage);
     break;
+  }
 
-  case ADC_CHAN_IBAT:
-    *val = (profile.voltage.ibat_scale == 0 || target.ibat == PIN_NONE) ? 0
-         : (float)adc_to_mv(raw_value) * (10000.0f / profile.voltage.ibat_scale);
+  case ADC_CHAN_IBAT: {
+    const float ibat_scale = profile.voltage.ibat_scale;
+    *val = (ibat_scale == 0 || target.ibat == PIN_NONE) ? 0
+         : (float)adc_to_mv(raw_value) * (10000.0f / ibat_scale);
     break;
+  }
 
   default:
     *val = raw_value;
