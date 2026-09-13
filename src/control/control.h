@@ -153,10 +153,10 @@ typedef struct {
   float ibat_sag_filtered; // filtered current in amps (fast for mAh tracking)
   float ibat_drawn;        // total mAh consumed
 
-  vec4_t rx;                            // holds raw or calibrated role channels; rover steering uses yaw
-  vec4_t rx_filtered;                   // same as above, but with constraints (just in case), smoothing and deadband applied
+  vec4_t rx;                            // Flight-owned calibrated, deadbanded roles; rover steering uses yaw
+  vec4_t rx_filtered;                   // Flight-owned constrained, smoothed roles; held input is smoothed every loop
   vec4_t rx_override;                   // override values, activated by controls_override
-  uint16_t rx_channels[RX_CHANNEL_MAX]; // full resolution 16-bit receiver channel values
+  uint16_t rx_channels[RX_CHANNEL_MAX]; // RX transport publishes 0..65535 channels; simulator_update supplies simulator input
   float rx_filter_hz;
 
   stick_wizard_state_t stick_calibration_wizard; // current phase of the calibration wizard

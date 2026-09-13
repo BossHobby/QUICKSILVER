@@ -10,6 +10,7 @@
 
 typedef enum {
   TASK_FLIGHT,
+  TASK_RX,
   TASK_VBAT,
   TASK_BARO,
   TASK_NAV,

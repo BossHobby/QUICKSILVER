@@ -28,8 +28,8 @@
 static void flight_task() {
   sixaxis_read();
   imu_calc();
+  rx_process();
   control();
-  rx_update();
 }
 
 void util_task() {
@@ -47,6 +47,7 @@ static void task_noop() {
 
 FAST_RAM task_t tasks[TASK_MAX] = {
     [TASK_FLIGHT] = CREATE_TASK("FLIGHT", TASK_MASK_ALWAYS, TASK_PRIORITY_REALTIME, flight_task, 0),
+    [TASK_RX] = CREATE_TASK("RX", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, rx_update, 0),
     [TASK_VBAT] = CREATE_TASK("VBAT", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, vbat_calc, 1000),
     [TASK_BARO] = CREATE_TASK("BARO", TASK_MASK_ALWAYS, TASK_PRIORITY_HIGH, baro_update, 10000),
 #ifdef VEHICLE_MULTI
