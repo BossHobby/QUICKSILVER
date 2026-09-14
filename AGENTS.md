@@ -1,722 +1,89 @@
-# AGENTS.md
-
-This file provides repository guidance for coding agents working in this repository.
-
-## Build Commands
-
-- Build all targets: `pio run`
-- Build specific target: `pio run -e stm32f405` (other targets: stm32f411, stm32f722, stm32f745, stm32f765, stm32g473, stm32h743, at32f435, multi-simulator, rover-simulator, wing-simulator)
-- Clean: `pio run -t clean`
-- run native tests: `pio test -e multi-test -e rover-test -e wing-test`
-- Verify build across all main targets: `pio run -e stm32f405 -e stm32f411 -e stm32f745 -e stm32f765 -e stm32f722 -e stm32h743 -e stm32g473 -e at32f435 -e at32f435m`
-
-## Code Style Guidelines
-
-- Includes: group by standard libraries first, then project modules
-- Indentation: 2 spaces
-- Braces: opening brace on same line for functions and control structures
-- Braces may be omitted for simple single-statement `if` bodies when it improves readability; use braces when a sequence of guard clauses or branches is clearer with visual blocks
-- Prefer named intermediate values over awkward line breaks made only to satisfy a column limit
-- Function naming: snake_case
-- Variable naming: snake_case
-- Constants/Macros: UPPER_CASE
-- Before adding declarations, compare the surrounding file and nearby files in the same subsystem and follow their organization. Group header constants after includes and before types, followed by extern variables and function declarations; do not insert constants between function declarations. Keep type-dependent macros beside their types and implementation-only constants in the owning source file.
-- Error handling: use failloop.h for critical errors
-- Comments: document non-obvious behavior and complex algorithms
-- Type safety: use appropriate typedefs (uint8_t, etc.) for hardware registers
-- Hardware access: use appropriate driver abstraction layers
-- Memory sections: respect DMA and FAST RAM sections where specified
-- Use const whenever possible
-
-## Profile Compatibility
-
-- Profile versions advance once for a new release after the previous version has had a public release. Do not bump `PROFILE_VERSION` repeatedly while working on the next unreleased version, even when additional persisted fields or schema changes are added. Extend the current unreleased version's changelog entry instead. Check public release history before deciding a version bump is needed.
-- The same public-release boundary applies to Configurator migrations: migrate publicly released profile formats only. Do not add migrations, compatibility adapters, or migration-time default filling for intermediate development profiles or artifacts. Update the current schema and its normal defaults directly.
-- Do not add on-device profile migrations. When changing persisted profile layout, update defaults/schema/versioning and expect old on-device profiles to be reset or rewritten off-device rather than migrated in firmware.
-
-## Architecture Overview
-
-QUICKSILVER is FPV drone flight controller firmware supporting STM32 F4/F7/H7/G4 and AT32 F435 MCUs.
-
-### Shared Runtime State (Required Pattern)
-
-Subsystems publish their externally useful runtime values into the global `state` (`control_state_t` in `src/control/control.h`, defined in `src/control/control.cpp`). This is a shared blackboard: despite its name, it is the vehicle's common runtime data interface. The companion `flags` holds shared control/status flags. Consumers read published values without depending on the producer's implementation.
-
-Keep subsystem machinery private. For example, battery filter history stays local while voltage/current readings are published; PID history and integration bookkeeping stay local while P/I/D terms and output are published; GPS publishes decoded position, speed and fix information for consumers such as telemetry.
-
-When adding or changing subsystem behavior:
-
-- Publish runtime values needed by other subsystems or diagnostics through `state` (or `flags` for shared control/status flags). Reuse existing fields when their meaning matches; do not introduce parallel public globals or trivial getters for the same values.
-- Keep filter histories, parser buffers, counters used only internally, and algorithm bookkeeping local to the owning subsystem. Do not put private implementation details into `state` merely for convenience.
-- Give each published value a clear owning producer. Consumers should treat it as read-only. Document intentional alternate writers, such as simulator input or override paths, and the conditions under which they own the value.
-- Document units, coordinate frame or range where relevant, initialization/reset behavior, and validity semantics. Distinguish measurements, requested commands and applied outputs; do not silently repurpose a field between these roles.
-- Treat `state` as the latest available values, not a synchronized snapshot. Check producer/consumer order and task cadence in `src/core/tasks.cpp` and `src/core/scheduler.cpp`. Use validity/freshness information when a consumer requires it; do not assume a value was updated this loop. Any ISR or concurrent access needs an explicit synchronization decision.
-- Treat serialized state as an external interface. For additions or changes, review `STATE_MEMBERS`, QUIC encoding, and affected Configurator, telemetry and blackbox consumers. Update serialization deliberately and check payload capacity when expanding it; preserve existing field meanings unless the interface change is intentional.
-- During review, trace the changed fields' writers and readers and verify ownership, initialization, validity and scheduling assumptions. Preserve this pattern without adding a generic event bus, accessor layer or broad state refactor unless the task requires one.
-
-### Core Modules (`src/core/`)
-- `main.c` - Entry point, hardware init sequence, starts scheduler
-- `scheduler.c` - Priority-based task scheduler (REALTIME > HIGH > MEDIUM > LOW)
-- `tasks.c` - Task definitions with runtime tracking (TASK_GYRO, TASK_PID, TASK_RX, etc.)
-- `flash.c` - Configuration persistence to flash memory
-- `profile.c` - Runtime configuration/profile management
-- `failloop.c` - Critical error handling (halts system with error code)
-- `project.h` - Memory section macros (FAST_RAM, DMA_RAM)
-
-### Flight Control (`src/flight/`)
-- `control.c` - Main control loop, mode handling (acro/angle), arming logic
-- `pid.c` - PID controller with D-term filtering and voltage compensation
-- `imu.c` - 6-axis sensor fusion, angle calculation
-- `sixaxis.c` - Gyro/accel reading and calibration
-- `filter.c` - Digital filters (PT1, dynamic filtering, SDFT)
-- `input.c` - Receiver input processing and expo curves
-
-### Hardware Drivers (`src/driver/`)
-- `mcu/` - MCU-specific implementations (stm32/, at32/, native/)
-- `gyro/` - Gyroscope drivers (BMI270, etc.)
-- Motor: `motor.c`, `motor_dshot.c` - DShot protocol implementation
-- Communication: `spi.c`, `serial.c`, `usb.c`
-
-### I/O Protocols (`src/io/`)
-- `msp.c` - MSP protocol for configurator communication
-- `quic.c` - Custom QUIC protocol for telemetry
-- `vtx.c` - VTX control abstraction (SmartAudio, TrampHV, MSP)
-- `blackbox.c` - Flight data logging
-
-### Receiver Support (`src/rx/`)
-- Protocol implementations: CRSF/ELRS, FrSky, FlySky, DSM, SBUS, IBUS
-- `rx.c` - Receiver abstraction layer
-- `rx_spi.c` - SPI-based receiver interface
-
-### OSD (`src/osd/`)
-- `render.c` - OSD rendering engine
-- `menu.c` - Configuration menu system
-
-## Memory Sections
-
-Use these macros for performance-critical or DMA-accessible data:
-- `FAST_RAM` - Places variables in fast-access RAM for real-time code
-- `DMA_RAM` - Places buffers in DMA-accessible memory regions
-
-## Task Scheduler
-
-Tasks are defined in `src/core/tasks.c` with priorities and context masks:
-- `TASK_MASK_ON_GROUND` - Runs only when disarmed
-- `TASK_MASK_IN_AIR` - Runs only when armed
-- `TASK_MASK_ALWAYS` - Runs in all states
-
-REALTIME tasks (gyro, imu, pid, rx) run every loop iteration. Lower priority tasks are scheduled based on available CPU time.
-
-## Target Configuration
-
-Board configurations are in `targets/*.yaml`. Each defines:
-- MCU type and pin mappings
-- Gyro SPI bus and CS pin
-- Motor timer assignments
-- Serial port mappings
-- LED, buzzer, and peripheral configs
-
-The `targets/_index.json` contains the master board index.
-
-## Test System
-
-### Overview
-
-The project uses Unity test framework integrated with PlatformIO for unit testing. Tests are written for native platform execution, allowing rapid testing without hardware.
-
-### Test Commands
-
-- Run all tests: `pio test -e multi-test -e rover-test -e wing-test`
-- Run with verbose output: `pio test -e multi-test -e rover-test -e wing-test -v`
-- Run a specific suite: `pio test -e wing-test --filter=test_wing`
-
-### Test Structure
-
-Shared tests are located in `test/test_common/`:
-
-- `test_main.cpp` - Suite runner that registers and executes shared tests
-- `test_<module>.cpp` - Individual test modules for different components
-- `test/mock_helpers.h/.cpp` and `test/mock_outputs.h/.cpp` - Shared test doubles
-
-### Test Organization
-
-Each test module follows this pattern:
-
-1. Include Unity: `#include <unity.h>`
-2. Include mock helpers: `#include "mock_helpers.h"`
-3. Include module under test
-4. Define setUp/tearDown if needed (local to module)
-5. Write test functions prefixed with `test_`
-6. Export test functions via `extern` declarations in `test_main.c`
-7. Register tests with `RUN_TEST()` in `test_main.c`
-
-### Unity Assertions
-
-Common Unity assertions used:
-
-- `TEST_ASSERT_EQUAL_FLOAT(expected, actual)` - Float equality
-- `TEST_ASSERT_FLOAT_WITHIN(delta, expected, actual)` - Float within tolerance
-- `TEST_ASSERT_NOT_NULL(pointer)` - Pointer not null
-- `TEST_ASSERT_TRUE(condition)` - Boolean true
-- `TEST_ASSERT_FALSE(condition)` - Boolean false
-- `TEST_ASSERT_EQUAL_INT(expected, actual)` - Integer equality
-- `TEST_ASSERT_EQUAL_MEMORY(expected, actual, length)` - Memory block comparison
-
-### PlatformIO Test Configuration
-
-The native test environments inherit their matching simulator environments:
-
-- `multi-test` inherits `multi-simulator`: shared tests, flight PID tests, and navigation tests
-- `rover-test` inherits `rover-simulator`: shared tests and rover control tests
-- `wing-test` inherits `wing-simulator`: shared tests, flight PID tests, and wing control tests
-
-Each selects the matching `VEHICLE_*` define and controller sources. Test builds
-use Unity's entry point and shared hardware test doubles; simulators use the
-normal firmware entry point. The `native-test` section holds common test settings.
-
-Suites are split into `test/test_common`, `test/test_pid`, `test/test_rover`, and
-`test/test_wing`, plus multirotor-only `test/test_navigation`. PlatformIO requires the `test_` directory prefix for discovery;
-environment names use hyphens. Shared mocks live directly under `test/`.
-
-### Test Coverage
-
-Current test modules include:
-
-- **Filter tests** - DSP filter initialization, low-pass filtering, frequency attenuation
-- **PID tests** - Proportional/integral/derivative control, voltage compensation
-- **IMU tests** - Gravity vector, gyro integration, accelerometer fusion, attitude calculation
-- **Vector tests** - 3D/4D vector operations, rotations, magnitude calculations
-- **CRC tests** - Checksum calculations and verification
-- **Ring buffer tests** - Circular buffer operations, wraparound, multi-read/write
-- **SPI tests** - SPI initialization, DMA transfer simulation, transaction queuing
-- **ADC tests** - ADC reading, temperature, voltage, and current measurements
-- **Serial tests** - Serial port configuration, data transmission/reception, buffer management
-
-### Writing New Tests
-
-1. Create a `.cpp` test file in the appropriate shared or vehicle-specific suite
-2. Include Unity and necessary headers
-3. Write test functions with descriptive names
-4. Add extern declarations to that suite's `test_main.cpp`
-5. Register tests with `RUN_TEST()` in that suite's `test_main.cpp`
-6. Use mock_helpers to isolate hardware dependencies
-7. Run with `pio test -e multi-test -e rover-test -e wing-test`
-
-### Test Best Practices
-
-- Each test should be independent and not rely on test order
-- Use setUp/tearDown to reset state between tests
-- Mock hardware dependencies using mock_helpers
-- Use descriptive test function names that explain what is tested
-- Keep tests focused on single functionality
-- Use appropriate Unity assertions for the data type being tested
-- Add tolerance when comparing floating-point values
-
-### Serial Testing
-
-- **USE_SERIAL macro is now enabled** for simulator builds to exercise more code paths
-- Serial mock implementation exists in `src/driver/mcu/native/serial.c`
-- Ring buffer implementation used for simulating serial hardware
-- Virtual pins are used instead of actual GPIO pins for simulator
-- When testing serial functionality:
-  - Use SERIAL_PORT1 instead of 0 (which is SERIAL_PORT_INVALID)
-  - Initialize serial ports correctly with mock_serial_init()
-  - Check for NULL pointers before using ring buffers
-
-## Feature Macros (src/config/feature.h)
-
-The project uses feature macros to control conditional compilation for different hardware targets and build configurations.
-
-### Primary Control Macro: SIMULATOR
-
-- When defined (via `-DSIMULATOR` build flag), builds for native/test environment
-- When undefined, builds for actual hardware with all peripherals enabled
-- Controlled by PlatformIO environment configuration
-
-### Feature Categories
-
-#### Core Hardware Features (disabled in SIMULATOR builds)
-
-- `USE_ADC` - Analog-to-digital converter support
-- `USE_SPI` - SPI bus interface
-- `USE_SERIAL` - Hardware UART/USART serial ports
-- `USE_GYRO` - Gyroscope sensor support
-- `USE_SOFT_SERIAL` - Software-emulated serial port
-
-#### Storage Features (disabled in SIMULATOR builds)
-
-- `USE_SDCARD` - SD card support for blackbox logging
-- `USE_DATA_FLASH` - Onboard flash memory for blackbox
-
-#### Motor Control (disabled in SIMULATOR builds)
-
-- `USE_MOTOR_DSHOT` - Digital shot protocol for brushless motors
-- `USE_MOTOR_PWM` - PWM control for brushed motors
-
-#### Video/OSD Features (disabled in SIMULATOR builds)
-
-- `USE_VTX` - Video transmitter control
-- `USE_DIGITAL_VTX` - Digital VTX protocols
-- `USE_MAX7456` - OSD chip support
-- `USE_RGB_LED` - Addressable RGB LED support
-
-#### Receiver Features (disabled in SIMULATOR builds)
-
-- `USE_RX_UNIFIED` - Serial receiver protocols (CRSF, SBUS, IBUS, DSM)
-- `USE_RX_SPI_FRSKY` - FrSky SPI receivers (not on AT32F4)
-- `USE_RX_SPI_FLYSKY` - FlySky SPI receivers (not on AT32F4)
-- `USE_RX_SPI_EXPRESS_LRS` - ExpressLRS SPI receivers (not on AT32F4)
-
-#### Always-Enabled Features (available in all builds including SIMULATOR)
-
-- `USE_SERIAL` - Serial port functionality (required for CRSF and other serial protocols)
-- `USE_RX_UNIFIED` - Unified serial receiver support (CRSF, SBUS, IBUS, DSM)
-- `USE_BLACKBOX` - Flight data logging
-
-### Usage Patterns
-
-```c
-// Simple feature check
-#ifdef USE_VTX
-  // VTX-specific code
-#endif
-
-// Feature alternatives
-#ifdef USE_MOTOR_DSHOT
-  motor_dshot_init();
-#else
-  #ifdef USE_MOTOR_PWM
-    motor_pwm_init();
-  #endif
-#endif
-
-// Platform-specific exclusions
-#ifndef AT32F4
-  #define USE_RX_SPI_FRSKY
-#endif
-```
-
-### Dependencies
-
-- SPI receivers require `USE_SPI`
-- VTX features require `USE_SERIAL`
-- Blackbox can use either `USE_SDCARD` or `USE_DATA_FLASH`
-- Motor control requires either `USE_MOTOR_DSHOT` or `USE_MOTOR_PWM`
-
-### Testing Considerations
-
-When writing tests:
-
-- Mock implementations should respect these feature flags
-- Test builds use `-DSIMULATOR` which disables most hardware features
-- Include guards should follow the same pattern as production code
-- Feature-specific tests should be wrapped in appropriate #ifdef blocks
-
-## Hardware Feature Implementation Guidelines (Simulator/Native)
-
-When enabling hardware features (ADC, SPI, etc.) for the simulator/native platform:
-
-### Header Organization
-
-- Keep native headers minimal to avoid circular dependencies
-- Native headers should only contain platform-specific constants and types
-- Avoid including system headers from native headers
-- Use `#pragma once` for include guards
-- Example structure:
-
-  ```c
-  // src/driver/mcu/native/adc.h
-  #pragma once
-
-  #define VREFINT_CAL (1489)
-  #define VREFINT_CAL_VREF (3300)
-  ```
-
-### Common Variables
-
-- Use `extern` declarations in native implementation files for shared variables
-- Never define variables in native code (they should be in common driver code)
-- Example:
-  ```c
-  // src/driver/mcu/native/adc.c
-  extern uint16_t adc_array[ADC_CHAN_MAX];
-  extern adc_channel_t adc_pins[ADC_CHAN_MAX];
-  ```
-
-### Test Files
-
-- Add `extern` declarations for test functions at the top of test files
-- Do not include conditional compilation (#ifdef USE_ADC) in test files
-- The test environment always has access to all features
-- Example:
-
-  ```c
-  // test/test_common/test_adc.c
-  extern void adc_set_raw_value(adc_chan_t chan, uint16_t value);
-
-  void test_adc_read_raw() {
-    adc_set_raw_value(ADC_CHAN_VBAT, 3000);
-    TEST_ASSERT_EQUAL_INT(3000, adc_read_raw(ADC_CHAN_VBAT));
-  }
-  ```
-
-### Implementation Patterns
-
-1. Create stub implementations that satisfy linker requirements
-2. Provide reasonable default values for simulated hardware
-3. Implement minimal functionality needed for tests
-4. Use static state variables in native implementations
-5. Add helper functions for test manipulation (set_raw_value, etc.)
-
-### Common Pitfalls to Avoid
-
-- Don't include system.h in native headers (causes circular dependencies)
-- Don't define common variables in native code (use extern)
-- Don't wrap test files in feature macros
-- Don't create complex dependencies between native implementations
-- Don't duplicate setUp/tearDown functions across test files
-
-## Serial Testing Guidelines
-
-When implementing tests for hardware features like serial:
-
-### Ring Buffer Management
-
-- Serial ports require initialized ring buffers for rx_buffer and tx_buffer
-- Create static ring buffer data arrays in test files
-- Initialize ring_buffer_t structures with proper data, head, tail, and size
-- Clear ring buffers between tests to ensure test isolation
-
-### Test Structure
-
-```c
-// Create ring buffers for testing
-static uint8_t rx_buffer_data[512];
-static uint8_t tx_buffer_data[512];
-static ring_buffer_t rx_buffer = {
-    .buffer = rx_buffer_data,
-    .head = 0,
-    .tail = 0,
-    .size = sizeof(rx_buffer_data),
-};
-
-// Initialize port with buffers
-serial_port_t port = {
-    .rx_buffer = &rx_buffer,
-    .tx_buffer = &tx_buffer,
-    .tx_done = true,
-};
-```
-
-### Validation Considerations
-
-- Native/simulator implementations may not pass hardware validation checks
-- Target device validation (target_serial_port_valid) may fail in test environment
-- Focus tests on functionality that can be exercised in simulator
-- Test edge cases and error conditions that don't require hardware
-
-## Task Scheduler
-
-### Overview
-
-The task scheduler manages execution of flight controller tasks with different priorities and timing requirements. It uses a runtime equalization system to ensure predictable task execution and prevent loop timing overruns.
-
-### Task Priorities
-
-Tasks are assigned one of four priority levels:
-- `TASK_PRIORITY_REALTIME` - Critical control tasks (GYRO, IMU, PID, RX) that must run every loop
-- `TASK_PRIORITY_HIGH` - Important tasks that should run frequently
-- `TASK_PRIORITY_MEDIUM` - Regular tasks (BLACKBOX, VTXTELEM, etc.)
-- `TASK_PRIORITY_LOW` - Background tasks that can be deferred
-
-### Runtime Equalization System
-
-The scheduler tracks task runtime to make scheduling decisions:
-
-```c
-typedef struct {
-  uint32_t runtime_avg;     // Running average over 32 samples
-  uint32_t runtime_worst;   // Worst-case runtime estimate
-} task_runtime_t;
-```
-
-Key constants:
-- `TASK_RUNTIME_REDUCTION`: 0.75x - Reduction when task is skipped
-- `TASK_RUNTIME_BUFFER`: 10μs - Buffer before loop deadline
-
-### Scheduling Algorithm
-
-1. **Task Selection**: Tasks are checked in priority order
-2. **Runtime Check**: For non-REALTIME tasks, the scheduler checks if `task->runtime_worst > time_left`
-3. **Skip Decision**: If insufficient time remains, the task is skipped and its worst-case estimate is reduced
-4. **Runtime Update**: After execution, worst-case is maintained at minimum 1.25x the running average
-
-### Task Definition
-
-Tasks are defined in `src/core/tasks.c` using the CREATE_TASK macro:
-```c
-CREATE_TASK("BLACKBOX", TASK_MASK_ALWAYS, TASK_PRIORITY_MEDIUM, blackbox_update, 0)
-```
-
-Parameters:
-- Name: Task identifier for debugging
-- Mask: When task should run (ALWAYS, ARMED, etc.)
-- Priority: Scheduling priority
-- Function: Task implementation
-- Period: Minimum microseconds between runs (0 = every loop if time permits)
-
-### Writing Predictable Tasks
-
-To ensure predictable runtime:
-1. **Avoid variable workloads** - Use fixed-size operations where possible
-2. **Implement rate limiting** - Process fixed amounts of data per iteration
-3. **Use state machines** - Break large operations into smaller steps
-4. **Monitor runtime** - Check task runtime statistics during development
-5. **Consider priority** - Only use REALTIME for critical control tasks
-
-### Example: Blackbox Task
-
-The blackbox task demonstrates good practices:
-- Uses rate divider based on `profile.blackbox.sample_rate_hz`
-- Processes one sample per iteration
-- Has consistent workload (compress and write fixed data structure)
-- Gracefully handles write failures without blocking
-
-### Common Runtime Issues to Avoid
-
-1. **Unbounded loops** - Never use `while(true)` or loops without fixed bounds in tasks
-2. **Variable-size operations** - Limit processing to fixed chunks per iteration
-3. **Blocking I/O** - Use non-blocking operations or state machines for I/O
-4. **Complex calculations** - Break into smaller steps across multiple iterations
-5. **Dynamic memory allocation** - Avoid malloc/free in task loops
-
-### Task Exceptions
-
-Some tasks are designed with different constraints:
-- **USB Task** - Blocks scheduler intentionally during configuration (flight is disabled)
-- **VTX Task** - Only runs on ground, blocked during flight for safety
-
-These tasks assume the user is not flying while configuring the system.
-
-### Tasks with Good Runtime Behavior
-
-- **OSD Task** - Already optimized for predictable runtime
-- **Blackbox Task** - Uses rate limiting and fixed workload per iteration
-
-### Runtime Optimization Guidelines
-
-When implementing new tasks or modifying existing ones:
-1. Use state machines for operations that span multiple iterations
-2. Implement per-iteration processing limits
-3. Add early exit conditions when approaching time budgets
-4. Use incremental processing for large operations
-5. Cache results to avoid repeated calculations
-6. Consider whether the task needs to run during flight
-
-## Scheduler Performance Metrics
-
-### Overview
-
-The scheduler includes comprehensive runtime metrics collection to monitor task performance and optimize scheduling decisions. These metrics are essential for identifying performance bottlenecks and ensuring stable flight performance.
-
-### Available Metrics
-
-The scheduler tracks the following metrics for each task:
-
-#### Core Runtime Metrics
-- **current**: Most recent execution time in microseconds
-- **avg**: Running average over 32 samples
-- **max**: Maximum observed runtime
-- **worst**: Worst-case estimate used for scheduling decisions
-- **percentile_95**: Smooth 95th percentile estimate using exponential moving average
-
-#### Variability Metrics (Debug builds only)
-- **stddev**: Standard deviation of runtime
-- **cv_percent**: Coefficient of Variation (stddev/avg × 100%) - measures relative variability
-- **skips**: Total number of times task was skipped due to insufficient time
-- **max_skips**: Maximum consecutive skips observed
-- **overruns**: Number of times task exceeded its worst-case estimate
-
-### Percentile Calculation
-
-The scheduler uses an exponential moving average approach for smooth P95 estimation:
-
-```c
-// Track values above average as potential peaks
-if (time_taken > task->runtime_avg) {
-  if (time_taken > task->runtime_peak_ema) {
-    // Fast upward adjustment (1/8 weight)
-    task->runtime_peak_ema = ((task->runtime_peak_ema * 7) + time_taken) >> 3;
-  } else {
-    // Slow downward adjustment (1/32 weight)
-    task->runtime_peak_ema = ((task->runtime_peak_ema * 31) + time_taken) >> 5;
-  }
-}
-// Continuous decay to forget old peaks
-task->runtime_peak_ema = (task->runtime_peak_ema * 511) >> 9;
-```
-
-This provides stable P95 estimates without the noise of traditional percentile calculations.
-
-### Scheduling Algorithm
-
-The scheduler uses a predictive approach based on runtime statistics:
-
-1. **Priority-based selection**: REALTIME tasks always run, others checked in priority order
-2. **Runtime prediction**: Uses `runtime_worst` (based on P95 + margin) to estimate if task will fit
-3. **Skip decision**: Non-realtime tasks skipped if `runtime_worst > time_remaining`
-4. **Skip penalty**: When a task is skipped, its `runtime_worst` is reduced by 25% (`* 3/4`) to increase future execution probability
-5. **Adaptive margins**: Uses conservative margins during startup, transitions to P95-based prediction
-
-#### Skip Penalty System
-
-When a task is skipped due to insufficient time, the scheduler applies a reduction penalty:
-
-```c
-// Reduce worst-case estimate by 25% (0.75x)
-task->runtime_worst = (task->runtime_worst * 3) >> 2;
-```
-
-This serves multiple purposes:
-- **Prevents starvation**: Skipped tasks become more likely to run in future loops
-- **Adapts to changing conditions**: Reduces estimates that may be too conservative
-- **Balances throughput**: Ensures non-realtime tasks still get execution time
-- **Self-correcting**: Over-pessimistic estimates naturally decay through skipping
-
-### Interpreting Metrics
-
-#### Coefficient of Variation (CV%)
-- **< 5%**: Very stable task with consistent runtime
-- **5-15%**: Normal variability for most tasks
-- **> 20%**: High variability, may need optimization
-
-#### Skip Patterns
-- **Occasional skips**: Normal for non-realtime tasks under load
-- **High consecutive skips**: May indicate task period too aggressive
-- **No skips**: Either REALTIME priority or very light task
-
-#### Overrun Analysis
-- **Low overruns**: Good scheduling prediction accuracy
-- **High overruns**: May need P95 margin adjustment or task optimization
-
-### Optimization Strategies
-
-Based on metrics analysis:
-
-1. **High CV% tasks**: Consider breaking into smaller steps or reducing workload
-2. **Frequent skips**: Reduce task frequency or optimize runtime
-3. **High overruns**: Tasks running longer than predicted, need runtime optimization
-4. **Consistent high runtime**: Consider priority adjustment or period increase
-
-### Future Enhancements
-
-Potential scheduler improvements being considered:
-
-#### Hardware Timer PLL
-Using hardware timers synchronized to gyro EXTI interrupts for improved timing precision:
-
-```c
-// PLL-based scheduler concept
-typedef struct {
-  int32_t phase_error;      // Gyro timing vs expected
-  int32_t frequency_error;  // Accumulated correction
-  uint32_t timer_period;    // Hardware timer period
-} scheduler_pll_t;
-```
-
-Benefits:
-- Eliminates busy-wait timing overhead
-- Locks main loop to actual gyro sampling rate
-- Reduces jitter through hardware-driven timing
-- Automatically adapts to gyro timing variations
-
-This would require gyro EXTI support and available hardware timers, but could significantly improve timing precision for supported hardware.
-
-## Three-Repo Architecture
-
-QUICKSILVER is part of a three-repo system:
-
-### BossHobby/Targets
-- Hardware board definitions (500+ FC boards) as YAML files in `targets/`
-- `src/schema/target.json` — JSON schema for target YAML validation
-- `src/types.ts` — TypeScript `target_t` interface (mirrors firmware `target_t`)
-- `src/index.ts` — validates YAMLs, generates `output/_index.json`, `output/_index.ini`, and cleaned YAMLs
-- CI pushes `output/` to `targets` branch for firmware consumption
-- Key files: `src/schema/target.json`, `src/types.ts`, `src/index.ts`, `src/dma.ts`, `manufacturers.yaml`
-
-### BossHobby/QUICKSILVER (this repo)
-- `script/pre_script.py` clones/fetches Targets repo (branch `targets`) into local `targets/` at build time
-- `targets/_index.ini` provides PlatformIO env entries (`[env:board-name] extends = mcu_type`)
-- One ELF per MCU type; `script/target_inject.py` copies MCU ELF and injects target YAML as CBOR into `.config_flash` section
-- `TARGET_HASH` (MD5 of YAML) compiled in to detect config changes
-- At runtime, `flash.c` decodes CBOR into `target_t` struct (defined in `src/core/target.h`)
-- CBOR serialization uses `TARGET_MEMBERS` macro pattern
-
-### BossHobby/Configurator
-- Desktop/web UI (Vue + Electron/Vite)
-- Communicates via custom **QUIC protocol** (NOT MSP) over WebSerial at 921600 baud
-- CBOR-encoded payloads; protocol defined in `src/store/serial/quic.ts`
-- Fetches `QuicVal.Info` (MCU/version/features), `QuicVal.Target` (pin mappings), `QuicVal.Profile` (all settings)
-- Motor labels hardcoded as quad in `src/store/motor.ts` (will need vehicle-type gating)
-- OSD elements hardcoded in `src/panel/OSDElements.vue`
-- AUX functions hardcoded for quad in `src/store/constants.ts`
-
-### Data Flow for Target Fields
-```
-Targets repo YAML → (git fetch) → QUICKSILVER targets/ dir → (CBOR inject) → ELF .config_flash
-                                                                     ↓ (runtime decode)
-                                                               target_t struct
-                                                                     ↓ (QUIC protocol)
-                                                               Configurator reads target_t
-```
-
-When adding new target fields (e.g. `vehicles`, `servo_pins`):
-1. Add to Targets repo: schema (`target.json`), types (`types.ts`), `target_keys`
-2. Add to QUICKSILVER: `target_t` struct + `TARGET_MEMBERS` CBOR macro in `target.h`
-3. Add to Configurator: `target_t` in `types.ts`, UI gating logic
-
-## Vehicle Type System
-
-### Overview
-The firmware supports multiple vehicle types via compile-time defines:
-- `VEHICLE_MULTI` — Multirotor (default, existing quad firmware)
-- `VEHICLE_ROVER` — Ground rover (Ackermann steering: 1 drive motor + 1 steering servo)
-- `VEHICLE_WING` — Fixed wing (future)
-
-The vehicle type is a **build-time choice**, set via `VEHICLE_*` compile flag. Only one is active per firmware build. Default is `VEHICLE_MULTI` if none specified.
-
-Target YAMLs include a `vehicles` field listing which vehicle types a board's hardware supports:
-```yaml
-vehicles: [multi, rover]
-```
-
-This is a **capability list**, not a selection. At runtime, the firmware validates that the loaded target's `vehicles` list includes the compiled vehicle type. If the target doesn't support the compiled type, the firmware enters failloop.
-
-### Build and Runtime Validation Flow
-1. **Build time**: `VEHICLE_ROVER` is set via build flag on the MCU env (e.g., `pio run -e stm32h743 -DVEHICLE_ROVER`). Per-target envs are dev-only; release builds compile per-MCU.
-2. **Build time**: Target YAML (with `vehicles: [multi, rover]`) is injected as CBOR into ELF by `target_inject.py`
-3. **Runtime**: `flash.c` decodes target, including `vehicles` field
-4. **Runtime**: Firmware checks if compiled `VEHICLE_*` is in `target.vehicles` → failloop if incompatible
-
-Existing targets without a `vehicles` field default to `[multi]` — only compatible with `VEHICLE_MULTI` builds.
-
-### Target Struct Extensions (Rover)
-- `target_t.vehicles` — bitmask of supported vehicle types (decoded from YAML `vehicles` array)
-- `target_t.servo_pins[SERVO_PIN_MAX]` — GPIO pins for servo outputs (50-333Hz PWM)
-
-### Rover Architecture
-- **Drive motor**: Motor pin 0, forward-only DShot or PWM (MVP). Bidirectional DShot3D deferred.
-- **Steering servo**: Servo pin 0, standard 1-2ms PWM at 50-333Hz
-- **Mixer**: Throttle → motor[0], yaw stick → servo[0]. No gyro assist in MVP.
-- **Arming**: Simplified — center throttle required, arm switch enables
-- **OSD**: Rover-specific elements (throttle bar, steering indicator, heading)
-
-### Servo Driver
-New driver in `src/driver/servo.h` + `src/driver/servo.c` + `src/driver/mcu/stm32/servo.c`:
-- Uses `TIMER_USE_SERVO` timer allocation
-- Timer config: prescaler for ~1MHz tick, ARR for desired refresh rate
-- CCR range: 1000-2000 for 1-2ms servo pulse
-- API: `servo_init()`, `servo_set(pin, value)` where value is [-1.0, +1.0]
-
-### Future: src/vehicle/ Rename
-When multi-vehicle support matures, plan to rename `src/flight/` → `src/vehicle/` as the code is vehicle-agnostic (PID, IMU, filters, input). Only `control.c` and `motor.c` have vehicle-specific branching.
+# Repository guidance
+
+QUICKSILVER is flight-controller firmware for STM32 F4/F7/G4/H7 and AT32 F435, with multirotor, rover and wing builds.
+
+## Approach
+
+- Trace callers, initialization order, task priorities and state writers before editing. Establish which conditions are reachable; do not add guards, startup handshakes or tests for hypothetical states the application cannot enter.
+- Keep changes focused. Address adjacent issues separately unless they block the requested change.
+- Follow existing subsystem structure before inventing abstractions. Avoid trivial wrappers, redundant state, speculative counters and APIs with empty implementations added just to hide a conditional.
+- Comments should explain actual ownership, timing and invariants. Do not justify code with a scenario contradicted by startup or arming rules.
+- Use `rg` for searches and `apply_patch` for edits, not Python or shell replacement scripts merely to modify source text.
+
+## Style and organization
+
+- Use 2-space indentation, same-line opening braces, `snake_case` functions/variables, `UPPER_CASE` constants/macros, `const` where possible and fixed-width hardware types.
+- Simple single-statement guards may omit braces; use braces when they clarify branches. Prefer named intermediate values to awkward line wrapping.
+- Follow neighboring include conventions: standard libraries before project modules, with the owning header first where established.
+- Order functions from supporting operations toward orchestration. Keep helpers near and before their callers, initialization before the update/service function, and any thread entry loop last.
+- Do not group new public functions or thread entries at the top merely because they are public. Avoid forward declarations introduced only to invert the established order.
+- Headers generally contain includes, constants, types, extern variables, then functions. Keep type-dependent macros beside their types and implementation-only constants in the source file.
+- In source files, put file-scope state declarations (including synchronization storage and handles) with the other state near the top, after includes/constants/types and before functions. Do not insert them between function definitions beside the function that initializes them.
+- Keep internals private. Do not change production linkage with constructs such as `#ifndef PIO_UNIT_TESTING static #endif` to expose them to tests.
+- Use existing driver boundaries and `failloop.h` for critical errors. Respect `FAST_RAM`/`DMA_RAM`; check stack, heap and DMA accessibility when adding threads or buffers.
+
+## Commits
+
+- Use `subsystem: short imperative summary`. Check recent history for component terminology rather than generic Conventional Commit types.
+- Lowercase subsystem and initial imperative verb; preserve proper names/acronyms and omit the trailing period.
+- Prefer a subject-only commit. Add a brief body only for a reason or non-obvious constraint, not routine summaries or test logs.
+
+## Build and test
+
+Environment names include the vehicle prefix. Current `platformio.ini` and generated `targets/*.ini` are authoritative.
+
+- Default build: `pio run`; clean: `pio run -t clean`.
+- MCU build: `pio run -e multi-stm32g473`; board build: `pio run -e multi-befh-betafpvg473_v2`.
+- Main MCU coverage: `pio run -e multi-stm32f405 -e multi-stm32f411 -e multi-stm32f745 -e multi-stm32f765 -e multi-stm32f722 -e multi-stm32h743 -e multi-stm32g473 -e multi-at32f435 -e multi-at32f435m`.
+- Native tests: `pio test -e multi-test -e rover-test -e wing-test`. Append `--filter test_common` for shared suites or select e.g. `pio test -e wing-test --filter test_wing`. Add `-v` for diagnostics.
+- Simulators: `multi-simulator`, `rover-simulator`, `wing-simulator`.
+- Test meaningful behavior and reachable transitions, not implementation details. Run checks appropriate to the change; distinguish build/test evidence from hardware validation. Report and investigate intermittent failures rather than silently rerunning until green.
+
+## Scheduling and timing
+
+- This branch uses the cooperative scheduler in `src/core/scheduler.cpp`; task definitions, priorities, masks and periods live in `src/core/tasks.cpp`. `src/core/main.cpp` initializes hardware before entering the scheduler.
+- Preserve the ordered `TASK_FLIGHT` path: `sixaxis_read()` → `imu_calc()` → `control()` → `rx_update()`. It runs every loop at REALTIME priority. Lower priorities run only when their mask, period and remaining budget allow.
+- Battery and utility tasks have 1 ms periods, barometer and multirotor navigation 10 ms, OSD 1 ms and GPS 5 ms. Registration omits GPS/navigation without a configured GPS port and barometer without detection. Check actual producer/consumer cadence before changing scheduling.
+- Ground means neither `flags.arm_state` nor `flags.in_air`. USB, VTX and gestures are ground-only. USB activity blocks normal arming; an arm request during USB activity latches the arm-switch disable. Motor testing is a separate output override.
+- Keep flight-time work bounded and non-blocking: limit bytes/items per call, use incremental state machines, and avoid dynamic allocation. Ground configuration may block; preserve `task_reset_runtime()` around maintenance that must be excluded from timing statistics.
+- Reject exhausted budgets before unsigned subtraction. Budget skips are not runtime samples and do not reduce `runtime_worst`. Sustained eligible starvation or overload requests a slower loop rate; ground-only work counts for admission but is excluded from flight-rate decisions.
+- Runtime fields use CPU cycles internally; debug serialization converts them to microseconds. `percentile_95` is a smoothed peak estimate, not an exact percentile. Consult source for thresholds and fallback behavior instead of copying formulas into guidance.
+- If introducing concurrency, identify each resource's owner and publication boundary, audit shared drivers/buffers as well as state, and keep synchronization with its owner. Arming gates and `volatile` do not provide synchronization. Keep interrupt-masked sections short and never wait while masking a required completion interrupt.
+
+## Shared runtime state
+
+- Global `state` (`control_state_t` in `src/control/control.h`, defined in `control.cpp`) is the common runtime interface; `flags` holds shared control/status flags. Publish externally useful values here, reusing matching fields instead of parallel globals or trivial getters.
+- Keep filter histories, parser buffers, private counters and algorithm bookkeeping local. Add diagnostics only for a concrete consumer/debugging requirement.
+- Give each field an owning producer; consumers treat it as read-only. Document alternate writers such as simulator/override paths and when they own it.
+- Document units, frames/ranges, initialization/reset and validity where relevant. Keep measurements, requested commands and applied outputs distinct.
+- `state` contains latest values, not a synchronized snapshot. Trace writers/readers and cadence; use freshness/validity when needed. ISR and concurrent access require an explicit synchronization decision.
+- Serialization is an external interface. Review `STATE_MEMBERS`, QUIC encoding, payload capacity and affected Configurator, telemetry and Blackbox consumers when changing fields. Preserve meanings deliberately; do not add an incidental event bus or broad state refactor.
+
+## Profiles, targets and vehicles
+
+- Advance `PROFILE_VERSION` once after the previous version has been publicly released. Extend the current unreleased version's changelog for further changes; check public release history before bumping.
+- Configurator migrations cover publicly released formats only. Do not add migration adapters/default filling for intermediate development artifacts; update current schema and normal defaults directly.
+- Do not add on-device profile migrations. Changed persisted layouts are reset or rewritten off-device.
+- Vehicle selection is compile-time: `VEHICLE_MULTI`, `VEHICLE_ROVER` or `VEHICLE_WING`. Target YAML `vehicles` lists capabilities, not selection; absent capabilities default to multirotor. `target_init()` rejects incompatible vehicles.
+- Target field changes must align across **BossHobby/Targets** schema (`src/schema/target.json`), types (`src/types.ts`) and generated keys; firmware `target_t`/`TARGET_MEMBERS` in `src/core/target.h`; and **BossHobby/Configurator** types/UI.
+- Targets `src/index.ts` generates `output/` YAML and indexes; CI publishes the generated branches. Firmware `script/pre_script.py` fetches these into `targets/`; `TARGETS_BRANCH` overrides branch selection. Use `SKIP_TARGETS_CHECKOUT=1` when intentionally building against an existing local target checkout.
+- `targets/_index.json` indexes boards and `targets/_index.ini` supplies board environments. `script/target_inject.py` copies the vehicle/MCU ELF for board injection and writes target CBOR into `.config_flash`; firmware decodes it into `target_t`. `TARGET_HASH` is the YAML's MD5. Check `script/post_script.py` for build/injection wiring.
+- Outputs are routed through `profile.mixer`, `profile.outputs` and `target.outputs`; trace `src/control/output.cpp` rather than assuming fixed motor/servo slots. PWM uses `src/driver/servo.cpp` and MCU implementations, with `TIMER_USE_SERVO` allocation. Normalized values [-1, +1] map to 1000–2000 µs pulses; `profile.servo.pwm_rate_hz` must be 50–333 Hz.
+- Configurator uses **QUIC**, with CBOR payloads over WebSerial at 921600 baud. Protocol definitions are in Configurator `src/store/serial/quic.ts`; firmware handling is `src/io/quic.cpp`. Do not assume it uses MSP because USB also supports MSP clients.
+
+## Native tests and drivers
+
+- Tests use Unity. Vehicle test environments inherit their simulators and matching controller sources. Shared mocks live under `test/`; suites are `test_common`, `test_pid`, `test_navigation` (multi), `test_rover` and `test_wing`.
+- PlatformIO discovers suites by the `test_` directory prefix; environment names use hyphens. Common settings live in `[native-test]`. Tests use Unity's entry point; simulators run the firmware entry point. Reuse `test/mock_helpers.h/.cpp` and `test/mock_outputs.h/.cpp`.
+- Add `test_*` functions to the appropriate `.cpp` suite, declare them in its `test_main.cpp`, and register with `RUN_TEST()`. Reset shared state, avoid duplicate suite setup/teardown, and use floating-point tolerances.
+- `src/config/feature.h` is authoritative. Native builds enable SPI, serial, ADC, GPS, servos, unified RX and Blackbox; do not assume `SIMULATOR` disables all hardware features or wrap tests in redundant feature guards.
+- Keep native headers minimal with `#pragma once`; avoid `system.h` and circular platform dependencies. Define common driver globals once in common code and reference them from native implementations. Native-only bookkeeping stays private.
+- Serial tests need a valid port such as `SERIAL_PORT1` (zero is invalid), initialized RX/TX ring buffers and reset indices. Use existing mocks and realistic configuration; account for target validation rather than bypassing it casually.
+
+## Source map
+
+- `src/core/`: startup, scheduling, profile/target persistence and faults.
+- `src/control/`: common control, IMU, sixaxis, PID/input and `multi/`, `rover/`, `wing/` controllers.
+- `src/driver/`: peripheral APIs and `mcu/{stm32,at32,native}/` implementations; `src/system/`: startup/linker/platform configuration.
+- `src/io/`: USB Configurator, QUIC/MSP, Blackbox, GPS, battery and VTX.
+- `src/rx/`: receivers; `src/osd/`: rendering/menus; `src/util/`: shared algorithms/helpers.
