@@ -6,6 +6,10 @@
 extern void test_osd_looptime_warning_is_temporary_until_2khz();
 extern void test_osd_transfer_is_bounded_and_retries();
 extern void test_osd_render_completes_before_transfer();
+extern void test_gestures_shortcuts_and_clock_wrap();
+extern void test_gestures_menu_taps_and_hold_repeat();
+extern void test_gestures_reset_disabled_mode_changes_and_ambiguous_input();
+extern void test_gestures_threshold_crossing_and_long_shortcut_press();
 extern void test_scheduler_omits_unconfigured_sensor_tasks();
 extern void test_imu_without_gps_publishes_tilt_without_heading_estimator();
 extern void test_baro_altitude_reference_without_gps();
@@ -235,6 +239,10 @@ int main(int argc, char **argv) {
   RUN_TEST(test_osd_looptime_warning_is_temporary_until_2khz);
   RUN_TEST(test_osd_transfer_is_bounded_and_retries);
   RUN_TEST(test_osd_render_completes_before_transfer);
+  RUN_TEST(test_gestures_shortcuts_and_clock_wrap);
+  RUN_TEST(test_gestures_menu_taps_and_hold_repeat);
+  RUN_TEST(test_gestures_reset_disabled_mode_changes_and_ambiguous_input);
+  RUN_TEST(test_gestures_threshold_crossing_and_long_shortcut_press);
   RUN_TEST(test_baro_altitude_reference_without_gps);
   RUN_TEST(test_scheduler_ground_only_starvation_does_not_reduce_flight_rate);
   RUN_TEST(test_scheduler_ground_work_does_not_indirectly_reduce_flight_rate);
