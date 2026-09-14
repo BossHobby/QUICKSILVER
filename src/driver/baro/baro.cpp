@@ -13,10 +13,12 @@
 
 static baro_sample_t latest_sample;
 static bool sample_pending;
+static uint32_t last_update_us;
 
 #ifdef USE_BARO
 
 #define P0 101325.0f // Standard pressure at sea level in pascals (Pa)
+#define BARO_UPDATE_PERIOD_US 10000
 
 uint8_t baro_buf[6];
 i2c_bus_device_t baro_bus;
@@ -74,6 +76,7 @@ static bool baro_read(float &altitude) { return false; }
 
 baro_types_t baro_init() {
   sample_pending = false;
+  last_update_us = 0; // first sample runs immediately
   const baro_types_t detected = baro_detect();
   state.baro_detected = detected != BARO_TYPE_INVALID;
   return detected;
@@ -96,10 +99,33 @@ bool baro_take_sample(baro_sample_t &sample) {
   return pending;
 }
 
-void baro_update() {
+TickType_t baro_update() {
+#ifdef USE_BARO
+  if (baro_type == BARO_TYPE_INVALID)
+    return portMAX_DELAY;
+
+  // A status or pressure read completes in the background; its completion
+  // interrupt wakes the worker, so no periodic retry is needed here.
+  if (!i2c_is_idle(&baro_bus))
+    return portMAX_DELAY;
+
+  const uint32_t now = time_micros();
+  if (now - last_update_us < BARO_UPDATE_PERIOD_US) {
+    return pdMS_TO_TICKS((BARO_UPDATE_PERIOD_US - (now - last_update_us)) / 1000);
+  }
+  last_update_us = now;
+
   float altitude;
-  if (baro_read(altitude))
+  if (baro_read(altitude)) {
     baro_publish_sample(altitude, time_millis());
+    return pdMS_TO_TICKS(BARO_UPDATE_PERIOD_US / 1000);
+  }
+  // Device-side conversion still in flight; unlike the transfer there is no
+  // interrupt for it, so poll the status register shortly.
+  return pdMS_TO_TICKS(2);
+#else
+  return portMAX_DELAY;
+#endif
 }
 
 #ifdef PIO_UNIT_TESTING
