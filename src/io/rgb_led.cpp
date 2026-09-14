@@ -36,10 +36,19 @@ static uint32_t rgb_ledflash(uint32_t color1, uint32_t color2, uint32_t period_m
   }
 }
 
-void rgb_led_update() {
+#define RGB_LED_UPDATE_PERIOD_US 10000
+
+TickType_t rgb_led_update() {
 #if defined(USE_RGB_LED)
+  static uint32_t last_update_us = 0;
+  const uint32_t now = time_micros();
+  if (now - last_update_us < RGB_LED_UPDATE_PERIOD_US) {
+    return pdMS_TO_TICKS((RGB_LED_UPDATE_PERIOD_US - (now - last_update_us)) / 1000);
+  }
+  last_update_us = now;
+
   if (RGB_LED_COUNT == 0 || rgb_led_busy()) {
-    return;
+    return pdMS_TO_TICKS(RGB_LED_UPDATE_PERIOD_US / 1000);
   }
 
   uint32_t new_value = 0;
@@ -64,5 +73,8 @@ void rgb_led_update() {
   } else {
     rgb_led_send();
   }
+  return pdMS_TO_TICKS(RGB_LED_UPDATE_PERIOD_US / 1000);
+#else
+  return portMAX_DELAY;
 #endif
 }

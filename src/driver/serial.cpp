@@ -1,5 +1,6 @@
 #include "driver/serial.h"
 
+#include "core/tasks.h"
 #include "driver/interrupt.h"
 #include "driver/serial_soft.h"
 
@@ -11,6 +12,29 @@ extern const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX];
 extern void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool swap);
 extern bool serial_hard_set_baudrate(serial_port_t *serial, uint32_t baudrate);
 extern void serial_hard_sync_rx(serial_port_t *serial);
+
+void serial_rx_notify_from_isr(serial_port_t *serial) {
+  // Serial data can arrive during boot before the IO worker is created.
+  if (threads[THREAD_IO].handle == nullptr) {
+    return;
+  }
+  BaseType_t wake = pdFALSE;
+  uint32_t work = 0;
+  if (serial == &serial_rx)
+    work = IO_WORK_RX;
+#ifdef USE_VTX
+  else if (serial == &serial_vtx)
+    work = IO_WORK_VTX;
+#endif
+#ifdef USE_GPS
+  else if (serial->config.port == profile.serial.gps)
+    work = IO_WORK_GPS;
+#endif
+  if (work == 0)
+    return;
+  xTaskNotifyFromISR(threads[THREAD_IO].handle, work, eSetBits, &wake);
+  portYIELD_FROM_ISR(wake);
+}
 
 bool serial_is_soft(serial_ports_t port) {
   if (port < SERIAL_PORT_MAX) {
@@ -202,6 +226,7 @@ void soft_serial_rx_isr(serial_ports_t port) {
 
   const uint8_t data = soft_serial_read_byte(port);
   ring_buffer_write(serial->rx_buffer, data);
+  serial_rx_notify_from_isr(serial);
 }
 
 #endif

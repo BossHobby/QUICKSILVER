@@ -1,4 +1,7 @@
 #pragma once
 
+#include <FreeRTOS.h>
+
 void buzzer_init();
-void buzzer_update();
+// Pulse edges are timestamp-driven; reports the next fixed service deadline.
+TickType_t buzzer_update();

@@ -16,6 +16,7 @@
 
 #define IBAT_SCALE (60.f * 60.f * 1000000.f)
 #define VBAT_PERIOD_US 1000
+#define THRSUM_FILTER_HZ 60
 
 extern profile_t profile;
 
@@ -30,6 +31,8 @@ static filter_state_t thrsum_filter_state;
 
 static float vbat_filtered_decay = 0;     // Li-ion voltage decay model (local to vbat.c)
 static uint32_t last_ibat_update_us;
+static uint32_t last_thrsum_update_us;
+static uint32_t last_calc_us;
 
 void vbat_init() {
   // Calculate actual ADC update period based on active channels
@@ -42,8 +45,9 @@ void vbat_init() {
   // Sag filter: Faster response (5Hz) for warnings and compensation
   filter_lp_pt1_coeff(&sag_filter, 5.0, adc_period_us);
   
-  // Throttle filter runs at task rate (1kHz) for flight control sync
-  filter_lp_pt1_coeff(&thrsum_filter, 60, VBAT_PERIOD_US);
+  // Throttle filter tracks the actual service interval, which varies with the
+  // IO worker's deadline-driven wake, instead of assuming a fixed 1 kHz call rate.
+  filter_lp_pt1_coeff(&thrsum_filter, THRSUM_FILTER_HZ, VBAT_PERIOD_US);
   
   filter_init_state(&vbat_display_filter_state, 1);
   filter_init_state(&vbat_sag_filter_state, 1);
@@ -71,6 +75,8 @@ void vbat_init() {
 
   vbat_filtered_decay = state.vbat_sag_filtered;
   last_ibat_update_us = time_micros();
+  last_thrsum_update_us = last_ibat_update_us;
+  last_calc_us = 0; // first pass after init runs immediately
 }
 
 static float vbat_auto_vdrop(float thrfilt, float tempvolt) {
@@ -110,8 +116,12 @@ static float vbat_auto_vdrop(float thrfilt, float tempvolt) {
   return minindex * 0.1f;
 }
 
-void vbat_calc() {
+TickType_t vbat_calc() {
   const uint32_t now = time_micros();
+  if (now - last_calc_us < VBAT_PERIOD_US) {
+    return pdMS_TO_TICKS((VBAT_PERIOD_US - (now - last_calc_us)) / 1000);
+  }
+  last_calc_us = now;
   const uint32_t elapsed_us = now - last_ibat_update_us;
   last_ibat_update_us = now;
   adc_read(ADC_CHAN_TEMP, &state.cpu_temp);
@@ -136,7 +146,11 @@ void vbat_calc() {
 
   // average of all motors
   // filter motorpwm so it has the same delay as the filtered voltage
-  // Always update thrfilt to maintain consistent timing
+  // step from the measured service interval so the filter stays a true 60 Hz
+  // regardless of how often the IO worker runs
+  const uint32_t thrsum_elapsed_us = now - last_thrsum_update_us;
+  last_thrsum_update_us = now;
+  filter_lp_pt1_coeff(&thrsum_filter, THRSUM_FILTER_HZ, thrsum_elapsed_us);
   const float thrfilt = filter_lp_pt1_step(&thrsum_filter, &thrsum_filter_state, state.thrsum);
   // Use sag filtered value for compensation calculations
   const float tempvolt = state.vbat_sag_filtered * (1.00f + CF1) - vbat_filtered_decay * (CF1);
@@ -156,4 +170,6 @@ void vbat_calc() {
     else
       flags.lowbatt = 0;
   }
+
+  return pdMS_TO_TICKS(VBAT_PERIOD_US / 1000);
 }

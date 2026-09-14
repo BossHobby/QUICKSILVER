@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <FreeRTOS.h>
+
 #define GPS_MIN_SATS_FOR_LOCK 4
 
 typedef enum {
@@ -108,7 +110,10 @@ typedef struct {
 extern gps_status_t gps_status;
 
 void gps_init();
-void gps_task();
+// Event-driven on serial RX data; reports a periodic backstop in ticks that
+// covers config retries and missed notifications, portMAX_DELAY when no GPS
+// port is configured.
+TickType_t gps_task();
 
 cbor_result_t cbor_encode_gps_constellation_t(cbor_value_t *enc, const gps_constellation_t *o);
 cbor_result_t cbor_encode_gps_status_t(cbor_value_t *enc, const gps_status_t *o);

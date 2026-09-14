@@ -342,7 +342,51 @@ static bool rx_check() {
 #endif
 }
 
-void rx_update() {
+static TickType_t rx_service_deadline() {
+#ifdef SIMULATOR
+  // Simulator frames arrive via simulator_update, which notifies the IO worker.
+  return portMAX_DELAY;
+#else
+  switch (profile.receiver.protocol) {
+  case RX_PROTOCOL_NRF24_BAYANG_TELEMETRY:
+  case RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON:
+  case RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND:
+  case RX_PROTOCOL_FRSKY_D8:
+  case RX_PROTOCOL_FRSKY_D16_FCC:
+  case RX_PROTOCOL_FRSKY_D16_LBT:
+  case RX_PROTOCOL_REDPINE:
+  case RX_PROTOCOL_EXPRESS_LRS:
+  case RX_PROTOCOL_FLYSKY_AFHDS:
+  case RX_PROTOCOL_FLYSKY_AFHDS2A:
+    // SPI radio state machines are time-compared inside their check and have
+    // no EXTI to wake the worker; keep the fast poll.
+    return 1;
+
+  case RX_PROTOCOL_INVALID:
+  case RX_PROTOCOL_MAX:
+    return portMAX_DELAY;
+
+  default:
+    break;
+  }
+
+  // Retry any input left by a bounded drain even without another interrupt.
+  if (serial_bytes_available(&serial_rx) != 0)
+    return 1;
+
+  // Serial transport wakes the worker via serial_rx_notify_from_isr. While
+  // unified autodetect is cycling, its candidate-switch timer needs a
+  // periodic wake.
+  if (serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_INVALID)
+    return pdMS_TO_TICKS(1000);
+  // CRSF also advances delayed baud changes and telemetry without RX bytes.
+  if (serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF)
+    return 1;
+  return portMAX_DELAY;
+#endif
+}
+
+TickType_t rx_update() {
   if (rx_check() && !flags.failsafe_signal_lost) {
     taskENTER_CRITICAL();
     memcpy(rx_mailbox.channels, rx_channels, sizeof(rx_channels));
@@ -350,6 +394,7 @@ void rx_update() {
     taskEXIT_CRITICAL();
     rx_filter_counter++;
   }
+  return rx_service_deadline();
 }
 
 void rx_process() {
