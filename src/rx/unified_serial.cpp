@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "control/control.h"
 #include "core/debug.h"
@@ -300,27 +301,39 @@ bool rx_serial_check() {
 
   state.rx_status = unsigned(RX_STATUS_DETECTED) + unsigned(serial_rx_detected_protcol);
 
-  const packet_status_t status = rx_serial_process(serial_rx_detected_protcol);
+  bool received = false;
+  uint16_t valid_channels[RX_CHANNEL_MAX];
+  memcpy(valid_channels, rx_channels, sizeof(valid_channels));
+  // Each complete frame or rejected byte advances the parser. Bound attempts
+  // by the queued bytes so continuous arrivals cannot monopolize the worker.
+  const uint32_t attempts = serial_bytes_available(&serial_rx) + 1;
+  for (uint32_t i = 0; i < attempts; i++) {
+    const packet_status_t status = rx_serial_process(serial_rx_detected_protcol);
+    // A lost-frame packet may decode channels without making them valid input.
+    if (status == PACKET_CHANNELS_RECEIVED)
+      memcpy(valid_channels, rx_channels, sizeof(valid_channels));
+    else
+      memcpy(rx_channels, valid_channels, sizeof(valid_channels));
+    rx_serial_update_lqi(serial_rx_detected_protcol, status);
+    if (status == PACKET_NEEDS_MORE)
+      break;
+    if (status == PACKET_ERROR)
+      continue;
+
+    if (bind_safety < BIND_SAFETY_COUNTER) {
+      flags.rx_mode = RXMODE_BIND;
+      bind_safety++;
+    } else {
+      flags.rx_mode = RXMODE_NORMAL;
+      flags.rx_ready = 1;
+    }
+    received |= status == PACKET_CHANNELS_RECEIVED;
+  }
 
   if (serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_MAVLINK)
     rx_serial_send_mavlink_telemetry();
 
-  rx_serial_update_lqi(serial_rx_detected_protcol, status);
-
-  if (status <= PACKET_NEEDS_MORE) {
-    // no channels received, we are done here.
-    return false;
-  }
-
-  if (bind_safety < BIND_SAFETY_COUNTER) {
-    flags.rx_mode = RXMODE_BIND;
-    bind_safety++;
-  } else {
-    flags.rx_mode = RXMODE_NORMAL;
-    flags.rx_ready = 1;
-  }
-
-  return status == PACKET_CHANNELS_RECEIVED;
+  return received;
 }
 
 #endif

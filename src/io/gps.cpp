@@ -731,9 +731,9 @@ static bool gps_read_ublox() {
   return false;
 }
 
-void gps_task() {
+TickType_t gps_task() {
   if (!is_init)
-    return;
+    return portMAX_DELAY;
 
   static uint32_t last_baud_rate_change = 0;
   static uint32_t config_request_time = 0;
@@ -954,6 +954,13 @@ void gps_task() {
   // and consumers reject the fix if the receiver stops delivering solutions.
   if (time_millis() - state.gps_last_update_ms > GPS_SOLUTION_STALE_MS)
     state.gps_lock = false;
+
+  // Steady state is fed by serial RX data; the periodic backstop covers
+  // config-state retries and a missed notification. The RX ring at 115200
+  // baud overflows in ~44 ms, so 20 ms leaves ample margin.
+  if (gps_status.state == GPS_RUNNING || gps_status.state == GPS_RUNNING_NAV_SAT_OFF)
+    return pdMS_TO_TICKS(20);
+  return pdMS_TO_TICKS(50);
 }
 
 // CBOR encoding functions
@@ -975,5 +982,5 @@ GPS_STATUS_MEMBERS
 
 #else
 void gps_init(void) {}
-void gps_task(void) {}
+TickType_t gps_task(void) { return portMAX_DELAY; }
 #endif

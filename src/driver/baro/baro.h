@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <FreeRTOS.h>
+
 // Freshness limit for navigation's filtered altitude/velocity.
 #define BARO_STALE_MS 500U
 
@@ -27,6 +29,10 @@ struct baro_sample_t {
 extern uint8_t baro_buf[6];
 
 baro_types_t baro_init(void);
-void baro_update(void);
+// Samples on a fixed cadence; reports the next service deadline in ticks.
+// In-flight I2C transfers wake the worker via i2c_notify_from_isr; a
+// device-side conversion has no interrupt and uses a short status poll.
+// portMAX_DELAY when no barometer is present.
+TickType_t baro_update(void);
 // Flight consumes the latest complete IO sample, coalescing unread samples.
 bool baro_take_sample(baro_sample_t &sample);

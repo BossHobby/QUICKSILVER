@@ -107,6 +107,7 @@ static void i2c_irq_handler(const i2c_ports_t port) {
     i2c_flag_clear(def->channel, I2C_STOPF_FLAG | I2C_TDC_FLAG | I2C_TDIS_FLAG | I2C_RDBF_FLAG);
     i2c_interrupt_enable(def->channel, I2C_ERR_INT | I2C_TDC_INT | I2C_STOP_INT | I2C_ACKFIAL_INT | I2C_TD_INT | I2C_RD_INT, FALSE);
     txn->status = TXN_IDLE;
+    i2c_notify_from_isr();
   }
 };
 

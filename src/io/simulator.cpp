@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "control/control.h"
+#include "core/tasks.h"
 
 typedef struct {
   float gyro[3];
@@ -38,6 +39,13 @@ static shared_memory_t *shared = NULL;
 static uint8_t osd[50 * 18];
 
 static std::atomic<bool> rc_updated = false;
+
+// Feed tests may run before the IO worker exists; only wake it once started.
+static void simulator_rx_notify() {
+  if (threads[THREAD_IO].handle != nullptr) {
+    xTaskNotify(threads[THREAD_IO].handle, IO_WORK_RX, eSetBits);
+  }
+}
 
 static void simulator_read_file(const char *filename, char *buf) {
   FILE *f = fopen(filename, "rb");
@@ -87,6 +95,9 @@ void simulator_update() {
 
     rc_updated = true;
     shared->state.rc_updated = 0;
+    // Wake the IO worker so the frame is published promptly; the thread
+    // context is the simulator build's equivalent of the serial RX ISR.
+    simulator_rx_notify();
   }
 
   state.gyro.axis[0] = state.gyro_raw.axis[0] = -shared->state.gyro[2];
@@ -149,6 +160,7 @@ uint32_t simulator_osd_can_fit() {
 void simulator_rx_test_frame(const uint16_t *channels) {
   memcpy(rx_channels, channels, sizeof(rx_channels));
   rc_updated = true;
+  simulator_rx_notify();
 }
 
 static uint32_t osd_test_pushes;

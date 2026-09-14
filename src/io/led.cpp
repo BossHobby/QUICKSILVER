@@ -111,21 +111,36 @@ void led_blink(uint8_t count) {
   blink_count = count;
 }
 
-void led_update() {
+#define LED_UPDATE_PERIOD_US 10000
+
+TickType_t led_update() {
+  static uint32_t last_update_us = 0;
+  const uint32_t now = time_micros();
+  if (now - last_update_us < LED_UPDATE_PERIOD_US) {
+    return pdMS_TO_TICKS((LED_UPDATE_PERIOD_US - (now - last_update_us)) / 1000);
+  }
+  last_update_us = now;
+
+  const TickType_t deadline = pdMS_TO_TICKS(LED_UPDATE_PERIOD_US / 1000);
+
   if (flags.lowbatt) {
-    return led_flash_duty(500, 16);
+    led_flash_duty(500, 16);
+    return deadline;
   }
 
   if (flags.rx_mode == RXMODE_BIND) {
-    return led_flash_duty(100, 24);
+    led_flash_duty(100, 24);
+    return deadline;
   }
 
   if (flags.failsafe) {
-    return led_flash_duty(500, 30);
+    led_flash_duty(500, 30);
+    return deadline;
   }
 
   if (flags.arm_request && flags.arming_disabled_flags != ARMING_DISABLED_NONE) {
-    return led_flash_duty(100, 8);
+    led_flash_duty(100, 8);
+    return deadline;
   }
 
   static uint32_t last_time = 0;
@@ -138,7 +153,7 @@ void led_update() {
       last_time = 0;
     }
     led_flash_duty(100, 8);
-    return;
+    return deadline;
   }
 
   if (blink_count) {
@@ -154,11 +169,13 @@ void led_update() {
     if (time - last_time > 250000) {
       led_on(LEDALL);
     }
-    return;
+    return deadline;
   }
 
   if (LED_BRIGHTNESS != 15)
     led_pwm(LED_BRIGHTNESS, state.looptime_autodetect);
   else
     led_on(LEDALL);
+
+  return deadline;
 }
