@@ -531,6 +531,12 @@ void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool s
   if (LL_USART_GetTransferDirection(USART.channel) & LL_USART_DIRECTION_RX) {
     if (dma & SERIAL_DMA_RX) {
       LL_USART_DisableIT_RXNE(usart_port_defs[serial->config.port].channel);
+#if defined(STM32H7) || defined(STM32G4)
+      // Circular DMA has no RX interrupt of its own; the IDLE line interrupt
+      // signals a finished burst so the IO worker can wake on data.
+      LL_USART_ClearFlag_IDLE(usart_port_defs[serial->config.port].channel);
+      LL_USART_EnableIT_IDLE(usart_port_defs[serial->config.port].channel);
+#endif
     } else {
       LL_USART_EnableIT_RXNE(usart_port_defs[serial->config.port].channel);
     }
@@ -658,10 +664,19 @@ static void handle_serial_isr(serial_port_t *serial) {
   if (LL_USART_IsEnabledIT_RXNE(port->channel) && LL_USART_IsActiveFlag_RXNE(port->channel)) {
     const volatile uint8_t data = LL_USART_ReceiveData8(port->channel);
     ring_buffer_write(serial->rx_buffer, data);
+    serial_rx_notify_from_isr(serial);
 #if defined(STM32F4)
     LL_USART_ClearFlag_RXNE(port->channel);
 #endif
   }
+
+#if defined(STM32H7) || defined(STM32G4)
+  // DMA-fed ports take one interrupt per burst instead of one per byte.
+  if (LL_USART_IsEnabledIT_IDLE(port->channel) && LL_USART_IsActiveFlag_IDLE(port->channel)) {
+    LL_USART_ClearFlag_IDLE(port->channel);
+    serial_rx_notify_from_isr(serial);
+  }
+#endif
 
   if (LL_USART_IsEnabledIT_TXE(port->channel) && LL_USART_IsActiveFlag_TXE(port->channel)) {
     uint8_t data = 0;

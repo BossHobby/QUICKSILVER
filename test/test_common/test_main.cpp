@@ -8,6 +8,7 @@ extern void test_vbat_integrates_current_over_elapsed_time();
 extern void test_rx_transport_leaves_conditioning_to_flight();
 extern void test_rx_mailbox_coalesces_complete_frames();
 extern void test_io_worker_publishes_rx_without_configuration_wait();
+extern void test_io_worker_services_cadence_without_notification();
 extern void test_osd_looptime_warning_is_temporary_until_2khz();
 extern void test_osd_transfer_is_bounded_and_retries();
 extern void test_osd_render_completes_before_transfer();
@@ -188,6 +189,8 @@ extern void test_failsafe_recovery_blocks_automatic_rearm_when_arm_stays_held(vo
 extern void test_sbus_failsafe_frame_does_not_refresh_last_frame_time(void);
 extern void test_crsf_no_frame_timeout_forces_rssi_to_zero(void);
 extern void test_crsf_channel_frame_clears_signal_lost_on_recovery(void);
+extern void test_crsf_drains_queued_frames_and_preserves_partial_frame(void);
+extern void test_sbus_drain_keeps_last_valid_channels(void);
 extern void test_crsf_channel_frame_allows_stage2_failsafe_recovery(void);
 extern void test_crsf_v3_subset_channel_frame_clears_signal_lost_on_recovery(void);
 extern void test_crsf_v3_subset_channel_frame_handles_offset_10bit_channels(void);
@@ -256,6 +259,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_vbat_integrates_current_over_elapsed_time);
   RUN_TEST(test_rx_mailbox_coalesces_complete_frames);
   RUN_TEST(test_io_worker_publishes_rx_without_configuration_wait);
+  RUN_TEST(test_io_worker_services_cadence_without_notification);
   RUN_TEST(test_flight_native_timer_period_and_coalescing);
   RUN_TEST(test_flight_timing_separates_runtime_and_period_across_wrap);
   RUN_TEST(test_flight_rate_fallback_cap_and_no_automatic_speedup);
@@ -431,6 +435,8 @@ int main(int argc, char **argv) {
   RUN_TEST(test_sbus_failsafe_frame_does_not_refresh_last_frame_time);
   RUN_TEST(test_crsf_no_frame_timeout_forces_rssi_to_zero);
   RUN_TEST(test_crsf_channel_frame_clears_signal_lost_on_recovery);
+  RUN_TEST(test_crsf_drains_queued_frames_and_preserves_partial_frame);
+  RUN_TEST(test_sbus_drain_keeps_last_valid_channels);
   RUN_TEST(test_crsf_channel_frame_allows_stage2_failsafe_recovery);
   RUN_TEST(test_crsf_v3_subset_channel_frame_clears_signal_lost_on_recovery);
   RUN_TEST(test_crsf_v3_subset_channel_frame_handles_offset_10bit_channels);

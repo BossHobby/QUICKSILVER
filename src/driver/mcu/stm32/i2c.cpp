@@ -147,6 +147,7 @@ static void i2c_irq_handler(const i2c_ports_t port) {
       LL_I2C_GenerateStopCondition(def->channel);
       LL_I2C_DisableIT_BUF(def->channel);
       txn->status = TXN_IDLE;
+      i2c_notify_from_isr();
     }
   } else if (LL_I2C_IsActiveFlag_TXE(def->channel)) {
     if (txn->status == TXN_DATA && txn->mode == MODE_READ) {
@@ -155,6 +156,7 @@ static void i2c_irq_handler(const i2c_ports_t port) {
       if (txn->offset == txn->size) {
         LL_I2C_GenerateStopCondition(def->channel);
         txn->status = TXN_IDLE;
+        i2c_notify_from_isr();
       } else {
         LL_I2C_TransmitData8(def->channel, txn->data[txn->offset++]);
       }
@@ -183,6 +185,7 @@ static void i2c_irq_handler(const i2c_ports_t port) {
     LL_I2C_ClearFlag_STOP(def->channel);
     CLEAR_BIT(def->channel->CR1, LL_I2C_CR1_TXIE | LL_I2C_CR1_RXIE | LL_I2C_CR1_STOPIE | LL_I2C_CR1_TCIE);
     txn->status = TXN_IDLE;
+    i2c_notify_from_isr();
   }
 #endif
 }
@@ -195,6 +198,7 @@ static void i2c_err_irq_handler(const i2c_ports_t port) {
     LL_I2C_ClearFlag_AF(def->channel);
     LL_I2C_GenerateStopCondition(def->channel);
     txn->status = TXN_IDLE;
+    i2c_notify_from_isr();
   }
 #endif
 }

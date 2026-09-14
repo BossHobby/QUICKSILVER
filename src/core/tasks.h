@@ -28,6 +28,21 @@ enum thread_id_t {
   THREAD_MAX,
 };
 
+enum io_task_t {
+  IO_RX, IO_BARO, IO_VTX, IO_GPS, IO_VBAT, IO_LED, IO_RGB, IO_BUZZER, IO_TASK_COUNT,
+};
+
+enum io_work_t : uint32_t {
+  IO_WORK_RX = 1u << IO_RX,
+  IO_WORK_BARO = 1u << IO_BARO,
+  IO_WORK_VTX = 1u << IO_VTX,
+  IO_WORK_GPS = 1u << IO_GPS,
+  IO_WORK_VBAT = 1u << IO_VBAT,
+  IO_WORK_LED = 1u << IO_LED,
+  IO_WORK_RGB = 1u << IO_RGB,
+  IO_WORK_BUZZER = 1u << IO_BUZZER,
+};
+
 struct thread_t {
   const char *name;
   uint8_t mask;
