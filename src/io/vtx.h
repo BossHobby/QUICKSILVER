@@ -2,6 +2,8 @@
 
 #include <cbor.h>
 
+#include <FreeRTOS.h>
+
 #include "core/profile.h"
 
 #define VTX_APPLY_TRIES 50
@@ -40,7 +42,9 @@ typedef struct {
 } vtx_device_t;
 
 void vtx_init();
-void vtx_update();
+// Ground-only maintenance; reports the next service deadline in ticks
+// (its internal retry delay), or portMAX_DELAY when not applicable.
+TickType_t vtx_update();
 
 uint16_t vtx_frequency_from_channel(vtx_band_t band, vtx_channel_t channel);
 int8_t vtx_find_frequency_index(uint16_t frequency);

@@ -2,6 +2,8 @@
 
 #include <stddef.h>
 
+#include <algorithm>
+
 #include "control/control.h"
 #include "core/failloop.h"
 #include "driver/baro/baro.h"
@@ -69,30 +71,55 @@ void threads_update() {
   }
 }
 
-void io_thread(void *) {
-  uint32_t last_baro = time_micros();
-  uint32_t last_gps = last_baro;
-  while (true) {
-    // Configuration commands own their locks; receiving channels does not.
-    rx_update();
-    vbat_calc();
-    const uint32_t now = time_micros();
-    if (state.baro_detected && now - last_baro >= 10000) {
-      last_baro = now;
-      baro_update();
-    }
-    led_update();
-    rgb_led_update();
-    buzzer_update();
+static uint32_t io_pending_tasks(TickType_t *remaining, TickType_t elapsed, uint32_t pending) {
+  uint32_t enabled = (1u << IO_TASK_COUNT) - 1;
 #ifdef USE_DIGITAL_VTX
-    if (serial_displayport.config.port == SERIAL_PORT_INVALID)
+  // DisplayPort is initialized before IO starts; OSD owns its VTX service.
+  if (serial_displayport.config.port != SERIAL_PORT_INVALID) {
+    enabled &= ~IO_WORK_VTX;
+    remaining[IO_VTX] = portMAX_DELAY;
+  }
 #endif
-    if (!flags.arm_state && !flags.in_air)
-      vtx_update();
-    if (profile.serial.gps != SERIAL_PORT_INVALID && now - last_gps >= 5000) {
-      last_gps = now;
-      gps_task();
-    }
-    vTaskDelay(1);
+  for (unsigned i = 0; i < IO_TASK_COUNT; i++) {
+    if (remaining[i] == portMAX_DELAY)
+      continue;
+    remaining[i] -= std::min(remaining[i], elapsed);
+    if (remaining[i] == 0)
+      pending |= 1u << i;
+  }
+  return pending & enabled;
+}
+
+void io_thread(void *) {
+  TickType_t remaining[IO_TASK_COUNT] = {};
+  TickType_t wait = 0;
+  TickType_t last = xTaskGetTickCount();
+  while (true) {
+    // Pending notifications need not block; share bursts with ready workers.
+    taskYIELD();
+    uint32_t pending = 0;
+    xTaskNotifyWait(0, UINT32_MAX, &pending, wait);
+    const TickType_t now = xTaskGetTickCount();
+    pending = io_pending_tasks(remaining, now - last, pending);
+    last = now;
+    if (pending & IO_WORK_RX)
+      remaining[IO_RX] = rx_update();
+    if (pending & IO_WORK_VBAT)
+      remaining[IO_VBAT] = vbat_calc();
+    if (pending & IO_WORK_LED)
+      remaining[IO_LED] = led_update();
+    if (pending & IO_WORK_RGB)
+      remaining[IO_RGB] = rgb_led_update();
+    if (pending & IO_WORK_BUZZER)
+      remaining[IO_BUZZER] = buzzer_update();
+    if (pending & IO_WORK_BARO)
+      remaining[IO_BARO] = baro_update();
+    if (pending & IO_WORK_VTX)
+      remaining[IO_VTX] = vtx_update();
+    if (pending & IO_WORK_GPS)
+      remaining[IO_GPS] = gps_task();
+    const TickType_t runtime = xTaskGetTickCount() - now;
+    const TickType_t next = *std::min_element(remaining, remaining + IO_TASK_COUNT);
+    wait = next == portMAX_DELAY ? portMAX_DELAY : std::max<TickType_t>(1, next - std::min(next, runtime));
   }
 }

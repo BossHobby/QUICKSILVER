@@ -653,6 +653,49 @@ void test_crsf_no_frame_timeout_forces_rssi_to_zero(void) {
   TEST_ASSERT_EQUAL_FLOAT(0.0f, state.rx_rssi);
 }
 
+void test_crsf_drains_queued_frames_and_preserves_partial_frame(void) {
+  crsf_test_reset(1000000);
+  crsf_channels_t frame = crsf_test_centered_channels();
+  frame.chan0 = 172;
+  crsf_test_write_frame(CRSF_FRAMETYPE_RC_CHANNELS_PACKED, (const uint8_t *)&frame, CRSF_FRAME_RC_CHANNELS_PAYLOAD_SIZE);
+  ring_buffer_write(serial_rx.rx_buffer, 0); // Rejected byte must not end the drain.
+  frame.chan0 = 1811;
+  crsf_test_write_frame(CRSF_FRAMETYPE_RC_CHANNELS_PACKED, (const uint8_t *)&frame, CRSF_FRAME_RC_CHANNELS_PAYLOAD_SIZE);
+  TEST_ASSERT_TRUE(rx_serial_check());
+  TEST_ASSERT_EQUAL_UINT32(0, serial_bytes_available(&serial_rx));
+  const uint16_t latest = rx_channels[0];
+  TEST_ASSERT_EQUAL_UINT16(65535, latest);
+
+  frame.chan0 = 172;
+  crsf_test_write_frame(CRSF_FRAMETYPE_RC_CHANNELS_PACKED, (const uint8_t *)&frame, CRSF_FRAME_RC_CHANNELS_PAYLOAD_SIZE);
+  uint8_t bytes[CRSF_FRAME_RC_CHANNELS_PAYLOAD_SIZE + 4];
+  TEST_ASSERT_EQUAL_UINT32(sizeof(bytes), ring_buffer_read_multi(serial_rx.rx_buffer, bytes, sizeof(bytes)));
+  // Preserve an incomplete payload and finish it on the next wake.
+  ring_buffer_write_multi(serial_rx.rx_buffer, bytes, 5);
+  TEST_ASSERT_FALSE(rx_serial_check());
+  TEST_ASSERT_EQUAL_UINT16(latest, rx_channels[0]);
+  ring_buffer_write_multi(serial_rx.rx_buffer, bytes + 5, sizeof(bytes) - 5);
+  TEST_ASSERT_TRUE(rx_serial_check());
+  TEST_ASSERT_EQUAL_UINT16(0, rx_channels[0]);
+  TEST_ASSERT_EQUAL_UINT32(0, serial_bytes_available(&serial_rx));
+}
+
+void test_sbus_drain_keeps_last_valid_channels(void) {
+  serial_test_reset(1000000, RX_SERIAL_PROTOCOL_SBUS, 100000, SERIAL_DIR_RX, SERIAL_STOP_BITS_2);
+  uint8_t frame[25] = {};
+  frame[0] = 0x0f;
+  frame[1] = 0x13;
+  frame[2] = 0x07; // Channel 0 = 1811.
+  ring_buffer_write_multi(serial_rx.rx_buffer, frame, sizeof(frame));
+  frame[1] = 0;
+  frame[2] = 0;
+  frame[23] = 1 << 2; // Lost-frame channels must not replace the valid sample.
+  ring_buffer_write_multi(serial_rx.rx_buffer, frame, sizeof(frame));
+  TEST_ASSERT_TRUE(rx_serial_check());
+  TEST_ASSERT_EQUAL_UINT16(65535, rx_channels[0]);
+  TEST_ASSERT_EQUAL_UINT32(0, serial_bytes_available(&serial_rx));
+}
+
 void test_crsf_channel_frame_clears_signal_lost_on_recovery(void) {
   crsf_test_reset(1000000);
   time_test_set_us(1000000 + FAILSAFE_DETECT_TIME_US + 1000);

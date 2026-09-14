@@ -8,8 +8,12 @@
 #include "core/profile.h"
 #include "core/tasks.h"
 #include "driver/adc.h"
+#include "driver/time.h"
 #include "io/vbat.h"
 #include "rx/rx.h"
+
+extern uint8_t adc_active_channels;
+extern void adc_set_raw_value(adc_chan_t chan, uint16_t value);
 
 extern void simulator_rx_test_frame(const uint16_t *channels);
 
@@ -79,7 +83,8 @@ void test_rx_mailbox_coalesces_complete_frames() {
 static void io_test_flight(void *) {
   flags = {};
   state = {};
-  profile_set_defaults();
+  profile_set_defaults(&profile);
+  profile_output_update();
   profile.receiver.protocol = RX_PROTOCOL_INVALID;
   profile.serial.gps = SERIAL_PORT_INVALID;
   profile.voltage.lipo_cell_count = 1;
@@ -94,6 +99,8 @@ static void io_test_flight(void *) {
   uint16_t channels[RX_CHANNEL_MAX];
   for (auto &channel : channels) channel = 1000;
   simulator_rx_test_frame(channels);
+  // A different source arriving before IO runs must preserve the RX bit.
+  xTaskNotify(threads[THREAD_IO].handle, IO_WORK_BARO, eSetBits);
   vTaskDelay(3);
   // Receiving does not wait for configuration ownership; Flight still owns
   // channel publication and conditioning.
@@ -121,6 +128,70 @@ void test_io_worker_publishes_rx_without_configuration_wait() {
     thread_start(THREAD_FLIGHT);
     vTaskStartScheduler();
     _exit(7);
+  }
+  int status;
+  for (unsigned i = 0; i < 2000; i++) {
+    if (waitpid(child, &status, WNOHANG) == child) {
+      TEST_ASSERT_TRUE(WIFEXITED(status));
+      TEST_ASSERT_EQUAL_INT(0, WEXITSTATUS(status));
+      return;
+    }
+    usleep(1000);
+  }
+  kill(child, SIGKILL);
+  waitpid(child, &status, 0);
+  TEST_FAIL_MESSAGE("IO worker stalled");
+}
+
+static void io_cadence_test_flight(void *) {
+  flags = {};
+  state = {};
+  profile_set_defaults(&profile);
+  profile_output_update();
+  profile.receiver.protocol = RX_PROTOCOL_INVALID;
+  profile.serial.gps = SERIAL_PORT_INVALID;
+  profile.voltage.lipo_cell_count = 1;
+  profile.voltage.ibat_scale = 1000;
+  target.ibat = PIN_A2;
+  state.looptime_autodetect = 1000;
+  rx_init();
+  adc_init();
+  adc_active_channels = 4;
+  adc_set_raw_value(ADC_CHAN_IBAT, 1000);
+  vbat_init();
+  profile_mutex_init();
+  xSemaphoreTake(profile_mutex, 0);
+  thread_start(THREAD_IO);
+  vTaskDelay(2);
+  xSemaphoreGive(profile_mutex);
+
+  // No notification of any kind: the cadence deadlines alone must wake the
+  // worker and run the measurement pass.
+  for (unsigned i = 0; i < 50; i++) {
+    time_test_advance_us(1000);
+    vTaskDelay(1);
+  }
+  if (!(state.ibat_drawn > 0)) _exit(2);
+  const float before = state.ibat_drawn;
+  // Repeated RX wakes must not postpone the battery's own deadline.
+  for (unsigned i = 0; i < 50; i++) {
+    time_test_advance_us(1000);
+    xTaskNotify(threads[THREAD_IO].handle, IO_WORK_RX, eSetBits);
+    vTaskDelay(1);
+  }
+  if (!(state.ibat_drawn > before)) _exit(5);
+  if (eTaskGetState(threads[THREAD_IO].handle) == eSuspended) _exit(3);
+  _exit(0);
+}
+
+void test_io_worker_services_cadence_without_notification() {
+  const pid_t child = fork();
+  TEST_ASSERT_TRUE(child >= 0);
+  if (child == 0) {
+    threads[THREAD_FLIGHT].entry = io_cadence_test_flight;
+    thread_start(THREAD_FLIGHT);
+    vTaskStartScheduler();
+    _exit(4);
   }
   int status;
   for (unsigned i = 0; i < 2000; i++) {
