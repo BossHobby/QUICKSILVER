@@ -24,6 +24,13 @@ static uint32_t vtx_delay_start = 0;
 static uint32_t vtx_delay_ms = 100;
 static vtx_protocol_t initialized_protocol = VTX_PROTOCOL_INVALID;
 
+// Time until the current retry delay expires; 1 tick when already due.
+static TickType_t vtx_deadline() {
+  const uint32_t elapsed_ms = time_millis() - vtx_delay_start;
+  const uint32_t remaining_ms = vtx_delay_ms > elapsed_ms ? vtx_delay_ms - elapsed_ms : 1;
+  return pdMS_TO_TICKS(remaining_ms);
+}
+
 static const vtx_device_t *vtx_device = NULL;
 extern const vtx_device_t msp_vtx_device;
 extern const vtx_device_t smart_audio_vtx_device;
@@ -184,67 +191,70 @@ static bool vtx_update_pitmode(vtx_pit_mode_t pit_mode) {
   return false;
 }
 
-void vtx_update() {
-  vtx_update_fpv_pin();
-
+TickType_t vtx_update() {
+  // Keep a deadline so IO resumes service after disarming without serial input.
   if (flags.arm_state || flags.in_air)
-    return;
+    return pdMS_TO_TICKS(100);
+
+  vtx_update_fpv_pin();
 
   if (profile.serial.smart_audio == SERIAL_PORT_INVALID &&
       serial_displayport.config.port == SERIAL_PORT_INVALID)
-    return;
+    return portMAX_DELAY;
 
   if (profile.serial.smart_audio != SERIAL_PORT_INVALID &&
       profile.serial.smart_audio == profile.serial.rx &&
       serial_rx_detected_protcol != RX_SERIAL_PROTOCOL_CRSF)
-    return;
+    return portMAX_DELAY;
 
   if ((time_millis() - vtx_delay_start) < vtx_delay_ms)
-    return;
+    return vtx_deadline();
 
   vtx_delay_ms = 0;
   vtx_delay_start = time_millis();
 
   const vtx_protocol_t protocol = vtx_desired_protocol();
   if (protocol == VTX_PROTOCOL_INVALID) {
-    return;
+    return portMAX_DELAY;
   }
 
   if (initialized_protocol != protocol) {
     mutex_guard_t configuration(profile_mutex);
     if (flags.arm_state || flags.in_air)
-      return;
+      return pdMS_TO_TICKS(100);
     vtx_actual.protocol = VTX_PROTOCOL_INVALID;
     vtx_init_protocol(protocol);
     initialized_protocol = protocol;
     apply_tries = 0;
-    return;
+    return vtx_deadline();
   }
 
   if (vtx_device == NULL)
-    return;
+    return portMAX_DELAY;
 
   const vtx_detect_status_t status = vtx_device->update(&vtx_actual);
   if (status < VTX_DETECT_SUCCESS)
-    return;
+    return vtx_deadline();
 
   // Receive/dispatch above may itself execute a configuration command. Take
   // ownership only for applying settings, and recheck after any mutex wait.
   mutex_guard_t configuration(profile_mutex);
   if (flags.arm_state || flags.in_air)
-    return;
+    return pdMS_TO_TICKS(100);
 
   vtx_pit_mode_t pit_mode = profile.vtx.pit_mode;
   if (profile.receiver.aux[AUX_FPV_SWITCH].channel <= RX_CHANNEL_16 && pit_mode != VTX_PIT_MODE_NO_SUPPORT)
     pit_mode = rx_aux_on(AUX_FPV_SWITCH) ? VTX_PIT_MODE_OFF : VTX_PIT_MODE_ON;
 
   if (!vtx_update_pitmode(pit_mode) || !vtx_update_frequency() || !vtx_update_powerlevel())
-    return;
+    return vtx_deadline();
+
+  return vtx_deadline();
 }
 
 #else
 void vtx_init() {}
-void vtx_update() {}
+TickType_t vtx_update() { return portMAX_DELAY; }
 #endif
 
 #define MEMBER CBOR_ENCODE_MEMBER

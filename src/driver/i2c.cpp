@@ -1,5 +1,7 @@
 #include "driver/i2c.h"
 
+#include "core/tasks.h"
+
 #ifdef USE_I2C
 
 // Clock period in us during unstick transfer
@@ -10,6 +12,16 @@
 FAST_RAM i2c_device_t i2c_dev[I2C_PORT_MAX] = {};
 
 extern void i2c_device_init(i2c_ports_t port);
+
+void i2c_notify_from_isr() {
+  // Transfers complete during peripheral init, before the IO worker exists.
+  if (threads[THREAD_IO].handle == nullptr) {
+    return;
+  }
+  BaseType_t wake = pdFALSE;
+  xTaskNotifyFromISR(threads[THREAD_IO].handle, IO_WORK_BARO, eSetBits, &wake);
+  portYIELD_FROM_ISR(wake);
+}
 
 static void i2c_init_pins(i2c_ports_t port) {
   const target_i2c_port_t *dev = &target.i2c_ports[port];

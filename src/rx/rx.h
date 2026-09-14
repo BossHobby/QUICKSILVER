@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <FreeRTOS.h>
+
 #include "config/config.h"
 #include "config/feature.h"
 #include "rx/stick_wizard.h"
@@ -133,8 +135,11 @@ typedef struct {
 extern uint16_t rx_channels[RX_CHANNEL_MAX];
 
 void rx_init();
-// IO thread: polls serial/SPI and publishes receiver state.
-void rx_update();
+// IO thread: polls serial/SPI and publishes receiver state. Reports the next
+// service deadline in ticks: fast poll for SPI protocols (time-compared hop
+// state machines), the autodetect timer while it cycles, portMAX_DELAY for
+// serial protocols whose data arrives via serial_rx_notify_from_isr.
+TickType_t rx_update();
 // Flight task: consumes received channels and conditions commands before control.
 void rx_process();
 void rx_stop();

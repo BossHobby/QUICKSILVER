@@ -53,6 +53,11 @@ extern const i2c_port_def_t i2c_port_defs[I2C_PORT_MAX];
 
 bool i2c_bus_device_init(const i2c_bus_device_t *bus);
 
+// Wakes the IO worker when a transaction completes in the I2C ISR. Coalesced:
+// only the owning device's update reports portMAX_DELAY while a transfer is
+// in flight; everything else keeps its own deadline.
+void i2c_notify_from_isr();
+
 static inline bool i2c_is_idle(const i2c_bus_device_t *bus) { return i2c_dev[bus->port].txn.status == TXN_IDLE; }
 void i2c_wait_idle(const i2c_bus_device_t *bus);
 

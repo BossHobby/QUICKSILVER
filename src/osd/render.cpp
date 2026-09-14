@@ -1982,7 +1982,7 @@ void osd_thread(void *) {
     osd_handle_gestures();
     osd_display();
 #ifdef USE_DIGITAL_VTX
-    if (serial_displayport.config.port != SERIAL_PORT_INVALID && !flags.arm_state && !flags.in_air)
+    if (serial_displayport.config.port != SERIAL_PORT_INVALID)
       vtx_update();
 #endif
     vTaskDelay(1);
