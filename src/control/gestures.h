@@ -2,17 +2,22 @@
 
 #include <stdint.h>
 
-#include "core/project.h"
-#include "osd/render.h"
+#include "util/vector.h"
 
-typedef enum {
+enum gesture_command_t {
   GESTURE_NONE,
-  GESTURE_DDD,
-  GESTURE_UUU,
-  GESTURE_RRR,
-  GESTURE_LRL,
-  GESTURE_MAX,
-} gestures_t;
+  GESTURE_CALIBRATE_SAVE,
+  GESTURE_TOGGLE_BIND,
+  GESTURE_OPEN_MENU,
+  GESTURE_RESET_OSD,
+  GESTURE_MENU_UP,
+  GESTURE_MENU_DOWN,
+  GESTURE_MENU_LEFT,
+  GESTURE_MENU_RIGHT,
+};
 
-int32_t gestures_detect();
+// Stick recognition. Disabled input and mode changes discard partial
+// commands and require a neutral dwell before accepting another direction.
+gesture_command_t gestures_detect(const vec4_t &sticks, bool enabled, bool menu, uint32_t now_us);
+
 void gestures();
