@@ -19,6 +19,7 @@
 #define configUSE_MUTEXES 1
 #define configUSE_TASK_NOTIFICATIONS 1
 #define INCLUDE_xTaskGetSchedulerState 1
+#define INCLUDE_xTaskGetIdleTaskHandle 1
 #define INCLUDE_vTaskDelay 1
 #define INCLUDE_vTaskSuspend 1
 #define INCLUDE_eTaskGetState 1
@@ -32,6 +33,19 @@
 #endif
 #define configUSE_TRACE_FACILITY 0
 #define configUSE_NEWLIB_REENTRANT 0
+
+// Run-time stats clock: DWT cycle counter on MCU, monotonic clock natively.
+// Implemented per port in driver/mcu/*/time.cpp and linked into the kernel.
+#define configGENERATE_RUN_TIME_STATS 1
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS()
+#define portGET_RUN_TIME_COUNTER_VALUE() rtos_runtime_clock()
+#ifdef __cplusplus
+extern "C" {
+#endif
+uint32_t rtos_runtime_clock(void);
+#ifdef __cplusplus
+}
+#endif
 
 #ifndef SIMULATOR
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION 1
