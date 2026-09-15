@@ -21,6 +21,7 @@ extern void test_gestures_menu_taps_and_hold_repeat();
 extern void test_gestures_reset_disabled_mode_changes_and_ambiguous_input();
 extern void test_gestures_threshold_crossing_and_long_shortcut_press();
 extern void test_flight_native_timer_period_and_coalescing();
+extern void test_flight_system_load_tracks_idle_share();
 extern void test_flight_timing_separates_runtime_and_period_across_wrap();
 extern void test_flight_rate_fallback_cap_and_no_automatic_speedup();
 extern void test_flight_maintenance_reset_excludes_delays_and_restarts_average();
@@ -261,6 +262,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_io_worker_publishes_rx_without_configuration_wait);
   RUN_TEST(test_io_worker_services_cadence_without_notification);
   RUN_TEST(test_flight_native_timer_period_and_coalescing);
+  RUN_TEST(test_flight_system_load_tracks_idle_share);
   RUN_TEST(test_flight_timing_separates_runtime_and_period_across_wrap);
   RUN_TEST(test_flight_rate_fallback_cap_and_no_automatic_speedup);
   RUN_TEST(test_flight_maintenance_reset_excludes_delays_and_restarts_average);

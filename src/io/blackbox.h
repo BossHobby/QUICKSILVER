@@ -3,7 +3,7 @@
 #include "core/profile.h"
 #include "util/util.h"
 
-#define BLACKBOX_VERSION MAKE_SEMVER(0, 3, 1)
+#define BLACKBOX_VERSION MAKE_SEMVER(0, 3, 2) // cpu_load is a percentage since 0.3.2 (was microseconds)
 
 #define BLACKBOX_SCALE 100
 #define BLACKBOX_DEBUG_SIZE 16
@@ -61,7 +61,7 @@ typedef struct {
 
   compact_output_t output;
 
-  uint16_t cpu_load;
+  uint16_t cpu_load; // system load percentage 0-100 (since blackbox 0.3.2)
 
   int32_t gps_coord[2]; // latitude, longitude; degrees * 1e7
   int32_t gps_home[2];  // same order and units; captured home used by navigation
