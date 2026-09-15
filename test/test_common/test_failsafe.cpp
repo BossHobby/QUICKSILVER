@@ -23,6 +23,7 @@ static constexpr float failsafe_neutral_throttle = 0.0f;
 #ifdef VEHICLE_MULTI
 extern void nav_test_reset(void);
 extern void nav_test_set_rth_active(bool active);
+extern float control_test_throttle_input(void);
 #endif
 
 static void failsafe_reset(uint32_t now_us) {
@@ -329,6 +330,44 @@ void test_failsafe_stage2_drop_blocks_outputs_and_disarms(void) {
 }
 
 #ifdef VEHICLE_MULTI
+void test_failsafe_stage1_retains_idle_throttle_until_recovery_or_drop(void) {
+  failsafe_reset(1000000);
+  failsafe_clear_arm_switch_latch();
+  state.aux_active = (1U << AUX_ARMING) | (1U << AUX_PREARM) | (1U << AUX_IDLE_UP);
+  control_update_arming();
+  TEST_ASSERT_TRUE(flags.arm_state);
+  const float idle_throttle = control_test_throttle_input();
+  TEST_ASSERT_TRUE(idle_throttle >= 0.001f);
+
+  flags.failsafe_signal_lost = 1;
+  time_test_advance_us(FAILSAFE_HOLD_TIME_US);
+  control_failsafe_update();
+  state.rx_filtered = state.rx_override;
+  control_update_arming();
+  TEST_ASSERT_TRUE(flags.arm_state);
+  TEST_ASSERT_FALSE(flags.failsafe_outputs_blocked);
+  TEST_ASSERT_EQUAL_FLOAT(idle_throttle, control_test_throttle_input());
+
+  state.aux_active &= ~(1U << AUX_IDLE_UP);
+  TEST_ASSERT_EQUAL_FLOAT(idle_throttle, control_test_throttle_input());
+
+  flags.failsafe_signal_lost = 0;
+  state.last_frame_time_us = time_micros();
+  control_failsafe_update();
+  TEST_ASSERT_FALSE(flags.controls_override);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, control_test_throttle_input());
+
+  flags.failsafe_signal_lost = 1;
+  time_test_advance_us(FAILSAFE_HOLD_TIME_US);
+  control_failsafe_update();
+  TEST_ASSERT_EQUAL_FLOAT(idle_throttle, control_test_throttle_input());
+  time_test_advance_us(FAILSAFE_STAGE2_TIME_US);
+  control_failsafe_update();
+  TEST_ASSERT_FALSE(flags.arm_state);
+  TEST_ASSERT_TRUE(flags.failsafe_outputs_blocked);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, control_test_throttle_input());
+}
+
 void test_failsafe_rth_keeps_outputs_allowed_past_stage2_time(void) {
   failsafe_reset(1000000);
   profile.navigation.rth_on_failsafe = true;
@@ -343,6 +382,7 @@ void test_failsafe_rth_keeps_outputs_allowed_past_stage2_time(void) {
 
   TEST_ASSERT_TRUE(state.rth_failsafe_active);
   TEST_ASSERT_EQUAL_UINT8(FAILSAFE_PHASE_STAGE1_GUARD, state.failsafe_phase);
+  TEST_ASSERT_EQUAL_FLOAT(state.rx_override.throttle, control_test_throttle_input());
   TEST_ASSERT_TRUE(flags.failsafe);
   TEST_ASSERT_TRUE(flags.arm_state);
   TEST_ASSERT_TRUE(flags.controls_override);

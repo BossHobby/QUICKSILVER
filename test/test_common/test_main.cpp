@@ -158,6 +158,7 @@ extern void test_blackbox_iframe_interval(void);
 extern void test_failsafe_holds_last_values_before_hold_timeout(void);
 extern void test_failsafe_blocks_outputs_while_rx_not_ready(void);
 extern void test_failsafe_stage1_applies_neutral_fallback(void);
+extern void test_failsafe_stage1_retains_idle_throttle_until_recovery_or_drop(void);
 extern void test_failsafe_stage2_drop_blocks_outputs_and_disarms(void);
 extern void test_failsafe_rth_keeps_outputs_allowed_past_stage2_time(void);
 extern void test_failsafe_recovery_clears_with_arm_switch_high_but_blocks_rearm(void);
@@ -384,6 +385,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_failsafe_stage1_applies_neutral_fallback);
   RUN_TEST(test_failsafe_stage2_drop_blocks_outputs_and_disarms);
 #ifdef VEHICLE_MULTI
+  RUN_TEST(test_failsafe_stage1_retains_idle_throttle_until_recovery_or_drop);
   RUN_TEST(test_failsafe_rth_keeps_outputs_allowed_past_stage2_time);
 #endif
   RUN_TEST(test_failsafe_recovery_clears_with_arm_switch_high_but_blocks_rearm);
