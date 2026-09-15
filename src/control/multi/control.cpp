@@ -171,6 +171,10 @@ static float control_throttle_input(void) {
   if (flags.controls_override && state.rth_active) {
     return state.rx_override.throttle;
   }
+  if (state.failsafe_phase == FAILSAFE_PHASE_STAGE1_GUARD) {
+    // Keep the PID/mixer path running while waiting for RX recovery or RTH.
+    return IDLE_THR;
+  }
   if (!rx_aux_on(AUX_IDLE_UP)) {
     if (state.rx_filtered.throttle < 0.05f) {
       return 0;
