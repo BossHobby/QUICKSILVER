@@ -4,6 +4,22 @@
 
 #include "core/project.h"
 
+// Run-time stats clock for the FreeRTOS kernel (FreeRTOSConfig.h). Uses the
+// real monotonic clock even under PIO_UNIT_TESTING, where time_cycles() may
+// be a frozen mock: scheduler tests need a live clock for idle-share deltas.
+// Scaled to the time_cycles() domain so window math (US_TO_CYCLES) matches
+// the MCU DWT clock; at the native 500 MHz scale this wraps in ~8.6 s, so a
+// multi-second stall can produce one bogus sample before the window recovers.
+static uint32_t rtos_monotonic_clock(void) {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return US_TO_CYCLES(1000000UL * (uint64_t)(ts.tv_sec) + (uint64_t)(ts.tv_nsec) / 1000UL);
+}
+
+extern "C" uint32_t rtos_runtime_clock(void) {
+  return rtos_monotonic_clock();
+}
+
 void time_init() {
 }
 

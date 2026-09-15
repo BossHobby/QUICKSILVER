@@ -42,14 +42,12 @@ void test_flight_timing_separates_runtime_and_period_across_wrap() {
     time_test_set_us(start);
     begin_timing();
     next_loop(70, 125);
-    TEST_ASSERT_EQUAL_UINT32(70, state.cpu_load);
     TEST_ASSERT_EQUAL_UINT32(125, state.looptime_us);
     TEST_ASSERT_FLOAT_WITHIN(0.000001f, 0.000125f, state.looptime);
     TEST_ASSERT_FLOAT_WITHIN(1, 8000, state.looptime_inverse);
     TEST_ASSERT_EQUAL_FLOAT(0, state.armtime);
     flags.arm_state = 1;
     next_loop(80, 250);
-    TEST_ASSERT_EQUAL_UINT32(80, state.cpu_load);
     TEST_ASSERT_FLOAT_WITHIN(0.000001f, 0.000375f, state.uptime);
     TEST_ASSERT_FLOAT_WITHIN(0.000001f, 0.000250f, state.armtime);
     flags.arm_state = 0;
@@ -164,6 +162,57 @@ static void timer_test_flight(void *) {
 
 static void timer_test_background(void *) {
   for (;;) ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+}
+
+static void load_test_background(void *) {
+  for (;;) ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+}
+
+static void load_test_flight(void *) {
+  if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) _exit(8);
+  state.loop_counter = 0;
+  state.looptime_autodetect = 125;
+
+  // Starve the idle task: the published load must climb and stay clamped to a
+  // percentage. The POSIX port only keeps run-time-stat bookkeeping current at
+  // kernel yield points, so yield periodically; the ARM ports preempt exactly
+  // and need no such aid. The falling direction (idle share credited while a
+  // task blocks in a port-layer wait) is a POSIX-port artifact and is
+  // verifiable on hardware only.
+  const uint32_t clock0 = rtos_runtime_clock();
+  const uint32_t spin_deadline = clock0 + US_TO_CYCLES(300000);
+  while ((int32_t)(rtos_runtime_clock() - spin_deadline) < 0) {
+    for (unsigned i = 0; i < 100; i++) {
+      flight_test_update_loop(0);
+    }
+    taskYIELD();
+  }
+  if (state.cpu_load < 50 || state.cpu_load > 100) _exit(1);
+  _exit(0);
+}
+
+void test_flight_system_load_tracks_idle_share() {
+  const pid_t child = fork();
+  TEST_ASSERT_TRUE(child >= 0);
+  if (child == 0) {
+    threads[THREAD_FLIGHT].entry = load_test_flight;
+    threads[THREAD_BLACKBOX].entry = load_test_background;
+    thread_start(THREAD_FLIGHT);
+    vTaskStartScheduler();
+    _exit(7);
+  }
+  int status;
+  for (unsigned i = 0; i < 2000; i++) {
+    if (waitpid(child, &status, WNOHANG) == child) {
+      TEST_ASSERT_TRUE(WIFEXITED(status));
+      TEST_ASSERT_EQUAL_INT(0, WEXITSTATUS(status));
+      return;
+    }
+    usleep(1000);
+  }
+  kill(child, SIGKILL);
+  waitpid(child, &status, 0);
+  TEST_FAIL_MESSAGE("System load test stalled");
 }
 
 void test_flight_native_timer_period_and_coalescing() {
