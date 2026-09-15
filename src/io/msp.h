@@ -39,8 +39,6 @@
 #define MSP_SET_MOTOR 214       // in message          PropBalance function
 #define MSP_SET_PASSTHROUGH 245 // in message          serial passthrough
 
-#define MSP_RESERVE_1 251 // reserved for system usage
-
 #define MSP2_COMMON_SERIAL_CONFIG 0x1009
 
 #define MSP_HEADER_LEN 5

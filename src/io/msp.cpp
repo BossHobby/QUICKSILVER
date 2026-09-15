@@ -13,7 +13,6 @@
 #include "driver/reset.h"
 #include "driver/serial.h"
 #include "driver/serial_4way.h"
-#include "io/quic.h"
 #include "io/usb_configurator.h"
 #include "io/vtx.h"
 #include "rx/rx.h"
@@ -112,11 +111,6 @@ static void msp_send_error(msp_t *msp, msp_magic_t magic, uint16_t cmd) {
   if (msp->send) {
     msp->send(magic, '!', cmd, NULL, 0);
   }
-}
-
-static void msp_quic_send(uint8_t *data, uint32_t len, void *priv) {
-  msp_t *msp = (msp_t *)priv;
-  msp_send_reply(msp, MSP1_MAGIC, MSP_RESERVE_1, data, len);
 }
 
 static void msp_check_vtx_detected(msp_t *msp) {
@@ -769,15 +763,6 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       break;
     }
 
-    break;
-  }
-
-  case MSP_RESERVE_1: {
-    quic_t quic = {
-        .priv_data = msp,
-        .send = msp_quic_send,
-    };
-    quic_process(&quic, payload, size);
     break;
   }
 
