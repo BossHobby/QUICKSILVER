@@ -9,6 +9,11 @@ volatile uint32_t systick_count = 0;
 static volatile uint32_t systick_val = 0;
 static volatile uint32_t systick_pending = 0;
 
+// Run-time stats clock for the FreeRTOS kernel (FreeRTOSConfig.h).
+extern "C" uint32_t rtos_runtime_clock(void) {
+  return DWT->CYCCNT;
+}
+
 static void debug_time_init() {
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
   CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;

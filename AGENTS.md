@@ -78,6 +78,7 @@ Environment names include the vehicle prefix. Current `platformio.ini` and gener
 - Keep filter histories, parser buffers, private counters and algorithm bookkeeping local. Add diagnostics only for a concrete consumer/debugging requirement.
 - Give each field an owning producer; consumers treat it as read-only. Document alternate writers such as simulator/override paths and when they own it.
 - Document units, frames/ranges, initialization/reset and validity where relevant. Keep measurements, requested commands and applied outputs distinct.
+- `state.cpu_load` is the system load percentage 0-100 (idle-cycle share, published by Flight on a ~50 ms window; ISR time is charged to the interrupted task), not a per-loop execution time. Blackbox logs it as a percentage since version 0.3.2.
 - `state` contains latest values, not a synchronized snapshot. Trace writers/readers and cadence; use freshness/validity when needed. ISR and concurrent access require an explicit synchronization decision.
 - Serialization is an external interface. Review `STATE_MEMBERS`, QUIC encoding, payload capacity and affected Configurator, telemetry and Blackbox consumers when changing fields. Preserve meanings deliberately; do not add an incidental event bus or broad state refactor.
 

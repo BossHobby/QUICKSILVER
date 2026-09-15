@@ -131,7 +131,7 @@ typedef struct {
 
   float uptime;      // running sum of looptimes
   float armtime;     // running sum of looptimes (while armed)
-  uint32_t cpu_load; // Execution time in microseconds before busy-wait padding.
+  uint32_t cpu_load; // System load percentage 0-100 from the idle task's cycle share; ISR time is charged to the interrupted task. Published by Flight on a fixed window.
 
   uint32_t failsafe_time_ms; // time the current failsafe started in ms
   uint8_t failsafe_phase;
