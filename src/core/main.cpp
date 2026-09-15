@@ -139,15 +139,48 @@ static void flight_update_rate(uint32_t runtime_us) {
   control_filter_update(false);
 }
 
+// Publishes system load (0-100 percent) into state.cpu_load from the idle
+// task's run-time share over a fixed window. Time spent in ISRs is charged
+// to whichever task was interrupted. Runs without a scheduler during unit
+// tests, so both entry points are guarded.
+static void flight_update_load() {
+  static bool window_started;
+  static uint32_t window_start_cycles;
+  static uint32_t window_start_idle;
+
+  if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED)
+    return;
+  const TaskHandle_t idle_handle = xTaskGetIdleTaskHandle();
+  if (idle_handle == nullptr)
+    return;
+
+  const uint32_t clock = rtos_runtime_clock();
+  const uint32_t idle_cycles = ulTaskGetRunTimeCounter(idle_handle);
+  if (!window_started) {
+    window_started = true;
+    window_start_cycles = clock;
+    window_start_idle = idle_cycles;
+    return;
+  }
+  if (clock - window_start_cycles < US_TO_CYCLES(50000))
+    return;
+
+  const uint32_t clock_delta = clock - window_start_cycles;
+  const uint32_t idle_delta = idle_cycles - window_start_idle;
+  window_start_cycles = clock;
+  window_start_idle = idle_cycles;
+  state.cpu_load = 100 - (uint32_t)(((uint64_t)idle_delta * 100) / clock_delta);
+}
+
 static void flight_update_loop(uint32_t elapsed_cycles) {
   const uint32_t now = time_cycles();
-  state.cpu_load = CYCLES_TO_US(elapsed_cycles);
   state.looptime_us = CYCLES_TO_US(now - last_loop_cycles);
   state.looptime = state.looptime_us * 1e-6f;
   state.looptime_inverse = state.looptime > 0.0f ? 1.0f / state.looptime : 0.0f;
   state.loop_counter++;
   last_loop_cycles = now;
-  flight_update_rate(state.cpu_load);
+  flight_update_load();
+  flight_update_rate(CYCLES_TO_US(elapsed_cycles));
   state.uptime += state.looptime;
   if (flags.arm_state)
     state.armtime += state.looptime;
