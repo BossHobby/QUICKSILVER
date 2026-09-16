@@ -115,6 +115,7 @@ typedef enum {
   AUX_AUTOLAUNCH,
   AUX_LOITER,
   AUX_CRUISE,
+  AUX_SPORTMODE,
 #endif
 
   AUX_PINIO_1,

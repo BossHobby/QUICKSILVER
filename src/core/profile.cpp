@@ -567,6 +567,7 @@ const profile_t default_profile = {
             AUTOLAUNCH, // AUX_AUTOLAUNCH
             LOITER,     // AUX_LOITER
             CRUISE,     // AUX_CRUISE
+            SPORTMODE,  // AUX_SPORTMODE
 #endif
             {RX_CHANNEL_OFF, 0, 0}, // AUX_PINIO_1
             {RX_CHANNEL_OFF, 0, 0}, // AUX_PINIO_2
@@ -722,6 +723,7 @@ const profile_t default_profile = {
             .finish_ms = 3000,
         },
         .turn_coordination = 1,
+        .sport_hold = 1,
     },
     .navigation = {
         .rth_altitude = 10.0f,   // 10m above current position
