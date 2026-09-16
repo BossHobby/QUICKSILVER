@@ -123,6 +123,7 @@ typedef enum {
   AUX_AUTOLAUNCH,
   AUX_LOITER,
   AUX_CRUISE,
+  AUX_SPORTMODE,
 #endif
 #ifndef VEHICLE_ROVER
   AUX_MISSION,

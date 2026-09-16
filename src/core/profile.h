@@ -36,6 +36,7 @@
 //        serial: rename hdzero to digital_vtx.
 //        vtx: an unset vtx.protocol is off; MSP VTX is no longer implied by the digital VTX
 //            port or a CRSF receiver sharing the smart audio port.
+//        wing: add Sport mode.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
 // 0.2.5 (c9dec9f1): add osd profiles.
@@ -620,12 +621,14 @@ typedef struct {
 typedef struct {
   profile_wing_autolaunch_t autolaunch;
   uint8_t turn_coordination; // Level adds the body rates of a coordinated turn at the current bank
+  uint8_t sport_hold;
 } profile_wing_t;
 
 #define WING_MEMBERS                            \
   START_STRUCT(profile_wing_t)                  \
   MEMBER(autolaunch, profile_wing_autolaunch_t) \
   MEMBER(turn_coordination, uint8_t)            \
+  MEMBER(sport_hold, uint8_t)                   \
   END_STRUCT()
 
 #define BLACKBOX_MEMBERS           \

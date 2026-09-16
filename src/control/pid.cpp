@@ -44,6 +44,11 @@ static vec3_t last_error = {0};
 static vec3_t last_error2 = {0};
 static pid_rate_t scaled_rates;
 
+#ifdef VEHICLE_WING
+static vec3_t sport_stick_average;
+static constexpr vec3_t sport_integral_limit = {{0.2f, 0.1f, 0.2f}};
+#endif
+
 static filter_t<vec3_t> filter[FILTER_MAX_SLOTS];
 static filter_t<vec3_t> dynamic_filter;
 static filter_t<vec3_t> rx_filter;
@@ -58,6 +63,22 @@ void pid_reset_i() {
   for (uint8_t axis = 0; axis < PID_SIZE; axis++) {
     pid_reset_i(axis);
   }
+}
+
+void pid_reset() {
+  pid_reset_i();
+  last_error2 = state.error;
+  last_error = state.error;
+  lastsetpoint = state.setpoint;
+  lastrate = state.gyro;
+  // Seeded deltas are zero, so cleared filter tails match the next input.
+  for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++)
+    filter[i].reset();
+  dynamic_filter.reset();
+  rx_filter.reset();
+#ifdef VEHICLE_WING
+  sport_stick_average = {{state.rx_filtered.roll, state.rx_filtered.pitch, state.rx_filtered.yaw}};
+#endif
 }
 
 const vec3_t *pid_get_ierror() {
@@ -88,6 +109,9 @@ void pid_filter_update(bool reset) {
 }
 
 void pid_init() {
+#ifdef VEHICLE_WING
+  sport_stick_average = {};
+#endif
   pid_rates_update();
   rx_filter.init(FILTER_LP_PT1, state.rx_filter_hz, state.looptime_autodetect);
   pid_filter_update(true);
@@ -191,7 +215,7 @@ static inline float pid_tda_compensation() {
   return constrain(tda_compensation, profile.pid.throttle_dterm_attenuation.tda_percent, 1.0f);
 }
 
-HOT_CODE void pid_calc() {
+HOT_CODE void pid_calc(bool sport) {
   rx_filter.coeff(FILTER_LP_PT1, state.rx_filter_hz, state.looptime_autodetect);
 
   const float dynamic_throttle = state.throttle + state.throttle * (1.0f - state.throttle);
@@ -244,9 +268,29 @@ HOT_CODE void pid_calc() {
     state.pid_p_term.axis[x] = state.error.axis[x] * current_kp.axis[x];
 
     const float simpson_sum = last_error2.axis[x] + 4.0f * last_error.axis[x] + state.error.axis[x];
-    const float ierror_delta = simpson_sum * current_ki.axis[x] * iterm_windup.axis[x];
-    ierror.axis[x] = iterm_enable.axis[x] ? (ierror.axis[x] + ierror_delta) : (ierror.axis[x] * 0.98f);
-    ierror.axis[x] = constrain(ierror.axis[x], -integral_limit.axis[x], integral_limit.axis[x]);
+#ifdef VEHICLE_WING
+    if (sport) {
+      // Zero rate demand integrates negative gyro only while hands-off.
+      // Slow input freezes hold; a transient releases it in elapsed time.
+      const float stick = state.rx_filtered.axis[x];
+      const float stick_coeff = 0.05f / (0.05f + state.looptime);
+      lpf(&sport_stick_average.axis[x], stick, stick_coeff);
+      const bool moving = fabsf(stick - sport_stick_average.axis[x]) > 0.02f;
+      if (!profile.wing.sport_hold || !flags.arm_state || !flags.in_air || flags.failsafe) {
+        ierror.axis[x] = 0.0f;
+      } else if (moving) {
+        ierror.axis[x] *= MAX(0.0f, 1.0f - 20.0f * state.looptime);
+      } else if (fabsf(stick) < 0.01f) {
+        ierror.axis[x] += simpson_sum * current_ki.axis[x];
+      }
+      ierror.axis[x] = constrain(ierror.axis[x], -sport_integral_limit.axis[x], sport_integral_limit.axis[x]);
+    } else
+#endif
+    {
+      const float ierror_delta = simpson_sum * current_ki.axis[x] * iterm_windup.axis[x];
+      ierror.axis[x] = iterm_enable.axis[x] ? (ierror.axis[x] + ierror_delta) : (ierror.axis[x] * 0.98f);
+      ierror.axis[x] = constrain(ierror.axis[x], -integral_limit.axis[x], integral_limit.axis[x]);
+    }
     state.pid_i_term.axis[x] = ierror.axis[x];
 
     float transition_setpoint_weight = 0;
