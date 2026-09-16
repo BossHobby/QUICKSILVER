@@ -10,6 +10,7 @@ void test_cbor_profile_servo_rate_roundtrip(void) {
   source.servo.pwm_rate_hz = 333;
 #ifdef VEHICLE_WING
   source.wing.turn_coordination = 0;
+  source.wing.sport_hold = 0;
 #endif
   source.navigation.loiter_radius = 80.0f;
   source.navigation.cruise_speed = 18.0f;
@@ -27,6 +28,7 @@ void test_cbor_profile_servo_rate_roundtrip(void) {
   TEST_ASSERT_EQUAL_UINT16(333, decoded.servo.pwm_rate_hz);
 #ifdef VEHICLE_WING
   TEST_ASSERT_EQUAL_UINT8(0, decoded.wing.turn_coordination);
+  TEST_ASSERT_EQUAL_UINT8(0, decoded.wing.sport_hold);
 #endif
   TEST_ASSERT_EQUAL_FLOAT(80.0f, decoded.navigation.loiter_radius);
   TEST_ASSERT_EQUAL_FLOAT(18.0f, decoded.navigation.cruise_speed);

@@ -21,6 +21,7 @@
 //        wing: add Level turn coordination.
 //        navigation: encode for wings; add wing cruise throttle, GPS-refined cruise speed, bank and loiter settings.
 //        wing: add loiter switch, RTH and failsafe RTH.
+//        wing: add Sport mode.
 // 0.3.0 (1e5b55c3): feat: add full 16-bit aux channel resolution with range-based function mapping.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
@@ -606,12 +607,14 @@ typedef struct {
 typedef struct {
   profile_wing_autolaunch_t autolaunch;
   uint8_t turn_coordination; // Level adds the body rates of a coordinated turn at the current bank
+  uint8_t sport_hold;
 } profile_wing_t;
 
 #define WING_MEMBERS                            \
   START_STRUCT(profile_wing_t)                  \
   MEMBER(autolaunch, profile_wing_autolaunch_t) \
   MEMBER(turn_coordination, uint8_t)            \
+  MEMBER(sport_hold, uint8_t)                   \
   END_STRUCT()
 
 #define BLACKBOX_MEMBERS           \

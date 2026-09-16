@@ -116,6 +116,8 @@ const char *control_flight_mode_name(void) {
     return "LEVEL";
   if (rx_aux_on(AUX_ACROMODE))
     return "ACRO";
+  if (rx_aux_on(AUX_SPORTMODE))
+    return "SPORT";
   return "MANUAL";
 #else
   if (state.rth_failsafe_active)
