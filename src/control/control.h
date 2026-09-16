@@ -115,6 +115,7 @@ typedef struct {
   uint8_t turtle : 1;
   uint8_t turtle_ready : 1;
   uint8_t gestures_disabled : 1;
+  uint8_t sport_mode : 1; // wing control applied Sport damping in the latest Flight pass
 
   // Separate bytes prevent IO flag writes from overwriting Flight's bitfields.
   uint8_t failsafe_signal_lost; // RX reports loss; Flight also enforces timeout.

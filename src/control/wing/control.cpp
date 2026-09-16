@@ -30,6 +30,7 @@ typedef enum {
   WING_MODE_ACRO,
   WING_MODE_LEVEL,
   WING_MODE_NAV,
+  WING_MODE_SPORT,
 } wing_mode_t;
 
 #define WING_AUTOTRIM_CAPTURE_MS 2000
@@ -109,6 +110,9 @@ static wing_mode_t wing_active_mode() {
   if (rx_aux_on(AUX_ACROMODE)) {
     return WING_MODE_ACRO;
   }
+  if (rx_aux_on(AUX_SPORTMODE)) {
+    return WING_MODE_SPORT;
+  }
   return WING_MODE_MANUAL;
 }
 
@@ -128,7 +132,8 @@ static vec3_t wing_level_angle_error(float roll, float pitch) {
   return error;
 }
 
-static void wing_calc_stabilized(wing_mode_t mode, bool launch_stabilized) {
+static void wing_calc_stabilized(wing_mode_t mode, bool launch_stabilized, bool sport_changed) {
+  const bool sport = flags.sport_mode;
   if (launch_stabilized) {
     // pitch_angle is a climb angle; attitude targets are positive nose-down.
     const float target_pitch = -profile.wing.autolaunch.pitch_angle * DEGTORAD;
@@ -155,6 +160,9 @@ static void wing_calc_stabilized(wing_mode_t mode, bool launch_stabilized) {
     state.setpoint.roll = angle_pid(0);
     state.setpoint.pitch = angle_pid(1);
     state.setpoint.yaw = 0.0f;
+  } else if (sport) {
+    // Sport damps measured rotation; pilot deflection goes straight to surfaces.
+    state.setpoint = {};
   } else {
     state.setpoint = input_rates_calc();
   }
@@ -162,11 +170,19 @@ static void wing_calc_stabilized(wing_mode_t mode, bool launch_stabilized) {
   state.error.roll = state.setpoint.roll - state.gyro.roll;
   state.error.pitch = state.setpoint.pitch - state.gyro.pitch;
   state.error.yaw = state.setpoint.yaw - state.gyro.yaw;
+  if (sport_changed)
+    pid_reset();
   pid_calc();
+  vec3_t surfaces = state.pidoutput;
+  if (sport) {
+    surfaces.roll += state.rx_filtered.roll;
+    surfaces.pitch += state.rx_filtered.pitch;
+    surfaces.yaw += state.rx_filtered.yaw;
+  }
   state.mixer_source[OUTPUT_SOURCE_THROTTLE] = state.throttle;
-  state.mixer_source[OUTPUT_SOURCE_ROLL] = constrain(state.pidoutput.roll, -1.0f, 1.0f);
-  state.mixer_source[OUTPUT_SOURCE_PITCH] = constrain(state.pidoutput.pitch, -1.0f, 1.0f);
-  state.mixer_source[OUTPUT_SOURCE_YAW] = constrain(state.pidoutput.yaw, -1.0f, 1.0f);
+  state.mixer_source[OUTPUT_SOURCE_ROLL] = constrain(surfaces.roll, -1.0f, 1.0f);
+  state.mixer_source[OUTPUT_SOURCE_PITCH] = constrain(surfaces.pitch, -1.0f, 1.0f);
+  state.mixer_source[OUTPUT_SOURCE_YAW] = constrain(surfaces.yaw, -1.0f, 1.0f);
 }
 
 static bool wing_launch_sticks_moved() {
@@ -594,6 +610,9 @@ void control() {
   if (wing_mode == WING_MODE_NAV)
     state.throttle = wing_nav_command.throttle;
   const bool launch_stabilized = wing_launch_in_progress();
+  const bool sport = wing_mode == WING_MODE_SPORT && !launch_stabilized;
+  const bool sport_changed = sport != flags.sport_mode;
+  flags.sport_mode = sport;
   if (wing_mode == WING_MODE_MANUAL && !launch_stabilized) {
     pid_reset_i();
     state.mixer_source[OUTPUT_SOURCE_THROTTLE] = state.throttle;
@@ -601,7 +620,7 @@ void control() {
     state.mixer_source[OUTPUT_SOURCE_PITCH] = constrain(state.rx_filtered.pitch, -1.0f, 1.0f);
     state.mixer_source[OUTPUT_SOURCE_YAW] = constrain(state.rx_filtered.yaw, -1.0f, 1.0f);
   } else {
-    wing_calc_stabilized(wing_mode, launch_stabilized);
+    wing_calc_stabilized(wing_mode, launch_stabilized, sport_changed);
   }
 
   if (flags.motortest_override) {

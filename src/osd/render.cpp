@@ -1024,6 +1024,7 @@ TickType_t osd_display() {
       osd_menu_select_aux_adjust(4, OSD_AUTO, "ARMING", 17, 22, &profile.receiver.aux[AUX_ARMING]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "PREARM", 17, 22, &profile.receiver.aux[AUX_PREARM]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "ACRO", 17, 22, &profile.receiver.aux[AUX_ACROMODE]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "SPORT", 17, 22, &profile.receiver.aux[AUX_SPORTMODE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "LEVEL", 17, 22, &profile.receiver.aux[AUX_LEVELMODE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "AUTOTRIM", 17, 22, &profile.receiver.aux[AUX_AUTOTRIM]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "AUTOLAUNCH", 17, 22, &profile.receiver.aux[AUX_AUTOLAUNCH]);
@@ -1275,6 +1276,7 @@ TickType_t osd_display() {
       osd_menu_select_aux_adjust(4, OSD_AUTO, "ARMING", 17, 22, &profile.receiver.aux[AUX_ARMING]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "PREARM", 17, 22, &profile.receiver.aux[AUX_PREARM]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "ACRO", 17, 22, &profile.receiver.aux[AUX_ACROMODE]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "SPORT", 17, 22, &profile.receiver.aux[AUX_SPORTMODE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "LEVEL", 17, 22, &profile.receiver.aux[AUX_LEVELMODE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "AUTOTRIM", 17, 22, &profile.receiver.aux[AUX_AUTOTRIM]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "AUTOLAUNCH", 17, 22, &profile.receiver.aux[AUX_AUTOLAUNCH]);

@@ -18,6 +18,9 @@
 extern const profile_t default_profile;
 extern void run_wing_safety_tests();
 extern void run_wing_navigation_tests();
+extern void test_sport_passes_sticks_and_damps_rotation();
+extern void test_sport_hold_releases_on_input_and_disarm();
+extern void test_sport_reentry_discards_manual_gyro_gap();
 void setUp() {
   profile = default_profile;
   profile_output_update();
@@ -397,6 +400,9 @@ int main() {
   RUN_TEST(test_failsafe_stops_surfaces_at_trimmed_center);
   run_wing_safety_tests();
   run_wing_navigation_tests();
+  RUN_TEST(test_sport_passes_sticks_and_damps_rotation);
+  RUN_TEST(test_sport_hold_releases_on_input_and_disarm);
+  RUN_TEST(test_sport_reentry_discards_manual_gyro_gap);
   const int result = UNITY_END();
   unlink("flash.bin");
   chdir(original_dir);

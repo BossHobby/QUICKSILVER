@@ -9,6 +9,7 @@ void test_cbor_profile_servo_rate_roundtrip(void) {
   profile_t source = default_profile;
   source.servo.pwm_rate_hz = 333;
 #ifdef VEHICLE_WING
+  source.wing.sport_hold = 0;
   source.wing.banked_turns = 1;
 #endif
   source.navigation.loiter_radius = 80.0f;
@@ -25,6 +26,7 @@ void test_cbor_profile_servo_rate_roundtrip(void) {
   TEST_ASSERT_TRUE(cbor_decode_profile_t(&codec, &decoded) >= CBOR_OK);
   TEST_ASSERT_EQUAL_UINT16(333, decoded.servo.pwm_rate_hz);
 #ifdef VEHICLE_WING
+  TEST_ASSERT_EQUAL_UINT8(0, decoded.wing.sport_hold);
   TEST_ASSERT_EQUAL_UINT8(1, decoded.wing.banked_turns);
 #endif
   TEST_ASSERT_EQUAL_FLOAT(80.0f, decoded.navigation.loiter_radius);
