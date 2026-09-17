@@ -13,7 +13,6 @@
 #define SPI_SPEED_FAST MHZ_TO_HZ(10)
 
 extern spi_bus_device_t gyro_bus;
-extern uint8_t gyro_buf[32];
 
 static int8_t gyro_cas = 0; // not ready
 
@@ -59,8 +58,8 @@ static void bmi323_init_config() {
 
   // init data ready interupt to pin int1/ push_pull /active_high  NO_LATCH(default)
   bmi3_write16(BMI323_REG_INT_LATCH_CONF, 0x00, 1);
-  // BMI323_REG_INT_MAP2 acc_ready /gyro_ready
-  bmi3_write16(BMI323_REG_INT_MAP2, 0x140, 1);
+  // Only gyro DRDY: other sources would add edges to the Flight clock.
+  bmi3_write16(BMI323_REG_INT_MAP2, 1 << 8, 1);
   // BMI323_REG_IO_INT_CTRL push_pull/active_high//enable int1
   bmi3_write16(BMI323_REG_IO_INT_CTRL, BMI3_INT_OUTPUT_ENABLE << 2 | BMI3_INT_PUSH_PULL << 1 | BMI3_INT_ACTIVE_HIGH, 15);
 }
@@ -178,7 +177,12 @@ void bmi3_read_data(uint8_t reg, uint8_t *data, uint32_t size) {
 
 void bmi323_read_gyro_data(gyro_data_t *data) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_FAST);
-  spi_txn_wait(&gyro_bus);
+  uint8_t gyro_buf[12];
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(BMI323_REG_ACC_DATA_X_LSB | 0x80, 0xFF),
+      spi_make_seg_buffer(gyro_buf, NULL, sizeof(gyro_buf)),
+  };
+  spi_seg_submit_wait(&gyro_bus, segs);
 
   data->accel.pitch = -(int16_t)((gyro_buf[1] << 8) | gyro_buf[0]);
   data->accel.roll = -(int16_t)((gyro_buf[3] << 8) | gyro_buf[2]);
@@ -204,14 +208,6 @@ void bmi323_read_gyro_data(gyro_data_t *data) {
   data->gyro.yaw = gyro_data[2];
 
   data->temp = 0;
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(BMI323_REG_ACC_DATA_X_LSB | 0x80, 0xFF),
-      spi_make_seg_buffer(gyro_buf, NULL, 12),
-  };
-  spi_seg_submit(&gyro_bus, segs);
-  while (!spi_txn_continue(&gyro_bus))
-    ;
 }
 
 #endif
