@@ -23,7 +23,6 @@
 #define AAF_BITSHIFT 10
 
 extern spi_bus_device_t gyro_bus;
-extern uint8_t gyro_buf[32];
 
 gyro_types_t icm42605_detect() {
   const uint8_t id = icm42605_read(ICM42605_WHO_AM_I);
@@ -55,6 +54,11 @@ void icm42605_configure() {
   icm42605_write(ICM42605_GYRO_ACCEL_CONFIG0, (15 << 4) | 15); // low latency
   icm42605_write(ICM42605_INT_CONFIG, ICM42605_INT1_MODE_PULSED | ICM42605_INT1_DRIVE_CIRCUIT_PP | ICM42605_INT1_POLARITY_ACTIVE_HIGH);
   icm42605_write(ICM42605_INT_CONFIG0, ICM42605_UI_DRDY_INT_CLEAR_ON_SBR);
+  icm42605_write(ICM42605_INT_SOURCE0, 1 << 3); // Route UI DRDY to INT1.
+  uint8_t int_config = icm42605_read(ICM42605_INT_CONFIG1);
+  int_config &= ~(1 << ICM42605_INT_ASYNC_RESET_BIT);
+  int_config |= ICM42605_INT_TPULSE_DURATION_8 | ICM42605_INT_TDEASSERT_DISABLED;
+  icm42605_write(ICM42605_INT_CONFIG1, int_config);
 
   {
     // Disable AFSR to prevent stalls in gyro output
@@ -117,7 +121,12 @@ void icm42605_write(uint8_t reg, uint8_t data) {
 
 void icm42605_read_gyro_data(gyro_data_t *data) {
   spi_bus_device_reconfigure(&gyro_bus, SPI_MODE_TRAILING_EDGE, SPI_SPEED_FAST);
-  spi_txn_wait(&gyro_bus);
+  uint8_t gyro_buf[14];
+  const spi_txn_segment_t segs[] = {
+      spi_make_seg_const(ICM42605_TEMP_DATA1 | 0x80),
+      spi_make_seg_buffer(gyro_buf, NULL, sizeof(gyro_buf)),
+  };
+  spi_seg_submit_wait(&gyro_bus, segs);
 
   data->temp = (float)((int16_t)((gyro_buf[0] << 8) | gyro_buf[1])) / 132.48f + 25.f;
 
@@ -128,13 +137,5 @@ void icm42605_read_gyro_data(gyro_data_t *data) {
   data->gyro.pitch = (int16_t)((gyro_buf[8] << 8) | gyro_buf[9]);
   data->gyro.roll = (int16_t)((gyro_buf[10] << 8) | gyro_buf[11]);
   data->gyro.yaw = (int16_t)((gyro_buf[12] << 8) | gyro_buf[13]);
-
-  const spi_txn_segment_t segs[] = {
-      spi_make_seg_const(ICM42605_TEMP_DATA1 | 0x80),
-      spi_make_seg_buffer(gyro_buf, NULL, 14),
-  };
-  spi_seg_submit(&gyro_bus, segs);
-  while (!spi_txn_continue(&gyro_bus))
-    ;
 }
 #endif

@@ -11,12 +11,17 @@
 #endif
 #include "core/profile.h"
 #include "core/tasks.h"
+#include "driver/gyro/gyro.h"
 #include "driver/time.h"
 #include "driver/timer.h"
 #include "util/mutex.h"
 
 extern void flight_test_timing_init();
 extern void flight_test_update_loop(uint32_t elapsed_cycles);
+extern void flight_test_sync_init(uint32_t gyro_period, uint32_t nominal);
+extern uint32_t flight_test_timer_reload(uint32_t event, uint32_t active_ticks);
+extern void gyro_test_clock_reset(uint32_t period, bool mpu6000);
+extern void gyro_test_clock_update(uint32_t sample);
 #ifdef VEHICLE_MULTI
 extern void nav_test_reset();
 #endif
@@ -86,6 +91,103 @@ void test_flight_maintenance_reset_excludes_delays_and_restarts_average() {
     next_loop(70, 125);
   TEST_ASSERT_EQUAL_FLOAT(125, state.looptime_autodetect);
   TEST_ASSERT_EQUAL_UINT8(0, state.looptime_warning);
+}
+
+static void check_flight_gyro_pll(bool mpu6000, uint32_t divider, uint32_t start, float nominal_us, float actual_us) {
+  const uint32_t tick_cycles = SYS_CLOCK_FREQ_HZ / 2000000;
+  const uint32_t nominal = US_TO_CYCLES(nominal_us);
+  const uint32_t actual = US_TO_CYCLES(actual_us);
+  gyro_test_clock_reset(nominal, mpu6000);
+  flight_test_sync_init(nominal, nominal * divider);
+  state.looptime_autodetect = nominal_us * divider;
+  uint32_t event = start + US_TO_CYCLES(37);
+  uint32_t active = nominal * divider / tick_cycles;
+  uint32_t queued = active;
+  uint32_t sample_count = 0;
+  uint32_t consumed = 0;
+  auto deliver = [&](uint32_t until) {
+    while (true) {
+      const uint32_t late = mpu6000 && sample_count % 8 == 7 ? US_TO_CYCLES(45) : 0;
+      const uint32_t edge = start + sample_count * actual + late;
+      if ((int32_t)(until - edge) < 0)
+        break;
+      gyro_test_clock_update(edge);
+      sample_count++;
+    }
+  };
+  uint32_t measured_start = 0;
+  for (uint32_t loop = 0; loop < 2000; loop++) {
+    event += active * tick_cycles;
+    active = queued; // Reload latched before entering the update ISR.
+    deliver(event);
+    queued = flight_test_timer_reload(event, active);
+    if (loop == 500)
+      measured_start = event;
+    if (loop > 500) {
+      TEST_ASSERT_NOT_EQUAL(0, gyro_clock_snapshot().period);
+      TEST_ASSERT_EQUAL_UINT32(divider, sample_count - consumed);
+      const uint32_t offset = mpu6000 ? US_TO_CYCLES(45) : 0;
+      const uint32_t age = (event - start - offset) % actual;
+      TEST_ASSERT_UINT32_WITHIN(US_TO_CYCLES(1), US_TO_CYCLES(4), age);
+      TEST_ASSERT_UINT32_WITHIN(US_TO_CYCLES(1), actual * divider, queued * tick_cycles);
+    }
+    consumed = sample_count;
+  }
+  // Fractional timer ticks must not introduce long-term frequency error.
+  TEST_ASSERT_UINT32_WITHIN(US_TO_CYCLES(2), 1499 * actual * divider, event - measured_start);
+  TEST_ASSERT_EQUAL_FLOAT(nominal_us * divider, state.looptime_autodetect);
+  gyro_test_clock_reset(nominal, false);
+}
+
+void test_flight_gyro_pll_tracks_drift_and_mpu6000_phase() {
+  check_flight_gyro_pll(false, 1, US_TO_CYCLES(1000), 125, 127);
+  check_flight_gyro_pll(false, 2, UINT32_MAX - US_TO_CYCLES(1000), 125, 124.13f);
+  check_flight_gyro_pll(true, 1, US_TO_CYCLES(1000), 125, 127);
+  check_flight_gyro_pll(true, 2, US_TO_CYCLES(1000), 125, 125.13f);
+  check_flight_gyro_pll(true, 4, UINT32_MAX - US_TO_CYCLES(1000), 125, 124.13f);
+  check_flight_gyro_pll(false, 1, US_TO_CYCLES(1000), 312.5f, 313.37f);
+  check_flight_gyro_pll(false, 2, US_TO_CYCLES(1000), 150.06f, 150.16f);
+}
+
+void test_flight_gyro_pll_reacquires_and_preserves_fallback() {
+  const uint32_t tick_cycles = SYS_CLOCK_FREQ_HZ / 2000000;
+  const uint32_t nominal = US_TO_CYCLES(125);
+  gyro_test_clock_reset(nominal, false);
+  flight_test_sync_init(nominal, nominal);
+  uint32_t edge = UINT32_MAX - US_TO_CYCLES(1000);
+  const uint32_t nominal_ticks = nominal / tick_cycles;
+  TEST_ASSERT_EQUAL_UINT32(nominal_ticks, flight_test_timer_reload(edge, nominal_ticks));
+  for (unsigned i = 0; i < 65; i++) {
+    edge += US_TO_CYCLES(127);
+    gyro_test_clock_update(edge);
+  }
+  TEST_ASSERT_EQUAL_UINT32(US_TO_CYCLES(127), gyro_clock_snapshot().period);
+  TEST_ASSERT_EQUAL_UINT32(nominal_ticks, flight_test_timer_reload(edge + US_TO_CYCLES(1000), nominal_ticks));
+  edge += US_TO_CYCLES(1000);
+  gyro_test_clock_update(edge);
+  TEST_ASSERT_EQUAL_UINT32(0, gyro_clock_snapshot().period);
+  TEST_ASSERT_EQUAL_UINT32(nominal_ticks, flight_test_timer_reload(edge, nominal_ticks));
+  for (unsigned i = 0; i < 64; i++) {
+    edge += US_TO_CYCLES(127);
+    gyro_test_clock_update(edge);
+  }
+  TEST_ASSERT_EQUAL_UINT32(US_TO_CYCLES(127), gyro_clock_snapshot().period);
+  // A faster EXTI can publish an edge after the timer update event.
+  TEST_ASSERT_UINT32_WITHIN(2, 254, flight_test_timer_reload(edge - 1, nominal_ticks));
+
+  // A rate change retains the committed interval and aligns the following one.
+  flight_test_sync_init(nominal, nominal * 2);
+  TEST_ASSERT_UINT32_WITHIN(2, 508, flight_test_timer_reload(edge, nominal_ticks));
+
+  // 500 us is not an integer multiple of the BMI's nominal 312.5 us period.
+  flight_test_sync_init(US_TO_CYCLES(312.5f), US_TO_CYCLES(500));
+  gyro_test_clock_reset(US_TO_CYCLES(312.5f), false);
+  for (unsigned i = 0; i < 65; i++) {
+    edge += US_TO_CYCLES(313.37f);
+    gyro_test_clock_update(edge);
+  }
+  TEST_ASSERT_EQUAL_UINT32(1000, flight_test_timer_reload(edge, 625));
+  gyro_test_clock_reset(nominal, false);
 }
 
 #ifdef VEHICLE_MULTI
