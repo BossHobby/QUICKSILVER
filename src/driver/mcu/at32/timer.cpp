@@ -160,6 +160,10 @@ void timer_up_set_period(timer_index_t tim, uint32_t period) {
   tmr_period_value_set(timer_defs[tim].instance, period);
 }
 
+uint32_t timer_up_count(timer_index_t tim) {
+  return tmr_counter_value_get(timer_defs[tim].instance);
+}
+
 void timer_up_start(timer_index_t tim) {
   auto *instance = timer_defs[tim].instance;
   tmr_event_sw_trigger(instance, TMR_OVERFLOW_SWTRIG);

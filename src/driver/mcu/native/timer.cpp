@@ -30,6 +30,10 @@ void timer_up_set_period(timer_index_t tim, uint32_t period) {
   taskEXIT_CRITICAL();
 }
 
+uint32_t timer_up_count(timer_index_t tim) {
+  return timers[tim].elapsed / timers[tim].divider;
+}
+
 void timer_up_start(timer_index_t tim) {
   taskENTER_CRITICAL();
   timers[tim].period = timers[tim].reload;

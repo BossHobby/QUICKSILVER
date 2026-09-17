@@ -120,18 +120,18 @@ void exti_enable(gpio_pins_t pin, exti_trigger_t trigger) {
 }
 
 void exti_interrupt_enable(gpio_pins_t pin) {
-  interrupt_enable(LINE.exti_irqn, EXTI_PRIORITY);
+  LL_EXTI_EnableIT_0_31(LINE.exti_line);
 }
 
 void exti_interrupt_disable(gpio_pins_t pin) {
-  interrupt_disable(LINE.exti_irqn);
+  LL_EXTI_DisableIT_0_31(LINE.exti_line);
 }
 
 bool exti_line_active(gpio_pins_t pin) {
   if (pin == PIN_NONE) {
     return false;
   }
-  if (LL_EXTI_IsActiveFlag_0_31(LINE.exti_line) == RESET) {
+  if (!LL_EXTI_IsEnabledIT_0_31(LINE.exti_line) || LL_EXTI_IsActiveFlag_0_31(LINE.exti_line) == RESET) {
     return false;
   }
   LL_EXTI_ClearFlag_0_31(LINE.exti_line);
@@ -147,6 +147,11 @@ static void handle_exit_isr() {
   if (target.rx_spi.busy_exti && exti_line_active(target.rx_spi.busy)) {
     extern void rx_spi_handle_busy_exti(bool);
     rx_spi_handle_busy_exti(gpio_pin_read(target.rx_spi.busy));
+  }
+
+  if (exti_line_active(target.gyro.exti)) {
+    extern void gyro_handle_exti();
+    gyro_handle_exti();
   }
 }
 
