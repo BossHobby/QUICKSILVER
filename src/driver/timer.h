@@ -150,5 +150,6 @@ void timer_enable_dma_request(timer_index_t tim, timer_channel_t chan, bool stat
 
 void timer_up_init(timer_index_t tim, uint16_t divider, uint32_t period);
 void timer_up_set_period(timer_index_t tim, uint32_t period);
+uint32_t timer_up_count(timer_index_t tim);
 void timer_up_start(timer_index_t tim);
 bool timer_up_pending(timer_index_t tim);
