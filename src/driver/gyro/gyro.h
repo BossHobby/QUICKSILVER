@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 #include "util/vector.h"
 
 typedef enum {
@@ -33,8 +35,17 @@ typedef struct {
   float temp;
 } gyro_data_t;
 
+// CPU cycles; zero period means acquiring or unavailable.
+typedef struct {
+  uint32_t period;
+  uint32_t phase; // Safe DRDY phase, including MPU6000's delayed sample.
+  uint32_t sample; // Latest observed edge, for freshness.
+} gyro_clock_t;
+
 extern gyro_types_t gyro_type;
 
+// Captures the EXTI-owned clock with interrupts masked.
+gyro_clock_t gyro_clock_snapshot();
 float gyro_update_period();
 bool gyro_exti_state();
 

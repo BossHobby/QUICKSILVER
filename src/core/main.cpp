@@ -45,12 +45,23 @@
 #include "rx/rx.h"
 #include "util/filter.h"
 
+static constexpr uint32_t FLIGHT_TIMER_HZ = 2000000;
+static constexpr uint32_t FLIGHT_TIMER_CYCLES = SYS_CLOCK_FREQ_HZ / FLIGHT_TIMER_HZ;
+static constexpr uint32_t GYRO_PHASE_MARGIN = US_TO_CYCLES(4);
+
 static timer_index_t flight_timer;
 static uint32_t last_loop_cycles;
 static uint32_t runtime_sum;
 static uint8_t runtime_samples;
 static std::atomic<bool> skip_loop_sample;
 static_assert(std::atomic<bool>::is_always_lock_free);
+
+static std::atomic<uint32_t> flight_nominal_period;
+static_assert(std::atomic<uint32_t>::is_always_lock_free);
+static uint32_t gyro_nominal_period;
+// Timer IRQ owns the queued reload and fractional timer-tick remainder.
+static uint32_t flight_reload_ticks;
+static uint32_t flight_timer_remainder;
 
 extern "C" __attribute__((__used__)) void
 memory_section_init() {
@@ -95,6 +106,7 @@ static void flight_timing_init() {
 #else
   float target = LOOPTIME_MAX;
 #endif
+  gyro_nominal_period = US_TO_CYCLES(target);
   while (target < LOOPTIME_MAX)
     target *= 2.0f;
   state.looptime = target * 1e-6f;
@@ -105,6 +117,8 @@ static void flight_timing_init() {
   runtime_samples = 0;
   skip_loop_sample = false;
   last_loop_cycles = time_cycles();
+  flight_nominal_period = US_TO_CYCLES(target);
+  flight_timer_remainder = 0;
 }
 
 void flight_reset_runtime() {
@@ -124,7 +138,8 @@ static void flight_update_rate(uint32_t runtime_us) {
   if (state.looptime_us > 20000)
     failloop(FAILLOOP_LOOPTIME);
 
-  // Measure Flight work, excluding the notification and configuration waits.
+  // Measure Flight work, including the synchronous gyro read, but excluding
+  // the notification and configuration waits.
   runtime_sum += runtime_us;
   if (++runtime_samples < 200)
     return;
@@ -135,6 +150,7 @@ static void flight_update_rate(uint32_t runtime_us) {
     return;
 
   state.looptime_autodetect = MIN(500.0f, state.looptime_autodetect * 2.0f);
+  flight_nominal_period = US_TO_CYCLES(state.looptime_autodetect);
   state.looptime_warning++;
   control_filter_update(false);
 }
@@ -191,13 +207,61 @@ void flight_test_timing_init() { flight_timing_init(); }
 void flight_test_update_loop(uint32_t elapsed_cycles) { flight_update_loop(elapsed_cycles); }
 #endif
 
-static uint32_t flight_timer_period() {
-  return (uint32_t)(state.looptime_autodetect * 2.0f + 0.5f) - 1;
+static uint32_t flight_timer_reload(uint32_t event, uint32_t active_ticks) {
+  const uint32_t nominal = flight_nominal_period.load();
+  uint32_t period = nominal;
+  const gyro_clock_t clock = gyro_clock_snapshot();
+  const uint32_t sample_period = clock.period;
+  const uint32_t divider = MAX(1U, (nominal + gyro_nominal_period / 2) / gyro_nominal_period);
+  const int32_t nominal_error = (int32_t)(nominal - divider * gyro_nominal_period);
+  // The 500 us fallback cap is not a whole number of periods for every gyro.
+  // Preserve that selected rate, running unsynchronized when it cannot lock.
+  if (sample_period != 0 && nominal_error >= -(int32_t)FLIGHT_TIMER_CYCLES &&
+      nominal_error <= (int32_t)FLIGHT_TIMER_CYCLES &&
+      (int32_t)(event - clock.sample) >= -(int32_t)gyro_nominal_period &&
+      (int32_t)(event - clock.sample) <= (int32_t)(gyro_nominal_period * 4)) {
+    period = divider * sample_period;
+    // ARR is buffered: the active interval is already committed. This write
+    // controls the following interval, so predict two update events ahead.
+    const uint32_t target = event + active_ticks * FLIGHT_TIMER_CYCLES + period;
+    int32_t error = (int32_t)(clock.phase + GYRO_PHASE_MARGIN - target) % (int32_t)sample_period;
+    if (error > (int32_t)(sample_period / 2))
+      error -= sample_period;
+    else if (error < -(int32_t)(sample_period / 2))
+      error += sample_period;
+    // Gentle phase tracking avoids reproducing interrupt jitter in the loop.
+    const int32_t correction = constrain(error / 4, -(int32_t)US_TO_CYCLES(1), (int32_t)US_TO_CYCLES(1));
+    period += correction;
+  }
+  const uint32_t cycles = period + flight_timer_remainder;
+  flight_timer_remainder = cycles % FLIGHT_TIMER_CYCLES;
+  return cycles / FLIGHT_TIMER_CYCLES;
 }
+
+#ifdef PIO_UNIT_TESTING
+void flight_test_sync_init(uint32_t gyro_period, uint32_t nominal) {
+  gyro_nominal_period = gyro_period;
+  flight_nominal_period = nominal;
+  flight_timer_remainder = 0;
+}
+uint32_t flight_test_timer_reload(uint32_t event, uint32_t active_ticks) {
+  return flight_timer_reload(event, active_ticks);
+}
+#endif
 
 bool flight_timer_irq_handler() {
   if (flight_timer == TIMER_INVALID || !timer_up_pending(flight_timer))
     return false;
+
+  uint32_t event;
+  // Read the two clocks together; an intervening EXTI/DMA ISR must not look
+  // like a phase error. Only the register reads need interrupt exclusion.
+  ATOMIC_BLOCK_ALL {
+    const uint32_t counter = timer_up_count(flight_timer);
+    event = time_cycles() - counter * FLIGHT_TIMER_CYCLES;
+  }
+  flight_reload_ticks = flight_timer_reload(event, flight_reload_ticks);
+  timer_up_set_period(flight_timer, flight_reload_ticks - 1);
 
   BaseType_t wake = pdFALSE;
   vTaskNotifyGiveFromISR(threads[THREAD_FLIGHT].handle, &wake);
@@ -270,7 +334,8 @@ void flight_thread(void *) {
   flight_timer = TIMER_TAG_TIM(timer_alloc(TIMER_USE_FLIGHT));
   configASSERT(flight_timer != TIMER_INVALID);
 
-  timer_up_init(flight_timer, PWM_CLOCK_FREQ_HZ / 2000000, flight_timer_period());
+  flight_reload_ticks = (flight_nominal_period.load() + FLIGHT_TIMER_CYCLES / 2) / FLIGHT_TIMER_CYCLES;
+  timer_up_init(flight_timer, PWM_CLOCK_FREQ_HZ / FLIGHT_TIMER_HZ, flight_reload_ticks - 1);
   interrupt_enable(timer_defs[flight_timer].irq, TIMER_PRIORITY);
   timer_up_start(flight_timer);
 
@@ -282,12 +347,7 @@ void flight_thread(void *) {
     // arm. Armed Flight never locks; OSD then only renders telemetry.
     mutex_guard_t configuration(profile_mutex, !flags.arm_state);
 
-    const float previous_period = state.looptime_autodetect;
     flight_update_loop(elapsed_cycles);
-    if (state.looptime_autodetect != previous_period) {
-      timer_up_set_period(flight_timer, flight_timer_period());
-    }
-
     simulator_update();
     sixaxis_read();
     imu_calc();
