@@ -23,3 +23,8 @@ extern flash_storage_t flash_storage;
 
 void flash_save();
 void flash_load();
+
+// Applies target.defaults serial/receiver/vtx initial assignments on top of
+// generic profile defaults. Boot calls this before the saved profile overwrite
+// so user settings, including port disable/autodetection, remain authoritative.
+void target_defaults_apply(profile_t *profile);

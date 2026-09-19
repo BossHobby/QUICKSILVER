@@ -85,7 +85,8 @@ void test_gps_burst_resumes_partial_packet() {
 }
 
 void test_gps_configuration_and_fix_validity() {
-  profile_set_defaults();
+  profile_set_defaults(&profile);
+  profile_output_update();
   TEST_ASSERT_EQUAL_UINT8(GPS_CONSTELLATION_GPS | GPS_CONSTELLATION_GALILEO, profile.gps.constellations);
   uint8_t encoded[4096];
   cbor_value_t encoder;

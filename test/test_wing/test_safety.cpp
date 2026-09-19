@@ -40,7 +40,8 @@ static void tick(uint32_t milliseconds = 1) {
 }
 
 static void prepare(uint32_t mode) {
-  profile_set_defaults(); // Use the same startup defaults as hardware.
+  profile_set_defaults(&profile); // Use the same startup defaults as hardware.
+  profile_output_update();
   profile.receiver.aux[AUX_PREARM].channel = RX_CHANNEL_ON;
   state.looptime_autodetect = 1000;
   state.rx_filter_hz = 50;

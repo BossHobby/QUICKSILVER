@@ -63,6 +63,10 @@ TARGET_SDCARD_MEMBERS
 TARGET_GYRO_SPI_DEVICE_MEMBERS
 TARGET_RX_SPI_DEVICE_MEMBERS
 TARGET_I2C_DEVICE_MEMBERS
+TARGET_DEFAULTS_SERIAL_MEMBERS
+TARGET_DEFAULTS_RECEIVER_MEMBERS
+TARGET_DEFAULTS_VTX_MEMBERS
+TARGET_DEFAULTS_MEMBERS
 TARGET_MEMBERS
 TARGET_INFO_MEMBERS
 
@@ -97,6 +101,10 @@ TARGET_SPI_DEVICE_MEMBERS
 TARGET_SDCARD_MEMBERS
 TARGET_RX_SPI_DEVICE_MEMBERS
 TARGET_I2C_DEVICE_MEMBERS
+TARGET_DEFAULTS_SERIAL_MEMBERS
+TARGET_DEFAULTS_RECEIVER_MEMBERS
+TARGET_DEFAULTS_VTX_MEMBERS
+TARGET_DEFAULTS_MEMBERS
 TARGET_MEMBERS
 
 #undef START_STRUCT
@@ -326,6 +334,78 @@ cbor_result_t cbor_decode_output_caps_t(cbor_value_t *dec, output_caps_t *t) {
   }
 
   *t = caps;
+  return res;
+}
+
+cbor_result_t cbor_encode_rx_protocol_t(cbor_value_t *enc, const rx_protocol_t *t) {
+  cbor_result_t res = CBOR_OK;
+
+  switch (*t) {
+  case RX_PROTOCOL_CRSF:
+    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "crsf"));
+    break;
+  case RX_PROTOCOL_SBUS:
+    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "sbus"));
+    break;
+  default:
+    // invalid encodes as an empty string, which the decoder maps back
+    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, ""));
+    break;
+  }
+
+  return res;
+}
+
+cbor_result_t cbor_decode_rx_protocol_t(cbor_value_t *dec, rx_protocol_t *t) {
+  cbor_result_t res = CBOR_OK;
+
+  const uint8_t *name;
+  uint32_t name_len;
+  CBOR_CHECK_ERROR(res = cbor_decode_tstr(dec, &name, &name_len));
+
+  // unknown protocol names are ignored, never guessed
+  *t = RX_PROTOCOL_INVALID;
+  if (buf_equal_string(name, name_len, "crsf")) {
+    *t = RX_PROTOCOL_CRSF;
+  } else if (buf_equal_string(name, name_len, "sbus")) {
+    *t = RX_PROTOCOL_SBUS;
+  }
+
+  return res;
+}
+
+cbor_result_t cbor_encode_vtx_protocol_t(cbor_value_t *enc, const vtx_protocol_t *t) {
+  cbor_result_t res = CBOR_OK;
+
+  switch (*t) {
+  case VTX_PROTOCOL_SMART_AUDIO:
+    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "smart_audio"));
+    break;
+  case VTX_PROTOCOL_TRAMP:
+    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "tramp"));
+    break;
+  default:
+    CBOR_CHECK_ERROR(res = cbor_encode_str(enc, ""));
+    break;
+  }
+
+  return res;
+}
+
+cbor_result_t cbor_decode_vtx_protocol_t(cbor_value_t *dec, vtx_protocol_t *t) {
+  cbor_result_t res = CBOR_OK;
+
+  const uint8_t *name;
+  uint32_t name_len;
+  CBOR_CHECK_ERROR(res = cbor_decode_tstr(dec, &name, &name_len));
+
+  *t = VTX_PROTOCOL_INVALID;
+  if (buf_equal_string(name, name_len, "smart_audio")) {
+    *t = VTX_PROTOCOL_SMART_AUDIO;
+  } else if (buf_equal_string(name, name_len, "tramp")) {
+    *t = VTX_PROTOCOL_TRAMP;
+  }
+
   return res;
 }
 
