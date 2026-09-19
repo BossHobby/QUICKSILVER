@@ -59,7 +59,20 @@ void fmc_erase() {
     failloop(FAILLOOP_FAULT);
   }
 #else
-  FLASH_Erase_Sector(FLASH_SECTOR_3, FLASH_VOLTAGE_RANGE_3);
+  // FLASH_CONFIG is sector 3 on the single-bank F4/F7 parts. The raw sector
+  // helper returns void, leaving a failed erase to surface as a program error
+  // in fmc_write_buf; the HAL call waits for completion and reports it here.
+  uint32_t sector_error;
+  FLASH_EraseInitTypeDef erase_init = {};
+  erase_init.TypeErase = FLASH_TYPEERASE_SECTORS;
+  erase_init.Sector = FLASH_SECTOR_3;
+  erase_init.NbSectors = 1;
+  erase_init.VoltageRange = FLASH_VOLTAGE_RANGE_3;
+  if (HAL_FLASHEx_Erase(&erase_init, &sector_error) != HAL_OK) {
+    fmc_lock();
+    __enable_irq();
+    failloop(FAILLOOP_FAULT);
+  }
 #endif
 }
 
