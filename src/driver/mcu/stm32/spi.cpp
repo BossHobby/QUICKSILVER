@@ -68,11 +68,16 @@ static uint32_t spi_divider_to_ll(uint32_t divider) {
   }
 }
 
-static uint32_t spi_find_divder(uint32_t clk_hz) {
+static uint32_t spi_find_divider(const spi_bus_device_t *bus) {
   uint32_t divider = 2;
   uint32_t clock = SPI_CLOCK_FREQ_HZ / divider;
+#ifdef STM32F7
+  // SPI1/4 use APB2 (108 MHz); SPI2/3 use APB1 (54 MHz).
+  if (bus->port == SPI_PORT1 || bus->port == SPI_PORT4)
+    clock *= 2;
+#endif
 
-  while ((clock > clk_hz) && (divider < 256)) {
+  while ((clock > bus->hz) && (divider < 256)) {
     divider = divider << 1;
     clock = clock >> 1;
   }
@@ -166,7 +171,7 @@ void spi_reconfigure(spi_bus_device_t *bus) {
 
   if (config->hz != bus->hz) {
     config->hz = bus->hz;
-    LL_SPI_SetBaudRatePrescaler(port->channel, spi_find_divder(bus->hz));
+    LL_SPI_SetBaudRatePrescaler(port->channel, spi_find_divider(bus));
   }
   if (config->mode != bus->mode) {
     config->mode = bus->mode;
