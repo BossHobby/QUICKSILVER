@@ -36,6 +36,10 @@ const char *failloop_string(failloop_t val) {
 }
 
 void failloop(failloop_t val) {
+  // Callers from the flash write path reach here with interrupts masked;
+  // the blink pattern and USB fault log need SysTick and USB interrupts.
+  __enable_irq();
+
   uint32_t blink_counter = 0;
   uint32_t blink_start = time_millis();
 
