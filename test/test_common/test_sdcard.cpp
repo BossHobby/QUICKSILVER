@@ -358,9 +358,11 @@ void test_sdcard_device_samples_during_write() {
 
     blackbox_device_header.file_num = 1;
     blackbox_device_header.files[0] = {.start = 512};
+    const uint32_t header_writes = card.blocks_written;
     blackbox_device_sdcard.start();
-    TEST_ASSERT_FALSE(blackbox_device_sdcard.update(wait));
-    card_device_wait_ready();
+    TEST_ASSERT_TRUE(blackbox_device_sdcard.update(wait));
+    TEST_ASSERT_EQUAL(portMAX_DELAY, wait);
+    TEST_ASSERT_EQUAL_UINT32(header_writes, card.blocks_written);
 
     uint8_t sample[32] = {};
     for (uint32_t i = 0; i < 16; i++)
@@ -389,11 +391,10 @@ void test_sdcard_device_samples_during_write() {
     card_device_wait_ready();
     TEST_ASSERT_EQUAL_UINT32(0, ring_buffer_available(&blackbox_encode_buffer));
     TEST_ASSERT_EQUAL_UINT32((16 + 183) * sizeof(sample), blackbox_current_file()->size);
+    TEST_ASSERT_EQUAL_UINT32(writes + 13 + 1, card.blocks_written); // Data pages and one directory commit.
 
     // Finishing the flush must leave the device ready for another file.
     blackbox_device_sdcard.start();
-    TEST_ASSERT_FALSE(blackbox_device_sdcard.update(wait));
-    card_device_wait_ready();
     TEST_ASSERT_TRUE(blackbox_device_sdcard.update(wait));
     TEST_ASSERT_EQUAL(portMAX_DELAY, wait);
 
