@@ -5,11 +5,11 @@
 #include "driver/blackbox/m25p16.h"
 #include "util/util.h"
 
-#ifdef USE_DATA_FLASH
+#if defined(USE_DATA_FLASH) || defined(PIO_UNIT_TESTING)
 
 #define FILES_SECTOR_OFFSET blackbox_bounds.sector_size
 #define PAGE_SIZE M25P16_PAGE_SIZE
-#define MAX_WRITE_SIZE (128)
+#define MAX_WRITE_SIZE PAGE_SIZE
 
 typedef enum {
   STATE_DETECT,
@@ -24,6 +24,7 @@ typedef enum {
 
   STATE_ERASE_HEADER,
   STATE_WRITE_HEADER,
+  STATE_WAIT_HEADER,
 } flash_device_state_t;
 
 typedef enum {
@@ -98,12 +99,12 @@ bool blackbox_device_flash_update(TickType_t &wait) {
     }
     if (write_size >= MAX_WRITE_SIZE || phase == PHASE_FLUSH) {
       state = STATE_WRITE;
-      wait = 0;
     } else {
       wait = portMAX_DELAY;
+      break;
     }
-    break;
   }
+    [[fallthrough]];
 
   case STATE_WRITE: {
     const uint32_t offset = blackbox_current_file()->start + blackbox_current_file()->size;
@@ -157,11 +158,17 @@ bool blackbox_device_flash_update(TickType_t &wait) {
 
   case STATE_WRITE_HEADER: {
     if (m25p16_page_program(0x0, (uint8_t *)&blackbox_device_header, sizeof(blackbox_device_header_t))) {
-      state = STATE_IDLE;
+      state = STATE_WAIT_HEADER;
       wait = 0;
     }
     return false;
   }
+  case STATE_WAIT_HEADER:
+    if (m25p16_is_ready()) {
+      state = STATE_IDLE;
+      wait = 0;
+    }
+    return false;
   }
 
   return true;
@@ -187,7 +194,9 @@ void blackbox_device_flash_stop() {
 }
 
 void blackbox_device_flash_start() {
-  state = STATE_ERASE_HEADER;
+  // Commit the directory after flushing at stop, when the final size is known.
+  // Erasing it here stalls data writes long enough to overflow the encode FIFO.
+  state = STATE_IDLE;
   phase = PHASE_WRITE;
 }
 

@@ -2,6 +2,9 @@
 
 #include <stdio.h>
 #include <string.h>
+#ifdef SIMULATOR
+#include <unistd.h>
+#endif
 
 #include "core/project.h"
 #include "util/util.h"
@@ -37,15 +40,14 @@ void blackbox_device_simulator_init() {
   state = STATE_DETECT;
 }
 
-static void simulator_read(uint32_t addr, uint8_t *data, uint32_t size) {
+static bool simulator_read(uint32_t addr, uint8_t *data, uint32_t size) {
   fseek(file, addr, SEEK_SET);
-  fread(data, size, 1, file);
+  return fread(data, size, 1, file) == 1;
 }
 
-static void simulator_write(uint32_t addr, uint8_t *data, uint32_t size) {
+static bool simulator_write(uint32_t addr, uint8_t *data, uint32_t size) {
   fseek(file, addr, SEEK_SET);
-  fwrite(data, size, 1, file);
-  fflush(file);
+  return fwrite(data, size, 1, file) == 1 && fflush(file) == 0;
 }
 
 bool blackbox_device_simulator_update(TickType_t &wait) {
@@ -68,8 +70,8 @@ simulator_do_more:
   }
 
   case STATE_READ_HEADER:
-    simulator_read(0x0, (uint8_t *)&blackbox_device_header, sizeof(blackbox_device_header_t));
-    if (blackbox_device_header.magic == BLACKBOX_HEADER_MAGIC) {
+    if (simulator_read(0x0, (uint8_t *)&blackbox_device_header, sizeof(blackbox_device_header_t)) &&
+        blackbox_device_header.magic == BLACKBOX_HEADER_MAGIC) {
       state = STATE_IDLE;
       break;
     }
@@ -85,6 +87,7 @@ simulator_do_more:
       if (to_write > 0 && (blackbox_current_file()->start + blackbox_current_file()->size) < blackbox_bounds.total_size) {
         state = STATE_START_WRITE;
       } else {
+        ring_buffer_clear(&blackbox_encode_buffer);
         state = STATE_WRITE_HEADER;
         should_flush = 0;
       }
@@ -141,7 +144,10 @@ simulator_do_more:
   }
 
   case STATE_CONTINUE_WRITE: {
-    simulator_write(offset, blackbox_write_buffer, PAGE_SIZE);
+    if (!simulator_write(offset, blackbox_write_buffer, PAGE_SIZE)) {
+      wait = 1;
+      return false;
+    }
     blackbox_current_file()->size += write_size;
     state = STATE_FINISH_WRITE;
     return false;
@@ -153,7 +159,16 @@ simulator_do_more:
   }
 
   case STATE_WRITE_HEADER: {
-    simulator_write(0x0, (uint8_t *)&blackbox_device_header, sizeof(blackbox_device_header_t));
+    // Persist data before publishing its directory, then persist the directory.
+    if (fsync(fileno(file)) != 0) {
+      wait = 1;
+      return false;
+    }
+    if (!simulator_write(0x0, (uint8_t *)&blackbox_device_header, sizeof(blackbox_device_header_t)) ||
+        fsync(fileno(file)) != 0) {
+      wait = 1;
+      return false;
+    }
     state = STATE_IDLE;
     return false;
   }
@@ -175,7 +190,8 @@ uint32_t blackbox_device_simulator_usage() {
 }
 
 void blackbox_device_simulator_start() {
-  state = STATE_WRITE_HEADER;
+  // Commit the directory only after flushing the completed recording.
+  state = STATE_IDLE;
 }
 
 void blackbox_device_simulator_stop() {

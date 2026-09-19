@@ -100,6 +100,10 @@ sdcard_do_more:
   case STATE_START_WRITE: {
     const uint32_t byte_offset = blackbox_current_file()->start + blackbox_current_file()->size;
     if (byte_offset >= blackbox_bounds.total_size) {
+      if (flush_pending) {
+        // Match flash: discard unwritable bytes before committing the directory.
+        ring_buffer_clear(&blackbox_encode_buffer);
+      }
       state = flush_pending ? STATE_ERASE_HEADER : STATE_IDLE;
       flush_pending = false;
       wait = state == STATE_IDLE ? portMAX_DELAY : 0;
@@ -208,7 +212,8 @@ void blackbox_device_sdcard_stop() {
 }
 
 void blackbox_device_sdcard_start() {
-  state = STATE_ERASE_HEADER;
+  // Commit the directory only after flushing the completed recording.
+  state = STATE_IDLE;
   flush_pending = false;
   write_count = 0;
 }

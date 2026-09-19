@@ -29,6 +29,7 @@ static StackType_t blackbox_stack[512];        // 2 KiB
 static StackType_t usb_stack[512];             // 2 KiB
 static StackType_t osd_stack[1024];            // 4 KiB, including DisplayPort frames
 static StackType_t io_stack[1024];             // 4 KiB: RX MSP dispatch and VTX frames.
+static uint8_t applied_mask;
 
 extern "C" void thread_assert_failed() {
   failloop(FAILLOOP_FAULT);
@@ -55,6 +56,12 @@ void thread_start(thread_id_t id) {
 
 void threads_update() {
   const uint8_t mask = TASK_MASK_DEFAULT | ((flags.arm_state || flags.in_air) ? TASK_MASK_IN_AIR : TASK_MASK_ON_GROUND);
+  // All threads are created before Flight starts applying context masks.
+  // Only this function suspends/resumes them; waits and notifications do not
+  // change which context they are allowed to run in.
+  if (mask == applied_mask)
+    return;
+  applied_mask = mask;
   for (auto &thread : threads) {
     if (thread.handle == nullptr) {
       continue;
