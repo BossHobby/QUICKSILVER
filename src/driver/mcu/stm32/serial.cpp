@@ -408,6 +408,7 @@ void serial_dma_tx_isr(dma_stream_t stream) {
   }
   state->tx_len = 0;
 
+  serial_tx_notify_from_isr(serial);
   if (transfer_error) {
     serial->tx_done = true;
     return;
@@ -702,6 +703,7 @@ static void handle_serial_isr(serial_port_t *serial) {
       if (serial->config.half_duplex)
         LL_USART_SetTransferDirection(port->channel, LL_USART_DIRECTION_RX);
       serial->tx_done = true;
+      serial_tx_notify_from_isr(serial);
     }
   }
 }
