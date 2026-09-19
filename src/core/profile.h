@@ -73,15 +73,6 @@ typedef enum {
   VTX_PIT_MODE_MAX,
 } __attribute__((__packed__)) vtx_pit_mode_t;
 
-typedef enum {
-  VTX_PROTOCOL_INVALID,
-  VTX_PROTOCOL_TRAMP,
-  VTX_PROTOCOL_SMART_AUDIO,
-  VTX_PROTOCOL_MSP_VTX,
-
-  VTX_PROTOCOL_MAX,
-} __attribute__((__packed__)) vtx_protocol_t;
-
 // Rates
 typedef enum {
   RATE_MODE_SILVERWARE,
@@ -800,7 +791,7 @@ extern const uint32_t blackbox_presets_count;
 void blackbox_preset_apply(const blackbox_preset_t *preset, profile_blackbox_t *profile);
 uint8_t blackbox_preset_equals(const blackbox_preset_t *preset, profile_blackbox_t *profile);
 
-void profile_set_defaults();
+void profile_set_defaults(profile_t *profile);
 pid_rate_t *profile_current_pid_rates();
 #ifndef VEHICLE_ROVER
 rate_t *profile_current_rates();

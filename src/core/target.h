@@ -47,6 +47,17 @@ typedef enum {
 
 typedef uint8_t output_caps_t;
 
+// Shared with profile.h via project.h; the defaults structs below and the
+// profile vtx config both store this.
+typedef enum {
+  VTX_PROTOCOL_INVALID,
+  VTX_PROTOCOL_TRAMP,
+  VTX_PROTOCOL_SMART_AUDIO,
+  VTX_PROTOCOL_MSP_VTX,
+
+  VTX_PROTOCOL_MAX,
+} __attribute__((__packed__)) vtx_protocol_t;
+
 typedef struct {
   gpio_pins_t pin;
   output_caps_t caps;
@@ -295,6 +306,58 @@ typedef struct {
   MEMBER(port, uint8_t)             \
   END_STRUCT()
 
+// Initial serial/receiver/vtx assignments supplied by the target.
+// Zero-initialized fields mean "no target default" and preserve generic
+// behavior; protocol strings unknown to the decoder map to the enum's
+// INVALID value.
+// Port numbers follow serial_ports_t: UART index for hardware ports,
+// SERIAL_SOFT_PORT1 (101) and up for soft serial.
+typedef struct {
+  serial_ports_t rx;
+  serial_ports_t smart_audio;
+  serial_ports_t hdzero;
+  serial_ports_t gps;
+} target_defaults_serial_t;
+
+#define TARGET_DEFAULTS_SERIAL_MEMBERS   \
+  START_STRUCT(target_defaults_serial_t) \
+  MEMBER(rx, uint8_t)                    \
+  MEMBER(smart_audio, uint8_t)           \
+  MEMBER(hdzero, uint8_t)                \
+  MEMBER(gps, uint8_t)                   \
+  END_STRUCT()
+
+typedef struct {
+  rx_protocol_t protocol;
+} target_defaults_receiver_t;
+
+#define TARGET_DEFAULTS_RECEIVER_MEMBERS       \
+  START_STRUCT(target_defaults_receiver_t)     \
+  MEMBER(protocol, rx_protocol_t)              \
+  END_STRUCT()
+
+typedef struct {
+  vtx_protocol_t protocol;
+} target_defaults_vtx_t;
+
+#define TARGET_DEFAULTS_VTX_MEMBERS    \
+  START_STRUCT(target_defaults_vtx_t)  \
+  MEMBER(protocol, vtx_protocol_t)     \
+  END_STRUCT()
+
+typedef struct {
+  target_defaults_serial_t serial;
+  target_defaults_receiver_t receiver;
+  target_defaults_vtx_t vtx;
+} target_defaults_t;
+
+#define TARGET_DEFAULTS_MEMBERS                \
+  START_STRUCT(target_defaults_t)              \
+  MEMBER(serial, target_defaults_serial_t)     \
+  MEMBER(receiver, target_defaults_receiver_t) \
+  MEMBER(vtx, target_defaults_vtx_t)           \
+  END_STRUCT()
+
 typedef struct {
   uint8_t name[32];
   uint8_t manufacturer[32];
@@ -330,6 +393,8 @@ typedef struct {
   uint16_t ibat_scale;
 
   target_dma_t dma[DMA_DEVICE_MAX];
+
+  target_defaults_t defaults;
 } target_t;
 
 #define TARGET_MEMBERS                                                           \
@@ -361,6 +426,7 @@ typedef struct {
   MEMBER(vbat_scale, uint16_t)                                                   \
   MEMBER(ibat_scale, uint16_t)                                                   \
   MEMBER(dma, target_dma_array_t)                                                  \
+  MEMBER(defaults, target_defaults_t)                                              \
   END_STRUCT()
 
 typedef enum {
@@ -431,3 +497,7 @@ cbor_result_t cbor_decode_target_dma_t(cbor_value_t *dec, target_dma_t *dma);
 cbor_result_t cbor_encode_target_info_t(cbor_value_t *enc, const target_info_t *i);
 cbor_result_t cbor_encode_target_dma_array_t(cbor_value_t *dec, const target_dma_array_t *dma);
 cbor_result_t cbor_decode_target_dma_array_t(cbor_value_t *dec, target_dma_array_t *dma);
+cbor_result_t cbor_encode_rx_protocol_t(cbor_value_t *enc, const rx_protocol_t *t);
+cbor_result_t cbor_decode_rx_protocol_t(cbor_value_t *dec, rx_protocol_t *t);
+cbor_result_t cbor_encode_vtx_protocol_t(cbor_value_t *enc, const vtx_protocol_t *t);
+cbor_result_t cbor_decode_vtx_protocol_t(cbor_value_t *dec, vtx_protocol_t *t);
