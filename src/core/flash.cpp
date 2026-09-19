@@ -12,7 +12,6 @@
 #include "rx/rx.h"
 #include "util/cbor_helper.h"
 
-extern const profile_t default_profile;
 extern profile_t profile;
 
 flash_storage_t flash_storage;
@@ -84,6 +83,59 @@ void flash_save() {
   __enable_irq();
 }
 
+static bool target_defaults_port_defined(serial_ports_t port) {
+  if (port > SERIAL_PORT_INVALID && port < SERIAL_PORT_MAX) {
+    return target_serial_port_valid(&target.serial_ports[port]);
+  }
+  if (port > SERIAL_SOFT_INVALID && port < SERIAL_SOFT_MAX) {
+    return target_serial_port_valid(&target.serial_soft_ports[port - SERIAL_SOFT_START]);
+  }
+  return false;
+}
+
+void target_defaults_apply(profile_t *profile) {
+  const target_defaults_t *defaults = &target.defaults;
+
+  // Serial roles reference ports by UART index (101+ for soft serial); a port
+  // the target does not define is skipped, leaving the generic default.
+  if (defaults->serial.rx != SERIAL_PORT_INVALID && target_defaults_port_defined(defaults->serial.rx)) {
+    profile->serial.rx = defaults->serial.rx;
+  }
+  if (defaults->serial.smart_audio != SERIAL_PORT_INVALID && target_defaults_port_defined(defaults->serial.smart_audio)) {
+    profile->serial.smart_audio = defaults->serial.smart_audio;
+  }
+  if (defaults->serial.hdzero != SERIAL_PORT_INVALID && target_defaults_port_defined(defaults->serial.hdzero)) {
+    profile->serial.hdzero = defaults->serial.hdzero;
+  }
+  if (defaults->serial.gps != SERIAL_PORT_INVALID && target_defaults_port_defined(defaults->serial.gps)) {
+    profile->serial.gps = defaults->serial.gps;
+  }
+
+  // Explicit serial providers select the unified serial decoder via the bind
+  // union; the top-level protocol stays unified serial because rx_init
+  // rejects unadvertised protocols. bind_saved keeps flash_save() from
+  // clearing the selection. Anything else, including the legacy
+  // "unified_serial" default, leaves autodetection enabled.
+  switch (defaults->receiver.protocol) {
+  case RX_PROTOCOL_CRSF:
+    profile->receiver.protocol = RX_PROTOCOL_UNIFIED_SERIAL;
+    profile->receiver.bind.unified.protocol = RX_SERIAL_PROTOCOL_CRSF;
+    profile->receiver.bind.bind_saved = 1;
+    break;
+  case RX_PROTOCOL_SBUS:
+    profile->receiver.protocol = RX_PROTOCOL_UNIFIED_SERIAL;
+    profile->receiver.bind.unified.protocol = RX_SERIAL_PROTOCOL_SBUS;
+    profile->receiver.bind.bind_saved = 1;
+    break;
+  default:
+    break;
+  }
+
+  if (defaults->vtx.protocol == VTX_PROTOCOL_SMART_AUDIO || defaults->vtx.protocol == VTX_PROTOCOL_TRAMP) {
+    profile->vtx.protocol = defaults->vtx.protocol;
+  }
+}
+
 void flash_load() {
   uint8_t *buffer = (uint8_t *)malloc(PROFILE_STORAGE_SIZE);
   if (buffer == NULL) {
@@ -107,7 +159,8 @@ void flash_load() {
     memcpy((uint8_t *)&flash_storage, buffer + FMC_MAGIC_SIZE, sizeof(flash_storage_t));
   }
 
-  profile_set_defaults();
+  profile_set_defaults(&profile);
+  target_defaults_apply(&profile);
 
   if (flash_compare_magic(PROFILE_STORAGE_OFFSET, (FMC_MAGIC | PROFILE_STORAGE_OFFSET))) {
     fmc_read_buf(PROFILE_STORAGE_OFFSET, buffer, PROFILE_STORAGE_SIZE);
