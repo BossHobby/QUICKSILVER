@@ -724,22 +724,25 @@ bool profile_outputs_use_protocol(output_protocol_t protocol) {
   return protocol <= OUTPUT_PROTOCOL_PWM && (output_protocols & (1U << protocol)) != 0;
 }
 
-void profile_set_defaults() {
-  memcpy(&profile, &default_profile, sizeof(profile_t));
+// Fills the supplied profile with the generic defaults plus the target-derived
+// overrides (gyro orientation, voltage scales). Does not touch the live global
+// profile or the output protocol snapshot; callers refresh the snapshot with
+// profile_output_update() once the live profile is final.
+void profile_set_defaults(profile_t *p) {
+  memcpy(p, &default_profile, sizeof(profile_t));
 
   for (uint8_t i = 0; i < PID_PROFILE_MAX; i++) {
-    profile.pid.pid_rates[i] = pid_rate_presets[DEFAULT_PID_RATE_PRESET].rate;
+    p->pid.pid_rates[i] = pid_rate_presets[DEFAULT_PID_RATE_PRESET].rate;
   }
 
-  blackbox_preset_apply(&blackbox_presets[DEFAULT_BLACKBOX_PRESET], &profile.blackbox);
-  profile.motor.gyro_orientation = target.gyro_orientation;
+  blackbox_preset_apply(&blackbox_presets[DEFAULT_BLACKBOX_PRESET], &p->blackbox);
+  p->motor.gyro_orientation = target.gyro_orientation;
   if (target.vbat_scale > 0) {
-    profile.voltage.vbat_scale = target.vbat_scale;
+    p->voltage.vbat_scale = target.vbat_scale;
   }
   if (target.ibat_scale > 0) {
-    profile.voltage.ibat_scale = target.ibat_scale;
+    p->voltage.ibat_scale = target.ibat_scale;
   }
-  profile_output_update();
 }
 
 pid_rate_t *profile_current_pid_rates() {

@@ -2,6 +2,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "control/control.h"
@@ -130,7 +131,19 @@ static void get_quic(quic_t *quic, cbor_value_t *dec) {
     break;
   }
   case QUIC_VAL_DEFAULT_PROFILE: {
-    res = cbor_encode_profile_t(&enc, &default_profile);
+    // Resolve the defaults into a temporary profile with an explicit heap
+    // lifetime, mirroring the allocation pattern of the surrounding USB
+    // handler; the live global profile is never modified.
+    profile_t *resolved_defaults = (profile_t *)malloc(sizeof(profile_t));
+    if (resolved_defaults == NULL) {
+      quic_errorf(QUIC_CMD_GET, "DEFAULT PROFILE ALLOC FAILED");
+      break;
+    }
+    profile_set_defaults(resolved_defaults);
+    target_defaults_apply(resolved_defaults);
+
+    res = cbor_encode_profile_t(&enc, resolved_defaults);
+    free(resolved_defaults);
     check_cbor_error(QUIC_CMD_GET);
 
     quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
