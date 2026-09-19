@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <FreeRTOS.h>
+
 #define MAX7456_COLS 30
 #define MAX7456_ROWS 16
 
@@ -55,8 +57,10 @@ typedef enum {
 void osd_device_init();
 void osd_intro();
 
-bool osd_is_ready();
-bool osd_update();
+// Tighten the caller's deadline for periodic transport/display work.
+bool osd_is_ready(TickType_t *wait = nullptr);
+bool osd_update(TickType_t *wait = nullptr);
+void osd_notify_from_isr(void *);
 
 void osd_clear();
 bool osd_clear_async();
