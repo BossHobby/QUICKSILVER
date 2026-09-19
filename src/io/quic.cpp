@@ -297,6 +297,12 @@ static void process_blackbox(quic_t *quic, cbor_value_t *dec, bool fault_mode) {
   switch (cmd) {
 #ifdef USE_BLACKBOX
   case QUIC_BLACKBOX_RESET:
+    // Disarming enables USB before the storage worker necessarily finishes.
+    // Let it finish the active transaction before replacing its directory.
+    if (!blackbox_device_ready() || ring_buffer_available(&blackbox_encode_buffer) != 0) {
+      quic_errorf(QUIC_CMD_BLACKBOX, "BLACKBOX BUSY");
+      break;
+    }
     blackbox_device_reset();
     quic_send(quic, QUIC_CMD_BLACKBOX, QUIC_FLAG_NONE, NULL, 0);
     break;

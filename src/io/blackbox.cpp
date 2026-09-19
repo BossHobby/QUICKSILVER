@@ -543,12 +543,14 @@ void blackbox_thread(void *) {
                                                 BLACKBOX_FRAME_I : BLACKBOX_FRAME_P;
     if (blackbox_device_write_frame(mailbox.settings.field_flags, &frame, &writer.previous, frame_type)) {
       writer.previous = frame;
-      // Encoding supplied bytes after the storage pass. An idle backend now
-      // has work; a busy backend keeps its completion/retry deadline.
-      if (wait == portMAX_DELAY) wait = 0;
     }
     // A rejected write is a dropped frame. Keep the last successful delta base.
     mailbox.pending.store(false, std::memory_order_release);
+    // An idle backend can consume the new bytes under this same ownership.
+    // Bound the pass to one sample and one extra service call; hardware waits
+    // and software continuation deadlines retain the normal yield boundary.
+    if (wait == portMAX_DELAY)
+      blackbox_device_update(wait);
   }
 }
 

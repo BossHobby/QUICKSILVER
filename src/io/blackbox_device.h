@@ -32,6 +32,8 @@ typedef struct {
   bool (*update)(TickType_t &wait);
   void (*reset)();
 
+  // Start streams data without rewriting the directory. Stop flushes data and
+  // commits the final directory; ready must stay false until that write finishes.
   void (*start)();
   void (*stop)();
 

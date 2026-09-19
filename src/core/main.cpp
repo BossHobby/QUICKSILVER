@@ -148,13 +148,16 @@ static void flight_update_load() {
   static uint32_t window_start_cycles;
   static uint32_t window_start_idle;
 
+  const uint32_t clock = rtos_runtime_clock();
+  if (window_started && clock - window_start_cycles < US_TO_CYCLES(50000))
+    return;
+
   if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED)
     return;
   const TaskHandle_t idle_handle = xTaskGetIdleTaskHandle();
   if (idle_handle == nullptr)
     return;
 
-  const uint32_t clock = rtos_runtime_clock();
   const uint32_t idle_cycles = ulTaskGetRunTimeCounter(idle_handle);
   if (!window_started) {
     window_started = true;
@@ -162,9 +165,6 @@ static void flight_update_load() {
     window_start_idle = idle_cycles;
     return;
   }
-  if (clock - window_start_cycles < US_TO_CYCLES(50000))
-    return;
-
   const uint32_t clock_delta = clock - window_start_cycles;
   const uint32_t idle_delta = idle_cycles - window_start_idle;
   window_start_cycles = clock;

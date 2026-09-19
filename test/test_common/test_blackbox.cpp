@@ -19,6 +19,7 @@
 #include "io/blackbox.h"
 #include "io/blackbox_device.h"
 #include "io/blackbox_device_simulator.h"
+#include "io/quic.h"
 #include "control/control.h"
 #include "util/vector.h"
 #include "util/cbor_helper.h"
@@ -1051,8 +1052,21 @@ static void test_blackbox_simulator_full_storage_sleeps_body() {
   TickType_t wait = 0;
   for (unsigned i = 0; i < 8 && !device.ready(); i++) device.update(wait);
   TEST_ASSERT_TRUE(device.ready());
+  blackbox_device_header_t saved_header = {};
+  FILE *recording = fopen("blackbox.bin", "rb");
+  TEST_ASSERT_NOT_NULL(recording);
+  TEST_ASSERT_EQUAL_UINT(1, fread(&saved_header, sizeof(saved_header), 1, recording));
+  fclose(recording);
   blackbox_device_header.file_num = 1;
   blackbox_device_header.files[0] = {.start = 1024, .size = 256};
+  device.start();
+  device.update(wait);
+  blackbox_device_header_t started_header = {};
+  recording = fopen("blackbox.bin", "rb");
+  TEST_ASSERT_NOT_NULL(recording);
+  TEST_ASSERT_EQUAL_UINT(1, fread(&started_header, sizeof(started_header), 1, recording));
+  fclose(recording);
+  TEST_ASSERT_EQUAL_MEMORY(&saved_header, &started_header, sizeof(saved_header));
   blackbox_bounds.total_size = 1280;
   const uint8_t bytes[128] = {};
   TEST_ASSERT_TRUE(device.write(bytes, sizeof(bytes)));
@@ -1067,10 +1081,51 @@ static void test_blackbox_simulator_full_storage_sleeps_body() {
   device.update(wait);
   TEST_ASSERT_EQUAL_UINT(0, wait);
   TEST_ASSERT_TRUE(device.ready());
+  TEST_ASSERT_EQUAL_UINT(0, ring_buffer_available(&blackbox_encode_buffer));
+  recording = fopen("blackbox.bin", "rb");
+  TEST_ASSERT_NOT_NULL(recording);
+  TEST_ASSERT_EQUAL_UINT(1, fread(&saved_header, sizeof(saved_header), 1, recording));
+  fclose(recording);
+  TEST_ASSERT_EQUAL_MEMORY(&blackbox_device_header, &saved_header, sizeof(saved_header));
   device.update(wait);
   TEST_ASSERT_EQUAL(portMAX_DELAY, wait);
 }
 
 void test_blackbox_simulator_full_storage_sleeps() {
   run_blackbox_test(test_blackbox_simulator_full_storage_sleeps_body);
+}
+
+static void test_blackbox_erase_waits_for_storage_body() {
+  blackbox_test_t fixture;
+  profile_mutex_init();
+  ring_buffer_clear(&blackbox_encode_buffer);
+  blackbox_device_header.file_num = 1;
+  quic_flag reply = QUIC_FLAG_NONE;
+  quic_t quic = {.priv_data = &reply, .send = [](uint8_t *data, uint32_t size, void *arg) {
+                  TEST_ASSERT_TRUE(size >= QUIC_HEADER_LEN);
+                  *static_cast<quic_flag *>(arg) = static_cast<quic_flag>(data[1] >> 5);
+                }};
+  uint8_t request[] = {QUIC_MAGIC, QUIC_CMD_BLACKBOX, 0, 1, QUIC_BLACKBOX_RESET};
+
+  flushing = 1;
+  TEST_ASSERT_TRUE(quic_process(&quic, request, sizeof(request)));
+  TEST_ASSERT_EQUAL(QUIC_FLAG_ERROR, reply);
+  TEST_ASSERT_EQUAL_UINT(1, blackbox_device_header.file_num);
+
+  flushing = 0;
+  const uint8_t sample = 42;
+  ring_buffer_write_multi(&blackbox_encode_buffer, &sample, 1);
+  TEST_ASSERT_TRUE(quic_process(&quic, request, sizeof(request)));
+  TEST_ASSERT_EQUAL(QUIC_FLAG_ERROR, reply);
+  TEST_ASSERT_EQUAL_UINT(1, blackbox_device_header.file_num);
+  TEST_ASSERT_EQUAL_UINT(1, ring_buffer_available(&blackbox_encode_buffer));
+
+  ring_buffer_clear(&blackbox_encode_buffer);
+  TEST_ASSERT_TRUE(quic_process(&quic, request, sizeof(request)));
+  TEST_ASSERT_EQUAL(QUIC_FLAG_NONE, reply);
+  TEST_ASSERT_EQUAL_UINT(0, blackbox_device_header.file_num);
+}
+
+void test_blackbox_erase_waits_for_storage() {
+  run_blackbox_test(test_blackbox_erase_waits_for_storage_body);
 }
