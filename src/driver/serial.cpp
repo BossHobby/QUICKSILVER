@@ -2,6 +2,7 @@
 
 #include "core/tasks.h"
 #include "driver/interrupt.h"
+#include "driver/osd/osd.h"
 #include "driver/serial_soft.h"
 
 #ifdef USE_SERIAL
@@ -14,6 +15,12 @@ extern bool serial_hard_set_baudrate(serial_port_t *serial, uint32_t baudrate);
 extern void serial_hard_sync_rx(serial_port_t *serial);
 
 void serial_rx_notify_from_isr(serial_port_t *serial) {
+#ifdef USE_DIGITAL_VTX
+  if (serial == &serial_displayport) {
+    osd_notify_from_isr(nullptr);
+    return;
+  }
+#endif
   // Serial data can arrive during boot before the IO worker is created.
   if (threads[THREAD_IO].handle == nullptr) {
     return;
@@ -34,6 +41,13 @@ void serial_rx_notify_from_isr(serial_port_t *serial) {
     return;
   xTaskNotifyFromISR(threads[THREAD_IO].handle, work, eSetBits, &wake);
   portYIELD_FROM_ISR(wake);
+}
+
+void serial_tx_notify_from_isr(serial_port_t *serial) {
+#ifdef USE_DIGITAL_VTX
+  if (serial == &serial_displayport)
+    osd_notify_from_isr(nullptr);
+#endif
 }
 
 bool serial_is_soft(serial_ports_t port) {

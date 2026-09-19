@@ -350,6 +350,7 @@ void serial_dma_tx_isr(dma_stream_t stream) {
   }
   state->tx_len = 0;
 
+  serial_tx_notify_from_isr(serial);
   if (transfer_error) {
     serial->tx_done = true;
     return;
@@ -526,6 +527,7 @@ static void handle_serial_isr(serial_port_t *serial) {
         usart_receiver_enable(port->channel, TRUE);
       }
       serial->tx_done = true;
+      serial_tx_notify_from_isr(serial);
     }
   }
 }

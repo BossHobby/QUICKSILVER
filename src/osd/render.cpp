@@ -927,10 +927,11 @@ void osd_display_rate_menu() {
 }
 #endif
 
-void osd_display() {
+TickType_t osd_display() {
   // MSP dispatch owns its command locks. Only ground rendering reads settings
   // that USB may be replacing; airborne telemetry never takes profile_mutex.
-  const bool ready = osd_is_ready();
+  TickType_t wait = portMAX_DELAY;
+  const bool ready = osd_is_ready(&wait);
   const bool maintenance = ready && !flags.arm_state && !flags.in_air;
   mutex_guard_t configuration(profile_mutex, maintenance);
 
@@ -941,7 +942,7 @@ void osd_display() {
       ;
   }
   if (!ready) {
-    return;
+    return (target_info.features & FEATURE_OSD) ? 1 : pdMS_TO_TICKS(33);
   }
 
   // check if the system changed
@@ -950,12 +951,12 @@ void osd_display() {
     // sytem has changed, reset osd state
     osd_system = sys;
     osd_update_screen(OSD_SCREEN_CLEAR);
-    return;
+    return 1;
   }
 
   // Drain the previous frame even while waiting for the next render deadline.
-  if (!osd_update()) {
-    return;
+  if (!osd_update(&wait)) {
+    return 1;
   }
 
   switch (osd_state.screen) {
@@ -975,6 +976,9 @@ void osd_display() {
     if (now - last_render_time >= OSD_RENDER_PERIOD_US) {
       last_render_time = now;
       osd_display_regular();
+    } else {
+      const uint32_t remaining_us = OSD_RENDER_PERIOD_US - (now - last_render_time);
+      return MAX(1U, MIN(wait, pdMS_TO_TICKS(remaining_us / 1000)));
     }
     break;
   }
@@ -1975,16 +1979,22 @@ void osd_display() {
     }
     break;
   }
+  return 1;
 }
 
 void osd_thread(void *) {
   while (true) {
     osd_handle_gestures();
-    osd_display();
+    TickType_t wait = osd_display();
 #ifdef USE_DIGITAL_VTX
     if (serial_displayport.config.port != SERIAL_PORT_INVALID)
-      vtx_update();
+      wait = MIN(wait, vtx_update());
 #endif
-    vTaskDelay(1);
+    // Ground gestures/menu service keeps its existing cadence. In flight,
+    // transport notifications interrupt the next display deadline.
+    if (!flags.arm_state && !flags.in_air)
+      wait = 1;
+    taskYIELD();
+    ulTaskNotifyTake(pdTRUE, MAX(1U, wait));
   }
 }
