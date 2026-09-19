@@ -46,6 +46,8 @@ extern void test_sdcard_transport_busy_and_timer_wrap();
 extern void test_sdcard_device_samples_during_write();
 extern void test_blackbox_navigation_roundtrip_and_unchanged_home(void);
 extern void test_blackbox_full_frame_fits_device_buffer(void);
+extern void test_flash_streams_without_startup_erase_and_commits_at_stop();
+extern void test_flash_flushes_last_page_at_capacity();
 extern void test_blackbox_captures_before_delayed_encoding();
 extern void test_blackbox_runs_in_own_freertos_task();
 extern void test_blackbox_mailbox_overrun_and_session_drain();
@@ -54,6 +56,7 @@ extern void test_blackbox_sleeps_until_recording_or_reset();
 extern void test_blackbox_wakes_for_samples_and_storage();
 extern void test_blackbox_completion_bursts_share_cpu();
 extern void test_blackbox_simulator_full_storage_sleeps();
+extern void test_blackbox_erase_waits_for_storage();
 extern void test_attitude_rth_recovery_strengthens_when_moving_away(void);
 extern void test_attitude_rth_recovery_requires_valid_course_and_phase(void);
 extern void test_attitude_normal_heading_pitch_weight_matches_vehicle(void);
@@ -137,6 +140,8 @@ extern void test_cbor_failed_enum_decode_preserves_value(void);
 extern void test_spi_initial_state(void);
 extern void test_spi_init(void);
 extern void test_spi_txn_queue(void);
+extern void test_sdcard_spi_async_busy_deadline(void);
+extern void test_sdcard_spi_async_command_and_data(void);
 extern void test_spi_txn_full_queue(void);
 extern void test_spi_sdcard_block_transfers(void);
 extern void test_spi_dma_ready(void);
@@ -379,6 +384,8 @@ int main(int argc, char **argv) {
   RUN_TEST(test_spi_sdcard_block_transfers);
   RUN_TEST(test_spi_dma_ready);
   RUN_TEST(test_spi_reconfigure);
+  RUN_TEST(test_sdcard_spi_async_busy_deadline);
+  RUN_TEST(test_sdcard_spi_async_command_and_data);
 
   // ADC tests
   RUN_TEST(test_adc_init);
@@ -405,6 +412,8 @@ int main(int argc, char **argv) {
   RUN_TEST(test_blackbox_debug_change_detection);
   RUN_TEST(test_blackbox_navigation_roundtrip_and_unchanged_home);
   RUN_TEST(test_blackbox_full_frame_fits_device_buffer);
+  RUN_TEST(test_flash_streams_without_startup_erase_and_commits_at_stop);
+  RUN_TEST(test_flash_flushes_last_page_at_capacity);
   RUN_TEST(test_blackbox_captures_before_delayed_encoding);
   RUN_TEST(test_blackbox_runs_in_own_freertos_task);
   RUN_TEST(test_blackbox_mailbox_overrun_and_session_drain);
@@ -413,6 +422,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_blackbox_wakes_for_samples_and_storage);
   RUN_TEST(test_blackbox_completion_bursts_share_cpu);
   RUN_TEST(test_blackbox_simulator_full_storage_sleeps);
+  RUN_TEST(test_blackbox_erase_waits_for_storage);
   RUN_TEST(test_blackbox_iframe_encoding);
   RUN_TEST(test_blackbox_pframe_encoding);
   RUN_TEST(test_blackbox_frame_type_bit);
