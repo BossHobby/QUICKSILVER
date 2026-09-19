@@ -227,7 +227,7 @@ bool displayport_clear_async() {
   return displayport_push_subcmd(SUBCMD_CLEAR_SCREEN, NULL, 0);
 }
 
-bool displayport_is_ready() {
+bool displayport_is_ready(TickType_t *wait) {
   bool had_packet = false;
   // Consume only the bytes already buffered at entry, even if more arrive.
   const uint32_t available = serial_bytes_available(&serial_displayport);
@@ -248,6 +248,11 @@ bool displayport_is_ready() {
   if ((time_millis() - last_heartbeat) > 500)
     if (displayport_push_subcmd(SUBCMD_HEARTBEAT, NULL, 0))
       last_heartbeat = time_millis();
+
+  if (wait) {
+    const uint32_t remaining = 501 - MIN(time_millis() - last_heartbeat, 501U);
+    *wait = MIN(*wait, pdMS_TO_TICKS(remaining));
+  }
 
   return !had_packet;
 }

@@ -135,7 +135,8 @@ extern osd_state_t osd_state;
 extern osd_system_t osd_system;
 
 void osd_init();
-void osd_display();
+// Service one bounded display pass and return its next deadline in ticks.
+TickType_t osd_display();
 void osd_thread(void *);
 void osd_display_reset();
 

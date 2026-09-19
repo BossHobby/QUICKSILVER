@@ -164,7 +164,7 @@ bool max7456_clear_async() {
   const spi_txn_segment_t segs[] = {
       spi_make_seg_const(DMM, 0x04),
   };
-  spi_seg_submit_continue(&bus, segs);
+  spi_seg_submit_continue(&bus, segs, .done_fn = osd_notify_from_isr);
 
   // Record when we started the clear operation
   clear_start_time = time_micros();
@@ -277,7 +277,7 @@ bool max7456_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data
   const spi_txn_segment_t segs[] = {
       spi_make_seg_buffer(NULL, buf, offset),
   };
-  spi_seg_submit_continue(&bus, segs);
+  spi_seg_submit_continue(&bus, segs, .done_fn = osd_notify_from_isr);
 
   return true;
 }
