@@ -100,3 +100,4 @@ const target_serial_port_t *serial_get_dev(const serial_ports_t port);
 // Selects RX, GPS or VTX work from the receiving port (UART RX/IDLE or
 // soft-serial timer). Repeated events coalesce without losing other work bits.
 void serial_rx_notify_from_isr(serial_port_t *serial);
+void serial_tx_notify_from_isr(serial_port_t *serial);

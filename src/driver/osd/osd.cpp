@@ -4,6 +4,7 @@
 #include <strings.h>
 
 #include "core/profile.h"
+#include "core/tasks.h"
 #include "driver/osd/displayport.h"
 #include "driver/osd/max7456.h"
 #include "io/simulator.h"
@@ -345,8 +346,31 @@ static bool osd_update_display() {
   const bool do_blink = osd_device == OSD_DEVICE_DISPLAYPORT && (attr & OSD_ATTR_BLINK) && !blink_phase;
   uint8_t size = 0;
 
-  // Submit at most one contiguous string per call, then yield to flight tasks.
-  while (col < cols && size < max_chars && (dirty_mask & (1ULL << col)) && row_start[col].attr == attr) {
+  // A new string costs 8 bytes on MAX7456 (2 bytes per character), or 10
+  // on DisplayPort. Bridge only cheaper gaps, without crossing attributes.
+  const uint8_t max_gap = osd_device == OSD_DEVICE_MAX7456 ? 3 : 9;
+  while (col < cols && size < max_chars && row_start[col].attr == attr) {
+    if (!(dirty_mask & (1ULL << col))) {
+      if (!dirty_mask)
+        break;
+      const uint8_t next = __builtin_ctzll(dirty_mask);
+      const uint32_t gap = next - col;
+      if (gap > max_gap || size + gap >= max_chars)
+        break;
+      bool same_attr = true;
+      for (uint8_t x = col; x <= next; x++) {
+        if (row_start[x].attr != attr) {
+          same_attr = false;
+          break;
+        }
+      }
+      if (!same_attr)
+        break;
+      while (col < next) {
+        string[size++] = do_blink ? ' ' : row_start[col].val;
+        col++;
+      }
+    }
     string[size++] = do_blink ? ' ' : row_start[col].val;
     dirty_mask &= ~(1ULL << col);
     col++;
@@ -360,7 +384,16 @@ static bool osd_update_display() {
   return false;
 }
 
-bool osd_is_ready() {
+void osd_notify_from_isr(void *) {
+  const TaskHandle_t handle = threads[THREAD_OSD].handle;
+  if (handle == nullptr)
+    return; // Intro transfers run before OSD starts.
+  BaseType_t wake = pdFALSE;
+  vTaskNotifyGiveFromISR(handle, &wake);
+  portYIELD_FROM_ISR(wake);
+}
+
+bool osd_is_ready(TickType_t *wait) {
   switch (osd_device) {
 #ifdef USE_MAX7456
   case OSD_DEVICE_MAX7456:
@@ -368,7 +401,7 @@ bool osd_is_ready() {
 #endif
 #ifdef USE_DIGITAL_VTX
   case OSD_DEVICE_DISPLAYPORT:
-    return displayport_is_ready();
+    return displayport_is_ready(wait);
 #endif
 #ifdef SIMULATOR
   case OSD_DEVICE_SIMULATOR:
@@ -379,7 +412,7 @@ bool osd_is_ready() {
   }
 }
 
-bool osd_update() {
+bool osd_update(TickType_t *wait) {
   if (display_has_dirty) {
     if (osd_update_display()) {
       display_has_dirty = false;
@@ -407,6 +440,11 @@ bool osd_update() {
         last_redraw = now;
         can_render = false;
       }
+    }
+    if (wait) {
+      const uint32_t blink_ms = 251 - MIN(now - last_blink, 251U);
+      const uint32_t redraw_ms = 5001 - MIN(now - last_redraw, 5001U);
+      *wait = MIN(*wait, pdMS_TO_TICKS(MIN(blink_ms, redraw_ms)));
     }
   }
 

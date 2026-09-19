@@ -5,7 +5,7 @@
 #include "driver/osd/osd.h"
 
 void displayport_init();
-bool displayport_is_ready();
+bool displayport_is_ready(TickType_t *wait = nullptr);
 void displayport_intro();
 
 bool displayport_clear_async();

@@ -22,6 +22,51 @@ extern uint8_t simulator_osd_test_char(uint8_t x, uint8_t y);
 static uint8_t msp_reply_direction;
 static uint16_t msp_reply_size;
 
+void test_osd_merges_short_gaps_and_retries() {
+  osd_device_init();
+  osd_clear();
+  osd_start(OSD_ATTR_TEXT, 0, 0);
+  osd_write_str("1.2");
+  while (!osd_update()) {}
+  osd_start(OSD_ATTR_TEXT, 0, 0);
+  osd_write_str("3.4");
+
+  simulator_osd_test_reset(true);
+  TEST_ASSERT_FALSE(osd_update());
+  TEST_ASSERT_EQUAL_UINT32(1, simulator_osd_test_push_count());
+  TEST_ASSERT_EQUAL_UINT8('1', simulator_osd_test_char(0, 0));
+  simulator_osd_test_reset(false);
+  TEST_ASSERT_FALSE(osd_update());
+  TEST_ASSERT_EQUAL_UINT32(1, simulator_osd_test_push_count());
+  TEST_ASSERT_EQUAL_UINT8('3', simulator_osd_test_char(0, 0));
+  TEST_ASSERT_EQUAL_UINT8('.', simulator_osd_test_char(1, 0));
+  TEST_ASSERT_EQUAL_UINT8('4', simulator_osd_test_char(2, 0));
+  while (!osd_update()) {}
+
+  // An unchanged cell with different attributes must still split strings.
+  osd_start(OSD_ATTR_INVERT, 1, 0);
+  osd_write_char('.');
+  while (!osd_update()) {}
+  osd_start(OSD_ATTR_TEXT, 0, 0);
+  osd_write_char('5');
+  osd_start(OSD_ATTR_TEXT, 2, 0);
+  osd_write_char('6');
+  simulator_osd_test_reset(false);
+  while (!osd_update()) {}
+  TEST_ASSERT_EQUAL_UINT32(2, simulator_osd_test_push_count());
+
+  // Ten unchanged characters cost at least another DisplayPort header.
+  osd_clear();
+  osd_start(OSD_ATTR_TEXT, 0, 0);
+  osd_write_char('A');
+  osd_start(OSD_ATTR_TEXT, 11, 0);
+  osd_write_char('B');
+  simulator_osd_test_reset(false);
+  while (!osd_update()) {}
+  TEST_ASSERT_EQUAL_UINT32(2, simulator_osd_test_push_count());
+  osd_clear();
+}
+
 void test_osd_transfer_is_bounded_and_retries() {
   osd_device_init();
   osd_clear();
@@ -88,13 +133,22 @@ void test_osd_render_completes_before_transfer() {
   for (unsigned i = 0; i < 8; i++) osd_display();
   TEST_ASSERT_EQUAL_UINT8('T', simulator_osd_test_char(0, 0));
   TEST_ASSERT_EQUAL_UINT8('4', simulator_osd_test_char(0, 1));
+  TEST_ASSERT_EQUAL_UINT32(pdMS_TO_TICKS(33), osd_display());
 
   time_test_advance_us(33332);
   for (unsigned i = 0; i < 8; i++) osd_display();
   TEST_ASSERT_EQUAL_UINT8('4', simulator_osd_test_char(0, 1));
+  TEST_ASSERT_EQUAL_UINT32(1, osd_display());
   time_test_advance_us(1);
   for (unsigned i = 0; i < 8; i++) osd_display();
   TEST_ASSERT_EQUAL_UINT8('9', simulator_osd_test_char(0, 1));
+  // A render deadline spanning the microsecond wrap still permits sleeping.
+  time_test_set_us(UINT32_MAX - 10000);
+  osd_display_reset();
+  for (unsigned i = 0; i < 8; i++) osd_display();
+  TEST_ASSERT_EQUAL_UINT32(pdMS_TO_TICKS(33), osd_display());
+  time_test_advance_us(20000);
+  TEST_ASSERT_EQUAL_UINT32(pdMS_TO_TICKS(13), osd_display());
   state.lipo_cell_count = saved_cell_count;
   osd_clear();
   osd_display_reset();
