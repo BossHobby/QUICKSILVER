@@ -38,7 +38,8 @@ void test_blackbox_balances_work_without_delaying_overdue_samples() {
   blackbox_device_init();
   blackbox_bounds.page_size = 256;
   blackbox_bounds.total_size = 1048576;
-  profile_set_defaults();
+  profile_set_defaults(&profile);
+  profile_output_update();
   state.looptime_autodetect = 125;
   state.aux_active = 1U << AUX_BLACKBOX;
   flags.turtle_ready = 0;
