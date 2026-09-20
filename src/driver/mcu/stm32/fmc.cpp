@@ -36,44 +36,38 @@ void fmc_unlock() {
 void fmc_erase() {
   // clear error status
   __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS);
+
+  FLASH_EraseInitTypeDef erase_init = {};
 #if defined(STM32G4)
-  uint32_t page_error;
-  FLASH_EraseInitTypeDef erase_init;
+  // Pages 24..31 hold the 16K configuration region of bank 1.
   erase_init.TypeErase = FLASH_TYPEERASE_PAGES;
   erase_init.Banks = FLASH_BANK_1;
   erase_init.Page = 24;
   erase_init.NbPages = 8;
-  HAL_FLASHEx_Erase(&erase_init, &page_error);
 #elif defined(STM32H7)
-  // FLASH_CONFIG is bank 1, sector 1. The HAL waits and clears erase mode before programming.
-  uint32_t sector_error;
-  FLASH_EraseInitTypeDef erase_init = {};
+  // FLASH_CONFIG is bank 1, sector 1.
   erase_init.TypeErase = FLASH_TYPEERASE_SECTORS;
   erase_init.Banks = FLASH_BANK_1;
   erase_init.Sector = FLASH_SECTOR_1;
-  erase_init.NbSectors = 1;
-  erase_init.VoltageRange = FLASH_VOLTAGE_RANGE_3;
-  if (HAL_FLASHEx_Erase(&erase_init, &sector_error) != HAL_OK) {
-    fmc_lock();
-    __enable_irq();
-    failloop(FAILLOOP_FAULT);
-  }
 #else
-  // FLASH_CONFIG is sector 3 on the single-bank F4/F7 parts. The raw sector
-  // helper returns void, leaving a failed erase to surface as a program error
-  // in fmc_write_buf; the HAL call waits for completion and reports it here.
-  uint32_t sector_error;
-  FLASH_EraseInitTypeDef erase_init = {};
+  // FLASH_CONFIG is sector 3 on the single-bank F4/F7 parts.
   erase_init.TypeErase = FLASH_TYPEERASE_SECTORS;
   erase_init.Sector = FLASH_SECTOR_3;
+#endif
+
+#if !defined(STM32G4)
   erase_init.NbSectors = 1;
   erase_init.VoltageRange = FLASH_VOLTAGE_RANGE_3;
-  if (HAL_FLASHEx_Erase(&erase_init, &sector_error) != HAL_OK) {
+#endif
+
+  // A failed erase must not fall through to the writes below: programming
+  // only clears bits, so half-cleared pages read back as stale profile data.
+  uint32_t erase_error = 0;
+  if (HAL_FLASHEx_Erase(&erase_init, &erase_error) != HAL_OK) {
     fmc_lock();
     __enable_irq();
     failloop(FAILLOOP_FAULT);
   }
-#endif
 }
 
 flash_word_t fmc_read(uint32_t addr) {
