@@ -38,6 +38,9 @@ extern vtx_status_t vtx_actual;
 extern msp_t displayport_msp;
 extern msp_t crsf_msp;
 
+// Only the task that owns VTX service sends frames.
+static uint8_t vtx_frame[MAX_VTX_MSP_FRAME_SIZE];
+
 bool msp_vtx_detected = false;
 msp_t *msp_vtx;
 
@@ -106,7 +109,6 @@ static void serial_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, 
 
   if (magic == MSP2_MAGIC) {
     const uint32_t size = len + MSP2_HEADER_LEN + 1;
-    uint8_t vtx_frame[MAX_VTX_MSP_FRAME_SIZE];
 
     vtx_frame[0] = '$';
     vtx_frame[1] = MSP2_MAGIC;
@@ -126,7 +128,6 @@ static void serial_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, 
       return; // MSP1 max payload is 255
     }
     const uint32_t size = len + MSP_HEADER_LEN + 1;
-    uint8_t vtx_frame[MAX_VTX_MSP_FRAME_SIZE];
 
     vtx_frame[0] = '$';
     vtx_frame[1] = MSP1_MAGIC;
