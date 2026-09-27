@@ -12,6 +12,7 @@
 #include "core/tasks.h"
 #include "driver/reset.h"
 #include "driver/serial.h"
+#include "driver/time.h"
 #include "driver/usb.h"
 #include "io/msp.h"
 #include "io/quic.h"
@@ -21,6 +22,7 @@
 
 #define BUFFER_SIZE (4 * 1024)
 #define MAX_USB_MSP_FRAME_SIZE 1024
+#define USB_READ_TIMEOUT_MS 200
 
 void usb_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
 
@@ -86,14 +88,11 @@ static quic_t quic = {
 };
 
 void usb_quic_logf(const char *fmt, ...) {
-  const uint32_t size = strlen(fmt) + 128;
-  char str[size];
-
-  memset(str, 0, size);
+  char str[128];
 
   va_list args;
   va_start(args, fmt);
-  vsnprintf(str, size, fmt, args);
+  vsnprintf(str, sizeof(str), fmt, args);
   va_end(args);
 
   quic_send_str(&quic, QUIC_CMD_LOG, QUIC_FLAG_NONE, str);
@@ -141,12 +140,14 @@ void usb_serial_passthrough(serial_ports_t port, uint32_t baudrate, uint8_t stop
 
   uint8_t *data = buffer + 2 * 512;
   while (1) {
+    bool idle = true;
     while (1) {
       const uint32_t size = usb_serial_read(data, 512);
       if (size == 0) {
         break;
       }
       serial_write_bytes(&serial, data, size);
+      idle = false;
     }
     while (1) {
       const uint32_t size = serial_read_bytes(&serial, data, 512);
@@ -154,9 +155,26 @@ void usb_serial_passthrough(serial_ports_t port, uint32_t baudrate, uint8_t stop
         break;
       }
       usb_serial_write(data, size);
+      idle = false;
     }
+    // Passthrough runs in the USB task; let IO and OSD run while idle.
+    if (idle)
+      vTaskDelay(1);
   }
 #endif
+}
+
+// Waits for the rest of a command without starving other priority 1 workers.
+// The fault loop runs with the scheduler suspended and must not delay.
+static bool usb_read_byte(uint8_t *data, bool fault_mode) {
+  const uint32_t start = time_millis();
+  while (usb_serial_read(data, 1) != 1) {
+    if (!flags.usb_active || time_millis() - start > USB_READ_TIMEOUT_MS)
+      return false;
+    if (!fault_mode)
+      vTaskDelay(1);
+  }
+  return true;
 }
 
 // double promition in the following is intended
@@ -200,11 +218,7 @@ void usb_configurator(bool fault_mode) {
     };
 
     uint8_t data = 0;
-    while (true) {
-      if (usb_serial_read(&data, 1) != 1) {
-        continue;
-      }
-
+    while (usb_read_byte(&data, fault_mode)) {
       msp_status_t status = msp_process_serial(&msp, data, fault_mode);
       if (status != MSP_EOF) {
         break;
@@ -223,9 +237,10 @@ void usb_configurator(bool fault_mode) {
       if (quic_process(&quic, buffer, buffer_size, fault_mode)) {
         break;
       }
-      if (usb_serial_read(&data, 1) == 1) {
-        buffer[buffer_size++] = data;
+      if (!usb_read_byte(&data, fault_mode)) {
+        break;
       }
+      buffer[buffer_size++] = data;
     }
     break;
   }
