@@ -28,6 +28,7 @@ extern void test_flight_rate_fallback_cap_and_no_automatic_speedup();
 extern void test_flight_maintenance_reset_excludes_delays_and_restarts_average();
 extern void test_flight_gyro_pll_tracks_drift_and_mpu6000_phase();
 extern void test_flight_gyro_pll_reacquires_and_preserves_fallback();
+extern void test_flight_gyro_pll_tolerates_missed_edges();
 #ifdef VEHICLE_MULTI
 extern void test_flight_navigation_cadence_configuration_and_wrap();
 #endif
@@ -279,6 +280,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_flight_maintenance_reset_excludes_delays_and_restarts_average);
   RUN_TEST(test_flight_gyro_pll_tracks_drift_and_mpu6000_phase);
   RUN_TEST(test_flight_gyro_pll_reacquires_and_preserves_fallback);
+  RUN_TEST(test_flight_gyro_pll_tolerates_missed_edges);
 #ifdef VEHICLE_MULTI
   RUN_TEST(test_flight_navigation_cadence_configuration_and_wrap);
 #endif
