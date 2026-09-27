@@ -41,6 +41,7 @@ void i2c_device_init(i2c_ports_t port) {
   i2c_enable(def->channel, TRUE);
 
   interrupt_enable(def->event_irq, I2C_PRIORITY);
+  interrupt_enable(def->err_irq, I2C_PRIORITY);
 }
 
 void i2c_write_reg_bytes(const i2c_bus_device_t *bus, const uint8_t reg, const uint8_t *data, const uint32_t size) {
@@ -85,7 +86,11 @@ static void i2c_irq_handler(const i2c_ports_t port) {
   i2c_txn_t *txn = &i2c_dev[port].txn;
   const i2c_port_def_t *def = &i2c_port_defs[port];
 
-  if (i2c_interrupt_flag_get(def->channel, I2C_TDIS_FLAG)) {
+  if (i2c_interrupt_flag_get(def->channel, I2C_ACKFAIL_FLAG)) {
+    // Release the bus as the vendor HAL does after a NACK; STOPF completes the transaction.
+    i2c_flag_clear(def->channel, I2C_ACKFAIL_FLAG);
+    i2c_stop_generate(def->channel);
+  } else if (i2c_interrupt_flag_get(def->channel, I2C_TDIS_FLAG)) {
     if (txn->status == TXN_REG) {
       i2c_data_send(def->channel, txn->reg);
       txn->status = TXN_DATA;
@@ -109,10 +114,17 @@ static void i2c_irq_handler(const i2c_ports_t port) {
     txn->status = TXN_IDLE;
     i2c_notify_from_isr();
   }
-};
+}
 
 static void i2c_err_irq_handler(const i2c_ports_t port) {
-  __NOP();
+  i2c_txn_t *txn = &i2c_dev[port].txn;
+  const i2c_port_def_t *def = &i2c_port_defs[port];
+
+  // The peripheral releases the bus on bus error or lost arbitration.
+  i2c_flag_clear(def->channel, I2C_BUSERR_FLAG | I2C_ARLOST_FLAG | I2C_OUF_FLAG);
+  i2c_interrupt_enable(def->channel, I2C_ERR_INT | I2C_TDC_INT | I2C_STOP_INT | I2C_ACKFIAL_INT | I2C_TD_INT | I2C_RD_INT, FALSE);
+  txn->status = TXN_IDLE;
+  i2c_notify_from_isr();
 }
 
 extern "C" void I2C1_ERR_IRQHandler(void) {
