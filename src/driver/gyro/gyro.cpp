@@ -18,6 +18,8 @@ gyro_types_t gyro_type = GYRO_TYPE_INVALID;
 spi_bus_device_t gyro_bus = {};
 #endif
 
+#define GYRO_CLOCK_MAX_MISSED 3
+
 // EXTI owns this clock except initialization and the masked calibration reset.
 // SPI reads remain in Flight.
 static struct {
@@ -25,6 +27,7 @@ static struct {
   uint32_t nominal_period;
   uint32_t rate_start;
   uint8_t count;
+  uint8_t missed;
   bool mpu6000;
   bool phase_valid;
 } gyro_clock;
@@ -47,12 +50,20 @@ static void gyro_clock_reset(uint32_t period, bool mpu6000) {
 static void gyro_clock_update(uint32_t sample) {
   const uint32_t interval = sample - gyro_clock.timing.sample;
   const uint32_t nominal = gyro_clock.nominal_period;
-  if (gyro_clock.count == 0 || interval < nominal / 2 || interval > nominal * 3 / 2) {
+  const bool missed_edge = interval > nominal * 3 / 2 && interval <= nominal * 5 / 2;
+  if (gyro_clock.count == 0 || interval < nominal / 2 || interval > nominal * 5 / 2 ||
+      (missed_edge && ++gyro_clock.missed > GYRO_CLOCK_MAX_MISSED)) {
     gyro_clock_reset(nominal, gyro_clock.mpu6000);
     gyro_clock.rate_start = sample;
     gyro_clock.count = 1;
     gyro_clock.timing.phase = sample;
+  } else if (missed_edge) {
+    // A dropped EXTI keeps phase and period. The rate window counts
+    // intervals, so it restarts at this edge.
+    gyro_clock.rate_start = sample;
+    gyro_clock.count = 1;
   } else {
+    gyro_clock.missed = 0;
     // MPU6000's delayed eighth edge precedes the short interval. Lock to that
     // late phase, not the alternating intervals, so every read sees new data.
     if (!gyro_clock.mpu6000 || interval < US_TO_CYCLES(85)) {
