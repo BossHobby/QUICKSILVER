@@ -182,7 +182,8 @@ static void flight_update_load() {
     return;
   }
   const uint32_t clock_delta = clock - window_start_cycles;
-  const uint32_t idle_delta = idle_cycles - window_start_idle;
+  // The idle counter and this clock are sampled at different instants.
+  const uint32_t idle_delta = MIN(idle_cycles - window_start_idle, clock_delta);
   window_start_cycles = clock;
   window_start_idle = idle_cycles;
   state.cpu_load = 100 - (uint32_t)(((uint64_t)idle_delta * 100) / clock_delta);
