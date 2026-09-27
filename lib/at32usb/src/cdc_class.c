@@ -268,16 +268,12 @@ static usb_sts_type class_sof_handler(void *udev) {
  */
 static usb_sts_type class_event_handler(void *udev, usbd_event_type event) {
   usb_sts_type status = USB_OK;
+  extern void usb_cdc_disconnect_handler();
   switch (event) {
   case USBD_RESET_EVENT:
-
-    /* ...user code... */
-
-    break;
   case USBD_SUSPEND_EVENT:
-
-    /* ...user code... */
-
+  case USBD_DISCONNECT_EVNET:
+    usb_cdc_disconnect_handler();
     break;
   case USBD_WAKEUP_EVENT:
     /* ...user code... */
