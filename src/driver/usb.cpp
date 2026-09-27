@@ -41,14 +41,11 @@ void usb_serial_print(char *str) {
 }
 
 void usb_serial_printf(const char *fmt, ...) {
-  const size_t size = strlen(fmt) + 128;
-  char str[size];
-
-  memset(str, 0, size);
+  char str[128];
 
   va_list args;
   va_start(args, fmt);
-  vsnprintf(str, size, fmt, args);
+  vsnprintf(str, sizeof(str), fmt, args);
   va_end(args);
 
   usb_serial_print(str);
