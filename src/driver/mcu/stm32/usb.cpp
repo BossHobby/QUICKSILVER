@@ -336,6 +336,17 @@ static usbd_respond cdc_setconf(usbd_device *dev, uint8_t cfg) {
   }
 }
 
+// Unplugging idles the bus, which the core reports as suspend. A reset
+// clears the configuration until the host sets it again.
+static void cdc_disconnect(usbd_device *dev, uint8_t event, uint8_t ep) {
+  flags.usb_active = 0;
+}
+
+// Resume keeps the configuration, so the host will not set it again.
+static void cdc_resume(usbd_device *dev, uint8_t event, uint8_t ep) {
+  flags.usb_active = dev->status.device_cfg != 0;
+}
+
 extern "C" void USB_IRQ_HANDLER() {
   usbd_poll(&udev);
 }
@@ -363,6 +374,9 @@ void usb_drv_init() {
   usbd_reg_config(&udev, cdc_setconf);
   usbd_reg_control(&udev, cdc_control);
   usbd_reg_descr(&udev, cdc_getdesc);
+  usbd_reg_event(&udev, usbd_evt_reset, cdc_disconnect);
+  usbd_reg_event(&udev, usbd_evt_susp, cdc_disconnect);
+  usbd_reg_event(&udev, usbd_evt_wkup, cdc_resume);
 
   usbd_enable(&udev, true);
   usbd_connect(&udev, true);
@@ -391,9 +405,17 @@ void usb_serial_write(uint8_t *data, uint32_t len) {
     return;
   }
 
+  // Drop the rest once the host stops draining TX so callers cannot hang.
   uint32_t written = 0;
-  while (written < len) {
-    written += ring_buffer_write_multi(&usb_tx_buffer, data + written, len - written);
+  uint32_t last_progress = time_millis();
+  while (written < len && flags.usb_active) {
+    const uint32_t count = ring_buffer_write_multi(&usb_tx_buffer, data + written, len - written);
     cdc_kickoff_tx();
+    if (count) {
+      written += count;
+      last_progress = time_millis();
+    } else if (time_millis() - last_progress > USB_WRITE_TIMEOUT_MS) {
+      break;
+    }
   }
 }

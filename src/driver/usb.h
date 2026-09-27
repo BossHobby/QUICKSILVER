@@ -6,6 +6,7 @@
 #include "util/ring_buffer.h"
 
 #define USB_BUFFER_SIZE 4096
+#define USB_WRITE_TIMEOUT_MS 100
 
 extern ring_buffer_t usb_tx_buffer;
 extern ring_buffer_t usb_rx_buffer;
