@@ -190,6 +190,37 @@ void test_flight_gyro_pll_reacquires_and_preserves_fallback() {
   gyro_test_clock_reset(nominal, false);
 }
 
+void test_flight_gyro_pll_tolerates_missed_edges() {
+  const uint32_t nominal = US_TO_CYCLES(125);
+  const uint32_t actual = US_TO_CYCLES(127);
+  gyro_test_clock_reset(nominal, false);
+  uint32_t edge = UINT32_MAX - US_TO_CYCLES(1000);
+  for (unsigned i = 0; i < 65; i++) {
+    edge += actual;
+    gyro_test_clock_update(edge);
+  }
+  TEST_ASSERT_EQUAL_UINT32(actual, gyro_clock_snapshot().period);
+
+  // A single dropped edge keeps the lock and the next window stays exact.
+  edge += 2 * actual;
+  gyro_test_clock_update(edge);
+  TEST_ASSERT_EQUAL_UINT32(actual, gyro_clock_snapshot().period);
+  TEST_ASSERT_EQUAL_UINT32(edge - 3 * actual, gyro_clock_snapshot().phase);
+  for (unsigned i = 0; i < 64; i++) {
+    edge += actual;
+    gyro_test_clock_update(edge);
+  }
+  TEST_ASSERT_EQUAL_UINT32(actual, gyro_clock_snapshot().period);
+
+  // Repeated drops without a good interval indicate a lost signal.
+  for (unsigned i = 0; i < 4; i++) {
+    edge += 2 * actual;
+    gyro_test_clock_update(edge);
+  }
+  TEST_ASSERT_EQUAL_UINT32(0, gyro_clock_snapshot().period);
+  gyro_test_clock_reset(nominal, false);
+}
+
 #ifdef VEHICLE_MULTI
 void test_flight_navigation_cadence_configuration_and_wrap() {
   const auto saved_profile = profile;
