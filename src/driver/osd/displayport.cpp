@@ -55,6 +55,9 @@ serial_port_t serial_displayport = {
 static const uint8_t msp_options[2] = {0, 1};
 static bool is_detected = false;
 
+// Frames are assembled only by the OSD task, which owns this port.
+static uint8_t msp_frame[MAX_MSP_FRAME_SIZE];
+
 static void displayport_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
   if (cmd == MSP_FC_VARIANT) {
     // we got the first MSP_FC_VARIANT request, consider vtx detected
@@ -71,56 +74,54 @@ static void displayport_msp_send(msp_magic_t magic, uint8_t direction, uint16_t 
     }
 
     uint32_t size = 0;
-    uint8_t buf[MAX_MSP_FRAME_SIZE];
 
-    buf[size++] = '$';
-    buf[size++] = MSP2_MAGIC;
-    buf[size++] = direction;
+    msp_frame[size++] = '$';
+    msp_frame[size++] = MSP2_MAGIC;
+    msp_frame[size++] = direction;
 
     uint8_t crc = 0;
 
-    buf[size++] = 0; // flag
+    msp_frame[size++] = 0; // flag
     crc = crc8_dvb_s2_calc(crc, 0);
 
-    buf[size++] = (cmd >> 0) & 0xFF;
+    msp_frame[size++] = (cmd >> 0) & 0xFF;
     crc = crc8_dvb_s2_calc(crc, (cmd >> 0) & 0xFF);
-    buf[size++] = (cmd >> 8) & 0xFF;
+    msp_frame[size++] = (cmd >> 8) & 0xFF;
     crc = crc8_dvb_s2_calc(crc, (cmd >> 8) & 0xFF);
-    buf[size++] = (len >> 0) & 0xFF;
+    msp_frame[size++] = (len >> 0) & 0xFF;
     crc = crc8_dvb_s2_calc(crc, (len >> 0) & 0xFF);
-    buf[size++] = (len >> 8) & 0xFF;
+    msp_frame[size++] = (len >> 8) & 0xFF;
     crc = crc8_dvb_s2_calc(crc, (len >> 8) & 0xFF);
 
-    memcpy(buf + size, data, len);
+    memcpy(msp_frame + size, data, len);
     size += len;
 
-    buf[size++] = crc8_dvb_s2_data(crc, data, len);
+    msp_frame[size++] = crc8_dvb_s2_data(crc, data, len);
 
-    serial_write_bytes(&serial_displayport, buf, size);
+    serial_write_bytes(&serial_displayport, msp_frame, size);
   } else if (len < 255) {
     if (serial_bytes_free(&serial_displayport) < static_cast<uint32_t>(len + MSP_HEADER_LEN + 1)) {
       return;
     }
 
     uint32_t size = 0;
-    uint8_t buf[MAX_MSP_FRAME_SIZE];
 
-    buf[size++] = '$';
-    buf[size++] = MSP1_MAGIC;
-    buf[size++] = direction;
-    buf[size++] = len;
-    buf[size++] = cmd;
+    msp_frame[size++] = '$';
+    msp_frame[size++] = MSP1_MAGIC;
+    msp_frame[size++] = direction;
+    msp_frame[size++] = len;
+    msp_frame[size++] = cmd;
 
-    memcpy(buf + size, data, len);
+    memcpy(msp_frame + size, data, len);
     size += len;
 
     uint8_t chksum = len ^ cmd;
     for (uint8_t i = 0; i < len; i++) {
       chksum ^= data[i];
     }
-    buf[size++] = chksum;
+    msp_frame[size++] = chksum;
 
-    serial_write_bytes(&serial_displayport, buf, size);
+    serial_write_bytes(&serial_displayport, msp_frame, size);
   }
 }
 
@@ -144,25 +145,24 @@ static bool displayport_push_subcmd(displayport_subcmd_t subcmd, const uint8_t *
   }
 
   uint32_t size = 0;
-  uint8_t buf[MAX_MSP_FRAME_SIZE];
 
-  buf[size++] = '$';
-  buf[size++] = 'M';
-  buf[size++] = '>';
-  buf[size++] = len + 1;
-  buf[size++] = MSP_DISPLAYPORT;
-  buf[size++] = subcmd;
+  msp_frame[size++] = '$';
+  msp_frame[size++] = 'M';
+  msp_frame[size++] = '>';
+  msp_frame[size++] = len + 1;
+  msp_frame[size++] = MSP_DISPLAYPORT;
+  msp_frame[size++] = subcmd;
 
-  memcpy(buf + size, data, len);
+  memcpy(msp_frame + size, data, len);
   size += len;
 
   uint8_t chksum = (len + 1) ^ MSP_DISPLAYPORT ^ subcmd;
   for (uint8_t i = 0; i < len; i++) {
     chksum ^= data[i];
   }
-  buf[size++] = chksum;
+  msp_frame[size++] = chksum;
 
-  return serial_write_bytes(&serial_displayport, buf, size);
+  return serial_write_bytes(&serial_displayport, msp_frame, size);
 }
 
 static uint8_t displayport_map_attr(uint8_t attr) {
@@ -262,11 +262,11 @@ osd_system_t displayport_check_system() {
 }
 
 bool displayport_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size) {
-  if (size > (MAX_MSP_FRAME_SIZE - 3)) {
+  if (size > UINT8_MAX - 3) {
     return false; // String too large
   }
 
-  uint8_t buffer[MAX_MSP_FRAME_SIZE];
+  uint8_t buffer[UINT8_MAX];
   buffer[0] = y;
   buffer[1] = x;
   buffer[2] = displayport_map_attr(attr);
