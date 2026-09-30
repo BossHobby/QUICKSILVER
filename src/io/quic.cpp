@@ -660,8 +660,9 @@ bool quic_process(quic_t *quic, uint8_t *data, uint32_t size, bool fault_mode) {
     return false;
   }
 
-  // USB is the only command transport. Receive the whole request before
-  // excluding ground Flight; the fault loop runs with scheduling suspended.
+  // USB and CRSF requests are served by the USB thread. Receive the whole
+  // request before excluding ground Flight; the fault loop runs with
+  // scheduling suspended.
   mutex_guard_t configuration(profile_mutex, !fault_mode);
   flight_reset_runtime();
 

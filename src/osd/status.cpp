@@ -337,7 +337,7 @@ bool osd_status_update(osd_element_t *el) {
     return osd_status_print(el);
   }
 
-  if (flags.arming_disabled_flags & ARMING_DISABLED_USB) {
+  if (flags.arming_disabled_flags & ARMING_DISABLED_CONFIGURATOR) {
     osd_status_show(MODE_HOLD, STATUS_USB_SAFETY);
     return osd_status_print(el);
   }

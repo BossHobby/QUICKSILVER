@@ -219,3 +219,17 @@ uint32_t crsf_tlm_frame_msp_resp(uint8_t *buf, uint8_t origin, const uint8_t *pa
   memcpy(frame->payload.data, payload, size);
   return crsf_tlm_frame_finalize(buf, size + CRSF_FRAME_ORIGIN_DEST_SIZE);
 }
+
+uint32_t crsf_frame_quic(uint8_t *buf, uint8_t destination, const uint8_t *payload, uint8_t size) {
+  if (size > CRSF_PAYLOAD_SIZE_MAX - CRSF_FRAME_ORIGIN_DEST_SIZE)
+    size = CRSF_PAYLOAD_SIZE_MAX - CRSF_FRAME_ORIGIN_DEST_SIZE;
+
+  crsf_frame_header_t *frame = (crsf_frame_header_t *)buf;
+  frame->type = CRSF_FRAMETYPE_QUIC;
+
+  crsf_extended_header_t *extended = (crsf_extended_header_t *)(buf + sizeof(*frame));
+  extended->destination = destination;
+  extended->origin = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+  memcpy(extended + 1, payload, size);
+  return crsf_tlm_frame_finalize(buf, CRSF_FRAME_ORIGIN_DEST_SIZE + size);
+}
