@@ -8,6 +8,8 @@
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "io/msp.h"
+#include "io/quic.h"
+#include "io/quic_crsf.h"
 #include "rx/crsf.h"
 #include "rx/rx.h"
 #include "rx/unified_serial.h"
@@ -1024,6 +1026,116 @@ void test_crsf_msp_request_queues_response_immediately(void) {
   TEST_ASSERT_EQUAL_UINT8(0U, frame[8]);
   TEST_ASSERT_EQUAL_UINT8(1U, frame[9]);
   TEST_ASSERT_EQUAL_UINT8(42U, frame[10]);
+}
+
+static void crsf_quic_test_write(uint8_t control, uint8_t seq, uint8_t ack, const uint8_t *data, uint8_t size) {
+  uint8_t payload[CRSF_PAYLOAD_SIZE_MAX] = {CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_USB, control, seq, ack};
+  if (size)
+    memcpy(payload + 5, data, size);
+  crsf_test_write_frame(CRSF_FRAMETYPE_QUIC, payload, size + 5);
+}
+
+// Runs one IO telemetry slot and returns the configurator frame it queued.
+static uint8_t crsf_quic_test_poll(uint8_t *frame) {
+  time_test_advance_us(2000);
+  ring_buffer_clear(serial_rx.tx_buffer);
+  rx_serial_check();
+  while (ring_buffer_available(serial_rx.tx_buffer) >= 2) {
+    const uint8_t size = crsf_test_read_tx_frame(frame);
+    if (frame[2] == CRSF_FRAMETYPE_QUIC) {
+      crsf_test_assert_frame_crc(frame, size);
+      return size;
+    }
+    TEST_ASSERT_FALSE(quic_crsf_active());
+  }
+  return 0;
+}
+
+// Collects one QUIC response, acknowledging each data frame in order.
+static uint32_t crsf_quic_test_read_response(uint8_t *response, uint8_t *next_seq) {
+  uint8_t frame[CRSF_FRAME_SIZE_MAX] = {0};
+  uint32_t size = 0;
+  for (uint32_t i = 0; i < 200; i++) {
+    if (size >= QUIC_HEADER_LEN && size == QUIC_HEADER_LEN + ((uint32_t)response[2] << 8 | response[3]))
+      break;
+
+    const uint8_t frame_size = crsf_quic_test_poll(frame);
+    // sync, length, type, destination, origin, control, seq, ack ... crc
+    if (frame_size <= 9)
+      continue;
+
+    TEST_ASSERT_EQUAL_UINT8(CRSF_ADDRESS_USB, frame[3]);
+    TEST_ASSERT_EQUAL_UINT8(*next_seq, frame[6]);
+    memcpy(response + size, frame + 8, frame_size - 9);
+    size += frame_size - 9;
+    (*next_seq)++;
+    crsf_quic_test_write(0, 0, *next_seq, NULL, 0);
+  }
+  return size;
+}
+
+void test_crsf_quic_session_serves_configurator_requests(void) {
+  // Far from the other tests' clocks, so the session is inactive for them.
+  crsf_test_reset(4000000000U);
+  flags.arm_state = 0;
+
+  uint8_t frame[CRSF_FRAME_SIZE_MAX] = {0};
+  crsf_quic_test_write(QUIC_CRSF_CONTROL_RESET, 0x5A, 0, NULL, 0);
+  // The session opens only after the USB thread has cleared both streams.
+  TEST_ASSERT_EQUAL_UINT8(0, crsf_quic_test_poll(frame));
+  TEST_ASSERT_TRUE(quic_crsf_active());
+
+  quic_crsf_update();
+  TEST_ASSERT_EQUAL_UINT8(9, crsf_quic_test_poll(frame));
+  TEST_ASSERT_EQUAL_UINT8(CRSF_ADDRESS_USB, frame[3]);
+  TEST_ASSERT_EQUAL_UINT8(CRSF_ADDRESS_FLIGHT_CONTROLLER, frame[4]);
+  TEST_ASSERT_EQUAL_UINT8(QUIC_CRSF_CONTROL_RESET, frame[5]);
+  TEST_ASSERT_EQUAL_UINT8(0x5A, frame[6]);
+
+  // An active session leaves idle slots empty instead of sending telemetry.
+  TEST_ASSERT_EQUAL_UINT8(0, crsf_quic_test_poll(frame));
+
+  // A retried RESET for the open session is answered without reopening it.
+  crsf_quic_test_write(QUIC_CRSF_CONTROL_RESET, 0x5A, 0, NULL, 0);
+  TEST_ASSERT_EQUAL_UINT8(9, crsf_quic_test_poll(frame));
+  TEST_ASSERT_EQUAL_UINT8(QUIC_CRSF_CONTROL_RESET, frame[5]);
+
+  const uint8_t get_info[] = {QUIC_MAGIC, QUIC_CMD_GET, 0, 1, QUIC_VAL_INFO};
+  crsf_quic_test_write(0, 0, 0, get_info, sizeof(get_info));
+  TEST_ASSERT_EQUAL_UINT8(9, crsf_quic_test_poll(frame));
+  TEST_ASSERT_EQUAL_UINT8(1, frame[7]);
+
+  quic_crsf_update();
+  uint8_t response[1024] = {0};
+  uint8_t next_seq = 0;
+  uint32_t size = crsf_quic_test_read_response(response, &next_seq);
+  TEST_ASSERT_GREATER_THAN_UINT32(QUIC_HEADER_LEN, size);
+  TEST_ASSERT_EQUAL_UINT8(QUIC_MAGIC, response[0]);
+  TEST_ASSERT_EQUAL_UINT8(QUIC_CMD_GET, response[1]);
+  TEST_ASSERT_EQUAL_UINT8(QUIC_VAL_INFO, response[QUIC_HEADER_LEN]);
+  const uint8_t info_frames = next_seq;
+  TEST_ASSERT_GREATER_THAN_UINT8(1, info_frames);
+
+  const uint8_t motor_test[] = {QUIC_MAGIC, QUIC_CMD_MOTOR, 0, 0};
+  crsf_quic_test_write(0, 1, next_seq, motor_test, sizeof(motor_test));
+  crsf_quic_test_poll(frame);
+  quic_crsf_update();
+  size = crsf_quic_test_read_response(response, &next_seq);
+  TEST_ASSERT_GREATER_THAN_UINT32(QUIC_HEADER_LEN, size);
+  TEST_ASSERT_EQUAL_UINT8(QUIC_CMD_MOTOR | (QUIC_FLAG_ERROR << 5), response[1]);
+
+  // Armed vehicles ignore the configurator, and the session then expires.
+  flags.arm_state = 1;
+  time_test_advance_us(3000000);
+  crsf_quic_test_write(0, 2, next_seq, NULL, 0);
+  TEST_ASSERT_EQUAL_UINT8(0, crsf_quic_test_poll(frame));
+  TEST_ASSERT_FALSE(quic_crsf_active());
+  time_test_advance_us(2000);
+  rx_serial_check();
+  const uint8_t frame_size = crsf_test_read_tx_frame(frame);
+  crsf_test_assert_frame_crc(frame, frame_size);
+  TEST_ASSERT_NOT_EQUAL(CRSF_FRAMETYPE_QUIC, frame[2]);
+  flags.arm_state = 0;
 }
 
 void test_crsf_link_statistics_updates_collected_stats(void) {

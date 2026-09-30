@@ -217,6 +217,7 @@ extern void test_crsf_device_ping_uses_ping_origin_as_device_info_destination(vo
 extern void test_crsf_gps_extended_frame_uses_gps_status(void);
 extern void test_crsf_flight_mode_frame_reports_mode_text(void);
 extern void test_crsf_msp_request_queues_response_immediately(void);
+extern void test_crsf_quic_session_serves_configurator_requests(void);
 extern void test_crsf_link_statistics_updates_collected_stats(void);
 extern void test_crsf_tx_link_statistics_updates_direct_lqi(void);
 extern void test_crsf_rx_link_statistics_updates_direct_lqi_and_downlink_stats(void);
@@ -476,6 +477,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_crsf_gps_extended_frame_uses_gps_status);
   RUN_TEST(test_crsf_flight_mode_frame_reports_mode_text);
   RUN_TEST(test_crsf_msp_request_queues_response_immediately);
+  RUN_TEST(test_crsf_quic_session_serves_configurator_requests);
   RUN_TEST(test_crsf_link_statistics_updates_collected_stats);
   RUN_TEST(test_crsf_tx_link_statistics_updates_direct_lqi);
   RUN_TEST(test_crsf_rx_link_statistics_updates_direct_lqi_and_downlink_stats);

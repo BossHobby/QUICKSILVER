@@ -8,6 +8,7 @@
 #include "control/sixaxis.h"
 #include "driver/motor.h"
 #include "driver/time.h"
+#include "io/quic_crsf.h"
 #include "util/cbor_helper.h"
 
 FAST_RAM control_flags_t flags = {
@@ -285,19 +286,20 @@ void control_update_arming() {
     flags.arming_disabled_flags |= ARMING_DISABLED_FAILSAFE;
   }
 
-  if (flags.usb_active) {
+  const bool configurator_active = flags.usb_active || quic_crsf_active();
+  if (configurator_active) {
     // Configurator access excludes normal arming; motor testing has its own
     // output override and does not bypass this arming gate.
-    flags.arming_disabled_flags |= ARMING_DISABLED_USB;
+    flags.arming_disabled_flags |= ARMING_DISABLED_CONFIGURATOR;
   }
 
-  // An arm request during USB configuration or a disarmed failsafe must be
-  // lowered before another attempt. Unplugging USB must not arm the vehicle.
-  if (flags.arm_request && ((failsafe_active && !flags.arm_state) || flags.usb_active)) {
+  // An arm request during configuration or a disarmed failsafe must be
+  // lowered before another attempt. Ending the session must not arm the vehicle.
+  if (flags.arm_request && ((failsafe_active && !flags.arm_state) || configurator_active)) {
     arming_disabled_latch |= ARMING_DISABLED_ARM_SWITCH;
   }
 
-  if (flags.arm_request && !flags.usb_active && (flags.arm_state || !failsafe_active)) {
+  if (flags.arm_request && !configurator_active && (flags.arm_state || !failsafe_active)) {
     // A new arm needs cleared latches, valid prearm, safe throttle and no
     // failsafe. An already armed vehicle follows the failsafe output policy.
     bool can_arm = !failsafe_active && !checked_prearm && arming_disabled_latch == ARMING_DISABLED_NONE;
