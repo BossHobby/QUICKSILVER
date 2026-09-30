@@ -32,7 +32,7 @@ typedef enum {
   ARMING_DISABLED_ARM_SWITCH = 1U << 0,
   ARMING_DISABLED_THROTTLE = 1U << 1,
   ARMING_DISABLED_FAILSAFE = 1U << 2,
-  ARMING_DISABLED_USB = 1U << 3,
+  ARMING_DISABLED_CONFIGURATOR = 1U << 3, // USB or CRSF configurator session
 } arming_disabled_flags_t;
 
 typedef enum {
