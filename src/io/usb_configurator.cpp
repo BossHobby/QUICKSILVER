@@ -15,6 +15,7 @@
 #include "driver/time.h"
 #include "driver/usb.h"
 #include "io/msp.h"
+#include "io/quic_crsf.h"
 #include "io/quic.h"
 #include "util/crc.h"
 #include "util/ring_buffer.h"
@@ -252,9 +253,11 @@ void usb_configurator(bool fault_mode) {
 }
 #pragma GCC diagnostic pop
 
+// Ground maintenance thread: serves the configurator over USB and CRSF.
 void usb_configurator_thread(void *) {
   while (true) {
     usb_configurator();
+    quic_crsf_update();
     vTaskDelay(1);
   }
 }

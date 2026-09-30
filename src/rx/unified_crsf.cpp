@@ -12,6 +12,7 @@
 #include "driver/time.h"
 #include "io/gps.h"
 #include "io/msp.h"
+#include "io/quic_crsf.h"
 #include "rx/crsf.h"
 #include "util/crc.h"
 #include "util/ring_buffer.h"
@@ -356,6 +357,15 @@ static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
     break;
   }
 
+  case CRSF_FRAMETYPE_QUIC: {
+    const crsf_extended_header_t *extended = (const crsf_extended_header_t *)&rx_data[1];
+    if (payload_length < CRSF_FRAME_ORIGIN_DEST_SIZE || extended->destination != CRSF_ADDRESS_FLIGHT_CONTROLLER)
+      break;
+
+    quic_crsf_receive(extended->origin, (const uint8_t *)(extended + 1), payload_length - CRSF_FRAME_ORIGIN_DEST_SIZE);
+    break;
+  }
+
   case CRSF_FRAMETYPE_DEVICE_PING: {
     const crsf_extended_header_t *extended = (const crsf_extended_header_t *)&rx_data[1];
     const uint8_t destination = payload_length >= CRSF_FRAME_ORIGIN_DEST_SIZE ? extended->origin : CRSF_ADDRESS_RADIO_TRANSMITTER;
@@ -481,6 +491,18 @@ static void rx_serial_send_crsf_telemetry() {
   static uint32_t telemetry_time = 0;
   const uint32_t now = time_micros();
   if ((now - telemetry_time) < CRSF_TELEMETRY_INTERVAL_US)
+    return;
+
+  // Give the configurator the downlink while its session is active.
+  if (serial_bytes_free(&serial_rx) >= CRSF_FRAME_SIZE_MAX) {
+    const uint32_t configurator_size = quic_crsf_frame(crsf_telemetry_packet);
+    if (configurator_size && rx_serial_crsf_queue_frame(crsf_telemetry_packet, configurator_size)) {
+      telemetry_time = now;
+      return;
+    }
+  }
+
+  if (quic_crsf_active())
     return;
 
   uint32_t telemetry_size = 0;
