@@ -18,7 +18,12 @@
 #define RELAX_FACTOR_YAW (RELAX_FACTOR_YAW_DEG * DEGTORAD)
 
 /// output limit
+#ifdef VEHICLE_WING
+// Surface commands use full travel; each output's min/max limits the servo.
+static constexpr vec3_t out_limit = {{1.0f, 1.0f, 1.0f}};
+#else
 static constexpr vec3_t out_limit = {{0.8f, 0.8f, 0.6f}};
+#endif
 
 // limit of integral term (abs)
 static constexpr vec3_t integral_limit = {{0.8f, 0.8f, 0.6f}};
