@@ -10,6 +10,7 @@
 
 #define BMP388_I2C_ADDR (0x76)        // same as BMP280/BMP180
 #define BMP388_DEFAULT_CHIP_ID (0x50) // from https://github.com/BoschSensortec/BMP3-Sensor-API/blob/master/bmp3_defs.h#L130
+#define BMP390_CHIP_ID (0x60)         // BMP390 shares the BMP388 register map and compensation
 
 #define BMP388_CMD_REG (0x7E)
 #define BMP388_RESERVED_UPPER_REG (0x7D)
@@ -125,7 +126,7 @@ static baro_types_t bmp388_init() {
   baro_bus.address = BMP388_I2C_ADDR;
 
   const uint8_t chip_id = i2c_read_reg(&baro_bus, BMP388_CHIP_ID_REG);
-  if (chip_id != BMP388_DEFAULT_CHIP_ID) {
+  if (chip_id != BMP388_DEFAULT_CHIP_ID && chip_id != BMP390_CHIP_ID) {
     return BARO_TYPE_INVALID;
   }
 
