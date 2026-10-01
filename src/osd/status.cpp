@@ -29,6 +29,7 @@ typedef enum {
   STATUS_TURTLE,
   STATUS_AUTOLAUNCH,
   STATUS_AUTOTRIM,
+  STATUS_LOITER,
   STATUS_RTH,
   STATUS_MAX,
 } osd_status_entries_t;
@@ -74,6 +75,7 @@ const char *default_system_status_labels[STATUS_MAX] = {
     [STATUS_TURTLE] = "**TURTLE**",
     [STATUS_AUTOLAUNCH] = "AUTO LAUNCH",
     [STATUS_AUTOTRIM] = "AUTOTRIM",
+    [STATUS_LOITER] = "LOITER",
     [STATUS_RTH] = "RTH",
 };
 
@@ -91,6 +93,7 @@ const char *guac_system_status_labels[STATUS_MAX] = {
     [STATUS_TURTLE] = "\x60THIS SIDE UP\x60",
     [STATUS_AUTOLAUNCH] = "AUTO LAUNCH",
     [STATUS_AUTOTRIM] = "AUTOTRIM",
+    [STATUS_LOITER] = "LOITER",
     [STATUS_RTH] = "RTH",
 };
 
@@ -203,6 +206,13 @@ static const char *osd_wing_autotrim_message(void) {
   }
   // A failsafe or motor test cancelled the capture; it never restarts by itself.
   return "AUTOTRIM: SWITCH OFF";
+}
+
+static const char *osd_wing_loiter_message(void) {
+  if (state.wing_loiter_state == WING_LOITER_BANK) {
+    return "LOITER: NO GPS";
+  }
+  return NULL;
 }
 
 // Announce one-shot launch and autotrim results for the default status time.
@@ -415,6 +425,12 @@ bool osd_status_update(osd_element_t *el) {
   const char *autotrim_message = osd_wing_autotrim_message();
   if (autotrim_message) {
     osd_status_show_text(MODE_HOLD, STATUS_AUTOTRIM, autotrim_message);
+    return osd_status_print(el);
+  }
+
+  const char *loiter_message = osd_wing_loiter_message();
+  if (loiter_message) {
+    osd_status_show_text(MODE_HOLD, STATUS_LOITER, loiter_message);
     return osd_status_print(el);
   }
 #endif
