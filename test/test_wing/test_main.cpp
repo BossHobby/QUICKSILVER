@@ -139,6 +139,7 @@ static void test_gliding_retains_airborne_state_and_motor_cutoff() {
   TEST_ASSERT_TRUE(flags.on_ground);
 }
 static void start_autotrim() {
+  flags.in_air = 1;
   state.aux_active |= (1U << AUX_AUTOTRIM);
   control();
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
@@ -243,6 +244,14 @@ static void test_autotrim_saves_on_disarm_with_switch_on() {
   finish_autotrim();
   state.aux_active &= ~(1U << AUX_ARMING);
   control();
+  // The disarming pass started armed, without configuration ownership.
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_SAVE_PENDING, state.wing_autotrim_state);
+  state.gps_lock = 1;
+  state.gps_speed = 10.0f; // A disarmed wing still gliding defers the save.
+  control();
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_SAVE_PENDING, state.wing_autotrim_state);
+  state.gps_speed = 0.0f;
+  control();
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_SAVED, state.wing_autotrim_state);
   profile_t saved = {};
   fmc_read_buf(PROFILE_STORAGE_OFFSET + FMC_MAGIC_SIZE, (uint8_t *)&saved, sizeof(saved));
@@ -302,6 +311,49 @@ static void test_autotrim_bounds_centers_and_excludes_throttle_mixes() {
   TEST_ASSERT_EQUAL_INT(-500, profile.outputs[2].trim);
 }
 
+static void test_autotrim_waits_for_steady_flight() {
+  arm();
+  state.rx_filtered.roll = 0.2f;
+  state.aux_active |= (1U << AUX_AUTOTRIM);
+  control();
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
+  time_test_advance_us(3000000);
+  control(); // Armed on the ground: no capture.
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
+
+  flags.in_air = 1;
+  state.gyro.pitch = 1.0f;
+  control();
+  time_test_advance_us(3000000);
+  control(); // Rotating: no capture.
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
+
+  state.gyro.pitch = 0.0f;
+  control();
+  time_test_advance_us(1999000);
+  control();
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
+  time_test_advance_us(1000);
+  control();
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_SAVE_PENDING, state.wing_autotrim_state);
+  TEST_ASSERT_EQUAL_INT(200, profile.outputs[1].trim);
+}
+
+static void test_failsafe_stops_surfaces_at_trimmed_center() {
+  pwm_motor();
+  profile.outputs[1].trim = 100;
+  profile.outputs[2].invert = true;
+  profile.outputs[2].trim = 50;
+  profile.outputs[3].trim = 300;
+  profile.outputs[3].max = 200;
+  flags.failsafe_outputs_blocked = 1;
+  write_throttle(1.0f);
+  TEST_ASSERT_EQUAL_FLOAT(-1.0f, pwm_values[0]);
+  TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.1f, pwm_values[1]);
+  TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.05f, pwm_values[2]);
+  TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.2f, pwm_values[3]);
+}
+
 int main() {
   // Native flash writes stay in a private directory, away from simulator data.
   char original_dir[4096];
@@ -321,6 +373,8 @@ int main() {
   RUN_TEST(test_autotrim_failsafe_reverts_and_requires_switch_cycle);
   RUN_TEST(test_autotrim_switch_off_on_disarm_cancels_without_saving);
   RUN_TEST(test_autotrim_bounds_centers_and_excludes_throttle_mixes);
+  RUN_TEST(test_autotrim_waits_for_steady_flight);
+  RUN_TEST(test_failsafe_stops_surfaces_at_trimmed_center);
   run_wing_safety_tests();
   const int result = UNITY_END();
   unlink("flash.bin");
