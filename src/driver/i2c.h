@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <atomic>
+
 #include "core/project.h"
 #include "driver/dma.h"
 #include "driver/gpio.h"
@@ -36,7 +38,8 @@ typedef enum {
 typedef struct {
   i2c_txn_mode_t mode;
   uint8_t address;
-  volatile i2c_txn_status_t status;
+  // The ISR fills read buffers before releasing TXN_IDLE.
+  std::atomic<i2c_txn_status_t> status;
   uint8_t reg;
   uint8_t *data;
   uint8_t size;
@@ -58,7 +61,9 @@ bool i2c_bus_device_init(const i2c_bus_device_t *bus);
 // in flight; everything else keeps its own deadline.
 void i2c_notify_from_isr();
 
-static inline bool i2c_is_idle(const i2c_bus_device_t *bus) { return i2c_dev[bus->port].txn.status == TXN_IDLE; }
+static inline bool i2c_is_idle(const i2c_bus_device_t *bus) {
+  return i2c_dev[bus->port].txn.status.load(std::memory_order_acquire) == TXN_IDLE;
+}
 void i2c_wait_idle(const i2c_bus_device_t *bus);
 
 void i2c_write_reg(const i2c_bus_device_t *bus, const uint8_t reg, const uint8_t data);
