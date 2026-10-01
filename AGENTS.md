@@ -13,6 +13,7 @@ QUICKSILVER is flight-controller firmware for STM32 F4/F7/G4/H7 and AT32 F435, w
 ## Style and organization
 
 - Use 2-space indentation, same-line opening braces, `snake_case` functions/variables, `UPPER_CASE` constants/macros, `const` where possible and fixed-width hardware types.
+- Prefer typed `constexpr` constants (`static constexpr` at file scope) over `#define` for new numeric constants; keep macros for preprocessor needs such as conditional compilation and token pasting.
 - Simple single-statement guards may omit braces; use braces when they clarify branches. Prefer named intermediate values to awkward line wrapping.
 - Follow neighboring include conventions: standard libraries before project modules, with the owning header first where established.
 - Order functions from supporting operations toward orchestration. Keep helpers near and before their callers, initialization before the update/service function, and the thread entry loop last. USB order: transport/protocol helpers, `usb_configurator()`, `usb_configurator_thread()`.
