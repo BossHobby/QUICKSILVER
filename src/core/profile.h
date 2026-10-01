@@ -18,7 +18,8 @@
 //        navigation: expose return height, speed, failsafe and throttle limits only.
 //        pid: add per-axis wing rate feedforward to each PID profile.
 //        wing: add Level banked turns.
-//        wing: add loiter switch and navigation settings.
+//        navigation: encode for wings; add wing cruise throttle, bank and loiter settings.
+//        wing: add loiter switch, RTH and failsafe RTH.
 // 0.3.0 (1e5b55c3): feat: add full 16-bit aux channel resolution with range-based function mapping.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
@@ -601,37 +602,15 @@ typedef struct {
   MEMBER(finish_ms, uint16_t)            \
   END_STRUCT()
 
-typedef enum {
-  WING_LOITER_RIGHT, // clockwise seen from above
-  WING_LOITER_LEFT,
-} wing_loiter_direction_t;
-
-typedef struct {
-  float cruise_throttle;    // 0..1, applied while navigating
-  float max_bank_angle;     // degrees
-  float loiter_radius;      // meters
-  uint8_t loiter_direction; // wing_loiter_direction_t
-} profile_wing_navigation_t;
-
-#define WING_NAVIGATION_MEMBERS           \
-  START_STRUCT(profile_wing_navigation_t) \
-  MEMBER(cruise_throttle, float)          \
-  MEMBER(max_bank_angle, float)           \
-  MEMBER(loiter_radius, float)            \
-  MEMBER(loiter_direction, uint8_t)       \
-  END_STRUCT()
-
 typedef struct {
   profile_wing_autolaunch_t autolaunch;
   uint8_t banked_turns;
-  profile_wing_navigation_t navigation;
 } profile_wing_t;
 
 #define WING_MEMBERS                            \
   START_STRUCT(profile_wing_t)                  \
   MEMBER(autolaunch, profile_wing_autolaunch_t) \
   MEMBER(banked_turns, uint8_t)                 \
-  MEMBER(navigation, profile_wing_navigation_t) \
   END_STRUCT()
 
 #define BLACKBOX_MEMBERS           \
@@ -684,6 +663,11 @@ typedef struct {
   STR_MEMBER(name_osd)             \
   END_STRUCT()
 
+typedef enum {
+  NAV_LOITER_RIGHT, // clockwise seen from above
+  NAV_LOITER_LEFT,
+} nav_loiter_direction_t;
+
 typedef struct {
   // RTH parameters
   float rth_altitude;        // Altitude offset from current position
@@ -692,6 +676,11 @@ typedef struct {
   float rth_throttle_min;
   float rth_throttle_hover;
   float rth_throttle_max;
+  // Wing navigation parameters
+  float cruise_throttle;    // 0..1 in level flight while navigating
+  float max_bank_angle;     // degrees
+  float loiter_radius;      // meters
+  uint8_t loiter_direction; // nav_loiter_direction_t
 } profile_navigation_t;
 
 #define NAVIGATION_MEMBERS            \
@@ -702,6 +691,10 @@ typedef struct {
   MEMBER(rth_throttle_min, float)     \
   MEMBER(rth_throttle_hover, float)   \
   MEMBER(rth_throttle_max, float)     \
+  MEMBER(cruise_throttle, float)      \
+  MEMBER(max_bank_angle, float)       \
+  MEMBER(loiter_radius, float)        \
+  MEMBER(loiter_direction, uint8_t)   \
   END_STRUCT()
 
 enum {
@@ -783,6 +776,7 @@ typedef struct {
   MEMBER(blackbox, profile_blackbox_t)                                                      \
   MEMBER(vtx, profile_vtx_t)                                                                \
   MEMBER(wing, profile_wing_t)                                                              \
+  MEMBER(navigation, profile_navigation_t)                                                  \
   END_STRUCT()
 #else
 #define PROFILE_MEMBERS                                                                     \
