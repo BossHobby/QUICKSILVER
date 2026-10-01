@@ -10,7 +10,7 @@
 #define LABEL_LEN 22
 #define LABEL_MAX_LEN 64
 #define SCROLL_PADDING 4
-#define SCROLL_INTERVAL_MS 250
+#define SCROLL_INTERVAL_MS 150
 
 typedef enum {
   STATUS_RX_WAIT,
@@ -135,84 +135,98 @@ static void osd_status_show(osd_status_mode_t mode, osd_status_entries_t entry) 
 }
 
 #ifdef VEHICLE_WING
+// Messages fit LABEL_LEN so they read without scrolling.
 static const char *osd_wing_autolaunch_message(void) {
   if (!rx_aux_on(AUX_AUTOLAUNCH)) {
     return NULL;
   }
   if (!flags.arm_state) {
-    return "AUTO LAUNCH: ARM FIRST";
+    return "LAUNCH: ARM FIRST";
+  }
+
+  // A finished or aborted launch is announced once; it stays silent until disarm.
+  const wing_launch_state_t launch_state = (wing_launch_state_t)state.wing_launch_state;
+  if (launch_state == WING_LAUNCH_DONE || launch_state == WING_LAUNCH_ABORTED) {
+    return NULL;
   }
   if (!state.wing_launch_available) {
-    return "AUTO LAUNCH: ENABLE BEFORE ARMING";
+    return "LAUNCH: SET BEFORE ARM";
   }
   if (state.rx_filtered.throttle < THROTTLE_SAFETY) {
-    return "AUTO LAUNCH: RAISE THROTTLE";
+    return "LAUNCH: RAISE THROTTLE";
   }
 
-  switch (state.wing_launch_state) {
+  switch (launch_state) {
   case WING_LAUNCH_IDLE:
   case WING_LAUNCH_IDLE_DELAY:
-    return "AUTO LAUNCH: PREPARING";
+    return "LAUNCH: GET READY";
 
   case WING_LAUNCH_WAIT:
-    return "AUTO LAUNCH: THROW NOW";
+    return "LAUNCH: THROW";
 
   case WING_LAUNCH_DETECTED:
-    return "AUTO LAUNCH: DETECTED";
-
   case WING_LAUNCH_MOTOR_DELAY:
+    return "LAUNCH: DETECTED";
+
   case WING_LAUNCH_SPINUP:
   case WING_LAUNCH_ACTIVE:
-    return "AUTO LAUNCH: MOVE STICKS TO ABORT";
+    return "LAUNCH: STICKS ABORT";
 
   case WING_LAUNCH_FINISH:
-    return "AUTO LAUNCH: TAKE CONTROL";
+    return "LAUNCH: TAKE CONTROL";
 
   case WING_LAUNCH_DONE:
-    return "AUTO LAUNCH DONE";
-
   case WING_LAUNCH_ABORTED:
-    return "AUTO LAUNCH ABORTED";
+    break;
   }
   return NULL;
 }
 
-static bool osd_wing_autolaunch_message_temp(void) {
-  return state.wing_launch_state == WING_LAUNCH_DONE || state.wing_launch_state == WING_LAUNCH_ABORTED;
-}
-
 static const char *osd_wing_autotrim_message(void) {
-  if (state.wing_autotrim_state == WING_AUTOTRIM_SAVED) {
-    return "AUTOTRIM DONE";
-  }
   if (!rx_aux_on(AUX_AUTOTRIM)) {
+    return NULL;
+  }
+
+  // Captured and saved trims are announced once.
+  const uint8_t autotrim_state = state.wing_autotrim_state;
+  if (autotrim_state == WING_AUTOTRIM_SAVE_PENDING || autotrim_state == WING_AUTOTRIM_SAVED) {
     return NULL;
   }
   if (!flags.arm_state) {
     return "AUTOTRIM: ARM FIRST";
   }
-  if (flags.failsafe) {
-    return "AUTOTRIM: FAILSAFE";
-  }
-
-  switch (state.wing_autotrim_state) {
-  case WING_AUTOTRIM_SAVE_PENDING:
-    return "AUTOTRIM: DISARM TO SAVE / AUX OFF CANCEL";
-
-  case WING_AUTOTRIM_ACTIVE:
+  if (autotrim_state == WING_AUTOTRIM_ACTIVE) {
     return "AUTOTRIM: HOLD LEVEL";
-
-  case WING_AUTOTRIM_IDLE:
-    return "AUTOTRIM: CYCLE AUX";
-
-  case WING_AUTOTRIM_SAVED:
-    return "AUTOTRIM DONE";
   }
-  return NULL;
+  // A failsafe or motor test cancelled the capture; it never restarts by itself.
+  return "AUTOTRIM: SWITCH OFF";
 }
 
-static bool osd_wing_autotrim_message_temp(void) {
-  return state.wing_autotrim_state == WING_AUTOTRIM_SAVED;
+// Announce one-shot launch and autotrim results for the default status time.
+static const char *osd_wing_result_message(void) {
+  static uint8_t last_launch_state = WING_LAUNCH_IDLE;
+  static uint8_t last_autotrim_state = WING_AUTOTRIM_IDLE;
+
+  const uint8_t launch_state = state.wing_launch_state;
+  const uint8_t autotrim_state = state.wing_autotrim_state;
+  const bool launch_changed = launch_state != last_launch_state;
+  const bool autotrim_changed = autotrim_state != last_autotrim_state;
+  last_launch_state = launch_state;
+  last_autotrim_state = autotrim_state;
+
+  if (launch_changed && launch_state == WING_LAUNCH_DONE) {
+    return "LAUNCH DONE";
+  }
+  if (launch_changed && launch_state == WING_LAUNCH_ABORTED) {
+    return "LAUNCH ABORTED";
+  }
+  if (autotrim_changed && autotrim_state == WING_AUTOTRIM_SAVE_PENDING) {
+    return "AUTOTRIM: DISARM SAVES";
+  }
+  if (autotrim_changed && autotrim_state == WING_AUTOTRIM_SAVED) {
+    return "AUTOTRIM SAVED";
+  }
+  return NULL;
 }
 #endif
 
@@ -371,15 +385,21 @@ bool osd_status_update(osd_element_t *el) {
   }
 
 #ifdef VEHICLE_WING
+  const char *result_message = osd_wing_result_message();
+  if (result_message) {
+    osd_status_show_text(MODE_TEMP, STATUS_AUTOLAUNCH, result_message);
+    return osd_status_print(el);
+  }
+
   const char *autolaunch_message = osd_wing_autolaunch_message();
   if (autolaunch_message) {
-    osd_status_show_text(osd_wing_autolaunch_message_temp() ? MODE_TEMP : MODE_HOLD, STATUS_AUTOLAUNCH, autolaunch_message);
+    osd_status_show_text(MODE_HOLD, STATUS_AUTOLAUNCH, autolaunch_message);
     return osd_status_print(el);
   }
 
   const char *autotrim_message = osd_wing_autotrim_message();
   if (autotrim_message) {
-    osd_status_show_text(osd_wing_autotrim_message_temp() ? MODE_TEMP : MODE_HOLD, STATUS_AUTOTRIM, autotrim_message);
+    osd_status_show_text(MODE_HOLD, STATUS_AUTOTRIM, autotrim_message);
     return osd_status_print(el);
   }
 #endif
