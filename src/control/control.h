@@ -203,7 +203,7 @@ typedef struct {
   bool baro_valid;              // last filtered sample was finite; check timestamp for freshness.
   uint32_t baro_last_update_ms; // time of last finite sample; zero at init, valid distinguishes a sample at time zero.
   float baro_vertical_speed;    // filtered vertical velocity, m/s up; zero at init/reacquisition.
-  float altitude;               // filtered meters above launch; zero at init/disarmed, held without a new valid sample.
+  float altitude;               // filtered meters above launch, or above the first sample before arming; zero at init, held without a new valid sample.
 
   // Navigation: home reference and return-to-home commands.
   gps_coord_t gps_home;
