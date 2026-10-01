@@ -31,6 +31,8 @@ static void step(uint32_t milliseconds = 10) {
     time_test_advance_us(10000);
     if (state.gps_lock)
       state.gps_last_update_ms = time_millis();
+    if (state.baro_valid)
+      state.baro_last_update_ms = time_millis();
     control();
     nav_update();
   }
@@ -172,6 +174,66 @@ static void test_loiter_waits_for_autolaunch() {
   TEST_ASSERT_EQUAL(WING_LOITER_INACTIVE, state.wing_loiter_state);
 }
 
+static void fly_with_baro(float altitude) {
+  fly(0);
+  // Navigation keeps scripted altitude while armed without new baro samples.
+  state.baro_valid = true;
+  state.altitude = altitude;
+  state.baro_vertical_speed = 0.0f;
+  state.aux_active |= 1U << AUX_LOITER;
+  step(1000);
+}
+
+static void test_loiter_holds_entry_altitude() {
+  fly_with_baro(50.0f);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, wing_nav_command.pitch);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, profile.wing.navigation.cruise_throttle, wing_nav_command.throttle);
+
+  // Below the target: nose up, with throttle added for the climb.
+  state.altitude = 45.0f;
+  step(2000);
+  TEST_ASSERT_TRUE(wing_nav_command.pitch < -5.0f * DEGTORAD);
+  TEST_ASSERT_TRUE(wing_nav_command.pitch >= -20.0f * DEGTORAD - 0.001f);
+  TEST_ASSERT_TRUE(wing_nav_command.throttle > profile.wing.navigation.cruise_throttle);
+  TEST_ASSERT_TRUE(state.setpoint.pitch < 0.0f);
+
+  // Above the target: nose down, with throttle reduced for the dive.
+  state.altitude = 55.0f;
+  step(4000);
+  TEST_ASSERT_TRUE(wing_nav_command.pitch > 5.0f * DEGTORAD);
+  TEST_ASSERT_TRUE(wing_nav_command.pitch <= 15.0f * DEGTORAD + 0.001f);
+  TEST_ASSERT_TRUE(wing_nav_command.throttle < profile.wing.navigation.cruise_throttle);
+}
+
+static void test_loiter_integral_trims_steady_sink() {
+  fly_with_baro(50.0f);
+  // A steady sink at the target altitude, as in a bank without extra lift.
+  state.baro_vertical_speed = -1.0f;
+  step(5000);
+  const float trimmed = wing_nav_command.pitch;
+  TEST_ASSERT_TRUE(trimmed < -3.0f * DEGTORAD);
+  state.baro_vertical_speed = 0.0f;
+  step(1000);
+  // The learned nose-up trim remains once the sink has stopped.
+  TEST_ASSERT_TRUE(wing_nav_command.pitch < -1.0f * DEGTORAD);
+}
+
+static void test_loiter_levels_pitch_when_baro_goes_stale() {
+  fly_with_baro(50.0f);
+  state.altitude = 40.0f;
+  step(2000);
+  TEST_ASSERT_TRUE(wing_nav_command.pitch < 0.0f);
+  state.baro_valid = false;
+  step(2000);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, wing_nav_command.pitch);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, profile.wing.navigation.cruise_throttle, wing_nav_command.throttle);
+
+  // A fresh barometer latches the current altitude rather than chasing the old target.
+  state.baro_valid = true;
+  step(1000);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, wing_nav_command.pitch);
+}
+
 void run_wing_loiter_tests() {
   RUN_TEST(test_loiter_requires_switch_and_flight);
   RUN_TEST(test_loiter_enters_tangentially_on_turn_side);
@@ -181,4 +243,7 @@ void run_wing_loiter_tests() {
   RUN_TEST(test_loiter_runs_without_configured_gps);
   RUN_TEST(test_loiter_yields_to_failsafe_and_disarm);
   RUN_TEST(test_loiter_waits_for_autolaunch);
+  RUN_TEST(test_loiter_holds_entry_altitude);
+  RUN_TEST(test_loiter_integral_trims_steady_sink);
+  RUN_TEST(test_loiter_levels_pitch_when_baro_goes_stale);
 }
