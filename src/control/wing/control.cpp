@@ -9,6 +9,7 @@
 #include "control/output.h"
 #include "control/pid.h"
 #include "control/rates.h"
+#include "control/wing/navigation.h"
 #include "core/flash.h"
 #include "core/profile.h"
 #include "core/tasks.h"
@@ -28,6 +29,7 @@ typedef enum {
   WING_MODE_MANUAL,
   WING_MODE_ACRO,
   WING_MODE_LEVEL,
+  WING_MODE_LOITER,
 } wing_mode_t;
 
 #define WING_AUTOTRIM_CAPTURE_MS 2000
@@ -93,7 +95,14 @@ static void wing_apply_test_outputs() {
 
 static wing_mode_t wing_active_mode() {
   // Stage 1 centers the sticks; level the wings rather than hold an attitude.
-  if (state.failsafe_phase == FAILSAFE_PHASE_STAGE1_GUARD || rx_aux_on(AUX_LEVELMODE)) {
+  if (state.failsafe_phase == FAILSAFE_PHASE_STAGE1_GUARD) {
+    return WING_MODE_LEVEL;
+  }
+  // Navigation activates loiter only when armed, airborne and out of launch.
+  if (state.wing_loiter_state != WING_LOITER_INACTIVE) {
+    return WING_MODE_LOITER;
+  }
+  if (rx_aux_on(AUX_LEVELMODE)) {
     return WING_MODE_LEVEL;
   }
   if (rx_aux_on(AUX_ACROMODE)) {
@@ -105,6 +114,17 @@ static wing_mode_t wing_active_mode() {
 static bool wing_launch_in_progress() {
   return rx_aux_on(AUX_AUTOLAUNCH) && state.wing_launch_available &&
          !flags.failsafe && state.wing_launch_state < WING_LAUNCH_DONE;
+}
+
+static vec3_t wing_level_angle_error(float roll, float pitch) {
+  vec3_t error = input_angle_vector(roll, pitch);
+  if (profile.wing.banked_turns) {
+    error.roll += copysignf(fabsf(state.GEstG.pitch * state.stick_vector.roll), state.stick_vector.roll);
+    error.pitch += copysignf(fabsf(state.GEstG.roll * state.stick_vector.pitch), state.stick_vector.pitch);
+    error.roll = constrain(error.roll, -1.0f, 1.0f);
+    error.pitch = constrain(error.pitch, -1.0f, 1.0f);
+  }
+  return error;
 }
 
 static void wing_calc_stabilized(wing_mode_t mode, bool launch_stabilized) {
@@ -124,16 +144,16 @@ static void wing_calc_stabilized(wing_mode_t mode, bool launch_stabilized) {
     state.setpoint.pitch = angle_pid(1);
     state.setpoint.yaw = 0.0f;
   } else if (mode == WING_MODE_LEVEL) {
-    state.angle_error = input_stick_vector(state.rx_filtered.axis);
-    if (profile.wing.banked_turns) {
-      state.angle_error.roll += copysignf(fabsf(state.GEstG.pitch * state.stick_vector.roll), state.stick_vector.roll);
-      state.angle_error.pitch += copysignf(fabsf(state.GEstG.roll * state.stick_vector.pitch), state.stick_vector.pitch);
-      state.angle_error.roll = constrain(state.angle_error.roll, -1.0f, 1.0f);
-      state.angle_error.pitch = constrain(state.angle_error.pitch, -1.0f, 1.0f);
-    }
+    const float max_angle = profile.rate.level_max_angle * DEGTORAD;
+    state.angle_error = wing_level_angle_error(state.rx_filtered.roll * max_angle, state.rx_filtered.pitch * max_angle);
     state.setpoint.roll = angle_pid(0);
     state.setpoint.pitch = angle_pid(1);
     state.setpoint.yaw = input_rates_calc().yaw;
+  } else if (mode == WING_MODE_LOITER) {
+    state.angle_error = wing_level_angle_error(wing_nav_command.roll, wing_nav_command.pitch);
+    state.setpoint.roll = angle_pid(0);
+    state.setpoint.pitch = angle_pid(1);
+    state.setpoint.yaw = 0.0f;
   } else {
     state.setpoint = input_rates_calc();
   }
@@ -188,8 +208,8 @@ static void wing_cancel_autotrim() {
 
 static bool wing_autotrim_steady() {
   // Trim is the command that holds settled flight: not on the ground, during
-  // autolaunch or while the airframe is still rotating.
-  if (!flags.in_air || wing_launch_in_progress()) {
+  // autolaunch, while loitering or while the airframe is still rotating.
+  if (!flags.in_air || wing_launch_in_progress() || state.wing_loiter_state != WING_LOITER_INACTIVE) {
     return false;
   }
   if (state.gps_lock && state.gps_speed < WING_FLYING_MIN_SPEED) {
@@ -561,6 +581,8 @@ void control() {
   state.throttle = wing_autolaunch_throttle();
   wing_launch_reset_pids_if_needed();
   const wing_mode_t wing_mode = wing_active_mode();
+  if (wing_mode == WING_MODE_LOITER)
+    state.throttle = wing_nav_command.throttle;
   const bool launch_stabilized = wing_launch_in_progress();
   if (wing_mode == WING_MODE_MANUAL && !launch_stabilized) {
     pid_reset_i();

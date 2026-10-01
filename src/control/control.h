@@ -89,6 +89,12 @@ typedef enum {
   WING_AUTOTRIM_SAVED,
 } wing_autotrim_state_t;
 
+typedef enum {
+  WING_LOITER_INACTIVE,
+  WING_LOITER_CIRCLE, // GPS-guided circle around a center placed on entry or GPS recovery.
+  WING_LOITER_BANK,   // No valid GPS: constant-bank turn in the loiter direction.
+} wing_loiter_state_t;
+
 // THE UN OF STRUCTS
 typedef struct {
   uint8_t arm_request : 1; // arming AUX is currently requested
@@ -240,6 +246,7 @@ typedef struct {
   uint8_t wing_launch_state;
   bool wing_launch_available;
   uint8_t wing_autotrim_state;
+  uint8_t wing_loiter_state; // wing_loiter_state_t, owned by wing navigation
 
   uint32_t dshot_rpm[MOTOR_PIN_MAX]; // eRPM / 100 per target output slot, written by the DShot driver
 } control_state_t;
@@ -332,6 +339,7 @@ typedef struct {
   MEMBER(wing_launch_state, uint8_t)                   \
   MEMBER(wing_launch_available, bool)                  \
   MEMBER(wing_autotrim_state, uint8_t)                 \
+  MEMBER(wing_loiter_state, uint8_t)                   \
   ARRAY_MEMBER(dshot_rpm, MOTOR_PIN_MAX, uint32_t)     \
   END_STRUCT()
 

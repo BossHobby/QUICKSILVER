@@ -7,6 +7,9 @@
 #ifdef VEHICLE_MULTI
 #include "control/multi/navigation.h"
 #endif
+#ifdef VEHICLE_WING
+#include "control/wing/navigation.h"
+#endif
 #include "core/profile.h"
 #include "driver/baro/baro.h"
 #include "driver/time.h"
@@ -284,10 +287,15 @@ void nav_update() {
 
   nav_update_altitude(arming);
   nav_update_vertical(dt);
-  if (profile.serial.gps != SERIAL_PORT_INVALID)
+  const bool gps_configured = profile.serial.gps != SERIAL_PORT_INVALID;
+  if (gps_configured)
     nav_update_home(arming);
 #ifdef VEHICLE_MULTI
   nav_update_multi(dt, gps.valid, gps.home_valid);
+#endif
+#ifdef VEHICLE_WING
+  // Loiter also runs without GPS, as a constant-bank turn.
+  nav_update_loiter(gps_configured && gps.valid);
 #endif
 }
 
