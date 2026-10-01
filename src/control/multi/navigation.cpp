@@ -3,15 +3,13 @@
 #include <math.h>
 
 #include "control/control.h"
+#include "control/navigation.h"
 #include "core/profile.h"
 #include "driver/baro/baro.h"
 #include "io/blackbox.h"
 #include "io/gps.h"
 #include "rx/rx.h"
 #include "util/util.h"
-
-#define EARTH_RADIUS 6371000.0f
-#define METERS_PER_DEGREE_LAT (EARTH_RADIUS * M_PI_F / 180.0f)
 
 #define ALT_KP 0.15f // relative to the estimated level hover throttle
 #define ALT_KI 0.05f
@@ -23,9 +21,6 @@
 #define RTH_HOME_RADIUS 3.0f
 #define RTH_ANGLE_SLEW_RATE 2.0f // normalized stick/s
 #define RTH_MIN_DISTANCE 10.0f
-#define RTH_MAX_HORIZONTAL_ACCURACY 30.0f
-#define RTH_MAX_POSITION_JUMP 50.0f
-#define RTH_GPS_STALE_MS 500U
 #define RTH_PROGRESS_TIMEOUT_MS 15000U
 #define RTH_PROGRESS_DISTANCE 5.0f
 #define NAV_VEL_KP 0.08f
@@ -52,15 +47,10 @@
 
 // Sensor and input history survives RTH stop/start. Published outputs live in state.
 static struct {
+  // Shared navigation validates GPS and latches home before each RTH update.
   bool home_valid;
+  bool gps_valid;
   struct {
-    bool valid;
-    gps_coord_t position;
-    bool position_valid;
-    uint32_t checked_ms;
-  } gps;
-  struct {
-    bool armed;
     bool rth_aux;
     bool failsafe;
   } previous;
@@ -104,84 +94,6 @@ static struct {
   } gps_loss;
 } rth;
 
-static void nav_update_gps(const gps_coord_t start, const gps_coord_t end) {
-  const float scale = M_PI_F / (180.0f * 10000000.0f);
-
-  const float lat_start_rad = (float)start.lat * scale;
-  const float lon_start_rad = (float)start.lon * scale;
-  const float lat_end_rad = (float)end.lat * scale;
-  const float lon_end_rad = (float)end.lon * scale;
-
-  const float cos_lat_start = cosf(lat_start_rad);
-  const float sin_lat_start = sinf(lat_start_rad);
-  const float cos_lat_end = cosf(lat_end_rad);
-  const float sin_lat_end = sinf(lat_end_rad);
-
-  const float delta_lon = lon_end_rad - lon_start_rad;
-  const float cos_delta_lon = cosf(delta_lon);
-  const float sin_delta_lon = sinf(delta_lon);
-
-  const float sin_half_delta_lat = sinf((lat_end_rad - lat_start_rad) * 0.5f);
-  const float sin_half_delta_lon = sinf(delta_lon * 0.5f);
-  const float a = sin_half_delta_lat * sin_half_delta_lat +
-                  cos_lat_start * cos_lat_end * sin_half_delta_lon * sin_half_delta_lon;
-
-  state.home_distance = EARTH_RADIUS * 2.0f * atan2f(sqrtf(a), sqrtf(1.0f - a));
-
-  const float y = sin_delta_lon * cos_lat_end;
-  const float x = cos_lat_start * sin_lat_end - sin_lat_start * cos_lat_end * cos_delta_lon;
-
-  state.home_bearing = normalize_rad(atan2f(y, x)) * RADTODEG;
-}
-
-// Local displacement in meters; GPS coordinates are signed degrees * 1e7.
-static void nav_position_delta(gps_coord_t start, gps_coord_t end, float *north, float *east) {
-  const float scale = 1.0f / 10000000.0f;
-  const float lat_diff = (end.lat - start.lat) * scale;
-  const float lon_diff = (end.lon - start.lon) * scale;
-  const float lat_rad = start.lat * scale * DEGTORAD;
-  *north = lat_diff * METERS_PER_DEGREE_LAT;
-  *east = lon_diff * (METERS_PER_DEGREE_LAT * cosf(lat_rad));
-}
-
-static float nav_distance_between(gps_coord_t start, gps_coord_t end) {
-  float north, east;
-  nav_position_delta(start, end, &north, &east);
-  return sqrtf(north * north + east * east);
-}
-
-static bool nav_gps_quality_ok(void) {
-  return state.gps_lock &&
-         state.gps_sats >= GPS_MIN_SATS_FOR_LOCK &&
-         state.gps_horizontal_accuracy <= RTH_MAX_HORIZONTAL_ACCURACY &&
-         (time_millis() - state.gps_last_update_ms) <= RTH_GPS_STALE_MS;
-}
-
-static void nav_update_gps_sanity(void) {
-  if (!nav_gps_quality_ok()) {
-    nav.gps.valid = false;
-    nav.gps.position_valid = false;
-    return;
-  }
-
-  if (state.gps_last_update_ms == nav.gps.checked_ms) {
-    return;
-  }
-  nav.gps.checked_ms = state.gps_last_update_ms;
-
-  if (nav.gps.position_valid) {
-    const float jump = nav_distance_between(nav.gps.position, state.gps_coord);
-    if (jump > RTH_MAX_POSITION_JUMP) {
-      nav.gps.valid = false;
-      return;
-    }
-  }
-
-  nav.gps.position = state.gps_coord;
-  nav.gps.position_valid = true;
-  nav.gps.valid = true;
-}
-
 static bool nav_altitude_source_ok(void) {
   return state.baro_valid &&
          (time_millis() - state.baro_last_update_ms) <= BARO_STALE_MS;
@@ -190,7 +102,7 @@ static bool nav_altitude_source_ok(void) {
 static bool nav_rth_can_start(void) {
   return state.rth_state != RTH_STATE_ABORTED &&
          nav.home_valid &&
-         nav.gps.valid &&
+         nav.gps_valid &&
          nav_altitude_source_ok() &&
          state.home_distance >= RTH_MIN_DISTANCE &&
          profile.navigation.rth_throttle_min < profile.navigation.rth_throttle_max;
@@ -245,7 +157,7 @@ static void nav_update_acceleration() {
   }
 
   const uint32_t elapsed_ms = state.gps_last_update_ms - rth.horizontal.updated_ms;
-  if (rth.horizontal.sample_valid && elapsed_ms > 0 && elapsed_ms <= RTH_GPS_STALE_MS) {
+  if (rth.horizontal.sample_valid && elapsed_ms > 0 && elapsed_ms <= NAV_GPS_STALE_MS) {
     const float sample_dt = elapsed_ms * 0.001f;
     const float gain = sample_dt / (0.2f + sample_dt);
     rth.horizontal.acceleration_north += gain * ((state.gps_vel_north - rth.horizontal.velocity_north) / sample_dt - rth.horizontal.acceleration_north);
@@ -420,7 +332,7 @@ static void nav_update_rth_control() {
     nav_rth_abort();
     return;
   }
-  if (!nav.gps.valid) {
+  if (!nav.gps_valid) {
     if (!rth.gps_loss.active) {
       rth.gps_loss.active = true;
       rth.gps_loss.started_ms = now_ms;
@@ -619,29 +531,14 @@ static void nav_update_request() {
   }
 }
 
-void nav_update_rth() {
-  nav_update_gps_sanity();
-
-  if (flags.arm_state != nav.previous.armed) {
-    if (flags.arm_state) {
-      nav.home_valid = nav.gps.valid;
-      if (nav.home_valid)
-        state.gps_home = state.gps_coord;
-    }
-    nav.previous.armed = flags.arm_state;
-  }
+void nav_update_rth(bool gps_valid, bool home_valid) {
+  nav.gps_valid = gps_valid;
+  nav.home_valid = home_valid;
 
   if (!flags.arm_state) {
-    state.gps_home = state.gps_coord;
-    nav.home_valid = false;
-
     nav_rth_stop();
     nav.previous.rth_aux = nav.previous.failsafe = 0;
   } else {
-    if (nav.gps.valid && nav.home_valid) {
-      nav_update_gps(state.gps_coord, state.gps_home);
-    }
-
     nav_update_request();
     if (state.rth_active) {
       nav_update_rth_control();
@@ -666,20 +563,12 @@ void nav_test_update_horizontal_control(float dt) {
   nav_update_horizontal_control(dt);
 }
 
-void nav_test_update_gps_sanity(void) {
-  nav_update_gps_sanity();
-}
-
-bool nav_test_gps_sane(void) {
-  return nav.gps.valid;
-}
-
 void nav_test_set_home_valid(bool valid) {
   nav.home_valid = valid;
 }
 
 void nav_test_set_gps_sane(bool sane) {
-  nav.gps.valid = sane;
+  nav.gps_valid = sane;
 }
 
 void nav_test_set_rth_active(bool active) {
