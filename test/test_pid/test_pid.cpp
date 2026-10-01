@@ -85,9 +85,10 @@ void test_wing_rate_feedforward_profile_switch_and_limits() {
   pid_rates_update();
   state.setpoint = (vec3_t){{10, -10, 10}};
   pid_calc();
-  TEST_ASSERT_EQUAL_FLOAT(0.8f, state.pidoutput.roll);
-  TEST_ASSERT_EQUAL_FLOAT(-0.8f, state.pidoutput.pitch);
-  TEST_ASSERT_EQUAL_FLOAT(0.6f, state.pidoutput.yaw);
+  // Wing surfaces use full travel on every axis.
+  TEST_ASSERT_EQUAL_FLOAT(1.0f, state.pidoutput.roll);
+  TEST_ASSERT_EQUAL_FLOAT(-1.0f, state.pidoutput.pitch);
+  TEST_ASSERT_EQUAL_FLOAT(1.0f, state.pidoutput.yaw);
 
   profile.pid.pid_rates[1] = {};
   profile.pid.pid_profile = PID_PROFILE_2;
