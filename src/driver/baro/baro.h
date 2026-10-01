@@ -18,7 +18,10 @@ typedef enum {
 
 typedef struct {
   baro_types_t (*init)(void);
-  bool (*get_pressure)(float *);
+  uint8_t status_reg;
+  uint8_t data_reg; // First of six pressure and temperature bytes.
+  bool (*data_ready)(uint8_t status);
+  float (*compensate)(const uint8_t data[6]); // Pressure in pascals.
 } baro_interface_t;
 
 struct baro_sample_t {
@@ -26,12 +29,11 @@ struct baro_sample_t {
   uint32_t timestamp_ms;
 };
 
-extern uint8_t baro_buf[6];
-
 baro_types_t baro_init(void);
 // Samples on a fixed cadence; reports the next service deadline in ticks.
-// In-flight I2C transfers wake the worker via i2c_notify_from_isr; a
-// device-side conversion has no interrupt and uses a short status poll.
+// Each sample reads the status, then the data register block; every transfer
+// returns portMAX_DELAY and resumes when i2c_notify_from_isr wakes the worker.
+// A device-side conversion has no interrupt and uses a short status poll.
 // portMAX_DELAY when no barometer is present.
 TickType_t baro_update(void);
 // Flight consumes the latest complete IO sample, coalescing unread samples.
