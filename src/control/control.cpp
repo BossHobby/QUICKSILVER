@@ -76,6 +76,8 @@ const char *control_flight_mode_name(void) {
     return "RATE ASST";
   return "MANUAL";
 #elif defined(VEHICLE_WING)
+  if (state.failsafe_phase == FAILSAFE_PHASE_STAGE1_GUARD)
+    return "FS LEVEL";
   if (rx_aux_on(AUX_LEVELMODE))
     return "LEVEL";
   if (rx_aux_on(AUX_ACROMODE))
