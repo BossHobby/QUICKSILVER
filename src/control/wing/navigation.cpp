@@ -5,6 +5,7 @@
 #include "control/control.h"
 #include "control/navigation.h"
 #include "core/profile.h"
+#include "driver/baro/baro.h"
 #include "driver/time.h"
 #include "io/blackbox.h"
 #include "rx/rx.h"
@@ -18,6 +19,14 @@
 #define LOITER_BANK_SLEW_RATE (45.0f * DEGTORAD) // rad/s
 #define LOITER_PITCH_SLEW_RATE (20.0f * DEGTORAD) // rad/s
 #define LOITER_THROTTLE_SLEW_RATE 0.5f       // per second
+#define ALT_POSITION_KP 0.5f                 // m/s climb per meter of altitude error
+#define ALT_MAX_CLIMB_RATE 3.0f              // m/s
+#define ALT_MAX_SINK_RATE 2.0f               // m/s
+#define ALT_RATE_KP (3.0f * DEGTORAD)        // climb angle per m/s of climb-rate error
+#define ALT_RATE_KI (1.0f * DEGTORAD)        // climb angle per m of accumulated climb-rate error
+#define ALT_MAX_CLIMB_ANGLE (20.0f * DEGTORAD)
+#define ALT_MAX_DIVE_ANGLE (15.0f * DEGTORAD)
+#define ALT_THROTTLE_PER_CLIMB_ANGLE 0.015f  // throttle per degree, holds airspeed without a sensor
 
 wing_nav_command_t wing_nav_command;
 
@@ -27,6 +36,12 @@ static struct {
   float center_east;
   uint32_t updated_us;
 } loiter;
+
+static struct {
+  bool active;    // a target is latched and the barometer is fresh
+  float target;   // meters above launch
+  float integral; // climb angle, radians; also trims the extra lift a bank needs
+} altitude;
 
 static float nav_slew(float current, float target, float step) {
   return constrain(target, current - step, current + step);
@@ -109,6 +124,34 @@ static float loiter_lateral_accel() {
   return circle;
 }
 
+// Holds the altitude latched when the barometer first becomes usable in
+// loiter. Returns the climb angle in radians, positive nose-up; zero without
+// a fresh barometer.
+static float altitude_climb_angle(float dt) {
+  const bool baro_ok = state.baro_valid && time_millis() - state.baro_last_update_ms <= BARO_STALE_MS;
+  if (!baro_ok) {
+    altitude.active = false;
+    return 0.0f;
+  }
+  if (!altitude.active) {
+    altitude.active = true;
+    altitude.target = state.altitude;
+    altitude.integral = 0.0f;
+  }
+
+  const float rate = constrain(ALT_POSITION_KP * (altitude.target - state.altitude), -ALT_MAX_SINK_RATE, ALT_MAX_CLIMB_RATE);
+  const float rate_error = rate - state.baro_vertical_speed;
+  const float proportional = ALT_RATE_KP * rate_error;
+  const float integral = altitude.integral + ALT_RATE_KI * rate_error * dt;
+  const float angle = proportional + integral;
+  // Stop integrating into a saturated climb or dive.
+  if ((angle < ALT_MAX_CLIMB_ANGLE || rate_error < 0.0f) && (angle > -ALT_MAX_DIVE_ANGLE || rate_error > 0.0f))
+    altitude.integral = constrain(integral, -ALT_MAX_DIVE_ANGLE, ALT_MAX_CLIMB_ANGLE);
+
+  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 6, (int16_t)constrain((altitude.target - state.altitude) * 10.0f, -32768.0f, 32767.0f)); // dm
+  return constrain(proportional + altitude.integral, -ALT_MAX_DIVE_ANGLE, ALT_MAX_CLIMB_ANGLE);
+}
+
 void nav_update_loiter(bool gps_valid) {
   const uint32_t now = time_micros();
   const float dt = constrain((now - loiter.updated_us) * 1e-6f, 0.0f, 0.1f);
@@ -116,6 +159,7 @@ void nav_update_loiter(bool gps_valid) {
 
   if (!loiter_requested()) {
     state.wing_loiter_state = WING_LOITER_INACTIVE;
+    altitude.active = false;
     blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 4, state.wing_loiter_state);
     return;
   }
@@ -142,8 +186,10 @@ void nav_update_loiter(bool gps_valid) {
 
   roll = constrain(roll, -max_bank, max_bank);
   wing_nav_command.roll = nav_slew(wing_nav_command.roll, roll, LOITER_BANK_SLEW_RATE * dt);
-  wing_nav_command.pitch = nav_slew(wing_nav_command.pitch, 0.0f, LOITER_PITCH_SLEW_RATE * dt);
-  const float throttle = constrain(profile.wing.navigation.cruise_throttle, 0.0f, 1.0f);
+  // Attitude pitch targets are positive nose-down.
+  const float climb_angle = altitude_climb_angle(dt);
+  wing_nav_command.pitch = nav_slew(wing_nav_command.pitch, -climb_angle, LOITER_PITCH_SLEW_RATE * dt);
+  const float throttle = constrain(profile.wing.navigation.cruise_throttle + ALT_THROTTLE_PER_CLIMB_ANGLE * climb_angle * RADTODEG, 0.0f, 1.0f);
   wing_nav_command.throttle = nav_slew(wing_nav_command.throttle, throttle, LOITER_THROTTLE_SLEW_RATE * dt);
 
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 4, state.wing_loiter_state);
