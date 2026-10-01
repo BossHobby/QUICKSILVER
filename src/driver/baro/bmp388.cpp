@@ -185,24 +185,16 @@ static float bmp388_compensate(const uint8_t data[6]) {
 }
 
 #ifdef USE_BARO
-static bool bmp388_get_pressure(float *pressure) {
-  static uint8_t status = 0;
-  if (!i2c_read_async(&baro_bus, BMP388_STATUS_REG, &status, 1))
-    return false;
-
-  if ((status & BMP388_DRDY_PRESS) == 0 || (status & BMP388_DRDY_TEMP) == 0)
-    return false;
-
-  *pressure = bmp388_compensate(baro_buf);
-
-  i2c_read_reg_bytes(&baro_bus, BMP388_DATA_0_REG, baro_buf, sizeof(baro_buf));
-
-  return true;
+static bool bmp388_data_ready(uint8_t status) {
+  return (status & BMP388_DRDY_PRESS) && (status & BMP388_DRDY_TEMP);
 }
 
 baro_interface_t bmp388_interface = {
     .init = bmp388_init,
-    .get_pressure = bmp388_get_pressure,
+    .status_reg = BMP388_STATUS_REG,
+    .data_reg = BMP388_DATA_0_REG,
+    .data_ready = bmp388_data_ready,
+    .compensate = bmp388_compensate,
 };
 #endif
 

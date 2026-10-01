@@ -142,22 +142,16 @@ static baro_types_t dps310_init() {
   return BARO_TYPE_DPS310;
 }
 
-static bool dps310_get_pressure(float *pressure) {
-  static uint8_t status = 0;
-  if (!i2c_read_async(&baro_bus, DPS310_REG_MEAS_CFG, &status, 1)) {
-    return false;
-  }
+static bool dps310_data_ready(uint8_t status) {
+  return status & (DPS310_MEAS_CFG_PRS_RDY | DPS310_MEAS_CFG_TMP_RDY);
+}
 
-  const bool sample_ready = status & (DPS310_MEAS_CFG_PRS_RDY | DPS310_MEAS_CFG_TMP_RDY);
-  if (!sample_ready) {
-    return false;
-  }
-
+static float dps310_compensate(const uint8_t data[6]) {
   static const float kT = 253952; // 16 times (Standard)
   static const float kP = 253952; // 16 times (Standard)
 
-  const int32_t Praw = get_twos_complement((baro_buf[0] << 16) + (baro_buf[1] << 8) + baro_buf[2], 24);
-  const int32_t Traw = get_twos_complement((baro_buf[3] << 16) + (baro_buf[4] << 8) + baro_buf[5], 24);
+  const int32_t Praw = get_twos_complement((data[0] << 16) + (data[1] << 8) + data[2], 24);
+  const int32_t Traw = get_twos_complement((data[3] << 16) + (data[4] << 8) + data[5], 24);
 
   const float Praw_sc = Praw / kP;
   const float Traw_sc = Traw / kT;
@@ -174,18 +168,17 @@ static bool dps310_get_pressure(float *pressure) {
 
   // See section 4.9.1, How to Calculate Compensated Pressure Values, of datasheet
   if (chip_id == SPL07_003_CHIP_ID) {
-    *pressure = c00 + Praw_sc * (c10 + Praw_sc * (c20 + Praw_sc * (c30 + Praw_sc * c40))) + Traw_sc * c01 + Traw_sc * Praw_sc * (c11 + Praw_sc * (c21 + Praw_sc * c31));
+    return c00 + Praw_sc * (c10 + Praw_sc * (c20 + Praw_sc * (c30 + Praw_sc * c40))) + Traw_sc * c01 + Traw_sc * Praw_sc * (c11 + Praw_sc * (c21 + Praw_sc * c31));
   } else {
-    *pressure = c00 + Praw_sc * (c10 + Praw_sc * (c20 + Praw_sc * c30)) + Traw_sc * c01 + Traw_sc * Praw_sc * (c11 + Praw_sc * c21);
+    return c00 + Praw_sc * (c10 + Praw_sc * (c20 + Praw_sc * c30)) + Traw_sc * c01 + Traw_sc * Praw_sc * (c11 + Praw_sc * c21);
   }
-
-  i2c_read_reg_bytes(&baro_bus, DPS310_REG_PSR_B2, baro_buf, sizeof(baro_buf));
-
-  return true;
 }
 
 baro_interface_t dps310_interface = {
     .init = dps310_init,
-    .get_pressure = dps310_get_pressure,
+    .status_reg = DPS310_REG_MEAS_CFG,
+    .data_reg = DPS310_REG_PSR_B2,
+    .data_ready = dps310_data_ready,
+    .compensate = dps310_compensate,
 };
 #endif
