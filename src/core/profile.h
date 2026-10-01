@@ -18,6 +18,7 @@
 //        navigation: expose return height, speed, failsafe and throttle limits only.
 //        pid: add per-axis wing rate feedforward to each PID profile.
 //        wing: add Level banked turns.
+//        wing: add loiter switch and navigation settings.
 // 0.3.0 (1e5b55c3): feat: add full 16-bit aux channel resolution with range-based function mapping.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
@@ -600,15 +601,37 @@ typedef struct {
   MEMBER(finish_ms, uint16_t)            \
   END_STRUCT()
 
+typedef enum {
+  WING_LOITER_RIGHT, // clockwise seen from above
+  WING_LOITER_LEFT,
+} wing_loiter_direction_t;
+
+typedef struct {
+  float cruise_throttle;    // 0..1, applied while navigating
+  float max_bank_angle;     // degrees
+  float loiter_radius;      // meters
+  uint8_t loiter_direction; // wing_loiter_direction_t
+} profile_wing_navigation_t;
+
+#define WING_NAVIGATION_MEMBERS           \
+  START_STRUCT(profile_wing_navigation_t) \
+  MEMBER(cruise_throttle, float)          \
+  MEMBER(max_bank_angle, float)           \
+  MEMBER(loiter_radius, float)            \
+  MEMBER(loiter_direction, uint8_t)       \
+  END_STRUCT()
+
 typedef struct {
   profile_wing_autolaunch_t autolaunch;
   uint8_t banked_turns;
+  profile_wing_navigation_t navigation;
 } profile_wing_t;
 
 #define WING_MEMBERS                            \
   START_STRUCT(profile_wing_t)                  \
   MEMBER(autolaunch, profile_wing_autolaunch_t) \
   MEMBER(banked_turns, uint8_t)                 \
+  MEMBER(navigation, profile_wing_navigation_t) \
   END_STRUCT()
 
 #define BLACKBOX_MEMBERS           \

@@ -113,6 +113,7 @@ typedef enum {
 #ifdef VEHICLE_WING
   AUX_AUTOTRIM,
   AUX_AUTOLAUNCH,
+  AUX_LOITER,
 #endif
 
   AUX_FUNCTION_MAX

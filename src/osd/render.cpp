@@ -1014,6 +1014,7 @@ TickType_t osd_display() {
       osd_menu_select_aux_adjust(4, OSD_AUTO, "LEVEL", 17, 22, &profile.receiver.aux[AUX_LEVELMODE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "AUTOTRIM", 17, 22, &profile.receiver.aux[AUX_AUTOTRIM]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "AUTOLAUNCH", 17, 22, &profile.receiver.aux[AUX_AUTOLAUNCH]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "LOITER", 17, 22, &profile.receiver.aux[AUX_LOITER]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BUZZER", 17, 22, &profile.receiver.aux[AUX_BUZZER_ENABLE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
@@ -1263,6 +1264,7 @@ TickType_t osd_display() {
       osd_menu_select_aux_adjust(4, OSD_AUTO, "LEVEL", 17, 22, &profile.receiver.aux[AUX_LEVELMODE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "AUTOTRIM", 17, 22, &profile.receiver.aux[AUX_AUTOTRIM]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "AUTOLAUNCH", 17, 22, &profile.receiver.aux[AUX_AUTOLAUNCH]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "LOITER", 17, 22, &profile.receiver.aux[AUX_LOITER]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BUZZER", 17, 22, &profile.receiver.aux[AUX_BUZZER_ENABLE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
