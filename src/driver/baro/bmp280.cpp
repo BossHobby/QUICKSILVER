@@ -111,24 +111,16 @@ static float bmp280_compensate(const uint8_t data[6]) {
 }
 
 #ifdef USE_BARO
-static bool bmp280_get_pressure(float *pressure) {
-  static uint8_t status = 0;
-  if (!i2c_read_async(&baro_bus, BMP280_STAT_REG, &status, 1))
-    return false;
-
-  if ((status & BMP280_MEASURING) != 0)
-    return false;
-
-  *pressure = bmp280_compensate(baro_buf);
-
-  i2c_read_reg_bytes(&baro_bus, BMP280_PRESSURE_MSB_REG, baro_buf, sizeof(baro_buf));
-
-  return true;
+static bool bmp280_data_ready(uint8_t status) {
+  return (status & BMP280_MEASURING) == 0;
 }
 
 baro_interface_t bmp280_interface = {
     .init = bmp280_init,
-    .get_pressure = bmp280_get_pressure,
+    .status_reg = BMP280_STAT_REG,
+    .data_reg = BMP280_PRESSURE_MSB_REG,
+    .data_ready = bmp280_data_ready,
+    .compensate = bmp280_compensate,
 };
 #endif
 
