@@ -97,10 +97,21 @@ const char *control_flight_mode_name(void) {
     return "RATE ASST";
   return "MANUAL";
 #elif defined(VEHICLE_WING)
+  if (state.wing_nav_failsafe)
+    return state.wing_nav_state == WING_NAV_DESCEND ? "FS DESCEND" : "FS RTH";
   if (state.failsafe_phase == FAILSAFE_PHASE_STAGE1_GUARD)
     return "FS LEVEL";
-  if (state.wing_loiter_state != WING_LOITER_INACTIVE)
-    return "LOITER";
+  switch (state.wing_nav_state) {
+  case WING_NAV_LOITER:
+  case WING_NAV_LOITER_BANK:
+    return rx_aux_on(AUX_RETURN_TO_HOME) ? "RTH" : "LOITER";
+  case WING_NAV_RTH_RETURN:
+  case WING_NAV_RTH_HOME:
+  case WING_NAV_RTH_HEADING:
+    return "RTH";
+  default:
+    break;
+  }
   if (rx_aux_on(AUX_LEVELMODE))
     return "LEVEL";
   if (rx_aux_on(AUX_ACROMODE))
@@ -246,6 +257,16 @@ static void failsafe_clear(uint32_t now_us) {
   failsafe_set_phase(FAILSAFE_PHASE_IDLE, now_us);
 }
 
+void control_failsafe_disarm() {
+  failsafe_clear_stage1_fallback();
+  flags.failsafe = 1;
+  flags.failsafe_outputs_blocked = 1;
+  failsafe_set_phase(FAILSAFE_PHASE_STAGE2_DROP, time_micros());
+  if (flags.arm_state)
+    failsafe_rearm_allows_prearm_hold = true;
+  flags.arm_state = 0;
+}
+
 void control_failsafe_update() {
   const uint32_t now_us = time_micros();
 #ifdef VEHICLE_MULTI
@@ -288,13 +309,7 @@ void control_failsafe_update() {
   if (flags.failsafe_signal_lost) {
     if (state.failsafe_phase == FAILSAFE_PHASE_STAGE2_DROP ||
         state.failsafe_phase == FAILSAFE_PHASE_RECOVERY) {
-      flags.failsafe = 1;
-      flags.failsafe_outputs_blocked = 1;
-      failsafe_set_phase(FAILSAFE_PHASE_STAGE2_DROP, now_us);
-      if (flags.arm_state) {
-        failsafe_rearm_allows_prearm_hold = true;
-      }
-      flags.arm_state = 0;
+      control_failsafe_disarm();
       return;
     }
 
@@ -306,6 +321,17 @@ void control_failsafe_update() {
       return;
     }
 
+#ifdef VEHICLE_WING
+    // Navigation takes over within one 10 ms update of stage 1 and then flies
+    // the failsafe; stay in stage 1 with live outputs instead of stage 2.
+    if (state.wing_nav_failsafe) {
+      flags.failsafe = 1;
+      flags.failsafe_outputs_blocked = 0;
+      failsafe_set_phase(FAILSAFE_PHASE_STAGE1_GUARD, now_us);
+      return;
+    }
+#endif
+
     const uint32_t stage1_us = loss_us - FAILSAFE_HOLD_TIME_US;
     if (stage1_us < FAILSAFE_STAGE2_TIME_US) {
       flags.failsafe = 1;
@@ -315,14 +341,7 @@ void control_failsafe_update() {
       return;
     }
 
-    failsafe_clear_stage1_fallback();
-    flags.failsafe = 1;
-    flags.failsafe_outputs_blocked = 1;
-    failsafe_set_phase(FAILSAFE_PHASE_STAGE2_DROP, now_us);
-    if (flags.arm_state) {
-      failsafe_rearm_allows_prearm_hold = true;
-    }
-    flags.arm_state = 0;
+    control_failsafe_disarm();
     return;
   }
 

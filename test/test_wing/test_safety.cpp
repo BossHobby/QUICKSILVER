@@ -229,6 +229,7 @@ static void test_wing_launch_delay_ramp_and_timed_handoff() {
 
 static void test_wing_launch_failsafe_stops_motor_and_disarms() {
   launch_to_active();
+  profile.navigation.rth_on_failsafe = false;
   state.last_frame_time_us = time_micros();
   flags.failsafe_signal_lost = 1;
   tick(3000);
@@ -327,6 +328,7 @@ static void test_wing_launch_pitch_exceeds_level_limit() {
 
 static void test_wing_failsafe_stage1_levels_manual_mode() {
   prepare(0);
+  profile.navigation.rth_on_failsafe = false;
   state.rx_filtered.throttle = 0.5f;
   tick();
   state.GEstG = {{0.5f, 0, 0.8660254f}};
