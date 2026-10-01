@@ -72,16 +72,4 @@ void i2c_write_reg_bytes(const i2c_bus_device_t *bus, const uint8_t reg, const u
 uint8_t i2c_read_reg(const i2c_bus_device_t *bus, const uint8_t reg);
 void i2c_read_reg_bytes(const i2c_bus_device_t *bus, const uint8_t reg, uint8_t *data, const uint32_t size);
 
-#define i2c_read_async(bus, reg, data, size)    \
-  ({                                            \
-    static bool is_done = false;                \
-    const bool temp = is_done;                  \
-    if (!is_done) {                             \
-      i2c_read_reg_bytes(bus, reg, data, size); \
-      is_done = true;                           \
-    } else                                      \
-      is_done = false;                          \
-    temp;                                       \
-  })
-
 uint32_t i2c_calc_clkctrl(uint32_t pclk_freq, uint32_t i2c_freq_khz, uint32_t dfcoeff);
