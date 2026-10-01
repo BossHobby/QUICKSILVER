@@ -73,6 +73,7 @@ go.mod
 go.sum
 
 /.pio
+/.cache/
 __pycache__
 /targets
 flash.bin
