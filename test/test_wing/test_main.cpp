@@ -235,6 +235,10 @@ static void test_autotrim_cancel_during_capture_and_on_early_disarm() {
   time_test_advance_us(3000000);
   control();
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_IDLE, state.wing_autotrim_state);
+  // The switch is still on: the next arm captures again.
+  state.aux_active |= 1U << AUX_ARMING;
+  control();
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
 }
 
 static void test_autotrim_saves_on_disarm_with_switch_on() {

@@ -218,7 +218,9 @@ static void wing_update_autotrim(bool armed_at_start) {
   }
   if (!flags.arm_state) {
     if (state.wing_autotrim_state == WING_AUTOTRIM_ACTIVE) {
+      // Landing mid-capture keeps the request: capture again on the next arm.
       wing_cancel_autotrim();
+      autotrim.ready = true;
     }
     return;
   }
