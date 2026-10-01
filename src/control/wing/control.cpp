@@ -125,6 +125,12 @@ static void wing_calc_stabilized(wing_mode_t mode, bool launch_stabilized) {
     state.setpoint.yaw = 0.0f;
   } else if (mode == WING_MODE_LEVEL) {
     state.angle_error = input_stick_vector(state.rx_filtered.axis);
+    if (profile.wing.banked_turns) {
+      state.angle_error.roll += copysignf(fabsf(state.GEstG.pitch * state.stick_vector.roll), state.stick_vector.roll);
+      state.angle_error.pitch += copysignf(fabsf(state.GEstG.roll * state.stick_vector.pitch), state.stick_vector.pitch);
+      state.angle_error.roll = constrain(state.angle_error.roll, -1.0f, 1.0f);
+      state.angle_error.pitch = constrain(state.angle_error.pitch, -1.0f, 1.0f);
+    }
     state.setpoint.roll = angle_pid(0);
     state.setpoint.pitch = angle_pid(1);
     state.setpoint.yaw = input_rates_calc().yaw;

@@ -18,6 +18,7 @@
 //        navigation: expose return height, speed, failsafe and throttle limits only.
 //        pid: add per-axis wing rate feedforward to each PID profile.
 //        pinio: replace FPV GPIO switching with four AUX outputs and separate VTX pit mode.
+//        wing: add Level banked turns.
 // 0.3.0 (1e5b55c3): feat: add full 16-bit aux channel resolution with range-based function mapping.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
@@ -602,11 +603,13 @@ typedef struct {
 
 typedef struct {
   profile_wing_autolaunch_t autolaunch;
+  uint8_t banked_turns;
 } profile_wing_t;
 
-#define WING_MEMBERS                               \
-  START_STRUCT(profile_wing_t)                     \
-  MEMBER(autolaunch, profile_wing_autolaunch_t)    \
+#define WING_MEMBERS                            \
+  START_STRUCT(profile_wing_t)                  \
+  MEMBER(autolaunch, profile_wing_autolaunch_t) \
+  MEMBER(banked_turns, uint8_t)                 \
   END_STRUCT()
 
 #define BLACKBOX_MEMBERS           \
