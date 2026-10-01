@@ -685,6 +685,7 @@ const profile_t default_profile = {
             .timeout_ms = 5000,
             .finish_ms = 3000,
         },
+        .banked_turns = 0,
     },
     .navigation = {
         .rth_altitude = 10.0f,   // 10m above current position
