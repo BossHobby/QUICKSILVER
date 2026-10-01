@@ -8,6 +8,9 @@ extern const profile_t default_profile;
 void test_cbor_profile_servo_rate_roundtrip(void) {
   profile_t source = default_profile;
   source.servo.pwm_rate_hz = 333;
+#ifdef VEHICLE_WING
+  source.wing.banked_turns = 1;
+#endif
   source.pid.pid_rates[0].kff = (vec3_t){{44, 30, 10}};
   source.pid.pid_rates[1].kff = (vec3_t){{20, 15, 0}};
   uint8_t buffer[4096] = {}; // QUIC profile response capacity.
@@ -19,6 +22,9 @@ void test_cbor_profile_servo_rate_roundtrip(void) {
   cbor_decoder_init(&codec, buffer, size);
   TEST_ASSERT_TRUE(cbor_decode_profile_t(&codec, &decoded) >= CBOR_OK);
   TEST_ASSERT_EQUAL_UINT16(333, decoded.servo.pwm_rate_hz);
+#ifdef VEHICLE_WING
+  TEST_ASSERT_EQUAL_UINT8(1, decoded.wing.banked_turns);
+#endif
   TEST_ASSERT_EQUAL(source.outputs[0].protocol, decoded.outputs[0].protocol);
 #ifndef VEHICLE_ROVER
   for (unsigned i = 0; i < PID_PROFILE_MAX; i++) {
