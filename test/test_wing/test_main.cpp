@@ -17,7 +17,7 @@
 
 extern const profile_t default_profile;
 extern void run_wing_safety_tests();
-extern void run_wing_loiter_tests();
+extern void run_wing_navigation_tests();
 void setUp() {
   profile = default_profile;
   profile_output_update();
@@ -396,7 +396,7 @@ int main() {
   RUN_TEST(test_autotrim_waits_for_steady_flight);
   RUN_TEST(test_failsafe_stops_surfaces_at_trimmed_center);
   run_wing_safety_tests();
-  run_wing_loiter_tests();
+  run_wing_navigation_tests();
   const int result = UNITY_END();
   unlink("flash.bin");
   chdir(original_dir);

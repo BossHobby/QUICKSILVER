@@ -687,12 +687,6 @@ const profile_t default_profile = {
             .finish_ms = 3000,
         },
         .banked_turns = 0,
-        .navigation = {
-            .cruise_throttle = 0.45f,
-            .max_bank_angle = 35.0f,
-            .loiter_radius = 50.0f,
-            .loiter_direction = WING_LOITER_RIGHT,
-        },
     },
     .navigation = {
         .rth_altitude = 10.0f,   // 10m above current position
@@ -701,6 +695,10 @@ const profile_t default_profile = {
         .rth_throttle_min = 0.1f,
         .rth_throttle_hover = 0.5f,
         .rth_throttle_max = 0.75f,
+        .cruise_throttle = 0.45f,
+        .max_bank_angle = 35.0f,
+        .loiter_radius = 50.0f,
+        .loiter_direction = NAV_LOITER_RIGHT,
     },
 };
 
@@ -830,7 +828,6 @@ BLACKBOX_PRESET_MEMBERS
 ROVER_PID_RATE_MEMBERS
 ROVER_MEMBERS
 WING_AUTOLAUNCH_MEMBERS
-WING_NAVIGATION_MEMBERS
 WING_MEMBERS
 SERVO_MEMBERS
 PROFILE_OUTPUT_MEMBERS
@@ -918,7 +915,6 @@ BLACKBOX_MEMBERS
 ROVER_PID_RATE_MEMBERS
 ROVER_MEMBERS
 WING_AUTOLAUNCH_MEMBERS
-WING_NAVIGATION_MEMBERS
 WING_MEMBERS
 SERVO_MEMBERS
 PROFILE_OUTPUT_MEMBERS

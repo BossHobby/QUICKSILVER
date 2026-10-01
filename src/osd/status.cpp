@@ -29,7 +29,6 @@ typedef enum {
   STATUS_TURTLE,
   STATUS_AUTOLAUNCH,
   STATUS_AUTOTRIM,
-  STATUS_LOITER,
   STATUS_RTH,
   STATUS_MAX,
 } osd_status_entries_t;
@@ -75,7 +74,6 @@ const char *default_system_status_labels[STATUS_MAX] = {
     [STATUS_TURTLE] = "**TURTLE**",
     [STATUS_AUTOLAUNCH] = "AUTO LAUNCH",
     [STATUS_AUTOTRIM] = "AUTOTRIM",
-    [STATUS_LOITER] = "LOITER",
     [STATUS_RTH] = "RTH",
 };
 
@@ -93,7 +91,6 @@ const char *guac_system_status_labels[STATUS_MAX] = {
     [STATUS_TURTLE] = "\x60THIS SIDE UP\x60",
     [STATUS_AUTOLAUNCH] = "AUTO LAUNCH",
     [STATUS_AUTOTRIM] = "AUTOTRIM",
-    [STATUS_LOITER] = "LOITER",
     [STATUS_RTH] = "RTH",
 };
 
@@ -208,11 +205,24 @@ static const char *osd_wing_autotrim_message(void) {
   return "AUTOTRIM: SWITCH OFF";
 }
 
-static const char *osd_wing_loiter_message(void) {
-  if (state.wing_loiter_state == WING_LOITER_BANK) {
-    return "LOITER: NO GPS";
+static const char *osd_wing_nav_message(void) {
+  const bool rth = state.wing_nav_failsafe || rx_aux_on(AUX_RETURN_TO_HOME);
+  switch (state.wing_nav_state) {
+  case WING_NAV_LOITER:
+    return rth ? "RTH: NO HOME" : NULL;
+  case WING_NAV_LOITER_BANK:
+    return rth ? "RTH: NO GPS" : "LOITER: NO GPS";
+  case WING_NAV_RTH_RETURN:
+    return "RETURN HOME";
+  case WING_NAV_RTH_HOME:
+    return "CIRCLE HOME";
+  case WING_NAV_RTH_HEADING:
+    return "RTH: GPS LOST";
+  case WING_NAV_DESCEND:
+    return "FS: DESCENDING";
+  default:
+    return NULL;
   }
-  return NULL;
 }
 
 // Announce one-shot launch and autotrim results for the default status time.
@@ -353,6 +363,13 @@ bool osd_status_update(osd_element_t *el) {
       return osd_status_print(el);
     }
 #endif
+#ifdef VEHICLE_WING
+    const char *nav_message = osd_wing_nav_message();
+    if (nav_message && state.wing_nav_failsafe) {
+      osd_status_show_text(MODE_HOLD, STATUS_RTH, nav_message);
+      return osd_status_print(el);
+    }
+#endif
     osd_status_show(MODE_HOLD, STATUS_FAILSAFE);
     return osd_status_print(el);
   }
@@ -428,9 +445,9 @@ bool osd_status_update(osd_element_t *el) {
     return osd_status_print(el);
   }
 
-  const char *loiter_message = osd_wing_loiter_message();
-  if (loiter_message) {
-    osd_status_show_text(MODE_HOLD, STATUS_LOITER, loiter_message);
+  const char *nav_message = osd_wing_nav_message();
+  if (nav_message) {
+    osd_status_show_text(MODE_HOLD, STATUS_RTH, nav_message);
     return osd_status_print(el);
   }
 #endif
