@@ -90,10 +90,14 @@ typedef enum {
 } wing_autotrim_state_t;
 
 typedef enum {
-  WING_LOITER_INACTIVE,
-  WING_LOITER_CIRCLE, // GPS-guided circle around a center placed on entry or GPS recovery.
-  WING_LOITER_BANK,   // No valid GPS: constant-bank turn in the loiter direction.
-} wing_loiter_state_t;
+  WING_NAV_INACTIVE,
+  WING_NAV_LOITER,      // GPS circle around a center placed on entry or GPS recovery.
+  WING_NAV_LOITER_BANK, // No valid GPS: constant-bank turn holding altitude.
+  WING_NAV_RTH_RETURN,  // Flying the GPS ground track toward home.
+  WING_NAV_RTH_HOME,    // Circling home at the return altitude.
+  WING_NAV_RTH_HEADING, // GPS lost while returning: home bearing on IMU heading for a limited time.
+  WING_NAV_DESCEND,     // Unpowered failsafe glide, held until receiver recovery.
+} wing_nav_state_t;
 
 // THE UN OF STRUCTS
 typedef struct {
@@ -246,7 +250,8 @@ typedef struct {
   uint8_t wing_launch_state;
   bool wing_launch_available;
   uint8_t wing_autotrim_state;
-  uint8_t wing_loiter_state; // wing_loiter_state_t, owned by wing navigation
+  uint8_t wing_nav_state; // wing_nav_state_t, owned by wing navigation
+  bool wing_nav_failsafe; // wing navigation owns a receiver failsafe; failsafe holds stage 1 with live outputs
 
   uint32_t dshot_rpm[MOTOR_PIN_MAX]; // eRPM / 100 per target output slot, written by the DShot driver
 } control_state_t;
@@ -339,7 +344,8 @@ typedef struct {
   MEMBER(wing_launch_state, uint8_t)                   \
   MEMBER(wing_launch_available, bool)                  \
   MEMBER(wing_autotrim_state, uint8_t)                 \
-  MEMBER(wing_loiter_state, uint8_t)                   \
+  MEMBER(wing_nav_state, uint8_t)                      \
+  MEMBER(wing_nav_failsafe, bool)                      \
   ARRAY_MEMBER(dshot_rpm, MOTOR_PIN_MAX, uint32_t)     \
   END_STRUCT()
 
@@ -354,6 +360,7 @@ extern motor_test_t motor_test;
 cbor_result_t cbor_encode_control_state_t(cbor_value_t *enc, const control_state_t *s);
 
 void control_update_arming();
+void control_failsafe_disarm();
 void control_failsafe_update();
 bool control_failsafe_active();
 void control();
