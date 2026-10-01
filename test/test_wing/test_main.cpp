@@ -100,6 +100,20 @@ static void test_level_tilt_moves_disarmed_surfaces_without_integral() {
   TEST_ASSERT_LESS_THAN_FLOAT(-0.6f, pwm_values[1]);
   TEST_ASSERT_LESS_THAN_FLOAT(-0.6f, pwm_values[2]);
 }
+static void test_level_banked_turn_correction() {
+  state.aux_active = 1U << AUX_LEVELMODE;
+  state.rx_filtered.roll = 0.3f;
+  state.rx_filtered.pitch = 0.2f;
+  state.GEstG = {{0.5f, 0.25f, 0.8291562f}};
+  control();
+  const vec3_t original = state.angle_error;
+  profile.wing.banked_turns = 1;
+  control();
+  TEST_ASSERT_TRUE(state.angle_error.roll > original.roll);
+  TEST_ASSERT_TRUE(state.angle_error.pitch > original.pitch);
+  TEST_ASSERT_TRUE(fabsf(state.angle_error.roll) <= 1.0f);
+  TEST_ASSERT_TRUE(fabsf(state.angle_error.pitch) <= 1.0f);
+}
 static void test_pwm_shared_rate_validation() {
   servo_init();
   TEST_ASSERT_EQUAL(50, pwm_rate);
@@ -368,6 +382,7 @@ int main() {
   RUN_TEST(test_pwm_throttle_range_and_limit);
   RUN_TEST(test_pwm_motor_stops_but_disarmed_surfaces_work);
   RUN_TEST(test_level_tilt_moves_disarmed_surfaces_without_integral);
+  RUN_TEST(test_level_banked_turn_correction);
   RUN_TEST(test_pwm_shared_rate_validation);
   RUN_TEST(test_gliding_retains_airborne_state_and_motor_cutoff);
   RUN_TEST(test_autotrim_requires_switch_and_averages_applied_surfaces_once);
