@@ -294,8 +294,8 @@ void nav_update() {
   nav_update_multi(dt, gps.valid, gps.home_valid);
 #endif
 #ifdef VEHICLE_WING
-  // Loiter also runs without GPS, as a constant-bank turn.
-  nav_update_loiter(gps_configured && gps.valid);
+  // Wing navigation also runs without GPS, as a constant-bank turn.
+  nav_update_wing(gps_configured && gps.valid, gps_configured && gps.home_valid);
 #endif
 }
 

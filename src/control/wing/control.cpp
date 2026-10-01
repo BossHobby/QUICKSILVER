@@ -29,7 +29,7 @@ typedef enum {
   WING_MODE_MANUAL,
   WING_MODE_ACRO,
   WING_MODE_LEVEL,
-  WING_MODE_LOITER,
+  WING_MODE_NAV,
 } wing_mode_t;
 
 #define WING_AUTOTRIM_CAPTURE_MS 2000
@@ -94,13 +94,14 @@ static void wing_apply_test_outputs() {
 }
 
 static wing_mode_t wing_active_mode() {
+  // Navigation runs only when armed, airborne and out of launch. It owns a
+  // failsafe when failsafe RTH is enabled, otherwise it has already stopped.
+  if (state.wing_nav_state != WING_NAV_INACTIVE) {
+    return WING_MODE_NAV;
+  }
   // Stage 1 centers the sticks; level the wings rather than hold an attitude.
   if (state.failsafe_phase == FAILSAFE_PHASE_STAGE1_GUARD) {
     return WING_MODE_LEVEL;
-  }
-  // Navigation activates loiter only when armed, airborne and out of launch.
-  if (state.wing_loiter_state != WING_LOITER_INACTIVE) {
-    return WING_MODE_LOITER;
   }
   if (rx_aux_on(AUX_LEVELMODE)) {
     return WING_MODE_LEVEL;
@@ -149,7 +150,7 @@ static void wing_calc_stabilized(wing_mode_t mode, bool launch_stabilized) {
     state.setpoint.roll = angle_pid(0);
     state.setpoint.pitch = angle_pid(1);
     state.setpoint.yaw = input_rates_calc().yaw;
-  } else if (mode == WING_MODE_LOITER) {
+  } else if (mode == WING_MODE_NAV) {
     state.angle_error = wing_level_angle_error(wing_nav_command.roll, wing_nav_command.pitch);
     state.setpoint.roll = angle_pid(0);
     state.setpoint.pitch = angle_pid(1);
@@ -208,8 +209,8 @@ static void wing_cancel_autotrim() {
 
 static bool wing_autotrim_steady() {
   // Trim is the command that holds settled flight: not on the ground, during
-  // autolaunch, while loitering or while the airframe is still rotating.
-  if (!flags.in_air || wing_launch_in_progress() || state.wing_loiter_state != WING_LOITER_INACTIVE) {
+  // autolaunch, while navigating or while the airframe is still rotating.
+  if (!flags.in_air || wing_launch_in_progress() || state.wing_nav_state != WING_NAV_INACTIVE) {
     return false;
   }
   if (state.gps_lock && state.gps_speed < WING_FLYING_MIN_SPEED) {
@@ -417,6 +418,10 @@ static float wing_autolaunch_throttle() {
   }
   if (flags.failsafe || !launch_aux_on) {
     if (state.wing_launch_available) {
+      // Throttle already latched in_air before release. A link loss must not
+      // let navigation bypass the throw detection or hand-clear delay.
+      if (flags.failsafe && state.wing_launch_state < WING_LAUNCH_SPINUP)
+        control_failsafe_disarm();
       wing_launch_set_state(WING_LAUNCH_ABORTED);
     }
     state.wing_launch_available = false;
@@ -560,6 +565,7 @@ bool control_failsafe_active() {
 
 void control() {
   const bool armed_at_start = flags.arm_state;
+  const float previous_throttle = state.throttle;
   bool motortest_usb = false;
   if (flags.usb_active && motor_test.active) {
     flags.arm_state = 1;
@@ -579,9 +585,13 @@ void control() {
   control_update_arming();
   wing_update_throttle();
   state.throttle = wing_autolaunch_throttle();
+  // Stage 1 centers the sticks before navigation's next 10 ms update. Keep
+  // the applied throttle for that handoff, including navigation's slew seed.
+  if (flags.arm_state && flags.in_air && flags.failsafe && profile.navigation.rth_on_failsafe)
+    state.throttle = previous_throttle;
   wing_launch_reset_pids_if_needed();
   const wing_mode_t wing_mode = wing_active_mode();
-  if (wing_mode == WING_MODE_LOITER)
+  if (wing_mode == WING_MODE_NAV)
     state.throttle = wing_nav_command.throttle;
   const bool launch_stabilized = wing_launch_in_progress();
   if (wing_mode == WING_MODE_MANUAL && !launch_stabilized) {
