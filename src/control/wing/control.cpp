@@ -11,6 +11,7 @@
 #include "control/rates.h"
 #include "core/flash.h"
 #include "core/profile.h"
+#include "core/tasks.h"
 #include "driver/motor.h"
 #include "driver/time.h"
 #include "util/util.h"
@@ -22,7 +23,9 @@ typedef enum {
 } wing_mode_t;
 
 #define WING_AUTOTRIM_CAPTURE_MS 2000
+#define WING_AUTOTRIM_MAX_RATE (20.0f * DEGTORAD)
 #define WING_LAUNCH_IDLE_SPINUP_MS 1500
+#define WING_LAUNCH_GPS_MAX_PITCH (45.0f * DEGTORAD)
 #define WING_FLYING_MIN_SPEED 3.5f
 #define WING_FLYING_MIN_ALTITUDE 5.0f
 #define WING_FLYING_ACCEL_THRESHOLD 0.3f
@@ -40,7 +43,9 @@ static struct {
 
 static struct {
   bool ready = true;
-  uint32_t start_ms;
+  bool steady;
+  uint32_t last_ms;
+  uint32_t capture_ms;
   uint32_t samples;
   struct {
     bool selected;
@@ -76,7 +81,8 @@ static void wing_apply_test_outputs() {
 }
 
 static wing_mode_t wing_active_mode() {
-  if (rx_aux_on(AUX_LEVELMODE)) {
+  // Stage 1 centers the sticks; level the wings rather than hold an attitude.
+  if (state.failsafe_phase == FAILSAFE_PHASE_STAGE1_GUARD || rx_aux_on(AUX_LEVELMODE)) {
     return WING_MODE_LEVEL;
   }
   if (rx_aux_on(AUX_ACROMODE)) {
@@ -85,9 +91,15 @@ static wing_mode_t wing_active_mode() {
   return WING_MODE_MANUAL;
 }
 
+static bool wing_launch_in_progress() {
+  return rx_aux_on(AUX_AUTOLAUNCH) && state.wing_launch_available &&
+         !flags.failsafe && state.wing_launch_state < WING_LAUNCH_DONE;
+}
+
 static void wing_calc_stabilized(wing_mode_t mode, bool launch_stabilized) {
   if (launch_stabilized) {
-    const float target_pitch = profile.wing.autolaunch.pitch_angle * DEGTORAD;
+    // pitch_angle is a climb angle; attitude targets are positive nose-down.
+    const float target_pitch = -profile.wing.autolaunch.pitch_angle * DEGTORAD;
     float pitch = target_pitch;
     if (state.wing_launch_state == WING_LAUNCH_FINISH) {
       const uint32_t elapsed_ms = time_millis() - launch.state_start_ms;
@@ -95,10 +107,8 @@ static void wing_calc_stabilized(wing_mode_t mode, bool launch_stabilized) {
       pitch = target_pitch * (1.0f - t) + state.rx_filtered.pitch * profile.rate.level_max_angle * DEGTORAD * t;
     }
 
-    const float max_angle = profile.rate.level_max_angle * DEGTORAD;
-    const float pitch_input = max_angle > 0.0f ? constrain(pitch / max_angle, -1.0f, 1.0f) : 0.0f;
-    float angle_input[3] = {0.0f, pitch_input, 0.0f};
-    state.angle_error = input_stick_vector(angle_input);
+    // The launch angle is independent of the pilot's level-mode limit.
+    state.angle_error = input_angle_vector(0.0f, pitch);
     state.setpoint.roll = angle_pid(0);
     state.setpoint.pitch = angle_pid(1);
     state.setpoint.yaw = 0.0f;
@@ -159,7 +169,21 @@ static void wing_cancel_autotrim() {
   state.wing_autotrim_state = WING_AUTOTRIM_IDLE;
 }
 
-static void wing_update_autotrim() {
+static bool wing_autotrim_steady() {
+  // Trim is the command that holds settled flight: not on the ground, during
+  // autolaunch or while the airframe is still rotating.
+  if (!flags.in_air || wing_launch_in_progress()) {
+    return false;
+  }
+  if (state.gps_lock && state.gps_speed < WING_FLYING_MIN_SPEED) {
+    return false;
+  }
+  return fabsf(state.gyro.roll) < WING_AUTOTRIM_MAX_RATE &&
+         fabsf(state.gyro.pitch) < WING_AUTOTRIM_MAX_RATE &&
+         fabsf(state.gyro.yaw) < WING_AUTOTRIM_MAX_RATE;
+}
+
+static void wing_update_autotrim(bool armed_at_start) {
   if (!rx_aux_on(AUX_AUTOTRIM)) {
     wing_cancel_autotrim();
     autotrim.ready = true;
@@ -171,8 +195,12 @@ static void wing_update_autotrim() {
     return;
   }
   if (state.wing_autotrim_state == WING_AUTOTRIM_SAVE_PENDING) {
-    if (!flags.arm_state) {
+    // Flight holds profile_mutex only for passes that start disarmed. The save
+    // blocks with interrupts masked, so wait while GPS shows a gliding wing.
+    const bool moving = state.gps_lock && state.gps_speed >= WING_FLYING_MIN_SPEED;
+    if (!flags.arm_state && !armed_at_start && !moving) {
       flash_save();
+      flight_reset_runtime();
       state.wing_autotrim_state = WING_AUTOTRIM_SAVED;
     }
     return;
@@ -183,10 +211,10 @@ static void wing_update_autotrim() {
     }
     return;
   }
-  const uint32_t now_ms = time_millis();
   if (autotrim.ready) {
     autotrim.ready = false;
-    autotrim.start_ms = now_ms;
+    autotrim.steady = false;
+    autotrim.capture_ms = 0;
     autotrim.samples = 0;
     bool has_surface = false;
     for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
@@ -204,6 +232,18 @@ static void wing_update_autotrim() {
     return;
   }
 
+  // Capture time only accumulates across consecutive steady passes.
+  const uint32_t now_ms = time_millis();
+  const bool steady = wing_autotrim_steady();
+  if (steady && autotrim.steady) {
+    autotrim.capture_ms += now_ms - autotrim.last_ms;
+  }
+  autotrim.steady = steady;
+  autotrim.last_ms = now_ms;
+  if (!steady) {
+    return;
+  }
+
   // Sample each surface once, after mixing, inversion, trim and travel limits.
   // These are normalized commanded positions, not measured servo feedback.
   for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
@@ -212,7 +252,7 @@ static void wing_update_autotrim() {
     }
   }
   autotrim.samples++;
-  if (now_ms - autotrim.start_ms >= WING_AUTOTRIM_CAPTURE_MS) {
+  if (autotrim.capture_ms >= WING_AUTOTRIM_CAPTURE_MS) {
     for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
       if (autotrim.outputs[i].selected) {
         profile.outputs[i].trim = constrain((int32_t)lrintf(1000.0f * autotrim.outputs[i].sum / autotrim.samples), -500, 500);
@@ -265,7 +305,8 @@ static void wing_launch_update_flying_detected(uint32_t now_ms) {
     return;
   }
 
-  const bool accel_condition = state.accel_raw.pitch > (WING_FLYING_ACCEL_THRESHOLD * ACC_1G);
+  // accel_raw.pitch reads positive nose-down at rest, so forward acceleration is negative.
+  const bool accel_condition = -state.accel_raw.pitch > (WING_FLYING_ACCEL_THRESHOLD * ACC_1G);
   if (!accel_condition) {
     launch.flying_detect_start_ms = 0;
     return;
@@ -297,8 +338,11 @@ static float wing_launch_ramp(float start, float end, uint32_t elapsed_ms, uint1
 }
 
 static bool wing_launch_detected() {
-  const bool accel_launched = state.accel_raw.pitch > profile.wing.autolaunch.accel_threshold * ACC_1G;
-  const bool gps_launched = state.gps_lock && state.gps_speed > profile.wing.autolaunch.velocity_threshold && state.accel_raw.pitch > 0.0f;
+  // A forward throw reads negative on accel_raw.pitch (positive nose-down at rest).
+  const bool accel_launched = -state.accel_raw.pitch > profile.wing.autolaunch.accel_threshold * ACC_1G;
+  // Attitude is positive nose-down: accept level to 45 degrees nose-up.
+  const bool launch_attitude = state.attitude.pitch <= 0.0f && state.attitude.pitch >= -WING_LAUNCH_GPS_MAX_PITCH;
+  const bool gps_launched = state.gps_lock && state.gps_speed > profile.wing.autolaunch.velocity_threshold && launch_attitude;
 
   return accel_launched || gps_launched;
 }
@@ -314,8 +358,9 @@ static float wing_autolaunch_throttle() {
   const bool launch_aux_on = rx_aux_on(AUX_AUTOLAUNCH);
   if (!flags.arm_state) {
     state.wing_launch_available = launch_aux_on;
-  } else if (flags.failsafe) {
-    // A recovered link must not restart launch detection while still armed.
+  } else if (flags.failsafe || !launch_aux_on) {
+    // Launch runs at most once per arm: neither a recovered link nor a
+    // re-enabled switch may restart it in flight.
     state.wing_launch_available = false;
   }
 
@@ -456,6 +501,7 @@ bool control_failsafe_active() {
 }
 
 void control() {
+  const bool armed_at_start = flags.arm_state;
   bool motortest_usb = false;
   if (flags.usb_active && motor_test.active) {
     flags.arm_state = 1;
@@ -477,8 +523,7 @@ void control() {
   state.throttle = wing_autolaunch_throttle();
   wing_launch_reset_pids_if_needed();
   const wing_mode_t wing_mode = wing_active_mode();
-  const bool launch_stabilized = rx_aux_on(AUX_AUTOLAUNCH) && state.wing_launch_available &&
-                                 !flags.failsafe && state.wing_launch_state < WING_LAUNCH_DONE;
+  const bool launch_stabilized = wing_launch_in_progress();
   if (wing_mode == WING_MODE_MANUAL && !launch_stabilized) {
     pid_reset_i();
     state.mixer_source[OUTPUT_SOURCE_THROTTLE] = state.throttle;
@@ -513,5 +558,5 @@ void control() {
         state.mixer_source[OUTPUT_SOURCE_YAW]);
   }
   // Update centers after writing this loop's outputs, as in INAV's switched trim.
-  wing_update_autotrim();
+  wing_update_autotrim(armed_at_start);
 }
