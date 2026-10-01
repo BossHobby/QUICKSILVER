@@ -5,10 +5,12 @@
 #include "control/imu.h"
 
 #include "control/control.h"
+#include "control/navigation.h"
 #include "control/pid.h"
 #include "core/profile.h"
 #include "driver/motor.h"
 #include "driver/time.h"
+#include "io/gps.h"
 #include "mock_outputs.h"
 #include "util/util.h"
 
@@ -365,6 +367,28 @@ static void test_wing_default_rate_response_across_profiles_and_loop_times() {
   }
 }
 
+static void test_wing_gps_home_latches_on_arm() {
+  prepare(0);
+  nav_init();
+  profile.serial.gps = SERIAL_PORT1;
+  state.gps_lock = true;
+  state.gps_sats = GPS_MIN_SATS_FOR_LOCK;
+  state.gps_horizontal_accuracy = 1.0f;
+  state.gps_coord = {.lon = 1142000000, .lat = 223000000};
+  time_test_advance_us(10000);
+  state.gps_last_update_ms = time_millis();
+  nav_update(); // First armed pass latches home.
+  TEST_ASSERT_EQUAL_INT32(223000000, state.gps_home.lat);
+
+  state.gps_coord.lat += 899; // About 10 m north.
+  time_test_advance_us(10000);
+  state.gps_last_update_ms = time_millis();
+  nav_update();
+  TEST_ASSERT_EQUAL_INT32(223000000, state.gps_home.lat);
+  TEST_ASSERT_FLOAT_WITHIN(0.5f, 10.0f, state.home_distance);
+  TEST_ASSERT_FLOAT_WITHIN(1.0f, 180.0f, state.home_bearing);
+}
+
 static void test_wing_default_level_response_has_no_derivative_kick_or_voltage_boost() {
   prepare(1U << AUX_LEVELMODE);
   state.GEstG = {{0.5f, 0, 0.8660254f}}; // 30-degree bank, zero angular rate.
@@ -396,5 +420,6 @@ void run_wing_safety_tests() {
   RUN_TEST(test_wing_launch_zero_level_limit_and_zero_pitch_stays_finite);
   RUN_TEST(test_wing_imu_tracks_scripted_bank);
   RUN_TEST(test_wing_default_rate_response_across_profiles_and_loop_times);
+  RUN_TEST(test_wing_gps_home_latches_on_arm);
   RUN_TEST(test_wing_default_level_response_has_no_derivative_kick_or_voltage_boost);
 }
