@@ -22,8 +22,9 @@ static struct {
 } nav;
 
 static struct {
-  float filtered; // Absolute altitude, meters.
-  float launch;   // Filtered absolute altitude latched on arming, meters.
+  float filtered;  // Absolute altitude, meters.
+  float launch;    // Filtered absolute altitude latched on the first sample and on arming, meters.
+  bool referenced; // launch holds a reference; until then altitude stays zero.
 } baro;
 
 // Position sanity survives arm cycles. Home follows the aircraft while
@@ -64,14 +65,15 @@ static void nav_update_altitude(bool arming) {
   if (updated)
     nav_filter_altitude(sample.altitude, sample.timestamp_ms);
 
-  if (arming)
+  // Disarmed altitude is relative to the first sample (or the last launch),
+  // so the bench shows baro movement; arming re-zeroes it.
+  const bool first = updated && state.baro_valid && !baro.referenced;
+  if (arming || first) {
     baro.launch = baro.filtered;
-  if (!flags.arm_state) {
-    state.altitude = 0;
-    baro.launch = 0;
-  } else if (updated && state.baro_valid) {
-    state.altitude = baro.filtered - baro.launch;
+    baro.referenced = true;
   }
+  if (baro.referenced && (arming || (updated && state.baro_valid)))
+    state.altitude = baro.filtered - baro.launch;
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 2, (int16_t)constrain(state.altitude * 10.0f, -32768.0f, 32767.0f));
 }
 
