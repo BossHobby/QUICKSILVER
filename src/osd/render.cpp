@@ -786,10 +786,10 @@ static void osd_display_regular() {
       osd_start_el(el);
       osd_write_char(ICON_ALTITUDE);
       if (state.altitude > 1000.f) {
-        osd_write_float(state.altitude / 1000.f, 3, 1);
+        osd_write_float(state.altitude / 1000.f, 5, 1);
         osd_write_char(ICON_KILOMETERS);
       } else {
-        osd_write_float(state.altitude, 3, 1);
+        osd_write_float(state.altitude, 5, 1);
         osd_write_char(ICON_METERS);
       }
       break;
