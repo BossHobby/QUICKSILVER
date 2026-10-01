@@ -69,7 +69,12 @@ static void output_stop_slot(uint8_t index, const profile_output_t *output) {
   }
 
   if (output->protocol == OUTPUT_PROTOCOL_PWM) {
-    servo_set(output->target_output, output_pwm_stop_value(index));
+    float value = output_pwm_stop_value(index);
+    if (!output_has_mixer_source(index, OUTPUT_SOURCE_THROTTLE)) {
+      // Surfaces stop at their trimmed center within the configured travel.
+      value = output_apply_config(output, value);
+    }
+    servo_set(output->target_output, value);
   } else {
     motor_set(output->target_output, MOTOR_OFF);
   }

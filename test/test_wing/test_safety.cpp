@@ -107,9 +107,14 @@ static void prepare_launch() {
 static void assert_launch_stabilized() {
   TEST_ASSERT_TRUE(state.setpoint.roll < 0);
   TEST_ASSERT_TRUE(state.pidoutput.roll < 0);
-  TEST_ASSERT_TRUE(state.setpoint.pitch > 0);
-  TEST_ASSERT_TRUE(state.pidoutput.pitch > 0);
+  // Positive pitch is nose-down: a level wing pitches up towards the climb angle.
+  TEST_ASSERT_TRUE(state.setpoint.pitch < 0);
+  TEST_ASSERT_TRUE(state.pidoutput.pitch < 0);
 }
+
+// Specific force along accel_raw.pitch, which reads positive nose-down at rest.
+#define FORWARD_THROW (-2.0f)
+#define BACKWARD_JERK (2.0f)
 
 static void test_wing_launch_stabilizes_while_waiting_and_releases_on_switch_off() {
   prepare(1U << AUX_AUTOLAUNCH);
@@ -139,7 +144,7 @@ static void test_wing_launch_stabilizes_while_waiting_and_releases_on_switch_off
 static void launch_to_active() {
   prepare_launch();
   state.GEstG = {{0.5f, 0, 0.8660254f}};
-  state.accel_raw.pitch = 2.0f;
+  state.accel_raw.pitch = FORWARD_THROW;
   tick(profile.wing.autolaunch.detect_time_ms + 1);
   TEST_ASSERT_EQUAL(WING_LAUNCH_DETECTED, state.wing_launch_state);
   assert_launch_stabilized();
@@ -154,15 +159,23 @@ static void launch_to_active() {
   assert_launch_stabilized();
   tick(profile.wing.autolaunch.spinup_ms);
   TEST_ASSERT_EQUAL(WING_LAUNCH_ACTIVE, state.wing_launch_state);
-  TEST_ASSERT_TRUE(state.setpoint.pitch > 0);
-  TEST_ASSERT_TRUE(state.pidoutput.pitch > 0);
+  TEST_ASSERT_TRUE(state.setpoint.pitch < 0);
+  TEST_ASSERT_TRUE(state.pidoutput.pitch < 0);
 }
 
 static void test_wing_launch_rejects_short_acceleration_pulse() {
   prepare_launch();
-  state.accel_raw.pitch = 2.0f;
+  state.accel_raw.pitch = FORWARD_THROW;
   tick(profile.wing.autolaunch.detect_time_ms - 1);
   state.accel_raw.pitch = 0;
+  tick(1000);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_WAIT, state.wing_launch_state);
+  TEST_ASSERT_EQUAL_FLOAT(MOTOR_OFF, state.output[0]);
+}
+
+static void test_wing_launch_ignores_backward_jerk() {
+  prepare_launch();
+  state.accel_raw.pitch = BACKWARD_JERK; // Wind-up or catching the airframe.
   tick(1000);
   TEST_ASSERT_EQUAL(WING_LAUNCH_WAIT, state.wing_launch_state);
   TEST_ASSERT_EQUAL_FLOAT(MOTOR_OFF, state.output[0]);
@@ -221,7 +234,7 @@ static void test_wing_launch_stage1_recovery_requires_disarm_before_relaunch() {
 
   flags.failsafe_signal_lost = 0;
   state.rx_filtered.throttle = 0.5f;
-  state.accel_raw.pitch = 2.0f; // Even a fresh launch trigger must be ignored.
+  state.accel_raw.pitch = FORWARD_THROW; // Even a fresh launch trigger must be ignored.
   tick(2000);
   TEST_ASSERT_TRUE(flags.arm_state);
   TEST_ASSERT_FALSE(flags.failsafe);
@@ -243,6 +256,60 @@ static void test_wing_launch_stage1_recovery_requires_disarm_before_relaunch() {
   state.rx_filtered.throttle = 0.5f;
   tick();
   TEST_ASSERT_EQUAL(WING_LAUNCH_WAIT, state.wing_launch_state);
+}
+
+static void test_wing_launch_switch_reenabled_in_flight_does_not_restart() {
+  prepare_launch();
+  state.aux_active &= ~(1U << AUX_AUTOLAUNCH);
+  tick();
+  TEST_ASSERT_FALSE(state.wing_launch_available);
+  state.aux_active |= 1U << AUX_AUTOLAUNCH;
+  state.GEstG = {{0.5f, 0, 0.8660254f}};
+  tick(2000);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_IDLE, state.wing_launch_state);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, (0.5f - 0.05f) * 1.0526316f, state.throttle);
+  TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[1]);
+  TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[2]);
+}
+
+static void test_wing_launch_gps_requires_launch_attitude() {
+  prepare_launch();
+  state.gps_lock = 1;
+  state.gps_speed = profile.wing.autolaunch.velocity_threshold + 1.0f;
+  state.attitude.pitch = 60.0f * DEGTORAD; // Nose down.
+  tick(100);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_WAIT, state.wing_launch_state);
+  state.attitude.pitch = -60.0f * DEGTORAD; // Steeply nose up.
+  tick(100);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_WAIT, state.wing_launch_state);
+  state.attitude.pitch = -15.0f * DEGTORAD;
+  tick(profile.wing.autolaunch.detect_time_ms + 1);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_DETECTED, state.wing_launch_state);
+}
+
+static void test_wing_launch_pitch_exceeds_level_limit() {
+  prepare_launch();
+  profile.rate.level_max_angle = 10.0f;
+  profile.wing.autolaunch.pitch_angle = 20.0f;
+  const float pitch = -15.0f * DEGTORAD; // Nose-up between the two limits.
+  state.GEstG = {{0, sinf(pitch), cosf(pitch)}};
+  tick();
+  TEST_ASSERT_TRUE(state.setpoint.pitch < 0); // Keep climbing towards 20 degrees.
+}
+
+static void test_wing_failsafe_stage1_levels_manual_mode() {
+  prepare(0);
+  state.rx_filtered.throttle = 0.5f;
+  tick();
+  state.GEstG = {{0.5f, 0, 0.8660254f}};
+  state.last_frame_time_us = time_micros();
+  flags.failsafe_signal_lost = 1;
+  tick(FAILSAFE_HOLD_TIME_US / 1000 + 1);
+  TEST_ASSERT_EQUAL(FAILSAFE_PHASE_STAGE1_GUARD, state.failsafe_phase);
+  TEST_ASSERT_EQUAL_STRING("FS LEVEL", control_flight_mode_name());
+  TEST_ASSERT_TRUE(state.setpoint.roll < 0);
+  TEST_ASSERT_TRUE(state.pidoutput.roll < 0);
+  TEST_ASSERT_EQUAL_FLOAT(MOTOR_OFF, state.output[0]);
 }
 
 static void test_wing_launch_zero_level_limit_and_zero_pitch_stays_finite() {
@@ -317,10 +384,15 @@ void run_wing_safety_tests() {
   RUN_TEST(test_wing_angle_stick_commands_and_manual_handoff);
   RUN_TEST(test_wing_launch_stabilizes_while_waiting_and_releases_on_switch_off);
   RUN_TEST(test_wing_launch_rejects_short_acceleration_pulse);
+  RUN_TEST(test_wing_launch_ignores_backward_jerk);
   RUN_TEST(test_wing_launch_delay_ramp_and_timed_handoff);
   RUN_TEST(test_wing_launch_failsafe_stops_motor_and_disarms);
   RUN_TEST(test_wing_launch_abort_returns_surfaces_to_manual);
   RUN_TEST(test_wing_launch_stage1_recovery_requires_disarm_before_relaunch);
+  RUN_TEST(test_wing_launch_switch_reenabled_in_flight_does_not_restart);
+  RUN_TEST(test_wing_launch_gps_requires_launch_attitude);
+  RUN_TEST(test_wing_launch_pitch_exceeds_level_limit);
+  RUN_TEST(test_wing_failsafe_stage1_levels_manual_mode);
   RUN_TEST(test_wing_launch_zero_level_limit_and_zero_pitch_stays_finite);
   RUN_TEST(test_wing_imu_tracks_scripted_bank);
   RUN_TEST(test_wing_default_rate_response_across_profiles_and_loop_times);
