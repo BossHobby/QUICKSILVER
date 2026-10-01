@@ -50,7 +50,11 @@ void test_baro_altitude_reference_without_gps() {
   flags.arm_state = false;
   time_test_advance_us(10000);
   nav_update();
-  TEST_ASSERT_EQUAL_FLOAT(0, state.altitude);
+  TEST_ASSERT_EQUAL_FLOAT(20, state.altitude); // still relative to the last launch
+  baro_test_sample(110, 1010);
+  time_test_set_us(1020000);
+  nav_update();
+  TEST_ASSERT_LESS_THAN_FLOAT(20, state.altitude); // disarmed altitude follows the baro
   flags.arm_state = true;
   time_test_advance_us(10000);
   nav_update();
@@ -58,7 +62,7 @@ void test_baro_altitude_reference_without_gps() {
   baro_test_sample(123, 2000);
   time_test_set_us(2000000);
   nav_update();
-  TEST_ASSERT_EQUAL_FLOAT(3, state.altitude);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 123 - (120 - 10 / 11.0f), state.altitude);
   profile.serial.gps = saved_gps;
   flags.arm_state = saved_arm;
 }
