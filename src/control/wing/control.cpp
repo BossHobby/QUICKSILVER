@@ -14,7 +14,15 @@
 #include "core/tasks.h"
 #include "driver/motor.h"
 #include "driver/time.h"
+#include "io/blackbox.h"
 #include "util/util.h"
+
+enum {
+  WING_DEBUG_MODE,
+  WING_DEBUG_LAUNCH_STATE,
+  WING_DEBUG_AUTOTRIM_STATE,
+  WING_DEBUG_FAILSAFE_PHASE,
+};
 
 typedef enum {
   WING_MODE_MANUAL,
@@ -559,4 +567,9 @@ void control() {
   }
   // Update centers after writing this loop's outputs, as in INAV's switched trim.
   wing_update_autotrim(armed_at_start);
+
+  blackbox_set_debug(BBOX_DEBUG_WING, WING_DEBUG_MODE, wing_mode);
+  blackbox_set_debug(BBOX_DEBUG_WING, WING_DEBUG_LAUNCH_STATE, state.wing_launch_state);
+  blackbox_set_debug(BBOX_DEBUG_WING, WING_DEBUG_AUTOTRIM_STATE, state.wing_autotrim_state);
+  blackbox_set_debug(BBOX_DEBUG_WING, WING_DEBUG_FAILSAFE_PHASE, state.failsafe_phase);
 }
