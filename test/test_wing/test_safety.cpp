@@ -154,7 +154,9 @@ static void launch_to_active() {
   TEST_ASSERT_EQUAL(WING_LAUNCH_MOTOR_DELAY, state.wing_launch_state);
   assert_launch_stabilized();
   state.accel_raw.pitch = 0;
+  tick(); // Release starts the motor delay.
   tick(profile.wing.autolaunch.motor_delay_ms - 1);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_MOTOR_DELAY, state.wing_launch_state);
   TEST_ASSERT_EQUAL_FLOAT(MOTOR_OFF, state.output[0]);
   tick();
   TEST_ASSERT_EQUAL(WING_LAUNCH_SPINUP, state.wing_launch_state);
@@ -163,6 +165,30 @@ static void launch_to_active() {
   TEST_ASSERT_EQUAL(WING_LAUNCH_ACTIVE, state.wing_launch_state);
   TEST_ASSERT_TRUE(state.setpoint.pitch < 0);
   TEST_ASSERT_TRUE(state.pidoutput.pitch < 0);
+}
+
+static void test_wing_launch_motor_delay_starts_at_release() {
+  prepare_launch();
+  state.accel_raw.pitch = FORWARD_THROW;
+  tick(profile.wing.autolaunch.detect_time_ms + 2);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_MOTOR_DELAY, state.wing_launch_state);
+  // Still in the hand: a long throw must not spend the delay.
+  tick(300);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_MOTOR_DELAY, state.wing_launch_state);
+  state.accel_raw.pitch = 0;
+  tick(profile.wing.autolaunch.motor_delay_ms);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_MOTOR_DELAY, state.wing_launch_state);
+  tick();
+  TEST_ASSERT_EQUAL(WING_LAUNCH_SPINUP, state.wing_launch_state);
+}
+
+static void test_wing_launch_sustained_acceleration_counts_as_released() {
+  prepare_launch();
+  state.accel_raw.pitch = FORWARD_THROW;
+  tick(profile.wing.autolaunch.detect_time_ms + 2);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_MOTOR_DELAY, state.wing_launch_state);
+  tick(500 + profile.wing.autolaunch.motor_delay_ms);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_SPINUP, state.wing_launch_state);
 }
 
 static void test_wing_launch_rejects_short_acceleration_pulse() {
@@ -197,7 +223,7 @@ static void test_wing_launch_delay_ramp_and_timed_handoff() {
   TEST_ASSERT_FALSE(state.wing_launch_available);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, (0.5f - 0.05f) * 1.0526316f, state.throttle);
   tick(1000);
-  TEST_ASSERT_EQUAL(WING_LAUNCH_IDLE, state.wing_launch_state);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_DONE, state.wing_launch_state);
   TEST_ASSERT_FALSE(state.wing_launch_available);
 }
 
@@ -231,7 +257,7 @@ static void test_wing_launch_stage1_recovery_requires_disarm_before_relaunch() {
   tick(1);
   TEST_ASSERT_EQUAL(FAILSAFE_PHASE_STAGE1_GUARD, state.failsafe_phase);
   TEST_ASSERT_TRUE(flags.arm_state);
-  TEST_ASSERT_EQUAL(WING_LAUNCH_IDLE, state.wing_launch_state);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_ABORTED, state.wing_launch_state);
   TEST_ASSERT_FALSE(state.wing_launch_available);
 
   flags.failsafe_signal_lost = 0;
@@ -241,7 +267,7 @@ static void test_wing_launch_stage1_recovery_requires_disarm_before_relaunch() {
   TEST_ASSERT_TRUE(flags.arm_state);
   TEST_ASSERT_FALSE(flags.failsafe);
   TEST_ASSERT_FALSE(state.wing_launch_available);
-  TEST_ASSERT_EQUAL(WING_LAUNCH_IDLE, state.wing_launch_state);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_ABORTED, state.wing_launch_state);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, (0.5f - 0.05f) * 1.0526316f, state.throttle);
   TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[1]);
   TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[2]);
@@ -268,7 +294,7 @@ static void test_wing_launch_switch_reenabled_in_flight_does_not_restart() {
   state.aux_active |= 1U << AUX_AUTOLAUNCH;
   state.GEstG = {{0.5f, 0, 0.8660254f}};
   tick(2000);
-  TEST_ASSERT_EQUAL(WING_LAUNCH_IDLE, state.wing_launch_state);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_ABORTED, state.wing_launch_state);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, (0.5f - 0.05f) * 1.0526316f, state.throttle);
   TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[1]);
   TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[2]);
@@ -407,6 +433,8 @@ void run_wing_safety_tests() {
   RUN_TEST(test_wing_angle_corrects_roll_and_pitch_in_both_directions);
   RUN_TEST(test_wing_angle_stick_commands_and_manual_handoff);
   RUN_TEST(test_wing_launch_stabilizes_while_waiting_and_releases_on_switch_off);
+  RUN_TEST(test_wing_launch_motor_delay_starts_at_release);
+  RUN_TEST(test_wing_launch_sustained_acceleration_counts_as_released);
   RUN_TEST(test_wing_launch_rejects_short_acceleration_pulse);
   RUN_TEST(test_wing_launch_ignores_backward_jerk);
   RUN_TEST(test_wing_launch_delay_ramp_and_timed_handoff);
