@@ -34,6 +34,7 @@ typedef enum {
 #define WING_AUTOTRIM_MAX_RATE (20.0f * DEGTORAD)
 #define WING_LAUNCH_IDLE_SPINUP_MS 1500
 #define WING_LAUNCH_GPS_MAX_PITCH (45.0f * DEGTORAD)
+#define WING_LAUNCH_MAX_THROW_MS 500
 #define WING_FLYING_MIN_SPEED 3.5f
 #define WING_FLYING_MIN_ALTITUDE 5.0f
 #define WING_FLYING_ACCEL_THRESHOLD 0.3f
@@ -42,6 +43,8 @@ typedef enum {
 static struct {
   uint32_t state_start_ms;
   uint32_t detect_start_ms;
+  uint32_t detected_ms;
+  uint32_t release_ms; // 0 while the throw is still accelerating.
   float throttle_start;
   float takeoff_altitude;
   bool takeoff_altitude_valid;
@@ -281,14 +284,18 @@ static void wing_launch_set_state(wing_launch_state_t next_state) {
     launch.flying_detected = false;
     launch.flying_detect_start_ms = 0;
   }
+  if (next_state == WING_LAUNCH_DETECTED) {
+    launch.detected_ms = launch.state_start_ms;
+    launch.release_ms = 0;
+  }
   if (next_state == WING_LAUNCH_MOTOR_DELAY || next_state == WING_LAUNCH_ACTIVE) {
     launch.takeoff_altitude = state.gps_altitude;
     launch.takeoff_altitude_valid = state.gps_lock;
   }
 }
 
-static bool wing_launch_abort_allowed(uint32_t elapsed_ms) {
-  return elapsed_ms >= profile.wing.autolaunch.min_time_ms && wing_launch_sticks_moved();
+static bool wing_launch_abort_allowed(uint32_t now_ms) {
+  return now_ms - launch.detected_ms >= profile.wing.autolaunch.min_time_ms && wing_launch_sticks_moved();
 }
 
 static bool wing_launch_is_flying() {
@@ -296,11 +303,12 @@ static bool wing_launch_is_flying() {
     return true;
   }
 
+  // GPS speed is ground speed and wind shifts it either way, so climb at
+  // launch throttle is the GPS evidence of flight.
   const bool throttle_condition = state.throttle >= profile.wing.autolaunch.throttle;
-  const bool velocity_condition = state.gps_speed > WING_FLYING_MIN_SPEED;
   const bool altitude_condition = launch.takeoff_altitude_valid && fabsf(state.gps_altitude - launch.takeoff_altitude) > WING_FLYING_MIN_ALTITUDE;
 
-  return state.gps_lock && throttle_condition && velocity_condition && altitude_condition;
+  return state.gps_lock && throttle_condition && altitude_condition;
 }
 
 static void wing_launch_update_flying_detected(uint32_t now_ms) {
@@ -345,14 +353,18 @@ static float wing_launch_ramp(float start, float end, uint32_t elapsed_ms, uint1
   return start + (end - start) * t;
 }
 
-static bool wing_launch_detected() {
+static bool wing_launch_throw_accelerating() {
   // A forward throw reads negative on accel_raw.pitch (positive nose-down at rest).
-  const bool accel_launched = -state.accel_raw.pitch > profile.wing.autolaunch.accel_threshold * ACC_1G;
+  return -state.accel_raw.pitch > profile.wing.autolaunch.accel_threshold * ACC_1G;
+}
+
+static bool wing_launch_detected() {
   // Attitude is positive nose-down: accept level to 45 degrees nose-up.
   const bool launch_attitude = state.attitude.pitch <= 0.0f && state.attitude.pitch >= -WING_LAUNCH_GPS_MAX_PITCH;
+  // A held airframe has no ground speed regardless of wind.
   const bool gps_launched = state.gps_lock && state.gps_speed > profile.wing.autolaunch.velocity_threshold && launch_attitude;
 
-  return accel_launched || gps_launched;
+  return wing_launch_throw_accelerating() || gps_launched;
 }
 
 static bool wing_launch_max_altitude_reached() {
@@ -366,18 +378,23 @@ static float wing_autolaunch_throttle() {
   const bool launch_aux_on = rx_aux_on(AUX_AUTOLAUNCH);
   if (!flags.arm_state) {
     state.wing_launch_available = launch_aux_on;
-  } else if (flags.failsafe || !launch_aux_on) {
-    // Launch runs at most once per arm: neither a recovered link nor a
-    // re-enabled switch may restart it in flight.
-    state.wing_launch_available = false;
-  }
-
-  if (!launch_aux_on || !flags.arm_state || flags.failsafe) {
     wing_launch_set_state(WING_LAUNCH_IDLE);
     return state.throttle;
   }
+  // Launch runs at most once per arm: DONE or ABORTED holds until disarm, so
+  // neither a recovered link nor a re-enabled switch may restart it in flight.
+  if (state.wing_launch_state >= WING_LAUNCH_DONE) {
+    state.wing_launch_available = false;
+    return state.throttle;
+  }
+  if (flags.failsafe || !launch_aux_on) {
+    if (state.wing_launch_available) {
+      wing_launch_set_state(WING_LAUNCH_ABORTED);
+    }
+    state.wing_launch_available = false;
+    return state.throttle;
+  }
   if (!state.wing_launch_available) {
-    wing_launch_set_state(WING_LAUNCH_IDLE);
     return state.throttle;
   }
 
@@ -438,18 +455,24 @@ static float wing_autolaunch_throttle() {
     return profile.wing.autolaunch.idle_throttle;
 
   case WING_LAUNCH_MOTOR_DELAY:
-    if (wing_launch_abort_allowed(elapsed_ms)) {
+    if (wing_launch_abort_allowed(now_ms)) {
       wing_launch_set_state(WING_LAUNCH_ABORTED);
       return 0.0f;
     }
-    if (elapsed_ms >= profile.wing.autolaunch.motor_delay_ms) {
+    // The delay clears the throwing hand, so it starts at release: when the
+    // throw stops accelerating, or after a capped throw duration.
+    if (launch.release_ms == 0 &&
+        (!wing_launch_throw_accelerating() || now_ms - launch.detected_ms >= WING_LAUNCH_MAX_THROW_MS)) {
+      launch.release_ms = now_ms;
+    }
+    if (launch.release_ms != 0 && now_ms - launch.release_ms >= profile.wing.autolaunch.motor_delay_ms) {
       launch.throttle_start = profile.wing.autolaunch.idle_throttle;
       wing_launch_set_state(WING_LAUNCH_SPINUP);
     }
     return profile.wing.autolaunch.idle_throttle;
 
   case WING_LAUNCH_SPINUP:
-    if (wing_launch_abort_allowed(profile.wing.autolaunch.motor_delay_ms + elapsed_ms)) {
+    if (wing_launch_abort_allowed(now_ms)) {
       wing_launch_set_state(WING_LAUNCH_ABORTED);
       return 0.0f;
     }
@@ -460,7 +483,7 @@ static float wing_autolaunch_throttle() {
     return wing_launch_ramp(launch.throttle_start, profile.wing.autolaunch.throttle, elapsed_ms, profile.wing.autolaunch.spinup_ms);
 
   case WING_LAUNCH_ACTIVE:
-    if (wing_launch_abort_allowed(profile.wing.autolaunch.motor_delay_ms + profile.wing.autolaunch.spinup_ms + elapsed_ms)) {
+    if (wing_launch_abort_allowed(now_ms)) {
       wing_launch_set_state(WING_LAUNCH_ABORTED);
       return state.throttle;
     }
@@ -480,7 +503,6 @@ static float wing_autolaunch_throttle() {
 
   case WING_LAUNCH_DONE:
   case WING_LAUNCH_ABORTED:
-    state.wing_launch_available = false;
     return state.throttle;
   }
   return state.throttle;
