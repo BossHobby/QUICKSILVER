@@ -12,10 +12,7 @@
 #define pow5(x) ((x) * (x) * (x) * (x) * (x))
 #define BF_RC_RATE_INCREMENTAL 14.54f
 
-vec3_t input_stick_vector(float rx_input[]) {
-  const float pitch = rx_input[1] * profile.rate.level_max_angle * DEGTORAD;
-  const float roll = rx_input[0] * profile.rate.level_max_angle * DEGTORAD;
-
+vec3_t input_angle_vector(float roll, float pitch) {
   state.stick_vector.roll = fastsin(roll);
   state.stick_vector.pitch = fastsin(pitch);
   state.stick_vector.yaw = fastcos(roll) * fastcos(pitch);
@@ -35,6 +32,11 @@ vec3_t input_stick_vector(float rx_input[]) {
       .pitch = constrain(-((state.GEstG.pitch * state.stick_vector.yaw) - (state.GEstG.yaw * state.stick_vector.pitch)), -1.0f, 1.0f),
       .yaw = constrain(((state.GEstG.roll * state.stick_vector.pitch) - (state.GEstG.pitch * state.stick_vector.roll)), -1.0f, 1.0f),
   };
+}
+
+vec3_t input_stick_vector(float rx_input[]) {
+  const float max_angle = profile.rate.level_max_angle * DEGTORAD;
+  return input_angle_vector(rx_input[0] * max_angle, rx_input[1] * max_angle);
 }
 
 static vec3_t input_get_expo() {
