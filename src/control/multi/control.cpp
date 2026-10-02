@@ -19,10 +19,26 @@
 #define IDLE_THR .001f // just enough to override motor stop at 0 throttle
 #endif
 
+// Blend from automatic to pilot throttle so a low stick cannot drop the craft
+// the instant control is handed back.
+#define THROTTLE_HANDBACK_TIME_US 500000U
+
+static struct {
+  bool automatic; // previous throttle came from navigation
+  bool active;
+  float from;
+  uint32_t start_us;
+} handback;
+
+static bool control_navigation_active(void) {
+  return flags.controls_override && (state.rth_active || state.failsafe_hold);
+}
+
 static void control_flight_mode() {
   const vec3_t rates = input_rates_calc();
 
-  if (flags.controls_override && state.rth_active) {
+  if (control_navigation_active()) {
+    // Navigation always flies self-level, whatever the flight mode switches say.
     state.angle_error = input_stick_vector(state.rx_filtered.axis);
     const float yaw_rate = state.rth_yaw_rate;
 
@@ -166,14 +182,7 @@ motor_test_t motor_test = {
     .value = {MOTOR_OFF, MOTOR_OFF, MOTOR_OFF, MOTOR_OFF},
 };
 
-static float control_throttle_input(void) {
-  if (flags.controls_override && state.rth_active) {
-    return state.rx_override.throttle;
-  }
-  if (state.failsafe_phase == FAILSAFE_PHASE_STAGE1_GUARD) {
-    // Keep the PID/mixer path running while waiting for RX recovery or RTH.
-    return IDLE_THR;
-  }
+static float control_pilot_throttle(void) {
   if (!rx_aux_on(AUX_IDLE_UP)) {
     if (state.rx_filtered.throttle < 0.05f) {
       return 0;
@@ -184,6 +193,37 @@ static float control_throttle_input(void) {
     return state.rx_filtered.throttle;
   }
   return (float)IDLE_THR + input_throttle_calc(state.rx_filtered.throttle) * (1.0f - (float)IDLE_THR);
+}
+
+static float control_throttle_input(void) {
+  if (control_navigation_active()) {
+    handback.automatic = true;
+    handback.active = false;
+    handback.from = state.rx_override.throttle;
+    return state.rx_override.throttle;
+  }
+  if (handback.automatic) {
+    handback.automatic = false;
+    handback.active = true;
+    handback.start_us = time_micros();
+  }
+  if (state.failsafe_phase == FAILSAFE_PHASE_STAGE1_GUARD) {
+    // Keep the PID/mixer path running while waiting for RX recovery or RTH.
+    handback.active = false;
+    return IDLE_THR;
+  }
+
+  const float pilot = control_pilot_throttle();
+  if (handback.active) {
+    const uint32_t elapsed_us = time_micros() - handback.start_us;
+    if (elapsed_us >= THROTTLE_HANDBACK_TIME_US) {
+      handback.active = false;
+    } else {
+      const float remaining = 1.0f - (float)elapsed_us / THROTTLE_HANDBACK_TIME_US;
+      return pilot + (handback.from - pilot) * remaining;
+    }
+  }
+  return pilot;
 }
 
 void control() {
@@ -221,6 +261,7 @@ void control() {
   if (flags.arm_state == 0) {
     state.throttle = 0;
     flags.in_air = 0;
+    handback = {};
   } else {
     state.throttle = control_throttle_input();
 
