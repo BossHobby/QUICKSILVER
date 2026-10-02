@@ -15,12 +15,19 @@
 #define ALT_KI 0.05f
 #define ALT_POSITION_KP 0.5f // m/s per meter of altitude error
 #define ALT_ACCEL_LIMIT 1.0f // m/s^2 target vertical acceleration
+#define ALT_BRAKE_ACCEL_LIMIT 5.0f // m/s^2, stopping a descent is never smoothed as gently
+#define GRAVITY_MS2 9.80665f
+#define HOVER_LEARN_TIME 3.0f     // seconds, hover throttle estimate time constant
+#define HOVER_LEARN_MIN_TIME 2.0f // seconds of steady flight before the estimate is used
+#define HOVER_LEARN_MIN_TILT 0.94f // cos(20 degrees)
+#define HOVER_LEARN_MAX_SPEED 0.5f // m/s vertical
+#define HOVER_LEARN_MIN_ALTITUDE 1.5f // meters above launch, clear of the ground and ground effect
+#define HOVER_LEARN_MAX_ERROR 0.1f // trust learned hover only this close to the takeover estimate
 #define RTH_MAX_YAW_RATE_LIMIT 30.0f
 #define RTH_CLIMB_RATE 2.0f
 #define RTH_DESCENT_RATE 2.0f
 #define RTH_HOME_RADIUS 3.0f
 #define RTH_ANGLE_SLEW_RATE 2.0f // normalized stick/s
-#define RTH_MIN_DISTANCE 10.0f
 #define RTH_PROGRESS_TIMEOUT_MS 15000U
 #define RTH_PROGRESS_DISTANCE 5.0f
 #define NAV_VEL_KP 0.08f
@@ -33,8 +40,10 @@
 #define RTH_NAV_COMMAND_TIME_CONSTANT 0.15f // seconds, smooth GPS-driven tilt changes
 #define RTH_THROTTLE_HEADROOM 0.15f
 #define RTH_THROTTLE_SLEW_RATE 1.5f
-#define RTH_GPS_LOSS_TIMEOUT_MS 3000U
 #define RTH_CLIMB_TIMEOUT_MS 10000U
+// Level altitude hold before giving up, so the sensor or the link can return.
+#define RTH_SENSOR_LOSS_TIMEOUT_MS 10000U
+#define RTH_FAILURE_HOLD_MS 10000U
 #define RTH_YAW_KP 1.0f
 #define RTH_TURN_ERROR_DEG 10.0f
 #define RTH_TURN_RATE_DEG 5.0f
@@ -54,7 +63,20 @@ static struct {
     bool rth_aux;
     bool failsafe;
   } previous;
+  float hover_learned_time; // seconds of steady flight in state.hover_throttle
+  struct {
+    bool active;
+    float altitude; // meters above launch, latched on engagement
+  } hold;
 } nav;
+
+// Vertical controller history. Shared by the failsafe hold and RTH so a
+// failsafe that escalates to RTH keeps its trim.
+static struct {
+  float integral;
+  float throttle_command;
+  float desired_rate;
+} alt;
 
 // Controller history is reset on every engagement.
 static struct {
@@ -79,19 +101,15 @@ static struct {
     uint32_t updated_ms;
   } horizontal;
   struct {
-    float integral;
-    float throttle_command;
-    float desired_rate;
-  } vertical;
-  struct {
     float best_error; // meters: altitude error in CLIMB, distance home otherwise
     uint32_t updated_ms;
   } progress;
   struct {
     bool active;
     uint32_t started_ms;
-    float altitude; // meters above launch, latched on loss
-  } gps_loss;
+    float altitude; // meters above launch, latched when a sensor is lost
+  } pause;
+  uint32_t failed_ms; // start of a heading or navigation failure hold
 } rth;
 
 static bool nav_altitude_source_ok(void) {
@@ -100,12 +118,73 @@ static bool nav_altitude_source_ok(void) {
 }
 
 static bool nav_rth_can_start(void) {
+  // Any distance is acceptable: close to home, RTH climbs and holds position.
   return state.rth_state != RTH_STATE_ABORTED &&
          nav.home_valid &&
          nav.gps_valid &&
          nav_altitude_source_ok() &&
-         state.home_distance >= RTH_MIN_DISTANCE &&
          profile.navigation.rth_throttle_min < profile.navigation.rth_throttle_max;
+}
+
+static float nav_tilt(void) {
+  return MAX(cosf(state.attitude.roll) * cosf(state.attitude.pitch), 0.5f);
+}
+
+static bool nav_hover_learned(void) {
+  return nav.hover_learned_time >= HOVER_LEARN_MIN_TIME;
+}
+
+// Learn level-hover throttle while the pilot flies steadily. Unlike a
+// configured value, this follows battery sag and payload changes.
+static void nav_update_hover(float dt) {
+  if (!flags.arm_state) {
+    // The next flight may have a different battery or payload.
+    nav.hover_learned_time = 0.0f;
+    state.hover_throttle = 0.0f;
+    return;
+  }
+  // in_air and on_ground do not prove the vehicle has lifted off; low
+  // throttle on the ground would otherwise learn as a low hover.
+  const bool airborne = flags.in_air && !flags.on_ground &&
+                        nav_altitude_source_ok() && state.altitude > HOVER_LEARN_MIN_ALTITUDE;
+  const float tilt = cosf(state.attitude.roll) * cosf(state.attitude.pitch);
+  const bool steady = airborne && !flags.controls_override && !flags.failsafe &&
+                      state.throttle > 0.05f && state.throttle < 0.95f &&
+                      tilt > HOVER_LEARN_MIN_TILT &&
+                      fabsf(state.vertical_speed) < HOVER_LEARN_MAX_SPEED;
+  if (!steady) {
+    return;
+  }
+  const float sample = state.throttle * tilt;
+  if (nav.hover_learned_time <= 0.0f) {
+    state.hover_throttle = sample;
+  } else {
+    state.hover_throttle += dt / (HOVER_LEARN_TIME + dt) * (sample - state.hover_throttle);
+  }
+  nav.hover_learned_time = MIN(nav.hover_learned_time + dt, HOVER_LEARN_MIN_TIME);
+}
+
+static float nav_hover_throttle(void) {
+  return nav_hover_learned() ? state.hover_throttle : profile.navigation.rth_throttle_hover;
+}
+
+// Take over vertical control from the currently applied throttle.
+static void nav_altitude_start(float throttle) {
+  const float throttle_min = constrain(profile.navigation.rth_throttle_min, 0.0f, 1.0f);
+  const float throttle_max = constrain(profile.navigation.rth_throttle_max, throttle_min, 1.0f);
+  alt.throttle_command = constrain(throttle, throttle_min, throttle_max);
+  // Infer hover from the applied throttle and the acceleration it produces
+  // (thrust ~ throttle), so a dive does not read as a low hover.
+  const float accel_ratio = constrain(1.0f + nav_vertical_accel() / GRAVITY_MS2, 0.5f, 1.5f);
+  const float hover = constrain(throttle * nav_tilt() / accel_ratio, throttle_min, throttle_max);
+  if (nav_hover_learned() && fabsf(state.hover_throttle - hover) <= HOVER_LEARN_MAX_ERROR) {
+    // A learned hover that agrees with the takeover is the steadier trim.
+    alt.integral = 0.0f;
+  } else {
+    alt.integral = hover - nav_hover_throttle();
+  }
+  alt.desired_rate = constrain(state.vertical_speed, -RTH_DESCENT_RATE, RTH_CLIMB_RATE);
+  state.rx_override.throttle = alt.throttle_command;
 }
 
 static float nav_slew(float current, float target, float step) {
@@ -113,41 +192,46 @@ static float nav_slew(float current, float target, float step) {
 }
 
 static void nav_update_altitude_control(float target_alt, float max_rate, float dt) {
+  const bool altitude_ok = nav_altitude_source_ok();
   const float error = target_alt - state.altitude;
   const float configured_throttle_min = constrain(profile.navigation.rth_throttle_min, 0.0f, 1.0f);
-  const float configured_throttle_hover = constrain(profile.navigation.rth_throttle_hover, configured_throttle_min, 1.0f);
   const float throttle_min = configured_throttle_min;
   const float throttle_ceiling = MAX(throttle_min, 1.0f - RTH_THROTTLE_HEADROOM);
   const float throttle_max = constrain(profile.navigation.rth_throttle_max, throttle_min, throttle_ceiling);
-  const float throttle_hover = constrain(configured_throttle_hover, throttle_min, throttle_max);
+  const float throttle_hover = constrain(nav_hover_throttle(), throttle_min, throttle_max);
   const float safe_dt = MAX(dt, 0.001f);
 
-  const float desired_rate = constrain(ALT_POSITION_KP * error, -max_rate, max_rate);
-  rth.vertical.desired_rate = nav_slew(rth.vertical.desired_rate, desired_rate, ALT_ACCEL_LIMIT * safe_dt);
-  const float rate_error = rth.vertical.desired_rate - state.baro_vertical_speed;
-  const float tilt = MAX(cosf(state.attitude.roll) * cosf(state.attitude.pitch), 0.5f);
+  // Without altitude, hold vertical speed at zero on the accelerometer estimate.
+  const float desired_rate = altitude_ok ? constrain(ALT_POSITION_KP * error, -max_rate, max_rate) : 0.0f;
+  const bool braking_descent = alt.desired_rate < 0.0f && desired_rate > alt.desired_rate;
+  alt.desired_rate = nav_slew(alt.desired_rate, desired_rate,
+      (braking_descent ? ALT_BRAKE_ACCEL_LIMIT : ALT_ACCEL_LIMIT) * safe_dt);
+  const float rate_error = alt.desired_rate - state.vertical_speed;
+  const float tilt = nav_tilt();
   // A low-hover-throttle craft gets more acceleration per throttle unit.
   // Scale the velocity gains with the trimmed hover estimate to compensate.
-  const float effective_hover = constrain(throttle_hover + rth.vertical.integral, MAX(throttle_min, 0.05f), throttle_max);
+  const float effective_hover = constrain(throttle_hover + alt.integral, MAX(throttle_min, 0.05f), throttle_max);
   // Allow the integral to compensate a wrong hover setting across the usable
   // throttle range. A fixed +/-0.2 limit cannot trim 0.5 down to a 0.2 hover.
-  const float integral = constrain(rth.vertical.integral + ALT_KI * effective_hover * rate_error * safe_dt,
+  const float integral = constrain(alt.integral + ALT_KI * effective_hover * rate_error * safe_dt,
                                    throttle_min * tilt - throttle_hover,
                                    throttle_max * tilt - throttle_hover);
   const float throttle = (throttle_hover + ALT_KP * effective_hover * rate_error + integral) / tilt;
   // The slew limiter is an actuator limit too. Do not wind up while the
   // applied throttle is still catching up with the proportional correction.
+  // Without a barometer the velocity estimate drifts, so freeze the trim.
   const float throttle_step = RTH_THROTTLE_SLEW_RATE * safe_dt;
-  const float applied_min = constrain(rth.vertical.throttle_command - throttle_step, throttle_min, throttle_max);
-  const float applied_max = constrain(rth.vertical.throttle_command + throttle_step, throttle_min, throttle_max);
-  if ((throttle >= applied_min && throttle <= applied_max) ||
-      (throttle > applied_max && rate_error < 0.0f) ||
-      (throttle < applied_min && rate_error > 0.0f)) {
-    rth.vertical.integral = integral;
+  const float applied_min = constrain(alt.throttle_command - throttle_step, throttle_min, throttle_max);
+  const float applied_max = constrain(alt.throttle_command + throttle_step, throttle_min, throttle_max);
+  if (altitude_ok &&
+      ((throttle >= applied_min && throttle <= applied_max) ||
+       (throttle > applied_max && rate_error < 0.0f) ||
+       (throttle < applied_min && rate_error > 0.0f))) {
+    alt.integral = integral;
   }
-  const float throttle_target = (throttle_hover + ALT_KP * effective_hover * rate_error + rth.vertical.integral) / tilt;
-  rth.vertical.throttle_command = constrain(throttle_target, applied_min, applied_max);
-  state.rx_override.throttle = constrain(rth.vertical.throttle_command, throttle_min, throttle_max);
+  const float throttle_target = (throttle_hover + ALT_KP * effective_hover * rate_error + alt.integral) / tilt;
+  alt.throttle_command = constrain(throttle_target, applied_min, applied_max);
+  state.rx_override.throttle = constrain(alt.throttle_command, throttle_min, throttle_max);
 }
 
 static void nav_update_acceleration() {
@@ -322,34 +406,40 @@ static bool nav_update_progress(uint32_t now_ms) {
   return now_ms - rth.progress.updated_ms <= RTH_PROGRESS_TIMEOUT_MS;
 }
 
+static void nav_begin_failure(rth_state_t failure, uint32_t now_ms) {
+  // Navigation cannot be trusted. Level and hold altitude, then give up.
+  nav_reset_horizontal();
+  state.rth_state = failure;
+  rth.target_altitude = state.altitude;
+  rth.failed_ms = now_ms;
+}
+
 static void nav_update_rth_control() {
   const uint32_t now = time_micros();
   const uint32_t now_ms = time_millis();
   const float dt = (now - rth.updated_us) * 1e-6f;
   rth.updated_us = now;
 
-  if (!nav_altitude_source_ok()) {
-    nav_rth_abort();
-    return;
-  }
-  if (!nav.gps_valid) {
-    if (!rth.gps_loss.active) {
-      rth.gps_loss.active = true;
-      rth.gps_loss.started_ms = now_ms;
-      rth.gps_loss.altitude = state.altitude;
+  if (!nav_altitude_source_ok() || !nav.gps_valid) {
+    if (!rth.pause.active) {
+      rth.pause.active = true;
+      rth.pause.started_ms = now_ms;
+      rth.pause.altitude = state.altitude;
       nav_reset_horizontal();
     }
-    if (now_ms - rth.gps_loss.started_ms >= RTH_GPS_LOSS_TIMEOUT_MS) {
+    if (now_ms - rth.pause.started_ms >= RTH_SENSOR_LOSS_TIMEOUT_MS) {
       nav_rth_abort();
       return;
     }
-    // Level and hold a latched altitude; horizontal position is unobservable.
-    nav_update_altitude_control(rth.gps_loss.altitude, RTH_CLIMB_RATE, dt);
+    // Level and hold a latched altitude while the sensor may return. Without
+    // a barometer the controller holds zero vertical speed instead.
+    nav_update_altitude_control(rth.pause.altitude, RTH_CLIMB_RATE, dt);
     return;
   }
-  if (rth.gps_loss.active) {
-    rth.gps_loss.active = false;
-    rth.progress.updated_ms = now_ms;
+  if (rth.pause.active) {
+    rth.pause.active = false;
+    // The progress clock keeps running, so a flapping sensor cannot extend
+    // the attempt; only the baseline restarts from the current position.
     rth.progress.best_error = state.rth_state == RTH_STATE_CLIMB
         ? fabsf(rth.target_altitude - state.altitude)
         : state.home_distance;
@@ -394,9 +484,7 @@ static void nav_update_rth_control() {
                        cosf(rth.acquisition.origin.lat * (DEGTORAD / 1e7f));
     if (now_ms - rth.acquisition.started_ms >= RTH_ACQUIRE_TIMEOUT_MS ||
         north * north + east * east >= RTH_ACQUIRE_DISTANCE_M * RTH_ACQUIRE_DISTANCE_M) {
-      nav_reset_horizontal();
-      state.rth_state = RTH_STATE_HEADING_FAILED;
-      rth.target_altitude = state.altitude;
+      nav_begin_failure(RTH_STATE_HEADING_FAILED, now_ms);
     } else if (state.heading_confidence >= RTH_ACQUIRE_CONFIDENCE && !state.heading_correction_flags) {
       nav_begin_turn(now_ms);
     } else {
@@ -409,8 +497,11 @@ static void nav_update_rth_control() {
     break;
   }
   case RTH_STATE_HEADING_FAILED:
-    // Acquisition failed: keep altitude control and level attitude. In
-    // failsafe, never turn a heading-only failure into an immediate motor drop.
+  case RTH_STATE_NAV_FAILED:
+    if (now_ms - rth.failed_ms >= RTH_FAILURE_HOLD_MS) {
+      nav_rth_abort();
+      return;
+    }
     nav_reset_horizontal();
     nav_update_altitude_control(rth.target_altitude, RTH_DESCENT_RATE, dt);
     break;
@@ -434,14 +525,15 @@ static void nav_update_rth_control() {
       // Allow a half-turn at the yaw-rate limit plus ten seconds to settle.
       const uint32_t timeout_ms = 10000U + (uint32_t)(180000.0f / RTH_MAX_YAW_RATE_LIMIT);
       if (now_ms - rth.progress.updated_ms > timeout_ms) {
-        nav_rth_abort();
+        nav_begin_failure(RTH_STATE_NAV_FAILED, now_ms);
       }
     }
     break;
   }
   case RTH_STATE_NAVIGATE:
     if (state.home_distance >= RTH_HOME_RADIUS && !nav_update_progress(now_ms)) {
-      nav_rth_abort();
+      nav_begin_failure(RTH_STATE_NAV_FAILED, now_ms);
+      nav_update_altitude_control(rth.target_altitude, RTH_DESCENT_RATE, dt);
       return;
     }
     nav_update_altitude_control(rth.target_altitude, RTH_DESCENT_RATE, dt);
@@ -481,16 +573,15 @@ void nav_rth_start() {
   state.rth_state = RTH_STATE_CLIMB;
   rth.target_altitude = state.altitude + profile.navigation.rth_altitude;
   rth.progress.best_error = fabsf(profile.navigation.rth_altitude);
-  rth.vertical.throttle_command = constrain(state.throttle, profile.navigation.rth_throttle_min, profile.navigation.rth_throttle_max);
-  // Seed controller trim from the currently applied throttle for a smooth
-  // takeover. This is an initial condition, not a learned hover measurement.
-  const float tilt = MAX(cosf(state.attitude.roll) * cosf(state.attitude.pitch), 0.5f);
-  rth.vertical.integral = rth.vertical.throttle_command * tilt - profile.navigation.rth_throttle_hover;
-  rth.vertical.desired_rate = constrain(state.baro_vertical_speed, -RTH_DESCENT_RATE, RTH_CLIMB_RATE);
+  if (nav.hold.active) {
+    // The failsafe hold already flies the vertical axis; keep its trim.
+    nav.hold.active = false;
+  } else {
+    nav_altitude_start(state.throttle);
+  }
   rth.updated_us = time_micros();
   rth.progress.updated_ms = time_millis();
   nav_reset_horizontal();
-  state.rx_override.throttle = rth.vertical.throttle_command;
 
   flags.controls_override = 1;
 }
@@ -521,9 +612,11 @@ static void nav_update_request() {
 
   // Check for failsafe RTH
   if (profile.navigation.rth_on_failsafe) {
-    if (flags.failsafe && !state.rth_active && nav.home_valid) {
+    // Only an airborne failsafe flies home; a landed vehicle idles and disarms.
+    if (state.failsafe_hold && !state.rth_active && nav.home_valid) {
       nav_rth_start();
     } else if (!flags.failsafe && state.rth_active && nav.previous.failsafe && !rth_aux) {
+      // Failsafe keeps flags.failsafe set until the pilot has taken over.
       // A manual RTH request keeps control after receiver recovery.
       nav_rth_stop();
     }
@@ -531,10 +624,7 @@ static void nav_update_request() {
   }
 }
 
-void nav_update_rth(bool gps_valid, bool home_valid) {
-  nav.gps_valid = gps_valid;
-  nav.home_valid = home_valid;
-
+static void nav_update_rth() {
   if (!flags.arm_state) {
     nav_rth_stop();
     nav.previous.rth_aux = nav.previous.failsafe = 0;
@@ -548,15 +638,54 @@ void nav_update_rth(bool gps_valid, bool home_valid) {
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 4, (int16_t)(state.rth_state));
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 5, (int16_t)(state.home_distance)); // meters
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 6, (int16_t)(state.home_bearing * 10)); // 0.1 deg
+}
+
+// Airborne stage 1 failsafe without RTH: level, and hold the altitude at loss.
+static void nav_update_failsafe_hold(float dt) {
+  if (!state.failsafe_hold || state.rth_active || !flags.arm_state) {
+    nav.hold.active = false;
+    return;
+  }
+  if (!nav.hold.active) {
+    nav.hold.active = true;
+    nav.hold.altitude = state.altitude;
+    // Control applies the pilot's last throttle until this first update.
+    nav_altitude_start(state.throttle);
+  }
+  nav_update_altitude_control(nav.hold.altitude, RTH_CLIMB_RATE, dt);
+}
+
+void nav_update_multi(float dt, bool gps_valid, bool home_valid) {
+  nav.gps_valid = gps_valid;
+  nav.home_valid = home_valid;
+
+  nav_update_hover(dt);
+  if (profile.serial.gps != SERIAL_PORT_INVALID) {
+    nav_update_rth();
+  }
+  nav_update_failsafe_hold(dt);
   // Publish applied requests in every phase, including acquisition and failure.
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 14, (int16_t)(state.rx_override.pitch * 1000));
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 15, (int16_t)(state.rx_override.roll * 1000));
+}
+
+bool nav_rth_home_valid() {
+  return nav.home_valid;
+}
+
+bool nav_gps_ready() {
+  return nav.gps_valid;
+}
+
+bool nav_altitude_ready() {
+  return nav_altitude_source_ok();
 }
 
 #ifdef PIO_UNIT_TESTING
 void nav_test_reset(void) {
   nav_rth_stop();
   nav = {};
+  alt = {};
 }
 
 void nav_test_update_horizontal_control(float dt) {
@@ -577,6 +706,11 @@ void nav_test_set_rth_active(bool active) {
 }
 
 void nav_test_update_rth(void) { nav_update_rth_control(); }
+void nav_test_set_hover_learned(float throttle) {
+  state.hover_throttle = throttle;
+  nav.hover_learned_time = throttle > 0.0f ? HOVER_LEARN_MIN_TIME : 0.0f;
+}
+void nav_test_update_hover(float dt) { nav_update_hover(dt); }
 void nav_test_altitude_control(float target, float rate, float dt) {
   nav_update_altitude_control(target, rate, dt);
 }

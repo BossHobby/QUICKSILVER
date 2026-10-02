@@ -14,3 +14,6 @@ void nav_position_delta(gps_coord_t start, gps_coord_t end, float *north, float 
 
 void nav_init();
 void nav_update();
+
+// Smoothed earth-vertical acceleration, m/s^2 up.
+float nav_vertical_accel();

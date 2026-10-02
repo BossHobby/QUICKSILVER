@@ -6,6 +6,9 @@
 #include "core/profile.h"
 #include "driver/osd/osd.h"
 #include "driver/time.h"
+#ifdef VEHICLE_MULTI
+#include "control/multi/navigation.h"
+#endif
 
 #define LABEL_LEN 22
 #define LABEL_MAX_LEN 64
@@ -250,12 +253,24 @@ static const char *osd_rth_message() {
       return "HOLD HOME";
     case RTH_STATE_HEADING_FAILED:
       return "HEADING FAILED";
+    case RTH_STATE_NAV_FAILED:
+      return "NAV FAILED";
     }
   }
 
   if (rx_aux_on(AUX_RETURN_TO_HOME)) {
     if (!flags.arm_state) return "ARM FIRST";
     return "UNAVAILABLE";
+  }
+
+  // Arming is always allowed; warn when failsafe RTH will not be available.
+  if (profile.navigation.rth_on_failsafe && profile.serial.gps != SERIAL_PORT_INVALID) {
+    if (!nav_altitude_ready())
+      return "NO BARO";
+    if (flags.arm_state && !nav_rth_home_valid())
+      return "NO HOME";
+    if (!flags.arm_state && !nav_gps_ready())
+      return "NO GPS FIX";
   }
   return NULL;
 }

@@ -63,6 +63,26 @@ STATE_MEMBERS
 static uint32_t failsafe_phase_start_us = 0;
 static bool failsafe_rearm_allows_prearm_hold = false;
 
+#ifdef VEHICLE_MULTI
+// Throttle must have been low this long before a link loss to treat the
+// vehicle as landed; a landed vehicle keeps the idle-then-disarm procedure.
+#define FAILSAFE_THROTTLE_LOW_TIME_US 10000000U
+// Stick deflection the pilot must give to take control back from failsafe RTH.
+#define FAILSAFE_RTH_STICK_THRESHOLD 0.3f
+// Navigation flies self-level, so a tilt beyond this held for the crash time
+// means the vehicle is down; failsafe RTH would otherwise run its motors on.
+#define FAILSAFE_CRASH_MIN_TILT 0.34f // cos(70 degrees)
+#define FAILSAFE_CRASH_TIME_US 1000000U
+
+static uint32_t failsafe_throttle_up_us = 0;
+static struct {
+  bool owns_link_loss; // RTH was flying when the link was (last) lost
+  bool link_recovering;
+  uint32_t link_recovered_us;
+  uint32_t upright_us; // last time failsafe RTH was not tilted beyond the crash limit
+} failsafe_rth;
+#endif
+
 void control_filter_update(bool reset) {
   sixaxis_filter_update(reset);
   pid_filter_update(reset);
@@ -87,6 +107,8 @@ const char *control_flight_mode_name(void) {
 #else
   if (state.rth_failsafe_active)
     return "FS RTH";
+  if (state.failsafe_hold)
+    return "FS HOLD";
   if (state.rth_active || rx_aux_on(AUX_RETURN_TO_HOME))
     return "RTH";
   if (!rx_aux_on(AUX_LEVELMODE))
@@ -109,6 +131,10 @@ static void failsafe_set_phase(failsafe_phase_t phase, uint32_t now_us) {
     failsafe_phase_start_us = now_us;
   }
 
+  if (phase != FAILSAFE_PHASE_STAGE1_GUARD) {
+    state.failsafe_hold = false;
+  }
+
   if (phase == FAILSAFE_PHASE_IDLE) {
     state.failsafe_time_ms = 0;
   } else if (previous_phase == FAILSAFE_PHASE_IDLE) {
@@ -118,6 +144,7 @@ static void failsafe_set_phase(failsafe_phase_t phase, uint32_t now_us) {
 
 static void failsafe_clear_stage1_fallback(void) {
   if (state.failsafe_phase == FAILSAFE_PHASE_STAGE1_GUARD) {
+    state.failsafe_hold = false;
 #ifdef VEHICLE_MULTI
     if (state.rth_active) {
       return;
@@ -127,12 +154,64 @@ static void failsafe_clear_stage1_fallback(void) {
   }
 }
 
-static void failsafe_apply_stage1_fallback(void) {
+#ifdef VEHICLE_MULTI
+static bool failsafe_airborne(uint32_t now_us) {
+  return flags.arm_state && flags.in_air &&
+         (now_us - failsafe_throttle_up_us) < FAILSAFE_THROTTLE_LOW_TIME_US;
+}
+
+static bool failsafe_sticks_active(void) {
+  return fabsf(state.rx.roll) > FAILSAFE_RTH_STICK_THRESHOLD ||
+         fabsf(state.rx.pitch) > FAILSAFE_RTH_STICK_THRESHOLD ||
+         fabsf(state.rx.yaw) > FAILSAFE_RTH_STICK_THRESHOLD;
+}
+
+// RTH that flew through a link loss keeps control until the link has been
+// stable for the recovery time and the pilot moves the sticks. A flapping
+// link therefore never restarts or interrupts the return.
+static void failsafe_update_rth_ownership(uint32_t now_us) {
+  if (!state.rth_active || !profile.navigation.rth_on_failsafe || flags.rx_ready != 1 || !flags.arm_state) {
+    failsafe_rth = {};
+  } else if (flags.failsafe_signal_lost) {
+    failsafe_rth.owns_link_loss = true;
+    failsafe_rth.link_recovering = false;
+  } else if (failsafe_rth.owns_link_loss) {
+    if (!failsafe_rth.link_recovering) {
+      failsafe_rth.link_recovering = true;
+      failsafe_rth.link_recovered_us = now_us;
+    }
+    if ((now_us - failsafe_rth.link_recovered_us) >= FAILSAFE_RECOVERY_TIME_US && failsafe_sticks_active()) {
+      failsafe_rth = {};
+    }
+  }
+  if (!failsafe_rth.owns_link_loss || cosf(state.attitude.roll) * cosf(state.attitude.pitch) > FAILSAFE_CRASH_MIN_TILT) {
+    failsafe_rth.upright_us = now_us;
+  }
+  state.rth_failsafe_active = failsafe_rth.owns_link_loss;
+}
+
+static bool failsafe_rth_crashed(uint32_t now_us) {
+  return state.rth_failsafe_active && (now_us - failsafe_rth.upright_us) >= FAILSAFE_CRASH_TIME_US;
+}
+#endif
+
+static void failsafe_apply_stage1_fallback(uint32_t now_us) {
   state.rx_override.roll = 0.0f;
   state.rx_override.pitch = 0.0f;
   state.rx_override.yaw = 0.0f;
 #ifdef VEHICLE_ROVER
   state.rx_override.throttle = 0.5f;
+#elif defined(VEHICLE_MULTI)
+  if (state.failsafe_hold) {
+    // Navigation owns throttle while holding.
+  } else if (failsafe_airborne(now_us)) {
+    // Level and hold altitude from the pilot's last throttle instead of
+    // idling; navigation takes over the vertical axis on its next update.
+    state.failsafe_hold = true;
+    state.rx_override.throttle = state.throttle;
+  } else {
+    state.rx_override.throttle = 0.0f;
+  }
 #else
   state.rx_override.throttle = 0.0f;
 #endif
@@ -167,8 +246,14 @@ static void failsafe_clear(uint32_t now_us) {
 
 void control_failsafe_update() {
   const uint32_t now_us = time_micros();
+#ifdef VEHICLE_MULTI
   // Receiver loss can change between navigation updates.
-  state.rth_failsafe_active = state.rth_active && profile.navigation.rth_on_failsafe && flags.failsafe_signal_lost;
+  failsafe_update_rth_ownership(now_us);
+  if (!flags.failsafe_signal_lost && state.failsafe_phase == FAILSAFE_PHASE_IDLE &&
+      state.rx_filtered.throttle > THROTTLE_SAFETY) {
+    failsafe_throttle_up_us = now_us;
+  }
+#endif
 
   if (flags.rx_ready != 1) {
     flags.failsafe = 1;
@@ -178,16 +263,27 @@ void control_failsafe_update() {
     return;
   }
 
-  if (flags.failsafe_signal_lost) {
 #ifdef VEHICLE_MULTI
-    if (state.rth_failsafe_active) {
-      flags.failsafe = 1;
-      flags.failsafe_outputs_blocked = 0;
-      failsafe_set_phase(FAILSAFE_PHASE_STAGE1_GUARD, now_us);
-      return;
-    }
+  if (failsafe_rth_crashed(now_us)) {
+    failsafe_rth = {};
+    state.rth_failsafe_active = false;
+    flags.failsafe = 1;
+    flags.failsafe_outputs_blocked = 1;
+    failsafe_set_phase(FAILSAFE_PHASE_STAGE2_DROP, now_us);
+    failsafe_rearm_allows_prearm_hold = true;
+    flags.arm_state = 0;
+    return;
+  }
+  if (state.rth_failsafe_active) {
+    // RTH flies through the loss until it gives up or the pilot takes over.
+    flags.failsafe = 1;
+    flags.failsafe_outputs_blocked = 0;
+    failsafe_set_phase(FAILSAFE_PHASE_STAGE1_GUARD, now_us);
+    return;
+  }
 #endif
 
+  if (flags.failsafe_signal_lost) {
     if (state.failsafe_phase == FAILSAFE_PHASE_STAGE2_DROP ||
         state.failsafe_phase == FAILSAFE_PHASE_RECOVERY) {
       flags.failsafe = 1;
@@ -213,7 +309,7 @@ void control_failsafe_update() {
       flags.failsafe = 1;
       flags.failsafe_outputs_blocked = 0;
       failsafe_set_phase(FAILSAFE_PHASE_STAGE1_GUARD, now_us);
-      failsafe_apply_stage1_fallback();
+      failsafe_apply_stage1_fallback(now_us);
       return;
     }
 
