@@ -52,6 +52,7 @@ typedef enum {
   RTH_STATE_HOVER_HOME,
   RTH_STATE_HEADING_FAILED,
   RTH_STATE_ABORTED,
+  RTH_STATE_NAV_FAILED,
 } rth_state_t;
 
 constexpr float RTH_MIN_HEADING_CONFIDENCE = 0.2f;
@@ -204,6 +205,8 @@ typedef struct {
   uint32_t baro_last_update_ms; // time of last finite sample; zero at init, valid distinguishes a sample at time zero.
   float baro_vertical_speed;    // filtered vertical velocity, m/s up; zero at init/reacquisition.
   float altitude;               // filtered meters above launch, or above the first sample before arming; zero at init, held without a new valid sample.
+  float vertical_speed;         // m/s up, accelerometer fused with barometer; decays toward zero without barometer.
+  float hover_throttle;         // learned level-hover throttle; zero until learned in flight.
 
   // Navigation: home reference and return-to-home commands.
   gps_coord_t gps_home;
@@ -212,6 +215,7 @@ typedef struct {
   uint8_t rth_state; // rth_state_t
   bool rth_active;
   bool rth_failsafe_active;
+  bool failsafe_hold; // airborne stage 1 failsafe: level and hold altitude instead of idling
   float rth_yaw_rate; // radians/s, independent of pilot rates
 
   vec3_t setpoint; // Requested body rates (rad/s), from sticks or attitude control.
@@ -299,12 +303,15 @@ typedef struct {
   MEMBER(baro_last_update_ms, uint32_t)                \
   MEMBER(baro_vertical_speed, float)                   \
   MEMBER(altitude, float)                              \
+  MEMBER(vertical_speed, float)                        \
+  MEMBER(hover_throttle, float)                        \
   MEMBER(gps_home, gps_coord_t)                        \
   MEMBER(home_bearing, float)                          \
   MEMBER(home_distance, float)                         \
   MEMBER(rth_state, uint8_t)                           \
   MEMBER(rth_active, bool)                             \
   MEMBER(rth_failsafe_active, bool)                    \
+  MEMBER(failsafe_hold, bool)                          \
   MEMBER(rth_yaw_rate, float)                          \
   MEMBER(setpoint, vec3_t)                             \
   MEMBER(error, vec3_t)                                \
