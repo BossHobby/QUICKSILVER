@@ -147,6 +147,11 @@ static inline void spi_bus_device_reconfigure(spi_bus_device_t *bus, spi_mode_t 
   bus->hz = hz;
 }
 
+// Targets omit SPI streams for ports whose devices only use polled transfers.
+static inline bool spi_port_has_dma(spi_ports_t port) {
+  return target.dma[spi_port_defs[port].dma_tx].dma != DMA_STREAM_INVALID;
+}
+
 static inline bool spi_dma_is_ready(spi_ports_t port) {
   const spi_device_t *dev = &spi_dev[port];
   return dev->dma_done;
