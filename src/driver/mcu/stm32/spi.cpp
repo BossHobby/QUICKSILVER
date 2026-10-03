@@ -255,12 +255,6 @@ void spi_device_init(spi_ports_t port) {
   const spi_port_def_t *def = &spi_port_defs[port];
   rcc_enable(def->rcc);
 
-  const dma_stream_def_t *dma_rx = &dma_stream_defs[target.dma[spi_port_defs[port].dma_rx].dma];
-  const dma_stream_def_t *dma_tx = &dma_stream_defs[target.dma[spi_port_defs[port].dma_tx].dma];
-
-  dma_enable_rcc(dma_rx);
-  dma_enable_rcc(dma_tx);
-
   LL_SPI_DeInit(def->channel);
 
   LL_SPI_InitTypeDef default_init;
@@ -291,8 +285,12 @@ void spi_device_init(spi_ports_t port) {
   spi_dev[port].mode = SPI_MODE_TRAILING_EDGE;
   spi_dev[port].hz = 0;
 
-  spi_dma_init_rx(port);
-  spi_dma_init_tx(port);
+  if (spi_port_has_dma(port)) {
+    dma_enable_rcc(&dma_stream_defs[target.dma[def->dma_rx].dma]);
+    dma_enable_rcc(&dma_stream_defs[target.dma[def->dma_tx].dma]);
+    spi_dma_init_rx(port);
+    spi_dma_init_tx(port);
+  }
   interrupt_enable(static_cast<IRQn_Type>(def->irq), SPI_PRIORITY);
 }
 
