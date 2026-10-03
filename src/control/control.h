@@ -232,7 +232,7 @@ typedef struct {
   bool wing_launch_available;
   uint8_t wing_autotrim_state;
 
-  uint32_t dshot_rpm[4];
+  uint32_t dshot_rpm[MOTOR_PIN_MAX]; // eRPM / 100 per target output slot, written by the DShot driver
 } control_state_t;
 
 #define STATE_MEMBERS                                  \
@@ -320,7 +320,7 @@ typedef struct {
   MEMBER(wing_launch_state, uint8_t)                   \
   MEMBER(wing_launch_available, bool)                  \
   MEMBER(wing_autotrim_state, uint8_t)                 \
-  ARRAY_MEMBER(dshot_rpm, 4, uint32_t)                 \
+  ARRAY_MEMBER(dshot_rpm, MOTOR_PIN_MAX, uint32_t)     \
   END_STRUCT()
 
 typedef struct {
