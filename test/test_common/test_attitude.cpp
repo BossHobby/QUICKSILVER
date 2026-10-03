@@ -664,6 +664,31 @@ void test_attitude_imu_pipeline_yaw_while_tilted(void) {
   TEST_ASSERT_FLOAT_WITHIN(0.5f * DEGTORAD, 90 * DEGTORAD, state.attitude.yaw - initial_yaw);
 }
 
+void test_attitude_imu_pipeline_drag_deceleration_stays_level(void) {
+  imu_pipeline_setup(0, 0);
+  flags.arm_state = 1;
+  state.gps_lock = true;
+  state.gps_heading = 90;
+  state.gps_heading_accuracy = 2;
+  state.gps_speed = 12;
+
+  // Level flight east, then drag decelerates the craft at 0.5 g while it
+  // stays level and RTH publishes that deceleration. The accelerometer reads
+  // it as nose-down tilt; uncompensated, the estimate drifts about 8 degrees.
+  for (int i = 0; i < 3000; i++) {
+    const bool braking = i >= 1000;
+    time_test_advance_us(1000);
+    if ((i % 100) == 0)
+      state.gps_last_update_ms = time_millis();
+    state.rth_accel_east = braking ? -0.5f * 9.80665f : 0.0f;
+    state.accel_raw = (vec3_t){{0, braking ? 0.5f : 0.0f, 1}};
+    imu_calc();
+    TEST_ASSERT_FLOAT_WITHIN(sinf(1.0f * DEGTORAD), 0, state.GEstG.pitch);
+    TEST_ASSERT_FLOAT_WITHIN(sinf(1.0f * DEGTORAD), 0, state.GEstG.roll);
+  }
+  TEST_ASSERT_FLOAT_WITHIN(1.0f, 90, state.heading);
+}
+
 void test_attitude_course_accuracy_tapers_recovery() {
   const float good = run_rth_heading_recovery(RTH_STATE_ACQUIRE_HEADING, -4, 5, true);
   const float good_confidence = state.heading_confidence;

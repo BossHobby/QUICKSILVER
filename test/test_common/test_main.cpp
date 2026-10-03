@@ -66,6 +66,7 @@ extern void test_attitude_rth_recovery_requires_valid_course_and_phase(void);
 extern void test_attitude_normal_heading_pitch_weight_matches_vehicle(void);
 extern void test_attitude_imu_pipeline_roll_and_pitch(void);
 extern void test_attitude_imu_pipeline_yaw_while_tilted(void);
+extern void test_attitude_imu_pipeline_drag_deceleration_stays_level(void);
 extern void test_bmp280_raw_reference_sample_returns_pascals(void);
 extern void test_bmp280_discards_unused_sample_nibbles(void);
 extern void test_bmp388_raw_reference_sample_retains_cubic_correction(void);
@@ -516,6 +517,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_attitude_normal_heading_pitch_weight_matches_vehicle);
   RUN_TEST(test_attitude_imu_pipeline_roll_and_pitch);
   RUN_TEST(test_attitude_imu_pipeline_yaw_while_tilted);
+  RUN_TEST(test_attitude_imu_pipeline_drag_deceleration_stays_level);
   RUN_TEST(test_bmp280_raw_reference_sample_returns_pascals);
   RUN_TEST(test_bmp280_discards_unused_sample_nibbles);
   RUN_TEST(test_bmp388_raw_reference_sample_retains_cubic_correction);
