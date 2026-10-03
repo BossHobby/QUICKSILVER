@@ -2,7 +2,7 @@
     "build": {
         "core": "ArteryTek AT32",
         "cpu": "cortex-m4",
-        "extra_flags": "-DAT32F4xx -DAT32F435 -DAT32F4 -DAT32 -DMCU_NAME=at32f435m",
+        "extra_flags": "-DAT32F4xx -DAT32F435 -DAT32F4 -DAT32 -DMCU_NAME=at32f435m -DUSE_SLOW_FLASH",
         "f_cpu": "288000000L",
         "mcu": "at32f435",
         "product_line": "AT32F435xM",
@@ -18,8 +18,8 @@
     ],
     "name": "AT32F435RMT7 (384K/512K RAM. 4032K Flash)",
     "upload": {
-        "maximum_ram_size": 393216,
-        "maximum_size": 4128768,
+        "maximum_ram_size": 262144,
+        "maximum_size": 983040,
         "protocol": "atlink",
         "protocols": [
             "cmsis-dap",
