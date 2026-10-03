@@ -60,7 +60,7 @@ typedef struct {
 #define DSHOT_DMA_BUFFER_SIZE (3 * DSHOT_DMA_SYMBOLS)
 
 #define GCR_TIME ((DSHOT_TIME * 5) / 4)
-#define GCR_SYMBOL_TIME (PWM_CLOCK_FREQ_HZ / (3 * GCR_TIME * 1000 - 1))
+#define GCR_SYMBOL_TIME (PWM_CLOCK_FREQ_HZ / (3 * GCR_TIME * 1000) - 1)
 
 // 30us delay, 5us buffer, 21 bits for worst case
 #define GCR_SYMBOL_TIME_MAX (((DSHOT_TIME_MAX * 5) / 4) * 3)
